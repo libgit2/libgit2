@@ -28,6 +28,7 @@
 #include "buf_text.h"
 #include "merge_file.h"
 #include "path.h"
+#include "attr.h"
 
 /* See docs/checkout-internals.md for more information */
 
@@ -69,6 +70,7 @@ typedef struct {
 	size_t completed_steps;
 	git_checkout_perfdata perfdata;
 	git_buf last_mkdir;
+	git_attr_session attr_session;
 } checkout_data;
 
 typedef struct {
@@ -1425,8 +1427,8 @@ static int blob_content_to_file(
 		hint_path = path;
 
 	if (!data->opts.disable_filters)
-		error = git_filter_list_load(
-			&fl, git_blob_owner(blob), blob, hint_path,
+		error = git_filter_list__load_with_attr_session(
+			&fl, data->repo, &data->attr_session, blob, hint_path,
 			GIT_FILTER_TO_WORKTREE, GIT_FILTER_OPT_DEFAULT);
 
 	if (!error)
@@ -2008,7 +2010,8 @@ static int checkout_write_merge(
 		in_data.ptr = (char *)result.ptr;
 		in_data.size = result.len;
 
-		if ((error = git_filter_list_load(&fl, data->repo, NULL, git_buf_cstr(&path_workdir),
+		if ((error = git_filter_list__load_with_attr_session(
+				&fl, data->repo, &data->attr_session, NULL, git_buf_cstr(&path_workdir),
 				GIT_FILTER_TO_WORKTREE, GIT_FILTER_OPT_DEFAULT)) < 0 ||
 			(error = git_filter_list_apply_to_data(&out_data, fl, &in_data)) < 0)
 			goto done;
@@ -2218,6 +2221,8 @@ static void checkout_data_clear(checkout_data *data)
 
 	git_index_free(data->index);
 	data->index = NULL;
+
+	git_attr_session__free(&data->attr_session);
 }
 
 static int checkout_data_init(
@@ -2359,6 +2364,8 @@ static int checkout_data_init(
 		goto cleanup;
 
 	data->workdir_len = git_buf_len(&data->path);
+
+	git_attr_session__init(&data->attr_session, data->repo);
 
 cleanup:
 	if (error < 0)
