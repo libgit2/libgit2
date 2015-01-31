@@ -9,17 +9,12 @@ environment:
   - GENERATOR: "Visual Studio 11 Win64"
     ARCH: 64
 build_script:
-- ps: >-
+- ps: |
     choco install cmake
-
     choco install python2
-
     mkdir build
-
     cd build
-
     cmake -D ENABLE_TRACE=ON -D BUILD_CLAR=ON .. -G"$env:GENERATOR"
-
     cmake --build . --config RelWithDebInfo
 test_script:
 - ps: ctest -V .
