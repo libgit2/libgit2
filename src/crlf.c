@@ -128,18 +128,21 @@ static int crlf_apply_to_odb(
 	const git_buf *from,
 	const git_filter_source *src)
 {
+	git_buf_text_stats stats;
+	bool is_binary;
+
 	/* Empty file? Nothing to do */
 	if (!git_buf_len(from))
 		return 0;
+
+	is_binary = git_buf_text_gather_stats(&stats, from, false);
 
 	/* Heuristics to see if we can skip the conversion.
 	 * Straight from Core Git.
 	 */
 	if (ca->crlf_action == GIT_CRLF_AUTO || ca->crlf_action == GIT_CRLF_GUESS) {
-		git_buf_text_stats stats;
-
-		/* Check heuristics for binary vs text - returns true if binary */
-		if (git_buf_text_gather_stats(&stats, from, false))
+		/* Check heuristics for binary vs text */
+		if (is_binary)
 			return GIT_PASSTHROUGH;
 
 		/*
@@ -150,25 +153,22 @@ static int crlf_apply_to_odb(
 		if (stats.cr != stats.crlf)
 			return GIT_PASSTHROUGH;
 
-		/* If there are no CR characters to filter out and CrLf is not set to "true", then just pass */
-		if (!stats.cr && ca->auto_crlf != GIT_AUTO_CRLF_TRUE)
-			return GIT_PASSTHROUGH;
+		if (ca->crlf_action == GIT_CRLF_GUESS) {
+			/*
+			 * If the file in the index has any CR in it, do not convert.
+			 * This is the new safer autocrlf handling.
+			 */
+			if (has_cr_in_index(src))
+				return GIT_PASSTHROUGH;
+		}
+	}
 
-		/* If safecrlf is enabled, sanity-check the result. */
-		if (stats.lf != stats.crlf) {
-			switch (ca->safe_crlf) {
-			case GIT_SAFE_CRLF_FAIL:
-				giterr_set(
-					GITERR_FILTER, "LF would be replaced by CRLF in '%s'",
-					git_filter_source_path(src));
-				return -1;
-			case GIT_SAFE_CRLF_WARN:
-				/* TODO: issue warning when warning API is available */;
-				break;
-			default:
-				break;
-			}
-		} else if (stats.crlf && ca->auto_crlf == GIT_AUTO_CRLF_INPUT) {
+	/* If safecrlf is enabled, sanity-check the result. */
+	if (ca->crlf_action == GIT_CRLF_INPUT ||
+		(ca->auto_crlf == GIT_AUTO_CRLF_INPUT &&
+		(ca->crlf_action == GIT_CRLF_GUESS || ca->crlf_action == GIT_CRLF_AUTO ||
+		(ca->crlf_action == GIT_CRLF_TEXT && ca->eol == GIT_EOL_UNSET)))) {
+		if (stats.crlf) {
 			switch (ca->safe_crlf) {
 			case GIT_SAFE_CRLF_FAIL:
 				giterr_set(
@@ -182,19 +182,28 @@ static int crlf_apply_to_odb(
 				break;
 			}
 		}
-
-		if (ca->crlf_action == GIT_CRLF_GUESS) {
-			/*
-			 * If the file in the index has any CR in it, do not convert.
-			 * This is the new safer autocrlf handling.
-			 */
-			if (has_cr_in_index(src))
-				return GIT_PASSTHROUGH;
+	} else if (ca->crlf_action == GIT_CRLF_CRLF ||
+				(ca->auto_crlf == GIT_AUTO_CRLF_TRUE && ca->crlf_action == GIT_CRLF_GUESS ||
+				((ca->crlf_action == GIT_CRLF_TEXT || ca->crlf_action == GIT_CRLF_AUTO) && ca->eol == GIT_EOL_UNSET))) {
+		if (stats.lf != stats.crlf) {
+			switch (ca->safe_crlf) {
+			case GIT_SAFE_CRLF_FAIL:
+				giterr_set(
+					GITERR_FILTER, "LF would be replaced by CRLF in '%s'",
+					git_filter_source_path(src));
+				return -1;
+			case GIT_SAFE_CRLF_WARN:
+				/* TODO: issue warning when warning API is available */;
+				break;
+			default:
+				break;
+			}
 		}
-
-		if (!stats.cr)
-			return GIT_PASSTHROUGH;
 	}
+
+	/* If there are no CR characters to filter out, then just pass */
+	if (!stats.cr)
+		return GIT_PASSTHROUGH;
 
 	/* Actually drop the carriage returns */
 	return git_buf_text_crlf_to_lf(to, from);
