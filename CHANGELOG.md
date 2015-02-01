@@ -15,6 +15,11 @@ v0.22 + 1
   * files containig CRLF in combination with core.autocrlf=input were accepted
   * adding files containing CR and CRLF but not the same number failed
 
+* LF -> CRLF filter now handles files on adding to index the way vanilla git does
+  * skip files marked as "binary" (-crlf)
+  * especially files containing single CR chars are added as is now
+  * honor "text" attribute for forcing a file being interpreted as text
+
 * Rename and copy detection is enabled for small files.
 
 * Checkout can now handle an initial checkout of a repository, making
