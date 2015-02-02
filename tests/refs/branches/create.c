@@ -196,3 +196,107 @@ void test_refs_branches_create__can_create_branch_with_unicode(void)
 		branch = NULL;
 	}
 }
+
+/**
+ * Verify that we can create a branch with a name that matches the
+ * namespace of a previously delete branch.
+ *
+ * git branch level_one/level_two
+ * git branch -D level_one/level_two
+ * git branch level_one
+ *
+ * We expect the delete to have deleted the files:
+ *     ".git/refs/heads/level_one/level_two"
+ *     ".git/logs/refs/heads/level_one/level_two"
+ * It may or may not have deleted the (now empty)
+ * containing directories.  To match git.git behavior,
+ * the second create needs to implicilty delete the
+ * directories and create the new files.
+ *     "refs/heads/level_one"
+ *     "logs/refs/heads/level_one"
+ *
+ * We should not fail to create the branch or its
+ * reflog because of an obsolete namespace container
+ * directory.
+ */
+void test_refs_branches_create__name_vs_namespace(void)
+{
+	const char * name;
+	struct item {
+		const char *first;
+		const char *second;
+	};
+	static const struct item item[] = {
+		{ "level_one/level_two", "level_one" },
+		{ "a/b/c/d/e",           "a/b/c/d" },
+		{ "ss/tt/uu/vv/ww",      "ss" },
+		/* And one test case that is deeper. */
+		{ "xx1/xx2/xx3/xx4",     "xx1/xx2/xx3/xx4/xx5/xx6" },
+		{ NULL, NULL },
+	};
+	const struct item *p;
+
+	retrieve_known_commit(&target, repo);
+
+	for (p=item; p->first; p++) {
+		cl_git_pass(git_branch_create(&branch, repo, p->first, target, 0, NULL, NULL));
+		cl_git_pass(git_oid_cmp(git_reference_target(branch), git_commit_id(target)));
+		cl_git_pass(git_branch_name(&name, branch));
+		cl_assert_equal_s(name, p->first);
+
+		cl_git_pass(git_branch_delete(branch));
+		git_reference_free(branch);
+		branch = NULL;
+
+		cl_git_pass(git_branch_create(&branch, repo, p->second, target, 0, NULL, NULL));
+		git_reference_free(branch);
+		branch = NULL;
+	}
+}
+
+/**
+ * We still need to fail if part of the namespace is
+ * still in use.
+ */
+void test_refs_branches_create__name_vs_namespace_fail(void)
+{
+	const char * name;
+	struct item {
+		const char *first;
+		const char *first_alternate;
+		const char *second;
+	};
+	static const struct item item[] = {
+		{ "level_one/level_two", "level_one/alternate", "level_one" },
+		{ "a/b/c/d/e",           "a/b/c/d/alternate",   "a/b/c/d" },
+		{ "ss/tt/uu/vv/ww",      "ss/alternate",        "ss" },
+		{ NULL, NULL, NULL },
+	};
+	const struct item *p;
+
+	retrieve_known_commit(&target, repo);
+
+	for (p=item; p->first; p++) {
+		cl_git_pass(git_branch_create(&branch, repo, p->first, target, 0, NULL, NULL));
+		cl_git_pass(git_oid_cmp(git_reference_target(branch), git_commit_id(target)));
+		cl_git_pass(git_branch_name(&name, branch));
+		cl_assert_equal_s(name, p->first);
+
+		cl_git_pass(git_branch_delete(branch));
+		git_reference_free(branch);
+		branch = NULL;
+
+		cl_git_pass(git_branch_create(&branch, repo, p->first_alternate, target, 0, NULL, NULL));
+		cl_git_pass(git_oid_cmp(git_reference_target(branch), git_commit_id(target)));
+		cl_git_pass(git_branch_name(&name, branch));
+		cl_assert_equal_s(name, p->first_alternate);
+
+		/* we do not delete the alternate. */
+		git_reference_free(branch);
+		branch = NULL;
+
+		cl_git_fail(git_branch_create(&branch, repo, p->second, target, 0, NULL, NULL));
+		git_reference_free(branch);
+		branch = NULL;
+	}
+}
