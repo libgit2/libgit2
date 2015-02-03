@@ -808,7 +808,8 @@ const char *git_repository__8dot3_name(git_repository *repo)
 
 			/* We anticipate the 8.3 name is "GIT~1", so use a static for
 			 * easy testing in the common case */
-			if (repo->name_8dot3 && strcasecmp(repo->name_8dot3, git_repository__8dot3_default) == 0)
+			if (repo->name_8dot3 &&
+				strcasecmp(repo->name_8dot3, git_repository__8dot3_default) == 0)
 				repo->has_8dot3_default = 1;
 		}
 #endif
