@@ -1137,6 +1137,10 @@ void update_attr_callback(
 	size_t total_steps,
 	void *payload)
 {
+	GIT_UNUSED(completed_steps);
+	GIT_UNUSED(total_steps);
+	GIT_UNUSED(payload);
+
 	if (path && strcmp(path, "ident1.txt") == 0)
 		cl_git_write2file("testrepo/.gitattributes",
 			"*.txt ident\n", 12, O_RDWR|O_CREAT, 0666);

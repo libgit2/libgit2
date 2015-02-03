@@ -251,7 +251,6 @@ static int preload_attr_file(
 
 static int system_attr_file(
 	git_buf *out,
-	git_repository *repo,
 	git_attr_session *attr_session)
 {
 	int error;
@@ -306,7 +305,7 @@ static int attr_setup(git_repository *repo, git_attr_session *attr_session)
 	 * definitions will be available for later file parsing
 	 */
 
-	error = system_attr_file(&sys, repo, attr_session);
+	error = system_attr_file(&sys, attr_session);
 
 	if (error == 0)
 		error = preload_attr_file(
@@ -526,7 +525,7 @@ static int collect_attr_files(
 	}
 
 	if ((flags & GIT_ATTR_CHECK_NO_SYSTEM) == 0) {
-		error = system_attr_file(&dir, repo, attr_session);
+		error = system_attr_file(&dir, attr_session);
 
 		if (!error)
 			error = push_attr_file(
