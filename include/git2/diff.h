@@ -849,9 +849,9 @@ GIT_EXTERN(size_t) git_diff_num_deltas_of_type(
 /**
  * Return the diff delta for an entry in the diff list.
  *
- * The `git_delta` pointer points to internal data and you do not have
- * to release it when you are done with it.  It will go away when the
- * `git_diff` (or any associated `git_patch`) goes away.
+ * The `git_diff_delta` pointer points to internal data and you do not
+ * have to release it when you are done with it.  It will go away when
+ * the * `git_diff` (or any associated `git_patch`) goes away.
  *
  * Note that the flags on the delta related to whether it has binary
  * content or not may not be set if there are no attributes set for the
