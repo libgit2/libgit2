@@ -861,6 +861,7 @@ void git_attr_session__free(git_attr_session *session)
 		return;
 
 	git_buf_free(&session->sysdir);
+	git_buf_free(&session->tmp);
 
 	memset(session, 0, sizeof(git_attr_session));
 }

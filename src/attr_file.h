@@ -114,6 +114,7 @@ typedef struct {
 	unsigned int init_setup:1,
 		init_sysdir:1;
 	git_buf sysdir;
+	git_buf tmp;
 } git_attr_session;
 
 extern int git_attr_session__init(git_attr_session *attr_session, git_repository *repo);
