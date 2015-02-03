@@ -177,7 +177,7 @@ void test_revwalk_basic__glob_heads_with_invalid(void)
 		/* walking */;
 
 	/* git log --branches --oneline | wc -l => 16 */
-	cl_assert_equal_i(17, i);
+	cl_assert_equal_i(18, i);
 }
 
 void test_revwalk_basic__push_head(void)
