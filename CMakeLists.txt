@@ -221,6 +221,8 @@ IF (LIBSSH2_FOUND)
 	INCLUDE_DIRECTORIES(${LIBSSH2_INCLUDE_DIR})
 	SET(LIBGIT2_PC_REQUIRES "${LIBGIT2_PC_REQUIRES} libssh2")
 	SET(SSH_LIBRARIES ${LIBSSH2_LIBRARIES})
+ELSE()
+	MESSAGE(STATUS "LIBSSH2 not found. Set CMAKE_PREFIX_PATH if it is installed outside of the default search path.")
 ENDIF()
 
 # Optional external dependency: libgssapi
