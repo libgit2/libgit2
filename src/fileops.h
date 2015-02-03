@@ -11,6 +11,8 @@
 #include "map.h"
 #include "posix.h"
 #include "path.h"
+#include "pool.h"
+#include "strmap.h"
 
 /**
  * Filebuffer methods
@@ -95,6 +97,13 @@ struct git_futils_mkdir_perfdata
 	size_t chmod_calls;
 };
 
+struct git_futils_mkdir_options
+{
+	git_strmap *dir_map;
+	git_pool *pool;
+	struct git_futils_mkdir_perfdata perfdata;
+};
+
 /**
  * Create a directory or entire path.
  *
@@ -106,10 +115,10 @@ struct git_futils_mkdir_perfdata
  * @param base Root for relative path.  These directories will never be made.
  * @param mode The mode to use for created directories.
  * @param flags Combination of the mkdir flags above.
- * @param perfdata Performance data, use `git_futils_mkdir` if you don't want this data.
+ * @param opts Extended options, use `git_futils_mkdir` if you are not interested.
  * @return 0 on success, else error code
  */
-extern int git_futils_mkdir_withperf(const char *path, const char *base, mode_t mode, uint32_t flags, struct git_futils_mkdir_perfdata *perfdata);
+extern int git_futils_mkdir_ext(const char *path, const char *base, mode_t mode, uint32_t flags, struct git_futils_mkdir_options *opts);
 
 /**
  * Create a directory or entire path.  Similar to `git_futils_mkdir_withperf`

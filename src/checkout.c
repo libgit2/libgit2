@@ -29,6 +29,10 @@
 #include "merge_file.h"
 #include "path.h"
 #include "attr.h"
+#include "pool.h"
+#include "strmap.h"
+
+GIT__USE_STRMAP;
 
 /* See docs/checkout-internals.md for more information */
 
@@ -69,7 +73,7 @@ typedef struct {
 	size_t total_steps;
 	size_t completed_steps;
 	git_checkout_perfdata perfdata;
-	git_buf last_mkdir;
+	git_strmap *mkdir_map;
 	git_attr_session attr_session;
 } checkout_data;
 
@@ -1293,25 +1297,6 @@ fail:
 	return error;
 }
 
-static int checkout_mkdir(
-	checkout_data *data,
-	const char *path,
-	const char *base,
-	mode_t mode,
-	unsigned int flags)
-{
-	struct git_futils_mkdir_perfdata mkdir_perfdata = {0};
-
-	int error = git_futils_mkdir_withperf(
-		path, base, mode, flags, &mkdir_perfdata);
-
-	data->perfdata.mkdir_calls += mkdir_perfdata.mkdir_calls;
-	data->perfdata.stat_calls += mkdir_perfdata.stat_calls;
-	data->perfdata.chmod_calls += mkdir_perfdata.chmod_calls;
-
-	return error;
-}
-
 static bool should_remove_existing(checkout_data *data)
 {
 	int ignorecase = 0;
@@ -1327,30 +1312,42 @@ static bool should_remove_existing(checkout_data *data)
 #define MKDIR_REMOVE_EXISTING \
 	MKDIR_NORMAL | GIT_MKDIR_REMOVE_FILES | GIT_MKDIR_REMOVE_SYMLINKS
 
+static int checkout_mkdir(
+	checkout_data *data,
+	const char *path,
+	const char *base,
+	mode_t mode,
+	unsigned int flags)
+{
+	struct git_futils_mkdir_options mkdir_opts = {0};
+	int error;
+
+	mkdir_opts.dir_map = data->mkdir_map;
+	mkdir_opts.pool = &data->pool;
+
+	error = git_futils_mkdir_ext(
+		path, base, mode, flags, &mkdir_opts);
+
+	data->perfdata.mkdir_calls += mkdir_opts.perfdata.mkdir_calls;
+	data->perfdata.stat_calls += mkdir_opts.perfdata.stat_calls;
+	data->perfdata.chmod_calls += mkdir_opts.perfdata.chmod_calls;
+
+	return error;
+}
+
 static int mkpath2file(
 	checkout_data *data, const char *path, unsigned int mode)
 {
-	git_buf *mkdir_path = &data->tmp;
 	struct stat st;
 	bool remove_existing = should_remove_existing(data);
+	unsigned int flags =
+		(remove_existing ? MKDIR_REMOVE_EXISTING : MKDIR_NORMAL) |
+		GIT_MKDIR_SKIP_LAST;
 	int error;
 
-	if ((error = git_buf_sets(mkdir_path, path)) < 0)
+	if ((error = checkout_mkdir(
+			data, path, data->opts.target_directory, mode, flags)) < 0)
 		return error;
-
-	git_buf_rtruncate_at_char(mkdir_path, '/');
-
-	if (!data->last_mkdir.size ||
-		data->last_mkdir.size != mkdir_path->size ||
-		memcmp(mkdir_path->ptr, data->last_mkdir.ptr, mkdir_path->size) != 0) {
-
-		if ((error = checkout_mkdir(
-				data, mkdir_path->ptr, data->opts.target_directory, mode,
-				remove_existing ? MKDIR_REMOVE_EXISTING : MKDIR_NORMAL)) < 0)
-			return error;
-
-		git_buf_swap(&data->last_mkdir, mkdir_path);
-	}
 
 	if (remove_existing) {
 		data->perfdata.stat_calls++;
@@ -2215,12 +2212,15 @@ static void checkout_data_clear(checkout_data *data)
 	git__free(data->pfx);
 	data->pfx = NULL;
 
-	git_buf_free(&data->last_mkdir);
+	git_strmap_free(data->mkdir_map);
+
 	git_buf_free(&data->path);
 	git_buf_free(&data->tmp);
 
 	git_index_free(data->index);
 	data->index = NULL;
+
+	git_strmap_free(data->mkdir_map);
 
 	git_attr_session__free(&data->attr_session);
 }
@@ -2360,7 +2360,8 @@ static int checkout_data_init(
 		(error = git_vector_init(&data->update_conflicts, 0, NULL)) < 0 ||
 		(error = git_pool_init(&data->pool, 1, 0)) < 0 ||
 		(error = git_buf_puts(&data->path, data->opts.target_directory)) < 0 ||
-		(error = git_path_to_dir(&data->path)) < 0)
+		(error = git_path_to_dir(&data->path)) < 0 ||
+		(error = git_strmap_alloc(&data->mkdir_map)) < 0)
 		goto cleanup;
 
 	data->workdir_len = git_buf_len(&data->path);
