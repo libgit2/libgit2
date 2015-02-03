@@ -29,7 +29,7 @@ GIT_BEGIN_DECL
 typedef struct git_patch git_patch;
 
 /**
- * Return the diff delta and patch for an entry in the diff list.
+ * Return a patch for an entry in the diff list.
  *
  * The `git_patch` is a newly created object contains the text diffs
  * for the delta.  You have to call `git_patch_free()` when you are
@@ -39,10 +39,6 @@ typedef struct git_patch git_patch;
  * For an unchanged file or a binary file, no `git_patch` will be
  * created, the output will be set to NULL, and the `binary` flag will be
  * set true in the `git_diff_delta` structure.
- *
- * The `git_diff_delta` pointer points to internal data and you do not have
- * to release it when you are done with it.  It will go away when the
- * `git_diff` and `git_patch` go away.
  *
  * It is okay to pass NULL for either of the output parameters; if you pass
  * NULL for the `git_patch`, then the text diff will not be calculated.
@@ -139,7 +135,8 @@ GIT_EXTERN(int) git_patch_from_buffers(
 GIT_EXTERN(void) git_patch_free(git_patch *patch);
 
 /**
- * Get the delta associated with a patch
+ * Get the delta associated with a patch.  This delta points to internal
+ * data and you do not have to release it when you are done with it.
  */
 GIT_EXTERN(const git_diff_delta *) git_patch_get_delta(const git_patch *patch);
 
