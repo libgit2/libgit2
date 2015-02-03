@@ -249,6 +249,46 @@ static int preload_attr_file(
 	return error;
 }
 
+static int system_attr_file(
+	git_buf *out,
+	git_repository *repo,
+	git_attr_session *attr_session)
+{
+	int error;
+
+	if (!attr_session) {
+		error = git_sysdir_find_system_file(out, GIT_ATTR_FILE_SYSTEM);
+
+		if (error == GIT_ENOTFOUND)
+			giterr_clear();
+
+		return error;
+	}
+
+	if (!attr_session->init_sysdir) {
+		error = git_sysdir_find_system_file(&attr_session->sysdir, GIT_ATTR_FILE_SYSTEM);
+
+		if (error == GIT_ENOTFOUND)
+			giterr_clear();
+		else if (error)
+			return error;
+
+		attr_session->init_sysdir = 1;
+	}
+
+	if (attr_session->sysdir.size == 0)
+		return GIT_ENOTFOUND;
+
+	/* We can safely provide a git_buf with no allocation (asize == 0) to
+	 * a consumer. This allows them to treat this as a regular `git_buf`,
+	 * but their call to `git_buf_free` will not attempt to free it.
+	 */
+	out->ptr = attr_session->sysdir.ptr;
+	out->size = attr_session->sysdir.size;
+	out->asize = 0;
+	return 0;
+}
+
 static int attr_setup(git_repository *repo, git_attr_session *attr_session)
 {
 	int error = 0;
@@ -256,7 +296,7 @@ static int attr_setup(git_repository *repo, git_attr_session *attr_session)
 	git_index *idx = NULL;
 	git_buf sys = GIT_BUF_INIT;
 
-	if (attr_session && attr_session->setup)
+	if (attr_session && attr_session->init_setup)
 		return 0;
 
 	if ((error = git_attr_cache__init(repo)) < 0)
@@ -266,18 +306,15 @@ static int attr_setup(git_repository *repo, git_attr_session *attr_session)
 	 * definitions will be available for later file parsing
 	 */
 
-	if (!(error = git_sysdir_find_system_file(&sys, GIT_ATTR_FILE_SYSTEM))) {
+	error = system_attr_file(&sys, repo, attr_session);
+
+	if (error == 0)
 		error = preload_attr_file(
 			repo, attr_session, GIT_ATTR_FILE__FROM_FILE, NULL, sys.ptr);
-		git_buf_free(&sys);
-	}
-	if (error < 0) {
-		if (error == GIT_ENOTFOUND) {
-			giterr_clear();
-			error = 0;
-		} else
-			return error;
-	}
+	else if (error != GIT_ENOTFOUND)
+		return error;
+
+	git_buf_free(&sys);
 
 	if ((error = preload_attr_file(
 			repo, attr_session, GIT_ATTR_FILE__FROM_FILE,
@@ -300,7 +337,7 @@ static int attr_setup(git_repository *repo, git_attr_session *attr_session)
 		return error;
 
 	if (attr_session)
-		attr_session->setup = 1;
+		attr_session->init_setup = 1;
 
 	return error;
 }
@@ -489,15 +526,14 @@ static int collect_attr_files(
 	}
 
 	if ((flags & GIT_ATTR_CHECK_NO_SYSTEM) == 0) {
-		error = git_sysdir_find_system_file(&dir, GIT_ATTR_FILE_SYSTEM);
+		error = system_attr_file(&dir, repo, attr_session);
+
 		if (!error)
 			error = push_attr_file(
 				repo, attr_session, files, GIT_ATTR_FILE__FROM_FILE,
 				NULL, dir.ptr);
-		else if (error == GIT_ENOTFOUND) {
-			giterr_clear();
+		else if (error == GIT_ENOTFOUND)
 			error = 0;
-		}
 	}
 
  cleanup:

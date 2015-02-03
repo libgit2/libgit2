@@ -854,3 +854,13 @@ int git_attr_session__init(git_attr_session *session, git_repository *repo)
 
 	return 0;
 }
+
+void git_attr_session__free(git_attr_session *session)
+{
+	if (!session)
+		return;
+
+	git_buf_free(&session->sysdir);
+
+	memset(session, 0, sizeof(git_attr_session));
+}
