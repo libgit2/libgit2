@@ -58,7 +58,6 @@
 #include "git2/types.h"
 #include "git2/errors.h"
 #include "thread-utils.h"
-#include "bswap.h"
 
 #include <regex.h>
 
