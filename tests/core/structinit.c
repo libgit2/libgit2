@@ -45,7 +45,7 @@ static void options_cmp(void *one, void *two, size_t size, const char *name)
 		if (((char *)one)[i] != ((char *)two)[i]) {
 			char desc[1024];
 
-			p_snprintf(desc, 1024, "Difference in %s at byte %d: macro=%u / func=%u",
+			p_snprintf(desc, 1024, "Difference in %s at byte %" PRIuZ ": macro=%u / func=%u",
 				name, i, ((char *)one)[i], ((char *)two)[i]);
 			clar__fail(__FILE__, __LINE__,
 				"Difference between macro and function options initializer",
