@@ -215,6 +215,8 @@ Here are the bindings to libgit2 that are currently available:
     * Rugged <https://github.com/libgit2/rugged>
 * Rust
     * git2-rs <https://github.com/alexcrichton/git2-rs>
+* Swift
+    * Gift <https://github.com/modocache/Gift>
 * Vala
     * libgit2.vapi <https://github.com/apmasell/vapis/blob/master/libgit2.vapi>
 
