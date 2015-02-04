@@ -31,7 +31,7 @@ GIT_INLINE(uint16_t) default_swab16(uint16_t val)
 
 #if defined(__GNUC__) && defined(__i386__)
 
-#define bswap32(x) ({ \
+#define bswap32(x) __extension__ ({ \
 	uint32_t __res; \
 	if (__builtin_constant_p(x)) { \
 		__res = default_swab32(x); \
@@ -40,7 +40,7 @@ GIT_INLINE(uint16_t) default_swab16(uint16_t val)
 	} \
 	__res; })
 
-#define bswap16(x) ({ \
+#define bswap16(x) __extension__ ({ \
 	uint16_t __res; \
 	if (__builtin_constant_p(x)) { \
 		__res = default_swab16(x); \
@@ -51,7 +51,7 @@ GIT_INLINE(uint16_t) default_swab16(uint16_t val)
 
 #elif defined(__GNUC__) && defined(__x86_64__)
 
-#define bswap32(x) ({ \
+#define bswap32(x) __extension__ ({ \
 	uint32_t __res; \
 	if (__builtin_constant_p(x)) { \
 		__res = default_swab32(x); \
@@ -60,7 +60,7 @@ GIT_INLINE(uint16_t) default_swab16(uint16_t val)
 	} \
 	__res; })
 
-#define bswap16(x) ({ \
+#define bswap16(x) __extension__ ({ \
 	uint16_t __res; \
 	if (__builtin_constant_p(x)) { \
 		__res = default_swab16(x); \
