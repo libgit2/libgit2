@@ -217,11 +217,8 @@ void test_checkout_nasty__git_tilde1(void)
 void test_checkout_nasty__git_custom_shortname(void)
 {
 #ifdef GIT_WIN32
-	char *shortname = git_win32_path_8dot3_name("C:\\Program Files");
-	if (shortname == NULL)
+	if (!cl_sandbox_supports_8dot3())
 		clar__skip();
-
-	git__free(shortname);
 
 	cl_must_pass(p_rename("nasty/.git", "nasty/_temp"));
 	cl_git_write2file("nasty/git~1", "", 0, O_RDWR|O_CREAT, 0666);
