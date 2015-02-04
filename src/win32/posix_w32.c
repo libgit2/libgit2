@@ -448,12 +448,8 @@ int p_stat(const char* path, struct stat* buf)
 	git_win32_path path_w;
 	int len;
 
-	if ((len = git_win32_path_from_utf8(path_w, path)) < 0)
-		return -1;
-
-	git_win32__path_trim_end(path_w, len);
-
-	if (lstat_w(path_w, buf, false) < 0)
+	if ((len = git_win32_path_from_utf8(path_w, path)) < 0 ||
+		lstat_w(path_w, buf, false) < 0)
 		return -1;
 
 	/* The item is a symbolic link or mount point. No need to iterate
