@@ -18,7 +18,7 @@
  * rotate with a loop.
  */
 
-#define SHA_ASM(op, x, n) ({ unsigned int __res; __asm__(op " %1,%0":"=r" (__res):"i" (n), "0" (x)); __res; })
+#define SHA_ASM(op, x, n) (__extension__ ({ unsigned int __res; __asm__(op " %1,%0":"=r" (__res):"i" (n), "0" (x)); __res; }))
 #define SHA_ROL(x,n)	SHA_ASM("rol", x, n)
 #define SHA_ROR(x,n)	SHA_ASM("ror", x, n)
 
