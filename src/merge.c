@@ -2651,9 +2651,8 @@ int git_merge(
 	git_checkout_options checkout_opts;
 	git_annotated_commit *ancestor_head = NULL, *our_head = NULL;
 	git_tree *ancestor_tree = NULL, *our_tree = NULL, **their_trees = NULL;
-	git_index *index = NULL, *index_new = NULL;
+	git_index *index = NULL;
 	git_indexwriter indexwriter = GIT_INDEXWRITER_INIT;
-	bool write_index = false;
 	size_t i;
 	int error = 0;
 
@@ -2667,23 +2666,11 @@ int git_merge(
 	their_trees = git__calloc(their_heads_len, sizeof(git_tree *));
 	GITERR_CHECK_ALLOC(their_trees);
 
-	if ((error = merge_heads(&ancestor_head, &our_head, repo, their_heads, their_heads_len)) < 0)
+	if ((error = merge_heads(&ancestor_head, &our_head, repo, their_heads, their_heads_len)) < 0 ||
+		(error = merge_normalize_checkout_opts(repo, &checkout_opts, given_checkout_opts,
+			ancestor_head, our_head, their_heads_len, their_heads)) < 0 ||
+		(error = git_indexwriter_init_for_operation(&indexwriter, repo, &checkout_opts.checkout_strategy)) < 0)
 		goto on_error;
-
-	if ((error = merge_normalize_checkout_opts(repo, &checkout_opts, given_checkout_opts,
-		ancestor_head, our_head, their_heads_len, their_heads)) < 0)
-		goto on_error;
-
-	write_index = (checkout_opts.checkout_strategy & GIT_CHECKOUT_DONT_WRITE_INDEX) == 0;
-
-	if (write_index) {
-		/* Never let checkout update the index, we'll update it ourselves. */
-		checkout_opts.checkout_strategy |= GIT_CHECKOUT_DONT_WRITE_INDEX;
-
-		if ((error = git_repository_index(&index, repo)) < 0 ||
-			(error = git_indexwriter_init(&indexwriter, index)) < 0)
-			goto on_error;
-	}
 
 	/* Write the merge files to the repository. */
 	if ((error = git_merge__setup(repo, our_head, their_heads, their_heads_len)) < 0)
@@ -2703,11 +2690,11 @@ int git_merge(
 
 	/* TODO: recursive, octopus, etc... */
 
-	if ((error = git_merge_trees(&index_new, repo, ancestor_tree, our_tree, their_trees[0], merge_opts)) < 0 ||
-		(error = git_merge__check_result(repo, index_new)) < 0 ||
-		(error = git_merge__append_conflicts_to_merge_msg(repo, index_new)) < 0 ||
-		(error = git_checkout_index(repo, index_new, &checkout_opts)) < 0 ||
-		(write_index && (error = git_indexwriter_commit(&indexwriter)) < 0))
+	if ((error = git_merge_trees(&index, repo, ancestor_tree, our_tree, their_trees[0], merge_opts)) < 0 ||
+		(error = git_merge__check_result(repo, index)) < 0 ||
+		(error = git_merge__append_conflicts_to_merge_msg(repo, index)) < 0 ||
+		(error = git_checkout_index(repo, index, &checkout_opts)) < 0 ||
+		(error = git_indexwriter_commit(&indexwriter)) < 0)
 		goto on_error;
 
 	goto done;
@@ -2719,7 +2706,6 @@ done:
 	git_indexwriter_cleanup(&indexwriter);
 
 	git_index_free(index);
-	git_index_free(index_new);
 
 	git_tree_free(ancestor_tree);
 	git_tree_free(our_tree);
