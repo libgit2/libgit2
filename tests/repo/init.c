@@ -714,3 +714,29 @@ void test_repo_init__init_with_initial_commit(void)
 
 	git_index_free(index);
 }
+
+void test_repo_init__at_filesystem_root(void)
+{
+	git_repository *repo;
+	const char *sandbox = clar_sandbox_path();
+	git_buf root = GIT_BUF_INIT;
+	int root_len;
+
+	if (!cl_getenv("GITTEST_INVASIVE_FILESYSTEM"))
+		cl_skip();
+
+	root_len = git_path_root(sandbox);
+	cl_assert(root_len >= 0);
+
+	git_buf_put(&root, sandbox, root_len+1);
+	git_buf_joinpath(&root, root.ptr, "libgit2_test_dir");
+
+	cl_assert(!git_path_exists(root.ptr));
+
+	cl_git_pass(git_repository_init(&repo, root.ptr, 0));
+	cl_assert(git_path_isdir(root.ptr));
+	cl_git_pass(git_futils_rmdir_r(root.ptr, NULL, GIT_RMDIR_REMOVE_FILES));
+
+	git_buf_free(&root);
+	git_repository_free(repo);
+}
