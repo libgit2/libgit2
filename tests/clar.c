@@ -269,6 +269,7 @@ clar_usage(const char *arg)
 	printf("  -sname\tRun only the suite with `name` (can go to individual test name)\n");
 	printf("  -iname\tInclude the suite with `name`\n");
 	printf("  -xname\tExclude the suite with `name`\n");
+	printf("  -v    \tIncrease verbosity (show suite names)\n");
 	printf("  -q    \tOnly report tests that had an error\n");
 	printf("  -Q    \tQuit as soon as a test fails\n");
 	printf("  -l    \tPrint suite names\n");
@@ -346,6 +347,10 @@ clar_parse_args(int argc, char **argv)
 
 			exit(0);
 		}
+
+		case 'v':
+			_clar.report_suite_names = 1;
+			break;
 
 		default:
 			clar_usage(argv[0]);
