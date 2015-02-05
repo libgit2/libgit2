@@ -5,12 +5,14 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 #include "common.h"
+#include "global.h"
 #include "git2/types.h"
 #include "git2/remote.h"
 #include "git2/net.h"
 #include "git2/transport.h"
 #include "git2/sys/transport.h"
 #include "path.h"
+#include "thread-utils.h"
 
 typedef struct transport_definition {
 	char *prefix;
@@ -39,6 +41,7 @@ static transport_definition transports[] = {
 	{ NULL, 0, 0 }
 };
 
+static git_mutex custom_transport_lock;
 static git_vector custom_transports = GIT_VECTOR_INIT;
 
 #define GIT_TRANSPORT_COUNT (sizeof(transports)/sizeof(transports[0])) - 1
@@ -109,6 +112,18 @@ static int transport_find_fn(
 	return 0;
 }
 
+static void transport_global_shutdown(void)
+{
+	git_mutex_free(&custom_transport_lock);
+}
+
+int git_transport_global_init(void)
+{
+	git_mutex_init(&custom_transport_lock);
+	git__on_shutdown(transport_global_shutdown);
+	return 0;
+}
+
 /**************
  * Public API *
  **************/
@@ -120,20 +135,25 @@ int git_transport_new(git_transport **out, git_remote *owner, const char *url)
 	void *param;
 	int error;
 
+	git_mutex_lock(&custom_transport_lock);
 	if ((error = transport_find_fn(&fn, url, &param)) == GIT_ENOTFOUND) {
 		giterr_set(GITERR_NET, "Unsupported URL protocol");
-		return -1;
+		error = -1;
+		goto done;
 	} else if (error < 0)
-		return error;
+		goto done;
 
 	if ((error = fn(&transport, owner, param)) < 0)
-		return error;
+		goto done;
 
 	GITERR_CHECK_VERSION(transport, GIT_TRANSPORT_VERSION, "git_transport");
 
 	*out = transport;
+	error = 0;
 
-	return 0;
+done:
+	git_mutex_unlock(&custom_transport_lock);
+	return error;
 }
 
 int git_transport_register(
@@ -148,6 +168,8 @@ int git_transport_register(
 
 	assert(scheme);
 	assert(cb);
+
+	git_mutex_lock(&custom_transport_lock);
 
 	if ((error = git_buf_printf(&prefix, "%s://", scheme)) < 0)
 		goto on_error;
@@ -168,10 +190,12 @@ int git_transport_register(
 
 	if (git_vector_insert(&custom_transports, definition) < 0)
 		goto on_error;
+	git_mutex_unlock(&custom_transport_lock);
 
 	return 0;
 
 on_error:
+	git_mutex_unlock(&custom_transport_lock);
 	git_buf_free(&prefix);
 	git__free(definition);
 	return error;
@@ -189,6 +213,7 @@ int git_transport_unregister(const char *scheme)
 	if ((error = git_buf_printf(&prefix, "%s://", scheme)) < 0)
 		goto done;
 
+	git_mutex_lock(&custom_transport_lock);
 	git_vector_foreach(&custom_transports, i, d) {
 		if (strcasecmp(d->prefix, prefix.ptr) == 0) {
 			if ((error = git_vector_remove(&custom_transports, i)) < 0)
@@ -208,6 +233,7 @@ int git_transport_unregister(const char *scheme)
 	error = GIT_ENOTFOUND;
 
 done:
+	git_mutex_unlock(&custom_transport_lock);
 	git_buf_free(&prefix);
 	return error;
 }

@@ -8,6 +8,7 @@
 #include "global.h"
 #include "hash.h"
 #include "sysdir.h"
+#include "transport.h"
 #include "git2/global.h"
 #include "git2/sys/openssl.h"
 #include "thread-utils.h"
@@ -107,6 +108,16 @@ static void init_ssl(void)
 #endif
 }
 
+/* Initialize all subsystems that have global state */
+static int global_init(void) {
+	int error = git_hash_global_init();
+	if (error >= 0)
+		error = git_sysdir_global_init();
+	if (error >= 0)
+		error = git_transport_global_init();
+	return error;
+}
+
 int git_openssl_set_locking(void)
 {
 #ifdef GIT_SSL
@@ -185,8 +196,7 @@ static int synchronized_threads_init(void)
 		return -1;
 
 	/* Initialize any other subsystems that have global state */
-	if ((error = git_hash_global_init()) >= 0)
-		error = git_sysdir_global_init();
+	error = global_init();
 
 	win32_pthread_initialize();
 
@@ -277,8 +287,7 @@ static void init_once(void)
 
 
 	/* Initialize any other subsystems that have global state */
-	if ((init_error = git_hash_global_init()) >= 0)
-		init_error = git_sysdir_global_init();
+	init_error = global_init();
 
 	/* OpenSSL needs to be initialized from the main thread */
 	init_ssl();
