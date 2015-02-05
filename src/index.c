@@ -1082,6 +1082,58 @@ static int index_conflict_to_reuc(git_index *index, const char *path)
 	return ret;
 }
 
+static bool valid_filemode(const int filemode)
+{
+	return (filemode == GIT_FILEMODE_BLOB ||
+		filemode == GIT_FILEMODE_BLOB_EXECUTABLE ||
+		filemode == GIT_FILEMODE_LINK ||
+		filemode == GIT_FILEMODE_COMMIT);
+}
+
+int git_index_add_frombuffer(
+    git_index *index, git_index_entry *source_entry,
+    const void *buffer, size_t len)
+{
+	git_index_entry *entry = NULL;
+	int error = 0;
+	git_oid id;
+
+	assert(index && source_entry->path);
+
+	if (INDEX_OWNER(index) == NULL)
+		return create_index_error(-1,
+			"Could not initialize index entry. "
+			"Index is not backed up by an existing repository.");
+
+	if (!valid_filemode(source_entry->mode)) {
+		giterr_set(GITERR_INDEX, "invalid filemode");
+		return -1;
+	}
+
+	if (index_entry_dup(&entry, INDEX_OWNER(index), source_entry) < 0)
+		return -1;
+
+	error = git_blob_create_frombuffer(&id, INDEX_OWNER(index), buffer, len);
+	if (error < 0) {
+		index_entry_free(entry);
+		return error;
+	}
+
+	git_oid_cpy(&entry->id, &id);
+	entry->file_size = len;
+
+	if ((error = index_insert(index, &entry, 1)) < 0)
+		return error;
+
+	/* Adding implies conflict was resolved, move conflict entries to REUC */
+	if ((error = index_conflict_to_reuc(index, entry->path)) < 0 && error != GIT_ENOTFOUND)
+		return error;
+
+	git_tree_cache_invalidate_path(index->tree, entry->path);
+	return 0;
+}
+
+
 int git_index_add_bypath(git_index *index, const char *path)
 {
 	git_index_entry *entry = NULL;
@@ -1114,14 +1166,6 @@ int git_index_remove_bypath(git_index *index, const char *path)
 		return ret;
 
 	return 0;
-}
-
-static bool valid_filemode(const int filemode)
-{
-	return (filemode == GIT_FILEMODE_BLOB ||
-		filemode == GIT_FILEMODE_BLOB_EXECUTABLE ||
-		filemode == GIT_FILEMODE_LINK ||
-		filemode == GIT_FILEMODE_COMMIT);
 }
 
 

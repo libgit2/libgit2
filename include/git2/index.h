@@ -457,6 +457,38 @@ GIT_EXTERN(int) git_index_entry_stage(const git_index_entry *entry);
 GIT_EXTERN(int) git_index_add_bypath(git_index *index, const char *path);
 
 /**
+ * Add or update an index entry from a buffer in memory
+ *
+ * This method will create a blob in the repository that owns the
+ * index and then add the index entry to the index.  The `path` of the
+ * entry represents the position of the blob relative to the
+ * repository's root folder.
+ *
+ * If a previous index entry exists that has the same path as the
+ * given 'entry', it will be replaced.  Otherwise, the 'entry' will be
+ * added. The `id` and the `file_size` of the 'entry' are updated with the
+ * real value of the blob.
+ *
+ * This forces the file to be added to the index, not looking
+ * at gitignore rules.  Those rules can be evaluated through
+ * the git_status APIs (in status.h) before calling this.
+ *
+ * If this file currently is the result of a merge conflict, this
+ * file will no longer be marked as conflicting.  The data about
+ * the conflict will be moved to the "resolve undo" (REUC) section.
+ *
+ * @param index an existing index object
+ * @param entry filename to add
+ * @param buffer data to be written into the blob
+ * @param len length of the data
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_index_add_frombuffer(
+	git_index *index,
+	git_index_entry *entry,
+	const void *buffer, size_t len);
+
+/**
  * Remove an index entry corresponding to a file on disk
  *
  * The file `path` must be relative to the repository's
