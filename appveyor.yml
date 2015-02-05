@@ -3,6 +3,8 @@ branches:
   only:
   - master
 environment:
+  GITTEST_INVASIVE_FILESYSTEM: 1
+
   matrix:
   - GENERATOR: "Visual Studio 11"
     ARCH: 32
