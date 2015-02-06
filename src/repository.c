@@ -1265,7 +1265,8 @@ static int repo_init_structure(
 		if (opts->template_path)
 			tdir = opts->template_path;
 		else if ((error = git_config_open_default(&cfg)) >= 0) {
-			error = git_config_get_string(&tdir, cfg, "init.templatedir");
+			if (!git_config_get_path(&template_buf, cfg, "init.templatedir"))
+				tdir = template_buf.ptr;
 			giterr_clear();
 		}
 
