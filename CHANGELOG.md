@@ -34,6 +34,25 @@ v0.22 + 1
   file handling during checkout, you may now use `GIT_CHECKOUT_SAFE |
   GIT_CHECKOUT_RECREATE_MISSING`.
 
+* The `git_clone_options` and `git_submodule_update_options`
+  structures no longer have a `signature` field.
+
+* The following functions have removed the signature and/or log message
+  parameters in favour of git-emulating ones.
+
+    * `git_branch_create()`, `git_branch_move()`
+    * `git_rebase_init()`, `git_rebase_abort()`
+    * `git_reference_symbolic_create_matching()`,
+      `git_reference_symbolic_create()`, `git_reference_create()`,
+      `git_reference_create_matching()`,
+      `git_reference_symbolic_set_target()`,
+      `git_reference_set_target()`, `git_reference_rename()`
+    * `git_remote_update_tips()`, `git_remote_fetch()`, `git_remote_push()`
+    * `git_repository_set_head()`,
+      `git_repository_set_head_detached()`,
+      `git_repository_detach_head()`
+    * `git_reset()`
+
 v0.22
 ------
 
