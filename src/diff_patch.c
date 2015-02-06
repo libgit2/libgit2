@@ -120,6 +120,8 @@ static int diff_patch_load(git_patch *patch, git_diff_output *output)
 {
 	int error = 0;
 	bool incomplete_data;
+	bool b_ofile_is_workdir;
+	bool b_nfile_is_workdir;
 
 	if ((patch->flags & GIT_DIFF_PATCH_LOADED) != 0)
 		return 0;
@@ -137,27 +139,30 @@ static int diff_patch_load(git_patch *patch, git_diff_output *output)
 		 ((patch->nfile.flags & GIT_DIFF_FLAG__NO_DATA) != 0 ||
 		  (patch->nfile.file->flags & GIT_DIFF_FLAG_VALID_ID) != 0));
 
+	b_ofile_is_workdir = GIT_ITERATOR_TYPE_IS_WORKDIR_OR_FILELIST(patch->ofile.src);
+	b_nfile_is_workdir = GIT_ITERATOR_TYPE_IS_WORKDIR_OR_FILELIST(patch->nfile.src);
+
 	/* always try to load workdir content first because filtering may
 	 * need 2x data size and this minimizes peak memory footprint
 	 */
-	if (patch->ofile.src == GIT_ITERATOR_TYPE_WORKDIR) {
+	if (b_ofile_is_workdir) {
 		if ((error = git_diff_file_content__load(&patch->ofile)) < 0 ||
 			(patch->ofile.file->flags & GIT_DIFF_FLAG_BINARY) != 0)
 			goto cleanup;
 	}
-	if (patch->nfile.src == GIT_ITERATOR_TYPE_WORKDIR) {
+	if (b_nfile_is_workdir) {
 		if ((error = git_diff_file_content__load(&patch->nfile)) < 0 ||
 			(patch->nfile.file->flags & GIT_DIFF_FLAG_BINARY) != 0)
 			goto cleanup;
 	}
 
 	/* once workdir has been tried, load other data as needed */
-	if (patch->ofile.src != GIT_ITERATOR_TYPE_WORKDIR) {
+	if (!b_ofile_is_workdir) {
 		if ((error = git_diff_file_content__load(&patch->ofile)) < 0 ||
 			(patch->ofile.file->flags & GIT_DIFF_FLAG_BINARY) != 0)
 			goto cleanup;
 	}
-	if (patch->nfile.src != GIT_ITERATOR_TYPE_WORKDIR) {
+	if (!b_nfile_is_workdir) {
 		if ((error = git_diff_file_content__load(&patch->nfile)) < 0 ||
 			(patch->nfile.file->flags & GIT_DIFF_FLAG_BINARY) != 0)
 			goto cleanup;

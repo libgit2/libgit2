@@ -380,7 +380,7 @@ int git_diff_file_content__load(git_diff_file_content *fc)
 	if ((fc->file->flags & GIT_DIFF_FLAG_BINARY) != 0)
 		return 0;
 
-	if (fc->src == GIT_ITERATOR_TYPE_WORKDIR)
+	if (GIT_ITERATOR_TYPE_IS_WORKDIR_OR_FILELIST(fc->src))
 		error = diff_file_content_load_workdir(fc);
 	else
 		error = diff_file_content_load_blob(fc);

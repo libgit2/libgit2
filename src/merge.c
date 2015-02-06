@@ -2358,11 +2358,12 @@ static int merge_check_index(size_t *conflicts, git_repository *repo, git_index 
 			goto done;
 	}
 
+	opts.flags |= GIT_DIFF_ENABLE_FILELIST_MATCH;
 	opts.pathspec.count = staged_paths.length;
 	opts.pathspec.strings = (char **)staged_paths.contents;
 
-	if ((error = git_iterator_for_index(&iter_repo, index_repo, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0 ||
-		(error = git_iterator_for_index(&iter_new, index_new, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0 ||
+	if ((error = git_iterator_for_indexfilelist(&iter_repo, index_repo, &opts.pathspec, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0 ||
+		(error = git_iterator_for_indexfilelist(&iter_new, index_new, &opts.pathspec, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0 ||
 		(error = git_diff__from_iterators(&index_diff_list, repo, iter_repo, iter_new, &opts)) < 0)
 		goto done;
 
@@ -2406,6 +2407,7 @@ static int merge_check_workdir(size_t *conflicts, git_repository *repo, git_inde
 	 * will be applied by the merge (including conflicts).  Ensure that there
 	 * are no changes in the workdir to these paths.
 	 */
+	opts.flags |= GIT_DIFF_ENABLE_FILELIST_MATCH;
 	opts.pathspec.count = merged_paths->length;
 	opts.pathspec.strings = (char **)merged_paths->contents;
 
@@ -2428,7 +2430,7 @@ int git_merge__check_result(git_repository *repo, git_index *index_new)
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_delta *delta;
 	git_vector paths = GIT_VECTOR_INIT;
-	size_t i, index_conflicts = 0, wd_conflicts = 0, conflicts;
+	size_t i, index_conflicts = 0, wd_conflicts = 0, conflicts = 0;
 	const git_index_entry *e;
 	int error = 0;
 
