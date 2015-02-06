@@ -11,6 +11,9 @@
 #include "git2/index.h"
 #include "vector.h"
 #include "buffer.h"
+#if defined(GIT_TRACE_ITERATOR)
+#include "trace.h"
+#endif
 
 typedef struct git_iterator git_iterator;
 
@@ -133,7 +136,13 @@ extern void git_iterator_free(git_iterator *iter);
 GIT_INLINE(int) git_iterator_current(
 	const git_index_entry **entry, git_iterator *iter)
 {
-	return iter->cb->current(entry, iter);
+	int r = iter->cb->current(entry, iter);
+#if defined(GIT_TRACE_ITERATOR)
+	git_trace(GIT_TRACE_TRACE, "git_iterator_current: [iter %p] yields [%d, %p, %s]",
+			  iter, r, *entry,
+			  (((*entry) && ((*entry)->path)) ? ((*entry)->path) : "(null)"));
+#endif
+	return r;
 }
 
 /**
@@ -146,7 +155,14 @@ GIT_INLINE(int) git_iterator_current(
 GIT_INLINE(int) git_iterator_advance(
 	const git_index_entry **entry, git_iterator *iter)
 {
-	return iter->cb->advance(entry, iter);
+	int r = iter->cb->advance(entry, iter);
+#if defined(GIT_TRACE_ITERATOR)
+	git_trace(GIT_TRACE_TRACE, "git_iterator_advance: [iter %p] yields [%d, %p, %s]",
+			  iter, r,
+			  ((entry) ? *entry : NULL),
+			  (((entry) && (*entry) && ((*entry)->path)) ? ((*entry)->path) : "(null)"));
+#endif
+	return r;
 }
 
 /**
@@ -167,7 +183,13 @@ GIT_INLINE(int) git_iterator_advance(
 GIT_INLINE(int) git_iterator_advance_into(
 	const git_index_entry **entry, git_iterator *iter)
 {
-	return iter->cb->advance_into(entry, iter);
+	int r = iter->cb->advance_into(entry, iter);
+#if defined(GIT_TRACE_ITERATOR)
+	git_trace(GIT_TRACE_TRACE, "git_iterator_advance_into: [iter %p] yields [%d, %p, %s]",
+			  iter, r, *entry,
+			  (((*entry) && ((*entry)->path)) ? ((*entry)->path) : "(null)"));
+#endif
+	return r;
 }
 
 /**
@@ -206,7 +228,14 @@ GIT_INLINE(int) git_iterator_seek(
 GIT_INLINE(int) git_iterator_reset(
 	git_iterator *iter, const char *start, const char *end)
 {
-	return iter->cb->reset(iter, start, end);
+	int r = iter->cb->reset(iter, start, end);
+#if defined(GIT_TRACE_ITERATOR)
+	git_trace(GIT_TRACE_TRACE, "git_iterator_reset: [iter %p] yields [%d] '%s' '%s'",
+			  iter, r,
+			  ((start) ? start : "(nil)"),
+			  ((end) ? end : "(nil)"));
+#endif
+	return r;
 }
 
 /**
