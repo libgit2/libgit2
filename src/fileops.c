@@ -174,7 +174,7 @@ int git_futils_readbuffer_updated(
 	 */
 	if (size && *size != (size_t)st.st_size)
 		changed = true;
-	if (mtime && *mtime != st.st_mtime)
+	if (mtime && *mtime != (time_t)st.st_mtime)
 		changed = true;
 	if (!size && !mtime)
 		changed = true;
