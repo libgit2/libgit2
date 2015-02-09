@@ -102,3 +102,25 @@ void test_config_include__missing(void)
 
 	git_config_free(cfg);
 }
+
+#define replicate10(s) s s s s s s s s s s
+void test_config_include__depth2(void)
+{
+	git_config *cfg;
+	const char *str;
+	const char *content = "[include]\n" replicate10(replicate10("path=bottom\n"));
+
+	cl_git_mkfile("top-level", "[include]\npath = middle\n[foo]\nbar = baz");
+	cl_git_mkfile("middle", content);
+	cl_git_mkfile("bottom", "[foo]\nbar2 = baz2");
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "top-level"));
+
+	cl_git_pass(git_config_get_string(&str, cfg, "foo.bar"));
+	cl_assert_equal_s(str, "baz");
+
+	cl_git_pass(git_config_get_string(&str, cfg, "foo.bar2"));
+	cl_assert_equal_s(str, "baz2");
+
+	git_config_free(cfg);
+}
