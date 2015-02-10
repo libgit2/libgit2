@@ -59,9 +59,9 @@ typedef enum {
  * An entry in a configuration file
  */
 typedef struct {
-	const char *name; /* Name of the entry (normalised) */
-	const char *value; /* String value of the entry */
-	git_config_level_t level; /* Which config file this was found in */
+	const char *name; /**< Name of the entry (normalised) */
+	const char *value; /**< String value of the entry */
+	git_config_level_t level; /**< Which config file this was found in */
 } git_config_entry;
 
 typedef int  (*git_config_foreach_cb)(const git_config_entry *, void *);
