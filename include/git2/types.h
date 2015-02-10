@@ -302,9 +302,7 @@ typedef struct {
 /**
  * Callback for the user's custom certificate checks.
  *
- * @param type The type of certificate or host info, SSH or X.509
- * @param data The data for the certificate or host info
- * @param len The size of the certificate or host info
+ * @param cert The host certificate
  * @param valid Whether the libgit2 checks (OpenSSL or WinHTTP) think
  * this certificate is valid
  * @param host Hostname of the host libgit2 connected to

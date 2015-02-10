@@ -156,7 +156,7 @@ GIT_EXTERN(int) git_rebase_init(
  * invocation of `git_rebase_init` or by another client.
  *
  * @param out Pointer to store the rebase object
- * @param reop The repository that has a rebase in-progress
+ * @param repo The repository that has a rebase in-progress
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_rebase_open(git_rebase **out, git_repository *repo);
@@ -195,8 +195,8 @@ GIT_EXTERN(git_rebase_operation *) git_rebase_operation_byindex(
  * working directory will be updated with the changes.  If there are conflicts,
  * you will need to address those before committing the changes.
  *
- * @param out Pointer to store the rebase operation that is to be performed next
- * @param repo The rebase in progress
+ * @param operation Pointer to store the rebase operation that is to be performed next
+ * @param rebase The rebase in progress
  * @param checkout_opts Options to specify how the patch should be checked out
  * @return Zero on success; -1 on failure.
  */
@@ -211,7 +211,7 @@ GIT_EXTERN(int) git_rebase_next(
  * invocation.
  *
  * @param id Pointer in which to store the OID of the newly created commit
- * @param repo The rebase that is in-progress
+ * @param rebase The rebase that is in-progress
  * @param author The author of the updated commit, or NULL to keep the
  *        author from the original commit
  * @param committer The committer of the rebase
@@ -255,7 +255,7 @@ GIT_EXTERN(int) git_rebase_abort(
  * @param rebase The rebase that is in-progress
  * @param signature The identity that is finishing the rebase (optional)
  * @param opts Options to specify how rebase is finished
- * @param Zero on success; -1 on error
+ * @return Zero on success; -1 on error
  */
 GIT_EXTERN(int) git_rebase_finish(
 	git_rebase *rebase,
