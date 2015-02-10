@@ -1558,8 +1558,10 @@ int git_diff_format_email(
 			goto on_error;
 		}
 
+		GITERR_CHECK_ALLOC_ADD(offset, 1);
 		summary = git__calloc(offset + 1, sizeof(char));
 		GITERR_CHECK_ALLOC(summary);
+
 		strncpy(summary, opts->summary, offset);
 	}
 

@@ -1178,7 +1178,7 @@ static int winhttp_stream_alloc(winhttp_subtransport *t, winhttp_stream **stream
 	if (!stream)
 		return -1;
 
-	s = git__calloc(sizeof(winhttp_stream), 1);
+	s = git__calloc(1, sizeof(winhttp_stream));
 	GITERR_CHECK_ALLOC(s);
 
 	s->parent.subtransport = &t->parent;
@@ -1329,7 +1329,7 @@ int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *own
 	if (!out)
 		return -1;
 
-	t = git__calloc(sizeof(winhttp_subtransport), 1);
+	t = git__calloc(1, sizeof(winhttp_subtransport));
 	GITERR_CHECK_ALLOC(t);
 
 	t->owner = (transport_smart *)owner;

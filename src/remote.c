@@ -383,10 +383,9 @@ int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 	if ((error = git_repository_config_snapshot(&config, repo)) < 0)
 		return error;
 
-	remote = git__malloc(sizeof(git_remote));
+	remote = git__calloc(1, sizeof(git_remote));
 	GITERR_CHECK_ALLOC(remote);
 
-	memset(remote, 0x0, sizeof(git_remote));
 	remote->update_fetchhead = 1;
 	remote->name = git__strdup(name);
 	GITERR_CHECK_ALLOC(remote->name);

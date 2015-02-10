@@ -29,6 +29,8 @@ int git_buf_text_puts_escaped(
 		scan += count;
 	}
 
+	GITERR_CHECK_ALLOC_ADD(buf->size, total);
+	GITERR_CHECK_ALLOC_ADD(buf->size + total, 1);
 	if (git_buf_grow(buf, buf->size + total + 1) < 0)
 		return -1;
 
@@ -73,8 +75,10 @@ int git_buf_text_crlf_to_lf(git_buf *tgt, const git_buf *src)
 		return git_buf_set(tgt, src->ptr, src->size);
 
 	/* reduce reallocs while in the loop */
+	GITERR_CHECK_ALLOC_ADD(src->size, 1);
 	if (git_buf_grow(tgt, src->size + 1) < 0)
 		return -1;
+
 	out = tgt->ptr;
 	tgt->size = 0;
 
@@ -117,19 +121,25 @@ int git_buf_text_lf_to_crlf(git_buf *tgt, const git_buf *src)
 		return git_buf_set(tgt, src->ptr, src->size);
 
 	/* attempt to reduce reallocs while in the loop */
+	GITERR_CHECK_ALLOC_ADD(src->size, src->size >> 4);
+	GITERR_CHECK_ALLOC_ADD(src->size + (src->size >> 4), 1);
 	if (git_buf_grow(tgt, src->size + (src->size >> 4) + 1) < 0)
 		return -1;
 	tgt->size = 0;
 
 	for (; next; scan = next + 1, next = memchr(scan, '\n', end - scan)) {
 		size_t copylen = next - scan;
-		size_t needsize = tgt->size + copylen + 2 + 1;
+		size_t needsize;
 
 		/* if we find mixed line endings, bail */
 		if (next > start && next[-1] == '\r') {
 			git_buf_free(tgt);
 			return GIT_PASSTHROUGH;
 		}
+
+		GITERR_CHECK_ALLOC_ADD(tgt->size, copylen);
+		GITERR_CHECK_ALLOC_ADD(tgt->size + copylen, 3);
+		needsize = tgt->size + copylen + 3;
 
 		if (tgt->asize < needsize && git_buf_grow(tgt, needsize) < 0)
 			return -1;

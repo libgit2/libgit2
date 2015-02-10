@@ -99,9 +99,8 @@ int git__utf8_to_16_alloc(wchar_t **dest, const char *src)
 		return -1;
 	}
 
-	*dest = git__malloc(utf16_size * sizeof(wchar_t));
-
-	if (!*dest) {
+	if (GIT_ALLOC_OVERFLOW_MULTIPLY(utf16_size, sizeof(wchar_t)) ||
+		!(*dest = git__malloc(utf16_size * sizeof(wchar_t)))) {
 		errno = ENOMEM;
 		return -1;
 	}

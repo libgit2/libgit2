@@ -903,9 +903,11 @@ static char *reader_readline(struct reader *reader, bool skip_whitespace)
 
 	line_len = line_end - line_src;
 
-	line = git__malloc(line_len + 1);
-	if (line == NULL)
+	if (GIT_ALLOC_OVERFLOW_ADD(line_len, 1) ||
+		(line = git__malloc(line_len + 1)) == NULL) {
+		giterr_set_oom();
 		return NULL;
+	}
 
 	memcpy(line, line_src, line_len);
 
@@ -958,6 +960,8 @@ static int parse_section_header_ext(struct reader *reader, const char *line, con
 	int c, rpos;
 	char *first_quote, *last_quote;
 	git_buf buf = GIT_BUF_INIT;
+	size_t quoted_len, base_name_len = strlen(base_name);
+
 	/*
 	 * base_name is what came before the space. We should be at the
 	 * first quotation mark, except for now, line isn't being kept in
@@ -966,13 +970,17 @@ static int parse_section_header_ext(struct reader *reader, const char *line, con
 
 	first_quote = strchr(line, '"');
 	last_quote = strrchr(line, '"');
+	quoted_len = last_quote - first_quote;
 
-	if (last_quote - first_quote == 0) {
+	if (quoted_len == 0) {
 		set_parse_error(reader, 0, "Missing closing quotation mark in section header");
 		return -1;
 	}
 
-	git_buf_grow(&buf, strlen(base_name) + last_quote - first_quote + 2);
+	GITERR_CHECK_ALLOC_ADD(base_name_len, quoted_len);
+	GITERR_CHECK_ALLOC_ADD(base_name_len + quoted_len, 2);
+
+	git_buf_grow(&buf, base_name_len + quoted_len + 2);
 	git_buf_printf(&buf, "%s.", base_name);
 
 	rpos = 0;
@@ -1029,6 +1037,7 @@ static int parse_section_header(struct reader *reader, char **section_out)
 	int name_length, c, pos;
 	int result;
 	char *line;
+	size_t line_len;
 
 	line = reader_readline(reader, true);
 	if (line == NULL)
@@ -1042,7 +1051,10 @@ static int parse_section_header(struct reader *reader, char **section_out)
 		return -1;
 	}
 
-	name = (char *)git__malloc((size_t)(name_end - line) + 1);
+	line_len = (size_t)(name_end - line);
+
+	GITERR_CHECK_ALLOC_ADD(line_len, 1);
+	name = git__malloc(line_len);
 	GITERR_CHECK_ALLOC(name);
 
 	name_length = 0;
@@ -1603,11 +1615,16 @@ static char *escape_value(const char *ptr)
 /* '\"' -> '"' etc */
 static char *fixup_line(const char *ptr, int quote_count)
 {
-	char *str = git__malloc(strlen(ptr) + 1);
-	char *out = str, *esc;
+	char *str, *out, *esc;
+	size_t ptr_len = strlen(ptr);
 
-	if (str == NULL)
+	if (GIT_ALLOC_OVERFLOW_ADD(ptr_len, 1) ||
+		(str = git__malloc(ptr_len + 1)) == NULL) {
+		giterr_set_oom();
 		return NULL;
+	}
+
+	out = str;
 
 	while (*ptr != '\0') {
 		if (*ptr == '"') {

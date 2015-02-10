@@ -74,6 +74,7 @@ int git__delta_apply(
 		return -1;
 	}
 
+	GITERR_CHECK_ALLOC_ADD(res_sz, 1);
 	res_dp = git__malloc(res_sz + 1);
 	GITERR_CHECK_ALLOC(res_dp);
 

@@ -201,7 +201,11 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 		return 0;
 
 	if (pb->nr_objects >= pb->nr_alloc) {
+		GITERR_CHECK_ALLOC_ADD(pb->nr_alloc, 1024);
+		GITERR_CHECK_ALLOC_MULTIPLY(pb->nr_alloc + 1024, 3 / 2);
 		pb->nr_alloc = (pb->nr_alloc + 1024) * 3 / 2;
+
+		GITERR_CHECK_ALLOC_MULTIPLY(pb->nr_alloc, sizeof(*po));
 		pb->object_list = git__realloc(pb->object_list,
 					       pb->nr_alloc * sizeof(*po));
 		GITERR_CHECK_ALLOC(pb->object_list);
@@ -499,8 +503,13 @@ static int cb_tag_foreach(const char *name, git_oid *oid, void *data)
 static git_pobject **compute_write_order(git_packbuilder *pb)
 {
 	unsigned int i, wo_end, last_untagged;
+	git_pobject **wo;
 
-	git_pobject **wo = git__malloc(sizeof(*wo) * pb->nr_objects);
+	if (GIT_ALLOC_OVERFLOW_MULTIPLY(pb->nr_objects, sizeof(*wo)) ||
+		(wo = git__malloc(pb->nr_objects * sizeof(*wo))) == NULL) {
+		giterr_set_oom();
+		return NULL;
+	}
 
 	for (i = 0; i < pb->nr_objects; i++) {
 		git_pobject *po = pb->object_list + i;
@@ -770,10 +779,13 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 		*mem_usage += sz;
 	}
 	if (!src->data) {
-		if (git_odb_read(&obj, pb->odb, &src_object->id) < 0)
+		size_t obj_sz;
+
+		if (git_odb_read(&obj, pb->odb, &src_object->id) < 0 ||
+			!git__is_ulong(obj_sz = git_odb_object_size(obj)))
 			return -1;
 
-		sz = (unsigned long)git_odb_object_size(obj);
+		sz = (unsigned long)obj_sz;
 		src->data = git__malloc(sz);
 		GITERR_CHECK_ALLOC(src->data);
 		memcpy(src->data, git_odb_object_data(obj), sz);
@@ -817,7 +829,9 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 		trg_object->delta_data = NULL;
 	}
 	if (delta_cacheable(pb, src_size, trg_size, delta_size)) {
+		GITERR_CHECK_ALLOC_ADD(pb->delta_cache_size, delta_size);
 		pb->delta_cache_size += delta_size;
+
 		git_packbuilder__cache_unlock(pb);
 
 		trg_object->delta_data = git__realloc(delta_buf, delta_size);
@@ -1088,6 +1102,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 		return 0;
 	}
 
+	GITERR_CHECK_ALLOC_MULTIPLY(pb->nr_threads, sizeof(*p));
 	p = git__malloc(pb->nr_threads * sizeof(*p));
 	GITERR_CHECK_ALLOC(p);
 
@@ -1239,6 +1254,7 @@ static int prepare_pack(git_packbuilder *pb)
 	if (pb->progress_cb)
 			pb->progress_cb(GIT_PACKBUILDER_DELTAFICATION, 0, pb->nr_objects, pb->progress_cb_payload);
 
+	GITERR_CHECK_ALLOC_MULTIPLY(pb->nr_objects, sizeof(*delta_list));
 	delta_list = git__malloc(pb->nr_objects * sizeof(*delta_list));
 	GITERR_CHECK_ALLOC(delta_list);
 

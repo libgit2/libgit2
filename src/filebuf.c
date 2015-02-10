@@ -271,6 +271,7 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags, mode_t mode
 		GITERR_CHECK_ALLOC(file->path_original);
 
 		/* create the locking path by appending ".lock" to the original */
+		GITERR_CHECK_ALLOC_ADD(path_len, GIT_FILELOCK_EXTLENGTH);
 		file->path_lock = git__malloc(path_len + GIT_FILELOCK_EXTLENGTH);
 		GITERR_CHECK_ALLOC(file->path_lock);
 
@@ -437,8 +438,8 @@ int git_filebuf_printf(git_filebuf *file, const char *format, ...)
 
 	} while ((size_t)len + 1 <= space_left);
 
-	tmp_buffer = git__malloc(len + 1);
-	if (!tmp_buffer) {
+	if (GIT_ALLOC_OVERFLOW_ADD(len, 1) ||
+		!(tmp_buffer = git__malloc(len + 1))) {
 		file->last_error = BUFERR_MEM;
 		return -1;
 	}

@@ -314,7 +314,7 @@ static int note_new(
 {
 	git_note *note = NULL;
 
-	note = (git_note *)git__malloc(sizeof(git_note));
+	note = git__malloc(sizeof(git_note));
 	GITERR_CHECK_ALLOC(note);
 
 	git_oid_cpy(&note->id, note_oid);

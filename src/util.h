@@ -64,7 +64,12 @@ GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 
 	length = p_strnlen(str, n);
 
-	ptr = (char*)git__malloc(length + 1);
+	if (GIT_ALLOC_OVERFLOW_ADD(length, 1)) {
+		giterr_set_oom();
+		return NULL;
+	}
+
+	ptr = git__malloc(length + 1);
 
 	if (!ptr)
 		return NULL;
@@ -80,7 +85,13 @@ GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 /* NOTE: This doesn't do null or '\0' checking.  Watch those boundaries! */
 GIT_INLINE(char *) git__substrdup(const char *start, size_t n)
 {
-	char *ptr = (char*)git__malloc(n+1);
+	char *ptr;
+
+	if (GIT_ALLOC_OVERFLOW_ADD(n, 1) || !(ptr = git__malloc(n+1))) {
+		giterr_set_oom();
+		return NULL;
+	}
+
 	memcpy(ptr, start, n);
 	ptr[n] = '\0';
 	return ptr;

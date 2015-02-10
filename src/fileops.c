@@ -127,6 +127,7 @@ int git_futils_readbuffer_fd(git_buf *buf, git_file fd, size_t len)
 
 	git_buf_clear(buf);
 
+	GITERR_CHECK_ALLOC_ADD(len, 1);
 	if (git_buf_grow(buf, len + 1) < 0)
 		return -1;
 
@@ -708,7 +709,10 @@ static int cp_link(const char *from, const char *to, size_t link_size)
 {
 	int error = 0;
 	ssize_t read_len;
-	char *link_data = git__malloc(link_size + 1);
+	char *link_data;
+
+	GITERR_CHECK_ALLOC_ADD(link_size, 1);
+	link_data = git__malloc(link_size + 1);
 	GITERR_CHECK_ALLOC(link_data);
 
 	read_len = p_readlink(from, link_data, link_size);

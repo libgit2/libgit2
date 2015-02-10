@@ -779,7 +779,9 @@ static int index_entry_create(
 		return -1;
 	}
 
-	entry = git__calloc(sizeof(struct entry_internal) + pathlen + 1, 1);
+	GITERR_CHECK_ALLOC_ADD(sizeof(struct entry_internal), pathlen);
+	GITERR_CHECK_ALLOC_ADD(sizeof(struct entry_internal) + pathlen, 1);
+	entry = git__calloc(1, sizeof(struct entry_internal) + pathlen + 1);
 	GITERR_CHECK_ALLOC(entry);
 
 	entry->pathlen = pathlen;
@@ -826,9 +828,17 @@ static int index_entry_init(
 
 static git_index_reuc_entry *reuc_entry_alloc(const char *path)
 {
-	size_t pathlen = strlen(path);
-	struct reuc_entry_internal *entry =
-		git__calloc(sizeof(struct reuc_entry_internal) + pathlen + 1, 1);
+	size_t pathlen = strlen(path),
+		structlen = sizeof(struct reuc_entry_internal);
+	struct reuc_entry_internal *entry;
+
+	if (GIT_ALLOC_OVERFLOW_ADD(structlen, pathlen) ||
+		GIT_ALLOC_OVERFLOW_ADD(structlen + pathlen, 1)) {
+		giterr_set_oom();
+		return NULL;
+	}
+
+	entry = git__calloc(1, structlen + pathlen + 1);
 	if (!entry)
 		return NULL;
 

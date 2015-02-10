@@ -622,7 +622,9 @@ static bool _check_dir_contents(
 	size_t sub_size = strlen(sub);
 
 	/* leave base valid even if we could not make space for subdir */
-	if (git_buf_try_grow(dir, dir_size + sub_size + 2, false, false) < 0)
+	if (GIT_ALLOC_OVERFLOW_ADD(dir_size, sub_size) ||
+		GIT_ALLOC_OVERFLOW_ADD(dir_size + sub_size, 2) ||
+		git_buf_try_grow(dir, dir_size + sub_size + 2, false, false) < 0)
 		return false;
 
 	/* save excursion */
@@ -822,6 +824,9 @@ int git_path_make_relative(git_buf *path, const char *parent)
 	for (; (q = strchr(q, '/')) && *(q + 1); q++)
 		depth++;
 
+	GITERR_CHECK_ALLOC_MULTIPLY(depth, 3);
+	GITERR_CHECK_ALLOC_ADD(depth * 3, plen);
+	GITERR_CHECK_ALLOC_ADD(depth * 3, 1);
 	newlen = (depth * 3) + plen;
 
 	/* save the offset as we might realllocate the pointer */
@@ -881,6 +886,7 @@ int git_path_iconv(git_path_iconv_t *ic, char **in, size_t *inlen)
 	git_buf_clear(&ic->buf);
 
 	while (1) {
+		GITERR_CHECK_ALLOC_ADD(wantlen, 1);
 		if (git_buf_grow(&ic->buf, wantlen + 1) < 0)
 			return -1;
 
@@ -1057,6 +1063,45 @@ int git_path_direach(
 	return error;
 }
 
+static int entry_path_alloc(
+	char **out,
+	const char *path,
+	size_t path_len,
+	const char *de_path,
+	size_t de_len,
+	size_t alloc_extra)
+{
+	int need_slash = (path_len > 0 && path[path_len-1] != '/') ? 1 : 0;
+	size_t alloc_size = path_len;
+	char *entry_path;
+
+	GITERR_CHECK_ALLOC_ADD(alloc_size, de_len);
+	alloc_size += de_len;
+
+	GITERR_CHECK_ALLOC_ADD(alloc_size, need_slash);
+	alloc_size += need_slash;
+
+	GITERR_CHECK_ALLOC_ADD(alloc_size, 1);
+	alloc_size++;
+
+	GITERR_CHECK_ALLOC_ADD(alloc_size, alloc_extra);
+	alloc_size += alloc_extra;
+
+	entry_path = git__calloc(1, alloc_size);
+	GITERR_CHECK_ALLOC(entry_path);
+
+	if (path_len)
+		memcpy(entry_path, path, path_len);
+
+	if (need_slash)
+		entry_path[path_len] = '/';
+
+	memcpy(&entry_path[path_len + need_slash], de_path, de_len);
+
+	*out = entry_path;
+	return 0;
+}
+
 int git_path_dirload(
 	const char *path,
 	size_t prefix_len,
@@ -1064,7 +1109,7 @@ int git_path_dirload(
 	unsigned int flags,
 	git_vector *contents)
 {
-	int error, need_slash;
+	int error;
 	DIR *dir;
 	size_t path_len;
 	path_dirent_data de_data;
@@ -1096,11 +1141,10 @@ int git_path_dirload(
 
 	path += prefix_len;
 	path_len -= prefix_len;
-	need_slash = (path_len > 0 && path[path_len-1] != '/') ? 1 : 0;
 
 	while ((error = p_readdir_r(dir, de_buf, &de)) == 0 && de != NULL) {
 		char *entry_path, *de_path = de->d_name;
-		size_t alloc_size, de_len = strlen(de_path);
+		size_t de_len = strlen(de_path);
 
 		if (git_path_is_dot_or_dotdot(de_path))
 			continue;
@@ -1110,17 +1154,9 @@ int git_path_dirload(
 			break;
 #endif
 
-		alloc_size = path_len + need_slash + de_len + 1 + alloc_extra;
-		if ((entry_path = git__calloc(alloc_size, 1)) == NULL) {
-			error = -1;
+		if ((error = entry_path_alloc(&entry_path,
+				path, path_len, de_path, de_len, alloc_extra)) < 0)
 			break;
-		}
-
-		if (path_len)
-			memcpy(entry_path, path, path_len);
-		if (need_slash)
-			entry_path[path_len] = '/';
-		memcpy(&entry_path[path_len + need_slash], de_path, de_len);
 
 		if ((error = git_vector_insert(contents, entry_path)) < 0) {
 			git__free(entry_path);

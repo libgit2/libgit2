@@ -380,7 +380,7 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 	if (!param)
 		return -1;
 
-	t = git__calloc(sizeof(transport_smart), 1);
+	t = git__calloc(1, sizeof(transport_smart));
 	GITERR_CHECK_ALLOC(t);
 
 	t->parent.version = GIT_TRANSPORT_VERSION;

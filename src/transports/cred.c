@@ -311,6 +311,9 @@ int git_cred_username_new(git_cred **cred, const char *username)
 	assert(cred);
 
 	len = strlen(username);
+
+	GITERR_CHECK_ALLOC_ADD(sizeof(git_cred_username), len);
+	GITERR_CHECK_ALLOC_ADD(sizeof(git_cred_username) + len, 1);
 	c = git__malloc(sizeof(git_cred_username) + len + 1);
 	GITERR_CHECK_ALLOC(c);
 
