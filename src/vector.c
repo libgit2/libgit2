@@ -29,14 +29,9 @@ GIT_INLINE(size_t) compute_new_size(git_vector *v)
 
 GIT_INLINE(int) resize_vector(git_vector *v, size_t new_size)
 {
-	size_t new_bytes;
 	void *new_contents;
 
-	/* Check for overflow */
-	GITERR_CHECK_ALLOC_MULTIPLY(new_size, sizeof(void *));
-	new_bytes = new_size * sizeof(void *);
-
-	new_contents = git__realloc(v->contents, new_bytes);
+	new_contents = git__reallocarray(v->contents, new_size, sizeof(void *));
 	GITERR_CHECK_ALLOC(new_contents);
 
 	v->_alloc_size = new_size;

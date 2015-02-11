@@ -186,8 +186,7 @@ static int resize(struct tsort_store *store, size_t new_size)
 	if (store->alloc < new_size) {
 		void **tempstore;
 
-		GITERR_CHECK_ALLOC_MULTIPLY(new_size, sizeof(void *));
-		tempstore = git__realloc(store->storage, new_size * sizeof(void *));
+		tempstore = git__reallocarray(store->storage, new_size, sizeof(void *));
 
 		/**
 		 * Do not propagate on OOM; this will abort the sort and

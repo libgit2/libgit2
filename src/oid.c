@@ -261,8 +261,7 @@ struct git_oid_shorten {
 
 static int resize_trie(git_oid_shorten *self, size_t new_size)
 {
-	GITERR_CHECK_ALLOC_MULTIPLY(new_size, sizeof(trie_node));
-	self->nodes = git__realloc(self->nodes, new_size * sizeof(trie_node));
+	self->nodes = git__reallocarray(self->nodes, new_size, sizeof(trie_node));
 	GITERR_CHECK_ALLOC(self->nodes);
 
 	if (new_size > self->size) {

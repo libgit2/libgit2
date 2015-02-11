@@ -104,6 +104,28 @@ GIT_INLINE(void *) git__realloc(void *ptr, size_t size)
 	return new_ptr;
 }
 
+/**
+ * Similar to `git__realloc`, except that it is suitable for reallocing an
+ * array to a new number of elements of `nelem`, each of size `elsize`.
+ * The total size calculation is checked for overflow.
+ */
+GIT_INLINE(void *) git__reallocarray(void *ptr, size_t nelem, size_t elsize)
+{
+	void *new_ptr = NULL;
+	if (GIT_ALLOC_OVERFLOW_MULTIPLY(nelem, elsize) ||
+		!(new_ptr = realloc(ptr, nelem * elsize)))
+		giterr_set_oom();
+	return new_ptr;
+}
+
+/**
+ * Similar to `git__calloc`, except that it does not zero memory.
+ */
+GIT_INLINE(void *) git__mallocarray(size_t nelem, size_t elsize)
+{
+	return git__reallocarray(NULL, nelem, elsize);
+}
+
 GIT_INLINE(void) git__free(void *ptr)
 {
 	free(ptr);
