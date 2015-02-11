@@ -494,7 +494,6 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 
 	while (!error && !git_iterator_advance(&entry, fsit)) {
 		const char *ref_name;
-		struct packref *ref;
 		char *ref_dup;
 
 		git_buf_truncate(&path, strlen(GIT_REFS_DIR));
@@ -504,12 +503,6 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 		if (git__suffixcmp(ref_name, ".lock") == 0 ||
 			(iter->glob && p_fnmatch(iter->glob, ref_name, 0) != 0))
 			continue;
-
-		git_sortedcache_rlock(backend->refcache);
-		ref = git_sortedcache_lookup(backend->refcache, ref_name);
-		if (ref)
-			ref->flags |= PACKREF_SHADOWED;
-		git_sortedcache_runlock(backend->refcache);
 
 		ref_dup = git_pool_strdup(&iter->pool, ref_name);
 		if (!ref_dup)
@@ -522,6 +515,21 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 	git_buf_free(&path);
 
 	return error;
+}
+
+static void iter_shadow_packed_refs(refdb_fs_backend *backend, refdb_fs_iter *iter)
+{
+	struct packref *ref;
+
+	while (iter->loose_pos < iter->loose.length) {
+		const char *path = git_vector_get(&iter->loose, iter->loose_pos++);
+		git_sortedcache_rlock(backend->refcache);
+		ref = git_sortedcache_lookup(backend->refcache, path);
+		if (ref)
+			ref->flags |= PACKREF_SHADOWED;
+		git_sortedcache_runlock(backend->refcache);
+	}
+	iter->loose_pos = 0;
 }
 
 static int refdb_fs_backend__iterator_next(
@@ -616,8 +624,6 @@ static int refdb_fs_backend__iterator(
 
 	assert(backend);
 
-	if (packed_reload(backend) < 0)
-		return -1;
 
 	iter = git__calloc(1, sizeof(refdb_fs_iter));
 	GITERR_CHECK_ALLOC(iter);
@@ -634,8 +640,17 @@ static int refdb_fs_backend__iterator(
 	iter->parent.next_name = refdb_fs_backend__iterator_next_name;
 	iter->parent.free = refdb_fs_backend__iterator_free;
 
+	/* Loose refs must be read before reloading the packed refs to
+	 * avoid a race condition in which loose refs are being packed
+	 * by another process.
+	 */
 	if (iter_load_loose_paths(backend, iter) < 0)
 		goto fail;
+
+	if (packed_reload(backend) < 0)
+		goto fail;
+
+	iter_shadow_packed_refs(backend, iter);
 
 	*out = (git_reference_iterator *)iter;
 	return 0;
