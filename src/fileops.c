@@ -330,7 +330,7 @@ int git_futils_mkdir_withperf(
 {
 	int error = -1;
 	git_buf make_path = GIT_BUF_INIT;
-	ssize_t root = 0, min_root_len;
+	ssize_t root = 0, min_root_len, root_len;
 	char lastch = '/', *tail;
 	struct stat st;
 
@@ -343,22 +343,29 @@ int git_futils_mkdir_withperf(
 		goto done;
 	}
 
-	/* remove trailing slashes on path */
-	while (make_path.ptr[make_path.size - 1] == '/') {
-		make_path.size--;
-		make_path.ptr[make_path.size] = '\0';
-	}
+	/* Trim trailing slashes (except the root) */
+	if ((root_len = git_path_root(make_path.ptr)) < 0)
+		root_len = 0;
+	else
+		root_len++;
+
+	while (make_path.size > (size_t)root_len &&
+		make_path.ptr[make_path.size - 1] == '/')
+		make_path.ptr[--make_path.size] = '\0';
 
 	/* if we are not supposed to made the last element, truncate it */
 	if ((flags & GIT_MKDIR_SKIP_LAST2) != 0) {
-		git_buf_rtruncate_at_char(&make_path, '/');
+		git_path_dirname_r(&make_path, make_path.ptr);
 		flags |= GIT_MKDIR_SKIP_LAST;
 	}
-	if ((flags & GIT_MKDIR_SKIP_LAST) != 0)
-		git_buf_rtruncate_at_char(&make_path, '/');
+	if ((flags & GIT_MKDIR_SKIP_LAST) != 0) {
+		git_path_dirname_r(&make_path, make_path.ptr);
+	}
 
-	/* if nothing left after truncation, then we're done! */
-	if (!make_path.size) {
+	/* We were either given the root path (or trimmed it to
+	 * the root), we don't have anything to do.
+	 */
+	if (make_path.size <= (size_t)root_len) {
 		error = 0;
 		goto done;
 	}
