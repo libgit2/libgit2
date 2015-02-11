@@ -58,6 +58,7 @@
 #include "git2/types.h"
 #include "git2/errors.h"
 #include "thread-utils.h"
+#include "integer.h"
 
 #include <regex.h>
 
@@ -174,13 +175,14 @@ GIT_INLINE(void) git__init_structure(void *structure, size_t len, unsigned int v
 	GITERR_CHECK_VERSION(&(VERSION), _tmpl.version, #TYPE);	\
 	memcpy((PTR), &_tmpl, sizeof(_tmpl)); } while (0)
 
+
 /** Check for integer overflow from addition or multiplication */
 #define GIT_ALLOC_OVERFLOW_ADD(one, two) \
-	(((one) + (two) < (one)) ? (giterr_set_oom(), 1) : 0)
+	(!git__add_sizet_overflow(NULL, (one), (two)) ? (giterr_set_oom(), 1) : 0)
 
 /** Check for integer overflow from multiplication */
 #define GIT_ALLOC_OVERFLOW_MULTIPLY(one, two) \
-	((one && ((one) * (two)) / (one) != (two)) ? (giterr_set_oom(), 1) : 0)
+	(!git__multiply_sizet_overflow(NULL, (one), (two)) ? (giterr_set_oom(), 1) : 0)
 
 /** Check for additive overflow, failing if it would occur. */
 #define GITERR_CHECK_ALLOC_ADD(one, two) \

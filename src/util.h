@@ -146,34 +146,6 @@ extern int git__strtol64(int64_t *n, const char *buff, const char **end_buf, int
 extern void git__hexdump(const char *buffer, size_t n);
 extern uint32_t git__hash(const void *key, int len, uint32_t seed);
 
-/** @return true if p fits into the range of a size_t */
-GIT_INLINE(int) git__is_sizet(git_off_t p)
-{
-	size_t r = (size_t)p;
-	return p == (git_off_t)r;
-}
-
-/** @return true if p fits into the range of an ssize_t */
-GIT_INLINE(int) git__is_ssizet(size_t p)
-{
-	ssize_t r = (ssize_t)p;
-	return p == (size_t)r;
-}
-
-/** @return true if p fits into the range of a uint32_t */
-GIT_INLINE(int) git__is_uint32(size_t p)
-{
-	uint32_t r = (uint32_t)p;
-	return p == (size_t)r;
-}
-
-/** @return true if p fits into the range of an unsigned long */
-GIT_INLINE(int) git__is_ulong(git_off_t p)
-{
-	unsigned long r = (unsigned long)p;
-	return p == (git_off_t)r;
-}
-
 /* 32-bit cross-platform rotl */
 #ifdef _MSC_VER /* use built-in method in MSVC */
 #	define git__rotl(v, s) (uint32_t)_rotl(v, s)
