@@ -29,3 +29,13 @@ void test_buf_oom__grow(void)
 
 	git_buf_free(&buf);
 }
+
+void test_buf_oom__grow_by(void)
+{
+	git_buf buf = GIT_BUF_INIT;
+
+	buf.size = SIZE_MAX-10;
+
+	cl_assert(git_buf_grow_by(&buf, 50) == -1);
+	cl_assert(git_buf_oom(&buf));
+}

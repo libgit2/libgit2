@@ -101,6 +101,18 @@ int git_buf_grow(git_buf *buffer, size_t target_size)
 	return git_buf_try_grow(buffer, target_size, true, true);
 }
 
+int git_buf_grow_by(git_buf *buffer, size_t additional_size)
+{
+	if (GIT_ALLOC_OVERFLOW_ADD(buffer->size, additional_size)) {
+		buffer->ptr = git_buf__oom;
+		giterr_set_oom();
+		return -1;
+	}
+
+	return git_buf_try_grow(
+		buffer, buffer->size + additional_size, true, true);	
+}
+
 void git_buf_free(git_buf *buf)
 {
 	if (!buf) return;
@@ -515,9 +527,8 @@ int git_buf_join_n(git_buf *buf, char separator, int nbuf, ...)
 	if (total_size == 0)
 		return 0;
 
-	GITERR_CHECK_ALLOC_ADD(buf->size, total_size);
-	GITERR_CHECK_ALLOC_ADD(buf->size + total_size, 1);
-	if (git_buf_grow(buf, buf->size + total_size + 1) < 0)
+	GITERR_CHECK_ALLOC_ADD(total_size, 1);
+	if (git_buf_grow_by(buf, total_size + 1) < 0)
 		return -1;
 
 	out = buf->ptr + buf->size;

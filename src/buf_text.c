@@ -29,9 +29,8 @@ int git_buf_text_puts_escaped(
 		scan += count;
 	}
 
-	GITERR_CHECK_ALLOC_ADD(buf->size, total);
-	GITERR_CHECK_ALLOC_ADD(buf->size + total, 1);
-	if (git_buf_grow(buf, buf->size + total + 1) < 0)
+	GITERR_CHECK_ALLOC_ADD(total, 1);
+	if (git_buf_grow_by(buf, total + 1) < 0)
 		return -1;
 
 	for (scan = string; *scan; ) {
@@ -129,7 +128,6 @@ int git_buf_text_lf_to_crlf(git_buf *tgt, const git_buf *src)
 
 	for (; next; scan = next + 1, next = memchr(scan, '\n', end - scan)) {
 		size_t copylen = next - scan;
-		size_t needsize;
 
 		/* if we find mixed line endings, bail */
 		if (next > start && next[-1] == '\r') {
@@ -137,11 +135,8 @@ int git_buf_text_lf_to_crlf(git_buf *tgt, const git_buf *src)
 			return GIT_PASSTHROUGH;
 		}
 
-		GITERR_CHECK_ALLOC_ADD(tgt->size, copylen);
-		GITERR_CHECK_ALLOC_ADD(tgt->size + copylen, 3);
-		needsize = tgt->size + copylen + 3;
-
-		if (tgt->asize < needsize && git_buf_grow(tgt, needsize) < 0)
+		GITERR_CHECK_ALLOC_ADD(copylen, 3);
+		if (git_buf_grow_by(tgt, copylen + 3) < 0)
 			return -1;
 
 		if (next > scan) {

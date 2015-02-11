@@ -513,7 +513,7 @@ static int buffer_want_with_caps(const git_remote_head *head, transport_smart_ca
 	len = (unsigned int)
 		(strlen("XXXXwant ") + GIT_OID_HEXSZ + 1 /* NUL */ +
 		 git_buf_len(&str) + 1 /* LF */);
-	git_buf_grow(buf, git_buf_len(buf) + len);
+	git_buf_grow_by(buf, len);
 	git_oid_fmt(oid, &head->oid);
 	git_buf_printf(buf, "%04xwant %s %s\n", len, oid, git_buf_cstr(&str));
 	git_buf_free(&str);
