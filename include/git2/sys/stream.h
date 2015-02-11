@@ -37,4 +37,6 @@ typedef struct git_stream {
 	void (*free)(struct git_stream *);
 } git_stream;
 
+GIT_END_DECL
+
 #endif
