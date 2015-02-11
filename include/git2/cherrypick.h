@@ -29,8 +29,8 @@ typedef struct {
 	/** For merge commits, the "mainline" is treated as the parent. */
 	unsigned int mainline;
 
-	git_merge_options merge_opts; /*< Options for the merging */
-	git_checkout_options checkout_opts; /*< Options for the checkout */
+	git_merge_options merge_opts; /**< Options for the merging */
+	git_checkout_options checkout_opts; /**< Options for the checkout */
 } git_cherrypick_options;
 
 #define GIT_CHERRYPICK_OPTIONS_VERSION 1

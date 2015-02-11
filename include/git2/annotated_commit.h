@@ -44,7 +44,7 @@ GIT_EXTERN(int) git_annotated_commit_from_ref(
  * @param repo repository that contains the given commit
  * @param branch_name name of the (remote) branch
  * @param remote_url url of the remote
- * @param oid the commit object id of the remote branch
+ * @param id the commit object id of the remote branch
  * @return 0 on success or error code
  */
 GIT_EXTERN(int) git_annotated_commit_from_fetchhead(
@@ -80,7 +80,7 @@ GIT_EXTERN(int) git_annotated_commit_lookup(
 /**
  * Gets the commit ID that the given `git_annotated_commit` refers to.
  *
- * @param head the given annotated commit
+ * @param commit the given annotated commit
  * @return commit id
  */
 GIT_EXTERN(const git_oid *) git_annotated_commit_id(
@@ -89,7 +89,7 @@ GIT_EXTERN(const git_oid *) git_annotated_commit_id(
 /**
  * Frees a `git_annotated_commit`.
  *
- * @param annotated_commit annotated commit to free
+ * @param commit annotated commit to free
  */
 GIT_EXTERN(void) git_annotated_commit_free(
 	git_annotated_commit *commit);

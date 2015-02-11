@@ -292,7 +292,7 @@ GIT_EXTERN(int) git_cred_username_new(git_cred **cred, const char *username);
  *
  * - cred: The newly created credential object.
  * - url: The resource for which we are demanding a credential.
- * - username_from_url: The username that was embedded in a "user@host"
+ * - username_from_url: The username that was embedded in a "user\@host"
  *                          remote url, or NULL if not included.
  * - allowed_types: A bitmask stating which cred types are OK to return.
  * - payload: The payload provided when specifying this callback.

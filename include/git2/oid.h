@@ -123,7 +123,7 @@ GIT_EXTERN(void) git_oid_pathfmt(char *out, const git_oid *id);
  * will be stored in TLS (i.e. one buffer per thread) to allow for
  * concurrent calls of the function.
  *
- * @param id the oid structure to format
+ * @param oid The oid structure to format
  * @return the c-string
  */
 GIT_EXTERN(char *) git_oid_tostr_s(const git_oid *oid);
