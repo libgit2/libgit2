@@ -905,7 +905,6 @@ static char *reader_readline(struct reader *reader, bool skip_whitespace)
 
 	if (GIT_ALLOC_OVERFLOW_ADD(line_len, 1) ||
 		(line = git__malloc(line_len + 1)) == NULL) {
-		giterr_set_oom();
 		return NULL;
 	}
 
@@ -1620,7 +1619,6 @@ static char *fixup_line(const char *ptr, int quote_count)
 
 	if (GIT_ALLOC_OVERFLOW_ADD(ptr_len, 1) ||
 		(str = git__malloc(ptr_len + 1)) == NULL) {
-		giterr_set_oom();
 		return NULL;
 	}
 

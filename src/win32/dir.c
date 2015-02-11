@@ -20,10 +20,8 @@ git__DIR *git__opendir(const char *dir)
 
 	if (GIT_ALLOC_OVERFLOW_ADD(sizeof(*new), dirlen) ||
 		GIT_ALLOC_OVERFLOW_ADD(sizeof(*new) + dirlen, 1) ||
-		!(new = git__calloc(1, sizeof(*new) + dirlen + 1))) {
-		giterr_set_oom();
+		!(new = git__calloc(1, sizeof(*new) + dirlen + 1)))
 		return NULL;
-	}
 
 	memcpy(new->dir, dir, dirlen);
 

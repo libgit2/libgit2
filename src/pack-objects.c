@@ -504,10 +504,8 @@ static git_pobject **compute_write_order(git_packbuilder *pb)
 	unsigned int i, wo_end, last_untagged;
 	git_pobject **wo;
 
-	if ((wo = git__mallocarray(pb->nr_objects, sizeof(*wo))) == NULL) {
-		giterr_set_oom();
+	if ((wo = git__mallocarray(pb->nr_objects, sizeof(*wo))) == NULL)
 		return NULL;
-	}
 
 	for (i = 0; i < pb->nr_objects; i++) {
 		git_pobject *po = pb->object_list + i;

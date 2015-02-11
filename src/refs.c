@@ -41,10 +41,8 @@ static git_reference *alloc_ref(const char *name)
 
 	if (GIT_ALLOC_OVERFLOW_ADD(reflen, namelen) ||
 		GIT_ALLOC_OVERFLOW_ADD(reflen + namelen, 1) ||
-		(ref = git__calloc(1, reflen + namelen + 1)) == NULL) {
-		giterr_set_oom();
+		(ref = git__calloc(1, reflen + namelen + 1)) == NULL)
 		return NULL;
-	}
 
 	memcpy(ref->name, name, namelen + 1);
 

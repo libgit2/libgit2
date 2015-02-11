@@ -117,10 +117,8 @@ static void *pool_alloc_page(git_pool *pool, uint32_t size)
 	}
 
 	if (GIT_ALLOC_OVERFLOW_ADD(alloc_size, sizeof(git_pool_page)) ||
-		!(page = git__calloc(1, alloc_size + sizeof(git_pool_page)))) {
-		giterr_set_oom();
+		!(page = git__calloc(1, alloc_size + sizeof(git_pool_page))))
 		return NULL;
-	}
 
 	page->size  = alloc_size;
 	page->avail = alloc_size - size;

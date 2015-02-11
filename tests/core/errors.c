@@ -149,3 +149,24 @@ void test_core_errors__integer_overflow_alloc_add(void)
 	cl_assert_equal_i(GITERR_NOMEMORY, giterr_last()->klass);
 	cl_assert_equal_s("Out of memory", giterr_last()->message);
 }
+
+void test_core_errors__integer_overflow_sets_oom(void)
+{
+	giterr_clear();
+	cl_assert(!GIT_ALLOC_OVERFLOW_ADD(SIZE_MAX-1, 1));
+	cl_assert_equal_p(NULL, giterr_last());
+
+	giterr_clear();
+	cl_assert(!GIT_ALLOC_OVERFLOW_ADD(42, 69));
+	cl_assert_equal_p(NULL, giterr_last());
+
+	giterr_clear();
+	cl_assert(GIT_ALLOC_OVERFLOW_ADD(SIZE_MAX, SIZE_MAX));
+	cl_assert_equal_i(GITERR_NOMEMORY, giterr_last()->klass);
+	cl_assert_equal_s("Out of memory", giterr_last()->message);
+
+	giterr_clear();
+	cl_assert(GIT_ALLOC_OVERFLOW_MULTIPLY(SIZE_MAX, SIZE_MAX));
+	cl_assert_equal_i(GITERR_NOMEMORY, giterr_last()->klass);
+	cl_assert_equal_s("Out of memory", giterr_last()->message);
+}

@@ -89,10 +89,8 @@ static git_tree_entry *alloc_entry(const char *filename)
 
 	if (GIT_ALLOC_OVERFLOW_ADD(tree_len, filename_len) ||
 		GIT_ALLOC_OVERFLOW_ADD(tree_len + filename_len, 1) ||
-		!(entry = git__malloc(tree_len + filename_len + 1))) {
-		giterr_set_oom();
+		!(entry = git__malloc(tree_len + filename_len + 1)))
 		return NULL;
-	}
 
 	memset(entry, 0x0, sizeof(git_tree_entry));
 	memcpy(entry->filename, filename, filename_len);

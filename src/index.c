@@ -833,10 +833,8 @@ static git_index_reuc_entry *reuc_entry_alloc(const char *path)
 	struct reuc_entry_internal *entry;
 
 	if (GIT_ALLOC_OVERFLOW_ADD(structlen, pathlen) ||
-		GIT_ALLOC_OVERFLOW_ADD(structlen + pathlen, 1)) {
-		giterr_set_oom();
+		GIT_ALLOC_OVERFLOW_ADD(structlen + pathlen, 1))
 		return NULL;
-	}
 
 	entry = git__calloc(1, structlen + pathlen + 1);
 	if (!entry)

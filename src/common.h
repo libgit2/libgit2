@@ -176,25 +176,19 @@ GIT_INLINE(void) git__init_structure(void *structure, size_t len, unsigned int v
 
 /** Check for integer overflow from addition or multiplication */
 #define GIT_ALLOC_OVERFLOW_ADD(one, two) \
-	((one) + (two) < (one))
+	(((one) + (two) < (one)) ? (giterr_set_oom(), 1) : 0)
 
 /** Check for integer overflow from multiplication */
 #define GIT_ALLOC_OVERFLOW_MULTIPLY(one, two) \
-	(one && ((one) * (two)) / (one) != (two))
+	((one && ((one) * (two)) / (one) != (two)) ? (giterr_set_oom(), 1) : 0)
 
 /** Check for additive overflow, failing if it would occur. */
 #define GITERR_CHECK_ALLOC_ADD(one, two) \
-	if (GIT_ALLOC_OVERFLOW_ADD(one, two)) { \
-		giterr_set_oom(); \
-		return -1; \
-	}
+	if (GIT_ALLOC_OVERFLOW_ADD(one, two)) { return -1; }
 
 /** Check for multiplicative overflow, failing if it would occur. */
 #define GITERR_CHECK_ALLOC_MULTIPLY(nelem, elsize) \
-	if (GIT_ALLOC_OVERFLOW_MULTIPLY(nelem, elsize)) { \
-		giterr_set_oom(); \
-		return -1; \
-	}
+	if (GIT_ALLOC_OVERFLOW_MULTIPLY(nelem, elsize)) { return -1; }
 
 /* NOTE: other giterr functions are in the public errors.h header file */
 

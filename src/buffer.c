@@ -105,7 +105,6 @@ int git_buf_grow_by(git_buf *buffer, size_t additional_size)
 {
 	if (GIT_ALLOC_OVERFLOW_ADD(buffer->size, additional_size)) {
 		buffer->ptr = git_buf__oom;
-		giterr_set_oom();
 		return -1;
 	}
 
