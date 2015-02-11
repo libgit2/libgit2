@@ -216,28 +216,28 @@ int git_odb__hashfd_filtered(
 int git_odb__hashlink(git_oid *out, const char *path)
 {
 	struct stat st;
-	git_off_t size;
+	size_t size;
 	int result;
 
 	if (git_path_lstat(path, &st) < 0)
 		return -1;
 
-	size = st.st_size;
-
-	if (!git__is_sizet(size)) {
-		giterr_set(GITERR_OS, "File size overflow for 32-bit systems");
+	if (!git__is_sizet(st.st_size)) {
+		giterr_set(GITERR_FILESYSTEM, "File size overflow for 32-bit systems");
 		return -1;
 	}
+
+	size = (size_t)st.st_size;
 
 	if (S_ISLNK(st.st_mode)) {
 		char *link_data;
 		ssize_t read_len;
 
 		GITERR_CHECK_ALLOC_ADD(size, 1);
-		link_data = git__malloc((size_t)(size + 1));
+		link_data = git__malloc(size + 1);
 		GITERR_CHECK_ALLOC(link_data);
 
-		read_len = p_readlink(path, link_data, (size_t)size);
+		read_len = p_readlink(path, link_data, size);
 		link_data[size] = '\0';
 		if (read_len != (ssize_t)size) {
 			giterr_set(GITERR_OS, "Failed to read symlink data for '%s'", path);
@@ -245,13 +245,13 @@ int git_odb__hashlink(git_oid *out, const char *path)
 			return -1;
 		}
 
-		result = git_odb_hash(out, link_data, (size_t)size, GIT_OBJ_BLOB);
+		result = git_odb_hash(out, link_data, size, GIT_OBJ_BLOB);
 		git__free(link_data);
 	} else {
 		int fd = git_futils_open_ro(path);
 		if (fd < 0)
 			return -1;
-		result = git_odb__hashfd(out, fd, (size_t)size, GIT_OBJ_BLOB);
+		result = git_odb__hashfd(out, fd, size, GIT_OBJ_BLOB);
 		p_close(fd);
 	}
 
