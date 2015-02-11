@@ -23,7 +23,7 @@
  *
  *     typedef git_array_t(my_struct) my_struct_array_t;
  */
-#define git_array_t(type) struct { type *ptr; uint32_t size, asize; }
+#define git_array_t(type) struct { type *ptr; size_t size, asize; }
 
 #define GIT_ARRAY_INIT { NULL, 0, 0 }
 
@@ -45,7 +45,7 @@ typedef git_array_t(char) git_array_generic_t;
 GIT_INLINE(void *) git_array_grow(void *_a, size_t item_size)
 {
 	volatile git_array_generic_t *a = _a;
-	uint32_t new_size;
+	size_t new_size;
 	char *new_array;
 
 	if (a->size < 8) {

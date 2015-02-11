@@ -484,7 +484,7 @@ static int buffer_want_with_caps(const git_remote_head *head, transport_smart_ca
 {
 	git_buf str = GIT_BUF_INIT;
 	char oid[GIT_OID_HEXSZ +1] = {0};
-	unsigned int len;
+	size_t len;
 
 	/* Prefer multi_ack_detailed */
 	if (caps->multi_ack_detailed)
@@ -510,12 +510,19 @@ static int buffer_want_with_caps(const git_remote_head *head, transport_smart_ca
 	if (git_buf_oom(&str))
 		return -1;
 
-	len = (unsigned int)
-		(strlen("XXXXwant ") + GIT_OID_HEXSZ + 1 /* NUL */ +
-		 git_buf_len(&str) + 1 /* LF */);
+	len = strlen("XXXXwant ") + GIT_OID_HEXSZ + 1 /* NUL */ +
+		 git_buf_len(&str) + 1 /* LF */;
+
+	if (len > 0xffff) {
+		giterr_set(GITERR_NET,
+			"Tried to produce packet with invalid length %d", len);
+		return -1;
+	}
+
 	git_buf_grow_by(buf, len);
 	git_oid_fmt(oid, &head->oid);
-	git_buf_printf(buf, "%04xwant %s %s\n", len, oid, git_buf_cstr(&str));
+	git_buf_printf(buf,
+		"%04xwant %s %s\n", (unsigned int)len, oid, git_buf_cstr(&str));
 	git_buf_free(&str);
 
 	return git_buf_oom(buf);

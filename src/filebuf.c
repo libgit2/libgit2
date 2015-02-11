@@ -408,8 +408,8 @@ int git_filebuf_reserve(git_filebuf *file, void **buffer, size_t len)
 int git_filebuf_printf(git_filebuf *file, const char *format, ...)
 {
 	va_list arglist;
-	size_t space_left;
-	int len, res;
+	size_t space_left, len;
+	int written, res;
 	char *tmp_buffer;
 
 	ENSURE_BUF_OK(file);
@@ -418,15 +418,16 @@ int git_filebuf_printf(git_filebuf *file, const char *format, ...)
 
 	do {
 		va_start(arglist, format);
-		len = p_vsnprintf((char *)file->buffer + file->buf_pos, space_left, format, arglist);
+		written = p_vsnprintf((char *)file->buffer + file->buf_pos, space_left, format, arglist);
 		va_end(arglist);
 
-		if (len < 0) {
+		if (written < 0) {
 			file->last_error = BUFERR_MEM;
 			return -1;
 		}
 
-		if ((size_t)len + 1 <= space_left) {
+		len = written;
+		if (len + 1 <= space_left) {
 			file->buf_pos += len;
 			return 0;
 		}
@@ -436,7 +437,7 @@ int git_filebuf_printf(git_filebuf *file, const char *format, ...)
 
 		space_left = file->buf_size - file->buf_pos;
 
-	} while ((size_t)len + 1 <= space_left);
+	} while (len + 1 <= space_left);
 
 	if (GIT_ALLOC_OVERFLOW_ADD(len, 1) ||
 		!(tmp_buffer = git__malloc(len + 1))) {
