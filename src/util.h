@@ -153,6 +153,13 @@ GIT_INLINE(int) git__is_sizet(git_off_t p)
 	return p == (git_off_t)r;
 }
 
+/** @return true if p fits into the range of an ssize_t */
+GIT_INLINE(int) git__is_ssizet(size_t p)
+{
+	ssize_t r = (ssize_t)p;
+	return p == (size_t)r;
+}
+
 /** @return true if p fits into the range of a uint32_t */
 GIT_INLINE(int) git__is_uint32(size_t p)
 {

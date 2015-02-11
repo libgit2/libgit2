@@ -155,6 +155,14 @@ ssize_t p_read(git_file fd, void *buf, size_t cnt)
 {
 	char *b = buf;
 
+	if (!git__is_ssizet(cnt)) {
+#ifdef GIT_WIN32
+		SetLastError(ERROR_INVALID_PARAMETER);
+#endif
+		errno = EINVAL;
+		return -1;
+	}
+
 	while (cnt) {
 		ssize_t r;
 #ifdef GIT_WIN32
@@ -229,7 +237,9 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 	out->data = malloc(len);
 	GITERR_CHECK_ALLOC(out->data);
 
-	if ((p_lseek(fd, offset, SEEK_SET) < 0) || ((size_t)p_read(fd, out->data, len) != len)) {
+	if (!git__is_ssizet(len) ||
+		(p_lseek(fd, offset, SEEK_SET) < 0) ||
+		(p_read(fd, out->data, len) != (ssize_t)len)) {
 		giterr_set(GITERR_OS, "mmap emulation failed");
 		return -1;
 	}

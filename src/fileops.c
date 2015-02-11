@@ -127,6 +127,11 @@ int git_futils_readbuffer_fd(git_buf *buf, git_file fd, size_t len)
 
 	git_buf_clear(buf);
 
+	if (!git__is_ssizet(len)) {
+		giterr_set(GITERR_INVALID, "Read too large.");
+		return -1;
+	}
+
 	GITERR_CHECK_ALLOC_ADD(len, 1);
 	if (git_buf_grow(buf, len + 1) < 0)
 		return -1;
