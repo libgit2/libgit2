@@ -194,7 +194,7 @@ static int write_deflate(git_filebuf *file, void *source, size_t len)
 int git_filebuf_open(git_filebuf *file, const char *path, int flags, mode_t mode)
 {
 	int compression, error = -1;
-	size_t path_len;
+	size_t path_len, alloc_len;
 
 	/* opening an already open buffer is a programming error;
 	 * assert that this never happens instead of returning
@@ -271,8 +271,8 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags, mode_t mode
 		GITERR_CHECK_ALLOC(file->path_original);
 
 		/* create the locking path by appending ".lock" to the original */
-		GITERR_CHECK_ALLOC_ADD(path_len, GIT_FILELOCK_EXTLENGTH);
-		file->path_lock = git__malloc(path_len + GIT_FILELOCK_EXTLENGTH);
+		GITERR_CHECK_ALLOC_ADD(&alloc_len, path_len, GIT_FILELOCK_EXTLENGTH);
+		file->path_lock = git__malloc(alloc_len);
 		GITERR_CHECK_ALLOC(file->path_lock);
 
 		memcpy(file->path_lock, file->path_original, path_len);
@@ -408,7 +408,7 @@ int git_filebuf_reserve(git_filebuf *file, void **buffer, size_t len)
 int git_filebuf_printf(git_filebuf *file, const char *format, ...)
 {
 	va_list arglist;
-	size_t space_left, len;
+	size_t space_left, len, alloclen;
 	int written, res;
 	char *tmp_buffer;
 
@@ -439,8 +439,8 @@ int git_filebuf_printf(git_filebuf *file, const char *format, ...)
 
 	} while (len + 1 <= space_left);
 
-	if (GIT_ALLOC_OVERFLOW_ADD(len, 1) ||
-		!(tmp_buffer = git__malloc(len + 1))) {
+	if (GIT_ADD_SIZET_OVERFLOW(&alloclen, len, 1) ||
+		!(tmp_buffer = git__malloc(alloclen))) {
 		file->last_error = BUFERR_MEM;
 		return -1;
 	}

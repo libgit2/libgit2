@@ -59,17 +59,13 @@ GIT_INLINE(char *) git__strdup(const char *str)
 
 GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 {
-	size_t length = 0;
+	size_t length = 0, alloclength;
 	char *ptr;
 
 	length = p_strnlen(str, n);
 
-	if (GIT_ALLOC_OVERFLOW_ADD(length, 1))
-		return NULL;
-
-	ptr = git__malloc(length + 1);
-
-	if (!ptr)
+	if (GIT_ADD_SIZET_OVERFLOW(&alloclength, length, 1) ||
+		!(ptr = git__malloc(alloclength)))
 		return NULL;
 
 	if (length)
@@ -84,8 +80,10 @@ GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 GIT_INLINE(char *) git__substrdup(const char *start, size_t n)
 {
 	char *ptr;
+	size_t alloclen;
 
-	if (GIT_ALLOC_OVERFLOW_ADD(n, 1) || !(ptr = git__malloc(n+1)))
+	if (GIT_ADD_SIZET_OVERFLOW(&alloclen, n, 1) ||
+		!(ptr = git__malloc(alloclen)))
 		return NULL;
 
 	memcpy(ptr, start, n);
@@ -107,8 +105,9 @@ GIT_INLINE(void *) git__realloc(void *ptr, size_t size)
  */
 GIT_INLINE(void *) git__reallocarray(void *ptr, size_t nelem, size_t elsize)
 {
-	return GIT_ALLOC_OVERFLOW_MULTIPLY(nelem, elsize) ?
-		NULL : realloc(ptr, nelem * elsize);
+	size_t newsize;
+	return GIT_MULTIPLY_SIZET_OVERFLOW(&newsize, nelem, elsize) ?
+		NULL : realloc(ptr, newsize);
 }
 
 /**

@@ -1169,8 +1169,7 @@ int git_merge_diff_list__find_renames(
 		goto done;
 
 	if (diff_list->conflicts.length <= opts->target_limit) {
-		GITERR_CHECK_ALLOC_MULTIPLY(diff_list->conflicts.length, 3);
-		cache_size = diff_list->conflicts.length * 3;
+		GITERR_CHECK_ALLOC_MULTIPLY(&cache_size, diff_list->conflicts.length, 3);
 		cache = git__calloc(cache_size, sizeof(void *));
 		GITERR_CHECK_ALLOC(cache);
 
@@ -2224,13 +2223,13 @@ static int merge_ancestor_head(
 	size_t their_heads_len)
 {
 	git_oid *oids, ancestor_oid;
-	size_t i;
+	size_t i, alloc_len;
 	int error = 0;
 
 	assert(repo && our_head && their_heads);
 
-	GITERR_CHECK_ALLOC_ADD(their_heads_len, 1);
-	oids = git__calloc(their_heads_len + 1, sizeof(git_oid));
+	GITERR_CHECK_ALLOC_ADD(&alloc_len, their_heads_len, 1);
+	oids = git__calloc(alloc_len, sizeof(git_oid));
 	GITERR_CHECK_ALLOC(oids);
 
 	git_oid_cpy(&oids[0], git_commit_id(our_head->commit));

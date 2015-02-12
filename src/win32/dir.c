@@ -11,16 +11,16 @@ git__DIR *git__opendir(const char *dir)
 {
 	git_win32_path filter_w;
 	git__DIR *new = NULL;
-	size_t dirlen;
+	size_t dirlen, alloclen;
 
 	if (!dir || !git_win32__findfirstfile_filter(filter_w, dir))
 		return NULL;
 
 	dirlen = strlen(dir);
 
-	if (GIT_ALLOC_OVERFLOW_ADD(sizeof(*new), dirlen) ||
-		GIT_ALLOC_OVERFLOW_ADD(sizeof(*new) + dirlen, 1) ||
-		!(new = git__calloc(1, sizeof(*new) + dirlen + 1)))
+	if (GIT_ADD_SIZET_OVERFLOW(&alloclen, sizeof(*new), dirlen) ||
+		GIT_ADD_SIZET_OVERFLOW(&alloclen, alloclen, 1) ||
+		!(new = git__calloc(1, alloclen)))
 		return NULL;
 
 	memcpy(new->dir, dir, dirlen);

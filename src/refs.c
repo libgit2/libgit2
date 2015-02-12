@@ -36,15 +36,13 @@ enum {
 
 static git_reference *alloc_ref(const char *name)
 {
-	git_reference *ref;
-	size_t namelen = strlen(name), reflen = sizeof(git_reference);
+	git_reference *ref = NULL;
+	size_t namelen = strlen(name), reflen;
 
-	if (GIT_ALLOC_OVERFLOW_ADD(reflen, namelen) ||
-		GIT_ALLOC_OVERFLOW_ADD(reflen + namelen, 1) ||
-		(ref = git__calloc(1, reflen + namelen + 1)) == NULL)
-		return NULL;
-
-	memcpy(ref->name, name, namelen + 1);
+	if (!GIT_ADD_SIZET_OVERFLOW(&reflen, sizeof(git_reference), namelen) &&
+		!GIT_ADD_SIZET_OVERFLOW(&reflen, reflen, 1) &&
+		(ref = git__calloc(1, reflen)) != NULL)
+		memcpy(ref->name, name, namelen + 1);
 
 	return ref;
 }
@@ -96,12 +94,12 @@ git_reference *git_reference__set_name(
 	git_reference *ref, const char *name)
 {
 	size_t namelen = strlen(name);
-	size_t reflen = sizeof(git_reference);
+	size_t reflen;
 	git_reference *rewrite = NULL;
 
-	if (!GIT_ALLOC_OVERFLOW_ADD(reflen, namelen) &&
-		!GIT_ALLOC_OVERFLOW_ADD(reflen + namelen, 1) &&
-		(rewrite = git__realloc(ref, reflen + namelen + 1)) != NULL)
+	if (!GIT_ADD_SIZET_OVERFLOW(&reflen, sizeof(git_reference), namelen) &&
+		!GIT_ADD_SIZET_OVERFLOW(&reflen, reflen, 1) &&
+		(rewrite = git__realloc(ref, reflen)) != NULL)
 		memcpy(rewrite->name, name, namelen + 1);
 
 	return rewrite;

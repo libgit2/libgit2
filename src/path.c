@@ -620,11 +620,12 @@ static bool _check_dir_contents(
 	bool result;
 	size_t dir_size = git_buf_len(dir);
 	size_t sub_size = strlen(sub);
+	size_t alloc_size;
 
 	/* leave base valid even if we could not make space for subdir */
-	if (GIT_ALLOC_OVERFLOW_ADD(dir_size, sub_size) ||
-		GIT_ALLOC_OVERFLOW_ADD(dir_size + sub_size, 2) ||
-		git_buf_try_grow(dir, dir_size + sub_size + 2, false, false) < 0)
+	if (GIT_ADD_SIZET_OVERFLOW(&alloc_size, dir_size, sub_size) ||
+		GIT_ADD_SIZET_OVERFLOW(&alloc_size, alloc_size, 2) ||
+		git_buf_try_grow(dir, alloc_size, false, false) < 0)
 		return false;
 
 	/* save excursion */
@@ -786,7 +787,7 @@ int git_path_cmp(
 int git_path_make_relative(git_buf *path, const char *parent)
 {
 	const char *p, *q, *p_dirsep, *q_dirsep;
-	size_t plen = path->size, newlen, depth = 1, i, offset;
+	size_t plen = path->size, newlen, alloclen, depth = 1, i, offset;
 
 	for (p_dirsep = p = path->ptr, q_dirsep = q = parent; *p && *q; p++, q++) {
 		if (*p == '/' && *q == '/') {
@@ -824,14 +825,14 @@ int git_path_make_relative(git_buf *path, const char *parent)
 	for (; (q = strchr(q, '/')) && *(q + 1); q++)
 		depth++;
 
-	GITERR_CHECK_ALLOC_MULTIPLY(depth, 3);
-	GITERR_CHECK_ALLOC_ADD(depth * 3, plen);
-	GITERR_CHECK_ALLOC_ADD(depth * 3, 1);
-	newlen = (depth * 3) + plen;
+	GITERR_CHECK_ALLOC_MULTIPLY(&newlen, depth, 3);
+	GITERR_CHECK_ALLOC_ADD(&newlen, newlen, plen);
+
+	GITERR_CHECK_ALLOC_ADD(&alloclen, newlen, 1);
 
 	/* save the offset as we might realllocate the pointer */
 	offset = p - path->ptr;
-	if (git_buf_try_grow(path, newlen + 1, 1, 0) < 0)
+	if (git_buf_try_grow(path, alloclen, 1, 0) < 0)
 		return -1;
 	p = path->ptr + offset;
 
@@ -876,7 +877,7 @@ void git_path_iconv_clear(git_path_iconv_t *ic)
 int git_path_iconv(git_path_iconv_t *ic, char **in, size_t *inlen)
 {
 	char *nfd = *in, *nfc;
-	size_t nfdlen = *inlen, nfclen, wantlen = nfdlen, rv;
+	size_t nfdlen = *inlen, nfclen, wantlen = nfdlen, alloclen, rv;
 	int retry = 1;
 
 	if (!ic || ic->map == (iconv_t)-1 ||
@@ -886,8 +887,8 @@ int git_path_iconv(git_path_iconv_t *ic, char **in, size_t *inlen)
 	git_buf_clear(&ic->buf);
 
 	while (1) {
-		GITERR_CHECK_ALLOC_ADD(wantlen, 1);
-		if (git_buf_grow(&ic->buf, wantlen + 1) < 0)
+		GITERR_CHECK_ALLOC_ADD(&alloclen, wantlen, 1);
+		if (git_buf_grow(&ic->buf, alloclen) < 0)
 			return -1;
 
 		nfc    = ic->buf.ptr   + ic->buf.size;
@@ -1072,21 +1073,13 @@ static int entry_path_alloc(
 	size_t alloc_extra)
 {
 	int need_slash = (path_len > 0 && path[path_len-1] != '/') ? 1 : 0;
-	size_t alloc_size = path_len;
+	size_t alloc_size;
 	char *entry_path;
 
-	GITERR_CHECK_ALLOC_ADD(alloc_size, de_len);
-	alloc_size += de_len;
-
-	GITERR_CHECK_ALLOC_ADD(alloc_size, need_slash);
-	alloc_size += need_slash;
-
-	GITERR_CHECK_ALLOC_ADD(alloc_size, 1);
-	alloc_size++;
-
-	GITERR_CHECK_ALLOC_ADD(alloc_size, alloc_extra);
-	alloc_size += alloc_extra;
-
+	GITERR_CHECK_ALLOC_ADD(&alloc_size, path_len, de_len);
+	GITERR_CHECK_ALLOC_ADD(&alloc_size, alloc_size, need_slash);
+	GITERR_CHECK_ALLOC_ADD(&alloc_size, alloc_size, 1);
+	GITERR_CHECK_ALLOC_ADD(&alloc_size, alloc_size, alloc_extra);
 	entry_path = git__calloc(1, alloc_size);
 	GITERR_CHECK_ALLOC(entry_path);
 

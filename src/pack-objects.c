@@ -202,9 +202,8 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 		return 0;
 
 	if (pb->nr_objects >= pb->nr_alloc) {
-		GITERR_CHECK_ALLOC_ADD(pb->nr_alloc, 1024);
-		GITERR_CHECK_ALLOC_MULTIPLY(pb->nr_alloc + 1024, 3 / 2);
-		newsize = (pb->nr_alloc + 1024) * 3 / 2;
+		GITERR_CHECK_ALLOC_ADD(&newsize, pb->nr_alloc, 1024);
+		GITERR_CHECK_ALLOC_MULTIPLY(&newsize, newsize, 3 / 2);
 
 		if (!git__is_uint32(newsize)) {
 			giterr_set(GITERR_NOMEMORY, "Packfile too large to fit in memory.");
@@ -833,7 +832,7 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 		trg_object->delta_data = NULL;
 	}
 	if (delta_cacheable(pb, src_size, trg_size, delta_size)) {
-		if (!git__add_uint64_overflow(&pb->delta_cache_size, pb->delta_cache_size, delta_size))
+		if (git__add_uint64_overflow(&pb->delta_cache_size, pb->delta_cache_size, delta_size))
 			return -1;
 
 		git_packbuilder__cache_unlock(pb);

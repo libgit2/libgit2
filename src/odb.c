@@ -216,30 +216,31 @@ int git_odb__hashfd_filtered(
 int git_odb__hashlink(git_oid *out, const char *path)
 {
 	struct stat st;
-	size_t size;
+	int size;
 	int result;
 
 	if (git_path_lstat(path, &st) < 0)
 		return -1;
 
-	if (!git__is_sizet(st.st_size)) {
+	if (!git__is_int(st.st_size) || (int)st.st_size < 0) {
 		giterr_set(GITERR_FILESYSTEM, "File size overflow for 32-bit systems");
 		return -1;
 	}
 
-	size = (size_t)st.st_size;
+	size = (int)st.st_size;
 
 	if (S_ISLNK(st.st_mode)) {
 		char *link_data;
-		ssize_t read_len;
+		int read_len;
+		size_t alloc_size;
 
-		GITERR_CHECK_ALLOC_ADD(size, 1);
-		link_data = git__malloc(size + 1);
+		GITERR_CHECK_ALLOC_ADD(&alloc_size, size, 1);
+		link_data = git__malloc(alloc_size);
 		GITERR_CHECK_ALLOC(link_data);
 
 		read_len = p_readlink(path, link_data, size);
 		link_data[size] = '\0';
-		if (read_len != (ssize_t)size) {
+		if (read_len != size) {
 			giterr_set(GITERR_OS, "Failed to read symlink data for '%s'", path);
 			git__free(link_data);
 			return -1;

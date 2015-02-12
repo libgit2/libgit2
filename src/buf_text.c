@@ -13,7 +13,7 @@ int git_buf_text_puts_escaped(
 	const char *esc_with)
 {
 	const char *scan;
-	size_t total = 0, esc_len = strlen(esc_with), count;
+	size_t total = 0, esc_len = strlen(esc_with), count, alloclen;
 
 	if (!string)
 		return 0;
@@ -29,8 +29,8 @@ int git_buf_text_puts_escaped(
 		scan += count;
 	}
 
-	GITERR_CHECK_ALLOC_ADD(total, 1);
-	if (git_buf_grow_by(buf, total + 1) < 0)
+	GITERR_CHECK_ALLOC_ADD(&alloclen, total, 1);
+	if (git_buf_grow_by(buf, alloclen) < 0)
 		return -1;
 
 	for (scan = string; *scan; ) {
@@ -66,6 +66,7 @@ int git_buf_text_crlf_to_lf(git_buf *tgt, const git_buf *src)
 	const char *scan = src->ptr;
 	const char *scan_end = src->ptr + src->size;
 	const char *next = memchr(scan, '\r', src->size);
+	size_t new_size;
 	char *out;
 
 	assert(tgt != src);
@@ -74,8 +75,8 @@ int git_buf_text_crlf_to_lf(git_buf *tgt, const git_buf *src)
 		return git_buf_set(tgt, src->ptr, src->size);
 
 	/* reduce reallocs while in the loop */
-	GITERR_CHECK_ALLOC_ADD(src->size, 1);
-	if (git_buf_grow(tgt, src->size + 1) < 0)
+	GITERR_CHECK_ALLOC_ADD(&new_size, src->size, 1);
+	if (git_buf_grow(tgt, new_size) < 0)
 		return -1;
 
 	out = tgt->ptr;
@@ -113,6 +114,7 @@ int git_buf_text_lf_to_crlf(git_buf *tgt, const git_buf *src)
 	const char *end = start + src->size;
 	const char *scan = start;
 	const char *next = memchr(scan, '\n', src->size);
+	size_t alloclen;
 
 	assert(tgt != src);
 
@@ -120,9 +122,9 @@ int git_buf_text_lf_to_crlf(git_buf *tgt, const git_buf *src)
 		return git_buf_set(tgt, src->ptr, src->size);
 
 	/* attempt to reduce reallocs while in the loop */
-	GITERR_CHECK_ALLOC_ADD(src->size, src->size >> 4);
-	GITERR_CHECK_ALLOC_ADD(src->size + (src->size >> 4), 1);
-	if (git_buf_grow(tgt, src->size + (src->size >> 4) + 1) < 0)
+	GITERR_CHECK_ALLOC_ADD(&alloclen, src->size, src->size >> 4);
+	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
+	if (git_buf_grow(tgt, alloclen) < 0)
 		return -1;
 	tgt->size = 0;
 
@@ -135,8 +137,8 @@ int git_buf_text_lf_to_crlf(git_buf *tgt, const git_buf *src)
 			return GIT_PASSTHROUGH;
 		}
 
-		GITERR_CHECK_ALLOC_ADD(copylen, 3);
-		if (git_buf_grow_by(tgt, copylen + 3) < 0)
+		GITERR_CHECK_ALLOC_ADD(&alloclen, copylen, 3);
+		if (git_buf_grow_by(tgt, alloclen) < 0)
 			return -1;
 
 		if (next > scan) {

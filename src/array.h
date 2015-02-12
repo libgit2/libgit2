@@ -51,10 +51,9 @@ GIT_INLINE(void *) git_array_grow(void *_a, size_t item_size)
 	if (a->size < 8) {
 		new_size = 8;
 	} else {
-		if (GIT_ALLOC_OVERFLOW_MULTIPLY(a->size, 3 / 2))
+		if (GIT_MULTIPLY_SIZET_OVERFLOW(&new_size, a->size, 3))
 			goto on_oom;
-
-		new_size = a->size * 3 / 2;
+		new_size /= 2;
 	}
 
 	if ((new_array = git__reallocarray(a->ptr, new_size, item_size)) == NULL)

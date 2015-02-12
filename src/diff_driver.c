@@ -163,12 +163,13 @@ static int diff_driver_alloc(
 {
 	git_diff_driver *driver;
 	size_t driverlen = sizeof(git_diff_driver),
-		namelen = strlen(name);
+		namelen = strlen(name),
+		alloclen;
 
-	GITERR_CHECK_ALLOC_ADD(driverlen, namelen);
-	GITERR_CHECK_ALLOC_ADD(driverlen + namelen, 1);
+	GITERR_CHECK_ALLOC_ADD(&alloclen, driverlen, namelen);
+	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
 
-	driver = git__calloc(1, driverlen + namelen + 1);
+	driver = git__calloc(1, alloclen);
 	GITERR_CHECK_ALLOC(driver);
 
 	memcpy(driver->name, name, namelen);

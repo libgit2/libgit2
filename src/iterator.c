@@ -344,11 +344,8 @@ static int tree_iterator__push_frame(tree_iterator *ti)
 	for (i = head->current; i < head->next; ++i)
 		n_entries += git_tree_entrycount(head->entries[i]->tree);
 
-	GITERR_CHECK_ALLOC_MULTIPLY(sizeof(tree_iterator_entry *), n_entries);
-	alloclen = sizeof(tree_iterator_entry *) * n_entries;
-
-	GITERR_CHECK_ALLOC_ADD(alloclen, sizeof(tree_iterator_frame));
-	alloclen += sizeof(tree_iterator_frame);
+	GITERR_CHECK_ALLOC_MULTIPLY(&alloclen, sizeof(tree_iterator_entry *), n_entries);
+	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, sizeof(tree_iterator_frame));
 
 	tf = git__calloc(1, alloclen);
 	GITERR_CHECK_ALLOC(tf);

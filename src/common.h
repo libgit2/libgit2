@@ -176,21 +176,21 @@ GIT_INLINE(void) git__init_structure(void *structure, size_t len, unsigned int v
 	memcpy((PTR), &_tmpl, sizeof(_tmpl)); } while (0)
 
 
-/** Check for integer overflow from addition or multiplication */
-#define GIT_ALLOC_OVERFLOW_ADD(one, two) \
-	(!git__add_sizet_overflow(NULL, (one), (two)) ? (giterr_set_oom(), 1) : 0)
+/** Check for additive overflow, setting an error if would occur. */
+#define GIT_ADD_SIZET_OVERFLOW(out, one, two) \
+	(git__add_sizet_overflow(out, one, two) ? (giterr_set_oom(), 1) : 0)
 
-/** Check for integer overflow from multiplication */
-#define GIT_ALLOC_OVERFLOW_MULTIPLY(one, two) \
-	(!git__multiply_sizet_overflow(NULL, (one), (two)) ? (giterr_set_oom(), 1) : 0)
+/** Check for additive overflow, setting an error if would occur. */
+#define GIT_MULTIPLY_SIZET_OVERFLOW(out, nelem, elsize) \
+	(git__multiply_sizet_overflow(out, nelem, elsize) ? (giterr_set_oom(), 1) : 0)
 
 /** Check for additive overflow, failing if it would occur. */
-#define GITERR_CHECK_ALLOC_ADD(one, two) \
-	if (GIT_ALLOC_OVERFLOW_ADD(one, two)) { return -1; }
+#define GITERR_CHECK_ALLOC_ADD(out, one, two) \
+	if (GIT_ADD_SIZET_OVERFLOW(out, one, two)) { return -1; }
 
 /** Check for multiplicative overflow, failing if it would occur. */
-#define GITERR_CHECK_ALLOC_MULTIPLY(nelem, elsize) \
-	if (GIT_ALLOC_OVERFLOW_MULTIPLY(nelem, elsize)) { return -1; }
+#define GITERR_CHECK_ALLOC_MULTIPLY(out, nelem, elsize) \
+	if (GIT_MULTIPLY_SIZET_OVERFLOW(out, nelem, elsize)) { return -1; }
 
 /* NOTE: other giterr functions are in the public errors.h header file */
 

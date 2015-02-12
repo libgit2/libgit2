@@ -35,6 +35,13 @@ GIT_INLINE(int) git__is_ulong(git_off_t p)
 	return p == (git_off_t)r;
 }
 
+/** @return true if p fits into the range of an int */
+GIT_INLINE(int) git__is_int(long long p)
+{
+	int r = (int)p;
+	return p == (long long)r;
+}
+
 /**
  * Sets `one + two` into `out`, unless the arithmetic would overflow.
  * @return true if the result fits in a `uint64_t`, false on overflow.
@@ -42,10 +49,9 @@ GIT_INLINE(int) git__is_ulong(git_off_t p)
 GIT_INLINE(bool) git__add_uint64_overflow(uint64_t *out, uint64_t one, uint64_t two)
 {
 	if (UINT64_MAX - one < two)
-		return false;
-	if (out)
-		*out = one + two;
-	return true;
+		return true;
+	*out = one + two;
+	return false;
 }
 
 /**
@@ -55,10 +61,9 @@ GIT_INLINE(bool) git__add_uint64_overflow(uint64_t *out, uint64_t one, uint64_t 
 GIT_INLINE(bool) git__add_sizet_overflow(size_t *out, size_t one, size_t two)
 {
 	if (SIZE_MAX - one < two)
-		return false;
-	if (out)
-		*out = one + two;
-	return true;
+		return true;
+	*out = one + two;
+	return false;
 }
 
 /**
@@ -68,10 +73,9 @@ GIT_INLINE(bool) git__add_sizet_overflow(size_t *out, size_t one, size_t two)
 GIT_INLINE(bool) git__multiply_sizet_overflow(size_t *out, size_t one, size_t two)
 {
 	if (one && SIZE_MAX / one < two)
-		return false;
-	if (out)
-		*out = one * two;
-	return true;
+		return true;
+	*out = one * two;
+	return false;
 }
 
 #endif /* INCLUDE_integer_h__ */
