@@ -446,10 +446,10 @@ int git_filebuf_printf(git_filebuf *file, const char *format, ...)
 	}
 
 	va_start(arglist, format);
-	len = p_vsnprintf(tmp_buffer, len + 1, format, arglist);
+	written = p_vsnprintf(tmp_buffer, len + 1, format, arglist);
 	va_end(arglist);
 
-	if (len < 0) {
+	if (written < 0) {
 		git__free(tmp_buffer);
 		file->last_error = BUFERR_MEM;
 		return -1;
