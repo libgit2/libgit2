@@ -634,7 +634,7 @@ int git_rebase_init(
 
 	*out = NULL;
 
-	GITERR_CHECK_VERSION(given_opts, GIT_MERGE_OPTIONS_VERSION, "git_merge_options");
+	GITERR_CHECK_VERSION(given_opts, GIT_REBASE_OPTIONS_VERSION, "git_rebase_options");
 
 	if (!onto)
 		onto = upstream;
@@ -1057,6 +1057,8 @@ int git_rebase_finish(
 	int error;
 
 	assert(rebase);
+
+	GITERR_CHECK_VERSION(given_opts, GIT_REBASE_OPTIONS_VERSION, "git_rebase_options");
 
 	if ((error = rebase_normalize_opts(rebase->repo, &opts, given_opts)) < 0)
 		goto done;
