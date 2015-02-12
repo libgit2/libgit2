@@ -17,6 +17,11 @@
 # define GIT_INLINE(type) static inline type
 #endif
 
+/** Support for gcc/clang __has_builtin intrinsic */
+#ifndef __has_builtin
+# define __has_builtin(x) 0
+#endif
+
 #include <assert.h>
 #include <errno.h>
 #include <limits.h>
