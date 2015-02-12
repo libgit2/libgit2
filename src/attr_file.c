@@ -96,6 +96,7 @@ static int attr_file_oid_from_index(
 int git_attr_file__load(
 	git_attr_file **out,
 	git_repository *repo,
+	git_attr_session *attr_session,
 	git_attr_file_entry *entry,
 	git_attr_file_source source,
 	git_attr_file_parser parser)
@@ -105,6 +106,7 @@ int git_attr_file__load(
 	git_buf content = GIT_BUF_INIT;
 	git_attr_file *file;
 	struct stat st;
+	bool nonexistent = false;
 
 	*out = NULL;
 
@@ -127,22 +129,16 @@ int git_attr_file__load(
 	case GIT_ATTR_FILE__FROM_FILE: {
 		int fd;
 
-		if (p_stat(entry->fullpath, &st) < 0)
-			return git_path_set_error(errno, entry->fullpath, "stat");
-		if (S_ISDIR(st.st_mode))
-			return GIT_ENOTFOUND;
-
-		/* For open or read errors, return ENOTFOUND to skip item */
+		/* For open or read errors, pretend that we got ENOTFOUND. */
 		/* TODO: issue warning when warning API is available */
 
-		if ((fd = git_futils_open_ro(entry->fullpath)) < 0)
-			return GIT_ENOTFOUND;
-
-		error = git_futils_readbuffer_fd(&content, fd, (size_t)st.st_size);
-		p_close(fd);
-
-		if (error < 0)
-			return GIT_ENOTFOUND;
+		if (p_stat(entry->fullpath, &st) < 0 ||
+			S_ISDIR(st.st_mode) ||
+			(fd = git_futils_open_ro(entry->fullpath)) < 0 ||
+			(error = git_futils_readbuffer_fd(&content, fd, (size_t)st.st_size)) < 0)
+			nonexistent = true;
+		else
+			p_close(fd);
 
 		break;
 	}
@@ -154,13 +150,21 @@ int git_attr_file__load(
 	if ((error = git_attr_file__new(&file, entry, source)) < 0)
 		goto cleanup;
 
+	/* store the key of the attr_reader; don't bother with cache
+	 * invalidation during the same attr reader session.
+	 */
+	if (attr_session)
+		file->session_key = attr_session->key;
+
 	if (parser && (error = parser(repo, file, git_buf_cstr(&content))) < 0) {
 		git_attr_file__free(file);
 		goto cleanup;
 	}
 
-	/* write cache breaker */
-	if (source == GIT_ATTR_FILE__FROM_INDEX)
+	/* write cache breakers */
+	if (nonexistent)
+		file->nonexistent = 1;
+	else if (source == GIT_ATTR_FILE__FROM_INDEX)
 		git_oid_cpy(&file->cache_data.oid, git_blob_id(blob));
 	else if (source == GIT_ATTR_FILE__FROM_FILE)
 		git_futils_filestamp_set_from_stat(&file->cache_data.stamp, &st);
@@ -175,9 +179,20 @@ cleanup:
 	return error;
 }
 
-int git_attr_file__out_of_date(git_repository *repo, git_attr_file *file)
+int git_attr_file__out_of_date(
+	git_repository *repo,
+	git_attr_session *attr_session,
+	git_attr_file *file)
 {
 	if (!file)
+		return 1;
+
+	/* we are never out of date if we just created this data in the same
+	 * attr_session; otherwise, nonexistent files must be invalidated
+	 */
+	if (attr_session && attr_session->key == file->session_key)
+		return 0;
+	else if (file->nonexistent)
 		return 1;
 
 	switch (file->source) {
@@ -831,3 +846,22 @@ void git_attr_rule__free(git_attr_rule *rule)
 	git__free(rule);
 }
 
+int git_attr_session__init(git_attr_session *session, git_repository *repo)
+{
+	assert(repo);
+
+	session->key = git_atomic_inc(&repo->attr_session_key);
+
+	return 0;
+}
+
+void git_attr_session__free(git_attr_session *session)
+{
+	if (!session)
+		return;
+
+	git_buf_free(&session->sysdir);
+	git_buf_free(&session->tmp);
+
+	memset(session, 0, sizeof(git_attr_session));
+}

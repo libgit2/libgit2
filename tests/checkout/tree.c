@@ -1130,3 +1130,57 @@ void test_checkout_tree__can_collect_perfdata(void)
 
 	git_object_free(obj);
 }
+
+void update_attr_callback(
+	const char *path,
+	size_t completed_steps,
+	size_t total_steps,
+	void *payload)
+{
+	GIT_UNUSED(completed_steps);
+	GIT_UNUSED(total_steps);
+	GIT_UNUSED(payload);
+
+	if (path && strcmp(path, "ident1.txt") == 0)
+		cl_git_write2file("testrepo/.gitattributes",
+			"*.txt ident\n", 12, O_RDWR|O_CREAT, 0666);
+}
+
+void test_checkout_tree__caches_attributes_during_checkout(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_oid oid;
+	git_object *obj = NULL;
+	git_buf ident1 = GIT_BUF_INIT, ident2 = GIT_BUF_INIT;
+	char *ident_paths[] = { "ident1.txt", "ident2.txt" };
+
+	opts.progress_cb = update_attr_callback;
+
+	assert_on_branch(g_repo, "master");
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+	opts.paths.strings = ident_paths;
+	opts.paths.count = 2;
+
+	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/ident"));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+
+	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
+
+	cl_git_pass(git_futils_readbuffer(&ident1, "testrepo/ident1.txt"));
+	cl_git_pass(git_futils_readbuffer(&ident2, "testrepo/ident2.txt"));
+
+	cl_assert_equal_strn(ident1.ptr, "# $Id$", 6);
+	cl_assert_equal_strn(ident2.ptr, "# $Id$", 6);
+
+	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
+
+	cl_git_pass(git_futils_readbuffer(&ident1, "testrepo/ident1.txt"));
+	cl_git_pass(git_futils_readbuffer(&ident2, "testrepo/ident2.txt"));
+
+	cl_assert_equal_strn(ident1.ptr, "# $Id: ", 7);
+	cl_assert_equal_strn(ident2.ptr, "# $Id: ", 7);
+
+	git_buf_free(&ident1);
+	git_buf_free(&ident2);
+	git_object_free(obj);
+}

@@ -31,6 +31,7 @@ extern int git_attr_cache__do_init(git_repository *repo);
 extern int git_attr_cache__get(
 	git_attr_file **file,
 	git_repository *repo,
+	git_attr_session *attr_session,
 	git_attr_file_source source,
 	const char *base,
 	const char *filename,

@@ -149,6 +149,7 @@ static int attr_cache_lookup(
 	git_attr_file **out_file,
 	git_attr_file_entry **out_entry,
 	git_repository *repo,
+	git_attr_session *attr_session,
 	git_attr_file_source source,
 	const char *base,
 	const char *filename)
@@ -162,9 +163,12 @@ static int attr_cache_lookup(
 
 	/* join base and path as needed */
 	if (base != NULL && git_path_root(filename) < 0) {
-		if (git_buf_joinpath(&path, base, filename) < 0)
+		git_buf *p = attr_session ? &attr_session->tmp : &path;
+
+		if (git_buf_joinpath(p, base, filename) < 0)
 			return -1;
-		filename = path.ptr;
+
+		filename = p->ptr;
 	}
 
 	relfile = filename;
@@ -196,6 +200,7 @@ cleanup:
 int git_attr_cache__get(
 	git_attr_file **out,
 	git_repository *repo,
+	git_attr_session *attr_session,
 	git_attr_file_source source,
 	const char *base,
 	const char *filename,
@@ -207,12 +212,12 @@ int git_attr_cache__get(
 	git_attr_file *file = NULL, *updated = NULL;
 
 	if ((error = attr_cache_lookup(
-			&file, &entry, repo, source, base, filename)) < 0)
+			&file, &entry, repo, attr_session, source, base, filename)) < 0)
 		return error;
 
 	/* load file if we don't have one or if existing one is out of date */
-	if (!file || (error = git_attr_file__out_of_date(repo, file)) > 0)
-		error = git_attr_file__load(&updated, repo, entry, source, parser);
+	if (!file || (error = git_attr_file__out_of_date(repo, attr_session, file)) > 0)
+		error = git_attr_file__load(&updated, repo, attr_session, entry, source, parser);
 
 	/* if we loaded the file, insert into and/or update cache */
 	if (updated) {

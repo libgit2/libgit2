@@ -29,6 +29,7 @@ git_attr_t git_attr_value(const char *attr)
 
 static int collect_attr_files(
 	git_repository *repo,
+	git_attr_session *attr_session,
 	uint32_t flags,
 	const char *path,
 	git_vector *files);
@@ -57,7 +58,7 @@ int git_attr_get(
 	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo)) < 0)
 		return -1;
 
-	if ((error = collect_attr_files(repo, flags, pathname, &files)) < 0)
+	if ((error = collect_attr_files(repo, NULL, flags, pathname, &files)) < 0)
 		goto cleanup;
 
 	memset(&attr, 0, sizeof(attr));
@@ -90,9 +91,10 @@ typedef struct {
 	git_attr_assignment *found;
 } attr_get_many_info;
 
-int git_attr_get_many(
+int git_attr_get_many_with_session(
 	const char **values,
 	git_repository *repo,
+	git_attr_session *attr_session,
 	uint32_t flags,
 	const char *pathname,
 	size_t num_attr,
@@ -115,7 +117,7 @@ int git_attr_get_many(
 	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo)) < 0)
 		return -1;
 
-	if ((error = collect_attr_files(repo, flags, pathname, &files)) < 0)
+	if ((error = collect_attr_files(repo, attr_session, flags, pathname, &files)) < 0)
 		goto cleanup;
 
 	info = git__calloc(num_attr, sizeof(attr_get_many_info));
@@ -161,6 +163,17 @@ cleanup:
 	return error;
 }
 
+int git_attr_get_many(
+	const char **values,
+	git_repository *repo,
+	uint32_t flags,
+	const char *pathname,
+	size_t num_attr,
+	const char **names)
+{
+	return git_attr_get_many_with_session(
+		values, repo, NULL, flags, pathname, num_attr, names);
+}
 
 int git_attr_foreach(
 	git_repository *repo,
@@ -183,7 +196,7 @@ int git_attr_foreach(
 	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo)) < 0)
 		return -1;
 
-	if ((error = collect_attr_files(repo, flags, pathname, &files)) < 0 ||
+	if ((error = collect_attr_files(repo, NULL, flags, pathname, &files)) < 0 ||
 		(error = git_strmap_alloc(&seen)) < 0)
 		goto cleanup;
 
@@ -219,6 +232,7 @@ cleanup:
 
 static int preload_attr_file(
 	git_repository *repo,
+	git_attr_session *attr_session,
 	git_attr_file_source source,
 	const char *base,
 	const char *file)
@@ -229,18 +243,60 @@ static int preload_attr_file(
 	if (!file)
 		return 0;
 	if (!(error = git_attr_cache__get(
-			&preload, repo, source, base, file, git_attr_file__parse_buffer)))
+			&preload, repo, attr_session, source, base, file, git_attr_file__parse_buffer)))
 		git_attr_file__free(preload);
 
 	return error;
 }
 
-static int attr_setup(git_repository *repo)
+static int system_attr_file(
+	git_buf *out,
+	git_attr_session *attr_session)
+{
+	int error;
+
+	if (!attr_session) {
+		error = git_sysdir_find_system_file(out, GIT_ATTR_FILE_SYSTEM);
+
+		if (error == GIT_ENOTFOUND)
+			giterr_clear();
+
+		return error;
+	}
+
+	if (!attr_session->init_sysdir) {
+		error = git_sysdir_find_system_file(&attr_session->sysdir, GIT_ATTR_FILE_SYSTEM);
+
+		if (error == GIT_ENOTFOUND)
+			giterr_clear();
+		else if (error)
+			return error;
+
+		attr_session->init_sysdir = 1;
+	}
+
+	if (attr_session->sysdir.size == 0)
+		return GIT_ENOTFOUND;
+
+	/* We can safely provide a git_buf with no allocation (asize == 0) to
+	 * a consumer. This allows them to treat this as a regular `git_buf`,
+	 * but their call to `git_buf_free` will not attempt to free it.
+	 */
+	out->ptr = attr_session->sysdir.ptr;
+	out->size = attr_session->sysdir.size;
+	out->asize = 0;
+	return 0;
+}
+
+static int attr_setup(git_repository *repo, git_attr_session *attr_session)
 {
 	int error = 0;
 	const char *workdir = git_repository_workdir(repo);
 	git_index *idx = NULL;
 	git_buf sys = GIT_BUF_INIT;
+
+	if (attr_session && attr_session->init_setup)
+		return 0;
 
 	if ((error = git_attr_cache__init(repo)) < 0)
 		return error;
@@ -249,38 +305,38 @@ static int attr_setup(git_repository *repo)
 	 * definitions will be available for later file parsing
 	 */
 
-	if (!(error = git_sysdir_find_system_file(&sys, GIT_ATTR_FILE_SYSTEM))) {
+	error = system_attr_file(&sys, attr_session);
+
+	if (error == 0)
 		error = preload_attr_file(
-			repo, GIT_ATTR_FILE__FROM_FILE, NULL, sys.ptr);
-		git_buf_free(&sys);
-	}
-	if (error < 0) {
-		if (error == GIT_ENOTFOUND) {
-			giterr_clear();
-			error = 0;
-		} else
-			return error;
-	}
+			repo, attr_session, GIT_ATTR_FILE__FROM_FILE, NULL, sys.ptr);
+	else if (error != GIT_ENOTFOUND)
+		return error;
+
+	git_buf_free(&sys);
 
 	if ((error = preload_attr_file(
-			repo, GIT_ATTR_FILE__FROM_FILE,
+			repo, attr_session, GIT_ATTR_FILE__FROM_FILE,
 			NULL, git_repository_attr_cache(repo)->cfg_attr_file)) < 0)
 		return error;
 
 	if ((error = preload_attr_file(
-			repo, GIT_ATTR_FILE__FROM_FILE,
+			repo, attr_session, GIT_ATTR_FILE__FROM_FILE,
 			git_repository_path(repo), GIT_ATTR_FILE_INREPO)) < 0)
 		return error;
 
 	if (workdir != NULL &&
 		(error = preload_attr_file(
-			repo, GIT_ATTR_FILE__FROM_FILE, workdir, GIT_ATTR_FILE)) < 0)
+			repo, attr_session, GIT_ATTR_FILE__FROM_FILE, workdir, GIT_ATTR_FILE)) < 0)
 		return error;
 
 	if ((error = git_repository_index__weakptr(&idx, repo)) < 0 ||
 		(error = preload_attr_file(
-			repo, GIT_ATTR_FILE__FROM_INDEX, NULL, GIT_ATTR_FILE)) < 0)
+			repo, attr_session, GIT_ATTR_FILE__FROM_INDEX, NULL, GIT_ATTR_FILE)) < 0)
 		return error;
+
+	if (attr_session)
+		attr_session->init_setup = 1;
 
 	return error;
 }
@@ -321,6 +377,7 @@ int git_attr_add_macro(
 
 typedef struct {
 	git_repository *repo;
+	git_attr_session *attr_session;
 	uint32_t flags;
 	const char *workdir;
 	git_index *index;
@@ -356,6 +413,7 @@ static int attr_decide_sources(
 
 static int push_attr_file(
 	git_repository *repo,
+	git_attr_session *attr_session,
 	git_vector *list,
 	git_attr_file_source source,
 	const char *base,
@@ -364,8 +422,9 @@ static int push_attr_file(
 	int error = 0;
 	git_attr_file *file = NULL;
 
-	error = git_attr_cache__get(
-		&file, repo, source, base, filename, git_attr_file__parse_buffer);
+	error = git_attr_cache__get(&file, repo, attr_session,
+		source, base, filename, git_attr_file__parse_buffer);
+
 	if (error < 0)
 		return error;
 
@@ -387,8 +446,8 @@ static int push_one_attr(void *ref, const char *path)
 		info->flags, info->workdir != NULL, info->index != NULL, src);
 
 	for (i = 0; !error && i < n_src; ++i)
-		error = push_attr_file(
-			info->repo, info->files, src[i], path, GIT_ATTR_FILE);
+		error = push_attr_file(info->repo, info->attr_session,
+			info->files, src[i], path, GIT_ATTR_FILE);
 
 	return error;
 }
@@ -407,6 +466,7 @@ static void release_attr_files(git_vector *files)
 
 static int collect_attr_files(
 	git_repository *repo,
+	git_attr_session *attr_session,
 	uint32_t flags,
 	const char *path,
 	git_vector *files)
@@ -416,7 +476,7 @@ static int collect_attr_files(
 	const char *workdir = git_repository_workdir(repo);
 	attr_walk_up_info info = { NULL };
 
-	if ((error = attr_setup(repo)) < 0)
+	if ((error = attr_setup(repo, attr_session)) < 0)
 		return error;
 
 	/* Resolve path in a non-bare repo */
@@ -435,12 +495,13 @@ static int collect_attr_files(
 	 */
 
 	error = push_attr_file(
-		repo, files, GIT_ATTR_FILE__FROM_FILE,
+		repo, attr_session, files, GIT_ATTR_FILE__FROM_FILE,
 		git_repository_path(repo), GIT_ATTR_FILE_INREPO);
 	if (error < 0)
 		goto cleanup;
 
-	info.repo  = repo;
+	info.repo = repo;
+	info.attr_session = attr_session;
 	info.flags = flags;
 	info.workdir = workdir;
 	if (git_repository_index__weakptr(&info.index, repo) < 0)
@@ -457,21 +518,21 @@ static int collect_attr_files(
 
 	if (git_repository_attr_cache(repo)->cfg_attr_file != NULL) {
 		error = push_attr_file(
-			repo, files, GIT_ATTR_FILE__FROM_FILE,
+			repo, attr_session, files, GIT_ATTR_FILE__FROM_FILE,
 			NULL, git_repository_attr_cache(repo)->cfg_attr_file);
 		if (error < 0)
 			goto cleanup;
 	}
 
 	if ((flags & GIT_ATTR_CHECK_NO_SYSTEM) == 0) {
-		error = git_sysdir_find_system_file(&dir, GIT_ATTR_FILE_SYSTEM);
+		error = system_attr_file(&dir, attr_session);
+
 		if (!error)
 			error = push_attr_file(
-				repo, files, GIT_ATTR_FILE__FROM_FILE, NULL, dir.ptr);
-		else if (error == GIT_ENOTFOUND) {
-			giterr_clear();
+				repo, attr_session, files, GIT_ATTR_FILE__FROM_FILE,
+				NULL, dir.ptr);
+		else if (error == GIT_ENOTFOUND)
 			error = 0;
-		}
 	}
 
  cleanup:

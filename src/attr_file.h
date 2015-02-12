@@ -38,11 +38,11 @@
 	 GIT_ATTR_FNMATCH_ALLOWMACRO | GIT_ATTR_FNMATCH_NOLEADINGDIR)
 
 typedef enum {
-	GIT_ATTR_FILE__IN_MEMORY  = 0,
-	GIT_ATTR_FILE__FROM_FILE  = 1,
-	GIT_ATTR_FILE__FROM_INDEX = 2,
+	GIT_ATTR_FILE__IN_MEMORY   = 0,
+	GIT_ATTR_FILE__FROM_FILE   = 1,
+	GIT_ATTR_FILE__FROM_INDEX  = 2,
 
-	GIT_ATTR_FILE_NUM_SOURCES = 3
+	GIT_ATTR_FILE_NUM_SOURCES  = 3
 } git_attr_file_source;
 
 extern const char *git_attr__true;
@@ -84,6 +84,8 @@ typedef struct {
 	git_attr_file_source source;
 	git_vector rules;			/* vector of <rule*> or <fnmatch*> */
 	git_pool pool;
+	unsigned int nonexistent:1;
+	int session_key;
 	union {
 		git_oid oid;
 		git_futils_filestamp stamp;
@@ -96,17 +98,41 @@ struct git_attr_file_entry {
 	char fullpath[GIT_FLEX_ARRAY];
 };
 
-typedef int (*git_attr_file_parser)(
-	git_repository *repo,
-	git_attr_file *file,
-	const char *data);
-
 typedef struct {
 	git_buf  full;
 	char    *path;
 	char    *basename;
 	int      is_dir;
 } git_attr_path;
+
+/* A git_attr_session can provide an "instance" of reading, to prevent cache
+ * invalidation during a single operation instance (like checkout).
+ */
+
+typedef struct {
+	int key;
+	unsigned int init_setup:1,
+		init_sysdir:1;
+	git_buf sysdir;
+	git_buf tmp;
+} git_attr_session;
+
+extern int git_attr_session__init(git_attr_session *attr_session, git_repository *repo);
+extern void git_attr_session__free(git_attr_session *session);
+
+extern int git_attr_get_many_with_session(
+	const char **values_out,
+	git_repository *repo,
+	git_attr_session *attr_session,
+	uint32_t flags,
+	const char *path,
+	size_t num_attr,
+	const char **names);
+
+typedef int (*git_attr_file_parser)(
+	git_repository *repo,
+	git_attr_file *file,
+	const char *data);
 
 /*
  * git_attr_file API
@@ -122,6 +148,7 @@ void git_attr_file__free(git_attr_file *file);
 int git_attr_file__load(
 	git_attr_file **out,
 	git_repository *repo,
+	git_attr_session *attr_session,
 	git_attr_file_entry *ce,
 	git_attr_file_source source,
 	git_attr_file_parser parser);
@@ -130,7 +157,7 @@ int git_attr_file__load_standalone(
 	git_attr_file **out, const char *path);
 
 int git_attr_file__out_of_date(
-	git_repository *repo, git_attr_file *file);
+	git_repository *repo, git_attr_session *session, git_attr_file *file);
 
 int git_attr_file__parse_buffer(
 	git_repository *repo, git_attr_file *attrs, const char *data);

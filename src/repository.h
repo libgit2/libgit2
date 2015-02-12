@@ -133,6 +133,8 @@ struct git_repository {
 		has_8dot3_default:1;
 	unsigned int lru_counter;
 
+	git_atomic attr_session_key;
+
 	git_cvar_value cvar_cache[GIT_CVAR_CACHE_MAX];
 };
 

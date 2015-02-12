@@ -394,15 +394,19 @@ static int filter_list_new(
 }
 
 static int filter_list_check_attributes(
-	const char ***out, git_filter_def *fdef, const git_filter_source *src)
+	const char ***out,
+	git_repository *repo,
+	git_attr_session *attr_session,
+	git_filter_def *fdef,
+	const git_filter_source *src)
 {
 	int error;
 	size_t i;
 	const char **strs = git__calloc(fdef->nattrs, sizeof(const char *));
 	GITERR_CHECK_ALLOC(strs);
 
-	error = git_attr_get_many(
-		strs, src->repo, 0, src->path, fdef->nattrs, fdef->attrs);
+	error = git_attr_get_many_with_session(
+		strs, repo, attr_session, 0, src->path, fdef->nattrs, fdef->attrs);
 
 	/* if no values were found but no matches are needed, it's okay! */
 	if (error == GIT_ENOTFOUND && !fdef->nmatches) {
@@ -448,9 +452,10 @@ int git_filter_list_new(
 	return filter_list_new(out, &src);
 }
 
-int git_filter_list_load(
+int git_filter_list__load_with_attr_session(
 	git_filter_list **filters,
 	git_repository *repo,
+	git_attr_session *attr_session,
 	git_blob *blob, /* can be NULL */
 	const char *path,
 	git_filter_mode_t mode,
@@ -481,7 +486,9 @@ int git_filter_list_load(
 			continue;
 
 		if (fdef->nattrs > 0) {
-			error = filter_list_check_attributes(&values, fdef, &src);
+			error = filter_list_check_attributes(
+				&values, repo, attr_session, fdef, &src);
+
 			if (error == GIT_ENOTFOUND) {
 				error = 0;
 				continue;
@@ -521,6 +528,18 @@ int git_filter_list_load(
 
 	*filters = fl;
 	return error;
+}
+
+int git_filter_list_load(
+	git_filter_list **filters,
+	git_repository *repo,
+	git_blob *blob, /* can be NULL */
+	const char *path,
+	git_filter_mode_t mode,
+	uint32_t options)
+{
+	return git_filter_list__load_with_attr_session(
+		filters, repo, NULL, blob, path, mode, options);
 }
 
 void git_filter_list_free(git_filter_list *fl)
