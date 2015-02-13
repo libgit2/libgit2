@@ -33,6 +33,12 @@
  *    inheritable on Windows, so specify the flag to get default behavior back. */
 #define STANDARD_OPEN_FLAGS (_O_BINARY | _O_NOINHERIT)
 
+/* Allowable mode bits on Win32.  Using mode bits that are not supported on
+ * Win32 (eg S_IRWXU) is generally ignored, but Wine warns loudly about it
+ * so we simply remove them.
+ */
+#define WIN32_MODE_MASK (_S_IREAD | _S_IWRITE)
+
 /* GetFinalPathNameByHandleW signature */
 typedef DWORD(WINAPI *PFGetFinalPathNameByHandleW)(HANDLE, LPWSTR, DWORD, DWORD);
 
@@ -343,7 +349,7 @@ int p_open(const char *path, int flags, ...)
 		va_end(arg_list);
 	}
 
-	return _wopen(buf, flags | STANDARD_OPEN_FLAGS, mode);
+	return _wopen(buf, flags | STANDARD_OPEN_FLAGS, mode & WIN32_MODE_MASK);
 }
 
 int p_creat(const char *path, mode_t mode)
@@ -353,7 +359,9 @@ int p_creat(const char *path, mode_t mode)
 	if (git_win32_path_from_utf8(buf, path) < 0)
 		return -1;
 
-	return _wopen(buf, _O_WRONLY | _O_CREAT | _O_TRUNC | STANDARD_OPEN_FLAGS, mode);
+	return _wopen(buf,
+		_O_WRONLY | _O_CREAT | _O_TRUNC | STANDARD_OPEN_FLAGS,
+		mode & WIN32_MODE_MASK);
 }
 
 int p_getcwd(char *buffer_out, size_t size)
@@ -607,7 +615,7 @@ int p_access(const char* path, mode_t mode)
 	if (git_win32_path_from_utf8(buf, path) < 0)
 		return -1;
 
-	return _waccess(buf, mode);
+	return _waccess(buf, mode & WIN32_MODE_MASK);
 }
 
 static int ensure_writable(wchar_t *fpath)
