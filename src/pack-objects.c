@@ -832,13 +832,14 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 		trg_object->delta_data = NULL;
 	}
 	if (delta_cacheable(pb, src_size, trg_size, delta_size)) {
-		if (git__add_uint64_overflow(&pb->delta_cache_size, pb->delta_cache_size, delta_size))
-			return -1;
+		bool overflow = git__add_uint64_overflow(
+			&pb->delta_cache_size, pb->delta_cache_size, delta_size);
 
 		git_packbuilder__cache_unlock(pb);
 
-		trg_object->delta_data = git__realloc(delta_buf, delta_size);
-		GITERR_CHECK_ALLOC(trg_object->delta_data);
+		if (overflow ||
+			!(trg_object->delta_data = git__realloc(delta_buf, delta_size)))
+			return -1;
 	} else {
 		/* create delta when writing the pack */
 		git_packbuilder__cache_unlock(pb);
