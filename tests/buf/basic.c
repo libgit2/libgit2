@@ -33,6 +33,8 @@ void test_buf_basic__resize_incremental(void)
 	cl_git_pass(git_buf_grow_by(&buf1, 16));
 	cl_assert_equal_i(5, buf1.size);
 	cl_assert(buf1.asize > 8);
+
+	git_buf_free(&buf1);
 }
 
 void test_buf_basic__printf(void)
