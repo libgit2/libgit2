@@ -168,10 +168,31 @@ GIT_INLINE(int) rebase_readoid(
 	return 0;
 }
 
+static git_rebase_operation *rebase_operation_alloc(
+	git_rebase *rebase,
+	git_rebase_operation_t type,
+	git_oid *id,
+	const char *exec)
+{
+	git_rebase_operation *operation;
+
+	assert((type == GIT_REBASE_OPERATION_EXEC) == !id);
+	assert((type == GIT_REBASE_OPERATION_EXEC) == !!exec);
+
+	if ((operation = git_array_alloc(rebase->operations)) == NULL)
+		return NULL;
+
+	operation->type = type;
+	git_oid_cpy((git_oid *)&operation->id, id);
+	operation->exec = exec;
+
+	return operation;
+}
+
 static int rebase_open_merge(git_rebase *rebase)
 {
 	git_buf state_path = GIT_BUF_INIT, buf = GIT_BUF_INIT, cmt = GIT_BUF_INIT;
-	git_oid current_id = {{0}};
+	git_oid id;
 	git_rebase_operation *operation;
 	size_t i, msgnum = 0, end;
 	int error;
@@ -194,7 +215,7 @@ static int rebase_open_merge(git_rebase *rebase)
 		goto done;
 
 	/* Read 'current' if it exists */
-	if ((error = rebase_readoid(&current_id, &buf, &state_path, CURRENT_FILE)) < 0 &&
+	if ((error = rebase_readoid(&id, &buf, &state_path, CURRENT_FILE)) < 0 &&
 		error != GIT_ENOTFOUND)
 		goto done;
 
@@ -203,14 +224,14 @@ static int rebase_open_merge(git_rebase *rebase)
 	GITERR_CHECK_ARRAY(rebase->operations);
 
 	for (i = 0; i < end; i++) {
-		operation = git_array_alloc(rebase->operations);
-		GITERR_CHECK_ALLOC(operation);
-
 		git_buf_clear(&cmt);
 
 		if ((error = git_buf_printf(&cmt, "cmt.%" PRIuZ, (i+1))) < 0 ||
-			(error = rebase_readoid((git_oid *)&operation->id, &buf, &state_path, cmt.ptr)) < 0)
+			(error = rebase_readoid(&id, &buf, &state_path, cmt.ptr)) < 0)
 			goto done;
+
+		operation = rebase_operation_alloc(rebase, GIT_REBASE_OPERATION_PICK, &id, NULL);
+		GITERR_CHECK_ALLOC(operation);
 	}
 
 	/* Read 'onto_name' */
@@ -553,9 +574,7 @@ static int rebase_init_operations(
 		if (merge)
 			continue;
 
-		operation = git_array_alloc(rebase->operations);
-		operation->type = GIT_REBASE_OPERATION_PICK;
-		git_oid_cpy((git_oid *)&operation->id, &id);
+		operation = rebase_operation_alloc(rebase, GIT_REBASE_OPERATION_PICK, &id, NULL);
 	}
 
 	error = 0;

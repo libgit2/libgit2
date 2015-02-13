@@ -42,6 +42,7 @@ static void test_operations(git_rebase *rebase, size_t expected_current)
 		operation = git_rebase_operation_byindex(rebase, i);
 		cl_assert_equal_i(GIT_REBASE_OPERATION_PICK, operation->type);
 		cl_assert_equal_oid(&expected_oid[i], &operation->id);
+		cl_assert_equal_p(NULL, operation->exec);
 	}
 }
 
