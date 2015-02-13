@@ -302,15 +302,16 @@ int git_libgit2_shutdown(void)
 	pthread_once_t new_once = PTHREAD_ONCE_INIT;
 	int ret;
 
+	if ((ptr = pthread_getspecific(_tls_key)) != NULL) {
+		pthread_setspecific(_tls_key, NULL);
+		git__free(ptr);
+	}
+
 	if ((ret = git_atomic_dec(&git__n_inits)) > 0)
 		return ret;
 
 	/* Shut down any subsystems that have global state */
 	git__shutdown();
-
-	ptr = pthread_getspecific(_tls_key);
-	pthread_setspecific(_tls_key, NULL);
-	git__free(ptr);
 
 	pthread_key_delete(_tls_key);
 	git_mutex_free(&git__mwindow_mutex);
