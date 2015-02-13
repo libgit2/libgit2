@@ -36,7 +36,17 @@ typedef enum {
 } git_filter_mode_t;
 
 /**
- * Filter option flags.
+ * Option flags to alter filter application rules.
+ *
+ * A combination of these flags can be passed in when a filter is applied
+ * to change the behavior of certain filters.  The supported values are:
+ *
+ * - GIT_FILTER_OPT_DEFAULT: no special behavior, the default
+ *
+ * - GIT_FILTER_OPT_ALLOW_UNSAFE: normally, the CRLF filter raises an
+ *   error if you attempt to add an invalid CRLF character combination to
+ *   the index with `core.safecrlf` set; this downgrades that to a warning
+ *   so actions like diff are still possible.
  */
 typedef enum {
 	GIT_FILTER_OPT_DEFAULT = 0u,

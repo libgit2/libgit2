@@ -139,6 +139,23 @@ GIT_EXTERN(uint32_t) git_filter_source_options(const git_filter_source *src);
  */
 
 /**
+ * Options to alter filter behavior.
+ *
+ * There are options that affect filter behavior that are intrinsic to the
+ * definition of the filter (as opposed to the `git_filter_opt_t` values
+ * that are specific to the individual application of the filter).
+ *
+ * - GIT_FILTER_DONT_PRELOAD_WORKDIR: if this filter is the first in a
+ *   filter chain, when applying with `GIT_FILTER_TO_ODB` don't load the
+ *   file contents from the working directory; instead the `apply`
+ *   callback will get an empty `git_buf` and the filter must process the
+ *   on-disk data by itself.
+ */
+typedef enum {
+	GIT_FILTER_DONT_PRELOAD_WORKDIR = (1u << 0),
+} git_filter_flag_t;
+
+/**
  * Initialize callback on filter
  *
  * Specified as `filter.initialize`, this is an optional callback invoked
@@ -148,6 +165,9 @@ GIT_EXTERN(uint32_t) git_filter_source_options(const git_filter_source *src);
  * before the first use of the filter, so you can defer expensive
  * initialization operations (in case libgit2 is being used in a way that
  * doesn't need the filter).
+ *
+ * @param filter The `git_filter` object that was registered.
+ * @return 0 on success, negative on failure (which deregisters the filter)
  */
 typedef int (*git_filter_init_fn)(git_filter *self);
 
@@ -237,6 +257,9 @@ typedef void (*git_filter_cleanup_fn)(
  *
  * The `initialize`, `shutdown`, `check`, `apply`, and `cleanup` callbacks
  * are all documented above with the respective function pointer typedefs.
+ *
+ * `flags` is a combination of `git_filter_flag_t` values that alter how
+ * the filter will be used.  See individual flag values for details.
  */
 struct git_filter {
 	unsigned int           version;
@@ -248,9 +271,13 @@ struct git_filter {
 	git_filter_check_fn    check;
 	git_filter_apply_fn    apply;
 	git_filter_cleanup_fn  cleanup;
+
+	/* added in VERSION 2 */
+
+	uint32_t               flags; /* git_filter_flag_t values */
 };
 
-#define GIT_FILTER_VERSION 1
+#define GIT_FILTER_VERSION 2
 
 /**
  * Register a filter under a given name with a given priority.

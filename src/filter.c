@@ -18,12 +18,12 @@
 #include "array.h"
 
 struct git_filter_source {
-	git_repository *repo;
-	const char     *path;
-	git_oid         oid;  /* zero if unknown (which is likely) */
+	git_repository *repo;     /* repository being filtered */
+	const char     *path;     /* relative path of file in repo */
+	git_oid         oid;      /* zero if unknown (which is likely) */
 	uint16_t        filemode; /* zero if unknown */
-	git_filter_mode_t mode;
-	uint32_t        options;
+	git_filter_mode_t mode;   /* direction in which filter is being applied */
+	uint32_t        options;  /* git_filter_opt_t flags for filter apply */
 };
 
 typedef struct {
@@ -224,11 +224,30 @@ static git_filter_def *filter_registry_lookup(size_t *pos, const char *name)
 	return fdef;
 }
 
+static void filter_registry_remove_at(size_t pos)
+{
+	git_filter_def *fdef = git_vector_get(&git__filter_registry->filters, pos);
+	if (!fdef)
+		return;
+
+	(void)git_vector_remove(&git__filter_registry->filters, pos);
+
+	if (fdef->initialized) {
+		if (fdef->filter && fdef->filter->shutdown)
+			fdef->filter->shutdown(fdef->filter);
+		fdef->initialized = false;
+	}
+
+	git__free(fdef->filter_name);
+	git__free(fdef->attrdata);
+	git__free(fdef);
+}
+
 int git_filter_register(
 	const char *name, git_filter *filter, int priority)
 {
 	git_filter_def *fdef;
-	size_t nattr = 0, nmatch = 0;
+	size_t pos, nattr = 0, nmatch = 0;
 	git_buf attrs = GIT_BUF_INIT;
 
 	assert(name && filter);
@@ -236,14 +255,28 @@ int git_filter_register(
 	if (filter_registry_initialize() < 0)
 		return -1;
 
-	if (!filter_registry_find(NULL, name)) {
-		giterr_set(
-			GITERR_FILTER, "Attempt to reregister existing filter '%s'", name);
-		return GIT_EEXISTS;
+	GITERR_CHECK_VERSION(filter, GIT_FILTER_VERSION, "git_filter");
+
+	if ((fdef = filter_registry_lookup(&pos, name)) != NULL) {
+		const char *msg = NULL;
+
+		if (fdef->filter->version == filter->version)
+			msg = "Attempt to reregister existing filter '%s'";
+		else if (fdef->filter->version > filter->version)
+			msg = "Attempt to register older version of existing filter '%s'";
+		/* else allow replacing with a newer version */
+
+		if (msg) {
+			giterr_set(GITERR_FILTER, msg, name);
+			return GIT_EEXISTS;
+		}
 	}
 
 	if (filter_def_scan_attrs(&attrs, &nattr, &nmatch, filter->attributes) < 0)
 		return -1;
+
+	if (fdef != NULL)
+		filter_registry_remove_at(pos);
 
 	fdef = git__calloc(
 		sizeof(git_filter_def) + 2 * nattr * sizeof(char *), 1);
@@ -289,16 +322,7 @@ int git_filter_unregister(const char *name)
 		return GIT_ENOTFOUND;
 	}
 
-	(void)git_vector_remove(&git__filter_registry->filters, pos);
-
-	if (fdef->initialized && fdef->filter && fdef->filter->shutdown) {
-		fdef->filter->shutdown(fdef->filter);
-		fdef->initialized = false;
-	}
-
-	git__free(fdef->filter_name);
-	git__free(fdef->attrdata);
-	git__free(fdef);
+	filter_registry_remove_at(pos);
 
 	return 0;
 }
@@ -677,22 +701,34 @@ cleanup:
 
 int git_filter_list_apply_to_file(
 	git_buf *out,
-	git_filter_list *filters,
+	git_filter_list *fl,
 	git_repository *repo,
 	const char *path)
 {
 	int error;
 	const char *base = repo ? git_repository_workdir(repo) : NULL;
 	git_buf abspath = GIT_BUF_INIT, raw = GIT_BUF_INIT;
+	git_filter_entry *first;
 
-	if (!(error = git_path_join_unrooted(&abspath, path, base, NULL)) &&
-		!(error = git_futils_readbuffer(&raw, abspath.ptr)))
+	if ((error = git_path_join_unrooted(&abspath, path, base, NULL)) < 0)
+		return error;
+
+	/* skip file load if TO_ODB and first filter has DONT_PRELOAD_WORKDIR */
+	if (!fl ||
+		fl->source.mode != GIT_FILTER_TO_ODB ||
+		!git_array_size(fl->filters) ||
+		!(first = git_array_get(fl->filters, 0)) ||
+		first->filter->version < 2 ||
+		(first->filter->flags & GIT_FILTER_DONT_PRELOAD_WORKDIR) == 0)
 	{
-		error = git_filter_list_apply_to_data(out, filters, &raw);
-
-		git_buf_free(&raw);
+		if ((error = git_futils_readbuffer(&raw, abspath.ptr)) < 0)
+			goto done;
 	}
 
+	error = git_filter_list_apply_to_data(out, fl, &raw);
+
+done:
+	git_buf_free(&raw);
 	git_buf_free(&abspath);
 	return error;
 }

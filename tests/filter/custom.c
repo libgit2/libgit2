@@ -54,7 +54,8 @@ void test_filter_custom__initialize(void)
 		"hero* bitflip reverse\n"
 		"herofile text\n"
 		"heroflip -reverse binary\n"
-		"*.bin binary\n");
+		"*.bin binary\n"
+		"bigfile filter=no-pre-read\n");
 }
 
 void test_filter_custom__cleanup(void)
@@ -167,23 +168,23 @@ static git_filter *create_reverse_filter(const char *attrs)
 static void register_custom_filters(void)
 {
 	static int filters_registered = 0;
+	if (filters_registered)
+		return;
 
-	if (!filters_registered) {
-		cl_git_pass(git_filter_register(
-			"bitflip", create_bitflip_filter(), BITFLIP_FILTER_PRIORITY));
+	filters_registered = 1;
 
-		cl_git_pass(git_filter_register(
-			"reverse", create_reverse_filter("+reverse"),
-			REVERSE_FILTER_PRIORITY));
+	cl_git_pass(git_filter_register(
+		"bitflip", create_bitflip_filter(), BITFLIP_FILTER_PRIORITY));
 
-		/* re-register reverse filter with standard filter=xyz priority */
-		cl_git_pass(git_filter_register(
-			"pre-reverse",
-			create_reverse_filter("+prereverse"),
-			GIT_FILTER_DRIVER_PRIORITY));
+	cl_git_pass(git_filter_register(
+		"reverse", create_reverse_filter("+reverse"),
+		REVERSE_FILTER_PRIORITY));
 
-		filters_registered = 1;
-	}
+	/* re-register reverse filter with standard filter=xyz priority */
+	cl_git_pass(git_filter_register(
+		"pre-reverse",
+		create_reverse_filter("+prereverse"),
+		GIT_FILTER_DRIVER_PRIORITY));
 }
 
 
@@ -329,10 +330,96 @@ void test_filter_custom__order_dependency(void)
 void test_filter_custom__filter_registry_failure_cases(void)
 {
 	git_filter fake = { GIT_FILTER_VERSION, 0 };
+	git_filter newer_version = { GIT_FILTER_VERSION + 1, 0 };
+	git_filter older_version = { GIT_FILTER_VERSION - 1, 0 };
 
+	/* can't replace a registered filter with the same version */
 	cl_assert_equal_i(GIT_EEXISTS, git_filter_register("bitflip", &fake, 0));
 
+	/* can't replace the builtin filters */
 	cl_git_fail(git_filter_unregister(GIT_FILTER_CRLF));
 	cl_git_fail(git_filter_unregister(GIT_FILTER_IDENT));
+
+	/* can't unregister a non-registered filter */
 	cl_assert_equal_i(GIT_ENOTFOUND, git_filter_unregister("not-a-filter"));
+
+	/* can't register a version that is too new */
+	cl_git_fail(git_filter_register("version-too-new", &newer_version, 0));
+
+	/* can replace old with new, but not new with old */
+	cl_git_pass(git_filter_register("test-replaceable", &older_version, 0));
+	cl_git_pass(git_filter_register("test-replaceable", &fake, 0));
+	cl_git_fail(git_filter_register("test-replaceable", &older_version, 0));
+	cl_git_pass(git_filter_unregister("test-replaceable"));
 }
+
+static char *no_preread_data = "not the disk data";
+
+static int no_preread_filter_apply(
+	git_filter     *self,
+	void          **payload,
+	git_buf        *to,
+	const git_buf  *from,
+	const git_filter_source *source)
+{
+	GIT_UNUSED(self); GIT_UNUSED(payload);
+
+	/* verify that attribute path match worked as expected */
+	cl_assert_equal_i(
+		0, git__strncmp("bigfile", git_filter_source_path(source), 4));
+
+	if (git_filter_source_mode(source) == GIT_FILTER_TO_ODB) {
+		/* here is where we would read the file ourselves;
+		 * instead return status data
+		 */
+		cl_assert_equal_sz(0, from->size);
+		cl_git_pass(git_buf_sets(to, no_preread_data));
+		return 0;
+	}
+
+	return GIT_PASSTHROUGH;
+}
+
+static void no_preread_filter_free(git_filter *f)
+{
+	git__free(f);
+}
+
+static git_filter *create_no_preread_filter(void)
+{
+	git_filter *filter = git__calloc(1, sizeof(git_filter));
+	cl_assert(filter);
+
+	filter->version = GIT_FILTER_VERSION;
+	filter->attributes = "filter=no-pre-read";
+	filter->shutdown = no_preread_filter_free;
+	filter->apply = no_preread_filter_apply;
+	filter->flags = GIT_FILTER_DONT_PRELOAD_WORKDIR;
+
+	return filter;
+}
+
+void test_filter_custom__filter_can_read_workdir_data_on_its_own(void)
+{
+	git_filter_list *fl;
+	git_buf out = { 0 };
+
+	cl_git_pass(git_filter_register(
+		"no-pre-read", create_no_preread_filter(), GIT_FILTER_DRIVER_PRIORITY));
+
+	cl_git_mkfile(
+		"empty_standard_repo/bigfile", "the actual data on disk\n");
+
+	cl_git_pass(git_filter_list_load(
+		&fl, g_repo, NULL, "bigfile", GIT_FILTER_TO_ODB, 0));
+
+	cl_git_pass(git_filter_list_apply_to_file(&out, fl, g_repo, "bigfile"));
+
+	cl_assert_equal_s(no_preread_data, out.ptr);
+
+	git_filter_list_free(fl);
+	git_buf_free(&out);
+
+	cl_git_pass(git_filter_unregister("no-pre-read"));
+}
+
