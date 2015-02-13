@@ -1284,6 +1284,7 @@ static int config_parse(git_strmap *values, diskfile_backend *cfg_file, struct r
 				if (result == 0) {
 					result = config_parse(values, cfg_file, r, level, depth+1);
 					r = git_array_get(cfg_file->readers, index);
+					reader = git_array_get(cfg_file->readers, reader_idx);
 				}
 				else if (result == GIT_ENOTFOUND) {
 					giterr_clear();
