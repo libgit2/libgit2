@@ -1,4 +1,5 @@
 #include "clar_libgit2.h"
+#include "clar_libgit2_trace.h"
 
 #ifdef _WIN32
 int __cdecl main(int argc, char *argv[])
@@ -11,6 +12,7 @@ int main(int argc, char *argv[])
 	clar_test_init(argc, argv);
 
 	git_libgit2_init();
+	cl_global_trace_register();
 	cl_sandbox_set_search_path_defaults();
 
 	/* Run the test suite */
@@ -19,6 +21,7 @@ int main(int argc, char *argv[])
 	clar_test_shutdown();
 
 	giterr_clear();
+	cl_global_trace_disable();
 	git_libgit2_shutdown();
 
 	return res;
