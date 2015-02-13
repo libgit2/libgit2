@@ -608,11 +608,21 @@ static int rebase_init(
 	const git_annotated_commit *onto,
 	const git_rebase_options *opts)
 {
+	git_reference *head_ref = NULL;
+	git_annotated_commit *head_branch = NULL;
 	git_buf state_path = GIT_BUF_INIT;
 	int error;
 
 	if ((error = git_buf_joinpath(&state_path, repo->path_repository, REBASE_MERGE_DIR)) < 0)
-		return error;
+		goto done;
+
+	if (!branch) {
+		if ((error = git_repository_head(&head_ref, repo)) < 0 ||
+			(error = git_annotated_commit_from_ref(&head_branch, repo, head_ref)) < 0)
+			goto done;
+
+		branch = head_branch;
+	}
 
 	rebase->repo = repo;
 	rebase->type = GIT_REBASE_TYPE_MERGE;
@@ -629,6 +639,10 @@ static int rebase_init(
 	error = rebase_init_merge(rebase, repo, branch, upstream, onto);
 
 	git_buf_free(&state_path);
+
+done:
+	git_reference_free(head_ref);
+	git_annotated_commit_free(head_branch);
 
 	return error;
 }
@@ -649,7 +663,7 @@ int git_rebase_init(
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	int error;
 
-	assert(repo && branch && (upstream || onto));
+	assert(repo && (upstream || onto));
 
 	*out = NULL;
 

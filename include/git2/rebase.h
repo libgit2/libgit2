@@ -133,7 +133,8 @@ GIT_EXTERN(int) git_rebase_init_options(
  *
  * @param out Pointer to store the rebase object
  * @param repo The repository to perform the rebase
- * @param branch The terminal commit to rebase
+ * @param branch The terminal commit to rebase, or NULL to rebase the
+ *               current branch
  * @param upstream The commit to begin rebasing from, or NULL to rebase all
  *                 reachable commits
  * @param onto The branch to rebase onto, or NULL to rebase onto the given
