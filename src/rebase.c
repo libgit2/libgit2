@@ -658,8 +658,8 @@ int git_rebase_init(
 {
 	git_rebase *rebase = NULL;
 	git_rebase_options opts;
-	git_reference *head_ref = NULL;
 	git_buf reflog = GIT_BUF_INIT;
+	git_commit *onto_commit = NULL;
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	int error;
 
@@ -672,24 +672,28 @@ int git_rebase_init(
 	if (!onto)
 		onto = upstream;
 
-	checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 
 	if ((error = rebase_normalize_opts(repo, &opts, given_opts)) < 0 ||
 		(error = git_repository__ensure_not_bare(repo, "rebase")) < 0 ||
 		(error = rebase_ensure_not_in_progress(repo)) < 0 ||
-		(error = rebase_ensure_not_dirty(repo)) < 0)
+		(error = rebase_ensure_not_dirty(repo)) < 0 ||
+		(error = git_commit_lookup(
+			&onto_commit, repo, git_annotated_commit_id(onto))) < 0)
 		return error;
 
 	rebase = git__calloc(1, sizeof(git_rebase));
 	GITERR_CHECK_ALLOC(rebase);
 
-	if ((error = rebase_init(rebase, repo, branch, upstream, onto, &opts)) < 0 ||
+	if ((error = rebase_init(
+			rebase, repo, branch, upstream, onto, &opts)) < 0 ||
 		(error = rebase_setupfiles(rebase)) < 0 ||
 		(error = git_buf_printf(&reflog,
 			"rebase: checkout %s", rebase_onto_name(onto))) < 0 ||
-		(error = git_reference_create(&head_ref, repo, GIT_HEAD_FILE,
-			git_annotated_commit_id(onto), 1, signature, reflog.ptr)) < 0 ||
-		(error = git_checkout_head(repo, &checkout_opts)) < 0)
+		(error = git_checkout_tree(
+			repo, (git_object *)onto_commit, &checkout_opts)) < 0 ||
+		(error = git_repository_set_head_detached(
+			repo, git_annotated_commit_id(onto), signature, reflog.ptr)) < 0)
 		goto done;
 
 	*out = rebase;
@@ -700,7 +704,7 @@ done:
 		git_rebase_free(rebase);
 	}
 
-	git_reference_free(head_ref);
+	git_commit_free(onto_commit);
 	git_buf_free(&reflog);
 	rebase_opts_free(&opts);
 
