@@ -104,7 +104,7 @@ void test_online_clone__can_checkout_a_cloned_repo(void)
 	bool checkout_progress_cb_was_called = false,
 		  fetch_progress_cb_was_called = false;
 
-	g_options.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	g_options.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 	g_options.checkout_opts.progress_cb = &checkout_progress;
 	g_options.checkout_opts.progress_payload = &checkout_progress_cb_was_called;
 	g_options.remote_callbacks.transfer_progress = &fetch_progress;
