@@ -26,7 +26,7 @@ void perf__do_merge(const char *fixture,
 
 	perf__timer__start(&t_total);
 
-	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 	clone_opts.checkout_opts = checkout_opts;
 	cl_git_pass(git_signature_now(&clone_opts.signature, "Me", "foo@example.com"));
 
