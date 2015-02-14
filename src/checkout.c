@@ -2346,6 +2346,13 @@ static int checkout_data_init(
 		}
 	}
 
+	/* if the repository does not actually have an index file, then this
+	 * is an initial checkout (perhaps from clone), so we allow safe updates
+	 */
+	if (!data->index->on_disk &&
+		(data->opts.checkout_strategy & GIT_CHECKOUT_SAFE) != 0)
+		data->opts.checkout_strategy |= GIT_CHECKOUT_SAFE_CREATE;
+
 	/* if you are forcing, definitely allow safe updates */
 	if ((data->opts.checkout_strategy & GIT_CHECKOUT_FORCE) != 0)
 		data->opts.checkout_strategy |= GIT_CHECKOUT_SAFE_CREATE;
