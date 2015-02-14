@@ -21,7 +21,7 @@ void test_checkout_crlf__cleanup(void)
 void test_checkout_crlf__detect_crlf_autocrlf_false(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_repo_set_bool(g_repo, "core.autocrlf", false);
 
@@ -36,7 +36,7 @@ void test_checkout_crlf__autocrlf_false_index_size_is_unfiltered_size(void)
 	git_index *index;
 	const git_index_entry *entry;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_repo_set_bool(g_repo, "core.autocrlf", false);
 
@@ -56,7 +56,7 @@ void test_checkout_crlf__autocrlf_false_index_size_is_unfiltered_size(void)
 void test_checkout_crlf__detect_crlf_autocrlf_true(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 
@@ -73,7 +73,7 @@ void test_checkout_crlf__detect_crlf_autocrlf_true(void)
 void test_checkout_crlf__more_lf_autocrlf_true(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 
@@ -85,7 +85,7 @@ void test_checkout_crlf__more_lf_autocrlf_true(void)
 void test_checkout_crlf__more_crlf_autocrlf_true(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 
@@ -97,7 +97,7 @@ void test_checkout_crlf__more_crlf_autocrlf_true(void)
 void test_checkout_crlf__all_crlf_autocrlf_true(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 
@@ -109,7 +109,7 @@ void test_checkout_crlf__all_crlf_autocrlf_true(void)
 void test_checkout_crlf__detect_crlf_autocrlf_true_utf8(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 
@@ -136,7 +136,7 @@ void test_checkout_crlf__autocrlf_true_index_size_is_filtered_size(void)
 	git_index *index;
 	const git_index_entry *entry;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 
@@ -162,7 +162,7 @@ void test_checkout_crlf__with_ident(void)
 	git_index *index;
 	git_blob *blob;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_git_mkfile("crlf/.gitattributes",
 		"*.txt text\n*.bin binary\n"
@@ -252,7 +252,7 @@ void test_checkout_crlf__with_ident(void)
 void test_checkout_crlf__autocrlf_false_no_attrs(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_repo_set_bool(g_repo, "core.autocrlf", false);
 
@@ -265,7 +265,7 @@ void test_checkout_crlf__autocrlf_false_no_attrs(void)
 void test_checkout_crlf__autocrlf_true_no_attrs(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 
@@ -283,7 +283,7 @@ void test_checkout_crlf__autocrlf_true_no_attrs(void)
 void test_checkout_crlf__autocrlf_input_no_attrs(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_repo_set_string(g_repo, "core.autocrlf", "input");
 
@@ -296,7 +296,7 @@ void test_checkout_crlf__autocrlf_input_no_attrs(void)
 void test_checkout_crlf__autocrlf_false_text_auto_attr(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_git_mkfile("./crlf/.gitattributes", "* text=auto\n");
 
@@ -316,7 +316,7 @@ void test_checkout_crlf__autocrlf_false_text_auto_attr(void)
 void test_checkout_crlf__autocrlf_true_text_auto_attr(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_git_mkfile("./crlf/.gitattributes", "* text=auto\n");
 
@@ -336,7 +336,7 @@ void test_checkout_crlf__autocrlf_true_text_auto_attr(void)
 void test_checkout_crlf__autocrlf_input_text_auto_attr(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_git_mkfile("./crlf/.gitattributes", "* text=auto\n");
 

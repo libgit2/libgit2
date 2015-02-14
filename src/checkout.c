@@ -255,13 +255,13 @@ static int checkout_action_no_wd(
 		error = checkout_notify(data, GIT_CHECKOUT_NOTIFY_DIRTY, delta, NULL);
 		if (error)
 			return error;
-		*action = CHECKOUT_ACTION_IF(SAFE_CREATE, UPDATE_BLOB, NONE);
+		*action = CHECKOUT_ACTION_IF(RECREATE_MISSING, UPDATE_BLOB, NONE);
 		break;
 	case GIT_DELTA_ADDED:    /* case 2 or 28 (and 5 but not really) */
 		*action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
 		break;
 	case GIT_DELTA_MODIFIED: /* case 13 (and 35 but not really) */
-		*action = CHECKOUT_ACTION_IF(SAFE_CREATE, UPDATE_BLOB, CONFLICT);
+		*action = CHECKOUT_ACTION_IF(RECREATE_MISSING, UPDATE_BLOB, CONFLICT);
 		break;
 	case GIT_DELTA_TYPECHANGE: /* case 21 (B->T) and 28 (T->B)*/
 		if (delta->new_file.mode == GIT_FILEMODE_TREE)
@@ -2346,18 +2346,17 @@ static int checkout_data_init(
 		}
 	}
 
+	/* if you are forcing, allow all safe updates, plus recreate missing */
+	if ((data->opts.checkout_strategy & GIT_CHECKOUT_FORCE) != 0)
+		data->opts.checkout_strategy |= GIT_CHECKOUT_SAFE |
+			GIT_CHECKOUT_RECREATE_MISSING;
+
 	/* if the repository does not actually have an index file, then this
 	 * is an initial checkout (perhaps from clone), so we allow safe updates
 	 */
 	if (!data->index->on_disk &&
 		(data->opts.checkout_strategy & GIT_CHECKOUT_SAFE) != 0)
-		data->opts.checkout_strategy |= GIT_CHECKOUT_SAFE_CREATE;
-
-	/* if you are forcing, definitely allow safe updates */
-	if ((data->opts.checkout_strategy & GIT_CHECKOUT_FORCE) != 0)
-		data->opts.checkout_strategy |= GIT_CHECKOUT_SAFE_CREATE;
-	if ((data->opts.checkout_strategy & GIT_CHECKOUT_SAFE_CREATE) != 0)
-		data->opts.checkout_strategy |= GIT_CHECKOUT_SAFE;
+		data->opts.checkout_strategy |= GIT_CHECKOUT_RECREATE_MISSING;
 
 	data->strategy = data->opts.checkout_strategy;
 

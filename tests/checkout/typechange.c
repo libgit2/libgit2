@@ -212,7 +212,8 @@ void test_checkout_typechange__checkout_with_conflicts(void)
 		p_mkdir("typechanges/d", 0777); /* intentionally empty dir */
 		force_create_file("typechanges/untracked");
 
-		opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+		opts.checkout_strategy = GIT_CHECKOUT_SAFE |
+			GIT_CHECKOUT_RECREATE_MISSING;
 		memset(&cts, 0, sizeof(cts));
 
 		cl_git_fail(git_checkout_tree(g_repo, obj, &opts));
