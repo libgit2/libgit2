@@ -72,7 +72,7 @@ static int cherrypick_normalize_opts(
 	const char *their_label)
 {
 	int error = 0;
-	unsigned int default_checkout_strategy = GIT_CHECKOUT_SAFE_CREATE |
+	unsigned int default_checkout_strategy = GIT_CHECKOUT_SAFE |
 		GIT_CHECKOUT_ALLOW_CONFLICTS;
 
 	GIT_UNUSED(repo);
