@@ -250,7 +250,7 @@ static int default_remote_create(
 	if ((error = git_remote_create(out, repo, name, url)) < 0)
 		return error;
 
-	return git_remote_set_callbacks(*out, callbacks);
+	return 0;
 }
 
 /*
@@ -335,6 +335,7 @@ static int clone_into(git_repository *repo, git_remote *_remote, const git_check
 	int error;
 	git_buf reflog_message = GIT_BUF_INIT;
 	git_remote *remote;
+	git_fetch_options fetch_options = GIT_FETCH_OPTIONS_INIT;
 	const git_remote_callbacks *callbacks;
 
 	assert(repo && _remote);
@@ -347,18 +348,15 @@ static int clone_into(git_repository *repo, git_remote *_remote, const git_check
 	if ((error = git_remote_dup(&remote, _remote)) < 0)
 		return error;
 
-	callbacks = git_remote_get_callbacks(_remote);
-	if (!giterr__check_version(callbacks, 1, "git_remote_callbacks") &&
-	    (error = git_remote_set_callbacks(remote, callbacks)) < 0)
-		goto cleanup;
-
 	if ((error = git_remote_add_fetch(remote, "refs/tags/*:refs/tags/*")) < 0)
 		goto cleanup;
 
-	git_remote_set_update_fetchhead(remote, 0);
 	git_buf_printf(&reflog_message, "clone: from %s", git_remote_url(remote));
 
-	if ((error = git_remote_fetch(remote, NULL, signature, git_buf_cstr(&reflog_message))) != 0)
+	fetch_options.signature = signature;
+	fetch_options.reflog_message = git_buf_cstr(&reflog_message);
+	fetch_options.update_fetchhead = 0;
+	if ((error = git_remote_fetch(remote, &_remote->callbacks, &fetch_options)) != 0)
 		goto cleanup;
 
 	error = checkout_branch(repo, remote, co_opts, branch, signature, git_buf_cstr(&reflog_message));
@@ -512,6 +510,7 @@ static int clone_local_into(git_repository *repo, git_remote *remote, const git_
 {
 	int error, flags;
 	git_repository *src;
+	git_fetch_options fetch_options = GIT_FETCH_OPTIONS_INIT;
 	git_buf src_odb = GIT_BUF_INIT, dst_odb = GIT_BUF_INIT, src_path = GIT_BUF_INIT;
 	git_buf reflog_message = GIT_BUF_INIT;
 
@@ -553,7 +552,9 @@ static int clone_local_into(git_repository *repo, git_remote *remote, const git_
 
 	git_buf_printf(&reflog_message, "clone: from %s", git_remote_url(remote));
 
-	if ((error = git_remote_fetch(remote, NULL, signature, git_buf_cstr(&reflog_message))) != 0)
+	fetch_options.signature = signature;
+	fetch_options.reflog_message = git_buf_cstr(&reflog_message);
+	if ((error = git_remote_fetch(remote, NULL, &fetch_options)) != 0)
 		goto cleanup;
 
 	error = checkout_branch(repo, remote, co_opts, branch, signature, git_buf_cstr(&reflog_message));

@@ -98,17 +98,6 @@ GIT_EXTERN(int) git_remote_create_anonymous(
 GIT_EXTERN(int) git_remote_lookup(git_remote **out, git_repository *repo, const char *name);
 
 /**
- * Save a remote to its repository's configuration
- *
- * One can't save a in-memory remote. Doing so will
- * result in a GIT_EINVALIDSPEC being returned.
- *
- * @param remote the remote to save to config
- * @return 0, GIT_EINVALIDSPEC or an error code
- */
-GIT_EXTERN(int) git_remote_save(const git_remote *remote);
-
-/**
  * Create a copy of an existing remote.  All internal strings are also
  * duplicated. Callbacks are not duplicated.
  *
@@ -317,7 +306,7 @@ GIT_EXTERN(int) git_remote_ls(const git_remote_head ***out,  size_t *size, git_r
  * download. Use NULL or an empty array to use the base refspecs
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_remote_download(git_remote *remote, const git_strarray *refspecs);
+GIT_EXTERN(int) git_remote_download(git_remote *remote, const git_remote_callbacks *callbacks, const git_strarray *refspecs);
 
 /**
  * Create a packfile and send it to the server
@@ -330,7 +319,7 @@ GIT_EXTERN(int) git_remote_download(git_remote *remote, const git_strarray *refs
  * upload. Use NULL or an empty array to use the base refspecs
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_remote_upload(git_remote *remote, const git_strarray *refspecs, const git_push_options *opts);
+GIT_EXTERN(int) git_remote_upload(git_remote *remote, const git_remote_callbacks *callbacks, const git_push_options *opts);
 
 /**
  * Check whether the remote is connected
@@ -396,24 +385,77 @@ GIT_EXTERN(int) git_remote_update_tips(
 GIT_EXTERN(int) git_remote_prune(git_remote *remote);
 
 /**
+ * Automatic tag following option
+ *
+ * Lets us select the --tags option to use.
+ */
+typedef enum {
+	GIT_REMOTE_DOWNLOAD_TAGS_AUTO = 0,
+	GIT_REMOTE_DOWNLOAD_TAGS_NONE = 1,
+	GIT_REMOTE_DOWNLOAD_TAGS_ALL = 2
+} git_remote_autotag_option_t;
+
+typedef struct {
+	unsigned int version;
+	/**
+	 * Whether to update FETCH_HEAD setting.  By default,
+	 * FETCH_HEAD will be updated on every fetch.  Set to 0 to
+	 * disable.
+	 */
+	unsigned int update_fetchhead;
+	/**
+	 * Set to true to prune stale references after fetching
+	 */
+	unsigned int prune;
+	/**
+	 * The tag auto-follow setting
+	 */
+	git_remote_autotag_option_t autotag;
+	/**
+	 * The refspecs to use for this fetch. Leave empty to use the
+	 * base refspecs.
+	 */
+	git_strarray refspecs;
+	/**
+	 * Identity to use to update the reflog.
+	 */
+	const git_signature *signature;
+	/**
+	 * The message to insert into the reflogs. If NULL, the default is "fetch".
+	 */
+	const char *reflog_message;
+} git_fetch_options;
+
+#define GIT_FETCH_OPTIONS_VERSION 1
+#define GIT_FETCH_OPTIONS_INIT { GIT_FETCH_OPTIONS_VERSION, 1 }
+
+/**
+ * Initializes a `git_fetch_options` with default values. Equivalent to
+ * creating an instance with GIT_FETCH_OPTIONS_INIT.
+ *
+ * @param opts the `git_fetch_options` instance to initialize.
+ * @param version the version of the struct; you should pass
+ *        `GIT_FETCH_OPTIONS_VERSION` here.
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_fetch_init_options(
+	git_fetch_options *opts,
+	unsigned int version);
+
+/**
  * Download new data and update tips
  *
  * Convenience function to connect to a remote, download the data,
  * disconnect and update the remote-tracking branches.
  *
  * @param remote the remote to fetch from
- * @param refspecs the refspecs to use for this fetch. Pass NULL or an
- *                 empty array to use the base refspecs.
- * @param signature The identity to use when updating reflogs
- * @param reflog_message The message to insert into the reflogs. If NULL, the
- *								 default is "fetch"
+ * @param opts configuration to use for this fetch
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_remote_fetch(
-		git_remote *remote,
-		const git_strarray *refspecs,
-		const git_signature *signature,
-		const char *reflog_message);
+	git_remote *remote,
+	const git_remote_callbacks *callbacks,
+	const git_fetch_options *opts);
 
 /**
  * Perform a push
@@ -421,16 +463,12 @@ GIT_EXTERN(int) git_remote_fetch(
  * Peform all the steps from a push.
  *
  * @param remote the remote to push to
- * @param refspecs the refspecs to use for pushing. If none are
- * passed, the configured refspecs will be used
- * @param opts the options
- * @param signature signature to use for the reflog of updated references
- * @param reflog_message message to use for the reflog of upated references
+ * @param opts the options to use for this push
  */
-GIT_EXTERN(int) git_remote_push(git_remote *remote,
-				const git_strarray *refspecs,
-				const git_push_options *opts,
-				const git_signature *signature, const char *reflog_message);
+GIT_EXTERN(int) git_remote_push(
+	git_remote *remote,
+	const git_remote_callbacks *callbacks,
+	const git_push_options *opts);
 
 /**
  * Get a list of the configured remotes for a repo
@@ -549,43 +587,9 @@ GIT_EXTERN(int) git_remote_init_callbacks(
 	unsigned int version);
 
 /**
- * Set the callbacks for a remote
- *
- * Note that the remote keeps its own copy of the data and you need to
- * call this function again if you want to change the callbacks.
- *
- * @param remote the remote to configure
- * @param callbacks a pointer to the user's callback settings
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_remote_set_callbacks(git_remote *remote, const git_remote_callbacks *callbacks);
-
-/**
- * Retrieve the current callback structure
- *
- * This provides read access to the callbacks structure as the remote
- * sees it.
- *
- * @param remote the remote to query
- * @return a pointer to the callbacks structure
- */
-GIT_EXTERN(const git_remote_callbacks *) git_remote_get_callbacks(git_remote *remote);
-
-/**
  * Get the statistics structure that is filled in by the fetch operation.
  */
 GIT_EXTERN(const git_transfer_progress *) git_remote_stats(git_remote *remote);
-
-/**
- * Automatic tag following option
- *
- * Lets us select the --tags option to use.
- */
-typedef enum {
-	GIT_REMOTE_DOWNLOAD_TAGS_AUTO = 0,
-	GIT_REMOTE_DOWNLOAD_TAGS_NONE = 1,
-	GIT_REMOTE_DOWNLOAD_TAGS_ALL = 2
-} git_remote_autotag_option_t;
 
 /**
  * Retrieve the tag auto-follow setting
@@ -594,16 +598,6 @@ typedef enum {
  * @return the auto-follow setting
  */
 GIT_EXTERN(git_remote_autotag_option_t) git_remote_autotag(const git_remote *remote);
-
-/**
- * Set the tag auto-follow setting
- *
- * @param remote the remote to configure
- * @param value a GIT_REMOTE_DOWNLOAD_TAGS value
- */
-GIT_EXTERN(void) git_remote_set_autotag(
-	git_remote *remote,
-	git_remote_autotag_option_t value);
 
 /**
  * Retrieve the ref-prune setting
@@ -624,7 +618,7 @@ GIT_EXTERN(int) git_remote_prune_refs(const git_remote *remote);
  *
  * No loaded instances of a the remote with the old name will change
  * their name or their list of refspecs.
- *
+ *a
  * @param problems non-default refspecs cannot be renamed and will be
  * stored here for further processing by the caller. Always free this
  * strarray on successful return.
@@ -646,16 +640,7 @@ GIT_EXTERN(int) git_remote_rename(
  * @return the update FETCH_HEAD setting
  */
 GIT_EXTERN(int) git_remote_update_fetchhead(git_remote *remote);
-
-/**
- * Sets the update FETCH_HEAD setting.  By default, FETCH_HEAD will be
- * updated on every fetch.  Set to 0 to disable.
- *
- * @param remote the remote to configure
- * @param value 0 to disable updating FETCH_HEAD
- */
-GIT_EXTERN(void) git_remote_set_update_fetchhead(git_remote *remote, int value);
-
+					
 /**
  * Ensure the remote name is well-formed.
  *

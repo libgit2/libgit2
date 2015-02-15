@@ -34,6 +34,19 @@ typedef struct {
 	 * to create. The default value is 1.
 	 */
 	unsigned int pb_parallelism;
+	/**
+	 * The refspecs to use for this push. Leave empty to use the
+	 * base refspecs.
+	 */
+	git_strarray refspecs;
+	/**
+	 * Identity to use to update the reflog.
+	 */
+	git_signature *signature;
+	/**
+	 * The message to insert into the reflogs.
+	 */
+	char *reflog_message;
 } git_push_options;
 
 #define GIT_PUSH_OPTIONS_VERSION 1
