@@ -35,11 +35,15 @@ static void origin_decref(git_blame__origin *o)
 /* Given a commit and a path in it, create a new origin structure. */
 static int make_origin(git_blame__origin **out, git_commit *commit, const char *path)
 {
-	int error = 0;
 	git_blame__origin *o;
+	size_t path_len = strlen(path), alloc_len;
+	int error = 0;
 
-	o = git__calloc(1, sizeof(*o) + strlen(path) + 1);
+	GITERR_CHECK_ALLOC_ADD(&alloc_len, sizeof(*o), path_len);
+	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 1);
+	o = git__calloc(1, alloc_len);
 	GITERR_CHECK_ALLOC(o);
+
 	o->commit = commit;
 	o->refcnt = 1;
 	strcpy(o->path, path);

@@ -23,7 +23,7 @@
  *
  *     typedef git_array_t(my_struct) my_struct_array_t;
  */
-#define git_array_t(type) struct { type *ptr; uint32_t size, asize; }
+#define git_array_t(type) struct { type *ptr; size_t size, asize; }
 
 #define GIT_ARRAY_INIT { NULL, 0, 0 }
 
@@ -45,15 +45,26 @@ typedef git_array_t(char) git_array_generic_t;
 GIT_INLINE(void *) git_array_grow(void *_a, size_t item_size)
 {
 	volatile git_array_generic_t *a = _a;
-	uint32_t new_size = (a->size < 8) ? 8 : a->asize * 3 / 2;
-	char *new_array = git__realloc(a->ptr, new_size * item_size);
-	if (!new_array) {
-		git_array_clear(*a);
-		return NULL;
+	size_t new_size;
+	char *new_array;
+
+	if (a->size < 8) {
+		new_size = 8;
 	} else {
-		a->ptr = new_array; a->asize = new_size; a->size++;
-		return a->ptr + (a->size - 1) * item_size;
+		if (GIT_MULTIPLY_SIZET_OVERFLOW(&new_size, a->size, 3))
+			goto on_oom;
+		new_size /= 2;
 	}
+
+	if ((new_array = git__reallocarray(a->ptr, new_size, item_size)) == NULL)
+		goto on_oom;
+
+	a->ptr = new_array; a->asize = new_size; a->size++;
+	return a->ptr + (a->size - 1) * item_size;
+
+on_oom:
+	git_array_clear(*a);
+	return NULL;
 }
 
 #define git_array_alloc(a) \

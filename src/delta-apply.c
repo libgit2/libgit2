@@ -57,7 +57,7 @@ int git__delta_apply(
 	size_t delta_len)
 {
 	const unsigned char *delta_end = delta + delta_len;
-	size_t base_sz, res_sz;
+	size_t base_sz, res_sz, alloc_sz;
 	unsigned char *res_dp;
 
 	/* Check that the base size matches the data we were given;
@@ -74,7 +74,8 @@ int git__delta_apply(
 		return -1;
 	}
 
-	res_dp = git__malloc(res_sz + 1);
+	GITERR_CHECK_ALLOC_ADD(&alloc_sz, res_sz, 1);
+	res_dp = git__malloc(alloc_sz);
 	GITERR_CHECK_ALLOC(res_dp);
 
 	res_dp[res_sz] = '\0';

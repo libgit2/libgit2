@@ -624,7 +624,7 @@ int git_packfile_unpack(
 	struct pack_chain_elem *elem = NULL, *stack;
 	git_pack_cache_entry *cached = NULL;
 	struct pack_chain_elem small_stack[SMALL_STACK_SIZE];
-	size_t stack_size = 0, elem_pos;
+	size_t stack_size = 0, elem_pos, alloclen;
 	git_otype base_type;
 
 	/*
@@ -683,8 +683,11 @@ int git_packfile_unpack(
 	 */
 	if (cached && stack_size == 1) {
 		void *data = obj->data;
-		obj->data = git__malloc(obj->len + 1);
+
+		GITERR_CHECK_ALLOC_ADD(&alloclen, obj->len, 1);
+		obj->data = git__malloc(alloclen);
 		GITERR_CHECK_ALLOC(obj->data);
+
 		memcpy(obj->data, data, obj->len + 1);
 		git_atomic_dec(&cached->refcount);
 		goto cleanup;
@@ -837,16 +840,18 @@ int packfile_unpack_compressed(
 	size_t size,
 	git_otype type)
 {
+	size_t buf_size;
 	int st;
 	z_stream stream;
 	unsigned char *buffer, *in;
 
-	buffer = git__calloc(1, size + 1);
+	GITERR_CHECK_ALLOC_ADD(&buf_size, size, 1);
+	buffer = git__calloc(1, buf_size);
 	GITERR_CHECK_ALLOC(buffer);
 
 	memset(&stream, 0, sizeof(stream));
 	stream.next_out = buffer;
-	stream.avail_out = (uInt)size + 1;
+	stream.avail_out = (uInt)buf_size;
 	stream.zalloc = use_git_alloc;
 	stream.zfree = use_git_free;
 
@@ -1085,14 +1090,17 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 {
 	struct stat st;
 	struct git_pack_file *p;
-	size_t path_len = path ? strlen(path) : 0;
+	size_t path_len = path ? strlen(path) : 0, alloc_len;
 
 	*pack_out = NULL;
 
 	if (path_len < strlen(".idx"))
 		return git_odb__error_notfound("invalid packfile path", NULL);
 
-	p = git__calloc(1, sizeof(*p) + path_len + 2);
+	GITERR_CHECK_ALLOC_ADD(&alloc_len, sizeof(*p), path_len);
+	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 2);
+
+	p = git__calloc(1, alloc_len);
 	GITERR_CHECK_ALLOC(p);
 
 	memcpy(p->pack_name, path, path_len + 1);

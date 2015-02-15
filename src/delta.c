@@ -119,6 +119,29 @@ struct git_delta_index {
 	struct index_entry *hash[GIT_FLEX_ARRAY];
 };
 
+static int lookup_index_alloc(
+	void **out, unsigned long *out_len, size_t entries, size_t hash_count)
+{
+	size_t entries_len, hash_len, index_len;
+
+	GITERR_CHECK_ALLOC_MULTIPLY(&entries_len, entries, sizeof(struct index_entry));
+	GITERR_CHECK_ALLOC_MULTIPLY(&hash_len, hash_count, sizeof(struct index_entry *));
+
+	GITERR_CHECK_ALLOC_ADD(&index_len, sizeof(struct git_delta_index), entries_len);
+	GITERR_CHECK_ALLOC_ADD(&index_len, index_len, hash_len);
+
+	if (!git__is_ulong(index_len)) {
+		giterr_set(GITERR_NOMEMORY, "Overly large delta");
+		return -1;
+	}
+
+	*out = git__malloc(index_len);
+	GITERR_CHECK_ALLOC(*out);
+
+	*out_len = index_len;
+	return 0;
+}
+
 struct git_delta_index *
 git_delta_create_index(const void *buf, unsigned long bufsize)
 {
@@ -148,13 +171,9 @@ git_delta_create_index(const void *buf, unsigned long bufsize)
 	hsize = 1 << i;
 	hmask = hsize - 1;
 
-	/* allocate lookup index */
-	memsize = sizeof(*index) +
-		  sizeof(*hash) * hsize +
-		  sizeof(*entry) * entries;
-	mem = git__malloc(memsize);
-	if (!mem)
+	if (lookup_index_alloc(&mem, &memsize, entries, hsize) < 0)
 		return NULL;
+
 	index = mem;
 	mem = index->hash;
 	hash = mem;

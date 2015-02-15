@@ -194,7 +194,7 @@ static int write_deflate(git_filebuf *file, void *source, size_t len)
 int git_filebuf_open(git_filebuf *file, const char *path, int flags, mode_t mode)
 {
 	int compression, error = -1;
-	size_t path_len;
+	size_t path_len, alloc_len;
 
 	/* opening an already open buffer is a programming error;
 	 * assert that this never happens instead of returning
@@ -271,7 +271,8 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags, mode_t mode
 		GITERR_CHECK_ALLOC(file->path_original);
 
 		/* create the locking path by appending ".lock" to the original */
-		file->path_lock = git__malloc(path_len + GIT_FILELOCK_EXTLENGTH);
+		GITERR_CHECK_ALLOC_ADD(&alloc_len, path_len, GIT_FILELOCK_EXTLENGTH);
+		file->path_lock = git__malloc(alloc_len);
 		GITERR_CHECK_ALLOC(file->path_lock);
 
 		memcpy(file->path_lock, file->path_original, path_len);
@@ -407,8 +408,8 @@ int git_filebuf_reserve(git_filebuf *file, void **buffer, size_t len)
 int git_filebuf_printf(git_filebuf *file, const char *format, ...)
 {
 	va_list arglist;
-	size_t space_left;
-	int len, res;
+	size_t space_left, len, alloclen;
+	int written, res;
 	char *tmp_buffer;
 
 	ENSURE_BUF_OK(file);
@@ -417,15 +418,16 @@ int git_filebuf_printf(git_filebuf *file, const char *format, ...)
 
 	do {
 		va_start(arglist, format);
-		len = p_vsnprintf((char *)file->buffer + file->buf_pos, space_left, format, arglist);
+		written = p_vsnprintf((char *)file->buffer + file->buf_pos, space_left, format, arglist);
 		va_end(arglist);
 
-		if (len < 0) {
+		if (written < 0) {
 			file->last_error = BUFERR_MEM;
 			return -1;
 		}
 
-		if ((size_t)len + 1 <= space_left) {
+		len = written;
+		if (len + 1 <= space_left) {
 			file->buf_pos += len;
 			return 0;
 		}
@@ -435,19 +437,19 @@ int git_filebuf_printf(git_filebuf *file, const char *format, ...)
 
 		space_left = file->buf_size - file->buf_pos;
 
-	} while ((size_t)len + 1 <= space_left);
+	} while (len + 1 <= space_left);
 
-	tmp_buffer = git__malloc(len + 1);
-	if (!tmp_buffer) {
+	if (GIT_ADD_SIZET_OVERFLOW(&alloclen, len, 1) ||
+		!(tmp_buffer = git__malloc(alloclen))) {
 		file->last_error = BUFERR_MEM;
 		return -1;
 	}
 
 	va_start(arglist, format);
-	len = p_vsnprintf(tmp_buffer, len + 1, format, arglist);
+	written = p_vsnprintf(tmp_buffer, len + 1, format, arglist);
 	va_end(arglist);
 
-	if (len < 0) {
+	if (written < 0) {
 		git__free(tmp_buffer);
 		file->last_error = BUFERR_MEM;
 		return -1;

@@ -84,10 +84,11 @@ int git_tree_entry_icmp(const git_tree_entry *e1, const git_tree_entry *e2)
 static git_tree_entry *alloc_entry(const char *filename)
 {
 	git_tree_entry *entry = NULL;
-	size_t filename_len = strlen(filename);
+	size_t filename_len = strlen(filename), tree_len;
 
-	entry = git__malloc(sizeof(git_tree_entry) + filename_len + 1);
-	if (!entry)
+	if (GIT_ADD_SIZET_OVERFLOW(&tree_len, sizeof(git_tree_entry), filename_len) ||
+		GIT_ADD_SIZET_OVERFLOW(&tree_len, tree_len, 1) ||
+		!(entry = git__malloc(tree_len)))
 		return NULL;
 
 	memset(entry, 0x0, sizeof(git_tree_entry));
@@ -210,7 +211,8 @@ int git_tree_entry_dup(git_tree_entry **dest, const git_tree_entry *source)
 
 	assert(source);
 
-	total_size = sizeof(git_tree_entry) + source->filename_len + 1;
+	GITERR_CHECK_ALLOC_ADD(&total_size, sizeof(git_tree_entry), source->filename_len);
+	GITERR_CHECK_ALLOC_ADD(&total_size, total_size, 1);
 
 	copy = git__malloc(total_size);
 	GITERR_CHECK_ALLOC(copy);

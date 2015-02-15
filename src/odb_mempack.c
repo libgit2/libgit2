@@ -38,6 +38,7 @@ static int impl__write(git_odb_backend *_backend, const git_oid *oid, const void
 	struct memory_packer_db *db = (struct memory_packer_db *)_backend;
 	struct memobject *obj = NULL; 
 	khiter_t pos;
+	size_t alloc_len;
 	int rval;
 
 	pos = kh_put(oid, db->objects, oid, &rval);
@@ -47,7 +48,8 @@ static int impl__write(git_odb_backend *_backend, const git_oid *oid, const void
 	if (rval == 0)
 		return 0;
 
-	obj = git__malloc(sizeof(struct memobject) + len);
+	GITERR_CHECK_ALLOC_ADD(&alloc_len, sizeof(struct memobject), len);
+	obj = git__malloc(alloc_len);
 	GITERR_CHECK_ALLOC(obj);
 
 	memcpy(obj->data, data, len);

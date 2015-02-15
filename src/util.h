@@ -59,14 +59,13 @@ GIT_INLINE(char *) git__strdup(const char *str)
 
 GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 {
-	size_t length = 0;
+	size_t length = 0, alloclength;
 	char *ptr;
 
 	length = p_strnlen(str, n);
 
-	ptr = (char*)git__malloc(length + 1);
-
-	if (!ptr)
+	if (GIT_ADD_SIZET_OVERFLOW(&alloclength, length, 1) ||
+		!(ptr = git__malloc(alloclength)))
 		return NULL;
 
 	if (length)
@@ -80,7 +79,13 @@ GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 /* NOTE: This doesn't do null or '\0' checking.  Watch those boundaries! */
 GIT_INLINE(char *) git__substrdup(const char *start, size_t n)
 {
-	char *ptr = (char*)git__malloc(n+1);
+	char *ptr;
+	size_t alloclen;
+
+	if (GIT_ADD_SIZET_OVERFLOW(&alloclen, n, 1) ||
+		!(ptr = git__malloc(alloclen)))
+		return NULL;
+
 	memcpy(ptr, start, n);
 	ptr[n] = '\0';
 	return ptr;
@@ -91,6 +96,26 @@ GIT_INLINE(void *) git__realloc(void *ptr, size_t size)
 	void *new_ptr = realloc(ptr, size);
 	if (!new_ptr) giterr_set_oom();
 	return new_ptr;
+}
+
+/**
+ * Similar to `git__realloc`, except that it is suitable for reallocing an
+ * array to a new number of elements of `nelem`, each of size `elsize`.
+ * The total size calculation is checked for overflow.
+ */
+GIT_INLINE(void *) git__reallocarray(void *ptr, size_t nelem, size_t elsize)
+{
+	size_t newsize;
+	return GIT_MULTIPLY_SIZET_OVERFLOW(&newsize, nelem, elsize) ?
+		NULL : realloc(ptr, newsize);
+}
+
+/**
+ * Similar to `git__calloc`, except that it does not zero memory.
+ */
+GIT_INLINE(void *) git__mallocarray(size_t nelem, size_t elsize)
+{
+	return git__reallocarray(NULL, nelem, elsize);
 }
 
 GIT_INLINE(void) git__free(void *ptr)
@@ -119,27 +144,6 @@ extern int git__strtol64(int64_t *n, const char *buff, const char **end_buf, int
 
 extern void git__hexdump(const char *buffer, size_t n);
 extern uint32_t git__hash(const void *key, int len, uint32_t seed);
-
-/** @return true if p fits into the range of a size_t */
-GIT_INLINE(int) git__is_sizet(git_off_t p)
-{
-	size_t r = (size_t)p;
-	return p == (git_off_t)r;
-}
-
-/** @return true if p fits into the range of a uint32_t */
-GIT_INLINE(int) git__is_uint32(size_t p)
-{
-	uint32_t r = (uint32_t)p;
-	return p == (size_t)r;
-}
-
-/** @return true if p fits into the range of an unsigned long */
-GIT_INLINE(int) git__is_ulong(git_off_t p)
-{
-	unsigned long r = (unsigned long)p;
-	return p == (git_off_t)r;
-}
 
 /* 32-bit cross-platform rotl */
 #ifdef _MSC_VER /* use built-in method in MSVC */

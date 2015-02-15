@@ -109,3 +109,68 @@ void test_core_errors__restore(void)
 	cl_assert_equal_i(42, giterr_last()->klass);
 	cl_assert_equal_s("Foo: bar", giterr_last()->message);
 }
+
+static int test_arraysize_multiply(size_t nelem, size_t size)
+{
+	size_t out;
+	GITERR_CHECK_ALLOC_MULTIPLY(&out, nelem, size);
+	return 0;
+}
+
+void test_core_errors__integer_overflow_alloc_multiply(void)
+{
+	cl_git_pass(test_arraysize_multiply(10, 10));
+	cl_git_pass(test_arraysize_multiply(1000, 1000));
+	cl_git_pass(test_arraysize_multiply(SIZE_MAX/sizeof(void *), sizeof(void *)));
+	cl_git_pass(test_arraysize_multiply(0, 10));
+	cl_git_pass(test_arraysize_multiply(10, 0));
+
+	cl_git_fail(test_arraysize_multiply(SIZE_MAX-1, sizeof(void *)));
+	cl_git_fail(test_arraysize_multiply((SIZE_MAX/sizeof(void *))+1, sizeof(void *)));
+
+	cl_assert_equal_i(GITERR_NOMEMORY, giterr_last()->klass);
+	cl_assert_equal_s("Out of memory", giterr_last()->message);
+}
+
+static int test_arraysize_add(size_t one, size_t two)
+{
+	size_t out;
+	GITERR_CHECK_ALLOC_ADD(&out, one, two);
+	return 0;
+}
+
+void test_core_errors__integer_overflow_alloc_add(void)
+{
+	cl_git_pass(test_arraysize_add(10, 10));
+	cl_git_pass(test_arraysize_add(1000, 1000));
+	cl_git_pass(test_arraysize_add(SIZE_MAX-10, 10));
+
+	cl_git_fail(test_arraysize_multiply(SIZE_MAX-1, 2));
+	cl_git_fail(test_arraysize_multiply(SIZE_MAX, SIZE_MAX));
+
+	cl_assert_equal_i(GITERR_NOMEMORY, giterr_last()->klass);
+	cl_assert_equal_s("Out of memory", giterr_last()->message);
+}
+
+void test_core_errors__integer_overflow_sets_oom(void)
+{
+	size_t out;
+
+	giterr_clear();
+	cl_assert(!GIT_ADD_SIZET_OVERFLOW(&out, SIZE_MAX-1, 1));
+	cl_assert_equal_p(NULL, giterr_last());
+
+	giterr_clear();
+	cl_assert(!GIT_ADD_SIZET_OVERFLOW(&out, 42, 69));
+	cl_assert_equal_p(NULL, giterr_last());
+
+	giterr_clear();
+	cl_assert(GIT_ADD_SIZET_OVERFLOW(&out, SIZE_MAX, SIZE_MAX));
+	cl_assert_equal_i(GITERR_NOMEMORY, giterr_last()->klass);
+	cl_assert_equal_s("Out of memory", giterr_last()->message);
+
+	giterr_clear();
+	cl_assert(GIT_ADD_SIZET_OVERFLOW(&out, SIZE_MAX, SIZE_MAX));
+	cl_assert_equal_i(GITERR_NOMEMORY, giterr_last()->klass);
+	cl_assert_equal_s("Out of memory", giterr_last()->message);
+}

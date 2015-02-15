@@ -17,6 +17,11 @@
 # define GIT_INLINE(type) static inline type
 #endif
 
+/** Support for gcc/clang __has_builtin intrinsic */
+#ifndef __has_builtin
+# define __has_builtin(x) 0
+#endif
+
 #include <assert.h>
 #include <errno.h>
 #include <limits.h>
@@ -58,6 +63,7 @@
 #include "git2/types.h"
 #include "git2/errors.h"
 #include "thread-utils.h"
+#include "integer.h"
 
 #include <regex.h>
 
@@ -173,6 +179,23 @@ GIT_INLINE(void) git__init_structure(void *structure, size_t len, unsigned int v
 	TYPE _tmpl = TPL; \
 	GITERR_CHECK_VERSION(&(VERSION), _tmpl.version, #TYPE);	\
 	memcpy((PTR), &_tmpl, sizeof(_tmpl)); } while (0)
+
+
+/** Check for additive overflow, setting an error if would occur. */
+#define GIT_ADD_SIZET_OVERFLOW(out, one, two) \
+	(git__add_sizet_overflow(out, one, two) ? (giterr_set_oom(), 1) : 0)
+
+/** Check for additive overflow, setting an error if would occur. */
+#define GIT_MULTIPLY_SIZET_OVERFLOW(out, nelem, elsize) \
+	(git__multiply_sizet_overflow(out, nelem, elsize) ? (giterr_set_oom(), 1) : 0)
+
+/** Check for additive overflow, failing if it would occur. */
+#define GITERR_CHECK_ALLOC_ADD(out, one, two) \
+	if (GIT_ADD_SIZET_OVERFLOW(out, one, two)) { return -1; }
+
+/** Check for multiplicative overflow, failing if it would occur. */
+#define GITERR_CHECK_ALLOC_MULTIPLY(out, nelem, elsize) \
+	if (GIT_MULTIPLY_SIZET_OVERFLOW(out, nelem, elsize)) { return -1; }
 
 /* NOTE: other giterr functions are in the public errors.h header file */
 

@@ -63,8 +63,12 @@ typedef struct {
 static int object_file_name(
 	git_buf *name, const loose_backend *be, const git_oid *id)
 {
+	size_t alloclen;
+
 	/* expand length for object root + 40 hex sha1 chars + 2 * '/' + '\0' */
-	if (git_buf_grow(name, be->objects_dirlen + GIT_OID_HEXSZ + 3) < 0)
+	GITERR_CHECK_ALLOC_ADD(&alloclen, be->objects_dirlen, GIT_OID_HEXSZ);
+	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, 3);
+	if (git_buf_grow(name, alloclen) < 0)
 		return -1;
 
 	git_buf_set(name, be->objects_dir, be->objects_dirlen);
@@ -261,14 +265,15 @@ static int inflate_buffer(void *in, size_t inlen, void *out, size_t outlen)
 static void *inflate_tail(z_stream *s, void *hb, size_t used, obj_hdr *hdr)
 {
 	unsigned char *buf, *head = hb;
-	size_t tail;
+	size_t tail, alloc_size;
 
 	/*
 	 * allocate a buffer to hold the inflated data and copy the
 	 * initial sequence of inflated data from the tail of the
 	 * head buffer, if any.
 	 */
-	if ((buf = git__malloc(hdr->size + 1)) == NULL) {
+	if (GIT_ADD_SIZET_OVERFLOW(&alloc_size, hdr->size, 1) ||
+		(buf = git__malloc(alloc_size)) == NULL) {
 		inflateEnd(s);
 		return NULL;
 	}
@@ -306,7 +311,7 @@ static int inflate_packlike_loose_disk_obj(git_rawobj *out, git_buf *obj)
 {
 	unsigned char *in, *buf;
 	obj_hdr hdr;
-	size_t len, used;
+	size_t len, used, alloclen;
 
 	/*
 	 * read the object header, which is an (uncompressed)
@@ -321,7 +326,8 @@ static int inflate_packlike_loose_disk_obj(git_rawobj *out, git_buf *obj)
 	/*
 	 * allocate a buffer and inflate the data into it
 	 */
-	buf = git__malloc(hdr.size + 1);
+	GITERR_CHECK_ALLOC_ADD(&alloclen, hdr.size, 1);
+	buf = git__malloc(alloclen);
 	GITERR_CHECK_ALLOC(buf);
 
 	in = ((unsigned char *)obj->ptr) + used;
@@ -515,12 +521,14 @@ static int locate_object_short_oid(
 	size_t len)
 {
 	char *objects_dir = backend->objects_dir;
-	size_t dir_len = strlen(objects_dir);
+	size_t dir_len = strlen(objects_dir), alloc_len;
 	loose_locate_object_state state;
 	int error;
 
 	/* prealloc memory for OBJ_DIR/xx/xx..38x..xx */
-	if (git_buf_grow(object_location, dir_len + 3 + GIT_OID_HEXSZ) < 0)
+	GITERR_CHECK_ALLOC_ADD(&alloc_len, dir_len, GIT_OID_HEXSZ);
+	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 3);
+	if (git_buf_grow(object_location, alloc_len) < 0)
 		return -1;
 
 	git_buf_set(object_location, objects_dir, dir_len);
@@ -563,9 +571,11 @@ static int locate_object_short_oid(
 		return error;
 
 	/* Update the location according to the oid obtained */
+	GITERR_CHECK_ALLOC_ADD(&alloc_len, dir_len, GIT_OID_HEXSZ);
+	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 2);
 
 	git_buf_truncate(object_location, dir_len);
-	if (git_buf_grow(object_location, dir_len + GIT_OID_HEXSZ + 2) < 0)
+	if (git_buf_grow(object_location, alloc_len) < 0)
 		return -1;
 
 	git_oid_pathfmt(object_location->ptr + dir_len, res_oid);
@@ -922,13 +932,15 @@ int git_odb_backend_loose(
 	unsigned int file_mode)
 {
 	loose_backend *backend;
-	size_t objects_dirlen;
+	size_t objects_dirlen, alloclen;
 
 	assert(backend_out && objects_dir);
 
 	objects_dirlen = strlen(objects_dir);
 
-	backend = git__calloc(1, sizeof(loose_backend) + objects_dirlen + 2);
+	GITERR_CHECK_ALLOC_ADD(&alloclen, sizeof(loose_backend), objects_dirlen);
+	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, 2);
+	backend = git__calloc(1, alloclen);
 	GITERR_CHECK_ALLOC(backend);
 
 	backend->parent.version = GIT_ODB_BACKEND_VERSION;

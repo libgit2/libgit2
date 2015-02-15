@@ -107,21 +107,22 @@ static void pool_insert_page(git_pool *pool, git_pool_page *page)
 static void *pool_alloc_page(git_pool *pool, uint32_t size)
 {
 	git_pool_page *page;
-	uint32_t alloc_size;
+	uint32_t new_page_size;
+	size_t alloc_size;
 
 	if (size <= pool->page_size)
-		alloc_size = pool->page_size;
+		new_page_size = pool->page_size;
 	else {
-		alloc_size = size;
+		new_page_size = size;
 		pool->has_large_page_alloc = 1;
 	}
 
-	page = git__calloc(1, alloc_size + sizeof(git_pool_page));
-	if (!page)
+	if (GIT_ADD_SIZET_OVERFLOW(&alloc_size, new_page_size, sizeof(git_pool_page)) ||
+		!(page = git__calloc(1, alloc_size)))
 		return NULL;
 
-	page->size  = alloc_size;
-	page->avail = alloc_size - size;
+	page->size  = new_page_size;
+	page->avail = new_page_size - size;
 
 	if (page->avail > 0)
 		pool_insert_page(pool, page);

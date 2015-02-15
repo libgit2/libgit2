@@ -11,11 +11,13 @@ int git_sortedcache_new(
 	const char *path)
 {
 	git_sortedcache *sc;
-	size_t pathlen;
+	size_t pathlen, alloclen;
 
 	pathlen = path ? strlen(path) : 0;
 
-	sc = git__calloc(sizeof(git_sortedcache) + pathlen + 1, 1);
+	GITERR_CHECK_ALLOC_ADD(&alloclen, sizeof(git_sortedcache), pathlen);
+	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
+	sc = git__calloc(1, alloclen);
 	GITERR_CHECK_ALLOC(sc);
 
 	if (git_pool_init(&sc->pool, 1, 0) < 0 ||

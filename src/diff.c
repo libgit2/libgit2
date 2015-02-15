@@ -1527,6 +1527,7 @@ int git_diff_format_email(
 	char *summary = NULL, *loc = NULL;
 	bool ignore_marker;
 	unsigned int format_flags = 0;
+	size_t allocsize;
 	int error;
 
 	assert(out && diff && opts);
@@ -1558,8 +1559,10 @@ int git_diff_format_email(
 			goto on_error;
 		}
 
-		summary = git__calloc(offset + 1, sizeof(char));
+		GITERR_CHECK_ALLOC_ADD(&allocsize, offset, 1);
+		summary = git__calloc(allocsize, sizeof(char));
 		GITERR_CHECK_ALLOC(summary);
+
 		strncpy(summary, opts->summary, offset);
 	}
 

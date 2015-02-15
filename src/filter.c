@@ -228,7 +228,7 @@ int git_filter_register(
 	const char *name, git_filter *filter, int priority)
 {
 	git_filter_def *fdef;
-	size_t nattr = 0, nmatch = 0;
+	size_t nattr = 0, nmatch = 0, alloc_len;
 	git_buf attrs = GIT_BUF_INIT;
 
 	assert(name && filter);
@@ -245,8 +245,11 @@ int git_filter_register(
 	if (filter_def_scan_attrs(&attrs, &nattr, &nmatch, filter->attributes) < 0)
 		return -1;
 
-	fdef = git__calloc(
-		sizeof(git_filter_def) + 2 * nattr * sizeof(char *), 1);
+	GITERR_CHECK_ALLOC_MULTIPLY(&alloc_len, nattr, 2);
+	GITERR_CHECK_ALLOC_MULTIPLY(&alloc_len, alloc_len, sizeof(char *));
+	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, sizeof(git_filter_def));
+
+	fdef = git__calloc(1, alloc_len);
 	GITERR_CHECK_ALLOC(fdef);
 
 	fdef->filter_name = git__strdup(name);
@@ -377,9 +380,12 @@ static int filter_list_new(
 	git_filter_list **out, const git_filter_source *src)
 {
 	git_filter_list *fl = NULL;
-	size_t pathlen = src->path ? strlen(src->path) : 0;
+	size_t pathlen = src->path ? strlen(src->path) : 0, alloclen;
 
-	fl = git__calloc(1, sizeof(git_filter_list) + pathlen + 1);
+	GITERR_CHECK_ALLOC_ADD(&alloclen, sizeof(git_filter_list), pathlen);
+	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
+
+	fl = git__calloc(1, alloclen);
 	GITERR_CHECK_ALLOC(fl);
 
 	if (src->path)

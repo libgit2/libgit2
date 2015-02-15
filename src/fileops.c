@@ -124,10 +124,17 @@ mode_t git_futils_canonical_mode(mode_t raw_mode)
 int git_futils_readbuffer_fd(git_buf *buf, git_file fd, size_t len)
 {
 	ssize_t read_size = 0;
+	size_t alloc_len;
 
 	git_buf_clear(buf);
 
-	if (git_buf_grow(buf, len + 1) < 0)
+	if (!git__is_ssizet(len)) {
+		giterr_set(GITERR_INVALID, "Read too large.");
+		return -1;
+	}
+
+	GITERR_CHECK_ALLOC_ADD(&alloc_len, len, 1);
+	if (git_buf_grow(buf, alloc_len) < 0)
 		return -1;
 
 	/* p_read loops internally to read len bytes */
@@ -449,7 +456,13 @@ int git_futils_mkdir_ext(
 		}
 
 		if (opts->dir_map && opts->pool) {
-			char *cache_path = git_pool_malloc(opts->pool, make_path.size + 1);
+			char *cache_path;
+			size_t alloc_size;
+
+			GITERR_CHECK_ALLOC_ADD(&alloc_size, make_path.size, 1);
+			if (!git__is_uint32(alloc_size))
+				return -1;
+			cache_path = git_pool_malloc(opts->pool, (uint32_t)alloc_size);
 			GITERR_CHECK_ALLOC(cache_path);
 
 			memcpy(cache_path, make_path.ptr, make_path.size + 1);
@@ -708,7 +721,11 @@ static int cp_link(const char *from, const char *to, size_t link_size)
 {
 	int error = 0;
 	ssize_t read_len;
-	char *link_data = git__malloc(link_size + 1);
+	char *link_data;
+	size_t alloc_size;
+
+	GITERR_CHECK_ALLOC_ADD(&alloc_size, link_size, 1);
+	link_data = git__malloc(alloc_size);
 	GITERR_CHECK_ALLOC(link_data);
 
 	read_len = p_readlink(from, link_data, link_size);

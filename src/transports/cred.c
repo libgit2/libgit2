@@ -306,12 +306,15 @@ int git_cred_default_new(git_cred **cred)
 int git_cred_username_new(git_cred **cred, const char *username)
 {
 	git_cred_username *c;
-	size_t len;
+	size_t len, allocsize;
 
 	assert(cred);
 
 	len = strlen(username);
-	c = git__malloc(sizeof(git_cred_username) + len + 1);
+
+	GITERR_CHECK_ALLOC_ADD(&allocsize, sizeof(git_cred_username), len);
+	GITERR_CHECK_ALLOC_ADD(&allocsize, allocsize, 1);
+	c = git__malloc(allocsize);
 	GITERR_CHECK_ALLOC(c);
 
 	c->parent.credtype = GIT_CREDTYPE_USERNAME;

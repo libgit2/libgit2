@@ -420,7 +420,7 @@ static int local_push(
 		const git_error *last;
 		char *ref = spec->refspec.dst;
 
-		status = git__calloc(sizeof(push_status), 1);
+		status = git__calloc(1, sizeof(push_status));
 		if (!status)
 			goto on_error;
 
