@@ -2375,6 +2375,9 @@ cleanup:
 	return error;
 }
 
+#define CHECKOUT_INDEX_DONT_WRITE_MASK \
+	(GIT_CHECKOUT_DONT_UPDATE_INDEX | GIT_CHECKOUT_DONT_WRITE_INDEX)
+
 int git_checkout_iterator(
 	git_iterator *target,
 	git_index *index,
@@ -2481,7 +2484,7 @@ int git_checkout_iterator(
 
 cleanup:
 	if (!error && data.index != NULL &&
-		(data.strategy & GIT_CHECKOUT_DONT_UPDATE_INDEX) == 0)
+		(data.strategy & CHECKOUT_INDEX_DONT_WRITE_MASK) == 0)
 		error = git_index_write(data.index);
 
 	git_diff_free(data.diff);

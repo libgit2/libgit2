@@ -135,7 +135,10 @@ typedef enum {
 	/** Only update existing files, don't create new ones */
 	GIT_CHECKOUT_UPDATE_ONLY = (1u << 7),
 
-	/** Normally checkout updates index entries as it goes; this stops that */
+	/**
+	 * Normally checkout updates index entries as it goes; this stops that.
+	 * Implies `GIT_CHECKOUT_DONT_WRITE_INDEX`.
+	 */
 	GIT_CHECKOUT_DONT_UPDATE_INDEX = (1u << 8),
 
 	/** Don't refresh index/config/etc before doing checkout */
@@ -165,6 +168,9 @@ typedef enum {
 
 	/** Don't overwrite existing files or folders */
 	GIT_CHECKOUT_DONT_REMOVE_EXISTING = (1u << 22),
+
+	/** Normally checkout writes the index upon completion; this prevents that. */
+	GIT_CHECKOUT_DONT_WRITE_INDEX = (1u << 23),
 
 	/**
 	 * THE FOLLOWING OPTIONS ARE NOT YET IMPLEMENTED

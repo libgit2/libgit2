@@ -1018,7 +1018,58 @@ void test_merge_workdir_setup__retained_after_success(void)
 	git_annotated_commit_free(their_heads[0]);
 }
 
+
 void test_merge_workdir_setup__removed_after_failure(void)
+{
+	git_oid our_oid;
+	git_reference *octo1_ref;
+	git_annotated_commit *our_head, *their_heads[1];
+
+	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
+	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
+
+	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
+	cl_git_pass(git_annotated_commit_from_ref(&their_heads[0], repo, octo1_ref));
+
+	cl_git_write2file("merge-resolve/.git/index.lock", "foo\n", 4, O_RDWR|O_CREAT, 0666);
+
+	cl_git_fail(git_merge(
+		repo, (const git_annotated_commit **)&their_heads[0], 1, NULL, NULL));
+
+	cl_assert(!git_path_exists("merge-resolve/.git/" GIT_MERGE_HEAD_FILE));
+	cl_assert(!git_path_exists("merge-resolve/.git/" GIT_MERGE_MODE_FILE));
+	cl_assert(!git_path_exists("merge-resolve/.git/" GIT_MERGE_MSG_FILE));
+
+	git_reference_free(octo1_ref);
+
+	git_annotated_commit_free(our_head);
+	git_annotated_commit_free(their_heads[0]);
+}
+
+void test_merge_workdir_setup__unlocked_after_success(void)
+{
+	git_oid our_oid;
+	git_reference *octo1_ref;
+	git_annotated_commit *our_head, *their_heads[1];
+
+	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
+	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
+
+	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
+	cl_git_pass(git_annotated_commit_from_ref(&their_heads[0], repo, octo1_ref));
+
+	cl_git_pass(git_merge(
+		repo, (const git_annotated_commit **)&their_heads[0], 1, NULL, NULL));
+
+	cl_assert(!git_path_exists("merge-resolve/.git/index.lock"));
+
+	git_reference_free(octo1_ref);
+
+	git_annotated_commit_free(our_head);
+	git_annotated_commit_free(their_heads[0]);
+}
+
+void test_merge_workdir_setup__unlocked_after_conflict(void)
 {
 	git_oid our_oid;
 	git_reference *octo1_ref;
@@ -1036,10 +1087,7 @@ void test_merge_workdir_setup__removed_after_failure(void)
 	cl_git_fail(git_merge(
 		repo, (const git_annotated_commit **)&their_heads[0], 1, NULL, NULL));
 
-	cl_assert(!git_path_exists("merge-resolve/" GIT_MERGE_HEAD_FILE));
-	cl_assert(!git_path_exists("merge-resolve/" GIT_ORIG_HEAD_FILE));
-	cl_assert(!git_path_exists("merge-resolve/" GIT_MERGE_MODE_FILE));
-	cl_assert(!git_path_exists("merge-resolve/" GIT_MERGE_MSG_FILE));
+	cl_assert(!git_path_exists("merge-resolve/.git/index.lock"));
 
 	git_reference_free(octo1_ref);
 

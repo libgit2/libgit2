@@ -9,6 +9,7 @@
 #include "repository.h"
 #include "filebuf.h"
 #include "merge.h"
+#include "index.h"
 
 #include "git2/types.h"
 #include "git2/merge.h"
@@ -174,7 +175,8 @@ int git_revert(
 	char commit_oidstr[GIT_OID_HEXSZ + 1];
 	const char *commit_msg;
 	git_buf their_label = GIT_BUF_INIT;
-	git_index *index_new = NULL;
+	git_index *index = NULL;
+	git_indexwriter indexwriter = GIT_INDEXWRITER_INIT;
 	int error;
 
 	assert(repo && commit);
@@ -194,14 +196,16 @@ int git_revert(
 
 	if ((error = git_buf_printf(&their_label, "parent of %.7s... %s", commit_oidstr, commit_msg)) < 0 ||
 		(error = revert_normalize_opts(repo, &opts, given_opts, git_buf_cstr(&their_label))) < 0 ||
+		(error = git_indexwriter_init_for_operation(&indexwriter, repo, &opts.checkout_opts.checkout_strategy)) < 0 ||
 		(error = write_revert_head(repo, commit_oidstr)) < 0 ||
 		(error = write_merge_msg(repo, commit_oidstr, commit_msg)) < 0 ||
 		(error = git_repository_head(&our_ref, repo)) < 0 ||
 		(error = git_reference_peel((git_object **)&our_commit, our_ref, GIT_OBJ_COMMIT)) < 0 ||
-		(error = git_revert_commit(&index_new, repo, commit, our_commit, opts.mainline, &opts.merge_opts)) < 0 ||
-		(error = git_merge__check_result(repo, index_new)) < 0 ||
-		(error = git_merge__append_conflicts_to_merge_msg(repo, index_new)) < 0 ||
-		(error = git_checkout_index(repo, index_new, &opts.checkout_opts)) < 0)
+		(error = git_revert_commit(&index, repo, commit, our_commit, opts.mainline, &opts.merge_opts)) < 0 ||
+		(error = git_merge__check_result(repo, index)) < 0 ||
+		(error = git_merge__append_conflicts_to_merge_msg(repo, index)) < 0 ||
+		(error = git_checkout_index(repo, index, &opts.checkout_opts)) < 0 ||
+		(error = git_indexwriter_commit(&indexwriter)) < 0)
 		goto on_error;
 
 	goto done;
@@ -210,7 +214,8 @@ on_error:
 	revert_state_cleanup(repo);
 
 done:
-	git_index_free(index_new);
+	git_indexwriter_cleanup(&indexwriter);
+	git_index_free(index);
 	git_commit_free(our_commit);
 	git_reference_free(our_ref);
 	git_buf_free(&their_label);
