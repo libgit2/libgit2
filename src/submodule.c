@@ -85,7 +85,7 @@ static kh_inline int str_equal_no_trailing_slash(const char *a, const char *b)
 
 __KHASH_IMPL(
 	str, static kh_inline, const char *, void *, 1,
-	str_hash_no_trailing_slash, str_equal_no_trailing_slash);
+	str_hash_no_trailing_slash, str_equal_no_trailing_slash)
 
 static int submodule_cache_init(git_repository *repo, int refresh);
 static void submodule_cache_free(git_submodule_cache *cache);

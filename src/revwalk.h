@@ -14,7 +14,7 @@
 #include "pool.h"
 #include "vector.h"
 
-GIT__USE_OIDMAP;
+GIT__USE_OIDMAP
 
 struct git_revwalk {
 	git_repository *repo;

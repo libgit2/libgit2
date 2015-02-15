@@ -17,11 +17,11 @@
 #define kfree git__free
 #include "khash.h"
 
-__KHASH_TYPE(off, git_off_t, void *);
+__KHASH_TYPE(off, git_off_t, void *)
 typedef khash_t(off) git_offmap;
 
 #define GIT__USE_OFFMAP \
-	__KHASH_IMPL(off, static kh_inline, git_off_t, void *, 1, kh_int64_hash_func, kh_int64_hash_equal);
+	__KHASH_IMPL(off, static kh_inline, git_off_t, void *, 1, kh_int64_hash_func, kh_int64_hash_equal)
 
 #define git_offmap_alloc()  kh_init(off)
 #define git_offmap_free(h)  kh_destroy(off, h), h = NULL

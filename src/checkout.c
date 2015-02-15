@@ -32,7 +32,7 @@
 #include "pool.h"
 #include "strmap.h"
 
-GIT__USE_STRMAP;
+GIT__USE_STRMAP
 
 /* See docs/checkout-internals.md for more information */
 

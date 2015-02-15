@@ -26,7 +26,7 @@
 #include <git2/sys/refs.h>
 #include <git2/sys/reflog.h>
 
-GIT__USE_STRMAP;
+GIT__USE_STRMAP
 
 #define DEFAULT_NESTING_LEVEL	5
 #define MAX_NESTING_LEVEL		10
