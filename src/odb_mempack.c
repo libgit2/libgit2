@@ -18,7 +18,7 @@
 #include "git2/types.h"
 #include "git2/pack.h"
 
-GIT__USE_OIDMAP;
+GIT__USE_OIDMAP
 
 struct memobject {
 	git_oid oid;

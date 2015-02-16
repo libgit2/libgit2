@@ -1,6 +1,6 @@
 #include "sortedcache.h"
 
-GIT__USE_STRMAP;
+GIT__USE_STRMAP
 
 int git_sortedcache_new(
 	git_sortedcache **out,

@@ -17,7 +17,7 @@
 #include "git2/sys/refs.h"
 #include "git2/sys/refdb_backend.h"
 
-GIT__USE_STRMAP;
+GIT__USE_STRMAP
 
 typedef struct {
 	const char *name;

@@ -5,7 +5,7 @@
 #include "sysdir.h"
 #include "ignore.h"
 
-GIT__USE_STRMAP;
+GIT__USE_STRMAP
 
 GIT_INLINE(int) attr_cache_lock(git_attr_cache *cache)
 {

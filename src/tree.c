@@ -17,7 +17,7 @@
 #define DEFAULT_TREE_SIZE 16
 #define MAX_FILEMODE_BYTES 6
 
-GIT__USE_STRMAP;
+GIT__USE_STRMAP
 
 static bool valid_filemode(const int filemode)
 {

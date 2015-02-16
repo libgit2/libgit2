@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "strmap.h"
 
-GIT__USE_STRMAP;
+GIT__USE_STRMAP
 
 git_strmap *g_table;
 
