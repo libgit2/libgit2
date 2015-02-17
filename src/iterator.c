@@ -1597,11 +1597,23 @@ static int indexfilelist_iterator__reset(
 	if (iterator__reset_range(self, start, end) < 0)
 		return -1;
 
-	/* We lookup the starting and ending paths in the filelist
-	 * rather than the index.  This gives us the bounds on set
-	 * of possible paths we will return during the iteration.
+	/* The general iterator API allows optional "start" and
+	 * "end" paths.  This probalby isn't necessary for the
+	 * "filelist" iterators, since the caller has already
+	 * given us the exact set of files they want, but to fit
+	 * in with the general iterators API, we interpret them
+	 * as a way to "subset" the filelist and bound the iteration.
 	 *
-	 * For the "end" string, we want it to be included in the
+	 * Complicating this is the fact that the "start" and "end"
+	 * paths might or might not be present in the "filelist".
+	 * We rely on bsearch() to give us either the actual position
+	 * or the would-be insertion point within the "filelist".
+	 *
+	 * For the "start" string, this means we either start the
+	 * iteration at the filelist position of the matching path
+	 * or the first one alphabetically following it.
+	 * 
+	 * For the "end" string, we want it to be INCLUDED in the
 	 * set of paths enumerated (unlike the STL).  We set the
 	 * "pos_filelist_end" to be just past it (like the STL).
 	 */
@@ -1716,9 +1728,12 @@ static int workdirfilelist_stat(struct stat *st, git_iterator *self, const char 
 {
 	workdirfilelist_iterator *wdfi = (workdirfilelist_iterator *)self;
 	git_buf buf_fullpath = GIT_BUF_INIT;
+	int r;
 
 	git_buf_joinpath(&buf_fullpath, wdfi->buf_workdir.ptr, path);
-	return (p_lstat(buf_fullpath.ptr, st));
+	r = p_lstat(buf_fullpath.ptr, st);
+	git_buf_free(&buf_fullpath);
+	return r;
 }
 
 /* The "end" string should be included in the enumeration,
