@@ -1444,6 +1444,9 @@ static int blob_content_to_file(
 			GIT_FILTER_TO_WORKTREE, GIT_FILTER_OPT_DEFAULT)))
 		return error;
 
+	if (fl)
+		git_filter_list__set_temp_buf(fl, &data->tmp);
+
 	/* setup the writer */
 	memset(&writer, 0, sizeof(struct checkout_stream));
 	writer.base.write = checkout_stream_write;

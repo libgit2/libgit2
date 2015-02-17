@@ -34,6 +34,7 @@ typedef struct {
 struct git_filter_list {
 	git_array_t(git_filter_entry) filters;
 	git_filter_source source;
+	git_buf *temp_buf;
 	char path[GIT_FLEX_ARRAY];
 };
 
@@ -522,7 +523,6 @@ int git_filter_list__load_with_attr_session(
 			fe = git_array_alloc(fl->filters);
 			GITERR_CHECK_ALLOC(fe);
 			fe->filter  = fdef->filter;
-			fe->stream  = NULL;
 			fe->payload = payload;
 		}
 	}
@@ -547,6 +547,11 @@ int git_filter_list_load(
 {
 	return git_filter_list__load_with_attr_session(
 		filters, repo, NULL, blob, path, mode, options);
+}
+
+void git_filter_list__set_temp_buf(git_filter_list *fl, git_buf *temp_buf)
+{
+	fl->temp_buf = temp_buf;
 }
 
 void git_filter_list_free(git_filter_list *fl)
@@ -591,7 +596,6 @@ int git_filter_list_push(
 	fe = git_array_alloc(fl->filters);
 	GITERR_CHECK_ALLOC(fe);
 	fe->filter  = filter;
-	fe->stream = NULL;
 	fe->payload = payload;
 
 	return 0;
@@ -745,7 +749,8 @@ struct proxy_stream {
 	const git_filter_source *source;
 	void **payload;
 	git_buf input;
-	git_buf output;
+	git_buf temp_buf;
+	git_buf *output;
 	git_filter_stream *target;
 };
 
@@ -769,15 +774,15 @@ static int proxy_stream_close(git_filter_stream *s)
 	error = proxy_stream->filter->apply(
 		proxy_stream->filter,
 		proxy_stream->payload,
-		&proxy_stream->output,
+		proxy_stream->output,
 		&proxy_stream->input,
 		proxy_stream->source);
 
 	if (error == GIT_PASSTHROUGH) {
 		writebuf = &proxy_stream->input;
 	} else if (error == 0) {
-		git_buf_sanitize(&proxy_stream->output);
-		writebuf = &proxy_stream->output;
+		git_buf_sanitize(proxy_stream->output);
+		writebuf = proxy_stream->output;
 	} else {
 		return error;
 	}
@@ -795,13 +800,14 @@ static void proxy_stream_free(git_filter_stream *s)
 	assert(proxy_stream);
 
 	git_buf_free(&proxy_stream->input);
-	git_buf_free(&proxy_stream->output);
+	git_buf_free(&proxy_stream->temp_buf);
 	git__free(proxy_stream);
 }
 
 static int proxy_stream_init(
 	git_filter_stream **out,
 	git_filter *filter,
+	git_buf *temp_buf,
 	void **payload,
 	const git_filter_source *source,
 	git_filter_stream *target)
@@ -816,6 +822,7 @@ static int proxy_stream_init(
 	proxy_stream->payload = payload;
 	proxy_stream->source = source;
 	proxy_stream->target = target;
+	proxy_stream->output = temp_buf ? temp_buf : &proxy_stream->temp_buf;
 
 	*out = (git_filter_stream *)proxy_stream;
 	return 0;
@@ -844,18 +851,20 @@ static int stream_list_init(
 			git_array_size(filters->filters) - 1 - i : i;
 		git_filter_entry *fe = git_array_get(filters->filters, filter_idx);
 		git_filter_stream *filter_stream;
-		git_filter_stream_fn stream_init;
 		
 		assert(fe->filter->stream || fe->filter->apply);
 
 		/* If necessary, create a stream that proxies the traditional
 		 * application.
 		 */
-		stream_init = fe->filter->stream ?
-			fe->filter->stream : proxy_stream_init;
-
-		error = stream_init(&filter_stream, fe->filter,
+		if (fe->filter->stream)
+			error = fe->filter->stream(&filter_stream, fe->filter,
 				&fe->payload, &filters->source, last_stream);
+		else
+			/* Create a stream that proxies the one-shot apply */
+			error = proxy_stream_init(&filter_stream, fe->filter,
+				filters->temp_buf, &fe->payload, &filters->source,
+				last_stream);
 
 		if (error < 0)
 			return error;
