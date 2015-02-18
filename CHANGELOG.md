@@ -247,3 +247,6 @@ v0.22
   functions. This is not something which we can know to do. A
   last-resort convenience function is provided in sys/openssl.h,
   `git_openssl_set_locking()` which can be used to set the locking.
+
+* `git_diff_merge()` now takes an explicit strategy argument on how to perform
+  the merge.

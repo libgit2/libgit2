@@ -188,7 +188,7 @@ void test_diff_workdir__to_tree(void)
 	 */
 	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, a, NULL, &opts));
 	cl_git_pass(git_diff_index_to_workdir(&diff2, g_repo, NULL, &opts));
-	cl_git_pass(git_diff_merge(diff, diff2));
+	cl_git_pass(git_diff_merge(diff, diff2, GIT_DIFF_MERGE_CGIT));
 	git_diff_free(diff2);
 
 	for (use_iterator = 0; use_iterator <= 1; use_iterator++) {
@@ -225,7 +225,7 @@ void test_diff_workdir__to_tree(void)
 	 */
 	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, b, NULL, &opts));
 	cl_git_pass(git_diff_index_to_workdir(&diff2, g_repo, NULL, &opts));
-	cl_git_pass(git_diff_merge(diff, diff2));
+	cl_git_pass(git_diff_merge(diff, diff2, GIT_DIFF_MERGE_CGIT));
 	git_diff_free(diff2);
 
 	for (use_iterator = 0; use_iterator <= 1; use_iterator++) {
@@ -261,7 +261,7 @@ void test_diff_workdir__to_tree(void)
 
 	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, b, NULL, &opts));
 	cl_git_pass(git_diff_index_to_workdir(&diff2, g_repo, NULL, &opts));
-	cl_git_pass(git_diff_merge(diff, diff2));
+	cl_git_pass(git_diff_merge(diff, diff2, GIT_DIFF_MERGE_CGIT));
 	git_diff_free(diff2);
 
 	memset(&exp, 0, sizeof(exp));
@@ -572,7 +572,7 @@ void test_diff_workdir__head_index_and_workdir_all_differ(void)
 		cl_assert_equal_i(0, exp.line_dels);
 	}
 
-	cl_git_pass(git_diff_merge(diff_i2t, diff_w2i));
+	cl_git_pass(git_diff_merge(diff_i2t, diff_w2i, GIT_DIFF_MERGE_CGIT));
 
 	for (use_iterator = 0; use_iterator <= 1; use_iterator++) {
 		memset(&exp, 0, sizeof(exp));
@@ -1099,7 +1099,7 @@ void test_diff_workdir__to_tree_issue_1397(void)
 
 	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, a, NULL, &opts));
 	cl_git_pass(git_diff_index_to_workdir(&diff2, g_repo, NULL, &opts));
-	cl_git_pass(git_diff_merge(diff, diff2));
+	cl_git_pass(git_diff_merge(diff, diff2, GIT_DIFF_MERGE_CGIT));
 	git_diff_free(diff2);
 
 	memset(&exp, 0, sizeof(exp));

@@ -154,7 +154,7 @@ void test_diff_submodules__dirty_submodule_2(void)
 
 		cl_git_pass(git_repository_head_tree(&head, g_repo));
 		cl_git_pass(git_diff_tree_to_index(&diff2, g_repo, head, NULL, &opts));
-		cl_git_pass(git_diff_merge(diff, diff2));
+		cl_git_pass(git_diff_merge(diff, diff2, GIT_DIFF_MERGE_CGIT));
 		git_diff_free(diff2);
 		git_tree_free(head);
 

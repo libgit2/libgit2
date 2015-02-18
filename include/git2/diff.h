@@ -781,22 +781,48 @@ GIT_EXTERN(int) git_diff_tree_to_workdir_with_index(
 	git_tree *old_tree,
 	const git_diff_options *opts); /**< can be NULL for defaults */
 
+typedef enum {
+	/* The resulting diff will have all items that appear in either "from" or
+	 * "onto" list. If an item appears in both lists, then it will be "merged"
+	 * to appear as if the old version was from the "onto" list and the new
+	 * version is from the "from" list. Its status will be the one from the
+	 * "from" list.
+	 */
+	GIT_DIFF_MERGE_NAIVE = 0,
+
+	/* Emulate C git for merging two diffs (a la 'git diff <sha>').
+	 *
+	 * When C git does a diff between the work dir and a tree, it actually
+	 * diffs with the index but uses the workdir contents. This emulates
+	 * those choices so we can emulate the type of diff.
+	 *
+	 * The resulting diff will have all items that appear in either "from" or
+	 * "onto" list. If an item appears in both lists, then it will be "merged"
+	 * to appear as if the old version was from the "onto" list and the new
+	 * version is from the "from" list. Its status will be the one from the
+	 * "onto" list, except:
+	 * 1) if the item is DELETED in the "onto" list but NOT DELETED in the "from"
+	 *    list, in which case it will remain DELETED,
+	 * 2) or if the item is DELETED in the "from" list but ADDED in the "onto"
+	 *    list, in which case it will become UNMODIFIED.
+	 */
+	GIT_DIFF_MERGE_CGIT = 1
+} git_diff_merge_strategy_t;
+
 /**
  * Merge one diff into another.
  *
- * This merges items from the "from" list into the "onto" list.  The
- * resulting diff will have all items that appear in either list.
- * If an item appears in both lists, then it will be "merged" to appear
- * as if the old version was from the "onto" list and the new version
- * is from the "from" list (with the exception that if the item has a
- * pending DELETE in the middle, then it will show as deleted).
+ * The diffs are merged according to a specific strategy - see git_diff_merge_strategy_t
+ * above for details.
  *
  * @param onto Diff to merge into.
  * @param from Diff to merge.
+ * @param strategy Strategy to use for the merge process.
  */
 GIT_EXTERN(int) git_diff_merge(
 	git_diff *onto,
-	const git_diff *from);
+	const git_diff *from,
+	git_diff_merge_strategy_t strategy);
 
 /**
  * Transform a diff marking file renames, copies, etc.

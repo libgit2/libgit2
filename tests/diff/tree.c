@@ -209,7 +209,62 @@ void test_diff_tree__bare(void)
 	cl_assert_equal_i(1, expect.line_dels);
 }
 
-void test_diff_tree__merge(void)
+void test_diff_tree__merge_naive(void)
+{
+	git_repository *repo;
+	git_index *repo_index;
+	git_diff *diff1, *diff2;
+	git_diff_options options = GIT_DIFF_OPTIONS_INIT;
+	options.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
+
+	cl_git_pass(git_repository_init(&repo, "diff", 0));
+	cl_git_pass(git_repository_index(&repo_index, repo));
+
+	/* added in index, not modified in workdir */
+	cl_git_mkfile("diff/added", "hello\n");
+	cl_git_pass(git_index_add_bypath(repo_index, "added"));
+
+	/* added in index, modified in workdir */
+	cl_git_mkfile("diff/modified", "hello\n");
+	cl_git_pass(git_index_add_bypath(repo_index, "modified"));
+	cl_git_rewritefile("diff/modified", "bonjour\n");
+
+	/* added in index, deleted in workdir */
+	cl_git_mkfile("diff/deleted", "hello\n");
+	cl_git_pass(git_index_add_bypath(repo_index, "deleted"));
+	cl_git_rmfile("diff/deleted");
+
+	/* missing in index, untracked in workdir */
+	cl_git_mkfile("diff/untracked", "hello\n");
+
+	cl_git_pass(git_diff_tree_to_index(&diff1, repo, NULL, repo_index, &options));
+	cl_assert_equal_i(3, git_diff_num_deltas(diff1));
+	cl_assert_equal_i(GIT_DELTA_ADDED, git_diff_get_delta(diff1, 0)->status);  // "added"
+	cl_assert_equal_i(GIT_DELTA_ADDED, git_diff_get_delta(diff1, 1)->status);  // "deleted"
+	cl_assert_equal_i(GIT_DELTA_ADDED, git_diff_get_delta(diff1, 2)->status);  // "modified"
+
+	cl_git_pass(git_diff_index_to_workdir(&diff2, repo, repo_index, &options));
+	cl_assert_equal_i(3, git_diff_num_deltas(diff2));
+	cl_assert_equal_i(GIT_DELTA_DELETED, git_diff_get_delta(diff2, 0)->status);  // "deleted"
+	cl_assert_equal_i(GIT_DELTA_MODIFIED, git_diff_get_delta(diff2, 1)->status);  // "modified"
+	cl_assert_equal_i(GIT_DELTA_UNTRACKED, git_diff_get_delta(diff2, 2)->status);  // "untracked"
+
+	cl_git_pass(git_diff_merge(diff1, diff2, GIT_DIFF_MERGE_NAIVE));
+	cl_git_pass(git_diff_foreach(diff1, diff_file_cb, diff_hunk_cb, diff_line_cb, &expect));
+	cl_assert_equal_i(4, expect.files);
+	cl_assert_equal_i(1, expect.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(1, expect.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(1, expect.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(1, expect.file_status[GIT_DELTA_UNTRACKED]);
+
+	git_diff_free(diff2);
+	git_diff_free(diff1);
+	git_index_free(repo_index);
+	git_repository_free(repo);
+	cl_git_pass(git_futils_rmdir_r("diff", NULL, GIT_RMDIR_REMOVE_FILES));
+}
+
+void test_diff_tree__merge_cgit(void)
 {
 	/* grabbed a couple of commit oids from the history of the attr repo */
 	const char *a_commit = "605812a";
@@ -230,7 +285,7 @@ void test_diff_tree__merge(void)
 
 	git_tree_free(c);
 
-	cl_git_pass(git_diff_merge(diff1, diff2));
+	cl_git_pass(git_diff_merge(diff1, diff2, GIT_DIFF_MERGE_CGIT));
 
 	git_diff_free(diff2);
 
