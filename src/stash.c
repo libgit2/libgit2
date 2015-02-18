@@ -564,7 +564,7 @@ static int retrieve_stash_commit(
 		goto cleanup;
 
 	max = git_reflog_entrycount(reflog);
-	if (index > max - 1) {
+	if (!max || index > max - 1) {
 		error = GIT_ENOTFOUND;
 		giterr_set(GITERR_STASH, "No stashed state at position %" PRIuZ, index);
 		goto cleanup;
@@ -949,7 +949,7 @@ int git_stash_drop(
 
 	max = git_reflog_entrycount(reflog);
 
-	if (index > max - 1) {
+	if (!max || index > max - 1) {
 		error = GIT_ENOTFOUND;
 		giterr_set(GITERR_STASH, "No stashed state at position %" PRIuZ, index);
 		goto cleanup;
