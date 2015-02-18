@@ -30,7 +30,7 @@ void test_filter_stream__cleanup(void)
 #define CHUNKSIZE 10240
 
 struct compress_stream {
-	git_writestream base;
+	git_writestream parent;
 	git_writestream *next;
 	git_filter_mode_t mode;
 	char current;
@@ -113,9 +113,9 @@ static int compress_filter_stream_init(
 	GIT_UNUSED(self);
 	GIT_UNUSED(payload);
 
-	stream->base.write = compress_stream_write;
-	stream->base.close = compress_stream_close;
-	stream->base.free = compress_stream_free;
+	stream->parent.write = compress_stream_write;
+	stream->parent.close = compress_stream_close;
+	stream->parent.free = compress_stream_free;
 	stream->next = next;
 	stream->mode = git_filter_source_mode(src);
 

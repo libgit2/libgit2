@@ -624,7 +624,7 @@ static int filter_list_out_buffer_from_raw(
 }
 
 struct buf_stream {
-	git_writestream base;
+	git_writestream parent;
 	git_buf *target;
 	bool complete;
 };
@@ -660,9 +660,9 @@ static void buf_stream_init(struct buf_stream *writer, git_buf *target)
 {
 	memset(writer, 0, sizeof(struct buf_stream));
 
-	writer->base.write = buf_stream_write;
-	writer->base.close = buf_stream_close;
-	writer->base.free = buf_stream_free;
+	writer->parent.write = buf_stream_write;
+	writer->parent.close = buf_stream_close;
+	writer->parent.free = buf_stream_free;
 	writer->target = target;
 
 	git_buf_clear(target);
@@ -744,7 +744,7 @@ int git_filter_list_apply_to_blob(
 }
 
 struct proxy_stream {
-	git_writestream base;
+	git_writestream parent;
 	git_filter *filter;
 	const git_filter_source *source;
 	void **payload;
@@ -815,9 +815,9 @@ static int proxy_stream_init(
 	struct proxy_stream *proxy_stream = git__calloc(1, sizeof(struct proxy_stream));
 	GITERR_CHECK_ALLOC(proxy_stream);
 
-	proxy_stream->base.write = proxy_stream_write;
-	proxy_stream->base.close = proxy_stream_close;
-	proxy_stream->base.free = proxy_stream_free;
+	proxy_stream->parent.write = proxy_stream_write;
+	proxy_stream->parent.close = proxy_stream_close;
+	proxy_stream->parent.free = proxy_stream_free;
 	proxy_stream->filter = filter;
 	proxy_stream->payload = payload;
 	proxy_stream->source = source;
