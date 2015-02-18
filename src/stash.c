@@ -652,7 +652,7 @@ static int apply_index(
 	git_tree *index_parent_tree,
 	git_tree *index_tree)
 {
-	git_index* unstashed_index = NULL;
+	git_index *unstashed_index = NULL;
 	git_merge_options options = GIT_MERGE_OPTIONS_INIT;
 	int error;
 	git_oid oid;
@@ -675,43 +675,22 @@ cleanup:
 
 static int apply_untracked(
 	git_repository *repo,
+	git_tree *start_index_tree,
 	git_tree *untracked_tree)
 {
 	git_checkout_options options = GIT_CHECKOUT_OPTIONS_INIT;
-	size_t i, count;
-	unsigned int status;
+	git_index *merged_index = NULL;
 	int error;
 
-	for (i = 0, count = git_tree_entrycount(untracked_tree); i < count; ++i) {
-		const git_tree_entry *entry = git_tree_entry_byindex(untracked_tree, i);
-		const char* path = git_tree_entry_name(entry);
-		error = git_status_file(&status, repo, path);
-		if (!error) {
-			giterr_set(GITERR_STASH, "Untracked or ignored file '%s' already exists", path);
-			return GIT_EEXISTS;
-		}
-	}
+	options.checkout_strategy =
+		GIT_CHECKOUT_SAFE | GIT_CHECKOUT_DONT_UPDATE_INDEX;
 
-	/*
-	 The untracked tree only contains the untracked / ignores files so checking
-	 it out would remove all other files in the workdir. Since git_checkout_tree()
-	 does not have a mode to leave removed files alone, we emulate it by checking
-	 out files from the untracked tree one by one.
-	 */
+	if ((error = git_merge_trees(&merged_index,
+			repo, NULL, start_index_tree, untracked_tree, NULL)) == 0)
+		error = git_checkout_index(repo, merged_index, &options);
 
-	options.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_DONT_UPDATE_INDEX;
-	options.paths.count = 1;
-	for (i = 0, count = git_tree_entrycount(untracked_tree); i < count; ++i) {
-		const git_tree_entry *entry = git_tree_entry_byindex(untracked_tree, i);
-
-		const char* name = git_tree_entry_name(entry);
-		options.paths.strings = (char**)&name;
-		if ((error = git_checkout_tree(
-				repo, (git_object*)untracked_tree, &options)) < 0)
-			return error;
-	}
-
-	return 0;
+	git_index_free(merged_index);
+	return error;
 }
 
 static int checkout_modified_notify_callback(
@@ -871,7 +850,7 @@ int git_stash_apply(
 
 	/* If applicable, restore untracked / ignored files in workdir */
 	if (untracked_tree) {
-		if ((error = apply_untracked(repo, untracked_tree)) < 0)
+		if ((error = apply_untracked(repo, start_index_tree, untracked_tree)) < 0)
 			goto cleanup;
 	}
 

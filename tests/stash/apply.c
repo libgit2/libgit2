@@ -121,7 +121,7 @@ void test_stash_apply__conflict_untracked_with_default(void)
 {
 	cl_git_mkfile("stash/when", "nothing\n");
 
-	cl_git_fail_with(git_stash_apply(repo, 0, GIT_APPLY_DEFAULT), GIT_EEXISTS);
+	cl_git_fail_with(git_stash_apply(repo, 0, GIT_APPLY_DEFAULT), GIT_EMERGECONFLICT);
 
 	cl_assert_equal_i(git_index_has_conflicts(repo_index), 0);
 	assert_status(repo, "what", GIT_STATUS_CURRENT);
@@ -134,7 +134,7 @@ void test_stash_apply__conflict_untracked_with_reinstate_index(void)
 {
 	cl_git_mkfile("stash/when", "nothing\n");
 
-	cl_git_fail_with(git_stash_apply(repo, 0, GIT_APPLY_REINSTATE_INDEX), GIT_EEXISTS);
+	cl_git_fail_with(git_stash_apply(repo, 0, GIT_APPLY_REINSTATE_INDEX), GIT_EMERGECONFLICT);
 
 	cl_assert_equal_i(git_index_has_conflicts(repo_index), 0);
 	assert_status(repo, "what", GIT_STATUS_CURRENT);
