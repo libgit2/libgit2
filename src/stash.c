@@ -8,6 +8,7 @@
 #include "common.h"
 #include "repository.h"
 #include "commit.h"
+#include "message.h"
 #include "tree.h"
 #include "reflog.h"
 #include "git2/diff.h"
@@ -50,23 +51,14 @@ static int append_abbreviated_oid(git_buf *out, const git_oid *b_commit)
 
 static int append_commit_description(git_buf *out, git_commit* commit)
 {
-	const char *message;
-	size_t pos = 0, len;
+	const char *summary = git_commit_summary(commit);
+	GITERR_CHECK_ALLOC(summary);
 
 	if (append_abbreviated_oid(out, git_commit_id(commit)) < 0)
 		return -1;
 
-	message = git_commit_message(commit);
-	len = strlen(message);
-
-	/* TODO: Replace with proper commit short message
-	 * when git_commit_message_short() is implemented.
-	 */
-	while (pos < len && message[pos] != '\n')
-		pos++;
-
 	git_buf_putc(out, ' ');
-	git_buf_put(out, message, pos);
+	git_buf_puts(out, summary);
 	git_buf_putc(out, '\n');
 
 	return git_buf_oom(out) ? -1 : 0;
