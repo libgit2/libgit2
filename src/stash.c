@@ -313,8 +313,7 @@ static int build_workdir_tree(
 	if ((error = git_commit_tree(&b_tree, b_commit)) < 0)
 		goto cleanup;
 
-	if ((error = git_diff_tree_to_workdir_with_index(
-			&diff, repo, b_tree, &opts)) < 0)
+	if ((error = git_diff_tree_to_workdir(&diff, repo, b_tree, &opts)) < 0)
 		goto cleanup;
 
 	data.include_changed = true;

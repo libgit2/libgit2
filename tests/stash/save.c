@@ -399,3 +399,22 @@ void test_stash_save__skip_submodules(void)
 
 	assert_status(repo, "untracked_repo/", GIT_STATUS_WT_NEW);
 }
+
+void test_stash_save__deleted_in_index_modified_in_workdir(void)
+{
+	git_index *index;
+
+	git_repository_index(&index, repo);
+
+	cl_git_pass(git_index_remove_bypath(index, "who"));
+	cl_git_pass(git_index_write(index));
+
+	assert_status(repo, "who", GIT_STATUS_WT_NEW | GIT_STATUS_INDEX_DELETED);
+
+	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_DEFAULT));
+
+	assert_blob_oid("stash@{0}^0:who", "a0400d4954659306a976567af43125a0b1aa8595");
+	assert_blob_oid("stash@{0}^2:who", NULL);
+
+	git_index_free(index);
+}
