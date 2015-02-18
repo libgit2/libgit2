@@ -273,8 +273,9 @@ static void init_once(void)
 {
 	if ((init_error = git_mutex_init(&git__mwindow_mutex)) != 0)
 		return;
-	pthread_key_create(&_tls_key, &cb__free_status);
 
+	if (!_tls_key)
+		pthread_key_create(&_tls_key, &cb__free_status);
 
 	/* Initialize any other subsystems that have global state */
 	if ((init_error = git_hash_global_init()) >= 0)
@@ -308,11 +309,6 @@ int git_libgit2_shutdown(void)
 	/* Shut down any subsystems that have global state */
 	git__shutdown();
 
-	ptr = pthread_getspecific(_tls_key);
-	pthread_setspecific(_tls_key, NULL);
-	git__free(ptr);
-
-	pthread_key_delete(_tls_key);
 	git_mutex_free(&git__mwindow_mutex);
 	_once_init = new_once;
 
