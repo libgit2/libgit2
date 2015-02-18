@@ -1397,7 +1397,7 @@ static int checkout_stream_close(git_writestream *s)
 	assert(stream && stream->open);
 
 	stream->open = 0;
-	return 0;
+	return p_close(stream->fd);
 }
 
 static void checkout_stream_free(git_writestream *s)
@@ -1461,7 +1461,6 @@ static int blob_content_to_file(
 	assert(writer.open == 0);
 
 	git_filter_list_free(fl);
-	p_close(fd);
 
 	if (error < 0)
 		return error;
