@@ -1373,14 +1373,14 @@ static int mkpath2file(
 }
 
 struct checkout_stream {
-	git_filter_stream base;
+	git_writestream base;
 	const char *path;
 	int fd;
 	int open;
 };
 
 static int checkout_stream_write(
-	git_filter_stream *s, const char *buffer, size_t len)
+	git_writestream *s, const char *buffer, size_t len)
 {
 	struct checkout_stream *stream = (struct checkout_stream *)s;
 	int ret;
@@ -1391,7 +1391,7 @@ static int checkout_stream_write(
 	return ret;
 }
 
-static int checkout_stream_close(git_filter_stream *s)
+static int checkout_stream_close(git_writestream *s)
 {
 	struct checkout_stream *stream = (struct checkout_stream *)s;
 	assert(stream && stream->open);
@@ -1400,7 +1400,7 @@ static int checkout_stream_close(git_filter_stream *s)
 	return 0;
 }
 
-static void checkout_stream_free(git_filter_stream *s)
+static void checkout_stream_free(git_writestream *s)
 {
 	GIT_UNUSED(s);
 }
@@ -1456,7 +1456,7 @@ static int blob_content_to_file(
 	writer.fd = fd;
 	writer.open = 1;
 
-	error = git_filter_list_stream_blob(fl, blob, (git_filter_stream *)&writer);
+	error = git_filter_list_stream_blob(fl, blob, (git_writestream *)&writer);
 
 	assert(writer.open == 0);
 

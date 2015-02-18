@@ -30,8 +30,8 @@ void test_filter_stream__cleanup(void)
 #define CHUNKSIZE 10240
 
 struct compress_stream {
-	git_filter_stream base;
-	git_filter_stream *next;
+	git_writestream base;
+	git_writestream *next;
 	git_filter_mode_t mode;
 	char current;
 	size_t current_chunk;
@@ -78,7 +78,7 @@ static int compress_stream_write__inflated(struct compress_stream *stream, const
 	return 0;
 }
 
-static int compress_stream_write(git_filter_stream *s, const char *buffer, size_t len)
+static int compress_stream_write(git_writestream *s, const char *buffer, size_t len)
 {
 	struct compress_stream *stream = (struct compress_stream *)s;
 
@@ -87,7 +87,7 @@ static int compress_stream_write(git_filter_stream *s, const char *buffer, size_
 		compress_stream_write__inflated(stream, buffer, len);
 }
 
-static int compress_stream_close(git_filter_stream *s)
+static int compress_stream_close(git_writestream *s)
 {
 	struct compress_stream *stream = (struct compress_stream *)s;
 	cl_assert_equal_i(0, stream->current_chunk);
@@ -95,17 +95,17 @@ static int compress_stream_close(git_filter_stream *s)
 	return 0;
 }
 
-static void compress_stream_free(git_filter_stream *stream)
+static void compress_stream_free(git_writestream *stream)
 {
 	git__free(stream);
 }
 
 static int compress_filter_stream_init(
-	git_filter_stream **out,
+	git_writestream **out,
 	git_filter *self,
 	void **payload,
 	const git_filter_source *src,
-	git_filter_stream *next)
+	git_writestream *next)
 {
 	struct compress_stream *stream = git__calloc(1, sizeof(struct compress_stream));
 	cl_assert(stream);
@@ -119,7 +119,7 @@ static int compress_filter_stream_init(
 	stream->next = next;
 	stream->mode = git_filter_source_mode(src);
 
-	*out = (git_filter_stream *)stream;
+	*out = (git_writestream *)stream;
 	return 0;
 }
 
