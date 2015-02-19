@@ -23,7 +23,7 @@ struct git_filter_source {
 	git_oid         oid;  /* zero if unknown (which is likely) */
 	uint16_t        filemode; /* zero if unknown */
 	git_filter_mode_t mode;
-	uint32_t        options;
+	uint32_t        flags;
 };
 
 typedef struct {
@@ -372,9 +372,9 @@ git_filter_mode_t git_filter_source_mode(const git_filter_source *src)
 	return src->mode;
 }
 
-uint32_t git_filter_source_options(const git_filter_source *src)
+uint32_t git_filter_source_flags(const git_filter_source *src)
 {
-	return src->options;
+	return src->flags;
 }
 
 static int filter_list_new(
@@ -394,7 +394,7 @@ static int filter_list_new(
 	fl->source.repo = src->repo;
 	fl->source.path = fl->path;
 	fl->source.mode = src->mode;
-	fl->source.options = src->options;
+	fl->source.flags = src->flags;
 
 	*out = fl;
 	return 0;
@@ -449,13 +449,13 @@ int git_filter_list_new(
 	git_filter_list **out,
 	git_repository *repo,
 	git_filter_mode_t mode,
-	uint32_t options)
+	uint32_t flags)
 {
 	git_filter_source src = { 0 };
 	src.repo = repo;
 	src.path = NULL;
 	src.mode = mode;
-	src.options = options;
+	src.flags = flags;
 	return filter_list_new(out, &src);
 }
 
@@ -466,7 +466,7 @@ int git_filter_list__load_with_attr_session(
 	git_blob *blob, /* can be NULL */
 	const char *path,
 	git_filter_mode_t mode,
-	uint32_t options)
+	uint32_t flags)
 {
 	int error = 0;
 	git_filter_list *fl = NULL;
@@ -481,7 +481,7 @@ int git_filter_list__load_with_attr_session(
 	src.repo = repo;
 	src.path = path;
 	src.mode = mode;
-	src.options = options;
+	src.flags = flags;
 	if (blob)
 		git_oid_cpy(&src.oid, git_blob_id(blob));
 
@@ -543,10 +543,10 @@ int git_filter_list_load(
 	git_blob *blob, /* can be NULL */
 	const char *path,
 	git_filter_mode_t mode,
-	uint32_t options)
+	uint32_t flags)
 {
 	return git_filter_list__load_with_attr_session(
-		filters, repo, NULL, blob, path, mode, options);
+		filters, repo, NULL, blob, path, mode, flags);
 }
 
 void git_filter_list__set_temp_buf(git_filter_list *fl, git_buf *temp_buf)

@@ -1441,7 +1441,7 @@ static int blob_content_to_file(
 	if (!data->opts.disable_filters &&
 		(error = git_filter_list__load_with_attr_session(
 			&fl, data->repo, &data->attr_session, blob, hint_path,
-			GIT_FILTER_TO_WORKTREE, GIT_FILTER_OPT_DEFAULT)))
+			GIT_FILTER_TO_WORKTREE, GIT_FILTER_DEFAULT)))
 		return error;
 
 	if (fl)
@@ -2054,7 +2054,7 @@ static int checkout_write_merge(
 
 		if ((error = git_filter_list__load_with_attr_session(
 				&fl, data->repo, &data->attr_session, NULL, git_buf_cstr(&path_workdir),
-				GIT_FILTER_TO_WORKTREE, GIT_FILTER_OPT_DEFAULT)) < 0 ||
+				GIT_FILTER_TO_WORKTREE, GIT_FILTER_DEFAULT)) < 0 ||
 			(error = git_filter_list_apply_to_data(&out_data, fl, &in_data)) < 0)
 			goto done;
 	} else {

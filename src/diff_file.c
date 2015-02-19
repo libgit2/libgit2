@@ -302,7 +302,7 @@ static int diff_file_content_load_workdir_file(
 
 	if ((error = git_filter_list_load(
 			&fl, fc->repo, NULL, fc->file->path,
-			GIT_FILTER_TO_ODB, GIT_FILTER_OPT_ALLOW_UNSAFE)) < 0)
+			GIT_FILTER_TO_ODB, GIT_FILTER_ALLOW_UNSAFE)) < 0)
 		goto cleanup;
 
 	/* if there are no filters, try to mmap the file */

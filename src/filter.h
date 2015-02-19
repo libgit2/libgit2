@@ -36,7 +36,7 @@ extern int git_filter_list__load_with_attr_session(
 	git_blob *blob, /* can be NULL */
 	const char *path,
 	git_filter_mode_t mode,
-	uint32_t options);
+	uint32_t flags);
 
 /*
  * Available filters

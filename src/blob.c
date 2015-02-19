@@ -199,7 +199,7 @@ int git_blob__create_from_paths(
 			/* Load the filters for writing this file to the ODB */
 			error = git_filter_list_load(
 				&fl, repo, NULL, hint_path,
-				GIT_FILTER_TO_ODB, GIT_FILTER_OPT_DEFAULT);
+				GIT_FILTER_TO_ODB, GIT_FILTER_DEFAULT);
 
 		if (error < 0)
 			/* well, that didn't work */;
@@ -357,7 +357,7 @@ int git_blob_filtered_content(
 
 	if (!(error = git_filter_list_load(
 			&fl, git_blob_owner(blob), blob, path,
-			GIT_FILTER_TO_WORKTREE, GIT_FILTER_OPT_DEFAULT))) {
+			GIT_FILTER_TO_WORKTREE, GIT_FILTER_DEFAULT))) {
 
 		error = git_filter_list_apply_to_blob(out, fl, blob);
 

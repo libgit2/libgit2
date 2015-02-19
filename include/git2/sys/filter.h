@@ -123,9 +123,9 @@ GIT_EXTERN(const git_oid *) git_filter_source_id(const git_filter_source *src);
 GIT_EXTERN(git_filter_mode_t) git_filter_source_mode(const git_filter_source *src);
 
 /**
- * Get the combination git_filter_opt_t options to be applied
+ * Get the combination git_filter_flag_t options to be applied
  */
-GIT_EXTERN(uint32_t) git_filter_source_options(const git_filter_source *src);
+GIT_EXTERN(uint32_t) git_filter_source_flags(const git_filter_source *src);
 
 /*
  * struct git_filter
