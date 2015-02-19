@@ -517,8 +517,12 @@ int git_filter_list__load_ext(
 		else if (error < 0)
 			break;
 		else {
-			if (!fl && (error = filter_list_new(&fl, &src)) < 0)
-				return error;
+			if (!fl) {
+				if ((error = filter_list_new(&fl, &src)) < 0)
+					return error;
+
+				fl->temp_buf = filter_opts->temp_buf;
+			}
 
 			fe = git_array_alloc(fl->filters);
 			GITERR_CHECK_ALLOC(fe);
@@ -551,11 +555,6 @@ int git_filter_list_load(
 
 	return git_filter_list__load_ext(
 		filters, repo, blob, path, mode, &filter_opts);
-}
-
-void git_filter_list__set_temp_buf(git_filter_list *fl, git_buf *temp_buf)
-{
-	fl->temp_buf = temp_buf;
 }
 
 void git_filter_list_free(git_filter_list *fl)

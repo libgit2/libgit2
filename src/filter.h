@@ -26,13 +26,11 @@ typedef enum {
 
 typedef struct {
 	git_attr_session *attr_session;
+	git_buf *temp_buf;
 	uint32_t flags;
 } git_filter_options;
 
 #define GIT_FILTER_OPTIONS_INIT {0}
-
-extern void git_filter_list__set_temp_buf(
-	git_filter_list *fl, git_buf *temp_buf);
 
 extern void git_filter_free(git_filter *filter);
 

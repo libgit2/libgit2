@@ -1440,15 +1440,13 @@ static int blob_content_to_file(
 	}
 
 	filter_opts.attr_session = &data->attr_session;
+	filter_opts.temp_buf = &data->tmp;
 
 	if (!data->opts.disable_filters &&
 		(error = git_filter_list__load_ext(
 			&fl, data->repo, blob, hint_path,
 			GIT_FILTER_TO_WORKTREE, &filter_opts)))
 		return error;
-
-	if (fl)
-		git_filter_list__set_temp_buf(fl, &data->tmp);
 
 	/* setup the writer */
 	memset(&writer, 0, sizeof(struct checkout_stream));
@@ -2057,6 +2055,7 @@ static int checkout_write_merge(
 		in_data.size = result.len;
 
 		filter_opts.attr_session = &data->attr_session;
+		filter_opts.temp_buf = &data->tmp;
 
 		if ((error = git_filter_list__load_ext(
 				&fl, data->repo, NULL, git_buf_cstr(&path_workdir),
