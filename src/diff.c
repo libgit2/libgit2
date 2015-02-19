@@ -1263,7 +1263,7 @@ int git_diff_tree_to_workdir_with_index(
 
 	if (!(error = git_diff_tree_to_index(&d1, repo, old_tree, index, opts)) &&
 		!(error = git_diff_index_to_workdir(&d2, repo, index, opts)))
-		error = git_diff_merge(d1, d2);
+		error = git_diff_merge(d1, d2, GIT_DIFF_MERGE_CGIT);
 
 	git_diff_free(d2);
 

@@ -132,7 +132,38 @@ static git_diff_delta *diff_delta__merge_like_cgit_reversed(
 	return dup;
 }
 
-int git_diff_merge(git_diff *onto, const git_diff *from)
+static git_diff_delta *diff_delta__merge_naive(
+	const git_diff_delta *a,
+	const git_diff_delta *b,
+	git_pool *pool)
+{
+	git_diff_delta *dup;
+
+	/* if 'b' status is unmodified, then just dup the 'a' diff */
+	if (b->status == GIT_DELTA_UNMODIFIED)
+		return diff_delta__dup(a, pool);
+
+	/* otherwise, base this diff on the 'b' diff */
+	if ((dup = diff_delta__dup(b, pool)) == NULL)
+		return NULL;
+
+	/* if 'a' status is unmodified, then we're done */
+	if (a->status == GIT_DELTA_UNMODIFIED)
+		return dup;
+
+	assert(a->status != GIT_DELTA_UNMODIFIED);
+	assert(b->status != GIT_DELTA_UNMODIFIED);
+
+	/* status for the new delta is the 'b' one */
+	git_oid_cpy(&dup->old_file.id, &a->old_file.id);
+	dup->old_file.mode  = a->old_file.mode;
+	dup->old_file.size  = a->old_file.size;
+	dup->old_file.flags = a->old_file.flags;
+
+	return dup;
+}
+
+int git_diff_merge(git_diff *onto, const git_diff *from, git_diff_merge_strategy_t strategy)
 {
 	int error = 0;
 	git_pool onto_pool;
@@ -174,9 +205,20 @@ int git_diff_merge(git_diff *onto, const git_diff *from)
 			delta = diff_delta__dup(f, &onto_pool);
 			j++;
 		} else {
-			delta = reversed ?
-				diff_delta__merge_like_cgit_reversed(o, f, &onto_pool) :
-				diff_delta__merge_like_cgit(o, f, &onto_pool);
+			switch (strategy) {
+				case GIT_DIFF_MERGE_NAIVE:
+					delta = reversed ?
+						diff_delta__merge_naive(f, o, &onto_pool) :
+						diff_delta__merge_naive(o, f, &onto_pool);
+					break;
+				case GIT_DIFF_MERGE_CGIT:
+					delta = reversed ?
+						diff_delta__merge_like_cgit_reversed(o, f, &onto_pool) :
+						diff_delta__merge_like_cgit(o, f, &onto_pool);
+					break;
+				default:
+					assert(0);
+			}
 			i++;
 			j++;
 		}
