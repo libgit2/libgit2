@@ -459,14 +459,13 @@ int git_filter_list_new(
 	return filter_list_new(out, &src);
 }
 
-int git_filter_list__load_with_attr_session(
+int git_filter_list__load_ext(
 	git_filter_list **filters,
 	git_repository *repo,
-	git_attr_session *attr_session,
 	git_blob *blob, /* can be NULL */
 	const char *path,
 	git_filter_mode_t mode,
-	uint32_t flags)
+	git_filter_options *filter_opts)
 {
 	int error = 0;
 	git_filter_list *fl = NULL;
@@ -481,7 +480,8 @@ int git_filter_list__load_with_attr_session(
 	src.repo = repo;
 	src.path = path;
 	src.mode = mode;
-	src.flags = flags;
+	src.flags = filter_opts->flags;
+
 	if (blob)
 		git_oid_cpy(&src.oid, git_blob_id(blob));
 
@@ -494,7 +494,7 @@ int git_filter_list__load_with_attr_session(
 
 		if (fdef->nattrs > 0) {
 			error = filter_list_check_attributes(
-				&values, repo, attr_session, fdef, &src);
+				&values, repo, filter_opts->attr_session, fdef, &src);
 
 			if (error == GIT_ENOTFOUND) {
 				error = 0;
@@ -545,8 +545,12 @@ int git_filter_list_load(
 	git_filter_mode_t mode,
 	uint32_t flags)
 {
-	return git_filter_list__load_with_attr_session(
-		filters, repo, NULL, blob, path, mode, flags);
+	git_filter_options filter_opts = GIT_FILTER_OPTIONS_INIT;
+
+	filter_opts.flags = flags;
+
+	return git_filter_list__load_ext(
+		filters, repo, blob, path, mode, &filter_opts);
 }
 
 void git_filter_list__set_temp_buf(git_filter_list *fl, git_buf *temp_buf)

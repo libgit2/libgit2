@@ -1416,6 +1416,7 @@ static int blob_content_to_file(
 	int flags = data->opts.file_open_flags;
 	mode_t file_mode = data->opts.file_mode ?
 		data->opts.file_mode : entry_filemode;
+	git_filter_options filter_opts = GIT_FILTER_OPTIONS_INIT;
 	struct checkout_stream writer;
 	mode_t mode;
 	git_filter_list *fl = NULL;
@@ -1438,10 +1439,12 @@ static int blob_content_to_file(
 		return fd;
 	}
 
+	filter_opts.attr_session = &data->attr_session;
+
 	if (!data->opts.disable_filters &&
-		(error = git_filter_list__load_with_attr_session(
-			&fl, data->repo, &data->attr_session, blob, hint_path,
-			GIT_FILTER_TO_WORKTREE, GIT_FILTER_DEFAULT)))
+		(error = git_filter_list__load_ext(
+			&fl, data->repo, blob, hint_path,
+			GIT_FILTER_TO_WORKTREE, &filter_opts)))
 		return error;
 
 	if (fl)
@@ -2003,6 +2006,7 @@ static int checkout_write_merge(
 	git_merge_file_result result = {0};
 	git_filebuf output = GIT_FILEBUF_INIT;
 	git_filter_list *fl = NULL;
+	git_filter_options filter_opts = GIT_FILTER_OPTIONS_INIT;
 	int error = 0;
 
 	if (data->opts.checkout_strategy & GIT_CHECKOUT_CONFLICT_STYLE_DIFF3)
@@ -2052,9 +2056,11 @@ static int checkout_write_merge(
 		in_data.ptr = (char *)result.ptr;
 		in_data.size = result.len;
 
-		if ((error = git_filter_list__load_with_attr_session(
-				&fl, data->repo, &data->attr_session, NULL, git_buf_cstr(&path_workdir),
-				GIT_FILTER_TO_WORKTREE, GIT_FILTER_DEFAULT)) < 0 ||
+		filter_opts.attr_session = &data->attr_session;
+
+		if ((error = git_filter_list__load_ext(
+				&fl, data->repo, NULL, git_buf_cstr(&path_workdir),
+				GIT_FILTER_TO_WORKTREE, &filter_opts)) < 0 ||
 			(error = git_filter_list_apply_to_data(&out_data, fl, &in_data)) < 0)
 			goto done;
 	} else {
