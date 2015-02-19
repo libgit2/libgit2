@@ -722,7 +722,7 @@ void test_repo_init__at_filesystem_root(void)
 	git_buf root = GIT_BUF_INIT;
 	int root_len;
 
-	if (!cl_getenv("GITTEST_INVASIVE_FILESYSTEM"))
+	if (!cl_getenv("GITTEST_INVASIVE_FS_STRUCTURE"))
 		cl_skip();
 
 	root_len = git_path_root(sandbox);

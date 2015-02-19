@@ -3,7 +3,8 @@ branches:
   only:
   - master
 environment:
-  GITTEST_INVASIVE_FILESYSTEM: 1
+  GITTEST_INVASIVE_FS_STRUCTURE: 1
+  GITTEST_INVASIVE_FS_SIZE: 1
 
   matrix:
   - GENERATOR: "Visual Studio 11"

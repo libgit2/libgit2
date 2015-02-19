@@ -123,9 +123,9 @@ GIT_EXTERN(const git_oid *) git_filter_source_id(const git_filter_source *src);
 GIT_EXTERN(git_filter_mode_t) git_filter_source_mode(const git_filter_source *src);
 
 /**
- * Get the combination git_filter_opt_t options to be applied
+ * Get the combination git_filter_flag_t options to be applied
  */
-GIT_EXTERN(uint32_t) git_filter_source_options(const git_filter_source *src);
+GIT_EXTERN(uint32_t) git_filter_source_flags(const git_filter_source *src);
 
 /*
  * struct git_filter
@@ -208,6 +208,13 @@ typedef int (*git_filter_apply_fn)(
 	const git_buf *from,
 	const git_filter_source *src);
 
+typedef int (*git_filter_stream_fn)(
+	git_writestream **out,
+	git_filter *self,
+	void **payload,
+	const git_filter_source *src,
+	git_writestream *next);
+
 /**
  * Callback to clean up after filtering has been applied
  *
@@ -247,6 +254,7 @@ struct git_filter {
 	git_filter_shutdown_fn shutdown;
 	git_filter_check_fn    check;
 	git_filter_apply_fn    apply;
+	git_filter_stream_fn   stream;
 	git_filter_cleanup_fn  cleanup;
 };
 

@@ -302,7 +302,7 @@ static int crlf_check(
 			return error;
 
 		/* downgrade FAIL to WARN if ALLOW_UNSAFE option is used */
-		if ((git_filter_source_options(src) & GIT_FILTER_OPT_ALLOW_UNSAFE) &&
+		if ((git_filter_source_flags(src) & GIT_FILTER_ALLOW_UNSAFE) &&
 			ca.safe_crlf == GIT_SAFE_CRLF_FAIL)
 			ca.safe_crlf = GIT_SAFE_CRLF_WARN;
 	}

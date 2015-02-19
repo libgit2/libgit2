@@ -282,9 +282,8 @@ static int system_attr_file(
 	 * a consumer. This allows them to treat this as a regular `git_buf`,
 	 * but their call to `git_buf_free` will not attempt to free it.
 	 */
-	out->ptr = attr_session->sysdir.ptr;
-	out->size = attr_session->sysdir.size;
-	out->asize = 0;
+	git_buf_attach_notowned(
+		out, attr_session->sysdir.ptr, attr_session->sysdir.size);
 	return 0;
 }
 

@@ -24,16 +24,23 @@ typedef enum {
 	GIT_CRLF_AUTO,
 } git_crlf_t;
 
+typedef struct {
+	git_attr_session *attr_session;
+	git_buf *temp_buf;
+	uint32_t flags;
+} git_filter_options;
+
+#define GIT_FILTER_OPTIONS_INIT {0}
+
 extern void git_filter_free(git_filter *filter);
 
-extern int git_filter_list__load_with_attr_session(
+extern int git_filter_list__load_ext(
 	git_filter_list **filters,
 	git_repository *repo,
-	git_attr_session *attr_session,
 	git_blob *blob, /* can be NULL */
 	const char *path,
 	git_filter_mode_t mode,
-	uint32_t options);
+	git_filter_options *filter_opts);
 
 /*
  * Available filters
