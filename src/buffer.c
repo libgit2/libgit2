@@ -500,6 +500,20 @@ void git_buf_attach(git_buf *buf, char *ptr, size_t asize)
 	}
 }
 
+void git_buf_attach_notowned(git_buf *buf, const char *ptr, size_t size)
+{
+	if (git_buf_is_allocated(buf))
+		git_buf_free(buf);
+
+	if (!size) {
+		git_buf_init(buf, 0);
+	} else {
+		buf->ptr = (char *)ptr;
+		buf->asize = 0;
+		buf->size = size;
+	}
+}
+
 int git_buf_join_n(git_buf *buf, char separator, int nbuf, ...)
 {
 	va_list ap;

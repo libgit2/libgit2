@@ -606,23 +606,6 @@ size_t git_filter_list_length(const git_filter_list *fl)
 	return fl ? git_array_size(fl->filters) : 0;
 }
 
-static int filter_list_out_buffer_from_raw(
-	git_buf *out, const void *ptr, size_t size)
-{
-	if (git_buf_is_allocated(out))
-		git_buf_free(out);
-
-	if (!size) {
-		git_buf_init(out, 0);
-	} else {
-		out->ptr   = (char *)ptr;
-		out->asize = 0;
-		out->size  = size;
-	}
-
-	return 0;
-}
-
 struct buf_stream {
 	git_writestream parent;
 	git_buf *target;
@@ -677,8 +660,10 @@ int git_filter_list_apply_to_data(
 	git_buf_sanitize(tgt);
 	git_buf_sanitize(src);
 
-	if (!filters)
-		return filter_list_out_buffer_from_raw(tgt, src->ptr, src->size);
+	if (!filters) {
+		git_buf_attach_notowned(tgt, src->ptr, src->size);
+		return 0;
+	}
 
 	buf_stream_init(&writer, tgt);
 
@@ -718,10 +703,7 @@ static int buf_from_blob(git_buf *out, git_blob *blob)
 		return -1;
 	}
 
-	out->ptr = (char *)git_blob_rawcontent(blob);
-	out->asize = 0;
-	out->size  = (size_t)rawsize;
-
+	git_buf_attach_notowned(out, git_blob_rawcontent(blob), (size_t)rawsize);
 	return 0;
 }
 

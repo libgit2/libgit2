@@ -329,15 +329,13 @@ cleanup:
 
 int git_blob_is_binary(const git_blob *blob)
 {
-	git_buf content;
+	git_buf content = GIT_BUF_INIT;
 
 	assert(blob);
 
-	content.ptr   = blob->odb_object->buffer;
-	content.size  =
-		min(blob->odb_object->cached.size, GIT_FILTER_BYTES_TO_CHECK_NUL);
-	content.asize = 0;
-
+	git_buf_attach_notowned(&content, blob->odb_object->buffer,
+		min(blob->odb_object->cached.size,
+		GIT_FILTER_BYTES_TO_CHECK_NUL));
 	return git_buf_text_is_binary(&content);
 }
 
