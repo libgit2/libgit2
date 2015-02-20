@@ -25,23 +25,6 @@ matrix:
  exclude:
    - os: osx
      compiler: gcc
- include:
-   - compiler: i586-mingw32msvc-gcc
-     env: OPTIONS="-DBUILD_CLAR=OFF -DWIN32=ON -DMINGW=ON -DUSE_SSH=OFF"
-     os: linux
-   - compiler: gcc
-     env: COVERITY=1
-     os: linux
-   - compiler: gcc
-     env:
-       - VALGRIND=1
-         OPTIONS="-DBUILD_CLAR=ON -DBUILD_EXAMPLES=OFF -DCMAKE_BUILD_TYPE=Debug"
-     os: linux
- allow_failures:
-   - env: COVERITY=1
-   - env:
-       - VALGRIND=1
-         OPTIONS="-DBUILD_CLAR=ON -DBUILD_EXAMPLES=OFF -DCMAKE_BUILD_TYPE=Debug"
 
 install:
   - ./script/install-deps-${TRAVIS_OS_NAME}.sh
@@ -49,11 +32,6 @@ install:
 # Run the Build script and tests
 script:
  - script/cibuild.sh
-
-# Run Tests
-after_success:
- - if [ "$TRAVIS_OS_NAME" = "linux" -a -n "$VALGRIND" ]; then sudo apt-get -qq install valgrind; fi
- - if [ "$TRAVIS_OS_NAME" = "linux" -a -n "$VALGRIND" ]; then valgrind --leak-check=full --show-reachable=yes --suppressions=./libgit2_clar.supp _build/libgit2_clar -ionline; fi
 
 # Only watch the development and master branches
 branches:

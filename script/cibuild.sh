@@ -16,7 +16,7 @@ mkdir _build
 cd _build
 # shellcheck disable=SC2086
 cmake .. -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS || exit $?
-make -j2 install || exit $?
+cmake --build . --target install || exit $?
 ctest -V . || exit $?
 
 # Now that we've tested the raw git protocol, let's set up ssh to we
