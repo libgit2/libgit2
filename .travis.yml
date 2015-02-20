@@ -7,24 +7,17 @@ os:
   - linux
   - osx
 
-compiler:
-  - gcc
-  - clang
-
 # Settings to try
 env:
  global:
   - secure: "YnhS+8n6B+uoyaYfaJ3Lei7cSJqHDPiKJCKFIF2c87YDfmCvAJke8QtE7IzjYDs7UFkTCM4ox+ph2bERUrxZbSCyEkHdjIZpKuMJfYWja/jgMqTMxdyOH9y8JLFbZsSXDIXDwqBlC6vVyl1fP90M35wuWcNTs6tctfVWVofEFbs="
   - GITTEST_INVASIVE_FS_SIZE=1
  matrix:
-  - OPTIONS="-DTHREADSAFE=ON -DCMAKE_BUILD_TYPE=Release"
-  - OPTIONS="-DTHREADSAFE=OFF -DBUILD_EXAMPLES=ON"
+  - OPTIONS="-DTHREADSAFE=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo" DCMAKE_OSX_ARCHITECTURES="i386;x86_64" -DBUILD_CLAR:BOOL=OFF -DUSE_SSH=OFF -DENABLE_TRACE=ON
+
 
 matrix:
  fast_finish: true
- exclude:
-   - os: osx
-     compiler: gcc
 
 install:
   - ./script/install-deps-${TRAVIS_OS_NAME}.sh
