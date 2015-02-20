@@ -56,6 +56,7 @@ static git_pack_cache_entry *new_cache_object(git_rawobj *source)
 	if (!e)
 		return NULL;
 
+	git_atomic_inc(&e->refcount);
 	memcpy(&e->raw, source, sizeof(git_rawobj));
 
 	return e;
@@ -145,7 +146,11 @@ static void free_lowest_entry(git_pack_cache *cache)
 	}
 }
 
-static int cache_add(git_pack_cache *cache, git_rawobj *base, git_off_t offset)
+static int cache_add(
+		git_pack_cache_entry **cached_out,
+		git_pack_cache *cache,
+		git_rawobj *base,
+		git_off_t offset)
 {
 	git_pack_cache_entry *entry;
 	int error, exists = 0;
@@ -171,6 +176,8 @@ static int cache_add(git_pack_cache *cache, git_rawobj *base, git_off_t offset)
 			assert(error != 0);
 			kh_value(cache->entries, k) = entry;
 			cache->memory_used += entry->raw.len;
+
+			*cached_out = entry;
 		}
 		git_mutex_unlock(&cache->lock);
 		/* Somebody beat us to adding it into the cache */
@@ -702,7 +709,7 @@ int git_packfile_unpack(
 		 * long as it's not already the cached one.
 		 */
 		if (!cached)
-			free_base = !!cache_add(&p->bases, obj, elem->base_key);
+			free_base = !!cache_add(&cached, &p->bases, obj, elem->base_key);
 
 		elem = &stack[elem_pos - 1];
 		curpos = elem->offset;
