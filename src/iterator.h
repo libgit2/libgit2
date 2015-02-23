@@ -141,6 +141,8 @@ int git_iterator_for_workdirfilelist(
 	git_iterator **iter,
 	git_repository *repo,
 	const char *repo_workdir,
+	git_index *index,
+	git_tree *tree,
 	const git_strarray *paths,
 	git_iterator_flag_t flags,
 	const char *start,

@@ -1142,6 +1142,14 @@ cleanup:
 	git__free(pfx); git_iterator_free(a); git_iterator_free(b); \
 } while (0)
 
+#define DIFF_FROM_ITERATORS_FILELIST(MAKE_FIRST, MAKE_SECOND) do { \
+	git_iterator *a = NULL, *b = NULL; \
+	GITERR_CHECK_VERSION(opts, GIT_DIFF_OPTIONS_VERSION, "git_diff_options"); \
+	if (!(error = MAKE_FIRST) && !(error = MAKE_SECOND)) \
+		error = git_diff__from_iterators(diff, repo, a, b, opts); \
+	git_iterator_free(a); git_iterator_free(b); \
+} while (0)
+
 int git_diff_tree_to_tree(
 	git_diff **diff,
 	git_repository *repo,
@@ -1225,10 +1233,17 @@ int git_diff_index_to_workdir(
 		return error;
 
 	if ((opts) && (opts->pathspec.count > 0) && (opts->flags & GIT_DIFF_ENABLE_FILELIST_MATCH)) {
-		/* We use opts->pathspec to seed the filelists inside the iterators, rather than diff->pathspec. */
-		DIFF_FROM_ITERATORS(
-			git_iterator_for_indexfilelist(&a, index, &opts->pathspec, 0, pfx, pfx),
-			git_iterator_for_workdirfilelist(&b, repo, NULL, &opts->pathspec, 0, pfx, pfx)
+		/* We use opts->pathspec to seed the filelists inside the iterators, rather
+		 * than setting up diff->pathspec for pattern matching.  (This implicitly
+		 * means that we do not do any of the git_pathspec_ matching.)
+		 *
+		 * We use a custom version of the DIFF_FROM_ITERATORS() macro, because we
+		 * do not need to set the "start" and "end" values nor do the common prefix
+		 * computation.
+		 */
+		DIFF_FROM_ITERATORS_FILELIST(
+			git_iterator_for_indexfilelist(&a, index, &opts->pathspec, 0, NULL, NULL),
+			git_iterator_for_workdirfilelist(&b, repo, NULL, index, NULL, &opts->pathspec, 0, NULL, NULL)
 		);
 	} else {
 		DIFF_FROM_ITERATORS(
