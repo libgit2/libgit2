@@ -138,8 +138,10 @@ GIT_INLINE(int) git_iterator_current(
 {
 	int r = iter->cb->current(entry, iter);
 #if defined(GIT_TRACE_ITERATOR)
-	git_trace(GIT_TRACE_TRACE, "git_iterator_current: [iter %p] yields [%d, %p, %s]",
-			  iter, r, *entry,
+	git_trace(GIT_TRACE_TRACE, "git_iterator_current: [iter %p] yields [%d, %p, 0%o, %s]",
+			  iter, r,
+			  ((entry) ? *entry : NULL),
+			  (((entry) && (*entry)) ? ((*entry)->mode) : 0),
 			  (((*entry) && ((*entry)->path)) ? ((*entry)->path) : "(null)"));
 #endif
 	return r;
@@ -157,9 +159,10 @@ GIT_INLINE(int) git_iterator_advance(
 {
 	int r = iter->cb->advance(entry, iter);
 #if defined(GIT_TRACE_ITERATOR)
-	git_trace(GIT_TRACE_TRACE, "git_iterator_advance: [iter %p] yields [%d, %p, %s]",
+	git_trace(GIT_TRACE_TRACE, "git_iterator_advance: [iter %p] yields [%d, %p, 0%o, %s]",
 			  iter, r,
 			  ((entry) ? *entry : NULL),
+			  (((entry) && (*entry)) ? ((*entry)->mode) : 0),
 			  (((entry) && (*entry) && ((*entry)->path)) ? ((*entry)->path) : "(null)"));
 #endif
 	return r;
@@ -185,9 +188,11 @@ GIT_INLINE(int) git_iterator_advance_into(
 {
 	int r = iter->cb->advance_into(entry, iter);
 #if defined(GIT_TRACE_ITERATOR)
-	git_trace(GIT_TRACE_TRACE, "git_iterator_advance_into: [iter %p] yields [%d, %p, %s]",
-			  iter, r, *entry,
-			  (((*entry) && ((*entry)->path)) ? ((*entry)->path) : "(null)"));
+	git_trace(GIT_TRACE_TRACE, "git_iterator_advance_into: [iter %p] yields [%d, %p, 0%o, %s]",
+			  iter, r,
+			  ((entry) ? *entry : NULL),
+			  (((entry) && (*entry)) ? ((*entry)->mode) : 0),
+			  (((entry) && (*entry) && ((*entry)->path)) ? ((*entry)->path) : "(null)"));
 #endif
 	return r;
 }

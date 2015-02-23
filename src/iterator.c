@@ -1523,6 +1523,10 @@ void git_iterator_free(git_iterator *iter)
 	if (iter == NULL)
 		return;
 
+#if defined(GIT_TRACE_ITERATOR)
+	git_trace(GIT_TRACE_TRACE, "git_iterator_free: [iter %p]", iter);
+#endif
+
 	iter->cb->free(iter);
 
 	git__free(iter->start);
