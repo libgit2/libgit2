@@ -263,9 +263,7 @@ int init_error = 0;
 
 static void cb__free_status(void *st)
 {
-	git_global_st *state = (git_global_st *) st;
-	git__free(state->error_t.message);
-
+	giterr_clear();
 	git__free(st);
 }
 
@@ -307,6 +305,8 @@ int git_libgit2_shutdown(void)
 
 	/* Shut down any subsystems that have global state */
 	git__shutdown();
+
+	giterr_clear();
 
 	ptr = pthread_getspecific(_tls_key);
 	pthread_setspecific(_tls_key, NULL);
