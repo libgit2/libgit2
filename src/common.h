@@ -38,6 +38,7 @@
 # include <direct.h>
 # include <winsock2.h>
 # include <windows.h>
+# include <ws2tcpip.h>
 # include "win32/msvc-compat.h"
 # include "win32/mingw-compat.h"
 # include "win32/error.h"
