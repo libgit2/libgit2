@@ -70,7 +70,10 @@ before calling any other libgit2 functions. You can call this function many time
 
     git_libgit2_shutdown();
 
-will free the resources.
+will free the resources.  Note that if you have worker threads, you should
+call `git_libgit2_shutdown` *after* those threads have exited.  If you
+require assistance coordinating this, simply have the worker threads call
+`git_libgit2_init` at startup and `git_libgit2_shutdown` at shutdown.
 
 Threading
 =========
