@@ -42,12 +42,30 @@
 /* GetFinalPathNameByHandleW signature */
 typedef DWORD(WINAPI *PFGetFinalPathNameByHandleW)(HANDLE, LPWSTR, DWORD, DWORD);
 
-int p_ftruncate(int fd, long size)
+/**
+ * Truncate or extend file.
+ *
+ * We now take a "git_off_t" rather than "long" because
+ * files may be longer than 2Gb.
+ */
+int p_ftruncate(int fd, git_off_t size)
 {
+	if (size < 0) {
+		errno = EINVAL;
+		return -1;
+	}
+
 #if defined(_MSC_VER) && _MSC_VER >= 1500
-	return _chsize_s(fd, size);
+	return ((_chsize_s(fd, size) == 0) ? 0 : -1);
 #else
-	return _chsize(fd, size);
+	/* TODO Find a replacement for _chsize() that handles big files.
+	 *      This comment is probably __MINGW32__ specific.
+	 */
+	if (size > INT32_MAX) {
+		errno = EFBIG;
+		return -1;
+	}
+	return _chsize(fd, (long)size);
 #endif
 }
 
