@@ -15,8 +15,7 @@ void test_checkout_tree__initialize(void)
 	g_repo = cl_git_sandbox_init("testrepo");
 
 	GIT_INIT_STRUCTURE(&g_opts, GIT_CHECKOUT_OPTIONS_VERSION);
-	g_opts.checkout_strategy = GIT_CHECKOUT_SAFE |
-		GIT_CHECKOUT_RECREATE_MISSING;
+	g_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 }
 
 void test_checkout_tree__cleanup(void)
@@ -409,8 +408,7 @@ void test_checkout_tree__can_checkout_with_pattern(void)
 
 	/* now to a narrow patterned checkout */
 
-	g_opts.checkout_strategy = GIT_CHECKOUT_SAFE |
-		GIT_CHECKOUT_RECREATE_MISSING;
+	g_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 	g_opts.paths.strings = entries;
 	g_opts.paths.count = 1;
 
@@ -448,7 +446,6 @@ void test_checkout_tree__can_disable_pattern_match(void)
 
 	g_opts.checkout_strategy =
 		GIT_CHECKOUT_SAFE |
-		GIT_CHECKOUT_RECREATE_MISSING |
 		GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH;
 	g_opts.paths.strings = entries;
 	g_opts.paths.count = 1;
@@ -461,8 +458,7 @@ void test_checkout_tree__can_disable_pattern_match(void)
 
 	/* let's try that again, but allow the pattern match */
 
-	g_opts.checkout_strategy = GIT_CHECKOUT_SAFE |
-		GIT_CHECKOUT_RECREATE_MISSING;
+	g_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 
 	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
 
