@@ -576,6 +576,7 @@ static int rebase_init_operations(
 			continue;
 
 		operation = rebase_operation_alloc(rebase, GIT_REBASE_OPERATION_PICK, &id, NULL);
+		GITERR_CHECK_ALLOC(operation);
 	}
 
 	error = 0;
