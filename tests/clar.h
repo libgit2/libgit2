@@ -26,6 +26,48 @@ const char *clar_sandbox_path(void);
 void cl_set_cleanup(void (*cleanup)(void *), void *opaque);
 void cl_fs_cleanup(void);
 
+/**
+ * cl_trace_* is a hook to provide a simple global tracing
+ * mechanism.
+ *
+ * The goal here is to let main() provide clar-proper
+ * with a callback to optionally write log info for
+ * test operations into the same stream used by their
+ * actual tests.  This would let them print test names
+ * and maybe performance data as they choose.
+ *
+ * The goal is NOT to alter the flow of control or to
+ * override test selection/skipping.  (So the callback
+ * does not return a value.)
+ *
+ * The goal is NOT to duplicate the existing
+ * pass/fail/skip reporting.  (So the callback
+ * does not accept a status/errorcode argument.)
+ *
+ */
+typedef enum cl_trace_event {
+	CL_TRACE__SUITE_BEGIN,
+	CL_TRACE__SUITE_END,
+	CL_TRACE__TEST__BEGIN,
+	CL_TRACE__TEST__END,
+	CL_TRACE__TEST__RUN_BEGIN,
+	CL_TRACE__TEST__RUN_END,
+	CL_TRACE__TEST__LONGJMP,
+} cl_trace_event;
+
+typedef void (cl_trace_cb)(
+	cl_trace_event ev,
+	const char *suite_name,
+	const char *test_name,
+	void *payload);
+
+/**
+ * Register a callback into CLAR to send global trace events.
+ * Pass NULL to disable.
+ */
+void cl_trace_register(cl_trace_cb *cb, void *payload);
+
+
 #ifdef CLAR_FIXTURE_PATH
 const char *cl_fixture(const char *fixture_name);
 void cl_fixture_sandbox(const char *fixture_name);
