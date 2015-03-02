@@ -109,6 +109,7 @@ int git_branch_delete(git_reference *branch)
 	int is_head;
 	git_buf config_section = GIT_BUF_INIT;
 	int error = -1;
+	int has_log;
 
 	assert(branch);
 
@@ -138,7 +139,11 @@ int git_branch_delete(git_reference *branch)
 	if (git_reference_delete(branch) < 0)
 		goto on_error;
 
-	if (git_reflog_delete(git_reference_owner(branch), git_reference_name(branch)) < 0)
+	has_log = git_reference_has_log(git_reference_owner(branch), git_reference_name(branch));
+	if (has_log < 0)
+		goto on_error;
+
+	if (has_log && git_reflog_delete(git_reference_owner(branch), git_reference_name(branch)) < 0)
 		goto on_error;
 
 	error = 0;
