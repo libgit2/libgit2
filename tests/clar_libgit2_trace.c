@@ -130,31 +130,31 @@ void _cl_trace_cb__event_handler(
 
 	switch (ev) {
 	case CL_TRACE__SUITE_BEGIN:
-		git_trace(GIT_TRACE_TRACE, "\n\n%s\nBegin Suite: %s", HR, suite_name);
+		git_trace(GIT_TRACE_TRACE, "\n\n%s\n%s: Begin Suite", HR, suite_name);
 		break;
 
 	case CL_TRACE__SUITE_END:
-		git_trace(GIT_TRACE_TRACE, "\n\nEnd Suite: %s\n%s", suite_name, HR);
+		git_trace(GIT_TRACE_TRACE, "\n\n%s: End Suite\n%s", suite_name, HR);
 		break;
 
 	case CL_TRACE__TEST__BEGIN:
-		git_trace(GIT_TRACE_TRACE, "\n%s / %s: Beginning", suite_name, test_name);
+		git_trace(GIT_TRACE_TRACE, "\n%s::%s: Begin Test", suite_name, test_name);
 		break;
 
 	case CL_TRACE__TEST__END:
-		git_trace(GIT_TRACE_TRACE, "%s / %s: Finishing", suite_name, test_name);
+		git_trace(GIT_TRACE_TRACE, "%s::%s: End Test", suite_name, test_name);
 		break;
 
 	case CL_TRACE__TEST__RUN_BEGIN:
-		git_trace(GIT_TRACE_TRACE, "%s / %s: Run Started", suite_name, test_name);
+		git_trace(GIT_TRACE_TRACE, "%s::%s: Begin Run", suite_name, test_name);
 		break;
 
 	case CL_TRACE__TEST__RUN_END:
-		git_trace(GIT_TRACE_TRACE, "%s / %s: Run Ended", suite_name, test_name);
+		git_trace(GIT_TRACE_TRACE, "%s::%s: End Run", suite_name, test_name);
 		break;
 
 	case CL_TRACE__TEST__LONGJMP:
-		git_trace(GIT_TRACE_TRACE, "%s / %s: Aborted", suite_name, test_name);
+		git_trace(GIT_TRACE_TRACE, "%s::%s: Aborted", suite_name, test_name);
 		break;
 
 	default:
