@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "clar_libgit2_trace.h"
+#include "clar_libgit2_timer.h"
 #include "trace.h"
 
 
@@ -120,6 +121,16 @@ static void _load_trace_params(void)
 
 #define HR "================================================================"
 
+/**
+ * Timer to report the take spend in a test's run() method.
+ */
+static cl_perf_timer s_timer_run = CL_PERF_TIMER_INIT;
+
+/**
+ * Timer to report total time in a test (init, run, cleanup).
+ */
+static cl_perf_timer s_timer_test = CL_PERF_TIMER_INIT;
+
 void _cl_trace_cb__event_handler(
 	cl_trace_event ev,
 	const char *suite_name,
@@ -139,21 +150,30 @@ void _cl_trace_cb__event_handler(
 
 	case CL_TRACE__TEST__BEGIN:
 		git_trace(GIT_TRACE_TRACE, "\n%s::%s: Begin Test", suite_name, test_name);
+		cl_perf_timer__init(&s_timer_test);
+		cl_perf_timer__start(&s_timer_test);
 		break;
 
 	case CL_TRACE__TEST__END:
-		git_trace(GIT_TRACE_TRACE, "%s::%s: End Test", suite_name, test_name);
+		cl_perf_timer__stop(&s_timer_test);
+		git_trace(GIT_TRACE_TRACE, "%s::%s: End Test (%.3f %.3f)", suite_name, test_name,
+				  cl_perf_timer__last(&s_timer_run),
+				  cl_perf_timer__last(&s_timer_test));
 		break;
 
 	case CL_TRACE__TEST__RUN_BEGIN:
 		git_trace(GIT_TRACE_TRACE, "%s::%s: Begin Run", suite_name, test_name);
+		cl_perf_timer__init(&s_timer_run);
+		cl_perf_timer__start(&s_timer_run);
 		break;
 
 	case CL_TRACE__TEST__RUN_END:
+		cl_perf_timer__stop(&s_timer_run);
 		git_trace(GIT_TRACE_TRACE, "%s::%s: End Run", suite_name, test_name);
 		break;
 
 	case CL_TRACE__TEST__LONGJMP:
+		cl_perf_timer__stop(&s_timer_run);
 		git_trace(GIT_TRACE_TRACE, "%s::%s: Aborted", suite_name, test_name);
 		break;
 
