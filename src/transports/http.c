@@ -350,6 +350,11 @@ static int on_headers_complete(http_parser *parser)
 				} else {
 					assert(t->cred);
 
+					if (!(t->cred->credtype & allowed_auth_types)) {
+						giterr_set(GITERR_NET, "credentials callback returned an invalid cred type");
+						return t->parse_error = PARSE_ERROR_GENERIC;
+					}
+
 					/* Successfully acquired a credential. */
 					t->parse_error = PARSE_ERROR_REPLAY;
 					return 0;
