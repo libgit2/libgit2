@@ -314,6 +314,9 @@ static int hashsig_heap_compare(const hashsig_heap *a, const hashsig_heap *b)
 
 	assert(a->cmp == b->cmp);
 
+	if (a->size + b->size == 0)
+		return 0;
+
 	/* hash heaps are sorted - just look for overlap vs total */
 
 	for (i = 0, j = 0; i < a->size && j < b->size; ) {
