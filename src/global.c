@@ -270,6 +270,17 @@ git_global_st *git__global_state(void)
 	return ptr;
 }
 
+BOOL WINAPI DllMain(HINSTANCE dll, DWORD reason, LPVOID reserved)
+{
+	if (reason == DLL_THREAD_DETACH) {
+		void *ptr = TlsGetValue(_tls_index);
+		git__global_state_cleanup(ptr);
+		git__free(ptr);
+	}
+
+	return TRUE;
+}
+
 #elif defined(GIT_THREADS) && defined(_POSIX_THREADS)
 
 static pthread_key_t _tls_key;
