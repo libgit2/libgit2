@@ -466,11 +466,11 @@ static int rebase_normalize_opts(
 		opts->rewrite_notes_ref = git__strdup(given_opts->rewrite_notes_ref);
 		GITERR_CHECK_ALLOC(opts->rewrite_notes_ref);
 	} else if (git_config__get_bool_force(config, "notes.rewrite.rebase", 1)) {
-		const char *rewrite_ref = git_config__get_string_force(
+		char *rewrite_ref = git_config__get_string_force(
 			config, "notes.rewriteref", NOTES_DEFAULT_REF);
 
 		if (rewrite_ref) {
-			opts->rewrite_notes_ref = git__strdup(rewrite_ref);
+			opts->rewrite_notes_ref = rewrite_ref;
 			GITERR_CHECK_ALLOC(opts->rewrite_notes_ref);
 		}
 	}

@@ -1948,6 +1948,7 @@ int git_repository_set_head(
 	}
 
 cleanup:
+	git_buf_free(&log_message);
 	git_reference_free(current);
 	git_reference_free(ref);
 	git_reference_free(new_head);
@@ -1980,6 +1981,7 @@ int git_repository_set_head_detached(
 	error = git_reference_create(&new_head, repo, GIT_HEAD_FILE, git_object_id(peeled), true, git_buf_cstr(&log_message));
 
 cleanup:
+	git_buf_free(&log_message);
 	git_object_free(object);
 	git_object_free(peeled);
 	git_reference_free(current);
@@ -2012,6 +2014,7 @@ int git_repository_detach_head(git_repository* repo)
 			1, git_buf_cstr(&log_message));
 
 cleanup:
+	git_buf_free(&log_message);
 	git_object_free(object);
 	git_reference_free(old_head);
 	git_reference_free(new_head);

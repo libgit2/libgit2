@@ -277,7 +277,7 @@ static int normalize_find_opts(
 	if (!given ||
 		 (given->flags & GIT_DIFF_FIND_ALL) == GIT_DIFF_FIND_BY_CONFIG)
 	{
-		const char *rule =
+		char *rule =
 			git_config__get_string_force(cfg, "diff.renames", "true");
 		int boolval;
 
@@ -287,6 +287,8 @@ static int normalize_find_opts(
 			opts->flags |= GIT_DIFF_FIND_RENAMES | GIT_DIFF_FIND_COPIES;
 		else
 			opts->flags |= GIT_DIFF_FIND_RENAMES;
+
+		git__free(rule);
 	}
 
 	/* some flags imply others */

@@ -221,4 +221,6 @@ void test_reset_hard__reflog_is_correct(void)
 	cl_git_pass(git_reset(repo, target, GIT_RESET_HARD, NULL));
 	reflog_check(repo, "HEAD", 4, NULL, git_buf_cstr(&buf));
 	reflog_check(repo, "refs/heads/master", 4, NULL, git_buf_cstr(&buf));
+
+	git_buf_free(&buf);
 }

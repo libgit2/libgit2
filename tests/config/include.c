@@ -128,5 +128,6 @@ void test_config_include__depth2(void)
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.bar2"));
 	cl_assert_equal_s("baz2", git_buf_cstr(&buf));
 
+	git_buf_free(&buf);
 	git_config_free(cfg);
 }

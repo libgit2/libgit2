@@ -1075,7 +1075,7 @@ int git_reference__update_terminal(
 	const git_signature *sig,
 	const char *log_message)
 {
-	git_reference *ref = NULL;
+	git_reference *ref = NULL, *ref2 = NULL;
 	git_signature *who = NULL;
 	const git_signature *to_use;
 	int error = 0;
@@ -1090,18 +1090,20 @@ int git_reference__update_terminal(
 	if (error == GIT_ENOTFOUND && ref) {
 		assert(git_reference_type(ref) == GIT_REF_SYMBOLIC);
 		giterr_clear();
-		error = reference__create(&ref, repo, ref->target.symbolic, oid, NULL, 0, to_use,
+		error = reference__create(&ref2, repo, ref->target.symbolic, oid, NULL, 0, to_use,
 					  log_message, NULL, NULL);
 	} else if (error == GIT_ENOTFOUND) {
 		giterr_clear();
-		error = reference__create(&ref, repo, ref_name, oid, NULL, 0, to_use,
+		error = reference__create(&ref2, repo, ref_name, oid, NULL, 0, to_use,
 					  log_message, NULL, NULL);
 	}  else if (error == 0) {
 		assert(git_reference_type(ref) == GIT_REF_OID);
-		error = reference__create(&ref, repo, ref->name, oid, NULL, 1, to_use,
+		error = reference__create(&ref2, repo, ref->name, oid, NULL, 1, to_use,
 					  log_message, &ref->target.oid, NULL);
 	}
 
+	git_reference_free(ref2);
+	git_reference_free(ref);
 	git_signature_free(who);
 	return error;
 }
