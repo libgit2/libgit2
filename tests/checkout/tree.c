@@ -15,7 +15,7 @@ void test_checkout_tree__initialize(void)
 	g_repo = cl_git_sandbox_init("testrepo");
 
 	GIT_INIT_STRUCTURE(&g_opts, GIT_CHECKOUT_OPTIONS_VERSION);
-	g_opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	g_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 }
 
 void test_checkout_tree__cleanup(void)
@@ -408,7 +408,7 @@ void test_checkout_tree__can_checkout_with_pattern(void)
 
 	/* now to a narrow patterned checkout */
 
-	g_opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	g_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 	g_opts.paths.strings = entries;
 	g_opts.paths.count = 1;
 
@@ -445,7 +445,8 @@ void test_checkout_tree__can_disable_pattern_match(void)
 	/* now to a narrow patterned checkout, but disable pattern */
 
 	g_opts.checkout_strategy =
-		GIT_CHECKOUT_SAFE_CREATE | GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH;
+		GIT_CHECKOUT_SAFE |
+		GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH;
 	g_opts.paths.strings = entries;
 	g_opts.paths.count = 1;
 
@@ -457,7 +458,7 @@ void test_checkout_tree__can_disable_pattern_match(void)
 
 	/* let's try that again, but allow the pattern match */
 
-	g_opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	g_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 
 	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
 
@@ -824,7 +825,8 @@ void test_checkout_tree__target_directory_from_bare(void)
 	g_repo = cl_git_sandbox_init("testrepo.git");
 	cl_assert(git_repository_is_bare(g_repo));
 
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	opts.checkout_strategy = GIT_CHECKOUT_SAFE |
+		GIT_CHECKOUT_RECREATE_MISSING;
 
 	opts.notify_flags = GIT_CHECKOUT_NOTIFY_ALL;
 	opts.notify_cb = checkout_count_callback;
@@ -1264,3 +1266,39 @@ void test_checkout_tree__can_update_but_not_write_index(void)
 	git_object_free(head);
 	git_index_free(index);
 }
+
+/* Emulate checking out in a repo created by clone --no-checkout,
+ * which would not have written an index. */
+void test_checkout_tree__safe_proceeds_if_no_index(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_oid oid;
+	git_object *obj = NULL;
+
+	assert_on_branch(g_repo, "master");
+	cl_must_pass(p_unlink("testrepo/.git/index"));
+
+	/* do second checkout safe because we should be clean after first */
+	opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+
+	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/subtrees"));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+
+	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
+	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/subtrees", NULL, NULL));
+
+	cl_assert(git_path_isfile("testrepo/README"));
+	cl_assert(git_path_isfile("testrepo/branch_file.txt"));
+	cl_assert(git_path_isfile("testrepo/new.txt"));
+	cl_assert(git_path_isfile("testrepo/ab/4.txt"));
+	cl_assert(git_path_isfile("testrepo/ab/c/3.txt"));
+	cl_assert(git_path_isfile("testrepo/ab/de/2.txt"));
+	cl_assert(git_path_isfile("testrepo/ab/de/fgh/1.txt"));
+
+	cl_assert(!git_path_isdir("testrepo/a"));
+
+	assert_on_branch(g_repo, "subtrees");
+
+	git_object_free(obj);
+}
+

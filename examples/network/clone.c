@@ -82,7 +82,7 @@ int do_clone(git_repository *repo, int argc, char **argv)
 	}
 
 	// Set up options
-	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 	checkout_opts.progress_cb = checkout_progress;
 	checkout_opts.progress_payload = &pd;
 	clone_opts.checkout_opts = checkout_opts;

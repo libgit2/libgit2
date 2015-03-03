@@ -31,7 +31,7 @@ GIT_BEGIN_DECL
  * check out, the "baseline" tree of what was checked out previously, the
  * working directory for actual files, and the index for staged changes.
  *
- * You give checkout one of four strategies for update:
+ * You give checkout one of three strategies for update:
  *
  * - `GIT_CHECKOUT_NONE` is a dry-run strategy that checks for conflicts,
  *   etc., but doesn't make any actual changes.
@@ -40,8 +40,8 @@ GIT_BEGIN_DECL
  *   make the working directory match the target (including potentially
  *   discarding modified files).
  *
- * In between those are `GIT_CHECKOUT_SAFE` and `GIT_CHECKOUT_SAFE_CREATE`
- * both of which only make modifications that will not lose changes.
+ * - `GIT_CHECKOUT_SAFE` is between these two options, it will only make
+ *   modifications that will not lose changes.
  *
  *                         |  target == baseline   |  target != baseline  |
  *    ---------------------|-----------------------|----------------------|
@@ -51,27 +51,20 @@ GIT_BEGIN_DECL
  *     workdir exists and  |       no action       |   conflict (notify   |
  *       is != baseline    | notify dirty MODIFIED | and cancel checkout) |
  *    ---------------------|-----------------------|----------------------|
- *      workdir missing,   | create if SAFE_CREATE |     create file      |
- *      baseline present   | notify dirty DELETED  |                      |
+ *      workdir missing,   | notify dirty DELETED  |     create file      |
+ *      baseline present   |                       |                      |
  *    ---------------------|-----------------------|----------------------|
- *
- * The only difference between SAFE and SAFE_CREATE is that SAFE_CREATE
- * will cause a file to be checked out if it is missing from the working
- * directory even if it is not modified between the target and baseline.
- *
  *
  * To emulate `git checkout`, use `GIT_CHECKOUT_SAFE` with a checkout
  * notification callback (see below) that displays information about dirty
  * files.  The default behavior will cancel checkout on conflicts.
  *
- * To emulate `git checkout-index`, use `GIT_CHECKOUT_SAFE_CREATE` with a
+ * To emulate `git checkout-index`, use `GIT_CHECKOUT_SAFE` with a
  * notification callback that cancels the operation if a dirty-but-existing
  * file is found in the working directory.  This core git command isn't
  * quite "force" but is sensitive about some types of changes.
  *
  * To emulate `git checkout -f`, use `GIT_CHECKOUT_FORCE`.
- *
- * To emulate `git clone` use `GIT_CHECKOUT_SAFE_CREATE` in the options.
  *
  *
  * There are some additional flags to modified the behavior of checkout:
@@ -116,12 +109,12 @@ typedef enum {
 	/** Allow safe updates that cannot overwrite uncommitted data */
 	GIT_CHECKOUT_SAFE = (1u << 0),
 
-	/** Allow safe updates plus creation of missing files */
-	GIT_CHECKOUT_SAFE_CREATE = (1u << 1),
-
 	/** Allow all updates to force working directory to look like index */
-	GIT_CHECKOUT_FORCE = (1u << 2),
+	GIT_CHECKOUT_FORCE = (1u << 1),
 
+
+	/** Allow checkout to recreate missing files */
+	GIT_CHECKOUT_RECREATE_MISSING = (1u << 2),
 
 	/** Allow checkout to make safe updates even if conflicts are found */
 	GIT_CHECKOUT_ALLOW_CONFLICTS = (1u << 4),

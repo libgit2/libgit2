@@ -137,7 +137,7 @@ typedef struct git_submodule_update_options {
 
 	/**
 	 * The checkout strategy to use when the sub repository needs to
-	 * be cloned. Use GIT_CHECKOUT_SAFE_CREATE to create all files
+	 * be cloned. Use GIT_CHECKOUT_SAFE to create all files
 	 * in the working directory for the newly cloned repository.
 	 */
 	unsigned int clone_checkout_strategy;
@@ -152,8 +152,8 @@ typedef struct git_submodule_update_options {
 #define GIT_SUBMODULE_UPDATE_OPTIONS_VERSION 1
 #define GIT_SUBMODULE_UPDATE_OPTIONS_INIT \
 	{ GIT_CHECKOUT_OPTIONS_VERSION, \
-		{ GIT_CHECKOUT_OPTIONS_VERSION, GIT_CHECKOUT_SAFE}, \
-	GIT_REMOTE_CALLBACKS_INIT, GIT_CHECKOUT_SAFE_CREATE }
+		{ GIT_CHECKOUT_OPTIONS_VERSION, GIT_CHECKOUT_SAFE }, \
+	GIT_REMOTE_CALLBACKS_INIT, GIT_CHECKOUT_SAFE }
 
 /**
  * Initializes a `git_submodule_update_options` with default values.

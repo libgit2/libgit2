@@ -8,6 +8,9 @@ v0.22 + 1
 
 * Rename and copy detection is enabled for small files.
 
+* Checkout can now handle an initial checkout of a repository, making
+  `GIT_CHECKOUT_SAFE_CREATE` unnecessary for users of clone.
+
 ### API additions
 
 * Parsing and retrieving a configuration value as a path is exposed
@@ -17,6 +20,11 @@ v0.22 + 1
 ### API removals
 
 ### Breaking API changes
+
+* `GIT_CHECKOUT_SAFE_CREATE` has been removed.  Most users will generally
+  be able to switch to `GIT_CHECKOUT_SAFE`, but if you require missing
+  file handling during checkout, you may now use `GIT_CHECKOUT_SAFE |
+  GIT_CHECKOUT_RECREATE_MISSING`.
 
 v0.22
 ------

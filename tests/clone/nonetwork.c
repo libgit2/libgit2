@@ -22,7 +22,7 @@ void test_clone_nonetwork__initialize(void)
 	memset(&g_options, 0, sizeof(git_clone_options));
 	g_options.version = GIT_CLONE_OPTIONS_VERSION;
 	g_options.checkout_opts = dummy_opts;
-	g_options.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	g_options.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 	g_options.remote_callbacks = dummy_callbacks;
 	cl_git_pass(git_signature_now(&g_options.signature, "Me", "foo@example.com"));
 }
