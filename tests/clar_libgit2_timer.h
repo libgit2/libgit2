@@ -1,32 +1,19 @@
 #ifndef __CLAR_LIBGIT2_TIMER__
 #define __CLAR_LIBGIT2_TIMER__
 
-#if defined(GIT_WIN32)
-
 struct cl_perf_timer
 {
 	/* cummulative running time across all start..stop intervals */
-	LARGE_INTEGER sum;
+	double sum;
+
 	/* value of last start..stop interval */
-	LARGE_INTEGER last;
+	double last;
+
 	/* clock value at start */
-	LARGE_INTEGER time_started;
+	double time_started;
 };
 
 #define CL_PERF_TIMER_INIT {0}
-
-#else
-
-struct cl_perf_timer
-{
-	uint32_t sum;
-	uint32_t last;
-	uint32_t time_started;
-};
-
-#define CL_PERF_TIMER_INIT {0}
-
-#endif
 
 typedef struct cl_perf_timer cl_perf_timer;
 
