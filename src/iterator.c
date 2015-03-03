@@ -1407,9 +1407,6 @@ static int workdir_iterator__enter_dir(fs_iterator *fi)
 
 	/* convert submodules to GITLINK and remove trailing slashes */
 	git_vector_foreach(&ff->entries, pos, entry) {
-		/* TODO Is strcmp(GIT_DIR,...) correct? Shouldn't we use
-		 * the dotgit equivalence code?
-		 */
 		if (!S_ISDIR(entry->st.st_mode) || !strcmp(GIT_DIR, entry->path))
 			continue;
 
@@ -1630,36 +1627,6 @@ static int indexfilelist_iterator__reset(
 	ifi->pos_filelist_start = 0;
 	ifi->pos_filelist_end = git_vector_length(&ifi->filelist);
 
-#if 0 /* We currently don't allow "start" and "end" strings for filelist iterators. */
-	/* The general iterator API allows optional "start" and
-	 * "end" paths.  This probalby isn't necessary for the
-	 * "filelist" iterators, since the caller has already
-	 * given us the exact set of files they want, but to fit
-	 * in with the general iterators API, we interpret them
-	 * as a way to "subset" the filelist and bound the iteration.
-	 *
-	 * Complicating this is the fact that the "start" and "end"
-	 * paths might or might not be present in the "filelist".
-	 * We rely on bsearch() to give us either the actual position
-	 * or the would-be insertion point within the "filelist".
-	 *
-	 * For the "start" string, this means we either start the
-	 * iteration at the filelist position of the matching path
-	 * or the first one alphabetically following it.
-	 * 
-	 * For the "end" string, we want it to be INCLUDED in the
-	 * set of paths enumerated (unlike the STL).  We set the
-	 * "pos_filelist_end" to be just past it (like the STL).
-	 */
-
-	if (ifi->base.start)
-		git_vector_bsearch(&ifi->pos_filelist_start, &ifi->filelist, ifi->base.start);
-
-	if (ifi->base.end)
-		if (git_vector_bsearch(&ifi->pos_filelist_end, &ifi->filelist, ifi->base.end) == 0)
-			ifi->pos_filelist_end++;
-#endif /* 0 */
-
 	/* Seed "current" with the first item in both the filelist and the index. */
 	/* Skip unmatched items in filelist. */
 
@@ -1710,11 +1677,6 @@ int git_iterator_for_indexfilelist(
 
 	ifi = git__calloc(1, sizeof(indexfilelist_iterator));
 	GITERR_CHECK_ALLOC(ifi);
-
-#if defined(GIT_TRACE_ITERATOR)
-	git_trace(GIT_TRACE_TRACE, "git_iterator_for_indexfilelist: [iter %p] [flags 0x%08lx] [count %d]",
-			  ifi, flags, (int)paths->count);
-#endif
 
 	ITERATOR_BASE_INIT(ifi, indexfilelist, INDEXFILELIST, git_index_owner(index));
 	if ((error = iterator__update_ignore_case((git_iterator *)ifi, flags)) < 0)
@@ -1882,27 +1844,6 @@ static int workdirfilelist_iterator__reset(
 	wdfi->pos_filelist_start = 0;
 	wdfi->pos_filelist_end = git_vector_length(&wdfi->filelist);
 
-#if 0 /* We currently don't allow "start" and "end" strings for filelist iterators. */
-	/* We lookup the starting and ending paths in the filelist.
-	 * This gives us the bounds on set
-	 * of possible paths we will return during the iteration.
-	 *
-	 * For the "end" string, we want it to be included in the
-	 * set of paths enumerated (unlike the STL).  We set the
-	 * "pos_filelist_end" to be just past it (like the STL).
-	 */
-
-	if (wdfi->base.start)
-		git_vector_bsearch(&wdfi->pos_filelist_start, &wdfi->filelist, wdfi->base.start);
-
-	if (wdfi->base.end)
-		if (git_vector_bsearch(&wdfi->pos_filelist_end, &wdfi->filelist, wdfi->base.end) == 0)
-			wdfi->pos_filelist_end++;
-
-	/* Seed "current" with the first item in both the filelist and the workdir. */
-	/* Skip unmatched items in filelist. */
-#endif /* 0 */
-
 	wdfi->pos_filelist_current = wdfi->pos_filelist_start;
 	while (!workdirfilelist_iterator__at_end(self)) {
 		const char *sz = git_vector_get(&wdfi->filelist, wdfi->pos_filelist_current);
@@ -1963,12 +1904,6 @@ int git_iterator_for_workdirfilelist(
 
 	wdfi = git__calloc(1, sizeof(workdirfilelist_iterator));
 	GITERR_CHECK_ALLOC(wdfi);
-
-#if defined(GIT_TRACE_ITERATOR)
-	git_trace(GIT_TRACE_TRACE, "git_iterator_for_workdirfilelist: [iter %p] [flags 0x%08lx] [count %d] [wd %s]",
-			  wdfi, flags, (int)paths->count,
-			  repo_workdir);
-#endif
 
 	ITERATOR_BASE_INIT(wdfi, workdirfilelist, WORKDIRFILELIST, repo);
 	if ((error = iterator__update_ignore_case((git_iterator *)wdfi, flags)) < 0)
@@ -2142,7 +2077,7 @@ bool git_iterator_current_tree_is_ignored(git_iterator *iter)
 		bool r = false;
 
 		assert(wdfi->entry.path && wdfi->entry.path[0]);
-		
+
 		git_buf_sets(&buf_parent, wdfi->entry.path);
 		/* remove trailing slash (should not be present) */
 		if (buf_parent.ptr[buf_parent.size - 1] == '/')
@@ -2186,10 +2121,7 @@ int git_iterator_current_workdir_path(git_buf **path, git_iterator *iter)
 			*path = &wi->fi.path;
 	}
 	else if (iter->type == GIT_ITERATOR_TYPE_WORKDIRFILELIST) {
-		// TODO
-#if defined(GIT_TRACE_ITERATOR)
-		git_trace(GIT_TRACE_TRACE, "git_iterator_current_workdir_path: TODO");
-#endif
+		// TODO Not sure whether this would actually be called.
 	}
 
 	return 0;
@@ -2278,9 +2210,6 @@ static int workdirfilelist__git_iterator_advance_over_with_status(
 
 	*status = GIT_ITERATOR_STATUS_EMPTY;
 
-#if defined(GIT_TRACE_ITERATOR)
-	git_trace(GIT_TRACE_TRACE, "workdirfilelist__advance_over_with_status: TODO");
-#endif
 	return git_iterator_advance(entryptr, iter);
 }
 

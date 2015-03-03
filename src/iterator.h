@@ -24,12 +24,12 @@ typedef enum {
 	GIT_ITERATOR_TYPE_WORKDIRFILELIST = 6,
 } git_iterator_type_t;
 
-#define GIT_ITERATOR_TYPE_IS_WORKDIR_OR_FILELIST(t)						\
-	(((t) == GIT_ITERATOR_TYPE_WORKDIR) ||								\
+#define GIT_ITERATOR_TYPE_IS_WORKDIR_OR_FILELIST(t) \
+	(((t) == GIT_ITERATOR_TYPE_WORKDIR) ||          \
 	 ((t) == GIT_ITERATOR_TYPE_WORKDIRFILELIST))
 
-#define GIT_ITERATOR_TYPE_IS_INDEX_OR_FILELIST(t)						\
-	(((t) == GIT_ITERATOR_TYPE_INDEX) ||								\
+#define GIT_ITERATOR_TYPE_IS_INDEX_OR_FILELIST(t) \
+	(((t) == GIT_ITERATOR_TYPE_INDEX) ||          \
 	 ((t) == GIT_ITERATOR_TYPE_INDEXFILELIST))
 
 typedef enum {
