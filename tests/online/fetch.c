@@ -48,7 +48,7 @@ static void do_fetch(const char *url, git_remote_autotag_option_t flag, int n)
 	git_remote_set_autotag(remote, flag);
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH));
 	cl_git_pass(git_remote_download(remote, NULL));
-	cl_git_pass(git_remote_update_tips(remote, NULL, NULL));
+	cl_git_pass(git_remote_update_tips(remote, NULL));
 	git_remote_disconnect(remote);
 	cl_assert_equal_i(counter, n);
 	cl_assert(bytes_received > 0);
@@ -132,7 +132,7 @@ void test_online_fetch__doesnt_retrieve_a_pack_when_the_repository_is_up_to_date
 
 	cl_assert_equal_i(false, invoked);
 
-	cl_git_pass(git_remote_update_tips(remote, NULL, NULL));
+	cl_git_pass(git_remote_update_tips(remote, NULL));
 	git_remote_disconnect(remote);
 
 	git_remote_free(remote);
@@ -208,8 +208,8 @@ void test_online_fetch__twice(void)
 	git_remote *remote;
 
 	cl_git_pass(git_remote_create(&remote, _repo, "test", "http://github.com/libgit2/TestGitRepository.git"));
-	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
-	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
+	cl_git_pass(git_remote_fetch(remote, NULL, NULL));
+	cl_git_pass(git_remote_fetch(remote, NULL, NULL));
 
 	git_remote_free(remote);
 }

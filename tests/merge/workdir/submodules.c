@@ -44,7 +44,7 @@ void test_merge_workdir_submodules__automerge(void)
 
 	cl_git_pass(git_reference_lookup(&our_ref, repo, "refs/heads/" SUBMODULE_MAIN_BRANCH));
 	cl_git_pass(git_commit_lookup(&our_commit, repo, git_reference_target(our_ref)));
-	cl_git_pass(git_reset(repo, (git_object *)our_commit, GIT_RESET_HARD, NULL, NULL, NULL));
+	cl_git_pass(git_reset(repo, (git_object *)our_commit, GIT_RESET_HARD, NULL));
 
 	cl_git_pass(git_reference_lookup(&their_ref, repo, "refs/heads/" SUBMODULE_OTHER_BRANCH));
 	cl_git_pass(git_annotated_commit_from_ref(&their_head, repo, their_ref));
@@ -77,7 +77,7 @@ void test_merge_workdir_submodules__take_changed(void)
 
 	cl_git_pass(git_reference_lookup(&our_ref, repo, "refs/heads/" SUBMODULE_MAIN_BRANCH));
 	cl_git_pass(git_commit_lookup(&our_commit, repo, git_reference_target(our_ref)));
-	cl_git_pass(git_reset(repo, (git_object *)our_commit, GIT_RESET_HARD, NULL, NULL, NULL));
+	cl_git_pass(git_reset(repo, (git_object *)our_commit, GIT_RESET_HARD, NULL));
 
 	cl_git_pass(git_reference_lookup(&their_ref, repo, "refs/heads/" SUBMODULE_OTHER2_BRANCH));
 	cl_git_pass(git_annotated_commit_from_ref(&their_head, repo, their_ref));

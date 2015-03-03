@@ -37,7 +37,7 @@ void test_repo_state__none_with_HEAD_attached(void)
 
 void test_repo_state__none_with_HEAD_detached(void)
 {
-	cl_git_pass(git_repository_detach_head(_repo, NULL, NULL));
+	cl_git_pass(git_repository_detach_head(_repo));
 	assert_repo_state(GIT_REPOSITORY_STATE_NONE);
 }
 

@@ -113,7 +113,7 @@ static void commit_and_tag(
 	if (tag_name == NULL)
 		return;
 
-	cl_git_pass(git_reference_create(&ref, repo, tag_name, &commit_id, 0, NULL, NULL));
+	cl_git_pass(git_reference_create(&ref, repo, tag_name, &commit_id, 0, NULL));
 	git_reference_free(ref);
 }
 

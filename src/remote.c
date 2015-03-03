@@ -924,7 +924,6 @@ on_error:
 int git_remote_fetch(
 		git_remote *remote,
 		const git_strarray *refspecs,
-		const git_signature *signature,
 		const char *reflog_message)
 {
 	int error;
@@ -952,7 +951,7 @@ int git_remote_fetch(
 	}
 
 	/* Create "remote/foo" branches for all remote branches */
-	error = git_remote_update_tips(remote, signature, git_buf_cstr(&reflog_msg_buf));
+	error = git_remote_update_tips(remote, git_buf_cstr(&reflog_msg_buf));
 	git_buf_free(&reflog_msg_buf);
 	if (error < 0)
 		return error;
@@ -1257,7 +1256,6 @@ static int update_tips_for_spec(
 		git_remote *remote,
 		git_refspec *spec,
 		git_vector *refs,
-		const git_signature *signature,
 		const char *log_message)
 {
 	int error = 0, autotag;
@@ -1332,7 +1330,7 @@ static int update_tips_for_spec(
 
 		/* In autotag mode, don't overwrite any locally-existing tags */
 		error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, !autotag, 
-				signature, log_message);
+				log_message);
 		if (error < 0 && error != GIT_EEXISTS)
 			goto on_error;
 
@@ -1418,7 +1416,7 @@ static int next_head(const git_remote *remote, git_vector *refs,
 	return GIT_ITEROVER;
 }
 
-static int opportunistic_updates(const git_remote *remote, git_vector *refs, const git_signature *sig, const char *msg)
+static int opportunistic_updates(const git_remote *remote, git_vector *refs, const char *msg)
 {
 	size_t i, j, k;
 	git_refspec *spec;
@@ -1441,7 +1439,7 @@ static int opportunistic_updates(const git_remote *remote, git_vector *refs, con
 		if ((error = git_refspec_transform(&refname, spec, head->name)) < 0)
 			return error;
 
-		error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, true, sig, msg);
+		error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, true, msg);
 		git_buf_free(&refname);
 		git_reference_free(ref);
 
@@ -1454,7 +1452,6 @@ static int opportunistic_updates(const git_remote *remote, git_vector *refs, con
 
 int git_remote_update_tips(
 		git_remote *remote,
-		const git_signature *signature,
 		const char *reflog_message)
 {
 	git_refspec *spec, tagspec;
@@ -1464,7 +1461,7 @@ int git_remote_update_tips(
 
 	/* push has its own logic hidden away in the push object */
 	if (remote->push) {
-		return git_push_update_tips(remote->push, signature, reflog_message);
+		return git_push_update_tips(remote->push);
 	}
 
 	if (git_refspec__parse(&tagspec, GIT_REFSPEC_TAGS, true) < 0)
@@ -1475,7 +1472,7 @@ int git_remote_update_tips(
 		goto out;
 
 	if (remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
-		if ((error = update_tips_for_spec(remote, &tagspec, &refs, signature, reflog_message)) < 0)
+		if ((error = update_tips_for_spec(remote, &tagspec, &refs, reflog_message)) < 0)
 			goto out;
 	}
 
@@ -1483,13 +1480,13 @@ int git_remote_update_tips(
 		if (spec->push)
 			continue;
 
-		if ((error = update_tips_for_spec(remote, spec, &refs, signature, reflog_message)) < 0)
+		if ((error = update_tips_for_spec(remote, spec, &refs, reflog_message)) < 0)
 			goto out;
 	}
 
 	/* only try to do opportunisitic updates if the refpec lists differ */
 	if (remote->passed_refspecs)
-		error = opportunistic_updates(remote, &refs, signature, reflog_message);
+		error = opportunistic_updates(remote, &refs, reflog_message);
 
 out:
 	git_vector_free(&refs);
@@ -1755,7 +1752,7 @@ static int rename_one_remote_reference(
 		goto cleanup;
 
 	if ((error = git_reference_rename(&ref, reference_in, git_buf_cstr(&new_name), 1,
-					  NULL, git_buf_cstr(&log_message))) < 0)
+					  git_buf_cstr(&log_message))) < 0)
 		goto cleanup;
 
 	if (git_reference_type(ref) != GIT_REF_SYMBOLIC)
@@ -1775,7 +1772,7 @@ static int rename_one_remote_reference(
 		goto cleanup;
 
 	error = git_reference_symbolic_set_target(&dummy, ref, git_buf_cstr(&new_name),
-						  NULL, git_buf_cstr(&log_message));
+						  git_buf_cstr(&log_message));
 
 	git_reference_free(dummy);
 
@@ -2373,8 +2370,7 @@ cleanup:
 	return error;
 }
 
-int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_push_options *opts,
-		    const git_signature *signature, const char *reflog_message)
+int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_push_options *opts)
 {
 	int error;
 
@@ -2386,7 +2382,7 @@ int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_
 	if ((error = git_remote_upload(remote, refspecs, opts)) < 0)
 		return error;
 
-	error = git_remote_update_tips(remote, signature, reflog_message);
+	error = git_remote_update_tips(remote, NULL);
 
 	git_remote_disconnect(remote);
 	return error;

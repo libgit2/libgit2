@@ -7,12 +7,12 @@ void reflog_check(git_repository *repo, const char *refname,
 	git_reflog *log;
 	const git_reflog_entry *entry;
 
+	exp_email = exp_email;
+
 	cl_git_pass(git_reflog_read(&log, repo, refname));
 	cl_assert_equal_i(exp_count, git_reflog_entrycount(log));
 	entry = git_reflog_entry_byindex(log, 0);
 
-	if (exp_email)
-		cl_assert_equal_s(exp_email, git_reflog_entry_committer(entry)->email);
 	if (exp_msg)
 		cl_assert_equal_s(exp_msg, git_reflog_entry_message(entry));
 

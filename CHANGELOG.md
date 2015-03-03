@@ -11,11 +11,19 @@ v0.22 + 1
 * Checkout can now handle an initial checkout of a repository, making
   `GIT_CHECKOUT_SAFE_CREATE` unnecessary for users of clone.
 
+* The signature parameter in the ref-modifying functions has been
+  removed. Use `git_repository_set_ident()` and
+  `git_repository_ident()` to override the signature to be used.
+
 ### API additions
 
 * Parsing and retrieving a configuration value as a path is exposed
   via `git_config_parse_path()` and `git_config_get_path()`
   respectively.
+
+* `git_repository_set_ident()` and `git_repository_ident()` serve to
+  set and query which identity will be used when writing to the
+  reflog.
 
 ### API removals
 
@@ -25,6 +33,25 @@ v0.22 + 1
   be able to switch to `GIT_CHECKOUT_SAFE`, but if you require missing
   file handling during checkout, you may now use `GIT_CHECKOUT_SAFE |
   GIT_CHECKOUT_RECREATE_MISSING`.
+
+* The `git_clone_options` and `git_submodule_update_options`
+  structures no longer have a `signature` field.
+
+* The following functions have removed the signature and/or log message
+  parameters in favour of git-emulating ones.
+
+    * `git_branch_create()`, `git_branch_move()`
+    * `git_rebase_init()`, `git_rebase_abort()`
+    * `git_reference_symbolic_create_matching()`,
+      `git_reference_symbolic_create()`, `git_reference_create()`,
+      `git_reference_create_matching()`,
+      `git_reference_symbolic_set_target()`,
+      `git_reference_set_target()`, `git_reference_rename()`
+    * `git_remote_update_tips()`, `git_remote_fetch()`, `git_remote_push()`
+    * `git_repository_set_head()`,
+      `git_repository_set_head_detached()`,
+      `git_repository_detach_head()`
+    * `git_reset()`
 
 v0.22
 ------

@@ -20,7 +20,7 @@ void test_repo_headtree__cleanup(void)
 
 void test_repo_headtree__can_retrieve_the_root_tree_from_a_detached_head(void)
 {
-	cl_git_pass(git_repository_detach_head(repo, NULL, NULL));
+	cl_git_pass(git_repository_detach_head(repo));
 
 	cl_git_pass(git_repository_head_tree(&tree, repo));
 

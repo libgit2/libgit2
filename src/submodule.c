@@ -927,7 +927,6 @@ int git_submodule_update(git_submodule *sm, int init, git_submodule_update_optio
 
 	/* Copy over the remote callbacks */
 	clone_options.remote_callbacks = update_options.remote_callbacks;
-	clone_options.signature = update_options.signature;
 
 	/* Get the status of the submodule to determine if it is already initialized  */
 	if ((error = git_submodule_status(&submodule_status, sm)) < 0)
@@ -985,7 +984,7 @@ int git_submodule_update(git_submodule *sm, int init, git_submodule_update_optio
 		update_options.checkout_opts.checkout_strategy = update_options.clone_checkout_strategy;
 
 		if ((error = git_clone(&sub_repo, submodule_url, sm->path, &clone_options)) < 0 ||
-			(error = git_repository_set_head_detached(sub_repo, git_submodule_index_id(sm), update_options.signature, NULL)) < 0 ||
+			(error = git_repository_set_head_detached(sub_repo, git_submodule_index_id(sm))) < 0 ||
 			(error = git_checkout_head(sub_repo, &update_options.checkout_opts)) != 0)
 			goto done;
 	} else {
@@ -997,7 +996,7 @@ int git_submodule_update(git_submodule *sm, int init, git_submodule_update_optio
 		if ((error = git_submodule_open(&sub_repo, sm)) < 0 ||
 			(error = git_object_lookup(&target_commit, sub_repo, git_submodule_index_id(sm), GIT_OBJ_COMMIT)) < 0 ||
 			(error = git_checkout_tree(sub_repo, target_commit, &update_options.checkout_opts)) != 0 ||
-			(error = git_repository_set_head_detached(sub_repo, git_submodule_index_id(sm), update_options.signature, NULL)) < 0)
+			(error = git_repository_set_head_detached(sub_repo, git_submodule_index_id(sm))) < 0)
 			goto done;
 
 		/* Invalidate the wd flags as the workdir has been updated. */

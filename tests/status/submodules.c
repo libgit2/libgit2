@@ -143,7 +143,7 @@ void test_status_submodules__moved_head(void)
 	/* move submodule HEAD to c47800c7266a2be04c571c04d5a6614691ea99bd */
 	cl_git_pass(
 		git_oid_fromstr(&oid, "c47800c7266a2be04c571c04d5a6614691ea99bd"));
-	cl_git_pass(git_repository_set_head_detached(smrepo, &oid, NULL, NULL));
+	cl_git_pass(git_repository_set_head_detached(smrepo, &oid));
 
 	/* first do a normal status, which should now include the submodule */
 
@@ -503,7 +503,7 @@ void test_status_submodules__entry_but_dir_tracked(void)
 		cl_git_pass(git_signature_now(&sig, "Sloppy Submoduler", "sloppy@example.com"));
 		cl_git_pass(git_tree_lookup(&tree, repo, &tree_id));
 		cl_git_pass(git_commit_create(&commit_id, repo, NULL, sig, sig, NULL, "message", tree, 0, NULL));
-		cl_git_pass(git_reference_create(&ref, repo, "refs/heads/master", &commit_id, 1, sig, "commit: foo"));
+		cl_git_pass(git_reference_create(&ref, repo, "refs/heads/master", &commit_id, 1, "commit: foo"));
 		git_reference_free(ref);
 		git_signature_free(sig);
 	}

@@ -156,7 +156,7 @@ int fetch(git_repository *repo, int argc, char **argv)
 	// right commits. This may be needed even if there was no packfile
 	// to download, which can happen e.g. when the branches have been
 	// changed but all the needed objects are available locally.
-	if (git_remote_update_tips(remote, NULL, NULL) < 0)
+	if (git_remote_update_tips(remote, NULL) < 0)
 		return -1;
 
 	git_remote_free(remote);

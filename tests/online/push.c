@@ -322,6 +322,7 @@ void test_online_push__initialize(void)
 
 	_repo = cl_git_sandbox_init("push_src");
 
+	cl_git_pass(git_repository_set_ident(_repo, "Random J. Hacker", "foo@example.com"));
 	cl_fixture_sandbox("testrepo.git");
 	cl_rename("push_src/submodule/.gitted", "push_src/submodule/.git");
 
@@ -395,7 +396,7 @@ void test_online_push__initialize(void)
 	/* Now that we've deleted everything, fetch from the remote */
 	cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_FETCH));
 	cl_git_pass(git_remote_download(_remote, NULL));
-	cl_git_pass(git_remote_update_tips(_remote, NULL, NULL));
+	cl_git_pass(git_remote_update_tips(_remote, NULL));
 	git_remote_disconnect(_remote);
 }
 
@@ -458,15 +459,12 @@ static void do_push(
 	size_t i;
 	int error;
 	git_strarray specs = {0};
-	git_signature *pusher;
 	git_remote_callbacks callbacks;
 	record_callbacks_data *data;
 
 	if (_remote) {
 		/* Auto-detect the number of threads to use */
 		opts.pb_parallelism = 0;
-
-		cl_git_pass(git_signature_now(&pusher, "Foo Bar", "foo@example.com"));
 
 		memcpy(&callbacks, git_remote_get_callbacks(_remote), sizeof(callbacks));
 		data = callbacks.payload;
@@ -489,7 +487,7 @@ static void do_push(
 		if (check_progress_cb && expected_ret == GIT_EUSER)
 			data->transfer_progress_calls = GIT_EUSER;
 
-		error = git_remote_push(_remote, &specs, &opts, pusher, "test push");
+		error = git_remote_push(_remote, &specs, &opts);
 		git__free(specs.strings);
 
 		if (expected_ret < 0) {
@@ -511,7 +509,6 @@ static void do_push(
 		if (check_update_tips_cb)
 			verify_update_tips_callback(_remote, expected_refs, expected_refs_len);
 
-		git_signature_free(pusher);
 	}
 
 }
@@ -611,7 +608,7 @@ void test_online_push__multi(void)
 	cl_git_pass(git_reflog_read(&log, _repo, "refs/remotes/test/b1"));
 	entry = git_reflog_entry_byindex(log, 0);
 	if (entry) {
-		cl_assert_equal_s("test push", git_reflog_entry_message(entry));
+		cl_assert_equal_s("update by push", git_reflog_entry_message(entry));
 		cl_assert_equal_s("foo@example.com", git_reflog_entry_committer(entry)->email);
 	}
 

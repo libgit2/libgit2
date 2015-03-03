@@ -27,8 +27,8 @@ void test_refs_overwrite__symbolic(void)
 	git_reference *ref, *branch_ref;
 
 	/* The target needds to exist and we need to check the name has changed */
-	cl_git_pass(git_reference_symbolic_create(&branch_ref, g_repo, ref_branch_name, ref_master_name, 0, NULL, NULL));
-	cl_git_pass(git_reference_symbolic_create(&ref, g_repo, ref_name, ref_branch_name, 0, NULL, NULL));
+	cl_git_pass(git_reference_symbolic_create(&branch_ref, g_repo, ref_branch_name, ref_master_name, 0, NULL));
+	cl_git_pass(git_reference_symbolic_create(&ref, g_repo, ref_name, ref_branch_name, 0, NULL));
 	git_reference_free(ref);
 
 	/* Ensure it points to the right place*/
@@ -38,8 +38,8 @@ void test_refs_overwrite__symbolic(void)
 	git_reference_free(ref);
 
 	/* Ensure we can't create it unless we force it to */
-	cl_git_fail(git_reference_symbolic_create(&ref, g_repo, ref_name, ref_master_name, 0, NULL, NULL));
-	cl_git_pass(git_reference_symbolic_create(&ref, g_repo, ref_name, ref_master_name, 1, NULL, NULL));
+	cl_git_fail(git_reference_symbolic_create(&ref, g_repo, ref_name, ref_master_name, 0, NULL));
+	cl_git_pass(git_reference_symbolic_create(&ref, g_repo, ref_name, ref_master_name, 1, NULL));
 	git_reference_free(ref);
 
 	/* Ensure it points to the right place */
@@ -63,7 +63,7 @@ void test_refs_overwrite__object_id(void)
 	git_reference_free(ref);
 
 	/* Create it */
-	cl_git_pass(git_reference_create(&ref, g_repo, ref_name, &id, 0, NULL, NULL));
+	cl_git_pass(git_reference_create(&ref, g_repo, ref_name, &id, 0, NULL));
 	git_reference_free(ref);
 
 	cl_git_pass(git_reference_lookup(&ref, g_repo, ref_test_name));
@@ -72,8 +72,8 @@ void test_refs_overwrite__object_id(void)
 	git_reference_free(ref);
 
 	/* Ensure we can't overwrite unless we force it */
-	cl_git_fail(git_reference_create(&ref, g_repo, ref_name, &id, 0, NULL, NULL));
-	cl_git_pass(git_reference_create(&ref, g_repo, ref_name, &id, 1, NULL, NULL));
+	cl_git_fail(git_reference_create(&ref, g_repo, ref_name, &id, 0, NULL));
+	cl_git_pass(git_reference_create(&ref, g_repo, ref_name, &id, 1, NULL));
 	git_reference_free(ref);
 
 	/* Ensure it has been overwritten */
@@ -94,10 +94,10 @@ void test_refs_overwrite__object_id_with_symbolic(void)
 	git_oid_cpy(&id, git_reference_target(ref));
 	git_reference_free(ref);
 
-	cl_git_pass(git_reference_create(&ref, g_repo, ref_name, &id, 0, NULL, NULL));
+	cl_git_pass(git_reference_create(&ref, g_repo, ref_name, &id, 0, NULL));
 	git_reference_free(ref);
-	cl_git_fail(git_reference_symbolic_create(&ref, g_repo, ref_name, ref_master_name, 0, NULL, NULL));
-	cl_git_pass(git_reference_symbolic_create(&ref, g_repo, ref_name, ref_master_name, 1, NULL, NULL));
+	cl_git_fail(git_reference_symbolic_create(&ref, g_repo, ref_name, ref_master_name, 0, NULL));
+	cl_git_pass(git_reference_symbolic_create(&ref, g_repo, ref_name, ref_master_name, 1, NULL));
 	git_reference_free(ref);
 
 	/* Ensure it points to the right place */
@@ -120,11 +120,11 @@ void test_refs_overwrite__symbolic_with_object_id(void)
 	git_reference_free(ref);
 
 	/* Create the symbolic ref */
-	cl_git_pass(git_reference_symbolic_create(&ref, g_repo, ref_name, ref_master_name, 0, NULL, NULL));
+	cl_git_pass(git_reference_symbolic_create(&ref, g_repo, ref_name, ref_master_name, 0, NULL));
 	git_reference_free(ref);
 	/* It shouldn't overwrite unless we tell it to */
-	cl_git_fail(git_reference_create(&ref, g_repo, ref_name, &id, 0, NULL, NULL));
-	cl_git_pass(git_reference_create(&ref, g_repo, ref_name, &id, 1, NULL, NULL));
+	cl_git_fail(git_reference_create(&ref, g_repo, ref_name, &id, 0, NULL));
+	cl_git_pass(git_reference_create(&ref, g_repo, ref_name, &id, 1, NULL));
 	git_reference_free(ref);
 
 	/* Ensure it points to the right place */

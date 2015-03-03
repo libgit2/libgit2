@@ -181,7 +181,7 @@ void test_network_remote_rename__overwrite_ref_in_target(void)
 	git_strarray problems = {0};
 
 	cl_git_pass(git_oid_fromstr(&id, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750"));
-	cl_git_pass(git_reference_create(&ref, _repo, "refs/remotes/renamed/master", &id, 1, NULL, NULL));
+	cl_git_pass(git_reference_create(&ref, _repo, "refs/remotes/renamed/master", &id, 1, NULL));
 	git_reference_free(ref);
 
 	cl_git_pass(git_remote_rename(&problems, _repo, _remote_name, "renamed"));
@@ -219,7 +219,7 @@ void test_network_remote_rename__symref_head(void)
 	char idstr[GIT_OID_HEXSZ + 1] = {0};
 	git_vector refs;
 
-	cl_git_pass(git_reference_symbolic_create(&ref, _repo, "refs/remotes/test/HEAD", "refs/remotes/test/master", 0, NULL, NULL));
+	cl_git_pass(git_reference_symbolic_create(&ref, _repo, "refs/remotes/test/HEAD", "refs/remotes/test/master", 0, NULL));
 	git_reference_free(ref);
 
 	cl_git_pass(git_remote_rename(&problems, _repo, _remote_name, "renamed"));

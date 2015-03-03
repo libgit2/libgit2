@@ -141,12 +141,6 @@ typedef struct git_submodule_update_options {
 	 * in the working directory for the newly cloned repository.
 	 */
 	unsigned int clone_checkout_strategy;
-
-	/**
-	 * The identity used when updating the reflog. NULL means to
-	 * use the default signature using the config.
-	 */
-	git_signature *signature;
 } git_submodule_update_options;
 
 #define GIT_SUBMODULE_UPDATE_OPTIONS_VERSION 1

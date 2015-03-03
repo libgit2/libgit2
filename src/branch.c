@@ -54,14 +54,12 @@ int git_branch_create(
 	git_repository *repository,
 	const char *branch_name,
 	const git_commit *commit,
-	int force,
-	const git_signature *signature,
-	const char *log_message)
+	int force)
 {
 	int is_head = 0;
 	git_reference *branch = NULL;
 	git_buf canonical_branch_name = GIT_BUF_INIT,
-			  log_message_buf = GIT_BUF_INIT;
+			  log_message = GIT_BUF_INIT;
 	int error = -1;
 
 	assert(branch_name && commit && ref_out);
@@ -88,19 +86,19 @@ int git_branch_create(
 	if (git_buf_joinpath(&canonical_branch_name, GIT_REFS_HEADS_DIR, branch_name) < 0)
 		goto cleanup;
 
-	if (git_buf_sets(&log_message_buf, log_message ? log_message : "Branch: created") < 0)
+	if (git_buf_printf(&log_message, "Branch: created from %s", git_oid_tostr_s(git_commit_id(commit))) < 0)
 		goto cleanup;
 
 	error = git_reference_create(&branch, repository,
-		git_buf_cstr(&canonical_branch_name), git_commit_id(commit), force, signature,
-		git_buf_cstr(&log_message_buf));
+		git_buf_cstr(&canonical_branch_name), git_commit_id(commit), force,
+		git_buf_cstr(&log_message));
 
 	if (!error)
 		*ref_out = branch;
 
 cleanup:
 	git_buf_free(&canonical_branch_name);
-	git_buf_free(&log_message_buf);
+	git_buf_free(&log_message);
 	return error;
 }
 
@@ -222,14 +220,12 @@ int git_branch_move(
 	git_reference **out,
 	git_reference *branch,
 	const char *new_branch_name,
-	int force,
-	const git_signature *signature,
-	const char *log_message)
+	int force)
 {
 	git_buf new_reference_name = GIT_BUF_INIT,
 	        old_config_section = GIT_BUF_INIT,
 	        new_config_section = GIT_BUF_INIT,
-	        log_message_buf = GIT_BUF_INIT;
+	        log_message = GIT_BUF_INIT;
 	int error;
 
 	assert(branch && new_branch_name);
@@ -240,20 +236,15 @@ int git_branch_move(
 	if ((error = git_buf_joinpath(&new_reference_name, GIT_REFS_HEADS_DIR, new_branch_name)) < 0)
 		goto done;
 
-	if (log_message) {
-		if ((error = git_buf_sets(&log_message_buf, log_message)) < 0)
+	if ((error = git_buf_printf(&log_message, "Branch: renamed %s to %s",
+				    git_reference_name(branch), git_buf_cstr(&new_reference_name))) < 0)
 			goto done;
-	} else {
-		if ((error = git_buf_printf(&log_message_buf, "Branch: renamed %s to %s",
-						git_reference_name(branch), git_buf_cstr(&new_reference_name))) < 0)
-			goto done;
-	}
 
 	/* first update ref then config so failure won't trash config */
 
 	error = git_reference_rename(
 		out, branch, git_buf_cstr(&new_reference_name), force,
-		signature, git_buf_cstr(&log_message_buf));
+		git_buf_cstr(&log_message));
 	if (error < 0)
 		goto done;
 
@@ -270,7 +261,7 @@ done:
 	git_buf_free(&new_reference_name);
 	git_buf_free(&old_config_section);
 	git_buf_free(&new_config_section);
-	git_buf_free(&log_message_buf);
+	git_buf_free(&log_message);
 
 	return error;
 }

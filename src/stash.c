@@ -411,7 +411,6 @@ cleanup:
 static int update_reflog(
 	git_oid *w_commit_oid,
 	git_repository *repo,
-	const git_signature *stasher,
 	const char *message)
 {
 	git_reference *stash;
@@ -420,7 +419,7 @@ static int update_reflog(
 	if ((error = git_reference_ensure_log(repo, GIT_REFS_STASH_FILE)) < 0)
 		return error;
 
-	error = git_reference_create(&stash, repo, GIT_REFS_STASH_FILE, w_commit_oid, 1, stasher, message);
+	error = git_reference_create(&stash, repo, GIT_REFS_STASH_FILE, w_commit_oid, 1, message);
 
 	git_reference_free(stash);
 
@@ -534,7 +533,7 @@ int git_stash_save(
 
 	git_buf_rtrim(&msg);
 
-	if ((error = update_reflog(out, repo, stasher, git_buf_cstr(&msg))) < 0)
+	if ((error = update_reflog(out, repo, git_buf_cstr(&msg))) < 0)
 		goto cleanup;
 
 	if ((error = reset_index_and_workdir(

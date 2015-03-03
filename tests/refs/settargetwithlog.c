@@ -25,7 +25,6 @@ void test_refs_settargetwithlog__updating_a_direct_reference_adds_a_reflog_entry
 {
 	git_reference *reference, *reference_out;
 	git_oid current_id, target_id;
-	git_signature *signature;
 	git_reflog *reflog;
 	const git_reflog_entry *entry;
 
@@ -36,10 +35,8 @@ void test_refs_settargetwithlog__updating_a_direct_reference_adds_a_reflog_entry
 
 	cl_git_pass(git_reference_lookup(&reference, g_repo, br2_name));
 
-	cl_git_pass(git_signature_now(&signature, "foo", "foo@bar"));
-
 	cl_git_pass(git_reference_set_target(
-		&reference_out, reference, &target_id, signature, message));
+		&reference_out, reference, &target_id, message));
 
 	cl_git_pass(git_reflog_read(&reflog, g_repo, br2_name));
 
@@ -51,5 +48,4 @@ void test_refs_settargetwithlog__updating_a_direct_reference_adds_a_reflog_entry
 	git_reflog_free(reflog);
 	git_reference_free(reference_out);
 	git_reference_free(reference);
-	git_signature_free(signature);
 }

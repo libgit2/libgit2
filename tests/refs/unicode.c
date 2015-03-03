@@ -24,7 +24,7 @@ void test_refs_unicode__create_and_lookup(void)
 	/* Create the reference */
 	cl_git_pass(git_reference_lookup(&ref0, repo, master));
 	cl_git_pass(git_reference_create(
-		&ref1, repo, REFNAME, git_reference_target(ref0), 0, NULL, NULL));
+		&ref1, repo, REFNAME, git_reference_target(ref0), 0, NULL));
 	cl_assert_equal_s(REFNAME, git_reference_name(ref1));
 	git_reference_free(ref0);
 

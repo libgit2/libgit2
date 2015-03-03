@@ -66,7 +66,7 @@ void test_cherrypick_workdir__automerge(void)
 		git_tree *cherrypicked_tree = NULL;
 
 		cl_git_pass(git_commit_lookup(&head, repo, &head_oid));
-		cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL, NULL, NULL));
+		cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL));
 
 		git_oid_fromstr(&cherry_oid, cherrypick_oids[i]);
 		cl_git_pass(git_commit_lookup(&commit, repo, &cherry_oid));
@@ -118,7 +118,7 @@ void test_cherrypick_workdir__empty_result(void)
 	cl_assert(git_path_exists(TEST_REPO_PATH "/file4.txt"));
 
 	cl_git_pass(git_commit_lookup(&head, repo, &head_oid));
-	cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL, NULL, NULL));
+	cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL));
 
 	git_oid_fromstr(&cherry_oid, cherrypick_oid);
 	cl_git_pass(git_commit_lookup(&commit, repo, &cherry_oid));
@@ -155,7 +155,7 @@ void test_cherrypick_workdir__conflicts(void)
 	git_oid_fromstr(&head_oid, "bafbf6912c09505ac60575cd43d3f2aba3bd84d8");
 
 	cl_git_pass(git_commit_lookup(&head, repo, &head_oid));
-	cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL, NULL, NULL));
+	cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL));
 
 	git_oid_fromstr(&cherry_oid, "e9b63f3655b2ad80c0ff587389b5a9589a3a7110");
 	cl_git_pass(git_commit_lookup(&commit, repo, &cherry_oid));
@@ -263,7 +263,7 @@ void test_cherrypick_workdir__conflict_use_ours(void)
 	git_oid_fromstr(&head_oid, "bafbf6912c09505ac60575cd43d3f2aba3bd84d8");
 
 	cl_git_pass(git_commit_lookup(&head, repo, &head_oid));
-	cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL, NULL, NULL));
+	cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL));
 
 	git_oid_fromstr(&cherry_oid, "e9b63f3655b2ad80c0ff587389b5a9589a3a7110");
 	cl_git_pass(git_commit_lookup(&commit, repo, &cherry_oid));
@@ -275,7 +275,7 @@ void test_cherrypick_workdir__conflict_use_ours(void)
 	/* resolve conflicts in the index by taking "ours" */
 	opts.merge_opts.file_favor = GIT_MERGE_FILE_FAVOR_OURS;
 
-	cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL, NULL, NULL));
+	cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL));
 	cl_git_pass(git_cherrypick(repo, commit, &opts));
 
 	cl_assert(merge_test_index(repo_index, merge_filesystem_entries, 3));
@@ -305,7 +305,7 @@ void test_cherrypick_workdir__rename(void)
 
 	git_oid_fromstr(&head_oid, "cfc4f0999a8367568e049af4f72e452d40828a15");
 	cl_git_pass(git_commit_lookup(&head, repo, &head_oid));
-	cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL, NULL, NULL));
+	cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL));
 
 	git_oid_fromstr(&cherry_oid, "2a26c7e88b285613b302ba76712bc998863f3cbc");
 	cl_git_pass(git_commit_lookup(&commit, repo, &cherry_oid));
@@ -340,7 +340,7 @@ void test_cherrypick_workdir__both_renamed(void)
 
 	git_oid_fromstr(&head_oid, "44cd2ed2052c9c68f9a439d208e9614dc2a55c70");
 	cl_git_pass(git_commit_lookup(&head, repo, &head_oid));
-	cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL, NULL, NULL));
+	cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL));
 
 	git_oid_fromstr(&cherry_oid, "2a26c7e88b285613b302ba76712bc998863f3cbc");
 	cl_git_pass(git_commit_lookup(&commit, repo, &cherry_oid));
@@ -391,7 +391,7 @@ void test_cherrypick_workdir__merge_fails_without_mainline_specified(void)
 
 	git_oid_fromstr(&head_oid, "cfc4f0999a8367568e049af4f72e452d40828a15");
 	cl_git_pass(git_commit_lookup(&head, repo, &head_oid));
-	cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL, NULL, NULL));
+	cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL));
 
 	git_oid_fromstr(&cherry_oid, "abe4603bc7cd5b8167a267e0e2418fd2348f8cff");
 	cl_git_pass(git_commit_lookup(&commit, repo, &cherry_oid));
@@ -423,7 +423,7 @@ void test_cherrypick_workdir__merge_first_parent(void)
 
 	git_oid_fromstr(&head_oid, "cfc4f0999a8367568e049af4f72e452d40828a15");
 	cl_git_pass(git_commit_lookup(&head, repo, &head_oid));
-	cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL, NULL, NULL));
+	cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL));
 
 	git_oid_fromstr(&cherry_oid, "abe4603bc7cd5b8167a267e0e2418fd2348f8cff");
 	cl_git_pass(git_commit_lookup(&commit, repo, &cherry_oid));
@@ -455,7 +455,7 @@ void test_cherrypick_workdir__merge_second_parent(void)
 
 	git_oid_fromstr(&head_oid, "cfc4f0999a8367568e049af4f72e452d40828a15");
 	cl_git_pass(git_commit_lookup(&head, repo, &head_oid));
-	cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL, NULL, NULL));
+	cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL));
 
 	git_oid_fromstr(&cherry_oid, "abe4603bc7cd5b8167a267e0e2418fd2348f8cff");
 	cl_git_pass(git_commit_lookup(&commit, repo, &cherry_oid));

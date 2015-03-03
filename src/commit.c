@@ -104,7 +104,7 @@ int git_commit_create_from_callback(
 
 	if (update_ref != NULL) {
 		error = git_reference__update_for_commit(
-			repo, ref, update_ref, id, committer, "commit");
+			repo, ref, update_ref, id, "commit");
 		git_reference_free(ref);
 		return error;
 	}
@@ -295,7 +295,7 @@ int git_commit_amend(
 
 	if (!error && update_ref) {
 		error = git_reference__update_for_commit(
-			repo, ref, NULL, id, committer, "commit");
+			repo, ref, NULL, id, "commit");
 		git_reference_free(ref);
 	}
 

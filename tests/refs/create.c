@@ -32,7 +32,7 @@ void test_refs_create__symbolic(void)
 	git_oid_fromstr(&id, current_master_tip);
 
 	/* Create and write the new symbolic reference */
-	cl_git_pass(git_reference_symbolic_create(&new_reference, g_repo, new_head_tracker, current_head_target, 0, NULL, NULL));
+	cl_git_pass(git_reference_symbolic_create(&new_reference, g_repo, new_head_tracker, current_head_target, 0, NULL));
 
 	/* Ensure the reference can be looked-up... */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, new_head_tracker));
@@ -73,7 +73,7 @@ void test_refs_create__deep_symbolic(void)
 
 	git_oid_fromstr(&id, current_master_tip);
 
-	cl_git_pass(git_reference_symbolic_create(&new_reference, g_repo, new_head_tracker, current_head_target, 0, NULL, NULL));
+	cl_git_pass(git_reference_symbolic_create(&new_reference, g_repo, new_head_tracker, current_head_target, 0, NULL));
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, new_head_tracker));
 	cl_git_pass(git_reference_resolve(&resolved_ref, looked_up_ref));
 	cl_assert_equal_oid(&id, git_reference_target(resolved_ref));
@@ -95,7 +95,7 @@ void test_refs_create__oid(void)
 	git_oid_fromstr(&id, current_master_tip);
 
 	/* Create and write the new object id reference */
-	cl_git_pass(git_reference_create(&new_reference, g_repo, new_head, &id, 0, NULL, NULL));
+	cl_git_pass(git_reference_create(&new_reference, g_repo, new_head, &id, 0, NULL));
 
 	/* Ensure the reference can be looked-up... */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, new_head));
@@ -130,7 +130,7 @@ void test_refs_create__oid_unknown(void)
 	git_oid_fromstr(&id, "deadbeef3f795b2b4353bcce3a527ad0a4f7f644");
 
 	/* Create and write the new object id reference */
-	cl_git_fail(git_reference_create(&new_reference, g_repo, new_head, &id, 0, NULL, NULL));
+	cl_git_fail(git_reference_create(&new_reference, g_repo, new_head, &id, 0, NULL));
 
 	/* Ensure the reference can't be looked-up... */
 	cl_git_fail(git_reference_lookup(&looked_up_ref, g_repo, new_head));
@@ -144,10 +144,10 @@ void test_refs_create__propagate_eexists(void)
 
 	/* Make sure it works for oid and for symbolic both */
 	git_oid_fromstr(&oid, current_master_tip);
-	error = git_reference_create(&ref, g_repo, current_head_target, &oid, false, NULL, NULL);
+	error = git_reference_create(&ref, g_repo, current_head_target, &oid, false, NULL);
 	cl_assert(error == GIT_EEXISTS);
 
-	error = git_reference_symbolic_create(&ref, g_repo, "HEAD", current_head_target, false, NULL, NULL);
+	error = git_reference_symbolic_create(&ref, g_repo, "HEAD", current_head_target, false, NULL);
 	cl_assert(error == GIT_EEXISTS);
 }
 
@@ -159,10 +159,10 @@ static void test_invalid_name(const char *name)
 	git_oid_fromstr(&id, current_master_tip);
 
 	cl_assert_equal_i(GIT_EINVALIDSPEC, git_reference_create(
-		&new_reference, g_repo, name, &id, 0, NULL, NULL));
+		&new_reference, g_repo, name, &id, 0, NULL));
 
 	cl_assert_equal_i(GIT_EINVALIDSPEC, git_reference_symbolic_create(
-		&new_reference, g_repo, name, current_head_target, 0, NULL, NULL));
+		&new_reference, g_repo, name, current_head_target, 0, NULL));
 }
 
 void test_refs_create__creating_a_reference_with_an_invalid_name_returns_EINVALIDSPEC(void)
@@ -188,7 +188,7 @@ static void test_win32_name(const char *name)
 
 	git_oid_fromstr(&id, current_master_tip);
 
-	ret = git_reference_create(&new_reference, g_repo, name, &id, 0, NULL, NULL);
+	ret = git_reference_create(&new_reference, g_repo, name, &id, 0, NULL);
 
 #ifdef GIT_WIN32
 	cl_assert_equal_i(GIT_EINVALIDSPEC, ret);

@@ -196,7 +196,7 @@ void test_submodule_update__update_already_checked_out_submodule(void)
 	cl_git_pass(git_reference_lookup(&branch_reference, g_repo, "refs/heads/alternate_1"));
 	cl_git_pass(git_reference_peel(&branch_commit, branch_reference, GIT_OBJ_COMMIT));
 	cl_git_pass(git_checkout_tree(g_repo, branch_commit, &checkout_options));
-	cl_git_pass(git_repository_set_head(g_repo, git_reference_name(branch_reference), NULL, NULL));
+	cl_git_pass(git_repository_set_head(g_repo, git_reference_name(branch_reference)));
 
 	/*
 	 * Verify state after checkout of parent repository. The submodule ID in the
@@ -270,7 +270,7 @@ void test_submodule_update__update_blocks_on_dirty_wd(void)
 	cl_git_pass(git_reference_lookup(&branch_reference, g_repo, "refs/heads/alternate_1"));
 	cl_git_pass(git_reference_peel(&branch_commit, branch_reference, GIT_OBJ_COMMIT));
 	cl_git_pass(git_checkout_tree(g_repo, branch_commit, &checkout_options));
-	cl_git_pass(git_repository_set_head(g_repo, git_reference_name(branch_reference), NULL, NULL));
+	cl_git_pass(git_repository_set_head(g_repo, git_reference_name(branch_reference)));
 
 	/*
 	 * Verify state after checkout of parent repository. The submodule ID in the
@@ -343,7 +343,7 @@ void test_submodule_update__can_force_update(void)
 	cl_git_pass(git_reference_lookup(&branch_reference, g_repo, "refs/heads/alternate_1"));
 	cl_git_pass(git_reference_peel(&branch_commit, branch_reference, GIT_OBJ_COMMIT));
 	cl_git_pass(git_checkout_tree(g_repo, branch_commit, &checkout_options));
-	cl_git_pass(git_repository_set_head(g_repo, git_reference_name(branch_reference), NULL, NULL));
+	cl_git_pass(git_repository_set_head(g_repo, git_reference_name(branch_reference)));
 
 	/*
 	 * Verify state after checkout of parent repository. The submodule ID in the

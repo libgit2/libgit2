@@ -325,7 +325,7 @@ static void create_fake_stash_reference_and_reflog(git_repository *repo)
 	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&log_path)));
 
 	cl_git_pass(git_reference_lookup(&master, repo, "refs/heads/master"));
-	cl_git_pass(git_reference_rename(&new_master, master, "refs/fakestash", 0, NULL, NULL));
+	cl_git_pass(git_reference_rename(&new_master, master, "refs/fakestash", 0, NULL));
 	git_reference_free(master);
 
 	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&log_path)));
@@ -597,7 +597,7 @@ void test_refs_revparse__issue_994(void)
 		"refs/remotes/origin/bim_with_3d@11296",
 		git_reference_target(head),
 		0,
-		NULL, NULL));
+		NULL));
 
 	cl_git_pass(git_revparse_single(&target, repo, "origin/bim_with_3d@11296"));
 	git_object_free(target);
@@ -634,7 +634,7 @@ void test_refs_revparse__try_to_retrieve_branch_before_described_tag(void)
 	test_object_inrepo("blah-7-gc47800c", "c47800c7266a2be04c571c04d5a6614691ea99bd", repo);
 
 	cl_git_pass(git_revparse_single(&target, repo, "HEAD~3"));
-	cl_git_pass(git_branch_create(&branch, repo, "blah-7-gc47800c", (git_commit *)target, 0, NULL, NULL));
+	cl_git_pass(git_branch_create(&branch, repo, "blah-7-gc47800c", (git_commit *)target, 0));
 
 	git_oid_tostr(sha, GIT_OID_HEXSZ + 1, git_object_id(target));
 
@@ -672,7 +672,7 @@ void test_refs_revparse__try_to_retrieve_sha_before_branch(void)
 	test_object_inrepo("a65fedf39aefe402d3bb6e24df4d4f5fe4547750", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", repo);
 
 	cl_git_pass(git_revparse_single(&target, repo, "HEAD~3"));
-	cl_git_pass(git_branch_create(&branch, repo, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", (git_commit *)target, 0, NULL, NULL));
+	cl_git_pass(git_branch_create(&branch, repo, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", (git_commit *)target, 0));
 
 	git_oid_tostr(sha, GIT_OID_HEXSZ + 1, git_object_id(target));
 
@@ -708,7 +708,7 @@ void test_refs_revparse__try_to_retrieve_branch_before_abbrev_sha(void)
 	test_object_inrepo("c47800", "c47800c7266a2be04c571c04d5a6614691ea99bd", repo);
 
 	cl_git_pass(git_revparse_single(&target, repo, "HEAD~3"));
-	cl_git_pass(git_branch_create(&branch, repo, "c47800", (git_commit *)target, 0, NULL, NULL));
+	cl_git_pass(git_branch_create(&branch, repo, "c47800", (git_commit *)target, 0));
 
 	git_oid_tostr(sha, GIT_OID_HEXSZ + 1, git_object_id(target));
 

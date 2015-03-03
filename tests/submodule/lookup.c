@@ -112,7 +112,7 @@ void test_submodule_lookup__lookup_even_with_unborn_head(void)
 
 	/* put us on an unborn branch */
 	cl_git_pass(git_reference_symbolic_create(
-		&head, g_repo, "HEAD", "refs/heads/garbage", 1, NULL, NULL));
+		&head, g_repo, "HEAD", "refs/heads/garbage", 1, NULL));
 	git_reference_free(head);
 
 	test_submodule_lookup__simple_lookup(); /* baseline should still pass */
@@ -259,10 +259,7 @@ void test_submodule_lookup__just_added(void)
 	assert_submodule_exists(g_repo, "sm_just_added_head");
 
 	{
-		git_signature *sig;
-		cl_git_pass(git_signature_now(&sig, "resetter", "resetter@email.com"));
-		cl_git_pass(git_reference_create(NULL, g_repo, "refs/heads/master", git_reference_target(original_head), 1, sig, "move head back"));
-		git_signature_free(sig);
+		cl_git_pass(git_reference_create(NULL, g_repo, "refs/heads/master", git_reference_target(original_head), 1, "move head back"));
 		git_reference_free(original_head);
 	}
 

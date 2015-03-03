@@ -59,7 +59,7 @@ void test_threads_refdb__iterator(void)
 
 	for (r = 0; r < 200; ++r) {
 		p_snprintf(name, sizeof(name), "refs/heads/direct-%03d", r);
-		cl_git_pass(git_reference_create(&ref, g_repo, name, &head, 0, NULL, NULL));
+		cl_git_pass(git_reference_create(&ref, g_repo, name, &head, 0, NULL));
 		git_reference_free(ref);
 	}
 
@@ -103,7 +103,7 @@ static void *create_refs(void *arg)
 
 	for (i = 0; i < 10; ++i) {
 		p_snprintf(name, sizeof(name), "refs/heads/thread-%03d-%02d", *id, i);
-		cl_git_pass(git_reference_create(&ref[i], g_repo, name, &head, 0, NULL, NULL));
+		cl_git_pass(git_reference_create(&ref[i], g_repo, name, &head, 0, NULL));
 
 		if (i == 5) {
 			git_refdb *refdb;
@@ -168,7 +168,7 @@ void test_threads_refdb__edit_while_iterate(void)
 
 	for (r = 0; r < 50; ++r) {
 		p_snprintf(name, sizeof(name), "refs/heads/starter-%03d", r);
-		cl_git_pass(git_reference_create(&ref, g_repo, name, &head, 0, NULL, NULL));
+		cl_git_pass(git_reference_create(&ref, g_repo, name, &head, 0, NULL));
 		git_reference_free(ref);
 	}
 

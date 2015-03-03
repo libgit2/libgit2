@@ -376,15 +376,14 @@ GIT_EXTERN(void) git_remote_free(git_remote *remote);
  * Update the tips to the new state
  *
  * @param remote the remote to update
- * @param signature The identity to use when updating reflogs
- * @param reflog_message The message to insert into the reflogs. If NULL, the
- *                       default is "fetch <name>", where <name> is the name of
- *                       the remote (or its url, for in-memory remotes).
+ * @param reflog_message The message to insert into the reflogs. If
+ * NULL and fetching, the default is "fetch <name>", where <name> is
+ * the name of the remote (or its url, for in-memory remotes). This
+ * parameter is ignored when pushing.
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_remote_update_tips(
 		git_remote *remote,
-		const git_signature *signature,
 		const char *reflog_message);
 
 /**
@@ -404,7 +403,6 @@ GIT_EXTERN(int) git_remote_prune(git_remote *remote);
  * @param remote the remote to fetch from
  * @param refspecs the refspecs to use for this fetch. Pass NULL or an
  *                 empty array to use the base refspecs.
- * @param signature The identity to use when updating reflogs
  * @param reflog_message The message to insert into the reflogs. If NULL, the
  *								 default is "fetch"
  * @return 0 or an error code
@@ -412,7 +410,6 @@ GIT_EXTERN(int) git_remote_prune(git_remote *remote);
 GIT_EXTERN(int) git_remote_fetch(
 		git_remote *remote,
 		const git_strarray *refspecs,
-		const git_signature *signature,
 		const char *reflog_message);
 
 /**
@@ -424,13 +421,10 @@ GIT_EXTERN(int) git_remote_fetch(
  * @param refspecs the refspecs to use for pushing. If none are
  * passed, the configured refspecs will be used
  * @param opts the options
- * @param signature signature to use for the reflog of updated references
- * @param reflog_message message to use for the reflog of upated references
  */
 GIT_EXTERN(int) git_remote_push(git_remote *remote,
 				const git_strarray *refspecs,
-				const git_push_options *opts,
-				const git_signature *signature, const char *reflog_message);
+				const git_push_options *opts);
 
 /**
  * Get a list of the configured remotes for a repo

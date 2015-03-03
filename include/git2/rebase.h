@@ -139,7 +139,6 @@ GIT_EXTERN(int) git_rebase_init_options(
  *                 reachable commits
  * @param onto The branch to rebase onto, or NULL to rebase onto the given
  *             upstream
- * @param signature The signature of the rebaser (optional)
  * @param opts Options to specify how rebase is performed
  * @return Zero on success; -1 on failure.
  */
@@ -149,7 +148,6 @@ GIT_EXTERN(int) git_rebase_init(
 	const git_annotated_commit *branch,
 	const git_annotated_commit *upstream,
 	const git_annotated_commit *onto,
-	const git_signature *signature,
 	const git_rebase_options *opts);
 
 /**
@@ -241,13 +239,10 @@ GIT_EXTERN(int) git_rebase_commit(
  * and working directory to their state before rebase began.
  *
  * @param rebase The rebase that is in-progress
- * @param signature The identity that is aborting the rebase
  * @return Zero on success; GIT_ENOTFOUND if a rebase is not in progress,
  *         -1 on other errors.
  */
-GIT_EXTERN(int) git_rebase_abort(
-	git_rebase *rebase,
-	const git_signature *signature);
+GIT_EXTERN(int) git_rebase_abort(git_rebase *rebase);
 
 /**
  * Finishes a rebase that is currently in progress once all patches have

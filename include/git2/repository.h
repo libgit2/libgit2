@@ -603,15 +603,11 @@ GIT_EXTERN(int) git_repository_hashfile(
  *
  * @param repo Repository pointer
  * @param refname Canonical name of the reference the HEAD should point at
- * @param signature The identity that will used to populate the reflog entry
- * @param log_message The one line long message to be appended to the reflog
  * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_repository_set_head(
 	git_repository* repo,
-	const char* refname,
-	const git_signature *signature,
-	const char *log_message);
+	const char* refname);
 
 /**
  * Make the repository HEAD directly point to the Commit.
@@ -627,15 +623,11 @@ GIT_EXTERN(int) git_repository_set_head(
  *
  * @param repo Repository pointer
  * @param commitish Object id of the Commit the HEAD should point to
- * @param signature The identity that will used to populate the reflog entry
- * @param log_message The one line long message to be appended to the reflog
  * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_repository_set_head_detached(
 	git_repository* repo,
-	const git_oid* commitish,
-	const git_signature *signature,
-	const char *log_message);
+	const git_oid* commitish);
 
 /**
  * Detach the HEAD.
@@ -651,15 +643,11 @@ GIT_EXTERN(int) git_repository_set_head_detached(
  * Otherwise, the HEAD will be detached and point to the peeled Commit.
  *
  * @param repo Repository pointer
- * @param signature The identity that will used to populate the reflog entry
- * @param reflog_message The one line long message to be appended to the reflog
  * @return 0 on success, GIT_EUNBORNBRANCH when HEAD points to a non existing
  * branch or an error code
  */
 GIT_EXTERN(int) git_repository_detach_head(
-	git_repository* repo,
-	const git_signature *signature,
-	const char *reflog_message);
+	git_repository* repo);
 
 /**
  * Repository state
@@ -719,6 +707,31 @@ GIT_EXTERN(const char *) git_repository_get_namespace(git_repository *repo);
  * @return 1 if shallow, zero if not
  */
 GIT_EXTERN(int) git_repository_is_shallow(git_repository *repo);
+
+/**
+ * Retrieve the configured identity to use for reflogs
+ *
+ * The memory is owned by the repository and must not be freed by the
+ * user.
+ *
+ * @param name where to store the pointer to the name
+ * @param email where to store the pointer to the email
+ * @param repo the repository
+ */
+GIT_EXTERN(int) git_repository_ident(const char **name, const char **email, const git_repository *repo);
+
+/**
+ * Set the identity to be used for writing reflogs
+ *
+ * If both are set, this name and email will be used to write to the
+ * reflog. Pass NULL to unset. When unset, the identity will be taken
+ * from the repository's configuration.
+ *
+ * @param repo the repository to configure
+ * @param name the name to use for the reflog entries
+ * @param name the email to use for the reflog entries
+ */
+GIT_EXTERN(int) git_repository_set_ident(git_repository *repo, const char *name, const char *email);
 
 /** @} */
 GIT_END_DECL

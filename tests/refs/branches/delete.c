@@ -13,7 +13,7 @@ void test_refs_branches_delete__initialize(void)
 	repo = cl_git_sandbox_init("testrepo.git");
 
 	cl_git_pass(git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
-	cl_git_pass(git_reference_create(&fake_remote, repo, "refs/remotes/nulltoken/master", &id, 0, NULL, NULL));
+	cl_git_pass(git_reference_create(&fake_remote, repo, "refs/remotes/nulltoken/master", &id, 0, NULL));
 }
 
 void test_refs_branches_delete__cleanup(void)
@@ -75,7 +75,7 @@ void test_refs_branches_delete__can_delete_a_branch_pointed_at_by_detached_HEAD(
 	git_reference_free(head);
 
 	/* Detach HEAD and make it target the commit that "master" points to */
-	git_repository_detach_head(repo, NULL, NULL);
+	git_repository_detach_head(repo);
 
 	cl_git_pass(git_branch_lookup(&branch, repo, "master", GIT_BRANCH_LOCAL));
 	cl_git_pass(git_branch_delete(branch));
