@@ -11,11 +11,17 @@ environment:
     ARCH: 32
   - GENERATOR: "Visual Studio 11 Win64"
     ARCH: 64
+  - GENERATOR: "MSYS Makefiles"
+    ARCH: 32
 build_script:
 - ps: |
     mkdir build
     cd build
-    cmake -D ENABLE_TRACE=ON -D BUILD_CLAR=ON .. -G"$env:GENERATOR"
-    cmake --build . --config RelWithDebInfo
+    if ($env:GENERATOR -ne "MSYS Makefiles") {
+      cmake -D ENABLE_TRACE=ON -D BUILD_CLAR=ON .. -G"$env:GENERATOR"
+      cmake --build . --config RelWithDebInfo
+    } else {
+      C:\MinGW\msys\1.0\bin\sh --login /c/projects/libgit2/script/appveyor-mingw.sh
+    }
 test_script:
 - ps: ctest -V .
