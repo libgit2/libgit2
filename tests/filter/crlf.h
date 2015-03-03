@@ -11,6 +11,8 @@
 #define ALL_LF_TEXT_RAW			"lf\nlf\nlf\nlf\nlf\n"
 #define MORE_CRLF_TEXT_RAW		"crlf\r\ncrlf\r\nlf\ncrlf\r\ncrlf\r\n"
 #define MORE_LF_TEXT_RAW		"lf\nlf\ncrlf\r\nlf\nlf\n"
+#define MIXED_LF_CR_RAW			"one\ntwo\rthree\nfour\r"
+#define MIXED_LF_CR_CRLF_RAW	"one\ntwo\rthree\r\nfour\r"
 #define BINARY_ALL_CRLF_TEXT_RAW	"\01one\r\ntwo\r\nthree\r\nfour\r\n"
 #define BINARY_ALL_LF_TEXT_RAW		"\01one\ntwo\nthree\nfour\n"
 #define BINARY_MIXED_LF_CR_RAW		"\01" MIXED_LF_CR_RAW
@@ -20,6 +22,8 @@
 #define ALL_LF_TEXT_AS_CRLF		"lf\r\nlf\r\nlf\r\nlf\r\nlf\r\n"
 #define MORE_CRLF_TEXT_AS_CRLF	"crlf\r\ncrlf\r\nlf\r\ncrlf\r\ncrlf\r\n"
 #define MORE_LF_TEXT_AS_CRLF	"lf\r\nlf\r\ncrlf\r\nlf\r\nlf\r\n"
+#define MIXED_LF_CR_AS_CRLF		"one\r\ntwo\rthree\r\nfour\r"
+#define MIXED_LF_CR_CRLF_AS_CRLF	MIXED_LF_CR_AS_CRLF
 #define BINARY_ALL_CRLF_TEXT_AS_CRLF	BINARY_ALL_CRLF_TEXT_RAW
 #define BINARY_ALL_LF_TEXT_AS_CRLF		BINARY_ALL_CRLF_TEXT_AS_CRLF
 #define BINARY_MIXED_LF_CR_AS_CRLF		"\01" MIXED_LF_CR_AS_CRLF
@@ -29,6 +33,8 @@
 #define ALL_LF_TEXT_AS_LF		ALL_LF_TEXT_RAW
 #define MORE_CRLF_TEXT_AS_LF	"crlf\ncrlf\nlf\ncrlf\ncrlf\n"
 #define MORE_LF_TEXT_AS_LF		"lf\nlf\ncrlf\nlf\nlf\n"
+#define MIXED_LF_CR_AS_LF		MIXED_LF_CR_RAW
+#define MIXED_LF_CR_CRLF_AS_LF	MIXED_LF_CR_CRLF_RAW
 #define BINARY_ALL_CRLF_TEXT_AS_LF		BINARY_ALL_CRLF_TEXT_RAW
 #define BINARY_ALL_LF_TEXT_AS_LF		BINARY_ALL_LF_TEXT_RAW
 #define BINARY_MIXED_LF_CR_AS_LF		BINARY_MIXED_LF_CR_RAW

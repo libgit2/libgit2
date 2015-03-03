@@ -227,6 +227,10 @@ static const char *line_ending(struct crlf_attrs *ca)
 
 	switch (ca->eol) {
 	case GIT_EOL_UNSET:
+		if (ca->auto_crlf == GIT_AUTO_CRLF_TRUE)
+			return "\r\n";
+		if (ca->auto_crlf == GIT_AUTO_CRLF_INPUT)
+			return "\n";
 		return GIT_EOL_NATIVE == GIT_EOL_CRLF ? "\r\n" : "\n";
 
 	case GIT_EOL_CRLF:
@@ -248,23 +252,48 @@ static int crlf_apply_to_workdir(
 	struct crlf_attrs *ca, git_buf *to, const git_buf *from)
 {
 	const char *workdir_ending = NULL;
+	git_buf_text_stats stats;
+	bool is_binary;
 
 	/* Empty file? Nothing to do. */
 	if (git_buf_len(from) == 0)
 		return 0;
-
-	/* Don't filter binary files */
-	if (git_buf_text_is_binary(from))
-		return GIT_PASSTHROUGH;
 
 	/* Determine proper line ending */
 	workdir_ending = line_ending(ca);
 	if (!workdir_ending)
 		return -1;
 
-	/* only LF->CRLF conversion is supported, do nothing on LF platforms */
+	/* check if we need to consider a LF->CRLF conversation */
 	if (strcmp(workdir_ending, "\r\n") != 0)
 		return GIT_PASSTHROUGH;
+
+	is_binary = git_buf_text_gather_stats(&stats, from, false);
+
+	/* Nothing to convert */
+	if (!stats.lf)
+		return GIT_PASSTHROUGH;
+
+	/* Is file already CRLF? */
+	if (stats.lf == stats.crlf)
+		return GIT_PASSTHROUGH;
+
+	if (ca->crlf_action == GIT_CRLF_AUTO || ca->crlf_action == GIT_CRLF_GUESS) {
+		if (ca->crlf_action == GIT_CRLF_GUESS) {
+			/*
+			 * If the file in the index has any CR OR crlf in it, do not convert.
+			 */
+			if (stats.cr || stats.crlf)
+				return GIT_PASSTHROUGH;
+		}
+
+		/* If we have any bare CR characters, we're not going to touch it */
+		if (stats.cr != stats.crlf)
+			return GIT_PASSTHROUGH;
+
+		if (is_binary)
+			return GIT_PASSTHROUGH;
+	}
 
 	return git_buf_text_lf_to_crlf(to, from);
 }

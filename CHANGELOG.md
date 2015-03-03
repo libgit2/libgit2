@@ -20,6 +20,13 @@ v0.22 + 1
   * especially files containing single CR chars are added as is now
   * honor "text" attribute for forcing a file being interpreted as text
 
+* LF -> CRLF filter now handles files on checkout the way vanilla git does
+  * honor "text" attribute forcing the processing of binary files and eol=crlf processing on LF platforms
+  * skip files containing the same number of LF and CRLF eols
+  * fix binary detection (only apply it for AUTO and GUESS files)
+  * correctly handle files with mixed line endings (CR, LF and also CrLf at the same time and in different combinations)
+  * fix checking out with core.autocrlf=true on LF-only platforms
+
 * Rename and copy detection is enabled for small files.
 
 * Checkout can now handle an initial checkout of a repository, making
