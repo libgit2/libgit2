@@ -18,7 +18,6 @@ int main(int argc, char *argv[])
 
 	clar_test_shutdown();
 
-	giterr_clear();
 	git_libgit2_shutdown();
 
 	return res;
