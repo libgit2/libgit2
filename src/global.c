@@ -36,16 +36,25 @@ void git__on_shutdown(git_global_shutdown_fn callback)
 	git__shutdown_callbacks[count - 1] = callback;
 }
 
+static void git__global_state_cleanup(git_global_st *st)
+{
+	if (!st)
+		return;
+
+	git__free(st->error_t.message);
+	st->error_t.message = NULL;
+}
+
 static void git__shutdown(void)
 {
 	int pos;
 
+	/* Shutdown subsystems that have registered */
 	for (pos = git_atomic_get(&git__n_shutdown_callbacks); pos > 0; pos = git_atomic_dec(&git__n_shutdown_callbacks)) {
 		git_global_shutdown_fn cb = git__swap(git__shutdown_callbacks[pos - 1], NULL);
 		if (cb != NULL)
 			cb();
 	}
-
 }
 
 #if defined(GIT_THREADS) && defined(GIT_SSL)
@@ -214,8 +223,14 @@ int git_libgit2_init(void)
 
 static void synchronized_threads_shutdown(void)
 {
+	void *ptr;
+
 	/* Shut down any subsystems that have global state */
 	git__shutdown();
+
+	ptr = TlsGetValue(_tls_index);
+	git__global_state_cleanup(ptr);
+
 	TlsFree(_tls_index);
 	git_mutex_free(&git__mwindow_mutex);
 }
@@ -255,6 +270,17 @@ git_global_st *git__global_state(void)
 	return ptr;
 }
 
+BOOL WINAPI DllMain(HINSTANCE dll, DWORD reason, LPVOID reserved)
+{
+	if (reason == DLL_THREAD_DETACH) {
+		void *ptr = TlsGetValue(_tls_index);
+		git__global_state_cleanup(ptr);
+		git__free(ptr);
+	}
+
+	return TRUE;
+}
+
 #elif defined(GIT_THREADS) && defined(_POSIX_THREADS)
 
 static pthread_key_t _tls_key;
@@ -263,9 +289,7 @@ int init_error = 0;
 
 static void cb__free_status(void *st)
 {
-	git_global_st *state = (git_global_st *) st;
-	git__free(state->error_t.message);
-
+	git__global_state_cleanup(st);
 	git__free(st);
 }
 
@@ -302,7 +326,7 @@ int git_libgit2_shutdown(void)
 	pthread_once_t new_once = PTHREAD_ONCE_INIT;
 	int ret;
 
-	if ((ret = git_atomic_dec(&git__n_inits)) > 0)
+	if ((ret = git_atomic_dec(&git__n_inits)) != 0)
 		return ret;
 
 	/* Shut down any subsystems that have global state */
@@ -310,13 +334,15 @@ int git_libgit2_shutdown(void)
 
 	ptr = pthread_getspecific(_tls_key);
 	pthread_setspecific(_tls_key, NULL);
+
+	git__global_state_cleanup(ptr);
 	git__free(ptr);
 
 	pthread_key_delete(_tls_key);
 	git_mutex_free(&git__mwindow_mutex);
 	_once_init = new_once;
 
-	return ret;
+	return 0;
 }
 
 git_global_st *git__global_state(void)
@@ -358,10 +384,13 @@ int git_libgit2_shutdown(void)
 	int ret;
 
 	/* Shut down any subsystems that have global state */
-	if (ret = git_atomic_dec(&git__n_inits))
-		git__shutdown();
+	if ((ret = git_atomic_dec(&git__n_inits)) != 0)
+		return ret;
 
-	return ret;
+	git__shutdown();
+	git__global_state_cleanup(&__state);
+
+	return 0;
 }
 
 git_global_st *git__global_state(void)
