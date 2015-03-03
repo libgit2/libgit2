@@ -55,12 +55,10 @@ int p_ftruncate(int fd, git_off_t size)
 		return -1;
 	}
 
-#if defined(_MSC_VER) && _MSC_VER >= 1500
+#if !defined(__MINGW32__)
 	return ((_chsize_s(fd, size) == 0) ? 0 : -1);
 #else
-	/* TODO Find a replacement for _chsize() that handles big files.
-	 *      This comment is probably __MINGW32__ specific.
-	 */
+	/* TODO MINGW32 Find a replacement for _chsize() that handles big files. */
 	if (size > INT32_MAX) {
 		errno = EFBIG;
 		return -1;
