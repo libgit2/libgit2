@@ -52,7 +52,7 @@ static int add_refspec(git_remote *remote, const char *string, bool is_fetch)
 
 static int download_tags_value(git_remote *remote, git_config *cfg)
 {
-	const git_config_entry *ce;
+	git_config_entry *ce;
 	git_buf buf = GIT_BUF_INIT;
 	int error;
 
@@ -70,6 +70,7 @@ static int download_tags_value(git_remote *remote, git_config *cfg)
 			remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_ALL;
 	}
 
+	git_config_entry_free(ce);
 	return error;
 }
 
@@ -548,7 +549,7 @@ int git_remote_save(const git_remote *remote)
 	git_config *cfg;
 	const char *tagopt = NULL;
 	git_buf buf = GIT_BUF_INIT;
-	const git_config_entry *existing;
+	git_config_entry *existing = NULL;
 
 	assert(remote);
 
@@ -618,6 +619,7 @@ int git_remote_save(const git_remote *remote)
 		cfg, git_buf_cstr(&buf), tagopt, true, false);
 
 cleanup:
+	git_config_entry_free(existing);
 	git_buf_free(&buf);
 	return error;
 }
@@ -753,7 +755,7 @@ int git_remote_ls(const git_remote_head ***out, size_t *size, git_remote *remote
 int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_url)
 {
 	git_config *cfg;
-	const git_config_entry *ce;
+	git_config_entry *ce = NULL;
 	const char *val = NULL;
 	int error;
 
@@ -805,6 +807,7 @@ found:
 		*proxy_url = git__strdup(val);
 		GITERR_CHECK_ALLOC(*proxy_url);
 	}
+	git_config_entry_free(ce);
 
 	return 0;
 }

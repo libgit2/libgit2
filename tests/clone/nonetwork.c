@@ -291,7 +291,7 @@ void test_clone_nonetwork__clone_from_empty_sets_upstream(void)
 	cl_set_cleanup(&cleanup_repository, "./repowithunborn");
 	cl_git_pass(git_clone(&repo, "./test1", "./repowithunborn", NULL));
 
-	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_repository_config_snapshot(&config, repo));
 
 	cl_git_pass(git_config_get_string(&str, config, "branch.master.remote"));
 	cl_assert_equal_s("origin", str);

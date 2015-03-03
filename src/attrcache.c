@@ -276,7 +276,7 @@ static int attr_cache__lookup_path(
 {
 	git_buf buf = GIT_BUF_INIT;
 	int error;
-	const git_config_entry *entry = NULL;
+	git_config_entry *entry = NULL;
 
 	*out = NULL;
 
@@ -296,6 +296,7 @@ static int attr_cache__lookup_path(
 	else if (!git_sysdir_find_xdg_file(&buf, fallback))
 		*out = git_buf_detach(&buf);
 
+	git_config_entry_free(entry);
 	git_buf_free(&buf);
 
 	return error;

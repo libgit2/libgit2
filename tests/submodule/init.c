@@ -34,9 +34,9 @@ void test_submodule_init__absolute_url(void)
 	/* init and verify that absolute path is written to .git/config */
 	cl_git_pass(git_submodule_init(sm, false));
 
-	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_repository_config_snapshot(&cfg, g_repo));
 
-	git_config_get_string(&config_url, cfg, "submodule.testrepo.url");
+	cl_git_pass(git_config_get_string(&config_url, cfg, "submodule.testrepo.url"));
 	cl_assert_equal_s(absolute_url.ptr, config_url);
 
 	git_buf_free(&absolute_url);
@@ -64,9 +64,9 @@ void test_submodule_init__relative_url(void)
 	/* init and verify that absolute path is written to .git/config */
 	cl_git_pass(git_submodule_init(sm, false));
 
-	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_repository_config_snapshot(&cfg, g_repo));
 
-	git_config_get_string(&config_url, cfg, "submodule.testrepo.url");
+	cl_git_pass(git_config_get_string(&config_url, cfg, "submodule.testrepo.url"));
 	cl_assert_equal_s(absolute_url.ptr, config_url);
 
 	git_buf_free(&absolute_url);
@@ -102,9 +102,9 @@ void test_submodule_init__relative_url_detached_head(void)
 	/* init and verify that absolute path is written to .git/config */
 	cl_git_pass(git_submodule_init(sm, false));
 
-	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_repository_config_snapshot(&cfg, g_repo));
 
-	git_config_get_string(&config_url, cfg, "submodule.testrepo.url");
+	cl_git_pass(git_config_get_string(&config_url, cfg, "submodule.testrepo.url"));
 	cl_assert_equal_s(absolute_url.ptr, config_url);
 
 	git_buf_free(&absolute_url);

@@ -67,16 +67,17 @@ void test_refs_branches_move__can_not_move_a_branch_if_its_destination_name_coll
 {
 	git_reference *original_ref, *new_ref;
 	git_config *config;
-	const git_config_entry *ce;
+	git_buf buf = GIT_BUF_INIT;
 	char *original_remote, *original_merge;
+	const char *str;
 
-	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_repository_config_snapshot(&config, repo));
 
-	cl_git_pass(git_config_get_entry(&ce, config, "branch.master.remote"));
-	original_remote = strdup(ce->value);
-	cl_git_pass(git_config_get_entry(&ce, config, "branch.master.merge"));
-	original_merge  = strdup(ce->value);
-
+	cl_git_pass(git_config_get_string_buf(&buf, config, "branch.master.remote"));
+	original_remote = git_buf_detach(&buf);
+	cl_git_pass(git_config_get_string_buf(&buf, config, "branch.master.merge"));
+	original_merge  = git_buf_detach(&buf);
+	git_config_free(config);
 
 	cl_git_pass(git_reference_lookup(&original_ref, repo, "refs/heads/br2"));
 
@@ -84,20 +85,25 @@ void test_refs_branches_move__can_not_move_a_branch_if_its_destination_name_coll
 		git_branch_move(&new_ref, original_ref, "master", 0));
 
 	cl_assert(giterr_last()->message != NULL);
-	cl_git_pass(git_config_get_entry(&ce, config, "branch.master.remote"));
-	cl_assert_equal_s(original_remote, ce->value);
-	cl_git_pass(git_config_get_entry(&ce, config, "branch.master.merge"));
-	cl_assert_equal_s(original_merge,  ce->value);
 
+	cl_git_pass(git_repository_config_snapshot(&config, repo));
+	cl_git_pass(git_config_get_string(&str, config, "branch.master.remote"));
+	cl_assert_equal_s(original_remote, str);
+	cl_git_pass(git_config_get_string(&str, config, "branch.master.merge"));
+	cl_assert_equal_s(original_merge,  str);
+	git_config_free(config);
 
 	cl_assert_equal_i(GIT_EEXISTS,
 		git_branch_move(&new_ref, original_ref, "cannot-fetch", 0));
 
 	cl_assert(giterr_last()->message != NULL);
-	cl_git_pass(git_config_get_entry(&ce, config, "branch.master.remote"));
-	cl_assert_equal_s(original_remote, ce->value);
-	cl_git_pass(git_config_get_entry(&ce, config, "branch.master.merge"));
-	cl_assert_equal_s(original_merge,  ce->value);
+
+	cl_git_pass(git_repository_config_snapshot(&config, repo));
+	cl_git_pass(git_config_get_string(&str, config, "branch.master.remote"));
+	cl_assert_equal_s(original_remote, str);
+	cl_git_pass(git_config_get_string(&str, config, "branch.master.merge"));
+	cl_assert_equal_s(original_merge,  str);
+	git_config_free(config);
 
 	git_reference_free(original_ref);
 	cl_git_pass(git_reference_lookup(&original_ref, repo, "refs/heads/track-local"));
@@ -106,12 +112,14 @@ void test_refs_branches_move__can_not_move_a_branch_if_its_destination_name_coll
 		git_branch_move(&new_ref, original_ref, "master", 0));
 
 	cl_assert(giterr_last()->message != NULL);
-	cl_git_pass(git_config_get_entry(&ce, config, "branch.master.remote"));
-	cl_assert_equal_s(original_remote, ce->value);
-	cl_git_pass(git_config_get_entry(&ce, config, "branch.master.merge"));
-	cl_assert_equal_s(original_merge,  ce->value);
 
-	free(original_remote); free(original_merge);
+	cl_git_pass(git_repository_config_snapshot(&config, repo));
+	cl_git_pass(git_config_get_string(&str, config, "branch.master.remote"));
+	cl_assert_equal_s(original_remote, str);
+	cl_git_pass(git_config_get_string(&str, config, "branch.master.merge"));
+	cl_assert_equal_s(original_merge,  str);
+
+	git__free(original_remote); git__free(original_merge);
 	git_reference_free(original_ref);
 	git_config_free(config);
 }

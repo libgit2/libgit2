@@ -96,7 +96,6 @@ typedef struct {
 	/* mutex to coordinate accessing the values */
 	git_mutex values_mutex;
 	refcounted_strmap *values;
-	int readonly;
 } diskfile_header;
 
 typedef struct {
@@ -504,19 +503,26 @@ out:
 	return ret;
 }
 
+/* release the map containing the entry as an equivalent to freeing it */
+static void release_map(git_config_entry *entry)
+{
+	refcounted_strmap *map = (refcounted_strmap *) entry->payload;
+	refcounted_strmap_free(map);
+}
+
 /*
  * Internal function that actually gets the value in string form
  */
-static int config_get(git_config_backend *cfg, const char *key, const git_config_entry **out)
+static int config_get(git_config_backend *cfg, const char *key, git_config_entry **out)
 {
 	diskfile_header *h = (diskfile_header *)cfg;
 	refcounted_strmap *map;
 	git_strmap *values;
 	khiter_t pos;
 	cvar_t *var;
-	int error;
+	int error = 0;
 
-	if (!h->readonly && ((error = config_refresh(cfg)) < 0))
+	if (!h->parent.readonly && ((error = config_refresh(cfg)) < 0))
 		return error;
 
 	map = refcounted_strmap_take(h);
@@ -534,9 +540,11 @@ static int config_get(git_config_backend *cfg, const char *key, const git_config
 	while (var->next)
 		var = var->next;
 
-	refcounted_strmap_free(map);
 	*out = var->entry;
-	return 0;
+	(*out)->free = release_map;
+	(*out)->payload = map;
+
+	return error;
 }
 
 static int config_set_multivar(
@@ -763,7 +771,7 @@ static int config_readonly_open(git_config_backend *cfg, git_config_level_t leve
 	refcounted_strmap *src_map;
 	int error;
 
-	if (!src_header->readonly && (error = config_refresh(&src_header->parent)) < 0)
+	if (!src_header->parent.readonly && (error = config_refresh(&src_header->parent)) < 0)
 		return error;
 
 	/* We're just copying data, don't care about the level */
@@ -787,7 +795,7 @@ int git_config_file__snapshot(git_config_backend **out, diskfile_backend *in)
 
 	backend->snapshot_from = in;
 
-	backend->header.readonly = 1;
+	backend->header.parent.readonly = 1;
 	backend->header.parent.version = GIT_CONFIG_BACKEND_VERSION;
 	backend->header.parent.open = config_readonly_open;
 	backend->header.parent.get = config_get;

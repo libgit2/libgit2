@@ -58,11 +58,18 @@ typedef enum {
 /**
  * An entry in a configuration file
  */
-typedef struct {
+typedef struct git_config_entry {
 	const char *name; /**< Name of the entry (normalised) */
 	const char *value; /**< String value of the entry */
 	git_config_level_t level; /**< Which config file this was found in */
+	void (*free)(struct git_config_entry *entry); /**< Free function for this entry */
+	void *payload; /**< Opaque value for the free function. Do not read or write */
 } git_config_entry;
+
+/**
+ * Free a config entry
+ */
+GIT_EXTERN(void) git_config_entry_free(git_config_entry *);
 
 typedef int  (*git_config_foreach_cb)(const git_config_entry *, void *);
 typedef struct git_config_iterator git_config_iterator;
@@ -261,16 +268,15 @@ GIT_EXTERN(void) git_config_free(git_config *cfg);
 /**
  * Get the git_config_entry of a config variable.
  *
- * The git_config_entry is owned by the config and should not be freed by the
- * user.
-
+ * Free the git_config_entry after use with `git_config_entry_free()`.
+ *
  * @param out pointer to the variable git_config_entry
  * @param cfg where to look for the variable
  * @param name the variable's name
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_config_get_entry(
-	const git_config_entry **out,
+	git_config_entry **out,
 	const git_config *cfg,
 	const char *name);
 
@@ -340,20 +346,36 @@ GIT_EXTERN(int) git_config_get_path(git_buf *out, const git_config *cfg, const c
 /**
  * Get the value of a string config variable.
  *
- * The string is owned by the variable and should not be freed by the
- * user. The pointer will be valid until the next operation on this
- * config object.
+ * This function can only be used on snapshot config objects. The
+ * string is owned by the config and should not be freed by the
+ * user. The pointer will be valid until the config is freed.
  *
  * All config files will be looked into, in the order of their
  * defined level. A higher level means a higher priority. The
  * first occurrence of the variable will be returned here.
  *
- * @param out pointer to the variable's value
+ * @param out pointer to the string
  * @param cfg where to look for the variable
  * @param name the variable's name
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_config_get_string(const char **out, const git_config *cfg, const char *name);
+
+/**
+ * Get the value of a string config variable.
+ *
+ * The value of the config will be copied into the buffer.
+ *
+ * All config files will be looked into, in the order of their
+ * defined level. A higher level means a higher priority. The
+ * first occurrence of the variable will be returned here.
+ *
+ * @param out buffer in which to store the string
+ * @param cfg where to look for the variable
+ * @param name the variable's name
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_config_get_string_buf(git_buf *out, const git_config *cfg, const char *name);
 
 /**
  * Get each value of a multivar in a foreach callback

@@ -2,6 +2,7 @@
 #include "posix.h"
 #include "path.h"
 #include "submodule_helpers.h"
+#include "config/config_helpers.h"
 
 static git_repository *g_repo = NULL;
 
@@ -51,7 +52,7 @@ void test_submodule_modify__init(void)
 	git_submodule_reload_all(g_repo, 1);
 
 	/* confirm submodule data in config */
-	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_repository_config_snapshot(&cfg, g_repo));
 	cl_git_pass(git_config_get_string(&str, cfg, "submodule.sm_unchanged.url"));
 	cl_assert(git__suffixcmp(str, "/submod2_target") == 0);
 	cl_git_pass(git_config_get_string(&str, cfg, "submodule.sm_changed_head.url"));
@@ -72,20 +73,12 @@ static int sync_one_submodule(
 static void assert_submodule_url_is_synced(
 	git_submodule *sm, const char *parent_key, const char *child_key)
 {
-	git_config *cfg;
-	const char *str;
 	git_repository *smrepo;
 
-	cl_git_pass(git_repository_config(&cfg, g_repo));
-	cl_git_pass(git_config_get_string(&str, cfg, parent_key));
-	cl_assert_equal_s(git_submodule_url(sm), str);
-	git_config_free(cfg);
+	assert_config_entry_value(g_repo, parent_key, git_submodule_url(sm));
 
 	cl_git_pass(git_submodule_open(&smrepo, sm));
-	cl_git_pass(git_repository_config(&cfg, smrepo));
-	cl_git_pass(git_config_get_string(&str, cfg, child_key));
-	cl_assert_equal_s(git_submodule_url(sm), str);
-	git_config_free(cfg);
+	assert_config_entry_value(smrepo, child_key,  git_submodule_url(sm));
 	git_repository_free(smrepo);
 }
 
@@ -111,7 +104,7 @@ void test_submodule_modify__sync(void)
 	 */
 
 	/* check submodule info does not match before sync */
-	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_repository_config_snapshot(&cfg, g_repo));
 	cl_git_pass(git_config_get_string(&str, cfg, "submodule."SM1".url"));
 	cl_assert(strcmp(git_submodule_url(sm1), str) != 0);
 	cl_git_pass(git_config_get_string(&str, cfg, "submodule."SM2".url"));

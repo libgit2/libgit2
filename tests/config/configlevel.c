@@ -22,7 +22,7 @@ void test_config_configlevel__adding_the_same_level_twice_returns_EEXISTS(void)
 void test_config_configlevel__can_replace_a_config_file_at_an_existing_level(void)
 {
 	git_config *cfg;
-	const char *s;
+	git_buf buf = {0};
 
 	cl_git_pass(git_config_new(&cfg));
 	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config18"),
@@ -30,9 +30,10 @@ void test_config_configlevel__can_replace_a_config_file_at_an_existing_level(voi
 	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config19"),
 		GIT_CONFIG_LEVEL_LOCAL, 1));
 
-	cl_git_pass(git_config_get_string(&s, cfg, "core.stringglobal"));
-	cl_assert_equal_s("don't find me!", s);
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "core.stringglobal"));
+	cl_assert_equal_s("don't find me!", buf.ptr);
 
+	git_buf_free(&buf);
 	git_config_free(cfg);
 }
 
@@ -40,7 +41,7 @@ void test_config_configlevel__can_read_from_a_single_level_focused_file_after_pa
 {
 	git_config *cfg;
 	git_config *single_level_cfg;
-	const char *s;
+	git_buf buf = {0};
 
 	cl_git_pass(git_config_new(&cfg));
 	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config18"),
@@ -52,9 +53,10 @@ void test_config_configlevel__can_read_from_a_single_level_focused_file_after_pa
 
 	git_config_free(cfg);
 
-	cl_git_pass(git_config_get_string(&s, single_level_cfg, "core.stringglobal"));
-	cl_assert_equal_s("don't find me!", s);
+	cl_git_pass(git_config_get_string_buf(&buf, single_level_cfg, "core.stringglobal"));
+	cl_assert_equal_s("don't find me!", buf.ptr);
 
+	git_buf_free(&buf);
 	git_config_free(single_level_cfg);
 }
 

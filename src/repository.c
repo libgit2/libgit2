@@ -191,7 +191,7 @@ static int load_config_data(git_repository *repo, const git_config *config)
 static int load_workdir(git_repository *repo, git_config *config, git_buf *parent_path)
 {
 	int         error;
-	const git_config_entry *ce;
+	git_config_entry *ce;
 	git_buf     worktree = GIT_BUF_INIT;
 
 	if (repo->is_bare)
@@ -204,7 +204,7 @@ static int load_workdir(git_repository *repo, git_config *config, git_buf *paren
 	if (ce && ce->value) {
 		if ((error = git_path_prettify_dir(
 				&worktree, ce->value, repo->path_repository)) < 0)
-			return error;
+			goto cleanup;
 
 		repo->workdir = git_buf_detach(&worktree);
 	}
@@ -212,14 +212,18 @@ static int load_workdir(git_repository *repo, git_config *config, git_buf *paren
 		repo->workdir = git_buf_detach(parent_path);
 	else {
 		if (git_path_dirname_r(&worktree, repo->path_repository) < 0 ||
-			git_path_to_dir(&worktree) < 0)
-			return -1;
+		    git_path_to_dir(&worktree) < 0) {
+			error = -1;
+			goto cleanup;
+		}
 
 		repo->workdir = git_buf_detach(&worktree);
 	}
 
 	GITERR_CHECK_ALLOC(repo->workdir);
-	return 0;
+cleanup:
+	git_config_entry_free(ce);
+	return error;
 }
 
 /*
