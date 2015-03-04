@@ -2,4 +2,4 @@
 
 set -x
 
-brew install libssh2 cmake
+brew install libssh2 cmake jq
