@@ -216,7 +216,7 @@ void test_refs_branches_move__default_reflog_message(void)
 
 	cl_git_pass(git_reflog_read(&log, repo, git_reference_name(new_branch)));
 	entry = git_reflog_entry_byindex(log, 0);
-	cl_assert_equal_s("Branch: renamed refs/heads/master to refs/heads/master2",
+	cl_assert_equal_s("branch: renamed refs/heads/master to refs/heads/master2",
 			git_reflog_entry_message(entry));
 	cl_assert_equal_s(sig->email, git_reflog_entry_committer(entry)->email);
 
