@@ -86,7 +86,7 @@ int git_branch_create(
 	if (git_buf_joinpath(&canonical_branch_name, GIT_REFS_HEADS_DIR, branch_name) < 0)
 		goto cleanup;
 
-	if (git_buf_printf(&log_message, "Branch: created from %s", git_oid_tostr_s(git_commit_id(commit))) < 0)
+	if (git_buf_printf(&log_message, "branch: Created from %s", git_oid_tostr_s(git_commit_id(commit))) < 0)
 		goto cleanup;
 
 	error = git_reference_create(&branch, repository,
