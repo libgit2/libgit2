@@ -34,6 +34,7 @@ typedef struct {
 struct git_hashsig {
 	hashsig_heap mins;
 	hashsig_heap maxs;
+	size_t lines;
 	git_hashsig_option_t opt;
 };
 
@@ -185,8 +186,10 @@ static int hashsig_add_hashes(
 			++scan;
 
 			/* check run terminator */
-			if (ch == '\n' || ch == '\0')
+			if (ch == '\n' || ch == '\0') {
+				sig->lines++;
 				break;
+			}
 
 			++len;
 			HASHSIG_HASH_MIX(state, ch);
@@ -333,6 +336,18 @@ static int hashsig_heap_compare(const hashsig_heap *a, const hashsig_heap *b)
 
 int git_hashsig_compare(const git_hashsig *a, const git_hashsig *b)
 {
+	/* if we have no elements in either file then each file is either
+	 * empty or blank.  if we're ignoring whitespace then the files are
+	 * similar, otherwise they're dissimilar.
+	 */
+	if (a->mins.size == 0 && b->mins.size == 0) {
+		if ((!a->lines && !b->lines) ||
+			(a->opt & GIT_HASHSIG_IGNORE_WHITESPACE))
+			return HASHSIG_SCALE;
+		else
+			return 0;
+	}
+
 	/* if we have fewer than the maximum number of elements, then just use
 	 * one array since the two arrays will be the same
 	 */
