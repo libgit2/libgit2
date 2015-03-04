@@ -1603,8 +1603,63 @@ void test_diff_rename__by_config_doesnt_mess_with_whitespace_settings(void)
 	git_tree_free(tree2);
 }
 
-/* test some variations on empty files */
-void test_diff_rename__empty_files(void)
+static void expect_files_renamed(const char *one, const char *two, uint32_t whitespace_flags)
+{
+	git_index *index;
+	git_diff *diff = NULL;
+	diff_expects exp;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
+
+	diffopts.flags = GIT_DIFF_INCLUDE_UNTRACKED;
+	findopts.flags = GIT_DIFF_FIND_FOR_UNTRACKED |
+		GIT_DIFF_FIND_AND_BREAK_REWRITES |
+		GIT_DIFF_FIND_RENAMES_FROM_REWRITES |
+		whitespace_flags;
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	cl_git_rewritefile("renames/ikeepsix.txt", one);
+	cl_git_pass(git_index_add_bypath(index, "ikeepsix.txt"));
+
+	cl_git_rmfile("renames/ikeepsix.txt");
+	cl_git_rewritefile("renames/ikeepsix2.txt", two);
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, index, &diffopts));
+	cl_git_pass(git_diff_find_similar(diff, &findopts));
+
+	memset(&exp, 0, sizeof(exp));
+
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(1, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
+
+	git_diff_free(diff);
+	git_index_free(index);
+}
+
+/* test some variations on empty and blank files */
+void test_diff_rename__empty_files_renamed(void)
+{
+	/* empty files are identical when ignoring whitespace or not */
+	expect_files_renamed("", "", GIT_DIFF_FIND_DONT_IGNORE_WHITESPACE);
+	expect_files_renamed("", "",  GIT_DIFF_FIND_IGNORE_WHITESPACE);
+}
+
+/* test that blank files are similar when ignoring whitespace */
+void test_diff_rename__blank_files_renamed_when_ignoring_whitespace(void)
+{
+	expect_files_renamed("", "\n\n",  GIT_DIFF_FIND_IGNORE_WHITESPACE);
+	expect_files_renamed("", "\r\n\r\n",  GIT_DIFF_FIND_IGNORE_WHITESPACE);
+	expect_files_renamed("\r\n\r\n", "\n\n\n",  GIT_DIFF_FIND_IGNORE_WHITESPACE);
+
+	expect_files_renamed("    ", "\n\n",  GIT_DIFF_FIND_IGNORE_WHITESPACE);
+	expect_files_renamed("   \n   \n", "\n\n",  GIT_DIFF_FIND_IGNORE_WHITESPACE);
+}
+
+/* blank files are not similar when whitespace is not ignored */
+static void expect_files_not_renamed(const char *one, const char *two, uint32_t whitespace_flags)
 {
 	git_index *index;
 	git_diff *diff = NULL;
@@ -1615,16 +1670,15 @@ void test_diff_rename__empty_files(void)
 	diffopts.flags = GIT_DIFF_INCLUDE_UNTRACKED;
 
 	findopts.flags = GIT_DIFF_FIND_FOR_UNTRACKED |
-		GIT_DIFF_FIND_AND_BREAK_REWRITES |
-		GIT_DIFF_FIND_RENAMES_FROM_REWRITES;
+		whitespace_flags;
 
 	cl_git_pass(git_repository_index(&index, g_repo));
 
-	cl_git_rewritefile("renames/ikeepsix.txt", "");
+	cl_git_rewritefile("renames/ikeepsix.txt", one);
 	cl_git_pass(git_index_add_bypath(index, "ikeepsix.txt"));
 
 	cl_git_rmfile("renames/ikeepsix.txt");
-	cl_git_rewritefile("renames/ikeepsix2.txt", "\n\n\n");
+	cl_git_rewritefile("renames/ikeepsix2.txt", two);
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, index, &diffopts));
 	cl_git_pass(git_diff_find_similar(diff, &findopts));
@@ -1639,4 +1693,12 @@ void test_diff_rename__empty_files(void)
 
 	git_diff_free(diff);
 	git_index_free(index);
+}
+
+/* test that blank files are similar when ignoring renames */
+void test_diff_rename__blank_files_not_renamed_when_not_ignoring_whitespace(void)
+{
+	expect_files_not_renamed("", "\r\n\r\n\r\n",  GIT_DIFF_FIND_DONT_IGNORE_WHITESPACE);
+	expect_files_not_renamed("", "\n\n\n\n",  GIT_DIFF_FIND_DONT_IGNORE_WHITESPACE);
+	expect_files_not_renamed("\n\n\n\n", "\r\n\r\n\r\n",  GIT_DIFF_FIND_DONT_IGNORE_WHITESPACE);
 }
