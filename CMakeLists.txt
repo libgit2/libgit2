@@ -31,6 +31,7 @@ OPTION( BUILD_EXAMPLES		"Build library usage example apps"		OFF )
 OPTION( TAGS				"Generate tags"							OFF )
 OPTION( PROFILE				"Generate profiling information"		OFF )
 OPTION( ENABLE_TRACE		"Enables tracing support"				OFF )
+OPTION( ENABLE_TRACE_ITERATOR	"Enables iterator tracing"			OFF )
 OPTION( LIBGIT2_FILENAME	"Name of the produced binary"			OFF )
 
 OPTION( ANDROID				"Build for android NDK"	 				OFF )
@@ -188,6 +189,10 @@ ENDIF()
 # Enable tracing
 IF (ENABLE_TRACE STREQUAL "ON")
 	ADD_DEFINITIONS(-DGIT_TRACE)
+ENDIF()
+IF (ENABLE_TRACE_ITERATOR STREQUAL "ON")
+	ADD_DEFINITIONS(-DGIT_TRACE)
+	ADD_DEFINITIONS(-DGIT_TRACE_ITERATOR)
 ENDIF()
 
 # Include POSIX regex when it is required
