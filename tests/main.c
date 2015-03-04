@@ -20,7 +20,6 @@ int main(int argc, char *argv[])
 
 	clar_test_shutdown();
 
-	giterr_clear();
 	cl_global_trace_disable();
 	git_libgit2_shutdown();
 
