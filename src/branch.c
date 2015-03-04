@@ -82,7 +82,7 @@ int git_branch_create(
 		error = -1;
 		goto cleanup;
 	}
-	
+
 	if (git_buf_joinpath(&canonical_branch_name, GIT_REFS_HEADS_DIR, branch_name) < 0)
 		goto cleanup;
 
