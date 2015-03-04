@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 
 #include "notes.h"
+#include "buffer.h"
 
 static git_repository *_repo;
 static git_note *_note;
@@ -33,7 +34,7 @@ void test_notes_notesref__cleanup(void)
 void test_notes_notesref__config_corenotesref(void)
 {
 	git_oid oid, note_oid;
-	const char *default_ref;
+	git_buf default_ref = GIT_BUF_INIT;
 
 	cl_git_pass(git_signature_now(&_sig, "alice", "alice@example.com"));
 	cl_git_pass(git_oid_fromstr(&oid, "8496071c1b46c854b31185ea97743be6a8774479"));
@@ -55,10 +56,13 @@ void test_notes_notesref__config_corenotesref(void)
 	cl_assert_equal_oid(git_note_id(_note), &note_oid);
 
 	cl_git_pass(git_note_default_ref(&default_ref, _repo));
-	cl_assert_equal_s("refs/notes/mydefaultnotesref", default_ref);
+	cl_assert_equal_s("refs/notes/mydefaultnotesref", default_ref.ptr);
+	git_buf_clear(&default_ref);
 
 	cl_git_pass(git_config_delete_entry(_cfg, "core.notesRef"));
 
 	cl_git_pass(git_note_default_ref(&default_ref, _repo));
-	cl_assert_equal_s(GIT_NOTES_DEFAULT_REF, default_ref);
+	cl_assert_equal_s(GIT_NOTES_DEFAULT_REF, default_ref.ptr);
+
+	git_buf_free(&default_ref);
 }
