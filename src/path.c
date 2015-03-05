@@ -1365,7 +1365,7 @@ GIT_INLINE(bool) verify_dotgit_ntfs(git_repository *repo, const char *path, size
 	else if (len >= git_repository__8dot3_default_len &&
 		strncasecmp(path, git_repository__8dot3_default, git_repository__8dot3_default_len) == 0)
 		start = git_repository__8dot3_default_len;
-	else if (shortname_len && len >= shortname_len &&
+	else if (shortname_len && len > shortname_len &&
 		strncasecmp(path, shortname, shortname_len) == 0)
 		start = shortname_len;
 	else
