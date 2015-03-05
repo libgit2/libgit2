@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "path.h"
+#include "submodule/submodule_helpers.h"
 
 static void test_make_relative(
 	const char *expected_path,
@@ -118,6 +119,22 @@ void test_path_core__isvalid_dot_git(void)
 	cl_assert_equal_b(true, git_path_isvalid(NULL, ".tig", 0));
 	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/.tig", 0));
 	cl_assert_equal_b(true, git_path_isvalid(NULL, ".tig/bar", 0));
+}
+
+void test_path_core__path_same_as_submodule_name(void)
+{
+	git_repository *repo;
+	git_buf buf = GIT_BUF_INIT;
+
+	repo = setup_fixture_submod2();
+	git_buf_puts(&buf, git_repository_workdir(repo));
+	git_buf_puts(&buf, "sm_unchanged");
+	cl_git_pass(git_repository_open(&repo, git_buf_cstr(&buf)));
+	cl_assert(git_repository_path(repo) != NULL);
+	cl_assert(git_repository_workdir(repo) != NULL);
+	// directory name is the same name as submodule name
+	cl_assert_equal_b(true, git_path_isvalid(repo, "sm_unchanged/foo.txt", GIT_PATH_REJECT_DOT_GIT));
+	git_repository_free(repo);
 }
 
 void test_path_core__isvalid_backslash(void)
