@@ -97,10 +97,9 @@ typedef enum {
  * the workdir and index will be left untouched.
  *
  * @param repo The owning repository.
- *
  * @param index The position within the stash list. 0 points to the
- * most recent stashed state.
- *
+ *              most recent stashed state.
+ * @param checkout_options Options to control how files are checked out
  * @param flags Flags to control the applying process. (see GIT_APPLY_* above)
  *
  * @return 0 on success, GIT_ENOTFOUND if there's no stashed state for the given
@@ -109,6 +108,7 @@ typedef enum {
 GIT_EXTERN(int) git_stash_apply(
 	git_repository *repo,
 	size_t index,
+	const git_checkout_options *checkout_options,
 	unsigned int flags);
 
 /**
@@ -167,10 +167,9 @@ GIT_EXTERN(int) git_stash_drop(
  * if successful.
  *
  * @param repo The owning repository.
- *
  * @param index The position within the stash list. 0 points to the
- * most recent stashed state.
- *
+ *              most recent stashed state.
+ * @param checkout_options Options to control how files are checked out
  * @param flags Flags to control the applying process. (see GIT_APPLY_* above)
  *
  * @return 0 on success, GIT_ENOTFOUND if there's no stashed state for the given
@@ -179,6 +178,7 @@ GIT_EXTERN(int) git_stash_drop(
 GIT_EXTERN(int) git_stash_pop(
 	git_repository *repo,
 	size_t index,
+	const git_checkout_options *checkout_options,
 	unsigned int flags);
 
 /** @} */
