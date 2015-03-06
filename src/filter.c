@@ -893,7 +893,7 @@ int git_filter_list_stream_file(
 		(error = git_path_join_unrooted(&abspath, path, base, NULL)) < 0)
 		goto done;
 
-	if ((fd = git_futils_open_ro(path)) < 0) {
+	if ((fd = git_futils_open_ro(abspath.ptr)) < 0) {
 		error = fd;
 		goto done;
 	}
