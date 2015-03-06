@@ -32,8 +32,6 @@ extern int p_recv(GIT_SOCKET socket, void *buffer, size_t length, int flags);
 extern int p_send(GIT_SOCKET socket, const void *buffer, size_t length, int flags);
 extern int p_inet_pton(int af, const char* src, void* dst);
 
-#define strcasecmp(s1, s2) _stricmp(s1, s2)
-#define strncasecmp(s1, s2, c) _strnicmp(s1, s2, c)
 extern int p_vsnprintf(char *buffer, size_t count, const char *format, va_list argptr);
 extern int p_snprintf(char *buffer, size_t count, const char *format, ...) GIT_FORMAT_PRINTF(3, 4);
 extern int p_mkstemp(char *tmp_path);
