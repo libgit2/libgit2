@@ -874,7 +874,6 @@ void stream_list_free(git_vector *streams)
 
 #define STREAM_BUFSIZE 10240
 
-/* TODO: maybe not use filter_stream as a target but create one */
 int git_filter_list_stream_file(
 	git_filter_list *filters,
 	git_repository *repo,
@@ -894,7 +893,7 @@ int git_filter_list_stream_file(
 		(error = git_path_join_unrooted(&abspath, path, base, NULL)) < 0)
 		goto done;
 
-	if ((fd = git_futils_open_ro(path)) < 0) {
+	if ((fd = git_futils_open_ro(abspath.ptr)) < 0) {
 		error = fd;
 		goto done;
 	}
