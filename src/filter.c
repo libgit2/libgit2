@@ -874,7 +874,6 @@ void stream_list_free(git_vector *streams)
 
 #define STREAM_BUFSIZE 10240
 
-/* TODO: maybe not use filter_stream as a target but create one */
 int git_filter_list_stream_file(
 	git_filter_list *filters,
 	git_repository *repo,
