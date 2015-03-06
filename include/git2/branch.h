@@ -55,6 +55,24 @@ GIT_EXTERN(int) git_branch_create(
 	int force);
 
 /**
+ * Create a new branch pointing at a target commit
+ *
+ * This behaves like `git_branch_create()` but takes an annotated
+ * commit, which lets you specify which extended sha syntax string was
+ * specified by a user, allowing for more exact reflog messages.
+ *
+ * See the documentation for `git_branch_create()`.
+ *
+ * @see git_branch_create
+ */
+GIT_EXTERN(int) git_branch_create_from_annotated(
+	git_reference **ref_out,
+	git_repository *repository,
+	const char *branch_name,
+	const git_annotated_commit *commit,
+	int force);
+
+/**
  * Delete an existing branch reference.
  *
  * If the branch is successfully deleted, the passed reference

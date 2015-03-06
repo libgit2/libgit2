@@ -26,6 +26,7 @@
 #include "remote.h"
 #include "merge.h"
 #include "diff_driver.h"
+#include "annotated_commit.h"
 
 #ifdef GIT_WIN32
 # include "win32/w32_util.h"
@@ -1961,27 +1962,28 @@ cleanup:
 	return error;
 }
 
-int git_repository_set_head_detached(
-	git_repository* repo,
-	const git_oid* commitish)
+static int detach(git_repository *repo, const git_oid *id, const char *from)
 {
 	int error;
 	git_buf log_message = GIT_BUF_INIT;
 	git_object *object = NULL, *peeled = NULL;
 	git_reference *new_head = NULL, *current = NULL;
 
-	assert(repo && commitish);
+	assert(repo && id);
 
 	if ((error = git_reference_lookup(&current, repo, GIT_HEAD_FILE)) < 0)
 		return error;
 
-	if ((error = git_object_lookup(&object, repo, commitish, GIT_OBJ_ANY)) < 0)
+	if ((error = git_object_lookup(&object, repo, id, GIT_OBJ_ANY)) < 0)
 		goto cleanup;
 
 	if ((error = git_object_peel(&peeled, object, GIT_OBJ_COMMIT)) < 0)
 		goto cleanup;
 
-	if ((error = checkout_message(&log_message, current, git_oid_tostr_s(git_object_id(peeled)))) < 0)
+	if (from == NULL)
+		from = git_oid_tostr_s(git_object_id(peeled));
+
+	if ((error = checkout_message(&log_message, current, from)) < 0)
 		goto cleanup;
 
 	error = git_reference_create(&new_head, repo, GIT_HEAD_FILE, git_object_id(peeled), true, git_buf_cstr(&log_message));
@@ -1993,6 +1995,22 @@ cleanup:
 	git_reference_free(current);
 	git_reference_free(new_head);
 	return error;
+}
+
+int git_repository_set_head_detached(
+	git_repository* repo,
+	const git_oid* commitish)
+{
+	return detach(repo, commitish, NULL);
+}
+
+int git_repository_set_head_detached_from_annotated(
+	git_repository *repo,
+	const git_annotated_commit *commitish)
+{
+	assert(repo && commitish);
+
+	return detach(repo, git_annotated_commit_id(commitish), commitish->ref_name);
 }
 
 int git_repository_detach_head(git_repository* repo)

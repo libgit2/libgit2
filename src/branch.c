@@ -12,6 +12,7 @@
 #include "refspec.h"
 #include "refs.h"
 #include "remote.h"
+#include "annotated_commit.h"
 
 #include "git2/branch.h"
 
@@ -49,11 +50,12 @@ static int not_a_local_branch(const char *reference_name)
 	return -1;
 }
 
-int git_branch_create(
+static int create_branch(
 	git_reference **ref_out,
 	git_repository *repository,
 	const char *branch_name,
 	const git_commit *commit,
+	const char *from,
 	int force)
 {
 	int is_head = 0;
@@ -86,7 +88,7 @@ int git_branch_create(
 	if (git_buf_joinpath(&canonical_branch_name, GIT_REFS_HEADS_DIR, branch_name) < 0)
 		goto cleanup;
 
-	if (git_buf_printf(&log_message, "branch: Created from %s", git_oid_tostr_s(git_commit_id(commit))) < 0)
+	if (git_buf_printf(&log_message, "branch: Created from %s", from) < 0)
 		goto cleanup;
 
 	error = git_reference_create(&branch, repository,
@@ -100,6 +102,26 @@ cleanup:
 	git_buf_free(&canonical_branch_name);
 	git_buf_free(&log_message);
 	return error;
+}
+
+int git_branch_create(
+	git_reference **ref_out,
+	git_repository *repository,
+	const char *branch_name,
+	const git_commit *commit,
+	int force)
+{
+	return create_branch(ref_out, repository, branch_name, commit, git_oid_tostr_s(git_commit_id(commit)), force);
+}
+
+int git_branch_create_from_annotated(
+	git_reference **ref_out,
+	git_repository *repository,
+	const char *branch_name,
+	const git_annotated_commit *commit,
+	int force)
+{
+	return create_branch(ref_out, repository, branch_name, commit->commit, commit->ref_name, force);
 }
 
 int git_branch_delete(git_reference *branch)

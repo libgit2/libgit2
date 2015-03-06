@@ -630,6 +630,22 @@ GIT_EXTERN(int) git_repository_set_head_detached(
 	const git_oid* commitish);
 
 /**
+ * Make the repository HEAD directly point to the Commit.
+ *
+ * This behaves like `git_repository_set_head_detached()` but takes an
+ * annotated commit, which lets you specify which extended sha syntax
+ * string was specified by a user, allowing for more exact reflog
+ * messages.
+ *
+ * See the documentation for `git_repository_set_head_detached()`.
+ *
+ * @see git_repository_set_head_detached
+ */
+GIT_EXTERN(int) git_repository_set_head_detached_from_annotated(
+	git_repository *repo,
+	const git_annotated_commit *commitish);
+
+/**
  * Detach the HEAD.
  *
  * If the HEAD is already detached and points to a Commit, 0 is returned.
