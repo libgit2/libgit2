@@ -201,6 +201,7 @@ void test_reset_hard__cleans_up_merge(void)
 void test_reset_hard__reflog_is_correct(void)
 {
 	git_buf buf = GIT_BUF_INIT;
+	git_annotated_commit *annotated;
 	const char *exp_msg = "commit: Add a file which name should appear before the "
 		"\"subdir/\" folder while being dealt with by the treewalker";
 
@@ -215,7 +216,7 @@ void test_reset_hard__reflog_is_correct(void)
 
 	git_object_free(target);
 
-	/* Moved branch, expect default message */
+	/* Moved branch, expect id in message */
 	cl_git_pass(git_revparse_single(&target, repo, "HEAD~^{commit}"));
 	cl_git_pass(git_buf_printf(&buf, "reset: moving to %s", git_oid_tostr_s(git_object_id(target))));
 	cl_git_pass(git_reset(repo, target, GIT_RESET_HARD, NULL));
@@ -223,4 +224,14 @@ void test_reset_hard__reflog_is_correct(void)
 	reflog_check(repo, "refs/heads/master", 4, NULL, git_buf_cstr(&buf));
 
 	git_buf_free(&buf);
+
+	/* Moved branch, expect revspec in message */
+	exp_msg = "reset: moving to HEAD~^{commit}";
+	cl_git_pass(git_annotated_commit_from_revspec(&annotated, repo, "HEAD~^{commit}"));
+	cl_git_pass(git_reset_from_annotated(repo, annotated, GIT_RESET_HARD, NULL));
+	reflog_check(repo, "HEAD", 5, NULL, exp_msg);
+	reflog_check(repo, "refs/heads/master", 5, NULL, exp_msg);
+
+	git_annotated_commit_free(annotated);
+
 }
