@@ -1464,7 +1464,7 @@ int git_remote_update_tips(
 
 	/* push has its own logic hidden away in the push object */
 	if (remote->push) {
-		return git_push_update_tips(remote->push);
+		return git_push_update_tips(remote->push, reflog_message);
 	}
 
 	if (git_refspec__parse(&tagspec, GIT_REFSPEC_TAGS, true) < 0)

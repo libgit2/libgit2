@@ -167,7 +167,7 @@ int git_push_add_refspec(git_push *push, const char *refspec)
 	return 0;
 }
 
-int git_push_update_tips(git_push *push)
+int git_push_update_tips(git_push *push, const char *reflog_message)
 {
 	git_buf remote_ref_name = GIT_BUF_INIT;
 	size_t i, j;
@@ -176,6 +176,9 @@ int git_push_update_tips(git_push *push)
 	git_reference *remote_ref;
 	push_status *status;
 	int error = 0;
+
+	if (!reflog_message)
+		reflog_message = "update by push";
 
 	git_vector_foreach(&push->status, i, status) {
 		int fire_callback = 1;
@@ -211,7 +214,7 @@ int git_push_update_tips(git_push *push)
 			} else {
 				error = git_reference_create(NULL, push->remote->repo,
 							git_buf_cstr(&remote_ref_name), &push_spec->loid, 1,
-							"update by push");
+							reflog_message);
 			}
 		}
 

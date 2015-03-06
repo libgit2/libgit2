@@ -108,11 +108,12 @@ int git_push_add_refspec(git_push *push, const char *refspec);
  * Update remote tips after a push
  *
  * @param push The push object
- * @param signature The identity to use when updating reflogs
+ * @param reflog_message The message to use when updating reflogs
+ * or NULL for default
  *
  * @return 0 or an error code
  */
-int git_push_update_tips(git_push *push);
+int git_push_update_tips(git_push *push, const char *reflog_message);
 
 /**
  * Perform the push
