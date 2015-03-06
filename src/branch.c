@@ -82,11 +82,11 @@ int git_branch_create(
 		error = -1;
 		goto cleanup;
 	}
-	
+
 	if (git_buf_joinpath(&canonical_branch_name, GIT_REFS_HEADS_DIR, branch_name) < 0)
 		goto cleanup;
 
-	if (git_buf_printf(&log_message, "Branch: created from %s", git_oid_tostr_s(git_commit_id(commit))) < 0)
+	if (git_buf_printf(&log_message, "branch: Created from %s", git_oid_tostr_s(git_commit_id(commit))) < 0)
 		goto cleanup;
 
 	error = git_reference_create(&branch, repository,
@@ -236,7 +236,7 @@ int git_branch_move(
 	if ((error = git_buf_joinpath(&new_reference_name, GIT_REFS_HEADS_DIR, new_branch_name)) < 0)
 		goto done;
 
-	if ((error = git_buf_printf(&log_message, "Branch: renamed %s to %s",
+	if ((error = git_buf_printf(&log_message, "branch: renamed %s to %s",
 				    git_reference_name(branch), git_buf_cstr(&new_reference_name))) < 0)
 			goto done;
 

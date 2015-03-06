@@ -112,7 +112,7 @@ void test_refs_branches_create__default_reflog_message(void)
 	cl_git_pass(git_reflog_read(&log, repo, "refs/heads/" NEW_BRANCH_NAME));
 
 	entry = git_reflog_entry_byindex(log, 0);
-	cl_git_pass(git_buf_printf(&buf, "Branch: created from %s", git_oid_tostr_s(git_commit_id(target))));
+	cl_git_pass(git_buf_printf(&buf, "branch: Created from %s", git_oid_tostr_s(git_commit_id(target))));
 	cl_assert_equal_s(git_buf_cstr(&buf), git_reflog_entry_message(entry));
 	cl_assert_equal_s(sig->email, git_reflog_entry_committer(entry)->email);
 
