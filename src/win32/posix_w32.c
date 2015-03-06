@@ -55,7 +55,7 @@ int p_ftruncate(int fd, git_off_t size)
 		return -1;
 	}
 
-#if !defined(__MINGW32__)
+#if !defined(__MINGW32__) || defined(MINGW_HAS_SECURE_API)
 	return ((_chsize_s(fd, size) == 0) ? 0 : -1);
 #else
 	/* TODO MINGW32 Find a replacement for _chsize() that handles big files. */
