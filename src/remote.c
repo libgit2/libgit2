@@ -2330,6 +2330,10 @@ int git_remote_upload(git_remote *remote, const git_strarray *refspecs, const gi
 	    (error = git_remote_connect(remote, GIT_DIRECTION_PUSH)) < 0)
 		goto cleanup;
 
+	free_refspecs(&remote->active_refspecs);
+	if (dwim_refspecs(&remote->active_refspecs, &remote->refspecs, &remote->refs) < 0)
+		goto cleanup;
+
 	if (remote->push) {
 		git_push_free(remote->push);
 		remote->push = NULL;
