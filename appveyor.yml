@@ -17,6 +17,10 @@ environment:
     ARCH: i686 # this is for 32-bit MinGW-w64
   - GENERATOR: "MSYS Makefiles"
     ARCH: 64
+matrix:
+  allow_failures:
+    - GENERATOR: "MSYS Makefiles"
+      ARCH: 32
 cache:
 - i686-4.9.2-release-win32-sjlj-rt_v3-rev1.7z
 - x86_64-4.9.2-release-win32-seh-rt_v3-rev1.7z
