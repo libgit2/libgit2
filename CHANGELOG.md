@@ -30,6 +30,8 @@ v0.22 + 1
 * `git_config_get_string_buf()` provides a way to safely retrieve a
   string from a non-snapshot configuration.
 
+* Reference renaming now uses the right id for the old value.
+
 ### API removals
 
 ### Breaking API changes

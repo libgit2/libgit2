@@ -203,6 +203,7 @@ void test_refs_branches_move__default_reflog_message(void)
 	const git_reflog_entry *entry;
 	git_signature *sig;
 	git_config *cfg;
+	git_oid id;
 
 	cl_git_pass(git_repository_config(&cfg, repo));
 	cl_git_pass(git_config_set_string(cfg, "user.name", "Foo Bar"));
@@ -212,6 +213,7 @@ void test_refs_branches_move__default_reflog_message(void)
 	cl_git_pass(git_signature_default(&sig, repo));
 
 	cl_git_pass(git_reference_lookup(&branch, repo, "refs/heads/master"));
+	git_oid_cpy(&id, git_reference_target(branch));
 	cl_git_pass(git_branch_move(&new_branch, branch, "master2", 0));
 
 	cl_git_pass(git_reflog_read(&log, repo, git_reference_name(new_branch)));
@@ -219,6 +221,8 @@ void test_refs_branches_move__default_reflog_message(void)
 	cl_assert_equal_s("branch: renamed refs/heads/master to refs/heads/master2",
 			git_reflog_entry_message(entry));
 	cl_assert_equal_s(sig->email, git_reflog_entry_committer(entry)->email);
+	cl_assert_equal_oid(&id, git_reflog_entry_id_old(entry));
+	cl_assert_equal_oid(&id, git_reflog_entry_id_new(entry));
 
 	git_reference_free(branch);
 	git_reference_free(new_branch);
