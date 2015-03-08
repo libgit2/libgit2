@@ -7,7 +7,7 @@ void reflog_check(git_repository *repo, const char *refname,
 	git_reflog *log;
 	const git_reflog_entry *entry;
 
-	exp_email = exp_email;
+	GIT_UNUSED(exp_email);
 
 	cl_git_pass(git_reflog_read(&log, repo, refname));
 	cl_assert_equal_i(exp_count, git_reflog_entrycount(log));
