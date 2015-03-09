@@ -111,6 +111,23 @@ typedef enum {
 } git_merge_file_favor_t;
 
 /**
+ * Whitespace merging flags
+ */
+typedef enum {
+	/** Defaults */
+	GIT_MERGE_FILE_IGNORE_DEFAULT = 0,
+
+	/** Ignore all whitespace */
+	GIT_MERGE_FILE_IGNORE_WHITESPACE = (1 << 0),
+
+	/** Ignore changes in amount of whitespace */
+	GIT_MERGE_FILE_IGNORE_WHITESPACE_CHANGE = (1 << 1),
+
+	/** Ignore whitespace at end of line */
+	GIT_MERGE_FILE_IGNORE_WHITESPACE_EOL = (1 << 2),
+} git_merge_file_whitespace_t;
+
+/**
  * File merging flags
  */
 typedef enum {
@@ -156,6 +173,9 @@ typedef struct {
 
 	/** Merge file flags. */
 	git_merge_file_flags_t flags;
+
+	/** Whitespace merge flags */
+	unsigned int whitespace_flags;
 } git_merge_file_options;
 
 #define GIT_MERGE_FILE_OPTIONS_VERSION 1
@@ -230,6 +250,9 @@ typedef struct {
 
 	/** Flags for handling conflicting content. */
 	git_merge_file_favor_t file_favor;
+
+	/** Flags for handling whitespace */
+	unsigned int whitespace_flags;
 } git_merge_options;
 
 #define GIT_MERGE_OPTIONS_VERSION 1
