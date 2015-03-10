@@ -171,7 +171,13 @@ static git_repository *repository_alloc(void)
 
 int git_repository_new(git_repository **out)
 {
-	*out = repository_alloc();
+	git_repository *repo;
+
+	*out = repo = repository_alloc();
+	GITERR_CHECK_ALLOC(repo);
+
+	repo->is_bare = 1;
+
 	return 0;
 }
 
