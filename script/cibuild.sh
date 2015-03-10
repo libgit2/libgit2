@@ -1,15 +1,5 @@
 #!/bin/sh
 
-# Fail fast for superseded builds to PR's
-if ! [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
-    if ! [ \"$TRAVIS_BUILD_NUMBER\" = $(curl -H "Accept: application/vnd.travis-ci.2+json" \
-        https://api.travis-ci.org/repos/libgit2/libgit2/builds?event_type=pull_request | \
-        jq ".builds | map(select(.pull_request_number == $TRAVIS_PULL_REQUEST))[0].number") ]; then
-        echo "There are newer queued builds for this pull request, failing early."
-        exit 1
-    fi
-fi
-
 if [ -n "$COVERITY" ];
 then
 	./script/coverity.sh;
