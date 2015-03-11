@@ -32,6 +32,9 @@ v0.22 + 1
 
 * Reference renaming now uses the right id for the old value.
 
+* `git_index_add_frombuffer()` can now create a blob from memory
+   buffer and add it to the index which is attached to a repository.
+
 ### API removals
 
 ### Breaking API changes
