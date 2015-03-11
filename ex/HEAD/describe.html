@@ -71,7 +71,8 @@
 <span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
 <span class="cm"> */</span>
 
-<span class="cp">#include &quot;common.h&quot;</span></pre></div>
+<span class="cp">#include &quot;common.h&quot;</span>
+<span class="cp">#include &lt;assert.h&gt;</span></pre></div>
       </td>
     </tr>
     <tr id='section-2'>
@@ -121,6 +122,27 @@ all of the use cases.</p>
 <span class="p">}</span> <span class="n">describe_options</span><span class="p">;</span>
 
 <span class="k">typedef</span> <span class="k">struct</span> <span class="n">args_info</span> <span class="n">args_info</span><span class="p">;</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="o">*</span><span class="nf">xrealloc</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">oldp</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">newsz</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">void</span> <span class="o">*</span><span class="n">p</span> <span class="o">=</span> <span class="n">realloc</span><span class="p">(</span><span class="n">oldp</span><span class="p">,</span> <span class="n">newsz</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">p</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;Cannot allocate memory, exiting.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="n">p</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">opts_add_commit</span><span class="p">(</span><span class="n">describe_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">commit</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">size_t</span> <span class="n">sz</span><span class="p">;</span>
+
+  <span class="n">assert</span><span class="p">(</span><span class="n">opts</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="n">sz</span> <span class="o">=</span> <span class="o">++</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">commit_count</span> <span class="o">*</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">commits</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
+  <span class="n">opts</span><span class="o">-&gt;</span><span class="n">commits</span> <span class="o">=</span> <span class="n">xrealloc</span><span class="p">(</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">commits</span><span class="p">,</span> <span class="n">sz</span><span class="p">);</span>
+  <span class="n">opts</span><span class="o">-&gt;</span><span class="n">commits</span><span class="p">[</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">commit_count</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">commit</span><span class="p">;</span>
+<span class="p">}</span>
 
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">do_describe_single</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="n">describe_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">rev</span><span class="p">)</span>
 <span class="p">{</span>
@@ -180,9 +202,7 @@ all of the use cases.</p>
     <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">curr</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">];</span>
 
     <span class="k">if</span> <span class="p">(</span><span class="n">curr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="sc">&#39;-&#39;</span><span class="p">)</span> <span class="p">{</span>
-      <span class="kt">size_t</span> <span class="n">newsz</span> <span class="o">=</span> <span class="o">++</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">commit_count</span> <span class="o">*</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">commits</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
-      <span class="n">opts</span><span class="o">-&gt;</span><span class="n">commits</span> <span class="o">=</span> <span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">**</span><span class="p">)</span><span class="n">realloc</span><span class="p">((</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">commits</span><span class="p">,</span> <span class="n">newsz</span><span class="p">);</span>
-      <span class="n">opts</span><span class="o">-&gt;</span><span class="n">commits</span><span class="p">[</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">commit_count</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">curr</span><span class="p">;</span>
+      <span class="n">opts_add_commit</span><span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="n">curr</span><span class="p">);</span>
     <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">curr</span><span class="p">,</span> <span class="s">&quot;--all&quot;</span><span class="p">))</span> <span class="p">{</span>
       <span class="n">opts</span><span class="o">-&gt;</span><span class="n">describe_options</span><span class="p">.</span><span class="n">describe_strategy</span> <span class="o">=</span> <span class="n">GIT_DESCRIBE_ALL</span><span class="p">;</span>
     <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">curr</span><span class="p">,</span> <span class="s">&quot;--tags&quot;</span><span class="p">))</span> <span class="p">{</span>
@@ -208,9 +228,7 @@ all of the use cases.</p>
   <span class="p">}</span>
   <span class="k">else</span> <span class="p">{</span>
     <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">format_options</span><span class="p">.</span><span class="n">dirty_suffix</span> <span class="o">||</span> <span class="o">!</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">format_options</span><span class="p">.</span><span class="n">dirty_suffix</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="p">{</span>
-      <span class="kt">size_t</span> <span class="n">sz</span> <span class="o">=</span> <span class="o">++</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">commit_count</span> <span class="o">*</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">commits</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
-      <span class="n">opts</span><span class="o">-&gt;</span><span class="n">commits</span> <span class="o">=</span> <span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">**</span><span class="p">)</span><span class="n">malloc</span><span class="p">(</span><span class="n">sz</span><span class="p">);</span>
-      <span class="n">opts</span><span class="o">-&gt;</span><span class="n">commits</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="s">&quot;HEAD&quot;</span><span class="p">;</span>
+      <span class="n">opts_add_commit</span><span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="s">&quot;HEAD&quot;</span><span class="p">);</span>
     <span class="p">}</span>
   <span class="p">}</span>
 <span class="p">}</span></pre></div>
