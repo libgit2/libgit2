@@ -609,6 +609,9 @@ static int local_download_pack(
 		data.progress_payload = progress_payload;
 		data.writepack = writepack;
 
+		/* autodetect */
+		git_packbuilder_set_threads(pack, 0);
+
 		if ((error = git_packbuilder_foreach(pack, foreach_cb, &data)) != 0)
 			goto cleanup;
 	}
