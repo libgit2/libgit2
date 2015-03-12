@@ -134,6 +134,12 @@ typedef enum {
 
 	/** Ignore whitespace at end of line */
 	GIT_MERGE_FILE_IGNORE_WHITESPACE_EOL = (1 << 5),
+
+	/** Use the "patience diff" algorithm */
+	GIT_MERGE_FILE_DIFF_PATIENCE = (1 << 6),
+
+	/** Take extra time to find minimal diff */
+	GIT_MERGE_FILE_DIFF_MINIMAL = (1 << 7),
 } git_merge_file_flags_t;
 
 /**
