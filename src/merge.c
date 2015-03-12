@@ -1154,7 +1154,7 @@ int git_merge_diff_list__find_renames(
 
 	assert(diff_list && opts);
 
-	if ((opts->flags & GIT_MERGE_TREE_FIND_RENAMES) == 0)
+	if ((opts->tree_flags & GIT_MERGE_TREE_FIND_RENAMES) == 0)
 		return 0;
 
 	similarity_ours = git__calloc(diff_list->conflicts.length,
@@ -1593,7 +1593,7 @@ static int merge_normalize_opts(
 		git_merge_options init = GIT_MERGE_OPTIONS_INIT;
 		memcpy(opts, &init, sizeof(init));
 
-		opts->flags = GIT_MERGE_TREE_FIND_RENAMES;
+		opts->tree_flags = GIT_MERGE_TREE_FIND_RENAMES;
 		opts->rename_threshold = GIT_MERGE_TREE_RENAME_THRESHOLD;
 	}
 

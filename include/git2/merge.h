@@ -63,7 +63,7 @@ GIT_EXTERN(int) git_merge_file_init_input(
 
 /**
  * Flags for `git_merge_tree` options.  A combination of these flags can be
- * passed in via the `flags` value in the `git_merge_options`.
+ * passed in via the `tree_flags` value in the `git_merge_options`.
  */
 typedef enum {
 	/**
@@ -225,7 +225,7 @@ typedef struct {
  */
 typedef struct {
 	unsigned int version;
-	git_merge_tree_flag_t flags;
+	git_merge_tree_flag_t tree_flags;
 
 	/**
 	 * Similarity to consider a file renamed (default 50).  If
