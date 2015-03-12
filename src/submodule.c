@@ -1091,10 +1091,10 @@ int git_submodule_sync(git_submodule *sm)
 			/* return error from reading submodule config */;
 		else if ((error = lookup_head_remote_key(&remote_name, smrepo)) < 0) {
 			giterr_clear();
-			error = git_buf_sets(&key, "branch.origin.remote");
+			error = git_buf_sets(&key, "remote.origin.url");
 		} else {
 			error = git_buf_join3(
-				&key, '.', "branch", remote_name.ptr, "remote");
+				&key, '.', "remote", remote_name.ptr, "url");
 			git_buf_free(&remote_name);
 		}
 

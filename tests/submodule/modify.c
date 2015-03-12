@@ -118,11 +118,11 @@ void test_submodule_modify__sync(void)
 
 	/* check that submodule config is updated */
 	assert_submodule_url_is_synced(
-		sm1, "submodule."SM1".url", "branch.origin.remote");
+		sm1, "submodule."SM1".url", "remote.origin.url");
 	assert_submodule_url_is_synced(
-		sm2, "submodule."SM2".url", "branch.origin.remote");
+		sm2, "submodule."SM2".url", "remote.origin.url");
 	assert_submodule_url_is_synced(
-		sm3, "submodule."SM3".url", "branch.origin.remote");
+		sm3, "submodule."SM3".url", "remote.origin.url");
 
 	git_submodule_free(sm1);
 	git_submodule_free(sm2);
