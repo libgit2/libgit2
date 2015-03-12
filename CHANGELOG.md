@@ -15,6 +15,9 @@ v0.22 + 1
   removed. Use `git_repository_set_ident()` and
   `git_repository_ident()` to override the signature to be used.
 
+* The local transport now auto-scales the number of threads to use
+  when creating the packfile instead of sticking to one.
+
 ### API additions
 
 * Parsing and retrieving a configuration value as a path is exposed
