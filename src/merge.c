@@ -654,7 +654,7 @@ static int merge_conflict_resolve_automerge(
 	git_merge_diff_list *diff_list,
 	const git_merge_diff *conflict,
 	unsigned int merge_file_favor,
-	unsigned int whitespace_flags)
+	unsigned int file_flags)
 {
 	const git_index_entry *ancestor = NULL, *ours = NULL, *theirs = NULL;
 	git_merge_file_options opts = GIT_MERGE_FILE_OPTIONS_INIT;
@@ -709,7 +709,7 @@ static int merge_conflict_resolve_automerge(
 		&conflict->their_entry : NULL;
 
 	opts.favor = merge_file_favor;
-	opts.whitespace_flags = whitespace_flags;
+	opts.flags = file_flags;
 
 	if ((error = git_repository_odb(&odb, diff_list->repo)) < 0 ||
 		(error = git_merge_file_from_index(&result, diff_list->repo, ancestor, ours, theirs, &opts)) < 0 ||
@@ -744,7 +744,7 @@ static int merge_conflict_resolve(
 	git_merge_diff_list *diff_list,
 	const git_merge_diff *conflict,
 	unsigned int merge_file_favor,
-	unsigned int whitespace_flags)
+	unsigned int file_flags)
 {
 	int resolved = 0;
 	int error = 0;
@@ -761,7 +761,7 @@ static int merge_conflict_resolve(
 		goto done;
 
 	if (!resolved && (error = merge_conflict_resolve_automerge(&resolved, diff_list, conflict,
-		merge_file_favor, whitespace_flags)) < 0)
+		merge_file_favor, file_flags)) < 0)
 		goto done;
 
 	*out = resolved;
@@ -1783,7 +1783,7 @@ int git_merge_trees(
 	git_vector_foreach(&changes, i, conflict) {
 		int resolved = 0;
 
-		if ((error = merge_conflict_resolve(&resolved, diff_list, conflict, opts.file_favor, opts.whitespace_flags)) < 0)
+		if ((error = merge_conflict_resolve(&resolved, diff_list, conflict, opts.file_favor, opts.file_flags)) < 0)
 			goto done;
 
 		if (!resolved)

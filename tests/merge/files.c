@@ -198,7 +198,7 @@ void test_merge_files__automerge_whitespace_eol(void)
 	theirs.path = "testfile.txt";
 	theirs.mode = 0100755;
 
-	opts.whitespace_flags |= GIT_MERGE_FILE_IGNORE_WHITESPACE_EOL;
+	opts.flags |= GIT_MERGE_FILE_IGNORE_WHITESPACE_EOL;
 	cl_git_pass(git_merge_file(&result, &ancestor, &ours, &theirs, &opts));
 
 	cl_assert_equal_i(1, result.automergeable);
@@ -236,7 +236,7 @@ void test_merge_files__automerge_whitespace_change(void)
 	theirs.path = "testfile.txt";
 	theirs.mode = 0100755;
 
-	opts.whitespace_flags |= GIT_MERGE_FILE_IGNORE_WHITESPACE_CHANGE;
+	opts.flags |= GIT_MERGE_FILE_IGNORE_WHITESPACE_CHANGE;
 	cl_git_pass(git_merge_file(&result, &ancestor, &ours, &theirs, &opts));
 
 	cl_assert_equal_i(1, result.automergeable);

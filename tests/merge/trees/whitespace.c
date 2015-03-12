@@ -54,7 +54,7 @@ void test_merge_trees_whitespace__eol(void)
 		{ 0100644, "ee3c2aac8e03224c323b58ecb1f9eef616745467", 0, "test.txt" },
 	};
 
-	opts.whitespace_flags |= GIT_MERGE_FILE_IGNORE_WHITESPACE_EOL;
+	opts.file_flags |= GIT_MERGE_FILE_IGNORE_WHITESPACE_EOL;
 
 	cl_git_pass(merge_trees_from_branches(&index, repo, BRANCH_A_EOL, BRANCH_B_EOL, &opts));
 
@@ -72,7 +72,7 @@ void test_merge_trees_whitespace__change(void)
 		{ 0100644, "a827eab4fd66ab37a6ebcfaa7b7e341abfd55947", 0, "test.txt" },
 	};
 
-	opts.whitespace_flags |= GIT_MERGE_FILE_IGNORE_WHITESPACE_CHANGE;
+	opts.file_flags |= GIT_MERGE_FILE_IGNORE_WHITESPACE_CHANGE;
 
 	cl_git_pass(merge_trees_from_branches(&index, repo, BRANCH_A_CHANGE, BRANCH_B_CHANGE, &opts));
 
