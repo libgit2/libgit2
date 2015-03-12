@@ -6,7 +6,7 @@
  */
 
 #ifdef GIT_SSH
-#include <libssh2.h>
+#include <libssh2/libssh2.h>
 #endif
 
 #include "git2.h"
