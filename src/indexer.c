@@ -287,9 +287,9 @@ static int store_object(git_indexer *idx)
 	pentry->offset = entry_start;
 
 	k = kh_put(oid, idx->pack->idx_cache, &pentry->sha1, &error);
-	if (!error) {
+	if (error == -1) {
 		git__free(pentry);
-		giterr_set(GITERR_INDEXER, "cannot handle duplicate objects in pack");
+		giterr_set_oom();
 		goto on_error;
 	}
 
