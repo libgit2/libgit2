@@ -293,6 +293,13 @@ static int store_object(git_indexer *idx)
 		goto on_error;
 	}
 
+	if (error == 0) {
+		giterr_set(GITERR_INDEXER, "duplicate object %s found in pack", git_oid_tostr_s(&pentry->sha1));
+		git__free(pentry);
+		goto on_error;
+	}
+
+
 	kh_value(idx->pack->idx_cache, k) = pentry;
 
 	git_oid_cpy(&entry->oid, &oid);
