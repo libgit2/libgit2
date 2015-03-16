@@ -273,6 +273,7 @@ typedef struct git_checkout_options {
 	git_strarray paths;
 
 	git_tree *baseline; /**< expected content of workdir, defaults to HEAD */
+	git_index *baseline_index; /**< expected content of workdir, expressed as an index. */
 
 	const char *target_directory; /**< alternative checkout path to workdir */
 
