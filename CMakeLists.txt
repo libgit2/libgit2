@@ -166,10 +166,16 @@ IF (WIN32 AND WINHTTP)
 		SET(LIBWINHTTP_PATH "${CMAKE_CURRENT_BINARY_DIR}/deps/winhttp")
 		FILE(MAKE_DIRECTORY ${LIBWINHTTP_PATH})
 
+		IF ("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
+			set(WINHTTP_DEF "${CMAKE_CURRENT_SOURCE_DIR}/deps/winhttp/winhttp64.def")
+		ELSE()
+			set(WINHTTP_DEF "${CMAKE_CURRENT_SOURCE_DIR}/deps/winhttp/winhttp.def")
+		ENDIF()
+
 		ADD_CUSTOM_COMMAND(
 			OUTPUT ${LIBWINHTTP_PATH}/libwinhttp.a
-			COMMAND ${DLLTOOL} -d ${CMAKE_CURRENT_SOURCE_DIR}/deps/winhttp/winhttp.def -k -D winhttp.dll -l libwinhttp.a
-			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/deps/winhttp/winhttp.def
+			COMMAND ${DLLTOOL} -d ${WINHTTP_DEF} -k -D winhttp.dll -l libwinhttp.a
+			DEPENDS ${WINHTTP_DEF}
 			WORKING_DIRECTORY ${LIBWINHTTP_PATH}
 		)
 
