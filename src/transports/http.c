@@ -558,7 +558,8 @@ static int http_connect(http_subtransport *t)
 	error = git_stream_connect(t->io);
 
 #ifdef GIT_SSL
-	if ((!error || error == GIT_ECERTIFICATE) && t->owner->certificate_check_cb != NULL) {
+	if ((!error || error == GIT_ECERTIFICATE) && t->owner->certificate_check_cb != NULL &&
+	    git_stream_is_encrypted(t->io)) {
 		git_cert *cert;
 		int is_valid;
 
