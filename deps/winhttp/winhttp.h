@@ -16,6 +16,8 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
  */
 
+#if defined(__MINGW_VERSION) || defined(__MINGW32_VERSION)
+
 #ifndef __WINE_WINHTTP_H
 #define __WINE_WINHTTP_H
 
@@ -582,3 +584,9 @@ BOOL        WINAPI WinHttpWriteData(HINTERNET,LPCVOID,DWORD,LPDWORD);
 #include <poppack.h>
 
 #endif  /* __WINE_WINHTTP_H */
+
+#else
+
+#include_next <winhttp.h>
+
+#endif

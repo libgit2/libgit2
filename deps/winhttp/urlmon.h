@@ -5,6 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#if defined(__MINGW_VERSION) || defined(__MINGW32_VERSION)
+
 #ifndef __CUSTOM_URLMON_H
 #define __CUSTOM_URLMON_H
 
@@ -35,3 +37,9 @@ struct IInternetSecurityManager
 #define URLZONE_TRUSTED       2
 
 #endif /* __CUSTOM_URLMON_H */
+
+#else
+
+#include_next <urlmon.h>
+
+#endif
