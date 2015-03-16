@@ -420,7 +420,8 @@ int git_futils_mkdir_ext(
 		if (p_lstat(make_path.ptr, &st) < 0) {
 			opts->perfdata.mkdir_calls++;
 
-			if (errno != ENOENT || p_mkdir(make_path.ptr, mode) < 0) {
+			if (errno != ENOENT ||
+				(p_mkdir(make_path.ptr, mode) < 0 && errno != EEXIST)) {
 				giterr_set(GITERR_OS, "Failed to make directory '%s'", make_path.ptr);
 				error = GIT_EEXISTS;
 				goto done;
