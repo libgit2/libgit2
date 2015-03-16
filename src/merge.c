@@ -61,6 +61,11 @@ struct merge_diff_df_data {
 	git_merge_diff *prev_conflict;
 };
 
+GIT_INLINE(int) merge_diff_detect_binary(
+	bool *binary_out,
+	git_repository *repo,
+	const git_merge_diff *conflict);
+
 
 /* Merge base computation */
 
@@ -662,6 +667,7 @@ static int merge_conflict_resolve_automerge(
 	git_odb *odb = NULL;
 	git_oid automerge_oid;
 	int error = 0;
+	bool binary = false;
 
 	assert(resolved && diff_list && conflict);
 
@@ -697,7 +703,9 @@ static int merge_conflict_resolve_automerge(
 		return 0;
 
 	/* Reject binary conflicts */
-	if (conflict->binary)
+	if ((error = merge_diff_detect_binary(&binary, diff_list->repo, conflict)) < 0)
+		return error;
+	if (binary)
 		return 0;
 
 	ancestor = GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->ancestor_entry) ?
@@ -1303,34 +1311,38 @@ GIT_INLINE(int) merge_diff_detect_type(
 }
 
 GIT_INLINE(int) merge_diff_detect_binary(
+	bool *binary_out,
 	git_repository *repo,
-	git_merge_diff *conflict)
+	const git_merge_diff *conflict)
 {
 	git_blob *ancestor_blob = NULL, *our_blob = NULL, *their_blob = NULL;
 	int error = 0;
+	bool binary = false;
 
 	if (GIT_MERGE_INDEX_ENTRY_ISFILE(conflict->ancestor_entry)) {
 		if ((error = git_blob_lookup(&ancestor_blob, repo, &conflict->ancestor_entry.id)) < 0)
 			goto done;
 
-		conflict->binary = git_blob_is_binary(ancestor_blob);
+		binary = git_blob_is_binary(ancestor_blob);
 	}
 
-	if (!conflict->binary &&
+	if (!binary &&
 		GIT_MERGE_INDEX_ENTRY_ISFILE(conflict->our_entry)) {
 		if ((error = git_blob_lookup(&our_blob, repo, &conflict->our_entry.id)) < 0)
 			goto done;
 
-		conflict->binary = git_blob_is_binary(our_blob);
+		binary = git_blob_is_binary(our_blob);
 	}
 
-	if (!conflict->binary &&
+	if (!binary &&
 		GIT_MERGE_INDEX_ENTRY_ISFILE(conflict->their_entry)) {
 		if ((error = git_blob_lookup(&their_blob, repo, &conflict->their_entry.id)) < 0)
 			goto done;
 
-		conflict->binary = git_blob_is_binary(their_blob);
+		binary = git_blob_is_binary(their_blob);
 	}
+
+	*binary_out = binary;
 
 done:
 	git_blob_free(ancestor_blob);
@@ -1411,7 +1423,6 @@ static int merge_diff_list_insert_conflict(
 	if ((conflict = merge_diff_from_index_entries(diff_list, tree_items)) == NULL ||
 		merge_diff_detect_type(conflict) < 0 ||
 		merge_diff_detect_df_conflict(merge_df_data, conflict) < 0 ||
-		merge_diff_detect_binary(diff_list->repo, conflict) < 0 ||
 		git_vector_insert(&diff_list->conflicts, conflict) < 0)
 		return -1;
 
