@@ -565,3 +565,10 @@ void test_online_clone__certificate_valid(void)
 
 	cl_git_pass(git_clone(&g_repo, "https://github.com/libgit2/TestGitRepository", "./foo", &g_options));
 }
+
+void test_online_clone__start_with_http(void)
+{
+	g_options.remote_callbacks.certificate_check = succeed_certificate_check;
+
+	cl_git_pass(git_clone(&g_repo, "http://github.com/libgit2/TestGitRepository", "./foo", &g_options));
+}
