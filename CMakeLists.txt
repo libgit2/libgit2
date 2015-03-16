@@ -163,12 +163,13 @@ IF (WIN32 AND WINHTTP)
 			MESSAGE(FATAL_ERROR "Could not find dlltool command")
 		ENDIF ()
 
-		SET(LIBWINHTTP_PATH "${CMAKE_CURRENT_SOURCE_DIR}/deps/winhttp")
+		SET(LIBWINHTTP_PATH "${CMAKE_CURRENT_BINARY_DIR}/deps/winhttp")
+		FILE(MAKE_DIRECTORY ${LIBWINHTTP_PATH})
 
 		ADD_CUSTOM_COMMAND(
 			OUTPUT ${LIBWINHTTP_PATH}/libwinhttp.a
-			COMMAND ${DLLTOOL} -d winhttp.def -k -D winhttp.dll -l libwinhttp.a
-			DEPENDS ${LIBWINHTTP_PATH}/winhttp.def
+			COMMAND ${DLLTOOL} -d ${CMAKE_CURRENT_SOURCE_DIR}/deps/winhttp/winhttp.def -k -D winhttp.dll -l libwinhttp.a
+			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/deps/winhttp/winhttp.def
 			WORKING_DIRECTORY ${LIBWINHTTP_PATH}
 		)
 
@@ -178,7 +179,8 @@ IF (WIN32 AND WINHTTP)
 		)
 
 		INCLUDE_DIRECTORIES(deps/winhttp)
-		LINK_DIRECTORIES(deps/winhttp)
+		LINK_DIRECTORIES(${LIBWINHTTP_PATH})
+		LINK_LIBRARIES(crypt32)
 	ENDIF ()
 
 	LINK_LIBRARIES(winhttp rpcrt4)
