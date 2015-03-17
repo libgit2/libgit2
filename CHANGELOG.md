@@ -108,6 +108,14 @@ v0.22 + 1
   if it is called immediately after creating a rebase session but before
   you have applied the first patch.
 
+* `git_rebase_options` now contains an optional pointer to
+  `git_checkout_options` that will be used for functions that modify
+  the working directory, namely `git_checkout_init`, `git_checkout_next`
+  and `git_checkout_abort`.  As a result, `git_rebase_open` now also
+  takes a `git_rebase_options` and only the `git_rebase_init` and
+  `git_rebase_open` functions take a `git_rebase_options`, where they
+  will persist the options to subsequent `git_rebase` calls.
+
 v0.22
 ------
 
