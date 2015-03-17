@@ -1148,7 +1148,7 @@ size_t git_rebase_operation_current(git_rebase *rebase)
 {
 	assert(rebase);
 
-	return rebase->current;
+	return rebase->started ? rebase->current : GIT_REBASE_NO_OPERATION;
 }
 
 git_rebase_operation *git_rebase_operation_byindex(git_rebase *rebase, size_t idx)

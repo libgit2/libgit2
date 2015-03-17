@@ -89,6 +89,9 @@ typedef enum {
 #define GIT_REBASE_OPTIONS_VERSION 1
 #define GIT_REBASE_OPTIONS_INIT {GIT_REBASE_OPTIONS_VERSION}
 
+/** Indicates that a rebase operation is not (yet) in progress. */
+#define GIT_REBASE_NO_OPERATION SIZE_MAX
+
 /**
  * A rebase operation
  *
@@ -170,6 +173,9 @@ GIT_EXTERN(size_t) git_rebase_operation_entrycount(git_rebase *rebase);
 
 /**
  * Gets the index of the rebase operation that is currently being applied.
+ * If the first operation has not yet been applied (because you have
+ * called `init` but not yet `next`) then this returns
+ * `GIT_REBASE_NO_OPERATION`.
  *
  * @param rebase The in-progress rebase
  * @return The index of the rebase operation currently being applied.

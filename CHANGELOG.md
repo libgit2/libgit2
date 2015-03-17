@@ -101,6 +101,10 @@ v0.22 + 1
 * `git_note_default_ref()` now uses a `git_buf` to return the string,
   as the string is otherwise not guaranteed to stay allocated.
 
+* `git_rebase_operation_current()` will return `GIT_REBASE_NO_OPERATION`
+  if it is called immediately after creating a rebase session but before
+  you have applied the first patch.
+
 v0.22
 ------
 

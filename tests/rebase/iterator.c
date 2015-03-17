@@ -65,7 +65,7 @@ void test_rebase_iterator__iterates(void)
 	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
 
 	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
-	test_operations(rebase, 0);
+	test_operations(rebase, GIT_REBASE_NO_OPERATION);
 	git_rebase_free(rebase);
 
 	cl_git_pass(git_rebase_open(&rebase, repo));
