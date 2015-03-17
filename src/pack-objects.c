@@ -15,6 +15,8 @@
 #include "thread-utils.h"
 #include "tree.h"
 #include "util.h"
+#include "revwalk.h"
+#include "commit_list.h"
 
 #include "git2/pack.h"
 #include "git2/commit.h"
@@ -38,6 +40,8 @@ struct pack_write_context {
 	git_indexer *indexer;
 	git_transfer_progress *stats;
 };
+
+GIT__USE_OIDMAP;
 
 #ifdef GIT_THREADS
 
@@ -124,8 +128,14 @@ int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
 	GITERR_CHECK_ALLOC(pb);
 
 	pb->object_ix = git_oidmap_alloc();
-
 	if (!pb->object_ix)
+		goto on_error;
+
+	pb->walk_objects = git_oidmap_alloc();
+	if (!pb->walk_objects)
+		goto on_error;
+
+	if (git_pool_init(&pb->object_pool, sizeof(git_walk_object), 0) < 0)
 		goto on_error;
 
 	pb->repo = repo;
@@ -1345,6 +1355,7 @@ const git_oid *git_packbuilder_hash(git_packbuilder *pb)
 	return &pb->pack_oid;
 }
 
+
 static int cb_tree_walk(
 	const char *root, const git_tree_entry *entry, void *payload)
 {
@@ -1403,6 +1414,235 @@ uint32_t git_packbuilder_written(git_packbuilder *pb)
 	return pb->nr_written;
 }
 
+int lookup_walk_object(git_walk_object **out, git_packbuilder *pb, const git_oid *id)
+{
+	git_walk_object *obj;
+
+	obj = git_pool_mallocz(&pb->object_pool, 1);
+	if (!obj) {
+		giterr_set_oom();
+		return -1;
+	}
+
+	git_oid_cpy(&obj->id, id);
+
+	*out = obj;
+	return 0;
+}
+
+static int retrieve_object(git_walk_object **out, git_packbuilder *pb, const git_oid *id)
+{
+	int error;
+	khiter_t pos;
+	git_walk_object *obj;
+
+	pos = git_oidmap_lookup_index(pb->walk_objects, id);
+	if (git_oidmap_valid_index(pb->walk_objects, pos)) {
+		obj = git_oidmap_value_at(pb->walk_objects, pos);
+	} else {
+		if ((error = lookup_walk_object(&obj, pb, id)) < 0)
+			return error;
+
+		git_oidmap_insert(pb->walk_objects, &obj->id, obj, error);
+	}
+
+	*out = obj;
+	return 0;
+}
+
+static int mark_blob_uninteresting(git_packbuilder *pb, const git_oid *id)
+{
+	int error;
+	git_walk_object *obj;
+
+	if ((error = retrieve_object(&obj, pb, id)) < 0)
+		return error;
+
+	obj->uninteresting = 1;
+
+	return 0;
+}
+
+static int mark_tree_uninteresting(git_packbuilder *pb, const git_oid *id)
+{
+	git_walk_object *obj;
+	git_tree *tree;
+	int error;
+	size_t i;
+
+	if ((error = retrieve_object(&obj, pb, id)) < 0)
+		return error;
+
+	if (obj->uninteresting)
+		return 0;
+
+	obj->uninteresting = 1;
+
+	if ((error = git_tree_lookup(&tree, pb->repo, id)) < 0)
+		return error;
+
+	for (i = 0; i < git_tree_entrycount(tree); i++) {
+		const git_tree_entry *entry = git_tree_entry_byindex(tree, i);
+		const git_oid *entry_id = git_tree_entry_id(entry);
+		switch (git_tree_entry_type(entry)) {
+		case GIT_OBJ_TREE:
+			if ((error = mark_tree_uninteresting(pb, entry_id)) < 0)
+				goto cleanup;
+			break;
+		case GIT_OBJ_BLOB:
+			if ((error = mark_blob_uninteresting(pb, entry_id)) < 0)
+				goto cleanup;
+			break;
+		default:
+			/* it's a submodule or something unknown, we don't want it */
+			;
+		}
+	}
+
+cleanup:
+	git_tree_free(tree);
+	return error;
+}
+
+/*
+ * Mark the edges of the graph uninteresting. Since we start from a
+ * git_revwalk, the commits are already uninteresting, but we need to
+ * mark the trees and blobs.
+ */
+static int mark_edges_uninteresting(git_packbuilder *pb, git_commit_list *commits)
+{
+	int error;
+	git_commit_list *list;
+	git_commit *commit;
+
+	for (list = commits; list; list = list->next) {
+		if (!list->item->uninteresting)
+			continue;
+
+		if ((error = git_commit_lookup(&commit, pb->repo, &list->item->oid)) < 0)
+			return error;
+
+		error = mark_tree_uninteresting(pb, git_commit_tree_id(commit));
+		git_commit_free(commit);
+
+		if (error < 0)
+			return error;
+	}
+
+	return 0;
+}
+
+int insert_tree(git_packbuilder *pb, git_tree *tree)
+{
+	size_t i;
+	int error;
+	git_tree *subtree;
+	git_walk_object *obj;
+	const char *name;
+
+	if ((error = retrieve_object(&obj, pb, git_tree_id(tree))) < 0)
+		return error;
+
+	if (obj->seen)
+		return 0;
+
+	obj->seen = 1;
+
+	if ((error = git_packbuilder_insert(pb, &obj->id, NULL)))
+		return error;
+
+	for (i = 0; i < git_tree_entrycount(tree); i++) {
+		const git_tree_entry *entry = git_tree_entry_byindex(tree, i);
+		const git_oid *entry_id = git_tree_entry_id(entry);
+		switch (git_tree_entry_type(entry)) {
+		case GIT_OBJ_TREE:
+			if ((error = git_tree_lookup(&subtree, pb->repo, entry_id)) < 0)
+				return error;
+
+			error = insert_tree(pb, subtree);
+			git_tree_free(subtree);
+
+			if (error < 0)
+				return error;
+
+			break;
+		case GIT_OBJ_BLOB:
+			name = git_tree_entry_name(entry);
+			if ((error = git_packbuilder_insert(pb, entry_id, name)) < 0)
+				return error;
+			break;
+		default:
+			/* it's a submodule or something unknown, we don't want it */
+			;
+		}
+	}
+
+
+	return error;
+}
+
+int insert_commit(git_packbuilder *pb, git_walk_object *obj)
+{
+	int error;
+	git_commit *commit = NULL;
+	git_tree *tree = NULL;
+
+	obj->seen = 1;
+
+	if ((error = git_packbuilder_insert(pb, &obj->id, NULL)) < 0)
+		return error;
+
+	if ((error = git_commit_lookup(&commit, pb->repo, &obj->id)) < 0)
+		return error;
+
+	if ((error = git_tree_lookup(&tree, pb->repo, git_commit_tree_id(commit))) < 0)
+		goto cleanup;
+
+	if ((error = insert_tree(pb, tree)) < 0)
+		goto cleanup;
+
+cleanup:
+	git_commit_free(commit);
+	git_tree_free(tree);
+	return error;
+}
+
+int git_packbuilder_insert_walk(git_packbuilder *pb, git_revwalk *walk)
+{
+	int error;
+	git_oid id;
+	git_walk_object *obj;
+
+	assert(pb && walk);
+
+	if ((error = mark_edges_uninteresting(pb, walk->user_input)) < 0)
+		return error;
+
+	/*
+	 * TODO: git marks the parents of the edges
+	 * uninteresting. This may provide a speed advantage, but does
+	 * seem to assume the remote does not have a single-commit
+	 * history on the other end.
+	 */
+
+	/* walk down each tree up to the blobs and insert them, stopping when uninteresting */
+	while ((error = git_revwalk_next(&id, walk)) == 0) {
+		if ((error = retrieve_object(&obj, pb, &id)) < 0)
+			return error;
+
+		if (obj->seen || obj->uninteresting)
+			continue;
+
+		if ((error = insert_commit(pb, obj)) < 0)
+			return error;
+	}
+
+	if (error == GIT_ITEROVER)
+		error = 0;
+
+	return 0;
+}
+
 int git_packbuilder_set_callbacks(git_packbuilder *pb, git_packbuilder_progress progress_cb, void *progress_cb_payload)
 {
 	if (!pb)
@@ -1435,6 +1675,9 @@ void git_packbuilder_free(git_packbuilder *pb)
 
 	if (pb->object_list)
 		git__free(pb->object_list);
+
+	git_oidmap_free(pb->walk_objects);
+	git_pool_clear(&pb->object_pool);
 
 	git_hash_ctx_cleanup(&pb->ctx);
 	git_zstream_free(&pb->zstream);

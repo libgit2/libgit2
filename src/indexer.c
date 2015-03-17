@@ -18,6 +18,8 @@
 #include "oidmap.h"
 #include "zstream.h"
 
+GIT__USE_OIDMAP;
+
 extern git_mutex git__mwindow_mutex;
 
 #define UINT31_MAX (0x7FFFFFFF)

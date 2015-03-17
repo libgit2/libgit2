@@ -16,6 +16,9 @@
 
 #include <zlib.h>
 
+GIT__USE_OFFMAP;
+GIT__USE_OIDMAP;
+
 static int packfile_open(struct git_pack_file *p);
 static git_off_t nth_packed_object_offset(const struct git_pack_file *p, uint32_t n);
 int packfile_unpack_compressed(
