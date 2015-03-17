@@ -3,6 +3,10 @@ v0.22 + 1
 
 ### Changes or improvements
 
+* Patience and minimal diff drivers can now be used for merges.
+
+* Merges can now ignore whitespace changes.
+
 * Updated binary identification in CRLF filtering to avoid false positives in
   UTF-8 files.
 
@@ -19,6 +23,8 @@ v0.22 + 1
   when creating the packfile instead of sticking to one.
 
 ### API additions
+
+* The `git_merge_options` gained a `file_flags` member.
 
 * Parsing and retrieving a configuration value as a path is exposed
   via `git_config_parse_path()` and `git_config_get_path()`
@@ -41,6 +47,12 @@ v0.22 + 1
 ### API removals
 
 ### Breaking API changes
+
+* The `git_merge_options` structure member `flags` has been renamed
+  to `tree_flags`.
+
+* The `git_merge_file_options` structure member `tree_flags` is now
+  an unsigned int. It was previously a `git_merge_file_flags_t`.
 
 * `GIT_CHECKOUT_SAFE_CREATE` has been removed.  Most users will generally
   be able to switch to `GIT_CHECKOUT_SAFE`, but if you require missing
