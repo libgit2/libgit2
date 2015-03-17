@@ -346,7 +346,7 @@ clar_parse_args(int argc, char **argv)
 						_clar.report_suite_names = 1;
 
 					switch (action) {
-					case 's': clar_run_suite(&_clar_suites[j], argument); break;
+					case 's': _clar_suites[j].enabled = 1; clar_run_suite(&_clar_suites[j], argument); break;
 					case 'i': _clar_suites[j].enabled = 1; break;
 					case 'x': _clar_suites[j].enabled = 0; break;
 					}
