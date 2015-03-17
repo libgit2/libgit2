@@ -339,7 +339,7 @@ int git_futils_mkdir_ext(
 	struct git_futils_mkdir_options *opts)
 {
 	int error = -1;
-	int mkdir_attempted = 0;
+	int mkdir_attempted;
 	git_buf make_path = GIT_BUF_INIT;
 	ssize_t root = 0, min_root_len, root_len;
 	char lastch = '/', *tail;
@@ -416,6 +416,7 @@ int git_futils_mkdir_ext(
 			continue;
 
 		/* See what's going on with this path component */
+		mkdir_attempted = 0;
 		do {
 			opts->perfdata.stat_calls++;
 			if (p_lstat(make_path.ptr, &st) < 0) {
