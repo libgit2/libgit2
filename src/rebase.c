@@ -504,33 +504,42 @@ static int rebase_ensure_not_in_progress(git_repository *repo)
 	return 0;
 }
 
-static int rebase_ensure_not_dirty(git_repository *repo)
+static int rebase_ensure_not_dirty(
+	git_repository *repo,
+	bool check_index,
+	bool check_workdir,
+	int fail_with)
 {
 	git_tree *head = NULL;
 	git_index *index = NULL;
 	git_diff *diff = NULL;
 	int error;
 
-	if ((error = git_repository_head_tree(&head, repo)) < 0 ||
-		(error = git_repository_index(&index, repo)) < 0 ||
-		(error = git_diff_tree_to_index(&diff, repo, head, index, NULL)) < 0)
-		goto done;
+	if (check_index) {
+		if ((error = git_repository_head_tree(&head, repo)) < 0 ||
+			(error = git_repository_index(&index, repo)) < 0 ||
+			(error = git_diff_tree_to_index(&diff, repo, head, index, NULL)) < 0)
+			goto done;
 
-	if (git_diff_num_deltas(diff) > 0) {
-		giterr_set(GITERR_REBASE, "Uncommitted changes exist in index");
-		error = -1;
-		goto done;
+		if (git_diff_num_deltas(diff) > 0) {
+			giterr_set(GITERR_REBASE, "Uncommitted changes exist in index");
+			error = fail_with;
+			goto done;
+		}
+
+		git_diff_free(diff);
+		diff = NULL;
 	}
 
-	git_diff_free(diff);
-	diff = NULL;
+	if (check_workdir) {
+		if ((error = git_diff_index_to_workdir(&diff, repo, index, NULL)) < 0)
+			goto done;
 
-	if ((error = git_diff_index_to_workdir(&diff, repo, index, NULL)) < 0)
-		goto done;
-
-	if (git_diff_num_deltas(diff) > 0) {
-		giterr_set(GITERR_REBASE, "Unstaged changes exist in workdir");
-		error = -1;
+		if (git_diff_num_deltas(diff) > 0) {
+			giterr_set(GITERR_REBASE, "Unstaged changes exist in workdir");
+			error = fail_with;
+			goto done;
+		}
 	}
 
 done:
@@ -679,7 +688,7 @@ int git_rebase_init(
 	if ((error = rebase_normalize_opts(repo, &opts, given_opts)) < 0 ||
 		(error = git_repository__ensure_not_bare(repo, "rebase")) < 0 ||
 		(error = rebase_ensure_not_in_progress(repo)) < 0 ||
-		(error = rebase_ensure_not_dirty(repo)) < 0 ||
+		(error = rebase_ensure_not_dirty(repo, true, true, GIT_ERROR)) < 0 ||
 		(error = git_commit_lookup(
 			&onto_commit, repo, git_annotated_commit_id(onto))) < 0)
 		return error;
@@ -869,11 +878,12 @@ static int rebase_commit_merge(
 
 	if (git_index_has_conflicts(index)) {
 		giterr_set(GITERR_REBASE, "Conflicts have not been resolved");
-		error = GIT_EMERGECONFLICT;
+		error = GIT_EUNMERGED;
 		goto done;
 	}
 
-	if ((error = git_commit_lookup(&current_commit, rebase->repo, &operation->id)) < 0 ||
+	if ((error = rebase_ensure_not_dirty(rebase->repo, false, true, GIT_EUNMERGED)) < 0 ||
+		(error = git_commit_lookup(&current_commit, rebase->repo, &operation->id)) < 0 ||
 		(error = git_repository_head(&head, rebase->repo)) < 0 ||
 		(error = git_reference_peel((git_object **)&head_commit, head, GIT_OBJ_COMMIT)) < 0 ||
 		(error = git_commit_tree(&head_tree, head_commit)) < 0 ||

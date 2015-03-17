@@ -28,6 +28,9 @@ v0.22 + 1
   allow for specifying the expression from the user to be put into the
   reflog.
 
+* `git_rebase_commit` now return `GIT_EUNMERGED` when you attempt to
+  commit with unstaged changes.
+
 ### API additions
 
 * The `git_merge_options` gained a `file_flags` member.
