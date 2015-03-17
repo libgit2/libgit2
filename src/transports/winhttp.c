@@ -1322,9 +1322,11 @@ static void winhttp_free(git_smart_subtransport *subtransport)
 	git__free(t);
 }
 
-int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *owner)
+int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *owner, void *param)
 {
 	winhttp_subtransport *t;
+
+	GIT_UNUSED(param);
 
 	if (!out)
 		return -1;
