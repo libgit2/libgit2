@@ -143,6 +143,8 @@ GIT_EXTERN(int) git_rebase_init_options(
  * @param onto The branch to rebase onto, or NULL to rebase onto the given
  *             upstream
  * @param opts Options to specify how rebase is performed
+ * @param checkout_opts Options to specify how the checkout to the `onto`
+ *                      branch is performed
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_rebase_init(
@@ -151,7 +153,8 @@ GIT_EXTERN(int) git_rebase_init(
 	const git_annotated_commit *branch,
 	const git_annotated_commit *upstream,
 	const git_annotated_commit *onto,
-	const git_rebase_options *opts);
+	const git_rebase_options *opts,
+	const git_checkout_options *checkout_opts);
 
 /**
  * Opens an existing rebase that was previously started by either an
@@ -245,10 +248,14 @@ GIT_EXTERN(int) git_rebase_commit(
  * and working directory to their state before rebase began.
  *
  * @param rebase The rebase that is in-progress
+ * @param checkout_opts The checkout options that will be used to influence a
+ *                      hard reset of the working directory.
  * @return Zero on success; GIT_ENOTFOUND if a rebase is not in progress,
  *         -1 on other errors.
  */
-GIT_EXTERN(int) git_rebase_abort(git_rebase *rebase);
+GIT_EXTERN(int) git_rebase_abort(
+	git_rebase *rebase,
+	const git_checkout_options *checkout_opts);
 
 /**
  * Finishes a rebase that is currently in progress once all patches have

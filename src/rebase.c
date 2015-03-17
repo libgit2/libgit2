@@ -658,19 +658,37 @@ done:
 	return error;
 }
 
+static void normalize_checkout_opts(
+	git_checkout_options *checkout_opts,
+	const git_checkout_options *given_checkout_opts)
+{
+	if (given_checkout_opts != NULL)
+		memcpy(checkout_opts, given_checkout_opts, sizeof(git_checkout_options));
+	else {
+		git_checkout_options default_checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+		default_checkout_opts.checkout_strategy =  GIT_CHECKOUT_SAFE;
+
+		memcpy(checkout_opts, &default_checkout_opts, sizeof(git_checkout_options));
+	}
+
+	if (! (checkout_opts->checkout_strategy & (GIT_CHECKOUT_SAFE | GIT_CHECKOUT_FORCE)))
+		checkout_opts->checkout_strategy |= GIT_CHECKOUT_SAFE;
+}
+
 int git_rebase_init(
 	git_rebase **out,
 	git_repository *repo,
 	const git_annotated_commit *branch,
 	const git_annotated_commit *upstream,
 	const git_annotated_commit *onto,
-	const git_rebase_options *given_opts)
+	const git_rebase_options *given_opts,
+	const git_checkout_options *given_checkout_opts)
 {
 	git_rebase *rebase = NULL;
 	git_rebase_options opts;
 	git_buf reflog = GIT_BUF_INIT;
 	git_commit *onto_commit = NULL;
-	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_checkout_options checkout_opts;
 	git_reference *head_ref = NULL;
 	int error;
 
@@ -679,11 +697,12 @@ int git_rebase_init(
 	*out = NULL;
 
 	GITERR_CHECK_VERSION(given_opts, GIT_REBASE_OPTIONS_VERSION, "git_rebase_options");
+	GITERR_CHECK_VERSION(given_checkout_opts, GIT_CHECKOUT_OPTIONS_VERSION, "git_checkout_options");
 
 	if (!onto)
 		onto = upstream;
 
-	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+	normalize_checkout_opts(&checkout_opts, given_checkout_opts);
 
 	if ((error = rebase_normalize_opts(repo, &opts, given_opts)) < 0 ||
 		(error = git_repository__ensure_not_bare(repo, "rebase")) < 0 ||
@@ -723,20 +742,13 @@ done:
 	return error;
 }
 
-static void normalize_checkout_opts(
+static void normalize_checkout_opts_for_apply(
 	git_rebase *rebase,
 	git_commit *current_commit,
 	git_checkout_options *checkout_opts,
 	const git_checkout_options *given_checkout_opts)
 {
-	if (given_checkout_opts != NULL)
-		memcpy(checkout_opts, given_checkout_opts, sizeof(git_checkout_options));
-	else {
-		git_checkout_options default_checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
-		default_checkout_opts.checkout_strategy =  GIT_CHECKOUT_SAFE;
-
-		memcpy(checkout_opts, &default_checkout_opts, sizeof(git_checkout_options));
-	}
+	normalize_checkout_opts(checkout_opts, given_checkout_opts);
 
 	if (!checkout_opts->ancestor_label)
 		checkout_opts->ancestor_label = "ancestor";
@@ -805,7 +817,7 @@ static int rebase_next_merge(
 
 	git_oid_fmt(current_idstr, &operation->id);
 
-	normalize_checkout_opts(rebase, current_commit, &checkout_opts, given_checkout_opts);
+	normalize_checkout_opts_for_apply(rebase, current_commit, &checkout_opts, given_checkout_opts);
 
 	if ((error = git_indexwriter_init_for_operation(&indexwriter, rebase->repo, &checkout_opts.checkout_strategy)) < 0 ||
 		(error = rebase_setupfile(rebase, MSGNUM_FILE, -1, "%d\n", rebase->current+1)) < 0 ||
@@ -960,7 +972,9 @@ int git_rebase_commit(
 	return error;
 }
 
-int git_rebase_abort(git_rebase *rebase)
+int git_rebase_abort(
+	git_rebase *rebase,
+	const git_checkout_options *checkout_opts)
 {
 	git_reference *orig_head_ref = NULL;
 	git_commit *orig_head_commit = NULL;
@@ -981,7 +995,7 @@ int git_rebase_abort(git_rebase *rebase)
 	if ((error = git_commit_lookup(
 			&orig_head_commit, rebase->repo, &rebase->orig_head_id)) < 0 ||
 		(error = git_reset(rebase->repo, (git_object *)orig_head_commit,
-			GIT_RESET_HARD, NULL)) < 0)
+			GIT_RESET_HARD, checkout_opts)) < 0)
 		goto done;
 
 	error = rebase_cleanup(rebase);

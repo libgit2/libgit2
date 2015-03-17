@@ -39,12 +39,12 @@ void test_rebase_setup__blocked_when_in_progress(void)
 	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL, NULL));
 	git_rebase_free(rebase);
 
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_REBASE_MERGE, git_repository_state(repo));
 
-	cl_git_fail(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
+	cl_git_fail(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL, NULL));
 
 	git_annotated_commit_free(branch_head);
 	git_annotated_commit_free(upstream_head);
@@ -70,7 +70,7 @@ void test_rebase_setup__merge(void)
 	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL, NULL));
 
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_REBASE_MERGE, git_repository_state(repo));
 
@@ -118,7 +118,7 @@ void test_rebase_setup__merge_root(void)
 	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_annotated_commit_from_ref(&onto_head, repo, onto_ref));
 
-	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, NULL, onto_head, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, NULL, onto_head, NULL, NULL));
 
 	git_oid_fromstr(&head_id, "efad0b11c47cb2f0220cbd6f5b0f93bb99064b00");
 	cl_git_pass(git_repository_head(&head, repo));
@@ -168,7 +168,7 @@ void test_rebase_setup__merge_onto_and_upstream(void)
 	cl_git_pass(git_annotated_commit_from_ref(&branch2_head, repo, branch2_ref));
 	cl_git_pass(git_annotated_commit_from_ref(&onto_head, repo, onto_ref));
 
-	cl_git_pass(git_rebase_init(&rebase, repo, branch1_head, branch2_head, onto_head, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch1_head, branch2_head, onto_head, NULL, NULL));
 
 	git_oid_fromstr(&head_id, "efad0b11c47cb2f0220cbd6f5b0f93bb99064b00");
 	cl_git_pass(git_repository_head(&head, repo));
@@ -215,7 +215,7 @@ void test_rebase_setup__branch_with_merges(void)
 	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL, NULL));
 
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_REBASE_MERGE, git_repository_state(repo));
 
@@ -263,7 +263,7 @@ void test_rebase_setup__orphan_branch(void)
 	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL, NULL));
 
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_REBASE_MERGE, git_repository_state(repo));
 
@@ -314,7 +314,7 @@ void test_rebase_setup__merge_null_branch_uses_HEAD(void)
 	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/master"));
 	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase_init(&rebase, repo, NULL, upstream_head, NULL, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, NULL, upstream_head, NULL, NULL, NULL));
 
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_REBASE_MERGE, git_repository_state(repo));
 
@@ -358,7 +358,7 @@ static int rebase_is_blocked(void)
 	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
 												    
-	error = git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL);
+	error = git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL, NULL);
 
 	git_annotated_commit_free(branch_head);
 	git_annotated_commit_free(upstream_head);

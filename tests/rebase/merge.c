@@ -53,7 +53,7 @@ void test_rebase_merge__next(void)
 	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL, NULL));
 
 	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
 
@@ -120,7 +120,7 @@ void test_rebase_merge__next_with_conflicts(void)
 	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL, NULL));
 
 	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
 
@@ -167,7 +167,7 @@ void test_rebase_merge__next_stops_with_iterover(void)
 	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL, NULL));
 
 	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
@@ -223,7 +223,7 @@ void test_rebase_merge__commit(void)
 	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL, NULL));
 
 	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
@@ -316,7 +316,7 @@ void test_rebase_merge__commit_updates_rewritten(void)
 	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL, NULL));
 
 	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
@@ -356,7 +356,7 @@ void test_rebase_merge__commit_drops_already_applied(void)
 	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL, NULL));
 
 	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
 	cl_git_fail(error = git_rebase_commit(&commit_id, rebase, NULL, signature,
@@ -399,7 +399,7 @@ void test_rebase_merge__finish(void)
 	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL, NULL));
 
 	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
@@ -470,7 +470,7 @@ static void test_copy_note(
 		git_commit_id(branch_commit),
 		"This is a commit note.", 0));
 
-	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, opts));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, opts, NULL));
 
 	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
