@@ -90,7 +90,7 @@ void test_rebase_merge__next_with_conflicts(void)
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_status_list *status_list;
 	const git_status_entry *status_entry;
-	git_oid pick_id;
+	git_oid pick_id, commit_id;
 
 	const char *expected_merge =
 "ASPARAGUS SOUP.\n"
@@ -138,6 +138,8 @@ void test_rebase_merge__next_with_conflicts(void)
 	cl_assert_equal_s("asparagus.txt", status_entry->head_to_index->new_file.path);
 
 	cl_assert_equal_file(expected_merge, strlen(expected_merge), "rebase/asparagus.txt");
+
+	cl_git_fail_with(GIT_EUNMERGED, git_rebase_commit(&commit_id, rebase, NULL, signature, NULL, NULL));
 
 	git_status_list_free(status_list);
 	git_annotated_commit_free(branch_head);
