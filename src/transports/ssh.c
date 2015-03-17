@@ -359,6 +359,22 @@ static int _git_ssh_authenticate_session(
 				session, c->username, c->prompt_callback);
 			break;
 		}
+#ifdef GIT_SSH_MEMORY_CREDENTIALS
+		case GIT_CREDTYPE_SSH_MEMORY: {
+			git_cred_ssh_key *c = (git_cred_ssh_key *)cred;
+
+			rc = libssh2_userauth_publickey_frommemory(
+				session,
+				c->username,
+				strlen(c->username),
+				c->publickey,
+				strlen(c->publickey),
+				c->privatekey,
+				strlen(c->privatekey),
+				c->passphrase);
+			break;
+		}
+#endif
 		default:
 			rc = LIBSSH2_ERROR_AUTHENTICATION_FAILED;
 		}
@@ -729,6 +745,9 @@ static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *use
 		if (!git__prefixcmp(ptr, SSH_AUTH_PUBLICKEY)) {
 			*out |= GIT_CREDTYPE_SSH_KEY;
 			*out |= GIT_CREDTYPE_SSH_CUSTOM;
+#ifdef GIT_SSH_MEMORY_CREDENTIALS
+			*out |= GIT_CREDTYPE_SSH_MEMORY;
+#endif
 			ptr += strlen(SSH_AUTH_PUBLICKEY);
 			continue;
 		}
