@@ -155,28 +155,35 @@ void test_reset_soft__fails_when_index_contains_conflicts_independently_of_MERGE
 	cl_assert_equal_i(GIT_EUNMERGED, git_reset(repo, target, GIT_RESET_SOFT, NULL));
 }
 
-void test_reset_soft_reflog_is_correct(void)
+void test_reset_soft__reflog_is_correct(void)
 {
-	const char *exp_msg = "commit: Updating test data so we can test inter-hunk-context";
+	git_annotated_commit *annotated;
+	const char *exp_msg = "checkout: moving from br2 to master";
+	const char *master_msg = "commit: checking in";
 
-	reflog_check(repo, "HEAD", 9, "yoram.harmelin@gmail.com", exp_msg);
-	reflog_check(repo, "refs/heads/master", 9, "yoram.harmelin@gmail.com", exp_msg);
+	reflog_check(repo, "HEAD", 7, "yoram.harmelin@gmail.com", exp_msg);
+	reflog_check(repo, "refs/heads/master", 2, "yoram.harmelin@gmail.com", master_msg);
 
 	/* Branch not moving, no reflog entry */
 	cl_git_pass(git_revparse_single(&target, repo, "HEAD^{commit}"));
 	cl_git_pass(git_reset(repo, target, GIT_RESET_SOFT, NULL));
-	reflog_check(repo, "HEAD", 9, "yoram.harmelin@gmail.com", exp_msg);
-	reflog_check(repo, "refs/heads/master", 9, "yoram.harmelin@gmail.com", exp_msg);
+	reflog_check(repo, "HEAD", 7, "yoram.harmelin@gmail.com", exp_msg);
+	reflog_check(repo, "refs/heads/master", 2, "yoram.harmelin@gmail.com", master_msg);
+	git_object_free(target);
 
-	/* Moved branch, expect default message */
+	/* Moved branch, expect id in message */
+	exp_msg = "reset: moving to be3563ae3f795b2b4353bcce3a527ad0a4f7f644";
 	cl_git_pass(git_revparse_single(&target, repo, "HEAD~^{commit}"));
 	cl_git_pass(git_reset(repo, target, GIT_RESET_SOFT, NULL));
-	reflog_check(repo, "HEAD", 9, "yoram.harmelin@gmail.com", exp_msg);
-	reflog_check(repo, "refs/heads/master", 10, NULL, "reset: moving");
+	reflog_check(repo, "HEAD", 8, "yoram.harmelin@gmail.com", exp_msg);
+	reflog_check(repo, "refs/heads/master", 3, NULL, exp_msg);
 
-	/* Moved branch, expect custom message */
-	cl_git_pass(git_revparse_single(&target, repo, "HEAD~^{commit}"));
-	cl_git_pass(git_reset(repo, target, GIT_RESET_SOFT, NULL));
+	/* Moved branch, expect message with annotated string */
+	exp_msg = "reset: moving to HEAD~^{commit}";
+	cl_git_pass(git_annotated_commit_from_revspec(&annotated, repo, "HEAD~^{commit}"));
+	cl_git_pass(git_reset_from_annotated(repo, annotated, GIT_RESET_SOFT, NULL));
 	reflog_check(repo, "HEAD", 9, "yoram.harmelin@gmail.com", exp_msg);
-	reflog_check(repo, "refs/heads/master", 11, NULL, "message1");
+	reflog_check(repo, "refs/heads/master", 4, NULL, exp_msg);
+
+	git_annotated_commit_free(annotated);
 }

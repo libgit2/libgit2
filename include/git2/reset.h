@@ -65,6 +65,24 @@ GIT_EXTERN(int) git_reset(
 	git_checkout_options *checkout_opts);
 
 /**
+ * Sets the current head to the specified commit oid and optionally
+ * resets the index and working tree to match.
+ *
+ * This behaves like `git_reset()` but takes an annotated commit,
+ * which lets you specify which extended sha syntax string was
+ * specified by a user, allowing for more exact reflog messages.
+ *
+ * See the documentation for `git_reset()`.
+ *
+ * @see git_reset
+ */
+GIT_EXTERN(int) git_reset_from_annotated(
+	git_repository *repo,
+	git_annotated_commit *commit,
+	git_reset_t reset_type,
+	git_checkout_options *checkout_opts);
+
+/**
  * Updates some entries in the index from the target commit tree.
  *
  * The scope of the updated entries is determined by the paths

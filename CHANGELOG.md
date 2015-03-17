@@ -18,6 +18,12 @@ v0.22 + 1
 * The local transport now auto-scales the number of threads to use
   when creating the packfile instead of sticking to one.
 
+* Reference renaming now uses the right id for the old value.
+
+* The annotated version of branch creation, HEAD detaching and reset
+  allow for specifying the expression from the user to be put into the
+  reflog.
+
 ### API additions
 
 * Parsing and retrieving a configuration value as a path is exposed
@@ -33,7 +39,14 @@ v0.22 + 1
 * `git_config_get_string_buf()` provides a way to safely retrieve a
   string from a non-snapshot configuration.
 
-* Reference renaming now uses the right id for the old value.
+* `git_annotated_commit_from_revspec()` allows to get an annotated
+  commit from an extended sha synatx string.
+
+* `git_repository_set_head_detached_from_annotated()`,
+  `git_branch_create_from_annotated()` and
+  `git_reset_from_annotated()` allow for the caller to provide an
+  annotated commit through which they can control what expression is
+  put into the reflog as the source/target.
 
 * `git_index_add_frombuffer()` can now create a blob from memory
    buffer and add it to the index which is attached to a repository.

@@ -12,6 +12,7 @@
 #include "git2/refs.h"
 #include "git2/repository.h"
 #include "git2/annotated_commit.h"
+#include "git2/revparse.h"
 
 static int annotated_commit_init(
 	git_annotated_commit **out,
@@ -95,6 +96,33 @@ int git_annotated_commit_from_fetchhead(
 
 	return annotated_commit_init(out, repo, id, branch_name, remote_url);
 }
+
+int git_annotated_commit_from_revspec(
+	git_annotated_commit **out,
+	git_repository *repo,
+	const char *revspec)
+{
+	git_object *obj, *commit;
+	int error;
+
+	assert(out && repo && revspec);
+
+	if ((error = git_revparse_single(&obj, repo, revspec)) < 0)
+		return error;
+
+	if ((error = git_object_peel(&commit, obj, GIT_OBJ_COMMIT))) {
+		git_object_free(obj);
+		return error;
+	}
+
+	error = annotated_commit_init(out, repo, git_object_id(commit), revspec, NULL);
+
+	git_object_free(obj);
+	git_object_free(commit);
+
+	return error;
+}
+
 
 const git_oid *git_annotated_commit_id(
 	const git_annotated_commit *annotated_commit)

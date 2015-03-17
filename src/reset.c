@@ -10,6 +10,7 @@
 #include "tag.h"
 #include "merge.h"
 #include "diff.h"
+#include "annotated_commit.h"
 #include "git2/reset.h"
 #include "git2/checkout.h"
 #include "git2/merge.h"
@@ -96,9 +97,10 @@ cleanup:
 	return error;
 }
 
-int git_reset(
+static int reset(
 	git_repository *repo,
 	git_object *target,
+	const char *to,
 	git_reset_t reset_type,
 	git_checkout_options *checkout_opts)
 {
@@ -139,7 +141,7 @@ int git_reset(
 		goto cleanup;
 	}
 
-	if ((error = git_buf_printf(&log_message, "reset: moving to %s", git_oid_tostr_s(git_object_id(commit)))) < 0)
+	if ((error = git_buf_printf(&log_message, "reset: moving to %s", to)) < 0)
 		return error;
 
 	/* move HEAD to the new target */
@@ -175,4 +177,22 @@ cleanup:
 	git_buf_free(&log_message);
 
 	return error;
+}
+
+int git_reset(
+	git_repository *repo,
+	git_object *target,
+	git_reset_t reset_type,
+	git_checkout_options *checkout_opts)
+{
+	return reset(repo, target, git_oid_tostr_s(git_object_id(target)), reset_type, checkout_opts);
+}
+
+int git_reset_from_annotated(
+	git_repository *repo,
+	git_annotated_commit *commit,
+	git_reset_t reset_type,
+	git_checkout_options *checkout_opts)
+{
+	return reset(repo, (git_object *) commit->commit, commit->ref_name, reset_type, checkout_opts);
 }

@@ -2,6 +2,7 @@
 #include "refs.h"
 #include "repo_helpers.h"
 #include "posix.h"
+#include "git2/annotated_commit.h"
 
 static const char *g_email = "foo@example.com";
 static git_repository *repo;
@@ -251,6 +252,7 @@ void test_repo_head__setting_head_updates_reflog(void)
 {
 	git_object *tag;
 	git_signature *sig;
+	git_annotated_commit *annotated;
 
 	cl_git_pass(git_signature_now(&sig, "me", "foo@example.com"));
 
@@ -264,6 +266,12 @@ void test_repo_head__setting_head_updates_reflog(void)
 	test_reflog(repo, 1, NULL, "tags/test^{commit}", "foo@example.com", "checkout: moving from unborn to e90810b8df3e80c413d903f631643c716887138d");
 	test_reflog(repo, 0, "tags/test^{commit}", "refs/heads/haacked", "foo@example.com", "checkout: moving from e90810b8df3e80c413d903f631643c716887138d to haacked");
 
+	cl_git_pass(git_annotated_commit_from_revspec(&annotated, repo, "haacked~0"));
+	cl_git_pass(git_repository_set_head_detached_from_annotated(repo, annotated));
+
+	test_reflog(repo, 0, NULL, "refs/heads/haacked", "foo@example.com", "checkout: moving from haacked to haacked~0");
+
+	git_annotated_commit_free(annotated);
 	git_object_free(tag);
 	git_signature_free(sig);
 }

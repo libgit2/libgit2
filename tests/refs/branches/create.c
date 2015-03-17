@@ -97,6 +97,7 @@ void test_refs_branches_create__default_reflog_message(void)
 	git_reflog *log;
 	git_buf buf = GIT_BUF_INIT;
 	const git_reflog_entry *entry;
+	git_annotated_commit *annotated;
 	git_signature *sig;
 	git_config *cfg;
 
@@ -116,6 +117,21 @@ void test_refs_branches_create__default_reflog_message(void)
 	cl_assert_equal_s(git_buf_cstr(&buf), git_reflog_entry_message(entry));
 	cl_assert_equal_s(sig->email, git_reflog_entry_committer(entry)->email);
 
+	cl_git_pass(git_reference_remove(repo, "refs/heads/" NEW_BRANCH_NAME));
+	git_reference_free(branch);
+	git_reflog_free(log);
+	git_buf_clear(&buf);
+
+	cl_git_pass(git_annotated_commit_from_revspec(&annotated, repo, "e90810b8df3"));
+	cl_git_pass(git_branch_create_from_annotated(&branch, repo, NEW_BRANCH_NAME, annotated, true));
+	cl_git_pass(git_reflog_read(&log, repo, "refs/heads/" NEW_BRANCH_NAME));
+
+	entry = git_reflog_entry_byindex(log, 0);
+	cl_git_pass(git_buf_printf(&buf, "branch: Created from e90810b8df3"));
+	cl_assert_equal_s(git_buf_cstr(&buf), git_reflog_entry_message(entry));
+	cl_assert_equal_s(sig->email, git_reflog_entry_committer(entry)->email);
+
+	git_annotated_commit_free(annotated);
 	git_buf_free(&buf);
 	git_reflog_free(log);
 	git_signature_free(sig);
