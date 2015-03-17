@@ -339,6 +339,7 @@ int git_futils_mkdir_ext(
 	struct git_futils_mkdir_options *opts)
 {
 	int error = -1;
+	int mkdir_attempted = 0;
 	git_buf make_path = GIT_BUF_INIT;
 	ssize_t root = 0, min_root_len, root_len;
 	char lastch = '/', *tail;
@@ -415,31 +416,42 @@ int git_futils_mkdir_ext(
 			continue;
 
 		/* See what's going on with this path component */
-		opts->perfdata.stat_calls++;
-
-		if (p_lstat(make_path.ptr, &st) < 0) {
-			opts->perfdata.mkdir_calls++;
-
-			if (errno != ENOENT ||
-				(p_mkdir(make_path.ptr, mode) < 0 && errno != EEXIST)) {
-				giterr_set(GITERR_OS, "Failed to make directory '%s'", make_path.ptr);
-				error = GIT_EEXISTS;
-				goto done;
-			}
-
-			giterr_clear();
-		} else {
-			/* with exclusive create, existing dir is an error */
-			if ((flags & GIT_MKDIR_EXCL) != 0) {
-				giterr_set(GITERR_FILESYSTEM, "Failed to make directory '%s': directory exists", make_path.ptr);
-				error = GIT_EEXISTS;
-				goto done;
-			}
-
-			if ((error = validate_existing(
-				make_path.ptr, &st, mode, flags, &opts->perfdata)) < 0)
+		do {
+			opts->perfdata.stat_calls++;
+			if (p_lstat(make_path.ptr, &st) < 0) {
+				if (errno != ENOENT || mkdir_attempted == 1) {
+					giterr_set(GITERR_OS, "Failed to make directory '%s'", make_path.ptr);
+					error = GIT_EEXISTS;
 					goto done;
-		}
+				}
+
+				opts->perfdata.mkdir_calls++;
+				if (p_mkdir(make_path.ptr, mode) == 0) {
+					giterr_clear();
+					break;
+				} else if (errno != EEXIST) {
+					giterr_set(GITERR_OS, "Failed to make directory '%s'", make_path.ptr);
+					error = GIT_EEXISTS;
+					goto done;
+				} else {
+					/* re-stat the path and check again */
+					mkdir_attempted = 1;
+				}
+			} else {
+				/* with exclusive create, existing dir is an error */
+				if ((flags & GIT_MKDIR_EXCL) != 0) {
+					giterr_set(GITERR_FILESYSTEM, "Failed to make directory '%s': directory exists", make_path.ptr);
+					error = GIT_EEXISTS;
+					goto done;
+				}
+
+				if ((error = validate_existing(
+					make_path.ptr, &st, mode, flags, &opts->perfdata)) < 0)
+						goto done;
+
+				break;
+			}
+		} while (1);
 
 		/* chmod if requested and necessary */
 		if (((flags & GIT_MKDIR_CHMOD_PATH) != 0 ||
