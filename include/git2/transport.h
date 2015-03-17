@@ -112,7 +112,7 @@ typedef enum {
 	 *
 	 * Only available for libssh2+OpenSSL for now.
 	 */
-	+GIT_CREDTYPE_SSH_MEMORY = (1u << 6),
+	GIT_CREDTYPE_SSH_MEMORY = (1u << 6),
 #endif
 } git_credtype_t;
 
@@ -307,7 +307,7 @@ GIT_EXTERN(int) git_cred_username_new(git_cred **cred, const char *username);
  * @param passphrase The passphrase of the credential.
  * @return 0 for success or an error code for failure
  */
-IT_EXTERN(int) git_cred_ssh_key_memory_new(
+GIT_EXTERN(int) git_cred_ssh_key_memory_new(
 	git_cred **out,
 	const char *username,
 	const char *publickey,
