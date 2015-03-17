@@ -1459,7 +1459,7 @@ int git_remote_update_tips(
 		const char *reflog_message)
 {
 	git_refspec *spec, tagspec;
-	git_vector refs;
+	git_vector refs = GIT_VECTOR_INIT;
 	int error;
 	size_t i;
 
