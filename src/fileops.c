@@ -417,7 +417,7 @@ int git_futils_mkdir_ext(
 
 		/* See what's going on with this path component */
 		mkdir_attempted = 0;
-		do {
+		for (;;) {
 			opts->perfdata.stat_calls++;
 			if (p_lstat(make_path.ptr, &st) < 0) {
 				if (errno != ENOENT || mkdir_attempted == 1) {
@@ -452,7 +452,7 @@ int git_futils_mkdir_ext(
 
 				break;
 			}
-		} while (1);
+		}
 
 		/* chmod if requested and necessary */
 		if (((flags & GIT_MKDIR_CHMOD_PATH) != 0 ||
