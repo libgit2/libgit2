@@ -1351,30 +1351,31 @@ static bool verify_dotgit_hfs(const char *path, size_t len)
 
 GIT_INLINE(bool) verify_dotgit_ntfs(git_repository *repo, const char *path, size_t len)
 {
-	const char *shortname = NULL;
-	size_t i, start, shortname_len = 0;
+	git_buf *reserved = git_repository__reserved_names_win32;
+	size_t reserved_len = git_repository__reserved_names_win32_len;
+	size_t start = 0, i;
 
-	/* See if the repo has a custom shortname (not "GIT~1") */
-	if (repo &&
-		(shortname = git_repository__8dot3_name(repo)) &&
-		shortname != git_repository__8dot3_default)
-		shortname_len = strlen(shortname);
+	if (repo)
+		git_repository__reserved_names(&reserved, &reserved_len, repo, true);
 
-	if (len >= 4 && strncasecmp(path, ".git", 4) == 0)
-		start = 4;
-	else if (len >= git_repository__8dot3_default_len &&
-		strncasecmp(path, git_repository__8dot3_default, git_repository__8dot3_default_len) == 0)
-		start = git_repository__8dot3_default_len;
-	else if (shortname_len && len >= shortname_len &&
-		strncasecmp(path, shortname, shortname_len) == 0)
-		start = shortname_len;
-	else
+	for (i = 0; i < reserved_len; i++) {
+		git_buf *r = &reserved[i];
+
+		if (len >= r->size &&
+			strncasecmp(path, r->ptr, r->size) == 0) {
+			start = r->size;
+			break;
+		}
+	}
+
+	if (!start)
 		return true;
 
-	/* Reject paths beginning with ".git\" */
+	/* Reject paths like ".git\" */
 	if (path[start] == '\\')
 		return false;
 
+	/* Reject paths like '.git ' or '.git.' */
 	for (i = start; i < len; i++) {
 		if (path[i] != ' ' && path[i] != '.')
 			return true;

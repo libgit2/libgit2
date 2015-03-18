@@ -14,6 +14,7 @@
 #include "git2/object.h"
 #include "git2/config.h"
 
+#include "array.h"
 #include "cache.h"
 #include "refs.h"
 #include "buffer.h"
@@ -26,6 +27,9 @@
 #define GIT_DIR DOT_GIT "/"
 #define GIT_DIR_MODE 0755
 #define GIT_BARE_DIR_MODE 0777
+
+/* Default DOS-compatible 8.3 "short name" for a git repository, "GIT~1" */
+#define GIT_DIR_SHORTNAME "GIT~1"
 
 /** Cvar cache identifiers */
 typedef enum {
@@ -124,16 +128,17 @@ struct git_repository {
 	git_diff_driver_registry *diff_drivers;
 
 	char *path_repository;
+	char *path_gitlink;
 	char *workdir;
 	char *namespace;
-	char *name_8dot3;
 
 	char *ident_name;
 	char *ident_email;
 
-	unsigned is_bare:1,
-		has_8dot3:1,
-		has_8dot3_default:1;
+	git_array_t(git_buf) reserved_names;
+
+	unsigned is_bare:1;
+
 	unsigned int lru_counter;
 
 	git_atomic attr_session_key;
@@ -188,19 +193,24 @@ int git_repository__set_orig_head(git_repository *repo, const git_oid *orig_head
 
 int git_repository__cleanup_files(git_repository *repo, const char *files[], size_t files_len);
 
-/*
- * Gets the DOS-compatible 8.3 "short name".  This will return only the
- * short name for the repository directory (ie, "git~1" for ".git").  This
- * will always return a pointer to `git_repository__8dot3_default` when
- * "GIT~1" is the short name.  This will return NULL for bare repositories,
- * and systems that do not have a short name.
- */
-const char *git_repository__8dot3_name(git_repository *repo);
+/* The default "reserved names" for a repository */
+extern git_buf git_repository__reserved_names_win32[];
+extern size_t git_repository__reserved_names_win32_len;
 
-/* The default DOS-compatible 8.3 "short name" for a git repository,
- * "GIT~1".
+extern git_buf git_repository__reserved_names_posix[];
+extern size_t git_repository__reserved_names_posix_len;
+
+/*
+ * Gets any "reserved names" in the repository.  This will return paths
+ * that should not be allowed in the repository (like ".git") to avoid
+ * conflicting with the repository path, or with alternate mechanisms to
+ * the repository path (eg, "GIT~1").  Every attempt will be made to look
+ * up all possible reserved names - if there was a conflict for the shortname
+ * GIT~1, for example, this function will try to look up the alternate
+ * shortname.  If that fails, this function returns false, but out and outlen
+ * will still be populated with good defaults.
  */
-extern const char *git_repository__8dot3_default;
-extern size_t git_repository__8dot3_default_len;
+bool git_repository__reserved_names(
+	git_buf **out, size_t *outlen, git_repository *repo, bool include_ntfs);
 
 #endif

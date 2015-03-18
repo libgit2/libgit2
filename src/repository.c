@@ -38,8 +38,16 @@
 
 #define GIT_REPO_VERSION 0
 
-const char *git_repository__8dot3_default = "GIT~1";
-size_t git_repository__8dot3_default_len = 5;
+git_buf git_repository__reserved_names_win32[] = {
+	{ DOT_GIT, 0, CONST_STRLEN(DOT_GIT) },
+	{ GIT_DIR_SHORTNAME, 0, CONST_STRLEN(GIT_DIR_SHORTNAME) }
+};
+size_t git_repository__reserved_names_win32_len = 2;
+
+git_buf git_repository__reserved_names_posix[] = {
+	{ DOT_GIT, 0, CONST_STRLEN(DOT_GIT) },
+};
+size_t git_repository__reserved_names_posix_len = 1;
 
 static void set_odb(git_repository *repo, git_odb *odb)
 {
@@ -111,6 +119,8 @@ void git_repository__cleanup(git_repository *repo)
 
 void git_repository_free(git_repository *repo)
 {
+	size_t i;
+
 	if (repo == NULL)
 		return;
 
@@ -121,10 +131,12 @@ void git_repository_free(git_repository *repo)
 	git_diff_driver_registry_free(repo->diff_drivers);
 	repo->diff_drivers = NULL;
 
+	for (i = 0; i < repo->reserved_names.size; i++)
+		git_buf_free(git_array_get(repo->reserved_names, i));
+
 	git__free(repo->path_repository);
 	git__free(repo->workdir);
 	git__free(repo->namespace);
-	git__free(repo->name_8dot3);
 	git__free(repo->ident_name);
 	git__free(repo->ident_email);
 
@@ -156,18 +168,26 @@ static bool valid_repository_path(git_buf *repository_path)
 static git_repository *repository_alloc(void)
 {
 	git_repository *repo = git__calloc(1, sizeof(git_repository));
-	if (!repo)
-		return NULL;
 
-	if (git_cache_init(&repo->objects) < 0) {
-		git__free(repo);
-		return NULL;
-	}
+	if (repo == NULL ||
+		git_cache_init(&repo->objects) < 0)
+		goto on_error;
+
+	git_array_init_to_size(repo->reserved_names, 4);
+	if (!repo->reserved_names.ptr)
+		goto on_error;
 
 	/* set all the entries in the cvar cache to `unset` */
 	git_repository__cvar_cache_clear(repo);
 
 	return repo;
+
+on_error:
+	if (repo)
+		git_cache_free(&repo->objects);
+
+	git__free(repo);
+	return NULL;
 }
 
 int git_repository_new(git_repository **out)
@@ -327,6 +347,7 @@ static int read_gitfile(git_buf *path_out, const char *file_path)
 static int find_repo(
 	git_buf *repo_path,
 	git_buf *parent_path,
+	git_buf *link_path,
 	const char *start_path,
 	uint32_t flags,
 	const char *ceiling_dirs)
@@ -369,8 +390,13 @@ static int find_repo(
 				git_buf repo_link = GIT_BUF_INIT;
 
 				if (!(error = read_gitfile(&repo_link, path.ptr))) {
-					if (valid_repository_path(&repo_link))
+					if (valid_repository_path(&repo_link)) {
 						git_buf_swap(repo_path, &repo_link);
+
+						if (link_path)
+							error = git_buf_put(link_path, 
+								path.ptr, path.size);
+					}
 
 					git_buf_free(&repo_link);
 					break;
@@ -458,13 +484,16 @@ int git_repository_open_ext(
 	const char *ceiling_dirs)
 {
 	int error;
-	git_buf path = GIT_BUF_INIT, parent = GIT_BUF_INIT;
+	git_buf path = GIT_BUF_INIT, parent = GIT_BUF_INIT,
+		link_path = GIT_BUF_INIT;
 	git_repository *repo;
 
 	if (repo_ptr)
 		*repo_ptr = NULL;
 
-	error = find_repo(&path, &parent, start_path, flags, ceiling_dirs);
+	error = find_repo(
+		&path, &parent, &link_path, start_path, flags, ceiling_dirs);
+
 	if (error < 0 || !repo_ptr)
 		return error;
 
@@ -473,6 +502,11 @@ int git_repository_open_ext(
 
 	repo->path_repository = git_buf_detach(&path);
 	GITERR_CHECK_ALLOC(repo->path_repository);
+
+	if (link_path.size) {
+		repo->path_gitlink = git_buf_detach(&link_path);
+		GITERR_CHECK_ALLOC(repo->path_gitlink);
+	}
 
 	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0)
 		repo->is_bare = 1;
@@ -525,7 +559,7 @@ int git_repository_discover(
 
 	git_buf_sanitize(out);
 
-	return find_repo(out, NULL, start_path, flags, ceiling_dirs);
+	return find_repo(out, NULL, NULL, start_path, flags, ceiling_dirs);
 }
 
 static int load_config(
@@ -810,27 +844,88 @@ const char *git_repository_get_namespace(git_repository *repo)
 	return repo->namespace;
 }
 
-const char *git_repository__8dot3_name(git_repository *repo)
-{
-	if (!repo->has_8dot3) {
-		repo->has_8dot3 = 1;
-
 #ifdef GIT_WIN32
-		if (!repo->is_bare) {
-			repo->name_8dot3 = git_win32_path_8dot3_name(repo->path_repository);
+static int reserved_names_add8dot3(git_repository *repo, const char *path)
+{
+	char *name = git_win32_path_8dot3_name(path);
+	const char *def = GIT_DIR_SHORTNAME;
+	size_t name_len, def_len = CONST_STRLEN(GIT_DIR_SHORTNAME);
+	git_buf *buf;
 
-			/* We anticipate the 8.3 name is "GIT~1", so use a static for
-			 * easy testing in the common case */
-			if (repo->name_8dot3 &&
-				strcasecmp(repo->name_8dot3, git_repository__8dot3_default) == 0)
-				repo->has_8dot3_default = 1;
-		}
-#endif
+	if (!name)
+		return 0;
+
+	name_len = strlen(name);
+
+	if (name_len == def_len && memcmp(name, def, def_len) == 0) {
+		git__free(name);
+		return 0;
 	}
 
-	return repo->has_8dot3_default ?
-		git_repository__8dot3_default : repo->name_8dot3;
+	if ((buf = git_array_alloc(repo->reserved_names)) == NULL)
+		return -1;
+
+	git_buf_attach(buf, name, name_len);
+	return true;
 }
+
+bool git_repository__reserved_names(
+	git_buf **out, size_t *outlen, git_repository *repo, bool include_ntfs)
+{
+	GIT_UNUSED(include_ntfs);
+
+	if (repo->reserved_names.size == 0) {
+		git_buf *buf;
+		size_t i;
+
+		/* Add the static defaults */
+		for (i = 0; i < git_repository__reserved_names_win32_len; i++) {
+			if ((buf = git_array_alloc(repo->reserved_names)) == NULL)
+				goto on_error;
+
+			buf->ptr = git_repository__reserved_names_win32[i].ptr;
+			buf->size = git_repository__reserved_names_win32[i].size;
+		}
+
+		/* Try to add any repo-specific reserved names */
+		if (!repo->is_bare) {
+			const char *reserved_path = repo->path_gitlink ?
+				repo->path_gitlink : repo->path_repository;
+
+			if (reserved_names_add8dot3(repo, reserved_path) < 0)
+				goto on_error;
+		}
+	}
+
+	*out = repo->reserved_names.ptr;
+	*outlen = repo->reserved_names.size;
+
+	return true;
+
+	/* Always give good defaults, even on OOM */
+on_error:
+	*out = git_repository__reserved_names_win32;
+	*outlen = git_repository__reserved_names_win32_len;
+
+	return false;
+}
+#else
+bool git_repository__reserved_names(
+	git_buf **out, size_t *outlen, git_repository *repo, bool include_ntfs)
+{
+	GIT_UNUSED(repo);
+
+	if (include_ntfs) {
+		*out = git_repository__reserved_names_win32;
+		*outlen = git_repository__reserved_names_win32_len;
+	} else {
+		*out = git_repository__reserved_names_posix;
+		*outlen = git_repository__reserved_names_posix_len;
+	}
+
+	return true;
+}
+#endif
 
 static int check_repositoryformatversion(git_config *config)
 {
