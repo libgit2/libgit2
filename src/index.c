@@ -2451,6 +2451,104 @@ int git_index_read_tree(git_index *index, const git_tree *tree)
 	return error;
 }
 
+int git_index_read_index(
+	git_index *index,
+	const git_index *new_index)
+{
+	git_vector new_entries = GIT_VECTOR_INIT,
+		remove_entries = GIT_VECTOR_INIT;
+	git_iterator *index_iterator = NULL;
+	git_iterator *new_iterator = NULL;
+	const git_index_entry *old_entry, *new_entry;
+	git_index_entry *entry;
+	size_t i;
+	int error;
+
+	if ((error = git_vector_init(&new_entries, new_index->entries.length, index->entries._cmp)) < 0 ||
+		(error = git_vector_init(&remove_entries, index->entries.length, NULL)) < 0)
+		goto done;
+
+	if ((error = git_iterator_for_index(&index_iterator,
+			index, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0 ||
+		(error = git_iterator_for_index(&new_iterator,
+			(git_index *)new_index, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0)
+		goto done;
+
+	if (((error = git_iterator_current(&old_entry, index_iterator)) < 0 && 
+			error != GIT_ITEROVER) ||
+		((error = git_iterator_current(&new_entry, new_iterator)) < 0 && 
+			error != GIT_ITEROVER))
+		goto done;
+
+	while (true) {
+		int diff;
+
+		if (old_entry && new_entry)
+			diff = git_index_entry_cmp(old_entry, new_entry);
+		else if (!old_entry && new_entry)
+			diff = 1;
+		else if (old_entry && !new_entry)
+			diff = -1;
+		else
+			break;
+
+		if (diff < 0) {
+			git_vector_insert(&remove_entries, (git_index_entry *)old_entry);
+		} else if (diff > 0) {
+			if ((error = index_entry_dup(&entry, git_index_owner(index), new_entry)) < 0)
+				goto done;
+
+			git_vector_insert(&new_entries, entry);
+		} else {
+			/* Path and stage are equal, if the OID is equal, keep it to
+			 * keep the stat cache data.
+			 */
+			if (git_oid_equal(&old_entry->id, &new_entry->id)) {
+				git_vector_insert(&new_entries, (git_index_entry *)old_entry);
+			} else {
+				if ((error = index_entry_dup(&entry, git_index_owner(index), new_entry)) < 0)
+					goto done;
+
+				git_vector_insert(&new_entries, entry);
+				git_vector_insert(&remove_entries, (git_index_entry *)old_entry);
+			}
+		}
+
+		if (diff <= 0) {
+			if ((error = git_iterator_advance(&old_entry, index_iterator)) < 0 &&
+				error != GIT_ITEROVER)
+				goto done;
+		}
+
+		if (diff >= 0) {
+			if ((error = git_iterator_advance(&new_entry, new_iterator)) < 0 &&
+				error != GIT_ITEROVER)
+				goto done;
+		}
+	}
+
+	git_index_name_clear(index);
+	git_index_reuc_clear(index);
+
+	git_vector_swap(&new_entries, &index->entries);
+
+	git_vector_foreach(&remove_entries, i, entry) {
+		if (index->tree)
+			git_tree_cache_invalidate_path(index->tree, entry->path);
+
+		index_entry_free(entry);
+	}
+
+	error = 0;
+
+done:
+	git_vector_free(&new_entries);
+	git_vector_free(&remove_entries);
+	git_iterator_free(index_iterator);
+	git_iterator_free(new_iterator);
+	return error;
+}
+
 git_repository *git_index_owner(const git_index *index)
 {
 	return INDEX_OWNER(index);

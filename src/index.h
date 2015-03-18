@@ -93,6 +93,8 @@ extern int git_index_snapshot_find(
 	size_t *at_pos, git_vector *snap, git_vector_cmp entry_srch,
 	const char *path, size_t path_len, int stage);
 
+/* Replace an index with a new index */
+int git_index_read_index(git_index *index, const git_index *new_index);
 
 typedef struct {
 	git_index *index;
