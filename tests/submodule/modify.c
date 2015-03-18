@@ -236,3 +236,11 @@ void test_submodule_modify__edit_and_save(void)
 	git_repository_free(r2);
 	git__free(old_url);
 }
+
+void test_submodule_modify__save_last(void)
+{
+	git_submodule *sm;
+
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_gitmodules_only"));
+	cl_git_pass(git_submodule_save(sm));
+}

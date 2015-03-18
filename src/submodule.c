@@ -628,8 +628,10 @@ int git_submodule_save(git_submodule *submodule)
 		(error = git_config_file_set_string(mods, key.ptr, submodule->url)) < 0)
 		goto cleanup;
 
-	if ((error = submodule_config_key_trunc_puts(&key, "branch")) < 0 ||
-		(error = git_config_file_set_string(mods, key.ptr, submodule->branch)) < 0)
+	if (!(error = submodule_config_key_trunc_puts(&key, "branch")) &&
+		submodule->branch != NULL)
+		error = git_config_file_set_string(mods, key.ptr, submodule->branch);
+	if (error < 0)
 		goto cleanup;
 
 	if (!(error = submodule_config_key_trunc_puts(&key, "update")) &&
