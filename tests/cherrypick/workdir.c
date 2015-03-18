@@ -300,7 +300,7 @@ void test_cherrypick_workdir__rename(void)
 		{ 0100644, "28d9eb4208074ad1cc84e71ccc908b34573f05d2", 0, "file3.txt.renamed" },
 	};
 
-	opts.merge_opts.flags |= GIT_MERGE_TREE_FIND_RENAMES;
+	opts.merge_opts.tree_flags |= GIT_MERGE_TREE_FIND_RENAMES;
 	opts.merge_opts.rename_threshold = 50;
 
 	git_oid_fromstr(&head_oid, "cfc4f0999a8367568e049af4f72e452d40828a15");
@@ -335,7 +335,7 @@ void test_cherrypick_workdir__both_renamed(void)
 		{ 0100644, "28d9eb4208074ad1cc84e71ccc908b34573f05d2", 2, "file3.txt.renamed_on_branch" },
 	};
 
-	opts.merge_opts.flags |= GIT_MERGE_TREE_FIND_RENAMES;
+	opts.merge_opts.tree_flags |= GIT_MERGE_TREE_FIND_RENAMES;
 	opts.merge_opts.rename_threshold = 50;
 
 	git_oid_fromstr(&head_oid, "44cd2ed2052c9c68f9a439d208e9614dc2a55c70");

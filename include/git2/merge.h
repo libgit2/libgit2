@@ -63,7 +63,7 @@ GIT_EXTERN(int) git_merge_file_init_input(
 
 /**
  * Flags for `git_merge_tree` options.  A combination of these flags can be
- * passed in via the `flags` value in the `git_merge_options`.
+ * passed in via the `tree_flags` value in the `git_merge_options`.
  */
 typedef enum {
 	/**
@@ -125,6 +125,21 @@ typedef enum {
 
 	/** Condense non-alphanumeric regions for simplified diff file */
 	GIT_MERGE_FILE_SIMPLIFY_ALNUM = (1 << 2),
+
+	/** Ignore all whitespace */
+	GIT_MERGE_FILE_IGNORE_WHITESPACE = (1 << 3),
+
+	/** Ignore changes in amount of whitespace */
+	GIT_MERGE_FILE_IGNORE_WHITESPACE_CHANGE = (1 << 4),
+
+	/** Ignore whitespace at end of line */
+	GIT_MERGE_FILE_IGNORE_WHITESPACE_EOL = (1 << 5),
+
+	/** Use the "patience diff" algorithm */
+	GIT_MERGE_FILE_DIFF_PATIENCE = (1 << 6),
+
+	/** Take extra time to find minimal diff */
+	GIT_MERGE_FILE_DIFF_MINIMAL = (1 << 7),
 } git_merge_file_flags_t;
 
 /**
@@ -155,7 +170,7 @@ typedef struct {
 	git_merge_file_favor_t favor;
 
 	/** Merge file flags. */
-	git_merge_file_flags_t flags;
+	unsigned int flags;
 } git_merge_file_options;
 
 #define GIT_MERGE_FILE_OPTIONS_VERSION 1
@@ -205,7 +220,7 @@ typedef struct {
  */
 typedef struct {
 	unsigned int version;
-	git_merge_tree_flag_t flags;
+	git_merge_tree_flag_t tree_flags;
 
 	/**
 	 * Similarity to consider a file renamed (default 50).  If
@@ -230,6 +245,8 @@ typedef struct {
 
 	/** Flags for handling conflicting content. */
 	git_merge_file_favor_t file_favor;
+
+	unsigned int file_flags;
 } git_merge_options;
 
 #define GIT_MERGE_OPTIONS_VERSION 1

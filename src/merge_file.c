@@ -151,6 +151,19 @@ static int git_merge_file__from_inputs(
 	if (options.flags & GIT_MERGE_FILE_STYLE_DIFF3)
 		xmparam.style = XDL_MERGE_DIFF3;
 
+	if (options.flags & GIT_MERGE_FILE_IGNORE_WHITESPACE)
+		xmparam.xpp.flags |= XDF_IGNORE_WHITESPACE;
+	if (options.flags & GIT_MERGE_FILE_IGNORE_WHITESPACE_CHANGE)
+		xmparam.xpp.flags |= XDF_IGNORE_WHITESPACE_CHANGE;
+	if (options.flags & GIT_MERGE_FILE_IGNORE_WHITESPACE_EOL)
+		xmparam.xpp.flags |= XDF_IGNORE_WHITESPACE_AT_EOL;
+
+	if (options.flags & GIT_MERGE_FILE_DIFF_PATIENCE)
+		xmparam.xpp.flags |= XDF_PATIENCE_DIFF;
+
+	if (options.flags & GIT_MERGE_FILE_DIFF_MINIMAL)
+		xmparam.xpp.flags |= XDF_NEED_MINIMAL;
+
 	if ((xdl_result = xdl_merge(&ancestor_mmfile, &our_mmfile,
 		&their_mmfile, &xmparam, &mmbuffer)) < 0) {
 		giterr_set(GITERR_MERGE, "Failed to merge files.");
