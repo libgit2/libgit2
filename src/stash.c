@@ -738,10 +738,8 @@ int git_stash_apply(
 				&unstashed_index, repo, index_parent_tree, repo_index, index_tree)) < 0)
 			goto cleanup;
 
-
-		/* TODO: GIT_EMERGECONFLICT  */
 		if (git_index_has_conflicts(unstashed_index)) {
-			error = GIT_EUNMERGED;
+			error = GIT_EMERGECONFLICT;
 			goto cleanup;
 		}
 	}

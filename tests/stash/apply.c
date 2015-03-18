@@ -108,7 +108,7 @@ void test_stash_apply__conflict_index_with_reinstate_index(void)
 	cl_git_pass(git_index_add_bypath(repo_index, "who"));
 	cl_git_pass(git_index_write(repo_index));
 
-	cl_git_fail_with(git_stash_apply(repo, 0, NULL, GIT_APPLY_REINSTATE_INDEX), GIT_EUNMERGED);
+	cl_git_fail_with(git_stash_apply(repo, 0, NULL, GIT_APPLY_REINSTATE_INDEX), GIT_EMERGECONFLICT);
 
 	cl_assert_equal_i(git_index_has_conflicts(repo_index), 0);
 	assert_status(repo, "what", GIT_STATUS_CURRENT);
