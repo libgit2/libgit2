@@ -13,7 +13,7 @@
 #include "smart.h"
 #include "auth.h"
 #include "auth_negotiate.h"
-#include "openssl_stream.h"
+#include "tls_stream.h"
 #include "socket_stream.h"
 
 git_http_auth_scheme auth_schemes[] = {
@@ -545,7 +545,7 @@ static int http_connect(http_subtransport *t)
 	}
 
 	if (t->connection_data.use_ssl) {
-		error = git_openssl_stream_new(&t->io, t->connection_data.host, t->connection_data.port);
+		error = git_tls_stream_new(&t->io, t->connection_data.host, t->connection_data.port);
 	} else {
 		error = git_socket_stream_new(&t->io,  t->connection_data.host, t->connection_data.port);
 	}
