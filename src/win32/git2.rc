@@ -2,7 +2,11 @@
 #include "../../include/git2/version.h"
 
 #ifndef LIBGIT2_FILENAME
-#	define LIBGIT2_FILENAME "git2"
+# define LIBGIT2_FILENAME "git2"
+#endif
+
+#ifndef LIBGIT2_COMMENTS
+# define LIBGIT2_COMMENTS "For more information visit http://libgit2.github.com/"
 #endif
 
 VS_VERSION_INFO		VERSIONINFO	MOVEABLE IMPURE LOADONCALL DISCARDABLE
@@ -30,7 +34,7 @@ BEGIN
       VALUE "OriginalFilename",	LIBGIT2_FILENAME ".dll\0"
       VALUE "ProductName",	"libgit2\0"
       VALUE "ProductVersion",	LIBGIT2_VERSION "\0"
-      VALUE "Comments",		"For more information visit http://libgit2.github.com/\0"
+      VALUE "Comments",		LIBGIT2_COMMENTS "\0"
     END
   END
   BLOCK "VarFileInfo"
