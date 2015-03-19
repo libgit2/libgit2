@@ -31,6 +31,9 @@ v0.22 + 1
 * `git_rebase_commit` now returns `GIT_EUNMERGED` when you attempt to
   commit with unstaged changes.
 
+* On Mac OS X, we now use SecureTransport to provide the cryptographic
+support for HTTPS connections insead of OpenSSL.
+
 ### API additions
 
 * The `git_merge_options` gained a `file_flags` member.
