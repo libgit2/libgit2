@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifdef GIT_SSL
+#ifdef GIT_OPENSSL
 
 #include <ctype.h>
 

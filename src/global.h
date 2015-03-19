@@ -17,7 +17,7 @@ typedef struct {
 	char oid_fmt[GIT_OID_HEXSZ+1];
 } git_global_st;
 
-#ifdef GIT_SSL
+#ifdef GIT_OPENSSL
 # include <openssl/ssl.h>
 extern SSL_CTX *git__ssl_ctx;
 #endif

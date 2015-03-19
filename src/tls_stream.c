@@ -15,7 +15,7 @@ int git_tls_stream_new(git_stream **out, const char *host, const char *port)
 {
 #ifdef GIT_SECURE_TRANSPORT
 	return git_stransport_stream_new(out, host, port);
-#elif defined(GIT_SSL)
+#elif defined(GIT_OPENSSL)
 	return git_openssl_stream_new(out, host, port);
 #else
 	GIT_UNUSED(out);
