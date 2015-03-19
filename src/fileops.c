@@ -399,6 +399,7 @@ int git_futils_mkdir_ext(
 
 	/* walk down tail of path making each directory */
 	for (tail = &make_path.ptr[root]; *tail; *tail = lastch) {
+		bool mkdir_attempted = false;
 
 		/* advance tail to include next path component */
 		while (*tail == '/')
@@ -417,16 +418,24 @@ int git_futils_mkdir_ext(
 		/* See what's going on with this path component */
 		opts->perfdata.stat_calls++;
 
+retry_lstat:
 		if (p_lstat(make_path.ptr, &st) < 0) {
-			opts->perfdata.mkdir_calls++;
-
-			if (errno != ENOENT || p_mkdir(make_path.ptr, mode) < 0) {
-				giterr_set(GITERR_OS, "Failed to make directory '%s'", make_path.ptr);
-				error = GIT_EEXISTS;
+			if (mkdir_attempted || errno != ENOENT) {
+				giterr_set(GITERR_OS, "Cannot access component in path '%s'", make_path.ptr);
+				error = -1;
 				goto done;
 			}
 
 			giterr_clear();
+			opts->perfdata.mkdir_calls++;
+			mkdir_attempted = true;
+			if (p_mkdir(make_path.ptr, mode) < 0) {
+				if (errno == EEXIST)
+					goto retry_lstat;
+				giterr_set(GITERR_OS, "Failed to make directory '%s'", make_path.ptr);
+				error = -1;
+				goto done;
+			}
 		} else {
 			/* with exclusive create, existing dir is an error */
 			if ((flags & GIT_MKDIR_EXCL) != 0) {
