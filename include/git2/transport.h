@@ -299,7 +299,6 @@ GIT_EXTERN(int) git_cred_default_new(git_cred **out);
  */
 GIT_EXTERN(int) git_cred_username_new(git_cred **cred, const char *username);
 
-#ifdef GIT_SSH_MEMORY_CREDENTIALS
 /**
  * Create a new ssh key credential object reading the keys from memory.
  *
@@ -316,7 +315,6 @@ GIT_EXTERN(int) git_cred_ssh_key_memory_new(
 	const char *publickey,
 	const char *privatekey,
 	const char *passphrase);
-#endif
 
 /**
  * Signature of a function which acquires a credential object.

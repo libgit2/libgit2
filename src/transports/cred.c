@@ -195,7 +195,6 @@ int git_cred_ssh_key_new(
 		GIT_CREDTYPE_SSH_KEY);
 }
 
-#ifdef GIT_SSH_MEMORY_CREDENTIALS
 int git_cred_ssh_key_memory_new(
 	git_cred **cred,
 	const char *username,
@@ -203,6 +202,7 @@ int git_cred_ssh_key_memory_new(
 	const char *privatekey,
 	const char *passphrase)
 {
+#ifdef GIT_SSH_MEMORY_CREDENTIALS
 	return git_cred_ssh_key_type_new(
 		cred,
 		username,
@@ -210,8 +210,12 @@ int git_cred_ssh_key_memory_new(
 		privatekey,
 		passphrase,
 		GIT_CREDTYPE_SSH_MEMORY);
-}
+#else
+	giterr_set(GITERR_INVALID,
+		"This version of libgit2 was not built with ssh memory credentials.");
+	return -1;
 #endif
+}
 
 static int git_cred_ssh_key_type_new(
 	git_cred **cred,
