@@ -17,17 +17,19 @@
 
 int stransport_error(OSStatus ret)
 {
-	switch (ret) {
-	case noErr:
+	CFStringRef message;
+
+	if (ret == noErr) {
 		giterr_clear();
 		return 0;
-	case errSSLXCertChainInvalid:
-	case errSSLBadCert:
-		return GIT_ECERTIFICATE;
-	default:
-		giterr_set(GITERR_NET, "SecureTransport error %d", ret);
-		return -1;
 	}
+
+	message = SecCopyErrorMessageString(ret, NULL);
+	GITERR_CHECK_ALLOC(message);
+
+	giterr_set(GITERR_NET, "SecureTransport error: %s", CFStringGetCStringPtr(message, kCFStringEncodingUTF8));
+	CFRelease(message);
+	return -1;
 }
 
 typedef struct {
@@ -42,15 +44,43 @@ int stransport_connect(git_stream *stream)
 {
 	stransport_stream *st = (stransport_stream *) stream;
 	int error;
+	SecTrustRef trust = NULL;
+	SecTrustResultType sec_res;
 	OSStatus ret;
 
 	if ((error = git_stream_connect(st->io)) < 0)
 		return error;
 
-	if ((ret = SSLHandshake(st->ctx)) != noErr)
-		return stransport_error(ret);
+	ret = SSLHandshake(st->ctx);
+	if (ret != errSSLServerAuthCompleted) {
+		giterr_set(GITERR_SSL, "unexpected return value from ssl handshake %d", ret);
+		return -1;
+	}
+
+	if ((ret = SSLCopyPeerTrust(st->ctx, &trust)) != noErr)
+		goto on_error;
+
+	if ((ret = SecTrustEvaluate(trust, &sec_res)) != noErr)
+		goto on_error;
+
+	CFRelease(trust);
+
+	if (sec_res == kSecTrustResultInvalid || sec_res == kSecTrustResultOtherError) {
+		giterr_set(GITERR_SSL, "internal security trust error");
+		return -1;
+	}
+
+	if (sec_res == kSecTrustResultDeny || sec_res == kSecTrustResultRecoverableTrustFailure ||
+	    sec_res == kSecTrustResultFatalTrustFailure)
+		return GIT_ECERTIFICATE;
 
 	return 0;
+
+on_error:
+	if (trust)
+		CFRelease(trust);
+
+	return stransport_error(ret);
 }
 
 int stransport_certificate(git_cert **out, git_stream *stream)
@@ -58,13 +88,9 @@ int stransport_certificate(git_cert **out, git_stream *stream)
 	stransport_stream *st = (stransport_stream *) stream;
 	SecTrustRef trust = NULL;
 	SecCertificateRef sec_cert;
-	SecTrustResultType sec_res;
 	OSStatus ret;
 
 	if ((ret = SSLCopyPeerTrust(st->ctx, &trust)) != noErr)
-		return stransport_error(ret);
-
-	if ((ret = SecTrustEvaluate(trust, &sec_res)) != noErr)
 		return stransport_error(ret);
 
 	sec_cert = SecTrustGetCertificateAtIndex(trust, 0);
@@ -198,6 +224,7 @@ int git_stransport_stream_new(git_stream **out, const char *host, const char *po
 
 	if ((ret = SSLSetIOFuncs(st->ctx, read_cb, write_cb)) != noErr ||
 	    (ret = SSLSetConnection(st->ctx, st->io)) != noErr ||
+	    (ret = SSLSetSessionOption(st->ctx, kSSLSessionOptionBreakOnServerAuth, true)) != noErr ||
 	    (ret = SSLSetPeerDomainName(st->ctx, host, strlen(host))) != noErr) {
 		git_stream_free((git_stream *)st);
 		return stransport_error(ret);
