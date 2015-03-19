@@ -17,8 +17,9 @@
 #include "repository.h"
 
 #include <wincrypt.h>
-#pragma comment(lib, "crypt32")
 #include <winhttp.h>
+
+/* For IInternetSecurityManager zone check */
 #include <objbase.h>
 #include <urlmon.h>
 
@@ -1006,8 +1007,11 @@ static int put_uuid_string(LPWSTR buffer, size_t buffer_len_cch)
 		return -1;
 	}
 
-	result = wsprintfW(
-		buffer,
+#if !defined(__MINGW32__) || defined(MINGW_HAS_SECURE_API)
+	result = swprintf_s(buffer, buffer_len_cch,
+#else
+	result = wsprintfW(buffer,
+#endif
 		L"%08x%04x%04x%02x%02x%02x%02x%02x%02x%02x%02x",
 		uuid.Data1, uuid.Data2, uuid.Data3,
 		uuid.Data4[0], uuid.Data4[1], uuid.Data4[2], uuid.Data4[3],
