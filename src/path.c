@@ -1274,26 +1274,122 @@ int git_path_from_url_or_path(git_buf *local_path_out, const char *url_or_path)
 		return git_buf_sets(local_path_out, url_or_path);
 }
 
-/* Reject paths like AUX or COM1, or those versions that end in a dot or
- * colon.  ("AUX." or "AUX:")
+
+/**
+ * Reject DOS device names of the form:
+ * (1) "AUX" (exactly)
+ *
+ * We also reject implicit aliases like:
+ * (2) "AUX." (or "AUX.<foo>")
+ * (3) "AUX:" (or "AUX:<foo>")
+ *
+ * TODO Investigate whether we should also reject:
+ * TODO (4) "AUX<spaces>"
+ * TODO (5) "AUX<spaces>." (or "AUX<spaces>.<foo>")
+ * TODO (6) "AUX<spaces>:" (or "AUX<spaces>:<foo>")
+ * TODO
+ * TODO But oddly "AUX<spaces><non-dot-or-colon>" is allowed.
+ * TODO Note that our caller has probably already taken care of (4).
+ *
  */
-GIT_INLINE(bool) verify_dospath(
-	const char *component,
-	size_t len,
-	const char dospath[3],
-	bool trailing_num)
+GIT_INLINE(bool) verify_dospath_x(const char *p, size_t len, const char *ml, const char *mu)
 {
-	size_t last = trailing_num ? 4 : 3;
-
-	if (len < last || git__strncasecmp(component, dospath, 3) != 0)
+	if (len < 3)
 		return true;
 
-	if (trailing_num && (component[3] < '1' || component[3] > '9'))
+	/* we've already tested p[0]. */
+	if ((p[1] != ml[1]) && (p[1] != mu[1]))
+		return true;
+	if ((p[2] != ml[2]) && (p[2] != mu[2]))
 		return true;
 
-	return (len > last &&
-		component[last] != '.' &&
-		component[last] != ':');
+	if (len == 3)
+		return false; /*reject exact match "AUX" (1) */
+
+	if ((p[3] == '.') || (p[3] == ':'))
+		return false; /* reject "AUX.", ... (2) and (3) */
+
+	return true;
+}
+
+/**
+ * Reject DOS device names of the form:
+ * (1) "LPT<n>" for <n> in [1..9]
+ *     (note that "LPT" and "LPT<non<n>>" is allowed)
+ *
+ * We also reject implicit aliases like:
+ * (2) "LPT<n>." (or "LPT<n>.<foo>")
+ * (3) "LPT<n>:" (or "LPT<n>:<foo>")
+ *
+ * TODO Likewise, investigate "LPT<n><spaces>"
+ * and "LPT<n><spaces><dot-or-colon>".
+ *
+ */
+GIT_INLINE(bool) verify_dospath_xn(const char *p, size_t len, const char *ml, const char *mu)
+{
+	if (len < 3)
+		return true;
+
+	/* we've already tested p[0]. */
+	if ((p[1] != ml[1]) && (p[1] != mu[1]))
+		return true;
+	if ((p[2] != ml[2]) && (p[2] != mu[2]))
+		return true;
+
+	if (len == 3)
+		return true; /* allow exactly "LPT" */
+
+	if ((p[3] < '1') || (p[3] > '9'))
+		return true; /* allow "LPT<non<n>>" */
+
+	if (len == 4)
+		return false; /* reject exactly "LPT<n>" */
+
+	if ((p[4] == '.') || (p[4] == ':'))
+		return false; /* reject "LPT1.", ... */
+
+	return true;
+}
+
+/* Reject paths like AUX or COM1, or those versions that end in a dot or
+ * colon, or those that have something after the dot or colon.
+ *
+ * The full set of DOS devices is fixed:
+ *     AUX, COM[1-9], CON, LPT[1-9], NUL, PRN
+ */
+GIT_INLINE(bool) verify_dospath(const char *p, size_t len)
+{
+	if (len < 3)
+		return true;
+	
+	switch (p[0]) {
+	case 'a':
+	case 'A':
+		return verify_dospath_x(p, len, "aux", "AUX");
+
+	case 'c':
+	case 'C':
+		if ((p[2] == 'n') || (p[2] == 'N'))
+			return verify_dospath_x(p, len, "con", "CON");
+		if ((p[2] == 'm') || (p[2] == 'M'))
+			return verify_dospath_xn(p, len, "com", "COM");
+		return true;
+
+	case 'l':
+	case 'L':
+		return verify_dospath_xn(p, len, "lpt", "LPT");
+
+	case 'n':
+	case 'N':
+		return verify_dospath_x(p, len, "nul", "NUL");
+
+	case 'p':
+	case 'P':
+		return verify_dospath_x(p, len, "prn", "PRN");
+
+	default:
+		return true;
+	}
 }
 
 static int32_t next_hfs_char(const char **in, size_t *len)
@@ -1446,15 +1542,9 @@ static bool verify_component(
 	if ((flags & GIT_PATH_REJECT_TRAILING_COLON) && component[len-1] == ':')
 		return false;
 
-	if (flags & GIT_PATH_REJECT_DOS_PATHS) {
-		if (!verify_dospath(component, len, "CON", false) ||
-			!verify_dospath(component, len, "PRN", false) ||
-			!verify_dospath(component, len, "AUX", false) ||
-			!verify_dospath(component, len, "NUL", false) ||
-			!verify_dospath(component, len, "COM", true)  ||
-			!verify_dospath(component, len, "LPT", true))
-			return false;
-	}
+	if ((flags & GIT_PATH_REJECT_DOS_PATHS) &&
+		!verify_dospath(component, len))
+		return false;
 
 	if (flags & GIT_PATH_REJECT_DOT_GIT_HFS &&
 		!verify_dotgit_hfs(component, len))
