@@ -64,7 +64,7 @@ v0.22 + 1
 * The `git_merge_options` structure member `flags` has been renamed
   to `tree_flags`.
 
-* The `git_merge_file_options` structure member `tree_flags` is now
+* The `git_merge_file_options` structure member `flags` is now
   an unsigned int. It was previously a `git_merge_file_flags_t`.
 
 * `GIT_CHECKOUT_SAFE_CREATE` has been removed.  Most users will generally
