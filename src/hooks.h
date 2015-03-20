@@ -8,10 +8,7 @@
 #ifndef INCLUDE_hooks_h__
 #define INCLUDE_hooks_h__
 
-#include "git2/common.h"
 #include "git2/hooks.h"
-
-#include "repository.h"
 
 #define GIT_HOOKS_DIRECTORY_NAME "hooks"
 
@@ -36,8 +33,28 @@
 #define GIT_HOOK_FILENAME_PRE_RECEIVE "pre-receive"
 #define GIT_HOOK_FILENAME_UPDATE "update"
 
-void git_hook_free(git_hook *hook);
-
-int set_if_hook_exists(git_repository_hooks* hooks, int index, const char* file_name);
+/**
+* When a new hook is added, the section below should be updated to include that hook.
+*/
+static const char* const _supported_hooks[GIT_HOOK_TYPE_MAXIMUM_SUPPORTED] =
+{
+    GIT_HOOK_FILENAME_APPLYPATCH_MSG,
+    GIT_HOOK_FILENAME_COMMIT_MSG,
+    GIT_HOOK_FILENAME_POST_APPLYPATCH,
+    GIT_HOOK_FILENAME_POST_CHECKOUT,
+    GIT_HOOK_FILENAME_POST_COMMIT,
+    GIT_HOOK_FILENAME_POST_MERGE,
+    GIT_HOOK_FILENAME_POST_RECEIVE,
+    GIT_HOOK_FILENAME_POST_REWRITE,
+    GIT_HOOK_FILENAME_POST_UPDATE,
+    GIT_HOOK_FILENAME_PREPARE_COMMIT_MSG,
+    GIT_HOOK_FILENAME_PRE_APPLYPATCH,
+    GIT_HOOK_FILENAME_PRE_AUTO_GC,
+    GIT_HOOK_FILENAME_PRE_COMMIT,
+    GIT_HOOK_FILENAME_PRE_PUSH,
+    GIT_HOOK_FILENAME_PRE_REBASE,
+    GIT_HOOK_FILENAME_PRE_RECEIVE,
+    GIT_HOOK_FILENAME_UPDATE,
+};
 
 #endif

@@ -9,6 +9,7 @@
 #define INCLUDE_git_hooks_h__
 
 #include "types.h"
+#include "buffer.h"
 
 /**
 * @file git2/hooks.h
@@ -20,37 +21,34 @@
 GIT_BEGIN_DECL
 
 /**
-* The list of indexes for all support hooks.
-* 
-* Each enum value is used as an index for the array available_hooks
-* in the git_hooks struct.
+* The list of all support hooks.
 */
 typedef enum {
-    GIT_HOOK_INDEX_APPLYPATCH_MSG = 0,
-    GIT_HOOK_INDEX_COMMIT_MSG,
-    GIT_HOOK_INDEX_POST_APPLYPATCH,
-    GIT_HOOK_INDEX_POST_CHECKOUT,
-    GIT_HOOK_INDEX_POST_COMMIT,
-    GIT_HOOK_INDEX_POST_MERGE,
-    GIT_HOOK_INDEX_POST_RECEIVE,
-    GIT_HOOK_INDEX_POST_REWRITE,
-    GIT_HOOK_INDEX_POST_UPDATE,
-    GIT_HOOK_INDEX_PREPARE_COMMIT_MSG,
-    GIT_HOOK_INDEX_PRE_APPLYPATCH,
-    GIT_HOOK_INDEX_PRE_AUTO_GC,
-    GIT_HOOK_INDEX_PRE_COMMIT,
-    GIT_HOOK_INDEX_PRE_PUSH,
-    GIT_HOOK_INDEX_PRE_REBASE,
-    GIT_HOOK_INDEX_PRE_RECEIVE,
-    GIT_HOOK_INDEX_UPDATE,
+    GIT_HOOK_TYPE_APPLYPATCH_MSG = 0,
+    GIT_HOOK_TYPE_COMMIT_MSG,
+    GIT_HOOK_TYPE_POST_APPLYPATCH,
+    GIT_HOOK_TYPE_POST_CHECKOUT,
+    GIT_HOOK_TYPE_POST_COMMIT,
+    GIT_HOOK_TYPE_POST_MERGE,
+    GIT_HOOK_TYPE_POST_RECEIVE,
+    GIT_HOOK_TYPE_POST_REWRITE,
+    GIT_HOOK_TYPE_POST_UPDATE,
+    GIT_HOOK_TYPE_PREPARE_COMMIT_MSG,
+    GIT_HOOK_TYPE_PRE_APPLYPATCH,
+    GIT_HOOK_TYPE_PRE_AUTO_GC,
+    GIT_HOOK_TYPE_PRE_COMMIT,
+    GIT_HOOK_TYPE_PRE_PUSH,
+    GIT_HOOK_TYPE_PRE_REBASE,
+    GIT_HOOK_TYPE_PRE_RECEIVE,
+    GIT_HOOK_TYPE_UPDATE,
 
     /**
     * The maximum number of supported hooks.
     *
     * All new hooks should be added above this line.
     */
-    GIT_HOOK_INDEX_MAXIMUM_SUPPORTED
-} git_hook_indexes;
+    GIT_HOOK_TYPE_MAXIMUM_SUPPORTED
+} git_hook_type;
 
 /**
 * An individual hook for a git repository
@@ -63,53 +61,33 @@ typedef struct git_hook {
     int exists;
 
     /**
-    * The file name of the hook.
+    * The full directory path to the hook.
     *
     * See `buffer.h` for background on `git_buf` objects.
     */
-    git_buf file_name;
+    git_buf path;
 } git_hook;
 
 /**
-* The hooks for a git repository
-*/
-typedef struct git_repository_hooks {
-    /**
-    * The full directory path to the hooks for the git repostiory.
-    *
-    * See `buffer.h` for background on `git_buf` objects.
-    */
-    git_buf path_hooks;
-
-    /**
-    * An array of all available hooks for the git repository.
-    *
-    * Each index represents a specific, supported hook for a git
-    * repository. Each value in the enum git_hooks is the index for
-    * that hook in this array.
-    */
-    git_hook *available_hooks[GIT_HOOK_INDEX_MAXIMUM_SUPPORTED];
-} git_repository_hooks;
-
-/**
-* Discover and return the hooks contained in a git repository.
+* Retrieve a specific hook contained in a git repository.
 *
-* @param out A pointer to the hooks that exist in the git repository.
+* @param hook_out A pointer to the hook.
 *
-* @param repo A repository object
+* @param repo_hooks A repository hooks object
 *
 * @return 0 or an error code
 */
-GIT_EXTERN(int) git_hooks_discover(
-    git_repository_hooks **hooks_out,
-    git_repository *repo);
+GIT_EXTERN(int) git_hooks_get(
+    git_hook **hook_out,
+    git_repository *repo,
+    git_hook_type type);
 
 /**
-* Deallocate a git repository hooks object.
+* Deallocate a git hook object.
 *
-* @param hooks The previously created hooks; cannot be used after free.
+* @param hooks The previously created hook; cannot be used after free.
 */
-GIT_EXTERN(void) git_repository_hooks_free(git_repository_hooks *hooks);
+GIT_EXTERN(void) git_hook_free(git_hook *hook);
 
 /** @} */
 GIT_END_DECL
