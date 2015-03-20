@@ -68,12 +68,16 @@ typedef struct git_hook {
     git_buf path;
 } git_hook;
 
+typedef int(*git_hook_callback)(const char* hook_file_path, int argv, char *argc);
+
 /**
 * Retrieve a specific hook contained in a git repository.
 *
-* @param hook_out A pointer to the hook.
+* @param hook_out An out pointer to the hook.
 *
-* @param repo_hooks A repository hooks object
+* @param repo A repository object.
+*
+* @param type The type of hook.
 *
 * @return 0 or an error code
 */
@@ -88,6 +92,13 @@ GIT_EXTERN(int) git_hooks_get(
 * @param hooks The previously created hook; cannot be used after free.
 */
 GIT_EXTERN(void) git_hook_free(git_hook *hook);
+
+/**
+* Registers a callback for a specific hook.
+*
+* @param hooks The previously created hook; cannot be used after free.
+*/
+GIT_EXTERN(void) git_hook_register_callback(git_hook_type type, git_hook_callback callback);
 
 /** @} */
 GIT_END_DECL
