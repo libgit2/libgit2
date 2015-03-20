@@ -81,7 +81,7 @@ typedef int(*git_hook_callback)(const char* hook_file_path, int argv, char *argc
 *
 * @return 0 or an error code
 */
-GIT_EXTERN(int) git_hooks_get(
+GIT_EXTERN(int) git_hook_get(
     git_hook **hook_out,
     git_repository *repo,
     git_hook_type type);

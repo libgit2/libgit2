@@ -57,4 +57,6 @@ static const char* const _supported_hooks[GIT_HOOK_TYPE_MAXIMUM_SUPPORTED] =
     GIT_HOOK_FILENAME_UPDATE,
 };
 
+void git_hook_
+
 #endif

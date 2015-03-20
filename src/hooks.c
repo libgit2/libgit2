@@ -10,6 +10,8 @@
 #include "hooks.h"
 #include "repository.h"
 
+static git_hook_callback _hook_callbacks[GIT_HOOK_TYPE_MAXIMUM_SUPPORTED];
+
 int git_hooks_get(git_hook **hook_out, git_repository *repo, git_hook_type type)
 {
     git_hook* hook = NULL;
@@ -47,6 +49,8 @@ int git_hooks_get(git_hook **hook_out, git_repository *repo, git_hook_type type)
 
 void git_hook_free(git_hook *hook)
 {
+    assert(hook);
+
     if (hook == NULL)
         return;
 
@@ -54,4 +58,12 @@ void git_hook_free(git_hook *hook)
 
     git__memzero(hook, sizeof(*hook));
     git__free(hook);
+}
+
+void git_hook_register_callback(git_hook_type type, git_hook_callback callback)
+{
+    assert(type >= 0 && type <= GIT_HOOK_TYPE_MAXIMUM_SUPPORTED);
+    assert(callback);
+
+    _hook_callbacks[type] = callback;
 }
