@@ -71,9 +71,11 @@ typedef struct git_hook {
 /**
 * Retrieve a specific hook contained in a git repository.
 *
-* @param hook_out A pointer to the hook.
+* @param hook_out An out pointer to the hook.
 *
-* @param repo_hooks A repository hooks object
+* @param repo A repository object.
+*
+* @param type The type of hook to get.
 *
 * @return 0 or an error code
 */
