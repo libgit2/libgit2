@@ -77,7 +77,7 @@ typedef int(*git_hook_callback)(const char* hook_file_path, int argv, char *argc
 *
 * @param repo A repository object.
 *
-* @param type The type of hook.
+* @param type The type of hook to get.
 *
 * @return 0 or an error code
 */
