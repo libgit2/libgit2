@@ -59,7 +59,7 @@ static git_hook* get_hook(git_hook_type type)
 {
     git_hook *hook;
 
-    cl_git_pass(git_hooks_get(&hook, _repo, type));
+    cl_git_pass(git_hook_get(&hook, _repo, type));
 
     verify_path_for_hook(hook, type);
 
