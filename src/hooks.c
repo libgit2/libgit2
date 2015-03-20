@@ -12,7 +12,7 @@
 
 static git_hook_callback _hook_callbacks[GIT_HOOK_TYPE_MAXIMUM_SUPPORTED];
 
-int git_hooks_get(git_hook **hook_out, git_repository *repo, git_hook_type type)
+int git_hook_get(git_hook **hook_out, git_repository *repo, git_hook_type type)
 {
     git_hook* hook = NULL;
 
