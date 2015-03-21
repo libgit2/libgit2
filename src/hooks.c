@@ -13,6 +13,7 @@
 int git_hook_get(git_hook **hook_out, git_repository *repo, git_hook_type type)
 {
     git_hook* hook = NULL;
+    const char *file_name;
 
     assert(hook_out);
     assert(repo);
@@ -28,10 +29,10 @@ int git_hook_get(git_hook **hook_out, git_repository *repo, git_hook_type type)
         return GIT_ERROR;
     }
 
-    const char *file_name = _supported_hooks[type];
+    file_name = _supported_hooks[type];
     if (git_path_contains_file(&hook->path, file_name))
     {
-        hook->exists = TRUE;
+        hook->exists = 1; // true
     }
 
     if (git_buf_joinpath(&hook->path, git_buf_cstr(&hook->path), file_name) != 0)
