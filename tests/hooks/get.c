@@ -1,3 +1,10 @@
+/*
+* Copyright (C) the libgit2 contributors. All rights reserved.
+*
+* This file is part of libgit2, distributed under the GNU GPL v2 with
+* a Linking Exception. For full terms see the included COPYING file.
+*/
+
 #include "clar_libgit2.h"
 
 #include "common.h"
@@ -19,7 +26,7 @@ void test_hooks_get__initialize(void)
 
     for (i = 0; i < ARRAY_SIZE(_expected_hooks); i++)
     {
-        _expected_hooks[i] = 0;
+        _expected_hooks[i] = GIT_HOOK_FALSE;
     }
 
     cl_assert(!git_path_isdir(REPO_PATH));
@@ -64,6 +71,8 @@ static git_hook* get_hook(git_hook_type type)
 
     cl_git_pass(git_hook_get(&hook, _repo, type));
 
+    cl_assert_equal_i(hook->type, type);
+
     verify_path_for_hook(hook, type);
 
     return hook;
@@ -103,13 +112,13 @@ void test_hooks_get__verify_no_hooks(void)
 void test_hooks_get__verify_some_hooks(void)
 {
     add_hook_file(GIT_HOOK_TYPE_COMMIT_MSG);
-    _expected_hooks[GIT_HOOK_TYPE_COMMIT_MSG] = 1;
+    _expected_hooks[GIT_HOOK_TYPE_COMMIT_MSG] = GIT_HOOK_TRUE;
 
     add_hook_file(GIT_HOOK_TYPE_PRE_PUSH);
-    _expected_hooks[GIT_HOOK_TYPE_PRE_PUSH] = 1;
+    _expected_hooks[GIT_HOOK_TYPE_PRE_PUSH] = GIT_HOOK_TRUE;
 
     add_hook_file(GIT_HOOK_TYPE_POST_UPDATE);
-    _expected_hooks[GIT_HOOK_TYPE_POST_UPDATE] = 1;
+    _expected_hooks[GIT_HOOK_TYPE_POST_UPDATE] = GIT_HOOK_TRUE;
 
     get_hooks_and_check_and_cleanup();
 }
@@ -126,7 +135,7 @@ void test_hooks_get__verify_all_hooks(void)
     for (i = 0; i < ARRAY_SIZE(_expected_hooks); i++)
     {
         add_hook_file(i);
-        _expected_hooks[i] = 1;
+        _expected_hooks[i] = GIT_HOOK_TRUE;
     }
 
     get_hooks_and_check_and_cleanup();

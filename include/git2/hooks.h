@@ -55,6 +55,11 @@ typedef enum {
 */
 typedef struct git_hook {
     /**
+    * The type of hook.
+    */
+    git_hook_type type;
+
+    /**
     * Indicates whether the hook exists or not. A value of 1 means
     * the hook exists. A value of 0 means the hook does not exist.
     */
@@ -71,16 +76,16 @@ typedef struct git_hook {
 /**
 * The type of method that is called when a git hook is executed.
 *
-* @param hook_file_path A full directory path to the hook.
+* @param hook The 
 *
 * @param argv The number of arguments for the hook, can be 0.
 *
 * @param argc A pointer to an array containing the arguments, can be null
 * if there are no arguments for the hook.
 *
-* @return 0 or an error code, error code information dictated by the hook.
+* @return GIT_OK (0) or an error code, error code information dictated by the hook.
 */
-typedef int(*git_hook_callback)(const char* hook_file_path, int argv, char *argc);
+typedef int(*git_hook_callback)(git_hook *hook, int argv, char *argc[]);
 
 /**
 * Retrieve a specific hook contained in a git repository.
@@ -91,7 +96,7 @@ typedef int(*git_hook_callback)(const char* hook_file_path, int argv, char *argc
 *
 * @param type The type of hook to get.
 *
-* @return 0 or an error code
+* @return GIT_OK (0) or an error code
 */
 GIT_EXTERN(int) git_hook_get(
     git_hook **hook_out,

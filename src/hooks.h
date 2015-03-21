@@ -10,6 +10,9 @@
 
 #include "git2/hooks.h"
 
+#define GIT_HOOK_FALSE 0
+#define GIT_HOOK_TRUE 1
+
 #define GIT_HOOKS_DIRECTORY_NAME "hooks"
 
 /**
@@ -67,8 +70,9 @@ static const char* const _supported_hooks[GIT_HOOK_TYPE_MAXIMUM_SUPPORTED] =
 * @param argc A pointer to an array containing the arguments, can be null
 * if there are no arguments for the hook.
 *
-* @return 0 or an error code, error code information dictated by the hook.
+* @return GIT_OK (0) if the hook succeeded or there was no callback registered,
+* an error code otherwise. Error code information dictated by the hook.
 */
-int git_hook_execute_callback(git_hook_type type, int argv, char *argc);
+int git_hook_execute_callback(git_hook_type type, git_repository *repo, int argv, char *argc[]);
 
 #endif
