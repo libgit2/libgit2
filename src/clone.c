@@ -467,6 +467,25 @@ int git_clone(
 	return error;
 }
 
+int git_clone_into(
+	git_repository *repo,
+	git_remote *remote,
+	const git_checkout_options *options,
+	const char *branch)
+{
+	git_checkout_options default_options = GIT_CHECKOUT_OPTIONS_INIT;
+	const git_checkout_options* opts;
+
+	assert(repo && remote);
+
+	if (options)
+		opts = options;
+	else
+		opts = &default_options;
+
+	return clone_into(repo, remote, opts, branch);
+}
+
 int git_clone_init_options(git_clone_options *opts, unsigned int version)
 {
 	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
