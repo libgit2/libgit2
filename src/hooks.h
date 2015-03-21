@@ -57,6 +57,18 @@ static const char* const _supported_hooks[GIT_HOOK_TYPE_MAXIMUM_SUPPORTED] =
     GIT_HOOK_FILENAME_UPDATE,
 };
 
-void git_hook_
+/**
+* Executes the callback for a specific hook.
+*
+* @param type The type of hook to execute the callback for.
+*
+* @param argv The number of arguments for the hook, can be 0.
+*
+* @param argc A pointer to an array containing the arguments, can be null
+* if there are no arguments for the hook.
+*
+* @return 0 or an error code, error code information dictated by the hook.
+*/
+int git_hook_execute_callback(git_hook_type type, int argv, char *argc);
 
 #endif

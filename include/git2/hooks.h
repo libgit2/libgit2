@@ -68,6 +68,18 @@ typedef struct git_hook {
     git_buf path;
 } git_hook;
 
+/**
+* The type of method that is called when a git hook is executed.
+*
+* @param hook_file_path A full directory path to the hook.
+*
+* @param argv The number of arguments for the hook, can be 0.
+*
+* @param argc A pointer to an array containing the arguments, can be null
+* if there are no arguments for the hook.
+*
+* @return 0 or an error code, error code information dictated by the hook.
+*/
 typedef int(*git_hook_callback)(const char* hook_file_path, int argv, char *argc);
 
 /**
@@ -96,7 +108,9 @@ GIT_EXTERN(void) git_hook_free(git_hook *hook);
 /**
 * Registers a callback for a specific hook.
 *
-* @param hooks The previously created hook; cannot be used after free.
+* @param type The type of hook to register for.
+*
+* @param callback The callback to register.
 */
 GIT_EXTERN(void) git_hook_register_callback(git_hook_type type, git_hook_callback callback);
 

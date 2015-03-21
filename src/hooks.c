@@ -67,3 +67,12 @@ void git_hook_register_callback(git_hook_type type, git_hook_callback callback)
 
     _hook_callbacks[type] = callback;
 }
+
+int git_hook_execute_callback(git_hook_type type, int argv, char *argc)
+{
+    assert(type >= 0 && type <= GIT_HOOK_TYPE_MAXIMUM_SUPPORTED);
+    assert(argv >= 0);
+    assert(argc);
+
+    *callback_out = _hook_callbacks[type];
+}
