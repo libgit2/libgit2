@@ -55,8 +55,8 @@ typedef enum {
 */
 typedef struct git_hook {
     /**
-    * Indicates whether the hook exists or not. A value of TRUE means
-    * the hook exists. A value of FALSE means the hook does not exist.
+    * Indicates whether the hook exists or not. A value of 1 means
+    * the hook exists. A value of 0 means the hook does not exist.
     */
     int exists;
 

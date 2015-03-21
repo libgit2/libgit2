@@ -12,9 +12,11 @@ static int _expected_hooks[GIT_HOOK_TYPE_MAXIMUM_SUPPORTED];
 
 void test_hooks_get__initialize(void)
 {
-    cl_assert_equal_i(ARRAY_SIZE(_supported_hooks), GIT_HOOK_TYPE_MAXIMUM_SUPPORTED);
-
     int i;
+
+    cl_assert_equal_i(ARRAY_SIZE(_supported_hooks), GIT_HOOK_TYPE_MAXIMUM_SUPPORTED);
+    cl_assert_equal_i(ARRAY_SIZE(_supported_hooks), ARRAY_SIZE(_expected_hooks));
+
     for (i = 0; i < ARRAY_SIZE(_expected_hooks); i++)
     {
         _expected_hooks[i] = 0;
@@ -38,6 +40,7 @@ void test_hooks_get__cleanup(void)
 static git_buf get_hook_path()
 {
     git_buf hook_path;
+
     git_buf_init(&hook_path, 0);
     cl_assert(git_buf_joinpath(&hook_path, _repo->path_repository, GIT_HOOKS_DIRECTORY_NAME) == 0);
     return hook_path;
@@ -46,8 +49,8 @@ static git_buf get_hook_path()
 static void verify_path_for_hook(git_hook *hook, git_hook_type type)
 {
     git_buf hook_path = get_hook_path();
-
     const char *file_name = _supported_hooks[type];
+
     cl_assert(git_buf_joinpath(&hook_path, git_buf_cstr(&hook_path), file_name) == 0);
 
     cl_assert_equal_s(git_buf_cstr(&hook->path), git_buf_cstr(&hook_path));
@@ -69,6 +72,7 @@ static git_hook* get_hook(git_hook_type type)
 static void get_hooks_and_check_and_cleanup()
 {
     int i;
+
     for (i = 0; i < GIT_HOOK_TYPE_MAXIMUM_SUPPORTED; i++)
     {
         git_hook *hook = get_hook(i);
@@ -112,12 +116,13 @@ void test_hooks_get__verify_some_hooks(void)
 
 void test_hooks_get__verify_all_hooks(void)
 {
+    int i;
+
     /**
     * Explicitly assume all hooks should be present. This helps to validate
     * that not only all the hooks are present, but that we are not missing
     * any hooks that need to be added in this test.
     */
-    int i;
     for (i = 0; i < ARRAY_SIZE(_expected_hooks); i++)
     {
         add_hook_file(i);
