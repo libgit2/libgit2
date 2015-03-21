@@ -136,6 +136,7 @@ static void git_proto_stream_free(git_smart_subtransport_stream *stream)
 
 	t->current_stream = NULL;
 
+	git_stream_close(s->io);
 	git_stream_free(s->io);
 	git__free(s->url);
 	git__free(s);
