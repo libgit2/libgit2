@@ -29,7 +29,13 @@ void test_checkout_filter_broken__bad_content(void)
 	git_checkout_head(g_repo, &opts);
 
 	check_file_contents("./crlf/test1.txt", "");
-	check_file_contents("./crlf/test2.txt", "test2.txt's content\n");
+
+	if (GIT_EOL_NATIVE == GIT_EOL_LF)
+		check_file_contents("./crlf/test2.txt", "test2.txt's content\n");
+	else
+		check_file_contents("./crlf/test2.txt", "test2.txt's content\r\n");
+
+	/* this will fail with core.autocrlf true and running it on Windows */
 	check_file_contents("./crlf/test3.txt", "");
 }
 
