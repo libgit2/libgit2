@@ -10,38 +10,35 @@
 #include "hooks.h"
 #include "repository.h"
 
-static git_hook_callback _registred_callbacks[GIT_HOOK_TYPE_MAXIMUM_SUPPORTED];
+static git_hook_callback registered_callbacks[GIT_HOOK_TYPE_MAXIMUM_SUPPORTED];
 
-int git_hook_get(git_hook **hook_out, git_repository *repo, git_hook_type type)
+int git_repository_hook_get(git_repository_hook **hook_out, git_repository *repo, git_hook_type type)
 {
-    git_hook *hook = NULL;
+    git_repository_hook *hook = NULL;
     const char *file_name;
 
     assert(hook_out);
     assert(repo);
     assert(type >= 0 && type <= GIT_HOOK_TYPE_MAXIMUM_SUPPORTED);
 
-    hook = git__calloc(1, sizeof(git_hook));
+    hook = git__calloc(1, sizeof(git_repository_hook));
     GITERR_CHECK_ALLOC(hook);
 
     hook->type = type;
 
     git_buf_init(&hook->path, 0);
-    if (git_buf_joinpath(&hook->path, repo->path_repository, GIT_HOOKS_DIRECTORY_NAME) != 0)
-    {
-        git_hook_free(hook);
+    if (git_buf_joinpath(&hook->path, repo->path_repository, GIT_HOOKS_DIRECTORY_NAME) != 0) {
+        git_repository_hook_free(hook);
         return GIT_ERROR;
     }
 
-    file_name = _supported_hooks[type];
-    if (git_path_contains_file(&hook->path, file_name))
-    {
+    file_name = supported_hooks[type];
+    if (git_path_contains_file(&hook->path, file_name)) {
         hook->exists = GIT_HOOK_TRUE;
     }
 
-    if (git_buf_joinpath(&hook->path, git_buf_cstr(&hook->path), file_name) != 0)
-    {
-        git_hook_free(hook);
+    if (git_buf_joinpath(&hook->path, git_buf_cstr(&hook->path), file_name) != 0) {
+        git_repository_hook_free(hook);
         return GIT_ERROR;
     }
 
@@ -50,7 +47,7 @@ int git_hook_get(git_hook **hook_out, git_repository *repo, git_hook_type type)
     return GIT_OK;
 }
 
-void git_hook_free(git_hook *hook)
+void git_repository_hook_free(git_repository_hook *hook)
 {
     assert(hook);
 
@@ -63,33 +60,31 @@ void git_hook_free(git_hook *hook)
     git__free(hook);
 }
 
-void git_hook_register_callback(git_hook_type type, git_hook_callback callback)
+void git_repository_hook_register_callback(git_hook_type type, git_hook_callback callback)
 {
     assert(type >= 0 && type <= GIT_HOOK_TYPE_MAXIMUM_SUPPORTED);
     assert(callback);
 
-    _registred_callbacks[type] = callback;
+    registered_callbacks[type] = callback;
 }
 
-int git_hook_execute_callback(git_hook_type type, git_repository *repo, int argv, char *argc[])
+int git_repository_hook_execute_callback(git_hook_type type, git_repository *repo, int argv, char *argc[])
 {
     int error = GIT_OK;
-    git_hook *hook = NULL;
+    git_repository_hook *hook = NULL;
 
     assert(type >= 0 && type <= GIT_HOOK_TYPE_MAXIMUM_SUPPORTED);
     assert(argv >= 0);
     assert(argc);
 
-    if (_registred_callbacks[type] != NULL)
-    {
-        if (git_hook_get(&hook, repo, type) != GIT_OK)
-        {
+    if (registered_callbacks[type] != NULL) {
+        if (git_repository_hook_get(&hook, repo, type) != GIT_OK) {
             return GIT_ERROR;
         }
 
-        error = _registred_callbacks[type](hook, argv, argc);
+        error = registered_callbacks[type](hook, repo, argv, argc);
 
-        git_hook_free(hook);
+        git_repository_hook_free(hook);
     }
 
     return error;

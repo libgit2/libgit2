@@ -39,7 +39,7 @@
 /**
 * When a new hook is added, the section below should be updated to include that hook.
 */
-static const char* const _supported_hooks[GIT_HOOK_TYPE_MAXIMUM_SUPPORTED] =
+static const char* const supported_hooks[GIT_HOOK_TYPE_MAXIMUM_SUPPORTED] =
 {
     GIT_HOOK_FILENAME_APPLYPATCH_MSG,
     GIT_HOOK_FILENAME_COMMIT_MSG,
@@ -73,6 +73,6 @@ static const char* const _supported_hooks[GIT_HOOK_TYPE_MAXIMUM_SUPPORTED] =
 * @return GIT_OK (0) if the hook succeeded or there was no callback registered,
 * an error code otherwise. Error code information dictated by the hook.
 */
-int git_hook_execute_callback(git_hook_type type, git_repository *repo, int argv, char *argc[]);
+int git_repository_hook_execute_callback(git_hook_type type, git_repository *repo, int argv, char *argc[]);
 
 #endif

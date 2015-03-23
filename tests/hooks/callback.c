@@ -15,7 +15,6 @@
 #define REPO_PATH "hookstestrepo"
 
 static git_repository *_repo = NULL;
-
 static git_hook_type _callback_expected_hook_type = GIT_HOOK_TYPE_COMMIT_MSG;
 static int _callback_expected_argv = 2;
 static char *_callback_expected_argc[] = { "Hello", "World" };
@@ -25,8 +24,6 @@ static int _callback_called = GIT_HOOK_FALSE;
 void test_hooks_callback__initialize(void)
 {
     _callback_called = GIT_HOOK_FALSE;
-
-    cl_assert_equal_i(ARRAY_SIZE(_supported_hooks), GIT_HOOK_TYPE_MAXIMUM_SUPPORTED);
 
     cl_assert(!git_path_isdir(REPO_PATH));
 
@@ -43,9 +40,10 @@ void test_hooks_callback__cleanup(void)
     cl_fixture_cleanup(REPO_PATH);
 }
 
-static int test_callback(git_hook *hook, int argv, char *argc[])
+static int verify_callback(git_repository_hook *hook, git_repository *repo, int argv, char *argc[])
 {
     cl_assert_equal_i(hook->type, _callback_expected_hook_type);
+    cl_assert_equal_p(repo, _repo);
     cl_assert_equal_i(argv, _callback_expected_argv);
     cl_assert_equal_p(argc, _callback_expected_argc);
 
@@ -56,9 +54,9 @@ static int test_callback(git_hook *hook, int argv, char *argc[])
 
 void test_hooks_callback__verify_callback_register(void)
 {
-    git_hook_register_callback(_callback_expected_hook_type, test_callback);
+    git_repository_hook_register_callback(_callback_expected_hook_type, verify_callback);
 
-    cl_git_pass(git_hook_execute_callback(_callback_expected_hook_type, _repo, _callback_expected_argv, _callback_expected_argc));
+    cl_git_pass(git_repository_hook_execute_callback(_callback_expected_hook_type, _repo, _callback_expected_argv, _callback_expected_argc));
 
     cl_assert_equal_i(_callback_called, GIT_HOOK_TRUE);
 }

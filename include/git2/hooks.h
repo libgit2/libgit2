@@ -53,7 +53,7 @@ typedef enum {
 /**
 * An individual hook for a git repository
 */
-typedef struct git_hook {
+typedef struct git_repository_hook {
     /**
     * The type of hook.
     */
@@ -71,12 +71,14 @@ typedef struct git_hook {
     * See `buffer.h` for background on `git_buf` objects.
     */
     git_buf path;
-} git_hook;
+} git_repository_hook;
 
 /**
 * The type of method that is called when a git hook is executed.
 *
-* @param hook The 
+* @param hook The hook that is being executed.
+*
+* @param repo A repository object.
 *
 * @param argv The number of arguments for the hook, can be 0.
 *
@@ -85,7 +87,7 @@ typedef struct git_hook {
 *
 * @return GIT_OK (0) or an error code, error code information dictated by the hook.
 */
-typedef int(*git_hook_callback)(git_hook *hook, int argv, char *argc[]);
+typedef int(*git_hook_callback)(git_repository_hook *hook, git_repository *repo, int argv, char *argc[]);
 
 /**
 * Retrieve a specific hook contained in a git repository.
@@ -98,17 +100,14 @@ typedef int(*git_hook_callback)(git_hook *hook, int argv, char *argc[]);
 *
 * @return GIT_OK (0) or an error code
 */
-GIT_EXTERN(int) git_hook_get(
-    git_hook **hook_out,
-    git_repository *repo,
-    git_hook_type type);
+GIT_EXTERN(int) git_repository_hook_get(git_repository_hook **hook_out, git_repository *repo, git_hook_type type);
 
 /**
 * Deallocate a git hook object.
 *
 * @param hooks The previously created hook; cannot be used after free.
 */
-GIT_EXTERN(void) git_hook_free(git_hook *hook);
+GIT_EXTERN(void) git_repository_hook_free(git_repository_hook *hook);
 
 /**
 * Registers a callback for a specific hook.
@@ -117,7 +116,7 @@ GIT_EXTERN(void) git_hook_free(git_hook *hook);
 *
 * @param callback The callback to register.
 */
-GIT_EXTERN(void) git_hook_register_callback(git_hook_type type, git_hook_callback callback);
+GIT_EXTERN(void) git_repository_hook_register_callback(git_hook_type type, git_hook_callback callback);
 
 /** @} */
 GIT_END_DECL

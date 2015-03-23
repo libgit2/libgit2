@@ -21,11 +21,10 @@ void test_hooks_get__initialize(void)
 {
     int i;
 
-    cl_assert_equal_i(ARRAY_SIZE(_supported_hooks), GIT_HOOK_TYPE_MAXIMUM_SUPPORTED);
-    cl_assert_equal_i(ARRAY_SIZE(_supported_hooks), ARRAY_SIZE(_expected_hooks));
+    cl_assert_equal_i(ARRAY_SIZE(supported_hooks), GIT_HOOK_TYPE_MAXIMUM_SUPPORTED);
+    cl_assert_equal_i(ARRAY_SIZE(supported_hooks), ARRAY_SIZE(_expected_hooks));
 
-    for (i = 0; i < ARRAY_SIZE(_expected_hooks); i++)
-    {
+    for (i = 0; i < ARRAY_SIZE(_expected_hooks); i++) {
         _expected_hooks[i] = GIT_HOOK_FALSE;
     }
 
@@ -53,10 +52,10 @@ static git_buf get_hook_path()
     return hook_path;
 }
 
-static void verify_path_for_hook(git_hook *hook, git_hook_type type)
+static void verify_path_for_hook(git_repository_hook *hook, git_hook_type type)
 {
     git_buf hook_path = get_hook_path();
-    const char *file_name = _supported_hooks[type];
+    const char *file_name = supported_hooks[type];
 
     cl_assert(git_buf_joinpath(&hook_path, git_buf_cstr(&hook_path), file_name) == 0);
 
@@ -65,11 +64,11 @@ static void verify_path_for_hook(git_hook *hook, git_hook_type type)
     git_buf_free(&hook_path);
 }
 
-static git_hook* get_hook(git_hook_type type)
+static git_repository_hook* get_hook(git_hook_type type)
 {
-    git_hook *hook;
+    git_repository_hook *hook;
 
-    cl_git_pass(git_hook_get(&hook, _repo, type));
+    cl_git_pass(git_repository_hook_get(&hook, _repo, type));
 
     cl_assert_equal_i(hook->type, type);
 
@@ -82,19 +81,18 @@ static void get_hooks_and_check_and_cleanup()
 {
     int i;
 
-    for (i = 0; i < GIT_HOOK_TYPE_MAXIMUM_SUPPORTED; i++)
-    {
-        git_hook *hook = get_hook(i);
+    for (i = 0; i < GIT_HOOK_TYPE_MAXIMUM_SUPPORTED; i++) {
+        git_repository_hook *hook = get_hook(i);
 
         cl_assert_equal_i(hook->exists, _expected_hooks[i]);
 
-        git_hook_free(hook);
+        git_repository_hook_free(hook);
     }
 }
 
 static void add_hook_file(git_hook_type type)
 {
-    const char *file_name = _supported_hooks[type];
+    const char *file_name = supported_hooks[type];
     git_buf hook_file_path = get_hook_path();
 
     cl_assert(git_buf_joinpath(&hook_file_path, git_buf_cstr(&hook_file_path), file_name) == 0);
@@ -132,8 +130,7 @@ void test_hooks_get__verify_all_hooks(void)
     * that not only all the hooks are present, but that we are not missing
     * any hooks that need to be added in this test.
     */
-    for (i = 0; i < ARRAY_SIZE(_expected_hooks); i++)
-    {
+    for (i = 0; i < ARRAY_SIZE(_expected_hooks); i++) {
         add_hook_file(i);
         _expected_hooks[i] = GIT_HOOK_TRUE;
     }
