@@ -225,6 +225,8 @@ int git_stransport_stream_new(git_stream **out, const char *host, const char *po
 	if ((ret = SSLSetIOFuncs(st->ctx, read_cb, write_cb)) != noErr ||
 	    (ret = SSLSetConnection(st->ctx, st->io)) != noErr ||
 	    (ret = SSLSetSessionOption(st->ctx, kSSLSessionOptionBreakOnServerAuth, true)) != noErr ||
+	    (ret = SSLSetProtocolVersionMin(st->ctx, kTLSProtocol1)) != noErr ||
+	    (ret = SSLSetProtocolVersionMax(st->ctx, kTLSProtocol12)) != noErr ||
 	    (ret = SSLSetPeerDomainName(st->ctx, host, strlen(host))) != noErr) {
 		git_stream_free((git_stream *)st);
 		return stransport_error(ret);
