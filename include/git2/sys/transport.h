@@ -149,10 +149,6 @@ typedef int (*git_transport_cb)(git_transport **out, git_remote *owner, void *pa
  * Add a custom transport definition, to be used in addition to the built-in
  * set of transports that come with libgit2.
  *
- * The caller is responsible for synchronizing calls to git_transport_register
- * and git_transport_unregister with other calls to the library that
- * instantiate transports.
- *
  * @param prefix The scheme (ending in "://") to match, i.e. "git://"
  * @param cb The callback used to create an instance of the transport
  * @param param A fixed parameter to pass to cb at creation time
@@ -167,6 +163,9 @@ GIT_EXTERN(int) git_transport_register(
  *
  * Unregister a custom transport definition which was previously registered
  * with git_transport_register.
+ *
+ * Note that there may still be active instances of the transport being
+ * unregistered even after this function returns.
  *
  * @param prefix From the previous call to git_transport_register
  * @return 0 or an error code
