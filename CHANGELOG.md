@@ -98,6 +98,9 @@ v0.22 + 1
   non-snapshot configuration, as there can be no guarantee that the
   returned pointer is valid.
 
+* `git_note_default_ref()` now uses a `git_buf` to return the string,
+  as the string is otherwise not guaranteed to stay allocated.
+
 v0.22
 ------
 

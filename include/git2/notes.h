@@ -183,12 +183,12 @@ GIT_EXTERN(void) git_note_free(git_note *note);
 /**
  * Get the default notes reference for a repository
  *
- * @param out Pointer to the default notes reference
+ * @param out buffer in which to store the name of the default notes reference
  * @param repo The Git repository
  *
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_note_default_ref(const char **out, git_repository *repo);
+GIT_EXTERN(int) git_note_default_ref(git_buf *out, git_repository *repo);
 
 /**
  * Loop over all the notes within a specified namespace
