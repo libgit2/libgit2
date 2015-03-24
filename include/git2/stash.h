@@ -70,6 +70,47 @@ GIT_EXTERN(int) git_stash_save(
 	const char *message,
 	unsigned int flags);
 
+typedef enum {
+	GIT_APPLY_DEFAULT = 0,
+
+	/* Try to reinstate not only the working tree's changes,
+	 * but also the index's ones.
+	 */
+	GIT_APPLY_REINSTATE_INDEX = (1 << 0),
+} git_apply_flags;
+
+/**
+ * Apply a single stashed state from the stash list.
+ *
+ * If any untracked or ignored file saved in the stash already exist in the
+ * workdir, the function will return GIT_EEXISTS and both the workdir and index
+ * will be left untouched.
+ *
+ * If local changes in the workdir would be overwritten when applying
+ * modifications saved in the stash, the function will return GIT_EMERGECONFLICT
+ * and the index will be left untouched. The workdir files will be left
+ * unmodified as well but restored untracked or ignored files that were saved
+ * in the stash will be left around in the workdir.
+ *
+ * If passing the GIT_APPLY_REINSTATE_INDEX flag and there would be conflicts
+ * when reinstating the index, the function will return GIT_EUNMERGED and both
+ * the workdir and index will be left untouched.
+ *
+ * @param repo The owning repository.
+ *
+ * @param index The position within the stash list. 0 points to the
+ * most recent stashed state.
+ *
+ * @param flags Flags to control the applying process. (see GIT_APPLY_* above)
+ *
+ * @return 0 on success, GIT_ENOTFOUND if there's no stashed state for the given
+ * index, or error code. (see details above)
+ */
+GIT_EXTERN(int) git_stash_apply(
+	git_repository *repo,
+	size_t index,
+	unsigned int flags);
+
 /**
  * This is a callback function you can provide to iterate over all the
  * stashed states that will be invoked per entry.
@@ -79,7 +120,7 @@ GIT_EXTERN(int) git_stash_save(
  * @param message The stash message.
  * @param stash_id The commit oid of the stashed state.
  * @param payload Extra parameter to callback function.
- * @return 0 to continue iterating or non-zero to stop
+ * @return 0 to continue iterating or non-zero to stop.
  */
 typedef int (*git_stash_cb)(
 	size_t index,
@@ -99,7 +140,7 @@ typedef int (*git_stash_cb)(
  *
  * @param payload Extra parameter to callback function.
  *
- * @return 0 on success, non-zero callback return value, or error code
+ * @return 0 on success, non-zero callback return value, or error code.
  */
 GIT_EXTERN(int) git_stash_foreach(
 	git_repository *repo,
@@ -114,12 +155,31 @@ GIT_EXTERN(int) git_stash_foreach(
  * @param index The position within the stash list. 0 points to the
  * most recent stashed state.
  *
- * @return 0 on success, or error code
+ * @return 0 on success, GIT_ENOTFOUND if there's no stashed state for the given
+ * index, or error code.
  */
-
 GIT_EXTERN(int) git_stash_drop(
 	git_repository *repo,
 	size_t index);
+
+/**
+ * Apply a single stashed state from the stash list and remove it from the list
+ * if successful.
+ *
+ * @param repo The owning repository.
+ *
+ * @param index The position within the stash list. 0 points to the
+ * most recent stashed state.
+ *
+ * @param flags Flags to control the applying process. (see GIT_APPLY_* above)
+ *
+ * @return 0 on success, GIT_ENOTFOUND if there's no stashed state for the given
+ * index, or error code. (see git_stash_apply() above for details)
+*/
+GIT_EXTERN(int) git_stash_pop(
+	git_repository *repo,
+	size_t index,
+	unsigned int flags);
 
 /** @} */
 GIT_END_DECL
