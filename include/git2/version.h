@@ -7,10 +7,10 @@
 #ifndef INCLUDE_git_version_h__
 #define INCLUDE_git_version_h__
 
-#define LIBGIT2_VERSION "0.22.0"
+#define LIBGIT2_VERSION "0.22.2"
 #define LIBGIT2_VER_MAJOR 0
 #define LIBGIT2_VER_MINOR 22
-#define LIBGIT2_VER_REVISION 0
+#define LIBGIT2_VER_REVISION 2
 
 #define LIBGIT2_SOVERSION 22
 
