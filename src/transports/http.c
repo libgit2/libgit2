@@ -350,6 +350,11 @@ static int on_headers_complete(http_parser *parser)
 				} else {
 					assert(t->cred);
 
+					if (!(t->cred->credtype & allowed_auth_types)) {
+						giterr_set(GITERR_NET, "credentials callback returned an invalid cred type");
+						return t->parse_error = PARSE_ERROR_GENERIC;
+					}
+
 					/* Successfully acquired a credential. */
 					t->parse_error = PARSE_ERROR_REPLAY;
 					return 0;
@@ -553,7 +558,8 @@ static int http_connect(http_subtransport *t)
 	error = git_stream_connect(t->io);
 
 #ifdef GIT_SSL
-	if ((!error || error == GIT_ECERTIFICATE) && t->owner->certificate_check_cb != NULL) {
+	if ((!error || error == GIT_ECERTIFICATE) && t->owner->certificate_check_cb != NULL &&
+	    git_stream_is_encrypted(t->io)) {
 		git_cert *cert;
 		int is_valid;
 

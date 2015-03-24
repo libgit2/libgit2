@@ -822,7 +822,8 @@ int git_patch__invoke_callbacks(
 	for (i = 0; !error && i < git_array_size(patch->hunks); ++i) {
 		diff_patch_hunk *h = git_array_get(patch->hunks, i);
 
-		error = hunk_cb(patch->delta, &h->hunk, payload);
+		if (hunk_cb)
+			error = hunk_cb(patch->delta, &h->hunk, payload);
 
 		if (!line_cb)
 			continue;

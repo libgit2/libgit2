@@ -58,17 +58,17 @@ static void do_fetch(const char *url, git_remote_autotag_option_t flag, int n)
 
 void test_online_fetch__default_git(void)
 {
-	do_fetch("git://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_AUTO, 5);
+	do_fetch("git://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_AUTO, 6);
 }
 
 void test_online_fetch__default_http(void)
 {
-	do_fetch("http://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_AUTO, 5);
+	do_fetch("http://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_AUTO, 6);
 }
 
 void test_online_fetch__default_https(void)
 {
-	do_fetch("https://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_AUTO, 5);
+	do_fetch("https://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_AUTO, 6);
 }
 
 void test_online_fetch__no_tags_git(void)

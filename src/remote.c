@@ -1459,7 +1459,7 @@ int git_remote_update_tips(
 		const char *reflog_message)
 {
 	git_refspec *spec, tagspec;
-	git_vector refs;
+	git_vector refs = GIT_VECTOR_INIT;
 	int error;
 	size_t i;
 
@@ -2328,6 +2328,10 @@ int git_remote_upload(git_remote *remote, const git_strarray *refspecs, const gi
 
 	if (!git_remote_connected(remote) &&
 	    (error = git_remote_connect(remote, GIT_DIRECTION_PUSH)) < 0)
+		goto cleanup;
+
+	free_refspecs(&remote->active_refspecs);
+	if (dwim_refspecs(&remote->active_refspecs, &remote->refspecs, &remote->refs) < 0)
 		goto cleanup;
 
 	if (remote->push) {

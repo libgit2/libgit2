@@ -4,7 +4,7 @@
 #include "path.h"
 
 #ifdef GIT_WIN32
-# include <Windows.h>
+# include <windows.h>
 #endif
 
 static git_repository *repo;

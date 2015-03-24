@@ -1771,6 +1771,15 @@ static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, co
 		goto cleanup;
 	}
 
+	/* If the new branch matches part of the namespace of a previously deleted branch,
+	 * there maybe an obsolete/unused directory (or directory hierarchy) in the way.
+	 */
+	if (git_path_isdir(git_buf_cstr(&path)) &&
+		(git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_RMDIR_SKIP_NONEMPTY) < 0)) {
+		error = -1;
+		goto cleanup;
+	}
+
 	error = git_futils_writebuffer(&buf, git_buf_cstr(&path), O_WRONLY|O_CREAT|O_APPEND, GIT_REFLOG_FILE_MODE);
 
 cleanup:

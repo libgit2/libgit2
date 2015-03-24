@@ -8,6 +8,9 @@
 #ifdef GIT_SSL
 
 #include <ctype.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 #include "global.h"
 #include "posix.h"

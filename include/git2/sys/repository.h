@@ -7,6 +7,9 @@
 #ifndef INCLUDE_sys_git_repository_h__
 #define INCLUDE_sys_git_repository_h__
 
+#include "git2/common.h"
+#include "git2/types.h"
+
 /**
  * @file git2/sys/repository.h
  * @brief Git repository custom implementation routines
@@ -53,7 +56,7 @@ GIT_EXTERN(void) git_repository__cleanup(git_repository *repo);
  *
  * @param repo A repository object
  * @param recurse_submodules Should submodules be updated recursively
- * @returrn 0 on success, < 0 on error
+ * @return 0 on success, < 0 on error
  */
 GIT_EXTERN(int) git_repository_reinit_filesystem(
 	git_repository *repo,

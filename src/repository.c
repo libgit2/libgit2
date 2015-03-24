@@ -1724,7 +1724,7 @@ int git_repository_set_bare(git_repository *repo)
 	if ((error = git_repository_config__weakptr(&config, repo)) < 0)
 		return error;
 
-	if ((error = git_config_set_bool(config, "core.bare", false)) < 0)
+	if ((error = git_config_set_bool(config, "core.bare", true)) < 0)
 		return error;
 
 	if ((error = git_config__update_entry(config, "core.worktree", NULL, true, true)) < 0)
