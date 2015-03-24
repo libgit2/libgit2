@@ -64,6 +64,7 @@ int buf_writestream_write(git_writestream *s, const char *buf, size_t len)
 
 int buf_writestream_close(git_writestream *s)
 {
+	GIT_UNUSED(s);
 	return 0;
 }
 
@@ -94,4 +95,5 @@ void test_filter_file__apply_stream(void)
 	cl_assert_equal_s("crlf\ncrlf\ncrlf\ncrlf\n", write_target.buf.ptr);
 
 	git_filter_list_free(fl);
+	write_target.base.free((struct git_writestream *)&write_target);
 }
