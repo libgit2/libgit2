@@ -194,6 +194,9 @@ void test_path_win32__8dot3_name(void)
 #ifdef GIT_WIN32
 	char *shortname;
 
+	if (!cl_sandbox_supports_8dot3())
+		clar__skip();
+
 	/* Some guaranteed short names */
 	cl_assert_equal_s("PROGRA~1", (shortname = git_win32_path_8dot3_name("C:\\Program Files")));
 	git__free(shortname);
