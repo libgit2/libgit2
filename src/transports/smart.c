@@ -409,7 +409,7 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 		return -1;
 	}
 
-	if (definition->callback(&t->wrapped, &t->parent) < 0) {
+	if (definition->callback(&t->wrapped, &t->parent, definition->param) < 0) {
 		git__free(t);
 		return -1;
 	}

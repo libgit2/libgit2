@@ -289,7 +289,8 @@ struct git_smart_subtransport {
 /* A function which creates a new subtransport for the smart transport */
 typedef int (*git_smart_subtransport_cb)(
 	git_smart_subtransport **out,
-	git_transport* owner);
+	git_transport* owner,
+	void* param);
 
 /**
  * Definition for a "subtransport"
@@ -306,6 +307,10 @@ typedef struct git_smart_subtransport_definition {
 	 * http:// is stateless, but git:// is not.
 	 */
 	unsigned rpc;
+
+	/** Param of the callback
+	 */
+	void* param;
 } git_smart_subtransport_definition;
 
 /* Smart transport subtransports that come with libgit2 */
@@ -321,7 +326,8 @@ typedef struct git_smart_subtransport_definition {
  */
 GIT_EXTERN(int) git_smart_subtransport_http(
 	git_smart_subtransport **out,
-	git_transport* owner);
+	git_transport* owner,
+	void *param);
 
 /**
  * Create an instance of the git subtransport.
@@ -332,7 +338,8 @@ GIT_EXTERN(int) git_smart_subtransport_http(
  */
 GIT_EXTERN(int) git_smart_subtransport_git(
 	git_smart_subtransport **out,
-	git_transport* owner);
+	git_transport* owner,
+	void *param);
 
 /**
  * Create an instance of the ssh subtransport.
@@ -343,7 +350,8 @@ GIT_EXTERN(int) git_smart_subtransport_git(
  */
 GIT_EXTERN(int) git_smart_subtransport_ssh(
 	git_smart_subtransport **out,
-	git_transport* owner);
+	git_transport* owner,
+	void *param);
 
 /**
  * Sets a custom transport factory for the remote. The caller can use this
