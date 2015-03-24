@@ -11,6 +11,41 @@
 #define GIT_IGNORE_DEFAULT_RULES ".\n..\n.git\n"
 
 /**
+ * A negative ignore pattern can match a positive one without
+ * wildcards if its pattern equals the tail of the positive
+ * pattern. Thus
+ *
+ * foo/bar
+ * !bar
+ *
+ * would result in foo/bar being unignored again.
+ */
+static int does_negate_pattern(git_attr_fnmatch *rule, git_attr_fnmatch *neg)
+{
+	char *p;
+
+	if ((rule->flags & GIT_ATTR_FNMATCH_NEGATIVE) == 0
+		&& (neg->flags & GIT_ATTR_FNMATCH_NEGATIVE) != 0) {
+		/*
+		 * no chance of matching if rule is shorter than
+		 * the negated one
+		 */
+		if (rule->length < neg->length)
+			return false;
+
+		/*
+		 * shift pattern so its tail aligns with the
+		 * negated pattern
+		 */
+		p = rule->pattern + rule->length - neg->length;
+		if (strcmp(p, neg->pattern) == 0)
+			return true;
+	}
+
+	return false;
+}
+
+/**
  * A negative ignore can only unignore a file which is given explicitly before, thus
  *
  *    foo
@@ -31,6 +66,8 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 	char *path;
 	git_buf buf = GIT_BUF_INIT;
 
+	*out = 0;
+
 	/* path of the file relative to the workdir, so we match the rules in subdirs */
 	if (match->containing_dir) {
 		git_buf_puts(&buf, match->containing_dir);
@@ -41,9 +78,14 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 	path = git_buf_detach(&buf);
 
 	git_vector_foreach(rules, i, rule) {
-		/* no chance of matching w/o a wilcard */
-		if (!(rule->flags & GIT_ATTR_FNMATCH_HASWILD))
-			continue;
+		if (!(rule->flags & GIT_ATTR_FNMATCH_HASWILD)) {
+			if (does_negate_pattern(rule, match)) {
+				*out = 1;
+				goto out;
+			}
+			else
+				continue;
+		}
 
 	/*
 	 * If we're dealing with a directory (which we know via the
@@ -62,7 +104,6 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 		if (error < 0)
 			goto out;
 
-
 		if ((error = p_fnmatch(git_buf_cstr(&buf), path, FNM_PATHNAME)) < 0) {
 			giterr_set(GITERR_INVALID, "error matching pattern");
 			goto out;
@@ -76,7 +117,6 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 		}
 	}
 
-	*out = 0;
 	error = 0;
 
 out:
