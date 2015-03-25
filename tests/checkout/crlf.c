@@ -347,3 +347,23 @@ void test_checkout_crlf__autocrlf_input_text_auto_attr(void)
 	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
 	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
 }
+
+void test_checkout_crlf__can_write_empty_file(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_bool(g_repo, "core.autocrlf", true);
+
+	git_repository_set_head(g_repo, "refs/heads/empty-files");
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/test1.txt", "");
+
+	if (GIT_EOL_NATIVE == GIT_EOL_LF)
+		check_file_contents("./crlf/test2.txt", "test2.txt's content\n");
+	else
+		check_file_contents("./crlf/test2.txt", "test2.txt's content\r\n");
+
+	check_file_contents("./crlf/test3.txt", "");
+}

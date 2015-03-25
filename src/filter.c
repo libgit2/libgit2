@@ -809,6 +809,9 @@ static int proxy_stream_init(
 	proxy_stream->target = target;
 	proxy_stream->output = temp_buf ? temp_buf : &proxy_stream->temp_buf;
 
+	if (temp_buf)
+		git_buf_clear(temp_buf);
+
 	*out = (git_writestream *)proxy_stream;
 	return 0;
 }
