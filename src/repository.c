@@ -133,7 +133,9 @@ void git_repository_free(git_repository *repo)
 
 	for (i = 0; i < repo->reserved_names.size; i++)
 		git_buf_free(git_array_get(repo->reserved_names, i));
+	git_array_clear(repo->reserved_names);
 
+	git__free(repo->path_gitlink);
 	git__free(repo->path_repository);
 	git__free(repo->workdir);
 	git__free(repo->namespace);
