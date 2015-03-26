@@ -9,6 +9,9 @@
 #include "path.h"
 #include "path_w32.h"
 #include "utf-conv.h"
+#include "posix.h"
+#include "reparse.h"
+#include "dir.h"
 
 #define PATH__NT_NAMESPACE     L"\\\\?\\"
 #define PATH__NT_NAMESPACE_LEN 4
@@ -26,6 +29,8 @@
 
 #define path__is_unc(p) \
 	(((p)[0] == '\\' && (p)[1] == '\\') || ((p)[0] == '/' && (p)[1] == '/'))
+
+#define PATH__MAX_UNC_LEN (32767)
 
 GIT_INLINE(int) path__cwd(wchar_t *path, int size)
 {
@@ -302,4 +307,224 @@ char *git_win32_path_8dot3_name(const char *path)
 		return NULL;
 
 	return shortname;
+}
+
+#if !defined(__MINGW32__)
+int git_win32_path_dirload_with_stat(
+	const char *path,
+	size_t prefix_len,
+	unsigned int flags,
+	const char *start_stat,
+	const char *end_stat,
+	git_vector *contents)
+{
+	int error = 0;
+	git_path_with_stat *ps;
+	git_win32_path pathw;
+	DIR *dir;
+	int(*strncomp)(const char *a, const char *b, size_t sz);
+	size_t cmp_len;
+	size_t start_len = start_stat ? strlen(start_stat) : 0;
+	size_t end_len = end_stat ? strlen(end_stat) : 0;
+	size_t path_size = strlen(path);
+	const char *repo_path = path + prefix_len;
+	size_t repo_path_len = strlen(repo_path);
+	char work_path[PATH__MAX_UNC_LEN];
+	git_win32_path target;
+	size_t path_len;
+	int fMode;
+
+	if (!git_win32__findfirstfile_filter(pathw, path)) {
+		error = -1;
+		giterr_set(GITERR_OS, "Could not parse the path '%s'", path);
+		goto clean_up_and_exit;
+	}
+
+	strncomp = (flags & GIT_PATH_DIR_IGNORE_CASE) != 0 
+		       ? git__strncasecmp 
+		       : git__strncmp;
+
+	/* use of FIND_FIRST_EX_LARGE_FETCH flag in the FindFirstFileExW call could benefit perormance
+	 * here when querying large repositories on Windows 7 (0x0600) or newer versions of Windows.
+	 * doing so could introduce compatibility issues on older versions of Windows. */
+	dir = git__calloc(1, sizeof(DIR));
+	dir->h = FindFirstFileExW(pathw, FindExInfoBasic, &dir->f, FindExSearchNameMatch, NULL, 0);
+	dir->first = 1;
+	if (dir->h == INVALID_HANDLE_VALUE) {
+		error = -1;
+		giterr_set(GITERR_OS, "Could not open directory '%s'", path);
+		goto clean_up_and_exit;
+	}
+	
+	if (repo_path_len > PATH__MAX_UNC_LEN) {
+		error = -1;
+		giterr_set(GITERR_OS, "Could not open directory '%s'", path);
+		goto clean_up_and_exit;
+	}
+
+	memcpy(work_path, repo_path, repo_path_len);
+
+	while (dir) {
+		if (!git_path_is_dot_or_dotdotW(dir->f.cFileName)) {
+			path_len = git__utf16_to_8(work_path + repo_path_len, ARRAYSIZE(work_path) - repo_path_len, dir->f.cFileName);
+
+			work_path[path_len + repo_path_len] = '\0';
+			path_len = path_len + repo_path_len;
+
+			cmp_len = min(start_len, path_len);
+			if (!(cmp_len && strncomp(work_path, start_stat, cmp_len) < 0)) {
+				cmp_len = min(end_len, path_len);
+				if (!(cmp_len && strncomp(work_path, end_stat, cmp_len) > 0)) {
+					fMode = S_IREAD;
+
+					if (dir->f.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+						fMode |= S_IFDIR;
+					else
+						fMode |= S_IFREG;
+
+					if (!(dir->f.dwFileAttributes & FILE_ATTRIBUTE_READONLY))
+						fMode |= S_IWRITE;
+
+					ps = git__calloc(1, sizeof(git_path_with_stat) + path_len + 2);
+					memcpy(ps->path, work_path, path_len + 1);
+					ps->path_len = path_len;
+					ps->st.st_atime = filetime_to_time_t(&dir->f.ftLastAccessTime);
+					ps->st.st_ctime = filetime_to_time_t(&dir->f.ftCreationTime);
+					ps->st.st_mtime = filetime_to_time_t(&dir->f.ftLastWriteTime);
+					ps->st.st_size = dir->f.nFileSizeHigh;
+					ps->st.st_size <<= 32;
+					ps->st.st_size |= dir->f.nFileSizeLow;
+					ps->st.st_dev = ps->st.st_rdev = (_getdrive() - 1);
+					ps->st.st_mode = (mode_t)fMode;
+					ps->st.st_ino = 0;
+					ps->st.st_gid = 0;
+					ps->st.st_uid = 0;
+					ps->st.st_nlink = 1;
+
+					if (dir->f.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
+						if (git_win32_path_readlink_w(target, dir->f.cFileName) >= 0) {
+							ps->st.st_mode = (ps->st.st_mode & ~S_IFMT) | S_IFLNK;
+
+							/* st_size gets the UTF-8 length of the target name, in bytes,
+							 * not counting the NULL terminator */
+							if ((ps->st.st_size = git__utf16_to_8(NULL, 0, target)) < 0) {
+								error = -1;
+								giterr_set(GITERR_OS, "Could not manage reparse link '%s'", dir->f.cFileName);
+								goto clean_up_and_exit;
+							}
+						}
+					}
+
+					if (S_ISDIR(ps->st.st_mode)) {
+						ps->path[ps->path_len++] = '/';
+						ps->path[ps->path_len] = '\0';
+					} else if (!S_ISREG(ps->st.st_mode) && !S_ISLNK(ps->st.st_mode)) {
+						git__free(ps);
+						ps = NULL;
+					}
+
+					if (ps)
+						git_vector_insert(contents, ps);
+				}
+			}
+		}
+
+		memset(&dir->f, 0, sizeof(git_path_with_stat));
+		dir->first = 0;
+
+		if (!FindNextFileW(dir->h, &dir->f)) {
+			if (GetLastError() == ERROR_NO_MORE_FILES)
+				break;
+			else {
+				error = -1;
+				giterr_set(GITERR_OS, "Could not get attributes for file in '%s'", path);
+				goto clean_up_and_exit;
+			}
+		}
+	}
+
+	/* sort now that directory suffix is added */
+	git_vector_sort(contents);
+
+clean_up_and_exit:
+
+	if (dir) {
+		FindClose(dir->h);
+		free(dir);
+	}
+
+	return error;
+}
+#endif
+
+static bool path_is_volume(wchar_t *target, size_t target_len)
+{
+	return (target_len && wcsncmp(target, L"\\??\\Volume{", 11) == 0);
+}
+
+/* On success, returns the length, in characters, of the path stored in dest.
+* On failure, returns a negative value. */
+int git_win32_path_readlink_w(git_win32_path dest, const git_win32_path path)
+{
+	BYTE buf[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
+	GIT_REPARSE_DATA_BUFFER *reparse_buf = (GIT_REPARSE_DATA_BUFFER *)buf;
+	HANDLE handle = NULL;
+	DWORD ioctl_ret;
+	wchar_t *target;
+	size_t target_len;
+
+	int error = -1;
+
+	handle = CreateFileW(path, GENERIC_READ,
+		FILE_SHARE_READ | FILE_SHARE_DELETE, NULL, OPEN_EXISTING,
+		FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, NULL);
+
+	if (handle == INVALID_HANDLE_VALUE) {
+		errno = ENOENT;
+		return -1;
+	}
+
+	if (!DeviceIoControl(handle, FSCTL_GET_REPARSE_POINT, NULL, 0,
+		reparse_buf, sizeof(buf), &ioctl_ret, NULL)) {
+		errno = EINVAL;
+		goto on_error;
+	}
+
+	switch (reparse_buf->ReparseTag) {
+	case IO_REPARSE_TAG_SYMLINK:
+		target = reparse_buf->SymbolicLinkReparseBuffer.PathBuffer +
+			(reparse_buf->SymbolicLinkReparseBuffer.SubstituteNameOffset / sizeof(WCHAR));
+		target_len = reparse_buf->SymbolicLinkReparseBuffer.SubstituteNameLength / sizeof(WCHAR);
+	break;
+	case IO_REPARSE_TAG_MOUNT_POINT:
+		target = reparse_buf->MountPointReparseBuffer.PathBuffer +
+			(reparse_buf->MountPointReparseBuffer.SubstituteNameOffset / sizeof(WCHAR));
+		target_len = reparse_buf->MountPointReparseBuffer.SubstituteNameLength / sizeof(WCHAR);
+	break;
+	default:
+		errno = EINVAL;
+		goto on_error;
+	}
+
+	if (path_is_volume(target, target_len)) {
+		/* This path is a reparse point that represents another volume mounted
+		* at this location, it is not a symbolic link our input was canonical.
+		*/
+		errno = EINVAL;
+		error = -1;
+	} else if (target_len) {
+		/* The path may need to have a prefix removed. */
+		target_len = git_win32__canonicalize_path(target, target_len);
+
+		/* Need one additional character in the target buffer
+		* for the terminating NULL. */
+		if (GIT_WIN_PATH_UTF16 > target_len) {
+			wcscpy(dest, target);
+			error = (int)target_len;
+		}
+	}
+
+on_error:
+	CloseHandle(handle);
+	return error;
 }
