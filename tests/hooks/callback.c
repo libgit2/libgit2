@@ -32,6 +32,8 @@ void test_hooks_callback__initialize(void)
 
 void test_hooks_callback__cleanup(void)
 {
+    git_hook_register_commit_msg_callback(NULL);
+
     git_repository_free(_repo);
     _repo = NULL;
 
@@ -60,4 +62,6 @@ void test_hooks_callback__verify_callback_register(void)
     cl_git_pass(git_hook_execute_commit_msg_callback(_repo, _expected_commit_msg_file_path));
 
     cl_assert_equal_i(_callback_called, true);
+
+    git_buf_free(&_expected_commit_msg_file_path);
 }

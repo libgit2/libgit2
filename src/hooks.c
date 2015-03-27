@@ -61,9 +61,12 @@ void git_hook_free(git_hook *hook)
 
 void git_hook_register_commit_msg_callback(git_hook_commit_msg_callback callback)
 {
-    assert(callback);
-
     commit_msg_callback = callback;
+}
+
+int git_hook_is_commit_msg_callback_registered()
+{
+    return (commit_msg_callback != NULL);
 }
 
 int git_hook_execute_commit_msg_callback(git_repository *repo, git_buf commit_msg_file_path)

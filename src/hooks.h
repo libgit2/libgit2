@@ -36,6 +36,13 @@ static const char* const supported_hooks[GIT_HOOK_FILENAME_TOTAL] =
 };
 
 /**
+* Indicates whether a callback is registered for the commit-msg hook.
+*
+* @return true if a callback is registered, false otherwise.
+*/
+int git_hook_is_commit_msg_callback_registered();
+
+/**
 * Executes the callback for the commit-msg hook.
 *
 * @param repo A repository object.

@@ -26,7 +26,7 @@ GIT_BEGIN_DECL
 typedef struct git_hook {
     /**
     * Indicates whether the hook exists and is executable. A value of 1 means
-    * the hook exists. A value of 0 means the hook does not exist.
+    *  the hook exists. A value of 0 means the hook does not exist.
     */
     int exists;
 
@@ -75,6 +75,7 @@ GIT_EXTERN(void) git_hook_free(git_hook *hook);
 * Registers a callback for the commit-msg hook.
 *
 * @param callback The callback to register.
+*  NULL can be used to de-register a callback.
 */
 GIT_EXTERN(void) git_hook_register_commit_msg_callback(git_hook_commit_msg_callback callback);
 

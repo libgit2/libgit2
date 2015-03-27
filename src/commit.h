@@ -33,4 +33,6 @@ struct git_commit {
 void git_commit__free(void *commit);
 int git_commit__parse(void *commit, git_odb_object *obj);
 
+int git_commit__execute_hook(git_repository *repo, char *commit_message);
+
 #endif
