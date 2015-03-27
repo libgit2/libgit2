@@ -1327,3 +1327,25 @@ void test_checkout_tree__safe_proceeds_if_no_index(void)
 	git_object_free(obj);
 }
 
+void test_checkout_tree__ignores_unstaged_casechange(void)
+{
+	git_reference *orig_ref, *br2_ref;
+	git_commit *orig, *br2;
+	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+
+	cl_git_pass(git_reference_lookup_resolved(&orig_ref, g_repo, "HEAD", 100));
+	cl_git_pass(git_commit_lookup(&orig, g_repo, git_reference_target(orig_ref)));
+	cl_git_pass(git_reset(g_repo, (git_object *)orig, GIT_RESET_HARD, NULL));
+
+	cl_rename("testrepo/branch_file.txt", "testrepo/Branch_File.txt");
+
+	cl_git_pass(git_reference_lookup_resolved(&br2_ref, g_repo, "refs/heads/br2", 100));
+	cl_git_pass(git_commit_lookup(&br2, g_repo, git_reference_target(br2_ref)));
+
+	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)br2, &checkout_opts));
+
+	git_commit_free(orig);
+	git_reference_free(orig_ref);
+}
