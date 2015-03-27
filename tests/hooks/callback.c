@@ -15,15 +15,13 @@
 #define REPO_PATH "hookstestrepo"
 
 static git_repository *_repo = NULL;
-static git_hook_type _callback_expected_hook_type = GIT_HOOK_TYPE_COMMIT_MSG;
-static int _callback_expected_argv = 2;
-static char *_callback_expected_argc[] = { "Hello", "World" };
+static git_buf _expected_commit_msg_file_path;
 
-static int _callback_called = GIT_HOOK_FALSE;
+static int _callback_called = false;
 
 void test_hooks_callback__initialize(void)
 {
-    _callback_called = GIT_HOOK_FALSE;
+    _callback_called = false;
 
     cl_assert(!git_path_isdir(REPO_PATH));
 
@@ -40,23 +38,26 @@ void test_hooks_callback__cleanup(void)
     cl_fixture_cleanup(REPO_PATH);
 }
 
-static int verify_callback(git_repository_hook *hook, git_repository *repo, int argv, char *argc[])
+static int verify_callback(git_hook *hook, git_repository *repo, git_buf commit_msg_file_path)
 {
-    cl_assert_equal_i(hook->type, _callback_expected_hook_type);
+    cl_assert_equal_i(hook->exists, false);
+    cl_assert(git_buf_contains_nul(&hook->path) != true);
     cl_assert_equal_p(repo, _repo);
-    cl_assert_equal_i(argv, _callback_expected_argv);
-    cl_assert_equal_p(argc, _callback_expected_argc);
+    cl_assert_equal_s(git_buf_cstr(&commit_msg_file_path), git_buf_cstr(&_expected_commit_msg_file_path));
 
-    _callback_called = GIT_HOOK_TRUE;
+    _callback_called = true;
 
     return GIT_OK;
 }
 
 void test_hooks_callback__verify_callback_register(void)
 {
-    git_repository_hook_register_callback(_callback_expected_hook_type, verify_callback);
+    git_buf_init(&_expected_commit_msg_file_path, 0);
+    git_buf_puts(&_expected_commit_msg_file_path, "Foobar");
 
-    cl_git_pass(git_repository_hook_execute_callback(_callback_expected_hook_type, _repo, _callback_expected_argv, _callback_expected_argc));
+    git_hook_register_commit_msg_callback(verify_callback);
 
-    cl_assert_equal_i(_callback_called, GIT_HOOK_TRUE);
+    cl_git_pass(git_hook_execute_commit_msg_callback(_repo, _expected_commit_msg_file_path));
+
+    cl_assert_equal_i(_callback_called, true);
 }
