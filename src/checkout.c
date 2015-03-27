@@ -2643,7 +2643,7 @@ int git_checkout_tree(
 	if ((error = git_repository_index(&index, repo)) < 0)
 		return error;
 
-	if (!(error = git_iterator_for_tree(&tree_i, tree, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)))
+	if (!(error = git_iterator_for_tree(&tree_i, tree, 0, NULL, NULL)))
 		error = git_checkout_iterator(tree_i, index, opts);
 
 	git_iterator_free(tree_i);
