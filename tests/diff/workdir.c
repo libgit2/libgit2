@@ -1694,3 +1694,34 @@ void test_diff_workdir__binary_detection(void)
 	git_index_free(idx);
 	git_buf_free(&b);
 }
+
+
+void test_diff_workdir__cpp_file_changed(void)
+{
+	const char *a_commit = "1107ceab8176a";
+	static char *str0 [] = { "MD5FileHash.cpp" };
+
+	git_diff *diff = NULL;
+	git_tree *a;
+	diff_expects exp;
+
+	g_repo = cl_git_sandbox_init("issue_3020");
+
+	a = resolve_commit_oid_to_tree(g_repo, a_commit);
+
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+
+	opts.pathspec.strings = str0; opts.pathspec.count = ARRAY_SIZE(str0);
+
+	opts.flags = GIT_DIFF_INCLUDE_UNTRACKED
+		| GIT_DIFF_RECURSE_UNTRACKED_DIRS;
+
+	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, a, &opts));
+
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+
+	cl_assert_equal_i(1, exp.files);
+
+	git_diff_free(diff);
+}
