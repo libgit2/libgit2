@@ -1344,6 +1344,16 @@ static int is_submodule(workdir_iterator *wi, git_path_with_stat *ie)
 	return is_submodule;
 }
 
+GIT_INLINE(git_dir_flag) git_entry__dir_flag(git_index_entry *entry) {
+#if defined(GIT_WIN32) && !defined(__MINGW32__)
+	return (entry && entry->mode)
+		? S_ISDIR(entry->mode) ? GIT_DIR_FLAG_TRUE : GIT_DIR_FLAG_FALSE
+		: GIT_DIR_FLAG_UNKNOWN;
+#else
+	return GIT_DIR_FLAG_UNKNOWN;
+#endif
+}
+
 static int workdir_iterator__enter_dir(fs_iterator *fi)
 {
 	workdir_iterator *wi = (workdir_iterator *)fi;
@@ -1352,9 +1362,10 @@ static int workdir_iterator__enter_dir(fs_iterator *fi)
 	git_path_with_stat *entry;
 	bool found_submodules = false;
 
+	git_dir_flag dir_flag = git_entry__dir_flag(&fi->entry);
+
 	/* check if this directory is ignored */
-	if (git_ignore__lookup(
-			&ff->is_ignored, &wi->ignores, fi->path.ptr + fi->root_len) < 0) {
+	if (git_ignore__lookup(&ff->is_ignored, &wi->ignores, fi->path.ptr + fi->root_len, dir_flag) < 0) {
 		giterr_clear();
 		ff->is_ignored = GIT_IGNORE_NOTFOUND;
 	}
@@ -1483,7 +1494,6 @@ int git_iterator_for_workdir_ext(
 	return fs_iterator__initialize(out, &wi->fi, repo_workdir);
 }
 
-
 void git_iterator_free(git_iterator *iter)
 {
 	if (iter == NULL)
@@ -1574,8 +1584,9 @@ int git_iterator_current_parent_tree(
 
 static void workdir_iterator_update_is_ignored(workdir_iterator *wi)
 {
-	if (git_ignore__lookup(
-			&wi->is_ignored, &wi->ignores, wi->fi.entry.path) < 0) {
+	git_dir_flag dir_flag = git_entry__dir_flag(&wi->fi.entry);
+
+	if (git_ignore__lookup(&wi->is_ignored, &wi->ignores, wi->fi.entry.path, dir_flag) < 0) {
 		giterr_clear();
 		wi->is_ignored = GIT_IGNORE_NOTFOUND;
 	}

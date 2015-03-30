@@ -450,7 +450,7 @@ git_attr_assignment *git_attr_rule__lookup_assignment(
 }
 
 int git_attr_path__init(
-	git_attr_path *info, const char *path, const char *base)
+	git_attr_path *info, const char *path, const char *base, git_dir_flag dir_flag)
 {
 	ssize_t root;
 
@@ -481,7 +481,21 @@ int git_attr_path__init(
 	if (!info->basename || !*info->basename)
 		info->basename = info->path;
 
-	info->is_dir = (int)git_path_isdir(info->full.ptr);
+	switch (dir_flag)
+	{
+	case GIT_DIR_FLAG_FALSE:
+		info->is_dir = 0;
+		break;
+
+	case GIT_DIR_FLAG_TRUE:
+		info->is_dir = 1;
+		break;
+
+	case GIT_DIR_FLAG_UNKNOWN:
+	default:
+		info->is_dir = (int)git_path_isdir(info->full.ptr);
+		break;
+	}
 
 	return 0;
 }
