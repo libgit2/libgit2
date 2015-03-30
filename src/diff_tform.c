@@ -84,11 +84,14 @@ static git_diff_delta *diff_delta__merge_like_cgit(
 	 * index (i.e. not in HEAD nor workdir) is given as empty.
 	 */
 	if (dup->status == GIT_DELTA_DELETED) {
-		if (a->status == GIT_DELTA_ADDED)
+		if (a->status == GIT_DELTA_ADDED) {
 			dup->status = GIT_DELTA_UNMODIFIED;
+			dup->nfiles = 2;
+		}
 		/* else don't overwrite DELETE status */
 	} else {
 		dup->status = a->status;
+		dup->nfiles = a->nfiles;
 	}
 
 	git_oid_cpy(&dup->old_file.id, &a->old_file.id);
@@ -118,10 +121,13 @@ static git_diff_delta *diff_delta__merge_like_cgit_reversed(
 		return dup;
 
 	if (dup->status == GIT_DELTA_DELETED) {
-		if (b->status == GIT_DELTA_ADDED)
+		if (b->status == GIT_DELTA_ADDED) {
 			dup->status = GIT_DELTA_UNMODIFIED;
+			dup->nfiles = 2;
+		}
 	} else {
 		dup->status = b->status;
+		dup->nfiles = b->nfiles;
 	}
 
 	git_oid_cpy(&dup->old_file.id, &b->old_file.id);
