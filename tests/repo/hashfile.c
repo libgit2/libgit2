@@ -50,10 +50,10 @@ void test_repo_hashfile__filtered(void)
 	cl_git_mkfile("status/testfile.txt", "content\r\n");
 	cl_git_mkfile("status/testfile.bin", "other\r\nstuff\r\n");
 
-	/* not equal hashes because of filtering */
+	/* equal hashes because of lack of filtering */
 	cl_git_pass(git_odb_hashfile(&a, "status/testfile.txt", GIT_OBJ_BLOB));
 	cl_git_pass(git_repository_hashfile(&b, _repo, "testfile.txt", GIT_OBJ_BLOB, NULL));
-	cl_assert(git_oid_cmp(&a, &b));
+	cl_assert_equal_oid(&a, &b);
 
 	/* equal hashes because filter is binary */
 	cl_git_pass(git_odb_hashfile(&a, "status/testfile.bin", GIT_OBJ_BLOB));
@@ -65,10 +65,10 @@ void test_repo_hashfile__filtered(void)
 	cl_git_pass(git_repository_hashfile(&b, _repo, "testfile.txt", GIT_OBJ_BLOB, "foo.bin"));
 	cl_assert_equal_oid(&a, &b);
 
-	/* not equal hashes when 'as_file' points to text filtering */
+	/* equal hashes since no crlf filtering */
 	cl_git_pass(git_odb_hashfile(&a, "status/testfile.bin", GIT_OBJ_BLOB));
 	cl_git_pass(git_repository_hashfile(&b, _repo, "testfile.bin", GIT_OBJ_BLOB, "foo.txt"));
-	cl_assert(git_oid_cmp(&a, &b));
+	cl_assert_equal_oid(&a, &b);
 
 	/* equal hashes when 'as_file' is empty and turns off filtering */
 	cl_git_pass(git_odb_hashfile(&a, "status/testfile.txt", GIT_OBJ_BLOB));

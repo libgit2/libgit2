@@ -320,21 +320,6 @@ static void assert_proper_normalization(git_index *index, const char *filename, 
 	cl_assert_equal_i(0, git_oid_streq(&entry->id, expected_sha));
 }
 
-void test_attr_repo__staging_properly_normalizes_line_endings_according_to_gitattributes_directives(void)
-{
-	git_index* index;
-
-	cl_git_pass(git_repository_index(&index, g_repo));
-
-	add_to_workdir(".gitattributes", GITATTR);
-
-	assert_proper_normalization(index, "text.txt", "22c74203bace3c2e950278c7ab08da0fca9f4e9b");
-	assert_proper_normalization(index, "huh.dunno", "22c74203bace3c2e950278c7ab08da0fca9f4e9b");
-	assert_proper_normalization(index, "binary.data", "66eeff1fcbacf589e6d70aa70edd3fce5be2b37c");
-
-	git_index_free(index);
-}
-
 void test_attr_repo__bare_repo_with_index(void)
 {
 	const char *names[4] = { "test1", "test2", "test3", "test4" };

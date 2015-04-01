@@ -56,21 +56,6 @@ GIT_INLINE(int) git_buf_text_puts_escape_regex(git_buf *buf, const char *string)
 extern void git_buf_text_unescape(git_buf *buf);
 
 /**
- * Replace all \r\n with \n.
- *
- * @return 0 on success, -1 on memory error, GIT_PASSTHROUGH if the
- * source buffer has mixed line endings.
- */
-extern int git_buf_text_crlf_to_lf(git_buf *tgt, const git_buf *src);
-
-/**
- * Replace all \n with \r\n. Does not modify existing \r\n.
- *
- * @return 0 on success, -1 on memory error
- */
-extern int git_buf_text_lf_to_crlf(git_buf *tgt, const git_buf *src);
-
-/**
  * Fill buffer with the common prefix of a array of strings
  *
  * Buffer will be set to empty if there is no common prefix

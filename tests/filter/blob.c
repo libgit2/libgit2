@@ -105,7 +105,7 @@ void test_filter_blob__ident(void)
 
 	cl_git_pass(git_blob_filtered_content(&buf, blob, "filter.identcrlf", 1));
 	cl_assert_equal_s(
-		"Some text\r\n$Id: 3164f585d548ac68027d22b104f2d8100b2b6845$\r\nGoes there\r\n", buf.ptr);
+		"Some text\n$Id: 3164f585d548ac68027d22b104f2d8100b2b6845$\nGoes there\n", buf.ptr);
 
 	cl_git_pass(git_blob_filtered_content(&buf, blob, "filter.identlf", 1));
 	cl_assert_equal_s(
