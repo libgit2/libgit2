@@ -114,8 +114,8 @@ void test_object_blob_fromchunks__creating_a_blob_from_chunks_honors_the_attribu
 	write_attributes(repo);
 
 	assert_named_chunked_blob("321cbdf08803c744082332332838df6bd160f8f9", "dummy.data");
-	assert_named_chunked_blob("e9671e138a780833cb689753570fd10a55be84fb", "dummy.txt");
-	assert_named_chunked_blob("e9671e138a780833cb689753570fd10a55be84fb", "dummy.dunno");
+	assert_named_chunked_blob("321cbdf08803c744082332332838df6bd160f8f9", "dummy.txt");
+	assert_named_chunked_blob("321cbdf08803c744082332332838df6bd160f8f9", "dummy.dunno");
 }
 
 static int failing_chunked_source_cb(

@@ -14,18 +14,12 @@
 
 #define VERY_SECURE_ENCRYPTION(b) ((b) ^ 0xff)
 
-#ifdef GIT_WIN32
-# define NEWLINE "\r\n"
-#else
-# define NEWLINE "\n"
-#endif
-
 static char workdir_data[] =
-	"some simple" NEWLINE
-	"data" NEWLINE
-	"that will be" NEWLINE
-	"trivially" NEWLINE
-	"scrambled." NEWLINE;
+	"some simple\n"
+	"data\n"
+	"that will be\n"
+	"trivially\n"
+	"scrambled.\n";
 
 /* Represents the data above scrambled (bits flipped) after \r\n -> \n
  * conversion, then bytewise reversed
@@ -234,16 +228,16 @@ void test_filter_custom__can_register_a_custom_filter_in_the_repository(void)
 
 	cl_git_pass(git_filter_list_load(
 		&fl, g_repo, NULL, "herofile", GIT_FILTER_TO_WORKTREE, 0));
-	/* expect: bitflip, reverse, crlf */
-	cl_assert_equal_sz(3, git_filter_list_length(fl));
+	/* expect: bitflip, reverse */
+	cl_assert_equal_sz(2, git_filter_list_length(fl));
 	git_filter_list_free(fl);
 
 	cl_git_pass(git_filter_list_load(
 		&fl, g_repo, NULL, "herocorp", GIT_FILTER_TO_WORKTREE, 0));
-	/* expect: bitflip, reverse - possibly crlf depending on global config */
+	/* expect: bitflip, reverse */
 	{
 		size_t flen = git_filter_list_length(fl);
-		cl_assert(flen == 2 || flen == 3);
+		cl_assert(flen == 2);
 	}
 	git_filter_list_free(fl);
 

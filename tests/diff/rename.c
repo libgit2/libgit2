@@ -32,7 +32,7 @@ void test_diff_rename__cleanup(void)
  *   sixserving.txt  -> ikeepsix.txt    (copy, add title, >80% match)
  *   sevencities.txt                    (no change)
  * commit 19dd32dfb1520a64e5bbaae8dce6ef423dfa2f13
- *   songofseven.txt -> untimely.txt    (rename, convert to crlf)
+ *   songofseven.txt -> untimely.txt    (rename)
  *   ikeepsix.txt    -> ikeepsix.txt    (reorder sections in file)
  *   sixserving.txt  -> sixserving.txt  (whitespace change - not just indent)
  *   sevencities.txt -> songof7cities.txt (rename, small text changes)
@@ -278,7 +278,7 @@ void test_diff_rename__not_exact_match(void)
 	git_diff_free(diff);
 
 	/* == Changes =====================================================
-	 * songofseven.txt -> untimely.txt    (rename, convert to crlf)
+	 * songofseven.txt -> untimely.txt    (rename)
 	 * ikeepsix.txt    -> ikeepsix.txt    (reorder sections in file)
 	 * sixserving.txt  -> sixserving.txt  (whitespace - not just indent)
 	 * sevencities.txt -> songof7cities.txt (rename, small text changes)
@@ -496,8 +496,6 @@ void test_diff_rename__working_directory_changes(void)
 	cl_git_pass(
 		git_futils_readbuffer(&old_content, "renames/songof7cities.txt"));
 	cl_git_pass(
-		git_buf_text_lf_to_crlf(&content, &old_content));
-	cl_git_pass(
 		git_futils_writebuffer(&content, "renames/songof7cities.txt", 0, 0));
 
 	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, tree, &diffopts));
@@ -510,10 +508,10 @@ void test_diff_rename__working_directory_changes(void)
 	cl_git_pass(git_diff_foreach(
 		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
 
-	cl_assert_equal_i(5, exp.files);
-	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_RENAMED]);
-	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
-	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_UNTRACKED]);
+	cl_assert_equal_i(6, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_UNTRACKED]);
 
 	git_diff_free(diff);
 

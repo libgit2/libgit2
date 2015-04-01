@@ -99,7 +99,7 @@ void test_checkout_index__honor_the_specified_pathspecs(void)
 	check_file_contents("./testrepo/new.txt", "my new file\n");
 }
 
-void test_checkout_index__honor_the_gitattributes_directives(void)
+void test_checkout_index__ignore_the_gitattributes_directives(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	const char *attributes =
@@ -115,24 +115,7 @@ void test_checkout_index__honor_the_gitattributes_directives(void)
 
 	check_file_contents("./testrepo/README", "hey there\n");
 	check_file_contents("./testrepo/new.txt", "my new file\n");
-	check_file_contents("./testrepo/branch_file.txt", "hi\r\nbye!\r\n");
-}
-
-void test_checkout_index__honor_coreautocrlf_setting_set_to_true(void)
-{
-#ifdef GIT_WIN32
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	const char *expected_readme_text = "hey there\r\n";
-
-	cl_git_pass(p_unlink("./testrepo/.gitattributes"));
-	cl_repo_set_bool(g_repo, "core.autocrlf", true);
-
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_RECREATE_MISSING;
-
-	cl_git_pass(git_checkout_index(g_repo, NULL, &opts));
-
-	check_file_contents("./testrepo/README", expected_readme_text);
-#endif
+	check_file_contents("./testrepo/branch_file.txt", "hi\nbye!\n");
 }
 
 void test_checkout_index__honor_coresymlinks_setting_set_to_true(void)
@@ -214,7 +197,7 @@ void test_checkout_index__options_disable_filters(void)
 
 	cl_git_pass(git_checkout_index(g_repo, NULL, &opts));
 
-	check_file_contents("./testrepo/new.txt", "my new file\r\n");
+	check_file_contents("./testrepo/new.txt", "my new file\n");
 
 	p_unlink("./testrepo/new.txt");
 
@@ -698,7 +681,7 @@ void test_checkout_index__adding_conflict_removes_stage_0(void)
 	git_index_free(new_index);
 }
 
-void test_checkout_index__conflicts_honor_coreautocrlf(void)
+void test_checkout_index__conflicts_ignore_coreautocrlf(void)
 {
 #ifdef GIT_WIN32
 	git_index *index;
@@ -717,11 +700,11 @@ void test_checkout_index__conflicts_honor_coreautocrlf(void)
 
 	cl_git_pass(git_futils_readbuffer(&conflicting_buf, "testrepo/conflicting.txt"));
 	cl_assert(strcmp(conflicting_buf.ptr,
-		"<<<<<<< ours\r\n"
-		"this file is changed in master and branch\r\n"
-		"=======\r\n"
-		"this file is changed in branch and master\r\n"
-		">>>>>>> theirs\r\n") == 0);
+		"<<<<<<< ours\n"
+		"this file is changed in master and branch\n"
+		"=======\n"
+		"this file is changed in branch and master\n"
+		">>>>>>> theirs\n") == 0);
 	git_buf_free(&conflicting_buf);
 
 	git_index_free(index);

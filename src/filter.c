@@ -108,17 +108,13 @@ static int filter_registry_initialize(void)
 
 	/* try to register both default filters */
 	{
-		git_filter *crlf = git_crlf_filter_new();
 		git_filter *ident = git_ident_filter_new();
 
-		if (crlf && git_filter_register(
-				GIT_FILTER_CRLF, crlf, GIT_FILTER_CRLF_PRIORITY) < 0)
-			crlf = NULL;
 		if (ident && git_filter_register(
 				GIT_FILTER_IDENT, ident, GIT_FILTER_IDENT_PRIORITY) < 0)
 			ident = NULL;
 
-		if (!crlf || !ident)
+		if (!ident)
 			return -1;
 	}
 
