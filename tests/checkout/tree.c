@@ -1349,3 +1349,60 @@ void test_checkout_tree__ignores_unstaged_casechange(void)
 	git_commit_free(orig);
 	git_reference_free(orig_ref);
 }
+
+void test_checkout_tree__conflicts_with_casechanged_subtrees(void)
+{
+	git_reference *orig_ref;
+	git_object *orig, *subtrees;
+	git_oid oid;
+	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+
+	cl_git_pass(git_reference_lookup_resolved(&orig_ref, g_repo, "HEAD", 100));
+	cl_git_pass(git_object_lookup(&orig, g_repo, git_reference_target(orig_ref), GIT_OBJ_COMMIT));
+	cl_git_pass(git_reset(g_repo, (git_object *)orig, GIT_RESET_HARD, NULL));
+
+	cl_must_pass(p_mkdir("testrepo/AB", 0777));
+	cl_must_pass(p_mkdir("testrepo/AB/C", 0777));
+	cl_git_write2file("testrepo/AB/C/3.txt", "Foobar!\n", 8, O_RDWR|O_CREAT, 0666);
+
+	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/subtrees"));
+	cl_git_pass(git_object_lookup(&subtrees, g_repo, &oid, GIT_OBJ_ANY));
+
+	cl_git_fail(git_checkout_tree(g_repo, subtrees, &checkout_opts));
+
+	git_object_free(orig);
+	git_object_free(subtrees);
+	git_reference_free(orig_ref);
+}
+
+void test_checkout_tree__checks_out_casechanged_subtrees(void)
+{
+	git_reference *orig_ref;
+	git_object *orig, *subtrees;
+	git_oid oid;
+	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+
+	cl_git_pass(git_reference_lookup_resolved(&orig_ref, g_repo, "HEAD", 100));
+	cl_git_pass(git_object_lookup(&orig, g_repo, git_reference_target(orig_ref), GIT_OBJ_COMMIT));
+	cl_git_pass(git_reset(g_repo, (git_object *)orig, GIT_RESET_HARD, NULL));
+
+	cl_must_pass(p_mkdir("testrepo/AB", 0777));
+	cl_must_pass(p_mkdir("testrepo/AB/C", 0777));
+	cl_git_write2file("testrepo/AB/C/unrelated.txt", "Foobar!\n", 8, O_RDWR|O_CREAT, 0666);
+
+	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/subtrees"));
+	cl_git_pass(git_object_lookup(&subtrees, g_repo, &oid, GIT_OBJ_ANY));
+
+	cl_git_pass(git_checkout_tree(g_repo, subtrees, &checkout_opts));
+
+	cl_assert(git_path_isfile("testrepo/ab/c/3.txt"));
+	cl_assert(git_path_isfile("testrepo/ab/c/unrelated.txt"));
+
+	git_object_free(orig);
+	git_object_free(subtrees);
+	git_reference_free(orig_ref);
+}
