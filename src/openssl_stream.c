@@ -243,7 +243,11 @@ int openssl_connect(git_stream *stream)
 		return ssl_set_error(st->ssl, ret);
 	}
 
-	if ((ret = SSL_connect(st->ssl)) <= 0)
+	do {
+		ret = SSL_connect(st->ssl);
+	} while (SSL_get_error(st->ssl, ret) == SSL_ERROR_WANT_READ || SSL_get_error(st->ssl, ret) == SSL_ERROR_WANT_WRITE);
+
+	if (ret <= 0)
 		return ssl_set_error(st->ssl, ret);
 
 	return verify_server_cert(st->ssl, st->socket->host);
