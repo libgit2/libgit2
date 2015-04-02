@@ -31,7 +31,7 @@ typedef long (*git_diff_find_context_fn)(
 	const char *, long, char *, long, void *);
 
 typedef int (*git_diff_find_context_line)(
-	git_diff_driver *, const char *, size_t);
+	git_diff_driver *, git_buf *);
 
 typedef struct {
 	git_diff_driver *driver;

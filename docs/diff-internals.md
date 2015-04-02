@@ -21,7 +21,7 @@ content, everything goes through diff drivers that are implemented in
 External Objects
 ----------------
 
-* `git_diff_options` repesents user choices about how a diff should be
+* `git_diff_options` represents user choices about how a diff should be
   performed and is passed to most diff generating functions.
 * `git_diff_file` represents an item on one side of a possible delta
 * `git_diff_delta` represents a pair of items that have changed in some
@@ -37,7 +37,7 @@ External Objects
   header that compactly represents that information, and it will have a
   number of lines of context surrounding added and deleted lines.
 * A `line` is simple a line of data along with a `git_diff_line_t` value
-  that tells how the data should be interpretted (e.g. context or added).
+  that tells how the data should be interpreted (e.g. context or added).
 
 Internal Objects
 ----------------

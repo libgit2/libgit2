@@ -8,4 +8,6 @@ init
 log
 rev-parse
 status
+tag
+for-each-ref
 *.dSYM

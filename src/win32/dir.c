@@ -7,29 +7,13 @@
 #define GIT__WIN32_NO_WRAP_DIR
 #include "posix.h"
 
-static int init_filter(char *filter, size_t n, const char *dir)
-{
-	size_t len = strlen(dir);
-
-	if (len+3 >= n)
-		return 0;
-
-	strcpy(filter, dir);
-	if (len && dir[len-1] != '/')
-		strcat(filter, "/");
-	strcat(filter, "*");
-
-	return 1;
-}
-
 git__DIR *git__opendir(const char *dir)
 {
-	git_win32_path_as_utf8 filter;
 	git_win32_path filter_w;
 	git__DIR *new = NULL;
 	size_t dirlen;
 
-	if (!dir || !init_filter(filter, sizeof(filter), dir))
+	if (!dir || !git_win32__findfirstfile_filter(filter_w, dir))
 		return NULL;
 
 	dirlen = strlen(dir);
@@ -39,7 +23,6 @@ git__DIR *git__opendir(const char *dir)
 		return NULL;
 	memcpy(new->dir, dir, dirlen);
 
-	git_win32_path_from_c(filter_w, filter);
 	new->h = FindFirstFileW(filter_w, &new->f);
 
 	if (new->h == INVALID_HANDLE_VALUE) {
@@ -72,10 +55,10 @@ int git__readdir_ext(
 		return -1;
 	}
 
-	if (wcslen(d->f.cFileName) >= sizeof(entry->d_name))
+	/* Convert the path to UTF-8 */
+	if (git_win32_path_to_utf8(entry->d_name, d->f.cFileName) < 0)
 		return -1;
 
-	git_win32_path_to_c(entry->d_name, d->f.cFileName);
 	entry->d_ino = 0;
 
 	*result = entry;
@@ -96,7 +79,6 @@ struct git__dirent *git__readdir(git__DIR *d)
 
 void git__rewinddir(git__DIR *d)
 {
-	git_win32_path_as_utf8 filter;
 	git_win32_path filter_w;
 
 	if (!d)
@@ -108,10 +90,9 @@ void git__rewinddir(git__DIR *d)
 		d->first = 0;
 	}
 
-	if (!init_filter(filter, sizeof(filter), d->dir))
+	if (!git_win32__findfirstfile_filter(filter_w, d->dir))
 		return;
 
-	git_win32_path_from_c(filter_w, filter);
 	d->h = FindFirstFileW(filter_w, &d->f);
 
 	if (d->h == INVALID_HANDLE_VALUE)

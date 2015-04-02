@@ -19,6 +19,7 @@
 #define GIT_REFS_HEADS_DIR GIT_REFS_DIR "heads/"
 #define GIT_REFS_TAGS_DIR GIT_REFS_DIR "tags/"
 #define GIT_REFS_REMOTES_DIR GIT_REFS_DIR "remotes/"
+#define GIT_REFS_NOTES_DIR GIT_REFS_DIR "notes/"
 #define GIT_REFS_DIR_MODE 0777
 #define GIT_REFS_FILE_MODE 0666
 
@@ -50,6 +51,8 @@
 
 #define GIT_REFNAME_MAX 1024
 
+typedef char git_refname_t[GIT_REFNAME_MAX];
+
 struct git_reference {
 	git_refdb *db;
 	git_ref_t type;
@@ -65,9 +68,8 @@ struct git_reference {
 
 git_reference *git_reference__set_name(git_reference *ref, const char *name);
 
-int git_reference__normalize_name_lax(char *buffer_out, size_t out_size, const char *name);
 int git_reference__normalize_name(git_buf *buf, const char *name, unsigned int flags);
-int git_reference__update_terminal(git_repository *repo, const char *ref_name, const git_oid *oid);
+int git_reference__update_terminal(git_repository *repo, const char *ref_name, const git_oid *oid, const git_signature *signature, const char *log_message);
 int git_reference__is_valid_name(const char *refname, unsigned int flags);
 int git_reference__is_branch(const char *ref_name);
 int git_reference__is_remote(const char *ref_name);

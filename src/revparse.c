@@ -168,6 +168,8 @@ static int retrieve_previously_checked_out_branch_or_revision(git_object **out, 
 	for (i = 0; i < numentries; i++) {
 		entry = git_reflog_entry_byindex(reflog, i);
 		msg = git_reflog_entry_message(entry);
+		if (!msg)
+			continue;
 
 		if (regexec(&preg, msg, 2, regexmatches, 0))
 			continue;
@@ -488,8 +490,7 @@ static int handle_grep_syntax(git_object **out, git_repository *repo, const git_
 	git_revwalk_sorting(walk, GIT_SORT_TIME);
 
 	if (spec_oid == NULL) {
-		// TODO: @carlosmn: The glob should be refs/* but this makes git_revwalk_next() fails
-		if ((error = git_revwalk_push_glob(walk, GIT_REFS_HEADS_DIR "*")) < 0)
+		if ((error = git_revwalk_push_glob(walk, "refs/*")) < 0)
 			goto cleanup;
 	} else if ((error = git_revwalk_push(walk, spec_oid)) < 0)
 			goto cleanup;

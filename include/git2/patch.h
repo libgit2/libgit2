@@ -106,6 +106,34 @@ GIT_EXTERN(int) git_patch_from_blob_and_buffer(
 	const git_diff_options *opts);
 
 /**
+ * Directly generate a patch from the difference between two buffers.
+ *
+ * This is just like `git_diff_buffers()` except it generates a patch
+ * object for the difference instead of directly making callbacks.  You can
+ * use the standard `git_patch` accessor functions to read the patch
+ * data, and you must call `git_patch_free()` on the patch when done.
+ *
+ * @param out The generated patch; NULL on error
+ * @param old_buffer Raw data for old side of diff, or NULL for empty
+ * @param old_len Length of the raw data for old side of the diff
+ * @param old_as_path Treat old buffer as if it had this filename; can be NULL
+ * @param new_buffer Raw data for new side of diff, or NULL for empty
+ * @param new_len Length of raw data for new side of diff
+ * @param new_as_path Treat buffer as if it had this filename; can be NULL
+ * @param opts Options for diff, or NULL for default options
+ * @return 0 on success or error code < 0
+ */
+GIT_EXTERN(int) git_patch_from_buffers(
+	git_patch **out,
+	const void *old_buffer,
+	size_t old_len,
+	const char *old_as_path,
+	const char *new_buffer,
+	size_t new_len,
+	const char *new_as_path,
+	const git_diff_options *opts);
+
+/**
  * Free a git_patch object.
  */
 GIT_EXTERN(void) git_patch_free(git_patch *patch);
@@ -113,12 +141,12 @@ GIT_EXTERN(void) git_patch_free(git_patch *patch);
 /**
  * Get the delta associated with a patch
  */
-GIT_EXTERN(const git_diff_delta *) git_patch_get_delta(git_patch *patch);
+GIT_EXTERN(const git_diff_delta *) git_patch_get_delta(const git_patch *patch);
 
 /**
  * Get the number of hunks in a patch
  */
-GIT_EXTERN(size_t) git_patch_num_hunks(git_patch *patch);
+GIT_EXTERN(size_t) git_patch_num_hunks(const git_patch *patch);
 
 /**
  * Get line counts of each type in a patch.
@@ -169,7 +197,7 @@ GIT_EXTERN(int) git_patch_get_hunk(
  * @return Number of lines in hunk or -1 if invalid hunk index
  */
 GIT_EXTERN(int) git_patch_num_lines_in_hunk(
-	git_patch *patch,
+	const git_patch *patch,
 	size_t hunk_idx);
 
 /**
@@ -218,13 +246,13 @@ GIT_EXTERN(size_t) git_patch_size(
  * Serialize the patch to text via callback.
  *
  * Returning a non-zero value from the callback will terminate the iteration
- * and cause this return `GIT_EUSER`.
+ * and return that value to the caller.
  *
  * @param patch A git_patch representing changes to one file
  * @param print_cb Callback function to output lines of the patch.  Will be
  *                 called for file headers, hunk headers, and diff lines.
  * @param payload Reference pointer that will be passed to your callbacks.
- * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ * @return 0 on success, non-zero callback return value, or error code
  */
 GIT_EXTERN(int) git_patch_print(
 	git_patch *patch,
@@ -234,14 +262,13 @@ GIT_EXTERN(int) git_patch_print(
 /**
  * Get the content of a patch as a single diff text.
  *
- * @param string Allocated string; caller must free.
+ * @param out The git_buf to be filled in
  * @param patch A git_patch representing changes to one file
  * @return 0 on success, <0 on failure.
  */
-GIT_EXTERN(int) git_patch_to_str(
-	char **string,
+GIT_EXTERN(int) git_patch_to_buf(
+	git_buf *out,
 	git_patch *patch);
-
 
 GIT_END_DECL
 

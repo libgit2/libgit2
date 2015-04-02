@@ -10,6 +10,7 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
+#include "buffer.h"
 
 /**
  * @file git2/repository.h
@@ -58,10 +59,8 @@ GIT_EXTERN(int) git_repository_wrap_odb(git_repository **out, git_odb *odb);
  * The method will automatically detect if the repository is bare
  * (if there is a repository).
  *
- * @param path_out The user allocated buffer which will
- * contain the found path.
- *
- * @param path_size repository_path size
+ * @param out A pointer to a user-allocated git_buf which will contain
+ * the found path.
  *
  * @param start_path The base path where the lookup starts.
  *
@@ -77,8 +76,7 @@ GIT_EXTERN(int) git_repository_wrap_odb(git_repository **out, git_odb *odb);
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_repository_discover(
-		char *path_out,
-		size_t path_size,
+		git_buf *out,
 		const char *start_path,
 		int across_fs,
 		const char *ceiling_dirs);
@@ -270,6 +268,18 @@ typedef struct {
 #define GIT_REPOSITORY_INIT_OPTIONS_INIT {GIT_REPOSITORY_INIT_OPTIONS_VERSION}
 
 /**
+ * Initializes a `git_repository_init_options` with default values. Equivalent
+ * to creating an instance with GIT_REPOSITORY_INIT_OPTIONS_INIT.
+ *
+ * @param opts the `git_repository_init_options` struct to initialize
+ * @param version Version of struct; pass `GIT_REPOSITORY_INIT_OPTIONS_VERSION`
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_repository_init_init_options(
+	git_repository_init_options *opts,
+	unsigned int version);
+
+/**
  * Create a new Git repository in the given folder with extended controls.
  *
  * This will initialize a new git repository (creating the repo_path
@@ -398,11 +408,27 @@ GIT_EXTERN(int) git_repository_is_bare(git_repository *repo);
  * The configuration file must be freed once it's no longer
  * being used by the user.
  *
- * @param out Pointer to store the loaded config file
+ * @param out Pointer to store the loaded configuration
  * @param repo A repository object
  * @return 0, or an error code
  */
 GIT_EXTERN(int) git_repository_config(git_config **out, git_repository *repo);
+
+/**
+ * Get a snapshot of the repository's configuration
+ *
+ * Convenience function to take a snapshot from the repository's
+ * configuration.  The contents of this snapshot will not change,
+ * even if the underlying config files are modified.
+ *
+ * The configuration file must be freed once it's no longer
+ * being used by the user.
+ *
+ * @param out Pointer to store the loaded configuration
+ * @param repo the repository
+ * @return 0, or an error code
+ */
+GIT_EXTERN(int) git_repository_config_snapshot(git_config **out, git_repository *repo);
 
 /**
  * Get the Object Database for this repository.
@@ -464,21 +490,11 @@ GIT_EXTERN(int) git_repository_index(git_index **out, git_repository *repo);
  * Use this function to get the contents of this file. Don't forget to
  * remove the file after you create the commit.
  *
- * If the repository message exists and there are no errors reading it, this
- * returns the bytes needed to store the message in memory (i.e. message
- * file size plus one terminating NUL byte).  That value is returned even if
- * `out` is NULL or `len` is shorter than the necessary size.
- *
- * The `out` buffer will *always* be NUL terminated, even if truncation
- * occurs.
- *
- * @param out Buffer to write data into or NULL to just read required size
- * @param len Length of `out` buffer in bytes
+ * @param out git_buf to write data into
  * @param repo Repository to read prepared message from
- * @return GIT_ENOTFOUND if no message exists, other value < 0 for other
- *         errors, or total bytes in message (may be > `len`) on success
+ * @return 0, GIT_ENOTFOUND if no message exists or an error code
  */
-GIT_EXTERN(int) git_repository_message(char *out, size_t len, git_repository *repo);
+GIT_EXTERN(int) git_repository_message(git_buf *out, git_repository *repo);
 
 /**
  * Remove git's prepared message.
@@ -488,13 +504,13 @@ GIT_EXTERN(int) git_repository_message(char *out, size_t len, git_repository *re
 GIT_EXTERN(int) git_repository_message_remove(git_repository *repo);
 
 /**
- * Remove all the metadata associated with an ongoing git merge, including
- * MERGE_HEAD, MERGE_MSG, etc.
+ * Remove all the metadata associated with an ongoing command like merge,
+ * revert, cherry-pick, etc.  For example: MERGE_HEAD, MERGE_MSG, etc.
  *
  * @param repo A repository object
  * @return 0 on success, or error
  */
-GIT_EXTERN(int) git_repository_merge_cleanup(git_repository *repo);
+GIT_EXTERN(int) git_repository_state_cleanup(git_repository *repo);
 
 typedef int (*git_repository_fetchhead_foreach_cb)(const char *ref_name,
 	const char *remote_url,
@@ -503,14 +519,18 @@ typedef int (*git_repository_fetchhead_foreach_cb)(const char *ref_name,
 	void *payload);
 
 /**
- * Call callback 'callback' for each entry in the given FETCH_HEAD file.
+ * Invoke 'callback' for each entry in the given FETCH_HEAD file.
+ *
+ * Return a non-zero value from the callback to stop the loop.
  *
  * @param repo A repository object
  * @param callback Callback function
  * @param payload Pointer to callback data (optional)
- * @return 0 on success, GIT_ENOTFOUND, GIT_EUSER or error
+ * @return 0 on success, non-zero callback return value, GIT_ENOTFOUND if
+ *         there is no FETCH_HEAD file, or other error code.
  */
-GIT_EXTERN(int) git_repository_fetchhead_foreach(git_repository *repo,
+GIT_EXTERN(int) git_repository_fetchhead_foreach(
+	git_repository *repo,
 	git_repository_fetchhead_foreach_cb callback,
 	void *payload);
 
@@ -518,15 +538,19 @@ typedef int (*git_repository_mergehead_foreach_cb)(const git_oid *oid,
 	void *payload);
 
 /**
- * If a merge is in progress, call callback 'cb' for each commit ID in the
+ * If a merge is in progress, invoke 'callback' for each commit ID in the
  * MERGE_HEAD file.
+ *
+ * Return a non-zero value from the callback to stop the loop.
  *
  * @param repo A repository object
  * @param callback Callback function
  * @param payload Pointer to callback data (optional)
- * @return 0 on success, GIT_ENOTFOUND, GIT_EUSER or error
+ * @return 0 on success, non-zero callback return value, GIT_ENOTFOUND if
+ *         there is no MERGE_HEAD file, or other error code.
  */
-GIT_EXTERN(int) git_repository_mergehead_foreach(git_repository *repo,
+GIT_EXTERN(int) git_repository_mergehead_foreach(
+	git_repository *repo,
 	git_repository_mergehead_foreach_cb callback,
 	void *payload);
 
@@ -538,6 +562,10 @@ GIT_EXTERN(int) git_repository_mergehead_foreach(git_repository *repo,
  * hash a file in the repository and you want to apply filtering rules (e.g.
  * crlf filters) before generating the SHA, then use this function.
  *
+ * Note: if the repository has `core.safecrlf` set to fail and the
+ * filtering triggers that failure, then this function will return an
+ * error and not calculate the hash of the file.
+ *
  * @param out Output value of calculated SHA
  * @param repo Repository pointer
  * @param path Path to file on disk whose contents should be hashed. If the
@@ -547,6 +575,7 @@ GIT_EXTERN(int) git_repository_mergehead_foreach(git_repository *repo,
  *             NULL, then the `path` parameter will be used instead. If
  *             this is passed as the empty string, then no filters will be
  *             applied when calculating the hash.
+ * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_repository_hashfile(
 	git_oid *out,
@@ -571,11 +600,15 @@ GIT_EXTERN(int) git_repository_hashfile(
  *
  * @param repo Repository pointer
  * @param refname Canonical name of the reference the HEAD should point at
+ * @param signature The identity that will used to populate the reflog entry
+ * @param log_message The one line long message to be appended to the reflog
  * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_repository_set_head(
 	git_repository* repo,
-	const char* refname);
+	const char* refname,
+	const git_signature *signature,
+	const char *log_message);
 
 /**
  * Make the repository HEAD directly point to the Commit.
@@ -591,11 +624,15 @@ GIT_EXTERN(int) git_repository_set_head(
  *
  * @param repo Repository pointer
  * @param commitish Object id of the Commit the HEAD should point to
+ * @param signature The identity that will used to populate the reflog entry
+ * @param log_message The one line long message to be appended to the reflog
  * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_repository_set_head_detached(
 	git_repository* repo,
-	const git_oid* commitish);
+	const git_oid* commitish,
+	const git_signature *signature,
+	const char *log_message);
 
 /**
  * Detach the HEAD.
@@ -611,11 +648,15 @@ GIT_EXTERN(int) git_repository_set_head_detached(
  * Otherwise, the HEAD will be detached and point to the peeled Commit.
  *
  * @param repo Repository pointer
+ * @param signature The identity that will used to populate the reflog entry
+ * @param reflog_message The one line long message to be appended to the reflog
  * @return 0 on success, GIT_EUNBORNBRANCH when HEAD points to a non existing
  * branch or an error code
  */
 GIT_EXTERN(int) git_repository_detach_head(
-	git_repository* repo);
+	git_repository* repo,
+	const git_signature *signature,
+	const char *reflog_message);
 
 typedef enum {
 	GIT_REPOSITORY_STATE_NONE,

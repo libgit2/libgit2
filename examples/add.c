@@ -78,7 +78,7 @@ int print_matched_cb(const char *path, const char *matched_pathspec, void *paylo
 	git_status_t status;
 	(void)matched_pathspec;
 
-	if (git_status_file(&status, p.repo, path)) {
+	if (git_status_file((unsigned int*)(&status), p.repo, path)) {
 		return -1; //abort
 	}
 

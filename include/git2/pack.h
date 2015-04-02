@@ -38,7 +38,7 @@
  *   `git_packbuilder_set_threads` can be used to adjust the number of
  *   threads used for the process.
  *
- * See tests-clar/pack/packbuilder.c for an example.
+ * See tests/pack/packbuilder.c for an example.
  *
  * @ingroup Git
  * @{
@@ -52,7 +52,7 @@ typedef enum {
 	GIT_PACKBUILDER_ADDING_OBJECTS = 0,
 	GIT_PACKBUILDER_DELTAFICATION = 1,
 } git_packbuilder_stage_t;
-	
+
 /**
  * Initialize a new packbuilder
  *
@@ -115,10 +115,22 @@ GIT_EXTERN(int) git_packbuilder_insert_tree(git_packbuilder *pb, const git_oid *
 GIT_EXTERN(int) git_packbuilder_insert_commit(git_packbuilder *pb, const git_oid *id);
 
 /**
+ * Write the contents of the packfile to an in-memory buffer
+ *
+ * The contents of the buffer will become a valid packfile, even though there
+ * will be no attached index
+ *
+ * @param buf Buffer where to write the packfile
+ * @param pb The packbuilder
+ */
+GIT_EXTERN(int) git_packbuilder_write_buf(git_buf *buf, git_packbuilder *pb);
+
+/**
  * Write the new pack and corresponding index file to path.
  *
  * @param pb The packbuilder
  * @param path to the directory where the packfile and index should be stored
+ * @param mode permissions to use creating a packfile or 0 for defaults
  * @param progress_cb function to call with progress information from the indexer (optional)
  * @param progress_cb_payload payload for the progress callback (optional)
  *
@@ -127,10 +139,22 @@ GIT_EXTERN(int) git_packbuilder_insert_commit(git_packbuilder *pb, const git_oid
 GIT_EXTERN(int) git_packbuilder_write(
 	git_packbuilder *pb,
 	const char *path,
-	git_transfer_progress_callback progress_cb,
+	unsigned int mode,
+	git_transfer_progress_cb progress_cb,
 	void *progress_cb_payload);
 
+/**
+* Get the packfile's hash
+*
+* A packfile's name is derived from the sorted hashing of all object
+* names. This is only correct after the packfile has been written.
+*
+* @param pb The packbuilder object
+*/
+GIT_EXTERN(const git_oid *) git_packbuilder_hash(git_packbuilder *pb);
+
 typedef int (*git_packbuilder_foreach_cb)(void *buf, size_t size, void *payload);
+
 /**
  * Create the new pack and pass each object to the callback
  *

@@ -19,9 +19,9 @@ GIT_BEGIN_DECL
  * Kinds of reset operation
  */
 typedef enum {
-	GIT_RESET_SOFT  = 1, /** Move the head to the given commit */
-	GIT_RESET_MIXED = 2, /** SOFT plus reset index to the commit */
-	GIT_RESET_HARD  = 3, /** MIXED plus changes in working tree discarded */
+	GIT_RESET_SOFT  = 1, /**< Move the head to the given commit */
+	GIT_RESET_MIXED = 2, /**< SOFT plus reset index to the commit */
+	GIT_RESET_HARD  = 3, /**< MIXED plus changes in working tree discarded */
 } git_reset_t;
 
 /**
@@ -48,10 +48,21 @@ typedef enum {
  *
  * @param reset_type Kind of reset operation to perform.
  *
+ * @param signature The identity that will used to populate the reflog entry
+ *
+ * @param log_message The one line long message to be appended to the reflog.
+ * The reflog is only updated if the affected direct reference is actually
+ * changing. If NULL, the default is "reset: moving"; if you want something more
+ * useful, provide a message.
+ *
  * @return 0 on success or an error code
  */
 GIT_EXTERN(int) git_reset(
-	git_repository *repo, git_object *target, git_reset_t reset_type);
+	git_repository *repo,
+	git_object *target,
+	git_reset_t reset_type,
+	git_signature *signature,
+	const char *log_message);
 
 /**
  * Updates some entries in the index from the target commit tree.

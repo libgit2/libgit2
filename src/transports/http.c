@@ -248,6 +248,7 @@ static int on_headers_complete(http_parser *parser)
 	http_subtransport *t = ctx->t;
 	http_stream *s = ctx->s;
 	git_buf buf = GIT_BUF_INIT;
+	int error = 0, no_callback = 0;
 
 	/* Both parse_header_name and parse_header_value are populated
 	 * and ready for consumption. */
@@ -256,29 +257,43 @@ static int on_headers_complete(http_parser *parser)
 			return t->parse_error = PARSE_ERROR_GENERIC;
 
 	/* Check for an authentication failure. */
+
 	if (parser->status_code == 401 &&
-		get_verb == s->verb &&
-		t->owner->cred_acquire_cb) {
-		int allowed_types = 0;
+	    get_verb == s->verb) {
+		if (!t->owner->cred_acquire_cb) {
+			no_callback = 1;
+		} else {
+			int allowed_types = 0;
 
-		if (parse_unauthorized_response(&t->www_authenticate,
-			&allowed_types, &t->auth_mechanism) < 0)
+			if (parse_unauthorized_response(&t->www_authenticate,
+							&allowed_types, &t->auth_mechanism) < 0)
+				return t->parse_error = PARSE_ERROR_GENERIC;
+
+			if (allowed_types &&
+			    (!t->cred || 0 == (t->cred->credtype & allowed_types))) {
+
+				error = t->owner->cred_acquire_cb(&t->cred,
+								  t->owner->url,
+								  t->connection_data.user,
+								  allowed_types,
+								  t->owner->cred_acquire_payload);
+
+				if (error == GIT_PASSTHROUGH) {
+					no_callback = 1;
+				} else if (error < 0) {
+					return PARSE_ERROR_GENERIC;
+				} else {
+					assert(t->cred);
+
+					/* Successfully acquired a credential. */
+					return t->parse_error = PARSE_ERROR_REPLAY;
+				}
+			}
+		}
+
+		if (no_callback) {
+			giterr_set(GITERR_NET, "authentication required but no callback set");
 			return t->parse_error = PARSE_ERROR_GENERIC;
-
-		if (allowed_types &&
-			(!t->cred || 0 == (t->cred->credtype & allowed_types))) {
-
-			if (t->owner->cred_acquire_cb(&t->cred,
-					t->owner->url,
-					t->connection_data.user,
-					allowed_types,
-					t->owner->cred_acquire_payload) < 0)
-				return PARSE_ERROR_GENERIC;
-
-			assert(t->cred);
-
-			/* Successfully acquired a credential. */
-			return t->parse_error = PARSE_ERROR_REPLAY;
 		}
 	}
 
@@ -382,9 +397,6 @@ static int on_body_fill_buffer(http_parser *parser, const char *str, size_t len)
 
 static void clear_parser_state(http_subtransport *t)
 {
-	unsigned i;
-	char *entry;
-
 	http_parser_init(&t->parser, HTTP_RESPONSE);
 	gitno_buffer_setup(&t->socket,
 		&t->parse_buffer,
@@ -407,10 +419,7 @@ static void clear_parser_state(http_subtransport *t)
 	git__free(t->location);
 	t->location = NULL;
 
-	git_vector_foreach(&t->www_authenticate, i, entry)
-		git__free(entry);
-
-	git_vector_free(&t->www_authenticate);
+	git_vector_free_deep(&t->www_authenticate);
 }
 
 static int write_chunk(gitno_socket *socket, const char *buffer, size_t len)

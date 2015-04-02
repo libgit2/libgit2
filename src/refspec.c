@@ -12,6 +12,7 @@
 #include "util.h"
 #include "posix.h"
 #include "refs.h"
+#include "vector.h"
 
 int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 {
@@ -177,60 +178,14 @@ int git_refspec_dst_matches(const git_refspec *refspec, const char *refname)
 	return (p_fnmatch(refspec->dst, refname, 0) == 0);
 }
 
-static int refspec_transform_internal(char *out, size_t outlen, const char *from, const char *to, const char *name)
-{
-	size_t baselen, namelen;
-
-	baselen = strlen(to);
-	if (outlen <= baselen) {
-		giterr_set(GITERR_INVALID, "Reference name too long");
-		return GIT_EBUFS;
-	}
-
-	/*
-	 * No '*' at the end means that it's mapped to one specific local
-	 * branch, so no actual transformation is needed.
-	 */
-	if (to[baselen - 1] != '*') {
-		memcpy(out, to, baselen + 1); /* include '\0' */
-		return 0;
-	}
-
-	/* There's a '*' at the end, so remove its length */
-	baselen--;
-
-	/* skip the prefix, -1 is for the '*' */
-	name += strlen(from) - 1;
-
-	namelen = strlen(name);
-
-	if (outlen <= baselen + namelen) {
-		giterr_set(GITERR_INVALID, "Reference name too long");
-		return GIT_EBUFS;
-	}
-
-	memcpy(out, to, baselen);
-	memcpy(out + baselen, name, namelen + 1);
-
-	return 0;
-}
-
-int git_refspec_transform(char *out, size_t outlen, const git_refspec *spec, const char *name)
-{
-	return refspec_transform_internal(out, outlen, spec->src, spec->dst, name);
-}
-
-int git_refspec_rtransform(char *out, size_t outlen, const git_refspec *spec, const char *name)
-{
-	return refspec_transform_internal(out, outlen, spec->dst, spec->src, name);
-}
-
 static int refspec_transform(
 	git_buf *out, const char *from, const char *to, const char *name)
 {
 	size_t to_len   = to   ? strlen(to)   : 0;
 	size_t from_len = from ? strlen(from) : 0;
 	size_t name_len = name ? strlen(name) : 0;
+
+	git_buf_sanitize(out);
 
 	if (git_buf_set(out, to, to_len) < 0)
 		return -1;
@@ -252,12 +207,12 @@ static int refspec_transform(
 	return git_buf_put(out, name + from_len, name_len - from_len);
 }
 
-int git_refspec_transform_r(git_buf *out, const git_refspec *spec, const char *name)
+int git_refspec_transform(git_buf *out, const git_refspec *spec, const char *name)
 {
 	return refspec_transform(out, spec->src, spec->dst, name);
 }
 
-int git_refspec_transform_l(git_buf *out, const git_refspec *spec, const char *name)
+int git_refspec_rtransform(git_buf *out, const git_refspec *spec, const char *name)
 {
 	return refspec_transform(out, spec->dst, spec->src, name);
 }
@@ -286,4 +241,71 @@ git_direction git_refspec_direction(const git_refspec *spec)
 	assert(spec);
 
 	return spec->push;
+}
+
+int git_refspec__dwim_one(git_vector *out, git_refspec *spec, git_vector *refs)
+{
+	git_buf buf = GIT_BUF_INIT;
+	size_t j, pos;
+	git_remote_head key;
+
+	const char* formatters[] = {
+		GIT_REFS_DIR "%s",
+		GIT_REFS_TAGS_DIR "%s",
+		GIT_REFS_HEADS_DIR "%s",
+		NULL
+	};
+
+	git_refspec *cur = git__calloc(1, sizeof(git_refspec));
+	GITERR_CHECK_ALLOC(cur);
+
+	cur->force = spec->force;
+	cur->push = spec->push;
+	cur->pattern = spec->pattern;
+	cur->matching = spec->matching;
+	cur->string = git__strdup(spec->string);
+
+	/* shorthand on the lhs */
+	if (git__prefixcmp(spec->src, GIT_REFS_DIR)) {
+		for (j = 0; formatters[j]; j++) {
+			git_buf_clear(&buf);
+			if (git_buf_printf(&buf, formatters[j], spec->src) < 0)
+				return -1;
+
+			key.name = (char *) git_buf_cstr(&buf);
+			if (!git_vector_search(&pos, refs, &key)) {
+				/* we found something to match the shorthand, set src to that */
+				cur->src = git_buf_detach(&buf);
+			}
+		}
+	}
+
+	/* No shorthands found, copy over the name */
+	if (cur->src == NULL && spec->src != NULL) {
+		cur->src = git__strdup(spec->src);
+		GITERR_CHECK_ALLOC(cur->src);
+	}
+
+	if (spec->dst && git__prefixcmp(spec->dst, GIT_REFS_DIR)) {
+		/* if it starts with "remotes" then we just prepend "refs/" */
+		if (!git__prefixcmp(spec->dst, "remotes/")) {
+			git_buf_puts(&buf, GIT_REFS_DIR);
+		} else {
+			git_buf_puts(&buf, GIT_REFS_HEADS_DIR);
+		}
+
+		if (git_buf_puts(&buf, spec->dst) < 0)
+			return -1;
+
+		cur->dst = git_buf_detach(&buf);
+	}
+
+	git_buf_free(&buf);
+
+	if (cur->dst == NULL && spec->dst != NULL) {
+		cur->dst = git__strdup(spec->dst);
+		GITERR_CHECK_ALLOC(cur->dst);
+	}
+
+	return git_vector_insert(out, cur);
 }

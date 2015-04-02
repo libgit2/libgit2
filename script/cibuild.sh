@@ -1,5 +1,11 @@
 #!/bin/sh
 
+if [ -n "$COVERITY" ];
+then
+	./script/coverity.sh;
+	exit $?;
+fi
+
 # Create a test repo which we can use for the online::push tests
 mkdir $HOME/_temp
 git init --bare $HOME/_temp/test.git
@@ -16,7 +22,13 @@ ctest -V . || exit $?
 # can do the push tests over it
 
 killall git-daemon
-sudo start ssh
+
+if [ "$TRAVIS_OS_NAME" = "osx" ]; then
+    echo 'PasswordAuthentication yes' | sudo tee -a /etc/sshd_config
+else
+    sudo start ssh
+fi
+
 ssh-keygen -t rsa -f ~/.ssh/id_rsa -N "" -q
 cat ~/.ssh/id_rsa.pub >>~/.ssh/authorized_keys
 ssh-keyscan -t rsa localhost >>~/.ssh/known_hosts
@@ -28,5 +40,5 @@ export GITTEST_REMOTE_SSH_PUBKEY="$HOME/.ssh/id_rsa.pub"
 export GITTEST_REMOTE_SSH_PASSPHRASE=""
 
 if [ -e ./libgit2_clar ]; then
-    ./libgit2_clar -sonline::push
+    ./libgit2_clar -sonline::push -sonline::clone::cred_callback
 fi

@@ -39,6 +39,19 @@ typedef struct {
 #define GIT_PUSH_OPTIONS_VERSION 1
 #define GIT_PUSH_OPTIONS_INIT { GIT_PUSH_OPTIONS_VERSION }
 
+/**
+ * Initializes a `git_push_options` with default values. Equivalent to
+ * creating an instance with GIT_PUSH_OPTIONS_INIT.
+ *
+ * @param opts the `git_push_options` instance to initialize.
+ * @param version the version of the struct; you should pass
+ *        `GIT_PUSH_OPTIONS_VERSION` here.
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_push_init_options(
+	git_push_options *opts,
+	unsigned int version);
+
 /** Push network progress notification function */
 typedef int (*git_push_transfer_progress)(
 	unsigned int current,
@@ -103,10 +116,16 @@ GIT_EXTERN(int) git_push_add_refspec(git_push *push, const char *refspec);
  * Update remote tips after a push
  *
  * @param push The push object
+ * @param signature The identity to use when updating reflogs
+ * @param reflog_message The message to insert into the reflogs. If NULL, the
+ *                       default is "update by push".
  *
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_push_update_tips(git_push *push);
+GIT_EXTERN(int) git_push_update_tips(
+		git_push *push,
+		const git_signature *signature,
+		const char *reflog_message);
 
 /**
  * Actually push all given refspecs
@@ -129,20 +148,22 @@ GIT_EXTERN(int) git_push_finish(git_push *push);
  *
  * @return true if remote side successfully unpacked, false otherwise
  */
-GIT_EXTERN(int) git_push_unpack_ok(git_push *push);
+GIT_EXTERN(int) git_push_unpack_ok(const git_push *push);
 
 /**
- * Call callback `cb' on each status
+ * Invoke callback `cb' on each status entry
  *
  * For each of the updated references, we receive a status report in the
  * form of `ok refs/heads/master` or `ng refs/heads/master <msg>`.
  * `msg != NULL` means the reference has not been updated for the given
  * reason.
  *
+ * Return a non-zero value from the callback to stop the loop.
+ *
  * @param push The push object
  * @param cb The callback to call on each object
  *
- * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ * @return 0 on success, non-zero callback return value, or error code
  */
 GIT_EXTERN(int) git_push_status_foreach(git_push *push,
 			int (*cb)(const char *ref, const char *msg, void *data),

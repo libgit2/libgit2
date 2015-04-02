@@ -64,7 +64,7 @@ typedef struct git_blame__entry {
 } git_blame__entry;
 
 struct git_blame {
-	const char *path;
+	char *path;
 	git_repository *repository;
 	git_blame_options options;
 

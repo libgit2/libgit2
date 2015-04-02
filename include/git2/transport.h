@@ -31,13 +31,27 @@ GIT_BEGIN_DECL
 /** Authentication type requested */
 typedef enum {
 	/* git_cred_userpass_plaintext */
-	GIT_CREDTYPE_USERPASS_PLAINTEXT =     (1u << 0),
+	GIT_CREDTYPE_USERPASS_PLAINTEXT = (1u << 0),
 
 	/* git_cred_ssh_key */
 	GIT_CREDTYPE_SSH_KEY = (1u << 1),
 
 	/* git_cred_ssh_custom */
-	GIT_CREDTYPE_SSH_CUSTOM =          (1u << 2),
+	GIT_CREDTYPE_SSH_CUSTOM = (1u << 2),
+
+	/* git_cred_default */
+	GIT_CREDTYPE_DEFAULT = (1u << 3),
+
+	/* git_cred_ssh_interactive */
+	GIT_CREDTYPE_SSH_INTERACTIVE = (1u << 4),
+
+	/**
+	 * Username-only information
+	 *
+	 * If the SSH transport does not know which username to use,
+	 * it will ask via this credential type.
+	 */
+	GIT_CREDTYPE_USERNAME = (1u << 5),
 } git_credtype_t;
 
 /* The base structure for all credential types */
@@ -48,7 +62,7 @@ struct git_cred {
 	void (*free)(git_cred *cred);
 };
 
-/* A plaintext username and password */
+/** A plaintext username and password */
 typedef struct {
 	git_cred parent;
 	char *username;
@@ -57,8 +71,10 @@ typedef struct {
 
 #ifdef GIT_SSH
 typedef LIBSSH2_USERAUTH_PUBLICKEY_SIGN_FUNC((*git_cred_sign_callback));
+typedef LIBSSH2_USERAUTH_KBDINT_RESPONSE_FUNC((*git_cred_ssh_interactive_callback));
 #else
 typedef int (*git_cred_sign_callback)(void *, ...);
+typedef int (*git_cred_ssh_interactive_callback)(void *, ...);
 #endif
 
 /**
@@ -73,6 +89,16 @@ typedef struct git_cred_ssh_key {
 } git_cred_ssh_key;
 
 /**
+ * Keyboard-interactive based ssh authentication
+ */
+typedef struct git_cred_ssh_interactive {
+	git_cred parent;
+	char *username;
+	git_cred_ssh_interactive_callback prompt_callback;
+	void *payload;
+} git_cred_ssh_interactive;
+
+/**
  * A key with a custom signature function
  */
 typedef struct git_cred_ssh_custom {
@@ -80,9 +106,18 @@ typedef struct git_cred_ssh_custom {
 	char *username;
 	char *publickey;
 	size_t publickey_len;
-	void *sign_callback;
-	void *sign_data;
+	git_cred_sign_callback sign_callback;
+	void *payload;
 } git_cred_ssh_custom;
+
+/** A key for NTLM/Kerberos "default" credentials */
+typedef struct git_cred git_cred_default;
+
+/** Username-only credential information */
+typedef struct git_cred_username {
+	git_cred parent;
+	char username[1];
+} git_cred_username;
 
 /**
  * Check whether a credential object contains username information.
@@ -125,6 +160,33 @@ GIT_EXTERN(int) git_cred_ssh_key_new(
 	const char *passphrase);
 
 /**
+ * Create a new ssh keyboard-interactive based credential object.
+ * The supplied credential parameter will be internally duplicated.
+ *
+ * @param username Username to use to authenticate.
+ * @param prompt_callback The callback method used for prompts.
+ * @param payload Additional data to pass to the callback.
+ * @return 0 for success or an error code for failure.
+ */
+GIT_EXTERN(int) git_cred_ssh_interactive_new(
+	git_cred **out,
+	const char *username,
+	git_cred_ssh_interactive_callback prompt_callback,
+	void *payload);
+
+/**
+ * Create a new ssh key credential object used for querying an ssh-agent.
+ * The supplied credential parameter will be internally duplicated.
+ *
+ * @param out The newly created credential object.
+ * @param username username to use to authenticate
+ * @return 0 for success or an error code for failure
+ */
+GIT_EXTERN(int) git_cred_ssh_key_from_agent(
+	git_cred **out,
+	const char *username);
+
+/**
  * Create an ssh key credential with a custom signing function.
  *
  * This lets you use your own function to sign the challenge.
@@ -138,8 +200,8 @@ GIT_EXTERN(int) git_cred_ssh_key_new(
  * @param username username to use to authenticate
  * @param publickey The bytes of the public key.
  * @param publickey_len The length of the public key in bytes.
- * @param sign_fn The callback method to sign the data during the challenge.
- * @param sign_data The data to pass to the sign function.
+ * @param sign_callback The callback method to sign the data during the challenge.
+ * @param payload Additional data to pass to the callback.
  * @return 0 for success or an error code for failure
  */
 GIT_EXTERN(int) git_cred_ssh_custom_new(
@@ -147,19 +209,36 @@ GIT_EXTERN(int) git_cred_ssh_custom_new(
 	const char *username,
 	const char *publickey,
 	size_t publickey_len,
-	git_cred_sign_callback sign_fn,
-	void *sign_data);
+	git_cred_sign_callback sign_callback,
+	void *payload);
+
+/**
+ * Create a "default" credential usable for Negotiate mechanisms like NTLM
+ * or Kerberos authentication.
+ *
+ * @return 0 for success or an error code for failure
+ */
+GIT_EXTERN(int) git_cred_default_new(git_cred **out);
+
+/**
+ * Create a credential to specify a username.
+ *
+ * This is used with ssh authentication to query for the username if
+ * none is specified in the url.
+ */
+GIT_EXTERN(int) git_cred_username_new(git_cred **cred, const char *username);
 
 /**
  * Signature of a function which acquires a credential object.
  *
- * @param cred The newly created credential object.
- * @param url The resource for which we are demanding a credential.
- * @param username_from_url The username that was embedded in a "user@host"
+ * - cred: The newly created credential object.
+ * - url: The resource for which we are demanding a credential.
+ * - username_from_url: The username that was embedded in a "user@host"
  *                          remote url, or NULL if not included.
- * @param allowed_types A bitmask stating which cred types are OK to return.
- * @param payload The payload provided when specifying this callback.
- * @return 0 for success or an error code for failure
+ * - allowed_types: A bitmask stating which cred types are OK to return.
+ * - payload: The payload provided when specifying this callback.
+ * - returns 0 for success, < 0 to indicate an error, > 0 to indicate
+ *       no credential was acquired
  */
 typedef int (*git_cred_acquire_cb)(
 	git_cred **cred,
@@ -203,13 +282,13 @@ struct git_transport {
 		int direction,
 		int flags);
 
-	/* This function may be called after a successful call to connect(). The
-	 * provided callback is invoked for each ref discovered on the remote
-	 * end. */
+	/* This function may be called after a successful call to
+	 * connect(). The array returned is owned by the transport and
+	 * is guranteed until the next call of a transport function. */
 	int (*ls)(
-		git_transport *transport,
-		git_headlist_cb list_cb,
-		void *payload);
+		const git_remote_head ***out,
+		size_t *size,
+		git_transport *transport);
 
 	/* Executes the push whose context is in the git_push object. */
 	int (*push)(git_transport *transport, git_push *push);
@@ -230,7 +309,7 @@ struct git_transport {
 		git_transport *transport,
 		git_repository *repo,
 		git_transfer_progress *stats,
-		git_transfer_progress_callback progress_cb,
+		git_transfer_progress_cb progress_cb,
 		void *progress_payload);
 
 	/* Checks to see if the transport is connected */
@@ -252,6 +331,18 @@ struct git_transport {
 
 #define GIT_TRANSPORT_VERSION 1
 #define GIT_TRANSPORT_INIT {GIT_TRANSPORT_VERSION}
+
+/**
+ * Initializes a `git_transport` with default values. Equivalent to
+ * creating an instance with GIT_TRANSPORT_INIT.
+ *
+ * @param opts the `git_transport` struct to initialize
+ * @param version Version of struct; pass `GIT_TRANSPORT_VERSION`
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_transport_init(
+	git_transport *opts,
+	unsigned int version);
 
 /**
  * Function to use to create a transport from a URL. The transport database

@@ -21,6 +21,7 @@ struct crlf_attrs {
 	int crlf_action;
 	int eol;
 	int auto_crlf;
+	int safe_crlf;
 };
 
 struct crlf_filter {
@@ -101,7 +102,7 @@ static int has_cr_in_index(const git_filter_source *src)
 	if (!S_ISREG(entry->mode)) /* don't crlf filter non-blobs */
 		return true;
 
-	if (git_blob_lookup(&blob, repo, &entry->oid) < 0)
+	if (git_blob_lookup(&blob, repo, &entry->id) < 0)
 		return false;
 
 	blobcontent = git_blob_rawcontent(blob);
@@ -136,6 +137,26 @@ static int crlf_apply_to_odb(
 		/* Check heuristics for binary vs text - returns true if binary */
 		if (git_buf_text_gather_stats(&stats, from, false))
 			return GIT_PASSTHROUGH;
+
+		/* If there are no CR characters to filter out, then just pass */
+		if (!stats.cr)
+			return GIT_PASSTHROUGH;
+
+		/* If safecrlf is enabled, sanity-check the result. */
+		if (stats.cr != stats.crlf || stats.lf != stats.crlf) {
+			switch (ca->safe_crlf) {
+			case GIT_SAFE_CRLF_FAIL:
+				giterr_set(
+					GITERR_FILTER, "LF would be replaced by CRLF in '%s'",
+					git_filter_source_path(src));
+				return -1;
+			case GIT_SAFE_CRLF_WARN:
+				/* TODO: issue warning when warning API is available */;
+				break;
+			default:
+				break;
+			}
+		}
 
 		/*
 		 * We're currently not going to even try to convert stuff
@@ -218,24 +239,11 @@ static int crlf_apply_to_workdir(
 	if (!workdir_ending)
 		return -1;
 
-	if (!strcmp("\n", workdir_ending)) {
-		if (ca->crlf_action == GIT_CRLF_GUESS && ca->auto_crlf)
-			return GIT_PASSTHROUGH;
+	/* only LF->CRLF conversion is supported, do nothing on LF platforms */
+	if (strcmp(workdir_ending, "\r\n") != 0)
+		return GIT_PASSTHROUGH;
 
-		if (git_buf_find(from, '\r') < 0)
-			return GIT_PASSTHROUGH;
-
-		if (git_buf_text_crlf_to_lf(to, from) < 0)
-			return -1;
-	} else {
-		/* only other supported option is lf->crlf conversion */
-		assert(!strcmp("\r\n", workdir_ending));
-
-		if (git_buf_text_lf_to_crlf(to, from) < 0)
-			return -1;
-	}
-
-	return 0;
+	return git_buf_text_lf_to_crlf(to, from);
 }
 
 static int crlf_check(
@@ -269,7 +277,10 @@ static int crlf_check(
 	if (ca.crlf_action == GIT_CRLF_BINARY)
 		return GIT_PASSTHROUGH;
 
-	if (ca.crlf_action == GIT_CRLF_GUESS) {
+	if (ca.crlf_action == GIT_CRLF_GUESS ||
+		(ca.crlf_action == GIT_CRLF_AUTO &&
+		git_filter_source_mode(src) == GIT_FILTER_SMUDGE)) {
+
 		error = git_repository__cvar(
 			&ca.auto_crlf, git_filter_source_repo(src), GIT_CVAR_AUTO_CRLF);
 		if (error < 0)
@@ -277,6 +288,22 @@ static int crlf_check(
 
 		if (ca.auto_crlf == GIT_AUTO_CRLF_FALSE)
 			return GIT_PASSTHROUGH;
+
+		if (ca.auto_crlf == GIT_AUTO_CRLF_INPUT &&
+			git_filter_source_mode(src) == GIT_FILTER_SMUDGE)
+			return GIT_PASSTHROUGH;
+	}
+
+	if (git_filter_source_mode(src) == GIT_FILTER_CLEAN) {
+		error = git_repository__cvar(
+			&ca.safe_crlf, git_filter_source_repo(src), GIT_CVAR_SAFE_CRLF);
+		if (error < 0)
+			return error;
+
+		/* downgrade FAIL to WARN if ALLOW_UNSAFE option is used */
+		if ((git_filter_source_options(src) & GIT_FILTER_OPT_ALLOW_UNSAFE) &&
+			ca.safe_crlf == GIT_SAFE_CRLF_FAIL)
+			ca.safe_crlf = GIT_SAFE_CRLF_WARN;
 	}
 
 	*payload = git__malloc(sizeof(ca));

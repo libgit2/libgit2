@@ -19,7 +19,7 @@
 #include "buffer.h"
 #include "object.h"
 #include "attrcache.h"
-#include "strmap.h"
+#include "submodule.h"
 #include "diff_driver.h"
 
 #define DOT_GIT ".git"
@@ -38,6 +38,8 @@ typedef enum {
 	GIT_CVAR_TRUSTCTIME,    /* core.trustctime */
 	GIT_CVAR_ABBREV,        /* core.abbrev */
 	GIT_CVAR_PRECOMPOSE,    /* core.precomposeunicode */
+	GIT_CVAR_SAFE_CRLF,		/* core.safecrlf */
+	GIT_CVAR_LOGALLREFUPDATES, /* core.logallrefupdates */
 	GIT_CVAR_CACHE_MAX
 } git_cvar_cached;
 
@@ -89,7 +91,11 @@ typedef enum {
 	GIT_ABBREV_DEFAULT = 7,
 	/* core.precomposeunicode */
 	GIT_PRECOMPOSE_DEFAULT = GIT_CVAR_FALSE,
-
+	/* core.safecrlf */
+	GIT_SAFE_CRLF_DEFAULT = GIT_CVAR_FALSE,
+	/* core.logallrefupdates */
+	GIT_LOGALLREFUPDATES_UNSET = 2,
+	GIT_LOGALLREFUPDATES_DEFAULT = GIT_LOGALLREFUPDATES_UNSET,
 } git_cvar_value;
 
 /* internal repository init flags */
@@ -105,10 +111,10 @@ struct git_repository {
 	git_refdb *_refdb;
 	git_config *_config;
 	git_index *_index;
+	git_submodule_cache *_submodules;
 
 	git_cache objects;
-	git_attr_cache attrcache;
-	git_strmap *submodules;
+	git_attr_cache *attrcache;
 	git_diff_driver_registry *diff_drivers;
 
 	char *path_repository;
@@ -123,7 +129,7 @@ struct git_repository {
 
 GIT_INLINE(git_attr_cache *) git_repository_attr_cache(git_repository *repo)
 {
-	return &repo->attrcache;
+	return repo->attrcache;
 }
 
 int git_repository_head_tree(git_tree **tree, git_repository *repo);
@@ -149,11 +155,6 @@ int git_repository_index__weakptr(git_index **out, git_repository *repo);
 int git_repository__cvar(int *out, git_repository *repo, git_cvar_cached cvar);
 void git_repository__cvar_cache_clear(git_repository *repo);
 
-/*
- * Submodule cache
- */
-extern void git_submodule_config_free(git_repository *repo);
-
 GIT_INLINE(int) git_repository__ensure_not_bare(
 	git_repository *repo,
 	const char *operation_name)
@@ -168,5 +169,7 @@ GIT_INLINE(int) git_repository__ensure_not_bare(
 
 	return GIT_EBAREREPO;
 }
+
+int git_repository__cleanup_files(git_repository *repo, const char *files[], size_t files_len);
 
 #endif

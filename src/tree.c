@@ -204,22 +204,22 @@ void git_tree_entry_free(git_tree_entry *entry)
 	git__free(entry);
 }
 
-git_tree_entry *git_tree_entry_dup(const git_tree_entry *entry)
+int git_tree_entry_dup(git_tree_entry **dest, const git_tree_entry *source)
 {
 	size_t total_size;
 	git_tree_entry *copy;
 
-	assert(entry);
+	assert(source);
 
-	total_size = sizeof(git_tree_entry) + entry->filename_len + 1;
+	total_size = sizeof(git_tree_entry) + source->filename_len + 1;
 
 	copy = git__malloc(total_size);
-	if (!copy)
-		return NULL;
+	GITERR_CHECK_ALLOC(copy);
 
-	memcpy(copy, entry, total_size);
+	memcpy(copy, source, total_size);
 
-	return copy;
+	*dest = copy;
+	return 0;
 }
 
 void git_tree__free(void *_tree)
@@ -283,7 +283,8 @@ static const git_tree_entry *entry_fromname(
 {
 	size_t idx;
 
-	assert(tree->entries.sorted); /* be safe when we cast away constness */
+	/* be safe when we cast away constness - i.e. don't trigger a sort */
+	assert(git_vector_is_sorted(&tree->entries));
 
 	if (tree_key_search(&idx, (git_vector *)&tree->entries, name, name_len) < 0)
 		return NULL;
@@ -305,8 +306,8 @@ const git_tree_entry *git_tree_entry_byindex(
 	return git_vector_get(&tree->entries, idx);
 }
 
-const git_tree_entry *git_tree_entry_byoid(
-	const git_tree *tree, const git_oid *oid)
+const git_tree_entry *git_tree_entry_byid(
+	const git_tree *tree, const git_oid *id)
 {
 	size_t i;
 	const git_tree_entry *e;
@@ -314,7 +315,7 @@ const git_tree_entry *git_tree_entry_byoid(
 	assert(tree);
 
 	git_vector_foreach(&tree->entries, i, e) {
-		if (memcmp(&e->oid.id, &oid->id, sizeof(oid->id)) == 0)
+		if (memcmp(&e->oid.id, &id->id, sizeof(id->id)) == 0)
 			return e;
 	}
 
@@ -333,7 +334,8 @@ int git_tree__prefix_position(const git_tree *tree, const char *path)
 	ksearch.filename = path;
 	ksearch.filename_len = strlen(path);
 
-	assert(tree->entries.sorted); /* be safe when we cast away constness */
+	/* be safe when we cast away constness - i.e. don't trigger a sort */
+	assert(git_vector_is_sorted(&tree->entries));
 
 	/* Find tree entry with appropriate prefix */
 	git_vector_bsearch2(
@@ -458,7 +460,7 @@ static int append_entry(
 	git_oid_cpy(&entry->oid, id);
 	entry->attr = (uint16_t)filemode;
 
-	if (git_vector_insert(&bld->entries, entry) < 0) {
+	if (git_vector_insert_sorted(&bld->entries, entry, NULL) < 0) {
 		git__free(entry);
 		return -1;
 	}
@@ -551,7 +553,7 @@ static int write_tree(
 			if (error < 0)
 				goto on_error;
 		} else {
-			error = append_entry(bld, filename, &entry->oid, entry->mode);
+			error = append_entry(bld, filename, &entry->id, entry->mode);
 			if (error < 0)
 				goto on_error;
 		}
@@ -669,7 +671,7 @@ int git_treebuilder_insert(
 		entry = alloc_entry(filename);
 		GITERR_CHECK_ALLOC(entry);
 
-		if (git_vector_insert(&bld->entries, entry) < 0) {
+		if (git_vector_insert_sorted(&bld->entries, entry, NULL) < 0) {
 			git__free(entry);
 			return -1;
 		}
@@ -853,8 +855,7 @@ int git_tree_entry_bypath(
 	case '\0':
 		/* If there are no more components in the path, return
 		 * this entry */
-		*entry_out = git_tree_entry_dup(entry);
-		return 0;
+		return git_tree_entry_dup(entry_out, entry);
 	}
 
 	if (git_tree_lookup(&subtree, root->object.repo, &entry->oid) < 0)
@@ -884,13 +885,13 @@ static int tree_walk(
 	git_vector_foreach(&tree->entries, i, entry) {
 		if (preorder) {
 			error = callback(path->ptr, entry, payload);
-			if (error > 0) {
+			if (error < 0) { /* negative value stops iteration */
+				giterr_set_after_callback_function(error, "git_tree_walk");
+				break;
+			}
+			if (error > 0) { /* positive value skips this entry */
 				error = 0;
 				continue;
-			}
-			if (error < 0) {
-				giterr_clear();
-				return GIT_EUSER;
 			}
 		}
 
@@ -898,8 +899,8 @@ static int tree_walk(
 			git_tree *subtree;
 			size_t path_len = git_buf_len(path);
 
-			if ((error = git_tree_lookup(
-				&subtree, tree->object.repo, &entry->oid)) < 0)
+			error = git_tree_lookup(&subtree, tree->object.repo, &entry->oid);
+			if (error < 0)
 				break;
 
 			/* append the next entry to the path */
@@ -907,21 +908,24 @@ static int tree_walk(
 			git_buf_putc(path, '/');
 
 			if (git_buf_oom(path))
-				return -1;
+				error = -1;
+			else
+				error = tree_walk(subtree, callback, path, payload, preorder);
 
-			error = tree_walk(subtree, callback, path, payload, preorder);
 			git_tree_free(subtree);
-
 			if (error != 0)
 				break;
 
 			git_buf_truncate(path, path_len);
 		}
 
-		if (!preorder && callback(path->ptr, entry, payload) < 0) {
-			giterr_clear();
-			error = GIT_EUSER;
-			break;
+		if (!preorder) {
+			error = callback(path->ptr, entry, payload);
+			if (error < 0) { /* negative value stops iteration */
+				giterr_set_after_callback_function(error, "git_tree_walk");
+				break;
+			}
+			error = 0;
 		}
 	}
 

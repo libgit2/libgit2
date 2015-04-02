@@ -2,10 +2,11 @@ libgit2 - the Git linkable library
 ==================================
 
 [![Build Status](https://secure.travis-ci.org/libgit2/libgit2.png?branch=development)](http://travis-ci.org/libgit2/libgit2)
+[![Coverity Scan Build Status](https://scan.coverity.com/projects/639/badge.svg)](https://scan.coverity.com/projects/639)
 
-`libgit2` is a portable, pure C implementation of the Git core methods provided as a
-re-entrant linkable library with a solid API, allowing you to write native
-speed custom Git applications in any language with bindings.
+`libgit2` is a portable, pure C implementation of the Git core methods
+provided as a re-entrant linkable library with a solid API, allowing you to
+write native speed custom Git applications in any language with bindings.
 
 `libgit2` is licensed under a **very permissive license** (GPLv2 with a special
 Linking Exception).  This basically means that you can link it (unmodified)
@@ -19,18 +20,19 @@ Additionally, the example code has been released to the public domain (see the
 * API documentation: <http://libgit2.github.com/libgit2>
 * IRC: [#libgit2](irc://irc.freenode.net/libgit2) on irc.freenode.net.
 * Mailing list: The libgit2 mailing list was
-    traditionally hosted in Librelist but has been deprecated. We encourage you to 
+    traditionally hosted in Librelist but has been deprecated. We encourage you to
     [use StackOverflow](http://stackoverflow.com/questions/tagged/libgit2) instead for any questions regarding
-    the library, or [open an issue](https://github.com/libgit2/libgit2/issues) 
-    on GitHub for bug reports.  The mailing list archives are still available at 
+    the library, or [open an issue](https://github.com/libgit2/libgit2/issues)
+    on GitHub for bug reports.  The mailing list archives are still available at
     <http://librelist.com/browser/libgit2/>.
 
 
 What It Can Do
 ==============
 
-`libgit2` is already very usable and is being used in production for many applications including the GitHub.com site, in Plastic SCM 
-and also powering Microsoft's Visual Studio tools for Git.  The library provides:
+`libgit2` is already very usable and is being used in production for many
+applications including the GitHub.com site, in Plastic SCM and also powering
+Microsoft's Visual Studio tools for Git.  The library provides:
 
 * SHA conversions, formatting and shortening
 * abstracted ODB backend system
@@ -64,7 +66,7 @@ Under Unix-like systems, like Linux, \*BSD and Mac OS X, libgit2 expects `pthrea
 they should be installed by default on all systems. Under Windows, libgit2 uses the native Windows API
 for threading.
 
-The `libgit2` library is built using `CMake 2.6+` (<http://www.cmake.org>) on all platforms.
+The `libgit2` library is built using [CMake](<http://www.cmake.org>) (version 2.6 or newer) on all platforms.
 
 On most systems you can build the library using the following commands
 
@@ -164,11 +166,12 @@ Here are the bindings to libgit2 that are currently available:
     * libgit2-glib <https://live.gnome.org/Libgit2-glib>
 * Haskell
     * hgit2 <https://github.com/fpco/gitlib>
+* Java
+    * Jagged <https://github.com/ethomson/jagged>
 * Lua
     * luagit2 <https://github.com/libgit2/luagit2>
 * .NET
     * libgit2sharp <https://github.com/libgit2/libgit2sharp>
-    * libgit2net, low level bindings superseded by libgit2sharp <https://github.com/txdv/libgit2net>
 * Node.js
     * node-gitteh <https://github.com/libgit2/node-gitteh>
     * nodegit <https://github.com/tbranyen/nodegit>
@@ -182,8 +185,12 @@ Here are the bindings to libgit2 that are currently available:
     * Git-Raw <https://github.com/ghedo/p5-Git-Raw>
 * PHP
     * php-git <https://github.com/libgit2/php-git>
+* PowerShell
+    * GitPowerShell <https://github.com/ethomson/gitpowershell>
 * Python
     * pygit2 <https://github.com/libgit2/pygit2>
+* R
+    * git2r <https://github.com/ropensci/git2r>
 * Ruby
     * Rugged <https://github.com/libgit2/rugged>
 * Vala
@@ -195,14 +202,16 @@ we can add it to the list.
 How Can I Contribute?
 ==================================
 
-Check the [contribution guidelines](CONTRIBUTING.md).
-
+Check the [contribution guidelines](CONTRIBUTING.md) to understand our
+workflow, the libgit2 [coding conventions](CONVENTIONS.md), and out list of
+[good starting projects](PROJECTS.md).
 
 License
 ==================================
-`libgit2` is under GPL2 **with linking exemption**. This means you
-can link to and use the library from any program, proprietary or open source; paid
-or gratis.  However, you cannot modify libgit2 and distribute it without
+
+`libgit2` is under GPL2 **with linking exemption**. This means you can link to
+and use the library from any program, proprietary or open source; paid or
+gratis.  However, you cannot modify libgit2 and distribute it without
 supplying the source.
 
-See the COPYING file for the full license text.
+See the [COPYING file](COPYING) for the full license text.

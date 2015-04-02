@@ -18,6 +18,7 @@ struct git_tree_cache {
 
 	ssize_t entries;
 	git_oid oid;
+	size_t namelen;
 	char name[GIT_FLEX_ARRAY];
 };
 

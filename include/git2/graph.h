@@ -36,6 +36,20 @@ GIT_BEGIN_DECL
  */
 GIT_EXTERN(int) git_graph_ahead_behind(size_t *ahead, size_t *behind, git_repository *repo, const git_oid *local, const git_oid *upstream);
 
+
+/**
+ * Determine if a commit is the descendant of another commit.
+ *
+ * @param commit a previously loaded commit.
+ * @param ancestor a potential ancestor commit.
+ * @return 1 if the given commit is a descendant of the potential ancestor,
+ * 0 if not, error code otherwise.
+ */
+GIT_EXTERN(int) git_graph_descendant_of(
+	git_repository *repo,
+	const git_oid *commit,
+	const git_oid *ancestor);
+
 /** @} */
 GIT_END_DECL
 #endif

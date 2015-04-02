@@ -7,23 +7,16 @@
 
 #include "tree-cache.h"
 
-static git_tree_cache *find_child(const git_tree_cache *tree, const char *path)
+static git_tree_cache *find_child(
+	const git_tree_cache *tree, const char *path, const char *end)
 {
-	size_t i, dirlen;
-	const char *end;
-
-	end = strchr(path, '/');
-	if (end == NULL) {
-		end = strrchr(path, '\0');
-	}
-
-	dirlen = end - path;
+	size_t i, dirlen = end ? (size_t)(end - path) : strlen(path);
 
 	for (i = 0; i < tree->children_count; ++i) {
-		const char *childname = tree->children[i]->name;
+		git_tree_cache *child = tree->children[i];
 
-		if (strlen(childname) == dirlen && !memcmp(path, childname, dirlen))
-			return tree->children[i];
+		if (child->namelen == dirlen && !memcmp(path, child->name, dirlen))
+			return child;
 	}
 
 	return NULL;
@@ -44,7 +37,7 @@ void git_tree_cache_invalidate_path(git_tree_cache *tree, const char *path)
 		if (end == NULL) /* End of path */
 			break;
 
-		tree = find_child(tree, ptr);
+		tree = find_child(tree, ptr, end);
 		if (tree == NULL) /* We don't have that tree */
 			return;
 
@@ -64,10 +57,9 @@ const git_tree_cache *git_tree_cache_get(const git_tree_cache *tree, const char 
 	while (1) {
 		end = strchr(ptr, '/');
 
-		tree = find_child(tree, ptr);
-		if (tree == NULL) { /* Can't find it */
+		tree = find_child(tree, ptr, end);
+		if (tree == NULL) /* Can't find it */
 			return NULL;
-		}
 
 		if (end == NULL || *end + 1 == '\0')
 			return tree;
@@ -100,6 +92,7 @@ static int read_tree_internal(git_tree_cache **out,
 	tree->parent = parent;
 
 	/* NUL-terminated tree name */
+	tree->namelen = name_len;
 	memcpy(tree->name, name_start, name_len);
 	tree->name[name_len] = '\0';
 
@@ -138,9 +131,11 @@ static int read_tree_internal(git_tree_cache **out,
 		tree->children = git__malloc(tree->children_count * sizeof(git_tree_cache *));
 		GITERR_CHECK_ALLOC(tree->children);
 
+		memset(tree->children, 0x0, tree->children_count * sizeof(git_tree_cache *));
+
 		for (i = 0; i < tree->children_count; ++i) {
 			if (read_tree_internal(&tree->children[i], &buffer, buffer_end, tree) < 0)
-				return -1;
+				goto corrupted;
 		}
 	}
 
@@ -150,7 +145,7 @@ static int read_tree_internal(git_tree_cache **out,
 
  corrupted:
 	git_tree_cache_free(tree);
-	giterr_set(GITERR_INDEX, "Corruped TREE extension in index");
+	giterr_set(GITERR_INDEX, "Corrupted TREE extension in index");
 	return -1;
 }
 
@@ -162,7 +157,7 @@ int git_tree_cache_read(git_tree_cache **tree, const char *buffer, size_t buffer
 		return -1;
 
 	if (buffer < buffer_end) {
-		giterr_set(GITERR_INDEX, "Corruped TREE extension in index (unexpected trailing data)");
+		giterr_set(GITERR_INDEX, "Corrupted TREE extension in index (unexpected trailing data)");
 		return -1;
 	}
 
@@ -176,9 +171,12 @@ void git_tree_cache_free(git_tree_cache *tree)
 	if (tree == NULL)
 		return;
 
-	for (i = 0; i < tree->children_count; ++i)
-		git_tree_cache_free(tree->children[i]);
+	if (tree->children != NULL) {
+		for (i = 0; i < tree->children_count; ++i)
+			git_tree_cache_free(tree->children[i]);
 
-	git__free(tree->children);
+		git__free(tree->children);
+	}
+
 	git__free(tree);
 }

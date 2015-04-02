@@ -93,18 +93,19 @@ static int git_stream_read(
 	size_t buf_size,
 	size_t *bytes_read)
 {
+	int error;
 	git_stream *s = (git_stream *)stream;
 	gitno_buffer buf;
 
 	*bytes_read = 0;
 
-	if (!s->sent_command && send_command(s) < 0)
-		return -1;
+	if (!s->sent_command && (error = send_command(s)) < 0)
+		return error;
 
 	gitno_buffer_setup(&s->socket, &buf, buffer, buf_size);
 
-	if (gitno_recv(&buf) < 0)
-		return -1;
+	if ((error = gitno_recv(&buf)) < 0)
+		return error;
 
 	*bytes_read = buf.offset;
 
@@ -116,10 +117,11 @@ static int git_stream_write(
 	const char *buffer,
 	size_t len)
 {
+	int error;
 	git_stream *s = (git_stream *)stream;
 
-	if (!s->sent_command && send_command(s) < 0)
-		return -1;
+	if (!s->sent_command && (error = send_command(s)) < 0)
+		return error;
 
 	return gitno_send(&s->socket, buffer, len, 0);
 }
@@ -140,7 +142,7 @@ static void git_stream_free(git_smart_subtransport_stream *stream)
 	}
 
 	git__free(s->url);
-	git__free(s);	
+	git__free(s);
 }
 
 static int git_stream_alloc(
@@ -179,39 +181,36 @@ static int _git_uploadpack_ls(
 	const char *url,
 	git_smart_subtransport_stream **stream)
 {
-	char *host=NULL, *port=NULL, *user=NULL, *pass=NULL;
+	char *host=NULL, *port=NULL, *path=NULL, *user=NULL, *pass=NULL;
+	const char *stream_url = url;
 	git_stream *s;
+	int error;
 
 	*stream = NULL;
 
 	if (!git__prefixcmp(url, prefix_git))
-		url += strlen(prefix_git);
+		stream_url += strlen(prefix_git);
 
-	if (git_stream_alloc(t, url, cmd_uploadpack, stream) < 0)
-		return -1;
+	if ((error = git_stream_alloc(t, stream_url, cmd_uploadpack, stream)) < 0)
+		return error;
 
 	s = (git_stream *)*stream;
 
-	if (gitno_extract_url_parts(&host, &port, &user, &pass, url, GIT_DEFAULT_PORT) < 0)
-		goto on_error;
+	if (!(error = gitno_extract_url_parts(
+			&host, &port, &path, &user, &pass, url, GIT_DEFAULT_PORT))) {
 
-	if (gitno_connect(&s->socket, host, port, 0) < 0)
-		goto on_error;
+		if (!(error = gitno_connect(&s->socket, host, port, 0)))
+			t->current_stream = s;
 
-	t->current_stream = s;
-	git__free(host);
-	git__free(port);
-	git__free(user);
-	git__free(pass);
-	return 0;
-
-on_error:
-	if (*stream)
+		git__free(host);
+		git__free(port);
+		git__free(path);
+		git__free(user);
+		git__free(pass);
+	} else if (*stream)
 		git_stream_free(*stream);
 
-	git__free(host);
-	git__free(port);
-	return -1;
+	return error;
 }
 
 static int _git_uploadpack(
@@ -235,39 +234,33 @@ static int _git_receivepack_ls(
 	const char *url,
 	git_smart_subtransport_stream **stream)
 {
-	char *host=NULL, *port=NULL, *user=NULL, *pass=NULL;
+	char *host=NULL, *port=NULL, *path=NULL, *user=NULL, *pass=NULL;
+	const char *stream_url = url;
 	git_stream *s;
+	int error;
 
 	*stream = NULL;
-
 	if (!git__prefixcmp(url, prefix_git))
-		url += strlen(prefix_git);
+		stream_url += strlen(prefix_git);
 
-	if (git_stream_alloc(t, url, cmd_receivepack, stream) < 0)
+	if (git_stream_alloc(t, stream_url, cmd_receivepack, stream) < 0)
 		return -1;
 
 	s = (git_stream *)*stream;
 
-	if (gitno_extract_url_parts(&host, &port, &user, &pass, url, GIT_DEFAULT_PORT) < 0)
-		goto on_error;
+	if (!(error = gitno_extract_url_parts(&host, &port, &path, &user, &pass, url, GIT_DEFAULT_PORT))) {
+		if (!(error = gitno_connect(&s->socket, host, port, 0)))
+			t->current_stream = s;
 
-	if (gitno_connect(&s->socket, host, port, 0) < 0)
-		goto on_error;
-
-	t->current_stream = s;
-	git__free(host);
-	git__free(port);
-	git__free(user);
-	git__free(pass);
-	return 0;
-
-on_error:
-	if (*stream)
+		git__free(host);
+		git__free(port);
+		git__free(path);
+		git__free(user);
+		git__free(pass);
+	} else if (*stream)
 		git_stream_free(*stream);
 
-	git__free(host);
-	git__free(port);
-	return -1;
+	return error;
 }
 
 static int _git_receivepack(

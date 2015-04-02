@@ -32,6 +32,8 @@
 #include "netops.h"
 #include "posix.h"
 #include "buffer.h"
+#include "http_parser.h"
+#include "global.h"
 
 #ifdef GIT_WIN32
 static void net_set_error(const char *str)
@@ -156,7 +158,7 @@ void gitno_buffer_setup_callback(
 void gitno_buffer_setup(gitno_socket *socket, gitno_buffer *buf, char *data, size_t len)
 {
 #ifdef GIT_SSL
-	if (socket->ssl.ctx) {
+	if (socket->ssl.ssl) {
 		gitno_buffer_setup_callback(socket, buf, data, len, gitno__recv_ssl, NULL);
 		return;
 	}
@@ -201,12 +203,13 @@ static int gitno_ssl_teardown(gitno_ssl *ssl)
 		ret = 0;
 
 	SSL_free(ssl->ssl);
-	SSL_CTX_free(ssl->ctx);
 	return ret;
 }
 
+#endif
+
 /* Match host names according to RFC 2818 rules */
-static int match_host(const char *pattern, const char *host)
+int gitno__match_host(const char *pattern, const char *host)
 {
 	for (;;) {
 		char c = tolower(*pattern++);
@@ -229,9 +232,9 @@ static int match_host(const char *pattern, const char *host)
 			while(*host) {
 				char h = tolower(*host);
 				if (c == h)
-					return match_host(pattern, host++);
+					return gitno__match_host(pattern, host++);
 				if (h == '.')
-					return match_host(pattern, host);
+					return gitno__match_host(pattern, host);
 				host++;
 			}
 			return -1;
@@ -249,11 +252,13 @@ static int check_host_name(const char *name, const char *host)
 	if (!strcasecmp(name, host))
 		return 0;
 
-	if (match_host(name, host) < 0)
+	if (gitno__match_host(name, host) < 0)
 		return -1;
 
 	return 0;
 }
+
+#ifdef GIT_SSL
 
 static int verify_server_cert(gitno_ssl *ssl, const char *host)
 {
@@ -286,6 +291,10 @@ static int verify_server_cert(gitno_ssl *ssl, const char *host)
 
 
 	cert = SSL_get_peer_certificate(ssl->ssl);
+	if (!cert) {
+		giterr_set(GITERR_SSL, "the server did not provide a certificate");
+		return -1;
+	}
 
 	/* Check the alternative names */
 	alts = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
@@ -320,7 +329,7 @@ static int verify_server_cert(gitno_ssl *ssl, const char *host)
 	GENERAL_NAMES_free(alts);
 
 	if (matched == 0)
-		goto cert_fail;
+		goto cert_fail_name;
 
 	if (matched == 1)
 		return 0;
@@ -357,11 +366,11 @@ static int verify_server_cert(gitno_ssl *ssl, const char *host)
 		int size = ASN1_STRING_to_UTF8(&peer_cn, str);
 		GITERR_CHECK_ALLOC(peer_cn);
 		if (memchr(peer_cn, '\0', size))
-			goto cert_fail;
+			goto cert_fail_name;
 	}
 
 	if (check_host_name((char *)peer_cn, host) < 0)
-		goto cert_fail;
+		goto cert_fail_name;
 
 	OPENSSL_free(peer_cn);
 
@@ -371,9 +380,9 @@ on_error:
 	OPENSSL_free(peer_cn);
 	return ssl_set_error(ssl, 0);
 
-cert_fail:
+cert_fail_name:
 	OPENSSL_free(peer_cn);
-	giterr_set(GITERR_SSL, "Certificate host name check failed");
+	giterr_set(GITERR_SSL, "hostname does not match certificate");
 	return -1;
 }
 
@@ -381,18 +390,12 @@ static int ssl_setup(gitno_socket *socket, const char *host, int flags)
 {
 	int ret;
 
-	SSL_library_init();
-	SSL_load_error_strings();
-	socket->ssl.ctx = SSL_CTX_new(SSLv23_method());
-	if (socket->ssl.ctx == NULL)
-		return ssl_set_error(&socket->ssl, 0);
+	if (git__ssl_ctx == NULL) {
+		giterr_set(GITERR_NET, "OpenSSL initialization failed");
+		return -1;
+	}
 
-	SSL_CTX_set_mode(socket->ssl.ctx, SSL_MODE_AUTO_RETRY);
-	SSL_CTX_set_verify(socket->ssl.ctx, SSL_VERIFY_NONE, NULL);
-	if (!SSL_CTX_set_default_verify_paths(socket->ssl.ctx))
-		return ssl_set_error(&socket->ssl, 0);
-
-	socket->ssl.ssl = SSL_new(socket->ssl.ctx);
+	socket->ssl.ssl = SSL_new(git__ssl_ctx);
 	if (socket->ssl.ssl == NULL)
 		return ssl_set_error(&socket->ssl, 0);
 
@@ -529,7 +532,7 @@ int gitno_send(gitno_socket *socket, const char *msg, size_t len, int flags)
 	size_t off = 0;
 
 #ifdef GIT_SSL
-	if (socket->ssl.ctx)
+	if (socket->ssl.ssl)
 		return gitno_send_ssl(&socket->ssl, msg, len, flags);
 #endif
 
@@ -550,7 +553,7 @@ int gitno_send(gitno_socket *socket, const char *msg, size_t len, int flags)
 int gitno_close(gitno_socket *s)
 {
 #ifdef GIT_SSL
-	if (s->ssl.ctx &&
+	if (s->ssl.ssl &&
 		gitno_ssl_teardown(&s->ssl) < 0)
 		return -1;
 #endif
@@ -582,7 +585,7 @@ int gitno_connection_data_from_url(
 		const char *service_suffix)
 {
 	int error = -1;
-	const char *default_port = NULL;
+	const char *default_port = NULL, *path_search_start = NULL;
 	char *original_host = NULL;
 
 	/* service_suffix is optional */
@@ -594,22 +597,18 @@ int gitno_connection_data_from_url(
 	gitno_connection_data_free_ptrs(data);
 
 	if (!git__prefixcmp(url, prefix_http)) {
-		url = url + strlen(prefix_http);
+		path_search_start = url + strlen(prefix_http);
 		default_port = "80";
 
 		if (data->use_ssl) {
 			giterr_set(GITERR_NET, "Redirect from HTTPS to HTTP is not allowed");
 			goto cleanup;
 		}
-	}
-
-	if (!git__prefixcmp(url, prefix_https)) {
-		url += strlen(prefix_https);
+	} else if (!git__prefixcmp(url, prefix_https)) {
+		path_search_start = url + strlen(prefix_https);
 		default_port = "443";
 		data->use_ssl = true;
-	}
-
-	if (url[0] == '/')
+	} else if (url[0] == '/')
 		default_port = data->use_ssl ? "443" : "80";
 
 	if (!default_port) {
@@ -618,26 +617,30 @@ int gitno_connection_data_from_url(
 	}
 
 	error = gitno_extract_url_parts(
-		&data->host, &data->port, &data->user, &data->pass,
+		&data->host, &data->port, &data->path, &data->user, &data->pass,
 		url, default_port);
 
 	if (url[0] == '/') {
 		/* Relative redirect; reuse original host name and port */
+		path_search_start = url;
 		git__free(data->host);
 		data->host = original_host;
 		original_host = NULL;
 	}
 
 	if (!error) {
-		const char *path = strchr(url, '/');
+		const char *path = strchr(path_search_start, '/');
 		size_t pathlen = strlen(path);
 		size_t suffixlen = service_suffix ? strlen(service_suffix) : 0;
 
 		if (suffixlen &&
-			 !memcmp(path + pathlen - suffixlen, service_suffix, suffixlen))
+		    !memcmp(path + pathlen - suffixlen, service_suffix, suffixlen)) {
+			git__free(data->path);
 			data->path = git__strndup(path, pathlen - suffixlen);
-		else
+		} else {
+			git__free(data->path);
 			data->path = git__strdup(path);
+		}
 
 		/* Check for errors in the resulting data */
 		if (original_host && url[0] != '/' && strcmp(original_host, data->host)) {
@@ -660,55 +663,74 @@ void gitno_connection_data_free_ptrs(gitno_connection_data *d)
 	git__free(d->pass); d->pass = NULL;
 }
 
+#define hex2c(c) ((c | 32) % 39 - 9)
+static char* unescape(char *str)
+{
+	int x, y;
+	int len = (int)strlen(str);
+
+	for (x=y=0; str[y]; ++x, ++y) {
+		if ((str[x] = str[y]) == '%') {
+			if (y < len-2 && isxdigit(str[y+1]) && isxdigit(str[y+2])) {
+				str[x] = (hex2c(str[y+1]) << 4) + hex2c(str[y+2]);
+				y += 2;
+			}
+		}
+	}
+	str[x] = '\0';
+	return str;
+}
+
 int gitno_extract_url_parts(
 		char **host,
 		char **port,
+		char **path,
 		char **username,
 		char **password,
 		const char *url,
 		const char *default_port)
 {
-	char *colon, *slash, *at, *end;
-	const char *start;
+	struct http_parser_url u = {0};
+	const char *_host, *_port, *_path, *_userinfo;
 
-	/*
-	 * ==> [user[:pass]@]hostname.tld[:port]/resource
-	 */
-
-	colon = strchr(url, ':');
-	slash = strchr(url, '/');
-	at = strchr(url, '@');
-
-	if (!slash ||
-	    (colon && (slash < colon))) {
-		giterr_set(GITERR_NET, "Malformed URL");
+	if (http_parser_parse_url(url, strlen(url), false, &u)) {
+		giterr_set(GITERR_NET, "Malformed URL '%s'", url);
 		return GIT_EINVALIDSPEC;
 	}
 
-	start = url;
-	if (at && at < slash) {
-		start = at+1;
-		*username = git__substrdup(url, at - url);
+	_host = url+u.field_data[UF_HOST].off;
+	_port = url+u.field_data[UF_PORT].off;
+	_path = url+u.field_data[UF_PATH].off;
+	_userinfo = url+u.field_data[UF_USERINFO].off;
+
+	if (u.field_set & (1 << UF_HOST)) {
+		*host = git__substrdup(_host, u.field_data[UF_HOST].len);
+		GITERR_CHECK_ALLOC(*host);
 	}
 
-	if (colon && colon < at) {
-		git__free(*username);
-		*username = git__substrdup(url, colon-url);
-		*password = git__substrdup(colon+1, at-colon-1);
-		colon = strchr(at, ':');
-	}
-
-	if (colon == NULL) {
+	if (u.field_set & (1 << UF_PORT))
+		*port = git__substrdup(_port, u.field_data[UF_PORT].len);
+	else
 		*port = git__strdup(default_port);
-	} else {
-		*port = git__substrdup(colon + 1, slash - colon - 1);
-	}
 	GITERR_CHECK_ALLOC(*port);
 
-	end = colon == NULL ? slash : colon;
+	if (u.field_set & (1 << UF_PATH)) {
+		*path = git__substrdup(_path, u.field_data[UF_PATH].len);
+		GITERR_CHECK_ALLOC(*path);
+	}
 
-	*host = git__substrdup(start, end - start);
-	GITERR_CHECK_ALLOC(*host);
+	if (u.field_set & (1 << UF_USERINFO)) {
+		const char *colon = memchr(_userinfo, ':', u.field_data[UF_USERINFO].len);
+		if (colon) {
+			*username = unescape(git__substrdup(_userinfo, colon - _userinfo));
+			*password = unescape(git__substrdup(colon+1, u.field_data[UF_USERINFO].len - (colon+1-_userinfo)));
+			GITERR_CHECK_ALLOC(*password);
+		} else {
+			*username = git__substrdup(_userinfo, u.field_data[UF_USERINFO].len);
+		}
+		GITERR_CHECK_ALLOC(*username);
+
+	}
 
 	return 0;
 }

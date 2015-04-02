@@ -199,8 +199,9 @@ typedef int (*git_attr_foreach_cb)(const char *name, const char *value, void *pa
  *             only once per attribute name, even if there are multiple
  *             rules for a given file.  The highest priority rule will be
  *             used.  Return a non-zero value from this to stop looping.
+ *             The value will be returned from `git_attr_foreach`.
  * @param payload Passed on as extra parameter to callback function.
- * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ * @return 0 on success, non-zero callback return value, or error code
  */
 GIT_EXTERN(int) git_attr_foreach(
 	git_repository *repo,

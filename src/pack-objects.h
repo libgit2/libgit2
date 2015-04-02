@@ -14,6 +14,7 @@
 #include "hash.h"
 #include "oidmap.h"
 #include "netops.h"
+#include "zstream.h"
 
 #include "git2/oid.h"
 #include "git2/pack.h"
@@ -54,6 +55,7 @@ struct git_packbuilder {
 	git_odb *odb; /* associated object database */
 
 	git_hash_ctx ctx;
+	git_zstream zstream;
 
 	uint32_t nr_objects,
 		 nr_alloc,

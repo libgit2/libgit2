@@ -84,7 +84,7 @@ GIT_EXTERN(git_repository *) git_blob_owner(const git_blob *blob);
  * time.
  *
  * @param blob pointer to the blob
- * @return the pointer; NULL if the blob has no contents
+ * @return the pointer
  */
 GIT_EXTERN(const void *) git_blob_rawcontent(const git_blob *blob);
 
@@ -159,37 +159,32 @@ typedef int (*git_blob_chunk_cb)(char *content, size_t max_length, void *payload
  * Write a loose blob to the Object Database from a
  * provider of chunks of data.
  *
- * Provided the `hintpath` parameter is filled, its value
- * will help to determine what git filters should be applied
- * to the object before it can be placed to the object database.
+ * If the `hintpath` parameter is filled, it will be used to determine
+ * what git filters should be applied to the object before it is written
+ * to the object database.
  *
+ * The implementation of the callback MUST respect the following rules:
  *
- * The implementation of the callback has to respect the
- * following rules:
+ *  - `content` must be filled by the callback. The maximum number of
+ *    bytes that the buffer can accept per call is defined by the
+ *    `max_length` parameter. Allocation and freeing of the buffer will
+ *    be taken care of by libgit2.
  *
- *  - `content` will have to be filled by the consumer. The maximum number
- * of bytes that the buffer can accept per call is defined by the
- * `max_length` parameter. Allocation and freeing of the buffer will be taken
- * care of by the function.
+ *  - The `callback` must return the number of bytes that have been
+ *    written to the `content` buffer.
  *
- *  - The callback is expected to return the number of bytes
- * that `content` have been filled with.
+ *  - When there is no more data to stream, `callback` should return
+ *    0. This will prevent it from being invoked anymore.
  *
- *  - When there is no more data to stream, the callback should
- * return 0. This will prevent it from being invoked anymore.
- *
- *  - When an error occurs, the callback should return -1.
- *
+ *  - If an error occurs, the callback should return a negative value.
+ *    This value will be returned to the caller.
  *
  * @param id Return the id of the written blob
- *
- * @param repo repository where the blob will be written.
- * This repository can be bare or not.
- *
- * @param hintpath if not NULL, will help selecting the filters
- * to apply onto the content of the blob to be created.
- *
- * @return 0 or an error code
+ * @param repo Repository where the blob will be written.
+ *        This repository can be bare or not.
+ * @param hintpath If not NULL, will be used to select data filters
+ *        to apply onto the content of the blob to be created.
+ * @return 0 or error code (from either libgit2 or callback function)
  */
 GIT_EXTERN(int) git_blob_create_fromchunks(
 	git_oid *id,
@@ -201,26 +196,27 @@ GIT_EXTERN(int) git_blob_create_fromchunks(
 /**
  * Write an in-memory buffer to the ODB as a blob
  *
- * @param oid return the oid of the written blob
+ * @param id return the id of the written blob
  * @param repo repository where to blob will be written
  * @param buffer data to be written into the blob
  * @param len length of the data
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_blob_create_frombuffer(git_oid *oid, git_repository *repo, const void *buffer, size_t len);
+GIT_EXTERN(int) git_blob_create_frombuffer(
+	git_oid *id, git_repository *repo, const void *buffer, size_t len);
 
 /**
  * Determine if the blob content is most certainly binary or not.
  *
  * The heuristic used to guess if a file is binary is taken from core git:
  * Searching for NUL bytes and looking for a reasonable ratio of printable
- * to non-printable characters among the first 4000 bytes.
+ * to non-printable characters among the first 8000 bytes.
  *
  * @param blob The blob which content should be analyzed
  * @return 1 if the content of the blob is detected
  * as binary; 0 otherwise.
  */
-GIT_EXTERN(int) git_blob_is_binary(git_blob *blob);
+GIT_EXTERN(int) git_blob_is_binary(const git_blob *blob);
 
 /** @} */
 GIT_END_DECL

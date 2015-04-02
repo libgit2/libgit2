@@ -33,12 +33,27 @@ static const char *colors[] = {
 	"\033[36m" /* cyan */
 };
 
+enum {
+	OUTPUT_DIFF = (1 << 0),
+	OUTPUT_STAT = (1 << 1),
+	OUTPUT_SHORTSTAT = (1 << 2),
+	OUTPUT_NUMSTAT = (1 << 3),
+	OUTPUT_SUMMARY = (1 << 4)
+};
+
+enum {
+	CACHE_NORMAL = 0,
+	CACHE_ONLY = 1,
+	CACHE_NONE = 2
+};
+
 /** The 'opts' struct captures all the various parsed command line options. */
 struct opts {
 	git_diff_options diffopts;
 	git_diff_find_options findopts;
 	int color;
-	int cached;
+	int cache;
+	int output;
 	git_diff_format_t format;
 	const char *treeish1;
 	const char *treeish2;
@@ -46,9 +61,11 @@ struct opts {
 };
 
 /** These functions are implemented at the end */
+static void usage(const char *message, const char *arg);
 static void parse_opts(struct opts *o, int argc, char *argv[]);
 static int color_printer(
 	const git_diff_delta*, const git_diff_hunk*, const git_diff_line*, void*);
+static void diff_print_stats(git_diff *diff, struct opts *o);
 
 int main(int argc, char *argv[])
 {
@@ -57,7 +74,7 @@ int main(int argc, char *argv[])
 	git_diff *diff;
 	struct opts o = {
 		GIT_DIFF_OPTIONS_INIT, GIT_DIFF_FIND_OPTIONS_INIT,
-		-1, 0, GIT_DIFF_FORMAT_PATCH, NULL, NULL, "."
+		-1, 0, 0, GIT_DIFF_FORMAT_PATCH, NULL, NULL, "."
 	};
 
 	git_threads_init();
@@ -74,6 +91,7 @@ int main(int argc, char *argv[])
 	 *  * &lt;sha1&gt; --cached
 	 *  * &lt;sha1&gt;
 	 *  * --cached
+	 *  * --nocache (don't use index data in diff at all)
 	 *  * nothing
 	 *
 	 * Currently ranged arguments like &lt;sha1&gt;..&lt;sha2&gt; and &lt;sha1&gt;...&lt;sha2&gt;
@@ -89,20 +107,23 @@ int main(int argc, char *argv[])
 		check_lg2(
 			git_diff_tree_to_tree(&diff, repo, t1, t2, &o.diffopts),
 			"diff trees", NULL);
-	else if (t1 && o.cached)
-		check_lg2(
-			git_diff_tree_to_index(&diff, repo, t1, NULL, &o.diffopts),
-			"diff tree to index", NULL);
+	else if (o.cache != CACHE_NORMAL) {
+		if (!t1)
+			treeish_to_tree(&t1, repo, "HEAD");
+
+		if (o.cache == CACHE_NONE)
+			check_lg2(
+				git_diff_tree_to_workdir(&diff, repo, t1, &o.diffopts),
+				"diff tree to working directory", NULL);
+		else
+			check_lg2(
+				git_diff_tree_to_index(&diff, repo, t1, NULL, &o.diffopts),
+				"diff tree to index", NULL);
+	}
 	else if (t1)
 		check_lg2(
 			git_diff_tree_to_workdir_with_index(&diff, repo, t1, &o.diffopts),
 			"diff tree to working directory", NULL);
-	else if (o.cached) {
-		treeish_to_tree(&t1, repo, "HEAD");
-		check_lg2(
-			git_diff_tree_to_index(&diff, repo, t1, NULL, &o.diffopts),
-			"diff tree to index", NULL);
-	}
 	else
 		check_lg2(
 			git_diff_index_to_workdir(&diff, repo, NULL, &o.diffopts),
@@ -117,15 +138,23 @@ int main(int argc, char *argv[])
 
 	/** Generate simple output using libgit2 display helper. */
 
-	if (o.color >= 0)
-		fputs(colors[0], stdout);
+	if (!o.output)
+		o.output = OUTPUT_DIFF;
 
-	check_lg2(
-		git_diff_print(diff, o.format, color_printer, &o.color),
-		"displaying diff", NULL);
+	if (o.output != OUTPUT_DIFF)
+		diff_print_stats(diff, &o);
 
-	if (o.color >= 0)
-		fputs(colors[0], stdout);
+	if ((o.output & OUTPUT_DIFF) != 0) {
+		if (o.color >= 0)
+			fputs(colors[0], stdout);
+
+		check_lg2(
+			git_diff_print(diff, o.format, color_printer, &o.color),
+			"displaying diff", NULL);
+
+		if (o.color >= 0)
+			fputs(colors[0], stdout);
+	}
 
 	/** Cleanup before exiting. */
 
@@ -200,16 +229,25 @@ static void parse_opts(struct opts *o, int argc, char *argv[])
 				usage("Only one or two tree identifiers can be provided", NULL);
 		}
 		else if (!strcmp(a, "-p") || !strcmp(a, "-u") ||
-			!strcmp(a, "--patch"))
+				 !strcmp(a, "--patch")) {
+			o->output |= OUTPUT_DIFF;
 			o->format = GIT_DIFF_FORMAT_PATCH;
+		}
 		else if (!strcmp(a, "--cached"))
-			o->cached = 1;
-		else if (!strcmp(a, "--name-only"))
+			o->cache = CACHE_ONLY;
+		else if (!strcmp(a, "--nocache"))
+			o->cache = CACHE_NONE;
+		else if (!strcmp(a, "--name-only") || !strcmp(a, "--format=name"))
 			o->format = GIT_DIFF_FORMAT_NAME_ONLY;
-		else if (!strcmp(a, "--name-status"))
+		else if (!strcmp(a, "--name-status") ||
+				!strcmp(a, "--format=name-status"))
 			o->format = GIT_DIFF_FORMAT_NAME_STATUS;
-		else if (!strcmp(a, "--raw"))
+		else if (!strcmp(a, "--raw") || !strcmp(a, "--format=raw"))
 			o->format = GIT_DIFF_FORMAT_RAW;
+		else if (!strcmp(a, "--format=diff-index")) {
+			o->format = GIT_DIFF_FORMAT_RAW;
+			o->diffopts.id_abbrev = 40;
+		}
 		else if (!strcmp(a, "--color"))
 			o->color = 0;
 		else if (!strcmp(a, "--no-color"))
@@ -228,6 +266,18 @@ static void parse_opts(struct opts *o, int argc, char *argv[])
 			o->diffopts.flags |= GIT_DIFF_INCLUDE_IGNORED;
 		else if (!strcmp(a, "--untracked"))
 			o->diffopts.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
+		else if (!strcmp(a, "--patience"))
+			o->diffopts.flags |= GIT_DIFF_PATIENCE;
+		else if (!strcmp(a, "--minimal"))
+			o->diffopts.flags |= GIT_DIFF_MINIMAL;
+		else if (!strcmp(a, "--stat"))
+			o->output |= OUTPUT_STAT;
+		else if (!strcmp(a, "--numstat"))
+			o->output |= OUTPUT_NUMSTAT;
+		else if (!strcmp(a, "--shortstat"))
+			o->output |= OUTPUT_SHORTSTAT;
+		else if (!strcmp(a, "--summary"))
+			o->output |= OUTPUT_SUMMARY;
 		else if (match_uint16_arg(
 				&o->findopts.rename_threshold, &args, "-M") ||
 			match_uint16_arg(
@@ -249,9 +299,39 @@ static void parse_opts(struct opts *o, int argc, char *argv[])
 				&o->diffopts.context_lines, &args, "--unified") &&
 			!match_uint16_arg(
 				&o->diffopts.interhunk_lines, &args, "--inter-hunk-context") &&
+			!match_uint16_arg(
+				&o->diffopts.id_abbrev, &args, "--abbrev") &&
 			!match_str_arg(&o->diffopts.old_prefix, &args, "--src-prefix") &&
 			!match_str_arg(&o->diffopts.new_prefix, &args, "--dst-prefix") &&
 			!match_str_arg(&o->dir, &args, "--git-dir"))
 			usage("Unknown command line argument", a);
 	}
+}
+
+/** Display diff output with "--stat", "--numstat", or "--shortstat" */
+static void diff_print_stats(git_diff *diff, struct opts *o)
+{
+	git_diff_stats *stats;
+	git_buf b = GIT_BUF_INIT_CONST(NULL, 0);
+	git_diff_stats_format_t format = 0;
+
+	check_lg2(
+		git_diff_get_stats(&stats, diff), "generating stats for diff", NULL);
+
+	if (o->output & OUTPUT_STAT)
+		format |= GIT_DIFF_STATS_FULL;
+	if (o->output & OUTPUT_SHORTSTAT)
+		format |= GIT_DIFF_STATS_SHORT;
+	if (o->output & OUTPUT_NUMSTAT)
+		format |= GIT_DIFF_STATS_NUMBER;
+	if (o->output & OUTPUT_SUMMARY)
+		format |= GIT_DIFF_STATS_INCLUDE_SUMMARY;
+
+	check_lg2(
+		git_diff_stats_to_buf(&b, stats, format, 80), "formatting stats", NULL);
+
+	fputs(b.ptr, stdout);
+
+	git_buf_free(&b);
+	git_diff_stats_free(stats);
 }

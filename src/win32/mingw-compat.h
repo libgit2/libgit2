@@ -10,19 +10,17 @@
 #if defined(__MINGW32__)
 
 /* use a 64-bit file offset type */
+# undef lseek
 # define lseek _lseeki64
+# undef stat
 # define stat _stati64
+# undef fstat
 # define fstat _fstati64
 
 /* stat: file mode type testing macros */
 # define _S_IFLNK 0120000
 # define S_IFLNK _S_IFLNK
 # define S_ISLNK(m) (((m) & _S_IFMT) == _S_IFLNK)
-
-GIT_INLINE(size_t) p_strnlen(const char *s, size_t maxlen) {
-	const char *end = memchr(s, 0, maxlen);
-	return end ? (size_t)(end - s) : maxlen;
-}
 
 #endif
 

@@ -7,7 +7,7 @@
 #ifndef INCLUDE_array_h__
 #define INCLUDE_array_h__
 
-#include "util.h"
+#include "common.h"
 
 /*
  * Use this to declare a typesafe resizable array of items, a la:

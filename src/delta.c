@@ -144,7 +144,7 @@ git_delta_create_index(const void *buf, unsigned long bufsize)
 		entries = 0xfffffffeU / RABIN_WINDOW;
 	}
 	hsize = entries / 4;
-	for (i = 4; (1u << i) < hsize && i < 31; i++);
+	for (i = 4; i < 31 && (1u << i) < hsize; i++);
 	hsize = 1 << i;
 	hmask = hsize - 1;
 

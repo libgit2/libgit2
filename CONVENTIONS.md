@@ -6,14 +6,18 @@ guidelines that should help with that.
 ## Compatibility
 
 `libgit2` runs on many different platforms with many different compilers.
-It is written in [ANSI C](http://en.wikipedia.org/wiki/ANSI_C) (a.k.a. C89)
-with some specific standards for function and type naming, code formatting,
-and testing.
 
-We try to avoid more recent extensions to maximize portability.  We also, to
-the greatest extent possible, try to avoid lots of `#ifdef`s inside the core
-code base.  This is somewhat unavoidable, but since it can really hamper
-maintainability, we keep it to a minimum.
+The public API of `libgit2` is [ANSI C](http://en.wikipedia.org/wiki/ANSI_C)
+(a.k.a. C89) compatible.
+
+Internally, `libgit2` is written using a portable subset of C99 - in order
+to maximize compatibility (e.g. with MSVC) we avoid certain C99
+extensions.  Specifically, we keep local variable declarations at the tops
+of blocks only and we avoid `//` style comments.
+
+Also, to the greatest extent possible, we try to avoid lots of `#ifdef`s
+inside the core code base.  This is somewhat unavoidable, but since it can
+really hamper maintainability, we keep it to a minimum.
 
 ## Match Surrounding Code
 
@@ -208,6 +212,9 @@ All inlined functions must be declared as:
 ```C
 GIT_INLINE(result_type) git_modulename_functionname(arg_list);
 ```
+
+`GIT_INLINE` (or `inline`) should not be used in public headers in order
+to preserve ANSI C compatibility.
 
 ## Tests
 

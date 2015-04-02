@@ -16,6 +16,7 @@
 
 #define GIT_MERGE_MSG_FILE		"MERGE_MSG"
 #define GIT_MERGE_MODE_FILE		"MERGE_MODE"
+#define GIT_MERGE_FILE_MODE		0666
 
 #define GIT_MERGE_TREE_RENAME_THRESHOLD	50
 #define GIT_MERGE_TREE_TARGET_LIMIT		1000
@@ -105,6 +106,8 @@ typedef struct {
 
 	git_index_entry their_entry;
 	git_delta_t their_status;
+
+	int binary:1;
 } git_merge_diff;
 
 /** Internal structure for merge inputs */
@@ -113,6 +116,7 @@ struct git_merge_head {
 	char *remote_url;
 
 	git_oid oid;
+	char oid_str[GIT_OID_HEXSZ+1];
 	git_commit *commit;
 };
 
@@ -133,7 +137,7 @@ int git_merge_diff_list__find_differences(git_merge_diff_list *merge_diff_list,
 	const git_tree *ours_tree,
 	const git_tree *theirs_tree);
 
-int git_merge_diff_list__find_renames(git_repository *repo, git_merge_diff_list *merge_diff_list, const git_merge_tree_opts *opts);
+int git_merge_diff_list__find_renames(git_repository *repo, git_merge_diff_list *merge_diff_list, const git_merge_options *opts);
 
 void git_merge_diff_list__free(git_merge_diff_list *diff_list);
 
@@ -142,8 +146,11 @@ void git_merge_diff_list__free(git_merge_diff_list *diff_list);
 int git_merge__setup(
 	git_repository *repo,
 	const git_merge_head *our_head,
-	const git_merge_head *their_heads[],
-	size_t their_heads_len,
-	unsigned int flags);
+	const git_merge_head *heads[],
+	size_t heads_len);
+
+int git_merge__indexes(git_repository *repo, git_index *index_new);
+
+int git_merge__append_conflicts_to_merge_msg(git_repository *repo, git_index *index);
 
 #endif

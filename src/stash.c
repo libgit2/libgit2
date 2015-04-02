@@ -178,7 +178,8 @@ static int stash_update_index_from_diff(
 			break;
 
 		case GIT_DELTA_UNTRACKED:
-			if (data->include_untracked)
+			if (data->include_untracked &&
+				delta->new_file.mode != GIT_FILEMODE_TREE)
 				add_path = delta->new_file.path;
 			break;
 
@@ -412,25 +413,15 @@ static int update_reflog(
 	const char *message)
 {
 	git_reference *stash;
-	git_reflog *reflog = NULL;
 	int error;
 
-	if ((error = git_reference_create(&stash, repo, GIT_REFS_STASH_FILE, w_commit_oid, 1)) < 0)
-		goto cleanup;
+	if ((error = git_reference_ensure_log(repo, GIT_REFS_STASH_FILE)) < 0)
+		return error;
+
+	error = git_reference_create(&stash, repo, GIT_REFS_STASH_FILE, w_commit_oid, 1, stasher, message);
 
 	git_reference_free(stash);
 
-	if ((error = git_reflog_read(&reflog, repo, GIT_REFS_STASH_FILE) < 0))
-		goto cleanup;
-
-	if ((error = git_reflog_append(reflog, w_commit_oid, stasher, message)) < 0)
-		goto cleanup;
-
-	if ((error = git_reflog_write(reflog)) < 0)
-		goto cleanup;
-
-cleanup:
-	git_reflog_free(reflog);
 	return error;
 }
 
@@ -440,7 +431,7 @@ static int is_dirty_cb(const char *path, unsigned int status, void *payload)
 	GIT_UNUSED(status);
 	GIT_UNUSED(payload);
 
-	return 1;
+	return GIT_PASSTHROUGH;
 }
 
 static int ensure_there_are_changes_to_stash(
@@ -463,7 +454,7 @@ static int ensure_there_are_changes_to_stash(
 
 	error = git_status_foreach_ext(repo, &opts, is_dirty_cb, NULL);
 
-	if (error == GIT_EUSER)
+	if (error == GIT_PASSTHROUGH)
 		return 0;
 
 	if (!error)
@@ -475,14 +466,18 @@ static int ensure_there_are_changes_to_stash(
 static int reset_index_and_workdir(
 	git_repository *repo,
 	git_commit *commit,
-	bool remove_untracked)
+	bool remove_untracked,
+	bool remove_ignored)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	if (remove_untracked)
 		opts.checkout_strategy |= GIT_CHECKOUT_REMOVE_UNTRACKED;
+
+	if (remove_ignored)
+		opts.checkout_strategy |= GIT_CHECKOUT_REMOVE_IGNORED;
 
 	return git_checkout_tree(repo, (git_object *)commit, &opts);
 }
@@ -542,7 +537,8 @@ int git_stash_save(
 	if ((error = reset_index_and_workdir(
 		repo,
 		((flags & GIT_STASH_KEEP_INDEX) != 0) ? i_commit : b_commit,
-		(flags & GIT_STASH_INCLUDE_UNTRACKED) != 0)) < 0)
+		(flags & GIT_STASH_INCLUDE_UNTRACKED) != 0,
+		(flags & GIT_STASH_INCLUDE_IGNORED) != 0)) < 0)
 		goto cleanup;
 
 cleanup:
@@ -582,12 +578,14 @@ int git_stash_foreach(
 	for (i = 0; i < max; i++) {
 		entry = git_reflog_entry_byindex(reflog, i);
 
-		if (callback(i,
+		error = callback(i,
 			git_reflog_entry_message(entry),
 			git_reflog_entry_id_new(entry),
-			payload)) {
-				error = GIT_EUSER;
-				break;
+			payload);
+
+		if (error) {
+			giterr_set_after_callback(error);
+			break;
 		}
 	}
 
@@ -636,7 +634,11 @@ int git_stash_drop(
 		entry = git_reflog_entry_byindex(reflog, 0);
 
 		git_reference_free(stash);
-		error = git_reference_create(&stash, repo, GIT_REFS_STASH_FILE, &entry->oid_cur, 1);
+		if ((error = git_reference_create(&stash, repo, GIT_REFS_STASH_FILE, &entry->oid_cur, 1, NULL, NULL) < 0))
+			goto cleanup;
+
+		/* We need to undo the writing that we just did */
+		error = git_reflog_write(reflog);
 	}
 
 cleanup:

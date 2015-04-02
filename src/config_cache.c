@@ -7,11 +7,11 @@
 
 #include "common.h"
 #include "fileops.h"
+#include "repository.h"
 #include "config.h"
 #include "git2/config.h"
 #include "vector.h"
 #include "filter.h"
-#include "repository.h"
 
 struct map_data {
 	const char *cvar_name;
@@ -51,6 +51,12 @@ static git_cvar_map _cvar_map_autocrlf[] = {
 	{GIT_CVAR_STRING, "input", GIT_AUTO_CRLF_INPUT}
 };
 
+static git_cvar_map _cvar_map_safecrlf[] = {
+	{GIT_CVAR_FALSE, NULL, GIT_SAFE_CRLF_FALSE},
+	{GIT_CVAR_TRUE, NULL, GIT_SAFE_CRLF_FAIL},
+	{GIT_CVAR_STRING, "warn", GIT_SAFE_CRLF_WARN}
+};
+
 /*
  * Generic map for integer values
  */
@@ -68,32 +74,39 @@ static struct map_data _cvar_maps[] = {
 	{"core.trustctime", NULL, 0, GIT_TRUSTCTIME_DEFAULT },
 	{"core.abbrev", _cvar_map_int, 1, GIT_ABBREV_DEFAULT },
 	{"core.precomposeunicode", NULL, 0, GIT_PRECOMPOSE_DEFAULT },
+	{"core.safecrlf", _cvar_map_safecrlf, ARRAY_SIZE(_cvar_map_safecrlf), GIT_SAFE_CRLF_DEFAULT},
+	{"core.logallrefupdates", NULL, 0, GIT_LOGALLREFUPDATES_DEFAULT },
 };
+
+int git_config__cvar(int *out, git_config *config, git_cvar_cached cvar)
+{
+	int error = 0;
+	struct map_data *data = &_cvar_maps[(int)cvar];
+	const git_config_entry *entry;
+
+	git_config__lookup_entry(&entry, config, data->cvar_name, false);
+
+	if (!entry)
+		*out = data->default_value;
+	else if (data->maps)
+		error = git_config_lookup_map_value(
+			out, data->maps, data->map_count, entry->value);
+	else
+		error = git_config_parse_bool(out, entry->value);
+
+	return error;
+}
 
 int git_repository__cvar(int *out, git_repository *repo, git_cvar_cached cvar)
 {
 	*out = repo->cvar_cache[(int)cvar];
 
 	if (*out == GIT_CVAR_NOT_CACHED) {
-		struct map_data *data = &_cvar_maps[(int)cvar];
-		git_config *config;
 		int error;
+		git_config *config;
 
-		error = git_repository_config__weakptr(&config, repo);
-		if (error < 0)
-			return error;
-
-		if (data->maps)
-			error = git_config_get_mapped(
-				out, config, data->cvar_name, data->maps, data->map_count);
-		else
-			error = git_config_get_bool(out, config, data->cvar_name);
-
-		if (error == GIT_ENOTFOUND) {
-			giterr_clear();
-			*out = data->default_value;
-		}
-		else if (error < 0)
+		if ((error = git_repository_config__weakptr(&config, repo)) < 0 ||
+			(error = git_config__cvar(out, config, cvar)) < 0)
 			return error;
 
 		repo->cvar_cache[(int)cvar] = *out;

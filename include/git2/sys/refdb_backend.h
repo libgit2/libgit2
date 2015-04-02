@@ -93,17 +93,20 @@ struct git_refdb_backend {
 	 * must provide this function.
 	 */
 	int (*write)(git_refdb_backend *backend,
-		const git_reference *ref, int force);
+		     const git_reference *ref, int force,
+		     const git_signature *who, const char *message,
+		     const git_oid *old, const char *old_target);
 
 	int (*rename)(
 		git_reference **out, git_refdb_backend *backend,
-		const char *old_name, const char *new_name, int force);
+		const char *old_name, const char *new_name, int force,
+		const git_signature *who, const char *message);
 
 	/**
 	 * Deletes the given reference from the refdb.  A refdb implementation
 	 * must provide this function.
 	 */
-	int (*del)(git_refdb_backend *backend, const char *ref_name);
+	int (*del)(git_refdb_backend *backend, const char *ref_name, const git_oid *old_id, const char *old_target);
 
 	/**
 	 * Suggests that the given refdb compress or optimize its references.
@@ -113,6 +116,17 @@ struct git_refdb_backend {
 	 * nothing will be done.
 	 */
 	int (*compress)(git_refdb_backend *backend);
+
+	/**
+	 * Query whether a particular reference has a log (may be empty)
+	 */
+	int (*has_log)(git_refdb_backend *backend, const char *refname);
+
+	/**
+	 * Make sure a particular reference will have a reflog which
+	 * will be appended to on writes.
+	 */
+	int (*ensure_log)(git_refdb_backend *backend, const char *refname);
 
 	/**
 	 * Frees any resources held by the refdb.  A refdb implementation may
@@ -143,6 +157,18 @@ struct git_refdb_backend {
 
 #define GIT_REFDB_BACKEND_VERSION 1
 #define GIT_REFDB_BACKEND_INIT {GIT_REFDB_BACKEND_VERSION}
+
+/**
+ * Initializes a `git_refdb_backend` with default values. Equivalent to
+ * creating an instance with GIT_REFDB_BACKEND_INIT.
+ *
+ * @param opts the `git_refdb_backend` struct to initialize
+ * @param version Version of struct; pass `GIT_REFDB_BACKEND_VERSION`
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_refdb_init_backend(
+	git_refdb_backend *backend,
+	unsigned int version);
 
 /**
  * Constructors for default filesystem-based refdb backend

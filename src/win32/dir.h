@@ -8,10 +8,11 @@
 #define INCLUDE_dir_h__
 
 #include "common.h"
+#include "w32_util.h"
 
 struct git__dirent {
 	int d_ino;
-	git_win32_path_as_utf8 d_name;
+	git_win32_utf8_path d_name;
 };
 
 typedef struct {

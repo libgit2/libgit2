@@ -16,7 +16,8 @@ GIT_INLINE(int) git_config_file_open(git_config_backend *cfg, unsigned int level
 
 GIT_INLINE(void) git_config_file_free(git_config_backend *cfg)
 {
-	cfg->free(cfg);
+	if (cfg)
+		cfg->free(cfg);
 }
 
 GIT_INLINE(int) git_config_file_get_string(

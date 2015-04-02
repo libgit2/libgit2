@@ -313,7 +313,7 @@ static int note_new(git_note **out, git_oid *note_oid, git_blob *blob)
 	note = (git_note *)git__malloc(sizeof(git_note));
 	GITERR_CHECK_ALLOC(note);
 
-	git_oid_cpy(&note->oid, note_oid);
+	git_oid_cpy(&note->id, note_oid);
 	note->message = git__strdup((char *)git_blob_rawcontent(blob));
 	GITERR_CHECK_ALLOC(note->message);
 
@@ -378,20 +378,11 @@ cleanup:
 
 static int note_get_default_ref(const char **out, git_repository *repo)
 {
-	int ret;
 	git_config *cfg;
+	int ret = git_repository_config__weakptr(&cfg, repo);
 
-	*out = NULL;
-
-	if (git_repository_config__weakptr(&cfg, repo) < 0)
-		return -1;
-
-	ret = git_config_get_string(out, cfg, "core.notesRef");
-	if (ret == GIT_ENOTFOUND) {
-		giterr_clear();
-		*out = GIT_NOTES_DEFAULT_REF;
-		return 0;
-	}
+	*out = (ret != 0) ? NULL : git_config__get_string_force(
+		cfg, "core.notesref", GIT_NOTES_DEFAULT_REF);
 
 	return ret;
 }
@@ -517,10 +508,10 @@ const char * git_note_message(const git_note *note)
 	return note->message;
 }
 
-const git_oid * git_note_oid(const git_note *note)
+const git_oid * git_note_id(const git_note *note)
 {
 	assert(note);
-	return &note->oid;
+	return &note->id;
 }
 
 void git_note_free(git_note *note)
@@ -592,8 +583,8 @@ int git_note_foreach(
 		return error;
 
 	while (!(error = git_note_next(&note_id, &annotated_id, iter))) {
-		if (note_cb(&note_id, &annotated_id, payload)) {
-			error = GIT_EUSER;
+		if ((error = note_cb(&note_id, &annotated_id, payload)) != 0) {
+			giterr_set_after_callback(error);
 			break;
 		}
 	}
@@ -649,7 +640,7 @@ int git_note_next(
 	if ((error = git_iterator_current(&item, it)) < 0)
 		return error;
 
-	git_oid_cpy(note_id, &item->oid);
+	git_oid_cpy(note_id, &item->id);
 
 	if (!(error = process_entry_path(item->path, annotated_id)))
 		git_iterator_advance(NULL, it);

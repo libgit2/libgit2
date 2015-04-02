@@ -55,7 +55,10 @@ GIT_EXTERN(git_filter *) git_filter_lookup(const char *name);
  * your own chains of filters.
  */
 GIT_EXTERN(int) git_filter_list_new(
-	git_filter_list **out, git_repository *repo, git_filter_mode_t mode);
+	git_filter_list **out,
+	git_repository *repo,
+	git_filter_mode_t mode,
+	uint32_t options);
 
 /**
  * Add a filter to a filter list with the given payload.
@@ -115,9 +118,14 @@ GIT_EXTERN(uint16_t) git_filter_source_filemode(const git_filter_source *src);
 GIT_EXTERN(const git_oid *) git_filter_source_id(const git_filter_source *src);
 
 /**
- * Get the git_filter_mode_t to be applied
+ * Get the git_filter_mode_t to be used
  */
 GIT_EXTERN(git_filter_mode_t) git_filter_source_mode(const git_filter_source *src);
+
+/**
+ * Get the combination git_filter_opt_t options to be applied
+ */
+GIT_EXTERN(uint32_t) git_filter_source_options(const git_filter_source *src);
 
 /*
  * struct git_filter
@@ -149,6 +157,7 @@ typedef int (*git_filter_init_fn)(git_filter *self);
  * Specified as `filter.shutdown`, this is an optional callback invoked
  * when the filter is unregistered or when libgit2 is shutting down.  It
  * will be called once at most and should release resources as needed.
+ * This may be called even if the `initialize` callback was not made.
  *
  * Typically this function will free the `git_filter` object itself.
  */

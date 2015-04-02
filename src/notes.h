@@ -21,7 +21,7 @@
 	"Notes removed by 'git_note_remove' from libgit2"
 
 struct git_note {
-	git_oid oid;
+	git_oid id;
 
 	char *message;
 };
