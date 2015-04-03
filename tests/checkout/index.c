@@ -4,6 +4,7 @@
 #include "git2/checkout.h"
 #include "fileops.h"
 #include "repository.h"
+#include "remote.h"
 
 static git_repository *g_repo;
 
@@ -133,6 +134,52 @@ void test_checkout_index__honor_coreautocrlf_setting_set_to_true(void)
 
 	check_file_contents("./testrepo/README", expected_readme_text);
 #endif
+}
+
+void test_checkout_index__honor_coresymlinks_default(void)
+{
+	git_repository *repo;
+	git_remote *origin;
+	git_object *target;
+	char cwd[GIT_PATH_MAX];
+
+	const char *url = git_repository_path(g_repo);
+
+	getcwd(cwd, sizeof(cwd));
+	cl_assert_equal_i(0, p_mkdir("readonly", 0555)); // Read-only directory
+	cl_assert_equal_i(0, chdir("readonly"));
+	cl_git_pass(git_repository_init(&repo, "../symlink.git", true));
+	cl_assert_equal_i(0, chdir(cwd));
+	cl_assert_equal_i(0, p_mkdir("symlink", 0777));
+	cl_git_pass(git_repository_set_workdir(repo, "symlink", 1));
+
+	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
+	cl_git_pass(git_remote_connect(origin, GIT_DIRECTION_FETCH));
+	cl_git_pass(git_remote_download(origin, NULL));
+	cl_git_pass(git_remote_update_tips(origin, NULL));
+	git_remote_free(origin);
+
+	cl_git_pass(git_revparse_single(&target, repo, "remotes/origin/master"));
+	cl_git_pass(git_reset(repo, target, GIT_RESET_HARD, NULL));
+	git_object_free(target);
+	git_repository_free(repo);
+
+#ifdef GIT_WIN32
+	check_file_contents("./symlink/link_to_new.txt", "new.txt");
+#else
+	{
+		char link_data[1024];
+		size_t link_size = 1024;
+
+		link_size = p_readlink("./symlink/link_to_new.txt", link_data, link_size);
+		link_data[link_size] = '\0';
+		cl_assert_equal_i(link_size, strlen("new.txt"));
+		cl_assert_equal_s(link_data, "new.txt");
+		check_file_contents("./symlink/link_to_new.txt", "my new file\n");
+	}
+#endif
+
+	cl_fixture_cleanup("symlink");
 }
 
 void test_checkout_index__honor_coresymlinks_setting_set_to_true(void)
