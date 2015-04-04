@@ -1091,7 +1091,7 @@ static bool valid_filemode(const int filemode)
 }
 
 int git_index_add_frombuffer(
-    git_index *index, git_index_entry *source_entry,
+    git_index *index, const git_index_entry *source_entry,
     const void *buffer, size_t len)
 {
 	git_index_entry *entry = NULL;
