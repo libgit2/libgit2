@@ -11,4 +11,5 @@ remote
 status
 tag
 for-each-ref
+describe
 *.dSYM
