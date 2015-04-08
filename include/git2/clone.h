@@ -49,7 +49,7 @@ typedef enum {
 	 * Bypass the git-aware transport, but do not try to use
 	 * hardlinks.
 	 */
-	GIT_CLONE_LOCAL_NO_LINKS,
+	GIT_CLONE_LOCAL_NO_LINKS
 } git_clone_local_t;
 
 /**

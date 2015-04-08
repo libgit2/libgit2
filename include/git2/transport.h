@@ -27,7 +27,7 @@ typedef enum {
 	/** MD5 is available */
 	GIT_CERT_SSH_MD5 = (1 << 0),
 	/** SHA-1 is available */
-	GIT_CERT_SSH_SHA1 = (1 << 1),
+	GIT_CERT_SSH_SHA1 = (1 << 1)
 } git_cert_ssh_t;
 
 /**
@@ -104,7 +104,7 @@ typedef enum {
 	 * If the SSH transport does not know which username to use,
 	 * it will ask via this credential type.
 	 */
-	GIT_CREDTYPE_USERNAME = (1u << 5),
+	GIT_CREDTYPE_USERNAME = (1u << 5)
 } git_credtype_t;
 
 /* The base structure for all credential types */

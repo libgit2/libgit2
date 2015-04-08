@@ -52,7 +52,7 @@ typedef enum {
 	GIT_PATHSPEC_NO_GLOB        = (1u << 2),
 	GIT_PATHSPEC_NO_MATCH_ERROR = (1u << 3),
 	GIT_PATHSPEC_FIND_FAILURES  = (1u << 4),
-	GIT_PATHSPEC_FAILURES_ONLY  = (1u << 5),
+	GIT_PATHSPEC_FAILURES_ONLY  = (1u << 5)
 } git_pathspec_flag_t;
 
 /**

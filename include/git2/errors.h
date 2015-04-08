@@ -47,7 +47,7 @@ typedef enum {
 	GIT_EPEEL           = -19,      /**< The requested peel operation is not possible */
 
 	GIT_PASSTHROUGH     = -30,	/**< Internal only */
-	GIT_ITEROVER        = -31,	/**< Signals end of iteration with iterator */
+	GIT_ITEROVER        = -31	/**< Signals end of iteration with iterator */
 } git_error_code;
 
 /**

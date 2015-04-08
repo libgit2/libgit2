@@ -32,7 +32,7 @@ typedef enum {
 	GIT_FILTER_TO_WORKTREE = 0,
 	GIT_FILTER_SMUDGE = GIT_FILTER_TO_WORKTREE,
 	GIT_FILTER_TO_ODB = 1,
-	GIT_FILTER_CLEAN = GIT_FILTER_TO_ODB,
+	GIT_FILTER_CLEAN = GIT_FILTER_TO_ODB
 } git_filter_mode_t;
 
 /**
@@ -40,7 +40,7 @@ typedef enum {
  */
 typedef enum {
 	GIT_FILTER_DEFAULT = 0u,
-	GIT_FILTER_ALLOW_UNSAFE = (1u << 0),
+	GIT_FILTER_ALLOW_UNSAFE = (1u << 0)
 } git_filter_flag_t;
 
 /**

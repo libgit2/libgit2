@@ -444,7 +444,7 @@ GIT_EXTERN(int) git_remote_list(git_strarray *out, git_repository *repo);
 typedef enum git_remote_completion_type {
 	GIT_REMOTE_COMPLETION_DOWNLOAD,
 	GIT_REMOTE_COMPLETION_INDEXING,
-	GIT_REMOTE_COMPLETION_ERROR,
+	GIT_REMOTE_COMPLETION_ERROR
 } git_remote_completion_type;
 
 /**

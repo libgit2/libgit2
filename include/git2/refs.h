@@ -650,7 +650,7 @@ typedef enum {
 	 * so the `ONELEVEL` naming rules aren't enforced and 'master'
 	 * becomes a valid name.
 	 */
-	GIT_REF_FORMAT_REFSPEC_SHORTHAND = (1u << 2),
+	GIT_REF_FORMAT_REFSPEC_SHORTHAND = (1u << 2)
 } git_reference_normalize_t;
 
 /**
