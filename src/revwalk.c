@@ -162,6 +162,10 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting,
 	if (commit == NULL)
 		return -1; /* error already reported by failed lookup */
 
+	/* A previous hide already told us we don't want this commit  */
+	if (commit->uninteresting)
+		return 0;
+
 	if (uninteresting)
 		walk->did_hide = 1;
 	else
