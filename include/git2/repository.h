@@ -206,7 +206,7 @@ typedef enum {
 	GIT_REPOSITORY_INIT_MKDIR             = (1u << 3),
 	GIT_REPOSITORY_INIT_MKPATH            = (1u << 4),
 	GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE = (1u << 5),
-	GIT_REPOSITORY_INIT_RELATIVE_GITLINK  = (1u << 6),
+	GIT_REPOSITORY_INIT_RELATIVE_GITLINK  = (1u << 6)
 } git_repository_init_flag_t;
 
 /**
