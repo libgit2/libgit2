@@ -1608,6 +1608,7 @@ int git_repository_init_ext(
 {
 	int error;
 	git_buf repo_path = GIT_BUF_INIT, wd_path = GIT_BUF_INIT;
+	const char *wd;
 
 	assert(out && given_repo && opts);
 
@@ -1617,6 +1618,7 @@ int git_repository_init_ext(
 	if (error < 0)
 		goto cleanup;
 
+	wd = (opts->flags & GIT_REPOSITORY_INIT_BARE) ? NULL : git_buf_cstr(&wd_path);
 	if (valid_repository_path(&repo_path)) {
 
 		if ((opts->flags & GIT_REPOSITORY_INIT_NO_REINIT) != 0) {
@@ -1629,15 +1631,15 @@ int git_repository_init_ext(
 		opts->flags |= GIT_REPOSITORY_INIT__IS_REINIT;
 
 		error = repo_init_config(
-			repo_path.ptr, wd_path.ptr, opts->flags, opts->mode);
+			repo_path.ptr, wd, opts->flags, opts->mode);
 
 		/* TODO: reinitialize the templates */
 	}
 	else {
 		if (!(error = repo_init_structure(
-				repo_path.ptr, wd_path.ptr, opts)) &&
+				repo_path.ptr, wd, opts)) &&
 			!(error = repo_init_config(
-				repo_path.ptr, wd_path.ptr, opts->flags, opts->mode)))
+				repo_path.ptr, wd, opts->flags, opts->mode)))
 			error = repo_init_create_head(
 				repo_path.ptr, opts->initial_head);
 	}
