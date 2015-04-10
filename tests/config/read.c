@@ -350,6 +350,18 @@ static void check_glob_iter(git_config *cfg, const char *regexp, int expected)
 	git_config_iterator_free(iter);
 }
 
+void test_config_read__iterator_invalid_glob(void)
+{
+	git_config *cfg;
+	git_config_iterator *iter;
+
+	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config9")));
+
+	cl_git_fail(git_config_iterator_glob_new(&iter, cfg, "*"));
+
+	git_config_free(cfg);
+}
+
 void test_config_read__iterator_glob(void)
 {
 	git_config *cfg;
