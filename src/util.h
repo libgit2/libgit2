@@ -31,6 +31,8 @@
  */
 #define CONST_STRLEN(x) ((sizeof(x)/sizeof(x[0])) - 1)
 
+#ifndef git__malloc
+
 /*
  * Custom memory allocation wrappers
  * that set error code and error message
@@ -50,12 +52,26 @@ GIT_INLINE(void *) git__calloc(size_t nelem, size_t elsize)
 	return ptr;
 }
 
+GIT_INLINE(void *) git__realloc(void *ptr, size_t size)
+{
+	void *new_ptr = realloc(ptr, size);
+	if (!new_ptr) giterr_set_oom();
+	return new_ptr;
+}
+
+GIT_INLINE(void) git__free(void *ptr)
+{
+	free(ptr);
+}
+
 GIT_INLINE(char *) git__strdup(const char *str)
 {
 	char *ptr = strdup(str);
 	if (!ptr) giterr_set_oom();
 	return ptr;
 }
+
+#endif /* git__malloc */
 
 GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 {
@@ -91,13 +107,6 @@ GIT_INLINE(char *) git__substrdup(const char *start, size_t n)
 	return ptr;
 }
 
-GIT_INLINE(void *) git__realloc(void *ptr, size_t size)
-{
-	void *new_ptr = realloc(ptr, size);
-	if (!new_ptr) giterr_set_oom();
-	return new_ptr;
-}
-
 /**
  * Similar to `git__realloc`, except that it is suitable for reallocing an
  * array to a new number of elements of `nelem`, each of size `elsize`.
@@ -107,7 +116,7 @@ GIT_INLINE(void *) git__reallocarray(void *ptr, size_t nelem, size_t elsize)
 {
 	size_t newsize;
 	return GIT_MULTIPLY_SIZET_OVERFLOW(&newsize, nelem, elsize) ?
-		NULL : realloc(ptr, newsize);
+		NULL : git__realloc(ptr, newsize);
 }
 
 /**
@@ -116,11 +125,6 @@ GIT_INLINE(void *) git__reallocarray(void *ptr, size_t nelem, size_t elsize)
 GIT_INLINE(void *) git__mallocarray(size_t nelem, size_t elsize)
 {
 	return git__reallocarray(NULL, nelem, elsize);
-}
-
-GIT_INLINE(void) git__free(void *ptr)
-{
-	free(ptr);
 }
 
 #define STRCMP_CASESELECT(IGNORE_CASE, STR1, STR2) \

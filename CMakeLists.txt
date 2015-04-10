@@ -26,9 +26,10 @@ INCLUDE(FindPkgConfig)
 #
 OPTION( SONAME				"Set the (SO)VERSION of the target"		ON  )
 OPTION( BUILD_SHARED_LIBS	"Build Shared Library (OFF for Static)"	ON  )
-OPTION( THREADSAFE			"Build libgit2 as threadsafe"			ON )
+OPTION( THREADSAFE			"Build libgit2 as threadsafe"			ON  )
 OPTION( BUILD_CLAR			"Build Tests using the Clar suite"		ON  )
 OPTION( BUILD_EXAMPLES		"Build library usage example apps"		OFF )
+OPTION( BUILD_BENCHMARK     "Builds benchmarking tools"             ON  )
 OPTION( TAGS				"Generate tags"							OFF )
 OPTION( PROFILE				"Generate profiling information"		OFF )
 OPTION( ENABLE_TRACE		"Enables tracing support"				OFF )
@@ -36,11 +37,11 @@ OPTION( LIBGIT2_FILENAME	"Name of the produced binary"			OFF )
 
 OPTION( ANDROID				"Build for android NDK"	 				OFF )
 
-OPTION( USE_OPENSSL                     "Link with and use openssl library"             ON )
+OPTION( USE_OPENSSL         "Link with and use openssl library"     ON  )
 OPTION( USE_ICONV			"Link with and use iconv library" 		OFF )
-OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
+OPTION( USE_SSH				"Link with libssh for SSH support"      ON  )
 OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"   OFF )
-OPTION( VALGRIND			"Configure build for valgrind"			OFF )
+OPTION( VALGRIND			"Configure build for valgrind"          OFF )
 
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	SET( USE_ICONV ON )
@@ -559,4 +560,33 @@ ENDIF ()
 
 IF (BUILD_EXAMPLES)
 	ADD_SUBDIRECTORY(examples)
+ENDIF ()
+
+IF (BUILD_BENCHMARK)
+	SET(BENCH_PATH "${CMAKE_CURRENT_SOURCE_DIR}/benchmark")
+	INCLUDE_DIRECTORIES(${BENCH_PATH})
+
+#	ADD_DEFINITIONS(-Dgit__malloc=gitbench__malloc)
+#	ADD_DEFINITIONS(-Dgit__calloc=gitbench__calloc)
+#	ADD_DEFINITIONS(-Dgit__realloc=gitbench__realloc)
+#	ADD_DEFINITIONS(-Dgit__free=gitbench__free)
+#	ADD_DEFINITIONS(-Dgit__strdup=gitbench__strdup)
+
+	FILE(GLOB_RECURSE SRC_BENCH ${BENCH_PATH}/*.c ${BENCH_PATH}/*.h)
+
+	ADD_EXECUTABLE(libgit2_bench ${SRC_BENCH} ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SSH} ${SRC_SHA1})
+
+	TARGET_LINK_LIBRARIES(libgit2_bench ${SSL_LIBRARIES})
+	TARGET_LINK_LIBRARIES(libgit2_bench ${SSH_LIBRARIES})
+	TARGET_LINK_LIBRARIES(libgit2_bench ${GSSAPI_LIBRARIES})
+	TARGET_LINK_LIBRARIES(libgit2_bench ${ICONV_LIBRARIES})
+	TARGET_OS_LIBRARIES(libgit2_bench)
+	MSVC_SPLIT_SOURCES(libgit2_bench)
+
+	IF (MSVC_IDE)
+		# Precompiled headers
+		SET_TARGET_PROPERTIES(libgit2_bench PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIalloc.h /FIprecompiled.h")
+	ELSE ()
+		SET_TARGET_PROPERTIES(libgit2_bench PROPERTIES COMPILE_FLAGS "-include malloc.h")
+	ENDIF ()
 ENDIF ()
