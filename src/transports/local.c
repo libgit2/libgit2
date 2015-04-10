@@ -544,7 +544,8 @@ static int local_download_pack(
 					error = 0;
 			}
 		} else {
-			error = git_packbuilder_insert(pack, &rhead->oid, rhead->name);
+			/* Tag or some other wanted object. Add it on its own */
+			error = git_packbuilder_insert_recur(pack, &rhead->oid, rhead->name);
 		}
 		git_object_free(obj);
 		if (error < 0)
