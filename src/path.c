@@ -1006,11 +1006,11 @@ int git_path_direach(
 	path_dirent_data de_data;
 	struct dirent *de, *de_buf = (struct dirent *)&de_data;
 
-	GIT_UNUSED(flags);
-
 #ifdef GIT_USE_ICONV
 	git_path_iconv_t ic = GIT_PATH_ICONV_INIT;
 #endif
+
+	GIT_UNUSED(flags);
 
 	if (git_path_to_dir(path) < 0)
 		return -1;
@@ -1108,11 +1108,11 @@ int git_path_dirload(
 	path_dirent_data de_data;
 	struct dirent *de, *de_buf = (struct dirent *)&de_data;
 
-	GIT_UNUSED(flags);
-
 #ifdef GIT_USE_ICONV
 	git_path_iconv_t ic = GIT_PATH_ICONV_INIT;
 #endif
+
+	GIT_UNUSED(flags);
 
 	assert(path && contents);
 
