@@ -45,7 +45,7 @@ typedef enum {
 	GIT_STATUS_WT_RENAMED       = (1u << 11),
 	GIT_STATUS_WT_UNREADABLE    = (1u << 12),
 
-	GIT_STATUS_IGNORED          = (1u << 14),
+	GIT_STATUS_IGNORED          = (1u << 14)
 } git_status_t;
 
 /**
@@ -78,7 +78,7 @@ typedef int (*git_status_cb)(
 typedef enum {
 	GIT_STATUS_SHOW_INDEX_AND_WORKDIR = 0,
 	GIT_STATUS_SHOW_INDEX_ONLY = 1,
-	GIT_STATUS_SHOW_WORKDIR_ONLY = 2,
+	GIT_STATUS_SHOW_WORKDIR_ONLY = 2
 } git_status_show_t;
 
 /**
@@ -149,7 +149,7 @@ typedef enum {
 	GIT_STATUS_OPT_NO_REFRESH                       = (1u << 12),
 	GIT_STATUS_OPT_UPDATE_INDEX                     = (1u << 13),
 	GIT_STATUS_OPT_INCLUDE_UNREADABLE               = (1u << 14),
-	GIT_STATUS_OPT_INCLUDE_UNREADABLE_AS_UNTRACKED  = (1u << 15),
+	GIT_STATUS_OPT_INCLUDE_UNREADABLE_AS_UNTRACKED  = (1u << 15)
 } git_status_opt_t;
 
 #define GIT_STATUS_OPT_DEFAULTS \

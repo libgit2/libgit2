@@ -80,7 +80,7 @@ typedef struct git_index_entry {
  */
 typedef enum {
 	GIT_IDXENTRY_EXTENDED  = (0x4000),
-	GIT_IDXENTRY_VALID     = (0x8000),
+	GIT_IDXENTRY_VALID     = (0x8000)
 } git_indxentry_flag_t;
 
 #define GIT_IDXENTRY_STAGE(E) \
@@ -126,7 +126,7 @@ typedef enum {
 	GIT_IDXENTRY_CONFLICTED        =  (1 << 7),
 
 	GIT_IDXENTRY_UNPACKED          =  (1 << 8),
-	GIT_IDXENTRY_NEW_SKIP_WORKTREE =  (1 << 9),
+	GIT_IDXENTRY_NEW_SKIP_WORKTREE =  (1 << 9)
 } git_idxentry_extended_flag_t;
 
 /** Capabilities of system that affect index actions. */
@@ -134,7 +134,7 @@ typedef enum {
 	GIT_INDEXCAP_IGNORE_CASE = 1,
 	GIT_INDEXCAP_NO_FILEMODE = 2,
 	GIT_INDEXCAP_NO_SYMLINKS = 4,
-	GIT_INDEXCAP_FROM_OWNER  = -1,
+	GIT_INDEXCAP_FROM_OWNER  = -1
 } git_indexcap_t;
 
 /** Callback for APIs that add/remove/update files matching pathspec */
@@ -146,7 +146,7 @@ typedef enum {
 	GIT_INDEX_ADD_DEFAULT = 0,
 	GIT_INDEX_ADD_FORCE = (1u << 0),
 	GIT_INDEX_ADD_DISABLE_PATHSPEC_MATCH = (1u << 1),
-	GIT_INDEX_ADD_CHECK_PATHSPEC = (1u << 2),
+	GIT_INDEX_ADD_CHECK_PATHSPEC = (1u << 2)
 } git_index_add_option_t;
 
 /**

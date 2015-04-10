@@ -100,7 +100,7 @@ GIT_EXTERN(void) git_libgit2_version(int *major, int *minor, int *rev);
 typedef enum {
 	GIT_FEATURE_THREADS	= (1 << 0),
 	GIT_FEATURE_HTTPS = (1 << 1),
-	GIT_FEATURE_SSH = (1 << 2),
+	GIT_FEATURE_SSH = (1 << 2)
 } git_feature_t;
 
 /**
@@ -142,7 +142,7 @@ typedef enum {
 	GIT_OPT_GET_CACHED_MEMORY,
 	GIT_OPT_GET_TEMPLATE_PATH,
 	GIT_OPT_SET_TEMPLATE_PATH,
-	GIT_OPT_SET_SSL_CERT_LOCATIONS,
+	GIT_OPT_SET_SSL_CERT_LOCATIONS
 } git_libgit2_opt_t;
 
 /**

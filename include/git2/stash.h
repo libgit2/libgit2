@@ -43,7 +43,7 @@ typedef enum {
 	 * All ignored files are also stashed and then cleaned up from
 	 * the working directory
 	 */
-	GIT_STASH_INCLUDE_IGNORED = (1 << 2),
+	GIT_STASH_INCLUDE_IGNORED = (1 << 2)
 } git_stash_flags;
 
 /**

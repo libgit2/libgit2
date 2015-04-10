@@ -30,7 +30,7 @@ GIT_BEGIN_DECL
 typedef enum {
 	GIT_DESCRIBE_DEFAULT,
 	GIT_DESCRIBE_TAGS,
-	GIT_DESCRIBE_ALL,
+	GIT_DESCRIBE_ALL
 } git_describe_strategy_t;
 
 /**

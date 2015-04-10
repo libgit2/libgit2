@@ -74,7 +74,7 @@ typedef enum {
 	GIT_OBJ_TAG = 4,		/**< An annotated tag object. */
 	GIT_OBJ__EXT2 = 5,		/**< Reserved for future use. */
 	GIT_OBJ_OFS_DELTA = 6, /**< A delta, base is given by an offset. */
-	GIT_OBJ_REF_DELTA = 7, /**< A delta, base is given by object id. */
+	GIT_OBJ_REF_DELTA = 7	/**< A delta, base is given by object id. */
 } git_otype;
 
 /** An open object database handle. */
@@ -191,14 +191,14 @@ typedef enum {
 	GIT_REF_INVALID = 0, /**< Invalid reference */
 	GIT_REF_OID = 1, /**< A reference which points at an object id */
 	GIT_REF_SYMBOLIC = 2, /**< A reference which points at another reference */
-	GIT_REF_LISTALL = GIT_REF_OID|GIT_REF_SYMBOLIC,
+	GIT_REF_LISTALL = GIT_REF_OID|GIT_REF_SYMBOLIC
 } git_ref_t;
 
 /** Basic type of any Git branch. */
 typedef enum {
 	GIT_BRANCH_LOCAL = 1,
 	GIT_BRANCH_REMOTE = 2,
-	GIT_BRANCH_ALL = GIT_BRANCH_LOCAL|GIT_BRANCH_REMOTE,
+	GIT_BRANCH_ALL = GIT_BRANCH_LOCAL|GIT_BRANCH_REMOTE
 } git_branch_t;
 
 /** Valid modes for index and tree entries. */
@@ -208,7 +208,7 @@ typedef enum {
 	GIT_FILEMODE_BLOB                = 0100644,
 	GIT_FILEMODE_BLOB_EXECUTABLE     = 0100755,
 	GIT_FILEMODE_LINK                = 0120000,
-	GIT_FILEMODE_COMMIT              = 0160000,
+	GIT_FILEMODE_COMMIT              = 0160000
 } git_filemode_t;
 
 /*
@@ -286,7 +286,7 @@ typedef enum git_cert_t {
          * The `data` argument to the callback will be a pointer to a
          * `git_cert_hostkey` structure.
          */
-	GIT_CERT_HOSTKEY_LIBSSH2,
+	GIT_CERT_HOSTKEY_LIBSSH2
 } git_cert_t;
 
 /**
@@ -407,7 +407,7 @@ typedef enum {
 
 	GIT_SUBMODULE_RECURSE_NO = 0,
 	GIT_SUBMODULE_RECURSE_YES = 1,
-	GIT_SUBMODULE_RECURSE_ONDEMAND = 2,
+	GIT_SUBMODULE_RECURSE_ONDEMAND = 2
 } git_submodule_recurse_t;
 
 /** A type to write in a streaming fashion, for example, for filters. */

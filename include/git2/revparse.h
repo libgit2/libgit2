@@ -74,7 +74,7 @@ typedef enum {
 	/** The spec targeted a range of commits. */
 	GIT_REVPARSE_RANGE          = 1 << 1,
 	/** The spec used the '...' operator, which invokes special semantics. */
-	GIT_REVPARSE_MERGE_BASE     = 1 << 2,
+	GIT_REVPARSE_MERGE_BASE     = 1 << 2
 } git_revparse_mode_t;
 
 /**
