@@ -19,7 +19,7 @@ int stransport_error(OSStatus ret)
 {
 	CFStringRef message;
 
-	if (ret == noErr) {
+	if (ret == noErr || ret == errSSLClosedGraceful) {
 		giterr_clear();
 		return 0;
 	}
@@ -183,7 +183,8 @@ int stransport_close(git_stream *stream)
 	stransport_stream *st = (stransport_stream *) stream;
 	OSStatus ret;
 
-	if ((ret = SSLClose(st->ctx)) != noErr)
+	ret = SSLClose(st->ctx);
+	if (ret != noErr && ret != errSSLClosedGraceful)
 		return stransport_error(ret);
 
 	return git_stream_close(st->io);
