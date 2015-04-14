@@ -41,11 +41,31 @@ git_commit_list_node *git_revwalk__commit_lookup(
 	return commit;
 }
 
+typedef git_array_t(git_commit_list_node*) commit_list_node_array;
+
+static bool interesting_arr(commit_list_node_array arr)
+{
+	git_commit_list_node **n;
+	size_t i = 0, size;
+
+	size = git_array_size(arr);
+	for (i = 0; i < size; i++) {
+		n = git_array_get(arr, i);
+		if (!*n)
+			break;
+
+		if (!(*n)->uninteresting)
+			return true;
+	}
+
+	return false;
+}
+
 static int mark_uninteresting(git_revwalk *walk, git_commit_list_node *commit)
 {
 	int error;
 	unsigned short i;
-	git_array_t(git_commit_list_node *) pending = GIT_ARRAY_INIT;
+	commit_list_node_array pending = GIT_ARRAY_INIT;
 	git_commit_list_node **tmp;
 
 	assert(commit);
@@ -66,7 +86,7 @@ static int mark_uninteresting(git_revwalk *walk, git_commit_list_node *commit)
 		tmp = git_array_pop(pending);
 		commit = tmp ? *tmp : NULL;
 
-	} while (commit != NULL);
+	} while (commit != NULL && !interesting_arr(pending));
 
 	git_array_clear(pending);
 
