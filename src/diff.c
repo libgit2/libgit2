@@ -621,7 +621,7 @@ int git_diff__oid_for_entry(
 		git_index *idx;
 
 		if (!(error = git_repository_index__weakptr(&idx, diff->repo))) {
-			memcpy(&entry.id, out, sizeof(entry.id));
+			git_oid_cpy(&entry.id, out);
 			error = git_index_add(idx, &entry);
 		}
  	}
