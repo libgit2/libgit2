@@ -807,7 +807,7 @@ static int maybe_modified(
 	 */
 	if (modified_uncertain && git_oid_iszero(&nitem->id)) {
 		const git_oid *update_check =
-			DIFF_FLAG_IS_SET(diff, GIT_DIFF_UPDATE_INDEX) ?
+			DIFF_FLAG_IS_SET(diff, GIT_DIFF_UPDATE_INDEX) && omode == nmode ?
 			&oitem->id : NULL;
 		if ((error = git_diff__oid_for_entry(
 				&noid, diff, nitem, update_check)) < 0)
