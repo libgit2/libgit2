@@ -1,6 +1,0 @@
-# This configuration can occur after removing and re-adding the origin remote
-[remote "origin"]
-[branch "master"]
-  remote = "origin"
-[remote "origin"]
-  url = "foo"
