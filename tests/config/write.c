@@ -6,6 +6,7 @@ void test_config_write__initialize(void)
 	cl_fixture_sandbox("config/config9");
 	cl_fixture_sandbox("config/config15");
 	cl_fixture_sandbox("config/config17");
+	cl_fixture_sandbox("config/config21");
 }
 
 void test_config_write__cleanup(void)
@@ -13,6 +14,7 @@ void test_config_write__cleanup(void)
 	cl_fixture_cleanup("config9");
 	cl_fixture_cleanup("config15");
 	cl_fixture_cleanup("config17");
+	cl_fixture_cleanup("config21");
 }
 
 void test_config_write__replace_value(void)
@@ -103,6 +105,35 @@ void test_config_write__delete_value_at_specific_level(void)
 	cl_git_pass(git_config_set_int32(cfg, "core.dummy2", 7));
 
 	git_config_free(cfg_specific);
+	git_config_free(cfg);
+}
+
+/*
+ * This test exposes a bug where duplicate empty section headers could prevent
+ * deletion of config entries.
+ */
+void test_config_write__delete_value_with_duplicate_header(void)
+{
+	const char *file_name  = "config21";
+	const char *entry_name = "remote.origin.url";
+	git_config *cfg;
+	git_config_entry *entry;
+
+	/* Make sure the expected entry exists */
+	cl_git_pass(git_config_open_ondisk(&cfg, file_name));
+	cl_git_pass(git_config_get_entry(&entry, cfg, entry_name));
+
+	/* Delete that entry */
+	cl_git_pass(git_config_delete_entry(cfg, entry_name));
+
+	/* Reopen the file and make sure the entry no longer exists */
+	git_config_entry_free(entry);
+	git_config_free(cfg);
+	cl_git_pass(git_config_open_ondisk(&cfg, file_name));
+	cl_git_fail(git_config_get_entry(&entry, cfg, entry_name));
+
+	/* Cleanup */
+	git_config_entry_free(entry);
 	git_config_free(cfg);
 }
 
