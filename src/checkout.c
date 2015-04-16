@@ -1796,7 +1796,7 @@ static int checkout_create_the_new(
 	size_t i;
 	int caps = git_index_caps(data->index);
 
-	git_index_set_caps(data->index, caps & !GIT_INDEXCAP_NO_FILEMODE);
+	git_index_set_caps(data->index, caps & ~GIT_INDEXCAP_NO_FILEMODE);
 
 	git_vector_foreach(&data->diff->deltas, i, delta) {
 		if (actions[i] & CHECKOUT_ACTION__DEFER_REMOVE) {
@@ -2550,7 +2550,7 @@ cleanup:
 		(data.strategy & CHECKOUT_INDEX_DONT_WRITE_MASK) == 0)
 	{
 		int caps = git_index_caps(data.index);
-		git_index_set_caps(data.index, caps & !GIT_INDEXCAP_NO_FILEMODE);
+		git_index_set_caps(data.index, caps & ~GIT_INDEXCAP_NO_FILEMODE);
 		error = git_index_write(data.index);
 		git_index_set_caps(data.index, caps);
 	}
