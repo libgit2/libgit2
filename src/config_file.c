@@ -1460,9 +1460,12 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 			 * don't loose that information, but we only need to
 			 * update post_start if we're going to use it in this
 			 * iteration.
+			 * If the section doesn't match and we are trying to delete an entry
+			 * (value == NULL), we must continue searching; there may be another
+			 * matching section later.
 			 */
 			if (!section_matches) {
-				if (!last_section_matched) {
+				if (!last_section_matched || value == NULL) {
 					reader_consume_line(reader);
 					continue;
 				}
