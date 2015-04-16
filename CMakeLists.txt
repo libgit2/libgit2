@@ -74,6 +74,11 @@ IF(WIN32)
 	OPTION(	WINHTTP			"Use Win32 WinHTTP routines"	ON	)
 ENDIF()
 
+IF(MSVC)
+	# Enable MSVC CRTDBG memory leak reporting when in debug mode.
+	OPTION(MSVC_CRTDBG "Enable CRTDBG memory leak reporting" OFF)
+ENDIF()
+
 # This variable will contain the libraries we need to put into
 # libgit2.pc's Requires.private. That is, what we're linking to or
 # what someone who's statically linking us needs to link to.
@@ -303,6 +308,10 @@ IF (MSVC)
 	ELSE()
 		SET(CRT_FLAG_DEBUG "/MDd")
 		SET(CRT_FLAG_RELEASE "/MD")
+	ENDIF()
+
+	IF (MSVC_CRTDBG)
+		SET(CRT_FLAG_DEBUG "${CRT_FLAG_DEBUG} /DGIT_MSVC_CRTDBG")
 	ENDIF()
 
 	# /Zi - Create debugging information

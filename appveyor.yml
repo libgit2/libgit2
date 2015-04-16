@@ -29,8 +29,8 @@ build_script:
     mkdir build
     cd build
     if ($env:GENERATOR -ne "MSYS Makefiles") {
-      cmake -D ENABLE_TRACE=ON -D BUILD_CLAR=ON .. -G"$env:GENERATOR"
-      cmake --build . --config RelWithDebInfo
+      cmake -D ENABLE_TRACE=ON -D BUILD_CLAR=ON -D MSVC_CRTDBG=ON .. -G"$env:GENERATOR"
+      cmake --build . --config Debug
     }
 - cmd: |
     if "%GENERATOR%"=="MSYS Makefiles" (C:\MinGW\msys\1.0\bin\sh --login /c/projects/libgit2/script/appveyor-mingw.sh)
