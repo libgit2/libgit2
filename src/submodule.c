@@ -628,8 +628,17 @@ int git_submodule_save(git_submodule *submodule)
 		(error = git_config_file_set_string(mods, key.ptr, submodule->url)) < 0)
 		goto cleanup;
 
-	if ((error = submodule_config_key_trunc_puts(&key, "branch")) < 0 ||
-		(error = git_config_file_set_string(mods, key.ptr, submodule->branch)) < 0)
+	if ((error = submodule_config_key_trunc_puts(&key, "branch")) < 0)
+		goto cleanup;
+	if (submodule->branch == NULL)
+		error = git_config_file_delete(mods, key.ptr);
+	else
+		error = git_config_file_set_string(mods, key.ptr, submodule->branch);
+	if (error == GIT_ENOTFOUND) {
+		error = 0;
+		giterr_clear();
+	}
+	if (error < 0)
 		goto cleanup;
 
 	if (!(error = submodule_config_key_trunc_puts(&key, "update")) &&
@@ -713,6 +722,21 @@ const char *git_submodule_branch(git_submodule *submodule)
 {
 	assert(submodule);
 	return submodule->branch;
+}
+
+int git_submodule_set_branch(git_submodule *submodule, const char *branch)
+{
+	assert(submodule);
+
+	git__free(submodule->branch);
+	submodule->branch = NULL;
+
+	if (branch != NULL) {
+		submodule->branch = git__strdup(branch);
+		GITERR_CHECK_ALLOC(submodule->branch);
+	}
+
+	return 0;
 }
 
 int git_submodule_set_url(git_submodule *submodule, const char *url)
