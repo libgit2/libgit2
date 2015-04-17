@@ -278,14 +278,6 @@ void git__free_thread_global_state(void)
 	TlsSetValue(_tls_index, NULL);
 }
 
-BOOL WINAPI DllMain(HINSTANCE dll, DWORD reason, LPVOID reserved)
-{
-	if (reason == DLL_THREAD_DETACH)
-		git__free_thread_global_state();
-
-	return TRUE;
-}
-
 #elif defined(GIT_THREADS) && defined(_POSIX_THREADS)
 
 static pthread_key_t _tls_key;
