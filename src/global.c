@@ -223,13 +223,10 @@ int git_libgit2_init(void)
 
 static void synchronized_threads_shutdown(void)
 {
-	void *ptr;
-
 	/* Shut down any subsystems that have global state */
 	git__shutdown();
 
-	ptr = TlsGetValue(_tls_index);
-	git__global_state_cleanup(ptr);
+	git__free_thread_global_state();
 
 	TlsFree(_tls_index);
 	git_mutex_free(&git__mwindow_mutex);
