@@ -103,7 +103,7 @@ static void cleanup_chmod_root(void *ref)
 {
 	mode_t *mode = ref;
 
-	if (*mode != 0) {
+	if (mode != NULL) {
 		(void)p_umask(*mode);
 		git__free(mode);
 	}
