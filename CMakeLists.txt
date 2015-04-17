@@ -29,6 +29,7 @@ OPTION( BUILD_SHARED_LIBS	"Build Shared Library (OFF for Static)"	ON  )
 OPTION( THREADSAFE			"Build libgit2 as threadsafe"			ON )
 OPTION( BUILD_CLAR			"Build Tests using the Clar suite"		ON  )
 OPTION( BUILD_EXAMPLES		"Build library usage example apps"		OFF )
+OPTION( BUILD_BENCHMARK     "Builds benchmarking tools"             ON  )
 OPTION( TAGS				"Generate tags"							OFF )
 OPTION( PROFILE				"Generate profiling information"		OFF )
 OPTION( ENABLE_TRACE		"Enables tracing support"				OFF )
@@ -568,4 +569,27 @@ ENDIF ()
 
 IF (BUILD_EXAMPLES)
 	ADD_SUBDIRECTORY(examples)
+ENDIF ()
+
+IF (BUILD_BENCHMARK)
+	SET(BENCH_PATH "${CMAKE_CURRENT_SOURCE_DIR}/benchmark")
+	INCLUDE_DIRECTORIES(${BENCH_PATH})
+
+	FILE(GLOB_RECURSE SRC_BENCH ${BENCH_PATH}/*.c ${BENCH_PATH}/*.h)
+
+	ADD_EXECUTABLE(libgit2_bench ${SRC_BENCH} ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SSH} ${SRC_SHA1})
+
+	TARGET_LINK_LIBRARIES(libgit2_bench ${SSL_LIBRARIES})
+	TARGET_LINK_LIBRARIES(libgit2_bench ${SSH_LIBRARIES})
+	TARGET_LINK_LIBRARIES(libgit2_bench ${GSSAPI_LIBRARIES})
+	TARGET_LINK_LIBRARIES(libgit2_bench ${ICONV_LIBRARIES})
+	TARGET_OS_LIBRARIES(libgit2_bench)
+	MSVC_SPLIT_SOURCES(libgit2_bench)
+
+	IF (MSVC_IDE)
+		# Precompiled headers
+		SET_TARGET_PROPERTIES(libgit2_bench PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
+	ELSE ()
+		SET_TARGET_PROPERTIES(libgit2_bench PROPERTIES COMPILE_FLAGS "-include malloc.h")
+	ENDIF ()
 ENDIF ()
