@@ -621,7 +621,7 @@ int git_diff__oid_for_entry(
 		git_index *idx;
 
 		if (!(error = git_repository_index__weakptr(&idx, diff->repo))) {
-			memcpy(&entry.id, out, sizeof(entry.id));
+			git_oid_cpy(&entry.id, out);
 			error = git_index_add(idx, &entry);
 		}
  	}
@@ -806,15 +806,12 @@ static int maybe_modified(
 	 * haven't calculated the OID of the new item, then calculate it now
 	 */
 	if (modified_uncertain && git_oid_iszero(&nitem->id)) {
-		if (git_oid_iszero(&noid)) {
-			const git_oid *update_check =
-				DIFF_FLAG_IS_SET(diff, GIT_DIFF_UPDATE_INDEX) ?
-				&oitem->id : NULL;
-
-			if ((error = git_diff__oid_for_entry(
-					&noid, diff, nitem, update_check)) < 0)
-				return error;
-		}
+		const git_oid *update_check =
+			DIFF_FLAG_IS_SET(diff, GIT_DIFF_UPDATE_INDEX) && omode == nmode ?
+			&oitem->id : NULL;
+		if ((error = git_diff__oid_for_entry(
+				&noid, diff, nitem, update_check)) < 0)
+			return error;
 
 		/* if oid matches, then mark unmodified (except submodules, where
 		 * the filesystem content may be modified even if the oid still
