@@ -270,13 +270,21 @@ git_global_st *git__global_state(void)
 	return ptr;
 }
 
+void git__free_thread_global_state(void)
+{
+	void *ptr = TlsGetValue(_tls_index);
+	if (!ptr)
+		return;
+
+	git__global_state_cleanup(ptr);
+	git__free(ptr);
+	TlsSetValue(_tls_index, NULL);
+}
+
 BOOL WINAPI DllMain(HINSTANCE dll, DWORD reason, LPVOID reserved)
 {
-	if (reason == DLL_THREAD_DETACH) {
-		void *ptr = TlsGetValue(_tls_index);
-		git__global_state_cleanup(ptr);
-		git__free(ptr);
-	}
+	if (reason == DLL_THREAD_DETACH)
+		git__free_thread_global_state();
 
 	return TRUE;
 }
