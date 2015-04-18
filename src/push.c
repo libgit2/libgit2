@@ -54,6 +54,13 @@ int git_push_new(git_push **out, git_remote *remote)
 		return -1;
 	}
 
+	if (git_vector_init(&p->updates, 0, NULL) < 0) {
+		git_vector_free(&p->status);
+		git_vector_free(&p->specs);
+		git__free(p);
+		return -1;
+	}
+
 	*out = p;
 	return 0;
 }
@@ -75,7 +82,9 @@ int git_push_set_callbacks(
 	git_packbuilder_progress pack_progress_cb,
 	void *pack_progress_cb_payload,
 	git_push_transfer_progress transfer_progress_cb,
-	void *transfer_progress_cb_payload)
+	void *transfer_progress_cb_payload,
+	git_push_negotiation negotiation_cb,
+	void *negotiation_cb_payload)
 {
 	if (!push)
 		return -1;
@@ -85,6 +94,9 @@ int git_push_set_callbacks(
 
 	push->transfer_progress_cb = transfer_progress_cb;
 	push->transfer_progress_cb_payload = transfer_progress_cb_payload;
+
+	push->negotiation_cb = negotiation_cb;
+	push->negotiation_cb_payload = negotiation_cb_payload;
 
 	return 0;
 }
@@ -534,6 +546,22 @@ on_error:
 	return error;
 }
 
+static int add_update(git_push *push, push_spec *spec)
+{
+	git_push_update *u = git__calloc(1, sizeof(git_push_update));
+	GITERR_CHECK_ALLOC(u);
+
+	u->src_refname = git__strdup(spec->refspec.src);
+	GITERR_CHECK_ALLOC(u->src_refname);
+	u->dst_refname = git__strdup(spec->refspec.src);
+	GITERR_CHECK_ALLOC(u->dst_refname);
+
+	git_oid_cpy(&u->src, &spec->loid);
+	git_oid_cpy(&u->dst, &spec->roid);
+
+	return git_vector_insert(&push->updates, u);
+}
+
 static int calculate_work(git_push *push)
 {
 	git_remote_head *head;
@@ -559,6 +587,9 @@ static int calculate_work(git_push *push)
 				break;
 			}
 		}
+
+		if (add_update(push, spec) < 0)
+			return -1;
 	}
 
 	return 0;
@@ -590,9 +621,17 @@ static int do_push(git_push *push)
 		if ((error = git_packbuilder_set_callbacks(push->pb, push->pack_progress_cb, push->pack_progress_cb_payload)) < 0)
 			goto on_error;
 
-	if ((error = calculate_work(push)) < 0 ||
-		(error = queue_objects(push)) < 0 ||
-		(error = transport->push(transport, push)) < 0)
+	if ((error = calculate_work(push)) < 0)
+		goto on_error;
+
+	if (push->negotiation_cb &&
+	    (error = push->negotiation_cb((const git_push_update **) push->updates.contents,
+					  push->updates.length,
+					  push->negotiation_cb_payload)))
+	    goto on_error;
+
+	if ((error = queue_objects(push)) < 0 ||
+	    (error = transport->push(transport, push)) < 0)
 		goto on_error;
 
 on_error:

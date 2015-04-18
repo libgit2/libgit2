@@ -59,6 +59,36 @@ typedef int (*git_push_transfer_progress)(
 	size_t bytes,
 	void* payload);
 
+/**
+ * Represents an update which will be performed on the remote during push
+ */
+typedef struct {
+	/**
+	 * The source name of the reference
+	 */
+	char *src_refname;
+	/**
+	 * The name of the reference to update on the server
+	 */
+	char *dst_refname;
+	/**
+	 * The current target of the reference
+	 */
+	git_oid src;
+	/**
+	 * The new target for the reference
+	 */
+	git_oid dst;
+} git_push_update;
+
+/**
+ * @param updates an array containing the updates which will be sent
+ * as commands to the destination.
+ * @param len number of elements in `updates`
+ * @param payload Payload provided by the caller
+ */
+typedef int (*git_push_negotiation)(const git_push_update **updates, size_t len, void *payload);
+
 /** @} */
 GIT_END_DECL
 #endif
