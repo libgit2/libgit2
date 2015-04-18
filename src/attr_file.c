@@ -379,6 +379,7 @@ bool git_attr_fnmatch__match(
 
 	if ((match->flags & GIT_ATTR_FNMATCH_DIRECTORY) && !path->is_dir) {
 		int matchval;
+		char *matchpath;
 
 		/* for attribute checks or root ignore checks, fail match */
 		if (!(match->flags & GIT_ATTR_FNMATCH_IGNORE) ||
@@ -388,7 +389,13 @@ bool git_attr_fnmatch__match(
 		/* for ignore checks, use container of current item for check */
 		path->basename[-1] = '\0';
 		flags |= FNM_LEADING_DIR;
-		matchval = p_fnmatch(match->pattern, path->path, flags);
+
+		if (match->containing_dir)
+			matchpath = path->basename;
+		else
+			matchpath = path->path;
+
+		matchval = p_fnmatch(match->pattern, matchpath, flags);
 		path->basename[-1] = '/';
 		return (matchval != FNM_NOMATCH);
 	}
