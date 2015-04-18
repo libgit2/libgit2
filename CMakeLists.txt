@@ -590,6 +590,6 @@ IF (BUILD_BENCHMARK)
 		# Precompiled headers
 		SET_TARGET_PROPERTIES(libgit2_bench PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
 	ELSE ()
-		SET_TARGET_PROPERTIES(libgit2_bench PROPERTIES COMPILE_FLAGS "-include malloc.h")
+		SET_TARGET_PROPERTIES(libgit2_bench PROPERTIES COMPILE_FLAGS)
 	ENDIF ()
 ENDIF ()
