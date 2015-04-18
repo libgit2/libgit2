@@ -32,6 +32,6 @@ typedef void (*git_global_shutdown_fn)(void);
 
 extern void git__on_shutdown(git_global_shutdown_fn callback);
 
-extern void git__free_thread_global_state(void);
+extern void git__free_tls_data(void);
 
 #endif

@@ -226,7 +226,7 @@ static void synchronized_threads_shutdown(void)
 	/* Shut down any subsystems that have global state */
 	git__shutdown();
 
-	git__free_thread_global_state();
+	git__free_tls_data();
 
 	TlsFree(_tls_index);
 	git_mutex_free(&git__mwindow_mutex);
@@ -267,7 +267,12 @@ git_global_st *git__global_state(void)
 	return ptr;
 }
 
-void git__free_thread_global_state(void)
+/**
+ * Free the TLS data associated with this thread.
+ * This should only be used by the thread as it
+ * is exiting.
+ */
+void git__free_tls_data(void)
 {
 	void *ptr = TlsGetValue(_tls_index);
 	if (!ptr)
