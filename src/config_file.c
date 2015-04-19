@@ -1686,7 +1686,7 @@ static int parse_multiline_variable(struct reader *reader, git_buf *value, int i
 
 	/* We've reached the end of the file, there is input missing */
 	if (line[0] == '\0') {
-		set_parse_error(reader, 0, "Unexpected end of file while parsing multine var");
+		set_parse_error(reader, 0, "Unexpected end of file while parsing multiline var");
 		git__free(line);
 		return -1;
 	}
@@ -1703,7 +1703,11 @@ static int parse_multiline_variable(struct reader *reader, git_buf *value, int i
 	/* Drop the continuation character '\': to closely follow the UNIX
 	 * standard, this character **has** to be last one in the buf, with
 	 * no whitespace after it */
-	assert(is_multiline_var(value->ptr));
+	if (!is_multiline_var(value->ptr)) {
+		set_parse_error(reader, 0, "Unexpected end of line while parsing multiline var");
+		git__free(line);
+		return -1;
+	}
 	git_buf_shorten(value, 1);
 
 	proc_line = fixup_line(line, in_quotes);
