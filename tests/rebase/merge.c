@@ -533,7 +533,8 @@ void test_rebase_merge__custom_checkout_options(void)
 	checkout_options.progress_cb = rebase_checkout_progress_cb;
 	checkout_options.progress_payload = &called;
 
-	rebase_options.checkout_options = &checkout_options;
+	memcpy(&rebase_options.checkout_options, &checkout_options,
+		sizeof(git_checkout_options));
 
 	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/beef"));
 	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/master"));

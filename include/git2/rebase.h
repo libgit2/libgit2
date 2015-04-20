@@ -55,7 +55,7 @@ typedef struct {
 	 * and a minimum strategy of `GIT_CHECKOUT_FORCE` is defaulted in
 	 * `abort` to match git semantics.
 	 */
-	git_checkout_options *checkout_options;
+	git_checkout_options checkout_options;
 } git_rebase_options;
 
 /**
@@ -100,7 +100,8 @@ typedef enum {
 } git_rebase_operation_t;
 
 #define GIT_REBASE_OPTIONS_VERSION 1
-#define GIT_REBASE_OPTIONS_INIT {GIT_REBASE_OPTIONS_VERSION}
+#define GIT_REBASE_OPTIONS_INIT \
+	{GIT_REBASE_OPTIONS_VERSION, 0, NULL, GIT_CHECKOUT_OPTIONS_INIT}
 
 /** Indicates that a rebase operation is not (yet) in progress. */
 #define GIT_REBASE_NO_OPERATION SIZE_MAX
