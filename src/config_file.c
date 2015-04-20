@@ -1619,76 +1619,69 @@ static char *escape_value(const char *ptr)
 }
 
 /* '\"' -> '"' etc */
-static char *fixup_line(const char *ptr, int quote_count)
+static int unescape_line(
+	char **out, bool *is_multi, const char *ptr, int quote_count)
 {
-	char *str, *out, *esc;
+	char *str, *fixed, *esc;
 	size_t ptr_len = strlen(ptr), alloc_len;
+
+	*is_multi = false;
 
 	if (GIT_ADD_SIZET_OVERFLOW(&alloc_len, ptr_len, 1) ||
 		(str = git__malloc(alloc_len)) == NULL) {
-		return NULL;
+		return -1;
 	}
 
-	out = str;
+	fixed = str;
 
 	while (*ptr != '\0') {
 		if (*ptr == '"') {
 			quote_count++;
 		} else if (*ptr != '\\') {
-			*out++ = *ptr;
+			*fixed++ = *ptr;
 		} else {
 			/* backslash, check the next char */
 			ptr++;
 			/* if we're at the end, it's a multiline, so keep the backslash */
 			if (*ptr == '\0') {
-				*out++ = '\\';
-				goto out;
+				*is_multi = true;
+				goto done;
 			}
 			if ((esc = strchr(escapes, *ptr)) != NULL) {
-				*out++ = escaped[esc - escapes];
+				*fixed++ = escaped[esc - escapes];
 			} else {
 				git__free(str);
 				giterr_set(GITERR_CONFIG, "Invalid escape at %s", ptr);
-				return NULL;
+				return -1;
 			}
 		}
 		ptr++;
 	}
 
-out:
-	*out = '\0';
+done:
+	*fixed = '\0';
+	*out = str;
 
-	return str;
-}
-
-static int is_multiline_var(const char *str)
-{
-	int count = 0;
-	const char *end = str + strlen(str);
-	while (end > str && end[-1] == '\\') {
-		count++;
-		end--;
-	}
-
-	/* An odd number means last backslash wasn't escaped, so it's multiline */
-	return count & 1;
+	return 0;
 }
 
 static int parse_multiline_variable(struct reader *reader, git_buf *value, int in_quotes)
 {
 	char *line = NULL, *proc_line = NULL;
 	int quote_count;
+	bool multiline;
 
 	/* Check that the next line exists */
 	line = reader_readline(reader, false);
 	if (line == NULL)
 		return -1;
 
-	/* We've reached the end of the file, there is input missing */
+	/* We've reached the end of the file, there is no continuation.
+	 * (this is not an error).
+	 */
 	if (line[0] == '\0') {
-		set_parse_error(reader, 0, "Unexpected end of file while parsing multine var");
 		git__free(line);
-		return -1;
+		return 0;
 	}
 
 	quote_count = strip_comments(line, !!in_quotes);
@@ -1700,14 +1693,7 @@ static int parse_multiline_variable(struct reader *reader, git_buf *value, int i
 		/* TODO: unbounded recursion. This **could** be exploitable */
 	}
 
-	/* Drop the continuation character '\': to closely follow the UNIX
-	 * standard, this character **has** to be last one in the buf, with
-	 * no whitespace after it */
-	assert(is_multiline_var(value->ptr));
-	git_buf_shorten(value, 1);
-
-	proc_line = fixup_line(line, in_quotes);
-	if (proc_line == NULL) {
+	if (unescape_line(&proc_line, &multiline, line, in_quotes) < 0) {
 		git__free(line);
 		return -1;
 	}
@@ -1720,7 +1706,7 @@ static int parse_multiline_variable(struct reader *reader, git_buf *value, int i
 	 * If we need to continue reading the next line, let's just
 	 * keep putting stuff in the buffer
 	 */
-	if (is_multiline_var(value->ptr))
+	if (multiline)
 		return parse_multiline_variable(reader, value, quote_count);
 
 	return 0;
@@ -1732,6 +1718,7 @@ static int parse_variable(struct reader *reader, char **var_name, char **var_val
 	const char *value_start = NULL;
 	char *line;
 	int quote_count;
+	bool multiline;
 
 	line = reader_readline(reader, true);
 	if (line == NULL)
@@ -1762,31 +1749,28 @@ static int parse_variable(struct reader *reader, char **var_name, char **var_val
 		while (git__isspace(value_start[0]))
 			value_start++;
 
-		if (is_multiline_var(value_start)) {
+		if (unescape_line(var_value, &multiline, value_start, 0) < 0)
+			goto on_error;
+
+		if (multiline) {
 			git_buf multi_value = GIT_BUF_INIT;
-			char *proc_line = fixup_line(value_start, 0);
-			GITERR_CHECK_ALLOC(proc_line);
-			git_buf_puts(&multi_value, proc_line);
-			git__free(proc_line);
-			if (parse_multiline_variable(reader, &multi_value, quote_count) < 0 || git_buf_oom(&multi_value)) {
-				git__free(*var_name);
-				git__free(line);
+			git_buf_attach(&multi_value, *var_value, 0);
+
+			if (parse_multiline_variable(reader, &multi_value, quote_count) < 0 ||
+				git_buf_oom(&multi_value)) {
 				git_buf_free(&multi_value);
-				return -1;
+				goto on_error;
 			}
 
 			*var_value = git_buf_detach(&multi_value);
-
-		}
-		else if (value_start[0] != '\0') {
-			*var_value = fixup_line(value_start, 0);
-			GITERR_CHECK_ALLOC(*var_value);
-		} else { /* equals sign but missing rhs */
-			*var_value = git__strdup("");
-			GITERR_CHECK_ALLOC(*var_value);
 		}
 	}
 
 	git__free(line);
 	return 0;
+
+on_error:
+	git__free(*var_name);
+	git__free(line);
+	return -1;
 }

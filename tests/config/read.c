@@ -69,6 +69,40 @@ void test_config_read__multiline_value(void)
 	git_config_free(cfg);
 }
 
+static void clean_test_config(void *unused)
+{
+	GIT_UNUSED(unused);
+	cl_fixture_cleanup("./testconfig");
+}
+
+void test_config_read__multiline_value_and_eof(void)
+{
+	git_config *cfg;
+
+	cl_set_cleanup(&clean_test_config, NULL);
+	cl_git_mkfile("./testconfig", "[header]\n  key1 = foo\\\n");
+	cl_git_pass(git_config_open_ondisk(&cfg, "./testconfig"));
+
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "header.key1"));
+	cl_assert_equal_s("foo", git_buf_cstr(&buf));
+
+	git_config_free(cfg);
+}
+
+void test_config_read__multiline_eof(void)
+{
+	git_config *cfg;
+
+	cl_set_cleanup(&clean_test_config, NULL);
+	cl_git_mkfile("./testconfig", "[header]\n  key1 = \\\n");
+	cl_git_pass(git_config_open_ondisk(&cfg, "./testconfig"));
+
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "header.key1"));
+	cl_assert_equal_s("", git_buf_cstr(&buf));
+
+	git_config_free(cfg);
+}
+
 /*
  * This kind of subsection declaration is case-insensitive
  */
@@ -518,12 +552,6 @@ void test_config_read__simple_read_from_specific_level(void)
 
 	git_config_free(cfg_specific);
 	git_config_free(cfg);
-}
-
-static void clean_test_config(void *unused)
-{
-	GIT_UNUSED(unused);
-	cl_fixture_cleanup("./testconfig");
 }
 
 void test_config_read__can_load_and_parse_an_empty_config_file(void)
