@@ -33,18 +33,18 @@ typedef struct {
 	 * Used by `git_rebase_init`, this will instruct other clients working
 	 * on this rebase that you want a quiet rebase experience, which they
 	 * may choose to provide in an application-specific manner.  This has no
-	 * effect upon libgit2 directly, but is provided for interoperability with
-	 * other clients.
+	 * effect upon libgit2 directly, but is provided for interoperability
+	 * between Git tools.
 	 */
 	int quiet;
 
 	/**
-	 * Used by `git_rebase_finish`, this is the canonical name of the notes
-	 * reference used to rewrite notes for rebased commits when finishing the
-	 * rebase; if NULL, the contents of the coniguration option
-	 * `notes.rewriteRef` is examined, unless the configuration option
-	 * `notes.rewrite.rebase` is set to false.  If `notes.rewriteRef` is also
-	 * NULL, notes will not be rewritten.
+	 * Used by `git_rebase_finish`, this is the name of the notes reference
+	 * used to rewrite notes for rebased commits when finishing the rebase;
+	 * if NULL, the contents of the coniguration option `notes.rewriteRef`
+	 * is examined, unless the configuration option `notes.rewrite.rebase`
+	 * is set to false.  If `notes.rewriteRef` is also NULL, notes will
+	 * not be rewritten.
 	 */
 	const char *rewrite_notes_ref;
 
