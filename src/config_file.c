@@ -1162,17 +1162,24 @@ static int skip_bom(struct reader *reader)
 
 static int strip_comments(char *line, int in_quotes)
 {
-	int quote_count = in_quotes;
+	int quote_count = in_quotes, backslash_count = 0;
 	char *ptr;
 
 	for (ptr = line; *ptr; ++ptr) {
 		if (ptr[0] == '"' && ptr > line && ptr[-1] != '\\')
 			quote_count++;
 
-		if ((ptr[0] == ';' || ptr[0] == '#') && (quote_count % 2) == 0) {
+		if ((ptr[0] == ';' || ptr[0] == '#') &&
+			(quote_count % 2) == 0 &&
+			(backslash_count % 2) == 0) {
 			ptr[0] = '\0';
 			break;
 		}
+
+		if (ptr[0] == '\\')
+			backslash_count++;
+		else
+			backslash_count = 0;
 	}
 
 	/* skip any space at the end */
@@ -1698,6 +1705,7 @@ static int parse_multiline_variable(struct reader *reader, git_buf *value, int i
 		return -1;
 	}
 	/* add this line to the multiline var */
+
 	git_buf_puts(value, proc_line);
 	git__free(line);
 	git__free(proc_line);

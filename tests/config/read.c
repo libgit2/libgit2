@@ -247,6 +247,17 @@ void test_config_read__escaping_quotes(void)
 	git_config_free(cfg);
 }
 
+void test_config_read__invalid_escape_sequence(void)
+{
+	git_config *cfg;
+
+	cl_set_cleanup(&clean_test_config, NULL);
+	cl_git_mkfile("./testconfig", "[header]\n  key1 = \\\\\\;\n  key2 = value2\n");
+	cl_git_fail(git_config_open_ondisk(&cfg, "./testconfig"));
+
+	git_config_free(cfg);
+}
+
 static int count_cfg_entries_and_compare_levels(
 	const git_config_entry *entry, void *payload)
 {
