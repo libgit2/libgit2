@@ -102,7 +102,7 @@ static int reset(
 	git_object *target,
 	const char *to,
 	git_reset_t reset_type,
-	git_checkout_options *checkout_opts)
+	const git_checkout_options *checkout_opts)
 {
 	git_object *commit = NULL;
 	git_index *index = NULL;
@@ -183,7 +183,7 @@ int git_reset(
 	git_repository *repo,
 	git_object *target,
 	git_reset_t reset_type,
-	git_checkout_options *checkout_opts)
+	const git_checkout_options *checkout_opts)
 {
 	return reset(repo, target, git_oid_tostr_s(git_object_id(target)), reset_type, checkout_opts);
 }
@@ -192,7 +192,7 @@ int git_reset_from_annotated(
 	git_repository *repo,
 	git_annotated_commit *commit,
 	git_reset_t reset_type,
-	git_checkout_options *checkout_opts)
+	const git_checkout_options *checkout_opts)
 {
 	return reset(repo, (git_object *) commit->commit, commit->ref_name, reset_type, checkout_opts);
 }

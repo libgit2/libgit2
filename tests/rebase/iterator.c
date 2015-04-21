@@ -52,11 +52,8 @@ void test_rebase_iterator__iterates(void)
 	git_reference *branch_ref, *upstream_ref;
 	git_annotated_commit *branch_head, *upstream_head;
 	git_rebase_operation *rebase_operation;
-	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid commit_id;
 	int error;
-
-	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 
 	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/beef"));
 	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/master"));
@@ -65,39 +62,39 @@ void test_rebase_iterator__iterates(void)
 	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
 
 	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
-	test_operations(rebase, 0);
+	test_operations(rebase, GIT_REBASE_NO_OPERATION);
 	git_rebase_free(rebase);
 
-	cl_git_pass(git_rebase_open(&rebase, repo));
-	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_open(&rebase, repo, NULL));
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 	test_operations(rebase, 0);
 
-	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 	test_operations(rebase, 1);
 
-	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 	test_operations(rebase, 2);
 
 	git_rebase_free(rebase);
-	cl_git_pass(git_rebase_open(&rebase, repo));
+	cl_git_pass(git_rebase_open(&rebase, repo, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 	test_operations(rebase, 3);
 
-	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 	test_operations(rebase, 4);
 
-	cl_git_fail(error = git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_fail(error = git_rebase_next(&rebase_operation, rebase));
 	cl_assert_equal_i(GIT_ITEROVER, error);
 	test_operations(rebase, 4);
 
