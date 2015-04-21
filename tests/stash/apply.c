@@ -213,3 +213,55 @@ void test_stash_apply__pop(void)
 
 	cl_git_fail_with(git_stash_pop(repo, 0, NULL, GIT_APPLY_DEFAULT), GIT_ENOTFOUND);
 }
+
+struct seen_paths {
+	bool what;
+	bool how;
+	bool who;
+	bool when;
+};
+
+int checkout_notify(
+	git_checkout_notify_t why,
+	const char *path,
+	const git_diff_file *baseline,
+	const git_diff_file *target,
+	const git_diff_file *workdir,
+	void *payload)
+{
+	struct seen_paths *seen_paths = (struct seen_paths *)payload;
+
+	if (strcmp(path, "what") == 0)
+		seen_paths->what = 1;
+	else if (strcmp(path, "how") == 0)
+		seen_paths->how = 1;
+	else if (strcmp(path, "who") == 0)
+		seen_paths->who = 1;
+	else if (strcmp(path, "when") == 0)
+		seen_paths->when = 1;
+
+	return 0;
+}
+
+void test_stash_apply__executes_notify_cb(void)
+{
+	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+	struct seen_paths seen_paths = {0};
+
+	checkout_opts.notify_cb = checkout_notify;
+	checkout_opts.notify_flags = GIT_CHECKOUT_NOTIFY_ALL;
+	checkout_opts.notify_payload = &seen_paths;
+
+	cl_git_pass(git_stash_apply(repo, 0, &checkout_opts, GIT_APPLY_DEFAULT));
+
+	cl_assert_equal_i(git_index_has_conflicts(repo_index), 0);
+	assert_status(repo, "what", GIT_STATUS_WT_MODIFIED);
+	assert_status(repo, "how", GIT_STATUS_CURRENT);
+	assert_status(repo, "who", GIT_STATUS_WT_MODIFIED);
+	assert_status(repo, "when", GIT_STATUS_WT_NEW);
+
+	cl_assert_equal_b(true, seen_paths.what);
+	cl_assert_equal_b(false, seen_paths.how);
+	cl_assert_equal_b(true, seen_paths.who);
+	cl_assert_equal_b(true, seen_paths.when);
+}
