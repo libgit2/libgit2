@@ -2360,16 +2360,10 @@ int git_remote_upload(git_remote *remote, const git_strarray *refspecs, const gi
 		}
 	}
 
-	cbs = &remote->callbacks;
-	if ((error = git_push_set_callbacks(push,
-					    cbs->pack_progress, cbs->payload,
-					    cbs->push_transfer_progress, cbs->payload,
-					    cbs->push_negotiation, cbs->payload)) < 0)
-		goto cleanup;
-
 	if ((error = git_push_finish(push)) < 0)
 		goto cleanup;
 
+	cbs = &remote->callbacks;
 	if (cbs->push_update_reference &&
 	    (error = git_push_status_foreach(push, cbs->push_update_reference, cbs->payload)) < 0)
 		goto cleanup;
