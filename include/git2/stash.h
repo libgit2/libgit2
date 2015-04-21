@@ -96,7 +96,9 @@ typedef enum {
  * @param repo The owning repository.
  * @param index The position within the stash list. 0 points to the
  *              most recent stashed state.
- * @param checkout_options Options to control how files are checked out
+ * @param checkout_options Options to control how files are checked out.
+ *                         A minimum strategy of `GIT_CHECKOUT_SAFE` is
+ *                         implied.
  * @param flags Flags to control the applying process. (see GIT_APPLY_* above)
  *
  * @return 0 on success, GIT_ENOTFOUND if there's no stashed state for the

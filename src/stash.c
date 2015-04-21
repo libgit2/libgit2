@@ -681,10 +681,11 @@ static void normalize_checkout_options(
 		memcpy(checkout_opts, given_checkout_opts, sizeof(git_checkout_options));
 	} else {
 		git_checkout_options default_checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
-		default_checkout_opts.checkout_strategy =  GIT_CHECKOUT_SAFE;
-
 		memcpy(checkout_opts, &default_checkout_opts, sizeof(git_checkout_options));
 	}
+
+	if ((checkout_opts->checkout_strategy & (GIT_CHECKOUT_SAFE | GIT_CHECKOUT_FORCE)) == 0)
+		checkout_opts->checkout_strategy = GIT_CHECKOUT_SAFE;
 
 	if (!checkout_opts->our_label)
 		checkout_opts->our_label = "Updated upstream";
