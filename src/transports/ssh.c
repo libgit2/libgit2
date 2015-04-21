@@ -399,7 +399,7 @@ static int request_creds(git_cred **out, ssh_subtransport *t, const char *user, 
 
 	if (no_callback) {
 		giterr_set(GITERR_SSH, "authentication required but no callback set");
-		return -1;
+		return GIT_EAUTH;
 	}
 
 	if (!(cred->credtype & auth_methods)) {
