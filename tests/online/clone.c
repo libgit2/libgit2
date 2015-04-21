@@ -20,7 +20,7 @@ static git_clone_options g_options;
 void test_online_clone__initialize(void)
 {
 	git_checkout_options dummy_opts = GIT_CHECKOUT_OPTIONS_INIT;
-	git_remote_callbacks dummy_callbacks = GIT_REMOTE_CALLBACKS_INIT;
+	git_fetch_options dummy_fetch = GIT_FETCH_OPTIONS_INIT;
 
 	g_repo = NULL;
 
@@ -28,7 +28,7 @@ void test_online_clone__initialize(void)
 	g_options.version = GIT_CLONE_OPTIONS_VERSION;
 	g_options.checkout_opts = dummy_opts;
 	g_options.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
-	g_options.remote_callbacks = dummy_callbacks;
+	g_options.fetch_opts = dummy_fetch;
 }
 
 void test_online_clone__cleanup(void)
@@ -107,8 +107,8 @@ void test_online_clone__can_checkout_a_cloned_repo(void)
 	g_options.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 	g_options.checkout_opts.progress_cb = &checkout_progress;
 	g_options.checkout_opts.progress_payload = &checkout_progress_cb_was_called;
-	g_options.remote_callbacks.transfer_progress = &fetch_progress;
-	g_options.remote_callbacks.payload = &fetch_progress_cb_was_called;
+	g_options.fetch_opts.callbacks.transfer_progress = &fetch_progress;
+	g_options.fetch_opts.callbacks.payload = &fetch_progress_cb_was_called;
 
 	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 
@@ -131,16 +131,11 @@ static int remote_mirror_cb(git_remote **out, git_repository *repo,
 {
 	int error;
 	git_remote *remote;
-	git_remote_callbacks *callbacks = (git_remote_callbacks *) payload;
 
+	GIT_UNUSED(payload);
 
 	if ((error = git_remote_create(&remote, repo, name, url)) < 0)
 		return error;
-
-	if ((error = git_remote_set_callbacks(remote, callbacks)) < 0) {
-		git_remote_free(remote);
-		return error;
-	}
 
 	git_remote_clear_refspecs(remote);
 
@@ -157,16 +152,14 @@ void test_online_clone__clone_mirror(void)
 {
 	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
 	git_reference *head;
-	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
 
 	bool fetch_progress_cb_was_called = false;
 
-	callbacks.transfer_progress = &fetch_progress;
-	callbacks.payload = &fetch_progress_cb_was_called;
+	opts.fetch_opts.callbacks.transfer_progress = &fetch_progress;
+	opts.fetch_opts.callbacks.payload = &fetch_progress_cb_was_called;
 
 	opts.bare = true;
 	opts.remote_cb = remote_mirror_cb;
-	opts.remote_cb_payload = &callbacks;
 
 	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo.git", &opts));
 
@@ -195,8 +188,8 @@ void test_online_clone__custom_remote_callbacks(void)
 {
 	int callcount = 0;
 
-	g_options.remote_callbacks.update_tips = update_tips;
-	g_options.remote_callbacks.payload = &callcount;
+	g_options.fetch_opts.callbacks.update_tips = update_tips;
+	g_options.fetch_opts.callbacks.payload = &callcount;
 
 	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 	cl_assert(callcount > 0);
@@ -222,7 +215,7 @@ void test_online_clone__cred_callback_failure_return_code_is_tunnelled(void)
 	if (!remote_url || !remote_user)
 		clar__skip();
 
-	g_options.remote_callbacks.credentials = cred_failure_cb;
+	g_options.fetch_opts.callbacks.credentials = cred_failure_cb;
 
 	cl_git_fail_with(-172, git_clone(&g_repo, remote_url, "./foo", &g_options));
 }
@@ -254,8 +247,8 @@ void test_online_clone__cred_callback_called_again_on_auth_failure(void)
 	if (!remote_url || !remote_user)
 		clar__skip();
 
-	g_options.remote_callbacks.credentials = cred_count_calls_cb;
-	g_options.remote_callbacks.payload = &counter;
+	g_options.fetch_opts.callbacks.credentials = cred_count_calls_cb;
+	g_options.fetch_opts.callbacks.payload = &counter;
 
 	cl_git_fail_with(GIT_EUSER, git_clone(&g_repo, remote_url, "./foo", &g_options));
 	cl_assert_equal_i(3, counter);
@@ -292,10 +285,10 @@ void test_online_clone__credentials(void)
 	if (!remote_url) return;
 
 	if (cl_getenv("GITTEST_REMOTE_DEFAULT")) {
-		g_options.remote_callbacks.credentials = cred_default;
+		g_options.fetch_opts.callbacks.credentials = cred_default;
 	} else {
-		g_options.remote_callbacks.credentials = git_cred_userpass;
-		g_options.remote_callbacks.payload = &user_pass;
+		g_options.fetch_opts.callbacks.credentials = git_cred_userpass;
+		g_options.fetch_opts.callbacks.payload = &user_pass;
 	}
 
 	cl_git_pass(git_clone(&g_repo, remote_url, "./foo", &g_options));
@@ -309,8 +302,8 @@ void test_online_clone__bitbucket_style(void)
 		"libgit2", "libgit2"
 	};
 
-	g_options.remote_callbacks.credentials = git_cred_userpass;
-	g_options.remote_callbacks.payload = &user_pass;
+	g_options.fetch_opts.callbacks.credentials = git_cred_userpass;
+	g_options.fetch_opts.callbacks.payload = &user_pass;
 
 	cl_git_pass(git_clone(&g_repo, BB_REPO_URL, "./foo", &g_options));
 	git_repository_free(g_repo); g_repo = NULL;
@@ -340,7 +333,7 @@ static int cancel_at_half(const git_transfer_progress *stats, void *payload)
 
 void test_online_clone__can_cancel(void)
 {
-	g_options.remote_callbacks.transfer_progress = cancel_at_half;
+	g_options.fetch_opts.callbacks.transfer_progress = cancel_at_half;
 
 	cl_git_fail_with(
 		git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options), 4321);
@@ -387,8 +380,8 @@ void test_online_clone__ssh_auth_methods(void)
 #ifndef GIT_SSH
 	clar__skip();
 #endif
-	g_options.remote_callbacks.credentials = check_ssh_auth_methods;
-	g_options.remote_callbacks.payload = &with_user;
+	g_options.fetch_opts.callbacks.credentials = check_ssh_auth_methods;
+	g_options.fetch_opts.callbacks.payload = &with_user;
 
 	with_user = 0;
 	cl_git_fail_with(GIT_EUSER,
@@ -407,16 +400,12 @@ static int custom_remote_ssh_with_paths(
 	void *payload)
 {
 	int error;
-	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
 
 	if ((error = git_remote_create(out, repo, name, url)) < 0)
 		return error;
 
 	if ((error = git_remote_set_transport(*out, git_transport_ssh_with_paths, payload)) < 0)
 		return error;
-
-	callbacks.credentials = cred_cb;
-	git_remote_set_callbacks(*out, &callbacks);
 
 	return 0;
 }
@@ -468,7 +457,7 @@ void test_online_clone__ssh_cannot_change_username(void)
 #ifndef GIT_SSH
 	clar__skip();
 #endif
-	g_options.remote_callbacks.credentials = cred_foo_bar;
+	g_options.fetch_opts.callbacks.credentials = cred_foo_bar;
 
 	cl_git_fail(git_clone(&g_repo, "ssh://git@github.com/libgit2/TestGitRepository", "./foo", &g_options));
 }
@@ -511,7 +500,7 @@ int ssh_certificate_check(git_cert *cert, int valid, const char *host, void *pay
 
 void test_online_clone__ssh_cert(void)
 {
-	g_options.remote_callbacks.certificate_check = ssh_certificate_check;
+	g_options.fetch_opts.callbacks.certificate_check = ssh_certificate_check;
 
 	if (!cl_getenv("GITTEST_REMOTE_SSH_FINGERPRINT"))
 		cl_skip();
@@ -537,7 +526,7 @@ static int fail_certificate_check(git_cert *cert, int valid, const char *host, v
 
 void test_online_clone__certificate_invalid(void)
 {
-	g_options.remote_callbacks.certificate_check = fail_certificate_check;
+	g_options.fetch_opts.callbacks.certificate_check = fail_certificate_check;
 
 	cl_git_fail_with(git_clone(&g_repo, "https://github.com/libgit2/TestGitRepository", "./foo", &g_options),
 		GIT_ECERTIFICATE);
@@ -561,14 +550,14 @@ static int succeed_certificate_check(git_cert *cert, int valid, const char *host
 
 void test_online_clone__certificate_valid(void)
 {
-	g_options.remote_callbacks.certificate_check = succeed_certificate_check;
+	g_options.fetch_opts.callbacks.certificate_check = succeed_certificate_check;
 
 	cl_git_pass(git_clone(&g_repo, "https://github.com/libgit2/TestGitRepository", "./foo", &g_options));
 }
 
 void test_online_clone__start_with_http(void)
 {
-	g_options.remote_callbacks.certificate_check = succeed_certificate_check;
+	g_options.fetch_opts.callbacks.certificate_check = succeed_certificate_check;
 
 	cl_git_pass(git_clone(&g_repo, "http://github.com/libgit2/TestGitRepository", "./foo", &g_options));
 }

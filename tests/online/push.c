@@ -369,9 +369,8 @@ void test_online_push__initialize(void)
 	cl_git_pass(git_remote_create(&_remote, _repo, "test", _remote_url));
 
 	record_callbacks_data_clear(&_record_cbs_data);
-	git_remote_set_callbacks(_remote, &_record_cbs);
 
-	cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH));
+	cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH, NULL));
 
 	/* Clean up previously pushed branches.  Fails if receive.denyDeletes is
 	 * set on the remote.  Also, on Git 1.7.0 and newer, you must run
@@ -394,10 +393,7 @@ void test_online_push__initialize(void)
 	git_vector_free(&delete_specs);
 
 	/* Now that we've deleted everything, fetch from the remote */
-	cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_FETCH));
-	cl_git_pass(git_remote_download(_remote, NULL));
-	cl_git_pass(git_remote_update_tips(_remote, NULL));
-	git_remote_disconnect(_remote);
+	cl_git_pass(git_remote_fetch(_remote, NULL, NULL, NULL));
 }
 
 void test_online_push__cleanup(void)
@@ -459,20 +455,18 @@ static void do_push(
 	size_t i;
 	int error;
 	git_strarray specs = {0};
-	git_remote_callbacks callbacks;
 	record_callbacks_data *data;
 
 	if (_remote) {
 		/* Auto-detect the number of threads to use */
 		opts.pb_parallelism = 0;
 
-		memcpy(&callbacks, git_remote_get_callbacks(_remote), sizeof(callbacks));
-		data = callbacks.payload;
+		memcpy(&opts.callbacks, &_record_cbs, sizeof(git_remote_callbacks));
+		data = opts.callbacks.payload;
 
-		callbacks.pack_progress = push_pack_progress_cb;
-		callbacks.push_transfer_progress = push_transfer_progress_cb;
-		callbacks.push_update_reference = record_push_status_cb;
-		cl_git_pass(git_remote_set_callbacks(_remote, &callbacks));
+		opts.callbacks.pack_progress = push_pack_progress_cb;
+		opts.callbacks.push_transfer_progress = push_transfer_progress_cb;
+		opts.callbacks.push_update_reference = record_push_status_cb;
 
 		if (refspecs_len) {
 			specs.count = refspecs_len;

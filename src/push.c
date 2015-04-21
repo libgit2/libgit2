@@ -155,7 +155,7 @@ int git_push_add_refspec(git_push *push, const char *refspec)
 	return 0;
 }
 
-int git_push_update_tips(git_push *push)
+int git_push_update_tips(git_push *push, const git_remote_callbacks *callbacks)
 {
 	git_buf remote_ref_name = GIT_BUF_INIT;
 	size_t i, j;
@@ -212,9 +212,9 @@ int git_push_update_tips(git_push *push)
 			fire_callback = 0;
 		}
 
-		if (fire_callback && push->remote->callbacks.update_tips) {
-			error = push->remote->callbacks.update_tips(git_buf_cstr(&remote_ref_name),
-						&push_spec->roid, &push_spec->loid, push->remote->callbacks.payload);
+		if (fire_callback && callbacks && callbacks->update_tips) {
+			error = callbacks->update_tips(git_buf_cstr(&remote_ref_name),
+						&push_spec->roid, &push_spec->loid, callbacks->payload);
 
 			if (error < 0)
 				goto on_error;
@@ -571,11 +571,10 @@ static int calculate_work(git_push *push)
 	return 0;
 }
 
-static int do_push(git_push *push)
+static int do_push(git_push *push, const git_remote_callbacks *callbacks)
 {
 	int error = 0;
 	git_transport *transport = push->remote->transport;
-	git_remote_callbacks *cbs = &push->remote->callbacks;
 
 	if (!transport->push) {
 		giterr_set(GITERR_NET, "Remote transport doesn't support push");
@@ -594,20 +593,20 @@ static int do_push(git_push *push)
 
 	git_packbuilder_set_threads(push->pb, push->pb_parallelism);
 
-	if (cbs->pack_progress)
-		if ((error = git_packbuilder_set_callbacks(push->pb, cbs->pack_progress, cbs->payload)) < 0)
+	if (callbacks && callbacks->pack_progress)
+		if ((error = git_packbuilder_set_callbacks(push->pb, callbacks->pack_progress, callbacks->payload)) < 0)
 			goto on_error;
 
 	if ((error = calculate_work(push)) < 0)
 		goto on_error;
 
-	if (cbs->push_negotiation &&
-	    (error = cbs->push_negotiation((const git_push_update **) push->updates.contents,
-					  push->updates.length, cbs->payload)) < 0)
+	if (callbacks && callbacks->push_negotiation &&
+	    (error = callbacks->push_negotiation((const git_push_update **) push->updates.contents,
+					  push->updates.length, callbacks->payload)) < 0)
 	    goto on_error;
 
 	if ((error = queue_objects(push)) < 0 ||
-	    (error = transport->push(transport, push)) < 0)
+	    (error = transport->push(transport, push, callbacks)) < 0)
 		goto on_error;
 
 on_error:
@@ -633,16 +632,16 @@ static int filter_refs(git_remote *remote)
 	return 0;
 }
 
-int git_push_finish(git_push *push)
+int git_push_finish(git_push *push, const git_remote_callbacks *callbacks)
 {
 	int error;
 
 	if (!git_remote_connected(push->remote) &&
-		(error = git_remote_connect(push->remote, GIT_DIRECTION_PUSH)) < 0)
+	    (error = git_remote_connect(push->remote, GIT_DIRECTION_PUSH, callbacks)) < 0)
 		return error;
 
 	if ((error = filter_refs(push->remote)) < 0 ||
-		(error = do_push(push)) < 0)
+	    (error = do_push(push, callbacks)) < 0)
 		return error;
 
 	if (!push->unpack_ok) {

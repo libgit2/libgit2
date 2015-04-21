@@ -946,11 +946,10 @@ static int stream_thunk(void *buf, size_t size, void *data)
 	return error;
 }
 
-int git_smart__push(git_transport *transport, git_push *push)
+int git_smart__push(git_transport *transport, git_push *push, const git_remote_callbacks *cbs)
 {
 	transport_smart *t = (transport_smart *)transport;
 	struct push_packbuilder_payload packbuilder_payload = {0};
-	git_remote_callbacks *cbs = &push->remote->callbacks;
 	git_buf pktline = GIT_BUF_INIT;
 	int error = 0, need_pack = 0;
 	push_spec *spec;
@@ -958,7 +957,7 @@ int git_smart__push(git_transport *transport, git_push *push)
 
 	packbuilder_payload.pb = push->pb;
 
-	if (cbs->transfer_progress) {
+	if (cbs && cbs->transfer_progress) {
 		packbuilder_payload.cb = cbs->push_transfer_progress;
 		packbuilder_payload.cb_payload = cbs->payload;
 	}
@@ -1011,7 +1010,7 @@ int git_smart__push(git_transport *transport, git_push *push)
 		goto done;
 
 	/* If progress is being reported write the final report */
-	if (cbs->push_transfer_progress) {
+	if (cbs && cbs->push_transfer_progress) {
 		error = cbs->push_transfer_progress(
 					push->pb->nr_written,
 					push->pb->nr_objects,

@@ -154,9 +154,7 @@ void test_checkout_index__honor_coresymlinks_default(void)
 	cl_git_pass(git_repository_set_workdir(repo, "symlink", 1));
 
 	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
-	cl_git_pass(git_remote_connect(origin, GIT_DIRECTION_FETCH));
-	cl_git_pass(git_remote_download(origin, NULL));
-	cl_git_pass(git_remote_update_tips(origin, NULL));
+	cl_git_pass(git_remote_fetch(origin, NULL, NULL, NULL));
 	git_remote_free(origin);
 
 	cl_git_pass(git_revparse_single(&target, repo, "remotes/origin/master"));

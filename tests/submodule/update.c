@@ -96,8 +96,8 @@ void test_submodule_update__update_submodule(void)
 	update_options.checkout_opts.progress_cb = checkout_progress_cb;
 	update_options.checkout_opts.progress_payload = &update_payload;
 
-	update_options.remote_callbacks.update_tips = update_tips;
-	update_options.remote_callbacks.payload = &update_payload;
+	update_options.fetch_opts.callbacks.update_tips = update_tips;
+	update_options.fetch_opts.callbacks.payload = &update_payload;
 
 	/* get the submodule */
 	cl_git_pass(git_submodule_lookup(&sm, g_repo, "testrepo"));

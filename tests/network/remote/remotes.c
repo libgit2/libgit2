@@ -86,7 +86,7 @@ void test_network_remote_remotes__error_when_no_push_available(void)
 
 	cl_git_pass(git_remote_set_transport(r, git_transport_local, NULL));
 
-	cl_git_pass(git_remote_connect(r, GIT_DIRECTION_PUSH));
+	cl_git_pass(git_remote_connect(r, GIT_DIRECTION_PUSH, NULL));
 
 	/* Make sure that push is really not available */
 	r->transport->push = NULL;
@@ -273,7 +273,7 @@ void test_network_remote_remotes__nonmatch_upstream_refspec(void)
 	cl_git_pass(git_config_set_string(config, "branch.master.remote", "taggy"));
 	cl_git_pass(git_config_set_string(config, "branch.master.merge", "refs/heads/foo"));
 
-	cl_git_pass(git_remote_fetch(remote, &specs, NULL));
+	cl_git_pass(git_remote_fetch(remote, &specs, NULL, NULL));
 
 	git_remote_free(remote);
 }
@@ -408,7 +408,7 @@ void test_network_remote_remotes__can_load_with_an_empty_url(void)
 	cl_assert(remote->url == NULL);
 	cl_assert(remote->pushurl == NULL);
 
-	cl_git_fail(git_remote_connect(remote, GIT_DIRECTION_FETCH));
+	cl_git_fail(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL));
 
 	cl_assert(giterr_last() != NULL);
 	cl_assert(giterr_last()->klass == GITERR_INVALID);
@@ -425,7 +425,7 @@ void test_network_remote_remotes__can_load_with_only_an_empty_pushurl(void)
 	cl_assert(remote->url == NULL);
 	cl_assert(remote->pushurl == NULL);
 
-	cl_git_fail(git_remote_connect(remote, GIT_DIRECTION_FETCH));
+	cl_git_fail(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL));
 
 	git_remote_free(remote);
 }
@@ -519,6 +519,6 @@ void test_network_remote_remotes__fetch_from_anonymous(void)
 
 	cl_git_pass(git_remote_create_anonymous(&remote, _repo, cl_fixture("testrepo.git"),
 						"refs/heads/*:refs/other/*"));
-	cl_git_pass(git_remote_fetch(remote, NULL, NULL));
+	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
 	git_remote_free(remote);
 }

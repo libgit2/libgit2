@@ -14,7 +14,7 @@
 #include "indexer.h"
 #include "strarray.h"
 #include "transport.h"
-#include "push.h"
+#include "pack.h"
 
 /**
  * @file git2/remote.h
@@ -276,9 +276,10 @@ GIT_EXTERN(const git_refspec *)git_remote_get_refspec(const git_remote *remote, 
  * @param remote the remote to connect to
  * @param direction GIT_DIRECTION_FETCH if you want to fetch or
  * GIT_DIRECTION_PUSH if you want to push
+ * @param callbacks the callbacks to use for this connection
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_remote_connect(git_remote *remote, git_direction direction);
+GIT_EXTERN(int) git_remote_connect(git_remote *remote, git_direction direction, const git_remote_callbacks *callbacks);
 
 /**
  * Get the remote repository's reference advertisement list
@@ -301,36 +302,6 @@ GIT_EXTERN(int) git_remote_connect(git_remote *remote, git_direction direction);
  * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_remote_ls(const git_remote_head ***out,  size_t *size, git_remote *remote);
-
-/**
- * Download and index the packfile
- *
- * Connect to the remote if it hasn't been done yet, negotiate with
- * the remote git which objects are missing, download and index the
- * packfile.
- *
- * The .idx file will be created and both it and the packfile with be
- * renamed to their final name.
- *
- * @param remote the remote
- * @param refspecs the refspecs to use for this negotiation and
- * download. Use NULL or an empty array to use the base refspecs
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_remote_download(git_remote *remote, const git_strarray *refspecs);
-
-/**
- * Create a packfile and send it to the server
- *
- * Connect to the remote if it hasn't been done yet, negotiate with
- * the remote git which objects are missing, create a packfile with the missing objects and send it.
- *
- * @param remote the remote
- * @param refspecs the refspecs to use for this negotiation and
- * upload. Use NULL or an empty array to use the base refspecs
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_remote_upload(git_remote *remote, const git_strarray *refspecs, const git_push_options *opts);
 
 /**
  * Check whether the remote is connected
@@ -373,60 +344,6 @@ GIT_EXTERN(void) git_remote_disconnect(git_remote *remote);
 GIT_EXTERN(void) git_remote_free(git_remote *remote);
 
 /**
- * Update the tips to the new state
- *
- * @param remote the remote to update
- * @param reflog_message The message to insert into the reflogs. If
- * NULL and fetching, the default is "fetch <name>", where <name> is
- * the name of the remote (or its url, for in-memory remotes). This
- * parameter is ignored when pushing.
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_remote_update_tips(
-		git_remote *remote,
-		const char *reflog_message);
-
-/**
- * Prune tracking refs that are no longer present on remote
- *
- * @param remote the remote to prune
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_remote_prune(git_remote *remote);
-
-/**
- * Download new data and update tips
- *
- * Convenience function to connect to a remote, download the data,
- * disconnect and update the remote-tracking branches.
- *
- * @param remote the remote to fetch from
- * @param refspecs the refspecs to use for this fetch. Pass NULL or an
- *                 empty array to use the base refspecs.
- * @param reflog_message The message to insert into the reflogs. If NULL, the
- *								 default is "fetch"
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_remote_fetch(
-		git_remote *remote,
-		const git_strarray *refspecs,
-		const char *reflog_message);
-
-/**
- * Perform a push
- *
- * Peform all the steps from a push.
- *
- * @param remote the remote to push to
- * @param refspecs the refspecs to use for pushing. If none are
- * passed, the configured refspecs will be used
- * @param opts the options
- */
-GIT_EXTERN(int) git_remote_push(git_remote *remote,
-				const git_strarray *refspecs,
-				const git_push_options *opts);
-
-/**
  * Get a list of the configured remotes for a repo
  *
  * The string array must be freed by the user.
@@ -446,6 +363,42 @@ typedef enum git_remote_completion_type {
 	GIT_REMOTE_COMPLETION_INDEXING,
 	GIT_REMOTE_COMPLETION_ERROR,
 } git_remote_completion_type;
+
+/** Push network progress notification function */
+typedef int (*git_push_transfer_progress)(
+	unsigned int current,
+	unsigned int total,
+	size_t bytes,
+	void* payload);
+/**
+ * Represents an update which will be performed on the remote during push
+ */
+typedef struct {
+	/**
+	 * The source name of the reference
+	 */
+	char *src_refname;
+	/**
+	 * The name of the reference to update on the server
+	 */
+	char *dst_refname;
+	/**
+	 * The current target of the reference
+	 */
+	git_oid src;
+	/**
+	 * The new target for the reference
+	 */
+	git_oid dst;
+} git_push_update;
+
+/**
+ * @param updates an array containing the updates which will be sent
+ * as commands to the destination.
+ * @param len number of elements in `updates`
+ * @param payload Payload provided by the caller
+ */
+typedef int (*git_push_negotiation)(const git_push_update **updates, size_t len, void *payload);
 
 /**
  * The callback settings structure
@@ -548,28 +501,160 @@ GIT_EXTERN(int) git_remote_init_callbacks(
 	git_remote_callbacks *opts,
 	unsigned int version);
 
-/**
- * Set the callbacks for a remote
- *
- * Note that the remote keeps its own copy of the data and you need to
- * call this function again if you want to change the callbacks.
- *
- * @param remote the remote to configure
- * @param callbacks a pointer to the user's callback settings
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_remote_set_callbacks(git_remote *remote, const git_remote_callbacks *callbacks);
+typedef struct {
+	int version;
+
+	/**
+	 * Callbacks to use for this fetch operation
+	 */
+	git_remote_callbacks callbacks;
+} git_fetch_options;
+
+#define GIT_FETCH_OPTIONS_VERSION 1
+#define GIT_FETCH_OPTIONS_INIT { GIT_FETCH_OPTIONS_VERSION, GIT_REMOTE_CALLBACKS_INIT }
 
 /**
- * Retrieve the current callback structure
+ * Initializes a `git_fetch_options` with default values. Equivalent to
+ * creating an instance with GIT_FETCH_OPTIONS_INIT.
  *
- * This provides read access to the callbacks structure as the remote
- * sees it.
- *
- * @param remote the remote to query
- * @return a pointer to the callbacks structure
+ * @param opts the `git_push_options` instance to initialize.
+ * @param version the version of the struct; you should pass
+ *        `GIT_FETCH_OPTIONS_VERSION` here.
+ * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(const git_remote_callbacks *) git_remote_get_callbacks(git_remote *remote);
+GIT_EXTERN(int) git_fetch_init_options(
+	git_fetch_options *opts,
+	unsigned int version);
+
+
+/**
+ * Controls the behavior of a git_push object.
+ */
+typedef struct {
+	unsigned int version;
+
+	/**
+	 * If the transport being used to push to the remote requires the creation
+	 * of a pack file, this controls the number of worker threads used by
+	 * the packbuilder when creating that pack file to be sent to the remote.
+	 *
+	 * If set to 0, the packbuilder will auto-detect the number of threads
+	 * to create. The default value is 1.
+	 */
+	unsigned int pb_parallelism;
+
+	/**
+	 * Callbacks to use for this push operation
+	 */
+	git_remote_callbacks callbacks;
+} git_push_options;
+
+#define GIT_PUSH_OPTIONS_VERSION 1
+#define GIT_PUSH_OPTIONS_INIT { GIT_PUSH_OPTIONS_VERSION, 0, GIT_REMOTE_CALLBACKS_INIT }
+
+/**
+ * Initializes a `git_push_options` with default values. Equivalent to
+ * creating an instance with GIT_PUSH_OPTIONS_INIT.
+ *
+ * @param opts the `git_push_options` instance to initialize.
+ * @param version the version of the struct; you should pass
+ *        `GIT_PUSH_OPTIONS_VERSION` here.
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_push_init_options(
+	git_push_options *opts,
+	unsigned int version);
+
+/**
+ * Download and index the packfile
+ *
+ * Connect to the remote if it hasn't been done yet, negotiate with
+ * the remote git which objects are missing, download and index the
+ * packfile.
+ *
+ * The .idx file will be created and both it and the packfile with be
+ * renamed to their final name.
+ *
+ * @param remote the remote
+ * @param refspecs the refspecs to use for this negotiation and
+ * download. Use NULL or an empty array to use the base refspecs
+ * @param opts the options to use for this fetch
+ * @return 0 or an error code
+ */
+ GIT_EXTERN(int) git_remote_download(git_remote *remote, const git_strarray *refspecs, const git_fetch_options *opts);
+
+/**
+ * Create a packfile and send it to the server
+ *
+ * Connect to the remote if it hasn't been done yet, negotiate with
+ * the remote git which objects are missing, create a packfile with the missing objects and send it.
+ *
+ * @param remote the remote
+ * @param refspecs the refspecs to use for this negotiation and
+ * upload. Use NULL or an empty array to use the base refspecs
+ * @param opts the options to use for this push
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_remote_upload(git_remote *remote, const git_strarray *refspecs, const git_push_options *opts);
+
+/**
+ * Update the tips to the new state
+ *
+ * @param remote the remote to update
+ * @param reflog_message The message to insert into the reflogs. If
+ * NULL and fetching, the default is "fetch <name>", where <name> is
+ * the name of the remote (or its url, for in-memory remotes). This
+ * parameter is ignored when pushing.
+ * @param callbacks  pointer to the callback structure to use
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_remote_update_tips(
+		git_remote *remote,
+		const git_remote_callbacks *callbacks,
+		const char *reflog_message);
+
+/**
+ * Download new data and update tips
+ *
+ * Convenience function to connect to a remote, download the data,
+ * disconnect and update the remote-tracking branches.
+ *
+ * @param remote the remote to fetch from
+ * @param refspecs the refspecs to use for this fetch. Pass NULL or an
+ *                 empty array to use the base refspecs.
+ * @param opts options to use for this fetch
+ * @param reflog_message The message to insert into the reflogs. If NULL, the
+ *								 default is "fetch"
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_remote_fetch(
+		git_remote *remote,
+		const git_strarray *refspecs,
+		const git_fetch_options *opts,
+		const char *reflog_message);
+
+/**
+ * Prune tracking refs that are no longer present on remote
+ *
+ * @param remote the remote to prune
+ * @param callbacks callbacks to use for this prune
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_remote_prune(git_remote *remote, const git_remote_callbacks *callbacks);
+
+/**
+ * Perform a push
+ *
+ * Peform all the steps from a push.
+ *
+ * @param remote the remote to push to
+ * @param refspecs the refspecs to use for pushing. If none are
+ * passed, the configured refspecs will be used
+ * @param opts options to use for this push
+ */
+GIT_EXTERN(int) git_remote_push(git_remote *remote,
+				const git_strarray *refspecs,
+				const git_push_options *opts);
 
 /**
  * Get the statistics structure that is filled in by the fetch operation.

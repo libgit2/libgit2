@@ -87,7 +87,7 @@ int git_push_add_refspec(git_push *push, const char *refspec);
  *
  * @return 0 or an error code
  */
-int git_push_update_tips(git_push *push);
+int git_push_update_tips(git_push *push, const git_remote_callbacks *callbacks);
 
 /**
  * Perform the push
@@ -103,7 +103,7 @@ int git_push_update_tips(git_push *push);
  *
  * @return 0 or an error code
  */
-int git_push_finish(git_push *push);
+int git_push_finish(git_push *push, const git_remote_callbacks *callbacks);
 
 /**
  * Invoke callback `cb' on each status entry

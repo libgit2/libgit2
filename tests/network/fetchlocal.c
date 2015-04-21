@@ -34,19 +34,16 @@ void test_network_fetchlocal__complete(void)
 	git_strarray refnames = {0};
 
 	const char *url = cl_git_fixture_url("testrepo.git");
-	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
+	git_fetch_options options = GIT_FETCH_OPTIONS_INIT;
 
-	callbacks.transfer_progress = transfer_cb;
-	callbacks.payload = &callcount;
+	options.callbacks.transfer_progress = transfer_cb;
+	options.callbacks.payload = &callcount;
 
 	cl_set_cleanup(&cleanup_local_repo, "foo");
 	cl_git_pass(git_repository_init(&repo, "foo", true));
 
 	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
-	git_remote_set_callbacks(origin, &callbacks);
-	cl_git_pass(git_remote_connect(origin, GIT_DIRECTION_FETCH));
-	cl_git_pass(git_remote_download(origin, NULL));
-	cl_git_pass(git_remote_update_tips(origin, NULL));
+	cl_git_pass(git_remote_fetch(origin, NULL, &options, NULL));
 
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(19, (int)refnames.count);
@@ -66,17 +63,16 @@ void test_network_fetchlocal__prune(void)
 	git_reference *ref;
 	git_repository *remote_repo = cl_git_sandbox_init("testrepo.git");
 	const char *url = cl_git_path_url(git_repository_path(remote_repo));
-	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
+	git_fetch_options options = GIT_FETCH_OPTIONS_INIT;
 
-	callbacks.transfer_progress = transfer_cb;
-	callbacks.payload = &callcount;
+	options.callbacks.transfer_progress = transfer_cb;
+	options.callbacks.payload = &callcount;
 
 	cl_set_cleanup(&cleanup_local_repo, "foo");
 	cl_git_pass(git_repository_init(&repo, "foo", true));
 
 	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
-	git_remote_set_callbacks(origin, &callbacks);
-	cl_git_pass(git_remote_fetch(origin, NULL, NULL));
+	cl_git_pass(git_remote_fetch(origin, NULL, &options, NULL));
 
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(19, (int)refnames.count);
@@ -89,11 +85,8 @@ void test_network_fetchlocal__prune(void)
 	git_reference_free(ref);
 
 	cl_git_pass(git_remote_lookup(&origin, repo, GIT_REMOTE_ORIGIN));
-	git_remote_set_callbacks(origin, &callbacks);
-	cl_git_pass(git_remote_connect(origin, GIT_DIRECTION_FETCH));
-	cl_git_pass(git_remote_download(origin, NULL));
-	cl_git_pass(git_remote_prune(origin));
-	cl_git_pass(git_remote_update_tips(origin, NULL));
+	cl_git_pass(git_remote_fetch(origin, NULL, &options, NULL));
+	cl_git_pass(git_remote_prune(origin, &options.callbacks));
 
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(18, (int)refnames.count);
@@ -105,11 +98,8 @@ void test_network_fetchlocal__prune(void)
 	git_reference_free(ref);
 
 	cl_git_pass(git_remote_lookup(&origin, repo, GIT_REMOTE_ORIGIN));
-	git_remote_set_callbacks(origin, &callbacks);
-	cl_git_pass(git_remote_connect(origin, GIT_DIRECTION_FETCH));
-	cl_git_pass(git_remote_download(origin, NULL));
-	cl_git_pass(git_remote_prune(origin));
-	cl_git_pass(git_remote_update_tips(origin, NULL));
+	cl_git_pass(git_remote_fetch(origin, NULL, &options, NULL));
+	cl_git_pass(git_remote_prune(origin, &options.callbacks));
 
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(17, (int)refnames.count);
@@ -151,9 +141,9 @@ void test_network_fetchlocal__prune_overlapping(void)
 	git_repository *remote_repo = cl_git_sandbox_init("testrepo.git");
 	const char *url = cl_git_path_url(git_repository_path(remote_repo));
 
-	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
-	callbacks.transfer_progress = transfer_cb;
-	callbacks.payload = &callcount;
+	git_fetch_options options = GIT_FETCH_OPTIONS_INIT;
+	options.callbacks.transfer_progress = transfer_cb;
+	options.callbacks.payload = &callcount;
 
 	cl_git_pass(git_reference_lookup(&ref, remote_repo, "refs/heads/master"));
 	git_oid_cpy(&target, git_reference_target(ref));
@@ -165,7 +155,6 @@ void test_network_fetchlocal__prune_overlapping(void)
 	cl_git_pass(git_repository_init(&repo, "foo", true));
 
 	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
-	git_remote_set_callbacks(origin, &callbacks);
 
 	cl_git_pass(git_repository_config(&config, repo));
 	cl_git_pass(git_config_set_bool(config, "remote.origin.prune", true));
@@ -173,8 +162,7 @@ void test_network_fetchlocal__prune_overlapping(void)
 
 	git_remote_free(origin);
 	cl_git_pass(git_remote_lookup(&origin, repo, GIT_REMOTE_ORIGIN));
-	git_remote_set_callbacks(origin, &callbacks);
-	cl_git_pass(git_remote_fetch(origin, NULL, NULL));
+	cl_git_pass(git_remote_fetch(origin, NULL, &options, NULL));
 
 	assert_ref_exists(repo, "refs/remotes/origin/master");
 	assert_ref_exists(repo, "refs/remotes/origin/pr/42");
@@ -188,9 +176,8 @@ void test_network_fetchlocal__prune_overlapping(void)
 
 	git_remote_free(origin);
 	cl_git_pass(git_remote_lookup(&origin, repo, GIT_REMOTE_ORIGIN));
-	callbacks.update_tips = update_tips_fail_on_call;
-	git_remote_set_callbacks(origin, &callbacks);
-	cl_git_pass(git_remote_fetch(origin, NULL, NULL));
+	options.callbacks.update_tips = update_tips_fail_on_call;
+	cl_git_pass(git_remote_fetch(origin, NULL, &options, NULL));
 
 	assert_ref_exists(repo, "refs/remotes/origin/master");
 	assert_ref_exists(repo, "refs/remotes/origin/pr/42");
@@ -204,9 +191,8 @@ void test_network_fetchlocal__prune_overlapping(void)
 
 	git_remote_free(origin);
 	cl_git_pass(git_remote_lookup(&origin, repo, GIT_REMOTE_ORIGIN));
-	callbacks.update_tips = update_tips_fail_on_call;
-	git_remote_set_callbacks(origin, &callbacks);
-	cl_git_pass(git_remote_fetch(origin, NULL, NULL));
+	options.callbacks.update_tips = update_tips_fail_on_call;
+	cl_git_pass(git_remote_fetch(origin, NULL, &options, NULL));
 
 	git_config_free(config);
 	git_strarray_free(&refnames);
@@ -224,17 +210,16 @@ void test_network_fetchlocal__fetchprune(void)
 	git_config *config;
 	git_repository *remote_repo = cl_git_sandbox_init("testrepo.git");
 	const char *url = cl_git_path_url(git_repository_path(remote_repo));
-	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
+	git_fetch_options options = GIT_FETCH_OPTIONS_INIT;
 
-	callbacks.transfer_progress = transfer_cb;
-	callbacks.payload = &callcount;
+	options.callbacks.transfer_progress = transfer_cb;
+	options.callbacks.payload = &callcount;
 
 	cl_set_cleanup(&cleanup_local_repo, "foo");
 	cl_git_pass(git_repository_init(&repo, "foo", true));
 
 	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
-	git_remote_set_callbacks(origin, &callbacks);
-	cl_git_pass(git_remote_fetch(origin, NULL, NULL));
+	cl_git_pass(git_remote_fetch(origin, NULL, &options, NULL));
 
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(19, (int)refnames.count);
@@ -247,9 +232,8 @@ void test_network_fetchlocal__fetchprune(void)
 	git_reference_free(ref);
 
 	cl_git_pass(git_remote_lookup(&origin, repo, GIT_REMOTE_ORIGIN));
-	git_remote_set_callbacks(origin, &callbacks);
-	cl_git_pass(git_remote_fetch(origin, NULL, NULL));
-	cl_git_pass(git_remote_prune(origin));
+	cl_git_pass(git_remote_fetch(origin, NULL, &options, NULL));
+	cl_git_pass(git_remote_prune(origin, &options.callbacks));
 
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(18, (int)refnames.count);
@@ -265,8 +249,7 @@ void test_network_fetchlocal__fetchprune(void)
 	git_config_free(config);
 	cl_git_pass(git_remote_lookup(&origin, repo, GIT_REMOTE_ORIGIN));
 	cl_assert_equal_i(1, git_remote_prune_refs(origin));
-	git_remote_set_callbacks(origin, &callbacks);
-	cl_git_pass(git_remote_fetch(origin, NULL, NULL));
+	cl_git_pass(git_remote_fetch(origin, NULL, &options, NULL));
 
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(17, (int)refnames.count);
@@ -289,17 +272,16 @@ void test_network_fetchlocal__prune_tag(void)
 
 	git_repository *remote_repo = cl_git_sandbox_init("testrepo.git");
 	const char *url = cl_git_path_url(git_repository_path(remote_repo));
-	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
+	git_fetch_options options = GIT_FETCH_OPTIONS_INIT;
 
-	callbacks.transfer_progress = transfer_cb;
-	callbacks.payload = &callcount;
+	options.callbacks.transfer_progress = transfer_cb;
+	options.callbacks.payload = &callcount;
 
 	cl_set_cleanup(&cleanup_local_repo, "foo");
 	cl_git_pass(git_repository_init(&repo, "foo", true));
 
 	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
-	git_remote_set_callbacks(origin, &callbacks);
-	cl_git_pass(git_remote_fetch(origin, NULL, NULL));
+	cl_git_pass(git_remote_fetch(origin, NULL, &options, NULL));
 	git_remote_free(origin);
 
 	cl_git_pass(git_revparse_single(&obj, repo, "origin/master"));
@@ -321,8 +303,7 @@ void test_network_fetchlocal__prune_tag(void)
 	git_config_free(config);
 	cl_git_pass(git_remote_lookup(&origin, repo, GIT_REMOTE_ORIGIN));
 	cl_assert_equal_i(1, git_remote_prune_refs(origin));
-	git_remote_set_callbacks(origin, &callbacks);
-	cl_git_pass(git_remote_fetch(origin, NULL, NULL));
+	cl_git_pass(git_remote_fetch(origin, NULL, &options, NULL));
 
 	assert_ref_exists(repo, "refs/tags/some-tag");
 	cl_git_fail_with(GIT_ENOTFOUND, git_reference_lookup(&ref, repo, "refs/remotes/origin/fake-remote"));
@@ -346,10 +327,10 @@ void test_network_fetchlocal__partial(void)
 	int callcount = 0;
 	git_strarray refnames = {0};
 	const char *url;
-	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
+	git_fetch_options options = GIT_FETCH_OPTIONS_INIT;
 
-	callbacks.transfer_progress = transfer_cb;
-	callbacks.payload = &callcount;
+	options.callbacks.transfer_progress = transfer_cb;
+	options.callbacks.payload = &callcount;
 
 	cl_set_cleanup(&cleanup_sandbox, NULL);
 	cl_git_pass(git_reference_list(&refnames, repo));
@@ -357,10 +338,7 @@ void test_network_fetchlocal__partial(void)
 
 	url = cl_git_fixture_url("testrepo.git");
 	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
-	git_remote_set_callbacks(origin, &callbacks);
-	cl_git_pass(git_remote_connect(origin, GIT_DIRECTION_FETCH));
-	cl_git_pass(git_remote_download(origin, NULL));
-	cl_git_pass(git_remote_update_tips(origin, NULL));
+	cl_git_pass(git_remote_fetch(origin, NULL, &options, NULL));
 
 	git_strarray_free(&refnames);
 
@@ -418,16 +396,13 @@ void test_network_fetchlocal__multi_remotes(void)
 	git_repository *repo = cl_git_sandbox_init("testrepo.git");
 	git_remote *test, *test2;
 	git_strarray refnames = {0};
-	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
+	git_fetch_options options = GIT_FETCH_OPTIONS_INIT;
 
 	cl_set_cleanup(&cleanup_sandbox, NULL);
-	callbacks.transfer_progress = transfer_cb;
+	options.callbacks.transfer_progress = transfer_cb;
 	cl_git_pass(git_remote_lookup(&test, repo, "test"));
 	cl_git_pass(git_remote_set_url(test, cl_git_fixture_url("testrepo.git")));
-	git_remote_set_callbacks(test, &callbacks);
-	cl_git_pass(git_remote_connect(test, GIT_DIRECTION_FETCH));
-	cl_git_pass(git_remote_download(test, NULL));
-	cl_git_pass(git_remote_update_tips(test, NULL));
+	cl_git_pass(git_remote_fetch(test, NULL, &options, NULL));
 
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(32, (int)refnames.count);
@@ -435,10 +410,7 @@ void test_network_fetchlocal__multi_remotes(void)
 
 	cl_git_pass(git_remote_lookup(&test2, repo, "test_with_pushurl"));
 	cl_git_pass(git_remote_set_url(test2, cl_git_fixture_url("testrepo.git")));
-	git_remote_set_callbacks(test2, &callbacks);
-	cl_git_pass(git_remote_connect(test2, GIT_DIRECTION_FETCH));
-	cl_git_pass(git_remote_download(test2, NULL));
-	cl_git_pass(git_remote_update_tips(test2, NULL));
+	cl_git_pass(git_remote_fetch(test2, NULL, &options, NULL));
 
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(44, (int)refnames.count);
@@ -463,7 +435,7 @@ void test_network_fetchlocal__call_progress(void)
 {
 	git_repository *repo;
 	git_remote *remote;
-	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
+	git_fetch_options options = GIT_FETCH_OPTIONS_INIT;
 	int callcount = 0;
 
 	cl_git_pass(git_repository_init(&repo, "foo.git", true));
@@ -471,11 +443,10 @@ void test_network_fetchlocal__call_progress(void)
 
 	cl_git_pass(git_remote_create_with_fetchspec(&remote, repo, "origin", cl_git_fixture_url("testrepo.git"), "+refs/heads/*:refs/heads/*"));
 
-	callbacks.sideband_progress = sideband_cb;
-	callbacks.payload = &callcount;
-	cl_git_pass(git_remote_set_callbacks(remote, &callbacks));
+	options.callbacks.sideband_progress = sideband_cb;
+	options.callbacks.payload = &callcount;
 
-	cl_git_pass(git_remote_fetch(remote, NULL, NULL));
+	cl_git_pass(git_remote_fetch(remote, NULL, &options, NULL));
 	cl_assert(callcount != 0);
 
 	git_remote_free(remote);

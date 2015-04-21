@@ -12,12 +12,12 @@ static git_clone_options g_options;
 
 void test_online_fetchhead__initialize(void)
 {
-	git_remote_callbacks dummy_callbacks = GIT_REMOTE_CALLBACKS_INIT;
+	git_fetch_options dummy_fetch = GIT_FETCH_OPTIONS_INIT;
 	g_repo = NULL;
 
 	memset(&g_options, 0, sizeof(git_clone_options));
 	g_options.version = GIT_CLONE_OPTIONS_VERSION;
-	g_options.remote_callbacks = dummy_callbacks;
+	g_options.fetch_opts = dummy_fetch;
 }
 
 void test_online_fetchhead__cleanup(void)
@@ -51,10 +51,7 @@ static void fetchhead_test_fetch(const char *fetchspec, const char *expected_fet
 		active_refs = &array;
 	}
 
-	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH));
-	cl_git_pass(git_remote_download(remote, active_refs));
-	cl_git_pass(git_remote_update_tips(remote, NULL));
-	git_remote_disconnect(remote);
+	cl_git_pass(git_remote_fetch(remote, active_refs, NULL, NULL));
 	git_remote_free(remote);
 
 	cl_git_pass(git_futils_readbuffer(&fetchhead_buf, "./foo/.git/FETCH_HEAD"));
