@@ -1423,7 +1423,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	while (!reader->eof) {
 		c = reader_peek(reader, SKIP_WHITESPACE);
 
-		if (c == '\0') { /* We've arrived at the end of the file */
+		if (c == '\n') { /* We've arrived at the end of the file */
 			break;
 
 		} else if (c == '[') { /* section header, new section begins */
