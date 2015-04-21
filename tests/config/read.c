@@ -611,6 +611,41 @@ void test_config_read__corrupt_header3(void)
 	git_config_free(cfg);
 }
 
+void test_config_read__invalid_key_chars(void)
+{
+	git_config *cfg;
+
+	cl_set_cleanup(&clean_test_config, NULL);
+	cl_git_mkfile("./testconfig", "[foo]\n    has_underscore = git2\n");
+	cl_git_fail(git_config_open_ondisk(&cfg, "./testconfig"));
+
+	cl_git_rewritefile("./testconfig", "[foo]\n  has/slash = git2\n");
+	cl_git_fail(git_config_open_ondisk(&cfg, "./testconfig"));
+
+	cl_git_rewritefile("./testconfig", "[foo]\n  has+plus = git2\n");
+	cl_git_fail(git_config_open_ondisk(&cfg, "./testconfig"));
+
+	cl_git_rewritefile("./testconfig", "[no_key]\n  = git2\n");
+	cl_git_fail(git_config_open_ondisk(&cfg, "./testconfig"));
+
+	git_config_free(cfg);
+}
+
+void test_config_read__lone_variable_with_trailing_whitespace(void)
+{
+	git_config *cfg;
+	int b;
+
+	cl_set_cleanup(&clean_test_config, NULL);
+	cl_git_mkfile("./testconfig", "[foo]\n    lonevariable   \n");
+	cl_git_pass(git_config_open_ondisk(&cfg, "./testconfig"));
+
+	cl_git_pass(git_config_get_bool(&b, cfg, "foo.lonevariable"));
+	cl_assert_equal_b(true, b);
+
+	git_config_free(cfg);
+}
+
 void test_config_read__override_variable(void)
 {
 	git_config *cfg;
