@@ -223,13 +223,10 @@ int git_libgit2_init(void)
 
 static void synchronized_threads_shutdown(void)
 {
-	void *ptr;
-
 	/* Shut down any subsystems that have global state */
 	git__shutdown();
 
-	ptr = TlsGetValue(_tls_index);
-	git__global_state_cleanup(ptr);
+	git__free_tls_data();
 
 	TlsFree(_tls_index);
 	git_mutex_free(&git__mwindow_mutex);
@@ -270,15 +267,20 @@ git_global_st *git__global_state(void)
 	return ptr;
 }
 
-BOOL WINAPI DllMain(HINSTANCE dll, DWORD reason, LPVOID reserved)
+/**
+ * Free the TLS data associated with this thread.
+ * This should only be used by the thread as it
+ * is exiting.
+ */
+void git__free_tls_data(void)
 {
-	if (reason == DLL_THREAD_DETACH) {
-		void *ptr = TlsGetValue(_tls_index);
-		git__global_state_cleanup(ptr);
-		git__free(ptr);
-	}
+	void *ptr = TlsGetValue(_tls_index);
+	if (!ptr)
+		return;
 
-	return TRUE;
+	git__global_state_cleanup(ptr);
+	git__free(ptr);
+	TlsSetValue(_tls_index, NULL);
 }
 
 #elif defined(GIT_THREADS) && defined(_POSIX_THREADS)
