@@ -145,6 +145,55 @@ void test_config_write__delete_value_with_duplicate_header(void)
 	git_config_free(cfg);
 }
 
+/*
+ * This test exposes a bug where duplicate section headers could cause
+ * config_write to add a new entry when one already exists.
+ */
+void test_config_write__add_value_with_duplicate_header(void)
+{
+	const char *file_name  = "config-duplicate-insert";
+	const char *entry_name = "foo.c";
+	const char *old_val    = "old";
+	const char *new_val    = "new";
+	const char *str;
+	git_config *cfg, *snapshot;
+
+	/* c = old should be replaced by c = new.
+	 * The bug causes c = new to be inserted under the first 'foo' header.
+	 */
+	const char *file_content =
+		"[foo]\n"   \
+		"  a = b\n" \
+		"[other]\n" \
+		"  a = b\n" \
+		"[foo]\n"   \
+		"  c = old\n";
+
+	/* Write the test config */
+	cl_git_mkfile(file_name, file_content);
+	cl_git_pass(git_config_open_ondisk(&cfg, file_name));
+
+	/* make sure the expected entry (foo.c) exists */
+	cl_git_pass(git_config_snapshot(&snapshot, cfg));
+	cl_git_pass(git_config_get_string(&str, snapshot, entry_name));
+	cl_assert_equal_s(old_val, str);
+	git_config_free(snapshot);
+
+	/* Try setting foo.c to something else */
+	cl_git_pass(git_config_set_string(cfg, entry_name, new_val));
+	git_config_free(cfg);
+
+	/* Reopen the file and make sure the new value was set */
+	cl_git_pass(git_config_open_ondisk(&cfg, file_name));
+	cl_git_pass(git_config_snapshot(&snapshot, cfg));
+	cl_git_pass(git_config_get_string(&str, snapshot, entry_name));
+	cl_assert_equal_s(new_val, str);
+
+	/* Cleanup */
+	git_config_free(snapshot);
+	git_config_free(cfg);
+}
+
 void test_config_write__write_subsection(void)
 {
 	git_config *cfg;
