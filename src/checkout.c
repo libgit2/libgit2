@@ -1794,9 +1794,6 @@ static int checkout_create_the_new(
 	int error = 0;
 	git_diff_delta *delta;
 	size_t i;
-	int caps = git_index_caps(data->index);
-
-	git_index_set_caps(data->index, caps & ~GIT_INDEXCAP_NO_FILEMODE);
 
 	git_vector_foreach(&data->diff->deltas, i, delta) {
 		if (actions[i] & CHECKOUT_ACTION__DEFER_REMOVE) {
@@ -1817,8 +1814,6 @@ static int checkout_create_the_new(
 			report_progress(data, delta->new_file.path);
 		}
 	}
-
-	git_index_set_caps(data->index, caps);
 
 	return 0;
 }
@@ -2548,12 +2543,7 @@ int git_checkout_iterator(
 cleanup:
 	if (!error && data.index != NULL &&
 		(data.strategy & CHECKOUT_INDEX_DONT_WRITE_MASK) == 0)
-	{
-		int caps = git_index_caps(data.index);
-		git_index_set_caps(data.index, caps & ~GIT_INDEXCAP_NO_FILEMODE);
 		error = git_index_write(data.index);
-		git_index_set_caps(data.index, caps);
-	}
 
 	git_diff_free(data.diff);
 	git_iterator_free(workdir);
