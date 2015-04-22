@@ -159,7 +159,6 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 	GITERR_CHECK_ALLOC(remote);
 
 	remote->repo = repo;
-	remote->update_fetchhead = 1;
 
 	if (git_vector_init(&remote->refs, 32, NULL) < 0 ||
 		canonicalize_url(&canonical_url, url) < 0)
@@ -311,7 +310,6 @@ int git_remote_dup(git_remote **dest, git_remote *source)
 
 	remote->repo = source->repo;
 	remote->download_tags = source->download_tags;
-	remote->update_fetchhead = source->update_fetchhead;
 	remote->prune_refs = source->prune_refs;
 
 	if (git_vector_init(&remote->refs, 32, NULL) < 0 ||
@@ -401,7 +399,6 @@ int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 	remote = git__calloc(1, sizeof(git_remote));
 	GITERR_CHECK_ALLOC(remote);
 
-	remote->update_fetchhead = 1;
 	remote->name = git__strdup(name);
 	GITERR_CHECK_ALLOC(remote->name);
 
@@ -972,7 +969,7 @@ int git_remote_fetch(
 		const git_fetch_options *opts,
 		const char *reflog_message)
 {
-	int error;
+	int error, update_fetchhead = 1;
 	bool prune = false;
 	git_buf reflog_msg_buf = GIT_BUF_INIT;
 	const git_remote_callbacks *cbs = NULL;
@@ -980,6 +977,7 @@ int git_remote_fetch(
 	if (opts) {
 		GITERR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
 		cbs = &opts->callbacks;
+		update_fetchhead = opts->update_fetchhead;
 	}
 
 	/* Connect and download everything */
@@ -1004,7 +1002,7 @@ int git_remote_fetch(
 	}
 
 	/* Create "remote/foo" branches for all remote branches */
-	error = git_remote_update_tips(remote, cbs, git_buf_cstr(&reflog_msg_buf));
+	error = git_remote_update_tips(remote, cbs, update_fetchhead, git_buf_cstr(&reflog_msg_buf));
 	git_buf_free(&reflog_msg_buf);
 	if (error < 0)
 		return error;
@@ -1320,6 +1318,7 @@ cleanup:
 static int update_tips_for_spec(
 		git_remote *remote,
 		const git_remote_callbacks *callbacks,
+		int update_fetchhead,
 		git_refspec *spec,
 		git_vector *refs,
 		const char *log_message)
@@ -1408,7 +1407,7 @@ static int update_tips_for_spec(
 		}
 	}
 
-	if (git_remote_update_fetchhead(remote) &&
+	if (update_fetchhead &&
 	    (error = git_remote_write_fetchhead(remote, spec, &update_heads)) < 0)
 		goto on_error;
 
@@ -1519,6 +1518,7 @@ static int opportunistic_updates(const git_remote *remote, git_vector *refs, con
 int git_remote_update_tips(
 		git_remote *remote,
 		const git_remote_callbacks *callbacks,
+		int update_fetchhead,
 		const char *reflog_message)
 {
 	git_refspec *spec, tagspec;
@@ -1539,7 +1539,7 @@ int git_remote_update_tips(
 		goto out;
 
 	if (remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
-		if ((error = update_tips_for_spec(remote, callbacks, &tagspec, &refs, reflog_message)) < 0)
+		if ((error = update_tips_for_spec(remote, callbacks, update_fetchhead, &tagspec, &refs, reflog_message)) < 0)
 			goto out;
 	}
 
@@ -1547,7 +1547,7 @@ int git_remote_update_tips(
 		if (spec->push)
 			continue;
 
-		if ((error = update_tips_for_spec(remote, callbacks, spec, &refs, reflog_message)) < 0)
+		if ((error = update_tips_for_spec(remote, callbacks, update_fetchhead, spec, &refs, reflog_message)) < 0)
 			goto out;
 	}
 
@@ -1946,16 +1946,6 @@ cleanup:
 
 	git_remote_free(remote);
 	return error;
-}
-
-int git_remote_update_fetchhead(git_remote *remote)
-{
-	return (remote->update_fetchhead != 0);
-}
-
-void git_remote_set_update_fetchhead(git_remote *remote, int value)
-{
-	remote->update_fetchhead = (value != 0);
 }
 
 int git_remote_is_valid_name(
@@ -2414,7 +2404,7 @@ int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_
 	if ((error = git_remote_upload(remote, refspecs, opts)) < 0)
 		return error;
 
-	error = git_remote_update_tips(remote, cbs, NULL);
+	error = git_remote_update_tips(remote, cbs, 0, NULL);
 
 	git_remote_disconnect(remote);
 	return error;

@@ -328,6 +328,7 @@ static int clone_into(git_repository *repo, git_remote *_remote, const git_fetch
 {
 	int error;
 	git_buf reflog_message = GIT_BUF_INIT;
+	git_fetch_options fetch_opts;
 	git_remote *remote;
 
 	assert(repo && _remote);
@@ -343,10 +344,11 @@ static int clone_into(git_repository *repo, git_remote *_remote, const git_fetch
 	if ((error = git_remote_add_fetch(remote, "refs/tags/*:refs/tags/*")) < 0)
 		goto cleanup;
 
-	git_remote_set_update_fetchhead(remote, 0);
+	memcpy(&fetch_opts, opts, sizeof(git_fetch_options));
+	fetch_opts.update_fetchhead = 0;
 	git_buf_printf(&reflog_message, "clone: from %s", git_remote_url(remote));
 
-	if ((error = git_remote_fetch(remote, NULL, opts, git_buf_cstr(&reflog_message))) != 0)
+	if ((error = git_remote_fetch(remote, NULL, &fetch_opts, git_buf_cstr(&reflog_message))) != 0)
 		goto cleanup;
 
 	error = checkout_branch(repo, remote, co_opts, branch, git_buf_cstr(&reflog_message));

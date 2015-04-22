@@ -127,7 +127,7 @@ void test_online_fetch__doesnt_retrieve_a_pack_when_the_repository_is_up_to_date
 
 	cl_assert_equal_i(false, invoked);
 
-	cl_git_pass(git_remote_update_tips(remote, &options.callbacks, NULL));
+	cl_git_pass(git_remote_update_tips(remote, &options.callbacks, 1, NULL));
 	git_remote_disconnect(remote);
 
 	git_remote_free(remote);

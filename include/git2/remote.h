@@ -538,10 +538,16 @@ typedef struct {
 	 * Whether to perform a prune after the fetch
 	 */
 	git_fetch_prune_t prune;
+
+	/**
+	 * Whether to write the results to FETCH_HEAD. Defaults to
+	 * on. Leave this default in order to behave like git.
+	 */
+	int update_fetchhead;
 } git_fetch_options;
 
 #define GIT_FETCH_OPTIONS_VERSION 1
-#define GIT_FETCH_OPTIONS_INIT { GIT_FETCH_OPTIONS_VERSION, GIT_REMOTE_CALLBACKS_INIT }
+#define GIT_FETCH_OPTIONS_INIT { GIT_FETCH_OPTIONS_VERSION, GIT_REMOTE_CALLBACKS_INIT, 0, 1 }
 
 /**
  * Initializes a `git_fetch_options` with default values. Equivalent to
@@ -636,11 +642,13 @@ GIT_EXTERN(int) git_remote_upload(git_remote *remote, const git_strarray *refspe
  * the name of the remote (or its url, for in-memory remotes). This
  * parameter is ignored when pushing.
  * @param callbacks  pointer to the callback structure to use
+ * @param update_fetchhead whether to write to FETCH_HEAD. Pass 1 to behave like git.
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_remote_update_tips(
 		git_remote *remote,
 		const git_remote_callbacks *callbacks,
+		int update_fetchhead,
 		const char *reflog_message);
 
 /**
@@ -753,23 +761,6 @@ GIT_EXTERN(int) git_remote_rename(
 	git_repository *repo,
 	const char *name,
 	const char *new_name);
-
-/**
- * Retrieve the update FETCH_HEAD setting.
- *
- * @param remote the remote to query
- * @return the update FETCH_HEAD setting
- */
-GIT_EXTERN(int) git_remote_update_fetchhead(git_remote *remote);
-
-/**
- * Sets the update FETCH_HEAD setting.  By default, FETCH_HEAD will be
- * updated on every fetch.  Set to 0 to disable.
- *
- * @param remote the remote to configure
- * @param value 0 to disable updating FETCH_HEAD
- */
-GIT_EXTERN(void) git_remote_set_update_fetchhead(git_remote *remote, int value);
 
 /**
  * Ensure the remote name is well-formed.

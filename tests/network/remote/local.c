@@ -241,7 +241,7 @@ void test_network_remote_local__push_to_bare_remote_with_file_url(void)
 	/* Get some commits */
 	connect_to_local_repository(cl_fixture("testrepo.git"));
 	cl_git_pass(git_remote_download(remote, &array, NULL));
-	cl_git_pass(git_remote_update_tips(remote, NULL, NULL));
+	cl_git_pass(git_remote_update_tips(remote, NULL, 1, NULL));
 	git_remote_disconnect(remote);
 
 	/* Set up an empty bare repo to push into */
@@ -282,7 +282,7 @@ void test_network_remote_local__push_to_non_bare_remote(void)
 	/* Get some commits */
 	connect_to_local_repository(cl_fixture("testrepo.git"));
 	cl_git_pass(git_remote_download(remote, &array, NULL));
-	cl_git_pass(git_remote_update_tips(remote, NULL, NULL));
+	cl_git_pass(git_remote_update_tips(remote, NULL, 1, NULL));
 	git_remote_disconnect(remote);
 
 	/* Set up an empty non-bare repo to push into */
@@ -350,7 +350,7 @@ void test_network_remote_local__reflog(void)
 	connect_to_local_repository(cl_fixture("testrepo.git"));
 
 	cl_git_pass(git_remote_download(remote, &array, NULL));
-	cl_git_pass(git_remote_update_tips(remote, NULL, "UPDAAAAAATE!!"));
+	cl_git_pass(git_remote_update_tips(remote, NULL, 1, "UPDAAAAAATE!!"));
 
 	cl_git_pass(git_reflog_read(&log, repo, "refs/remotes/sloppy/master"));
 	cl_assert_equal_i(1, git_reflog_entrycount(log));
