@@ -400,16 +400,16 @@ void test_network_fetchlocal__multi_remotes(void)
 
 	cl_set_cleanup(&cleanup_sandbox, NULL);
 	options.callbacks.transfer_progress = transfer_cb;
+	cl_git_pass(git_remote_set_url(repo, "test", cl_git_fixture_url("testrepo.git")));
 	cl_git_pass(git_remote_lookup(&test, repo, "test"));
-	cl_git_pass(git_remote_set_url(test, cl_git_fixture_url("testrepo.git")));
 	cl_git_pass(git_remote_fetch(test, NULL, &options, NULL));
 
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(32, (int)refnames.count);
 	git_strarray_free(&refnames);
 
+	cl_git_pass(git_remote_set_url(repo, "test_with_pushurl", cl_git_fixture_url("testrepo.git")));
 	cl_git_pass(git_remote_lookup(&test2, repo, "test_with_pushurl"));
-	cl_git_pass(git_remote_set_url(test2, cl_git_fixture_url("testrepo.git")));
 	cl_git_pass(git_remote_fetch(test2, NULL, &options, NULL));
 
 	cl_git_pass(git_reference_list(&refnames, repo));

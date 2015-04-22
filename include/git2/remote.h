@@ -153,26 +153,30 @@ GIT_EXTERN(const char *) git_remote_url(const git_remote *remote);
 GIT_EXTERN(const char *) git_remote_pushurl(const git_remote *remote);
 
 /**
- * Set the remote's url
+ * Set the remote's url in the configuration
  *
- * Existing connections will not be updated.
+ * Remote objects already in memory will not be affected. This assumes
+ * the common case of a single-url remote and will otherwise return an error.
  *
- * @param remote the remote
+ * @param repo the repository in which to perform the change
+ * @param remote the remote's name
  * @param url the url to set
  * @return 0 or an error value
  */
-GIT_EXTERN(int) git_remote_set_url(git_remote *remote, const char* url);
+GIT_EXTERN(int) git_remote_set_url(git_repository *repo, const char *remote, const char* url);
 
 /**
- * Set the remote's url for pushing
+ * Set the remote's url for pushing in the configuration.
  *
- * Existing connections will not be updated.
+ * Remote objects already in memory will not be affected. This assumes
+ * the common case of a single-url remote and will otherwise return an error.
  *
- * @param remote the remote
- * @param url the url to set or NULL to clear the pushurl
- * @return 0 or an error value
+ *
+ * @param repo the repository in which to perform the change
+ * @param remote the remote's name
+ * @param url the url to set
  */
-GIT_EXTERN(int) git_remote_set_pushurl(git_remote *remote, const char* url);
+GIT_EXTERN(int) git_remote_set_pushurl(git_repository *repo, const char *remote, const char* url);
 
 /**
  * Add a fetch refspec to the remote

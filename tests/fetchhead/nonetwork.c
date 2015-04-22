@@ -331,9 +331,8 @@ void test_fetchhead_nonetwork__unborn_with_upstream(void)
 	cl_git_pass(git_clone(&repo, "./test1", "./repowithunborn", NULL));
 
 	/* Simulate someone pushing to it by changing to one that has stuff */
+	cl_git_pass(git_remote_set_url(repo, "origin", cl_fixture("testrepo.git")));
 	cl_git_pass(git_remote_lookup(&remote, repo, "origin"));
-	cl_git_pass(git_remote_set_url(remote, cl_fixture("testrepo.git")));
-	cl_git_pass(git_remote_save(remote));
 
 	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
 	git_remote_free(remote);

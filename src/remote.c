@@ -20,6 +20,10 @@
 #include "fetchhead.h"
 #include "push.h"
 
+#define CONFIG_URL_FMT "remote.%s.url"
+#define CONFIG_PUSHURL_FMT "remote.%s.pushurl"
+#define CONFIG_FETCH_FMT "remote.%s.fetch"
+
 static int dwim_refspecs(git_vector *out, git_vector *refspecs, git_vector *refs);
 static int lookup_remote_prune_config(git_remote *remote, git_config *config, const char *name);
 
@@ -141,11 +145,15 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 {
 	git_remote *remote;
 	git_config *config = NULL;
-	git_buf canonical_url = GIT_BUF_INIT, fetchbuf = GIT_BUF_INIT;
+	git_buf canonical_url = GIT_BUF_INIT;
+	git_buf var = GIT_BUF_INIT;
 	int error = -1;
 
 	/* name is optional */
 	assert(out && repo && url);
+
+	if ((error = git_repository_config__weakptr(&config, repo)) < 0)
+		return error;
 
 	remote = git__calloc(1, sizeof(git_remote));
 	GITERR_CHECK_ALLOC(remote);
@@ -162,6 +170,12 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 	if (name != NULL) {
 		remote->name = git__strdup(name);
 		GITERR_CHECK_ALLOC(remote->name);
+
+		if ((error = git_buf_printf(&var, CONFIG_URL_FMT, name)) < 0)
+			goto on_error;
+
+		if ((error = git_config_set_string(config, var.ptr, remote->url)) < 0)
+			goto on_error;
 	}
 
 	if (fetch != NULL) {
@@ -183,6 +197,8 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 		/* A remote without a name doesn't download tags */
 		remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_NONE;
 
+	git_buf_free(&var);
+
 	*out = remote;
 	error = 0;
 
@@ -191,8 +207,8 @@ on_error:
 		git_remote_free(remote);
 
 	git_config_free(config);
-	git_buf_free(&fetchbuf);
 	git_buf_free(&canonical_url);
+	git_buf_free(&var);
 	return error;
 }
 
@@ -564,22 +580,7 @@ int git_remote_save(const git_remote *remote)
 	if ((error = git_repository_config__weakptr(&cfg, remote->repo)) < 0)
 		return error;
 
-	if ((error = git_buf_printf(&buf, "remote.%s.url", remote->name)) < 0)
-		return error;
-
 	/* after this point, buffer is allocated so end with cleanup */
-
-	if ((error = git_config_set_string(
-			cfg, git_buf_cstr(&buf), remote->url)) < 0)
-		goto cleanup;
-
-	git_buf_clear(&buf);
-	if ((error = git_buf_printf(&buf, "remote.%s.pushurl", remote->name)) < 0)
-		goto cleanup;
-
-	if ((error = git_config__update_entry(
-			cfg, git_buf_cstr(&buf), remote->pushurl, true, false)) < 0)
-		goto cleanup;
 
 	if ((error = update_config_refspec(remote, cfg, GIT_DIRECTION_FETCH)) < 0)
 		goto cleanup;
@@ -642,16 +643,42 @@ const char *git_remote_url(const git_remote *remote)
 	return remote->url;
 }
 
-int git_remote_set_url(git_remote *remote, const char* url)
+static int set_url(git_repository *repo, const char *remote, const char *pattern, const char *url)
 {
-	assert(remote);
-	assert(url);
+	git_config *cfg;
+	git_buf buf = GIT_BUF_INIT, canonical_url = GIT_BUF_INIT;
+	int error;
 
-	git__free(remote->url);
-	remote->url = git__strdup(url);
-	GITERR_CHECK_ALLOC(remote->url);
+	assert(repo && remote);
 
-	return 0;
+	if ((error = ensure_remote_name_is_valid(remote)) < 0)
+		return error;
+
+	if ((error = git_repository_config__weakptr(&cfg, repo)) < 0)
+		return error;
+
+	if ((error = git_buf_printf(&buf, pattern, remote)) < 0)
+		return error;
+
+	if (url) {
+		if ((error = canonicalize_url(&canonical_url, url)) < 0)
+			goto cleanup;
+
+		error = git_config_set_string(cfg, buf.ptr, url);
+	} else {
+		error = git_config_delete_entry(cfg, buf.ptr);
+	}
+
+cleanup:
+	git_buf_free(&canonical_url);
+	git_buf_free(&buf);
+
+	return error;
+}
+
+int git_remote_set_url(git_repository *repo, const char *remote, const char *url)
+{
+	return set_url(repo, remote, CONFIG_URL_FMT, url);
 }
 
 const char *git_remote_pushurl(const git_remote *remote)
@@ -660,18 +687,9 @@ const char *git_remote_pushurl(const git_remote *remote)
 	return remote->pushurl;
 }
 
-int git_remote_set_pushurl(git_remote *remote, const char* url)
+int git_remote_set_pushurl(git_repository *repo, const char *remote, const char* url)
 {
-	assert(remote);
-
-	git__free(remote->pushurl);
-	if (url) {
-		remote->pushurl = git__strdup(url);
-		GITERR_CHECK_ALLOC(remote->pushurl);
-	} else {
-		remote->pushurl = NULL;
-	}
-	return 0;
+	return set_url(repo, remote, CONFIG_PUSHURL_FMT, url);
 }
 
 const char* git_remote__urlfordirection(git_remote *remote, int direction)

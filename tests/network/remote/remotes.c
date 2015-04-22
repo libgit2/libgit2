@@ -54,11 +54,18 @@ void test_network_remote_remotes__parsing(void)
 
 void test_network_remote_remotes__pushurl(void)
 {
-	cl_git_pass(git_remote_set_pushurl(_remote, "git://github.com/libgit2/notlibgit2"));
-	cl_assert_equal_s(git_remote_pushurl(_remote), "git://github.com/libgit2/notlibgit2");
+	const char *name = git_remote_name(_remote);
+	git_remote *mod;
 
-	cl_git_pass(git_remote_set_pushurl(_remote, NULL));
-	cl_assert(git_remote_pushurl(_remote) == NULL);
+	cl_git_pass(git_remote_set_pushurl(_repo, name, "git://github.com/libgit2/notlibgit2"));
+	cl_git_pass(git_remote_lookup(&mod, _repo, name));
+	cl_assert_equal_s(git_remote_pushurl(mod), "git://github.com/libgit2/notlibgit2");
+	git_remote_free(mod);
+
+	cl_git_pass(git_remote_set_pushurl(_repo, name, NULL));
+	cl_git_pass(git_remote_lookup(&mod, _repo, name));
+	cl_assert(git_remote_pushurl(mod) == NULL);
+	git_remote_free(mod);
 }
 
 void test_network_remote_remotes__error_when_not_found(void)
@@ -174,13 +181,16 @@ void test_network_remote_remotes__save(void)
 
 	/* Set up the remote and save it to config */
 	cl_git_pass(git_remote_create(&_remote, _repo, "upstream", "git://github.com/libgit2/libgit2"));
+	git_remote_free(_remote);
+	cl_git_pass(git_remote_set_pushurl(_repo, "upstream", "git://github.com/libgit2/libgit2_push"));
+	cl_git_pass(git_remote_lookup(&_remote, _repo, "upstream"));
+
 	git_remote_clear_refspecs(_remote);
 
 	cl_git_pass(git_remote_add_fetch(_remote, fetch_refspec1));
 	cl_git_pass(git_remote_add_fetch(_remote, fetch_refspec2));
 	cl_git_pass(git_remote_add_push(_remote, push_refspec1));
 	cl_git_pass(git_remote_add_push(_remote, push_refspec2));
-	cl_git_pass(git_remote_set_pushurl(_remote, "git://github.com/libgit2/libgit2_push"));
 	cl_git_pass(git_remote_save(_remote));
 	git_remote_free(_remote);
 	_remote = NULL;
@@ -203,12 +213,11 @@ void test_network_remote_remotes__save(void)
 	cl_assert_equal_s(git_remote_url(_remote), "git://github.com/libgit2/libgit2");
 	cl_assert_equal_s(git_remote_pushurl(_remote), "git://github.com/libgit2/libgit2_push");
 
-	/* remove the pushurl again and see if we can save that too */
-	cl_git_pass(git_remote_set_pushurl(_remote, NULL));
-	cl_git_pass(git_remote_save(_remote));
 	git_remote_free(_remote);
 	_remote = NULL;
 
+	/* remove the pushurl again and see if we can save that too */
+	cl_git_pass(git_remote_set_pushurl(_repo, "upstream", NULL));
 	cl_git_pass(git_remote_lookup(&_remote, _repo, "upstream"));
 	cl_assert(git_remote_pushurl(_remote) == NULL);
 }
