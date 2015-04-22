@@ -30,8 +30,6 @@ typedef enum {
 	GIT_TRANSPORTFLAGS_NONE = 0,
 } git_transport_flags_t;
 
-typedef struct git_transport git_transport;
-
 struct git_transport {
 	unsigned int version;
 	/* Set progress and error callbacks */
@@ -141,9 +139,6 @@ GIT_EXTERN(int) git_transport_new(git_transport **out, git_remote *owner, const 
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *payload);
-
-/* Signature of a function which creates a transport */
-typedef int (*git_transport_cb)(git_transport **out, git_remote *owner, void *param);
 
 /**
  * Add a custom transport definition, to be used in addition to the built-in
@@ -352,21 +347,6 @@ GIT_EXTERN(int) git_smart_subtransport_ssh(
 	git_smart_subtransport **out,
 	git_transport* owner,
 	void *param);
-
-/**
- * Sets a custom transport factory for the remote. The caller can use this
- * function to override the transport used for this remote when performing
- * network operations.
- *
- * @param remote the remote to configure
- * @param transport_cb the function to use to create a transport
- * @param payload opaque parameter passed to transport_cb
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_remote_set_transport(
-	git_remote *remote,
-	git_transport_cb transport_cb,
-	void *payload);
 
 /** @} */
 GIT_END_DECL

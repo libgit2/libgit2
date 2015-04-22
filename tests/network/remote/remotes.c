@@ -80,6 +80,7 @@ void test_network_remote_remotes__error_when_not_found(void)
 void test_network_remote_remotes__error_when_no_push_available(void)
 {
 	git_remote *r;
+	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
 	char *specs = {
 		"refs/heads/master",
 	};
@@ -91,9 +92,8 @@ void test_network_remote_remotes__error_when_no_push_available(void)
 
 	cl_git_pass(git_remote_create_anonymous(&r, _repo, cl_fixture("testrepo.git"), NULL));
 
-	cl_git_pass(git_remote_set_transport(r, git_transport_local, NULL));
-
-	cl_git_pass(git_remote_connect(r, GIT_DIRECTION_PUSH, NULL));
+	callbacks.transport = git_transport_local;
+	cl_git_pass(git_remote_connect(r, GIT_DIRECTION_PUSH, &callbacks));
 
 	/* Make sure that push is really not available */
 	r->transport->push = NULL;

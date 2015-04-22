@@ -309,8 +309,6 @@ int git_remote_dup(git_remote **dest, git_remote *source)
 		GITERR_CHECK_ALLOC(remote->pushurl);
 	}
 
-	remote->transport_cb = source->transport_cb;
-	remote->transport_cb_payload = source->transport_cb_payload;
 	remote->repo = source->repo;
 	remote->download_tags = source->download_tags;
 	remote->update_fetchhead = source->update_fetchhead;
@@ -725,13 +723,15 @@ int git_remote_connect(git_remote *remote, git_direction direction, const git_re
 	int flags = GIT_TRANSPORTFLAGS_NONE;
 	int error;
 	void *payload = NULL;
-	git_cred_acquire_cb credentials;
+	git_cred_acquire_cb credentials = NULL;
+	git_transport_cb transport = NULL;
 
 	assert(remote);
 
 	if (callbacks) {
 		GITERR_CHECK_VERSION(callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
 		credentials = callbacks->credentials;
+		transport   = callbacks->transport;
 		payload     = callbacks->payload;
 	}
 
@@ -746,8 +746,8 @@ int git_remote_connect(git_remote *remote, git_direction direction, const git_re
 
 	/* If we don't have a transport object yet, and the caller specified a
 	 * custom transport factory, use that */
-	if (!t && remote->transport_cb &&
-		(error = remote->transport_cb(&t, remote, remote->transport_cb_payload)) < 0)
+	if (!t && transport &&
+		(error = transport(&t, remote, payload)) < 0)
 		return error;
 
 	/* If we still don't have a transport, then use the global
@@ -1661,23 +1661,6 @@ int git_remote_list(git_strarray *remotes_list, git_repository *repo)
 	remotes_list->strings =
 		(char **)git_vector_detach(&remotes_list->count, NULL, &list);
 
-	return 0;
-}
-
-int git_remote_set_transport(
-	git_remote *remote,
-	git_transport_cb transport_cb,
-	void *payload)
-{
-	assert(remote);
-
-	if (remote->transport) {
-		giterr_set(GITERR_NET, "A transport is already bound to this remote");
-		return -1;
-	}
-
-	remote->transport_cb = transport_cb;
-	remote->transport_cb_payload = payload;
 	return 0;
 }
 

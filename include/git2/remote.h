@@ -484,6 +484,12 @@ struct git_remote_callbacks {
 	git_push_negotiation push_negotiation;
 
 	/**
+	 * Create the transport to use for this operation. Leave NULL
+	 * to auto-detect.
+	 */
+	git_transport_cb transport;
+
+	/**
 	 * This will be passed to each of the callbacks in this struct
 	 * as the last parameter.
 	 */

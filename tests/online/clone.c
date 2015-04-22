@@ -401,10 +401,9 @@ static int custom_remote_ssh_with_paths(
 {
 	int error;
 
-	if ((error = git_remote_create(out, repo, name, url)) < 0)
-		return error;
+	GIT_UNUSED(payload);
 
-	if ((error = git_remote_set_transport(*out, git_transport_ssh_with_paths, payload)) < 0)
+	if ((error = git_remote_create(out, repo, name, url)) < 0)
 		return error;
 
 	return 0;
@@ -435,7 +434,8 @@ void test_online_clone__ssh_with_paths(void)
 		clar__skip();
 
 	g_options.remote_cb = custom_remote_ssh_with_paths;
-	g_options.remote_cb_payload = &arr;
+	g_options.fetch_opts.callbacks.transport = git_transport_ssh_with_paths;
+	g_options.fetch_opts.callbacks.payload = &arr;
 
 	cl_git_fail(git_clone(&g_repo, remote_url, "./foo", &g_options));
 
