@@ -973,6 +973,7 @@ int git_remote_fetch(
 		const char *reflog_message)
 {
 	int error;
+	bool prune = false;
 	git_buf reflog_msg_buf = GIT_BUF_INIT;
 	const git_remote_callbacks *cbs = NULL;
 
@@ -1008,7 +1009,16 @@ int git_remote_fetch(
 	if (error < 0)
 		return error;
 
-	if (remote->prune_refs)
+	if (opts && opts->prune == GIT_FETCH_PRUNE)
+		prune = true;
+	else if (opts && opts->prune == GIT_FETCH_PRUNE_FALLBACK && remote->prune_refs)
+		prune = true;
+	else if (opts && opts->prune == GIT_FETCH_NO_PRUNE)
+		prune = false;
+	else
+		prune = remote->prune_refs;
+
+	if (prune)
 		error = git_remote_prune(remote, cbs);
 
 	return error;

@@ -505,6 +505,21 @@ GIT_EXTERN(int) git_remote_init_callbacks(
 	git_remote_callbacks *opts,
 	unsigned int version);
 
+typedef enum {
+	/**
+	 * Use the setting from the configuration
+	 */
+	GIT_FETCH_PRUNE_FALLBACK,
+	/**
+	 * Force pruning on
+	 */
+	GIT_FETCH_PRUNE,
+	/**
+	 * Force pruning off
+	 */
+	GIT_FETCH_NO_PRUNE,
+} git_fetch_prune_t;
+
 typedef struct {
 	int version;
 
@@ -512,6 +527,11 @@ typedef struct {
 	 * Callbacks to use for this fetch operation
 	 */
 	git_remote_callbacks callbacks;
+
+	/**
+	 * Whether to perform a prune after the fetch
+	 */
+	git_fetch_prune_t prune;
 } git_fetch_options;
 
 #define GIT_FETCH_OPTIONS_VERSION 1
