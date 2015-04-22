@@ -41,10 +41,10 @@ static void do_fetch(const char *url, git_remote_autotag_option_t flag, int n)
 	options.callbacks.transfer_progress = progress;
 	options.callbacks.update_tips = update_tips;
 	options.callbacks.payload = &bytes_received;
+	options.download_tags = flag;
 	counter = 0;
 
 	cl_git_pass(git_remote_create(&remote, _repo, "test", url));
-	git_remote_set_autotag(remote, flag);
 	cl_git_pass(git_remote_fetch(remote, NULL, &options, NULL));
 	cl_assert_equal_i(counter, n);
 	cl_assert(bytes_received > 0);
@@ -127,7 +127,7 @@ void test_online_fetch__doesnt_retrieve_a_pack_when_the_repository_is_up_to_date
 
 	cl_assert_equal_i(false, invoked);
 
-	cl_git_pass(git_remote_update_tips(remote, &options.callbacks, 1, NULL));
+	cl_git_pass(git_remote_update_tips(remote, &options.callbacks, 1, options.download_tags, NULL));
 	git_remote_disconnect(remote);
 
 	git_remote_free(remote);

@@ -23,6 +23,7 @@
 #define CONFIG_URL_FMT "remote.%s.url"
 #define CONFIG_PUSHURL_FMT "remote.%s.pushurl"
 #define CONFIG_FETCH_FMT "remote.%s.fetch"
+#define CONFIG_TAGOPT_FMT "remote.%s.tagopt"
 
 static int dwim_refspecs(git_vector *out, git_vector *refspecs, git_vector *refs);
 static int lookup_remote_prune_config(git_remote *remote, git_config *config, const char *name);
@@ -60,7 +61,6 @@ static int download_tags_value(git_remote *remote, git_config *cfg)
 	git_buf buf = GIT_BUF_INIT;
 	int error;
 
-	/* The 0 value is the default (auto), let's see if we need to change it */
 	if (git_buf_printf(&buf, "remote.%s.tagopt", remote->name) < 0)
 		return -1;
 
@@ -192,9 +192,12 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 			goto on_error;
 	}
 
+	/* A remote without a name doesn't download tags */
 	if (!name)
-		/* A remote without a name doesn't download tags */
 		remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_NONE;
+	else
+		remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_AUTO;
+
 
 	git_buf_free(&var);
 
@@ -419,6 +422,7 @@ int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 	optional_setting_found |= found;
 
 	remote->repo = repo;
+	remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_AUTO;
 
 	if (found && strlen(val) > 0) {
 		remote->url = git__strdup(val);
@@ -558,7 +562,6 @@ int git_remote_save(const git_remote *remote)
 {
 	int error;
 	git_config *cfg;
-	const char *tagopt = NULL;
 	git_buf buf = GIT_BUF_INIT;
 	git_config_entry *existing = NULL;
 
@@ -582,37 +585,6 @@ int git_remote_save(const git_remote *remote)
 
 	if ((error = update_config_refspec(remote, cfg, GIT_DIRECTION_PUSH)) < 0)
 		goto cleanup;
-
-	/*
-	 * What action to take depends on the old and new values. This
-	 * is describes by the table below. tagopt means whether the
-	 * is already a value set in the config
-	 *
-	 *            AUTO     ALL or NONE
-	 *         +-----------------------+
-	 *  tagopt | remove  |     set     |
-	 *         +---------+-------------|
-	 * !tagopt | nothing |     set     |
-	 *         +---------+-------------+
-	 */
-
-	git_buf_clear(&buf);
-	if ((error = git_buf_printf(&buf, "remote.%s.tagopt", remote->name)) < 0)
-		goto cleanup;
-
-	if ((error = git_config__lookup_entry(
-			&existing, cfg, git_buf_cstr(&buf), false)) < 0)
-		goto cleanup;
-
-	if (remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_ALL)
-		tagopt = "--tags";
-	else if (remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_NONE)
-		tagopt = "--no-tags";
-	else if (existing != NULL)
-		tagopt = NULL;
-
-	error = git_config__update_entry(
-		cfg, git_buf_cstr(&buf), tagopt, true, false);
 
 cleanup:
 	git_config_entry_free(existing);
@@ -951,7 +923,7 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs, const 
 		remote->push = NULL;
 	}
 
-	if ((error = git_fetch_negotiate(remote)) < 0)
+	if ((error = git_fetch_negotiate(remote, opts)) < 0)
 		return error;
 
 	return git_fetch_download_pack(remote, cbs);
@@ -970,6 +942,7 @@ int git_remote_fetch(
 		const char *reflog_message)
 {
 	int error, update_fetchhead = 1;
+	git_remote_autotag_option_t tagopt = remote->download_tags;
 	bool prune = false;
 	git_buf reflog_msg_buf = GIT_BUF_INIT;
 	const git_remote_callbacks *cbs = NULL;
@@ -978,6 +951,7 @@ int git_remote_fetch(
 		GITERR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
 		cbs = &opts->callbacks;
 		update_fetchhead = opts->update_fetchhead;
+		tagopt = opts->download_tags;
 	}
 
 	/* Connect and download everything */
@@ -1002,7 +976,7 @@ int git_remote_fetch(
 	}
 
 	/* Create "remote/foo" branches for all remote branches */
-	error = git_remote_update_tips(remote, cbs, update_fetchhead, git_buf_cstr(&reflog_msg_buf));
+	error = git_remote_update_tips(remote, cbs, update_fetchhead, tagopt, git_buf_cstr(&reflog_msg_buf));
 	git_buf_free(&reflog_msg_buf);
 	if (error < 0)
 		return error;
@@ -1319,6 +1293,7 @@ static int update_tips_for_spec(
 		git_remote *remote,
 		const git_remote_callbacks *callbacks,
 		int update_fetchhead,
+		git_remote_autotag_option_t tagopt,
 		git_refspec *spec,
 		git_vector *refs,
 		const char *log_message)
@@ -1354,9 +1329,9 @@ static int update_tips_for_spec(
 			continue;
 
 		if (git_refspec_src_matches(&tagspec, head->name)) {
-			if (remote->download_tags != GIT_REMOTE_DOWNLOAD_TAGS_NONE) {
+			if (tagopt != GIT_REMOTE_DOWNLOAD_TAGS_NONE) {
 
-				if (remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_AUTO)
+				if (tagopt == GIT_REMOTE_DOWNLOAD_TAGS_AUTO)
 					autotag = 1;
 
 				git_buf_clear(&refname);
@@ -1519,10 +1494,12 @@ int git_remote_update_tips(
 		git_remote *remote,
 		const git_remote_callbacks *callbacks,
 		int update_fetchhead,
+		git_remote_autotag_option_t download_tags,
 		const char *reflog_message)
 {
 	git_refspec *spec, tagspec;
 	git_vector refs = GIT_VECTOR_INIT;
+	git_remote_autotag_option_t tagopt;
 	int error;
 	size_t i;
 
@@ -1538,8 +1515,13 @@ int git_remote_update_tips(
 	if ((error = ls_to_vector(&refs, remote)) < 0)
 		goto out;
 
-	if (remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
-		if ((error = update_tips_for_spec(remote, callbacks, update_fetchhead, &tagspec, &refs, reflog_message)) < 0)
+	if (download_tags == GIT_REMOTE_DOWNLOAD_TAGS_FALLBACK)
+		tagopt = remote->download_tags;
+	else
+		tagopt = download_tags;
+
+	if (tagopt == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
+		if ((error = update_tips_for_spec(remote, callbacks, update_fetchhead, tagopt, &tagspec, &refs, reflog_message)) < 0)
 			goto out;
 	}
 
@@ -1547,7 +1529,7 @@ int git_remote_update_tips(
 		if (spec->push)
 			continue;
 
-		if ((error = update_tips_for_spec(remote, callbacks, update_fetchhead, spec, &refs, reflog_message)) < 0)
+		if ((error = update_tips_for_spec(remote, callbacks, update_fetchhead, tagopt, spec, &refs, reflog_message)) < 0)
 			goto out;
 	}
 
@@ -1675,9 +1657,42 @@ git_remote_autotag_option_t git_remote_autotag(const git_remote *remote)
 	return remote->download_tags;
 }
 
-void git_remote_set_autotag(git_remote *remote, git_remote_autotag_option_t value)
+int git_remote_set_autotag(git_repository *repo, const char *remote, git_remote_autotag_option_t value)
 {
-	remote->download_tags = value;
+	git_buf var = GIT_BUF_INIT;
+	git_config *config;
+	int error;
+
+	assert(repo && remote);
+
+	if ((error = ensure_remote_name_is_valid(remote)) < 0)
+		return error;
+
+	if ((error = git_repository_config__weakptr(&config, repo)) < 0)
+		return error;
+
+	if ((error = git_buf_printf(&var, CONFIG_TAGOPT_FMT, remote)))
+		return error;
+
+	switch (value) {
+	case GIT_REMOTE_DOWNLOAD_TAGS_NONE:
+		error = git_config_set_string(config, var.ptr, "--no-tags");
+		break;
+	case GIT_REMOTE_DOWNLOAD_TAGS_ALL:
+		error = git_config_set_string(config, var.ptr, "--tags");
+		break;
+	case GIT_REMOTE_DOWNLOAD_TAGS_AUTO:
+		error = git_config_delete_entry(config, var.ptr);
+		if (error == GIT_ENOTFOUND)
+			error = 0;
+		break;
+	default:
+		giterr_set(GITERR_INVALID, "Invalid value for the tagopt setting");
+		error = -1;
+	}
+
+	git_buf_free(&var);
+	return error;
 }
 
 int git_remote_prune_refs(const git_remote *remote)
@@ -2404,7 +2419,7 @@ int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_
 	if ((error = git_remote_upload(remote, refspecs, opts)) < 0)
 		return error;
 
-	error = git_remote_update_tips(remote, cbs, 0, NULL);
+	error = git_remote_update_tips(remote, cbs, 0, 0, NULL);
 
 	git_remote_disconnect(remote);
 	return error;

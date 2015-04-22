@@ -165,26 +165,26 @@ void test_network_remote_local__shorthand_fetch_refspec1(void)
 
 	cl_git_pass(git_remote_fetch(remote, &array, NULL, NULL));
 
-	cl_git_fail(git_reference_lookup(&ref, repo, "refs/remotes/master"));
-
+	cl_git_fail(git_reference_lookup(&ref, repo, "refs/remotes/origin/master"));
 	cl_git_fail(git_reference_lookup(&ref, repo, "refs/tags/hard_tag"));
 }
 
 void test_network_remote_local__tagopt(void)
 {
 	git_reference *ref;
+	git_fetch_options fetch_opts = GIT_FETCH_OPTIONS_INIT;
 
 	cl_git_pass(git_remote_create(&remote, repo, "tagopt", cl_git_path_url(cl_fixture("testrepo.git"))));
-	git_remote_set_autotag(remote, GIT_REMOTE_DOWNLOAD_TAGS_ALL);
-	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
+	fetch_opts.download_tags = GIT_REMOTE_DOWNLOAD_TAGS_ALL;
+	cl_git_pass(git_remote_fetch(remote, NULL, &fetch_opts, NULL));
 
 	cl_git_pass(git_reference_lookup(&ref, repo, "refs/remotes/tagopt/master"));
 	git_reference_free(ref);
 	cl_git_pass(git_reference_lookup(&ref, repo, "refs/tags/hard_tag"));
 	git_reference_free(ref);
 
-	git_remote_set_autotag(remote, GIT_REMOTE_DOWNLOAD_TAGS_AUTO);
-	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
+	fetch_opts.download_tags = GIT_REMOTE_DOWNLOAD_TAGS_AUTO;
+	cl_git_pass(git_remote_fetch(remote, NULL, &fetch_opts, NULL));
 	cl_git_pass(git_reference_lookup(&ref, repo, "refs/remotes/tagopt/master"));
 	git_reference_free(ref);
 }
@@ -240,9 +240,7 @@ void test_network_remote_local__push_to_bare_remote_with_file_url(void)
 
 	/* Get some commits */
 	connect_to_local_repository(cl_fixture("testrepo.git"));
-	cl_git_pass(git_remote_download(remote, &array, NULL));
-	cl_git_pass(git_remote_update_tips(remote, NULL, 1, NULL));
-	git_remote_disconnect(remote);
+	cl_git_pass(git_remote_fetch(remote, &array, NULL, NULL));
 
 	/* Set up an empty bare repo to push into */
 	{
@@ -278,12 +276,11 @@ void test_network_remote_local__push_to_non_bare_remote(void)
 	};
 	/* Shouldn't be able to push to a non-bare remote */
 	git_remote *localremote;
+	git_fetch_options fetch_opts = GIT_FETCH_OPTIONS_INIT;
 
 	/* Get some commits */
 	connect_to_local_repository(cl_fixture("testrepo.git"));
-	cl_git_pass(git_remote_download(remote, &array, NULL));
-	cl_git_pass(git_remote_update_tips(remote, NULL, 1, NULL));
-	git_remote_disconnect(remote);
+	cl_git_pass(git_remote_fetch(remote, &array, &fetch_opts, NULL));
 
 	/* Set up an empty non-bare repo to push into */
 	{
@@ -349,8 +346,7 @@ void test_network_remote_local__reflog(void)
 
 	connect_to_local_repository(cl_fixture("testrepo.git"));
 
-	cl_git_pass(git_remote_download(remote, &array, NULL));
-	cl_git_pass(git_remote_update_tips(remote, NULL, 1, "UPDAAAAAATE!!"));
+	cl_git_pass(git_remote_fetch(remote, &array, NULL, "UPDAAAAAATE!!"));
 
 	cl_git_pass(git_reflog_read(&log, repo, "refs/remotes/sloppy/master"));
 	cl_assert_equal_i(1, git_reflog_entrycount(log));

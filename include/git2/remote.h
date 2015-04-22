@@ -526,6 +526,31 @@ typedef enum {
 	GIT_FETCH_NO_PRUNE,
 } git_fetch_prune_t;
 
+/**
+ * Automatic tag following option
+ *
+ * Lets us select the --tags option to use.
+ */
+typedef enum {
+	/**
+	 * Use the setting from the configuration.
+	 */
+	GIT_REMOTE_DOWNLOAD_TAGS_FALLBACK = 0,
+	/**
+	 * Ask the server for tags pointing to objects we're already
+	 * downloading.
+	 */
+	GIT_REMOTE_DOWNLOAD_TAGS_AUTO,
+	/**
+	 * Don't ask for any tags beyond the refspecs.
+	 */
+	GIT_REMOTE_DOWNLOAD_TAGS_NONE,
+	/**
+	 * Ask for the all the tags.
+	 */
+	GIT_REMOTE_DOWNLOAD_TAGS_ALL,
+} git_remote_autotag_option_t;
+
 typedef struct {
 	int version;
 
@@ -544,6 +569,15 @@ typedef struct {
 	 * on. Leave this default in order to behave like git.
 	 */
 	int update_fetchhead;
+
+	/**
+	 * Determines how to behave regarding tags on the remote, such
+	 * as auto-downloading tags for objects we're downloading or
+	 * downloading all of them.
+	 *
+	 * The default is to auto-follow tags.
+	 */
+	git_remote_autotag_option_t download_tags;
 } git_fetch_options;
 
 #define GIT_FETCH_OPTIONS_VERSION 1
@@ -643,12 +677,15 @@ GIT_EXTERN(int) git_remote_upload(git_remote *remote, const git_strarray *refspe
  * parameter is ignored when pushing.
  * @param callbacks  pointer to the callback structure to use
  * @param update_fetchhead whether to write to FETCH_HEAD. Pass 1 to behave like git.
+ * @param download_tags what the behaviour for downloading tags is for this fetch. This is
+ * ignored for push. This must be the same value passed to `git_remote_download()`.
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_remote_update_tips(
 		git_remote *remote,
 		const git_remote_callbacks *callbacks,
 		int update_fetchhead,
+		git_remote_autotag_option_t download_tags,
 		const char *reflog_message);
 
 /**
@@ -700,17 +737,6 @@ GIT_EXTERN(int) git_remote_push(git_remote *remote,
 GIT_EXTERN(const git_transfer_progress *) git_remote_stats(git_remote *remote);
 
 /**
- * Automatic tag following option
- *
- * Lets us select the --tags option to use.
- */
-typedef enum {
-	GIT_REMOTE_DOWNLOAD_TAGS_AUTO = 0,
-	GIT_REMOTE_DOWNLOAD_TAGS_NONE = 1,
-	GIT_REMOTE_DOWNLOAD_TAGS_ALL = 2
-} git_remote_autotag_option_t;
-
-/**
  * Retrieve the tag auto-follow setting
  *
  * @param remote the remote to query
@@ -719,15 +745,16 @@ typedef enum {
 GIT_EXTERN(git_remote_autotag_option_t) git_remote_autotag(const git_remote *remote);
 
 /**
- * Set the tag auto-follow setting
+ * Set the remote's tag following setting.
  *
- * @param remote the remote to configure
- * @param value a GIT_REMOTE_DOWNLOAD_TAGS value
+ * The change will be made in the configuration. No loaded remotes
+ * will be affected.
+ *
+ * @param repo the repository in which to make the change
+ * @param remote the name of the remote
+ * @param value the new value to take.
  */
-GIT_EXTERN(void) git_remote_set_autotag(
-	git_remote *remote,
-	git_remote_autotag_option_t value);
-
+GIT_EXTERN(int) git_remote_set_autotag(git_repository *repo, const char *remote, git_remote_autotag_option_t value);
 /**
  * Retrieve the ref-prune setting
  *
