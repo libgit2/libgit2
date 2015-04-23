@@ -179,16 +179,17 @@ GIT_EXTERN(int) git_remote_set_url(git_repository *repo, const char *remote, con
 GIT_EXTERN(int) git_remote_set_pushurl(git_repository *repo, const char *remote, const char* url);
 
 /**
- * Add a fetch refspec to the remote
+ * Add a fetch refspec to the remote's configuration
  *
- * Convenience function for adding a single fetch refspec to the
- * current list in the remote.
+ * Add the given refspec to the fetch list in the configuration. No
+ * loaded remote instances will be affected.
  *
- * @param remote the remote
+ * @param repo the repository in which to change the configuration
+ * @param remote the name of the remote to change
  * @param refspec the new fetch refspec
  * @return 0 or an error value
  */
-GIT_EXTERN(int) git_remote_add_fetch(git_remote *remote, const char *refspec);
+GIT_EXTERN(int) git_remote_add_fetch(git_repository *repo, const char *remote, const char *refspec);
 
 /**
  * Get the remote's list of fetch refspecs
@@ -212,16 +213,17 @@ GIT_EXTERN(int) git_remote_get_fetch_refspecs(git_strarray *array, const git_rem
 GIT_EXTERN(int) git_remote_set_fetch_refspecs(git_remote *remote, git_strarray *array);
 
 /**
- * Add a push refspec to the remote
+ * Add a push refspec to the remote's configuration
  *
- * Convenience function for adding a single push refspec to the
- * current list in the remote.
+ * Add the given refspec to the push list in the configuration. No
+ * loaded remote instances will be affected.
  *
- * @param remote the remote
+ * @param repo the repository in which to change the configuration
+ * @param remote the name of the remote to change
  * @param refspec the new push refspec
  * @return 0 or an error value
  */
-GIT_EXTERN(int) git_remote_add_push(git_remote *remote, const char *refspec);
+GIT_EXTERN(int) git_remote_add_push(git_repository *repo, const char *remote, const char *refspec);
 
 /**
  * Get the remote's list of push refspecs
@@ -243,15 +245,6 @@ GIT_EXTERN(int) git_remote_get_push_refspecs(git_strarray *array, const git_remo
  * @param array the new list of push resfpecs
  */
 GIT_EXTERN(int) git_remote_set_push_refspecs(git_remote *remote, git_strarray *array);
-
-/**
- * Clear the refspecs
- *
- * Remove all configured fetch and push refspecs from the remote.
- *
- * @param remote the remote
- */
-GIT_EXTERN(void) git_remote_clear_refspecs(git_remote *remote);
 
 /**
  * Get the number of refspecs for a remote

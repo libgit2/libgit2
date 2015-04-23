@@ -115,9 +115,12 @@ void test_network_remote_remotes__add_fetchspec(void)
 
 	size = git_remote_refspec_count(_remote);
 
-	cl_git_pass(git_remote_add_fetch(_remote, "refs/*:refs/*"));
-
+	cl_git_pass(git_remote_add_fetch(_repo, "test", "refs/*:refs/*"));
 	size++;
+
+	git_remote_free(_remote);
+	cl_git_pass(git_remote_lookup(&_remote, _repo, "test"));
+
 	cl_assert_equal_i((int)size, (int)git_remote_refspec_count(_remote));
 
 	_refspec = git_remote_get_refspec(_remote, size - 1);
@@ -156,8 +159,12 @@ void test_network_remote_remotes__add_pushspec(void)
 
 	size = git_remote_refspec_count(_remote);
 
-	cl_git_pass(git_remote_add_push(_remote, "refs/*:refs/*"));
+	cl_git_pass(git_remote_add_push(_repo, "test", "refs/*:refs/*"));
 	size++;
+
+	git_remote_free(_remote);
+	cl_git_pass(git_remote_lookup(&_remote, _repo, "test"));
+
 	cl_assert_equal_i((int)size, (int)git_remote_refspec_count(_remote));
 
 	_refspec = git_remote_get_refspec(_remote, size - 1);
@@ -166,60 +173,6 @@ void test_network_remote_remotes__add_pushspec(void)
 	cl_assert_equal_s(git_refspec_string(_refspec), "refs/*:refs/*");
 
 	cl_assert_equal_b(_refspec->push, true);
-}
-
-void test_network_remote_remotes__save(void)
-{
-	git_strarray array;
-	const char *fetch_refspec1 = "refs/heads/ns1/*:refs/remotes/upstream/ns1/*";
-	const char *fetch_refspec2 = "refs/heads/ns2/*:refs/remotes/upstream/ns2/*";
-	const char *push_refspec1 = "refs/heads/ns1/*:refs/heads/ns1/*";
-	const char *push_refspec2 = "refs/heads/ns2/*:refs/heads/ns2/*";
-
-	git_remote_free(_remote);
-	_remote = NULL;
-
-	/* Set up the remote and save it to config */
-	cl_git_pass(git_remote_create(&_remote, _repo, "upstream", "git://github.com/libgit2/libgit2"));
-	git_remote_free(_remote);
-	cl_git_pass(git_remote_set_pushurl(_repo, "upstream", "git://github.com/libgit2/libgit2_push"));
-	cl_git_pass(git_remote_lookup(&_remote, _repo, "upstream"));
-
-	git_remote_clear_refspecs(_remote);
-
-	cl_git_pass(git_remote_add_fetch(_remote, fetch_refspec1));
-	cl_git_pass(git_remote_add_fetch(_remote, fetch_refspec2));
-	cl_git_pass(git_remote_add_push(_remote, push_refspec1));
-	cl_git_pass(git_remote_add_push(_remote, push_refspec2));
-	cl_git_pass(git_remote_save(_remote));
-	git_remote_free(_remote);
-	_remote = NULL;
-
-	/* Load it from config and make sure everything matches */
-	cl_git_pass(git_remote_lookup(&_remote, _repo, "upstream"));
-
-	cl_git_pass(git_remote_get_fetch_refspecs(&array, _remote));
-	cl_assert_equal_i(2, (int)array.count);
-	cl_assert_equal_s(fetch_refspec1, array.strings[0]);
-	cl_assert_equal_s(fetch_refspec2, array.strings[1]);
-	git_strarray_free(&array);
-
-	cl_git_pass(git_remote_get_push_refspecs(&array, _remote));
-	cl_assert_equal_i(2, (int)array.count);
-	cl_assert_equal_s(push_refspec1, array.strings[0]);
-	cl_assert_equal_s(push_refspec2, array.strings[1]);
-	git_strarray_free(&array);
-
-	cl_assert_equal_s(git_remote_url(_remote), "git://github.com/libgit2/libgit2");
-	cl_assert_equal_s(git_remote_pushurl(_remote), "git://github.com/libgit2/libgit2_push");
-
-	git_remote_free(_remote);
-	_remote = NULL;
-
-	/* remove the pushurl again and see if we can save that too */
-	cl_git_pass(git_remote_set_pushurl(_repo, "upstream", NULL));
-	cl_git_pass(git_remote_lookup(&_remote, _repo, "upstream"));
-	cl_assert(git_remote_pushurl(_remote) == NULL);
 }
 
 void test_network_remote_remotes__fnmatch(void)
@@ -499,12 +452,15 @@ void test_network_remote_remotes__query_refspecs(void)
 	git_strarray array;
 	int i;
 
-	cl_git_pass(git_remote_create_anonymous(&remote, _repo, "git://github.com/libgit2/libgit2", NULL));
+	cl_git_pass(git_remote_create_with_fetchspec(&remote, _repo, "query", "git://github.com/libgit2/libgit2", NULL));
+	git_remote_free(remote);
 
 	for (i = 0; i < 3; i++) {
-		cl_git_pass(git_remote_add_fetch(remote, fetch_refspecs[i]));
-		cl_git_pass(git_remote_add_push(remote, push_refspecs[i]));
+		cl_git_pass(git_remote_add_fetch(_repo, "query", fetch_refspecs[i]));
+		cl_git_pass(git_remote_add_push(_repo, "query", push_refspecs[i]));
 	}
+
+	cl_git_pass(git_remote_lookup(&remote, _repo, "query"));
 
 	cl_git_pass(git_remote_get_fetch_refspecs(&array, remote));
 	for (i = 0; i < 3; i++) {
@@ -519,6 +475,7 @@ void test_network_remote_remotes__query_refspecs(void)
 	git_strarray_free(&array);
 
 	git_remote_free(remote);
+	git_remote_delete(_repo, "test");
 }
 
 void test_network_remote_remotes__fetch_from_anonymous(void)

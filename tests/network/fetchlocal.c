@@ -358,15 +358,8 @@ static int remote_mirror_cb(git_remote **out, git_repository *repo,
 
 	GIT_UNUSED(payload);
 
-	if ((error = git_remote_create(&remote, repo, name, url)) < 0)
+	if ((error = git_remote_create_with_fetchspec(&remote, repo, name, url, "+refs/*:refs/*")) < 0)
 		return error;
-
-	git_remote_clear_refspecs(remote);
-
-	if ((error = git_remote_add_fetch(remote, "+refs/*:refs/*")) < 0) {
-		git_remote_free(remote);
-		return error;
-	}
 
 	*out = remote;
 	return 0;

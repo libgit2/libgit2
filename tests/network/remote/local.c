@@ -161,7 +161,6 @@ void test_network_remote_local__shorthand_fetch_refspec1(void)
 	git_reference *ref;
 
 	connect_to_local_repository(cl_fixture("testrepo.git"));
-	git_remote_clear_refspecs(remote);
 
 	cl_git_pass(git_remote_fetch(remote, &array, NULL, NULL));
 

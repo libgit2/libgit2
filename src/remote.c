@@ -23,6 +23,7 @@
 #define CONFIG_URL_FMT "remote.%s.url"
 #define CONFIG_PUSHURL_FMT "remote.%s.pushurl"
 #define CONFIG_FETCH_FMT "remote.%s.fetch"
+#define CONFIG_PUSH_FMT "remote.%s.push"
 #define CONFIG_TAGOPT_FMT "remote.%s.tagopt"
 
 static int dwim_refspecs(git_vector *out, git_vector *refspecs, git_vector *refs);
@@ -90,6 +91,38 @@ static int ensure_remote_name_is_valid(const char *name)
 	}
 
 	return error;
+}
+
+static int write_add_refspec(git_repository *repo, const char *name, const char *refspec, bool fetch)
+{
+	git_config *cfg;
+	git_buf var = GIT_BUF_INIT;
+	const char *fmt;
+	int error;
+
+	if ((error = git_repository_config__weakptr(&cfg, repo)) < 0)
+	    return error;
+
+	fmt = fetch ? CONFIG_FETCH_FMT : CONFIG_PUSH_FMT;
+
+	if ((error = ensure_remote_name_is_valid(name)) < 0)
+		return error;
+
+	if ((error = git_buf_printf(&var, fmt, name)) < 0)
+		return error;
+
+	/*
+	 * "$^" is a unmatcheable regexp: it will not match anything at all, so
+	 * all values will be considered new and we will not replace any
+	 * present value.
+	 */
+	if ((error = git_config_set_multivar(cfg, var.ptr, "$^", refspec)) < 0) {
+		goto cleanup;
+	}
+
+cleanup:
+	git_buf_free(&var);
+	return 0;
 }
 
 #if 0
@@ -178,7 +211,11 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 	}
 
 	if (fetch != NULL) {
-		if (add_refspec(remote, fetch, true) < 0)
+		if ((error = add_refspec(remote, fetch, true)) < 0)
+			goto on_error;
+
+		/* only write for non-anonymous remotes */
+		if (name && (error = write_add_refspec(repo, name, fetch, true)) < 0)
 			goto on_error;
 
 		if ((error = git_repository_config_snapshot(&config, repo)) < 0)
@@ -562,8 +599,6 @@ int git_remote_save(const git_remote *remote)
 {
 	int error;
 	git_config *cfg;
-	git_buf buf = GIT_BUF_INIT;
-	git_config_entry *existing = NULL;
 
 	assert(remote);
 
@@ -578,17 +613,6 @@ int git_remote_save(const git_remote *remote)
 	if ((error = git_repository_config__weakptr(&cfg, remote->repo)) < 0)
 		return error;
 
-	/* after this point, buffer is allocated so end with cleanup */
-
-	if ((error = update_config_refspec(remote, cfg, GIT_DIRECTION_FETCH)) < 0)
-		goto cleanup;
-
-	if ((error = update_config_refspec(remote, cfg, GIT_DIRECTION_PUSH)) < 0)
-		goto cleanup;
-
-cleanup:
-	git_config_entry_free(existing);
-	git_buf_free(&buf);
 	return error;
 }
 
@@ -2015,26 +2039,14 @@ git_refspec *git_remote__matching_dst_refspec(git_remote *remote, const char *re
 	return NULL;
 }
 
-void git_remote_clear_refspecs(git_remote *remote)
+int git_remote_add_fetch(git_repository *repo, const char *remote, const char *refspec)
 {
-	git_refspec *spec;
-	size_t i;
-
-	git_vector_foreach(&remote->refspecs, i, spec) {
-		git_refspec__free(spec);
-		git__free(spec);
-	}
-	git_vector_clear(&remote->refspecs);
+	return write_add_refspec(repo, remote, refspec, true);
 }
 
-int git_remote_add_fetch(git_remote *remote, const char *refspec)
+int git_remote_add_push(git_repository *repo, const char *remote, const char *refspec)
 {
-	return add_refspec(remote, refspec, true);
-}
-
-int git_remote_add_push(git_remote *remote, const char *refspec)
-{
-	return add_refspec(remote, refspec, false);
+	return write_add_refspec(repo, remote, refspec, false);
 }
 
 static int set_refspecs(git_remote *remote, git_strarray *array, int push)

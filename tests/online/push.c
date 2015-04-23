@@ -861,6 +861,7 @@ void test_online_push__configured(void)
 {
 	git_oid note_oid, *target_oid, expected_oid;
 	git_signature *signature;
+	git_remote *old_remote;
 	const char *specs[] = { "refs/notes/commits:refs/notes/commits" };
 	push_status exp_stats[] = { { "refs/notes/commits", 1 } };
 	expected_ref exp_refs[] = { { "refs/notes/commits", &expected_oid } };
@@ -870,7 +871,10 @@ void test_online_push__configured(void)
 
 	target_oid = &_oid_b6;
 
-	cl_git_pass(git_remote_add_push(_remote, specs[0]));
+	cl_git_pass(git_remote_add_push(_repo, git_remote_name(_remote), specs[0]));
+	old_remote = _remote;
+	cl_git_pass(git_remote_lookup(&_remote, _repo, git_remote_name(_remote)));
+	git_remote_free(old_remote);
 
 	/* Create note to push */
 	cl_git_pass(git_signature_new(&signature, "nulltoken", "emeric.fermas@gmail.com", 1323847743, 60)); /* Wed Dec 14 08:29:03 2011 +0100 */

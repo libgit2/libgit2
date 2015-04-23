@@ -57,12 +57,7 @@ void test_refs_branches_remote__ambiguous_remote_returns_error(void)
 	git_buf buf;
 
 	/* Create the remote */
-	cl_git_pass(git_remote_create(&remote, g_repo, "addtest", "http://github.com/libgit2/libgit2"));
-
-	/* Update the remote fetch spec */
-	git_remote_clear_refspecs(remote);
-	cl_git_pass(git_remote_add_fetch(remote, "refs/heads/*:refs/remotes/test/*"));
-	cl_git_pass(git_remote_save(remote));
+	cl_git_pass(git_remote_create_with_fetchspec(&remote, g_repo, "addtest", "http://github.com/libgit2/libgit2", "refs/heads/*:refs/remotes/test/*"));
 
 	git_remote_free(remote);
 
