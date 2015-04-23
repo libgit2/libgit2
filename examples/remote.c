@@ -151,7 +151,6 @@ static int cmd_seturl(git_repository *repo, struct opts *o)
 {
 	int i, retval, push = 0;
 	char *name = NULL, *url = NULL;
-	git_remote *remote;
 
 	for (i = 0; i < o->argc; i++) {
 		char *arg = o->argv[i];
@@ -170,19 +169,12 @@ static int cmd_seturl(git_repository *repo, struct opts *o)
 	if (name == NULL || url == NULL)
 		usage("you need to specify remote and the new URL", NULL);
 
-	check_lg2(git_remote_lookup(&remote, repo, name),
-			"could not look up remote", name);
-
 	if (push)
-		retval = git_remote_set_pushurl(remote, url);
+		retval = git_remote_set_pushurl(repo, name, url);
 	else
-		retval = git_remote_set_url(remote, url);
+		retval = git_remote_set_url(repo, name, url);
+
 	check_lg2(retval, "could not set URL", url);
-
-	check_lg2(git_remote_save(remote),
-			"could not save remote", NULL);
-
-	git_remote_free(remote);
 
 	return 0;
 }
