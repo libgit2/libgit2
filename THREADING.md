@@ -41,11 +41,21 @@ both of which are thread-safe. You do not need to do anything special.
 
 When using libssh2 which itself uses WinCNG, there are no special
 steps necessary. If you are using a MinGW or similar environment where
-libssh2 uses OpenSSL or libgcrypt, then the non-Windows case affects
+libssh2 uses OpenSSL or libgcrypt, then the general case affects
 you.
 
-Non-Windows
+On Mac OS X
 -----------
+
+On OS X, the library makes use of CommonCrypto and SecureTransport for
+cryptographic support. These are thread-safe and you do not need to do
+anything special.
+
+Note that libssh2 may still use OpenSSL itself. In that case, the
+general case still affects you if you use ssh.
+
+General Case
+------------
 
 On the rest of the platforms, libgit2 uses OpenSSL to be able to use
 HTTPS as a transport. This library is made to be thread-implementation
@@ -71,8 +81,8 @@ See the
 [OpenSSL documentation](https://www.openssl.org/docs/crypto/threads.html)
 on threading for more details.
 
-Be also aware that libgit2 may not always link against OpenSSL in the
-future if there are alternatives provided by the system.
+Be also aware that libgit2 does not always link against OpenSSL
+if there are alternatives provided by the system.
 
 libssh2 may be linked against OpenSSL or libgcrypt. If it uses
 OpenSSL, you only need to set up threading for OpenSSL once and the

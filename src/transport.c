@@ -29,7 +29,7 @@ static transport_definition local_transport_definition = { "file://", git_transp
 static transport_definition transports[] = {
 	{ "git://",   git_transport_smart, &git_subtransport_definition },
 	{ "http://",  git_transport_smart, &http_subtransport_definition },
-#if defined(GIT_SSL) || defined(GIT_WINHTTP)
+#if defined(GIT_OPENSSL) || defined(GIT_WINHTTP) || defined(GIT_SECURE_TRANSPORT)
 	{ "https://", git_transport_smart, &http_subtransport_definition },
 #endif
 	{ "file://",  git_transport_local, NULL },

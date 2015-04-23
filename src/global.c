@@ -17,7 +17,7 @@ git_mutex git__mwindow_mutex;
 
 #define MAX_SHUTDOWN_CB 8
 
-#ifdef GIT_SSL
+#ifdef GIT_OPENSSL
 # include <openssl/ssl.h>
 SSL_CTX *git__ssl_ctx;
 # ifdef GIT_THREADS
@@ -57,7 +57,7 @@ static void git__shutdown(void)
 	}
 }
 
-#if defined(GIT_THREADS) && defined(GIT_SSL)
+#if defined(GIT_THREADS) && defined(GIT_OPENSSL)
 void openssl_locking_function(int mode, int n, const char *file, int line)
 {
 	int lock;
@@ -89,7 +89,7 @@ static void shutdown_ssl_locking(void)
 
 static void init_ssl(void)
 {
-#ifdef GIT_SSL
+#ifdef GIT_OPENSSL
 	long ssl_opts = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
 
 	/* Older OpenSSL and MacOS OpenSSL doesn't have this */
@@ -118,7 +118,7 @@ static void init_ssl(void)
 
 int git_openssl_set_locking(void)
 {
-#ifdef GIT_SSL
+#ifdef GIT_OPENSSL
 # ifdef GIT_THREADS
 	int num_locks, i;
 
