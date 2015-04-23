@@ -153,6 +153,85 @@ void test_index_filemodes__trusted(void)
 	git_index_free(index);
 }
 
+#define add_entry_and_check_mode(I,FF,X) add_entry_and_check_mode_(I,FF,X,__FILE__,__LINE__)
+
+static void add_entry_and_check_mode_(
+	git_index *index, bool from_file, git_filemode_t mode,
+	const char *file, int line)
+{
+	size_t pos;
+	const git_index_entry* entry;
+	git_index_entry new_entry;
+
+	/* If old_filename exists, we copy that to the new file, and test
+	 * git_index_add(), otherwise create a new entry testing git_index_add_frombuffer
+	 */
+	if (from_file)
+	{
+		clar__assert(!git_index_find(&pos, index, "exec_off"),
+			file, line, "Cannot find original index entry", NULL, 1);
+
+		entry = git_index_get_byindex(index, pos);
+
+		memcpy(&new_entry, entry, sizeof(new_entry));
+	}
+	else
+		memset(&new_entry, 0x0, sizeof(git_index_entry));
+
+	new_entry.path = "filemodes/explicit_test";
+	new_entry.mode = mode;
+
+	if (from_file)
+	{
+		clar__assert(!git_index_add(index, &new_entry),
+			file, line, "Cannot add index entry", NULL, 1);
+	}
+	else
+	{
+		const char *content = "hey there\n";
+		clar__assert(!git_index_add_frombuffer(index, &new_entry, content, strlen(content)),
+			file, line, "Cannot add index entry from buffer", NULL, 1);
+	}
+
+	clar__assert(!git_index_find(&pos, index, "filemodes/explicit_test"),
+		file, line, "Cannot find new index entry", NULL, 1);
+
+	entry = git_index_get_byindex(index, pos);
+
+	clar__assert_equal(file, line, "Expected mode does not match index",
+		1, "%07o", (unsigned int)entry->mode, (unsigned int)mode);
+}
+
+void test_index_filemodes__explicit(void)
+{
+	git_index *index;
+
+	/* These tests should run and work everywhere, as the filemode is
+	 * given explicitly to git_index_add or git_index_add_frombuffer
+	 */
+	cl_repo_set_bool(g_repo, "core.filemode", false);
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	/* Each of these tests keeps overwriting the same file in the index. */
+	/* 1 - add new 0644 entry  */
+	add_entry_and_check_mode(index, true, GIT_FILEMODE_BLOB);
+
+	/* 2 - add 0755 entry over existing 0644 */
+	add_entry_and_check_mode(index, true, GIT_FILEMODE_BLOB_EXECUTABLE);
+
+	/* 3 - add 0644 entry over existing 0755 */
+	add_entry_and_check_mode(index, true, GIT_FILEMODE_BLOB);
+
+	/* 4 - add 0755 buffer entry over existing 0644  */
+	add_entry_and_check_mode(index, false, GIT_FILEMODE_BLOB_EXECUTABLE);
+
+	/* 5 - add 0644 buffer entry over existing 0755 */
+	add_entry_and_check_mode(index, false, GIT_FILEMODE_BLOB);
+
+	git_index_free(index);
+}
+
 void test_index_filemodes__invalid(void)
 {
 	git_index *index;

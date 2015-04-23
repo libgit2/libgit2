@@ -987,9 +987,10 @@ static int index_no_dups(void **old, void *new)
  * it, then it will return an error **and also free the entry**.  When
  * it replaces an existing entry, it will update the entry_ptr with the
  * actual entry in the index (and free the passed in one).
+ * trust_mode is whether we trust the mode in entry_ptr.
  */
 static int index_insert(
-	git_index *index, git_index_entry **entry_ptr, int replace)
+	git_index *index, git_index_entry **entry_ptr, int replace, bool trust_mode)
 {
 	int error = 0;
 	size_t path_length, position;
@@ -1021,7 +1022,10 @@ static int index_insert(
 			&position, index, entry->path, 0, GIT_IDXENTRY_STAGE(entry), false)) {
 		existing = index->entries.contents[position];
 		/* update filemode to existing values if stat is not trusted */
-		entry->mode = index_merge_mode(index, existing, entry->mode);
+		if (trust_mode)
+			entry->mode = git_index__create_mode(entry->mode);
+		else
+			entry->mode = index_merge_mode(index, existing, entry->mode);
 	}
 
 	/* look for tree / blob name collisions, removing conflicts if requested */
@@ -1122,7 +1126,7 @@ int git_index_add_frombuffer(
 	git_oid_cpy(&entry->id, &id);
 	entry->file_size = len;
 
-	if ((error = index_insert(index, &entry, 1)) < 0)
+	if ((error = index_insert(index, &entry, 1, true)) < 0)
 		return error;
 
 	/* Adding implies conflict was resolved, move conflict entries to REUC */
@@ -1142,7 +1146,7 @@ int git_index_add_bypath(git_index *index, const char *path)
 	assert(index && path);
 
 	if ((ret = index_entry_init(&entry, index, path)) < 0 ||
-		(ret = index_insert(index, &entry, 1)) < 0)
+		(ret = index_insert(index, &entry, 1, false)) < 0)
 		return ret;
 
 	/* Adding implies conflict was resolved, move conflict entries to REUC */
@@ -1182,7 +1186,7 @@ int git_index_add(git_index *index, const git_index_entry *source_entry)
 	}
 
 	if ((ret = index_entry_dup(&entry, INDEX_OWNER(index), source_entry)) < 0 ||
-		(ret = index_insert(index, &entry, 1)) < 0)
+		(ret = index_insert(index, &entry, 1, true)) < 0)
 		return ret;
 
 	git_tree_cache_invalidate_path(index->tree, entry->path);
@@ -1313,7 +1317,7 @@ int git_index_conflict_add(git_index *index,
 		/* Make sure stage is correct */
 		GIT_IDXENTRY_STAGE_SET(entries[i], i + 1);
 
-		if ((ret = index_insert(index, &entries[i], 1)) < 0)
+		if ((ret = index_insert(index, &entries[i], 1, true)) < 0)
 			goto on_error;
 
 		entries[i] = NULL; /* don't free if later entry fails */
@@ -2537,7 +2541,7 @@ int git_index_add_all(
 		entry->id = blobid;
 
 		/* add working directory item to index */
-		if ((error = index_insert(index, &entry, 1)) < 0)
+		if ((error = index_insert(index, &entry, 1, false)) < 0)
 			break;
 
 		git_tree_cache_invalidate_path(index->tree, wd->path);
