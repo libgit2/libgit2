@@ -279,9 +279,6 @@ static int create_and_configure_origin(
 	if ((error = remote_create(&origin, repo, "origin", url, payload)) < 0)
 		goto on_error;
 
-	if ((error = git_remote_save(origin)) < 0)
-		goto on_error;
-
 	*out = origin;
 	return 0;
 

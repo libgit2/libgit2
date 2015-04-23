@@ -302,9 +302,6 @@ int git_remote_create_with_fetchspec(git_remote **out, git_repository *repo, con
 	if (create_internal(&remote, repo, name, url, fetch) < 0)
 		goto on_error;
 
-	if (git_remote_save(remote) < 0)
-		goto on_error;
-
 	*out = remote;
 
 	return 0;
@@ -591,27 +588,6 @@ static int update_config_refspec(const git_remote *remote, git_config *config, i
 
 cleanup:
 	git_buf_free(&name);
-
-	return error;
-}
-
-int git_remote_save(const git_remote *remote)
-{
-	int error;
-	git_config *cfg;
-
-	assert(remote);
-
-	if (!remote->name) {
-		giterr_set(GITERR_INVALID, "Can't save an anonymous remote.");
-		return GIT_EINVALIDSPEC;
-	}
-
-	if ((error = ensure_remote_name_is_valid(remote->name)) < 0)
-		return error;
-
-	if ((error = git_repository_config__weakptr(&cfg, remote->repo)) < 0)
-		return error;
 
 	return error;
 }

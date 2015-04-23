@@ -319,18 +319,6 @@ void test_network_remote_remotes__cannot_add_a_nameless_remote(void)
 		git_remote_create(&remote, _repo, NULL, "git://github.com/libgit2/libgit2"));
 }
 
-void test_network_remote_remotes__cannot_save_an_inmemory_remote(void)
-{
-	git_remote *remote;
-
-	cl_git_pass(git_remote_create_anonymous(&remote, _repo, "git://github.com/libgit2/libgit2", NULL));
-
-	cl_assert_equal_p(NULL, git_remote_name(remote));
-
-	cl_git_fail(git_remote_save(remote));
-	git_remote_free(remote);
-}
-
 void test_network_remote_remotes__cannot_add_a_remote_with_an_invalid_name(void)
 {
 	git_remote *remote = NULL;

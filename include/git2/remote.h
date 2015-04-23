@@ -28,8 +28,7 @@ GIT_BEGIN_DECL
 typedef int (*git_remote_rename_problem_cb)(const char *problematic_refspec, void *payload);
 
 /**
- * Add a remote with the default fetch refspec to the repository's configuration.  This
- * calls git_remote_save before returning.
+ * Add a remote with the default fetch refspec to the repository's configuration.
  *
  * @param out the resulting remote
  * @param repo the repository in which to create the remote
@@ -45,8 +44,7 @@ GIT_EXTERN(int) git_remote_create(
 
 /**
  * Add a remote with the provided fetch refspec (or default if NULL) to the repository's
- * configuration.  This
- * calls git_remote_save before returning.
+ * configuration.
  *
  * @param out the resulting remote
  * @param repo the repository in which to create the remote
@@ -96,17 +94,6 @@ GIT_EXTERN(int) git_remote_create_anonymous(
  * @return 0, GIT_ENOTFOUND, GIT_EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_remote_lookup(git_remote **out, git_repository *repo, const char *name);
-
-/**
- * Save a remote to its repository's configuration
- *
- * One can't save a in-memory remote. Doing so will
- * result in a GIT_EINVALIDSPEC being returned.
- *
- * @param remote the remote to save to config
- * @return 0, GIT_EINVALIDSPEC or an error code
- */
-GIT_EXTERN(int) git_remote_save(const git_remote *remote);
 
 /**
  * Create a copy of an existing remote.  All internal strings are also
