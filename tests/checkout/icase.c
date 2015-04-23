@@ -6,6 +6,8 @@
 
 #ifdef GIT_WIN32
 # include <windows.h>
+#else
+# include <dirent.h>
 #endif
 
 static git_repository *repo;
@@ -40,7 +42,7 @@ void test_checkout_icase__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-static char *test_realpath(const char *in)
+static char *get_filename(const char *in)
 {
 #ifdef GIT_WIN32
 	HANDLE fh;
@@ -65,7 +67,31 @@ static char *test_realpath(const char *in)
 
 	return filename;
 #else
-	return realpath(in, NULL);
+	char *search_dirname, *search_filename, *filename = NULL;
+	git_buf out = GIT_BUF_INIT;
+	DIR *dir;
+	struct dirent *de;
+
+	cl_assert(search_dirname = git_path_dirname(in));
+	cl_assert(search_filename = git_path_basename(in));
+
+	cl_assert(dir = opendir(search_dirname));
+
+	while ((de = readdir(dir))) {
+		if (strcasecmp(de->d_name, search_filename) == 0) {
+			git_buf_join(&out, '/', search_dirname, de->d_name);
+			filename = git_buf_detach(&out);
+			break;
+		}
+	}
+
+	closedir(dir);
+
+	git__free(search_dirname);
+	git__free(search_filename);
+	git_buf_free(&out);
+
+	return filename;
 #endif
 }
 
@@ -74,7 +100,7 @@ static void assert_name_is(const char *expected)
 	char *actual;
 	size_t actual_len, expected_len, start;
 
-	cl_assert(actual = test_realpath(expected));
+	cl_assert(actual = get_filename(expected));
 
 	expected_len = strlen(expected);
 	actual_len = strlen(actual);
