@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 
 #include "git2/checkout.h"
+#include "refs.h"
 #include "path.h"
 
 #ifdef GIT_WIN32
@@ -14,8 +15,17 @@ static git_checkout_options checkout_opts;
 void test_checkout_icase__initialize(void)
 {
 	git_oid id;
+	git_config *cfg;
+	int icase = 0;
 
 	repo = cl_git_sandbox_init("testrepo");
+
+	cl_git_pass(git_repository_config_snapshot(&cfg, repo));
+	git_config_get_bool(&icase, cfg, "core.ignorecase");
+	git_config_free(cfg);
+
+	if (!icase)
+		cl_skip();
 
 	cl_git_pass(git_reference_name_to_id(&id, repo, "refs/heads/dir"));
 	cl_git_pass(git_object_lookup(&obj, repo, &id, GIT_OBJ_ANY));
@@ -212,3 +222,54 @@ void test_checkout_icase__overwrites_links_for_folders_when_forced(void)
 	cl_assert(!git_path_exists("b.txt"));
 	assert_name_is("testrepo/a");
 }
+
+void test_checkout_icase__ignores_unstaged_casechange(void)
+{
+	git_reference *orig_ref, *br2_ref;
+	git_commit *orig, *br2;
+	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+
+	cl_git_pass(git_reference_lookup_resolved(&orig_ref, repo, "HEAD", 100));
+	cl_git_pass(git_commit_lookup(&orig, repo, git_reference_target(orig_ref)));
+	cl_git_pass(git_reset(repo, (git_object *)orig, GIT_RESET_HARD, NULL));
+
+	cl_rename("testrepo/branch_file.txt", "testrepo/Branch_File.txt");
+
+	cl_git_pass(git_reference_lookup_resolved(&br2_ref, repo, "refs/heads/br2", 100));
+	cl_git_pass(git_commit_lookup(&br2, repo, git_reference_target(br2_ref)));
+
+	cl_git_pass(git_checkout_tree(repo, (const git_object *)br2, &checkout_opts));
+
+	git_commit_free(orig);
+	git_reference_free(orig_ref);
+}
+
+void test_checkout_icase__conflicts_with_casechanged_subtrees(void)
+{
+	git_reference *orig_ref;
+	git_object *orig, *subtrees;
+	git_oid oid;
+	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+
+	cl_git_pass(git_reference_lookup_resolved(&orig_ref, repo, "HEAD", 100));
+	cl_git_pass(git_object_lookup(&orig, repo, git_reference_target(orig_ref), GIT_OBJ_COMMIT));
+	cl_git_pass(git_reset(repo, (git_object *)orig, GIT_RESET_HARD, NULL));
+
+	cl_must_pass(p_mkdir("testrepo/AB", 0777));
+	cl_must_pass(p_mkdir("testrepo/AB/C", 0777));
+	cl_git_write2file("testrepo/AB/C/3.txt", "Foobar!\n", 8, O_RDWR|O_CREAT, 0666);
+
+	cl_git_pass(git_reference_name_to_id(&oid, repo, "refs/heads/subtrees"));
+	cl_git_pass(git_object_lookup(&subtrees, repo, &oid, GIT_OBJ_ANY));
+
+	cl_git_fail(git_checkout_tree(repo, subtrees, &checkout_opts));
+
+	git_object_free(orig);
+	git_object_free(subtrees);
+    git_reference_free(orig_ref);
+}
+
