@@ -106,6 +106,44 @@ void test_config_write__delete_value_at_specific_level(void)
 	git_config_free(cfg);
 }
 
+/*
+ * This test exposes a bug where duplicate empty section headers could prevent
+ * deletion of config entries.
+ */
+void test_config_write__delete_value_with_duplicate_header(void)
+{
+	const char *file_name  = "config-duplicate-header";
+	const char *entry_name = "remote.origin.url";
+	git_config *cfg;
+	git_config_entry *entry;
+
+	/* This config can occur after removing and re-adding the origin remote */
+	const char *file_content =
+		"[remote \"origin\"]\n"		\
+		"[branch \"master\"]\n"		\
+		"	remote = \"origin\"\n"	\
+		"[remote \"origin\"]\n"		\
+		"	url = \"foo\"\n";
+
+	/* Write the test config and make sure the expected entry exists */
+	cl_git_mkfile(file_name, file_content);
+	cl_git_pass(git_config_open_ondisk(&cfg, file_name));
+	cl_git_pass(git_config_get_entry(&entry, cfg, entry_name));
+
+	/* Delete that entry */
+	cl_git_pass(git_config_delete_entry(cfg, entry_name));
+
+	/* Reopen the file and make sure the entry no longer exists */
+	git_config_entry_free(entry);
+	git_config_free(cfg);
+	cl_git_pass(git_config_open_ondisk(&cfg, file_name));
+	cl_git_fail(git_config_get_entry(&entry, cfg, entry_name));
+
+	/* Cleanup */
+	git_config_entry_free(entry);
+	git_config_free(cfg);
+}
+
 void test_config_write__write_subsection(void)
 {
 	git_config *cfg;
