@@ -146,6 +146,24 @@ void test_attr_ignore__skip_gitignore_directory(void)
 	assert_is_ignored(true, "NewFolder/NewFolder/File.txt");
 }
 
+void test_attr_ignore__subdirectory_gitignore(void)
+{
+	p_unlink("attr/.gitignore");
+	cl_assert(!git_path_exists("attr/.gitignore"));
+	cl_git_mkfile(
+		"attr/.gitignore",
+		"file1\n");
+	p_mkdir("attr/dir", 0777);
+	cl_git_mkfile(
+		"attr/dir/.gitignore",
+		"file2/\n");
+
+	assert_is_ignored(true, "file1");
+	assert_is_ignored(true, "dir/file1");
+	assert_is_ignored(true, "dir/file2");  /* in ignored dir */
+	assert_is_ignored(false, "dir/file3");
+}
+
 void test_attr_ignore__expand_tilde_to_homedir(void)
 {
 	git_config *cfg;
