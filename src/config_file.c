@@ -1423,7 +1423,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	while (!reader->eof) {
 		c = reader_peek(reader, SKIP_WHITESPACE);
 
-		if (c == '\0') { /* We've arrived at the end of the file */
+		if (c == '\n') { /* We've arrived at the end of the file */
 			break;
 
 		} else if (c == '[') { /* section header, new section begins */
@@ -1723,9 +1723,47 @@ static int parse_multiline_variable(struct reader *reader, git_buf *value, int i
 	return 0;
 }
 
+GIT_INLINE(bool) is_namechar(char c)
+{
+	return isalnum(c) || c == '-';
+}
+
+static int parse_name(
+	char **name, const char **value, struct reader *reader, const char *line)
+{
+	const char *name_end = line, *value_start;
+
+	*name = NULL;
+	*value = NULL;
+
+	while (*name_end && is_namechar(*name_end))
+		name_end++;
+
+	if (line == name_end) {
+		set_parse_error(reader, 0, "Invalid configuration key");
+		return -1;
+	}
+
+	value_start = name_end;
+
+	while (*value_start && git__isspace(*value_start))
+		value_start++;
+
+	if (*value_start == '=') {
+		*value = value_start + 1;
+	} else if (*value_start) {
+		set_parse_error(reader, 0, "Invalid configuration key");
+		return -1;
+	}
+
+	if ((*name = git__strndup(line, name_end - line)) == NULL)
+		return -1;
+
+	return 0;
+}
+
 static int parse_variable(struct reader *reader, char **var_name, char **var_value)
 {
-	const char *var_end = NULL;
 	const char *value_start = NULL;
 	char *line;
 	int quote_count;
@@ -1737,18 +1775,8 @@ static int parse_variable(struct reader *reader, char **var_name, char **var_val
 
 	quote_count = strip_comments(line, 0);
 
-	var_end = strchr(line, '=');
-
-	if (var_end == NULL)
-		var_end = strchr(line, '\0');
-	else
-		value_start = var_end + 1;
-
-	do var_end--;
-	while (var_end>line && git__isspace(*var_end));
-
-	*var_name = git__strndup(line, var_end - line + 1);
-	GITERR_CHECK_ALLOC(*var_name);
+	if (parse_name(var_name, &value_start, reader, line) < 0)
+		return -1;
 
 	/* If there is no value, boolean true is assumed */
 	*var_value = NULL;

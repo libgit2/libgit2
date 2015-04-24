@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "buffer.h"
+#include "fileops.h"
 
 void test_config_write__initialize(void)
 {
@@ -392,4 +393,38 @@ void test_config_write__outside_change(void)
 	cl_assert_equal_i(6, tmp);
 
 	git_config_free(cfg);
+}
+
+void test_config_write__to_empty_file(void)
+{
+	git_config *cfg;
+	const char *filename = "config-file";
+	git_buf result = GIT_BUF_INIT;
+
+	cl_git_mkfile(filename, "");
+	cl_git_pass(git_config_open_ondisk(&cfg, filename));
+	cl_git_pass(git_config_set_string(cfg, "section.name", "value"));
+	git_config_free(cfg);
+
+	cl_git_pass(git_futils_readbuffer(&result, "config-file"));
+	cl_assert_equal_s("[section]\n\tname = value\n", result.ptr);
+
+	git_buf_free(&result);
+}
+
+void test_config_write__to_file_with_only_comment(void)
+{
+	git_config *cfg;
+	const char *filename = "config-file";
+	git_buf result = GIT_BUF_INIT;
+
+	cl_git_mkfile(filename, "\n\n");
+	cl_git_pass(git_config_open_ondisk(&cfg, filename));
+	cl_git_pass(git_config_set_string(cfg, "section.name", "value"));
+	git_config_free(cfg);
+
+	cl_git_pass(git_futils_readbuffer(&result, "config-file"));
+	cl_assert_equal_s("\n\n[section]\n\tname = value\n", result.ptr);
+
+	git_buf_free(&result);
 }
