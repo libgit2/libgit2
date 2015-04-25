@@ -1292,13 +1292,17 @@ GIT_INLINE(bool) workdir_path_is_dotgit(const git_buf *path)
 	if (path->ptr[len - 1] == '/')
 		len--;
 
-	if (tolower(path->ptr[len - 1]) != 't' ||
-		tolower(path->ptr[len - 2]) != 'i' ||
-		tolower(path->ptr[len - 3]) != 'g' ||
-		tolower(path->ptr[len - 4]) != '.')
+	if ((len > 4) && (path->ptr[len - 5] != '/'))
 		return false;
-
-	return (len == 4 || path->ptr[len - 5] == '/');
+	if (path->ptr[len - 4] != '.')
+		return false;
+	if ((path->ptr[len - 3] != 'g') && (path->ptr[len - 3] != 'G'))
+		return false;
+	if ((path->ptr[len - 2] != 'i') && (path->ptr[len - 2] != 'I'))
+		return false;
+	if ((path->ptr[len - 1] != 't') && (path->ptr[len - 1] != 'T'))
+		return false;
+	return true;
 }
 
 /**
