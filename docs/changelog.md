@@ -22,6 +22,23 @@ v0.28 + 1
 * libgit2 can now correctly cope with URLs where the host contains a colon
   but a port is not specified.  (eg `http://example.com:/repo.git`).
 
+### API additions
+
+* `git_commit_create_on_ex()` takes on the role which
+  `git_commit_create()` had when provided a reference name to
+  update. `git_commit_create_on_head()` always updates the current
+  branch.
+
+* `git_commit_create_fromstate()` is a variant of the commit creation
+  function which behaves closer to `git-commit` by taking the parents
+  and tree from the current branch and the index.
+
+### API removals
+
+* `git_commit_create()` has been deprecated. Its replacement,
+  `git_commit_create_on()`, forgoes the `update_ref` parameter.
+  Callers will have to perform the reference manipulation themselves.
+
 v0.28
 -----
 
