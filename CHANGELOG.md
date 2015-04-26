@@ -37,6 +37,12 @@ support for HTTPS connections insead of OpenSSL.
 * Checkout can now accept an index for the baseline computations via the
   `baseline_index` member.
 
+* The configuration for fetching is no longer stored inside the
+  `git_remote` struct but has been moved to a `git_fetch_options`. The
+  remote functions now take these options or the callbacks instead of
+  setting them beforehand.
+
+
 ### API additions
 
 * The `git_merge_options` gained a `file_flags` member.
@@ -64,7 +70,15 @@ support for HTTPS connections insead of OpenSSL.
   put into the reflog as the source/target.
 
 * `git_index_add_frombuffer()` can now create a blob from memory
-   buffer and add it to the index which is attached to a repository.
+  buffer and add it to the index which is attached to a repository.
+
+* The structure `git_fetch_options` has been added to determine the
+  runtime configuration for fetching, such as callbacks, pruning and
+  autotag behaviour. It has the runtime initializer
+  `git_fetch_init_options()`.
+
+* The enum `git_fetch_prune_t` has been added, letting you specify the
+  pruning behaviour for a fetch.
 
 * `git_stash_apply()` can now apply a stashed state from the stash list,
   placing the data into the working directory and index.
@@ -73,6 +87,15 @@ support for HTTPS connections insead of OpenSSL.
   but will remove the stashed state after a successful application.
 
 ### API removals
+
+* `git_remote_save()` and `git_remote_clear_refspecs()` has been
+  removed. Remote's configuration is changed via the configuration
+  directly or through a convenience function which performs changes to
+  the configuration directly.
+
+* `git_remote_set_callbacks()`, `git_remote_get_callbacks()` and
+  `git_remote_set_transport()` have been removed a the remote no
+  longer stores this configuration.
 
 ### Breaking API changes
 
@@ -129,6 +152,39 @@ support for HTTPS connections insead of OpenSSL.
   takes a `git_rebase_options` and only the `git_rebase_init` and
   `git_rebase_open` functions take a `git_rebase_options`, where they
   will persist the options to subsequent `git_rebase` calls.
+
+* The `git_clone_options` struct now has fetch options in a
+  `fetch_opts` field instead of remote callbacks in
+  `remote_callbacks`.
+
+* The following functions now longer act on a remote instance but
+  change the repository's configuration. Their signatures have changed
+  accordingly:
+
+    * `git_remote_set_url()`, `git_remote_seturl()`
+    * `git_remote_add_fetch()`, `git_remote_add_push()` and
+    * `git_remote_set_autotag()`
+
+* `git_remote_connect()` and `git_remote_prune()` now take a pointer
+  to the callbacks.
+
+* `git_remote_fetch()` and `git_remote_download()` now take a poitner
+  to fetch options which determine the runtime configuration.
+
+* The `git_remote_autotag_option_t` values have been changed. It has
+  gained a `_FALLBACK` default value to specify no override for the
+  configured setting.
+
+* `git_remote_update_tips()` now takes a pointer to the callbacks as
+  well as a boolean whether to write `FETCH_HEAD` and the autotag
+  setting.
+
+* The `git_submodule_update_options` struct now has fetch options in
+  the `fetch_opts` field instead of callbacks in the
+  `remote_callbacks` field.
+
+* The `push` function in the `git_transport` interface now takes a
+  pointer to the remote callbacks.
 
 v0.22
 ------
