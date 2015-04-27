@@ -50,8 +50,6 @@ void test_submodule_modify__init(void)
 	/* call init and see that settings are copied */
 	cl_git_pass(git_submodule_foreach(g_repo, init_one_submodule, NULL));
 
-	git_submodule_reload_all(g_repo, 1);
-
 	/* confirm submodule data in config */
 	cl_git_pass(git_repository_config_snapshot(&cfg, g_repo));
 	cl_git_pass(git_config_get_string(&str, cfg, "submodule.sm_unchanged.url"));

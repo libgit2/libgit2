@@ -109,7 +109,6 @@ void git_repository__cleanup(git_repository *repo)
 
 	git_cache_clear(&repo->objects);
 	git_attr_cache_flush(repo);
-	git_submodule_cache_free(repo);
 
 	set_config(repo, NULL);
 	set_index(repo, NULL);

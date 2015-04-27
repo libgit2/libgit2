@@ -121,7 +121,6 @@ struct git_repository {
 	git_refdb *_refdb;
 	git_config *_config;
 	git_index *_index;
-	git_submodule_cache *_submodules;
 
 	git_cache objects;
 	git_attr_cache *attrcache;
