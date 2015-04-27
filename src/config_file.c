@@ -1504,6 +1504,9 @@ static int read_on_variable(
 	cvar_t *var;
 	int result = 0;
 
+	GIT_UNUSED(line);
+	GIT_UNUSED(line_len);
+
 	git__strtolower(var_name);
 	git_buf_printf(&buf, "%s.%s", current_section, var_name);
 	git__free(var_name);
@@ -1696,6 +1699,8 @@ static int write_on_section(
 	struct write_data *write_data = (struct write_data *)data;
 	int result = 0;
 
+	GIT_UNUSED(reader);
+
 	/* If we were previously in the correct section (but aren't anymore)
 	 * and haven't written our value (for a simple name/value set, not
 	 * a multivar), then append it to the end of the section before writing
@@ -1723,7 +1728,9 @@ static int write_on_variable(
 {
 	struct write_data *write_data = (struct write_data *)data;
 	bool has_matched = false;
-	int result = 0;
+
+	GIT_UNUSED(reader);
+	GIT_UNUSED(current_section);
 
 	/* See if we are to update this name/value pair; first examine name */
 	if (write_data->in_section &&
@@ -1754,7 +1761,11 @@ static int write_on_variable(
 
 static int write_on_comment(struct reader **reader, const char *line, size_t line_len, void *data)
 {
-	struct write_data *write_data = (struct write_data *)data;
+	struct write_data *write_data;
+
+	GIT_UNUSED(reader);
+
+	write_data = (struct write_data *)data;
 	return write_line(write_data, line, line_len);
 }
 
@@ -1762,6 +1773,8 @@ static int write_on_eof(struct reader **reader, void *data)
 {
 	struct write_data *write_data = (struct write_data *)data;
 	int result = 0;
+
+	GIT_UNUSED(reader);
 
 	/* If we are at the EOF and have not written our value (again, for a
 	 * simple name/value set, not a multivar) then we have never seen the
@@ -1782,9 +1795,7 @@ static int write_on_eof(struct reader **reader, void *data)
 static int config_write(diskfile_backend *cfg, const char *key, const regex_t *preg, const char* value)
 {
 	int result;
-	int section_matches = 0, last_section_matched = 0, preg_replaced = 0, write_trailer = 0;
-	const char *pre_end = NULL, *post_start = NULL, *data_start;
-	char *current_section = NULL, *section, *name, *ldot;
+	char *section, *name, *ldot;
 	git_filebuf file = GIT_FILEBUF_INIT;
 	struct reader *reader = git_array_get(cfg->readers, 0);
 	struct write_data write_data;
@@ -1803,12 +1814,10 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	if (result == GIT_ENOTFOUND) {
 		reader->read_ptr = NULL;
 		reader->eof = 1;
-		data_start = NULL;
 		git_buf_clear(&reader->buffer);
 	} else if (result == 0) {
 		reader->read_ptr = reader->buffer.ptr;
 		reader->eof = 0;
-		data_start = reader->read_ptr;
 	} else {
 		git_filebuf_cleanup(&file);
 		return -1; /* OS error when reading the file */

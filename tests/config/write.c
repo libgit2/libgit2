@@ -535,7 +535,6 @@ void test_config_write__outside_change(void)
 void test_config_write__preserves_whitespace_and_comments(void)
 {
 	const char *file_name  = "config-duplicate-header";
-	const char *entry_name = "remote.origin.url";
 	const char *n;
 	git_config *cfg;
 	git_buf newfile = GIT_BUF_INIT;
@@ -571,7 +570,6 @@ void test_config_write__preserves_whitespace_and_comments(void)
 void test_config_write__preserves_entry_with_name_only(void)
 {
 	const char *file_name  = "config-empty-value";
-	const char *entry_name = "remote.origin.url";
 	git_config *cfg;
 	git_buf newfile = GIT_BUF_INIT;
 
