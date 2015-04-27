@@ -140,44 +140,10 @@ static int lstat_w(
 	WIN32_FILE_ATTRIBUTE_DATA fdata;
 
 	if (GetFileAttributesExW(path, GetFileExInfoStandard, &fdata)) {
-		int fMode = S_IREAD;
-
 		if (!buf)
 			return 0;
 
-		if (fdata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-			fMode |= S_IFDIR;
-		else
-			fMode |= S_IFREG;
-
-		if (!(fdata.dwFileAttributes & FILE_ATTRIBUTE_READONLY))
-			fMode |= S_IWRITE;
-
-		buf->st_ino = 0;
-		buf->st_gid = 0;
-		buf->st_uid = 0;
-		buf->st_nlink = 1;
-		buf->st_mode = (mode_t)fMode;
-		buf->st_size = ((git_off_t)fdata.nFileSizeHigh << 32) + fdata.nFileSizeLow;
-		buf->st_dev = buf->st_rdev = (_getdrive() - 1);
-		buf->st_atime = filetime_to_time_t(&(fdata.ftLastAccessTime));
-		buf->st_mtime = filetime_to_time_t(&(fdata.ftLastWriteTime));
-		buf->st_ctime = filetime_to_time_t(&(fdata.ftCreationTime));
-
-		if (fdata.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
-			git_win32_path target;
-
-			if (git_win32_path_readlink_w(target, path) >= 0) {
-				buf->st_mode = (buf->st_mode & ~S_IFMT) | S_IFLNK;
-
-				/* st_size gets the UTF-8 length of the target name, in bytes,
-				 * not counting the NULL terminator */
-				if ((buf->st_size = git__utf16_to_8(NULL, 0, target)) < 0)
-					return -1;
-			}
-		}
-
-		return 0;
+		return git_win32__file_attribute_to_stat(buf, &fdata, path);
 	}
 
 	errno = ENOENT;

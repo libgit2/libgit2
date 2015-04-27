@@ -52,12 +52,4 @@ extern int p_lstat_posixly(const char *filename, struct stat *buf);
 extern struct tm * p_localtime_r(const time_t *timer, struct tm *result);
 extern struct tm * p_gmtime_r(const time_t *timer, struct tm *result);
 
-GIT_INLINE(time_t) filetime_to_time_t(const FILETIME *ft)
-{
-	long long winTime = ((long long)ft->dwHighDateTime << 32) + ft->dwLowDateTime;
-	winTime -= 116444736000000000LL; /* Windows to Unix Epoch conversion */
-	winTime /= 10000000;             /* Nano to seconds resolution */
-	return (time_t)winTime;
-}
-
 #endif

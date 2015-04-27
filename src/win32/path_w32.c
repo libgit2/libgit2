@@ -330,9 +330,7 @@ int git_win32_path_dirload_with_stat(
 	const char *repo_path = path + prefix_len;
 	size_t repo_path_len = strlen(repo_path);
 	char work_path[PATH__MAX_UNC_LEN];
-	git_win32_path target;
 	size_t path_len;
-	int fMode;
 
 	if (!git_win32__findfirstfile_filter(pathw, path)) {
 		error = -1;
@@ -374,46 +372,19 @@ int git_win32_path_dirload_with_stat(
 			cmp_len = min(start_len, path_len);
 			if (!(cmp_len && strncomp(work_path, start_stat, cmp_len) < 0)) {
 				cmp_len = min(end_len, path_len);
+
 				if (!(cmp_len && strncomp(work_path, end_stat, cmp_len) > 0)) {
-					fMode = S_IREAD;
-
-					if (dir->f.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-						fMode |= S_IFDIR;
-					else
-						fMode |= S_IFREG;
-
-					if (!(dir->f.dwFileAttributes & FILE_ATTRIBUTE_READONLY))
-						fMode |= S_IWRITE;
-
 					ps = git__calloc(1, sizeof(git_path_with_stat) + path_len + 2);
+
+					if ((error = git_win32__file_attribute_to_stat(&ps->st,
+							(WIN32_FILE_ATTRIBUTE_DATA *)&dir->f,
+							NULL)) < 0) {
+						git__free(ps);
+						goto clean_up_and_exit;
+					}
+
 					memcpy(ps->path, work_path, path_len + 1);
 					ps->path_len = path_len;
-					ps->st.st_atime = filetime_to_time_t(&dir->f.ftLastAccessTime);
-					ps->st.st_ctime = filetime_to_time_t(&dir->f.ftCreationTime);
-					ps->st.st_mtime = filetime_to_time_t(&dir->f.ftLastWriteTime);
-					ps->st.st_size = dir->f.nFileSizeHigh;
-					ps->st.st_size <<= 32;
-					ps->st.st_size |= dir->f.nFileSizeLow;
-					ps->st.st_dev = ps->st.st_rdev = (_getdrive() - 1);
-					ps->st.st_mode = (mode_t)fMode;
-					ps->st.st_ino = 0;
-					ps->st.st_gid = 0;
-					ps->st.st_uid = 0;
-					ps->st.st_nlink = 1;
-
-					if (dir->f.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
-						if (git_win32_path_readlink_w(target, dir->f.cFileName) >= 0) {
-							ps->st.st_mode = (ps->st.st_mode & ~S_IFMT) | S_IFLNK;
-
-							/* st_size gets the UTF-8 length of the target name, in bytes,
-							 * not counting the NULL terminator */
-							if ((ps->st.st_size = git__utf16_to_8(NULL, 0, target)) < 0) {
-								error = -1;
-								giterr_set(GITERR_OS, "Could not manage reparse link '%s'", dir->f.cFileName);
-								goto clean_up_and_exit;
-							}
-						}
-					}
 
 					if (S_ISDIR(ps->st.st_mode)) {
 						ps->path[ps->path_len++] = '/';
