@@ -252,7 +252,7 @@ void test_config_write__overwrite_multivar_within_duplicate_header(void)
 	cl_git_pass(git_config_get_entry(&entry, cfg, entry_name));
 
 	/* Update that entry */
-	cl_git_pass(git_config_set_multivar(cfg, entry_name, "", "newurl"));
+	cl_git_pass(git_config_set_multivar(cfg, entry_name, ".*", "newurl"));
 
 	/* Reopen the file and make sure the entry was updated */
 	git_config_entry_free(entry);
