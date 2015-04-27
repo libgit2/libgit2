@@ -321,7 +321,7 @@ int git_win32_path_dirload_with_stat(
 	int error = 0;
 	git_path_with_stat *ps;
 	git_win32_path pathw;
-	DIR *dir;
+	DIR dir = {0};
 	int(*strncomp)(const char *a, const char *b, size_t sz);
 	size_t cmp_len;
 	size_t start_len = start_stat ? strlen(start_stat) : 0;
@@ -333,22 +333,21 @@ int git_win32_path_dirload_with_stat(
 	size_t path_len;
 
 	if (!git_win32__findfirstfile_filter(pathw, path)) {
-		error = -1;
 		giterr_set(GITERR_OS, "Could not parse the path '%s'", path);
-		goto clean_up_and_exit;
+		return -1;
 	}
 
-	strncomp = (flags & GIT_PATH_DIR_IGNORE_CASE) != 0 
-		       ? git__strncasecmp 
-		       : git__strncmp;
+	strncomp = (flags & GIT_PATH_DIR_IGNORE_CASE) != 0 ?
+	git__strncasecmp : git__strncmp;
+
 
 	/* use of FIND_FIRST_EX_LARGE_FETCH flag in the FindFirstFileExW call could benefit perormance
 	 * here when querying large repositories on Windows 7 (0x0600) or newer versions of Windows.
 	 * doing so could introduce compatibility issues on older versions of Windows. */
-	dir = git__calloc(1, sizeof(DIR));
-	dir->h = FindFirstFileExW(pathw, FindExInfoBasic, &dir->f, FindExSearchNameMatch, NULL, 0);
-	dir->first = 1;
-	if (dir->h == INVALID_HANDLE_VALUE) {
+	dir.h = FindFirstFileExW(pathw, FindExInfoBasic, &dir.f, FindExSearchNameMatch, NULL, 0);
+	dir.first = 1;
+
+	if (dir.h == INVALID_HANDLE_VALUE) {
 		error = -1;
 		giterr_set(GITERR_OS, "Could not open directory '%s'", path);
 		goto clean_up_and_exit;
@@ -362,9 +361,9 @@ int git_win32_path_dirload_with_stat(
 
 	memcpy(work_path, repo_path, repo_path_len);
 
-	while (dir) {
-		if (!git_path_is_dot_or_dotdotW(dir->f.cFileName)) {
-			path_len = git__utf16_to_8(work_path + repo_path_len, ARRAYSIZE(work_path) - repo_path_len, dir->f.cFileName);
+	while (1) {
+		if (!git_path_is_dot_or_dotdotW(dir.f.cFileName)) {
+			path_len = git__utf16_to_8(work_path + repo_path_len, ARRAYSIZE(work_path) - repo_path_len, dir.f.cFileName);
 
 			work_path[path_len + repo_path_len] = '\0';
 			path_len = path_len + repo_path_len;
@@ -377,7 +376,7 @@ int git_win32_path_dirload_with_stat(
 					ps = git__calloc(1, sizeof(git_path_with_stat) + path_len + 2);
 
 					if ((error = git_win32__file_attribute_to_stat(&ps->st,
-							(WIN32_FILE_ATTRIBUTE_DATA *)&dir->f,
+							(WIN32_FILE_ATTRIBUTE_DATA *)&dir.f,
 							NULL)) < 0) {
 						git__free(ps);
 						goto clean_up_and_exit;
@@ -400,10 +399,10 @@ int git_win32_path_dirload_with_stat(
 			}
 		}
 
-		memset(&dir->f, 0, sizeof(git_path_with_stat));
-		dir->first = 0;
+		memset(&dir.f, 0, sizeof(git_path_with_stat));
+		dir.first = 0;
 
-		if (!FindNextFileW(dir->h, &dir->f)) {
+		if (!FindNextFileW(dir.h, &dir.f)) {
 			if (GetLastError() == ERROR_NO_MORE_FILES)
 				break;
 			else {
@@ -418,11 +417,8 @@ int git_win32_path_dirload_with_stat(
 	git_vector_sort(contents);
 
 clean_up_and_exit:
-
-	if (dir) {
-		FindClose(dir->h);
-		free(dir);
-	}
+	if (dir.h != INVALID_HANDLE_VALUE)
+		FindClose(dir.h);
 
 	return error;
 }
