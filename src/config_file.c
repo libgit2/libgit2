@@ -1789,7 +1789,12 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	struct reader *reader = git_array_get(cfg->readers, 0);
 	struct write_data write_data;
 
-	/* TODO: take the lock before reading */
+	/* Lock the file */
+	if ((result = git_filebuf_open(
+		&file, cfg->file_path, 0, GIT_CONFIG_FILE_MODE)) < 0) {
+			git_buf_free(&reader->buffer);
+			return result;
+	}
 
 	/* We need to read in our own config file */
 	result = git_futils_readbuffer(&reader->buffer, cfg->file_path);
@@ -1805,14 +1810,8 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 		reader->eof = 0;
 		data_start = reader->read_ptr;
 	} else {
+		git_filebuf_cleanup(&file);
 		return -1; /* OS error when reading the file */
-	}
-
-	/* Lock the file */
-	if ((result = git_filebuf_open(
-		&file, cfg->file_path, 0, GIT_CONFIG_FILE_MODE)) < 0) {
-			git_buf_free(&reader->buffer);
-			return result;
 	}
 
 	ldot = strrchr(key, '.');
