@@ -830,7 +830,7 @@ static int reader_getchar_raw(struct reader *reader)
 
 	if (c == 0) {
 		reader->eof = 1;
-		c = '\n';
+		c = '\0';
 	}
 
 	return c;
@@ -849,13 +849,12 @@ static int reader_getchar(struct reader *reader, int flags)
 
 	do {
 		c = reader_getchar_raw(reader);
-	} while (skip_whitespace && git__isspace(c) &&
-	       !reader->eof);
+	} while (c != '\n' && c != '\0' && skip_whitespace && git__isspace(c));
 
 	if (skip_comments && (c == '#' || c == ';')) {
 		do {
 			c = reader_getchar_raw(reader);
-		} while (c != '\n');
+		} while (c != '\n' && c != '\0');
 	}
 
 	return c;
@@ -1423,22 +1422,26 @@ on_error:
 
 static int config_parse(
 	struct reader *reader,
-	int (*on_section)(struct reader **reader, const char *current_section, void *data),
-	int (*on_variable)(struct reader **reader, const char *current_section, char *var_name, char *var_value, void *data),
+	int (*on_section)(struct reader **reader, const char *current_section, const char *line, size_t line_len, void *data),
+	int (*on_variable)(struct reader **reader, const char *current_section, char *var_name, char *var_value, const char *line, size_t line_len, void *data),
+	int (*on_comment)(struct reader **reader, const char *line, size_t line_len, void *data),
 	int (*on_eof)(struct reader **reader, void *data),
 	void *data)
 {
-	char *current_section = NULL, *var_name, *var_value;
+	char *current_section = NULL, *var_name, *var_value, *line_start;
 	char c;
+	size_t line_len;
 	int result = 0;
 
 	skip_bom(reader);
 
 	while (result == 0 && !reader->eof) {
+		line_start = reader->read_ptr;
+
 		c = reader_peek(reader, SKIP_WHITESPACE);
 
 		switch (c) {
-		case '\n': /* EOF when peeking, set EOF in the reader to exit the loop */
+		case '\0': /* EOF when peeking, set EOF in the reader to exit the loop */
 			reader->eof = 1;
 			break;
 
@@ -1446,19 +1449,28 @@ static int config_parse(
 			git__free(current_section);
 			current_section = NULL;
 
-			if ((result = parse_section_header(reader, &current_section)) == 0 && on_section)
-				result = on_section(&reader, current_section, data);
+			if ((result = parse_section_header(reader, &current_section)) == 0 && on_section) {
+				line_len = reader->read_ptr - line_start;
+				result = on_section(&reader, current_section, line_start, line_len, data);
+			}
 			break;
 
+		case '\n': /* comment or whitespace-only */
 		case ';':
 		case '#':
-			/* TODO: handle comments */
 			reader_consume_line(reader);
+
+			if (on_comment) {
+				line_len = reader->read_ptr - line_start;
+				result = on_comment(&reader, line_start, line_len, data);
+			}
 			break;
 
 		default: /* assume variable declaration */
-			if ((result = parse_variable(reader, &var_name, &var_value)) == 0 && on_variable)
-				result = on_variable(&reader, current_section, var_name, var_value, data);
+			if ((result = parse_variable(reader, &var_name, &var_value)) == 0 && on_variable) {
+				line_len = reader->read_ptr - line_start;
+				result = on_variable(&reader, current_section, var_name, var_value, line_start, line_len, data);
+			}
 			break;
 		}
 	}
@@ -1478,7 +1490,14 @@ struct parse_data {
 	int depth;
 };
 
-static int read_on_variable(struct reader **reader, const char *current_section, char *var_name, char *var_value, void *data)
+static int read_on_variable(
+	struct reader **reader,
+	const char *current_section,
+	char *var_name,
+	char *var_value,
+	const char *line,
+	size_t line_len,
+	void *data)
 {
 	struct parse_data *parse_data = (struct parse_data *)data;
 	git_buf buf = GIT_BUF_INIT;
@@ -1577,7 +1596,7 @@ static int config_read(git_strmap *values, diskfile_backend *cfg_file, struct re
 	parse_data.level = level;
 	parse_data.depth = depth;
 
-	return config_parse(reader, NULL, read_on_variable, NULL, &parse_data);
+	return config_parse(reader, NULL, read_on_variable, NULL, NULL, &parse_data);
 }
 
 static int write_section(git_filebuf *file, const char *key)
@@ -1638,6 +1657,16 @@ struct write_data {
 	const char *value;
 };
 
+static int write_line(struct write_data *write_data, const char *line, size_t line_len)
+{
+	int result = git_filebuf_write(write_data->file, line, line_len);
+
+	if (!result && line_len && line[line_len-1] != '\n')
+		result = git_filebuf_printf(write_data->file, "\n");
+
+	return result;
+}
+
 static int write_value(struct write_data *write_data)
 {
 	const char *q;
@@ -1657,7 +1686,12 @@ static int write_value(struct write_data *write_data)
 	return result;
 }
 
-static int write_on_section(struct reader **reader, const char *current_section, void *data)
+static int write_on_section(
+	struct reader **reader,
+	const char *current_section,
+	const char *line,
+	size_t line_len,
+	void *data)
 {
 	struct write_data *write_data = (struct write_data *)data;
 	int result = 0;
@@ -1672,14 +1706,20 @@ static int write_on_section(struct reader **reader, const char *current_section,
 
 	write_data->in_section = strcmp(current_section, write_data->section) == 0;
 
-	/* todo: no, write what's there */
 	if (!result)
-		result = write_section(write_data->file, current_section);
+		result = write_line(write_data, line, line_len);
 
 	return result;
 }
 
-static int write_on_variable(struct reader **reader, const char *current_section, char *var_name, char *var_value, void *data)
+static int write_on_variable(
+	struct reader **reader,
+	const char *current_section,
+	char *var_name,
+	char *var_value,
+	const char *line,
+	size_t line_len,
+	void *data)
 {
 	struct write_data *write_data = (struct write_data *)data;
 	bool has_matched = false;
@@ -1694,18 +1734,14 @@ static int write_on_variable(struct reader **reader, const char *current_section
 	if (has_matched && write_data->preg != NULL)
 		has_matched = (regexec(write_data->preg, var_value, 0, NULL, 0) == 0);
 
-	// TODO: do this
-//	git__free(var_name);
-//	git__free(var_value);
+	git__free(var_name);
+	git__free(var_value);
 
 	/* If this isn't the name/value we're looking for, simply dump the
 	 * existing data back out and continue on.
 	 */
-	if (!has_matched) {
-		// TODO: write write write
-		const char *q = quotes_for_value(var_value);
-		return git_filebuf_printf(write_data->file, "\t%s = %s%s%s\n", var_name, q, var_value, q);
-	}
+	if (!has_matched)
+		return write_line(write_data, line, line_len);
 
 	write_data->preg_replaced = 1;
 
@@ -1714,6 +1750,12 @@ static int write_on_variable(struct reader **reader, const char *current_section
 		return 0;
 
 	return write_value(write_data);
+}
+
+static int write_on_comment(struct reader **reader, const char *line, size_t line_len, void *data)
+{
+	struct write_data *write_data = (struct write_data *)data;
+	return write_line(write_data, line, line_len);
 }
 
 static int write_on_eof(struct reader **reader, void *data)
@@ -1785,7 +1827,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	write_data.preg = preg;
 	write_data.value = value;
 
-	if ((result = config_parse(reader, write_on_section, write_on_variable, write_on_eof, &write_data)) < 0) {
+	if ((result = config_parse(reader, write_on_section, write_on_variable, write_on_comment, write_on_eof, &write_data)) < 0) {
 		git_filebuf_cleanup(&file);
 		goto done;
 	}
