@@ -163,6 +163,9 @@ void cl_sandbox_set_search_path_defaults(void);
 
 #ifdef GIT_WIN32
 bool cl_sandbox_supports_8dot3(void);
+bool cl_sandbox_supports_reparse_points(void);
 #endif
+
+bool cl_sandbox_supports_links(void);
 
 #endif

@@ -13,6 +13,9 @@ void test_repo_reservedname__includes_shortname_on_win32(void)
 	git_buf *reserved;
 	size_t reserved_len;
 
+	if (!cl_sandbox_supports_8dot3())
+		clar__skip();
+
 	repo = cl_git_sandbox_init("nasty");
 	cl_assert(git_repository__reserved_names(&reserved, &reserved_len, repo, false));
 
@@ -31,6 +34,9 @@ void test_repo_reservedname__includes_shortname_when_requested(void)
 	git_repository *repo;
 	git_buf *reserved;
 	size_t reserved_len;
+
+	if (!cl_sandbox_supports_8dot3())
+		clar__skip();
 
 	repo = cl_git_sandbox_init("nasty");
 	cl_assert(git_repository__reserved_names(&reserved, &reserved_len, repo, true));

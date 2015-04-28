@@ -223,7 +223,7 @@ void test_core_link__stat_symlink(void)
 {
 	struct stat st;
 
-	if (!should_run())
+	if (!should_run() || !cl_sandbox_supports_links())
 		clar__skip();
 
 	cl_git_rewritefile("stat_target", "This is the target of a symbolic link.\n");
@@ -242,7 +242,7 @@ void test_core_link__stat_symlink_directory(void)
 {
 	struct stat st;
 
-	if (!should_run())
+	if (!should_run() || !cl_sandbox_supports_links())
 		clar__skip();
 
 	p_mkdir("stat_dirtarget", 0777);
@@ -259,7 +259,7 @@ void test_core_link__stat_symlink_chain(void)
 {
 	struct stat st;
 
-	if (!should_run())
+	if (!should_run() || !cl_sandbox_supports_links())
 		clar__skip();
 
 	cl_git_rewritefile("stat_final_target", "Final target of some symbolic links...\n");
@@ -276,7 +276,7 @@ void test_core_link__stat_dangling_symlink(void)
 {
 	struct stat st;
 
-	if (!should_run())
+	if (!should_run() || !cl_sandbox_supports_links())
 		clar__skip();
 
 	do_symlink("stat_nonexistent", "stat_dangling", 0);
@@ -289,7 +289,7 @@ void test_core_link__stat_dangling_symlink_directory(void)
 {
 	struct stat st;
 
-	if (!should_run())
+	if (!should_run() || !cl_sandbox_supports_links())
 		clar__skip();
 
 	do_symlink("stat_nonexistent", "stat_dangling_dir", 1);
@@ -303,7 +303,7 @@ void test_core_link__lstat_symlink(void)
 	git_buf target_path = GIT_BUF_INIT;
 	struct stat st;
 
-	if (!should_run())
+	if (!should_run() || !cl_sandbox_supports_links())
 		clar__skip();
 
 	/* Windows always writes the canonical path as the link target, so
@@ -330,7 +330,7 @@ void test_core_link__lstat_symlink_directory(void)
 	git_buf target_path = GIT_BUF_INIT;
 	struct stat st;
 
-	if (!should_run())
+	if (!should_run() || !cl_sandbox_supports_links())
 		clar__skip();
 
 	git_buf_join(&target_path, '/', clar_sandbox_path(), "lstat_dirtarget");
@@ -352,7 +352,7 @@ void test_core_link__lstat_dangling_symlink(void)
 {
 	struct stat st;
 
-	if (!should_run())
+	if (!should_run() || !cl_sandbox_supports_links())
 		clar__skip();
 
 	do_symlink("lstat_nonexistent", "lstat_dangling", 0);
@@ -368,7 +368,7 @@ void test_core_link__lstat_dangling_symlink_directory(void)
 {
 	struct stat st;
 
-	if (!should_run())
+	if (!should_run() || !cl_sandbox_supports_links())
 		clar__skip();
 
 	do_symlink("lstat_nonexistent", "lstat_dangling_dir", 1);
@@ -385,6 +385,9 @@ void test_core_link__stat_junction(void)
 #ifdef GIT_WIN32
 	git_buf target_path = GIT_BUF_INIT;
 	struct stat st;
+
+	if (!cl_sandbox_supports_links())
+		clar__skip();
 
 	git_buf_join(&target_path, '/', clar_sandbox_path(), "stat_junctarget");
 
@@ -407,6 +410,9 @@ void test_core_link__stat_dangling_junction(void)
 	git_buf target_path = GIT_BUF_INIT;
 	struct stat st;
 
+	if (!cl_sandbox_supports_links())
+		clar__skip();
+
 	git_buf_join(&target_path, '/', clar_sandbox_path(), "stat_nonexistent_junctarget");
 
 	p_mkdir("stat_nonexistent_junctarget", 0777);
@@ -426,6 +432,9 @@ void test_core_link__lstat_junction(void)
 #ifdef GIT_WIN32
 	git_buf target_path = GIT_BUF_INIT;
 	struct stat st;
+
+	if (!cl_sandbox_supports_links())
+		clar__skip();
 
 	git_buf_join(&target_path, '/', clar_sandbox_path(), "lstat_junctarget");
 
@@ -448,6 +457,9 @@ void test_core_link__lstat_dangling_junction(void)
 	git_buf target_path = GIT_BUF_INIT;
 	struct stat st;
 
+	if (!cl_sandbox_supports_links())
+		clar__skip();
+
 	git_buf_join(&target_path, '/', clar_sandbox_path(), "lstat_nonexistent_junctarget");
 
 	p_mkdir("lstat_nonexistent_junctarget", 0777);
@@ -469,7 +481,7 @@ void test_core_link__stat_hardlink(void)
 {
 	struct stat st;
 
-	if (!should_run())
+	if (!should_run() || !cl_sandbox_supports_links())
 		clar__skip();
 
 	cl_git_rewritefile("stat_hardlink1", "This file has many names!\n");
@@ -488,7 +500,7 @@ void test_core_link__lstat_hardlink(void)
 {
 	struct stat st;
 
-	if (!should_run())
+	if (!should_run() || !cl_sandbox_supports_links())
 		clar__skip();
 
 	cl_git_rewritefile("lstat_hardlink1", "This file has many names!\n");
@@ -508,6 +520,9 @@ void test_core_link__stat_reparse_point(void)
 #ifdef GIT_WIN32
 	struct stat st;
 
+	if (!cl_sandbox_supports_reparse_points())
+		clar__skip();
+
 	/* Generic reparse points should be treated as regular files, only
 	 * symlinks and junctions should be treated as links.
 	 */
@@ -525,6 +540,9 @@ void test_core_link__lstat_reparse_point(void)
 {
 #ifdef GIT_WIN32
 	struct stat st;
+
+	if (!cl_sandbox_supports_reparse_points())
+		clar__skip();
 
 	cl_git_rewritefile("lstat_reparse", "This is a reparse point!\n");
 	do_custom_reparse("lstat_reparse");
@@ -558,7 +576,7 @@ void test_core_link__readlink_symlink(void)
 	int len;
 	char buf[2048];
 
-	if (!should_run())
+	if (!should_run() || !cl_sandbox_supports_links())
 		clar__skip();
 
 	git_buf_join(&target_path, '/', clar_sandbox_path(), "readlink_target");
@@ -582,7 +600,7 @@ void test_core_link__readlink_dangling(void)
 	int len;
 	char buf[2048];
 
-	if (!should_run())
+	if (!should_run() || !cl_sandbox_supports_links())
 		clar__skip();
 
 	git_buf_join(&target_path, '/', clar_sandbox_path(), "readlink_nonexistent");
@@ -606,7 +624,7 @@ void test_core_link__readlink_multiple(void)
 	int len;
 	char buf[2048];
 
-	if (!should_run())
+	if (!should_run() || !cl_sandbox_supports_links())
 		clar__skip();
 
 	git_buf_join(&target_path, '/', clar_sandbox_path(), "readlink_final");
