@@ -171,11 +171,11 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 		if ((error = git_repository_config_snapshot(&config, repo)) < 0)
 			goto on_error;
 
-		if (lookup_remote_prune_config(remote, config, name) < 0)
+		if ((error = lookup_remote_prune_config(remote, config, name)) < 0)
 			goto on_error;
 
 		/* Move the data over to where the matching functions can find them */
-		if (dwim_refspecs(&remote->active_refspecs, &remote->refspecs, &remote->refs) < 0)
+		if ((error = dwim_refspecs(&remote->active_refspecs, &remote->refspecs, &remote->refs)) < 0)
 			goto on_error;
 	}
 
@@ -457,7 +457,7 @@ int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 		goto cleanup;
 
 	/* Move the data over to where the matching functions can find them */
-	if (dwim_refspecs(&remote->active_refspecs, &remote->refspecs, &remote->refs) < 0)
+	if ((error = dwim_refspecs(&remote->active_refspecs, &remote->refspecs, &remote->refs)) < 0)
 		goto cleanup;
 
 	*out = remote;
@@ -2330,7 +2330,7 @@ int git_remote_upload(git_remote *remote, const git_strarray *refspecs, const gi
 		goto cleanup;
 
 	free_refspecs(&remote->active_refspecs);
-	if (dwim_refspecs(&remote->active_refspecs, &remote->refspecs, &remote->refs) < 0)
+	if ((error = dwim_refspecs(&remote->active_refspecs, &remote->refspecs, &remote->refs)) < 0)
 		goto cleanup;
 
 	if (remote->push) {

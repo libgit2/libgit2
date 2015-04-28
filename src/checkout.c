@@ -1457,7 +1457,7 @@ static int blob_content_to_file(
 	writer.fd = fd;
 	writer.open = 1;
 
-	error = git_filter_list_stream_blob(fl, blob, (git_writestream *)&writer);
+	error = git_filter_list_stream_blob(fl, blob, &writer.base);
 
 	assert(writer.open == 0);
 
