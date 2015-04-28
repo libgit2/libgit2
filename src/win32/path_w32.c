@@ -30,8 +30,6 @@
 #define path__is_unc(p) \
 	(((p)[0] == '\\' && (p)[1] == '\\') || ((p)[0] == '/' && (p)[1] == '/'))
 
-#define PATH__MAX_UNC_LEN (32767)
-
 /* Using _FIND_FIRST_EX_LARGE_FETCH may increase performance in Windows 7
  * and better.  Prior versions will ignore this.
  */
@@ -318,20 +316,25 @@ GIT_INLINE(int) path_with_stat_alloc(
 	git_path_with_stat **out,
 	const char *parent_path,
 	size_t parent_path_len,
-	const char *child_path,
-	size_t child_path_len,
+	const wchar_t *child_path_utf16,
 	bool trailing_slash)
 {
 	git_path_with_stat *ps;
 	int inner_slash =
 		(parent_path_len > 0 && parent_path[parent_path_len-1] != '/');
-	size_t path_len, ps_size;
+	size_t path_len, child_path_len, ps_size;
+
+	if ((child_path_len = git__utf16_to_8(NULL, 0, child_path_utf16)) < 0) {
+		giterr_set(GITERR_OS, "Could not convert path to UTF-8 (path too long?)");
+		return -1;
+	}
 
 	GITERR_CHECK_ALLOC_ADD(&path_len, parent_path_len, inner_slash);
 	GITERR_CHECK_ALLOC_ADD(&path_len, path_len, child_path_len);
 	GITERR_CHECK_ALLOC_ADD(&path_len, path_len, trailing_slash ? 1 : 0);
 
 	GITERR_CHECK_ALLOC_ADD(&ps_size, sizeof(git_path_with_stat), path_len);
+	GITERR_CHECK_ALLOC_ADD(&ps_size, ps_size, 1);
 
 	ps = git__calloc(1, ps_size);
 	GITERR_CHECK_ALLOC(ps);
@@ -342,7 +345,13 @@ GIT_INLINE(int) path_with_stat_alloc(
 	if (inner_slash)
 		ps->path[parent_path_len] = '/';
 
-	memcpy(&ps->path[parent_path_len + inner_slash], child_path, child_path_len);
+	if (git__utf16_to_8(
+			&ps->path[parent_path_len + inner_slash],
+			child_path_len + 1, child_path_utf16) != child_path_len) {
+		git__free(ps);
+		giterr_set(GITERR_OS, "Could not convert path to UTF-8 (size changed)");
+		return -1;
+	}
 
 	if (trailing_slash)
 		ps->path[path_len-1] = '/';
@@ -370,9 +379,8 @@ int git_win32_path_dirload_with_stat(
 	size_t cmp_len;
 	size_t start_len = start_stat ? strlen(start_stat) : 0;
 	size_t end_len = end_stat ? strlen(end_stat) : 0;
-	char work_path[PATH__MAX_UNC_LEN];
 	const char *suffix;
-	size_t path_len, work_path_len, suffix_len;
+	size_t path_len, suffix_len;
 
 	if (!git_win32__findfirstfile_filter(pathw, path)) {
 		giterr_set(GITERR_OS, "Could not parse the path '%s'", path);
@@ -387,9 +395,9 @@ int git_win32_path_dirload_with_stat(
 	suffix = path + prefix_len;
 	suffix_len = path_len - prefix_len;
 
-	/* use of FIND_FIRST_EX_LARGE_FETCH flag in the FindFirstFileExW call could benefit perormance
-	 * here when querying large repositories on Windows 7 (0x0600) or newer versions of Windows.
-	 * doing so could introduce compatibility issues on older versions of Windows. */
+	/* We use FIND_FIRST_EX_LARGE_FETCH here for a minor perf bump; this
+	 * flag should be ignored on previous version of Windows.
+	 */
 	dir.h = FindFirstFileExW(
 		pathw,
 		FindExInfoBasic,
@@ -408,46 +416,26 @@ int git_win32_path_dirload_with_stat(
 		if (git_path_is_dot_or_dotdotW(dir.f.cFileName))
 			continue;
 
-		if ((work_path_len = git__utf16_to_8(work_path, PATH__MAX_UNC_LEN, dir.f.cFileName)) < 0) {
-			error = -1;
-			giterr_set(GITERR_OS, "Could not convert path to UTF-8 (path too long?)");
-			goto clean_up_and_exit;
-		}
-		work_path[work_path_len] = '\0';
-
-		/* TODO: what about junctions to directories? */
 		if ((error = path_with_stat_alloc(&ps,
-				suffix, suffix_len,
-				work_path, work_path_len,
+				suffix, suffix_len, dir.f.cFileName,
 				(dir.f.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)) < 0)
 			goto clean_up_and_exit;
 
-		/* skip if before start_stat or after end_stat */
-		cmp_len = min(start_len, work_path_len);
-		if (cmp_len && strncomp(ps->path, start_stat, cmp_len) < 0) {
-			git__free(ps);
-			continue;
-		}
+		git_vector_insert(contents, ps);
 
-		cmp_len = min(end_len, work_path_len);
-		if (cmp_len && strncomp(ps->path, end_stat, cmp_len) > 0) {
-			git__free(ps);
+		/* skip stat if before start_stat or after end_stat */
+		cmp_len = min(start_len, ps->path_len);
+		if (cmp_len && strncomp(ps->path, start_stat, cmp_len) < 0)
 			continue;
-		}
+
+		cmp_len = min(end_len, ps->path_len);
+		if (cmp_len && strncomp(ps->path, end_stat, cmp_len) > 0)
+			continue;
 
 		if ((error = git_win32__file_attribute_to_stat(&ps->st,
 				(WIN32_FILE_ATTRIBUTE_DATA *)&dir.f,
-				NULL)) < 0) {
-			git__free(ps);
+				NULL)) < 0)
 			goto clean_up_and_exit;
-		}
-
-		if (!S_ISDIR(ps->st.st_mode) && !S_ISREG(ps->st.st_mode) && !S_ISLNK(ps->st.st_mode)) {
-			git__free(ps);
-			continue;
-		}
-
-		git_vector_insert(contents, ps);
 	} while (FindNextFileW(dir.h, &dir.f));
 
 	if (GetLastError() != ERROR_NO_MORE_FILES) {
