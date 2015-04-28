@@ -362,6 +362,30 @@ GIT_INLINE(int) path_with_stat_alloc(
 	return 0;
 }
 
+GIT_INLINE(int) path_add_base(
+	git_win32_path out,
+	size_t dir_len,
+	wchar_t *base,
+	size_t base_len)
+{
+	size_t out_len;
+
+	if (GIT_ADD_SIZET_OVERFLOW(&out_len, dir_len, base_len) < 0 ||
+		GIT_ADD_SIZET_OVERFLOW(&out_len, out_len, 2) < 0)
+		return -1;
+
+	if (out_len > GIT_WIN_PATH_UTF16) {
+		giterr_set(GITERR_FILESYSTEM, "invalid path '%.*ls\\%.*ls' (path too long)", dir_len, out, base_len, base);
+		return -1;
+	}
+
+	out[dir_len] = '\\';
+	memcpy(&out[dir_len+1], base, base_len * sizeof(wchar_t));
+	out[out_len-1] = '\0';
+
+	return 0;
+}
+
 #if !defined(__MINGW32__)
 int git_win32_path_dirload_with_stat(
 	const char *path,
@@ -373,16 +397,17 @@ int git_win32_path_dirload_with_stat(
 {
 	int error = 0;
 	git_path_with_stat *ps;
-	git_win32_path pathw;
+	git_win32_path path_filter, file_path;
 	DIR dir = {0};
 	int(*strncomp)(const char *a, const char *b, size_t sz);
-	size_t cmp_len;
 	size_t start_len = start_stat ? strlen(start_stat) : 0;
 	size_t end_len = end_stat ? strlen(end_stat) : 0;
+	size_t path_len, suffix_len, cmp_len;
 	const char *suffix;
-	size_t path_len, suffix_len;
+	int root_len;
 
-	if (!git_win32__findfirstfile_filter(pathw, path)) {
+	if ((root_len = git_win32_path_from_utf8(file_path, path)) < 0 ||
+			!git_win32__findfirstfile_filter(path_filter, path)) {
 		giterr_set(GITERR_OS, "Could not parse the path '%s'", path);
 		return -1;
 	}
@@ -399,7 +424,7 @@ int git_win32_path_dirload_with_stat(
 	 * flag should be ignored on previous version of Windows.
 	 */
 	dir.h = FindFirstFileExW(
-		pathw,
+		path_filter,
 		FindExInfoBasic,
 		&dir.f,
 		FindExSearchNameMatch,
@@ -416,7 +441,8 @@ int git_win32_path_dirload_with_stat(
 		if (git_path_is_dot_or_dotdotW(dir.f.cFileName))
 			continue;
 
-		if ((error = path_with_stat_alloc(&ps,
+		if ((error = path_add_base(file_path, root_len, dir.f.cFileName, wcslen(dir.f.cFileName))) < 0 ||
+			(error = path_with_stat_alloc(&ps,
 				suffix, suffix_len, dir.f.cFileName,
 				(dir.f.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)) < 0)
 			goto clean_up_and_exit;
@@ -433,9 +459,9 @@ int git_win32_path_dirload_with_stat(
 			continue;
 
 		if ((error = git_win32__file_attribute_to_stat(&ps->st,
-				(WIN32_FILE_ATTRIBUTE_DATA *)&dir.f,
-				NULL)) < 0)
+				(WIN32_FILE_ATTRIBUTE_DATA *)&dir.f, file_path)) < 0) {
 			goto clean_up_and_exit;
+		}
 	} while (FindNextFileW(dir.h, &dir.f));
 
 	if (GetLastError() != ERROR_NO_MORE_FILES) {
