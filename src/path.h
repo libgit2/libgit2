@@ -273,6 +273,7 @@ extern int git_path_apply_relative(git_buf *target, const char *relpath);
 enum {
 	GIT_PATH_DIR_IGNORE_CASE = (1u << 0),
 	GIT_PATH_DIR_PRECOMPOSE_UNICODE = (1u << 1),
+	GIT_PATH_DIR_INCLUDE_DOT_AND_DOTDOT = (1u << 2),
 };
 
 /**
@@ -325,6 +326,37 @@ extern int git_path_walk_up(
 	const char *ceiling,
 	int (*callback)(void *payload, const char *path),
 	void *payload);
+
+typedef struct git_path_diriter git_path_diriter;
+
+struct git_path_diriter
+{
+	git_buf path;
+	size_t parent_len;
+
+	unsigned int flags;
+
+	DIR *dir;
+};
+
+extern int git_path_diriter_init(
+	git_path_diriter *diriter,
+	const char *path,
+	unsigned int flags);
+
+extern int git_path_diriter_next(
+	const char **out,
+	size_t *out_len,
+	git_path_diriter *diriter);
+
+extern int git_path_diriter_fullpath(
+	const char **out,
+	size_t *out_len,
+	git_path_diriter *diriter);
+
+extern int git_path_diriter_stat(struct stat *out, git_path_diriter *diriter);
+
+extern void git_path_diriter_free(git_path_diriter *diriter);
 
 /**
  * Load all directory entries (except '.' and '..') into a vector.

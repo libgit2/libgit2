@@ -260,6 +260,20 @@ int git_path_root(const char *path)
 	return -1;	/* Not a real error - signals that path is not rooted */
 }
 
+void git_path_trim_slashes(git_buf *path)
+{
+	int ceiling = git_path_root(path->ptr) + 1;
+	assert(ceiling >= 0);
+
+	while (path->size > (size_t)ceiling) {
+		if (path->ptr[path->size-1] != '/')
+			break;
+
+		path->ptr[path->size-1] = '\0';
+		path->size--;
+	}
+}
+
 int git_path_join_unrooted(
 	git_buf *path_out, const char *path, const char *base, ssize_t *root_at)
 {
@@ -1179,6 +1193,122 @@ int git_path_with_stat_cmp_icase(const void *a, const void *b)
 {
 	const git_path_with_stat *psa = a, *psb = b;
 	return strcasecmp(psa->path, psb->path);
+}
+
+int git_path_diriter_init(
+	git_path_diriter *diriter,
+	const char *path,
+	unsigned int flags)
+{
+	assert(diriter && path);
+
+	memset(diriter, 0, sizeof(git_path_diriter));
+
+	if (git_buf_puts(&diriter->path, path) < 0)
+		return -1;
+
+	git_path_mkposix(diriter->path.ptr);
+	git_path_trim_slashes(&diriter->path);
+
+	if ((diriter->dir = opendir(diriter->path.ptr)) == NULL) {
+		git_buf_free(&diriter->path);
+
+		giterr_set(GITERR_OS, "Failed to open directory '%s'", path);
+		return -1;
+	}
+
+#ifdef GIT_USE_ICONV
+	if ((flags & GIT_PATH_DIR_PRECOMPOSE_UNICODE) != 0)
+		(void)git_path_iconv_init_precompose(&ic);
+#endif
+
+	diriter->parent_len = diriter->path.size;
+	diriter->flags = flags;
+
+	return 0;
+}
+
+int git_path_diriter_next(
+	const char **out,
+	size_t *out_len,
+	git_path_diriter *diriter)
+{
+	struct dirent *de;
+	const char *filename;
+	size_t filename_len;
+	bool skip_dot = !(diriter->flags & GIT_PATH_DIR_INCLUDE_DOT_AND_DOTDOT);
+	int error = 0;
+
+	assert(out && out_len && diriter);
+
+	*out = NULL;
+	*out_len = 0;
+
+	errno = 0;
+
+	do {
+		if ((de = readdir(diriter->dir)) == NULL) {
+			if (!errno)
+				return GIT_ITEROVER;
+
+			giterr_set(GITERR_OS,
+				"Could not read directory '%s'", diriter->path);
+			return -1;
+		}
+	} while (skip_dot && git_path_is_dot_or_dotdot(de->d_name));
+
+	filename = de->d_name;
+	filename_len = strlen(filename);
+
+#ifdef GIT_USE_ICONV
+	if ((error = git_path_iconv(&diriter->ic, &filename, &filename_len)) < 0)
+		return error;
+#endif
+
+	git_buf_truncate(&diriter->path, diriter->parent_len);
+	git_buf_putc(&diriter->path, '/');
+	git_buf_put(&diriter->path, filename, filename_len);
+
+	if (git_buf_oom(&diriter->path))
+		return -1;
+
+	*out = &diriter->path.ptr[diriter->parent_len+1];
+	*out_len = filename_len;
+
+	return error;
+}
+
+int git_path_diriter_fullpath(
+	const char **out,
+	size_t *out_len,
+	git_path_diriter *diriter)
+{
+	assert(out && out_len && diriter);
+
+	*out = diriter->path.ptr;
+	*out_len = diriter->path.size;
+	return 0;
+}
+
+int git_path_diriter_stat(struct stat *out, git_path_diriter *diriter)
+{
+	assert(out && diriter);
+
+	return git_path_lstat(diriter->path.ptr, out);
+}
+
+void git_path_diriter_free(git_path_diriter *diriter)
+{
+	if (diriter == NULL)
+		return;
+
+	closedir(diriter->dir);
+
+#ifdef GIT_USE_ICONV
+	git_path_iconv_clear(&diriter->ic);
+#endif
+
+	git_buf_free(&diriter->path);
 }
 
 int git_path_dirload_with_stat(
