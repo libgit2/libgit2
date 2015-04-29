@@ -335,7 +335,6 @@ typedef struct {
 	git_config_iterator *current;
 	const git_config *cfg;
 	regex_t regex;
-	int has_regex;
 	size_t i;
 } all_iter;
 
@@ -472,7 +471,6 @@ int git_config_iterator_glob_new(git_config_iterator **out, const git_config *cf
 
 	if ((result = regcomp(&iter->regex, regexp, REG_EXTENDED)) != 0) {
 		giterr_set_regex(&iter->regex, result);
-		regfree(&iter->regex);
 		git__free(iter);
 		return -1;
 	}
@@ -895,7 +893,8 @@ void multivar_iter_free(git_config_iterator *_iter)
 	iter->iter->free(iter->iter);
 
 	git__free(iter->name);
-	regfree(&iter->regex);
+	if (iter->have_regex)
+		regfree(&iter->regex);
 	git__free(iter);
 }
 
