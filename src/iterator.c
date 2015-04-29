@@ -984,21 +984,6 @@ static void fs_iterator__seek_frame_start(
 		ff->index = 0;
 }
 
-GIT_INLINE(int) path_dirload_with_stat(
-	const char *path,
-	size_t prefix_len,
-	unsigned int flags,
-	const char *start_stat,
-	const char *end_stat,
-	git_vector *contents)
-{
-#if defined(GIT_WIN32) && !defined(__MINGW32__)
-	return	git_win32_path_dirload_with_stat(path, prefix_len, flags, start_stat, end_stat, contents);
-#else
-	return	git_path_dirload_with_stat(path, prefix_len, flags, start_stat, end_stat, contents);
-#endif
-}
-
 static int fs_iterator__expand_dir(fs_iterator *fi)
 {
 	int error;
@@ -1013,7 +998,7 @@ static int fs_iterator__expand_dir(fs_iterator *fi)
 	ff = fs_iterator__alloc_frame(fi);
 	GITERR_CHECK_ALLOC(ff);
 
-	error = path_dirload_with_stat(
+	error = git_path_dirload_with_stat(
 		fi->path.ptr, fi->root_len, fi->dirload_flags,
 		fi->base.start, fi->base.end, &ff->entries);
 

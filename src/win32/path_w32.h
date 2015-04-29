@@ -80,30 +80,6 @@ extern int git_win32_path_to_utf8(git_win32_utf8_path dest, const wchar_t *src);
  */
 extern char *git_win32_path_8dot3_name(const char *path);
 
-#if !defined(__MINGW32__)
-/**
- * Load all directory entries along with stat info into a vector.
- * Performed in a single pass per directory for optimized performance on Windows.
- *
- * This adds four things on top of plain `git_path_dirload`:
- *
- * 1. Each entry in the vector is a `git_path_with_stat` struct that
- *    contains both the path and the stat info
- * 2. The entries will be sorted alphabetically
- * 3. Entries that are directories will be suffixed with a '/'
- * 4. Optionally, you can be a start and end prefix and only elements
- *    after the start and before the end (inclusively) will be stat'ed.
- *
- * @param path The directory to read from
- * @param prefix_len The trailing part of path to prefix to entry paths
- * @param flags GIT_PATH_DIR flags from above
- * @param start_stat As optimization, only stat values after this prefix
- * @param end_stat As optimization, only stat values before this prefix
- * @param contents Vector to fill with git_path_with_stat structures
- */
-extern int git_win32_path_dirload_with_stat(const char *path, size_t prefix_len, unsigned int flags, const char *start_stat, const char *end_stat, git_vector *contents);
-#endif
-
 extern int git_win32_path_readlink_w(git_win32_path dest, const git_win32_path path);
 
 #endif
