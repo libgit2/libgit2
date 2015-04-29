@@ -10,6 +10,7 @@
 #include "repository.h"
 #ifdef GIT_WIN32
 #include "win32/posix.h"
+#include "win32/buffer.h"
 #include "win32/w32_util.h"
 #else
 #include <dirent.h>
@@ -1134,7 +1135,7 @@ int git_path_diriter_init(
 	return 0;
 }
 
-static int diriter_update_utf16(git_path_diriter *diriter)
+static int diriter_update_paths(git_path_diriter *diriter)
 {
 	size_t filename_len, path_len;
 
@@ -1156,29 +1157,9 @@ static int diriter_update_utf16(git_path_diriter *diriter)
 		diriter->current.cFileName, filename_len * sizeof(wchar_t));
 	diriter->path[path_len-1] = L'\0';
 
-	return 0;
-}
-
-static int diriter_update_utf8(git_path_diriter *diriter)
-{
-	git_win32_utf8_path filename_utf8;
-	wchar_t *filename_utf16;
-	int filename_utf8_len;
-
-	/* Don't copy the full UTF-16 path into the UTF-8 path, only do the
-	 * UTF16 -> UTF8 conversion of the filename portion. This prevents us
-	 * from trying to encode the parent path differently, which would be
-	 * bad since we do arithmetic based on the already computed parent len.
-	 */
-
-	filename_utf16 = &diriter->path[diriter->parent_len + 1];
-
-	if ((filename_utf8_len = git_win32_path_to_utf8(filename_utf8, filename_utf16)) < 0)
-		return filename_utf8_len;
-
 	git_buf_truncate(&diriter->path_utf8, diriter->parent_utf8_len);
 	git_buf_putc(&diriter->path_utf8, '/');
-	git_buf_put(&diriter->path_utf8, filename_utf8, (size_t)filename_utf8_len);
+	git_buf_put_w(&diriter->path_utf8, diriter->current.cFileName, filename_len);
 
 	if (git_buf_oom(&diriter->path_utf8))
 		return -1;
@@ -1200,7 +1181,7 @@ int git_path_diriter_next(git_path_diriter *diriter)
 			return GIT_ITEROVER;
 	} while (skip_dot && git_path_is_dot_or_dotdotW(diriter->current.cFileName));
 
-	if (diriter_update_utf16(diriter) < 0 || diriter_update_utf8(diriter) < 0)
+	if (diriter_update_paths(diriter) < 0)
 		return -1;
 
 	return 0;
