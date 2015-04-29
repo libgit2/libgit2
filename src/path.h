@@ -366,22 +366,18 @@ extern void git_path_diriter_free(git_path_diriter *diriter);
  * of strings. That vector can then be sorted, iterated, or whatever.
  * Remember to free alloc of the allocated strings when you are done.
  *
+ * @param contents Vector to fill with directory entry names.
  * @param path The directory to read from.
  * @param prefix_len When inserting entries, the trailing part of path
  * 		will be prefixed after this length.  I.e. given path "/a/b" and
  * 		prefix_len 3, the entries will look like "b/e1", "b/e2", etc.
- * @param alloc_extra Extra bytes to add to each string allocation in
- * 		case you want to append anything funny.
  * @param flags Combination of GIT_PATH_DIR flags.
- * @param contents Vector to fill with directory entry names.
  */
 extern int git_path_dirload(
+	git_vector *contents,
 	const char *path,
 	size_t prefix_len,
-	size_t alloc_extra,
-	uint32_t flags,
-	git_vector *contents);
-
+	uint32_t flags);
 
 typedef struct {
 	struct stat st;
