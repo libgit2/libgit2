@@ -1078,6 +1078,182 @@ int git_path_direach(
 	return error;
 }
 
+#if defined(GIT_WIN32) && !defined(__MINGW32__)
+
+/* Using _FIND_FIRST_EX_LARGE_FETCH may increase performance in Windows 7
+ * and better.  Prior versions will ignore this.
+ */
+#ifndef FIND_FIRST_EX_LARGE_FETCH
+# define FIND_FIRST_EX_LARGE_FETCH 2
+#endif
+
+int git_path_diriter_init(
+	git_path_diriter *diriter,
+	const char *path,
+	unsigned int flags)
+{
+	git_win32_path path_filter;
+	git_buf hack = {0};
+
+	assert(diriter && path);
+
+	memset(diriter, 0, sizeof(git_path_diriter));
+	diriter->handle = INVALID_HANDLE_VALUE;
+
+	if (git_buf_puts(&diriter->path_utf8, path) < 0)
+		return -1;
+
+	git_path_trim_slashes(&diriter->path_utf8);
+
+	if (diriter->path_utf8.size == 0) {
+		giterr_set(GITERR_FILESYSTEM, "Could not open directory '%s'", path);
+		return -1;
+	}
+
+	if ((diriter->parent_len = git_win32_path_from_utf8(diriter->path, diriter->path_utf8.ptr)) < 0 ||
+			!git_win32__findfirstfile_filter(path_filter, diriter->path_utf8.ptr)) {
+		giterr_set(GITERR_OS, "Could not parse the directory path '%s'", path);
+		return -1;
+	}
+
+	diriter->handle = FindFirstFileExW(
+		path_filter,
+		FindExInfoBasic,
+		&diriter->current,
+		FindExSearchNameMatch,
+		NULL,
+		FIND_FIRST_EX_LARGE_FETCH);
+
+	if (diriter->handle == INVALID_HANDLE_VALUE) {
+		giterr_set(GITERR_OS, "Could not open directory '%s'", path);
+		return -1;
+	}
+
+	diriter->parent_utf8_len = diriter->path_utf8.size;
+	diriter->flags = flags;
+	return 0;
+}
+
+static int diriter_update_utf16(git_path_diriter *diriter)
+{
+	size_t filename_len, path_len;
+
+	filename_len = wcslen(diriter->current.cFileName);
+
+	if (GIT_ADD_SIZET_OVERFLOW(&path_len, diriter->parent_len, filename_len) ||
+		GIT_ADD_SIZET_OVERFLOW(&path_len, path_len, 2))
+		return -1;
+
+	if (path_len > GIT_WIN_PATH_UTF16) {
+		giterr_set(GITERR_FILESYSTEM,
+			"invalid path '%.*ls\\%ls' (path too long)",
+			diriter->parent_len, diriter->path, diriter->current.cFileName);
+		return -1;
+	}
+
+	diriter->path[diriter->parent_len] = L'\\';
+	memcpy(&diriter->path[diriter->parent_len+1],
+		diriter->current.cFileName, filename_len * sizeof(wchar_t));
+	diriter->path[path_len-1] = L'\0';
+
+	return 0;
+}
+
+static int diriter_update_utf8(git_path_diriter *diriter)
+{
+	git_win32_utf8_path filename_utf8;
+	wchar_t *filename_utf16;
+	int filename_utf8_len;
+
+	/* Don't copy the full UTF-16 path into the UTF-8 path, only do the
+	 * UTF16 -> UTF8 conversion of the filename portion. This prevents us
+	 * from trying to encode the parent path differently, which would be
+	 * bad since we do arithmetic based on the already computed parent len.
+	 */
+
+	filename_utf16 = &diriter->path[diriter->parent_len + 1];
+
+	if ((filename_utf8_len = git_win32_path_to_utf8(filename_utf8, filename_utf16)) < 0)
+		return filename_utf8_len;
+
+	git_buf_truncate(&diriter->path_utf8, diriter->parent_utf8_len);
+	git_buf_putc(&diriter->path_utf8, '/');
+	git_buf_put(&diriter->path_utf8, filename_utf8, (size_t)filename_utf8_len);
+
+	if (git_buf_oom(&diriter->path_utf8))
+		return -1;
+
+	return 0;
+}
+
+int git_path_diriter_next(git_path_diriter *diriter)
+{
+	bool skip_dot = !(diriter->flags & GIT_PATH_DIR_INCLUDE_DOT_AND_DOTDOT);
+
+	do {
+		/* Our first time through, we already have the data from
+		 * FindFirstFileW.  Use it, otherwise get the next file.
+		 */
+		if (!diriter->needs_next)
+			diriter->needs_next = 1;
+		else if (!FindNextFileW(diriter->handle, &diriter->current))
+			return GIT_ITEROVER;
+	} while (skip_dot && git_path_is_dot_or_dotdotW(diriter->current.cFileName));
+
+	if (diriter_update_utf16(diriter) < 0 || diriter_update_utf8(diriter) < 0)
+		return -1;
+
+	return 0;
+}
+
+int git_path_diriter_filename(
+	const char **out,
+	size_t *out_len,
+	git_path_diriter *diriter)
+{
+	assert(out && out_len && diriter);
+
+	assert(diriter->path_utf8.size > diriter->parent_utf8_len);
+
+	*out = &diriter->path_utf8.ptr[diriter->parent_utf8_len+1];
+	*out_len = diriter->path_utf8.size - diriter->parent_utf8_len - 1;
+	return 0;
+}
+
+int git_path_diriter_fullpath(
+	const char **out,
+	size_t *out_len,
+	git_path_diriter *diriter)
+{
+	assert(out && out_len && diriter);
+
+	*out = diriter->path_utf8.ptr;
+	*out_len = diriter->path_utf8.size;
+	return 0;
+}
+
+int git_path_diriter_stat(struct stat *out, git_path_diriter *diriter)
+{
+	assert(out && diriter);
+
+	return git_win32__file_attribute_to_stat(out,
+		(WIN32_FILE_ATTRIBUTE_DATA *)&diriter->current,
+		diriter->path);
+}
+
+void git_path_diriter_free(git_path_diriter *diriter)
+{
+	if (diriter == NULL)
+		return;
+
+	if (diriter->handle != INVALID_HANDLE_VALUE) {
+		FindClose(diriter->handle);
+		diriter->handle = INVALID_HANDLE_VALUE;
+	}
+}
+
+#else
+
 int git_path_diriter_init(
 	git_path_diriter *diriter,
 	const char *path,
@@ -1090,8 +1266,12 @@ int git_path_diriter_init(
 	if (git_buf_puts(&diriter->path, path) < 0)
 		return -1;
 
-	git_path_mkposix(diriter->path.ptr);
 	git_path_trim_slashes(&diriter->path);
+
+	if (diriter->path.size == 0) {
+		giterr_set(GITERR_FILESYSTEM, "Could not open directory '%s'", path);
+		return -1;
+	}
 
 	if ((diriter->dir = opendir(diriter->path.ptr)) == NULL) {
 		git_buf_free(&diriter->path);
@@ -1159,6 +1339,8 @@ int git_path_diriter_filename(
 {
 	assert(out && out_len && diriter);
 
+	assert(diriter->path.size > diriter->parent_len);
+
 	*out = &diriter->path.ptr[diriter->parent_len+1];
 	*out_len = diriter->path.size - diriter->parent_len - 1;
 	return 0;
@@ -1200,13 +1382,15 @@ void git_path_diriter_free(git_path_diriter *diriter)
 	git_buf_free(&diriter->path);
 }
 
+#endif
+
 int git_path_dirload(
 	git_vector *contents,
 	const char *path,
 	size_t prefix_len,
 	unsigned int flags)
 {
-	git_path_diriter iter = {0};
+	git_path_diriter iter = GIT_PATH_DIRITER_INIT;
 	const char *name;
 	size_t name_len;
 	char *dup;

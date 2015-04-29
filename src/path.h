@@ -329,6 +329,28 @@ extern int git_path_walk_up(
 
 typedef struct git_path_diriter git_path_diriter;
 
+#if defined(GIT_WIN32) && !defined(__MINGW32__)
+
+struct git_path_diriter
+{
+	git_win32_path path;
+	size_t parent_len;
+
+	git_buf path_utf8;
+	size_t parent_utf8_len;
+
+	HANDLE handle;
+
+	unsigned int flags;
+
+	WIN32_FIND_DATAW current;
+	unsigned int needs_next;
+};
+
+#define GIT_PATH_DIRITER_INIT { {0}, 0, GIT_BUF_INIT, 0, INVALID_HANDLE_VALUE }
+
+#else
+
 struct git_path_diriter
 {
 	git_buf path;
@@ -338,6 +360,10 @@ struct git_path_diriter
 
 	DIR *dir;
 };
+
+#define GIT_PATH_DIRITER_INIT { GIT_BUF_INIT }
+
+#endif
 
 /**
  * Initialize a directory iterator.

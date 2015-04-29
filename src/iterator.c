@@ -1011,7 +1011,7 @@ static int dirload_with_stat(
 	const char *end_stat,
 	git_vector *contents)
 {
-	git_path_diriter diriter = {0};
+	git_path_diriter diriter = GIT_PATH_DIRITER_INIT;
 	const char *path;
 	int (*strncomp)(const char *a, const char *b, size_t sz);
 	size_t start_len = start_stat ? strlen(start_stat) : 0;

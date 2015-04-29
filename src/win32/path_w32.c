@@ -30,11 +30,6 @@
 #define path__is_unc(p) \
 	(((p)[0] == '\\' && (p)[1] == '\\') || ((p)[0] == '/' && (p)[1] == '/'))
 
-/* Using _FIND_FIRST_EX_LARGE_FETCH may increase performance in Windows 7
- * and better.  Prior versions will ignore this.
- */
-#define _FIND_FIRST_EX_LARGE_FETCH 2
-
 GIT_INLINE(int) path__cwd(wchar_t *path, int size)
 {
 	int len;
