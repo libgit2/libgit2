@@ -339,23 +339,70 @@ struct git_path_diriter
 	DIR *dir;
 };
 
+/**
+ * Initialize a directory iterator.
+ *
+ * @param diriter Pointer to a diriter structure that will be setup.
+ * @param path The path that will be iterated over
+ * @param flags Directory reader flags
+ * @return 0 or an error code
+ */
 extern int git_path_diriter_init(
 	git_path_diriter *diriter,
 	const char *path,
 	unsigned int flags);
 
-extern int git_path_diriter_next(
+/**
+ * Advance the directory iterator.  Will return GIT_ITEROVER when
+ * the iteration has completed successfully.
+ *
+ * @param diriter The directory iterator
+ * @return 0, GIT_ITEROVER, or an error code
+ */
+extern int git_path_diriter_next(git_path_diriter *diriter);
+
+/**
+ * Returns the file name of the current item in the iterator.
+ *
+ * @param out Pointer to store the path in
+ * @param out_len Pointer to store the length of the path in
+ * @param diriter The directory iterator
+ * @return 0 or an error code
+ */
+extern int git_path_diriter_filename(
 	const char **out,
 	size_t *out_len,
 	git_path_diriter *diriter);
 
+/**
+ * Returns the full path of the current item in the iterator; that
+ * is the current filename plus the path of the directory that the
+ * iterator was constructed with.
+ *
+ * @param out Pointer to store the path in
+ * @param out_len Pointer to store the length of the path in
+ * @param diriter The directory iterator
+ * @return 0 or an error code
+ */
 extern int git_path_diriter_fullpath(
 	const char **out,
 	size_t *out_len,
 	git_path_diriter *diriter);
 
+/**
+ * Performs an `lstat` on the current item in the iterator.
+ *
+ * @param out Pointer to store the stat data in
+ * @param diriter The directory iterator
+ * @return 0 or an error code
+ */
 extern int git_path_diriter_stat(struct stat *out, git_path_diriter *diriter);
 
+/**
+ * Closes the directory iterator.
+ *
+ * @param diriter The directory iterator
+ */
 extern void git_path_diriter_free(git_path_diriter *diriter);
 
 /**

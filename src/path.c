@@ -1111,10 +1111,7 @@ int git_path_diriter_init(
 	return 0;
 }
 
-int git_path_diriter_next(
-	const char **out,
-	size_t *out_len,
-	git_path_diriter *diriter)
+int git_path_diriter_next(git_path_diriter *diriter)
 {
 	struct dirent *de;
 	const char *filename;
@@ -1122,10 +1119,7 @@ int git_path_diriter_next(
 	bool skip_dot = !(diriter->flags & GIT_PATH_DIR_INCLUDE_DOT_AND_DOTDOT);
 	int error = 0;
 
-	assert(out && out_len && diriter);
-
-	*out = NULL;
-	*out_len = 0;
+	assert(diriter);
 
 	errno = 0;
 
@@ -1155,10 +1149,19 @@ int git_path_diriter_next(
 	if (git_buf_oom(&diriter->path))
 		return -1;
 
-	*out = &diriter->path.ptr[diriter->parent_len+1];
-	*out_len = filename_len;
-
 	return error;
+}
+
+int git_path_diriter_filename(
+	const char **out,
+	size_t *out_len,
+	git_path_diriter *diriter)
+{
+	assert(out && out_len && diriter);
+
+	*out = &diriter->path.ptr[diriter->parent_len+1];
+	*out_len = diriter->path.size - diriter->parent_len - 1;
+	return 0;
 }
 
 int git_path_diriter_fullpath(
@@ -1214,7 +1217,7 @@ int git_path_dirload(
 	if ((error = git_path_diriter_init(&iter, path, flags)) < 0)
 		return error;
 
-	while ((error = git_path_diriter_next(&name, &name_len, &iter)) == 0) {
+	while ((error = git_path_diriter_next(&iter)) == 0) {
 		if ((error = git_path_diriter_fullpath(&name, &name_len, &iter)) < 0)
 			break;
 

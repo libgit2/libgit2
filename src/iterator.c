@@ -1026,7 +1026,7 @@ static int dirload_with_stat(
 	if ((error = git_path_diriter_init(&diriter, dirpath, flags)) < 0)
 		goto done;
 
-	while ((error = git_path_diriter_next(&path, &path_len, &diriter)) == 0) {
+	while ((error = git_path_diriter_next(&diriter)) == 0) {
 		if ((error = git_path_diriter_fullpath(&path, &path_len, &diriter)) < 0)
 			goto done;
 
