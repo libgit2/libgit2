@@ -23,6 +23,8 @@ static int run_command(git_cb fn, int argc, char **argv)
 	int error;
 	git_repository *repo;
 
+	git_libgit2_init();
+
 // Before running the actual command, create an instance of the local
 // repository and pass it to the function.
 
@@ -42,6 +44,8 @@ static int run_command(git_cb fn, int argc, char **argv)
 	if(repo)
 		git_repository_free(repo);
 
+	git_libgit2_shutdown();
+
 	return !!error;
 }
 
@@ -53,8 +57,6 @@ int main(int argc, char **argv)
 		fprintf(stderr, "usage: %s <cmd> [repo]\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
-
-	git_libgit2_init();
 
 	for (i = 0; commands[i].name != NULL; ++i) {
 		if (!strcmp(argv[1], commands[i].name))
