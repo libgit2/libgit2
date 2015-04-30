@@ -169,7 +169,7 @@ typedef struct {
 	/** The file to favor in region conflicts. */
 	git_merge_file_favor_t favor;
 
-	/** Merge file flags. */
+	/** see `git_merge_file_flags_t` above */
 	unsigned int flags;
 } git_merge_file_options;
 
@@ -246,6 +246,7 @@ typedef struct {
 	/** Flags for handling conflicting content. */
 	git_merge_file_favor_t file_favor;
 
+	/** see `git_merge_file_flags_t` above */
 	unsigned int file_flags;
 } git_merge_options;
 
