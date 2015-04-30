@@ -49,7 +49,7 @@ enum {
 	GIT_IGNORE_TRUE = 1,
 };
 
-extern int git_ignore__lookup(int *out, git_ignores *ign, const char *path);
+extern int git_ignore__lookup(int *out, git_ignores *ign, const char *path, git_dir_flag dir_flag);
 
 /* command line Git sometimes generates an error message if given a
  * pathspec that contains an exact match to an ignored file (provided

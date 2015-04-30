@@ -130,88 +130,6 @@ int p_fsync(int fd)
 	return 0;
 }
 
-GIT_INLINE(time_t) filetime_to_time_t(const FILETIME *ft)
-{
-	long long winTime = ((long long)ft->dwHighDateTime << 32) + ft->dwLowDateTime;
-	winTime -= 116444736000000000LL; /* Windows to Unix Epoch conversion */
-	winTime /= 10000000;		 /* Nano to seconds resolution */
-	return (time_t)winTime;
-}
-
-static bool path_is_volume(wchar_t *target, size_t target_len)
-{
-	return (target_len && wcsncmp(target, L"\\??\\Volume{", 11) == 0);
-}
-
-/* On success, returns the length, in characters, of the path stored in dest.
- * On failure, returns a negative value. */
-static int readlink_w(
-	git_win32_path dest,
-	const git_win32_path path)
-{
-	BYTE buf[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
-	GIT_REPARSE_DATA_BUFFER *reparse_buf = (GIT_REPARSE_DATA_BUFFER *)buf;
-	HANDLE handle = NULL;
-	DWORD ioctl_ret;
-	wchar_t *target;
-	size_t target_len;
-
-	int error = -1;
-
-	handle = CreateFileW(path, GENERIC_READ,
-		FILE_SHARE_READ | FILE_SHARE_DELETE, NULL, OPEN_EXISTING,
-		FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, NULL);
-
-	if (handle == INVALID_HANDLE_VALUE) {
-		errno = ENOENT;
-		return -1;
-	}
-
-	if (!DeviceIoControl(handle, FSCTL_GET_REPARSE_POINT, NULL, 0,
-		reparse_buf, sizeof(buf), &ioctl_ret, NULL)) {
-		errno = EINVAL;
-		goto on_error;
-	}
-
-	switch (reparse_buf->ReparseTag) {
-	case IO_REPARSE_TAG_SYMLINK:
-		target = reparse_buf->SymbolicLinkReparseBuffer.PathBuffer +
-			(reparse_buf->SymbolicLinkReparseBuffer.SubstituteNameOffset / sizeof(WCHAR));
-		target_len = reparse_buf->SymbolicLinkReparseBuffer.SubstituteNameLength / sizeof(WCHAR);
-		break;
-	case IO_REPARSE_TAG_MOUNT_POINT:
-		target = reparse_buf->MountPointReparseBuffer.PathBuffer +
-			(reparse_buf->MountPointReparseBuffer.SubstituteNameOffset / sizeof(WCHAR));
-		target_len = reparse_buf->MountPointReparseBuffer.SubstituteNameLength / sizeof(WCHAR);
-		break;
-	default:
-		errno = EINVAL;
-		goto on_error;
-	}
-
-	if (path_is_volume(target, target_len)) {
-		/* This path is a reparse point that represents another volume mounted
-		 * at this location, it is not a symbolic link our input was canonical.
-		 */
-		errno = EINVAL;
-		error = -1;
-	} else if (target_len) {
-		/* The path may need to have a prefix removed. */
-		target_len = git_win32__canonicalize_path(target, target_len);
-
-		/* Need one additional character in the target buffer
-		 * for the terminating NULL. */
-		if (GIT_WIN_PATH_UTF16 > target_len) {
-			wcscpy(dest, target);
-			error = (int)target_len;
-		}
-	}
-
-on_error:
-	CloseHandle(handle);
-	return error;
-}
-
 #define WIN32_IS_WSEP(CH) ((CH) == L'/' || (CH) == L'\\')
 
 static int lstat_w(
@@ -249,7 +167,7 @@ static int lstat_w(
 		if (fdata.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
 			git_win32_path target;
 
-			if (readlink_w(target, path) >= 0) {
+			if (git_win32_path_readlink_w(target, path) >= 0) {
 				buf->st_mode = (buf->st_mode & ~S_IFMT) | S_IFLNK;
 
 				/* st_size gets the UTF-8 length of the target name, in bytes,
@@ -331,7 +249,7 @@ int p_readlink(const char *path, char *buf, size_t bufsiz)
 	 * we need to buffer the result on the stack. */
 
 	if (git_win32_path_from_utf8(path_w, path) < 0 ||
-		readlink_w(target_w, path_w) < 0 ||
+		git_win32_path_readlink_w(target_w, path_w) < 0 ||
 		(len = git_win32_path_to_utf8(target, target_w)) < 0)
 		return -1;
 
