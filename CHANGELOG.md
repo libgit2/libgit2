@@ -67,6 +67,8 @@ support for HTTPS connections insead of OpenSSL.
 
 ### Breaking API changes
 
+* `git_smart_subtransport_cb` now has a `param` parameter.
+
 * The `git_merge_options` structure member `flags` has been renamed
   to `tree_flags`.
 
