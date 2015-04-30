@@ -517,6 +517,11 @@ void rebase_checkout_progress_cb(
 	void *payload)
 {
 	int *called = payload;
+
+	GIT_UNUSED(path);
+	GIT_UNUSED(completed_steps);
+	GIT_UNUSED(total_steps);
+
 	*called = 1;
 }
 
