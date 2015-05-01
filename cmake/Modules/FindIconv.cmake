@@ -11,10 +11,7 @@ IF(ICONV_INCLUDE_DIR AND ICONV_LIBRARIES)
 	SET(ICONV_FIND_QUIETLY TRUE)
 ENDIF()
 
-FIND_PATH(ICONV_INCLUDE_DIR iconv.h PATHS /opt/local/include NO_DEFAULT_PATH)
 FIND_PATH(ICONV_INCLUDE_DIR iconv.h)
-
-FIND_LIBRARY(iconv_lib NAMES iconv libiconv libiconv-2 c NO_DEFAULT_PATH PATHS /opt/local/lib)
 FIND_LIBRARY(iconv_lib NAMES iconv libiconv libiconv-2 c)
 
 IF(ICONV_INCLUDE_DIR AND iconv_lib)
