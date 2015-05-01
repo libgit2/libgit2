@@ -70,14 +70,50 @@ GIT_EXTERN(int) git_stash_save(
 	const char *message,
 	unsigned int flags);
 
+/** Stash application flags. */
 typedef enum {
-	GIT_APPLY_DEFAULT = 0,
+	GIT_STASH_APPLY_DEFAULT = 0,
 
 	/* Try to reinstate not only the working tree's changes,
-	 * but also the index's ones.
+	 * but also the index's changes.
 	 */
-	GIT_APPLY_REINSTATE_INDEX = (1 << 0),
-} git_apply_flags;
+	GIT_STASH_APPLY_REINSTATE_INDEX = (1 << 0),
+} git_stash_apply_flags;
+
+/** Stash application options structure.
+ *
+ * Initialize with the `GIT_STASH_APPLY_OPTIONS_INIT` macro to set
+ * sensible defaults; for example:
+ *
+ *		git_stash_apply_options opts = GIT_STASH_APPLY_OPTIONS_INIT;
+ */
+typedef struct git_stash_apply_options {
+	unsigned int version;
+
+	/** See `git_stash_apply_flags_t`, above. */
+	git_stash_apply_flags flags;
+
+	/** Options to use when writing files to the working directory. */
+	git_checkout_options checkout_options;
+} git_stash_apply_options;
+
+#define GIT_STASH_APPLY_OPTIONS_VERSION 1
+#define GIT_STASH_APPLY_OPTIONS_INIT { \
+	GIT_STASH_APPLY_OPTIONS_VERSION, \
+	GIT_STASH_APPLY_DEFAULT, \
+	GIT_CHECKOUT_OPTIONS_INIT }
+
+/**
+ * Initializes a `git_stash_apply_options` with default values. Equivalent to
+ * creating an instance with GIT_STASH_APPLY_OPTIONS_INIT.
+ *
+ * @param opts the `git_stash_apply_options` instance to initialize.
+ * @param version the version of the struct; you should pass
+ *        `GIT_STASH_APPLY_OPTIONS_INIT` here.
+ * @return Zero on success; -1 on failure.
+ */
+int git_stash_apply_init_options(
+	git_stash_apply_options *opts, unsigned int version);
 
 /**
  * Apply a single stashed state from the stash list.
@@ -89,17 +125,17 @@ typedef enum {
  * ignored files and there is a conflict when applying the modified files,
  * then those files will remain in the working directory.
  *
- * If passing the GIT_APPLY_REINSTATE_INDEX flag and there would be conflicts
- * when reinstating the index, the function will return GIT_EMERGECONFLICT
- * and both the working directory and index will be left unmodified.
+ * If passing the GIT_STASH_APPLY_REINSTATE_INDEX flag and there would be
+ * conflicts when reinstating the index, the function will return
+ * GIT_EMERGECONFLICT and both the working directory and index will be left
+ * unmodified.
+ *
+ * Note that a minimum checkout strategy of `GIT_CHECKOUT_SAFE` is implied.
  *
  * @param repo The owning repository.
  * @param index The position within the stash list. 0 points to the
  *              most recent stashed state.
- * @param checkout_options Options to control how files are checked out.
- *                         A minimum strategy of `GIT_CHECKOUT_SAFE` is
- *                         implied.
- * @param flags Flags to control the applying process. (see GIT_APPLY_* above)
+ * @param options Options to control how stashes are applied.
  *
  * @return 0 on success, GIT_ENOTFOUND if there's no stashed state for the
  *         given index, GIT_EMERGECONFLICT if changes exist in the working
@@ -108,8 +144,7 @@ typedef enum {
 GIT_EXTERN(int) git_stash_apply(
 	git_repository *repo,
 	size_t index,
-	const git_checkout_options *checkout_options,
-	unsigned int flags);
+	const git_stash_apply_options *options);
 
 /**
  * This is a callback function you can provide to iterate over all the
@@ -169,8 +204,7 @@ GIT_EXTERN(int) git_stash_drop(
  * @param repo The owning repository.
  * @param index The position within the stash list. 0 points to the
  *              most recent stashed state.
- * @param checkout_options Options to control how files are checked out
- * @param flags Flags to control the applying process. (see GIT_APPLY_* above)
+ * @param options Options to control how stashes are applied.
  *
  * @return 0 on success, GIT_ENOTFOUND if there's no stashed state for the given
  * index, or error code. (see git_stash_apply() above for details)
@@ -178,8 +212,7 @@ GIT_EXTERN(int) git_stash_drop(
 GIT_EXTERN(int) git_stash_pop(
 	git_repository *repo,
 	size_t index,
-	const git_checkout_options *checkout_options,
-	unsigned int flags);
+	const git_stash_apply_options *options);
 
 /** @} */
 GIT_END_DECL

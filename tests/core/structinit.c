@@ -131,6 +131,11 @@ void test_core_structinit__compare(void)
 		git_revert_options, GIT_REVERT_OPTIONS_VERSION, \
 		GIT_REVERT_OPTIONS_INIT, git_revert_init_options);
 
+	/* stash apply */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_stash_apply_options, GIT_STASH_APPLY_OPTIONS_VERSION, \
+		GIT_STASH_APPLY_OPTIONS_INIT, git_stash_apply_init_options);
+
 	/* status */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_status_options, GIT_STATUS_OPTIONS_VERSION, \

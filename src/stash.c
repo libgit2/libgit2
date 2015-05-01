@@ -673,34 +673,40 @@ done:
 	return error;
 }
 
-static void normalize_checkout_options(
-	git_checkout_options *checkout_opts,
-	const git_checkout_options *given_checkout_opts)
+static void normalize_apply_options(
+	git_stash_apply_options *opts,
+	const git_stash_apply_options *given_apply_opts)
 {	
-	if (given_checkout_opts != NULL) {
-		memcpy(checkout_opts, given_checkout_opts, sizeof(git_checkout_options));
+	if (given_apply_opts != NULL) {
+		memcpy(opts, given_apply_opts, sizeof(git_stash_apply_options));
 	} else {
-		git_checkout_options default_checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
-		memcpy(checkout_opts, &default_checkout_opts, sizeof(git_checkout_options));
+		git_stash_apply_options default_apply_opts = GIT_STASH_APPLY_OPTIONS_INIT;
+		memcpy(opts, &default_apply_opts, sizeof(git_stash_apply_options));
 	}
 
-	if ((checkout_opts->checkout_strategy & (GIT_CHECKOUT_SAFE | GIT_CHECKOUT_FORCE)) == 0)
-		checkout_opts->checkout_strategy = GIT_CHECKOUT_SAFE;
+	if ((opts->checkout_options.checkout_strategy & (GIT_CHECKOUT_SAFE | GIT_CHECKOUT_FORCE)) == 0)
+		opts->checkout_options.checkout_strategy = GIT_CHECKOUT_SAFE;
 
-	if (!checkout_opts->our_label)
-		checkout_opts->our_label = "Updated upstream";
+	if (!opts->checkout_options.our_label)
+		opts->checkout_options.our_label = "Updated upstream";
 
-	if (!checkout_opts->their_label)
-		checkout_opts->their_label = "Stashed changes";
+	if (!opts->checkout_options.their_label)
+		opts->checkout_options.their_label = "Stashed changes";
+}
+
+int git_stash_apply_init_options(git_stash_apply_options *opts, unsigned int version)
+{
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_stash_apply_options, GIT_STASH_APPLY_OPTIONS_INIT);
+	return 0;
 }
 
 int git_stash_apply(
 	git_repository *repo,
 	size_t index,
-	const git_checkout_options *given_checkout_opts,
-	unsigned int flags)
+	const git_stash_apply_options *given_opts)
 {
-	git_checkout_options checkout_opts;
+	git_stash_apply_options opts;
 	unsigned int checkout_strategy;
 	git_commit *stash_commit = NULL;
 	git_tree *stash_tree = NULL;
@@ -714,8 +720,10 @@ int git_stash_apply(
 	git_index *untracked_index = NULL;
 	int error;
 
-	normalize_checkout_options(&checkout_opts, given_checkout_opts);
-	checkout_strategy = checkout_opts.checkout_strategy;
+	GITERR_CHECK_VERSION(given_opts, GIT_STASH_APPLY_OPTIONS_VERSION, "git_stash_apply_options");
+
+	normalize_apply_options(&opts, given_opts);
+	checkout_strategy = opts.checkout_options.checkout_strategy;
 
 	/* Retrieve commit corresponding to the given stash */
 	if ((error = retrieve_stash_commit(&stash_commit, repo, index)) < 0)
@@ -732,7 +740,7 @@ int git_stash_apply(
 		goto cleanup;
 
 	/* Restore index if required */
-	if ((flags & GIT_APPLY_REINSTATE_INDEX) &&
+	if ((opts.flags & GIT_STASH_APPLY_REINSTATE_INDEX) &&
 		git_oid_cmp(git_tree_id(stash_parent_tree), git_tree_id(index_tree))) {
 
 		if ((error = merge_index_and_tree(
@@ -756,12 +764,12 @@ int git_stash_apply(
 		goto cleanup;
 
 	if (untracked_index) {
-		checkout_opts.checkout_strategy |= GIT_CHECKOUT_DONT_UPDATE_INDEX;
+		opts.checkout_options.checkout_strategy |= GIT_CHECKOUT_DONT_UPDATE_INDEX;
 
-		if ((error = git_checkout_index(repo, untracked_index, &checkout_opts)) < 0)
+		if ((error = git_checkout_index(repo, untracked_index, &opts.checkout_options)) < 0)
 			goto cleanup;
 
-		checkout_opts.checkout_strategy = checkout_strategy;
+		opts.checkout_options.checkout_strategy = checkout_strategy;
 	}
 
 
@@ -771,15 +779,15 @@ int git_stash_apply(
 	 */
 
 	if (!git_index_has_conflicts(modified_index))
-		checkout_opts.checkout_strategy |= GIT_CHECKOUT_DONT_UPDATE_INDEX;
+		opts.checkout_options.checkout_strategy |= GIT_CHECKOUT_DONT_UPDATE_INDEX;
 
 	/* Check out the modified index using the existing repo index as baseline,
 	 * so that existing modifications in the index can be rewritten even when
 	 * checking out safely.
 	 */
-	checkout_opts.baseline_index = repo_index;
+	opts.checkout_options.baseline_index = repo_index;
 
-	if ((error = git_checkout_index(repo, modified_index, &checkout_opts)) < 0)
+	if ((error = git_checkout_index(repo, modified_index, &opts.checkout_options)) < 0)
 		goto cleanup;
 
 	if (unstashed_index && !git_index_has_conflicts(modified_index)) {
@@ -903,12 +911,11 @@ cleanup:
 int git_stash_pop(
 	git_repository *repo,
 	size_t index,
-	const git_checkout_options *checkout_options,
-	unsigned int flags)
+	const git_stash_apply_options *options)
 {
 	int error;
 
-	if ((error = git_stash_apply(repo, index, checkout_options, flags)) < 0)
+	if ((error = git_stash_apply(repo, index, options)) < 0)
 		return error;
 
 	return git_stash_drop(repo, index);

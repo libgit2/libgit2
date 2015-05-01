@@ -63,7 +63,7 @@ void test_stash_apply__cleanup(void)
 
 void test_stash_apply__with_default(void)
 {
-	cl_git_pass(git_stash_apply(repo, 0, NULL, GIT_APPLY_DEFAULT));
+	cl_git_pass(git_stash_apply(repo, 0, NULL));
 
 	cl_assert_equal_i(git_index_has_conflicts(repo_index), 0);
 	assert_status(repo, "what", GIT_STATUS_WT_MODIFIED);
@@ -74,7 +74,11 @@ void test_stash_apply__with_default(void)
 
 void test_stash_apply__with_reinstate_index(void)
 {
-	cl_git_pass(git_stash_apply(repo, 0, NULL, GIT_APPLY_REINSTATE_INDEX));
+	git_stash_apply_options opts = GIT_STASH_APPLY_OPTIONS_INIT;
+
+	opts.flags = GIT_STASH_APPLY_REINSTATE_INDEX;
+
+	cl_git_pass(git_stash_apply(repo, 0, &opts));
 
 	cl_assert_equal_i(git_index_has_conflicts(repo_index), 0);
 	assert_status(repo, "what", GIT_STATUS_WT_MODIFIED);
@@ -93,7 +97,7 @@ void test_stash_apply__conflict_index_with_default(void)
 	cl_git_pass(git_index_add_bypath(repo_index, "who"));
 	cl_git_pass(git_index_write(repo_index));
 
-	cl_git_pass(git_stash_apply(repo, 0, NULL, GIT_APPLY_DEFAULT));
+	cl_git_pass(git_stash_apply(repo, 0, NULL));
 
 	cl_assert_equal_i(git_index_has_conflicts(repo_index), 1);
 	assert_status(repo, "what", GIT_STATUS_INDEX_MODIFIED);
@@ -104,11 +108,15 @@ void test_stash_apply__conflict_index_with_default(void)
 
 void test_stash_apply__conflict_index_with_reinstate_index(void)
 {
+	git_stash_apply_options opts = GIT_STASH_APPLY_OPTIONS_INIT;
+
+	opts.flags = GIT_STASH_APPLY_REINSTATE_INDEX;
+
 	cl_git_rewritefile("stash/who", "nothing\n");
 	cl_git_pass(git_index_add_bypath(repo_index, "who"));
 	cl_git_pass(git_index_write(repo_index));
 
-	cl_git_fail_with(git_stash_apply(repo, 0, NULL, GIT_APPLY_REINSTATE_INDEX), GIT_EMERGECONFLICT);
+	cl_git_fail_with(git_stash_apply(repo, 0, &opts), GIT_EMERGECONFLICT);
 
 	cl_assert_equal_i(git_index_has_conflicts(repo_index), 0);
 	assert_status(repo, "what", GIT_STATUS_CURRENT);
@@ -119,9 +127,11 @@ void test_stash_apply__conflict_index_with_reinstate_index(void)
 
 void test_stash_apply__conflict_untracked_with_default(void)
 {
+	git_stash_apply_options opts = GIT_STASH_APPLY_OPTIONS_INIT;
+
 	cl_git_mkfile("stash/when", "nothing\n");
 
-	cl_git_fail_with(git_stash_apply(repo, 0, NULL, GIT_APPLY_DEFAULT), GIT_EMERGECONFLICT);
+	cl_git_fail_with(git_stash_apply(repo, 0, &opts), GIT_EMERGECONFLICT);
 
 	cl_assert_equal_i(git_index_has_conflicts(repo_index), 0);
 	assert_status(repo, "what", GIT_STATUS_CURRENT);
@@ -132,9 +142,13 @@ void test_stash_apply__conflict_untracked_with_default(void)
 
 void test_stash_apply__conflict_untracked_with_reinstate_index(void)
 {
+	git_stash_apply_options opts = GIT_STASH_APPLY_OPTIONS_INIT;
+
+	opts.flags = GIT_STASH_APPLY_REINSTATE_INDEX;
+
 	cl_git_mkfile("stash/when", "nothing\n");
 
-	cl_git_fail_with(git_stash_apply(repo, 0, NULL, GIT_APPLY_REINSTATE_INDEX), GIT_EMERGECONFLICT);
+	cl_git_fail_with(git_stash_apply(repo, 0, &opts), GIT_EMERGECONFLICT);
 
 	cl_assert_equal_i(git_index_has_conflicts(repo_index), 0);
 	assert_status(repo, "what", GIT_STATUS_CURRENT);
@@ -147,7 +161,7 @@ void test_stash_apply__conflict_workdir_with_default(void)
 {
 	cl_git_rewritefile("stash/what", "ciao\n");
 
-	cl_git_fail_with(git_stash_apply(repo, 0, NULL, GIT_APPLY_DEFAULT), GIT_EMERGECONFLICT);
+	cl_git_fail_with(git_stash_apply(repo, 0, NULL), GIT_EMERGECONFLICT);
 
 	cl_assert_equal_i(git_index_has_conflicts(repo_index), 0);
 	assert_status(repo, "what", GIT_STATUS_WT_MODIFIED);
@@ -158,9 +172,13 @@ void test_stash_apply__conflict_workdir_with_default(void)
 
 void test_stash_apply__conflict_workdir_with_reinstate_index(void)
 {
+	git_stash_apply_options opts = GIT_STASH_APPLY_OPTIONS_INIT;
+
+	opts.flags = GIT_STASH_APPLY_REINSTATE_INDEX;
+
 	cl_git_rewritefile("stash/what", "ciao\n");
 
-	cl_git_fail_with(git_stash_apply(repo, 0, NULL, GIT_APPLY_REINSTATE_INDEX), GIT_EMERGECONFLICT);
+	cl_git_fail_with(git_stash_apply(repo, 0, &opts), GIT_EMERGECONFLICT);
 
 	cl_assert_equal_i(git_index_has_conflicts(repo_index), 0);
 	assert_status(repo, "what", GIT_STATUS_WT_MODIFIED);
@@ -179,7 +197,7 @@ void test_stash_apply__conflict_commit_with_default(void)
 	cl_git_pass(git_index_add_bypath(repo_index, "what"));
 	cl_repo_commit_from_index(NULL, repo, signature, 0, "Other commit");
 
-	cl_git_pass(git_stash_apply(repo, 0, NULL, GIT_APPLY_DEFAULT));
+	cl_git_pass(git_stash_apply(repo, 0, NULL));
 
 	cl_assert_equal_i(git_index_has_conflicts(repo_index), 1);
 	cl_git_pass(git_index_conflict_get(&ancestor, &our, &their, repo_index, "what")); /* unmerged */
@@ -190,15 +208,18 @@ void test_stash_apply__conflict_commit_with_default(void)
 
 void test_stash_apply__conflict_commit_with_reinstate_index(void)
 {
+	git_stash_apply_options opts = GIT_STASH_APPLY_OPTIONS_INIT;
 	const git_index_entry *ancestor;
 	const git_index_entry *our;
 	const git_index_entry *their;
+
+	opts.flags = GIT_STASH_APPLY_REINSTATE_INDEX;
 
 	cl_git_rewritefile("stash/what", "ciao\n");
 	cl_git_pass(git_index_add_bypath(repo_index, "what"));
 	cl_repo_commit_from_index(NULL, repo, signature, 0, "Other commit");
 
-	cl_git_pass(git_stash_apply(repo, 0, NULL, GIT_APPLY_REINSTATE_INDEX));
+	cl_git_pass(git_stash_apply(repo, 0, &opts));
 
 	cl_assert_equal_i(git_index_has_conflicts(repo_index), 1);
 	cl_git_pass(git_index_conflict_get(&ancestor, &our, &their, repo_index, "what")); /* unmerged */
@@ -209,9 +230,9 @@ void test_stash_apply__conflict_commit_with_reinstate_index(void)
 
 void test_stash_apply__pop(void)
 {
-	cl_git_pass(git_stash_pop(repo, 0, NULL, GIT_APPLY_DEFAULT));
+	cl_git_pass(git_stash_pop(repo, 0, NULL));
 
-	cl_git_fail_with(git_stash_pop(repo, 0, NULL, GIT_APPLY_DEFAULT), GIT_ENOTFOUND);
+	cl_git_fail_with(git_stash_pop(repo, 0, NULL), GIT_ENOTFOUND);
 }
 
 struct seen_paths {
@@ -245,14 +266,14 @@ int checkout_notify(
 
 void test_stash_apply__executes_notify_cb(void)
 {
-	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_stash_apply_options opts = GIT_STASH_APPLY_OPTIONS_INIT;
 	struct seen_paths seen_paths = {0};
 
-	checkout_opts.notify_cb = checkout_notify;
-	checkout_opts.notify_flags = GIT_CHECKOUT_NOTIFY_ALL;
-	checkout_opts.notify_payload = &seen_paths;
+	opts.checkout_options.notify_cb = checkout_notify;
+	opts.checkout_options.notify_flags = GIT_CHECKOUT_NOTIFY_ALL;
+	opts.checkout_options.notify_payload = &seen_paths;
 
-	cl_git_pass(git_stash_apply(repo, 0, &checkout_opts, GIT_APPLY_DEFAULT));
+	cl_git_pass(git_stash_apply(repo, 0, &opts));
 
 	cl_assert_equal_i(git_index_has_conflicts(repo_index), 0);
 	assert_status(repo, "what", GIT_STATUS_WT_MODIFIED);
