@@ -29,6 +29,7 @@ struct git_push {
 	git_packbuilder *pb;
 	git_remote *remote;
 	git_vector specs;
+	git_vector updates;
 	bool report_status;
 
 	/* report-status */
@@ -42,6 +43,8 @@ struct git_push {
 	void *pack_progress_cb_payload;
 	git_push_transfer_progress transfer_progress_cb;
 	void *transfer_progress_cb_payload;
+	git_push_negotiation negotiation_cb;
+	void *negotiation_cb_payload;
 };
 
 /**
@@ -85,6 +88,8 @@ int git_push_set_options(
  * the upload portion of a push. Be aware that this is called inline with
  * pack building operations, so performance may be affected.
  * @param transfer_progress_cb_payload Payload for the network progress callback.
+ * @param push_negotiation_cb Function to call before sending the commands to the remote.
+ * @param push_negotiation_cb_payload Payload for the negotiation callback
  * @return 0 or an error code
  */
 int git_push_set_callbacks(
@@ -92,7 +97,9 @@ int git_push_set_callbacks(
 	git_packbuilder_progress pack_progress_cb,
 	void *pack_progress_cb_payload,
 	git_push_transfer_progress transfer_progress_cb,
-	void *transfer_progress_cb_payload);
+	void *transfer_progress_cb_payload,
+	git_push_negotiation negotiation_cb,
+	void *negotiation_cb_payload);
 
 /**
  * Add a refspec to be pushed
