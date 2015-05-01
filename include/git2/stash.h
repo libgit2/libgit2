@@ -82,19 +82,16 @@ typedef enum {
 /**
  * Apply a single stashed state from the stash list.
  *
- * If any untracked or ignored file saved in the stash already exist in the
- * workdir, the function will return GIT_EEXISTS and both the workdir and index
- * will be left untouched.
- *
- * If local changes in the workdir would be overwritten when applying
- * modifications saved in the stash, the function will return GIT_EMERGECONFLICT
- * and the index will be left untouched. The workdir files will be left
- * unmodified as well but restored untracked or ignored files that were saved
- * in the stash will be left around in the workdir.
+ * If local changes in the working directory conflict with changes in the
+ * stash then GIT_EMERGECONFLICT will be returned.  In this case, the index
+ * will always remain unmodified and all files in the working directory will
+ * remain unmodified.  However, if you are restoring untracked files or
+ * ignored files and there is a conflict when applying the modified files,
+ * then those files will remain in the working directory.
  *
  * If passing the GIT_APPLY_REINSTATE_INDEX flag and there would be conflicts
- * when reinstating the index, the function will return GIT_EUNMERGED and both
- * the workdir and index will be left untouched.
+ * when reinstating the index, the function will return GIT_EMERGECONFLICT
+ * and both the working directory and index will be left unmodified.
  *
  * @param repo The owning repository.
  * @param index The position within the stash list. 0 points to the
@@ -102,8 +99,9 @@ typedef enum {
  * @param checkout_options Options to control how files are checked out
  * @param flags Flags to control the applying process. (see GIT_APPLY_* above)
  *
- * @return 0 on success, GIT_ENOTFOUND if there's no stashed state for the given
- * index, or error code. (see details above)
+ * @return 0 on success, GIT_ENOTFOUND if there's no stashed state for the
+ *         given index, GIT_EMERGECONFLICT if changes exist in the working
+ *         directory, or an error code
  */
 GIT_EXTERN(int) git_stash_apply(
 	git_repository *repo,
