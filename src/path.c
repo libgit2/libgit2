@@ -1263,7 +1263,7 @@ int git_path_diriter_init(
 
 #ifdef GIT_USE_ICONV
 	if ((flags & GIT_PATH_DIR_PRECOMPOSE_UNICODE) != 0)
-		(void)git_path_iconv_init_precompose(&ic);
+		(void)git_path_iconv_init_precompose(&diriter->ic);
 #endif
 
 	diriter->parent_len = diriter->path.size;
@@ -1299,7 +1299,8 @@ int git_path_diriter_next(git_path_diriter *diriter)
 	filename_len = strlen(filename);
 
 #ifdef GIT_USE_ICONV
-	if ((error = git_path_iconv(&diriter->ic, &filename, &filename_len)) < 0)
+	if ((diriter->flags & GIT_PATH_DIR_PRECOMPOSE_UNICODE) != 0 &&
+		(error = git_path_iconv(&diriter->ic, (char **)&filename, &filename_len)) < 0)
 		return error;
 #endif
 

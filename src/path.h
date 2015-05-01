@@ -327,6 +327,93 @@ extern int git_path_walk_up(
 	int (*callback)(void *payload, const char *path),
 	void *payload);
 
+
+enum { GIT_PATH_NOTEQUAL = 0, GIT_PATH_EQUAL = 1, GIT_PATH_PREFIX = 2 };
+
+/*
+ * Determines if a path is equal to or potentially a child of another.
+ * @param parent The possible parent
+ * @param child The possible child
+ */
+GIT_INLINE(int) git_path_equal_or_prefixed(
+	const char *parent,
+	const char *child,
+	ssize_t *prefixlen)
+{
+	const char *p = parent, *c = child;
+	int lastslash = 0;
+
+	while (*p && *c) {
+		lastslash = (*p == '/');
+
+		if (*p++ != *c++)
+			return GIT_PATH_NOTEQUAL;
+	}
+
+	if (*p != '\0')
+		return GIT_PATH_NOTEQUAL;
+
+	if (*c == '\0') {
+		if (prefixlen)
+			*prefixlen = p - parent;
+
+		return GIT_PATH_EQUAL;
+	}
+
+	if (*c == '/' || lastslash) {
+		if (prefixlen)
+			*prefixlen = (p - parent) - lastslash;
+
+		return GIT_PATH_PREFIX;
+	}
+
+	return GIT_PATH_NOTEQUAL;
+}
+
+/* translate errno to libgit2 error code and set error message */
+extern int git_path_set_error(
+	int errno_value, const char *path, const char *action);
+
+/* check if non-ascii characters are present in filename */
+extern bool git_path_has_non_ascii(const char *path, size_t pathlen);
+
+#define GIT_PATH_REPO_ENCODING "UTF-8"
+
+#ifdef __APPLE__
+#define GIT_PATH_NATIVE_ENCODING "UTF-8-MAC"
+#else
+#define GIT_PATH_NATIVE_ENCODING "UTF-8"
+#endif
+
+#ifdef GIT_USE_ICONV
+
+#include <iconv.h>
+
+typedef struct {
+	iconv_t map;
+	git_buf buf;
+} git_path_iconv_t;
+
+#define GIT_PATH_ICONV_INIT { (iconv_t)-1, GIT_BUF_INIT }
+
+/* Init iconv data for converting decomposed UTF-8 to precomposed */
+extern int git_path_iconv_init_precompose(git_path_iconv_t *ic);
+
+/* Clear allocated iconv data */
+extern void git_path_iconv_clear(git_path_iconv_t *ic);
+
+/*
+ * Rewrite `in` buffer using iconv map if necessary, replacing `in`
+ * pointer internal iconv buffer if rewrite happened.  The `in` pointer
+ * will be left unchanged if no rewrite was needed.
+ */
+extern int git_path_iconv(git_path_iconv_t *ic, char **in, size_t *inlen);
+
+#endif /* GIT_USE_ICONV */
+
+extern bool git_path_does_fs_decompose_unicode(const char *root);
+
+
 typedef struct git_path_diriter git_path_diriter;
 
 #if defined(GIT_WIN32) && !defined(__MINGW32__)
@@ -359,6 +446,10 @@ struct git_path_diriter
 	unsigned int flags;
 
 	DIR *dir;
+
+#ifdef GIT_USE_ICONV
+	git_path_iconv_t ic;
+#endif
 };
 
 #define GIT_PATH_DIRITER_INIT { GIT_BUF_INIT }
@@ -452,90 +543,6 @@ extern int git_path_dirload(
 	size_t prefix_len,
 	uint32_t flags);
 
-enum { GIT_PATH_NOTEQUAL = 0, GIT_PATH_EQUAL = 1, GIT_PATH_PREFIX = 2 };
-
-/*
- * Determines if a path is equal to or potentially a child of another.
- * @param parent The possible parent
- * @param child The possible child
- */
-GIT_INLINE(int) git_path_equal_or_prefixed(
-	const char *parent,
-	const char *child,
-	ssize_t *prefixlen)
-{
-	const char *p = parent, *c = child;
-	int lastslash = 0;
-
-	while (*p && *c) {
-		lastslash = (*p == '/');
-
-		if (*p++ != *c++)
-			return GIT_PATH_NOTEQUAL;
-	}
-
-	if (*p != '\0')
-		return GIT_PATH_NOTEQUAL;
-
-	if (*c == '\0') {
-		if (prefixlen)
-			*prefixlen = p - parent;
-
-		return GIT_PATH_EQUAL;
-	}
-
-	if (*c == '/' || lastslash) {
-		if (prefixlen)
-			*prefixlen = (p - parent) - lastslash;
-
-		return GIT_PATH_PREFIX;
-	}
-
-	return GIT_PATH_NOTEQUAL;
-}
-
-/* translate errno to libgit2 error code and set error message */
-extern int git_path_set_error(
-	int errno_value, const char *path, const char *action);
-
-/* check if non-ascii characters are present in filename */
-extern bool git_path_has_non_ascii(const char *path, size_t pathlen);
-
-#define GIT_PATH_REPO_ENCODING "UTF-8"
-
-#ifdef __APPLE__
-#define GIT_PATH_NATIVE_ENCODING "UTF-8-MAC"
-#else
-#define GIT_PATH_NATIVE_ENCODING "UTF-8"
-#endif
-
-#ifdef GIT_USE_ICONV
-
-#include <iconv.h>
-
-typedef struct {
-	iconv_t map;
-	git_buf buf;
-} git_path_iconv_t;
-
-#define GIT_PATH_ICONV_INIT { (iconv_t)-1, GIT_BUF_INIT }
-
-/* Init iconv data for converting decomposed UTF-8 to precomposed */
-extern int git_path_iconv_init_precompose(git_path_iconv_t *ic);
-
-/* Clear allocated iconv data */
-extern void git_path_iconv_clear(git_path_iconv_t *ic);
-
-/*
- * Rewrite `in` buffer using iconv map if necessary, replacing `in`
- * pointer internal iconv buffer if rewrite happened.  The `in` pointer
- * will be left unchanged if no rewrite was needed.
- */
-extern int git_path_iconv(git_path_iconv_t *ic, char **in, size_t *inlen);
-
-#endif /* GIT_USE_ICONV */
-
-extern bool git_path_does_fs_decompose_unicode(const char *root);
 
 /* Used for paths to repositories on the filesystem */
 extern bool git_path_is_local_file_url(const char *file_url);
