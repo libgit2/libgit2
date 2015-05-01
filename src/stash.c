@@ -701,6 +701,11 @@ int git_stash_apply_init_options(git_stash_apply_options *opts, unsigned int ver
 	return 0;
 }
 
+#define NOTIFY_PROGRESS(opts, progress_type) \
+	if ((opts).progress_cb && \
+		(error = (opts).progress_cb((progress_type), (opts).progress_payload))) \
+		return (error < 0) ? error : -1;
+
 int git_stash_apply(
 	git_repository *repo,
 	size_t index,
@@ -725,6 +730,8 @@ int git_stash_apply(
 	normalize_apply_options(&opts, given_opts);
 	checkout_strategy = opts.checkout_options.checkout_strategy;
 
+	NOTIFY_PROGRESS(opts, GIT_STASH_APPLY_PROGRESS_LOADING_STASH);
+
 	/* Retrieve commit corresponding to the given stash */
 	if ((error = retrieve_stash_commit(&stash_commit, repo, index)) < 0)
 		goto cleanup;
@@ -738,6 +745,8 @@ int git_stash_apply(
 	/* Load repo index */
 	if ((error = git_repository_index(&repo_index, repo)) < 0)
 		goto cleanup;
+
+	NOTIFY_PROGRESS(opts, GIT_STASH_APPLY_PROGRESS_ANALYZE_INDEX);
 
 	/* Restore index if required */
 	if ((opts.flags & GIT_STASH_APPLY_REINSTATE_INDEX) &&
@@ -753,18 +762,25 @@ int git_stash_apply(
 		}
 	}
 
+	NOTIFY_PROGRESS(opts, GIT_STASH_APPLY_PROGRESS_ANALYZE_MODIFIED);
+
 	/* Restore modified files in workdir */
 	if ((error = merge_index_and_tree(
 			&modified_index, repo, stash_parent_tree, repo_index, stash_tree)) < 0)
 		goto cleanup;
 
 	/* If applicable, restore untracked / ignored files in workdir */
-	if (untracked_tree &&
-		(error = merge_index_and_tree(&untracked_index, repo, NULL, repo_index, untracked_tree)) < 0)
-		goto cleanup;
+	if (untracked_tree) {
+		NOTIFY_PROGRESS(opts, GIT_STASH_APPLY_PROGRESS_ANALYZE_UNTRACKED);
+
+		if ((error = merge_index_and_tree(&untracked_index, repo, NULL, repo_index, untracked_tree)) < 0)
+			goto cleanup;
+	}
 
 	if (untracked_index) {
 		opts.checkout_options.checkout_strategy |= GIT_CHECKOUT_DONT_UPDATE_INDEX;
+
+		NOTIFY_PROGRESS(opts, GIT_STASH_APPLY_PROGRESS_CHECKOUT_UNTRACKED);
 
 		if ((error = git_checkout_index(repo, untracked_index, &opts.checkout_options)) < 0)
 			goto cleanup;
@@ -787,6 +803,8 @@ int git_stash_apply(
 	 */
 	opts.checkout_options.baseline_index = repo_index;
 
+	NOTIFY_PROGRESS(opts, GIT_STASH_APPLY_PROGRESS_CHECKOUT_MODIFIED);
+
 	if ((error = git_checkout_index(repo, modified_index, &opts.checkout_options)) < 0)
 		goto cleanup;
 
@@ -794,6 +812,8 @@ int git_stash_apply(
 		if ((error = git_index_read_index(repo_index, unstashed_index)) < 0)
 			goto cleanup;
 	}
+
+	NOTIFY_PROGRESS(opts, GIT_STASH_APPLY_PROGRESS_DONE);
 
 cleanup:
 	git_index_free(untracked_index);

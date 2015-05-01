@@ -80,6 +80,40 @@ typedef enum {
 	GIT_STASH_APPLY_REINSTATE_INDEX = (1 << 0),
 } git_stash_apply_flags;
 
+typedef enum {
+	GIT_STASH_APPLY_PROGRESS_NONE = 0,
+
+	/** Loading the stashed data from the object database. */
+	GIT_STASH_APPLY_PROGRESS_LOADING_STASH,
+
+	/** The stored index is being analyzed. */
+	GIT_STASH_APPLY_PROGRESS_ANALYZE_INDEX,
+
+	/** The modified files are being analyzed. */
+	GIT_STASH_APPLY_PROGRESS_ANALYZE_MODIFIED,
+
+	/** The untracked and ignored files are being analyzed. */
+	GIT_STASH_APPLY_PROGRESS_ANALYZE_UNTRACKED,
+
+	/** The untracked files are being written to disk. */
+	GIT_STASH_APPLY_PROGRESS_CHECKOUT_UNTRACKED,
+
+	/** The modified files are being written to disk. */
+	GIT_STASH_APPLY_PROGRESS_CHECKOUT_MODIFIED,
+
+	/** The stash was applied successfully. */
+	GIT_STASH_APPLY_PROGRESS_DONE,
+} git_stash_apply_progress_t;
+
+/**
+ * Stash application progress notification function.
+ * Return 0 to continue processing, or a negative value to
+ * abort the stash application.
+ */
+typedef int (*git_stash_apply_progress_cb)(
+	git_stash_apply_progress_t progress,
+	void *payload);
+
 /** Stash application options structure.
  *
  * Initialize with the `GIT_STASH_APPLY_OPTIONS_INIT` macro to set
@@ -95,6 +129,10 @@ typedef struct git_stash_apply_options {
 
 	/** Options to use when writing files to the working directory. */
 	git_checkout_options checkout_options;
+
+	/** Optional callback to notify the consumer of application progress. */
+	git_stash_apply_progress_cb progress_cb;
+	void *progress_payload;
 } git_stash_apply_options;
 
 #define GIT_STASH_APPLY_OPTIONS_VERSION 1

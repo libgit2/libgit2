@@ -286,3 +286,48 @@ void test_stash_apply__executes_notify_cb(void)
 	cl_assert_equal_b(true, seen_paths.who);
 	cl_assert_equal_b(true, seen_paths.when);
 }
+
+int progress_cb(
+	git_stash_apply_progress_t progress,
+	void *payload)
+{
+	git_stash_apply_progress_t *p = (git_stash_apply_progress_t *)payload;
+
+	cl_assert_equal_i((*p)+1, progress);
+
+	*p = progress;
+
+	return 0;
+}
+
+void test_stash_apply__calls_progress_cb(void)
+{
+	git_stash_apply_options opts = GIT_STASH_APPLY_OPTIONS_INIT;
+	git_stash_apply_progress_t progress = GIT_STASH_APPLY_PROGRESS_NONE;
+
+	opts.progress_cb = progress_cb;
+	opts.progress_payload = &progress;
+
+	cl_git_pass(git_stash_apply(repo, 0, &opts));
+	cl_assert_equal_i(progress, GIT_STASH_APPLY_PROGRESS_DONE);
+}
+
+int aborting_progress_cb(
+	git_stash_apply_progress_t progress,
+	void *payload)
+{
+	if (progress == GIT_STASH_APPLY_PROGRESS_ANALYZE_MODIFIED)
+		return -44;
+
+	return 0;
+}
+
+void test_stash_apply__progress_cb_can_abort(void)
+{
+	git_stash_apply_options opts = GIT_STASH_APPLY_OPTIONS_INIT;
+	git_stash_apply_progress_t progress = GIT_STASH_APPLY_PROGRESS_NONE;
+
+	opts.progress_cb = aborting_progress_cb;
+
+	cl_git_fail_with(-44, git_stash_apply(repo, 0, &opts));
+}
