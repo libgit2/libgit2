@@ -97,12 +97,16 @@ static int diff_delta__from_one(
 		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_INCLUDE_UNREADABLE))
 		return 0;
 
-	if (!git_pathspec__match(
-			&diff->pathspec, entry->path,
-			DIFF_FLAG_IS_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH),
-			DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_CASE),
-			&matched_pathspec, NULL))
-		return 0;
+	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_ENABLE_FILELIST_MATCH)) {
+		matched_pathspec = entry->path;
+	} else {
+		if (!git_pathspec__match(
+				&diff->pathspec, entry->path,
+				DIFF_FLAG_IS_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH),
+				DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_CASE),
+				&matched_pathspec, NULL))
+			return 0;
+	}
 
 	delta = diff_delta__alloc(diff, status, entry->path);
 	GITERR_CHECK_ALLOC(delta);
@@ -312,11 +316,13 @@ static const char *diff_mnemonic_prefix(
 	const char *pfx = "";
 
 	switch (type) {
-	case GIT_ITERATOR_TYPE_EMPTY:   pfx = "c"; break;
-	case GIT_ITERATOR_TYPE_TREE:    pfx = "c"; break;
-	case GIT_ITERATOR_TYPE_INDEX:   pfx = "i"; break;
-	case GIT_ITERATOR_TYPE_WORKDIR: pfx = "w"; break;
-	case GIT_ITERATOR_TYPE_FS:      pfx = left_side ? "1" : "2"; break;
+	case GIT_ITERATOR_TYPE_EMPTY:           pfx = "c"; break;
+	case GIT_ITERATOR_TYPE_TREE:            pfx = "c"; break;
+	case GIT_ITERATOR_TYPE_INDEX:           pfx = "i"; break;
+	case GIT_ITERATOR_TYPE_INDEXFILELIST:   pfx = "i"; break;
+	case GIT_ITERATOR_TYPE_WORKDIR:         pfx = "w"; break;
+	case GIT_ITERATOR_TYPE_WORKDIRFILELIST: pfx = "w"; break;
+	case GIT_ITERATOR_TYPE_FS:              pfx = left_side ? "1" : "2"; break;
 	default: break;
 	}
 
@@ -401,9 +407,13 @@ static int diff_list_apply_options(
 		memcpy(&diff->opts, opts, sizeof(diff->opts));
 		DIFF_FLAG_SET(diff, GIT_DIFF_IGNORE_CASE, icase);
 
-		/* initialize pathspec from options */
-		if (git_pathspec__vinit(&diff->pathspec, &opts->pathspec, pool) < 0)
-			return -1;
+		if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_ENABLE_FILELIST_MATCH)) {
+			/* we do not use diff->pathspec, since the iterators have the filelist. */
+		} else {
+			/* initialize pathspec from options */
+			if (git_pathspec__vinit(&diff->pathspec, &opts->pathspec, pool) < 0)
+				return -1;
+		}
 	}
 
 	/* flag INCLUDE_TYPECHANGE_TREES implies INCLUDE_TYPECHANGE */
@@ -453,10 +463,10 @@ static int diff_list_apply_options(
 
 	/* Unset UPDATE_INDEX unless diffing workdir and index */
 	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_UPDATE_INDEX) &&
-		(!(diff->old_src == GIT_ITERATOR_TYPE_WORKDIR ||
-		   diff->new_src == GIT_ITERATOR_TYPE_WORKDIR) ||
-		 !(diff->old_src == GIT_ITERATOR_TYPE_INDEX ||
-		   diff->new_src == GIT_ITERATOR_TYPE_INDEX)))
+		(!(GIT_ITERATOR_TYPE_IS_WORKDIR_OR_FILELIST(diff->old_src) ||
+		   GIT_ITERATOR_TYPE_IS_WORKDIR_OR_FILELIST(diff->new_src)) ||
+		 !(GIT_ITERATOR_TYPE_IS_INDEX_OR_FILELIST(diff->old_src) ||
+		   GIT_ITERATOR_TYPE_IS_INDEX_OR_FILELIST(diff->new_src))))
 		diff->opts.flags &= ~GIT_DIFF_UPDATE_INDEX;
 
 	/* if ignore_submodules not explicitly set, check diff config */
@@ -508,7 +518,9 @@ static void diff_list_free(git_diff *diff)
 {
 	git_vector_free_deep(&diff->deltas);
 
-	git_pathspec__vfree(&diff->pathspec);
+	if (!DIFF_FLAG_IS_SET(diff, GIT_DIFF_ENABLE_FILELIST_MATCH))
+		git_pathspec__vfree(&diff->pathspec);
+
 	git_pool_clear(&diff->pool);
 
 	git__memzero(diff, sizeof(*diff));
@@ -706,17 +718,21 @@ static int maybe_modified(
 	const git_index_entry *nitem = info->nitem;
 	unsigned int omode = oitem->mode;
 	unsigned int nmode = nitem->mode;
-	bool new_is_workdir = (info->new_iter->type == GIT_ITERATOR_TYPE_WORKDIR);
+	bool new_is_workdir = GIT_ITERATOR_TYPE_IS_WORKDIR_OR_FILELIST(info->new_iter->type);
 	bool modified_uncertain = false;
 	const char *matched_pathspec;
 	int error = 0;
 
-	if (!git_pathspec__match(
-			&diff->pathspec, oitem->path,
-			DIFF_FLAG_IS_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH),
-			DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_CASE),
-			&matched_pathspec, NULL))
-		return 0;
+	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_ENABLE_FILELIST_MATCH)) {
+		matched_pathspec = oitem->path;
+	} else {
+		if (!git_pathspec__match(
+				&diff->pathspec, oitem->path,
+				DIFF_FLAG_IS_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH),
+				DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_CASE),
+				&matched_pathspec, NULL))
+			return 0;
+	}
 
 	memset(&noid, 0, sizeof(noid));
 
@@ -944,7 +960,7 @@ static int handle_unmatched_new_item(
 		/* item contained in ignored directory, so skip over it */
 		return git_iterator_advance(&info->nitem, info->new_iter);
 
-	else if (info->new_iter->type != GIT_ITERATOR_TYPE_WORKDIR)
+	else if (!GIT_ITERATOR_TYPE_IS_WORKDIR_OR_FILELIST(info->new_iter->type))
 		delta_type = GIT_DELTA_ADDED;
 
 	else if (nitem->mode == GIT_FILEMODE_COMMIT) {
@@ -1126,6 +1142,14 @@ cleanup:
 	git__free(pfx); git_iterator_free(a); git_iterator_free(b); \
 } while (0)
 
+#define DIFF_FROM_ITERATORS_FILELIST(MAKE_FIRST, MAKE_SECOND) do { \
+	git_iterator *a = NULL, *b = NULL; \
+	GITERR_CHECK_VERSION(opts, GIT_DIFF_OPTIONS_VERSION, "git_diff_options"); \
+	if (!(error = MAKE_FIRST) && !(error = MAKE_SECOND)) \
+		error = git_diff__from_iterators(diff, repo, a, b, opts); \
+	git_iterator_free(a); git_iterator_free(b); \
+} while (0)
+
 int git_diff_tree_to_tree(
 	git_diff **diff,
 	git_repository *repo,
@@ -1208,11 +1232,26 @@ int git_diff_index_to_workdir(
 	if (!index && (error = diff_load_index(&index, repo)) < 0)
 		return error;
 
-	DIFF_FROM_ITERATORS(
-		git_iterator_for_index(&a, index, 0, pfx, pfx),
-		git_iterator_for_workdir(
-			&b, repo, index, NULL, GIT_ITERATOR_DONT_AUTOEXPAND, pfx, pfx)
-	);
+	if ((opts) && (opts->pathspec.count > 0) && (opts->flags & GIT_DIFF_ENABLE_FILELIST_MATCH)) {
+		/* We use opts->pathspec to seed the filelists inside the iterators, rather
+		 * than setting up diff->pathspec for pattern matching.  (This implicitly
+		 * means that we do not do any of the git_pathspec_ matching.)
+		 *
+		 * We use a custom version of the DIFF_FROM_ITERATORS() macro, because we
+		 * do not need to set the "start" and "end" values nor do the common prefix
+		 * computation.
+		 */
+		DIFF_FROM_ITERATORS_FILELIST(
+			git_iterator_for_indexfilelist(&a, index, &opts->pathspec, 0, NULL, NULL),
+			git_iterator_for_workdirfilelist(&b, repo, NULL, index, NULL, &opts->pathspec, 0, NULL, NULL)
+		);
+	} else {
+		DIFF_FROM_ITERATORS(
+			git_iterator_for_index(&a, index, 0, pfx, pfx),
+			git_iterator_for_workdir(
+				&b, repo, index, NULL, GIT_ITERATOR_DONT_AUTOEXPAND, pfx, pfx)
+		);
+	}
 
 	if (!error && DIFF_FLAG_IS_SET(*diff, GIT_DIFF_UPDATE_INDEX))
 		error = git_index_write(index);

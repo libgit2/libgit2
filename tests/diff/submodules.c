@@ -116,7 +116,7 @@ void test_diff_submodules__dirty_submodule(void)
 	git_diff_free(diff);
 }
 
-void test_diff_submodules__dirty_submodule_2(void)
+static void do__test_diff_submodules__dirty_submodule_2(bool enable_filelist_match)
 {
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff *diff = NULL, *diff2 = NULL;
@@ -135,6 +135,8 @@ void test_diff_submodules__dirty_submodule_2(void)
 		GIT_DIFF_SHOW_UNTRACKED_CONTENT |
 		GIT_DIFF_RECURSE_UNTRACKED_DIRS |
 		GIT_DIFF_DISABLE_PATHSPEC_MATCH;
+	if (enable_filelist_match)
+		opts.flags |= GIT_DIFF_ENABLE_FILELIST_MATCH;
 	opts.old_prefix = "a"; opts.new_prefix = "b";
 	opts.pathspec.count = 1;
 	opts.pathspec.strings = &smpath;
@@ -166,6 +168,16 @@ void test_diff_submodules__dirty_submodule_2(void)
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_dirty);
 	git_diff_free(diff);
+}
+
+void test_diff_submodules__dirty_submodule_2_regular(void)
+{
+	do__test_diff_submodules__dirty_submodule_2(false);
+}
+
+void test_diff_submodules__dirty_submodule_2_filelist(void)
+{
+	do__test_diff_submodules__dirty_submodule_2(true);
 }
 
 void test_diff_submodules__submod2_index_to_wd(void)
@@ -225,7 +237,7 @@ void test_diff_submodules__submod2_head_to_index(void)
 	git_tree_free(head);
 }
 
-void test_diff_submodules__invalid_cache(void)
+static void do__test_diff_submodules__invalid_cache(bool enable_filelist_match)
 {
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff *diff = NULL;
@@ -254,6 +266,8 @@ void test_diff_submodules__invalid_cache(void)
 	g_repo = setup_fixture_submod2();
 
 	opts.flags = GIT_DIFF_INCLUDE_UNTRACKED;
+	if (enable_filelist_match)
+		opts.flags |= GIT_DIFF_ENABLE_FILELIST_MATCH;
 	opts.old_prefix = "a"; opts.new_prefix = "b";
 	opts.pathspec.count = 1;
 	opts.pathspec.strings = &smpath;
@@ -355,6 +369,16 @@ void test_diff_submodules__invalid_cache(void)
 
 	git_index_free(smindex);
 	git_repository_free(smrepo);
+}
+
+void test_diff_submodules__invalid_cache_regular(void)
+{
+	do__test_diff_submodules__invalid_cache(false);
+}
+
+void test_diff_submodules__invalid_cache_filelist(void)
+{
+	do__test_diff_submodules__invalid_cache(true);
 }
 
 void test_diff_submodules__diff_ignore_options(void)

@@ -20,7 +20,17 @@ typedef enum {
 	GIT_ITERATOR_TYPE_INDEX = 2,
 	GIT_ITERATOR_TYPE_WORKDIR = 3,
 	GIT_ITERATOR_TYPE_FS = 4,
+	GIT_ITERATOR_TYPE_INDEXFILELIST = 5,
+	GIT_ITERATOR_TYPE_WORKDIRFILELIST = 6,
 } git_iterator_type_t;
+
+#define GIT_ITERATOR_TYPE_IS_WORKDIR_OR_FILELIST(t) \
+	(((t) == GIT_ITERATOR_TYPE_WORKDIR) ||          \
+	 ((t) == GIT_ITERATOR_TYPE_WORKDIRFILELIST))
+
+#define GIT_ITERATOR_TYPE_IS_INDEX_OR_FILELIST(t) \
+	(((t) == GIT_ITERATOR_TYPE_INDEX) ||          \
+	 ((t) == GIT_ITERATOR_TYPE_INDEXFILELIST))
 
 typedef enum {
 	/** ignore case for entry sort order */
@@ -113,6 +123,27 @@ GIT_INLINE(int) git_iterator_for_workdir(
 extern int git_iterator_for_filesystem(
 	git_iterator **out,
 	const char *root,
+	git_iterator_flag_t flags,
+	const char *start,
+	const char *end);
+
+/* Iterates over the given filelist and enumerate the entries that are in the index. */
+int git_iterator_for_indexfilelist(
+	git_iterator **iter,
+	git_index *index,
+	const git_strarray *paths,
+	git_iterator_flag_t flags,
+	const char *start,
+	const char *end);
+
+/* Iterates over the given filelist and enumerate the entries that are in the workdir. */
+int git_iterator_for_workdirfilelist(
+	git_iterator **iter,
+	git_repository *repo,
+	const char *repo_workdir,
+	git_index *index,
+	git_tree *tree,
+	const git_strarray *paths,
 	git_iterator_flag_t flags,
 	const char *start,
 	const char *end);

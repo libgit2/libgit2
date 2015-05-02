@@ -993,3 +993,149 @@ void test_repo_iterator__skips_fifos_and_such(void)
 	git_iterator_free(i);
 #endif
 }
+
+void test_repo_iterator__indexfilelist(void)
+{
+	git_iterator *i;
+	git_index *index;
+	git_vector filelist;
+	git_strarray paths;
+
+	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
+	cl_git_pass(git_vector_insert(&filelist, "a"));
+	cl_git_pass(git_vector_insert(&filelist, "B"));
+	cl_git_pass(git_vector_insert(&filelist, "c"));
+	cl_git_pass(git_vector_insert(&filelist, "D"));
+	cl_git_pass(git_vector_insert(&filelist, "e"));
+	cl_git_pass(git_vector_insert(&filelist, "k/1"));
+	cl_git_pass(git_vector_insert(&filelist, "k/a"));
+	cl_git_pass(git_vector_insert(&filelist, "L/1"));
+	paths.count = filelist.length;
+	paths.strings = (char **)filelist.contents;
+
+	g_repo = cl_git_sandbox_init("icase");
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	/* In this test we DO NOT force a case setting on the index. */
+
+	/* All indexfilelist iterator tests are "autoexpand with no tree entries" */
+
+	cl_git_pass(git_iterator_for_indexfilelist(&i, index, &paths, 0, NULL, NULL));
+	expect_iterator_items(i, 8, NULL, 8, NULL);
+	git_iterator_free(i);
+
+	git_index_free(index);
+	git_vector_free(&filelist);
+}
+
+void test_repo_iterator__indexfilelist_icase(void)
+{
+	git_iterator *i;
+	git_index *index;
+	int caps;
+	git_vector filelist;
+	git_strarray paths;
+
+	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
+	cl_git_pass(git_vector_insert(&filelist, "a"));
+	cl_git_pass(git_vector_insert(&filelist, "B"));
+	cl_git_pass(git_vector_insert(&filelist, "c"));
+	cl_git_pass(git_vector_insert(&filelist, "D"));
+	cl_git_pass(git_vector_insert(&filelist, "e"));
+	cl_git_pass(git_vector_insert(&filelist, "k/1"));
+	cl_git_pass(git_vector_insert(&filelist, "k/a"));
+	cl_git_pass(git_vector_insert(&filelist, "L/1"));
+	paths.count = filelist.length;
+	paths.strings = (char **)filelist.contents;
+
+	g_repo = cl_git_sandbox_init("icase");
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	caps = git_index_caps(index);
+
+	/* force case sensitivity */
+	cl_git_pass(git_index_set_caps(index, caps & ~GIT_INDEXCAP_IGNORE_CASE));
+
+	/* All indexfilelist iterator tests are "autoexpand with no tree entries" */
+
+	cl_git_pass(git_iterator_for_indexfilelist(&i, index, &paths, 0, NULL, NULL));
+	expect_iterator_items(i, 8, NULL, 8, NULL);
+	git_iterator_free(i);
+
+	/* force case insensitivity */
+	cl_git_pass(git_index_set_caps(index, caps | GIT_INDEXCAP_IGNORE_CASE));
+
+	cl_git_pass(git_iterator_for_indexfilelist(&i, index, &paths, 0, NULL, NULL));
+	expect_iterator_items(i, 8, NULL, 8, NULL);
+	git_iterator_free(i);
+
+	cl_git_pass(git_index_set_caps(index, caps));
+	git_index_free(index);
+	git_vector_free(&filelist);
+}
+
+void test_repo_iterator__workdirfilelist(void)
+{
+	git_iterator *i;
+	git_vector filelist;
+	git_strarray paths;
+
+	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
+	cl_git_pass(git_vector_insert(&filelist, "a"));
+	cl_git_pass(git_vector_insert(&filelist, "B"));
+	cl_git_pass(git_vector_insert(&filelist, "c"));
+	cl_git_pass(git_vector_insert(&filelist, "D"));
+	cl_git_pass(git_vector_insert(&filelist, "e"));
+	cl_git_pass(git_vector_insert(&filelist, "k/1"));
+	cl_git_pass(git_vector_insert(&filelist, "k/a"));
+	cl_git_pass(git_vector_insert(&filelist, "L/1"));
+	paths.count = filelist.length;
+	paths.strings = (char **)filelist.contents;
+
+	g_repo = cl_git_sandbox_init("icase");
+
+	/* All indexfilelist iterator tests are "autoexpand with no tree entries" */
+	/* In this test we DO NOT force a case on the iterators and verify default behavior. */
+
+	cl_git_pass(git_iterator_for_workdirfilelist(&i, g_repo, NULL, NULL, NULL, &paths, 0, NULL, NULL));
+	expect_iterator_items(i, 8, NULL, 8, NULL);
+	git_iterator_free(i);
+
+	git_vector_free(&filelist);
+}
+
+void test_repo_iterator__workdirfilelist_icase(void)
+{
+	git_iterator *i;
+	git_iterator_flag_t flag;
+	git_vector filelist;
+	git_strarray paths;
+
+	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
+	cl_git_pass(git_vector_insert(&filelist, "a"));
+	cl_git_pass(git_vector_insert(&filelist, "B"));
+	cl_git_pass(git_vector_insert(&filelist, "c"));
+	cl_git_pass(git_vector_insert(&filelist, "D"));
+	cl_git_pass(git_vector_insert(&filelist, "e"));
+	cl_git_pass(git_vector_insert(&filelist, "k/1"));
+	cl_git_pass(git_vector_insert(&filelist, "k/a"));
+	cl_git_pass(git_vector_insert(&filelist, "L/1"));
+	paths.count = filelist.length;
+	paths.strings = (char **)filelist.contents;
+
+	g_repo = cl_git_sandbox_init("icase");
+
+	flag = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+	cl_git_pass(git_iterator_for_workdirfilelist(&i, g_repo, NULL, NULL, NULL, &paths, 0, NULL, NULL));
+	expect_iterator_items(i, 8, NULL, 8, NULL);
+	git_iterator_free(i);
+
+	flag = GIT_ITERATOR_IGNORE_CASE;
+
+	cl_git_pass(git_iterator_for_workdirfilelist(&i, g_repo, NULL, NULL, NULL, &paths, 0, NULL, NULL));
+	expect_iterator_items(i, 8, NULL, 8, NULL);
+	git_iterator_free(i);
+
+	git_vector_free(&filelist);
+}

@@ -12,6 +12,7 @@
 #include "buffer.h"
 #include "submodule.h"
 #include <ctype.h>
+#include "git2/ignore.h"
 
 #define ITERATOR_SET_CB(P,NAME_LC) do { \
 	(P)->cb.current = NAME_LC ## _iterator__current; \
@@ -1265,20 +1266,53 @@ int git_iterator_for_filesystem(
 	return fs_iterator__initialize(out, fi, root);
 }
 
+/**
+ * Optional tree and/or the index+snapshot to compare against
+ * when checking for submodules when looking at the workdir
+ * (using _TYPE_WORKDIR or _TYPE_WORKDIRFILELIST).
+ */
+typedef struct {
+	git_tree *tree;
+	git_index *index;
+	git_vector index_snapshot;
+	git_vector_cmp entry_srch;
+} workdir_aux;
+
+static int workdir_aux__init(
+	workdir_aux *aux,
+	git_index *index,
+	git_tree *tree,
+	int ignore_case)
+{
+	int error = 0;
+
+	if (tree && (error = git_object_dup((git_object **)&aux->tree, (git_object *)tree)) < 0)
+		return error;
+
+	aux->index = index;
+	if (index && (error = git_index_snapshot_new(&aux->index_snapshot, index)) < 0)
+		return error;
+
+	aux->entry_srch = ignore_case ?
+		git_index_entry_isrch : git_index_entry_srch;
+
+	return error;
+}
+
+static void workdir_aux__free(workdir_aux *aux)
+{
+	if (aux->index)
+		git_index_snapshot_release(&aux->index_snapshot, aux->index);
+	git_tree_free(aux->tree);
+}
+
 
 typedef struct {
 	fs_iterator fi;
 	git_ignores ignores;
 	int is_ignored;
 
-	/*
-	 * We may have a tree or the index+snapshot to compare against
-	 * when checking for submodules.
-	 */
-	git_tree *tree;
-	git_index *index;
-	git_vector index_snapshot;
-	git_vector_cmp entry_srch;
+	workdir_aux aux;
 
 } workdir_iterator;
 
@@ -1307,17 +1341,17 @@ GIT_INLINE(bool) workdir_path_is_dotgit(const git_buf *path)
  * We consider it a submodule if the path is listed as a submodule in
  * either the tree or the index.
  */
-static int is_submodule(workdir_iterator *wi, git_path_with_stat *ie)
+static int is_submodule(workdir_aux *aux, char *path, size_t path_len)
 {
 	int error, is_submodule = 0;
 
-	if (wi->tree) {
+	if (aux->tree) {
 		git_tree_entry *e;
 
 		/* remove the trailing slash for finding */
-		ie->path[ie->path_len-1] = '\0';
-		error = git_tree_entry_bypath(&e, wi->tree, ie->path);
-		ie->path[ie->path_len-1] = '/';
+		path[path_len-1] = '\0';
+		error = git_tree_entry_bypath(&e, aux->tree, path);
+		path[path_len-1] = '/';
 		if (error < 0 && error != GIT_ENOTFOUND)
 			return 0;
 		if (!error) {
@@ -1326,16 +1360,16 @@ static int is_submodule(workdir_iterator *wi, git_path_with_stat *ie)
 		}
 	}
 
-	if (!is_submodule && wi->index) {
+	if (!is_submodule && aux->index) {
 		git_index_entry *e;
 		size_t pos;
 
-		error = git_index_snapshot_find(&pos, &wi->index_snapshot, wi->entry_srch, ie->path, ie->path_len-1, 0);
+		error = git_index_snapshot_find(&pos, &aux->index_snapshot, aux->entry_srch, path, path_len-1, 0);
 		if (error < 0 && error != GIT_ENOTFOUND)
 			return 0;
 
 		if (!error) {
-			e = git_vector_get(&wi->index_snapshot, pos);
+			e = git_vector_get(&aux->index_snapshot, pos);
 
 			is_submodule = e->mode == GIT_FILEMODE_COMMIT;
 		}
@@ -1376,7 +1410,7 @@ static int workdir_iterator__enter_dir(fs_iterator *fi)
 		if (!S_ISDIR(entry->st.st_mode) || !strcmp(GIT_DIR, entry->path))
 			continue;
 
-		if (is_submodule(wi, entry)) {
+		if (is_submodule(&wi->aux, entry->path, entry->path_len)) {
 			entry->st.st_mode = GIT_FILEMODE_COMMIT;
 			entry->path_len--;
 			entry->path[entry->path_len] = '\0';
@@ -1418,9 +1452,9 @@ static int workdir_iterator__update_entry(fs_iterator *fi)
 static void workdir_iterator__free(git_iterator *self)
 {
 	workdir_iterator *wi = (workdir_iterator *)self;
-	if (wi->index)
-		git_index_snapshot_release(&wi->index_snapshot, wi->index);
-	git_tree_free(wi->tree);
+
+	workdir_aux__free(&wi->aux);
+
 	fs_iterator__free(self);
 	git_ignore__free(&wi->ignores);
 }
@@ -1462,17 +1496,10 @@ int git_iterator_for_workdir_ext(
 		return error;
 	}
 
-	if (tree && (error = git_object_dup((git_object **)&wi->tree, (git_object *)tree)) < 0)
-		return error;
-
-	wi->index = index;
-	if (index && (error = git_index_snapshot_new(&wi->index_snapshot, index)) < 0) {
+	if ((error = workdir_aux__init(&wi->aux, index, tree, iterator__ignore_case(wi))) < 0) {
 		git_iterator_free((git_iterator *)wi);
 		return error;
 	}
-	wi->entry_srch = iterator__ignore_case(wi) ?
-		git_index_entry_isrch : git_index_entry_srch;
-
 
 	/* try to look up precompose and set flag if appropriate */
 	if (git_repository__cvar(&precompose, repo, GIT_CVAR_PRECOMPOSE) < 0)
@@ -1481,6 +1508,424 @@ int git_iterator_for_workdir_ext(
 		wi->fi.base.flags |= GIT_ITERATOR_PRECOMPOSE_UNICODE;
 
 	return fs_iterator__initialize(out, &wi->fi, repo_workdir);
+}
+
+
+/**
+ * Initialize a sorted vector to the values in the given strarray.
+ * This is a shallow copy.
+ */
+static int initialize_filelist_vector(
+	git_vector *pvec_filelist,
+	int ignore_case,
+	const git_strarray *paths)
+{
+	size_t k;
+	int error;
+
+	if ((error = git_vector_init(pvec_filelist, paths->count,
+			((git_vector_cmp)((ignore_case) ? git__strcasecmp : git__strcmp)))) < 0)
+		goto done;
+
+	for (k = 0; k < paths->count; k++)
+		if ((error = git_vector_insert(pvec_filelist, paths->strings[k])) < 0)
+			goto done;
+
+	git_vector_sort(pvec_filelist);
+	return 0;
+
+done:
+	git_vector_free(pvec_filelist);
+	return error;
+}
+
+
+typedef struct {
+	git_iterator base;
+	git_iterator_callbacks cb;
+	git_vector filelist;
+	size_t pos_filelist_start;
+	size_t pos_filelist_end;
+	size_t pos_filelist_current;
+
+	git_index *index;
+	git_vector entries;
+	git_vector_cmp entry_srch;
+	size_t pos_index;
+	
+} indexfilelist_iterator;
+
+/* The "end" string should be included in the enumeration,
+ * so we set the "pos_filelist_end" value just past its
+ * position (in STL style).
+ */
+static int indexfilelist_iterator__at_end(git_iterator *self)
+{
+	indexfilelist_iterator *ifi = (indexfilelist_iterator *)self;
+	return (ifi->pos_filelist_current >= ifi->pos_filelist_end);
+}
+
+static int indexfilelist_iterator__current(
+	const git_index_entry **entry, git_iterator *self)
+{
+	indexfilelist_iterator *ifi = (indexfilelist_iterator *)self;
+
+	iterator__clear_entry(entry);
+
+	if (indexfilelist_iterator__at_end(self))
+		return GIT_ITEROVER;
+
+	if (entry)
+		*entry = git_vector_get(&ifi->entries, ifi->pos_index);
+
+	ifi->base.flags |= GIT_ITERATOR_FIRST_ACCESS;
+	return 0;
+}
+
+static int indexfilelist_iterator__advance(
+	const git_index_entry **entry, git_iterator *self)
+{
+	indexfilelist_iterator *ifi = (indexfilelist_iterator *)self;
+
+	if (!iterator__has_been_accessed(ifi))
+		return indexfilelist_iterator__current(entry, self);
+
+	ifi->pos_filelist_current++;
+
+	while (!indexfilelist_iterator__at_end(self)) {
+		const char *sz = git_vector_get(&ifi->filelist, ifi->pos_filelist_current);
+		if (git_index_snapshot_find(&ifi->pos_index, &ifi->entries, ifi->entry_srch, sz, 0, 0) == 0)
+			break;
+		ifi->pos_filelist_current++;
+	}
+	return indexfilelist_iterator__current(entry, self);
+}
+
+static int indexfilelist_iterator__advance_into(
+	const git_index_entry **entry, git_iterator *self)
+{
+	/* not needed since we don't present a diving/treewalk concept. */
+	GIT_UNUSED(entry); GIT_UNUSED(self);
+	return -1;
+}
+
+static int indexfilelist_iterator__seek(
+	git_iterator *self, const char *prefix)
+{
+	GIT_UNUSED(self); GIT_UNUSED(prefix);
+	return -1;
+}
+
+static int indexfilelist_iterator__reset(
+	git_iterator *self, const char *start, const char *end)
+{
+	indexfilelist_iterator *ifi = (indexfilelist_iterator *)self;
+
+	if (iterator__reset_range(self, start, end) < 0)
+		return -1;
+
+	ifi->pos_filelist_start = 0;
+	ifi->pos_filelist_end = git_vector_length(&ifi->filelist);
+
+	/* Seed "current" with the first item in both the filelist and the index. */
+	/* Skip unmatched items in filelist. */
+
+	ifi->pos_filelist_current = ifi->pos_filelist_start;
+	while (!indexfilelist_iterator__at_end(self)) {
+		const char *sz = git_vector_get(&ifi->filelist, ifi->pos_filelist_current);
+		if (git_index_snapshot_find(&ifi->pos_index, &ifi->entries, ifi->entry_srch, sz, 0, 0) == 0)
+			break;
+		ifi->pos_filelist_current++;
+	}
+	return (indexfilelist_iterator__at_end(self) ? GIT_ITEROVER : 0);
+}
+
+static void indexfilelist_iterator__free(git_iterator *self)
+{
+	indexfilelist_iterator *ifi = (indexfilelist_iterator *)self;
+	git_index_snapshot_release(&ifi->entries, ifi->index);
+	ifi->index = NULL;
+	git_vector_free(&ifi->filelist);
+}
+
+int git_iterator_for_indexfilelist(
+	git_iterator **iter,
+	git_index *index,
+	const git_strarray *paths,
+	git_iterator_flag_t flags,
+	const char *start,
+	const char *end)
+{
+	int error = 0;
+	indexfilelist_iterator *ifi = NULL;
+
+	assert(paths && paths->count > 0);
+
+	/* This iterator does not take "start" and "end" strings
+	 * since we have been given the exact set of paths to
+	 * enumerate.
+	 */
+	assert(!start && !end);
+
+	/* This iterator only returns items from the filelist
+	 * that happen to appear in the index, so we don't do
+	 * any of these variations.
+	 */
+	assert((flags & GIT_ITERATOR_INCLUDE_TREES) == 0);
+	assert((flags & GIT_ITERATOR_DONT_AUTOEXPAND) == 0);
+	assert((flags & GIT_ITERATOR_PRECOMPOSE_UNICODE) == 0);
+
+	ifi = git__calloc(1, sizeof(indexfilelist_iterator));
+	GITERR_CHECK_ALLOC(ifi);
+
+	ITERATOR_BASE_INIT(ifi, indexfilelist, INDEXFILELIST, git_index_owner(index));
+	if ((error = iterator__update_ignore_case((git_iterator *)ifi, flags)) < 0)
+		goto done;
+
+	ifi->entry_srch = iterator__ignore_case(ifi) ?
+		git_index_entry_isrch : git_index_entry_srch;
+
+	/* Snapshot the current index and sort the entries as requested. */
+	ifi->index = index;
+	if ((error = git_index_snapshot_new(&ifi->entries, index)) < 0)
+		goto done;
+	git_vector_set_cmp(&ifi->entries, iterator__ignore_case(ifi) ?
+		git_index_entry_icmp : git_index_entry_cmp);
+	git_vector_sort(&ifi->entries);
+
+	if ((error = initialize_filelist_vector(&ifi->filelist,
+			iterator__ignore_case(ifi), paths)) < 0)
+		goto done;
+
+	indexfilelist_iterator__reset((git_iterator *)ifi, NULL, NULL);
+
+	*iter = (git_iterator *)ifi;
+	return 0;
+
+done:
+	git_iterator_free((git_iterator *)ifi);
+	return -1;
+}
+
+
+typedef struct {
+	git_iterator base;
+	git_iterator_callbacks cb;
+	git_vector filelist;
+	size_t pos_filelist_start;
+	size_t pos_filelist_end;
+	size_t pos_filelist_current;
+
+	git_buf buf_workdir;
+
+	workdir_aux aux;
+
+	/* We have a single fixed entry that we return to callers
+	 * and use this buffer to hold the path referenced in the
+	 * entry.
+	 */
+	git_buf buf_entry_path;
+	git_index_entry entry;
+	
+} workdirfilelist_iterator;
+
+static int workdirfilelist_stat(git_iterator *self, const char *path)
+{
+	workdirfilelist_iterator *wdfi = (workdirfilelist_iterator *)self;
+	git_buf buf_fullpath = GIT_BUF_INIT;
+	struct stat st;
+	int r;
+
+	git_buf_joinpath(&buf_fullpath, wdfi->buf_workdir.ptr, path);
+	r = p_lstat(buf_fullpath.ptr, &st);
+	git_buf_free(&buf_fullpath);
+
+	if (r == 0) {
+		/* copy given path into our private buffer for use with our fixed entry. */
+		git_buf_sets(&wdfi->buf_entry_path, path);
+
+		/* We use __init_from_stat() just to copy fields from "st" into
+		 * "entry".  However, it calls git_index__create_mode() which
+		 * sets entry->mode := (S_IFLNK | S_IFDIR) for any directory.
+		 * (This is equal to GIT_FILEMODE_COMMIT and means "submodule".
+		 * So we use supplied tree and index to confirm that.
+		 */
+		git_index_entry__init_from_stat(&wdfi->entry, &st, true);
+		if (wdfi->entry.mode == (S_IFLNK | S_IFDIR)) {
+			int is_sub;
+			/* is_submodule() expects trailing slash */
+			if (wdfi->buf_entry_path.ptr[wdfi->buf_entry_path.size - 1] != '/')
+				git_buf_putc(&wdfi->buf_entry_path, '/');
+			is_sub = is_submodule(&wdfi->aux, wdfi->buf_entry_path.ptr, wdfi->buf_entry_path.size);
+			/* entry path for submodules DO NOT have trailing slash; keep it for plain dirs */
+			if (is_sub)
+				git_buf_truncate(&wdfi->buf_entry_path, wdfi->buf_entry_path.size - 1);
+			else
+				wdfi->entry.mode = S_IFDIR;
+		}
+
+		/* borrow private buffer in our fixed entry. */
+		wdfi->entry.path = wdfi->buf_entry_path.ptr;
+	}
+
+	return r;
+}
+
+/* The "end" string should be included in the enumeration,
+ * so we set the "pos_filelist_end" value just past its
+ * position (in STL style).
+ */
+static int workdirfilelist_iterator__at_end(git_iterator *self)
+{
+	workdirfilelist_iterator *wdfi = (workdirfilelist_iterator *)self;
+	return (wdfi->pos_filelist_current >= wdfi->pos_filelist_end);
+}
+
+static int workdirfilelist_iterator__current(
+	const git_index_entry **entry, git_iterator *self)
+{
+	workdirfilelist_iterator *wdfi = (workdirfilelist_iterator *)self;
+
+	iterator__clear_entry(entry);
+
+	if (workdirfilelist_iterator__at_end(self))
+		return GIT_ITEROVER;
+
+	if (entry)
+		*entry = &wdfi->entry;
+
+	wdfi->base.flags |= GIT_ITERATOR_FIRST_ACCESS;
+	return 0;
+}
+
+static int workdirfilelist_iterator__advance(
+	const git_index_entry **entry, git_iterator *self)
+{
+	workdirfilelist_iterator *wdfi = (workdirfilelist_iterator *)self;
+
+	if (!iterator__has_been_accessed(wdfi))
+		return workdirfilelist_iterator__current(entry, self);
+
+	wdfi->pos_filelist_current++;
+
+	while (!workdirfilelist_iterator__at_end(self)) {
+		const char *sz = git_vector_get(&wdfi->filelist, wdfi->pos_filelist_current);
+		if (workdirfilelist_stat(self, sz) == 0)
+			break;
+
+		wdfi->pos_filelist_current++;
+	}
+	return workdirfilelist_iterator__current(entry, self);
+}
+
+static int workdirfilelist_iterator__advance_into(
+	const git_index_entry **entry, git_iterator *self)
+{
+	/* not needed since we don't present a diving/treewalk concept. */
+	GIT_UNUSED(entry); GIT_UNUSED(self);
+	return GIT_ENOTFOUND;
+}
+
+static int workdirfilelist_iterator__seek(
+	git_iterator *self, const char *prefix)
+{
+	GIT_UNUSED(self); GIT_UNUSED(prefix);
+	return -1;
+}
+
+static int workdirfilelist_iterator__reset(
+	git_iterator *self, const char *start, const char *end)
+{
+	workdirfilelist_iterator *wdfi = (workdirfilelist_iterator *)self;
+
+	if (iterator__reset_range(self, start, end) < 0)
+		return -1;
+
+	wdfi->pos_filelist_start = 0;
+	wdfi->pos_filelist_end = git_vector_length(&wdfi->filelist);
+
+	wdfi->pos_filelist_current = wdfi->pos_filelist_start;
+	while (!workdirfilelist_iterator__at_end(self)) {
+		const char *sz = git_vector_get(&wdfi->filelist, wdfi->pos_filelist_current);
+		if (workdirfilelist_stat(self, sz) == 0)
+			break;
+
+		wdfi->pos_filelist_current++;
+	}
+	return (workdirfilelist_iterator__at_end(self) ? GIT_ITEROVER : 0);
+}
+
+static void workdirfilelist_iterator__free(git_iterator *self)
+{
+	workdirfilelist_iterator *wdfi = (workdirfilelist_iterator *)self;
+
+	workdir_aux__free(&wdfi->aux);
+
+	git_buf_free(&wdfi->buf_workdir);
+	git_buf_free(&wdfi->buf_entry_path);
+	git_vector_free(&wdfi->filelist);
+}
+
+int git_iterator_for_workdirfilelist(
+	git_iterator **iter,
+	git_repository *repo,
+	const char *repo_workdir,
+	git_index *index,
+	git_tree *tree,
+	const git_strarray *paths,
+	git_iterator_flag_t flags,
+	const char *start,
+	const char *end)
+{
+	int error = 0;
+	workdirfilelist_iterator *wdfi = NULL;
+
+	assert(paths && paths->count > 0);
+
+	/* This iterator does not take "start" and "end" strings
+	 * since we have been given the exact set of paths to
+	 * enumerate.
+	 */
+	assert(!start && !end);
+
+	/* This iterator only returns items from the filelist
+	 * that happen to appear in the index, so we don't do
+	 * any of these variations.
+	 */
+	assert((flags & GIT_ITERATOR_INCLUDE_TREES) == 0);
+	assert((flags & GIT_ITERATOR_DONT_AUTOEXPAND) == 0);
+	assert((flags & GIT_ITERATOR_PRECOMPOSE_UNICODE) == 0);
+
+	if (!repo_workdir) {
+		if (git_repository__ensure_not_bare(repo, "scan working directory") < 0)
+			return GIT_EBAREREPO;
+		repo_workdir = git_repository_workdir(repo);
+	}
+
+	wdfi = git__calloc(1, sizeof(workdirfilelist_iterator));
+	GITERR_CHECK_ALLOC(wdfi);
+
+	ITERATOR_BASE_INIT(wdfi, workdirfilelist, WORKDIRFILELIST, repo);
+	if ((error = iterator__update_ignore_case((git_iterator *)wdfi, flags)) < 0)
+		goto done;
+
+	git_buf_sets(&wdfi->buf_workdir, repo_workdir);
+
+	if ((error = workdir_aux__init(&wdfi->aux, index, tree, iterator__ignore_case(wdfi))) < 0)
+		goto done;
+
+	if ((error = initialize_filelist_vector(&wdfi->filelist,
+			iterator__ignore_case(wdfi), paths)) < 0)
+		goto done;
+
+	workdirfilelist_iterator__reset((git_iterator *)wdfi, NULL, NULL);
+
+	*iter = (git_iterator *)wdfi;
+	return 0;
+
+done:
+	git_iterator_free((git_iterator *)wdfi);
+	return error;
 }
 
 
@@ -1587,27 +2032,68 @@ static void workdir_iterator_update_is_ignored(workdir_iterator *wi)
 
 bool git_iterator_current_is_ignored(git_iterator *iter)
 {
-	workdir_iterator *wi = (workdir_iterator *)iter;
-
-	if (iter->type != GIT_ITERATOR_TYPE_WORKDIR)
-		return false;
-
-	if (wi->is_ignored != GIT_IGNORE_UNCHECKED)
+	if (iter->type == GIT_ITERATOR_TYPE_WORKDIR) {
+		workdir_iterator *wi = (workdir_iterator *)iter;
+		if (wi->is_ignored == GIT_IGNORE_UNCHECKED)
+			workdir_iterator_update_is_ignored(wi);
 		return (bool)(wi->is_ignored == GIT_IGNORE_TRUE);
-
-	workdir_iterator_update_is_ignored(wi);
-
-	return (bool)(wi->is_ignored == GIT_IGNORE_TRUE);
+	}
+	else if (iter->type == GIT_ITERATOR_TYPE_WORKDIRFILELIST) {
+		workdirfilelist_iterator *wdfi = (workdirfilelist_iterator *)iter;
+		int is_ignored = 0;
+		/* Since we are not managing a recursive dive into the
+		 * workdir (rather, we only enumerate the paths in the
+		 * given filelist), we are not maintaining a git_ignore
+		 * object.  So we use the (probably very expensive)
+		 * convenience lookup routine each time we need it.
+		 */
+		git_ignore_path_is_ignored(&is_ignored, iter->repo, wdfi->entry.path);
+		return (bool)(is_ignored == GIT_IGNORE_TRUE);
+	}
+	else {
+		return false;
+	}
 }
 
 bool git_iterator_current_tree_is_ignored(git_iterator *iter)
 {
-	workdir_iterator *wi = (workdir_iterator *)iter;
+	if (iter->type == GIT_ITERATOR_TYPE_WORKDIR) {
+		workdir_iterator *wi = (workdir_iterator *)iter;
+		return (bool)(wi->fi.stack->is_ignored == GIT_IGNORE_TRUE);
+	}
+	else if (iter->type == GIT_ITERATOR_TYPE_WORKDIRFILELIST) {
+		/* TODO We have one caller in diff.c.  We are used to see if
+		 * the containing directory is also ignored.  See delta
+		 * https://github.com/libgit2/libgit2/commit/f554611a274aafd702bd899f4663c16eb76ae8f0
+		 * for background info.
+		 *
+		 * I'm wondering if we really need to do this for a
+		 * workdirfilelist iterator.
+		 */
+		workdirfilelist_iterator *wdfi = (workdirfilelist_iterator *)iter;
+		git_buf buf_parent = GIT_BUF_INIT;
+		const char *sz;
+		int is_ignored = 0;
+		bool r = false;
 
-	if (iter->type != GIT_ITERATOR_TYPE_WORKDIR)
+		assert(wdfi->entry.path && wdfi->entry.path[0]);
+
+		git_buf_sets(&buf_parent, wdfi->entry.path);
+		/* remove trailing slash (should not be present) */
+		if (buf_parent.ptr[buf_parent.size - 1] == '/')
+			git_buf_truncate(&buf_parent, buf_parent.size - 1);
+		/* truncate filename. see if parent directory is ignored. */
+		if (((sz = strrchr(buf_parent.ptr, '/')) != NULL) && (sz > buf_parent.ptr)) {
+			git_buf_truncate(&buf_parent, (sz - buf_parent.ptr));
+			git_ignore_path_is_ignored(&is_ignored, iter->repo, buf_parent.ptr);
+			r = (bool)(is_ignored == GIT_IGNORE_TRUE);
+		}
+		git_buf_free(&buf_parent);
+		return r;
+	}
+	else {
 		return false;
-
-	return (bool)(wi->fi.stack->is_ignored == GIT_IGNORE_TRUE);
+	}
 }
 
 int git_iterator_cmp(git_iterator *iter, const char *path_prefix)
@@ -1627,17 +2113,21 @@ int git_iterator_cmp(git_iterator *iter, const char *path_prefix)
 
 int git_iterator_current_workdir_path(git_buf **path, git_iterator *iter)
 {
-	workdir_iterator *wi = (workdir_iterator *)iter;
+	*path = NULL;
 
-	if (iter->type != GIT_ITERATOR_TYPE_WORKDIR || !wi->fi.entry.path)
-		*path = NULL;
-	else
-		*path = &wi->fi.path;
+	if (iter->type == GIT_ITERATOR_TYPE_WORKDIR) {
+		workdir_iterator *wi = (workdir_iterator *)iter;
+		if (wi->fi.entry.path)
+			*path = &wi->fi.path;
+	}
+	else if (iter->type == GIT_ITERATOR_TYPE_WORKDIRFILELIST) {
+		// TODO Not sure whether this would actually be called.
+	}
 
 	return 0;
 }
 
-int git_iterator_advance_over_with_status(
+static int workdir__git_iterator_advance_over_with_status(
 	const git_index_entry **entryptr,
 	git_iterator_status_t *status,
 	git_iterator *iter)
@@ -1649,8 +2139,6 @@ int git_iterator_advance_over_with_status(
 
 	*status = GIT_ITERATOR_STATUS_NORMAL;
 
-	if (iter->type != GIT_ITERATOR_TYPE_WORKDIR)
-		return git_iterator_advance(entryptr, iter);
 	if ((error = git_iterator_current(&entry, iter)) < 0)
 		return error;
 
@@ -1704,5 +2192,41 @@ int git_iterator_advance_over_with_status(
 	git__free(base);
 
 	return error;
+}
+
+static int workdirfilelist__git_iterator_advance_over_with_status(
+	const git_index_entry **entryptr,
+	git_iterator_status_t *status,
+	git_iterator *iter)
+{
+	/* TODO What to do here?  Our caller is iterating on a filelist
+	 * and hit a directory.  Should we inspect filelist[k+1] and do
+	 * a prefix comparison with the current value?  Or should we do
+	 * a readdir() on the workdir?  In the general case, maybe the
+	 * latter, but if diff() has already done that in the first passes
+	 * and is just using us for a check-result pass, we may not ever
+	 * get here.
+	 */
+
+	*status = GIT_ITERATOR_STATUS_EMPTY;
+
+	return git_iterator_advance(entryptr, iter);
+}
+
+int git_iterator_advance_over_with_status(
+	const git_index_entry **entryptr,
+	git_iterator_status_t *status,
+	git_iterator *iter)
+{
+	if (iter->type == GIT_ITERATOR_TYPE_WORKDIR)
+		return workdir__git_iterator_advance_over_with_status(
+			entryptr, status, iter);
+
+	else if (iter->type == GIT_ITERATOR_TYPE_WORKDIRFILELIST)
+		return workdirfilelist__git_iterator_advance_over_with_status(
+			entryptr, status, iter);
+
+	*status = GIT_ITERATOR_STATUS_NORMAL;
+	return git_iterator_advance(entryptr, iter);
 }
 
