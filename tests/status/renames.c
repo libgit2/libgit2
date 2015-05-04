@@ -73,16 +73,20 @@ static void check_status(
 
 		cl_assert_equal_i_fmt(expected->status, actual->status, "%04x");
 
-		if (oldname)
-			cl_assert(git__strcmp(oldname, expected->oldname) == 0);
-		else
-			cl_assert(expected->oldname == NULL);
+		if (expected->oldname) {
+			cl_assert(oldname != NULL);
+			cl_assert_equal_s(oldname, expected->oldname);
+		} else {
+			cl_assert(oldname == NULL);
+		}
 
 		if (actual->status & (GIT_STATUS_INDEX_RENAMED|GIT_STATUS_WT_RENAMED)) {
-			if (newname)
-				cl_assert(git__strcmp(newname, expected->newname) == 0);
-			else
-				cl_assert(expected->newname == NULL);
+			if (expected->newname) {
+				cl_assert(newname != NULL);
+				cl_assert_equal_s(newname, expected->newname);
+			} else {
+				cl_assert(newname == NULL);
+			}
 		}
 	}
 }

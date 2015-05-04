@@ -124,6 +124,11 @@ typedef enum {
 	/** Use case insensitive filename comparisons */
 	GIT_DIFF_IGNORE_CASE = (1u << 10),
 
+	/** May be combined with `GIT_DIFF_IGNORE_CASE` to specify that a file
+	 *  that has changed case will be returned as an add/delete pair.
+	 */
+	GIT_DIFF_INCLUDE_CASECHANGE = (1u << 11),
+
 	/** If the pathspec is set in the diff options, this flags means to
 	 *  apply it as an exact match instead of as an fnmatch pattern.
 	 */
@@ -220,7 +225,7 @@ typedef struct git_diff git_diff;
 typedef enum {
 	GIT_DIFF_FLAG_BINARY     = (1u << 0), /**< file(s) treated as binary data */
 	GIT_DIFF_FLAG_NOT_BINARY = (1u << 1), /**< file(s) treated as text data */
-	GIT_DIFF_FLAG_VALID_ID  = (1u << 2), /**< `id` value is known correct */
+	GIT_DIFF_FLAG_VALID_ID   = (1u << 2), /**< `id` value is known correct */
 } git_diff_flag_t;
 
 /**

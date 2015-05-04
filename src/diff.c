@@ -822,6 +822,19 @@ static int maybe_modified(
 			status = GIT_DELTA_UNMODIFIED;
 	}
 
+	/* If we want case changes, then break this into a delete of the old
+	 * and an add of the new so that consumers can act accordingly (eg,
+	 * checkout will update the case on disk.)
+	 */
+	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_CASE) &&
+		DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_CASECHANGE) &&
+		strcmp(oitem->path, nitem->path) != 0) {
+
+		if (!(error = diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem)))
+			error = diff_delta__from_one(diff, GIT_DELTA_ADDED, nitem);
+		return error;
+	}
+
 	return diff_delta__from_two(
 		diff, status, oitem, omode, nitem, nmode,
 		git_oid_iszero(&noid) ? NULL : &noid, matched_pathspec);

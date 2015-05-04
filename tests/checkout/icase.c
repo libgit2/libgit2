@@ -1,10 +1,13 @@
 #include "clar_libgit2.h"
 
 #include "git2/checkout.h"
+#include "refs.h"
 #include "path.h"
 
 #ifdef GIT_WIN32
 # include <windows.h>
+#else
+# include <dirent.h>
 #endif
 
 static git_repository *repo;
@@ -14,14 +17,23 @@ static git_checkout_options checkout_opts;
 void test_checkout_icase__initialize(void)
 {
 	git_oid id;
+	git_config *cfg;
+	int icase = 0;
 
 	repo = cl_git_sandbox_init("testrepo");
+
+	cl_git_pass(git_repository_config_snapshot(&cfg, repo));
+	git_config_get_bool(&icase, cfg, "core.ignorecase");
+	git_config_free(cfg);
+
+	if (!icase)
+		cl_skip();
 
 	cl_git_pass(git_reference_name_to_id(&id, repo, "refs/heads/dir"));
 	cl_git_pass(git_object_lookup(&obj, repo, &id, GIT_OBJ_ANY));
 
 	git_checkout_init_options(&checkout_opts, GIT_CHECKOUT_OPTIONS_VERSION);
-	checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_NONE;
 }
 
 void test_checkout_icase__cleanup(void)
@@ -30,7 +42,7 @@ void test_checkout_icase__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-static char *test_realpath(const char *in)
+static char *get_filename(const char *in)
 {
 #ifdef GIT_WIN32
 	HANDLE fh;
@@ -55,7 +67,31 @@ static char *test_realpath(const char *in)
 
 	return filename;
 #else
-	return realpath(in, NULL);
+	char *search_dirname, *search_filename, *filename = NULL;
+	git_buf out = GIT_BUF_INIT;
+	DIR *dir;
+	struct dirent *de;
+
+	cl_assert(search_dirname = git_path_dirname(in));
+	cl_assert(search_filename = git_path_basename(in));
+
+	cl_assert(dir = opendir(search_dirname));
+
+	while ((de = readdir(dir))) {
+		if (strcasecmp(de->d_name, search_filename) == 0) {
+			git_buf_join(&out, '/', search_dirname, de->d_name);
+			filename = git_buf_detach(&out);
+			break;
+		}
+	}
+
+	closedir(dir);
+
+	git__free(search_dirname);
+	git__free(search_filename);
+	git_buf_free(&out);
+
+	return filename;
 #endif
 }
 
@@ -64,7 +100,7 @@ static void assert_name_is(const char *expected)
 	char *actual;
 	size_t actual_len, expected_len, start;
 
-	cl_assert(actual = test_realpath(expected));
+	cl_assert(actual = get_filename(expected));
 
 	expected_len = strlen(expected);
 	actual_len = strlen(actual);
@@ -79,8 +115,21 @@ static void assert_name_is(const char *expected)
 	free(actual);
 }
 
-void test_checkout_icase__overwrites_files_for_files(void)
+void test_checkout_icase__refuses_to_overwrite_files_for_files(void)
 {
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE|GIT_CHECKOUT_RECREATE_MISSING;
+
+	cl_git_write2file("testrepo/BRANCH_FILE.txt", "neue file\n", 10, \
+		O_WRONLY | O_CREAT | O_TRUNC, 0644);
+
+	cl_git_fail(git_checkout_tree(repo, obj, &checkout_opts));
+	assert_name_is("testrepo/BRANCH_FILE.txt");
+}
+
+void test_checkout_icase__overwrites_files_for_files_when_forced(void)
+{
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
 	cl_git_write2file("testrepo/NEW.txt", "neue file\n", 10, \
 		O_WRONLY | O_CREAT | O_TRUNC, 0644);
 
@@ -88,8 +137,22 @@ void test_checkout_icase__overwrites_files_for_files(void)
 	assert_name_is("testrepo/new.txt");
 }
 
-void test_checkout_icase__overwrites_links_for_files(void)
+void test_checkout_icase__refuses_to_overwrite_links_for_files(void)
 {
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE|GIT_CHECKOUT_RECREATE_MISSING;
+
+	cl_must_pass(p_symlink("../tmp", "testrepo/BRANCH_FILE.txt"));
+
+	cl_git_fail(git_checkout_tree(repo, obj, &checkout_opts));
+
+	cl_assert(!git_path_exists("tmp"));
+	assert_name_is("testrepo/BRANCH_FILE.txt");
+}
+
+void test_checkout_icase__overwrites_links_for_files_when_forced(void)
+{
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
 	cl_must_pass(p_symlink("../tmp", "testrepo/NEW.txt"));
 
 	cl_git_pass(git_checkout_tree(repo, obj, &checkout_opts));
@@ -98,8 +161,10 @@ void test_checkout_icase__overwrites_links_for_files(void)
 	assert_name_is("testrepo/new.txt");
 }
 
-void test_checkout_icase__overwites_folders_for_files(void)
+void test_checkout_icase__overwrites_empty_folders_for_files(void)
 {
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE|GIT_CHECKOUT_RECREATE_MISSING;
+
 	cl_must_pass(p_mkdir("testrepo/NEW.txt", 0777));
 
 	cl_git_pass(git_checkout_tree(repo, obj, &checkout_opts));
@@ -108,8 +173,50 @@ void test_checkout_icase__overwites_folders_for_files(void)
 	cl_assert(!git_path_isdir("testrepo/new.txt"));
 }
 
-void test_checkout_icase__overwrites_files_for_folders(void)
+void test_checkout_icase__refuses_to_overwrite_populated_folders_for_files(void)
 {
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE|GIT_CHECKOUT_RECREATE_MISSING;
+
+	cl_must_pass(p_mkdir("testrepo/BRANCH_FILE.txt", 0777));
+	cl_git_write2file("testrepo/BRANCH_FILE.txt/foobar", "neue file\n", 10, \
+		O_WRONLY | O_CREAT | O_TRUNC, 0644);
+
+	cl_git_fail(git_checkout_tree(repo, obj, &checkout_opts));
+
+	assert_name_is("testrepo/BRANCH_FILE.txt");
+	cl_assert(git_path_isdir("testrepo/BRANCH_FILE.txt"));
+}
+
+void test_checkout_icase__overwrites_folders_for_files_when_forced(void)
+{
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_must_pass(p_mkdir("testrepo/NEW.txt", 0777));
+	cl_git_write2file("testrepo/NEW.txt/foobar", "neue file\n", 10, \
+		O_WRONLY | O_CREAT | O_TRUNC, 0644);
+
+	cl_git_pass(git_checkout_tree(repo, obj, &checkout_opts));
+
+	assert_name_is("testrepo/new.txt");
+	cl_assert(!git_path_isdir("testrepo/new.txt"));
+}
+
+void test_checkout_icase__refuses_to_overwrite_files_for_folders(void)
+{
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE|GIT_CHECKOUT_RECREATE_MISSING;
+
+	cl_git_write2file("testrepo/A", "neue file\n", 10, \
+		O_WRONLY | O_CREAT | O_TRUNC, 0644);
+
+	cl_git_fail(git_checkout_tree(repo, obj, &checkout_opts));
+	assert_name_is("testrepo/A");
+	cl_assert(!git_path_isdir("testrepo/A"));
+}
+
+void test_checkout_icase__overwrites_files_for_folders_when_forced(void)
+{
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
 	cl_git_write2file("testrepo/A", "neue file\n", 10, \
 		O_WRONLY | O_CREAT | O_TRUNC, 0644);
 
@@ -118,13 +225,77 @@ void test_checkout_icase__overwrites_files_for_folders(void)
 	cl_assert(git_path_isdir("testrepo/a"));
 }
 
-void test_checkout_icase__overwrites_links_for_folders(void)
+void test_checkout_icase__refuses_to_overwrite_links_for_folders(void)
 {
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE|GIT_CHECKOUT_RECREATE_MISSING;
+
+	cl_must_pass(p_symlink("..", "testrepo/A"));
+
+	cl_git_fail(git_checkout_tree(repo, obj, &checkout_opts));
+
+	cl_assert(!git_path_exists("b.txt"));
+	assert_name_is("testrepo/A");
+}
+
+void test_checkout_icase__overwrites_links_for_folders_when_forced(void)
+{
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
 	cl_must_pass(p_symlink("..", "testrepo/A"));
 
 	cl_git_pass(git_checkout_tree(repo, obj, &checkout_opts));
 
 	cl_assert(!git_path_exists("b.txt"));
 	assert_name_is("testrepo/a");
+}
+
+void test_checkout_icase__ignores_unstaged_casechange(void)
+{
+	git_reference *orig_ref, *br2_ref;
+	git_commit *orig, *br2;
+	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+
+	cl_git_pass(git_reference_lookup_resolved(&orig_ref, repo, "HEAD", 100));
+	cl_git_pass(git_commit_lookup(&orig, repo, git_reference_target(orig_ref)));
+	cl_git_pass(git_reset(repo, (git_object *)orig, GIT_RESET_HARD, NULL));
+
+	cl_rename("testrepo/branch_file.txt", "testrepo/Branch_File.txt");
+
+	cl_git_pass(git_reference_lookup_resolved(&br2_ref, repo, "refs/heads/br2", 100));
+	cl_git_pass(git_commit_lookup(&br2, repo, git_reference_target(br2_ref)));
+
+	cl_git_pass(git_checkout_tree(repo, (const git_object *)br2, &checkout_opts));
+
+	git_commit_free(orig);
+	git_reference_free(orig_ref);
+}
+
+void test_checkout_icase__conflicts_with_casechanged_subtrees(void)
+{
+	git_reference *orig_ref;
+	git_object *orig, *subtrees;
+	git_oid oid;
+	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+
+	cl_git_pass(git_reference_lookup_resolved(&orig_ref, repo, "HEAD", 100));
+	cl_git_pass(git_object_lookup(&orig, repo, git_reference_target(orig_ref), GIT_OBJ_COMMIT));
+	cl_git_pass(git_reset(repo, (git_object *)orig, GIT_RESET_HARD, NULL));
+
+	cl_must_pass(p_mkdir("testrepo/AB", 0777));
+	cl_must_pass(p_mkdir("testrepo/AB/C", 0777));
+	cl_git_write2file("testrepo/AB/C/3.txt", "Foobar!\n", 8, O_RDWR|O_CREAT, 0666);
+
+	cl_git_pass(git_reference_name_to_id(&oid, repo, "refs/heads/subtrees"));
+	cl_git_pass(git_object_lookup(&subtrees, repo, &oid, GIT_OBJ_ANY));
+
+	cl_git_fail(git_checkout_tree(repo, subtrees, &checkout_opts));
+
+	git_object_free(orig);
+	git_object_free(subtrees);
+    git_reference_free(orig_ref);
 }
 
