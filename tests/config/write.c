@@ -145,6 +145,138 @@ void test_config_write__delete_value_with_duplicate_header(void)
 	git_config_free(cfg);
 }
 
+/*
+ * This test exposes a bug where duplicate section headers could cause
+ * config_write to add a new entry when one already exists.
+ */
+void test_config_write__add_value_with_duplicate_header(void)
+{
+	const char *file_name  = "config-duplicate-insert";
+	const char *entry_name = "foo.c";
+	const char *old_val    = "old";
+	const char *new_val    = "new";
+	const char *str;
+	git_config *cfg, *snapshot;
+
+	/* c = old should be replaced by c = new.
+	 * The bug causes c = new to be inserted under the first 'foo' header.
+	 */
+	const char *file_content =
+		"[foo]\n"   \
+		"  a = b\n" \
+		"[other]\n" \
+		"  a = b\n" \
+		"[foo]\n"   \
+		"  c = old\n";
+
+	/* Write the test config */
+	cl_git_mkfile(file_name, file_content);
+	cl_git_pass(git_config_open_ondisk(&cfg, file_name));
+
+	/* make sure the expected entry (foo.c) exists */
+	cl_git_pass(git_config_snapshot(&snapshot, cfg));
+	cl_git_pass(git_config_get_string(&str, snapshot, entry_name));
+	cl_assert_equal_s(old_val, str);
+	git_config_free(snapshot);
+
+	/* Try setting foo.c to something else */
+	cl_git_pass(git_config_set_string(cfg, entry_name, new_val));
+	git_config_free(cfg);
+
+	/* Reopen the file and make sure the new value was set */
+	cl_git_pass(git_config_open_ondisk(&cfg, file_name));
+	cl_git_pass(git_config_snapshot(&snapshot, cfg));
+	cl_git_pass(git_config_get_string(&str, snapshot, entry_name));
+	cl_assert_equal_s(new_val, str);
+
+	/* Cleanup */
+	git_config_free(snapshot);
+	git_config_free(cfg);
+}
+
+void test_config_write__overwrite_value_with_duplicate_header(void)
+{
+	const char *file_name  = "config-duplicate-header";
+	const char *entry_name = "remote.origin.url";
+	git_config *cfg;
+	git_config_entry *entry;
+
+	/* This config can occur after removing and re-adding the origin remote */
+	const char *file_content =
+		"[remote \"origin\"]\n"		\
+		"[branch \"master\"]\n"		\
+		"	remote = \"origin\"\n"	\
+		"[remote \"origin\"]\n"		\
+		"	url = \"foo\"\n";
+
+	/* Write the test config and make sure the expected entry exists */
+	cl_git_mkfile(file_name, file_content);
+	cl_git_pass(git_config_open_ondisk(&cfg, file_name));
+	cl_git_pass(git_config_get_entry(&entry, cfg, entry_name));
+
+	/* Update that entry */
+	cl_git_pass(git_config_set_string(cfg, entry_name, "newurl"));
+
+	/* Reopen the file and make sure the entry was updated */
+	git_config_entry_free(entry);
+	git_config_free(cfg);
+	cl_git_pass(git_config_open_ondisk(&cfg, file_name));
+	cl_git_pass(git_config_get_entry(&entry, cfg, entry_name));
+
+	cl_assert_equal_s("newurl", entry->value);
+
+	/* Cleanup */
+	git_config_entry_free(entry);
+	git_config_free(cfg);
+}
+
+static int multivar_cb(const git_config_entry *entry, void *data)
+{
+	int *n = (int *)data;
+
+	cl_assert_equal_s(entry->value, "newurl");
+
+	(*n)++;
+
+	return 0;
+}
+
+void test_config_write__overwrite_multivar_within_duplicate_header(void)
+{
+	const char *file_name  = "config-duplicate-header";
+	const char *entry_name = "remote.origin.url";
+	git_config *cfg;
+	git_config_entry *entry;
+	int n = 0;
+
+	/* This config can occur after removing and re-adding the origin remote */
+	const char *file_content =
+		"[remote \"origin\"]\n"		\
+		"	url = \"bar\"\n"		\
+		"[branch \"master\"]\n"		\
+		"	remote = \"origin\"\n"	\
+		"[remote \"origin\"]\n"		\
+		"	url = \"foo\"\n";
+
+	/* Write the test config and make sure the expected entry exists */
+	cl_git_mkfile(file_name, file_content);
+	cl_git_pass(git_config_open_ondisk(&cfg, file_name));
+	cl_git_pass(git_config_get_entry(&entry, cfg, entry_name));
+
+	/* Update that entry */
+	cl_git_pass(git_config_set_multivar(cfg, entry_name, ".*", "newurl"));
+	git_config_entry_free(entry);
+	git_config_free(cfg);
+
+	/* Reopen the file and make sure the entry was updated */
+	cl_git_pass(git_config_open_ondisk(&cfg, file_name));
+	cl_git_pass(git_config_get_multivar_foreach(cfg, entry_name, NULL, multivar_cb, &n));
+	cl_assert_equal_i(2, n);
+
+	/* Cleanup */
+	git_config_free(cfg);
+}
+
 void test_config_write__write_subsection(void)
 {
 	git_config *cfg;
@@ -395,6 +527,75 @@ void test_config_write__outside_change(void)
 	git_config_free(cfg);
 }
 
+#define SECTION_FOO \
+	"\n"                     \
+	"    \n"                 \
+	" [section \"foo\"]  \n" \
+	" # here's a comment\n"  \
+	"\tname = \"value\"\n"   \
+	"  name2 = \"value2\"\n" \
+	";  another comment!\n"
+
+#define SECTION_BAR \
+	"[section \"bar\"]\t\n"  \
+	"\t  \n"                 \
+	" barname=\"value\"\n"
+
+
+void test_config_write__preserves_whitespace_and_comments(void)
+{
+	const char *file_name  = "config-duplicate-header";
+	const char *n;
+	git_config *cfg;
+	git_buf newfile = GIT_BUF_INIT;
+
+	/* This config can occur after removing and re-adding the origin remote */
+	const char *file_content = SECTION_FOO SECTION_BAR;
+
+	/* Write the test config and make sure the expected entry exists */
+	cl_git_mkfile(file_name, file_content);
+	cl_git_pass(git_config_open_ondisk(&cfg, file_name));
+	cl_git_pass(git_config_set_string(cfg, "section.foo.other", "otherval"));
+	cl_git_pass(git_config_set_string(cfg, "newsection.newname", "new_value"));
+
+	/* Ensure that we didn't needlessly mangle the config file */
+	cl_git_pass(git_futils_readbuffer(&newfile, file_name));
+	n = newfile.ptr;
+
+	cl_assert_equal_strn(SECTION_FOO, n, strlen(SECTION_FOO));
+	n += strlen(SECTION_FOO);
+
+	cl_assert_equal_strn("\tother = otherval\n", n, strlen("\tother = otherval\n"));
+	n += strlen("\tother = otherval\n");
+
+	cl_assert_equal_strn(SECTION_BAR, n, strlen(SECTION_BAR));
+	n += strlen(SECTION_BAR);
+
+	cl_assert_equal_s("[newsection]\n\tnewname = new_value\n", n);
+
+	git_buf_free(&newfile);
+	git_config_free(cfg);
+}
+
+void test_config_write__preserves_entry_with_name_only(void)
+{
+	const char *file_name  = "config-empty-value";
+	git_config *cfg;
+	git_buf newfile = GIT_BUF_INIT;
+
+	/* Write the test config and make sure the expected entry exists */
+	cl_git_mkfile(file_name, "[section \"foo\"]\n\tname\n");
+	cl_git_pass(git_config_open_ondisk(&cfg, file_name));
+	cl_git_pass(git_config_set_string(cfg, "newsection.newname", "new_value"));
+	cl_git_pass(git_config_set_string(cfg, "section.foo.other", "otherval"));
+
+	cl_git_pass(git_futils_readbuffer(&newfile, file_name));
+	cl_assert_equal_s("[section \"foo\"]\n\tname\n\tother = otherval\n[newsection]\n\tnewname = new_value\n", newfile.ptr);
+
+	git_buf_free(&newfile);
+	git_config_free(cfg);
+}
+
 void test_config_write__to_empty_file(void)
 {
 	git_config *cfg;
@@ -428,3 +629,4 @@ void test_config_write__to_file_with_only_comment(void)
 
 	git_buf_free(&result);
 }
+
