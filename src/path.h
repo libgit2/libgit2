@@ -273,6 +273,7 @@ extern int git_path_apply_relative(git_buf *target, const char *relpath);
 enum {
 	GIT_PATH_DIR_IGNORE_CASE = (1u << 0),
 	GIT_PATH_DIR_PRECOMPOSE_UNICODE = (1u << 1),
+	GIT_PATH_DIR_INCLUDE_DOT_AND_DOTDOT = (1u << 2),
 };
 
 /**
@@ -326,66 +327,6 @@ extern int git_path_walk_up(
 	int (*callback)(void *payload, const char *path),
 	void *payload);
 
-/**
- * Load all directory entries (except '.' and '..') into a vector.
- *
- * For cases where `git_path_direach()` is not appropriate, this
- * allows you to load the filenames in a directory into a vector
- * of strings. That vector can then be sorted, iterated, or whatever.
- * Remember to free alloc of the allocated strings when you are done.
- *
- * @param path The directory to read from.
- * @param prefix_len When inserting entries, the trailing part of path
- * 		will be prefixed after this length.  I.e. given path "/a/b" and
- * 		prefix_len 3, the entries will look like "b/e1", "b/e2", etc.
- * @param alloc_extra Extra bytes to add to each string allocation in
- * 		case you want to append anything funny.
- * @param flags Combination of GIT_PATH_DIR flags.
- * @param contents Vector to fill with directory entry names.
- */
-extern int git_path_dirload(
-	const char *path,
-	size_t prefix_len,
-	size_t alloc_extra,
-	uint32_t flags,
-	git_vector *contents);
-
-
-typedef struct {
-	struct stat st;
-	size_t      path_len;
-	char        path[GIT_FLEX_ARRAY];
-} git_path_with_stat;
-
-extern int git_path_with_stat_cmp(const void *a, const void *b);
-extern int git_path_with_stat_cmp_icase(const void *a, const void *b);
-
-/**
- * Load all directory entries along with stat info into a vector.
- *
- * This adds four things on top of plain `git_path_dirload`:
- *
- * 1. Each entry in the vector is a `git_path_with_stat` struct that
- *    contains both the path and the stat info
- * 2. The entries will be sorted alphabetically
- * 3. Entries that are directories will be suffixed with a '/'
- * 4. Optionally, you can be a start and end prefix and only elements
- *    after the start and before the end (inclusively) will be stat'ed.
- *
- * @param path The directory to read from
- * @param prefix_len The trailing part of path to prefix to entry paths
- * @param flags GIT_PATH_DIR flags from above
- * @param start_stat As optimization, only stat values after this prefix
- * @param end_stat As optimization, only stat values before this prefix
- * @param contents Vector to fill with git_path_with_stat structures
- */
-extern int git_path_dirload_with_stat(
-	const char *path,
-	size_t prefix_len,
-	uint32_t flags,
-	const char *start_stat,
-	const char *end_stat,
-	git_vector *contents);
 
 enum { GIT_PATH_NOTEQUAL = 0, GIT_PATH_EQUAL = 1, GIT_PATH_PREFIX = 2 };
 
@@ -471,6 +412,137 @@ extern int git_path_iconv(git_path_iconv_t *ic, char **in, size_t *inlen);
 #endif /* GIT_USE_ICONV */
 
 extern bool git_path_does_fs_decompose_unicode(const char *root);
+
+
+typedef struct git_path_diriter git_path_diriter;
+
+#if defined(GIT_WIN32) && !defined(__MINGW32__)
+
+struct git_path_diriter
+{
+	git_win32_path path;
+	size_t parent_len;
+
+	git_buf path_utf8;
+	size_t parent_utf8_len;
+
+	HANDLE handle;
+
+	unsigned int flags;
+
+	WIN32_FIND_DATAW current;
+	unsigned int needs_next;
+};
+
+#define GIT_PATH_DIRITER_INIT { {0}, 0, GIT_BUF_INIT, 0, INVALID_HANDLE_VALUE }
+
+#else
+
+struct git_path_diriter
+{
+	git_buf path;
+	size_t parent_len;
+
+	unsigned int flags;
+
+	DIR *dir;
+
+#ifdef GIT_USE_ICONV
+	git_path_iconv_t ic;
+#endif
+};
+
+#define GIT_PATH_DIRITER_INIT { GIT_BUF_INIT }
+
+#endif
+
+/**
+ * Initialize a directory iterator.
+ *
+ * @param diriter Pointer to a diriter structure that will be setup.
+ * @param path The path that will be iterated over
+ * @param flags Directory reader flags
+ * @return 0 or an error code
+ */
+extern int git_path_diriter_init(
+	git_path_diriter *diriter,
+	const char *path,
+	unsigned int flags);
+
+/**
+ * Advance the directory iterator.  Will return GIT_ITEROVER when
+ * the iteration has completed successfully.
+ *
+ * @param diriter The directory iterator
+ * @return 0, GIT_ITEROVER, or an error code
+ */
+extern int git_path_diriter_next(git_path_diriter *diriter);
+
+/**
+ * Returns the file name of the current item in the iterator.
+ *
+ * @param out Pointer to store the path in
+ * @param out_len Pointer to store the length of the path in
+ * @param diriter The directory iterator
+ * @return 0 or an error code
+ */
+extern int git_path_diriter_filename(
+	const char **out,
+	size_t *out_len,
+	git_path_diriter *diriter);
+
+/**
+ * Returns the full path of the current item in the iterator; that
+ * is the current filename plus the path of the directory that the
+ * iterator was constructed with.
+ *
+ * @param out Pointer to store the path in
+ * @param out_len Pointer to store the length of the path in
+ * @param diriter The directory iterator
+ * @return 0 or an error code
+ */
+extern int git_path_diriter_fullpath(
+	const char **out,
+	size_t *out_len,
+	git_path_diriter *diriter);
+
+/**
+ * Performs an `lstat` on the current item in the iterator.
+ *
+ * @param out Pointer to store the stat data in
+ * @param diriter The directory iterator
+ * @return 0 or an error code
+ */
+extern int git_path_diriter_stat(struct stat *out, git_path_diriter *diriter);
+
+/**
+ * Closes the directory iterator.
+ *
+ * @param diriter The directory iterator
+ */
+extern void git_path_diriter_free(git_path_diriter *diriter);
+
+/**
+ * Load all directory entries (except '.' and '..') into a vector.
+ *
+ * For cases where `git_path_direach()` is not appropriate, this
+ * allows you to load the filenames in a directory into a vector
+ * of strings. That vector can then be sorted, iterated, or whatever.
+ * Remember to free alloc of the allocated strings when you are done.
+ *
+ * @param contents Vector to fill with directory entry names.
+ * @param path The directory to read from.
+ * @param prefix_len When inserting entries, the trailing part of path
+ * 		will be prefixed after this length.  I.e. given path "/a/b" and
+ * 		prefix_len 3, the entries will look like "b/e1", "b/e2", etc.
+ * @param flags Combination of GIT_PATH_DIR flags.
+ */
+extern int git_path_dirload(
+	git_vector *contents,
+	const char *path,
+	size_t prefix_len,
+	uint32_t flags);
+
 
 /* Used for paths to repositories on the filesystem */
 extern bool git_path_is_local_file_url(const char *file_url);

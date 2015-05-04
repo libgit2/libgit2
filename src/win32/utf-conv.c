@@ -8,10 +8,6 @@
 #include "common.h"
 #include "utf-conv.h"
 
-#ifndef WC_ERR_INVALID_CHARS
-# define WC_ERR_INVALID_CHARS	0x80
-#endif
-
 GIT_INLINE(DWORD) get_wc_flags(void)
 {
 	static char inited = 0;

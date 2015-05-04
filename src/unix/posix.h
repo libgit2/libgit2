@@ -8,6 +8,7 @@
 #define INCLUDE_posix__unix_h__
 
 #include <stdio.h>
+#include <dirent.h>
 #include <sys/param.h>
 
 typedef int GIT_SOCKET;

@@ -186,7 +186,7 @@ void test_diff_drivers__builtins(void)
 
 	g_repo = cl_git_sandbox_init("userdiff");
 
-	cl_git_pass(git_path_dirload("userdiff/files", 9, 0, 0, &files));
+	cl_git_pass(git_path_dirload(&files, "userdiff/files", 9, 0));
 
 	opts.interhunk_lines = 1;
 	opts.context_lines = 1;

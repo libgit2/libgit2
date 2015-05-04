@@ -9,6 +9,9 @@
 #include "path.h"
 #include "path_w32.h"
 #include "utf-conv.h"
+#include "posix.h"
+#include "reparse.h"
+#include "dir.h"
 
 #define PATH__NT_NAMESPACE     L"\\\\?\\"
 #define PATH__NT_NAMESPACE_LEN 4
@@ -302,4 +305,76 @@ char *git_win32_path_8dot3_name(const char *path)
 		return NULL;
 
 	return shortname;
+}
+
+static bool path_is_volume(wchar_t *target, size_t target_len)
+{
+	return (target_len && wcsncmp(target, L"\\??\\Volume{", 11) == 0);
+}
+
+/* On success, returns the length, in characters, of the path stored in dest.
+* On failure, returns a negative value. */
+int git_win32_path_readlink_w(git_win32_path dest, const git_win32_path path)
+{
+	BYTE buf[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
+	GIT_REPARSE_DATA_BUFFER *reparse_buf = (GIT_REPARSE_DATA_BUFFER *)buf;
+	HANDLE handle = NULL;
+	DWORD ioctl_ret;
+	wchar_t *target;
+	size_t target_len;
+
+	int error = -1;
+
+	handle = CreateFileW(path, GENERIC_READ,
+		FILE_SHARE_READ | FILE_SHARE_DELETE, NULL, OPEN_EXISTING,
+		FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, NULL);
+
+	if (handle == INVALID_HANDLE_VALUE) {
+		errno = ENOENT;
+		return -1;
+	}
+
+	if (!DeviceIoControl(handle, FSCTL_GET_REPARSE_POINT, NULL, 0,
+		reparse_buf, sizeof(buf), &ioctl_ret, NULL)) {
+		errno = EINVAL;
+		goto on_error;
+	}
+
+	switch (reparse_buf->ReparseTag) {
+	case IO_REPARSE_TAG_SYMLINK:
+		target = reparse_buf->SymbolicLinkReparseBuffer.PathBuffer +
+			(reparse_buf->SymbolicLinkReparseBuffer.SubstituteNameOffset / sizeof(WCHAR));
+		target_len = reparse_buf->SymbolicLinkReparseBuffer.SubstituteNameLength / sizeof(WCHAR);
+	break;
+	case IO_REPARSE_TAG_MOUNT_POINT:
+		target = reparse_buf->MountPointReparseBuffer.PathBuffer +
+			(reparse_buf->MountPointReparseBuffer.SubstituteNameOffset / sizeof(WCHAR));
+		target_len = reparse_buf->MountPointReparseBuffer.SubstituteNameLength / sizeof(WCHAR);
+	break;
+	default:
+		errno = EINVAL;
+		goto on_error;
+	}
+
+	if (path_is_volume(target, target_len)) {
+		/* This path is a reparse point that represents another volume mounted
+		* at this location, it is not a symbolic link our input was canonical.
+		*/
+		errno = EINVAL;
+		error = -1;
+	} else if (target_len) {
+		/* The path may need to have a prefix removed. */
+		target_len = git_win32__canonicalize_path(target, target_len);
+
+		/* Need one additional character in the target buffer
+		* for the terminating NULL. */
+		if (GIT_WIN_PATH_UTF16 > target_len) {
+			wcscpy(dest, target);
+			error = (int)target_len;
+		}
+	}
+
+on_error:
+	CloseHandle(handle);
+	return error;
 }
