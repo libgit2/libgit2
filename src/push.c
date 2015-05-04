@@ -682,6 +682,7 @@ void git_push_free(git_push *push)
 {
 	push_spec *spec;
 	push_status *status;
+	git_push_update *update;
 	unsigned int i;
 
 	if (push == NULL)
@@ -696,6 +697,13 @@ void git_push_free(git_push *push)
 		git_push_status_free(status);
 	}
 	git_vector_free(&push->status);
+
+	git_vector_foreach(&push->updates, i, update) {
+		git__free(update->src_refname);
+		git__free(update->dst_refname);
+		git__free(update);
+	}
+	git_vector_free(&push->updates);
 
 	git__free(push);
 }
