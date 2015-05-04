@@ -1067,7 +1067,7 @@ int git_submodule_update(git_submodule *sm, int init, git_submodule_update_optio
 	memcpy(&clone_options.fetch_opts, &update_options.fetch_opts, sizeof(git_fetch_options));
 
 	/* Get the status of the submodule to determine if it is already initialized  */
-	if ((error = git_submodule_status(&submodule_status, sm)) < 0)
+	if ((error = git_submodule_status(&submodule_status, sm->repo, sm->name)) < 0)
 		goto done;
 
 	/*
@@ -1511,11 +1511,20 @@ int git_submodule__status(
 	return 0;
 }
 
-int git_submodule_status(unsigned int *status, git_submodule *sm)
+int git_submodule_status(unsigned int *status, git_repository *repo, const char *name)
 {
-	assert(status && sm);
+	git_submodule *sm;
+	int error;
 
-	return git_submodule__status(status, NULL, NULL, NULL, sm, 0);
+	assert(status && repo && name);
+
+	if ((error = git_submodule_lookup(&sm, repo, name)) < 0)
+		return error;
+
+	error = git_submodule__status(status, NULL, NULL, NULL, sm, 0);
+	git_submodule_free(sm);
+
+	return error;
 }
 
 int git_submodule_location(unsigned int *location, git_submodule *sm)

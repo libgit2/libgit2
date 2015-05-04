@@ -626,16 +626,17 @@ GIT_EXTERN(int) git_submodule_reload_all(git_repository *repo, int force);
  * This looks at a submodule and tries to determine the status.  It
  * will return a combination of the `GIT_SUBMODULE_STATUS` values above.
  * How deeply it examines the working directory to do this will depend
- * on the `git_submodule_ignore_t` value for the submodule - which can be
- * set either temporarily or permanently with `git_submodule_set_ignore()`.
+ * on the `git_submodule_ignore_t` value for the submodule.
  *
  * @param status Combination of `GIT_SUBMODULE_STATUS` flags
- * @param submodule Submodule for which to get status
+ * @param repo the repository in which to look
+ * @param name name of the submodule
  * @return 0 on success, <0 on error
  */
 GIT_EXTERN(int) git_submodule_status(
 	unsigned int *status,
-	git_submodule *submodule);
+	git_repository *repo,
+	const char *name);
 
 /**
  * Get the locations of submodule information.
