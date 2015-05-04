@@ -1067,7 +1067,7 @@ int git_submodule_update(git_submodule *sm, int init, git_submodule_update_optio
 	memcpy(&clone_options.fetch_opts, &update_options.fetch_opts, sizeof(git_fetch_options));
 
 	/* Get the status of the submodule to determine if it is already initialized  */
-	if ((error = git_submodule_status(&submodule_status, sm->repo, sm->name)) < 0)
+	if ((error = git_submodule_status(&submodule_status, sm->repo, sm->name, GIT_SUBMODULE_IGNORE_FALLBACK)) < 0)
 		goto done;
 
 	/*
@@ -1462,7 +1462,7 @@ int git_submodule__status(
 	unsigned int status;
 	git_repository *smrepo = NULL;
 
-	if (ign < GIT_SUBMODULE_IGNORE_NONE)
+	if (ign == GIT_SUBMODULE_IGNORE_FALLBACK)
 		ign = sm->ignore;
 
 	/* only return location info if ignore == all */
@@ -1511,7 +1511,7 @@ int git_submodule__status(
 	return 0;
 }
 
-int git_submodule_status(unsigned int *status, git_repository *repo, const char *name)
+int git_submodule_status(unsigned int *status, git_repository *repo, const char *name, git_submodule_ignore_t ignore)
 {
 	git_submodule *sm;
 	int error;
@@ -1521,7 +1521,7 @@ int git_submodule_status(unsigned int *status, git_repository *repo, const char 
 	if ((error = git_submodule_lookup(&sm, repo, name)) < 0)
 		return error;
 
-	error = git_submodule__status(status, NULL, NULL, NULL, sm, 0);
+	error = git_submodule__status(status, NULL, NULL, NULL, sm, ignore);
 	git_submodule_free(sm);
 
 	return error;

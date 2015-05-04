@@ -374,7 +374,7 @@ typedef enum {
  *
  * The values are:
  *
- * - GIT_SUBMODULE_IGNORE_RESET: reset to the on-disk value.
+ * - GIT_SUBMODULE_IGNORE_FALLBACK: use the submodule's configuration
  * - GIT_SUBMODULE_IGNORE_NONE: don't ignore any change - i.e. even an
  *   untracked file, will mark the submodule as dirty.  Ignored files are
  *   still ignored, of course.
@@ -388,14 +388,12 @@ typedef enum {
  *   when we don't want any particular ignore rule to be specified.
  */
 typedef enum {
-	GIT_SUBMODULE_IGNORE_RESET     = -1, /**< reset to on-disk value */
+	GIT_SUBMODULE_IGNORE_FALLBACK  = -1, /**< use the submodule's configuration */
 
 	GIT_SUBMODULE_IGNORE_NONE      = 1,  /**< any change or untracked == dirty */
 	GIT_SUBMODULE_IGNORE_UNTRACKED = 2,  /**< dirty if tracked files change */
 	GIT_SUBMODULE_IGNORE_DIRTY     = 3,  /**< only dirty if HEAD moved */
 	GIT_SUBMODULE_IGNORE_ALL       = 4,  /**< never dirty */
-
-	GIT_SUBMODULE_IGNORE_DEFAULT   = 0
 } git_submodule_ignore_t;
 
 /**

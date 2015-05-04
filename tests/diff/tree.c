@@ -89,7 +89,7 @@ void test_diff_tree__0(void)
 }
 
 #define DIFF_OPTS(FLAGS, CTXT) \
-	{GIT_DIFF_OPTIONS_VERSION, (FLAGS), GIT_SUBMODULE_IGNORE_DEFAULT, \
+	{GIT_DIFF_OPTIONS_VERSION, (FLAGS), GIT_SUBMODULE_IGNORE_FALLBACK, \
 	{NULL,0}, NULL, NULL, (CTXT), 1}
 
 void test_diff_tree__options(void)

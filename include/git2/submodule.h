@@ -631,12 +631,14 @@ GIT_EXTERN(int) git_submodule_reload_all(git_repository *repo, int force);
  * @param status Combination of `GIT_SUBMODULE_STATUS` flags
  * @param repo the repository in which to look
  * @param name name of the submodule
+ * @param ignore the ignore rules to follow
  * @return 0 on success, <0 on error
  */
 GIT_EXTERN(int) git_submodule_status(
 	unsigned int *status,
 	git_repository *repo,
-	const char *name);
+	const char *name,
+	git_submodule_ignore_t ignore);
 
 /**
  * Get the locations of submodule information.
