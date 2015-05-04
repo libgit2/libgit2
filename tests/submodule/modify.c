@@ -128,11 +128,21 @@ void test_submodule_modify__sync(void)
 	git_submodule_free(sm3);
 }
 
+void test_submodule_modify__set_ignore(void)
+{
+	git_submodule *sm;
+
+	cl_git_pass(git_submodule_set_ignore(g_repo, "sm_changed_head", GIT_SUBMODULE_IGNORE_UNTRACKED));
+
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_head"));
+	cl_assert_equal_i(GIT_SUBMODULE_IGNORE_UNTRACKED, git_submodule_ignore(sm));
+	git_submodule_free(sm);
+}
+
 void test_submodule_modify__edit_and_save(void)
 {
 	git_submodule *sm1, *sm2;
 	char *old_url, *old_branch;
-	git_submodule_ignore_t old_ignore;
 	git_submodule_update_t old_update;
 	git_repository *r2;
 	git_submodule_recurse_t old_fetchrecurse;
@@ -145,15 +155,12 @@ void test_submodule_modify__edit_and_save(void)
 	/* modify properties of submodule */
 	cl_git_pass(git_submodule_set_url(sm1, SM_LIBGIT2_URL));
 	cl_git_pass(git_submodule_set_branch(sm1, SM_LIBGIT2_BRANCH));
-	old_ignore = git_submodule_set_ignore(sm1, GIT_SUBMODULE_IGNORE_UNTRACKED);
 	old_update = git_submodule_set_update(sm1, GIT_SUBMODULE_UPDATE_REBASE);
 	old_fetchrecurse = git_submodule_set_fetch_recurse_submodules(
 		sm1, GIT_SUBMODULE_RECURSE_YES);
 
 	cl_assert_equal_s(SM_LIBGIT2_URL, git_submodule_url(sm1));
 	cl_assert_equal_s(SM_LIBGIT2_BRANCH, git_submodule_branch(sm1));
-	cl_assert_equal_i(
-		GIT_SUBMODULE_IGNORE_UNTRACKED, git_submodule_ignore(sm1));
 	cl_assert_equal_i(
 		GIT_SUBMODULE_UPDATE_REBASE, git_submodule_update_strategy(sm1));
 	cl_assert_equal_i(
@@ -162,9 +169,6 @@ void test_submodule_modify__edit_and_save(void)
 	/* revert without saving (and confirm setters return old value) */
 	cl_git_pass(git_submodule_set_url(sm1, old_url));
 	cl_git_pass(git_submodule_set_branch(sm1, old_branch));
-	cl_assert_equal_i(
-		GIT_SUBMODULE_IGNORE_UNTRACKED,
-		git_submodule_set_ignore(sm1, GIT_SUBMODULE_IGNORE_RESET));
 	cl_assert_equal_i(
 		GIT_SUBMODULE_UPDATE_REBASE,
 		git_submodule_set_update(sm1, GIT_SUBMODULE_UPDATE_RESET));
@@ -175,7 +179,6 @@ void test_submodule_modify__edit_and_save(void)
 	/* check that revert was successful */
 	cl_assert_equal_s(old_url, git_submodule_url(sm1));
 	cl_assert_equal_s(old_branch, git_submodule_branch(sm1));
-	cl_assert_equal_i((int)old_ignore, (int)git_submodule_ignore(sm1));
 	cl_assert_equal_i((int)old_update, (int)git_submodule_update_strategy(sm1));
 	cl_assert_equal_i(
 		old_fetchrecurse, git_submodule_fetch_recurse_submodules(sm1));
@@ -183,7 +186,6 @@ void test_submodule_modify__edit_and_save(void)
 	/* modify properties of submodule (again) */
 	cl_git_pass(git_submodule_set_url(sm1, SM_LIBGIT2_URL));
 	cl_git_pass(git_submodule_set_branch(sm1, SM_LIBGIT2_BRANCH));
-	git_submodule_set_ignore(sm1, GIT_SUBMODULE_IGNORE_UNTRACKED);
 	git_submodule_set_update(sm1, GIT_SUBMODULE_UPDATE_REBASE);
 	git_submodule_set_fetch_recurse_submodules(sm1, GIT_SUBMODULE_RECURSE_YES);
 
@@ -191,14 +193,11 @@ void test_submodule_modify__edit_and_save(void)
 	cl_git_pass(git_submodule_save(sm1));
 
 	/* attempt to "revert" values */
-	git_submodule_set_ignore(sm1, GIT_SUBMODULE_IGNORE_RESET);
 	git_submodule_set_update(sm1, GIT_SUBMODULE_UPDATE_RESET);
 
 	/* but ignore and update should NOT revert because the RESET
 	 * should now be the newly saved value...
 	 */
-	cl_assert_equal_i(
-		(int)GIT_SUBMODULE_IGNORE_UNTRACKED, (int)git_submodule_ignore(sm1));
 	cl_assert_equal_i(
 		(int)GIT_SUBMODULE_UPDATE_REBASE, (int)git_submodule_update_strategy(sm1));
 	cl_assert_equal_i(GIT_SUBMODULE_RECURSE_YES, git_submodule_fetch_recurse_submodules(sm1));
@@ -208,8 +207,6 @@ void test_submodule_modify__edit_and_save(void)
 
 	cl_assert_equal_s(SM_LIBGIT2_URL, git_submodule_url(sm1));
 	cl_assert_equal_s(SM_LIBGIT2_BRANCH, git_submodule_branch(sm1));
-	cl_assert_equal_i(
-		(int)GIT_SUBMODULE_IGNORE_UNTRACKED, (int)git_submodule_ignore(sm1));
 	cl_assert_equal_i(
 		(int)GIT_SUBMODULE_UPDATE_REBASE, (int)git_submodule_update_strategy(sm1));
 	cl_assert_equal_i(GIT_SUBMODULE_RECURSE_YES, git_submodule_fetch_recurse_submodules(sm1));
@@ -225,8 +222,6 @@ void test_submodule_modify__edit_and_save(void)
 	cl_git_pass(git_submodule_lookup(&sm2, r2, "sm_changed_head"));
 
 	cl_assert_equal_s(SM_LIBGIT2_URL, git_submodule_url(sm2));
-	cl_assert_equal_i(
-		GIT_SUBMODULE_IGNORE_UNTRACKED, git_submodule_ignore(sm2));
 	cl_assert_equal_i(
 		GIT_SUBMODULE_UPDATE_REBASE, git_submodule_update_strategy(sm2));
 	cl_assert_equal_i(

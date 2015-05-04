@@ -111,7 +111,7 @@ static int set_sm_ignore(git_submodule *sm, const char *name, void *payload)
 {
 	git_submodule_ignore_t ignore = *(git_submodule_ignore_t *)payload;
 	GIT_UNUSED(name);
-	git_submodule_set_ignore(sm, ignore);
+	git_submodule_set_ignore(g_repo, git_submodule_name(sm), ignore);
 	return 0;
 }
 

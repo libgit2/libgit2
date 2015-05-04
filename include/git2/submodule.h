@@ -452,9 +452,6 @@ GIT_EXTERN(const git_oid *) git_submodule_wd_id(git_submodule *submodule);
  *    The working directory will be consider clean so long as there is a
  *    checked out version present.
  *
- * plus the special **GIT_SUBMODULE_IGNORE_RESET** which can be used with
- * `git_submodule_set_ignore()` to revert to the on-disk setting.
- *
  * @param submodule The submodule to check
  * @return The current git_submodule_ignore_t valyue what will be used for
  *         this submodule.
@@ -463,23 +460,18 @@ GIT_EXTERN(git_submodule_ignore_t) git_submodule_ignore(
 	git_submodule *submodule);
 
 /**
- * Set the ignore rule for the submodule.
+ * Set the ignore rule for the submodule in the configuration
  *
- * This sets the in-memory ignore rule for the submodule which will
- * control the behavior of `git_submodule_status()`.
+ * This does not affect any currently-loaded instances.
  *
- * To make changes persistent, call `git_submodule_save()` to write the
- * value to disk (in the ".gitmodules" and ".git/config" files).
- *
- * Call with `GIT_SUBMODULE_IGNORE_RESET` or call `git_submodule_reload()`
- * to revert the in-memory rule to the value that is on disk.
- *
- * @param submodule The submodule to update
+ * @param repo the repository to affect
+ * @param name the name of the submdule
  * @param ignore The new value for the ignore rule
- * @return old value for ignore
+ * @return 0 or an error code
  */
-GIT_EXTERN(git_submodule_ignore_t) git_submodule_set_ignore(
-	git_submodule *submodule,
+GIT_EXTERN(int) git_submodule_set_ignore(
+	git_repository *repo,
+	const char *name,
 	git_submodule_ignore_t ignore);
 
 /**
