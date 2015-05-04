@@ -230,12 +230,24 @@ void test_config_write__overwrite_value_with_duplicate_header(void)
 	git_config_free(cfg);
 }
 
+static int multivar_cb(const git_config_entry *entry, void *data)
+{
+	int *n = (int *)data;
+
+	cl_assert_equal_s(entry->value, "newurl");
+
+	(*n)++;
+
+	return 0;
+}
+
 void test_config_write__overwrite_multivar_within_duplicate_header(void)
 {
 	const char *file_name  = "config-duplicate-header";
 	const char *entry_name = "remote.origin.url";
 	git_config *cfg;
 	git_config_entry *entry;
+	int n = 0;
 
 	/* This config can occur after removing and re-adding the origin remote */
 	const char *file_content =
@@ -253,17 +265,15 @@ void test_config_write__overwrite_multivar_within_duplicate_header(void)
 
 	/* Update that entry */
 	cl_git_pass(git_config_set_multivar(cfg, entry_name, ".*", "newurl"));
-
-	/* Reopen the file and make sure the entry was updated */
 	git_config_entry_free(entry);
 	git_config_free(cfg);
-	cl_git_pass(git_config_open_ondisk(&cfg, file_name));
-	cl_git_pass(git_config_get_entry(&entry, cfg, entry_name));
 
-	cl_assert_equal_s("newurl", entry->value);
+	/* Reopen the file and make sure the entry was updated */
+	cl_git_pass(git_config_open_ondisk(&cfg, file_name));
+	cl_git_pass(git_config_get_multivar_foreach(cfg, entry_name, NULL, multivar_cb, &n));
+	cl_assert_equal_i(2, n);
 
 	/* Cleanup */
-	git_config_entry_free(entry);
 	git_config_free(cfg);
 }
 
