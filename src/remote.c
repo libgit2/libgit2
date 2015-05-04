@@ -28,6 +28,7 @@
 
 static int dwim_refspecs(git_vector *out, git_vector *refspecs, git_vector *refs);
 static int lookup_remote_prune_config(git_remote *remote, git_config *config, const char *name);
+char *apply_insteadof(git_config *config, const char *url, int direction);
 
 static int add_refspec_to(git_vector *vector, const char *string, bool is_fetch)
 {
@@ -207,7 +208,7 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 		canonicalize_url(&canonical_url, url) < 0)
 		goto on_error;
 
-	remote->url = git_buf_detach(&canonical_url);
+	remote->url = apply_insteadof(repo->_config, canonical_url.ptr, GIT_DIRECTION_FETCH);
 
 	if (name != NULL) {
 		remote->name = git__strdup(name);
@@ -216,7 +217,7 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 		if ((error = git_buf_printf(&var, CONFIG_URL_FMT, name)) < 0)
 			goto on_error;
 
-		if ((error = git_config_set_string(config, var.ptr, remote->url)) < 0)
+		if ((error = git_config_set_string(config, var.ptr, canonical_url.ptr)) < 0)
 			goto on_error;
 	}
 
@@ -341,7 +342,7 @@ int git_remote_dup(git_remote **dest, git_remote *source)
 
 	if (source->url != NULL) {
 		remote->url = git__strdup(source->url);
-		GITERR_CHECK_ALLOC(remote->url);		
+		GITERR_CHECK_ALLOC(remote->url);
 	}
 
 	if (source->pushurl != NULL) {
@@ -456,7 +457,7 @@ int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 	remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_AUTO;
 
 	if (found && strlen(val) > 0) {
-		remote->url = git__strdup(val);
+		remote->url = apply_insteadof(config, val, GIT_DIRECTION_FETCH);
 		GITERR_CHECK_ALLOC(remote->url);
 	}
 
@@ -476,7 +477,7 @@ int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 	}
 
 	if (found && strlen(val) > 0) {
-		remote->pushurl = git__strdup(val);
+		remote->pushurl = apply_insteadof(config, val, GIT_DIRECTION_PUSH);
 		GITERR_CHECK_ALLOC(remote->pushurl);
 	}
 
@@ -2420,4 +2421,68 @@ int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_
 
 	git_remote_disconnect(remote);
 	return error;
+}
+
+#define PREFIX "url"
+#define SUFFIX_FETCH "insteadof"
+#define SUFFIX_PUSH "pushinsteadof"
+
+char *apply_insteadof(git_config *config, const char *url, int direction)
+{
+	size_t match_length, prefix_length, suffix_length;
+	char *replacement = NULL;
+	const char *regexp;
+
+	git_buf result = GIT_BUF_INIT;
+	git_config_entry *entry;
+	git_config_iterator *iter;
+
+	assert(config);
+	assert(url);
+	assert(direction == GIT_DIRECTION_FETCH || direction == GIT_DIRECTION_PUSH);
+
+	/* Add 1 to prefix/suffix length due to the additional escaped dot */
+	prefix_length = strlen(PREFIX) + 1;
+	if (direction == GIT_DIRECTION_FETCH) {
+		regexp = PREFIX "\\..*\\." SUFFIX_FETCH;
+		suffix_length = strlen(SUFFIX_FETCH) + 1;
+	} else {
+		regexp = PREFIX "\\..*\\." SUFFIX_PUSH;
+		suffix_length = strlen(SUFFIX_PUSH) + 1;
+	}
+
+	git_config_iterator_glob_new(&iter, config, regexp);
+
+	match_length = 0;
+	while (git_config_next(&entry, iter) == 0) {
+		size_t n, replacement_length;
+
+		/* Check if entry value is a prefix of URL */
+		if (git__prefixcmp(url, entry->value))
+			continue;
+		/* Check if entry value is longer than previous
+		 * prefixes */
+		if ((n = strlen(entry->value)) <= match_length)
+			continue;
+
+		git__free(replacement);
+		match_length = n;
+
+		/* Cut off prefix and suffix of the value */
+		replacement_length =
+		    strlen(entry->name) - (prefix_length + suffix_length);
+		replacement = git__strndup(entry->name + prefix_length,
+				replacement_length);
+	}
+
+	git_config_iterator_free(iter);
+
+	if (match_length == 0)
+		return git__strdup(url);
+
+	git_buf_printf(&result, "%s%s", replacement, url + match_length);
+
+	git__free(replacement);
+
+	return result.ptr;
 }

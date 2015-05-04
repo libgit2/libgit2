@@ -120,6 +120,9 @@ GIT_EXTERN(const char *) git_remote_name(const git_remote *remote);
 /**
  * Get the remote's url
  *
+ * If url.*.insteadOf has been configured for this URL, it will
+ * return the modified URL.
+ *
  * @param remote the remote
  * @return a pointer to the url
  */
@@ -127,6 +130,9 @@ GIT_EXTERN(const char *) git_remote_url(const git_remote *remote);
 
 /**
  * Get the remote's url for pushing
+ *
+ * If url.*.pushInsteadOf has been configured for this URL, it
+ * will return the modified URL.
  *
  * @param remote the remote
  * @return a pointer to the url or NULL if no special url for pushing is set
