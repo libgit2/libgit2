@@ -41,10 +41,10 @@ void test_submodule_modify__init(void)
 	git_config_free(cfg);
 
 	/* confirm no submodule data in config */
-	cl_git_pass(git_repository_config(&cfg, g_repo));
-	cl_git_fail(git_config_get_string(&str, cfg, "submodule.sm_unchanged.url"));
-	cl_git_fail(git_config_get_string(&str, cfg, "submodule.sm_changed_head.url"));
-	cl_git_fail(git_config_get_string(&str, cfg, "submodule.sm_added_and_uncommited.url"));
+	cl_git_pass(git_repository_config_snapshot(&cfg, g_repo));
+	cl_git_fail_with(GIT_ENOTFOUND, git_config_get_string(&str, cfg, "submodule.sm_unchanged.url"));
+	cl_git_fail_with(GIT_ENOTFOUND, git_config_get_string(&str, cfg, "submodule.sm_changed_head.url"));
+	cl_git_fail_with(GIT_ENOTFOUND, git_config_get_string(&str, cfg, "submodule.sm_added_and_uncommited.url"));
 	git_config_free(cfg);
 
 	/* call init and see that settings are copied */
