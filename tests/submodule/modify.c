@@ -185,47 +185,14 @@ void test_submodule_modify__set_branch(void)
 	git_submodule_free(sm);
 }
 
-void test_submodule_modify__edit_and_save(void)
+void test_submodule_modify__set_url(void)
 {
-	git_submodule *sm1, *sm2;
-	char *old_url;
-	git_repository *r2;
+	git_submodule *sm;
 
-	cl_git_pass(git_submodule_lookup(&sm1, g_repo, "sm_changed_head"));
-
-	old_url = git__strdup(git_submodule_url(sm1));
-
-	/* modify properties of submodule */
-	cl_git_pass(git_submodule_set_url(sm1, SM_LIBGIT2_URL));
-	cl_assert_equal_s(SM_LIBGIT2_URL, git_submodule_url(sm1));
-
-	/* revert without saving (and confirm setters return old value) */
-	cl_git_pass(git_submodule_set_url(sm1, old_url));
-
-	/* check that revert was successful */
-	cl_assert_equal_s(old_url, git_submodule_url(sm1));
-
-	/* modify properties of submodule (again) */
-	cl_git_pass(git_submodule_set_url(sm1, SM_LIBGIT2_URL));
-
-	/* call save */
-	cl_git_pass(git_submodule_save(sm1));
-
-	/* call reload and check that the new values are loaded */
-	cl_git_pass(git_submodule_reload(sm1, 0));
-
-	cl_assert_equal_s(SM_LIBGIT2_URL, git_submodule_url(sm1));
-
-	/* open a second copy of the repo and compare submodule */
-	cl_git_pass(git_repository_open(&r2, "submod2"));
-	cl_git_pass(git_submodule_lookup(&sm2, r2, "sm_changed_head"));
-
-	cl_assert_equal_s(SM_LIBGIT2_URL, git_submodule_url(sm2));
-
-	git_submodule_free(sm1);
-	git_submodule_free(sm2);
-	git_repository_free(r2);
-	git__free(old_url);
+	cl_git_pass(git_submodule_set_url(g_repo, "sm_changed_head", SM_LIBGIT2_URL));
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_head"));
+	cl_assert_equal_s(SM_LIBGIT2_URL, git_submodule_url(sm));
+	git_submodule_free(sm);
 }
 
 void test_submodule_modify__save_last(void)

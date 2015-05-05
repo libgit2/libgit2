@@ -23,10 +23,10 @@ void test_submodule_init__absolute_url(void)
 	cl_assert(git_path_dirname_r(&absolute_url, git_repository_workdir(g_repo)) > 0);
 	cl_git_pass(git_buf_joinpath(&absolute_url, absolute_url.ptr, "testrepo.git"));
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "testrepo"));
-
 	/* write the absolute url to the .gitmodules file*/
-	cl_git_pass(git_submodule_set_url(sm, absolute_url.ptr));
+	cl_git_pass(git_submodule_set_url(g_repo, "testrepo", absolute_url.ptr));
+
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "testrepo"));
 
 	/* verify that the .gitmodules is set with an absolute path*/
 	cl_assert_equal_s(absolute_url.ptr, git_submodule_url(sm));

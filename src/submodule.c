@@ -788,10 +788,6 @@ int git_submodule_save(git_submodule *submodule)
 		(error = git_config_file_set_string(mods, key.ptr, submodule->path)) < 0)
 		goto cleanup;
 
-	if ((error = submodule_config_key_trunc_puts(&key, "url")) < 0 ||
-		(error = git_config_file_set_string(mods, key.ptr, submodule->url)) < 0)
-		goto cleanup;
-
 	/* update internal defaults */
 
 	submodule->ignore_default = submodule->ignore;
@@ -890,16 +886,11 @@ int git_submodule_set_branch(git_repository *repo, const char *name, const char 
 	return write_var(repo, name, "branch", branch);
 }
 
-int git_submodule_set_url(git_submodule *submodule, const char *url)
+int git_submodule_set_url(git_repository *repo, const char *name, const char *url)
 {
-	assert(submodule && url);
+	assert(repo && name && url);
 
-	git__free(submodule->url);
-
-	submodule->url = git__strdup(url);
-	GITERR_CHECK_ALLOC(submodule->url);
-
-	return 0;
+	return write_var(repo, name, "url", url);
 }
 
 const git_oid *git_submodule_index_id(git_submodule *submodule)

@@ -386,20 +386,18 @@ GIT_EXTERN(const char *) git_submodule_branch(git_submodule *submodule);
 GIT_EXTERN(int) git_submodule_set_branch(git_repository *repo, const char *name, const char *branch);
 
 /**
- * Set the URL for the submodule.
+ * Set the URL for the submodule in the configuration
  *
- * This sets the URL in memory for the submodule. This will be used for
- * any following submodule actions while this submodule data is in memory.
  *
- * After calling this, you may wish to call `git_submodule_save()` to write
- * the changes back to the ".gitmodules" file and `git_submodule_sync()` to
+ * After calling this, you may wish to call `git_submodule_sync()` to
  * write the changes to the checked out submodule repository.
  *
- * @param submodule Pointer to the submodule object
+ * @param repo the repository to affect
+ * @param name the name of the submodule to configure
  * @param url URL that should be used for the submodule
  * @return 0 on success, <0 on failure
  */
-GIT_EXTERN(int) git_submodule_set_url(git_submodule *submodule, const char *url);
+GIT_EXTERN(int) git_submodule_set_url(git_repository *repo, const char *name, const char *url);
 
 /**
  * Get the OID for the submodule in the index.
