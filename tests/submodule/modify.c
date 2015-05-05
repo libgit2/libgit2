@@ -150,12 +150,27 @@ void test_submodule_modify__set_update(void)
 	git_submodule_free(sm);
 }
 
+void test_submodule_modify__set_fetch_recurse_submodules(void)
+{
+	git_submodule *sm;
+
+	cl_git_pass(git_submodule_set_fetch_recurse_submodules(g_repo, "sm_changed_head", GIT_SUBMODULE_RECURSE_YES));
+
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_head"));
+	cl_assert_equal_i(GIT_SUBMODULE_RECURSE_YES, git_submodule_fetch_recurse_submodules(sm));
+	git_submodule_free(sm);
+
+	git_submodule_set_fetch_recurse_submodules(g_repo, "sm_changed_head", GIT_SUBMODULE_RECURSE_ONDEMAND);
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_head"));
+	cl_assert_equal_i(GIT_SUBMODULE_RECURSE_ONDEMAND, git_submodule_fetch_recurse_submodules(sm));
+	git_submodule_free(sm);
+}
+
 void test_submodule_modify__edit_and_save(void)
 {
 	git_submodule *sm1, *sm2;
 	char *old_url, *old_branch;
 	git_repository *r2;
-	git_submodule_recurse_t old_fetchrecurse;
 
 	cl_git_pass(git_submodule_lookup(&sm1, g_repo, "sm_changed_head"));
 
@@ -165,43 +180,29 @@ void test_submodule_modify__edit_and_save(void)
 	/* modify properties of submodule */
 	cl_git_pass(git_submodule_set_url(sm1, SM_LIBGIT2_URL));
 	cl_git_pass(git_submodule_set_branch(sm1, SM_LIBGIT2_BRANCH));
-	old_fetchrecurse = git_submodule_set_fetch_recurse_submodules(
-		sm1, GIT_SUBMODULE_RECURSE_YES);
-
 	cl_assert_equal_s(SM_LIBGIT2_URL, git_submodule_url(sm1));
 	cl_assert_equal_s(SM_LIBGIT2_BRANCH, git_submodule_branch(sm1));
-	cl_assert_equal_i(
-		GIT_SUBMODULE_RECURSE_YES, git_submodule_fetch_recurse_submodules(sm1));
 
 	/* revert without saving (and confirm setters return old value) */
 	cl_git_pass(git_submodule_set_url(sm1, old_url));
 	cl_git_pass(git_submodule_set_branch(sm1, old_branch));
-	cl_assert_equal_i(
-		GIT_SUBMODULE_RECURSE_YES, git_submodule_set_fetch_recurse_submodules(
-			sm1, GIT_SUBMODULE_RECURSE_RESET));
 
 	/* check that revert was successful */
 	cl_assert_equal_s(old_url, git_submodule_url(sm1));
 	cl_assert_equal_s(old_branch, git_submodule_branch(sm1));
-	cl_assert_equal_i(
-		old_fetchrecurse, git_submodule_fetch_recurse_submodules(sm1));
 
 	/* modify properties of submodule (again) */
 	cl_git_pass(git_submodule_set_url(sm1, SM_LIBGIT2_URL));
 	cl_git_pass(git_submodule_set_branch(sm1, SM_LIBGIT2_BRANCH));
-	git_submodule_set_fetch_recurse_submodules(sm1, GIT_SUBMODULE_RECURSE_YES);
 
 	/* call save */
 	cl_git_pass(git_submodule_save(sm1));
-
-	cl_assert_equal_i(GIT_SUBMODULE_RECURSE_YES, git_submodule_fetch_recurse_submodules(sm1));
 
 	/* call reload and check that the new values are loaded */
 	cl_git_pass(git_submodule_reload(sm1, 0));
 
 	cl_assert_equal_s(SM_LIBGIT2_URL, git_submodule_url(sm1));
 	cl_assert_equal_s(SM_LIBGIT2_BRANCH, git_submodule_branch(sm1));
-	cl_assert_equal_i(GIT_SUBMODULE_RECURSE_YES, git_submodule_fetch_recurse_submodules(sm1));
 
 	/* unset branch again and verify that the property is deleted in config */
 	cl_git_pass(git_submodule_set_branch(sm1, NULL));
@@ -214,19 +215,6 @@ void test_submodule_modify__edit_and_save(void)
 	cl_git_pass(git_submodule_lookup(&sm2, r2, "sm_changed_head"));
 
 	cl_assert_equal_s(SM_LIBGIT2_URL, git_submodule_url(sm2));
-	cl_assert_equal_i(
-		GIT_SUBMODULE_RECURSE_NO, git_submodule_fetch_recurse_submodules(sm2));
-
-	/* set fetchRecurseSubmodules on-demand */
-	cl_git_pass(git_submodule_reload(sm1, 0));
-	git_submodule_set_fetch_recurse_submodules(sm1, GIT_SUBMODULE_RECURSE_ONDEMAND);
-	cl_assert_equal_i(
-		GIT_SUBMODULE_RECURSE_ONDEMAND, git_submodule_fetch_recurse_submodules(sm1));
-	/* call save */
-	cl_git_pass(git_submodule_save(sm1));
-	cl_git_pass(git_submodule_reload(sm1, 0));
-	cl_assert_equal_i(
-		GIT_SUBMODULE_RECURSE_ONDEMAND, git_submodule_fetch_recurse_submodules(sm1));
 
 	git_submodule_free(sm1);
 	git_submodule_free(sm2);

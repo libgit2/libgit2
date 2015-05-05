@@ -519,18 +519,18 @@ GIT_EXTERN(git_submodule_recurse_t) git_submodule_fetch_recurse_submodules(
 	git_submodule *submodule);
 
 /**
- * Set the fetchRecurseSubmodules rule for a submodule.
+ * Set the fetchRecurseSubmodules rule for a submodule in the configuration
  *
- * This sets the submodule.<name>.fetchRecurseSubmodules value for
- * the submodule.  You should call `git_submodule_save()` if you want
- * to persist the new value.
+ * This setting won't affect any existing instances.
  *
- * @param submodule The submodule to modify
+ * @param repo the repository to affect
+ * @param name the submodule to configure
  * @param fetch_recurse_submodules Boolean value
  * @return old value for fetchRecurseSubmodules
  */
-GIT_EXTERN(git_submodule_recurse_t) git_submodule_set_fetch_recurse_submodules(
-	git_submodule *submodule,
+GIT_EXTERN(int) git_submodule_set_fetch_recurse_submodules(
+	git_repository *repo,
+	const char *name,
 	git_submodule_recurse_t fetch_recurse_submodules);
 
 /**

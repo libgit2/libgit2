@@ -769,7 +769,6 @@ int git_submodule_save(git_submodule *submodule)
 	int error = 0;
 	git_config_backend *mods;
 	git_buf key = GIT_BUF_INIT;
-	const char *val;
 
 	assert(submodule);
 
@@ -803,12 +802,6 @@ int git_submodule_save(git_submodule *submodule)
 		error = 0;
 		giterr_clear();
 	}
-	if (error < 0)
-		goto cleanup;
-
-	if (!(error = submodule_config_key_trunc_puts(&key, "fetchRecurseSubmodules")) &&
-		(val = git_submodule_recurse_to_str(submodule->fetch_recurse)) != NULL)
-		error = git_config_file_set_string(mods, key.ptr, val);
 	if (error < 0)
 		goto cleanup;
 
@@ -965,7 +958,11 @@ static int write_var(git_repository *repo, const char *name, const char *var, co
 	if ((error = git_buf_printf(&key, "submodule.%s.%s", name, var)) < 0)
 		goto cleanup;
 
-	error = git_config_file_set_string(mods, key.ptr, val);
+	if (val)
+		error = git_config_file_set_string(mods, key.ptr, val);
+	else
+		error = git_config_file_delete(mods, key.ptr);
+
 	git_buf_free(&key);
 
 cleanup:
@@ -1019,20 +1016,31 @@ git_submodule_recurse_t git_submodule_fetch_recurse_submodules(
 	return submodule->fetch_recurse;
 }
 
-git_submodule_recurse_t git_submodule_set_fetch_recurse_submodules(
-	git_submodule *submodule,
-	git_submodule_recurse_t fetch_recurse_submodules)
+int git_submodule_set_fetch_recurse_submodules(git_repository *repo, const char *name, git_submodule_recurse_t recurse)
 {
-	git_submodule_recurse_t old;
+	const char *val;
+	int error;
 
-	assert(submodule);
+	assert(repo && name);
 
-	if (fetch_recurse_submodules == GIT_SUBMODULE_RECURSE_RESET)
-		fetch_recurse_submodules = submodule->fetch_recurse_default;
+	val = git_submodule_recurse_to_str(recurse);
+	if (!val) {
+		switch (recurse) {
+		case GIT_SUBMODULE_RECURSE_YES:
+			val = "true";
+			break;
+		case GIT_SUBMODULE_RECURSE_NO:
+			val = NULL;
+			break;
+		default:
+			giterr_set(GITERR_SUBMODULE, "invalid recurse value");
+			return -1;
+		}
+	}
 
-	old = submodule->fetch_recurse;
-	submodule->fetch_recurse = fetch_recurse_submodules;
-	return old;
+	error = write_var(repo, name, "fetchRecurseSubmodules", val);
+
+	return error;
 }
 
 static int submodule_repo_create(
