@@ -150,14 +150,10 @@ int git_submodule_lookup(
 	const char *name)    /* trailing slash is allowed */
 {
 	int error;
+	unsigned int location;
 	git_submodule *sm;
-	git_config_backend *mods;
 
 	assert(repo && name);
-
-	mods = open_gitmodules(repo, GITMODULES_EXISTING);
-	if (!mods)
-		return -1;
 
 	if ((error = submodule_alloc(&sm, repo, name)) < 0)
 		return error;
@@ -167,13 +163,28 @@ int git_submodule_lookup(
 		return error;
 	}
 
-	/* Didn't find it via the name, maybe it's the path */
-	if (!sm->url) {
+	if ((error = git_submodule_location(&location, sm)) < 0) {
+		git_submodule_free(sm);
+		return error;
+	}
+
+	/* If it's not configured, we need to check for the path */
+	if (location == 0 || location == GIT_SUBMODULE_STATUS_IN_WD) {
+		git_config_backend *mods;
 		const char *pattern = "submodule\\..*\\.path";
 		fbp_data data = { name, NULL };
 
-		if ((error = git_config_file_foreach_match(mods, pattern, find_by_path, &data)) < 0)
+		mods = open_gitmodules(repo, GITMODULES_EXISTING);
+
+		if (mods)
+			error = git_config_file_foreach_match(mods, pattern, find_by_path, &data);
+
+		git_config_file_free(mods);
+
+		if (error < 0) {
+			git_submodule_free(sm);
 			return error;
+		}
 
 		if (data.name) {
 			git__free(sm->name);
@@ -189,8 +200,13 @@ int git_submodule_lookup(
 		}
 	}
 
-	/* If we didn't find the url, consider it missing */
-	if (!sm->url) {
+	if ((error = git_submodule_location(&location, sm)) < 0) {
+		git_submodule_free(sm);
+		return error;
+	}
+
+	/* If we still haven't found it, do the WD check */
+	if (location == 0 || location == GIT_SUBMODULE_STATUS_IN_WD) {
 		git_submodule_free(sm);
 		error = GIT_ENOTFOUND;
 
