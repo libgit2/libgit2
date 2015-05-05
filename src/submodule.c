@@ -124,6 +124,26 @@ static void submodule_set_lookup_error(int error, const char *name)
 		"Submodule '%s' has not been added yet", name);
 }
 
+typedef struct {
+	const char *path;
+	char *name;
+} fbp_data;
+
+static int find_by_path(const git_config_entry *entry, void *payload)
+{
+	fbp_data *data = payload;
+
+	if (!strcmp(entry->value, data->path)) {
+		const char *fdot, *ldot;
+		fdot = strchr(entry->name, '.');
+		ldot = strrchr(entry->name, '.');
+		data->name = git__strndup(fdot + 1, ldot - fdot - 1);
+		GITERR_CHECK_ALLOC(data->name);
+	}
+
+	return 0;
+}
+
 int git_submodule_lookup(
 	git_submodule **out, /* NULL if user only wants to test existence */
 	git_repository *repo,
@@ -145,6 +165,28 @@ int git_submodule_lookup(
 	if ((error = git_submodule_reload(sm, false)) < 0) {
 		git_submodule_free(sm);
 		return error;
+	}
+
+	/* Didn't find it via the name, maybe it's the path */
+	if (!sm->url) {
+		const char *pattern = "submodule\\..*\\.path";
+		fbp_data data = { name, NULL };
+
+		if ((error = git_config_file_foreach_match(mods, pattern, find_by_path, &data)) < 0)
+			return error;
+
+		if (data.name) {
+			git__free(sm->name);
+			sm->name = data.name;
+			sm->path = git__strdup(name);
+			GITERR_CHECK_ALLOC(sm->path);
+
+			/* Try to load again with the right name */
+			if ((error = git_submodule_reload(sm, false)) < 0) {
+				git_submodule_free(sm);
+				return error;
+			}
+		}
 	}
 
 	/* If we didn't find the url, consider it missing */
