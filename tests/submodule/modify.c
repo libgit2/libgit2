@@ -166,34 +166,47 @@ void test_submodule_modify__set_fetch_recurse_submodules(void)
 	git_submodule_free(sm);
 }
 
+void test_submodule_modify__set_branch(void)
+{
+	git_submodule *sm;
+
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_head"));
+	cl_assert(git_submodule_branch(sm) == NULL);
+	git_submodule_free(sm);
+
+	cl_git_pass(git_submodule_set_branch(g_repo, "sm_changed_head", SM_LIBGIT2_BRANCH));
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_head"));
+	cl_assert_equal_s(SM_LIBGIT2_BRANCH, git_submodule_branch(sm));
+	git_submodule_free(sm);
+
+	cl_git_pass(git_submodule_set_branch(g_repo, "sm_changed_head", NULL));
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_head"));
+	cl_assert(git_submodule_branch(sm) == NULL);
+	git_submodule_free(sm);
+}
+
 void test_submodule_modify__edit_and_save(void)
 {
 	git_submodule *sm1, *sm2;
-	char *old_url, *old_branch;
+	char *old_url;
 	git_repository *r2;
 
 	cl_git_pass(git_submodule_lookup(&sm1, g_repo, "sm_changed_head"));
 
 	old_url = git__strdup(git_submodule_url(sm1));
-	old_branch = NULL;
 
 	/* modify properties of submodule */
 	cl_git_pass(git_submodule_set_url(sm1, SM_LIBGIT2_URL));
-	cl_git_pass(git_submodule_set_branch(sm1, SM_LIBGIT2_BRANCH));
 	cl_assert_equal_s(SM_LIBGIT2_URL, git_submodule_url(sm1));
-	cl_assert_equal_s(SM_LIBGIT2_BRANCH, git_submodule_branch(sm1));
 
 	/* revert without saving (and confirm setters return old value) */
 	cl_git_pass(git_submodule_set_url(sm1, old_url));
-	cl_git_pass(git_submodule_set_branch(sm1, old_branch));
 
 	/* check that revert was successful */
 	cl_assert_equal_s(old_url, git_submodule_url(sm1));
-	cl_assert_equal_s(old_branch, git_submodule_branch(sm1));
 
 	/* modify properties of submodule (again) */
 	cl_git_pass(git_submodule_set_url(sm1, SM_LIBGIT2_URL));
-	cl_git_pass(git_submodule_set_branch(sm1, SM_LIBGIT2_BRANCH));
 
 	/* call save */
 	cl_git_pass(git_submodule_save(sm1));
@@ -202,13 +215,6 @@ void test_submodule_modify__edit_and_save(void)
 	cl_git_pass(git_submodule_reload(sm1, 0));
 
 	cl_assert_equal_s(SM_LIBGIT2_URL, git_submodule_url(sm1));
-	cl_assert_equal_s(SM_LIBGIT2_BRANCH, git_submodule_branch(sm1));
-
-	/* unset branch again and verify that the property is deleted in config */
-	cl_git_pass(git_submodule_set_branch(sm1, NULL));
-	cl_git_pass(git_submodule_save(sm1));
-	cl_git_pass(git_submodule_reload(sm1, 0));
-	cl_assert_equal_s(NULL, git_submodule_branch(sm1));
 
 	/* open a second copy of the repo and compare submodule */
 	cl_git_pass(git_repository_open(&r2, "submod2"));

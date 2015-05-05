@@ -792,19 +792,6 @@ int git_submodule_save(git_submodule *submodule)
 		(error = git_config_file_set_string(mods, key.ptr, submodule->url)) < 0)
 		goto cleanup;
 
-	if ((error = submodule_config_key_trunc_puts(&key, "branch")) < 0)
-		goto cleanup;
-	if (submodule->branch == NULL)
-		error = git_config_file_delete(mods, key.ptr);
-	else
-		error = git_config_file_set_string(mods, key.ptr, submodule->branch);
-	if (error == GIT_ENOTFOUND) {
-		error = 0;
-		giterr_clear();
-	}
-	if (error < 0)
-		goto cleanup;
-
 	/* update internal defaults */
 
 	submodule->ignore_default = submodule->ignore;
@@ -864,25 +851,43 @@ int git_submodule_resolve_url(git_buf *out, git_repository *repo, const char *ur
 	return error;
 }
 
+static int write_var(git_repository *repo, const char *name, const char *var, const char *val)
+{
+	git_buf key = GIT_BUF_INIT;
+	git_config_backend *mods;
+	int error;
+
+	mods = open_gitmodules(repo, GITMODULES_CREATE);
+	if (!mods)
+		return -1;
+
+	if ((error = git_buf_printf(&key, "submodule.%s.%s", name, var)) < 0)
+		goto cleanup;
+
+	if (val)
+		error = git_config_file_set_string(mods, key.ptr, val);
+	else
+		error = git_config_file_delete(mods, key.ptr);
+
+	git_buf_free(&key);
+
+cleanup:
+	git_config_file_free(mods);
+	return error;
+}
+
 const char *git_submodule_branch(git_submodule *submodule)
 {
 	assert(submodule);
 	return submodule->branch;
 }
 
-int git_submodule_set_branch(git_submodule *submodule, const char *branch)
+int git_submodule_set_branch(git_repository *repo, const char *name, const char *branch)
 {
-	assert(submodule);
 
-	git__free(submodule->branch);
-	submodule->branch = NULL;
+	assert(repo && name);
 
-	if (branch != NULL) {
-		submodule->branch = git__strdup(branch);
-		GITERR_CHECK_ALLOC(submodule->branch);
-	}
-
-	return 0;
+	return write_var(repo, name, "branch", branch);
 }
 
 int git_submodule_set_url(git_submodule *submodule, const char *url)
@@ -943,31 +948,6 @@ git_submodule_ignore_t git_submodule_ignore(git_submodule *submodule)
 	assert(submodule);
 	return (submodule->ignore < GIT_SUBMODULE_IGNORE_NONE) ?
 		GIT_SUBMODULE_IGNORE_NONE : submodule->ignore;
-}
-
-static int write_var(git_repository *repo, const char *name, const char *var, const char *val)
-{
-	git_buf key = GIT_BUF_INIT;
-	git_config_backend *mods;
-	int error;
-
-	mods = open_gitmodules(repo, GITMODULES_CREATE);
-	if (!mods)
-		return -1;
-
-	if ((error = git_buf_printf(&key, "submodule.%s.%s", name, var)) < 0)
-		goto cleanup;
-
-	if (val)
-		error = git_config_file_set_string(mods, key.ptr, val);
-	else
-		error = git_config_file_delete(mods, key.ptr);
-
-	git_buf_free(&key);
-
-cleanup:
-	git_config_file_free(mods);
-	return error;
 }
 
 int git_submodule_set_ignore(git_repository *repo, const char *name, git_submodule_ignore_t ignore)
