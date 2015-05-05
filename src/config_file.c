@@ -1381,11 +1381,11 @@ static int parse_variable(struct reader *reader, char **var_name, char **var_val
 
 	quote_count = strip_comments(line, 0);
 
-	if (parse_name(var_name, &value_start, reader, line) < 0)
-		return -1;
-
 	/* If there is no value, boolean true is assumed */
 	*var_value = NULL;
+
+	if (parse_name(var_name, &value_start, reader, line) < 0)
+		goto on_error;
 
 	/*
 	 * Now, let's try to parse the value
@@ -1835,7 +1835,10 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	write_data.preg = preg;
 	write_data.value = value;
 
-	if ((result = config_parse(reader, write_on_section, write_on_variable, write_on_comment, write_on_eof, &write_data)) < 0) {
+	result = config_parse(reader, write_on_section, write_on_variable, write_on_comment, write_on_eof, &write_data);
+	git__free(section);
+
+	if (result < 0) {
 		git_filebuf_cleanup(&file);
 		goto done;
 	}
