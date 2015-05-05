@@ -806,12 +806,6 @@ int git_submodule_save(git_submodule *submodule)
 	if (error < 0)
 		goto cleanup;
 
-	if (!(error = submodule_config_key_trunc_puts(&key, "update")) &&
-		(val = git_submodule_update_to_str(submodule->update)) != NULL)
-		error = git_config_file_set_string(mods, key.ptr, val);
-	if (error < 0)
-		goto cleanup;
-
 	if (!(error = submodule_config_key_trunc_puts(&key, "fetchRecurseSubmodules")) &&
 		(val = git_submodule_recurse_to_str(submodule->fetch_recurse)) != NULL)
 		error = git_config_file_set_string(mods, key.ptr, val);
@@ -958,24 +952,17 @@ git_submodule_ignore_t git_submodule_ignore(git_submodule *submodule)
 		GIT_SUBMODULE_IGNORE_NONE : submodule->ignore;
 }
 
-int git_submodule_set_ignore(git_repository *repo, const char *name, git_submodule_ignore_t ignore)
+static int write_var(git_repository *repo, const char *name, const char *var, const char *val)
 {
 	git_buf key = GIT_BUF_INIT;
 	git_config_backend *mods;
-	const char *val;
 	int error;
-
-	val = git_submodule_ignore_to_str(ignore);
-	if (!val) {
-		giterr_set(GITERR_SUBMODULE, "invalid ignore value");
-		return -1;
-	}
 
 	mods = open_gitmodules(repo, GITMODULES_CREATE);
 	if (!mods)
 		return -1;
 
-	if ((error = git_buf_printf(&key, "submodule.%s.ignore", name)) < 0)
+	if ((error = git_buf_printf(&key, "submodule.%s.%s", name, var)) < 0)
 		goto cleanup;
 
 	error = git_config_file_set_string(mods, key.ptr, val);
@@ -986,6 +973,22 @@ cleanup:
 	return error;
 }
 
+int git_submodule_set_ignore(git_repository *repo, const char *name, git_submodule_ignore_t ignore)
+{
+	const char *val;
+	int error;
+
+	val = git_submodule_ignore_to_str(ignore);
+	if (!val) {
+		giterr_set(GITERR_SUBMODULE, "invalid ignore value");
+		return -1;
+	}
+
+	error = write_var(repo, name, "ignore", val);
+
+	return error;
+}
+
 git_submodule_update_t git_submodule_update_strategy(git_submodule *submodule)
 {
 	assert(submodule);
@@ -993,19 +996,20 @@ git_submodule_update_t git_submodule_update_strategy(git_submodule *submodule)
 		GIT_SUBMODULE_UPDATE_CHECKOUT : submodule->update;
 }
 
-git_submodule_update_t git_submodule_set_update(
-	git_submodule *submodule, git_submodule_update_t update)
+int git_submodule_set_update(git_repository *repo, const char *name, git_submodule_update_t update)
 {
-	git_submodule_update_t old;
+	const char *val;
+	int error;
 
-	assert(submodule);
+	val = git_submodule_update_to_str(update);
+	if (!val) {
+		giterr_set(GITERR_SUBMODULE, "invalid update value");
+		return -1;
+	}
 
-	if (update == GIT_SUBMODULE_UPDATE_RESET)
-		update = submodule->update_default;
+	error = write_var(repo, name, "update", val);
 
-	old = submodule->update;
-	submodule->update = update;
-	return old;
+	return error;
 }
 
 git_submodule_recurse_t git_submodule_fetch_recurse_submodules(

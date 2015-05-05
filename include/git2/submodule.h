@@ -490,23 +490,18 @@ GIT_EXTERN(git_submodule_update_t) git_submodule_update_strategy(
 	git_submodule *submodule);
 
 /**
- * Set the update rule for the submodule.
+ * Set the update rule for the submodule in the configuration
  *
- * The initial value comes from the ".git/config" setting of
- * `submodule.$name.update` for this submodule (which is initialized from
- * the ".gitmodules" file).  Using this function sets the update rule in
- * memory for the submodule.  Call `git_submodule_save()` to write out the
- * new update rule.
+ * This setting won't affect any existing instances.
  *
- * Calling this again with GIT_SUBMODULE_UPDATE_RESET or calling
- * `git_submodule_reload()` will revert the rule to the on disk value.
- *
- * @param submodule The submodule to update
+ * @param repo the repository to affect
+ * @param name the name of the submodule to configure
  * @param update The new value to use
- * @return old value for update
+ * @return 0 or an error code
  */
-GIT_EXTERN(git_submodule_update_t) git_submodule_set_update(
-	git_submodule *submodule,
+GIT_EXTERN(int) git_submodule_set_update(
+	git_repository *repo,
+	const char *name,
 	git_submodule_update_t update);
 
 /**
