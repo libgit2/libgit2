@@ -194,12 +194,3 @@ void test_submodule_modify__set_url(void)
 	cl_assert_equal_s(SM_LIBGIT2_URL, git_submodule_url(sm));
 	git_submodule_free(sm);
 }
-
-void test_submodule_modify__save_last(void)
-{
-	git_submodule *sm;
-
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_gitmodules_only"));
-	cl_git_pass(git_submodule_save(sm));
-	git_submodule_free(sm);
-}

@@ -301,20 +301,6 @@ GIT_EXTERN(int) git_submodule_add_to_index(
 	int write_index);
 
 /**
- * Write submodule settings to .gitmodules file.
- *
- * This commits any in-memory changes to the submodule to the gitmodules
- * file on disk.  You may also be interested in `git_submodule_init()` which
- * writes submodule info to ".git/config" (which is better for local changes
- * to submodule settings) and/or `git_submodule_sync()` which writes
- * settings about remotes to the actual submodule repository.
- *
- * @param submodule The submodule to write.
- * @return 0 on success, <0 on failure.
- */
-GIT_EXTERN(int) git_submodule_save(git_submodule *submodule);
-
-/**
  * Get the containing repository for a submodule.
  *
  * This returns a pointer to the repository that contains the submodule.

@@ -764,44 +764,6 @@ const char *git_submodule_recurse_to_str(git_submodule_recurse_t recurse)
 	return NULL;
 }
 
-int git_submodule_save(git_submodule *submodule)
-{
-	int error = 0;
-	git_config_backend *mods;
-	git_buf key = GIT_BUF_INIT;
-
-	assert(submodule);
-
-	mods = open_gitmodules(submodule->repo, GITMODULES_CREATE);
-	if (!mods) {
-		giterr_set(GITERR_SUBMODULE,
-			"Adding submodules to a bare repository is not supported");
-		return -1;
-	}
-
-	if ((error = git_buf_printf(&key, "submodule.%s.", submodule->name)) < 0)
-		goto cleanup;
-
-	/* save values for path, url, update, ignore, fetchRecurseSubmodules */
-
-	if ((error = submodule_config_key_trunc_puts(&key, "path")) < 0 ||
-		(error = git_config_file_set_string(mods, key.ptr, submodule->path)) < 0)
-		goto cleanup;
-
-	/* update internal defaults */
-
-	submodule->ignore_default = submodule->ignore;
-	submodule->update_default = submodule->update;
-	submodule->fetch_recurse_default = submodule->fetch_recurse;
-	submodule->flags |= GIT_SUBMODULE_STATUS_IN_CONFIG;
-
-cleanup:
-	git_config_file_free(mods);
-	git_buf_free(&key);
-
-	return error;
-}
-
 git_repository *git_submodule_owner(git_submodule *submodule)
 {
 	assert(submodule);
