@@ -156,10 +156,12 @@ INCLUDE_DIRECTORIES(src include)
 
 IF (SECURITY_FOUND)
   MESSAGE("-- Found Security ${SECURITY_DIRS}")
+  SET(LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS} -framework Security")
 ENDIF()
 
 IF (COREFOUNDATION_FOUND)
   MESSAGE("-- Found CoreFoundation ${COREFOUNDATION_DIRS}")
+  SET(LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS} -framework CoreFoundation")
 ENDIF()
 
 
