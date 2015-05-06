@@ -32,8 +32,9 @@ static const char *post_verb = "POST";
 
 #define OWNING_SUBTRANSPORT(s) ((http_subtransport *)(s)->parent.subtransport)
 
-#define PARSE_ERROR_GENERIC	-1
-#define PARSE_ERROR_REPLAY	-2
+#define PARSE_ERROR_GENERIC	GIT_ERROR
+#define PARSE_ERROR_AUTHENTICATION	GIT_EAUTH
+#define PARSE_ERROR_REPLAY	1
 
 #define CHUNK_SIZE	4096
 
@@ -364,7 +365,7 @@ static int on_headers_complete(http_parser *parser)
 
 		if (no_callback) {
 			giterr_set(GITERR_NET, "authentication required but no callback set");
-			return t->parse_error = PARSE_ERROR_GENERIC;
+			return t->parse_error = PARSE_ERROR_AUTHENTICATION;
 		}
 	}
 
@@ -694,7 +695,7 @@ replay:
 		}
 
 		if (t->parse_error < 0)
-			return -1;
+			return t->parse_error;
 
 		if (bytes_parsed != t->parse_buffer.offset - data_offset) {
 			giterr_set(GITERR_NET,
