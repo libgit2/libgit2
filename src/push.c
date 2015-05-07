@@ -639,7 +639,7 @@ int git_push_finish(git_push *push, const git_remote_callbacks *callbacks)
 	int error;
 
 	if (!git_remote_connected(push->remote) &&
-	    (error = git_remote_connect(push->remote, GIT_DIRECTION_PUSH, callbacks, push->custom_headers)) < 0)
+	    (error = git_remote_connect(push->remote, GIT_DIRECTION_PUSH, callbacks, NULL, push->custom_headers)) < 0)
 		return error;
 
 	if ((error = filter_refs(push->remote)) < 0 ||

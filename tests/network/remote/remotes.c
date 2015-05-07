@@ -93,7 +93,7 @@ void test_network_remote_remotes__error_when_no_push_available(void)
 	cl_git_pass(git_remote_create_anonymous(&r, _repo, cl_fixture("testrepo.git")));
 
 	callbacks.transport = git_transport_local;
-	cl_git_pass(git_remote_connect(r, GIT_DIRECTION_PUSH, &callbacks, NULL));
+	cl_git_pass(git_remote_connect(r, GIT_DIRECTION_PUSH, &callbacks, NULL, NULL));
 
 	/* Make sure that push is really not available */
 	r->transport->push = NULL;
@@ -359,7 +359,7 @@ void test_network_remote_remotes__can_load_with_an_empty_url(void)
 	cl_assert(remote->url == NULL);
 	cl_assert(remote->pushurl == NULL);
 
-	cl_git_fail(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL));
+	cl_git_fail(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
 
 	cl_assert(giterr_last() != NULL);
 	cl_assert(giterr_last()->klass == GITERR_INVALID);
@@ -376,7 +376,7 @@ void test_network_remote_remotes__can_load_with_only_an_empty_pushurl(void)
 	cl_assert(remote->url == NULL);
 	cl_assert(remote->pushurl == NULL);
 
-	cl_git_fail(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL));
+	cl_git_fail(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
 
 	git_remote_free(remote);
 }

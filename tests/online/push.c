@@ -372,7 +372,7 @@ void test_online_push__initialize(void)
 
 	record_callbacks_data_clear(&_record_cbs_data);
 
-	cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH, &_record_cbs, NULL));
+	cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH, &_record_cbs, NULL, NULL));
 
 	/* Clean up previously pushed branches.  Fails if receive.denyDeletes is
 	 * set on the remote.  Also, on Git 1.7.0 and newer, you must run
