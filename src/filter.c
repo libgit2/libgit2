@@ -875,7 +875,7 @@ void stream_list_free(git_vector *streams)
 	git_vector_free(streams);
 }
 
-#define STREAM_BUFSIZE 10240
+#define STREAM_BUFSIZE 65536
 
 int git_filter_list_stream_file(
 	git_filter_list *filters,
