@@ -521,6 +521,12 @@ struct git_remote_callbacks {
 	int (*push_update_reference)(const char *refname, const char *status, void *data);
 
 	/**
+	 * Called once between the negotiation step and the upload. It
+	 * provides information about what updates will be performed.
+	 */
+	git_push_negotiation push_negotiation;
+
+	/**
 	 * This will be passed to each of the callbacks in this struct
 	 * as the last parameter.
 	 */

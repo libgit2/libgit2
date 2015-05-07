@@ -40,12 +40,9 @@ void test_rebase_merge__next(void)
 	git_reference *branch_ref, *upstream_ref;
 	git_annotated_commit *branch_head, *upstream_head;
 	git_rebase_operation *rebase_operation;
-	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_status_list *status_list;
 	const git_status_entry *status_entry;
 	git_oid pick_id, file1_id;
-
-	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 
 	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/beef"));
 	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/master"));
@@ -55,7 +52,7 @@ void test_rebase_merge__next(void)
 
 	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 
 	git_oid_fromstr(&pick_id, "da9c51a23d02d931a486f45ad18cda05cf5d2b94");
 
@@ -87,10 +84,9 @@ void test_rebase_merge__next_with_conflicts(void)
 	git_reference *branch_ref, *upstream_ref;
 	git_annotated_commit *branch_head, *upstream_head;
 	git_rebase_operation *rebase_operation;
-	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_status_list *status_list;
 	const git_status_entry *status_entry;
-	git_oid pick_id;
+	git_oid pick_id, commit_id;
 
 	const char *expected_merge =
 "ASPARAGUS SOUP.\n"
@@ -112,8 +108,6 @@ void test_rebase_merge__next_with_conflicts(void)
 "asparagus which had been laid by, boil it until these last articles are\n"
 "sufficiently done, thicken with flour, butter and milk, and serve it up.\n";
 
-	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
-
 	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/asparagus"));
 	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/master"));
 
@@ -122,7 +116,7 @@ void test_rebase_merge__next_with_conflicts(void)
 
 	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 
 	git_oid_fromstr(&pick_id, "33f915f9e4dbd9f4b24430e48731a59b45b15500");
 
@@ -139,6 +133,8 @@ void test_rebase_merge__next_with_conflicts(void)
 
 	cl_assert_equal_file(expected_merge, strlen(expected_merge), "rebase/asparagus.txt");
 
+	cl_git_fail_with(GIT_EUNMERGED, git_rebase_commit(&commit_id, rebase, NULL, signature, NULL, NULL));
+
 	git_status_list_free(status_list);
 	git_annotated_commit_free(branch_head);
 	git_annotated_commit_free(upstream_head);
@@ -153,11 +149,8 @@ void test_rebase_merge__next_stops_with_iterover(void)
 	git_reference *branch_ref, *upstream_ref;
 	git_annotated_commit *branch_head, *upstream_head;
 	git_rebase_operation *rebase_operation;
-	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid commit_id;
 	int error;
-
-	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 
 	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/beef"));
 	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/master"));
@@ -167,27 +160,27 @@ void test_rebase_merge__next_stops_with_iterover(void)
 
 	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
-	cl_git_fail(error = git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_fail(error = git_rebase_next(&rebase_operation, rebase));
 	cl_assert_equal_i(GIT_ITEROVER, error);
 
 	cl_assert_equal_file("5\n", 2, "rebase/.git/rebase-merge/end");
@@ -206,14 +199,11 @@ void test_rebase_merge__commit(void)
 	git_reference *branch_ref, *upstream_ref;
 	git_annotated_commit *branch_head, *upstream_head;
 	git_rebase_operation *rebase_operation;
-	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid commit_id, tree_id, parent_id;
 	git_signature *author;
 	git_commit *commit;
 	git_reflog *reflog;
 	const git_reflog_entry *reflog_entry;
-
-	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 
 	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/beef"));
 	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/master"));
@@ -223,7 +213,7 @@ void test_rebase_merge__commit(void)
 
 	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
@@ -262,16 +252,13 @@ void test_rebase_merge__commit(void)
 	git_rebase_free(rebase);
 }
 
-void test_rebase_merge__commit_updates_rewritten(void)
+void test_rebase_merge__blocked_when_dirty(void)
 {
 	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
 	git_annotated_commit *branch_head, *upstream_head;
 	git_rebase_operation *rebase_operation;
-	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid commit_id;
-
-	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 
 	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/beef"));
 	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/master"));
@@ -281,11 +268,46 @@ void test_rebase_merge__commit_updates_rewritten(void)
 
 	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	/* Allow untracked files */
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
+	cl_git_mkfile("rebase/untracked_file.txt", "This is untracked\n");
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	/* Do not allow unstaged */
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
+	cl_git_mkfile("rebase/veal.txt", "This is an unstaged change\n");
+	cl_git_fail_with(GIT_EUNMERGED, git_rebase_commit(&commit_id, rebase, NULL, signature,
+		NULL, NULL));
+
+	git_annotated_commit_free(branch_head);
+	git_annotated_commit_free(upstream_head);
+	git_reference_free(branch_ref);
+	git_reference_free(upstream_ref);
+	git_rebase_free(rebase);
+}
+
+void test_rebase_merge__commit_updates_rewritten(void)
+{
+	git_rebase *rebase;
+	git_reference *branch_ref, *upstream_ref;
+	git_annotated_commit *branch_head, *upstream_head;
+	git_rebase_operation *rebase_operation;
+	git_oid commit_id;
+
+	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/beef"));
+	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/master"));
+
+	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
+	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
+
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
+
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
+		NULL, NULL));
+
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
@@ -307,11 +329,8 @@ void test_rebase_merge__commit_drops_already_applied(void)
 	git_reference *branch_ref, *upstream_ref;
 	git_annotated_commit *branch_head, *upstream_head;
 	git_rebase_operation *rebase_operation;
-	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid commit_id;
 	int error;
-
-	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 
 	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/beef"));
 	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/green_pea"));
@@ -321,13 +340,13 @@ void test_rebase_merge__commit_drops_already_applied(void)
 
 	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 	cl_git_fail(error = git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
 	cl_assert_equal_i(GIT_EAPPLIED, error);
 
-	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
@@ -348,13 +367,10 @@ void test_rebase_merge__finish(void)
 	git_reference *branch_ref, *upstream_ref, *head_ref;
 	git_annotated_commit *branch_head, *upstream_head;
 	git_rebase_operation *rebase_operation;
-	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid commit_id;
 	git_reflog *reflog;
 	const git_reflog_entry *reflog_entry;
 	int error;
-
-	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 
 	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/gravy"));
 	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/veal"));
@@ -364,14 +380,14 @@ void test_rebase_merge__finish(void)
 
 	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
-	cl_git_fail(error = git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_fail(error = git_rebase_next(&rebase_operation, rebase));
 	cl_assert_equal_i(GIT_ITEROVER, error);
 
-	cl_git_pass(git_rebase_finish(rebase, signature, NULL));
+	cl_git_pass(git_rebase_finish(rebase, signature));
 
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_NONE, git_repository_state(repo));
 
@@ -411,12 +427,9 @@ static void test_copy_note(
 	git_annotated_commit *branch_head, *upstream_head;
 	git_commit *branch_commit;
 	git_rebase_operation *rebase_operation;
-	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid note_id, commit_id;
 	git_note *note = NULL;
 	int error;
-
-	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 
 	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/gravy"));
 	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/veal"));
@@ -435,11 +448,11 @@ static void test_copy_note(
 
 	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, opts));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
-	cl_git_pass(git_rebase_finish(rebase, signature, opts));
+	cl_git_pass(git_rebase_finish(rebase, signature));
 
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_NONE, git_repository_state(repo));
 
@@ -497,3 +510,58 @@ void test_rebase_merge__copy_notes_disabled_in_config(void)
 	test_copy_note(NULL, 0);
 }
 
+void rebase_checkout_progress_cb(
+	const char *path,
+	size_t completed_steps,
+	size_t total_steps,
+	void *payload)
+{
+	int *called = payload;
+
+	GIT_UNUSED(path);
+	GIT_UNUSED(completed_steps);
+	GIT_UNUSED(total_steps);
+
+	*called = 1;
+}
+
+void test_rebase_merge__custom_checkout_options(void)
+{
+	git_rebase *rebase;
+	git_reference *branch_ref, *upstream_ref;
+	git_annotated_commit *branch_head, *upstream_head;
+	git_rebase_options rebase_options = GIT_REBASE_OPTIONS_INIT;
+	git_checkout_options checkout_options = GIT_CHECKOUT_OPTIONS_INIT;
+	git_rebase_operation *rebase_operation;
+	int called = 0;
+
+	checkout_options.progress_cb = rebase_checkout_progress_cb;
+	checkout_options.progress_payload = &called;
+
+	memcpy(&rebase_options.checkout_options, &checkout_options,
+		sizeof(git_checkout_options));
+
+	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/beef"));
+	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/master"));
+
+	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
+	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
+
+	called = 0;
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, &rebase_options));
+	cl_assert_equal_i(1, called);
+
+	called = 0;
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
+	cl_assert_equal_i(1, called);
+
+	called = 0;
+	cl_git_pass(git_rebase_abort(rebase));
+	cl_assert_equal_i(1, called);
+
+	git_annotated_commit_free(branch_head);
+	git_annotated_commit_free(upstream_head);
+	git_reference_free(branch_ref);
+	git_reference_free(upstream_ref);
+	git_rebase_free(rebase);
+}

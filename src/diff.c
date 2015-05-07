@@ -621,7 +621,7 @@ int git_diff__oid_for_entry(
 		git_index *idx;
 
 		if (!(error = git_repository_index__weakptr(&idx, diff->repo))) {
-			memcpy(&entry.id, out, sizeof(entry.id));
+			git_oid_cpy(&entry.id, out);
 			error = git_index_add(idx, &entry);
 		}
  	}
@@ -806,15 +806,12 @@ static int maybe_modified(
 	 * haven't calculated the OID of the new item, then calculate it now
 	 */
 	if (modified_uncertain && git_oid_iszero(&nitem->id)) {
-		if (git_oid_iszero(&noid)) {
-			const git_oid *update_check =
-				DIFF_FLAG_IS_SET(diff, GIT_DIFF_UPDATE_INDEX) ?
-				&oitem->id : NULL;
-
-			if ((error = git_diff__oid_for_entry(
-					&noid, diff, nitem, update_check)) < 0)
-				return error;
-		}
+		const git_oid *update_check =
+			DIFF_FLAG_IS_SET(diff, GIT_DIFF_UPDATE_INDEX) && omode == nmode ?
+			&oitem->id : NULL;
+		if ((error = git_diff__oid_for_entry(
+				&noid, diff, nitem, update_check)) < 0)
+			return error;
 
 		/* if oid matches, then mark unmodified (except submodules, where
 		 * the filesystem content may be modified even if the oid still
@@ -823,6 +820,19 @@ static int maybe_modified(
 		if (omode == nmode && !S_ISGITLINK(omode) &&
 			git_oid_equal(&oitem->id, &noid))
 			status = GIT_DELTA_UNMODIFIED;
+	}
+
+	/* If we want case changes, then break this into a delete of the old
+	 * and an add of the new so that consumers can act accordingly (eg,
+	 * checkout will update the case on disk.)
+	 */
+	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_CASE) &&
+		DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_CASECHANGE) &&
+		strcmp(oitem->path, nitem->path) != 0) {
+
+		if (!(error = diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem)))
+			error = diff_delta__from_one(diff, GIT_DELTA_ADDED, nitem);
+		return error;
 	}
 
 	return diff_delta__from_two(

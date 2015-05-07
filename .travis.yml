@@ -27,7 +27,7 @@ matrix:
      compiler: gcc
  include:
    - compiler: i586-mingw32msvc-gcc
-     env: OPTIONS="-DBUILD_CLAR=OFF -DWIN32=ON -DMINGW=ON -DUSE_SSH=OFF"
+     env: OPTIONS="-DCMAKE_TOOLCHAIN_FILE=../script/toolchain-mingw32.cmake" SKIP_TESTS=1
      os: linux
    - compiler: gcc
      env: COVERITY=1

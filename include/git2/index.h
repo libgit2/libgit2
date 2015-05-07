@@ -485,7 +485,7 @@ GIT_EXTERN(int) git_index_add_bypath(git_index *index, const char *path);
  */
 GIT_EXTERN(int) git_index_add_frombuffer(
 	git_index *index,
-	git_index_entry *entry,
+	const git_index_entry *entry,
 	const void *buffer, size_t len);
 
 /**

@@ -8,6 +8,7 @@
 #define INCLUDE_git_path_w32_h__
 
 #include "common.h"
+#include "vector.h"
 
 /*
  * Provides a large enough buffer to support Windows paths:  MAX_PATH is
@@ -78,5 +79,7 @@ extern int git_win32_path_to_utf8(git_win32_utf8_path dest, const wchar_t *src);
  * @return The name of the shortname for the given path
  */
 extern char *git_win32_path_8dot3_name(const char *path);
+
+extern int git_win32_path_readlink_w(git_win32_path dest, const git_win32_path path);
 
 #endif

@@ -246,6 +246,51 @@ void test_clone_nonetwork__can_detached_head(void)
 	cl_fixture_cleanup("./foo1");
 }
 
+void test_clone_nonetwork__clone_tag_to_tree(void)
+{
+	git_repository *stage;
+	git_index_entry entry;
+	git_index *index;
+	git_odb *odb;
+	git_oid tree_id;
+	git_tree *tree;
+	git_reference *tag;
+	git_tree_entry *tentry;
+	const char *file_path = "some/deep/path.txt";
+	const char *file_content = "some content\n";
+	const char *tag_name = "refs/tags/tree-tag";
+
+	stage = cl_git_sandbox_init("testrepo.git");
+	cl_git_pass(git_repository_odb(&odb, stage));
+	cl_git_pass(git_index_new(&index));
+
+	memset(&entry, 0, sizeof(git_index_entry));
+	entry.path = file_path;
+	entry.mode = GIT_FILEMODE_BLOB;
+	cl_git_pass(git_odb_write(&entry.id, odb, file_content, strlen(file_content), GIT_OBJ_BLOB));
+
+	cl_git_pass(git_index_add(index, &entry));
+	cl_git_pass(git_index_write_tree_to(&tree_id, index, stage));
+	cl_git_pass(git_reference_create(&tag, stage, tag_name, &tree_id, 0, NULL));
+	git_reference_free(tag);
+	git_odb_free(odb);
+	git_index_free(index);
+
+	g_options.local = GIT_CLONE_NO_LOCAL;
+	cl_git_pass(git_clone(&g_repo, cl_git_path_url(git_repository_path(stage)), "./foo", &g_options));
+	git_repository_free(stage);
+
+	cl_git_pass(git_reference_lookup(&tag, g_repo, tag_name));
+	cl_git_pass(git_tree_lookup(&tree, g_repo, git_reference_target(tag)));
+	git_reference_free(tag);
+
+	cl_git_pass(git_tree_entry_bypath(&tentry, tree, file_path));
+	git_tree_entry_free(tentry);
+	git_tree_free(tree);
+
+	cl_fixture_cleanup("testrepo.git");
+}
+
 static void assert_correct_reflog(const char *name)
 {
 	git_reflog *log;

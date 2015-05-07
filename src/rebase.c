@@ -57,6 +57,8 @@ typedef enum {
 struct git_rebase {
 	git_repository *repo;
 
+	git_rebase_options options;
+
 	git_rebase_type_t type;
 	char *state_path;
 
@@ -249,7 +251,43 @@ done:
 	return error;
 }
 
-int git_rebase_open(git_rebase **out, git_repository *repo)
+static git_rebase *rebase_alloc(const git_rebase_options *rebase_opts)
+{
+	git_rebase *rebase = git__calloc(1, sizeof(git_rebase));
+
+	if (!rebase)
+		return NULL;
+
+	if (rebase_opts)
+		memcpy(&rebase->options, rebase_opts, sizeof(git_rebase_options));
+	else
+		git_rebase_init_options(&rebase->options, GIT_REBASE_OPTIONS_VERSION);
+
+	if (rebase_opts && rebase_opts->rewrite_notes_ref) {
+		if ((rebase->options.rewrite_notes_ref = git__strdup(rebase_opts->rewrite_notes_ref)) == NULL)
+			return NULL;
+	}
+
+	if ((rebase->options.checkout_options.checkout_strategy & (GIT_CHECKOUT_SAFE | GIT_CHECKOUT_FORCE)) == 0)
+		rebase->options.checkout_options.checkout_strategy = GIT_CHECKOUT_SAFE;
+
+	return rebase;
+}
+
+static int rebase_check_versions(const git_rebase_options *given_opts)
+{
+	GITERR_CHECK_VERSION(given_opts, GIT_REBASE_OPTIONS_VERSION, "git_rebase_options");
+
+	if (given_opts)
+		GITERR_CHECK_VERSION(&given_opts->checkout_options, GIT_CHECKOUT_OPTIONS_VERSION, "git_checkout_options");
+
+	return 0;
+}
+
+int git_rebase_open(
+	git_rebase **out,
+	git_repository *repo,
+	const git_rebase_options *given_opts)
 {
 	git_rebase *rebase;
 	git_buf path = GIT_BUF_INIT, orig_head_name = GIT_BUF_INIT,
@@ -258,7 +296,10 @@ int git_rebase_open(git_rebase **out, git_repository *repo)
 
 	assert(repo);
 
-	rebase = git__calloc(1, sizeof(git_rebase));
+	if ((error = rebase_check_versions(given_opts)) < 0)
+		return error;
+
+	rebase = rebase_alloc(given_opts);
 	GITERR_CHECK_ALLOC(rebase);
 
 	rebase->repo = repo;
@@ -446,48 +487,6 @@ int git_rebase_init_options(git_rebase_options *opts, unsigned int version)
 	return 0;
 }
 
-static int rebase_normalize_opts(
-	git_repository *repo,
-	git_rebase_options *opts,
-	const git_rebase_options *given_opts)
-{
-	git_rebase_options default_opts = GIT_REBASE_OPTIONS_INIT;
-	git_config *config;
-
-	if (given_opts)
-		memcpy(opts, given_opts, sizeof(git_rebase_options));
-	else
-		memcpy(opts, &default_opts, sizeof(git_rebase_options));
-
-	if (git_repository_config(&config, repo) < 0)
-		return -1;
-
-	if (given_opts && given_opts->rewrite_notes_ref) {
-		opts->rewrite_notes_ref = git__strdup(given_opts->rewrite_notes_ref);
-		GITERR_CHECK_ALLOC(opts->rewrite_notes_ref);
-	} else if (git_config__get_bool_force(config, "notes.rewrite.rebase", 1)) {
-		char *rewrite_ref = git_config__get_string_force(
-			config, "notes.rewriteref", NOTES_DEFAULT_REF);
-
-		if (rewrite_ref) {
-			opts->rewrite_notes_ref = rewrite_ref;
-			GITERR_CHECK_ALLOC(opts->rewrite_notes_ref);
-		}
-	}
-
-	git_config_free(config);
-
-	return 0;
-}
-
-static void rebase_opts_free(git_rebase_options *opts)
-{
-	if (!opts)
-		return;
-
-	git__free((char *)opts->rewrite_notes_ref);
-}
-
 static int rebase_ensure_not_in_progress(git_repository *repo)
 {
 	int error;
@@ -504,33 +503,42 @@ static int rebase_ensure_not_in_progress(git_repository *repo)
 	return 0;
 }
 
-static int rebase_ensure_not_dirty(git_repository *repo)
+static int rebase_ensure_not_dirty(
+	git_repository *repo,
+	bool check_index,
+	bool check_workdir,
+	int fail_with)
 {
 	git_tree *head = NULL;
 	git_index *index = NULL;
 	git_diff *diff = NULL;
 	int error;
 
-	if ((error = git_repository_head_tree(&head, repo)) < 0 ||
-		(error = git_repository_index(&index, repo)) < 0 ||
-		(error = git_diff_tree_to_index(&diff, repo, head, index, NULL)) < 0)
-		goto done;
+	if (check_index) {
+		if ((error = git_repository_head_tree(&head, repo)) < 0 ||
+			(error = git_repository_index(&index, repo)) < 0 ||
+			(error = git_diff_tree_to_index(&diff, repo, head, index, NULL)) < 0)
+			goto done;
 
-	if (git_diff_num_deltas(diff) > 0) {
-		giterr_set(GITERR_REBASE, "Uncommitted changes exist in index");
-		error = -1;
-		goto done;
+		if (git_diff_num_deltas(diff) > 0) {
+			giterr_set(GITERR_REBASE, "Uncommitted changes exist in index");
+			error = fail_with;
+			goto done;
+		}
+
+		git_diff_free(diff);
+		diff = NULL;
 	}
 
-	git_diff_free(diff);
-	diff = NULL;
+	if (check_workdir) {
+		if ((error = git_diff_index_to_workdir(&diff, repo, index, NULL)) < 0)
+			goto done;
 
-	if ((error = git_diff_index_to_workdir(&diff, repo, index, NULL)) < 0)
-		goto done;
-
-	if (git_diff_num_deltas(diff) > 0) {
-		giterr_set(GITERR_REBASE, "Unstaged changes exist in workdir");
-		error = -1;
+		if (git_diff_num_deltas(diff) > 0) {
+			giterr_set(GITERR_REBASE, "Unstaged changes exist in workdir");
+			error = fail_with;
+			goto done;
+		}
 	}
 
 done:
@@ -607,8 +615,7 @@ static int rebase_init(
 	git_repository *repo,
 	const git_annotated_commit *branch,
 	const git_annotated_commit *upstream,
-	const git_annotated_commit *onto,
-	const git_rebase_options *opts)
+	const git_annotated_commit *onto)
 {
 	git_reference *head_ref = NULL;
 	git_annotated_commit *head_branch = NULL;
@@ -630,7 +637,7 @@ static int rebase_init(
 	rebase->type = GIT_REBASE_TYPE_MERGE;
 	rebase->state_path = git_buf_detach(&state_path);
 	rebase->orig_head_name = git__strdup(branch->ref_name ? branch->ref_name : ORIG_DETACHED_HEAD);
-	rebase->quiet = opts->quiet;
+	rebase->quiet = rebase->options.quiet;
 
 	git_oid_cpy(&rebase->orig_head_id, git_annotated_commit_id(branch));
 	git_oid_cpy(&rebase->onto_id, git_annotated_commit_id(onto));
@@ -658,10 +665,8 @@ int git_rebase_init(
 	const git_rebase_options *given_opts)
 {
 	git_rebase *rebase = NULL;
-	git_rebase_options opts;
 	git_buf reflog = GIT_BUF_INIT;
 	git_commit *onto_commit = NULL;
-	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_reference *head_ref = NULL;
 	int error;
 
@@ -669,31 +674,26 @@ int git_rebase_init(
 
 	*out = NULL;
 
-	GITERR_CHECK_VERSION(given_opts, GIT_REBASE_OPTIONS_VERSION, "git_rebase_options");
-
 	if (!onto)
 		onto = upstream;
 
-	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
-
-	if ((error = rebase_normalize_opts(repo, &opts, given_opts)) < 0 ||
+	if ((error = rebase_check_versions(given_opts)) < 0 ||
 		(error = git_repository__ensure_not_bare(repo, "rebase")) < 0 ||
 		(error = rebase_ensure_not_in_progress(repo)) < 0 ||
-		(error = rebase_ensure_not_dirty(repo)) < 0 ||
+		(error = rebase_ensure_not_dirty(repo, true, true, GIT_ERROR)) < 0 ||
 		(error = git_commit_lookup(
 			&onto_commit, repo, git_annotated_commit_id(onto))) < 0)
 		return error;
 
-	rebase = git__calloc(1, sizeof(git_rebase));
-	GITERR_CHECK_ALLOC(rebase);
+	rebase = rebase_alloc(given_opts);
 
 	if ((error = rebase_init(
-			rebase, repo, branch, upstream, onto, &opts)) < 0 ||
+			rebase, repo, branch, upstream, onto)) < 0 ||
 		(error = rebase_setupfiles(rebase)) < 0 ||
 		(error = git_buf_printf(&reflog,
 			"rebase: checkout %s", rebase_onto_name(onto))) < 0 ||
 		(error = git_checkout_tree(
-			repo, (git_object *)onto_commit, &checkout_opts)) < 0 ||
+			repo, (git_object *)onto_commit, &rebase->options.checkout_options)) < 0 ||
 		(error = git_reference_create(&head_ref, repo, GIT_HEAD_FILE,
 			git_annotated_commit_id(onto), 1, reflog.ptr)) < 0)
 		goto done;
@@ -709,25 +709,16 @@ done:
 
 	git_commit_free(onto_commit);
 	git_buf_free(&reflog);
-	rebase_opts_free(&opts);
 
 	return error;
 }
 
-static void normalize_checkout_opts(
-	git_rebase *rebase,
-	git_commit *current_commit,
+static void normalize_checkout_options_for_apply(
 	git_checkout_options *checkout_opts,
-	const git_checkout_options *given_checkout_opts)
+	git_rebase *rebase,
+	git_commit *current_commit)
 {
-	if (given_checkout_opts != NULL)
-		memcpy(checkout_opts, given_checkout_opts, sizeof(git_checkout_options));
-	else {
-		git_checkout_options default_checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
-		default_checkout_opts.checkout_strategy =  GIT_CHECKOUT_SAFE;
-
-		memcpy(checkout_opts, &default_checkout_opts, sizeof(git_checkout_options));
-	}
+	memcpy(checkout_opts, &rebase->options.checkout_options, sizeof(git_checkout_options));
 
 	if (!checkout_opts->ancestor_label)
 		checkout_opts->ancestor_label = "ancestor";
@@ -758,16 +749,15 @@ GIT_INLINE(int) rebase_movenext(git_rebase *rebase)
 
 static int rebase_next_merge(
 	git_rebase_operation **out,
-	git_rebase *rebase,
-	git_checkout_options *given_checkout_opts)
+	git_rebase *rebase)
 {
 	git_buf path = GIT_BUF_INIT;
-	git_checkout_options checkout_opts = {0};
 	git_commit *current_commit = NULL, *parent_commit = NULL;
 	git_tree *current_tree = NULL, *head_tree = NULL, *parent_tree = NULL;
 	git_index *index = NULL;
 	git_indexwriter indexwriter = GIT_INDEXWRITER_INIT;
 	git_rebase_operation *operation;
+	git_checkout_options checkout_opts;
 	char current_idstr[GIT_OID_HEXSZ];
 	unsigned int parent_count;
 	int error;
@@ -796,7 +786,7 @@ static int rebase_next_merge(
 
 	git_oid_fmt(current_idstr, &operation->id);
 
-	normalize_checkout_opts(rebase, current_commit, &checkout_opts, given_checkout_opts);
+	normalize_checkout_options_for_apply(&checkout_opts, rebase, current_commit);
 
 	if ((error = git_indexwriter_init_for_operation(&indexwriter, rebase->repo, &checkout_opts.checkout_strategy)) < 0 ||
 		(error = rebase_setupfile(rebase, MSGNUM_FILE, -1, "%d\n", rebase->current+1)) < 0 ||
@@ -824,8 +814,7 @@ done:
 
 int git_rebase_next(
 	git_rebase_operation **out,
-	git_rebase *rebase,
-	git_checkout_options *checkout_opts)
+	git_rebase *rebase)
 {
 	int error;
 
@@ -833,7 +822,7 @@ int git_rebase_next(
 
 	switch (rebase->type) {
 	case GIT_REBASE_TYPE_MERGE:
-		error = rebase_next_merge(out, rebase, checkout_opts);
+		error = rebase_next_merge(out, rebase);
 		break;
 	default:
 		abort();
@@ -869,11 +858,12 @@ static int rebase_commit_merge(
 
 	if (git_index_has_conflicts(index)) {
 		giterr_set(GITERR_REBASE, "Conflicts have not been resolved");
-		error = GIT_EMERGECONFLICT;
+		error = GIT_EUNMERGED;
 		goto done;
 	}
 
-	if ((error = git_commit_lookup(&current_commit, rebase->repo, &operation->id)) < 0 ||
+	if ((error = rebase_ensure_not_dirty(rebase->repo, false, true, GIT_EUNMERGED)) < 0 ||
+		(error = git_commit_lookup(&current_commit, rebase->repo, &operation->id)) < 0 ||
 		(error = git_repository_head(&head, rebase->repo)) < 0 ||
 		(error = git_reference_peel((git_object **)&head_commit, head, GIT_OBJ_COMMIT)) < 0 ||
 		(error = git_commit_tree(&head_tree, head_commit)) < 0 ||
@@ -971,7 +961,7 @@ int git_rebase_abort(git_rebase *rebase)
 	if ((error = git_commit_lookup(
 			&orig_head_commit, rebase->repo, &rebase->orig_head_id)) < 0 ||
 		(error = git_reset(rebase->repo, (git_object *)orig_head_commit,
-			GIT_RESET_HARD, NULL)) < 0)
+			GIT_RESET_HARD, &rebase->options.checkout_options)) < 0)
 		goto done;
 
 	error = rebase_cleanup(rebase);
@@ -983,19 +973,50 @@ done:
 	return error;
 }
 
+static int notes_ref_lookup(git_buf *out, git_rebase *rebase)
+{
+	git_config *config = NULL;
+	int do_rewrite, error;
+
+	if (rebase->options.rewrite_notes_ref) {
+		git_buf_attach_notowned(out,
+			rebase->options.rewrite_notes_ref,
+			strlen(rebase->options.rewrite_notes_ref));
+		return 0;
+	}
+
+	if ((error = git_repository_config(&config, rebase->repo)) < 0 ||
+		(error = git_config_get_bool(&do_rewrite, config, "notes.rewrite.rebase")) < 0) {
+
+		if (error != GIT_ENOTFOUND)
+			goto done;
+
+		giterr_clear();
+		do_rewrite = 1;
+	}
+
+	error = do_rewrite ?
+		git_config_get_string_buf(out, config, "notes.rewriteref") :
+		GIT_ENOTFOUND;
+
+done:
+	git_config_free(config);
+	return error;
+}
+
 static int rebase_copy_note(
 	git_rebase *rebase,
+	const char *notes_ref,
 	git_oid *from,
 	git_oid *to,
-	const git_signature *committer,
-	const git_rebase_options *opts)
+	const git_signature *committer)
 {
 	git_note *note = NULL;
 	git_oid note_id;
 	git_signature *who = NULL;
 	int error;
 
-	if ((error = git_note_read(&note, rebase->repo, opts->rewrite_notes_ref, from)) < 0) {
+	if ((error = git_note_read(&note, rebase->repo, notes_ref, from)) < 0) {
 		if (error == GIT_ENOTFOUND) {
 			giterr_clear();
 			error = 0;
@@ -1016,7 +1037,7 @@ static int rebase_copy_note(
 		committer = who;
 	}
 
-	error = git_note_create(&note_id, rebase->repo, opts->rewrite_notes_ref,
+	error = git_note_create(&note_id, rebase->repo, notes_ref,
 		git_note_author(note), committer, to, git_note_message(note), 0);
 
 done:
@@ -1028,17 +1049,22 @@ done:
 
 static int rebase_copy_notes(
 	git_rebase *rebase,
-	const git_signature *committer,
-	const git_rebase_options *opts)
+	const git_signature *committer)
 {
-	git_buf path = GIT_BUF_INIT, rewritten = GIT_BUF_INIT;
+	git_buf path = GIT_BUF_INIT, rewritten = GIT_BUF_INIT, notes_ref = GIT_BUF_INIT;
 	char *pair_list, *fromstr, *tostr, *end;
 	git_oid from, to;
 	unsigned int linenum = 1;
 	int error = 0;
 
-	if (!opts->rewrite_notes_ref)
+	if ((error = notes_ref_lookup(&notes_ref, rebase)) < 0) {
+		if (error == GIT_ENOTFOUND) {
+			giterr_clear();
+			error = 0;
+		}
+
 		goto done;
+	}
 
 	if ((error = git_buf_joinpath(&path, rebase->state_path, REWRITTEN_FILE)) < 0 ||
 		(error = git_futils_readbuffer(&rewritten, path.ptr)) < 0)
@@ -1067,7 +1093,7 @@ static int rebase_copy_notes(
 			git_oid_fromstr(&to, tostr) < 0)
 			goto on_error;
 
-		if ((error = rebase_copy_note(rebase, &from, &to, committer, opts)) < 0)
+		if ((error = rebase_copy_note(rebase, notes_ref.ptr, &from, &to, committer)) < 0)
 			goto done;
 
 		linenum++;
@@ -1082,16 +1108,15 @@ on_error:
 done:
 	git_buf_free(&rewritten);
 	git_buf_free(&path);
+	git_buf_free(&notes_ref);
 
 	return error;
 }
 
 int git_rebase_finish(
 	git_rebase *rebase,
-	const git_signature *signature,
-	const git_rebase_options *given_opts)
+	const git_signature *signature)
 {
-	git_rebase_options opts;
 	git_reference *terminal_ref = NULL, *branch_ref = NULL, *head_ref = NULL;
 	git_commit *terminal_commit = NULL;
 	git_buf branch_msg = GIT_BUF_INIT, head_msg = GIT_BUF_INIT;
@@ -1099,11 +1124,6 @@ int git_rebase_finish(
 	int error;
 
 	assert(rebase);
-
-	GITERR_CHECK_VERSION(given_opts, GIT_REBASE_OPTIONS_VERSION, "git_rebase_options");
-
-	if ((error = rebase_normalize_opts(rebase->repo, &opts, given_opts)) < 0)
-		goto done;
 
 	git_oid_fmt(onto, &rebase->onto_id);
 
@@ -1120,7 +1140,7 @@ int git_rebase_finish(
 		(error = git_reference_symbolic_create(&head_ref,
 			rebase->repo, GIT_HEAD_FILE, rebase->orig_head_name, 1,
 			head_msg.ptr)) < 0 ||
-		(error = rebase_copy_notes(rebase, signature, &opts)) < 0)
+		(error = rebase_copy_notes(rebase, signature)) < 0)
 		goto done;
 
 	error = rebase_cleanup(rebase);
@@ -1132,7 +1152,6 @@ done:
 	git_reference_free(head_ref);
 	git_reference_free(branch_ref);
 	git_reference_free(terminal_ref);
-	rebase_opts_free(&opts);
 
 	return error;
 }
@@ -1148,7 +1167,7 @@ size_t git_rebase_operation_current(git_rebase *rebase)
 {
 	assert(rebase);
 
-	return rebase->current;
+	return rebase->started ? rebase->current : GIT_REBASE_NO_OPERATION;
 }
 
 git_rebase_operation *git_rebase_operation_byindex(git_rebase *rebase, size_t idx)
@@ -1167,5 +1186,6 @@ void git_rebase_free(git_rebase *rebase)
 	git__free(rebase->orig_head_name);
 	git__free(rebase->state_path);
 	git_array_clear(rebase->operations);
+	git__free((char *)rebase->options.rewrite_notes_ref);
 	git__free(rebase);
 }

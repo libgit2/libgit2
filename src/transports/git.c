@@ -136,6 +136,7 @@ static void git_proto_stream_free(git_smart_subtransport_stream *stream)
 
 	t->current_stream = NULL;
 
+	git_stream_close(s->io);
 	git_stream_free(s->io);
 	git__free(s->url);
 	git__free(s);
@@ -340,9 +341,11 @@ static void _git_free(git_smart_subtransport *subtransport)
 	git__free(t);
 }
 
-int git_smart_subtransport_git(git_smart_subtransport **out, git_transport *owner)
+int git_smart_subtransport_git(git_smart_subtransport **out, git_transport *owner, void *param)
 {
 	git_subtransport *t;
+
+	GIT_UNUSED(param);
 
 	if (!out)
 		return -1;

@@ -1404,6 +1404,42 @@ int git_packbuilder_insert_tree(git_packbuilder *pb, const git_oid *oid)
 	return error;
 }
 
+int git_packbuilder_insert_recur(git_packbuilder *pb, const git_oid *id, const char *name)
+{
+	git_object *obj;
+	int error;
+
+	assert(pb && id);
+
+	if ((error = git_object_lookup(&obj, pb->repo, id, GIT_OBJ_ANY)) < 0)
+		return error;
+
+	switch (git_object_type(obj)) {
+	case GIT_OBJ_BLOB:
+		error = git_packbuilder_insert(pb, id, name);
+		break;
+	case GIT_OBJ_TREE:
+		error = git_packbuilder_insert_tree(pb, id);
+		break;
+	case GIT_OBJ_COMMIT:
+		error = git_packbuilder_insert_commit(pb, id);
+		break;
+	case GIT_OBJ_TAG:
+		if ((error = git_packbuilder_insert(pb, id, name)) < 0)
+			goto cleanup;
+		error = git_packbuilder_insert_recur(pb, git_tag_target_id((git_tag *) obj), NULL);
+		break;
+
+	default:
+		giterr_set(GITERR_INVALID, "unknown object type");
+		error = -1;
+	}
+
+cleanup:
+	git_object_free(obj);
+	return error;
+}
+
 uint32_t git_packbuilder_object_count(git_packbuilder *pb)
 {
 	return pb->nr_objects;

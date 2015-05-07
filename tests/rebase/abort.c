@@ -27,7 +27,7 @@ static void test_abort(git_annotated_commit *branch, git_annotated_commit *onto)
 	git_reflog *reflog;
 	const git_reflog_entry *reflog_entry;
 
-	cl_git_pass(git_rebase_open(&rebase, repo));
+	cl_git_pass(git_rebase_open(&rebase, repo, NULL));
 	cl_git_pass(git_rebase_abort(rebase));
 
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_NONE, git_repository_state(repo));

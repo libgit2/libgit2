@@ -122,7 +122,6 @@ extern int git__page_size(size_t *page_size);
 #include "strnlen.h"
 
 #ifdef NO_READDIR_R
-#	include <dirent.h>
 GIT_INLINE(int) p_readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result)
 {
 	GIT_UNUSED(entry);

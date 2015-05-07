@@ -28,6 +28,12 @@ v0.22 + 1
   allow for specifying the expression from the user to be put into the
   reflog.
 
+* `git_rebase_commit` now returns `GIT_EUNMERGED` when you attempt to
+  commit with unstaged changes.
+
+* On Mac OS X, we now use SecureTransport to provide the cryptographic
+support for HTTPS connections insead of OpenSSL.
+
 ### API additions
 
 * The `git_merge_options` gained a `file_flags` member.
@@ -61,10 +67,12 @@ v0.22 + 1
 
 ### Breaking API changes
 
+* `git_smart_subtransport_cb` now has a `param` parameter.
+
 * The `git_merge_options` structure member `flags` has been renamed
   to `tree_flags`.
 
-* The `git_merge_file_options` structure member `tree_flags` is now
+* The `git_merge_file_options` structure member `flags` is now
   an unsigned int. It was previously a `git_merge_file_flags_t`.
 
 * `GIT_CHECKOUT_SAFE_CREATE` has been removed.  Most users will generally
@@ -97,6 +105,21 @@ v0.22 + 1
 * `git_config_get_string()` will return an error if used on a
   non-snapshot configuration, as there can be no guarantee that the
   returned pointer is valid.
+
+* `git_note_default_ref()` now uses a `git_buf` to return the string,
+  as the string is otherwise not guaranteed to stay allocated.
+
+* `git_rebase_operation_current()` will return `GIT_REBASE_NO_OPERATION`
+  if it is called immediately after creating a rebase session but before
+  you have applied the first patch.
+
+* `git_rebase_options` now contains an optional pointer to
+  `git_checkout_options` that will be used for functions that modify
+  the working directory, namely `git_checkout_init`, `git_checkout_next`
+  and `git_checkout_abort`.  As a result, `git_rebase_open` now also
+  takes a `git_rebase_options` and only the `git_rebase_init` and
+  `git_rebase_open` functions take a `git_rebase_options`, where they
+  will persist the options to subsequent `git_rebase` calls.
 
 v0.22
 ------

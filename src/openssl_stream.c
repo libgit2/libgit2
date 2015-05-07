@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifdef GIT_SSL
+#ifdef GIT_OPENSSL
 
 #include <ctype.h>
 
@@ -374,6 +374,10 @@ int git_openssl_stream_new(git_stream **out, const char *host, const char *port)
 
 int git_openssl_stream_new(git_stream **out, const char *host, const char *port)
 {
+	GIT_UNUSED(out);
+	GIT_UNUSED(host);
+	GIT_UNUSED(port);
+
 	giterr_set(GITERR_SSL, "openssl is not supported in this version");
 	return -1;
 }

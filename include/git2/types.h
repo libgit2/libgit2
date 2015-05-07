@@ -273,6 +273,7 @@ typedef int (*git_transfer_progress_cb)(const git_transfer_progress *stats, void
  */
 typedef int (*git_transport_message_cb)(const char *str, int len, void *payload);
 
+
 /**
  * Type of host certificate structure that is passed to the check callback
  */

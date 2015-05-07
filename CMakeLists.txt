@@ -13,6 +13,7 @@
 
 PROJECT(libgit2 C)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+CMAKE_POLICY(SET CMP0015 NEW)
 
 # Add find modules to the path
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
@@ -33,9 +34,6 @@ OPTION( PROFILE				"Generate profiling information"		OFF )
 OPTION( ENABLE_TRACE		"Enables tracing support"				OFF )
 OPTION( LIBGIT2_FILENAME	"Name of the produced binary"			OFF )
 
-OPTION( ANDROID				"Build for android NDK"	 				OFF )
-
-OPTION( USE_OPENSSL                     "Link with and use openssl library"             ON )
 OPTION( USE_ICONV			"Link with and use iconv library" 		OFF )
 OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
 OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"   OFF )
@@ -43,6 +41,8 @@ OPTION( VALGRIND			"Configure build for valgrind"			OFF )
 
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	SET( USE_ICONV ON )
+	FIND_PACKAGE(Security)
+	FIND_PACKAGE(CoreFoundation REQUIRED)
 ENDIF()
 
 IF(MSVC)
@@ -58,10 +58,6 @@ IF(MSVC)
 	# are linking statically
 	OPTION( STATIC_CRT		"Link the static CRT libraries"	ON  )
 
-	# By default, libgit2 is built with WinHTTP.  To use the built-in
-	# HTTP transport, invoke CMake with the "-DWINHTTP=OFF" argument.
-	OPTION( WINHTTP			"Use Win32 WinHTTP routines"	ON  )
-
 	# If you want to embed a copy of libssh2 into libgit2, pass a
 	# path to libssh2
 	OPTION( EMBED_SSH_PATH		"Path to libssh2 to embed (Windows)" OFF )
@@ -69,6 +65,22 @@ IF(MSVC)
 	ADD_DEFINITIONS(-D_SCL_SECURE_NO_WARNINGS)
 	ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
 	ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_DEPRECATE)
+ENDIF()
+
+
+IF(WIN32)
+	# By default, libgit2 is built with WinHTTP.  To use the built-in
+	# HTTP transport, invoke CMake with the "-DWINHTTP=OFF" argument.
+	OPTION(	WINHTTP			"Use Win32 WinHTTP routines"	ON	)
+ENDIF()
+
+IF(MSVC)
+	# Enable MSVC CRTDBG memory leak reporting when in debug mode.
+	OPTION(MSVC_CRTDBG "Enable CRTDBG memory leak reporting" OFF)
+ENDIF()
+
+IF (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+	OPTION( USE_OPENSSL                     "Link with and use openssl library"             ON )
 ENDIF()
 
 # This variable will contain the libraries we need to put into
@@ -140,6 +152,17 @@ STRING(REGEX REPLACE "^.*LIBGIT2_SOVERSION ([0-9]+)$" "\\1" LIBGIT2_SOVERSION "$
 # Find required dependencies
 INCLUDE_DIRECTORIES(src include)
 
+IF (SECURITY_FOUND)
+  MESSAGE("-- Found Security ${SECURITY_DIRS}")
+  SET(LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS} -framework Security")
+ENDIF()
+
+IF (COREFOUNDATION_FOUND)
+  MESSAGE("-- Found CoreFoundation ${COREFOUNDATION_DIRS}")
+  SET(LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS} -framework CoreFoundation")
+ENDIF()
+
+
 IF (WIN32 AND EMBED_SSH_PATH)
 	FILE(GLOB SRC_SSH "${EMBED_SSH_PATH}/src/*.c")
 	INCLUDE_DIRECTORIES("${EMBED_SSH_PATH}/include")
@@ -147,10 +170,45 @@ IF (WIN32 AND EMBED_SSH_PATH)
 	ADD_DEFINITIONS(-DGIT_SSH)
 ENDIF()
 
-IF (WIN32 AND WINHTTP AND NOT MINGW)
+IF (WIN32 AND WINHTTP)
 	ADD_DEFINITIONS(-DGIT_WINHTTP)
 	INCLUDE_DIRECTORIES(deps/http-parser)
 	FILE(GLOB SRC_HTTP deps/http-parser/*.c deps/http-parser/*.h)
+
+	# Since MinGW does not come with headers or an import library for winhttp,
+	# we have to include a private header and generate our own import library
+	IF (MINGW)
+		FIND_PROGRAM(DLLTOOL dlltool CMAKE_FIND_ROOT_PATH_BOTH)
+		IF (NOT DLLTOOL)
+			MESSAGE(FATAL_ERROR "Could not find dlltool command")
+		ENDIF ()
+
+		SET(LIBWINHTTP_PATH "${CMAKE_CURRENT_BINARY_DIR}/deps/winhttp")
+		FILE(MAKE_DIRECTORY ${LIBWINHTTP_PATH})
+
+		IF ("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
+			set(WINHTTP_DEF "${CMAKE_CURRENT_SOURCE_DIR}/deps/winhttp/winhttp64.def")
+		ELSE()
+			set(WINHTTP_DEF "${CMAKE_CURRENT_SOURCE_DIR}/deps/winhttp/winhttp.def")
+		ENDIF()
+
+		ADD_CUSTOM_COMMAND(
+			OUTPUT ${LIBWINHTTP_PATH}/libwinhttp.a
+			COMMAND ${DLLTOOL} -d ${WINHTTP_DEF} -k -D winhttp.dll -l libwinhttp.a
+			DEPENDS ${WINHTTP_DEF}
+			WORKING_DIRECTORY ${LIBWINHTTP_PATH}
+		)
+
+		SET_SOURCE_FILES_PROPERTIES(
+			${CMAKE_CURRENT_SOURCE_DIR}/src/transports/winhttp.c
+			PROPERTIES OBJECT_DEPENDS ${LIBWINHTTP_PATH}/libwinhttp.a
+		)
+
+		INCLUDE_DIRECTORIES(deps/winhttp)
+		LINK_DIRECTORIES(${LIBWINHTTP_PATH})
+	ENDIF ()
+
+	LINK_LIBRARIES(winhttp rpcrt4 crypt32)
 ELSE ()
 	IF (NOT AMIGA AND USE_OPENSSL)
 		FIND_PACKAGE(OpenSSL)
@@ -191,7 +249,7 @@ IF (ENABLE_TRACE STREQUAL "ON")
 ENDIF()
 
 # Include POSIX regex when it is required
-IF(WIN32 OR AMIGA OR ANDROID OR CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
+IF(WIN32 OR AMIGA OR CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
 	INCLUDE_DIRECTORIES(deps/regex)
 	SET(SRC_REGEX deps/regex/regex.c)
 ENDIF()
@@ -265,6 +323,10 @@ IF (MSVC)
 	ELSE()
 		SET(CRT_FLAG_DEBUG "/MDd")
 		SET(CRT_FLAG_RELEASE "/MD")
+	ENDIF()
+
+	IF (MSVC_CRTDBG)
+		SET(CRT_FLAG_DEBUG "${CRT_FLAG_DEBUG} /DGIT_MSVC_CRTDBG")
 	ENDIF()
 
 	# /Zi - Create debugging information
@@ -368,11 +430,18 @@ ELSE()
 	# that uses CMAKE_CONFIGURATION_TYPES and not CMAKE_BUILD_TYPE
 ENDIF()
 
+IF (SECURITY_FOUND)
+  ADD_DEFINITIONS(-DGIT_SECURE_TRANSPORT)
+  INCLUDE_DIRECTORIES(${SECURITY_INCLUDE_DIR})
+ENDIF ()
+
 IF (OPENSSL_FOUND)
-  ADD_DEFINITIONS(-DGIT_SSL)
+  ADD_DEFINITIONS(-DGIT_OPENSSL)
   INCLUDE_DIRECTORIES(${OPENSSL_INCLUDE_DIR})
   SET(SSL_LIBRARIES ${OPENSSL_LIBRARIES})
 ENDIF()
+
+
 
 IF (THREADSAFE)
 	IF (NOT WIN32)
@@ -412,6 +481,8 @@ ENDIF()
 
 # Compile and link libgit2
 ADD_LIBRARY(git2 ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SSH} ${SRC_SHA1} ${WIN_RC})
+TARGET_LINK_LIBRARIES(git2 ${SECURITY_DIRS})
+TARGET_LINK_LIBRARIES(git2 ${COREFOUNDATION_DIRS})
 TARGET_LINK_LIBRARIES(git2 ${SSL_LIBRARIES})
 TARGET_LINK_LIBRARIES(git2 ${SSH_LIBRARIES})
 TARGET_LINK_LIBRARIES(git2 ${GSSAPI_LIBRARIES})
@@ -480,6 +551,8 @@ IF (BUILD_CLAR)
 
 	ADD_EXECUTABLE(libgit2_clar ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_CLAR} ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SSH} ${SRC_SHA1})
 
+	TARGET_LINK_LIBRARIES(libgit2_clar ${COREFOUNDATION_DIRS})
+	TARGET_LINK_LIBRARIES(libgit2_clar ${SECURITY_DIRS})
 	TARGET_LINK_LIBRARIES(libgit2_clar ${SSL_LIBRARIES})
 	TARGET_LINK_LIBRARIES(libgit2_clar ${SSH_LIBRARIES})
 	TARGET_LINK_LIBRARIES(libgit2_clar ${GSSAPI_LIBRARIES})
@@ -493,7 +566,7 @@ IF (BUILD_CLAR)
 	ENDIF ()
 
 	ENABLE_TESTING()
-	IF (WINHTTP OR OPENSSL_FOUND)
+	IF (WINHTTP OR OPENSSL_FOUND OR SECURITY_FOUND)
 		ADD_TEST(libgit2_clar libgit2_clar -ionline)
 	ELSE ()
 		ADD_TEST(libgit2_clar libgit2_clar -v)

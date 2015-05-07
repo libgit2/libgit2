@@ -754,12 +754,14 @@ static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *use
 #endif
 
 int git_smart_subtransport_ssh(
-	git_smart_subtransport **out, git_transport *owner)
+	git_smart_subtransport **out, git_transport *owner, void *param)
 {
 #ifdef GIT_SSH
 	ssh_subtransport *t;
 
 	assert(out);
+
+	GIT_UNUSED(param);
 
 	t = git__calloc(sizeof(ssh_subtransport), 1);
 	GITERR_CHECK_ALLOC(t);
@@ -773,6 +775,7 @@ int git_smart_subtransport_ssh(
 	return 0;
 #else
 	GIT_UNUSED(owner);
+	GIT_UNUSED(param);
 
 	assert(out);
 	*out = NULL;
@@ -793,6 +796,7 @@ int git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *p
 	git_smart_subtransport_definition ssh_definition = {
 		git_smart_subtransport_ssh,
 		0, /* no RPC */
+		NULL,
 	};
 
 	if (paths->count != 2) {

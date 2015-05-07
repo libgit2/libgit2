@@ -62,7 +62,7 @@ GIT_EXTERN(int) git_reset(
 	git_repository *repo,
 	git_object *target,
 	git_reset_t reset_type,
-	git_checkout_options *checkout_opts);
+	const git_checkout_options *checkout_opts);
 
 /**
  * Sets the current head to the specified commit oid and optionally
@@ -80,7 +80,7 @@ GIT_EXTERN(int) git_reset_from_annotated(
 	git_repository *repo,
 	git_annotated_commit *commit,
 	git_reset_t reset_type,
-	git_checkout_options *checkout_opts);
+	const git_checkout_options *checkout_opts);
 
 /**
  * Updates some entries in the index from the target commit tree.

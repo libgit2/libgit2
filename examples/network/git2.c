@@ -23,8 +23,8 @@ static int run_command(git_cb fn, int argc, char **argv)
 	int error;
 	git_repository *repo;
 
-// Before running the actual command, create an instance of the local
-// repository and pass it to the function.
+	// Before running the actual command, create an instance of the local
+	// repository and pass it to the function.
 
 	error = git_repository_open(&repo, ".git");
 	if (error < 0)
@@ -48,6 +48,7 @@ static int run_command(git_cb fn, int argc, char **argv)
 int main(int argc, char **argv)
 {
 	int i;
+	int return_code = 1;
 
 	if (argc < 2) {
 		fprintf(stderr, "usage: %s <cmd> [repo]\n", argv[0]);
@@ -57,10 +58,16 @@ int main(int argc, char **argv)
 	git_libgit2_init();
 
 	for (i = 0; commands[i].name != NULL; ++i) {
-		if (!strcmp(argv[1], commands[i].name))
-			return run_command(commands[i].fn, --argc, ++argv);
+		if (!strcmp(argv[1], commands[i].name)) {
+			return_code = run_command(commands[i].fn, --argc, ++argv);
+			goto shutdown;
+		}
 	}
 
 	fprintf(stderr, "Command not found: %s\n", argv[1]);
-	return 1;
+
+shutdown:
+	git_libgit2_shutdown();
+
+	return return_code;
 }

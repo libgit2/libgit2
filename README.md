@@ -163,7 +163,7 @@ with full path to the toolchain):
 	SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 	SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 
-Add `-DCMAKE_TOOLCHAIN_FILE={pathToToolchainFile} -DANDROID=1` to cmake command
+Add `-DCMAKE_TOOLCHAIN_FILE={pathToToolchainFile}` to cmake command
 when configuring.
 
 Language Bindings

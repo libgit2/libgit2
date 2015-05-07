@@ -69,6 +69,40 @@ void test_config_read__multiline_value(void)
 	git_config_free(cfg);
 }
 
+static void clean_test_config(void *unused)
+{
+	GIT_UNUSED(unused);
+	cl_fixture_cleanup("./testconfig");
+}
+
+void test_config_read__multiline_value_and_eof(void)
+{
+	git_config *cfg;
+
+	cl_set_cleanup(&clean_test_config, NULL);
+	cl_git_mkfile("./testconfig", "[header]\n  key1 = foo\\\n");
+	cl_git_pass(git_config_open_ondisk(&cfg, "./testconfig"));
+
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "header.key1"));
+	cl_assert_equal_s("foo", git_buf_cstr(&buf));
+
+	git_config_free(cfg);
+}
+
+void test_config_read__multiline_eof(void)
+{
+	git_config *cfg;
+
+	cl_set_cleanup(&clean_test_config, NULL);
+	cl_git_mkfile("./testconfig", "[header]\n  key1 = \\\n");
+	cl_git_pass(git_config_open_ondisk(&cfg, "./testconfig"));
+
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "header.key1"));
+	cl_assert_equal_s("", git_buf_cstr(&buf));
+
+	git_config_free(cfg);
+}
+
 /*
  * This kind of subsection declaration is case-insensitive
  */
@@ -213,6 +247,17 @@ void test_config_read__escaping_quotes(void)
 	git_config_free(cfg);
 }
 
+void test_config_read__invalid_escape_sequence(void)
+{
+	git_config *cfg;
+
+	cl_set_cleanup(&clean_test_config, NULL);
+	cl_git_mkfile("./testconfig", "[header]\n  key1 = \\\\\\;\n  key2 = value2\n");
+	cl_git_fail(git_config_open_ondisk(&cfg, "./testconfig"));
+
+	git_config_free(cfg);
+}
+
 static int count_cfg_entries_and_compare_levels(
 	const git_config_entry *entry, void *payload)
 {
@@ -348,6 +393,18 @@ static void check_glob_iter(git_config *cfg, const char *regexp, int expected)
 	cl_assert_equal_i(GIT_ITEROVER, error);
 	cl_assert_equal_i(expected, count);
 	git_config_iterator_free(iter);
+}
+
+void test_config_read__iterator_invalid_glob(void)
+{
+	git_config *cfg;
+	git_config_iterator *iter;
+
+	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config9")));
+
+	cl_git_fail(git_config_iterator_glob_new(&iter, cfg, "*"));
+
+	git_config_free(cfg);
 }
 
 void test_config_read__iterator_glob(void)
@@ -508,12 +565,6 @@ void test_config_read__simple_read_from_specific_level(void)
 	git_config_free(cfg);
 }
 
-static void clean_test_config(void *unused)
-{
-	GIT_UNUSED(unused);
-	cl_fixture_cleanup("./testconfig");
-}
-
 void test_config_read__can_load_and_parse_an_empty_config_file(void)
 {
 	git_config *cfg;
@@ -556,6 +607,41 @@ void test_config_read__corrupt_header3(void)
 	cl_set_cleanup(&clean_test_config, NULL);
 	cl_git_mkfile("./testconfig", "[unclosed \"slash\\\"]\n    lib = git2\n");
 	cl_git_fail(git_config_open_ondisk(&cfg, "./testconfig"));
+
+	git_config_free(cfg);
+}
+
+void test_config_read__invalid_key_chars(void)
+{
+	git_config *cfg;
+
+	cl_set_cleanup(&clean_test_config, NULL);
+	cl_git_mkfile("./testconfig", "[foo]\n    has_underscore = git2\n");
+	cl_git_fail(git_config_open_ondisk(&cfg, "./testconfig"));
+
+	cl_git_rewritefile("./testconfig", "[foo]\n  has/slash = git2\n");
+	cl_git_fail(git_config_open_ondisk(&cfg, "./testconfig"));
+
+	cl_git_rewritefile("./testconfig", "[foo]\n  has+plus = git2\n");
+	cl_git_fail(git_config_open_ondisk(&cfg, "./testconfig"));
+
+	cl_git_rewritefile("./testconfig", "[no_key]\n  = git2\n");
+	cl_git_fail(git_config_open_ondisk(&cfg, "./testconfig"));
+
+	git_config_free(cfg);
+}
+
+void test_config_read__lone_variable_with_trailing_whitespace(void)
+{
+	git_config *cfg;
+	int b;
+
+	cl_set_cleanup(&clean_test_config, NULL);
+	cl_git_mkfile("./testconfig", "[foo]\n    lonevariable   \n");
+	cl_git_pass(git_config_open_ondisk(&cfg, "./testconfig"));
+
+	cl_git_pass(git_config_get_bool(&b, cfg, "foo.lonevariable"));
+	cl_assert_equal_b(true, b);
 
 	git_config_free(cfg);
 }

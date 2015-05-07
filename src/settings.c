@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifdef GIT_SSL
+#ifdef GIT_OPENSSL
 # include <openssl/err.h>
 #endif
 
@@ -28,7 +28,7 @@ int git_libgit2_features()
 #ifdef GIT_THREADS
 		| GIT_FEATURE_THREADS
 #endif
-#if defined(GIT_SSL) || defined(GIT_WINHTTP)
+#if defined(GIT_OPENSSL) || defined(GIT_WINHTTP) || defined(GIT_SECURE_TRANSPORT)
 		| GIT_FEATURE_HTTPS
 #endif
 #if defined(GIT_SSH)
@@ -138,7 +138,7 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	case GIT_OPT_SET_SSL_CERT_LOCATIONS:
-#ifdef GIT_SSL
+#ifdef GIT_OPENSSL
 		{
 			const char *file = va_arg(ap, const char *);
 			const char *path = va_arg(ap, const char *);
