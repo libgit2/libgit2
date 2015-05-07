@@ -217,7 +217,7 @@ void test_network_remote_local__push_to_bare_remote(void)
 	cl_git_pass(git_remote_connect(localremote, GIT_DIRECTION_PUSH, NULL));
 
 	/* Try to push */
-	cl_git_pass(git_remote_upload(remote, &push_array, NULL));
+	cl_git_pass(git_remote_upload(localremote, &push_array, NULL));
 
 	/* Clean up */
 	git_remote_free(localremote);
@@ -256,7 +256,7 @@ void test_network_remote_local__push_to_bare_remote_with_file_url(void)
 	cl_git_pass(git_remote_connect(localremote, GIT_DIRECTION_PUSH, NULL));
 
 	/* Try to push */
-	cl_git_pass(git_remote_upload(remote, &push_array, NULL));
+	cl_git_pass(git_remote_upload(localremote, &push_array, NULL));
 
 	/* Clean up */
 	git_remote_free(localremote);
