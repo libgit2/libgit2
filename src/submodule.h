@@ -143,8 +143,4 @@ extern int git_submodule_parse_ignore(
 extern int git_submodule_parse_update(
 	git_submodule_update_t *out, const char *value);
 
-extern const char *git_submodule_ignore_to_str(git_submodule_ignore_t);
-extern const char *git_submodule_update_to_str(git_submodule_update_t);
-extern const char *git_submodule_recurse_to_str(git_submodule_recurse_t);
-
 #endif

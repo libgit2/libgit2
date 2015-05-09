@@ -737,30 +737,12 @@ cleanup:
 	return error;
 }
 
-const char *git_submodule_ignore_to_str(git_submodule_ignore_t ignore)
-{
-	int i;
-	for (i = 0; i < (int)ARRAY_SIZE(_sm_ignore_map); ++i)
-		if (_sm_ignore_map[i].map_value == ignore)
-			return _sm_ignore_map[i].str_match;
-	return NULL;
-}
-
 const char *git_submodule_update_to_str(git_submodule_update_t update)
 {
 	int i;
 	for (i = 0; i < (int)ARRAY_SIZE(_sm_update_map); ++i)
 		if (_sm_update_map[i].map_value == update)
 			return _sm_update_map[i].str_match;
-	return NULL;
-}
-
-const char *git_submodule_recurse_to_str(git_submodule_recurse_t recurse)
-{
-	int i;
-	for (i = 0; i < (int)ARRAY_SIZE(_sm_recurse_map); ++i)
-		if (_sm_recurse_map[i].map_value == recurse)
-			return _sm_recurse_map[i].str_match;
 	return NULL;
 }
 
@@ -834,6 +816,22 @@ cleanup:
 	return error;
 }
 
+static int write_mapped_var(git_repository *repo, const char *name, git_cvar_map *maps, size_t nmaps, const char *var, int ival)
+{
+	git_cvar_t type;
+	const char *val;
+
+	if (git_config_lookup_map_enum(&type, &val, maps, nmaps, ival) < 0) {
+		giterr_set(GITERR_SUBMODULE, "invalid value for %s", var);
+		return -1;
+	}
+
+	if (type == GIT_CVAR_TRUE)
+		val = "true";
+
+	return write_var(repo, name, var, val);
+}
+
 const char *git_submodule_branch(git_submodule *submodule)
 {
 	assert(submodule);
@@ -905,18 +903,9 @@ git_submodule_ignore_t git_submodule_ignore(git_submodule *submodule)
 
 int git_submodule_set_ignore(git_repository *repo, const char *name, git_submodule_ignore_t ignore)
 {
-	const char *val;
-	int error;
+	assert(repo && name);
 
-	val = git_submodule_ignore_to_str(ignore);
-	if (!val) {
-		giterr_set(GITERR_SUBMODULE, "invalid ignore value");
-		return -1;
-	}
-
-	error = write_var(repo, name, "ignore", val);
-
-	return error;
+	return write_mapped_var(repo, name, _sm_ignore_map, ARRAY_SIZE(_sm_ignore_map), "ignore", ignore);
 }
 
 git_submodule_update_t git_submodule_update_strategy(git_submodule *submodule)
@@ -928,18 +917,9 @@ git_submodule_update_t git_submodule_update_strategy(git_submodule *submodule)
 
 int git_submodule_set_update(git_repository *repo, const char *name, git_submodule_update_t update)
 {
-	const char *val;
-	int error;
+	assert(repo && name);
 
-	val = git_submodule_update_to_str(update);
-	if (!val) {
-		giterr_set(GITERR_SUBMODULE, "invalid update value");
-		return -1;
-	}
-
-	error = write_var(repo, name, "update", val);
-
-	return error;
+	return write_mapped_var(repo, name, _sm_update_map, ARRAY_SIZE(_sm_update_map), "update", update);
 }
 
 git_submodule_recurse_t git_submodule_fetch_recurse_submodules(
@@ -951,29 +931,9 @@ git_submodule_recurse_t git_submodule_fetch_recurse_submodules(
 
 int git_submodule_set_fetch_recurse_submodules(git_repository *repo, const char *name, git_submodule_recurse_t recurse)
 {
-	const char *val;
-	int error;
-
 	assert(repo && name);
 
-	val = git_submodule_recurse_to_str(recurse);
-	if (!val) {
-		switch (recurse) {
-		case GIT_SUBMODULE_RECURSE_YES:
-			val = "true";
-			break;
-		case GIT_SUBMODULE_RECURSE_NO:
-			val = NULL;
-			break;
-		default:
-			giterr_set(GITERR_SUBMODULE, "invalid recurse value");
-			return -1;
-		}
-	}
-
-	error = write_var(repo, name, "fetchRecurseSubmodules", val);
-
-	return error;
+	return write_mapped_var(repo, name, _sm_recurse_map, ARRAY_SIZE(_sm_recurse_map), "fetchRecurseSubmodules", recurse);
 }
 
 static int submodule_repo_create(
