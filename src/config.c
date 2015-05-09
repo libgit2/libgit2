@@ -1083,6 +1083,9 @@ int git_config_find_xdg(git_buf *path)
 int git_config_find_system(git_buf *path)
 {
 	git_buf_sanitize(path);
+	/* system config in %PROGRAMDATA%\Git on win32 is named config, see https://github.com/git-for-windows/git/commit/ba8c0399e60807f08f73ce6a394c72c261eb96ce */
+	if (!git_sysdir_find_system_file(path, "config"))
+		return 0;
 	return git_sysdir_find_system_file(path, GIT_CONFIG_FILENAME_SYSTEM);
 }
 

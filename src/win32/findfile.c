@@ -9,6 +9,7 @@
 #include "utf-conv.h"
 #include "path.h"
 #include "findfile.h"
+#include <shlobj.h> // wrong casing with mingw,, on Windows the file is named ShlObj.h
 
 #define REG_MSYSGIT_INSTALL_LOCAL L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Git_is1"
 
@@ -162,15 +163,33 @@ static int win32_find_existing_dirs(
 	return (git_buf_oom(out) ? -1 : 0);
 }
 
+static int win32_find_system_wide_config(git_buf *out)
+{
+	wchar_t wbuffer[MAX_PATH];
+	if (SHGetFolderPathW(NULL, CSIDL_COMMON_APPDATA, NULL, 0 /* SHGFP_TYPE_CURRENT */, wbuffer) != S_OK || wcslen(wbuffer) >= MAX_PATH - 5) /* 5 = len("\\Git\\") */
+		return -1;
+
+	wcscat(wbuffer, L"\\Git\\");
+
+	if (_waccess(wbuffer, F_OK))
+		return -1;
+
+	return win32_path_to_8(out, wbuffer);
+}
+
 int git_win32__find_system_dirs(git_buf *out, const wchar_t *subdir)
 {
 	git_buf buf = GIT_BUF_INIT;
 
-	/* directories where git.exe & git.cmd are found */
-	if (!win32_find_git_in_path(&buf, L"git.exe", subdir) && buf.size)
+	/* look for %PROGRAMDATA%\Git, cf. https://github.com/git-for-windows/git/commit/ba8c0399e60807f08f73ce6a394c72c261eb96ce */
+	if (!win32_find_system_wide_config(&buf) && buf.size)
 		git_buf_set(out, buf.ptr, buf.size);
 	else
 		git_buf_clear(out);
+
+	/* directories where git.exe & git.cmd are found */
+	if (!win32_find_git_in_path(&buf, L"git.exe", subdir) && buf.size)
+		git_buf_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
 
 	if (!win32_find_git_in_path(&buf, L"git.cmd", subdir) && buf.size)
 		git_buf_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
