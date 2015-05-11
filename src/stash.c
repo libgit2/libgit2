@@ -106,7 +106,7 @@ static int build_tree_from_index(git_tree **out, git_index *index)
 	git_oid i_tree_oid;
 
 	if ((error = git_index_write_tree(&i_tree_oid, index)) < 0)
-		return -1;
+		return error;
 
 	return git_tree_lookup(out, git_index_owner(index), &i_tree_oid);
 }
