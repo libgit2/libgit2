@@ -337,7 +337,6 @@ typedef struct git_submodule git_submodule;
  *
  * The values are:
  *
- * - GIT_SUBMODULE_UPDATE_RESET: reset to the on-disk value.
  * - GIT_SUBMODULE_UPDATE_CHECKOUT: the default; when a submodule is
  *   updated, checkout the new detached HEAD to the submodule directory.
  * - GIT_SUBMODULE_UPDATE_REBASE: update by rebasing the current checked
@@ -350,8 +349,6 @@ typedef struct git_submodule git_submodule;
  *   when we don't want any particular update rule to be specified.
  */
 typedef enum {
-	GIT_SUBMODULE_UPDATE_RESET    = -1,
-
 	GIT_SUBMODULE_UPDATE_CHECKOUT = 1,
 	GIT_SUBMODULE_UPDATE_REBASE   = 2,
 	GIT_SUBMODULE_UPDATE_MERGE    = 3,
@@ -401,15 +398,12 @@ typedef enum {
  *
  * Represent the value of `submodule.$name.fetchRecurseSubmodules`
  *
- * * GIT_SUBMODULE_RECURSE_RESET - reset to the on-disk value
  * * GIT_SUBMODULE_RECURSE_NO    - do no recurse into submodules
  * * GIT_SUBMODULE_RECURSE_YES   - recurse into submodules
  * * GIT_SUBMODULE_RECURSE_ONDEMAND - recurse into submodules only when
  *                                    commit not already in local clone
  */
 typedef enum {
-	GIT_SUBMODULE_RECURSE_RESET = -1,
-
 	GIT_SUBMODULE_RECURSE_NO = 0,
 	GIT_SUBMODULE_RECURSE_YES = 1,
 	GIT_SUBMODULE_RECURSE_ONDEMAND = 2,

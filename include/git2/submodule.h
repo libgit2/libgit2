@@ -459,9 +459,7 @@ GIT_EXTERN(int) git_submodule_set_ignore(
  * Get the update rule that will be used for the submodule.
  *
  * This value controls the behavior of the `git submodule update` command.
- * There are four useful values documented with `git_submodule_update_t`
- * plus the `GIT_SUBMODULE_UPDATE_RESET` which can be used to revert to
- * the on-disk setting.
+ * There are four useful values documented with `git_submodule_update_t`.
  *
  * @param submodule The submodule to check
  * @return The current git_submodule_update_t value that will be used
