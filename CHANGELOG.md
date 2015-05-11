@@ -34,6 +34,9 @@ v0.22 + 1
 * On Mac OS X, we now use SecureTransport to provide the cryptographic
 support for HTTPS connections insead of OpenSSL.
 
+* Checkout can now accept an index for the baseline computations via the
+  `baseline_index` member.
+
 ### API additions
 
 * The `git_merge_options` gained a `file_flags` member.
