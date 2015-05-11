@@ -2668,6 +2668,92 @@ enum {
 	INDEX_ACTION_REMOVE = 2,
 };
 
+struct foreach_diff_data {
+	git_index *index;
+	const git_pathspec *pathspec;
+	git_index_matched_path_cb cb;
+	void *payload;
+};
+
+static int apply_each_file(const git_diff_delta *delta, float progress, void *payload)
+{
+	struct foreach_diff_data *data = payload;
+	const char *match, *path;
+	int error = 0;
+
+	GIT_UNUSED(progress);
+
+	path = delta->old_file.path;
+
+	/* We only want those which match the pathspecs */
+	if (!git_pathspec__match(
+		    &data->pathspec->pathspec, path, false, (bool)data->index->ignore_case,
+		    &match, NULL))
+		return 0;
+
+	if (data->cb)
+		error = data->cb(path, match, data->payload);
+
+	if (error > 0) /* skip this entry */
+		return 0;
+	if (error < 0) /* actual error */
+		return error;
+
+	if (delta->status == GIT_DELTA_DELETED)
+		error = git_index_remove_bypath(data->index, path);
+	else
+		error = git_index_add_bypath(data->index, path);
+
+	return error;
+}
+
+static int index_apply_to_wd_diff(git_index *index, int action, const git_strarray *paths,
+				  git_index_matched_path_cb cb, void *payload)
+{
+	int error;
+	git_diff *diff;
+	git_pathspec ps;
+	git_repository *repo;
+	struct foreach_diff_data data = {
+		index,
+		NULL,
+		cb,
+		payload,
+	};
+
+	assert(index);
+	assert(action == INDEX_ACTION_UPDATE);
+
+	repo = INDEX_OWNER(index);
+
+	if (!repo) {
+		return create_index_error(-1,
+			"cannot run update; the index is not backed up by a repository.");
+	}
+
+	/*
+	 * We do the matching ourselves intead of passing the list to
+	 * diff because we want to tell the callback which one
+	 * matched, which we do not know if we ask diff to filter for us.
+	 */
+	if ((error = git_pathspec__init(&ps, paths)) < 0)
+		return error;
+
+	if ((error = git_diff_index_to_workdir(&diff, repo, index, NULL)) < 0)
+		goto cleanup;
+
+	data.pathspec = &ps;
+	error = git_diff_foreach(diff, apply_each_file, NULL, NULL, &data);
+	git_diff_free(diff);
+
+	if (error) /* make sure error is set if callback stopped iteration */
+		giterr_set_after_callback(error);
+
+cleanup:
+	git_pathspec__clear(&ps);
+	return error;
+}
+
 static int index_apply_to_all(
 	git_index *index,
 	int action,
@@ -2758,95 +2844,16 @@ int git_index_remove_all(
 	return error;
 }
 
-struct foreach_diff_data {
-	git_index *index;
-	const git_pathspec *pathspec;
-	git_index_matched_path_cb cb;
-	void *payload;
-};
-
-static int add_each_file(const git_diff_delta *delta, float progress, void *payload)
-{
-	struct foreach_diff_data *data = payload;
-	const char *match, *path;
-	int error = 0;
-
-	GIT_UNUSED(progress);
-
-	/* We only want those we already have in the index */
-	if (delta->status != GIT_DELTA_MODIFIED &&
-	    delta->status != GIT_DELTA_TYPECHANGE &&
-	    delta->status != GIT_DELTA_DELETED)
-		return 0;
-
-	path = delta->old_file.path;
-
-	/* We only want those which match the pathspecs */
-	if (!git_pathspec__match(
-		    &data->pathspec->pathspec, path, false, (bool)data->index->ignore_case,
-		    &match, NULL))
-		return 0;
-
-	if (data->cb)
-		error = data->cb(path, match, data->payload);
-
-	if (error > 0) /* skip this entry */
-		return 0;
-	if (error < 0) /* actual error */
-		return error;
-
-	if (delta->status == GIT_DELTA_DELETED)
-		error = git_index_remove_bypath(data->index, path);
-	else
-		error = git_index_add_bypath(data->index, path);
-
-	return error;
-}
-
 int git_index_update_all(
 	git_index *index,
 	const git_strarray *pathspec,
 	git_index_matched_path_cb cb,
 	void *payload)
 {
-	int error;
-	git_repository *repo;
-	git_diff *diff;
-	git_pathspec ps;
-	struct foreach_diff_data data = {
-		index,
-		NULL,
-		cb,
-		payload,
-	};
-
-	repo = INDEX_OWNER(index);
-
-	if (!repo) {
-		return create_index_error(-1,
-			"cannot run update; the index is not backed up by a repository.");
-	}
-
-	/*
-	 * We do the matching ourselves intead of passing the list to
-	 * diff because we want to tell the callback which one
-	 * matched, which we do not know if we ask diff to filter for us.
-	 */
-	if ((error = git_pathspec__init(&ps, pathspec)) < 0)
-		return error;
-
-	if ((error = git_diff_index_to_workdir(&diff, repo, index, NULL)) < 0)
-		goto cleanup;
-
-	data.pathspec = &ps;
-	error = git_diff_foreach(diff, add_each_file, NULL, NULL, &data);
-	git_diff_free(diff);
-
+	int error = index_apply_to_wd_diff(index, INDEX_ACTION_UPDATE, pathspec, cb, payload);
 	if (error) /* make sure error is set if callback stopped iteration */
 		giterr_set_after_callback(error);
 
-cleanup:
-	git_pathspec__clear(&ps);
 	return error;
 }
 
