@@ -128,42 +128,58 @@ void test_submodule_modify__sync(void)
 	git_submodule_free(sm3);
 }
 
-void test_submodule_modify__set_ignore(void)
+void assert_ignore_change(git_submodule_ignore_t ignore)
 {
 	git_submodule *sm;
 
-	cl_git_pass(git_submodule_set_ignore(g_repo, "sm_changed_head", GIT_SUBMODULE_IGNORE_UNTRACKED));
+	cl_git_pass(git_submodule_set_ignore(g_repo, "sm_changed_head", ignore));
 
 	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_head"));
-	cl_assert_equal_i(GIT_SUBMODULE_IGNORE_UNTRACKED, git_submodule_ignore(sm));
+	cl_assert_equal_i(ignore, git_submodule_ignore(sm));
+	git_submodule_free(sm);
+}
+
+void test_submodule_modify__set_ignore(void)
+{
+	assert_ignore_change(GIT_SUBMODULE_IGNORE_UNTRACKED);
+	assert_ignore_change(GIT_SUBMODULE_IGNORE_NONE);
+	assert_ignore_change(GIT_SUBMODULE_IGNORE_ALL);
+}
+
+void assert_update_change(git_submodule_update_t update)
+{
+	git_submodule *sm;
+
+	cl_git_pass(git_submodule_set_update(g_repo, "sm_changed_head", update));
+
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_head"));
+	cl_assert_equal_i(update, git_submodule_update_strategy(sm));
 	git_submodule_free(sm);
 }
 
 void test_submodule_modify__set_update(void)
 {
+	assert_update_change(GIT_SUBMODULE_UPDATE_REBASE);
+	assert_update_change(GIT_SUBMODULE_UPDATE_NONE);
+	assert_update_change(GIT_SUBMODULE_UPDATE_CHECKOUT);
+}
+
+void assert_recurse_change(git_submodule_recurse_t recurse)
+{
 	git_submodule *sm;
 
-	cl_git_pass(git_submodule_set_update(g_repo, "sm_changed_head", GIT_SUBMODULE_UPDATE_REBASE));
+	cl_git_pass(git_submodule_set_fetch_recurse_submodules(g_repo, "sm_changed_head", recurse));
 
 	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_head"));
-	cl_assert_equal_i(GIT_SUBMODULE_UPDATE_REBASE, git_submodule_update_strategy(sm));
+	cl_assert_equal_i(recurse, git_submodule_fetch_recurse_submodules(sm));
 	git_submodule_free(sm);
 }
 
 void test_submodule_modify__set_fetch_recurse_submodules(void)
 {
-	git_submodule *sm;
-
-	cl_git_pass(git_submodule_set_fetch_recurse_submodules(g_repo, "sm_changed_head", GIT_SUBMODULE_RECURSE_YES));
-
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_head"));
-	cl_assert_equal_i(GIT_SUBMODULE_RECURSE_YES, git_submodule_fetch_recurse_submodules(sm));
-	git_submodule_free(sm);
-
-	git_submodule_set_fetch_recurse_submodules(g_repo, "sm_changed_head", GIT_SUBMODULE_RECURSE_ONDEMAND);
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_head"));
-	cl_assert_equal_i(GIT_SUBMODULE_RECURSE_ONDEMAND, git_submodule_fetch_recurse_submodules(sm));
-	git_submodule_free(sm);
+	assert_recurse_change(GIT_SUBMODULE_RECURSE_YES);
+	assert_recurse_change(GIT_SUBMODULE_RECURSE_NO);
+	assert_recurse_change(GIT_SUBMODULE_RECURSE_ONDEMAND);
 }
 
 void test_submodule_modify__set_branch(void)
