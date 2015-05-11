@@ -74,7 +74,7 @@ static int write_file_stream(
 	git_oid *id, git_odb *odb, const char *path, git_off_t file_size)
 {
 	int fd, error;
-	char buffer[4096];
+	char buffer[FILEIO_BUFSIZE];
 	git_odb_stream *stream = NULL;
 	ssize_t read_len = -1, written = 0;
 

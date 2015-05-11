@@ -68,6 +68,11 @@
 
 #include <regex.h>
 
+#define DEFAULT_BUFSIZE 65536
+#define FILEIO_BUFSIZE DEFAULT_BUFSIZE
+#define FILTERIO_BUFSIZE DEFAULT_BUFSIZE
+#define NETIO_BUFSIZE DEFAULT_BUFSIZE
+
 /**
  * Check a pointer allocation result, returning -1 if it failed.
  */

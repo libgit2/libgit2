@@ -689,7 +689,7 @@ int git_futils_fake_symlink(const char *old, const char *new)
 static int cp_by_fd(int ifd, int ofd, bool close_fd_when_done)
 {
 	int error = 0;
-	char buffer[4096];
+	char buffer[FILEIO_BUFSIZE];
 	ssize_t len = 0;
 
 	while (!error && (len = p_read(ifd, buffer, sizeof(buffer))) > 0)

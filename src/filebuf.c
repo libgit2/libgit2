@@ -68,7 +68,7 @@ static int lock_file(git_filebuf *file, int flags, mode_t mode)
 
 	if ((flags & GIT_FILEBUF_APPEND) && git_path_exists(file->path_original) == true) {
 		git_file source;
-		char buffer[2048];
+		char buffer[FILEIO_BUFSIZE];
 		ssize_t read_bytes;
 
 		source = p_open(file->path_original, O_RDONLY);
