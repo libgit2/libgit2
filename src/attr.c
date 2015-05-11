@@ -309,7 +309,8 @@ static int attr_setup(git_repository *repo, git_attr_session *attr_session)
 	if (error == 0)
 		error = preload_attr_file(
 			repo, attr_session, GIT_ATTR_FILE__FROM_FILE, NULL, sys.ptr);
-	else if (error != GIT_ENOTFOUND)
+
+	if (error != GIT_ENOTFOUND)
 		return error;
 
 	git_buf_free(&sys);
