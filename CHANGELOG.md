@@ -63,6 +63,12 @@ support for HTTPS connections insead of OpenSSL.
 * `git_index_add_frombuffer()` can now create a blob from memory
    buffer and add it to the index which is attached to a repository.
 
+* `git_stash_apply()` can now apply a stashed state from the stash list,
+  placing the data into the working directory and index.
+
+* `git_stash_pop()` will apply a stashed state (like `git_stash_apply()`)
+  but will remove the stashed state after a successful application.
+
 ### API removals
 
 ### Breaking API changes
