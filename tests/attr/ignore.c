@@ -160,7 +160,7 @@ void test_attr_ignore__subdirectory_gitignore(void)
 
 	assert_is_ignored(true, "file1");
 	assert_is_ignored(true, "dir/file1");
-	assert_is_ignored(true, "dir/file2");  /* in ignored dir */
+	assert_is_ignored(true, "dir/file2/actual_file");  /* in ignored dir */
 	assert_is_ignored(false, "dir/file3");
 }
 
