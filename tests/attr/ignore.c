@@ -191,3 +191,35 @@ void test_attr_ignore__expand_tilde_to_homedir(void)
 
 	assert_is_ignored(false, "example.global_with_tilde");
 }
+
+/* Ensure that the .gitignore in the subdirectory only affects
+ * items in the subdirectory. */
+void test_attr_ignore__gitignore_in_subdir(void)
+{
+	cl_git_rmfile("attr/.gitignore");
+
+	cl_must_pass(p_mkdir("attr/dir1", 0777));
+	cl_must_pass(p_mkdir("attr/dir1/dir2", 0777));
+	cl_must_pass(p_mkdir("attr/dir1/dir2/dir3", 0777));
+
+	cl_git_mkfile("attr/dir1/dir2/dir3/.gitignore", "dir1/\ndir1/subdir/");
+
+	assert_is_ignored(false, "dir1/file");
+	assert_is_ignored(false, "dir1/dir2/file");
+	assert_is_ignored(false, "dir1/dir2/dir3/file");
+	assert_is_ignored(false, "dir1/dir2/dir3/dir1");
+	assert_is_ignored(true,  "dir1/dir2/dir3/dir1/file");
+	assert_is_ignored(true,  "dir1/dir2/dir3/dir1/subdir/foo");
+
+	if (cl_repo_get_bool(g_repo, "core.ignorecase")) {
+		cl_git_mkfile("attr/dir1/dir2/dir3/.gitignore", "DiR1/\nDiR1/subdir/\n");
+
+		assert_is_ignored(false, "dir1/file");
+		assert_is_ignored(false, "dir1/dir2/file");
+		assert_is_ignored(false, "dir1/dir2/dir3/file");
+		assert_is_ignored(false, "dir1/dir2/dir3/dir1");
+		assert_is_ignored(true,  "dir1/dir2/dir3/dir1/file");
+		assert_is_ignored(true,  "dir1/dir2/dir3/dir1/subdir/foo");
+	}
+}
+
