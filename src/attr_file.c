@@ -401,10 +401,9 @@ bool git_attr_fnmatch__match(
 			path->basename == path->path)
 			return false;
 
-		/* for ignore checks, use container of current item for check */
-		path->basename[-1] = '\0';
 		flags |= FNM_LEADING_DIR;
 
+		/* for ignore checks, use container of current item for check */
 		if (match->containing_dir)
 			matchpath = path->basename;
 		else
@@ -419,7 +418,7 @@ bool git_attr_fnmatch__match(
 			return false;
 
 		matchval = p_fnmatch(match->pattern, matchpath, flags);
-		path->basename[-1] = '/';
+
 		return (matchval != FNM_NOMATCH);
 	}
 
