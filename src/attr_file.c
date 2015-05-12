@@ -410,6 +410,14 @@ bool git_attr_fnmatch__match(
 		else
 			matchpath = path->path;
 
+		/* fail match if this is a file with same name as ignored folder */
+		bool samename = (match->flags & GIT_ATTR_FNMATCH_ICASE) ?
+			!strcasecmp(match->pattern, matchpath) :
+			!strcmp(match->pattern, matchpath);
+
+		if (samename)
+			return false;
+
 		matchval = p_fnmatch(match->pattern, matchpath, flags);
 		path->basename[-1] = '/';
 		return (matchval != FNM_NOMATCH);
