@@ -247,7 +247,7 @@ GIT_EXTERN(int) git_odb_write(git_oid *out, git_odb *odb, const void *data, size
  * @param type type of the object that will be written
  * @return 0 if the stream was created; error code otherwise
  */
-GIT_EXTERN(int) git_odb_open_wstream(git_odb_stream **out, git_odb *db, size_t size, git_otype type);
+GIT_EXTERN(int) git_odb_open_wstream(git_odb_stream **out, git_odb *db, git_off_t size, git_otype type);
 
 /**
  * Write to an odb stream

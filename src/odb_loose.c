@@ -834,7 +834,7 @@ static void loose_backend__stream_free(git_odb_stream *_stream)
 	git__free(stream);
 }
 
-static int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_backend, size_t length, git_otype type)
+static int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_backend, git_off_t length, git_otype type)
 {
 	loose_backend *backend;
 	loose_writestream *stream = NULL;
@@ -842,7 +842,7 @@ static int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_
 	git_buf tmp_path = GIT_BUF_INIT;
 	int hdrlen;
 
-	assert(_backend);
+	assert(_backend && length >= 0);
 
 	backend = (loose_backend *)_backend;
 	*stream_out = NULL;
