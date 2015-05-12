@@ -396,6 +396,8 @@ bool git_attr_fnmatch__match(
 	}
 
 	if ((match->flags & GIT_ATTR_FNMATCH_DIRECTORY) && !path->is_dir) {
+		bool samename;
+
 		/* for attribute checks or root ignore checks, fail match */
 		if (!(match->flags & GIT_ATTR_FNMATCH_IGNORE) ||
 			path->basename == path->path)
@@ -404,7 +406,7 @@ bool git_attr_fnmatch__match(
 		flags |= FNM_LEADING_DIR;
 
 		/* fail match if this is a file with same name as ignored folder */
-		bool samename = (match->flags & GIT_ATTR_FNMATCH_ICASE) ?
+		samename = (match->flags & GIT_ATTR_FNMATCH_ICASE) ?
 			!strcasecmp(match->pattern, relpath) :
 			!strcmp(match->pattern, relpath);
 
