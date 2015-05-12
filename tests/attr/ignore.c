@@ -223,3 +223,20 @@ void test_attr_ignore__gitignore_in_subdir(void)
 	}
 }
 
+void test_attr_ignore__depth_file_not_ignored_when_folder_specified(void)
+{
+	cl_git_rmfile("attr/.gitignore");
+
+	cl_must_pass(p_mkdir("attr/dir1", 0777));
+	cl_must_pass(p_mkdir("attr/dir1/dir2", 0777));
+	cl_must_pass(p_mkdir("attr/dir1/dir2/dir3", 0777));
+
+	cl_git_mkfile("attr/dir1/dir2/dir3/.gitignore", "dir1/\n");
+
+	assert_is_ignored(false, "dir1/dir2/dir3/dir1");
+
+	if (cl_repo_get_bool(g_repo, "core.ignorecase")) {
+		assert_is_ignored(false, "dir1/dir2/dir3/DiR1");
+	}
+}
+
