@@ -70,7 +70,7 @@ typedef struct {
 	gitno_buffer parse_buffer;
 	git_buf parse_header_name;
 	git_buf parse_header_value;
-	char parse_buffer_data[2048];
+	char parse_buffer_data[NETIO_BUFSIZE];
 	char *content_type;
 	char *location;
 	git_vector www_authenticate;

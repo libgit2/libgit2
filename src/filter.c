@@ -875,15 +875,13 @@ void stream_list_free(git_vector *streams)
 	git_vector_free(streams);
 }
 
-#define STREAM_BUFSIZE 65536
-
 int git_filter_list_stream_file(
 	git_filter_list *filters,
 	git_repository *repo,
 	const char *path,
 	git_writestream *target)
 {
-	char buf[STREAM_BUFSIZE];
+	char buf[FILTERIO_BUFSIZE];
 	git_buf abspath = GIT_BUF_INIT;
 	const char *base = repo ? git_repository_workdir(repo) : NULL;
 	git_vector filter_streams = GIT_VECTOR_INIT;
@@ -901,7 +899,7 @@ int git_filter_list_stream_file(
 		goto done;
 	}
 
-	while ((readlen = p_read(fd, buf, STREAM_BUFSIZE)) > 0) {
+	while ((readlen = p_read(fd, buf, sizeof(buf))) > 0) {
 		if ((error = stream_start->write(stream_start, buf, readlen)) < 0)
 			goto done;
 	}
