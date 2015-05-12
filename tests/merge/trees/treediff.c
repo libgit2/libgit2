@@ -43,6 +43,7 @@ static void test_find_differences(
     git_merge_diff_list *merge_diff_list = git_merge_diff_list__alloc(repo);
     git_oid ancestor_oid, ours_oid, theirs_oid;
     git_tree *ancestor_tree, *ours_tree, *theirs_tree;
+	git_iterator *ancestor_iter, *ours_iter, *theirs_iter;
 
 	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
 	opts.tree_flags |= GIT_MERGE_TREE_FIND_RENAMES;
@@ -66,7 +67,14 @@ static void test_find_differences(
 	cl_git_pass(git_tree_lookup(&ours_tree, repo, &ours_oid));
 	cl_git_pass(git_tree_lookup(&theirs_tree, repo, &theirs_oid));
 
-	cl_git_pass(git_merge_diff_list__find_differences(merge_diff_list, ancestor_tree, ours_tree, theirs_tree));
+	cl_git_pass(git_iterator_for_tree(&ancestor_iter, ancestor_tree,
+			GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL));
+	cl_git_pass(git_iterator_for_tree(&ours_iter, ours_tree,
+			GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL));
+	cl_git_pass(git_iterator_for_tree(&theirs_iter, theirs_tree,
+			GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL));
+
+	cl_git_pass(git_merge_diff_list__find_differences(merge_diff_list, ancestor_iter, ours_iter, theirs_iter));
 	cl_git_pass(git_merge_diff_list__find_renames(repo, merge_diff_list, &opts));
 
 	/*
@@ -76,6 +84,10 @@ static void test_find_differences(
 	cl_assert(treediff_conflict_data_len == merge_diff_list->conflicts.length);
 
 	cl_assert(merge_test_merge_conflicts(&merge_diff_list->conflicts, treediff_conflict_data, treediff_conflict_data_len));
+
+	git_iterator_free(ancestor_iter);
+	git_iterator_free(ours_iter);
+	git_iterator_free(theirs_iter);
 
 	git_tree_free(ancestor_tree);
 	git_tree_free(ours_tree);

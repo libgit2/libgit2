@@ -34,6 +34,9 @@ v0.22 + 1
 * On Mac OS X, we now use SecureTransport to provide the cryptographic
 support for HTTPS connections insead of OpenSSL.
 
+* Checkout can now accept an index for the baseline computations via the
+  `baseline_index` member.
+
 ### API additions
 
 * The `git_merge_options` gained a `file_flags` member.
@@ -62,6 +65,12 @@ support for HTTPS connections insead of OpenSSL.
 
 * `git_index_add_frombuffer()` can now create a blob from memory
    buffer and add it to the index which is attached to a repository.
+
+* `git_stash_apply()` can now apply a stashed state from the stash list,
+  placing the data into the working directory and index.
+
+* `git_stash_pop()` will apply a stashed state (like `git_stash_apply()`)
+  but will remove the stashed state after a successful application.
 
 ### API removals
 

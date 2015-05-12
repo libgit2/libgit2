@@ -1451,11 +1451,11 @@ static int merge_diff_list_insert_unmodified(
 
 int git_merge_diff_list__find_differences(
 	git_merge_diff_list *diff_list,
-	const git_tree *ancestor_tree,
-	const git_tree *our_tree,
-	const git_tree *their_tree)
+	git_iterator *ancestor_iter,
+	git_iterator *our_iter,
+	git_iterator *their_iter)
 {
-	git_iterator *iterators[3] = {0};
+	git_iterator *iterators[3] = { ancestor_iter, our_iter, their_iter };
 	const git_index_entry *items[3] = {0}, *best_cur_item, *cur_items[3];
 	git_vector_cmp entry_compare = git_index_entry_cmp;
 	struct merge_diff_df_data df_data = {0};
@@ -1463,12 +1463,7 @@ int git_merge_diff_list__find_differences(
 	size_t i, j;
 	int error = 0;
 
-	assert(diff_list && (our_tree || their_tree));
-
-	if ((error = git_iterator_for_tree(&iterators[TREE_IDX_ANCESTOR], (git_tree *)ancestor_tree, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0 ||
-		(error = git_iterator_for_tree(&iterators[TREE_IDX_OURS], (git_tree *)our_tree, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0 ||
-		(error = git_iterator_for_tree(&iterators[TREE_IDX_THEIRS], (git_tree *)their_tree, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0)
-		goto done;
+	assert(diff_list && (our_iter || their_iter));
 
 	/* Set up the iterators */
 	for (i = 0; i < 3; i++) {
@@ -1544,9 +1539,6 @@ int git_merge_diff_list__find_differences(
 	}
 
 done:
-	for (i = 0; i < 3; i++)
-		git_iterator_free(iterators[i]);
-
 	if (error == GIT_ITEROVER)
 		error = 0;
 
@@ -1757,14 +1749,28 @@ on_error:
 	return error;
 }
 
-int git_merge_trees(
+static git_iterator *iterator_given_or_empty(git_iterator **empty, git_iterator *given)
+{
+	if (given)
+		return given;
+
+	if (git_iterator_for_nothing(empty, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL) < 0)
+		return NULL;
+
+	return *empty;
+}
+
+int git_merge__iterators(
 	git_index **out,
 	git_repository *repo,
-	const git_tree *ancestor_tree,
-	const git_tree *our_tree,
-	const git_tree *their_tree,
+	git_iterator *ancestor_iter,
+	git_iterator *our_iter,
+	git_iterator *theirs_iter,
 	const git_merge_options *given_opts)
 {
+	git_iterator *empty_ancestor = NULL,
+		*empty_ours = NULL,
+		*empty_theirs = NULL;
 	git_merge_diff_list *diff_list;
 	git_merge_options opts;
 	git_merge_diff *conflict;
@@ -1772,11 +1778,12 @@ int git_merge_trees(
 	size_t i;
 	int error = 0;
 
-	assert(out && repo && (our_tree || their_tree));
+	assert(out && repo);
 
 	*out = NULL;
 
-	GITERR_CHECK_VERSION(given_opts, GIT_MERGE_OPTIONS_VERSION, "git_merge_options");
+	GITERR_CHECK_VERSION(
+		given_opts, GIT_MERGE_OPTIONS_VERSION, "git_merge_options");
 
 	if ((error = merge_normalize_opts(repo, &opts, given_opts)) < 0)
 		return error;
@@ -1784,7 +1791,12 @@ int git_merge_trees(
 	diff_list = git_merge_diff_list__alloc(repo);
 	GITERR_CHECK_ALLOC(diff_list);
 
-	if ((error = git_merge_diff_list__find_differences(diff_list, ancestor_tree, our_tree, their_tree)) < 0 ||
+	ancestor_iter = iterator_given_or_empty(&empty_ancestor, ancestor_iter);
+	our_iter = iterator_given_or_empty(&empty_ours, our_iter);
+	theirs_iter = iterator_given_or_empty(&empty_theirs, theirs_iter);
+
+	if ((error = git_merge_diff_list__find_differences(
+			diff_list, ancestor_iter, our_iter, theirs_iter)) < 0 ||
 		(error = git_merge_diff_list__find_renames(repo, diff_list, &opts)) < 0)
 		goto done;
 
@@ -1808,9 +1820,43 @@ int git_merge_trees(
 
 done:
 	git_merge_diff_list__free(diff_list);
+	git_iterator_free(empty_ancestor);
+	git_iterator_free(empty_ours);
+	git_iterator_free(empty_theirs);
 
 	return error;
 }
+
+int git_merge_trees(
+	git_index **out,
+	git_repository *repo,
+	const git_tree *ancestor_tree,
+	const git_tree *our_tree,
+	const git_tree *their_tree,
+	const git_merge_options *merge_opts)
+{
+	git_iterator *ancestor_iter = NULL, *our_iter = NULL, *their_iter = NULL;
+	int error;
+
+	if ((error = git_iterator_for_tree(&ancestor_iter, (git_tree *)ancestor_tree,
+			GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0 ||
+		(error = git_iterator_for_tree(&our_iter, (git_tree *)our_tree,
+			GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0 ||
+		(error = git_iterator_for_tree(&their_iter, (git_tree *)their_tree,
+			GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0)
+		goto done;
+
+	error = git_merge__iterators(
+		out, repo, ancestor_iter, our_iter, their_iter, merge_opts);
+
+done:
+	git_iterator_free(ancestor_iter);
+	git_iterator_free(our_iter);
+	git_iterator_free(their_iter);
+
+	return error;
+}
+
 
 int git_merge_commits(
 	git_index **out,

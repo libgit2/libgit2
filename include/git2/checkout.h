@@ -272,7 +272,16 @@ typedef struct git_checkout_options {
 	 */
 	git_strarray paths;
 
-	git_tree *baseline; /**< expected content of workdir, defaults to HEAD */
+	/** The expected content of the working directory; defaults to HEAD.
+	 *  If the working directory does not match this baseline information,
+	 *  that will produce a checkout conflict.
+	 */
+	git_tree *baseline;
+
+	/** Like `baseline` above, though expressed as an index.  This
+	 *  option overrides `baseline`.
+	 */
+	git_index *baseline_index; /**< expected content of workdir, expressed as an index. */
 
 	const char *target_directory; /**< alternative checkout path to workdir */
 

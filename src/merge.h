@@ -10,6 +10,7 @@
 #include "vector.h"
 #include "commit_list.h"
 #include "pool.h"
+#include "iterator.h"
 
 #include "git2/merge.h"
 #include "git2/types.h"
@@ -121,10 +122,11 @@ int git_merge__bases_many(
 
 git_merge_diff_list *git_merge_diff_list__alloc(git_repository *repo);
 
-int git_merge_diff_list__find_differences(git_merge_diff_list *merge_diff_list,
-	const git_tree *ancestor_tree,
-	const git_tree *ours_tree,
-	const git_tree *theirs_tree);
+int git_merge_diff_list__find_differences(
+	git_merge_diff_list *merge_diff_list,
+	git_iterator *ancestor_iterator,
+	git_iterator *ours_iter,
+	git_iterator *theirs_iter);
 
 int git_merge_diff_list__find_renames(git_repository *repo, git_merge_diff_list *merge_diff_list, const git_merge_options *opts);
 
@@ -137,6 +139,14 @@ int git_merge__setup(
 	const git_annotated_commit *our_head,
 	const git_annotated_commit *heads[],
 	size_t heads_len);
+
+int git_merge__iterators(
+	git_index **out,
+	git_repository *repo,
+	git_iterator *ancestor_iter,
+	git_iterator *our_iter,
+	git_iterator *their_iter,
+	const git_merge_options *given_opts);
 
 int git_merge__check_result(git_repository *repo, git_index *index_new);
 

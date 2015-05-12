@@ -2397,7 +2397,7 @@ static int checkout_data_init(
 			 &data->can_symlink, repo, GIT_CVAR_SYMLINKS)) < 0)
 		goto cleanup;
 
-	if (!data->opts.baseline) {
+	if (!data->opts.baseline && !data->opts.baseline_index) {
 		data->opts_free_baseline = true;
 
 		error = checkout_lookup_head_tree(&data->opts.baseline, repo);
@@ -2501,11 +2501,20 @@ int git_checkout_iterator(
 		(error = git_iterator_for_workdir_ext(
 			&workdir, data.repo, data.opts.target_directory, index, NULL,
 			iterflags | GIT_ITERATOR_DONT_AUTOEXPAND,
-			data.pfx, data.pfx)) < 0 ||
-		(error = git_iterator_for_tree(
-			&baseline, data.opts.baseline,
-			iterflags, data.pfx, data.pfx)) < 0)
+			data.pfx, data.pfx)) < 0)
 		goto cleanup;
+
+	if (data.opts.baseline_index) {
+		if ((error = git_iterator_for_index(
+				&baseline, data.opts.baseline_index,
+				iterflags, data.pfx, data.pfx)) < 0)
+			goto cleanup;
+	} else {
+		if ((error = git_iterator_for_tree(
+				&baseline, data.opts.baseline,
+				iterflags, data.pfx, data.pfx)) < 0)
+			goto cleanup;
+	}
 
 	/* Should not have case insensitivity mismatch */
 	assert(git_iterator_ignore_case(workdir) == git_iterator_ignore_case(baseline));
