@@ -254,13 +254,9 @@ static int attr_setup(git_repository *repo)
 			repo, GIT_ATTR_FILE__FROM_FILE, NULL, sys.ptr);
 		git_buf_free(&sys);
 	}
-	if (error < 0) {
-		if (error == GIT_ENOTFOUND) {
-			giterr_clear();
-			error = 0;
-		} else
-			return error;
-	}
+
+	if (error != GIT_ENOTFOUND)
+		return error;
 
 	if ((error = preload_attr_file(
 			repo, GIT_ATTR_FILE__FROM_FILE,
