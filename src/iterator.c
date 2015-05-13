@@ -46,6 +46,7 @@
 #define iterator__include_trees(I)   iterator__flag(I,INCLUDE_TREES)
 #define iterator__dont_autoexpand(I) iterator__flag(I,DONT_AUTOEXPAND)
 #define iterator__do_autoexpand(I)   !iterator__flag(I,DONT_AUTOEXPAND)
+#define iterator__include_conflicts(I) iterator__flag(I, INCLUDE_CONFLICTS)
 
 #define GIT_ITERATOR_FIRST_ACCESS (1 << 15)
 #define iterator__has_been_accessed(I) iterator__flag(I,FIRST_ACCESS)
@@ -668,13 +669,16 @@ static const git_index_entry *index_iterator__index_entry(index_iterator *ii)
 	return ie;
 }
 
-static const git_index_entry *index_iterator__skip_conflicts(index_iterator *ii)
+static const git_index_entry *index_iterator__advance_over_conflicts(index_iterator *ii)
 {
-	const git_index_entry *ie;
+	const git_index_entry *ie = index_iterator__index_entry(ii);
 
-	while ((ie = index_iterator__index_entry(ii)) != NULL &&
-		   git_index_entry_stage(ie) != 0)
-		ii->current++;
+	if (!iterator__include_conflicts(ii)) {
+		while (ie && git_index_entry_stage(ie) != 0) {
+			ii->current++;
+			ie = index_iterator__index_entry(ii);
+		}
+	}
 
 	return ie;
 }
@@ -702,7 +706,7 @@ static void index_iterator__next_prefix_tree(index_iterator *ii)
 
 static int index_iterator__first_prefix_tree(index_iterator *ii)
 {
-	const git_index_entry *ie = index_iterator__skip_conflicts(ii);
+	const git_index_entry *ie = index_iterator__advance_over_conflicts(ii);
 	const char *scan, *prior, *slash;
 
 	if (!ie || !iterator__include_trees(ii))
@@ -825,7 +829,7 @@ static int index_iterator__reset(
 		git_index_snapshot_find(
 			&ii->current, &ii->entries, ii->entry_srch, ii->base.start, 0, 0);
 
-	if ((ie = index_iterator__skip_conflicts(ii)) == NULL)
+	if ((ie = index_iterator__advance_over_conflicts(ii)) == NULL)
 		return 0;
 
 	if (git_buf_sets(&ii->partial, ie->path) < 0)
