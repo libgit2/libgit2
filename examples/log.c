@@ -340,14 +340,14 @@ static void print_time(const git_time *intime, const char *prefix)
 static void print_commit(git_commit *commit)
 {
 	char buf[GIT_OID_HEXSZ + 1];
-	int i, count;
+	unsigned int i, count;
 	const git_signature *sig;
 	const char *scan, *eol;
 
 	git_oid_tostr(buf, sizeof(buf), git_commit_id(commit));
 	printf("commit %s\n", buf);
 
-	if ((count = (int)git_commit_parentcount(commit)) > 1) {
+	if ((count = git_commit_parentcount(commit)) > 1) {
 		printf("Merge:");
 		for (i = 0; i < count; ++i) {
 			git_oid_tostr(buf, 8, git_commit_parent_id(commit, i));
