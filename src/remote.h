@@ -24,16 +24,12 @@ struct git_remote {
 	git_vector refspecs;
 	git_vector active_refspecs;
 	git_vector passive_refspecs;
-	git_transport_cb transport_cb;
-	void *transport_cb_payload;
 	git_transport *transport;
 	git_repository *repo;
 	git_push *push;
-	git_remote_callbacks callbacks;
 	git_transfer_progress stats;
 	unsigned int need_pack;
 	git_remote_autotag_option_t download_tags;
-	int update_fetchhead;
 	int prune_refs;
 	int passed_refspecs;
 };

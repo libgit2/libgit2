@@ -158,7 +158,7 @@ typedef struct {
 /* smart_protocol.c */
 int git_smart__store_refs(transport_smart *t, int flushes);
 int git_smart__detect_caps(git_pkt_ref *pkt, transport_smart_caps *caps, git_vector *symrefs);
-int git_smart__push(git_transport *transport, git_push *push);
+int git_smart__push(git_transport *transport, git_push *push, const git_remote_callbacks *cbs);
 
 int git_smart__negotiate_fetch(
 	git_transport *transport,

@@ -16,7 +16,6 @@
 #include "git2/pack.h"
 #include "git2/commit.h"
 #include "git2/revparse.h"
-#include "git2/push.h"
 #include "pack-objects.h"
 #include "refs.h"
 #include "posix.h"
@@ -366,7 +365,8 @@ static int local_push_update_remote_ref(
 
 static int local_push(
 	git_transport *transport,
-	git_push *push)
+	git_push *push,
+	const git_remote_callbacks *cbs)
 {
 	transport_local *t = (transport_local *)transport;
 	git_odb *remote_odb = NULL;
@@ -379,6 +379,8 @@ static int local_push(
 	int error;
 	unsigned int i;
 	size_t j;
+
+	GIT_UNUSED(cbs);
 
 	/* 'push->remote->url' may be a url or path; convert to a path */
 	if ((error = git_path_from_url_or_path(&buf, push->remote->url)) < 0) {
@@ -471,7 +473,7 @@ static int local_push(
 
 		if (!url || t->parent.close(&t->parent) < 0 ||
 			t->parent.connect(&t->parent, url,
-			push->remote->callbacks.credentials, NULL, GIT_DIRECTION_PUSH, flags))
+			NULL, NULL, GIT_DIRECTION_PUSH, flags))
 			goto on_error;
 	}
 

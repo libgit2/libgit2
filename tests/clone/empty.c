@@ -10,14 +10,14 @@ static git_repository *g_repo_cloned;
 void test_clone_empty__initialize(void)
 {
 	git_repository *sandbox = cl_git_sandbox_init("empty_bare.git");
-	git_remote_callbacks dummy_callbacks = GIT_REMOTE_CALLBACKS_INIT;
+	git_fetch_options dummy_options = GIT_FETCH_OPTIONS_INIT;
 	cl_git_remove_placeholders(git_repository_path(sandbox), "dummy-marker.txt");
 
 	g_repo = NULL;
 
 	memset(&g_options, 0, sizeof(git_clone_options));
 	g_options.version = GIT_CLONE_OPTIONS_VERSION;
-	g_options.remote_callbacks = dummy_callbacks;
+	g_options.fetch_opts = dummy_options;
 }
 
 void test_clone_empty__cleanup(void)

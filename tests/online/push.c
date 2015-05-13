@@ -369,9 +369,8 @@ void test_online_push__initialize(void)
 	cl_git_pass(git_remote_create(&_remote, _repo, "test", _remote_url));
 
 	record_callbacks_data_clear(&_record_cbs_data);
-	git_remote_set_callbacks(_remote, &_record_cbs);
 
-	cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH));
+	cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH, NULL));
 
 	/* Clean up previously pushed branches.  Fails if receive.denyDeletes is
 	 * set on the remote.  Also, on Git 1.7.0 and newer, you must run
@@ -394,10 +393,7 @@ void test_online_push__initialize(void)
 	git_vector_free(&delete_specs);
 
 	/* Now that we've deleted everything, fetch from the remote */
-	cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_FETCH));
-	cl_git_pass(git_remote_download(_remote, NULL));
-	cl_git_pass(git_remote_update_tips(_remote, NULL));
-	git_remote_disconnect(_remote);
+	cl_git_pass(git_remote_fetch(_remote, NULL, NULL, NULL));
 }
 
 void test_online_push__cleanup(void)
@@ -459,20 +455,18 @@ static void do_push(
 	size_t i;
 	int error;
 	git_strarray specs = {0};
-	git_remote_callbacks callbacks;
 	record_callbacks_data *data;
 
 	if (_remote) {
 		/* Auto-detect the number of threads to use */
 		opts.pb_parallelism = 0;
 
-		memcpy(&callbacks, git_remote_get_callbacks(_remote), sizeof(callbacks));
-		data = callbacks.payload;
+		memcpy(&opts.callbacks, &_record_cbs, sizeof(git_remote_callbacks));
+		data = opts.callbacks.payload;
 
-		callbacks.pack_progress = push_pack_progress_cb;
-		callbacks.push_transfer_progress = push_transfer_progress_cb;
-		callbacks.push_update_reference = record_push_status_cb;
-		cl_git_pass(git_remote_set_callbacks(_remote, &callbacks));
+		opts.callbacks.pack_progress = push_pack_progress_cb;
+		opts.callbacks.push_transfer_progress = push_transfer_progress_cb;
+		opts.callbacks.push_update_reference = record_push_status_cb;
 
 		if (refspecs_len) {
 			specs.count = refspecs_len;
@@ -867,6 +861,7 @@ void test_online_push__configured(void)
 {
 	git_oid note_oid, *target_oid, expected_oid;
 	git_signature *signature;
+	git_remote *old_remote;
 	const char *specs[] = { "refs/notes/commits:refs/notes/commits" };
 	push_status exp_stats[] = { { "refs/notes/commits", 1 } };
 	expected_ref exp_refs[] = { { "refs/notes/commits", &expected_oid } };
@@ -876,7 +871,10 @@ void test_online_push__configured(void)
 
 	target_oid = &_oid_b6;
 
-	cl_git_pass(git_remote_add_push(_remote, specs[0]));
+	cl_git_pass(git_remote_add_push(_repo, git_remote_name(_remote), specs[0]));
+	old_remote = _remote;
+	cl_git_pass(git_remote_lookup(&_remote, _repo, git_remote_name(_remote)));
+	git_remote_free(old_remote);
 
 	/* Create note to push */
 	cl_git_pass(git_signature_new(&signature, "nulltoken", "emeric.fermas@gmail.com", 1323847743, 60)); /* Wed Dec 14 08:29:03 2011 +0100 */

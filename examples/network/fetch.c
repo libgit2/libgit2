@@ -10,6 +10,7 @@
 
 struct dl_data {
 	git_remote *remote;
+	git_fetch_options *fetch_opts;
 	int ret;
 	int finished;
 };
@@ -28,7 +29,7 @@ static void *download(void *ptr)
 
 	// Connect to the remote end specifying that we want to fetch
 	// information from it.
-	if (git_remote_connect(data->remote, GIT_DIRECTION_FETCH) < 0) {
+	if (git_remote_connect(data->remote, GIT_DIRECTION_FETCH, &data->fetch_opts->callbacks) < 0) {
 		data->ret = -1;
 		goto exit;
 	}
@@ -36,7 +37,7 @@ static void *download(void *ptr)
 	// Download the packfile and index it. This function updates the
 	// amount of received data and the indexer stats which lets you
 	// inform the user about progress.
-	if (git_remote_download(data->remote, NULL) < 0) {
+	if (git_remote_download(data->remote, NULL, data->fetch_opts) < 0) {
 		data->ret = -1;
 		goto exit;
 	}
@@ -78,7 +79,7 @@ int fetch(git_repository *repo, int argc, char **argv)
 	git_remote *remote = NULL;
 	const git_transfer_progress *stats;
 	struct dl_data data;
-	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
+	git_fetch_options fetch_opts = GIT_FETCH_OPTIONS_INIT;
 #ifndef _WIN32
 	pthread_t worker;
 #endif
@@ -96,13 +97,13 @@ int fetch(git_repository *repo, int argc, char **argv)
 	}
 
 	// Set up the callbacks (only update_tips for now)
-	callbacks.update_tips = &update_cb;
-	callbacks.sideband_progress = &progress_cb;
-	callbacks.credentials = cred_acquire_cb;
-	git_remote_set_callbacks(remote, &callbacks);
+	fetch_opts.callbacks.update_tips = &update_cb;
+	fetch_opts.callbacks.sideband_progress = &progress_cb;
+	fetch_opts.callbacks.credentials = cred_acquire_cb;
 
 	// Set up the information for the background worker thread
 	data.remote = remote;
+	data.fetch_opts = &fetch_opts;
 	data.ret = 0;
 	data.finished = 0;
 
@@ -156,7 +157,7 @@ int fetch(git_repository *repo, int argc, char **argv)
 	// right commits. This may be needed even if there was no packfile
 	// to download, which can happen e.g. when the branches have been
 	// changed but all the needed objects are available locally.
-	if (git_remote_update_tips(remote, NULL) < 0)
+	if (git_remote_update_tips(remote, &fetch_opts.callbacks, 1, fetch_opts.download_tags, NULL) < 0)
 		return -1;
 
 	git_remote_free(remote);

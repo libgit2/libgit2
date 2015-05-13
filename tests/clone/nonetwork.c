@@ -15,7 +15,7 @@ static git_remote* g_remote;
 void test_clone_nonetwork__initialize(void)
 {
 	git_checkout_options dummy_opts = GIT_CHECKOUT_OPTIONS_INIT;
-	git_remote_callbacks dummy_callbacks = GIT_REMOTE_CALLBACKS_INIT;
+	git_fetch_options dummy_fetch = GIT_FETCH_OPTIONS_INIT;
 
 	g_repo = NULL;
 
@@ -23,7 +23,7 @@ void test_clone_nonetwork__initialize(void)
 	g_options.version = GIT_CLONE_OPTIONS_VERSION;
 	g_options.checkout_opts = dummy_opts;
 	g_options.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
-	g_options.remote_callbacks = dummy_callbacks;
+	g_options.fetch_opts = dummy_fetch;
 }
 
 void test_clone_nonetwork__cleanup(void)
@@ -179,7 +179,7 @@ void test_clone_nonetwork__can_cancel_clone_in_fetch(void)
 {
 	g_options.checkout_branch = "test";
 
-	g_options.remote_callbacks.transfer_progress =
+	g_options.fetch_opts.callbacks.transfer_progress =
 		clone_cancel_fetch_transfer_progress_cb;
 
 	cl_git_fail_with(git_clone(
