@@ -749,6 +749,19 @@ GIT_EXTERN(int) git_repository_ident(const char **name, const char **email, cons
  */
 GIT_EXTERN(int) git_repository_set_ident(git_repository *repo, const char *name, const char *email);
 
+/**
+ * Revert the unicode decomposition of a path
+ *
+ * This function simply copies the path unmodified if libgit2 was built without
+ * iconv support or if "core.precomposeUnicode" is not set to true in the
+ * repository's configuration.
+ *
+ * @param repo the repository
+ * @param path the path to precompose
+ * @param out the buffer to write the precomposed path into
+ */
+GIT_EXTERN(int) git_repository_precompose_path(git_repository *repo, const char *path, git_buf *out);
+
 /** @} */
 GIT_END_DECL
 #endif

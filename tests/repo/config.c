@@ -209,3 +209,26 @@ void test_repo_config__read_with_no_configs_at_all(void)
 	cl_assert(!git_path_exists("empty_standard_repo/.git/config"));
 	cl_assert(!git_path_exists("alternate/3/.gitconfig"));
 }
+
+void test_repo_config__precompose_paths(void)
+{
+	char *composed = "ḱṷṓn", *decomposed = "ḱṷṓn";
+	git_repository *repo;
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
+
+	cl_repo_set_bool(repo, "core.precomposeunicode", false);
+	cl_git_pass(git_repository_precompose_path(repo, decomposed, &buf));
+	cl_assert(!strcmp(buf.ptr, decomposed));
+
+	cl_repo_set_bool(repo, "core.precomposeunicode", true);
+	cl_git_pass(git_repository_precompose_path(repo, decomposed, &buf));
+#ifdef GIT_USE_ICONV
+	cl_assert(!strcmp(buf.ptr, composed));
+#else
+	cl_assert(!strcmp(buf.ptr, decomposed));
+#endif
+
+	git_repository_free(repo);
+}

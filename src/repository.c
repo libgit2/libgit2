@@ -2290,3 +2290,59 @@ int git_repository_set_ident(git_repository *repo, const char *name, const char 
 
 	return 0;
 }
+
+#ifdef GIT_USE_ICONV
+
+int git_repository_precompose_path(git_repository *repo, const char *path, git_buf *out)
+{
+	git_path_iconv_t ic = GIT_PATH_ICONV_INIT;
+	git_config *config;
+	int value;
+	int error;
+
+	assert(repo && path && out);
+
+	git_buf_sanitize(out);
+
+	if (git_repository_config__weakptr(&config, repo) < 0)
+		return -1;
+
+	error = git_config_get_bool(&value, config, "core.precomposeunicode");
+	if (error == GIT_ENOTFOUND) {
+		giterr_clear();
+		error = 0;
+		value = 0;
+	} else if (error < 0)
+		goto cleanup;
+
+	if (value) {
+		char* current = (char*)path;
+		size_t len = strlen(current);
+		if ((error = git_path_iconv_init_precompose(&ic)) < 0 ||
+			(error = git_path_iconv(&ic, &current, &len)) < 0)
+			goto cleanup;
+		if (current == (char*)path)
+			error = git_buf_set(out, path, len);
+		else
+			git_buf_swap(&ic.buf, out);
+	} else {
+		error = git_buf_set(out, path, strlen(path));
+	}
+
+cleanup:
+	git_path_iconv_clear(&ic);
+	return error;
+}
+
+#else
+
+int git_repository_precompose_path(git_repository *repo, const char *path, git_buf *out)
+{
+	assert(repo && path && out);
+
+	git_buf_sanitize(out);
+
+	return git_buf_set(out, path, strlen(path));
+}
+
+#endif
