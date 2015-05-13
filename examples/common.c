@@ -127,6 +127,25 @@ static const char *match_numeric_arg(struct args_info *args, const char *opt)
 	return found;
 }
 
+int match_uint32_arg(
+	uint32_t *out, struct args_info *args, const char *opt)
+{
+	const char *found = match_numeric_arg(args, opt);
+	uint32_t val;
+	char *endptr = NULL;
+
+	if (!found)
+		return 0;
+
+	val = (uint32_t)strtoul(found, &endptr, 0);
+	if (!endptr || *endptr != '\0')
+		fatal("expected number after argument", opt);
+
+	if (out)
+		*out = val;
+	return 1;
+}
+
 int match_uint16_arg(
 	uint16_t *out, struct args_info *args, const char *opt)
 {
