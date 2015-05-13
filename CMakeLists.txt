@@ -60,7 +60,7 @@ IF(MSVC)
 
 	# If you want to embed a copy of libssh2 into libgit2, pass a
 	# path to libssh2
-	OPTION( EMBED_SSH_PATH		"Path to libssh2 to embed (Windows)" OFF )
+	SET( EMBED_SSH_PATH "" CACHE PATH "Path to libssh2 to embed (Windows)" )
 
 	ADD_DEFINITIONS(-D_SCL_SECURE_NO_WARNINGS)
 	ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
