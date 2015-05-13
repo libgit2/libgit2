@@ -701,10 +701,14 @@ int git_stash_apply_init_options(git_stash_apply_options *opts, unsigned int ver
 	return 0;
 }
 
-#define NOTIFY_PROGRESS(opts, progress_type) \
-	if ((opts).progress_cb && \
-		(error = (opts).progress_cb((progress_type), (opts).progress_payload))) \
-		return (error < 0) ? error : -1;
+#define NOTIFY_PROGRESS(opts, progress_type)				\
+	do {								\
+		if ((opts).progress_cb &&				\
+		    (error = (opts).progress_cb((progress_type), (opts).progress_payload))) { \
+			error = (error < 0) ? error : -1;		\
+			goto cleanup;					\
+		}							\
+	} while(false);
 
 int git_stash_apply(
 	git_repository *repo,
