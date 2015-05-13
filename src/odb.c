@@ -50,7 +50,7 @@ static git_cache *odb_cache(git_odb *odb)
 
 static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_depth);
 
-int git_odb__format_object_header(char *hdr, size_t n, size_t obj_len, git_otype obj_type)
+int git_odb__format_object_header(char *hdr, size_t n, git_off_t obj_len, git_otype obj_type)
 {
 	const char *type_str = git_object_type2string(obj_type);
 	int len = p_snprintf(hdr, n, "%s %"PRIuZ, type_str, obj_len);
@@ -330,9 +330,14 @@ static void fake_wstream__free(git_odb_stream *_stream)
 	git__free(stream);
 }
 
-static int init_fake_wstream(git_odb_stream **stream_p, git_odb_backend *backend, size_t size, git_otype type)
+static int init_fake_wstream(git_odb_stream **stream_p, git_odb_backend *backend, git_off_t size, git_otype type)
 {
 	fake_wstream *stream;
+
+	if (!git__is_ssizet(size)) {
+		giterr_set(GITERR_ODB, "object size too large to keep in memory");
+		return -1;
+	}
 
 	stream = git__calloc(1, sizeof(fake_wstream));
 	GITERR_CHECK_ALLOC(stream);
@@ -940,7 +945,7 @@ int git_odb_write(
 	return error;
 }
 
-static void hash_header(git_hash_ctx *ctx, size_t size, git_otype type)
+static void hash_header(git_hash_ctx *ctx, git_off_t size, git_otype type)
 {
 	char header[64];
 	int hdrlen;
@@ -950,7 +955,7 @@ static void hash_header(git_hash_ctx *ctx, size_t size, git_otype type)
 }
 
 int git_odb_open_wstream(
-	git_odb_stream **stream, git_odb *db, size_t size, git_otype type)
+	git_odb_stream **stream, git_odb *db, git_off_t size, git_otype type)
 {
 	size_t i, writes = 0;
 	int error = GIT_ERROR;
