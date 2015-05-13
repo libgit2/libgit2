@@ -46,6 +46,13 @@ static void print_progress(const progress_data *pd)
 	}
 }
 
+static int sideband_progress(const char *str, int len, void *payload)
+{
+	printf("remote: %*s", len, str);
+	fflush(stdout);
+	return 0;
+}
+
 static int fetch_progress(const git_transfer_progress *stats, void *payload)
 {
 	progress_data *pd = (progress_data*)payload;
@@ -86,6 +93,7 @@ int do_clone(git_repository *repo, int argc, char **argv)
 	checkout_opts.progress_cb = checkout_progress;
 	checkout_opts.progress_payload = &pd;
 	clone_opts.checkout_opts = checkout_opts;
+	clone_opts.fetch_opts.callbacks.sideband_progress = sideband_progress;
 	clone_opts.fetch_opts.callbacks.transfer_progress = &fetch_progress;
 	clone_opts.fetch_opts.callbacks.credentials = cred_acquire_cb;
 	clone_opts.fetch_opts.callbacks.payload = &pd;

@@ -65,6 +65,7 @@ struct git_packbuilder {
 	git_zstream zstream;
 
 	uint32_t nr_objects,
+		 nr_deltified,
 		 nr_alloc,
 		 nr_written,
 		 nr_remaining;
