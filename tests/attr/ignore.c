@@ -207,7 +207,6 @@ void test_attr_ignore__gitignore_in_subdir(void)
 	assert_is_ignored(false, "dir1/file");
 	assert_is_ignored(false, "dir1/dir2/file");
 	assert_is_ignored(false, "dir1/dir2/dir3/file");
-	assert_is_ignored(false, "dir1/dir2/dir3/dir1");
 	assert_is_ignored(true,  "dir1/dir2/dir3/dir1/file");
 	assert_is_ignored(true,  "dir1/dir2/dir3/dir1/subdir/foo");
 
@@ -217,26 +216,39 @@ void test_attr_ignore__gitignore_in_subdir(void)
 		assert_is_ignored(false, "dir1/file");
 		assert_is_ignored(false, "dir1/dir2/file");
 		assert_is_ignored(false, "dir1/dir2/dir3/file");
-		assert_is_ignored(false, "dir1/dir2/dir3/dir1");
 		assert_is_ignored(true,  "dir1/dir2/dir3/dir1/file");
 		assert_is_ignored(true,  "dir1/dir2/dir3/dir1/subdir/foo");
 	}
 }
 
-void test_attr_ignore__depth_file_not_ignored_when_folder_specified(void)
+/* Ensure that files do not match folder cases */
+void test_attr_ignore__dont_ignore_files_for_folder(void)
 {
 	cl_git_rmfile("attr/.gitignore");
 
-	cl_must_pass(p_mkdir("attr/dir1", 0777));
-	cl_must_pass(p_mkdir("attr/dir1/dir2", 0777));
-	cl_must_pass(p_mkdir("attr/dir1/dir2/dir3", 0777));
+	cl_git_mkfile("attr/dir/.gitignore", "test/\n");
 
-	cl_git_mkfile("attr/dir1/dir2/dir3/.gitignore", "dir1/\n");
+	/* Create "test" as a file; ensure it is not ignored. */
+	cl_git_mkfile("attr/dir/test", "This is a file.");
 
-	assert_is_ignored(false, "dir1/dir2/dir3/dir1");
+	assert_is_ignored(false, "dir/test");
+	if (cl_repo_get_bool(g_repo, "core.ignorecase"))
+		assert_is_ignored(false, "dir/TeSt");
 
-	if (cl_repo_get_bool(g_repo, "core.ignorecase")) {
-		assert_is_ignored(false, "dir1/dir2/dir3/DiR1");
-	}
+	/* Create "test" as a directory; ensure it is ignored. */
+	cl_git_rmfile("attr/dir/test");
+	cl_must_pass(p_mkdir("attr/dir/test", 0777));
+
+	assert_is_ignored(true, "dir/test");
+	if (cl_repo_get_bool(g_repo, "core.ignorecase"))
+		assert_is_ignored(true, "dir/TeSt");
+
+	/* Remove "test" entirely; ensure it is not ignored.
+	 * (As it doesn't exist, it is not a directory.)
+	 */
+	cl_must_pass(p_rmdir("attr/dir/test"));
+
+	assert_is_ignored(false, "dir/test");
+	if (cl_repo_get_bool(g_repo, "core.ignorecase"))
+		assert_is_ignored(false, "dir/TeSt");
 }
-
