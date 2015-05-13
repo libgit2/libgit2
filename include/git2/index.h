@@ -24,9 +24,9 @@ GIT_BEGIN_DECL
 
 /** Time structure used in a git index entry */
 typedef struct {
-	git_time_t seconds;
+	int32_t seconds;
 	/* nsec should not be stored as time_t compatible */
-	unsigned int nanoseconds;
+	uint32_t nanoseconds;
 } git_index_time;
 
 /**
@@ -44,22 +44,27 @@ typedef struct {
  * accessed via the later `GIT_IDXENTRY_...` bitmasks below.  Some of
  * these flags are read from and written to disk, but some are set aside
  * for in-memory only reference.
+ *
+ * Note that the time and size fields are truncated to 32 bits. This
+ * is enough to detect changes, which is enough for the index to
+ * function as a cache, but it should not be taken as an authoritative
+ * source for that data.
  */
 typedef struct git_index_entry {
 	git_index_time ctime;
 	git_index_time mtime;
 
-	unsigned int dev;
-	unsigned int ino;
-	unsigned int mode;
-	unsigned int uid;
-	unsigned int gid;
-	git_off_t file_size;
+	uint32_t dev;
+	uint32_t ino;
+	uint32_t mode;
+	uint32_t uid;
+	uint32_t gid;
+	uint32_t file_size;
 
 	git_oid id;
 
-	unsigned short flags;
-	unsigned short flags_extended;
+	uint16_t flags;
+	uint16_t flags_extended;
 
 	const char *path;
 } git_index_entry;
