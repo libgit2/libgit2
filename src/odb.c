@@ -21,9 +21,12 @@
 
 #define GIT_ALTERNATES_FILE "info/alternates"
 
-/* TODO: is this correct? */
-#define GIT_LOOSE_PRIORITY 2
-#define GIT_PACKED_PRIORITY 1
+/*
+ * We work under the assumption that most objects for long-running
+ * operations will be packed
+ */
+#define GIT_LOOSE_PRIORITY 1
+#define GIT_PACKED_PRIORITY 2
 
 #define GIT_ALTERNATES_MAX_DEPTH 5
 
