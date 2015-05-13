@@ -857,6 +857,64 @@ static bool entry_is_prefixed(
 			item->path[pathlen] == '/');
 }
 
+static int iterator_current(
+	const git_index_entry **entry,
+	git_iterator *iterator)
+{
+	int error;
+
+	if ((error = git_iterator_current(entry, iterator)) == GIT_ITEROVER) {
+		*entry = NULL;
+		error = 0;
+	}
+
+	return error;
+}
+
+static int iterator_advance(
+	const git_index_entry **entry,
+	git_iterator *iterator)
+{
+	int error;
+
+	if ((error = git_iterator_advance(entry, iterator)) == GIT_ITEROVER) {
+		*entry = NULL;
+		error = 0;
+	}
+
+	return error;
+}
+
+static int iterator_advance_into(
+	const git_index_entry **entry,
+	git_iterator *iterator)
+{
+	int error;
+
+	if ((error = git_iterator_advance_into(entry, iterator)) == GIT_ITEROVER) {
+		*entry = NULL;
+		error = 0;
+	}
+
+	return error;
+}
+
+static int iterator_advance_over_with_status(
+	const git_index_entry **entry,
+	git_iterator_status_t *status,
+	git_iterator *iterator)
+{
+	int error;
+
+	if ((error = git_iterator_advance_over_with_status(
+			entry, status, iterator)) == GIT_ITEROVER) {
+		*entry = NULL;
+		error = 0;
+	}
+
+	return error;
+}
+
 static int handle_unmatched_new_item(
 	git_diff *diff, diff_in_progress *info)
 {
@@ -910,12 +968,11 @@ static int handle_unmatched_new_item(
 			/* if delta wasn't created (because of rules), just skip ahead */
 			last = diff_delta__last_for_item(diff, nitem);
 			if (!last)
-				return git_iterator_advance(&info->nitem, info->new_iter);
+				return iterator_advance(&info->nitem, info->new_iter);
 
 			/* iterate into dir looking for an actual untracked file */
-			if ((error = git_iterator_advance_over_with_status(
-					&info->nitem, &untracked_state, info->new_iter)) < 0 &&
-				error != GIT_ITEROVER)
+			if ((error = iterator_advance_over_with_status(
+					&info->nitem, &untracked_state, info->new_iter)) < 0)
 				return error;
 
 			/* if we found nothing or just ignored items, update the record */
@@ -935,7 +992,7 @@ static int handle_unmatched_new_item(
 
 		/* try to advance into directory if necessary */
 		if (recurse_into_dir) {
-			error = git_iterator_advance_into(&info->nitem, info->new_iter);
+			error = iterator_advance_into(&info->nitem, info->new_iter);
 
 			/* if real error or no error, proceed with iteration */
 			if (error != GIT_ENOTFOUND)
@@ -946,7 +1003,7 @@ static int handle_unmatched_new_item(
 			 * it or ignore it
 			 */
 			if (contains_oitem)
-				return git_iterator_advance(&info->nitem, info->new_iter);
+				return iterator_advance(&info->nitem, info->new_iter);
 			delta_type = GIT_DELTA_IGNORED;
 		}
 	}
@@ -955,7 +1012,7 @@ static int handle_unmatched_new_item(
 		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_RECURSE_IGNORED_DIRS) &&
 		git_iterator_current_tree_is_ignored(info->new_iter))
 		/* item contained in ignored directory, so skip over it */
-		return git_iterator_advance(&info->nitem, info->new_iter);
+		return iterator_advance(&info->nitem, info->new_iter);
 
 	else if (info->new_iter->type != GIT_ITERATOR_TYPE_WORKDIR)
 		delta_type = GIT_DELTA_ADDED;
@@ -968,12 +1025,12 @@ static int handle_unmatched_new_item(
 
 			/* if this contains a tracked item, treat as normal TREE */
 			if (contains_oitem) {
-				error = git_iterator_advance_into(&info->nitem, info->new_iter);
+				error = iterator_advance_into(&info->nitem, info->new_iter);
 				if (error != GIT_ENOTFOUND)
 					return error;
 
 				giterr_clear();
-				return git_iterator_advance(&info->nitem, info->new_iter);
+				return iterator_advance(&info->nitem, info->new_iter);
 			}
 		}
 	}
@@ -1004,7 +1061,7 @@ static int handle_unmatched_new_item(
 		}
 	}
 
-	return git_iterator_advance(&info->nitem, info->new_iter);
+	return iterator_advance(&info->nitem, info->new_iter);
 }
 
 static int handle_unmatched_old_item(
@@ -1033,10 +1090,10 @@ static int handle_unmatched_old_item(
 		 */
 		if (S_ISDIR(info->nitem->mode) &&
 			DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_RECURSE_UNTRACKED_DIRS))
-			return git_iterator_advance(&info->nitem, info->new_iter);
+			return iterator_advance(&info->nitem, info->new_iter);
 	}
 
-	return git_iterator_advance(&info->oitem, info->old_iter);
+	return iterator_advance(&info->oitem, info->old_iter);
 }
 
 static int handle_matched_item(
@@ -1047,9 +1104,8 @@ static int handle_matched_item(
 	if ((error = maybe_modified(diff, info)) < 0)
 		return error;
 
-	if (!(error = git_iterator_advance(&info->oitem, info->old_iter)) ||
-		error == GIT_ITEROVER)
-		error = git_iterator_advance(&info->nitem, info->new_iter);
+	if (!(error = iterator_advance(&info->oitem, info->old_iter)))
+		error = iterator_advance(&info->nitem, info->new_iter);
 
 	return error;
 }
@@ -1085,13 +1141,9 @@ int git_diff__from_iterators(
 	if ((error = diff_list_apply_options(diff, opts)) < 0)
 		goto cleanup;
 
-	if ((error = git_iterator_current(&info.oitem, old_iter)) < 0 &&
-		error != GIT_ITEROVER)
+	if ((error = iterator_current(&info.oitem, old_iter)) < 0 ||
+		(error = iterator_current(&info.nitem, new_iter)) < 0)
 		goto cleanup;
-	if ((error = git_iterator_current(&info.nitem, new_iter)) < 0 &&
-		error != GIT_ITEROVER)
-		goto cleanup;
-	error = 0;
 
 	/* run iterators building diffs */
 	while (!error && (info.oitem || info.nitem)) {
@@ -1113,10 +1165,6 @@ int git_diff__from_iterators(
 		 */
 		else
 			error = handle_matched_item(diff, &info);
-
-		/* because we are iterating over two lists, ignore ITEROVER */
-		if (error == GIT_ITEROVER)
-			error = 0;
 	}
 
 	diff->perf.stat_calls += old_iter->stat_calls + new_iter->stat_calls;
