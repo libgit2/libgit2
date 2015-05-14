@@ -47,14 +47,17 @@ void test_index_conflicts__add(void)
 	memset(&their_entry, 0x0, sizeof(git_index_entry));
 
 	ancestor_entry.path = "test-one.txt";
+	ancestor_entry.mode = 0100644;
 	ancestor_entry.flags |= (1 << GIT_IDXENTRY_STAGESHIFT);
 	git_oid_fromstr(&ancestor_entry.id, TEST_ANCESTOR_OID);
 
 	our_entry.path = "test-one.txt";
+	our_entry.mode = 0100644;
 	ancestor_entry.flags |= (2 << GIT_IDXENTRY_STAGESHIFT);
 	git_oid_fromstr(&our_entry.id, TEST_OUR_OID);
 
 	their_entry.path = "test-one.txt";
+	their_entry.mode = 0100644;
 	ancestor_entry.flags |= (3 << GIT_IDXENTRY_STAGESHIFT);
 	git_oid_fromstr(&their_entry.id, TEST_THEIR_OID);
 
@@ -75,14 +78,17 @@ void test_index_conflicts__add_fixes_incorrect_stage(void)
 	memset(&their_entry, 0x0, sizeof(git_index_entry));
 
 	ancestor_entry.path = "test-one.txt";
+	ancestor_entry.mode = 0100644;
 	ancestor_entry.flags |= (3 << GIT_IDXENTRY_STAGESHIFT);
 	git_oid_fromstr(&ancestor_entry.id, TEST_ANCESTOR_OID);
 
 	our_entry.path = "test-one.txt";
+	our_entry.mode = 0100644;
 	ancestor_entry.flags |= (1 << GIT_IDXENTRY_STAGESHIFT);
 	git_oid_fromstr(&our_entry.id, TEST_OUR_OID);
 
 	their_entry.path = "test-one.txt";
+	their_entry.mode = 0100644;
 	ancestor_entry.flags |= (2 << GIT_IDXENTRY_STAGESHIFT);
 	git_oid_fromstr(&their_entry.id, TEST_THEIR_OID);
 
@@ -109,8 +115,8 @@ void test_index_conflicts__add_removes_stage_zero(void)
 	memset(&our_entry, 0x0, sizeof(git_index_entry));
 	memset(&their_entry, 0x0, sizeof(git_index_entry));
 
-	staged.mode = 0100644;
 	staged.path = "test-one.txt";
+	staged.mode = 0100644;
 	git_oid_fromstr(&staged.id, TEST_STAGED_OID);
 	cl_git_pass(git_index_add(repo_index, &staged));
 	cl_assert(git_index_entrycount(repo_index) == 9);
@@ -322,6 +328,7 @@ void test_index_conflicts__partial(void)
 	memset(&their_entry, 0x0, sizeof(git_index_entry));
 
 	ancestor_entry.path = "test-one.txt";
+	ancestor_entry.mode = 0100644;
 	ancestor_entry.flags |= (1 << GIT_IDXENTRY_STAGESHIFT);
 	git_oid_fromstr(&ancestor_entry.id, TEST_ANCESTOR_OID);
 

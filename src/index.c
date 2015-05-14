@@ -1317,6 +1317,15 @@ int git_index_conflict_add(git_index *index,
 		(ret = index_entry_dup(&entries[2], INDEX_OWNER(index), their_entry)) < 0)
 		goto on_error;
 
+	/* Validate entries */
+	for (i = 0; i < 3; i++) {
+		if (entries[i] && !valid_filemode(entries[i]->mode)) {
+			giterr_set(GITERR_INDEX, "invalid filemode for stage %d entry",
+				i);
+			return -1;
+		}
+	}
+
 	/* Remove existing index entries for each path */
 	for (i = 0; i < 3; i++) {
 		if (entries[i] == NULL)
