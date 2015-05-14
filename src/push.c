@@ -529,11 +529,12 @@ static int add_update(git_push *push, push_spec *spec)
 
 	u->src_refname = git__strdup(spec->refspec.src);
 	GITERR_CHECK_ALLOC(u->src_refname);
-	u->dst_refname = git__strdup(spec->refspec.src);
+
+	u->dst_refname = git__strdup(spec->refspec.dst);
 	GITERR_CHECK_ALLOC(u->dst_refname);
 
-	git_oid_cpy(&u->src, &spec->loid);
-	git_oid_cpy(&u->dst, &spec->roid);
+	git_oid_cpy(&u->src, &spec->roid);
+	git_oid_cpy(&u->dst, &spec->loid);
 
 	return git_vector_insert(&push->updates, u);
 }
