@@ -601,7 +601,7 @@ static int do_push(git_push *push, const git_remote_callbacks *callbacks)
 		goto on_error;
 
 	if (callbacks && callbacks->push_negotiation &&
-	    (error = callbacks->push_negotiation((const git_push_update **) push->updates.contents,
+	    (error = callbacks->push_negotiation(push->remote, (const git_push_update **) push->updates.contents,
 					  push->updates.length, callbacks->payload)) < 0)
 	    goto on_error;
 
