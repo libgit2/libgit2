@@ -176,7 +176,7 @@ Here are the bindings to libgit2 that are currently available:
 * Chicken Scheme
     * chicken-git <https://wiki.call-cc.org/egg/git>
 * D
-    * dlibgit <https://github.com/AndrejMitrovic/dlibgit>
+    * dlibgit <https://github.com/s-ludwig/dlibgit>
 * Delphi
     * GitForDelphi <https://github.com/libgit2/GitForDelphi>
 * Erlang
