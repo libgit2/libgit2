@@ -408,14 +408,42 @@ static int get_optional_config(
 	return error;
 }
 
+struct url_cb_data {
+	char *val;
+	int nurls;
+	bool fetch;
+};
+
+static int url_cb(const git_config_entry *entry, void *payload)
+{
+	struct url_cb_data *data = payload;
+
+	if (data->nurls > 0) {
+		giterr_set(GITERR_NET, "remotes with more than one url are not supported");
+		return -1;
+	}
+
+	if (!entry->value) {
+		giterr_set(GITERR_NET, "invalid value for %s", data->fetch ? "url" : "pushurl");
+		return -1;
+	}
+
+	data->val = git__strdup(entry->value);
+	GITERR_CHECK_ALLOC(data->val);
+	data->nurls++;
+
+	return 0;
+}
+
 int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 {
 	git_remote *remote;
 	git_buf buf = GIT_BUF_INIT;
-	const char *val;
+	char *val;
 	int error = 0;
 	git_config *config;
 	struct refspec_cb_data data = { NULL };
+	struct url_cb_data url_data;
 	bool optional_setting_found = false, found;
 
 	assert(out && repo && name);
@@ -443,26 +471,34 @@ int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 	if ((error = git_buf_printf(&buf, "remote.%s.url", name)) < 0)
 		goto cleanup;
 
-	if ((error = get_optional_config(&found, config, &buf, NULL, (void *)&val)) < 0)
+	url_data.val   = NULL;
+	url_data.nurls = 0;
+	url_data.fetch = true;
+	if ((error = get_optional_config(&found, config, &buf, url_cb, &url_data)) < 0)
 		goto cleanup;
 
+	val = url_data.val;
 	optional_setting_found |= found;
 
 	remote->repo = repo;
 	remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_AUTO;
 
-	if (found && strlen(val) > 0) {
-		remote->url = git__strdup(val);
-		GITERR_CHECK_ALLOC(remote->url);
-	}
+	if (found && strlen(val) > 0)
+		remote->url = val;
+	else
+		git__free(val);
 
 	val = NULL;
 	git_buf_clear(&buf);
 	git_buf_printf(&buf, "remote.%s.pushurl", name);
 
-	if ((error = get_optional_config(&found, config, &buf, NULL, (void *)&val)) < 0)
+	url_data.val   = NULL;
+	url_data.nurls = 0;
+	url_data.fetch = true;
+	if ((error = get_optional_config(&found, config, &buf, url_cb, &url_data)) < 0)
 		goto cleanup;
 
+	val = url_data.val;
 	optional_setting_found |= found;
 
 	if (!optional_setting_found) {
@@ -471,10 +507,10 @@ int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 		goto cleanup;
 	}
 
-	if (found && strlen(val) > 0) {
-		remote->pushurl = git__strdup(val);
-		GITERR_CHECK_ALLOC(remote->pushurl);
-	}
+	if (found && strlen(val) > 0)
+		remote->pushurl = val;
+	else
+		git__free(val);
 
 	data.remote = remote;
 	data.fetch = true;
