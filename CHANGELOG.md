@@ -42,6 +42,9 @@ support for HTTPS connections insead of OpenSSL.
   remote functions now take these options or the callbacks instead of
   setting them beforehand.
 
+* The index now uses diffs for `add_all()` and `update_all()` which
+  gives it a speed boost and closer semantics to git.
+
 
 ### API additions
 
