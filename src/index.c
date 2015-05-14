@@ -1173,6 +1173,9 @@ int git_index_remove_bypath(git_index *index, const char *path)
 		ret != GIT_ENOTFOUND))
 		return ret;
 
+	if (ret == GIT_ENOTFOUND)
+		giterr_clear();
+
 	return 0;
 }
 
