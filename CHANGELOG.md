@@ -49,6 +49,8 @@ support for HTTPS connections insead of OpenSSL.
   the error message, which allows you to get the "repository not
   found" messages.
 
+* `git_index_conflict_add()` will remove staged entries that exist for
+  conflicted paths.
 
 ### API additions
 

@@ -16,6 +16,7 @@ static git_index *repo_index;
 #define CONFLICTS_TWO_OUR_OID "8b3f43d2402825c200f835ca1762413e386fd0b2"
 #define CONFLICTS_TWO_THEIR_OID "220bd62631c8cf7a83ef39c6b94595f00517211e"
 
+#define TEST_STAGED_OID "beefdadafeedabedcafedeedbabedeadbeaddeaf"
 #define TEST_ANCESTOR_OID "f00ff00ff00ff00ff00ff00ff00ff00ff00ff00f"
 #define TEST_OUR_OID "b44bb44bb44bb44bb44bb44bb44bb44bb44bb44b"
 #define TEST_THEIR_OID "0123456789abcdef0123456789abcdef01234567"
@@ -94,6 +95,55 @@ void test_index_conflicts__add_fixes_incorrect_stage(void)
 	cl_assert(git_index_entry_stage(conflict_entry[0]) == 1);
 	cl_assert(git_index_entry_stage(conflict_entry[1]) == 2);
 	cl_assert(git_index_entry_stage(conflict_entry[2]) == 3);
+}
+
+void test_index_conflicts__add_removes_stage_zero(void)
+{
+	git_index_entry staged, ancestor_entry, our_entry, their_entry;
+	const git_index_entry *conflict_entry[3];
+
+	cl_assert(git_index_entrycount(repo_index) == 8);
+
+	memset(&staged, 0x0, sizeof(git_index_entry));
+	memset(&ancestor_entry, 0x0, sizeof(git_index_entry));
+	memset(&our_entry, 0x0, sizeof(git_index_entry));
+	memset(&their_entry, 0x0, sizeof(git_index_entry));
+
+	staged.mode = 0100644;
+	staged.path = "test-one.txt";
+	git_oid_fromstr(&staged.id, TEST_STAGED_OID);
+	cl_git_pass(git_index_add(repo_index, &staged));
+	cl_assert(git_index_entrycount(repo_index) == 9);
+
+	ancestor_entry.path = "test-one.txt";
+	ancestor_entry.mode = 0100644;
+	ancestor_entry.flags |= (3 << GIT_IDXENTRY_STAGESHIFT);
+	git_oid_fromstr(&ancestor_entry.id, TEST_ANCESTOR_OID);
+
+	our_entry.path = "test-one.txt";
+	our_entry.mode = 0100644;
+	our_entry.flags |= (1 << GIT_IDXENTRY_STAGESHIFT);
+	git_oid_fromstr(&our_entry.id, TEST_OUR_OID);
+
+	their_entry.path = "test-one.txt";
+	their_entry.mode = 0100644;
+	their_entry.flags |= (2 << GIT_IDXENTRY_STAGESHIFT);
+	git_oid_fromstr(&their_entry.id, TEST_THEIR_OID);
+
+	cl_git_pass(git_index_conflict_add(repo_index, &ancestor_entry, &our_entry, &their_entry));
+
+	cl_assert(git_index_entrycount(repo_index) == 11);
+
+	cl_assert_equal_p(NULL, git_index_get_bypath(repo_index, "test-one.txt", 0));
+
+	cl_git_pass(git_index_conflict_get(&conflict_entry[0], &conflict_entry[1], &conflict_entry[2], repo_index, "test-one.txt"));
+
+	cl_assert_equal_oid(&ancestor_entry.id, &conflict_entry[0]->id);
+	cl_assert_equal_i(1, git_index_entry_stage(conflict_entry[0]));
+	cl_assert_equal_oid(&our_entry.id, &conflict_entry[1]->id);
+	cl_assert_equal_i(2, git_index_entry_stage(conflict_entry[1]));
+	cl_assert_equal_oid(&their_entry.id, &conflict_entry[2]->id);
+	cl_assert_equal_i(3, git_index_entry_stage(conflict_entry[2]));
 }
 
 void test_index_conflicts__get(void)

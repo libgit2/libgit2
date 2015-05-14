@@ -631,7 +631,8 @@ GIT_EXTERN(int) git_index_find(size_t *at_pos, git_index *index, const char *pat
 /**@{*/
 
 /**
- * Add or update index entries to represent a conflict
+ * Add or update index entries to represent a conflict.  Any staged
+ * entries that exist at the given paths will be removed.
  *
  * The entries are the entries from the tree included in the merge.  Any
  * entry may be null to indicate that that file was not present in the

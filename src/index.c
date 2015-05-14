@@ -1314,6 +1314,21 @@ int git_index_conflict_add(git_index *index,
 		(ret = index_entry_dup(&entries[2], INDEX_OWNER(index), their_entry)) < 0)
 		goto on_error;
 
+	/* Remove existing index entries for each path */
+	for (i = 0; i < 3; i++) {
+		if (entries[i] == NULL)
+			continue;
+
+		if ((ret = git_index_remove(index, entries[i]->path, 0)) != 0) {
+			if (ret != GIT_ENOTFOUND)
+				goto on_error;
+
+			giterr_clear();
+			ret = 0;
+		}
+	}
+
+	/* Add the conflict entries */
 	for (i = 0; i < 3; i++) {
 		if (entries[i] == NULL)
 			continue;
@@ -1321,7 +1336,7 @@ int git_index_conflict_add(git_index *index,
 		/* Make sure stage is correct */
 		GIT_IDXENTRY_STAGE_SET(entries[i], i + 1);
 
-		if ((ret = index_insert(index, &entries[i], 1, true)) < 0)
+		if ((ret = index_insert(index, &entries[i], 0, true)) < 0)
 			goto on_error;
 
 		entries[i] = NULL; /* don't free if later entry fails */

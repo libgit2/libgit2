@@ -634,7 +634,7 @@ void test_status_worktree__conflicted_item(void)
 		&our_entry, &their_entry));
 
 	cl_git_pass(git_status_file(&status, repo, "modified_file"));
-	cl_assert_equal_i(GIT_STATUS_WT_MODIFIED, status);
+	cl_assert_equal_i(GIT_STATUS_INDEX_DELETED|GIT_STATUS_WT_NEW, status);
 
 	git_index_free(index);
 }
