@@ -186,6 +186,11 @@ support for HTTPS connections insead of OpenSSL.
 * The `push` function in the `git_transport` interface now takes a
   pointer to the remote callbacks.
 
+* The `git_index_entry` struct's fields' types have been changed to
+  more accurately reflect what is in fact stored in the
+  index. Specifically, time and file size are 32 bits intead of 64, as
+  these values are truncated.
+
 v0.22
 ------
 
