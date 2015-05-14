@@ -190,16 +190,6 @@ GIT_EXTERN(int) git_remote_add_fetch(git_repository *repo, const char *remote, c
 GIT_EXTERN(int) git_remote_get_fetch_refspecs(git_strarray *array, const git_remote *remote);
 
 /**
- * Set the remote's list of fetch refspecs
- *
- * The contents of the string array are copied.
- *
- * @param remote the remote to modify
- * @param array the new list of fetch resfpecs
- */
-GIT_EXTERN(int) git_remote_set_fetch_refspecs(git_remote *remote, git_strarray *array);
-
-/**
  * Add a push refspec to the remote's configuration
  *
  * Add the given refspec to the push list in the configuration. No
@@ -222,16 +212,6 @@ GIT_EXTERN(int) git_remote_add_push(git_repository *repo, const char *remote, co
  * @param remote the remote to query
  */
 GIT_EXTERN(int) git_remote_get_push_refspecs(git_strarray *array, const git_remote *remote);
-
-/**
- * Set the remote's list of push refspecs
- *
- * The contents of the string array are copied.
- *
- * @param remote the remote to modify
- * @param array the new list of push resfpecs
- */
-GIT_EXTERN(int) git_remote_set_push_refspecs(git_remote *remote, git_strarray *array);
 
 /**
  * Get the number of refspecs for a remote

@@ -97,6 +97,10 @@ support for HTTPS connections insead of OpenSSL.
   `git_remote_set_transport()` have been removed and the remote no
   longer stores this configuration.
 
+* `git_remote_set_fetch_refpecs()` and
+  `git_remote_set_push_refspecs()` have been removed. There is no
+  longer a way to set the base refspecs at run-time.
+
 ### Breaking API changes
 
 * `git_smart_subtransport_cb` now has a `param` parameter.

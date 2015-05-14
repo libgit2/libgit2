@@ -318,8 +318,9 @@ int git_remote_create_anonymous(git_remote **out, git_repository *repo, const ch
 
 int git_remote_dup(git_remote **dest, git_remote *source)
 {
+	size_t i;
 	int error = 0;
-	git_strarray refspecs = { 0 };
+	git_refspec *spec;
 	git_remote *remote = git__calloc(1, sizeof(git_remote));
 	GITERR_CHECK_ALLOC(remote);
 
@@ -349,21 +350,14 @@ int git_remote_dup(git_remote **dest, git_remote *source)
 		goto cleanup;
 	}
 
-	if ((error = git_remote_get_fetch_refspecs(&refspecs, source)) < 0 ||
-	    (error = git_remote_set_fetch_refspecs(remote, &refspecs)) < 0)
-		goto cleanup;
-
-	git_strarray_free(&refspecs);
-
-	if ((error = git_remote_get_push_refspecs(&refspecs, source)) < 0 ||
-	    (error = git_remote_set_push_refspecs(remote, &refspecs)) < 0)
-		goto cleanup;
+	git_vector_foreach(&source->refspecs, i, spec) {
+		if ((error = add_refspec(remote, spec->string, !spec->push)) < 0)
+			goto cleanup;
+	}
 
 	*dest = remote;
 
 cleanup:
-
-	git_strarray_free(&refspecs);
 
 	if (error < 0)
 		git__free(remote);
@@ -2044,16 +2038,6 @@ static int set_refspecs(git_remote *remote, git_strarray *array, int push)
 	}
 
 	return 0;
-}
-
-int git_remote_set_fetch_refspecs(git_remote *remote, git_strarray *array)
-{
-	return set_refspecs(remote, array, false);
-}
-
-int git_remote_set_push_refspecs(git_remote *remote, git_strarray *array)
-{
-	return set_refspecs(remote, array, true);
 }
 
 static int copy_refspecs(git_strarray *array, const git_remote *remote, unsigned int push)
