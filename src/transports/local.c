@@ -474,6 +474,7 @@ static int local_counting(int stage, unsigned int current, unsigned int total, v
 {
 	git_buf progress_info = GIT_BUF_INIT;
 	transport_local *t = payload;
+	int error;
 
 	if (!t->progress_cb)
 		return 0;
@@ -493,7 +494,10 @@ static int local_counting(int stage, unsigned int current, unsigned int total, v
 	if (git_buf_oom(&progress_info))
 		return -1;
 
-	return t->progress_cb(git_buf_cstr(&progress_info), git_buf_len(&progress_info), t->message_cb_payload);
+	error = t->progress_cb(git_buf_cstr(&progress_info), git_buf_len(&progress_info), t->message_cb_payload);
+	git_buf_free(&progress_info);
+
+	return error;
 }
 
 static int local_download_pack(
