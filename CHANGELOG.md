@@ -100,6 +100,14 @@ support for HTTPS connections insead of OpenSSL.
   configuration of the server, and tools can use this to show messages
   about failing to communicate with the server.
 
+* `git_diff_index_to_workdir()` and `git_diff_tree_to_index()` will now
+  produce deltas of type `GIT_DELTA_CONFLICTED` to indicate that the index
+  side of the delta is a conflict.
+
+* The `git_status` family of functions will now produce status of type
+  `GIT_STATUS_CONFLICTED` to indicate that a conflict exists for that file
+  in the index.
+
 ### API removals
 
 * `git_remote_save()` and `git_remote_clear_refspecs()` has been

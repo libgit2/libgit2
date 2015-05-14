@@ -327,6 +327,22 @@ static const char *diff_mnemonic_prefix(
 	return pfx;
 }
 
+static int diff_entry_cmp(const void *a, const void *b)
+{
+	const git_index_entry *entry_a = a;
+	const git_index_entry *entry_b = b;
+
+	return strcmp(entry_a->path, entry_b->path);
+}
+
+static int diff_entry_icmp(const void *a, const void *b)
+{
+	const git_index_entry *entry_a = a;
+	const git_index_entry *entry_b = b;
+
+	return strcasecmp(entry_a->path, entry_b->path);
+}
+
 static void diff_set_ignore_case(git_diff *diff, bool ignore_case)
 {
 	if (!ignore_case) {
@@ -335,7 +351,7 @@ static void diff_set_ignore_case(git_diff *diff, bool ignore_case)
 		diff->strcomp    = git__strcmp;
 		diff->strncomp   = git__strncmp;
 		diff->pfxcomp    = git__prefixcmp;
-		diff->entrycomp  = git_index_entry_cmp;
+		diff->entrycomp  = diff_entry_cmp;
 
 		git_vector_set_cmp(&diff->deltas, git_diff_delta__cmp);
 	} else {
@@ -344,7 +360,7 @@ static void diff_set_ignore_case(git_diff *diff, bool ignore_case)
 		diff->strcomp    = git__strcasecmp;
 		diff->strncomp   = git__strncasecmp;
 		diff->pfxcomp    = git__prefixcmp_icase;
-		diff->entrycomp  = git_index_entry_icmp;
+		diff->entrycomp  = diff_entry_icmp;
 
 		git_vector_set_cmp(&diff->deltas, git_diff_delta__casecmp);
 	}
@@ -731,8 +747,12 @@ static int maybe_modified(
 		new_is_workdir)
 		nmode = (nmode & ~MODE_BITS_MASK) | (omode & MODE_BITS_MASK);
 
+	/* if one side is a conflict, mark the whole delta as conflicted */
+	if (git_index_entry_stage(oitem) > 0 || git_index_entry_stage(nitem) > 0)
+		status = GIT_DELTA_CONFLICTED;
+
 	/* support "assume unchanged" (poorly, b/c we still stat everything) */
-	if ((oitem->flags & GIT_IDXENTRY_VALID) != 0)
+	else if ((oitem->flags & GIT_IDXENTRY_VALID) != 0)
 		status = GIT_DELTA_UNMODIFIED;
 
 	/* support "skip worktree" index bit */
@@ -875,9 +895,29 @@ static int iterator_advance(
 	const git_index_entry **entry,
 	git_iterator *iterator)
 {
-	int error;
+	const git_index_entry *prev_entry = *entry;
+	int cmp, error;
 
-	if ((error = git_iterator_advance(entry, iterator)) == GIT_ITEROVER) {
+	/* if we're looking for conflicts, we only want to report
+	 * one conflict for each file, instead of all three sides.
+	 * so if this entry is a conflict for this file, and the
+	 * previous one was a conflict for the same file, skip it.
+	 */
+	while ((error = git_iterator_advance(entry, iterator)) == 0) {
+		if (!(iterator->flags & GIT_ITERATOR_INCLUDE_CONFLICTS) ||
+			git_index_entry_stage(prev_entry) == 0 ||
+			git_index_entry_stage(*entry) == 0)
+			break;
+
+		cmp = (iterator->flags & GIT_ITERATOR_IGNORE_CASE) ?
+			strcasecmp(prev_entry->path, (*entry)->path) :
+			strcmp(prev_entry->path, (*entry)->path);
+
+		if (cmp)
+			break;
+	}
+
+	if (error == GIT_ITEROVER) {
 		*entry = NULL;
 		error = 0;
 	}
@@ -926,8 +966,12 @@ static int handle_unmatched_new_item(
 	/* check if this is a prefix of the other side */
 	contains_oitem = entry_is_prefixed(diff, info->oitem, nitem);
 
+	/* update delta_type if this item is conflicted */
+	if (git_index_entry_stage(nitem))
+		delta_type = GIT_DELTA_CONFLICTED;
+
 	/* update delta_type if this item is ignored */
-	if (git_iterator_current_is_ignored(info->new_iter))
+	else if (git_iterator_current_is_ignored(info->new_iter))
 		delta_type = GIT_DELTA_IGNORED;
 
 	if (nitem->mode == GIT_FILEMODE_TREE) {
@@ -1067,8 +1111,14 @@ static int handle_unmatched_new_item(
 static int handle_unmatched_old_item(
 	git_diff *diff, diff_in_progress *info)
 {
-	int error = diff_delta__from_one(diff, GIT_DELTA_DELETED, info->oitem);
-	if (error != 0)
+	git_delta_t delta_type = GIT_DELTA_DELETED;
+	int error;
+
+	/* update delta_type if this item is conflicted */
+	if (git_index_entry_stage(info->oitem))
+		delta_type = GIT_DELTA_CONFLICTED;
+
+	if ((error = diff_delta__from_one(diff, delta_type, info->oitem)) < 0)
 		return error;
 
 	/* if we are generating TYPECHANGE records then check for that
@@ -1234,6 +1284,8 @@ int git_diff_tree_to_index(
 {
 	int error = 0;
 	bool index_ignore_case = false;
+	git_iterator_flag_t iflag = GIT_ITERATOR_DONT_IGNORE_CASE |
+		GIT_ITERATOR_INCLUDE_CONFLICTS;
 
 	assert(diff && repo);
 
@@ -1243,10 +1295,8 @@ int git_diff_tree_to_index(
 	index_ignore_case = index->ignore_case;
 
 	DIFF_FROM_ITERATORS(
-		git_iterator_for_tree(
-			&a, old_tree, GIT_ITERATOR_DONT_IGNORE_CASE, pfx, pfx),
-		git_iterator_for_index(
-			&b, index, GIT_ITERATOR_DONT_IGNORE_CASE, pfx, pfx)
+		git_iterator_for_tree(&a, old_tree, iflag, pfx, pfx),
+		git_iterator_for_index(&b, index, iflag, pfx, pfx)
 	);
 
 	/* if index is in case-insensitive order, re-sort deltas to match */
@@ -1270,7 +1320,8 @@ int git_diff_index_to_workdir(
 		return error;
 
 	DIFF_FROM_ITERATORS(
-		git_iterator_for_index(&a, index, 0, pfx, pfx),
+		git_iterator_for_index(
+			&a, index, GIT_ITERATOR_INCLUDE_CONFLICTS, pfx, pfx),
 		git_iterator_for_workdir(
 			&b, repo, index, NULL, GIT_ITERATOR_DONT_AUTOEXPAND, pfx, pfx)
 	);

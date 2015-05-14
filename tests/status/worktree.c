@@ -487,7 +487,7 @@ void test_status_worktree__conflict_with_diff3(void)
 
 	cl_git_pass(git_status_file(&status, repo, "modified_file"));
 
-	cl_assert_equal_i(GIT_STATUS_INDEX_DELETED | GIT_STATUS_WT_NEW, status);
+	cl_assert_equal_i(GIT_STATUS_CONFLICTED, status);
 }
 
 static const char *filemode_paths[] = {
@@ -640,7 +640,7 @@ void test_status_worktree__conflicted_item(void)
 		&our_entry, &their_entry));
 
 	cl_git_pass(git_status_file(&status, repo, "modified_file"));
-	cl_assert_equal_i(GIT_STATUS_INDEX_DELETED|GIT_STATUS_WT_NEW, status);
+	cl_assert_equal_i(GIT_STATUS_CONFLICTED, status);
 
 	git_index_free(index);
 }
