@@ -703,6 +703,9 @@ static int cp_by_fd(int ifd, int ofd, bool close_fd_when_done)
 		error = (int)len;
 	}
 
+	if (error < 0)
+		giterr_set(GITERR_OS, "write error while copying file");
+
 	if (close_fd_when_done) {
 		p_close(ifd);
 		p_close(ofd);
