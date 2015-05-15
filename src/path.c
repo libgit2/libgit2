@@ -1038,11 +1038,13 @@ int git_path_direach(
 		if ((error = git_buf_put(path, de_path, de_len)) < 0)
 			break;
 
+		giterr_clear();
 		error = fn(arg, path);
 
 		git_buf_truncate(path, wd_len); /* restore path */
 
-		if (error != 0) {
+		/* Only set our own error if the callback did not set one already */
+		if (error != 0 && !giterr_last()) {
 			giterr_set_after_callback(error);
 			break;
 		}
