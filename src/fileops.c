@@ -818,7 +818,8 @@ static int _cp_r_callback(void *ref, git_buf *from)
 
 	/* make symlink or regular file */
 	if (info->flags & GIT_CPDIR_LINK_FILES) {
-		error = p_link(from->ptr, info->to.ptr);
+		if ((error = p_link(from->ptr, info->to.ptr)) < 0)
+			giterr_set(GITERR_OS, "failed to link '%s'", from->ptr);
 	} else if (S_ISLNK(from_st.st_mode)) {
 		error = cp_link(from->ptr, info->to.ptr, (size_t)from_st.st_size);
 	} else {
