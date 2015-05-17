@@ -18,139 +18,6 @@ void test_checkout_crlf__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-void test_checkout_crlf__autocrlf_false(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", false);
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
-}
-
-void test_checkout_crlf__autocrlf_false_index_size_is_unfiltered_size(void)
-{
-	git_index *index;
-	const git_index_entry *entry;
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", false);
-
-	git_checkout_head(g_repo, &opts);
-
-	git_repository_index(&index, g_repo);
-
-	cl_assert((entry = git_index_get_bypath(index, "all-lf", 0)) != NULL);
-	cl_assert(entry->file_size == strlen(ALL_LF_TEXT_RAW));
-
-	cl_assert((entry = git_index_get_bypath(index, "all-crlf", 0)) != NULL);
-	cl_assert(entry->file_size == strlen(ALL_CRLF_TEXT_RAW));
-
-	cl_assert((entry = git_index_get_bypath(index, "more-lf", 0)) != NULL);
-	cl_assert(entry->file_size == strlen(MORE_LF_TEXT_RAW));
-
-	cl_assert((entry = git_index_get_bypath(index, "more-crlf", 0)) != NULL);
-	cl_assert(entry->file_size == strlen(MORE_CRLF_TEXT_RAW));
-
-	cl_assert((entry = git_index_get_bypath(index, "mixed-lf-cr", 0)) != NULL);
-	cl_assert(entry->file_size == strlen(MIXED_LF_CR_RAW));
-
-	cl_assert((entry = git_index_get_bypath(index, "mixed-lf-cr-crlf", 0)) != NULL);
-	cl_assert(entry->file_size == strlen(MIXED_LF_CR_CRLF_RAW));
-
-	cl_assert((entry = git_index_get_bypath(index, "binary-all-lf", 0)) != NULL);
-	cl_assert(entry->file_size == strlen(BINARY_ALL_LF_TEXT_RAW));
-
-	cl_assert((entry = git_index_get_bypath(index, "binary-all-crlf", 0)) != NULL);
-	cl_assert(entry->file_size == strlen(BINARY_ALL_CRLF_TEXT_RAW));
-
-	cl_assert((entry = git_index_get_bypath(index, "binary-mixed-lf-cr", 0)) != NULL);
-	cl_assert(entry->file_size == strlen(BINARY_MIXED_LF_CR_RAW));
-
-	cl_assert((entry = git_index_get_bypath(index, "binary-mixed-lf-cr-crlf", 0)) != NULL);
-	cl_assert(entry->file_size == strlen(BINARY_MIXED_LF_CR_CRLF_RAW));
-
-	git_index_free(index);
-}
-
-void test_checkout_crlf__autocrlf_true(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", true);
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
-}
-
-void test_checkout_crlf__detect_crlf_autocrlf_true_utf8(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", true);
-
-	git_repository_set_head(g_repo, "refs/heads/utf8");
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/few-utf8-chars-lf.txt", FEW_UTF8_CRLF_RAW);
-	check_file_contents("./crlf/many-utf8-chars-lf.txt", MANY_UTF8_CRLF_RAW);
-
-	check_file_contents("./crlf/few-utf8-chars-crlf.txt", FEW_UTF8_CRLF_RAW);
-	check_file_contents("./crlf/many-utf8-chars-crlf.txt", MANY_UTF8_CRLF_RAW);
-}
-
-void test_checkout_crlf__autocrlf_true_index_size_is_filtered_size(void)
-{
-	git_index *index;
-	const git_index_entry *entry;
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", true);
-
-	git_checkout_head(g_repo, &opts);
-
-	git_repository_index(&index, g_repo);
-
-	cl_assert((entry = git_index_get_bypath(index, "all-lf", 0)) != NULL);
-	cl_assert_equal_sz(strlen(ALL_LF_TEXT_AS_CRLF), entry->file_size);
-
-	cl_assert((entry = git_index_get_bypath(index, "all-crlf", 0)) != NULL);
-	cl_assert_equal_sz(strlen(ALL_CRLF_TEXT_RAW), entry->file_size);
-
-	git_index_free(index);
-}
-
 void test_checkout_crlf__with_ident(void)
 {
 	git_index *index;
@@ -232,848 +99,6 @@ void test_checkout_crlf__with_ident(void)
 	git_index_free(index);
 }
 
-void test_checkout_crlf__autocrlf_input(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_repo_set_string(g_repo, "core.autocrlf", "input");
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
-}
-
-void test_checkout_crlf__autocrlf_false__text_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* text\n");
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", false);
-
-	git_checkout_head(g_repo, &opts);
-
-	if (GIT_EOL_NATIVE == GIT_EOL_CRLF) {
-		check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
-		check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
-
-		check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
-		check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
-
-		check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
-		check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_AS_CRLF);
-
-		check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_AS_CRLF);
-		check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_AS_CRLF);
-		check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
-		check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_AS_CRLF);
-	} else {
-		check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-		check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-
-		check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
-		check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
-
-		check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
-		check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
-
-		check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
-		check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
-		check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
-		check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
-	}
-}
-
-void test_checkout_crlf__autocrlf_true__text_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* text\n");
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", true);
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_AS_CRLF);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_AS_CRLF);
-}
-
-void test_checkout_crlf__autocrlf_input__text_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* text\n");
-
-	cl_repo_set_string(g_repo, "core.autocrlf", "input");
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
-}
-
-void test_checkout_crlf__autocrlf_false__text_auto_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* text=auto\n");
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", false);
-
-	git_checkout_head(g_repo, &opts);
-
-	if (GIT_EOL_NATIVE == GIT_EOL_CRLF) {
-		check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
-		check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
-
-		check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
-		check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
-	} else {
-		check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-		check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-
-		check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
-		check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
-	}
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
-}
-
-void test_checkout_crlf__autocrlf_true__text_auto_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* text=auto\n");
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", true);
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
-}
-
-void test_checkout_crlf__autocrlf_input__text_auto_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* text=auto\n");
-
-	cl_repo_set_string(g_repo, "core.autocrlf", "input");
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
-}
-
-void test_checkout_crlf__autocrlf_false__text__eol_crlf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* text eol=crlf\n");
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", false);
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_AS_CRLF);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_AS_CRLF);
-}
-
-void test_checkout_crlf__autocrlf_true__text__eol_crlf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* text eol=crlf\n");
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", true);
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_AS_CRLF);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_AS_CRLF);
-}
-
-void test_checkout_crlf__autocrlf_input__text__eol_crlf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* text eol=crlf\n");
-
-	cl_repo_set_string(g_repo, "core.autocrlf", "input");
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_AS_CRLF);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_AS_CRLF);
-}
-
-void test_checkout_crlf__autocrlf_false__text__eol_lf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* text eol=lf\n");
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", false);
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
-}
-
-void test_checkout_crlf__autocrlf_true__text__eol_lf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* text eol=lf\n");
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", true);
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
-}
-
-void test_checkout_crlf__autocrlf_input__text__eol_lf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* text eol=lf\n");
-
-	cl_repo_set_string(g_repo, "core.autocrlf", "input");
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
-}
-
-void test_checkout_crlf__autocrlf_false__eol_lf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* eol=lf\n");
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", false);
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
-}
-
-void test_checkout_crlf__autocrlf_true__eol_lf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* eol=lf\n");
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", true);
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
-}
-
-void test_checkout_crlf__autocrlf_input__eol_lf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* eol=lf\n");
-
-	cl_repo_set_string(g_repo, "core.autocrlf", "input");
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
-}
-
-void test_checkout_crlf__autocrlf_false__eol_crlf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* eol=crlf\n");
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", false);
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_AS_CRLF);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_AS_CRLF);
-}
-
-void test_checkout_crlf__autocrlf_true__eol_crlf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* eol=crlf\n");
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", true);
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_AS_CRLF);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_AS_CRLF);
-}
-
-void test_checkout_crlf__autocrlf_input__eol_crlf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* eol=crlf\n");
-
-	cl_repo_set_string(g_repo, "core.autocrlf", "input");
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_AS_CRLF);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_AS_CRLF);
-}
-
-void test_checkout_crlf__autocrlf_false__crlf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* crlf\n");
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", false);
-
-	git_checkout_head(g_repo, &opts);
-
-	if (GIT_EOL_NATIVE == GIT_EOL_LF) {
-		check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-		check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
-
-		check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
-		check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
-
-		check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
-		check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
-
-		check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
-		check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_AS_CRLF);
-		check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
-		check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
-	} else {
-		check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
-		check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
-
-		check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
-		check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
-
-		check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
-		check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_AS_CRLF);
-
-		check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_AS_CRLF);
-		check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_AS_CRLF);
-		check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
-		check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_AS_CRLF);
-	}
-}
-
-void test_checkout_crlf__autocrlf_true__crlf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* crlf\n");
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", true);
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_AS_CRLF);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_AS_CRLF);
-}
-
-void test_checkout_crlf__autocrlf_input__crlf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* crlf\n");
-
-	cl_repo_set_string(g_repo, "core.autocrlf", "input");
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
-}
-
-void test_checkout_crlf__autocrlf_false__no_crlf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* -crlf\n");
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", false);
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
-}
-
-void test_checkout_crlf__autocrlf_true__no_crlf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* -crlf\n");
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", true);
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
-}
-
-void test_checkout_crlf__autocrlf_input__no_crlf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* -crlf\n");
-
-	cl_repo_set_string(g_repo, "core.autocrlf", "input");
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
-}
-
-void test_checkout_crlf__autocrlf_false__text_auto__eol_lf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* text=auto eol=lf\n");
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", false);
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
-}
-
-void test_checkout_crlf__autocrlf_true__text_auto__eol_lf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* text=auto eol=lf\n");
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", true);
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
-}
-
-void test_checkout_crlf__autocrlf_input__text_auto__eol_lf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* text=auto eol=lf\n");
-
-	cl_repo_set_string(g_repo, "core.autocrlf", "input");
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
-}
-
-void test_checkout_crlf__autocrlf_false_text_auto__eol_crlf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* text=auto eol=crlf\n");
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", true);
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_AS_CRLF);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_AS_CRLF);
-}
-
-void test_checkout_crlf__autocrlf_true_text_auto__eol_crlf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* text=auto eol=crlf\n");
-
-	cl_repo_set_bool(g_repo, "core.autocrlf", true);
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_AS_CRLF);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_AS_CRLF);
-}
-
-void test_checkout_crlf__autocrlf_input_text_auto__eol_crlf_attr(void)
-{
-	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	cl_git_mkfile("./crlf/.gitattributes", "* text=auto eol=crlf\n");
-
-	cl_repo_set_string(g_repo, "core.autocrlf", "input");
-
-	git_checkout_head(g_repo, &opts);
-
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
-
-	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
-
-	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
-	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_AS_CRLF);
-
-	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_AS_CRLF);
-	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
-	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_AS_CRLF);
-}
-
 void test_checkout_crlf__can_write_empty_file(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
@@ -1086,10 +111,1460 @@ void test_checkout_crlf__can_write_empty_file(void)
 
 	check_file_contents("./crlf/test1.txt", "");
 
-	if (GIT_EOL_NATIVE == GIT_EOL_LF)
-		check_file_contents("./crlf/test2.txt", "test2.txt's content\n");
-	else
-		check_file_contents("./crlf/test2.txt", "test2.txt's content\r\n");
+	check_file_contents("./crlf/test2.txt", "test2.txt's content\r\n");
 
 	check_file_contents("./crlf/test3.txt", "");
 }
+
+// the following tests are auto-generated, with generate.sh in multitest-checkout-folder of crlf-test-generator.7z
+#ifdef GIT_WIN32
+void test_checkout_crlf__autocrlf_false(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "false");
+
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_true(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "true");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_input(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_false__text_auto_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "false");
+	cl_git_mkfile("./crlf/.gitattributes", "* text=auto\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_true__text_auto_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "true");
+	cl_git_mkfile("./crlf/.gitattributes", "* text=auto\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_input__text_auto_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+	cl_git_mkfile("./crlf/.gitattributes", "* text=auto\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_false__text_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "false");
+	cl_git_mkfile("./crlf/.gitattributes", "* text\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+
+void test_checkout_crlf__autocrlf_true__text_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "true");
+	cl_git_mkfile("./crlf/.gitattributes", "* text\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+
+void test_checkout_crlf__autocrlf_input__text_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+	cl_git_mkfile("./crlf/.gitattributes", "* text\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_false__eol_lf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "false");
+	cl_git_mkfile("./crlf/.gitattributes", "* eol=lf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_true__eol_lf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "true");
+	cl_git_mkfile("./crlf/.gitattributes", "* eol=lf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_input__eol_lf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+	cl_git_mkfile("./crlf/.gitattributes", "* eol=lf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_false__eol_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "false");
+	cl_git_mkfile("./crlf/.gitattributes", "* eol=crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+
+void test_checkout_crlf__autocrlf_true__eol_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "true");
+	cl_git_mkfile("./crlf/.gitattributes", "* eol=crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+
+void test_checkout_crlf__autocrlf_input__eol_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+	cl_git_mkfile("./crlf/.gitattributes", "* eol=crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+
+void test_checkout_crlf__autocrlf_false__crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "false");
+	cl_git_mkfile("./crlf/.gitattributes", "* crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+
+void test_checkout_crlf__autocrlf_true__crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "true");
+	cl_git_mkfile("./crlf/.gitattributes", "* crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+
+void test_checkout_crlf__autocrlf_input__crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+	cl_git_mkfile("./crlf/.gitattributes", "* crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_false__no_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "false");
+	cl_git_mkfile("./crlf/.gitattributes", "* -crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_true__no_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "true");
+	cl_git_mkfile("./crlf/.gitattributes", "* -crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_input__no_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+	cl_git_mkfile("./crlf/.gitattributes", "* -crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_false__texteol_lf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "false");
+	cl_git_mkfile("./crlf/.gitattributes", "* text eol=lf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_true__texteol_lf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "true");
+	cl_git_mkfile("./crlf/.gitattributes", "* text eol=lf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_input__texteol_lf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+	cl_git_mkfile("./crlf/.gitattributes", "* text eol=lf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_false__texteol_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "false");
+	cl_git_mkfile("./crlf/.gitattributes", "* text eol=crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+
+void test_checkout_crlf__autocrlf_true__texteol_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "true");
+	cl_git_mkfile("./crlf/.gitattributes", "* text eol=crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+
+void test_checkout_crlf__autocrlf_input__texteol_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+	cl_git_mkfile("./crlf/.gitattributes", "* text eol=crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+
+void test_checkout_crlf__autocrlf_false__text_autoeol_lf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "false");
+	cl_git_mkfile("./crlf/.gitattributes", "* text=auto eol=lf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_true__text_autoeol_lf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "true");
+	cl_git_mkfile("./crlf/.gitattributes", "* text=auto eol=lf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_input__text_autoeol_lf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+	cl_git_mkfile("./crlf/.gitattributes", "* text=auto eol=lf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_false__text_autoeol_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "false");
+	cl_git_mkfile("./crlf/.gitattributes", "* text=auto eol=crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+
+void test_checkout_crlf__autocrlf_true__text_autoeol_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "true");
+	cl_git_mkfile("./crlf/.gitattributes", "* text=auto eol=crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+
+void test_checkout_crlf__autocrlf_input__text_autoeol_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+	cl_git_mkfile("./crlf/.gitattributes", "* text=auto eol=crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+#else
+void test_checkout_crlf__autocrlf_false(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "false");
+
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_true(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "true");
+
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_input(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_false__text_auto_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "false");
+	cl_git_mkfile("./crlf/.gitattributes", "* text=auto\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_true__text_auto_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "true");
+	cl_git_mkfile("./crlf/.gitattributes", "* text=auto\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_input__text_auto_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+	cl_git_mkfile("./crlf/.gitattributes", "* text=auto\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_false__text_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "false");
+	cl_git_mkfile("./crlf/.gitattributes", "* text\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_true__text_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "true");
+	cl_git_mkfile("./crlf/.gitattributes", "* text\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+
+void test_checkout_crlf__autocrlf_input__text_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+	cl_git_mkfile("./crlf/.gitattributes", "* text\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_false__eol_lf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "false");
+	cl_git_mkfile("./crlf/.gitattributes", "* eol=lf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_true__eol_lf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "true");
+	cl_git_mkfile("./crlf/.gitattributes", "* eol=lf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_input__eol_lf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+	cl_git_mkfile("./crlf/.gitattributes", "* eol=lf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_false__eol_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "false");
+	cl_git_mkfile("./crlf/.gitattributes", "* eol=crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+
+void test_checkout_crlf__autocrlf_true__eol_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "true");
+	cl_git_mkfile("./crlf/.gitattributes", "* eol=crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+
+void test_checkout_crlf__autocrlf_input__eol_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+	cl_git_mkfile("./crlf/.gitattributes", "* eol=crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+
+void test_checkout_crlf__autocrlf_false__crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "false");
+	cl_git_mkfile("./crlf/.gitattributes", "* crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_true__crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "true");
+	cl_git_mkfile("./crlf/.gitattributes", "* crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+
+void test_checkout_crlf__autocrlf_input__crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+	cl_git_mkfile("./crlf/.gitattributes", "* crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_false__no_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "false");
+	cl_git_mkfile("./crlf/.gitattributes", "* -crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_true__no_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "true");
+	cl_git_mkfile("./crlf/.gitattributes", "* -crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_input__no_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+	cl_git_mkfile("./crlf/.gitattributes", "* -crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_false__texteol_lf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "false");
+	cl_git_mkfile("./crlf/.gitattributes", "* text eol=lf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_true__texteol_lf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "true");
+	cl_git_mkfile("./crlf/.gitattributes", "* text eol=lf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_input__texteol_lf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+	cl_git_mkfile("./crlf/.gitattributes", "* text eol=lf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_false__texteol_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "false");
+	cl_git_mkfile("./crlf/.gitattributes", "* text eol=crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+
+void test_checkout_crlf__autocrlf_true__texteol_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "true");
+	cl_git_mkfile("./crlf/.gitattributes", "* text eol=crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+
+void test_checkout_crlf__autocrlf_input__texteol_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+	cl_git_mkfile("./crlf/.gitattributes", "* text eol=crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+
+void test_checkout_crlf__autocrlf_false__text_autoeol_lf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "false");
+	cl_git_mkfile("./crlf/.gitattributes", "* text=auto eol=lf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_true__text_autoeol_lf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "true");
+	cl_git_mkfile("./crlf/.gitattributes", "* text=auto eol=lf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_input__text_autoeol_lf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+	cl_git_mkfile("./crlf/.gitattributes", "* text=auto eol=lf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_CRLF_RAW);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_CRLF_RAW);
+}
+
+void test_checkout_crlf__autocrlf_false__text_autoeol_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "false");
+	cl_git_mkfile("./crlf/.gitattributes", "* text=auto eol=crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+
+void test_checkout_crlf__autocrlf_true__text_autoeol_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "true");
+	cl_git_mkfile("./crlf/.gitattributes", "* text=auto eol=crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+
+void test_checkout_crlf__autocrlf_input__text_autoeol_crlf_attr(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+	cl_git_mkfile("./crlf/.gitattributes", "* text=auto eol=crlf\n");
+
+	git_checkout_head(g_repo, &opts);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/mixed-lf-cr-crlf", MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/binary-all-crlf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-all-lf", BINARY_ALL_CRLF_TEXT_RAW);
+	check_file_contents("./crlf/binary-mixed-lf-cr", BINARY_MIXED_LF_CR_AS_CRLF);
+	check_file_contents("./crlf/binary-mixed-lf-cr-crlf", BINARY_MIXED_LF_CR_AS_CRLF);
+}
+#endif
