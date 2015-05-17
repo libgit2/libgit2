@@ -168,7 +168,7 @@ GIT_EXTERN(int) git_remote_set_pushurl(git_repository *repo, const char *remote,
  * @param repo the repository in which to change the configuration
  * @param remote the name of the remote to change
  * @param refspec the new fetch refspec
- * @return 0 or an error value
+ * @return 0, GIT_EINVALIDSPEC if refspec is invalid or an error value
  */
 GIT_EXTERN(int) git_remote_add_fetch(git_repository *repo, const char *remote, const char *refspec);
 
@@ -192,7 +192,7 @@ GIT_EXTERN(int) git_remote_get_fetch_refspecs(git_strarray *array, const git_rem
  * @param repo the repository in which to change the configuration
  * @param remote the name of the remote to change
  * @param refspec the new push refspec
- * @return 0 or an error value
+ * @return 0, GIT_EINVALIDSPEC if refspec is invalid or an error value
  */
 GIT_EXTERN(int) git_remote_add_push(git_repository *repo, const char *remote, const char *refspec);
 

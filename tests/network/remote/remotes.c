@@ -128,6 +128,8 @@ void test_network_remote_remotes__add_fetchspec(void)
 	cl_assert_equal_s(git_refspec_dst(_refspec), "refs/*");
 	cl_assert_equal_s(git_refspec_string(_refspec), "refs/*:refs/*");
 	cl_assert_equal_b(_refspec->push, false);
+
+	cl_git_fail_with(GIT_EINVALIDSPEC, git_remote_add_fetch(_repo, "test", "refs/*/foo/*:refs/*"));
 }
 
 void test_network_remote_remotes__dup(void)

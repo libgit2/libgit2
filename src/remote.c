@@ -97,6 +97,7 @@ static int write_add_refspec(git_repository *repo, const char *name, const char 
 {
 	git_config *cfg;
 	git_buf var = GIT_BUF_INIT;
+	git_refspec spec;
 	const char *fmt;
 	int error;
 
@@ -107,6 +108,15 @@ static int write_add_refspec(git_repository *repo, const char *name, const char 
 
 	if ((error = ensure_remote_name_is_valid(name)) < 0)
 		return error;
+
+	if ((error = git_refspec__parse(&spec, refspec, fetch)) < 0) {
+		if (giterr_last()->klass != GITERR_NOMEMORY)
+			error = GIT_EINVALIDSPEC;
+
+		return error;
+	}
+
+	git_refspec__free(&spec);
 
 	if ((error = git_buf_printf(&var, fmt, name)) < 0)
 		return error;
