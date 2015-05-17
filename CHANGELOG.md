@@ -183,6 +183,9 @@ support for HTTPS connections insead of OpenSSL.
   well as a boolean whether to write `FETCH_HEAD` and the autotag
   setting.
 
+* `git_remote_create_anonymous()` no longer takes a fetch refspec as
+  url-only remotes cannot have configured refspecs.
+
 * The `git_submodule_update_options` struct now has fetch options in
   the `fetch_opts` field instead of callbacks in the
   `remote_callbacks` field.

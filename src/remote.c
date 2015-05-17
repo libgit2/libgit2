@@ -311,9 +311,9 @@ on_error:
 	return -1;
 }
 
-int git_remote_create_anonymous(git_remote **out, git_repository *repo, const char *url, const char *fetch)
+int git_remote_create_anonymous(git_remote **out, git_repository *repo, const char *url)
 {
-	return create_internal(out, repo, NULL, url, fetch);
+	return create_internal(out, repo, NULL, url, NULL);
 }
 
 int git_remote_dup(git_remote **dest, git_remote *source)
