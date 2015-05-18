@@ -52,7 +52,7 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 
 			if (recvd == 0 && !flush) {
 				giterr_set(GITERR_NET, "early EOF");
-				return -1;
+				return GIT_EEOF;
 			}
 
 			continue;
@@ -770,7 +770,7 @@ static int parse_report(transport_smart *transport, git_push *push)
 
 			if (recvd == 0) {
 				giterr_set(GITERR_NET, "early EOF");
-				return -1;
+				return GIT_EEOF;
 			}
 			continue;
 		}

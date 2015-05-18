@@ -129,10 +129,14 @@ static int ssh_stream_read(
 		return -1;
 	}
 
-	/* Having something in stderr is typically a not-found error */
+	/*
+	 * If we can't get anything out of stdout, it's typically a
+	 * not-found error, so read from stderr and signal EOF on
+	 * stderr.
+	 */
 	if (rc == 0 && (rc = libssh2_channel_read_stderr(s->channel, buffer, buf_size)) > 0) {
 		giterr_set(GITERR_SSH, "%*s", rc, buffer);
-		return -1;
+		return GIT_EEOF;
 	}
 
 

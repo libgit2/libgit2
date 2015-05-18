@@ -93,6 +93,11 @@ support for HTTPS connections insead of OpenSSL.
 * `git_stash_pop()` will apply a stashed state (like `git_stash_apply()`)
   but will remove the stashed state after a successful application.
 
+* A new error code `GIT_EEOF` indicates an early EOF from the
+  server. This typically indicates an error with the URL or
+  configuration of the server, and tools can use this to show messages
+  about failing to communicate with the server.
+
 ### API removals
 
 * `git_remote_save()` and `git_remote_clear_refspecs()` has been
