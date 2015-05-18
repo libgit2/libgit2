@@ -77,10 +77,23 @@ static int diff_insert_delta(
 static int diff_delta__from_one(
 	git_diff *diff,
 	git_delta_t status,
-	const git_index_entry *entry)
+	const git_index_entry *oitem,
+	const git_index_entry *nitem)
 {
+	const git_index_entry *entry = nitem;
+	bool has_old = false;
 	git_diff_delta *delta;
 	const char *matched_pathspec;
+
+	assert((oitem != NULL) ^ (nitem != NULL));
+
+	if (oitem) {
+		entry = oitem;
+		has_old = true;
+	}
+
+	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_REVERSE))
+		has_old = !has_old;
 
 	if ((entry->flags & GIT_IDXENTRY_VALID) != 0)
 		return 0;
@@ -111,7 +124,7 @@ static int diff_delta__from_one(
 	assert(status != GIT_DELTA_MODIFIED);
 	delta->nfiles = 1;
 
-	if (delta->status == GIT_DELTA_DELETED) {
+	if (has_old) {
 		delta->old_file.mode = entry->mode;
 		delta->old_file.size = entry->file_size;
 		git_oid_cpy(&delta->old_file.id, &entry->id);
@@ -123,8 +136,7 @@ static int diff_delta__from_one(
 
 	delta->old_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 
-	if (delta->status == GIT_DELTA_DELETED ||
-		!git_oid_iszero(&delta->new_file.id))
+	if (has_old || !git_oid_iszero(&delta->new_file.id))
 		delta->new_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 
 	return diff_insert_delta(diff, delta, matched_pathspec);
@@ -764,13 +776,13 @@ static int maybe_modified(
 		if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_TYPECHANGE))
 			status = GIT_DELTA_TYPECHANGE;
 		else if (nmode == GIT_FILEMODE_UNREADABLE) {
-			if (!(error = diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem)))
-				error = diff_delta__from_one(diff, GIT_DELTA_UNREADABLE, nitem);
+			if (!(error = diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem, NULL)))
+				error = diff_delta__from_one(diff, GIT_DELTA_UNREADABLE, NULL, nitem);
 			return error;
 		}
 		else {
-			if (!(error = diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem)))
-				error = diff_delta__from_one(diff, GIT_DELTA_ADDED, nitem);
+			if (!(error = diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem, NULL)))
+				error = diff_delta__from_one(diff, GIT_DELTA_ADDED, NULL, nitem);
 			return error;
 		}
 	}
@@ -850,8 +862,9 @@ static int maybe_modified(
 		DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_CASECHANGE) &&
 		strcmp(oitem->path, nitem->path) != 0) {
 
-		if (!(error = diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem)))
-			error = diff_delta__from_one(diff, GIT_DELTA_ADDED, nitem);
+		if (!(error = diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem, NULL)))
+			error = diff_delta__from_one(diff, GIT_DELTA_ADDED, NULL, nitem);
+
 		return error;
 	}
 
@@ -1006,7 +1019,7 @@ static int handle_unmatched_new_item(
 			git_iterator_status_t untracked_state;
 
 			/* attempt to insert record for this directory */
-			if ((error = diff_delta__from_one(diff, delta_type, nitem)) != 0)
+			if ((error = diff_delta__from_one(diff, delta_type, NULL, nitem)) != 0)
 				return error;
 
 			/* if delta wasn't created (because of rules), just skip ahead */
@@ -1087,7 +1100,7 @@ static int handle_unmatched_new_item(
 	}
 
 	/* Actually create the record for this item if necessary */
-	if ((error = diff_delta__from_one(diff, delta_type, nitem)) != 0)
+	if ((error = diff_delta__from_one(diff, delta_type, NULL, nitem)) != 0)
 		return error;
 
 	/* If user requested TYPECHANGE records, then check for that instead of
@@ -1118,7 +1131,7 @@ static int handle_unmatched_old_item(
 	if (git_index_entry_stage(info->oitem))
 		delta_type = GIT_DELTA_CONFLICTED;
 
-	if ((error = diff_delta__from_one(diff, delta_type, info->oitem)) < 0)
+	if ((error = diff_delta__from_one(diff, delta_type, info->oitem, NULL)) < 0)
 		return error;
 
 	/* if we are generating TYPECHANGE records then check for that
