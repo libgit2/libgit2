@@ -45,6 +45,10 @@ support for HTTPS connections insead of OpenSSL.
 * The index now uses diffs for `add_all()` and `update_all()` which
   gives it a speed boost and closer semantics to git.
 
+* The ssh transport now reports the stderr output from the server as
+  the error message, which allows you to get the "repository not
+  found" messages.
+
 
 ### API additions
 
