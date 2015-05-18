@@ -645,6 +645,52 @@ void test_status_worktree__conflicted_item(void)
 	git_index_free(index);
 }
 
+void test_status_worktree__conflict_has_no_oid(void)
+{
+	git_repository *repo = cl_git_sandbox_init("status");
+	git_index *index;
+	git_index_entry entry = {0};
+	git_status_list *statuslist;
+	const git_status_entry *status;
+	git_oid zero_id = {0};
+
+	entry.mode = 0100644;
+	entry.path = "modified_file";
+	git_oid_fromstr(&entry.id, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef");
+
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_index_conflict_add(index, &entry, &entry, &entry));
+
+	git_status_list_new(&statuslist, repo, NULL);
+
+	cl_assert_equal_i(16, git_status_list_entrycount(statuslist));
+
+	status = git_status_byindex(statuslist, 2);
+
+	cl_assert_equal_i(GIT_STATUS_CONFLICTED, status->status);
+	cl_assert_equal_s("modified_file", status->head_to_index->old_file.path);
+	cl_assert(!git_oid_equal(&zero_id, &status->head_to_index->old_file.id));
+	cl_assert(0 != status->head_to_index->old_file.mode);
+	cl_assert_equal_s("modified_file", status->head_to_index->new_file.path);
+	cl_assert_equal_oid(&zero_id, &status->head_to_index->new_file.id);
+	cl_assert_equal_i(0, status->head_to_index->new_file.mode);
+	cl_assert_equal_i(0, status->head_to_index->new_file.size);
+
+	cl_assert_equal_s("modified_file", status->index_to_workdir->old_file.path);
+	cl_assert_equal_oid(&zero_id, &status->index_to_workdir->old_file.id);
+	cl_assert_equal_i(0, status->index_to_workdir->old_file.mode);
+	cl_assert_equal_i(0, status->index_to_workdir->old_file.size);
+	cl_assert_equal_s("modified_file", status->index_to_workdir->new_file.path);
+	cl_assert(
+		!git_oid_equal(&zero_id, &status->index_to_workdir->new_file.id) ||
+		!(status->index_to_workdir->new_file.flags & GIT_DIFF_FLAG_VALID_ID));
+	cl_assert(0 != status->index_to_workdir->new_file.mode);
+	cl_assert(0 != status->index_to_workdir->new_file.size);
+
+	git_index_free(index);
+	git_status_list_free(statuslist);
+}
+
 static void stage_and_commit(git_repository *repo, const char *path)
 {
 	git_index *index;
