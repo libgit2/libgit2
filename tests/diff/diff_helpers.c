@@ -68,7 +68,7 @@ int diff_file_cb(
 	if ((delta->flags & GIT_DIFF_FLAG_BINARY) != 0)
 		e->files_binary++;
 
-	cl_assert(delta->status <= GIT_DELTA_TYPECHANGE);
+	cl_assert(delta->status <= GIT_DELTA_CONFLICTED);
 
 	e->file_status[delta->status] += 1;
 
