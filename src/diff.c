@@ -766,43 +766,45 @@ static int maybe_modified(
 
 	/* if one side is a conflict, mark the whole delta as conflicted */
 	if (git_index_entry_is_conflict(oitem) ||
-		git_index_entry_is_conflict(nitem))
+			git_index_entry_is_conflict(nitem)) {
 		status = GIT_DELTA_CONFLICTED;
 
 	/* support "assume unchanged" (poorly, b/c we still stat everything) */
-	else if ((oitem->flags & GIT_IDXENTRY_VALID) != 0)
+	} else if ((oitem->flags & GIT_IDXENTRY_VALID) != 0) {
 		status = GIT_DELTA_UNMODIFIED;
 
 	/* support "skip worktree" index bit */
-	else if ((oitem->flags_extended & GIT_IDXENTRY_SKIP_WORKTREE) != 0)
+	} else if ((oitem->flags_extended & GIT_IDXENTRY_SKIP_WORKTREE) != 0) {
 		status = GIT_DELTA_UNMODIFIED;
 
 	/* if basic type of file changed, then split into delete and add */
-	else if (GIT_MODE_TYPE(omode) != GIT_MODE_TYPE(nmode)) {
-		if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_TYPECHANGE))
+	} else if (GIT_MODE_TYPE(omode) != GIT_MODE_TYPE(nmode)) {
+		if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_TYPECHANGE)) {
 			status = GIT_DELTA_TYPECHANGE;
+		}
+
 		else if (nmode == GIT_FILEMODE_UNREADABLE) {
 			if (!(error = diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem, NULL)))
 				error = diff_delta__from_one(diff, GIT_DELTA_UNREADABLE, NULL, nitem);
 			return error;
 		}
+
 		else {
 			if (!(error = diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem, NULL)))
 				error = diff_delta__from_one(diff, GIT_DELTA_ADDED, NULL, nitem);
 			return error;
 		}
-	}
 
 	/* if oids and modes match (and are valid), then file is unmodified */
-	else if (git_oid_equal(&oitem->id, &nitem->id) &&
+	} else if (git_oid_equal(&oitem->id, &nitem->id) &&
 			 omode == nmode &&
-			 !git_oid_iszero(&oitem->id))
+			 !git_oid_iszero(&oitem->id)) {
 		status = GIT_DELTA_UNMODIFIED;
 
 	/* if we have an unknown OID and a workdir iterator, then check some
 	 * circumstances that can accelerate things or need special handling
 	 */
-	else if (git_oid_iszero(&nitem->id) && new_is_workdir) {
+	} else if (git_oid_iszero(&nitem->id) && new_is_workdir) {
 		bool use_ctime = ((diff->diffcaps & GIT_DIFFCAPS_TRUST_CTIME) != 0);
 		bool use_nanos = ((diff->diffcaps & GIT_DIFFCAPS_TRUST_NANOSECS) != 0);
 
@@ -833,12 +835,12 @@ static int maybe_modified(
 			status = GIT_DELTA_MODIFIED;
 			modified_uncertain = true;
 		}
-	}
 
 	/* if mode is GITLINK and submodules are ignored, then skip */
-	else if (S_ISGITLINK(nmode) &&
-			 DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_SUBMODULES))
+	} else if (S_ISGITLINK(nmode) &&
+			 DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_SUBMODULES)) {
 		status = GIT_DELTA_UNMODIFIED;
+	}
 
 	/* if we got here and decided that the files are modified, but we
 	 * haven't calculated the OID of the new item, then calculate it now
@@ -847,6 +849,7 @@ static int maybe_modified(
 		const git_oid *update_check =
 			DIFF_FLAG_IS_SET(diff, GIT_DIFF_UPDATE_INDEX) && omode == nmode ?
 			&oitem->id : NULL;
+
 		if ((error = git_diff__oid_for_entry(
 				&noid, diff, nitem, update_check)) < 0)
 			return error;
