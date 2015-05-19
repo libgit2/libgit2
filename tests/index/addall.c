@@ -193,6 +193,19 @@ void test_index_addall__repo_lifecycle(void)
 	cl_repo_commit_from_index(NULL, g_repo, NULL, 0, "first commit");
 	check_status(g_repo, 0, 0, 0, 3, 0, 0, 1);
 
+	if (cl_repo_get_bool(g_repo, "core.filemode")) {
+		cl_git_pass(git_index_update_all(index, NULL, NULL, NULL));
+		cl_must_pass(p_chmod(TEST_DIR "/file.zzz", 0777));
+		cl_git_pass(git_index_update_all(index, NULL, NULL, NULL));
+		check_status(g_repo, 0, 0, 1, 3, 0, 0, 1);
+
+		/* go back to what we had before */
+		cl_must_pass(p_chmod(TEST_DIR "/file.zzz", 0666));
+		cl_git_pass(git_index_update_all(index, NULL, NULL, NULL));
+		check_status(g_repo, 0, 0, 0, 3, 0, 0, 1);
+	}
+
+
 	/* attempt to add an ignored file - does nothing */
 	strs[0] = "file.foo";
 	cl_git_pass(git_index_add_all(index, &paths, 0, NULL, NULL));

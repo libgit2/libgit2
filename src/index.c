@@ -24,6 +24,10 @@
 #include "git2/config.h"
 #include "git2/sys/index.h"
 
+static int index_apply_to_wd_diff(git_index *index, int action, const git_strarray *paths,
+				  unsigned int flags,
+				  git_index_matched_path_cb cb, void *payload);
+
 #define entry_size(type,len) ((offsetof(type, path) + (len) + 8) & ~7)
 #define short_entry_size(len) entry_size(struct entry_short, len)
 #define long_entry_size(len) entry_size(struct entry_long, len)
@@ -2554,6 +2558,13 @@ git_repository *git_index_owner(const git_index *index)
 	return INDEX_OWNER(index);
 }
 
+enum {
+	INDEX_ACTION_NONE = 0,
+	INDEX_ACTION_UPDATE = 1,
+	INDEX_ACTION_REMOVE = 2,
+	INDEX_ACTION_ADDALL = 3,
+};
+
 int git_index_add_all(
 	git_index *index,
 	const git_strarray *paths,
@@ -2564,28 +2575,14 @@ int git_index_add_all(
 	int error;
 	git_repository *repo;
 	git_iterator *wditer = NULL;
-	const git_index_entry *wd = NULL;
-	git_index_entry *entry;
 	git_pathspec ps;
-	const char *match;
-	size_t existing;
 	bool no_fnmatch = (flags & GIT_INDEX_ADD_DISABLE_PATHSPEC_MATCH) != 0;
-	int ignorecase;
-	git_oid blobid;
 
 	assert(index);
-
-	if (INDEX_OWNER(index) == NULL)
-		return create_index_error(-1,
-			"Could not add paths to index. "
-			"Index is not backed up by an existing repository.");
 
 	repo = INDEX_OWNER(index);
 	if ((error = git_repository__ensure_not_bare(repo, "index add all")) < 0)
 		return error;
-
-	if (git_repository__cvar(&ignorecase, repo, GIT_CVAR_IGNORECASE) < 0)
-		return -1;
 
 	if ((error = git_pathspec__init(&ps, paths)) < 0)
 		return error;
@@ -2597,63 +2594,10 @@ int git_index_add_all(
 			repo, &ps.pathspec, no_fnmatch)) < 0)
 		goto cleanup;
 
-	if ((error = git_iterator_for_workdir(
-			&wditer, repo, NULL, NULL, 0, ps.prefix, ps.prefix)) < 0)
-		goto cleanup;
+	error = index_apply_to_wd_diff(index, INDEX_ACTION_ADDALL, paths, flags, cb, payload);
 
-	while (!(error = git_iterator_advance(&wd, wditer))) {
-
-		/* check if path actually matches */
-		if (!git_pathspec__match(
-				&ps.pathspec, wd->path, no_fnmatch, (bool)ignorecase, &match, NULL))
-			continue;
-
-		/* skip ignored items that are not already in the index */
-		if ((flags & GIT_INDEX_ADD_FORCE) == 0 &&
-			git_iterator_current_is_ignored(wditer) &&
-			index_find(&existing, index, wd->path, 0, 0, true) < 0)
-			continue;
-
-		/* issue notification callback if requested */
-		if (cb && (error = cb(wd->path, match, payload)) != 0) {
-			if (error > 0) /* return > 0 means skip this one */
-				continue;
-			if (error < 0) { /* return < 0 means abort */
-				giterr_set_after_callback(error);
-				break;
-			}
-		}
-
-		/* TODO: Should we check if the file on disk is already an exact
-		 * match to the file in the index and skip this work if it is?
-		 */
-
-		/* write the blob to disk and get the oid */
-		if ((error = git_blob_create_fromworkdir(&blobid, repo, wd->path)) < 0)
-			break;
-
-		/* make the new entry to insert */
-		if ((error = index_entry_dup(&entry, INDEX_OWNER(index), wd)) < 0)
-			break;
-
-		entry->id = blobid;
-
-		/* add working directory item to index */
-		if ((error = index_insert(index, &entry, 1, false)) < 0)
-			break;
-
-		git_tree_cache_invalidate_path(index->tree, wd->path);
-
-		/* add implies conflict resolved, move conflict entries to REUC */
-		if ((error = index_conflict_to_reuc(index, wd->path)) < 0) {
-			if (error != GIT_ENOTFOUND)
-				break;
-			giterr_clear();
-		}
-	}
-
-	if (error == GIT_ITEROVER)
-		error = 0;
+	if (error)
+		giterr_set_after_callback(error);
 
 cleanup:
 	git_iterator_free(wditer);
@@ -2662,11 +2606,102 @@ cleanup:
 	return error;
 }
 
-enum {
-	INDEX_ACTION_NONE = 0,
-	INDEX_ACTION_UPDATE = 1,
-	INDEX_ACTION_REMOVE = 2,
+struct foreach_diff_data {
+	git_index *index;
+	const git_pathspec *pathspec;
+	unsigned int flags;
+	git_index_matched_path_cb cb;
+	void *payload;
 };
+
+static int apply_each_file(const git_diff_delta *delta, float progress, void *payload)
+{
+	struct foreach_diff_data *data = payload;
+	const char *match, *path;
+	int error = 0;
+
+	GIT_UNUSED(progress);
+
+	path = delta->old_file.path;
+
+	/* We only want those which match the pathspecs */
+	if (!git_pathspec__match(
+		    &data->pathspec->pathspec, path, false, (bool)data->index->ignore_case,
+		    &match, NULL))
+		return 0;
+
+	if (data->cb)
+		error = data->cb(path, match, data->payload);
+
+	if (error > 0) /* skip this entry */
+		return 0;
+	if (error < 0) /* actual error */
+		return error;
+
+	if (delta->status == GIT_DELTA_DELETED)
+		error = git_index_remove_bypath(data->index, path);
+	else
+		error = git_index_add_bypath(data->index, delta->new_file.path);
+
+	return error;
+}
+
+static int index_apply_to_wd_diff(git_index *index, int action, const git_strarray *paths,
+				  unsigned int flags,
+				  git_index_matched_path_cb cb, void *payload)
+{
+	int error;
+	git_diff *diff;
+	git_pathspec ps;
+	git_repository *repo;
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	struct foreach_diff_data data = {
+		index,
+		NULL,
+		flags,
+		cb,
+		payload,
+	};
+
+	assert(index);
+	assert(action == INDEX_ACTION_UPDATE || action == INDEX_ACTION_ADDALL);
+
+	repo = INDEX_OWNER(index);
+
+	if (!repo) {
+		return create_index_error(-1,
+			"cannot run update; the index is not backed up by a repository.");
+	}
+
+	/*
+	 * We do the matching ourselves intead of passing the list to
+	 * diff because we want to tell the callback which one
+	 * matched, which we do not know if we ask diff to filter for us.
+	 */
+	if ((error = git_pathspec__init(&ps, paths)) < 0)
+		return error;
+
+	opts.flags = GIT_DIFF_INCLUDE_TYPECHANGE;
+	if (action == INDEX_ACTION_ADDALL) {
+		opts.flags |= GIT_DIFF_INCLUDE_UNTRACKED | GIT_DIFF_RECURSE_IGNORED_DIRS;
+		if (flags == GIT_INDEX_ADD_FORCE)
+			opts.flags |= GIT_DIFF_INCLUDE_IGNORED;
+	}
+
+	if ((error = git_diff_index_to_workdir(&diff, repo, index, &opts)) < 0)
+		goto cleanup;
+
+	data.pathspec = &ps;
+	error = git_diff_foreach(diff, apply_each_file, NULL, NULL, &data);
+	git_diff_free(diff);
+
+	if (error) /* make sure error is set if callback stopped iteration */
+		giterr_set_after_callback(error);
+
+cleanup:
+	git_pathspec__clear(&ps);
+	return error;
+}
 
 static int index_apply_to_all(
 	git_index *index,
@@ -2764,9 +2799,7 @@ int git_index_update_all(
 	git_index_matched_path_cb cb,
 	void *payload)
 {
-	int error = index_apply_to_all(
-		index, INDEX_ACTION_UPDATE, pathspec, cb, payload);
-
+	int error = index_apply_to_wd_diff(index, INDEX_ACTION_UPDATE, pathspec, 0, cb, payload);
 	if (error) /* make sure error is set if callback stopped iteration */
 		giterr_set_after_callback(error);
 
