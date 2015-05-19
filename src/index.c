@@ -2670,7 +2670,8 @@ static int apply_each_file(const git_diff_delta *delta, float progress, void *pa
 	if (error < 0) /* actual error */
 		return error;
 
-	if (delta->status == GIT_DELTA_DELETED)
+	/* If the workdir item does not exist, remove it from the index. */
+	if ((delta->new_file.flags & GIT_DIFF_FLAG_EXISTS) == 0)
 		error = git_index_remove_bypath(data->index, path);
 	else
 		error = git_index_add_bypath(data->index, delta->new_file.path);
