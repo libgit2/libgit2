@@ -108,6 +108,10 @@ support for HTTPS connections insead of OpenSSL.
   `GIT_STATUS_CONFLICTED` to indicate that a conflict exists for that file
   in the index.
 
+* `git_index_entry_is_conflict()` is a utility function to determine if
+  a given index entry has a non-zero stage entry, indicating that it is
+  one side of a conflict.
+
 ### API removals
 
 * `git_remote_save()` and `git_remote_clear_refspecs()` has been

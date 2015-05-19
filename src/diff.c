@@ -180,14 +180,14 @@ static int diff_delta__from_two(
 	GITERR_CHECK_ALLOC(delta);
 	delta->nfiles = 2;
 
-	if (!git_index_entry_stage(old_entry)) {
+	if (!git_index_entry_is_conflict(old_entry)) {
 		delta->old_file.size = old_entry->file_size;
 		delta->old_file.mode = old_mode;
 		git_oid_cpy(&delta->old_file.id, old_id);
 		delta->old_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 	}
 
-	if (!git_index_entry_stage(new_entry)) {
+	if (!git_index_entry_is_conflict(new_entry)) {
 		git_oid_cpy(&delta->new_file.id, new_id);
 		delta->new_file.size = new_entry->file_size;
 		delta->new_file.mode = new_mode;
@@ -765,7 +765,8 @@ static int maybe_modified(
 		nmode = (nmode & ~MODE_BITS_MASK) | (omode & MODE_BITS_MASK);
 
 	/* if one side is a conflict, mark the whole delta as conflicted */
-	if (git_index_entry_stage(oitem) > 0 || git_index_entry_stage(nitem) > 0)
+	if (git_index_entry_is_conflict(oitem) ||
+		git_index_entry_is_conflict(nitem))
 		status = GIT_DELTA_CONFLICTED;
 
 	/* support "assume unchanged" (poorly, b/c we still stat everything) */
@@ -923,8 +924,8 @@ static int iterator_advance(
 	 */
 	while ((error = git_iterator_advance(entry, iterator)) == 0) {
 		if (!(iterator->flags & GIT_ITERATOR_INCLUDE_CONFLICTS) ||
-			git_index_entry_stage(prev_entry) == 0 ||
-			git_index_entry_stage(*entry) == 0)
+			!git_index_entry_is_conflict(prev_entry) ||
+			!git_index_entry_is_conflict(*entry))
 			break;
 
 		cmp = (iterator->flags & GIT_ITERATOR_IGNORE_CASE) ?
@@ -985,7 +986,7 @@ static int handle_unmatched_new_item(
 	contains_oitem = entry_is_prefixed(diff, info->oitem, nitem);
 
 	/* update delta_type if this item is conflicted */
-	if (git_index_entry_stage(nitem))
+	if (git_index_entry_is_conflict(nitem))
 		delta_type = GIT_DELTA_CONFLICTED;
 
 	/* update delta_type if this item is ignored */
@@ -1133,7 +1134,7 @@ static int handle_unmatched_old_item(
 	int error;
 
 	/* update delta_type if this item is conflicted */
-	if (git_index_entry_stage(info->oitem))
+	if (git_index_entry_is_conflict(info->oitem))
 		delta_type = GIT_DELTA_CONFLICTED;
 
 	if ((error = diff_delta__from_one(diff, delta_type, info->oitem, NULL)) < 0)

@@ -272,7 +272,7 @@ void test_index_conflicts__moved_to_reuc_on_add(void)
 		cl_assert(entry = git_index_get_byindex(repo_index, i));
 
 		if (strcmp(entry->path, "conflicts-one.txt") == 0)
-			cl_assert(git_index_entry_stage(entry) == 0);
+			cl_assert(!git_index_entry_is_conflict(entry));
 	}
 }
 
@@ -312,7 +312,7 @@ void test_index_conflicts__remove_all_conflicts(void)
 
 	for (i = 0; i < git_index_entrycount(repo_index); i++) {
 		cl_assert(entry = git_index_get_byindex(repo_index, i));
-		cl_assert(git_index_entry_stage(entry) == 0);
+		cl_assert(!git_index_entry_is_conflict(entry));
 	}
 }
 

@@ -66,7 +66,7 @@ static size_t merge_trivial_conflict_entrycount(void)
 	for (i = 0; i < git_index_entrycount(repo_index); i++) {
 		cl_assert(entry = git_index_get_byindex(repo_index, i));
 
-		if (git_index_entry_stage(entry) > 0)
+		if (git_index_entry_is_conflict(entry))
 			count++;
 	}
 

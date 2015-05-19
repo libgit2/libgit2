@@ -1537,7 +1537,7 @@ int git_index_conflict_next(
 	while (iterator->cur < iterator->index->entries.length) {
 		entry = git_index_get_byindex(iterator->index, iterator->cur);
 
-		if (git_index_entry_stage(entry) > 0) {
+		if (git_index_entry_is_conflict(entry)) {
 			if ((len = index_conflict__get_byindex(
 				ancestor_out,
 				our_out,
@@ -2381,6 +2381,11 @@ static int write_index(git_index *index, git_filebuf *file)
 int git_index_entry_stage(const git_index_entry *entry)
 {
 	return GIT_IDXENTRY_STAGE(entry);
+}
+
+int git_index_entry_is_conflict(const git_index_entry *entry)
+{
+	return (GIT_IDXENTRY_STAGE(entry) > 0);
 }
 
 typedef struct read_tree_data {

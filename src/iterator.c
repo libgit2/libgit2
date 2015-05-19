@@ -674,7 +674,7 @@ static const git_index_entry *index_iterator__advance_over_conflicts(index_itera
 	const git_index_entry *ie = index_iterator__index_entry(ii);
 
 	if (!iterator__include_conflicts(ii)) {
-		while (ie && git_index_entry_stage(ie) != 0) {
+		while (ie && git_index_entry_is_conflict(ie)) {
 			ii->current++;
 			ie = index_iterator__index_entry(ii);
 		}

@@ -430,6 +430,15 @@ GIT_EXTERN(int) git_index_add(git_index *index, const git_index_entry *source_en
  */
 GIT_EXTERN(int) git_index_entry_stage(const git_index_entry *entry);
 
+/**
+ * Return whether the given index entry is a conflict (has a high stage
+ * entry).  This is simply shorthand for `git_index_entry_stage > 0`.
+ *
+ * @param entry The entry
+ * @return 1 if the entry is a conflict entry, 0 otherwise
+ */
+GIT_EXTERN(int) git_index_entry_is_conflict(const git_index_entry *entry);
+
 /**@}*/
 
 /** @name Workdir Index Entry Functions
