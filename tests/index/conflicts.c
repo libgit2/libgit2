@@ -48,17 +48,17 @@ void test_index_conflicts__add(void)
 
 	ancestor_entry.path = "test-one.txt";
 	ancestor_entry.mode = 0100644;
-	ancestor_entry.flags |= (1 << GIT_IDXENTRY_STAGESHIFT);
+	GIT_IDXENTRY_STAGE_SET(&ancestor_entry, 1);
 	git_oid_fromstr(&ancestor_entry.id, TEST_ANCESTOR_OID);
 
 	our_entry.path = "test-one.txt";
 	our_entry.mode = 0100644;
-	ancestor_entry.flags |= (2 << GIT_IDXENTRY_STAGESHIFT);
+	GIT_IDXENTRY_STAGE_SET(&our_entry, 2);
 	git_oid_fromstr(&our_entry.id, TEST_OUR_OID);
 
 	their_entry.path = "test-one.txt";
 	their_entry.mode = 0100644;
-	ancestor_entry.flags |= (3 << GIT_IDXENTRY_STAGESHIFT);
+	GIT_IDXENTRY_STAGE_SET(&ancestor_entry, 2);
 	git_oid_fromstr(&their_entry.id, TEST_THEIR_OID);
 
 	cl_git_pass(git_index_conflict_add(repo_index, &ancestor_entry, &our_entry, &their_entry));
@@ -79,17 +79,17 @@ void test_index_conflicts__add_fixes_incorrect_stage(void)
 
 	ancestor_entry.path = "test-one.txt";
 	ancestor_entry.mode = 0100644;
-	ancestor_entry.flags |= (3 << GIT_IDXENTRY_STAGESHIFT);
+	GIT_IDXENTRY_STAGE_SET(&ancestor_entry, 3);
 	git_oid_fromstr(&ancestor_entry.id, TEST_ANCESTOR_OID);
 
 	our_entry.path = "test-one.txt";
 	our_entry.mode = 0100644;
-	ancestor_entry.flags |= (1 << GIT_IDXENTRY_STAGESHIFT);
+	GIT_IDXENTRY_STAGE_SET(&our_entry, 1);
 	git_oid_fromstr(&our_entry.id, TEST_OUR_OID);
 
 	their_entry.path = "test-one.txt";
 	their_entry.mode = 0100644;
-	ancestor_entry.flags |= (2 << GIT_IDXENTRY_STAGESHIFT);
+	GIT_IDXENTRY_STAGE_SET(&their_entry, 2);
 	git_oid_fromstr(&their_entry.id, TEST_THEIR_OID);
 
 	cl_git_pass(git_index_conflict_add(repo_index, &ancestor_entry, &our_entry, &their_entry));
@@ -123,17 +123,17 @@ void test_index_conflicts__add_removes_stage_zero(void)
 
 	ancestor_entry.path = "test-one.txt";
 	ancestor_entry.mode = 0100644;
-	ancestor_entry.flags |= (3 << GIT_IDXENTRY_STAGESHIFT);
+	GIT_IDXENTRY_STAGE_SET(&ancestor_entry, 3);
 	git_oid_fromstr(&ancestor_entry.id, TEST_ANCESTOR_OID);
 
 	our_entry.path = "test-one.txt";
 	our_entry.mode = 0100644;
-	our_entry.flags |= (1 << GIT_IDXENTRY_STAGESHIFT);
+	GIT_IDXENTRY_STAGE_SET(&our_entry, 1);
 	git_oid_fromstr(&our_entry.id, TEST_OUR_OID);
 
 	their_entry.path = "test-one.txt";
 	their_entry.mode = 0100644;
-	their_entry.flags |= (2 << GIT_IDXENTRY_STAGESHIFT);
+	GIT_IDXENTRY_STAGE_SET(&their_entry, 2);
 	git_oid_fromstr(&their_entry.id, TEST_THEIR_OID);
 
 	cl_git_pass(git_index_conflict_add(repo_index, &ancestor_entry, &our_entry, &their_entry));
@@ -329,7 +329,7 @@ void test_index_conflicts__partial(void)
 
 	ancestor_entry.path = "test-one.txt";
 	ancestor_entry.mode = 0100644;
-	ancestor_entry.flags |= (1 << GIT_IDXENTRY_STAGESHIFT);
+	GIT_IDXENTRY_STAGE_SET(&ancestor_entry, 1);
 	git_oid_fromstr(&ancestor_entry.id, TEST_ANCESTOR_OID);
 
 	cl_git_pass(git_index_conflict_add(repo_index, &ancestor_entry, NULL, NULL));

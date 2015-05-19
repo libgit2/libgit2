@@ -102,7 +102,7 @@ static void create_index(struct checkout_index_entry *entries, size_t entries_le
 		memset(&entry, 0x0, sizeof(git_index_entry));
 
 		entry.mode = entries[i].mode;
-		entry.flags = entries[i].stage << GIT_IDXENTRY_STAGESHIFT;
+		GIT_IDXENTRY_STAGE_SET(&entry, entries[i].stage);
 		git_oid_fromstr(&entry.id, entries[i].oid_str);
 		entry.path = entries[i].path;
 
