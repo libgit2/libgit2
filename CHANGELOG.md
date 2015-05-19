@@ -52,6 +52,11 @@ support for HTTPS connections insead of OpenSSL.
 * `git_index_conflict_add()` will remove staged entries that exist for
   conflicted paths.
 
+* The flags for a `git_diff_file` will now have the `GIT_DIFF_FLAG_EXISTS`
+  bit set when a file exists on that side of the diff.  This is useful
+  for understanding whether a side of the diff exists in the presence of
+  a conflict.
+
 ### API additions
 
 * The `git_merge_options` gained a `file_flags` member.
