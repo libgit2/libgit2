@@ -80,6 +80,7 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 	git_vector_foreach(rules, i, rule) {
 		if (!(rule->flags & GIT_ATTR_FNMATCH_HASWILD)) {
 			if (does_negate_pattern(rule, match)) {
+				error = 0;
 				*out = 1;
 				goto out;
 			}
