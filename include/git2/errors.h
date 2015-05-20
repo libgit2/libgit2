@@ -45,6 +45,7 @@ typedef enum {
 	GIT_ECERTIFICATE    = -17,      /**< Server certificate is invalid */
 	GIT_EAPPLIED        = -18,	/**< Patch/merge has already been applied */
 	GIT_EPEEL           = -19,      /**< The requested peel operation is not possible */
+	GIT_EEOF            = -20,      /**< Unexpected EOF */
 
 	GIT_PASSTHROUGH     = -30,	/**< Internal only */
 	GIT_ITEROVER        = -31,	/**< Signals end of iteration with iterator */

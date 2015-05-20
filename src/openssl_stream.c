@@ -55,6 +55,7 @@ static int ssl_set_error(SSL *ssl, int error)
 			break;
 		}
 		giterr_set(GITERR_NET, "SSL error: received early EOF");
+		return GIT_EEOF;
 		break;
 	case SSL_ERROR_SSL:
 		e = ERR_get_error();
