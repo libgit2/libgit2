@@ -2683,7 +2683,10 @@ static int index_apply_to_wd_diff(git_index *index, int action, const git_strarr
 
 	opts.flags = GIT_DIFF_INCLUDE_TYPECHANGE;
 	if (action == INDEX_ACTION_ADDALL) {
-		opts.flags |= GIT_DIFF_INCLUDE_UNTRACKED | GIT_DIFF_RECURSE_IGNORED_DIRS;
+		opts.flags |= GIT_DIFF_INCLUDE_UNTRACKED |
+			GIT_DIFF_RECURSE_UNTRACKED_DIRS |
+			GIT_DIFF_RECURSE_IGNORED_DIRS;
+
 		if (flags == GIT_INDEX_ADD_FORCE)
 			opts.flags |= GIT_DIFF_INCLUDE_IGNORED;
 	}
