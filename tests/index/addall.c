@@ -282,6 +282,29 @@ void test_index_addall__repo_lifecycle(void)
 	git_index_free(index);
 }
 
+void test_index_addall__files_in_folders(void)
+{
+	git_index *index;
+	git_strarray paths = { NULL, 0 };
+
+	addall_create_test_repo(true);
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	cl_git_pass(git_index_add_all(index, NULL, 0, NULL, NULL));
+	check_stat_data(index, TEST_DIR "/file.bar", true);
+	check_status(g_repo, 2, 0, 0, 0, 0, 0, 1);
+
+	cl_must_pass(p_mkdir(TEST_DIR "/subdir", 0777));
+	cl_git_mkfile(TEST_DIR "/subdir/file", "hello!\n");
+	check_status(g_repo, 2, 0, 0, 1, 0, 0, 1);
+
+	cl_git_pass(git_index_add_all(index, NULL, 0, NULL, NULL));
+	check_status(g_repo, 3, 0, 0, 0, 0, 0, 1);
+
+	git_index_free(index);
+}
+
 static int addall_match_prefix(
 	const char *path, const char *matched_pathspec, void *payload)
 {
