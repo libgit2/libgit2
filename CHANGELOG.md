@@ -61,6 +61,10 @@ support for HTTPS connections insead of OpenSSL.
   `git_off_t` instead of `size_t` for the size of the blob, which
   allows putting large files into the odb on 32-bit systems.
 
+* The remote's push and pull URLs now honor the url.$URL.insteadOf
+  configuration. This allows modifying URL prefixes to a custom
+  value via gitconfig.
+
 ### API additions
 
 * The `git_merge_options` gained a `file_flags` member.
