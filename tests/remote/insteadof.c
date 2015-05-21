@@ -58,3 +58,15 @@ void test_remote_insteadof__pushurl_insteadof_applicable(void)
 	    git_remote_pushurl(g_remote),
 	    "git@github.com:libgit2/libgit2");
 }
+
+void test_remote_insteadof__anonymous_remote(void)
+{
+	cl_git_pass(git_repository_open(&g_repo, cl_fixture(REPO_PATH)));
+	cl_git_pass(git_remote_create_anonymous(&g_remote, g_repo,
+	    "http://example.com/libgit2/libgit2"));
+
+	cl_assert_equal_s(
+	    git_remote_url(g_remote),
+	    "http://github.com/libgit2/libgit2");
+	cl_assert_equal_p(git_remote_pushurl(g_remote), NULL);
+}
