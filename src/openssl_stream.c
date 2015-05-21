@@ -243,10 +243,9 @@ int openssl_connect(git_stream *stream)
 		return ssl_set_error(st->ssl, ret);
 	}
 
-#ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
-	// specify the host
-        SSL_set_tlsext_host_name(st->ssl, st->socket->host);
-#endif
+	/* specify the host in case SNI is needed */
+	SSL_set_tlsext_host_name(st->ssl, st->socket->host);
+
 	if ((ret = SSL_connect(st->ssl)) <= 0)
 		return ssl_set_error(st->ssl, ret);
 
