@@ -561,7 +561,7 @@ typedef struct {
 } git_fetch_options;
 
 #define GIT_FETCH_OPTIONS_VERSION 1
-#define GIT_FETCH_OPTIONS_INIT { GIT_FETCH_OPTIONS_VERSION, GIT_REMOTE_CALLBACKS_INIT, 0, 1 }
+#define GIT_FETCH_OPTIONS_INIT { GIT_FETCH_OPTIONS_VERSION, GIT_REMOTE_CALLBACKS_INIT, GIT_FETCH_PRUNE_FALLBACK, 1 }
 
 /**
  * Initializes a `git_fetch_options` with default values. Equivalent to
