@@ -19,6 +19,8 @@ matrix:
   allow_failures:
     - GENERATOR: "MSYS Makefiles"
       ARCH: 32
+    - GENERATOR: "Visual Studio 11 Win64"
+      ARCH: 64
 cache:
 - i686-4.9.2-release-win32-sjlj-rt_v3-rev1.7z
 - x86_64-4.9.2-release-win32-seh-rt_v3-rev1.7z
