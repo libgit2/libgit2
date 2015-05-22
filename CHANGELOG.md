@@ -10,6 +10,23 @@ v0.22 + 1
 * Updated binary identification in CRLF filtering to avoid false positives in
   UTF-8 files.
 
+* LF -> CRLF filter now correctly honors core.safecrlf=true errors
+  * LF only files were accepted with core.autocrlf=true on CRLF platforms
+  * files containig CRLF in combination with core.autocrlf=input were accepted
+  * adding files containing CR and CRLF but not the same number failed
+
+* LF -> CRLF filter now handles files on adding to index the way vanilla git does
+  * skip files marked as "binary" (-crlf)
+  * especially files containing single CR chars are added as is now
+  * honor "text" attribute for forcing a file being interpreted as text
+
+* LF -> CRLF filter now handles files on checkout the way vanilla git does
+  * honor "text" attribute forcing the processing of binary files and eol=crlf processing on LF platforms
+  * skip files containing the same number of LF and CRLF eols
+  * fix binary detection (only apply it for AUTO and GUESS files)
+  * correctly handle files with mixed line endings (CR, LF and also CrLf at the same time and in different combinations)
+  * fix checking out with core.autocrlf=true on LF-only platforms
+
 * Rename and copy detection is enabled for small files.
 
 * Checkout can now handle an initial checkout of a repository, making

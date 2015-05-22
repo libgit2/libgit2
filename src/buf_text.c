@@ -131,17 +131,17 @@ int git_buf_text_lf_to_crlf(git_buf *tgt, const git_buf *src)
 	for (; next; scan = next + 1, next = memchr(scan, '\n', end - scan)) {
 		size_t copylen = next - scan;
 
-		/* if we find mixed line endings, bail */
-		if (next > start && next[-1] == '\r') {
-			git_buf_free(tgt);
-			return GIT_PASSTHROUGH;
-		}
-
 		GITERR_CHECK_ALLOC_ADD(&alloclen, copylen, 3);
 		if (git_buf_grow_by(tgt, alloclen) < 0)
 			return -1;
 
-		if (next > scan) {
+		/* if we find mixed line endings, ignore it as vanilla git does
+		 * the decision if this function needs to be called at all is made in the crlf filter
+		 */
+		if (next > start && next[-1] == '\r') {
+			memcpy(tgt->ptr + tgt->size, scan, copylen - 1);
+			tgt->size += copylen - 1;
+		} else if (next > scan) {
 			memcpy(tgt->ptr + tgt->size, scan, copylen);
 			tgt->size += copylen;
 		}

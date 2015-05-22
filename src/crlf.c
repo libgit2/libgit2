@@ -124,39 +124,22 @@ static int crlf_apply_to_odb(
 	const git_buf *from,
 	const git_filter_source *src)
 {
+	git_buf_text_stats stats;
+	bool is_binary;
+
 	/* Empty file? Nothing to do */
 	if (!git_buf_len(from))
 		return 0;
+
+	is_binary = git_buf_text_gather_stats(&stats, from, false);
 
 	/* Heuristics to see if we can skip the conversion.
 	 * Straight from Core Git.
 	 */
 	if (ca->crlf_action == GIT_CRLF_AUTO || ca->crlf_action == GIT_CRLF_GUESS) {
-		git_buf_text_stats stats;
-
-		/* Check heuristics for binary vs text - returns true if binary */
-		if (git_buf_text_gather_stats(&stats, from, false))
+		/* Check heuristics for binary vs text */
+		if (is_binary)
 			return GIT_PASSTHROUGH;
-
-		/* If there are no CR characters to filter out, then just pass */
-		if (!stats.cr)
-			return GIT_PASSTHROUGH;
-
-		/* If safecrlf is enabled, sanity-check the result. */
-		if (stats.cr != stats.crlf || stats.lf != stats.crlf) {
-			switch (ca->safe_crlf) {
-			case GIT_SAFE_CRLF_FAIL:
-				giterr_set(
-					GITERR_FILTER, "LF would be replaced by CRLF in '%s'",
-					git_filter_source_path(src));
-				return -1;
-			case GIT_SAFE_CRLF_WARN:
-				/* TODO: issue warning when warning API is available */;
-				break;
-			default:
-				break;
-			}
-		}
 
 		/*
 		 * We're currently not going to even try to convert stuff
@@ -174,10 +157,50 @@ static int crlf_apply_to_odb(
 			if (has_cr_in_index(src))
 				return GIT_PASSTHROUGH;
 		}
-
-		if (!stats.cr)
-			return GIT_PASSTHROUGH;
 	}
+
+	/* If safecrlf is enabled, sanity-check the result. */
+	if (ca->crlf_action == GIT_CRLF_INPUT ||
+		(ca->auto_crlf == GIT_AUTO_CRLF_INPUT &&
+		(ca->crlf_action == GIT_CRLF_GUESS || ca->crlf_action == GIT_CRLF_AUTO ||
+		(ca->crlf_action == GIT_CRLF_TEXT && ca->eol==GIT_EOL_UNSET)))) {
+		if (stats.crlf) {
+			switch (ca->safe_crlf) {
+			case GIT_SAFE_CRLF_FAIL:
+				giterr_set(
+					GITERR_FILTER, "CRLF would be replaced by LF in '%s'",
+					git_filter_source_path(src));
+				return -1;
+			case GIT_SAFE_CRLF_WARN:
+				/* TODO: issue warning when warning API is available */;
+				break;
+			default:
+				break;
+			}
+		}
+	} else if (ca->crlf_action == GIT_CRLF_CRLF ||
+				(ca->auto_crlf == GIT_AUTO_CRLF_TRUE &&
+				(ca->crlf_action == GIT_CRLF_GUESS || ca->crlf_action == GIT_CRLF_AUTO ||
+				(ca->crlf_action == GIT_CRLF_TEXT && ca->eol == GIT_EOL_UNSET)))) {
+		if (stats.lf != stats.crlf) {
+			switch (ca->safe_crlf) {
+			case GIT_SAFE_CRLF_FAIL:
+				giterr_set(
+					GITERR_FILTER, "LF would be replaced by CRLF in '%s'",
+					git_filter_source_path(src));
+				return -1;
+			case GIT_SAFE_CRLF_WARN:
+				/* TODO: issue warning when warning API is available */;
+				break;
+			default:
+				break;
+			}
+		}
+	}
+
+	/* If there are no CR characters to filter out, then just pass */
+	if (!stats.cr)
+		return GIT_PASSTHROUGH;
 
 	/* Actually drop the carriage returns */
 	return git_buf_text_crlf_to_lf(to, from);
@@ -204,6 +227,10 @@ static const char *line_ending(struct crlf_attrs *ca)
 
 	switch (ca->eol) {
 	case GIT_EOL_UNSET:
+		if (ca->auto_crlf == GIT_AUTO_CRLF_TRUE)
+			return "\r\n";
+		if (ca->auto_crlf == GIT_AUTO_CRLF_INPUT)
+			return "\n";
 		return GIT_EOL_NATIVE == GIT_EOL_CRLF ? "\r\n" : "\n";
 
 	case GIT_EOL_CRLF:
@@ -225,23 +252,48 @@ static int crlf_apply_to_workdir(
 	struct crlf_attrs *ca, git_buf *to, const git_buf *from)
 {
 	const char *workdir_ending = NULL;
+	git_buf_text_stats stats;
+	bool is_binary;
 
 	/* Empty file? Nothing to do. */
 	if (git_buf_len(from) == 0)
 		return 0;
-
-	/* Don't filter binary files */
-	if (git_buf_text_is_binary(from))
-		return GIT_PASSTHROUGH;
 
 	/* Determine proper line ending */
 	workdir_ending = line_ending(ca);
 	if (!workdir_ending)
 		return -1;
 
-	/* only LF->CRLF conversion is supported, do nothing on LF platforms */
+	/* check if we need to consider a LF->CRLF conversation */
 	if (strcmp(workdir_ending, "\r\n") != 0)
 		return GIT_PASSTHROUGH;
+
+	is_binary = git_buf_text_gather_stats(&stats, from, false);
+
+	/* Nothing to convert */
+	if (!stats.lf)
+		return GIT_PASSTHROUGH;
+
+	/* Is file already CRLF? */
+	if (stats.lf == stats.crlf)
+		return GIT_PASSTHROUGH;
+
+	if (ca->crlf_action == GIT_CRLF_AUTO || ca->crlf_action == GIT_CRLF_GUESS) {
+		if (ca->crlf_action == GIT_CRLF_GUESS) {
+			/*
+			 * If the file in the index has any CR OR crlf in it, do not convert.
+			 */
+			if (stats.cr || stats.crlf)
+				return GIT_PASSTHROUGH;
+		}
+
+		/* If we have any bare CR characters, we're not going to touch it */
+		if (stats.cr != stats.crlf)
+			return GIT_PASSTHROUGH;
+
+		if (is_binary)
+			return GIT_PASSTHROUGH;
+	}
 
 	return git_buf_text_lf_to_crlf(to, from);
 }
@@ -267,6 +319,10 @@ static int crlf_check(
 		ca.eol = check_eol(attr_values[1]); /* eol */
 	}
 	ca.auto_crlf = GIT_AUTO_CRLF_DEFAULT;
+	error = git_repository__cvar(
+		&ca.auto_crlf, git_filter_source_repo(src), GIT_CVAR_AUTO_CRLF);
+	if (error < 0)
+		return error;
 
 	/*
 	 * Use the core Git logic to see if we should perform CRLF for this file
@@ -280,11 +336,6 @@ static int crlf_check(
 	if (ca.crlf_action == GIT_CRLF_GUESS ||
 		(ca.crlf_action == GIT_CRLF_AUTO &&
 		git_filter_source_mode(src) == GIT_FILTER_SMUDGE)) {
-
-		error = git_repository__cvar(
-			&ca.auto_crlf, git_filter_source_repo(src), GIT_CVAR_AUTO_CRLF);
-		if (error < 0)
-			return error;
 
 		if (ca.crlf_action == GIT_CRLF_GUESS &&
 			ca.auto_crlf == GIT_AUTO_CRLF_FALSE)

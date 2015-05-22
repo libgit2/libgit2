@@ -11,16 +11,34 @@
 #define ALL_LF_TEXT_RAW			"lf\nlf\nlf\nlf\nlf\n"
 #define MORE_CRLF_TEXT_RAW		"crlf\r\ncrlf\r\nlf\ncrlf\r\ncrlf\r\n"
 #define MORE_LF_TEXT_RAW		"lf\nlf\ncrlf\r\nlf\nlf\n"
+#define MIXED_LF_CR_RAW			"one\ntwo\rthree\nfour\r"
+#define MIXED_LF_CR_CRLF_RAW	"one\ntwo\rthree\r\nfour\r"
+#define BINARY_ALL_CRLF_TEXT_RAW	"\01one\r\ntwo\r\nthree\r\nfour\r\n"
+#define BINARY_ALL_LF_TEXT_RAW		"\01one\ntwo\nthree\nfour\n"
+#define BINARY_MIXED_LF_CR_RAW		"\01" MIXED_LF_CR_RAW
+#define BINARY_MIXED_LF_CR_CRLF_RAW	"\01" MIXED_LF_CR_CRLF_RAW
 
 #define ALL_CRLF_TEXT_AS_CRLF	ALL_CRLF_TEXT_RAW
 #define ALL_LF_TEXT_AS_CRLF		"lf\r\nlf\r\nlf\r\nlf\r\nlf\r\n"
 #define MORE_CRLF_TEXT_AS_CRLF	"crlf\r\ncrlf\r\nlf\r\ncrlf\r\ncrlf\r\n"
 #define MORE_LF_TEXT_AS_CRLF	"lf\r\nlf\r\ncrlf\r\nlf\r\nlf\r\n"
+#define MIXED_LF_CR_AS_CRLF		"one\r\ntwo\rthree\r\nfour\r"
+#define MIXED_LF_CR_CRLF_AS_CRLF	MIXED_LF_CR_AS_CRLF
+#define BINARY_ALL_CRLF_TEXT_AS_CRLF	BINARY_ALL_CRLF_TEXT_RAW
+#define BINARY_ALL_LF_TEXT_AS_CRLF		BINARY_ALL_CRLF_TEXT_AS_CRLF
+#define BINARY_MIXED_LF_CR_AS_CRLF		"\01" MIXED_LF_CR_AS_CRLF
+#define BINARY_MIXED_LF_CR_CRLF_AS_CRLF	BINARY_MIXED_LF_CR_AS_CRLF
 
 #define ALL_CRLF_TEXT_AS_LF		"crlf\ncrlf\ncrlf\ncrlf\n"
 #define ALL_LF_TEXT_AS_LF		ALL_LF_TEXT_RAW
 #define MORE_CRLF_TEXT_AS_LF	"crlf\ncrlf\nlf\ncrlf\ncrlf\n"
 #define MORE_LF_TEXT_AS_LF		"lf\nlf\ncrlf\nlf\nlf\n"
+#define MIXED_LF_CR_AS_LF		MIXED_LF_CR_RAW
+#define MIXED_LF_CR_CRLF_AS_LF	MIXED_LF_CR_CRLF_RAW
+#define BINARY_ALL_CRLF_TEXT_AS_LF		BINARY_ALL_CRLF_TEXT_RAW
+#define BINARY_ALL_LF_TEXT_AS_LF		BINARY_ALL_LF_TEXT_RAW
+#define BINARY_MIXED_LF_CR_AS_LF		BINARY_MIXED_LF_CR_RAW
+#define BINARY_MIXED_LF_CR_CRLF_AS_LF	BINARY_MIXED_LF_CR_CRLF_RAW
 
 #define FEW_UTF8_CRLF_RAW		"\xe2\x9a\xbdThe rest is ASCII01.\r\nThe rest is ASCII02.\r\nThe rest is ASCII03.\r\nThe rest is ASCII04.\r\nThe rest is ASCII05.\r\nThe rest is ASCII06.\r\nThe rest is ASCII07.\r\nThe rest is ASCII08.\r\nThe rest is ASCII09.\r\nThe rest is ASCII10.\r\nThe rest is ASCII11.\r\nThe rest is ASCII12.\r\nThe rest is ASCII13.\r\nThe rest is ASCII14.\r\nThe rest is ASCII15.\r\nThe rest is ASCII16.\r\nThe rest is ASCII17.\r\nThe rest is ASCII18.\r\nThe rest is ASCII19.\r\nThe rest is ASCII20.\r\nThe rest is ASCII21.\r\nThe rest is ASCII22.\r\n"
 #define FEW_UTF8_LF_RAW			"\xe2\x9a\xbdThe rest is ASCII01.\nThe rest is ASCII02.\nThe rest is ASCII03.\nThe rest is ASCII04.\nThe rest is ASCII05.\nThe rest is ASCII06.\nThe rest is ASCII07.\nThe rest is ASCII08.\nThe rest is ASCII09.\nThe rest is ASCII10.\nThe rest is ASCII11.\nThe rest is ASCII12.\nThe rest is ASCII13.\nThe rest is ASCII14.\nThe rest is ASCII15.\nThe rest is ASCII16.\nThe rest is ASCII17.\nThe rest is ASCII18.\nThe rest is ASCII19.\nThe rest is ASCII20.\nThe rest is ASCII21.\nThe rest is ASCII22.\n"
