@@ -2,6 +2,7 @@ version: '{build}'
 branches:
   only:
   - master
+  - /^maint.*/
 environment:
   GITTEST_INVASIVE_FS_STRUCTURE: 1
   GITTEST_INVASIVE_FS_SIZE: 1
