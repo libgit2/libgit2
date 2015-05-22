@@ -15,6 +15,15 @@
 #include "smart.h"
 #include "cred.h"
 #include "socket_stream.h"
+#include "global.h"
+#include "stream.h"
+
+static int should_lock = 1;
+
+void git_libssh2_set_threadsafe(void)
+{
+	should_lock = 0;
+}
 
 #ifdef GIT_SSH
 
@@ -97,7 +106,9 @@ static int send_command(ssh_stream *s)
 	if (error < 0)
 		goto cleanup;
 
+	LOCK;
 	error = libssh2_channel_exec(s->channel, request.ptr);
+	UNLOCK;
 	if (error < LIBSSH2_ERROR_NONE) {
 		ssh_error(s->session, "SSH could not execute request");
 		goto cleanup;
@@ -124,7 +135,10 @@ static int ssh_stream_read(
 	if (!s->sent_command && send_command(s) < 0)
 		return -1;
 
-	if ((rc = libssh2_channel_read(s->channel, buffer, buf_size)) < LIBSSH2_ERROR_NONE) {
+	LOCK;
+	rc = libssh2_channel_read(s->channel, buffer, buf_size);
+	UNLOCK;
+	if (rc < LIBSSH2_ERROR_NONE) {
 		ssh_error(s->session, "SSH could not read data");
 		return -1;
 	}
@@ -134,9 +148,14 @@ static int ssh_stream_read(
 	 * not-found error, so read from stderr and signal EOF on
 	 * stderr.
 	 */
-	if (rc == 0 && (rc = libssh2_channel_read_stderr(s->channel, buffer, buf_size)) > 0) {
-		giterr_set(GITERR_SSH, "%*s", rc, buffer);
-		return GIT_EEOF;
+	if (rc == 0) {
+		LOCK;
+		rc = libssh2_channel_read_stderr(s->channel, buffer, buf_size);
+		UNLOCK;
+		if (rc > 0) {
+			giterr_set(GITERR_SSH, "%*s", rc, buffer);
+			return GIT_EEOF;
+		}
 	}
 
 
@@ -158,7 +177,9 @@ static int ssh_stream_write(
 		return -1;
 
 	do {
+		LOCK;
 		ret = libssh2_channel_write(s->channel, buffer + off, len - off);
+		UNLOCK;
 		if (ret < 0)
 			break;
 
@@ -272,10 +293,15 @@ static int ssh_agent_auth(LIBSSH2_SESSION *session, git_cred_ssh_key *c) {
 
 	struct libssh2_agent_publickey *curr, *prev = NULL;
 
-	LIBSSH2_AGENT *agent = libssh2_agent_init(session);
+	LIBSSH2_AGENT *agent;
 
-	if (agent == NULL)
+	agent = libssh2_agent_init(session);
+
+	if (agent == NULL) {
+		UNLOCK;
+		giterr_set(GITERR_SSH, "failed to initialize agent connection");
 		return -1;
+	}
 
 	rc = libssh2_agent_connect(agent);
 
@@ -311,6 +337,7 @@ shutdown:
 
 	libssh2_agent_disconnect(agent);
 	libssh2_agent_free(agent);
+	UNLOCK;
 
 	return rc;
 }
@@ -321,6 +348,7 @@ static int _git_ssh_authenticate_session(
 {
 	int rc;
 
+	LOCK;
 	do {
 		giterr_clear();
 		switch (cred->credtype) {
@@ -374,6 +402,7 @@ static int _git_ssh_authenticate_session(
 			rc = LIBSSH2_ERROR_AUTHENTICATION_FAILED;
 		}
 	} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
+	UNLOCK;
 
         if (rc == LIBSSH2_ERROR_PASSWORD_EXPIRED || rc == LIBSSH2_ERROR_AUTHENTICATION_FAILED)
                 return GIT_EAUTH;
@@ -434,8 +463,10 @@ static int _git_ssh_session_create(
 
 	assert(session);
 
+	LOCK;
 	s = libssh2_session_init();
 	if (!s) {
+		UNLOCK;
 		giterr_set(GITERR_NET, "Failed to initialize SSH session");
 		return -1;
 	}
@@ -443,6 +474,7 @@ static int _git_ssh_session_create(
 	do {
 		rc = libssh2_session_startup(s, socket->s);
 	} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
+	UNLOCK;
 
 	if (rc != LIBSSH2_ERROR_NONE) {
 		ssh_error(s, "Failed to start SSH session");
@@ -495,6 +527,7 @@ static int _git_ssh_setup_conn(
 	    (error = git_stream_connect(s->io)) < 0)
 		goto done;
 
+	LOCK;
 	if ((error = _git_ssh_session_create(&session, s->io)) < 0)
 		goto done;
 
@@ -517,6 +550,7 @@ static int _git_ssh_setup_conn(
 		}
 
 		if (cert.type == 0) {
+			UNLOCK;
 			giterr_set(GITERR_SSH, "unable to get the host key");
 			error = -1;
 			goto done;
@@ -529,12 +563,14 @@ static int _git_ssh_setup_conn(
 
 		error = t->owner->certificate_check_cb((git_cert *) cert_ptr, 0, host, t->owner->message_cb_payload);
 		if (error < 0) {
+			UNLOCK;
 			if (!giterr_last())
 				giterr_set(GITERR_NET, "user cancelled hostkey check");
 
 			goto done;
 		}
 	}
+	UNLOCK;
 
 	/* we need the username to ask for auth methods */
 	if (!user) {
@@ -580,7 +616,9 @@ static int _git_ssh_setup_conn(
 	if (error < 0)
 		goto done;
 
+	LOCK;
 	channel = libssh2_channel_open_session(session);
+	UNLOCK;
 	if (!channel) {
 		error = -1;
 		ssh_error(session, "Failed to open SSH channel");
@@ -726,7 +764,9 @@ static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *use
 
 	*out = 0;
 
+	LOCK;
 	list = libssh2_userauth_list(session, username, strlen(username));
+	UNLOCK;
 
 	/* either error, or the remote accepts NONE auth, which is bizarre, let's punt */
 	if (list == NULL && !libssh2_userauth_authenticated(session))

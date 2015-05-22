@@ -64,6 +64,13 @@ it should use. This means that libgit2 cannot know what to set as the
 user of libgit2 may use OpenSSL independently and the locking settings
 must survive libgit2 shutting down.
 
+As using these libraries without taking extra steps is unsafe, we err
+on the side of caution and lock around operations with these
+libraries. If you have set up thread safety for these librarires, you
+may call `git_openssl_set_threadafe()` and/or
+`git_libssh2_set_threadsafe()` which tell libgit2 that the libraries
+are thread-safe themselves and there is no need to take these locks.
+
 libgit2 does provide a last-resort convenience function
 `git_openssl_set_locking()` (available in `sys/openssl.h`) to use the
 platform-native mutex mechanisms to perform the locking, which you may

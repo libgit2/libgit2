@@ -50,4 +50,14 @@ GIT_INLINE(void) git_stream_free(git_stream *st)
 	st->free(st);
 }
 
+/* Macros for locking around OpenSSL and libssh2; it assumes you have a static 'should_lock' variable */
+#define LOCK do {						   \
+	if (should_lock && git_mutex_lock(&git__io_mutex) < 0) {   \
+		giterr_set(GITERR_NET, "failed to lock IO mutex"); \
+		return -1;					   \
+	}							   \
+} while(0)
+
+#define UNLOCK git_mutex_unlock(&git__io_mutex)
+
 #endif

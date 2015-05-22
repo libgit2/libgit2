@@ -26,6 +26,17 @@
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
 
+/*
+ * Whether we should take a lock around OpenSSL operations, the user
+ * can disable this if they've initialised OpenSSL's threading.
+ */
+static int should_lock = 1;
+
+void git_openssl_set_threadsafe(void)
+{
+	should_lock = 0;
+}
+
 static int ssl_set_error(SSL *ssl, int error)
 {
 	int err;
@@ -75,6 +86,8 @@ static int ssl_teardown(SSL *ssl)
 {
 	int ret;
 
+	LOCK;
+
 	ret = SSL_shutdown(ssl);
 	if (ret < 0)
 		ret = ssl_set_error(ssl, ret);
@@ -82,6 +95,9 @@ static int ssl_teardown(SSL *ssl)
 		ret = 0;
 
 	SSL_free(ssl);
+
+	UNLOCK;
+
 	return ret;
 }
 
@@ -109,7 +125,10 @@ static int verify_server_cert(SSL *ssl, const char *host)
 	void *addr;
 	int i = -1,j;
 
+	LOCK;
+
 	if (SSL_get_verify_result(ssl) != X509_V_OK) {
+		UNLOCK;
 		giterr_set(GITERR_SSL, "The SSL certificate is invalid");
 		return GIT_ECERTIFICATE;
 	}
@@ -128,6 +147,7 @@ static int verify_server_cert(SSL *ssl, const char *host)
 
 	cert = SSL_get_peer_certificate(ssl);
 	if (!cert) {
+		UNLOCK;
 		giterr_set(GITERR_SSL, "the server did not provide a certificate");
 		return -1;
 	}
@@ -167,8 +187,10 @@ static int verify_server_cert(SSL *ssl, const char *host)
 	if (matched == 0)
 		goto cert_fail_name;
 
-	if (matched == 1)
+	if (matched == 1) {
+		UNLOCK;
 		return 0;
+	}
 
 	/* If no alternative names are available, check the common name */
 	peer_name = X509_get_subject_name(cert);
@@ -213,10 +235,12 @@ static int verify_server_cert(SSL *ssl, const char *host)
 	return 0;
 
 on_error:
+	UNLOCK;
 	OPENSSL_free(peer_cn);
 	return ssl_set_error(ssl, 0);
 
 cert_fail_name:
+	UNLOCK;
 	OPENSSL_free(peer_cn);
 	giterr_set(GITERR_SSL, "hostname does not match certificate");
 	return GIT_ECERTIFICATE;
@@ -239,7 +263,10 @@ int openssl_connect(git_stream *stream)
 	if ((ret = git_stream_connect((git_stream *)st->socket)) < 0)
 		return ret;
 
+	LOCK;
+
 	if ((ret = SSL_set_fd(st->ssl, st->socket->s)) <= 0) {
+		UNLOCK;
 		openssl_close((git_stream *) st);
 		return ssl_set_error(st->ssl, ret);
 	}
@@ -247,7 +274,10 @@ int openssl_connect(git_stream *stream)
 	/* specify the host in case SNI is needed */
 	SSL_set_tlsext_host_name(st->ssl, st->socket->host);
 
-	if ((ret = SSL_connect(st->ssl)) <= 0)
+	ret = SSL_connect(st->ssl);
+	UNLOCK;
+
+	if (ret <= 0)
 		return ssl_set_error(st->ssl, ret);
 
 	return verify_server_cert(st->ssl, st->socket->host);
@@ -260,9 +290,12 @@ int openssl_certificate(git_cert **out, git_stream *stream)
 	X509 *cert = SSL_get_peer_certificate(st->ssl);
 	unsigned char *guard, *encoded_cert;
 
+	LOCK;
+
 	/* Retrieve the length of the certificate first */
 	len = i2d_X509(cert, NULL);
 	if (len < 0) {
+		UNLOCK;
 		giterr_set(GITERR_NET, "failed to retrieve certificate information");
 		return -1;
 	}
@@ -273,6 +306,7 @@ int openssl_certificate(git_cert **out, git_stream *stream)
 	guard = encoded_cert;
 
 	len = i2d_X509(cert, &guard);
+	UNLOCK;
 	if (len < 0) {
 		git__free(encoded_cert);
 		giterr_set(GITERR_NET, "failed to retrieve certificate information");
@@ -294,7 +328,10 @@ ssize_t openssl_write(git_stream *stream, const char *data, size_t len, int flag
 
 	GIT_UNUSED(flags);
 
-	if ((ret = SSL_write(st->ssl, data, len)) <= 0) {
+	LOCK;
+	ret = SSL_write(st->ssl, data, len);
+	UNLOCK;
+	if (ret <= 0) {
 		return ssl_set_error(st->ssl, ret);
 	}
 
@@ -306,8 +343,12 @@ ssize_t openssl_read(git_stream *stream, void *data, size_t len)
 	openssl_stream *st = (openssl_stream *) stream;
 	int ret;
 
+
+	LOCK;
 	if ((ret = SSL_read(st->ssl, data, len)) <= 0)
 		ssl_set_error(st->ssl, ret);
+
+	UNLOCK;
 
 	return ret;
 }
@@ -342,7 +383,9 @@ int git_openssl_stream_new(git_stream **out, const char *host, const char *port)
 	if (git_socket_stream_new((git_stream **) &st->socket, host, port))
 		return -1;
 
+	LOCK;
 	st->ssl = SSL_new(git__ssl_ctx);
+	UNLOCK;
 	if (st->ssl == NULL) {
 		giterr_set(GITERR_SSL, "failed to create ssl object");
 		return -1;

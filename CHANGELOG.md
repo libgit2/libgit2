@@ -49,6 +49,11 @@ support for HTTPS connections insead of OpenSSL.
   the error message, which allows you to get the "repository not
   found" messages.
 
+* OpenSSL and libssh2 code now locks by default as a way to have safe
+  defaults. Use `git_openssl_set_threadsafe()` and
+  `git_libssh2_set_threadsafe()` resp. to disable the locks if you
+  have made sure their locking is set up.
+
 
 ### API additions
 
@@ -97,6 +102,10 @@ support for HTTPS connections insead of OpenSSL.
   server. This typically indicates an error with the URL or
   configuration of the server, and tools can use this to show messages
   about failing to communicate with the server.
+
+* `git_openssl_set_threadsafe()` and `git_libssh2_set_threadsafe()`
+  have been added to allow the user to specify that they have taken
+  care of setting up the threading for these libraries.
 
 ### API removals
 

@@ -25,6 +25,7 @@ extern SSL_CTX *git__ssl_ctx;
 git_global_st *git__global_state(void);
 
 extern git_mutex git__mwindow_mutex;
+extern git_mutex git__io_mutex;
 
 #define GIT_GLOBAL (git__global_state())
 

@@ -14,6 +14,7 @@
 
 
 git_mutex git__mwindow_mutex;
+git_mutex git__io_mutex;
 
 #define MAX_SHUTDOWN_CB 8
 
@@ -135,6 +136,7 @@ int git_openssl_set_locking(void)
 
 	CRYPTO_set_locking_callback(openssl_locking_function);
 	git__on_shutdown(shutdown_ssl_locking);
+	git_openssl_set_threadsafe();
 	return 0;
 # else
 	giterr_set(GITERR_THREAD, "libgit2 as not built with threads");
@@ -190,7 +192,8 @@ static int synchronized_threads_init(void)
 	int error;
 
 	_tls_index = TlsAlloc();
-	if (git_mutex_init(&git__mwindow_mutex))
+	if (git_mutex_init(&git__mwindow_mutex) ||
+	    git_mutex_init(&git__io_mutex))
 		return -1;
 
 	/* Initialize any other subsystems that have global state */
@@ -230,6 +233,7 @@ static void synchronized_threads_shutdown(void)
 
 	TlsFree(_tls_index);
 	git_mutex_free(&git__mwindow_mutex);
+	git_mutex_free(&git__io_mutex);
 }
 
 int git_libgit2_shutdown(void)
@@ -299,6 +303,8 @@ static void init_once(void)
 {
 	if ((init_error = git_mutex_init(&git__mwindow_mutex)) != 0)
 		return;
+	if ((init_error = git_mutex_init(&git__io_mutex)) != 0)
+		return;
 	pthread_key_create(&_tls_key, &cb__free_status);
 
 
@@ -342,6 +348,7 @@ int git_libgit2_shutdown(void)
 
 	pthread_key_delete(_tls_key);
 	git_mutex_free(&git__mwindow_mutex);
+	git_mutex_free(&git__io_mutex);
 	_once_init = new_once;
 
 	return 0;
