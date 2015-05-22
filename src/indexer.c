@@ -316,6 +316,13 @@ on_error:
 	return -1;
 }
 
+GIT_INLINE(bool) has_entry(git_indexer *idx, git_oid *id)
+{
+	khiter_t k;
+	k = kh_get(oid, idx->pack->idx_cache, id);
+	return (k != kh_end(idx->pack->idx_cache));
+}
+
 static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_entry *pentry, git_off_t entry_start)
 {
 	int i, error;
@@ -330,8 +337,11 @@ static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_ent
 
 	pentry->offset = entry_start;
 	k = kh_put(oid, idx->pack->idx_cache, &pentry->sha1, &error);
-	if (!error)
+
+	if (error <= 0) {
+		giterr_set(GITERR_INDEXER, "cannot insert object into pack");
 		return -1;
+	}
 
 	kh_value(idx->pack->idx_cache, k) = pentry;
 
@@ -781,6 +791,9 @@ static int fix_thin_pack(git_indexer *idx, git_transfer_progress *stats)
 
 	git_oid_fromraw(&base, base_info);
 	git_mwindow_close(&w);
+
+	if (has_entry(idx, &base))
+		return 0;
 
 	if (inject_object(idx, &base) < 0)
 		return -1;
