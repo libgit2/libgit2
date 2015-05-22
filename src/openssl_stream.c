@@ -291,19 +291,14 @@ ssize_t openssl_write(git_stream *stream, const char *data, size_t len, int flag
 {
 	openssl_stream *st = (openssl_stream *) stream;
 	int ret;
-	size_t off = 0;
 
 	GIT_UNUSED(flags);
 
-	while (off < len) {
-		ret = SSL_write(st->ssl, data + off, len - off);
-		if (ret <= 0 && ret != SSL_ERROR_WANT_WRITE)
-			return ssl_set_error(st->ssl, ret);
+	if ((ret = SSL_write(st->ssl, data, len)) <= 0) {
+		return ssl_set_error(st->ssl, ret);
+	}
 
-		off += ret;
-	}	
-
-	return off;
+	return ret;
 }
 
 ssize_t openssl_read(git_stream *stream, void *data, size_t len)
@@ -311,14 +306,8 @@ ssize_t openssl_read(git_stream *stream, void *data, size_t len)
 	openssl_stream *st = (openssl_stream *) stream;
 	int ret;
 
-	do {
-		ret = SSL_read(st->ssl, data, len);
-	} while (SSL_get_error(st->ssl, ret) == SSL_ERROR_WANT_READ);
-
-	if (ret < 0) {
+	if ((ret = SSL_read(st->ssl, data, len)) <= 0)
 		ssl_set_error(st->ssl, ret);
-		return -1;
-	}
 
 	return ret;
 }
