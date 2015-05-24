@@ -22,8 +22,8 @@ GIT_BEGIN_DECL
  * Payload for git_cred_stock_userpass_plaintext.
  */
 typedef struct git_cred_userpass_payload {
-	char *username;
-	char *password;
+	const char *username;
+	const char *password;
 } git_cred_userpass_payload;
 
 
