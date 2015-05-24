@@ -39,9 +39,7 @@ const char *git_cred__username(git_cred *cred)
 		return c->username;
 	}
 	case GIT_CREDTYPE_SSH_KEY:
-#ifdef GIT_SSH_MEMORY_CREDENTIALS
 	case GIT_CREDTYPE_SSH_MEMORY:
-#endif
 	{
 		git_cred_ssh_key *c = (git_cred_ssh_key *) cred;
 		return c->username;

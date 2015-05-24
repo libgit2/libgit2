@@ -109,14 +109,12 @@ typedef enum {
 	 */
 	GIT_CREDTYPE_USERNAME = (1u << 5),
 
-#ifdef GIT_SSH_MEMORY_CREDENTIALS
 	/**
 	 * Credentials read from memory.
 	 *
 	 * Only available for libssh2+OpenSSL for now.
 	 */
 	GIT_CREDTYPE_SSH_MEMORY = (1u << 6),
-#endif
 } git_credtype_t;
 
 /* The base structure for all credential types */
