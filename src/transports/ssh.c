@@ -374,12 +374,15 @@ static int _git_ssh_authenticate_session(
 		case GIT_CREDTYPE_SSH_MEMORY: {
 			git_cred_ssh_key *c = (git_cred_ssh_key *)cred;
 
+			assert(c->username);
+			assert(c->privatekey);
+
 			rc = libssh2_userauth_publickey_frommemory(
 				session,
 				c->username,
 				strlen(c->username),
 				c->publickey,
-				strlen(c->publickey),
+				c->publickey ? strlen(c->publickey) : 0,
 				c->privatekey,
 				strlen(c->privatekey),
 				c->passphrase);
