@@ -37,7 +37,7 @@ static void test_with_many(int expected_new)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, NULL, NULL, &exp));
+		diff, diff_file_cb, NULL, NULL, NULL, &exp));
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(expected_new + 1, exp.file_status[GIT_DELTA_ADDED]);
 	cl_assert_equal_i(expected_new + 2, exp.files);
@@ -47,7 +47,7 @@ static void test_with_many(int expected_new)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, NULL, NULL, &exp));
+		diff, diff_file_cb, NULL, NULL, NULL, &exp));
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
 	cl_assert_equal_i(expected_new, exp.file_status[GIT_DELTA_ADDED]);
 	cl_assert_equal_i(expected_new + 1, exp.files);
@@ -63,7 +63,7 @@ static void test_with_many(int expected_new)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, NULL, NULL, &exp));
+		diff, diff_file_cb, NULL, NULL, NULL, &exp));
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(expected_new + 1, exp.file_status[GIT_DELTA_ADDED]);
 	cl_assert_equal_i(expected_new + 2, exp.files);
@@ -73,7 +73,7 @@ static void test_with_many(int expected_new)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, NULL, NULL, &exp));
+		diff, diff_file_cb, NULL, NULL, NULL, &exp));
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
 	cl_assert_equal_i(expected_new, exp.file_status[GIT_DELTA_ADDED]);
 	cl_assert_equal_i(expected_new + 1, exp.files);

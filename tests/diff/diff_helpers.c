@@ -91,6 +91,18 @@ int diff_print_file_cb(
 	return diff_file_cb(delta, progress, payload);
 }
 
+int diff_binary_cb(
+	const git_diff_delta *delta,
+	const git_diff_binary *binary,
+	void *payload)
+{
+	GIT_UNUSED(delta);
+	GIT_UNUSED(binary);
+	GIT_UNUSED(payload);
+
+	return 0;
+}
+
 int diff_hunk_cb(
 	const git_diff_delta *delta,
 	const git_diff_hunk *hunk,
@@ -145,6 +157,7 @@ int diff_line_cb(
 int diff_foreach_via_iterator(
 	git_diff *diff,
 	git_diff_file_cb file_cb,
+	git_diff_binary_cb binary_cb,
 	git_diff_hunk_cb hunk_cb,
 	git_diff_line_cb line_cb,
 	void *data)

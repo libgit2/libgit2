@@ -59,7 +59,7 @@ static void test_notify(
 	memset(&exp, 0, sizeof(exp));
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
-	cl_git_pass(git_diff_foreach(diff, diff_file_cb, NULL, NULL, &exp));
+	cl_git_pass(git_diff_foreach(diff, diff_file_cb, NULL, NULL, NULL, &exp));
 
 	cl_assert_equal_i(expected_diffed_files_count, exp.files);
 
@@ -222,7 +222,7 @@ void test_diff_notify__notify_cb_can_be_used_as_filtering_function(void)
 	memset(&exp, 0, sizeof(exp));
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
-	cl_git_pass(git_diff_foreach(diff, diff_file_cb, NULL, NULL, &exp));
+	cl_git_pass(git_diff_foreach(diff, diff_file_cb, NULL, NULL, NULL, &exp));
 
 	cl_assert_equal_i(0, exp.files);
 
