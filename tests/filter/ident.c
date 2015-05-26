@@ -49,22 +49,22 @@ void test_filter_ident__to_worktree(void)
 
 	add_blob_and_filter(
 		"Hello\n$Id$\nFun stuff\n", fl,
-		"Hello\n$Id: b69e2387aafcaf73c4de5b9ab59abe27fdadee30$\nFun stuff\n");
+		"Hello\n$Id: b69e2387aafcaf73c4de5b9ab59abe27fdadee30 $\nFun stuff\n");
 	add_blob_and_filter(
 		"Hello\n$Id: Junky$\nFun stuff\n", fl,
-		"Hello\n$Id: 45cd107a7102911cb2a7df08404674327fa050b9$\nFun stuff\n");
+		"Hello\n$Id: 45cd107a7102911cb2a7df08404674327fa050b9 $\nFun stuff\n");
 	add_blob_and_filter(
 		"$Id$\nAt the start\n", fl,
-		"$Id: b13415c767abc196fb95bd17070e8c1113e32160$\nAt the start\n");
+		"$Id: b13415c767abc196fb95bd17070e8c1113e32160 $\nAt the start\n");
 	add_blob_and_filter(
 		"At the end\n$Id$", fl,
-		"At the end\n$Id: 1344925c6bc65b34c5a7b50f86bf688e48e9a272$");
+		"At the end\n$Id: 1344925c6bc65b34c5a7b50f86bf688e48e9a272 $");
 	add_blob_and_filter(
 		"$Id$", fl,
-		"$Id: b3f5ebfb5843bc43ceecff6d4f26bb37c615beb1$");
+		"$Id: b3f5ebfb5843bc43ceecff6d4f26bb37c615beb1 $");
 	add_blob_and_filter(
 		"$Id: Some sort of junk goes here$", fl,
-		"$Id: ab2dd3853c7c9a4bff55aca2bea077a73c32ac06$");
+		"$Id: ab2dd3853c7c9a4bff55aca2bea077a73c32ac06 $");
 
 	add_blob_and_filter("$Id: ", fl, "$Id: ");
 	add_blob_and_filter("$Id", fl, "$Id");
