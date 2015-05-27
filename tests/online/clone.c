@@ -501,6 +501,74 @@ void test_online_clone__ssh_cert(void)
 	cl_git_fail_with(GIT_EUSER, git_clone(&g_repo, "ssh://localhost/foo", "./foo", &g_options));
 }
 
+static char *read_key_file(const char *path)
+{
+	FILE *f;
+	char *buf;
+	long key_length;
+
+	if (!path || !*path)
+		return NULL;
+
+	cl_assert((f = fopen(path, "r")) != NULL);
+	cl_assert(fseek(f, 0, SEEK_END) != -1);
+	cl_assert((key_length = ftell(f)) != -1);
+	cl_assert(fseek(f, 0, SEEK_SET) != -1);
+	cl_assert((buf = malloc(key_length)) != NULL);
+	cl_assert(fread(buf, key_length, 1, f) == 1);
+	fclose(f);
+
+	return buf;
+}
+
+static int ssh_memory_cred_cb(git_cred **cred, const char *url, const char *user_from_url,
+		   unsigned int allowed_types, void *payload)
+{
+	const char *remote_user = cl_getenv("GITTEST_REMOTE_USER");
+	const char *pubkey_path = cl_getenv("GITTEST_REMOTE_SSH_PUBKEY");
+	const char *privkey_path = cl_getenv("GITTEST_REMOTE_SSH_KEY");
+	const char *passphrase = cl_getenv("GITTEST_REMOTE_SSH_PASSPHRASE");
+
+	GIT_UNUSED(url); GIT_UNUSED(user_from_url); GIT_UNUSED(payload);
+
+	if (allowed_types & GIT_CREDTYPE_USERNAME)
+		return git_cred_username_new(cred, remote_user);
+
+	if (allowed_types & GIT_CREDTYPE_SSH_KEY)
+	{
+		char *pubkey = read_key_file(pubkey_path);
+		char *privkey = read_key_file(privkey_path);
+
+		int ret = git_cred_ssh_key_memory_new(cred, remote_user, pubkey, privkey, passphrase);
+
+		if (privkey)
+			free(privkey);
+		if (pubkey)
+			free(pubkey);
+		return ret;
+	}
+
+	giterr_set(GITERR_NET, "unexpected cred type");
+	return -1;
+}
+
+void test_online_clone__ssh_memory_auth(void)
+{
+	const char *remote_url = cl_getenv("GITTEST_REMOTE_URL");
+	const char *remote_user = cl_getenv("GITTEST_REMOTE_USER");
+	const char *privkey = cl_getenv("GITTEST_REMOTE_SSH_KEY");
+
+#ifndef GIT_SSH_MEMORY_CREDENTIALS
+	clar__skip();
+#endif
+	if (!remote_url || !remote_user || !privkey || strncmp(remote_url, "ssh://", 5) != 0)
+		clar__skip();
+
+	g_options.fetch_opts.callbacks.credentials = ssh_memory_cred_cb;
+
+	cl_git_pass(git_clone(&g_repo, remote_url, "./foo", &g_options));
+}
+
 void test_online_clone__url_with_no_path_returns_EINVALIDSPEC(void)
 {
 	cl_git_fail_with(git_clone(&g_repo, "http://github.com", "./foo", &g_options),
