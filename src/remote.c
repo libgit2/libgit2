@@ -97,6 +97,7 @@ static int write_add_refspec(git_repository *repo, const char *name, const char 
 {
 	git_config *cfg;
 	git_buf var = GIT_BUF_INIT;
+	git_refspec spec;
 	const char *fmt;
 	int error;
 
@@ -107,6 +108,15 @@ static int write_add_refspec(git_repository *repo, const char *name, const char 
 
 	if ((error = ensure_remote_name_is_valid(name)) < 0)
 		return error;
+
+	if ((error = git_refspec__parse(&spec, refspec, fetch)) < 0) {
+		if (giterr_last()->klass != GITERR_NOMEMORY)
+			error = GIT_EINVALIDSPEC;
+
+		return error;
+	}
+
+	git_refspec__free(&spec);
 
 	if ((error = git_buf_printf(&var, fmt, name)) < 0)
 		return error;
@@ -311,15 +321,16 @@ on_error:
 	return -1;
 }
 
-int git_remote_create_anonymous(git_remote **out, git_repository *repo, const char *url, const char *fetch)
+int git_remote_create_anonymous(git_remote **out, git_repository *repo, const char *url)
 {
-	return create_internal(out, repo, NULL, url, fetch);
+	return create_internal(out, repo, NULL, url, NULL);
 }
 
 int git_remote_dup(git_remote **dest, git_remote *source)
 {
+	size_t i;
 	int error = 0;
-	git_strarray refspecs = { 0 };
+	git_refspec *spec;
 	git_remote *remote = git__calloc(1, sizeof(git_remote));
 	GITERR_CHECK_ALLOC(remote);
 
@@ -349,21 +360,14 @@ int git_remote_dup(git_remote **dest, git_remote *source)
 		goto cleanup;
 	}
 
-	if ((error = git_remote_get_fetch_refspecs(&refspecs, source)) < 0 ||
-	    (error = git_remote_set_fetch_refspecs(remote, &refspecs)) < 0)
-		goto cleanup;
-
-	git_strarray_free(&refspecs);
-
-	if ((error = git_remote_get_push_refspecs(&refspecs, source)) < 0 ||
-	    (error = git_remote_set_push_refspecs(remote, &refspecs)) < 0)
-		goto cleanup;
+	git_vector_foreach(&source->refspecs, i, spec) {
+		if ((error = add_refspec(remote, spec->string, !spec->push)) < 0)
+			goto cleanup;
+	}
 
 	*dest = remote;
 
 cleanup:
-
-	git_strarray_free(&refspecs);
 
 	if (error < 0)
 		git__free(remote);
@@ -1449,18 +1453,20 @@ static int next_head(const git_remote *remote, git_vector *refs,
 	return GIT_ITEROVER;
 }
 
-static int opportunistic_updates(const git_remote *remote, git_vector *refs, const char *msg)
+static int opportunistic_updates(const git_remote *remote, const git_remote_callbacks *callbacks,
+				 git_vector *refs, const char *msg)
 {
 	size_t i, j, k;
 	git_refspec *spec;
 	git_remote_head *head;
 	git_reference *ref;
 	git_buf refname = GIT_BUF_INIT;
-	int error;
+	int error = 0;
 
 	i = j = k = 0;
 
 	while ((error = next_head(remote, refs, &spec, &head, &i, &j, &k)) == 0) {
+		git_oid old = {{ 0 }};
 		/*
 		 * If we got here, there is a refspec which was used
 		 * for fetching which matches the source of one of the
@@ -1469,18 +1475,38 @@ static int opportunistic_updates(const git_remote *remote, git_vector *refs, con
 		 * FETCH_HEAD
 		 */
 
+		git_buf_clear(&refname);
 		if ((error = git_refspec_transform(&refname, spec, head->name)) < 0)
-			return error;
+			goto cleanup;
 
-		error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, true, msg);
-		git_buf_free(&refname);
+		error = git_reference_name_to_id(&old, remote->repo, refname.ptr);
+		if (error < 0 && error != GIT_ENOTFOUND)
+			goto cleanup;
+
+		if (!git_oid_cmp(&old, &head->oid))
+			continue;
+
+		/* If we did find a current reference, make sure we haven't lost a race */
+		if (error)
+			error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, true, msg);
+		else
+			error = git_reference_create_matching(&ref, remote->repo, refname.ptr, &head->oid, true, &old, msg);
 		git_reference_free(ref);
-
 		if (error < 0)
-			return error;
+			goto cleanup;
+
+		if (callbacks && callbacks->update_tips != NULL) {
+			if (callbacks->update_tips(refname.ptr, &old, &head->oid, callbacks->payload) < 0)
+				goto cleanup;
+		}
 	}
 
-	return 0;
+	if (error == GIT_ITEROVER)
+		error = 0;
+
+cleanup:
+	git_buf_free(&refname);
+	return error;
 }
 
 int git_remote_update_tips(
@@ -1528,7 +1554,7 @@ int git_remote_update_tips(
 
 	/* only try to do opportunisitic updates if the refpec lists differ */
 	if (remote->passed_refspecs)
-		error = opportunistic_updates(remote, &refs, reflog_message);
+		error = opportunistic_updates(remote, callbacks, &refs, reflog_message);
 
 out:
 	git_vector_free(&refs);
@@ -2044,16 +2070,6 @@ static int set_refspecs(git_remote *remote, git_strarray *array, int push)
 	}
 
 	return 0;
-}
-
-int git_remote_set_fetch_refspecs(git_remote *remote, git_strarray *array)
-{
-	return set_refspecs(remote, array, false);
-}
-
-int git_remote_set_push_refspecs(git_remote *remote, git_strarray *array)
-{
-	return set_refspecs(remote, array, true);
 }
 
 static int copy_refspecs(git_strarray *array, const git_remote *remote, unsigned int push)

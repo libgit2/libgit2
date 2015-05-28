@@ -100,14 +100,18 @@ support for HTTPS connections insead of OpenSSL.
 
 ### API removals
 
-* `git_remote_save()` and `git_remote_clear_refspecs()` has been
+* `git_remote_save()` and `git_remote_clear_refspecs()` have been
   removed. Remote's configuration is changed via the configuration
   directly or through a convenience function which performs changes to
   the configuration directly.
 
 * `git_remote_set_callbacks()`, `git_remote_get_callbacks()` and
-  `git_remote_set_transport()` have been removed a the remote no
+  `git_remote_set_transport()` have been removed and the remote no
   longer stores this configuration.
+
+* `git_remote_set_fetch_refpecs()` and
+  `git_remote_set_push_refspecs()` have been removed. There is no
+  longer a way to set the base refspecs at run-time.
 
 ### Breaking API changes
 
@@ -180,7 +184,7 @@ support for HTTPS connections insead of OpenSSL.
 * `git_remote_connect()` and `git_remote_prune()` now take a pointer
   to the callbacks.
 
-* `git_remote_fetch()` and `git_remote_download()` now take a poitner
+* `git_remote_fetch()` and `git_remote_download()` now take a pointer
   to fetch options which determine the runtime configuration.
 
 * The `git_remote_autotag_option_t` values have been changed. It has
@@ -190,6 +194,9 @@ support for HTTPS connections insead of OpenSSL.
 * `git_remote_update_tips()` now takes a pointer to the callbacks as
   well as a boolean whether to write `FETCH_HEAD` and the autotag
   setting.
+
+* `git_remote_create_anonymous()` no longer takes a fetch refspec as
+  url-only remotes cannot have configured refspecs.
 
 * The `git_submodule_update_options` struct now has fetch options in
   the `fetch_opts` field instead of callbacks in the

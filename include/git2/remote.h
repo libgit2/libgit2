@@ -63,24 +63,18 @@ GIT_EXTERN(int) git_remote_create_with_fetchspec(
 /**
  * Create an anonymous remote
  *
- * Create a remote with the given url and refspec in memory. You can use
- * this when you have a URL instead of a remote's name.  Note that anonymous
- * remotes cannot be converted to persisted remotes.
+ * Create a remote with the given url in-memory. You can use this when
+ * you have a URL instead of a remote's name.
  *
- * The name, when provided, will be checked for validity.
- * See `git_tag_create()` for rules about valid names.
- *
- * @param out pointer to the new remote object
+ * @param out pointer to the new remote objects
  * @param repo the associated repository
  * @param url the remote repository's URL
- * @param fetch the fetch refspec to use for this remote.
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_remote_create_anonymous(
 		git_remote **out,
 		git_repository *repo,
-		const char *url,
-		const char *fetch);
+		const char *url);
 
 /**
  * Get the information for a particular remote
@@ -174,7 +168,7 @@ GIT_EXTERN(int) git_remote_set_pushurl(git_repository *repo, const char *remote,
  * @param repo the repository in which to change the configuration
  * @param remote the name of the remote to change
  * @param refspec the new fetch refspec
- * @return 0 or an error value
+ * @return 0, GIT_EINVALIDSPEC if refspec is invalid or an error value
  */
 GIT_EXTERN(int) git_remote_add_fetch(git_repository *repo, const char *remote, const char *refspec);
 
@@ -190,16 +184,6 @@ GIT_EXTERN(int) git_remote_add_fetch(git_repository *repo, const char *remote, c
 GIT_EXTERN(int) git_remote_get_fetch_refspecs(git_strarray *array, const git_remote *remote);
 
 /**
- * Set the remote's list of fetch refspecs
- *
- * The contents of the string array are copied.
- *
- * @param remote the remote to modify
- * @param array the new list of fetch resfpecs
- */
-GIT_EXTERN(int) git_remote_set_fetch_refspecs(git_remote *remote, git_strarray *array);
-
-/**
  * Add a push refspec to the remote's configuration
  *
  * Add the given refspec to the push list in the configuration. No
@@ -208,7 +192,7 @@ GIT_EXTERN(int) git_remote_set_fetch_refspecs(git_remote *remote, git_strarray *
  * @param repo the repository in which to change the configuration
  * @param remote the name of the remote to change
  * @param refspec the new push refspec
- * @return 0 or an error value
+ * @return 0, GIT_EINVALIDSPEC if refspec is invalid or an error value
  */
 GIT_EXTERN(int) git_remote_add_push(git_repository *repo, const char *remote, const char *refspec);
 
@@ -222,16 +206,6 @@ GIT_EXTERN(int) git_remote_add_push(git_repository *repo, const char *remote, co
  * @param remote the remote to query
  */
 GIT_EXTERN(int) git_remote_get_push_refspecs(git_strarray *array, const git_remote *remote);
-
-/**
- * Set the remote's list of push refspecs
- *
- * The contents of the string array are copied.
- *
- * @param remote the remote to modify
- * @param array the new list of push resfpecs
- */
-GIT_EXTERN(int) git_remote_set_push_refspecs(git_remote *remote, git_strarray *array);
 
 /**
  * Get the number of refspecs for a remote

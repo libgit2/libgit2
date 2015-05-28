@@ -90,7 +90,7 @@ void test_network_remote_remotes__error_when_no_push_available(void)
 	};
 
 
-	cl_git_pass(git_remote_create_anonymous(&r, _repo, cl_fixture("testrepo.git"), NULL));
+	cl_git_pass(git_remote_create_anonymous(&r, _repo, cl_fixture("testrepo.git")));
 
 	callbacks.transport = git_transport_local;
 	cl_git_pass(git_remote_connect(r, GIT_DIRECTION_PUSH, &callbacks));
@@ -128,6 +128,8 @@ void test_network_remote_remotes__add_fetchspec(void)
 	cl_assert_equal_s(git_refspec_dst(_refspec), "refs/*");
 	cl_assert_equal_s(git_refspec_string(_refspec), "refs/*:refs/*");
 	cl_assert_equal_b(_refspec->push, false);
+
+	cl_git_fail_with(GIT_EINVALIDSPEC, git_remote_add_fetch(_repo, "test", "refs/*/foo/*:refs/*"));
 }
 
 void test_network_remote_remotes__dup(void)
@@ -464,14 +466,4 @@ void test_network_remote_remotes__query_refspecs(void)
 
 	git_remote_free(remote);
 	git_remote_delete(_repo, "test");
-}
-
-void test_network_remote_remotes__fetch_from_anonymous(void)
-{
-	git_remote *remote;
-
-	cl_git_pass(git_remote_create_anonymous(&remote, _repo, cl_fixture("testrepo.git"),
-						"refs/heads/*:refs/other/*"));
-	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
-	git_remote_free(remote);
 }
