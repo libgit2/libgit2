@@ -46,6 +46,7 @@ typedef enum {
 	GIT_STATUS_WT_UNREADABLE    = (1u << 12),
 
 	GIT_STATUS_IGNORED          = (1u << 14),
+	GIT_STATUS_CONFLICTED       = (1u << 15),
 } git_status_t;
 
 /**

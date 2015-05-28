@@ -1173,6 +1173,9 @@ int git_index_remove_bypath(git_index *index, const char *path)
 		ret != GIT_ENOTFOUND))
 		return ret;
 
+	if (ret == GIT_ENOTFOUND)
+		giterr_clear();
+
 	return 0;
 }
 
@@ -1314,6 +1317,30 @@ int git_index_conflict_add(git_index *index,
 		(ret = index_entry_dup(&entries[2], INDEX_OWNER(index), their_entry)) < 0)
 		goto on_error;
 
+	/* Validate entries */
+	for (i = 0; i < 3; i++) {
+		if (entries[i] && !valid_filemode(entries[i]->mode)) {
+			giterr_set(GITERR_INDEX, "invalid filemode for stage %d entry",
+				i);
+			return -1;
+		}
+	}
+
+	/* Remove existing index entries for each path */
+	for (i = 0; i < 3; i++) {
+		if (entries[i] == NULL)
+			continue;
+
+		if ((ret = git_index_remove(index, entries[i]->path, 0)) != 0) {
+			if (ret != GIT_ENOTFOUND)
+				goto on_error;
+
+			giterr_clear();
+			ret = 0;
+		}
+	}
+
+	/* Add the conflict entries */
 	for (i = 0; i < 3; i++) {
 		if (entries[i] == NULL)
 			continue;
@@ -1321,7 +1348,7 @@ int git_index_conflict_add(git_index *index,
 		/* Make sure stage is correct */
 		GIT_IDXENTRY_STAGE_SET(entries[i], i + 1);
 
-		if ((ret = index_insert(index, &entries[i], 1, true)) < 0)
+		if ((ret = index_insert(index, &entries[i], 0, true)) < 0)
 			goto on_error;
 
 		entries[i] = NULL; /* don't free if later entry fails */
@@ -1510,7 +1537,7 @@ int git_index_conflict_next(
 	while (iterator->cur < iterator->index->entries.length) {
 		entry = git_index_get_byindex(iterator->index, iterator->cur);
 
-		if (git_index_entry_stage(entry) > 0) {
+		if (git_index_entry_is_conflict(entry)) {
 			if ((len = index_conflict__get_byindex(
 				ancestor_out,
 				our_out,
@@ -2356,6 +2383,11 @@ int git_index_entry_stage(const git_index_entry *entry)
 	return GIT_IDXENTRY_STAGE(entry);
 }
 
+int git_index_entry_is_conflict(const git_index_entry *entry)
+{
+	return (GIT_IDXENTRY_STAGE(entry) > 0);
+}
+
 typedef struct read_tree_data {
 	git_index *index;
 	git_vector *old_entries;
@@ -2638,7 +2670,8 @@ static int apply_each_file(const git_diff_delta *delta, float progress, void *pa
 	if (error < 0) /* actual error */
 		return error;
 
-	if (delta->status == GIT_DELTA_DELETED)
+	/* If the workdir item does not exist, remove it from the index. */
+	if ((delta->new_file.flags & GIT_DIFF_FLAG_EXISTS) == 0)
 		error = git_index_remove_bypath(data->index, path);
 	else
 		error = git_index_add_bypath(data->index, delta->new_file.path);

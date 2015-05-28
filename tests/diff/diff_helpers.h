@@ -8,7 +8,7 @@ typedef struct {
 	int files;
 	int files_binary;
 
-	int file_status[10]; /* indexed by git_delta_t value */
+	int file_status[11]; /* indexed by git_delta_t value */
 
 	int hunks;
 	int hunk_new_lines;

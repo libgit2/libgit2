@@ -127,6 +127,7 @@ int cl_rename(const char *source, const char *dest);
 /* Git sandbox setup helpers */
 
 git_repository *cl_git_sandbox_init(const char *sandbox);
+git_repository *cl_git_sandbox_init_new(const char *name);
 void cl_git_sandbox_cleanup(void);
 git_repository *cl_git_sandbox_reopen(void);
 

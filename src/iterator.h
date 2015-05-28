@@ -33,6 +33,8 @@ typedef enum {
 	GIT_ITERATOR_DONT_AUTOEXPAND  = (1u << 3),
 	/** convert precomposed unicode to decomposed unicode */
 	GIT_ITERATOR_PRECOMPOSE_UNICODE = (1u << 4),
+	/** include conflicts */
+	GIT_ITERATOR_INCLUDE_CONFLICTS = (1u << 5),
 } git_iterator_flag_t;
 
 typedef struct {

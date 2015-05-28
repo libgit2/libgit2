@@ -49,6 +49,13 @@ support for HTTPS connections insead of OpenSSL.
   the error message, which allows you to get the "repository not
   found" messages.
 
+* `git_index_conflict_add()` will remove staged entries that exist for
+  conflicted paths.
+
+* The flags for a `git_diff_file` will now have the `GIT_DIFF_FLAG_EXISTS`
+  bit set when a file exists on that side of the diff.  This is useful
+  for understanding whether a side of the diff exists in the presence of
+  a conflict.
 
 ### API additions
 
@@ -97,6 +104,18 @@ support for HTTPS connections insead of OpenSSL.
   server. This typically indicates an error with the URL or
   configuration of the server, and tools can use this to show messages
   about failing to communicate with the server.
+
+* `git_diff_index_to_workdir()` and `git_diff_tree_to_index()` will now
+  produce deltas of type `GIT_DELTA_CONFLICTED` to indicate that the index
+  side of the delta is a conflict.
+
+* The `git_status` family of functions will now produce status of type
+  `GIT_STATUS_CONFLICTED` to indicate that a conflict exists for that file
+  in the index.
+
+* `git_index_entry_is_conflict()` is a utility function to determine if
+  a given index entry has a non-zero stage entry, indicating that it is
+  one side of a conflict.
 
 ### API removals
 
