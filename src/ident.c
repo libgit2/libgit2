@@ -56,7 +56,7 @@ static int ident_insert_id(
 		return GIT_PASSTHROUGH;
 
 	need_size = (size_t)(id_start - from->ptr) +
-		5 /* "$Id: " */ + GIT_OID_HEXSZ + 1 /* "$" */ +
+		5 /* "$Id: " */ + GIT_OID_HEXSZ + 2 /* " $" */ +
 		(size_t)(from_end - id_end);
 
 	if (git_buf_grow(to, need_size) < 0)
@@ -65,7 +65,7 @@ static int ident_insert_id(
 	git_buf_set(to, from->ptr, (size_t)(id_start - from->ptr));
 	git_buf_put(to, "$Id: ", 5);
 	git_buf_put(to, oid, GIT_OID_HEXSZ);
-	git_buf_putc(to, '$');
+	git_buf_put(to, " $", 2);
 	git_buf_put(to, id_end, (size_t)(from_end - id_end));
 
 	return git_buf_oom(to) ? -1 : 0;
