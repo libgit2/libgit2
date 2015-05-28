@@ -15,7 +15,7 @@ static int use_remote(git_repository *repo, char *name)
 	// Find the remote by name
 	error = git_remote_lookup(&remote, repo, name);
 	if (error < 0) {
-		error = git_remote_create_anonymous(&remote, repo, name, NULL);
+		error = git_remote_create_anonymous(&remote, repo, name);
 		if (error < 0)
 			goto cleanup;
 	}
@@ -25,9 +25,8 @@ static int use_remote(git_repository *repo, char *name)
 	 * each of the remote references.
 	 */
 	callbacks.credentials = cred_acquire_cb;
-	git_remote_set_callbacks(remote, &callbacks);
 
-	error = git_remote_connect(remote, GIT_DIRECTION_FETCH);
+	error = git_remote_connect(remote, GIT_DIRECTION_FETCH, &callbacks);
 	if (error < 0)
 		goto cleanup;
 

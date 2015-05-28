@@ -63,6 +63,7 @@ int git_reset_default(
 
 		assert(delta->status == GIT_DELTA_ADDED ||
 			delta->status == GIT_DELTA_MODIFIED ||
+			delta->status == GIT_DELTA_CONFLICTED ||
 			delta->status == GIT_DELTA_DELETED);
 
 		error = git_index_conflict_remove(index, delta->old_file.path);

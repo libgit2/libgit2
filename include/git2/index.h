@@ -24,9 +24,9 @@ GIT_BEGIN_DECL
 
 /** Time structure used in a git index entry */
 typedef struct {
-	git_time_t seconds;
+	int32_t seconds;
 	/* nsec should not be stored as time_t compatible */
-	unsigned int nanoseconds;
+	uint32_t nanoseconds;
 } git_index_time;
 
 /**
@@ -44,22 +44,27 @@ typedef struct {
  * accessed via the later `GIT_IDXENTRY_...` bitmasks below.  Some of
  * these flags are read from and written to disk, but some are set aside
  * for in-memory only reference.
+ *
+ * Note that the time and size fields are truncated to 32 bits. This
+ * is enough to detect changes, which is enough for the index to
+ * function as a cache, but it should not be taken as an authoritative
+ * source for that data.
  */
 typedef struct git_index_entry {
 	git_index_time ctime;
 	git_index_time mtime;
 
-	unsigned int dev;
-	unsigned int ino;
-	unsigned int mode;
-	unsigned int uid;
-	unsigned int gid;
-	git_off_t file_size;
+	uint32_t dev;
+	uint32_t ino;
+	uint32_t mode;
+	uint32_t uid;
+	uint32_t gid;
+	uint32_t file_size;
 
 	git_oid id;
 
-	unsigned short flags;
-	unsigned short flags_extended;
+	uint16_t flags;
+	uint16_t flags_extended;
 
 	const char *path;
 } git_index_entry;
@@ -425,6 +430,15 @@ GIT_EXTERN(int) git_index_add(git_index *index, const git_index_entry *source_en
  */
 GIT_EXTERN(int) git_index_entry_stage(const git_index_entry *entry);
 
+/**
+ * Return whether the given index entry is a conflict (has a high stage
+ * entry).  This is simply shorthand for `git_index_entry_stage > 0`.
+ *
+ * @param entry The entry
+ * @return 1 if the entry is a conflict entry, 0 otherwise
+ */
+GIT_EXTERN(int) git_index_entry_is_conflict(const git_index_entry *entry);
+
 /**@}*/
 
 /** @name Workdir Index Entry Functions
@@ -626,7 +640,8 @@ GIT_EXTERN(int) git_index_find(size_t *at_pos, git_index *index, const char *pat
 /**@{*/
 
 /**
- * Add or update index entries to represent a conflict
+ * Add or update index entries to represent a conflict.  Any staged
+ * entries that exist at the given paths will be removed.
  *
  * The entries are the entries from the tree included in the merge.  Any
  * entry may be null to indicate that that file was not present in the

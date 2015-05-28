@@ -24,10 +24,9 @@ static int custom_transport_remote_create(
 {
 	int error;
 
-	if ((error = git_remote_create(out, repo, name, url)) < 0)
-		return error;
+	GIT_UNUSED(payload);
 
-	if ((error = git_remote_set_transport(*out, custom_transport, payload)) < 0)
+	if ((error = git_remote_create(out, repo, name, url)) < 0)
 		return error;
 
 	return 0;
@@ -40,7 +39,8 @@ void test_clone_transport__custom_transport(void)
 	int custom_transport_used = 0;
 
 	clone_opts.remote_cb = custom_transport_remote_create;
-	clone_opts.remote_cb_payload = &custom_transport_used;
+	clone_opts.fetch_opts.callbacks.transport = custom_transport;
+	clone_opts.fetch_opts.callbacks.payload = &custom_transport_used;
 
 	cl_git_pass(git_clone(&repo, cl_fixture("testrepo.git"), "./custom_transport.git", &clone_opts));
 	git_repository_free(repo);

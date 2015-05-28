@@ -44,6 +44,9 @@ static unsigned int index_delta2status(const git_diff_delta *head2idx)
 	case GIT_DELTA_TYPECHANGE:
 		st = GIT_STATUS_INDEX_TYPECHANGE;
 		break;
+	case GIT_DELTA_CONFLICTED:
+		st = GIT_STATUS_CONFLICTED;
+		break;
 	default:
 		break;
 	}
@@ -101,6 +104,9 @@ static unsigned int workdir_delta2status(
 		break;
 	case GIT_DELTA_TYPECHANGE:
 		st = GIT_STATUS_WT_TYPECHANGE;
+		break;
+	case GIT_DELTA_CONFLICTED:
+		st = GIT_STATUS_CONFLICTED;
 		break;
 	default:
 		break;

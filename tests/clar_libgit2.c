@@ -197,6 +197,14 @@ git_repository *cl_git_sandbox_init(const char *sandbox)
 	return _cl_repo;
 }
 
+git_repository *cl_git_sandbox_init_new(const char *sandbox)
+{
+	cl_git_pass(git_repository_init(&_cl_repo, sandbox, false));
+	_cl_sandbox = sandbox;
+
+	return _cl_repo;
+}
+
 git_repository *cl_git_sandbox_reopen(void)
 {
 	if (_cl_repo) {

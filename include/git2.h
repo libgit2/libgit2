@@ -40,7 +40,6 @@
 #include "git2/pack.h"
 #include "git2/patch.h"
 #include "git2/pathspec.h"
-#include "git2/push.h"
 #include "git2/rebase.h"
 #include "git2/refdb.h"
 #include "git2/reflog.h"

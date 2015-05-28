@@ -146,3 +146,13 @@ void test_network_refspecs__invalid_reverse(void)
 	assert_invalid_rtransform("refs/heads/*:refs/remotes/origin/*", "master");
 	assert_invalid_rtransform("refs/heads/*:refs/remotes/origin/*", "refs/remotes/o/master");
 }
+
+void test_network_refspecs__matching(void)
+{
+	git_refspec spec;
+
+	cl_git_pass(git_refspec__parse(&spec, ":", false));
+	cl_assert_equal_s(":", spec.string);
+	cl_assert_equal_s("", spec.src);
+	cl_assert_equal_s("", spec.dst);
+}

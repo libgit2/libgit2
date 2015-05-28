@@ -125,9 +125,20 @@ static int ssh_stream_read(
 		return -1;
 
 	if ((rc = libssh2_channel_read(s->channel, buffer, buf_size)) < LIBSSH2_ERROR_NONE) {
-		ssh_error(s->session, "SSH could not read data");;
+		ssh_error(s->session, "SSH could not read data");
 		return -1;
 	}
+
+	/*
+	 * If we can't get anything out of stdout, it's typically a
+	 * not-found error, so read from stderr and signal EOF on
+	 * stderr.
+	 */
+	if (rc == 0 && (rc = libssh2_channel_read_stderr(s->channel, buffer, buf_size)) > 0) {
+		giterr_set(GITERR_SSH, "%*s", rc, buffer);
+		return GIT_EEOF;
+	}
+
 
 	*bytes_read = rc;
 

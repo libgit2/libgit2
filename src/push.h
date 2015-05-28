@@ -38,13 +38,6 @@ struct git_push {
 
 	/* options */
 	unsigned pb_parallelism;
-
-	git_packbuilder_progress pack_progress_cb;
-	void *pack_progress_cb_payload;
-	git_push_transfer_progress transfer_progress_cb;
-	void *transfer_progress_cb_payload;
-	git_push_negotiation negotiation_cb;
-	void *negotiation_cb_payload;
 };
 
 /**
@@ -77,31 +70,6 @@ int git_push_set_options(
 	const git_push_options *opts);
 
 /**
- * Set the callbacks for a push
- *
- * @param push The push object
- * @param pack_progress_cb Function to call with progress information during
- * pack building. Be aware that this is called inline with pack building
- * operations, so performance may be affected.
- * @param pack_progress_cb_payload Payload for the pack progress callback.
- * @param transfer_progress_cb Function to call with progress information during
- * the upload portion of a push. Be aware that this is called inline with
- * pack building operations, so performance may be affected.
- * @param transfer_progress_cb_payload Payload for the network progress callback.
- * @param push_negotiation_cb Function to call before sending the commands to the remote.
- * @param push_negotiation_cb_payload Payload for the negotiation callback
- * @return 0 or an error code
- */
-int git_push_set_callbacks(
-	git_push *push,
-	git_packbuilder_progress pack_progress_cb,
-	void *pack_progress_cb_payload,
-	git_push_transfer_progress transfer_progress_cb,
-	void *transfer_progress_cb_payload,
-	git_push_negotiation negotiation_cb,
-	void *negotiation_cb_payload);
-
-/**
  * Add a refspec to be pushed
  *
  * @param push The push object
@@ -119,7 +87,7 @@ int git_push_add_refspec(git_push *push, const char *refspec);
  *
  * @return 0 or an error code
  */
-int git_push_update_tips(git_push *push);
+int git_push_update_tips(git_push *push, const git_remote_callbacks *callbacks);
 
 /**
  * Perform the push
@@ -135,7 +103,7 @@ int git_push_update_tips(git_push *push);
  *
  * @return 0 or an error code
  */
-int git_push_finish(git_push *push);
+int git_push_finish(git_push *push, const git_remote_callbacks *callbacks);
 
 /**
  * Invoke callback `cb' on each status entry

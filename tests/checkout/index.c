@@ -154,9 +154,7 @@ void test_checkout_index__honor_coresymlinks_default(void)
 	cl_git_pass(git_repository_set_workdir(repo, "symlink", 1));
 
 	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
-	cl_git_pass(git_remote_connect(origin, GIT_DIRECTION_FETCH));
-	cl_git_pass(git_remote_download(origin, NULL));
-	cl_git_pass(git_remote_update_tips(origin, NULL));
+	cl_git_pass(git_remote_fetch(origin, NULL, NULL, NULL));
 	git_remote_free(origin);
 
 	cl_git_pass(git_revparse_single(&target, repo, "remotes/origin/master"));
@@ -687,15 +685,15 @@ static void add_conflict(git_index *index, const char *path)
 	entry.path = path;
 
 	git_oid_fromstr(&entry.id, "d427e0b2e138501a3d15cc376077a3631e15bd46");
-	entry.flags = (1 << GIT_IDXENTRY_STAGESHIFT);
+	GIT_IDXENTRY_STAGE_SET(&entry, 1);
 	cl_git_pass(git_index_add(index, &entry));
 
 	git_oid_fromstr(&entry.id, "4e886e602529caa9ab11d71f86634bd1b6e0de10");
-	entry.flags = (2 << GIT_IDXENTRY_STAGESHIFT);
+	GIT_IDXENTRY_STAGE_SET(&entry, 2);
 	cl_git_pass(git_index_add(index, &entry));
 
 	git_oid_fromstr(&entry.id, "2bd0a343aeef7a2cf0d158478966a6e587ff3863");
-	entry.flags = (3 << GIT_IDXENTRY_STAGESHIFT);
+	GIT_IDXENTRY_STAGE_SET(&entry, 3);
 	cl_git_pass(git_index_add(index, &entry));
 }
 

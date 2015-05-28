@@ -2492,7 +2492,7 @@ int git_merge__check_result(git_repository *repo, git_index *index_new)
 	for (i = 0; i < git_index_entrycount(index_new); i++) {
 		e = git_index_get_byindex(index_new, i);
 
-		if (git_index_entry_stage(e) != 0 &&
+		if (git_index_entry_is_conflict(e) &&
 			(git_vector_last(&paths) == NULL ||
 			strcmp(git_vector_last(&paths), e->path) != 0)) {
 
@@ -2544,7 +2544,7 @@ int git_merge__append_conflicts_to_merge_msg(
 	for (i = 0; i < git_index_entrycount(index); i++) {
 		const git_index_entry *e = git_index_get_byindex(index, i);
 
-		if (git_index_entry_stage(e) == 0)
+		if (!git_index_entry_is_conflict(e))
 			continue;
 
 		if (last == NULL || strcmp(e->path, last) != 0)

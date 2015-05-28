@@ -959,8 +959,15 @@ git_off_t get_delta_base(
 			if (k != kh_end(p->idx_cache)) {
 				*curpos += 20;
 				return ((struct git_pack_entry *)kh_value(p->idx_cache, k))->offset;
+			} else {
+				/* If we're building an index, don't try to find the pack
+				 * entry; we just haven't seen it yet.  We'll make
+				 * progress again in the next loop.
+				 */
+				return GIT_PASSTHROUGH;
 			}
 		}
+
 		/* The base entry _must_ be in the same pack */
 		if (pack_entry_find_offset(&base_offset, &unused, p, (git_oid *)base_info, GIT_OID_HEXSZ) < 0)
 			return packfile_error("base entry delta is not in the same pack");

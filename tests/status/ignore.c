@@ -1010,3 +1010,15 @@ void test_status_ignore__subdir_doesnt_match_above(void)
 	cl_git_pass(git_ignore_path_is_ignored(&ignored, g_repo, "src/SRC/test.txt"));
 	cl_assert_equal_i(icase, ignored);
 }
+
+void test_status_ignore__negate_exact_previous(void)
+{
+	int ignored;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	cl_git_mkfile("empty_standard_repo/.gitignore", "*.com\ntags\n!tags/\n.buildpath");
+	cl_git_mkfile("empty_standard_repo/.buildpath", "");
+	cl_git_pass(git_ignore_path_is_ignored(&ignored, g_repo, ".buildpath"));
+	cl_assert_equal_i(1, ignored);
+}

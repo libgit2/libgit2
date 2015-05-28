@@ -44,6 +44,8 @@ void test_stash_apply__initialize(void)
 	assert_status(repo, "how", GIT_STATUS_CURRENT);
 	assert_status(repo, "who", GIT_STATUS_CURRENT);
 	assert_status(repo, "when", GIT_ENOTFOUND);
+
+	git_index_free(repo_index);
 }
 
 void test_stash_apply__cleanup(void)

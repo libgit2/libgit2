@@ -1,19 +1,12 @@
 #include "clar_libgit2.h"
 
+static const char *refspec = "refs/heads/first-merge:refs/remotes/origin/first-merge";
+
 static int remote_single_branch(git_remote **out, git_repository *repo, const char *name, const char *url, void *payload)
 {
-	char *fetch_refspecs[] = {
-		"refs/heads/first-merge:refs/remotes/origin/first-merge",
-	};
-	git_strarray fetch_refspecs_strarray = {
-		fetch_refspecs,
-		1,
-	};
-
 	GIT_UNUSED(payload);
 
-	cl_git_pass(git_remote_create(out, repo, name, url));
-	cl_git_pass(git_remote_set_fetch_refspecs(*out, &fetch_refspecs_strarray));
+	cl_git_pass(git_remote_create_with_fetchspec(out, repo, name, url, refspec));
 
 	return 0;
 }
@@ -22,6 +15,7 @@ void test_online_remotes__single_branch(void)
 {
 	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
 	git_repository *repo;
+	git_remote *remote;
 	git_strarray refs;
 	size_t i, count = 0;
 
@@ -38,6 +32,15 @@ void test_online_remotes__single_branch(void)
 	cl_assert_equal_i(1, count);
 
 	git_strarray_free(&refs);
+
+	cl_git_pass(git_remote_lookup(&remote, repo, "origin"));
+	cl_git_pass(git_remote_get_fetch_refspecs(&refs, remote));
+
+	cl_assert_equal_i(1, refs.count);
+	cl_assert_equal_s(refspec, refs.strings[0]);
+
+	git_strarray_free(&refs);
+	git_remote_free(remote);
 	git_repository_free(repo);
 }
 

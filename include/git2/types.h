@@ -224,6 +224,12 @@ typedef struct git_refspec git_refspec;
 typedef struct git_remote git_remote;
 
 /**
+ * Interface which represents a transport to communicate with a
+ * remote.
+ */
+typedef struct git_transport git_transport;
+
+/**
  * Preparation for a push operation. Can be used to configure what to
  * push and the level of parallelism of the packfile builder.
  */

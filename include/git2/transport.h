@@ -20,6 +20,9 @@
  */
 GIT_BEGIN_DECL
 
+/** Signature of a function which creates a transport */
+typedef int (*git_transport_cb)(git_transport **out, git_remote *owner, void *param);
+
 /**
  * Type of SSH host fingerprint
  */

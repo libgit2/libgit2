@@ -16,7 +16,6 @@
 #include "git2/pack.h"
 #include "git2/commit.h"
 #include "git2/revparse.h"
-#include "git2/push.h"
 #include "pack-objects.h"
 #include "refs.h"
 #include "posix.h"
@@ -290,50 +289,6 @@ static int local_negotiate_fetch(
 	return 0;
 }
 
-static int local_push_copy_object(
-	git_odb *local_odb,
-	git_odb *remote_odb,
-	git_pobject *obj)
-{
-	int error = 0;
-	git_odb_object *odb_obj = NULL;
-	git_odb_stream *odb_stream;
-	size_t odb_obj_size;
-	git_otype odb_obj_type;
-	git_oid remote_odb_obj_oid;
-
-	/* Object already exists in the remote ODB; do nothing and return 0*/
-	if (git_odb_exists(remote_odb, &obj->id))
-		return 0;
-
-	if ((error = git_odb_read(&odb_obj, local_odb, &obj->id)) < 0)
-		return error;
-
-	odb_obj_size = git_odb_object_size(odb_obj);
-	odb_obj_type = git_odb_object_type(odb_obj);
-
-	if ((error = git_odb_open_wstream(&odb_stream, remote_odb,
-		odb_obj_size, odb_obj_type)) < 0)
-		goto on_error;
-
-	if (git_odb_stream_write(odb_stream, (char *)git_odb_object_data(odb_obj),
-		odb_obj_size) < 0 ||
-		git_odb_stream_finalize_write(&remote_odb_obj_oid, odb_stream) < 0) {
-		error = -1;
-	} else if (git_oid__cmp(&obj->id, &remote_odb_obj_oid) != 0) {
-		giterr_set(GITERR_ODB, "Error when writing object to remote odb "
-			"during local push operation. Remote odb object oid does not "
-			"match local oid.");
-		error = -1;
-	}
-
-	git_odb_stream_free(odb_stream);
-
-on_error:
-	git_odb_object_free(odb_obj);
-	return error;
-}
-
 static int local_push_update_remote_ref(
 	git_repository *remote_repo,
 	const char *lref,
@@ -364,21 +319,32 @@ static int local_push_update_remote_ref(
 	return error;
 }
 
+static int transfer_to_push_transfer(const git_transfer_progress *stats, void *payload)
+{
+	const git_remote_callbacks *cbs = payload;
+
+	if (!cbs || !cbs->push_transfer_progress)
+		return 0;
+
+	return cbs->push_transfer_progress(stats->received_objects, stats->total_objects, stats->received_bytes,
+					   cbs->payload);
+}
+
 static int local_push(
 	git_transport *transport,
-	git_push *push)
+	git_push *push,
+	const git_remote_callbacks *cbs)
 {
 	transport_local *t = (transport_local *)transport;
-	git_odb *remote_odb = NULL;
-	git_odb *local_odb = NULL;
 	git_repository *remote_repo = NULL;
 	push_spec *spec;
 	char *url = NULL;
 	const char *path;
-	git_buf buf = GIT_BUF_INIT;
+	git_buf buf = GIT_BUF_INIT, odb_path = GIT_BUF_INIT;
 	int error;
-	unsigned int i;
 	size_t j;
+
+	GIT_UNUSED(cbs);
 
 	/* 'push->remote->url' may be a url or path; convert to a path */
 	if ((error = git_path_from_url_or_path(&buf, push->remote->url)) < 0) {
@@ -396,22 +362,24 @@ static int local_push(
 
 	/* We don't currently support pushing locally to non-bare repos. Proper
 	   non-bare repo push support would require checking configs to see if
-	   we should override the default 'don't let this happen' behavior */
+	   we should override the default 'don't let this happen' behavior.
+
+	   Note that this is only an issue when pushing to the current branch,
+	   but we forbid all pushes just in case */
 	if (!remote_repo->is_bare) {
 		error = GIT_EBAREREPO;
 		giterr_set(GITERR_INVALID, "Local push doesn't (yet) support pushing to non-bare repos.");
 		goto on_error;
 	}
 
-	if ((error = git_repository_odb__weakptr(&remote_odb, remote_repo)) < 0 ||
-		(error = git_repository_odb__weakptr(&local_odb, push->repo)) < 0)
+	if ((error = git_buf_joinpath(&odb_path, git_repository_path(remote_repo), "objects/pack")) < 0)
 		goto on_error;
 
-	for (i = 0; i < push->pb->nr_objects; i++) {
-		if ((error = local_push_copy_object(local_odb, remote_odb,
-			&push->pb->object_list[i])) < 0)
-			goto on_error;
-	}
+	error = git_packbuilder_write(push->pb, odb_path.ptr, 0, transfer_to_push_transfer, (void *) cbs);
+	git_buf_free(&odb_path);
+
+	if (error < 0)
+		goto on_error;
 
 	push->unpack_ok = 1;
 
@@ -471,7 +439,7 @@ static int local_push(
 
 		if (!url || t->parent.close(&t->parent) < 0 ||
 			t->parent.connect(&t->parent, url,
-			push->remote->callbacks.credentials, NULL, GIT_DIRECTION_PUSH, flags))
+			NULL, NULL, GIT_DIRECTION_PUSH, flags))
 			goto on_error;
 	}
 
@@ -500,6 +468,37 @@ static int foreach_cb(void *buf, size_t len, void *payload)
 }
 
 static const char *counting_objects_fmt = "Counting objects %d\r";
+static const char *compressing_objects_fmt = "Compressing objects: %.0f%% (%d/%d)";
+
+static int local_counting(int stage, unsigned int current, unsigned int total, void *payload)
+{
+	git_buf progress_info = GIT_BUF_INIT;
+	transport_local *t = payload;
+	int error;
+
+	if (!t->progress_cb)
+		return 0;
+
+	if (stage == GIT_PACKBUILDER_ADDING_OBJECTS) {
+		git_buf_printf(&progress_info, counting_objects_fmt, current);
+	} else if (stage == GIT_PACKBUILDER_DELTAFICATION) {
+		float perc = (((float) current) / total) * 100;
+		git_buf_printf(&progress_info, compressing_objects_fmt, perc, current, total);
+		if (current == total)
+			git_buf_printf(&progress_info, ", done\n");
+		else
+			git_buf_putc(&progress_info, '\r');
+
+	}
+
+	if (git_buf_oom(&progress_info))
+		return -1;
+
+	error = t->progress_cb(git_buf_cstr(&progress_info), git_buf_len(&progress_info), t->message_cb_payload);
+	git_buf_free(&progress_info);
+
+	return error;
+}
 
 static int local_download_pack(
 		git_transport *transport,
@@ -524,6 +523,8 @@ static int local_download_pack(
 
 	if ((error = git_packbuilder_new(&pack, t->repo)) < 0)
 		goto cleanup;
+
+	git_packbuilder_set_callbacks(pack, local_counting, t);
 
 	stats->total_objects = 0;
 	stats->indexed_objects = 0;

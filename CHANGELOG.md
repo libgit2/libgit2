@@ -37,6 +37,26 @@ support for HTTPS connections insead of OpenSSL.
 * Checkout can now accept an index for the baseline computations via the
   `baseline_index` member.
 
+* The configuration for fetching is no longer stored inside the
+  `git_remote` struct but has been moved to a `git_fetch_options`. The
+  remote functions now take these options or the callbacks instead of
+  setting them beforehand.
+
+* The index now uses diffs for `add_all()` and `update_all()` which
+  gives it a speed boost and closer semantics to git.
+
+* The ssh transport now reports the stderr output from the server as
+  the error message, which allows you to get the "repository not
+  found" messages.
+
+* `git_index_conflict_add()` will remove staged entries that exist for
+  conflicted paths.
+
+* The flags for a `git_diff_file` will now have the `GIT_DIFF_FLAG_EXISTS`
+  bit set when a file exists on that side of the diff.  This is useful
+  for understanding whether a side of the diff exists in the presence of
+  a conflict.
+
 ### API additions
 
 * The `git_merge_options` gained a `file_flags` member.
@@ -64,7 +84,15 @@ support for HTTPS connections insead of OpenSSL.
   put into the reflog as the source/target.
 
 * `git_index_add_frombuffer()` can now create a blob from memory
-   buffer and add it to the index which is attached to a repository.
+  buffer and add it to the index which is attached to a repository.
+
+* The structure `git_fetch_options` has been added to determine the
+  runtime configuration for fetching, such as callbacks, pruning and
+  autotag behaviour. It has the runtime initializer
+  `git_fetch_init_options()`.
+
+* The enum `git_fetch_prune_t` has been added, letting you specify the
+  pruning behaviour for a fetch.
 
 * `git_stash_apply()` can now apply a stashed state from the stash list,
   placing the data into the working directory and index.
@@ -72,7 +100,37 @@ support for HTTPS connections insead of OpenSSL.
 * `git_stash_pop()` will apply a stashed state (like `git_stash_apply()`)
   but will remove the stashed state after a successful application.
 
+* A new error code `GIT_EEOF` indicates an early EOF from the
+  server. This typically indicates an error with the URL or
+  configuration of the server, and tools can use this to show messages
+  about failing to communicate with the server.
+
+* `git_diff_index_to_workdir()` and `git_diff_tree_to_index()` will now
+  produce deltas of type `GIT_DELTA_CONFLICTED` to indicate that the index
+  side of the delta is a conflict.
+
+* The `git_status` family of functions will now produce status of type
+  `GIT_STATUS_CONFLICTED` to indicate that a conflict exists for that file
+  in the index.
+
+* `git_index_entry_is_conflict()` is a utility function to determine if
+  a given index entry has a non-zero stage entry, indicating that it is
+  one side of a conflict.
+
 ### API removals
+
+* `git_remote_save()` and `git_remote_clear_refspecs()` have been
+  removed. Remote's configuration is changed via the configuration
+  directly or through a convenience function which performs changes to
+  the configuration directly.
+
+* `git_remote_set_callbacks()`, `git_remote_get_callbacks()` and
+  `git_remote_set_transport()` have been removed and the remote no
+  longer stores this configuration.
+
+* `git_remote_set_fetch_refpecs()` and
+  `git_remote_set_push_refspecs()` have been removed. There is no
+  longer a way to set the base refspecs at run-time.
 
 ### Breaking API changes
 
@@ -129,6 +187,47 @@ support for HTTPS connections insead of OpenSSL.
   takes a `git_rebase_options` and only the `git_rebase_init` and
   `git_rebase_open` functions take a `git_rebase_options`, where they
   will persist the options to subsequent `git_rebase` calls.
+
+* The `git_clone_options` struct now has fetch options in a
+  `fetch_opts` field instead of remote callbacks in
+  `remote_callbacks`.
+
+* The following functions now longer act on a remote instance but
+  change the repository's configuration. Their signatures have changed
+  accordingly:
+
+    * `git_remote_set_url()`, `git_remote_seturl()`
+    * `git_remote_add_fetch()`, `git_remote_add_push()` and
+    * `git_remote_set_autotag()`
+
+* `git_remote_connect()` and `git_remote_prune()` now take a pointer
+  to the callbacks.
+
+* `git_remote_fetch()` and `git_remote_download()` now take a pointer
+  to fetch options which determine the runtime configuration.
+
+* The `git_remote_autotag_option_t` values have been changed. It has
+  gained a `_FALLBACK` default value to specify no override for the
+  configured setting.
+
+* `git_remote_update_tips()` now takes a pointer to the callbacks as
+  well as a boolean whether to write `FETCH_HEAD` and the autotag
+  setting.
+
+* `git_remote_create_anonymous()` no longer takes a fetch refspec as
+  url-only remotes cannot have configured refspecs.
+
+* The `git_submodule_update_options` struct now has fetch options in
+  the `fetch_opts` field instead of callbacks in the
+  `remote_callbacks` field.
+
+* The `push` function in the `git_transport` interface now takes a
+  pointer to the remote callbacks.
+
+* The `git_index_entry` struct's fields' types have been changed to
+  more accurately reflect what is in fact stored in the
+  index. Specifically, time and file size are 32 bits intead of 64, as
+  these values are truncated.
 
 v0.22
 ------

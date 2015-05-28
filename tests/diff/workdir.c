@@ -68,6 +68,51 @@ void test_diff_workdir__to_index(void)
 	git_diff_free(diff);
 }
 
+void test_diff_workdir__to_index_with_conflicts(void)
+{
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_diff *diff = NULL;
+	git_index *index;
+	git_index_entry our_entry = {0}, their_entry = {0};
+	diff_expects exp = {0};
+
+	g_repo = cl_git_sandbox_init("status");
+
+	opts.context_lines = 3;
+	opts.interhunk_lines = 1;
+
+	/* Adding an entry that represents a rename gets two files in conflict */
+	our_entry.path = "subdir/modified_file";
+	our_entry.mode = 0100644;
+
+	their_entry.path = "subdir/rename_conflict";
+	their_entry.mode = 0100644;
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_conflict_add(index, NULL, &our_entry, &their_entry));
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, index, &opts));
+
+	cl_git_pass(diff_foreach_via_iterator(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+
+	cl_assert_equal_i(9, exp.files);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(4, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_CONFLICTED]);
+
+	cl_assert_equal_i(7, exp.hunks);
+
+	cl_assert_equal_i(12, exp.lines);
+	cl_assert_equal_i(4, exp.line_ctxt);
+	cl_assert_equal_i(3, exp.line_adds);
+	cl_assert_equal_i(5, exp.line_dels);
+
+	git_diff_free(diff);
+	git_index_free(index);
+}
+
 void test_diff_workdir__to_index_with_assume_unchanged(void)
 {
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;

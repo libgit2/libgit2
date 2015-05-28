@@ -318,7 +318,7 @@ void test_filter_custom__order_dependency(void)
 	/* expansion because reverse was applied at checkin and at ident time,
 	 * reverse is not applied yet */
 	cl_assert_equal_s(
-		"Another test\n$59001fe193103b1016b27027c0c827d036fd0ac8 :dI$\nCrazy!\n", buf.ptr);
+		"Another test\n$ 59001fe193103b1016b27027c0c827d036fd0ac8 :dI$\nCrazy!\n", buf.ptr);
 	cl_assert_equal_i(0, git_oid_strcmp(
 		git_blob_id(blob), "8ca0df630d728c0c72072b6101b301391ef10095"));
 	git_blob_free(blob);

@@ -163,3 +163,79 @@ void test_diff_index__checks_options_version(void)
 	git_tree_free(a);
 }
 
+static void do_conflicted_diff(diff_expects *exp, unsigned long flags)
+{
+	const char *a_commit = "26a125ee1bf"; /* the current HEAD */
+	git_tree *a = resolve_commit_oid_to_tree(g_repo, a_commit);
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_index_entry ancestor = {0}, ours = {0}, theirs = {0};
+	git_diff *diff = NULL;
+	git_index *index;
+
+	cl_assert(a);
+
+	opts.context_lines = 1;
+	opts.interhunk_lines = 1;
+	opts.flags |= flags;
+
+	memset(exp, 0, sizeof(diff_expects));
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	ancestor.path = ours.path = theirs.path = "staged_changes";
+	ancestor.mode = ours.mode = theirs.mode = 0100644;
+
+	git_oid_fromstr(&ancestor.id, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef");
+	git_oid_fromstr(&ours.id, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef");
+	git_oid_fromstr(&theirs.id, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef");
+
+	cl_git_pass(git_index_conflict_add(index, &ancestor, &ours, &theirs));
+	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, a, index, &opts));
+
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, exp));
+
+	git_diff_free(diff);
+	git_tree_free(a);
+	git_index_free(index);
+}
+
+void test_diff_index__reports_conflicts(void)
+{
+	diff_expects exp;
+
+	do_conflicted_diff(&exp, 0);
+
+	cl_assert_equal_i(8, exp.files);
+	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_CONFLICTED]);
+
+	cl_assert_equal_i(7, exp.hunks);
+
+	cl_assert_equal_i(9, exp.lines);
+	cl_assert_equal_i(2, exp.line_ctxt);
+	cl_assert_equal_i(5, exp.line_adds);
+	cl_assert_equal_i(2, exp.line_dels);
+}
+
+void test_diff_index__reports_conflicts_when_reversed(void)
+{
+	diff_expects exp;
+
+	do_conflicted_diff(&exp, GIT_DIFF_REVERSE);
+
+	cl_assert_equal_i(8, exp.files);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_CONFLICTED]);
+
+	cl_assert_equal_i(7, exp.hunks);
+
+	cl_assert_equal_i(9, exp.lines);
+	cl_assert_equal_i(2, exp.line_ctxt);
+	cl_assert_equal_i(2, exp.line_adds);
+	cl_assert_equal_i(5, exp.line_dels);
+}

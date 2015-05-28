@@ -42,6 +42,12 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 	 */
 	if (!is_fetch && rhs == lhs && rhs[1] == '\0') {
 		refspec->matching = 1;
+		refspec->string = git__strdup(input);
+		GITERR_CHECK_ALLOC(refspec->string);
+		refspec->src = git__strdup("");
+		GITERR_CHECK_ALLOC(refspec->src);
+		refspec->dst = git__strdup("");
+		GITERR_CHECK_ALLOC(refspec->dst);
 		return 0;
 	}
 
