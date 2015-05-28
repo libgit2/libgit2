@@ -159,3 +159,35 @@ void test_refs_branches_upstream__set_unset_upstream(void)
 
 	cl_git_sandbox_cleanup();
 }
+
+void test_refs_branches_upstream__no_fetch_refspec(void)
+{
+	git_reference *ref, *branch;
+	git_repository *repo;
+	git_remote *remote;
+	git_config *cfg;
+
+	repo = cl_git_sandbox_init("testrepo.git");
+
+	cl_git_pass(git_remote_create_with_fetchspec(&remote, repo, "matching", ".", NULL));
+	cl_git_pass(git_remote_add_push(repo, "matching", ":"));
+
+	cl_git_pass(git_reference_lookup(&branch, repo, "refs/heads/test"));
+	cl_git_pass(git_reference_create(&ref, repo, "refs/remotes/matching/master", git_reference_target(branch), 1, "fetch"));
+	cl_git_fail(git_branch_set_upstream(branch, "matching/master"));
+	cl_assert_equal_s("Could not determine remote for 'refs/remotes/matching/master'",
+			  giterr_last()->message);
+
+	/* we can't set it automatically, so let's test the user setting it by hand */
+	cl_git_pass(git_repository_config(&cfg, repo));
+	cl_git_pass(git_config_set_string(cfg, "branch.test.remote", "matching"));
+	cl_git_pass(git_config_set_string(cfg, "branch.test.merge", "refs/heads/master"));
+	/* we still can't find it because there is no rule for that reference */
+	cl_git_fail_with(GIT_ENOTFOUND, git_branch_upstream(&ref, branch));
+
+	git_reference_free(ref);
+	git_reference_free(branch);
+	git_remote_free(remote);
+
+	cl_git_sandbox_cleanup();
+}

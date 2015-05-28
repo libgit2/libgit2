@@ -551,7 +551,7 @@ int git_branch_set_upstream(git_reference *branch, const char *upstream_name)
 	git_remote *remote = NULL;
 	git_config *config;
 	const char *name, *shortname;
-	int local;
+	int local, error;
 	const git_refspec *fetchspec;
 
 	name = git_reference_name(branch);
@@ -586,9 +586,12 @@ int git_branch_set_upstream(git_reference *branch, const char *upstream_name)
 	 * that.
 	 */
 	if (local)
-		git_buf_puts(&value, ".");
+		error = git_buf_puts(&value, ".");
 	else
-		git_branch_remote_name(&value, repo, git_reference_name(upstream));
+		error = git_branch_remote_name(&value, repo, git_reference_name(upstream));
+
+	if (error < 0)
+		goto on_error;
 
 	if (git_buf_printf(&key, "branch.%s.remote", shortname) < 0)
 		goto on_error;
