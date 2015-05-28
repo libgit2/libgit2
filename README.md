@@ -201,7 +201,7 @@ Here are the bindings to libgit2 that are currently available:
 * Objective-C
     * objective-git <https://github.com/libgit2/objective-git>
 * OCaml
-    * libgit2-ocaml <https://github.com/burdges/libgit2-ocaml>
+    * ocaml-libgit2 <https://github.com/fxfactorial/ocaml-libgit2>
 * Parrot Virtual Machine
     * parrot-libgit2 <https://github.com/letolabs/parrot-libgit2>
 * Perl
