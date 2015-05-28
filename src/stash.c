@@ -761,7 +761,7 @@ int git_stash_apply(
 			goto cleanup;
 
 		if (git_index_has_conflicts(unstashed_index)) {
-			error = GIT_EMERGECONFLICT;
+			error = GIT_ECONFLICT;
 			goto cleanup;
 		}
 	}

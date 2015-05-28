@@ -2509,7 +2509,7 @@ int git_merge__check_result(git_repository *repo, git_index *index_new)
 	if ((conflicts = index_conflicts + wd_conflicts) > 0) {
 		giterr_set(GITERR_MERGE, "%d uncommitted change%s would be overwritten by merge",
 			conflicts, (conflicts != 1) ? "s" : "");
-		error = GIT_EMERGECONFLICT;
+		error = GIT_ECONFLICT;
 	}
 
 done:

@@ -229,6 +229,9 @@ support for HTTPS connections insead of OpenSSL.
   index. Specifically, time and file size are 32 bits intead of 64, as
   these values are truncated.
 
+* `GIT_EMERGECONFLICT` is now `GIT_ECONFLICT`, which more accurately
+  describes the nature of the error.
+
 v0.22
 ------
 

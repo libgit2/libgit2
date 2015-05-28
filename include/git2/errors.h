@@ -38,7 +38,7 @@ typedef enum {
 	GIT_EUNMERGED       = -10,	/**< Merge in progress prevented operation */
 	GIT_ENONFASTFORWARD = -11,	/**< Reference was not fast-forwardable */
 	GIT_EINVALIDSPEC    = -12,	/**< Name/ref spec was not in a valid format */
-	GIT_EMERGECONFLICT  = -13,	/**< Merge conflicts prevented operation */
+	GIT_ECONFLICT       = -13,	/**< Checkout conflicts prevented operation */
 	GIT_ELOCKED         = -14,	/**< Lock file prevented operation */
 	GIT_EMODIFIED       = -15,	/**< Reference value does not match expected */
 	GIT_EAUTH           = -16,      /**< Authentication error */
