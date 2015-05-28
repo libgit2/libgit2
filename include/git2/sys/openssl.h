@@ -28,10 +28,26 @@ GIT_BEGIN_DECL
  * likely sets up locking. You should very strongly prefer that over
  * this function.
  *
+ * This calls `git_openssl_set_threadsafe()` enabling concurrent
+ * OpenSSL operations.
+ *
  * @return 0 on success, -1 if there are errors or if libgit2 was not
  * built with OpenSSL and threading support.
  */
 GIT_EXTERN(int) git_openssl_set_locking(void);
+
+/**
+ * Mark the OpenSSL code as thread-safe
+ *
+ * By default we take a lock around OpenSSL operations. If you have
+ * set up OpenSSL threading in your application, you may call this
+ * function to avoid taking these locks, which would enable concurrent
+ * work.
+ *
+ * These locks are only used if the library was built with threading
+ * support.
+ */
+GIT_EXTERN(void) git_openssl_set_threadsafe(void);
 
 GIT_END_DECL
 #endif
