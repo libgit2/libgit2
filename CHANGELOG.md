@@ -57,6 +57,10 @@ support for HTTPS connections insead of OpenSSL.
   for understanding whether a side of the diff exists in the presence of
   a conflict.
 
+* The constructor for a write-stream into the odb now takes
+  `git_off_t` instead of `size_t` for the size of the blob, which
+  allows putting large files into the odb on 32-bit systems.
+
 ### API additions
 
 * The `git_merge_options` gained a `file_flags` member.
@@ -94,6 +98,10 @@ support for HTTPS connections insead of OpenSSL.
 * The enum `git_fetch_prune_t` has been added, letting you specify the
   pruning behaviour for a fetch.
 
+* A push operation will notify the caller of what updates it indends
+  to perform on the remote, which provides similar information to
+  git's pre-push hook.
+
 * `git_stash_apply()` can now apply a stashed state from the stash list,
   placing the data into the working directory and index.
 
@@ -116,6 +124,10 @@ support for HTTPS connections insead of OpenSSL.
 * `git_index_entry_is_conflict()` is a utility function to determine if
   a given index entry has a non-zero stage entry, indicating that it is
   one side of a conflict.
+
+* It is now possible to pass a keypair via a buffer instead of a
+  path. For this, `GIT_CREDTYPE_SSH_MEMORY` and
+  `git_cred_ssh_key_memory_new()` have been added.
 
 ### API removals
 
@@ -180,17 +192,20 @@ support for HTTPS connections insead of OpenSSL.
   if it is called immediately after creating a rebase session but before
   you have applied the first patch.
 
-* `git_rebase_options` now contains an optional pointer to
-  `git_checkout_options` that will be used for functions that modify
-  the working directory, namely `git_checkout_init`, `git_checkout_next`
-  and `git_checkout_abort`.  As a result, `git_rebase_open` now also
-  takes a `git_rebase_options` and only the `git_rebase_init` and
+* `git_rebase_options` now contains a `git_checkout_options` struct
+  that will be used for functions that modify the working directory,
+  namely `git_checkout_init`, `git_checkout_next` and
+  `git_checkout_abort`.  As a result, `git_rebase_open` now also takes
+  a `git_rebase_options` and only the `git_rebase_init` and
   `git_rebase_open` functions take a `git_rebase_options`, where they
   will persist the options to subsequent `git_rebase` calls.
 
 * The `git_clone_options` struct now has fetch options in a
   `fetch_opts` field instead of remote callbacks in
   `remote_callbacks`.
+
+* The remote callbacks has gained a new member `push_negotiation`
+  which gets called before sending the update commands to the server.
 
 * The following functions now longer act on a remote instance but
   change the repository's configuration. Their signatures have changed
