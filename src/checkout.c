@@ -1292,7 +1292,7 @@ static int checkout_get_actions(
 			(int)counts[CHECKOUT_ACTION__CONFLICT],
 			counts[CHECKOUT_ACTION__CONFLICT] == 1 ?
 			"conflict prevents" : "conflicts prevent");
-		error = GIT_EMERGECONFLICT;
+		error = GIT_ECONFLICT;
 		goto fail;
 	}
 
@@ -2062,7 +2062,7 @@ static int checkout_write_merge(
 
 	if (result.path == NULL || result.mode == 0) {
 		giterr_set(GITERR_CHECKOUT, "Could not merge contents of file");
-		error = GIT_EMERGECONFLICT;
+		error = GIT_ECONFLICT;
 		goto done;
 	}
 
@@ -2357,7 +2357,7 @@ static int checkout_data_init(
 			/* cannot checkout if unresolved conflicts exist */
 			if ((data->opts.checkout_strategy & GIT_CHECKOUT_FORCE) == 0 &&
 				git_index_has_conflicts(data->index)) {
-				error = GIT_EMERGECONFLICT;
+				error = GIT_ECONFLICT;
 				giterr_set(GITERR_CHECKOUT,
 					"unresolved conflicts exist in the index");
 				goto cleanup;

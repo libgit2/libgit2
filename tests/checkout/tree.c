@@ -306,7 +306,7 @@ void test_checkout_tree__conflict_on_ignored_when_not_overwriting(void)
 	cl_git_fail(error = checkout_tree_with_blob_ignored_in_workdir(
 		GIT_CHECKOUT_SAFE | GIT_CHECKOUT_DONT_OVERWRITE_IGNORED, false));
 
-	cl_assert_equal_i(GIT_EMERGECONFLICT, error);
+	cl_assert_equal_i(GIT_ECONFLICT, error);
 }
 
 void test_checkout_tree__can_overwrite_ignored_by_default(void)
@@ -327,7 +327,7 @@ void test_checkout_tree__conflict_on_ignored_folder_when_not_overwriting(void)
 	cl_git_fail(error = checkout_tree_with_blob_ignored_in_workdir(
 		GIT_CHECKOUT_SAFE | GIT_CHECKOUT_DONT_OVERWRITE_IGNORED, true));
 
-	cl_assert_equal_i(GIT_EMERGECONFLICT, error);
+	cl_assert_equal_i(GIT_ECONFLICT, error);
 }
 
 void test_checkout_tree__can_overwrite_ignored_folder_by_default(void)
@@ -512,7 +512,7 @@ void assert_conflict(
 
 	g_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 	cl_assert_equal_i(
-		GIT_EMERGECONFLICT, git_checkout_tree(g_repo, g_object, &g_opts));
+		GIT_ECONFLICT, git_checkout_tree(g_repo, g_object, &g_opts));
 
 	/* Stage the conflicting change */
 	cl_git_pass(git_index_add_bypath(index, entry_path));
@@ -520,10 +520,10 @@ void assert_conflict(
 	git_index_free(index);
 
 	cl_assert_equal_i(
-		GIT_EMERGECONFLICT, git_checkout_tree(g_repo, g_object, &g_opts));
+		GIT_ECONFLICT, git_checkout_tree(g_repo, g_object, &g_opts));
 }
 
-void test_checkout_tree__checking_out_a_conflicting_type_change_returns_EMERGECONFLICT(void)
+void test_checkout_tree__checking_out_a_conflicting_type_change_returns_ECONFLICT(void)
 {
 	/*
 	 * 099faba adds a symlink named 'link_to_new.txt'
@@ -533,7 +533,7 @@ void test_checkout_tree__checking_out_a_conflicting_type_change_returns_EMERGECO
 	assert_conflict("link_to_new.txt", "old.txt", "a65fedf", "099faba");
 }
 
-void test_checkout_tree__checking_out_a_conflicting_type_change_returns_EMERGECONFLICT_2(void)
+void test_checkout_tree__checking_out_a_conflicting_type_change_returns_ECONFLICT_2(void)
 {
 	/*
 	 * cf80f8d adds a directory named 'a/'
@@ -543,7 +543,7 @@ void test_checkout_tree__checking_out_a_conflicting_type_change_returns_EMERGECO
 	assert_conflict("a", "hello\n", "a4a7dce", "cf80f8d");
 }
 
-void test_checkout_tree__checking_out_a_conflicting_content_change_returns_EMERGECONFLICT(void)
+void test_checkout_tree__checking_out_a_conflicting_content_change_returns_ECONFLICT(void)
 {
 	/*
 	 * c47800c adds a symlink named 'branch_file.txt'
