@@ -84,7 +84,7 @@ void gitno_consume_n(gitno_buffer *buf, size_t cons)
 int gitno__match_host(const char *pattern, const char *host)
 {
 	for (;;) {
-		char c = tolower(*pattern++);
+		char c = git__tolower(*pattern++);
 
 		if (c == '\0')
 			return *host ? -1 : 0;
@@ -102,7 +102,7 @@ int gitno__match_host(const char *pattern, const char *host)
 	 */
 
 			while(*host) {
-				char h = tolower(*host);
+				char h = git__tolower(*host);
 				if (c == h)
 					return gitno__match_host(pattern, host++);
 				if (h == '.')
@@ -112,7 +112,7 @@ int gitno__match_host(const char *pattern, const char *host)
 			return -1;
 		}
 
-		if (c != tolower(*host++))
+		if (c != git__tolower(*host++))
 			return -1;
 	}
 

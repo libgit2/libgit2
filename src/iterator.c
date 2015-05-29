@@ -1401,10 +1401,10 @@ GIT_INLINE(bool) workdir_path_is_dotgit(const git_buf *path)
 	if (path->ptr[len - 1] == '/')
 		len--;
 
-	if (tolower(path->ptr[len - 1]) != 't' ||
-		tolower(path->ptr[len - 2]) != 'i' ||
-		tolower(path->ptr[len - 3]) != 'g' ||
-		tolower(path->ptr[len - 4]) != '.')
+	if (git__tolower(path->ptr[len - 1]) != 't' ||
+		git__tolower(path->ptr[len - 2]) != 'i' ||
+		git__tolower(path->ptr[len - 3]) != 'g' ||
+		git__tolower(path->ptr[len - 4]) != '.')
 		return false;
 
 	return (len == 4 || path->ptr[len - 5] == '/');

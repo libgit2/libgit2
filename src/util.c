@@ -171,9 +171,9 @@ int git__strcmp(const char *a, const char *b)
 
 int git__strcasecmp(const char *a, const char *b)
 {
-	while (*a && *b && tolower(*a) == tolower(*b))
+	while (*a && *b && git__tolower(*a) == git__tolower(*b))
 		++a, ++b;
-	return ((unsigned char)tolower(*a) - (unsigned char)tolower(*b));
+	return ((unsigned char)git__tolower(*a) - (unsigned char)git__tolower(*b));
 }
 
 int git__strcasesort_cmp(const char *a, const char *b)
@@ -182,7 +182,7 @@ int git__strcasesort_cmp(const char *a, const char *b)
 
 	while (*a && *b) {
 		if (*a != *b) {
-			if (tolower(*a) != tolower(*b))
+			if (git__tolower(*a) != git__tolower(*b))
 				break;
 			/* use case in sort order even if not in equivalence */
 			if (!cmp)
@@ -193,7 +193,7 @@ int git__strcasesort_cmp(const char *a, const char *b)
 	}
 
 	if (*a || *b)
-		return (unsigned char)tolower(*a) - (unsigned char)tolower(*b);
+		return (unsigned char)git__tolower(*a) - (unsigned char)git__tolower(*b);
 
 	return cmp;
 }
@@ -212,8 +212,8 @@ int git__strncasecmp(const char *a, const char *b, size_t sz)
 	int al, bl;
 
 	do {
-		al = (unsigned char)tolower(*a);
-		bl = (unsigned char)tolower(*b);
+		al = (unsigned char)git__tolower(*a);
+		bl = (unsigned char)git__tolower(*b);
 		++a, ++b;
 	} while (--sz && al && al == bl);
 
@@ -225,7 +225,7 @@ void git__strntolower(char *str, size_t len)
 	size_t i;
 
 	for (i = 0; i < len; ++i) {
-		str[i] = (char) tolower(str[i]);
+		str[i] = (char)git__tolower(str[i]);
 	}
 }
 
@@ -255,8 +255,8 @@ int git__prefixncmp_icase(const char *str, size_t str_n, const char *prefix)
 	int s, p;
 
 	while(str_n--) {
-		s = (unsigned char)tolower(*str++);
-		p = (unsigned char)tolower(*prefix++);
+		s = (unsigned char)git__tolower(*str++);
+		p = (unsigned char)git__tolower(*prefix++);
 
 		if (s != p)
 			return s - p;

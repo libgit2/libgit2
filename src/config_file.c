@@ -156,7 +156,7 @@ int git_config_file_normalize_section(char *start, char *end)
 		if (end && scan >= end)
 			break;
 		if (isalnum(*scan))
-			*scan = (char)tolower(*scan);
+			*scan = (char)git__tolower(*scan);
 		else if (*scan != '-' || scan == start)
 			return GIT_EINVALIDSPEC;
 	}
@@ -1083,7 +1083,7 @@ static int parse_section_header(struct reader *reader, char **section_out)
 			goto fail_parse;
 		}
 
-		name[name_length++] = (char) tolower(c);
+		name[name_length++] = (char)git__tolower(c);
 
 	} while ((c = line[pos++]) != ']');
 

@@ -1471,7 +1471,7 @@ static int32_t next_hfs_char(const char **in, size_t *len)
 		 * the ASCII range, which is perfectly fine, because the
 		 * git folder name can only be composed of ascii characters
 		 */
-		return tolower(codepoint);
+		return git__tolower(codepoint);
 	}
 	return 0; /* NULL byte -- end of string */
 }
