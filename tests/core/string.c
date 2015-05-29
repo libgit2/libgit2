@@ -52,11 +52,13 @@ void test_core_string__strcmp(void)
 	cl_assert(strcmp("e\342\202\254ghi=", "et") > 0);
 	cl_assert(strcmp("rt dev\302\266h", "rt\303\202of") < 0);
 	cl_assert(strcmp("et", "e\342\202\254ghi=") < 0);
+	cl_assert(strcmp("\303\215", "\303\255") < 0);
 
 	cl_assert(git__strcmp("rt\303\202of", "rt dev\302\266h") > 0);
 	cl_assert(git__strcmp("e\342\202\254ghi=", "et") > 0);
 	cl_assert(git__strcmp("rt dev\302\266h", "rt\303\202of") < 0);
 	cl_assert(git__strcmp("et", "e\342\202\254ghi=") < 0);
+	cl_assert(git__strcmp("\303\215", "\303\255") < 0);
 }
 
 void test_core_string__strcasecmp(void)
@@ -71,9 +73,11 @@ void test_core_string__strcasecmp(void)
 	cl_assert(strcasecmp("e\342\202\254ghi=", "et") > 0);
 	cl_assert(strcasecmp("rt dev\302\266h", "rt\303\202of") < 0);
 	cl_assert(strcasecmp("et", "e\342\202\254ghi=") < 0);
+	cl_assert(strcasecmp("\303\215", "\303\255") < 0);
 
 	cl_assert(git__strcasecmp("rt\303\202of", "rt dev\302\266h") > 0);
 	cl_assert(git__strcasecmp("e\342\202\254ghi=", "et") > 0);
 	cl_assert(git__strcasecmp("rt dev\302\266h", "rt\303\202of") < 0);
 	cl_assert(git__strcasecmp("et", "e\342\202\254ghi=") < 0);
+	cl_assert(git__strcasecmp("\303\215", "\303\255") < 0);
 }
