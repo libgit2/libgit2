@@ -173,7 +173,7 @@ int git__strcasecmp(const char *a, const char *b)
 {
 	while (*a && *b && tolower(*a) == tolower(*b))
 		++a, ++b;
-	return (tolower(*a) - tolower(*b));
+	return ((unsigned char)tolower(*a) - (unsigned char)tolower(*b));
 }
 
 int git__strcasesort_cmp(const char *a, const char *b)
@@ -193,7 +193,7 @@ int git__strcasesort_cmp(const char *a, const char *b)
 	}
 
 	if (*a || *b)
-		return tolower(*a) - tolower(*b);
+		return (unsigned char)tolower(*a) - (unsigned char)tolower(*b);
 
 	return cmp;
 }
