@@ -189,6 +189,12 @@ v0.23
 * `git_submodule_set_branch()` allows to set the configured branch for
   a submodule.
 
+* `git_blame_options` has been taught how to handle diff find options
+  through its find_options field.
+
+* `git_diff_find_t` has now been taught how to ignore rename handling
+  completely through `GIT_DIFF_FIND_NO_RENAMES`.
+
 ### API removals
 
 * `git_remote_save()` and `git_remote_clear_refspecs()` have been
