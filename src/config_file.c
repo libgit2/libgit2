@@ -105,6 +105,10 @@ typedef struct {
 
 	git_array_t(struct reader) readers;
 
+	bool locked;
+	git_filebuf locked_buf;
+	git_buf locked_content;
+
 	char  *file_path;
 } diskfile_backend;
 
@@ -685,6 +689,42 @@ static int config_snapshot(git_config_backend **out, git_config_backend *in)
 	return git_config_file__snapshot(out, b);
 }
 
+static int config_lock(git_config_backend *_cfg)
+{
+	diskfile_backend *cfg = (diskfile_backend *) _cfg;
+	int error;
+
+	if ((error = git_filebuf_open(&cfg->locked_buf, cfg->file_path, 0, GIT_CONFIG_FILE_MODE)) < 0)
+		return error;
+
+	error = git_futils_readbuffer(&cfg->locked_content, cfg->file_path);
+	if (error < 0 && error != GIT_ENOTFOUND) {
+		git_filebuf_cleanup(&cfg->locked_buf);
+		return error;
+	}
+
+	cfg->locked = true;
+	return 0;
+
+}
+
+static int config_unlock(git_config_backend *_cfg, int success)
+{
+	diskfile_backend *cfg = (diskfile_backend *) _cfg;
+	int error = 0;
+
+	if (success) {
+		git_filebuf_write(&cfg->locked_buf, cfg->locked_content.ptr, cfg->locked_content.size);
+		error = git_filebuf_commit(&cfg->locked_buf);
+	}
+
+	git_filebuf_cleanup(&cfg->locked_buf);
+	git_buf_free(&cfg->locked_content);
+	cfg->locked = false;
+
+	return error;
+}
+
 int git_config_file__ondisk(git_config_backend **out, const char *path)
 {
 	diskfile_backend *backend;
@@ -706,6 +746,8 @@ int git_config_file__ondisk(git_config_backend **out, const char *path)
 	backend->header.parent.del_multivar = config_delete_multivar;
 	backend->header.parent.iterator = config_iterator_new;
 	backend->header.parent.snapshot = config_snapshot;
+	backend->header.parent.lock = config_lock;
+	backend->header.parent.unlock = config_unlock;
 	backend->header.parent.free = backend_free;
 
 	*out = (git_config_backend *)backend;
@@ -746,6 +788,21 @@ static int config_delete_readonly(git_config_backend *cfg, const char *name)
 {
 	GIT_UNUSED(cfg);
 	GIT_UNUSED(name);
+
+	return config_error_readonly();
+}
+
+static int config_lock_readonly(git_config_backend *_cfg)
+{
+	GIT_UNUSED(_cfg);
+
+	return config_error_readonly();
+}
+
+static int config_unlock_readonly(git_config_backend *_cfg, int success)
+{
+	GIT_UNUSED(_cfg);
+	GIT_UNUSED(success);
 
 	return config_error_readonly();
 }
@@ -803,6 +860,8 @@ int git_config_file__snapshot(git_config_backend **out, diskfile_backend *in)
 	backend->header.parent.del = config_delete_readonly;
 	backend->header.parent.del_multivar = config_delete_multivar_readonly;
 	backend->header.parent.iterator = config_iterator_new;
+	backend->header.parent.lock = config_lock_readonly;
+	backend->header.parent.unlock = config_unlock_readonly;
 	backend->header.parent.free = backend_readonly_free;
 
 	*out = (git_config_backend *)backend;
@@ -1801,15 +1860,19 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	struct reader *reader = git_array_get(cfg->readers, 0);
 	struct write_data write_data;
 
-	/* Lock the file */
-	if ((result = git_filebuf_open(
-		&file, cfg->file_path, 0, GIT_CONFIG_FILE_MODE)) < 0) {
+	if (cfg->locked) {
+		result = git_buf_puts(&reader->buffer, git_buf_cstr(&cfg->locked_content));
+	} else {
+		/* Lock the file */
+		if ((result = git_filebuf_open(
+			     &file, cfg->file_path, 0, GIT_CONFIG_FILE_MODE)) < 0) {
 			git_buf_free(&reader->buffer);
 			return result;
-	}
+		}
 
-	/* We need to read in our own config file */
-	result = git_futils_readbuffer(&reader->buffer, cfg->file_path);
+		/* We need to read in our own config file */
+		result = git_futils_readbuffer(&reader->buffer, cfg->file_path);
+	}
 
 	/* Initialise the reading position */
 	if (result == GIT_ENOTFOUND) {
@@ -1840,20 +1903,26 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	git__free(section);
 
 	if (result < 0) {
-		git_buf_free(&buf);
 		git_filebuf_cleanup(&file);
 		goto done;
 	}
 
-	git_filebuf_write(&file, git_buf_cstr(&buf), git_buf_len(&buf));
+	if (cfg->locked) {
+		size_t len = buf.asize;
+		/* Update our copy with the modified contents */
+		git_buf_free(&cfg->locked_content);
+		git_buf_attach(&cfg->locked_content, git_buf_detach(&buf), len);
+	} else {
+		git_filebuf_write(&file, git_buf_cstr(&buf), git_buf_len(&buf));
 
-	/* refresh stats - if this errors, then commit will error too */
-	(void)git_filebuf_stats(&reader->file_mtime, &reader->file_size, &file);
+		/* refresh stats - if this errors, then commit will error too */
+		(void)git_filebuf_stats(&reader->file_mtime, &reader->file_size, &file);
 
-	result = git_filebuf_commit(&file);
-	git_buf_free(&reader->buffer);
+		result = git_filebuf_commit(&file);
+	}
 
 done:
+	git_buf_free(&buf);
 	git_buf_free(&reader->buffer);
 	return result;
 }
