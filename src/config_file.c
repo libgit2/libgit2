@@ -1602,7 +1602,7 @@ static int config_read(git_strmap *values, diskfile_backend *cfg_file, struct re
 	return config_parse(reader, NULL, read_on_variable, NULL, NULL, &parse_data);
 }
 
-static int write_section(git_filebuf *file, const char *key)
+static int write_section(git_buf *fbuf, const char *key)
 {
 	int result;
 	const char *dot;
@@ -1626,7 +1626,7 @@ static int write_section(git_filebuf *file, const char *key)
 	if (git_buf_oom(&buf))
 		return -1;
 
-	result = git_filebuf_write(file, git_buf_cstr(&buf), buf.size);
+	result = git_buf_put(fbuf, git_buf_cstr(&buf), buf.size);
 	git_buf_free(&buf);
 
 	return result;
@@ -1651,7 +1651,7 @@ static const char *quotes_for_value(const char *value)
 }
 
 struct write_data {
-	git_filebuf *file;
+	git_buf *buf;
 	unsigned int in_section : 1,
 		preg_replaced : 1;
 	const char *section;
@@ -1662,10 +1662,10 @@ struct write_data {
 
 static int write_line(struct write_data *write_data, const char *line, size_t line_len)
 {
-	int result = git_filebuf_write(write_data->file, line, line_len);
+	int result = git_buf_put(write_data->buf, line, line_len);
 
 	if (!result && line_len && line[line_len-1] != '\n')
-		result = git_filebuf_printf(write_data->file, "\n");
+		result = git_buf_printf(write_data->buf, "\n");
 
 	return result;
 }
@@ -1676,7 +1676,7 @@ static int write_value(struct write_data *write_data)
 	int result;
 
 	q = quotes_for_value(write_data->value);
-	result = git_filebuf_printf(write_data->file,
+	result = git_buf_printf(write_data->buf,
 		"\t%s = %s%s%s\n", write_data->name, q, write_data->value, q);
 
 	/* If we are updating a single name/value, we're done.  Setting `value`
@@ -1782,7 +1782,7 @@ static int write_on_eof(struct reader **reader, void *data)
 	 * value.
 	 */
 	if ((!write_data->preg || !write_data->preg_replaced) && write_data->value) {
-		if ((result = write_section(write_data->file, write_data->section)) == 0)
+		if ((result = write_section(write_data->buf, write_data->section)) == 0)
 			result = write_value(write_data);
 	}
 
@@ -1797,6 +1797,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	int result;
 	char *section, *name, *ldot;
 	git_filebuf file = GIT_FILEBUF_INIT;
+	git_buf buf = GIT_BUF_INIT;
 	struct reader *reader = git_array_get(cfg->readers, 0);
 	struct write_data write_data;
 
@@ -1827,7 +1828,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	name = ldot + 1;
 	section = git__strndup(key, ldot - key);
 
-	write_data.file = &file;
+	write_data.buf = &buf;
 	write_data.section = section;
 	write_data.in_section = 0;
 	write_data.preg_replaced = 0;
@@ -1839,9 +1840,12 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	git__free(section);
 
 	if (result < 0) {
+		git_buf_free(&buf);
 		git_filebuf_cleanup(&file);
 		goto done;
 	}
+
+	git_filebuf_write(&file, git_buf_cstr(&buf), git_buf_len(&buf));
 
 	/* refresh stats - if this errors, then commit will error too */
 	(void)git_filebuf_stats(&reader->file_mtime, &reader->file_size, &file);
