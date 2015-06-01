@@ -987,6 +987,69 @@ void test_checkout_tree__filemode_preserved_in_index(void)
 	git_index_free(index);
 }
 
+mode_t read_filemode(const char *path)
+{
+	struct stat st;
+	char pathabs[256] = {0};
+
+	strcat(pathabs, clar_sandbox_path());
+	strcat(pathabs, "/testrepo/");
+	strcat(pathabs, path);
+	cl_must_pass(p_stat(pathabs, &st));
+
+	return st.st_mode;
+}
+
+void test_checkout_tree__filemode_preserved_in_workdir(void)
+{
+#ifndef GIT_WIN32
+	git_oid executable_oid;
+	git_commit *commit;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	/* test a freshly added executable */
+	cl_git_pass(git_oid_fromstr(&executable_oid, "afe4393b2b2a965f06acf2ca9658eaa01e0cd6b6"));
+	cl_git_pass(git_commit_lookup(&commit, g_repo, &executable_oid));
+
+	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
+	cl_assert_equal_i(0100755, read_filemode("executable.txt"));
+
+	git_commit_free(commit);
+
+
+	/* Now start with a commit which has a text file */
+	cl_git_pass(git_oid_fromstr(&executable_oid, "cf80f8de9f1185bf3a05f993f6121880dd0cfbc9"));
+	cl_git_pass(git_commit_lookup(&commit, g_repo, &executable_oid));
+
+	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
+	cl_assert_equal_i(0100644, read_filemode("a/b.txt"));
+
+	git_commit_free(commit);
+
+
+	/* And then check out to a commit which converts the text file to an executable */
+	cl_git_pass(git_oid_fromstr(&executable_oid, "144344043ba4d4a405da03de3844aa829ae8be0e"));
+	cl_git_pass(git_commit_lookup(&commit, g_repo, &executable_oid));
+
+	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
+	cl_assert_equal_i(0100755, read_filemode("a/b.txt"));
+
+	git_commit_free(commit);
+
+
+	/* Finally, check out the text file again and check that the exec bit is cleared */
+	cl_git_pass(git_oid_fromstr(&executable_oid, "cf80f8de9f1185bf3a05f993f6121880dd0cfbc9"));
+	cl_git_pass(git_commit_lookup(&commit, g_repo, &executable_oid));
+
+	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
+	cl_assert_equal_i(0100644, read_filemode("a/b.txt"));
+
+	git_commit_free(commit);
+#endif
+}
+
 void test_checkout_tree__removes_conflicts(void)
 {
 	git_oid commit_id;
