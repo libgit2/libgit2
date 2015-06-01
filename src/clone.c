@@ -532,8 +532,21 @@ static int clone_local_into(git_repository *repo, git_remote *remote, const git_
 	if (can_link(git_repository_path(src), git_repository_path(repo), link))
 		flags |= GIT_CPDIR_LINK_FILES;
 
-	if ((error = git_futils_cp_r(git_buf_cstr(&src_odb), git_buf_cstr(&dst_odb),
-				     flags, GIT_OBJECT_DIR_MODE)) < 0)
+	error = git_futils_cp_r(git_buf_cstr(&src_odb), git_buf_cstr(&dst_odb),
+				flags, GIT_OBJECT_DIR_MODE);
+
+	/*
+	 * can_link() doesn't catch all variations, so if we hit an
+	 * error and did want to link, let's try again without trying
+	 * to link.
+	 */
+	if (error < 0 && link) {
+		flags &= ~GIT_CPDIR_LINK_FILES;
+		error = git_futils_cp_r(git_buf_cstr(&src_odb), git_buf_cstr(&dst_odb),
+					flags, GIT_OBJECT_DIR_MODE);
+	}
+
+	if (error < 0)
 		goto cleanup;
 
 	git_buf_printf(&reflog_message, "clone: from %s", git_remote_url(remote));
