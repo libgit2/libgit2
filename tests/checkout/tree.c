@@ -973,6 +973,17 @@ void test_checkout_tree__filemode_preserved_in_index(void)
 	git_commit_free(commit);
 
 
+	/* Finally, check out the text file again and check that the exec bit is cleared */
+	cl_git_pass(git_oid_fromstr(&executable_oid, "cf80f8de9f1185bf3a05f993f6121880dd0cfbc9"));
+	cl_git_pass(git_commit_lookup(&commit, g_repo, &executable_oid));
+
+	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
+	cl_assert(entry = git_index_get_bypath(index, "a/b.txt", 0));
+	cl_assert_equal_i(0100644, entry->mode);
+
+	git_commit_free(commit);
+
+
 	git_index_free(index);
 }
 
