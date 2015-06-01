@@ -163,9 +163,15 @@ static void hack_index(char *files[])
 		cl_git_pass(p_stat(path.ptr, &statbuf));
 
 		entry->ctime.seconds = (git_time_t)statbuf.st_ctime;
-		entry->ctime.nanoseconds = 0;
 		entry->mtime.seconds = (git_time_t)statbuf.st_mtime;
+#if !defined(GIT_WIN32) && !defined(__APPLE__)
+		/* Apple and Windows doesn't provide these struct stat fields. */
+		entry->ctime.nanoseconds = statbuf.st_ctim.tv_nsec;
+		entry->mtime.nanoseconds = statbuf.st_mtim.tv_nsec;
+#else
+		entry->ctime.nanoseconds = 0;
 		entry->mtime.nanoseconds = 0;
+#endif
 		entry->dev = statbuf.st_dev;
 		entry->ino = statbuf.st_ino;
 		entry->uid  = statbuf.st_uid;

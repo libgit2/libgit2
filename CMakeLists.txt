@@ -37,6 +37,7 @@ OPTION( LIBGIT2_FILENAME	"Name of the produced binary"			OFF )
 OPTION( USE_ICONV			"Link with and use iconv library" 		OFF )
 OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
 OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"   OFF )
+OPTION( USE_NSEC			"Care about sub-second file mtimes and ctimes"	OFF )
 OPTION( VALGRIND			"Configure build for valgrind"			OFF )
 OPTION( CURL			"User curl for HTTP if available" ON)
 
@@ -498,6 +499,10 @@ IF (THREADSAFE)
 	ENDIF()
 
 	ADD_DEFINITIONS(-DGIT_THREADS)
+ENDIF()
+
+IF (USE_NSEC)
+	ADD_DEFINITIONS(-DGIT_USE_NSEC)
 ENDIF()
 
 ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)

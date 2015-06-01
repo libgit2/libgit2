@@ -858,8 +858,11 @@ void git_index_entry__init_from_stat(
 {
 	entry->ctime.seconds = (git_time_t)st->st_ctime;
 	entry->mtime.seconds = (git_time_t)st->st_mtime;
-	/* entry->mtime.nanoseconds = st->st_mtimensec; */
-	/* entry->ctime.nanoseconds = st->st_ctimensec; */
+#if !defined(GIT_WIN32) && !defined(__APPLE__)
+	/* Apple and Windows doesn't provide these struct stat fields. */
+	entry->mtime.nanoseconds = st->st_mtim.tv_nsec;
+	entry->ctime.nanoseconds = st->st_ctim.tv_nsec;
+#endif
 	entry->dev  = st->st_rdev;
 	entry->ino  = st->st_ino;
 	entry->mode = (!trust_mode && S_ISREG(st->st_mode)) ?

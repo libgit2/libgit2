@@ -835,7 +835,11 @@ static int maybe_modified(
 	 */
 	} else if (git_oid_iszero(&nitem->id) && new_is_workdir) {
 		bool use_ctime = ((diff->diffcaps & GIT_DIFFCAPS_TRUST_CTIME) != 0);
+#ifdef GIT_USE_NSEC
 		bool use_nanos = ((diff->diffcaps & GIT_DIFFCAPS_TRUST_NANOSECS) != 0);
+#else
+		bool use_nanos = false;
+#endif
 		git_index *index;
 		git_iterator_index(&index, info->new_iter);
 
