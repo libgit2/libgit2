@@ -635,44 +635,47 @@ void test_config_write__to_file_with_only_comment(void)
 
 void test_config_write__locking(void)
 {
-	git_config_backend *cfg, *cfg2;
+	git_config *cfg, *cfg2;
 	git_config_entry *entry;
 	const char *filename = "locked-file";
 
 	/* Open the config and lock it */
 	cl_git_mkfile(filename, "[section]\n\tname = value\n");
-	cl_git_pass(git_config_file__ondisk(&cfg, filename));
-	cl_git_pass(git_config_file_open(cfg, GIT_CONFIG_LEVEL_APP));
-	cl_git_pass(git_config_file_get_string(&entry, cfg, "section.name"));
+	cl_git_pass(git_config_open_ondisk(&cfg, filename));
+	cl_git_pass(git_config_get_entry(&entry, cfg, "section.name"));
 	cl_assert_equal_s("value", entry->value);
 	git_config_entry_free(entry);
-	cl_git_pass(git_config_file_lock(cfg));
+	cl_git_pass(git_config_lock(cfg));
 
 	/* Change entries in the locked backend */
-	cl_git_pass(git_config_file_set_string(cfg, "section.name", "other value"));
-	cl_git_pass(git_config_file_set_string(cfg, "section2.name3", "more value"));
+	cl_git_pass(git_config_set_string(cfg, "section.name", "other value"));
+	cl_git_pass(git_config_set_string(cfg, "section2.name3", "more value"));
 
 	/* We can see that the file we read from hasn't changed */
-	cl_git_pass(git_config_file__ondisk(&cfg2, filename));
-	cl_git_pass(git_config_file_open(cfg2, GIT_CONFIG_LEVEL_APP));
-	cl_git_pass(git_config_file_get_string(&entry, cfg2, "section.name"));
+	cl_git_pass(git_config_open_ondisk(&cfg2, filename));
+	cl_git_pass(git_config_get_entry(&entry, cfg2, "section.name"));
 	cl_assert_equal_s("value", entry->value);
 	git_config_entry_free(entry);
-	cl_git_fail_with(GIT_ENOTFOUND, git_config_file_get_string(&entry, cfg2, "section2.name3"));
-	git_config_file_free(cfg2);
+	cl_git_fail_with(GIT_ENOTFOUND, git_config_get_entry(&entry, cfg2, "section2.name3"));
+	git_config_free(cfg2);
 
-	git_config_file_unlock(cfg, true);
-	git_config_file_free(cfg);
+	/* And we also get the old view when we read from the locked config */
+	cl_git_pass(git_config_get_entry(&entry, cfg, "section.name"));
+	cl_assert_equal_s("value", entry->value);
+	git_config_entry_free(entry);
+	cl_git_fail_with(GIT_ENOTFOUND, git_config_get_entry(&entry, cfg, "section2.name3"));
+
+	git_config_unlock(cfg, true);
+	git_config_free(cfg);
 
 	/* Now that we've unlocked it, we should see both updates */
-	cl_git_pass(git_config_file__ondisk(&cfg, filename));
-	cl_git_pass(git_config_file_open(cfg, GIT_CONFIG_LEVEL_APP));
-	cl_git_pass(git_config_file_get_string(&entry, cfg, "section.name"));
+	cl_git_pass(git_config_open_ondisk(&cfg, filename));
+	cl_git_pass(git_config_get_entry(&entry, cfg, "section.name"));
 	cl_assert_equal_s("other value", entry->value);
 	git_config_entry_free(entry);
-	cl_git_pass(git_config_file_get_string(&entry, cfg, "section2.name3"));
+	cl_git_pass(git_config_get_entry(&entry, cfg, "section2.name3"));
 	cl_assert_equal_s("more value", entry->value);
 	git_config_entry_free(entry);
 
-	git_config_file_free(cfg);
+	git_config_free(cfg);
 }
