@@ -469,7 +469,8 @@ static int diff_patch_from_sources(
 	git_diff_file *lfile = &pd->delta.old_file, *rfile = &pd->delta.new_file;
 	git_diff_file_content *ldata = &pd->patch.ofile, *rdata = &pd->patch.nfile;
 
-	GITERR_CHECK_VERSION(opts, GIT_DIFF_OPTIONS_VERSION, "git_diff_options");
+	if ((error = diff_patch_normalize_options(&pd->patch.diff_opts, opts)) < 0)
+		return error;
 
 	if (opts && (opts->flags & GIT_DIFF_REVERSE) != 0) {
 		void *tmp = lfile; lfile = rfile; rfile = tmp;
