@@ -293,8 +293,14 @@ static int ssh_agent_auth(LIBSSH2_SESSION *session, git_cred_ssh_key *c) {
 		if (rc < 0)
 			goto shutdown;
 
-		if (rc == 1)
+		/* rc is set to 1 whenever the ssh agent ran out of keys to check.
+		 * Set the error code to authentication failure rather than erroring
+		 * out with an untranslatable error code.
+		 */
+		if (rc == 1) {
+			rc = LIBSSH2_ERROR_AUTHENTICATION_FAILED;
 			goto shutdown;
+		}
 
 		rc = libssh2_agent_userauth(agent, c->username, curr);
 
