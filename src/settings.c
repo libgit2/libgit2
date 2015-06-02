@@ -34,6 +34,9 @@ int git_libgit2_features()
 #if defined(GIT_SSH)
 		| GIT_FEATURE_SSH
 #endif
+#if defined(GIT_USE_NSEC)
+		| GIT_FEATURE_NSEC
+#endif
 	;
 }
 
