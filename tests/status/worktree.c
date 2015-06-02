@@ -649,10 +649,10 @@ void test_status_worktree__conflict_has_no_oid(void)
 {
 	git_repository *repo = cl_git_sandbox_init("status");
 	git_index *index;
-	git_index_entry entry = {0};
+	git_index_entry entry = {{0}};
 	git_status_list *statuslist;
 	const git_status_entry *status;
-	git_oid zero_id = {0};
+	git_oid zero_id = {{0}};
 
 	entry.mode = 0100644;
 	entry.path = "modified_file";

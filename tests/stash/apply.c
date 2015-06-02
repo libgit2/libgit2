@@ -254,6 +254,11 @@ int checkout_notify(
 {
 	struct seen_paths *seen_paths = (struct seen_paths *)payload;
 
+	GIT_UNUSED(why);
+	GIT_UNUSED(baseline);
+	GIT_UNUSED(target);
+	GIT_UNUSED(workdir);
+
 	if (strcmp(path, "what") == 0)
 		seen_paths->what = 1;
 	else if (strcmp(path, "how") == 0)
@@ -318,6 +323,8 @@ int aborting_progress_cb(
 	git_stash_apply_progress_t progress,
 	void *payload)
 {
+	GIT_UNUSED(payload);
+
 	if (progress == GIT_STASH_APPLY_PROGRESS_ANALYZE_MODIFIED)
 		return -44;
 
@@ -327,7 +334,6 @@ int aborting_progress_cb(
 void test_stash_apply__progress_cb_can_abort(void)
 {
 	git_stash_apply_options opts = GIT_STASH_APPLY_OPTIONS_INIT;
-	git_stash_apply_progress_t progress = GIT_STASH_APPLY_PROGRESS_NONE;
 
 	opts.progress_cb = aborting_progress_cb;
 
