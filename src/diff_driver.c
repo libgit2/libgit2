@@ -116,7 +116,7 @@ static int diff_driver_add_patterns(
 		if (error < 0)
 			break;
 
-		if ((error = regcomp(&pat->re, buf.ptr, regex_flags)) < 0) {
+		if ((error = regcomp(&pat->re, buf.ptr, regex_flags)) != 0) {
 			/* if regex fails to compile, warn? fail? */
 			error = giterr_set_regex(&pat->re, error);
 			regfree(&pat->re);

@@ -39,11 +39,31 @@ git_commit_list_node *git_revwalk__commit_lookup(
 	return commit;
 }
 
+typedef git_array_t(git_commit_list_node*) commit_list_node_array;
+
+static bool interesting_arr(commit_list_node_array arr)
+{
+	git_commit_list_node **n;
+	size_t i = 0, size;
+
+	size = git_array_size(arr);
+	for (i = 0; i < size; i++) {
+		n = git_array_get(arr, i);
+		if (!*n)
+			break;
+
+		if (!(*n)->uninteresting)
+			return true;
+	}
+
+	return false;
+}
+
 static int mark_uninteresting(git_revwalk *walk, git_commit_list_node *commit)
 {
 	int error;
 	unsigned short i;
-	git_array_t(git_commit_list_node *) pending = GIT_ARRAY_INIT;
+	commit_list_node_array pending = GIT_ARRAY_INIT;
 	git_commit_list_node **tmp;
 
 	assert(commit);
@@ -64,7 +84,7 @@ static int mark_uninteresting(git_revwalk *walk, git_commit_list_node *commit)
 		tmp = git_array_pop(pending);
 		commit = tmp ? *tmp : NULL;
 
-	} while (commit != NULL);
+	} while (commit != NULL && !interesting_arr(pending));
 
 	git_array_clear(pending);
 
@@ -141,6 +161,10 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting,
 	commit = git_revwalk__commit_lookup(walk, &commit_id);
 	if (commit == NULL)
 		return -1; /* error already reported by failed lookup */
+
+	/* A previous hide already told us we don't want this commit  */
+	if (commit->uninteresting)
+		return 0;
 
 	if (uninteresting)
 		walk->did_hide = 1;

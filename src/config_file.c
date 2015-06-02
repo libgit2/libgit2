@@ -568,7 +568,7 @@ static int config_set_multivar(
 	}
 
 	result = regcomp(&preg, regexp, REG_EXTENDED);
-	if (result < 0) {
+	if (result != 0) {
 		giterr_set_regex(&preg, result);
 		result = -1;
 		goto out;
@@ -654,7 +654,7 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 	refcounted_strmap_free(map);
 
 	result = regcomp(&preg, regexp, REG_EXTENDED);
-	if (result < 0) {
+	if (result != 0) {
 		giterr_set_regex(&preg, result);
 		result = -1;
 		goto out;

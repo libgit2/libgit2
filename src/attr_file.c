@@ -344,6 +344,7 @@ bool git_attr_fnmatch__match(
 	git_attr_fnmatch *match,
 	git_attr_path *path)
 {
+	const char *relpath = path->path;
 	const char *filename;
 	int flags = 0;
 
@@ -360,6 +361,8 @@ bool git_attr_fnmatch__match(
 			if (git__prefixcmp(path->path, match->containing_dir))
 				return 0;
 		}
+
+		relpath += match->containing_dir_length;
 	}
 
 	if (match->flags & GIT_ATTR_FNMATCH_ICASE)
@@ -368,7 +371,7 @@ bool git_attr_fnmatch__match(
 		flags |= FNM_LEADING_DIR;
 
 	if (match->flags & GIT_ATTR_FNMATCH_FULLPATH) {
-		filename = path->path;
+		filename = relpath;
 		flags |= FNM_PATHNAME;
 	} else {
 		filename = path->basename;
@@ -378,28 +381,33 @@ bool git_attr_fnmatch__match(
 	}
 
 	if ((match->flags & GIT_ATTR_FNMATCH_DIRECTORY) && !path->is_dir) {
-		int matchval;
+		bool samename;
 
 		/* for attribute checks or root ignore checks, fail match */
 		if (!(match->flags & GIT_ATTR_FNMATCH_IGNORE) ||
 			path->basename == path->path)
 			return false;
 
-		/* for ignore checks, use container of current item for check */
-		path->basename[-1] = '\0';
 		flags |= FNM_LEADING_DIR;
-		matchval = p_fnmatch(match->pattern, path->path, flags);
-		path->basename[-1] = '/';
-		return (matchval != FNM_NOMATCH);
+
+		/* fail match if this is a file with same name as ignored folder */
+		samename = (match->flags & GIT_ATTR_FNMATCH_ICASE) ?
+			!strcasecmp(match->pattern, relpath) :
+			!strcmp(match->pattern, relpath);
+
+		if (samename)
+			return false;
+
+		return (p_fnmatch(match->pattern, relpath, flags) != FNM_NOMATCH);
 	}
 
 	/* if path is a directory prefix of a negated pattern, then match */
 	if ((match->flags & GIT_ATTR_FNMATCH_NEGATIVE) && path->is_dir) {
-		size_t pathlen = strlen(path->path);
+		size_t pathlen = strlen(relpath);
 		bool prefixed = (pathlen <= match->length) &&
 			((match->flags & GIT_ATTR_FNMATCH_ICASE) ?
-			 !strncasecmp(match->pattern, path->path, pathlen) :
-			 !strncmp(match->pattern, path->path, pathlen));
+			!strncasecmp(match->pattern, relpath, pathlen) :
+			!strncmp(match->pattern, relpath, pathlen));
 
 		if (prefixed && git_path_at_end_of_segment(&match->pattern[pathlen]))
 			return true;
@@ -604,7 +612,7 @@ int git_attr_fnmatch__parse(
 	}
 
 	if (context) {
-		char *slash = strchr(context, '/');
+		char *slash = strrchr(context, '/');
 		size_t len;
 		if (slash) {
 			/* include the slash for easier matching */
@@ -614,27 +622,7 @@ int git_attr_fnmatch__parse(
 		}
 	}
 
-	if ((spec->flags & GIT_ATTR_FNMATCH_FULLPATH) != 0 &&
-		context != NULL && git_path_root(pattern) < 0)
-	{
-		/* use context path minus the trailing filename */
-		char *slash = strrchr(context, '/');
-		size_t contextlen = slash ? slash - context + 1 : 0;
-
-		/* given an unrooted fullpath match from a file inside a repo,
-		 * prefix the pattern with the relative directory of the source file
-		 */
-		spec->pattern = git_pool_malloc(
-			pool, (uint32_t)(contextlen + spec->length + 1));
-		if (spec->pattern) {
-			memcpy(spec->pattern, context, contextlen);
-			memcpy(spec->pattern + contextlen, pattern, spec->length);
-			spec->length += contextlen;
-			spec->pattern[spec->length] = '\0';
-		}
-	} else {
-		spec->pattern = git_pool_strndup(pool, pattern, spec->length);
-	}
+	spec->pattern = git_pool_strndup(pool, pattern, spec->length);
 
 	if (!spec->pattern) {
 		*base = git__next_line(pattern);
