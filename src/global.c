@@ -116,6 +116,20 @@ static void init_ssl(void)
 #endif
 }
 
+/**
+ * This function aims to clean-up the SSL context which
+ * we allocated.
+ */
+static void uninit_ssl(void)
+{
+#ifdef GIT_OPENSSL
+	if (git__ssl_ctx) {
+		SSL_CTX_free(git__ssl_ctx);
+		git__ssl_ctx = NULL;
+	}
+#endif
+}
+
 int git_openssl_set_locking(void)
 {
 #ifdef GIT_OPENSSL
@@ -333,6 +347,7 @@ int git_libgit2_shutdown(void)
 
 	/* Shut down any subsystems that have global state */
 	git__shutdown();
+	uninit_ssl();
 
 	ptr = pthread_getspecific(_tls_key);
 	pthread_setspecific(_tls_key, NULL);
@@ -391,6 +406,7 @@ int git_libgit2_shutdown(void)
 
 	git__shutdown();
 	git__global_state_cleanup(&__state);
+	uninit_ssl();
 
 	return 0;
 }
