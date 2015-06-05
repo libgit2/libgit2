@@ -15,6 +15,7 @@
 #include "auth_negotiate.h"
 #include "tls_stream.h"
 #include "socket_stream.h"
+#include "curl_stream.h"
 
 git_http_auth_scheme auth_schemes[] = {
 	{ GIT_AUTHTYPE_NEGOTIATE, "Negotiate", GIT_CREDTYPE_DEFAULT, git_http_auth_negotiate },
@@ -544,11 +545,15 @@ static int http_connect(http_subtransport *t)
 		t->io = NULL;
 	}
 
+#ifdef GIT_CURL
+	error = git_curl_stream_new(&t->io, t->connection_data.host, t->connection_data.port, t->connection_data.use_ssl);
+#else
 	if (t->connection_data.use_ssl) {
 		error = git_tls_stream_new(&t->io, t->connection_data.host, t->connection_data.port);
 	} else {
 		error = git_socket_stream_new(&t->io,  t->connection_data.host, t->connection_data.port);
 	}
+#endif
 
 	if (error < 0)
 		return error;
@@ -557,7 +562,7 @@ static int http_connect(http_subtransport *t)
 
 	error = git_stream_connect(t->io);
 
-#if defined(GIT_OPENSSL) || defined(GIT_SECURE_TRANSPORT)
+#if defined(GIT_OPENSSL) || defined(GIT_SECURE_TRANSPORT) || defined(GIT_CURL)
 	if ((!error || error == GIT_ECERTIFICATE) && t->owner->certificate_check_cb != NULL &&
 	    git_stream_is_encrypted(t->io)) {
 		git_cert *cert;
