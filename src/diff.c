@@ -664,8 +664,10 @@ int git_diff__oid_for_entry(
 		updated_entry.mode = mode;
 		git_oid_cpy(&updated_entry.id, out);
 
-		if (!(error = git_repository_index__weakptr(&idx, diff->repo)))
+		if (!(error = git_repository_index__weakptr(&idx, diff->repo))) {
 			error = git_index_add(idx, &updated_entry);
+			diff->index_updated = true;
+		}
  	}
 
 	git_buf_free(&full_path);
@@ -1360,7 +1362,7 @@ int git_diff_index_to_workdir(
 			&b, repo, index, NULL, GIT_ITERATOR_DONT_AUTOEXPAND, pfx, pfx)
 	);
 
-	if (!error && DIFF_FLAG_IS_SET(*diff, GIT_DIFF_UPDATE_INDEX))
+	if (!error && DIFF_FLAG_IS_SET(*diff, GIT_DIFF_UPDATE_INDEX) && (*diff)->index_updated)
 		error = git_index_write(index);
 
 	return error;
