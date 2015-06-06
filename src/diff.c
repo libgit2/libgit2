@@ -661,6 +661,7 @@ int git_diff__oid_for_entry(
 		if (!(error = git_repository_index__weakptr(&idx, diff->repo))) {
 			git_oid_cpy(&entry.id, out);
 			error = git_index_add(idx, &entry);
+			diff->index_updated = true;
 		}
  	}
 
@@ -1353,7 +1354,7 @@ int git_diff_index_to_workdir(
 			&b, repo, index, NULL, GIT_ITERATOR_DONT_AUTOEXPAND, pfx, pfx)
 	);
 
-	if (!error && DIFF_FLAG_IS_SET(*diff, GIT_DIFF_UPDATE_INDEX))
+	if (!error && DIFF_FLAG_IS_SET(*diff, GIT_DIFF_UPDATE_INDEX) && (*diff)->index_updated)
 		error = git_index_write(index);
 
 	return error;

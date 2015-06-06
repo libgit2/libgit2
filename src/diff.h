@@ -64,6 +64,7 @@ struct git_diff {
 	git_iterator_type_t new_src;
 	uint32_t diffcaps;
 	git_diff_perfdata perf;
+	bool index_updated;
 
 	int (*strcomp)(const char *, const char *);
 	int (*strncomp)(const char *, const char *, size_t);
