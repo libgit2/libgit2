@@ -72,6 +72,9 @@ support for HTTPS connections insead of OpenSSL.
 * The race condition mitigations described in `racy-git.txt` have been
   implemented.
 
+* If libcurl is installed, we will use it to connect to HTTP(S)
+  servers.
+
 ### API additions
 
 * The `git_merge_options` gained a `file_flags` member.

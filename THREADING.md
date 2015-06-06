@@ -47,9 +47,14 @@ you.
 On Mac OS X
 -----------
 
-On OS X, the library makes use of CommonCrypto and SecureTransport for
-cryptographic support. These are thread-safe and you do not need to do
-anything special.
+By default we use libcurl to perform the encryption. The
+system-provided libcurl uses SecureTransport, so no special steps are
+necessary. If you link against another libcurl (e.g. from homebrew)
+refer to the general case.
+
+If the option to use libcurl was deactivated, the library makes use of
+CommonCrypto and SecureTransport for cryptographic support. These are
+thread-safe and you do not need to do anything special.
 
 Note that libssh2 may still use OpenSSL itself. In that case, the
 general case still affects you if you use ssh.
@@ -57,12 +62,15 @@ general case still affects you if you use ssh.
 General Case
 ------------
 
-On the rest of the platforms, libgit2 uses OpenSSL to be able to use
-HTTPS as a transport. This library is made to be thread-implementation
-agnostic, and the users of the library must set which locking function
-it should use. This means that libgit2 cannot know what to set as the
-user of libgit2 may use OpenSSL independently and the locking settings
-must survive libgit2 shutting down.
+By default we use libcurl, which has its own ![recommendations for
+thread safety](http://curl.haxx.se/libcurl/c/libcurl-tutorial.html#Multi-threading).
+
+If libcurl was not found or was disabled, libgit2 uses OpenSSL to be
+able to use HTTPS as a transport. This library is made to be
+thread-implementation agnostic, and the users of the library must set
+which locking function it should use. This means that libgit2 cannot
+know what to set as the user of libgit2 may use OpenSSL independently
+and the locking settings must survive libgit2 shutting down.
 
 libgit2 does provide a last-resort convenience function
 `git_openssl_set_locking()` (available in `sys/openssl.h`) to use the
