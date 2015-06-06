@@ -48,7 +48,7 @@ int git_buf_try_grow(
 		return 0;
 
 	if (buf->asize == 0) {
-		new_size = target_size;
+		new_size = target_size + 1;
 		new_ptr = NULL;
 	} else {
 		new_size = buf->asize;
