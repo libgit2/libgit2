@@ -1044,8 +1044,10 @@ int git_path_direach(
 		git_buf_truncate(path, wd_len); /* restore path */
 
 		/* Only set our own error if the callback did not set one already */
-		if (error != 0 && !giterr_last()) {
-			giterr_set_after_callback(error);
+		if (error != 0) {
+			if (!giterr_last())
+				giterr_set_after_callback(error);
+
 			break;
 		}
 	}
