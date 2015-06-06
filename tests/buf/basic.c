@@ -15,6 +15,45 @@ void test_buf_basic__resize(void)
 	git_buf_free(&buf1);
 }
 
+void test_buf_basic__auto_grow(void)
+{
+	git_buf buf1 = GIT_BUF_INIT_CONST("1234567890", 10);
+	git_buf buf2 = buf1;
+
+	cl_git_pass(git_buf_grow(&buf1, 0));
+	cl_assert(git_buf_oom(&buf1) == 0);
+	cl_assert_equal_i(buf1.size, buf2.size);
+	cl_assert(memcmp(buf1.ptr, buf2.ptr, buf1.size) == 0);
+
+	git_buf_free(&buf1);
+}
+
+void test_buf_basic__auto_grow_8(void)
+{
+	git_buf buf1 = GIT_BUF_INIT_CONST("1234567890", 8);
+	git_buf buf2 = buf1;
+
+	cl_git_pass(git_buf_grow(&buf1, 0));
+	cl_assert(git_buf_oom(&buf1) == 0);
+	cl_assert_equal_i(buf1.size, buf2.size);
+	cl_assert(memcmp(buf1.ptr, buf2.ptr, buf1.size) == 0);
+
+	git_buf_free(&buf1);
+}
+
+void test_buf_basic__grow_8(void)
+{
+	git_buf buf1 = GIT_BUF_INIT_CONST("1234567890", 8);
+	git_buf buf2 = buf1;
+
+	cl_git_pass(git_buf_grow(&buf1, buf1.size));
+	cl_assert(git_buf_oom(&buf1) == 0);
+	cl_assert_equal_i(buf1.size, buf2.size);
+	cl_assert(memcmp(buf1.ptr, buf2.ptr, buf1.size) == 0);
+
+	git_buf_free(&buf1);
+}
+
 void test_buf_basic__resize_incremental(void)
 {
 	git_buf buf1 = GIT_BUF_INIT;
