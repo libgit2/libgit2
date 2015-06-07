@@ -10,6 +10,7 @@
 #include "http_parser.h"
 #include "buffer.h"
 #include "netops.h"
+#include "remote.h"
 #include "smart.h"
 #include "auth.h"
 #include "auth_negotiate.h"
@@ -533,6 +534,7 @@ static int write_chunk(git_stream *io, const char *buffer, size_t len)
 static int http_connect(http_subtransport *t)
 {
 	int error;
+	char *proxy_url;
 
 	if (t->connected &&
 		http_should_keep_alive(&t->parser) &&
@@ -559,6 +561,15 @@ static int http_connect(http_subtransport *t)
 		return error;
 
 	GITERR_CHECK_VERSION(t->io, GIT_STREAM_VERSION, "git_stream");
+
+	if (git_stream_supports_proxy(t->io) &&
+	    !git_remote__get_http_proxy(t->owner->owner, !!t->connection_data.use_ssl, &proxy_url)) {
+		error = git_stream_set_proxy(t->io, proxy_url);
+		git__free(proxy_url);
+
+		if (error < 0)
+			return error;
+	}
 
 	error = git_stream_connect(t->io);
 
