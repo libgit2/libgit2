@@ -64,6 +64,17 @@ static int curls_certificate(git_cert **out, git_stream *stream)
 	return 0;
 }
 
+static int curls_set_proxy(git_stream *stream, const char *proxy_url)
+{
+	CURLcode res;
+	curl_stream *s = (curl_stream *) stream;
+
+	if ((res = curl_easy_setopt(s->handle, CURLOPT_PROXY, proxy_url)) != CURLE_OK)
+		return seterr_curl(s);
+
+	return 0;
+}
+
 static int wait_for(curl_socket_t fd, bool reading)
 {
 	int ret;
@@ -185,12 +196,16 @@ int git_curl_stream_new(git_stream **out, const char *host, const char *port, in
 	curl_easy_setopt(handle, CURLOPT_CONNECT_ONLY, 1);
 	curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 1);
 	curl_easy_setopt(handle, CURLOPT_CERTINFO, 1);
+	curl_easy_setopt(handle, CURLOPT_HTTPPROXYTUNNEL, 1);
+
 	/* curl_easy_setopt(handle, CURLOPT_VERBOSE, 1); */
 
 	st->parent.version = GIT_STREAM_VERSION;
 	st->parent.encrypted = encrypted;
+	st->parent.proxy_support = 1;
 	st->parent.connect = curls_connect;
 	st->parent.certificate = curls_certificate;
+	st->parent.set_proxy = curls_set_proxy;
 	st->parent.read = curls_read;
 	st->parent.write = curls_write;
 	st->parent.close = curls_close;
