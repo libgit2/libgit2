@@ -73,7 +73,7 @@ void test_diff_workdir__to_index_with_conflicts(void)
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff *diff = NULL;
 	git_index *index;
-	git_index_entry our_entry = {0}, their_entry = {0};
+	git_index_entry our_entry = {{0}}, their_entry = {{0}};
 	diff_expects exp = {0};
 
 	g_repo = cl_git_sandbox_init("status");

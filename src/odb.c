@@ -53,7 +53,7 @@ static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_
 int git_odb__format_object_header(char *hdr, size_t n, git_off_t obj_len, git_otype obj_type)
 {
 	const char *type_str = git_object_type2string(obj_type);
-	int len = p_snprintf(hdr, n, "%s %"PRIuZ, type_str, obj_len);
+	int len = p_snprintf(hdr, n, "%s %lld", type_str, obj_len);
 	assert(len > 0 && len <= (int)n);
 	return len+1;
 }

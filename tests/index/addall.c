@@ -288,7 +288,6 @@ void test_index_addall__repo_lifecycle(void)
 void test_index_addall__files_in_folders(void)
 {
 	git_index *index;
-	git_strarray paths = { NULL, 0 };
 
 	addall_create_test_repo(true);
 
@@ -408,7 +407,7 @@ void test_index_addall__adds_conflicts(void)
 	cl_git_pass(git_reference_lookup(&ref, g_repo, "refs/heads/branch"));
 	cl_git_pass(git_annotated_commit_from_ref(&annotated, g_repo, ref));
 
-	cl_git_pass(git_merge(g_repo, &annotated, 1, NULL, NULL));
+	cl_git_pass(git_merge(g_repo, (const git_annotated_commit**)&annotated, 1, NULL, NULL));
 	check_status(g_repo, 0, 1, 2, 0, 0, 0, 0, 1);
 
 	cl_git_pass(git_index_add_all(index, NULL, 0, NULL, NULL));
@@ -433,7 +432,7 @@ void test_index_addall__removes_deleted_conflicted_files(void)
 	cl_git_pass(git_reference_lookup(&ref, g_repo, "refs/heads/branch"));
 	cl_git_pass(git_annotated_commit_from_ref(&annotated, g_repo, ref));
 
-	cl_git_pass(git_merge(g_repo, &annotated, 1, NULL, NULL));
+	cl_git_pass(git_merge(g_repo, (const git_annotated_commit**)&annotated, 1, NULL, NULL));
 	check_status(g_repo, 0, 1, 2, 0, 0, 0, 0, 1);
 
 	cl_git_rmfile("merge-resolve/conflicting.txt");
