@@ -135,6 +135,8 @@ static void parse_options(describe_options *opts, int argc, char **argv)
 		} else if (match_int_arg((int *)&opts->format_options.abbreviated_size, &args, "--abbrev", 0)) {
 		} else if (match_int_arg((int *)&opts->describe_options.max_candidates_tags, &args, "--candidates", 0)) {
 		} else if (match_str_arg(&opts->describe_options.pattern, &args, "--match")) {
+		} else {
+			print_usage();
 		}
 	}
 
