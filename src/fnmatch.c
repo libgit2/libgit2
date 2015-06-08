@@ -164,8 +164,8 @@ p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 				default:
 				normal:
 						if (c != *string && !((flags & FNM_CASEFOLD) &&
-									(tolower((unsigned char)c) ==
-									tolower((unsigned char)*string))))
+									(git__tolower((unsigned char)c) ==
+									git__tolower((unsigned char)*string))))
 								return (FNM_NOMATCH);
 						++string;
 						break;
@@ -190,7 +190,7 @@ rangematch(const char *pattern, char test, int flags, char **newp)
 				++pattern;
 
 		if (flags & FNM_CASEFOLD)
-				test = (char)tolower((unsigned char)test);
+				test = (char)git__tolower((unsigned char)test);
 
 		/*
 			* A right bracket shall lose its special meaning and represent
@@ -207,7 +207,7 @@ rangematch(const char *pattern, char test, int flags, char **newp)
 				if (c == '/' && (flags & FNM_PATHNAME))
 						return (RANGE_NOMATCH);
 				if ((flags & FNM_CASEFOLD))
-						c = (char)tolower((unsigned char)c);
+						c = (char)git__tolower((unsigned char)c);
 				if (*pattern == '-'
 					&& (c2 = *(pattern+1)) != EOS && c2 != ']') {
 						pattern += 2;
@@ -216,7 +216,7 @@ rangematch(const char *pattern, char test, int flags, char **newp)
 						if (c2 == EOS)
 								return (RANGE_ERROR);
 						if (flags & FNM_CASEFOLD)
-								c2 = (char)tolower((unsigned char)c2);
+								c2 = (char)git__tolower((unsigned char)c2);
 						if (c <= test && test <= c2)
 								ok = 1;
 				} else if (c == test)

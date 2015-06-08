@@ -275,6 +275,15 @@ extern char *git__strsep(char **end, const char *sep);
 extern void git__strntolower(char *str, size_t len);
 extern void git__strtolower(char *str);
 
+#ifdef GIT_WIN32
+GIT_INLINE(int) git__tolower(int c)
+{
+	return (c >= 'A' && c <= 'Z') ? (c + 32) : c;
+}
+#else
+# define git__tolower(a) tolower(a)
+#endif
+
 GIT_INLINE(const char *) git__next_line(const char *s)
 {
 	while (*s && *s != '\n') s++;
