@@ -115,22 +115,22 @@ void test_checkout_crlf__detect_crlf_autocrlf_true_utf8(void)
 
 	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 
-	git_repository_set_head(g_repo, "refs/heads/utf8");
+	git_repository_set_head(g_repo, "refs/heads/master");
 	git_checkout_head(g_repo, &opts);
 
 	if (GIT_EOL_NATIVE == GIT_EOL_LF)
 	{
-		check_file_contents("./crlf/few-utf8-chars-lf.txt", FEW_UTF8_LF_RAW);
-		check_file_contents("./crlf/many-utf8-chars-lf.txt", MANY_UTF8_LF_RAW);
+		check_file_contents("./crlf/few-utf8-chars-lf", FEW_UTF8_LF_RAW);
+		check_file_contents("./crlf/many-utf8-chars-lf", MANY_UTF8_LF_RAW);
 	}
 	else
 	{
-		check_file_contents("./crlf/few-utf8-chars-lf.txt", FEW_UTF8_CRLF_RAW);
-		check_file_contents("./crlf/many-utf8-chars-lf.txt", MANY_UTF8_CRLF_RAW);
+		check_file_contents("./crlf/few-utf8-chars-lf", FEW_UTF8_CRLF_RAW);
+		check_file_contents("./crlf/many-utf8-chars-lf", MANY_UTF8_CRLF_RAW);
 	}
 
-	check_file_contents("./crlf/few-utf8-chars-crlf.txt", FEW_UTF8_CRLF_RAW);
-	check_file_contents("./crlf/many-utf8-chars-crlf.txt", MANY_UTF8_CRLF_RAW);
+	check_file_contents("./crlf/few-utf8-chars-crlf", FEW_UTF8_CRLF_RAW);
+	check_file_contents("./crlf/many-utf8-chars-crlf", MANY_UTF8_CRLF_RAW);
 }
 
 void test_checkout_crlf__autocrlf_true_index_size_is_filtered_size(void)
