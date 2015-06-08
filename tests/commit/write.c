@@ -1,5 +1,8 @@
 #include "clar_libgit2.h"
 
+#include "fileops.h"
+#include "path.h"
+
 static const char *committer_name = "Vicent Marti";
 static const char *committer_email = "vicent@github.com";
 static const char *commit_message = "This commit has been created in memory\n\
@@ -157,4 +160,28 @@ void test_commit_write__root(void)
 
 	git_signature_free(committer);
 	git_reflog_free(log);
+}
+
+static int commit_write_hook_callback(git_hook *hook, git_repository *repo, git_buf commit_msg_file_path)
+{
+    cl_assert(hook);
+    
+    cl_assert_equal_p(g_repo, repo);
+
+    git_buf file_contents = GIT_BUF_INIT;
+
+    cl_git_pass(git_futils_readbuffer(&file_contents, git_buf_cstr(&commit_msg_file_path)));
+
+    cl_assert_equal_s(commit_message, git_buf_cstr(&file_contents));
+
+    return GIT_OK;
+}
+
+void test_commit_write__hook_callback_registered(void)
+{
+    git_hook_register_commit_msg_callback(commit_write_hook_callback);
+
+    test_commit_write__from_memory();
+
+    git_hook_register_commit_msg_callback(NULL);
 }

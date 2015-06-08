@@ -12,6 +12,8 @@
 #include "git2/sys/commit.h"
 
 #include "common.h"
+#include "filebuf.h"
+#include "hooks.h"
 #include "odb.h"
 #include "commit.h"
 #include "signature.h"
@@ -90,6 +92,10 @@ int git_commit_create_from_callback(
 		git_buf_printf(&commit, "encoding %s\n", message_encoding);
 
 	git_buf_putc(&commit, '\n');
+
+    if (git_commit__execute_hook(repo, message) != GIT_OK) {
+        goto on_error;
+    }
 
 	if (git_buf_puts(&commit, message) < 0)
 		goto on_error;
@@ -507,4 +513,56 @@ int git_commit_nth_gen_ancestor(
 
 	*ancestor = parent;
 	return 0;
+}
+
+int git_commit__execute_hook(git_repository *repo, char *commit_message)
+{
+    int error = GIT_OK;
+    git_buf message = GIT_BUF_INIT;
+    git_buf path = GIT_BUF_INIT;
+    git_filebuf file = GIT_FILEBUF_INIT;
+
+    if (git_hook_is_commit_msg_callback_registered())
+    {
+        if (git_buf_puts(&message, commit_message) != GIT_OK) {
+            goto on_error;
+        }
+
+        if (git_buf_joinpath(&path, repo->path_repository, "commit-msg") != GIT_OK) {
+            goto on_error;
+        }
+
+        if (git_path_isfile(git_buf_cstr(&path))) {
+            if (git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_RMDIR_REMOVE_FILES) != GIT_OK) {
+                goto on_error;
+            }
+        }
+
+        if (git_filebuf_open(&file, git_buf_cstr(&path), GIT_FILEBUF_FORCE, GIT_REFS_FILE_MODE) < 0) {
+            goto on_error;
+        }
+
+        git_filebuf_write(&file, git_buf_cstr(&message), git_buf_len(&message));
+
+        if (git_filebuf_commit(&file) == GIT_OK) {
+            error = git_hook_execute_commit_msg_callback(repo, path);
+
+            if (git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_RMDIR_REMOVE_FILES) != GIT_OK) {
+                goto on_error;
+            }
+        }
+
+        git_buf_free(&message);
+        git_buf_free(&path);
+    }
+
+    return error;
+
+on_error:
+
+    git_filebuf_cleanup(&file);
+    git_buf_free(&message);
+    git_buf_free(&path);
+
+    return GIT_ERROR;
 }
