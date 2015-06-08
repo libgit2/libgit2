@@ -294,7 +294,6 @@ static int collide_peers_simple(
 	int collisions = 0;
 	int conflicts_wide = 0;
 	int conflicts_utf8 = 0;
-	BOOL result = FALSE;
 
 	/* Other non-contiguous invalid characters. */
 	static wchar_t inv[] = {
@@ -362,7 +361,6 @@ static int collide_peers_reserved(
 	int collisions = 0;
 	int conflicts_wide = 0;
 	int conflicts_utf8 = 0;
-	BOOL result = FALSE;
 
 	c_begin = 0xd800;
 	c_end   = 0xdfff;
@@ -398,7 +396,6 @@ static int collide_peers_private(
 	int collisions = 0;
 	int conflicts_wide = 0;
 	int conflicts_utf8 = 0;
-	BOOL result = FALSE;
 
 	c_begin = 0xe000;
 	c_end   = 0xffff;
@@ -451,7 +448,6 @@ static int collide_peers_surrogate(
 	int collisions = 0;
 	int conflicts_wide = 0;
 	int conflicts_utf8 = 0;
-	BOOL result = FALSE;
 
 	for (r = 0; r < g_ranges_len; r++) {
 		unsigned int c;
@@ -564,6 +560,65 @@ void test_fsquirks_windows_case__driveletter(void)
 	fflush(stdout);
 	fflush(stderr);
 
+	cl_assert(conflicts == 0);
+#endif
+}
+
+/**
+ * Do detailed case collision test on Turkish-I.  Mainstream cases were
+ * already covered in the "simple" test, but this tries to comfirm it
+ * in isolation.
+ *
+ * Normally we have lowercasing rule:
+ *    0049 capital I (no dot) ==> 0069 lower i with dot
+ * For Turkish we have:
+ *    0130 capital I with dot ==> 0069 lower i with dot
+ *    0049 capital I (no dot) ==> 0131 lower dotless i
+ *
+ * Note that CompareStringOrdinal() is locale-independent, so I'm not
+ * going to bother trying to set a Turkish locale here.
+ * https://msdn.microsoft.com/en-us/library/windows/desktop/dd318144(v=vs.85).aspx
+ */
+void test_fsquirks_windows_case__turkish(void)
+{
+#if defined(GIT_WIN32)
+	const wchar_t *tmpl = g_utf16_template;
+	wchar_t *tmpl_pos = g_template_pos;
+	const wchar_t *tmpl_base = g_template_base;
+	int collisions = 0;
+	int conflicts;
+	int conflicts_wide = 0;
+	int conflicts_utf8 = 0;
+
+	tmpl_pos[0] = 0x0049;
+	tmpl_pos[1] = g_suffix;
+	tmpl_pos[2] = 0;
+	create_one_file(tmpl, tmpl_base, &collisions, &conflicts_wide, &conflicts_utf8);
+
+	tmpl_pos[0] = 0x0069;
+	tmpl_pos[1] = g_suffix;
+	tmpl_pos[2] = 0;
+	create_one_file(tmpl, tmpl_base, &collisions, &conflicts_wide, &conflicts_utf8);
+
+	tmpl_pos[0] = 0x0130;
+	tmpl_pos[1] = g_suffix;
+	tmpl_pos[2] = 0;
+	create_one_file(tmpl, tmpl_base, &collisions, &conflicts_wide, &conflicts_utf8);
+
+	tmpl_pos[0] = 0x0131;
+	tmpl_pos[1] = g_suffix;
+	tmpl_pos[2] = 0;
+	create_one_file(tmpl, tmpl_base, &collisions, &conflicts_wide, &conflicts_utf8);
+	
+	/* so if normal rules were used, we have 1 collision.
+	 * if turkish rules were used, we have 2 collisions.
+	 */
+	cl_assert(collisions == 1);
+
+	fflush(stdout);
+	fflush(stderr);
+
+	conflicts = conflicts_wide + conflicts_utf8;
 	cl_assert(conflicts == 0);
 #endif
 }
