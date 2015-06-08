@@ -168,7 +168,7 @@ static void do_conflicted_diff(diff_expects *exp, unsigned long flags)
 	const char *a_commit = "26a125ee1bf"; /* the current HEAD */
 	git_tree *a = resolve_commit_oid_to_tree(g_repo, a_commit);
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	git_index_entry ancestor = {0}, ours = {0}, theirs = {0};
+	git_index_entry ancestor = {{0}}, ours = {{0}}, theirs = {{0}};
 	git_diff *diff = NULL;
 	git_index *index;
 

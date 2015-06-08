@@ -492,7 +492,7 @@ void test_core_path__13_cannot_prettify_a_non_existing_file(void)
 {
 	git_buf p = GIT_BUF_INIT;
 
-	cl_must_pass(git_path_exists(NON_EXISTING_FILEPATH) == false);
+	cl_assert_equal_b(git_path_exists(NON_EXISTING_FILEPATH), false);
 	cl_assert_equal_i(GIT_ENOTFOUND, git_path_prettify(&p, NON_EXISTING_FILEPATH, NULL));
 	cl_assert_equal_i(GIT_ENOTFOUND, git_path_prettify(&p, NON_EXISTING_FILEPATH "/so-do-i", NULL));
 
