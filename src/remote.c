@@ -869,7 +869,7 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs, const 
 {
 	int error = -1;
 	size_t i;
-	git_vector refs, specs, *to_active;
+	git_vector *to_active, specs = GIT_VECTOR_INIT, refs = GIT_VECTOR_INIT;
 	const git_remote_callbacks *cbs = NULL;
 
 	assert(remote);
@@ -2451,7 +2451,8 @@ char *apply_insteadof(git_config *config, const char *url, int direction)
 		suffix_length = strlen(SUFFIX_PUSH) + 1;
 	}
 
-	git_config_iterator_glob_new(&iter, config, regexp);
+	if (git_config_iterator_glob_new(&iter, config, regexp) < 0)
+		return NULL;
 
 	match_length = 0;
 	while (git_config_next(&entry, iter) == 0) {
