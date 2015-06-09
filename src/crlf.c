@@ -193,28 +193,29 @@ static const char *line_ending(struct crlf_attrs *ca)
 	case GIT_CRLF_CRLF:
 		return "\r\n";
 
+	case GIT_CRLF_GUESS:
+		if (ca->auto_crlf == GIT_AUTO_CRLF_FALSE)
+			return "\n";
+		break;
+
 	case GIT_CRLF_AUTO:
 	case GIT_CRLF_TEXT:
-	case GIT_CRLF_GUESS:
 		break;
 
 	default:
 		goto line_ending_error;
 	}
 
-	switch (ca->eol) {
-	case GIT_EOL_UNSET:
-		return GIT_EOL_NATIVE == GIT_EOL_CRLF ? "\r\n" : "\n";
-
-	case GIT_EOL_CRLF:
+	if (ca->auto_crlf == GIT_AUTO_CRLF_TRUE)
 		return "\r\n";
-
-	case GIT_EOL_LF:
+	else if (ca->auto_crlf == GIT_AUTO_CRLF_INPUT)
 		return "\n";
-
-	default:
-		goto line_ending_error;
-	}
+	else if (ca->eol == GIT_EOL_UNSET)
+		return GIT_EOL_NATIVE == GIT_EOL_CRLF ? "\r\n" : "\n";
+	else if (ca->eol == GIT_EOL_LF)
+		return "\n";
+	else if (ca->eol == GIT_EOL_CRLF)
+		return "\r\n";
 
 line_ending_error:
 	giterr_set(GITERR_INVALID, "Invalid input to line ending filter");
@@ -299,7 +300,7 @@ static int crlf_check(
 		return GIT_PASSTHROUGH;
 
 	if (ca.crlf_action == GIT_CRLF_GUESS ||
-		(ca.crlf_action == GIT_CRLF_AUTO &&
+		((ca.crlf_action == GIT_CRLF_AUTO || ca.crlf_action == GIT_CRLF_TEXT) &&
 		git_filter_source_mode(src) == GIT_FILTER_SMUDGE)) {
 
 		error = git_repository__cvar(
