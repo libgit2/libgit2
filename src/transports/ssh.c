@@ -177,11 +177,12 @@ static int ssh_stream_write(
 static void ssh_stream_free(git_smart_subtransport_stream *stream)
 {
 	ssh_stream *s = (ssh_stream *)stream;
-	ssh_subtransport *t = OWNING_SUBTRANSPORT(s);
-	int ret;
+	ssh_subtransport *t;
 
-	GIT_UNUSED(ret);
+	if (!stream)
+		return;
 
+	t = OWNING_SUBTRANSPORT(s);
 	t->current_stream = NULL;
 
 	if (s->channel) {
@@ -621,8 +622,7 @@ static int _git_ssh_setup_conn(
 
 done:
 	if (error < 0) {
-		if (*stream)
-			ssh_stream_free(*stream);
+		ssh_stream_free(*stream);
 
 		if (session)
 			libssh2_session_free(session);
