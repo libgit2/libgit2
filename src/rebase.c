@@ -512,7 +512,7 @@ static int rebase_ensure_not_dirty(
 	git_tree *head = NULL;
 	git_index *index = NULL;
 	git_diff *diff = NULL;
-	int error;
+	int error = 0;
 
 	if (check_index) {
 		if ((error = git_repository_head_tree(&head, repo)) < 0 ||
