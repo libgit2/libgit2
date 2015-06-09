@@ -12,6 +12,7 @@
 #include "stream.h"
 #include "git2/transport.h"
 #include "buffer.h"
+#include "vector.h"
 
 typedef struct {
 	git_stream parent;
@@ -19,6 +20,7 @@ typedef struct {
 	curl_socket_t socket;
 	char curl_error[CURL_ERROR_SIZE + 1];
 	git_cert_x509 cert_info;
+	git_strarray cert_info_strings;
 } curl_stream;
 
 static int seterr_curl(curl_stream *s)
@@ -53,11 +55,39 @@ static int curls_connect(git_stream *stream)
 
 static int curls_certificate(git_cert **out, git_stream *stream)
 {
+	int error;
+	CURLcode res;
+	struct curl_slist *slist;
+	struct curl_certinfo *certinfo;
+	git_vector strings = GIT_VECTOR_INIT;
 	curl_stream *s = (curl_stream *) stream;
 
-	s->cert_info.cert_type = GIT_CERT_X509;
-	s->cert_info.data      = NULL;
-	s->cert_info.len       = 0;
+	if ((res = curl_easy_getinfo(s->handle, CURLINFO_CERTINFO, &certinfo)) != CURLE_OK)
+		return seterr_curl(s);
+
+	/* No information is available, can happen with SecureTransport */
+	if (certinfo->num_of_certs == 0) {
+		s->cert_info.cert_type = GIT_CERT_NONE;
+		s->cert_info.data      = NULL;
+		s->cert_info.len       = 0;
+		return 0;
+	}
+
+	if ((error = git_vector_init(&strings, 8, NULL)) < 0)
+		return error;
+
+	for (slist = certinfo->certinfo[0]; slist; slist = slist->next) {
+		char *str = git__strdup(slist->data);
+		GITERR_CHECK_ALLOC(str);
+	}
+
+	/* Copy the contents of the vector into a strarray so we can expose them */
+	s->cert_info_strings.strings = (char **) strings.contents;
+	s->cert_info_strings.count   = strings.length;
+
+	s->cert_info.cert_type = GIT_CERT_STRARRAY;
+	s->cert_info.data      = &s->cert_info_strings;
+	s->cert_info.len       = strings.length;
 
 	*out = (git_cert *) &s->cert_info;
 
@@ -161,6 +191,7 @@ static void curls_free(git_stream *stream)
 	curl_stream *s = (curl_stream *) stream;
 
 	curls_close(stream);
+	git_strarray_free(&s->cert_info_strings);
 	git__free(s);
 }
 
