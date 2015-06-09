@@ -38,11 +38,7 @@ void test_filter_crlf__to_worktree(void)
 
 	cl_git_pass(git_filter_list_apply_to_data(&out, fl, &in));
 
-#ifdef GIT_WIN32
 	cl_assert_equal_s("Some text\r\nRight here\r\n", out.ptr);
-#else
-	cl_assert_equal_s("Some text\nRight here\n", out.ptr);
-#endif
 
 	git_filter_list_free(fl);
 	git_buf_free(&out);

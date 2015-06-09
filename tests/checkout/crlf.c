@@ -220,11 +220,7 @@ void test_checkout_crlf__detect_crlf_autocrlf_true(void)
 
 	git_checkout_head(g_repo, &opts);
 
-	if (GIT_EOL_NATIVE == GIT_EOL_LF)
-		check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-	else
-		check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
-
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
 	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
 }
 
@@ -238,16 +234,8 @@ void test_checkout_crlf__detect_crlf_autocrlf_true_utf8(void)
 	git_repository_set_head(g_repo, "refs/heads/master");
 	git_checkout_head(g_repo, &opts);
 
-	if (GIT_EOL_NATIVE == GIT_EOL_LF)
-	{
-		check_file_contents("./crlf/few-utf8-chars-lf", FEW_UTF8_LF_RAW);
-		check_file_contents("./crlf/many-utf8-chars-lf", MANY_UTF8_LF_RAW);
-	}
-	else
-	{
-		check_file_contents("./crlf/few-utf8-chars-lf", FEW_UTF8_CRLF_RAW);
-		check_file_contents("./crlf/many-utf8-chars-lf", MANY_UTF8_CRLF_RAW);
-	}
+	check_file_contents("./crlf/few-utf8-chars-lf", FEW_UTF8_CRLF_RAW);
+	check_file_contents("./crlf/many-utf8-chars-lf", MANY_UTF8_CRLF_RAW);
 
 	check_file_contents("./crlf/few-utf8-chars-crlf", FEW_UTF8_CRLF_RAW);
 	check_file_contents("./crlf/many-utf8-chars-crlf", MANY_UTF8_CRLF_RAW);
@@ -269,10 +257,7 @@ void test_checkout_crlf__autocrlf_true_index_size_is_filtered_size(void)
 
 	cl_assert((entry = git_index_get_bypath(index, "all-lf", 0)) != NULL);
 
-	if (GIT_EOL_NATIVE == GIT_EOL_LF)
-		cl_assert_equal_sz(strlen(ALL_LF_TEXT_RAW), entry->file_size);
-	else
-		cl_assert_equal_sz(strlen(ALL_LF_TEXT_AS_CRLF), entry->file_size);
+	cl_assert_equal_sz(strlen(ALL_LF_TEXT_AS_CRLF), entry->file_size);
 
 	cl_assert((entry = git_index_get_bypath(index, "all-crlf", 0)) != NULL);
 	cl_assert_equal_sz(strlen(ALL_CRLF_TEXT_RAW), entry->file_size);
@@ -341,25 +326,14 @@ void test_checkout_crlf__with_ident(void)
 
 	git_checkout_head(g_repo, &opts);
 
-	if (GIT_EOL_NATIVE == GIT_EOL_LF) {
-		cl_assert_equal_file(
-			ALL_LF_TEXT_RAW
-			"\n$Id: fcf6d4d9c212dc66563b1171b1cd99953c756467 $\n",
-			0, "crlf/lf.ident");
-		cl_assert_equal_file(
-			ALL_CRLF_TEXT_AS_LF
-			"\n$Id: f2c66ad9b2b5a734d9bf00d5000cc10a62b8a857 $\n\n",
-			0, "crlf/crlf.ident");
-	} else {
-		cl_assert_equal_file(
-			ALL_LF_TEXT_AS_CRLF
-			"\r\n$Id: fcf6d4d9c212dc66563b1171b1cd99953c756467 $\r\n",
-			0, "crlf/lf.ident");
-		cl_assert_equal_file(
-			ALL_CRLF_TEXT_RAW
-			"\r\n$Id: f2c66ad9b2b5a734d9bf00d5000cc10a62b8a857 $\r\n\r\n",
-			0, "crlf/crlf.ident");
-	}
+	cl_assert_equal_file(
+		ALL_LF_TEXT_AS_CRLF
+		"\r\n$Id: fcf6d4d9c212dc66563b1171b1cd99953c756467 $\r\n",
+		0, "crlf/lf.ident");
+	cl_assert_equal_file(
+		ALL_CRLF_TEXT_RAW
+		"\r\n$Id: f2c66ad9b2b5a734d9bf00d5000cc10a62b8a857 $\r\n\r\n",
+		0, "crlf/crlf.ident");
 
 	cl_assert_equal_file(
 		"$Id: f7830382dac1f1583422be5530fdfbd26289431b $\n"
@@ -394,13 +368,8 @@ void test_checkout_crlf__autocrlf_true_no_attrs(void)
 
 	git_checkout_head(g_repo, &opts);
 
-	if (GIT_EOL_NATIVE == GIT_EOL_CRLF) {
-		check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
-		check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
-	} else {
-		check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-		check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-	}
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
 }
 
 void test_checkout_crlf__autocrlf_input_no_attrs(void)
@@ -447,13 +416,8 @@ void test_checkout_crlf__autocrlf_true_text_auto_attr(void)
 
 	git_checkout_head(g_repo, &opts);
 
-	if (GIT_EOL_NATIVE == GIT_EOL_CRLF) {
-		check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
-		check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
-	} else {
-		check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-		check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-	}
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
 }
 
 void test_checkout_crlf__autocrlf_input_text_auto_attr(void)
@@ -483,10 +447,7 @@ void test_checkout_crlf__can_write_empty_file(void)
 
 	check_file_contents("./crlf/test1.txt", "");
 
-	if (GIT_EOL_NATIVE == GIT_EOL_LF)
-		check_file_contents("./crlf/test2.txt", "test2.txt's content\n");
-	else
-		check_file_contents("./crlf/test2.txt", "test2.txt's content\r\n");
+	check_file_contents("./crlf/test2.txt", "test2.txt's content\r\n");
 
 	check_file_contents("./crlf/test3.txt", "");
 }
