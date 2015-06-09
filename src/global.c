@@ -11,7 +11,10 @@
 #include "git2/global.h"
 #include "git2/sys/openssl.h"
 #include "thread-utils.h"
-
+#if defined(GIT_MSVC_CRTDBG)
+#include "win32/w32_stack.h"
+#include "win32/w32_crtdbg_stacktrace.h"
+#endif
 
 git_mutex git__mwindow_mutex;
 
@@ -225,6 +228,11 @@ int git_libgit2_init(void)
 
 	/* Only do work on a 0 -> 1 transition of the refcount */
 	if ((ret = git_atomic_inc(&git__n_inits)) == 1) {
+#if defined(GIT_MSVC_CRTDBG)
+		git_win32__crtdbg_stacktrace_init();
+		git_win32__stack_init();
+#endif
+
 		if (synchronized_threads_init() < 0)
 			ret = -1;
 	}
@@ -254,8 +262,14 @@ int git_libgit2_shutdown(void)
 	while (InterlockedCompareExchange(&_mutex, 1, 0)) { Sleep(0); }
 
 	/* Only do work on a 1 -> 0 transition of the refcount */
-	if ((ret = git_atomic_dec(&git__n_inits)) == 0)
+	if ((ret = git_atomic_dec(&git__n_inits)) == 0) {
 		synchronized_threads_shutdown();
+
+#if defined(GIT_MSVC_CRTDBG)
+		git_win32__crtdbg_stacktrace_cleanup();
+		git_win32__stack_cleanup();
+#endif
+	}
 
 	/* Exit the lock */
 	InterlockedExchange(&_mutex, 0);
