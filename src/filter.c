@@ -887,7 +887,7 @@ int git_filter_list_stream_file(
 	git_vector filter_streams = GIT_VECTOR_INIT;
 	git_writestream *stream_start;
 	ssize_t readlen;
-	int fd, error;
+	int fd = -1, error;
 
 	if ((error = stream_list_init(
 			&stream_start, &filter_streams, filters, target)) < 0 ||
@@ -909,9 +909,10 @@ int git_filter_list_stream_file(
 	else if (readlen < 0)
 		error = readlen;
 
-	p_close(fd);
 
 done:
+	if (fd >= 0)
+		p_close(fd);
 	stream_list_free(&filter_streams);
 	git_buf_free(&abspath);
 	return error;
