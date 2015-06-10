@@ -676,11 +676,13 @@ static bool is_rename_target(
 		return false;
 
 	/* only consider ADDED, RENAMED, COPIED, and split MODIFIED as
-	 * targets; maybe include UNTRACKED and IGNORED if requested.
+	 * targets; maybe include UNTRACKED if requested.
 	 */
 	switch (delta->status) {
 	case GIT_DELTA_UNMODIFIED:
 	case GIT_DELTA_DELETED:
+	case GIT_DELTA_IGNORED:
+	case GIT_DELTA_CONFLICTED:
 		return false;
 
 	case GIT_DELTA_MODIFIED:
@@ -707,9 +709,6 @@ static bool is_rename_target(
 			return false;
 		break;
 
-	case GIT_DELTA_IGNORED:
-		return false;
-
 	default: /* all other status values should be checked */
 		break;
 	}
@@ -735,6 +734,7 @@ static bool is_rename_source(
 	case GIT_DELTA_UNTRACKED:
 	case GIT_DELTA_UNREADABLE:
 	case GIT_DELTA_IGNORED:
+	case GIT_DELTA_CONFLICTED:
 		return false;
 
 	case GIT_DELTA_DELETED:
