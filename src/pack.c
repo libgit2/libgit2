@@ -319,9 +319,9 @@ static int pack_index_check(const char *path, struct git_pack_file *p)
 
 static int pack_index_open(struct git_pack_file *p)
 {
-	char *idx_name;
 	int error = 0;
-	size_t name_len, base_len;
+	size_t name_len;
+	git_buf idx_name = GIT_BUF_INIT;
 
 	if (p->index_version > -1)
 		return 0;
@@ -329,22 +329,23 @@ static int pack_index_open(struct git_pack_file *p)
 	name_len = strlen(p->pack_name);
 	assert(name_len > strlen(".pack")); /* checked by git_pack_file alloc */
 
-	if ((idx_name = git__malloc(name_len)) == NULL)
+	git_buf_grow(&idx_name, name_len);
+	git_buf_put(&idx_name, p->pack_name, name_len - strlen(".pack"));
+	git_buf_puts(&idx_name, ".idx");
+	if (git_buf_oom(&idx_name)) {
+		giterr_set_oom();
 		return -1;
-
-	base_len = name_len - strlen(".pack");
-	memcpy(idx_name, p->pack_name, base_len);
-	memcpy(idx_name + base_len, ".idx", sizeof(".idx"));
+	}
 
 	if ((error = git_mutex_lock(&p->lock)) < 0) {
-		git__free(idx_name);
+		git_buf_free(&idx_name);
 		return error;
 	}
 
 	if (p->index_version == -1)
-		error = pack_index_check(idx_name, p);
+		error = pack_index_check(idx_name.ptr, p);
 
-	git__free(idx_name);
+	git_buf_free(&idx_name);
 
 	git_mutex_unlock(&p->lock);
 

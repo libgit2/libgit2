@@ -1143,9 +1143,9 @@ static void merge_diff_list_count_candidates(
 		if (GIT_MERGE_INDEX_ENTRY_EXISTS(entry->ancestor_entry) &&
 			(!GIT_MERGE_INDEX_ENTRY_EXISTS(entry->our_entry) ||
 			!GIT_MERGE_INDEX_ENTRY_EXISTS(entry->their_entry)))
-			src_count++;
+			(*src_count)++;
 		else if (!GIT_MERGE_INDEX_ENTRY_EXISTS(entry->ancestor_entry))
-			tgt_count++;
+			(*tgt_count)++;
 	}
 }
 
