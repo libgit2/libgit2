@@ -309,6 +309,7 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 	const char *buffer_end = buffer_start + git_odb_object_size(odb_obj);
 	git_oid parent_id;
 	size_t header_len;
+	git_signature dummy_sig;
 
 	buffer = buffer_start;
 
@@ -336,6 +337,15 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 
 	if (git_signature__parse(commit->author, &buffer, buffer_end, "author ", '\n') < 0)
 		return -1;
+
+	/* Some tools create multiple author fields, ignore the extra ones */
+	while ((size_t)(buffer_end - buffer) >= strlen("author ") && !git__prefixcmp(buffer, "author ")) {
+		if (git_signature__parse(&dummy_sig, &buffer, buffer_end, "author ", '\n') < 0)
+			return -1;
+
+		git__free(dummy_sig.name);
+		git__free(dummy_sig.email);
+	}
 
 	/* Always parse the committer; we need the commit time */
 	commit->committer = git__malloc(sizeof(git_signature));
