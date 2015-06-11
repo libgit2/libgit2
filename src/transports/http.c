@@ -547,15 +547,15 @@ static int http_connect(http_subtransport *t)
 		t->io = NULL;
 	}
 
-#ifdef GIT_CURL
-	error = git_curl_stream_new(&t->io, t->connection_data.host, t->connection_data.port, t->connection_data.use_ssl);
-#else
 	if (t->connection_data.use_ssl) {
 		error = git_tls_stream_new(&t->io, t->connection_data.host, t->connection_data.port);
 	} else {
+#ifdef GIT_CURL
+		error = git_curl_stream_new(&t->io, t->connection_data.host, t->connection_data.port, false);
+#else
 		error = git_socket_stream_new(&t->io,  t->connection_data.host, t->connection_data.port);
-	}
 #endif
+	}
 
 	if (error < 0)
 		return error;
