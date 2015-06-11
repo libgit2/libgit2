@@ -427,7 +427,7 @@ int git_openssl_stream_new(git_stream **out, const char *host, const char *port)
 	GITERR_CHECK_ALLOC(st);
 
 #ifdef GIT_CURL
-	error = git_curl_stream_new(&st->io, host, port, false);
+	error = git_curl_stream_new(&st->io, host, port);
 #else
 	error = git_socket_stream_new(&st->io, host, port)
 #endif
