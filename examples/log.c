@@ -52,6 +52,7 @@ struct log_options {
 	int show_diff, show_log_size;
 	int skip, limit;
 	int min_parents, max_parents;
+	int ignore_case;
 	git_time_t before;
 	git_time_t after;
 	const char *author;
@@ -67,8 +68,8 @@ static void print_commit(git_commit *commit, struct log_options *opt);
 static int match_with_parent(git_commit *commit, int i, git_diff_options *);
 
 /** utility functions for filtering */
-static int signature_matches(const git_signature *sig, const char *filter);
-static int log_message_matches(const git_commit *commit, const char *filter);
+static int signature_matches(const git_signature *sig, const char *filter, int icase);
+static int log_message_matches(const git_commit *commit, const char *filter, int icase);
 
 int main(int argc, char *argv[])
 {
@@ -132,13 +133,13 @@ int main(int argc, char *argv[])
 				continue;
 		}
 
-		if (!signature_matches(git_commit_author(commit), opt.author))
+		if (!signature_matches(git_commit_author(commit), opt.author, opt.ignore_case))
 			continue;
 
-		if (!signature_matches(git_commit_committer(commit), opt.committer))
+		if (!signature_matches(git_commit_committer(commit), opt.committer, opt.ignore_case))
 			continue;
 
-		if (!log_message_matches(commit, opt.grep))
+		if (!log_message_matches(commit, opt.grep, opt.ignore_case))
 			continue;
 
 		if (count++ < opt.skip)
@@ -186,26 +187,31 @@ int main(int argc, char *argv[])
 }
 
 /** Determine if the given git_signature does not contain the filter text. */
-static int signature_matches(const git_signature *sig, const char *filter) {
+static int signature_matches(const git_signature *sig, const char *filter, int icase) {
 	if (filter == NULL)
 		return 1;
-
-	if (sig != NULL &&
-		(strstr(sig->name, filter) != NULL ||
-		strstr(sig->email, filter) != NULL))
-		return 1;
-
+	if (icase){
+		if (sig != NULL &&
+			(strcasestr(sig->name, filter) != NULL ||
+			strcasestr(sig->email, filter) != NULL))
+			return 1;
+	} else {
+		if (sig != NULL &&
+			(strstr(sig->name, filter) != NULL ||
+			strstr(sig->email, filter) != NULL))
+			return 1;
+	}
 	return 0;
 }
 
-static int log_message_matches(const git_commit *commit, const char *filter) {
+static int log_message_matches(const git_commit *commit, const char *filter, int icase) {
 	const char *message = NULL;
 
 	if (filter == NULL)
 		return 1;
 
 	if ((message = git_commit_message(commit)) != NULL &&
-		strstr(message, filter) != NULL)
+		(icase ? strcasestr(message, filter) : strstr(message, filter)) != NULL)
 		return 1;
 
 	return 0;
@@ -479,6 +485,8 @@ static int parse_options(
 			/** Found valid --min_parents. */;
 		else if (!strcmp(a, "-p") || !strcmp(a, "-u") || !strcmp(a, "--patch"))
 			opt->show_diff = 1;
+		else if (!strcmp(a, "-i") || !strcmp(a, "--regexp-ignore-case"))
+			opt->ignore_case = 1;
 		else
 			usage("Unsupported argument", a);
 	}
