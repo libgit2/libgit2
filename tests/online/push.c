@@ -319,6 +319,8 @@ void test_online_push__initialize(void)
 	git_vector delete_specs = GIT_VECTOR_INIT;
 	const git_remote_head **heads;
 	size_t heads_len;
+	git_push_options push_opts = GIT_PUSH_OPTIONS_INIT;
+	git_fetch_options fetch_opts = GIT_FETCH_OPTIONS_INIT;
 
 	_repo = cl_git_sandbox_init("push_src");
 
@@ -370,7 +372,7 @@ void test_online_push__initialize(void)
 
 	record_callbacks_data_clear(&_record_cbs_data);
 
-	cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH, NULL));
+	cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH, &_record_cbs));
 
 	/* Clean up previously pushed branches.  Fails if receive.denyDeletes is
 	 * set on the remote.  Also, on Git 1.7.0 and newer, you must run
@@ -386,14 +388,16 @@ void test_online_push__initialize(void)
 			delete_specs.length,
 		};
 
-		cl_git_pass(git_remote_upload(_remote, &arr, NULL));
+		memcpy(&push_opts.callbacks, &_record_cbs, sizeof(git_remote_callbacks));
+		cl_git_pass(git_remote_upload(_remote, &arr, &push_opts));
 	}
 
 	git_remote_disconnect(_remote);
 	git_vector_free(&delete_specs);
 
 	/* Now that we've deleted everything, fetch from the remote */
-	cl_git_pass(git_remote_fetch(_remote, NULL, NULL, NULL));
+	memcpy(&fetch_opts.callbacks, &_record_cbs, sizeof(git_remote_callbacks));
+	cl_git_pass(git_remote_fetch(_remote, NULL, &fetch_opts, NULL));
 }
 
 void test_online_push__cleanup(void)
