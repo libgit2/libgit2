@@ -110,18 +110,25 @@ int stransport_certificate(git_cert **out, git_stream *stream)
 	return 0;
 }
 
+/*
+ * Contrary to typical network IO callbacks, Secure Transport write callback is
+ * expected to write *all* passed data, not just as much as it can, and any
+ * other case would be considered a failure.
+ *
+ * This behavior is actually not specified in the Apple documentation, but is
+ * required for things to work correctly (and incidentally, that's also how
+ * Apple implements it in its projects at opensource.apple.com).
+ *
+ * Libgit2 streams happen to already have this very behavior so this is just
+ * passthrough.
+ */
 static OSStatus write_cb(SSLConnectionRef conn, const void *data, size_t *len)
 {
 	git_stream *io = (git_stream *) conn;
-	ssize_t ret;
 
-	ret = git_stream_write(io, data, *len, 0);
-	if (ret < 0) {
-		*len = 0;
-		return -1;
+	if (git_stream_write(io, data, *len, 0) < 0) {
+		return -36; /* "ioErr" from MacErrors.h which is not available on iOS */
 	}
-
-	*len = ret;
 
 	return noErr;
 }
@@ -141,29 +148,38 @@ ssize_t stransport_write(git_stream *stream, const char *data, size_t len, int f
 	return processed;
 }
 
+/*
+ * Contrary to typical network IO callbacks, Secure Transport read callback is
+ * expected to read *exactly* the requested number of bytes, not just as much
+ * as it can, and any other case would be considered a failure.
+ *
+ * This behavior is actually not specified in the Apple documentation, but is
+ * required for things to work correctly (and incidentally, that's also how
+ * Apple implements it in its projects at opensource.apple.com).
+ */
 static OSStatus read_cb(SSLConnectionRef conn, void *data, size_t *len)
 {
 	git_stream *io = (git_stream *) conn;
+	OSStatus error = noErr;
+	size_t off = 0;
 	ssize_t ret;
-	size_t left, requested;
 
-	requested = left = *len;
 	do {
-		ret = git_stream_read(io, data + (requested - left), left);
+		ret = git_stream_read(io, data + off, *len - off);
 		if (ret < 0) {
-			*len = 0;
-			return -1;
+			error = -36; /* "ioErr" from MacErrors.h which is not available on iOS */
+			break;
+		}
+		if (ret == 0) {
+			error = errSSLClosedGraceful;
+			break;
 		}
 
-		left -= ret;
-	} while (left);
+		off += ret;
+	} while (off < *len);
 
-	*len = requested;
-
-	if (ret == 0)
-		return errSSLClosedGraceful;
-
-	return noErr;
+	*len = off;
+	return error;
 }
 
 ssize_t stransport_read(git_stream *stream, void *data, size_t len)
