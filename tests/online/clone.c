@@ -428,6 +428,7 @@ void test_online_clone__ssh_with_paths(void)
 
 	g_options.remote_cb = custom_remote_ssh_with_paths;
 	g_options.fetch_opts.callbacks.transport = git_transport_ssh_with_paths;
+	g_options.fetch_opts.callbacks.credentials = cred_cb;
 	g_options.fetch_opts.callbacks.payload = &arr;
 
 	cl_git_fail(git_clone(&g_repo, remote_url, "./foo", &g_options));
