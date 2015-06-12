@@ -65,6 +65,10 @@ support for HTTPS connections insead of OpenSSL.
   configuration. This allows modifying URL prefixes to a custom
   value via gitconfig.
 
+* `git_diff_foreach`, `git_diff_blobs`, `git_diff_blob_to_buffer`,
+  and `git_diff_buffers` now accept a new binary callback of type
+  `git_diff_binary_cb` that includes the binary diff information.
+
 ### API additions
 
 * The `git_merge_options` gained a `file_flags` member.
