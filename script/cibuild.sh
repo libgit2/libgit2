@@ -45,8 +45,8 @@ export GITTEST_REMOTE_SSH_PASSPHRASE=""
 
 if [ -e ./libgit2_clar ]; then
     ./libgit2_clar -sonline::push -sonline::clone::ssh_cert &&
-    ./libgit2_clar -sonline::clone::ssh_with_paths
+    ./libgit2_clar -sonline::clone::ssh_with_paths || exit $?
     if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-        ./libgit2_clar -sonline::clone::cred_callback
+        ./libgit2_clar -sonline::clone::cred_callback || exit $?
     fi
 fi
