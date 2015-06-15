@@ -24,11 +24,16 @@ int stransport_error(OSStatus ret)
 		return 0;
 	}
 
+#if !TARGET_OS_IPHONE
 	message = SecCopyErrorMessageString(ret, NULL);
 	GITERR_CHECK_ALLOC(message);
 
 	giterr_set(GITERR_NET, "SecureTransport error: %s", CFStringGetCStringPtr(message, kCFStringEncodingUTF8));
 	CFRelease(message);
+#else
+    giterr_set(GITERR_NET, "SecureTransport error: OSStatus %d", (unsigned int)ret);
+#endif
+    
 	return -1;
 }
 
