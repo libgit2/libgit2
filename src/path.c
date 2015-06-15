@@ -889,7 +889,7 @@ void git_path_iconv_clear(git_path_iconv_t *ic)
 	}
 }
 
-int git_path_iconv(git_path_iconv_t *ic, char **in, size_t *inlen)
+int git_path_iconv(git_path_iconv_t *ic, const char **in, size_t *inlen)
 {
 	char *nfd = *in, *nfc;
 	size_t nfdlen = *inlen, nfclen, wantlen = nfdlen, alloclen, rv;
@@ -1018,8 +1018,7 @@ int git_path_direach(
 	int error = 0;
 	ssize_t wd_len;
 	DIR *dir;
-	path_dirent_data de_data;
-	struct dirent *de, *de_buf = (struct dirent *)&de_data;
+	struct dirent *de;
 
 #ifdef GIT_USE_ICONV
 	git_path_iconv_t ic = GIT_PATH_ICONV_INIT;
@@ -1045,7 +1044,7 @@ int git_path_direach(
 		(void)git_path_iconv_init_precompose(&ic);
 #endif
 
-	while (p_readdir_r(dir, de_buf, &de) == 0 && de != NULL) {
+	while ((de = readdir(dir)) != NULL) {
 		char *de_path = de->d_name;
 		size_t de_len = strlen(de_path);
 

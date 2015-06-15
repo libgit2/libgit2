@@ -407,7 +407,7 @@ extern void git_path_iconv_clear(git_path_iconv_t *ic);
  * pointer internal iconv buffer if rewrite happened.  The `in` pointer
  * will be left unchanged if no rewrite was needed.
  */
-extern int git_path_iconv(git_path_iconv_t *ic, char **in, size_t *inlen);
+extern int git_path_iconv(git_path_iconv_t *ic, const char **in, size_t *inlen);
 
 #endif /* GIT_USE_ICONV */
 
