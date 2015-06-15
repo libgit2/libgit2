@@ -658,10 +658,28 @@ int git_index__changed_relative_to(
 			index->stamp.ino != fs->ino);
 }
 
+/*
+ * Force the next diff to take a look at those entries which have the
+ * same timestamp as the current index.
+ */
+static void truncate_racily_clean(git_index *index)
+{
+	size_t i;
+	git_index_entry *entry;
+	git_time_t ts = index->stamp.mtime;
+
+	git_vector_foreach(&index->entries, i, entry) {
+		if (entry->mtime.seconds == ts || ts == 0)
+			entry->file_size = 0;
+	}
+}
+
 int git_index_write(git_index *index)
 {
 	git_indexwriter writer = GIT_INDEXWRITER_INIT;
 	int error;
+
+	truncate_racily_clean(index);
 
 	if ((error = git_indexwriter_init(&writer, index)) == 0)
 		error = git_indexwriter_commit(&writer);
