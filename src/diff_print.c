@@ -335,7 +335,6 @@ static int format_binary(
 	const char *typename = type == GIT_DIFF_BINARY_DELTA ?
 		"delta" : "literal";
 	const char *scan, *end;
-	int error = 0;
 
 	git_buf_printf(pi->buf, "%s %lu\n", typename, inflatedlen);
 	pi->line.num_lines++;

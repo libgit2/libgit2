@@ -863,7 +863,7 @@ int git_reference__normalize_name(
 	const char *name,
 	unsigned int flags)
 {
-	char *current;
+	const char *current;
 	int segment_len, segments_count = 0, error = GIT_EINVALIDSPEC;
 	unsigned int process_flags;
 	bool normalize = (buf != NULL);

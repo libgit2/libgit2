@@ -285,7 +285,7 @@ done:
 
 static int diff_binary(git_diff_output *output, git_patch *patch)
 {
-	git_diff_binary binary = { 0 };
+	git_diff_binary binary = {{0}};
 	const char *old_data = patch->ofile.map.data;
 	const char *new_data = patch->nfile.map.data;
 	size_t old_len = patch->ofile.map.len,

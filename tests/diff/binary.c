@@ -317,6 +317,8 @@ static int print_cb(
 {
 	git_buf *buf = (git_buf *)payload;
 
+	GIT_UNUSED(delta);
+
 	if (hunk)
 		git_buf_put(buf, hunk->header, hunk->header_len);
 
@@ -382,6 +384,8 @@ static int file_cb(
 {
 	struct diff_data *diff_data = payload;
 
+	GIT_UNUSED(progress);
+
 	if (delta->old_file.path)
 		diff_data->old_path = git__strdup(delta->old_file.path);
 
@@ -401,6 +405,8 @@ static int binary_cb(
 {
 	struct diff_data *diff_data = payload;
 
+	GIT_UNUSED(delta);
+
 	git_buf_encode_base85(&diff_data->old_binary_base85,
 		binary->old_file.data, binary->old_file.datalen);
 	diff_data->old_binary_inflatedlen = binary->old_file.inflatedlen;
@@ -419,6 +425,10 @@ static int hunk_cb(
 	const git_diff_hunk *hunk,
 	void *payload)
 {
+	GIT_UNUSED(delta);
+	GIT_UNUSED(hunk);
+	GIT_UNUSED(payload);
+
 	cl_fail("did not expect hunk callback");
 	return 0;
 }
@@ -429,6 +439,11 @@ static int line_cb(
 	const git_diff_line *line,
 	void *payload)
 {
+	GIT_UNUSED(delta);
+	GIT_UNUSED(hunk);
+	GIT_UNUSED(line);
+	GIT_UNUSED(payload);
+
 	cl_fail("did not expect line callback");
 	return 0;
 }
@@ -440,15 +455,6 @@ void test_diff_binary__blob_to_blob(void)
 	git_blob *old_blob, *new_blob;
 	git_oid old_id, new_id;
 	struct diff_data diff_data = {0};
-	const char *expected =
-		"diff --git a/untimely.txt b/untimely.txt\n" \
-		"index 9a69d960ae94b060f56c2a8702545e2bb1abb935..1111d4f11f4b35bf6759e0fb714fe09731ef0840 100644\n" \
-		"GIT binary patch\n" \
-		"delta 32\n" \
-		"nc%1vf+QYWt3zLL@hC)e3Vu?a>QDRl4f_G*?PG(-ZA}<#J$+QbW\n" \
-		"\n" \
-		"delta 7\n" \
-		"Oc%18D`@*{63ljhg(E~C7\n";
 
 	opts.flags = GIT_DIFF_SHOW_BINARY | GIT_DIFF_FORCE_BINARY;
 	opts.id_abbrev = GIT_OID_HEXSZ;

@@ -1045,7 +1045,7 @@ int git_path_direach(
 #endif
 
 	while ((de = readdir(dir)) != NULL) {
-		char *de_path = de->d_name;
+		const char *de_path = de->d_name;
 		size_t de_len = strlen(de_path);
 
 		if (git_path_is_dot_or_dotdot(de_path))
@@ -1305,7 +1305,7 @@ int git_path_diriter_next(git_path_diriter *diriter)
 
 #ifdef GIT_USE_ICONV
 	if ((diriter->flags & GIT_PATH_DIR_PRECOMPOSE_UNICODE) != 0 &&
-		(error = git_path_iconv(&diriter->ic, (char **)&filename, &filename_len)) < 0)
+		(error = git_path_iconv(&diriter->ic, &filename, &filename_len)) < 0)
 		return error;
 #endif
 
