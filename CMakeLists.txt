@@ -19,8 +19,12 @@ CMAKE_POLICY(SET CMP0015 NEW)
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
 
 INCLUDE(CheckLibraryExists)
+INCLUDE(CheckStructHasMember)
 INCLUDE(AddCFlagIfSupported)
 INCLUDE(FindPkgConfig)
+
+CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtim.tv_nsec sys/stat.h
+	HAVE_STRUCT_STAT_NSEC LANGUAGE C)
 
 # Build options
 #
@@ -37,7 +41,9 @@ OPTION( LIBGIT2_FILENAME	"Name of the produced binary"			OFF )
 OPTION( USE_ICONV			"Link with and use iconv library" 		OFF )
 OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
 OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"   OFF )
-OPTION( USE_NSEC			"Care about sub-second file mtimes and ctimes"	OFF )
+IF(HAVE_STRUCT_STAT_NSEC)
+	OPTION( USE_NSEC		"Care about sub-second file mtimes and ctimes"	OFF )
+ENDIF()
 OPTION( VALGRIND			"Configure build for valgrind"			OFF )
 OPTION( CURL			"User curl for HTTP if available" ON)
 

@@ -164,8 +164,7 @@ static void hack_index(char *files[])
 
 		entry->ctime.seconds = (git_time_t)statbuf.st_ctime;
 		entry->mtime.seconds = (git_time_t)statbuf.st_mtime;
-#if !defined(GIT_WIN32) && !defined(__APPLE__)
-		/* Apple and Windows doesn't provide these struct stat fields. */
+#if defined(GIT_USE_NSEC)
 		entry->ctime.nanoseconds = statbuf.st_ctim.tv_nsec;
 		entry->mtime.nanoseconds = statbuf.st_mtim.tv_nsec;
 #else
