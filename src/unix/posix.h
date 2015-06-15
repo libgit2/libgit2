@@ -26,6 +26,7 @@ typedef int GIT_SOCKET;
 #define p_mkdir(p,m) mkdir(p, m)
 #define p_fsync(fd) fsync(fd)
 extern char *p_realpath(const char *, char *);
+#define p_utimensat(fd, path, times, flags) utimensat(fd, path, times, flags)
 
 #define p_recv(s,b,l,f) recv(s,b,l,f)
 #define p_send(s,b,l,f) send(s,b,l,f)
