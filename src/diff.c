@@ -1089,8 +1089,10 @@ static int handle_unmatched_new_item(
 		/* item contained in ignored directory, so skip over it */
 		return iterator_advance(&info->nitem, info->new_iter);
 
-	else if (info->new_iter->type != GIT_ITERATOR_TYPE_WORKDIR)
-		delta_type = GIT_DELTA_ADDED;
+	else if (info->new_iter->type != GIT_ITERATOR_TYPE_WORKDIR) {
+		if (delta_type != GIT_DELTA_CONFLICTED)
+			delta_type = GIT_DELTA_ADDED;
+	}
 
 	else if (nitem->mode == GIT_FILEMODE_COMMIT) {
 		/* ignore things that are not actual submodules */
