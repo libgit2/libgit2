@@ -269,7 +269,9 @@ void test_checkout_icase__ignores_unstaged_casechange(void)
 	cl_git_pass(git_checkout_tree(repo, (const git_object *)br2, &checkout_opts));
 
 	git_commit_free(orig);
+	git_commit_free(br2);
 	git_reference_free(orig_ref);
+	git_reference_free(br2_ref);
 }
 
 void test_checkout_icase__conflicts_with_casechanged_subtrees(void)
