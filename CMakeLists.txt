@@ -490,7 +490,11 @@ IF (BUILD_CLAR)
 	ENDIF ()
 
 	ENABLE_TESTING()
-	ADD_TEST(libgit2_clar libgit2_clar -ionline)
+	IF (WINHTTP OR OPENSSL_FOUND)
+		ADD_TEST(libgit2_clar libgit2_clar -ionline)
+	ELSE ()
+		ADD_TEST(libgit2_clar libgit2_clar)
+	ENDIF ()
 ENDIF ()
 
 IF (TAGS)

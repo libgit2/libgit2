@@ -15,6 +15,9 @@
 typedef unsigned short mode_t;
 typedef SSIZE_T ssize_t;
 
+#define strcasecmp(s1, s2) _stricmp(s1, s2)
+#define strncasecmp(s1, s2, c) _strnicmp(s1, s2, c)
+
 #endif
 
 #define GIT_STDLIB_CALL __cdecl
