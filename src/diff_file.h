@@ -28,7 +28,7 @@ typedef struct {
 extern int git_diff_file_content__init_from_diff(
 	git_diff_file_content *fc,
 	git_diff *diff,
-	size_t delta_index,
+	git_diff_delta *delta,
 	bool use_old);
 
 typedef struct {
@@ -49,7 +49,9 @@ extern int git_diff_file_content__init_from_src(
 	git_diff_file *as_file);
 
 /* this loads the blob/file-on-disk as needed */
-extern int git_diff_file_content__load(git_diff_file_content *fc);
+extern int git_diff_file_content__load(
+	git_diff_file_content *fc,
+	git_diff_options *diff_opts);
 
 /* this releases the blob/file-in-memory */
 extern void git_diff_file_content__unload(git_diff_file_content *fc);

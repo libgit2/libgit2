@@ -496,8 +496,8 @@ int git_blame_buffer(
 
 	/* Diff to the reference blob */
 	git_diff_blob_to_buffer(reference->final_blob, blame->path,
-			buffer, buffer_len, blame->path,
-			&diffopts, NULL, buffer_hunk_cb, buffer_line_cb, blame);
+		buffer, buffer_len, blame->path, &diffopts,
+		NULL, NULL, buffer_hunk_cb, buffer_line_cb, blame);
 
 	*out = blame;
 	return 0;

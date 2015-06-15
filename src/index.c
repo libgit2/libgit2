@@ -2727,7 +2727,7 @@ static int index_apply_to_wd_diff(git_index *index, int action, const git_strarr
 		goto cleanup;
 
 	data.pathspec = &ps;
-	error = git_diff_foreach(diff, apply_each_file, NULL, NULL, &data);
+	error = git_diff_foreach(diff, apply_each_file, NULL, NULL, NULL, &data);
 	git_diff_free(diff);
 
 	if (error) /* make sure error is set if callback stopped iteration */

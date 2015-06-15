@@ -65,7 +65,7 @@ void test_diff_rename__match_oid(void)
 	 */
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(4, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
@@ -81,7 +81,7 @@ void test_diff_rename__match_oid(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(3, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
@@ -102,7 +102,7 @@ void test_diff_rename__match_oid(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(3, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
@@ -124,7 +124,7 @@ void test_diff_rename__match_oid(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(3, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
@@ -204,7 +204,7 @@ void test_diff_rename__not_exact_match(void)
 	 */
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(4, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
@@ -222,7 +222,7 @@ void test_diff_rename__not_exact_match(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(4, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
@@ -243,7 +243,7 @@ void test_diff_rename__not_exact_match(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(4, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
@@ -266,7 +266,7 @@ void test_diff_rename__not_exact_match(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(5, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
@@ -297,7 +297,7 @@ void test_diff_rename__not_exact_match(void)
 	 */
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(6, exp.files);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
@@ -317,7 +317,7 @@ void test_diff_rename__not_exact_match(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(4, exp.files);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
@@ -344,7 +344,7 @@ void test_diff_rename__not_exact_match(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(5, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
@@ -369,7 +369,7 @@ void test_diff_rename__not_exact_match(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(4, exp.files);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
@@ -469,7 +469,7 @@ void test_diff_rename__working_directory_changes(void)
 	/* git diff --no-renames 2bc7f351d20b53f1c72c16c4b036e491c478c49a */
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(6, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
@@ -482,7 +482,7 @@ void test_diff_rename__working_directory_changes(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(5, exp.files);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_RENAMED]);
@@ -508,7 +508,7 @@ void test_diff_rename__working_directory_changes(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(5, exp.files);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_RENAMED]);
@@ -527,7 +527,7 @@ void test_diff_rename__working_directory_changes(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(6, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
@@ -545,7 +545,7 @@ void test_diff_rename__working_directory_changes(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(6, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
@@ -575,7 +575,7 @@ void test_diff_rename__working_directory_changes(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(5, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
@@ -673,7 +673,7 @@ void test_diff_rename__file_exchange(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(2, exp.files);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
 
@@ -682,7 +682,7 @@ void test_diff_rename__file_exchange(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(2, exp.files);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_RENAMED]);
 
@@ -725,7 +725,7 @@ void test_diff_rename__file_exchange_three(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(3, exp.files);
 	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_MODIFIED]);
 
@@ -734,7 +734,7 @@ void test_diff_rename__file_exchange_three(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(3, exp.files);
 	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_RENAMED]);
 
@@ -776,7 +776,7 @@ void test_diff_rename__file_partial_exchange(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(2, exp.files);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
 
@@ -785,7 +785,7 @@ void test_diff_rename__file_partial_exchange(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(3, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_ADDED]);
@@ -833,7 +833,7 @@ void test_diff_rename__rename_and_copy_from_same_source(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(6, exp.files);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_ADDED]);
 	cl_assert_equal_i(4, exp.file_status[GIT_DELTA_UNMODIFIED]);
@@ -843,7 +843,7 @@ void test_diff_rename__rename_and_copy_from_same_source(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(6, exp.files);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_COPIED]);
 	cl_assert_equal_i(4, exp.file_status[GIT_DELTA_UNMODIFIED]);
@@ -885,7 +885,7 @@ void test_diff_rename__from_deleted_to_split(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(4, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
@@ -896,7 +896,7 @@ void test_diff_rename__from_deleted_to_split(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(4, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
@@ -998,8 +998,8 @@ void test_diff_rename__rejected_match_can_match_others(void)
 
 	cl_git_pass(git_diff_find_similar(diff, &findopts));
 
-	cl_git_pass(
-		git_diff_foreach(diff, test_names_expected, NULL, NULL, &expect));
+	cl_git_pass(git_diff_foreach(
+		diff, test_names_expected, NULL, NULL, NULL, &expect));
 
 	git_diff_free(diff);
 	git_tree_free(tree);
@@ -1072,8 +1072,8 @@ void test_diff_rename__rejected_match_can_match_others_two(void)
 
 	cl_git_pass(git_diff_find_similar(diff, &findopts));
 
-	cl_git_pass(
-		git_diff_foreach(diff, test_names_expected, NULL, NULL, &expect));
+	cl_git_pass(git_diff_foreach(
+		diff, test_names_expected, NULL, NULL, NULL, &expect));
 	cl_assert(expect.idx > 0);
 
 	git_diff_free(diff);
@@ -1128,8 +1128,8 @@ void test_diff_rename__rejected_match_can_match_others_three(void)
 
 	cl_git_pass(git_diff_find_similar(diff, &findopts));
 
-	cl_git_pass(
-		git_diff_foreach(diff, test_names_expected, NULL, NULL, &expect));
+	cl_git_pass(git_diff_foreach(
+		diff, test_names_expected, NULL, NULL, NULL, &expect));
 
 	cl_assert(expect.idx == expect.len);
 
@@ -1177,8 +1177,8 @@ void test_diff_rename__can_rename_from_rewrite(void)
 
 	cl_git_pass(git_diff_find_similar(diff, &findopts));
 
-	cl_git_pass(
-		git_diff_foreach(diff, test_names_expected, NULL, NULL, &expect));
+	cl_git_pass(git_diff_foreach(
+		diff, test_names_expected, NULL, NULL, NULL, &expect));
 
 	cl_assert(expect.idx == expect.len);
 
@@ -1210,7 +1210,7 @@ void test_diff_rename__case_changes_are_split(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(2, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_ADDED]);
@@ -1220,7 +1220,7 @@ void test_diff_rename__case_changes_are_split(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(1, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
 
@@ -1252,7 +1252,7 @@ void test_diff_rename__unmodified_can_be_renamed(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(2, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_ADDED]);
@@ -1262,13 +1262,13 @@ void test_diff_rename__unmodified_can_be_renamed(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(1, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(1, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
 
@@ -1317,7 +1317,7 @@ void test_diff_rename__rewrite_on_single_file(void)
 	memset(&exp, 0, sizeof(exp));
 
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(2, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNTRACKED]);
@@ -1352,7 +1352,7 @@ void test_diff_rename__can_find_copy_to_split(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(4, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
 	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_UNMODIFIED]);
@@ -1362,7 +1362,7 @@ void test_diff_rename__can_find_copy_to_split(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(5, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_COPIED]);
@@ -1401,7 +1401,7 @@ void test_diff_rename__can_delete_unmodified_deltas(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(4, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
 	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_UNMODIFIED]);
@@ -1411,7 +1411,7 @@ void test_diff_rename__can_delete_unmodified_deltas(void)
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(2, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_COPIED]);
@@ -1451,7 +1451,7 @@ void test_diff_rename__matches_config_behavior(void)
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_find_similar(diff, &opts));
 	cl_git_pass(git_diff_foreach(diff,
-				diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+				diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(4, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_ADDED]);
@@ -1465,7 +1465,7 @@ void test_diff_rename__matches_config_behavior(void)
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_find_similar(diff, &opts));
 	cl_git_pass(git_diff_foreach(diff,
-				diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+				diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(3, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_ADDED]);
@@ -1479,7 +1479,7 @@ void test_diff_rename__matches_config_behavior(void)
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_find_similar(diff, &opts));
 	cl_git_pass(git_diff_foreach(diff,
-				diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+				diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(4, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
@@ -1492,7 +1492,7 @@ void test_diff_rename__matches_config_behavior(void)
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_find_similar(diff, NULL));
 	cl_git_pass(git_diff_foreach(diff,
-				diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+				diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(4, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
@@ -1535,7 +1535,7 @@ void test_diff_rename__can_override_thresholds_when_obeying_config(void)
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_find_similar(diff, &opts));
 	cl_git_pass(git_diff_foreach(diff,
-				diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+				diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(4, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
@@ -1549,7 +1549,7 @@ void test_diff_rename__can_override_thresholds_when_obeying_config(void)
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_find_similar(diff, &opts));
 	cl_git_pass(git_diff_foreach(diff,
-				diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+				diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(4, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
@@ -1590,7 +1590,7 @@ void test_diff_rename__by_config_doesnt_mess_with_whitespace_settings(void)
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_find_similar(diff, &opts));
 	cl_git_pass(git_diff_foreach(diff,
-				diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+				diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(5, exp.files);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
@@ -1631,7 +1631,7 @@ static void expect_files_renamed(const char *one, const char *two, uint32_t whit
 	memset(&exp, 0, sizeof(exp));
 
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(1, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
 
@@ -1686,7 +1686,7 @@ static void expect_files_not_renamed(const char *one, const char *two, uint32_t 
 	memset(&exp, 0, sizeof(exp));
 
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(2, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNTRACKED]);
