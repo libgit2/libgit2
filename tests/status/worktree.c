@@ -6,6 +6,7 @@
 #include "util.h"
 #include "path.h"
 #include "../diff/diff_helpers.h"
+#include "../checkout/checkout_helpers.h"
 #include "git2/sys/diff.h"
 
 /**
@@ -956,6 +957,7 @@ void test_status_worktree__update_stat_cache_0(void)
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 	git_status_list *status;
 	git_diff_perfdata perf = GIT_DIFF_PERFDATA_INIT;
+	git_index *index;
 
 	opts.flags = GIT_STATUS_OPT_DEFAULTS;
 
@@ -966,6 +968,10 @@ void test_status_worktree__update_stat_cache_0(void)
 	cl_assert_equal_sz(5, perf.oid_calculations);
 
 	git_status_list_free(status);
+
+	/* tick the index so we avoid recalculating racily-clean entries */
+	cl_git_pass(git_repository_index__weakptr(&index, repo));
+	tick_index(index);
 
 	opts.flags |= GIT_STATUS_OPT_UPDATE_INDEX;
 

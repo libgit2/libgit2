@@ -32,25 +32,6 @@ void test_checkout_crlf__detect_crlf_autocrlf_false(void)
 	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
 }
 
-static void tick_index(git_index *index)
-{
-	git_time_t ts;
-	struct timespec times[2];
-
-	cl_assert(index->on_disk);
-	cl_assert(git_index_path(index));
-
-	cl_git_pass(git_index_read(index, true));
-	ts = index->stamp.mtime;
-
-	times[0].tv_sec  = UTIME_OMIT; /* dont' change the atime */
-	times[0].tv_nsec = UTIME_OMIT; /* dont' change the atime */
-	times[1].tv_sec  = ts + 1;
-	times[1].tv_nsec = 0;
-	cl_git_pass(p_utimensat(AT_FDCWD, git_index_path(index), times, 0));
-	cl_git_pass(git_index_read(index, true));
-}
-
 void test_checkout_crlf__autocrlf_false_index_size_is_unfiltered_size(void)
 {
 	git_index *index;

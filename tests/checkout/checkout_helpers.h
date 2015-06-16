@@ -27,3 +27,5 @@ extern int checkout_count_callback(
 	const git_diff_file *target,
 	const git_diff_file *workdir,
 	void *payload);
+
+extern void tick_index(git_index *index);
