@@ -2,6 +2,7 @@
 #include "git2/merge.h"
 #include "buffer.h"
 #include "merge.h"
+#include "index.h"
 #include "../merge_helpers.h"
 #include "posix.h"
 
@@ -231,9 +232,20 @@ static int merge_differently_filtered_files(char *files[])
 	cl_git_pass(git_reference_peel(&head_object, head, GIT_OBJ_COMMIT));
 	cl_git_pass(git_reset(repo, head_object, GIT_RESET_HARD, NULL));
 
+	/* Emulate checkout with a broken or misconfigured filter:  modify some
+	 * files on-disk and then update the index with the updated file size
+	 * and time, as if some filter applied them.  These files should not be
+	 * treated as dirty since we created them.
+	 *
+	 * (Make sure to update the index stamp to defeat racy-git protections
+	 * trying to sanity check the files in the index; those would rehash the
+	 * files, showing them as dirty, the exact mechanism we're trying to avoid.)
+	 */
+
 	write_files(files);
 	hack_index(files);
 
+	repo_index->stamp.mtime = time(NULL) + 1;
 	cl_git_pass(git_index_write(repo_index));
 
 	error = merge_branch();
