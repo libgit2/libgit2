@@ -262,6 +262,13 @@ gpgsig -----BEGIN PGP SIGNATURE-----\n\
  -----END PGP SIGNATURE-----\n\
 \n\
 a simple commit which works\n",
+/* some tools create two author entries */
+"tree 1810dff58d8a660512d4832e740f692884338ccd\n\
+author Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
+author Helpful Coworker <helpful@coworker> 1273848544 +0200\n\
+committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
+\n\
+a simple commit which works",
 };
 
 static int parse_commit(git_commit **out, const char *buffer)
