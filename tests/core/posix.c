@@ -97,3 +97,52 @@ void test_core_posix__inet_pton(void)
 	cl_git_fail(p_inet_pton(5, "315.124", NULL)); /* AF_CHAOS */
 	cl_assert_equal_i(EAFNOSUPPORT, errno);
 }
+
+void test_core_posix__utimes(void)
+{
+	struct timeval times[2];
+	struct stat st;
+	time_t curtime;
+	int fd;
+
+	/* test p_utimes */
+	times[0].tv_sec = 1234567890;
+	times[0].tv_usec = 0;
+	times[1].tv_sec = 1234567890;
+	times[1].tv_usec = 0;
+
+	cl_git_mkfile("foo", "Dummy file.");
+	cl_must_pass(p_utimes("foo", times));
+
+	p_stat("foo", &st);
+	cl_assert_equal_i(1234567890, st.st_atime);
+	cl_assert_equal_i(1234567890, st.st_mtime);
+
+
+	/* test p_futimes */
+	times[0].tv_sec = 1414141414;
+	times[0].tv_usec = 0;
+	times[1].tv_sec = 1414141414;
+	times[1].tv_usec = 0;
+
+	cl_must_pass(fd = p_open("foo", O_RDWR));
+	cl_must_pass(p_futimes(fd, times));
+	p_close(fd);
+
+	p_stat("foo", &st);
+	cl_assert_equal_i(1414141414, st.st_atime);
+	cl_assert_equal_i(1414141414, st.st_mtime);
+
+
+	/* test p_utimes with current time, assume that
+	 * it takes < 5 seconds to get the time...!
+	 */
+	cl_must_pass(p_utimes("foo", NULL));
+
+	curtime = time(NULL);
+	p_stat("foo", &st);
+	cl_assert((st.st_atime - curtime) < 5);
+	cl_assert((st.st_mtime - curtime) < 5);
+
+	p_unlink("foo");
+}

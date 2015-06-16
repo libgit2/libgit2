@@ -132,8 +132,9 @@ int checkout_count_callback(
 
 void tick_index(git_index *index)
 {
+	int index_fd;
 	git_time_t ts;
-	struct timespec times[2];
+	struct timeval times[2];
 
 	cl_assert(index->on_disk);
 	cl_assert(git_index_path(index));
@@ -141,10 +142,11 @@ void tick_index(git_index *index)
 	cl_git_pass(git_index_read(index, true));
 	ts = index->stamp.mtime;
 
-	times[0].tv_sec  = UTIME_OMIT; /* dont' change the atime */
-	times[0].tv_nsec = UTIME_OMIT; /* dont' change the atime */
+	times[0].tv_sec  = ts;
+	times[0].tv_usec = 0;
 	times[1].tv_sec  = ts + 1;
-	times[1].tv_nsec = 0;
-	cl_git_pass(p_utimensat(AT_FDCWD, git_index_path(index), times, 0));
+	times[1].tv_usec = 0;
+
+	cl_git_pass(p_utimes(git_index_path(index), times));
 	cl_git_pass(git_index_read(index, true));
 }
