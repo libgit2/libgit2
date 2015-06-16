@@ -164,6 +164,8 @@ int diff_foreach_via_iterator(
 {
 	size_t d, num_d = git_diff_num_deltas(diff);
 
+	GIT_UNUSED(binary_cb);
+
 	for (d = 0; d < num_d; ++d) {
 		git_patch *patch;
 		const git_diff_delta *delta;

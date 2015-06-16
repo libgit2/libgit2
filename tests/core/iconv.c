@@ -24,7 +24,7 @@ void test_core_iconv__cleanup(void)
 void test_core_iconv__unchanged(void)
 {
 #ifdef GIT_USE_ICONV
-	char *data = "Ascii data", *original = data;
+	const char *data = "Ascii data", *original = data;
 	size_t datalen = strlen(data);
 
 	cl_git_pass(git_path_iconv(&ic, &data, &datalen));
@@ -38,7 +38,7 @@ void test_core_iconv__unchanged(void)
 void test_core_iconv__decomposed_to_precomposed(void)
 {
 #ifdef GIT_USE_ICONV
-	char *data = nfd;
+	const char *data = nfd;
 	size_t datalen, nfdlen = strlen(nfd);
 
 	datalen = nfdlen;
@@ -64,7 +64,7 @@ void test_core_iconv__decomposed_to_precomposed(void)
 void test_core_iconv__precomposed_is_unmodified(void)
 {
 #ifdef GIT_USE_ICONV
-	char *data = nfc;
+	const char *data = nfc;
 	size_t datalen = strlen(nfc);
 
 	cl_git_pass(git_path_iconv(&ic, &data, &datalen));
