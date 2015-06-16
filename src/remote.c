@@ -167,14 +167,18 @@ static int get_check_cert(int *out, git_repository *repo)
 
 static int canonicalize_url(git_buf *out, const char *in)
 {
-#ifdef GIT_WIN32
-	const char *c;
+	if (in == NULL || strlen(in) == 0) {
+		giterr_set(GITERR_INVALID, "cannot set empty URL");
+		return GIT_EINVALIDSPEC;
+	}
 
+#ifdef GIT_WIN32
 	/* Given a UNC path like \\server\path, we need to convert this
 	 * to //server/path for compatibility with core git.
 	 */
 	if (in[0] == '\\' && in[1] == '\\' &&
 		(git__isalpha(in[2]) || git__isdigit(in[2]))) {
+		const char *c;
 		for (c = in; *c; c++)
 			git_buf_putc(out, *c == '\\' ? '/' : *c);
 
