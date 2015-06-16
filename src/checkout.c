@@ -150,6 +150,15 @@ static int checkout_notify(
 	}
 }
 
+GIT_INLINE(bool) is_workdir_base_or_new(
+	const git_oid *workdir_id,
+	const git_diff_file *baseitem,
+	const git_diff_file *newitem)
+{
+	return (git_oid__cmp(&baseitem->id, workdir_id) == 0 ||
+		git_oid__cmp(&newitem->id, workdir_id) == 0);
+}
+
 static bool checkout_is_workdir_modified(
 	checkout_data *data,
 	const git_diff_file *baseitem,
@@ -193,8 +202,7 @@ static bool checkout_is_workdir_modified(
 		if (wditem->mtime.seconds == ie->mtime.seconds &&
 			wditem->mtime.nanoseconds == ie->mtime.nanoseconds &&
 			wditem->file_size == ie->file_size)
-			return (git_oid__cmp(&baseitem->id, &ie->id) != 0 &&
-				git_oid_cmp(&newitem->id, &ie->id) != 0);
+			return !is_workdir_base_or_new(&ie->id, baseitem, newitem);
 	}
 
 	/* depending on where base is coming from, we may or may not know
@@ -206,7 +214,10 @@ static bool checkout_is_workdir_modified(
 	if (git_diff__oid_for_entry(&oid, data->diff, wditem, NULL) < 0)
 		return false;
 
-	return (git_oid__cmp(&baseitem->id, &oid) != 0);
+	/* Allow the checkout if the workdir is not modified *or* if the checkout
+	 * target's contents are already in the working directory.
+	 */
+	return !is_workdir_base_or_new(&oid, baseitem, newitem);
 }
 
 #define CHECKOUT_ACTION_IF(FLAG,YES,NO) \
