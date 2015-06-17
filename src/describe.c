@@ -335,14 +335,14 @@ static int display_name(git_buf *buf, git_repository *repo, struct commit_name *
 {
 	if (n->prio == 2 && !n->tag) {
 		if (git_tag_lookup(&n->tag, repo, &n->sha1) < 0) {
-			giterr_set(GITERR_TAG, "Annotated tag '%s' not available", n->path);
+			giterr_set("Annotated tag '%s' not available", n->path);
 			return -1;
 		}
 	}
 
 	if (n->tag && !n->name_checked) {
 		if (!git_tag_name(n->tag)) {
-			giterr_set(GITERR_TAG, "Annotated tag '%s' has no embedded name", n->path);
+			giterr_set("Annotated tag '%s' has no embedded name", n->path);
 			return -1;
 		}
 
@@ -425,7 +425,7 @@ static int describe_not_found(const git_oid *oid, const char *message_format) {
 	char oid_str[GIT_OID_HEXSZ + 1];
 	git_oid_tostr(oid_str, sizeof(oid_str), oid);
 
-	giterr_set(GITERR_DESCRIBE, message_format, oid_str);
+	giterr_set(message_format, oid_str);
 	return GIT_ENOTFOUND;
 }
 
@@ -694,7 +694,7 @@ int git_describe_commit(
 				goto cleanup;
 
 	if (git_oidmap_size(data.names) == 0 && !opts->show_commit_oid_as_fallback) {
-		giterr_set(GITERR_DESCRIBE, "Cannot describe - "
+		giterr_set("Cannot describe - "
 			"No reference found, cannot describe anything.");
 		error = -1;
 		goto cleanup;
@@ -792,7 +792,7 @@ int git_describe_format(git_buf *out, const git_describe_result *result, const g
 
 
 	if (opts.always_use_long_format && opts.abbreviated_size == 0) {
-		giterr_set(GITERR_DESCRIBE, "Cannot describe - "
+		giterr_set("Cannot describe - "
 			"'always_use_long_format' is incompatible with a zero"
 			"'abbreviated_size'");
 		return -1;

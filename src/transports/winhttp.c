@@ -107,12 +107,12 @@ static int apply_basic_credential(HINTERNET request, git_cred *cred)
 		goto on_error;
 
 	if ((wide_len = git__utf8_to_16_alloc(&wide, git_buf_cstr(&buf))) < 0) {
-		giterr_set(GITERR_OS, "Failed to convert string to wide form");
+		giterr_set_os("Failed to convert string to wide form");
 		goto on_error;
 	}
 
 	if (!WinHttpAddRequestHeaders(request, wide, (ULONG) -1L, WINHTTP_ADDREQ_FLAG_ADD)) {
-		giterr_set(GITERR_OS, "Failed to add a header to the request");
+		giterr_set_os("Failed to add a header to the request");
 		goto on_error;
 	}
 
@@ -170,7 +170,7 @@ static int fallback_cred_acquire_cb(
 
 		/* Convert URL to wide characters */
 		if (git__utf8_to_16_alloc(&wide_url, url) < 0) {
-			giterr_set(GITERR_OS, "Failed to convert string to wide form");
+			giterr_set_os("Failed to convert string to wide form");
 			return -1;
 		}
 
@@ -223,7 +223,7 @@ static int certificate_check(winhttp_stream *s, int valid)
 		return 0;
 
 	if (!WinHttpQueryOption(s->request, WINHTTP_OPTION_SERVER_CERT_CONTEXT, &cert_ctx, &cert_ctx_size)) {
-		giterr_set(GITERR_OS, "failed to get server certificate");
+		giterr_set_os("failed to get server certificate");
 		return -1;
 	}
 
@@ -235,7 +235,7 @@ static int certificate_check(winhttp_stream *s, int valid)
 	CertFreeCertificateContext(cert_ctx);
 
 	if (error < 0 && !giterr_last())
-		giterr_set(GITERR_NET, "user cancelled certificate check");
+		giterr_set("user cancelled certificate check");
 
 	return error;
 }
@@ -286,7 +286,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 
 	/* Convert URL to wide characters */
 	if (git__utf8_to_16_alloc(&s->request_uri, git_buf_cstr(&buf)) < 0) {
-		giterr_set(GITERR_OS, "Failed to convert string to wide form");
+		giterr_set_os("Failed to convert string to wide form");
 		goto on_error;
 	}
 
@@ -301,12 +301,12 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			t->connection_data.use_ssl ? WINHTTP_FLAG_SECURE : 0);
 
 	if (!s->request) {
-		giterr_set(GITERR_OS, "Failed to open request");
+		giterr_set_os("Failed to open request");
 		goto on_error;
 	}
 
 	if (!WinHttpSetTimeouts(s->request, default_timeout, default_connect_timeout, default_timeout, default_timeout)) {
-		giterr_set(GITERR_OS, "Failed to set timeouts for WinHTTP");
+		giterr_set_os("Failed to set timeouts for WinHTTP");
 		goto on_error;
 	}
 
@@ -322,7 +322,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		int proxy_wide_len = git__utf8_to_16_alloc(&proxy_wide, proxy_url);
 
 		if (proxy_wide_len < 0) {
-			giterr_set(GITERR_OS, "Failed to convert string to wide form");
+			giterr_set_os("Failed to convert string to wide form");
 			goto on_error;
 		}
 
@@ -339,7 +339,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			WINHTTP_OPTION_PROXY,
 			&proxy_info,
 			sizeof(WINHTTP_PROXY_INFO))) {
-			giterr_set(GITERR_OS, "Failed to set proxy");
+			giterr_set_os("Failed to set proxy");
 			git__free(proxy_wide);
 			goto on_error;
 		}
@@ -354,7 +354,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		WINHTTP_OPTION_DISABLE_FEATURE,
 		&disable_redirects,
 		sizeof(disable_redirects))) {
-			giterr_set(GITERR_OS, "Failed to disable redirects");
+			giterr_set_os("Failed to disable redirects");
 			goto on_error;
 	}
 
@@ -368,7 +368,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 
 	/* Send Pragma: no-cache header */
 	if (!WinHttpAddRequestHeaders(s->request, pragma_nocache, (ULONG) -1L, WINHTTP_ADDREQ_FLAG_ADD)) {
-		giterr_set(GITERR_OS, "Failed to add a header to the request");
+		giterr_set_os("Failed to add a header to the request");
 		goto on_error;
 	}
 
@@ -381,13 +381,13 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			goto on_error;
 
 		if (git__utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_buf_cstr(&buf)) < 0) {
-			giterr_set(GITERR_OS, "Failed to convert content-type to wide characters");
+			giterr_set_os("Failed to convert content-type to wide characters");
 			goto on_error;
 		}
 
 		if (!WinHttpAddRequestHeaders(s->request, ct, (ULONG)-1L,
 			WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE)) {
-			giterr_set(GITERR_OS, "Failed to add a header to the request");
+			giterr_set_os("Failed to add a header to the request");
 			goto on_error;
 		}
 
@@ -398,13 +398,13 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			goto on_error;
 
 		if (git__utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_buf_cstr(&buf)) < 0) {
-			giterr_set(GITERR_OS, "Failed to convert accept header to wide characters");
+			giterr_set_os("Failed to convert accept header to wide characters");
 			goto on_error;
 		}
 
 		if (!WinHttpAddRequestHeaders(s->request, ct, (ULONG)-1L,
 			WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE)) {
-			giterr_set(GITERR_OS, "Failed to add a header to the request");
+			giterr_set_os("Failed to add a header to the request");
 			goto on_error;
 		}
 	}
@@ -466,7 +466,7 @@ static int parse_unauthorized_response(
 	 * We can assume this was already done, since we know we are unauthorized. 
 	 */
 	if (!WinHttpQueryAuthSchemes(request, &supported, &first, &target)) {
-		giterr_set(GITERR_OS, "Failed to parse supported auth schemes"); 
+		giterr_set_os("Failed to parse supported auth schemes"); 
 		return -1;
 	}
 
@@ -499,7 +499,7 @@ static int write_chunk(HINTERNET request, const char *buffer, size_t len)
 		git_buf_cstr(&buf),	(DWORD)git_buf_len(&buf),
 		&bytes_written)) {
 		git_buf_free(&buf);
-		giterr_set(GITERR_OS, "Failed to write chunk header");
+		giterr_set_os("Failed to write chunk header");
 		return -1;
 	}
 
@@ -509,7 +509,7 @@ static int write_chunk(HINTERNET request, const char *buffer, size_t len)
 	if (!WinHttpWriteData(request,
 		buffer, (DWORD)len,
 		&bytes_written)) {
-		giterr_set(GITERR_OS, "Failed to write chunk");
+		giterr_set_os("Failed to write chunk");
 		return -1;
 	}
 
@@ -517,7 +517,7 @@ static int write_chunk(HINTERNET request, const char *buffer, size_t len)
 	if (!WinHttpWriteData(request,
 		"\r\n", 2,
 		&bytes_written)) {
-		giterr_set(GITERR_OS, "Failed to write chunk footer");
+		giterr_set_os("Failed to write chunk footer");
 		return -1;
 	}
 
@@ -530,7 +530,7 @@ static int winhttp_close_connection(winhttp_subtransport *t)
 
 	if (t->connection) {
 		if (!WinHttpCloseHandle(t->connection)) {
-			giterr_set(GITERR_OS, "Unable to close connection");
+			giterr_set_os("Unable to close connection");
 			ret = -1;
 		}
 
@@ -539,7 +539,7 @@ static int winhttp_close_connection(winhttp_subtransport *t)
 
 	if (t->session) {
 		if (!WinHttpCloseHandle(t->session)) {
-			giterr_set(GITERR_OS, "Unable to close session");
+			giterr_set_os("Unable to close session");
 			ret = -1;
 		}
 
@@ -568,7 +568,7 @@ static int winhttp_connect(
 
 	/* Prepare host */
 	if (git__utf8_to_16_alloc(&wide_host, t->connection_data.host) < 0) {
-		giterr_set(GITERR_OS, "Unable to convert host to wide characters");
+		giterr_set_os("Unable to convert host to wide characters");
 		return -1;
 	}
 
@@ -581,12 +581,12 @@ static int winhttp_connect(
 		0);
 
 	if (!t->session) {
-		giterr_set(GITERR_OS, "Failed to init WinHTTP");
+		giterr_set_os("Failed to init WinHTTP");
 		goto on_error;
 	}
 
 	if (!WinHttpSetTimeouts(t->session, default_timeout, default_connect_timeout, default_timeout, default_timeout)) {
-		giterr_set(GITERR_OS, "Failed to set timeouts for WinHTTP");
+		giterr_set_os("Failed to set timeouts for WinHTTP");
 		goto on_error;
 	}
 
@@ -599,7 +599,7 @@ static int winhttp_connect(
 		0);
 
 	if (!t->connection) {
-		giterr_set(GITERR_OS, "Failed to connect to host");
+		giterr_set_os("Failed to connect to host");
 		goto on_error;
 	}
 
@@ -645,7 +645,7 @@ static int send_request(winhttp_stream *s, size_t len, int ignore_length)
 
 	if (request_failed) {
 		if (GetLastError() != ERROR_WINHTTP_SECURE_FAILURE) {
-			giterr_set(GITERR_OS, "failed to send request");
+			giterr_set_os("failed to send request");
 			return -1;
 		} else {
 			cert_valid = 0;
@@ -655,7 +655,7 @@ static int send_request(winhttp_stream *s, size_t len, int ignore_length)
 	giterr_clear();
 	if ((error = certificate_check(s, cert_valid)) < 0) {
 		if (!giterr_last())
-			giterr_set(GITERR_OS, "user cancelled certificate check");
+			giterr_set_os("user cancelled certificate check");
 
 		return error;
 	}
@@ -667,12 +667,12 @@ static int send_request(winhttp_stream *s, size_t len, int ignore_length)
 	ignore_flags = no_check_cert_flags;
 	
 	if (!WinHttpSetOption(s->request, WINHTTP_OPTION_SECURITY_FLAGS, &ignore_flags, sizeof(ignore_flags))) {
-		giterr_set(GITERR_OS, "failed to set security options");
+		giterr_set_os("failed to set security options");
 		return -1;
 	}
 
 	if ((error = do_send_request(s, len, ignore_length)) < 0)
-		giterr_set(GITERR_OS, "failed to send request");
+		giterr_set_os("failed to send request");
 
 	return error;
 }
@@ -692,7 +692,7 @@ static int winhttp_stream_read(
 replay:
 	/* Enforce a reasonable cap on the number of replays */
 	if (++replay_count >= 7) {
-		giterr_set(GITERR_NET, "Too many redirects or authentication replays");
+		giterr_set("Too many redirects or authentication replays");
 		return -1;
 	}
 
@@ -727,7 +727,7 @@ replay:
 			if (!WinHttpWriteData(s->request,
 				"0\r\n\r\n", 5,
 				&bytes_written)) {
-				giterr_set(GITERR_OS, "Failed to write final chunk");
+				giterr_set_os("Failed to write final chunk");
 				return -1;
 			}
 		}
@@ -738,7 +738,7 @@ replay:
 			if (INVALID_SET_FILE_POINTER == SetFilePointer(s->post_body,
 					0, 0, FILE_BEGIN) &&
 				NO_ERROR != GetLastError()) {
-				giterr_set(GITERR_OS, "Failed to reset file pointer");
+				giterr_set_os("Failed to reset file pointer");
 				return -1;
 			}
 
@@ -752,14 +752,14 @@ replay:
 					&bytes_read, NULL) ||
 					!bytes_read) {
 					git__free(buffer);
-					giterr_set(GITERR_OS, "Failed to read from temp file");
+					giterr_set_os("Failed to read from temp file");
 					return -1;
 				}
 
 				if (!WinHttpWriteData(s->request, buffer,
 					bytes_read, &bytes_written)) {
 					git__free(buffer);
-					giterr_set(GITERR_OS, "Failed to write data");
+					giterr_set_os("Failed to write data");
 					return -1;
 				}
 
@@ -775,7 +775,7 @@ replay:
 		}
 
 		if (!WinHttpReceiveResponse(s->request, 0)) {
-			giterr_set(GITERR_OS, "Failed to receive response");
+			giterr_set_os("Failed to receive response");
 			return -1;
 		}
 
@@ -787,7 +787,7 @@ replay:
 			WINHTTP_HEADER_NAME_BY_INDEX,
 			&status_code, &status_code_length,
 			WINHTTP_NO_HEADER_INDEX)) {
-				giterr_set(GITERR_OS, "Failed to retrieve status code");
+				giterr_set_os("Failed to retrieve status code");
 				return -1;
 		}
 
@@ -817,7 +817,7 @@ replay:
 				&location_length,
 				WINHTTP_NO_HEADER_INDEX) ||
 				GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
-				giterr_set(GITERR_OS, "Failed to read Location header");
+				giterr_set_os("Failed to read Location header");
 				return -1;
 			}
 
@@ -830,14 +830,14 @@ replay:
 				location,
 				&location_length,
 				WINHTTP_NO_HEADER_INDEX)) {
-				giterr_set(GITERR_OS, "Failed to read Location header");
+				giterr_set_os("Failed to read Location header");
 				git__free(location);
 				return -1;
 			}
 
 			/* Convert the Location header to UTF-8 */
 			if (git__utf16_to_8_alloc(&location8, location) < 0) {
-				giterr_set(GITERR_OS, "Failed to convert Location header to UTF-8");
+				giterr_set_os("Failed to convert Location header to UTF-8");
 				git__free(location);
 				return -1;
 			}
@@ -905,7 +905,7 @@ replay:
 		}
 
 		if (HTTP_STATUS_OK != status_code) {
-			giterr_set(GITERR_NET, "Request failed with status code: %d", status_code);
+			giterr_set("Request failed with status code: %d", status_code);
 			return -1;
 		}
 
@@ -916,7 +916,7 @@ replay:
 			p_snprintf(expected_content_type_8, MAX_CONTENT_TYPE_LEN, "application/x-git-%s-advertisement", s->service);
 
 		if (git__utf8_to_16(expected_content_type, MAX_CONTENT_TYPE_LEN, expected_content_type_8) < 0) {
-			giterr_set(GITERR_OS, "Failed to convert expected content-type to wide characters");
+			giterr_set_os("Failed to convert expected content-type to wide characters");
 			return -1;
 		}
 
@@ -927,12 +927,12 @@ replay:
 			WINHTTP_HEADER_NAME_BY_INDEX,
 			&content_type, &content_type_length,
 			WINHTTP_NO_HEADER_INDEX)) {
-				giterr_set(GITERR_OS, "Failed to retrieve response content-type");
+				giterr_set_os("Failed to retrieve response content-type");
 				return -1;
 		}
 
 		if (wcscmp(expected_content_type, content_type)) {
-			giterr_set(GITERR_NET, "Received unexpected content-type");
+			giterr_set("Received unexpected content-type");
 			return -1;
 		}
 
@@ -944,7 +944,7 @@ replay:
 		(DWORD)buf_size,
 		&dw_bytes_read))
 	{
-		giterr_set(GITERR_OS, "Failed to read data");
+		giterr_set_os("Failed to read data");
 		return -1;
 	}
 
@@ -967,7 +967,7 @@ static int winhttp_stream_write_single(
 
 	/* This implementation of write permits only a single call. */
 	if (s->sent_request) {
-		giterr_set(GITERR_NET, "Subtransport configured for only one write");
+		giterr_set("Subtransport configured for only one write");
 		return -1;
 	}
 
@@ -980,7 +980,7 @@ static int winhttp_stream_write_single(
 			(LPCVOID)buffer,
 			(DWORD)len,
 			&bytes_written)) {
-		giterr_set(GITERR_OS, "Failed to write data");
+		giterr_set_os("Failed to write data");
 		return -1;
 	}
 
@@ -998,12 +998,12 @@ static int put_uuid_string(LPWSTR buffer, size_t buffer_len_cch)
 	if (RPC_S_OK != status &&
 		RPC_S_UUID_LOCAL_ONLY != status &&
 		RPC_S_UUID_NO_ADDRESS != status) {
-		giterr_set(GITERR_NET, "Unable to generate name for temp file");
+		giterr_set("Unable to generate name for temp file");
 		return -1;
 	}
 
 	if (buffer_len_cch < UUID_LENGTH_CCH + 1) {
-		giterr_set(GITERR_NET, "Buffer too small for name of temp file");
+		giterr_set("Buffer too small for name of temp file");
 		return -1;
 	}
 
@@ -1018,7 +1018,7 @@ static int put_uuid_string(LPWSTR buffer, size_t buffer_len_cch)
 		uuid.Data4[4], uuid.Data4[5], uuid.Data4[6], uuid.Data4[7]);
 
 	if (result < UUID_LENGTH_CCH) {
-		giterr_set(GITERR_OS, "Unable to generate name for temp file");
+		giterr_set_os("Unable to generate name for temp file");
 		return -1;
 	}
 
@@ -1030,7 +1030,7 @@ static int get_temp_file(LPWSTR buffer, DWORD buffer_len_cch)
 	size_t len;
 
 	if (!GetTempPathW(buffer_len_cch, buffer)) {
-		giterr_set(GITERR_OS, "Failed to get temp path");
+		giterr_set_os("Failed to get temp path");
 		return -1;
 	}
 
@@ -1073,13 +1073,13 @@ static int winhttp_stream_write_buffered(
 
 		if (INVALID_HANDLE_VALUE == s->post_body) {
 			s->post_body = NULL;
-			giterr_set(GITERR_OS, "Failed to create temporary file");
+			giterr_set_os("Failed to create temporary file");
 			return -1;
 		}
 	}
 
 	if (!WriteFile(s->post_body, buffer, (DWORD)len, &bytes_written, NULL)) {
-		giterr_set(GITERR_OS, "Failed to write to temporary file");
+		giterr_set_os("Failed to write to temporary file");
 		return -1;
 	}
 
@@ -1107,7 +1107,7 @@ static int winhttp_stream_write_chunked(
 		if (!WinHttpAddRequestHeaders(s->request,
 			transfer_encoding, (ULONG) -1L,
 			WINHTTP_ADDREQ_FLAG_ADD)) {
-			giterr_set(GITERR_OS, "Failed to add a header to the request");
+			giterr_set_os("Failed to add a header to the request");
 			return -1;
 		}
 

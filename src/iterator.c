@@ -1103,7 +1103,7 @@ static int fs_iterator__expand_dir(fs_iterator *fi)
 	fs_iterator_frame *ff;
 
 	if (fi->depth > FS_MAX_DEPTH) {
-		giterr_set(GITERR_REPOSITORY,
+		giterr_set(
 			"Directory nesting is too deep (%d)", fi->depth);
 		return -1;
 	}
@@ -1636,7 +1636,7 @@ int git_iterator_set_ignore_case(git_iterator *iter, bool ignore_case)
 		else
 			iter->flags &= ~GIT_ITERATOR_IGNORE_CASE;
 	} else {
-		giterr_set(GITERR_INVALID,
+		giterr_set(
 			"Cannot currently set ignore case on non-empty iterators");
 		return -1;
 	}

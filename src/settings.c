@@ -50,8 +50,7 @@ static int config_level_to_sysdir(int config_level)
 	case GIT_CONFIG_LEVEL_XDG:    val = GIT_SYSDIR_XDG; break;
 	case GIT_CONFIG_LEVEL_GLOBAL: val = GIT_SYSDIR_GLOBAL; break;
 	default:
-		giterr_set(
-			GITERR_INVALID, "Invalid config path selector %d", config_level);
+		giterr_set("Invalid config path selector %d", config_level);
 	}
 
 	return val;
@@ -143,13 +142,13 @@ int git_libgit2_opts(int key, ...)
 			const char *file = va_arg(ap, const char *);
 			const char *path = va_arg(ap, const char *);
 			if (!SSL_CTX_load_verify_locations(git__ssl_ctx, file, path)) {
-				giterr_set(GITERR_NET, "SSL error: %s",
+				giterr_set("SSL error: %s",
 					ERR_error_string(ERR_get_error(), NULL));
 				error = -1;
 			}
 		}
 #else
-		giterr_set(GITERR_NET, "Cannot set certificate locations: OpenSSL is not enabled");
+		giterr_set("Cannot set certificate locations: OpenSSL is not enabled");
 		error = -1;
 #endif
 		break;

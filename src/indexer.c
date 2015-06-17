@@ -83,12 +83,12 @@ static int parse_header(struct git_pack_header *hdr, struct git_pack_file *pack)
 
 	/* Verify we recognize this pack file format. */
 	if (hdr->hdr_signature != ntohl(PACK_SIGNATURE)) {
-		giterr_set(GITERR_INDEXER, "Wrong pack signature");
+		giterr_set("Wrong pack signature");
 		return -1;
 	}
 
 	if (!pack_version_ok(hdr->hdr_version)) {
-		giterr_set(GITERR_INDEXER, "Wrong pack version");
+		giterr_set("Wrong pack version");
 		return -1;
 	}
 
@@ -296,7 +296,7 @@ static int store_object(git_indexer *idx)
 	}
 
 	if (error == 0) {
-		giterr_set(GITERR_INDEXER, "duplicate object %s found in pack", git_oid_tostr_s(&pentry->sha1));
+		giterr_set("duplicate object %s found in pack", git_oid_tostr_s(&pentry->sha1));
 		git__free(pentry);
 		goto on_error;
 	}
@@ -348,7 +348,7 @@ static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_ent
 	k = kh_put(oid, idx->pack->idx_cache, &pentry->sha1, &error);
 
 	if (error <= 0) {
-		giterr_set(GITERR_INDEXER, "cannot insert object into pack");
+		giterr_set("cannot insert object into pack");
 		return -1;
 	}
 
@@ -376,7 +376,7 @@ static int hash_and_save(git_indexer *idx, git_rawobj *obj, git_off_t entry_star
 	GITERR_CHECK_ALLOC(entry);
 
 	if (git_odb__hashobj(&oid, obj) < 0) {
-		giterr_set(GITERR_INDEXER, "Failed to hash object");
+		giterr_set("Failed to hash object");
 		goto on_error;
 	}
 
@@ -485,7 +485,7 @@ static int append_to_pack(git_indexer *idx, const void *data, size_t size)
 
 	if (p_lseek(fd, current_size + size - 1, SEEK_SET) < 0 ||
 	    p_write(idx->pack->mwf.fd, data, 1) < 0) {
-		giterr_set(GITERR_OS, "cannot extend packfile '%s'", idx->pack->pack_name);
+		giterr_set_os("cannot extend packfile '%s'", idx->pack->pack_name);
 		return -1;
 	}
 
@@ -693,7 +693,7 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	entry_start = idx->pack->mwf.size;
 
 	if (git_odb_read(&obj, idx->odb, id) < 0) {
-		giterr_set(GITERR_INDEXER, "missing delta bases");
+		giterr_set("missing delta bases");
 		return -1;
 	}
 
@@ -766,7 +766,7 @@ static int fix_thin_pack(git_indexer *idx, git_transfer_progress *stats)
 	assert(git_vector_length(&idx->deltas) > 0);
 
 	if (idx->odb == NULL) {
-		giterr_set(GITERR_INDEXER, "cannot fix a thin pack without an ODB");
+		giterr_set("cannot fix a thin pack without an ODB");
 		return -1;
 	}
 
@@ -788,14 +788,14 @@ static int fix_thin_pack(git_indexer *idx, git_transfer_progress *stats)
 	}
 
 	if (!found_ref_delta) {
-		giterr_set(GITERR_INDEXER, "no REF_DELTA found, cannot inject object");
+		giterr_set("no REF_DELTA found, cannot inject object");
 		return -1;
 	}
 
 	/* curpos now points to the base information, which is an OID */
 	base_info = git_mwindow_open(&idx->pack->mwf, &w, curpos, GIT_OID_RAWSZ, &left);
 	if (base_info == NULL) {
-		giterr_set(GITERR_INDEXER, "failed to map delta information");
+		giterr_set("failed to map delta information");
 		return -1;
 	}
 
@@ -919,7 +919,7 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 
 	/* Test for this before resolve_deltas(), as it plays with idx->off */
 	if (idx->off < idx->pack->mwf.size - 20) {
-		giterr_set(GITERR_INDEXER, "Unexpected data at the end of the pack");
+		giterr_set("Unexpected data at the end of the pack");
 		return -1;
 	}
 
@@ -935,7 +935,7 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 
 	git_hash_final(&trailer_hash, &idx->trailer);
 	if (git_oid_cmp(&file_hash, &trailer_hash)) {
-		giterr_set(GITERR_INDEXER, "packfile trailer mismatch");
+		giterr_set("packfile trailer mismatch");
 		return -1;
 	}
 
@@ -946,7 +946,7 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 		return error;
 
 	if (stats->indexed_objects != stats->total_objects) {
-		giterr_set(GITERR_INDEXER, "early EOF");
+		giterr_set("early EOF");
 		return -1;
 	}
 
@@ -1039,7 +1039,7 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 	git_mwindow_free_all(&idx->pack->mwf);
 	/* We need to close the descriptor here so Windows doesn't choke on commit_at */
 	if (p_close(idx->pack->mwf.fd) < 0) {
-		giterr_set(GITERR_OS, "failed to close packfile");
+		giterr_set_os("failed to close packfile");
 		goto on_error;
 	}
 

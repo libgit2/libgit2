@@ -156,13 +156,11 @@ void test_diff_rename__checks_options_version(void)
 	opts.version = 0;
 	cl_git_fail(git_diff_find_similar(diff, &opts));
 	err = giterr_last();
-	cl_assert_equal_i(GITERR_INVALID, err->klass);
 
 	giterr_clear();
 	opts.version = 1024;
 	cl_git_fail(git_diff_find_similar(diff, &opts));
 	err = giterr_last();
-	cl_assert_equal_i(GITERR_INVALID, err->klass);
 
 	git_diff_free(diff);
 	git_tree_free(old_tree);

@@ -385,7 +385,7 @@ static int diff_required(git_diff *diff, const char *action)
 {
 	if (diff)
 		return 0;
-	giterr_set(GITERR_INVALID, "Must provide valid diff to %s", action);
+	giterr_set("Must provide valid diff to %s", action);
 	return -1;
 }
 
@@ -735,7 +735,7 @@ int git_patch_from_diff(
 
 	delta = git_vector_get(&diff->deltas, idx);
 	if (!delta) {
-		giterr_set(GITERR_INVALID, "Index out of range for delta in diff");
+		giterr_set("Index out of range for delta in diff");
 		return GIT_ENOTFOUND;
 	}
 
@@ -830,7 +830,7 @@ int git_patch_line_stats(
 
 static int diff_error_outofrange(const char *thing)
 {
-	giterr_set(GITERR_INVALID, "Diff patch %s index out of range", thing);
+	giterr_set("Diff patch %s index out of range", thing);
 	return GIT_ENOTFOUND;
 }
 

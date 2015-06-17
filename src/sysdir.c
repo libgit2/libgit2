@@ -99,7 +99,7 @@ static int git_sysdir_check_selector(git_sysdir_t which)
 	if (which < GIT_SYSDIR__MAX)
 		return 0;
 
-	giterr_set(GITERR_INVALID, "config directory selector out of range");
+	giterr_set("config directory selector out of range");
 	return -1;
 }
 
@@ -138,7 +138,7 @@ int git_sysdir_get_str(
 	GITERR_CHECK_ERROR(git_sysdir_get(&path, which));
 
 	if (!out || path->size >= outlen) {
-		giterr_set(GITERR_NOMEMORY, "Buffer is too short for the path");
+		giterr_set("Buffer is too short for the path");
 		return GIT_EBUFS;
 	}
 
@@ -222,7 +222,7 @@ static int git_sysdir_find_in_dirlist(
 
 done:
 	git_buf_free(path);
-	giterr_set(GITERR_OS, "The %s file '%s' doesn't exist", label, name);
+	giterr_set_os("The %s file '%s' doesn't exist", label, name);
 	return GIT_ENOTFOUND;
 }
 

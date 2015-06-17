@@ -61,7 +61,7 @@ const char *git_tag_message(const git_tag *t)
 
 static int tag_error(const char *str)
 {
-	giterr_set(GITERR_TAG, "Failed to parse tag. %s", str);
+	giterr_set("Failed to parse tag. %s", str);
 	return -1;
 }
 
@@ -228,7 +228,7 @@ static int write_tag_annotation(
 
 on_error:
 	git_buf_free(&tag);
-	giterr_set(GITERR_OBJECT, "Failed to create tag annotation.");
+	giterr_set("Failed to create tag annotation.");
 	return -1;
 }
 
@@ -251,7 +251,7 @@ static int git_tag_create__internal(
 	assert(!create_tag_annotation || (tagger && message));
 
 	if (git_object_owner(target) != repo) {
-		giterr_set(GITERR_INVALID, "The given target does not belong to this repository");
+		giterr_set("The given target does not belong to this repository");
 		return -1;
 	}
 
@@ -263,7 +263,7 @@ static int git_tag_create__internal(
 	 *	reference unless overwriting has explicitly been requested **/
 	if (error == 0 && !allow_ref_overwrite) {
 		git_buf_free(&ref_name);
-		giterr_set(GITERR_TAG, "Tag already exists");
+		giterr_set("Tag already exists");
 		return GIT_EEXISTS;
 	}
 
@@ -343,7 +343,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 		goto on_error;
 
 	if (tag.type != target_obj->cached.type) {
-		giterr_set(GITERR_TAG, "The type for the given target is invalid");
+		giterr_set("The type for the given target is invalid");
 		goto on_error;
 	}
 
@@ -360,7 +360,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	/** Ensure the tag name doesn't conflict with an already existing
 	 *	reference unless overwriting has explictly been requested **/
 	if (error == 0 && !allow_ref_overwrite) {
-		giterr_set(GITERR_TAG, "Tag already exists");
+		giterr_set("Tag already exists");
 		return GIT_EEXISTS;
 	}
 

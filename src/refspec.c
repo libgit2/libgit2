@@ -139,9 +139,7 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 	return 0;
 
  invalid:
-        giterr_set(
-                GITERR_INVALID,
-                "'%s' is not a valid refspec.", input);
+        giterr_set("'%s' is not a valid refspec.", input);
 	return -1;
 }
 
@@ -242,7 +240,7 @@ int git_refspec_transform(git_buf *out, const git_refspec *spec, const char *nam
 	git_buf_sanitize(out);
 
 	if (!git_refspec_src_matches(spec, name)) {
-		giterr_set(GITERR_INVALID, "ref '%s' doesn't match the source", name);
+		giterr_set("ref '%s' doesn't match the source", name);
 		return -1;
 	}
 
@@ -258,7 +256,7 @@ int git_refspec_rtransform(git_buf *out, const git_refspec *spec, const char *na
 	git_buf_sanitize(out);
 
 	if (!git_refspec_dst_matches(spec, name)) {
-		giterr_set(GITERR_INVALID, "ref '%s' doesn't match the destination", name);
+		giterr_set("ref '%s' doesn't match the destination", name);
 		return -1;
 	}
 

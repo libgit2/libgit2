@@ -126,7 +126,7 @@ int git__strtol64(int64_t *result, const char *nptr, const char **endptr, int ba
 
 Return:
 	if (ndig == 0) {
-		giterr_set(GITERR_INVALID, "Failed to convert string to long. Not a number");
+		giterr_set("Failed to convert string to long. Not a number");
 		return -1;
 	}
 
@@ -134,7 +134,7 @@ Return:
 		*endptr = p;
 
 	if (ovfl) {
-		giterr_set(GITERR_INVALID, "Failed to convert string to long. Overflow error");
+		giterr_set("Failed to convert string to long. Overflow error");
 		return -1;
 	}
 
@@ -153,7 +153,7 @@ int git__strtol32(int32_t *result, const char *nptr, const char **endptr, int ba
 
 	tmp_int = tmp_long & 0xFFFFFFFF;
 	if (tmp_int != tmp_long) {
-		giterr_set(GITERR_INVALID, "Failed to convert. '%s' is too large", nptr);
+		giterr_set("Failed to convert. '%s' is too large", nptr);
 		return -1;
 	}
 

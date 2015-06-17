@@ -86,7 +86,6 @@ static int ensure_remote_name_is_valid(const char *name)
 
 	if (!git_remote_is_valid_name(name)) {
 		giterr_set(
-			GITERR_CONFIG,
 			"'%s' is not a valid remote name.", name ? name : "(null)");
 		error = GIT_EINVALIDSPEC;
 	}
@@ -111,7 +110,7 @@ static int write_add_refspec(git_repository *repo, const char *name, const char 
 		return error;
 
 	if ((error = git_refspec__parse(&spec, refspec, fetch)) < 0) {
-		if (giterr_last()->klass != GITERR_NOMEMORY)
+		if (!giterr_is_oom(giterr_last()))
 			error = GIT_EINVALIDSPEC;
 
 		return error;
@@ -168,7 +167,7 @@ static int get_check_cert(int *out, git_repository *repo)
 static int canonicalize_url(git_buf *out, const char *in)
 {
 	if (in == NULL || strlen(in) == 0) {
-		giterr_set(GITERR_INVALID, "cannot set empty URL");
+		giterr_set("cannot set empty URL");
 		return GIT_EINVALIDSPEC;
 	}
 
@@ -282,7 +281,6 @@ static int ensure_remote_doesnot_exist(git_repository *repo, const char *name)
 	git_remote_free(remote);
 
 	giterr_set(
-		GITERR_CONFIG,
 		"Remote '%s' already exists.", name);
 
 	return GIT_EEXISTS;
@@ -476,7 +474,7 @@ int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 
 	if (!optional_setting_found) {
 		error = GIT_ENOTFOUND;
-		giterr_set(GITERR_CONFIG, "Remote '%s' does not exist.", name);
+		giterr_set("Remote '%s' does not exist.", name);
 		goto cleanup;
 	}
 
@@ -710,7 +708,7 @@ int git_remote_connect(git_remote *remote, git_direction direction, const git_re
 
 	url = git_remote__urlfordirection(remote, direction);
 	if (url == NULL) {
-		giterr_set(GITERR_INVALID,
+		giterr_set(
 			"Malformed remote '%s' - missing URL", remote->name);
 		return -1;
 	}
@@ -748,7 +746,7 @@ int git_remote_ls(const git_remote_head ***out, size_t *size, git_remote *remote
 	assert(remote);
 
 	if (!remote->transport) {
-		giterr_set(GITERR_NET, "this remote has never connected");
+		giterr_set("this remote has never connected");
 		return -1;
 	}
 
@@ -1722,7 +1720,7 @@ int git_remote_set_autotag(git_repository *repo, const char *remote, git_remote_
 			error = 0;
 		break;
 	default:
-		giterr_set(GITERR_INVALID, "Invalid value for the tagopt setting");
+		giterr_set("Invalid value for the tagopt setting");
 		error = -1;
 	}
 

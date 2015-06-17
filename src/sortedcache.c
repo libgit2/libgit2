@@ -26,7 +26,7 @@ int git_sortedcache_new(
 		goto fail;
 
 	if (git_rwlock_init(&sc->lock)) {
-		giterr_set(GITERR_OS, "Failed to initialize lock");
+		giterr_set_os("Failed to initialize lock");
 		goto fail;
 	}
 
@@ -161,7 +161,7 @@ int git_sortedcache_wlock(git_sortedcache *sc)
 	GIT_UNUSED(sc); /* prevent warning when compiled w/o threads */
 
 	if (git_rwlock_wrlock(&sc->lock) < 0) {
-		giterr_set(GITERR_OS, "Unable to acquire write lock on cache");
+		giterr_set_os("Unable to acquire write lock on cache");
 		return -1;
 	}
 	return 0;
@@ -180,7 +180,7 @@ int git_sortedcache_rlock(git_sortedcache *sc)
 	GIT_UNUSED(sc); /* prevent warning when compiled w/o threads */
 
 	if (git_rwlock_rdlock(&sc->lock) < 0) {
-		giterr_set(GITERR_OS, "Unable to acquire read lock on cache");
+		giterr_set_os("Unable to acquire read lock on cache");
 		return -1;
 	}
 	return 0;
@@ -207,7 +207,7 @@ int git_sortedcache_lockandload(git_sortedcache *sc, git_buf *buf)
 		goto unlock;
 
 	if (!git__is_sizet(sc->stamp.size)) {
-		giterr_set(GITERR_INVALID, "Unable to load file larger than size_t");
+		giterr_set("Unable to load file larger than size_t");
 		error = -1;
 		goto unlock;
 	}
@@ -363,7 +363,7 @@ int git_sortedcache_remove(git_sortedcache *sc, size_t pos)
 	 */
 
 	if ((item = git_vector_get(&sc->items, pos)) == NULL) {
-		giterr_set(GITERR_INVALID, "Removing item out of range");
+		giterr_set("Removing item out of range");
 		return GIT_ENOTFOUND;
 	}
 

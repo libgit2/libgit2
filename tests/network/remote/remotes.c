@@ -74,7 +74,6 @@ void test_network_remote_remotes__error_when_not_found(void)
 	cl_git_fail_with(git_remote_lookup(&r, _repo, "does-not-exist"), GIT_ENOTFOUND);
 
 	cl_assert(giterr_last() != NULL);
-	cl_assert(giterr_last()->klass == GITERR_CONFIG);
 }
 
 void test_network_remote_remotes__error_when_no_push_available(void)
@@ -362,7 +361,6 @@ void test_network_remote_remotes__can_load_with_an_empty_url(void)
 	cl_git_fail(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL));
 
 	cl_assert(giterr_last() != NULL);
-	cl_assert(giterr_last()->klass == GITERR_INVALID);
 
 	git_remote_free(remote);
 }

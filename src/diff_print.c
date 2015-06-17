@@ -565,7 +565,7 @@ int git_diff_print(
 		print_file = diff_print_one_name_status;
 		break;
 	default:
-		giterr_set(GITERR_INVALID, "Unknown diff output format (%d)", format);
+		giterr_set("Unknown diff output format (%d)", format);
 		return -1;
 	}
 
@@ -622,7 +622,7 @@ int git_diff_print_callback__to_buf(
 	GIT_UNUSED(delta); GIT_UNUSED(hunk);
 
 	if (!output) {
-		giterr_set(GITERR_INVALID, "Buffer pointer must be provided");
+		giterr_set("Buffer pointer must be provided");
 		return -1;
 	}
 

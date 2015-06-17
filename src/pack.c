@@ -45,7 +45,7 @@ static int pack_entry_find_offset(
 
 static int packfile_error(const char *message)
 {
-	giterr_set(GITERR_ODB, "Invalid pack file - %s", message);
+	giterr_set("Invalid pack file - %s", message);
 	return -1;
 }
 
@@ -99,7 +99,7 @@ static int cache_init(git_pack_cache *cache)
 	cache->memory_limit = GIT_PACK_CACHE_MEMORY_LIMIT;
 
 	if (git_mutex_init(&cache->lock)) {
-		giterr_set(GITERR_OS, "Failed to initialize pack cache mutex");
+		giterr_set_os("Failed to initialize pack cache mutex");
 
 		git__free(cache->entries);
 		cache->entries = NULL;
@@ -165,7 +165,7 @@ static int cache_add(
 	entry = new_cache_object(base);
 	if (entry) {
 		if (git_mutex_lock(&cache->lock) < 0) {
-			giterr_set(GITERR_OS, "failed to lock cache");
+			giterr_set_os("failed to lock cache");
 			git__free(entry);
 			return -1;
 		}
@@ -226,7 +226,7 @@ static int pack_index_check(const char *path, struct git_pack_file *p)
 
 	if (p_fstat(fd, &st) < 0) {
 		p_close(fd);
-		giterr_set(GITERR_OS, "Unable to stat pack index '%s'", path);
+		giterr_set_os("Unable to stat pack index '%s'", path);
 		return -1;
 	}
 
@@ -235,7 +235,7 @@ static int pack_index_check(const char *path, struct git_pack_file *p)
 		(idx_size = (size_t)st.st_size) < 4 * 256 + 20 + 20)
 	{
 		p_close(fd);
-		giterr_set(GITERR_ODB, "Invalid pack index '%s'", path);
+		giterr_set("Invalid pack index '%s'", path);
 		return -1;
 	}
 
@@ -421,13 +421,13 @@ static int packfile_unpack_header1(
 	shift = 4;
 	while (c & 0x80) {
 		if (len <= used) {
-			giterr_set(GITERR_ODB, "buffer too small");
+			giterr_set("buffer too small");
 			return GIT_EBUFS;
 		}
 
 		if (bitsizeof(long) <= shift) {
 			*usedp = 0;
-			giterr_set(GITERR_ODB, "packfile corrupted");
+			giterr_set("packfile corrupted");
 			return -1;
 		}
 
@@ -791,7 +791,7 @@ int git_packfile_stream_open(git_packfile_stream *obj, struct git_pack_file *p, 
 	st = inflateInit(&obj->zstream);
 	if (st != Z_OK) {
 		git__free(obj);
-		giterr_set(GITERR_ZLIB, "failed to init packfile stream");
+		giterr_set("failed to init packfile stream");
 		return -1;
 	}
 
@@ -822,7 +822,7 @@ ssize_t git_packfile_stream_read(git_packfile_stream *obj, void *buffer, size_t 
 	written = len - obj->zstream.avail_out;
 
 	if (st != Z_OK && st != Z_STREAM_END) {
-		giterr_set(GITERR_ZLIB, "error reading from the zlib stream");
+		giterr_set("error reading from the zlib stream");
 		return -1;
 	}
 
@@ -869,7 +869,7 @@ int packfile_unpack_compressed(
 	st = inflateInit(&stream);
 	if (st != Z_OK) {
 		git__free(buffer);
-		giterr_set(GITERR_ZLIB, "failed to init zlib stream on unpack");
+		giterr_set("failed to init zlib stream on unpack");
 
 		return -1;
 	}
@@ -896,7 +896,7 @@ int packfile_unpack_compressed(
 
 	if ((st != Z_STREAM_END) || stream.total_out != size) {
 		git__free(buffer);
-		giterr_set(GITERR_ZLIB, "error inflating zlib stream");
+		giterr_set("error inflating zlib stream");
 		return -1;
 	}
 
@@ -1076,7 +1076,7 @@ static int packfile_open(struct git_pack_file *p)
 	return 0;
 
 cleanup:
-	giterr_set(GITERR_OS, "Invalid packfile '%s'", p->pack_name);
+	giterr_set_os("Invalid packfile '%s'", p->pack_name);
 
 	if (p->mwf.fd >= 0)
 		p_close(p->mwf.fd);
@@ -1152,7 +1152,7 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 	p->index_version = -1;
 
 	if (git_mutex_init(&p->lock)) {
-		giterr_set(GITERR_OS, "Failed to initialize packfile mutex");
+		giterr_set_os("Failed to initialize packfile mutex");
 		git__free(p);
 		return -1;
 	}

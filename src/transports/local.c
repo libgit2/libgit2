@@ -249,7 +249,7 @@ static int local_ls(const git_remote_head ***out, size_t *size, git_transport *t
 	transport_local *t = (transport_local *)transport;
 
 	if (!t->have_refs) {
-		giterr_set(GITERR_NET, "The transport has not yet loaded the refs");
+		giterr_set("The transport has not yet loaded the refs");
 		return -1;
 	}
 
@@ -368,7 +368,7 @@ static int local_push(
 	   but we forbid all pushes just in case */
 	if (!remote_repo->is_bare) {
 		error = GIT_EBAREREPO;
-		giterr_set(GITERR_INVALID, "Local push doesn't (yet) support pushing to non-bare repos.");
+		giterr_set("Local push doesn't (yet) support pushing to non-bare repos.");
 		goto on_error;
 	}
 

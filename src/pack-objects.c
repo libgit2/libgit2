@@ -153,7 +153,7 @@ int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
 		git_mutex_init(&pb->progress_mutex) ||
 		git_cond_init(&pb->progress_cond))
 	{
-		giterr_set(GITERR_OS, "Failed to initialize packbuilder mutex");
+		giterr_set_os("Failed to initialize packbuilder mutex");
 		goto on_error;
 	}
 
@@ -216,7 +216,7 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 		GITERR_CHECK_ALLOC_MULTIPLY(&newsize, newsize, 3 / 2);
 
 		if (!git__is_uint32(newsize)) {
-			giterr_set(GITERR_NOMEMORY, "Packfile too large to fit in memory.");
+			giterr_set("Packfile too large to fit in memory.");
 			return -1;
 		}
 
@@ -285,7 +285,7 @@ static int get_delta(void **out, git_odb *odb, git_pobject *po)
 		&delta_size, 0);
 
 	if (!delta_buf || delta_size != po->delta_size) {
-		giterr_set(GITERR_INVALID, "Delta size changed");
+		giterr_set("Delta size changed");
 		goto on_error;
 	}
 
@@ -606,7 +606,7 @@ static git_pobject **compute_write_order(git_packbuilder *pb)
 	}
 
 	if (wo_end != pb->nr_objects) {
-		giterr_set(GITERR_INVALID, "invalid write order");
+		giterr_set("invalid write order");
 		return NULL;
 	}
 
@@ -784,7 +784,7 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 		git_odb_object_free(obj);
 
 		if (sz != trg_size) {
-			giterr_set(GITERR_INVALID,
+			giterr_set(
 				   "Inconsistent target object length");
 			return -1;
 		}
@@ -806,7 +806,7 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 		git_odb_object_free(obj);
 
 		if (sz != src_size) {
-			giterr_set(GITERR_INVALID,
+			giterr_set(
 				   "Inconsistent source object length");
 			return -1;
 		}
@@ -1105,7 +1105,7 @@ static void *threaded_find_deltas(void *arg)
 		git_packbuilder__progress_unlock(me->pb);
 
 		if (git_mutex_lock(&me->mutex)) {
-			giterr_set(GITERR_THREAD, "unable to lock packfile condition mutex");
+			giterr_set("unable to lock packfile condition mutex");
 			return NULL;
 		}
 
@@ -1184,7 +1184,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 		ret = git_thread_create(&p[i].thread, NULL,
 					threaded_find_deltas, &p[i]);
 		if (ret) {
-			giterr_set(GITERR_THREAD, "unable to create thread");
+			giterr_set("unable to create thread");
 			return -1;
 		}
 		active_threads++;
@@ -1253,7 +1253,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 		git_packbuilder__progress_unlock(pb);
 
 		if (git_mutex_lock(&target->mutex)) {
-			giterr_set(GITERR_THREAD, "unable to lock packfile condition mutex");
+			giterr_set("unable to lock packfile condition mutex");
 			git__free(p);
 			return -1;
 		}
@@ -1459,7 +1459,7 @@ int git_packbuilder_insert_recur(git_packbuilder *pb, const git_oid *id, const c
 		break;
 
 	default:
-		giterr_set(GITERR_INVALID, "unknown object type");
+		giterr_set("unknown object type");
 		error = -1;
 	}
 

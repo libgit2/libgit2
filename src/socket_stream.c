@@ -34,16 +34,16 @@ static void net_set_error(const char *str)
 	char * win32_error = git_win32_get_error_message(error);
 
 	if (win32_error) {
-		giterr_set(GITERR_NET, "%s: %s", str, win32_error);
+		giterr_set("%s: %s", str, win32_error);
 		git__free(win32_error);
 	} else {
-		giterr_set(GITERR_NET, str);
+		giterr_set(str);
 	}
 }
 #else
 static void net_set_error(const char *str)
 {
-	giterr_set(GITERR_NET, "%s: %s", str, strerror(errno));
+	giterr_set("%s: %s", str, strerror(errno));
 }
 #endif
 
@@ -57,7 +57,7 @@ static int close_socket(GIT_SOCKET s)
 		return -1;
 
 	if (0 != WSACleanup()) {
-		giterr_set(GITERR_OS, "Winsock cleanup failed");
+		giterr_set_os("Winsock cleanup failed");
 		return -1;
 	}
 
@@ -82,13 +82,13 @@ int socket_connect(git_stream *stream)
 	WSADATA wsd;
 
 	if (WSAStartup(MAKEWORD(2,2), &wsd) != 0) {
-		giterr_set(GITERR_OS, "Winsock init failed");
+		giterr_set_os("Winsock init failed");
 		return -1;
 	}
 
 	if (LOBYTE(wsd.wVersion) != 2 || HIBYTE(wsd.wVersion) != 2) {
 		WSACleanup();
-		giterr_set(GITERR_OS, "Winsock init failed");
+		giterr_set_os("Winsock init failed");
 		return -1;
 	}
 #endif
@@ -98,7 +98,7 @@ int socket_connect(git_stream *stream)
 	hints.ai_family = AF_UNSPEC;
 
 	if ((ret = p_getaddrinfo(st->host, st->port, &hints, &info)) != 0) {
-		giterr_set(GITERR_NET,
+		giterr_set(
 			   "Failed to resolve address for %s: %s", st->host, p_gai_strerror(ret));
 		return -1;
 	}
@@ -121,7 +121,7 @@ int socket_connect(git_stream *stream)
 
 	/* Oops, we couldn't connect to any address */
 	if (s == INVALID_SOCKET && p == NULL) {
-		giterr_set(GITERR_OS, "Failed to connect to %s", st->host);
+		giterr_set_os("Failed to connect to %s", st->host);
 		p_freeaddrinfo(info);
 		return -1;
 	}

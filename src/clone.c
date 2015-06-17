@@ -175,7 +175,7 @@ static int update_head_to_remote(
 	refspec = git_remote__matching_refspec(remote, git_buf_cstr(&branch));
 
 	if (refspec == NULL) {
-		giterr_set(GITERR_NET, "the remote's default branch does not fit the refspec configuration");
+		giterr_set("the remote's default branch does not fit the refspec configuration");
 		error = GIT_EINVALIDSPEC;
 		goto cleanup;
 	}
@@ -331,7 +331,7 @@ static int clone_into(git_repository *repo, git_remote *_remote, const git_fetch
 	assert(repo && _remote);
 
 	if (!git_repository_is_empty(repo)) {
-		giterr_set(GITERR_INVALID, "the repository is not empty");
+		giterr_set("the repository is not empty");
 		return -1;
 	}
 
@@ -403,7 +403,7 @@ int git_clone(
 
 	/* Only clone to a new directory or an empty directory */
 	if (git_path_exists(local_path) && !git_path_is_empty_dir(local_path)) {
-		giterr_set(GITERR_INVALID,
+		giterr_set(
 			"'%s' exists and is not an empty directory", local_path);
 		return GIT_EEXISTS;
 	}
@@ -503,7 +503,7 @@ static int clone_local_into(git_repository *repo, git_remote *remote, const git_
 	assert(repo && remote);
 
 	if (!git_repository_is_empty(repo)) {
-		giterr_set(GITERR_INVALID, "the repository is not empty");
+		giterr_set("the repository is not empty");
 		return -1;
 	}
 

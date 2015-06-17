@@ -716,7 +716,6 @@ void test_index_tests__elocked(void)
 	cl_assert_equal_i(GIT_ELOCKED, error);
 
 	err = giterr_last();
-	cl_assert_equal_i(err->klass, GITERR_INDEX);
 
 	git_filebuf_cleanup(&file);
 	git_index_free(index);

@@ -19,7 +19,7 @@ static int basic_next_token(
 	GIT_UNUSED(ctx);
 
 	if (c->credtype != GIT_CREDTYPE_USERPASS_PLAINTEXT) {
-		giterr_set(GITERR_INVALID, "invalid credential type for basic auth");
+		giterr_set("invalid credential type for basic auth");
 		goto on_error;
 	}
 

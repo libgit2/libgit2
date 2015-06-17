@@ -26,7 +26,7 @@
 
 static int create_error(int error, const char *msg)
 {
-	giterr_set(GITERR_STASH, "Cannot stash changes - %s", msg);
+	giterr_set("Cannot stash changes - %s", msg);
 	return error;
 }
 
@@ -196,7 +196,6 @@ static int stash_update_index_from_diff(
 		default:
 			/* Unimplemented */
 			giterr_set(
-				GITERR_INVALID,
 				"Cannot update index. Unimplemented status (%d)",
 				delta->status);
 			return -1;
@@ -592,7 +591,7 @@ static int retrieve_stash_commit(
 	max = git_reflog_entrycount(reflog);
 	if (!max || index > max - 1) {
 		error = GIT_ENOTFOUND;
-		giterr_set(GITERR_STASH, "No stashed state at position %" PRIuZ, index);
+		giterr_set("No stashed state at position %" PRIuZ, index);
 		goto cleanup;
 	}
 
@@ -927,7 +926,7 @@ int git_stash_drop(
 
 	if (!max || index > max - 1) {
 		error = GIT_ENOTFOUND;
-		giterr_set(GITERR_STASH, "No stashed state at position %" PRIuZ, index);
+		giterr_set("No stashed state at position %" PRIuZ, index);
 		goto cleanup;
 	}
 

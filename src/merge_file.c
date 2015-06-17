@@ -166,7 +166,7 @@ static int git_merge_file__from_inputs(
 
 	if ((xdl_result = xdl_merge(&ancestor_mmfile, &our_mmfile,
 		&their_mmfile, &xmparam, &mmbuffer)) < 0) {
-		giterr_set(GITERR_MERGE, "Failed to merge files.");
+		giterr_set("Failed to merge files.");
 		error = -1;
 		goto done;
 	}

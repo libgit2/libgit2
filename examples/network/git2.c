@@ -36,7 +36,7 @@ static int run_command(git_cb fn, int argc, char **argv)
 		if (giterr_last() == NULL)
 			fprintf(stderr, "Error without message");
 		else
-			fprintf(stderr, "Bad news:\n %s\n", giterr_last()->message);
+			fprintf(stderr, "Bad news:\n %s\n", giterr_last());
 	}
 
 	if(repo)

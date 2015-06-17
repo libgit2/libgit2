@@ -60,43 +60,7 @@ typedef enum {
  */
 typedef struct {
 	char *message;
-	int klass;
 } git_error;
-
-/** Error classes */
-typedef enum {
-	GITERR_NONE = 0,
-	GITERR_NOMEMORY,
-	GITERR_OS,
-	GITERR_INVALID,
-	GITERR_REFERENCE,
-	GITERR_ZLIB,
-	GITERR_REPOSITORY,
-	GITERR_CONFIG,
-	GITERR_REGEX,
-	GITERR_ODB,
-	GITERR_INDEX,
-	GITERR_OBJECT,
-	GITERR_NET,
-	GITERR_TAG,
-	GITERR_TREE,
-	GITERR_INDEXER,
-	GITERR_SSL,
-	GITERR_SUBMODULE,
-	GITERR_THREAD,
-	GITERR_STASH,
-	GITERR_CHECKOUT,
-	GITERR_FETCHHEAD,
-	GITERR_MERGE,
-	GITERR_SSH,
-	GITERR_FILTER,
-	GITERR_REVERT,
-	GITERR_CALLBACK,
-	GITERR_CHERRYPICK,
-	GITERR_DESCRIBE,
-	GITERR_REBASE,
-	GITERR_FILESYSTEM
-} git_error_t;
 
 /**
  * Return the last `git_error` object that was generated for the
@@ -144,7 +108,7 @@ GIT_EXTERN(int) giterr_detach(git_error *cpy);
  *                    general subsystem that is responsible for the error.
  * @param string The formatted error message to keep
  */
-GIT_EXTERN(void) giterr_set_str(int error_class, const char *string);
+GIT_EXTERN(void) giterr_set(const char *string, ...);
 
 /**
  * Set the error message to a special value for memory allocation failure.

@@ -89,7 +89,7 @@ static void free_refspec(push_spec *spec)
 static int check_rref(char *ref)
 {
 	if (git__prefixcmp(ref, "refs/")) {
-		giterr_set(GITERR_INVALID, "Not a valid reference '%s'", ref);
+		giterr_set("Not a valid reference '%s'", ref);
 		return -1;
 	}
 
@@ -107,10 +107,10 @@ static int check_lref(git_push *push, char *ref)
 		return 0;
 
 	if (error == GIT_ENOTFOUND)
-		giterr_set(GITERR_REFERENCE,
+		giterr_set(
 			"src refspec '%s' does not match any existing object", ref);
 	else
-		giterr_set(GITERR_INVALID, "Not a valid reference '%s'", ref);
+		giterr_set("Not a valid reference '%s'", ref);
 	return -1;
 }
 
@@ -124,7 +124,7 @@ static int parse_refspec(git_push *push, push_spec **spec, const char *str)
 	GITERR_CHECK_ALLOC(s);
 
 	if (git_refspec__parse(&s->refspec, str, false) < 0) {
-		giterr_set(GITERR_INVALID, "invalid refspec %s", str);
+		giterr_set("invalid refspec %s", str);
 		goto on_error;
 	}
 
@@ -319,7 +319,7 @@ static int revwalk(git_vector *commits, git_push *push)
 				continue;
 
 			if (!git_odb_exists(push->repo->_odb, &spec->roid)) {
-				giterr_set(GITERR_REFERENCE, 
+				giterr_set(
 					"Cannot push because a reference that you are trying to update on the remote contains commits that are not present locally.");
 				error = GIT_ENONFASTFORWARD;
 				goto on_error;
@@ -330,7 +330,7 @@ static int revwalk(git_vector *commits, git_push *push)
 
 			if (error == GIT_ENOTFOUND ||
 				(!error && !git_oid_equal(&base, &spec->roid))) {
-				giterr_set(GITERR_REFERENCE,
+				giterr_set(
 					"Cannot push non-fastforwardable reference");
 				error = GIT_ENONFASTFORWARD;
 				goto on_error;
@@ -552,7 +552,7 @@ static int calculate_work(git_push *push)
 			/* This is a create or update.  Local ref must exist. */
 			if (git_reference_name_to_id(
 					&spec->loid, push->repo, spec->refspec.src) < 0) {
-				giterr_set(GITERR_REFERENCE, "No such reference '%s'", spec->refspec.src);
+				giterr_set("No such reference '%s'", spec->refspec.src);
 				return -1;
 			}
 		}
@@ -578,7 +578,7 @@ static int do_push(git_push *push, const git_remote_callbacks *callbacks)
 	git_transport *transport = push->remote->transport;
 
 	if (!transport->push) {
-		giterr_set(GITERR_NET, "Remote transport doesn't support push");
+		giterr_set("Remote transport doesn't support push");
 		error = -1;
 		goto on_error;
 	}
@@ -647,7 +647,7 @@ int git_push_finish(git_push *push, const git_remote_callbacks *callbacks)
 
 	if (!push->unpack_ok) {
 		error = -1;
-		giterr_set(GITERR_NET, "unpacking the sent packfile failed on the remote");
+		giterr_set("unpacking the sent packfile failed on the remote");
 	}
 
 	return error;

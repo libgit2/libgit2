@@ -12,7 +12,7 @@ GIT_INLINE(int) attr_cache_lock(git_attr_cache *cache)
 	GIT_UNUSED(cache); /* avoid warning if threading is off */
 
 	if (git_mutex_lock(&cache->lock) < 0) {
-		giterr_set(GITERR_OS, "Unable to get attr cache lock");
+		giterr_set_os("Unable to get attr cache lock");
 		return -1;
 	}
 	return 0;
@@ -365,7 +365,7 @@ int git_attr_cache__do_init(git_repository *repo)
 
 	/* set up lock */
 	if (git_mutex_init(&cache->lock) < 0) {
-		giterr_set(GITERR_OS, "Unable to initialize lock for attr cache");
+		giterr_set_os("Unable to initialize lock for attr cache");
 		git__free(cache);
 		return -1;
 	}
@@ -429,7 +429,7 @@ int git_attr_cache__insert_macro(git_repository *repo, git_attr_rule *macro)
 		return 0;
 
 	if (git_mutex_lock(&cache->lock) < 0) {
-		giterr_set(GITERR_OS, "Unable to get attr cache lock");
+		giterr_set_os("Unable to get attr cache lock");
 		error = -1;
 	} else {
 		git_strmap_insert(macros, macro->match.pattern, macro, error);

@@ -50,7 +50,7 @@ static void ssh_error(LIBSSH2_SESSION *session, const char *errmsg)
 	char *ssherr;
 	libssh2_session_last_error(session, &ssherr, NULL, 0);
 
-	giterr_set(GITERR_SSH, "%s: %s", errmsg, ssherr);
+	giterr_set("%s: %s", errmsg, ssherr);
 }
 
 /*
@@ -72,7 +72,7 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 	}
 
 	if (!repo) {
-		giterr_set(GITERR_NET, "Malformed git protocol URL");
+		giterr_set("Malformed git protocol URL");
 		return -1;
 	}
 
@@ -135,7 +135,7 @@ static int ssh_stream_read(
 	 * stderr.
 	 */
 	if (rc == 0 && (rc = libssh2_channel_read_stderr(s->channel, buffer, buf_size)) > 0) {
-		giterr_set(GITERR_SSH, "%*s", rc, buffer);
+		giterr_set("%*s", rc, buffer);
 		return GIT_EEOF;
 	}
 
@@ -258,7 +258,7 @@ static int git_ssh_extract_url_parts(
 	}
 
 	if (colon == NULL || (colon < start)) {
-		giterr_set(GITERR_NET, "Malformed URL");
+		giterr_set("Malformed URL");
 		return -1;
 	}
 
@@ -429,19 +429,19 @@ static int request_creds(git_cred **out, ssh_subtransport *t, const char *user, 
 		else if (error < 0)
 			return error;
 		else if (!cred) {
-			giterr_set(GITERR_SSH, "Callback failed to initialize SSH credentials");
+			giterr_set("Callback failed to initialize SSH credentials");
 			return -1;
 		}
 	}
 
 	if (no_callback) {
-		giterr_set(GITERR_SSH, "authentication required but no callback set");
+		giterr_set("authentication required but no callback set");
 		return -1;
 	}
 
 	if (!(cred->credtype & auth_methods)) {
 		cred->free(cred);
-		giterr_set(GITERR_SSH, "callback returned unsupported credentials type");
+		giterr_set("callback returned unsupported credentials type");
 		return -1;
 	}
 
@@ -462,7 +462,7 @@ static int _git_ssh_session_create(
 
 	s = libssh2_session_init();
 	if (!s) {
-		giterr_set(GITERR_NET, "Failed to initialize SSH session");
+		giterr_set("Failed to initialize SSH session");
 		return -1;
 	}
 
@@ -543,7 +543,7 @@ static int _git_ssh_setup_conn(
 		}
 
 		if (cert.type == 0) {
-			giterr_set(GITERR_SSH, "unable to get the host key");
+			giterr_set("unable to get the host key");
 			error = -1;
 			goto done;
 		}
@@ -556,7 +556,7 @@ static int _git_ssh_setup_conn(
 		error = t->owner->certificate_check_cb((git_cert *) cert_ptr, 0, host, t->owner->message_cb_payload);
 		if (error < 0) {
 			if (!giterr_last())
-				giterr_set(GITERR_NET, "user cancelled hostkey check");
+				giterr_set("user cancelled hostkey check");
 
 			goto done;
 		}
@@ -595,7 +595,7 @@ static int _git_ssh_setup_conn(
 			goto done;
 
 		if (strcmp(user, git_cred__username(cred))) {
-			giterr_set(GITERR_SSH, "username does not match previous request");
+			giterr_set("username does not match previous request");
 			error = -1;
 			goto done;
 		}
@@ -662,7 +662,7 @@ static int ssh_uploadpack(
 		return 0;
 	}
 
-	giterr_set(GITERR_NET, "Must call UPLOADPACK_LS before UPLOADPACK");
+	giterr_set("Must call UPLOADPACK_LS before UPLOADPACK");
 	return -1;
 }
 
@@ -689,7 +689,7 @@ static int ssh_receivepack(
 		return 0;
 	}
 
-	giterr_set(GITERR_NET, "Must call RECEIVEPACK_LS before RECEIVEPACK");
+	giterr_set("Must call RECEIVEPACK_LS before RECEIVEPACK");
 	return -1;
 }
 
@@ -819,7 +819,7 @@ int git_smart_subtransport_ssh(
 	assert(out);
 	*out = NULL;
 
-	giterr_set(GITERR_INVALID, "Cannot create SSH transport. Library was built without SSH support");
+	giterr_set("Cannot create SSH transport. Library was built without SSH support");
 	return -1;
 #endif
 }
@@ -839,7 +839,7 @@ int git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *p
 	};
 
 	if (paths->count != 2) {
-		giterr_set(GITERR_SSH, "invalid ssh paths, must be two strings");
+		giterr_set("invalid ssh paths, must be two strings");
 		return GIT_EINVALIDSPEC;
 	}
 
@@ -863,7 +863,7 @@ int git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *p
 	assert(out);
 	*out = NULL;
 
-	giterr_set(GITERR_INVALID, "Cannot create SSH transport. Library was built without SSH support");
+	giterr_set("Cannot create SSH transport. Library was built without SSH support");
 	return -1;
 #endif
 }

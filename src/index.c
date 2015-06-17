@@ -338,7 +338,7 @@ static int index_sort_if_needed(git_index *index, bool need_lock)
 		return 0;
 
 	if (need_lock && git_mutex_lock(&index->lock) < 0) {
-		giterr_set(GITERR_OS, "Unable to lock index");
+		giterr_set_os("Unable to lock index");
 		return -1;
 	}
 
@@ -407,7 +407,7 @@ int git_index_open(git_index **index_out, const char *index_path)
 	GITERR_CHECK_ALLOC(index);
 
 	if (git_mutex_init(&index->lock)) {
-		giterr_set(GITERR_OS, "Failed to initialize lock");
+		giterr_set_os("Failed to initialize lock");
 		git__free(index);
 		return -1;
 	}
@@ -531,7 +531,7 @@ int git_index_clear(git_index *index)
 	git_pool_clear(&index->tree_pool);
 
 	if (git_mutex_lock(&index->lock) < 0) {
-		giterr_set(GITERR_OS, "Failed to lock index");
+		giterr_set_os("Failed to lock index");
 		return -1;
 	}
 
@@ -551,7 +551,7 @@ int git_index_clear(git_index *index)
 
 static int create_index_error(int error, const char *msg)
 {
-	giterr_set(GITERR_INDEX, msg);
+	giterr_set(msg);
 	return error;
 }
 
@@ -617,7 +617,7 @@ static int compare_checksum(git_index *index)
 
 	if ((error = p_lseek(fd, -20, SEEK_END)) < 0) {
 		p_close(fd);
-		giterr_set(GITERR_OS, "failed to seek to end of file");
+		giterr_set("failed to seek to end of file");
 		return -1;
 	}
 
@@ -651,7 +651,6 @@ int git_index_read(git_index *index, int force)
 	if ((updated = git_futils_filestamp_check(&stamp, index->index_file_path) < 0) ||
 	    ((updated = compare_checksum(index)) < 0)) {
 		giterr_set(
-			GITERR_INDEX,
 			"Failed to read index: '%s' no longer exists",
 			index->index_file_path);
 		return updated;
@@ -809,7 +808,7 @@ const git_index_entry *git_index_get_bypath(
 	assert(index);
 
 	if (index_find(&pos, index, path, 0, stage, true) < 0) {
-		giterr_set(GITERR_INDEX, "Index does not contain %s", path);
+		giterr_set("Index does not contain %s", path);
 		return NULL;
 	}
 
@@ -842,7 +841,7 @@ static int index_entry_create(
 
 	if (!git_path_isvalid(repo, path,
 		GIT_PATH_REJECT_DEFAULTS | GIT_PATH_REJECT_DOT_GIT)) {
-		giterr_set(GITERR_INDEX, "Invalid path: '%s'", path);
+		giterr_set("Invalid path: '%s'", path);
 		return -1;
 	}
 
@@ -1057,7 +1056,7 @@ static int check_file_directory_collision(git_index *index,
 	retval = retval + has_dir_name(index, entry, ok_to_replace);
 
 	if (retval) {
-		giterr_set(GITERR_INDEX,
+		giterr_set(
 			"'%s' appears as both a file and a directory", entry->path);
 		return -1;
 	}
@@ -1069,7 +1068,7 @@ static int index_no_dups(void **old, void *new)
 {
 	const git_index_entry *entry = new;
 	GIT_UNUSED(old);
-	giterr_set(GITERR_INDEX, "'%s' appears multiple times at stage %d",
+	giterr_set("'%s' appears multiple times at stage %d",
 		entry->path, GIT_IDXENTRY_STAGE(entry));
 	return GIT_EEXISTS;
 }
@@ -1102,7 +1101,7 @@ static int index_insert(
 		entry->flags |= GIT_IDXENTRY_NAMEMASK;
 
 	if (git_mutex_lock(&index->lock) < 0) {
-		giterr_set(GITERR_OS, "Unable to acquire index lock");
+		giterr_set_os("Unable to acquire index lock");
 		return -1;
 	}
 
@@ -1201,7 +1200,7 @@ int git_index_add_frombuffer(
 			"Index is not backed up by an existing repository.");
 
 	if (!valid_filemode(source_entry->mode)) {
-		giterr_set(GITERR_INDEX, "invalid filemode");
+		giterr_set("invalid filemode");
 		return -1;
 	}
 
@@ -1275,7 +1274,7 @@ int git_index_add(git_index *index, const git_index_entry *source_entry)
 	assert(index && source_entry && source_entry->path);
 
 	if (!valid_filemode(source_entry->mode)) {
-		giterr_set(GITERR_INDEX, "invalid filemode");
+		giterr_set("invalid filemode");
 		return -1;
 	}
 
@@ -1293,13 +1292,13 @@ int git_index_remove(git_index *index, const char *path, int stage)
 	size_t position;
 
 	if (git_mutex_lock(&index->lock) < 0) {
-		giterr_set(GITERR_OS, "Failed to lock index");
+		giterr_set_os("Failed to lock index");
 		return -1;
 	}
 
 	if (index_find(&position, index, path, 0, stage, false) < 0) {
 		giterr_set(
-			GITERR_INDEX, "Index does not contain %s at stage %d", path, stage);
+			"Index does not contain %s at stage %d", path, stage);
 		error = GIT_ENOTFOUND;
 	} else {
 		error = index_remove_entry(index, position);
@@ -1317,7 +1316,7 @@ int git_index_remove_directory(git_index *index, const char *dir, int stage)
 	git_index_entry *entry;
 
 	if (git_mutex_lock(&index->lock) < 0) {
-		giterr_set(GITERR_OS, "Failed to lock index");
+		giterr_set_os("Failed to lock index");
 		return -1;
 	}
 
@@ -1360,14 +1359,14 @@ int git_index_find(size_t *at_pos, git_index *index, const char *path)
 	assert(index && path);
 
 	if (git_mutex_lock(&index->lock) < 0) {
-		giterr_set(GITERR_OS, "Failed to lock index");
+		giterr_set_os("Failed to lock index");
 		return -1;
 	}
 
 	if (git_vector_bsearch2(
 			&pos, &index->entries, index->entries_search_path, path) < 0) {
 		git_mutex_unlock(&index->lock);
-		giterr_set(GITERR_INDEX, "Index does not contain %s", path);
+		giterr_set("Index does not contain %s", path);
 		return GIT_ENOTFOUND;
 	}
 
@@ -1407,7 +1406,7 @@ int git_index_conflict_add(git_index *index,
 	/* Validate entries */
 	for (i = 0; i < 3; i++) {
 		if (entries[i] && !valid_filemode(entries[i]->mode)) {
-			giterr_set(GITERR_INDEX, "invalid filemode for stage %d entry",
+			giterr_set("invalid filemode for stage %d entry",
 				i);
 			return -1;
 		}
@@ -1538,7 +1537,7 @@ static int index_conflict_remove(git_index *index, const char *path)
 		return GIT_ENOTFOUND;
 
 	if (git_mutex_lock(&index->lock) < 0) {
-		giterr_set(GITERR_OS, "Unable to lock index");
+		giterr_set_os("Unable to lock index");
 		return -1;
 	}
 
@@ -1819,7 +1818,7 @@ void git_index_reuc_clear(git_index *index)
 
 static int index_error_invalid(const char *message)
 {
-	giterr_set(GITERR_INDEX, "Invalid data in index - %s", message);
+	giterr_set("Invalid data in index - %s", message);
 	return -1;
 }
 
@@ -2101,7 +2100,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	seek_forward(INDEX_HEADER_SIZE);
 
 	if (git_mutex_lock(&index->lock) < 0) {
-		giterr_set(GITERR_OS, "Unable to acquire index lock");
+		giterr_set_os("Unable to acquire index lock");
 		return -1;
 	}
 
@@ -2262,7 +2261,7 @@ static int write_entries(git_index *index, git_filebuf *file)
 	git_index_entry *entry;
 
 	if (git_mutex_lock(&index->lock) < 0) {
-		giterr_set(GITERR_OS, "Failed to lock index");
+		giterr_set_os("Failed to lock index");
 		return -1;
 	}
 
@@ -2560,7 +2559,7 @@ int git_index_read_tree(git_index *index, const git_tree *tree)
 		if ((error = git_index_clear(index)) < 0)
 			/* well, this isn't good */;
 		else if (git_mutex_lock(&index->lock) < 0) {
-			giterr_set(GITERR_OS, "Unable to acquire index lock");
+			giterr_set_os("Unable to acquire index lock");
 			error = -1;
 		} else {
 			git_vector_swap(&entries, &index->entries);
@@ -2891,7 +2890,7 @@ static int index_apply_to_all(
 				i--; /* back up foreach if we removed this */
 			break;
 		default:
-			giterr_set(GITERR_INVALID, "Unknown index action %d", action);
+			giterr_set("Unknown index action %d", action);
 			error = -1;
 			break;
 		}
@@ -2938,7 +2937,7 @@ int git_index_snapshot_new(git_vector *snap, git_index *index)
 	GIT_REFCOUNT_INC(index);
 
 	if (git_mutex_lock(&index->lock) < 0) {
-		giterr_set(GITERR_OS, "Failed to lock index");
+		giterr_set_os("Failed to lock index");
 		return -1;
 	}
 
@@ -2994,7 +2993,7 @@ int git_indexwriter_init(
 		&writer->file, index->index_file_path, GIT_FILEBUF_HASH_CONTENTS, GIT_INDEX_FILE_MODE)) < 0) {
 
 		if (error == GIT_ELOCKED)
-			giterr_set(GITERR_INDEX, "The index is locked. This might be due to a concurrent or crashed process");
+			giterr_set("The index is locked. This might be due to a concurrent or crashed process");
 
 		return error;
 	}
@@ -3045,7 +3044,7 @@ int git_indexwriter_commit(git_indexwriter *writer)
 
 	if ((error = git_futils_filestamp_check(
 		&writer->index->stamp, writer->index->index_file_path)) < 0) {
-		giterr_set(GITERR_OS, "Could not read index timestamp");
+		giterr_set_os("Could not read index timestamp");
 		return -1;
 	}
 

@@ -312,7 +312,6 @@ void test_diff_tree__checks_options_version(void)
 	opts.version = 0;
 	cl_git_fail(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
 	err = giterr_last();
-	cl_assert_equal_i(GITERR_INVALID, err->klass);
 
 	giterr_clear();
 	opts.version = 1024;

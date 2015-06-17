@@ -10,13 +10,13 @@ void test_core_errors__public_api(void)
 	giterr_set_oom();
 
 	cl_assert(giterr_last() != NULL);
-	cl_assert(giterr_last()->klass == GITERR_NOMEMORY);
+	cl_assert(giterr_is_oom(giterr_last()));
 	str_in_error = strstr(giterr_last()->message, "memory");
 	cl_assert(str_in_error != NULL);
 
 	giterr_clear();
 
-	giterr_set_str(GITERR_REPOSITORY, "This is a test");
+	giterr_set("This is a test");
 
 	cl_assert(giterr_last() != NULL);
 	str_in_error = strstr(giterr_last()->message, "This is a test");
@@ -40,13 +40,13 @@ void test_core_errors__new_school(void)
 	giterr_set_oom(); /* internal fn */
 
 	cl_assert(giterr_last() != NULL);
-	cl_assert(giterr_last()->klass == GITERR_NOMEMORY);
+	cl_assert(giterr_is_oom(giterr_last()));
 	str_in_error = strstr(giterr_last()->message, "memory");
 	cl_assert(str_in_error != NULL);
 
 	giterr_clear();
 
-	giterr_set(GITERR_REPOSITORY, "This is a test"); /* internal fn */
+	giterr_set("This is a test"); /* internal fn */
 
 	cl_assert(giterr_last() != NULL);
 	str_in_error = strstr(giterr_last()->message, "This is a test");
@@ -61,7 +61,7 @@ void test_core_errors__new_school(void)
 		cl_assert(p_lstat("this_file_does_not_exist", &st) < 0);
 		GIT_UNUSED(st);
 	} while (false);
-	giterr_set(GITERR_OS, "stat failed"); /* internal fn */
+	giterr_set_os("stat failed"); /* internal fn */
 
 	cl_assert(giterr_last() != NULL);
 	str_in_error = strstr(giterr_last()->message, "stat failed");
@@ -74,7 +74,7 @@ void test_core_errors__new_school(void)
 
 	/* The MSDN docs use this to generate a sample error */
 	cl_assert(GetProcessId(NULL) == 0);
-	giterr_set(GITERR_OS, "GetProcessId failed"); /* internal fn */
+	giterr_set_os("GetProcessId failed"); /* internal fn */
 
 	cl_assert(giterr_last() != NULL);
 	str_in_error = strstr(giterr_last()->message, "GetProcessId failed");
@@ -97,16 +97,15 @@ void test_core_errors__restore(void)
 
 	memset(&err_state, 0x0, sizeof(git_error_state));
 
-	giterr_set(42, "Foo: %s", "bar");
+	giterr_set("Foo: %s", "bar");
 	cl_assert_equal_i(-1, giterr_capture(&err_state, -1));
 
 	cl_assert(giterr_last() == NULL);
 
-	giterr_set(99, "Bar: %s", "foo");
+	giterr_set("Bar: %s", "foo");
 
 	giterr_restore(&err_state);
 
-	cl_assert_equal_i(42, giterr_last()->klass);
 	cl_assert_equal_s("Foo: bar", giterr_last()->message);
 }
 
@@ -128,7 +127,7 @@ void test_core_errors__integer_overflow_alloc_multiply(void)
 	cl_git_fail(test_arraysize_multiply(SIZE_MAX-1, sizeof(void *)));
 	cl_git_fail(test_arraysize_multiply((SIZE_MAX/sizeof(void *))+1, sizeof(void *)));
 
-	cl_assert_equal_i(GITERR_NOMEMORY, giterr_last()->klass);
+	cl_assert(giterr_is_oom(giterr_last()));
 	cl_assert_equal_s("Out of memory", giterr_last()->message);
 }
 
@@ -148,7 +147,7 @@ void test_core_errors__integer_overflow_alloc_add(void)
 	cl_git_fail(test_arraysize_multiply(SIZE_MAX-1, 2));
 	cl_git_fail(test_arraysize_multiply(SIZE_MAX, SIZE_MAX));
 
-	cl_assert_equal_i(GITERR_NOMEMORY, giterr_last()->klass);
+	cl_assert(giterr_is_oom(giterr_last()));
 	cl_assert_equal_s("Out of memory", giterr_last()->message);
 }
 
@@ -166,11 +165,11 @@ void test_core_errors__integer_overflow_sets_oom(void)
 
 	giterr_clear();
 	cl_assert(GIT_ADD_SIZET_OVERFLOW(&out, SIZE_MAX, SIZE_MAX));
-	cl_assert_equal_i(GITERR_NOMEMORY, giterr_last()->klass);
+	cl_assert(giterr_is_oom(giterr_last()));
 	cl_assert_equal_s("Out of memory", giterr_last()->message);
 
 	giterr_clear();
 	cl_assert(GIT_ADD_SIZET_OVERFLOW(&out, SIZE_MAX, SIZE_MAX));
-	cl_assert_equal_i(GITERR_NOMEMORY, giterr_last()->klass);
+	cl_assert(giterr_is_oom(giterr_last()));
 	cl_assert_equal_s("Out of memory", giterr_last()->message);
 }

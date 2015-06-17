@@ -147,7 +147,7 @@ static int crlf_apply_to_odb(
 			switch (ca->safe_crlf) {
 			case GIT_SAFE_CRLF_FAIL:
 				giterr_set(
-					GITERR_FILTER, "LF would be replaced by CRLF in '%s'",
+					"LF would be replaced by CRLF in '%s'",
 					git_filter_source_path(src));
 				return -1;
 			case GIT_SAFE_CRLF_WARN:
@@ -218,7 +218,7 @@ static const char *line_ending(struct crlf_attrs *ca)
 		return "\r\n";
 
 line_ending_error:
-	giterr_set(GITERR_INVALID, "Invalid input to line ending filter");
+	giterr_set("Invalid input to line ending filter");
 	return NULL;
 }
 

@@ -85,9 +85,10 @@
 	do { int _err = (code); if (_err) return _err; } while (0)
 
 /**
- * Set the error message for this thread, formatting as needed.
+ * Set the error message for this thread to an operating system
+ * error message.
  */
-void giterr_set(int error_class, const char *string, ...);
+void giterr_set_os(const char *fmt, ...);
 
 /**
  * Set the error message for a regex failure, using the internal regex
@@ -109,7 +110,7 @@ GIT_INLINE(int) giterr_set_after_callback_function(
 	if (error_code) {
 		const git_error *e = giterr_last();
 		if (!e || !e->message)
-			giterr_set(e ? e->klass : GITERR_CALLBACK,
+			giterr_set(
 				"%s callback returned %d", action, error_code);
 	}
 	return error_code;
@@ -152,6 +153,9 @@ int giterr_capture(git_error_state *state, int error_code);
  */
 int giterr_restore(git_error_state *state);
 
+/** Returns true if the given error state is from an OOM */
+int giterr_is_oom(const git_error *err);
+
 /**
  * Check a versioned structure for validity
  */
@@ -166,7 +170,7 @@ GIT_INLINE(int) giterr__check_version(const void *structure, unsigned int expect
 	if (actual > 0 && actual <= expected_max)
 		return 0;
 
-	giterr_set(GITERR_INVALID, "Invalid version %d on %s", actual, name);
+	giterr_set("invalid version %d on %s", actual, name);
 	return -1;
 }
 #define GITERR_CHECK_VERSION(S,V,N) if (giterr__check_version(S,V,N) < 0) return -1

@@ -183,7 +183,7 @@ static int packed_reload(refdb_fs_backend *backend)
 	return 0;
 
 parse_failed:
-	giterr_set(GITERR_REFERENCE, "Corrupted packed references file");
+	giterr_set("Corrupted packed references file");
 
 	git_sortedcache_clear(backend->refcache, false);
 	git_sortedcache_wunlock(backend->refcache);
@@ -210,7 +210,7 @@ static int loose_parse_oid(
 		return 0;
 
 corrupted:
-	giterr_set(GITERR_REFERENCE, "Corrupted loose reference file: %s", filename);
+	giterr_set("Corrupted loose reference file: %s", filename);
 	return -1;
 }
 
@@ -346,7 +346,7 @@ static const char *loose_parse_symbolic(git_buf *file_content)
 	refname_start = (const char *)file_content->ptr;
 
 	if (git_buf_len(file_content) < header_len + 1) {
-		giterr_set(GITERR_REFERENCE, "Corrupted loose reference file");
+		giterr_set("Corrupted loose reference file");
 		return NULL;
 	}
 
@@ -395,7 +395,7 @@ static int loose_lookup(
 
 static int ref_error_notfound(const char *name)
 {
-	giterr_set(GITERR_REFERENCE, "Reference '%s' not found", name);
+	giterr_set("Reference '%s' not found", name);
 	return GIT_ENOTFOUND;
 }
 
@@ -681,7 +681,7 @@ static int reference_path_available(
 			return -1;
 
 		if (exists) {
-			giterr_set(GITERR_REFERENCE,
+			giterr_set(
 				"Failed to write reference '%s': a reference with "
 				"that name already exists.", new_ref);
 			return GIT_EEXISTS;
@@ -695,7 +695,7 @@ static int reference_path_available(
 
 		if (ref && !ref_is_available(old_ref, new_ref, ref->name)) {
 			git_sortedcache_runlock(backend->refcache);
-			giterr_set(GITERR_REFERENCE,
+			giterr_set(
 				"Path to reference '%s' collides with existing one", new_ref);
 			return -1;
 		}
@@ -713,7 +713,7 @@ static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *
 	assert(file && backend && name);
 
 	if (!git_path_isvalid(backend->repo, name, GIT_PATH_REJECT_DEFAULTS)) {
-		giterr_set(GITERR_INVALID, "Invalid reference name '%s'.", name);
+		giterr_set("Invalid reference name '%s'.", name);
 		return GIT_EINVALIDSPEC;
 	}
 
@@ -911,7 +911,7 @@ static int packed_remove_loose(refdb_fs_backend *backend)
 			if (failed)
 				continue;
 
-			giterr_set(GITERR_REFERENCE,
+			giterr_set(
 				"Failed to remove loose reference '%s' after packing: %s",
 				full_path.ptr, strerror(errno));
 			failed = 1;
@@ -1164,7 +1164,7 @@ static int refdb_fs_backend__write_tail(
 		goto on_error;
 
 	if (cmp) {
-		giterr_set(GITERR_REFERENCE, "old reference value does not match");
+		giterr_set("old reference value does not match");
 		error = GIT_EMODIFIED;
 		goto on_error;
 	}
@@ -1237,7 +1237,7 @@ static int refdb_fs_backend__delete_tail(
 		goto cleanup;
 
 	if (cmp) {
-		giterr_set(GITERR_REFERENCE, "old reference value does not match");
+		giterr_set("old reference value does not match");
 		error = GIT_EMODIFIED;
 		goto cleanup;
 	}
@@ -1442,7 +1442,7 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 
 #define seek_forward(_increase) do { \
 	if (_increase >= buf_size) { \
-		giterr_set(GITERR_INVALID, "Ran out of data while parsing reflog"); \
+		giterr_set("Ran out of data while parsing reflog"); \
 		goto fail; \
 	} \
 	buf += _increase; \
@@ -1659,7 +1659,7 @@ static int lock_reflog(git_filebuf *file, refdb_fs_backend *backend, const char 
 	repo = backend->repo;
 
 	if (!git_path_isvalid(backend->repo, refname, GIT_PATH_REJECT_DEFAULTS)) {
-		giterr_set(GITERR_INVALID, "Invalid reference name '%s'.", refname);
+		giterr_set("Invalid reference name '%s'.", refname);
 		return GIT_EINVALIDSPEC;
 	}
 
@@ -1667,7 +1667,7 @@ static int lock_reflog(git_filebuf *file, refdb_fs_backend *backend, const char 
 		return -1;
 
 	if (!git_path_isfile(git_buf_cstr(&log_path))) {
-		giterr_set(GITERR_INVALID,
+		giterr_set(
 			"Log file for reference '%s' doesn't exist.", refname);
 		error = -1;
 		goto cleanup;
@@ -1840,7 +1840,7 @@ static int refdb_reflog_fs__rename(git_refdb_backend *_backend, const char *old_
 	p_close(fd);
 
 	if (p_rename(git_buf_cstr(&old_path), git_buf_cstr(&temp_path)) < 0) {
-		giterr_set(GITERR_OS, "Failed to rename reflog for %s", new_name);
+		giterr_set_os("Failed to rename reflog for %s", new_name);
 		error = -1;
 		goto cleanup;
 	}
@@ -1857,7 +1857,7 @@ static int refdb_reflog_fs__rename(git_refdb_backend *_backend, const char *old_
 	}
 
 	if (p_rename(git_buf_cstr(&temp_path), git_buf_cstr(&new_path)) < 0) {
-		giterr_set(GITERR_OS, "Failed to rename reflog for %s", new_name);
+		giterr_set_os("Failed to rename reflog for %s", new_name);
 		error = -1;
 	}
 
