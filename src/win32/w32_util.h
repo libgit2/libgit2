@@ -79,6 +79,16 @@ GIT_INLINE(time_t) git_win32__filetime_to_time_t(const FILETIME *ft)
 	return (time_t)winTime;
 }
 
+GIT_INLINE(void) git_win32__timeval_to_filetime(
+	FILETIME *ft, const struct timeval tv)
+{
+	long long ticks = (tv.tv_sec * 10000000LL) +
+		(tv.tv_usec * 10LL) + 116444736000000000LL;
+
+	ft->dwHighDateTime = ((ticks >> 32) & 0xffffffffLL);
+	ft->dwLowDateTime = (ticks & 0xffffffffLL);
+}
+
 GIT_INLINE(int) git_win32__file_attribute_to_stat(
 	struct stat *st,
 	const WIN32_FILE_ATTRIBUTE_DATA *attrdata,

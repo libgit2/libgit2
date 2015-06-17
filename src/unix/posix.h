@@ -19,6 +19,9 @@ typedef int GIT_SOCKET;
 #define p_lstat(p,b) lstat(p,b)
 #define p_stat(p,b) stat(p, b)
 
+#define p_utimes(f, t) utimes(f, t)
+#define p_futimes(f, t) futimes(f, t)
+
 #define p_readlink(a, b, c) readlink(a, b, c)
 #define p_symlink(o,n) symlink(o, n)
 #define p_link(o,n) link(o, n)

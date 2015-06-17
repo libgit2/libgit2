@@ -2,6 +2,7 @@
 #include "diff_helpers.h"
 #include "repository.h"
 #include "git2/sys/diff.h"
+#include "../checkout/checkout_helpers.h"
 
 static git_repository *g_repo = NULL;
 
@@ -1583,6 +1584,7 @@ void test_diff_workdir__can_update_index(void)
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff *diff = NULL;
 	git_diff_perfdata perf = GIT_DIFF_PERFDATA_INIT;
+	git_index *index;
 
 	g_repo = cl_git_sandbox_init("status");
 
@@ -1606,6 +1608,10 @@ void test_diff_workdir__can_update_index(void)
 
 	/* now allow diff to update stat cache */
 	opts.flags |= GIT_DIFF_UPDATE_INDEX;
+
+	/* advance a tick for the index so we don't re-calculate racily-clean entries */
+	cl_git_pass(git_repository_index__weakptr(&index, g_repo));
+	tick_index(index);
 
 	basic_diff_status(&diff, &opts);
 

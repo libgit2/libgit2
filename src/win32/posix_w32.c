@@ -201,6 +201,44 @@ int p_lstat_posixly(const char *filename, struct stat *buf)
 	return do_lstat(filename, buf, true);
 }
 
+int p_utimes(const char *filename, const struct timeval times[2])
+{
+	int fd, error;
+
+	if ((fd = p_open(filename, O_RDWR)) < 0)
+		return fd;
+
+	error = p_futimes(fd, times);
+
+	close(fd);
+	return error;
+}
+
+int p_futimes(int fd, const struct timeval times[2])
+{
+	HANDLE handle;
+	FILETIME atime = {0}, mtime = {0};
+
+	if (times == NULL) {
+		SYSTEMTIME st;
+
+		GetSystemTime(&st);
+		SystemTimeToFileTime(&st, &atime);
+		SystemTimeToFileTime(&st, &mtime);
+	} else {
+		git_win32__timeval_to_filetime(&atime, times[0]);
+		git_win32__timeval_to_filetime(&mtime, times[1]);
+	}
+
+	if ((handle = (HANDLE)_get_osfhandle(fd)) == INVALID_HANDLE_VALUE)
+		return -1;
+
+	if (SetFileTime(handle, NULL, &atime, &mtime) == 0)
+		return -1;
+
+	return 0;
+}
+
 int p_readlink(const char *path, char *buf, size_t bufsiz)
 {
 	git_win32_path path_w, target_w;

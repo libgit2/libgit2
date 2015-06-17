@@ -4,6 +4,7 @@
 
 #include "git2/checkout.h"
 #include "repository.h"
+#include "index.h"
 #include "posix.h"
 
 static git_repository *g_repo;
@@ -40,9 +41,10 @@ void test_checkout_crlf__autocrlf_false_index_size_is_unfiltered_size(void)
 
 	cl_repo_set_bool(g_repo, "core.autocrlf", false);
 
-	git_checkout_head(g_repo, &opts);
-
 	git_repository_index(&index, g_repo);
+	tick_index(index);
+
+	git_checkout_head(g_repo, &opts);
 
 	cl_assert((entry = git_index_get_bypath(index, "all-lf", 0)) != NULL);
 	cl_assert(entry->file_size == strlen(ALL_LF_TEXT_RAW));
@@ -140,9 +142,10 @@ void test_checkout_crlf__autocrlf_true_index_size_is_filtered_size(void)
 
 	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 
-	git_checkout_head(g_repo, &opts);
-
 	git_repository_index(&index, g_repo);
+	tick_index(index);
+
+	git_checkout_head(g_repo, &opts);
 
 	cl_assert((entry = git_index_get_bypath(index, "all-lf", 0)) != NULL);
 
