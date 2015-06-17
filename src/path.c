@@ -891,7 +891,7 @@ void git_path_iconv_clear(git_path_iconv_t *ic)
 
 int git_path_iconv(git_path_iconv_t *ic, const char **in, size_t *inlen)
 {
-	char *nfd = *in, *nfc;
+	char *nfd = (char*)*in, *nfc;
 	size_t nfdlen = *inlen, nfclen, wantlen = nfdlen, alloclen, rv;
 	int retry = 1;
 

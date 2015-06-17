@@ -132,7 +132,6 @@ int checkout_count_callback(
 
 void tick_index(git_index *index)
 {
-	int index_fd;
 	git_time_t ts;
 	struct timeval times[2];
 
