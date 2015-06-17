@@ -1745,3 +1745,39 @@ void test_diff_workdir__binary_detection(void)
 	git_index_free(idx);
 	git_buf_free(&b);
 }
+
+void test_diff_workdir__to_index_conflicted(void) {
+	const char *a_commit = "26a125ee1bf"; /* the current HEAD */
+	git_index_entry ancestor = {{0}}, ours = {{0}}, theirs = {{0}};
+	git_tree *a;
+	git_index *index;
+	git_diff *diff1, *diff2;
+	const git_diff_delta *delta;
+
+	g_repo = cl_git_sandbox_init("status");
+	a = resolve_commit_oid_to_tree(g_repo, a_commit);
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	ancestor.path = ours.path = theirs.path = "_file";
+	ancestor.mode = ours.mode = theirs.mode = 0100644;
+	git_oid_fromstr(&ancestor.id, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef");
+	git_oid_fromstr(&ours.id, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef");
+	git_oid_fromstr(&theirs.id, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef");
+	cl_git_pass(git_index_conflict_add(index, &ancestor, &ours, &theirs));
+
+	cl_git_pass(git_diff_tree_to_index(&diff1, g_repo, a, index, NULL));
+	cl_git_pass(git_diff_index_to_workdir(&diff2, g_repo, index, NULL));
+	cl_git_pass(git_diff_merge(diff1, diff2));
+
+	cl_assert_equal_i(git_diff_num_deltas(diff1), 12);
+	delta = git_diff_get_delta(diff1, 0);
+	cl_assert_equal_s(delta->old_file.path, "_file");
+	cl_assert_equal_i(delta->nfiles, 1);
+	cl_assert_equal_i(delta->status, GIT_DELTA_CONFLICTED);
+
+	git_diff_free(diff2);
+	git_diff_free(diff1);
+	git_index_free(index);
+	git_tree_free(a);
+}
