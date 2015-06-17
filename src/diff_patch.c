@@ -270,20 +270,24 @@ static int create_binary(
 	}
 
 	if (a_datalen && b_datalen) {
-		void *delta_data = git_delta(
-			a_data, (unsigned long)a_datalen,
-			b_data, (unsigned long)b_datalen,
-			&delta_data_len, (unsigned long)deflate.size);
+		void *delta_data;
 
-		if (delta_data) {
+		error = git_delta(&delta_data, &delta_data_len,
+			a_data, a_datalen,
+			b_data, b_datalen,
+			deflate.size);
+
+		if (error == 0) {
 			error = git_zstream_deflatebuf(
 				&delta, delta_data, (size_t)delta_data_len);
 
 			git__free(delta_data);
-
-			if (error < 0)
-				goto done;
+		} else if (error == GIT_EBUFS) {
+			error = 0;
 		}
+
+		if (error < 0)
+			goto done;
 	}
 
 	if (delta.size && delta.size < deflate.size) {

@@ -274,6 +274,7 @@ static int get_delta(void **out, git_odb *odb, git_pobject *po)
 	git_odb_object *src = NULL, *trg = NULL;
 	unsigned long delta_size;
 	void *delta_buf;
+	int error;
 
 	*out = NULL;
 
@@ -281,12 +282,15 @@ static int get_delta(void **out, git_odb *odb, git_pobject *po)
 	    git_odb_read(&trg, odb, &po->id) < 0)
 		goto on_error;
 
-	delta_buf = git_delta(
-		git_odb_object_data(src), (unsigned long)git_odb_object_size(src),
-		git_odb_object_data(trg), (unsigned long)git_odb_object_size(trg),
-		&delta_size, 0);
+	error = git_delta(&delta_buf, &delta_size,
+		git_odb_object_data(src), git_odb_object_size(src),
+		git_odb_object_data(trg), git_odb_object_size(trg),
+		0);
 
-	if (!delta_buf || delta_size != po->delta_size) {
+	if (error < 0 && error != GIT_EBUFS)
+		goto on_error;
+
+	if (error == GIT_EBUFS || delta_size != po->delta_size) {
 		giterr_set(GITERR_INVALID, "Delta size changed");
 		goto on_error;
 	}
@@ -815,16 +819,14 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 		*mem_usage += sz;
 	}
 	if (!src->index) {
-		src->index = git_delta_create_index(src->data, src_size);
-		if (!src->index)
+		if (git_delta_index_init(&src->index, src->data, src_size) < 0)
 			return 0; /* suboptimal pack - out of memory */
 
-		*mem_usage += git_delta_sizeof_index(src->index);
+		*mem_usage += git_delta_index_size(src->index);
 	}
 
-	delta_buf = git_delta_create(src->index, trg->data, trg_size,
-				     &delta_size, max_size);
-	if (!delta_buf)
+	if (git_delta_create_from_index(&delta_buf, &delta_size, src->index, trg->data, trg_size,
+		max_size) < 0)
 		return 0;
 
 	if (trg_object->delta) {
@@ -885,9 +887,14 @@ static unsigned int check_delta_limit(git_pobject *me, unsigned int n)
 
 static unsigned long free_unpacked(struct unpacked *n)
 {
-	unsigned long freed_mem = git_delta_sizeof_index(n->index);
-	git_delta_free_index(n->index);
+	unsigned long freed_mem = 0;
+	
+	if (n->index) {
+		freed_mem += git_delta_index_size(n->index);
+		git_delta_index_free(n->index);
+	}
 	n->index = NULL;
+
 	if (n->data) {
 		freed_mem += (unsigned long)n->object->size;
 		git__free(n->data);
