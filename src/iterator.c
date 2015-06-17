@@ -1762,6 +1762,18 @@ int git_iterator_current_workdir_path(git_buf **path, git_iterator *iter)
 	return 0;
 }
 
+int git_iterator_index(git_index **out, git_iterator *iter)
+{
+	workdir_iterator *wi = (workdir_iterator *)iter;
+
+	if (iter->type != GIT_ITERATOR_TYPE_WORKDIR)
+		*out = NULL;
+
+	*out = wi->index;
+
+	return 0;
+}
+
 int git_iterator_advance_over_with_status(
 	const git_index_entry **entryptr,
 	git_iterator_status_t *status,

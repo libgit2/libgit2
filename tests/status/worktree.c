@@ -985,6 +985,8 @@ void test_status_worktree__update_stat_cache_0(void)
 
 	opts.flags &= ~GIT_STATUS_OPT_UPDATE_INDEX;
 
+	/* tick again as the index updating from the previous diff might have reset the timestamp */
+	tick_index(index);
 	cl_git_pass(git_status_list_new(&status, repo, &opts));
 	check_status0(status);
 	cl_git_pass(git_status_list_get_perfdata(&perf, status));

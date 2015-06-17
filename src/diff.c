@@ -816,10 +816,10 @@ static int maybe_modified(
 	} else if (git_oid_iszero(&nitem->id) && new_is_workdir) {
 		bool use_ctime = ((diff->diffcaps & GIT_DIFFCAPS_TRUST_CTIME) != 0);
 		bool use_nanos = ((diff->diffcaps & GIT_DIFFCAPS_TRUST_NANOSECS) != 0);
+		git_index *index;
+		git_iterator_index(&index, info->new_iter);
 
 		status = GIT_DELTA_UNMODIFIED;
-
-		/* TODO: add check against index file st_mtime to avoid racy-git */
 
 		if (S_ISGITLINK(nmode)) {
 			if ((error = maybe_modified_submodule(&status, &noid, diff, info)) < 0)
@@ -839,7 +839,8 @@ static int maybe_modified(
 			 !diff_time_eq(&oitem->ctime, &nitem->ctime, use_nanos)) ||
 			oitem->ino != nitem->ino ||
 			oitem->uid != nitem->uid ||
-			oitem->gid != nitem->gid)
+			oitem->gid != nitem->gid ||
+			(index && nitem->mtime.seconds >= index->stamp.mtime))
 		{
 			status = GIT_DELTA_MODIFIED;
 			modified_uncertain = true;

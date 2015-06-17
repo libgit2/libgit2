@@ -1623,6 +1623,8 @@ void test_diff_workdir__can_update_index(void)
 
 	/* now if we do it again, we should see fewer OID calculations */
 
+	/* tick again as the index updating from the previous diff might have reset the timestamp */
+	tick_index(index);
 	basic_diff_status(&diff, &opts);
 
 	cl_git_pass(git_diff_get_perfdata(&perf, diff));
