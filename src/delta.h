@@ -6,6 +6,7 @@
 #define INCLUDE_git_delta_h__
 
 #include "common.h"
+#include "pack.h"
 
 /* opaque object for delta index */
 struct git_delta_index;
@@ -19,8 +20,8 @@ struct git_delta_index;
  * before free_delta_index() is called.  The returned pointer must be freed
  * using free_delta_index().
  */
-extern struct git_delta_index *
-git_delta_create_index(const void *buf, unsigned long bufsize);
+extern struct git_delta_index *git_delta_create_index(
+	const void *buf, unsigned long bufsize);
 
 /*
  * free_delta_index: free the index created by create_delta_index()
@@ -110,5 +111,51 @@ GIT_INLINE(unsigned long) git_delta_get_hdr_size(
 	*datap = data;
 	return size;
 }
+
+/**
+* Apply a git binary delta to recover the original content.
+* The caller is responsible for freeing the returned buffer.
+*
+* @param out the output buffer
+* @param out_len the length of the output buffer
+* @param base the base to copy from during copy instructions.
+* @param base_len number of bytes available at base.
+* @param delta the delta to execute copy/insert instructions from.
+* @param delta_len total number of bytes in the delta.
+* @return 0 on success or an error code
+*/
+extern int git_delta_apply(
+	void **out,
+	size_t *out_len,
+	const unsigned char *base,
+	size_t base_len,
+	const unsigned char *delta,
+	size_t delta_len);
+
+/**
+* Read the header of a git binary delta.
+*
+* @param base_out pointer to store the base size field.
+* @param result_out pointer to store the result size field.
+* @param delta the delta to execute copy/insert instructions from.
+* @param delta_len total number of bytes in the delta.
+* @return 0 on success or an error code
+*/
+extern int git_delta_read_header(
+	size_t *base_out,
+	size_t *result_out,
+	const unsigned char *delta,
+	size_t delta_len);
+
+/**
+ * Read the header of a git binary delta
+ *
+ * This variant reads just enough from the packfile stream to read the
+ * delta header.
+ */
+extern int git_delta_read_header_fromstream(
+	size_t *base_out,
+	size_t *result_out,
+	git_packfile_stream *stream);
 
 #endif

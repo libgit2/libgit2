@@ -12,7 +12,7 @@
 #include "fileops.h"
 #include "hash.h"
 #include "odb.h"
-#include "delta-apply.h"
+#include "delta.h"
 #include "filebuf.h"
 
 #include "git2/odb_backend.h"

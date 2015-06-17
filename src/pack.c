@@ -8,7 +8,7 @@
 #include "common.h"
 #include "odb.h"
 #include "pack.h"
-#include "delta-apply.h"
+#include "delta.h"
 #include "sha1_lookup.h"
 #include "mwindow.h"
 #include "fileops.h"
@@ -505,7 +505,7 @@ int git_packfile_resolve_header(
 		git_mwindow_close(&w_curs);
 		if ((error = git_packfile_stream_open(&stream, p, curpos)) < 0)
 			return error;
-		error = git__delta_read_header_fromstream(&base_size, size_p, &stream);
+		error = git_delta_read_header_fromstream(&base_size, size_p, &stream);
 		git_packfile_stream_free(&stream);
 		if (error < 0)
 			return error;
@@ -730,8 +730,9 @@ int git_packfile_unpack(
 		obj->len = 0;
 		obj->type = GIT_OBJ_BAD;
 
-		error = git__delta_apply(obj, base.data, base.len, delta.data, delta.len);
+		error = git_delta_apply(&obj->data, &obj->len, base.data, base.len, delta.data, delta.len);
 		obj->type = base_type;
+
 		/*
 		 * We usually don't want to free the base at this
 		 * point, as we put it into the cache in the previous
