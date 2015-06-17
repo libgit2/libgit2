@@ -174,3 +174,11 @@ void test_apply_fromdiff__delete(void)
 		NULL, NULL,
 		PATCH_DELETE_ORIGINAL, NULL));
 }
+
+void test_apply_fromdiff__no_change(void)
+{
+	cl_git_pass(apply_buf(
+		FILE_ORIGINAL, "file.txt",
+		FILE_ORIGINAL, "file.txt",
+		"", NULL));
+}

@@ -262,7 +262,10 @@ int git_apply__patch(
 			patch->nfile.file->mode : GIT_FILEMODE_BLOB;
 	}
 
-	if ((error = apply_hunks(contents_out, source, source_len, patch)) < 0)
+	/* If the patch is empty, simply keep the source unchanged */
+	if (patch->hunks.size == 0)
+		git_buf_put(contents_out, source, source_len);
+	else if ((error = apply_hunks(contents_out, source, source_len, patch)) < 0)
 		goto done;
 
 	if (patch->delta->status == GIT_DELTA_DELETED &&
