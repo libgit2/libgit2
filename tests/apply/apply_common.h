@@ -473,3 +473,102 @@
 	"+patch file\n" \
 	"-it's something else\n" \
 	" entirely!"
+
+/* binary contents */
+
+#define FILE_BINARY_LITERAL_ORIGINAL "\x00\x00\x0a"
+#define FILE_BINARY_LITERAL_ORIGINAL_LEN 3
+
+#define FILE_BINARY_LITERAL_MODIFIED "\x00\x00\x01\x02\x0a"
+#define FILE_BINARY_LITERAL_MODIFIED_LEN 5
+
+#define PATCH_BINARY_LITERAL \
+	"diff --git a/binary.bin b/binary.bin\n" \
+	"index bd474b2519cc15eab801ff851cc7d50f0dee49a1..9ac35ff15cd8864aeafd889e4826a3150f0b06c4 100644\n" \
+	"GIT binary patch\n" \
+	"literal 5\n" \
+	"Mc${NkU}WL~000&M4gdfE\n" \
+	"\n" \
+	"literal 3\n" \
+	"Kc${Nk-~s>u4FC%O\n\n"
+
+#define FILE_BINARY_DELTA_ORIGINAL \
+	"\x00\x00\x01\x02\x00\x00\x01\x02\x00\x00\x01\x02\x0a\x54\x68\x69" \
+	"\x73\x20\x69\x73\x20\x61\x20\x62\x69\x6e\x61\x72\x79\x20\x66\x69" \
+	"\x6c\x65\x2c\x20\x62\x79\x20\x76\x69\x72\x74\x75\x65\x20\x6f\x66" \
+	"\x20\x68\x61\x76\x69\x6e\x67\x20\x73\x6f\x6d\x65\x20\x6e\x75\x6c" \
+	"\x6c\x73\x2e\x0a\x00\x00\x01\x02\x00\x00\x01\x02\x00\x00\x01\x02" \
+	"\x0a\x57\x65\x27\x72\x65\x20\x67\x6f\x69\x6e\x67\x20\x74\x6f\x20" \
+	"\x63\x68\x61\x6e\x67\x65\x20\x70\x6f\x72\x74\x69\x6f\x6e\x73\x20" \
+	"\x6f\x66\x20\x69\x74\x2e\x0a\x00\x00\x01\x02\x00\x00\x01\x02\x00" \
+	"\x00\x01\x02\x0a\x53\x6f\x20\x74\x68\x61\x74\x20\x77\x65\x20\x67" \
+	"\x69\x74\x20\x61\x20\x62\x69\x6e\x61\x72\x79\x20\x64\x65\x6c\x74" \
+	"\x61\x20\x69\x6e\x73\x74\x65\x61\x64\x20\x6f\x66\x20\x74\x68\x65" \
+	"\x20\x64\x65\x66\x6c\x61\x74\x65\x64\x20\x63\x6f\x6e\x74\x65\x6e" \
+	"\x74\x73\x2e\x0a\x00\x00\x01\x02\x00\x00\x01\x02\x00\x00\x01\x02" \
+	"\x0a"
+#define FILE_BINARY_DELTA_ORIGINAL_LEN 209
+
+#define FILE_BINARY_DELTA_MODIFIED \
+	"\x00\x00\x01\x02\x00\x00\x01\x02\x00\x00\x01\x02\x0a\x5a\x5a\x5a" \
+	"\x5a\x20\x69\x73\x20\x61\x20\x62\x69\x6e\x61\x72\x79\x20\x66\x69" \
+	"\x6c\x65\x2c\x20\x62\x79\x20\x76\x69\x72\x74\x75\x65\x20\x6f\x66" \
+	"\x20\x68\x61\x76\x69\x6e\x67\x20\x73\x6f\x6d\x65\x20\x6e\x75\x6c" \
+	"\x6c\x73\x2e\x0a\x00\x00\x01\x02\x00\x00\x01\x02\x00\x00\x01\x02" \
+	"\x0a\x57\x65\x27\x72\x65\x20\x67\x6f\x69\x6e\x67\x20\x74\x6f\x20" \
+	"\x63\x68\x61\x6e\x67\x65\x20\x70\x6f\x72\x74\x69\x6f\x6e\x73\x20" \
+	"\x6f\x66\x20\x49\x54\x2e\x0a\x00\x00\x01\x02\x00\x00\x01\x02\x00" \
+	"\x00\x01\x02\x0a\x53\x4f\x20\x74\x68\x61\x74\x20\x77\x65\x20\x67" \
+	"\x69\x74\x20\x61\x20\x62\x69\x6e\x61\x72\x79\x20\x64\x65\x6c\x74" \
+	"\x61\x20\x69\x6e\x73\x74\x65\x61\x64\x20\x6f\x66\x20\x74\x68\x65" \
+	"\x20\x64\x65\x66\x6c\x61\x74\x65\x64\x20\x63\x6f\x6e\x74\x65\x6e" \
+	"\x74\x73\x2e\x0a\x00\x00\x01\x02\x00\x00\x01\x02\x00\x00\x01\x02" \
+	"\x0a"
+#define FILE_BINARY_DELTA_MODIFIED_LEN 209
+
+#define PATCH_BINARY_DELTA \
+	"diff --git a/binary.bin b/binary.bin\n" \
+	"index 27184d9883b12c4c9c54b4a31137603586169f51..7c94f9e60bf366033d98e0d551ae37d30faef74a 100644\n" \
+	"GIT binary patch\n" \
+	"delta 48\n" \
+	"kc$~Y)c#%<%fq{_;hPk4EV4`4>uxE%K7m7r%|HL+L0In7XGynhq\n" \
+	"\n" \
+	"delta 48\n" \
+	"mc$~Y)c#%<%fq{_;hPgsAGK(h)CJASj=y9P)1m{m|^9BI99|yz$\n\n"
+
+#define PATCH_BINARY_ADD \
+	"diff --git a/binary.bin b/binary.bin\n" \
+	"new file mode 100644\n" \
+	"index 0000000000000000000000000000000000000000..7c94f9e60bf366033d98e0d551ae37d30faef74a\n" \
+	"GIT binary patch\n" \
+	"literal 209\n" \
+	"zc${60u?oUK5JXSQe8qG&;(u6KC<u0&+$Ohh?#kUJlD{_rLCL^0!@QXgcKh&k^H>C_\n" \
+	"zAhe=XX7rNzh<3&##YcwqNHmEKsP<&&m~%Zf;eX@Khr$?aExDmfqyyt+#l^I)3+LMg\n" \
+	"kxnAIj9Pfn_|Gh`fP7tlm6j#y{FJYg_IifRlR^R@A08f862mk;8\n" \
+	"\n" \
+	"literal 0\n" \
+	"Hc$@<O00001\n\n"
+
+#define PATCH_BINARY_DELETE \
+	"diff --git a/binary.bin b/binary.bin\n" \
+	"deleted file mode 100644\n" \
+	"index 7c94f9e60bf366033d98e0d551ae37d30faef74a..0000000000000000000000000000000000000000\n" \
+	"GIT binary patch\n" \
+	"literal 0\n" \
+	"Hc$@<O00001\n" \
+	"\n" \
+	"literal 209\n" \
+	"zc${60u?oUK5JXSQe8qG&;(u6KC<u0&+$Ohh?#kUJlD{_rLCL^0!@QXgcKh&k^H>C_\n" \
+	"zAhe=XX7rNzh<3&##YcwqNHmEKsP<&&m~%Zf;eX@Khr$?aExDmfqyyt+#l^I)3+LMg\n" \
+	"kxnAIj9Pfn_|Gh`fP7tlm6j#y{FJYg_IifRlR^R@A08f862mk;8\n\n"
+
+/* contains an old side that does not match the expected source */
+#define PATCH_BINARY_NOT_REVERSIBLE \
+	"diff --git a/binary.bin b/binary.bin\n" \
+	"index 27184d9883b12c4c9c54b4a31137603586169f51..7c94f9e60bf366033d98e0d551ae37d30faef74a 100644\n" \
+	"GIT binary patch\n" \
+	"literal 5\n" \
+	"Mc${NkU}WL~000&M4gdfE\n" \
+	"\n" \
+	"delta 48\n" \
+	"mc$~Y)c#%<%fq{_;hPgsAGK(h)CJASj=y9P)1m{m|^9BI99|yz$\n\n"

@@ -299,3 +299,30 @@ void test_apply_fromfile__fail_not_a_patch(void)
 	cl_git_fail(git_patch_from_patchfile(&patch, PATCH_NOT_A_PATCH,
 		strlen(PATCH_NOT_A_PATCH)));
 }
+
+/*
+void test_apply_fromdiff__binary_change_must_be_reversible(void)
+{
+	git_buf original = GIT_BUF_INIT, modified = GIT_BUF_INIT,
+		result = GIT_BUF_INIT;
+	char *filename;
+	unsigned int mode;
+
+	original.ptr = FILE_BINARY_DELTA_ORIGINAL;
+	original.size = FILE_BINARY_DELTA_ORIGINAL_LEN;
+
+	modified.ptr = FILE_BINARY_DELTA_MODIFIED;
+	modified.size = FILE_BINARY_DELTA_MODIFIED_LEN;
+
+	cl_git_fail(git_apply__patch(&result, &filename, &mode, old ? old->ptr : NULL, old ? old->size : 0, patch);
+
+	cl_git_fail(apply_gitbuf(
+		&original, "binary.bin",
+		&modified, "binary.bin",
+		PATCH_BINARY_NOT_REVERSIBLE, &binary_opts));
+	cl_assert_equal_s("binary patch did not apply cleanly", giterr_last()->message);
+
+	git_buf_free(&result);
+	git__free(filename);
+}
+*/

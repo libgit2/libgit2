@@ -8,10 +8,13 @@
 #include "apply_common.h"
 
 static git_repository *repo = NULL;
+static git_diff_options binary_opts = GIT_DIFF_OPTIONS_INIT;
 
 void test_apply_fromdiff__initialize(void)
 {
 	repo = cl_git_sandbox_init("renames");
+
+	binary_opts.flags |= GIT_DIFF_SHOW_BINARY;
 }
 
 void test_apply_fromdiff__cleanup(void)
@@ -19,10 +22,10 @@ void test_apply_fromdiff__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-static int apply_buf(
-	const char *old,
+static int apply_gitbuf(
+	const git_buf *old,
 	const char *oldname,
-	const char *new,
+	const git_buf *new,
 	const char *newname,
 	const char *patch_expected,
 	const git_diff_options *diff_opts)
@@ -35,22 +38,27 @@ static int apply_buf(
 	int error;
 
 	cl_git_pass(git_patch_from_buffers(&patch,
-		old, old ? strlen(old) : 0, oldname,
-		new, new ? strlen(new) : 0, newname,
+		old ? old->ptr : NULL, old ? old->size : 0,
+		oldname,
+		new ? new->ptr : NULL, new ? new->size : 0,
+		newname,
 		diff_opts));
-	cl_git_pass(git_patch_to_buf(&patchbuf, patch));
 
-	cl_assert_equal_s(patch_expected, patchbuf.ptr);
+	if (patch_expected) {
+		cl_git_pass(git_patch_to_buf(&patchbuf, patch));
+		cl_assert_equal_s(patch_expected, patchbuf.ptr);
+	}
 
-	error = git_apply__patch(&result, &filename, &mode, old, old ? strlen(old) : 0, patch);
+	error = git_apply__patch(&result, &filename, &mode, old ? old->ptr : NULL, old ? old->size : 0, patch);
 
 	if (error == 0 && new == NULL) {
 		cl_assert_equal_i(0, result.size);
 		cl_assert_equal_p(NULL, filename);
 		cl_assert_equal_i(0, mode);
-	} else {
-		cl_assert_equal_s(new, result.ptr);
-		cl_assert_equal_s("file.txt", filename);
+	}
+	else if (error == 0) {
+		cl_assert_equal_s(new->ptr, result.ptr);
+		cl_assert_equal_s(newname ? newname : oldname, filename);
 		cl_assert_equal_i(0100644, mode);
 	}
 
@@ -60,6 +68,32 @@ static int apply_buf(
 	git_patch_free(patch);
 
 	return error;
+}
+
+static int apply_buf(
+	const char *old,
+	const char *oldname,
+	const char *new,
+	const char *newname,
+	const char *patch_expected,
+	const git_diff_options *diff_opts)
+{
+	git_buf o = GIT_BUF_INIT, n = GIT_BUF_INIT,
+		*optr = NULL, *nptr = NULL;
+
+	if (old) {
+		o.ptr = (char *)old;
+		o.size = strlen(old);
+		optr = &o;
+	}
+
+	if (new) {
+		n.ptr = (char *)new;
+		n.size = strlen(new);
+		nptr = &n;
+	}
+
+	return apply_gitbuf(optr, oldname, nptr, newname, patch_expected, diff_opts);
 }
 
 void test_apply_fromdiff__change_middle(void)
@@ -181,4 +215,75 @@ void test_apply_fromdiff__no_change(void)
 		FILE_ORIGINAL, "file.txt",
 		FILE_ORIGINAL, "file.txt",
 		"", NULL));
+}
+
+void test_apply_fromdiff__binary_add(void)
+{
+	git_buf newfile = GIT_BUF_INIT;
+
+	newfile.ptr = FILE_BINARY_DELTA_MODIFIED;
+	newfile.size = FILE_BINARY_DELTA_MODIFIED_LEN;
+
+	cl_git_pass(apply_gitbuf(
+		NULL, NULL,
+		&newfile, "binary.bin",
+		NULL, &binary_opts));
+}
+
+void test_apply_fromdiff__binary_no_change(void)
+{
+	git_buf original = GIT_BUF_INIT;
+
+	original.ptr = FILE_BINARY_DELTA_ORIGINAL;
+	original.size = FILE_BINARY_DELTA_ORIGINAL_LEN;
+
+	cl_git_pass(apply_gitbuf(
+		&original, "binary.bin",
+		&original, "binary.bin",
+		"", &binary_opts));
+}
+
+void test_apply_fromdiff__binary_change_delta(void)
+{
+	git_buf original = GIT_BUF_INIT, modified = GIT_BUF_INIT;
+
+	original.ptr = FILE_BINARY_DELTA_ORIGINAL;
+	original.size = FILE_BINARY_DELTA_ORIGINAL_LEN;
+
+	modified.ptr = FILE_BINARY_DELTA_MODIFIED;
+	modified.size = FILE_BINARY_DELTA_MODIFIED_LEN;
+
+	cl_git_pass(apply_gitbuf(
+		&original, "binary.bin",
+		&modified, "binary.bin",
+		NULL, &binary_opts));
+}
+
+void test_apply_fromdiff__binary_change_literal(void)
+{
+	git_buf original = GIT_BUF_INIT, modified = GIT_BUF_INIT;
+
+	original.ptr = FILE_BINARY_LITERAL_ORIGINAL;
+	original.size = FILE_BINARY_LITERAL_ORIGINAL_LEN;
+
+	modified.ptr = FILE_BINARY_LITERAL_MODIFIED;
+	modified.size = FILE_BINARY_LITERAL_MODIFIED_LEN;
+
+	cl_git_pass(apply_gitbuf(
+		&original, "binary.bin",
+		&modified, "binary.bin",
+		NULL, &binary_opts));
+}
+
+void test_apply_fromdiff__binary_delete(void)
+{
+	git_buf original = GIT_BUF_INIT;
+
+	original.ptr = FILE_BINARY_DELTA_MODIFIED;
+	original.size = FILE_BINARY_DELTA_MODIFIED_LEN;
+
+	cl_git_pass(apply_gitbuf(
+		&original, "binary.bin",
+		NULL, NULL,
+		NULL, &binary_opts));
 }

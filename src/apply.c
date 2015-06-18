@@ -13,6 +13,8 @@
 #include "diff_patch.h"
 #include "fileops.h"
 #include "apply.h"
+#include "delta.h"
+#include "zstream.h"
 
 #define apply_err(...) \
 	( giterr_set(GITERR_PATCH, __VA_ARGS__), -1 )
@@ -239,6 +241,87 @@ done:
 	return error;
 }
 
+static int apply_binary_delta(
+	git_buf *out,
+	const char *source,
+	size_t source_len,
+	git_diff_binary_file *binary_file)
+{
+	git_buf inflated = GIT_BUF_INIT;
+	int error = 0;
+
+	/* no diff means identical contents */
+	if (binary_file->datalen == 0)
+		return git_buf_put(out, source, source_len);
+
+	error = git_zstream_inflatebuf(&inflated,
+		binary_file->data, binary_file->datalen);
+
+	if (!error && inflated.size != binary_file->inflatedlen) {
+		error = apply_err("inflated delta does not match expected length");
+		git_buf_free(out);
+	}
+
+	if (error < 0)
+		goto done;
+
+	if (binary_file->type == GIT_DIFF_BINARY_DELTA) {
+		void *data;
+		size_t data_len;
+
+		error = git_delta_apply(&data, &data_len, (void *)source, source_len,
+			(void *)inflated.ptr, inflated.size);
+
+		out->ptr = data;
+		out->size = data_len;
+		out->asize = data_len;
+	}
+	else if (binary_file->type == GIT_DIFF_BINARY_LITERAL) {
+		git_buf_swap(out, &inflated);
+	}
+	else {
+		error = apply_err("unknown binary delta type");
+		goto done;
+	}
+
+done:
+	git_buf_free(&inflated);
+	return error;
+}
+
+static int apply_binary(
+	git_buf *out,
+	const char *source,
+	size_t source_len,
+	git_patch *patch)
+{
+	git_buf reverse = GIT_BUF_INIT;
+	int error;
+
+	/* first, apply the new_file delta to the given source */
+	if ((error = apply_binary_delta(out, source, source_len,
+			&patch->binary.new_file)) < 0)
+		goto done;
+
+	/* second, apply the old_file delta to sanity check the result */
+	if ((error = apply_binary_delta(&reverse, out->ptr, out->size,
+			&patch->binary.old_file)) < 0)
+		goto done;
+
+	if (source_len != reverse.size ||
+		memcmp(source, reverse.ptr, source_len) != 0) {
+		error = apply_err("binary patch did not apply cleanly");
+		goto done;
+	}
+
+done:
+	if (error < 0)
+		git_buf_free(out);
+
+	git_buf_free(&reverse);
+	return error;
+}
+
 int git_apply__patch(
 	git_buf *contents_out,
 	char **filename_out,
@@ -262,10 +345,14 @@ int git_apply__patch(
 			patch->nfile.file->mode : GIT_FILEMODE_BLOB;
 	}
 
-	/* If the patch is empty, simply keep the source unchanged */
-	if (patch->hunks.size == 0)
-		git_buf_put(contents_out, source, source_len);
-	else if ((error = apply_hunks(contents_out, source, source_len, patch)) < 0)
+	if (patch->delta->flags & GIT_DIFF_FLAG_BINARY)
+		error = apply_binary(contents_out, source, source_len, patch);
+	else if (patch->hunks.size)
+		error = apply_hunks(contents_out, source, source_len, patch);
+	else
+		error = git_buf_put(contents_out, source, source_len);
+
+	if (error)
 		goto done;
 
 	if (patch->delta->status == GIT_DELTA_DELETED &&

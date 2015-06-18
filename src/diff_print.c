@@ -415,6 +415,9 @@ static int diff_print_patch_file_binary(
 		(error = diff_print_load_content(pi, delta)) < 0)
 		return error;
 
+	if (binary->new_file.datalen == 0 && binary->old_file.datalen == 0)
+		return 0;
+
 	pre_binary_size = pi->buf->size;
 	git_buf_printf(pi->buf, "GIT binary patch\n");
 	pi->line.num_lines++;
