@@ -143,7 +143,7 @@ void tick_index(git_index *index)
 
 	times[0].tv_sec  = ts;
 	times[0].tv_usec = 0;
-	times[1].tv_sec  = ts + 1;
+	times[1].tv_sec  = ts + 5;
 	times[1].tv_usec = 0;
 
 	cl_git_pass(p_utimes(git_index_path(index), times));
