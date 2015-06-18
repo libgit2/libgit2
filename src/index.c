@@ -688,20 +688,59 @@ int git_index__changed_relative_to(
 	return !!git_oid_cmp(&index->checksum, checksum);
 }
 
+static bool is_racy_timestamp(git_time_t stamp, git_index_entry *entry)
+{
+	/* Git special-cases submodules in the check */
+	if (S_ISGITLINK(entry->mode))
+		return false;
+
+	/* If we never read the index, we can't have this race either */
+	if (stamp == 0)
+		return false;
+
+	/* If the timestamp is the same or newer than the index, it's racy */
+	return ((int32_t) stamp) <= entry->mtime.seconds;
+}
+
 /*
  * Force the next diff to take a look at those entries which have the
  * same timestamp as the current index.
  */
-static void truncate_racily_clean(git_index *index)
+static int truncate_racily_clean(git_index *index)
 {
 	size_t i;
+	int error;
 	git_index_entry *entry;
 	git_time_t ts = index->stamp.mtime;
+	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
+	git_diff *diff;
 
+	/* Nothing to do if there's no repo to talk about */
+	if (!INDEX_OWNER(index))
+		return 0;
+
+	/* If there's no workdir, we can't know where to even check */
+	if (!git_repository_workdir(INDEX_OWNER(index)))
+		return 0;
+
+	diff_opts.flags |= GIT_DIFF_INCLUDE_TYPECHANGE | GIT_DIFF_IGNORE_SUBMODULES | GIT_DIFF_DISABLE_PATHSPEC_MATCH;
 	git_vector_foreach(&index->entries, i, entry) {
-		if (entry->mtime.seconds == ts || ts == 0)
+		if (!is_racy_timestamp(ts, entry))
+			continue;
+
+		diff_opts.pathspec.count = 1;
+		diff_opts.pathspec.strings = (char **) &entry->path;
+
+		if ((error = git_diff_index_to_workdir(&diff, INDEX_OWNER(index), index, &diff_opts)) < 0)
+			return error;
+
+		if (git_diff_num_deltas(diff) > 0)
 			entry->file_size = 0;
+
+		git_diff_free(diff);
 	}
+
+	return 0;
 }
 
 int git_index_write(git_index *index)
