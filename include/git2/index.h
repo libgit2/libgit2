@@ -274,6 +274,18 @@ GIT_EXTERN(int) git_index_write(git_index *index);
 GIT_EXTERN(const char *) git_index_path(const git_index *index);
 
 /**
+ * Get the checksum of the index
+ *
+ * This checksum is the SHA-1 hash over the index file (except the
+ * last 20 bytes which are the checksum itself). In cases where the
+ * index does not exist on-disk, it will be zeroed out.
+ *
+ * @param index an existing index object
+ * @return a pointer to the checksum of the index
+ */
+GIT_EXTERN(const git_oid *) git_index_checksum(git_index *index);
+
+/**
  * Read a tree into the index file with stats
  *
  * The current index contents will be replaced by the specified tree.

@@ -22,6 +22,7 @@ struct git_index {
 
 	char *index_file_path;
 	git_futils_filestamp stamp;
+	git_oid checksum;   /* checksum at the end of the file */
 
 	git_vector entries;
 
