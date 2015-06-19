@@ -1544,19 +1544,21 @@ void test_diff_workdir__with_stale_index(void)
 
 static int touch_file(void *payload, git_buf *path)
 {
-	int fd;
-	char b;
+	struct stat st;
+	struct timeval times[2];
 
 	GIT_UNUSED(payload);
 	if (git_path_isdir(path->ptr))
 		return 0;
 
-	cl_assert((fd = p_open(path->ptr, O_RDWR)) >= 0);
-	cl_assert_equal_i(1, p_read(fd, &b, 1));
-	cl_must_pass(p_lseek(fd, 0, SEEK_SET));
-	cl_must_pass(p_write(fd, &b, 1));
-	cl_must_pass(p_close(fd));
+	cl_must_pass(p_stat(path->ptr, &st));
 
+	times[0].tv_sec = st.st_mtime + 3;
+	times[0].tv_usec = 0;
+	times[1].tv_sec = st.st_mtime + 3;
+	times[1].tv_usec = 0;
+
+	cl_must_pass(p_utimes(path->ptr, times));
 	return 0;
 }
 
@@ -1783,3 +1785,63 @@ void test_diff_workdir__to_index_conflicted(void) {
 	git_index_free(index);
 	git_tree_free(a);
 }
+
+void test_diff_workdir__only_writes_index_when_necessary(void)
+{
+	git_index *index;
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_diff *diff = NULL;
+	git_diff_perfdata perf = GIT_DIFF_PERFDATA_INIT;
+	git_reference *head;
+	git_object *head_object;
+	git_oid initial, first, second;
+	git_buf path = GIT_BUF_INIT;
+	struct stat st;
+	struct timeval times[2];
+
+	opts.flags |= GIT_DIFF_INCLUDE_UNTRACKED | GIT_DIFF_UPDATE_INDEX;
+
+	g_repo = cl_git_sandbox_init("status");
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_repository_head(&head, g_repo));
+	cl_git_pass(git_reference_peel(&head_object, head, GIT_OBJ_COMMIT));
+
+	cl_git_pass(git_reset(g_repo, head_object, GIT_RESET_HARD, NULL));
+
+	git_oid_cpy(&initial, git_index_checksum(index));
+
+	/* update the index timestamp to avoid raciness */
+	cl_must_pass(p_stat("status/.git/index", &st));
+
+	times[0].tv_sec = st.st_mtime + 5;
+	times[0].tv_usec = 0;
+	times[1].tv_sec = st.st_mtime + 5;
+	times[1].tv_usec = 0;
+
+	cl_must_pass(p_utimes("status/.git/index", times));
+
+	/* ensure diff doesn't touch the index */
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	git_diff_free(diff);
+
+	git_oid_cpy(&first, git_index_checksum(index));
+	cl_assert(!git_oid_equal(&initial, &first));
+
+	/* touch all the files so stat times are different */
+	cl_git_pass(git_buf_sets(&path, "status"));
+	cl_git_pass(git_path_direach(&path, 0, touch_file, NULL));
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	git_diff_free(diff);
+
+	/* ensure the second diff did update the index */
+	git_oid_cpy(&second, git_index_checksum(index));
+	cl_assert(!git_oid_equal(&first, &second));
+
+	git_buf_free(&path);
+	git_object_free(head_object);
+	git_reference_free(head);
+	git_index_free(index);
+}
+
