@@ -211,7 +211,7 @@ static bool checkout_is_workdir_modified(
 	if (baseitem->size && wditem->file_size != baseitem->size)
 		return true;
 
-	if (git_diff__oid_for_entry(&oid, data->diff, wditem, NULL) < 0)
+	if (git_diff__oid_for_entry(&oid, data->diff, wditem, wditem->mode, NULL) < 0)
 		return false;
 
 	/* Allow the checkout if the workdir is not modified *or* if the checkout
