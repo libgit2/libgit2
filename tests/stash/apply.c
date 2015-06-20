@@ -10,10 +10,9 @@ void test_stash_apply__initialize(void)
 {
 	git_oid oid;
 
-	cl_git_pass(git_signature_new(&signature, "nulltoken", "emeric.fermas@gmail.com", 1323847743, 60)); /* Wed Dec 14 08:29:03 2011 +0100 */
-
-	cl_git_pass(git_repository_init(&repo, "stash", 0));
+	repo = cl_git_sandbox_init_new("stash");
 	cl_git_pass(git_repository_index(&repo_index, repo));
+	cl_git_pass(git_signature_new(&signature, "nulltoken", "emeric.fermas@gmail.com", 1323847743, 60)); /* Wed Dec 14 08:29:03 2011 +0100 */
 
 	cl_git_mkfile("stash/what", "hello\n");
 	cl_git_mkfile("stash/how", "small\n");
@@ -28,14 +27,17 @@ void test_stash_apply__initialize(void)
 	cl_git_rewritefile("stash/what", "goodbye\n");
 	cl_git_rewritefile("stash/who", "funky world\n");
 	cl_git_mkfile("stash/when", "tomorrow\n");
+	cl_git_mkfile("stash/why", "would anybody use stash?\n");
 
 	cl_git_pass(git_index_add_bypath(repo_index, "who"));
+	cl_git_pass(git_index_add_bypath(repo_index, "why"));
 
 	/* Pre-stash state */
 	assert_status(repo, "what", GIT_STATUS_WT_MODIFIED);
 	assert_status(repo, "how", GIT_STATUS_CURRENT);
 	assert_status(repo, "who", GIT_STATUS_INDEX_MODIFIED);
 	assert_status(repo, "when", GIT_STATUS_WT_NEW);
+	assert_status(repo, "why", GIT_STATUS_INDEX_NEW);
 
 	cl_git_pass(git_stash_save(&oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED));
 
@@ -44,6 +46,7 @@ void test_stash_apply__initialize(void)
 	assert_status(repo, "how", GIT_STATUS_CURRENT);
 	assert_status(repo, "who", GIT_STATUS_CURRENT);
 	assert_status(repo, "when", GIT_ENOTFOUND);
+	assert_status(repo, "why", GIT_ENOTFOUND);
 }
 
 void test_stash_apply__cleanup(void)
@@ -54,11 +57,7 @@ void test_stash_apply__cleanup(void)
 	git_index_free(repo_index);
 	repo_index = NULL;
 
-	git_repository_free(repo);
-	repo = NULL;
-
-	cl_git_pass(git_futils_rmdir_r("stash", NULL, GIT_RMDIR_REMOVE_FILES));
-	cl_fixture_cleanup("sorry-it-is-a-non-bare-only-party");
+	cl_git_sandbox_cleanup();
 }
 
 void test_stash_apply__with_default(void)
@@ -70,6 +69,7 @@ void test_stash_apply__with_default(void)
 	assert_status(repo, "how", GIT_STATUS_CURRENT);
 	assert_status(repo, "who", GIT_STATUS_WT_MODIFIED);
 	assert_status(repo, "when", GIT_STATUS_WT_NEW);
+	assert_status(repo, "why", GIT_STATUS_WT_NEW);
 }
 
 void test_stash_apply__with_reinstate_index(void)
@@ -85,6 +85,7 @@ void test_stash_apply__with_reinstate_index(void)
 	assert_status(repo, "how", GIT_STATUS_CURRENT);
 	assert_status(repo, "who", GIT_STATUS_INDEX_MODIFIED);
 	assert_status(repo, "when", GIT_STATUS_WT_NEW);
+	assert_status(repo, "why", GIT_STATUS_INDEX_NEW);
 }
 
 void test_stash_apply__conflict_index_with_default(void)
@@ -96,6 +97,7 @@ void test_stash_apply__conflict_index_with_default(void)
 	cl_git_rewritefile("stash/who", "nothing\n");
 	cl_git_pass(git_index_add_bypath(repo_index, "who"));
 	cl_git_pass(git_index_write(repo_index));
+	cl_repo_commit_from_index(NULL, repo, signature, 0, "Other commit");
 
 	cl_git_pass(git_stash_apply(repo, 0, NULL));
 
@@ -104,6 +106,7 @@ void test_stash_apply__conflict_index_with_default(void)
 	assert_status(repo, "how", GIT_STATUS_CURRENT);
 	cl_git_pass(git_index_conflict_get(&ancestor, &our, &their, repo_index, "who")); /* unmerged */
 	assert_status(repo, "when", GIT_STATUS_WT_NEW);
+	assert_status(repo, "why", GIT_STATUS_INDEX_NEW);
 }
 
 void test_stash_apply__conflict_index_with_reinstate_index(void)
@@ -123,6 +126,7 @@ void test_stash_apply__conflict_index_with_reinstate_index(void)
 	assert_status(repo, "how", GIT_STATUS_CURRENT);
 	assert_status(repo, "who", GIT_STATUS_INDEX_MODIFIED);
 	assert_status(repo, "when", GIT_ENOTFOUND);
+	assert_status(repo, "why", GIT_ENOTFOUND);
 }
 
 void test_stash_apply__conflict_untracked_with_default(void)
@@ -138,6 +142,7 @@ void test_stash_apply__conflict_untracked_with_default(void)
 	assert_status(repo, "how", GIT_STATUS_CURRENT);
 	assert_status(repo, "who", GIT_STATUS_CURRENT);
 	assert_status(repo, "when", GIT_STATUS_WT_NEW);
+	assert_status(repo, "why", GIT_ENOTFOUND);
 }
 
 void test_stash_apply__conflict_untracked_with_reinstate_index(void)
@@ -155,6 +160,7 @@ void test_stash_apply__conflict_untracked_with_reinstate_index(void)
 	assert_status(repo, "how", GIT_STATUS_CURRENT);
 	assert_status(repo, "who", GIT_STATUS_CURRENT);
 	assert_status(repo, "when", GIT_STATUS_WT_NEW);
+	assert_status(repo, "why", GIT_ENOTFOUND);
 }
 
 void test_stash_apply__conflict_workdir_with_default(void)
@@ -168,6 +174,7 @@ void test_stash_apply__conflict_workdir_with_default(void)
 	assert_status(repo, "how", GIT_STATUS_CURRENT);
 	assert_status(repo, "who", GIT_STATUS_CURRENT);
 	assert_status(repo, "when", GIT_STATUS_WT_NEW);
+	assert_status(repo, "why", GIT_ENOTFOUND);
 }
 
 void test_stash_apply__conflict_workdir_with_reinstate_index(void)
@@ -185,6 +192,7 @@ void test_stash_apply__conflict_workdir_with_reinstate_index(void)
 	assert_status(repo, "how", GIT_STATUS_CURRENT);
 	assert_status(repo, "who", GIT_STATUS_CURRENT);
 	assert_status(repo, "when", GIT_STATUS_WT_NEW);
+	assert_status(repo, "why", GIT_ENOTFOUND);
 }
 
 void test_stash_apply__conflict_commit_with_default(void)
@@ -204,6 +212,7 @@ void test_stash_apply__conflict_commit_with_default(void)
 	assert_status(repo, "how", GIT_STATUS_CURRENT);
 	assert_status(repo, "who", GIT_STATUS_INDEX_MODIFIED);
 	assert_status(repo, "when", GIT_STATUS_WT_NEW);
+	assert_status(repo, "why", GIT_STATUS_INDEX_NEW);
 }
 
 void test_stash_apply__conflict_commit_with_reinstate_index(void)
@@ -226,6 +235,7 @@ void test_stash_apply__conflict_commit_with_reinstate_index(void)
 	assert_status(repo, "how", GIT_STATUS_CURRENT);
 	assert_status(repo, "who", GIT_STATUS_INDEX_MODIFIED);
 	assert_status(repo, "when", GIT_STATUS_WT_NEW);
+	assert_status(repo, "why", GIT_STATUS_INDEX_NEW);
 }
 
 void test_stash_apply__pop(void)
@@ -285,6 +295,7 @@ void test_stash_apply__executes_notify_cb(void)
 	assert_status(repo, "how", GIT_STATUS_CURRENT);
 	assert_status(repo, "who", GIT_STATUS_WT_MODIFIED);
 	assert_status(repo, "when", GIT_STATUS_WT_NEW);
+	assert_status(repo, "why", GIT_STATUS_WT_NEW);
 
 	cl_assert_equal_b(true, seen_paths.what);
 	cl_assert_equal_b(false, seen_paths.how);
