@@ -110,7 +110,7 @@ typedef struct {
 
 	/* cache invalidation data */
 	git_oid head_id;
-	git_futils_filestamp index_stamp;
+	git_oid index_checksum;
 	git_buf gitmodules_path;
 	git_futils_filestamp gitmodules_stamp;
 	git_futils_filestamp config_stamp;

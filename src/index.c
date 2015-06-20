@@ -116,7 +116,7 @@ static int read_header(struct index_header *dest, const void *buffer);
 
 static int parse_index(git_index *index, const char *buffer, size_t buffer_size);
 static bool is_index_extended(git_index *index);
-static int write_index(git_index *index, git_filebuf *file);
+static int write_index(git_oid *checksum, git_index *index, git_filebuf *file);
 
 static void index_entry_free(git_index_entry *entry);
 static void index_entry_reuc_free(git_index_reuc_entry *reuc);
@@ -598,6 +598,38 @@ int git_index_caps(const git_index *index)
 			(index->no_symlinks ? GIT_INDEXCAP_NO_SYMLINKS : 0));
 }
 
+const git_oid *git_index_checksum(git_index *index)
+{
+	return &index->checksum;
+}
+
+/**
+ * Returns 1 for changed, 0 for not changed and <0 for errors
+ */
+static int compare_checksum(git_index *index)
+{
+	int fd, error;
+	ssize_t bytes_read;
+	git_oid checksum = {{ 0 }};
+
+	if ((fd = p_open(index->index_file_path, O_RDONLY)) < 0)
+		return fd;
+
+	if ((error = p_lseek(fd, -20, SEEK_END)) < 0) {
+		p_close(fd);
+		giterr_set(GITERR_OS, "failed to seek to end of file");
+		return -1;
+	}
+
+	bytes_read = p_read(fd, &checksum, GIT_OID_RAWSZ);
+	p_close(fd);
+
+	if (bytes_read < 0)
+		return -1;
+
+	return !!git_oid_cmp(&checksum, &index->checksum);
+}
+
 int git_index_read(git_index *index, int force)
 {
 	int error = 0, updated;
@@ -616,8 +648,8 @@ int git_index_read(git_index *index, int force)
 		return 0;
 	}
 
-	updated = git_futils_filestamp_check(&stamp, index->index_file_path);
-	if (updated < 0) {
+	if ((updated = git_futils_filestamp_check(&stamp, index->index_file_path) < 0) ||
+	    ((updated = compare_checksum(index)) < 0)) {
 		giterr_set(
 			GITERR_INDEX,
 			"Failed to read index: '%s' no longer exists",
@@ -647,15 +679,13 @@ int git_index_read(git_index *index, int force)
 }
 
 int git_index__changed_relative_to(
-	git_index *index, const git_futils_filestamp *fs)
+	git_index *index, const git_oid *checksum)
 {
 	/* attempt to update index (ignoring errors) */
 	if (git_index_read(index, false) < 0)
 		giterr_clear();
 
-	return (index->stamp.mtime != fs->mtime ||
-			index->stamp.size != fs->size ||
-			index->stamp.ino != fs->ino);
+	return !!git_oid_cmp(&index->checksum, checksum);
 }
 
 /*
@@ -2092,6 +2122,8 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 		goto done;
 	}
 
+	git_oid_cpy(&index->checksum, &checksum_calculated);
+
 #undef seek_forward
 
 	/* Entries are stored case-sensitively on disk, so re-sort now if
@@ -2355,7 +2387,7 @@ static int write_tree_extension(git_index *index, git_filebuf *file)
 	return error;
 }
 
-static int write_index(git_index *index, git_filebuf *file)
+static int write_index(git_oid *checksum, git_index *index, git_filebuf *file)
 {
 	git_oid hash_final;
 	struct index_header header;
@@ -2391,6 +2423,7 @@ static int write_index(git_index *index, git_filebuf *file)
 
 	/* get out the hash for all the contents we've appended to the file */
 	git_filebuf_hash(&hash_final, file);
+	git_oid_cpy(checksum, &hash_final);
 
 	/* write it at the end of the file */
 	return git_filebuf_write(file, hash_final.id, GIT_OID_RAWSZ);
@@ -2953,6 +2986,7 @@ int git_indexwriter_init_for_operation(
 int git_indexwriter_commit(git_indexwriter *writer)
 {
 	int error;
+	git_oid checksum = {{ 0 }};
 
 	if (!writer->should_write)
 		return 0;
@@ -2962,7 +2996,7 @@ int git_indexwriter_commit(git_indexwriter *writer)
 
 	git_vector_sort(&writer->index->reuc);
 
-	if ((error = write_index(writer->index, &writer->file)) < 0) {
+	if ((error = write_index(&checksum, writer->index, &writer->file)) < 0) {
 		git_indexwriter_cleanup(writer);
 		return error;
 	}
@@ -2977,6 +3011,7 @@ int git_indexwriter_commit(git_indexwriter *writer)
 	}
 
 	writer->index->on_disk = 1;
+	git_oid_cpy(&writer->index->checksum, &checksum);
 
 	git_index_free(writer->index);
 	writer->index = NULL;
