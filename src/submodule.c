@@ -1946,7 +1946,7 @@ static int submodule_cache_refresh(git_submodule_cache *cache, int refresh)
 		update_index = update_head = update_gitmod = true;
 	else {
 		update_index =
-			!idx || git_index__changed_relative_to(idx, &cache->index_stamp);
+			!idx || git_index__changed_relative_to(idx, &cache->index_checksum);
 		update_head =
 			!head || !git_oid_equal(&cache->head_id, git_tree_id(head));
 
@@ -1984,8 +1984,7 @@ static int submodule_cache_refresh(git_submodule_cache *cache, int refresh)
 		if ((error = submodule_cache_refresh_from_index(cache, idx)) < 0)
 			goto cleanup;
 
-		git_futils_filestamp_set(
-			&cache->index_stamp, git_index__filestamp(idx));
+		git_oid_cpy(&cache->index_checksum, git_index_checksum(idx));
 	}
 
 	/* add submodule information from HEAD */

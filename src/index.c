@@ -679,15 +679,13 @@ int git_index_read(git_index *index, int force)
 }
 
 int git_index__changed_relative_to(
-	git_index *index, const git_futils_filestamp *fs)
+	git_index *index, const git_oid *checksum)
 {
 	/* attempt to update index (ignoring errors) */
 	if (git_index_read(index, false) < 0)
 		giterr_clear();
 
-	return (index->stamp.mtime != fs->mtime ||
-			index->stamp.size != fs->size ||
-			index->stamp.ino != fs->ino);
+	return !!git_oid_cmp(&index->checksum, checksum);
 }
 
 /*
