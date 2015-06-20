@@ -17,6 +17,7 @@ void test_stash_apply__initialize(void)
 	cl_git_mkfile("stash/what", "hello\n");
 	cl_git_mkfile("stash/how", "small\n");
 	cl_git_mkfile("stash/who", "world\n");
+	cl_git_mkfile("stash/where", "meh\n");
 
 	cl_git_pass(git_index_add_bypath(repo_index, "what"));
 	cl_git_pass(git_index_add_bypath(repo_index, "how"));
@@ -28,9 +29,14 @@ void test_stash_apply__initialize(void)
 	cl_git_rewritefile("stash/who", "funky world\n");
 	cl_git_mkfile("stash/when", "tomorrow\n");
 	cl_git_mkfile("stash/why", "would anybody use stash?\n");
+	cl_git_mkfile("stash/where", "????\n");
 
 	cl_git_pass(git_index_add_bypath(repo_index, "who"));
 	cl_git_pass(git_index_add_bypath(repo_index, "why"));
+	cl_git_pass(git_index_add_bypath(repo_index, "where"));
+	git_index_write(repo_index);
+
+	cl_git_rewritefile("stash/where", "....\n");
 
 	/* Pre-stash state */
 	assert_status(repo, "what", GIT_STATUS_WT_MODIFIED);
@@ -38,6 +44,7 @@ void test_stash_apply__initialize(void)
 	assert_status(repo, "who", GIT_STATUS_INDEX_MODIFIED);
 	assert_status(repo, "when", GIT_STATUS_WT_NEW);
 	assert_status(repo, "why", GIT_STATUS_INDEX_NEW);
+	assert_status(repo, "where", GIT_STATUS_INDEX_NEW|GIT_STATUS_WT_MODIFIED);
 
 	cl_git_pass(git_stash_save(&oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED));
 
@@ -47,6 +54,7 @@ void test_stash_apply__initialize(void)
 	assert_status(repo, "who", GIT_STATUS_CURRENT);
 	assert_status(repo, "when", GIT_ENOTFOUND);
 	assert_status(repo, "why", GIT_ENOTFOUND);
+	assert_status(repo, "where", GIT_ENOTFOUND);
 }
 
 void test_stash_apply__cleanup(void)
@@ -62,6 +70,8 @@ void test_stash_apply__cleanup(void)
 
 void test_stash_apply__with_default(void)
 {
+	git_buf where = GIT_BUF_INIT;
+
 	cl_git_pass(git_stash_apply(repo, 0, NULL));
 
 	cl_assert_equal_i(git_index_has_conflicts(repo_index), 0);
@@ -69,11 +79,42 @@ void test_stash_apply__with_default(void)
 	assert_status(repo, "how", GIT_STATUS_CURRENT);
 	assert_status(repo, "who", GIT_STATUS_WT_MODIFIED);
 	assert_status(repo, "when", GIT_STATUS_WT_NEW);
-	assert_status(repo, "why", GIT_STATUS_WT_NEW);
+	assert_status(repo, "why", GIT_STATUS_INDEX_NEW);
+	assert_status(repo, "where", GIT_STATUS_INDEX_NEW);
+
+	cl_git_pass(git_futils_readbuffer(&where, "stash/where"));
+	cl_assert_equal_s("....\n", where.ptr);
+
+	git_buf_free(&where);
+}
+
+void test_stash_apply__with_existing_file(void)
+{
+	cl_git_mkfile("stash/where", "oops!\n");
+	cl_git_fail(git_stash_apply(repo, 0, NULL));
+}
+
+void test_stash_apply__merges_new_file(void)
+{
+	git_index_entry *ancestor, *our, *their;
+
+	cl_git_mkfile("stash/where", "committed before stash\n");
+	cl_git_pass(git_index_add_bypath(repo_index, "where"));
+	cl_repo_commit_from_index(NULL, repo, signature, 0, "Other commit");
+
+	cl_git_pass(git_stash_apply(repo, 0, NULL));
+
+	cl_assert_equal_i(1, git_index_has_conflicts(repo_index));
+	assert_status(repo, "what", GIT_STATUS_INDEX_MODIFIED);
+	cl_git_pass(git_index_conflict_get(&ancestor, &our, &their, repo_index, "where")); /* unmerged */
+	assert_status(repo, "who", GIT_STATUS_INDEX_MODIFIED);
+	assert_status(repo, "when", GIT_STATUS_WT_NEW);
+	assert_status(repo, "why", GIT_STATUS_INDEX_NEW);
 }
 
 void test_stash_apply__with_reinstate_index(void)
 {
+	git_buf where = GIT_BUF_INIT;
 	git_stash_apply_options opts = GIT_STASH_APPLY_OPTIONS_INIT;
 
 	opts.flags = GIT_STASH_APPLY_REINSTATE_INDEX;
@@ -86,6 +127,12 @@ void test_stash_apply__with_reinstate_index(void)
 	assert_status(repo, "who", GIT_STATUS_INDEX_MODIFIED);
 	assert_status(repo, "when", GIT_STATUS_WT_NEW);
 	assert_status(repo, "why", GIT_STATUS_INDEX_NEW);
+	assert_status(repo, "where", GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_MODIFIED);
+
+	cl_git_pass(git_futils_readbuffer(&where, "stash/where"));
+	cl_assert_equal_s("....\n", where.ptr);
+
+	git_buf_free(&where);
 }
 
 void test_stash_apply__conflict_index_with_default(void)
@@ -312,7 +359,8 @@ void test_stash_apply__executes_notify_cb(void)
 	assert_status(repo, "how", GIT_STATUS_CURRENT);
 	assert_status(repo, "who", GIT_STATUS_WT_MODIFIED);
 	assert_status(repo, "when", GIT_STATUS_WT_NEW);
-	assert_status(repo, "why", GIT_STATUS_WT_NEW);
+	assert_status(repo, "why", GIT_STATUS_INDEX_NEW);
+	assert_status(repo, "where", GIT_STATUS_INDEX_NEW);
 
 	cl_assert_equal_b(true, seen_paths.what);
 	cl_assert_equal_b(false, seen_paths.how);
