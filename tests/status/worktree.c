@@ -1096,3 +1096,51 @@ void test_status_worktree__unreadable_as_untracked(void)
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
 }
 
+void test_status_worktree__update_index_with_symlink_doesnt_change_mode(void)
+{
+	git_repository *repo = cl_git_sandbox_init("testrepo");
+	git_reference *head;
+	git_object *head_object;
+	git_index *index;
+	const git_index_entry *idx_entry;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	status_entry_counts counts = {0};
+	const char *expected_paths[] = { "README" };
+	const unsigned int expected_statuses[] = {GIT_STATUS_WT_NEW};
+
+	opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
+	opts.flags = GIT_STATUS_OPT_DEFAULTS | GIT_STATUS_OPT_UPDATE_INDEX;
+
+	cl_git_pass(git_repository_head(&head, repo));
+	cl_git_pass(git_reference_peel(&head_object, head, GIT_OBJ_COMMIT));
+
+	cl_git_pass(git_reset(repo, head_object, GIT_RESET_HARD, NULL));
+
+	cl_git_rewritefile("testrepo/README", "This was rewritten.");
+
+	/* this status rewrites the index because we have changed the
+	 * contents of a tracked file
+	 */
+	counts.expected_entry_count = 1;
+	counts.expected_paths = expected_paths;
+	counts.expected_statuses = expected_statuses;
+
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts));
+	cl_assert_equal_i(1, counts.entry_count);
+
+	/* now ensure that the status's rewrite of the index did not screw
+	 * up the mode of the symlink `link_to_new.txt`, particularly
+	 * on platforms that don't support symlinks
+	 */
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_index_read(index, true));
+
+	cl_assert(idx_entry = git_index_get_bypath(index, "link_to_new.txt", 0));
+	cl_assert(S_ISLNK(idx_entry->mode));
+
+	git_index_free(index);
+	git_object_free(head_object);
+	git_reference_free(head);
+}
+

@@ -570,7 +570,7 @@ int git_diff__oid_for_file(
 	git_oid *out,
 	git_diff *diff,
 	const char *path,
-	uint16_t  mode,
+	uint16_t mode,
 	git_off_t size)
 {
 	git_index_entry entry;
@@ -580,13 +580,14 @@ int git_diff__oid_for_file(
 	entry.file_size = size;
 	entry.path = (char *)path;
 
-	return git_diff__oid_for_entry(out, diff, &entry, NULL);
+	return git_diff__oid_for_entry(out, diff, &entry, mode, NULL);
 }
 
 int git_diff__oid_for_entry(
 	git_oid *out,
 	git_diff *diff,
 	const git_index_entry *src,
+	uint16_t mode,
 	const git_oid *update_match)
 {
 	int error = 0;
@@ -600,7 +601,7 @@ int git_diff__oid_for_entry(
 		&full_path, git_repository_workdir(diff->repo), entry.path) < 0)
 		return -1;
 
-	if (!entry.mode) {
+	if (!mode) {
 		struct stat st;
 
 		diff->perf.stat_calls++;
@@ -616,7 +617,7 @@ int git_diff__oid_for_entry(
 	}
 
 	/* calculate OID for file if possible */
-	if (S_ISGITLINK(entry.mode)) {
+	if (S_ISGITLINK(mode)) {
 		git_submodule *sm;
 
 		if (!git_submodule_lookup(&sm, diff->repo, entry.path)) {
@@ -630,7 +631,7 @@ int git_diff__oid_for_entry(
 			 */
 			giterr_clear();
 		}
-	} else if (S_ISLNK(entry.mode)) {
+	} else if (S_ISLNK(mode)) {
 		error = git_odb__hashlink(out, full_path.ptr);
 		diff->perf.oid_calculations++;
 	} else if (!git__is_sizet(entry.file_size)) {
@@ -657,11 +658,14 @@ int git_diff__oid_for_entry(
 	/* update index for entry if requested */
 	if (!error && update_match && git_oid_equal(out, update_match)) {
 		git_index *idx;
+		git_index_entry updated_entry;
 
-		if (!(error = git_repository_index__weakptr(&idx, diff->repo))) {
-			git_oid_cpy(&entry.id, out);
-			error = git_index_add(idx, &entry);
-		}
+		memcpy(&updated_entry, &entry, sizeof(git_index_entry));
+		updated_entry.mode = mode;
+		git_oid_cpy(&updated_entry.id, out);
+
+		if (!(error = git_repository_index__weakptr(&idx, diff->repo)))
+			error = git_index_add(idx, &updated_entry);
  	}
 
 	git_buf_free(&full_path);
@@ -856,7 +860,7 @@ static int maybe_modified(
 			&oitem->id : NULL;
 
 		if ((error = git_diff__oid_for_entry(
-				&noid, diff, nitem, update_check)) < 0)
+				&noid, diff, nitem, nmode, update_check)) < 0)
 			return error;
 
 		/* if oid matches, then mark unmodified (except submodules, where
