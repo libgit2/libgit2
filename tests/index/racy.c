@@ -6,12 +6,12 @@
 
 static git_repository *g_repo;
 
-void test_diff_racy__initialize(void)
+void test_index_racy__initialize(void)
 {
 	cl_git_pass(git_repository_init(&g_repo, "diff_racy", false));
 }
 
-void test_diff_racy__cleanup(void)
+void test_index_racy__cleanup(void)
 {
 	git_repository_free(g_repo);
 	g_repo = NULL;
@@ -19,7 +19,7 @@ void test_diff_racy__cleanup(void)
 	cl_fixture_cleanup("diff_racy");
 }
 
-void test_diff_racy__diff(void)
+void test_index_racy__diff(void)
 {
 	git_index *index;
 	git_diff *diff;
@@ -48,7 +48,7 @@ void test_diff_racy__diff(void)
 	git_buf_free(&path);
 }
 
-void test_diff_racy__write_index_just_after_file(void)
+void test_index_racy__write_index_just_after_file(void)
 {
 	git_index *index;
 	git_diff *diff;
