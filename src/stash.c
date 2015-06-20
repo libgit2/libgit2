@@ -733,6 +733,29 @@ int git_stash_apply_init_options(git_stash_apply_options *opts, unsigned int ver
 		}							\
 	} while(false);
 
+static int ensure_clean_index(git_repository *repo, git_index *index)
+{
+	git_tree *head_tree = NULL;
+	git_diff *index_diff = NULL;
+	int error = 0;
+
+	if ((error = git_repository_head_tree(&head_tree, repo)) < 0 ||
+		(error = git_diff_tree_to_index(
+			&index_diff, repo, head_tree, index, NULL)) < 0)
+		goto done;
+
+	if (git_diff_num_deltas(index_diff) > 0) {
+		giterr_set(GITERR_STASH, "%d uncommitted changes exist in the index",
+			git_diff_num_deltas(index_diff));
+		error = GIT_EUNCOMMITTED;
+	}
+
+done:
+	git_diff_free(index_diff);
+	git_tree_free(head_tree);
+	return error;
+}
+
 int git_stash_apply(
 	git_repository *repo,
 	size_t index,
@@ -774,6 +797,9 @@ int git_stash_apply(
 		goto cleanup;
 
 	NOTIFY_PROGRESS(opts, GIT_STASH_APPLY_PROGRESS_ANALYZE_INDEX);
+
+	if ((error = ensure_clean_index(repo, repo_index)) < 0)
+		goto cleanup;
 
 	/* Restore index if required */
 	if ((opts.flags & GIT_STASH_APPLY_REINSTATE_INDEX) &&
