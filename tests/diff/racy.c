@@ -12,7 +12,10 @@ void test_diff_racy__initialize(void)
 
 void test_diff_racy__cleanup(void)
 {
-	cl_git_sandbox_cleanup();
+	git_repository_free(g_repo);
+	g_repo = NULL;
+
+	cl_fixture_cleanup("diff_racy");
 }
 
 void test_diff_racy__diff(void)
@@ -31,12 +34,17 @@ void test_diff_racy__diff(void)
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, index, NULL));
 	cl_assert_equal_i(0, git_diff_num_deltas(diff));
+	git_diff_free(diff);
 
 	/* Change its contents quickly, so we get the same timestamp */
 	cl_git_mkfile(path.ptr, "B");
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, index, NULL));
 	cl_assert_equal_i(1, git_diff_num_deltas(diff));
+
+	git_index_free(index);
+	git_diff_free(diff);
+	git_buf_free(&path);
 }
 
 void test_diff_racy__write_index_just_after_file(void)
