@@ -133,12 +133,25 @@ static void hack_index(char *files[])
 	struct stat statbuf;
 	git_buf path = GIT_BUF_INIT;
 	git_index_entry *entry;
+	struct timeval times[2];
+	time_t now;
 	size_t i;
 
 	/* Update the index to suggest that checkout placed these files on
 	 * disk, keeping the object id but updating the cache, which will
 	 * emulate a Git implementation's different filter.
+	 *
+	 * We set the file's timestamp to before now to pretend that
+	 * it was an old checkout so we don't trigger the racy
+	 * protections would would check the content.
 	 */
+
+	now = time(NULL);
+	times[0].tv_sec  = now - 5;
+	times[0].tv_usec = 0;
+	times[1].tv_sec  = now - 5;
+	times[1].tv_usec = 0;
+
 	for (i = 0, filename = files[i]; filename; filename = files[++i]) {
 		git_buf_clear(&path);
 
@@ -146,6 +159,7 @@ static void hack_index(char *files[])
 			git_index_get_bypath(repo_index, filename, 0));
 
 		cl_git_pass(git_buf_printf(&path, "%s/%s", TEST_REPO_PATH, filename));
+		cl_git_pass(p_utimes(path.ptr, times));
 		cl_git_pass(p_stat(path.ptr, &statbuf));
 
 		entry->ctime.seconds = (git_time_t)statbuf.st_ctime;
@@ -245,7 +259,6 @@ static int merge_differently_filtered_files(char *files[])
 	write_files(files);
 	hack_index(files);
 
-	repo_index->stamp.mtime = time(NULL) + 1;
 	cl_git_pass(git_index_write(repo_index));
 
 	error = merge_branch();
