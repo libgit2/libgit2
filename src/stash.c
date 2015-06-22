@@ -819,6 +819,8 @@ int git_stash_apply(
 
 	NOTIFY_PROGRESS(opts, GIT_STASH_APPLY_PROGRESS_DONE);
 
+	error = git_index_write(repo_index);
+
 cleanup:
 	git_index_free(untracked_index);
 	git_index_free(modified_index);
