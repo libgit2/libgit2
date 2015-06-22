@@ -2,6 +2,7 @@ version: '{build}'
 branches:
   only:
   - master
+  - /^maint.*/
 build_script:
 - ps: >-
     choco install cmake
