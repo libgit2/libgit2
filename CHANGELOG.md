@@ -69,6 +69,9 @@ support for HTTPS connections insead of OpenSSL.
   and `git_diff_buffers` now accept a new binary callback of type
   `git_diff_binary_cb` that includes the binary diff information.
 
+* The race condition mitigations described in `racy-git.txt` have been
+  implemented.
+
 ### API additions
 
 * The `git_merge_options` gained a `file_flags` member.
