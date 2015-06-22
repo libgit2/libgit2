@@ -80,10 +80,11 @@ static git_diff_delta *diff_delta__merge_like_cgit(
 		return NULL;
 
 	/* If 'a' status is uninteresting, then we're done */
-	if (a->status == GIT_DELTA_UNMODIFIED)
+	if (a->status == GIT_DELTA_UNMODIFIED ||
+		a->status == GIT_DELTA_UNTRACKED ||
+		a->status == GIT_DELTA_UNREADABLE)
 		return dup;
 
-	assert(a->status != GIT_DELTA_UNMODIFIED);
 	assert(b->status != GIT_DELTA_UNMODIFIED);
 
 	/* A cgit exception is that the diff of a file that is only in the
@@ -104,47 +105,6 @@ static git_diff_delta *diff_delta__merge_like_cgit(
 	dup->old_file.mode  = a->old_file.mode;
 	dup->old_file.size  = a->old_file.size;
 	dup->old_file.flags = a->old_file.flags;
-
-	return dup;
-}
-
-static git_diff_delta *diff_delta__merge_like_cgit_reversed(
-	const git_diff_delta *a,
-	const git_diff_delta *b,
-	git_pool *pool)
-{
-	git_diff_delta *dup;
-
-	/* reversed version of above logic */
-
-	if (a->status == GIT_DELTA_CONFLICTED)
-		return diff_delta__dup(a, pool);
-	if (b->status == GIT_DELTA_CONFLICTED)
-		return diff_delta__dup(b, pool);
-
-	if (a->status == GIT_DELTA_UNMODIFIED)
-		return diff_delta__dup(b, pool);
-
-	if ((dup = diff_delta__dup(a, pool)) == NULL)
-		return NULL;
-
-	if (b->status == GIT_DELTA_UNMODIFIED || b->status == GIT_DELTA_UNTRACKED || b->status == GIT_DELTA_UNREADABLE)
-		return dup;
-
-	if (dup->status == GIT_DELTA_DELETED) {
-		if (b->status == GIT_DELTA_ADDED) {
-			dup->status = GIT_DELTA_UNMODIFIED;
-			dup->nfiles = 2;
-		}
-	} else {
-		dup->status = b->status;
-		dup->nfiles = b->nfiles;
-	}
-
-	git_oid_cpy(&dup->old_file.id, &b->old_file.id);
-	dup->old_file.mode  = b->old_file.mode;
-	dup->old_file.size  = b->old_file.size;
-	dup->old_file.flags = b->old_file.flags;
 
 	return dup;
 }
@@ -191,9 +151,10 @@ int git_diff_merge(git_diff *onto, const git_diff *from)
 			delta = diff_delta__dup(f, &onto_pool);
 			j++;
 		} else {
-			delta = reversed ?
-				diff_delta__merge_like_cgit_reversed(o, f, &onto_pool) :
-				diff_delta__merge_like_cgit(o, f, &onto_pool);
+			const git_diff_delta *left = reversed ? f : o;
+			const git_diff_delta *right = reversed ? o : f;
+
+			delta = diff_delta__merge_like_cgit(left, right, &onto_pool);
 			i++;
 			j++;
 		}
