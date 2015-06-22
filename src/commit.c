@@ -518,3 +518,58 @@ int git_commit_nth_gen_ancestor(
 	*ancestor = parent;
 	return 0;
 }
+
+int git_commit_header_field(git_buf *out, const git_commit *commit, const char *field)
+{
+	const char *buf = commit->raw_header;
+	const char *h, *eol;
+
+	git_buf_sanitize(out);
+	while ((h = strchr(buf, '\n')) && h[1] != '\0' && h[1] != '\n') {
+		h++;
+		if (git__prefixcmp(h, field)) {
+			buf = h;
+			continue;
+		}
+
+		h += strlen(field);
+		eol = strchr(h, '\n');
+		if (h[0] != ' ') {
+			buf = h;
+			continue;
+		}
+		if (!eol)
+			goto malformed;
+
+		h++; /* skip the SP */
+
+		git_buf_put(out, h, eol - h);
+		if (git_buf_oom(out))
+			goto oom;
+
+		/* If the next line starts with SP, it's multi-line, we must continue */
+		while (eol[1] == ' ') {
+			git_buf_putc(out, '\n');
+			h = eol + 2;
+			eol = strchr(h, '\n');
+			if (!eol)
+				goto malformed;
+
+			git_buf_put(out, h, eol - h);
+		}
+
+		if (git_buf_oom(out))
+			goto oom;
+
+		return 0;
+	}
+
+	return GIT_ENOTFOUND;
+
+malformed:
+	giterr_set(GITERR_OBJECT, "malformed header");
+	return -1;
+oom:
+	giterr_set_oom();
+	return -1;
+}

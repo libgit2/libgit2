@@ -240,6 +240,17 @@ GIT_EXTERN(int) git_commit_nth_gen_ancestor(
 	unsigned int n);
 
 /**
+ * Get an arbitrary header field
+ *
+ * @param out the buffer to fill
+ * @param commit the commit to look in
+ * @param field the header field to return
+ * @return 0 on succeess, GIT_ENOTFOUND if the field does not exist,
+ * or an error code
+ */
+GIT_EXTERN(int) git_commit_header_field(git_buf *out, const git_commit *commit, const char *field);
+
+/**
  * Create new commit in the repository from a list of `git_object` pointers
  *
  * The message will **not** be cleaned up automatically. You can do that
