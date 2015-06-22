@@ -140,6 +140,9 @@ support for HTTPS connections insead of OpenSSL.
 * `git_filter_list_contains` will indicate whether a particular
   filter will be run in the given filter list.
 
+* `git_commit_header_field()` has been added, which allows retrieving
+  the contents of an arbitrary header field.
+
 ### API removals
 
 * `git_remote_save()` and `git_remote_clear_refspecs()` have been
