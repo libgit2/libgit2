@@ -98,3 +98,46 @@ void test_index_racy__write_index_just_after_file(void)
 	git_diff_free(diff);
 	git_index_free(index);
 }
+
+void test_index_racy__empty_file_after_smudge(void)
+{
+	git_index *index;
+	git_diff *diff;
+	git_buf path = GIT_BUF_INIT;
+	int i, found_race = 0;
+	const git_index_entry *entry;
+
+	/* Make sure we do have a timestamp */
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_write(index));
+
+	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "A"));
+
+	/* Make sure writing the file, adding and rewriting happen in the same second */
+	for (i = 0; i < 10; i++) {
+		struct stat st;
+		cl_git_mkfile(path.ptr, "A");
+
+		cl_git_pass(git_index_add_bypath(index, "A"));
+		cl_git_mkfile(path.ptr, "B");
+		cl_git_pass(git_index_write(index));
+
+		cl_git_mkfile(path.ptr, "");
+
+		cl_git_pass(p_stat(path.ptr, &st));
+		cl_assert(entry = git_index_get_bypath(index, "A", 0));
+		if (entry->mtime.seconds == (int32_t) st.st_mtime) {
+			found_race = 1;
+			break;
+		}
+
+	}
+
+	if (!found_race)
+		cl_fail("failed to find race after 10 attempts");
+
+	cl_assert_equal_i(0, entry->file_size);
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, index, NULL));
+	cl_assert_equal_i(1, git_diff_num_deltas(diff));
+}
