@@ -316,6 +316,13 @@ on_error:
 	return -1;
 }
 
+GIT_INLINE(bool) has_entry(git_indexer *idx, git_oid *id)
+{
+	khiter_t k;
+	k = kh_get(oid, idx->pack->idx_cache, id);
+	return (k != kh_end(idx->pack->idx_cache));
+}
+
 static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_entry *pentry, git_off_t entry_start)
 {
 	int i, error;
@@ -330,8 +337,11 @@ static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_ent
 
 	pentry->offset = entry_start;
 	k = kh_put(oid, idx->pack->idx_cache, &pentry->sha1, &error);
-	if (!error)
+
+	if (error <= 0) {
+		giterr_set(GITERR_INDEXER, "cannot insert object into pack");
 		return -1;
+	}
 
 	kh_value(idx->pack->idx_cache, k) = pentry;
 
@@ -459,13 +469,14 @@ static int write_at(git_indexer *idx, const void *data, git_off_t offset, size_t
 static int append_to_pack(git_indexer *idx, const void *data, size_t size)
 {
 	git_off_t current_size = idx->pack->mwf.size;
+	int fd = idx->pack->mwf.fd;
 
 	if (!size)
 		return 0;
 
-	/* add the extra space we need at the end */
-	if (p_ftruncate(idx->pack->mwf.fd, current_size + size) < 0) {
-		giterr_set(GITERR_OS, "Failed to increase size of pack file '%s'", idx->pack->pack_name);
+	if (p_lseek(fd, current_size + size - 1, SEEK_SET) < 0 ||
+	    p_write(idx->pack->mwf.fd, data, 1) < 0) {
+		giterr_set(GITERR_OS, "cannot extend packfile '%s'", idx->pack->pack_name);
 		return -1;
 	}
 
@@ -781,6 +792,9 @@ static int fix_thin_pack(git_indexer *idx, git_transfer_progress *stats)
 
 	git_oid_fromraw(&base, base_info);
 	git_mwindow_close(&w);
+
+	if (has_entry(idx, &base))
+		return 0;
 
 	if (inject_object(idx, &base) < 0)
 		return -1;

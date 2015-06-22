@@ -196,29 +196,29 @@ void test_checkout_crlf__with_ident(void)
 	if (GIT_EOL_NATIVE == GIT_EOL_LF) {
 		cl_assert_equal_file(
 			ALL_LF_TEXT_RAW
-			"\n$Id: fcf6d4d9c212dc66563b1171b1cd99953c756467$\n",
+			"\n$Id: fcf6d4d9c212dc66563b1171b1cd99953c756467 $\n",
 			0, "crlf/lf.ident");
 		cl_assert_equal_file(
 			ALL_CRLF_TEXT_AS_LF
-			"\n$Id: f2c66ad9b2b5a734d9bf00d5000cc10a62b8a857$\n\n",
+			"\n$Id: f2c66ad9b2b5a734d9bf00d5000cc10a62b8a857 $\n\n",
 			0, "crlf/crlf.ident");
 	} else {
 		cl_assert_equal_file(
 			ALL_LF_TEXT_AS_CRLF
-			"\r\n$Id: fcf6d4d9c212dc66563b1171b1cd99953c756467$\r\n",
+			"\r\n$Id: fcf6d4d9c212dc66563b1171b1cd99953c756467 $\r\n",
 			0, "crlf/lf.ident");
 		cl_assert_equal_file(
 			ALL_CRLF_TEXT_RAW
-			"\r\n$Id: f2c66ad9b2b5a734d9bf00d5000cc10a62b8a857$\r\n\r\n",
+			"\r\n$Id: f2c66ad9b2b5a734d9bf00d5000cc10a62b8a857 $\r\n\r\n",
 			0, "crlf/crlf.ident");
 	}
 
 	cl_assert_equal_file(
-		"$Id: f7830382dac1f1583422be5530fdfbd26289431b$\n"
+		"$Id: f7830382dac1f1583422be5530fdfbd26289431b $\n"
 		MORE_LF_TEXT_AS_LF, 0, "crlf/more1.identlf");
 
 	cl_assert_equal_file(
-		"\r\n$Id: 74677a68413012ce8d7e7cfc3f12603df3a3eac4$\r\n"
+		"\r\n$Id: 74677a68413012ce8d7e7cfc3f12603df3a3eac4 $\r\n"
 		MORE_CRLF_TEXT_AS_CRLF, 0, "crlf/more2.identcrlf");
 
 	git_index_free(index);

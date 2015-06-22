@@ -243,6 +243,9 @@ int openssl_connect(git_stream *stream)
 		return ssl_set_error(st->ssl, ret);
 	}
 
+	/* specify the host in case SNI is needed */
+	SSL_set_tlsext_host_name(st->ssl, st->socket->host);
+
 	if ((ret = SSL_connect(st->ssl)) <= 0)
 		return ssl_set_error(st->ssl, ret);
 
