@@ -15,7 +15,7 @@
 #include "fileops.h"
 #include "config.h"
 
-static git_diff_delta *diff_delta__dup(
+git_diff_delta *git_diff__delta_dup(
 	const git_diff_delta *d, git_pool *pool)
 {
 	git_diff_delta *delta = git__malloc(sizeof(git_diff_delta));
@@ -46,7 +46,7 @@ fail:
 	return NULL;
 }
 
-static git_diff_delta *diff_delta__merge_like_cgit(
+git_diff_delta *git_diff__merge_like_cgit(
 	const git_diff_delta *a,
 	const git_diff_delta *b,
 	git_pool *pool)
@@ -67,16 +67,16 @@ static git_diff_delta *diff_delta__merge_like_cgit(
 
 	/* If one of the diffs is a conflict, just dup it */
 	if (b->status == GIT_DELTA_CONFLICTED)
-		return diff_delta__dup(b, pool);
+		return git_diff__delta_dup(b, pool);
 	if (a->status == GIT_DELTA_CONFLICTED)
-		return diff_delta__dup(a, pool);
+		return git_diff__delta_dup(a, pool);
 
 	/* if f2 == f3 or f2 is deleted, then just dup the 'a' diff */
 	if (b->status == GIT_DELTA_UNMODIFIED || a->status == GIT_DELTA_DELETED)
-		return diff_delta__dup(a, pool);
+		return git_diff__delta_dup(a, pool);
 
 	/* otherwise, base this diff on the 'b' diff */
-	if ((dup = diff_delta__dup(b, pool)) == NULL)
+	if ((dup = git_diff__delta_dup(b, pool)) == NULL)
 		return NULL;
 
 	/* If 'a' status is uninteresting, then we're done */
@@ -109,7 +109,7 @@ static git_diff_delta *diff_delta__merge_like_cgit(
 	return dup;
 }
 
-int git_diff__merge_deltas(
+int git_diff__merge(
 	git_diff *onto, const git_diff *from, git_diff__merge_cb cb)
 {
 	int error = 0;
@@ -146,10 +146,10 @@ int git_diff__merge_deltas(
 			STRCMP_CASESELECT(ignore_case, o->old_file.path, f->old_file.path);
 
 		if (cmp < 0) {
-			delta = diff_delta__dup(o, &onto_pool);
+			delta = git_diff__delta_dup(o, &onto_pool);
 			i++;
 		} else if (cmp > 0) {
-			delta = diff_delta__dup(f, &onto_pool);
+			delta = git_diff__delta_dup(f, &onto_pool);
 			j++;
 		} else {
 			const git_diff_delta *left = reversed ? f : o;
@@ -196,7 +196,7 @@ int git_diff__merge_deltas(
 
 int git_diff_merge(git_diff *onto, const git_diff *from)
 {
-	return git_diff__merge_deltas(onto, from, diff_delta__merge_like_cgit);
+	return git_diff__merge(onto, from, git_diff__merge_like_cgit);
 }
 
 int git_diff_find_similar__hashsig_for_file(
@@ -347,7 +347,7 @@ static int insert_delete_side_of_split(
 	git_diff *diff, git_vector *onto, const git_diff_delta *delta)
 {
 	/* make new record for DELETED side of split */
-	git_diff_delta *deleted = diff_delta__dup(delta, &diff->pool);
+	git_diff_delta *deleted = git_diff__delta_dup(delta, &diff->pool);
 	GITERR_CHECK_ALLOC(deleted);
 
 	deleted->status = GIT_DELTA_DELETED;

@@ -133,6 +133,15 @@ typedef git_diff_delta *(*git_diff__merge_cb)(
 extern int git_diff__merge(
 	git_diff *onto, const git_diff *from, git_diff__merge_cb cb);
 
+extern git_diff_delta *git_diff__merge_like_cgit(
+	const git_diff_delta *a,
+	const git_diff_delta *b,
+	git_pool *pool);
+
+/* Duplicate a `git_diff_delta` out of the `git_pool` */
+extern git_diff_delta *git_diff__delta_dup(
+	const git_diff_delta *d, git_pool *pool);
+
 /*
  * Sometimes a git_diff_file will have a zero size; this attempts to
  * fill in the size without loading the blob if possible.  If that is
