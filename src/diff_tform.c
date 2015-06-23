@@ -65,6 +65,12 @@ static git_diff_delta *diff_delta__merge_like_cgit(
 	 *  f3 = b->new_file
 	 */
 
+	/* If one of the diffs is a conflict, just dup it */
+	if (b->status == GIT_DELTA_CONFLICTED)
+		return diff_delta__dup(b, pool);
+	if (a->status == GIT_DELTA_CONFLICTED)
+		return diff_delta__dup(a, pool);
+
 	/* if f2 == f3 or f2 is deleted, then just dup the 'a' diff */
 	if (b->status == GIT_DELTA_UNMODIFIED || a->status == GIT_DELTA_DELETED)
 		return diff_delta__dup(a, pool);
@@ -110,6 +116,11 @@ static git_diff_delta *diff_delta__merge_like_cgit_reversed(
 	git_diff_delta *dup;
 
 	/* reversed version of above logic */
+
+	if (a->status == GIT_DELTA_CONFLICTED)
+		return diff_delta__dup(a, pool);
+	if (b->status == GIT_DELTA_CONFLICTED)
+		return diff_delta__dup(b, pool);
 
 	if (a->status == GIT_DELTA_UNMODIFIED)
 		return diff_delta__dup(b, pool);
