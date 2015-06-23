@@ -87,7 +87,7 @@ ENDIF()
 
 CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtim.tv_nsec sys/stat.h
 	HAVE_STRUCT_STAT_NSEC LANGUAGE C)
-IF(HAVE_STRUCT_STAT_NSEC)
+IF(HAVE_STRUCT_STAT_NSEC OR WIN32)
 	OPTION( USE_NSEC		"Care about sub-second file mtimes and ctimes"	OFF )
 ENDIF()
 

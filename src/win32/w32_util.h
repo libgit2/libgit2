@@ -76,17 +76,23 @@ size_t git_win32__path_trim_end(wchar_t *str, size_t len);
 size_t git_win32__canonicalize_path(wchar_t *str, size_t len);
 
 /**
- * Converts a FILETIME structure to a time_t.
+ * Converts a FILETIME structure to a struct timespec.
  *
  * @param FILETIME A pointer to a FILETIME
- * @return A time_t containing the same time
+ * @param ts A pointer to the timespec structure to fill in
  */
-GIT_INLINE(time_t) git_win32__filetime_to_time_t(const FILETIME *ft)
+GIT_INLINE(void) git_win32__filetime_to_timespec(
+	const FILETIME *ft,
+	struct timespec *ts)
 {
 	long long winTime = ((long long)ft->dwHighDateTime << 32) + ft->dwLowDateTime;
 	winTime -= 116444736000000000LL; /* Windows to Unix Epoch conversion */
-	winTime /= 10000000;             /* Nano to seconds resolution */
-	return (time_t)winTime;
+	ts->tv_sec = (time_t)(winTime / 10000000);
+#ifdef GIT_USE_NSEC
+	ts->tv_nsec = (winTime % 10000000) * 100;
+#else
+	ts->tv_nsec = 0;
+#endif
 }
 
 GIT_INLINE(void) git_win32__timeval_to_filetime(
@@ -122,9 +128,9 @@ GIT_INLINE(int) git_win32__file_attribute_to_stat(
 	st->st_size = ((git_off_t)attrdata->nFileSizeHigh << 32) + attrdata->nFileSizeLow;
 	st->st_dev = _getdrive() - 1;
 	st->st_rdev = st->st_dev;
-	st->st_atime = git_win32__filetime_to_time_t(&(attrdata->ftLastAccessTime));
-	st->st_mtime = git_win32__filetime_to_time_t(&(attrdata->ftLastWriteTime));
-	st->st_ctime = git_win32__filetime_to_time_t(&(attrdata->ftCreationTime));
+	git_win32__filetime_to_timespec(&(attrdata->ftLastAccessTime), &(st->st_atim));
+	git_win32__filetime_to_timespec(&(attrdata->ftLastWriteTime), &(st->st_mtim));
+	git_win32__filetime_to_timespec(&(attrdata->ftCreationTime), &(st->st_ctim));
 
 	if (attrdata->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT && path) {
 		git_win32_path target;
