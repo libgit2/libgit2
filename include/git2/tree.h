@@ -373,7 +373,7 @@ GIT_EXTERN(void) git_treebuilder_filter(
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_treebuilder_write(
-	git_oid *id, git_treebuilder *bld);
+	git_oid *id, const git_treebuilder *bld);
 
 
 /** Callback for the tree traversal method */
