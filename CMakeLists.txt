@@ -23,9 +23,6 @@ INCLUDE(CheckStructHasMember)
 INCLUDE(AddCFlagIfSupported)
 INCLUDE(FindPkgConfig)
 
-CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtim.tv_nsec sys/stat.h
-	HAVE_STRUCT_STAT_NSEC LANGUAGE C)
-
 # Build options
 #
 OPTION( SONAME				"Set the (SO)VERSION of the target"		ON  )
@@ -41,9 +38,6 @@ OPTION( LIBGIT2_FILENAME	"Name of the produced binary"			OFF )
 OPTION( USE_ICONV			"Link with and use iconv library" 		OFF )
 OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
 OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"   OFF )
-IF(HAVE_STRUCT_STAT_NSEC)
-	OPTION( USE_NSEC		"Care about sub-second file mtimes and ctimes"	OFF )
-ENDIF()
 OPTION( VALGRIND			"Configure build for valgrind"			OFF )
 OPTION( CURL			"User curl for HTTP if available" ON)
 
@@ -89,6 +83,12 @@ ENDIF()
 
 IF (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	OPTION( USE_OPENSSL                     "Link with and use openssl library"             ON )
+ENDIF()
+
+CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtim.tv_nsec sys/stat.h
+	HAVE_STRUCT_STAT_NSEC LANGUAGE C)
+IF(HAVE_STRUCT_STAT_NSEC)
+	OPTION( USE_NSEC		"Care about sub-second file mtimes and ctimes"	OFF )
 ENDIF()
 
 # This variable will contain the libraries we need to put into
