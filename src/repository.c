@@ -32,6 +32,8 @@
 # include "win32/w32_util.h"
 #endif
 
+static int check_repositoryformatversion(git_config *config);
+
 #define GIT_FILE_CONTENT_PREFIX "gitdir:"
 
 #define GIT_BRANCH_MASTER "master"
@@ -489,6 +491,7 @@ int git_repository_open_ext(
 	git_buf path = GIT_BUF_INIT, parent = GIT_BUF_INIT,
 		link_path = GIT_BUF_INIT;
 	git_repository *repo;
+	git_config *config = NULL;
 
 	if (repo_ptr)
 		*repo_ptr = NULL;
@@ -510,22 +513,36 @@ int git_repository_open_ext(
 		GITERR_CHECK_ALLOC(repo->path_gitlink);
 	}
 
+	/*
+	 * We'd like to have the config, but git doesn't particularly
+	 * care if it's not there, so we need to deal with that.
+	 */
+
+	error = git_repository_config_snapshot(&config, repo);
+	if (error < 0 && error != GIT_ENOTFOUND)
+		goto cleanup;
+
+	if (config && (error = check_repositoryformatversion(config)) < 0)
+		goto cleanup;
+
 	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0)
 		repo->is_bare = 1;
 	else {
-		git_config *config = NULL;
 
-		if ((error = git_repository_config_snapshot(&config, repo)) < 0 ||
-			(error = load_config_data(repo, config)) < 0 ||
-			(error = load_workdir(repo, config, &parent)) < 0)
-			git_repository_free(repo);
-
-		git_config_free(config);
+		if (config &&
+		    ((error = load_config_data(repo, config)) < 0 ||
+		     (error = load_workdir(repo, config, &parent))) < 0)
+			goto cleanup;
 	}
 
-	if (!error)
-		*repo_ptr = repo;
+cleanup:
 	git_buf_free(&parent);
+	git_config_free(config);
+
+	if (error < 0)
+		git_repository_free(repo);
+	else
+		*repo_ptr = repo;
 
 	return error;
 }

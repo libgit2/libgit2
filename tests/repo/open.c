@@ -20,6 +20,23 @@ void test_repo_open__bare_empty_repo(void)
 	cl_assert(git_repository_workdir(repo) == NULL);
 }
 
+void test_repo_open__format_version_1(void)
+{
+	git_buf path = GIT_BUF_INIT;
+	git_repository *repo;
+	git_config *config;
+
+	repo = cl_git_sandbox_init("empty_bare.git");
+
+	cl_git_pass(git_repository_open(&repo, "empty_bare.git"));
+	cl_git_pass(git_repository_config__weakptr(&config, repo));
+
+	cl_git_pass(git_config_set_int32(config, "core.repositoryformatversion", 1));
+
+	git_repository_free(repo);
+	cl_git_fail(git_repository_open(&repo, "empty_bare.git"));
+}
+
 void test_repo_open__standard_empty_repo_through_gitdir(void)
 {
 	git_repository *repo;
