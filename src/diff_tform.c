@@ -109,7 +109,8 @@ static git_diff_delta *diff_delta__merge_like_cgit(
 	return dup;
 }
 
-int git_diff_merge(git_diff *onto, const git_diff *from)
+int git_diff__merge_deltas(
+	git_diff *onto, const git_diff *from, git_diff__merge_cb cb)
 {
 	int error = 0;
 	git_pool onto_pool;
@@ -154,7 +155,7 @@ int git_diff_merge(git_diff *onto, const git_diff *from)
 			const git_diff_delta *left = reversed ? f : o;
 			const git_diff_delta *right = reversed ? o : f;
 
-			delta = diff_delta__merge_like_cgit(left, right, &onto_pool);
+			delta = cb(left, right, &onto_pool);
 			i++;
 			j++;
 		}
@@ -162,7 +163,7 @@ int git_diff_merge(git_diff *onto, const git_diff *from)
 		/* the ignore rules for the target may not match the source
 		 * or the result of a merged delta could be skippable...
 		 */
-		if (git_diff_delta__should_skip(&onto->opts, delta)) {
+		if (delta && git_diff_delta__should_skip(&onto->opts, delta)) {
 			git__free(delta);
 			continue;
 		}
@@ -191,6 +192,11 @@ int git_diff_merge(git_diff *onto, const git_diff *from)
 	git_pool_clear(&onto_pool);
 
 	return error;
+}
+
+int git_diff_merge(git_diff *onto, const git_diff *from)
+{
+	return git_diff__merge_deltas(onto, from, diff_delta__merge_like_cgit);
 }
 
 int git_diff_find_similar__hashsig_for_file(
