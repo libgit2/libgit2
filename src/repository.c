@@ -931,9 +931,14 @@ bool git_repository__reserved_names(
 
 static int check_repositoryformatversion(git_config *config)
 {
-	int version;
+	int version, error;
 
-	if (git_config_get_int32(&version, config, "core.repositoryformatversion") < 0)
+	error = git_config_get_int32(&version, config, "core.repositoryformatversion");
+	/* git ignores this if the config variable isn't there */
+	if (error == GIT_ENOTFOUND)
+		return 0;
+
+	if (error < 0)
 		return -1;
 
 	if (GIT_REPO_VERSION < version) {
