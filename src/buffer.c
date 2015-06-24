@@ -41,8 +41,10 @@ int git_buf_try_grow(
 	if (buf->ptr == git_buf__oom)
 		return -1;
 
-	if (buf->asize == 0 && buf->size != 0)
-		return GIT_EINVALIDSPEC;
+	if (buf->asize == 0 && buf->size != 0) {
+		giterr_set(GITERR_INVALID, "cannot grow a borrowed buffer");
+		return GIT_EINVALID;
+	}
 
 	if (!target_size)
 		target_size = buf->size;

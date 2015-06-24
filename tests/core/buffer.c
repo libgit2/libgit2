@@ -1164,5 +1164,5 @@ void test_core_buffer__dont_grow_borrowed(void)
 	cl_assert_equal_i(0, buf.asize);
 	cl_assert_equal_i(strlen(somestring) + 1, buf.size);
 
-	cl_git_fail_with(GIT_EINVALIDSPEC, git_buf_grow(&buf, 1024));
+	cl_git_fail_with(GIT_EINVALID, git_buf_grow(&buf, 1024));
 }
