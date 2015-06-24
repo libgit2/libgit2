@@ -14,6 +14,7 @@
 #include "git2/transport.h"
 
 #include "socket_stream.h"
+#include "curl_stream.h"
 
 int stransport_error(OSStatus ret)
 {
@@ -113,6 +114,13 @@ int stransport_certificate(git_cert **out, git_stream *stream)
 
 	*out = (git_cert *)&st->cert_info;
 	return 0;
+}
+
+int stransport_set_proxy(git_stream *stream, const char *proxy)
+{
+	stransport_stream *st = (stransport_stream *) stream;
+
+	return git_stream_set_proxy(st->io, proxy);
 }
 
 /*
@@ -233,7 +241,13 @@ int git_stransport_stream_new(git_stream **out, const char *host, const char *po
 	st = git__calloc(1, sizeof(stransport_stream));
 	GITERR_CHECK_ALLOC(st);
 
-	if ((error = git_socket_stream_new(&st->io, host, port)) < 0){
+#ifdef GIT_CURL
+	error = git_curl_stream_new(&st->io, host, port);
+#else
+	error = git_socket_stream_new(&st->io, host, port)
+#endif
+
+	if (error < 0){
 		git__free(st);
 		return error;
 	}
@@ -256,8 +270,10 @@ int git_stransport_stream_new(git_stream **out, const char *host, const char *po
 
 	st->parent.version = GIT_STREAM_VERSION;
 	st->parent.encrypted = 1;
+	st->parent.proxy_support = git_stream_supports_proxy(st->io);
 	st->parent.connect = stransport_connect;
 	st->parent.certificate = stransport_certificate;
+	st->parent.set_proxy = stransport_set_proxy;
 	st->parent.read = stransport_read;
 	st->parent.write = stransport_write;
 	st->parent.close = stransport_close;
