@@ -990,7 +990,7 @@ static int check_repositoryformatversion(int *version, git_config *config)
 		giterr_set(GITERR_REPOSITORY,
 			"Unsupported repository version %d. Only versions up to %d are supported.",
 			*version, GIT_REPO_VERSION_MAX_ALLOWED);
-		return -1;
+		return GIT_EUNSUPPORTED;
 	}
 
 	return 0;
@@ -1005,7 +1005,7 @@ static int extension_each_cb(const git_config_entry *entry, void *payload)
 		return 0;
 
 	giterr_set(GITERR_REPOSITORY, "Unknown Git repository extension: %s", name);
-	return -1;
+	return GIT_EUNSUPPORTED;
 }
 
 static int check_extensions(git_repository *repo, git_config *config)
