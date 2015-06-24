@@ -1,5 +1,7 @@
 #include "clar_libgit2.h"
 
+#include "git2/sys/diff.h"
+
 #include "buffer.h"
 #include "filebuf.h"
 
@@ -46,6 +48,11 @@ void test_patch(
 
 	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
 	cl_git_pass(git_patch_to_buf(&actual, patch));
+
+	cl_assert_equal_s(expected, actual.ptr);
+
+	git_buf_clear(&actual);
+	cl_git_pass(git_diff_print(diff, GIT_DIFF_FORMAT_PATCH, git_diff_print_callback__to_buf, &actual));
 
 	cl_assert_equal_s(expected, actual.ptr);
 
