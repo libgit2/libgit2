@@ -183,7 +183,7 @@ static void do_conflicted_diff(diff_expects *exp, unsigned long flags)
 	cl_git_pass(git_repository_index(&index, g_repo));
 
 	ancestor.path = ours.path = theirs.path = "staged_changes";
-	ancestor.mode = ours.mode = theirs.mode = 0100644;
+	ancestor.mode = ours.mode = theirs.mode = GIT_FILEMODE_BLOB;
 
 	git_oid_fromstr(&ancestor.id, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef");
 	git_oid_fromstr(&ours.id, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef");
@@ -238,4 +238,33 @@ void test_diff_index__reports_conflicts_when_reversed(void)
 	cl_assert_equal_i(2, exp.line_ctxt);
 	cl_assert_equal_i(2, exp.line_adds);
 	cl_assert_equal_i(5, exp.line_dels);
+}
+
+void test_diff_index__not_in_head_conflicted(void)
+{
+	const char *a_commit = "26a125ee1bf"; /* the current HEAD */
+	git_index_entry theirs = {{0}};
+	git_index *index;
+	git_diff *diff;
+	const git_diff_delta *delta;
+
+	git_tree *a = resolve_commit_oid_to_tree(g_repo, a_commit);
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_read_tree(index, a));
+
+	theirs.path = "file_not_in_head";
+	theirs.mode = GIT_FILEMODE_BLOB;
+	git_oid_fromstr(&theirs.id, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef");
+	cl_git_pass(git_index_conflict_add(index, NULL, NULL, &theirs));
+
+	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, a, index, NULL));
+
+	cl_assert_equal_i(git_diff_num_deltas(diff), 1);
+	delta = git_diff_get_delta(diff, 0);
+	cl_assert_equal_i(delta->status, GIT_DELTA_CONFLICTED);
+
+	git_diff_free(diff);
+	git_index_free(index);
+	git_tree_free(a);
 }
