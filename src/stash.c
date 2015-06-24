@@ -22,6 +22,7 @@
 #include "signature.h"
 #include "iterator.h"
 #include "merge.h"
+#include "diff.h"
 
 static int create_error(int error, const char *msg)
 {
@@ -292,6 +293,25 @@ cleanup:
 	return error;
 }
 
+static git_diff_delta *stash_delta_merge(
+	const git_diff_delta *a,
+	const git_diff_delta *b,
+	git_pool *pool)
+{
+	/* Special case for stash: if a file is deleted in the index, but exists
+	 * in the working tree, we need to stash the workdir copy for the workdir.
+	 */
+	if (a->status == GIT_DELTA_DELETED && b->status == GIT_DELTA_UNTRACKED) {
+		git_diff_delta *dup = git_diff__delta_dup(b, pool);
+
+		if (dup)
+			dup->status = GIT_DELTA_MODIFIED;
+		return dup;
+	}
+
+	return git_diff__merge_like_cgit(a, b, pool);
+}
+
 static int build_workdir_tree(
 	git_tree **tree_out,
 	git_index *index,
@@ -299,17 +319,19 @@ static int build_workdir_tree(
 {
 	git_repository *repo = git_index_owner(index);
 	git_tree *b_tree = NULL;
-	git_diff *diff = NULL;
+	git_diff *diff = NULL, *idx_to_wd = NULL;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	struct stash_update_rules data = {0};
 	int error;
 
-	opts.flags = GIT_DIFF_IGNORE_SUBMODULES;
+	opts.flags = GIT_DIFF_IGNORE_SUBMODULES | GIT_DIFF_INCLUDE_UNTRACKED;
 
 	if ((error = git_commit_tree(&b_tree, b_commit)) < 0)
 		goto cleanup;
 
-	if ((error = git_diff_tree_to_workdir(&diff, repo, b_tree, &opts)) < 0)
+	if ((error = git_diff_tree_to_index(&diff, repo, b_tree, index, &opts)) < 0 ||
+		(error = git_diff_index_to_workdir(&idx_to_wd, repo, index, &opts)) < 0 ||
+		(error = git_diff__merge(diff, idx_to_wd, stash_delta_merge)) < 0)
 		goto cleanup;
 
 	data.include_changed = true;
@@ -320,6 +342,7 @@ static int build_workdir_tree(
 	error = build_tree_from_index(tree_out, index);
 
 cleanup:
+	git_diff_free(idx_to_wd);
 	git_diff_free(diff);
 	git_tree_free(b_tree);
 
