@@ -11,6 +11,7 @@
 #include "git2/index.h"
 #include "vector.h"
 #include "buffer.h"
+#include "ignore.h"
 
 typedef struct git_iterator git_iterator;
 
@@ -285,5 +286,12 @@ typedef enum {
  */
 extern int git_iterator_advance_over_with_status(
 	const git_index_entry **entry, git_iterator_status_t *status, git_iterator *iter);
+
+/**
+ * Retrieve the index stored in the iterator.
+ *
+ * Only implemented for the workdir iterator
+ */
+extern int git_iterator_index(git_index **out, git_iterator *iter);
 
 #endif
