@@ -531,7 +531,7 @@ int git_repository_open_ext(
 
 		if (config &&
 		    ((error = load_config_data(repo, config)) < 0 ||
-		     (error = load_workdir(repo, config, &parent))) < 0)
+		     (error = load_workdir(repo, config, &parent)) < 0))
 			goto cleanup;
 	}
 
