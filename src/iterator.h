@@ -294,4 +294,19 @@ extern int git_iterator_advance_over_with_status(
  */
 extern int git_iterator_index(git_index **out, git_iterator *iter);
 
+typedef int (*git_iterator_walk_cb)(
+	const git_index_entry **entries,
+	void *data);
+
+/**
+ * Walk the given iterators in lock-step.  The given callback will be
+ * called for each unique path, with the index entry in each iterator
+ * (or NULL if the given iterator does not contain that path).
+ */
+extern int git_iterator_walk(
+	git_iterator **iterators,
+	size_t cnt,
+	git_iterator_walk_cb cb,
+	void *data);
+
 #endif
