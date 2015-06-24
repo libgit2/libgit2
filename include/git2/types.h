@@ -284,6 +284,11 @@ typedef int (*git_transport_message_cb)(const char *str, int len, void *payload)
  * Type of host certificate structure that is passed to the check callback
  */
 typedef enum git_cert_t {
+	/**
+	 * No information about the certificate is available. This may
+	 * happen when using curl.
+	 */
+	GIT_CERT_NONE,
         /**
          * The `data` argument to the callback will be a pointer to
          * the DER-encoded data.
@@ -294,6 +299,13 @@ typedef enum git_cert_t {
          * `git_cert_hostkey` structure.
          */
 	GIT_CERT_HOSTKEY_LIBSSH2,
+	/**
+	 * The `data` argument to the callback will be a pointer to a
+	 * `git_strarray` with `name:content` strings containing
+	 * information about the certificate. This is used when using
+	 * curl.
+	 */
+	GIT_CERT_STRARRAY,
 } git_cert_t;
 
 /**

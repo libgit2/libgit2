@@ -16,6 +16,10 @@
 #include "netops.h"
 #include "git2/transport.h"
 
+#ifdef GIT_CURL
+# include "curl_stream.h"
+#endif
+
 #ifndef GIT_WIN32
 # include <sys/types.h>
 # include <sys/socket.h>
@@ -25,6 +29,79 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
+#include <openssl/bio.h>
+
+static int bio_create(BIO *b)
+{
+	b->init = 1;
+	b->num = 0;
+	b->ptr = NULL;
+	b->flags = 0;
+
+	return 1;
+}
+
+static int bio_destroy(BIO *b)
+{
+	if (!b)
+		return 0;
+
+	b->init = 0;
+	b->num = 0;
+	b->ptr = NULL;
+	b->flags = 0;
+
+	return 1;
+}
+
+static int bio_read(BIO *b, char *buf, int len)
+{
+	git_stream *io = (git_stream *) b->ptr;
+	return (int) git_stream_read(io, buf, len);
+}
+
+static int bio_write(BIO *b, const char *buf, int len)
+{
+	git_stream *io = (git_stream *) b->ptr;
+	return (int) git_stream_write(io, buf, len, 0);
+}
+
+static long bio_ctrl(BIO *b, int cmd, long num, void *ptr)
+{
+	GIT_UNUSED(b);
+	GIT_UNUSED(num);
+	GIT_UNUSED(ptr);
+
+	if (cmd == BIO_CTRL_FLUSH)
+		return 1;
+
+	return 0;
+}
+
+static int bio_gets(BIO *b, char *buf, int len)
+{
+	GIT_UNUSED(b);
+	GIT_UNUSED(buf);
+	GIT_UNUSED(len);
+	return -1;
+}
+
+static int bio_puts(BIO *b, const char *str)
+{
+	return bio_write(b, str, strlen(str));
+}
+
+static BIO_METHOD git_stream_bio_method = {
+	BIO_TYPE_SOURCE_SINK,
+	"git_stream",
+	bio_write,
+	bio_read,
+	bio_puts,
+	bio_gets,
+	bio_ctrl,
+	bio_create,
+	bio_destroy
+};
 
 static int ssl_set_error(SSL *ssl, int error)
 {
@@ -224,7 +301,8 @@ cert_fail_name:
 
 typedef struct {
 	git_stream parent;
-	git_socket_stream *socket;
+	git_stream *io;
+	char *host;
 	SSL *ssl;
 	git_cert_x509 cert_info;
 } openssl_stream;
@@ -234,23 +312,24 @@ int openssl_close(git_stream *stream);
 int openssl_connect(git_stream *stream)
 {
 	int ret;
+	BIO *bio;
 	openssl_stream *st = (openssl_stream *) stream;
 
-	if ((ret = git_stream_connect((git_stream *)st->socket)) < 0)
+	if ((ret = git_stream_connect(st->io)) < 0)
 		return ret;
 
-	if ((ret = SSL_set_fd(st->ssl, st->socket->s)) <= 0) {
-		openssl_close((git_stream *) st);
-		return ssl_set_error(st->ssl, ret);
-	}
+	bio = BIO_new(&git_stream_bio_method);
+	GITERR_CHECK_ALLOC(bio);
+	bio->ptr = st->io;
 
+	SSL_set_bio(st->ssl, bio, bio);
 	/* specify the host in case SNI is needed */
-	SSL_set_tlsext_host_name(st->ssl, st->socket->host);
+	SSL_set_tlsext_host_name(st->ssl, st->host);
 
 	if ((ret = SSL_connect(st->ssl)) <= 0)
 		return ssl_set_error(st->ssl, ret);
 
-	return verify_server_cert(st->ssl, st->socket->host);
+	return verify_server_cert(st->ssl, st->host);
 }
 
 int openssl_certificate(git_cert **out, git_stream *stream)
@@ -287,6 +366,13 @@ int openssl_certificate(git_cert **out, git_stream *stream)
 	return 0;
 }
 
+static int openssl_set_proxy(git_stream *stream, const char *proxy_url)
+{
+	openssl_stream *st = (openssl_stream *) stream;
+
+	return git_stream_set_proxy(st->io, proxy_url);
+}
+
 ssize_t openssl_write(git_stream *stream, const char *data, size_t len, int flags)
 {
 	openssl_stream *st = (openssl_stream *) stream;
@@ -320,7 +406,7 @@ int openssl_close(git_stream *stream)
 	if ((ret = ssl_teardown(st->ssl)) < 0)
 		return -1;
 
-	return git_stream_close((git_stream *)st->socket);
+	return git_stream_close(st->io);
 }
 
 void openssl_free(git_stream *stream)
@@ -328,19 +414,26 @@ void openssl_free(git_stream *stream)
 	openssl_stream *st = (openssl_stream *) stream;
 
 	git__free(st->cert_info.data);
-	git_stream_free((git_stream *) st->socket);
+	git_stream_free(st->io);
 	git__free(st);
 }
 
 int git_openssl_stream_new(git_stream **out, const char *host, const char *port)
 {
+	int error;
 	openssl_stream *st;
 
 	st = git__calloc(1, sizeof(openssl_stream));
 	GITERR_CHECK_ALLOC(st);
 
-	if (git_socket_stream_new((git_stream **) &st->socket, host, port))
-		return -1;
+#ifdef GIT_CURL
+	error = git_curl_stream_new(&st->io, host, port);
+#else
+	error = git_socket_stream_new(&st->io, host, port)
+#endif
+
+	if (error < 0)
+		return error;
 
 	st->ssl = SSL_new(git__ssl_ctx);
 	if (st->ssl == NULL) {
@@ -348,10 +441,15 @@ int git_openssl_stream_new(git_stream **out, const char *host, const char *port)
 		return -1;
 	}
 
+	st->host = git__strdup(host);
+	GITERR_CHECK_ALLOC(st->host);
+
 	st->parent.version = GIT_STREAM_VERSION;
 	st->parent.encrypted = 1;
+	st->parent.proxy_support = git_stream_supports_proxy(st->io);
 	st->parent.connect = openssl_connect;
 	st->parent.certificate = openssl_certificate;
+	st->parent.set_proxy = openssl_set_proxy;
 	st->parent.read = openssl_read;
 	st->parent.write = openssl_write;
 	st->parent.close = openssl_close;

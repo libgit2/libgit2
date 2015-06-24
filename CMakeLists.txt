@@ -38,6 +38,7 @@ OPTION( USE_ICONV			"Link with and use iconv library" 		OFF )
 OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
 OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"   OFF )
 OPTION( VALGRIND			"Configure build for valgrind"			OFF )
+OPTION( CURL			"User curl for HTTP if available" ON)
 
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	SET( USE_ICONV ON )
@@ -199,9 +200,19 @@ IF (WIN32 AND WINHTTP)
 
 	LINK_LIBRARIES(winhttp rpcrt4 crypt32)
 ELSE ()
+	IF (CURL)
+		FIND_PACKAGE(CURL)
+	ENDIF ()
+
 	IF (NOT AMIGA AND USE_OPENSSL)
 		FIND_PACKAGE(OpenSSL)
 	ENDIF ()
+
+	IF (CURL_FOUND)
+		ADD_DEFINITIONS(-DGIT_CURL)
+		INCLUDE_DIRECTORIES(${CURL_INCLUDE_DIRS})
+		LINK_LIBRARIES(${CURL_LIBRARIES})
+	ENDIF()
 
 	FIND_PACKAGE(HTTP_Parser)
 	IF (HTTP_PARSER_FOUND AND HTTP_PARSER_VERSION_MAJOR EQUAL 2)
