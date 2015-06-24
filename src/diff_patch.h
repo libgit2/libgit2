@@ -24,7 +24,9 @@ enum {
 	GIT_DIFF_PATCH_ALLOCATED = (1 << 0),
 	GIT_DIFF_PATCH_INITIALIZED = (1 << 1),
 	GIT_DIFF_PATCH_LOADED = (1 << 2),
+	/* the two sides are different */
 	GIT_DIFF_PATCH_DIFFABLE = (1 << 3),
+	/* the difference between the two sides has been computed */
 	GIT_DIFF_PATCH_DIFFED = (1 << 4),
 	GIT_DIFF_PATCH_FLATTENED = (1 << 5),
 };
