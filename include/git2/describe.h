@@ -94,7 +94,7 @@ typedef struct {
 	 * If the workdir is dirty and this is set, this string will
 	 * be appended to the description string.
 	 */
-	char *dirty_suffix;
+	const char *dirty_suffix;
 } git_describe_format_options;
 
 #define GIT_DESCRIBE_FORMAT_OPTIONS_VERSION 1
