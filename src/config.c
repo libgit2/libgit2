@@ -1194,6 +1194,26 @@ fail_parse:
 	return -1;
 }
 
+int git_config_lookup_map_enum(git_cvar_t *type_out, const char **str_out,
+			       const git_cvar_map *maps, size_t map_n, int enum_val)
+{
+	size_t i;
+
+	for (i = 0; i < map_n; i++) {
+		const git_cvar_map *m = &maps[i];
+
+		if (m->map_value != enum_val)
+			continue;
+
+		*type_out = m->cvar_type;
+		*str_out = m->str_match;
+		return 0;
+	}
+
+	giterr_set(GITERR_CONFIG, "invalid enum value");
+	return GIT_ENOTFOUND;
+}
+
 int git_config_parse_bool(int *out, const char *value)
 {
 	if (git__parse_bool(out, value) == 0)

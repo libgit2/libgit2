@@ -180,7 +180,7 @@ static bool checkout_is_workdir_modified(
 			return true;
 		}
 
-		if (git_submodule_status(&sm_status, sm) < 0 ||
+		if (git_submodule_status(&sm_status, data->repo, wditem->path, GIT_SUBMODULE_IGNORE_FALLBACK) < 0 ||
 			GIT_SUBMODULE_STATUS_IS_WD_DIRTY(sm_status))
 			rval = true;
 		else if ((sm_oid = git_submodule_wd_id(sm)) == NULL)
@@ -1860,11 +1860,6 @@ static int checkout_create_submodules(
 	git_diff_delta *delta;
 	size_t i;
 
-	/* initial reload of submodules if .gitmodules was changed */
-	if (data->reload_submodules &&
-		(error = git_submodule_reload_all(data->repo, 1)) < 0)
-		return error;
-
 	git_vector_foreach(&data->diff->deltas, i, delta) {
 		if (actions[i] & CHECKOUT_ACTION__DEFER_REMOVE) {
 			/* this has a blocker directory that should only be removed iff
@@ -1885,8 +1880,7 @@ static int checkout_create_submodules(
 		}
 	}
 
-	/* final reload once submodules have been updated */
-	return git_submodule_reload_all(data->repo, 1);
+	return 0;
 }
 
 static int checkout_lookup_head_tree(git_tree **out, git_repository *repo)
