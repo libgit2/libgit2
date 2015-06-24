@@ -121,6 +121,35 @@ GIT_INLINE(bool) should_skip_binary(git_patch *patch, git_diff_file *file)
 	return (file->flags & GIT_DIFF_FLAG_BINARY) != 0;
 }
 
+static bool diff_patch_diffable(git_patch *patch)
+{
+	size_t olen, nlen;
+
+	if (patch->delta->status == GIT_DELTA_UNMODIFIED)
+		return false;
+
+	/* if we've determined this to be binary (and we are not showing binary
+	 * data) then we have skipped loading the map data.  instead, query the
+	 * file data itself.
+	 */
+	if ((patch->delta->flags & GIT_DIFF_FLAG_BINARY) != 0 &&
+		(patch->diff_opts.flags & GIT_DIFF_SHOW_BINARY) == 0) {
+		olen = (size_t)patch->ofile.file->size;
+		nlen = (size_t)patch->nfile.file->size;
+	} else {
+		olen = patch->ofile.map.len;
+		nlen = patch->nfile.map.len;
+	}
+
+	/* if both sides are empty, files are identical */
+	if (!olen && !nlen)
+		return false;
+
+	/* otherwise, check the file sizes and the oid */
+	return (olen != nlen ||
+		!git_oid_equal(&patch->ofile.file->id, &patch->nfile.file->id));
+}
+
 static int diff_patch_load(git_patch *patch, git_diff_output *output)
 {
 	int error = 0;
@@ -186,18 +215,7 @@ cleanup:
 	diff_patch_update_binary(patch);
 
 	if (!error) {
-		bool skip_binary =
-			(patch->delta->flags & GIT_DIFF_FLAG_BINARY) != 0 &&
-			(patch->diff_opts.flags & GIT_DIFF_SHOW_BINARY) == 0;
-
-		/* patch is diffable only for non-binary, modified files where
-		* at least one side has data and the data actually changed
-		*/
-		if (!skip_binary &&
-			patch->delta->status != GIT_DELTA_UNMODIFIED &&
-			(patch->ofile.map.len || patch->nfile.map.len) &&
-			(patch->ofile.map.len != patch->nfile.map.len ||
-			 !git_oid_equal(&patch->ofile.file->id, &patch->nfile.file->id)))
+		if (diff_patch_diffable(patch))
 			patch->flags |= GIT_DIFF_PATCH_DIFFABLE;
 
 		patch->flags |= GIT_DIFF_PATCH_LOADED;
