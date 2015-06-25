@@ -351,3 +351,47 @@ void test_fetchhead_nonetwork__quote_in_branch_name(void)
 	cl_git_rewritefile("./test1/.git/FETCH_HEAD", FETCH_HEAD_QUOTE_DATA);
 	cl_git_pass(git_repository_fetchhead_foreach(g_repo, read_noop, NULL));
 }
+
+static bool found_master;
+static bool find_master_called;
+
+int find_master(const char *ref_name, const char *remote_url, const git_oid *oid, unsigned int is_merge, void *payload)
+{
+	GIT_UNUSED(remote_url);
+	GIT_UNUSED(oid);
+	GIT_UNUSED(payload);
+
+	find_master_called = true;
+
+	if (!strcmp("refs/heads/master", ref_name)) {
+		cl_assert(is_merge);
+		found_master = true;
+	}
+
+	return 0;
+}
+
+void test_fetchhead_nonetwork__create_when_refpecs_given(void)
+{
+	git_remote *remote;
+	git_buf path = GIT_BUF_INIT;
+	char *refspec = "refs/heads/master";
+	git_strarray specs = {
+		&refspec,
+		1,
+	};
+
+	cl_set_cleanup(&cleanup_repository, "./test1");
+	cl_git_pass(git_repository_init(&g_repo, "./test1", 0));
+
+	cl_git_pass(git_buf_joinpath(&path, git_repository_path(g_repo), "FETCH_HEAD"));
+	cl_git_pass(git_remote_create(&remote, g_repo, "origin", cl_fixture("testrepo.git")));
+
+	cl_assert(!git_path_exists(path.ptr));
+	cl_git_pass(git_remote_fetch(remote, &specs, NULL, NULL));
+	cl_assert(git_path_exists(path.ptr));
+
+	cl_git_pass(git_repository_fetchhead_foreach(g_repo, find_master, NULL));
+	cl_assert(find_master_called);
+	cl_assert(found_master);
+}
