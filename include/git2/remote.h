@@ -475,7 +475,7 @@ typedef enum {
 	/**
 	 * Use the setting from the configuration
 	 */
-	GIT_FETCH_PRUNE_FALLBACK,
+	GIT_FETCH_PRUNE_UNSPECIFIED,
 	/**
 	 * Force pruning on
 	 */
@@ -495,7 +495,7 @@ typedef enum {
 	/**
 	 * Use the setting from the configuration.
 	 */
-	GIT_REMOTE_DOWNLOAD_TAGS_FALLBACK = 0,
+	GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED = 0,
 	/**
 	 * Ask the server for tags pointing to objects we're already
 	 * downloading.
@@ -541,7 +541,7 @@ typedef struct {
 } git_fetch_options;
 
 #define GIT_FETCH_OPTIONS_VERSION 1
-#define GIT_FETCH_OPTIONS_INIT { GIT_FETCH_OPTIONS_VERSION, GIT_REMOTE_CALLBACKS_INIT, GIT_FETCH_PRUNE_FALLBACK, 1 }
+#define GIT_FETCH_OPTIONS_INIT { GIT_FETCH_OPTIONS_VERSION, GIT_REMOTE_CALLBACKS_INIT, GIT_FETCH_PRUNE_UNSPECIFIED, 1 }
 
 /**
  * Initializes a `git_fetch_options` with default values. Equivalent to

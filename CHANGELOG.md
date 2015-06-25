@@ -242,7 +242,7 @@ support for HTTPS connections insead of OpenSSL.
   to fetch options which determine the runtime configuration.
 
 * The `git_remote_autotag_option_t` values have been changed. It has
-  gained a `_FALLBACK` default value to specify no override for the
+  gained a `_UNSPECIFIED` default value to specify no override for the
   configured setting.
 
 * `git_remote_update_tips()` now takes a pointer to the callbacks as

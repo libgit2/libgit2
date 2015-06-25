@@ -186,7 +186,7 @@ static int diff_file_content_commit_to_str(
 			return error;
 		}
 
-		if ((error = git_submodule_status(&sm_status, fc->repo, fc->file->path, GIT_SUBMODULE_IGNORE_FALLBACK)) < 0) {
+		if ((error = git_submodule_status(&sm_status, fc->repo, fc->file->path, GIT_SUBMODULE_IGNORE_UNSPECIFIED)) < 0) {
 			git_submodule_free(sm);
 			return error;
 		}

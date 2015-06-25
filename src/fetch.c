@@ -60,7 +60,7 @@ static int filter_wants(git_remote *remote, const git_fetch_options *opts)
 	size_t i, heads_len;
 	git_remote_autotag_option_t tagopt = remote->download_tags;
 
-	if (opts && opts->download_tags != GIT_REMOTE_DOWNLOAD_TAGS_FALLBACK)
+	if (opts && opts->download_tags != GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED)
 		tagopt = opts->download_tags;
 
 	git_vector_clear(&remote->refs);
