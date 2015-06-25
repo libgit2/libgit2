@@ -26,14 +26,45 @@ void test_repo_open__format_version_1(void)
 	git_config *config;
 
 	repo = cl_git_sandbox_init("empty_bare.git");
-
 	cl_git_pass(git_repository_open(&repo, "empty_bare.git"));
-	cl_git_pass(git_repository_config(&config, repo));
 
+
+	/* Set repo format version to 1, try to open (should pass) */
+	cl_git_pass(git_repository_config(&config, repo));
 	cl_git_pass(git_config_set_int32(config, "core.repositoryformatversion", 1));
 
 	git_config_free(config);
 	git_repository_free(repo);
+
+	cl_git_pass(git_repository_open(&repo, "empty_bare.git"));
+
+
+	/* Set noop extension, try to open (should pass) */
+	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_config_set_bool(config, "extensions.noop", true));
+
+	git_config_free(config);
+	git_repository_free(repo);
+
+	cl_git_pass(git_repository_open(&repo, "empty_bare.git"));
+
+	/* Set preciousObjects extension, try to open (should pass) */
+	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_config_set_bool(config, "extensions.preciousObjects", true));
+
+	git_config_free(config);
+	git_repository_free(repo);
+
+	cl_git_pass(git_repository_open(&repo, "empty_bare.git"));
+
+
+	/* Set unknown extension, try to open (should fail) */
+	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_config_set_bool(config, "extensions.foobar", true));
+
+	git_config_free(config);
+	git_repository_free(repo);
+
 	cl_git_fail(git_repository_open(&repo, "empty_bare.git"));
 }
 

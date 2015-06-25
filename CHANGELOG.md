@@ -75,6 +75,12 @@ support for HTTPS connections insead of OpenSSL.
 * If libcurl is installed, we will use it to connect to HTTP(S)
   servers.
 
+* Support for `core.repositoryformatversion = 1` has been added. libgit2
+  will now load optional extensions from the `extensions.` namespace.
+
+* The `extensions.preciousObject` extension is now understood, although
+  no action is taken by libgit2 because all objects are precious to us.
+
 ### API additions
 
 * The `git_merge_options` gained a `file_flags` member.
