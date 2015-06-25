@@ -1342,9 +1342,20 @@ static int update_tips_for_spec(
 			} else {
 				continue;
 			}
-		} else if (git_refspec_src_matches(spec, head->name) && spec->dst) {
-			if (git_refspec_transform(&refname, spec, head->name) < 0)
-				goto on_error;
+		} else if (git_refspec_src_matches(spec, head->name)) {
+			if (spec->dst) {
+				if (git_refspec_transform(&refname, spec, head->name) < 0)
+					goto on_error;
+			} else {
+				/*
+				 * no rhs mans store it in FETCH_HEAD, even if we don't
+				 update anything else.
+				 */
+				if ((error = git_vector_insert(&update_heads, head)) < 0)
+					goto on_error;
+
+				continue;
+			}
 		} else {
 			continue;
 		}
