@@ -985,7 +985,7 @@ int git_remote_fetch(
 
 	if (opts && opts->prune == GIT_FETCH_PRUNE)
 		prune = true;
-	else if (opts && opts->prune == GIT_FETCH_PRUNE_FALLBACK && remote->prune_refs)
+	else if (opts && opts->prune == GIT_FETCH_PRUNE_UNSPECIFIED && remote->prune_refs)
 		prune = true;
 	else if (opts && opts->prune == GIT_FETCH_NO_PRUNE)
 		prune = false;
@@ -1550,7 +1550,7 @@ int git_remote_update_tips(
 	if ((error = ls_to_vector(&refs, remote)) < 0)
 		goto out;
 
-	if (download_tags == GIT_REMOTE_DOWNLOAD_TAGS_FALLBACK)
+	if (download_tags == GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED)
 		tagopt = remote->download_tags;
 	else
 		tagopt = download_tags;

@@ -167,7 +167,7 @@ unsigned int get_submodule_status(git_repository *repo, const char *name)
 
 	assert(repo && name);
 
-	cl_git_pass(git_submodule_status(&status, repo, name, GIT_SUBMODULE_IGNORE_FALLBACK));
+	cl_git_pass(git_submodule_status(&status, repo, name, GIT_SUBMODULE_IGNORE_UNSPECIFIED));
 
 	return status;
 }
