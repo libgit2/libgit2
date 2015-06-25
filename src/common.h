@@ -108,8 +108,8 @@ GIT_INLINE(int) giterr_set_after_callback_function(
 	int error_code, const char *action)
 {
 	if (error_code) {
-		const git_error *e = giterr_last();
-		if (!e || !e->message)
+		const char *e = giterr_last();
+		if (!e)
 			giterr_set(
 				"%s callback returned %d", action, error_code);
 	}
@@ -138,8 +138,8 @@ void giterr_system_set(int code);
  * Structure to preserve libgit2 error state
  */
 typedef struct {
-	int       error_code;
-	git_error error_msg;
+	int error_code;
+	char *error_msg;
 } git_error_state;
 
 /**
@@ -154,7 +154,7 @@ int giterr_capture(git_error_state *state, int error_code);
 int giterr_restore(git_error_state *state);
 
 /** Returns true if the given error state is from an OOM */
-int giterr_is_oom(const git_error *err);
+int giterr_is_oom(const char *err);
 
 /**
  * Check a versioned structure for validity

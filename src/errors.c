@@ -13,25 +13,22 @@
  * New error handling
  ********************************************/
 
-static git_error g_git_oom_error = {
-	"Out of memory",
-};
+static const char *g_git_oom_error = "Out of memory";
 
 static void set_error(char *string)
 {
-	git_error *error = &GIT_GLOBAL->error_t;
+	git_global_st *global = GIT_GLOBAL;
 
-	if (error->message != string)
-		git__free(error->message);
+	if (global->error_buf != string)
+		git__free(global->error_buf);
 
-	error->message = string;
-
-	GIT_GLOBAL->last_error = error;
+	global->error_buf = string;
+	global->last_error = string;
 }
 
 void giterr_set_oom(void)
 {
-	GIT_GLOBAL->last_error = &g_git_oom_error;
+	GIT_GLOBAL->last_error = g_git_oom_error;
 }
 
 void giterr_set(const char *fmt, ...)
@@ -102,10 +99,8 @@ int giterr_set_regex(const regex_t *regex, int error_code)
 
 void giterr_clear(void)
 {
-	if (GIT_GLOBAL->last_error != NULL) {
+	if (GIT_GLOBAL->last_error != NULL)
 		set_error(NULL);
-		GIT_GLOBAL->last_error = NULL;
-	}
 
 	errno = 0;
 #ifdef GIT_WIN32
@@ -113,29 +108,34 @@ void giterr_clear(void)
 #endif
 }
 
-int giterr_is_oom(const git_error *e)
+int giterr_is_oom(const char *e)
 {
-	return e == &g_git_oom_error;
+	return e == g_git_oom_error;
 }
 
-int giterr_detach(git_error *cpy)
+static int giterr_detach(const char **out)
 {
-	git_error *error = GIT_GLOBAL->last_error;
+	git_global_st *global = GIT_GLOBAL;
+	const char *error = global->last_error;
 
-	assert(cpy);
+	assert(out);
 
 	if (!error)
 		return -1;
 
-	cpy->message = error->message;
+	if (error == g_git_oom_error) {
+		*out = g_git_oom_error;
+		global->last_error = NULL;
+	} else {
+		*out = global->error_buf;
+		global->error_buf = NULL;
+	}
 
-	error->message = NULL;
 	giterr_clear();
-
 	return 0;
 }
 
-const git_error *giterr_last(void)
+const char *giterr_last(void)
 {
 	return GIT_GLOBAL->last_error;
 }
@@ -150,12 +150,24 @@ int giterr_capture(git_error_state *state, int error_code)
 
 int giterr_restore(git_error_state *state)
 {
-	if (state && state->error_code && state->error_msg.message)
-		set_error(state->error_msg.message);
-	else
-		giterr_clear();
+	int error;
 
-	return state ? state->error_code : 0;
+	if (!state || !state->error_code || !state->error_msg) {
+		giterr_clear();
+		return 0;
+	}
+
+	if (state->error_msg == g_git_oom_error)
+		giterr_set_oom();
+	else
+		set_error(state->error_msg);
+
+	error = state->error_code;
+
+	state->error_code = 0;
+	state->error_msg = NULL;
+
+	return error;
 }
 
 int giterr_system_last(void)

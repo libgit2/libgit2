@@ -41,8 +41,8 @@ static void git__global_state_cleanup(git_global_st *st)
 	if (!st)
 		return;
 
-	git__free(st->error_t.message);
-	st->error_t.message = NULL;
+	git__free(st->error_buf);
+	st->error_buf = NULL;
 }
 
 static void git__shutdown(void)

@@ -952,7 +952,6 @@ void test_repo_iterator__fs_preserves_error(void)
 	cl_git_pass(git_iterator_advance(&e, i)); /* a */
 	cl_git_fail(git_iterator_advance(&e, i)); /* b */
 	cl_assert(giterr_last());
-	cl_assert(giterr_last()->message != NULL);
 	/* skip 'c/' empty directory */
 	cl_git_pass(git_iterator_advance(&e, i)); /* d */
 	cl_assert_equal_i(GIT_ITEROVER, git_iterator_advance(&e, i));

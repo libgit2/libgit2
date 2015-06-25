@@ -385,7 +385,7 @@ static int local_push(
 
 	git_vector_foreach(&push->specs, j, spec) {
 		push_status *status;
-		const git_error *last;
+		const char *error_last;
 		char *ref = spec->refspec.dst;
 
 		status = git__calloc(1, sizeof(push_status));
@@ -411,10 +411,10 @@ static int local_push(
 				status->msg = git__strdup("Remote branch not found to delete");
 				break;
 			default:
-				last = giterr_last();
+				error_last = giterr_last();
 
-				if (last && last->message)
-					status->msg = git__strdup(last->message);
+				if (error_last)
+					status->msg = git__strdup(error_last);
 				else
 					status->msg = git__strdup("Unspecified error encountered");
 				break;

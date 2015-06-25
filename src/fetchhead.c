@@ -168,11 +168,10 @@ static int fetchhead_ref_parse(
 	}
 
 	if (git_oid_fromstr(oid, oid_str) < 0) {
-		const git_error *oid_err = giterr_last();
-		const char *err_msg = oid_err ? oid_err->message : "Invalid object ID";
+		const char *oid_err = giterr_last();
+		const char *err_msg = oid_err ? oid_err : "Invalid object ID";
 
-		giterr_set("%s in FETCH_HEAD line %d",
-			err_msg, line_num);
+		giterr_set("%s in FETCH_HEAD line %d", err_msg, line_num);
 		return -1;
 	}
 

@@ -53,39 +53,17 @@ typedef enum {
 } git_error_code;
 
 /**
- * Structure to store extra details of the last error that occurred.
+ * Return the last error message that was generated for the current
+ * thread or NULL if no error has occurred.
  *
- * This is kept on a per-thread basis if GIT_THREADS was defined when the
- * library was build, otherwise one is kept globally for the library
+ * @return A string describing the error or NULL.
  */
-typedef struct {
-	char *message;
-} git_error;
-
-/**
- * Return the last `git_error` object that was generated for the
- * current thread or NULL if no error has occurred.
- *
- * @return A git_error object.
- */
-GIT_EXTERN(const git_error *) giterr_last(void);
+GIT_EXTERN(const char *) giterr_last(void);
 
 /**
  * Clear the last library error that occurred for this thread.
  */
 GIT_EXTERN(void) giterr_clear(void);
-
-/**
- * Get the last error data and clear it.
- *
- * This copies the last error into the given `git_error` struct
- * and returns 0 if the copy was successful, leaving the error
- * cleared as if `giterr_clear` had been called.
- *
- * If there was no existing error in the library, -1 will be returned
- * and the contents of `cpy` will be left unmodified.
- */
-GIT_EXTERN(int) giterr_detach(git_error *cpy);
 
 /**
  * Set the error message string for this thread.
@@ -99,13 +77,6 @@ GIT_EXTERN(int) giterr_detach(git_error *cpy);
  * This error message is stored in thread-local storage and only applies
  * to the particular thread that this libgit2 call is made from.
  *
- * NOTE: Passing the `error_class` as GITERR_OS has a special behavior: we
- * attempt to append the system default error message for the last OS error
- * that occurred and then clear the last error.  The specific implementation
- * of looking up and clearing this last OS error will vary by platform.
- *
- * @param error_class One of the `git_error_t` enum above describing the
- *                    general subsystem that is responsible for the error.
  * @param string The formatted error message to keep
  */
 GIT_EXTERN(void) giterr_set(const char *string, ...);

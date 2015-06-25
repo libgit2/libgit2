@@ -537,24 +537,18 @@ void test_diff_blob__comparing_two_text_blobs_honors_interhunkcontext(void)
 
 void test_diff_blob__checks_options_version_too_low(void)
 {
-	const git_error *err;
-
 	opts.version = 0;
 	cl_git_fail(git_diff_blobs(
 		d, NULL, alien, NULL, &opts,
 		diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &expected));
-	err = giterr_last();
 }
 
 void test_diff_blob__checks_options_version_too_high(void)
 {
-	const git_error *err;
-
 	opts.version = 1024;
 	cl_git_fail(git_diff_blobs(
 		d, NULL, alien, NULL, &opts,
 		diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &expected));
-	err = giterr_last();
 }
 
 void test_diff_blob__can_correctly_detect_a_binary_blob_as_binary(void)

@@ -12,8 +12,12 @@
 #include "hash.h"
 
 typedef struct {
-	git_error *last_error;
-	git_error error_t;
+	/* last error that occurred, may be the static OOM message */
+	const char *last_error;
+
+	/* last error message allocated, should be freed */
+	char *error_buf;
+
 	char oid_fmt[GIT_OID_HEXSZ+1];
 } git_global_st;
 

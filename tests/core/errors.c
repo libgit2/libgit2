@@ -11,7 +11,7 @@ void test_core_errors__public_api(void)
 
 	cl_assert(giterr_last() != NULL);
 	cl_assert(giterr_is_oom(giterr_last()));
-	str_in_error = strstr(giterr_last()->message, "memory");
+	str_in_error = strstr(giterr_last(), "memory");
 	cl_assert(str_in_error != NULL);
 
 	giterr_clear();
@@ -19,7 +19,7 @@ void test_core_errors__public_api(void)
 	giterr_set("This is a test");
 
 	cl_assert(giterr_last() != NULL);
-	str_in_error = strstr(giterr_last()->message, "This is a test");
+	str_in_error = strstr(giterr_last(), "This is a test");
 	cl_assert(str_in_error != NULL);
 
 	giterr_clear();
@@ -41,7 +41,7 @@ void test_core_errors__new_school(void)
 
 	cl_assert(giterr_last() != NULL);
 	cl_assert(giterr_is_oom(giterr_last()));
-	str_in_error = strstr(giterr_last()->message, "memory");
+	str_in_error = strstr(giterr_last(), "memory");
 	cl_assert(str_in_error != NULL);
 
 	giterr_clear();
@@ -49,7 +49,7 @@ void test_core_errors__new_school(void)
 	giterr_set("This is a test"); /* internal fn */
 
 	cl_assert(giterr_last() != NULL);
-	str_in_error = strstr(giterr_last()->message, "This is a test");
+	str_in_error = strstr(giterr_last(), "This is a test");
 	cl_assert(str_in_error != NULL);
 
 	giterr_clear();
@@ -64,7 +64,7 @@ void test_core_errors__new_school(void)
 	giterr_set_os("stat failed"); /* internal fn */
 
 	cl_assert(giterr_last() != NULL);
-	str_in_error = strstr(giterr_last()->message, "stat failed");
+	str_in_error = strstr(giterr_last(), "stat failed");
 	cl_assert(str_in_error != NULL);
 	cl_assert(git__prefixcmp(str_in_error, "stat failed: ") == 0);
 	cl_assert(strlen(str_in_error) > strlen("stat failed: "));
@@ -77,7 +77,7 @@ void test_core_errors__new_school(void)
 	giterr_set_os("GetProcessId failed"); /* internal fn */
 
 	cl_assert(giterr_last() != NULL);
-	str_in_error = strstr(giterr_last()->message, "GetProcessId failed");
+	str_in_error = strstr(giterr_last(), "GetProcessId failed");
 	cl_assert(str_in_error != NULL);
 	cl_assert(git__prefixcmp(str_in_error, "GetProcessId failed: ") == 0);
 	cl_assert(strlen(str_in_error) > strlen("GetProcessId failed: "));
@@ -106,7 +106,7 @@ void test_core_errors__restore(void)
 
 	giterr_restore(&err_state);
 
-	cl_assert_equal_s("Foo: bar", giterr_last()->message);
+	cl_assert_equal_s("Foo: bar", giterr_last());
 }
 
 static int test_arraysize_multiply(size_t nelem, size_t size)
@@ -128,7 +128,7 @@ void test_core_errors__integer_overflow_alloc_multiply(void)
 	cl_git_fail(test_arraysize_multiply((SIZE_MAX/sizeof(void *))+1, sizeof(void *)));
 
 	cl_assert(giterr_is_oom(giterr_last()));
-	cl_assert_equal_s("Out of memory", giterr_last()->message);
+	cl_assert_equal_s("Out of memory", giterr_last());
 }
 
 static int test_arraysize_add(size_t one, size_t two)
@@ -148,7 +148,7 @@ void test_core_errors__integer_overflow_alloc_add(void)
 	cl_git_fail(test_arraysize_multiply(SIZE_MAX, SIZE_MAX));
 
 	cl_assert(giterr_is_oom(giterr_last()));
-	cl_assert_equal_s("Out of memory", giterr_last()->message);
+	cl_assert_equal_s("Out of memory", giterr_last());
 }
 
 void test_core_errors__integer_overflow_sets_oom(void)
@@ -166,10 +166,10 @@ void test_core_errors__integer_overflow_sets_oom(void)
 	giterr_clear();
 	cl_assert(GIT_ADD_SIZET_OVERFLOW(&out, SIZE_MAX, SIZE_MAX));
 	cl_assert(giterr_is_oom(giterr_last()));
-	cl_assert_equal_s("Out of memory", giterr_last()->message);
+	cl_assert_equal_s("Out of memory", giterr_last());
 
 	giterr_clear();
 	cl_assert(GIT_ADD_SIZET_OVERFLOW(&out, SIZE_MAX, SIZE_MAX));
 	cl_assert(giterr_is_oom(giterr_last()));
-	cl_assert_equal_s("Out of memory", giterr_last()->message);
+	cl_assert_equal_s("Out of memory", giterr_last());
 }
