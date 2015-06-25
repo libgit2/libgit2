@@ -528,7 +528,6 @@ int git_repository_open_ext(
 		goto cleanup;
 
 	if (version >= 1) {
-		repo->has_extensions = 1;
 		if ((error = check_extensions(repo, config)) < 0)
 			goto cleanup;
 	}
@@ -980,10 +979,15 @@ static int check_repositoryformatversion(int *version, git_config *config)
 static int extension_each_cb(const git_config_entry *entry, void *payload)
 {
 	const char *name = entry->name + strlen("extensions.");
-	(void)payload;
+	git_repository *repo = payload;
 
 	if (!strcmp(name, "noop"))
 		return 0;
+
+	if (!strcmp(name, "preciousobjects")) {
+		repo->extensions |= GIT_REPOSITORY_EXT_PRECIOUS_OBJECTS;
+		return 0;
+	}
 
 	giterr_set(GITERR_REPOSITORY, "Unknown Git repository extension: %s", name);
 	return GIT_EUNSUPPORTED;

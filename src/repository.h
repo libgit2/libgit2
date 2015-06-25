@@ -115,6 +115,10 @@ enum {
 	GIT_REPOSITORY_INIT__IS_REINIT  = (1u << 18),
 };
 
+enum {
+	GIT_REPOSITORY_EXT_PRECIOUS_OBJECTS = (1u << 1)
+};
+
 /** Internal structure for repository object */
 struct git_repository {
 	git_odb *_odb;
@@ -136,9 +140,9 @@ struct git_repository {
 
 	git_array_t(git_buf) reserved_names;
 
-	unsigned is_bare:1,
-			 has_extensions:1;
+	unsigned is_bare:1;
 
+	unsigned int extensions;
 	unsigned int lru_counter;
 
 	git_atomic attr_session_key;

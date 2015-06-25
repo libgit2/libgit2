@@ -48,6 +48,15 @@ void test_repo_open__format_version_1(void)
 
 	cl_git_pass(git_repository_open(&repo, "empty_bare.git"));
 
+	/* Set preciousObjects extension, try to open (should pass) */
+	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_config_set_bool(config, "extensions.preciousObjects", true));
+
+	git_config_free(config);
+	git_repository_free(repo);
+
+	cl_git_pass(git_repository_open(&repo, "empty_bare.git"));
+
 
 	/* Set unknown extension, try to open (should fail) */
 	cl_git_pass(git_repository_config(&config, repo));
