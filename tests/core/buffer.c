@@ -1153,3 +1153,16 @@ void test_core_buffer__lf_and_crlf_conversions(void)
 	git_buf_free(&src);
 	git_buf_free(&tgt);
 }
+
+void test_core_buffer__dont_grow_borrowed(void)
+{
+	const char *somestring = "blah blah";
+	git_buf buf = GIT_BUF_INIT;
+
+	git_buf_attach_notowned(&buf, somestring, strlen(somestring) + 1);
+	cl_assert_equal_p(somestring, buf.ptr);
+	cl_assert_equal_i(0, buf.asize);
+	cl_assert_equal_i(strlen(somestring) + 1, buf.size);
+
+	cl_git_fail_with(GIT_EINVALID, git_buf_grow(&buf, 1024));
+}

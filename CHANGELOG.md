@@ -127,6 +127,9 @@ support for HTTPS connections insead of OpenSSL.
   configuration of the server, and tools can use this to show messages
   about failing to communicate with the server.
 
+* A new error code `GIT_EINVALID` indicates that an argument to a
+  function is invalid, or an invalid operation was requested.
+
 * `git_diff_index_to_workdir()` and `git_diff_tree_to_index()` will now
   produce deltas of type `GIT_DELTA_CONFLICTED` to indicate that the index
   side of the delta is a conflict.
@@ -266,6 +269,9 @@ support for HTTPS connections insead of OpenSSL.
 
 * `GIT_EMERGECONFLICT` is now `GIT_ECONFLICT`, which more accurately
   describes the nature of the error.
+
+* It is no longer allowed to call `git_buf_grow()` on buffers
+  borrowing the memory they point to.
 
 v0.22
 ------

@@ -107,12 +107,10 @@ GIT_EXTERN(git_off_t) git_blob_rawsize(const git_blob *blob);
  * The output is written into a `git_buf` which the caller must free
  * when done (via `git_buf_free`).
  *
- * If no filters need to be applied, then the `out` buffer will just be
- * populated with a pointer to the raw content of the blob.  In that case,
- * be careful to *not* free the blob until done with the buffer.  To keep
- * the data detached from the blob, call `git_buf_grow` on the buffer
- * with a `want_size` of 0 and the buffer will be reallocated to be
- * detached from the blob.
+ * If no filters need to be applied, then the `out` buffer will just
+ * be populated with a pointer to the raw content of the blob.  In
+ * that case, be careful to *not* free the blob until done with the
+ * buffer or copy it into memory you own.
  *
  * @param out The git_buf to be filled in
  * @param blob Pointer to the blob

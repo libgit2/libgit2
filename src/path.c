@@ -640,7 +640,7 @@ static bool _check_dir_contents(
 	/* leave base valid even if we could not make space for subdir */
 	if (GIT_ADD_SIZET_OVERFLOW(&alloc_size, dir_size, sub_size) ||
 		GIT_ADD_SIZET_OVERFLOW(&alloc_size, alloc_size, 2) ||
-		git_buf_try_grow(dir, alloc_size, false, false) < 0)
+		git_buf_try_grow(dir, alloc_size, false) < 0)
 		return false;
 
 	/* save excursion */
@@ -847,7 +847,7 @@ int git_path_make_relative(git_buf *path, const char *parent)
 
 	/* save the offset as we might realllocate the pointer */
 	offset = p - path->ptr;
-	if (git_buf_try_grow(path, alloclen, 1, 0) < 0)
+	if (git_buf_try_grow(path, alloclen, 1) < 0)
 		return -1;
 	p = path->ptr + offset;
 
