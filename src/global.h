@@ -16,7 +16,7 @@ typedef struct {
 	const char *last_error;
 
 	/* last error message allocated, should be freed */
-	char *error_buf;
+	git_buf error_buf;
 
 	char oid_fmt[GIT_OID_HEXSZ+1];
 } git_global_st;

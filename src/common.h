@@ -10,7 +10,7 @@
 #include "git2/common.h"
 #include "cc-compat.h"
 
-/** Declare a function as always inlined. */
+ /** Declare a function as always inlined. */
 #if defined(_MSC_VER)
 # define GIT_INLINE(type) static __inline type
 #else
@@ -63,8 +63,10 @@
 
 #include "git2/types.h"
 #include "git2/errors.h"
+#include "git2/buffer.h"
 #include "thread-utils.h"
 #include "integer.h"
+#include "buffer.h"
 
 #include <regex.h>
 
@@ -139,7 +141,8 @@ void giterr_system_set(int code);
  */
 typedef struct {
 	int error_code;
-	char *error_msg;
+	const char *last_error;
+	git_buf error_buf;
 } git_error_state;
 
 /**
