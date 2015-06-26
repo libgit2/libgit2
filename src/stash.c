@@ -671,6 +671,31 @@ cleanup:
 	return error;
 }
 
+static int merge_indexes(
+	git_index **out,
+	git_repository *repo,
+	git_tree *ancestor_tree,
+	git_index *ours_index,
+	git_index *theirs_index)
+{
+	git_iterator *ancestor = NULL, *ours = NULL, *theirs = NULL;
+	const git_iterator_flag_t flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+	int error;
+
+	if ((error = git_iterator_for_tree(&ancestor, ancestor_tree, flags, NULL, NULL)) < 0 ||
+		(error = git_iterator_for_index(&ours, ours_index, flags, NULL, NULL)) < 0 ||
+		(error = git_iterator_for_index(&theirs, theirs_index, flags, NULL, NULL)) < 0)
+		goto done;
+
+	error = git_merge__iterators(out, repo, ancestor, ours, theirs, NULL);
+
+done:
+	git_iterator_free(ancestor);
+	git_iterator_free(ours);
+	git_iterator_free(theirs);
+	return error;
+}
+
 static int merge_index_and_tree(
 	git_index **out,
 	git_repository *repo,
@@ -733,6 +758,70 @@ int git_stash_apply_init_options(git_stash_apply_options *opts, unsigned int ver
 		}							\
 	} while(false);
 
+static int ensure_clean_index(git_repository *repo, git_index *index)
+{
+	git_tree *head_tree = NULL;
+	git_diff *index_diff = NULL;
+	int error = 0;
+
+	if ((error = git_repository_head_tree(&head_tree, repo)) < 0 ||
+		(error = git_diff_tree_to_index(
+			&index_diff, repo, head_tree, index, NULL)) < 0)
+		goto done;
+
+	if (git_diff_num_deltas(index_diff) > 0) {
+		giterr_set(GITERR_STASH, "%d uncommitted changes exist in the index",
+			git_diff_num_deltas(index_diff));
+		error = GIT_EUNCOMMITTED;
+	}
+
+done:
+	git_diff_free(index_diff);
+	git_tree_free(head_tree);
+	return error;
+}
+
+static int stage_new_file(const git_index_entry **entries, void *data)
+{
+	git_index *index = data;
+
+	if(entries[0] == NULL)
+		return git_index_add(index, entries[1]);
+	else
+		return git_index_add(index, entries[0]);
+}
+
+static int stage_new_files(
+	git_index **out,
+	git_repository *repo,
+	git_tree *parent_tree,
+	git_tree *tree)
+{
+	git_iterator *iterators[2] = { NULL, NULL };
+	git_index *index = NULL;
+	int error;
+
+	if ((error = git_index_new(&index)) < 0 ||
+		(error = git_iterator_for_tree(&iterators[0], parent_tree,
+			GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0 ||
+		(error = git_iterator_for_tree(&iterators[1], tree,
+			GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0)
+		goto done;
+
+	error = git_iterator_walk(iterators, 2, stage_new_file, index);
+
+done:
+	if (error < 0)
+		git_index_free(index);
+	else
+		*out = index;
+
+	git_iterator_free(iterators[0]);
+	git_iterator_free(iterators[1]);
+
+	return error;
+}
+
 int git_stash_apply(
 	git_repository *repo,
 	size_t index,
@@ -746,6 +835,7 @@ int git_stash_apply(
 	git_tree *index_tree = NULL;
 	git_tree *index_parent_tree = NULL;
 	git_tree *untracked_tree = NULL;
+	git_index *stash_adds = NULL;
 	git_index *repo_index = NULL;
 	git_index *unstashed_index = NULL;
 	git_index *modified_index = NULL;
@@ -775,6 +865,9 @@ int git_stash_apply(
 
 	NOTIFY_PROGRESS(opts, GIT_STASH_APPLY_PROGRESS_ANALYZE_INDEX);
 
+	if ((error = ensure_clean_index(repo, repo_index)) < 0)
+		goto cleanup;
+
 	/* Restore index if required */
 	if ((opts.flags & GIT_STASH_APPLY_REINSTATE_INDEX) &&
 		git_oid_cmp(git_tree_id(stash_parent_tree), git_tree_id(index_tree))) {
@@ -787,6 +880,16 @@ int git_stash_apply(
 			error = GIT_ECONFLICT;
 			goto cleanup;
 		}
+
+	/* Otherwise, stage any new files in the stash tree.  (Note: their
+	 * previously unstaged contents are staged, not the previously staged.)
+	 */
+	} else if ((opts.flags & GIT_STASH_APPLY_REINSTATE_INDEX) == 0) {
+		if ((error = stage_new_files(
+				&stash_adds, repo, stash_parent_tree, stash_tree)) < 0 ||
+			(error = merge_indexes(
+				&unstashed_index, repo, stash_parent_tree, repo_index, stash_adds)) < 0)
+			goto cleanup;
 	}
 
 	NOTIFY_PROGRESS(opts, GIT_STASH_APPLY_PROGRESS_ANALYZE_MODIFIED);
@@ -848,6 +951,7 @@ cleanup:
 	git_index_free(untracked_index);
 	git_index_free(modified_index);
 	git_index_free(unstashed_index);
+	git_index_free(stash_adds);
 	git_index_free(repo_index);
 	git_tree_free(untracked_tree);
 	git_tree_free(index_parent_tree);
