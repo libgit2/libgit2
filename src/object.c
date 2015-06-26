@@ -129,10 +129,10 @@ int git_object_lookup_prefix(
 	if (error < 0)
 		return error;
 
-	if (len > GIT_OID_RAWSZ)
-		len = GIT_OID_RAWSZ;
+	if (len > GIT_OID_HEXSZ)
+		len = GIT_OID_HEXSZ;
 
-	if (len == GIT_OID_RAWSZ) {
+	if (len == GIT_OID_HEXSZ) {
 		git_cached_obj *cached = NULL;
 
 		/* We want to match the full id : we can first look up in the cache,
@@ -172,9 +172,9 @@ int git_object_lookup_prefix(
 		memcpy(short_oid.id, id->id, (len + 1) / 2);
 		if (len % 2)
 			short_oid.id[len / 2] &= 0xF0;
-		memset(short_oid.id + (len + 1) / 2, 0, (GIT_OID_RAWSZ - len) / 2);
+		memset(short_oid.id + (len + 1) / 2, 0, (GIT_OID_HEXSZ - len) / 2);
 
-		/* If len < GIT_OID_RAWSZ (a strict short oid was given), we have
+		/* If len < GIT_OID_HEXSZ (a strict short oid was given), we have
 		 * 2 options :
 		 * - We always search in the cache first. If we find that short oid is
 		 *	ambiguous, we can stop. But in all the other cases, we must then
