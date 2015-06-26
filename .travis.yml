@@ -20,6 +20,16 @@ env:
   - OPTIONS="-DTHREADSAFE=ON -DCMAKE_BUILD_TYPE=Release"
   - OPTIONS="-DTHREADSAFE=OFF -DBUILD_EXAMPLES=ON"
 
+addons:
+  apt:
+    packages:
+    - cmake
+    - libssh2-1-dev
+    - openssh-client
+    - openssh-server
+
+sudo: false
+
 matrix:
  fast_finish: true
  exclude:
@@ -44,7 +54,7 @@ matrix:
          OPTIONS="-DBUILD_CLAR=ON -DBUILD_EXAMPLES=OFF -DCMAKE_BUILD_TYPE=Debug"
 
 install:
-  - ./script/install-deps-${TRAVIS_OS_NAME}.sh
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then ./script/install-deps-${TRAVIS_OS_NAME}.sh; fi
 
 # Run the Build script and tests
 script:
