@@ -6,6 +6,17 @@ ELSE()
 	TARGET_LINK_LIBRARIES(cgit2 git2 pthread)
 ENDIF()
 
+# Use -Wno-declaration-after-statement -Wunused-but-set-variable on global.c
+FOREACH(warn declaration-after-statement unused-but-set-variable)
+	SET(no_warn "-Wno-${warn}")
+	STRING(TOUPPER ${warn} _UPCASE)
+	SET(_var "IS_WNO_${_UPCASE}_SUPPORTED")
+	CHECK_C_COMPILER_FLAG(${no_warn} ${_var})
+	IF(${_var})
+		SET_PROPERTY(SOURCE general.c APPEND_STRING PROPERTY COMPILE_FLAGS " ${no_warn}")
+	ENDIF()
+ENDFOREACH()
+
 FILE(GLOB SRC_EXAMPLE_APPS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.c)
 FOREACH(src_app ${SRC_EXAMPLE_APPS})
 	STRING(REPLACE ".c" "" app_name ${src_app})
