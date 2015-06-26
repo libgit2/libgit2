@@ -1791,7 +1791,6 @@ void test_diff_workdir__only_writes_index_when_necessary(void)
 	git_index *index;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff *diff = NULL;
-	git_diff_perfdata perf = GIT_DIFF_PERFDATA_INIT;
 	git_reference *head;
 	git_object *head_object;
 	git_oid initial, first, second;

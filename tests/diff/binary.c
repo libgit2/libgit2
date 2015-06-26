@@ -277,7 +277,6 @@ void test_diff_binary__empty_for_no_diff(void)
 	git_tree *tree;
 	git_diff *diff;
 	git_buf actual = GIT_BUF_INIT;
-	const char *expected = "";
 
 	opts.flags = GIT_DIFF_SHOW_BINARY | GIT_DIFF_FORCE_BINARY;
 	opts.id_abbrev = GIT_OID_HEXSZ;
