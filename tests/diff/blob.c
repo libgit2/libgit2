@@ -33,11 +33,11 @@ void test_diff_blob__initialize(void)
 
 	/* tests/resources/attr/root_test4.txt */
 	cl_git_pass(git_oid_fromstrn(&oid, "a0f7217a", 8));
-	cl_git_pass(git_blob_lookup_prefix(&d, g_repo, &oid, 4));
+	cl_git_pass(git_blob_lookup_prefix(&d, g_repo, &oid, 8));
 
 	/* alien.png */
 	cl_git_pass(git_oid_fromstrn(&oid, "edf3dcee", 8));
-	cl_git_pass(git_blob_lookup_prefix(&alien, g_repo, &oid, 4));
+	cl_git_pass(git_blob_lookup_prefix(&alien, g_repo, &oid, 8));
 }
 
 void test_diff_blob__cleanup(void)
@@ -80,7 +80,7 @@ void test_diff_blob__can_compare_text_blobs(void)
 
 	/* tests/resources/attr/root_test3 */
 	cl_git_pass(git_oid_fromstrn(&c_oid, "c96bbb2c2557a832", 16));
-	cl_git_pass(git_blob_lookup_prefix(&c, g_repo, &c_oid, 8));
+	cl_git_pass(git_blob_lookup_prefix(&c, g_repo, &c_oid, 16));
 
 	/* Doing the equivalent of a `git diff -U1` on these files */
 
@@ -163,15 +163,15 @@ void test_diff_blob__can_compare_text_blobs_with_patch(void)
 
 	/* tests/resources/attr/root_test1 */
 	cl_git_pass(git_oid_fromstrn(&a_oid, "45141a79", 8));
-	cl_git_pass(git_blob_lookup_prefix(&a, g_repo, &a_oid, 4));
+	cl_git_pass(git_blob_lookup_prefix(&a, g_repo, &a_oid, 8));
 
 	/* tests/resources/attr/root_test2 */
 	cl_git_pass(git_oid_fromstrn(&b_oid, "4d713dc4", 8));
-	cl_git_pass(git_blob_lookup_prefix(&b, g_repo, &b_oid, 4));
+	cl_git_pass(git_blob_lookup_prefix(&b, g_repo, &b_oid, 8));
 
 	/* tests/resources/attr/root_test3 */
 	cl_git_pass(git_oid_fromstrn(&c_oid, "c96bbb2c2557a832", 16));
-	cl_git_pass(git_blob_lookup_prefix(&c, g_repo, &c_oid, 8));
+	cl_git_pass(git_blob_lookup_prefix(&c, g_repo, &c_oid, 16));
 
 	/* Doing the equivalent of a `git diff -U1` on these files */
 
@@ -437,7 +437,7 @@ void test_diff_blob__can_compare_two_binary_blobs(void)
 
 	/* heart.png */
 	cl_git_pass(git_oid_fromstrn(&h_oid, "de863bff", 8));
-	cl_git_pass(git_blob_lookup_prefix(&heart, g_repo, &h_oid, 4));
+	cl_git_pass(git_blob_lookup_prefix(&heart, g_repo, &h_oid, 8));
 
 	cl_git_pass(git_diff_blobs(
 		alien, NULL, heart, NULL, &opts,
@@ -505,7 +505,7 @@ void test_diff_blob__comparing_two_text_blobs_honors_interhunkcontext(void)
 
 	/* tests/resources/attr/root_test1 from commit f5b0af1 */
 	cl_git_pass(git_oid_fromstrn(&old_d_oid, "fe773770", 8));
-	cl_git_pass(git_blob_lookup_prefix(&old_d, g_repo, &old_d_oid, 4));
+	cl_git_pass(git_blob_lookup_prefix(&old_d, g_repo, &old_d_oid, 8));
 
 	/* Test with default inter-hunk-context (not set) => default is 0 */
 	cl_git_pass(git_diff_blobs(
@@ -598,7 +598,7 @@ void test_diff_blob__can_compare_blob_to_buffer(void)
 
 	/* tests/resources/attr/root_test1 */
 	cl_git_pass(git_oid_fromstrn(&a_oid, "45141a79", 8));
-	cl_git_pass(git_blob_lookup_prefix(&a, g_repo, &a_oid, 4));
+	cl_git_pass(git_blob_lookup_prefix(&a, g_repo, &a_oid, 8));
 
 	/* diff from blob a to content of b */
 	quick_diff_blob_to_str(a, NULL, b_content, 0, NULL);
@@ -640,7 +640,7 @@ void test_diff_blob__can_compare_blob_to_buffer_with_patch(void)
 
 	/* tests/resources/attr/root_test1 */
 	cl_git_pass(git_oid_fromstrn(&a_oid, "45141a79", 8));
-	cl_git_pass(git_blob_lookup_prefix(&a, g_repo, &a_oid, 4));
+	cl_git_pass(git_blob_lookup_prefix(&a, g_repo, &a_oid, 8));
 
 	/* diff from blob a to content of b */
 	cl_git_pass(git_patch_from_blob_and_buffer(
@@ -719,10 +719,10 @@ void test_diff_blob__binary_data_comparisons(void)
 	opts.flags |= GIT_DIFF_INCLUDE_UNMODIFIED;
 
 	cl_git_pass(git_oid_fromstrn(&oid, "45141a79", 8));
-	cl_git_pass(git_blob_lookup_prefix(&nonbin, g_repo, &oid, 4));
+	cl_git_pass(git_blob_lookup_prefix(&nonbin, g_repo, &oid, 8));
 
 	cl_git_pass(git_oid_fromstrn(&oid, "b435cd56", 8));
-	cl_git_pass(git_blob_lookup_prefix(&bin, g_repo, &oid, 4));
+	cl_git_pass(git_blob_lookup_prefix(&bin, g_repo, &oid, 8));
 
 	/* non-binary to reference content */
 
@@ -825,11 +825,11 @@ void test_diff_blob__using_path_and_attributes(void)
 	opts.flags |= GIT_DIFF_INCLUDE_UNMODIFIED;
 
 	cl_git_pass(git_oid_fromstrn(&oid, "45141a79", 8));
-	cl_git_pass(git_blob_lookup_prefix(&nonbin, g_repo, &oid, 4));
+	cl_git_pass(git_blob_lookup_prefix(&nonbin, g_repo, &oid, 8));
 	/* 20b: "Hello from the root\n" */
 
 	cl_git_pass(git_oid_fromstrn(&oid, "b435cd56", 8));
-	cl_git_pass(git_blob_lookup_prefix(&bin, g_repo, &oid, 4));
+	cl_git_pass(git_blob_lookup_prefix(&bin, g_repo, &oid, 8));
 	/* 33b: "0123456789\n\x01\x02\x03\x04\x05\x06\x07\x08\x09\n0123456789\n" */
 
 	/* non-binary to reference content */
