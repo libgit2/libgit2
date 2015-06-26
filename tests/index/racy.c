@@ -108,7 +108,7 @@ void test_index_racy__empty_file_after_smudge(void)
 	const git_index_entry *entry;
 
 	/* Make sure we do have a timestamp */
-	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_repository_index__weakptr(&index, g_repo));
 	cl_git_pass(git_index_write(index));
 
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "A"));
@@ -140,4 +140,7 @@ void test_index_racy__empty_file_after_smudge(void)
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, index, NULL));
 	cl_assert_equal_i(1, git_diff_num_deltas(diff));
+
+	git_buf_free(&path);
+	git_diff_free(diff);
 }

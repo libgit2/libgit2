@@ -394,4 +394,7 @@ void test_fetchhead_nonetwork__create_when_refpecs_given(void)
 	cl_git_pass(git_repository_fetchhead_foreach(g_repo, find_master, NULL));
 	cl_assert(find_master_called);
 	cl_assert(found_master);
+
+	git_remote_free(remote);
+	git_buf_free(&path);
 }
