@@ -325,9 +325,14 @@ static int diff_binary(git_diff_output *output, git_patch *patch)
 			old_data, old_len, new_data, new_len)) < 0)
 		return error;
 
-	return giterr_set_after_callback_function(
+	error = giterr_set_after_callback_function(
 		output->binary_cb(patch->delta, &binary, output->payload),
 		"git_patch");
+
+	git__free((char *) binary.old_file.data);
+	git__free((char *) binary.new_file.data);
+
+	return error;
 }
 
 static int diff_patch_generate(git_patch *patch, git_diff_output *output)
@@ -376,6 +381,9 @@ static void diff_patch_free(git_patch *patch)
 
 	git__free((char *)patch->diff_opts.old_prefix);
 	git__free((char *)patch->diff_opts.new_prefix);
+
+	git__free((char *)patch->binary.old_file.data);
+	git__free((char *)patch->binary.new_file.data);
 
 	if (patch->flags & GIT_DIFF_PATCH_ALLOCATED)
 		git__free(patch);

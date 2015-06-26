@@ -4,6 +4,7 @@
 
 #include "buffer.h"
 #include "filebuf.h"
+#include "repository.h"
 
 static git_repository *repo;
 
@@ -497,7 +498,7 @@ void test_diff_binary__blob_to_blob(void)
 	opts.id_abbrev = GIT_OID_HEXSZ;
 
 	repo = cl_git_sandbox_init("renames");
-	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_repository_index__weakptr(&index, repo));
 
 	cl_git_append2file("renames/untimely.txt", "Oh that crazy Kipling!\r\n");
 	cl_git_pass(git_index_add_bypath(index, "untimely.txt"));
@@ -532,4 +533,7 @@ void test_diff_binary__blob_to_blob(void)
 
 	git__free(diff_data.old_path);
 	git__free(diff_data.new_path);
+
+	git_buf_free(&diff_data.old_binary_base85);
+	git_buf_free(&diff_data.new_binary_base85);
 }
