@@ -47,15 +47,19 @@ static int compare_file(void *payload, git_buf *actual_path)
 	git_buf expected_contents = GIT_BUF_INIT;
 	struct compare_data *cd = payload;
 	bool failed = true;
+	int cmp_git, cmp_gitattributes;
+	char *basename;
 
-	if (strcmp(git_path_basename(actual_path->ptr), ".git") == 0 ||
-		strcmp(git_path_basename(actual_path->ptr), ".gitattributes") == 0) {
+	basename = git_path_basename(actual_path->ptr);
+	cmp_git = strcmp(basename, ".git");
+	cmp_gitattributes = strcmp(basename, ".gitattributes");
+
+	if (cmp_git == 0 || cmp_gitattributes == 0) {
 		failed = false;
 		goto done;
 	}
 
-	cl_git_pass(git_buf_joinpath(&expected_path, cd->dirname,
-		git_path_basename(actual_path->ptr)));
+	cl_git_pass(git_buf_joinpath(&expected_path, cd->dirname, basename));
 
 	if (!git_path_isfile(expected_path.ptr) ||
 		!git_path_isfile(actual_path->ptr))
@@ -83,6 +87,7 @@ done:
 		git_buf_free(&details);
 	}
 
+	git__free(basename);
 	git_buf_free(&expected_contents);
 	git_buf_free(&actual_contents);
 	git_buf_free(&expected_path);
@@ -151,7 +156,12 @@ static void empty_workdir(const char *name)
 
 	git_path_dirload(&contents, name, 0, 0);
 	git_vector_foreach(&contents, i, fn) {
-		if (strncasecmp(git_path_basename(fn), ".git", 4) == 0)
+		char *basename = git_path_basename(fn);
+		int cmp = strncasecmp(basename, ".git", 4);
+
+		git__free(basename);
+
+		if (cmp == 0)
 			continue;
 		p_unlink(fn);
 	}

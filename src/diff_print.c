@@ -578,6 +578,9 @@ int git_diff_print(
 			giterr_set_after_callback_function(error, "git_diff_print");
 	}
 
+	git__free(pi.nfile);
+	git__free(pi.ofile);
+
 	git_buf_free(&buf);
 
 	return error;
