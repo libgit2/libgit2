@@ -34,8 +34,6 @@ killall git-daemon
 
 if [ "$TRAVIS_OS_NAME" = "osx" ]; then
     echo 'PasswordAuthentication yes' | sudo tee -a /etc/sshd_config
-else
-    sudo start ssh
 fi
 
 ssh-keygen -t rsa -f ~/.ssh/id_rsa -N "" -q
