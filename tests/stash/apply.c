@@ -413,3 +413,37 @@ void test_stash_apply__progress_cb_can_abort(void)
 
 	cl_git_fail_with(-44, git_stash_apply(repo, 0, &opts));
 }
+
+void test_stash_apply__uses_reflog_like_indices_1(void)
+{
+	git_oid oid;
+
+	cl_git_mkfile("stash/untracked", "untracked\n");
+	cl_git_pass(git_stash_save(&oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED));
+	assert_status(repo, "untracked", GIT_ENOTFOUND);
+
+	// stash@{1} is the oldest (first) stash we made
+	cl_git_pass(git_stash_apply(repo, 1, NULL));
+	cl_assert_equal_i(git_index_has_conflicts(repo_index), 0);
+	assert_status(repo, "what", GIT_STATUS_WT_MODIFIED);
+	assert_status(repo, "how", GIT_STATUS_CURRENT);
+	assert_status(repo, "who", GIT_STATUS_WT_MODIFIED);
+	assert_status(repo, "when", GIT_STATUS_WT_NEW);
+	assert_status(repo, "why", GIT_STATUS_INDEX_NEW);
+	assert_status(repo, "where", GIT_STATUS_INDEX_NEW);
+}
+
+void test_stash_apply__uses_reflog_like_indices_2(void)
+{
+	git_oid oid;
+
+	cl_git_mkfile("stash/untracked", "untracked\n");
+	cl_git_pass(git_stash_save(&oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED));
+	assert_status(repo, "untracked", GIT_ENOTFOUND);
+
+	// stash@{0} is the newest stash we made immediately above
+	cl_git_pass(git_stash_apply(repo, 0, NULL));
+
+	cl_assert_equal_i(git_index_has_conflicts(repo_index), 0);
+	assert_status(repo, "untracked", GIT_STATUS_WT_NEW);
+}
