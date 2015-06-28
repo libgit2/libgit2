@@ -19,7 +19,8 @@
  * This callback will be called during crtdbg-instrumented allocs.
  *
  * @param aux_id [out] A returned "aux_id" representing a unique
- * (de-duped at the C# layer) stacktrace.
+ * (de-duped at the C# layer) stacktrace.  "aux_id" 0 is reserved
+ * to mean no aux stacktrace data.
  */
 typedef void (*git_win32__stack__aux_cb_alloc)(unsigned int *aux_id);
 
@@ -60,11 +61,16 @@ GIT_EXTERN(int) git_win32__stack__set_aux_cb(
 /**
  * Wrapper containing the raw unprocessed stackframe
  * data for a single stacktrace and any "aux_id".
+ *
+ * I put the aux_id first so leaks will be sorted by it.
+ * So, for example, if a specific callstack in C# leaks
+ * a repo handle, all of the pointers within the associated
+ * repo pointer will be grouped together.
  */
 typedef struct {
-	void *frames[GIT_WIN32__STACK__MAX_FRAMES];
-	unsigned int nr_frames;
 	unsigned int aux_id;
+	unsigned int nr_frames;
+	void *frames[GIT_WIN32__STACK__MAX_FRAMES];
 } git_win32__stack__raw_data;
 
 

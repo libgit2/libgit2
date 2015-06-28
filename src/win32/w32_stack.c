@@ -76,7 +76,7 @@ int git_win32__stack_compare(
 	git_win32__stack__raw_data *d1,
 	git_win32__stack__raw_data *d2)
 {
-	return memcmp(d1, d2, sizeof(d1));
+	return memcmp(d1, d2, sizeof(*d1));
 }
 
 int git_win32__stack_format(
@@ -88,7 +88,6 @@ int git_win32__stack_format(
 
 	/* SYMBOL_INFO has char FileName[1] at the end.  The docs say to
 	 * to malloc it with extra space for your desired max filename.
-	 * We use a union to do the same thing without mallocing.
 	 */
 	struct {
 		SYMBOL_INFO symbol;
@@ -152,12 +151,25 @@ int git_win32__stack_format(
 		buf_used += detail_len;
 	}
 
-	/* If an "aux" data provider was registered, ask it to append its detailed
-	 * data to the end of ours using the "aux_id" it gave us when this de-duped
-	 * item was created.
+	/* "aux_id" 0 is reserved to mean no aux data. This is needed to handle
+	 * allocs that occur before the aux callbacks were registered.
 	 */
-	if (g_aux_cb_lookup)
-		(g_aux_cb_lookup)(pdata->aux_id, &pbuf[buf_used], (buf_len - buf_used - 1));
+	if (pdata->aux_id > 0) {
+		p_snprintf(detail, sizeof(detail), "%saux_id: %d%s",
+				   prefix, pdata->aux_id, suffix);
+		detail_len = strlen(detail);
+		if ((buf_used + detail_len + 1) < buf_len) {
+			memcpy(&pbuf[buf_used], detail, detail_len);
+			buf_used += detail_len;
+		}
+
+		/* If an "aux" data provider is still registered, ask it to append its detailed
+		 * data to the end of ours using the "aux_id" it gave us when this de-duped
+		 * item was created.
+		 */
+		if (g_aux_cb_lookup)
+			(g_aux_cb_lookup)(pdata->aux_id, &pbuf[buf_used], (buf_len - buf_used - 1));
+	}
 
 	return GIT_OK;
 }
