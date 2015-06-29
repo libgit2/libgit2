@@ -32,7 +32,7 @@ v0.22 + 1
   commit with unstaged changes.
 
 * On Mac OS X, we now use SecureTransport to provide the cryptographic
-support for HTTPS connections insead of OpenSSL.
+  support for HTTPS connections insead of OpenSSL.
 
 * Checkout can now accept an index for the baseline computations via the
   `baseline_index` member.
@@ -41,6 +41,10 @@ support for HTTPS connections insead of OpenSSL.
   `git_remote` struct but has been moved to a `git_fetch_options`. The
   remote functions now take these options or the callbacks instead of
   setting them beforehand.
+
+* `git_submodule` instances are no longer cached or shared across
+  lookup. Each submodule represents the configuration at the time of
+  loading.
 
 * The index now uses diffs for `add_all()` and `update_all()` which
   gives it a speed boost and closer semantics to git.
@@ -152,6 +156,9 @@ support for HTTPS connections insead of OpenSSL.
 * `git_commit_header_field()` has been added, which allows retrieving
   the contents of an arbitrary header field.
 
+* `git_submodule_set_branch()` allows to set the configured branch for
+  a submodule.
+
 ### API removals
 
 * `git_remote_save()` and `git_remote_clear_refspecs()` have been
@@ -166,6 +173,9 @@ support for HTTPS connections insead of OpenSSL.
 * `git_remote_set_fetch_refpecs()` and
   `git_remote_set_push_refspecs()` have been removed. There is no
   longer a way to set the base refspecs at run-time.
+
+* `git_submodule_save()` has been removed. The submodules are no
+  longer configured via the objects.
 
 ### Breaking API changes
 
@@ -230,7 +240,7 @@ support for HTTPS connections insead of OpenSSL.
 * The remote callbacks has gained a new member `push_negotiation`
   which gets called before sending the update commands to the server.
 
-* The following functions now longer act on a remote instance but
+* The following functions no longer act on a remote instance but
   change the repository's configuration. Their signatures have changed
   accordingly:
 
@@ -258,6 +268,17 @@ support for HTTPS connections insead of OpenSSL.
 * The `git_submodule_update_options` struct now has fetch options in
   the `fetch_opts` field instead of callbacks in the
   `remote_callbacks` field.
+
+* The following functions no longer act on a submodule instance but
+  change the repository's configuration. Their signatures have changed
+  accordingly:
+
+    * `git_submodule_set_url()`, `git_submodule_set_ignore()`,
+      `git_submodule_set_update()`,
+      `git_submodule_set_fetch_recurse_submodules()`.
+
+* `git_submodule_status()` no longer takes a submodule instance but a
+  repsitory, a submodule name and an ignore setting.
 
 * The `push` function in the `git_transport` interface now takes a
   pointer to the remote callbacks.
