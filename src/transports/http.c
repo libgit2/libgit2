@@ -336,8 +336,7 @@ static int on_headers_complete(http_parser *parser)
 		if (!t->owner->cred_acquire_cb) {
 			no_callback = 1;
 		} else {
-			if (allowed_auth_types &&
-			    (!t->cred || 0 == (t->cred->credtype & allowed_auth_types))) {
+			if (allowed_auth_types) {
 
 				error = t->owner->cred_acquire_cb(&t->cred,
 								  t->owner->url,
