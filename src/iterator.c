@@ -1852,7 +1852,6 @@ int git_iterator_walk(
 	const git_index_entry **iterator_item;	/* next in each iterator */
 	const git_index_entry **cur_items;		/* current path in each iter */
 	const git_index_entry *first_match;
-	int cur_item_modified;
 	size_t i, j;
 	int error = 0;
 
@@ -1875,7 +1874,6 @@ int git_iterator_walk(
 			cur_items[i] = NULL;
 
 		first_match = NULL;
-		cur_item_modified = 0;
 
 		/* Find the next path(s) to consume from each iterator */
 		for (i = 0; i < cnt; i++) {
@@ -1898,9 +1896,6 @@ int git_iterator_walk(
 
 					first_match = iterator_item[i];
 					cur_items[i] = iterator_item[i];
-				} else if (path_diff > 0) {
-					/* No entry for the current item, this is modified */
-					cur_item_modified = 1;
 				} else if (path_diff == 0) {
 					cur_items[i] = iterator_item[i];
 				}
