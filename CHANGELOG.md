@@ -7,6 +7,10 @@ v0.23 + 1
 
 ### API removals
 
+### Breaking API changes
+
+* `git_cert` descendent types now have a proper `parent` member
+
 v0.23
 ------
 

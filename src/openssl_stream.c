@@ -358,11 +358,12 @@ int openssl_certificate(git_cert **out, git_stream *stream)
 		return -1;
 	}
 
-	st->cert_info.cert_type = GIT_CERT_X509;
+	st->cert_info.parent.cert_type = GIT_CERT_X509;
 	st->cert_info.data = encoded_cert;
 	st->cert_info.len = len;
 
-	*out = (git_cert *)&st->cert_info;
+	*out = &st->cert_info.parent;
+
 	return 0;
 }
 
