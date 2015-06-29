@@ -215,7 +215,7 @@ int git_cred_ssh_key_memory_new(
 	GIT_UNUSED(privatekey);
 	GIT_UNUSED(passphrase);
 
-	giterr_set(GITERR_INVALID,
+	giterr_set(
 		"This version of libgit2 was not built with ssh memory credentials.");
 	return -1;
 #endif

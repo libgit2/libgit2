@@ -10,7 +10,7 @@
 #include "git2/common.h"
 #include "cc-compat.h"
 
-/** Declare a function as always inlined. */
+ /** Declare a function as always inlined. */
 #if defined(_MSC_VER)
 # define GIT_INLINE(type) static __inline type
 #else
@@ -63,8 +63,10 @@
 
 #include "git2/types.h"
 #include "git2/errors.h"
+#include "git2/buffer.h"
 #include "thread-utils.h"
 #include "integer.h"
+#include "buffer.h"
 
 #include <regex.h>
 
@@ -85,9 +87,10 @@
 	do { int _err = (code); if (_err) return _err; } while (0)
 
 /**
- * Set the error message for this thread, formatting as needed.
+ * Set the error message for this thread to an operating system
+ * error message.
  */
-void giterr_set(int error_class, const char *string, ...);
+void giterr_set_os(const char *fmt, ...);
 
 /**
  * Set the error message for a regex failure, using the internal regex
@@ -107,9 +110,9 @@ GIT_INLINE(int) giterr_set_after_callback_function(
 	int error_code, const char *action)
 {
 	if (error_code) {
-		const git_error *e = giterr_last();
-		if (!e || !e->message)
-			giterr_set(e ? e->klass : GITERR_CALLBACK,
+		const char *e = giterr_last();
+		if (!e)
+			giterr_set(
 				"%s callback returned %d", action, error_code);
 	}
 	return error_code;
@@ -137,8 +140,9 @@ void giterr_system_set(int code);
  * Structure to preserve libgit2 error state
  */
 typedef struct {
-	int       error_code;
-	git_error error_msg;
+	int error_code;
+	const char *last_error;
+	git_buf error_buf;
 } git_error_state;
 
 /**
@@ -151,6 +155,9 @@ int giterr_capture(git_error_state *state, int error_code);
  * Restore error state to a previous value, returning saved error code.
  */
 int giterr_restore(git_error_state *state);
+
+/** Returns true if the given error state is from an OOM */
+int giterr_is_oom(const char *err);
 
 /**
  * Check a versioned structure for validity
@@ -166,7 +173,7 @@ GIT_INLINE(int) giterr__check_version(const void *structure, unsigned int expect
 	if (actual > 0 && actual <= expected_max)
 		return 0;
 
-	giterr_set(GITERR_INVALID, "Invalid version %d on %s", actual, name);
+	giterr_set("invalid version %d on %s", actual, name);
 	return -1;
 }
 #define GITERR_CHECK_VERSION(S,V,N) if (giterr__check_version(S,V,N) < 0) return -1

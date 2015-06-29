@@ -130,7 +130,7 @@ int git_refdb_lookup(git_reference **out, git_refdb *db, const char *ref_name)
 int git_refdb_iterator(git_reference_iterator **out, git_refdb *db, const char *glob)
 {
 	if (!db->backend || !db->backend->iterator) {
-		giterr_set(GITERR_REFERENCE, "This backend doesn't support iterators");
+		giterr_set("This backend doesn't support iterators");
 		return -1;
 	}
 
@@ -248,7 +248,7 @@ int git_refdb_lock(void **payload, git_refdb *db, const char *refname)
 	assert(payload && db && refname);
 
 	if (!db->backend->lock) {
-		giterr_set(GITERR_REFERENCE, "backend does not support locking");
+		giterr_set("backend does not support locking");
 		return -1;
 	}
 

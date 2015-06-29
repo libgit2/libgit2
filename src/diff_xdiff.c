@@ -49,7 +49,7 @@ static int git_xdiff_parse_hunk(git_diff_hunk *hunk, const char *header)
 	return 0;
 
 fail:
-	giterr_set(GITERR_INVALID, "Malformed hunk header from xdiff");
+	giterr_set("Malformed hunk header from xdiff");
 	return -1;
 }
 
@@ -98,7 +98,7 @@ static int diff_update_lines(
 		info->new_lineno += (int)line->num_lines;
 		break;
 	default:
-		giterr_set(GITERR_INVALID, "Unknown diff line origin %02x",
+		giterr_set("Unknown diff line origin %02x",
 			(unsigned int)line->origin);
 		return -1;
 	}

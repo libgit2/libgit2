@@ -65,12 +65,12 @@ int git__delta_apply(
 	 * base object, resulting in data corruption or segfault.
 	 */
 	if ((hdr_sz(&base_sz, &delta, delta_end) < 0) || (base_sz != base_len)) {
-		giterr_set(GITERR_INVALID, "Failed to apply delta. Base size does not match given data");
+		giterr_set("Failed to apply delta. Base size does not match given data");
 		return -1;
 	}
 
 	if (hdr_sz(&res_sz, &delta, delta_end) < 0) {
-		giterr_set(GITERR_INVALID, "Failed to apply delta. Base size does not match given data");
+		giterr_set("Failed to apply delta. Base size does not match given data");
 		return -1;
 	}
 
@@ -130,6 +130,6 @@ int git__delta_apply(
 fail:
 	git__free(out->data);
 	out->data = NULL;
-	giterr_set(GITERR_INVALID, "Failed to apply delta");
+	giterr_set("Failed to apply delta");
 	return -1;
 }

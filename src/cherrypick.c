@@ -107,7 +107,7 @@ static int cherrypick_seterr(git_commit *commit, const char *fmt)
 {
 	char commit_oidstr[GIT_OID_HEXSZ + 1];
 
-	giterr_set(GITERR_CHERRYPICK, fmt,
+	giterr_set(fmt,
 		git_oid_tostr(commit_oidstr, GIT_OID_HEXSZ + 1, git_commit_id(commit)));
 
 	return -1;

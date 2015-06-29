@@ -41,8 +41,7 @@ static void git__global_state_cleanup(git_global_st *st)
 	if (!st)
 		return;
 
-	git__free(st->error_t.message);
-	st->error_t.message = NULL;
+	git_buf_free(&st->error_buf);
 }
 
 static void git__shutdown(void)
@@ -142,7 +141,7 @@ int git_openssl_set_locking(void)
 
 	for (i = 0; i < num_locks; i++) {
 		if (git_mutex_init(&openssl_locks[i]) != 0) {
-			giterr_set(GITERR_SSL, "failed to initialize openssl locks");
+			giterr_set("failed to initialize openssl locks");
 			return -1;
 		}
 	}
@@ -151,11 +150,11 @@ int git_openssl_set_locking(void)
 	git__on_shutdown(shutdown_ssl_locking);
 	return 0;
 # else
-	giterr_set(GITERR_THREAD, "libgit2 as not built with threads");
+	giterr_set("libgit2 as not built with threads");
 	return -1;
 # endif
 #else
-	giterr_set(GITERR_SSL, "libgit2 was not built with OpenSSL support");
+	giterr_set("libgit2 was not built with OpenSSL support");
 	return -1;
 #endif
 }

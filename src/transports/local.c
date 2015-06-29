@@ -249,7 +249,7 @@ static int local_ls(const git_remote_head ***out, size_t *size, git_transport *t
 	transport_local *t = (transport_local *)transport;
 
 	if (!t->have_refs) {
-		giterr_set(GITERR_NET, "The transport has not yet loaded the refs");
+		giterr_set("The transport has not yet loaded the refs");
 		return -1;
 	}
 
@@ -368,7 +368,7 @@ static int local_push(
 	   but we forbid all pushes just in case */
 	if (!remote_repo->is_bare) {
 		error = GIT_EBAREREPO;
-		giterr_set(GITERR_INVALID, "Local push doesn't (yet) support pushing to non-bare repos.");
+		giterr_set("Local push doesn't (yet) support pushing to non-bare repos.");
 		goto on_error;
 	}
 
@@ -385,7 +385,7 @@ static int local_push(
 
 	git_vector_foreach(&push->specs, j, spec) {
 		push_status *status;
-		const git_error *last;
+		const char *error_last;
 		char *ref = spec->refspec.dst;
 
 		status = git__calloc(1, sizeof(push_status));
@@ -411,10 +411,10 @@ static int local_push(
 				status->msg = git__strdup("Remote branch not found to delete");
 				break;
 			default:
-				last = giterr_last();
+				error_last = giterr_last();
 
-				if (last && last->message)
-					status->msg = git__strdup(last->message);
+				if (error_last)
+					status->msg = git__strdup(error_last);
 				else
 					status->msg = git__strdup("Unspecified error encountered");
 				break;

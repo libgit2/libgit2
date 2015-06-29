@@ -145,7 +145,6 @@ void test_diff_rename__checks_options_version(void)
 	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
-	const git_error *err;
 
 	old_tree = resolve_commit_oid_to_tree(g_repo, old_sha);
 	new_tree = resolve_commit_oid_to_tree(g_repo, new_sha);
@@ -155,14 +154,10 @@ void test_diff_rename__checks_options_version(void)
 
 	opts.version = 0;
 	cl_git_fail(git_diff_find_similar(diff, &opts));
-	err = giterr_last();
-	cl_assert_equal_i(GITERR_INVALID, err->klass);
 
 	giterr_clear();
 	opts.version = 1024;
 	cl_git_fail(git_diff_find_similar(diff, &opts));
-	err = giterr_last();
-	cl_assert_equal_i(GITERR_INVALID, err->klass);
 
 	git_diff_free(diff);
 	git_tree_free(old_tree);

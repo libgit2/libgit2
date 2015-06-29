@@ -144,7 +144,7 @@ int gitno_connection_data_from_url(
 		default_port = "80";
 
 		if (data->use_ssl) {
-			giterr_set(GITERR_NET, "Redirect from HTTPS to HTTP is not allowed");
+			giterr_set("Redirect from HTTPS to HTTP is not allowed");
 			goto cleanup;
 		}
 	} else if (!git__prefixcmp(url, prefix_https)) {
@@ -155,7 +155,7 @@ int gitno_connection_data_from_url(
 		default_port = data->use_ssl ? "443" : "80";
 
 	if (!default_port) {
-		giterr_set(GITERR_NET, "Unrecognized URL prefix");
+		giterr_set("Unrecognized URL prefix");
 		goto cleanup;
 	}
 
@@ -187,7 +187,7 @@ int gitno_connection_data_from_url(
 
 		/* Check for errors in the resulting data */
 		if (original_host && url[0] != '/' && strcmp(original_host, data->host)) {
-			giterr_set(GITERR_NET, "Cross host redirect not allowed");
+			giterr_set("Cross host redirect not allowed");
 			error = -1;
 		}
 	}
@@ -237,7 +237,7 @@ int gitno_extract_url_parts(
 	const char *_host, *_port, *_path, *_userinfo;
 
 	if (http_parser_parse_url(url, strlen(url), false, &u)) {
-		giterr_set(GITERR_NET, "Malformed URL '%s'", url);
+		giterr_set("Malformed URL '%s'", url);
 		return GIT_EINVALIDSPEC;
 	}
 
@@ -261,7 +261,7 @@ int gitno_extract_url_parts(
 		*path = git__substrdup(_path, u.field_data[UF_PATH].len);
 		GITERR_CHECK_ALLOC(*path);
 	} else {
-		giterr_set(GITERR_NET, "invalid url, missing path");
+		giterr_set("invalid url, missing path");
 		return GIT_EINVALIDSPEC;
 	}
 

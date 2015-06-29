@@ -123,13 +123,13 @@ static int config_snapshot(git_config_backend **out, git_config_backend *in);
 
 static void set_parse_error(struct reader *reader, int col, const char *error_str)
 {
-	giterr_set(GITERR_CONFIG, "Failed to parse config file: %s (in %s:%d, column %d)",
+	giterr_set("Failed to parse config file: %s (in %s:%d, column %d)",
 		error_str, reader->file_path, reader->line_number, col);
 }
 
 static int config_error_readonly(void)
 {
-	giterr_set(GITERR_CONFIG, "this backend is read-only");
+	giterr_set("this backend is read-only");
 	return -1;
 }
 
@@ -469,7 +469,7 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 		cvar_t *existing = git_strmap_value_at(values, pos);
 
 		if (existing->next != NULL) {
-			giterr_set(GITERR_CONFIG, "Multivar incompatible with simple set");
+			giterr_set("Multivar incompatible with simple set");
 			ret = -1;
 			goto out;
 		}
@@ -615,7 +615,7 @@ static int config_delete(git_config_backend *cfg, const char *name)
 
 	if (!git_strmap_valid_index(values, pos)) {
 		refcounted_strmap_free(map);
-		giterr_set(GITERR_CONFIG, "Could not find key '%s' to delete", name);
+		giterr_set("Could not find key '%s' to delete", name);
 		return GIT_ENOTFOUND;
 	}
 
@@ -623,7 +623,7 @@ static int config_delete(git_config_backend *cfg, const char *name)
 	refcounted_strmap_free(map);
 
 	if (var->next != NULL) {
-		giterr_set(GITERR_CONFIG, "Cannot delete multivar with a single delete");
+		giterr_set("Cannot delete multivar with a single delete");
 		return -1;
 	}
 
@@ -654,7 +654,7 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 	if (!git_strmap_valid_index(values, pos)) {
 		refcounted_strmap_free(map);
 		git__free(key);
-		giterr_set(GITERR_CONFIG, "Could not find key '%s' to delete", name);
+		giterr_set("Could not find key '%s' to delete", name);
 		return GIT_ENOTFOUND;
 	}
 
@@ -1267,7 +1267,7 @@ static int unescape_line(
 				*fixed++ = escaped[esc - escapes];
 			} else {
 				git__free(str);
-				giterr_set(GITERR_CONFIG, "Invalid escape at %s", ptr);
+				giterr_set("Invalid escape at %s", ptr);
 				return -1;
 			}
 		}
@@ -1581,7 +1581,7 @@ static int config_read(git_strmap *values, diskfile_backend *cfg_file, struct re
 	struct parse_data parse_data;
 
 	if (depth >= MAX_INCLUDE_DEPTH) {
-		giterr_set(GITERR_CONFIG, "Maximum config include depth reached");
+		giterr_set("Maximum config include depth reached");
 		return -1;
 	}
 

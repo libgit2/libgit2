@@ -148,7 +148,7 @@ static int git_smart__connect(
 	else if (GIT_DIRECTION_PUSH == t->direction)
 		service = GIT_SERVICE_RECEIVEPACK_LS;
 	else {
-		giterr_set(GITERR_NET, "Invalid direction");
+		giterr_set("Invalid direction");
 		return -1;
 	}
 
@@ -169,7 +169,7 @@ static int git_smart__connect(
 		pkt = (git_pkt *)git_vector_get(&t->refs, 0);
 
 		if (!pkt || GIT_PKT_COMMENT != pkt->type) {
-			giterr_set(GITERR_NET, "Invalid response");
+			giterr_set("Invalid response");
 			return -1;
 		} else {
 			/* Remove the comment pkt from the list */
@@ -216,7 +216,7 @@ static int git_smart__ls(const git_remote_head ***out, size_t *size, git_transpo
 	transport_smart *t = (transport_smart *)transport;
 
 	if (!t->have_refs) {
-		giterr_set(GITERR_NET, "The transport has not yet loaded the refs");
+		giterr_set("The transport has not yet loaded the refs");
 		return -1;
 	}
 
@@ -236,7 +236,7 @@ int git_smart__negotiation_step(git_transport *transport, void *data, size_t len
 		return -1;
 
 	if (GIT_DIRECTION_FETCH != t->direction) {
-		giterr_set(GITERR_NET, "This operation is only valid for fetch");
+		giterr_set("This operation is only valid for fetch");
 		return -1;
 	}
 
@@ -265,7 +265,7 @@ int git_smart__get_push_stream(transport_smart *t, git_smart_subtransport_stream
 		return -1;
 
 	if (GIT_DIRECTION_PUSH != t->direction) {
-		giterr_set(GITERR_NET, "This operation is only valid for push");
+		giterr_set("This operation is only valid for push");
 		return -1;
 	}
 

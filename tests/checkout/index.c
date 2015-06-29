@@ -493,20 +493,13 @@ void test_checkout_index__can_overcome_name_clashes(void)
 void test_checkout_index__validates_struct_version(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	const git_error *err;
 
 	opts.version = 1024;
 	cl_git_fail(git_checkout_index(g_repo, NULL, &opts));
 
-	err = giterr_last();
-	cl_assert_equal_i(err->klass, GITERR_INVALID);
-
 	opts.version = 0;
 	giterr_clear();
 	cl_git_fail(git_checkout_index(g_repo, NULL, &opts));
-
-	err = giterr_last();
-	cl_assert_equal_i(err->klass, GITERR_INVALID);
 }
 
 void test_checkout_index__can_update_prefixed_files(void)

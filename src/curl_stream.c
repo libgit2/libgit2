@@ -25,7 +25,7 @@ typedef struct {
 
 static int seterr_curl(curl_stream *s)
 {
-	giterr_set(GITERR_NET, "curl error: %s\n", s->curl_error);
+	giterr_set("curl error: %s\n", s->curl_error);
 	return -1;
 }
 
@@ -121,7 +121,7 @@ static int wait_for(curl_socket_t fd, bool reading)
 		FD_SET(fd, &outfd);
 
 	if ((ret = select(fd + 1, &infd, &outfd, &errfd, NULL)) < 0) {
-		giterr_set(GITERR_OS, "error in select");
+		giterr_set_os("error in select");
 		return -1;
 	}
 
@@ -206,7 +206,7 @@ int git_curl_stream_new(git_stream **out, const char *host, const char *port)
 
 	handle = curl_easy_init();
 	if (handle == NULL) {
-		giterr_set(GITERR_NET, "failed to create curl handle");
+		giterr_set("failed to create curl handle");
 		return -1;
 	}
 
@@ -249,7 +249,7 @@ int git_curl_stream_new(git_stream **out, const char *host, const char *port)
 	GIT_UNUSED(host);
 	GIT_UNUSED(port);
 
-	giterr_set(GITERR_NET, "curl is not supported in this version");
+	giterr_set("curl is not supported in this version");
 	return -1;
 }
 

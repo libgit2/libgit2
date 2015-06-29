@@ -226,7 +226,7 @@ static int ref_pkt(git_pkt **out, const char *line, size_t len)
 
 	/* Check for a bit of consistency */
 	if (line[GIT_OID_HEXSZ] != ' ') {
-		giterr_set(GITERR_NET, "Error parsing pkt-line");
+		giterr_set("Error parsing pkt-line");
 		error = -1;
 		goto error_out;
 	}
@@ -270,7 +270,7 @@ static int ok_pkt(git_pkt **out, const char *line, size_t len)
 
 	line += 3; /* skip "ok " */
 	if (!(ptr = strchr(line, '\n'))) {
-		giterr_set(GITERR_NET, "Invalid packet line");
+		giterr_set("Invalid packet line");
 		return -1;
 	}
 	len = ptr - line;
@@ -299,7 +299,7 @@ static int ng_pkt(git_pkt **out, const char *line, size_t len)
 
 	line += 3; /* skip "ng " */
 	if (!(ptr = strchr(line, ' '))) {
-		giterr_set(GITERR_NET, "Invalid packet line");
+		giterr_set("Invalid packet line");
 		return -1;
 	}
 	len = ptr - line;
@@ -313,7 +313,7 @@ static int ng_pkt(git_pkt **out, const char *line, size_t len)
 
 	line = ptr + 1;
 	if (!(ptr = strchr(line, '\n'))) {
-		giterr_set(GITERR_NET, "Invalid packet line");
+		giterr_set("Invalid packet line");
 		return -1;
 	}
 	len = ptr - line;
@@ -360,7 +360,7 @@ static int32_t parse_len(const char *line)
 
 	for (i = 0; i < PKT_LEN_SIZE; ++i) {
 		if (!isxdigit(num[i])) {
-			giterr_set(GITERR_NET, "Found invalid hex digit in length");
+			giterr_set("Found invalid hex digit in length");
 			return -1;
 		}
 	}
@@ -522,7 +522,7 @@ static int buffer_want_with_caps(const git_remote_head *head, transport_smart_ca
 		 git_buf_len(&str) + 1 /* LF */;
 
 	if (len > 0xffff) {
-		giterr_set(GITERR_NET,
+		giterr_set(
 			"Tried to produce packet with invalid length %d", len);
 		return -1;
 	}

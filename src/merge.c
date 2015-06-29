@@ -79,7 +79,7 @@ int merge_bases_many(git_commit_list **out, git_revwalk **walk_out, git_reposito
 	unsigned int i;
 
 	if (length < 2) {
-		giterr_set(GITERR_INVALID, "At least two commits are required to find an ancestor. Provided 'length' was %u.", length);
+		giterr_set("At least two commits are required to find an ancestor. Provided 'length' was %u.", length);
 		return -1;
 	}
 
@@ -105,7 +105,7 @@ int merge_bases_many(git_commit_list **out, git_revwalk **walk_out, git_reposito
 		goto on_error;
 
 	if (!result) {
-		giterr_set(GITERR_MERGE, "No merge base found");
+		giterr_set("No merge base found");
 		error = GIT_ENOTFOUND;
 		goto on_error;
 	}
@@ -185,7 +185,7 @@ int git_merge_base_octopus(git_oid *out, git_repository *repo, size_t length, co
 	assert(out && repo && input_array);
 
 	if (length < 2) {
-		giterr_set(GITERR_INVALID, "At least two commits are required to find an ancestor. Provided 'length' was %u.", length);
+		giterr_set("At least two commits are required to find an ancestor. Provided 'length' was %u.", length);
 		return -1;
 	}
 
@@ -231,7 +231,7 @@ static int merge_bases(git_commit_list **out, git_revwalk **walk_out, git_reposi
 
 	if (!result) {
 		git_revwalk_free(walk);
-		giterr_set(GITERR_MERGE, "No merge base found");
+		giterr_set("No merge base found");
 		return GIT_ENOTFOUND;
 	}
 
@@ -427,7 +427,7 @@ int git_repository_mergehead_foreach(
 
 	while ((line = git__strsep(&buffer, "\n")) != NULL) {
 		if (strlen(line) != GIT_OID_HEXSZ) {
-			giterr_set(GITERR_INVALID, "Unable to parse OID - invalid length");
+			giterr_set("Unable to parse OID - invalid length");
 			error = -1;
 			goto cleanup;
 		}
@@ -444,7 +444,7 @@ int git_repository_mergehead_foreach(
 	}
 
 	if (*buffer) {
-		giterr_set(GITERR_MERGE, "No EOL at line %d", line_num);
+		giterr_set("No EOL at line %d", line_num);
 		error = -1;
 		goto cleanup;
 	}
@@ -2451,7 +2451,7 @@ int git_merge__check_result(git_repository *repo, git_index *index_new)
 		goto done;
 
 	if ((conflicts = index_conflicts + wd_conflicts) > 0) {
-		giterr_set(GITERR_MERGE, "%d uncommitted change%s would be overwritten by merge",
+		giterr_set("%d uncommitted change%s would be overwritten by merge",
 			conflicts, (conflicts != 1) ? "s" : "");
 		error = GIT_ECONFLICT;
 	}
@@ -2608,7 +2608,7 @@ int git_merge_analysis(
 	assert(analysis_out && preference_out && repo && their_heads);
 
 	if (their_heads_len != 1) {
-		giterr_set(GITERR_MERGE, "Can only merge a single branch");
+		giterr_set("Can only merge a single branch");
 		error = -1;
 		goto done;
 	}
@@ -2665,7 +2665,7 @@ int git_merge(
 	assert(repo && their_heads);
 
 	if (their_heads_len != 1) {
-		giterr_set(GITERR_MERGE, "Can only merge a single branch");
+		giterr_set("Can only merge a single branch");
 		return -1;
 	}
 

@@ -42,7 +42,7 @@ int git_buf_try_grow(
 		return -1;
 
 	if (buf->asize == 0 && buf->size != 0) {
-		giterr_set(GITERR_INVALID, "cannot grow a borrowed buffer");
+		giterr_set("cannot grow a borrowed buffer");
 		return GIT_EINVALID;
 	}
 
@@ -308,7 +308,7 @@ int git_buf_decode_base64(git_buf *buf, const char *base64, size_t len)
 			buf->size = orig_size;
 			buf->ptr[buf->size] = '\0';
 
-			giterr_set(GITERR_INVALID, "Invalid base64 input");
+			giterr_set("Invalid base64 input");
 			return -1;
 		}
 

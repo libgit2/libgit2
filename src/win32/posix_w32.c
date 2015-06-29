@@ -565,7 +565,7 @@ static int ensure_writable(wchar_t *fpath)
 		if (GetLastError() == ERROR_FILE_NOT_FOUND)
 			return 0;
 
-		giterr_set(GITERR_OS, "failed to get attributes");
+		giterr_set_os("failed to get attributes");
 		return -1;
 	}
 
@@ -574,7 +574,7 @@ static int ensure_writable(wchar_t *fpath)
 
 	attrs &= ~FILE_ATTRIBUTE_READONLY;
 	if (!SetFileAttributesW(fpath, attrs)) {
-		giterr_set(GITERR_OS, "failed to set attributes");
+		giterr_set_os("failed to set attributes");
 		return -1;
 	}
 

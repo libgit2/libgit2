@@ -106,7 +106,7 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 			goto out;
 
 		if ((error = p_fnmatch(git_buf_cstr(&buf), path, FNM_PATHNAME)) < 0) {
-			giterr_set(GITERR_INVALID, "error matching pattern");
+			giterr_set("error matching pattern");
 			goto out;
 		}
 
@@ -144,7 +144,7 @@ static int parse_ignore_file(
 		context = attrs->entry->path;
 
 	if (git_mutex_lock(&attrs->lock) < 0) {
-		giterr_set(GITERR_OS, "Failed to lock ignore file");
+		giterr_set_os("Failed to lock ignore file");
 		return -1;
 	}
 
@@ -558,7 +558,7 @@ int git_ignore__check_pathspec_for_exact_ignores(
 			break;
 
 		if (ignored) {
-			giterr_set(GITERR_INVALID, "pathspec contains ignored file '%s'",
+			giterr_set("pathspec contains ignored file '%s'",
 				filename);
 			error = GIT_EINVALIDSPEC;
 			break;

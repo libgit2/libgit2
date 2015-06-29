@@ -65,7 +65,7 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 		return error;
 
 	if (git_mutex_lock(&git__mwindow_mutex) < 0) {
-		giterr_set(GITERR_OS, "failed to lock mwindow mutex");
+		giterr_set_os("failed to lock mwindow mutex");
 		return -1;
 	}
 
@@ -135,7 +135,7 @@ void git_mwindow_put_pack(struct git_pack_file *pack)
 void git_mwindow_free_all(git_mwindow_file *mwf)
 {
 	if (git_mutex_lock(&git__mwindow_mutex)) {
-		giterr_set(GITERR_THREAD, "unable to lock mwindow mutex");
+		giterr_set("unable to lock mwindow mutex");
 		return;
 	}
 
@@ -242,7 +242,7 @@ static int git_mwindow_close_lru(git_mwindow_file *mwf)
 	}
 
 	if (!lru_w) {
-		giterr_set(GITERR_OS, "Failed to close memory window. Couldn't find LRU");
+		giterr_set_os("Failed to close memory window. Couldn't find LRU");
 		return -1;
 	}
 
@@ -327,7 +327,7 @@ unsigned char *git_mwindow_open(
 	git_mwindow *w = *cursor;
 
 	if (git_mutex_lock(&git__mwindow_mutex)) {
-		giterr_set(GITERR_THREAD, "unable to lock mwindow mutex");
+		giterr_set("unable to lock mwindow mutex");
 		return NULL;
 	}
 
@@ -379,7 +379,7 @@ int git_mwindow_file_register(git_mwindow_file *mwf)
 	int ret;
 
 	if (git_mutex_lock(&git__mwindow_mutex)) {
-		giterr_set(GITERR_THREAD, "unable to lock mwindow mutex");
+		giterr_set("unable to lock mwindow mutex");
 		return -1;
 	}
 
@@ -419,7 +419,7 @@ void git_mwindow_close(git_mwindow **window)
 	git_mwindow *w = *window;
 	if (w) {
 		if (git_mutex_lock(&git__mwindow_mutex)) {
-			giterr_set(GITERR_THREAD, "unable to lock mwindow mutex");
+			giterr_set("unable to lock mwindow mutex");
 			return;
 		}
 

@@ -131,7 +131,7 @@ static int lookup_index_alloc(
 	GITERR_CHECK_ALLOC_ADD(&index_len, index_len, hash_len);
 
 	if (!git__is_ulong(index_len)) {
-		giterr_set(GITERR_NOMEMORY, "Overly large delta");
+		giterr_set("Overly large delta");
 		return -1;
 	}
 

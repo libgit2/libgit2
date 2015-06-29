@@ -635,7 +635,7 @@ int git_diff__oid_for_entry(
 		error = git_odb__hashlink(out, full_path.ptr);
 		diff->perf.oid_calculations++;
 	} else if (!git__is_sizet(entry.file_size)) {
-		giterr_set(GITERR_OS, "File size overflow (for 32-bits) on '%s'",
+		giterr_set_os("File size overflow (for 32-bits) on '%s'",
 			entry.path);
 		error = -1;
 	} else if (!(error = git_filter_list_load(
@@ -1568,7 +1568,7 @@ int git_diff__commit(
 		char commit_oidstr[GIT_OID_HEXSZ + 1];
 
 		error = -1;
-		giterr_set(GITERR_INVALID, "Commit %s is a merge commit",
+		giterr_set("Commit %s is a merge commit",
 			git_oid_tostr(commit_oidstr, GIT_OID_HEXSZ + 1, git_commit_id(commit)));
 		goto on_error;
 	}
@@ -1682,12 +1682,12 @@ int git_diff_format_email(
 
 	if ((ignore_marker = opts->flags & GIT_DIFF_FORMAT_EMAIL_EXCLUDE_SUBJECT_PATCH_MARKER) == false) {
 		if (opts->patch_no > opts->total_patches) {
-			giterr_set(GITERR_INVALID, "patch %"PRIuZ" out of range. max %"PRIuZ, opts->patch_no, opts->total_patches);
+			giterr_set("patch %"PRIuZ" out of range. max %"PRIuZ, opts->patch_no, opts->total_patches);
 			return -1;
 		}
 
 		if (opts->patch_no == 0) {
-			giterr_set(GITERR_INVALID, "invalid patch no %"PRIuZ". should be >0", opts->patch_no);
+			giterr_set("invalid patch no %"PRIuZ". should be >0", opts->patch_no);
 			return -1;
 		}
 	}
@@ -1699,7 +1699,7 @@ int git_diff_format_email(
 		size_t offset = 0;
 
 		if ((offset = (loc - opts->summary)) == 0) {
-			giterr_set(GITERR_INVALID, "summary is empty");
+			giterr_set("summary is empty");
 			error = -1;
 			goto on_error;
 		}

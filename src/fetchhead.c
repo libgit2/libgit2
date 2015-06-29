@@ -148,7 +148,7 @@ static int fetchhead_ref_parse(
 	*remote_url = NULL;
 
 	if (!*line) {
-		giterr_set(GITERR_FETCHHEAD,
+		giterr_set(
 			"Empty line in FETCH_HEAD line %d", line_num);
 		return -1;
 	}
@@ -162,24 +162,23 @@ static int fetchhead_ref_parse(
 	}
 
 	if (strlen(oid_str) != GIT_OID_HEXSZ) {
-		giterr_set(GITERR_FETCHHEAD,
+		giterr_set(
 			"Invalid object ID in FETCH_HEAD line %d", line_num);
 		return -1;
 	}
 
 	if (git_oid_fromstr(oid, oid_str) < 0) {
-		const git_error *oid_err = giterr_last();
-		const char *err_msg = oid_err ? oid_err->message : "Invalid object ID";
+		const char *oid_err = giterr_last();
+		const char *err_msg = oid_err ? oid_err : "Invalid object ID";
 
-		giterr_set(GITERR_FETCHHEAD, "%s in FETCH_HEAD line %d",
-			err_msg, line_num);
+		giterr_set("%s in FETCH_HEAD line %d", err_msg, line_num);
 		return -1;
 	}
 
 	/* Parse new data from newer git clients */
 	if (*line) {
 		if ((is_merge_str = git__strsep(&line, "\t")) == NULL) {
-			giterr_set(GITERR_FETCHHEAD,
+			giterr_set(
 				"Invalid description data in FETCH_HEAD line %d", line_num);
 			return -1;
 		}
@@ -189,13 +188,13 @@ static int fetchhead_ref_parse(
 		else if (strcmp(is_merge_str, "not-for-merge") == 0)
 			*is_merge = 0;
 		else {
-			giterr_set(GITERR_FETCHHEAD,
+			giterr_set(
 				"Invalid for-merge entry in FETCH_HEAD line %d", line_num);
 			return -1;
 		}
 
 		if ((desc = line) == NULL) {
-			giterr_set(GITERR_FETCHHEAD,
+			giterr_set(
 				"Invalid description in FETCH_HEAD line %d", line_num);
 			return -1;
 		}
@@ -212,7 +211,7 @@ static int fetchhead_ref_parse(
 		if (name) {
 			if ((desc = strstr(name, "' ")) == NULL ||
 				git__prefixcmp(desc, "' of ") != 0) {
-				giterr_set(GITERR_FETCHHEAD,
+				giterr_set(
 					"Invalid description in FETCH_HEAD line %d", line_num);
 				return -1;
 			}
@@ -277,7 +276,7 @@ int git_repository_fetchhead_foreach(git_repository *repo,
 	}
 
 	if (*buffer) {
-		giterr_set(GITERR_FETCHHEAD, "No EOL at line %d", line_num+1);
+		giterr_set("No EOL at line %d", line_num+1);
 		error = -1;
 		goto done;
 	}

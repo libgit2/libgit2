@@ -51,7 +51,7 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 				return recvd;
 
 			if (recvd == 0 && !flush) {
-				giterr_set(GITERR_NET, "early EOF");
+				giterr_set("early EOF");
 				return GIT_EEOF;
 			}
 
@@ -60,7 +60,7 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 
 		gitno_consume(buf, line_end);
 		if (pkt->type == GIT_PKT_ERR) {
-			giterr_set(GITERR_NET, "Remote error: %s", ((git_pkt_err *)pkt)->error);
+			giterr_set("Remote error: %s", ((git_pkt_err *)pkt)->error);
 			git__free(pkt);
 			return -1;
 		}
@@ -105,7 +105,7 @@ static int append_symref(const char **out, git_vector *symrefs, const char *ptr)
 
 	/* if the error isn't OOM, then it's a parse error; let's use a nicer message */
 	if (error < 0) {
-		if (giterr_last()->klass != GITERR_NOMEMORY)
+		if (!giterr_is_oom(giterr_last()))
 			goto on_invalid;
 
 		return error;
@@ -118,7 +118,7 @@ static int append_symref(const char **out, git_vector *symrefs, const char *ptr)
 	return 0;
 
 on_invalid:
-	giterr_set(GITERR_NET, "remote sent invalid symref");
+	giterr_set("remote sent invalid symref");
 	git_refspec__free(mapping);
 	return -1;
 }
@@ -364,7 +364,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 		i++;
 		if (i % 20 == 0) {
 			if (t->cancelled.val) {
-				giterr_set(GITERR_NET, "The fetch was cancelled by the user");
+				giterr_set("The fetch was cancelled by the user");
 				error = GIT_EUSER;
 				goto on_error;
 			}
@@ -394,7 +394,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 					error = pkt_type;
 					goto on_error;
 				} else {
-					giterr_set(GITERR_NET, "Unexpected pkt type");
+					giterr_set("Unexpected pkt type");
 					error = -1;
 					goto on_error;
 				}
@@ -446,7 +446,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 		goto on_error;
 
 	if (t->cancelled.val) {
-		giterr_set(GITERR_NET, "The fetch was cancelled by the user");
+		giterr_set("The fetch was cancelled by the user");
 		error = GIT_EUSER;
 		goto on_error;
 	}
@@ -463,7 +463,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 		if (pkt_type < 0) {
 			return pkt_type;
 		} else if (pkt_type != GIT_PKT_ACK && pkt_type != GIT_PKT_NAK) {
-			giterr_set(GITERR_NET, "Unexpected pkt type");
+			giterr_set("Unexpected pkt type");
 			return -1;
 		}
 	} else {
@@ -484,7 +484,7 @@ static int no_sideband(transport_smart *t, struct git_odb_writepack *writepack, 
 
 	do {
 		if (t->cancelled.val) {
-			giterr_set(GITERR_NET, "The fetch was cancelled by the user");
+			giterr_set("The fetch was cancelled by the user");
 			return GIT_EUSER;
 		}
 
@@ -712,7 +712,7 @@ static int add_push_report_pkt(git_push *push, git_pkt *pkt)
 		case GIT_PKT_FLUSH:
 			return GIT_ITEROVER;
 		default:
-			giterr_set(GITERR_NET, "report-status: protocol error");
+			giterr_set("report-status: protocol error");
 			return -1;
 	}
 
@@ -769,7 +769,7 @@ static int parse_report(transport_smart *transport, git_push *push)
 				return recvd;
 
 			if (recvd == 0) {
-				giterr_set(GITERR_NET, "early EOF");
+				giterr_set("early EOF");
 				return GIT_EEOF;
 			}
 			continue;
@@ -785,7 +785,7 @@ static int parse_report(transport_smart *transport, git_push *push)
 				error = add_push_report_sideband_pkt(push, (git_pkt_data *)pkt);
 				break;
 			case GIT_PKT_ERR:
-				giterr_set(GITERR_NET, "report-status: Error reported: %s",
+				giterr_set("report-status: Error reported: %s",
 					((git_pkt_err *)pkt)->error);
 				error = -1;
 				break;
@@ -843,7 +843,7 @@ static int update_refs_from_report(
 	/* For each push spec we sent to the server, we should have
 	 * gotten back a status packet in the push report */
 	if (push_specs->length != push_report->length) {
-		giterr_set(GITERR_NET, "report-status: protocol error");
+		giterr_set("report-status: protocol error");
 		return -1;
 	}
 
@@ -858,7 +858,7 @@ static int update_refs_from_report(
 		/* For each push spec we sent to the server, we should have
 		 * gotten back a status packet in the push report which matches */
 		if (strcmp(push_spec->refspec.dst, push_status->ref)) {
-			giterr_set(GITERR_NET, "report-status: protocol error");
+			giterr_set("report-status: protocol error");
 			return -1;
 		}
 	}

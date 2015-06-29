@@ -23,7 +23,7 @@ GIT_INLINE(int) git_stream_is_encrypted(git_stream *st)
 GIT_INLINE(int) git_stream_certificate(git_cert **out, git_stream *st)
 {
 	if (!st->encrypted) {
-		giterr_set(GITERR_INVALID, "an unencrypted stream does not have a certificate");
+		giterr_set("an unencrypted stream does not have a certificate");
 		return -1;
 	}
 
@@ -38,7 +38,7 @@ GIT_INLINE(int) git_stream_supports_proxy(git_stream *st)
 GIT_INLINE(int) git_stream_set_proxy(git_stream *st, const char *proxy_url)
 {
 	if (!st->proxy_support) {
-		giterr_set(GITERR_INVALID, "proxy not supported on this stream");
+		giterr_set("proxy not supported on this stream");
 		return -1;
 	}
 

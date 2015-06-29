@@ -151,7 +151,7 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type)
 	int error = 0;
 
 	if (!git_object_typeisloose(type)) {
-		giterr_set(GITERR_INVALID, "Invalid object type for hash");
+		giterr_set("Invalid object type for hash");
 		return -1;
 	}
 
@@ -174,7 +174,7 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type)
 	 * If size is not zero, the file was truncated after we originally
 	 * stat'd it, so we consider this a read failure too */
 	if (read_len < 0 || size > 0) {
-		giterr_set(GITERR_OS, "Error reading file for hashing");
+		giterr_set_os("Error reading file for hashing");
 		error = -1;
 
 		goto done;
@@ -226,7 +226,7 @@ int git_odb__hashlink(git_oid *out, const char *path)
 		return -1;
 
 	if (!git__is_int(st.st_size) || (int)st.st_size < 0) {
-		giterr_set(GITERR_FILESYSTEM, "File size overflow for 32-bit systems");
+		giterr_set("File size overflow for 32-bit systems");
 		return -1;
 	}
 
@@ -244,7 +244,7 @@ int git_odb__hashlink(git_oid *out, const char *path)
 		read_len = p_readlink(path, link_data, size);
 		link_data[size] = '\0';
 		if (read_len != size) {
-			giterr_set(GITERR_OS, "Failed to read symlink data for '%s'", path);
+			giterr_set_os("Failed to read symlink data for '%s'", path);
 			git__free(link_data);
 			return -1;
 		}
@@ -270,7 +270,7 @@ int git_odb_hashfile(git_oid *out, const char *path, git_otype type)
 		return fd;
 
 	if ((size = git_futils_filesize(fd)) < 0 || !git__is_sizet(size)) {
-		giterr_set(GITERR_OS, "File size overflow for 32-bit systems");
+		giterr_set_os("File size overflow for 32-bit systems");
 		p_close(fd);
 		return -1;
 	}
@@ -335,7 +335,7 @@ static int init_fake_wstream(git_odb_stream **stream_p, git_odb_backend *backend
 	fake_wstream *stream;
 
 	if (!git__is_ssizet(size)) {
-		giterr_set(GITERR_ODB, "object size too large to keep in memory");
+		giterr_set("object size too large to keep in memory");
 		return -1;
 	}
 
@@ -445,7 +445,7 @@ size_t git_odb_num_backends(git_odb *odb)
 
 static int git_odb__error_unsupported_in_backend(const char *action)
 {
-	giterr_set(GITERR_ODB,
+	giterr_set(
 		"Cannot %s - unsupported in the loaded odb backends", action);
 	return -1;
 }
@@ -463,7 +463,7 @@ int git_odb_get_backend(git_odb_backend **out, git_odb *odb, size_t pos)
 		return 0;
 	}
 
-	giterr_set(GITERR_ODB, "No ODB backend loaded at index %" PRIuZ, pos);
+	giterr_set("No ODB backend loaded at index %" PRIuZ, pos);
 	return GIT_ENOTFOUND;
 }
 
@@ -488,7 +488,7 @@ static int add_default_backends(
 		if (as_alternates)
 			return 0;
 
-		giterr_set(GITERR_ODB, "Failed to load object database in '%s'", objects_dir);
+		giterr_set("Failed to load object database in '%s'", objects_dir);
 		return -1;
 	}
 
@@ -1009,7 +1009,7 @@ static int git_odb_stream__invalid_length(
 	const git_odb_stream *stream,
 	const char *action)
 {
-	giterr_set(GITERR_ODB,
+	giterr_set(
 		"Cannot %s - "
 		"Invalid length. %"PRIuZ" was expected. The "
 		"total size of the received chunks amounts to %"PRIuZ".",
@@ -1144,16 +1144,16 @@ int git_odb__error_notfound(const char *message, const git_oid *oid)
 	if (oid != NULL) {
 		char oid_str[GIT_OID_HEXSZ + 1];
 		git_oid_tostr(oid_str, sizeof(oid_str), oid);
-		giterr_set(GITERR_ODB, "Object not found - %s (%s)", message, oid_str);
+		giterr_set("Object not found - %s (%s)", message, oid_str);
 	} else
-		giterr_set(GITERR_ODB, "Object not found - %s", message);
+		giterr_set("Object not found - %s", message);
 
 	return GIT_ENOTFOUND;
 }
 
 int git_odb__error_ambiguous(const char *message)
 {
-	giterr_set(GITERR_ODB, "Ambiguous SHA1 prefix - %s", message);
+	giterr_set("Ambiguous SHA1 prefix - %s", message);
 	return GIT_EAMBIGUOUS;
 }
 

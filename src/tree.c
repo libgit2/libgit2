@@ -373,9 +373,9 @@ unsigned int git_treebuilder_entrycount(git_treebuilder *bld)
 static int tree_error(const char *str, const char *path)
 {
 	if (path)
-		giterr_set(GITERR_TREE, "%s - %s", str, path);
+		giterr_set("%s - %s", str, path);
 	else
-		giterr_set(GITERR_TREE, "%s", str);
+		giterr_set("%s", str);
 	return -1;
 }
 
@@ -466,7 +466,7 @@ static int append_entry(
 	git_strmap_insert(bld->map, entry->filename, entry, error);
 	if (error < 0) {
 		git_tree_entry_free(entry);
-		giterr_set(GITERR_TREE, "failed to append entry %s to the tree builder", filename);
+		giterr_set("failed to append entry %s to the tree builder", filename);
 		return -1;
 	}
 
@@ -584,7 +584,7 @@ int git_tree__write_index(
 	assert(oid && index && repo);
 
 	if (git_index_has_conflicts(index)) {
-		giterr_set(GITERR_INDEX,
+		giterr_set(
 			"Cannot create a tree from a not fully merged index.");
 		return GIT_EUNMERGED;
 	}
@@ -696,7 +696,7 @@ int git_treebuilder_insert(
 
 		if (error < 0) {
 			git_tree_entry_free(entry);
-			giterr_set(GITERR_TREE, "failed to insert %s", filename);
+			giterr_set("failed to insert %s", filename);
 			return -1;
 		}
 	}
@@ -850,14 +850,14 @@ int git_tree_entry_bypath(
 	filename_len = subpath_len(path);
 
 	if (filename_len == 0) {
-		giterr_set(GITERR_TREE, "Invalid tree path given");
+		giterr_set("Invalid tree path given");
 		return GIT_ENOTFOUND;
 	}
 
 	entry = entry_fromname(root, path, filename_len);
 
 	if (entry == NULL) {
-		giterr_set(GITERR_TREE,
+		giterr_set(
 			   "the path '%.*s' does not exist in the given tree", filename_len, path);
 		return GIT_ENOTFOUND;
 	}
@@ -867,7 +867,7 @@ int git_tree_entry_bypath(
 		/* If there are more components in the path...
 		 * then this entry *must* be a tree */
 		if (!git_tree_entry__is_tree(entry)) {
-			giterr_set(GITERR_TREE,
+			giterr_set(
 				   "the path '%.*s' exists but is not a tree", filename_len, path);
 			return GIT_ENOTFOUND;
 		}
@@ -968,7 +968,7 @@ int git_tree_walk(
 	git_buf root_path = GIT_BUF_INIT;
 
 	if (mode != GIT_TREEWALK_POST && mode != GIT_TREEWALK_PRE) {
-		giterr_set(GITERR_INVALID, "Invalid walking mode for tree walk");
+		giterr_set("Invalid walking mode for tree walk");
 		return -1;
 	}
 

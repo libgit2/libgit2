@@ -240,7 +240,7 @@ int git_filter_register(
 
 	if (!filter_registry_find(NULL, name)) {
 		giterr_set(
-			GITERR_FILTER, "Attempt to reregister existing filter '%s'", name);
+			"Attempt to reregister existing filter '%s'", name);
 		return GIT_EEXISTS;
 	}
 
@@ -285,12 +285,12 @@ int git_filter_unregister(const char *name)
 
 	/* cannot unregister default filters */
 	if (!strcmp(GIT_FILTER_CRLF, name) || !strcmp(GIT_FILTER_IDENT, name)) {
-		giterr_set(GITERR_FILTER, "Cannot unregister filter '%s'", name);
+		giterr_set("Cannot unregister filter '%s'", name);
 		return -1;
 	}
 
 	if ((fdef = filter_registry_lookup(&pos, name)) == NULL) {
-		giterr_set(GITERR_FILTER, "Cannot find filter '%s' to unregister", name);
+		giterr_set("Cannot find filter '%s' to unregister", name);
 		return GIT_ENOTFOUND;
 	}
 
@@ -609,7 +609,7 @@ int git_filter_list_push(
 	if (git_vector_search2(
 			&pos, &git__filter_registry->filters,
 			filter_def_filter_key_check, filter) < 0) {
-		giterr_set(GITERR_FILTER, "Cannot use an unregistered filter");
+		giterr_set("Cannot use an unregistered filter");
 		return -1;
 	}
 
@@ -724,7 +724,7 @@ static int buf_from_blob(git_buf *out, git_blob *blob)
 	git_off_t rawsize = git_blob_rawsize(blob);
 
 	if (!git__is_sizet(rawsize)) {
-		giterr_set(GITERR_OS, "Blob is too large to filter");
+		giterr_set_os("Blob is too large to filter");
 		return -1;
 	}
 

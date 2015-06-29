@@ -96,7 +96,7 @@ static int write_file_stream(
 	p_close(fd);
 
 	if (written != file_size || read_len < 0) {
-		giterr_set(GITERR_OS, "Failed to read file into stream");
+		giterr_set_os("Failed to read file into stream");
 		error = -1;
 	}
 
@@ -142,7 +142,7 @@ static int write_symlink(
 
 	read_len = p_readlink(path, link_data, link_size);
 	if (read_len != (ssize_t)link_size) {
-		giterr_set(GITERR_OS, "Failed to create blob.  Can't read symlink '%s'", path);
+		giterr_set_os("Failed to create blob.  Can't read symlink '%s'", path);
 		git__free(link_data);
 		return -1;
 	}
@@ -302,7 +302,7 @@ int git_blob_create_fromchunks(
 			break;
 
 		if (read_bytes > BUFFER_SIZE) {
-			giterr_set(GITERR_OBJECT, "Invalid chunk size while creating blob");
+			giterr_set("Invalid chunk size while creating blob");
 			error = GIT_EBUFS;
 		} else if (read_bytes < 0) {
 			error = giterr_set_after_callback(read_bytes);

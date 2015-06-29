@@ -302,7 +302,6 @@ void test_diff_tree__checks_options_version(void)
 {
 	const char *a_commit = "8496071c1b46c85";
 	const char *b_commit = "be3563ae3f79";
-	const git_error *err;
 
 	g_repo = cl_git_sandbox_init("testrepo.git");
 
@@ -311,13 +310,10 @@ void test_diff_tree__checks_options_version(void)
 
 	opts.version = 0;
 	cl_git_fail(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
-	err = giterr_last();
-	cl_assert_equal_i(GITERR_INVALID, err->klass);
 
 	giterr_clear();
 	opts.version = 1024;
 	cl_git_fail(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
-	err = giterr_last();
 }
 
 void process_tree_to_tree_diffing(

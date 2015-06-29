@@ -352,7 +352,7 @@ static int on_headers_complete(http_parser *parser)
 					assert(t->cred);
 
 					if (!(t->cred->credtype & allowed_auth_types)) {
-						giterr_set(GITERR_NET, "credentials callback returned an invalid cred type");
+						giterr_set("credentials callback returned an invalid cred type");
 						return t->parse_error = PARSE_ERROR_GENERIC;
 					}
 
@@ -364,7 +364,7 @@ static int on_headers_complete(http_parser *parser)
 		}
 
 		if (no_callback) {
-			giterr_set(GITERR_NET, "authentication required but no callback set");
+			giterr_set("authentication required but no callback set");
 			return t->parse_error = PARSE_ERROR_GENERIC;
 		}
 	}
@@ -378,7 +378,7 @@ static int on_headers_complete(http_parser *parser)
 	    t->location) {
 
 		if (s->redirect_count >= 7) {
-			giterr_set(GITERR_NET, "Too many redirects");
+			giterr_set("Too many redirects");
 			return t->parse_error = PARSE_ERROR_GENERIC;
 		}
 
@@ -402,7 +402,7 @@ static int on_headers_complete(http_parser *parser)
 
 	/* Check for a 200 HTTP status code. */
 	if (parser->status_code != 200) {
-		giterr_set(GITERR_NET,
+		giterr_set(
 			"Unexpected HTTP status code: %d",
 			parser->status_code);
 		return t->parse_error = PARSE_ERROR_GENERIC;
@@ -410,7 +410,7 @@ static int on_headers_complete(http_parser *parser)
 
 	/* The response must contain a Content-Type header. */
 	if (!t->content_type) {
-		giterr_set(GITERR_NET, "No Content-Type header in response");
+		giterr_set("No Content-Type header in response");
 		return t->parse_error = PARSE_ERROR_GENERIC;
 	}
 
@@ -429,7 +429,7 @@ static int on_headers_complete(http_parser *parser)
 
 	if (strcmp(t->content_type, git_buf_cstr(&buf))) {
 		git_buf_free(&buf);
-		giterr_set(GITERR_NET,
+		giterr_set(
 			"Invalid Content-Type: %s",
 			t->content_type);
 		return t->parse_error = PARSE_ERROR_GENERIC;
@@ -463,7 +463,7 @@ static int on_body_fill_buffer(http_parser *parser, const char *str, size_t len)
 		return 0;
 
 	if (ctx->buf_size < len) {
-		giterr_set(GITERR_NET, "Can't fit data in the buffer");
+		giterr_set("Can't fit data in the buffer");
 		return t->parse_error = PARSE_ERROR_GENERIC;
 	}
 
@@ -587,7 +587,7 @@ static int http_connect(http_subtransport *t)
 
 		if (error < 0) {
 			if (!giterr_last())
-				giterr_set(GITERR_NET, "user cancelled certificate check");
+				giterr_set("user cancelled certificate check");
 
 			return error;
 		}
@@ -712,7 +712,7 @@ replay:
 			return -1;
 
 		if (bytes_parsed != t->parse_buffer.offset - data_offset) {
-			giterr_set(GITERR_NET,
+			giterr_set(
 				"HTTP parser error: %s",
 				http_errno_description((enum http_errno)t->parser.http_errno));
 			return -1;
@@ -805,7 +805,7 @@ static int http_stream_write_single(
 	assert(t->connected);
 
 	if (s->sent_request) {
-		giterr_set(GITERR_NET, "Subtransport configured for only one write");
+		giterr_set("Subtransport configured for only one write");
 		return -1;
 	}
 

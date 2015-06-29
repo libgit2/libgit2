@@ -151,7 +151,7 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting,
 		if (from_glob)
 			return 0;
 
-		giterr_set(GITERR_INVALID, "Object is not a committish");
+		giterr_set("Object is not a committish");
 		return -1;
 	}
 	if (error < 0)
@@ -289,7 +289,7 @@ int git_revwalk_push_range(git_revwalk *walk, const char *range)
 
 	if (revspec.flags & GIT_REVPARSE_MERGE_BASE) {
 		/* TODO: support "<commit>...<commit>" */
-		giterr_set(GITERR_INVALID, "Symmetric differences not implemented in revwalk");
+		giterr_set("Symmetric differences not implemented in revwalk");
 		return GIT_EINVALIDSPEC;
 	}
 
@@ -660,7 +660,7 @@ int git_revwalk_add_hide_cb(
 
 	if (walk->hide_cb) {
 		/* There is already a callback added */
-		giterr_set(GITERR_INVALID, "There is already a callback added to hide commits in revision walker.");
+		giterr_set("There is already a callback added to hide commits in revision walker.");
 		return -1;
 	}
 

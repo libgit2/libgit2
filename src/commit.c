@@ -79,7 +79,7 @@ int git_commit_create_from_callback(
 	if (ref && !matched_parent) {
 		git_reference_free(ref);
 		git_buf_free(&commit);
-		giterr_set(GITERR_OBJECT, "failed to create commit: current tip is not the first parent");
+		giterr_set("failed to create commit: current tip is not the first parent");
 		return GIT_EMODIFIED;
 	}
 
@@ -113,7 +113,7 @@ int git_commit_create_from_callback(
 
 on_error:
 	git_buf_free(&commit);
-	giterr_set(GITERR_OBJECT, "Failed to create commit.");
+	giterr_set("Failed to create commit.");
 	return -1;
 }
 
@@ -284,7 +284,7 @@ int git_commit_amend(
 
 		if (git_oid_cmp(git_commit_id(commit_to_amend), git_reference_target(ref))) {
 			git_reference_free(ref);
-			giterr_set(GITERR_REFERENCE, "commit to amend is not the tip of the given branch");
+			giterr_set("commit to amend is not the tip of the given branch");
 			return -1;
 		}
 	}
@@ -391,7 +391,7 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 	return 0;
 
 bad_buffer:
-	giterr_set(GITERR_OBJECT, "Failed to parse bad commit object");
+	giterr_set("Failed to parse bad commit object");
 	return -1;
 }
 
@@ -479,7 +479,7 @@ int git_commit_parent(
 
 	parent_id = git_commit_parent_id(commit, n);
 	if (parent_id == NULL) {
-		giterr_set(GITERR_INVALID, "Parent %u does not exist", n);
+		giterr_set("Parent %u does not exist", n);
 		return GIT_ENOTFOUND;
 	}
 
@@ -567,7 +567,7 @@ int git_commit_header_field(git_buf *out, const git_commit *commit, const char *
 	return GIT_ENOTFOUND;
 
 malformed:
-	giterr_set(GITERR_OBJECT, "malformed header");
+	giterr_set("malformed header");
 	return -1;
 oom:
 	giterr_set_oom();

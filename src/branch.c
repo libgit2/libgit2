@@ -33,7 +33,7 @@ static int retrieve_branch_reference(
 		/* OOM */;
 	else if ((error = git_reference_lookup(&branch, repo, ref_name.ptr)) < 0)
 		giterr_set(
-			GITERR_REFERENCE, "Cannot locate %s branch '%s'",
+			"Cannot locate %s branch '%s'",
 			is_remote ? "remote-tracking" : "local", branch_name);
 
 	*branch_reference_out = branch; /* will be NULL on error */
@@ -45,7 +45,6 @@ static int retrieve_branch_reference(
 static int not_a_local_branch(const char *reference_name)
 {
 	giterr_set(
-		GITERR_INVALID,
 		"Reference '%s' is not a local branch.", reference_name);
 	return -1;
 }
@@ -79,7 +78,7 @@ static int create_branch(
 	}
 
 	if (is_head && force) {
-		giterr_set(GITERR_REFERENCE, "Cannot force update branch '%s' as it is "
+		giterr_set("Cannot force update branch '%s' as it is "
 			"the current HEAD of the repository.", branch_name);
 		error = -1;
 		goto cleanup;
@@ -133,7 +132,7 @@ int git_branch_delete(git_reference *branch)
 	assert(branch);
 
 	if (!git_reference_is_branch(branch) && !git_reference_is_remote(branch)) {
-		giterr_set(GITERR_INVALID, "Reference '%s' is not a valid branch.",
+		giterr_set("Reference '%s' is not a valid branch.",
 			git_reference_name(branch));
 		return GIT_ENOTFOUND;
 	}
@@ -142,7 +141,7 @@ int git_branch_delete(git_reference *branch)
 		return is_head;
 
 	if (is_head) {
-		giterr_set(GITERR_REFERENCE, "Cannot delete branch '%s' as it is "
+		giterr_set("Cannot delete branch '%s' as it is "
 			"the current HEAD of the repository.", git_reference_name(branch));
 		return -1;
 	}
@@ -314,7 +313,7 @@ int git_branch_name(
 	} else if (git_reference_is_remote(ref)) {
 		branch_name += strlen(GIT_REFS_REMOTES_DIR);
 	} else {
-		giterr_set(GITERR_INVALID,
+		giterr_set(
 				"Reference '%s' is neither a local nor a remote branch.", ref->name);
 		return -1;
 	}
@@ -372,7 +371,7 @@ int git_branch_upstream_name(
 			goto cleanup;
 
 	if (git_buf_len(&remote_name) == 0 || git_buf_len(&merge_name) == 0) {
-		giterr_set(GITERR_REFERENCE,
+		giterr_set(
 			"branch '%s' does not have an upstream", refname);
 		error = GIT_ENOTFOUND;
 		goto cleanup;
@@ -422,7 +421,7 @@ int git_branch_upstream_remote(git_buf *buf, git_repository *repo, const char *r
 		return error;
 
 	if (git_buf_len(buf) == 0) {
-		giterr_set(GITERR_REFERENCE, "branch '%s' does not have an upstream remote", refname);
+		giterr_set("branch '%s' does not have an upstream remote", refname);
 		error = GIT_ENOTFOUND;
 		git_buf_clear(buf);
 	}
@@ -445,7 +444,7 @@ int git_branch_remote_name(git_buf *buf, git_repository *repo, const char *refna
 
 	/* Verify that this is a remote branch */
 	if (!git_reference__is_remote(refname)) {
-		giterr_set(GITERR_INVALID, "Reference '%s' is not a remote branch.",
+		giterr_set("Reference '%s' is not a remote branch.",
 			refname);
 		error = GIT_ERROR;
 		goto cleanup;
@@ -471,7 +470,7 @@ int git_branch_remote_name(git_buf *buf, git_repository *repo, const char *refna
 			} else {
 				git_remote_free(remote);
 
-				giterr_set(GITERR_REFERENCE,
+				giterr_set(
 					"Reference '%s' is ambiguous", refname);
 				error = GIT_EAMBIGUOUS;
 				goto cleanup;
@@ -485,7 +484,7 @@ int git_branch_remote_name(git_buf *buf, git_repository *repo, const char *refna
 		git_buf_clear(buf);
 		error = git_buf_puts(buf, remote_name);
 	} else {
-		giterr_set(GITERR_REFERENCE,
+		giterr_set(
 			"Could not determine remote for '%s'", refname);
 		error = GIT_ENOTFOUND;
 	}
@@ -574,7 +573,7 @@ int git_branch_set_upstream(git_reference *branch, const char *upstream_name)
 	else if (git_branch_lookup(&upstream, repo, upstream_name, GIT_BRANCH_REMOTE) == 0)
 		local = 0;
 	else {
-		giterr_set(GITERR_REFERENCE,
+		giterr_set(
 			"Cannot set upstream for branch '%s'", shortname);
 		return GIT_ENOTFOUND;
 	}

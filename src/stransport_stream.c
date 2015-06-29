@@ -29,10 +29,10 @@ int stransport_error(OSStatus ret)
 	message = SecCopyErrorMessageString(ret, NULL);
 	GITERR_CHECK_ALLOC(message);
 
-	giterr_set(GITERR_NET, "SecureTransport error: %s", CFStringGetCStringPtr(message, kCFStringEncodingUTF8));
+	giterr_set("SecureTransport error: %s", CFStringGetCStringPtr(message, kCFStringEncodingUTF8));
 	CFRelease(message);
 #else
-    giterr_set(GITERR_NET, "SecureTransport error: OSStatus %d", (unsigned int)ret);
+    giterr_set("SecureTransport error: OSStatus %d", (unsigned int)ret);
 #endif
 
 	return -1;
@@ -59,7 +59,7 @@ int stransport_connect(git_stream *stream)
 
 	ret = SSLHandshake(st->ctx);
 	if (ret != errSSLServerAuthCompleted) {
-		giterr_set(GITERR_SSL, "unexpected return value from ssl handshake %d", ret);
+		giterr_set("unexpected return value from ssl handshake %d", ret);
 		return -1;
 	}
 
@@ -72,7 +72,7 @@ int stransport_connect(git_stream *stream)
 	CFRelease(trust);
 
 	if (sec_res == kSecTrustResultInvalid || sec_res == kSecTrustResultOtherError) {
-		giterr_set(GITERR_SSL, "internal security trust error");
+		giterr_set("internal security trust error");
 		return -1;
 	}
 
@@ -104,7 +104,7 @@ int stransport_certificate(git_cert **out, git_stream *stream)
 	CFRelease(trust);
 
 	if (st->der_data == NULL) {
-		giterr_set(GITERR_SSL, "retrieved invalid certificate data");
+		giterr_set("retrieved invalid certificate data");
 		return -1;
 	}
 
@@ -254,7 +254,7 @@ int git_stransport_stream_new(git_stream **out, const char *host, const char *po
 
 	st->ctx = SSLCreateContext(NULL, kSSLClientSide, kSSLStreamType);
 	if (!st->ctx) {
-		giterr_set(GITERR_NET, "failed to create SSL context");
+		giterr_set("failed to create SSL context");
 		return -1;
 	}
 
