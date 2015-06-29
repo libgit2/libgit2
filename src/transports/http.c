@@ -36,6 +36,7 @@ static const char *post_verb = "POST";
 
 #define PARSE_ERROR_GENERIC	-1
 #define PARSE_ERROR_REPLAY	-2
+#define PARSE_ERROR_AUTHFAIL	-3
 
 #define CHUNK_SIZE	4096
 
@@ -361,6 +362,9 @@ static int on_headers_complete(http_parser *parser)
 					t->parse_error = PARSE_ERROR_REPLAY;
 					return 0;
 				}
+			} else {
+				giterr_set(GITERR_NET, "authentication failed, incorrect credentials");
+				return t->parse_error = PARSE_ERROR_AUTHFAIL;
 			}
 		}
 
@@ -708,6 +712,9 @@ replay:
 
 			goto replay;
 		}
+
+		if (PARSE_ERROR_AUTHFAIL == t->parse_error)
+			return GIT_EAUTH;
 
 		if (t->parse_error < 0)
 			return -1;
