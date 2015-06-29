@@ -793,7 +793,6 @@ static int stage_new_file(const git_index_entry **entries, void *data)
 
 static int stage_new_files(
 	git_index **out,
-	git_repository *repo,
 	git_tree *parent_tree,
 	git_tree *tree)
 {
@@ -886,7 +885,7 @@ int git_stash_apply(
 	 */
 	} else if ((opts.flags & GIT_STASH_APPLY_REINSTATE_INDEX) == 0) {
 		if ((error = stage_new_files(
-				&stash_adds, repo, stash_parent_tree, stash_tree)) < 0 ||
+				&stash_adds, stash_parent_tree, stash_tree)) < 0 ||
 			(error = merge_indexes(
 				&unstashed_index, repo, stash_parent_tree, repo_index, stash_adds)) < 0)
 			goto cleanup;
