@@ -31,6 +31,9 @@ void test_submodule_lookup__simple_lookup(void)
 
 	/* lookup non-existent item */
 	refute_submodule_exists(g_repo, "no_such_file", GIT_ENOTFOUND);
+
+	/* lookup a submodule by path with a trailing slash */
+	assert_submodule_exists(g_repo, "sm_added_and_uncommited/");
 }
 
 void test_submodule_lookup__accessors(void)

@@ -168,11 +168,18 @@ int git_submodule_lookup(
 		return error;
 	}
 
-	/* If it's not configured, we need to check for the path */
+	/* If it's not configured or we're looking by path  */
 	if (location == 0 || location == GIT_SUBMODULE_STATUS_IN_WD) {
 		git_config_backend *mods;
 		const char *pattern = "submodule\\..*\\.path";
-		fbp_data data = { name, NULL };
+		git_buf path = GIT_BUF_INIT;
+		fbp_data data = { NULL, NULL };
+
+		git_buf_puts(&path, name);
+		while (path.ptr[path.size-1] == '/') {
+			path.ptr[--path.size] = '\0';
+		}
+		data.path = path.ptr;
 
 		mods = open_gitmodules(repo, GITMODULES_EXISTING);
 
@@ -189,8 +196,7 @@ int git_submodule_lookup(
 		if (data.name) {
 			git__free(sm->name);
 			sm->name = data.name;
-			sm->path = git__strdup(name);
-			GITERR_CHECK_ALLOC(sm->path);
+			sm->path = git_buf_detach(&path);
 
 			/* Try to load again with the right name */
 			if ((error = git_submodule_reload(sm, false)) < 0) {
@@ -198,6 +204,8 @@ int git_submodule_lookup(
 				return error;
 			}
 		}
+
+		git_buf_free(&path);
 	}
 
 	if ((error = git_submodule_location(&location, sm)) < 0) {
