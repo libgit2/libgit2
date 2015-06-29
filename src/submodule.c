@@ -741,7 +741,7 @@ const char *git_submodule_update_to_str(git_submodule_update_t update)
 {
 	int i;
 	for (i = 0; i < (int)ARRAY_SIZE(_sm_update_map); ++i)
-		if (_sm_update_map[i].map_value == update)
+		if (_sm_update_map[i].map_value == (int)update)
 			return _sm_update_map[i].str_match;
 	return NULL;
 }
