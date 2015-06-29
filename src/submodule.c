@@ -1691,26 +1691,7 @@ static int submodule_load_from_config(
 
 	/* Deregister under name being replaced */
 	if (replaced) {
-		git_submodule_free(sm);
 		git__free(replaced);
-	}
-
-	/* Insert under alternate key */
-	if (alternate) {
-		void *old_sm = NULL;
-
-		if (error < 0)
-			goto done;
-		if (error > 0)
-			error = 0;
-
-		GIT_REFCOUNT_INC(sm); /* increase refcount for new key */
-
-		/* if we replaced an old module under this key, release the old one */
-		if (old_sm && ((git_submodule *)old_sm) != sm) {
-			git_submodule_free(old_sm);
-			/* TODO: log warning about multiple submodules with same path */
-		}
 	}
 
 	/* TODO: Look up path in index and if it is present but not a GITLINK
