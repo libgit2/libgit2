@@ -523,7 +523,7 @@ static int buffer_want_with_caps(const git_remote_head *head, transport_smart_ca
 
 	if (len > 0xffff) {
 		giterr_set(GITERR_NET,
-			"Tried to produce packet with invalid length %d", len);
+			"Tried to produce packet with invalid length %" PRIuZ, len);
 		return -1;
 	}
 
