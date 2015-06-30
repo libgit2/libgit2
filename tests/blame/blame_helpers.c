@@ -4,7 +4,7 @@ void hunk_message(size_t idx, const git_blame_hunk *hunk, const char *fmt, ...)
 {
 	va_list arglist;
 
-	printf("Hunk %zd (line %d +%d): ", idx,
+	printf("Hunk %"PRIuZ" (line %d +%d): ", idx,
 			hunk->final_start_line_number, hunk->lines_in_hunk-1);
 
 	va_start(arglist, fmt);

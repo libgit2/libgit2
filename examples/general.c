@@ -142,8 +142,8 @@ int main (int argc, char** argv)
   // We provide methods to convert from the object type which is an enum, to
   // a string representation of that value (and vice-versa).
   str_type = git_object_type2string(otype);
-  printf("object length and type: %d, %s\n",
-      (int)git_odb_object_size(obj),
+  printf("object length and type: %"PRIuZ", %s\n",
+      git_odb_object_size(obj),
       str_type);
 
   // For proper memory management, close the object when you are done with
@@ -324,7 +324,7 @@ int main (int argc, char** argv)
   // Getting the count of entries in the tree so you can iterate over them
   // if you want to.
   size_t cnt = git_tree_entrycount(tree); // 3
-  printf("tree entries: %d\n", (int)cnt);
+  printf("tree entries: %"PRIuZ"\n", cnt);
 
   entry = git_tree_entry_byindex(tree, 0);
   printf("Entry name: %s\n", git_tree_entry_name(entry)); // "hello.c"
