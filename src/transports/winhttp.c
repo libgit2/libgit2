@@ -1096,7 +1096,6 @@ static int winhttp_stream_write_chunked(
 	size_t len)
 {
 	winhttp_stream *s = (winhttp_stream *)stream;
-	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
 	int error;
 
 	if (!s->request && winhttp_stream_connect(s) < 0)

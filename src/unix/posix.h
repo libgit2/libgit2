@@ -11,6 +11,7 @@
 #include <dirent.h>
 #include <sys/param.h>
 #include <sys/time.h>
+#include <sys/stat.h>
 
 typedef int GIT_SOCKET;
 #define INVALID_SOCKET -1

@@ -336,7 +336,7 @@ static int format_binary(
 		"delta" : "literal";
 	const char *scan, *end;
 
-	git_buf_printf(pi->buf, "%s %lu\n", typename, inflatedlen);
+	git_buf_printf(pi->buf, "%s %" PRIuZ "\n", typename, inflatedlen);
 	pi->line.num_lines++;
 
 	for (scan = data, end = data + datalen; scan < end; ) {
