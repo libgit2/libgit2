@@ -96,7 +96,7 @@ void test_stash_apply__with_existing_file(void)
 
 void test_stash_apply__merges_new_file(void)
 {
-	git_index_entry *ancestor, *our, *their;
+	const git_index_entry *ancestor, *our, *their;
 
 	cl_git_mkfile("stash/where", "committed before stash\n");
 	cl_git_pass(git_index_add_bypath(repo_index, "where"));

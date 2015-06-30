@@ -413,6 +413,7 @@ void openssl_free(git_stream *stream)
 {
 	openssl_stream *st = (openssl_stream *) stream;
 
+	git__free(st->host);
 	git__free(st->cert_info.data);
 	git_stream_free(st->io);
 	git__free(st);

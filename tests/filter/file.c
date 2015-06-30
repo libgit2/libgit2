@@ -91,9 +91,9 @@ void test_filter_file__apply_stream(void)
 
 	cl_git_pass(git_filter_list_push(fl, crlf, NULL));
 
-	cl_git_pass(git_filter_list_stream_file(fl, g_repo, "all-crlf", (git_writestream *)&write_target));
+	cl_git_pass(git_filter_list_stream_file(fl, g_repo, "all-crlf", &write_target.base));
 	cl_assert_equal_s("crlf\ncrlf\ncrlf\ncrlf\n", write_target.buf.ptr);
 
 	git_filter_list_free(fl);
-	write_target.base.free((struct git_writestream *)&write_target);
+	write_target.base.free(&write_target.base);
 }

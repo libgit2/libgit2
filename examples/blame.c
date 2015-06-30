@@ -37,8 +37,8 @@ static void parse_opts(struct opts *o, int argc, char *argv[]);
 
 int main(int argc, char *argv[])
 {
-	int i, line, break_on_null_hunk;
-	size_t rawsize;
+	int line, break_on_null_hunk;
+	size_t i, rawsize;
 	char spec[1024] = {0};
 	struct opts o = {0};
 	const char *rawdata;

@@ -3,6 +3,7 @@
 
 #include "buffer.h"
 #include "index.h"
+#include "repository.h"
 
 static git_repository *g_repo;
 
