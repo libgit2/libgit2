@@ -1067,6 +1067,22 @@ void git_config_iterator_free(git_config_iterator *iter)
 	iter->free(iter);
 }
 
+int git_config_find_local(git_buf *path, git_repository *repo)
+{
+	assert(repo);
+
+	git_buf_sanitize(path);
+	if (git_buf_joinpath(path, repo->path_repository, GIT_CONFIG_FILENAME_INREPO) < 0)
+		return -1;
+
+	if (!git_path_exists(path->ptr)) {
+		giterr_set(GITERR_OS, "The config file '%s' doesn't exist", path->ptr);
+		return GIT_ENOTFOUND;
+	}
+
+	return 0;
+}
+
 int git_config_find_global(git_buf *path)
 {
 	git_buf_sanitize(path);
