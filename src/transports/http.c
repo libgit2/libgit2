@@ -337,6 +337,10 @@ static int on_headers_complete(http_parser *parser)
 			no_callback = 1;
 		} else {
 			if (allowed_auth_types) {
+				if (t->cred) {
+					t->cred->free(t->cred);
+					t->cred = NULL;
+				}
 
 				error = t->owner->cred_acquire_cb(&t->cred,
 								  t->owner->url,
