@@ -1421,6 +1421,31 @@ int git_diff_tree_to_workdir_with_index(
 	return error;
 }
 
+int git_diff_index_to_index(
+	git_diff **diff,
+	git_repository *repo,
+	git_index *old_index,
+	git_index *new_index,
+	const git_diff_options *opts)
+{
+	int error = 0;
+
+	assert(diff && old_index && new_index);
+
+	DIFF_FROM_ITERATORS(
+		git_iterator_for_index(
+			&a, old_index, GIT_ITERATOR_DONT_IGNORE_CASE, pfx, pfx),
+		git_iterator_for_index(
+			&b, new_index, GIT_ITERATOR_DONT_IGNORE_CASE, pfx, pfx)
+	);
+
+	/* if index is in case-insensitive order, re-sort deltas to match */
+	if (!error && (old_index->ignore_case || new_index->ignore_case))
+		diff_set_ignore_case(*diff, true);
+
+	return error;
+}
+
 size_t git_diff_num_deltas(const git_diff *diff)
 {
 	assert(diff);

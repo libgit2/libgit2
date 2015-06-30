@@ -268,3 +268,35 @@ void test_diff_index__not_in_head_conflicted(void)
 	git_index_free(index);
 	git_tree_free(a);
 }
+
+void test_diff_index__to_index(void)
+{
+	const char *a_commit = "26a125ee1bf"; /* the current HEAD */
+	git_tree *old_tree;
+	git_index *old_index;
+	git_index *new_index;
+	git_diff *diff;
+	diff_expects exp;
+
+	cl_git_pass(git_index_new(&old_index));
+	old_tree = resolve_commit_oid_to_tree(g_repo, a_commit);
+	cl_git_pass(git_index_read_tree(old_index, old_tree));
+
+	cl_git_pass(git_repository_index(&new_index, g_repo));
+
+	cl_git_pass(git_diff_index_to_index(&diff, g_repo, old_index, new_index, NULL));
+
+	memset(&exp, 0, sizeof(diff_expects));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(8, exp.files);
+	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_CONFLICTED]);
+
+	git_diff_free(diff);
+	git_index_free(new_index);
+	git_index_free(old_index);
+	git_tree_free(old_tree);
+}
