@@ -770,7 +770,7 @@ static int ensure_clean_index(git_repository *repo, git_index *index)
 		goto done;
 
 	if (git_diff_num_deltas(index_diff) > 0) {
-		giterr_set(GITERR_STASH, "%d uncommitted changes exist in the index",
+		giterr_set(GITERR_STASH, "%" PRIuZ " uncommitted changes exist in the index",
 			git_diff_num_deltas(index_diff));
 		error = GIT_EUNCOMMITTED;
 	}
