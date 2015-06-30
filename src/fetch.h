@@ -13,13 +13,6 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts);
 
 int git_fetch_download_pack(git_remote *remote, const git_remote_callbacks *callbacks);
 
-int git_fetch__download_pack(
-		git_transport *t,
-		git_repository *repo,
-		git_transfer_progress *stats,
-		git_transfer_progress_cb progress_cb,
-		void *progress_payload);
-
 int git_fetch_setup_walk(git_revwalk **out, git_repository *repo);
 
 #endif
