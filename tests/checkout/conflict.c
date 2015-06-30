@@ -161,7 +161,10 @@ static void ensure_workdir_oid(const char *path, const char *oid_str)
 
 static void ensure_workdir_mode(const char *path, int mode)
 {
-#ifndef GIT_WIN32
+#ifdef GIT_WIN32
+	GIT_UNUSED(path);
+	GIT_UNUSED(mode);
+#else
 	git_buf fullpath = GIT_BUF_INIT;
 	struct stat st;
 
