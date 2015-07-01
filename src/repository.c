@@ -867,7 +867,9 @@ static int reserved_names_add8dot3(git_repository *repo, const char *path)
 {
 	char *name = git_win32_path_8dot3_name(path);
 	const char *def = GIT_DIR_SHORTNAME;
+	const char *def_dot_git = DOT_GIT;
 	size_t name_len, def_len = CONST_STRLEN(GIT_DIR_SHORTNAME);
+	size_t def_dot_git_len = CONST_STRLEN(DOT_GIT);
 	git_buf *buf;
 
 	if (!name)
@@ -875,7 +877,8 @@ static int reserved_names_add8dot3(git_repository *repo, const char *path)
 
 	name_len = strlen(name);
 
-	if (name_len == def_len && memcmp(name, def, def_len) == 0) {
+	if ((name_len == def_len && memcmp(name, def, def_len) == 0) || 
+		(name_len == def_dot_git_len && memcmp(name, def_dot_git, def_dot_git_len) == 0)) {
 		git__free(name);
 		return 0;
 	}
