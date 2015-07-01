@@ -1385,7 +1385,7 @@ int git_submodule_reload(git_submodule *sm, int force)
 
 		git_buf_sets(&path, "submodule\\.");
 		git_buf_text_puts_escape_regex(&path, sm->name);
-		git_buf_puts(&path, ".*");
+		git_buf_puts(&path, "\\..*");
 
 		if (git_buf_oom(&path)) {
 			error = -1;
