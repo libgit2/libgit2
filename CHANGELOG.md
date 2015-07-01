@@ -177,6 +177,9 @@ v0.22 + 1
 * `git_submodule_save()` has been removed. The submodules are no
   longer configured via the objects.
 
+* `git_submodule_reload_all()` has been removed as we no longer cache
+  submodules.
+
 ### Breaking API changes
 
 * `git_smart_subtransport_cb` now has a `param` parameter.
