@@ -8,9 +8,9 @@
 # the configuration that git produces.
 #
 # To update the test resource data, from the test resource directory:
-#     git rm -r ./crlf_data
+#     git rm -r ./crlf_data/{posix,windows}
 #     sh ./generate_crlf.sh ./crlf ./crlf_data /tmp/crlf_gitdirs
-#     git add ./crlf_data
+#     git add ./crlf_data/{posix,windows}
 
 set -e
 
