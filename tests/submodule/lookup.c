@@ -269,3 +269,26 @@ void test_submodule_lookup__just_added(void)
 	refute_submodule_exists(g_repo, "sm_just_added_head", GIT_EEXISTS);
 }
 
+/* Test_App and Test_App2 are fairly similar names, make sure we load the right one */
+void test_submodule_lookup__prefix_name(void)
+{
+	git_submodule *sm;
+
+	cl_git_rewritefile("submod2/.gitmodules",
+			   "[submodule \"Test_App\"]\n"
+			   "    path = Test_App\n"
+			   "    url = ../Test_App\n"
+			   "[submodule \"Test_App2\"]\n"
+			   "    path = Test_App2\n"
+			   "    url = ../Test_App\n");
+
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "Test_App"));
+	cl_assert_equal_s("Test_App", git_submodule_name(sm));
+
+	git_submodule_free(sm);
+
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "Test_App2"));
+	cl_assert_equal_s("Test_App2", git_submodule_name(sm));
+
+	git_submodule_free(sm);
+}
