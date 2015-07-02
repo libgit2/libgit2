@@ -10,7 +10,7 @@ static int fd = -1;
 
 void test_core_ftruncate__initialize(void)
 {
-	if (!cl_getenv("GITTEST_INVASIVE_FS_SIZE"))
+	if (!cl_is_env_set("GITTEST_INVASIVE_FS_SIZE"))
 		cl_skip();
 
 	cl_must_pass((fd = p_open(filename, O_CREAT | O_RDWR, 0644)));

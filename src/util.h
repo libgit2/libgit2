@@ -7,6 +7,9 @@
 #ifndef INCLUDE_util_h__
 #define INCLUDE_util_h__
 
+#include "git2/buffer.h"
+#include "buffer.h"
+
 #if defined(GIT_MSVC_CRTDBG)
 /* Enable MSVC CRTDBG memory leak reporting.
  *
@@ -595,5 +598,7 @@ GIT_INLINE(double) git__timer(void)
 }
 
 #endif
+
+extern int git__getenv(git_buf *out, const char *name);
 
 #endif /* INCLUDE_util_h__ */

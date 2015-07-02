@@ -10,6 +10,10 @@
 #include <ctype.h>
 #include "posix.h"
 
+#ifdef GIT_WIN32
+# include "win32/buffer.h"
+#endif
+
 #ifdef _MSC_VER
 # include <Shlwapi.h>
 #endif
@@ -765,3 +769,47 @@ int git__utf8_iterate(const uint8_t *str, int str_len, int32_t *dst)
 	*dst = uc;
 	return length;
 }
+
+#ifdef GIT_WIN32
+int git__getenv(git_buf *out, const char *name)
+{
+	wchar_t *wide_name = NULL, *wide_value = NULL;
+	DWORD value_len;
+	int error = -1;
+
+	git_buf_clear(out);
+
+	if (git__utf8_to_16_alloc(&wide_name, name) < 0)
+		return -1;
+
+	if ((value_len = GetEnvironmentVariableW(wide_name, NULL, 0)) > 0) {
+		wide_value = git__malloc(value_len * sizeof(wchar_t));
+		GITERR_CHECK_ALLOC(wide_value);
+
+		value_len = GetEnvironmentVariableW(wide_name, wide_value, value_len);
+	}
+
+	if (value_len)
+		error = git_buf_put_w(out, wide_value, value_len);
+	else if (GetLastError() == ERROR_ENVVAR_NOT_FOUND)
+		error = GIT_ENOTFOUND;
+	else
+		giterr_set(GITERR_OS, "could not read environment variable '%s'", name);
+
+	git__free(wide_name);
+	git__free(wide_value);
+	return error;
+}
+#else
+int git__getenv(git_buf *out, const char *name)
+{
+	const char *val = getenv(name);
+
+	git_buf_clear(out);
+
+	if (!val)
+		return GIT_ENOTFOUND;
+
+	return git_buf_puts(out, val);
+}
+#endif

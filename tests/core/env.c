@@ -30,14 +30,8 @@ static char *home_values[] = {
 void test_core_env__initialize(void)
 {
 	int i;
-	for (i = 0; i < NUM_VARS; ++i) {
-		const char *original = cl_getenv(env_vars[i]);
-#ifdef GIT_WIN32
-		env_save[i] = (char *)original;
-#else
-		env_save[i] = original ? git__strdup(original) : NULL;
-#endif
-	}
+	for (i = 0; i < NUM_VARS; ++i)
+		env_save[i] = cl_getenv(env_vars[i]);
 }
 
 static void set_global_search_path_from_env(void)
@@ -77,12 +71,14 @@ static void setenv_and_check(const char *name, const char *value)
 	char *check;
 
 	cl_git_pass(cl_setenv(name, value));
-
 	check = cl_getenv(name);
-	cl_assert_equal_s(value, check);
-#ifdef GIT_WIN32
+
+	if (value)
+		cl_assert_equal_s(value, check);
+	else
+		cl_assert(check == NULL);
+
 	git__free(check);
-#endif
 }
 
 void test_core_env__0(void)
