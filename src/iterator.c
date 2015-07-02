@@ -1921,8 +1921,8 @@ int git_iterator_walk(
 	}
 
 done:
-	git__free(iterator_item);
-	git__free(cur_items);
+	git__free((git_index_entry **)iterator_item);
+	git__free((git_index_entry **)cur_items);
 
 	if (error == GIT_ITEROVER)
 		error = 0;
