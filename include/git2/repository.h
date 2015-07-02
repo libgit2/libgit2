@@ -363,6 +363,17 @@ GIT_EXTERN(int) git_repository_is_empty(git_repository *repo);
 GIT_EXTERN(const char *) git_repository_path(git_repository *repo);
 
 /**
+ * Set the path of this repository. Use it with caution. Basically
+ * this function is intended to set repository path of a repository
+ * with custom backend created by git_repository_wrap_odb.
+ *
+ * @param repo A repository object
+ * @param path The new path of the repo
+ * @return 0, or an error code
+ */
+GIT_EXTERN(int) git_repository_set_path(git_repository *repo, const char *path);
+
+/**
  * Get the path of the working directory for this repository
  *
  * If the repository is bare, this function will always return

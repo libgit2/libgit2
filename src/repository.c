@@ -1764,6 +1764,26 @@ const char *git_repository_path(git_repository *repo)
 	return repo->path_repository;
 }
 
+int git_repository_set_path(git_repository *repo, const char *path)
+{
+	char *old;
+	git_buf new_path = GIT_BUF_INIT;
+
+	assert(repo);
+
+	if (git_path_prettify_dir(&new_path, path, NULL) < 0)
+		return -1;
+
+	if (repo->path_repository && strcmp(repo->path_repository, new_path.ptr) == 0)
+		return 0;
+
+	old = repo->path_repository;
+	repo->path_repository = git_buf_detach(&new_path);
+	git__free(old);
+
+	return 0;
+}
+
 const char *git_repository_workdir(git_repository *repo)
 {
 	assert(repo);
