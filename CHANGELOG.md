@@ -1,4 +1,13 @@
-v0.22 + 1
+v0.23 + 1
+-------
+
+### Changes or improvements
+
+### API additions
+
+### API removals
+
+v0.23
 ------
 
 ### Changes or improvements
