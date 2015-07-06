@@ -142,9 +142,28 @@ void _cl_trace_cb__event_handler(
 	switch (ev) {
 	case CL_TRACE__SUITE_BEGIN:
 		git_trace(GIT_TRACE_TRACE, "\n\n%s\n%s: Begin Suite", HR, suite_name);
+#if 0 && defined(GIT_MSVC_CRTDBG)
+		git_win32__crtdbg_stacktrace__dump(
+			GIT_WIN32__CRTDBG_STACKTRACE__SET_MARK,
+			suite_name);
+#endif
 		break;
 
 	case CL_TRACE__SUITE_END:
+#if 0 && defined(GIT_MSVC_CRTDBG)
+		/* As an example of checkpointing, dump leaks within this suite.
+		 * This may generate false positives for things like the global
+		 * TLS error state and maybe the odb cache since they aren't
+		 * freed until the global shutdown and outside the scope of this
+		 * set of tests.
+		 *
+		 * This may under-report if the test itself uses a checkpoint.
+		 * See tests/trace/windows/stacktrace.c
+		 */
+		git_win32__crtdbg_stacktrace__dump(
+			GIT_WIN32__CRTDBG_STACKTRACE__LEAKS_SINCE_MARK,
+			suite_name);
+#endif
 		git_trace(GIT_TRACE_TRACE, "\n\n%s: End Suite\n%s", suite_name, HR);
 		break;
 

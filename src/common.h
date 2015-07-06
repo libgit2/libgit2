@@ -46,6 +46,10 @@
 # ifdef GIT_THREADS
 #	include "win32/pthread.h"
 # endif
+# if defined(GIT_MSVC_CRTDBG)
+#   include "win32/w32_stack.h"
+#   include "win32/w32_crtdbg_stacktrace.h"
+# endif
 
 #else
 
