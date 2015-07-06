@@ -119,6 +119,7 @@ bool cl_is_chmod_supported(void);
 
 /* Environment wrappers */
 char *cl_getenv(const char *name);
+bool cl_is_env_set(const char *name);
 int cl_setenv(const char *name, const char *value);
 
 /* Reliable rename */

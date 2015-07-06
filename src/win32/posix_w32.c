@@ -11,6 +11,8 @@
 #include "utf-conv.h"
 #include "repository.h"
 #include "reparse.h"
+#include "global.h"
+#include "buffer.h"
 #include <errno.h>
 #include <io.h>
 #include <fcntl.h>

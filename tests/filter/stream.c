@@ -209,7 +209,7 @@ void test_filter_stream__smallfile(void)
 /* optionally write a 500 MB file through the compression stream */
 void test_filter_stream__bigfile(void)
 {
-	if (!cl_getenv("GITTEST_INVASIVE_FS_SIZE"))
+	if (!cl_is_env_set("GITTEST_INVASIVE_FS_SIZE"))
 		cl_skip();
 
 	test_stream(51200);

@@ -9,16 +9,16 @@
 
 static git_repository *_repo;
 
-static char *_remote_url;
+static char *_remote_url = NULL;
 
-static char *_remote_ssh_key;
-static char *_remote_ssh_pubkey;
-static char *_remote_ssh_passphrase;
+static char *_remote_user = NULL;
+static char *_remote_pass = NULL;
 
-static char *_remote_user;
-static char *_remote_pass;
+static char *_remote_ssh_key = NULL;
+static char *_remote_ssh_pubkey = NULL;
+static char *_remote_ssh_passphrase = NULL;
 
-static char *_remote_default;
+static char *_remote_default = NULL;
 
 static int cred_acquire_cb(git_cred **,	const char *, const char *, unsigned int, void *);
 
@@ -355,6 +355,7 @@ void test_online_push__initialize(void)
 	git_oid_fromstr(&_tag_tag, "eea4f2705eeec2db3813f2430829afce99cd00b5");
 
 	/* Remote URL environment variable must be set.  User and password are optional.  */
+
 	_remote_url = cl_getenv("GITTEST_REMOTE_URL");
 	_remote_user = cl_getenv("GITTEST_REMOTE_USER");
 	_remote_pass = cl_getenv("GITTEST_REMOTE_PASS");
@@ -405,6 +406,14 @@ void test_online_push__cleanup(void)
 	if (_remote)
 		git_remote_free(_remote);
 	_remote = NULL;
+
+	git__free(_remote_url);
+	git__free(_remote_user);
+	git__free(_remote_pass);
+	git__free(_remote_ssh_key);
+	git__free(_remote_ssh_pubkey);
+	git__free(_remote_ssh_passphrase);
+	git__free(_remote_default);
 
 	/* Freed by cl_git_sandbox_cleanup */
 	_repo = NULL;
