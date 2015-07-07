@@ -836,6 +836,25 @@ GIT_EXTERN(int) git_diff_tree_to_workdir_with_index(
 	const git_diff_options *opts); /**< can be NULL for defaults */
 
 /**
+ * Create a diff with the difference between two index objects.
+ *
+ * The first index will be used for the "old_file" side of the delta and the
+ * second index will be used for the "new_file" side of the delta.
+ *
+ * @param diff Output pointer to a git_diff pointer to be allocated.
+ * @param repo The repository containing the indexes.
+ * @param old_index A git_index object to diff from.
+ * @param new_index A git_index object to diff to.
+ * @param opts Structure with options to influence diff or NULL for defaults.
+ */
+GIT_EXTERN(int) git_diff_index_to_index(
+	git_diff **diff,
+	git_repository *repo,
+	git_index *old_index,
+	git_index *new_index,
+	const git_diff_options *opts); /**< can be NULL for defaults */
+
+/**
  * Merge one diff into another.
  *
  * This merges items from the "from" list into the "onto" list.  The
