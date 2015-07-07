@@ -304,21 +304,16 @@ static void blame_chunk(
 }
 
 static int my_emit(
-		xdfenv_t *xe,
-		xdchange_t *xscr,
-		xdemitcb_t *ecb,
-		xdemitconf_t const *xecfg)
+	long start_a, long count_a,
+	long start_b, long count_b,
+	void *cb_data)
 {
-	xdchange_t *xch = xscr;
-	GIT_UNUSED(xe);
-	GIT_UNUSED(xecfg);
-	while (xch) {
-		blame_chunk_cb_data *d = ecb->priv;
-		blame_chunk(d->blame, d->tlno, d->plno, xch->i2, d->target, d->parent);
-		d->plno = xch->i1 + xch->chg1;
-		d->tlno = xch->i2 + xch->chg2;
-		xch = xch->next;
-	}
+	blame_chunk_cb_data *d = (blame_chunk_cb_data *)cb_data;
+
+	blame_chunk(d->blame, d->tlno, d->plno, start_b, d->target, d->parent);
+	d->plno = start_a + count_a;
+	d->tlno = start_b + count_b;
+	
 	return 0;
 }
 
@@ -352,7 +347,7 @@ static int diff_hunks(mmfile_t file_a, mmfile_t file_b, void *cb_data)
 	xdemitconf_t xecfg = {0};
 	xdemitcb_t ecb = {0};
 
-	xecfg.emit_func = (void(*)(void))my_emit;
+	xecfg.hunk_func = my_emit;
 	ecb.priv = cb_data;
 
 	trim_common_tail(&file_a, &file_b, 0);
