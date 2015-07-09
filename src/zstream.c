@@ -86,6 +86,11 @@ int git_zstream_get_output(void *out, size_t *out_len, git_zstream *zstream)
 	int zflush = Z_FINISH;
 	size_t out_remain = *out_len;
 
+	if (zstream->in_len && zstream->zerr == Z_STREAM_END) {
+		giterr_set(GITERR_ZLIB, "zlib input had trailing garbage");
+		return -1;
+	}
+
 	while (out_remain > 0 && zstream->zerr != Z_STREAM_END) {
 		size_t out_queued, in_queued, out_used, in_used;
 

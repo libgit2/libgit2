@@ -58,6 +58,25 @@ void test_core_zstream__basic(void)
 	assert_zlib_equal(data, strlen(data) + 1, out, outlen);
 }
 
+void test_core_zstream__fails_on_trailing_garbage(void)
+{
+	git_buf deflated = GIT_BUF_INIT, inflated = GIT_BUF_INIT;
+	size_t i = 0;
+
+	/* compress a simple string */
+	git_zstream_deflatebuf(&deflated, "foobar!!", 8);
+
+	/* append some garbage */
+	for (i = 0; i < 10; i++) {
+		git_buf_putc(&deflated, i);
+	}
+
+	cl_git_fail(git_zstream_inflatebuf(&inflated, deflated.ptr, deflated.size));
+
+	git_buf_free(&deflated);
+	git_buf_free(&inflated);
+}
+
 void test_core_zstream__buffer(void)
 {
 	git_buf out = GIT_BUF_INIT;
