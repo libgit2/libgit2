@@ -90,7 +90,7 @@ xdchange_t *xdl_get_hunk(xdchange_t **xscr, xdemitconf_t const *xecfg)
 		} else if (distance < max_ignorable && xch->ignore) {
 			ignored += xch->chg2;
 		} else if (lxch != xchp &&
-			   xch->i1 + ignored - (lxch->i1 + lxch->chg1) > max_common) {
+			   xch->i1 + ignored - (lxch->i1 + lxch->chg1) > (unsigned long)max_common) {
 			break;
 		} else if (!xch->ignore) {
 			lxch = xch;
