@@ -394,3 +394,11 @@ void test_apply_fromfile__binary_change_must_be_reversible(void)
 		NULL, 0,
 		PATCH_BINARY_NOT_REVERSIBLE, NULL, 0));
 }
+
+void test_apply_fromfile__empty_file_not_allowed(void)
+{
+	git_patch *patch;
+
+	cl_git_fail(git_patch_from_patchfile(&patch, "", 0));
+	cl_git_fail(git_patch_from_patchfile(&patch, NULL, 0));
+}
