@@ -544,6 +544,8 @@ static int xdl_call_hunk_func(xdfenv_t *xe, xdchange_t *xscr, xdemitcb_t *ecb,
 {
 	xdchange_t *xch, *xche;
 
+	(void)xe;
+
 	for (xch = xscr; xch; xch = xche->next) {
 		xche = xdl_get_hunk(&xch, xecfg);
 		if (!xch)
