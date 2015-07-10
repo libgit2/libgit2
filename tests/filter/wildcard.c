@@ -9,7 +9,7 @@
 
 static git_repository *g_repo = NULL;
 
-static git_filter *create_wildcard_filter();
+static git_filter *create_wildcard_filter(void);
 
 #define DATA_LEN 32
 
@@ -63,6 +63,9 @@ static int wildcard_filter_check(
 	const git_filter_source *src,
 	const char **attr_values)
 {
+	GIT_UNUSED(self);
+	GIT_UNUSED(src);
+
 	if (strcmp(attr_values[0], "wcflip") == 0 ||
 		strcmp(attr_values[0], "wcreverse") == 0) {
 		*payload = git__strdup(attr_values[0]);
@@ -91,8 +94,9 @@ static int wildcard_filter_apply(
 	return GIT_PASSTHROUGH;
 }
 
-static int wildcard_filter_cleanup(git_filter *self, void *payload)
+static void wildcard_filter_cleanup(git_filter *self, void *payload)
 {
+	GIT_UNUSED(self);
 	git__free(payload);
 	return 0;
 }
@@ -125,7 +129,7 @@ void test_filter_wildcard__reverse(void)
 	cl_git_pass(git_filter_list_load(
 		&fl, g_repo, NULL, "hero-reverse-foo", GIT_FILTER_TO_ODB, 0));
 
-	cl_git_pass(git_buf_put(&in, input, DATA_LEN));
+	cl_git_pass(git_buf_put(&in, (char *)input, DATA_LEN));
 	cl_git_pass(git_filter_list_apply_to_data(&out, fl, &in));
 
 	cl_assert_equal_i(DATA_LEN, out.size);
@@ -146,7 +150,7 @@ void test_filter_wildcard__flip(void)
 	cl_git_pass(git_filter_list_load(
 		&fl, g_repo, NULL, "hero-flip-foo", GIT_FILTER_TO_ODB, 0));
 
-	cl_git_pass(git_buf_put(&in, input, DATA_LEN));
+	cl_git_pass(git_buf_put(&in, (char *)input, DATA_LEN));
 	cl_git_pass(git_filter_list_apply_to_data(&out, fl, &in));
 
 	cl_assert_equal_i(DATA_LEN, out.size);
@@ -167,7 +171,7 @@ void test_filter_wildcard__none(void)
 	cl_git_pass(git_filter_list_load(
 		&fl, g_repo, NULL, "none-foo", GIT_FILTER_TO_ODB, 0));
 
-	cl_git_pass(git_buf_put(&in, input, DATA_LEN));
+	cl_git_pass(git_buf_put(&in, (char *)input, DATA_LEN));
 	cl_git_pass(git_filter_list_apply_to_data(&out, fl, &in));
 
 	cl_assert_equal_i(DATA_LEN, out.size);
