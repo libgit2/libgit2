@@ -3,6 +3,10 @@ v0.23 + 1
 
 ### Changes or improvements
 
+* Custom filters can now be registered with wildcard attributes, for
+  example `filter=*`.  Consumers should examine the attributes parameter
+  of the `check` function for details.
+
 ### API additions
 
 ### API removals
@@ -87,10 +91,6 @@ v0.23
 
 * If libcurl is installed, we will use it to connect to HTTP(S)
   servers.
-
-* Custom filters can now be registered with wildcard attributes, for
-  example `filter=*`.  Consumers should examine the attributes parameter
-  of the `check` function for details.
 
 ### API additions
 
