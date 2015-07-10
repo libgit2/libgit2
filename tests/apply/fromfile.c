@@ -21,7 +21,9 @@ void test_apply_fromfile__cleanup(void)
 
 static int apply_patchfile(
 	const char *old,
+	size_t old_len,
 	const char *new,
+	size_t new_len,
 	const char *patchfile,
 	const char *filename_expected,
 	unsigned int mode_expected)
@@ -35,13 +37,11 @@ static int apply_patchfile(
 
 	cl_git_pass(git_patch_from_patchfile(&patch, patchfile, strlen(patchfile)));
 
-	error = git_apply__patch(&result, &filename, &mode, old, old ? strlen(old) : 0, patch);
+	error = git_apply__patch(&result, &filename, &mode, old, old_len, patch);
 
 	if (error == 0) {
-		if (new == NULL)
-			cl_assert_equal_i(0, result.size);
-		else
-			cl_assert_equal_s(new, result.ptr);
+		cl_assert_equal_i(new_len, result.size);
+		cl_assert(memcmp(new, result.ptr, new_len) == 0);
 
 		cl_assert_equal_s(filename_expected, filename);
 		cl_assert_equal_i(mode_expected, mode);
@@ -57,7 +57,9 @@ static int apply_patchfile(
 
 static int validate_and_apply_patchfile(
 	const char *old,
+	size_t old_len,
 	const char *new,
+	size_t new_len,
 	const char *patchfile,
 	const git_diff_options *diff_opts,
 	const char *filename_expected,
@@ -68,14 +70,14 @@ static int validate_and_apply_patchfile(
 	int error;
 
 	cl_git_pass(git_patch_from_buffers(&patch_fromdiff,
-		old, old ? strlen(old) : 0, "file.txt",
-		new, new ? strlen(new) : 0, "file.txt",
+		old, old_len, "file.txt",
+		new, new_len, "file.txt",
 		diff_opts));
 	cl_git_pass(git_patch_to_buf(&validated, patch_fromdiff));
 
 	cl_assert_equal_s(patchfile, validated.ptr);
 
-	error = apply_patchfile(old, new, patchfile, filename_expected, mode_expected);
+	error = apply_patchfile(old, old_len, new, new_len, patchfile, filename_expected, mode_expected);
 
 	git_buf_free(&validated);
 	git_patch_free(patch_fromdiff);
@@ -85,8 +87,10 @@ static int validate_and_apply_patchfile(
 
 void test_apply_fromfile__change_middle(void)
 {
-	cl_git_pass(validate_and_apply_patchfile(FILE_ORIGINAL,
-		FILE_CHANGE_MIDDLE, PATCH_ORIGINAL_TO_CHANGE_MIDDLE, NULL,
+	cl_git_pass(validate_and_apply_patchfile(
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
+		FILE_CHANGE_MIDDLE, strlen(FILE_CHANGE_MIDDLE),
+		PATCH_ORIGINAL_TO_CHANGE_MIDDLE, NULL,
 		"b/file.txt", 0100644));
 }
 
@@ -95,28 +99,36 @@ void test_apply_fromfile__change_middle_nocontext(void)
 	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
 	diff_opts.context_lines = 0;
 
-	cl_git_pass(validate_and_apply_patchfile(FILE_ORIGINAL,
-		FILE_CHANGE_MIDDLE, PATCH_ORIGINAL_TO_CHANGE_MIDDLE_NOCONTEXT,
+	cl_git_pass(validate_and_apply_patchfile(
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
+		FILE_CHANGE_MIDDLE, strlen(FILE_CHANGE_MIDDLE),
+		PATCH_ORIGINAL_TO_CHANGE_MIDDLE_NOCONTEXT,
 		&diff_opts, "b/file.txt", 0100644));
 }
 
 void test_apply_fromfile__change_firstline(void)
 {
-	cl_git_pass(validate_and_apply_patchfile(FILE_ORIGINAL,
-		FILE_CHANGE_FIRSTLINE, PATCH_ORIGINAL_TO_CHANGE_FIRSTLINE, NULL,
+	cl_git_pass(validate_and_apply_patchfile(
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
+		FILE_CHANGE_FIRSTLINE, strlen(FILE_CHANGE_FIRSTLINE),
+		PATCH_ORIGINAL_TO_CHANGE_FIRSTLINE, NULL,
 		"b/file.txt", 0100644));
 }
 
 void test_apply_fromfile__lastline(void)
 {
-	cl_git_pass(validate_and_apply_patchfile(FILE_ORIGINAL,
-		FILE_CHANGE_LASTLINE, PATCH_ORIGINAL_TO_CHANGE_LASTLINE, NULL,
+	cl_git_pass(validate_and_apply_patchfile(
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
+		FILE_CHANGE_LASTLINE, strlen(FILE_CHANGE_LASTLINE),
+		PATCH_ORIGINAL_TO_CHANGE_LASTLINE, NULL,
 		"b/file.txt", 0100644));
 }
 
 void test_apply_fromfile__prepend(void)
 {
-	cl_git_pass(validate_and_apply_patchfile(FILE_ORIGINAL, FILE_PREPEND,
+	cl_git_pass(validate_and_apply_patchfile(
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
+		FILE_PREPEND, strlen(FILE_PREPEND),
 		PATCH_ORIGINAL_TO_PREPEND, NULL, "b/file.txt", 0100644));
 }
 
@@ -125,14 +137,18 @@ void test_apply_fromfile__prepend_nocontext(void)
 	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
 	diff_opts.context_lines = 0;
 
-	cl_git_pass(validate_and_apply_patchfile(FILE_ORIGINAL, FILE_PREPEND,
+	cl_git_pass(validate_and_apply_patchfile(
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
+		FILE_PREPEND, strlen(FILE_PREPEND),
 		PATCH_ORIGINAL_TO_PREPEND_NOCONTEXT, &diff_opts,
 		"b/file.txt", 0100644));
 }
 
 void test_apply_fromfile__append(void)
 {
-	cl_git_pass(validate_and_apply_patchfile(FILE_ORIGINAL, FILE_APPEND,
+	cl_git_pass(validate_and_apply_patchfile(
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
+		FILE_APPEND, strlen(FILE_APPEND),
 		PATCH_ORIGINAL_TO_APPEND, NULL, "b/file.txt", 0100644));
 }
 
@@ -141,82 +157,108 @@ void test_apply_fromfile__append_nocontext(void)
 	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
 	diff_opts.context_lines = 0;
 
-	cl_git_pass(validate_and_apply_patchfile(FILE_ORIGINAL, FILE_APPEND,
+	cl_git_pass(validate_and_apply_patchfile(
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
+		FILE_APPEND, strlen(FILE_APPEND),
 		PATCH_ORIGINAL_TO_APPEND_NOCONTEXT, &diff_opts,
 		"b/file.txt", 0100644));
 }
 
 void test_apply_fromfile__prepend_and_append(void)
 {
-	cl_git_pass(validate_and_apply_patchfile(FILE_ORIGINAL,
-		FILE_PREPEND_AND_APPEND, PATCH_ORIGINAL_TO_PREPEND_AND_APPEND, NULL,
+	cl_git_pass(validate_and_apply_patchfile(
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
+		FILE_PREPEND_AND_APPEND, strlen(FILE_PREPEND_AND_APPEND),
+		PATCH_ORIGINAL_TO_PREPEND_AND_APPEND, NULL,
 		"b/file.txt", 0100644));
 }
 
 void test_apply_fromfile__to_empty_file(void)
 {
-	cl_git_pass(validate_and_apply_patchfile(FILE_ORIGINAL, "",
+	cl_git_pass(validate_and_apply_patchfile(
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
+		"", 0,
 		PATCH_ORIGINAL_TO_EMPTY_FILE, NULL, "b/file.txt", 0100644));
 }
 
 void test_apply_fromfile__from_empty_file(void)
 {
-	cl_git_pass(validate_and_apply_patchfile("", FILE_ORIGINAL,
+	cl_git_pass(validate_and_apply_patchfile(
+		"", 0,
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
 		PATCH_EMPTY_FILE_TO_ORIGINAL, NULL, "b/file.txt", 0100644));
 }
 
 void test_apply_fromfile__add(void)
 {
-	cl_git_pass(validate_and_apply_patchfile(NULL, FILE_ORIGINAL,
+	cl_git_pass(validate_and_apply_patchfile(
+		NULL, 0,
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
 		PATCH_ADD_ORIGINAL, NULL, "b/file.txt", 0100644));
 }
 
 void test_apply_fromfile__delete(void)
 {
-	cl_git_pass(validate_and_apply_patchfile(FILE_ORIGINAL, NULL,
+	cl_git_pass(validate_and_apply_patchfile(
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
+		NULL, 0,
 		PATCH_DELETE_ORIGINAL, NULL, NULL, 0));
 }
 
 
 void test_apply_fromfile__rename_exact(void)
 {
-	cl_git_pass(apply_patchfile(FILE_ORIGINAL, FILE_ORIGINAL,
+	cl_git_pass(apply_patchfile(
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
 		PATCH_RENAME_EXACT, "b/newfile.txt", 0100644));
 }
 
 void test_apply_fromfile__rename_similar(void)
 {
-	cl_git_pass(apply_patchfile(FILE_ORIGINAL, FILE_CHANGE_MIDDLE,
+	cl_git_pass(apply_patchfile(
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
+		FILE_CHANGE_MIDDLE, strlen(FILE_CHANGE_MIDDLE),
 		PATCH_RENAME_SIMILAR, "b/newfile.txt", 0100644));
 }
 
 void test_apply_fromfile__rename_similar_quotedname(void)
 {
-	cl_git_pass(apply_patchfile(FILE_ORIGINAL, FILE_CHANGE_MIDDLE,
+	cl_git_pass(apply_patchfile(
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
+		FILE_CHANGE_MIDDLE, strlen(FILE_CHANGE_MIDDLE),
 		PATCH_RENAME_SIMILAR_QUOTEDNAME, "b/foo\"bar.txt", 0100644));
 }
 
 void test_apply_fromfile__modechange(void)
 {
-	cl_git_pass(apply_patchfile(FILE_ORIGINAL, FILE_ORIGINAL,
+	cl_git_pass(apply_patchfile(
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
 		PATCH_MODECHANGE_UNCHANGED, "b/file.txt", 0100755));
 }
 
 void test_apply_fromfile__modechange_with_modification(void)
 {
-	cl_git_pass(apply_patchfile(FILE_ORIGINAL, FILE_CHANGE_MIDDLE,
+	cl_git_pass(apply_patchfile(
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
+		FILE_CHANGE_MIDDLE, strlen(FILE_CHANGE_MIDDLE),
 		PATCH_MODECHANGE_MODIFIED, "b/file.txt", 0100755));
 }
 
 void test_apply_fromfile__noisy(void)
 {
-	cl_git_pass(apply_patchfile(FILE_ORIGINAL, FILE_CHANGE_MIDDLE,
+	cl_git_pass(apply_patchfile(
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
+		FILE_CHANGE_MIDDLE, strlen(FILE_CHANGE_MIDDLE),
 		PATCH_NOISY, "b/file.txt", 0100644));
 }
 
 void test_apply_fromfile__noisy_nocontext(void)
 {
-	cl_git_pass(apply_patchfile(FILE_ORIGINAL, FILE_CHANGE_MIDDLE,
+	cl_git_pass(apply_patchfile(
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
+		FILE_CHANGE_MIDDLE, strlen(FILE_CHANGE_MIDDLE),
 		PATCH_NOISY_NOCONTEXT, "b/file.txt", 0100644));
 }
 
@@ -250,15 +292,19 @@ void test_apply_fromfile__fail_corrupt_githeader(void)
 
 void test_apply_fromfile__empty_context(void)
 {
-	cl_git_pass(apply_patchfile(FILE_EMPTY_CONTEXT_ORIGINAL,
-		FILE_EMPTY_CONTEXT_MODIFIED, PATCH_EMPTY_CONTEXT,
+	cl_git_pass(apply_patchfile(
+		FILE_EMPTY_CONTEXT_ORIGINAL, strlen(FILE_EMPTY_CONTEXT_ORIGINAL),
+		FILE_EMPTY_CONTEXT_MODIFIED, strlen(FILE_EMPTY_CONTEXT_MODIFIED),
+		PATCH_EMPTY_CONTEXT,
 		"b/file.txt", 0100644));
 }
 
 void test_apply_fromfile__append_no_nl(void)
 {
 	cl_git_pass(validate_and_apply_patchfile(
-		FILE_ORIGINAL, FILE_APPEND_NO_NL, PATCH_APPEND_NO_NL, NULL, "b/file.txt", 0100644));
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
+		FILE_APPEND_NO_NL, strlen(FILE_APPEND_NO_NL),
+		PATCH_APPEND_NO_NL, NULL, "b/file.txt", 0100644));
 }
 
 void test_apply_fromfile__fail_missing_new_file(void)
@@ -300,29 +346,51 @@ void test_apply_fromfile__fail_not_a_patch(void)
 		strlen(PATCH_NOT_A_PATCH)));
 }
 
-/*
-void test_apply_fromdiff__binary_change_must_be_reversible(void)
+void test_apply_fromfile__binary_add(void)
 {
-	git_buf original = GIT_BUF_INIT, modified = GIT_BUF_INIT,
-		result = GIT_BUF_INIT;
-	char *filename;
-	unsigned int mode;
-
-	original.ptr = FILE_BINARY_DELTA_ORIGINAL;
-	original.size = FILE_BINARY_DELTA_ORIGINAL_LEN;
-
-	modified.ptr = FILE_BINARY_DELTA_MODIFIED;
-	modified.size = FILE_BINARY_DELTA_MODIFIED_LEN;
-
-	cl_git_fail(git_apply__patch(&result, &filename, &mode, old ? old->ptr : NULL, old ? old->size : 0, patch);
-
-	cl_git_fail(apply_gitbuf(
-		&original, "binary.bin",
-		&modified, "binary.bin",
-		PATCH_BINARY_NOT_REVERSIBLE, &binary_opts));
-	cl_assert_equal_s("binary patch did not apply cleanly", giterr_last()->message);
-
-	git_buf_free(&result);
-	git__free(filename);
+	cl_git_pass(apply_patchfile(
+		NULL, 0,
+		FILE_BINARY_DELTA_MODIFIED, FILE_BINARY_DELTA_MODIFIED_LEN,
+		PATCH_BINARY_ADD, "b/binary.bin", 0100644));
 }
-*/
+
+void test_apply_fromfile__binary_change_delta(void)
+{
+	cl_git_pass(apply_patchfile(
+		FILE_BINARY_DELTA_ORIGINAL, FILE_BINARY_DELTA_ORIGINAL_LEN,
+		FILE_BINARY_DELTA_MODIFIED, FILE_BINARY_DELTA_MODIFIED_LEN,
+		PATCH_BINARY_DELTA, "b/binary.bin", 0100644));
+}
+
+void test_apply_fromfile__binary_change_literal(void)
+{
+	cl_git_pass(apply_patchfile(
+		FILE_BINARY_LITERAL_ORIGINAL, FILE_BINARY_LITERAL_ORIGINAL_LEN,
+		FILE_BINARY_LITERAL_MODIFIED, FILE_BINARY_LITERAL_MODIFIED_LEN,
+		PATCH_BINARY_LITERAL, "b/binary.bin", 0100644));
+}
+
+void test_apply_fromfile__binary_delete(void)
+{
+	cl_git_pass(apply_patchfile(
+		FILE_BINARY_DELTA_MODIFIED, FILE_BINARY_DELTA_MODIFIED_LEN,
+		NULL, 0,
+		PATCH_BINARY_DELETE, NULL, 0));
+}
+
+void test_apply_fromfile__binary_change_does_not_apply(void)
+{
+	/* try to apply patch backwards, ensure it does not apply */
+	cl_git_fail(apply_patchfile(
+		FILE_BINARY_DELTA_MODIFIED, FILE_BINARY_DELTA_MODIFIED_LEN,
+		FILE_BINARY_DELTA_ORIGINAL, FILE_BINARY_DELTA_ORIGINAL_LEN,
+		PATCH_BINARY_DELTA, "b/binary.bin", 0100644));
+}
+
+void test_apply_fromfile__binary_change_must_be_reversible(void)
+{
+	cl_git_fail(apply_patchfile(
+		FILE_BINARY_DELTA_MODIFIED, FILE_BINARY_DELTA_MODIFIED_LEN,
+		NULL, 0,
+		PATCH_BINARY_NOT_REVERSIBLE, NULL, 0));
+}

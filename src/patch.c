@@ -65,6 +65,15 @@ static int parse_advance_ws(patch_parse_ctx *ctx)
 	return ret;
 }
 
+static int parse_advance_nl(patch_parse_ctx *ctx)
+{
+	if (ctx->line_len != 1 || ctx->line[0] != '\n')
+		return -1;
+
+	parse_advance_line(ctx);
+	return 0;
+}
+
 static int header_path_len(patch_parse_ctx *ctx)
 {
 	bool inquote = 0;
@@ -354,6 +363,7 @@ typedef struct {
 
 static const header_git_op header_git_ops[] = {
 	{ "@@ -", NULL },
+	{ "GIT binary patch", NULL },
 	{ "--- ", parse_header_git_oldpath },
 	{ "+++ ", parse_header_git_newpath },
 	{ "index ", parse_header_git_index },
@@ -426,7 +436,7 @@ done:
 	return error;
 }
 
-static int parse_number(int *out, patch_parse_ctx *ctx)
+static int parse_number(git_off_t *out, patch_parse_ctx *ctx)
 {
 	const char *end;
 	int64_t num;
@@ -440,9 +450,20 @@ static int parse_number(int *out, patch_parse_ctx *ctx)
 	if (num < 0)
 		return -1;
 
-	*out = (int)num;
+	*out = num;
 	parse_advance_chars(ctx, (end - ctx->line));
 
+	return 0;
+}
+
+static int parse_int(int *out, patch_parse_ctx *ctx)
+{
+	git_off_t num;
+
+	if (parse_number(&num, ctx) < 0 || !git__is_int(num))
+		return -1;
+
+	*out = (int)num;
 	return 0;
 }
 
@@ -456,22 +477,22 @@ static int parse_hunk_header(
 	hunk->hunk.new_lines = 1;
 
 	if (parse_advance_expected(ctx, "@@ -", 4) < 0 ||
-		parse_number(&hunk->hunk.old_start, ctx) < 0)
+		parse_int(&hunk->hunk.old_start, ctx) < 0)
 		goto fail;
 
 	if (ctx->line_len > 0 && ctx->line[0] == ',') {
 		if (parse_advance_expected(ctx, ",", 1) < 0 ||
-			parse_number(&hunk->hunk.old_lines, ctx) < 0)
+			parse_int(&hunk->hunk.old_lines, ctx) < 0)
 			goto fail;
 	}
 
 	if (parse_advance_expected(ctx, " +", 2) < 0 ||
-		parse_number(&hunk->hunk.new_start, ctx) < 0)
+		parse_int(&hunk->hunk.new_start, ctx) < 0)
 		goto fail;
 
 	if (ctx->line_len > 0 && ctx->line[0] == ',') {
 		if (parse_advance_expected(ctx, ",", 1) < 0 ||
-			parse_number(&hunk->hunk.new_lines, ctx) < 0)
+			parse_int(&hunk->hunk.new_lines, ctx) < 0)
 			goto fail;
 	}
 
@@ -672,7 +693,110 @@ done:
 	return error;
 }
 
-static int parse_patch_body(
+static int parse_patch_binary_side(
+	git_diff_binary_file *binary,
+	patch_parse_ctx *ctx)
+{
+	git_diff_binary_t type = GIT_DIFF_BINARY_NONE;
+	git_buf base85 = GIT_BUF_INIT, decoded = GIT_BUF_INIT;
+	git_off_t len;
+	int error = 0;
+
+	if (ctx->line_len >= 8 && memcmp(ctx->line, "literal ", 8) == 0) {
+		type = GIT_DIFF_BINARY_LITERAL;
+		parse_advance_chars(ctx, 8);
+	} else if (ctx->line_len >= 6 && memcmp(ctx->line, "delta ", 6) == 0) {
+		type = GIT_DIFF_BINARY_DELTA;
+		parse_advance_chars(ctx, 6);
+	} else {
+		error = parse_err("unknown binary delta type at line %d", ctx->line_num);
+		goto done;
+	}
+
+	if (parse_number(&len, ctx) < 0 || parse_advance_nl(ctx) < 0 || len < 0) {
+		error = parse_err("invalid binary size at line %d", ctx->line_num);
+		goto done;
+	}
+
+	while (ctx->line_len) {
+		char c = ctx->line[0];
+		size_t encoded_len, decoded_len = 0, decoded_orig = decoded.size;
+
+		if (c == '\n')
+			break;
+		else if (c >= 'A' && c <= 'Z')
+			decoded_len = c - 'A' + 1;
+		else if (c >= 'a' && c <= 'z')
+			decoded_len = c - 'a' + 26 + 1;
+
+		if (!decoded_len) {
+			error = parse_err("invalid binary length at line %d", ctx->line_num);
+			goto done;
+		}
+
+		parse_advance_chars(ctx, 1);
+
+		encoded_len = ((decoded_len / 4) + !!(decoded_len % 4)) * 5;
+
+		if (encoded_len > ctx->line_len - 1) {
+			error = parse_err("truncated binary data at line %d", ctx->line_num);
+			goto done;
+		}
+
+		if ((error = git_buf_decode_base85(
+				&decoded, ctx->line, encoded_len, decoded_len)) < 0)
+			goto done;
+
+		if (decoded.size - decoded_orig != decoded_len) {
+			error = parse_err("truncated binary data at line %d", ctx->line_num);
+			goto done;
+		}
+
+		parse_advance_chars(ctx, encoded_len);
+
+		if (parse_advance_nl(ctx) < 0) {
+			error = parse_err("trailing data at line %d", ctx->line_num);
+			goto done;
+		}
+	}
+
+	binary->type = type;
+	binary->inflatedlen = (size_t)len;
+	binary->datalen = decoded.size;
+	binary->data = git_buf_detach(&decoded);
+
+done:
+	git_buf_free(&base85);
+	git_buf_free(&decoded);
+	return error;
+}
+
+static int parse_patch_binary(
+	git_patch *patch,
+	patch_parse_ctx *ctx)
+{
+	int error;
+
+	if (parse_advance_expected(ctx, "GIT binary patch", 16) < 0 ||
+		parse_advance_nl(ctx) < 0)
+		return parse_err("corrupt git binary header at line %d", ctx->line_num);
+
+	/* parse old->new binary diff */
+	if ((error = parse_patch_binary_side(&patch->binary.new_file, ctx)) < 0)
+		return error;
+
+	if (parse_advance_nl(ctx) < 0)
+		return parse_err("corrupt git binary separator at line %d", ctx->line_num);
+
+	/* parse new->old binary diff */
+	if ((error = parse_patch_binary_side(&patch->binary.old_file, ctx)) < 0)
+		return error;
+
+	patch->delta->flags |= GIT_DIFF_FLAG_BINARY;
+	return 0;
+}
+
+static int parse_patch_hunks(
 	git_patch *patch,
 	patch_parse_ctx *ctx)
 {
@@ -698,6 +822,17 @@ done:
 	return error;
 }
 
+static int parse_patch_body(git_patch *patch, patch_parse_ctx *ctx)
+{
+	if (ctx->line_len >= 16 && memcmp(ctx->line, "GIT binary patch", 16) == 0)
+		return parse_patch_binary(patch, ctx);
+
+	else if (ctx->line_len >= 4 && memcmp(ctx->line, "@@ -", 4) == 0)
+		return parse_patch_hunks(patch, ctx);
+
+	return 0;
+}
+
 static int check_patch(git_patch *patch)
 {
 	if (!patch->ofile.file->path && patch->delta->status != GIT_DELTA_ADDED)
@@ -712,8 +847,9 @@ static int check_patch(git_patch *patch)
 	}
 
 	if (patch->delta->status == GIT_DELTA_MODIFIED &&
-		patch->nfile.file->mode == patch->ofile.file->mode &&
-		git_array_size(patch->hunks) == 0)
+			!(patch->delta->flags & GIT_DIFF_FLAG_BINARY) &&
+			patch->nfile.file->mode == patch->ofile.file->mode &&
+			git_array_size(patch->hunks) == 0)
 		return parse_err("patch with no hunks");
 
 	return 0;
