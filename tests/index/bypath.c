@@ -21,3 +21,15 @@ void test_index_bypath__add_directory(void)
 {
 	cl_git_fail_with(GIT_EDIRECTORY, git_index_add_bypath(g_idx, "just_a_dir"));
 }
+
+void test_index_bypath__add_submodule(void)
+{
+	unsigned int status;
+	const char *sm_name = "sm_changed_head";
+
+	cl_git_pass(git_submodule_status(&status, g_repo, sm_name, 0));
+	cl_assert_equal_i(GIT_SUBMODULE_STATUS_WD_MODIFIED, status & GIT_SUBMODULE_STATUS_WD_MODIFIED);
+	cl_git_pass(git_index_add_bypath(g_idx, sm_name));
+	cl_git_pass(git_submodule_status(&status, g_repo, sm_name, 0));
+	cl_assert_equal_i(0, status & GIT_SUBMODULE_STATUS_WD_MODIFIED);
+}
