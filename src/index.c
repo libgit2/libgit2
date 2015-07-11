@@ -1236,9 +1236,29 @@ int git_index_add_bypath(git_index *index, const char *path)
 
 	assert(index && path);
 
-	if ((ret = index_entry_init(&entry, index, path)) < 0 ||
-		(ret = index_insert(index, &entry, 1, false)) < 0)
+	if ((ret = index_entry_init(&entry, index, path)) == 0)
+		ret = index_insert(index, &entry, 1, false);
+
+	/* If we were given a directory, let's see if it's a submodule */
+	if (ret < 0 && ret != GIT_EDIRECTORY)
 		return ret;
+
+	if (ret == GIT_EDIRECTORY) {
+		git_submodule *sm;
+		git_error_state err;
+
+		giterr_capture(&err, ret);
+
+		ret = git_submodule_lookup(&sm, INDEX_OWNER(index), path);
+		if (ret == GIT_ENOTFOUND)
+			return giterr_restore(&err);
+		else
+			git__free(err.error_msg.message);
+
+		ret = git_submodule_add_to_index(sm, false);
+		git_submodule_free(sm);
+		return ret;
+	}
 
 	/* Adding implies conflict was resolved, move conflict entries to REUC */
 	if ((ret = index_conflict_to_reuc(index, path)) < 0 && ret != GIT_ENOTFOUND)
