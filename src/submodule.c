@@ -1647,7 +1647,7 @@ static int submodule_load_from_config(
 	} else {
 		khiter_t pos;
 		git_strmap *map = data->map;
-		pos = git_strmap_lookup_index(map, name.ptr);
+		pos = git_strmap_lookup_index(map, path ? path : name.ptr);
 		if (git_strmap_valid_index(map, pos)) {
 			sm = git_strmap_value_at(map, pos);
 		} else {
