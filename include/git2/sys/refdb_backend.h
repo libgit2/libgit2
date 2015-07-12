@@ -103,8 +103,9 @@ struct git_refdb_backend {
 		const git_signature *who, const char *message);
 
 	/**
-	 * Deletes the given reference from the refdb.  A refdb implementation
-	 * must provide this function.
+	 * Deletes the given reference (and if necessary its reflog)
+	 * from the refdb.  A refdb implementation must provide this
+	 * function.
 	 */
 	int (*del)(git_refdb_backend *backend, const char *ref_name, const git_oid *old_id, const char *old_target);
 
