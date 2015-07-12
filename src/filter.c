@@ -950,18 +950,20 @@ int git_filter_list_stream_data(
 {
 	git_vector filter_streams = GIT_VECTOR_INIT;
 	git_writestream *stream_start;
-	int error = 0;
+	int error = 0, close_error;
 
 	git_buf_sanitize(data);
 
-	if ((error = stream_list_init(
-			&stream_start, &filter_streams, filters, target)) == 0 &&
-		(error =
-			stream_start->write(stream_start, data->ptr, data->size)) == 0)
-		error = stream_start->close(stream_start);
+	if ((error = stream_list_init(&stream_start, &filter_streams, filters, target)) < 0)
+		goto out;
 
+	error = stream_start->write(stream_start, data->ptr, data->size);
+
+out:
+	close_error = stream_start->close(stream_start);
 	stream_list_free(&filter_streams);
-	return error;
+	/* propagate the stream init or write error */
+	return error < 0 ? error : close_error;
 }
 
 int git_filter_list_stream_blob(
