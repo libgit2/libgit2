@@ -143,10 +143,10 @@ int fetch(git_repository *repo, int argc, char **argv)
 	 * network.
 	 */
 	if (stats->local_objects > 0) {
-		printf("\rReceived %d/%d objects in %zu bytes (used %d local objects)\n",
+		printf("\rReceived %d/%d objects in %" PRIuZ " bytes (used %d local objects)\n",
 		       stats->indexed_objects, stats->total_objects, stats->received_bytes, stats->local_objects);
 	} else{
-		printf("\rReceived %d/%d objects in %zu bytes\n",
+		printf("\rReceived %d/%d objects in %" PRIuZ "bytes\n",
 			stats->indexed_objects, stats->total_objects, stats->received_bytes);
 	}
 
