@@ -637,6 +637,7 @@ void test_config_write__locking(void)
 {
 	git_config *cfg, *cfg2;
 	git_config_entry *entry;
+	git_transaction *tx;
 	const char *filename = "locked-file";
 
 	/* Open the config and lock it */
@@ -645,7 +646,7 @@ void test_config_write__locking(void)
 	cl_git_pass(git_config_get_entry(&entry, cfg, "section.name"));
 	cl_assert_equal_s("value", entry->value);
 	git_config_entry_free(entry);
-	cl_git_pass(git_config_lock(cfg));
+	cl_git_pass(git_config_lock(&tx, cfg));
 
 	/* Change entries in the locked backend */
 	cl_git_pass(git_config_set_string(cfg, "section.name", "other value"));
@@ -665,8 +666,8 @@ void test_config_write__locking(void)
 	git_config_entry_free(entry);
 	cl_git_fail_with(GIT_ENOTFOUND, git_config_get_entry(&entry, cfg, "section2.name3"));
 
-	git_config_unlock(cfg, true);
-	git_config_free(cfg);
+	cl_git_pass(git_transaction_commit(tx));
+	git_transaction_free(tx);
 
 	/* Now that we've unlocked it, we should see both updates */
 	cl_git_pass(git_config_open_ondisk(&cfg, filename));

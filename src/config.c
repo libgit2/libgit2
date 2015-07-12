@@ -1144,8 +1144,9 @@ int git_config_open_default(git_config **out)
 	return error;
 }
 
-int git_config_lock(git_config *cfg)
+int git_config_lock(git_transaction **out, git_config *cfg)
 {
+	int error;
 	git_config_backend *file;
 	file_internal *internal;
 
@@ -1156,7 +1157,10 @@ int git_config_lock(git_config *cfg)
 	}
 	file = internal->file;
 
-	return file->lock(file);
+	if ((error = file->lock(file)) < 0)
+		return error;
+
+	return git_transaction_config_new(out, cfg);
 }
 
 int git_config_unlock(git_config *cfg, int commit)

@@ -9,11 +9,10 @@ v0.23 + 1
 
 ### API additions
 
-* `git_config_lock()` and `git_config_unlock()` have been added, which
-  allow for transactional/atomic complex updates to the configuration,
-  removing the opportunity for concurrent operations and not
-  committing any changes until the unlock.
-
+* `git_config_lock()` has been added, which allow for
+  transactional/atomic complex updates to the configuration, removing
+  the opportunity for concurrent operations and not committing any
+  changes until the unlock.
 
 ### API removals
 

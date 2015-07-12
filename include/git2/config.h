@@ -696,25 +696,16 @@ GIT_EXTERN(int) git_config_backend_foreach_match(
  * updates made after locking will not be visible to a reader until
  * the file is unlocked.
  *
+ * You can apply the changes by calling `git_transaction_commit()`
+ * before freeing the transaction. Either of these actions will unlock
+ * the config.
+ *
+ * @param tx the resulting transaction, use this to commit or undo the
+ * changes
  * @param cfg the configuration in which to lock
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_config_lock(git_config *cfg);
-
-/**
- * Unlock the backend with the highest priority
- *
- * Unlocking will allow other writers to updat the configuration
- * file. Optionally, any changes performed since the lock will be
- * applied to the configuration.
- *
- * @param cfg the configuration
- * @param commit boolean which indicates whether to commit any changes
- * done since locking
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_config_unlock(git_config *cfg, int commit);
-
+GIT_EXTERN(int) git_config_lock(git_transaction **tx, git_config *cfg);
 
 /** @} */
 GIT_END_DECL
