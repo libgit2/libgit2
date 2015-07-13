@@ -65,6 +65,14 @@ extern bool git_pathspec__match(
 	bool casefold,
 	const char **matched_pathspec,
 	size_t *matched_at);
+	
+	
+/*
+ * Match a path partially against the vectorized pathspec.
+ */ 
+extern bool git_pathspec__match_partial(
+	const git_vector *vspec,
+	const char *path);
 
 /* easy pathspec setup */
 
