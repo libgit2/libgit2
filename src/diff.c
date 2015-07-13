@@ -1067,6 +1067,10 @@ static int handle_unmatched_new_item(
 
 			return 0;
 		}
+		
+		if (!git_pathspec__match_partial(&diff->pathspec, nitem->path)) {
+ 			recurse_into_dir = false;
+ 		}
 
 		/* try to advance into directory if necessary */
 		if (recurse_into_dir) {
