@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "submodule_helpers.h"
 #include "git2/sys/repository.h"
+#include "repository.h"
 #include "fileops.h"
 
 static git_repository *g_repo = NULL;
@@ -103,8 +104,25 @@ static int sm_lookup_cb(git_submodule *sm, const char *name, void *payload)
 
 void test_submodule_lookup__foreach(void)
 {
+	git_config *cfg;
 	sm_lookup_data data;
+
 	memset(&data, 0, sizeof(data));
+	cl_git_pass(git_submodule_foreach(g_repo, sm_lookup_cb, &data));
+	cl_assert_equal_i(8, data.count);
+
+	memset(&data, 0, sizeof(data));
+
+	/* Change the path for a submodule so it doesn't match the name */
+	cl_git_pass(git_config_open_ondisk(&cfg, "submod2/.gitmodules"));
+
+	cl_git_pass(git_config_set_string(cfg, "submodule.smchangedindex.path", "sm_changed_index"));
+	cl_git_pass(git_config_set_string(cfg, "submodule.smchangedindex.url", "../submod2_target"));
+	cl_git_pass(git_config_delete_entry(cfg, "submodule.sm_changed_index.path"));
+	cl_git_pass(git_config_delete_entry(cfg, "submodule.sm_changed_index.url"));
+
+	git_config_free(cfg);
+
 	cl_git_pass(git_submodule_foreach(g_repo, sm_lookup_cb, &data));
 	cl_assert_equal_i(8, data.count);
 }
