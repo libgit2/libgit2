@@ -10,6 +10,10 @@
 #include <wchar.h>
 #include "common.h"
 
+#ifndef WC_ERR_INVALID_CHARS
+# define WC_ERR_INVALID_CHARS	0x80
+#endif
+
 /**
  * Converts a UTF-8 string to wide characters.
  *

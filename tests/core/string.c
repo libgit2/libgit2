@@ -1,4 +1,4 @@
-#include "clar_libgit2.h"
+﻿#include "clar_libgit2.h"
 
 /* compare prefixes */
 void test_core_string__0(void)
@@ -80,4 +80,18 @@ void test_core_string__strcasecmp(void)
 	cl_assert(git__strcasecmp("rt dev\302\266h", "rt\303\202of") < 0);
 	cl_assert(git__strcasecmp("et", "e\342\202\254ghi=") < 0);
 	cl_assert(git__strcasecmp("\303\215", "\303\255") < 0);
+}
+
+void test_core_string__unicode(void)
+{
+	wchar_t *wsrc1 = L"这";
+	wchar_t *wsrc2 = L"StorageNewsletter » Gartner Ranks Top Seven Enterprise Endpoint Backup Products.pdf";
+	wchar_t *wdest1, *wdest2;
+	char *ndest1, *ndest2;
+	cl_assert(git__utf16_to_8_alloc(&ndest1, wsrc1));
+	cl_assert(git__utf16_to_8_alloc(&ndest2, wsrc2));
+	cl_assert(git__utf8_to_16_alloc(&wdest1, ndest1));
+	cl_assert(git__utf8_to_16_alloc(&wdest2, ndest2));
+	cl_assert(wcscmp(wsrc1, wdest1) == 0);
+	cl_assert(wcscmp(wsrc2, wdest2) == 0);
 }
