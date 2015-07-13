@@ -71,7 +71,7 @@ extern bool git_pathspec__match(
  * Match a path partially against the vectorized pathspec.
  */ 
 extern bool git_pathspec__match_partial(
-	const git_vector *vspec,
+	const git_strarray *strspec,
 	const char *path);
 
 /* easy pathspec setup */

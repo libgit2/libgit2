@@ -231,17 +231,16 @@ bool git_pathspec__match(
 
 /* match a path against the vectorized pathspec */
 bool git_pathspec__match_partial(
-	const git_vector *vspec,
+	const git_strarray *strspec,
 	const char *path)
 {
-	size_t pos = 0;
-	const git_attr_fnmatch *match;
+	size_t i;
 
-	if (!vspec || !vspec->length)
+	if (!strspec || !strspec->count)
 		return true;
 
-	git_vector_foreach(vspec, pos, match) {
-		if (strstr(match->pattern, path)) {
+	for (i = 0; i < strspec->count; ++i) {
+		if (strstr(strspec->strings[i], path) || strstr(path, strspec->strings[i])) {
 			return true;
 		}
 	}
