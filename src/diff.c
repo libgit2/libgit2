@@ -1014,9 +1014,9 @@ static int handle_unmatched_new_item(
 		/* check if user requests recursion into this type of dir */
 		recurse_into_dir = contains_oitem ||
 			(delta_type == GIT_DELTA_UNTRACKED &&
-			 DIFF_FLAG_IS_SET(diff, GIT_DIFF_RECURSE_UNTRACKED_DIRS)) ||
+			DIFF_FLAG_IS_SET(diff, GIT_DIFF_RECURSE_UNTRACKED_DIRS)) ||
 			(delta_type == GIT_DELTA_IGNORED &&
-			 DIFF_FLAG_IS_SET(diff, GIT_DIFF_RECURSE_IGNORED_DIRS));
+			DIFF_FLAG_IS_SET(diff, GIT_DIFF_RECURSE_IGNORED_DIRS));
 
 		/* do not advance into directories that contain a .git file */
 		if (recurse_into_dir && !contains_oitem) {
@@ -1050,7 +1050,7 @@ static int handle_unmatched_new_item(
 
 			/* iterate into dir looking for an actual untracked file */
 			if ((error = iterator_advance_over_with_status(
-					&info->nitem, &untracked_state, info->new_iter)) < 0)
+				&info->nitem, &untracked_state, info->new_iter)) < 0)
 				return error;
 
 			/* if we found nothing or just ignored items, update the record */
@@ -1067,10 +1067,12 @@ static int handle_unmatched_new_item(
 
 			return 0;
 		}
-		
-		if (!git_pathspec__match_partial(&diff->pathspec, nitem->path)) {
- 			recurse_into_dir = false;
- 		}
+
+		if (diff->opts.flags & GIT_DIFF_DISABLE_PATHSPEC_MATCH) {
+			if (!git_pathspec__match_partial(&diff->opts.pathspec, nitem->path)) {
+				recurse_into_dir = false;
+			}
+		}
 
 		/* try to advance into directory if necessary */
 		if (recurse_into_dir) {
