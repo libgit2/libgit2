@@ -319,7 +319,7 @@ extern int git_path_cmp(
  * @param callback Function to invoke on each path.  Passed the `payload`
  *		and the buffer containing the current path.  The path should not
  *		be modified in any way. Return non-zero to stop iteration.
- * @param state Passed to fn as the first ath.
+ * @param payload Passed to fn as the first ath.
  */
 extern int git_path_walk_up(
 	git_buf *pathbuf,
@@ -590,5 +590,10 @@ extern bool git_path_isvalid(
 	git_repository *repo,
 	const char *path,
 	unsigned int flags);
+
+/**
+ * Convert any backslashes into slashes
+ */
+int git_path_normalize_slashes(git_buf *out, const char *path);
 
 #endif

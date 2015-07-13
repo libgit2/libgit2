@@ -787,18 +787,14 @@ int git_submodule_resolve_url(git_buf *out, git_repository *repo, const char *ur
 
 	git_buf_sanitize(out);
 
+	/* We do this in all platforms in case someone on Windows created the .gitmodules */
 	if (strchr(url, '\\')) {
-		char *p;
-		if ((error = git_buf_puts(&normalized, url)) < 0)
+		if ((error = git_path_normalize_slashes(&normalized, url)) < 0)
 			return error;
-
-		for (p = normalized.ptr; *p; p++) {
-			if (*p == '\\')
-				*p = '/';
-		}
 
 		url = normalized.ptr;
 	}
+
 
 	if (git_path_is_relative(url)) {
 		if (!(error = get_url_base(out, repo)))

@@ -413,6 +413,7 @@ ELSE ()
 		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 	ENDIF ()
 
+	ADD_C_FLAG_IF_SUPPORTED(-Wdocumentation)
 	ADD_C_FLAG_IF_SUPPORTED(-Wno-missing-field-initializers)
 	ADD_C_FLAG_IF_SUPPORTED(-Wstrict-aliasing=2)
 	ADD_C_FLAG_IF_SUPPORTED(-Wstrict-prototypes)

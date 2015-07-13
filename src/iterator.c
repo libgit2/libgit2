@@ -1027,8 +1027,11 @@ static int dirload_with_stat(
 	strncomp = (flags & GIT_PATH_DIR_IGNORE_CASE) != 0 ?
 		git__strncasecmp : git__strncmp;
 
-	if ((error = git_path_diriter_init(&diriter, dirpath, flags)) < 0)
+	/* Any error here is equivalent to the dir not existing, skip over it */
+	if ((error = git_path_diriter_init(&diriter, dirpath, flags)) < 0) {
+		error = GIT_ENOTFOUND;
 		goto done;
+	}
 
 	while ((error = git_path_diriter_next(&diriter)) == 0) {
 		if ((error = git_path_diriter_fullpath(&path, &path_len, &diriter)) < 0)
@@ -1117,7 +1120,7 @@ static int fs_iterator__expand_dir(fs_iterator *fi)
 
 	if (error < 0) {
 		git_error_state last_error = { 0 };
-		giterr_capture(&last_error, error);
+		giterr_state_capture(&last_error, error);
 
 		/* these callbacks may clear the error message */
 		fs_iterator__free_frame(ff);
@@ -1125,7 +1128,7 @@ static int fs_iterator__expand_dir(fs_iterator *fi)
 		/* next time return value we skipped to */
 		fi->base.flags &= ~GIT_ITERATOR_FIRST_ACCESS;
 
-		return giterr_restore(&last_error);
+		return giterr_state_restore(&last_error);
 	}
 
 	if (ff->entries.length == 0) {
