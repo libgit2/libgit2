@@ -781,10 +781,24 @@ const char *git_submodule_url(git_submodule *submodule)
 int git_submodule_resolve_url(git_buf *out, git_repository *repo, const char *url)
 {
 	int error = 0;
+	git_buf normalized = GIT_BUF_INIT;
 
 	assert(out && repo && url);
 
 	git_buf_sanitize(out);
+
+	if (strchr(url, '\\')) {
+		char *p;
+		if ((error = git_buf_puts(&normalized, url)) < 0)
+			return error;
+
+		for (p = normalized.ptr; *p; p++) {
+			if (*p == '\\')
+				*p = '/';
+		}
+
+		url = normalized.ptr;
+	}
 
 	if (git_path_is_relative(url)) {
 		if (!(error = get_url_base(out, repo)))
@@ -796,6 +810,7 @@ int git_submodule_resolve_url(git_buf *out, git_repository *repo, const char *ur
 		error = -1;
 	}
 
+	git_buf_free(&normalized);
 	return error;
 }
 
