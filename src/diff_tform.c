@@ -592,10 +592,6 @@ static int similarity_measure(
 		 b_file->size > (a_file->size << 3)))
 		goto cleanup;
 		
-				
-	/* check if either file is 0 bytes */
-	if (a_file->size == 0 || b_file->size == 0)
-		goto cleanup;
 
 	/* update signature cache if needed */
 	if (!cache[a_idx]) {
