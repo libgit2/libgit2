@@ -86,12 +86,13 @@ int git_win32__ishidden(const char *path)
 
 	attrs = GetFileAttributesW(buf);
 
-	if ((attrs | FILE_ATTRIBUTE_HIDDEN) == 0)
-	{
+	if (attrs == INVALID_FILE_ATTRIBUTES)
 		return -1;
-	}
 
-	return 1;
+	if (attrs & FILE_ATTRIBUTE_HIDDEN)
+		return 1;
+
+	return -1;
 }
 
 /**
