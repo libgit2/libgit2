@@ -48,6 +48,22 @@ bool git_win32__findfirstfile_filter(git_win32_path dest, const char *src);
 int git_win32__sethidden(const char *path);
 
 /**
+* Checks if the given path (file or folder) has the +H (hidden) attribute set.
+*
+* @param path The path which should receive the +H bit.
+* @return True if hidden, false if visible
+*/
+int git_win32__ishidden(const char *path);
+
+/**
+* Ensures the given path (file or folder) does not have the +H (hidden) attribute set.
+*
+* @param path The path which should not have the +H bit.
+* @return 0 on success; -1 on failure
+*/
+int git_win32__setvisible(const char *path);
+
+/**
  * Removes any trailing backslashes from a path, except in the case of a drive
  * letter path (C:\, D:\, etc.). This function cannot fail.
  *
