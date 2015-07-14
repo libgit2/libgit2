@@ -1122,7 +1122,7 @@ int git_path_diriter_init(
 
 	diriter->handle = FindFirstFileExW(
 		path_filter,
-		FindExInfoBasic,
+		FindExInfoStandard,
 		&diriter->current,
 		FindExSearchNameMatch,
 		NULL,
