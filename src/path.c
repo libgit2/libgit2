@@ -1122,7 +1122,7 @@ int git_path_diriter_init(
 
 	diriter->handle = FindFirstFileExW(
 		path_filter,
-		FindExInfoBasic,
+		FindExInfoStandard,
 		&diriter->current,
 		FindExSearchNameMatch,
 		NULL,
@@ -1155,13 +1155,20 @@ static int diriter_update_paths(git_path_diriter *diriter)
 		return -1;
 	}
 
-	diriter->path[diriter->parent_len] = L'\\';
-	memcpy(&diriter->path[diriter->parent_len+1],
-		diriter->current.cFileName, filename_len * sizeof(wchar_t));
-	diriter->path[path_len-1] = L'\0';
+	if (diriter->path[diriter->parent_len - 1] != L'\\') {
+		diriter->path[diriter->parent_len] = L'\\'; // if the paths ends with a "\\" then we don't want to add another one
+		memcpy(&diriter->path[diriter->parent_len + 1],
+			diriter->current.cFileName, filename_len * sizeof(wchar_t));
+		diriter->path[path_len - 1] = L'\0';
+	}
+	else {
+		memcpy(&diriter->path[diriter->parent_len],
+			diriter->current.cFileName, filename_len * sizeof(wchar_t));
+		diriter->path[path_len - 2] = L'\0';
+	}
 
 	git_buf_truncate(&diriter->path_utf8, diriter->parent_utf8_len);
-	git_buf_putc(&diriter->path_utf8, '/');
+	if (diriter->path_utf8.ptr[diriter->path_utf8.size - 1] != '/') git_buf_putc(&diriter->path_utf8, '/'); // if the paths ends with a "/" then we don't want to add another one
 	git_buf_put_w(&diriter->path_utf8, diriter->current.cFileName, filename_len);
 
 	if (git_buf_oom(&diriter->path_utf8))

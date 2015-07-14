@@ -223,11 +223,27 @@ int git_futils_writebuffer(
 	const git_buf *buf,	const char *path, int flags, mode_t mode)
 {
 	int fd, error = 0;
+	bool hidden = false;
 
 	if (flags <= 0)
 		flags = O_CREAT | O_TRUNC | O_WRONLY;
 	if (!mode)
 		mode = GIT_FILEMODE_BLOB;
+
+#ifdef GIT_WIN32
+	if (strstr(path, ".git") == NULL) {
+		if (git_win32__ishidden(path) == 1) {
+			if (git_win32__setvisible(path) == -1) {
+				giterr_set(GITERR_OS,
+					"Failed to unhide file '%s'",
+					path);
+				return -1;
+			}
+
+			hidden = true;
+		}
+	}
+#endif
 
 	if ((fd = p_open(path, flags, mode)) < 0) {
 		giterr_set(GITERR_OS, "Could not open '%s' for writing", path);
@@ -243,6 +259,11 @@ int git_futils_writebuffer(
 	if ((error = p_close(fd)) < 0)
 		giterr_set(GITERR_OS, "Error while closing '%s'", path);
 
+#ifdef GIT_WIN32
+	if (hidden) {
+		git_win32__sethidden(path);
+	}
+#endif
 	return error;
 }
 

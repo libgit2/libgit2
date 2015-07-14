@@ -71,6 +71,21 @@ static int lock_file(git_filebuf *file, int flags, mode_t mode)
 		char buffer[FILEIO_BUFSIZE];
 		ssize_t read_bytes;
 
+#ifdef GIT_WIN32
+		bool hidden = false;
+		if (strstr(file->path_original, ".git") == NULL) {
+			if (git_win32__ishidden(file->path_original) == 1) {
+				if (git_win32__setvisible(file->path_original) == -1) {
+					giterr_set(GITERR_OS,
+						"Failed to unhide filebuf '%s'",
+						file->path_original);
+					return -1;
+				}
+
+				hidden = true;
+			}
+		}
+#endif
 		source = p_open(file->path_original, O_RDONLY);
 		if (source < 0) {
 			giterr_set(GITERR_OS,
@@ -86,7 +101,11 @@ static int lock_file(git_filebuf *file, int flags, mode_t mode)
 		}
 
 		p_close(source);
-
+#ifdef GIT_WIN32
+		if (hidden) {
+			git_win32__sethidden(file->path_original);
+		}
+#endif
 		if (read_bytes < 0) {
 			giterr_set(GITERR_OS, "Failed to read file '%s'", file->path_original);
 			return -1;
