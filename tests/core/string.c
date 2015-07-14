@@ -82,9 +82,9 @@ void test_core_string__strcasecmp(void)
 	cl_assert(git__strcasecmp("\303\215", "\303\255") < 0);
 }
 
-#ifdef GIT_WIN32
 void test_core_string__unicode(void)
 {
+#ifdef GIT_WIN32
 	wchar_t *wsrc1 = L"这";
 	wchar_t *wsrc2 = L"StorageNewsletter » Gartner Ranks Top Seven Enterprise Endpoint Backup Products.pdf";
 	wchar_t *wdest1, *wdest2;
@@ -99,5 +99,5 @@ void test_core_string__unicode(void)
 	git__free(ndest2);
 	git__free(wdest1);
 	git__free(wdest2);
-}
 #endif
+}
