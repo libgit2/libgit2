@@ -591,7 +591,6 @@ static int similarity_measure(
 		(a_file->size > (b_file->size << 3) ||
 		 b_file->size > (a_file->size << 3)))
 		goto cleanup;
-		
 
 	/* update signature cache if needed */
 	if (!cache[a_idx]) {
