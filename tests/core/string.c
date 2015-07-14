@@ -82,6 +82,7 @@ void test_core_string__strcasecmp(void)
 	cl_assert(git__strcasecmp("\303\215", "\303\255") < 0);
 }
 
+#ifdef GIT_WIN32
 void test_core_string__unicode(void)
 {
 	wchar_t *wsrc1 = L"这";
@@ -94,4 +95,9 @@ void test_core_string__unicode(void)
 	cl_assert(git__utf8_to_16_alloc(&wdest2, ndest2));
 	cl_assert(wcscmp(wsrc1, wdest1) == 0);
 	cl_assert(wcscmp(wsrc2, wdest2) == 0);
+	git__free(ndest1);
+	git__free(ndest2);
+	git__free(wdest1);
+	git__free(wdest2);
 }
+#endif
