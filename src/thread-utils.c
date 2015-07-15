@@ -8,7 +8,9 @@
 #include "thread-utils.h"
 
 #ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
 #	define WIN32_LEAN_AND_MEAN
+#endif
 #	include <windows.h>
 #elif defined(hpux) || defined(__hpux) || defined(_hpux)
 #	include <sys/pstat.h>
