@@ -1050,7 +1050,7 @@ static int handle_unmatched_new_item(
 
 			/* iterate into dir looking for an actual untracked file */
 			if ((error = iterator_advance_over_with_status(
-						&info->nitem, &untracked_state, info->new_iter)) < 0)
+					&info->nitem, &untracked_state, info->new_iter)) < 0)
 				return error;
 
 			/* if we found nothing or just ignored items, update the record */
