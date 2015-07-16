@@ -9,11 +9,19 @@ v0.23 + 1
 
 ### API additions
 
+* `git_diff_options` added a new callback `progress_cb` to report on the
+  progress of the diff as files are being compared. The documentation of
+  the existing callback `notify_cb` was updated to reflect that it only
+  gets called when new deltas are added to the diff.
+
 ### API removals
 
 ### Breaking API changes
 
 * `git_cert` descendent types now have a proper `parent` member
+
+* The `notify_payload` field of `git_diff_options` was renamed to `payload`
+  to reflect that it's also the payload for the new progress callback.
 
 v0.23
 ------
