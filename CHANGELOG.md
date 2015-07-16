@@ -17,6 +17,11 @@ v0.23 + 1
   the opportunity for concurrent operations and not committing any
   changes until the unlock.
 
+* `git_diff_options` added a new callback `progress_cb` to report on the
+  progress of the diff as files are being compared. The documentation of
+  the existing callback `notify_cb` was updated to reflect that it only
+  gets called when new deltas are added to the diff.
+
 ### API removals
 
 ### Breaking API changes
@@ -35,6 +40,9 @@ v0.23 + 1
   case insensitive systems.  Previous versions would keep the case as
   it existed in the index.  This does not affect the higher-level
   `git_index_add_bypath` or `git_index_add_frombuffer` functions.
+
+* The `notify_payload` field of `git_diff_options` was renamed to `payload`
+  to reflect that it's also the payload for the new progress callback.
 
 v0.23
 ------
