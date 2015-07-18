@@ -19,6 +19,7 @@ typedef struct git_blame__origin {
 	char *path[GIT_FLEX_ARRAY];
 } git_blame__origin;
 
+
 /*
  * Each group of lines is described by a git_blame__entry; it can be split
  * as we pass blame to the parents.  They form a linked list in the
