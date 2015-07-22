@@ -108,7 +108,7 @@ int stransport_certificate(git_cert **out, git_stream *stream)
 		return -1;
 	}
 
-	st->cert_info.cert_type = GIT_CERT_X509;
+	st->cert_info.parent.cert_type = GIT_CERT_X509;
 	st->cert_info.data = (void *) CFDataGetBytePtr(st->der_data);
 	st->cert_info.len = CFDataGetLength(st->der_data);
 

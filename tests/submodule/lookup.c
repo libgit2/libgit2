@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "submodule_helpers.h"
 #include "git2/sys/repository.h"
+#include "repository.h"
 #include "fileops.h"
 
 static git_repository *g_repo = NULL;
@@ -103,8 +104,25 @@ static int sm_lookup_cb(git_submodule *sm, const char *name, void *payload)
 
 void test_submodule_lookup__foreach(void)
 {
+	git_config *cfg;
 	sm_lookup_data data;
+
 	memset(&data, 0, sizeof(data));
+	cl_git_pass(git_submodule_foreach(g_repo, sm_lookup_cb, &data));
+	cl_assert_equal_i(8, data.count);
+
+	memset(&data, 0, sizeof(data));
+
+	/* Change the path for a submodule so it doesn't match the name */
+	cl_git_pass(git_config_open_ondisk(&cfg, "submod2/.gitmodules"));
+
+	cl_git_pass(git_config_set_string(cfg, "submodule.smchangedindex.path", "sm_changed_index"));
+	cl_git_pass(git_config_set_string(cfg, "submodule.smchangedindex.url", "../submod2_target"));
+	cl_git_pass(git_config_delete_entry(cfg, "submodule.sm_changed_index.path"));
+	cl_git_pass(git_config_delete_entry(cfg, "submodule.sm_changed_index.url"));
+
+	git_config_free(cfg);
+
 	cl_git_pass(git_submodule_foreach(g_repo, sm_lookup_cb, &data));
 	cl_assert_equal_i(8, data.count);
 }
@@ -269,3 +287,26 @@ void test_submodule_lookup__just_added(void)
 	refute_submodule_exists(g_repo, "sm_just_added_head", GIT_EEXISTS);
 }
 
+/* Test_App and Test_App2 are fairly similar names, make sure we load the right one */
+void test_submodule_lookup__prefix_name(void)
+{
+	git_submodule *sm;
+
+	cl_git_rewritefile("submod2/.gitmodules",
+			   "[submodule \"Test_App\"]\n"
+			   "    path = Test_App\n"
+			   "    url = ../Test_App\n"
+			   "[submodule \"Test_App2\"]\n"
+			   "    path = Test_App2\n"
+			   "    url = ../Test_App\n");
+
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "Test_App"));
+	cl_assert_equal_s("Test_App", git_submodule_name(sm));
+
+	git_submodule_free(sm);
+
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "Test_App2"));
+	cl_assert_equal_s("Test_App2", git_submodule_name(sm));
+
+	git_submodule_free(sm);
+}

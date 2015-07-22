@@ -486,8 +486,8 @@ void clar__assert_equal_file(
 			for (pos = 0; pos < bytes && expected_data[pos] == buf[pos]; ++pos)
 				/* find differing byte offset */;
 			p_snprintf(
-				buf, sizeof(buf), "file content mismatch at byte %d",
-				(int)(total_bytes + pos));
+				buf, sizeof(buf), "file content mismatch at byte %"PRIdZ,
+				(ssize_t)(total_bytes + pos));
 			p_close(fd);
 			clar__fail(file, line, path, buf, 1);
 		}

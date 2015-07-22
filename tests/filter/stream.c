@@ -25,6 +25,7 @@ void test_filter_stream__cleanup(void)
 	g_repo = NULL;
 
 	git_filter_unregister("compress");
+	git__free(compress_filter);
 }
 
 #define CHUNKSIZE 10240
@@ -123,11 +124,6 @@ static int compress_filter_stream_init(
 	return 0;
 }
 
-static void compress_filter_free(git_filter *f)
-{
-	git__free(f);
-}
-
 git_filter *create_compress_filter(void)
 {
 	git_filter *filter = git__calloc(1, sizeof(git_filter));
@@ -136,7 +132,6 @@ git_filter *create_compress_filter(void)
 	filter->version = GIT_FILTER_VERSION;
 	filter->attributes = "+compress";
 	filter->stream = compress_filter_stream_init;
-	filter->shutdown = compress_filter_free;
 
 	return filter;
 }

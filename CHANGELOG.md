@@ -1,4 +1,21 @@
-v0.22 + 1
+v0.23 + 1
+-------
+
+### Changes or improvements
+
+* Custom filters can now be registered with wildcard attributes, for
+  example `filter=*`.  Consumers should examine the attributes parameter
+  of the `check` function for details.
+
+### API additions
+
+### API removals
+
+### Breaking API changes
+
+* `git_cert` descendent types now have a proper `parent` member
+
+v0.23
 ------
 
 ### Changes or improvements
@@ -176,6 +193,9 @@ v0.22 + 1
 
 * `git_submodule_save()` has been removed. The submodules are no
   longer configured via the objects.
+
+* `git_submodule_reload_all()` has been removed as we no longer cache
+  submodules.
 
 ### Breaking API changes
 

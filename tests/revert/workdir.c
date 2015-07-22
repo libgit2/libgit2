@@ -334,16 +334,18 @@ void test_revert_workdir__again_after_edit_two(void)
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 3));
 
 	cl_git_pass(git_futils_readbuffer(&diff_buf, "revert/file.txt"));
-	cl_assert(strcmp(diff_buf.ptr,	"a\n" \
-		"<<<<<<< HEAD\n" \
-		"=======\n" \
-		"a\n" \
-		">>>>>>> parent of 97e52d5... Revert me\n" \
-		"a\n" \
-		"a\n" \
-		"a\n" \
-		"a\n" \
-		"ab\n") == 0);
+	cl_assert_equal_s(
+			"a\n" \
+			"<<<<<<< HEAD\n" \
+			"=======\n" \
+			"a\n" \
+			">>>>>>> parent of 97e52d5... Revert me\n" \
+			"a\n" \
+			"a\n" \
+			"a\n" \
+			"a\n" \
+			"ab",
+		diff_buf.ptr);
 
 	git_commit_free(revert_commit);
 	git_commit_free(head_commit);

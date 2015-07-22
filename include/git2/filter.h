@@ -137,7 +137,13 @@ GIT_EXTERN(int) git_filter_list_apply_to_data(
 	git_buf *in);
 
 /**
- * Apply filter list to the contents of a file on disk
+ * Apply a filter list to the contents of a file on disk
+ *
+ * @param out buffer into which to store the filtered file
+ * @param filters the list of filters to apply
+ * @param repo the repository in which to perform the filtering
+ * @param path the path of the file to filter, a relative path will be
+ * taken as relative to the workdir
  */
 GIT_EXTERN(int) git_filter_list_apply_to_file(
 	git_buf *out,
@@ -146,24 +152,51 @@ GIT_EXTERN(int) git_filter_list_apply_to_file(
 	const char *path);
 
 /**
- * Apply filter list to the contents of a blob
+ * Apply a filter list to the contents of a blob
+ *
+ * @param out buffer into which to store the filtered file
+ * @param filters the list of filters to apply
+ * @param blob the blob to filter
  */
 GIT_EXTERN(int) git_filter_list_apply_to_blob(
 	git_buf *out,
 	git_filter_list *filters,
 	git_blob *blob);
 
+/**
+ * Apply a filter list to an arbitrary buffer as a stream
+ *
+ * @param filters the list of filters to apply
+ * @param data the buffer to filter
+ * @param target the stream into which the data will be written
+ */
 GIT_EXTERN(int) git_filter_list_stream_data(
 	git_filter_list *filters,
 	git_buf *data,
 	git_writestream *target);
 
+/**
+ * Apply a filter list to a file as a stream
+ *
+ * @param filters the list of filters to apply
+ * @param repo the repository in which to perform the filtering
+ * @param path the path of the file to filter, a relative path will be
+ * taken as relative to the workdir
+ * @param target the stream into which the data will be written
+ */
 GIT_EXTERN(int) git_filter_list_stream_file(
 	git_filter_list *filters,
 	git_repository *repo,
 	const char *path,
 	git_writestream *target);
 
+/**
+ * Apply a filter list to a blob as a stream
+ *
+ * @param filters the list of filters to apply
+ * @param blob the blob to filter
+ * @param target the stream into which the data will be written
+ */
 GIT_EXTERN(int) git_filter_list_stream_blob(
 	git_filter_list *filters,
 	git_blob *blob,

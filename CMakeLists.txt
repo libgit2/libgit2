@@ -12,7 +12,7 @@
 # > cmake --build . --target install
 
 PROJECT(libgit2 C)
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 CMAKE_POLICY(SET CMP0015 NEW)
 
 # Add find modules to the path
@@ -336,6 +336,7 @@ IF (MSVC)
 
 	IF (MSVC_CRTDBG)
 		SET(CRT_FLAG_DEBUG "${CRT_FLAG_DEBUG} /DGIT_MSVC_CRTDBG")
+		SET(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_C_STANDARD_LIBRARIES}" "Dbghelp.lib")
 	ENDIF()
 
 	# /Zi - Create debugging information

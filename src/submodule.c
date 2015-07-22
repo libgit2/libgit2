@@ -1385,7 +1385,7 @@ int git_submodule_reload(git_submodule *sm, int force)
 
 		git_buf_sets(&path, "submodule\\.");
 		git_buf_text_puts_escape_regex(&path, sm->name);
-		git_buf_puts(&path, ".*");
+		git_buf_puts(&path, "\\..*");
 
 		if (git_buf_oom(&path)) {
 			error = -1;
@@ -1647,7 +1647,7 @@ static int submodule_load_from_config(
 	} else {
 		khiter_t pos;
 		git_strmap *map = data->map;
-		pos = git_strmap_lookup_index(map, name.ptr);
+		pos = git_strmap_lookup_index(map, path ? path : name.ptr);
 		if (git_strmap_valid_index(map, pos)) {
 			sm = git_strmap_value_at(map, pos);
 		} else {

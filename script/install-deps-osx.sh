@@ -2,4 +2,5 @@
 
 set -x
 
-brew install libssh2 cmake
+brew update
+brew install libssh2

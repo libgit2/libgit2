@@ -5,14 +5,13 @@
 #include "buf_text.h"
 #include "git2/sys/filter.h"
 #include "git2/sys/repository.h"
+#include "custom_helpers.h"
 
 /* going TO_WORKDIR, filters are executed low to high
  * going TO_ODB, filters are executed high to low
  */
 #define BITFLIP_FILTER_PRIORITY -1
 #define REVERSE_FILTER_PRIORITY -2
-
-#define VERY_SECURE_ENCRYPTION(b) ((b) ^ 0xff)
 
 #ifdef GIT_WIN32
 # define NEWLINE "\r\n"
@@ -26,6 +25,8 @@ static char workdir_data[] =
 	"that will be" NEWLINE
 	"trivially" NEWLINE
 	"scrambled." NEWLINE;
+
+#define REVERSED_DATA_LEN 51
 
 /* Represents the data above scrambled (bits flipped) after \r\n -> \n
  * conversion, then bytewise reversed
@@ -63,107 +64,6 @@ void test_filter_custom__cleanup(void)
 	g_repo = NULL;
 }
 
-static int bitflip_filter_apply(
-	git_filter     *self,
-	void          **payload,
-	git_buf        *to,
-	const git_buf  *from,
-	const git_filter_source *source)
-{
-	const unsigned char *src = (const unsigned char *)from->ptr;
-	unsigned char *dst;
-	size_t i;
-
-	GIT_UNUSED(self); GIT_UNUSED(payload);
-
-	/* verify that attribute path match worked as expected */
-	cl_assert_equal_i(
-		0, git__strncmp("hero", git_filter_source_path(source), 4));
-
-	if (!from->size)
-		return 0;
-
-	cl_git_pass(git_buf_grow(to, from->size));
-
-	dst = (unsigned char *)to->ptr;
-
-	for (i = 0; i < from->size; i++)
-		dst[i] = VERY_SECURE_ENCRYPTION(src[i]);
-
-	to->size = from->size;
-
-	return 0;
-}
-
-static void bitflip_filter_free(git_filter *f)
-{
-	git__free(f);
-}
-
-static git_filter *create_bitflip_filter(void)
-{
-	git_filter *filter = git__calloc(1, sizeof(git_filter));
-	cl_assert(filter);
-
-	filter->version = GIT_FILTER_VERSION;
-	filter->attributes = "+bitflip";
-	filter->shutdown = bitflip_filter_free;
-	filter->apply = bitflip_filter_apply;
-
-	return filter;
-}
-
-
-static int reverse_filter_apply(
-	git_filter     *self,
-	void          **payload,
-	git_buf        *to,
-	const git_buf  *from,
-	const git_filter_source *source)
-{
-	const unsigned char *src = (const unsigned char *)from->ptr;
-	const unsigned char *end = src + from->size;
-	unsigned char *dst;
-
-	GIT_UNUSED(self); GIT_UNUSED(payload); GIT_UNUSED(source);
-
-	/* verify that attribute path match worked as expected */
-	cl_assert_equal_i(
-		0, git__strncmp("hero", git_filter_source_path(source), 4));
-
-	if (!from->size)
-		return 0;
-
-	cl_git_pass(git_buf_grow(to, from->size));
-
-	dst = (unsigned char *)to->ptr + from->size - 1;
-
-	while (src < end)
-		*dst-- = *src++;
-
-	to->size = from->size;
-
-	return 0;
-}
-
-static void reverse_filter_free(git_filter *f)
-{
-	git__free(f);
-}
-
-static git_filter *create_reverse_filter(const char *attrs)
-{
-	git_filter *filter = git__calloc(1, sizeof(git_filter));
-	cl_assert(filter);
-
-	filter->version = GIT_FILTER_VERSION;
-	filter->attributes = attrs;
-	filter->shutdown = reverse_filter_free;
-	filter->apply = reverse_filter_apply;
-
-	return filter;
-}
-
 static void register_custom_filters(void)
 {
 	static int filters_registered = 0;
@@ -185,7 +85,6 @@ static void register_custom_filters(void)
 		filters_registered = 1;
 	}
 }
-
 
 void test_filter_custom__to_odb(void)
 {

@@ -324,7 +324,9 @@ int openssl_connect(git_stream *stream)
 
 	SSL_set_bio(st->ssl, bio, bio);
 	/* specify the host in case SNI is needed */
+#ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
 	SSL_set_tlsext_host_name(st->ssl, st->host);
+#endif
 
 	if ((ret = SSL_connect(st->ssl)) <= 0)
 		return ssl_set_error(st->ssl, ret);
@@ -358,11 +360,12 @@ int openssl_certificate(git_cert **out, git_stream *stream)
 		return -1;
 	}
 
-	st->cert_info.cert_type = GIT_CERT_X509;
+	st->cert_info.parent.cert_type = GIT_CERT_X509;
 	st->cert_info.data = encoded_cert;
 	st->cert_info.len = len;
 
-	*out = (git_cert *)&st->cert_info;
+	*out = &st->cert_info.parent;
+
 	return 0;
 }
 

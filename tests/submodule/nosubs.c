@@ -71,8 +71,6 @@ void test_submodule_nosubs__add_and_delete(void)
 	git_submodule *sm;
 	git_buf buf = GIT_BUF_INIT;
 
-	/* note lack of calls to git_submodule_reload_all - this *should* work */
-
 	cl_git_fail(git_submodule_lookup(NULL, repo, "libgit2"));
 	cl_git_fail(git_submodule_lookup(NULL, repo, "submodules/libgit2"));
 

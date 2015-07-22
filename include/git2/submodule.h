@@ -584,17 +584,6 @@ GIT_EXTERN(int) git_submodule_open(
 GIT_EXTERN(int) git_submodule_reload(git_submodule *submodule, int force);
 
 /**
- * Reread all submodule info.
- *
- * Call this to reload all cached submodule information for the repo.
- *
- * @param repo The repository to reload submodule data for
- * @param force Force full reload even if the data doesn't seem out of date
- * @return 0 on success, <0 on error
- */
-GIT_EXTERN(int) git_submodule_reload_all(git_repository *repo, int force);
-
-/**
  * Get the status for a submodule.
  *
  * This looks at a submodule and tries to determine the status.  It

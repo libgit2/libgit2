@@ -23,32 +23,6 @@ static int progress_cb(const char *str, int len, void *data)
 	return 0;
 }
 
-static void *download(void *ptr)
-{
-	struct dl_data *data = (struct dl_data *)ptr;
-
-	// Connect to the remote end specifying that we want to fetch
-	// information from it.
-	if (git_remote_connect(data->remote, GIT_DIRECTION_FETCH, &data->fetch_opts->callbacks) < 0) {
-		data->ret = -1;
-		goto exit;
-	}
-
-	// Download the packfile and index it. This function updates the
-	// amount of received data and the indexer stats which lets you
-	// inform the user about progress.
-	if (git_remote_download(data->remote, NULL, data->fetch_opts) < 0) {
-		data->ret = -1;
-		goto exit;
-	}
-
-	data->ret = 0;
-
-exit:
-	data->finished = 1;
-	return &data->ret;
-}
-
 /**
  * This function gets called for each remote-tracking branch that gets
  * updated. The message we output depends on whether it's a new one or
@@ -73,6 +47,24 @@ static int update_cb(const char *refname, const git_oid *a, const git_oid *b, vo
 	return 0;
 }
 
+/**
+ * This gets called during the download and indexing. Here we show
+ * processed and total objects in the pack and the amount of received
+ * data. Most frontends will probably want to show a percentage and
+ * the download rate.
+ */
+static int transfer_progress_cb(const git_transfer_progress *stats, void *payload)
+{
+	if (stats->received_objects == stats->total_objects) {
+		printf("Resolving deltas %d/%d\r",
+		       stats->indexed_deltas, stats->total_deltas);
+	} else if (stats->total_objects > 0) {
+		printf("Received %d/%d objects (%d) in %" PRIuZ " bytes\r",
+		       stats->received_objects, stats->total_objects,
+		       stats->indexed_objects, stats->received_bytes);
+	}
+}
+
 /** Entry point for this command */
 int fetch(git_repository *repo, int argc, char **argv)
 {
@@ -80,9 +72,6 @@ int fetch(git_repository *repo, int argc, char **argv)
 	const git_transfer_progress *stats;
 	struct dl_data data;
 	git_fetch_options fetch_opts = GIT_FETCH_OPTIONS_INIT;
-#ifndef _WIN32
-	pthread_t worker;
-#endif
 
 	if (argc < 2) {
 		fprintf(stderr, "usage: %s fetch <repo>\n", argv[-1]);
@@ -99,66 +88,30 @@ int fetch(git_repository *repo, int argc, char **argv)
 	// Set up the callbacks (only update_tips for now)
 	fetch_opts.callbacks.update_tips = &update_cb;
 	fetch_opts.callbacks.sideband_progress = &progress_cb;
+	fetch_opts.callbacks.transfer_progress = transfer_progress_cb;
 	fetch_opts.callbacks.credentials = cred_acquire_cb;
 
-	// Set up the information for the background worker thread
-	data.remote = remote;
-	data.fetch_opts = &fetch_opts;
-	data.ret = 0;
-	data.finished = 0;
-
-	stats = git_remote_stats(remote);
-
-#ifdef _WIN32
-	download(&data);
-#else
-	pthread_create(&worker, NULL, download, &data);
-
-	// Loop while the worker thread is still running. Here we show processed
-	// and total objects in the pack and the amount of received
-	// data. Most frontends will probably want to show a percentage and
-	// the download rate.
-	do {
-		usleep(10000);
-
-		if (stats->received_objects == stats->total_objects) {
-			printf("Resolving deltas %d/%d\r",
-			       stats->indexed_deltas, stats->total_deltas);
-		} else if (stats->total_objects > 0) {
-			printf("Received %d/%d objects (%d) in %" PRIuZ " bytes\r",
-			       stats->received_objects, stats->total_objects,
-				   stats->indexed_objects, stats->received_bytes);
-		}
-	} while (!data.finished);
-
-	if (data.ret < 0)
-		goto on_error;
-
-	pthread_join(worker, NULL);
-#endif
+	/**
+	 * Perform the fetch with the configured refspecs from the
+	 * config. Update the reflog for the updated references with
+	 * "fetch".
+	 */
+	if (git_remote_fetch(remote, NULL, &fetch_opts, "fetch") < 0)
+		return -1;
 
 	/**
 	 * If there are local objects (we got a thin pack), then tell
 	 * the user how many objects we saved from having to cross the
 	 * network.
 	 */
+	stats = git_remote_stats(remote);
 	if (stats->local_objects > 0) {
-		printf("\rReceived %d/%d objects in %zu bytes (used %d local objects)\n",
+		printf("\rReceived %d/%d objects in %" PRIuZ " bytes (used %d local objects)\n",
 		       stats->indexed_objects, stats->total_objects, stats->received_bytes, stats->local_objects);
 	} else{
-		printf("\rReceived %d/%d objects in %zu bytes\n",
+		printf("\rReceived %d/%d objects in %" PRIuZ "bytes\n",
 			stats->indexed_objects, stats->total_objects, stats->received_bytes);
 	}
-
-	// Disconnect the underlying connection to prevent from idling.
-	git_remote_disconnect(remote);
-
-	// Update the references in the remote's namespace to point to the
-	// right commits. This may be needed even if there was no packfile
-	// to download, which can happen e.g. when the branches have been
-	// changed but all the needed objects are available locally.
-	if (git_remote_update_tips(remote, &fetch_opts.callbacks, 1, fetch_opts.download_tags, NULL) < 0)
-		return -1;
 
 	git_remote_free(remote);
 

@@ -1299,8 +1299,8 @@ static int checkout_get_actions(
 	if (counts[CHECKOUT_ACTION__CONFLICT] > 0 &&
 		(data->strategy & GIT_CHECKOUT_ALLOW_CONFLICTS) == 0)
 	{
-		giterr_set(GITERR_CHECKOUT, "%d %s checkout",
-			(int)counts[CHECKOUT_ACTION__CONFLICT],
+		giterr_set(GITERR_CHECKOUT, "%"PRIuZ" %s checkout",
+			counts[CHECKOUT_ACTION__CONFLICT],
 			counts[CHECKOUT_ACTION__CONFLICT] == 1 ?
 			"conflict prevents" : "conflicts prevent");
 		error = GIT_ECONFLICT;
