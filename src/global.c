@@ -344,8 +344,8 @@ int git_libgit2_init(void)
 {
 	int ret;
 
-	pthread_once(&_once_init, init_once);
 	ret = git_atomic_inc(&git__n_inits);
+	pthread_once(&_once_init, init_once);
 
 	return init_error ? init_error : ret;
 }
