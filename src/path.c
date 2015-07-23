@@ -12,6 +12,7 @@
 #include "win32/posix.h"
 #include "win32/buffer.h"
 #include "win32/w32_util.h"
+#include "win32/version.h"
 #else
 #include <dirent.h>
 #endif
@@ -1085,7 +1086,7 @@ int git_path_direach(
 #if defined(GIT_WIN32) && !defined(__MINGW32__)
 
 /* Using _FIND_FIRST_EX_LARGE_FETCH may increase performance in Windows 7
- * and better.  Prior versions will ignore this.
+ * and better.
  */
 #ifndef FIND_FIRST_EX_LARGE_FETCH
 # define FIND_FIRST_EX_LARGE_FETCH 2
@@ -1098,6 +1099,10 @@ int git_path_diriter_init(
 {
 	git_win32_path path_filter;
 	git_buf hack = {0};
+
+	static int is_win7_or_later = -1;
+	if (is_win7_or_later < 0)
+		is_win7_or_later = git_has_win32_version(6, 1, 0);
 
 	assert(diriter && path);
 
@@ -1122,11 +1127,11 @@ int git_path_diriter_init(
 
 	diriter->handle = FindFirstFileExW(
 		path_filter,
-		FindExInfoBasic,
+		is_win7_or_later ? FindExInfoBasic : FindExInfoStandard,
 		&diriter->current,
 		FindExSearchNameMatch,
 		NULL,
-		FIND_FIRST_EX_LARGE_FETCH);
+		is_win7_or_later ? FIND_FIRST_EX_LARGE_FETCH : 0);
 
 	if (diriter->handle == INVALID_HANDLE_VALUE) {
 		giterr_set(GITERR_OS, "Could not open directory '%s'", path);
