@@ -125,10 +125,14 @@ int giterr_detach(git_error *cpy)
 	if (!error)
 		return -1;
 
-	cpy->message = error->message;
+	if (error == &g_git_oom_error) {
+		cpy->message = git__strdup(error->message);
+	} else {
+		cpy->message = error->message;
+		error->message = NULL;
+	}
 	cpy->klass = error->klass;
 
-	error->message = NULL;
 	giterr_clear();
 
 	return 0;
