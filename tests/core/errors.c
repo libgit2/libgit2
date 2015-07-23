@@ -110,6 +110,29 @@ void test_core_errors__restore(void)
 	cl_assert_equal_s("Foo: bar", giterr_last()->message);
 }
 
+void test_core_errors__restore_oom(void)
+{
+	git_error_state err_state = {0};
+	const char *static_message = NULL;
+
+	giterr_clear();
+
+	giterr_set_oom(); /* internal fn */
+	static_message = giterr_last()->message;
+
+	cl_assert_equal_i(-1, giterr_capture(&err_state, -1));
+
+	cl_assert(giterr_last() == NULL);
+
+	cl_assert_(err_state.error_msg.message != static_message, "pointer to static buffer exposed");
+
+	giterr_restore(&err_state);
+
+	cl_assert(giterr_last()->klass == GITERR_NOMEMORY);
+
+	giterr_clear();
+}
+
 static int test_arraysize_multiply(size_t nelem, size_t size)
 {
 	size_t out;
