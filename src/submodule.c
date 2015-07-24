@@ -781,10 +781,20 @@ const char *git_submodule_url(git_submodule *submodule)
 int git_submodule_resolve_url(git_buf *out, git_repository *repo, const char *url)
 {
 	int error = 0;
+	git_buf normalized = GIT_BUF_INIT;
 
 	assert(out && repo && url);
 
 	git_buf_sanitize(out);
+
+	/* We do this in all platforms in case someone on Windows created the .gitmodules */
+	if (strchr(url, '\\')) {
+		if ((error = git_path_normalize_slashes(&normalized, url)) < 0)
+			return error;
+
+		url = normalized.ptr;
+	}
+
 
 	if (git_path_is_relative(url)) {
 		if (!(error = get_url_base(out, repo)))
@@ -796,6 +806,7 @@ int git_submodule_resolve_url(git_buf *out, git_repository *repo, const char *ur
 		error = -1;
 	}
 
+	git_buf_free(&normalized);
 	return error;
 }
 

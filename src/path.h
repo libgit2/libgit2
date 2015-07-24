@@ -591,4 +591,9 @@ extern bool git_path_isvalid(
 	const char *path,
 	unsigned int flags);
 
+/**
+ * Convert any backslashes into slashes
+ */
+int git_path_normalize_slashes(git_buf *out, const char *path);
+
 #endif
