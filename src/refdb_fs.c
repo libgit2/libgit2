@@ -63,6 +63,8 @@ typedef struct refdb_fs_backend {
 	uint32_t direach_flags;
 } refdb_fs_backend;
 
+static int refdb_reflog_fs__delete(git_refdb_backend *_backend, const char *name);
+
 static int packref_cmp(const void *a_, const void *b_)
 {
 	const struct packref *a = a_, *b = b_;
@@ -1216,6 +1218,11 @@ static int refdb_fs_backend__delete(
 
 	if ((error = loose_lock(&file, backend, ref_name)) < 0)
 		return error;
+
+	if ((error = refdb_reflog_fs__delete(_backend, ref_name)) < 0) {
+		git_filebuf_cleanup(&file);
+		return error;
+	}
 
 	return refdb_fs_backend__delete_tail(_backend, &file, ref_name, old_id, old_target);
 }
