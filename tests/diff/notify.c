@@ -55,7 +55,7 @@ static void test_notify(
 	opts.pathspec.strings = searched_pathspecs;
 	opts.pathspec.count   = pathspecs_count;
 
-	opts.notify_payload = expected_matched_pathspecs;
+	opts.payload = expected_matched_pathspecs;
 	memset(&exp, 0, sizeof(exp));
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
@@ -227,4 +227,31 @@ void test_diff_notify__notify_cb_can_be_used_as_filtering_function(void)
 	cl_assert_equal_i(0, exp.files);
 
 	git_diff_free(diff);
+}
+
+static int progress_abort_diff(
+	const git_diff *diff_so_far,
+	const char *old_path,
+	const char *new_path,
+	void *payload)
+{
+	GIT_UNUSED(old_path);
+	GIT_UNUSED(new_path);
+	GIT_UNUSED(payload);
+
+	return -42;
+}
+
+void test_diff_notify__progress_cb_can_abort_diff(void)
+{
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_diff *diff = NULL;
+
+	g_repo = cl_git_sandbox_init("status");
+
+	opts.flags |= GIT_DIFF_INCLUDE_IGNORED | GIT_DIFF_INCLUDE_UNTRACKED;
+	opts.progress_cb = progress_abort_diff;
+
+	cl_git_fail_with(
+		git_diff_index_to_workdir(&diff, g_repo, NULL, &opts), -42);
 }
