@@ -148,6 +148,6 @@ void test_core_filebuf__rename_error(void)
 	p_close(fd);
 
 	git_filebuf_cleanup(&file);
-	cl_assert_equal_i(false, git_path_exists(test_lock));
 
+	cl_assert_equal_i(false, git_path_exists(test_lock));
 }
