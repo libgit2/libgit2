@@ -1260,10 +1260,15 @@ int git_path_diriter_init(
 	}
 
 	if ((diriter->dir = opendir(diriter->path.ptr)) == NULL) {
+		int error = -1;
+
 		git_buf_free(&diriter->path);
 
+		if (errno == ENOENT)
+			error = GIT_ENOTFOUND;
+
 		giterr_set(GITERR_OS, "Failed to open directory '%s'", path);
-		return -1;
+		return error;
 	}
 
 #ifdef GIT_USE_ICONV
