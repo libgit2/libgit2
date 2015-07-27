@@ -114,18 +114,6 @@ GIT_EXTERN(const git_error *) giterr_last(void);
 GIT_EXTERN(void) giterr_clear(void);
 
 /**
- * Get the last error data and clear it.
- *
- * This copies the last error into the given `git_error` struct
- * and returns 0 if the copy was successful, leaving the error
- * cleared as if `giterr_clear` had been called.
- *
- * If there was no existing error in the library, -1 will be returned
- * and the contents of `cpy` will be left unmodified.
- */
-GIT_EXTERN(int) giterr_detach(git_error *cpy);
-
-/**
  * Set the error message string for this thread.
  *
  * This function is public so that custom ODB backends and the like can

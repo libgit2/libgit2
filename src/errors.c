@@ -116,7 +116,7 @@ void giterr_clear(void)
 #endif
 }
 
-int giterr_detach(git_error *cpy)
+static int giterr_detach(git_error *cpy)
 {
 	git_error *error = GIT_GLOBAL->last_error;
 
