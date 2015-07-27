@@ -125,14 +125,12 @@ static int giterr_detach(git_error *cpy)
 	if (!error)
 		return -1;
 
-	if (error == &g_git_oom_error) {
-		cpy->message = git__strdup(error->message);
-	} else {
-		cpy->message = error->message;
-		error->message = NULL;
-	}
+	cpy->message = error->message;
 	cpy->klass = error->klass;
 
+	if (error != &g_git_oom_error) {
+		error->message = NULL;
+	}
 	giterr_clear();
 
 	return 0;
@@ -153,8 +151,13 @@ int giterr_capture(git_error_state *state, int error_code)
 
 int giterr_restore(git_error_state *state)
 {
-	if (state && state->error_code && state->error_msg.message)
-		set_error(state->error_msg.klass, state->error_msg.message);
+	if (state && state->error_code && state->error_msg.message) {
+		if (state->error_msg.message == g_git_oom_error.message) {
+			giterr_set_oom();
+		} else {
+			set_error(state->error_msg.klass, state->error_msg.message);
+		}
+	}
 	else
 		giterr_clear();
 
