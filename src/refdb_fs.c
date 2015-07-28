@@ -480,14 +480,16 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 	int error = 0;
 	git_buf path = GIT_BUF_INIT;
 	git_iterator *fsit = NULL;
+	git_iterator_options fsit_opts = GIT_ITERATOR_OPTIONS_INIT;
 	const git_index_entry *entry = NULL;
 
 	if (!backend->path) /* do nothing if no path for loose refs */
 		return 0;
 
+	fsit_opts.flags = backend->iterator_flags;
+
 	if ((error = git_buf_printf(&path, "%s/refs", backend->path)) < 0 ||
-		(error = git_iterator_for_filesystem(
-			&fsit, path.ptr, backend->iterator_flags, NULL, NULL)) < 0) {
+		(error = git_iterator_for_filesystem(&fsit, path.ptr, &fsit_opts)) < 0) {
 		git_buf_free(&path);
 		return error;
 	}

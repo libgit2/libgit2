@@ -38,6 +38,17 @@ typedef enum {
 	GIT_ITERATOR_INCLUDE_CONFLICTS = (1u << 5),
 } git_iterator_flag_t;
 
+
+typedef struct {
+	const char *start;
+	const char *end;
+
+	/* flags, from above */
+	unsigned int flags;
+} git_iterator_options;
+
+#define GIT_ITERATOR_OPTIONS_INIT {0}
+
 typedef struct {
 	int (*current)(const git_index_entry **, git_iterator *);
 	int (*advance)(const git_index_entry **, git_iterator *);
@@ -61,9 +72,7 @@ struct git_iterator {
 
 extern int git_iterator_for_nothing(
 	git_iterator **out,
-	git_iterator_flag_t flags,
-	const char *start,
-	const char *end);
+	git_iterator_options *options);
 
 /* tree iterators will match the ignore_case value from the index of the
  * repository, unless you override with a non-zero flag value
@@ -71,9 +80,7 @@ extern int git_iterator_for_nothing(
 extern int git_iterator_for_tree(
 	git_iterator **out,
 	git_tree *tree,
-	git_iterator_flag_t flags,
-	const char *start,
-	const char *end);
+	git_iterator_options *options);
 
 /* index iterators will take the ignore_case value from the index; the
  * ignore_case flags are not used
@@ -81,9 +88,7 @@ extern int git_iterator_for_tree(
 extern int git_iterator_for_index(
 	git_iterator **out,
 	git_index *index,
-	git_iterator_flag_t flags,
-	const char *start,
-	const char *end);
+	git_iterator_options *options);
 
 extern int git_iterator_for_workdir_ext(
 	git_iterator **out,
@@ -91,9 +96,7 @@ extern int git_iterator_for_workdir_ext(
 	const char *repo_workdir,
 	git_index *index,
 	git_tree *tree,
-	git_iterator_flag_t flags,
-	const char *start,
-	const char *end);
+	git_iterator_options *options);
 
 /* workdir iterators will match the ignore_case value from the index of the
  * repository, unless you override with a non-zero flag value
@@ -103,11 +106,9 @@ GIT_INLINE(int) git_iterator_for_workdir(
 	git_repository *repo,
 	git_index *index,
 	git_tree *tree,
-	git_iterator_flag_t flags,
-	const char *start,
-	const char *end)
+	git_iterator_options *options)
 {
-	return git_iterator_for_workdir_ext(out, repo, NULL, index, tree, flags, start, end);
+	return git_iterator_for_workdir_ext(out, repo, NULL, index, tree, options);
 }
 
 /* for filesystem iterators, you have to explicitly pass in the ignore_case
@@ -116,9 +117,7 @@ GIT_INLINE(int) git_iterator_for_workdir(
 extern int git_iterator_for_filesystem(
 	git_iterator **out,
 	const char *root,
-	git_iterator_flag_t flags,
-	const char *start,
-	const char *end);
+	git_iterator_options *options);
 
 extern void git_iterator_free(git_iterator *iter);
 

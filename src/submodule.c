@@ -286,7 +286,7 @@ static int submodules_from_index(git_strmap *map, git_index *idx)
        git_iterator *i;
        const git_index_entry *entry;
 
-       if ((error = git_iterator_for_index(&i, idx, 0, NULL, NULL)) < 0)
+       if ((error = git_iterator_for_index(&i, idx, NULL)) < 0)
                return error;
 
        while (!(error = git_iterator_advance(&entry, i))) {
@@ -322,7 +322,7 @@ static int submodules_from_head(git_strmap *map, git_tree *head)
        git_iterator *i;
        const git_index_entry *entry;
 
-       if ((error = git_iterator_for_tree(&i, head, 0, NULL, NULL)) < 0)
+       if ((error = git_iterator_for_tree(&i, head, NULL)) < 0)
                return error;
 
        while (!(error = git_iterator_advance(&entry, i))) {

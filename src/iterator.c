@@ -31,12 +31,15 @@
 	(P)->base.cb      = &(P)->cb; \
 	ITERATOR_SET_CB(P,NAME_LC); \
 	(P)->base.repo    = (REPO); \
-	(P)->base.start   = start ? git__strdup(start) : NULL; \
-	(P)->base.end     = end ? git__strdup(end) : NULL; \
-	if ((start && !(P)->base.start) || (end && !(P)->base.end)) { \
+	(P)->base.start   = options && options->start ? \
+		git__strdup(options->start) : NULL; \
+	(P)->base.end     = options && options->end ? \
+		git__strdup(options->end) : NULL; \
+	if ((options && options->start && !(P)->base.start) || \
+		(options && options->end && !(P)->base.end)) { \
 		git__free(P); return -1; } \
 	(P)->base.prefixcomp = git__prefixcmp; \
-	(P)->base.flags = flags & ~ITERATOR_CASE_FLAGS; \
+	(P)->base.flags = options ? options->flags & ~ITERATOR_CASE_FLAGS : 0; \
 	if ((P)->base.flags & GIT_ITERATOR_DONT_AUTOEXPAND) \
 		(P)->base.flags |= GIT_ITERATOR_INCLUDE_TREES; \
 	} while (0)
@@ -149,9 +152,7 @@ typedef struct {
 
 int git_iterator_for_nothing(
 	git_iterator **iter,
-	git_iterator_flag_t flags,
-	const char *start,
-	const char *end)
+	git_iterator_options *options)
 {
 	empty_iterator *i = git__calloc(1, sizeof(empty_iterator));
 	GITERR_CHECK_ALLOC(i);
@@ -162,7 +163,7 @@ int git_iterator_for_nothing(
 
 	ITERATOR_BASE_INIT(i, empty, EMPTY, NULL);
 
-	if ((flags & GIT_ITERATOR_IGNORE_CASE) != 0)
+	if (options && (options->flags & GIT_ITERATOR_IGNORE_CASE) != 0)
 		i->base.flags |= GIT_ITERATOR_IGNORE_CASE;
 
 	*iter = (git_iterator *)i;
@@ -607,15 +608,13 @@ static int tree_iterator__create_root_frame(tree_iterator *ti, git_tree *tree)
 int git_iterator_for_tree(
 	git_iterator **iter,
 	git_tree *tree,
-	git_iterator_flag_t flags,
-	const char *start,
-	const char *end)
+	git_iterator_options *options)
 {
 	int error;
 	tree_iterator *ti;
 
 	if (tree == NULL)
-		return git_iterator_for_nothing(iter, flags, start, end);
+		return git_iterator_for_nothing(iter, options);
 
 	if ((error = git_object_dup((git_object **)&tree, (git_object *)tree)) < 0)
 		return error;
@@ -625,7 +624,7 @@ int git_iterator_for_tree(
 
 	ITERATOR_BASE_INIT(ti, tree, TREE, git_tree_owner(tree));
 
-	if ((error = iterator__update_ignore_case((git_iterator *)ti, flags)) < 0)
+	if ((error = iterator__update_ignore_case((git_iterator *)ti, options ? options->flags : 0)) < 0)
 		goto fail;
 	ti->strncomp = iterator__ignore_case(ti) ? git__strncasecmp : git__strncmp;
 
@@ -860,9 +859,7 @@ static void index_iterator__free(git_iterator *self)
 int git_iterator_for_index(
 	git_iterator **iter,
 	git_index  *index,
-	git_iterator_flag_t flags,
-	const char *start,
-	const char *end)
+	git_iterator_options *options)
 {
 	int error = 0;
 	index_iterator *ii = git__calloc(1, sizeof(index_iterator));
@@ -876,7 +873,7 @@ int git_iterator_for_index(
 
 	ITERATOR_BASE_INIT(ii, index, INDEX, git_index_owner(index));
 
-	if ((error = iterator__update_ignore_case((git_iterator *)ii, flags)) < 0) {
+	if ((error = iterator__update_ignore_case((git_iterator *)ii, options ? options->flags : 0)) < 0) {
 		git_iterator_free((git_iterator *)ii);
 		return error;
 	}
@@ -1061,6 +1058,8 @@ static int dirload_with_stat(
 		ps->path_len = path_len;
 
 		memcpy(ps->path, path, path_len);
+
+		/* TODO: don't stat if assume unchanged for this path */
 
 		if ((error = git_path_diriter_stat(&ps->st, &diriter)) < 0) {
 			if (error == GIT_ENOTFOUND) {
@@ -1366,16 +1365,14 @@ static int fs_iterator__initialize(
 int git_iterator_for_filesystem(
 	git_iterator **out,
 	const char *root,
-	git_iterator_flag_t flags,
-	const char *start,
-	const char *end)
+	git_iterator_options *options)
 {
 	fs_iterator *fi = git__calloc(1, sizeof(fs_iterator));
 	GITERR_CHECK_ALLOC(fi);
 
 	ITERATOR_BASE_INIT(fi, fs, FS, NULL);
 
-	if ((flags & GIT_ITERATOR_IGNORE_CASE) != 0)
+	if (options && (options->flags & GIT_ITERATOR_IGNORE_CASE) != 0)
 		fi->base.flags |= GIT_ITERATOR_IGNORE_CASE;
 
 	return fs_iterator__initialize(out, fi, root);
@@ -1559,9 +1556,7 @@ int git_iterator_for_workdir_ext(
 	const char *repo_workdir,
 	git_index *index,
 	git_tree *tree,
-	git_iterator_flag_t flags,
-	const char *start,
-	const char *end)
+	git_iterator_options *options)
 {
 	int error, precompose = 0;
 	workdir_iterator *wi;
@@ -1583,7 +1578,7 @@ int git_iterator_for_workdir_ext(
 	wi->fi.leave_dir_cb = workdir_iterator__leave_dir;
 	wi->fi.update_entry_cb = workdir_iterator__update_entry;
 
-	if ((error = iterator__update_ignore_case((git_iterator *)wi, flags)) < 0 ||
+	if ((error = iterator__update_ignore_case((git_iterator *)wi, options ? options->flags : 0)) < 0 ||
 		(error = git_ignore__for_path(repo, ".gitignore", &wi->ignores)) < 0)
 	{
 		git_iterator_free((git_iterator *)wi);

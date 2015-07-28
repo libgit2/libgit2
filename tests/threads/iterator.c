@@ -13,10 +13,13 @@ static void *run_workdir_iterator(void *arg)
 {
 	int error = 0;
 	git_iterator *iter;
+	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 	const git_index_entry *entry = NULL;
 
+	iter_opts.flags = GIT_ITERATOR_DONT_AUTOEXPAND;
+
 	cl_git_pass(git_iterator_for_workdir(
-		&iter, _repo, NULL, NULL, GIT_ITERATOR_DONT_AUTOEXPAND, NULL, NULL));
+		&iter, _repo, NULL, NULL, &iter_opts));
 
 	while (!error) {
 		if (entry && entry->mode == GIT_FILEMODE_TREE) {

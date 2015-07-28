@@ -126,6 +126,7 @@ static void expect_iterator_items(
 void test_repo_iterator__index(void)
 {
 	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
 	git_index *index;
 
 	g_repo = cl_git_sandbox_init("icase");
@@ -133,19 +134,19 @@ void test_repo_iterator__index(void)
 	cl_git_pass(git_repository_index(&index, g_repo));
 
 	/* autoexpand with no tree entries for index */
-	cl_git_pass(git_iterator_for_index(&i, index, 0, NULL, NULL));
+	cl_git_pass(git_iterator_for_index(&i, index, NULL));
 	expect_iterator_items(i, 20, NULL, 20, NULL);
 	git_iterator_free(i);
 
 	/* auto expand with tree entries */
-	cl_git_pass(git_iterator_for_index(
-		&i, index, GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_INCLUDE_TREES;
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
 	expect_iterator_items(i, 22, NULL, 22, NULL);
 	git_iterator_free(i);
 
 	/* no auto expand (implies trees included) */
-	cl_git_pass(git_iterator_for_index(
-		&i, index, GIT_ITERATOR_DONT_AUTOEXPAND, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_DONT_AUTOEXPAND;
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
 	expect_iterator_items(i, 12, NULL, 22, NULL);
 	git_iterator_free(i);
 
@@ -155,6 +156,7 @@ void test_repo_iterator__index(void)
 void test_repo_iterator__index_icase(void)
 {
 	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
 	git_index *index;
 	int caps;
 
@@ -167,32 +169,45 @@ void test_repo_iterator__index_icase(void)
 	cl_git_pass(git_index_set_caps(index, caps & ~GIT_INDEXCAP_IGNORE_CASE));
 
 	/* autoexpand with no tree entries over range */
-	cl_git_pass(git_iterator_for_index(&i, index, 0, "c", "k/D"));
+	i_opts.start = "c";
+	i_opts.end = "k/D";
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
 	expect_iterator_items(i, 7, NULL, 7, NULL);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_index(&i, index, 0, "k", "k/Z"));
+	i_opts.start = "k";
+	i_opts.end = "k/Z";
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
 	expect_iterator_items(i, 3, NULL, 3, NULL);
 	git_iterator_free(i);
 
 	/* auto expand with tree entries */
-	cl_git_pass(git_iterator_for_index(
-		&i, index, GIT_ITERATOR_INCLUDE_TREES, "c", "k/D"));
+	i_opts.flags = GIT_ITERATOR_INCLUDE_TREES;
+
+	i_opts.start = "c";
+	i_opts.end = "k/D";
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
 	expect_iterator_items(i, 8, NULL, 8, NULL);
 	git_iterator_free(i);
-	cl_git_pass(git_iterator_for_index(
-		&i, index, GIT_ITERATOR_INCLUDE_TREES, "k", "k/Z"));
+
+	i_opts.start = "k";
+	i_opts.end = "k/Z";
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
 	expect_iterator_items(i, 4, NULL, 4, NULL);
 	git_iterator_free(i);
 
 	/* no auto expand (implies trees included) */
-	cl_git_pass(git_iterator_for_index(
-		&i, index, GIT_ITERATOR_DONT_AUTOEXPAND, "c", "k/D"));
+	i_opts.flags = GIT_ITERATOR_DONT_AUTOEXPAND;
+
+	i_opts.start = "c";
+	i_opts.end = "k/D";
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
 	expect_iterator_items(i, 5, NULL, 8, NULL);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_index(
-		&i, index, GIT_ITERATOR_DONT_AUTOEXPAND, "k", "k/Z"));
+	i_opts.start = "k";
+	i_opts.end = "k/Z";
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
 	expect_iterator_items(i, 1, NULL, 4, NULL);
 	git_iterator_free(i);
 
@@ -200,33 +215,47 @@ void test_repo_iterator__index_icase(void)
 	cl_git_pass(git_index_set_caps(index, caps | GIT_INDEXCAP_IGNORE_CASE));
 
 	/* autoexpand with no tree entries over range */
-	cl_git_pass(git_iterator_for_index(&i, index, 0, "c", "k/D"));
+	i_opts.flags = 0;
+
+	i_opts.start = "c";
+	i_opts.end = "k/D";
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
 	expect_iterator_items(i, 13, NULL, 13, NULL);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_index(&i, index, 0, "k", "k/Z"));
+	i_opts.start = "k";
+	i_opts.end = "k/Z";
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
 	expect_iterator_items(i, 5, NULL, 5, NULL);
 	git_iterator_free(i);
 
 	/* auto expand with tree entries */
-	cl_git_pass(git_iterator_for_index(
-		&i, index, GIT_ITERATOR_INCLUDE_TREES, "c", "k/D"));
+	i_opts.flags = GIT_ITERATOR_INCLUDE_TREES;
+
+	i_opts.start = "c";
+	i_opts.end = "k/D";
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
 	expect_iterator_items(i, 14, NULL, 14, NULL);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_index(
-		&i, index, GIT_ITERATOR_INCLUDE_TREES, "k", "k/Z"));
+	i_opts.start = "k";
+	i_opts.end = "k/Z";
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
 	expect_iterator_items(i, 6, NULL, 6, NULL);
 	git_iterator_free(i);
 
 	/* no auto expand (implies trees included) */
-	cl_git_pass(git_iterator_for_index(
-		&i, index, GIT_ITERATOR_DONT_AUTOEXPAND, "c", "k/D"));
+	i_opts.flags = GIT_ITERATOR_DONT_AUTOEXPAND;
+
+	i_opts.start = "c";
+	i_opts.end = "k/D";
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
 	expect_iterator_items(i, 9, NULL, 14, NULL);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_index(
-		&i, index, GIT_ITERATOR_DONT_AUTOEXPAND, "k", "k/Z"));
+	i_opts.start = "k";
+	i_opts.end = "k/Z";
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
 	expect_iterator_items(i, 1, NULL, 6, NULL);
 	git_iterator_free(i);
 
@@ -237,6 +266,7 @@ void test_repo_iterator__index_icase(void)
 void test_repo_iterator__tree(void)
 {
 	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
 	git_tree *head;
 
 	g_repo = cl_git_sandbox_init("icase");
@@ -244,19 +274,21 @@ void test_repo_iterator__tree(void)
 	cl_git_pass(git_repository_head_tree(&head, g_repo));
 
 	/* auto expand with no tree entries */
-	cl_git_pass(git_iterator_for_tree(&i, head, 0, NULL, NULL));
+	cl_git_pass(git_iterator_for_tree(&i, head, NULL));
 	expect_iterator_items(i, 20, NULL, 20, NULL);
 	git_iterator_free(i);
 
 	/* auto expand with tree entries */
-	cl_git_pass(git_iterator_for_tree(
-		&i, head, GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_INCLUDE_TREES;
+
+	cl_git_pass(git_iterator_for_tree(&i, head, &i_opts));
 	expect_iterator_items(i, 22, NULL, 22, NULL);
 	git_iterator_free(i);
 
 	/* no auto expand (implies trees included) */
-	cl_git_pass(git_iterator_for_tree(
-		&i, head, GIT_ITERATOR_DONT_AUTOEXPAND, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_DONT_AUTOEXPAND;
+
+	cl_git_pass(git_iterator_for_tree(&i, head, &i_opts));
 	expect_iterator_items(i, 12, NULL, 22, NULL);
 	git_iterator_free(i);
 
@@ -267,75 +299,98 @@ void test_repo_iterator__tree_icase(void)
 {
 	git_iterator *i;
 	git_tree *head;
-	git_iterator_flag_t flag;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
 
 	g_repo = cl_git_sandbox_init("icase");
 
 	cl_git_pass(git_repository_head_tree(&head, g_repo));
 
-	flag = GIT_ITERATOR_DONT_IGNORE_CASE;
+	i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
 
 	/* auto expand with no tree entries */
-	cl_git_pass(git_iterator_for_tree(&i, head, flag, "c", "k/D"));
+	i_opts.start = "c";
+	i_opts.end = "k/D";
+	cl_git_pass(git_iterator_for_tree(&i, head, &i_opts));
 	expect_iterator_items(i, 7, NULL, 7, NULL);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_tree(&i, head, flag, "k", "k/Z"));
+	i_opts.start = "k";
+	i_opts.end = "k/Z";
+	cl_git_pass(git_iterator_for_tree(&i, head, &i_opts));
 	expect_iterator_items(i, 3, NULL, 3, NULL);
 	git_iterator_free(i);
 
+	i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE | GIT_ITERATOR_INCLUDE_TREES;
+
 	/* auto expand with tree entries */
-	cl_git_pass(git_iterator_for_tree(
-		&i, head, flag | GIT_ITERATOR_INCLUDE_TREES, "c", "k/D"));
+	i_opts.start = "c";
+	i_opts.end = "k/Z";
+	cl_git_pass(git_iterator_for_tree(&i, head, &i_opts));
 	expect_iterator_items(i, 8, NULL, 8, NULL);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_tree(
-		&i, head, flag | GIT_ITERATOR_INCLUDE_TREES, "k", "k/Z"));
+	i_opts.start = "k";
+	i_opts.end = "k/Z";
+	cl_git_pass(git_iterator_for_tree(&i, head, &i_opts));
 	expect_iterator_items(i, 4, NULL, 4, NULL);
 	git_iterator_free(i);
 
 	/* no auto expand (implies trees included) */
-	cl_git_pass(git_iterator_for_tree(
-		&i, head, flag | GIT_ITERATOR_DONT_AUTOEXPAND, "c", "k/D"));
+	i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE | GIT_ITERATOR_DONT_AUTOEXPAND;
+	i_opts.start = "c";
+	i_opts.end = "k/D";
+	cl_git_pass(git_iterator_for_tree(&i, head, &i_opts));
 	expect_iterator_items(i, 5, NULL, 8, NULL);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_tree(
-		&i, head, flag | GIT_ITERATOR_DONT_AUTOEXPAND, "k", "k/Z"));
+	i_opts.start = "k";
+	i_opts.end = "k/D";
+	cl_git_pass(git_iterator_for_tree(&i, head, &i_opts));
 	expect_iterator_items(i, 1, NULL, 4, NULL);
 	git_iterator_free(i);
 
-	flag = GIT_ITERATOR_IGNORE_CASE;
-
 	/* auto expand with no tree entries */
-	cl_git_pass(git_iterator_for_tree(&i, head, flag, "c", "k/D"));
+	i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
+
+	i_opts.start = "c";
+	i_opts.end = "k/D";
+	cl_git_pass(git_iterator_for_tree(&i, head, &i_opts));
 	expect_iterator_items(i, 13, NULL, 13, NULL);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_tree(&i, head, flag, "k", "k/Z"));
+	i_opts.start = "k";
+	i_opts.end = "k/Z";
+	cl_git_pass(git_iterator_for_tree(&i, head, &i_opts));
 	expect_iterator_items(i, 5, NULL, 5, NULL);
 	git_iterator_free(i);
 
 	/* auto expand with tree entries */
-	cl_git_pass(git_iterator_for_tree(
-		&i, head, flag | GIT_ITERATOR_INCLUDE_TREES, "c", "k/D"));
+	i_opts.flags = GIT_ITERATOR_IGNORE_CASE | GIT_ITERATOR_INCLUDE_TREES;
+
+	i_opts.start = "c";
+	i_opts.end = "k/D";
+	cl_git_pass(git_iterator_for_tree(&i, head, &i_opts));
 	expect_iterator_items(i, 14, NULL, 14, NULL);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_tree(
-		&i, head, flag | GIT_ITERATOR_INCLUDE_TREES, "k", "k/Z"));
+	i_opts.start = "k";
+	i_opts.end = "k/Z";
+	cl_git_pass(git_iterator_for_tree(&i, head, &i_opts));
 	expect_iterator_items(i, 6, NULL, 6, NULL);
 	git_iterator_free(i);
 
 	/* no auto expand (implies trees included) */
-	cl_git_pass(git_iterator_for_tree(
-		&i, head, flag | GIT_ITERATOR_DONT_AUTOEXPAND, "c", "k/D"));
+	i_opts.flags = GIT_ITERATOR_IGNORE_CASE | GIT_ITERATOR_DONT_AUTOEXPAND;
+
+	i_opts.start = "c";
+	i_opts.end = "k/D";
+	cl_git_pass(git_iterator_for_tree(&i, head, &i_opts));
 	expect_iterator_items(i, 9, NULL, 14, NULL);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_tree(
-		&i, head, flag | GIT_ITERATOR_DONT_AUTOEXPAND, "k", "k/Z"));
+	i_opts.start = "k";
+	i_opts.end = "k/Z";
+	cl_git_pass(git_iterator_for_tree(&i, head, &i_opts));
 	expect_iterator_items(i, 1, NULL, 6, NULL);
 	git_iterator_free(i);
 
@@ -345,6 +400,7 @@ void test_repo_iterator__tree_icase(void)
 void test_repo_iterator__tree_more(void)
 {
 	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
 	git_tree *head;
 	static const char *expect_basic[] = {
 		"current_file",
@@ -396,19 +452,21 @@ void test_repo_iterator__tree_more(void)
 	cl_git_pass(git_repository_head_tree(&head, g_repo));
 
 	/* auto expand with no tree entries */
-	cl_git_pass(git_iterator_for_tree(&i, head, 0, NULL, NULL));
+	cl_git_pass(git_iterator_for_tree(&i, head, NULL));
 	expect_iterator_items(i, 12, expect_basic, 12, expect_basic);
 	git_iterator_free(i);
 
 	/* auto expand with tree entries */
-	cl_git_pass(git_iterator_for_tree(
-		&i, head, GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_INCLUDE_TREES;
+
+	cl_git_pass(git_iterator_for_tree(&i, head, &i_opts));
 	expect_iterator_items(i, 13, expect_trees, 13, expect_trees);
 	git_iterator_free(i);
 
 	/* no auto expand (implies trees included) */
-	cl_git_pass(git_iterator_for_tree(
-		&i, head, GIT_ITERATOR_DONT_AUTOEXPAND, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_DONT_AUTOEXPAND;
+
+	cl_git_pass(git_iterator_for_tree(&i, head, &i_opts));
 	expect_iterator_items(i, 10, expect_noauto, 13, expect_trees);
 	git_iterator_free(i);
 
@@ -463,6 +521,8 @@ void test_repo_iterator__tree_case_conflicts_0(void)
 	git_tree *tree;
 	git_oid blob_id, biga_id, littlea_id, tree_id;
 	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+
 	const char *expect_cs[] = {
 		"A/1.file", "A/3.file", "a/2.file", "a/4.file" };
 	const char *expect_ci[] = {
@@ -486,25 +546,23 @@ void test_repo_iterator__tree_case_conflicts_0(void)
 
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
 
-	cl_git_pass(git_iterator_for_tree(
-		&i, tree, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
 	expect_iterator_items(i, 4, expect_cs, 4, expect_cs);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_tree(
-		&i, tree, GIT_ITERATOR_IGNORE_CASE, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
+	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
 	expect_iterator_items(i, 4, expect_ci, 4, expect_ci);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_tree(
-		&i, tree, GIT_ITERATOR_DONT_IGNORE_CASE |
-		GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE | GIT_ITERATOR_INCLUDE_TREES;
+	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
 	expect_iterator_items(i, 6, expect_cs_trees, 6, expect_cs_trees);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_tree(
-		&i, tree, GIT_ITERATOR_IGNORE_CASE |
-		GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_IGNORE_CASE | GIT_ITERATOR_INCLUDE_TREES;
+	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
 	expect_iterator_items(i, 5, expect_ci_trees, 5, expect_ci_trees);
 	git_iterator_free(i);
 
@@ -517,6 +575,8 @@ void test_repo_iterator__tree_case_conflicts_1(void)
 	git_tree *tree;
 	git_oid blob_id, Ab_id, biga_id, littlea_id, tree_id;
 	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+
 	const char *expect_cs[] = {
 		"A/a", "A/b/1", "A/c", "a/C", "a/a", "a/b" };
 	const char *expect_ci[] = {
@@ -541,25 +601,23 @@ void test_repo_iterator__tree_case_conflicts_1(void)
 
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
 
-	cl_git_pass(git_iterator_for_tree(
-		&i, tree, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
 	expect_iterator_items(i, 6, expect_cs, 6, expect_cs);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_tree(
-		&i, tree, GIT_ITERATOR_IGNORE_CASE, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
+	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
 	expect_iterator_items(i, 4, expect_ci, 4, expect_ci);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_tree(
-		&i, tree, GIT_ITERATOR_DONT_IGNORE_CASE |
-		GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE | GIT_ITERATOR_INCLUDE_TREES;
+	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
 	expect_iterator_items(i, 9, expect_cs_trees, 9, expect_cs_trees);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_tree(
-		&i, tree, GIT_ITERATOR_IGNORE_CASE |
-		GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_IGNORE_CASE | GIT_ITERATOR_INCLUDE_TREES;
+	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
 	expect_iterator_items(i, 6, expect_ci_trees, 6, expect_ci_trees);
 	git_iterator_free(i);
 
@@ -572,6 +630,8 @@ void test_repo_iterator__tree_case_conflicts_2(void)
 	git_tree *tree;
 	git_oid blob_id, d1, d2, c1, c2, b1, b2, a1, a2, tree_id;
 	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+
 	const char *expect_cs[] = {
 		"A/B/C/D/16", "A/B/C/D/foo", "A/B/C/d/15",  "A/B/C/d/FOO",
 		"A/B/c/D/14", "A/B/c/D/foo", "A/B/c/d/13",  "A/B/c/d/FOO",
@@ -639,19 +699,18 @@ void test_repo_iterator__tree_case_conflicts_2(void)
 
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
 
-	cl_git_pass(git_iterator_for_tree(
-		&i, tree, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
 	expect_iterator_items(i, 32, expect_cs, 32, expect_cs);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_tree(
-		&i, tree, GIT_ITERATOR_IGNORE_CASE, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
+	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
 	expect_iterator_items(i, 17, expect_ci, 17, expect_ci);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_tree(
-		&i, tree, GIT_ITERATOR_IGNORE_CASE |
-		GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_IGNORE_CASE | GIT_ITERATOR_INCLUDE_TREES;
+	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
 	expect_iterator_items(i, 21, expect_ci_trees, 21, expect_ci_trees);
 	git_iterator_free(i);
 
@@ -661,23 +720,24 @@ void test_repo_iterator__tree_case_conflicts_2(void)
 void test_repo_iterator__workdir(void)
 {
 	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
 
 	g_repo = cl_git_sandbox_init("icase");
 
 	/* auto expand with no tree entries */
-	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, 0, NULL, NULL));
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
 	expect_iterator_items(i, 20, NULL, 20, NULL);
 	git_iterator_free(i);
 
 	/* auto expand with tree entries */
-	cl_git_pass(git_iterator_for_workdir(
-		&i, g_repo, NULL, NULL, GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_INCLUDE_TREES;
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
 	expect_iterator_items(i, 22, NULL, 22, NULL);
 	git_iterator_free(i);
 
 	/* no auto expand (implies trees included) */
-	cl_git_pass(git_iterator_for_workdir(
-		&i, g_repo, NULL, NULL, GIT_ITERATOR_DONT_AUTOEXPAND, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_DONT_AUTOEXPAND;
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
 	expect_iterator_items(i, 12, NULL, 22, NULL);
 	git_iterator_free(i);
 }
@@ -685,73 +745,97 @@ void test_repo_iterator__workdir(void)
 void test_repo_iterator__workdir_icase(void)
 {
 	git_iterator *i;
-	git_iterator_flag_t flag;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
 
 	g_repo = cl_git_sandbox_init("icase");
 
-	flag = GIT_ITERATOR_DONT_IGNORE_CASE;
-
 	/* auto expand with no tree entries */
-	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, flag, "c", "k/D"));
+	i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+	i_opts.start = "c";
+	i_opts.end = "k/D";
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
 	expect_iterator_items(i, 7, NULL, 7, NULL);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, flag, "k", "k/Z"));
+	i_opts.start = "k";
+	i_opts.end = "k/Z";
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
 	expect_iterator_items(i, 3, NULL, 3, NULL);
 	git_iterator_free(i);
 
 	/* auto expand with tree entries */
-	cl_git_pass(git_iterator_for_workdir(
-		&i, g_repo, NULL, NULL, flag | GIT_ITERATOR_INCLUDE_TREES, "c", "k/D"));
+	i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE | GIT_ITERATOR_INCLUDE_TREES;
+
+	i_opts.start = "c";
+	i_opts.end = "k/D";
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
 	expect_iterator_items(i, 8, NULL, 8, NULL);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_workdir(
-		&i, g_repo, NULL, NULL, flag | GIT_ITERATOR_INCLUDE_TREES, "k", "k/Z"));
+	i_opts.start = "k";
+	i_opts.end = "k/Z";
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
 	expect_iterator_items(i, 4, NULL, 4, NULL);
 	git_iterator_free(i);
 
 	/* no auto expand (implies trees included) */
-	cl_git_pass(git_iterator_for_workdir(
-		&i, g_repo, NULL, NULL, flag | GIT_ITERATOR_DONT_AUTOEXPAND, "c", "k/D"));
+	i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE | GIT_ITERATOR_DONT_AUTOEXPAND;
+
+	i_opts.start = "c";
+	i_opts.end = "k/D";
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
 	expect_iterator_items(i, 5, NULL, 8, NULL);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_workdir(
-		&i, g_repo, NULL, NULL, flag | GIT_ITERATOR_DONT_AUTOEXPAND, "k", "k/Z"));
+	i_opts.start = "k";
+	i_opts.end = "k/Z";
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
 	expect_iterator_items(i, 1, NULL, 4, NULL);
 	git_iterator_free(i);
 
-	flag = GIT_ITERATOR_IGNORE_CASE;
-
 	/* auto expand with no tree entries */
-	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, flag, "c", "k/D"));
+	i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
+
+	i_opts.start = "c";
+	i_opts.end = "k/D";
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
 	expect_iterator_items(i, 13, NULL, 13, NULL);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, flag, "k", "k/Z"));
+	i_opts.start = "k";
+	i_opts.end = "k/Z";
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
 	expect_iterator_items(i, 5, NULL, 5, NULL);
 	git_iterator_free(i);
 
 	/* auto expand with tree entries */
-	cl_git_pass(git_iterator_for_workdir(
-		&i, g_repo, NULL, NULL, flag | GIT_ITERATOR_INCLUDE_TREES, "c", "k/D"));
+	i_opts.flags = GIT_ITERATOR_IGNORE_CASE | GIT_ITERATOR_INCLUDE_TREES;
+
+	i_opts.start = "c";
+	i_opts.end = "k/D";
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
 	expect_iterator_items(i, 14, NULL, 14, NULL);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_workdir(
-		&i, g_repo, NULL, NULL, flag | GIT_ITERATOR_INCLUDE_TREES, "k", "k/Z"));
+	i_opts.start = "k";
+	i_opts.end = "k/Z";
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
 	expect_iterator_items(i, 6, NULL, 6, NULL);
 	git_iterator_free(i);
 
 	/* no auto expand (implies trees included) */
-	cl_git_pass(git_iterator_for_workdir(
-		&i, g_repo, NULL, NULL, flag | GIT_ITERATOR_DONT_AUTOEXPAND, "c", "k/D"));
+	i_opts.flags = GIT_ITERATOR_IGNORE_CASE | GIT_ITERATOR_DONT_AUTOEXPAND;
+
+	i_opts.start = "c";
+	i_opts.end = "k/D";
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
 	expect_iterator_items(i, 9, NULL, 14, NULL);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_workdir(
-		&i, g_repo, NULL, NULL, flag | GIT_ITERATOR_DONT_AUTOEXPAND, "k", "k/Z"));
+	i_opts.start = "k";
+	i_opts.end = "k/Z";
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
 	expect_iterator_items(i, 1, NULL, 6, NULL);
 	git_iterator_free(i);
 }
@@ -796,6 +880,7 @@ static void build_workdir_tree(const char *root, int dirs, int subs)
 void test_repo_iterator__workdir_depth(void)
 {
 	git_iterator *iter;
+	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 
 	g_repo = cl_git_sandbox_init("icase");
 
@@ -804,13 +889,13 @@ void test_repo_iterator__workdir_depth(void)
 	build_workdir_tree("icase/dir02/sUB01", 50, 0);
 
 	/* auto expand with no tree entries */
-	cl_git_pass(git_iterator_for_workdir(&iter, g_repo, NULL, NULL, 0, NULL, NULL));
+	cl_git_pass(git_iterator_for_workdir(&iter, g_repo, NULL, NULL, &iter_opts));
 	expect_iterator_items(iter, 125, NULL, 125, NULL);
 	git_iterator_free(iter);
 
 	/* auto expand with tree entries (empty dirs silently skipped) */
-	cl_git_pass(git_iterator_for_workdir(
-		&iter, g_repo, NULL, NULL, GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
+	iter_opts.flags = GIT_ITERATOR_INCLUDE_TREES;
+	cl_git_pass(git_iterator_for_workdir(&iter, g_repo, NULL, NULL, &iter_opts));
 	expect_iterator_items(iter, 337, NULL, 337, NULL);
 	git_iterator_free(iter);
 }
@@ -818,6 +903,8 @@ void test_repo_iterator__workdir_depth(void)
 void test_repo_iterator__fs(void)
 {
 	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+
 	static const char *expect_base[] = {
 		"DIR01/Sub02/file",
 		"DIR01/sub00/file",
@@ -863,18 +950,17 @@ void test_repo_iterator__fs(void)
 
 	build_workdir_tree("status/subdir", 2, 4);
 
-	cl_git_pass(git_iterator_for_filesystem(
-		&i, "status/subdir", 0, NULL, NULL));
+	cl_git_pass(git_iterator_for_filesystem(&i, "status/subdir", NULL));
 	expect_iterator_items(i, 8, expect_base, 8, expect_base);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_filesystem(
-		&i, "status/subdir", GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_INCLUDE_TREES;
+	cl_git_pass(git_iterator_for_filesystem(&i, "status/subdir", &i_opts));
 	expect_iterator_items(i, 18, expect_trees, 18, expect_trees);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_filesystem(
-		&i, "status/subdir", GIT_ITERATOR_DONT_AUTOEXPAND, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_DONT_AUTOEXPAND;
+	cl_git_pass(git_iterator_for_filesystem(&i, "status/subdir", &i_opts));
 	expect_iterator_items(i, 5, expect_noauto, 18, expect_trees);
 	git_iterator_free(i);
 
@@ -882,20 +968,18 @@ void test_repo_iterator__fs(void)
 	git__tsort((void **)expect_trees, 18, (git__tsort_cmp)git__strcasecmp);
 	git__tsort((void **)expect_noauto, 5, (git__tsort_cmp)git__strcasecmp);
 
-	cl_git_pass(git_iterator_for_filesystem(
-		&i, "status/subdir", GIT_ITERATOR_IGNORE_CASE, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
+	cl_git_pass(git_iterator_for_filesystem(&i, "status/subdir", &i_opts));
 	expect_iterator_items(i, 8, expect_base, 8, expect_base);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_filesystem(
-		&i, "status/subdir", GIT_ITERATOR_IGNORE_CASE |
-		GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_IGNORE_CASE | GIT_ITERATOR_INCLUDE_TREES;
+	cl_git_pass(git_iterator_for_filesystem(&i, "status/subdir", &i_opts));
 	expect_iterator_items(i, 18, expect_trees, 18, expect_trees);
 	git_iterator_free(i);
 
-	cl_git_pass(git_iterator_for_filesystem(
-		&i, "status/subdir", GIT_ITERATOR_IGNORE_CASE |
-		GIT_ITERATOR_DONT_AUTOEXPAND, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_IGNORE_CASE | GIT_ITERATOR_DONT_AUTOEXPAND;
+	cl_git_pass(git_iterator_for_filesystem(&i, "status/subdir", &i_opts));
 	expect_iterator_items(i, 5, expect_noauto, 18, expect_trees);
 	git_iterator_free(i);
 }
@@ -923,7 +1007,7 @@ void test_repo_iterator__fs2(void)
 	g_repo = cl_git_sandbox_init("testrepo");
 
 	cl_git_pass(git_iterator_for_filesystem(
-		&i, "testrepo/.git/refs", 0, NULL, NULL));
+		&i, "testrepo/.git/refs", NULL));
 	expect_iterator_items(i, 13, expect_base, 13, expect_base);
 	git_iterator_free(i);
 }
@@ -947,7 +1031,7 @@ void test_repo_iterator__unreadable_dir(void)
 	cl_git_mkfile("empty_standard_repo/r/d", "final");
 
 	cl_git_pass(git_iterator_for_filesystem(
-		&i, "empty_standard_repo/r", 0, NULL, NULL));
+		&i, "empty_standard_repo/r", NULL));
 
 	cl_git_pass(git_iterator_advance(&e, i)); /* a */
 	cl_git_fail(git_iterator_advance(&e, i)); /* b */
