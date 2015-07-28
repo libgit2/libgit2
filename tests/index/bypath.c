@@ -33,3 +33,10 @@ void test_index_bypath__add_submodule(void)
 	cl_git_pass(git_submodule_status(&status, g_repo, sm_name, 0));
 	cl_assert_equal_i(0, status & GIT_SUBMODULE_STATUS_WD_MODIFIED);
 }
+
+void test_index_bypath__add_submodule_old_style(void)
+{
+	const char *sm_name = "not-submodule";
+
+	cl_git_pass(git_index_add_bypath(g_idx, sm_name));
+}
