@@ -83,7 +83,7 @@ int git_push_add_refspec(git_push *push, const char *refspec);
  * Update remote tips after a push
  *
  * @param push The push object
- * @param signature The identity to use when updating reflogs
+ * @param callbacks The identity to use when updating reflogs
  *
  * @return 0 or an error code
  */
