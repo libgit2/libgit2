@@ -204,7 +204,7 @@ GIT_EXTERN(int) git_submodule_update(git_submodule *submodule, int init, git_sub
  * @param repo The parent repository
  * @param name The name of or path to the submodule; trailing slashes okay
  * @return 0 on success, GIT_ENOTFOUND if submodule does not exist,
- *         GIT_EEXISTS if a repository is found in working directory only,
+ *         GIT_EEXISTS if a repository is found in working directory only, but Output ptr is still set,
  *         -1 on other errors.
  */
 GIT_EXTERN(int) git_submodule_lookup(
