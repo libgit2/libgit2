@@ -1027,8 +1027,11 @@ static int dirload_with_stat(
 	strncomp = (flags & GIT_PATH_DIR_IGNORE_CASE) != 0 ?
 		git__strncasecmp : git__strncmp;
 
-	if ((error = git_path_diriter_init(&diriter, dirpath, flags)) < 0)
+	/* Any error here is equivalent to the dir not existing, skip over it */
+	if ((error = git_path_diriter_init(&diriter, dirpath, flags)) < 0) {
+		error = GIT_ENOTFOUND;
 		goto done;
+	}
 
 	while ((error = git_path_diriter_next(&diriter)) == 0) {
 		if ((error = git_path_diriter_fullpath(&path, &path_len, &diriter)) < 0)
