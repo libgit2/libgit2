@@ -728,6 +728,7 @@ static int truncate_racily_clean(git_index *index)
 		if (!is_racy_timestamp(ts, entry))
 			continue;
 
+		/* TODO: use the (non-fnmatching) filelist iterator */
 		diff_opts.pathspec.count = 1;
 		diff_opts.pathspec.strings = (char **) &entry->path;
 
