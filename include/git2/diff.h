@@ -163,6 +163,13 @@ typedef enum {
 	/** Include unreadable files in the diff */
 	GIT_DIFF_INCLUDE_UNREADABLE_AS_UNTRACKED = (1u << 17),
 
+	/** Use literal path matching in the iterators.  This is more broad
+	*  than the DISABLE_PATHSPEC_MATCH flag.  The caller must provide an
+	*  array of paths (no patterns or prefixes).  Only values included in
+	*  that list will be returned.
+	*/
+	GIT_DIFF_ENABLE_FILELIST_MATCH = (1u << 18),
+
 	/*
 	 * Options controlling how output will be generated
 	 */

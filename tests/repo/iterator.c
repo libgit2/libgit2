@@ -1073,3 +1073,251 @@ void test_repo_iterator__skips_fifos_and_such(void)
 	git_iterator_free(i);
 #endif
 }
+
+void test_repo_iterator__indexfilelist(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_index *index;
+	git_vector filelist;
+	int default_icase;
+	int expect;
+
+	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
+	cl_git_pass(git_vector_insert(&filelist, "a"));
+	cl_git_pass(git_vector_insert(&filelist, "B"));
+	cl_git_pass(git_vector_insert(&filelist, "c"));
+	cl_git_pass(git_vector_insert(&filelist, "D"));
+	cl_git_pass(git_vector_insert(&filelist, "e"));
+	cl_git_pass(git_vector_insert(&filelist, "k/1"));
+	cl_git_pass(git_vector_insert(&filelist, "k/a"));
+	cl_git_pass(git_vector_insert(&filelist, "L/1"));
+
+	g_repo = cl_git_sandbox_init("icase");
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	/* In this test we DO NOT force a case setting on the index. */
+	default_icase = ((git_index_caps(index) & GIT_INDEXCAP_IGNORE_CASE) != 0);
+
+	i_opts.pathlist = &filelist;
+
+	/* All indexfilelist iterator tests are "autoexpand with no tree entries" */
+
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	expect_iterator_items(i, 8, NULL, 8, NULL);
+	git_iterator_free(i);
+
+	i_opts.start = "c";
+	i_opts.end = NULL;
+
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	/* (c D e k/1 k/a L ==> 6) vs (c e k/1 k/a ==> 4) */
+	expect = ((default_icase) ? 6 : 4);
+	expect_iterator_items(i, expect, NULL, expect, NULL);
+	git_iterator_free(i);
+
+	i_opts.start = NULL;
+	i_opts.end = "e";
+
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	/* (a B c D e ==> 5) vs (B D L/1 a c e ==> 6) */
+	expect = ((default_icase) ? 5 : 6);
+	expect_iterator_items(i, expect, NULL, expect, NULL);
+	git_iterator_free(i);
+
+	git_index_free(index);
+	git_vector_free(&filelist);
+}
+
+void test_repo_iterator__indexfilelist_2(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_index *index;
+	git_vector filelist = GIT_VECTOR_INIT;
+
+	g_repo = cl_git_sandbox_init("icase");
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
+	cl_git_pass(git_vector_insert(&filelist, "0"));
+	cl_git_pass(git_vector_insert(&filelist, "c"));
+	cl_git_pass(git_vector_insert(&filelist, "D"));
+	cl_git_pass(git_vector_insert(&filelist, "e"));
+	cl_git_pass(git_vector_insert(&filelist, "k/a"));
+
+	i_opts.pathlist = &filelist;
+
+	i_opts.start = "b";
+	i_opts.end = "k/D";
+
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	expect_iterator_items(i, 4, NULL, 4, NULL);
+	git_iterator_free(i);
+
+	git_index_free(index);
+	git_vector_free(&filelist);
+}
+
+void test_repo_iterator__indexfilelist_icase(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_index *index;
+	int caps;
+	git_vector filelist;
+
+	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
+	cl_git_pass(git_vector_insert(&filelist, "a"));
+	cl_git_pass(git_vector_insert(&filelist, "B"));
+	cl_git_pass(git_vector_insert(&filelist, "c"));
+	cl_git_pass(git_vector_insert(&filelist, "D"));
+	cl_git_pass(git_vector_insert(&filelist, "e"));
+	cl_git_pass(git_vector_insert(&filelist, "k/1"));
+	cl_git_pass(git_vector_insert(&filelist, "k/a"));
+	cl_git_pass(git_vector_insert(&filelist, "L/1"));
+
+	g_repo = cl_git_sandbox_init("icase");
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	caps = git_index_caps(index);
+
+	/* force case sensitivity */
+	cl_git_pass(git_index_set_caps(index, caps & ~GIT_INDEXCAP_IGNORE_CASE));
+
+	/* All indexfilelist iterator tests are "autoexpand with no tree entries" */
+
+	i_opts.pathlist = &filelist;
+
+	i_opts.start = "c";
+	i_opts.end = "k/D";
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	expect_iterator_items(i, 3, NULL, 3, NULL);
+	git_iterator_free(i);
+
+	i_opts.start = "k";
+	i_opts.end = "k/Z";
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	expect_iterator_items(i, 1, NULL, 1, NULL);
+	git_iterator_free(i);
+
+	/* force case insensitivity */
+	cl_git_pass(git_index_set_caps(index, caps | GIT_INDEXCAP_IGNORE_CASE));
+
+	i_opts.start = "c";
+	i_opts.end = "k/D";
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	expect_iterator_items(i, 5, NULL, 5, NULL);
+	git_iterator_free(i);
+
+	i_opts.start = "k";
+	i_opts.end = "k/Z";
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	expect_iterator_items(i, 2, NULL, 2, NULL);
+	git_iterator_free(i);
+
+	cl_git_pass(git_index_set_caps(index, caps));
+	git_index_free(index);
+	git_vector_free(&filelist);
+}
+
+void test_repo_iterator__workdirfilelist(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_vector filelist;
+	bool default_icase;
+	int expect;
+
+	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
+	cl_git_pass(git_vector_insert(&filelist, "a"));
+	cl_git_pass(git_vector_insert(&filelist, "B"));
+	cl_git_pass(git_vector_insert(&filelist, "c"));
+	cl_git_pass(git_vector_insert(&filelist, "D"));
+	cl_git_pass(git_vector_insert(&filelist, "e"));
+	cl_git_pass(git_vector_insert(&filelist, "k/1"));
+	cl_git_pass(git_vector_insert(&filelist, "k/a"));
+	cl_git_pass(git_vector_insert(&filelist, "L/1"));
+
+	g_repo = cl_git_sandbox_init("icase");
+
+	/* All indexfilelist iterator tests are "autoexpand with no tree entries" */
+	/* In this test we DO NOT force a case on the iteratords and verify default behavior. */
+
+	i_opts.pathlist = &filelist;
+
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+	expect_iterator_items(i, 8, NULL, 8, NULL);
+	git_iterator_free(i);
+
+	i_opts.start = "c";
+	i_opts.end = NULL;
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+	default_icase = git_iterator_ignore_case(i);
+	/* (c D e k/1 k/a L ==> 6) vs (c e k/1 k/a ==> 4) */
+	expect = ((default_icase) ? 6 : 4);
+	expect_iterator_items(i, expect, NULL, expect, NULL);
+	git_iterator_free(i);
+
+	i_opts.start = NULL;
+	i_opts.end = "e";
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+	default_icase = git_iterator_ignore_case(i);
+	/* (a B c D e ==> 5) vs (B D L/1 a c e ==> 6) */
+	expect = ((default_icase) ? 5 : 6);
+	expect_iterator_items(i, expect, NULL, expect, NULL);
+	git_iterator_free(i);
+
+	git_vector_free(&filelist);
+}
+
+void test_repo_iterator__workdirfilelist_icase(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_vector filelist;
+
+	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
+	cl_git_pass(git_vector_insert(&filelist, "a"));
+	cl_git_pass(git_vector_insert(&filelist, "B"));
+	cl_git_pass(git_vector_insert(&filelist, "c"));
+	cl_git_pass(git_vector_insert(&filelist, "D"));
+	cl_git_pass(git_vector_insert(&filelist, "e"));
+	cl_git_pass(git_vector_insert(&filelist, "k/1"));
+	cl_git_pass(git_vector_insert(&filelist, "k/a"));
+	cl_git_pass(git_vector_insert(&filelist, "L/1"));
+
+	g_repo = cl_git_sandbox_init("icase");
+
+	i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+	i_opts.pathlist = &filelist;
+
+	i_opts.start = "c";
+	i_opts.end = "k/D";
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+	expect_iterator_items(i, 3, NULL, 3, NULL);
+	git_iterator_free(i);
+
+	i_opts.start = "k";
+	i_opts.end = "k/Z";
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+	expect_iterator_items(i, 1, NULL, 1, NULL);
+	git_iterator_free(i);
+
+	i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
+
+	i_opts.start = "c";
+	i_opts.end = "k/D";
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+	expect_iterator_items(i, 5, NULL, 5, NULL);
+	git_iterator_free(i);
+
+	i_opts.start = "k";
+	i_opts.end = "k/Z";
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+	expect_iterator_items(i, 2, NULL, 2, NULL);
+	git_iterator_free(i);
+
+	git_vector_free(&filelist);
+}

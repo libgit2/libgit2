@@ -43,6 +43,11 @@ typedef struct {
 	const char *start;
 	const char *end;
 
+	/* paths to include in the iterator (literal).  any paths not listed
+	 * will be excluded.  note that this vector may be resorted!
+	 */
+	git_vector *pathlist;
+
 	/* flags, from above */
 	unsigned int flags;
 } git_iterator_options;
@@ -65,6 +70,8 @@ struct git_iterator {
 	git_repository *repo;
 	char *start;
 	char *end;
+	git_vector *pathlist;
+	size_t pathlist_idx;
 	int (*prefixcomp)(const char *str, const char *prefix);
 	size_t stat_calls;
 	unsigned int flags;

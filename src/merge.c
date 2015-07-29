@@ -2356,10 +2356,8 @@ static int merge_check_index(size_t *conflicts, git_repository *repo, git_index 
 			goto done;
 	}
 
-	opts.pathspec.count = staged_paths.length;
-	opts.pathspec.strings = (char **)staged_paths.contents;
-
 	iter_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+	iter_opts.pathlist = &staged_paths;
 
 	if ((error = git_iterator_for_index(&iter_repo, index_repo, &iter_opts)) < 0 ||
 		(error = git_iterator_for_index(&iter_new, index_new, &iter_opts)) < 0 ||
@@ -2406,6 +2404,7 @@ static int merge_check_workdir(size_t *conflicts, git_repository *repo, git_inde
 	 * will be applied by the merge (including conflicts).  Ensure that there
 	 * are no changes in the workdir to these paths.
 	 */
+	opts.flags |= GIT_DIFF_ENABLE_FILELIST_MATCH;
 	opts.pathspec.count = merged_paths->length;
 	opts.pathspec.strings = (char **)merged_paths->contents;
 

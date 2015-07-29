@@ -74,6 +74,24 @@ static int diff_insert_delta(
 	return error;
 }
 
+static bool diff_pathspec_match(
+	const char **matched_pathspec, git_diff *diff, const char *path)
+{
+	/* The iterator has filtered out paths for us, so the fact that we're
+	 * seeing this patch means that it must match the given path list.
+	 */
+	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_ENABLE_FILELIST_MATCH)) {
+		*matched_pathspec = path;
+		return true;
+	}
+
+	return git_pathspec__match(
+		&diff->pathspec, path,
+		DIFF_FLAG_IS_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH),
+		DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_CASE),
+		matched_pathspec, NULL);
+}
+
 static int diff_delta__from_one(
 	git_diff *diff,
 	git_delta_t status,
@@ -110,11 +128,7 @@ static int diff_delta__from_one(
 		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_INCLUDE_UNREADABLE))
 		return 0;
 
-	if (!git_pathspec__match(
-			&diff->pathspec, entry->path,
-			DIFF_FLAG_IS_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH),
-			DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_CASE),
-			&matched_pathspec, NULL))
+	if (!diff_pathspec_match(&matched_pathspec, diff, entry->path))
 		return 0;
 
 	delta = diff_delta__alloc(diff, status, entry->path);
@@ -755,11 +769,7 @@ static int maybe_modified(
 	const char *matched_pathspec;
 	int error = 0;
 
-	if (!git_pathspec__match(
-			&diff->pathspec, oitem->path,
-			DIFF_FLAG_IS_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH),
-			DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_CASE),
-			&matched_pathspec, NULL))
+	if (!diff_pathspec_match(&matched_pathspec, diff, oitem->path))
 		return 0;
 
 	memset(&noid, 0, sizeof(noid));
@@ -1266,7 +1276,9 @@ cleanup:
 
 #define DIFF_FROM_ITERATORS(MAKE_FIRST, FLAGS_FIRST, MAKE_SECOND, FLAGS_SECOND) do { \
 	git_iterator *a = NULL, *b = NULL; \
-	char *pfx = opts ? git_pathspec_prefix(&opts->pathspec) : NULL; \
+	git_vector pathlist = GIT_VECTOR_INIT; \
+	char *pfx = (opts && !(opts->flags & GIT_DIFF_ENABLE_FILELIST_MATCH)) ? \
+		git_pathspec_prefix(&opts->pathspec) : NULL; \
 	git_iterator_options a_opts = GIT_ITERATOR_OPTIONS_INIT, \
 		b_opts = GIT_ITERATOR_OPTIONS_INIT; \
 	a_opts.flags = FLAGS_FIRST; \
@@ -1276,9 +1288,19 @@ cleanup:
 	b_opts.start = pfx; \
 	b_opts.end = pfx; \
 	GITERR_CHECK_VERSION(opts, GIT_DIFF_OPTIONS_VERSION, "git_diff_options"); \
-	if (!(error = MAKE_FIRST) && !(error = MAKE_SECOND)) \
+	if (opts && (opts->flags & GIT_DIFF_ENABLE_FILELIST_MATCH) && opts->pathspec.count) { \
+		size_t __i; \
+		error = git_vector_init(&pathlist, opts->pathspec.count, NULL); \
+		for (__i = 0; !error && __i < opts->pathspec.count; __i++) { \
+			error = git_vector_insert(&pathlist, opts->pathspec.strings[__i]); \
+		} \
+		a_opts.pathlist = &pathlist; \
+		b_opts.pathlist = &pathlist; \
+	} \
+	if (!error && !(error = MAKE_FIRST) && !(error = MAKE_SECOND)) \
 		error = git_diff__from_iterators(diff, repo, a, b, opts); \
 	git__free(pfx); git_iterator_free(a); git_iterator_free(b); \
+	git_vector_free(&pathlist); \
 } while (0)
 
 int git_diff_tree_to_tree(

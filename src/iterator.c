@@ -42,6 +42,8 @@
 	(P)->base.flags = options ? options->flags & ~ITERATOR_CASE_FLAGS : 0; \
 	if ((P)->base.flags & GIT_ITERATOR_DONT_AUTOEXPAND) \
 		(P)->base.flags |= GIT_ITERATOR_INCLUDE_TREES; \
+	if (options && options->pathlist) \
+		(P)->base.pathlist = options->pathlist; \
 	} while (0)
 
 #define iterator__flag(I,F) ((((git_iterator *)(I))->flags & GIT_ITERATOR_ ## F) != 0)
@@ -105,6 +107,12 @@ static int iterator__update_ignore_case(
 
 	iter->prefixcomp = iterator__ignore_case(iter) ?
 		git__prefixcmp_icase : git__prefixcmp;
+
+	if (iter->pathlist) {
+		git_vector_set_cmp(iter->pathlist, iterator__ignore_case(iter) ?
+			git__strcasecmp : git__strcmp);
+		git_vector_sort(iter->pathlist);
+	}
 
 	return error;
 }
@@ -616,6 +624,9 @@ int git_iterator_for_tree(
 	if (tree == NULL)
 		return git_iterator_for_nothing(iter, options);
 
+	/* not yet supported */
+	assert (!options || !options->pathlist);
+
 	if ((error = git_object_dup((git_object **)&tree, (git_object *)tree)) < 0)
 		return error;
 
@@ -668,15 +679,47 @@ static const git_index_entry *index_iterator__index_entry(index_iterator *ii)
 	return ie;
 }
 
-static const git_index_entry *index_iterator__advance_over_conflicts(index_iterator *ii)
+static const git_index_entry *index_iterator__advance_over_unwanted(index_iterator *ii)
 {
 	const git_index_entry *ie = index_iterator__index_entry(ii);
+	const char *p;
+	int cmp;
 
-	if (!iterator__include_conflicts(ii)) {
-		while (ie && git_index_entry_is_conflict(ie)) {
+	while (ie) {
+		if (!iterator__include_conflicts(ii) &&
+				git_index_entry_is_conflict(ie)) {
 			ii->current++;
 			ie = index_iterator__index_entry(ii);
+			continue;
 		}
+
+		/* if we have a pathlist, this entry's path must be in it to be
+		 * returned.  otherwise, advance the pathlist entry or the iterator
+		 * until we find the next path that we want to return.
+		 */
+		if (ii->base.pathlist) {
+			if (ii->base.pathlist_idx >= ii->base.pathlist->length) {
+				ii->current = SIZE_MAX;
+				ie = NULL;
+				break;
+			}
+
+			p = ii->base.pathlist->contents[ii->base.pathlist_idx];
+			cmp = ii->base.pathlist->_cmp(p, ie->path);
+
+			if (cmp < 0) {
+				ii->base.pathlist_idx++;
+				continue;
+			}
+
+			if (cmp > 0) {
+				ii->current++;
+				ie = index_iterator__index_entry(ii);
+				continue;
+			}
+		}
+
+		break;
 	}
 
 	return ie;
@@ -705,7 +748,7 @@ static void index_iterator__next_prefix_tree(index_iterator *ii)
 
 static int index_iterator__first_prefix_tree(index_iterator *ii)
 {
-	const git_index_entry *ie = index_iterator__advance_over_conflicts(ii);
+	const git_index_entry *ie = index_iterator__advance_over_unwanted(ii);
 	const char *scan, *prior, *slash;
 
 	if (!ie || !iterator__include_trees(ii))
@@ -818,17 +861,22 @@ static int index_iterator__reset(
 {
 	index_iterator *ii = (index_iterator *)self;
 	const git_index_entry *ie;
+	size_t pathlist_idx = 0;
 
 	if (iterator__reset_range(self, start, end) < 0)
 		return -1;
 
 	ii->current = 0;
+	ii->base.pathlist_idx = 0;
 
+	/* if we're given a start prefix, find it; if we're given a pathlist, find
+	 * the first of those.  start at the later of the two.
+	 */
 	if (ii->base.start)
 		git_index_snapshot_find(
 			&ii->current, &ii->entries, ii->entry_srch, ii->base.start, 0, 0);
 
-	if ((ie = index_iterator__advance_over_conflicts(ii)) == NULL)
+	if ((ie = index_iterator__advance_over_unwanted(ii)) == NULL)
 		return 0;
 
 	if (git_buf_sets(&ii->partial, ie->path) < 0)
@@ -1004,25 +1052,60 @@ static void fs_iterator__seek_frame_start(
 		ff->index = 0;
 }
 
+typedef enum {
+	DIRLOAD_PATHLIST_NONE = 0,
+	DIRLOAD_PATHLIST_EXACT = 1,
+	DIRLOAD_PATHLIST_DIRECTORY = 2,
+} dirload_pathlist_match_t;
+
+static dirload_pathlist_match_t dirload_pathlist_match(
+	git_vector *pathlist,
+	const char *path,
+	size_t path_len,
+	int (*prefixcomp)(const char *a, const char *b))
+{
+	const char *matched;
+	size_t idx;
+
+	if (git_vector_bsearch2(
+			&idx, pathlist, pathlist->_cmp, path) != GIT_ENOTFOUND)
+		return DIRLOAD_PATHLIST_EXACT;
+
+	/* the explicit path we searched for was not found, but this may be
+	 * a directory and the pathlist contains a file in it.  check.
+	 */
+	if ((matched = git_vector_get(pathlist, idx)) != NULL &&
+		prefixcomp(matched, path) == 0 &&
+		matched[path_len] == '/')
+		return DIRLOAD_PATHLIST_DIRECTORY;
+
+	return DIRLOAD_PATHLIST_NONE;
+}
+
 static int dirload_with_stat(
+	git_vector *contents,
 	const char *dirpath,
 	size_t prefix_len,
 	unsigned int flags,
 	const char *start_stat,
 	const char *end_stat,
-	git_vector *contents)
+	git_vector *pathlist)
 {
 	git_path_diriter diriter = GIT_PATH_DIRITER_INIT;
 	const char *path;
 	int (*strncomp)(const char *a, const char *b, size_t sz);
+	int (*prefixcomp)(const char *a, const char *b);
 	size_t start_len = start_stat ? strlen(start_stat) : 0;
 	size_t end_len = end_stat ? strlen(end_stat) : 0;
 	fs_iterator_path_with_stat *ps;
 	size_t path_len, cmp_len, ps_size;
+	dirload_pathlist_match_t pathlist_match = DIRLOAD_PATHLIST_EXACT;
 	int error;
 
 	strncomp = (flags & GIT_PATH_DIR_IGNORE_CASE) != 0 ?
 		git__strncasecmp : git__strncmp;
+	prefixcomp = (flags & GIT_PATH_DIR_IGNORE_CASE) != 0 ?
+		git__prefixcmp_icase : git__prefixcmp;
 
 	/* Any error here is equivalent to the dir not existing, skip over it */
 	if ((error = git_path_diriter_init(&diriter, dirpath, flags)) < 0) {
@@ -1044,8 +1127,18 @@ static int dirload_with_stat(
 		cmp_len = min(start_len, path_len);
 		if (cmp_len && strncomp(path, start_stat, cmp_len) < 0)
 			continue;
+		/* skip if after end_stat */
 		cmp_len = min(end_len, path_len);
 		if (cmp_len && strncomp(path, end_stat, cmp_len) > 0)
+			continue;
+
+		/* skip if we have a pathlist and this isn't in it.  note that we
+		 * haven't stat'd yet to know if it's a file or a directory, so this
+		 * match for files like `foo` when we're looking for `foo/bar`
+		 */
+		if (pathlist &&
+				!(pathlist_match = dirload_pathlist_match(
+					pathlist, path, path_len, prefixcomp)))
 			continue;
 
 		/* Make sure to append two bytes, one for the path's null
@@ -1064,6 +1157,12 @@ static int dirload_with_stat(
 		if ((error = git_path_diriter_stat(&ps->st, &diriter)) < 0) {
 			if (error == GIT_ENOTFOUND) {
 				/* file was removed between readdir and lstat */
+				git__free(ps);
+				continue;
+			}
+
+			if (pathlist_match == DIRLOAD_PATHLIST_DIRECTORY) {
+				/* were looking for a directory, but this is a file */
 				git__free(ps);
 				continue;
 			}
@@ -1113,9 +1212,9 @@ static int fs_iterator__expand_dir(fs_iterator *fi)
 	ff = fs_iterator__alloc_frame(fi);
 	GITERR_CHECK_ALLOC(ff);
 
-	error = dirload_with_stat(
+	error = dirload_with_stat(&ff->entries,
 		fi->path.ptr, fi->root_len, fi->dirload_flags,
-		fi->base.start, fi->base.end, &ff->entries);
+		fi->base.start, fi->base.end, fi->base.pathlist);
 
 	if (error < 0) {
 		git_error_state last_error = { 0 };
