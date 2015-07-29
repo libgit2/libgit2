@@ -444,6 +444,7 @@ static void git_smart__free(git_transport *transport)
 		git_pkt_free(p);
 
 	git_vector_free(refs);
+	git__free(t->proxy.url);
 
 	git_strarray_free(&t->custom_headers);
 
