@@ -41,7 +41,7 @@ struct pack_write_context {
 	git_transfer_progress *stats;
 };
 
-GIT__USE_OIDMAP;
+GIT__USE_OIDMAP
 
 #ifdef GIT_THREADS
 
