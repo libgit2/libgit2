@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "submodule_helpers.h"
 #include "git2/sys/repository.h"
+#include "repository.h"
 #include "fileops.h"
 
 static git_repository *g_repo = NULL;
@@ -103,8 +104,25 @@ static int sm_lookup_cb(git_submodule *sm, const char *name, void *payload)
 
 void test_submodule_lookup__foreach(void)
 {
+	git_config *cfg;
 	sm_lookup_data data;
+
 	memset(&data, 0, sizeof(data));
+	cl_git_pass(git_submodule_foreach(g_repo, sm_lookup_cb, &data));
+	cl_assert_equal_i(8, data.count);
+
+	memset(&data, 0, sizeof(data));
+
+	/* Change the path for a submodule so it doesn't match the name */
+	cl_git_pass(git_config_open_ondisk(&cfg, "submod2/.gitmodules"));
+
+	cl_git_pass(git_config_set_string(cfg, "submodule.smchangedindex.path", "sm_changed_index"));
+	cl_git_pass(git_config_set_string(cfg, "submodule.smchangedindex.url", "../submod2_target"));
+	cl_git_pass(git_config_delete_entry(cfg, "submodule.sm_changed_index.path"));
+	cl_git_pass(git_config_delete_entry(cfg, "submodule.sm_changed_index.url"));
+
+	git_config_free(cfg);
+
 	cl_git_pass(git_submodule_foreach(g_repo, sm_lookup_cb, &data));
 	cl_assert_equal_i(8, data.count);
 }
@@ -131,6 +149,29 @@ void test_submodule_lookup__lookup_even_with_missing_index(void)
 	git_index_free(idx);
 
 	test_submodule_lookup__simple_lookup(); /* baseline should still pass */
+}
+
+void test_submodule_lookup__backslashes(void)
+{
+	git_config *cfg;
+	git_submodule *sm;
+	git_repository *subrepo;
+	git_buf buf = GIT_BUF_INIT;
+	const char *backslashed_path = "..\\submod2_target";
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "submod2/.gitmodules"));
+	cl_git_pass(git_config_set_string(cfg, "submodule.sm_unchanged.url", backslashed_path));
+	git_config_free(cfg);
+
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_unchanged"));
+	cl_assert_equal_s(backslashed_path, git_submodule_url(sm));
+	cl_git_pass(git_submodule_open(&subrepo, sm));
+
+	cl_git_pass(git_submodule_resolve_url(&buf, g_repo, backslashed_path));
+
+	git_buf_free(&buf);
+	git_submodule_free(sm);
+	git_repository_free(subrepo);
 }
 
 static void baseline_tests(void)

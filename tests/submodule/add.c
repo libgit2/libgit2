@@ -4,6 +4,7 @@
 #include "submodule_helpers.h"
 #include "config/config_helpers.h"
 #include "fileops.h"
+#include "repository.h"
 
 static git_repository *g_repo = NULL;
 

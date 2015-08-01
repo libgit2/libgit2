@@ -511,7 +511,7 @@ static int write_chunk(git_stream *io, const char *buffer, size_t len)
 	git_buf buf = GIT_BUF_INIT;
 
 	/* Chunk header */
-	git_buf_printf(&buf, "%X\r\n", (unsigned)len);
+	git_buf_printf(&buf, "%" PRIxZ "\r\n", len);
 
 	if (git_buf_oom(&buf))
 		return -1;
