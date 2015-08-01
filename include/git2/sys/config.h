@@ -76,7 +76,7 @@ struct git_config_backend {
  * Initializes a `git_config_backend` with default values. Equivalent to
  * creating an instance with GIT_CONFIG_BACKEND_INIT.
  *
- * @param opts the `git_config_backend` struct to initialize.
+ * @param backend the `git_config_backend` struct to initialize.
  * @param version Version of struct; pass `GIT_CONFIG_BACKEND_VERSION`
  * @return Zero on success; -1 on failure.
  */
