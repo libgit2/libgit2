@@ -34,9 +34,15 @@ void test_index_bypath__add_submodule(void)
 	cl_assert_equal_i(0, status & GIT_SUBMODULE_STATUS_WD_MODIFIED);
 }
 
-void test_index_bypath__add_submodule_old_style(void)
+void test_index_bypath__add_submodule_unregistered(void)
 {
 	const char *sm_name = "not-submodule";
+	const char *sm_head = "68e92c611b80ee1ed8f38314ff9577f0d15b2444";
+	const git_index_entry *entry;
 
 	cl_git_pass(git_index_add_bypath(g_idx, sm_name));
+
+	cl_assert(entry = git_index_get_bypath(g_idx, sm_name, 0));
+	cl_assert_equal_s(sm_head, git_oid_tostr_s(&entry->id));
+	cl_assert_equal_s(sm_name, entry->path);
 }
