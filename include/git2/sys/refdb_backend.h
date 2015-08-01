@@ -176,7 +176,7 @@ struct git_refdb_backend {
  * Initializes a `git_refdb_backend` with default values. Equivalent to
  * creating an instance with GIT_REFDB_BACKEND_INIT.
  *
- * @param opts the `git_refdb_backend` struct to initialize
+ * @param backend the `git_refdb_backend` struct to initialize
  * @param version Version of struct; pass `GIT_REFDB_BACKEND_VERSION`
  * @return Zero on success; -1 on failure.
  */

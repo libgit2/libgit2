@@ -745,7 +745,7 @@ GIT_EXTERN(int) git_repository_ident(const char **name, const char **email, cons
  *
  * @param repo the repository to configure
  * @param name the name to use for the reflog entries
- * @param name the email to use for the reflog entries
+ * @param email the email to use for the reflog entries
  */
 GIT_EXTERN(int) git_repository_set_ident(git_repository *repo, const char *name, const char *email);
 
