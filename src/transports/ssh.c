@@ -66,6 +66,8 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 	if (!git__prefixcmp(url, prefix_ssh)) {
 		url = url + strlen(prefix_ssh);
 		repo = strchr(url, '/');
+		if (repo && repo[1] == '~')
+			++repo;
 	} else {
 		repo = strchr(url, ':');
 		if (repo) repo++;
