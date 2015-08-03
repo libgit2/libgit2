@@ -1286,13 +1286,13 @@ int git_index_add_bypath(git_index *index, const char *path)
 		git_submodule *sm;
 		git_error_state err;
 
-		giterr_capture(&err, ret);
+		giterr_state_capture(&err, ret);
 
 		ret = git_submodule_lookup(&sm, INDEX_OWNER(index), path);
 		if (ret == GIT_ENOTFOUND)
-			return giterr_restore(&err);
+			return giterr_state_restore(&err);
 
-		git__free(err.error_msg.message);
+		giterr_state_free(&err);
 
 		/*
 		 * EEXISTS means that there is a repository at that path, but it's not known

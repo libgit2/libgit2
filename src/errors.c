@@ -131,53 +131,65 @@ void giterr_clear(void)
 #endif
 }
 
-static int giterr_detach(git_error *cpy)
-{
-	git_error *error = GIT_GLOBAL->last_error;
-	git_buf *buf = &GIT_GLOBAL->error_buf;
-
-	assert(cpy);
-
-	if (!error)
-		return -1;
-
-	cpy->message = git_buf_detach(buf);
-	cpy->klass = error->klass;
-
-	if (error != &g_git_oom_error) {
-		error->message = NULL;
-	}
-	giterr_clear();
-
-	return 0;
-}
-
 const git_error *giterr_last(void)
 {
 	return GIT_GLOBAL->last_error;
 }
 
-int giterr_capture(git_error_state *state, int error_code)
+int giterr_state_capture(git_error_state *state, int error_code)
 {
+	git_error *error = GIT_GLOBAL->last_error;
+	git_buf *error_buf = &GIT_GLOBAL->error_buf;
+
+	memset(state, 0, sizeof(git_error_state));
+
+	if (!error_code)
+		return 0;
+
 	state->error_code = error_code;
-	if (error_code)
-		giterr_detach(&state->error_msg);
+	state->oom = (error == &g_git_oom_error);
+
+	if (error) {
+		state->error_msg.klass = error->klass;
+
+		if (state->oom)
+			state->error_msg.message = g_git_oom_error.message;
+		else
+			state->error_msg.message = git_buf_detach(error_buf);
+	}
+
+	giterr_clear();
 	return error_code;
 }
 
-int giterr_restore(git_error_state *state)
+int giterr_state_restore(git_error_state *state)
 {
-	if (state && state->error_code && state->error_msg.message) {
-		if (state->error_msg.message == g_git_oom_error.message) {
-			giterr_set_oom();
-		} else {
-			set_error(state->error_msg.klass, state->error_msg.message);
-		}
-	}
-	else
-		giterr_clear();
+	int ret = 0;
 
-	return state ? state->error_code : 0;
+	giterr_clear();
+
+	if (state && state->error_msg.message) {
+		if (state->oom)
+			giterr_set_oom();
+		else
+			set_error(state->error_msg.klass, state->error_msg.message);
+
+		ret = state->error_code;
+		memset(state, 0, sizeof(git_error_state));
+	}
+
+	return ret;
+}
+
+void giterr_state_free(git_error_state *state)
+{
+	if (!state)
+		return;
+
+	if (!state->oom)
+		git__free(state->error_msg.message);
+
+	memset(state, 0, sizeof(git_error_state));
 }
 
 int giterr_system_last(void)

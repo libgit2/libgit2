@@ -141,20 +141,25 @@ void giterr_system_set(int code);
  * Structure to preserve libgit2 error state
  */
 typedef struct {
-	int       error_code;
+	int error_code;
+	unsigned int oom : 1;
 	git_error error_msg;
 } git_error_state;
 
 /**
  * Capture current error state to restore later, returning error code.
- * If `error_code` is zero, this does nothing and returns zero.
+ * If `error_code` is zero, this does not clear the current error state.
+ * You must either restore this error state, or free it.
  */
-int giterr_capture(git_error_state *state, int error_code);
+extern int giterr_state_capture(git_error_state *state, int error_code);
 
 /**
  * Restore error state to a previous value, returning saved error code.
  */
-int giterr_restore(git_error_state *state);
+extern int giterr_state_restore(git_error_state *state);
+
+/** Free an error state. */
+extern void giterr_state_free(git_error_state *state);
 
 /**
  * Check a versioned structure for validity
