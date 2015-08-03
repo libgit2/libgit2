@@ -93,7 +93,7 @@ struct git_odb_backend {
  * Initializes a `git_odb_backend` with default values. Equivalent to
  * creating an instance with GIT_ODB_BACKEND_INIT.
  *
- * @param opts the `git_odb_backend` struct to initialize.
+ * @param backend the `git_odb_backend` struct to initialize.
  * @param version Version the struct; pass `GIT_ODB_BACKEND_VERSION`
  * @return Zero on success; -1 on failure.
  */

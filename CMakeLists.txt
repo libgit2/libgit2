@@ -12,7 +12,7 @@
 # > cmake --build . --target install
 
 PROJECT(libgit2 C)
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 CMAKE_POLICY(SET CMP0015 NEW)
 
 # Add find modules to the path
@@ -412,6 +412,7 @@ ELSE ()
 		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 	ENDIF ()
 
+	ADD_C_FLAG_IF_SUPPORTED(-Wdocumentation)
 	ADD_C_FLAG_IF_SUPPORTED(-Wno-missing-field-initializers)
 	ADD_C_FLAG_IF_SUPPORTED(-Wstrict-aliasing=2)
 	ADD_C_FLAG_IF_SUPPORTED(-Wstrict-prototypes)
