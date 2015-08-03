@@ -1228,6 +1228,45 @@ int git_index_add_frombuffer(
 	return 0;
 }
 
+static int add_repo_as_submodule(git_index_entry **out, git_index *index, const char *path)
+{
+	git_repository *sub;
+	git_buf abspath = GIT_BUF_INIT;
+	git_repository *repo = INDEX_OWNER(index);
+	git_reference *head;
+	git_index_entry *entry;
+	struct stat st;
+	int error;
+
+	if (index_entry_create(&entry, INDEX_OWNER(index), path) < 0)
+		return -1;
+
+	if ((error = git_buf_joinpath(&abspath, git_repository_workdir(repo), path)) < 0)
+		return error;
+
+	if ((error = p_stat(abspath.ptr, &st)) < 0) {
+		giterr_set(GITERR_OS, "failed to stat repository dir");
+		return -1;
+	}
+
+	git_index_entry__init_from_stat(entry, &st, !index->distrust_filemode);
+
+	if ((error = git_repository_open(&sub, abspath.ptr)) < 0)
+		return error;
+
+	if ((error = git_repository_head(&head, sub)) < 0)
+		return error;
+
+	git_oid_cpy(&entry->id, git_reference_target(head));
+	entry->mode = GIT_FILEMODE_COMMIT;
+
+	git_reference_free(head);
+	git_repository_free(sub);
+	git_buf_free(&abspath);
+
+	*out = entry;
+	return 0;
+}
 
 int git_index_add_bypath(git_index *index, const char *path)
 {
@@ -1252,12 +1291,26 @@ int git_index_add_bypath(git_index *index, const char *path)
 		ret = git_submodule_lookup(&sm, INDEX_OWNER(index), path);
 		if (ret == GIT_ENOTFOUND)
 			return giterr_restore(&err);
-		else
-			git__free(err.error_msg.message);
 
-		ret = git_submodule_add_to_index(sm, false);
-		git_submodule_free(sm);
-		return ret;
+		git__free(err.error_msg.message);
+
+		/*
+		 * EEXISTS means that there is a repository at that path, but it's not known
+		 * as a submodule. We add its HEAD as an entry and don't register it.
+		 */
+		if (ret == GIT_EEXISTS) {
+			if ((ret = add_repo_as_submodule(&entry, index, path)) < 0)
+				return ret;
+
+			if ((ret = index_insert(index, &entry, 1, false)) < 0)
+				return ret;
+		} else if (ret < 0) {
+			return ret;
+		} else {
+			ret = git_submodule_add_to_index(sm, false);
+			git_submodule_free(sm);
+			return ret;
+		}
 	}
 
 	/* Adding implies conflict was resolved, move conflict entries to REUC */
