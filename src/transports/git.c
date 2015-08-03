@@ -50,6 +50,8 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 	}
 
 	repo = delim;
+	if (repo[1] == '~')
+		++repo;
 
 	delim = strchr(url, ':');
 	if (delim == NULL)
