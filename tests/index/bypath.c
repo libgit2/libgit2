@@ -46,3 +46,29 @@ void test_index_bypath__add_submodule_unregistered(void)
 	cl_assert_equal_s(sm_head, git_oid_tostr_s(&entry->id));
 	cl_assert_equal_s(sm_name, entry->path);
 }
+
+void test_index_bypath__add_hidden(void)
+{
+	const git_index_entry *entry;
+	bool hidden;
+
+	GIT_UNUSED(entry);
+	GIT_UNUSED(hidden);
+
+#ifdef GIT_WIN32
+	cl_git_mkfile("submod2/hidden_file", "you can't see me");
+
+	cl_git_pass(git_win32__hidden(&hidden, "submod2/hidden_file"));
+	cl_assert(!hidden);
+
+	cl_git_pass(git_win32__set_hidden("submod2/hidden_file", true));
+
+	cl_git_pass(git_win32__hidden(&hidden, "submod2/hidden_file"));
+	cl_assert(hidden);
+
+	cl_git_pass(git_index_add_bypath(g_idx, "hidden_file"));
+
+	cl_assert(entry = git_index_get_bypath(g_idx, "hidden_file", 0));
+	cl_assert_equal_i(GIT_FILEMODE_BLOB, entry->mode);
+#endif
+}
