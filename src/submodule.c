@@ -215,23 +215,34 @@ int git_submodule_lookup(
 
 	/* If we still haven't found it, do the WD check */
 	if (location == 0 || location == GIT_SUBMODULE_STATUS_IN_WD) {
-		git_submodule_free(sm);
 		error = GIT_ENOTFOUND;
 
 		/* If it's not configured, we still check if there's a repo at the path */
 		if (git_repository_workdir(repo)) {
 			git_buf path = GIT_BUF_INIT;
 			if (git_buf_join3(&path,
-					  '/', git_repository_workdir(repo), name, DOT_GIT) < 0)
+					  '/', git_repository_workdir(repo), name, DOT_GIT) < 0) {
+				git_submodule_free(sm);
 				return -1;
+			}
 
-			if (git_path_exists(path.ptr))
+			if (git_path_exists(path.ptr)) {
 				error = GIT_EEXISTS;
+
+				if (out)
+					*out = sm;
+				else
+					git_submodule_free(sm);
+			}
 
 			git_buf_free(&path);
 		}
 
-		submodule_set_lookup_error(error, name);
+		if (error != GIT_EEXISTS)
+		{
+			git_submodule_free(sm);
+			submodule_set_lookup_error(error, name);
+		}
 		return error;
 	}
 
