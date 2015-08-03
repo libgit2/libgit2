@@ -1254,6 +1254,8 @@ int git_index_add_bypath(git_index *index, const char *path)
 			return giterr_restore(&err);
 		else
 			git__free(err.error_msg.message);
+		if (ret < 0)
+			return ret;
 
 		ret = git_submodule_add_to_index(sm, false);
 		git_submodule_free(sm);
