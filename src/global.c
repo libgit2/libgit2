@@ -279,18 +279,19 @@ int git_libgit2_shutdown(void)
 
 git_global_st *git__global_state(void)
 {
-	void *ptr;
+	git_global_st *ptr;
 
 	assert(git_atomic_get(&git__n_inits) > 0);
 
 	if ((ptr = TlsGetValue(_tls_index)) != NULL)
 		return ptr;
 
-	ptr = git__malloc(sizeof(git_global_st));
+	ptr = git__calloc(1, sizeof(git_global_st));
 	if (!ptr)
 		return NULL;
 
-	memset(ptr, 0x0, sizeof(git_global_st));
+	git_buf_init(&ptr->error_buf, 0);
+
 	TlsSetValue(_tls_index, ptr);
 	return ptr;
 }
@@ -378,18 +379,18 @@ int git_libgit2_shutdown(void)
 
 git_global_st *git__global_state(void)
 {
-	void *ptr;
+	git_global_st *ptr;
 
 	assert(git_atomic_get(&git__n_inits) > 0);
 
 	if ((ptr = pthread_getspecific(_tls_key)) != NULL)
 		return ptr;
 
-	ptr = git__malloc(sizeof(git_global_st));
+	ptr = git__calloc(1, sizeof(git_global_st));
 	if (!ptr)
 		return NULL;
 
-	memset(ptr, 0x0, sizeof(git_global_st));
+	git_buf_init(&ptr->error_buf, 0);
 	pthread_setspecific(_tls_key, ptr);
 	return ptr;
 }
@@ -407,6 +408,7 @@ int git_libgit2_init(void)
 		ssl_inited = 1;
 	}
 
+	git_buf_init(&__state.error_buf, 0);
 	return git_atomic_inc(&git__n_inits);
 }
 

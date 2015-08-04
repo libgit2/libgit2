@@ -1120,7 +1120,7 @@ static int fs_iterator__expand_dir(fs_iterator *fi)
 
 	if (error < 0) {
 		git_error_state last_error = { 0 };
-		giterr_capture(&last_error, error);
+		giterr_state_capture(&last_error, error);
 
 		/* these callbacks may clear the error message */
 		fs_iterator__free_frame(ff);
@@ -1128,7 +1128,7 @@ static int fs_iterator__expand_dir(fs_iterator *fi)
 		/* next time return value we skipped to */
 		fi->base.flags &= ~GIT_ITERATOR_FIRST_ACCESS;
 
-		return giterr_restore(&last_error);
+		return giterr_state_restore(&last_error);
 	}
 
 	if (ff->entries.length == 0) {
