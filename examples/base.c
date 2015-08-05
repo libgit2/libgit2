@@ -57,6 +57,7 @@ void check_error()
 
 }
 
+/*implements the function of "git init"*/
 void cmd_init()
 {
     git_repository *repo = NULL;
@@ -92,8 +93,8 @@ static int fetch_progress(const git_transfer_progress *stats, void *payload)
     return 0;
 }
 
-
-static void cmd_clone()
+/*implements the function of "git clone"*/
+void cmd_clone()
 {
     progress_data pd = {{0}};
     git_repository *repo = NULL;
@@ -146,13 +147,7 @@ static int mergehead_peel_cb(const git_oid *oid, void *payload)
 	return 0;
 }
 
-git_repository* open_local_repo()
-{
-    git_repository *repo = NULL;
-    git_repository_open(&repo, LOCALGIT);
-    return repo;
-}
-
+/*implements the function of "git add ."*/
 void cmd_add()
 {
     git_repository *repo = NULL;
@@ -162,8 +157,7 @@ void cmd_add()
     print_payload payload;
 
     git_libgit2_init();
-    repo = open_local_repo();
-    
+    git_repository_open(&repo, LOCALGIT);
 
     git_repository_index(&index, repo);
 
@@ -295,7 +289,6 @@ static int push_update_reference_callback(const char *refname, const char *statu
 	return 0;
 }
 
-
 int cmd_push_repo(git_repository *repo)
 {
 	int err = GIT_OK;
@@ -336,6 +329,7 @@ out:
 	return rc;
 }
 
+/*implements the function of "git push"*/
 void cmd_push()
 {
     git_repository *repo = NULL;
@@ -409,7 +403,7 @@ static int transfer_progress_cb(const git_transfer_progress *stats, void *payloa
     return 0;
 }
 
-//ok
+/*implements the function of "git fetch"*/
 void cmd_fetch()
 {
     git_repository *repo = NULL;
@@ -546,6 +540,7 @@ out:
 	return rc;
 }
 
+/*implements the function of "git merge origin/master"*/
 void cmd_merge()
 {
     git_repository *repo = NULL;
@@ -649,7 +644,6 @@ out:
 	return rc;
 }
 
-//ok
 void cmd_rebase()
 {
     git_repository *repo = NULL;
@@ -679,7 +673,8 @@ int cmd_commit_repo(git_repository *repo)
 	git_signature *committer_signature = NULL;
 	git_tree *tree = NULL;
 	git_commit **parents = NULL;
-    const char *message = "auto";
+    //TODO: write the message for commit
+    const char *message = "demoCommit";
 
 	int i;
 	int rc = EXIT_FAILURE;
@@ -761,6 +756,7 @@ out:
 	return rc;
 }
 
+/*implements the function of "git commit -a -m demoCommit"*/
 void cmd_commit()
 {
     git_repository *repo = NULL;
