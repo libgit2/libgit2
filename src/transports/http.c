@@ -255,7 +255,7 @@ static int on_header_ready(http_subtransport *t)
 			GITERR_CHECK_ALLOC(t->content_type);
 		}
 	}
-	else if (!strcmp("WWW-Authenticate", git_buf_cstr(name))) {
+	else if (!strcasecmp("WWW-Authenticate", git_buf_cstr(name))) {
 		char *dup = git__strdup(git_buf_cstr(value));
 		GITERR_CHECK_ALLOC(dup);
 
