@@ -793,7 +793,7 @@ int main(int argc, char *argv[])
 
     if (argc != 2) {
         printf("Please use the command as ./base clone, ./base add for running");
-        return 1;
+        return 0;
     }
     
 
