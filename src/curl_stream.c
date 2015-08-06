@@ -220,6 +220,7 @@ int git_curl_stream_new(git_stream **out, const char *host, const char *port)
 	curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, 1);
 	curl_easy_setopt(handle, CURLOPT_CERTINFO, 1);
 	curl_easy_setopt(handle, CURLOPT_HTTPPROXYTUNNEL, 1);
+	curl_easy_setopt(handle, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
 
 	/* curl_easy_setopt(handle, CURLOPT_VERBOSE, 1); */
 
