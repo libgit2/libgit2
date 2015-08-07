@@ -977,16 +977,27 @@ static int index_entry_reuc_init(git_index_reuc_entry **reuc_out,
 	return 0;
 }
 
-static void index_entry_cpy(git_index_entry *tgt, const git_index_entry *src)
+static void index_entry_cpy(
+	git_index_entry *tgt,
+	git_index *index,
+	const git_index_entry *src,
+	bool update_path)
 {
 	const char *tgt_path = tgt->path;
 	memcpy(tgt, src, sizeof(*tgt));
-	tgt->path = tgt_path; /* reset to existing path data */
+
+	/* keep the existing path buffer, but update the path to the one
+	 * given by the caller, if we trust it.
+	 */
+	tgt->path = tgt_path;
+
+	if (index->ignore_case && update_path)
+		memcpy((char *)tgt->path, src->path, strlen(tgt->path));
 }
 
 static int index_entry_dup(
 	git_index_entry **out,
-	git_repository *repo,
+	git_index *index,
 	const git_index_entry *src)
 {
 	git_index_entry *entry;
@@ -996,10 +1007,10 @@ static int index_entry_dup(
 		return 0;
 	}
 
-	if (index_entry_create(&entry, repo, src->path) < 0)
+	if (index_entry_create(&entry, INDEX_OWNER(index), src->path) < 0)
 		return -1;
 
-	index_entry_cpy(entry, src);
+	index_entry_cpy(entry, index, src, false);
 	*out = entry;
 	return 0;
 }
@@ -1247,7 +1258,7 @@ static int index_insert(
 	 */
 	else if (existing) {
 		if (replace)
-			index_entry_cpy(existing, entry);
+			index_entry_cpy(existing, index, entry, trust_path);
 		index_entry_free(entry);
 		*entry_ptr = entry = existing;
 	}
@@ -1327,7 +1338,7 @@ int git_index_add_frombuffer(
 		return -1;
 	}
 
-	if (index_entry_dup(&entry, INDEX_OWNER(index), source_entry) < 0)
+	if (index_entry_dup(&entry, index, source_entry) < 0)
 		return -1;
 
 	error = git_blob_create_frombuffer(&id, INDEX_OWNER(index), buffer, len);
@@ -1474,7 +1485,7 @@ int git_index_add(git_index *index, const git_index_entry *source_entry)
 		return -1;
 	}
 
-	if ((ret = index_entry_dup(&entry, INDEX_OWNER(index), source_entry)) < 0 ||
+	if ((ret = index_entry_dup(&entry, index, source_entry)) < 0 ||
 		(ret = index_insert(index, &entry, 1, true, true)) < 0)
 		return ret;
 
@@ -1600,9 +1611,9 @@ int git_index_conflict_add(git_index *index,
 
 	assert (index);
 
-	if ((ret = index_entry_dup(&entries[0], INDEX_OWNER(index), ancestor_entry)) < 0 ||
-		(ret = index_entry_dup(&entries[1], INDEX_OWNER(index), our_entry)) < 0 ||
-		(ret = index_entry_dup(&entries[2], INDEX_OWNER(index), their_entry)) < 0)
+	if ((ret = index_entry_dup(&entries[0], index, ancestor_entry)) < 0 ||
+		(ret = index_entry_dup(&entries[1], index, our_entry)) < 0 ||
+		(ret = index_entry_dup(&entries[2], index, their_entry)) < 0)
 		goto on_error;
 
 	/* Validate entries */
@@ -2210,7 +2221,7 @@ static size_t read_entry(
 
 	entry.path = (char *)path_ptr;
 
-	if (index_entry_dup(out, INDEX_OWNER(index), &entry) < 0)
+	if (index_entry_dup(out, index, &entry) < 0)
 		return 0;
 
 	return entry_size;
@@ -2727,7 +2738,7 @@ static int read_tree_cb(
 		entry->mode == old_entry->mode &&
 		git_oid_equal(&entry->id, &old_entry->id))
 	{
-		index_entry_cpy(entry, old_entry);
+		index_entry_cpy(entry, data->index, old_entry, false);
 		entry->flags_extended = 0;
 	}
 
@@ -2859,7 +2870,7 @@ int git_index_read_index(
 		if (diff < 0) {
 			git_vector_insert(&remove_entries, (git_index_entry *)old_entry);
 		} else if (diff > 0) {
-			if ((error = index_entry_dup(&entry, git_index_owner(index), new_entry)) < 0)
+			if ((error = index_entry_dup(&entry, index, new_entry)) < 0)
 				goto done;
 
 			git_vector_insert(&new_entries, entry);
@@ -2870,7 +2881,7 @@ int git_index_read_index(
 			if (git_oid_equal(&old_entry->id, &new_entry->id)) {
 				git_vector_insert(&new_entries, (git_index_entry *)old_entry);
 			} else {
-				if ((error = index_entry_dup(&entry, git_index_owner(index), new_entry)) < 0)
+				if ((error = index_entry_dup(&entry, index, new_entry)) < 0)
 					goto done;
 
 				git_vector_insert(&new_entries, entry);

@@ -73,6 +73,26 @@ void test_index_bypath__add_hidden(void)
 #endif
 }
 
+void test_index_bypath__add_keeps_existing_case(void)
+{
+	const git_index_entry *entry;
+
+	if (!cl_repo_get_bool(g_repo, "core.ignorecase"))
+		clar__skip();
+
+	cl_git_mkfile("submod2/just_a_dir/file1.txt", "This is a file");
+	cl_git_pass(git_index_add_bypath(g_idx, "just_a_dir/file1.txt"));
+
+	cl_assert(entry = git_index_get_bypath(g_idx, "just_a_dir/file1.txt", 0));
+	cl_assert_equal_s("just_a_dir/file1.txt", entry->path);
+
+	cl_git_rewritefile("submod2/just_a_dir/file1.txt", "Updated!");
+	cl_git_pass(git_index_add_bypath(g_idx, "just_a_dir/FILE1.txt"));
+
+	cl_assert(entry = git_index_get_bypath(g_idx, "just_a_dir/FILE1.txt", 0));
+	cl_assert_equal_s("just_a_dir/file1.txt", entry->path);
+}
+
 void test_index_bypath__add_honors_existing_case(void)
 {
 	const git_index_entry *entry;
