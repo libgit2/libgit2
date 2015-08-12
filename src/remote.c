@@ -1334,11 +1334,13 @@ static int update_tips_for_spec(
 	for (; i < refs->length; ++i) {
 		head = git_vector_get(refs, i);
 		autotag = 0;
+		git_buf_clear(&refname);
 
 		/* Ignore malformed ref names (which also saves us from tag^{} */
 		if (!git_reference_is_valid_name(head->name))
 			continue;
 
+		/* If we have a tag, see if the auto-follow rules say to update it */
 		if (git_refspec_src_matches(&tagspec, head->name)) {
 			if (tagopt != GIT_REMOTE_DOWNLOAD_TAGS_NONE) {
 
@@ -1348,10 +1350,11 @@ static int update_tips_for_spec(
 				git_buf_clear(&refname);
 				if (git_buf_puts(&refname, head->name) < 0)
 					goto on_error;
-			} else {
-				continue;
 			}
-		} else if (git_refspec_src_matches(spec, head->name)) {
+		}
+
+		/* If we didn't want to auto-follow the tag, check if the refspec matches */
+		if (!autotag && git_refspec_src_matches(spec, head->name)) {
 			if (spec->dst) {
 				if (git_refspec_transform(&refname, spec, head->name) < 0)
 					goto on_error;
@@ -1365,7 +1368,10 @@ static int update_tips_for_spec(
 
 				continue;
 			}
-		} else {
+		}
+
+		/* If we still don't have a refname, we don't want it */
+		if (git_buf_len(&refname) == 0) {
 			continue;
 		}
 

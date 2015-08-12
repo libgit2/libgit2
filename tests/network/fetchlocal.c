@@ -369,17 +369,46 @@ void test_network_fetchlocal__clone_into_mirror(void)
 {
 	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
 	git_repository *repo;
-	git_reference *head;
+	git_reference *ref;
 
 	opts.bare = true;
 	opts.remote_cb = remote_mirror_cb;
 	cl_git_pass(git_clone(&repo, cl_git_fixture_url("testrepo.git"), "./foo.git", &opts));
 
-	cl_git_pass(git_reference_lookup(&head, repo, "HEAD"));
-	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(head));
-	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
+	cl_git_pass(git_reference_lookup(&ref, repo, "HEAD"));
+	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(ref));
+	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(ref));
 
-	git_reference_free(head);
+	git_reference_free(ref);
+	cl_git_pass(git_reference_lookup(&ref, repo, "refs/remotes/test/master"));
+
+	git_reference_free(ref);
+	git_repository_free(repo);
+	cl_fixture_cleanup("./foo.git");
+}
+
+void test_network_fetchlocal__all_refs(void)
+{
+	git_repository *repo;
+	git_remote *remote;
+	git_reference *ref;
+	char *allrefs = "+refs/*:refs/*";
+	git_strarray refspecs = {
+		&allrefs,
+		1,
+	};
+
+	cl_git_pass(git_repository_init(&repo, "./foo.git", true));
+	cl_git_pass(git_remote_create_anonymous(&remote, repo, cl_git_fixture_url("testrepo.git")));
+	cl_git_pass(git_remote_fetch(remote, &refspecs, NULL, NULL));
+
+	cl_git_pass(git_reference_lookup(&ref, repo, "refs/remotes/test/master"));
+	git_reference_free(ref);
+
+	cl_git_pass(git_reference_lookup(&ref, repo, "refs/tags/test"));
+	git_reference_free(ref);
+
+	git_remote_free(remote);
 	git_repository_free(repo);
 	cl_fixture_cleanup("./foo.git");
 }
