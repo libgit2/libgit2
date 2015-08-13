@@ -1144,6 +1144,41 @@ int git_config_open_default(git_config **out)
 	return error;
 }
 
+int git_config_lock(git_transaction **out, git_config *cfg)
+{
+	int error;
+	git_config_backend *file;
+	file_internal *internal;
+
+	internal = git_vector_get(&cfg->files, 0);
+	if (!internal || !internal->file) {
+		giterr_set(GITERR_CONFIG, "cannot lock; the config has no backends/files");
+		return -1;
+	}
+	file = internal->file;
+
+	if ((error = file->lock(file)) < 0)
+		return error;
+
+	return git_transaction_config_new(out, cfg);
+}
+
+int git_config_unlock(git_config *cfg, int commit)
+{
+	git_config_backend *file;
+	file_internal *internal;
+
+	internal = git_vector_get(&cfg->files, 0);
+	if (!internal || !internal->file) {
+		giterr_set(GITERR_CONFIG, "cannot lock; the config has no backends/files");
+		return -1;
+	}
+
+	file = internal->file;
+
+	return file->unlock(file, commit);
+}
+
 /***********
  * Parsers
  ***********/

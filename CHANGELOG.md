@@ -9,6 +9,11 @@ v0.23 + 1
 
 ### API additions
 
+* `git_config_lock()` has been added, which allow for
+  transactional/atomic complex updates to the configuration, removing
+  the opportunity for concurrent operations and not committing any
+  changes until the unlock.
+
 ### API removals
 
 ### Breaking API changes
@@ -18,6 +23,10 @@ v0.23 + 1
 * It is the responsibility fo the refdb backend to decide what to do
   with the reflog on ref deletion. The file-based backend must delete
   it, a database-backed one may wish to archive it.
+
+* `git_config_backend` has gained two entries. `lock` and `unlock`
+  with which to implement the transactional/atomic semantics for the
+  configuration backend.
 
 v0.23
 ------

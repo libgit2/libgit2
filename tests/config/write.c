@@ -1,6 +1,9 @@
 #include "clar_libgit2.h"
 #include "buffer.h"
 #include "fileops.h"
+#include "git2/sys/config.h"
+#include "config_file.h"
+#include "config.h"
 
 void test_config_write__initialize(void)
 {
@@ -630,3 +633,50 @@ void test_config_write__to_file_with_only_comment(void)
 	git_buf_free(&result);
 }
 
+void test_config_write__locking(void)
+{
+	git_config *cfg, *cfg2;
+	git_config_entry *entry;
+	git_transaction *tx;
+	const char *filename = "locked-file";
+
+	/* Open the config and lock it */
+	cl_git_mkfile(filename, "[section]\n\tname = value\n");
+	cl_git_pass(git_config_open_ondisk(&cfg, filename));
+	cl_git_pass(git_config_get_entry(&entry, cfg, "section.name"));
+	cl_assert_equal_s("value", entry->value);
+	git_config_entry_free(entry);
+	cl_git_pass(git_config_lock(&tx, cfg));
+
+	/* Change entries in the locked backend */
+	cl_git_pass(git_config_set_string(cfg, "section.name", "other value"));
+	cl_git_pass(git_config_set_string(cfg, "section2.name3", "more value"));
+
+	/* We can see that the file we read from hasn't changed */
+	cl_git_pass(git_config_open_ondisk(&cfg2, filename));
+	cl_git_pass(git_config_get_entry(&entry, cfg2, "section.name"));
+	cl_assert_equal_s("value", entry->value);
+	git_config_entry_free(entry);
+	cl_git_fail_with(GIT_ENOTFOUND, git_config_get_entry(&entry, cfg2, "section2.name3"));
+	git_config_free(cfg2);
+
+	/* And we also get the old view when we read from the locked config */
+	cl_git_pass(git_config_get_entry(&entry, cfg, "section.name"));
+	cl_assert_equal_s("value", entry->value);
+	git_config_entry_free(entry);
+	cl_git_fail_with(GIT_ENOTFOUND, git_config_get_entry(&entry, cfg, "section2.name3"));
+
+	cl_git_pass(git_transaction_commit(tx));
+	git_transaction_free(tx);
+
+	/* Now that we've unlocked it, we should see both updates */
+	cl_git_pass(git_config_open_ondisk(&cfg, filename));
+	cl_git_pass(git_config_get_entry(&entry, cfg, "section.name"));
+	cl_assert_equal_s("other value", entry->value);
+	git_config_entry_free(entry);
+	cl_git_pass(git_config_get_entry(&entry, cfg, "section2.name3"));
+	cl_assert_equal_s("more value", entry->value);
+	git_config_entry_free(entry);
+
+	git_config_free(cfg);
+}
