@@ -2,6 +2,7 @@
 # see travis-ci.org for details
 
 language: c
+cache: ccache
 
 os:
   - linux
