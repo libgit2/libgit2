@@ -15,6 +15,7 @@ compiler:
 # Settings to try
 env:
  global:
+  - PATH="/usr/lib/ccache:$PATH"
   - secure: "YnhS+8n6B+uoyaYfaJ3Lei7cSJqHDPiKJCKFIF2c87YDfmCvAJke8QtE7IzjYDs7UFkTCM4ox+ph2bERUrxZbSCyEkHdjIZpKuMJfYWja/jgMqTMxdyOH9y8JLFbZsSXDIXDwqBlC6vVyl1fP90M35wuWcNTs6tctfVWVofEFbs="
   - GITTEST_INVASIVE_FS_SIZE=1
  matrix:
