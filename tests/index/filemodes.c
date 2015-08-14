@@ -239,6 +239,7 @@ void test_index_filemodes__invalid(void)
 
 	cl_git_pass(git_repository_index(&index, g_repo));
 
+	GIT_IDXENTRY_STAGE_SET(&entry, 0);
 	entry.path = "foo";
 	entry.mode = GIT_OBJ_BLOB;
 	cl_git_fail(git_index_add(index, &entry));
