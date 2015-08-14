@@ -250,3 +250,12 @@ void test_diff_drivers__builtins(void)
 	git_buf_free(&expected);
 	git_vector_free(&files);
 }
+
+#include "git2/sys/diff.h"
+
+void test_diff_drivers__check_builtins(void)
+{
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+	cl_git_pass(git_diff_driver_compile_builtins(g_repo));
+}
+
