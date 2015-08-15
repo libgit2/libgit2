@@ -36,6 +36,8 @@ static const char *post_verb = "POST";
 
 #define PARSE_ERROR_GENERIC	-1
 #define PARSE_ERROR_REPLAY	-2
+/** Look at the user field */
+#define PARSE_ERROR_EXT         -3
 
 #define CHUNK_SIZE	4096
 
@@ -78,6 +80,7 @@ typedef struct {
 	git_vector www_authenticate;
 	enum last_cb last_cb;
 	int parse_error;
+	int error;
 	unsigned parse_finished : 1;
 
 	/* Authentication */
@@ -351,7 +354,8 @@ static int on_headers_complete(http_parser *parser)
 				if (error == GIT_PASSTHROUGH) {
 					no_callback = 1;
 				} else if (error < 0) {
-					return PARSE_ERROR_GENERIC;
+					t->error = error;
+					return t->parse_error = PARSE_ERROR_EXT;
 				} else {
 					assert(t->cred);
 
@@ -710,6 +714,10 @@ replay:
 				return error;
 
 			goto replay;
+		}
+
+		if (t->parse_error == PARSE_ERROR_EXT) {
+			return t->error;
 		}
 
 		if (t->parse_error < 0)
