@@ -250,3 +250,29 @@ void test_diff_drivers__builtins(void)
 	git_buf_free(&expected);
 	git_vector_free(&files);
 }
+
+void test_diff_drivers__invalid_pattern(void)
+{
+	git_config *cfg;
+	git_index *idx;
+	git_diff *diff;
+	git_patch *patch;
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+
+	g_repo = cl_git_sandbox_init("userdiff");
+	cl_git_mkfile("userdiff/.gitattributes", "*.storyboard diff=storyboard\n");
+
+	cl_git_pass(git_repository_config__weakptr(&cfg, g_repo));
+	cl_git_pass(git_config_set_string(cfg, "diff.storyboard.xfuncname", "<!--(.*?)-->"));
+
+	cl_git_mkfile("userdiff/dummy.storyboard", "");
+	cl_git_pass(git_repository_index__weakptr(&idx, g_repo));
+	cl_git_pass(git_index_add_bypath(idx, "dummy.storyboard"));
+	cl_git_mkfile("userdiff/dummy.storyboard", "some content\n");
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
+
+	git_patch_free(patch);
+	git_diff_free(diff);
+}
