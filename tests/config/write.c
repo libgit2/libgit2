@@ -530,6 +530,9 @@ void test_config_write__outside_change(void)
 	git_config_free(cfg);
 }
 
+#define FOO_COMMENT \
+	";  another comment!\n"
+
 #define SECTION_FOO \
 	"\n"                     \
 	"    \n"                 \
@@ -537,7 +540,8 @@ void test_config_write__outside_change(void)
 	" # here's a comment\n"  \
 	"\tname = \"value\"\n"   \
 	"  name2 = \"value2\"\n" \
-	";  another comment!\n"
+
+#define SECTION_FOO_WITH_COMMENT SECTION_FOO FOO_COMMENT
 
 #define SECTION_BAR \
 	"[section \"bar\"]\t\n"  \
@@ -553,7 +557,7 @@ void test_config_write__preserves_whitespace_and_comments(void)
 	git_buf newfile = GIT_BUF_INIT;
 
 	/* This config can occur after removing and re-adding the origin remote */
-	const char *file_content = SECTION_FOO SECTION_BAR;
+	const char *file_content = SECTION_FOO_WITH_COMMENT SECTION_BAR;
 
 	/* Write the test config and make sure the expected entry exists */
 	cl_git_mkfile(file_name, file_content);
@@ -567,9 +571,10 @@ void test_config_write__preserves_whitespace_and_comments(void)
 
 	cl_assert_equal_strn(SECTION_FOO, n, strlen(SECTION_FOO));
 	n += strlen(SECTION_FOO);
-
 	cl_assert_equal_strn("\tother = otherval\n", n, strlen("\tother = otherval\n"));
 	n += strlen("\tother = otherval\n");
+	cl_assert_equal_strn(FOO_COMMENT, n, strlen(FOO_COMMENT));
+	n += strlen(FOO_COMMENT);
 
 	cl_assert_equal_strn(SECTION_BAR, n, strlen(SECTION_BAR));
 	n += strlen(SECTION_BAR);
