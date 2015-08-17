@@ -1420,6 +1420,30 @@ int git_index_remove_directory(git_index *index, const char *dir, int stage)
 	return error;
 }
 
+int git_index_find_prefix(size_t *at_pos, git_index *index, const char *prefix)
+{
+	int error = 0;
+	size_t pos;
+	const git_index_entry *entry;
+
+	if (git_mutex_lock(&index->lock) < 0) {
+		giterr_set(GITERR_OS, "Failed to lock index");
+		return -1;
+	}
+
+	index_find(&pos, index, prefix, strlen(prefix), GIT_INDEX_STAGE_ANY, false);
+	entry = git_vector_get(&index->entries, pos);
+	if (!entry || git__prefixcmp(entry->path, prefix) != 0)
+		error = GIT_ENOTFOUND;
+
+	if (!error && at_pos)
+		*at_pos = pos;
+
+	git_mutex_unlock(&index->lock);
+
+	return error;
+}
+
 int git_index__find_pos(
 	size_t *out, git_index *index, const char *path, size_t path_len, int stage)
 {

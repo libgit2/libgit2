@@ -643,6 +643,17 @@ GIT_EXTERN(int) git_index_update_all(
  */
 GIT_EXTERN(int) git_index_find(size_t *at_pos, git_index *index, const char *path);
 
+/**
+ * Find the first position of any entries matching a prefix. To find the first position
+ * of a path inside a given folder, suffix the prefix with a '/'.
+ *
+ * @param at_pos the address to which the position of the index entry is written (optional)
+ * @param index an existing index object
+ * @param prefix the prefix to search for
+ * @return 0 with valid value in at_pos; an error code otherwise
+ */
+GIT_EXTERN(int) git_index_find_prefix(size_t *at_pos, git_index *index, const char *prefix);
+
 /**@}*/
 
 /** @name Conflict Index Entry Functions
