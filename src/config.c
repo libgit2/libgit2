@@ -13,6 +13,7 @@
 #include "vector.h"
 #include "buf_text.h"
 #include "config_file.h"
+#include "transaction.h"
 #if GIT_WIN32
 # include <windows.h>
 #endif
