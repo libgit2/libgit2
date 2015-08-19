@@ -152,8 +152,18 @@ STRING(REGEX REPLACE "^.*LIBGIT2_SOVERSION ([0-9]+)$" "\\1" LIBGIT2_SOVERSION "$
 INCLUDE_DIRECTORIES(src include)
 
 IF (SECURITY_FOUND)
-  MESSAGE("-- Found Security ${SECURITY_DIRS}")
-  LIST(APPEND LIBGIT2_PC_LIBS "-framework Security")
+  # OS X 10.7 and older do not have some functions we use, fall back to OpenSSL there
+  CHECK_LIBRARY_EXISTS("${SECURITY_DIRS}" SSLCreateContext "Security/SecureTransport.h" HAVE_NEWER_SECURITY)
+  IF (HAVE_NEWER_SECURITY)
+    MESSAGE("-- Found Security ${SECURITY_DIRS}")
+    LIST(APPEND LIBGIT2_PC_LIBS "-framework Security")
+  ELSE()
+    MESSAGE("-- Security framework is too old, falling back to OpenSSL")
+    SET(SECURITY_FOUND "NO")
+    SET(SECURITY_DIRS "")
+    SET(SECURITY_DIR "")
+    SET(USE_OPENSSL "ON")
+  ENDIF()
 ENDIF()
 
 IF (COREFOUNDATION_FOUND)
