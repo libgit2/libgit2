@@ -372,6 +372,20 @@ static int ref_name_cmp(const void *a, const void *b)
 	return strcmp(ref_a->head.name, ref_b->head.name);
 }
 
+int git_transport_smart_certificate_check(git_transport *transport, git_cert *cert, int valid, const char *hostname)
+{
+	transport_smart *t = (transport_smart *)transport;
+
+	return t->certificate_check_cb(cert, valid, hostname, t->message_cb_payload);
+}
+
+int git_transport_smart_credentials(git_cred **out, git_transport *transport, const char *user, int methods)
+{
+	transport_smart *t = (transport_smart *)transport;
+
+	return t->cred_acquire_cb(out, t->url, user, methods, t->cred_acquire_payload);
+}
+
 int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 {
 	transport_smart *t;
