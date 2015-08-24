@@ -97,7 +97,7 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 		if (rule->containing_dir) {
 			git_buf_puts(&buf, rule->containing_dir);
 		}
-		if (!strchr(rule->pattern, '*'))
+		if (rule->flags & GIT_ATTR_FNMATCH_LEADINGDIR && !(rule->flags & GIT_ATTR_FNMATCH_NEGATIVE))
 			error = git_buf_printf(&buf, "%s/*", rule->pattern);
 		else
 			error = git_buf_puts(&buf, rule->pattern);
