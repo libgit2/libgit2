@@ -17,13 +17,13 @@
 #include <git2/sys/refdb_backend.h>
 #include <git2/types.h>
 
-int git_odb_backend_mariadb(git_odb_backend **backend_out,
+GIT_EXTERN(int) git_odb_backend_mariadb(git_odb_backend **backend_out,
         MYSQL *db,
         const char *mariadb_table,
         uint32_t git_repository_id,
         int odb_partitions);
 
-int git_refdb_backend_mariadb(git_refdb_backend **backend_out,
+GIT_EXTERN(int) git_refdb_backend_mariadb(git_refdb_backend **backend_out,
         MYSQL *db,
         const char *mariadb_table,
         uint32_t git_repository_id,
