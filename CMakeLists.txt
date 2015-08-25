@@ -39,6 +39,7 @@ OPTION( USE_ICONV			"Link with and use iconv library" 		OFF )
 OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
 OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"   OFF )
 OPTION( VALGRIND			"Configure build for valgrind"			OFF )
+OPTION( USE_MARIADB			"Include Mariadb/Mysql backend + transport support" OFF )
 
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	SET( USE_ICONV ON )
@@ -222,6 +223,13 @@ IF (LIBSSH2_FOUND)
 	LINK_DIRECTORIES(${LIBSSH2_LIBRARY_DIRS})
 	SET(LIBGIT2_PC_REQUIRES "${LIBGIT2_PC_REQUIRES} libssh2")
 	SET(SSH_LIBRARIES ${LIBSSH2_LIBRARIES})
+ENDIF()
+
+IF (USE_MARIADB)
+	FIND_PACKAGE(Libmysql)
+	INCLUDE_DIRECTORIES(${LIBMYSQL_INCLUDE_DIR})
+	FILE(GLOB SRC_MARIADB "src/mariadb/*.c")
+	SET(MARIADB_LIBRARIES ${LIBMYSQL_LIBRARY})
 ENDIF()
 
 # Optional external dependency: libgssapi
@@ -408,11 +416,12 @@ ELSE()
 ENDIF()
 
 # Compile and link libgit2
-ADD_LIBRARY(git2 ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SSH} ${SRC_SHA1} ${WIN_RC})
+ADD_LIBRARY(git2 ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SSH} ${SRC_SHA1} ${WIN_RC} ${SRC_MARIADB})
 TARGET_LINK_LIBRARIES(git2 ${SSL_LIBRARIES})
 TARGET_LINK_LIBRARIES(git2 ${SSH_LIBRARIES})
 TARGET_LINK_LIBRARIES(git2 ${GSSAPI_LIBRARIES})
 TARGET_LINK_LIBRARIES(git2 ${ICONV_LIBRARIES})
+TARGET_LINK_LIBRARIES(git2 ${MARIADB_LIBRARIES})
 TARGET_OS_LIBRARIES(git2)
 
 # Workaround for Cmake bug #0011240 (see http://public.kitware.com/Bug/view.php?id=11240)
