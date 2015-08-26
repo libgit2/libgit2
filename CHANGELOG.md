@@ -20,7 +20,7 @@ v0.23 + 1
 
 * `git_cert` descendent types now have a proper `parent` member
 
-* It is the responsibility fo the refdb backend to decide what to do
+* It is the responsibility of the refdb backend to decide what to do
   with the reflog on ref deletion. The file-based backend must delete
   it, a database-backed one may wish to archive it.
 
