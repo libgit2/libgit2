@@ -520,6 +520,9 @@ static int local_mariadb_connect(
 	if (repo == NULL)
 		goto error;
 
+	if (store_refs(t) < 0)
+		goto error;
+
 	free(db_host);
 	free(db_user);
 	free(db_passwd);
@@ -528,9 +531,6 @@ static int local_mariadb_connect(
 	free(table_prefix);
 
 	t->repo = repo;
-
-	if (store_refs(t) < 0)
-		goto error;
 
 	t->connected = 1;
 	return 0;
