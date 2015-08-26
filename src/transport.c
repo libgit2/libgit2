@@ -33,6 +33,10 @@ static transport_definition transports[] = {
 	{ "https://", git_transport_smart, &http_subtransport_definition },
 #endif
 	{ "file://",  git_transport_local, NULL },
+#ifdef GIT_MARIADB
+	{ "mysql://", git_transport_local, NULL },
+	{ "mariadb://", git_transport_local, NULL },
+#endif
 #ifdef GIT_SSH
 	{ "ssh://",   git_transport_smart, &ssh_subtransport_definition },
 #endif

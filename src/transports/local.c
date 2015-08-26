@@ -4,9 +4,22 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
+
+#ifdef GIT_MARIADB
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-prototypes"
+#include <my_global.h>
+#include <mysql.h>
+#pragma GCC diagnostic pop
+#endif
+
 #include "common.h"
 #include "git2/types.h"
 #include "git2/net.h"
+#ifdef GIT_MARIADB
+#include "git2/mariadb.h"
+#include "git2/sys/repository.h"
+#endif
 #include "git2/repository.h"
 #include "git2/object.h"
 #include "git2/tag.h"
@@ -34,6 +47,9 @@ typedef struct {
 	int direction;
 	int flags;
 	git_atomic cancelled;
+#ifdef GIT_MARIADB
+	MYSQL *db;
+#endif
 	git_repository *repo;
 	git_transport_message_cb progress_cb;
 	git_transport_message_cb error_cb;
@@ -195,7 +211,7 @@ on_error:
  * Try to open the url as a git directory. The direction doesn't
  * matter in this case because we're calculating the heads ourselves.
  */
-static int local_connect(
+static int local_fs_connect(
 	git_transport *transport,
 	const char *url,
 	git_cred_acquire_cb cred_acquire_cb,
@@ -243,6 +259,310 @@ static int local_connect(
 	t->connected = 1;
 
 	return 0;
+}
+
+#ifdef GIT_MARIADB
+
+static int get_token_value_str(const char *url, const char *token, char **value)
+{
+	const char *substr;
+	const char *endstr;
+
+	substr = token;
+	do {
+		substr = strstr(url, substr);
+		if (substr == NULL)
+			return GIT_ERROR;
+		substr += strlen(token);
+	} while(substr[0] != '=');
+
+	substr++; /* skip '=' */
+
+	endstr = strstr(substr, "&");
+	if (endstr == NULL)
+		endstr = strstr(substr, "/");
+
+	if (endstr != NULL) {
+		*value = git__strndup(substr, endstr - substr);
+	} else {
+		*value = git__strdup(substr);
+	}
+	return (*value != NULL ? GIT_OK : GIT_ERROR);
+}
+
+static int get_token_value_int(const char *url, const char *token,
+	 unsigned int *value)
+{
+	char *value_str = NULL;
+	char *endptr = NULL;
+	long val;
+	int err;
+
+	err = get_token_value_str(url, token, &value_str);
+	if (err != GIT_OK)
+		return err;
+
+	val = strtol(value_str, &endptr, 0);
+	if (endptr == value_str || endptr == NULL)
+		return GIT_ERROR;
+	*value = val;
+	return GIT_OK;
+}
+
+/*!
+ * \brief quick&dirty parsing function
+ */
+static int parse_mariadb_url(
+	const char *url,
+	char **db_host, unsigned int *db_port,
+	char **db_user, char **db_passwd,
+	char **db_unix_socket, char **db_name,
+	char **table_prefix,
+	uint32_t *repository_id)
+{
+	*db_host = NULL;
+	*db_port = 0;
+	*db_user = NULL;
+	*db_passwd = NULL;
+	*db_unix_socket = NULL;
+	*db_name = NULL;
+	*table_prefix = NULL;
+	*repository_id = 0;
+
+	if (get_token_value_str(url, "host", db_host) != GIT_OK
+		|| get_token_value_int(url, "port", db_port) != GIT_OK
+		|| get_token_value_str(url, "user", db_user) != GIT_OK
+		|| get_token_value_str(url, "passwd", db_user) != GIT_OK
+		|| get_token_value_str(url, "unix_socket", db_unix_socket) != GIT_OK
+		|| get_token_value_str(url, "db_name", db_name) != GIT_OK
+		|| get_token_value_str(url, "table_prefix", table_prefix) != GIT_OK
+		|| get_token_value_int(url, "repository_id", repository_id) != GIT_OK)
+		goto error;
+
+	if (*db_unix_socket == NULL
+		&& (*db_host == NULL || *db_port <= 0))
+		goto error;
+
+	if (*db_name == NULL || *table_prefix == NULL)
+		goto error;
+
+	return GIT_OK;
+
+error:
+	free(*db_host);
+	free(*db_user);
+	free(*db_passwd);
+	free(*db_unix_socket);
+	free(*db_name);
+	free(*table_prefix);
+	return GIT_ERROR;
+}
+
+static MYSQL *mariadb_connect(
+	const char *mariadb_host,
+	int mariadb_port,
+	const char *mariadb_user,
+	const char *mariadb_passwd,
+	const char *mariadb_unix_socket,
+	int mariadb_client_flag,
+	const char *mariadb_db)
+{
+	my_bool reconnect = TRUE;
+	MYSQL *db = mysql_init(NULL);
+
+	if (!db) {
+		return NULL;
+	}
+
+	// allow libmysql to reconnect gracefully
+	if (mysql_options(db, MYSQL_OPT_RECONNECT, &reconnect) != 0) {
+		goto error;
+	}
+
+	// make the connection
+	if (mysql_real_connect(db, mariadb_host, mariadb_user,
+			mariadb_passwd, mariadb_db, mariadb_port, mariadb_unix_socket,
+			mariadb_client_flag) != db) {
+		goto error;
+	}
+
+	mysql_autocommit(db, FALSE);
+	mysql_query(db, "BEGIN;");
+	return db;
+
+error:
+	if (db)
+		mysql_close(db);
+	return NULL;
+}
+
+static git_repository *make_mariadb_repo(MYSQL *db,
+	const char *db_table_prefix, uint32_t repository_id,
+	int odb_partitions, int refdb_partitions)
+{
+	int error;
+	char odb_table[256];
+	char refdb_table[256];
+	git_odb            *odb = NULL;
+	git_odb_backend    *odb_backend = NULL;
+	git_refdb            *refdb = NULL;
+	git_refdb_backend    *refdb_backend = NULL;
+	git_repository *repo = NULL;
+
+	snprintf(odb_table, sizeof(odb_table), "%s_odb", db_table_prefix);
+	snprintf(refdb_table, sizeof(refdb_table), "%s_refdb", db_table_prefix);
+
+	error = git_odb_new(&odb);
+	if (error) {
+		goto error;
+	}
+
+	error = git_repository_wrap_odb(&repo, odb);
+	if (error) {
+		goto error;
+	}
+
+	/* mark it as bare to avoid later issues */
+	git_repository_set_bare(repo);
+
+	error = git_odb_backend_mariadb(&odb_backend,
+		db, odb_table, repository_id, odb_partitions);
+	if (error) {
+		goto error;
+	}
+
+	error = git_odb_add_backend(odb, odb_backend, 1);
+	if (error) {
+		goto error;
+	}
+
+	error = git_refdb_new(&refdb, repo);
+	if (error) {
+		goto error;
+	}
+
+	error = git_refdb_backend_mariadb(&refdb_backend,
+			db, refdb_table, repository_id, refdb_partitions);
+	if (error) {
+		goto error;
+	}
+
+	error = git_refdb_set_backend(refdb, refdb_backend);
+	if (error) {
+		goto error;
+	}
+
+	git_repository_set_refdb(repo, refdb);
+
+	return repo;
+
+error:
+	if (odb)
+		git_odb_free(odb);
+	if (refdb)
+		git_refdb_free(refdb);
+	return NULL;
+}
+
+/*
+ * Try to open the url as a git directory. The direction doesn't
+ * matter in this case because we're calculating the heads ourselves.
+ */
+static int local_mariadb_connect(
+	git_transport *transport,
+	const char *url,
+	git_cred_acquire_cb cred_acquire_cb,
+	void *cred_acquire_payload,
+	int direction, int flags)
+{
+	git_repository *repo;
+	transport_local *t = (transport_local *) transport;
+	char *db_host;
+	unsigned int db_port;
+	char *db_user;
+	char *db_passwd;
+	char *db_unix_socket;
+	char *db_name;
+	char *table_prefix;
+	uint32_t repository_id;
+
+	GIT_UNUSED(cred_acquire_cb);
+	GIT_UNUSED(cred_acquire_payload);
+
+	if (t->connected)
+		return 0;
+
+	if (parse_mariadb_url(url,
+			&db_host, &db_port, &db_user, &db_passwd,
+			&db_unix_socket, &db_name, &table_prefix,
+			&repository_id) != GIT_OK) {
+		return -1;
+	}
+
+	free_heads(&t->refs);
+
+	t->url = git__strdup(url);
+	GITERR_CHECK_ALLOC(t->url);
+	t->direction = direction;
+	t->flags = flags;
+	
+	t->db = mariadb_connect(db_host, db_port, db_user, db_passwd,
+		db_unix_socket, 0 /* flags */, db_name);
+	if (t->db == NULL)
+		goto error;
+
+	repo = make_mariadb_repo(t->db, table_prefix, repository_id,
+		/* partition numbers shouldn't matter because the repository (and
+		 * so the tables) should already exists */
+		2, 2);
+	if (repo == NULL)
+		goto error;
+
+	free(db_host);
+	free(db_user);
+	free(db_passwd);
+	free(db_unix_socket);
+	free(db_name);
+	free(table_prefix);
+
+	t->repo = repo;
+
+	if (store_refs(t) < 0)
+		goto error;
+
+	t->connected = 1;
+	return 0;
+
+error:
+	if (t->db)
+		mysql_close(t->db);
+	free(db_host);
+	free(db_user);
+	free(db_passwd);
+	free(db_unix_socket);
+	free(db_name);
+	free(table_prefix);
+	return -1;
+}
+
+#endif /* ifdef GIT_MARIADB */
+
+static int local_connect(
+	git_transport *transport,
+	const char *url,
+	git_cred_acquire_cb cred_acquire_cb,
+	void *cred_acquire_payload,
+	int direction, int flags)
+{
+#ifdef GIT_MARIADB
+	if (strncmp(url, "mysql://", strlen("mysql://")) == 0
+		|| strncmp(url, "mariadb://", strlen("mariadb://")) == 0) {
+		return local_mariadb_connect(transport, url, cred_acquire_cb,
+			 cred_acquire_payload, direction, flags);
+	}
+#endif /* ifdef GIT_MARIADB */
+    return local_fs_connect(transport, url, cred_acquire_cb,
+        cred_acquire_payload, direction, flags);
 }
 
 static int local_ls(const git_remote_head ***out, size_t *size, git_transport *transport)
@@ -668,6 +988,14 @@ static int local_close(git_transport *transport)
 	transport_local *t = (transport_local *)transport;
 
 	t->connected = 0;
+
+#ifdef GIT_MARIADB
+	if (t->db) {
+		mysql_commit(t->db);
+		mysql_close(t->db);
+		t->db = NULL;
+	}
+#endif
 
 	if (t->repo) {
 		git_repository_free(t->repo);
