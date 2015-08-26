@@ -271,8 +271,10 @@ static int get_token_value_str(const char *url, const char *token, char **value)
 	substr = token;
 	do {
 		substr = strstr(url, substr);
-		if (substr == NULL)
-			return GIT_ERROR;
+		if (substr == NULL) {
+			*value = NULL;
+			return GIT_OK;
+		}
 		substr += strlen(token);
 	} while(substr[0] != '=');
 
@@ -332,7 +334,7 @@ static int parse_mariadb_url(
 	if (get_token_value_str(url, "host", db_host) != GIT_OK
 		|| get_token_value_int(url, "port", db_port) != GIT_OK
 		|| get_token_value_str(url, "user", db_user) != GIT_OK
-		|| get_token_value_str(url, "passwd", db_user) != GIT_OK
+		|| get_token_value_str(url, "passwd", db_passwd) != GIT_OK
 		|| get_token_value_str(url, "unix_socket", db_unix_socket) != GIT_OK
 		|| get_token_value_str(url, "db_name", db_name) != GIT_OK
 		|| get_token_value_str(url, "table_prefix", table_prefix) != GIT_OK
