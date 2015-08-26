@@ -507,7 +507,7 @@ static int local_mariadb_connect(
 	GITERR_CHECK_ALLOC(t->url);
 	t->direction = direction;
 	t->flags = flags;
-	
+
 	t->db = mariadb_connect(db_host, db_port, db_user, db_passwd,
 		db_unix_socket, 0 /* flags */, db_name);
 	if (t->db == NULL)
