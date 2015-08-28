@@ -1279,7 +1279,7 @@ static int repo_write_template(
 
 #ifdef GIT_WIN32
 	if (!error && hidden) {
-		if (git_win32__sethidden(path.ptr) < 0)
+		if (git_win32__set_hidden(path.ptr, true) < 0)
 			error = -1;
 	}
 #else
@@ -1373,7 +1373,7 @@ static int repo_init_structure(
 	/* Hide the ".git" directory */
 #ifdef GIT_WIN32
 	if ((opts->flags & GIT_REPOSITORY_INIT__HAS_DOTGIT) != 0) {
-		if (git_win32__sethidden(repo_dir) < 0) {
+		if (git_win32__set_hidden(repo_dir, true) < 0) {
 			giterr_set(GITERR_OS,
 				"Failed to mark Git repository folder as hidden");
 			return -1;
