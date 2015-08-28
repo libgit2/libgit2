@@ -1071,13 +1071,22 @@ static dirload_pathlist_match_t dirload_pathlist_match(
 			&idx, pathlist, pathlist->_cmp, path) != GIT_ENOTFOUND)
 		return DIRLOAD_PATHLIST_EXACT;
 
-	/* the explicit path we searched for was not found, but this may be
-	 * a directory and the pathlist contains a file in it.  check.
+	/* the explicit path that we've seen in the directory iterator was
+	 * not found - however, we may have hit a subdirectory in the directory
+	 * iterator.  examine the pathlist to see if it contains children of the
+	 * current path.  if so, indicate that we've found a subdirectory that
+	 * is worth examining.
 	 */
-	if ((matched = git_vector_get(pathlist, idx)) != NULL &&
-		prefixcomp(matched, path) == 0 &&
-		matched[path_len] == '/')
-		return DIRLOAD_PATHLIST_DIRECTORY;
+	while ((matched = git_vector_get(pathlist, idx)) != NULL &&
+		prefixcomp(matched, path) == 0) {
+
+		if (matched[path_len] == '/')
+			return DIRLOAD_PATHLIST_DIRECTORY;
+		else if (matched[path_len] > '/')
+			break;
+
+		idx++;
+	}
 
 	return DIRLOAD_PATHLIST_NONE;
 }

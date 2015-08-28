@@ -26,7 +26,7 @@ static void expect_iterator_items(
 	const git_index_entry *entry;
 	int count, error;
 	int no_trees = !(git_iterator_flags(i) & GIT_ITERATOR_INCLUDE_TREES);
-	bool v = false;
+	bool v = true;
 
 	if (expected_flat < 0) { v = true; expected_flat = -expected_flat; }
 	if (expected_total < 0) { v = true; expected_total = -expected_total; }
@@ -1236,8 +1236,11 @@ void test_repo_iterator__workdirfilelist(void)
 	cl_git_pass(git_vector_insert(&filelist, "c"));
 	cl_git_pass(git_vector_insert(&filelist, "D"));
 	cl_git_pass(git_vector_insert(&filelist, "e"));
+	cl_git_pass(git_vector_insert(&filelist, "k.a"));
+	cl_git_pass(git_vector_insert(&filelist, "k.b"));
 	cl_git_pass(git_vector_insert(&filelist, "k/1"));
 	cl_git_pass(git_vector_insert(&filelist, "k/a"));
+	cl_git_pass(git_vector_insert(&filelist, "kZZZZZZZ"));
 	cl_git_pass(git_vector_insert(&filelist, "L/1"));
 
 	g_repo = cl_git_sandbox_init("icase");
@@ -1284,8 +1287,11 @@ void test_repo_iterator__workdirfilelist_icase(void)
 	cl_git_pass(git_vector_insert(&filelist, "c"));
 	cl_git_pass(git_vector_insert(&filelist, "D"));
 	cl_git_pass(git_vector_insert(&filelist, "e"));
+	cl_git_pass(git_vector_insert(&filelist, "k.a"));
+	cl_git_pass(git_vector_insert(&filelist, "k.b"));
 	cl_git_pass(git_vector_insert(&filelist, "k/1"));
 	cl_git_pass(git_vector_insert(&filelist, "k/a"));
+	cl_git_pass(git_vector_insert(&filelist, "kZZZZ"));
 	cl_git_pass(git_vector_insert(&filelist, "L/1"));
 
 	g_repo = cl_git_sandbox_init("icase");
