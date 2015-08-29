@@ -63,10 +63,10 @@ void test_index_racy__write_index_just_after_file(void)
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "A"));
 	cl_git_mkfile(path.ptr, "A");
 	/* Force the file's timestamp to be a second after we wrote the index */
-	times[0].tv_sec = index->stamp.mtime + 1;
-	times[0].tv_usec = 0;
-	times[1].tv_sec = index->stamp.mtime + 1;
-	times[1].tv_usec = 0;
+	times[0].tv_sec = index->stamp.mtime.tv_sec + 1;
+	times[0].tv_usec = index->stamp.mtime.tv_nsec / 1000;
+	times[1].tv_sec = index->stamp.mtime.tv_sec + 1;
+	times[1].tv_usec = index->stamp.mtime.tv_nsec / 1000;
 	cl_git_pass(p_utimes(path.ptr, times));
 
 	/*
@@ -82,10 +82,10 @@ void test_index_racy__write_index_just_after_file(void)
 	 * Pretend this index' modification happend a second after the
 	 * file update, and rewrite the file in that same second.
 	 */
-	times[0].tv_sec = index->stamp.mtime + 2;
-	times[0].tv_usec = 0;
-	times[1].tv_sec = index->stamp.mtime + 2;
-	times[0].tv_usec = 0;
+	times[0].tv_sec = index->stamp.mtime.tv_sec + 2;
+	times[0].tv_usec = index->stamp.mtime.tv_nsec / 1000;
+	times[1].tv_sec = index->stamp.mtime.tv_sec + 2;
+	times[0].tv_usec = index->stamp.mtime.tv_nsec / 1000;
 
 	cl_git_pass(p_utimes(git_index_path(index), times));
 	cl_git_pass(p_utimes(path.ptr, times));

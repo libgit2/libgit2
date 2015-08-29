@@ -131,7 +131,7 @@ static int diff_delta__from_one(
 	if (status == GIT_DELTA_UNTRACKED &&
 		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_INCLUDE_UNTRACKED))
 		return 0;
-	
+
 	if (status == GIT_DELTA_UNREADABLE &&
 		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_INCLUDE_UNREADABLE))
 		return 0;
@@ -864,7 +864,10 @@ static int maybe_modified(
 			oitem->ino != nitem->ino ||
 			oitem->uid != nitem->uid ||
 			oitem->gid != nitem->gid ||
-			(index && nitem->mtime.seconds >= index->stamp.mtime))
+			(index &&
+			 ((nitem->mtime.seconds > (int32_t) index->stamp.mtime.tv_sec) ||
+			   ((nitem->mtime.seconds == (int32_t) index->stamp.mtime.tv_sec) &&
+			     (nitem->mtime.nanoseconds >= (uint32_t) index->stamp.mtime.tv_nsec)))))
 		{
 			status = GIT_DELTA_MODIFIED;
 			modified_uncertain = true;

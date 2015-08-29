@@ -1035,12 +1035,18 @@ int git_futils_filestamp_check(
 	if (p_stat(path, &st) < 0)
 		return GIT_ENOTFOUND;
 
-	if (stamp->mtime == (git_time_t)st.st_mtime &&
+	if (stamp->mtime.tv_sec == st.st_mtim.tv_sec &&
+#if defined(GIT_USE_NSEC)
+		stamp->mtime.tv_nsec == st.st_mtim.tv_nsec &&
+#endif
 		stamp->size  == (git_off_t)st.st_size   &&
 		stamp->ino   == (unsigned int)st.st_ino)
 		return 0;
 
-	stamp->mtime = (git_time_t)st.st_mtime;
+	stamp->mtime.tv_sec = st.st_mtim.tv_sec;
+#if defined(GIT_USE_NSEC)
+	stamp->mtime.tv_nsec = st.st_mtim.tv_nsec;
+#endif
 	stamp->size  = (git_off_t)st.st_size;
 	stamp->ino   = (unsigned int)st.st_ino;
 
@@ -1063,7 +1069,7 @@ void git_futils_filestamp_set_from_stat(
 	git_futils_filestamp *stamp, struct stat *st)
 {
 	if (st) {
-		stamp->mtime = (git_time_t)st->st_mtime;
+		stamp->mtime = st->st_mtim;
 		stamp->size  = (git_off_t)st->st_size;
 		stamp->ino   = (unsigned int)st->st_ino;
 	} else {

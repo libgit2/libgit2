@@ -719,18 +719,27 @@ int git_index__changed_relative_to(
 	return !!git_oid_cmp(&index->checksum, checksum);
 }
 
-static bool is_racy_timestamp(git_time_t stamp, git_index_entry *entry)
+static bool is_racy_timestamp(const struct timespec *stamp, git_index_entry *entry)
 {
 	/* Git special-cases submodules in the check */
 	if (S_ISGITLINK(entry->mode))
 		return false;
 
 	/* If we never read the index, we can't have this race either */
-	if (stamp == 0)
+	if(stamp->tv_sec == 0)
 		return false;
 
 	/* If the timestamp is the same or newer than the index, it's racy */
-	return ((int32_t) stamp) <= entry->mtime.seconds;
+#if defined(GIT_USE_NSEC)
+	if((int32_t) stamp->tv_sec < entry->mtime.seconds)
+		return true;
+	else if((int32_t) stamp->tv_sec > entry->mtime.seconds)
+		return false;
+	else
+		return (uint32_t) stamp->tv_nsec <= entry->mtime.nanoseconds;
+#else
+	return ((int32_t) stamp->tv_sec) <= entry->mtime.seconds;
+#endif
 }
 
 /*
@@ -742,7 +751,6 @@ static int truncate_racily_clean(git_index *index)
 	size_t i;
 	int error;
 	git_index_entry *entry;
-	git_time_t ts = index->stamp.mtime;
 	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff *diff;
 
@@ -756,7 +764,7 @@ static int truncate_racily_clean(git_index *index)
 
 	diff_opts.flags |= GIT_DIFF_INCLUDE_TYPECHANGE | GIT_DIFF_IGNORE_SUBMODULES | GIT_DIFF_DISABLE_PATHSPEC_MATCH;
 	git_vector_foreach(&index->entries, i, entry) {
-		if (!is_racy_timestamp(ts, entry))
+		if (!is_racy_timestamp(&index->stamp.mtime, entry))
 			continue;
 
 		/* TODO: use the (non-fnmatching) filelist iterator */
@@ -2875,9 +2883,9 @@ int git_index_read_index(
 		(error = git_iterator_for_index(&new_iterator, (git_index *)new_index, &opts)) < 0)
 		goto done;
 
-	if (((error = git_iterator_current(&old_entry, index_iterator)) < 0 && 
+	if (((error = git_iterator_current(&old_entry, index_iterator)) < 0 &&
 			error != GIT_ITEROVER) ||
-		((error = git_iterator_current(&new_entry, new_iterator)) < 0 && 
+		((error = git_iterator_current(&new_entry, new_iterator)) < 0 &&
 			error != GIT_ITEROVER))
 		goto done;
 
