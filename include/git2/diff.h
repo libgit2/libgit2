@@ -130,7 +130,9 @@ typedef enum {
 	GIT_DIFF_INCLUDE_CASECHANGE = (1u << 11),
 
 	/** If the pathspec is set in the diff options, this flags means to
-	 *  apply it as an exact match instead of as an fnmatch pattern.
+	 *  use exact prefix matches instead of an fnmatch pattern.  Each
+	 *  path in the list must either be a full filename or a subdirectory
+	 *  prefix.
 	 */
 	GIT_DIFF_DISABLE_PATHSPEC_MATCH = (1u << 12),
 
