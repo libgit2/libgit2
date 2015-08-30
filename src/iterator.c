@@ -560,7 +560,7 @@ static int tree_iterator__update_entry(tree_iterator *ti)
 	return 0;
 }
 
-static int tree_iterator__current(
+static int tree_iterator__current_internal(
 	const git_index_entry **entry, git_iterator *self)
 {
 	int error;
@@ -581,6 +581,39 @@ static int tree_iterator__current(
 	ti->base.flags |= GIT_ITERATOR_FIRST_ACCESS;
 
 	return 0;
+}
+
+int tree_iterator__advance(
+	const git_index_entry **out, git_iterator *self);
+
+static int tree_iterator__current(
+	const git_index_entry **out, git_iterator *self)
+{
+	git_index_entry *entry = NULL;
+	iterator_pathlist__match_t m;
+	int error;
+
+	do {
+		if ((error = tree_iterator__current_internal(&entry, self)) < 0)
+			return error;
+
+		if (self->pathlist.length) {
+			m = iterator_pathlist__match(
+				self, entry->path, strlen(entry->path));
+
+			if (m != ITERATOR_PATHLIST_MATCH) {
+				if ((error = tree_iterator__advance(&entry, self)) < 0)
+					return error;
+
+				entry = NULL;
+			}
+		}
+	} while (!entry);
+
+	if (out)
+		*out = entry;
+
+	return error;
 }
 
 static int tree_iterator__advance_into(
