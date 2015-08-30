@@ -1047,6 +1047,7 @@ void test_repo_iterator__skips_fifos_and_such(void)
 #ifndef GIT_WIN32
 	git_iterator *i;
 	const git_index_entry *e;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
 
 	g_repo = cl_git_sandbox_init("empty_standard_repo");
 
@@ -1056,9 +1057,11 @@ void test_repo_iterator__skips_fifos_and_such(void)
 	cl_assert(!mkfifo("empty_standard_repo/fifo", 0777));
 	cl_assert(!access("empty_standard_repo/fifo", F_OK));
 
+	i_opts.flags = GIT_ITERATOR_INCLUDE_TREES |
+		GIT_ITERATOR_DONT_AUTOEXPAND;
+
 	cl_git_pass(git_iterator_for_filesystem(
-		&i, "empty_standard_repo", GIT_ITERATOR_INCLUDE_TREES |
-		GIT_ITERATOR_DONT_AUTOEXPAND, NULL, NULL));
+		&i, "empty_standard_repo", &i_opts));
 
 	cl_git_pass(git_iterator_advance(&e, i)); /* .git */
 	cl_assert(S_ISDIR(e->mode));
