@@ -2357,7 +2357,8 @@ static int merge_check_index(size_t *conflicts, git_repository *repo, git_index 
 	}
 
 	iter_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
-	iter_opts.pathlist = &staged_paths;
+	iter_opts.pathlist.strings = (char **)staged_paths.contents;
+	iter_opts.pathlist.count = staged_paths.length;
 
 	if ((error = git_iterator_for_index(&iter_repo, index_repo, &iter_opts)) < 0 ||
 		(error = git_iterator_for_index(&iter_new, index_new, &iter_opts)) < 0 ||

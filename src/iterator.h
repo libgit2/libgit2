@@ -38,15 +38,14 @@ typedef enum {
 	GIT_ITERATOR_INCLUDE_CONFLICTS = (1u << 5),
 } git_iterator_flag_t;
 
-
 typedef struct {
 	const char *start;
 	const char *end;
 
-	/* paths to include in the iterator (literal).  any paths not listed
-	 * will be excluded.  note that this vector may be resorted!
+	/* paths to include in the iterator (literal).  if set, any paths not
+	 * listed here will be excluded from iteration.
 	 */
-	git_vector *pathlist;
+	git_strarray pathlist;
 
 	/* flags, from above */
 	unsigned int flags;
@@ -70,8 +69,9 @@ struct git_iterator {
 	git_repository *repo;
 	char *start;
 	char *end;
-	git_vector *pathlist;
-	size_t pathlist_idx;
+	git_vector pathlist;
+	int (*strcomp)(const char *a, const char *b);
+	int (*strncomp)(const char *a, const char *b, size_t n);
 	int (*prefixcomp)(const char *str, const char *prefix);
 	size_t stat_calls;
 	unsigned int flags;
@@ -277,7 +277,8 @@ extern git_index *git_iterator_get_index(git_iterator *iter);
 typedef enum {
 	GIT_ITERATOR_STATUS_NORMAL = 0,
 	GIT_ITERATOR_STATUS_IGNORED = 1,
-	GIT_ITERATOR_STATUS_EMPTY = 2
+	GIT_ITERATOR_STATUS_EMPTY = 2,
+	GIT_ITERATOR_STATUS_FILTERED = 3
 } git_iterator_status_t;
 
 /* Advance over a directory and check if it contains no files or just

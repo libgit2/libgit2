@@ -26,7 +26,7 @@ static void expect_iterator_items(
 	const git_index_entry *entry;
 	int count, error;
 	int no_trees = !(git_iterator_flags(i) & GIT_ITERATOR_INCLUDE_TREES);
-	bool v = true;
+	bool v = false;
 
 	if (expected_flat < 0) { v = true; expected_flat = -expected_flat; }
 	if (expected_total < 0) { v = true; expected_total = -expected_total; }
@@ -1099,7 +1099,8 @@ void test_repo_iterator__indexfilelist(void)
 	/* In this test we DO NOT force a case setting on the index. */
 	default_icase = ((git_index_caps(index) & GIT_INDEXCAP_IGNORE_CASE) != 0);
 
-	i_opts.pathlist = &filelist;
+	i_opts.pathlist.strings = (char **)filelist.contents;
+	i_opts.pathlist.count = filelist.length;
 
 	/* All indexfilelist iterator tests are "autoexpand with no tree entries" */
 
@@ -1147,7 +1148,8 @@ void test_repo_iterator__indexfilelist_2(void)
 	cl_git_pass(git_vector_insert(&filelist, "e"));
 	cl_git_pass(git_vector_insert(&filelist, "k/a"));
 
-	i_opts.pathlist = &filelist;
+	i_opts.pathlist.strings = (char **)filelist.contents;
+	i_opts.pathlist.count = filelist.length;
 
 	i_opts.start = "b";
 	i_opts.end = "k/D";
@@ -1188,7 +1190,8 @@ void test_repo_iterator__indexfilelist_icase(void)
 
 	/* All indexfilelist iterator tests are "autoexpand with no tree entries" */
 
-	i_opts.pathlist = &filelist;
+	i_opts.pathlist.strings = (char **)filelist.contents;
+	i_opts.pathlist.count = filelist.length;
 
 	i_opts.start = "c";
 	i_opts.end = "k/D";
@@ -1248,7 +1251,8 @@ void test_repo_iterator__workdirfilelist(void)
 	/* All indexfilelist iterator tests are "autoexpand with no tree entries" */
 	/* In this test we DO NOT force a case on the iteratords and verify default behavior. */
 
-	i_opts.pathlist = &filelist;
+	i_opts.pathlist.strings = (char **)filelist.contents;
+	i_opts.pathlist.count = filelist.length;
 
 	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
 	expect_iterator_items(i, 8, NULL, 8, NULL);
@@ -1297,7 +1301,8 @@ void test_repo_iterator__workdirfilelist_icase(void)
 	g_repo = cl_git_sandbox_init("icase");
 
 	i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
-	i_opts.pathlist = &filelist;
+	i_opts.pathlist.strings = (char **)filelist.contents;
+	i_opts.pathlist.count = filelist.length;
 
 	i_opts.start = "c";
 	i_opts.end = "k/D";

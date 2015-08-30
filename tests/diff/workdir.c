@@ -486,7 +486,7 @@ void test_diff_workdir__to_index_with_pathlist_disabling_fnmatch(void)
 	/* ensure that a single NULL pathspec is filtered out (like when using
 	 * fnmatch filtering)
 	 */
-	opts.pathspec.strings = &pathspec;
+
 	opts.pathspec.count   = 1;
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
@@ -559,6 +559,30 @@ void test_diff_workdir__to_index_with_pathlist_disabling_fnmatch(void)
 
 	/* ensure that subdirs can be specified with a trailing slash */
 	pathspec = "subdir/";
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+
+	for (use_iterator = 0; use_iterator <= 1; use_iterator++) {
+		memset(&exp, 0, sizeof(exp));
+
+		if (use_iterator)
+			cl_git_pass(diff_foreach_via_iterator(
+				diff, diff_file_cb, NULL, NULL, NULL, &exp));
+		else
+			cl_git_pass(git_diff_foreach(diff, diff_file_cb, NULL, NULL, NULL, &exp));
+
+		cl_assert_equal_i(3, exp.files);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+		cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+		cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
+		cl_assert_equal_i(0, exp.file_status[GIT_DELTA_IGNORED]);
+		cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNTRACKED]);
+	}
+
+	git_diff_free(diff);
+
+	/* ensure that multiple trailing slashes are ignored */
+	pathspec = "subdir//////";
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 
