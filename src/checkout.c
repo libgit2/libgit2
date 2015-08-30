@@ -2652,6 +2652,7 @@ int git_checkout_tree(
 	git_index *index;
 	git_tree *tree = NULL;
 	git_iterator *tree_i = NULL;
+	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 
 	if (!treeish && !repo) {
 		giterr_set(GITERR_CHECKOUT,
@@ -2687,7 +2688,12 @@ int git_checkout_tree(
 	if ((error = git_repository_index(&index, repo)) < 0)
 		return error;
 
-	if (!(error = git_iterator_for_tree(&tree_i, tree, NULL)))
+	if ((opts->checkout_strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)) {
+		iter_opts.pathlist.count = opts->paths.count;
+		iter_opts.pathlist.strings = opts->paths.strings;
+	}
+
+	if (!(error = git_iterator_for_tree(&tree_i, tree, &iter_opts)))
 		error = git_checkout_iterator(tree_i, index, opts);
 
 	git_iterator_free(tree_i);
