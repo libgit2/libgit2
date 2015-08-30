@@ -1068,6 +1068,12 @@ static int handle_unmatched_new_item(
 			return 0;
 		}
 
+		if (diff->opts.flags & GIT_DIFF_DISABLE_PATHSPEC_MATCH) {
+			if (!git_pathspec__match_partial(&diff->opts.pathspec, nitem->path)) {
+				recurse_into_dir = false;
+			}
+		}
+
 		/* try to advance into directory if necessary */
 		if (recurse_into_dir) {
 			error = iterator_advance_into(&info->nitem, info->new_iter);

@@ -229,6 +229,24 @@ bool git_pathspec__match(
 	return (result > 0);
 }
 
+/* match a path against the vectorized pathspec */
+bool git_pathspec__match_partial(
+	const git_strarray *strspec,
+	const char *path)
+{
+	size_t i;
+
+	if (!strspec || !strspec->count)
+		return true;
+
+	for (i = 0; i < strspec->count; ++i) {
+		if (strstr(strspec->strings[i], path) || strstr(path, strspec->strings[i])) {
+			return true;
+		}
+	}
+
+	return false;
+}
 
 int git_pathspec__init(git_pathspec *ps, const git_strarray *paths)
 {
