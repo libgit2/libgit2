@@ -1162,6 +1162,76 @@ void test_repo_iterator__indexfilelist_2(void)
 	git_vector_free(&filelist);
 }
 
+void test_repo_iterator__indexfilelist_3(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_index *index;
+	git_vector filelist = GIT_VECTOR_INIT;
+
+	g_repo = cl_git_sandbox_init("icase");
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
+	cl_git_pass(git_vector_insert(&filelist, "0"));
+	cl_git_pass(git_vector_insert(&filelist, "c"));
+	cl_git_pass(git_vector_insert(&filelist, "D"));
+	cl_git_pass(git_vector_insert(&filelist, "e"));
+	cl_git_pass(git_vector_insert(&filelist, "k/"));
+	cl_git_pass(git_vector_insert(&filelist, "k.a"));
+	cl_git_pass(git_vector_insert(&filelist, "k.b"));
+	cl_git_pass(git_vector_insert(&filelist, "kZZZZZZZ"));
+
+	i_opts.pathlist.strings = (char **)filelist.contents;
+	i_opts.pathlist.count = filelist.length;
+
+	i_opts.start = "b";
+	i_opts.end = "k/D";
+
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	expect_iterator_items(i, 8, NULL, 8, NULL);
+	git_iterator_free(i);
+
+	git_index_free(index);
+	git_vector_free(&filelist);
+}
+
+void test_repo_iterator__indexfilelist_4(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_index *index;
+	git_vector filelist = GIT_VECTOR_INIT;
+
+	g_repo = cl_git_sandbox_init("icase");
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
+	cl_git_pass(git_vector_insert(&filelist, "0"));
+	cl_git_pass(git_vector_insert(&filelist, "c"));
+	cl_git_pass(git_vector_insert(&filelist, "D"));
+	cl_git_pass(git_vector_insert(&filelist, "e"));
+	cl_git_pass(git_vector_insert(&filelist, "k"));
+	cl_git_pass(git_vector_insert(&filelist, "k.a"));
+	cl_git_pass(git_vector_insert(&filelist, "k.b"));
+	cl_git_pass(git_vector_insert(&filelist, "kZZZZZZZ"));
+
+	i_opts.pathlist.strings = (char **)filelist.contents;
+	i_opts.pathlist.count = filelist.length;
+
+	i_opts.start = "b";
+	i_opts.end = "k/D";
+
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	expect_iterator_items(i, 8, NULL, 8, NULL);
+	git_iterator_free(i);
+
+	git_index_free(index);
+	git_vector_free(&filelist);
+}
+
 void test_repo_iterator__indexfilelist_icase(void)
 {
 	git_iterator *i;

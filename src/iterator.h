@@ -70,6 +70,7 @@ struct git_iterator {
 	char *start;
 	char *end;
 	git_vector pathlist;
+	size_t pathlist_walk_idx;
 	int (*strcomp)(const char *a, const char *b);
 	int (*strncomp)(const char *a, const char *b, size_t n);
 	int (*prefixcomp)(const char *str, const char *prefix);

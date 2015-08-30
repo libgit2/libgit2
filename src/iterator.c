@@ -75,7 +75,8 @@ static int iterator_pathlist__init(git_iterator *iter, git_strarray *pathspec)
 {
 	size_t i;
 
-	if (git_vector_init(&iter->pathlist, pathspec->count, iter->strcomp) < 0)
+	if (git_vector_init(&iter->pathlist, pathspec->count,
+			(git_vector_cmp)iter->strcomp) < 0)
 		return -1;
 
 	for (i = 0; i < pathspec->count; i++) {
@@ -98,7 +99,8 @@ static iterator_pathlist__match_t iterator_pathlist__match(
 	size_t idx;
 	int error;
 
-	error = git_vector_bsearch2(&idx, &iter->pathlist, iter->strcomp, path);
+	error = git_vector_bsearch2(&idx, &iter->pathlist,
+		(git_vector_cmp)iter->strcomp, path);
 
 	if (error == 0)
 		return ITERATOR_PATHLIST_MATCH;
@@ -116,10 +118,7 @@ static iterator_pathlist__match_t iterator_pathlist__match(
 
 		/* is this a literal directory entry (eg `foo/`) or a file beneath */
 		if (p[path_len] == '/') {
-			while (p[path_len] == '/')
-				path_len++;
-
-			return (p[path_len] == '\0') ?
+			return (p[path_len+1] == '\0') ?
 				ITERATOR_PATHLIST_MATCH_DIRECTORY :
 				ITERATOR_PATHLIST_MATCH_CHILD;
 		}
@@ -133,10 +132,68 @@ static iterator_pathlist__match_t iterator_pathlist__match(
 	return ITERATOR_PATHLIST_NONE;
 }
 
+static void iterator_pathlist_walk__reset(git_iterator *iter)
+{
+	iter->pathlist_walk_idx = 0;
+}
+
+/* walker for the index iterator that allows it to walk the sorted pathlist
+ * entries alongside the sorted index entries.  the `iter->pathlist_walk_idx`
+ * stores the starting position for subsequent calls, the position is advanced
+ * along with the index iterator, with a special case for handling directories
+ * in the pathlist that are specified without trailing '/'.  (eg, `foo`).
+ * we do not advance over these entries until we're certain that the index
+ * iterator will not ask us for a file beneath that directory (eg, `foo/bar`).
+ */
+static bool iterator_pathlist_walk__contains(git_iterator *iter, const char *path)
+{
+	size_t i;
+	char *p;
+	size_t p_len;
+	int cmp;
+
+	for (i = iter->pathlist_walk_idx; i < iter->pathlist.length; i++) {
+		p = iter->pathlist.contents[i];
+		p_len = strlen(p);
+
+		/* see if the pathlist entry is a prefix of this path */
+		cmp = iter->strncomp(p, path, p_len);
+
+		/* this pathlist entry sorts before the given path, try the next */
+		if (!p_len || cmp < 0)
+			iter->pathlist_walk_idx++;
+
+		/* this pathlist sorts after the given path, no match. */
+		else if (cmp > 0)
+			return false;
+
+		/* match!  an exact match (`foo` vs `foo`), the path is a child of an
+		 * explicit directory in the pathlist (`foo/` vs `foo/bar`) or the path
+		 * is a child of an entry in the pathlist (`foo` vs `foo/bar`)
+		 */
+		else if (path[p_len] == '\0' || p[p_len - 1] == '/' || path[p_len] == '/')
+			return true;
+
+		/* only advance the start index for future callers if we know that we
+		 * will not see a child of this path.  eg, a pathlist entry `foo` is
+		 * a prefix for `foo.txt` and `foo/bar`.  don't advance the start
+		 * pathlist index when we see `foo.txt` or we would miss a subsequent
+		 * inspection of `foo/bar`.  only advance when there are no more
+		 * potential children.
+		 */
+		else if (path[p_len] > '/')
+			iter->pathlist_walk_idx++;
+	}
+
+	return false;
+}
+
 static void iterator_pathlist__update_ignore_case(git_iterator *iter)
 {
-	git_vector_set_cmp(&iter->pathlist, iter->strcomp);
+	git_vector_set_cmp(&iter->pathlist, (git_vector_cmp)iter->strcomp);
 	git_vector_sort(&iter->pathlist);
+
+	iter->pathlist_walk_idx = 0;
 }
 
 
@@ -583,13 +640,13 @@ static int tree_iterator__current_internal(
 	return 0;
 }
 
-int tree_iterator__advance(
+static int tree_iterator__advance(
 	const git_index_entry **out, git_iterator *self);
 
 static int tree_iterator__current(
 	const git_index_entry **out, git_iterator *self)
 {
-	git_index_entry *entry = NULL;
+	const git_index_entry *entry = NULL;
 	iterator_pathlist__match_t m;
 	int error;
 
@@ -797,9 +854,7 @@ static const git_index_entry *index_iterator__advance_over_unwanted(
 	index_iterator *ii)
 {
 	const git_index_entry *ie = index_iterator__index_entry(ii);
-	const char *p;
-	size_t p_len;
-	int cmp;
+	bool match;
 
 	while (ie) {
 		if (!iterator__include_conflicts(ii) &&
@@ -810,51 +865,15 @@ static const git_index_entry *index_iterator__advance_over_unwanted(
 		}
 
 		/* if we have a pathlist, this entry's path must be in it to be
-		 * returned.  otherwise, advance the pathlist entry or the iterator
-		 * until we find the next path that we want to return.
+		 * returned.  walk the pathlist in unison with the index to
+		 * compare paths.
 		 */
 		if (ii->base.pathlist.length) {
+			match = iterator_pathlist_walk__contains(&ii->base, ie->path);
 
-			if (ii->pathlist_idx >= ii->base.pathlist.length) {
-				ii->current = SIZE_MAX;
-				ie = NULL;
-				break;
-			}
-
-			p = git_vector_get(&ii->base.pathlist, ii->pathlist_idx);
-
-			/* trim trailing slashes that indicate an exact directory match */
-			p_len = strlen(p);
-
-			while (p_len && p[p_len-1] == '/')
-				p_len--;
-
-			cmp = ii->base.strncomp(ie->path, p, p_len);
-
-			/* we've matched the prefix - if the pathlist entry is equal to
-			 * this entry, or if the pathlist entry is a folder (eg `foo/`)
-			 * and this entry was beneath that, then continue.  otherwise,
-			 * sort the index entry path against the pathlist entry.
-			 */
-			if (cmp == 0) {
-				if (ie->path[p_len] == 0)
-					;
-				else if (ie->path[p_len] == '/')
-					;
-				else if (ie->path[p_len] < '/')
-					cmp = -1;
-				else if (ie->path[p_len] > '/')
-					cmp = 1;
-			}
-
-			if (cmp < 0) {
+			if (!match) {
 				ii->current++;
 				ie = index_iterator__index_entry(ii);
-				continue;
-			}
-
-			if (cmp > 0) {
-				ii->pathlist_idx++;
 				continue;
 			}
 		}
@@ -1006,7 +1025,8 @@ static int index_iterator__reset(
 		return -1;
 
 	ii->current = 0;
-	ii->pathlist_idx = 0;
+
+	iterator_pathlist_walk__reset(self);
 
 	/* if we're given a start prefix, find it; if we're given a pathlist, find
 	 * the first of those.  start at the later of the two.
@@ -1193,7 +1213,7 @@ static void fs_iterator__seek_frame_start(
 		ff->index = 0;
 }
 
-static int dirload_with_stat(git_vector *contents, size_t *filtered, fs_iterator *fi)
+static int dirload_with_stat(git_vector *contents, fs_iterator *fi)
 {
 	git_path_diriter diriter = GIT_PATH_DIRITER_INIT;
 	const char *path;
@@ -1203,8 +1223,6 @@ static int dirload_with_stat(git_vector *contents, size_t *filtered, fs_iterator
 	size_t path_len, cmp_len, ps_size;
 	iterator_pathlist__match_t pathlist_match = ITERATOR_PATHLIST_MATCH;
 	int error;
-
-	*filtered = 0;
 
 	/* Any error here is equivalent to the dir not existing, skip over it */
 	if ((error = git_path_diriter_init(
@@ -1241,11 +1259,8 @@ static int dirload_with_stat(git_vector *contents, size_t *filtered, fs_iterator
 		if (fi->base.pathlist.length &&
 			fi->pathlist_match != ITERATOR_PATHLIST_MATCH &&
 			fi->pathlist_match != ITERATOR_PATHLIST_MATCH_DIRECTORY &&
-			!(pathlist_match = iterator_pathlist__match(&fi->base, path, path_len))) {
-
-			*filtered++;
+			!(pathlist_match = iterator_pathlist__match(&fi->base, path, path_len)))
 			continue;
-		}
 
 		/* Make sure to append two bytes, one for the path's null
 		 * termination, one for a possible trailing '/' for folders.
@@ -1313,7 +1328,6 @@ static int fs_iterator__expand_dir(fs_iterator *fi)
 {
 	int error;
 	fs_iterator_frame *ff;
-	size_t filtered = 0;
 
 	if (fi->depth > FS_MAX_DEPTH) {
 		giterr_set(GITERR_REPOSITORY,
@@ -1324,7 +1338,7 @@ static int fs_iterator__expand_dir(fs_iterator *fi)
 	ff = fs_iterator__alloc_frame(fi);
 	GITERR_CHECK_ALLOC(ff);
 
-	error = dirload_with_stat(&ff->entries, &filtered, fi);
+	error = dirload_with_stat(&ff->entries, fi);
 
 	if (error < 0) {
 		git_error_state last_error = { 0 };
