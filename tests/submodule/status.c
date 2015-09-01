@@ -264,6 +264,7 @@ static int confirm_submodule_status(
 void test_submodule_status__iterator(void)
 {
 	git_iterator *iter;
+	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 	const git_index_entry *entry;
 	size_t i;
 	static const char *expected[] = {
@@ -308,9 +309,10 @@ void test_submodule_status__iterator(void)
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 	git_index *index;
 
+	iter_opts.flags = GIT_ITERATOR_IGNORE_CASE | GIT_ITERATOR_INCLUDE_TREES;
+
 	cl_git_pass(git_repository_index(&index, g_repo));
-	cl_git_pass(git_iterator_for_workdir(&iter, g_repo, index, NULL,
-		GIT_ITERATOR_IGNORE_CASE | GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
+	cl_git_pass(git_iterator_for_workdir(&iter, g_repo, index, NULL, &iter_opts));
 
 	for (i = 0; !git_iterator_advance(&entry, iter); ++i)
 		cl_assert_equal_s(expected[i], entry->path);

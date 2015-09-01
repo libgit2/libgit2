@@ -663,7 +663,7 @@ int git_note_iterator_new(
 	if (error < 0)
 		goto cleanup;
 
-	if ((error = git_iterator_for_tree(it, tree, 0, NULL, NULL)) < 0)
+	if ((error = git_iterator_for_tree(it, tree, NULL)) < 0)
 		git_iterator_free(*it);
 
 cleanup:

@@ -728,6 +728,7 @@ static int truncate_racily_clean(git_index *index)
 		if (!is_racy_timestamp(ts, entry))
 			continue;
 
+		/* TODO: use the (non-fnmatching) filelist iterator */
 		diff_opts.pathspec.count = 1;
 		diff_opts.pathspec.strings = (char **) &entry->path;
 
@@ -2658,6 +2659,7 @@ int git_index_read_index(
 		remove_entries = GIT_VECTOR_INIT;
 	git_iterator *index_iterator = NULL;
 	git_iterator *new_iterator = NULL;
+	git_iterator_options opts = GIT_ITERATOR_OPTIONS_INIT;
 	const git_index_entry *old_entry, *new_entry;
 	git_index_entry *entry;
 	size_t i;
@@ -2667,10 +2669,10 @@ int git_index_read_index(
 		(error = git_vector_init(&remove_entries, index->entries.length, NULL)) < 0)
 		goto done;
 
-	if ((error = git_iterator_for_index(&index_iterator,
-			index, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0 ||
-		(error = git_iterator_for_index(&new_iterator,
-			(git_index *)new_index, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0)
+	opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+	if ((error = git_iterator_for_index(&index_iterator, index, &opts)) < 0 ||
+		(error = git_iterator_for_index(&new_iterator, (git_index *)new_index, &opts)) < 0)
 		goto done;
 
 	if (((error = git_iterator_current(&old_entry, index_iterator)) < 0 && 

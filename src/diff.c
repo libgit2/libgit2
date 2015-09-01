@@ -74,6 +74,23 @@ static int diff_insert_delta(
 	return error;
 }
 
+static bool diff_pathspec_match(
+	const char **matched_pathspec, git_diff *diff, const char *path)
+{
+	/* The iterator has filtered out paths for us, so the fact that we're
+	 * seeing this patch means that it must match the given path list.
+	 */
+	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH)) {
+		*matched_pathspec = path;
+		return true;
+	}
+
+	return git_pathspec__match(
+		&diff->pathspec, path, false,
+		DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_CASE),
+		matched_pathspec, NULL);
+}
+
 static int diff_delta__from_one(
 	git_diff *diff,
 	git_delta_t status,
@@ -110,11 +127,7 @@ static int diff_delta__from_one(
 		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_INCLUDE_UNREADABLE))
 		return 0;
 
-	if (!git_pathspec__match(
-			&diff->pathspec, entry->path,
-			DIFF_FLAG_IS_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH),
-			DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_CASE),
-			&matched_pathspec, NULL))
+	if (!diff_pathspec_match(&matched_pathspec, diff, entry->path))
 		return 0;
 
 	delta = diff_delta__alloc(diff, status, entry->path);
@@ -755,11 +768,7 @@ static int maybe_modified(
 	const char *matched_pathspec;
 	int error = 0;
 
-	if (!git_pathspec__match(
-			&diff->pathspec, oitem->path,
-			DIFF_FLAG_IS_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH),
-			DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_CASE),
-			&matched_pathspec, NULL))
+	if (!diff_pathspec_match(&matched_pathspec, diff, oitem->path))
 		return 0;
 
 	memset(&noid, 0, sizeof(noid));
@@ -1053,6 +1062,12 @@ static int handle_unmatched_new_item(
 					&info->nitem, &untracked_state, info->new_iter)) < 0)
 				return error;
 
+			/* if we found nothing that matched our pathlist filter, exclude */
+			if (untracked_state == GIT_ITERATOR_STATUS_FILTERED) {
+				git_vector_pop(&diff->deltas);
+				git__free(last);
+			}
+
 			/* if we found nothing or just ignored items, update the record */
 			if (untracked_state == GIT_ITERATOR_STATUS_IGNORED ||
 				untracked_state == GIT_ITERATOR_STATUS_EMPTY) {
@@ -1264,11 +1279,26 @@ cleanup:
 	return error;
 }
 
-#define DIFF_FROM_ITERATORS(MAKE_FIRST, MAKE_SECOND) do { \
+#define DIFF_FROM_ITERATORS(MAKE_FIRST, FLAGS_FIRST, MAKE_SECOND, FLAGS_SECOND) do { \
 	git_iterator *a = NULL, *b = NULL; \
-	char *pfx = opts ? git_pathspec_prefix(&opts->pathspec) : NULL; \
+	char *pfx = (opts && !(opts->flags & GIT_DIFF_DISABLE_PATHSPEC_MATCH)) ? \
+		git_pathspec_prefix(&opts->pathspec) : NULL; \
+	git_iterator_options a_opts = GIT_ITERATOR_OPTIONS_INIT, \
+		b_opts = GIT_ITERATOR_OPTIONS_INIT; \
+	a_opts.flags = FLAGS_FIRST; \
+	a_opts.start = pfx; \
+	a_opts.end = pfx; \
+	b_opts.flags = FLAGS_SECOND; \
+	b_opts.start = pfx; \
+	b_opts.end = pfx; \
 	GITERR_CHECK_VERSION(opts, GIT_DIFF_OPTIONS_VERSION, "git_diff_options"); \
-	if (!(error = MAKE_FIRST) && !(error = MAKE_SECOND)) \
+	if (opts && (opts->flags & GIT_DIFF_DISABLE_PATHSPEC_MATCH)) { \
+		a_opts.pathlist.strings = opts->pathspec.strings; \
+		a_opts.pathlist.count = opts->pathspec.count; \
+		b_opts.pathlist.strings = opts->pathspec.strings; \
+		b_opts.pathlist.count = opts->pathspec.count; \
+	} \
+	if (!error && !(error = MAKE_FIRST) && !(error = MAKE_SECOND)) \
 		error = git_diff__from_iterators(diff, repo, a, b, opts); \
 	git__free(pfx); git_iterator_free(a); git_iterator_free(b); \
 } while (0)
@@ -1280,8 +1310,8 @@ int git_diff_tree_to_tree(
 	git_tree *new_tree,
 	const git_diff_options *opts)
 {
-	int error = 0;
 	git_iterator_flag_t iflag = GIT_ITERATOR_DONT_IGNORE_CASE;
+	int error = 0;
 
 	assert(diff && repo);
 
@@ -1293,8 +1323,8 @@ int git_diff_tree_to_tree(
 		iflag = GIT_ITERATOR_IGNORE_CASE;
 
 	DIFF_FROM_ITERATORS(
-		git_iterator_for_tree(&a, old_tree, iflag, pfx, pfx),
-		git_iterator_for_tree(&b, new_tree, iflag, pfx, pfx)
+		git_iterator_for_tree(&a, old_tree, &a_opts), iflag,
+		git_iterator_for_tree(&b, new_tree, &b_opts), iflag
 	);
 
 	return error;
@@ -1318,10 +1348,10 @@ int git_diff_tree_to_index(
 	git_index *index,
 	const git_diff_options *opts)
 {
-	int error = 0;
-	bool index_ignore_case = false;
 	git_iterator_flag_t iflag = GIT_ITERATOR_DONT_IGNORE_CASE |
 		GIT_ITERATOR_INCLUDE_CONFLICTS;
+	bool index_ignore_case = false;
+	int error = 0;
 
 	assert(diff && repo);
 
@@ -1331,8 +1361,8 @@ int git_diff_tree_to_index(
 	index_ignore_case = index->ignore_case;
 
 	DIFF_FROM_ITERATORS(
-		git_iterator_for_tree(&a, old_tree, iflag, pfx, pfx),
-		git_iterator_for_index(&b, index, iflag, pfx, pfx)
+		git_iterator_for_tree(&a, old_tree, &a_opts), iflag,
+		git_iterator_for_index(&b, index, &b_opts), iflag
 	);
 
 	/* if index is in case-insensitive order, re-sort deltas to match */
@@ -1356,10 +1386,11 @@ int git_diff_index_to_workdir(
 		return error;
 
 	DIFF_FROM_ITERATORS(
-		git_iterator_for_index(
-			&a, index, GIT_ITERATOR_INCLUDE_CONFLICTS, pfx, pfx),
-		git_iterator_for_workdir(
-			&b, repo, index, NULL, GIT_ITERATOR_DONT_AUTOEXPAND, pfx, pfx)
+		git_iterator_for_index(&a, index, &a_opts),
+		GIT_ITERATOR_INCLUDE_CONFLICTS,
+
+		git_iterator_for_workdir(&b, repo, index, NULL, &b_opts),
+		GIT_ITERATOR_DONT_AUTOEXPAND
 	);
 
 	if (!error && DIFF_FLAG_IS_SET(*diff, GIT_DIFF_UPDATE_INDEX) && (*diff)->index_updated)
@@ -1383,9 +1414,8 @@ int git_diff_tree_to_workdir(
 		return error;
 
 	DIFF_FROM_ITERATORS(
-		git_iterator_for_tree(&a, old_tree, 0, pfx, pfx),
-		git_iterator_for_workdir(
-			&b, repo, index, old_tree, GIT_ITERATOR_DONT_AUTOEXPAND, pfx, pfx)
+		git_iterator_for_tree(&a, old_tree, &a_opts), 0,
+		git_iterator_for_workdir(&b, repo, index, old_tree, &b_opts), GIT_ITERATOR_DONT_AUTOEXPAND
 	);
 
 	return error;
@@ -1433,10 +1463,8 @@ int git_diff_index_to_index(
 	assert(diff && old_index && new_index);
 
 	DIFF_FROM_ITERATORS(
-		git_iterator_for_index(
-			&a, old_index, GIT_ITERATOR_DONT_IGNORE_CASE, pfx, pfx),
-		git_iterator_for_index(
-			&b, new_index, GIT_ITERATOR_DONT_IGNORE_CASE, pfx, pfx)
+		git_iterator_for_index(&a, old_index, &a_opts), GIT_ITERATOR_DONT_IGNORE_CASE,
+		git_iterator_for_index(&b, new_index, &b_opts), GIT_ITERATOR_DONT_IGNORE_CASE
 	);
 
 	/* if index is in case-insensitive order, re-sort deltas to match */

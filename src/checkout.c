@@ -2471,11 +2471,12 @@ int git_checkout_iterator(
 {
 	int error = 0;
 	git_iterator *baseline = NULL, *workdir = NULL;
+	git_iterator_options baseline_opts = GIT_ITERATOR_OPTIONS_INIT,
+		workdir_opts = GIT_ITERATOR_OPTIONS_INIT;
 	checkout_data data = {0};
 	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
 	uint32_t *actions = NULL;
 	size_t *counts = NULL;
-	git_iterator_flag_t iterflags = 0;
 
 	/* initialize structures and options */
 	error = checkout_data_init(&data, target, opts);
@@ -2499,25 +2500,30 @@ int git_checkout_iterator(
 
 	/* set up iterators */
 
-	iterflags = git_iterator_ignore_case(target) ?
+	workdir_opts.flags = git_iterator_ignore_case(target) ?
 		GIT_ITERATOR_IGNORE_CASE : GIT_ITERATOR_DONT_IGNORE_CASE;
+	workdir_opts.flags |= GIT_ITERATOR_DONT_AUTOEXPAND;
+	workdir_opts.start = data.pfx;
+	workdir_opts.end = data.pfx;
 
 	if ((error = git_iterator_reset(target, data.pfx, data.pfx)) < 0 ||
 		(error = git_iterator_for_workdir_ext(
 			&workdir, data.repo, data.opts.target_directory, index, NULL,
-			iterflags | GIT_ITERATOR_DONT_AUTOEXPAND,
-			data.pfx, data.pfx)) < 0)
+			&workdir_opts)) < 0)
 		goto cleanup;
+
+	baseline_opts.flags = git_iterator_ignore_case(target) ?
+		GIT_ITERATOR_IGNORE_CASE : GIT_ITERATOR_DONT_IGNORE_CASE;
+	baseline_opts.start = data.pfx;
+	baseline_opts.end = data.pfx;
 
 	if (data.opts.baseline_index) {
 		if ((error = git_iterator_for_index(
-				&baseline, data.opts.baseline_index,
-				iterflags, data.pfx, data.pfx)) < 0)
+				&baseline, data.opts.baseline_index, &baseline_opts)) < 0)
 			goto cleanup;
 	} else {
 		if ((error = git_iterator_for_tree(
-				&baseline, data.opts.baseline,
-				iterflags, data.pfx, data.pfx)) < 0)
+				&baseline, data.opts.baseline, &baseline_opts)) < 0)
 			goto cleanup;
 	}
 
@@ -2625,7 +2631,7 @@ int git_checkout_index(
 		return error;
 	GIT_REFCOUNT_INC(index);
 
-	if (!(error = git_iterator_for_index(&index_i, index, 0, NULL, NULL)))
+	if (!(error = git_iterator_for_index(&index_i, index, NULL)))
 		error = git_checkout_iterator(index_i, index, opts);
 
 	if (owned)
@@ -2646,6 +2652,7 @@ int git_checkout_tree(
 	git_index *index;
 	git_tree *tree = NULL;
 	git_iterator *tree_i = NULL;
+	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 
 	if (!treeish && !repo) {
 		giterr_set(GITERR_CHECKOUT,
@@ -2681,7 +2688,12 @@ int git_checkout_tree(
 	if ((error = git_repository_index(&index, repo)) < 0)
 		return error;
 
-	if (!(error = git_iterator_for_tree(&tree_i, tree, 0, NULL, NULL)))
+	if ((opts->checkout_strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)) {
+		iter_opts.pathlist.count = opts->paths.count;
+		iter_opts.pathlist.strings = opts->paths.strings;
+	}
+
+	if (!(error = git_iterator_for_tree(&tree_i, tree, &iter_opts)))
 		error = git_checkout_iterator(tree_i, index, opts);
 
 	git_iterator_free(tree_i);

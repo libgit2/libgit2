@@ -30,13 +30,17 @@ static void tree_iterator_test(
 {
 	git_tree *t;
 	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
 	const git_index_entry *entry;
 	int error, count = 0, count_post_reset = 0;
 	git_repository *repo = cl_git_sandbox_init(sandbox);
 
+	i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+	i_opts.start = start;
+	i_opts.end = end;
+
 	cl_assert(t = resolve_commit_oid_to_tree(repo, treeish));
-	cl_git_pass(git_iterator_for_tree(
-		&i, t, GIT_ITERATOR_DONT_IGNORE_CASE, start, end));
+	cl_git_pass(git_iterator_for_tree(&i, t, &i_opts));
 
 	/* test loop */
 	while (!(error = git_iterator_advance(&entry, i))) {
@@ -297,6 +301,7 @@ void test_diff_iterator__tree_special_functions(void)
 {
 	git_tree *t;
 	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
 	const git_index_entry *entry;
 	git_repository *repo = cl_git_sandbox_init("attr");
 	int error, cases = 0;
@@ -306,8 +311,9 @@ void test_diff_iterator__tree_special_functions(void)
 		repo, "24fa9a9fc4e202313e24b648087495441dab432b");
 	cl_assert(t != NULL);
 
-	cl_git_pass(git_iterator_for_tree(
-		&i, t, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL));
+	i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+	cl_git_pass(git_iterator_for_tree(&i, t, &i_opts));
 
 	while (!(error = git_iterator_advance(&entry, i))) {
 		cl_assert(entry);
@@ -365,11 +371,16 @@ static void index_iterator_test(
 	const git_index_entry *entry;
 	int error, count = 0, caps;
 	git_repository *repo = cl_git_sandbox_init(sandbox);
+	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 
 	cl_git_pass(git_repository_index(&index, repo));
 	caps = git_index_caps(index);
 
-	cl_git_pass(git_iterator_for_index(&i, index, flags, start, end));
+	iter_opts.flags = flags;
+	iter_opts.start = start;
+	iter_opts.end = end;
+
+	cl_git_pass(git_iterator_for_index(&i, index, &iter_opts));
 
 	while (!(error = git_iterator_advance(&entry, i))) {
 		cl_assert(entry);
@@ -581,12 +592,16 @@ static void workdir_iterator_test(
 	const char *an_ignored_name)
 {
 	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
 	const git_index_entry *entry;
 	int error, count = 0, count_all = 0, count_all_post_reset = 0;
 	git_repository *repo = cl_git_sandbox_init(sandbox);
 
-	cl_git_pass(git_iterator_for_workdir(
-		&i, repo, NULL, NULL, GIT_ITERATOR_DONT_AUTOEXPAND, start, end));
+	i_opts.flags = GIT_ITERATOR_DONT_AUTOEXPAND;
+	i_opts.start = start;
+	i_opts.end = end;
+
+	cl_git_pass(git_iterator_for_workdir(&i, repo, NULL, NULL, &i_opts));
 
 	error = git_iterator_current(&entry, i);
 	cl_assert((error == 0 && entry != NULL) ||
@@ -765,6 +780,7 @@ void test_diff_iterator__workdir_builtin_ignores(void)
 {
 	git_repository *repo = cl_git_sandbox_init("attr");
 	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
 	const git_index_entry *entry;
 	int idx;
 	static struct {
@@ -796,8 +812,12 @@ void test_diff_iterator__workdir_builtin_ignores(void)
 	cl_git_pass(p_mkdir("attr/sub/sub/.git", 0777));
 	cl_git_mkfile("attr/sub/.git", "whatever");
 
+	i_opts.flags = GIT_ITERATOR_DONT_AUTOEXPAND;
+	i_opts.start = "dir";
+	i_opts.end = "sub/sub/file";
+
 	cl_git_pass(git_iterator_for_workdir(
-		&i, repo, NULL, NULL, GIT_ITERATOR_DONT_AUTOEXPAND, "dir", "sub/sub/file"));
+		&i, repo, NULL, NULL, &i_opts));
 	cl_git_pass(git_iterator_current(&entry, i));
 
 	for (idx = 0; entry != NULL; ++idx) {
@@ -827,12 +847,17 @@ static void check_wd_first_through_third_range(
 	git_repository *repo, const char *start, const char *end)
 {
 	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
 	const git_index_entry *entry;
 	int error, idx;
 	static const char *expected[] = { "FIRST", "second", "THIRD", NULL };
 
+	i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
+	i_opts.start = start;
+	i_opts.end = end;
+
 	cl_git_pass(git_iterator_for_workdir(
-		&i, repo, NULL, NULL, GIT_ITERATOR_IGNORE_CASE, start, end));
+		&i, repo, NULL, NULL, &i_opts));
 	cl_git_pass(git_iterator_current(&entry, i));
 
 	for (idx = 0; entry != NULL; ++idx) {
@@ -877,14 +902,16 @@ static void check_tree_range(
 {
 	git_tree *head;
 	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
 	int error, count;
+
+	i_opts.flags = ignore_case ? GIT_ITERATOR_IGNORE_CASE : GIT_ITERATOR_DONT_IGNORE_CASE;
+	i_opts.start = start;
+	i_opts.end = end;
 
 	cl_git_pass(git_repository_head_tree(&head, repo));
 
-	cl_git_pass(git_iterator_for_tree(
-		&i, head,
-		ignore_case ? GIT_ITERATOR_IGNORE_CASE : GIT_ITERATOR_DONT_IGNORE_CASE,
-		start, end));
+	cl_git_pass(git_iterator_for_tree(&i, head, &i_opts));
 
 	for (count = 0; !(error = git_iterator_advance(NULL, i)); ++count)
 		/* count em up */;
@@ -931,6 +958,7 @@ static void check_index_range(
 {
 	git_index *index;
 	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
 	int error, count, caps;
 	bool is_ignoring_case;
 
@@ -942,7 +970,11 @@ static void check_index_range(
 	if (ignore_case != is_ignoring_case)
 		cl_git_pass(git_index_set_caps(index, caps ^ GIT_INDEXCAP_IGNORE_CASE));
 
-	cl_git_pass(git_iterator_for_index(&i, index, 0, start, end));
+	i_opts.flags = 0;
+	i_opts.start = start;
+	i_opts.end = end;
+
+	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
 
 	cl_assert(git_iterator_ignore_case(i) == ignore_case);
 

@@ -1695,10 +1695,14 @@ on_error:
 
 static git_iterator *iterator_given_or_empty(git_iterator **empty, git_iterator *given)
 {
+	git_iterator_options opts = GIT_ITERATOR_OPTIONS_INIT;
+
 	if (given)
 		return given;
 
-	if (git_iterator_for_nothing(empty, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL) < 0)
+	opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+	if (git_iterator_for_nothing(empty, &opts) < 0)
 		return NULL;
 
 	return *empty;
@@ -1780,14 +1784,17 @@ int git_merge_trees(
 	const git_merge_options *merge_opts)
 {
 	git_iterator *ancestor_iter = NULL, *our_iter = NULL, *their_iter = NULL;
+	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 	int error;
 
-	if ((error = git_iterator_for_tree(&ancestor_iter, (git_tree *)ancestor_tree,
-			GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0 ||
-		(error = git_iterator_for_tree(&our_iter, (git_tree *)our_tree,
-			GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0 ||
-		(error = git_iterator_for_tree(&their_iter, (git_tree *)their_tree,
-			GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0)
+	iter_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+	if ((error = git_iterator_for_tree(
+			&ancestor_iter, (git_tree *)ancestor_tree, &iter_opts)) < 0 ||
+		(error = git_iterator_for_tree(
+			&our_iter, (git_tree *)our_tree, &iter_opts)) < 0 ||
+		(error = git_iterator_for_tree(
+			&their_iter, (git_tree *)their_tree, &iter_opts)) < 0)
 		goto done;
 
 	error = git_merge__iterators(
@@ -2319,6 +2326,7 @@ static int merge_check_index(size_t *conflicts, git_repository *repo, git_index 
 	git_tree *head_tree = NULL;
 	git_index *index_repo = NULL;
 	git_iterator *iter_repo = NULL, *iter_new = NULL;
+	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 	git_diff *staged_diff_list = NULL, *index_diff_list = NULL;
 	git_diff_delta *delta;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
@@ -2348,11 +2356,12 @@ static int merge_check_index(size_t *conflicts, git_repository *repo, git_index 
 			goto done;
 	}
 
-	opts.pathspec.count = staged_paths.length;
-	opts.pathspec.strings = (char **)staged_paths.contents;
+	iter_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+	iter_opts.pathlist.strings = (char **)staged_paths.contents;
+	iter_opts.pathlist.count = staged_paths.length;
 
-	if ((error = git_iterator_for_index(&iter_repo, index_repo, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0 ||
-		(error = git_iterator_for_index(&iter_new, index_new, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0 ||
+	if ((error = git_iterator_for_index(&iter_repo, index_repo, &iter_opts)) < 0 ||
+		(error = git_iterator_for_index(&iter_new, index_new, &iter_opts)) < 0 ||
 		(error = git_diff__from_iterators(&index_diff_list, repo, iter_repo, iter_new, &opts)) < 0)
 		goto done;
 
@@ -2396,6 +2405,7 @@ static int merge_check_workdir(size_t *conflicts, git_repository *repo, git_inde
 	 * will be applied by the merge (including conflicts).  Ensure that there
 	 * are no changes in the workdir to these paths.
 	 */
+	opts.flags |= GIT_DIFF_DISABLE_PATHSPEC_MATCH;
 	opts.pathspec.count = merged_paths->length;
 	opts.pathspec.strings = (char **)merged_paths->contents;
 
@@ -2414,6 +2424,7 @@ int git_merge__check_result(git_repository *repo, git_index *index_new)
 {
 	git_tree *head_tree = NULL;
 	git_iterator *iter_head = NULL, *iter_new = NULL;
+	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 	git_diff *merged_list = NULL;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_delta *delta;
@@ -2422,9 +2433,11 @@ int git_merge__check_result(git_repository *repo, git_index *index_new)
 	const git_index_entry *e;
 	int error = 0;
 
+	iter_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
 	if ((error = git_repository_head_tree(&head_tree, repo)) < 0 ||
-		(error = git_iterator_for_tree(&iter_head, head_tree, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0 ||
-		(error = git_iterator_for_index(&iter_new, index_new, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0 ||
+		(error = git_iterator_for_tree(&iter_head, head_tree, &iter_opts)) < 0 ||
+		(error = git_iterator_for_index(&iter_new, index_new, &iter_opts)) < 0 ||
 		(error = git_diff__from_iterators(&merged_list, repo, iter_head, iter_new, &opts)) < 0)
 		goto done;
 
