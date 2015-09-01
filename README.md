@@ -7,7 +7,7 @@ How to compile
 
 ```
 $ sudo apt-get install libmysqlclient-dev
-$ cmake -DUSE\_MARIADB=on .
+$ cmake -DUSE_MARIADB=on .
 $ make -j4
 $ sudo make install
 ```
