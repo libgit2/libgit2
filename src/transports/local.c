@@ -693,39 +693,22 @@ static int local_push(
 	transport_local *t = (transport_local *)transport;
 	git_odb *remote_odb = NULL;
 	git_odb *local_odb = NULL;
-	git_repository *remote_repo = NULL;
 	push_spec *spec;
 	char *url = NULL;
-	const char *path;
-	git_buf buf = GIT_BUF_INIT;
 	int error;
 	unsigned int i;
 	size_t j;
 
-	/* 'push->remote->url' may be a url or path; convert to a path */
-	if ((error = git_path_from_url_or_path(&buf, push->remote->url)) < 0) {
-		git_buf_free(&buf);
-		return error;
-	}
-	path = git_buf_cstr(&buf);
-
-	error = git_repository_open(&remote_repo, path);
-
-	git_buf_free(&buf);
-
-	if (error < 0)
-		return error;
-
 	/* We don't currently support pushing locally to non-bare repos. Proper
 	   non-bare repo push support would require checking configs to see if
 	   we should override the default 'don't let this happen' behavior */
-	if (!remote_repo->is_bare) {
+	if (!t->repo->is_bare) {
 		error = GIT_EBAREREPO;
 		giterr_set(GITERR_INVALID, "Local push doesn't (yet) support pushing to non-bare repos.");
 		goto on_error;
 	}
 
-	if ((error = git_repository_odb__weakptr(&remote_odb, remote_repo)) < 0 ||
+	if ((error = git_repository_odb__weakptr(&remote_odb, t->repo)) < 0 ||
 		(error = git_repository_odb__weakptr(&local_odb, push->repo)) < 0)
 		goto on_error;
 
@@ -752,7 +735,7 @@ static int local_push(
 			goto on_error;
 		}
 
-		error = local_push_update_remote_ref(remote_repo, spec->refspec.src, spec->refspec.dst,
+		error = local_push_update_remote_ref(t->repo, spec->refspec.src, spec->refspec.dst,
 			&spec->loid, &spec->roid);
 
 		switch (error) {
@@ -800,7 +783,6 @@ static int local_push(
 	error = 0;
 
 on_error:
-	git_repository_free(remote_repo);
 	git__free(url);
 
 	return error;
