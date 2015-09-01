@@ -1,13 +1,16 @@
 libgit2-mariadb - Libgit2 with MariaDB / Mysql support
 ======================================================
 
+
 How to compile
 --------------
 
+```
 $ sudo apt-get install libmysqlclient-dev
 $ cmake -DUSE\_MARIADB=on .
 $ make -j4
 $ sudo make install
+```
 
 
 How to use it
