@@ -122,7 +122,7 @@ static void pathspec_match_context_init(
 	if (disable_fnmatch)
 		ctxt->fnmatch_flags = -1;
 	else if (casefold)
-		ctxt->fnmatch_flags = FNM_CASEFOLD;
+		ctxt->fnmatch_flags = GIT_FNM_CASEFOLD;
 	else
 		ctxt->fnmatch_flags = 0;
 
@@ -140,16 +140,16 @@ static int pathspec_match_one(
 	struct pathspec_match_context *ctxt,
 	const char *path)
 {
-	int result = (match->flags & GIT_ATTR_FNMATCH_MATCH_ALL) ? 0 : FNM_NOMATCH;
+	int result = (match->flags & GIT_ATTR_FNMATCH_MATCH_ALL) ? 0 : GIT_FNM_NOMATCH;
 
-	if (result == FNM_NOMATCH)
-		result = ctxt->strcomp(match->pattern, path) ? FNM_NOMATCH : 0;
+	if (result == GIT_FNM_NOMATCH)
+		result = ctxt->strcomp(match->pattern, path) ? GIT_FNM_NOMATCH : 0;
 
-	if (ctxt->fnmatch_flags >= 0 && result == FNM_NOMATCH)
-		result = p_fnmatch(match->pattern, path, ctxt->fnmatch_flags);
+	if (ctxt->fnmatch_flags >= 0 && result == GIT_FNM_NOMATCH)
+		result = git_fnmatch(match->pattern, path, ctxt->fnmatch_flags);
 
 	/* if we didn't match, look for exact dirname prefix match */
-	if (result == FNM_NOMATCH &&
+	if (result == GIT_FNM_NOMATCH &&
 		(match->flags & GIT_ATTR_FNMATCH_HASWILD) == 0 &&
 		ctxt->strncomp(path, match->pattern, match->length) == 0 &&
 		path[match->length] == '/')
@@ -158,7 +158,7 @@ static int pathspec_match_one(
 	/* if we didn't match and this is a negative match, check for exact
 	 * match of filename with leading '!'
 	 */
-	if (result == FNM_NOMATCH &&
+	if (result == GIT_FNM_NOMATCH &&
 		(match->flags & GIT_ATTR_FNMATCH_NEGATIVE) != 0 &&
 		*path == '!' &&
 		ctxt->strncomp(path + 1, match->pattern, match->length) == 0 &&

@@ -10,7 +10,8 @@
 #include "common.h"
 #include <fcntl.h>
 #include <time.h>
-#include "fnmatch.h"
+
+#include "git2/fnmatch.h"
 
 /* stat: file mode type testing macros */
 #ifndef S_IFGITLINK

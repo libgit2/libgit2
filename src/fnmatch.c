@@ -48,7 +48,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "fnmatch.h"
+#include "git2/fnmatch.h"
+
+#include "common.h"
 
 #define EOS		'\0'
 
@@ -64,26 +66,26 @@ p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 		const char *stringstart;
 		char *newp;
 		char c, test;
-		int recurs_flags = flags & ~FNM_PERIOD;
+		int recurs_flags = flags & ~GIT_FNM_PERIOD;
 
 		if (recurs-- == 0)
-				return FNM_NORES;
+				return GIT_FNM_NORES;
 
 		for (stringstart = string;;)
 				switch (c = *pattern++) {
 				case EOS:
-						if ((flags & FNM_LEADING_DIR) && *string == '/')
+						if ((flags & GIT_FNM_LEADING_DIR) && *string == '/')
 								return (0);
-						return (*string == EOS ? 0 : FNM_NOMATCH);
+						return (*string == EOS ? 0 : GIT_FNM_NOMATCH);
 				case '?':
 						if (*string == EOS)
-								return (FNM_NOMATCH);
-						if (*string == '/' && (flags & FNM_PATHNAME))
-								return (FNM_NOMATCH);
-						if (*string == '.' && (flags & FNM_PERIOD) &&
+								return (GIT_FNM_NOMATCH);
+						if (*string == '/' && (flags & GIT_FNM_PATHNAME))
+								return (GIT_FNM_NOMATCH);
+						if (*string == '.' && (flags & GIT_FNM_PERIOD) &&
 							(string == stringstart ||
-							((flags & FNM_PATHNAME) && *(string - 1) == '/')))
-								return (FNM_NOMATCH);
+							((flags & GIT_FNM_PATHNAME) && *(string - 1) == '/')))
+								return (GIT_FNM_NOMATCH);
 						++string;
 						break;
 				case '*':
@@ -93,29 +95,29 @@ p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 						 * It will be restored if/when we recurse below.
 						 */
 						if (c == '*') {
-							flags &= ~FNM_PATHNAME;
+							flags &= ~GIT_FNM_PATHNAME;
 							while (c == '*')
 								c = *++pattern;
 							if (c == '/')
 								c = *++pattern;
 						}
 
-						if (*string == '.' && (flags & FNM_PERIOD) &&
+						if (*string == '.' && (flags & GIT_FNM_PERIOD) &&
 							(string == stringstart ||
-							((flags & FNM_PATHNAME) && *(string - 1) == '/')))
-								return (FNM_NOMATCH);
+							((flags & GIT_FNM_PATHNAME) && *(string - 1) == '/')))
+								return (GIT_FNM_NOMATCH);
 
 						/* Optimize for pattern with * at end or before /. */
 						if (c == EOS) {
-								if (flags & FNM_PATHNAME)
-										return ((flags & FNM_LEADING_DIR) ||
+								if (flags & GIT_FNM_PATHNAME)
+										return ((flags & GIT_FNM_LEADING_DIR) ||
 											strchr(string, '/') == NULL ?
-											0 : FNM_NOMATCH);
+											0 : GIT_FNM_NOMATCH);
 								else
 										return (0);
-						} else if (c == '/' && (flags & FNM_PATHNAME)) {
+						} else if (c == '/' && (flags & GIT_FNM_PATHNAME)) {
 								if ((string = strchr(string, '/')) == NULL)
-										return (FNM_NOMATCH);
+										return (GIT_FNM_NOMATCH);
 								break;
 						}
 
@@ -124,22 +126,22 @@ p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 								int e;
 
 								e = p_fnmatchx(pattern, string, recurs_flags, recurs);
-								if (e != FNM_NOMATCH)
+								if (e != GIT_FNM_NOMATCH)
 										return e;
-								if (test == '/' && (flags & FNM_PATHNAME))
+								if (test == '/' && (flags & GIT_FNM_PATHNAME))
 										break;
 								++string;
 						}
-						return (FNM_NOMATCH);
+						return (GIT_FNM_NOMATCH);
 				case '[':
 						if (*string == EOS)
-								return (FNM_NOMATCH);
-						if (*string == '/' && (flags & FNM_PATHNAME))
-								return (FNM_NOMATCH);
-						if (*string == '.' && (flags & FNM_PERIOD) &&
+								return (GIT_FNM_NOMATCH);
+						if (*string == '/' && (flags & GIT_FNM_PATHNAME))
+								return (GIT_FNM_NOMATCH);
+						if (*string == '.' && (flags & GIT_FNM_PERIOD) &&
 							(string == stringstart ||
-							((flags & FNM_PATHNAME) && *(string - 1) == '/')))
-								return (FNM_NOMATCH);
+							((flags & GIT_FNM_PATHNAME) && *(string - 1) == '/')))
+								return (GIT_FNM_NOMATCH);
 
 						switch (rangematch(pattern, *string, flags, &newp)) {
 						case RANGE_ERROR:
@@ -149,12 +151,12 @@ p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 								pattern = newp;
 								break;
 						case RANGE_NOMATCH:
-								return (FNM_NOMATCH);
+								return (GIT_FNM_NOMATCH);
 						}
 						++string;
 						break;
 				case '\\':
-						if (!(flags & FNM_NOESCAPE)) {
+						if (!(flags & GIT_FNM_NOESCAPE)) {
 								if ((c = *pattern++) == EOS) {
 										c = '\\';
 										--pattern;
@@ -163,10 +165,10 @@ p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 						/* FALLTHROUGH */
 				default:
 				normal:
-						if (c != *string && !((flags & FNM_CASEFOLD) &&
+						if (c != *string && !((flags & GIT_FNM_CASEFOLD) &&
 									(git__tolower((unsigned char)c) ==
 									git__tolower((unsigned char)*string))))
-								return (FNM_NOMATCH);
+								return (GIT_FNM_NOMATCH);
 						++string;
 						break;
 				}
@@ -189,7 +191,7 @@ rangematch(const char *pattern, char test, int flags, char **newp)
 		if ((negate = (*pattern == '!' || *pattern == '^')) != 0)
 				++pattern;
 
-		if (flags & FNM_CASEFOLD)
+		if (flags & GIT_FNM_CASEFOLD)
 				test = (char)git__tolower((unsigned char)test);
 
 		/*
@@ -200,22 +202,22 @@ rangematch(const char *pattern, char test, int flags, char **newp)
 		ok = 0;
 		c = *pattern++;
 		do {
-				if (c == '\\' && !(flags & FNM_NOESCAPE))
+				if (c == '\\' && !(flags & GIT_FNM_NOESCAPE))
 						c = *pattern++;
 				if (c == EOS)
 						return (RANGE_ERROR);
-				if (c == '/' && (flags & FNM_PATHNAME))
+				if (c == '/' && (flags & GIT_FNM_PATHNAME))
 						return (RANGE_NOMATCH);
-				if ((flags & FNM_CASEFOLD))
+				if ((flags & GIT_FNM_CASEFOLD))
 						c = (char)git__tolower((unsigned char)c);
 				if (*pattern == '-'
 					&& (c2 = *(pattern+1)) != EOS && c2 != ']') {
 						pattern += 2;
-						if (c2 == '\\' && !(flags & FNM_NOESCAPE))
+						if (c2 == '\\' && !(flags & GIT_FNM_NOESCAPE))
 								c2 = *pattern++;
 						if (c2 == EOS)
 								return (RANGE_ERROR);
-						if (flags & FNM_CASEFOLD)
+						if (flags & GIT_FNM_CASEFOLD)
 								c2 = (char)git__tolower((unsigned char)c2);
 						if (c <= test && test <= c2)
 								ok = 1;
@@ -228,7 +230,7 @@ rangematch(const char *pattern, char test, int flags, char **newp)
 }
 
 int
-p_fnmatch(const char *pattern, const char *string, int flags)
+git_fnmatch(const char *pattern, const char *string, int flags)
 {
 		return p_fnmatchx(pattern, string, flags, 64);
 }

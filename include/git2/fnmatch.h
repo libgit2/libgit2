@@ -30,20 +30,26 @@
 
 #include "common.h"
 
-#define FNM_NOMATCH		1		/* Match failed. */
-#define FNM_NOSYS		2		/* Function not supported (unused). */
-#define	FNM_NORES		3		/* Out of resources */
+#define GIT_FNM_NOMATCH		1		/* Match failed. */
+#define GIT_FNM_NOSYS		2		/* Function not supported (unused). */
+#define	GIT_FNM_NORES		3		/* Out of resources */
 
-#define FNM_NOESCAPE	0x01		/* Disable backslash escaping. */
-#define FNM_PATHNAME	0x02		/* Slash must be matched by slash. */
-#define FNM_PERIOD		0x04		/* Period must be matched by period. */
-#define FNM_LEADING_DIR 0x08		/* Ignore /<tail> after Imatch. */
-#define FNM_CASEFOLD	0x10		/* Case insensitive search. */
+#define GIT_FNM_NOESCAPE	0x01		/* Disable backslash escaping. */
+#define GIT_FNM_PATHNAME	0x02		/* Slash must be matched by slash. */
+#define GIT_FNM_PERIOD		0x04		/* Period must be matched by period. */
+#define GIT_FNM_LEADING_DIR 0x08		/* Ignore /<tail> after Imatch. */
+#define GIT_FNM_CASEFOLD	0x10		/* Case insensitive search. */
 
-#define FNM_IGNORECASE	FNM_CASEFOLD
-#define FNM_FILE_NAME	FNM_PATHNAME
+#define GIT_FNM_IGNORECASE	GIT_FNM_CASEFOLD
+#define GIT_FNM_FILE_NAME	GIT_FNM_PATHNAME
 
-extern int p_fnmatch(const char *pattern, const char *string, int flags);
+/**
+ * Behave in a way similar to fnmatch() on Linux, but is portable
+ * (see man fnmatch).
+ * For instance, can be useful for people wanting to implement their
+ * own RefDB backend
+ */
+GIT_EXTERN(int) git_fnmatch(const char *pattern, const char *string, int flags);
 
 #endif /* _FNMATCH_H */
 
