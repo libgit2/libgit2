@@ -185,18 +185,41 @@ GIT_EXTERN(int) git_transport_dummy(
 	git_remote *owner,
 	/* NULL */ void *payload);
 
+
+typedef struct git_transport_local_repo_callbacks {
+	/*!
+	 * Callback for the local transport to open a repository
+	 *
+	 * \param[out] out will point to the created repository
+	 * \param[out] user structure to keep associated with the repository
+	 * \param[in] url URL indicating the repository to open
+	 * \return 0 if successful, <0 if error (see git2/errors.h)
+	 */
+	int (*open)(git_repository **out_repo, void **user, const char *url);
+
+	/*!
+	 * Callback for the local transport to close a repository
+	 * opened with .open_repository_cb()
+	 *
+	 * \param repo repository that must be closed (don't forget git_repository_free())
+	 * \param user see the parameter 'user' for .open()
+	 */
+	void (*close)(git_repository *repo, void *user);
+} git_transport_local_repo_callbacks;
+
 /**
  * Create an instance of the local transport.
  *
  * @param out The newly created transport (out)
  * @param owner The git_remote which will own this transport
- * @param payload You must pass NULL for this parameter.
+ * @param payload You can pass NULL, or a pointer to a
+ *   git_transport_local_repo_callbacks structure
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_transport_local(
 	git_transport **out,
 	git_remote *owner,
-	/* NULL */ void *payload);
+	/* NULL or git_transport_local_repo_callbacks */ void *payload);
 
 /**
  * Create an instance of the smart transport.

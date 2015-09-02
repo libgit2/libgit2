@@ -12,7 +12,7 @@ static int custom_transport(
 {
 	*((int*)payload) = 1;
 
-	return git_transport_local(out, owner, payload);
+	return git_transport_local(out, owner, NULL);
 }
 
 static int custom_transport_remote_create(

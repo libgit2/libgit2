@@ -33,7 +33,12 @@ typedef struct {
 	int direction;
 	int flags;
 	git_atomic cancelled;
+
+	git_transport_local_repo_callbacks repository_cb;
+	void *callbacks_userdata;
+
 	git_repository *repo;
+
 	git_transport_message_cb progress_cb;
 	git_transport_message_cb error_cb;
 	void *message_cb_payload;
@@ -190,6 +195,34 @@ on_error:
 	return -1;
 }
 
+static int open_fs_repository(git_repository **out, void **user, const char *url)
+{
+	const char *path;
+	git_buf buf = GIT_BUF_INIT;
+	int error;
+
+	GIT_UNUSED(user);
+
+	/* 'url' may be a url or path; convert to a path */
+	if ((error = git_path_from_url_or_path(&buf, url)) < 0) {
+		git_buf_free(&buf);
+		return error;
+	}
+	path = git_buf_cstr(&buf);
+
+	error = git_repository_open(out, path);
+
+	git_buf_free(&buf);
+
+	return 0;
+}
+
+static void close_fs_repository(git_repository *repo, void *user)
+{
+	GIT_UNUSED(user);
+	git_repository_free(repo);
+}
+
 /*
  * Try to open the url as a git directory. The direction doesn't
  * matter in this case because we're calculating the heads ourselves.
@@ -201,17 +234,16 @@ static int local_connect(
 	void *cred_acquire_payload,
 	int direction, int flags)
 {
-	git_repository *repo;
 	int error;
 	transport_local *t = (transport_local *) transport;
-	const char *path;
-	git_buf buf = GIT_BUF_INIT;
 
 	GIT_UNUSED(cred_acquire_cb);
 	GIT_UNUSED(cred_acquire_payload);
 
 	if (t->connected)
 		return 0;
+
+	assert(t->repository_cb.open);
 
 	free_heads(&t->refs);
 
@@ -220,21 +252,9 @@ static int local_connect(
 	t->direction = direction;
 	t->flags = flags;
 
-	/* 'url' may be a url or path; convert to a path */
-	if ((error = git_path_from_url_or_path(&buf, url)) < 0) {
-		git_buf_free(&buf);
-		return error;
-	}
-	path = git_buf_cstr(&buf);
-
-	error = git_repository_open(&repo, path);
-
-	git_buf_free(&buf);
-
+	error = t->repository_cb.open(&t->repo, &t->callbacks_userdata, url);
 	if (error < 0)
 		return -1;
-
-	t->repo = repo;
 
 	if (store_refs(t) < 0)
 		return -1;
@@ -636,7 +656,8 @@ static int local_close(git_transport *transport)
 	t->connected = 0;
 
 	if (t->repo) {
-		git_repository_free(t->repo);
+		assert(t->repository_cb.close);
+		t->repository_cb.close(t->repo, t->callbacks_userdata);
 		t->repo = NULL;
 	}
 
@@ -692,6 +713,13 @@ int git_transport_local(git_transport **out, git_remote *owner, void *param)
 		git__free(t);
 		return error;
 	}
+
+	if (param != NULL)
+		memcpy(&t->repository_cb, param, sizeof(t->repository_cb));
+	if (t->repository_cb.open == NULL)
+		t->repository_cb.open = open_fs_repository;
+	if (t->repository_cb.close == NULL)
+		t->repository_cb.close = close_fs_repository;
 
 	t->owner = owner;
 
