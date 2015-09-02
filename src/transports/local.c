@@ -336,29 +336,13 @@ static int local_push(
 	const git_remote_callbacks *cbs)
 {
 	transport_local *t = (transport_local *)transport;
-	git_repository *remote_repo = NULL;
 	push_spec *spec;
 	char *url = NULL;
-	const char *path;
-	git_buf buf = GIT_BUF_INIT, odb_path = GIT_BUF_INIT;
+	git_buf odb_path = GIT_BUF_INIT;
 	int error;
 	size_t j;
 
 	GIT_UNUSED(cbs);
-
-	/* 'push->remote->url' may be a url or path; convert to a path */
-	if ((error = git_path_from_url_or_path(&buf, push->remote->url)) < 0) {
-		git_buf_free(&buf);
-		return error;
-	}
-	path = git_buf_cstr(&buf);
-
-	error = git_repository_open(&remote_repo, path);
-
-	git_buf_free(&buf);
-
-	if (error < 0)
-		return error;
 
 	/* We don't currently support pushing locally to non-bare repos. Proper
 	   non-bare repo push support would require checking configs to see if
@@ -366,13 +350,13 @@ static int local_push(
 
 	   Note that this is only an issue when pushing to the current branch,
 	   but we forbid all pushes just in case */
-	if (!remote_repo->is_bare) {
+	if (!t->repo->is_bare) {
 		error = GIT_EBAREREPO;
 		giterr_set(GITERR_INVALID, "Local push doesn't (yet) support pushing to non-bare repos.");
 		goto on_error;
 	}
 
-	if ((error = git_buf_joinpath(&odb_path, git_repository_path(remote_repo), "objects/pack")) < 0)
+	if ((error = git_buf_joinpath(&odb_path, git_repository_path(t->repo), "objects/pack")) < 0)
 		goto on_error;
 
 	error = git_packbuilder_write(push->pb, odb_path.ptr, 0, transfer_to_push_transfer, (void *) cbs);
@@ -398,7 +382,7 @@ static int local_push(
 			goto on_error;
 		}
 
-		error = local_push_update_remote_ref(remote_repo, spec->refspec.src, spec->refspec.dst,
+		error = local_push_update_remote_ref(t->repo, spec->refspec.src, spec->refspec.dst,
 			&spec->loid, &spec->roid);
 
 		switch (error) {
@@ -446,7 +430,6 @@ static int local_push(
 	error = 0;
 
 on_error:
-	git_repository_free(remote_repo);
 	git__free(url);
 
 	return error;
