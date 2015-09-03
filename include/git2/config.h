@@ -171,6 +171,9 @@ GIT_EXTERN(int) git_config_new(git_config **out);
  * parsed; it's expected to be a native Git config file following
  * the default Git config syntax (see man git-config).
  *
+ * If the file does not exist, the file will still be added and it
+ * will be created the first time we write to it.
+ *
  * Note that the configuration object will free the file
  * automatically.
  *
@@ -202,8 +205,7 @@ GIT_EXTERN(int) git_config_add_file_ondisk(
  *
  * @param out The configuration instance to create
  * @param path Path to the on-disk file to open
- * @return 0 on success, GIT_ENOTFOUND when the file doesn't exist
- * or an error code
+ * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_config_open_ondisk(git_config **out, const char *path);
 
