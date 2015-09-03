@@ -224,7 +224,7 @@ static int get_name(const char *refname, void *payload)
 		return 0;
 
 	/* Accept only tags that match the pattern, if given */
-	if (data->opts->pattern && (!is_tag || p_fnmatch(data->opts->pattern,
+	if (data->opts->pattern && (!is_tag || git_fnmatch(data->opts->pattern,
 		refname + strlen(GIT_REFS_TAGS_DIR), 0)))
 				return 0;
 

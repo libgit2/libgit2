@@ -462,11 +462,11 @@ static int get_one_status(const char *path, unsigned int status, void *data)
 	sfi->count++;
 	sfi->status = status;
 
-	strcomp = (sfi->fnm_flags & FNM_CASEFOLD) ? git__strcasecmp : git__strcmp;
+	strcomp = (sfi->fnm_flags & GIT_FNM_CASEFOLD) ? git__strcasecmp : git__strcmp;
 
 	if (sfi->count > 1 ||
 		(strcomp(sfi->expected, path) != 0 &&
-		 p_fnmatch(sfi->expected, path, sfi->fnm_flags) != 0))
+		 git_fnmatch(sfi->expected, path, sfi->fnm_flags) != 0))
 	{
 		sfi->ambiguous = true;
 		return GIT_EAMBIGUOUS; /* giterr_set will be done by caller */
@@ -493,7 +493,7 @@ int git_status_file(
 	if ((sfi.expected = git__strdup(path)) == NULL)
 		return -1;
 	if (index->ignore_case)
-		sfi.fnm_flags = FNM_CASEFOLD;
+		sfi.fnm_flags = GIT_FNM_CASEFOLD;
 
 	opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	opts.flags = GIT_STATUS_OPT_INCLUDE_IGNORED |

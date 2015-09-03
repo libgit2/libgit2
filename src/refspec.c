@@ -185,7 +185,7 @@ int git_refspec_src_matches(const git_refspec *refspec, const char *refname)
 	if (refspec == NULL || refspec->src == NULL)
 		return false;
 
-	return (p_fnmatch(refspec->src, refname, 0) == 0);
+	return (git_fnmatch(refspec->src, refname, 0) == 0);
 }
 
 int git_refspec_dst_matches(const git_refspec *refspec, const char *refname)
@@ -193,7 +193,7 @@ int git_refspec_dst_matches(const git_refspec *refspec, const char *refname)
 	if (refspec == NULL || refspec->dst == NULL)
 		return false;
 
-	return (p_fnmatch(refspec->dst, refname, 0) == 0);
+	return (git_fnmatch(refspec->dst, refname, 0) == 0);
 }
 
 static int refspec_transform(

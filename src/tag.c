@@ -464,7 +464,7 @@ static int tag_list_cb(const char *tag_name, git_oid *oid, void *data)
 	GIT_UNUSED(oid);
 
 	if (!*filter->pattern ||
-		p_fnmatch(filter->pattern, tag_name + GIT_REFS_TAGS_DIR_LEN, 0) == 0)
+		git_fnmatch(filter->pattern, tag_name + GIT_REFS_TAGS_DIR_LEN, 0) == 0)
 	{
 		char *matched = git__strdup(tag_name + GIT_REFS_TAGS_DIR_LEN);
 		GITERR_CHECK_ALLOC(matched);

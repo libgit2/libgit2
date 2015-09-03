@@ -33,7 +33,12 @@ typedef struct {
 	int direction;
 	int flags;
 	git_atomic cancelled;
+
+	git_transport_local_repo_callbacks repository_cb;
+	void *callbacks_userdata;
+
 	git_repository *repo;
+
 	git_transport_message_cb progress_cb;
 	git_transport_message_cb error_cb;
 	void *message_cb_payload;
@@ -190,6 +195,34 @@ on_error:
 	return -1;
 }
 
+static int open_fs_repository(git_repository **out, void **user, const char *url)
+{
+	const char *path;
+	git_buf buf = GIT_BUF_INIT;
+	int error;
+
+	GIT_UNUSED(user);
+
+	/* 'url' may be a url or path; convert to a path */
+	if ((error = git_path_from_url_or_path(&buf, url)) < 0) {
+		git_buf_free(&buf);
+		return error;
+	}
+	path = git_buf_cstr(&buf);
+
+	error = git_repository_open(out, path);
+
+	git_buf_free(&buf);
+
+	return 0;
+}
+
+static void close_fs_repository(git_repository *repo, void *user)
+{
+	GIT_UNUSED(user);
+	git_repository_free(repo);
+}
+
 /*
  * Try to open the url as a git directory. The direction doesn't
  * matter in this case because we're calculating the heads ourselves.
@@ -201,17 +234,16 @@ static int local_connect(
 	void *cred_acquire_payload,
 	int direction, int flags)
 {
-	git_repository *repo;
 	int error;
 	transport_local *t = (transport_local *) transport;
-	const char *path;
-	git_buf buf = GIT_BUF_INIT;
 
 	GIT_UNUSED(cred_acquire_cb);
 	GIT_UNUSED(cred_acquire_payload);
 
 	if (t->connected)
 		return 0;
+
+	assert(t->repository_cb.open);
 
 	free_heads(&t->refs);
 
@@ -220,21 +252,9 @@ static int local_connect(
 	t->direction = direction;
 	t->flags = flags;
 
-	/* 'url' may be a url or path; convert to a path */
-	if ((error = git_path_from_url_or_path(&buf, url)) < 0) {
-		git_buf_free(&buf);
-		return error;
-	}
-	path = git_buf_cstr(&buf);
-
-	error = git_repository_open(&repo, path);
-
-	git_buf_free(&buf);
-
+	error = t->repository_cb.open(&t->repo, &t->callbacks_userdata, url);
 	if (error < 0)
 		return -1;
-
-	t->repo = repo;
 
 	if (store_refs(t) < 0)
 		return -1;
@@ -336,29 +356,13 @@ static int local_push(
 	const git_remote_callbacks *cbs)
 {
 	transport_local *t = (transport_local *)transport;
-	git_repository *remote_repo = NULL;
 	push_spec *spec;
 	char *url = NULL;
-	const char *path;
-	git_buf buf = GIT_BUF_INIT, odb_path = GIT_BUF_INIT;
+	git_buf odb_path = GIT_BUF_INIT;
 	int error;
 	size_t j;
 
 	GIT_UNUSED(cbs);
-
-	/* 'push->remote->url' may be a url or path; convert to a path */
-	if ((error = git_path_from_url_or_path(&buf, push->remote->url)) < 0) {
-		git_buf_free(&buf);
-		return error;
-	}
-	path = git_buf_cstr(&buf);
-
-	error = git_repository_open(&remote_repo, path);
-
-	git_buf_free(&buf);
-
-	if (error < 0)
-		return error;
 
 	/* We don't currently support pushing locally to non-bare repos. Proper
 	   non-bare repo push support would require checking configs to see if
@@ -366,13 +370,13 @@ static int local_push(
 
 	   Note that this is only an issue when pushing to the current branch,
 	   but we forbid all pushes just in case */
-	if (!remote_repo->is_bare) {
+	if (!t->repo->is_bare) {
 		error = GIT_EBAREREPO;
 		giterr_set(GITERR_INVALID, "Local push doesn't (yet) support pushing to non-bare repos.");
 		goto on_error;
 	}
 
-	if ((error = git_buf_joinpath(&odb_path, git_repository_path(remote_repo), "objects/pack")) < 0)
+	if ((error = git_buf_joinpath(&odb_path, git_repository_path(t->repo), "objects/pack")) < 0)
 		goto on_error;
 
 	error = git_packbuilder_write(push->pb, odb_path.ptr, 0, transfer_to_push_transfer, (void *) cbs);
@@ -398,7 +402,7 @@ static int local_push(
 			goto on_error;
 		}
 
-		error = local_push_update_remote_ref(remote_repo, spec->refspec.src, spec->refspec.dst,
+		error = local_push_update_remote_ref(t->repo, spec->refspec.src, spec->refspec.dst,
 			&spec->loid, &spec->roid);
 
 		switch (error) {
@@ -446,7 +450,6 @@ static int local_push(
 	error = 0;
 
 on_error:
-	git_repository_free(remote_repo);
 	git__free(url);
 
 	return error;
@@ -653,7 +656,8 @@ static int local_close(git_transport *transport)
 	t->connected = 0;
 
 	if (t->repo) {
-		git_repository_free(t->repo);
+		assert(t->repository_cb.close);
+		t->repository_cb.close(t->repo, t->callbacks_userdata);
 		t->repo = NULL;
 	}
 
@@ -709,6 +713,13 @@ int git_transport_local(git_transport **out, git_remote *owner, void *param)
 		git__free(t);
 		return error;
 	}
+
+	if (param != NULL)
+		memcpy(&t->repository_cb, param, sizeof(t->repository_cb));
+	if (t->repository_cb.open == NULL)
+		t->repository_cb.open = open_fs_repository;
+	if (t->repository_cb.close == NULL)
+		t->repository_cb.close = close_fs_repository;
 
 	t->owner = owner;
 

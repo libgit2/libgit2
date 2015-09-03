@@ -1,10 +1,10 @@
+#include "git2/fnmatch.h"
 #include "git2/ignore.h"
 #include "common.h"
 #include "ignore.h"
 #include "attrcache.h"
 #include "path.h"
 #include "config.h"
-#include "fnmatch.h"
 
 #define GIT_IGNORE_INTERNAL		"[internal]exclude"
 
@@ -91,7 +91,7 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 	/*
 	 * If we're dealing with a directory (which we know via the
 	 * strchr() check) we want to use 'dirname/<star>' as the
-	 * pattern so p_fnmatch() honours FNM_PATHNAME
+	 * pattern so git_fnmatch() honours FNM_PATHNAME
 	 */
 		git_buf_clear(&buf);
 		if (rule->containing_dir) {
@@ -105,13 +105,13 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 		if (error < 0)
 			goto out;
 
-		if ((error = p_fnmatch(git_buf_cstr(&buf), path, FNM_PATHNAME)) < 0) {
+		if ((error = git_fnmatch(git_buf_cstr(&buf), path, GIT_FNM_PATHNAME)) < 0) {
 			giterr_set(GITERR_INVALID, "error matching pattern");
 			goto out;
 		}
 
 		/* if we found a match, we want to keep this rule */
-		if (error != FNM_NOMATCH) {
+		if (error != GIT_FNM_NOMATCH) {
 			*out = 1;
 			error = 0;
 			goto out;
