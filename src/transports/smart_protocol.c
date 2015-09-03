@@ -957,7 +957,7 @@ int git_smart__push(git_transport *transport, git_push *push, const git_remote_c
 
 	packbuilder_payload.pb = push->pb;
 
-	if (cbs && cbs->transfer_progress) {
+	if (cbs && cbs->push_transfer_progress) {
 		packbuilder_payload.cb = cbs->push_transfer_progress;
 		packbuilder_payload.cb_payload = cbs->payload;
 	}
