@@ -70,6 +70,7 @@ typedef struct gitno_connection_data {
 	char *user;
 	char *pass;
 	bool use_ssl;
+	git_strarray *extra_headers;
 } gitno_connection_data;
 
 /*

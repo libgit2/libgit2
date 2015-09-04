@@ -54,7 +54,6 @@ typedef struct {
 	char *redirect_url;
 	const char *verb;
 	char *chunk_buffer;
-	git_strarray *extra_headers;
 	unsigned chunk_buffer_len;
 	unsigned sent_request : 1,
 		received_response : 1,
@@ -212,9 +211,9 @@ static int gen_request(
 	} else
 		git_buf_puts(buf, "Accept: */*\r\n");
 
-	if (s->extra_headers) {
-		for (i = 0; i < s->extra_headers->count; i++) {
-			git_buf_puts(buf, s->extra_headers->strings[i]);
+	if (t->connection_data.extra_headers) {
+		for (i = 0; i < t->connection_data.extra_headers->count; i++) {
+			git_buf_puts(buf, t->connection_data.extra_headers->strings[i]);
 			git_buf_puts(buf, "\r\n");
 		}
 	}
