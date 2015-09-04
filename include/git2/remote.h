@@ -230,6 +230,9 @@ GIT_EXTERN(size_t) git_remote_refspec_count(const git_remote *remote);
  */
 GIT_EXTERN(const git_refspec *)git_remote_get_refspec(const git_remote *remote, size_t n);
 
+GIT_EXTERN(int) git_remote_extra_http_headers(const git_remote *remote, git_strarray *extra_http_headers);
+GIT_EXTERN(int) git_remote_set_extra_http_headers(git_remote *remote, const git_strarray extra_http_headers);
+
 /**
  * Open a connection to a remote
  *

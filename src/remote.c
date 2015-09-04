@@ -1643,7 +1643,7 @@ void git_remote_free(git_remote *remote)
 	free_refspecs(&remote->passive_refspecs);
 	git_vector_free(&remote->passive_refspecs);
 
-	git__free(remote->extra_http_headers);
+	git_strarray_free(&remote->extra_http_headers);
 
 	git_push_free(remote->push);
 	git__free(remote->url);
@@ -2152,6 +2152,16 @@ int git_remote_get_push_refspecs(git_strarray *array, const git_remote *remote)
 size_t git_remote_refspec_count(const git_remote *remote)
 {
 	return remote->refspecs.length;
+}
+
+int git_remote_extra_http_headers(const git_remote *remote, git_strarray *extra_http_headers)
+{
+	return git_strarray_copy(extra_http_headers, &remote->extra_http_headers);
+}
+
+int git_remote_set_extra_http_headers(git_remote *remote, const git_strarray extra_http_headers)
+{
+	return git_strarray_copy(&remote->extra_http_headers, &extra_http_headers);
 }
 
 const git_refspec *git_remote_get_refspec(const git_remote *remote, size_t n)

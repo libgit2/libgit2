@@ -32,7 +32,7 @@ struct git_remote {
 	git_remote_autotag_option_t download_tags;
 	int prune_refs;
 	int passed_refspecs;
-	git_strarray *extra_http_headers;
+	git_strarray extra_http_headers;
 };
 
 const char* git_remote__urlfordirection(struct git_remote *remote, int direction);
