@@ -28,6 +28,29 @@
 GIT__USE_IDXMAP
 GIT__USE_IDXMAP_ICASE
 
+#define INSERT_IN_MAP_EX(idx, map, e, err) do {				\
+		if ((idx)->ignore_case)					\
+			git_idxmap_icase_insert((khash_t(idxicase) *) (map), (e), (e), (err)); \
+		else							\
+			git_idxmap_insert((map), (e), (e), (err));	\
+	} while (0)
+
+#define INSERT_IN_MAP(idx, e, err) INSERT_IN_MAP_EX(idx, (idx)->entries_map, e, err)
+
+#define LOOKUP_IN_MAP(p, idx, k) do {					\
+		if ((idx)->ignore_case)					\
+			(p) = git_idxmap_icase_lookup_index((khash_t(idxicase) *) index->entries_map, (k)); \
+		else							\
+			(p) = git_idxmap_lookup_index(index->entries_map, (k)); \
+	} while (0)
+
+#define DELETE_IN_MAP(idx, e) do {					\
+		if ((idx)->ignore_case)					\
+			git_idxmap_icase_delete((khash_t(idxicase) *) (idx)->entries_map, (e)); \
+		else							\
+			git_idxmap_delete((idx)->entries_map, (e));	\
+	} while (0)
+
 static int index_apply_to_wd_diff(git_index *index, int action, const git_strarray *paths,
 				  unsigned int flags,
 				  git_index_matched_path_cb cb, void *payload);
@@ -514,11 +537,7 @@ static int index_remove_entry(git_index *index, size_t pos)
 	if (entry != NULL)
 		git_tree_cache_invalidate_path(index->tree, entry->path);
 
-	if (index->ignore_case)
-		git_idxmap_icase_delete((khash_t(idxicase) *) index->entries_map, entry);
-	else
-		git_idxmap_delete(index->entries_map, entry);
-
+	DELETE_IN_MAP(index, entry);
 	error = git_vector_remove(&index->entries, pos);
 
 	if (!error) {
@@ -824,10 +843,7 @@ const git_index_entry *git_index_get_bypath(
 	key.path = path;
 	GIT_IDXENTRY_STAGE_SET(&key, stage);
 
-	if (index->ignore_case)
-		pos = git_idxmap_icase_lookup_index((khash_t(idxicase) *) index->entries_map, &key);
-	else
-		pos = git_idxmap_lookup_index(index->entries_map, &key);
+	LOOKUP_IN_MAP(pos, index, &key);
 
 	if (git_idxmap_valid_index(index->entries_map, pos))
 		return git_idxmap_value_at(index->entries_map, pos);
@@ -1161,10 +1177,7 @@ static int index_insert(
 		error = git_vector_insert_sorted(&index->entries, entry, index_no_dups);
 
 		if (error == 0) {
-			if (index->ignore_case)
-				git_idxmap_icase_insert((khash_t(idxicase) *) index->entries_map, entry, entry, error);			else
-				git_idxmap_insert(index->entries_map, entry, entry, error);
-
+			INSERT_IN_MAP(index, entry, error);
 		}
 	}
 
@@ -1400,10 +1413,8 @@ int git_index_remove(git_index *index, const char *path, int stage)
 
 	remove_key.path = path;
 	GIT_IDXENTRY_STAGE_SET(&remove_key, stage);
-	if (index->ignore_case)
-		git_idxmap_icase_delete((khash_t(idxicase) *) index->entries_map, &remove_key);
-	else
-		git_idxmap_delete(index->entries_map, &remove_key);
+
+	DELETE_IN_MAP(index, &remove_key);
 
 	if (index_find(&position, index, path, 0, stage, false) < 0) {
 		giterr_set(
@@ -2236,10 +2247,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 			goto done;
 		}
 
-		if (index->ignore_case)
-			git_idxmap_icase_insert((khash_t(idxicase) *) index->entries_map, entry, entry, error);
-		else
-			git_idxmap_insert(index->entries_map, entry, entry, error);
+		INSERT_IN_MAP(index, entry, error);
 
 		if (error < 0) {
 			index_entry_free(entry);
@@ -2690,10 +2698,7 @@ int git_index_read_tree(git_index *index, const git_tree *tree)
 		kh_resize(idx, entries_map, entries.length);
 
 	git_vector_foreach(&entries, i, e) {
-		if (index->ignore_case)
-			git_idxmap_icase_insert((git_idxmap_icase *) entries_map, e, e, error);
-		else
-			git_idxmap_insert(entries_map, e, e, error);
+		INSERT_IN_MAP_EX(index, entries_map, e, error);
 
 		if (error < 0) {
 			giterr_set(GITERR_INDEX, "failed to insert entry into map");
