@@ -974,6 +974,7 @@ static int http_action(
 	if ((!t->connection_data.host || !t->connection_data.port || !t->connection_data.path) &&
 		 (ret = gitno_connection_data_from_url(&t->connection_data, url, NULL)) < 0)
 		return ret;
+	t->connection_data.extra_headers = t->owner->owner->extra_http_headers;
 
 	if ((ret = http_connect(t)) < 0)
 		return ret;

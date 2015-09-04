@@ -1643,6 +1643,8 @@ void git_remote_free(git_remote *remote)
 	free_refspecs(&remote->passive_refspecs);
 	git_vector_free(&remote->passive_refspecs);
 
+	git__free(remote->extra_http_headers);
+
 	git_push_free(remote->push);
 	git__free(remote->url);
 	git__free(remote->pushurl);
