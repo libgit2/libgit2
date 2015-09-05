@@ -7,6 +7,9 @@ v0.23 + 1
   example `filter=*`.  Consumers should examine the attributes parameter
   of the `check` function for details.
 
+* Symlinks are now followed when locking a file, which can be
+  necessary when multiple worktrees share a base repository.
+
 ### API additions
 
 * `git_config_lock()` has been added, which allow for

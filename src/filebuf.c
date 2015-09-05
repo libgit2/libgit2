@@ -191,6 +191,81 @@ static int write_deflate(git_filebuf *file, void *source, size_t len)
 	return 0;
 }
 
+#define MAX_SYMLINK_DEPTH 5
+
+static int resolve_symlink(git_buf *out, const char *path)
+{
+	int i, error, root;
+	ssize_t ret;
+	struct stat st;
+	git_buf curpath = GIT_BUF_INIT, target = GIT_BUF_INIT;
+
+	if ((error = git_buf_grow(&target, GIT_PATH_MAX + 1)) < 0 ||
+	    (error = git_buf_puts(&curpath, path)) < 0)
+		return error;
+
+	for (i = 0; i < MAX_SYMLINK_DEPTH; i++) {
+		error = p_lstat(curpath.ptr, &st);
+		if (error < 0 && errno == ENOENT) {
+			error = git_buf_puts(out, curpath.ptr);
+			goto cleanup;
+		}
+
+		if (error < 0) {
+			giterr_set(GITERR_OS, "failed to stat '%s'", curpath.ptr);
+			error = -1;
+			goto cleanup;
+		}
+
+		if (!S_ISLNK(st.st_mode)) {
+			error = git_buf_puts(out, curpath.ptr);
+			goto cleanup;
+		}
+
+		ret = p_readlink(curpath.ptr, target.ptr, GIT_PATH_MAX);
+		if (ret < 0) {
+			giterr_set(GITERR_OS, "failed to read symlink '%s'", curpath.ptr);
+			error = -1;
+			goto cleanup;
+		}
+
+		if (ret == GIT_PATH_MAX) {
+			giterr_set(GITERR_INVALID, "symlink target too long");
+			error = -1;
+			goto cleanup;
+		}
+
+		/* readlink(2) won't NUL-terminate for us */
+		target.ptr[ret] = '\0';
+		target.size = ret;
+
+		root = git_path_root(target.ptr);
+		if (root >= 0) {
+			if ((error = git_buf_puts(&curpath, target.ptr)) < 0)
+				goto cleanup;
+		} else {
+			git_buf dir = GIT_BUF_INIT;
+
+			if ((error = git_path_dirname_r(&dir, curpath.ptr)) < 0)
+				goto cleanup;
+
+			git_buf_swap(&curpath, &dir);
+			git_buf_free(&dir);
+
+			if ((error = git_path_apply_relative(&curpath, target.ptr)) < 0)
+				goto cleanup;
+		}
+	}
+
+	giterr_set(GITERR_INVALID, "maximum symlink depth reached");
+	error = -1;
+
+cleanup:
+	git_buf_free(&curpath);
+	git_buf_free(&target);
+	return error;
+}
+
 int git_filebuf_open(git_filebuf *file, const char *path, int flags, mode_t mode)
 {
 	int compression, error = -1;
@@ -265,11 +340,14 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags, mode_t mode
 		file->path_lock = git_buf_detach(&tmp_path);
 		GITERR_CHECK_ALLOC(file->path_lock);
 	} else {
-		path_len = strlen(path);
+		git_buf resolved_path = GIT_BUF_INIT;
+
+		if ((error = resolve_symlink(&resolved_path, path)) < 0)
+			goto cleanup;
 
 		/* Save the original path of the file */
-		file->path_original = git__strdup(path);
-		GITERR_CHECK_ALLOC(file->path_original);
+		path_len = resolved_path.size;
+		file->path_original = git_buf_detach(&resolved_path);
 
 		/* create the locking path by appending ".lock" to the original */
 		GITERR_CHECK_ALLOC_ADD(&alloc_len, path_len, GIT_FILELOCK_EXTLENGTH);
