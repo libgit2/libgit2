@@ -977,16 +977,27 @@ static int index_entry_reuc_init(git_index_reuc_entry **reuc_out,
 	return 0;
 }
 
-static void index_entry_cpy(git_index_entry *tgt, const git_index_entry *src)
+static void index_entry_cpy(
+	git_index_entry *tgt,
+	git_index *index,
+	const git_index_entry *src,
+	bool update_path)
 {
 	const char *tgt_path = tgt->path;
 	memcpy(tgt, src, sizeof(*tgt));
-	tgt->path = tgt_path; /* reset to existing path data */
+
+	/* keep the existing path buffer, but update the path to the one
+	 * given by the caller, if we trust it.
+	 */
+	tgt->path = tgt_path;
+
+	if (index->ignore_case && update_path)
+		memcpy((char *)tgt->path, src->path, strlen(tgt->path));
 }
 
 static int index_entry_dup(
 	git_index_entry **out,
-	git_repository *repo,
+	git_index *index,
 	const git_index_entry *src)
 {
 	git_index_entry *entry;
@@ -996,10 +1007,10 @@ static int index_entry_dup(
 		return 0;
 	}
 
-	if (index_entry_create(&entry, repo, src->path) < 0)
+	if (index_entry_create(&entry, INDEX_OWNER(index), src->path) < 0)
 		return -1;
 
-	index_entry_cpy(entry, src);
+	index_entry_cpy(entry, index, src, false);
 	*out = entry;
 	return 0;
 }
@@ -1102,6 +1113,74 @@ static int check_file_directory_collision(git_index *index,
 	return 0;
 }
 
+static int canonicalize_directory_path(
+	git_index *index, git_index_entry *entry)
+{
+	const git_index_entry *match, *best = NULL;
+	char *search, *sep;
+	size_t pos, search_len, best_len;
+
+	if (!index->ignore_case)
+		return 0;
+
+	/* item already exists in the index, simply re-use the existing case */
+	if ((match = git_index_get_bypath(index, entry->path, 0)) != NULL) {
+		memcpy((char *)entry->path, match->path, strlen(entry->path));
+		return 0;
+	}
+
+	/* nothing to do */
+	if (strchr(entry->path, '/') == NULL)
+		return 0;
+
+	if ((search = git__strdup(entry->path)) == NULL)
+		return -1;
+
+	/* starting at the parent directory and descending to the root, find the
+	 * common parent directory.
+	 */
+	while (!best && (sep = strrchr(search, '/'))) {
+		sep[1] = '\0';
+
+		search_len = strlen(search);
+
+		git_vector_bsearch2(
+			&pos, &index->entries, index->entries_search_path, search);
+
+		while ((match = git_vector_get(&index->entries, pos))) {
+			if (GIT_IDXENTRY_STAGE(match) != 0) {
+				/* conflicts do not contribute to canonical paths */
+			} else if (memcmp(search, match->path, search_len) == 0) {
+				/* prefer an exact match to the input filename */
+				best = match;
+				best_len = search_len;
+				break;
+			} else if (strncasecmp(search, match->path, search_len) == 0) {
+				/* continue walking, there may be a path with an exact
+				 * (case sensitive) match later in the index, but use this
+				 * as the best match until that happens.
+				 */
+				if (!best) {
+					best = match;
+					best_len = search_len;
+				}
+			} else {
+				break;
+			}
+
+			pos++;
+		}
+
+		sep[0] = '\0';
+	}
+
+	if (best)
+		memcpy((char *)entry->path, best->path, best_len);
+
+	git__free(search);
+	return 0;
+}
+
 static int index_no_dups(void **old, void *new)
 {
 	const git_index_entry *entry = new;
@@ -1115,10 +1194,17 @@ static int index_no_dups(void **old, void *new)
  * it, then it will return an error **and also free the entry**.  When
  * it replaces an existing entry, it will update the entry_ptr with the
  * actual entry in the index (and free the passed in one).
+ * trust_path is whether we use the given path, or whether (on case
+ * insensitive systems only) we try to canonicalize the given path to
+ * be within an existing directory.
  * trust_mode is whether we trust the mode in entry_ptr.
  */
 static int index_insert(
-	git_index *index, git_index_entry **entry_ptr, int replace, bool trust_mode)
+	git_index *index,
+	git_index_entry **entry_ptr,
+	int replace,
+	bool trust_path,
+	bool trust_mode)
 {
 	int error = 0;
 	size_t path_length, position;
@@ -1156,8 +1242,14 @@ static int index_insert(
 			entry->mode = index_merge_mode(index, existing, entry->mode);
 	}
 
+	/* canonicalize the directory name */
+	if (!trust_path)
+		error = canonicalize_directory_path(index, entry);
+
 	/* look for tree / blob name collisions, removing conflicts if requested */
-	error = check_file_directory_collision(index, entry, position, replace);
+	if (!error)
+		error = check_file_directory_collision(index, entry, position, replace);
+
 	if (error < 0)
 		/* skip changes */;
 
@@ -1166,7 +1258,7 @@ static int index_insert(
 	 */
 	else if (existing) {
 		if (replace)
-			index_entry_cpy(existing, entry);
+			index_entry_cpy(existing, index, entry, trust_path);
 		index_entry_free(entry);
 		*entry_ptr = entry = existing;
 	}
@@ -1246,7 +1338,7 @@ int git_index_add_frombuffer(
 		return -1;
 	}
 
-	if (index_entry_dup(&entry, INDEX_OWNER(index), source_entry) < 0)
+	if (index_entry_dup(&entry, index, source_entry) < 0)
 		return -1;
 
 	error = git_blob_create_frombuffer(&id, INDEX_OWNER(index), buffer, len);
@@ -1258,7 +1350,7 @@ int git_index_add_frombuffer(
 	git_oid_cpy(&entry->id, &id);
 	entry->file_size = len;
 
-	if ((error = index_insert(index, &entry, 1, true)) < 0)
+	if ((error = index_insert(index, &entry, 1, true, true)) < 0)
 		return error;
 
 	/* Adding implies conflict was resolved, move conflict entries to REUC */
@@ -1317,7 +1409,7 @@ int git_index_add_bypath(git_index *index, const char *path)
 	assert(index && path);
 
 	if ((ret = index_entry_init(&entry, index, path)) == 0)
-		ret = index_insert(index, &entry, 1, false);
+		ret = index_insert(index, &entry, 1, false, false);
 
 	/* If we were given a directory, let's see if it's a submodule */
 	if (ret < 0 && ret != GIT_EDIRECTORY)
@@ -1343,7 +1435,7 @@ int git_index_add_bypath(git_index *index, const char *path)
 			if ((ret = add_repo_as_submodule(&entry, index, path)) < 0)
 				return ret;
 
-			if ((ret = index_insert(index, &entry, 1, false)) < 0)
+			if ((ret = index_insert(index, &entry, 1, false, false)) < 0)
 				return ret;
 		} else if (ret < 0) {
 			return ret;
@@ -1393,8 +1485,8 @@ int git_index_add(git_index *index, const git_index_entry *source_entry)
 		return -1;
 	}
 
-	if ((ret = index_entry_dup(&entry, INDEX_OWNER(index), source_entry)) < 0 ||
-		(ret = index_insert(index, &entry, 1, true)) < 0)
+	if ((ret = index_entry_dup(&entry, index, source_entry)) < 0 ||
+		(ret = index_insert(index, &entry, 1, true, true)) < 0)
 		return ret;
 
 	git_tree_cache_invalidate_path(index->tree, entry->path);
@@ -1543,9 +1635,9 @@ int git_index_conflict_add(git_index *index,
 
 	assert (index);
 
-	if ((ret = index_entry_dup(&entries[0], INDEX_OWNER(index), ancestor_entry)) < 0 ||
-		(ret = index_entry_dup(&entries[1], INDEX_OWNER(index), our_entry)) < 0 ||
-		(ret = index_entry_dup(&entries[2], INDEX_OWNER(index), their_entry)) < 0)
+	if ((ret = index_entry_dup(&entries[0], index, ancestor_entry)) < 0 ||
+		(ret = index_entry_dup(&entries[1], index, our_entry)) < 0 ||
+		(ret = index_entry_dup(&entries[2], index, their_entry)) < 0)
 		goto on_error;
 
 	/* Validate entries */
@@ -1579,7 +1671,7 @@ int git_index_conflict_add(git_index *index,
 		/* Make sure stage is correct */
 		GIT_IDXENTRY_STAGE_SET(entries[i], i + 1);
 
-		if ((ret = index_insert(index, &entries[i], 0, true)) < 0)
+		if ((ret = index_insert(index, &entries[i], 0, true, true)) < 0)
 			goto on_error;
 
 		entries[i] = NULL; /* don't free if later entry fails */
@@ -2153,7 +2245,7 @@ static size_t read_entry(
 
 	entry.path = (char *)path_ptr;
 
-	if (index_entry_dup(out, INDEX_OWNER(index), &entry) < 0)
+	if (index_entry_dup(out, index, &entry) < 0)
 		return 0;
 
 	return entry_size;
@@ -2670,7 +2762,7 @@ static int read_tree_cb(
 		entry->mode == old_entry->mode &&
 		git_oid_equal(&entry->id, &old_entry->id))
 	{
-		index_entry_cpy(entry, old_entry);
+		index_entry_cpy(entry, data->index, old_entry, false);
 		entry->flags_extended = 0;
 	}
 
@@ -2802,7 +2894,7 @@ int git_index_read_index(
 		if (diff < 0) {
 			git_vector_insert(&remove_entries, (git_index_entry *)old_entry);
 		} else if (diff > 0) {
-			if ((error = index_entry_dup(&entry, git_index_owner(index), new_entry)) < 0)
+			if ((error = index_entry_dup(&entry, index, new_entry)) < 0)
 				goto done;
 
 			git_vector_insert(&new_entries, entry);
@@ -2813,7 +2905,7 @@ int git_index_read_index(
 			if (git_oid_equal(&old_entry->id, &new_entry->id)) {
 				git_vector_insert(&new_entries, (git_index_entry *)old_entry);
 			} else {
-				if ((error = index_entry_dup(&entry, git_index_owner(index), new_entry)) < 0)
+				if ((error = index_entry_dup(&entry, index, new_entry)) < 0)
 					goto done;
 
 				git_vector_insert(&new_entries, entry);

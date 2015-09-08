@@ -31,6 +31,11 @@ v0.23 + 1
   with which to implement the transactional/atomic semantics for the
   configuration backend.
 
+* `git_index_add` will now use the case as provided by the caller on
+  case insensitive systems.  Previous versions would keep the case as
+  it existed in the index.  This does not affect the higher-level
+  `git_index_add_bypath` or `git_index_add_frombuffer` functions.
+
 v0.23
 ------
 
