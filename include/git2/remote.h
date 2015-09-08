@@ -585,6 +585,11 @@ typedef struct {
 	 * Callbacks to use for this push operation
 	 */
 	git_remote_callbacks callbacks;
+
+	/**
+	 * Extra headers for this push operation
+	 */
+	git_strarray custom_headers;
 } git_push_options;
 
 #define GIT_PUSH_OPTIONS_VERSION 1
