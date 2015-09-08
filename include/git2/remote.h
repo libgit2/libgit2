@@ -241,9 +241,10 @@ GIT_EXTERN(const git_refspec *)git_remote_get_refspec(const git_remote *remote, 
  * @param direction GIT_DIRECTION_FETCH if you want to fetch or
  * GIT_DIRECTION_PUSH if you want to push
  * @param callbacks the callbacks to use for this connection
+ * @param custom_headers extra HTTP headers to use in this connection
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_remote_connect(git_remote *remote, git_direction direction, const git_remote_callbacks *callbacks);
+GIT_EXTERN(int) git_remote_connect(git_remote *remote, git_direction direction, const git_remote_callbacks *callbacks, const git_strarray *custom_headers);
 
 /**
  * Get the remote repository's reference advertisement list

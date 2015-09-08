@@ -687,7 +687,15 @@ int set_transport_callbacks(git_transport *t, const git_remote_callbacks *cbs)
 				cbs->certificate_check, cbs->payload);
 }
 
-int git_remote_connect(git_remote *remote, git_direction direction, const git_remote_callbacks *callbacks)
+int set_transport_custom_headers(git_transport *t, const git_strarray *custom_headers)
+{
+	if (!t->set_custom_headers || !custom_headers)
+		return 0;
+
+	return t->set_custom_headers(t, custom_headers);
+}
+
+int git_remote_connect(git_remote *remote, git_direction direction, const git_remote_callbacks *callbacks, const git_strarray *custom_headers)
 {
 	git_transport *t;
 	const char *url;
@@ -725,6 +733,9 @@ int git_remote_connect(git_remote *remote, git_direction direction, const git_re
 	 * transport registrations which map URI schemes to transport factories */
 	if (!t && (error = git_transport_new(&t, remote, url)) < 0)
 		return error;
+
+	if ((error = set_transport_custom_headers(t, custom_headers)) != 0)
+		goto on_error;
 
 	if ((error = set_transport_callbacks(t, callbacks)) < 0 ||
 	    (error = t->connect(t, url, credentials, payload, direction, flags)) != 0)
@@ -893,7 +904,7 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs, const 
 	}
 
 	if (!git_remote_connected(remote) &&
-	    (error = git_remote_connect(remote, GIT_DIRECTION_FETCH, cbs)) < 0)
+	    (error = git_remote_connect(remote, GIT_DIRECTION_FETCH, cbs, NULL)) < 0)
 		goto on_error;
 
 	if (ls_to_vector(&refs, remote) < 0)
@@ -966,7 +977,7 @@ int git_remote_fetch(
 	}
 
 	/* Connect and download everything */
-	if ((error = git_remote_connect(remote, GIT_DIRECTION_FETCH, cbs)) != 0)
+	if ((error = git_remote_connect(remote, GIT_DIRECTION_FETCH, cbs, NULL)) != 0)
 		return error;
 
 	error = git_remote_download(remote, refspecs, opts);
@@ -2384,7 +2395,7 @@ int git_remote_upload(git_remote *remote, const git_strarray *refspecs, const gi
 		cbs = &opts->callbacks;
 
 	if (!git_remote_connected(remote) &&
-	    (error = git_remote_connect(remote, GIT_DIRECTION_PUSH, cbs)) < 0)
+	    (error = git_remote_connect(remote, GIT_DIRECTION_PUSH, cbs, &opts->custom_headers)) < 0)
 		goto cleanup;
 
 	free_refspecs(&remote->active_refspecs);
@@ -2441,7 +2452,7 @@ int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_
 
 	assert(remote && refspecs);
 
-	if ((error = git_remote_connect(remote, GIT_DIRECTION_PUSH, cbs)) < 0)
+	if ((error = git_remote_connect(remote, GIT_DIRECTION_PUSH, cbs, &opts->custom_headers)) < 0)
 		return error;
 
 	if ((error = git_remote_upload(remote, refspecs, opts)) < 0)
