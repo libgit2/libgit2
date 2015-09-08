@@ -211,10 +211,9 @@ static int gen_request(
 	} else
 		git_buf_puts(buf, "Accept: */*\r\n");
 
-	if (t->connection_data.extra_headers) {
-		for (i = 0; i < t->connection_data.extra_headers->count; i++) {
-			git_buf_puts(buf, t->connection_data.extra_headers->strings[i]);
-			git_buf_puts(buf, "\r\n");
+	if (t->owner->custom_headers) {
+		for (i = 0; i < t->owner->custom_headers->count; i++) {
+			git_buf_printf(buf, "%s\r\n", t->owner->custom_headers->strings[i]);
 		}
 	}
 

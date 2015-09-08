@@ -66,6 +66,17 @@ static int git_smart__set_callbacks(
 	return 0;
 }
 
+static int git_smart__set_custom_headers(
+	git_transport *transport,
+	const git_strarray *custom_headers)
+{
+	transport_smart *t = (transport_smart *)transport;
+
+	t->custom_headers = custom_headers;
+
+	return 0;
+}
+
 int git_smart__update_heads(transport_smart *t, git_vector *symrefs)
 {
 	size_t i;
@@ -399,6 +410,7 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 
 	t->parent.version = GIT_TRANSPORT_VERSION;
 	t->parent.set_callbacks = git_smart__set_callbacks;
+	t->parent.set_custom_headers = git_smart__set_custom_headers;
 	t->parent.connect = git_smart__connect;
 	t->parent.close = git_smart__close;
 	t->parent.free = git_smart__free;
