@@ -204,3 +204,29 @@ void test_core_filebuf__symlink_depth(void)
 
 	cl_git_pass(git_futils_rmdir_r(dir, NULL, GIT_RMDIR_REMOVE_FILES));
 }
+
+void test_core_filebuf__hidden_file(void)
+{
+#ifndef GIT_WIN32
+	cl_skip();
+#else
+	git_filebuf file = GIT_FILEBUF_INIT;
+	char *dir = "hidden", *test = "hidden/test";
+	bool hidden;
+
+	cl_git_pass(p_mkdir(dir, 0666));
+	cl_git_mkfile(test, "dummy content");
+
+	cl_git_pass(git_win32__set_hidden(test, true));
+	cl_git_pass(git_win32__hidden(&hidden, test));
+	cl_assert(hidden);
+
+	cl_git_pass(git_filebuf_open(&file, test, 0, 0666));
+
+	cl_git_pass(git_filebuf_printf(&file, "%s\n", "libgit2 rocks"));
+
+	cl_git_pass(git_filebuf_commit(&file));
+
+	git_filebuf_cleanup(&file);
+#endif
+}
