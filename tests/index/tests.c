@@ -155,6 +155,27 @@ void test_index_tests__find_in_empty(void)
    git_index_free(index);
 }
 
+void test_index_tests__find_prefix(void)
+{
+   git_index *index;
+   const git_index_entry *entry;
+   size_t pos;
+
+   cl_git_pass(git_index_open(&index, TEST_INDEX_PATH));
+
+   cl_git_pass(git_index_find_prefix(&pos, index, "src"));
+   entry = git_index_get_byindex(index, pos);
+   cl_assert(git__strcmp(entry->path, "src/block-sha1/sha1.c") == 0);
+
+   cl_git_pass(git_index_find_prefix(&pos, index, "src/co"));
+   entry = git_index_get_byindex(index, pos);
+   cl_assert(git__strcmp(entry->path, "src/commit.c") == 0);
+
+   cl_assert(GIT_ENOTFOUND == git_index_find_prefix(NULL, index, "blah"));
+
+   git_index_free(index);
+}
+
 void test_index_tests__write(void)
 {
    git_index *index;
