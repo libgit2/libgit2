@@ -277,6 +277,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	unsigned long disable_redirects = WINHTTP_DISABLE_REDIRECTS;
 	int default_timeout = TIMEOUT_INFINITE;
 	int default_connect_timeout = DEFAULT_CONNECT_TIMEOUT;
+	int i;
 
 	/* Prepare URL */
 	git_buf_printf(&buf, "%s%s", t->connection_data.path, s->service_url);
