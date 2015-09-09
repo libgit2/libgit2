@@ -10,7 +10,7 @@
 #include "fnmatch.h"
 
 
-#define GIT2_STORAGE_ENGINE "InnoDB"
+#define GIT2_STORAGE_ENGINE "XtraDB"
 #define MAX_QUERY_LEN 1024 /* without the values */
 
 
