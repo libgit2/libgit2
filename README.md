@@ -1,3 +1,33 @@
+libgit2-mariadb - Libgit2 with MariaDB / Mysql support
+======================================================
+
+
+How to compile
+--------------
+
+```
+$ sudo apt-get install libmysqlclient-dev
+$ cmake -DUSE_MARIADB=on .
+$ make -j4
+$ sudo make install
+```
+
+
+How to use it
+-------------
+
+1) ODB and Refdb backends:
+
+See https://github.com/jflesch/pygit2/blob/66b72c5b0f7012448de64c326d7902eac7f3c5c1/src/repository.c#L379
+for an example
+
+2) Transport backend:
+
+URL start with "mariadb://" or "mysql://" (as of now, both are equivalent).
+See https://github.com/jflesch/pygit2/blob/66b72c5b0f7012448de64c326d7902eac7f3c5c1/scripts/git-mariadb.py#L226
+for an example
+
+
 libgit2 - the Git linkable library
 ==================================
 
