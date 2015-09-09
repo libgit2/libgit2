@@ -510,8 +510,10 @@ static int local_mariadb_connect(
 
 	t->db = mariadb_connect(db_host, db_port, db_user, db_passwd,
 		db_unix_socket, 0 /* flags */, db_name);
-	if (t->db == NULL)
+	if (t->db == NULL) {
+		abort();
 		goto error;
+	}
 
 	repo = make_mariadb_repo(t->db, table_prefix, repository_id,
 		/* partition numbers shouldn't matter because the repository (and
@@ -519,6 +521,7 @@ static int local_mariadb_connect(
 		2, 2);
 	if (repo == NULL)
 		goto error;
+	t->repo = repo;
 
 	if (store_refs(t) < 0)
 		goto error;
@@ -529,8 +532,6 @@ static int local_mariadb_connect(
 	free(db_unix_socket);
 	free(db_name);
 	free(table_prefix);
-
-	t->repo = repo;
 
 	t->connected = 1;
 	return 0;
