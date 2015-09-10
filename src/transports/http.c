@@ -213,7 +213,8 @@ static int gen_request(
 
 	if (t->owner->custom_headers) {
 		for (i = 0; i < t->owner->custom_headers->count; i++) {
-			git_buf_printf(buf, "%s\r\n", t->owner->custom_headers->strings[i]);
+			if (t->owner->custom_headers->strings[i])
+				git_buf_printf(buf, "%s\r\n", t->owner->custom_headers->strings[i]);
 		}
 	}
 

@@ -412,17 +412,19 @@ static int winhttp_stream_connect(winhttp_stream *s)
 
 	if (t->owner->custom_headers) {
 		for (i = 0; i < t->owner->custom_headers->count; i++) {
-			git_buf_clear(&buf);
-			git_buf_puts(&buf, t->owner->custom_headers->strings[i]);
-			if (git__utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_buf_cstr(&buf)) < 0) {
-				giterr_set(GITERR_OS, "Failed to convert custom header to wide characters");
-				goto on_error;
-			}
+			if (t->owner->custom_headers->strings[i]) {
+				git_buf_clear(&buf);
+				git_buf_puts(&buf, t->owner->custom_headers->strings[i]);
+				if (git__utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_buf_cstr(&buf)) < 0) {
+					giterr_set(GITERR_OS, "Failed to convert custom header to wide characters");
+					goto on_error;
+				}
 
-			if (!WinHttpAddRequestHeaders(s->request, ct, (ULONG)-1L,
-				WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE)) {
-				giterr_set(GITERR_OS, "Failed to add a header to the request");
-				goto on_error;
+				if (!WinHttpAddRequestHeaders(s->request, ct, (ULONG)-1L,
+					WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE)) {
+					giterr_set(GITERR_OS, "Failed to add a header to the request");
+					goto on_error;
+				}
 			}
 		}
 	}
