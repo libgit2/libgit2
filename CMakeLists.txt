@@ -99,6 +99,23 @@ SET(BIN_INSTALL_DIR bin CACHE PATH "Where to install binaries to.")
 SET(LIB_INSTALL_DIR lib CACHE PATH "Where to install libraries to.")
 SET(INCLUDE_INSTALL_DIR include CACHE PATH "Where to install headers to.")
 
+# Set a couple variables to be substituted inside the .pc file.
+# We can't just use LIB_INSTALL_DIR in the .pc file, as passing them as absolue
+# or relative paths is both valid and supported by cmake.
+SET (PKGCONFIG_PREFIX ${CMAKE_INSTALL_PREFIX})
+
+IF(IS_ABSOLUTE ${LIB_INSTALL_DIR})
+  SET (PKGCONFIG_LIBDIR ${LIB_INSTALL_DIR})
+ELSE(IS_ABSOLUTE ${LIB_INSTALL_DIR})
+  SET (PKGCONFIG_LIBDIR "\${prefix}/${LIB_INSTALL_DIR}")
+ENDIF (IS_ABSOLUTE ${LIB_INSTALL_DIR})
+
+IF(IS_ABSOLUTE ${INCLUDE_INSTALL_DIR})
+  SET (PKGCONFIG_INCLUDEDIR ${INCLUDE_INSTALL_DIR})
+ELSE(IS_ABSOLUTE ${INCLUDE_INSTALL_DIR})
+  SET (PKGCONFIG_INCLUDEDIR "\${prefix}/${INCLUDE_INSTALL_DIR}")
+ENDIF(IS_ABSOLUTE ${INCLUDE_INSTALL_DIR})
+
 FUNCTION(TARGET_OS_LIBRARIES target)
 	IF(WIN32)
 		TARGET_LINK_LIBRARIES(${target} ws2_32)
