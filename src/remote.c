@@ -2392,14 +2392,17 @@ int git_remote_upload(git_remote *remote, const git_strarray *refspecs, const gi
 	git_push *push;
 	git_refspec *spec;
 	const git_remote_callbacks *cbs = NULL;
+	const git_strarray *custom_headers = NULL;
 
 	assert(remote);
 
-	if (opts)
+	if (opts) {
 		cbs = &opts->callbacks;
+		custom_headers = &opts->custom_headers;
+	}
 
 	if (!git_remote_connected(remote) &&
-	    (error = git_remote_connect(remote, GIT_DIRECTION_PUSH, cbs, &opts->custom_headers)) < 0)
+	    (error = git_remote_connect(remote, GIT_DIRECTION_PUSH, cbs, custom_headers)) < 0)
 		goto cleanup;
 
 	free_refspecs(&remote->active_refspecs);
@@ -2448,15 +2451,17 @@ int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_
 {
 	int error;
 	const git_remote_callbacks *cbs = NULL;
+	const git_strarray *custom_headers = NULL;
 
 	if (opts) {
 		GITERR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
 		cbs = &opts->callbacks;
+		custom_headers = &opts->custom_headers;
 	}
 
 	assert(remote && refspecs);
 
-	if ((error = git_remote_connect(remote, GIT_DIRECTION_PUSH, cbs, &opts->custom_headers)) < 0)
+	if ((error = git_remote_connect(remote, GIT_DIRECTION_PUSH, cbs, custom_headers)) < 0)
 		return error;
 
 	if ((error = git_remote_upload(remote, refspecs, opts)) < 0)
