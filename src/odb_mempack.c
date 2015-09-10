@@ -154,6 +154,9 @@ void git_mempack_reset(git_odb_backend *_backend)
 	});
 
 	git_array_clear(db->commits);
+
+	git_oidmap_free(db->objects);
+	db->objects = git_oidmap_alloc();
 }
 
 static void impl__free(git_odb_backend *_backend)
