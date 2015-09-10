@@ -547,6 +547,11 @@ typedef struct {
 	 * The default is to auto-follow tags.
 	 */
 	git_remote_autotag_option_t download_tags;
+
+	/**
+	 * Extra headers for this fetch operation
+	 */
+	git_strarray custom_headers;
 } git_fetch_options;
 
 #define GIT_FETCH_OPTIONS_VERSION 1

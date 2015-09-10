@@ -895,16 +895,18 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs, const 
 	size_t i;
 	git_vector *to_active, specs = GIT_VECTOR_INIT, refs = GIT_VECTOR_INIT;
 	const git_remote_callbacks *cbs = NULL;
+	const git_strarray *custom_headers = NULL;
 
 	assert(remote);
 
 	if (opts) {
 		GITERR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
 		cbs = &opts->callbacks;
+		custom_headers = &opts->custom_headers;
 	}
 
 	if (!git_remote_connected(remote) &&
-	    (error = git_remote_connect(remote, GIT_DIRECTION_FETCH, cbs, NULL)) < 0)
+	    (error = git_remote_connect(remote, GIT_DIRECTION_FETCH, cbs, custom_headers)) < 0)
 		goto on_error;
 
 	if (ls_to_vector(&refs, remote) < 0)
@@ -968,16 +970,18 @@ int git_remote_fetch(
 	bool prune = false;
 	git_buf reflog_msg_buf = GIT_BUF_INIT;
 	const git_remote_callbacks *cbs = NULL;
+	const git_strarray *custom_headers = NULL;
 
 	if (opts) {
 		GITERR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
 		cbs = &opts->callbacks;
+		custom_headers = &opts->custom_headers;
 		update_fetchhead = opts->update_fetchhead;
 		tagopt = opts->download_tags;
 	}
 
 	/* Connect and download everything */
-	if ((error = git_remote_connect(remote, GIT_DIRECTION_FETCH, cbs, NULL)) != 0)
+	if ((error = git_remote_connect(remote, GIT_DIRECTION_FETCH, cbs, custom_headers)) != 0)
 		return error;
 
 	error = git_remote_download(remote, refspecs, opts);
