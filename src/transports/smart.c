@@ -66,7 +66,7 @@ static int git_smart__set_callbacks(
 	return 0;
 }
 
-bool is_valid(const char *custom_header)
+bool is_valid_custom_header(const char *custom_header)
 {
 	const char *c;
 	int name_len;
@@ -99,7 +99,7 @@ bool is_valid(const char *custom_header)
 		git__strncmp("Content-Length", custom_header, name_len) == 0;
 }
 
-const char *find_invalid_header(const git_strarray *custom_headers)
+const char *find_invalid_custom_header(const git_strarray *custom_headers)
 {
 	size_t i;
 
@@ -107,7 +107,7 @@ const char *find_invalid_header(const git_strarray *custom_headers)
 		return NULL;
 
 	for (i = 0; i < custom_headers->count; i++)
-		if (!is_valid(custom_headers->strings[i]))
+		if (!is_valid_custom_header(custom_headers->strings[i]))
 			return custom_headers->strings[i];
 
 	return NULL;
@@ -118,7 +118,7 @@ static int git_smart__set_custom_headers(
 	const git_strarray *custom_headers)
 {
 	transport_smart *t = (transport_smart *)transport;
-	const char *invalid_header = find_invalid_header(custom_headers);
+	const char *invalid_header = find_invalid_custom_header(custom_headers);
 
 	if (invalid_header != NULL) {
 		giterr_set(GITERR_INVALID, "Illegal HTTP header '%s'", invalid_header);
