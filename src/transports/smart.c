@@ -66,11 +66,64 @@ static int git_smart__set_callbacks(
 	return 0;
 }
 
+bool is_valid(const char *custom_header)
+{
+	const char *c;
+	int name_len;
+
+	if (custom_header == NULL)
+		return true;
+
+	// Disallow \r and \n
+	c = strchr(custom_header, '\r');
+	if (c != NULL)
+		return false;
+	c = strchr(custom_header, '\n');
+	if (c != NULL)
+		return false;
+
+	// Require a header name followed by :
+	c = strchr(custom_header, ':');
+	if (c == NULL)
+		return false;
+	name_len = c - custom_header;
+	if (name_len < 1)
+		return false;
+
+	// Disallow headers that we set
+	return git__strncmp("User-Agent", custom_header, name_len) == 0 &&
+		git__strncmp("Host", custom_header, name_len) == 0 &&
+		git__strncmp("Accept", custom_header, name_len) == 0 &&
+		git__strncmp("Content-Type", custom_header, name_len) == 0 &&
+		git__strncmp("Transfer-Encoding", custom_header, name_len) == 0 &&
+		git__strncmp("Content-Length", custom_header, name_len) == 0;
+}
+
+const char *find_invalid_header(const git_strarray *custom_headers)
+{
+	size_t i;
+
+	if (custom_headers == NULL || custom_headers->count == 0)
+		return NULL;
+
+	for (i = 0; i < custom_headers->count; i++)
+		if (!is_valid(custom_headers->strings[i]))
+			return custom_headers->strings[i];
+
+	return NULL;
+}
+
 static int git_smart__set_custom_headers(
 	git_transport *transport,
 	const git_strarray *custom_headers)
 {
 	transport_smart *t = (transport_smart *)transport;
+	const char *invalid_header = find_invalid_header(custom_headers);
+
+	if (invalid_header != NULL) {
+		giterr_set(GITERR_INVALID, "Illegal HTTP header '%s'", invalid_header);
+		return -1;
+	}
 
 	t->custom_headers = custom_headers;
 
