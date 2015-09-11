@@ -6,7 +6,8 @@
  */
 #include "common.h"
 #include "diff.h"
-#include "diff_patch.h"
+#include "diff_file.h"
+#include "patch_diff.h"
 #include "fileops.h"
 #include "zstream.h"
 #include "blob.h"
@@ -14,19 +15,19 @@
 #include "git2/sys/diff.h"
 
 typedef struct {
-	git_diff *diff;
 	git_diff_format_t format;
 	git_diff_line_cb print_cb;
 	void *payload;
+
 	git_buf *buf;
+	git_diff_line line;
+
+	const char *old_prefix;
+	const char *new_prefix;
 	uint32_t flags;
 	int oid_strlen;
-	git_diff_line line;
-	unsigned int
-		content_loaded : 1,
-		content_allocated : 1;
-	git_diff_file_content *ofile;
-	git_diff_file_content *nfile;
+
+	int (*strcomp)(const char *, const char *);
 } diff_print_info;
 
 static int diff_print_info_init__common(
@@ -74,11 +75,13 @@ static int diff_print_info_init_fromdiff(
 
 	memset(pi, 0, sizeof(diff_print_info));
 
-	pi->diff = diff;
-
 	if (diff) {
 		pi->flags = diff->opts.flags;
 		pi->oid_strlen = diff->opts.id_abbrev;
+		pi->old_prefix = diff->opts.old_prefix;
+		pi->new_prefix = diff->opts.new_prefix;
+
+		pi->strcomp = diff->strcomp;
 	}
 
 	return diff_print_info_init__common(pi, out, repo, format, cb, payload);
@@ -92,24 +95,16 @@ static int diff_print_info_init_frompatch(
 	git_diff_line_cb cb,
 	void *payload)
 {
-	git_repository *repo;
-
 	assert(patch);
-
-	repo = patch->diff ? patch->diff->repo : NULL;
 
 	memset(pi, 0, sizeof(diff_print_info));
 
-	pi->diff = patch->diff;
-
 	pi->flags = patch->diff_opts.flags;
 	pi->oid_strlen = patch->diff_opts.id_abbrev;
+	pi->old_prefix = patch->diff_opts.old_prefix;
+	pi->new_prefix = patch->diff_opts.new_prefix;
 
-	pi->content_loaded = 1;
-	pi->ofile = &patch->ofile;
-	pi->nfile = &patch->nfile;
-
-	return diff_print_info_init__common(pi, out, repo, format, cb, payload);
+	return diff_print_info_init__common(pi, out, patch->repo, format, cb, payload);
 }
 
 static char diff_pick_suffix(int mode)
@@ -173,8 +168,8 @@ static int diff_print_one_name_status(
 	diff_print_info *pi = data;
 	git_buf *out = pi->buf;
 	char old_suffix, new_suffix, code = git_diff_status_char(delta->status);
-	int (*strcomp)(const char *, const char *) =
-		pi->diff ? pi->diff->strcomp : git__strcmp;
+	int(*strcomp)(const char *, const char *) = pi->strcomp ?
+		pi->strcomp : git__strcmp;
 
 	GIT_UNUSED(progress);
 
@@ -367,39 +362,6 @@ static int format_binary(
 	return 0;
 }
 
-static int diff_print_load_content(
-	diff_print_info *pi,
-	git_diff_delta *delta)
-{
-	git_diff_file_content *ofile, *nfile;
-	int error;
-
-	assert(pi->diff);
-
-	ofile = git__calloc(1, sizeof(git_diff_file_content));
-	nfile = git__calloc(1, sizeof(git_diff_file_content));
-
-	GITERR_CHECK_ALLOC(ofile);
-	GITERR_CHECK_ALLOC(nfile);
-
-	if ((error = git_diff_file_content__init_from_diff(
-			ofile, pi->diff, delta, true)) < 0 ||
-		(error = git_diff_file_content__init_from_diff(
-			nfile, pi->diff, delta, true)) < 0) {
-
-		git__free(ofile);
-		git__free(nfile);
-		return error;
-	}
-
-	pi->content_loaded = 1;
-	pi->content_allocated = 1;
-	pi->ofile = ofile;
-	pi->nfile = nfile;
-
-	return 0;
-}
-
 static int diff_print_patch_file_binary(
 	diff_print_info *pi, git_diff_delta *delta,
 	const char *old_pfx, const char *new_pfx,
@@ -410,10 +372,6 @@ static int diff_print_patch_file_binary(
 
 	if ((pi->flags & GIT_DIFF_SHOW_BINARY) == 0)
 		goto noshow;
-
-	if (!pi->content_loaded &&
-		(error = diff_print_load_content(pi, delta)) < 0)
-		return error;
 
 	if (binary->new_file.datalen == 0 && binary->old_file.datalen == 0)
 		return 0;
@@ -450,9 +408,9 @@ static int diff_print_patch_file(
 	int error;
 	diff_print_info *pi = data;
 	const char *oldpfx =
-		pi->diff ? pi->diff->opts.old_prefix : DIFF_OLD_PREFIX_DEFAULT;
+		pi->old_prefix ? pi->old_prefix : DIFF_OLD_PREFIX_DEFAULT;
 	const char *newpfx =
-		pi->diff ? pi->diff->opts.new_prefix : DIFF_NEW_PREFIX_DEFAULT;
+		pi->new_prefix ? pi->new_prefix : DIFF_NEW_PREFIX_DEFAULT;
 
 	bool binary = (delta->flags & GIT_DIFF_FLAG_BINARY) ||
 		(pi->flags & GIT_DIFF_FORCE_BINARY);
@@ -488,9 +446,9 @@ static int diff_print_patch_binary(
 {
 	diff_print_info *pi = data;
 	const char *old_pfx =
-		pi->diff ? pi->diff->opts.old_prefix : DIFF_OLD_PREFIX_DEFAULT;
+		pi->old_prefix ? pi->old_prefix : DIFF_OLD_PREFIX_DEFAULT;
 	const char *new_pfx =
-		pi->diff ? pi->diff->opts.new_prefix : DIFF_NEW_PREFIX_DEFAULT;
+		pi->new_prefix ? pi->new_prefix : DIFF_NEW_PREFIX_DEFAULT;
 	int error;
 
 	git_buf_clear(pi->buf);
@@ -585,39 +543,7 @@ int git_diff_print(
 			giterr_set_after_callback_function(error, "git_diff_print");
 	}
 
-	git__free(pi.nfile);
-	git__free(pi.ofile);
-
 	git_buf_free(&buf);
-
-	return error;
-}
-
-/* print a git_patch to an output callback */
-int git_patch_print(
-	git_patch *patch,
-	git_diff_line_cb print_cb,
-	void *payload)
-{
-	int error;
-	git_buf temp = GIT_BUF_INIT;
-	diff_print_info pi;
-
-	assert(patch && print_cb);
-
-	if (!(error = diff_print_info_init_frompatch(
-			&pi, &temp, patch,
-			GIT_DIFF_FORMAT_PATCH, print_cb, payload)))
-	{
-		error = git_patch__invoke_callbacks(
-			patch, diff_print_patch_file, diff_print_patch_binary,
-			diff_print_patch_hunk, diff_print_patch_line, &pi);
-
-		if (error) /* make sure error message is set */
-			giterr_set_after_callback_function(error, "git_patch_print");
-	}
-
-	git_buf_free(&temp);
 
 	return error;
 }
@@ -660,6 +586,37 @@ int git_diff_print_callback__to_file_handle(
 		fputc(line->origin, fp);
 	fwrite(line->content, 1, line->content_len, fp);
 	return 0;
+}
+
+/* print a git_patch to an output callback */
+int git_patch_print(
+	git_patch *patch,
+	git_diff_line_cb print_cb,
+	void *payload)
+{
+	int error;
+	git_buf temp = GIT_BUF_INIT;
+	diff_print_info pi;
+
+	assert(patch && print_cb);
+
+	if (!(error = diff_print_info_init_frompatch(
+		&pi, &temp, patch,
+		GIT_DIFF_FORMAT_PATCH, print_cb, payload)))
+	{
+		error = git_patch__invoke_callbacks(
+			patch,
+			diff_print_patch_file, diff_print_patch_binary,
+			diff_print_patch_hunk, diff_print_patch_line,
+			&pi);
+
+		if (error) /* make sure error message is set */
+			giterr_set_after_callback_function(error, "git_patch_print");
+	}
+
+	git_buf_free(&temp);
+
+	return error;
 }
 
 /* print a git_patch to a git_buf */

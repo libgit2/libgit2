@@ -106,6 +106,7 @@ void test_apply_fromfile__change_middle_nocontext(void)
 		&diff_opts, "b/file.txt", 0100644));
 }
 
+
 void test_apply_fromfile__change_firstline(void)
 {
 	cl_git_pass(validate_and_apply_patchfile(

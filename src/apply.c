@@ -10,7 +10,7 @@
 #include "git2/patch.h"
 #include "git2/filter.h"
 #include "array.h"
-#include "diff_patch.h"
+#include "patch.h"
 #include "fileops.h"
 #include "apply.h"
 #include "delta.h"
@@ -163,7 +163,7 @@ static int update_hunk(
 static int apply_hunk(
 	patch_image *image,
 	git_patch *patch,
-	diff_patch_hunk *hunk)
+	git_patch_hunk *hunk)
 {
 	patch_image preimage, postimage;
 	size_t line_num, i;
@@ -218,7 +218,7 @@ static int apply_hunks(
 	size_t source_len,
 	git_patch *patch)
 {
-	diff_patch_hunk *hunk;
+	git_patch_hunk *hunk;
 	git_diff_line *line;
 	patch_image image;
 	size_t i;
@@ -340,9 +340,11 @@ int git_apply__patch(
 	*mode_out = 0;
 
 	if (patch->delta->status != GIT_DELTA_DELETED) {
-		filename = git__strdup(patch->nfile.file->path);
-		mode = patch->nfile.file->mode ?
-			patch->nfile.file->mode : GIT_FILEMODE_BLOB;
+		const git_diff_file *newfile = patch->newfile(patch);
+
+		filename = git__strdup(newfile->path);
+		mode = newfile->mode ?
+			newfile->mode : GIT_FILEMODE_BLOB;
 	}
 
 	if (patch->delta->flags & GIT_DIFF_FLAG_BINARY)
