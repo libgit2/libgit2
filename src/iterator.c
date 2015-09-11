@@ -640,8 +640,53 @@ static int tree_iterator__current_internal(
 	return 0;
 }
 
-static int tree_iterator__advance(
-	const git_index_entry **out, git_iterator *self);
+static int tree_iterator__advance_into_internal(git_iterator *self)
+{
+	int error = 0;
+	tree_iterator *ti = (tree_iterator *)self;
+
+	if (tree_iterator__at_tree(ti))
+		error = tree_iterator__push_frame(ti);
+
+	return error;
+}
+
+static int tree_iterator__advance_internal(git_iterator *self)
+{
+	int error;
+	tree_iterator *ti = (tree_iterator *)self;
+	tree_iterator_frame *tf = ti->head;
+
+	if (tf->current >= tf->n_entries)
+		return GIT_ITEROVER;
+
+	if (!iterator__has_been_accessed(ti))
+		return 0;
+
+	if (iterator__do_autoexpand(ti) && iterator__include_trees(ti) &&
+		tree_iterator__at_tree(ti))
+		return tree_iterator__advance_into_internal(self);
+
+	if (ti->path_has_filename) {
+		git_buf_rtruncate_at_char(&ti->path, '/');
+		ti->path_has_filename = ti->entry_is_current = false;
+	}
+
+	/* scan forward and up, advancing in frame or popping frame when done */
+	while (!tree_iterator__move_to_next(ti, tf) &&
+		tree_iterator__pop_frame(ti, false))
+		tf = ti->head;
+
+	/* find next and load trees */
+	if ((error = tree_iterator__set_next(ti, tf)) < 0)
+		return error;
+
+	/* deal with include_trees / auto_expand as needed */
+	if (!iterator__include_trees(ti) && tree_iterator__at_tree(ti))
+		return tree_iterator__advance_into_internal(self);
+
+	return 0;
+}
 
 static int tree_iterator__current(
 	const git_index_entry **out, git_iterator *self)
@@ -659,7 +704,7 @@ static int tree_iterator__current(
 				self, entry->path, strlen(entry->path));
 
 			if (m != ITERATOR_PATHLIST_MATCH) {
-				if ((error = tree_iterator__advance(&entry, self)) < 0)
+				if ((error = tree_iterator__advance_internal(self)) < 0)
 					return error;
 
 				entry = NULL;
@@ -673,59 +718,28 @@ static int tree_iterator__current(
 	return error;
 }
 
-static int tree_iterator__advance_into(
-	const git_index_entry **entry, git_iterator *self)
-{
-	int error = 0;
-	tree_iterator *ti = (tree_iterator *)self;
-
-	iterator__clear_entry(entry);
-
-	if (tree_iterator__at_tree(ti))
-		error = tree_iterator__push_frame(ti);
-
-	if (!error && entry)
-		error = tree_iterator__current(entry, self);
-
-	return error;
-}
-
 static int tree_iterator__advance(
 	const git_index_entry **entry, git_iterator *self)
 {
-	int error;
-	tree_iterator *ti = (tree_iterator *)self;
-	tree_iterator_frame *tf = ti->head;
+	int error = tree_iterator__advance_internal(self);
 
 	iterator__clear_entry(entry);
 
-	if (tf->current >= tf->n_entries)
-		return GIT_ITEROVER;
-
-	if (!iterator__has_been_accessed(ti))
-		return tree_iterator__current(entry, self);
-
-	if (iterator__do_autoexpand(ti) && iterator__include_trees(ti) &&
-		tree_iterator__at_tree(ti))
-		return tree_iterator__advance_into(entry, self);
-
-	if (ti->path_has_filename) {
-		git_buf_rtruncate_at_char(&ti->path, '/');
-		ti->path_has_filename = ti->entry_is_current = false;
-	}
-
-	/* scan forward and up, advancing in frame or popping frame when done */
-	while (!tree_iterator__move_to_next(ti, tf) &&
-		   tree_iterator__pop_frame(ti, false))
-		tf = ti->head;
-
-	/* find next and load trees */
-	if ((error = tree_iterator__set_next(ti, tf)) < 0)
+	if (error < 0)
 		return error;
 
-	/* deal with include_trees / auto_expand as needed */
-	if (!iterator__include_trees(ti) && tree_iterator__at_tree(ti))
-		return tree_iterator__advance_into(entry, self);
+	return tree_iterator__current(entry, self);
+}
+
+static int tree_iterator__advance_into(
+	const git_index_entry **entry, git_iterator *self)
+{
+	int error = tree_iterator__advance_into_internal(self);
+
+	iterator__clear_entry(entry);
+
+	if (error < 0)
+		return error;
 
 	return tree_iterator__current(entry, self);
 }
