@@ -161,8 +161,12 @@ void git_mempack_reset(git_odb_backend *_backend)
 
 static void impl__free(git_odb_backend *_backend)
 {
-	git_mempack_reset(_backend);
-	git__free(_backend);
+	struct memory_packer_db *db = (struct memory_packer_db *)_backend;
+
+	git_mempack_reset(db);
+	git_oidmap_free(db->objects);
+
+	git__free(db);
 }
 
 int git_mempack_new(git_odb_backend **out)
