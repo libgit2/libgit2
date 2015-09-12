@@ -1690,7 +1690,12 @@ static int submodule_load_from_config(
 		} else {
 			if (sm->name != sm->path)
 				replaced = sm->name;
+			git_strmap_delete(data->map, sm->name);
 			alternate = sm->name = git_buf_detach(&name);
+			git_strmap_insert(data->map, sm->name, sm, error);
+			if (error < 0)
+				goto done;
+			error = 0;
 		}
 	}
 	else if (path && strcmp(path, sm->path) != 0) { /* path changed */
