@@ -2054,3 +2054,46 @@ void test_diff_workdir__only_writes_index_when_necessary(void)
 	git_index_free(index);
 }
 
+void test_diff_workdir__to_index_pathlist(void)
+{
+	git_index *index;
+	git_diff *diff;
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_vector pathlist = GIT_VECTOR_INIT;
+
+	git_vector_insert(&pathlist, "foobar/asdf");
+	git_vector_insert(&pathlist, "subdir/asdf");
+	git_vector_insert(&pathlist, "ignored/asdf");
+
+	g_repo = cl_git_sandbox_init("status");
+
+	cl_git_mkfile("status/.gitignore", ".gitignore\n" "ignored/\n");
+
+	cl_must_pass(p_mkdir("status/foobar", 0777));
+	cl_git_mkfile("status/foobar/one", "one\n");
+
+	cl_must_pass(p_mkdir("status/ignored", 0777));
+	cl_git_mkfile("status/ignored/one", "one\n");
+	cl_git_mkfile("status/ignored/two", "two\n");
+	cl_git_mkfile("status/ignored/three", "three\n");
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	opts.flags = GIT_DIFF_INCLUDE_IGNORED;
+	opts.pathspec.strings = pathlist.contents;
+	opts.pathspec.count = pathlist.length;
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, index, &opts));
+	cl_assert_equal_i(0, git_diff_num_deltas(diff));
+	git_diff_free(diff);
+
+	opts.flags |= GIT_DIFF_DISABLE_PATHSPEC_MATCH;
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, index, &opts));
+	cl_assert_equal_i(0, git_diff_num_deltas(diff));
+	git_diff_free(diff);
+
+	git_index_free(index);
+	git_vector_free(&pathlist);
+}
+
