@@ -75,18 +75,27 @@ static int diff_insert_delta(
 }
 
 static bool diff_pathspec_match(
-	const char **matched_pathspec, git_diff *diff, const char *path)
+	const char **matched_pathspec,
+	git_diff *diff,
+	const git_index_entry *entry)
 {
-	/* The iterator has filtered out paths for us, so the fact that we're
-	 * seeing this patch means that it must match the given path list.
+	bool disable_pathspec_match = 
+		DIFF_FLAG_IS_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH);
+
+	/* If we're disabling fnmatch, then the iterator has already applied
+	 * the filters to the files for us and we don't have to do anything.
+	 * However, this only applies to *files* - the iterator will include
+	 * directories that we need to recurse into when not autoexpanding,
+	 * so we still need to apply the pathspec match to directories.
 	 */
-	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH)) {
-		*matched_pathspec = path;
+	if ((S_ISLNK(entry->mode) || S_ISREG(entry->mode)) &&
+		disable_pathspec_match) {
+		*matched_pathspec = entry->path;
 		return true;
 	}
 
 	return git_pathspec__match(
-		&diff->pathspec, path, false,
+		&diff->pathspec, entry->path, disable_pathspec_match,
 		DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_CASE),
 		matched_pathspec, NULL);
 }
@@ -127,7 +136,7 @@ static int diff_delta__from_one(
 		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_INCLUDE_UNREADABLE))
 		return 0;
 
-	if (!diff_pathspec_match(&matched_pathspec, diff, entry->path))
+	if (!diff_pathspec_match(&matched_pathspec, diff, entry))
 		return 0;
 
 	delta = diff_delta__alloc(diff, status, entry->path);
@@ -768,7 +777,7 @@ static int maybe_modified(
 	const char *matched_pathspec;
 	int error = 0;
 
-	if (!diff_pathspec_match(&matched_pathspec, diff, oitem->path))
+	if (!diff_pathspec_match(&matched_pathspec, diff, oitem))
 		return 0;
 
 	memset(&noid, 0, sizeof(noid));
