@@ -331,7 +331,6 @@ int git_transaction_commit(git_transaction *tx)
 
 	if (tx->type == TRANSACTION_CONFIG) {
 		error = git_config_unlock(tx->cfg, true);
-		git_config_free(tx->cfg);
 		tx->cfg = NULL;
 
 		return error;
