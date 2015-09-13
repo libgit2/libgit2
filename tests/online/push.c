@@ -299,7 +299,7 @@ static void verify_update_tips_callback(git_remote *remote, expected_ref expecte
 			goto failed;
 		}
 
-		if (git_oid_cmp(expected_refs[i].oid, tip->new_oid) != 0) {
+		if (git_oid_cmp(expected_refs[i].oid, &tip->new_oid) != 0) {
 			git_buf_printf(&msg, "Updated tip ID does not match expected ID");
 			failed = 1;
 			goto failed;
