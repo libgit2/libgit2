@@ -9,8 +9,6 @@ const git_oid OID_ZERO = {{ 0 }};
 void updated_tip_free(updated_tip *t)
 {
 	git__free(t->name);
-	git__free(t->old_oid);
-	git__free(t->new_oid);
 	git__free(t);
 }
 
@@ -46,14 +44,11 @@ int record_update_tips_cb(const char *refname, const git_oid *a, const git_oid *
 	updated_tip *t;
 	record_callbacks_data *record_data = (record_callbacks_data *)data;
 
-	cl_assert(t = git__malloc(sizeof(*t)));
+	cl_assert(t = git__calloc(1, sizeof(*t)));
 
 	cl_assert(t->name = git__strdup(refname));
-	cl_assert(t->old_oid = git__malloc(sizeof(*t->old_oid)));
-	git_oid_cpy(t->old_oid, a);
-
-	cl_assert(t->new_oid = git__malloc(sizeof(*t->new_oid)));
-	git_oid_cpy(t->new_oid, b);
+	git_oid_cpy(&t->old_oid, a);
+	git_oid_cpy(&t->new_oid, b);
 
 	git_vector_insert(&record_data->updated_tips, t);
 
