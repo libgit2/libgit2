@@ -1319,7 +1319,11 @@ int git_path_diriter_next(git_path_diriter *diriter)
 #endif
 
 	git_buf_truncate(&diriter->path, diriter->parent_len);
-	git_buf_putc(&diriter->path, '/');
+
+	if (diriter->parent_len > 0 &&
+		diriter->path.ptr[diriter->parent_len-1] != '/')
+		git_buf_putc(&diriter->path, '/');
+
 	git_buf_put(&diriter->path, filename, filename_len);
 
 	if (git_buf_oom(&diriter->path))
