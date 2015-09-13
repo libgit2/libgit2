@@ -670,6 +670,16 @@ void test_config_write__locking(void)
 	git_transaction_free(tx);
 
 	/* Now that we've unlocked it, we should see both updates */
+	cl_git_pass(git_config_get_entry(&entry, cfg, "section.name"));
+	cl_assert_equal_s("other value", entry->value);
+	git_config_entry_free(entry);
+	cl_git_pass(git_config_get_entry(&entry, cfg, "section2.name3"));
+	cl_assert_equal_s("more value", entry->value);
+	git_config_entry_free(entry);
+
+	git_config_free(cfg);
+
+	/* We should also see the changes after reopening the config */
 	cl_git_pass(git_config_open_ondisk(&cfg, filename));
 	cl_git_pass(git_config_get_entry(&entry, cfg, "section.name"));
 	cl_assert_equal_s("other value", entry->value);
