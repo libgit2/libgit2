@@ -1022,3 +1022,20 @@ void test_status_ignore__negate_exact_previous(void)
 	cl_git_pass(git_ignore_path_is_ignored(&ignored, g_repo, ".buildpath"));
 	cl_assert_equal_i(1, ignored);
 }
+
+void test_status_ignore__negate_starstar(void)
+{
+    int ignored;
+
+    g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+    cl_git_mkfile("empty_standard_repo/.gitignore",
+              "code/projects/**/packages/*\n"
+              "!code/projects/**/packages/repositories.config");
+
+    cl_git_pass(git_futils_mkdir_r("code/projects/foo/bar/packages", "empty_standard_repo", 0777));
+    cl_git_mkfile("empty_standard_repo/code/projects/foo/bar/packages/repositories.config", "");
+
+    cl_git_pass(git_ignore_path_is_ignored(&ignored, g_repo, "code/projects/foo/bar/packages/repositories.config"));
+    cl_assert_equal_i(0, ignored);
+}
