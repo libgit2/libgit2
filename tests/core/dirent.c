@@ -275,3 +275,32 @@ void test_core_dirent__diriter_with_fullname(void)
 
 	check_counts(&sub);
 }
+
+void test_core_dirent__diriter_at_directory_root(void)
+{
+	git_path_diriter diriter = GIT_PATH_DIRITER_INIT;
+	const char *sandbox_path, *path;
+	char *root_path;
+	size_t path_len;
+	int root_offset, error;
+
+	sandbox_path = clar_sandbox_path();
+	cl_assert((root_offset = git_path_root(sandbox_path)) >= 0);
+
+	cl_assert(root_path = git__calloc(1, root_offset + 2));
+	strncpy(root_path, sandbox_path, root_offset + 1);
+
+	cl_git_pass(git_path_diriter_init(&diriter, root_path, 0));
+
+	while ((error = git_path_diriter_next(&diriter)) == 0) {
+		cl_git_pass(git_path_diriter_fullpath(&path, &path_len, &diriter));
+
+		cl_assert(path_len > (size_t)(root_offset + 1));
+		cl_assert(path[root_offset+1] != '/');
+	}
+
+	cl_assert_equal_i(error, GIT_ITEROVER);
+
+	git_path_diriter_free(&diriter);
+	git__free(root_path);
+}
