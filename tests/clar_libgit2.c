@@ -299,6 +299,8 @@ const char* cl_git_path_url(const char *path)
 		in_buf++;
 	}
 
+	cl_assert(url_buf.size < 4096);
+
 	strncpy(url, git_buf_cstr(&url_buf), 4096);
 	git_buf_free(&url_buf);
 	git_buf_free(&path_buf);
