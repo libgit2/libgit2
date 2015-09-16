@@ -13,6 +13,41 @@ static void cleanup_basic_dirs(void *ref)
 	git_futils_rmdir_r("d4", NULL, GIT_RMDIR_EMPTY_HIERARCHY);
 }
 
+void test_core_mkdir__absolute(void)
+{
+	git_buf path = GIT_BUF_INIT;
+
+	cl_set_cleanup(cleanup_basic_dirs, NULL);
+
+	git_buf_joinpath(&path, clar_sandbox_path(), "d0");
+
+	/* make a directory */
+	cl_assert(!git_path_isdir(path.ptr));
+	cl_git_pass(git_futils_mkdir(path.ptr, 0755, 0));
+	cl_assert(git_path_isdir(path.ptr));
+
+	git_buf_joinpath(&path, path.ptr, "subdir");
+
+	/* make a directory */
+	cl_assert(!git_path_isdir(path.ptr));
+	cl_git_pass(git_futils_mkdir(path.ptr, 0755, 0));
+	cl_assert(git_path_isdir(path.ptr));
+
+	git_buf_joinpath(&path, path.ptr, "another");
+
+	/* make a directory */
+	cl_assert(!git_path_isdir(path.ptr));
+	cl_git_pass(git_futils_mkdir_r(path.ptr, 0755));
+	cl_assert(git_path_isdir(path.ptr));
+
+	git_buf_joinpath(&path, clar_sandbox_path(), "d1/foo/bar/asdf");
+
+	/* make a directory */
+	cl_assert(!git_path_isdir(path.ptr));
+	cl_git_pass(git_futils_mkdir_r(path.ptr, 0755));
+	cl_assert(git_path_isdir(path.ptr));
+}
+
 void test_core_mkdir__basic(void)
 {
 	cl_set_cleanup(cleanup_basic_dirs, NULL);
