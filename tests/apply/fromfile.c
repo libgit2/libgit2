@@ -5,7 +5,7 @@
 #include "repository.h"
 #include "buf_text.h"
 
-#include "apply_common.h"
+#include "../patch/patch_common.h"
 
 static git_repository *repo = NULL;
 
