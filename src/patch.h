@@ -33,8 +33,6 @@ struct git_patch {
 	size_t content_size;
 	size_t context_size;
 
-	const git_diff_file *(*newfile)(git_patch *patch);
-	const git_diff_file *(*oldfile)(git_patch *patch);
 	void (*free_fn)(git_patch *patch);
 };
 

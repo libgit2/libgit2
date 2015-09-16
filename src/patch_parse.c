@@ -5,11 +5,9 @@
 #define parse_err(...) \
 	( giterr_set(GITERR_PATCH, __VA_ARGS__), -1 )
 
+/* TODO: remove this, just use git_patch */
 typedef struct {
 	git_patch base;
-
-	git_diff_file old_file;
-	git_diff_file new_file;
 } git_patch_parsed;
 
 typedef struct {
@@ -141,13 +139,13 @@ static int parse_header_path(char **out, patch_parse_ctx *ctx)
 static int parse_header_git_oldpath(
 	git_patch_parsed *patch, patch_parse_ctx *ctx)
 {
-	return parse_header_path((char **)&patch->old_file.path, ctx);
+	return parse_header_path((char **)&patch->base.delta->old_file.path, ctx);
 }
 
 static int parse_header_git_newpath(
 	git_patch_parsed *patch, patch_parse_ctx *ctx)
 {
-	return parse_header_path((char **)&patch->new_file.path, ctx);
+	return parse_header_path((char **)&patch->base.delta->new_file.path, ctx);
 }
 
 static int parse_header_mode(uint16_t *mode, patch_parse_ctx *ctx)
@@ -231,37 +229,37 @@ static int parse_header_git_index(
 static int parse_header_git_oldmode(
 	git_patch_parsed *patch, patch_parse_ctx *ctx)
 {
-	return parse_header_mode(&patch->old_file.mode, ctx);
+	return parse_header_mode(&patch->base.delta->old_file.mode, ctx);
 }
 
 static int parse_header_git_newmode(
 	git_patch_parsed *patch, patch_parse_ctx *ctx)
 {
-	return parse_header_mode(&patch->new_file.mode, ctx);
+	return parse_header_mode(&patch->base.delta->new_file.mode, ctx);
 }
 
 static int parse_header_git_deletedfilemode(
 	git_patch_parsed *patch,
 	patch_parse_ctx *ctx)
 {
-	git__free((char *)patch->old_file.path);
+	git__free((char *)patch->base.delta->old_file.path);
 
-	patch->old_file.path = NULL;
+	patch->base.delta->old_file.path = NULL;
 	patch->base.delta->status = GIT_DELTA_DELETED;
 
-	return parse_header_mode(&patch->old_file.mode, ctx);
+	return parse_header_mode(&patch->base.delta->old_file.mode, ctx);
 }
 
 static int parse_header_git_newfilemode(
 	git_patch_parsed *patch,
 	patch_parse_ctx *ctx)
 {
-	git__free((char *)patch->new_file.path);
+	git__free((char *)patch->base.delta->new_file.path);
 
-	patch->new_file.path = NULL;
+	patch->base.delta->new_file.path = NULL;
 	patch->base.delta->status = GIT_DELTA_ADDED;
 
-	return parse_header_mode(&patch->new_file.mode, ctx);
+	return parse_header_mode(&patch->base.delta->new_file.mode, ctx);
 }
 
 static int parse_header_rename(
@@ -313,7 +311,7 @@ static int parse_header_renamefrom(
 	patch->base.delta->status |= GIT_DELTA_RENAMED;
 
 	return parse_header_rename(
-		(char **)&patch->old_file.path,
+		(char **)&patch->base.delta->old_file.path,
 		&ctx->header_old_path,
 		ctx);
 }
@@ -324,7 +322,7 @@ static int parse_header_renameto(
 	patch->base.delta->status |= GIT_DELTA_RENAMED;
 
 	return parse_header_rename(
-		(char **)&patch->new_file.path,
+		(char **)&patch->base.delta->new_file.path,
 		&ctx->header_new_path,
 		ctx);
 }
@@ -674,16 +672,18 @@ static int parsed_patch_header(
 			/* For modechange only patches, it does not include filenames;
 			* instead we need to use the paths in the diff --git header.
 			*/
-			if (!patch->old_file.path && !patch->new_file.path) {
+			if (!patch->base.delta->old_file.path &&
+				!patch->base.delta->new_file.path) {
+
 				if (!ctx->header_old_path || !ctx->header_new_path) {
 					error = parse_err("git diff header lacks old / new paths");
 					goto done;
 				}
 
-				patch->old_file.path = ctx->header_old_path;
+				patch->base.delta->old_file.path = ctx->header_old_path;
 				ctx->header_old_path = NULL;
 
-				patch->new_file.path = ctx->header_new_path;
+				patch->base.delta->new_file.path = ctx->header_new_path;
 				ctx->header_new_path = NULL;
 			}
 
@@ -848,36 +848,26 @@ static int parsed_patch_body(
 
 static int check_patch(git_patch_parsed *patch)
 {
-	if (!patch->old_file.path && patch->base.delta->status != GIT_DELTA_ADDED)
+	if (!patch->base.delta->old_file.path &&
+			patch->base.delta->status != GIT_DELTA_ADDED)
 		return parse_err("missing old file path");
 
-	if (!patch->new_file.path && patch->base.delta->status != GIT_DELTA_DELETED)
+	if (!patch->base.delta->new_file.path &&
+			patch->base.delta->status != GIT_DELTA_DELETED)
 		return parse_err("missing new file path");
 
-	if (patch->old_file.path && patch->new_file.path) {
-		if (!patch->new_file.mode)
-			patch->new_file.mode = patch->old_file.mode;
+	if (patch->base.delta->old_file.path && patch->base.delta->new_file.path) {
+		if (!patch->base.delta->new_file.mode)
+			patch->base.delta->new_file.mode = patch->base.delta->old_file.mode;
 	}
 
 	if (patch->base.delta->status == GIT_DELTA_MODIFIED &&
 		!(patch->base.delta->flags & GIT_DIFF_FLAG_BINARY) &&
-		patch->new_file.mode == patch->old_file.mode &&
+		patch->base.delta->new_file.mode == patch->base.delta->old_file.mode &&
 		git_array_size(patch->base.hunks) == 0)
 		return parse_err("patch with no hunks");
 
 	return 0;
-}
-
-static const git_diff_file *parsed_patch_newfile(git_patch *p)
-{
-	git_patch_parsed *patch = (git_patch_parsed *)p;
-	return &patch->new_file;
-}
-
-static const git_diff_file *parsed_patch_oldfile(git_patch *p)
-{
-	git_patch_parsed *patch = (git_patch_parsed *)p;
-	return &patch->old_file;
 }
 
 int git_patch_from_patchfile(
@@ -893,9 +883,6 @@ int git_patch_from_patchfile(
 
 	patch = git__calloc(1, sizeof(git_patch_parsed));
 	GITERR_CHECK_ALLOC(patch);
-
-	patch->base.newfile = parsed_patch_newfile;
-	patch->base.oldfile = parsed_patch_oldfile;
 
 	patch->base.delta = git__calloc(1, sizeof(git_diff_delta));
 	patch->base.delta->status = GIT_DELTA_MODIFIED;

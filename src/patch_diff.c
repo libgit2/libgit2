@@ -21,18 +21,6 @@ static void diff_output_init(
 
 static void diff_output_to_patch(git_patch_diff_output *, git_patch_diff *);
 
-static const git_diff_file *patch_diff_newfile(git_patch *p)
-{
-	git_patch_diff *patch = (git_patch_diff *)p;
-	return patch->nfile.file;
-}
-
-static const git_diff_file *patch_diff_oldfile(git_patch *p)
-{
-	git_patch_diff *patch = (git_patch_diff *)p;
-	return patch->ofile.file;
-}
-
 static void patch_diff_free(git_patch *p)
 {
 	git_patch_diff *patch = (git_patch_diff *)p;
@@ -72,8 +60,6 @@ static void patch_diff_update_binary(git_patch_diff *patch)
 
 static void patch_diff_init_common(git_patch_diff *patch)
 {
-	patch->base.newfile = patch_diff_newfile;
-	patch->base.oldfile = patch_diff_oldfile;
 	patch->base.free_fn = patch_diff_free;
 
 	patch_diff_update_binary(patch);
