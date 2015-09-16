@@ -57,6 +57,8 @@ typedef struct refdb_fs_backend {
 	git_repository *repo;
 	/* path to git directory */
 	char *gitpath;
+	/* path to common objects' directory */
+	char *commonpath;
 
 	git_sortedcache *refcache;
 	int peeling_mode;
@@ -363,6 +365,14 @@ static const char *loose_parse_symbolic(git_buf *file_content)
 	return refname_start;
 }
 
+static bool is_per_worktree_ref(const char *ref_name)
+{
+	return strcmp("HEAD", ref_name) == 0 ||
+	    strcmp("FETCH_HEAD", ref_name) == 0 ||
+	    strcmp("MERGE_HEAD", ref_name) == 0 ||
+	    strcmp("ORIG_HEAD", ref_name) == 0;
+}
+
 static int loose_lookup(
 	git_reference **out,
 	refdb_fs_backend *backend,
@@ -370,11 +380,17 @@ static int loose_lookup(
 {
 	git_buf ref_file = GIT_BUF_INIT;
 	int error = 0;
+	const char *ref_dir;
 
 	if (out)
 		*out = NULL;
 
-	if ((error = loose_readbuffer(&ref_file, backend->gitpath, ref_name)) < 0)
+	if (is_per_worktree_ref(ref_name))
+		ref_dir = backend->gitpath;
+	else
+		ref_dir = backend->commonpath;
+
+	if ((error = loose_readbuffer(&ref_file, ref_dir, ref_name)) < 0)
 		/* cannot read loose ref file - gah */;
 	else if (git__prefixcmp(git_buf_cstr(&ref_file), GIT_SYMREF) == 0) {
 		const char *target;
@@ -485,12 +501,12 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 	git_iterator_options fsit_opts = GIT_ITERATOR_OPTIONS_INIT;
 	const git_index_entry *entry = NULL;
 
-	if (!backend->gitpath) /* do nothing if no gitpath for loose refs */
+	if (!backend->commonpath) /* do nothing if no commonpath for loose refs */
 		return 0;
 
 	fsit_opts.flags = backend->iterator_flags;
 
-	if ((error = git_buf_printf(&path, "%s/refs", backend->gitpath)) < 0 ||
+	if ((error = git_buf_printf(&path, "%s/refs", backend->commonpath)) < 0 ||
 		(error = git_iterator_for_filesystem(&fsit, path.ptr, &fsit_opts)) < 0) {
 		git_buf_free(&path);
 		return error;
@@ -1410,6 +1426,7 @@ static void refdb_fs_backend__free(git_refdb_backend *_backend)
 
 	git_sortedcache_free(backend->refcache);
 	git__free(backend->gitpath);
+	git__free(backend->commonpath);
 	git__free(backend);
 }
 
@@ -1419,6 +1436,8 @@ static int setup_namespace(git_buf *gitpath, git_repository *repo)
 
 	/* Not all repositories have a gitpath */
 	if (repo->path_repository == NULL)
+		return 0;
+	if (repo->commondir == NULL)
 		return 0;
 
 	/* Load the path to the repo first */
@@ -1446,7 +1465,7 @@ static int setup_namespace(git_buf *gitpath, git_repository *repo)
 	git__free(parts);
 
 	/* Make sure that the folder with the namespace exists */
-	if (git_futils_mkdir_relative(git_buf_cstr(gitpath), repo->path_repository,
+	if (git_futils_mkdir_relative(git_buf_cstr(gitpath), repo->commondir,
 			0777, GIT_MKDIR_PATH, NULL) < 0)
 		return -1;
 
@@ -1960,9 +1979,11 @@ int git_refdb_backend_fs(
 	if (setup_namespace(&gitpath, repository) < 0)
 		goto fail;
 
-	backend->gitpath = git_buf_detach(&gitpath);
+	backend->gitpath = backend->commonpath =  git_buf_detach(&gitpath);
+	if (repository->commondir)
+		backend->commonpath = git__strdup(repository->commondir);
 
-	if (git_buf_joinpath(&gitpath, backend->gitpath, GIT_PACKEDREFS_FILE) < 0 ||
+	if (git_buf_joinpath(&gitpath, backend->commonpath, GIT_PACKEDREFS_FILE) < 0 ||
 		git_sortedcache_new(
 			&backend->refcache, offsetof(struct packref, name),
 			NULL, NULL, packref_cmp, git_buf_cstr(&gitpath)) < 0)
@@ -2002,6 +2023,7 @@ int git_refdb_backend_fs(
 fail:
 	git_buf_free(&gitpath);
 	git__free(backend->gitpath);
+	git__free(backend->commonpath);
 	git__free(backend);
 	return -1;
 }
