@@ -38,6 +38,8 @@ GIT__USE_STRMAP
 
 static int check_repositoryformatversion(git_config *config);
 
+#define GIT_COMMONDIR_FILE "commondir"
+
 #define GIT_FILE_CONTENT_PREFIX "gitdir:"
 
 #define GIT_BRANCH_MASTER "master"
@@ -143,6 +145,7 @@ void git_repository_free(git_repository *repo)
 
 	git__free(repo->path_gitlink);
 	git__free(repo->path_repository);
+	git__free(repo->commondir);
 	git__free(repo->workdir);
 	git__free(repo->namespace);
 	git__free(repo->ident_name);
@@ -157,17 +160,41 @@ void git_repository_free(git_repository *repo)
  *
  * Open a repository object from its path
  */
-static bool valid_repository_path(git_buf *repository_path)
+static bool valid_repository_path(git_buf *repository_path, git_buf *common_path)
 {
-	/* Check OBJECTS_DIR first, since it will generate the longest path name */
-	if (git_path_contains_dir(repository_path, GIT_OBJECTS_DIR) == false)
-		return false;
+	/* Check if we have a separate commondir (e.g. we have a
+	 * worktree) */
+	if (git_path_contains_file(repository_path, GIT_COMMONDIR_FILE)) {
+		git_buf common_link  = GIT_BUF_INIT;
+		git_buf_joinpath(&common_link, repository_path->ptr, GIT_COMMONDIR_FILE);
+
+		git_futils_readbuffer(&common_link, common_link.ptr);
+		git_buf_rtrim(&common_link);
+
+		if (git_path_is_relative(common_link.ptr)) {
+			git_buf_joinpath(common_path, repository_path->ptr, common_link.ptr);
+		} else {
+			git_buf_swap(common_path, &common_link);
+		}
+
+		git_buf_free(&common_link);
+	}
+	else {
+		git_buf_set(common_path, repository_path->ptr, repository_path->size);
+	}
+
+	/* Make sure the commondir path always has a trailing * slash */
+	if (git_buf_rfind(common_path, '/') != (ssize_t)common_path->size - 1)
+		git_buf_putc(common_path, '/');
 
 	/* Ensure HEAD file exists */
 	if (git_path_contains_file(repository_path, GIT_HEAD_FILE) == false)
 		return false;
 
-	if (git_path_contains_dir(repository_path, GIT_REFS_DIR)  == false)
+	/* Check files in common dir */
+	if (git_path_contains_dir(common_path, GIT_OBJECTS_DIR) == false)
+		return false;
+	if (git_path_contains_dir(common_path, GIT_REFS_DIR) == false)
 		return false;
 
 	return true;
@@ -356,6 +383,7 @@ static int find_repo(
 	git_buf *repo_path,
 	git_buf *parent_path,
 	git_buf *link_path,
+	git_buf *common_path,
 	const char *start_path,
 	uint32_t flags,
 	const char *ceiling_dirs)
@@ -363,6 +391,7 @@ static int find_repo(
 	int error;
 	git_buf path = GIT_BUF_INIT;
 	git_buf repo_link = GIT_BUF_INIT;
+	git_buf common_link = GIT_BUF_INIT;
 	struct stat st;
 	dev_t initial_device = 0;
 	int min_iterations;
@@ -409,9 +438,13 @@ static int find_repo(
 				break;
 
 			if (S_ISDIR(st.st_mode)) {
-				if (valid_repository_path(&path)) {
+				if (valid_repository_path(&path, &common_link)) {
 					git_path_to_dir(&path);
 					git_buf_set(repo_path, path.ptr, path.size);
+
+					if (common_path)
+						git_buf_swap(&common_link, common_path);
+
 					break;
 				}
 			}
@@ -419,11 +452,13 @@ static int find_repo(
 				error = read_gitfile(&repo_link, path.ptr);
 				if (error < 0)
 					break;
-				if (valid_repository_path(&repo_link)) {
+				if (valid_repository_path(&repo_link, &common_link)) {
 					git_buf_swap(repo_path, &repo_link);
 
 					if (link_path)
 						error = git_buf_put(link_path, path.ptr, path.size);
+					if (common_path)
+						git_buf_swap(&common_link, common_path);
 				}
 				break;
 			}
@@ -470,6 +505,7 @@ static int find_repo(
 
 	git_buf_free(&path);
 	git_buf_free(&repo_link);
+	git_buf_free(&common_link);
 	return error;
 }
 
@@ -478,14 +514,15 @@ int git_repository_open_bare(
 	const char *bare_path)
 {
 	int error;
-	git_buf path = GIT_BUF_INIT;
+	git_buf path = GIT_BUF_INIT, common_path = GIT_BUF_INIT;
 	git_repository *repo = NULL;
 
 	if ((error = git_path_prettify_dir(&path, bare_path, NULL)) < 0)
 		return error;
 
-	if (!valid_repository_path(&path)) {
+	if (!valid_repository_path(&path, &common_path)) {
 		git_buf_free(&path);
+		git_buf_free(&common_path);
 		giterr_set(GITERR_REPOSITORY, "path is not a repository: %s", bare_path);
 		return GIT_ENOTFOUND;
 	}
@@ -495,6 +532,8 @@ int git_repository_open_bare(
 
 	repo->path_repository = git_buf_detach(&path);
 	GITERR_CHECK_ALLOC(repo->path_repository);
+	repo->commondir = git_buf_detach(&common_path);
+	GITERR_CHECK_ALLOC(repo->commondir);
 
 	/* of course we're bare! */
 	repo->is_bare = 1;
@@ -681,7 +720,7 @@ int git_repository_open_ext(
 {
 	int error;
 	git_buf path = GIT_BUF_INIT, parent = GIT_BUF_INIT,
-		link_path = GIT_BUF_INIT;
+		link_path = GIT_BUF_INIT, common_path = GIT_BUF_INIT;
 	git_repository *repo;
 	git_config *config = NULL;
 
@@ -692,7 +731,7 @@ int git_repository_open_ext(
 		*repo_ptr = NULL;
 
 	error = find_repo(
-		&path, &parent, &link_path, start_path, flags, ceiling_dirs);
+		&path, &parent, &link_path, &common_path, start_path, flags, ceiling_dirs);
 
 	if (error < 0 || !repo_ptr)
 		return error;
@@ -706,6 +745,10 @@ int git_repository_open_ext(
 	if (link_path.size) {
 		repo->path_gitlink = git_buf_detach(&link_path);
 		GITERR_CHECK_ALLOC(repo->path_gitlink);
+	}
+	if (common_path.size) {
+		repo->commondir = git_buf_detach(&common_path);
+		GITERR_CHECK_ALLOC(repo->commondir);
 	}
 
 	/*
@@ -773,7 +816,7 @@ int git_repository_discover(
 
 	git_buf_sanitize(out);
 
-	return find_repo(out, NULL, NULL, start_path, flags, ceiling_dirs);
+	return find_repo(out, NULL, NULL, NULL, start_path, flags, ceiling_dirs);
 }
 
 static int load_config(
@@ -928,7 +971,7 @@ int git_repository_odb__weakptr(git_odb **out, git_repository *repo)
 		git_buf odb_path = GIT_BUF_INIT;
 		git_odb *odb;
 
-		if ((error = git_buf_joinpath(&odb_path, repo->path_repository, GIT_OBJECTS_DIR)) < 0)
+		if ((error = git_buf_joinpath(&odb_path, repo->commondir, GIT_OBJECTS_DIR)) < 0)
 			return error;
 
 		error = git_odb_open(&odb, odb_path.ptr);
@@ -1856,7 +1899,8 @@ int git_repository_init_ext(
 	git_repository_init_options *opts)
 {
 	int error;
-	git_buf repo_path = GIT_BUF_INIT, wd_path = GIT_BUF_INIT;
+	git_buf repo_path = GIT_BUF_INIT, wd_path = GIT_BUF_INIT,
+		common_path = GIT_BUF_INIT;
 	const char *wd;
 
 	assert(out && given_repo && opts);
@@ -1868,7 +1912,7 @@ int git_repository_init_ext(
 		goto cleanup;
 
 	wd = (opts->flags & GIT_REPOSITORY_INIT_BARE) ? NULL : git_buf_cstr(&wd_path);
-	if (valid_repository_path(&repo_path)) {
+	if (valid_repository_path(&repo_path, &common_path)) {
 
 		if ((opts->flags & GIT_REPOSITORY_INIT_NO_REINIT) != 0) {
 			giterr_set(GITERR_REPOSITORY,
@@ -1901,6 +1945,7 @@ int git_repository_init_ext(
 		error = repo_init_create_origin(*out, opts->origin_url);
 
 cleanup:
+	git_buf_free(&common_path);
 	git_buf_free(&repo_path);
 	git_buf_free(&wd_path);
 
@@ -2021,6 +2066,12 @@ const char *git_repository_workdir(git_repository *repo)
 		return NULL;
 
 	return repo->workdir;
+}
+
+const char *git_repository_commondir(git_repository *repo)
+{
+	assert(repo);
+	return repo->commondir;
 }
 
 int git_repository_set_workdir(

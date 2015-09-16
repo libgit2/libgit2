@@ -393,6 +393,17 @@ GIT_EXTERN(const char *) git_repository_path(git_repository *repo);
 GIT_EXTERN(const char *) git_repository_workdir(git_repository *repo);
 
 /**
+ * Get the path of the shared common directory for this repository
+ *
+ * If the repository is bare is not a worktree, the git directory
+ * path is returned.
+ *
+ * @param repo A repository object
+ * @return the path to the common dir
+ */
+GIT_EXTERN(const char *) git_repository_commondir(git_repository *repo);
+
+/**
  * Set the path to the working directory for this repository
  *
  * The working directory doesn't need to be the same one

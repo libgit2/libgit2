@@ -128,6 +128,7 @@ struct git_repository {
 
 	char *path_repository;
 	char *path_gitlink;
+	char *commondir;
 	char *workdir;
 	char *namespace;
 
