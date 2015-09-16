@@ -18,7 +18,7 @@ GIT__USE_STRMAP
 int git_futils_mkpath2file(const char *file_path, const mode_t mode)
 {
 	return git_futils_mkdir(
-		file_path, NULL, mode,
+		file_path, mode,
 		GIT_MKDIR_PATH | GIT_MKDIR_SKIP_LAST | GIT_MKDIR_VERIFY_DIR);
 }
 
@@ -331,8 +331,8 @@ GIT_INLINE(int) validate_existing(
 	return 0;
 }
 
-int git_futils_mkdir_ext(
-	const char *path,
+int git_futils_mkdir_relative(
+	const char *relative_path,
 	const char *base,
 	mode_t mode,
 	uint32_t flags,
@@ -343,9 +343,13 @@ int git_futils_mkdir_ext(
 	ssize_t root = 0, min_root_len, root_len;
 	char lastch = '/', *tail;
 	struct stat st;
+	struct git_futils_mkdir_options empty_opts = {0};
+
+	if (!opts)
+		opts = &empty_opts;
 
 	/* build path and find "root" where we should start calling mkdir */
-	if (git_path_join_unrooted(&make_path, path, base, &root) < 0)
+	if (git_path_join_unrooted(&make_path, relative_path, base, &root) < 0)
 		return -1;
 
 	if (make_path.size == 0) {
@@ -503,17 +507,16 @@ done:
 
 int git_futils_mkdir(
 	const char *path,
-	const char *base,
 	mode_t mode,
 	uint32_t flags)
 {
 	struct git_futils_mkdir_options options = {0};
-	return git_futils_mkdir_ext(path, base, mode, flags, &options);
+	return git_futils_mkdir_relative(path, NULL, mode, flags, &options);
 }
 
-int git_futils_mkdir_r(const char *path, const char *base, const mode_t mode)
+int git_futils_mkdir_r(const char *path, const mode_t mode)
 {
-	return git_futils_mkdir(path, base, mode, GIT_MKDIR_PATH);
+	return git_futils_mkdir(path, mode, GIT_MKDIR_PATH);
 }
 
 typedef struct {
@@ -777,7 +780,7 @@ static int _cp_r_mkdir(cp_r_info *info, git_buf *from)
 	/* create root directory the first time we need to create a directory */
 	if ((info->flags & GIT_CPDIR__MKDIR_DONE_FOR_TO_ROOT) == 0) {
 		error = git_futils_mkdir(
-			info->to_root, NULL, info->dirmode,
+			info->to_root, info->dirmode,
 			(info->flags & GIT_CPDIR_CHMOD_DIRS) ? GIT_MKDIR_CHMOD : 0);
 
 		info->flags |= GIT_CPDIR__MKDIR_DONE_FOR_TO_ROOT;
@@ -785,9 +788,9 @@ static int _cp_r_mkdir(cp_r_info *info, git_buf *from)
 
 	/* create directory with root as base to prevent excess chmods */
 	if (!error)
-		error = git_futils_mkdir(
+		error = git_futils_mkdir_relative(
 			from->ptr + info->from_prefix, info->to_root,
-			info->dirmode, info->mkdir_flags);
+			info->dirmode, info->mkdir_flags, NULL);
 
 	return error;
 }

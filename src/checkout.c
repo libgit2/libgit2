@@ -1366,7 +1366,7 @@ static int checkout_mkdir(
 	mkdir_opts.dir_map = data->mkdir_map;
 	mkdir_opts.pool = &data->pool;
 
-	error = git_futils_mkdir_ext(
+	error = git_futils_mkdir_relative(
 		path, base, mode, flags, &mkdir_opts);
 
 	data->perfdata.mkdir_calls += mkdir_opts.perfdata.mkdir_calls;

@@ -929,7 +929,7 @@ void test_core_buffer__similarity_metric(void)
 	cl_git_pass(git_buf_sets(&buf, SIMILARITY_TEST_DATA_1));
 	cl_git_pass(git_hashsig_create(&a, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
 
-	cl_git_pass(git_futils_mkdir("scratch", NULL, 0755, GIT_MKDIR_PATH));
+	cl_git_pass(git_futils_mkdir("scratch", 0755, GIT_MKDIR_PATH));
 	cl_git_mkfile("scratch/testdata", SIMILARITY_TEST_DATA_1);
 	cl_git_pass(git_hashsig_create_fromfile(
 		&b, "scratch/testdata", GIT_HASHSIG_NORMAL));

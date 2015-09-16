@@ -36,7 +36,7 @@ void test_refs_pack__empty(void)
 	git_buf temp_path = GIT_BUF_INIT;
 
 	cl_git_pass(git_buf_join_n(&temp_path, '/', 3, git_repository_path(g_repo), GIT_REFS_HEADS_DIR, "empty_dir"));
-	cl_git_pass(git_futils_mkdir_r(temp_path.ptr, NULL, GIT_REFS_DIR_MODE));
+	cl_git_pass(git_futils_mkdir_r(temp_path.ptr, GIT_REFS_DIR_MODE));
 	git_buf_free(&temp_path);
 
 	packall();

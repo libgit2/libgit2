@@ -1413,7 +1413,8 @@ static int setup_namespace(git_buf *path, git_repository *repo)
 	git__free(parts);
 
 	/* Make sure that the folder with the namespace exists */
-	if (git_futils_mkdir_r(git_buf_cstr(path), repo->path_repository, 0777) < 0)
+	if (git_futils_mkdir_relative(git_buf_cstr(path), repo->path_repository,
+			0777, GIT_MKDIR_PATH, NULL) < 0)
 		return -1;
 
 	/* Return root of the namespaced path, i.e. without the trailing '/refs' */

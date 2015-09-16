@@ -84,9 +84,9 @@ static int object_file_name(
 
 static int object_mkdir(const git_buf *name, const loose_backend *be)
 {
-	return git_futils_mkdir(
+	return git_futils_mkdir_relative(
 		name->ptr + be->objects_dirlen, be->objects_dir, be->object_dir_mode,
-		GIT_MKDIR_PATH | GIT_MKDIR_SKIP_LAST | GIT_MKDIR_VERIFY_DIR);
+		GIT_MKDIR_PATH | GIT_MKDIR_SKIP_LAST | GIT_MKDIR_VERIFY_DIR, NULL);
 }
 
 static size_t get_binary_object_header(obj_hdr *hdr, git_buf *obj)

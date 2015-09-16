@@ -63,7 +63,7 @@ void test_checkout_index__can_remove_untracked_files(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
-	git_futils_mkdir("./testrepo/dir/subdir/subsubdir", NULL, 0755, GIT_MKDIR_PATH);
+	git_futils_mkdir("./testrepo/dir/subdir/subsubdir", 0755, GIT_MKDIR_PATH);
 	cl_git_mkfile("./testrepo/dir/one", "one\n");
 	cl_git_mkfile("./testrepo/dir/subdir/two", "two\n");
 
