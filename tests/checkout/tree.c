@@ -989,15 +989,18 @@ void test_checkout_tree__filemode_preserved_in_index(void)
 
 mode_t read_filemode(const char *path)
 {
+	git_buf fullpath = GIT_BUF_INIT;
 	struct stat st;
-	char pathabs[256] = {0};
+	mode_t result;
 
-	strcat(pathabs, clar_sandbox_path());
-	strcat(pathabs, "/testrepo/");
-	strcat(pathabs, path);
-	cl_must_pass(p_stat(pathabs, &st));
+	git_buf_joinpath(&fullpath, "testrepo", path);
+	cl_must_pass(p_stat(fullpath.ptr, &st));
 
-	return st.st_mode;
+	result = GIT_PERMS_IS_EXEC(st.st_mode) ? 0100755 : 0100644;
+
+	git_buf_free(&fullpath);
+
+	return result;
 }
 
 void test_checkout_tree__filemode_preserved_in_workdir(void)
