@@ -946,7 +946,7 @@ void test_checkout_tree__filemode_preserved_in_index(void)
 
 	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
 	cl_assert(entry = git_index_get_bypath(index, "executable.txt", 0));
-	cl_assert_equal_i(0100755, entry->mode);
+	cl_assert(GIT_PERMS_IS_EXEC(entry->mode));
 
 	git_commit_free(commit);
 
@@ -957,7 +957,7 @@ void test_checkout_tree__filemode_preserved_in_index(void)
 
 	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
 	cl_assert(entry = git_index_get_bypath(index, "a/b.txt", 0));
-	cl_assert_equal_i(0100644, entry->mode);
+	cl_assert(!GIT_PERMS_IS_EXEC(entry->mode));
 
 	git_commit_free(commit);
 
@@ -968,7 +968,7 @@ void test_checkout_tree__filemode_preserved_in_index(void)
 
 	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
 	cl_assert(entry = git_index_get_bypath(index, "a/b.txt", 0));
-	cl_assert_equal_i(0100755, entry->mode);
+	cl_assert(GIT_PERMS_IS_EXEC(entry->mode));
 
 	git_commit_free(commit);
 
@@ -979,7 +979,7 @@ void test_checkout_tree__filemode_preserved_in_index(void)
 
 	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
 	cl_assert(entry = git_index_get_bypath(index, "a/b.txt", 0));
-	cl_assert_equal_i(0100644, entry->mode);
+	cl_assert(!GIT_PERMS_IS_EXEC(entry->mode));
 
 	git_commit_free(commit);
 
@@ -1017,7 +1017,7 @@ void test_checkout_tree__filemode_preserved_in_workdir(void)
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &executable_oid));
 
 	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
-	cl_assert_equal_i(0100755, read_filemode("executable.txt"));
+	cl_assert(GIT_PERMS_IS_EXEC(read_filemode("executable.txt")));
 
 	git_commit_free(commit);
 
@@ -1027,7 +1027,7 @@ void test_checkout_tree__filemode_preserved_in_workdir(void)
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &executable_oid));
 
 	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
-	cl_assert_equal_i(0100644, read_filemode("a/b.txt"));
+	cl_assert(!GIT_PERMS_IS_EXEC(read_filemode("a/b.txt")));
 
 	git_commit_free(commit);
 
@@ -1037,7 +1037,7 @@ void test_checkout_tree__filemode_preserved_in_workdir(void)
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &executable_oid));
 
 	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
-	cl_assert_equal_i(0100755, read_filemode("a/b.txt"));
+	cl_assert(GIT_PERMS_IS_EXEC(read_filemode("a/b.txt")));
 
 	git_commit_free(commit);
 
@@ -1047,7 +1047,7 @@ void test_checkout_tree__filemode_preserved_in_workdir(void)
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &executable_oid));
 
 	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
-	cl_assert_equal_i(0100644, read_filemode("a/b.txt"));
+	cl_assert(!GIT_PERMS_IS_EXEC(read_filemode("a/b.txt")));
 
 	git_commit_free(commit);
 #endif
