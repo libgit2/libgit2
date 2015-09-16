@@ -996,7 +996,8 @@ mode_t read_filemode(const char *path)
 	git_buf_joinpath(&fullpath, "testrepo", path);
 	cl_must_pass(p_stat(fullpath.ptr, &st));
 
-	result = GIT_PERMS_IS_EXEC(st.st_mode) ? 0100755 : 0100644;
+	result = GIT_PERMS_IS_EXEC(st.st_mode) ?
+		GIT_FILEMODE_BLOB_EXECUTABLE : GIT_FILEMODE_BLOB;
 
 	git_buf_free(&fullpath);
 
