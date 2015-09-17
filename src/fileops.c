@@ -331,6 +331,138 @@ GIT_INLINE(int) validate_existing(
 	return 0;
 }
 
+	
+GIT_INLINE(int) mkdir_canonicalize(
+	git_buf *path,
+	uint32_t flags)
+{
+	ssize_t root_len;
+
+	if (path->size == 0) {
+		giterr_set(GITERR_OS, "attempt to create empty path");
+		return -1;
+	}
+
+	/* Trim trailing slashes (except the root) */
+	if ((root_len = git_path_root(path->ptr)) < 0)
+		root_len = 0;
+	else
+		root_len++;
+
+	while (path->size > (size_t)root_len && path->ptr[path->size - 1] == '/')
+		path->ptr[--path->size] = '\0';
+
+	/* if we are not supposed to made the last element, truncate it */
+	if ((flags & GIT_MKDIR_SKIP_LAST2) != 0) {
+		git_path_dirname_r(path, path->ptr);
+		flags |= GIT_MKDIR_SKIP_LAST;
+	}
+	if ((flags & GIT_MKDIR_SKIP_LAST) != 0) {
+		git_path_dirname_r(path, path->ptr);
+	}
+
+	/* We were either given the root path (or trimmed it to
+	* the root), we don't have anything to do.
+	*/
+	if (path->size <= (size_t)root_len)
+		git_buf_clear(path);
+
+	return 0;
+}
+
+int git_futils_mkdir(
+	const char *path,
+	mode_t mode,
+	uint32_t flags)
+{
+	git_buf make_path = GIT_BUF_INIT, parent_path = GIT_BUF_INIT;
+	const char *relative;
+	struct git_futils_mkdir_options opts = { 0 };
+	struct stat st;
+	size_t depth = 0;
+	int len = 0, error;
+
+	if ((error = git_buf_puts(&make_path, path)) < 0 ||
+		(error = mkdir_canonicalize(&make_path, flags)) < 0 ||
+		(error = git_buf_puts(&parent_path, make_path.ptr)) < 0 ||
+		make_path.size == 0)
+		goto done;
+
+	/* find the first parent directory that exists.  this will be used
+	 * as the base to dirname_relative.
+	 */
+	for (relative = make_path.ptr; parent_path.size; ) {
+		error = p_lstat(parent_path.ptr, &st);
+
+		if (error == 0) {
+			break;
+		} else if (errno != ENOENT) {
+			giterr_set(GITERR_OS, "failed to stat '%s'", parent_path.ptr);
+			goto done;
+		}
+
+		depth++;
+
+		/* examine the parent of the current path */
+		if ((len = git_path_dirname_r(&parent_path, parent_path.ptr)) < 0) {
+			error = len;
+			goto done;
+		}
+
+		assert(len);
+
+		/* we've walked all the given path's parents and it's either relative
+		 * or rooted.  either way, give up and make the entire path.
+		 */
+		if (len == 1 &&
+			(parent_path.ptr[0] == '.' || parent_path.ptr[0] == '/')) {
+			relative = make_path.ptr;
+			break;
+		}
+
+		relative = make_path.ptr + len + 1;
+
+		/* not recursive? just make this directory relative to its parent. */
+		if ((flags & GIT_MKDIR_PATH) == 0)
+			break;
+	}
+
+	/* we found an item at the location we're trying to create,
+	 * validate it.
+	 */
+	if (depth == 0) {
+		if ((error = validate_existing(make_path.ptr, &st, mode, flags, &opts.perfdata)) < 0)
+			goto done;
+
+		if ((flags & GIT_MKDIR_EXCL) != 0) {
+			giterr_set(GITERR_FILESYSTEM, "failed to make directory '%s': "
+				"directory exists", make_path.ptr);
+			error = GIT_EEXISTS;
+			goto done;
+		}
+
+		goto done;
+	}
+
+	/* we already took `SKIP_LAST` and `SKIP_LAST2` into account when
+	 * canonicalizing `make_path`.
+	 */
+	flags &= ~(GIT_MKDIR_SKIP_LAST2 | GIT_MKDIR_SKIP_LAST);
+
+	error = git_futils_mkdir_relative(relative,
+		parent_path.size ? parent_path.ptr : NULL, mode, flags, &opts);
+
+done:
+	git_buf_free(&make_path);
+	git_buf_free(&parent_path);
+	return error;
+}
+
+int git_futils_mkdir_r(const char *path, const mode_t mode)
+{
+	return git_futils_mkdir(path, mode, GIT_MKDIR_PATH);
+}
+
 int git_futils_mkdir_relative(
 	const char *relative_path,
 	const char *base,
@@ -338,12 +470,12 @@ int git_futils_mkdir_relative(
 	uint32_t flags,
 	struct git_futils_mkdir_options *opts)
 {
-	int error = -1;
 	git_buf make_path = GIT_BUF_INIT;
-	ssize_t root = 0, min_root_len, root_len;
+	ssize_t root = 0, min_root_len;
 	char lastch = '/', *tail;
 	struct stat st;
 	struct git_futils_mkdir_options empty_opts = {0};
+	int error;
 
 	if (!opts)
 		opts = &empty_opts;
@@ -352,37 +484,9 @@ int git_futils_mkdir_relative(
 	if (git_path_join_unrooted(&make_path, relative_path, base, &root) < 0)
 		return -1;
 
-	if (make_path.size == 0) {
-		giterr_set(GITERR_OS, "Attempt to create empty path");
+	if ((error = mkdir_canonicalize(&make_path, flags)) < 0 ||
+		make_path.size == 0)
 		goto done;
-	}
-
-	/* Trim trailing slashes (except the root) */
-	if ((root_len = git_path_root(make_path.ptr)) < 0)
-		root_len = 0;
-	else
-		root_len++;
-
-	while (make_path.size > (size_t)root_len &&
-		make_path.ptr[make_path.size - 1] == '/')
-		make_path.ptr[--make_path.size] = '\0';
-
-	/* if we are not supposed to made the last element, truncate it */
-	if ((flags & GIT_MKDIR_SKIP_LAST2) != 0) {
-		git_path_dirname_r(&make_path, make_path.ptr);
-		flags |= GIT_MKDIR_SKIP_LAST;
-	}
-	if ((flags & GIT_MKDIR_SKIP_LAST) != 0) {
-		git_path_dirname_r(&make_path, make_path.ptr);
-	}
-
-	/* We were either given the root path (or trimmed it to
-	 * the root), we don't have anything to do.
-	 */
-	if (make_path.size <= (size_t)root_len) {
-		error = 0;
-		goto done;
-	}
 
 	/* if we are not supposed to make the whole path, reset root */
 	if ((flags & GIT_MKDIR_PATH) == 0)
@@ -503,20 +607,6 @@ retry_lstat:
 done:
 	git_buf_free(&make_path);
 	return error;
-}
-
-int git_futils_mkdir(
-	const char *path,
-	mode_t mode,
-	uint32_t flags)
-{
-	struct git_futils_mkdir_options options = {0};
-	return git_futils_mkdir_relative(path, NULL, mode, flags, &options);
-}
-
-int git_futils_mkdir_r(const char *path, const mode_t mode)
-{
-	return git_futils_mkdir(path, mode, GIT_MKDIR_PATH);
 }
 
 typedef struct {

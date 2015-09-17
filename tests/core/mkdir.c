@@ -27,25 +27,27 @@ void test_core_mkdir__absolute(void)
 	cl_assert(git_path_isdir(path.ptr));
 
 	git_buf_joinpath(&path, path.ptr, "subdir");
-
-	/* make a directory */
 	cl_assert(!git_path_isdir(path.ptr));
 	cl_git_pass(git_futils_mkdir(path.ptr, 0755, 0));
 	cl_assert(git_path_isdir(path.ptr));
 
+	/* ensure mkdir_r works for a single subdir */
 	git_buf_joinpath(&path, path.ptr, "another");
-
-	/* make a directory */
 	cl_assert(!git_path_isdir(path.ptr));
 	cl_git_pass(git_futils_mkdir_r(path.ptr, 0755));
 	cl_assert(git_path_isdir(path.ptr));
 
+	/* ensure mkdir_r works */
 	git_buf_joinpath(&path, clar_sandbox_path(), "d1/foo/bar/asdf");
-
-	/* make a directory */
 	cl_assert(!git_path_isdir(path.ptr));
 	cl_git_pass(git_futils_mkdir_r(path.ptr, 0755));
 	cl_assert(git_path_isdir(path.ptr));
+
+	/* ensure we don't imply recursive */
+	git_buf_joinpath(&path, clar_sandbox_path(), "d2/foo/bar/asdf");
+	cl_assert(!git_path_isdir(path.ptr));
+	cl_git_fail(git_futils_mkdir(path.ptr, 0755, 0));
+	cl_assert(!git_path_isdir(path.ptr));
 }
 
 void test_core_mkdir__basic(void)
@@ -285,4 +287,3 @@ void test_core_mkdir__mkdir_path_inside_unwriteable_parent(void)
 
 	cl_must_pass(p_chmod("r/mode", 0777));
 }
-
