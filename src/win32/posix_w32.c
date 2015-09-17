@@ -148,12 +148,19 @@ static int lstat_w(
 		return git_win32__file_attribute_to_stat(buf, &fdata, path);
 	}
 
-	errno = ENOENT;
+	switch (GetLastError()) {
+	case ERROR_ACCESS_DENIED:
+		errno = EACCES;
+		break;
+	default:
+		errno = ENOENT;
+		break;
+	}
 
 	/* To match POSIX behavior, set ENOTDIR when any of the folders in the
 	 * file path is a regular file, otherwise set ENOENT.
 	 */
-	if (posix_enotdir) {
+	if (errno == ENOENT && posix_enotdir) {
 		size_t path_len = wcslen(path);
 
 		/* scan up path until we find an existing item */
