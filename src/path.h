@@ -169,6 +169,12 @@ extern bool git_path_isdir(const char *path);
 extern bool git_path_isfile(const char *path);
 
 /**
+ * Check if the given path points to a symbolic link.
+ * @return true or false
+ */
+extern bool git_path_islink(const char *path);
+
+/**
  * Check if the given path is a directory, and is empty.
  */
 extern bool git_path_is_empty_dir(const char *path);
