@@ -289,48 +289,76 @@ void git_futils_mmap_free(git_map *out)
 	p_munmap(out);
 }
 
-GIT_INLINE(int) validate_existing(
-	const char *make_path,
+GIT_INLINE(int) mkdir_validate_dir(
+	const char *path,
 	struct stat *st,
 	mode_t mode,
 	uint32_t flags,
-	struct git_futils_mkdir_perfdata *perfdata)
+	struct git_futils_mkdir_options *opts)
 {
+	/* with exclusive create, existing dir is an error */
+	if ((flags & GIT_MKDIR_EXCL) != 0) {
+		giterr_set(GITERR_FILESYSTEM,
+			"Failed to make directory '%s': directory exists", path);
+		return GIT_EEXISTS;
+	}
+
 	if ((S_ISREG(st->st_mode) && (flags & GIT_MKDIR_REMOVE_FILES)) ||
 		(S_ISLNK(st->st_mode) && (flags & GIT_MKDIR_REMOVE_SYMLINKS))) {
-		if (p_unlink(make_path) < 0) {
+		if (p_unlink(path) < 0) {
 			giterr_set(GITERR_OS, "Failed to remove %s '%s'",
-				S_ISLNK(st->st_mode) ? "symlink" : "file", make_path);
+				S_ISLNK(st->st_mode) ? "symlink" : "file", path);
 			return GIT_EEXISTS;
 		}
 
-		perfdata->mkdir_calls++;
+		opts->perfdata.mkdir_calls++;
 
-		if (p_mkdir(make_path, mode) < 0) {
-			giterr_set(GITERR_OS, "Failed to make directory '%s'", make_path);
+		if (p_mkdir(path, mode) < 0) {
+			giterr_set(GITERR_OS, "Failed to make directory '%s'", path);
 			return GIT_EEXISTS;
 		}
 	}
 
 	else if (S_ISLNK(st->st_mode)) {
 		/* Re-stat the target, make sure it's a directory */
-		perfdata->stat_calls++;
+		opts->perfdata.stat_calls++;
 
-		if (p_stat(make_path, st) < 0) {
-			giterr_set(GITERR_OS, "Failed to make directory '%s'", make_path);
+		if (p_stat(path, st) < 0) {
+			giterr_set(GITERR_OS, "Failed to make directory '%s'", path);
 			return GIT_EEXISTS;
 		}
 	}
 
 	else if (!S_ISDIR(st->st_mode)) {
 		giterr_set(GITERR_FILESYSTEM,
-			"Failed to make directory '%s': directory exists", make_path);
+			"Failed to make directory '%s': directory exists", path);
 		return GIT_EEXISTS;
 	}
 
 	return 0;
 }
 
+GIT_INLINE(int) mkdir_validate_mode(
+	const char *path,
+	struct stat *st,
+	bool terminal_path,
+	mode_t mode,
+	uint32_t flags,
+	struct git_futils_mkdir_options *opts)
+{
+	if (((terminal_path && (flags & GIT_MKDIR_CHMOD) != 0) ||
+		(flags & GIT_MKDIR_CHMOD_PATH) != 0) && st->st_mode != mode) {
+
+		opts->perfdata.chmod_calls++;
+
+		if (p_chmod(path, mode) < 0) {
+			giterr_set(GITERR_OS, "failed to set permissions on '%s'", path);
+			return -1;
+		}
+	}
+
+	return 0;
+}
 	
 GIT_INLINE(int) mkdir_canonicalize(
 	git_buf *path,
@@ -431,15 +459,11 @@ int git_futils_mkdir(
 	 * validate it.
 	 */
 	if (depth == 0) {
-		if ((error = validate_existing(make_path.ptr, &st, mode, flags, &opts.perfdata)) < 0)
-			goto done;
+		error = mkdir_validate_dir(make_path.ptr, &st, mode, flags, &opts);
 
-		if ((flags & GIT_MKDIR_EXCL) != 0) {
-			giterr_set(GITERR_FILESYSTEM, "failed to make directory '%s': "
-				"directory exists", make_path.ptr);
-			error = GIT_EEXISTS;
-			goto done;
-		}
+		if (!error)
+			error = mkdir_validate_mode(
+				make_path.ptr, &st, true, mode, flags, &opts);
 
 		goto done;
 	}
@@ -545,32 +569,15 @@ retry_lstat:
 				goto done;
 			}
 		} else {
-			/* with exclusive create, existing dir is an error */
-			if ((flags & GIT_MKDIR_EXCL) != 0) {
-				giterr_set(GITERR_FILESYSTEM, "Failed to make directory '%s': directory exists", make_path.ptr);
-				error = GIT_EEXISTS;
+			if ((error = mkdir_validate_dir(
+				make_path.ptr, &st, mode, flags, opts)) < 0)
 				goto done;
-			}
-
-			if ((error = validate_existing(
-				make_path.ptr, &st, mode, flags, &opts->perfdata)) < 0)
-					goto done;
 		}
 
 		/* chmod if requested and necessary */
-		if (((flags & GIT_MKDIR_CHMOD_PATH) != 0 ||
-			 (lastch == '\0' && (flags & GIT_MKDIR_CHMOD) != 0)) &&
-			st.st_mode != mode) {
-
-			opts->perfdata.chmod_calls++;
-
-			if ((error = p_chmod(make_path.ptr, mode)) < 0 &&
-				lastch == '\0') {
-				giterr_set(GITERR_OS, "Failed to set permissions on '%s'",
-					make_path.ptr);
-				goto done;
-			}
-		}
+		if ((error = mkdir_validate_mode(
+			make_path.ptr, &st, (lastch == '\0'), mode, flags, opts)) < 0)
+			goto done;
 
 		if (opts->dir_map && opts->pool) {
 			char *cache_path;
