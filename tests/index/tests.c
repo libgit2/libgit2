@@ -752,7 +752,7 @@ void test_index_tests__reload_from_disk(void)
 
 	cl_set_cleanup(&cleanup_myrepo, NULL);
 
-	cl_git_pass(git_futils_mkdir("./myrepo", NULL, 0777, GIT_MKDIR_PATH));
+	cl_git_pass(git_futils_mkdir("./myrepo", 0777, GIT_MKDIR_PATH));
 	cl_git_mkfile("./myrepo/a.txt", "a\n");
 	cl_git_mkfile("./myrepo/b.txt", "b\n");
 

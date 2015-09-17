@@ -92,7 +92,7 @@ void test_submodule_status__ignore_none(void)
 	cl_assert((status & GIT_SUBMODULE_STATUS_WD_DELETED) != 0);
 
 	/* now mkdir sm_unchanged to test uninitialized */
-	cl_git_pass(git_futils_mkdir("sm_unchanged", "submod2", 0755, 0));
+	cl_git_pass(git_futils_mkdir_relative("sm_unchanged", "submod2", 0755, 0, NULL));
 	status = get_submodule_status(g_repo, "sm_unchanged");
 	cl_assert((status & GIT_SUBMODULE_STATUS_WD_UNINITIALIZED) != 0);
 
@@ -141,7 +141,7 @@ void test_submodule_status__ignore_untracked(void)
 	cl_assert((status & GIT_SUBMODULE_STATUS_WD_DELETED) != 0);
 
 	/* now mkdir sm_unchanged to test uninitialized */
-	cl_git_pass(git_futils_mkdir("sm_unchanged", "submod2", 0755, 0));
+	cl_git_pass(git_futils_mkdir_relative("sm_unchanged", "submod2", 0755, 0, NULL));
 	cl_git_pass(git_submodule_status(&status, g_repo,"sm_unchanged", ign));
 	cl_assert((status & GIT_SUBMODULE_STATUS_WD_UNINITIALIZED) != 0);
 
@@ -185,7 +185,7 @@ void test_submodule_status__ignore_dirty(void)
 	cl_assert((status & GIT_SUBMODULE_STATUS_WD_DELETED) != 0);
 
 	/* now mkdir sm_unchanged to test uninitialized */
-	cl_git_pass(git_futils_mkdir("sm_unchanged", "submod2", 0755, 0));
+	cl_git_pass(git_futils_mkdir_relative("sm_unchanged", "submod2", 0755, 0, NULL));
 	cl_git_pass(git_submodule_status(&status, g_repo,"sm_unchanged", ign));
 	cl_assert((status & GIT_SUBMODULE_STATUS_WD_UNINITIALIZED) != 0);
 
@@ -229,7 +229,7 @@ void test_submodule_status__ignore_all(void)
 	cl_assert(GIT_SUBMODULE_STATUS_IS_UNMODIFIED(status));
 
 	/* now mkdir sm_unchanged to test uninitialized */
-	cl_git_pass(git_futils_mkdir("sm_unchanged", "submod2", 0755, 0));
+	cl_git_pass(git_futils_mkdir_relative("sm_unchanged", "submod2", 0755, 0, NULL));
 	cl_git_pass(git_submodule_status(&status, g_repo,"sm_unchanged", ign));
 	cl_assert(GIT_SUBMODULE_STATUS_IS_UNMODIFIED(status));
 
@@ -338,7 +338,7 @@ void test_submodule_status__untracked_dirs_containing_ignored_files(void)
 		"submod2/.git/modules/sm_unchanged/info/exclude", "\n*.ignored\n");
 
 	cl_git_pass(
-		git_futils_mkdir("sm_unchanged/directory", "submod2", 0755, 0));
+		git_futils_mkdir_relative("sm_unchanged/directory", "submod2", 0755, 0, NULL));
 	cl_git_mkfile(
 		"submod2/sm_unchanged/directory/i_am.ignored",
 		"ignore this file, please\n");

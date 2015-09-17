@@ -72,7 +72,7 @@ extern const char *git_path_topdir(const char *path);
  * This will return a number >= 0 which is the offset to the start of the
  * path, if the path is rooted (i.e. "/rooted/path" returns 0 and
  * "c:/windows/rooted/path" returns 2).  If the path is not rooted, this
- * returns < 0.
+ * returns -1.
  */
 extern int git_path_root(const char *path);
 
@@ -167,6 +167,12 @@ extern bool git_path_isdir(const char *path);
  * @return true or false
  */
 extern bool git_path_isfile(const char *path);
+
+/**
+ * Check if the given path points to a symbolic link.
+ * @return true or false
+ */
+extern bool git_path_islink(const char *path);
 
 /**
  * Check if the given path is a directory, and is empty.

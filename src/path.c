@@ -526,6 +526,17 @@ bool git_path_isfile(const char *path)
 	return S_ISREG(st.st_mode) != 0;
 }
 
+bool git_path_islink(const char *path)
+{
+	struct stat st;
+
+	assert(path);
+	if (p_lstat(path, &st) < 0)
+		return false;
+
+	return S_ISLNK(st.st_mode) != 0;
+}
+
 #ifdef GIT_WIN32
 
 bool git_path_is_empty_dir(const char *path)

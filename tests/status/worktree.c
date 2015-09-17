@@ -195,7 +195,7 @@ void test_status_worktree__swap_subdir_with_recurse_and_pathspec(void)
 	cl_git_pass(p_rename("status/subdir", "status/current_file"));
 	cl_git_pass(p_rename("status/swap", "status/subdir"));
 	cl_git_mkfile("status/.new_file", "dummy");
-	cl_git_pass(git_futils_mkdir_r("status/zzz_new_dir", NULL, 0777));
+	cl_git_pass(git_futils_mkdir_r("status/zzz_new_dir", 0777));
 	cl_git_mkfile("status/zzz_new_dir/new_file", "dummy");
 	cl_git_mkfile("status/zzz_new_file", "dummy");
 
@@ -917,7 +917,7 @@ void test_status_worktree__long_filenames(void)
 
 	// Create directory with amazingly long filename
 	sprintf(path, "empty_standard_repo/%s", longname);
-	cl_git_pass(git_futils_mkdir_r(path, NULL, 0777));
+	cl_git_pass(git_futils_mkdir_r(path, 0777));
 	sprintf(path, "empty_standard_repo/%s/foo", longname);
 	cl_git_mkfile(path, "dummy");
 
@@ -1007,7 +1007,7 @@ void test_status_worktree__unreadable(void)
 	status_entry_counts counts = {0};
 
 	/* Create directory with no read permission */
-	cl_git_pass(git_futils_mkdir_r("empty_standard_repo/no_permission", NULL, 0777));
+	cl_git_pass(git_futils_mkdir_r("empty_standard_repo/no_permission", 0777));
 	cl_git_mkfile("empty_standard_repo/no_permission/foo", "dummy");
 	p_chmod("empty_standard_repo/no_permission", 0644);
 
@@ -1041,7 +1041,7 @@ void test_status_worktree__unreadable_not_included(void)
 	status_entry_counts counts = {0};
 
 	/* Create directory with no read permission */
-	cl_git_pass(git_futils_mkdir_r("empty_standard_repo/no_permission", NULL, 0777));
+	cl_git_pass(git_futils_mkdir_r("empty_standard_repo/no_permission", 0777));
 	cl_git_mkfile("empty_standard_repo/no_permission/foo", "dummy");
 	p_chmod("empty_standard_repo/no_permission", 0644);
 
@@ -1074,7 +1074,7 @@ void test_status_worktree__unreadable_as_untracked(void)
 	status_entry_counts counts = {0};
 
 	/* Create directory with no read permission */
-	cl_git_pass(git_futils_mkdir_r("empty_standard_repo/no_permission", NULL, 0777));
+	cl_git_pass(git_futils_mkdir_r("empty_standard_repo/no_permission", 0777));
 	cl_git_mkfile("empty_standard_repo/no_permission/foo", "dummy");
 	p_chmod("empty_standard_repo/no_permission", 0644);
 

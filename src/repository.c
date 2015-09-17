@@ -1441,8 +1441,8 @@ static int repo_init_structure(
 			if (chmod)
 				mkdir_flags |= GIT_MKDIR_CHMOD;
 
-			error = git_futils_mkdir(
-				tpl->path, repo_dir, dmode, mkdir_flags);
+			error = git_futils_mkdir_relative(
+				tpl->path, repo_dir, dmode, mkdir_flags, NULL);
 		}
 		else if (!external_tpl) {
 			const char *content = tpl->content;
@@ -1464,7 +1464,7 @@ static int mkdir_parent(git_buf *buf, uint32_t mode, bool skip2)
 	 * don't try to set gid or grant world write access
 	 */
 	return git_futils_mkdir(
-		buf->ptr, NULL, mode & ~(S_ISGID | 0002),
+		buf->ptr, mode & ~(S_ISGID | 0002),
 		GIT_MKDIR_PATH | GIT_MKDIR_VERIFY_DIR |
 		(skip2 ? GIT_MKDIR_SKIP_LAST2 : GIT_MKDIR_SKIP_LAST));
 }
@@ -1568,14 +1568,14 @@ static int repo_init_directories(
 		/* create path #4 */
 		if (wd_path->size > 0 &&
 			(error = git_futils_mkdir(
-				wd_path->ptr, NULL, dirmode & ~S_ISGID,
+				wd_path->ptr, dirmode & ~S_ISGID,
 				GIT_MKDIR_VERIFY_DIR)) < 0)
 			return error;
 
 		/* create path #2 (if not the same as #4) */
 		if (!natural_wd &&
 			(error = git_futils_mkdir(
-				repo_path->ptr, NULL, dirmode & ~S_ISGID,
+				repo_path->ptr, dirmode & ~S_ISGID,
 				GIT_MKDIR_VERIFY_DIR | GIT_MKDIR_SKIP_LAST)) < 0)
 			return error;
 	}
@@ -1585,7 +1585,7 @@ static int repo_init_directories(
 		has_dotgit)
 	{
 		/* create path #1 */
-		error = git_futils_mkdir(repo_path->ptr, NULL, dirmode,
+		error = git_futils_mkdir(repo_path->ptr, dirmode,
 			GIT_MKDIR_VERIFY_DIR | ((dirmode & S_ISGID) ? GIT_MKDIR_CHMOD : 0));
 	}
 
