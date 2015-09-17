@@ -408,13 +408,15 @@ int git_futils_mkdir(
 	struct git_futils_mkdir_options opts = { 0 };
 	struct stat st;
 	size_t depth = 0;
-	int len = 0, error;
+	int len = 0, root_len, error;
 
 	if ((error = git_buf_puts(&make_path, path)) < 0 ||
 		(error = mkdir_canonicalize(&make_path, flags)) < 0 ||
 		(error = git_buf_puts(&parent_path, make_path.ptr)) < 0 ||
 		make_path.size == 0)
 		goto done;
+
+	root_len = git_path_root(make_path.ptr);
 
 	/* find the first parent directory that exists.  this will be used
 	 * as the base to dirname_relative.
@@ -442,8 +444,7 @@ int git_futils_mkdir(
 		/* we've walked all the given path's parents and it's either relative
 		 * or rooted.  either way, give up and make the entire path.
 		 */
-		if (len == 1 &&
-			(parent_path.ptr[0] == '.' || parent_path.ptr[0] == '/')) {
+		if ((len == 1 && parent_path.ptr[0] == '.') || len == root_len+1) {
 			relative = make_path.ptr;
 			break;
 		}
