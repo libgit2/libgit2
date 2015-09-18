@@ -76,6 +76,8 @@ typedef struct git_config_file_iter {
 		 (iter) && (((tmp) = CVAR_LIST_NEXT(iter) || 1));\
 		 (iter) = (tmp))
 
+#define READER_POS(r) ((r).read_ptr - git_buf_cstr(&(r).buffer))
+
 struct reader {
 	time_t file_mtime;
 	size_t file_size;
@@ -1717,6 +1719,9 @@ struct write_data {
 	const char *name;
 	const regex_t *preg;
 	const char *value;
+	git_array_t(size_t) section_pos;
+	git_array_t(size_t) namestart_pos;
+	git_array_t(size_t) nameend_pos;
 };
 
 static int write_line(struct write_data *write_data, const char *line, size_t line_len)
@@ -1756,24 +1761,19 @@ static int write_on_section(
 	void *data)
 {
 	struct write_data *write_data = (struct write_data *)data;
-	int result = 0;
+	int in_section = strcmp(current_section, write_data->section) == 0;
 
 	GIT_UNUSED(reader);
+	GIT_UNUSED(line);
+	GIT_UNUSED(line_len);
 
-	/* If we were previously in the correct section (but aren't anymore)
-	 * and haven't written our value (for a simple name/value set, not
-	 * a multivar), then append it to the end of the section before writing
-	 * the new one.
-	 */
-	if (write_data->in_section && !write_data->preg && write_data->value)
-		result = write_value(write_data);
+	if (write_data->in_section != in_section && in_section)
+		GITERR_CHECK_ALLOC(git_array_alloc(write_data->section_pos));
+	write_data->in_section = in_section;
+	if (in_section)
+		*git_array_last(write_data->section_pos) = READER_POS(**reader);
 
-	write_data->in_section = strcmp(current_section, write_data->section) == 0;
-
-	if (!result)
-		result = write_line(write_data, line, line_len);
-
-	return result;
+	return 0;
 }
 
 static int write_on_variable(
@@ -1790,6 +1790,10 @@ static int write_on_variable(
 
 	GIT_UNUSED(reader);
 	GIT_UNUSED(current_section);
+	GIT_UNUSED(line_len);
+
+	if (write_data->in_section)
+		*git_array_last(write_data->section_pos) = READER_POS(**reader);
 
 	/* See if we are to update this name/value pair; first examine name */
 	if (write_data->in_section &&
@@ -1807,45 +1811,15 @@ static int write_on_variable(
 	 * existing data back out and continue on.
 	 */
 	if (!has_matched)
-		return write_line(write_data, line, line_len);
+		return 0;
 
 	write_data->preg_replaced = 1;
 
-	/* If value is NULL, we are deleting this value; write nothing. */
-	if (!write_data->value)
-		return 0;
-
-	return write_value(write_data);
-}
-
-static int write_on_comment(struct reader **reader, const char *line, size_t line_len, void *data)
-{
-	struct write_data *write_data;
-
-	GIT_UNUSED(reader);
-
-	write_data = (struct write_data *)data;
-	return write_line(write_data, line, line_len);
-}
-
-static int write_on_eof(struct reader **reader, void *data)
-{
-	struct write_data *write_data = (struct write_data *)data;
-	int result = 0;
-
-	GIT_UNUSED(reader);
-
-	/* If we are at the EOF and have not written our value (again, for a
-	 * simple name/value set, not a multivar) then we have never seen the
-	 * section in question and should create a new section and write the
-	 * value.
-	 */
-	if ((!write_data->preg || !write_data->preg_replaced) && write_data->value) {
-		if ((result = write_section(write_data->buf, write_data->section)) == 0)
-			result = write_value(write_data);
-	}
-
-	return result;
+	GITERR_CHECK_ALLOC(git_array_alloc(write_data->namestart_pos));
+	GITERR_CHECK_ALLOC(git_array_alloc(write_data->nameend_pos));
+	*git_array_last(write_data->namestart_pos) = READER_POS(**reader) - line_len;
+	*git_array_last(write_data->nameend_pos) = READER_POS(**reader);
+	return 0;
 }
 
 /*
@@ -1854,11 +1828,12 @@ static int write_on_eof(struct reader **reader, void *data)
 static int config_write(diskfile_backend *cfg, const char *key, const regex_t *preg, const char* value)
 {
 	int result;
-	char *section, *name, *ldot;
+	char *section = NULL, *name, *ldot;
 	git_filebuf file = GIT_FILEBUF_INIT;
 	git_buf buf = GIT_BUF_INIT;
 	struct reader *reader = git_array_get(cfg->readers, 0);
 	struct write_data write_data;
+	size_t i;
 
 	if (cfg->locked) {
 		result = git_buf_puts(&reader->buffer, git_buf_cstr(&cfg->locked_content));
@@ -1898,9 +1873,86 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	write_data.name = name;
 	write_data.preg = preg;
 	write_data.value = value;
+	git_array_init_to_size(write_data.section_pos, 8);
+	git_array_init_to_size(write_data.namestart_pos, 8);
+	git_array_init_to_size(write_data.nameend_pos, 8);
+	result = config_parse(reader, write_on_section, write_on_variable, NULL, NULL, &write_data);
+	if (result < 0) {
+		git_filebuf_cleanup(&file);
+		goto done;
+	}
 
-	result = config_parse(reader, write_on_section, write_on_variable, write_on_comment, write_on_eof, &write_data);
-	git__free(section);
+	if (git_array_size(write_data.namestart_pos) == 1) {
+		// replace one value
+		const char *line = git_buf_cstr(&reader->buffer);
+		size_t line_len = *git_array_get(write_data.namestart_pos, 0);
+		const char *line2 = git_buf_cstr(&reader->buffer) + *git_array_get(write_data.nameend_pos, 0);
+		size_t line_len2 = git_buf_len(&reader->buffer) - *git_array_get(write_data.nameend_pos, 0);
+
+		if ((result = write_line(&write_data, line, line_len)) == 0) {
+			if (value != NULL)
+				result = write_value(&write_data);
+			if (result == 0)
+				result = write_line(&write_data, line2, line_len2);
+		}
+	} else if (git_array_size(write_data.namestart_pos) == 0) {
+		// new key
+		if (git_array_size(write_data.section_pos) > 0) {
+			// old section, append key at the end of section
+			const char *line = git_buf_cstr(&reader->buffer);
+			size_t line_len = *git_array_last(write_data.section_pos);
+			const char *line2 = git_buf_cstr(&reader->buffer) + *git_array_last(write_data.section_pos);
+			size_t line_len2 = git_buf_len(&reader->buffer) - *git_array_last(write_data.section_pos);
+
+			if ((result = write_line(&write_data, line, line_len)) == 0) {
+				if (value != NULL)
+					result = write_value(&write_data);
+				if (result == 0)
+					result = write_line(&write_data, line2, line_len2);
+			}
+		} else {
+			// new section, append section and key at the end of file
+			const char *line = git_buf_cstr(&reader->buffer);
+			size_t line_len = git_buf_len(&reader->buffer);
+
+			if ((result = write_line(&write_data, line, line_len)) == 0) {
+				if (value != NULL) {
+					if ((result = write_section(write_data.buf, write_data.section)) == 0)
+						result = write_value(&write_data);
+				}
+			}
+		}
+	} else {
+		// multivar
+		if (git_array_size(write_data.namestart_pos) > 0) {
+			const char *line = git_buf_cstr(&reader->buffer);
+			size_t line_len = *git_array_get(write_data.namestart_pos, 0);
+
+			result = write_line(&write_data, line, line_len);
+		}
+		for (i = 0; i < git_array_size(write_data.namestart_pos) - 1; i++) {
+			const char *line = git_buf_cstr(&reader->buffer) + *git_array_get(write_data.nameend_pos, i);
+			size_t line_len = *git_array_get(write_data.namestart_pos, i + 1) - *git_array_get(write_data.nameend_pos, i);
+
+			if (result == 0) {
+				if (value != NULL) {
+					if ((result = write_value(&write_data)) == 0)
+						result = write_line(&write_data, line, line_len);
+				}
+			}
+		}
+		if (git_array_size(write_data.namestart_pos) > 0) {
+			const char *line = git_buf_cstr(&reader->buffer) + *git_array_last(write_data.nameend_pos);
+			size_t line_len = git_buf_len(&reader->buffer) - *git_array_last(write_data.nameend_pos);
+
+			if (result == 0) {
+				if (value != NULL) {
+					if ((result = write_value(&write_data)) == 0)
+						result = write_line(&write_data, line, line_len);
+				}
+			}
+		}
+	}
 
 	if (result < 0) {
 		git_filebuf_cleanup(&file);
@@ -1922,6 +1974,8 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	}
 
 done:
+	if (section)
+		git__free(section);
 	git_buf_free(&buf);
 	git_buf_free(&reader->buffer);
 	return result;
