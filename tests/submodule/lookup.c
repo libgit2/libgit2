@@ -369,7 +369,7 @@ void test_submodule_lookup__renamed(void)
 	/* Rename the entry in the index */
 	{
 		const git_index_entry *e;
-		git_index_entry entry = { 0 };
+		git_index_entry entry = {{ 0 }};
 
 		e = git_index_get_bypath(idx, "sm_unchanged", 0);
 		cl_assert(e);

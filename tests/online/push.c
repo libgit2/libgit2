@@ -91,7 +91,6 @@ static int cred_acquire_cb(
 
 /**
  * git_push_status_foreach callback that records status entries.
- * @param data (git_vector *) of push_status instances
  */
 static int record_push_status_cb(const char *ref, const char *msg, void *payload)
 {
