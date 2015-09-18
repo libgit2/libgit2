@@ -1711,6 +1711,7 @@ static const char *quotes_for_value(const char *value)
 
 struct write_data {
 	git_buf *buf;
+	git_buf buffered_comment;
 	unsigned int in_section : 1,
 		preg_replaced : 1;
 	const char *section;
@@ -1719,14 +1720,19 @@ struct write_data {
 	const char *value;
 };
 
-static int write_line(struct write_data *write_data, const char *line, size_t line_len)
+static int write_line_to(git_buf *buf, const char *line, size_t line_len)
 {
-	int result = git_buf_put(write_data->buf, line, line_len);
+	int result = git_buf_put(buf, line, line_len);
 
 	if (!result && line_len && line[line_len-1] != '\n')
-		result = git_buf_printf(write_data->buf, "\n");
+		result = git_buf_printf(buf, "\n");
 
 	return result;
+}
+
+static int write_line(struct write_data *write_data, const char *line, size_t line_len)
+{
+	return write_line_to(write_data->buf, line, line_len);
 }
 
 static int write_value(struct write_data *write_data)
@@ -1770,6 +1776,14 @@ static int write_on_section(
 
 	write_data->in_section = strcmp(current_section, write_data->section) == 0;
 
+	/*
+	 * If there were comments just before this section, dump them as well.
+	 */
+	if (!result) {
+		result = git_buf_put(write_data->buf, write_data->buffered_comment.ptr, write_data->buffered_comment.size);
+		git_buf_clear(&write_data->buffered_comment);
+	}
+
 	if (!result)
 		result = write_line(write_data, line, line_len);
 
@@ -1787,9 +1801,18 @@ static int write_on_variable(
 {
 	struct write_data *write_data = (struct write_data *)data;
 	bool has_matched = false;
+	int error;
 
 	GIT_UNUSED(reader);
 	GIT_UNUSED(current_section);
+
+	/*
+	 * If there were comments just before this variable, let's dump them as well.
+	 */
+	if ((error = git_buf_put(write_data->buf, write_data->buffered_comment.ptr, write_data->buffered_comment.size)) < 0)
+		return error;
+
+	git_buf_clear(&write_data->buffered_comment);
 
 	/* See if we are to update this name/value pair; first examine name */
 	if (write_data->in_section &&
@@ -1825,7 +1848,7 @@ static int write_on_comment(struct reader **reader, const char *line, size_t lin
 	GIT_UNUSED(reader);
 
 	write_data = (struct write_data *)data;
-	return write_line(write_data, line, line_len);
+	return write_line_to(&write_data->buffered_comment, line, line_len);
 }
 
 static int write_on_eof(struct reader **reader, void *data)
@@ -1834,6 +1857,12 @@ static int write_on_eof(struct reader **reader, void *data)
 	int result = 0;
 
 	GIT_UNUSED(reader);
+
+	/*
+	 * If we've buffered comments when reaching EOF, make sure to dump them.
+	 */
+	if ((result = git_buf_put(write_data->buf, write_data->buffered_comment.ptr, write_data->buffered_comment.size)) < 0)
+		return result;
 
 	/* If we are at the EOF and have not written our value (again, for a
 	 * simple name/value set, not a multivar) then we have never seen the
@@ -1892,6 +1921,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	section = git__strndup(key, ldot - key);
 
 	write_data.buf = &buf;
+	git_buf_init(&write_data.buffered_comment, 0);
 	write_data.section = section;
 	write_data.in_section = 0;
 	write_data.preg_replaced = 0;
@@ -1901,6 +1931,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 
 	result = config_parse(reader, write_on_section, write_on_variable, write_on_comment, write_on_eof, &write_data);
 	git__free(section);
+	git_buf_free(&write_data.buffered_comment);
 
 	if (result < 0) {
 		git_filebuf_cleanup(&file);
