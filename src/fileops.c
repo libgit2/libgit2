@@ -359,7 +359,7 @@ GIT_INLINE(int) mkdir_validate_mode(
 
 	return 0;
 }
-	
+
 GIT_INLINE(int) mkdir_canonicalize(
 	git_buf *path,
 	uint32_t flags)
@@ -1027,6 +1027,11 @@ int git_futils_filestamp_check(
 	git_futils_filestamp *stamp, const char *path)
 {
 	struct stat st;
+#if defined(__APPLE__)
+	const struct timespec *statmtime = &st.st_mtimespec;
+#else
+	const struct timespec *statmtime = &st.st_mtim;
+#endif
 
 	/* if the stamp is NULL, then always reload */
 	if (stamp == NULL)
@@ -1035,17 +1040,17 @@ int git_futils_filestamp_check(
 	if (p_stat(path, &st) < 0)
 		return GIT_ENOTFOUND;
 
-	if (stamp->mtime.tv_sec == st.st_mtim.tv_sec &&
+	if (stamp->mtime.tv_sec == statmtime->tv_sec &&
 #if defined(GIT_USE_NSEC)
-		stamp->mtime.tv_nsec == st.st_mtim.tv_nsec &&
+		stamp->mtime.tv_nsec == statmtime->tv_nsec &&
 #endif
 		stamp->size  == (git_off_t)st.st_size   &&
 		stamp->ino   == (unsigned int)st.st_ino)
 		return 0;
 
-	stamp->mtime.tv_sec = st.st_mtim.tv_sec;
+	stamp->mtime.tv_sec = statmtime->tv_sec;
 #if defined(GIT_USE_NSEC)
-	stamp->mtime.tv_nsec = st.st_mtim.tv_nsec;
+	stamp->mtime.tv_nsec = statmtime->tv_nsec;
 #endif
 	stamp->size  = (git_off_t)st.st_size;
 	stamp->ino   = (unsigned int)st.st_ino;
@@ -1068,8 +1073,14 @@ void git_futils_filestamp_set(
 void git_futils_filestamp_set_from_stat(
 	git_futils_filestamp *stamp, struct stat *st)
 {
+#if defined(__APPLE__)
+	const struct timespec *statmtime = &st->st_mtimespec;
+#else
+	const struct timespec *statmtime = &st->st_mtim;
+#endif
+
 	if (st) {
-		stamp->mtime = st->st_mtim;
+		stamp->mtime = *statmtime;
 		stamp->size  = (git_off_t)st->st_size;
 		stamp->ino   = (unsigned int)st->st_ino;
 	} else {
