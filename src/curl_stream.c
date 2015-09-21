@@ -13,6 +13,7 @@
 #include "git2/transport.h"
 #include "buffer.h"
 #include "vector.h"
+#include "proxy.h"
 
 typedef struct {
 	git_stream parent;
@@ -21,6 +22,7 @@ typedef struct {
 	char curl_error[CURL_ERROR_SIZE + 1];
 	git_cert_x509 cert_info;
 	git_strarray cert_info_strings;
+	git_proxy_options proxy;
 } curl_stream;
 
 static int seterr_curl(curl_stream *s)
@@ -95,12 +97,16 @@ static int curls_certificate(git_cert **out, git_stream *stream)
 	return 0;
 }
 
-static int curls_set_proxy(git_stream *stream, const char *proxy_url)
+static int curls_set_proxy(git_stream *stream, const git_proxy_options *proxy_opts)
 {
+	int error;
 	CURLcode res;
 	curl_stream *s = (curl_stream *) stream;
 
-	if ((res = curl_easy_setopt(s->handle, CURLOPT_PROXY, proxy_url)) != CURLE_OK)
+	if ((error = git_proxy_options_dup(&s->proxy, proxy_opts)) < 0)
+		return error;
+
+	if ((res = curl_easy_setopt(s->handle, CURLOPT_PROXY, s->proxy.url)) != CURLE_OK)
 		return seterr_curl(s);
 
 	return 0;
