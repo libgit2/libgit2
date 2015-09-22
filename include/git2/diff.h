@@ -264,9 +264,14 @@ typedef enum {
  * link, a submodule commit id, or even a tree (although that only if you
  * are tracking type changes or ignored/untracked directories).
  *
- * The `oid` is the `git_oid` of the item.  If the entry represents an
+ * The `id` is the `git_oid` of the item.  If the entry represents an
  * absent side of a diff (e.g. the `old_file` of a `GIT_DELTA_ADDED` delta),
  * then the oid will be zeroes.
+ *
+ * The `id_abbrev` represents the known length of the `id` field, when
+ * converted to a hex string.  It is generally `GIT_OID_HEXSZ`, unless this
+ * delta was created from reading a patch file, in which case it may be
+ * abbreviated to something reasonable, like 7 characters.
  *
  * `path` is the NUL-terminated path to the entry relative to the working
  * directory of the repository.
@@ -280,6 +285,7 @@ typedef enum {
  */
 typedef struct {
 	git_oid     id;
+	int         id_abbrev;
 	const char *path;
 	git_off_t   size;
 	uint32_t    flags;

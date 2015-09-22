@@ -197,15 +197,11 @@ static int parse_header_oid(
 static int parse_header_git_index(
 	git_patch_parsed *patch, patch_parse_ctx *ctx)
 {
-	/*
-	* TODO: we read the prefix provided in the diff into the delta's id
-	* field, but do not mark is at an abbreviated id.
-	*/
-	size_t oid_len, nid_len;
-
-	if (parse_header_oid(&patch->base.delta->old_file.id, &oid_len, ctx) < 0 ||
+	if (parse_header_oid(&patch->base.delta->old_file.id,
+			&patch->base.delta->old_file.id_abbrev, ctx) < 0 ||
 		parse_advance_expected(ctx, "..", 2) < 0 ||
-		parse_header_oid(&patch->base.delta->new_file.id, &nid_len, ctx) < 0)
+		parse_header_oid(&patch->base.delta->new_file.id,
+			&patch->base.delta->new_file.id_abbrev, ctx) < 0)
 		return -1;
 
 	if (ctx->line_len > 0 && ctx->line[0] == ' ') {

@@ -208,6 +208,7 @@ static int diff_print_one_raw(
 {
 	diff_print_info *pi = data;
 	git_buf *out = pi->buf;
+	int id_abbrev;
 	char code = git_diff_status_char(delta->status);
 	char start_oid[GIT_OID_HEXSZ+1], end_oid[GIT_OID_HEXSZ+1];
 
@@ -217,6 +218,16 @@ static int diff_print_one_raw(
 		return 0;
 
 	git_buf_clear(out);
+
+	id_abbrev = delta->old_file.mode ? delta->old_file.id_abbrev :
+		delta->new_file.id_abbrev;
+
+	if (pi->oid_strlen - 1 > id_abbrev) {
+		giterr_set(GITERR_PATCH,
+			"The patch input contains %d id characters (cannot print %d)",
+			id_abbrev, pi->oid_strlen);
+		return -1;
+	}
 
 	git_oid_tostr(start_oid, pi->oid_strlen, &delta->old_file.id);
 	git_oid_tostr(end_oid, pi->oid_strlen, &delta->new_file.id);
@@ -251,6 +262,22 @@ static int diff_print_oid_range(
 	git_buf *out, const git_diff_delta *delta, int oid_strlen)
 {
 	char start_oid[GIT_OID_HEXSZ+1], end_oid[GIT_OID_HEXSZ+1];
+
+	if (delta->old_file.mode &&
+			oid_strlen - 1 > delta->old_file.id_abbrev) {
+		giterr_set(GITERR_PATCH,
+			"The patch input contains %d id characters (cannot print %d)",
+			delta->old_file.id_abbrev, oid_strlen);
+		return -1;
+	}
+
+	if ((delta->new_file.mode &&
+			oid_strlen - 1 > delta->new_file.id_abbrev)) {
+		giterr_set(GITERR_PATCH,
+			"The patch input contains %d id characters (cannot print %d)",
+			delta->new_file.id_abbrev, oid_strlen);
+		return -1;
+	}
 
 	git_oid_tostr(start_oid, oid_strlen, &delta->old_file.id);
 	git_oid_tostr(end_oid, oid_strlen, &delta->new_file.id);
