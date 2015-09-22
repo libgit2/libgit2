@@ -242,6 +242,7 @@ static int parse_header_git_deletedfilemode(
 
 	patch->base.delta->old_file.path = NULL;
 	patch->base.delta->status = GIT_DELTA_DELETED;
+	patch->base.delta->nfiles = 1;
 
 	return parse_header_mode(&patch->base.delta->old_file.mode, ctx);
 }
@@ -254,6 +255,7 @@ static int parse_header_git_newfilemode(
 
 	patch->base.delta->new_file.path = NULL;
 	patch->base.delta->status = GIT_DELTA_ADDED;
+	patch->base.delta->nfiles = 1;
 
 	return parse_header_mode(&patch->base.delta->new_file.mode, ctx);
 }
@@ -886,6 +888,7 @@ int git_patch_from_patchfile(
 
 	patch->base.delta = git__calloc(1, sizeof(git_diff_delta));
 	patch->base.delta->status = GIT_DELTA_MODIFIED;
+	patch->base.delta->nfiles = 2;
 
 	ctx.content = content;
 	ctx.content_len = content_len;
