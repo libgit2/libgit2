@@ -628,6 +628,49 @@ done:
 	return error;
 }
 
+static int check_filenames(
+	git_patch_parsed *patch,
+	patch_parse_ctx *ctx)
+{
+	/* For modechange only patches, it does not include filenames;
+	 * instead we need to use the paths in the diff --git header.
+	 */
+	if (!patch->base.delta->old_file.path &&
+		!patch->base.delta->new_file.path) {
+
+		if (!ctx->header_old_path || !ctx->header_new_path)
+			return parse_err("git diff header lacks old / new paths");
+
+		patch->base.delta->old_file.path = ctx->header_old_path;
+		ctx->header_old_path = NULL;
+
+		patch->base.delta->new_file.path = ctx->header_new_path;
+		ctx->header_new_path = NULL;
+	}
+
+	/* For additions that have a `diff --git` header, set the old path
+	 * to the path from the header, not `/dev/null`.
+	 */
+	if (patch->base.delta->status == GIT_DELTA_ADDED &&
+			ctx->header_old_path) {
+		git__free((char *)patch->base.delta->old_file.path);
+		patch->base.delta->old_file.path = ctx->header_old_path;
+		ctx->header_old_path = NULL;
+	}
+
+	/* For deletes, set the new path to the path from the
+	* `diff --git` header, not `/dev/null`.
+	*/
+	if (patch->base.delta->status == GIT_DELTA_DELETED &&
+			ctx->header_new_path) {
+		git__free((char *)patch->base.delta->new_file.path);
+		patch->base.delta->new_file.path = ctx->header_new_path;
+		ctx->header_new_path = NULL;
+	}
+
+	return 0;
+}
+
 static int parsed_patch_header(
 	git_patch_parsed *patch,
 	patch_parse_ctx *ctx)
@@ -667,23 +710,7 @@ static int parsed_patch_header(
 			if ((error = parse_header_git(patch, ctx)) < 0)
 				goto done;
 
-			/* For modechange only patches, it does not include filenames;
-			* instead we need to use the paths in the diff --git header.
-			*/
-			if (!patch->base.delta->old_file.path &&
-				!patch->base.delta->new_file.path) {
-
-				if (!ctx->header_old_path || !ctx->header_new_path) {
-					error = parse_err("git diff header lacks old / new paths");
-					goto done;
-				}
-
-				patch->base.delta->old_file.path = ctx->header_old_path;
-				ctx->header_old_path = NULL;
-
-				patch->base.delta->new_file.path = ctx->header_new_path;
-				ctx->header_new_path = NULL;
-			}
+			error = check_filenames(patch, ctx);
 
 			goto done;
 		}

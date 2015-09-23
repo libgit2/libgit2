@@ -282,7 +282,6 @@ static int diff_print_oid_range(
 	git_oid_tostr(start_oid, oid_strlen, &delta->old_file.id);
 	git_oid_tostr(end_oid, oid_strlen, &delta->new_file.id);
 
-	/* TODO: Match git diff more closely */
 	if (delta->old_file.mode == delta->new_file.mode) {
 		git_buf_printf(out, "index %s..%s %o\n",
 			start_oid, end_oid, delta->old_file.mode);
