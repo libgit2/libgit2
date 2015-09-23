@@ -306,7 +306,7 @@ static int parse_header_rename(
 static int parse_header_renamefrom(
 	git_patch_parsed *patch, patch_parse_ctx *ctx)
 {
-	patch->base.delta->status |= GIT_DELTA_RENAMED;
+	patch->base.delta->status = GIT_DELTA_RENAMED;
 
 	return parse_header_rename(
 		(char **)&patch->base.delta->old_file.path,
@@ -317,7 +317,7 @@ static int parse_header_renamefrom(
 static int parse_header_renameto(
 	git_patch_parsed *patch, patch_parse_ctx *ctx)
 {
-	patch->base.delta->status |= GIT_DELTA_RENAMED;
+	patch->base.delta->status = GIT_DELTA_RENAMED;
 
 	return parse_header_rename(
 		(char **)&patch->base.delta->new_file.path,

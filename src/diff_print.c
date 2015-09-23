@@ -322,6 +322,26 @@ static int diff_delta_format_with_paths(
 	return git_buf_printf(out, template, oldpfx, oldpath, newpfx, newpath);
 }
 
+int diff_delta_format_rename_header(
+	git_buf *out,
+	const git_diff_delta *delta)
+{
+	if (delta->similarity > 100) {
+		giterr_set(GITERR_PATCH, "invalid similarity %d", delta->similarity);
+		return -1;
+	}
+
+	git_buf_printf(out,
+		"similarity index %d%%\n"
+		"rename from %s\n"
+		"rename to %s\n",
+		delta->similarity,
+		delta->old_file.path,
+		delta->new_file.path);
+
+	return git_buf_oom(out) ? -1 : 0;
+}
+
 int git_diff_delta__format_file_header(
 	git_buf *out,
 	const git_diff_delta *delta,
@@ -340,6 +360,9 @@ int git_diff_delta__format_file_header(
 
 	git_buf_printf(out, "diff --git %s%s %s%s\n",
 		oldpfx, delta->old_file.path, newpfx, delta->new_file.path);
+
+	if (delta->status == GIT_DELTA_RENAMED)
+		GITERR_CHECK_ERROR(diff_delta_format_rename_header(out, delta));
 
 	GITERR_CHECK_ERROR(diff_print_oid_range(out, delta, oid_strlen));
 
