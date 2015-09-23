@@ -349,6 +349,8 @@ int git_diff_delta__format_file_header(
 	const char *newpfx,
 	int oid_strlen)
 {
+	bool skip_index;
+
 	if (!oldpfx)
 		oldpfx = DIFF_OLD_PREFIX_DEFAULT;
 	if (!newpfx)
@@ -364,11 +366,18 @@ int git_diff_delta__format_file_header(
 	if (delta->status == GIT_DELTA_RENAMED)
 		GITERR_CHECK_ERROR(diff_delta_format_rename_header(out, delta));
 
-	GITERR_CHECK_ERROR(diff_print_oid_range(out, delta, oid_strlen));
+	skip_index = (delta->status == GIT_DELTA_RENAMED &&
+		delta->similarity == 100 &&
+		delta->old_file.mode == 0 &&
+		delta->new_file.mode == 0);
 
-	if ((delta->flags & GIT_DIFF_FLAG_BINARY) == 0)
-		diff_delta_format_with_paths(
-			out, delta, oldpfx, newpfx, "--- %s%s\n+++ %s%s\n");
+	if (!skip_index) {
+		GITERR_CHECK_ERROR(diff_print_oid_range(out, delta, oid_strlen));
+
+		if ((delta->flags & GIT_DIFF_FLAG_BINARY) == 0)
+			diff_delta_format_with_paths(
+				out, delta, oldpfx, newpfx, "--- %s%s\n+++ %s%s\n");
+	}
 
 	return git_buf_oom(out) ? -1 : 0;
 }
