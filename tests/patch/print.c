@@ -12,7 +12,7 @@ void patch_print_from_patchfile(const char *data, size_t len)
 	git_patch *patch;
 	git_buf buf = GIT_BUF_INIT;
 
-	cl_git_pass(git_patch_from_patchfile(&patch, data, len));
+	cl_git_pass(git_patch_from_patchfile(&patch, data, len, NULL));
 	cl_git_pass(git_patch_to_buf(&buf, patch));
 
 	cl_assert_equal_s(data, buf.ptr);

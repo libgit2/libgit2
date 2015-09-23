@@ -267,18 +267,31 @@ GIT_EXTERN(int) git_patch_to_buf(
 	git_buf *out,
 	git_patch *patch);
 
+/** Options for parsing patch files. */
+typedef struct {
+	/**
+	 * The length of the prefix (in path segments) for the filenames.
+	 * This prefix will be removed when looking for files.  The default is 1.
+	 */
+	uint32_t prefix_len;
+} git_patch_options;
+
+#define GIT_PATCH_OPTIONS_INIT { 1 }
+
 /**
  * Create a patch from the contents of a patch file.
  *
  * @param out The patch to be created
  * @param patchfile The contents of a patch file
  * @param patchfile_len The length of the patch file
+ * @param opts The git_patch_options
  * @return 0 on success, <0 on failure.
  */
 GIT_EXTERN(int) git_patch_from_patchfile(
 	git_patch **out,
 	const char *patchfile,
-	size_t patchfile_len);
+	size_t patchfile_len,
+	git_patch_options *opts);
 
 GIT_END_DECL
 

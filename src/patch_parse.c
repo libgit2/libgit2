@@ -5,9 +5,25 @@
 #define parse_err(...) \
 	( giterr_set(GITERR_PATCH, __VA_ARGS__), -1 )
 
-/* TODO: remove this, just use git_patch */
 typedef struct {
 	git_patch base;
+
+	git_patch_options opts;
+
+	/* the paths from the `diff --git` header, these will be used if this is not
+	 * a rename (and rename paths are specified) or if no `+++`/`---` line specify
+	 * the paths.
+	 */
+	char *header_old_path, *header_new_path;
+
+	/* renamed paths are precise and are not prefixed */
+	char *rename_old_path, *rename_new_path;
+
+	/* the paths given in `---` and `+++` lines */
+	char *old_path, *new_path;
+
+	/* the prefixes from the old/new paths */
+	char *old_prefix, *new_prefix;
 } git_patch_parsed;
 
 typedef struct {
@@ -19,10 +35,6 @@ typedef struct {
 	size_t line_num;
 
 	size_t remain;
-
-	/* TODO: move this into the parse struct? its lifecycle is odd... */
-	char *header_new_path;
-	char *header_old_path;
 } patch_parse_ctx;
 
 
@@ -139,13 +151,13 @@ static int parse_header_path(char **out, patch_parse_ctx *ctx)
 static int parse_header_git_oldpath(
 	git_patch_parsed *patch, patch_parse_ctx *ctx)
 {
-	return parse_header_path((char **)&patch->base.delta->old_file.path, ctx);
+	return parse_header_path(&patch->old_path, ctx);
 }
 
 static int parse_header_git_newpath(
 	git_patch_parsed *patch, patch_parse_ctx *ctx)
 {
-	return parse_header_path((char **)&patch->base.delta->new_file.path, ctx);
+	return parse_header_path(&patch->new_path, ctx);
 }
 
 static int parse_header_mode(uint16_t *mode, patch_parse_ctx *ctx)
@@ -262,44 +274,17 @@ static int parse_header_git_newfilemode(
 
 static int parse_header_rename(
 	char **out,
-	char **header_path,
 	patch_parse_ctx *ctx)
 {
 	git_buf path = GIT_BUF_INIT;
-	size_t header_path_len, prefix_len;
-
-	if (*header_path == NULL)
-		return parse_err("rename without proper git diff header at line %d",
-			ctx->line_num);
-
-	header_path_len = strlen(*header_path);
 
 	if (parse_header_path_buf(&path, ctx) < 0)
 		return -1;
 
-	if (header_path_len < git_buf_len(&path))
-		return parse_err("rename path is invalid at line %d", ctx->line_num);
-
-	/* This sanity check exists because git core uses the data in the
-	* "rename from" / "rename to" lines, but it's formatted differently
-	* than the other paths and lacks the normal prefix.  This irregularity
-	* causes us to ignore these paths (we always store the prefixed paths)
-	* but instead validate that they match the suffix of the paths we parsed
-	* since we would behave differently from git core if they ever differed.
-	* Instead, we raise an error, rather than parsing differently.
-	*/
-	prefix_len = header_path_len - path.size;
-
-	if (strncmp(*header_path + prefix_len, path.ptr, path.size) != 0 ||
-		(prefix_len > 0 && (*header_path)[prefix_len - 1] != '/'))
-		return parse_err("rename path does not match header at line %d",
-			ctx->line_num);
-
-	*out = *header_path;
-	*header_path = NULL;
-
-	git_buf_free(&path);
-
+	/* Note: the `rename from` and `rename to` lines include the literal
+	 * filename.  They do *not* include the prefix.  (Who needs consistency?)
+	 */
+	*out = git_buf_detach(&path);
 	return 0;
 }
 
@@ -307,22 +292,14 @@ static int parse_header_renamefrom(
 	git_patch_parsed *patch, patch_parse_ctx *ctx)
 {
 	patch->base.delta->status = GIT_DELTA_RENAMED;
-
-	return parse_header_rename(
-		(char **)&patch->base.delta->old_file.path,
-		&ctx->header_old_path,
-		ctx);
+	return parse_header_rename(&patch->rename_old_path, ctx);
 }
 
 static int parse_header_renameto(
 	git_patch_parsed *patch, patch_parse_ctx *ctx)
 {
 	patch->base.delta->status = GIT_DELTA_RENAMED;
-
-	return parse_header_rename(
-		(char **)&patch->base.delta->new_file.path,
-		&ctx->header_new_path,
-		ctx);
+	return parse_header_rename(&patch->rename_new_path, ctx);
 }
 
 static int parse_header_percent(uint16_t *out, patch_parse_ctx *ctx)
@@ -404,12 +381,12 @@ static int parse_header_git(
 	if (parse_advance_expected(ctx, "diff --git ", 11) < 0)
 		return parse_err("corrupt git diff header at line %d", ctx->line_num);
 
-	if (parse_header_path(&ctx->header_old_path, ctx) < 0)
+	if (parse_header_path(&patch->header_old_path, ctx) < 0)
 		return parse_err("corrupt old path in git diff header at line %d",
 			ctx->line_num);
 
 	if (parse_advance_ws(ctx) < 0 ||
-		parse_header_path(&ctx->header_new_path, ctx) < 0)
+		parse_header_path(&patch->header_new_path, ctx) < 0)
 		return parse_err("corrupt new path in git diff header at line %d",
 			ctx->line_num);
 
@@ -628,49 +605,6 @@ done:
 	return error;
 }
 
-static int check_filenames(
-	git_patch_parsed *patch,
-	patch_parse_ctx *ctx)
-{
-	/* For modechange only patches, it does not include filenames;
-	 * instead we need to use the paths in the diff --git header.
-	 */
-	if (!patch->base.delta->old_file.path &&
-		!patch->base.delta->new_file.path) {
-
-		if (!ctx->header_old_path || !ctx->header_new_path)
-			return parse_err("git diff header lacks old / new paths");
-
-		patch->base.delta->old_file.path = ctx->header_old_path;
-		ctx->header_old_path = NULL;
-
-		patch->base.delta->new_file.path = ctx->header_new_path;
-		ctx->header_new_path = NULL;
-	}
-
-	/* For additions that have a `diff --git` header, set the old path
-	 * to the path from the header, not `/dev/null`.
-	 */
-	if (patch->base.delta->status == GIT_DELTA_ADDED &&
-			ctx->header_old_path) {
-		git__free((char *)patch->base.delta->old_file.path);
-		patch->base.delta->old_file.path = ctx->header_old_path;
-		ctx->header_old_path = NULL;
-	}
-
-	/* For deletes, set the new path to the path from the
-	* `diff --git` header, not `/dev/null`.
-	*/
-	if (patch->base.delta->status == GIT_DELTA_DELETED &&
-			ctx->header_new_path) {
-		git__free((char *)patch->base.delta->new_file.path);
-		patch->base.delta->new_file.path = ctx->header_new_path;
-		ctx->header_new_path = NULL;
-	}
-
-	return 0;
-}
-
 static int parsed_patch_header(
 	git_patch_parsed *patch,
 	patch_parse_ctx *ctx)
@@ -707,11 +641,7 @@ static int parsed_patch_header(
 
 		/* A proper git patch */
 		if (ctx->line_len >= 11 && memcmp(ctx->line, "diff --git ", 11) == 0) {
-			if ((error = parse_header_git(patch, ctx)) < 0)
-				goto done;
-
-			error = check_filenames(patch, ctx);
-
+			error = parse_header_git(patch, ctx);
 			goto done;
 		}
 
@@ -871,15 +801,114 @@ static int parsed_patch_body(
 	return 0;
 }
 
+int check_header_names(
+	const char *one,
+	const char *two,
+	const char *old_or_new,
+	bool two_null)
+{
+	if (!one || !two)
+		return 0;
+
+	if (two_null && strcmp(two, "/dev/null") != 0)
+		return parse_err("expected %s path of '/dev/null'", old_or_new);
+
+	else if (!two_null && strcmp(one, two) != 0)
+		return parse_err("mismatched %s path names", old_or_new);
+
+	return 0;
+}
+
+static int check_prefix(
+	char **out,
+	size_t *out_len,
+	git_patch_parsed *patch,
+	const char *path_start)
+{
+	const char *path = path_start;
+	uint32_t remain = patch->opts.prefix_len;
+
+	*out = NULL;
+	*out_len = 0;
+
+	if (patch->opts.prefix_len == 0)
+		goto done;
+
+	/* leading slashes do not count as part of the prefix in git apply */
+	while (*path == '/')
+		path++;
+
+	while (*path && remain) {
+		if (*path == '/')
+			remain--;
+
+		path++;
+	}
+
+	if (remain || !*path)
+		return parse_err("header filename does not contain %d path components",
+			patch->opts.prefix_len);
+
+done:
+	*out_len = (path - path_start);
+	*out = git__strndup(path_start, *out_len);
+
+	return (out == NULL) ? -1 : 0;
+}
+
+static int check_filenames(git_patch_parsed *patch)
+{
+	const char *prefixed_new, *prefixed_old;
+	size_t old_prefixlen = 0, new_prefixlen = 0;
+	bool added = (patch->base.delta->status == GIT_DELTA_ADDED);
+	bool deleted = (patch->base.delta->status == GIT_DELTA_DELETED);
+
+	if (patch->old_path && !patch->new_path)
+		return parse_err("missing new path");
+
+	if (!patch->old_path && patch->new_path)
+		return parse_err("missing old path");
+
+	/* Ensure (non-renamed) paths match */
+	if (check_header_names(
+			patch->header_old_path, patch->old_path, "old", added) < 0 ||
+		check_header_names(
+			patch->header_new_path, patch->new_path, "new", deleted) < 0)
+		return -1;
+
+	prefixed_old = (!added && patch->old_path) ? patch->old_path :
+		patch->header_old_path;
+	prefixed_new = (!deleted && patch->new_path) ? patch->new_path :
+		patch->header_new_path;
+
+	if (check_prefix(
+			&patch->old_prefix, &old_prefixlen, patch, prefixed_old) < 0 ||
+		check_prefix(
+			&patch->new_prefix, &new_prefixlen, patch, prefixed_new) < 0)
+		return -1;
+
+	/* Prefer the rename filenames as they are unambiguous and unprefixed */
+	if (patch->rename_old_path)
+		patch->base.delta->old_file.path = patch->rename_old_path;
+	else
+		patch->base.delta->old_file.path = prefixed_old + old_prefixlen;
+
+	if (patch->rename_new_path)
+		patch->base.delta->new_file.path = patch->rename_new_path;
+	else
+		patch->base.delta->new_file.path = prefixed_new + new_prefixlen;
+
+	if (!patch->base.delta->old_file.path &&
+		!patch->base.delta->new_file.path)
+		return parse_err("git diff header lacks old / new paths");
+
+	return 0;
+}
+
 static int check_patch(git_patch_parsed *patch)
 {
-	if (!patch->base.delta->old_file.path &&
-			patch->base.delta->status != GIT_DELTA_ADDED)
-		return parse_err("missing old file path");
-
-	if (!patch->base.delta->new_file.path &&
-			patch->base.delta->status != GIT_DELTA_DELETED)
-		return parse_err("missing new file path");
+	if (check_filenames(patch) < 0)
+		return -1;
 
 	if (patch->base.delta->old_file.path &&
 			patch->base.delta->status != GIT_DELTA_DELETED &&
@@ -895,13 +924,32 @@ static int check_patch(git_patch_parsed *patch)
 	return 0;
 }
 
+static void patch_parsed__free(git_patch *p)
+{
+	git_patch_parsed *patch = (git_patch_parsed *)p;
+
+	if (!patch)
+		return;
+
+	git__free(patch->old_prefix);
+	git__free(patch->new_prefix);
+	git__free(patch->header_old_path);
+	git__free(patch->header_new_path);
+	git__free(patch->rename_old_path);
+	git__free(patch->rename_new_path);
+	git__free(patch->old_path);
+	git__free(patch->new_path);
+}
+
 int git_patch_from_patchfile(
 	git_patch **out,
 	const char *content,
-	size_t content_len)
+	size_t content_len,
+	git_patch_options *opts)
 {
 	patch_parse_ctx ctx = { 0 };
 	git_patch_parsed *patch;
+	git_patch_options default_opts = GIT_PATCH_OPTIONS_INIT;
 	int error = 0;
 
 	*out = NULL;
@@ -909,10 +957,12 @@ int git_patch_from_patchfile(
 	patch = git__calloc(1, sizeof(git_patch_parsed));
 	GITERR_CHECK_ALLOC(patch);
 
-	/* TODO: allow callers to specify prefix depth (eg, `-p2`) */
-	patch->base.diff_opts.new_prefix = "";
-	patch->base.diff_opts.old_prefix = "";
-	patch->base.diff_opts.flags |= GIT_DIFF_SHOW_BINARY;
+	if (opts)
+		memcpy(&patch->opts, opts, sizeof(git_patch_options));
+	else
+		memcpy(&patch->opts, &default_opts, sizeof(git_patch_options));
+
+	patch->base.free_fn = patch_parsed__free;
 
 	patch->base.delta = git__calloc(1, sizeof(git_diff_delta));
 	patch->base.delta->status = GIT_DELTA_MODIFIED;
@@ -927,12 +977,13 @@ int git_patch_from_patchfile(
 		(error = check_patch(patch)) < 0)
 		goto done;
 
+	patch->base.diff_opts.old_prefix = patch->old_prefix;
+	patch->base.diff_opts.new_prefix = patch->new_prefix;
+	patch->base.diff_opts.flags |= GIT_DIFF_SHOW_BINARY;
+
 	GIT_REFCOUNT_INC(patch);
 	*out = &patch->base;
 
 done:
-	git__free(ctx.header_old_path);
-	git__free(ctx.header_new_path);
-
 	return error;
 }
