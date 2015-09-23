@@ -885,6 +885,7 @@ int git_patch_from_patchfile(
 	/* TODO: allow callers to specify prefix depth (eg, `-p2`) */
 	patch->base.diff_opts.new_prefix = "";
 	patch->base.diff_opts.old_prefix = "";
+	patch->base.diff_opts.flags |= GIT_DIFF_SHOW_BINARY;
 
 	patch->base.delta = git__calloc(1, sizeof(git_diff_delta));
 	patch->base.delta->status = GIT_DELTA_MODIFIED;
