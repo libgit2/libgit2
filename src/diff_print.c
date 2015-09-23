@@ -300,46 +300,67 @@ static int diff_print_oid_range(
 	return git_buf_oom(out) ? -1 : 0;
 }
 
+static int diff_delta_format_path(
+	git_buf *out, const char *prefix, const char *filename)
+{
+	if (git_buf_joinpath(out, prefix, filename) < 0)
+		return -1;
+
+	return git_buf_quote(out);
+}
+
+
 static int diff_delta_format_with_paths(
 	git_buf *out,
 	const git_diff_delta *delta,
-	const char *oldpfx,
-	const char *newpfx,
-	const char *template)
+	const char *template,
+	const char *oldpath,
+	const char *newpath)
 {
-	const char *oldpath = delta->old_file.path;
-	const char *newpath = delta->new_file.path;
-
-	if (git_oid_iszero(&delta->old_file.id)) {
-		oldpfx = "";
+	if (git_oid_iszero(&delta->old_file.id))
 		oldpath = "/dev/null";
-	}
-	if (git_oid_iszero(&delta->new_file.id)) {
-		newpfx = "";
-		newpath = "/dev/null";
-	}
 
-	return git_buf_printf(out, template, oldpfx, oldpath, newpfx, newpath);
+	if (git_oid_iszero(&delta->new_file.id))
+		newpath = "/dev/null";
+
+	return git_buf_printf(out, template, oldpath, newpath);
 }
 
 int diff_delta_format_rename_header(
 	git_buf *out,
 	const git_diff_delta *delta)
 {
+	git_buf old_path = GIT_BUF_INIT, new_path = GIT_BUF_INIT;
+	int error = 0;
+
 	if (delta->similarity > 100) {
 		giterr_set(GITERR_PATCH, "invalid similarity %d", delta->similarity);
-		return -1;
+		error = -1;
+		goto done;
 	}
+
+	if ((error = git_buf_puts(&old_path, delta->old_file.path)) < 0 ||
+		(error = git_buf_puts(&new_path, delta->new_file.path)) < 0 ||
+		(error = git_buf_quote(&old_path)) < 0 ||
+		(error = git_buf_quote(&new_path)) < 0)
+		goto done;
 
 	git_buf_printf(out,
 		"similarity index %d%%\n"
 		"rename from %s\n"
 		"rename to %s\n",
 		delta->similarity,
-		delta->old_file.path,
-		delta->new_file.path);
+		old_path.ptr,
+		new_path.ptr);
 
-	return git_buf_oom(out) ? -1 : 0;
+	if (git_buf_oom(out))
+		error = -1;
+
+done:
+	git_buf_free(&old_path);
+	git_buf_free(&new_path);
+
+	return error;
 }
 
 int git_diff_delta__format_file_header(
@@ -349,7 +370,9 @@ int git_diff_delta__format_file_header(
 	const char *newpfx,
 	int oid_strlen)
 {
+	git_buf old_path = GIT_BUF_INIT, new_path = GIT_BUF_INIT;
 	bool skip_index;
+	int error = 0;
 
 	if (!oldpfx)
 		oldpfx = DIFF_OLD_PREFIX_DEFAULT;
@@ -358,13 +381,21 @@ int git_diff_delta__format_file_header(
 	if (!oid_strlen)
 		oid_strlen = GIT_ABBREV_DEFAULT + 1;
 
+	if ((error = diff_delta_format_path(
+			&old_path, oldpfx, delta->old_file.path)) < 0 ||
+		(error = diff_delta_format_path(
+			&new_path, newpfx, delta->new_file.path)) < 0)
+		goto done;
+
 	git_buf_clear(out);
 
-	git_buf_printf(out, "diff --git %s%s %s%s\n",
-		oldpfx, delta->old_file.path, newpfx, delta->new_file.path);
+	git_buf_printf(out, "diff --git %s %s\n",
+		old_path.ptr, new_path.ptr);
 
-	if (delta->status == GIT_DELTA_RENAMED)
-		GITERR_CHECK_ERROR(diff_delta_format_rename_header(out, delta));
+	if (delta->status == GIT_DELTA_RENAMED) {
+		if ((error = diff_delta_format_rename_header(out, delta)) < 0)
+			goto done;
+	}
 
 	skip_index = (delta->status == GIT_DELTA_RENAMED &&
 		delta->similarity == 100 &&
@@ -372,14 +403,22 @@ int git_diff_delta__format_file_header(
 		delta->new_file.mode == 0);
 
 	if (!skip_index) {
-		GITERR_CHECK_ERROR(diff_print_oid_range(out, delta, oid_strlen));
+		if ((error = diff_print_oid_range(out, delta, oid_strlen)) < 0)
+			goto done;
 
 		if ((delta->flags & GIT_DIFF_FLAG_BINARY) == 0)
-			diff_delta_format_with_paths(
-				out, delta, oldpfx, newpfx, "--- %s%s\n+++ %s%s\n");
+			diff_delta_format_with_paths(out, delta,
+				"--- %s\n+++ %s\n", old_path.ptr, new_path.ptr);
 	}
 
-	return git_buf_oom(out) ? -1 : 0;
+	if (git_buf_oom(out))
+		error = -1;
+
+done:
+	git_buf_free(&old_path);
+	git_buf_free(&new_path);
+
+	return error;
 }
 
 static int format_binary(
@@ -420,6 +459,33 @@ static int format_binary(
 	return 0;
 }
 
+static int diff_print_patch_file_binary_noshow(
+	diff_print_info *pi, git_diff_delta *delta,
+	const char *old_pfx, const char *new_pfx,
+	const git_diff_binary *binary)
+{
+	git_buf old_path = GIT_BUF_INIT, new_path = GIT_BUF_INIT;
+	int error;
+
+	if ((error = diff_delta_format_path(
+			&old_path, old_pfx, delta->old_file.path)) < 0 ||
+		(error = diff_delta_format_path(
+			&new_path, new_pfx, delta->new_file.path)) < 0)
+		goto done;
+
+
+	pi->line.num_lines = 1;
+	error = diff_delta_format_with_paths(
+		pi->buf, delta, "Binary files %s and %s differ\n",
+		old_path.ptr, new_path.ptr);
+
+done:
+	git_buf_free(&old_path);
+	git_buf_free(&new_path);
+
+	return error;
+}
+
 static int diff_print_patch_file_binary(
 	diff_print_info *pi, git_diff_delta *delta,
 	const char *old_pfx, const char *new_pfx,
@@ -429,7 +495,8 @@ static int diff_print_patch_file_binary(
 	int error;
 
 	if ((pi->flags & GIT_DIFF_SHOW_BINARY) == 0)
-		goto noshow;
+		return diff_print_patch_file_binary_noshow(
+			pi, delta, old_pfx, new_pfx, binary);
 
 	if (binary->new_file.datalen == 0 && binary->old_file.datalen == 0)
 		return 0;
@@ -446,18 +513,14 @@ static int diff_print_patch_file_binary(
 		if (error == GIT_EBUFS) {
 			giterr_clear();
 			git_buf_truncate(pi->buf, pre_binary_size);
-			goto noshow;
+
+			return diff_print_patch_file_binary_noshow(
+				pi, delta, old_pfx, new_pfx, binary);
 		}
 	}
 
 	pi->line.num_lines++;
 	return error;
-
-noshow:
-	pi->line.num_lines = 1;
-	return diff_delta_format_with_paths(
-		pi->buf, delta, old_pfx, new_pfx,
-		"Binary files %s%s and %s%s differ\n");
 }
 
 static int diff_print_patch_file(
