@@ -40,9 +40,9 @@ test_script:
     ctest -V -R libgit2_clar-cred_callback
     Start-Job { java -jar $Env:APPVEYOR_BUILD_FOLDER\build\poxyproxy.jar -d --port 8080 --credentials foo:bar }
     ctest -V .
-    $env:GITTEST_REMOTE_PROXY_URL = "http://foo:bar@localhost:8080/"
+    $env:GITTEST_REMOTE_PROXY_URL = "http://foo:bar@localhost:8080"
     .\Debug\libgit2_clar.exe -sonline::clone::proxy_credentials_in_url
-    $env:GITTEST_REMOTE_PROXY_URL = "http://localhost:8080/"
+    $env:GITTEST_REMOTE_PROXY_URL = "http://localhost:8080"
     $env:GITTEST_REMOTE_PROXY_USER = "foo"
     $env:GITTEST_REMOTE_PROXY_PASS = "bar"
     .\Debug\libgit2_clar.exe -sonline::clone::proxy_credentials_request
