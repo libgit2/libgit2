@@ -258,6 +258,15 @@ static int diff_print_one_raw(
 	return pi->print_cb(delta, NULL, &pi->line, pi->payload);
 }
 
+static int diff_print_modes(
+	git_buf *out, const git_diff_delta *delta)
+{
+	git_buf_printf(out, "old mode %o\n", delta->old_file.mode);
+	git_buf_printf(out, "new mode %o\n", delta->new_file.mode);
+
+	return git_buf_oom(out) ? -1 : 0;
+}
+
 static int diff_print_oid_range(
 	git_buf *out, const git_diff_delta *delta, int oid_strlen)
 {
@@ -286,14 +295,13 @@ static int diff_print_oid_range(
 		git_buf_printf(out, "index %s..%s %o\n",
 			start_oid, end_oid, delta->old_file.mode);
 	} else {
-		if (delta->old_file.mode == 0) {
+		if (delta->old_file.mode == 0)
 			git_buf_printf(out, "new file mode %o\n", delta->new_file.mode);
-		} else if (delta->new_file.mode == 0) {
+		else if (delta->new_file.mode == 0)
 			git_buf_printf(out, "deleted file mode %o\n", delta->old_file.mode);
-		} else {
-			git_buf_printf(out, "old mode %o\n", delta->old_file.mode);
-			git_buf_printf(out, "new mode %o\n", delta->new_file.mode);
-		}
+		else
+			diff_print_modes(out, delta);
+
 		git_buf_printf(out, "index %s..%s\n", start_oid, end_oid);
 	}
 
@@ -308,7 +316,6 @@ static int diff_delta_format_path(
 
 	return git_buf_quote(out);
 }
-
 
 static int diff_delta_format_with_paths(
 	git_buf *out,
@@ -371,7 +378,7 @@ int git_diff_delta__format_file_header(
 	int oid_strlen)
 {
 	git_buf old_path = GIT_BUF_INIT, new_path = GIT_BUF_INIT;
-	bool skip_index;
+	bool unchanged;
 	int error = 0;
 
 	if (!oldpfx)
@@ -397,12 +404,10 @@ int git_diff_delta__format_file_header(
 			goto done;
 	}
 
-	skip_index = (delta->status == GIT_DELTA_RENAMED &&
-		delta->similarity == 100 &&
-		delta->old_file.mode == 0 &&
-		delta->new_file.mode == 0);
+	unchanged = (git_oid_iszero(&delta->old_file.id) &&
+		git_oid_iszero(&delta->new_file.id));
 
-	if (!skip_index) {
+	if (!unchanged) {
 		if ((error = diff_print_oid_range(out, delta, oid_strlen)) < 0)
 			goto done;
 
@@ -410,6 +415,9 @@ int git_diff_delta__format_file_header(
 			diff_delta_format_with_paths(out, delta,
 				"--- %s\n+++ %s\n", old_path.ptr, new_path.ptr);
 	}
+
+	if (unchanged && delta->old_file.mode != delta->new_file.mode)
+		diff_print_modes(out, delta);
 
 	if (git_buf_oom(out))
 		error = -1;
