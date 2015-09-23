@@ -25,7 +25,7 @@ typedef struct {
 	const char *old_prefix;
 	const char *new_prefix;
 	uint32_t flags;
-	int oid_strlen;
+	int id_strlen;
 
 	int (*strcomp)(const char *, const char *);
 } diff_print_info;
@@ -43,17 +43,15 @@ static int diff_print_info_init__common(
 	pi->payload = payload;
 	pi->buf = out;
 
-	if (!pi->oid_strlen) {
+	if (!pi->id_strlen) {
 		if (!repo)
-			pi->oid_strlen = GIT_ABBREV_DEFAULT;
-		else if (git_repository__cvar(&pi->oid_strlen, repo, GIT_CVAR_ABBREV) < 0)
+			pi->id_strlen = GIT_ABBREV_DEFAULT;
+		else if (git_repository__cvar(&pi->id_strlen, repo, GIT_CVAR_ABBREV) < 0)
 			return -1;
 	}
 
-	pi->oid_strlen += 1; /* for NUL byte */
-
-	if (pi->oid_strlen > GIT_OID_HEXSZ + 1)
-		pi->oid_strlen = GIT_OID_HEXSZ + 1;
+	if (pi->id_strlen > GIT_OID_HEXSZ)
+		pi->id_strlen = GIT_OID_HEXSZ;
 
 	memset(&pi->line, 0, sizeof(pi->line));
 	pi->line.old_lineno = -1;
@@ -77,7 +75,7 @@ static int diff_print_info_init_fromdiff(
 
 	if (diff) {
 		pi->flags = diff->opts.flags;
-		pi->oid_strlen = diff->opts.id_abbrev;
+		pi->id_strlen = diff->opts.id_abbrev;
 		pi->old_prefix = diff->opts.old_prefix;
 		pi->new_prefix = diff->opts.new_prefix;
 
@@ -100,7 +98,7 @@ static int diff_print_info_init_frompatch(
 	memset(pi, 0, sizeof(diff_print_info));
 
 	pi->flags = patch->diff_opts.flags;
-	pi->oid_strlen = patch->diff_opts.id_abbrev;
+	pi->id_strlen = patch->diff_opts.id_abbrev;
 	pi->old_prefix = patch->diff_opts.old_prefix;
 	pi->new_prefix = patch->diff_opts.new_prefix;
 
@@ -222,18 +220,18 @@ static int diff_print_one_raw(
 	id_abbrev = delta->old_file.mode ? delta->old_file.id_abbrev :
 		delta->new_file.id_abbrev;
 
-	if (pi->oid_strlen - 1 > id_abbrev) {
+	if (pi->id_strlen > id_abbrev) {
 		giterr_set(GITERR_PATCH,
 			"The patch input contains %d id characters (cannot print %d)",
-			id_abbrev, pi->oid_strlen);
+			id_abbrev, pi->id_strlen);
 		return -1;
 	}
 
-	git_oid_tostr(start_oid, pi->oid_strlen, &delta->old_file.id);
-	git_oid_tostr(end_oid, pi->oid_strlen, &delta->new_file.id);
+	git_oid_tostr(start_oid, pi->id_strlen + 1, &delta->old_file.id);
+	git_oid_tostr(end_oid, pi->id_strlen + 1, &delta->new_file.id);
 
 	git_buf_printf(
-		out, (pi->oid_strlen <= GIT_OID_HEXSZ) ?
+		out, (pi->id_strlen <= GIT_OID_HEXSZ) ?
 			":%06o %06o %s... %s... %c" : ":%06o %06o %s %s %c",
 		delta->old_file.mode, delta->new_file.mode, start_oid, end_oid, code);
 
@@ -268,28 +266,28 @@ static int diff_print_modes(
 }
 
 static int diff_print_oid_range(
-	git_buf *out, const git_diff_delta *delta, int oid_strlen)
+	git_buf *out, const git_diff_delta *delta, int id_strlen)
 {
 	char start_oid[GIT_OID_HEXSZ+1], end_oid[GIT_OID_HEXSZ+1];
 
 	if (delta->old_file.mode &&
-			oid_strlen - 1 > delta->old_file.id_abbrev) {
+			id_strlen > delta->old_file.id_abbrev) {
 		giterr_set(GITERR_PATCH,
 			"The patch input contains %d id characters (cannot print %d)",
-			delta->old_file.id_abbrev, oid_strlen);
+			delta->old_file.id_abbrev, id_strlen);
 		return -1;
 	}
 
 	if ((delta->new_file.mode &&
-			oid_strlen - 1 > delta->new_file.id_abbrev)) {
+			id_strlen > delta->new_file.id_abbrev)) {
 		giterr_set(GITERR_PATCH,
 			"The patch input contains %d id characters (cannot print %d)",
-			delta->new_file.id_abbrev, oid_strlen);
+			delta->new_file.id_abbrev, id_strlen);
 		return -1;
 	}
 
-	git_oid_tostr(start_oid, oid_strlen, &delta->old_file.id);
-	git_oid_tostr(end_oid, oid_strlen, &delta->new_file.id);
+	git_oid_tostr(start_oid, id_strlen + 1, &delta->old_file.id);
+	git_oid_tostr(end_oid, id_strlen + 1, &delta->new_file.id);
 
 	if (delta->old_file.mode == delta->new_file.mode) {
 		git_buf_printf(out, "index %s..%s %o\n",
@@ -375,7 +373,7 @@ int git_diff_delta__format_file_header(
 	const git_diff_delta *delta,
 	const char *oldpfx,
 	const char *newpfx,
-	int oid_strlen)
+	int id_strlen)
 {
 	git_buf old_path = GIT_BUF_INIT, new_path = GIT_BUF_INIT;
 	bool unchanged;
@@ -385,8 +383,8 @@ int git_diff_delta__format_file_header(
 		oldpfx = DIFF_OLD_PREFIX_DEFAULT;
 	if (!newpfx)
 		newpfx = DIFF_NEW_PREFIX_DEFAULT;
-	if (!oid_strlen)
-		oid_strlen = GIT_ABBREV_DEFAULT + 1;
+	if (!id_strlen)
+		id_strlen = GIT_ABBREV_DEFAULT;
 
 	if ((error = diff_delta_format_path(
 			&old_path, oldpfx, delta->old_file.path)) < 0 ||
@@ -408,7 +406,7 @@ int git_diff_delta__format_file_header(
 		git_oid_iszero(&delta->new_file.id));
 
 	if (!unchanged) {
-		if ((error = diff_print_oid_range(out, delta, oid_strlen)) < 0)
+		if ((error = diff_print_oid_range(out, delta, id_strlen)) < 0)
 			goto done;
 
 		if ((delta->flags & GIT_DIFF_FLAG_BINARY) == 0)
@@ -544,8 +542,8 @@ static int diff_print_patch_file(
 	bool binary = (delta->flags & GIT_DIFF_FLAG_BINARY) ||
 		(pi->flags & GIT_DIFF_FORCE_BINARY);
 	bool show_binary = !!(pi->flags & GIT_DIFF_SHOW_BINARY);
-	int oid_strlen = binary && show_binary ?
-		GIT_OID_HEXSZ + 1 : pi->oid_strlen;
+	int id_strlen = binary && show_binary ?
+		GIT_OID_HEXSZ : pi->id_strlen;
 
 	GIT_UNUSED(progress);
 
@@ -558,7 +556,7 @@ static int diff_print_patch_file(
 		return 0;
 
 	if ((error = git_diff_delta__format_file_header(
-			pi->buf, delta, oldpfx, newpfx, oid_strlen)) < 0)
+			pi->buf, delta, oldpfx, newpfx, id_strlen)) < 0)
 		return error;
 
 	pi->line.origin      = GIT_DIFF_LINE_FILE_HDR;
