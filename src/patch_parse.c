@@ -881,10 +881,10 @@ static int check_patch(git_patch_parsed *patch)
 			patch->base.delta->status != GIT_DELTA_DELETED)
 		return parse_err("missing new file path");
 
-	if (patch->base.delta->old_file.path && patch->base.delta->new_file.path) {
-		if (!patch->base.delta->new_file.mode)
-			patch->base.delta->new_file.mode = patch->base.delta->old_file.mode;
-	}
+	if (patch->base.delta->old_file.path &&
+			patch->base.delta->status != GIT_DELTA_DELETED &&
+			!patch->base.delta->new_file.mode)
+		patch->base.delta->new_file.mode = patch->base.delta->old_file.mode;
 
 	if (patch->base.delta->status == GIT_DELTA_MODIFIED &&
 		!(patch->base.delta->flags & GIT_DIFF_FLAG_BINARY) &&
