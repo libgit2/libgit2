@@ -858,6 +858,72 @@ int git_buf_splice(
 	return 0;
 }
 
+/* Quote per http://marc.info/?l=git&m=112927316408690&w=2 */
+int git_buf_quote(git_buf *buf)
+{
+	const char whitespace[] = { 'a', 'b', 't', 'n', 'v', 'f', 'r' };
+	git_buf quoted = GIT_BUF_INIT;
+	size_t i = 0;
+	bool quote = false;
+	int error = 0;
+
+	/* walk to the first char that needs quoting */
+	if (buf->size && buf->ptr[0] == '!')
+		quote = true;
+
+	for (i = 0; !quote && i < buf->size; i++) {
+		if (buf->ptr[i] == '"' || buf->ptr[i] == '\\' ||
+			buf->ptr[i] < ' ' || buf->ptr[i] > '~') {
+			quote = true;
+			break;
+		}
+	}
+
+	if (!quote)
+		goto done;
+
+	git_buf_putc(&quoted, '"');
+	git_buf_put(&quoted, buf->ptr, i);
+
+	for (; i < buf->size; i++) {
+		/* whitespace - use the map above, which is ordered by ascii value */
+		if (buf->ptr[i] >= '\a' && buf->ptr[i] <= '\r') {
+			git_buf_putc(&quoted, '\\');
+			git_buf_putc(&quoted, whitespace[buf->ptr[i] - '\a']);
+		}
+
+		/* double quote and backslash must be escaped */
+		else if (buf->ptr[i] == '"' || buf->ptr[i] == '\\') {
+			git_buf_putc(&quoted, '\\');
+			git_buf_putc(&quoted, buf->ptr[i]);
+		}
+
+		/* escape anything unprintable as octal */
+		else if (buf->ptr[i] != ' ' &&
+				(buf->ptr[i] < '!' || buf->ptr[i] > '~')) {
+			git_buf_printf(&quoted, "\\%03o", buf->ptr[i]);
+		}
+
+		/* yay, printable! */
+		else {
+			git_buf_putc(&quoted, buf->ptr[i]);
+		}
+	}
+
+	git_buf_putc(&quoted, '"');
+
+	if (git_buf_oom(&quoted)) {
+		error = -1;
+		goto done;
+	}
+
+	git_buf_swap(&quoted, buf);
+
+done:
+	git_buf_free(&quoted);
+	return error;
+}
+
 /* Unquote per http://marc.info/?l=git&m=112927316408690&w=2 */
 int git_buf_unquote(git_buf *buf)
 {
