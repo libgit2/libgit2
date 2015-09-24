@@ -66,14 +66,20 @@ static int git_smart__set_callbacks(
 	return 0;
 }
 
-#define forbid_custom_header(disallowed_name) \
-	if (strncmp(disallowed_name, custom_header, name_len) == 0) \
-		return false
+static char *forbidden_custom_headers[] = {
+  "User-Agent",
+  "Host",
+  "Accept",
+  "Content-Type",
+  "Transfer-Encoding",
+  "Content-Length",
+};
 
 bool is_valid_custom_header(const char *custom_header)
 {
 	const char *c;
 	int name_len;
+	unsigned long i;
 
 	if (custom_header == NULL)
 		return true;
@@ -95,12 +101,9 @@ bool is_valid_custom_header(const char *custom_header)
 		return false;
 
 	// Disallow headers that we set
-	forbid_custom_header("User-Agent");
-	forbid_custom_header("Host");
-	forbid_custom_header("Accept");
-	forbid_custom_header("Content-Type");
-	forbid_custom_header("Transfer-Encoding");
-	forbid_custom_header("Content-Length");
+	for (i = 0; i < ARRAY_SIZE(forbidden_custom_headers); i++)
+		if (strncmp(forbidden_custom_headers[i], custom_header, name_len) == 0)
+			return false;
 
 	return true;
 }
