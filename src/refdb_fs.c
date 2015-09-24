@@ -1582,7 +1582,7 @@ static int create_new_reflog_file(const char *filepath)
 
 GIT_INLINE(int) retrieve_reflog_path(git_buf *path, git_repository *repo, const char *name)
 {
-	return git_buf_join3(path, '/', repo->path_repository, GIT_REFLOG_DIR, name);
+	return git_buf_join3(path, '/', repo->commondir, GIT_REFLOG_DIR, name);
 }
 
 static int refdb_reflog_fs__ensure_log(git_refdb_backend *_backend, const char *name)
