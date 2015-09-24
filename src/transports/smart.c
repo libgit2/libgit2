@@ -66,7 +66,7 @@ static int git_smart__set_callbacks(
 	return 0;
 }
 
-int http_header_name_length(const char *http_header)
+static int http_header_name_length(const char *http_header)
 {
 	const char *colon = strchr(http_header, ':');
 	if (!colon)
@@ -74,7 +74,7 @@ int http_header_name_length(const char *http_header)
 	return colon - http_header;
 }
 
-bool is_malformed_http_header(const char *http_header)
+static bool is_malformed_http_header(const char *http_header)
 {
 	const char *c;
 	int name_len;
@@ -104,7 +104,7 @@ static char *forbidden_custom_headers[] = {
 	"Content-Length",
 };
 
-bool is_forbidden_custom_header(const char *custom_header)
+static bool is_forbidden_custom_header(const char *custom_header)
 {
 	unsigned long i;
 	int name_len = http_header_name_length(custom_header);
