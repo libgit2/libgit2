@@ -184,7 +184,7 @@ static int parse_header_mode(uint16_t *mode, patch_parse_ctx *ctx)
 
 static int parse_header_oid(
 	git_oid *oid,
-	size_t *oid_len,
+	int *oid_len,
 	patch_parse_ctx *ctx)
 {
 	size_t len;
@@ -201,7 +201,7 @@ static int parse_header_oid(
 
 	parse_advance_chars(ctx, len);
 
-	*oid_len = len;
+	*oid_len = (int)len;
 
 	return 0;
 }

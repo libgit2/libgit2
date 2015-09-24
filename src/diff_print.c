@@ -467,8 +467,7 @@ static int format_binary(
 
 static int diff_print_patch_file_binary_noshow(
 	diff_print_info *pi, git_diff_delta *delta,
-	const char *old_pfx, const char *new_pfx,
-	const git_diff_binary *binary)
+	const char *old_pfx, const char *new_pfx)
 {
 	git_buf old_path = GIT_BUF_INIT, new_path = GIT_BUF_INIT;
 	int error;
@@ -502,7 +501,7 @@ static int diff_print_patch_file_binary(
 
 	if ((pi->flags & GIT_DIFF_SHOW_BINARY) == 0)
 		return diff_print_patch_file_binary_noshow(
-			pi, delta, old_pfx, new_pfx, binary);
+			pi, delta, old_pfx, new_pfx);
 
 	if (binary->new_file.datalen == 0 && binary->old_file.datalen == 0)
 		return 0;
@@ -521,7 +520,7 @@ static int diff_print_patch_file_binary(
 			git_buf_truncate(pi->buf, pre_binary_size);
 
 			return diff_print_patch_file_binary_noshow(
-				pi, delta, old_pfx, new_pfx, binary);
+				pi, delta, old_pfx, new_pfx);
 		}
 	}
 
