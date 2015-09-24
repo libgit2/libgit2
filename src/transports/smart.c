@@ -81,9 +81,6 @@ bool is_valid_custom_header(const char *custom_header)
 	int name_len;
 	unsigned long i;
 
-	if (custom_header == NULL)
-		return true;
-
 	// Disallow \r and \n
 	c = strchr(custom_header, '\r');
 	if (c != NULL)
