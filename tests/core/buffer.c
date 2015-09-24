@@ -847,6 +847,8 @@ void test_core_buffer__decode_base85_fails_gracefully(void)
 	cl_git_fail(git_buf_decode_base85(&buf, "truncated", 9, 42));
 	cl_assert_equal_sz(6, buf.size);
 	cl_assert_equal_s("foobar", buf.ptr);
+
+	git_buf_free(&buf);
 }
 
 void test_core_buffer__classify_with_utf8(void)

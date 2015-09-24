@@ -939,6 +939,10 @@ static void patch_parsed__free(git_patch *p)
 	git__free(patch->rename_new_path);
 	git__free(patch->old_path);
 	git__free(patch->new_path);
+	git_array_clear(patch->base.hunks);
+	git_array_clear(patch->base.lines);
+	git__free(patch->base.delta);
+	git__free(patch);
 }
 
 int git_patch_from_patchfile(
@@ -985,5 +989,8 @@ int git_patch_from_patchfile(
 	*out = &patch->base;
 
 done:
+	if (error < 0)
+		patch_parsed__free(&patch->base);
+
 	return error;
 }
