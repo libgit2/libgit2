@@ -862,8 +862,7 @@ static int load_config(
 	if ((error = git_config_new(&cfg)) < 0)
 		return error;
 
-	error = git_buf_joinpath(
-		&config_path, repo->path_repository, GIT_CONFIG_FILENAME_INREPO);
+	error = git_repository_item_path(&config_path, repo, GIT_REPOSITORY_ITEM_CONFIG);
 	if (error < 0)
 		goto on_error;
 
