@@ -66,57 +66,55 @@ static int git_smart__set_callbacks(
 	return 0;
 }
 
-static char *forbidden_custom_headers[] = {
-  "User-Agent",
-  "Host",
-  "Accept",
-  "Content-Type",
-  "Transfer-Encoding",
-  "Content-Length",
-};
+int http_header_name_length(const char *http_header)
+{
+	const char *colon = strchr(http_header, ':');
+	if (!colon)
+		return 0;
+	return colon - http_header;
+}
 
-bool is_valid_custom_header(const char *custom_header)
+bool is_malformed_http_header(const char *http_header)
 {
 	const char *c;
 	int name_len;
-	unsigned long i;
 
 	// Disallow \r and \n
-	c = strchr(custom_header, '\r');
-	if (c != NULL)
-		return false;
-	c = strchr(custom_header, '\n');
-	if (c != NULL)
-		return false;
+	c = strchr(http_header, '\r');
+	if (c)
+		return true;
+	c = strchr(http_header, '\n');
+	if (c)
+		return true;
 
 	// Require a header name followed by :
-	c = strchr(custom_header, ':');
-	if (c == NULL)
-		return false;
-	name_len = c - custom_header;
+	name_len = http_header_name_length(http_header);
 	if (name_len < 1)
-		return false;
+		return true;
+
+	return false;
+}
+
+static char *forbidden_custom_headers[] = {
+	"User-Agent",
+	"Host",
+	"Accept",
+	"Content-Type",
+	"Transfer-Encoding",
+	"Content-Length",
+};
+
+bool is_forbidden_custom_header(const char *custom_header)
+{
+	unsigned long i;
+	int name_len = http_header_name_length(custom_header);
 
 	// Disallow headers that we set
 	for (i = 0; i < ARRAY_SIZE(forbidden_custom_headers); i++)
 		if (strncmp(forbidden_custom_headers[i], custom_header, name_len) == 0)
-			return false;
+			return true;
 
-	return true;
-}
-
-const char *find_invalid_custom_header(const git_strarray *custom_headers)
-{
-	size_t i;
-
-	if (custom_headers == NULL || custom_headers->count == 0)
-		return NULL;
-
-	for (i = 0; i < custom_headers->count; i++)
-		if (!is_valid_custom_header(custom_headers->strings[i]))
-			return custom_headers->strings[i];
-
-	return NULL;
+	return false;
 }
 
 static int git_smart__set_custom_headers(
@@ -124,11 +122,17 @@ static int git_smart__set_custom_headers(
 	const git_strarray *custom_headers)
 {
 	transport_smart *t = (transport_smart *)transport;
-	const char *invalid_header = find_invalid_custom_header(custom_headers);
+	size_t i;
 
-	if (invalid_header != NULL) {
-		giterr_set(GITERR_INVALID, "Illegal HTTP header '%s'", invalid_header);
-		return -1;
+	for (i = 0; i < custom_headers->count; i++) {
+		if (is_malformed_http_header(custom_headers->strings[i])) {
+			giterr_set(GITERR_INVALID, "custom HTTP header '%s' is malformed", custom_headers->strings[i]);
+			return -1;
+		}
+		if (is_forbidden_custom_header(custom_headers->strings[i])) {
+			giterr_set(GITERR_INVALID, "custom HTTP header '%s' is already set by libgit2", custom_headers->strings[i]);
+			return -1;
+		}
 	}
 
 	t->custom_headers = custom_headers;
