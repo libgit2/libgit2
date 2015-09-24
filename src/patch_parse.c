@@ -10,6 +10,10 @@ typedef struct {
 
 	git_patch_options opts;
 
+	/* the patch contents, which lines will point into. */
+	/* TODO: allow us to point somewhere refcounted. */
+	char *content;
+
 	/* the paths from the `diff --git` header, these will be used if this is not
 	 * a rename (and rename paths are specified) or if no `+++`/`---` line specify
 	 * the paths.
@@ -523,7 +527,7 @@ static int parse_hunk_body(
 	int newlines = hunk->hunk.new_lines;
 
 	for (;
-	ctx->remain > 4 && (oldlines || newlines) &&
+		ctx->remain > 4 && (oldlines || newlines) &&
 		memcmp(ctx->line, "@@ -", 4) != 0;
 		parse_advance_line(ctx)) {
 
@@ -931,6 +935,12 @@ static void patch_parsed__free(git_patch *p)
 	if (!patch)
 		return;
 
+	git__free((char *)patch->base.binary.old_file.data);
+	git__free((char *)patch->base.binary.new_file.data);
+	git_array_clear(patch->base.hunks);
+	git_array_clear(patch->base.lines);
+	git__free(patch->base.delta);
+
 	git__free(patch->old_prefix);
 	git__free(patch->new_prefix);
 	git__free(patch->header_old_path);
@@ -939,9 +949,7 @@ static void patch_parsed__free(git_patch *p)
 	git__free(patch->rename_new_path);
 	git__free(patch->old_path);
 	git__free(patch->new_path);
-	git_array_clear(patch->base.hunks);
-	git_array_clear(patch->base.lines);
-	git__free(patch->base.delta);
+	git__free(patch->content);
 	git__free(patch);
 }
 
@@ -969,10 +977,19 @@ int git_patch_from_patchfile(
 	patch->base.free_fn = patch_parsed__free;
 
 	patch->base.delta = git__calloc(1, sizeof(git_diff_delta));
+	GITERR_CHECK_ALLOC(patch->base.delta);
+
 	patch->base.delta->status = GIT_DELTA_MODIFIED;
 	patch->base.delta->nfiles = 2;
 
-	ctx.content = content;
+	if (content_len) {
+		patch->content = git__malloc(content_len);
+		GITERR_CHECK_ALLOC(patch->content);
+
+		memcpy(patch->content, content, content_len);
+	}
+
+	ctx.content = patch->content;
 	ctx.content_len = content_len;
 	ctx.remain = content_len;
 

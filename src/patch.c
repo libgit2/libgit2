@@ -196,12 +196,6 @@ int git_patch_get_line_in_hunk(
 
 static void git_patch__free(git_patch *patch)
 {
-	git_array_clear(patch->lines);
-	git_array_clear(patch->hunks);
-
-	git__free((char *)patch->binary.old_file.data);
-	git__free((char *)patch->binary.new_file.data);
-
 	if (patch->free_fn)
 		patch->free_fn(patch);
 }
