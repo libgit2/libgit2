@@ -38,11 +38,7 @@ static void patch_line_init(
 	out->content_offset = in_offset;
 }
 
-static unsigned int patch_image_init(patch_image *out)
-{
-	memset(out, 0x0, sizeof(patch_image));
-	return 0;
-}
+#define PATCH_IMAGE_INIT { {0} }
 
 static int patch_image_init_fromstr(
 	patch_image *out, const char *in, size_t in_len)
@@ -165,13 +161,9 @@ static int apply_hunk(
 	git_patch *patch,
 	git_patch_hunk *hunk)
 {
-	patch_image preimage, postimage;
+	patch_image preimage = PATCH_IMAGE_INIT, postimage = PATCH_IMAGE_INIT;
 	size_t line_num, i;
 	int error = 0;
-
-	if ((error = patch_image_init(&preimage)) < 0 ||
-		(error = patch_image_init(&postimage)) < 0)
-		goto done;
 
 	for (i = 0; i < hunk->line_count; i++) {
 		size_t linenum = hunk->line_start + i;
