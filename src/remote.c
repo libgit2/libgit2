@@ -689,7 +689,7 @@ int set_transport_callbacks(git_transport *t, const git_remote_callbacks *cbs)
 
 static int set_transport_custom_headers(git_transport *t, const git_strarray *custom_headers)
 {
-	if (!t->set_custom_headers || !custom_headers)
+	if (!t->set_custom_headers)
 		return 0;
 
 	return t->set_custom_headers(t, custom_headers);

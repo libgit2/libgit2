@@ -124,6 +124,12 @@ static int git_smart__set_custom_headers(
 	transport_smart *t = (transport_smart *)transport;
 	size_t i;
 
+	if (t->custom_headers.count)
+		git_strarray_free(&t->custom_headers);
+
+	if (!custom_headers)
+		return 0;
+
 	for (i = 0; i < custom_headers->count; i++) {
 		if (is_malformed_http_header(custom_headers->strings[i])) {
 			giterr_set(GITERR_INVALID, "custom HTTP header '%s' is malformed", custom_headers->strings[i]);
@@ -135,9 +141,7 @@ static int git_smart__set_custom_headers(
 		}
 	}
 
-	t->custom_headers = custom_headers;
-
-	return 0;
+	return git_strarray_copy(&t->custom_headers, custom_headers);
 }
 
 int git_smart__update_heads(transport_smart *t, git_vector *symrefs)
@@ -435,6 +439,8 @@ static void git_smart__free(git_transport *transport)
 		git_pkt_free(p);
 
 	git_vector_free(refs);
+
+	git_strarray_free(&t->custom_headers);
 
 	git__free(t);
 }

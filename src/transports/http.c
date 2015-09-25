@@ -211,11 +211,9 @@ static int gen_request(
 	} else
 		git_buf_puts(buf, "Accept: */*\r\n");
 
-	if (t->owner->custom_headers) {
-		for (i = 0; i < t->owner->custom_headers->count; i++) {
-			if (t->owner->custom_headers->strings[i])
-				git_buf_printf(buf, "%s\r\n", t->owner->custom_headers->strings[i]);
-		}
+	for (i = 0; i < t->owner->custom_headers.count; i++) {
+		if (t->owner->custom_headers.strings[i])
+			git_buf_printf(buf, "%s\r\n", t->owner->custom_headers.strings[i]);
 	}
 
 	/* Apply credentials to the request */
