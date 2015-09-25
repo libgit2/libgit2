@@ -901,7 +901,7 @@ int git_buf_quote(git_buf *buf)
 		/* escape anything unprintable as octal */
 		else if (buf->ptr[i] != ' ' &&
 				(buf->ptr[i] < '!' || buf->ptr[i] > '~')) {
-			git_buf_printf(&quoted, "\\%03o", buf->ptr[i]);
+			git_buf_printf(&quoted, "\\%03o", (unsigned char)buf->ptr[i]);
 		}
 
 		/* yay, printable! */
@@ -959,7 +959,7 @@ int git_buf_unquote(git_buf *buf)
 			case 'v': ch = '\v'; break;
 
 			/* \xyz digits convert to the char*/
-			case '0': case '1': case '2':
+			case '0': case '1': case '2': case '3':
 				if (j == buf->size-3) {
 					giterr_set(GITERR_INVALID,
 						"Truncated quoted character \\%c", ch);
