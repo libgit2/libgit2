@@ -125,6 +125,48 @@ void test_apply_fromfile__lastline(void)
 		"file.txt", 0100644));
 }
 
+void test_apply_fromfile__change_middle_shrink(void)
+{
+	cl_git_pass(validate_and_apply_patchfile(
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
+		FILE_CHANGE_MIDDLE_SHRINK, strlen(FILE_CHANGE_MIDDLE_SHRINK),
+		PATCH_ORIGINAL_TO_CHANGE_MIDDLE_SHRINK, NULL,
+		"file.txt", 0100644));
+}
+
+void test_apply_fromfile__change_middle_shrink_nocontext(void)
+{
+	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
+	diff_opts.context_lines = 0;
+
+	cl_git_pass(validate_and_apply_patchfile(
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
+		FILE_CHANGE_MIDDLE_SHRINK, strlen(FILE_CHANGE_MIDDLE_SHRINK),
+		PATCH_ORIGINAL_TO_MIDDLE_SHRINK_NOCONTEXT, &diff_opts,
+		"file.txt", 0100644));
+}
+
+void test_apply_fromfile__change_middle_grow(void)
+{
+	cl_git_pass(validate_and_apply_patchfile(
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
+		FILE_CHANGE_MIDDLE_GROW, strlen(FILE_CHANGE_MIDDLE_GROW),
+		PATCH_ORIGINAL_TO_CHANGE_MIDDLE_GROW, NULL,
+		"file.txt", 0100644));
+}
+
+void test_apply_fromfile__change_middle_grow_nocontext(void)
+{
+	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
+	diff_opts.context_lines = 0;
+
+	cl_git_pass(validate_and_apply_patchfile(
+		FILE_ORIGINAL, strlen(FILE_ORIGINAL),
+		FILE_CHANGE_MIDDLE_GROW, strlen(FILE_CHANGE_MIDDLE_GROW),
+		PATCH_ORIGINAL_TO_MIDDLE_GROW_NOCONTEXT, &diff_opts,
+		"file.txt", 0100644));
+}
+
 void test_apply_fromfile__prepend(void)
 {
 	cl_git_pass(validate_and_apply_patchfile(

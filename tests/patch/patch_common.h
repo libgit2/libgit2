@@ -98,6 +98,95 @@
 	"-below it!\n" \
 	"+change to the last line.\n"
 
+/* A change of the middle where we remove many lines */
+
+#define FILE_CHANGE_MIDDLE_SHRINK \
+	"hey!\n" \
+	"i've changed a lot, but left the line\n" \
+	"below it!\n"
+
+#define PATCH_ORIGINAL_TO_CHANGE_MIDDLE_SHRINK \
+	"diff --git a/file.txt b/file.txt\n" \
+	"index 9432026..629cd35 100644\n" \
+	"--- a/file.txt\n" \
+	"+++ b/file.txt\n" \
+	"@@ -1,9 +1,3 @@\n" \
+	" hey!\n" \
+	"-this is some context!\n" \
+	"-around some lines\n" \
+	"-that will change\n" \
+	"-yes it is!\n" \
+	"-(this line is changed)\n" \
+	"-and this\n" \
+	"-is additional context\n" \
+	"+i've changed a lot, but left the line\n" \
+	" below it!\n"
+
+#define PATCH_ORIGINAL_TO_MIDDLE_SHRINK_NOCONTEXT \
+	"diff --git a/file.txt b/file.txt\n" \
+	"index 9432026..629cd35 100644\n" \
+	"--- a/file.txt\n" \
+	"+++ b/file.txt\n" \
+	"@@ -2,7 +2 @@ hey!\n" \
+	"-this is some context!\n" \
+	"-around some lines\n" \
+	"-that will change\n" \
+	"-yes it is!\n" \
+	"-(this line is changed)\n" \
+	"-and this\n" \
+	"-is additional context\n" \
+	"+i've changed a lot, but left the line\n"
+
+/* A change to the middle where we grow many lines */
+
+#define FILE_CHANGE_MIDDLE_GROW \
+	"hey!\n" \
+	"this is some context!\n" \
+	"around some lines\n" \
+	"that will change\n" \
+	"yes it is!\n" \
+	"this line is changed\n" \
+	"and this line is added\n" \
+	"so is this\n" \
+	"(this too)\n" \
+	"whee...\n" \
+	"and this\n" \
+	"is additional context\n" \
+	"below it!\n"
+
+#define PATCH_ORIGINAL_TO_CHANGE_MIDDLE_GROW \
+	"diff --git a/file.txt b/file.txt\n" \
+	"index 9432026..207ebca 100644\n" \
+	"--- a/file.txt\n" \
+	"+++ b/file.txt\n" \
+	"@@ -3,7 +3,11 @@ this is some context!\n" \
+	" around some lines\n" \
+	" that will change\n" \
+	" yes it is!\n" \
+	"-(this line is changed)\n" \
+	"+this line is changed\n" \
+	"+and this line is added\n" \
+	"+so is this\n" \
+	"+(this too)\n" \
+	"+whee...\n" \
+	" and this\n" \
+	" is additional context\n" \
+	" below it!\n"
+
+
+#define PATCH_ORIGINAL_TO_MIDDLE_GROW_NOCONTEXT \
+	"diff --git a/file.txt b/file.txt\n" \
+	"index 9432026..207ebca 100644\n" \
+	"--- a/file.txt\n" \
+	"+++ b/file.txt\n" \
+	"@@ -6 +6,5 @@ yes it is!\n" \
+	"-(this line is changed)\n" \
+	"+this line is changed\n" \
+	"+and this line is added\n" \
+	"+so is this\n" \
+	"+(this too)\n" \
+	"+whee...\n"
+
 /* An insertion at the beginning of the file (and the resultant patch) */
 
 #define FILE_PREPEND \
