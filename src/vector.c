@@ -7,6 +7,7 @@
 
 #include "common.h"
 #include "vector.h"
+#include "integer.h"
 
 /* In elements, not bytes */
 #define MIN_ALLOCSIZE	8
@@ -332,17 +333,16 @@ int git_vector_resize_to(git_vector *v, size_t new_length)
 
 int git_vector_grow_at(git_vector *v, size_t idx, size_t grow_len)
 {
-	size_t new_length = v->length + grow_len;
-	size_t new_idx = idx + grow_len;
+	size_t new_length;
 
-	assert(grow_len > 0);
-	assert (idx <= v->length);
+	assert(grow_len > 0 && idx <= v->length);
 
-	if (new_length < v->length ||
-		(new_length > v->_alloc_size && resize_vector(v, new_length) < 0))
+	GITERR_CHECK_ALLOC_ADD(&new_length, v->length, grow_len);
+
+	if (new_length > v->_alloc_size && resize_vector(v, new_length) < 0)
 		return -1;
 
-	memmove(&v->contents[new_idx], &v->contents[idx],
+	memmove(&v->contents[idx + grow_len], &v->contents[idx],
 		sizeof(void *) * (v->length - idx));
 	memset(&v->contents[idx], 0, sizeof(void *) * grow_len);
 
@@ -353,17 +353,18 @@ int git_vector_grow_at(git_vector *v, size_t idx, size_t grow_len)
 int git_vector_shrink_at(git_vector *v, size_t idx, size_t shrink_len)
 {
 	size_t new_length = v->length - shrink_len;
-	size_t end_idx = idx + shrink_len;
+	size_t end_idx = 0;
+	
+	assert(shrink_len > 0);
 
-	assert(shrink_len > 0 && shrink_len <= v->length);
-	assert(idx <= v->length);
+	if (git__add_sizet_overflow(&end_idx, idx, shrink_len))
+		assert(0);
 
-	if (new_length > v->length)
-		return -1;
+	assert(end_idx <= v->length);
 
-	if (idx > v->length)
+	if (end_idx < v->length)
 		memmove(&v->contents[idx], &v->contents[end_idx],
-			sizeof(void *) * (v->length - idx));
+			sizeof(void *) * (v->length - end_idx));
 
 	memset(&v->contents[new_length], 0, sizeof(void *) * shrink_len);
 
