@@ -25,7 +25,7 @@ static void patch_diff_free(git_patch *p)
 {
 	git_patch_diff *patch = (git_patch_diff *)p;
 
-    git_array_clear(patch->base.lines);
+	git_array_clear(patch->base.lines);
 	git_array_clear(patch->base.hunks);
 
 	git__free((char *)patch->base.binary.old_file.data);

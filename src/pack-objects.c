@@ -888,7 +888,7 @@ static unsigned int check_delta_limit(git_pobject *me, unsigned int n)
 static unsigned long free_unpacked(struct unpacked *n)
 {
 	unsigned long freed_mem = 0;
-	
+
 	if (n->index) {
 		freed_mem += git_delta_index_size(n->index);
 		git_delta_index_free(n->index);
