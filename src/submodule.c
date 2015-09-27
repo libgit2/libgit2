@@ -229,6 +229,7 @@ int git_submodule_lookup(
 
 		if (error < 0) {
 			git_submodule_free(sm);
+			git_buf_free(&path);
 			return error;
 		}
 
@@ -1699,6 +1700,8 @@ static int submodule_read_config(git_submodule *sm, git_config *cfg)
 	 * should be strcasecmp
 	 */
 		if (strcmp(sm->name, value) != 0) {
+			if (sm->path != sm->name)
+				git__free(sm->path);
 			sm->path = git__strdup(value);
 			GITERR_CHECK_ALLOC(sm->path);
 		}

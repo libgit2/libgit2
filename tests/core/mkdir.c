@@ -48,6 +48,8 @@ void test_core_mkdir__absolute(void)
 	cl_assert(!git_path_isdir(path.ptr));
 	cl_git_fail(git_futils_mkdir(path.ptr, 0755, 0));
 	cl_assert(!git_path_isdir(path.ptr));
+
+	git_buf_free(&path);
 }
 
 void test_core_mkdir__basic(void)
