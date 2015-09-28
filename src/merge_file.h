@@ -7,8 +7,7 @@
 #ifndef INCLUDE_filediff_h__
 #define INCLUDE_filediff_h__
 
-#include "xdiff/xdiff.h"
-
-#include "git2/merge.h"
+/* xdiff cannot cope with large files, just treat them as binary */
+#define GIT_MERGE_FILE_XDIFF_MAX (1024UL * 1024 * 1023)
 
 #endif
