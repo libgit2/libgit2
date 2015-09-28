@@ -21,7 +21,8 @@
  */
 
 #include "xinclude.h"
-
+#include "common.h"
+#include "integer.h"
 
 
 #define XDL_MAX_COST_MIN 256
@@ -323,7 +324,7 @@ int xdl_recs_cmp(diffdata_t *dd1, long off1, long lim1,
 
 int xdl_do_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 		xdfenv_t *xe) {
-	long ndiags;
+	size_t ndiags, allocsize;
 	long *kvd, *kvdf, *kvdb;
 	xdalgoenv_t xenv;
 	diffdata_t dd1, dd2;
@@ -343,9 +344,12 @@ int xdl_do_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	 * Allocate and setup K vectors to be used by the differential algorithm.
 	 * One is to store the forward path and one to store the backward path.
 	 */
-	ndiags = xe->xdf1.nreff + xe->xdf2.nreff + 3;
-	if (!(kvd = (long *) xdl_malloc((2 * ndiags + 2) * sizeof(long)))) {
+	GITERR_CHECK_ALLOC_ADD3(&ndiags, xe->xdf1.nreff, xe->xdf2.nreff, 3);
+	GITERR_CHECK_ALLOC_MULTIPLY(&allocsize, ndiags, 2);
+	GITERR_CHECK_ALLOC_ADD(&allocsize, allocsize, 2);
+	GITERR_CHECK_ALLOC_MULTIPLY(&allocsize, allocsize, sizeof(long));
 
+	if (!(kvd = (long *) xdl_malloc(allocsize))) {
 		xdl_free_env(xe);
 		return -1;
 	}
