@@ -23,8 +23,6 @@ void test_win32_longpath__initialize(void)
 
 	for (i = 0; i < (remain - 5); i++)
 		git_buf_putc(&path, 'a');
-
-	printf("%s %" PRIuZ "\n", path.ptr, path.size);
 #endif
 }
 
