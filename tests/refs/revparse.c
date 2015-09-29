@@ -812,3 +812,18 @@ void test_refs_revparse__ext_returns_NULL_reference_when_expression_points_at_a_
 		"0266163a49e280c4f5ed1e08facd36a2bd716bcf",
         NULL);
 }
+
+void test_refs_revparse__uneven_sizes(void)
+{
+	test_object("a65fedf39aefe402d3bb6e24df4d4f5fe454775",
+				"a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+
+	test_object("a65fedf39aefe402d3bb6e24df4d4f5fe45477",
+				"a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+
+	test_object("a65fedf39aefe402d3bb6e24df4d4f5fe4547",
+				"a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+
+	test_object("a65fedf39aefe402d3bb6e24df4d",
+				"a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+}

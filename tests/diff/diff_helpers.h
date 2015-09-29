@@ -42,6 +42,11 @@ extern int diff_print_file_cb(
 	float progress,
 	void *cb_data);
 
+extern int diff_binary_cb(
+	const git_diff_delta *delta,
+	const git_diff_binary *binary,
+	void *cb_data);
+
 extern int diff_hunk_cb(
 	const git_diff_delta *delta,
 	const git_diff_hunk *hunk,
@@ -56,6 +61,7 @@ extern int diff_line_cb(
 extern int diff_foreach_via_iterator(
 	git_diff *diff,
 	git_diff_file_cb file_cb,
+	git_diff_binary_cb binary_cb,
 	git_diff_hunk_cb hunk_cb,
 	git_diff_line_cb line_cb,
 	void *data);

@@ -228,7 +228,7 @@ static int certificate_check(winhttp_stream *s, int valid)
 	}
 
 	giterr_clear();
-	cert.cert_type = GIT_CERT_X509;
+	cert.parent.cert_type = GIT_CERT_X509;
 	cert.data = cert_ctx->pbCertEncoded;
 	cert.len = cert_ctx->cbCertEncoded;
 	error = t->owner->certificate_check_cb((git_cert *) &cert, valid, t->connection_data.host, t->owner->cred_acquire_payload);
@@ -1096,7 +1096,6 @@ static int winhttp_stream_write_chunked(
 	size_t len)
 {
 	winhttp_stream *s = (winhttp_stream *)stream;
-	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
 	int error;
 
 	if (!s->request && winhttp_stream_connect(s) < 0)

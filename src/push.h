@@ -83,7 +83,7 @@ int git_push_add_refspec(git_push *push, const char *refspec);
  * Update remote tips after a push
  *
  * @param push The push object
- * @param signature The identity to use when updating reflogs
+ * @param callbacks the callbacks to use for this connection
  *
  * @return 0 or an error code
  */
@@ -100,6 +100,7 @@ int git_push_update_tips(git_push *push, const git_remote_callbacks *callbacks);
  * order to find out which updates were accepted or rejected.
  *
  * @param push The push object
+ * @param callbacks the callbacks to use for this connection
  *
  * @return 0 or an error code
  */
@@ -117,6 +118,7 @@ int git_push_finish(git_push *push, const git_remote_callbacks *callbacks);
  *
  * @param push The push object
  * @param cb The callback to call on each object
+ * @param data The payload passed to the callback
  *
  * @return 0 on success, non-zero callback return value, or error code
  */

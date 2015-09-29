@@ -11,6 +11,8 @@
 #include "utf-conv.h"
 #include "repository.h"
 #include "reparse.h"
+#include "global.h"
+#include "buffer.h"
 #include <errno.h>
 #include <io.h>
 #include <fcntl.h>
@@ -146,12 +148,19 @@ static int lstat_w(
 		return git_win32__file_attribute_to_stat(buf, &fdata, path);
 	}
 
-	errno = ENOENT;
+	switch (GetLastError()) {
+	case ERROR_ACCESS_DENIED:
+		errno = EACCES;
+		break;
+	default:
+		errno = ENOENT;
+		break;
+	}
 
 	/* To match POSIX behavior, set ENOTDIR when any of the folders in the
 	 * file path is a regular file, otherwise set ENOENT.
 	 */
-	if (posix_enotdir) {
+	if (errno == ENOENT && posix_enotdir) {
 		size_t path_len = wcslen(path);
 
 		/* scan up path until we find an existing item */
@@ -199,6 +208,44 @@ int p_lstat(const char *filename, struct stat *buf)
 int p_lstat_posixly(const char *filename, struct stat *buf)
 {
 	return do_lstat(filename, buf, true);
+}
+
+int p_utimes(const char *filename, const struct timeval times[2])
+{
+	int fd, error;
+
+	if ((fd = p_open(filename, O_RDWR)) < 0)
+		return fd;
+
+	error = p_futimes(fd, times);
+
+	close(fd);
+	return error;
+}
+
+int p_futimes(int fd, const struct timeval times[2])
+{
+	HANDLE handle;
+	FILETIME atime = {0}, mtime = {0};
+
+	if (times == NULL) {
+		SYSTEMTIME st;
+
+		GetSystemTime(&st);
+		SystemTimeToFileTime(&st, &atime);
+		SystemTimeToFileTime(&st, &mtime);
+	} else {
+		git_win32__timeval_to_filetime(&atime, times[0]);
+		git_win32__timeval_to_filetime(&mtime, times[1]);
+	}
+
+	if ((handle = (HANDLE)_get_osfhandle(fd)) == INVALID_HANDLE_VALUE)
+		return -1;
+
+	if (SetFileTime(handle, NULL, &atime, &mtime) == 0)
+		return -1;
+
+	return 0;
 }
 
 int p_readlink(const char *path, char *buf, size_t bufsiz)

@@ -10,8 +10,9 @@
 #include "repository.h"
 #ifdef GIT_WIN32
 #include "win32/posix.h"
-#include "win32/buffer.h"
+#include "win32/w32_buffer.h"
 #include "win32/w32_util.h"
+#include "win32/version.h"
 #else
 #include <dirent.h>
 #endif
@@ -525,6 +526,17 @@ bool git_path_isfile(const char *path)
 	return S_ISREG(st.st_mode) != 0;
 }
 
+bool git_path_islink(const char *path)
+{
+	struct stat st;
+
+	assert(path);
+	if (p_lstat(path, &st) < 0)
+		return false;
+
+	return S_ISLNK(st.st_mode) != 0;
+}
+
 #ifdef GIT_WIN32
 
 bool git_path_is_empty_dir(const char *path)
@@ -640,7 +652,7 @@ static bool _check_dir_contents(
 	/* leave base valid even if we could not make space for subdir */
 	if (GIT_ADD_SIZET_OVERFLOW(&alloc_size, dir_size, sub_size) ||
 		GIT_ADD_SIZET_OVERFLOW(&alloc_size, alloc_size, 2) ||
-		git_buf_try_grow(dir, alloc_size, false, false) < 0)
+		git_buf_try_grow(dir, alloc_size, false) < 0)
 		return false;
 
 	/* save excursion */
@@ -847,7 +859,7 @@ int git_path_make_relative(git_buf *path, const char *parent)
 
 	/* save the offset as we might realllocate the pointer */
 	offset = p - path->ptr;
-	if (git_buf_try_grow(path, alloclen, 1, 0) < 0)
+	if (git_buf_try_grow(path, alloclen, 1) < 0)
 		return -1;
 	p = path->ptr + offset;
 
@@ -889,9 +901,9 @@ void git_path_iconv_clear(git_path_iconv_t *ic)
 	}
 }
 
-int git_path_iconv(git_path_iconv_t *ic, char **in, size_t *inlen)
+int git_path_iconv(git_path_iconv_t *ic, const char **in, size_t *inlen)
 {
-	char *nfd = *in, *nfc;
+	char *nfd = (char*)*in, *nfc;
 	size_t nfdlen = *inlen, nfclen, wantlen = nfdlen, alloclen, rv;
 	int retry = 1;
 
@@ -1018,8 +1030,7 @@ int git_path_direach(
 	int error = 0;
 	ssize_t wd_len;
 	DIR *dir;
-	path_dirent_data de_data;
-	struct dirent *de, *de_buf = (struct dirent *)&de_data;
+	struct dirent *de;
 
 #ifdef GIT_USE_ICONV
 	git_path_iconv_t ic = GIT_PATH_ICONV_INIT;
@@ -1045,8 +1056,8 @@ int git_path_direach(
 		(void)git_path_iconv_init_precompose(&ic);
 #endif
 
-	while (p_readdir_r(dir, de_buf, &de) == 0 && de != NULL) {
-		char *de_path = de->d_name;
+	while ((de = readdir(dir)) != NULL) {
+		const char *de_path = de->d_name;
 		size_t de_len = strlen(de_path);
 
 		if (git_path_is_dot_or_dotdot(de_path))
@@ -1086,7 +1097,7 @@ int git_path_direach(
 #if defined(GIT_WIN32) && !defined(__MINGW32__)
 
 /* Using _FIND_FIRST_EX_LARGE_FETCH may increase performance in Windows 7
- * and better.  Prior versions will ignore this.
+ * and better.
  */
 #ifndef FIND_FIRST_EX_LARGE_FETCH
 # define FIND_FIRST_EX_LARGE_FETCH 2
@@ -1099,6 +1110,10 @@ int git_path_diriter_init(
 {
 	git_win32_path path_filter;
 	git_buf hack = {0};
+
+	static int is_win7_or_later = -1;
+	if (is_win7_or_later < 0)
+		is_win7_or_later = git_has_win32_version(6, 1, 0);
 
 	assert(diriter && path);
 
@@ -1123,11 +1138,11 @@ int git_path_diriter_init(
 
 	diriter->handle = FindFirstFileExW(
 		path_filter,
-		FindExInfoBasic,
+		is_win7_or_later ? FindExInfoBasic : FindExInfoStandard,
 		&diriter->current,
 		FindExSearchNameMatch,
 		NULL,
-		FIND_FIRST_EX_LARGE_FETCH);
+		is_win7_or_later ? FIND_FIRST_EX_LARGE_FETCH : 0);
 
 	if (diriter->handle == INVALID_HANDLE_VALUE) {
 		giterr_set(GITERR_OS, "Could not open directory '%s'", path);
@@ -1162,7 +1177,11 @@ static int diriter_update_paths(git_path_diriter *diriter)
 	diriter->path[path_len-1] = L'\0';
 
 	git_buf_truncate(&diriter->path_utf8, diriter->parent_utf8_len);
-	git_buf_putc(&diriter->path_utf8, '/');
+
+	if (diriter->parent_utf8_len > 0 &&
+		diriter->path_utf8.ptr[diriter->parent_utf8_len-1] != '/')
+		git_buf_putc(&diriter->path_utf8, '/');
+
 	git_buf_put_w(&diriter->path_utf8, diriter->current.cFileName, filename_len);
 
 	if (git_buf_oom(&diriter->path_utf8))
@@ -1230,6 +1249,8 @@ void git_path_diriter_free(git_path_diriter *diriter)
 {
 	if (diriter == NULL)
 		return;
+
+	git_buf_free(&diriter->path_utf8);
 
 	if (diriter->handle != INVALID_HANDLE_VALUE) {
 		FindClose(diriter->handle);
@@ -1304,12 +1325,16 @@ int git_path_diriter_next(git_path_diriter *diriter)
 
 #ifdef GIT_USE_ICONV
 	if ((diriter->flags & GIT_PATH_DIR_PRECOMPOSE_UNICODE) != 0 &&
-		(error = git_path_iconv(&diriter->ic, (char **)&filename, &filename_len)) < 0)
+		(error = git_path_iconv(&diriter->ic, &filename, &filename_len)) < 0)
 		return error;
 #endif
 
 	git_buf_truncate(&diriter->path, diriter->parent_len);
-	git_buf_putc(&diriter->path, '/');
+
+	if (diriter->parent_len > 0 &&
+		diriter->path.ptr[diriter->parent_len-1] != '/')
+		git_buf_putc(&diriter->path, '/');
+
 	git_buf_put(&diriter->path, filename, filename_len);
 
 	if (git_buf_oom(&diriter->path))
@@ -1473,7 +1498,7 @@ static int32_t next_hfs_char(const char **in, size_t *len)
 		 * the ASCII range, which is perfectly fine, because the
 		 * git folder name can only be composed of ascii characters
 		 */
-		return tolower(codepoint);
+		return git__tolower(codepoint);
 	}
 	return 0; /* NULL byte -- end of string */
 }
@@ -1669,4 +1694,20 @@ bool git_path_isvalid(
 	}
 
 	return verify_component(repo, start, (c - start), flags);
+}
+
+int git_path_normalize_slashes(git_buf *out, const char *path)
+{
+	int error;
+	char *p;
+
+	if ((error = git_buf_puts(out, path)) < 0)
+		return error;
+
+	for (p = out->ptr; *p; p++) {
+		if (*p == '\\')
+			*p = '/';
+	}
+
+	return 0;
 }

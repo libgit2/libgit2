@@ -100,12 +100,18 @@ $ git status --short
 	assert_blob_oid("refs/stash:how", "e6d64adb2c7f3eb8feb493b556cc8070dca379a3");	/* not so small and */
 	assert_blob_oid("refs/stash:who", "a0400d4954659306a976567af43125a0b1aa8595");	/* funky world */
 	assert_blob_oid("refs/stash:when", NULL);
+	assert_blob_oid("refs/stash:why", "88c2533e21f098b89c91a431d8075cbdbe422a51"); /* would anybody use stash? */
+	assert_blob_oid("refs/stash:where", "e3d6434ec12eb76af8dfa843a64ba6ab91014a0b"); /* .... */
+	assert_blob_oid("refs/stash:.gitignore", "ac4d88de61733173d9959e4b77c69b9f17a00980");
 	assert_blob_oid("refs/stash:just.ignore", NULL);
 
 	assert_blob_oid("refs/stash^2:what", "dd7e1c6f0fefe118f0b63d9f10908c460aa317a6");	/* goodbye */
 	assert_blob_oid("refs/stash^2:how", "e6d64adb2c7f3eb8feb493b556cc8070dca379a3");	/* not so small and */
 	assert_blob_oid("refs/stash^2:who", "cc628ccd10742baea8241c5924df992b5c019f71");	/* world */
 	assert_blob_oid("refs/stash^2:when", NULL);
+	assert_blob_oid("refs/stash^2:why", "88c2533e21f098b89c91a431d8075cbdbe422a51"); /* would anybody use stash? */
+	assert_blob_oid("refs/stash^2:where", "e08f7fbb9a42a0c5367cf8b349f1f08c3d56bd72"); /* ???? */
+	assert_blob_oid("refs/stash^2:.gitignore", "ac4d88de61733173d9959e4b77c69b9f17a00980");
 	assert_blob_oid("refs/stash^2:just.ignore", NULL);
 
 	assert_blob_oid("refs/stash^3", NULL);
@@ -243,11 +249,13 @@ void test_stash_save__cannot_stash_when_there_are_no_local_change(void)
 	cl_git_pass(git_repository_index(&index, repo));
 
 	/*
-	 * 'what' and 'who' are being committed.
-	 * 'when' remain untracked.
+	 * 'what', 'where' and 'who' are being committed.
+	 * 'when' remains untracked.
 	 */
 	cl_git_pass(git_index_add_bypath(index, "what"));
+	cl_git_pass(git_index_add_bypath(index, "where"));
 	cl_git_pass(git_index_add_bypath(index, "who"));
+
 	cl_repo_commit_from_index(NULL, repo, signature, 0, "Initial commit");
 	git_index_free(index);
 

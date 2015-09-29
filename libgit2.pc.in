@@ -1,10 +1,13 @@
-libdir=@CMAKE_INSTALL_PREFIX@/@LIB_INSTALL_DIR@
-includedir=@CMAKE_INSTALL_PREFIX@/@INCLUDE_INSTALL_DIR@
+prefix=@PKGCONFIG_PREFIX@
+libdir=@PKGCONFIG_LIBDIR@
+includedir=@PKGCONFIG_INCLUDEDIR@
 
 Name: libgit2
 Description: The git library, take 2
 Version: @LIBGIT2_VERSION_STRING@
-Requires.private: @LIBGIT2_PC_REQUIRES@
-Libs.private: @LIBGIT2_PC_LIBS@
+
 Libs: -L${libdir} -lgit2
+Libs.private: @LIBGIT2_PC_LIBS@
+Requires.private: @LIBGIT2_PC_REQUIRES@
+
 Cflags: -I${includedir}

@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "submodule_helpers.h"
 #include "git2/sys/repository.h"
+#include "repository.h"
 #include "fileops.h"
 
 static git_repository *g_repo = NULL;
@@ -31,6 +32,9 @@ void test_submodule_lookup__simple_lookup(void)
 
 	/* lookup non-existent item */
 	refute_submodule_exists(g_repo, "no_such_file", GIT_ENOTFOUND);
+
+	/* lookup a submodule by path with a trailing slash */
+	assert_submodule_exists(g_repo, "sm_added_and_uncommited/");
 }
 
 void test_submodule_lookup__accessors(void)
@@ -100,8 +104,25 @@ static int sm_lookup_cb(git_submodule *sm, const char *name, void *payload)
 
 void test_submodule_lookup__foreach(void)
 {
+	git_config *cfg;
 	sm_lookup_data data;
+
 	memset(&data, 0, sizeof(data));
+	cl_git_pass(git_submodule_foreach(g_repo, sm_lookup_cb, &data));
+	cl_assert_equal_i(8, data.count);
+
+	memset(&data, 0, sizeof(data));
+
+	/* Change the path for a submodule so it doesn't match the name */
+	cl_git_pass(git_config_open_ondisk(&cfg, "submod2/.gitmodules"));
+
+	cl_git_pass(git_config_set_string(cfg, "submodule.smchangedindex.path", "sm_changed_index"));
+	cl_git_pass(git_config_set_string(cfg, "submodule.smchangedindex.url", "../submod2_target"));
+	cl_git_pass(git_config_delete_entry(cfg, "submodule.sm_changed_index.path"));
+	cl_git_pass(git_config_delete_entry(cfg, "submodule.sm_changed_index.url"));
+
+	git_config_free(cfg);
+
 	cl_git_pass(git_submodule_foreach(g_repo, sm_lookup_cb, &data));
 	cl_assert_equal_i(8, data.count);
 }
@@ -128,6 +149,29 @@ void test_submodule_lookup__lookup_even_with_missing_index(void)
 	git_index_free(idx);
 
 	test_submodule_lookup__simple_lookup(); /* baseline should still pass */
+}
+
+void test_submodule_lookup__backslashes(void)
+{
+	git_config *cfg;
+	git_submodule *sm;
+	git_repository *subrepo;
+	git_buf buf = GIT_BUF_INIT;
+	const char *backslashed_path = "..\\submod2_target";
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "submod2/.gitmodules"));
+	cl_git_pass(git_config_set_string(cfg, "submodule.sm_unchanged.url", backslashed_path));
+	git_config_free(cfg);
+
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_unchanged"));
+	cl_assert_equal_s(backslashed_path, git_submodule_url(sm));
+	cl_git_pass(git_submodule_open(&subrepo, sm));
+
+	cl_git_pass(git_submodule_resolve_url(&buf, g_repo, backslashed_path));
+
+	git_buf_free(&buf);
+	git_submodule_free(sm);
+	git_repository_free(subrepo);
 }
 
 static void baseline_tests(void)
@@ -266,3 +310,81 @@ void test_submodule_lookup__just_added(void)
 	refute_submodule_exists(g_repo, "sm_just_added_head", GIT_EEXISTS);
 }
 
+/* Test_App and Test_App2 are fairly similar names, make sure we load the right one */
+void test_submodule_lookup__prefix_name(void)
+{
+	git_submodule *sm;
+
+	cl_git_rewritefile("submod2/.gitmodules",
+			   "[submodule \"Test_App\"]\n"
+			   "    path = Test_App\n"
+			   "    url = ../Test_App\n"
+			   "[submodule \"Test_App2\"]\n"
+			   "    path = Test_App2\n"
+			   "    url = ../Test_App\n");
+
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "Test_App"));
+	cl_assert_equal_s("Test_App", git_submodule_name(sm));
+
+	git_submodule_free(sm);
+
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "Test_App2"));
+	cl_assert_equal_s("Test_App2", git_submodule_name(sm));
+
+	git_submodule_free(sm);
+}
+
+void test_submodule_lookup__renamed(void)
+{
+	const char *newpath = "sm_actually_changed";
+	git_index *idx;
+	sm_lookup_data data;
+
+	cl_git_pass(git_repository_index__weakptr(&idx, g_repo));
+
+	/* We're replicating 'git mv sm_unchanged sm_actually_changed' in this test */
+
+	cl_git_pass(p_rename("submod2/sm_unchanged", "submod2/sm_actually_changed"));
+
+	/* Change the path in .gitmodules and stage it*/
+	{
+		git_config *cfg;
+
+		cl_git_pass(git_config_open_ondisk(&cfg, "submod2/.gitmodules"));
+		cl_git_pass(git_config_set_string(cfg, "submodule.sm_unchanged.path", newpath));
+		git_config_free(cfg);
+
+		cl_git_pass(git_index_add_bypath(idx, ".gitmodules"));
+	}
+
+	/* Change the worktree info in the the submodule's config */
+	{
+		git_config *cfg;
+
+		cl_git_pass(git_config_open_ondisk(&cfg, "submod2/.git/modules/sm_unchanged/config"));
+		cl_git_pass(git_config_set_string(cfg, "core.worktree", "../../../sm_actually_changed"));
+		git_config_free(cfg);
+	}
+
+	/* Rename the entry in the index */
+	{
+		const git_index_entry *e;
+		git_index_entry entry = {{ 0 }};
+
+		e = git_index_get_bypath(idx, "sm_unchanged", 0);
+		cl_assert(e);
+		cl_assert_equal_i(GIT_FILEMODE_COMMIT, e->mode);
+
+		entry.path = newpath;
+		entry.mode = GIT_FILEMODE_COMMIT;
+		git_oid_cpy(&entry.id, &e->id);
+
+		cl_git_pass(git_index_remove(idx, "sm_unchanged", 0));
+		cl_git_pass(git_index_add(idx, &entry));
+		cl_git_pass(git_index_write(idx));
+	}
+
+	memset(&data, 0, sizeof(data));
+	cl_git_pass(git_submodule_foreach(g_repo, sm_lookup_cb, &data));
+	cl_assert_equal_i(8, data.count);
+}

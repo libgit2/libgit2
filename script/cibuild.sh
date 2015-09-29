@@ -34,8 +34,6 @@ killall git-daemon
 
 if [ "$TRAVIS_OS_NAME" = "osx" ]; then
     echo 'PasswordAuthentication yes' | sudo tee -a /etc/sshd_config
-else
-    sudo start ssh
 fi
 
 ssh-keygen -t rsa -f ~/.ssh/id_rsa -N "" -q
@@ -53,8 +51,8 @@ export GITTEST_REMOTE_SSH_PASSPHRASE=""
 
 if [ -e ./libgit2_clar ]; then
     ./libgit2_clar -sonline::push -sonline::clone::ssh_cert &&
-    ./libgit2_clar -sonline::clone::ssh_with_paths
+    ./libgit2_clar -sonline::clone::ssh_with_paths || exit $?
     if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-        ./libgit2_clar -sonline::clone::cred_callback
+        ./libgit2_clar -sonline::clone::cred_callback || exit $?
     fi
 fi

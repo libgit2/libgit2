@@ -38,7 +38,7 @@ GIT_EXTERN(int) git_diff_print_callback__to_buf(
 	const git_diff_delta *delta,
 	const git_diff_hunk *hunk,
 	const git_diff_line *line,
-	void *payload); /*< payload must be a `git_buf *` */
+	void *payload); /**< payload must be a `git_buf *` */
 
 /**
  * Diff print callback that writes to stdio FILE handle.
@@ -58,7 +58,7 @@ GIT_EXTERN(int) git_diff_print_callback__to_file_handle(
 	const git_diff_delta *delta,
 	const git_diff_hunk *hunk,
 	const git_diff_line *line,
-	void *payload); /*< payload must be a `FILE *` */
+	void *payload); /**< payload must be a `FILE *` */
 
 
 /**
@@ -66,8 +66,8 @@ GIT_EXTERN(int) git_diff_print_callback__to_file_handle(
  */
 typedef struct {
 	unsigned int version;
-	size_t stat_calls; /*< Number of stat() calls performed */
-	size_t oid_calculations; /*< Number of ID calculations */
+	size_t stat_calls; /**< Number of stat() calls performed */
+	size_t oid_calculations; /**< Number of ID calculations */
 } git_diff_perfdata;
 
 #define GIT_DIFF_PERFDATA_VERSION 1

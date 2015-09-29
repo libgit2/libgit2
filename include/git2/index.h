@@ -274,6 +274,18 @@ GIT_EXTERN(int) git_index_write(git_index *index);
 GIT_EXTERN(const char *) git_index_path(const git_index *index);
 
 /**
+ * Get the checksum of the index
+ *
+ * This checksum is the SHA-1 hash over the index file (except the
+ * last 20 bytes which are the checksum itself). In cases where the
+ * index does not exist on-disk, it will be zeroed out.
+ *
+ * @param index an existing index object
+ * @return a pointer to the checksum of the index
+ */
+GIT_EXTERN(const git_oid *) git_index_checksum(git_index *index);
+
+/**
  * Read a tree into the index file with stats
  *
  * The current index contents will be replaced by the specified tree.
@@ -630,6 +642,17 @@ GIT_EXTERN(int) git_index_update_all(
  * @return a zero-based position in the index if found; GIT_ENOTFOUND otherwise
  */
 GIT_EXTERN(int) git_index_find(size_t *at_pos, git_index *index, const char *path);
+
+/**
+ * Find the first position of any entries matching a prefix. To find the first position
+ * of a path inside a given folder, suffix the prefix with a '/'.
+ *
+ * @param at_pos the address to which the position of the index entry is written (optional)
+ * @param index an existing index object
+ * @param prefix the prefix to search for
+ * @return 0 with valid value in at_pos; an error code otherwise
+ */
+GIT_EXTERN(int) git_index_find_prefix(size_t *at_pos, git_index *index, const char *prefix);
 
 /**@}*/
 

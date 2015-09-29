@@ -15,7 +15,7 @@
 #include "fileops.h"
 #include "config.h"
 
-static git_diff_delta *diff_delta__dup(
+git_diff_delta *git_diff__delta_dup(
 	const git_diff_delta *d, git_pool *pool)
 {
 	git_diff_delta *delta = git__malloc(sizeof(git_diff_delta));
@@ -46,7 +46,7 @@ fail:
 	return NULL;
 }
 
-static git_diff_delta *diff_delta__merge_like_cgit(
+git_diff_delta *git_diff__merge_like_cgit(
 	const git_diff_delta *a,
 	const git_diff_delta *b,
 	git_pool *pool)
@@ -65,19 +65,26 @@ static git_diff_delta *diff_delta__merge_like_cgit(
 	 *  f3 = b->new_file
 	 */
 
+	/* If one of the diffs is a conflict, just dup it */
+	if (b->status == GIT_DELTA_CONFLICTED)
+		return git_diff__delta_dup(b, pool);
+	if (a->status == GIT_DELTA_CONFLICTED)
+		return git_diff__delta_dup(a, pool);
+
 	/* if f2 == f3 or f2 is deleted, then just dup the 'a' diff */
 	if (b->status == GIT_DELTA_UNMODIFIED || a->status == GIT_DELTA_DELETED)
-		return diff_delta__dup(a, pool);
+		return git_diff__delta_dup(a, pool);
 
 	/* otherwise, base this diff on the 'b' diff */
-	if ((dup = diff_delta__dup(b, pool)) == NULL)
+	if ((dup = git_diff__delta_dup(b, pool)) == NULL)
 		return NULL;
 
 	/* If 'a' status is uninteresting, then we're done */
-	if (a->status == GIT_DELTA_UNMODIFIED)
+	if (a->status == GIT_DELTA_UNMODIFIED ||
+		a->status == GIT_DELTA_UNTRACKED ||
+		a->status == GIT_DELTA_UNREADABLE)
 		return dup;
 
-	assert(a->status != GIT_DELTA_UNMODIFIED);
 	assert(b->status != GIT_DELTA_UNMODIFIED);
 
 	/* A cgit exception is that the diff of a file that is only in the
@@ -102,43 +109,8 @@ static git_diff_delta *diff_delta__merge_like_cgit(
 	return dup;
 }
 
-static git_diff_delta *diff_delta__merge_like_cgit_reversed(
-	const git_diff_delta *a,
-	const git_diff_delta *b,
-	git_pool *pool)
-{
-	git_diff_delta *dup;
-
-	/* reversed version of above logic */
-
-	if (a->status == GIT_DELTA_UNMODIFIED)
-		return diff_delta__dup(b, pool);
-
-	if ((dup = diff_delta__dup(a, pool)) == NULL)
-		return NULL;
-
-	if (b->status == GIT_DELTA_UNMODIFIED || b->status == GIT_DELTA_UNTRACKED || b->status == GIT_DELTA_UNREADABLE)
-		return dup;
-
-	if (dup->status == GIT_DELTA_DELETED) {
-		if (b->status == GIT_DELTA_ADDED) {
-			dup->status = GIT_DELTA_UNMODIFIED;
-			dup->nfiles = 2;
-		}
-	} else {
-		dup->status = b->status;
-		dup->nfiles = b->nfiles;
-	}
-
-	git_oid_cpy(&dup->old_file.id, &b->old_file.id);
-	dup->old_file.mode  = b->old_file.mode;
-	dup->old_file.size  = b->old_file.size;
-	dup->old_file.flags = b->old_file.flags;
-
-	return dup;
-}
-
-int git_diff_merge(git_diff *onto, const git_diff *from)
+int git_diff__merge(
+	git_diff *onto, const git_diff *from, git_diff__merge_cb cb)
 {
 	int error = 0;
 	git_pool onto_pool;
@@ -174,15 +146,16 @@ int git_diff_merge(git_diff *onto, const git_diff *from)
 			STRCMP_CASESELECT(ignore_case, o->old_file.path, f->old_file.path);
 
 		if (cmp < 0) {
-			delta = diff_delta__dup(o, &onto_pool);
+			delta = git_diff__delta_dup(o, &onto_pool);
 			i++;
 		} else if (cmp > 0) {
-			delta = diff_delta__dup(f, &onto_pool);
+			delta = git_diff__delta_dup(f, &onto_pool);
 			j++;
 		} else {
-			delta = reversed ?
-				diff_delta__merge_like_cgit_reversed(o, f, &onto_pool) :
-				diff_delta__merge_like_cgit(o, f, &onto_pool);
+			const git_diff_delta *left = reversed ? f : o;
+			const git_diff_delta *right = reversed ? o : f;
+
+			delta = cb(left, right, &onto_pool);
 			i++;
 			j++;
 		}
@@ -190,7 +163,7 @@ int git_diff_merge(git_diff *onto, const git_diff *from)
 		/* the ignore rules for the target may not match the source
 		 * or the result of a merged delta could be skippable...
 		 */
-		if (git_diff_delta__should_skip(&onto->opts, delta)) {
+		if (delta && git_diff_delta__should_skip(&onto->opts, delta)) {
 			git__free(delta);
 			continue;
 		}
@@ -219,6 +192,11 @@ int git_diff_merge(git_diff *onto, const git_diff *from)
 	git_pool_clear(&onto_pool);
 
 	return error;
+}
+
+int git_diff_merge(git_diff *onto, const git_diff *from)
+{
+	return git_diff__merge(onto, from, git_diff__merge_like_cgit);
 }
 
 int git_diff_find_similar__hashsig_for_file(
@@ -369,7 +347,7 @@ static int insert_delete_side_of_split(
 	git_diff *diff, git_vector *onto, const git_diff_delta *delta)
 {
 	/* make new record for DELETED side of split */
-	git_diff_delta *deleted = diff_delta__dup(delta, &diff->pool);
+	git_diff_delta *deleted = git_diff__delta_dup(delta, &diff->pool);
 	GITERR_CHECK_ALLOC(deleted);
 
 	deleted->status = GIT_DELTA_DELETED;
@@ -676,11 +654,13 @@ static bool is_rename_target(
 		return false;
 
 	/* only consider ADDED, RENAMED, COPIED, and split MODIFIED as
-	 * targets; maybe include UNTRACKED and IGNORED if requested.
+	 * targets; maybe include UNTRACKED if requested.
 	 */
 	switch (delta->status) {
 	case GIT_DELTA_UNMODIFIED:
 	case GIT_DELTA_DELETED:
+	case GIT_DELTA_IGNORED:
+	case GIT_DELTA_CONFLICTED:
 		return false;
 
 	case GIT_DELTA_MODIFIED:
@@ -707,9 +687,6 @@ static bool is_rename_target(
 			return false;
 		break;
 
-	case GIT_DELTA_IGNORED:
-		return false;
-
 	default: /* all other status values should be checked */
 		break;
 	}
@@ -735,6 +712,7 @@ static bool is_rename_source(
 	case GIT_DELTA_UNTRACKED:
 	case GIT_DELTA_UNREADABLE:
 	case GIT_DELTA_IGNORED:
+	case GIT_DELTA_CONFLICTED:
 		return false;
 
 	case GIT_DELTA_DELETED:

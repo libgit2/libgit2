@@ -124,3 +124,109 @@ void test_core_filebuf__umask(void)
 	cl_must_pass(p_unlink(test));
 }
 
+void test_core_filebuf__rename_error(void)
+{
+	git_filebuf file = GIT_FILEBUF_INIT;
+	char *dir = "subdir",  *test = "subdir/test", *test_lock = "subdir/test.lock";
+	int fd;
+
+#ifndef GIT_WIN32
+	cl_skip();
+#endif
+
+	cl_git_pass(p_mkdir(dir, 0666));
+	cl_git_mkfile(test, "dummy content");
+	fd = p_open(test, O_RDONLY);
+	cl_assert(fd > 0);
+	cl_git_pass(git_filebuf_open(&file, test, 0, 0666));
+
+	cl_git_pass(git_filebuf_printf(&file, "%s\n", "libgit2 rocks"));
+
+	cl_assert_equal_i(true, git_path_exists(test_lock));
+
+	cl_git_fail(git_filebuf_commit(&file));
+	p_close(fd);
+
+	git_filebuf_cleanup(&file);
+
+	cl_assert_equal_i(false, git_path_exists(test_lock));
+}
+
+void test_core_filebuf__symlink_follow(void)
+{
+	git_filebuf file = GIT_FILEBUF_INIT;
+	const char *dir = "linkdir", *source = "linkdir/link";
+
+#ifdef GIT_WIN32
+	cl_skip();
+#endif
+
+	cl_git_pass(p_mkdir(dir, 0777));
+	cl_git_pass(p_symlink("target", source));
+
+	cl_git_pass(git_filebuf_open(&file, source, 0, 0666));
+	cl_git_pass(git_filebuf_printf(&file, "%s\n", "libgit2 rocks"));
+
+	cl_assert_equal_i(true, git_path_exists("linkdir/target.lock"));
+
+	cl_git_pass(git_filebuf_commit(&file));
+	cl_assert_equal_i(true, git_path_exists("linkdir/target"));
+
+	git_filebuf_cleanup(&file);
+
+	/* The second time around, the target file does exist */
+	cl_git_pass(git_filebuf_open(&file, source, 0, 0666));
+	cl_git_pass(git_filebuf_printf(&file, "%s\n", "libgit2 rocks"));
+
+	cl_assert_equal_i(true, git_path_exists("linkdir/target.lock"));
+
+	cl_git_pass(git_filebuf_commit(&file));
+	cl_assert_equal_i(true, git_path_exists("linkdir/target"));
+
+	git_filebuf_cleanup(&file);
+	cl_git_pass(git_futils_rmdir_r(dir, NULL, GIT_RMDIR_REMOVE_FILES));
+}
+
+void test_core_filebuf__symlink_depth(void)
+{
+	git_filebuf file = GIT_FILEBUF_INIT;
+	const char *dir = "linkdir", *source = "linkdir/link";
+
+#ifdef GIT_WIN32
+	cl_skip();
+#endif
+
+	cl_git_pass(p_mkdir(dir, 0777));
+	/* Endless loop */
+	cl_git_pass(p_symlink("link", source));
+
+	cl_git_fail(git_filebuf_open(&file, source, 0, 0666));
+
+	cl_git_pass(git_futils_rmdir_r(dir, NULL, GIT_RMDIR_REMOVE_FILES));
+}
+
+void test_core_filebuf__hidden_file(void)
+{
+#ifndef GIT_WIN32
+	cl_skip();
+#else
+	git_filebuf file = GIT_FILEBUF_INIT;
+	char *dir = "hidden", *test = "hidden/test";
+	bool hidden;
+
+	cl_git_pass(p_mkdir(dir, 0666));
+	cl_git_mkfile(test, "dummy content");
+
+	cl_git_pass(git_win32__set_hidden(test, true));
+	cl_git_pass(git_win32__hidden(&hidden, test));
+	cl_assert(hidden);
+
+	cl_git_pass(git_filebuf_open(&file, test, 0, 0666));
+
+	cl_git_pass(git_filebuf_printf(&file, "%s\n", "libgit2 rocks"));
+
+	cl_git_pass(git_filebuf_commit(&file));
+
+	git_filebuf_cleanup(&file);
+#endif
+}

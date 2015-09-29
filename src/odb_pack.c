@@ -383,7 +383,7 @@ static int pack_backend__read_internal(
 	git_odb_backend *backend, const git_oid *oid)
 {
 	struct git_pack_entry e;
-	git_rawobj raw;
+	git_rawobj raw = {NULL};
 	int error;
 
 	if ((error = pack_entry_find(&e, (struct pack_backend *)backend, oid)) < 0 ||

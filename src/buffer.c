@@ -33,13 +33,18 @@ void git_buf_init(git_buf *buf, size_t initial_size)
 }
 
 int git_buf_try_grow(
-	git_buf *buf, size_t target_size, bool mark_oom, bool preserve_external)
+	git_buf *buf, size_t target_size, bool mark_oom)
 {
 	char *new_ptr;
 	size_t new_size;
 
 	if (buf->ptr == git_buf__oom)
 		return -1;
+
+	if (buf->asize == 0 && buf->size != 0) {
+		giterr_set(GITERR_INVALID, "cannot grow a borrowed buffer");
+		return GIT_EINVALID;
+	}
 
 	if (!target_size)
 		target_size = buf->size;
@@ -82,9 +87,6 @@ int git_buf_try_grow(
 		return -1;
 	}
 
-	if (preserve_external && !buf->asize && buf->ptr != NULL && buf->size > 0)
-		memcpy(new_ptr, buf->ptr, min(buf->size, new_size));
-
 	buf->asize = new_size;
 	buf->ptr   = new_ptr;
 
@@ -98,7 +100,7 @@ int git_buf_try_grow(
 
 int git_buf_grow(git_buf *buffer, size_t target_size)
 {
-	return git_buf_try_grow(buffer, target_size, true, true);
+	return git_buf_try_grow(buffer, target_size, true);
 }
 
 int git_buf_grow_by(git_buf *buffer, size_t additional_size)
@@ -110,7 +112,7 @@ int git_buf_grow_by(git_buf *buffer, size_t additional_size)
 		return -1;
 	}
 
-	return git_buf_try_grow(buffer, newsize, true, true);	
+	return git_buf_try_grow(buffer, newsize, true);
 }
 
 void git_buf_free(git_buf *buf)

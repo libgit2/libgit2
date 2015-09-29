@@ -50,16 +50,16 @@ void git_cache_dump_stats(git_cache *cache)
 	if (kh_size(cache->map) == 0)
 		return;
 
-	printf("Cache %p: %d items cached, %d bytes\n",
-		cache, kh_size(cache->map), (int)cache->used_memory);
+	printf("Cache %p: %d items cached, %"PRIdZ" bytes\n",
+		cache, kh_size(cache->map), cache->used_memory);
 
 	kh_foreach_value(cache->map, object, {
 		char oid_str[9];
-		printf(" %s%c %s (%d)\n",
+		printf(" %s%c %s (%"PRIuZ")\n",
 			git_object_type2string(object->type),
 			object->flags == GIT_CACHE_STORE_PARSED ? '*' : ' ',
 			git_oid_tostr(oid_str, sizeof(oid_str), &object->oid),
-			(int)object->size
+			object->size
 		);
 	});
 }
@@ -68,6 +68,7 @@ int git_cache_init(git_cache *cache)
 {
 	memset(cache, 0, sizeof(*cache));
 	cache->map = git_oidmap_alloc();
+	GITERR_CHECK_ALLOC(cache->map);
 	if (git_rwlock_init(&cache->lock)) {
 		giterr_set(GITERR_OS, "Failed to initialize cache rwlock");
 		return -1;

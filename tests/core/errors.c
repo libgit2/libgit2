@@ -93,21 +93,67 @@ void test_core_errors__restore(void)
 	giterr_clear();
 	cl_assert(giterr_last() == NULL);
 
-	cl_assert_equal_i(0, giterr_capture(&err_state, 0));
+	cl_assert_equal_i(0, giterr_state_capture(&err_state, 0));
 
 	memset(&err_state, 0x0, sizeof(git_error_state));
 
 	giterr_set(42, "Foo: %s", "bar");
-	cl_assert_equal_i(-1, giterr_capture(&err_state, -1));
+	cl_assert_equal_i(-1, giterr_state_capture(&err_state, -1));
 
 	cl_assert(giterr_last() == NULL);
 
 	giterr_set(99, "Bar: %s", "foo");
 
-	giterr_restore(&err_state);
+	giterr_state_restore(&err_state);
 
 	cl_assert_equal_i(42, giterr_last()->klass);
 	cl_assert_equal_s("Foo: bar", giterr_last()->message);
+}
+
+void test_core_errors__free_state(void)
+{
+	git_error_state err_state = {0};
+
+	giterr_clear();
+
+	giterr_set(42, "Foo: %s", "bar");
+	cl_assert_equal_i(-1, giterr_state_capture(&err_state, -1));
+
+	giterr_set(99, "Bar: %s", "foo");
+
+	giterr_state_free(&err_state);
+
+	cl_assert_equal_i(99, giterr_last()->klass);
+	cl_assert_equal_s("Bar: foo", giterr_last()->message);
+
+	giterr_state_restore(&err_state);
+
+	cl_assert(giterr_last() == NULL);
+}
+
+void test_core_errors__restore_oom(void)
+{
+	git_error_state err_state = {0};
+	const git_error *oom_error = NULL;
+
+	giterr_clear();
+
+	giterr_set_oom(); /* internal fn */
+	oom_error = giterr_last();
+	cl_assert(oom_error);
+
+	cl_assert_equal_i(-1, giterr_state_capture(&err_state, -1));
+
+	cl_assert(giterr_last() == NULL);
+	cl_assert_equal_i(GITERR_NOMEMORY, err_state.error_msg.klass);
+	cl_assert_equal_s("Out of memory", err_state.error_msg.message);
+
+	giterr_state_restore(&err_state);
+
+	cl_assert(giterr_last()->klass == GITERR_NOMEMORY);
+	cl_assert_(giterr_last() == oom_error, "static oom error not restored");
+
+	giterr_clear();
 }
 
 static int test_arraysize_multiply(size_t nelem, size_t size)

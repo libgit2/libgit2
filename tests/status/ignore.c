@@ -148,7 +148,7 @@ void test_status_ignore__ignore_pattern_contains_space(void)
 	cl_git_pass(git_status_file(&flags, g_repo, "foo bar.txt"));
 	cl_assert(flags == GIT_STATUS_IGNORED);
 
-	cl_git_pass(git_futils_mkdir_r("empty_standard_repo/foo", NULL, mode));
+	cl_git_pass(git_futils_mkdir_r("empty_standard_repo/foo", mode));
 	cl_git_mkfile("empty_standard_repo/foo/look-ma.txt", "I'm not going to be ignored!");
 
 	cl_git_pass(git_status_file(&flags, g_repo, "foo/look-ma.txt"));
@@ -206,7 +206,7 @@ void test_status_ignore__subdirectories(void)
 	 * used a rooted path for an ignore, so I changed this behavior.
 	 */
 	cl_git_pass(git_futils_mkdir_r(
-		"empty_standard_repo/test/ignore_me", NULL, 0775));
+		"empty_standard_repo/test/ignore_me", 0775));
 	cl_git_mkfile(
 		"empty_standard_repo/test/ignore_me/file", "I'm going to be ignored!");
 	cl_git_mkfile(
@@ -230,9 +230,9 @@ static void make_test_data(const char *reponame, const char **files)
 	g_repo = cl_git_sandbox_init(reponame);
 
 	for (scan = files; *scan != NULL; ++scan) {
-		cl_git_pass(git_futils_mkdir(
+		cl_git_pass(git_futils_mkdir_relative(
 			*scan + repolen, reponame,
-			0777, GIT_MKDIR_PATH | GIT_MKDIR_SKIP_LAST));
+			0777, GIT_MKDIR_PATH | GIT_MKDIR_SKIP_LAST, NULL));
 		cl_git_mkfile(*scan, "contents");
 	}
 }
@@ -612,7 +612,7 @@ void test_status_ignore__issue_1766_negated_ignores(void)
 	g_repo = cl_git_sandbox_init("empty_standard_repo");
 
 	cl_git_pass(git_futils_mkdir_r(
-		"empty_standard_repo/a", NULL, 0775));
+		"empty_standard_repo/a", 0775));
 	cl_git_mkfile(
 		"empty_standard_repo/a/.gitignore", "*\n!.gitignore\n");
 	cl_git_mkfile(
@@ -622,7 +622,7 @@ void test_status_ignore__issue_1766_negated_ignores(void)
 	assert_is_ignored("a/ignoreme");
 
 	cl_git_pass(git_futils_mkdir_r(
-		"empty_standard_repo/b", NULL, 0775));
+		"empty_standard_repo/b", 0775));
 	cl_git_mkfile(
 		"empty_standard_repo/b/.gitignore", "*\n!.gitignore\n");
 	cl_git_mkfile(
@@ -1021,4 +1021,21 @@ void test_status_ignore__negate_exact_previous(void)
 	cl_git_mkfile("empty_standard_repo/.buildpath", "");
 	cl_git_pass(git_ignore_path_is_ignored(&ignored, g_repo, ".buildpath"));
 	cl_assert_equal_i(1, ignored);
+}
+
+void test_status_ignore__negate_starstar(void)
+{
+    int ignored;
+
+    g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+    cl_git_mkfile("empty_standard_repo/.gitignore",
+              "code/projects/**/packages/*\n"
+              "!code/projects/**/packages/repositories.config");
+
+    cl_git_pass(git_futils_mkdir_r("empty_standard_repo/code/projects/foo/bar/packages", 0777));
+    cl_git_mkfile("empty_standard_repo/code/projects/foo/bar/packages/repositories.config", "");
+
+    cl_git_pass(git_ignore_path_is_ignored(&ignored, g_repo, "code/projects/foo/bar/packages/repositories.config"));
+    cl_assert_equal_i(0, ignored);
 }

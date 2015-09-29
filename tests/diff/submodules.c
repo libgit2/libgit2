@@ -273,13 +273,13 @@ void test_diff_submodules__invalid_cache(void)
 
 	/* create untracked file in submodule working directory */
 	cl_git_mkfile("submod2/sm_changed_head/new_around_here", "hello");
-	git_submodule_set_ignore(sm, GIT_SUBMODULE_IGNORE_NONE);
+	git_submodule_set_ignore(g_repo, git_submodule_name(sm), GIT_SUBMODULE_IGNORE_NONE);
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_dirty);
 	git_diff_free(diff);
 
-	git_submodule_set_ignore(sm, GIT_SUBMODULE_IGNORE_UNTRACKED);
+	git_submodule_set_ignore(g_repo, git_submodule_name(sm), GIT_SUBMODULE_IGNORE_UNTRACKED);
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_unchanged);
@@ -301,7 +301,7 @@ void test_diff_submodules__invalid_cache(void)
 	check_diff_patches(diff, expected_dirty);
 	git_diff_free(diff);
 
-	git_submodule_set_ignore(sm, GIT_SUBMODULE_IGNORE_DIRTY);
+	git_submodule_set_ignore(g_repo, git_submodule_name(sm), GIT_SUBMODULE_IGNORE_DIRTY);
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_unchanged);
@@ -312,13 +312,13 @@ void test_diff_submodules__invalid_cache(void)
 	cl_git_pass(git_repository_index(&smindex, smrepo));
 	cl_git_pass(git_index_add_bypath(smindex, "file_to_modify"));
 
-	git_submodule_set_ignore(sm, GIT_SUBMODULE_IGNORE_UNTRACKED);
+	git_submodule_set_ignore(g_repo, git_submodule_name(sm), GIT_SUBMODULE_IGNORE_UNTRACKED);
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_dirty);
 	git_diff_free(diff);
 
-	git_submodule_set_ignore(sm, GIT_SUBMODULE_IGNORE_DIRTY);
+	git_submodule_set_ignore(g_repo, git_submodule_name(sm), GIT_SUBMODULE_IGNORE_DIRTY);
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_unchanged);
@@ -327,19 +327,19 @@ void test_diff_submodules__invalid_cache(void)
 	/* commit changed index of submodule */
 	cl_repo_commit_from_index(NULL, smrepo, NULL, 1372350000, "Move it");
 
-	git_submodule_set_ignore(sm, GIT_SUBMODULE_IGNORE_DIRTY);
+	git_submodule_set_ignore(g_repo, git_submodule_name(sm), GIT_SUBMODULE_IGNORE_DIRTY);
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_moved);
 	git_diff_free(diff);
 
-	git_submodule_set_ignore(sm, GIT_SUBMODULE_IGNORE_ALL);
+	git_submodule_set_ignore(g_repo, git_submodule_name(sm), GIT_SUBMODULE_IGNORE_ALL);
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_unchanged);
 	git_diff_free(diff);
 
-	git_submodule_set_ignore(sm, GIT_SUBMODULE_IGNORE_NONE);
+	git_submodule_set_ignore(g_repo, git_submodule_name(sm), GIT_SUBMODULE_IGNORE_NONE);
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_moved_dirty);
@@ -465,7 +465,7 @@ void test_diff_submodules__skips_empty_includes_used(void)
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(0, exp.files);
 	git_diff_free(diff);
 
@@ -478,7 +478,7 @@ void test_diff_submodules__skips_empty_includes_used(void)
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(1, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_IGNORED]);
 	git_diff_free(diff);
@@ -488,7 +488,7 @@ void test_diff_submodules__skips_empty_includes_used(void)
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 	cl_assert_equal_i(1, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNTRACKED]);
 	git_diff_free(diff);

@@ -18,7 +18,7 @@
 #include "oidmap.h"
 #include "zstream.h"
 
-GIT__USE_OIDMAP;
+GIT__USE_OIDMAP
 
 extern git_mutex git__mwindow_mutex;
 
@@ -478,13 +478,14 @@ static int write_at(git_indexer *idx, const void *data, git_off_t offset, size_t
 static int append_to_pack(git_indexer *idx, const void *data, size_t size)
 {
 	git_off_t current_size = idx->pack->mwf.size;
+	int fd = idx->pack->mwf.fd;
 
 	if (!size)
 		return 0;
 
-	/* add the extra space we need at the end */
-	if (p_ftruncate(idx->pack->mwf.fd, current_size + size) < 0) {
-		giterr_set(GITERR_OS, "Failed to increase size of pack file '%s'", idx->pack->pack_name);
+	if (p_lseek(fd, current_size + size - 1, SEEK_SET) < 0 ||
+	    p_write(idx->pack->mwf.fd, data, 1) < 0) {
+		giterr_set(GITERR_OS, "cannot extend packfile '%s'", idx->pack->pack_name);
 		return -1;
 	}
 
@@ -822,7 +823,7 @@ static int resolve_deltas(git_indexer *idx, git_transfer_progress *stats)
 		progressed = 0;
 		non_null = 0;
 		git_vector_foreach(&idx->deltas, i, delta) {
-			git_rawobj obj;
+			git_rawobj obj = {NULL};
 
 			if (!delta)
 				continue;

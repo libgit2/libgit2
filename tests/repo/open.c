@@ -20,6 +20,23 @@ void test_repo_open__bare_empty_repo(void)
 	cl_assert(git_repository_workdir(repo) == NULL);
 }
 
+void test_repo_open__format_version_1(void)
+{
+	git_repository *repo;
+	git_config *config;
+
+	repo = cl_git_sandbox_init("empty_bare.git");
+
+	cl_git_pass(git_repository_open(&repo, "empty_bare.git"));
+	cl_git_pass(git_repository_config(&config, repo));
+
+	cl_git_pass(git_config_set_int32(config, "core.repositoryformatversion", 1));
+
+	git_config_free(config);
+	git_repository_free(repo);
+	cl_git_fail(git_repository_open(&repo, "empty_bare.git"));
+}
+
 void test_repo_open__standard_empty_repo_through_gitdir(void)
 {
 	git_repository *repo;
@@ -74,7 +91,7 @@ static void make_gitlink_dir(const char *dir, const char *linktext)
 {
 	git_buf path = GIT_BUF_INIT;
 
-	cl_git_pass(git_futils_mkdir(dir, NULL, 0777, GIT_MKDIR_VERIFY_DIR));
+	cl_git_pass(git_futils_mkdir(dir, 0777, GIT_MKDIR_VERIFY_DIR));
 	cl_git_pass(git_buf_joinpath(&path, dir, ".git"));
 	cl_git_rewritefile(path.ptr, linktext);
 	git_buf_free(&path);
@@ -205,7 +222,7 @@ void test_repo_open__bad_gitlinks(void)
 	cl_git_sandbox_init("attr");
 
 	cl_git_pass(p_mkdir("invalid", 0777));
-	cl_git_pass(git_futils_mkdir_r("invalid2/.git", NULL, 0777));
+	cl_git_pass(git_futils_mkdir_r("invalid2/.git", 0777));
 
 	for (scan = bad_links; *scan != NULL; scan++) {
 		make_gitlink_dir("alternate", *scan);

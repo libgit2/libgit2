@@ -59,7 +59,7 @@ extern int git_buf_grow_by(git_buf *buffer, size_t additional_size);
  * into the newly allocated buffer.
  */
 extern int git_buf_try_grow(
-	git_buf *buf, size_t target_size, bool mark_oom, bool preserve_external);
+	git_buf *buf, size_t target_size, bool mark_oom);
 
 /**
  * Sanitizes git_buf structures provided from user input.  Users of the

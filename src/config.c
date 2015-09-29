@@ -13,6 +13,7 @@
 #include "vector.h"
 #include "buf_text.h"
 #include "config_file.h"
+#include "transaction.h"
 #if GIT_WIN32
 # include <windows.h>
 #endif
@@ -1144,6 +1145,41 @@ int git_config_open_default(git_config **out)
 	return error;
 }
 
+int git_config_lock(git_transaction **out, git_config *cfg)
+{
+	int error;
+	git_config_backend *file;
+	file_internal *internal;
+
+	internal = git_vector_get(&cfg->files, 0);
+	if (!internal || !internal->file) {
+		giterr_set(GITERR_CONFIG, "cannot lock; the config has no backends/files");
+		return -1;
+	}
+	file = internal->file;
+
+	if ((error = file->lock(file)) < 0)
+		return error;
+
+	return git_transaction_config_new(out, cfg);
+}
+
+int git_config_unlock(git_config *cfg, int commit)
+{
+	git_config_backend *file;
+	file_internal *internal;
+
+	internal = git_vector_get(&cfg->files, 0);
+	if (!internal || !internal->file) {
+		giterr_set(GITERR_CONFIG, "cannot lock; the config has no backends/files");
+		return -1;
+	}
+
+	file = internal->file;
+
+	return file->unlock(file, commit);
+}
+
 /***********
  * Parsers
  ***********/
@@ -1192,6 +1228,26 @@ int git_config_lookup_map_value(
 fail_parse:
 	giterr_set(GITERR_CONFIG, "Failed to map '%s'", value);
 	return -1;
+}
+
+int git_config_lookup_map_enum(git_cvar_t *type_out, const char **str_out,
+			       const git_cvar_map *maps, size_t map_n, int enum_val)
+{
+	size_t i;
+
+	for (i = 0; i < map_n; i++) {
+		const git_cvar_map *m = &maps[i];
+
+		if (m->map_value != enum_val)
+			continue;
+
+		*type_out = m->cvar_type;
+		*str_out = m->str_match;
+		return 0;
+	}
+
+	giterr_set(GITERR_CONFIG, "invalid enum value");
+	return GIT_ENOTFOUND;
 }
 
 int git_config_parse_bool(int *out, const char *value)

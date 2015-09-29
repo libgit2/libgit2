@@ -142,6 +142,7 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
         giterr_set(
                 GITERR_INVALID,
                 "'%s' is not a valid refspec.", input);
+        git_refspec__free(refspec);
 	return -1;
 }
 
@@ -153,6 +154,8 @@ void git_refspec__free(git_refspec *refspec)
 	git__free(refspec->src);
 	git__free(refspec->dst);
 	git__free(refspec->string);
+
+	memset(refspec, 0x0, sizeof(git_refspec));
 }
 
 const char *git_refspec_src(const git_refspec *refspec)

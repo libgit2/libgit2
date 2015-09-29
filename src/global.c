@@ -11,7 +11,10 @@
 #include "git2/global.h"
 #include "git2/sys/openssl.h"
 #include "thread-utils.h"
-
+#if defined(GIT_MSVC_CRTDBG)
+#include "win32/w32_stack.h"
+#include "win32/w32_crtdbg_stacktrace.h"
+#endif
 
 git_mutex git__mwindow_mutex;
 
@@ -225,6 +228,11 @@ int git_libgit2_init(void)
 
 	/* Only do work on a 0 -> 1 transition of the refcount */
 	if ((ret = git_atomic_inc(&git__n_inits)) == 1) {
+#if defined(GIT_MSVC_CRTDBG)
+		git_win32__crtdbg_stacktrace_init();
+		git_win32__stack_init();
+#endif
+
 		if (synchronized_threads_init() < 0)
 			ret = -1;
 	}
@@ -254,8 +262,14 @@ int git_libgit2_shutdown(void)
 	while (InterlockedCompareExchange(&_mutex, 1, 0)) { Sleep(0); }
 
 	/* Only do work on a 1 -> 0 transition of the refcount */
-	if ((ret = git_atomic_dec(&git__n_inits)) == 0)
+	if ((ret = git_atomic_dec(&git__n_inits)) == 0) {
 		synchronized_threads_shutdown();
+
+#if defined(GIT_MSVC_CRTDBG)
+		git_win32__crtdbg_stacktrace_cleanup();
+		git_win32__stack_cleanup();
+#endif
+	}
 
 	/* Exit the lock */
 	InterlockedExchange(&_mutex, 0);
@@ -265,18 +279,19 @@ int git_libgit2_shutdown(void)
 
 git_global_st *git__global_state(void)
 {
-	void *ptr;
+	git_global_st *ptr;
 
 	assert(git_atomic_get(&git__n_inits) > 0);
 
 	if ((ptr = TlsGetValue(_tls_index)) != NULL)
 		return ptr;
 
-	ptr = git__malloc(sizeof(git_global_st));
+	ptr = git__calloc(1, sizeof(git_global_st));
 	if (!ptr)
 		return NULL;
 
-	memset(ptr, 0x0, sizeof(git_global_st));
+	git_buf_init(&ptr->error_buf, 0);
+
 	TlsSetValue(_tls_index, ptr);
 	return ptr;
 }
@@ -330,8 +345,8 @@ int git_libgit2_init(void)
 {
 	int ret;
 
-	pthread_once(&_once_init, init_once);
 	ret = git_atomic_inc(&git__n_inits);
+	pthread_once(&_once_init, init_once);
 
 	return init_error ? init_error : ret;
 }
@@ -364,18 +379,18 @@ int git_libgit2_shutdown(void)
 
 git_global_st *git__global_state(void)
 {
-	void *ptr;
+	git_global_st *ptr;
 
 	assert(git_atomic_get(&git__n_inits) > 0);
 
 	if ((ptr = pthread_getspecific(_tls_key)) != NULL)
 		return ptr;
 
-	ptr = git__malloc(sizeof(git_global_st));
+	ptr = git__calloc(1, sizeof(git_global_st));
 	if (!ptr)
 		return NULL;
 
-	memset(ptr, 0x0, sizeof(git_global_st));
+	git_buf_init(&ptr->error_buf, 0);
 	pthread_setspecific(_tls_key, ptr);
 	return ptr;
 }
@@ -393,6 +408,7 @@ int git_libgit2_init(void)
 		ssl_inited = 1;
 	}
 
+	git_buf_init(&__state.error_buf, 0);
 	return git_atomic_inc(&git__n_inits);
 }
 

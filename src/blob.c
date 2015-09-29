@@ -185,6 +185,12 @@ int git_blob__create_from_paths(
 		(error = git_repository_odb(&odb, repo)) < 0)
 		goto done;
 
+	if (S_ISDIR(st.st_mode)) {
+		giterr_set(GITERR_ODB, "cannot create blob from '%s'; it is a directory", content_path);
+		error = GIT_EDIRECTORY;
+		goto done;
+	}
+
 	if (out_st)
 		memcpy(out_st, &st, sizeof(st));
 

@@ -16,8 +16,8 @@ extern const git_oid OID_ZERO;
 
 typedef struct {
 	char *name;
-	git_oid *old_oid;
-	git_oid *new_oid;
+	git_oid old_oid;
+	git_oid new_oid;
 } updated_tip;
 
 typedef struct {

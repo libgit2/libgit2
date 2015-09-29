@@ -32,6 +32,8 @@
 # include "win32/w32_util.h"
 #endif
 
+static int check_repositoryformatversion(git_config *config);
+
 #define GIT_FILE_CONTENT_PREFIX "gitdir:"
 
 #define GIT_BRANCH_MASTER "master"
@@ -109,7 +111,6 @@ void git_repository__cleanup(git_repository *repo)
 
 	git_cache_clear(&repo->objects);
 	git_attr_cache_flush(repo);
-	git_submodule_cache_free(repo);
 
 	set_config(repo, NULL);
 	set_index(repo, NULL);
@@ -489,6 +490,7 @@ int git_repository_open_ext(
 	git_buf path = GIT_BUF_INIT, parent = GIT_BUF_INIT,
 		link_path = GIT_BUF_INIT;
 	git_repository *repo;
+	git_config *config = NULL;
 
 	if (repo_ptr)
 		*repo_ptr = NULL;
@@ -510,22 +512,36 @@ int git_repository_open_ext(
 		GITERR_CHECK_ALLOC(repo->path_gitlink);
 	}
 
+	/*
+	 * We'd like to have the config, but git doesn't particularly
+	 * care if it's not there, so we need to deal with that.
+	 */
+
+	error = git_repository_config_snapshot(&config, repo);
+	if (error < 0 && error != GIT_ENOTFOUND)
+		goto cleanup;
+
+	if (config && (error = check_repositoryformatversion(config)) < 0)
+		goto cleanup;
+
 	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0)
 		repo->is_bare = 1;
 	else {
-		git_config *config = NULL;
 
-		if ((error = git_repository_config_snapshot(&config, repo)) < 0 ||
-			(error = load_config_data(repo, config)) < 0 ||
-			(error = load_workdir(repo, config, &parent)) < 0)
-			git_repository_free(repo);
-
-		git_config_free(config);
+		if (config &&
+		    ((error = load_config_data(repo, config)) < 0 ||
+		     (error = load_workdir(repo, config, &parent)) < 0))
+			goto cleanup;
 	}
 
-	if (!error)
-		*repo_ptr = repo;
+cleanup:
 	git_buf_free(&parent);
+	git_config_free(config);
+
+	if (error < 0)
+		git_repository_free(repo);
+	else
+		*repo_ptr = repo;
 
 	return error;
 }
@@ -851,7 +867,9 @@ static int reserved_names_add8dot3(git_repository *repo, const char *path)
 {
 	char *name = git_win32_path_8dot3_name(path);
 	const char *def = GIT_DIR_SHORTNAME;
+	const char *def_dot_git = DOT_GIT;
 	size_t name_len, def_len = CONST_STRLEN(GIT_DIR_SHORTNAME);
+	size_t def_dot_git_len = CONST_STRLEN(DOT_GIT);
 	git_buf *buf;
 
 	if (!name)
@@ -859,7 +877,8 @@ static int reserved_names_add8dot3(git_repository *repo, const char *path)
 
 	name_len = strlen(name);
 
-	if (name_len == def_len && memcmp(name, def, def_len) == 0) {
+	if ((name_len == def_len && memcmp(name, def, def_len) == 0) || 
+		(name_len == def_dot_git_len && memcmp(name, def_dot_git, def_dot_git_len) == 0)) {
 		git__free(name);
 		return 0;
 	}
@@ -889,12 +908,28 @@ bool git_repository__reserved_names(
 			buf->size = git_repository__reserved_names_win32[i].size;
 		}
 
-		/* Try to add any repo-specific reserved names */
+		/* Try to add any repo-specific reserved names - the gitlink file
+		 * within a submodule or the repository (if the repository directory
+		 * is beneath the workdir).  These are typically `.git`, but should
+		 * be protected in case they are not.  Note, repo and workdir paths
+		 * are always prettified to end in `/`, so a prefixcmp is safe.
+		 */
 		if (!repo->is_bare) {
-			const char *reserved_path = repo->path_gitlink ?
-				repo->path_gitlink : repo->path_repository;
+			int (*prefixcmp)(const char *, const char *);
+			int error, ignorecase;
 
-			if (reserved_names_add8dot3(repo, reserved_path) < 0)
+			error = git_repository__cvar(
+				&ignorecase, repo, GIT_CVAR_IGNORECASE);
+			prefixcmp = (error || ignorecase) ? git__prefixcmp_icase :
+				git__prefixcmp;
+
+			if (repo->path_gitlink &&
+				reserved_names_add8dot3(repo, repo->path_gitlink) < 0)
+				goto on_error;
+
+			if (repo->path_repository &&
+				prefixcmp(repo->path_repository, repo->workdir) == 0 &&
+				reserved_names_add8dot3(repo, repo->path_repository) < 0)
 				goto on_error;
 		}
 	}
@@ -931,9 +966,14 @@ bool git_repository__reserved_names(
 
 static int check_repositoryformatversion(git_config *config)
 {
-	int version;
+	int version, error;
 
-	if (git_config_get_int32(&version, config, "core.repositoryformatversion") < 0)
+	error = git_config_get_int32(&version, config, "core.repositoryformatversion");
+	/* git ignores this if the config variable isn't there */
+	if (error == GIT_ENOTFOUND)
+		return 0;
+
+	if (error < 0)
 		return -1;
 
 	if (GIT_REPO_VERSION < version) {
@@ -1255,7 +1295,7 @@ static int repo_write_template(
 
 #ifdef GIT_WIN32
 	if (!error && hidden) {
-		if (git_win32__sethidden(path.ptr) < 0)
+		if (git_win32__set_hidden(path.ptr, true) < 0)
 			error = -1;
 	}
 #else
@@ -1349,7 +1389,7 @@ static int repo_init_structure(
 	/* Hide the ".git" directory */
 #ifdef GIT_WIN32
 	if ((opts->flags & GIT_REPOSITORY_INIT__HAS_DOTGIT) != 0) {
-		if (git_win32__sethidden(repo_dir) < 0) {
+		if (git_win32__set_hidden(repo_dir, true) < 0) {
 			giterr_set(GITERR_OS,
 				"Failed to mark Git repository folder as hidden");
 			return -1;
@@ -1417,8 +1457,8 @@ static int repo_init_structure(
 			if (chmod)
 				mkdir_flags |= GIT_MKDIR_CHMOD;
 
-			error = git_futils_mkdir(
-				tpl->path, repo_dir, dmode, mkdir_flags);
+			error = git_futils_mkdir_relative(
+				tpl->path, repo_dir, dmode, mkdir_flags, NULL);
 		}
 		else if (!external_tpl) {
 			const char *content = tpl->content;
@@ -1440,7 +1480,7 @@ static int mkdir_parent(git_buf *buf, uint32_t mode, bool skip2)
 	 * don't try to set gid or grant world write access
 	 */
 	return git_futils_mkdir(
-		buf->ptr, NULL, mode & ~(S_ISGID | 0002),
+		buf->ptr, mode & ~(S_ISGID | 0002),
 		GIT_MKDIR_PATH | GIT_MKDIR_VERIFY_DIR |
 		(skip2 ? GIT_MKDIR_SKIP_LAST2 : GIT_MKDIR_SKIP_LAST));
 }
@@ -1544,14 +1584,14 @@ static int repo_init_directories(
 		/* create path #4 */
 		if (wd_path->size > 0 &&
 			(error = git_futils_mkdir(
-				wd_path->ptr, NULL, dirmode & ~S_ISGID,
+				wd_path->ptr, dirmode & ~S_ISGID,
 				GIT_MKDIR_VERIFY_DIR)) < 0)
 			return error;
 
 		/* create path #2 (if not the same as #4) */
 		if (!natural_wd &&
 			(error = git_futils_mkdir(
-				repo_path->ptr, NULL, dirmode & ~S_ISGID,
+				repo_path->ptr, dirmode & ~S_ISGID,
 				GIT_MKDIR_VERIFY_DIR | GIT_MKDIR_SKIP_LAST)) < 0)
 			return error;
 	}
@@ -1561,7 +1601,7 @@ static int repo_init_directories(
 		has_dotgit)
 	{
 		/* create path #1 */
-		error = git_futils_mkdir(repo_path->ptr, NULL, dirmode,
+		error = git_futils_mkdir(repo_path->ptr, dirmode,
 			GIT_MKDIR_VERIFY_DIR | ((dirmode & S_ISGID) ? GIT_MKDIR_CHMOD : 0));
 	}
 

@@ -153,7 +153,7 @@ static int get_check_cert(int *out, git_repository *repo)
 	 * most specific to least specific. */
 
 	/* GIT_SSL_NO_VERIFY environment variable */
-	if ((val = getenv("GIT_SSL_NO_VERIFY")) != NULL)
+	if ((val = p_getenv("GIT_SSL_NO_VERIFY")) != NULL)
 		return git_config_parse_bool(out, val);
 
 	/* http.sslVerify config setting */
@@ -167,14 +167,18 @@ static int get_check_cert(int *out, git_repository *repo)
 
 static int canonicalize_url(git_buf *out, const char *in)
 {
-#ifdef GIT_WIN32
-	const char *c;
+	if (in == NULL || strlen(in) == 0) {
+		giterr_set(GITERR_INVALID, "cannot set empty URL");
+		return GIT_EINVALIDSPEC;
+	}
 
+#ifdef GIT_WIN32
 	/* Given a UNC path like \\server\path, we need to convert this
 	 * to //server/path for compatibility with core git.
 	 */
 	if (in[0] == '\\' && in[1] == '\\' &&
 		(git__isalpha(in[2]) || git__isdigit(in[2]))) {
+		const char *c;
 		for (c = in; *c; c++)
 			git_buf_putc(out, *c == '\\' ? '/' : *c);
 
@@ -755,7 +759,7 @@ int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_ur
 {
 	git_config *cfg;
 	git_config_entry *ce = NULL;
-	const char *val = NULL;
+	git_buf val = GIT_BUF_INIT;
 	int error;
 
 	assert(remote);
@@ -785,7 +789,7 @@ int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_ur
 			return error;
 
 		if (ce && ce->value) {
-			val = ce->value;
+			*proxy_url = git__strdup(ce->value);
 			goto found;
 		}
 	}
@@ -793,19 +797,28 @@ int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_ur
 	/* http.proxy config setting */
 	if ((error = git_config__lookup_entry(&ce, cfg, "http.proxy", false)) < 0)
 		return error;
+
 	if (ce && ce->value) {
-		val = ce->value;
+		*proxy_url = git__strdup(ce->value);
 		goto found;
 	}
 
 	/* HTTP_PROXY / HTTPS_PROXY environment variables */
-	val = use_ssl ? getenv("HTTPS_PROXY") : getenv("HTTP_PROXY");
+	error = git__getenv(&val, use_ssl ? "HTTPS_PROXY" : "HTTP_PROXY");
+
+	if (error < 0) {
+		if (error == GIT_ENOTFOUND) {
+			giterr_clear();
+			error = 0;
+		}
+
+		return error;
+	}
+
+	*proxy_url = git_buf_detach(&val);
 
 found:
-	if (val && val[0]) {
-		*proxy_url = git__strdup(val);
-		GITERR_CHECK_ALLOC(*proxy_url);
-	}
+	GITERR_CHECK_ALLOC(*proxy_url);
 	git_config_entry_free(ce);
 
 	return 0;
@@ -869,7 +882,7 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs, const 
 {
 	int error = -1;
 	size_t i;
-	git_vector refs, specs, *to_active;
+	git_vector *to_active, specs = GIT_VECTOR_INIT, refs = GIT_VECTOR_INIT;
 	const git_remote_callbacks *cbs = NULL;
 
 	assert(remote);
@@ -981,7 +994,7 @@ int git_remote_fetch(
 
 	if (opts && opts->prune == GIT_FETCH_PRUNE)
 		prune = true;
-	else if (opts && opts->prune == GIT_FETCH_PRUNE_FALLBACK && remote->prune_refs)
+	else if (opts && opts->prune == GIT_FETCH_PRUNE_UNSPECIFIED && remote->prune_refs)
 		prune = true;
 	else if (opts && opts->prune == GIT_FETCH_NO_PRUNE)
 		prune = false;
@@ -1321,11 +1334,13 @@ static int update_tips_for_spec(
 	for (; i < refs->length; ++i) {
 		head = git_vector_get(refs, i);
 		autotag = 0;
+		git_buf_clear(&refname);
 
 		/* Ignore malformed ref names (which also saves us from tag^{} */
 		if (!git_reference_is_valid_name(head->name))
 			continue;
 
+		/* If we have a tag, see if the auto-follow rules say to update it */
 		if (git_refspec_src_matches(&tagspec, head->name)) {
 			if (tagopt != GIT_REMOTE_DOWNLOAD_TAGS_NONE) {
 
@@ -1335,13 +1350,28 @@ static int update_tips_for_spec(
 				git_buf_clear(&refname);
 				if (git_buf_puts(&refname, head->name) < 0)
 					goto on_error;
+			}
+		}
+
+		/* If we didn't want to auto-follow the tag, check if the refspec matches */
+		if (!autotag && git_refspec_src_matches(spec, head->name)) {
+			if (spec->dst) {
+				if (git_refspec_transform(&refname, spec, head->name) < 0)
+					goto on_error;
 			} else {
+				/*
+				 * no rhs mans store it in FETCH_HEAD, even if we don't
+				 update anything else.
+				 */
+				if ((error = git_vector_insert(&update_heads, head)) < 0)
+					goto on_error;
+
 				continue;
 			}
-		} else if (git_refspec_src_matches(spec, head->name) && spec->dst) {
-			if (git_refspec_transform(&refname, spec, head->name) < 0)
-				goto on_error;
-		} else {
+		}
+
+		/* If we still don't have a refname, we don't want it */
+		if (git_buf_len(&refname) == 0) {
 			continue;
 		}
 
@@ -1535,7 +1565,7 @@ int git_remote_update_tips(
 	if ((error = ls_to_vector(&refs, remote)) < 0)
 		goto out;
 
-	if (download_tags == GIT_REMOTE_DOWNLOAD_TAGS_FALLBACK)
+	if (download_tags == GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED)
 		tagopt = remote->download_tags;
 	else
 		tagopt = download_tags;
@@ -2451,7 +2481,8 @@ char *apply_insteadof(git_config *config, const char *url, int direction)
 		suffix_length = strlen(SUFFIX_PUSH) + 1;
 	}
 
-	git_config_iterator_glob_new(&iter, config, regexp);
+	if (git_config_iterator_glob_new(&iter, config, regexp) < 0)
+		return NULL;
 
 	match_length = 0;
 	while (git_config_next(&entry, iter) == 0) {

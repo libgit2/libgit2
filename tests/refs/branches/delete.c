@@ -132,6 +132,8 @@ void test_refs_branches_delete__removes_reflog(void)
 	cl_git_pass(git_branch_delete(branch));
 	git_reference_free(branch);
 
+	cl_assert_equal_i(false, git_reference_has_log(repo, "refs/heads/track-local"));
+
 	/* Reading a nonexistant reflog creates it, but it should be empty */
 	cl_git_pass(git_reflog_read(&log, repo, "refs/heads/track-local"));
 	cl_assert_equal_i(0, git_reflog_entrycount(log));

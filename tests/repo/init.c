@@ -99,7 +99,7 @@ void test_repo_init__bare_repo_escaping_current_workdir(void)
 	cl_git_pass(git_path_prettify_dir(&path_current_workdir, ".", NULL));
 
 	cl_git_pass(git_buf_joinpath(&path_repository, git_buf_cstr(&path_current_workdir), "a/b/c"));
-	cl_git_pass(git_futils_mkdir_r(git_buf_cstr(&path_repository), NULL, GIT_DIR_MODE));
+	cl_git_pass(git_futils_mkdir_r(git_buf_cstr(&path_repository), GIT_DIR_MODE));
 
 	/* Change the current working directory */
 	cl_git_pass(chdir(git_buf_cstr(&path_repository)));
@@ -312,7 +312,7 @@ void test_repo_init__extended_0(void)
 	cl_git_fail(git_repository_init_ext(&_repo, "extended", &opts));
 
 	/* make the directory first, then it should succeed */
-	cl_git_pass(git_futils_mkdir("extended", NULL, 0775, 0));
+	cl_git_pass(git_futils_mkdir("extended", 0775, 0));
 	cl_git_pass(git_repository_init_ext(&_repo, "extended", &opts));
 
 	cl_assert(!git__suffixcmp(git_repository_workdir(_repo), "/extended/"));
@@ -631,7 +631,7 @@ void test_repo_init__can_reinit_an_initialized_repository(void)
 
 	cl_set_cleanup(&cleanup_repository, "extended");
 
-	cl_git_pass(git_futils_mkdir("extended", NULL, 0775, 0));
+	cl_git_pass(git_futils_mkdir("extended", 0775, 0));
 	cl_git_pass(git_repository_init(&_repo, "extended", false));
 
 	cl_git_pass(git_repository_init(&reinit, "extended", false));
@@ -713,7 +713,7 @@ void test_repo_init__at_filesystem_root(void)
 	git_buf root = GIT_BUF_INIT;
 	int root_len;
 
-	if (!cl_getenv("GITTEST_INVASIVE_FS_STRUCTURE"))
+	if (!cl_is_env_set("GITTEST_INVASIVE_FS_STRUCTURE"))
 		cl_skip();
 
 	root_len = git_path_root(sandbox);

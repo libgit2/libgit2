@@ -14,6 +14,7 @@
 #include "git2/transport.h"
 
 #include "socket_stream.h"
+#include "curl_stream.h"
 
 int stransport_error(OSStatus ret)
 {
@@ -24,11 +25,16 @@ int stransport_error(OSStatus ret)
 		return 0;
 	}
 
+#if !TARGET_OS_IPHONE
 	message = SecCopyErrorMessageString(ret, NULL);
 	GITERR_CHECK_ALLOC(message);
 
 	giterr_set(GITERR_NET, "SecureTransport error: %s", CFStringGetCStringPtr(message, kCFStringEncodingUTF8));
 	CFRelease(message);
+#else
+    giterr_set(GITERR_NET, "SecureTransport error: OSStatus %d", (unsigned int)ret);
+#endif
+
 	return -1;
 }
 
@@ -102,7 +108,7 @@ int stransport_certificate(git_cert **out, git_stream *stream)
 		return -1;
 	}
 
-	st->cert_info.cert_type = GIT_CERT_X509;
+	st->cert_info.parent.cert_type = GIT_CERT_X509;
 	st->cert_info.data = (void *) CFDataGetBytePtr(st->der_data);
 	st->cert_info.len = CFDataGetLength(st->der_data);
 
@@ -110,18 +116,32 @@ int stransport_certificate(git_cert **out, git_stream *stream)
 	return 0;
 }
 
+int stransport_set_proxy(git_stream *stream, const char *proxy)
+{
+	stransport_stream *st = (stransport_stream *) stream;
+
+	return git_stream_set_proxy(st->io, proxy);
+}
+
+/*
+ * Contrary to typical network IO callbacks, Secure Transport write callback is
+ * expected to write *all* passed data, not just as much as it can, and any
+ * other case would be considered a failure.
+ *
+ * This behavior is actually not specified in the Apple documentation, but is
+ * required for things to work correctly (and incidentally, that's also how
+ * Apple implements it in its projects at opensource.apple.com).
+ *
+ * Libgit2 streams happen to already have this very behavior so this is just
+ * passthrough.
+ */
 static OSStatus write_cb(SSLConnectionRef conn, const void *data, size_t *len)
 {
 	git_stream *io = (git_stream *) conn;
-	ssize_t ret;
 
-	ret = git_stream_write(io, data, *len, 0);
-	if (ret < 0) {
-		*len = 0;
-		return -1;
+	if (git_stream_write(io, data, *len, 0) < 0) {
+		return -36; /* "ioErr" from MacErrors.h which is not available on iOS */
 	}
-
-	*len = ret;
 
 	return noErr;
 }
@@ -141,29 +161,38 @@ ssize_t stransport_write(git_stream *stream, const char *data, size_t len, int f
 	return processed;
 }
 
+/*
+ * Contrary to typical network IO callbacks, Secure Transport read callback is
+ * expected to read *exactly* the requested number of bytes, not just as much
+ * as it can, and any other case would be considered a failure.
+ *
+ * This behavior is actually not specified in the Apple documentation, but is
+ * required for things to work correctly (and incidentally, that's also how
+ * Apple implements it in its projects at opensource.apple.com).
+ */
 static OSStatus read_cb(SSLConnectionRef conn, void *data, size_t *len)
 {
 	git_stream *io = (git_stream *) conn;
+	OSStatus error = noErr;
+	size_t off = 0;
 	ssize_t ret;
-	size_t left, requested;
 
-	requested = left = *len;
 	do {
-		ret = git_stream_read(io, data + (requested - left), left);
+		ret = git_stream_read(io, data + off, *len - off);
 		if (ret < 0) {
-			*len = 0;
-			return -1;
+			error = -36; /* "ioErr" from MacErrors.h which is not available on iOS */
+			break;
+		}
+		if (ret == 0) {
+			error = errSSLClosedGraceful;
+			break;
 		}
 
-		left -= ret;
-	} while (left);
+		off += ret;
+	} while (off < *len);
 
-	*len = requested;
-
-	if (ret == 0)
-		return errSSLClosedGraceful;
-
-	return noErr;
+	*len = off;
+	return error;
 }
 
 ssize_t stransport_read(git_stream *stream, void *data, size_t len)
@@ -212,7 +241,13 @@ int git_stransport_stream_new(git_stream **out, const char *host, const char *po
 	st = git__calloc(1, sizeof(stransport_stream));
 	GITERR_CHECK_ALLOC(st);
 
-	if ((error = git_socket_stream_new(&st->io, host, port)) < 0){
+#ifdef GIT_CURL
+	error = git_curl_stream_new(&st->io, host, port);
+#else
+	error = git_socket_stream_new(&st->io, host, port);
+#endif
+
+	if (error < 0){
 		git__free(st);
 		return error;
 	}
@@ -235,8 +270,10 @@ int git_stransport_stream_new(git_stream **out, const char *host, const char *po
 
 	st->parent.version = GIT_STREAM_VERSION;
 	st->parent.encrypted = 1;
+	st->parent.proxy_support = git_stream_supports_proxy(st->io);
 	st->parent.connect = stransport_connect;
 	st->parent.certificate = stransport_certificate;
+	st->parent.set_proxy = stransport_set_proxy;
 	st->parent.read = stransport_read;
 	st->parent.write = stransport_write;
 	st->parent.close = stransport_close;

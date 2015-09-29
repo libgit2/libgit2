@@ -193,28 +193,29 @@ static const char *line_ending(struct crlf_attrs *ca)
 	case GIT_CRLF_CRLF:
 		return "\r\n";
 
+	case GIT_CRLF_GUESS:
+		if (ca->auto_crlf == GIT_AUTO_CRLF_FALSE)
+			return "\n";
+		break;
+
 	case GIT_CRLF_AUTO:
 	case GIT_CRLF_TEXT:
-	case GIT_CRLF_GUESS:
 		break;
 
 	default:
 		goto line_ending_error;
 	}
 
-	switch (ca->eol) {
-	case GIT_EOL_UNSET:
-		return GIT_EOL_NATIVE == GIT_EOL_CRLF ? "\r\n" : "\n";
-
-	case GIT_EOL_CRLF:
+	if (ca->auto_crlf == GIT_AUTO_CRLF_TRUE)
 		return "\r\n";
-
-	case GIT_EOL_LF:
+	else if (ca->auto_crlf == GIT_AUTO_CRLF_INPUT)
 		return "\n";
-
-	default:
-		goto line_ending_error;
-	}
+	else if (ca->eol == GIT_EOL_UNSET)
+		return GIT_EOL_NATIVE == GIT_EOL_CRLF ? "\r\n" : "\n";
+	else if (ca->eol == GIT_EOL_LF)
+		return "\n";
+	else if (ca->eol == GIT_EOL_CRLF)
+		return "\r\n";
 
 line_ending_error:
 	giterr_set(GITERR_INVALID, "Invalid input to line ending filter");
@@ -224,15 +225,13 @@ line_ending_error:
 static int crlf_apply_to_workdir(
 	struct crlf_attrs *ca, git_buf *to, const git_buf *from)
 {
+	git_buf_text_stats stats;
 	const char *workdir_ending = NULL;
+	bool is_binary;
 
 	/* Empty file? Nothing to do. */
 	if (git_buf_len(from) == 0)
 		return 0;
-
-	/* Don't filter binary files */
-	if (git_buf_text_is_binary(from))
-		return GIT_PASSTHROUGH;
 
 	/* Determine proper line ending */
 	workdir_ending = line_ending(ca);
@@ -242,6 +241,29 @@ static int crlf_apply_to_workdir(
 	/* only LF->CRLF conversion is supported, do nothing on LF platforms */
 	if (strcmp(workdir_ending, "\r\n") != 0)
 		return GIT_PASSTHROUGH;
+
+	/* If there are no LFs, or all LFs are part of a CRLF, nothing to do */
+	is_binary = git_buf_text_gather_stats(&stats, from, false);
+
+	if (stats.lf == 0 || stats.lf == stats.crlf)
+		return GIT_PASSTHROUGH;
+
+	if (ca->crlf_action == GIT_CRLF_AUTO ||
+		ca->crlf_action == GIT_CRLF_GUESS) {
+
+		/* If we have any existing CR or CRLF line endings, do nothing */
+		if (ca->crlf_action == GIT_CRLF_GUESS &&
+			stats.cr > 0 && stats.crlf > 0)
+			return GIT_PASSTHROUGH;
+
+		/* If we have bare CR characters, do nothing */
+		if (stats.cr != stats.crlf)
+			return GIT_PASSTHROUGH;
+
+		/* Don't filter binary files */
+		if (is_binary)
+			return GIT_PASSTHROUGH;
+	}
 
 	return git_buf_text_lf_to_crlf(to, from);
 }
@@ -278,7 +300,7 @@ static int crlf_check(
 		return GIT_PASSTHROUGH;
 
 	if (ca.crlf_action == GIT_CRLF_GUESS ||
-		(ca.crlf_action == GIT_CRLF_AUTO &&
+		((ca.crlf_action == GIT_CRLF_AUTO || ca.crlf_action == GIT_CRLF_TEXT) &&
 		git_filter_source_mode(src) == GIT_FILTER_SMUDGE)) {
 
 		error = git_repository__cvar(

@@ -103,8 +103,8 @@ void test_index_tests__default_test_index(void)
 		git_index_entry *e = entries[test_entries[i].index];
 
 		cl_assert_equal_s(e->path, test_entries[i].path);
-		cl_assert(e->mtime.seconds == test_entries[i].mtime);
-		cl_assert(e->file_size == test_entries[i].file_size);
+		cl_assert_equal_i(e->mtime.seconds, test_entries[i].mtime);
+		cl_assert_equal_i(e->file_size, test_entries[i].file_size);
    }
 
    git_index_free(index);
@@ -151,6 +151,27 @@ void test_index_tests__find_in_empty(void)
    for (i = 0; i < ARRAY_SIZE(test_entries); ++i) {
 		cl_assert(GIT_ENOTFOUND == git_index_find(NULL, index, test_entries[i].path));
    }
+
+   git_index_free(index);
+}
+
+void test_index_tests__find_prefix(void)
+{
+   git_index *index;
+   const git_index_entry *entry;
+   size_t pos;
+
+   cl_git_pass(git_index_open(&index, TEST_INDEX_PATH));
+
+   cl_git_pass(git_index_find_prefix(&pos, index, "src"));
+   entry = git_index_get_byindex(index, pos);
+   cl_assert(git__strcmp(entry->path, "src/block-sha1/sha1.c") == 0);
+
+   cl_git_pass(git_index_find_prefix(&pos, index, "src/co"));
+   entry = git_index_get_byindex(index, pos);
+   cl_assert(git__strcmp(entry->path, "src/commit.c") == 0);
+
+   cl_assert(GIT_ENOTFOUND == git_index_find_prefix(NULL, index, "blah"));
 
    git_index_free(index);
 }
@@ -731,7 +752,7 @@ void test_index_tests__reload_from_disk(void)
 
 	cl_set_cleanup(&cleanup_myrepo, NULL);
 
-	cl_git_pass(git_futils_mkdir("./myrepo", NULL, 0777, GIT_MKDIR_PATH));
+	cl_git_pass(git_futils_mkdir("./myrepo", 0777, GIT_MKDIR_PATH));
 	cl_git_mkfile("./myrepo/a.txt", "a\n");
 	cl_git_mkfile("./myrepo/b.txt", "b\n");
 
@@ -792,10 +813,43 @@ void test_index_tests__reload_while_ignoring_case(void)
 	cl_git_pass(git_index_set_caps(index, caps &= ~GIT_INDEXCAP_IGNORE_CASE));
 	cl_git_pass(git_index_read(index, true));
 	cl_git_pass(git_vector_verify_sorted(&index->entries));
+	cl_assert(git_index_get_bypath(index, ".HEADER", 0));
+	cl_assert_equal_p(NULL, git_index_get_bypath(index, ".header", 0));
 
 	cl_git_pass(git_index_set_caps(index, caps | GIT_INDEXCAP_IGNORE_CASE));
 	cl_git_pass(git_index_read(index, true));
 	cl_git_pass(git_vector_verify_sorted(&index->entries));
+	cl_assert(git_index_get_bypath(index, ".HEADER", 0));
+	cl_assert(git_index_get_bypath(index, ".header", 0));
+
+	git_index_free(index);
+}
+
+void test_index_tests__change_icase_on_instance(void)
+{
+	git_index *index;
+	unsigned int caps;
+	const git_index_entry *e;
+
+	cl_git_pass(git_index_open(&index, TEST_INDEX_PATH));
+	cl_git_pass(git_vector_verify_sorted(&index->entries));
+
+	caps = git_index_caps(index);
+	cl_git_pass(git_index_set_caps(index, caps &= ~GIT_INDEXCAP_IGNORE_CASE));
+	cl_assert_equal_i(false, index->ignore_case);
+	cl_git_pass(git_vector_verify_sorted(&index->entries));
+	cl_assert(e = git_index_get_bypath(index, "src/common.h", 0));
+	cl_assert_equal_p(NULL, e = git_index_get_bypath(index, "SRC/Common.h", 0));
+	cl_assert(e = git_index_get_bypath(index, "COPYING", 0));
+	cl_assert_equal_p(NULL, e = git_index_get_bypath(index, "copying", 0));
+
+	cl_git_pass(git_index_set_caps(index, caps | GIT_INDEXCAP_IGNORE_CASE));
+	cl_assert_equal_i(true, index->ignore_case);
+	cl_git_pass(git_vector_verify_sorted(&index->entries));
+	cl_assert(e = git_index_get_bypath(index, "COPYING", 0));
+	cl_assert_equal_s("COPYING", e->path);
+	cl_assert(e = git_index_get_bypath(index, "copying", 0));
+	cl_assert_equal_s("COPYING", e->path);
 
 	git_index_free(index);
 }

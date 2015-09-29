@@ -44,6 +44,7 @@ static void test_find_differences(
     git_oid ancestor_oid, ours_oid, theirs_oid;
     git_tree *ancestor_tree, *ours_tree, *theirs_tree;
 	git_iterator *ancestor_iter, *ours_iter, *theirs_iter;
+	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 
 	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
 	opts.tree_flags |= GIT_MERGE_TREE_FIND_RENAMES;
@@ -67,12 +68,11 @@ static void test_find_differences(
 	cl_git_pass(git_tree_lookup(&ours_tree, repo, &ours_oid));
 	cl_git_pass(git_tree_lookup(&theirs_tree, repo, &theirs_oid));
 
-	cl_git_pass(git_iterator_for_tree(&ancestor_iter, ancestor_tree,
-			GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL));
-	cl_git_pass(git_iterator_for_tree(&ours_iter, ours_tree,
-			GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL));
-	cl_git_pass(git_iterator_for_tree(&theirs_iter, theirs_tree,
-			GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL));
+	iter_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+	cl_git_pass(git_iterator_for_tree(&ancestor_iter, ancestor_tree, &iter_opts));
+	cl_git_pass(git_iterator_for_tree(&ours_iter, ours_tree, &iter_opts));
+	cl_git_pass(git_iterator_for_tree(&theirs_iter, theirs_tree, &iter_opts));
 
 	cl_git_pass(git_merge_diff_list__find_differences(merge_diff_list, ancestor_iter, ours_iter, theirs_iter));
 	cl_git_pass(git_merge_diff_list__find_renames(repo, merge_diff_list, &opts));

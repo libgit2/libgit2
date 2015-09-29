@@ -150,6 +150,15 @@ static int checkout_notify(
 	}
 }
 
+GIT_INLINE(bool) is_workdir_base_or_new(
+	const git_oid *workdir_id,
+	const git_diff_file *baseitem,
+	const git_diff_file *newitem)
+{
+	return (git_oid__cmp(&baseitem->id, workdir_id) == 0 ||
+		git_oid__cmp(&newitem->id, workdir_id) == 0);
+}
+
 static bool checkout_is_workdir_modified(
 	checkout_data *data,
 	const git_diff_file *baseitem,
@@ -171,7 +180,7 @@ static bool checkout_is_workdir_modified(
 			return true;
 		}
 
-		if (git_submodule_status(&sm_status, sm) < 0 ||
+		if (git_submodule_status(&sm_status, data->repo, wditem->path, GIT_SUBMODULE_IGNORE_UNSPECIFIED) < 0 ||
 			GIT_SUBMODULE_STATUS_IS_WD_DIRTY(sm_status))
 			rval = true;
 		else if ((sm_oid = git_submodule_wd_id(sm)) == NULL)
@@ -193,8 +202,7 @@ static bool checkout_is_workdir_modified(
 		if (wditem->mtime.seconds == ie->mtime.seconds &&
 			wditem->mtime.nanoseconds == ie->mtime.nanoseconds &&
 			wditem->file_size == ie->file_size)
-			return (git_oid__cmp(&baseitem->id, &ie->id) != 0 &&
-				git_oid_cmp(&newitem->id, &ie->id) != 0);
+			return !is_workdir_base_or_new(&ie->id, baseitem, newitem);
 	}
 
 	/* depending on where base is coming from, we may or may not know
@@ -203,10 +211,13 @@ static bool checkout_is_workdir_modified(
 	if (baseitem->size && wditem->file_size != baseitem->size)
 		return true;
 
-	if (git_diff__oid_for_entry(&oid, data->diff, wditem, NULL) < 0)
+	if (git_diff__oid_for_entry(&oid, data->diff, wditem, wditem->mode, NULL) < 0)
 		return false;
 
-	return (git_oid__cmp(&baseitem->id, &oid) != 0);
+	/* Allow the checkout if the workdir is not modified *or* if the checkout
+	 * target's contents are already in the working directory.
+	 */
+	return !is_workdir_base_or_new(&oid, baseitem, newitem);
 }
 
 #define CHECKOUT_ACTION_IF(FLAG,YES,NO) \
@@ -231,6 +242,12 @@ static int checkout_action_common(
 		/* to "update" a symlink, we must remove the old one first */
 		if (delta->new_file.mode == GIT_FILEMODE_LINK && wd != NULL)
 			*action |= CHECKOUT_ACTION__REMOVE;
+
+		/* if the file is on disk and doesn't match our mode, force update */
+		if (wd &&
+			GIT_PERMS_IS_EXEC(wd->mode) !=
+			GIT_PERMS_IS_EXEC(delta->new_file.mode))
+				*action |= CHECKOUT_ACTION__REMOVE;
 
 		notify = GIT_CHECKOUT_NOTIFY_UPDATED;
 	}
@@ -1288,8 +1305,8 @@ static int checkout_get_actions(
 	if (counts[CHECKOUT_ACTION__CONFLICT] > 0 &&
 		(data->strategy & GIT_CHECKOUT_ALLOW_CONFLICTS) == 0)
 	{
-		giterr_set(GITERR_CHECKOUT, "%d %s checkout",
-			(int)counts[CHECKOUT_ACTION__CONFLICT],
+		giterr_set(GITERR_CHECKOUT, "%"PRIuZ" %s checkout",
+			counts[CHECKOUT_ACTION__CONFLICT],
 			counts[CHECKOUT_ACTION__CONFLICT] == 1 ?
 			"conflict prevents" : "conflicts prevent");
 		error = GIT_ECONFLICT;
@@ -1349,7 +1366,7 @@ static int checkout_mkdir(
 	mkdir_opts.dir_map = data->mkdir_map;
 	mkdir_opts.pool = &data->pool;
 
-	error = git_futils_mkdir_ext(
+	error = git_futils_mkdir_relative(
 		path, base, mode, flags, &mkdir_opts);
 
 	data->perfdata.mkdir_calls += mkdir_opts.perfdata.mkdir_calls;
@@ -1488,15 +1505,6 @@ static int blob_content_to_file(
 
 	if (error < 0)
 		return error;
-
-	if (GIT_PERMS_IS_EXEC(mode)) {
-		data->perfdata.chmod_calls++;
-
-		if ((error = p_chmod(path, mode)) < 0) {
-			giterr_set(GITERR_OS, "Failed to set permissions on '%s'", path);
-			return error;
-		}
-	}
 
 	if (st) {
 		data->perfdata.stat_calls++;
@@ -1849,11 +1857,6 @@ static int checkout_create_submodules(
 	git_diff_delta *delta;
 	size_t i;
 
-	/* initial reload of submodules if .gitmodules was changed */
-	if (data->reload_submodules &&
-		(error = git_submodule_reload_all(data->repo, 1)) < 0)
-		return error;
-
 	git_vector_foreach(&data->diff->deltas, i, delta) {
 		if (actions[i] & CHECKOUT_ACTION__DEFER_REMOVE) {
 			/* this has a blocker directory that should only be removed iff
@@ -1874,8 +1877,7 @@ static int checkout_create_submodules(
 		}
 	}
 
-	/* final reload once submodules have been updated */
-	return git_submodule_reload_all(data->repo, 1);
+	return 0;
 }
 
 static int checkout_lookup_head_tree(git_tree **out, git_repository *repo)
@@ -2466,11 +2468,12 @@ int git_checkout_iterator(
 {
 	int error = 0;
 	git_iterator *baseline = NULL, *workdir = NULL;
+	git_iterator_options baseline_opts = GIT_ITERATOR_OPTIONS_INIT,
+		workdir_opts = GIT_ITERATOR_OPTIONS_INIT;
 	checkout_data data = {0};
 	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
 	uint32_t *actions = NULL;
 	size_t *counts = NULL;
-	git_iterator_flag_t iterflags = 0;
 
 	/* initialize structures and options */
 	error = checkout_data_init(&data, target, opts);
@@ -2494,25 +2497,30 @@ int git_checkout_iterator(
 
 	/* set up iterators */
 
-	iterflags = git_iterator_ignore_case(target) ?
+	workdir_opts.flags = git_iterator_ignore_case(target) ?
 		GIT_ITERATOR_IGNORE_CASE : GIT_ITERATOR_DONT_IGNORE_CASE;
+	workdir_opts.flags |= GIT_ITERATOR_DONT_AUTOEXPAND;
+	workdir_opts.start = data.pfx;
+	workdir_opts.end = data.pfx;
 
 	if ((error = git_iterator_reset(target, data.pfx, data.pfx)) < 0 ||
 		(error = git_iterator_for_workdir_ext(
 			&workdir, data.repo, data.opts.target_directory, index, NULL,
-			iterflags | GIT_ITERATOR_DONT_AUTOEXPAND,
-			data.pfx, data.pfx)) < 0)
+			&workdir_opts)) < 0)
 		goto cleanup;
+
+	baseline_opts.flags = git_iterator_ignore_case(target) ?
+		GIT_ITERATOR_IGNORE_CASE : GIT_ITERATOR_DONT_IGNORE_CASE;
+	baseline_opts.start = data.pfx;
+	baseline_opts.end = data.pfx;
 
 	if (data.opts.baseline_index) {
 		if ((error = git_iterator_for_index(
-				&baseline, data.opts.baseline_index,
-				iterflags, data.pfx, data.pfx)) < 0)
+				&baseline, data.opts.baseline_index, &baseline_opts)) < 0)
 			goto cleanup;
 	} else {
 		if ((error = git_iterator_for_tree(
-				&baseline, data.opts.baseline,
-				iterflags, data.pfx, data.pfx)) < 0)
+				&baseline, data.opts.baseline, &baseline_opts)) < 0)
 			goto cleanup;
 	}
 
@@ -2620,7 +2628,7 @@ int git_checkout_index(
 		return error;
 	GIT_REFCOUNT_INC(index);
 
-	if (!(error = git_iterator_for_index(&index_i, index, 0, NULL, NULL)))
+	if (!(error = git_iterator_for_index(&index_i, index, NULL)))
 		error = git_checkout_iterator(index_i, index, opts);
 
 	if (owned)
@@ -2641,6 +2649,7 @@ int git_checkout_tree(
 	git_index *index;
 	git_tree *tree = NULL;
 	git_iterator *tree_i = NULL;
+	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 
 	if (!treeish && !repo) {
 		giterr_set(GITERR_CHECKOUT,
@@ -2676,7 +2685,12 @@ int git_checkout_tree(
 	if ((error = git_repository_index(&index, repo)) < 0)
 		return error;
 
-	if (!(error = git_iterator_for_tree(&tree_i, tree, 0, NULL, NULL)))
+	if ((opts->checkout_strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)) {
+		iter_opts.pathlist.count = opts->paths.count;
+		iter_opts.pathlist.strings = opts->paths.strings;
+	}
+
+	if (!(error = git_iterator_for_tree(&tree_i, tree, &iter_opts)))
 		error = git_checkout_iterator(tree_i, index, opts);
 
 	git_iterator_free(tree_i);

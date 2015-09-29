@@ -63,6 +63,8 @@ typedef struct refdb_fs_backend {
 	uint32_t direach_flags;
 } refdb_fs_backend;
 
+static int refdb_reflog_fs__delete(git_refdb_backend *_backend, const char *name);
+
 static int packref_cmp(const void *a_, const void *b_)
 {
 	const struct packref *a = a_, *b = b_;
@@ -478,14 +480,16 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 	int error = 0;
 	git_buf path = GIT_BUF_INIT;
 	git_iterator *fsit = NULL;
+	git_iterator_options fsit_opts = GIT_ITERATOR_OPTIONS_INIT;
 	const git_index_entry *entry = NULL;
 
 	if (!backend->path) /* do nothing if no path for loose refs */
 		return 0;
 
+	fsit_opts.flags = backend->iterator_flags;
+
 	if ((error = git_buf_printf(&path, "%s/refs", backend->path)) < 0 ||
-		(error = git_iterator_for_filesystem(
-			&fsit, path.ptr, backend->iterator_flags, NULL, NULL)) < 0) {
+		(error = git_iterator_for_filesystem(&fsit, path.ptr, &fsit_opts)) < 0) {
 		git_buf_free(&path);
 		return error;
 	}
@@ -1217,6 +1221,11 @@ static int refdb_fs_backend__delete(
 	if ((error = loose_lock(&file, backend, ref_name)) < 0)
 		return error;
 
+	if ((error = refdb_reflog_fs__delete(_backend, ref_name)) < 0) {
+		git_filebuf_cleanup(&file);
+		return error;
+	}
+
 	return refdb_fs_backend__delete_tail(_backend, &file, ref_name, old_id, old_target);
 }
 
@@ -1404,7 +1413,8 @@ static int setup_namespace(git_buf *path, git_repository *repo)
 	git__free(parts);
 
 	/* Make sure that the folder with the namespace exists */
-	if (git_futils_mkdir_r(git_buf_cstr(path), repo->path_repository, 0777) < 0)
+	if (git_futils_mkdir_relative(git_buf_cstr(path), repo->path_repository,
+			0777, GIT_MKDIR_PATH, NULL) < 0)
 		return -1;
 
 	/* Return root of the namespaced path, i.e. without the trailing '/refs' */

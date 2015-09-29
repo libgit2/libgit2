@@ -40,12 +40,22 @@ GIT_INLINE(bool) git_win32__isalpha(wchar_t c)
 bool git_win32__findfirstfile_filter(git_win32_path dest, const char *src);
 
 /**
- * Ensures the given path (file or folder) has the +H (hidden) attribute set.
+ * Ensures the given path (file or folder) has the +H (hidden) attribute set
+ * or unset.
  *
- * @param path The path which should receive the +H bit.
+ * @param path The path that should receive the +H bit.
+ * @param hidden true to set +H, false to unset it
  * @return 0 on success; -1 on failure
  */
-int git_win32__sethidden(const char *path);
+extern int git_win32__set_hidden(const char *path, bool hidden);
+
+/**
+ * Determines if the given file or folder has the hidden attribute set.
+ * @param hidden pointer to store hidden value
+ * @param path The path that should be queried for hiddenness.
+ * @return 0 on success or an error code.
+ */
+extern int git_win32__hidden(bool *hidden, const char *path);
 
 /**
  * Removes any trailing backslashes from a path, except in the case of a drive
@@ -77,6 +87,16 @@ GIT_INLINE(time_t) git_win32__filetime_to_time_t(const FILETIME *ft)
 	winTime -= 116444736000000000LL; /* Windows to Unix Epoch conversion */
 	winTime /= 10000000;             /* Nano to seconds resolution */
 	return (time_t)winTime;
+}
+
+GIT_INLINE(void) git_win32__timeval_to_filetime(
+	FILETIME *ft, const struct timeval tv)
+{
+	long long ticks = (tv.tv_sec * 10000000LL) +
+		(tv.tv_usec * 10LL) + 116444736000000000LL;
+
+	ft->dwHighDateTime = ((ticks >> 32) & 0xffffffffLL);
+	ft->dwLowDateTime = (ticks & 0xffffffffLL);
 }
 
 GIT_INLINE(int) git_win32__file_attribute_to_stat(

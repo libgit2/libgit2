@@ -20,6 +20,19 @@ fixture_path(const char *base, const char *fixture_name)
 	return _path;
 }
 
+static const char *
+fixture_basename(const char *fixture_name)
+{
+	const char *p;
+
+	for (p = fixture_name; *p; p++) {
+		if (p[0] == '/' && p[1] && p[1] != '/')
+			fixture_name = p+1;
+	}
+
+	return fixture_name;
+}
+
 #ifdef CLAR_FIXTURE_PATH
 const char *cl_fixture(const char *fixture_name)
 {
@@ -33,6 +46,6 @@ void cl_fixture_sandbox(const char *fixture_name)
 
 void cl_fixture_cleanup(const char *fixture_name)
 {
-	fs_rm(fixture_path(_clar_path, fixture_name));
+	fs_rm(fixture_path(_clar_path, fixture_basename(fixture_name)));
 }
 #endif

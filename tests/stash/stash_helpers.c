@@ -26,12 +26,17 @@ void setup_stash(git_repository *repo, git_signature *signature)
 	cl_git_rewritefile("stash/what", "goodbye\n");			/* dd7e1c6f0fefe118f0b63d9f10908c460aa317a6 */
 	cl_git_rewritefile("stash/how", "not so small and\n");	/* e6d64adb2c7f3eb8feb493b556cc8070dca379a3 */
 	cl_git_rewritefile("stash/who", "funky world\n");		/* a0400d4954659306a976567af43125a0b1aa8595 */
+	cl_git_mkfile("stash/why", "would anybody use stash?\n"); /* 88c2533e21f098b89c91a431d8075cbde422a51 */
+	cl_git_mkfile("stash/where", "????\n");					/* e08f7fbb9a42a0c5367cf8b349f1f08c3d56bd72 */
 
 	cl_git_pass(git_index_add_bypath(index, "what"));
 	cl_git_pass(git_index_add_bypath(index, "how"));
+	cl_git_pass(git_index_add_bypath(index, "why"));
+	cl_git_pass(git_index_add_bypath(index, "where"));
 	cl_git_pass(git_index_write(index));
 
 	cl_git_rewritefile("stash/what", "see you later\n");	/* bc99dc98b3eba0e9157e94769cd4d49cb49de449 */
+	cl_git_mkfile("stash/where", "....\n");					/* e3d6434ec12eb76af8dfa843a64ba6ab91014a0b */
 
 	git_index_free(index);
 }

@@ -89,18 +89,20 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 		}
 
 	/*
-	 * If we're dealing with a directory (which we know via the
-	 * strchr() check) we want to use 'dirname/<star>' as the
-	 * pattern so p_fnmatch() honours FNM_PATHNAME
+	 * When dealing with a directory, we add '/<star>' so
+	 * p_fnmatch() honours FNM_PATHNAME. Checking for LEADINGDIR
+	 * alone isn't enough as that's also set for nagations, so we
+	 * need to check that NEGATIVE is off.
 	 */
 		git_buf_clear(&buf);
 		if (rule->containing_dir) {
 			git_buf_puts(&buf, rule->containing_dir);
 		}
-		if (!strchr(rule->pattern, '*'))
-			error = git_buf_printf(&buf, "%s/*", rule->pattern);
-		else
-			error = git_buf_puts(&buf, rule->pattern);
+
+		error = git_buf_puts(&buf, rule->pattern);
+
+		if ((rule->flags & (GIT_ATTR_FNMATCH_LEADINGDIR | GIT_ATTR_FNMATCH_NEGATIVE)) == GIT_ATTR_FNMATCH_LEADINGDIR)
+			error = git_buf_PUTS(&buf, "/*");
 
 		if (error < 0)
 			goto out;

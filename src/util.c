@@ -10,6 +10,10 @@
 #include <ctype.h>
 #include "posix.h"
 
+#ifdef GIT_WIN32
+# include "win32/w32_buffer.h"
+#endif
+
 #ifdef _MSC_VER
 # include <Shlwapi.h>
 #endif
@@ -171,9 +175,9 @@ int git__strcmp(const char *a, const char *b)
 
 int git__strcasecmp(const char *a, const char *b)
 {
-	while (*a && *b && tolower(*a) == tolower(*b))
+	while (*a && *b && git__tolower(*a) == git__tolower(*b))
 		++a, ++b;
-	return (tolower(*a) - tolower(*b));
+	return ((unsigned char)git__tolower(*a) - (unsigned char)git__tolower(*b));
 }
 
 int git__strcasesort_cmp(const char *a, const char *b)
@@ -182,7 +186,7 @@ int git__strcasesort_cmp(const char *a, const char *b)
 
 	while (*a && *b) {
 		if (*a != *b) {
-			if (tolower(*a) != tolower(*b))
+			if (git__tolower(*a) != git__tolower(*b))
 				break;
 			/* use case in sort order even if not in equivalence */
 			if (!cmp)
@@ -193,7 +197,7 @@ int git__strcasesort_cmp(const char *a, const char *b)
 	}
 
 	if (*a || *b)
-		return tolower(*a) - tolower(*b);
+		return (unsigned char)git__tolower(*a) - (unsigned char)git__tolower(*b);
 
 	return cmp;
 }
@@ -212,8 +216,8 @@ int git__strncasecmp(const char *a, const char *b, size_t sz)
 	int al, bl;
 
 	do {
-		al = (unsigned char)tolower(*a);
-		bl = (unsigned char)tolower(*b);
+		al = (unsigned char)git__tolower(*a);
+		bl = (unsigned char)git__tolower(*b);
 		++a, ++b;
 	} while (--sz && al && al == bl);
 
@@ -225,7 +229,7 @@ void git__strntolower(char *str, size_t len)
 	size_t i;
 
 	for (i = 0; i < len; ++i) {
-		str[i] = (char) tolower(str[i]);
+		str[i] = (char)git__tolower(str[i]);
 	}
 }
 
@@ -255,8 +259,8 @@ int git__prefixncmp_icase(const char *str, size_t str_n, const char *prefix)
 	int s, p;
 
 	while(str_n--) {
-		s = (unsigned char)tolower(*str++);
-		p = (unsigned char)tolower(*prefix++);
+		s = (unsigned char)git__tolower(*str++);
+		p = (unsigned char)git__tolower(*prefix++);
 
 		if (s != p)
 			return s - p;
@@ -765,3 +769,47 @@ int git__utf8_iterate(const uint8_t *str, int str_len, int32_t *dst)
 	*dst = uc;
 	return length;
 }
+
+#ifdef GIT_WIN32
+int git__getenv(git_buf *out, const char *name)
+{
+	wchar_t *wide_name = NULL, *wide_value = NULL;
+	DWORD value_len;
+	int error = -1;
+
+	git_buf_clear(out);
+
+	if (git__utf8_to_16_alloc(&wide_name, name) < 0)
+		return -1;
+
+	if ((value_len = GetEnvironmentVariableW(wide_name, NULL, 0)) > 0) {
+		wide_value = git__malloc(value_len * sizeof(wchar_t));
+		GITERR_CHECK_ALLOC(wide_value);
+
+		value_len = GetEnvironmentVariableW(wide_name, wide_value, value_len);
+	}
+
+	if (value_len)
+		error = git_buf_put_w(out, wide_value, value_len);
+	else if (GetLastError() == ERROR_ENVVAR_NOT_FOUND)
+		error = GIT_ENOTFOUND;
+	else
+		giterr_set(GITERR_OS, "could not read environment variable '%s'", name);
+
+	git__free(wide_name);
+	git__free(wide_value);
+	return error;
+}
+#else
+int git__getenv(git_buf *out, const char *name)
+{
+	const char *val = getenv(name);
+
+	git_buf_clear(out);
+
+	if (!val)
+		return GIT_ENOTFOUND;
+
+	return git_buf_puts(out, val);
+}
+#endif

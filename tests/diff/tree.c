@@ -49,7 +49,7 @@ void test_diff_tree__0(void)
 	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
 
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &expect));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &expect));
 
 	cl_assert_equal_i(5, expect.files);
 	cl_assert_equal_i(2, expect.file_status[GIT_DELTA_ADDED]);
@@ -71,7 +71,7 @@ void test_diff_tree__0(void)
 	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, c, b, &opts));
 
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &expect));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &expect));
 
 	cl_assert_equal_i(2, expect.files);
 	cl_assert_equal_i(0, expect.file_status[GIT_DELTA_ADDED]);
@@ -89,7 +89,7 @@ void test_diff_tree__0(void)
 }
 
 #define DIFF_OPTS(FLAGS, CTXT) \
-	{GIT_DIFF_OPTIONS_VERSION, (FLAGS), GIT_SUBMODULE_IGNORE_DEFAULT, \
+	{GIT_DIFF_OPTIONS_VERSION, (FLAGS), GIT_SUBMODULE_IGNORE_UNSPECIFIED, \
 	{NULL,0}, NULL, NULL, (CTXT), 1}
 
 void test_diff_tree__options(void)
@@ -158,7 +158,7 @@ void test_diff_tree__options(void)
 			cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, c, d, &opts));
 
 		cl_git_pass(git_diff_foreach(
-			diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &actual));
+			diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &actual));
 
 		expected = &test_expects[i];
 		cl_assert_equal_i(actual.files,     expected->files);
@@ -194,7 +194,7 @@ void test_diff_tree__bare(void)
 	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
 
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &expect));
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &expect));
 
 	cl_assert_equal_i(3, expect.files);
 	cl_assert_equal_i(2, expect.file_status[GIT_DELTA_ADDED]);
@@ -235,7 +235,7 @@ void test_diff_tree__merge(void)
 	git_diff_free(diff2);
 
 	cl_git_pass(git_diff_foreach(
-		diff1, diff_file_cb, diff_hunk_cb, diff_line_cb, &expect));
+		diff1, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &expect));
 
 	cl_assert_equal_i(6, expect.files);
 	cl_assert_equal_i(2, expect.file_status[GIT_DELTA_ADDED]);
@@ -332,7 +332,7 @@ void process_tree_to_tree_diffing(
 	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
 
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, NULL, NULL, &expect));
+		diff, diff_file_cb, NULL, NULL, NULL, &expect));
 }
 
 void test_diff_tree__symlink_blob_mode_changed_to_regular_file(void)
@@ -441,8 +441,8 @@ void test_diff_tree__issue_1397(void)
 
 	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
 
-	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &expect));
+	cl_git_pass(git_diff_foreach(diff,
+		diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &expect));
 
 	cl_assert_equal_i(1, expect.files);
 	cl_assert_equal_i(0, expect.file_status[GIT_DELTA_DELETED]);
@@ -472,8 +472,8 @@ void test_diff_tree__diff_configs(void)
 
 	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, NULL));
 
-	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &expect));
+	cl_git_pass(git_diff_foreach(diff, 
+		diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &expect));
 
 	cl_assert_equal_i(2, expect.files);
 	cl_assert_equal_i(2, expect.file_status[GIT_DELTA_MODIFIED]);
@@ -492,8 +492,8 @@ void test_diff_tree__diff_configs(void)
 
 	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, NULL));
 
-	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &expect));
+	cl_git_pass(git_diff_foreach(diff,
+		diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &expect));
 
 	cl_assert_equal_i(2, expect.files);
 	cl_assert_equal_i(2, expect.file_status[GIT_DELTA_MODIFIED]);
@@ -513,8 +513,8 @@ void test_diff_tree__diff_configs(void)
 
 	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, NULL));
 
-	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &expect));
+	cl_git_pass(git_diff_foreach(diff,
+		diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &expect));
 
 	cl_assert_equal_i(2, expect.files);
 	cl_assert_equal_i(2, expect.file_status[GIT_DELTA_MODIFIED]);

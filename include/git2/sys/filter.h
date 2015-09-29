@@ -240,7 +240,10 @@ typedef void (*git_filter_cleanup_fn)(
  * for this filter (e.g. "eol crlf text").  If the attribute name is bare,
  * it will be simply loaded and passed to the `check` callback.  If it has
  * a value (i.e. "name=value"), the attribute must match that value for
- * the filter to be applied.
+ * the filter to be applied.  The value may be a wildcard (eg, "name=*"),
+ * in which case the filter will be invoked for any value for the given
+ * attribute name.  See the attribute parameter of the `check` callback
+ * for the attribute value that was specified.
  *
  * The `initialize`, `shutdown`, `check`, `apply`, and `cleanup` callbacks
  * are all documented above with the respective function pointer typedefs.

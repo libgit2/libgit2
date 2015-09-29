@@ -46,6 +46,9 @@ typedef enum {
 	GIT_EAPPLIED        = -18,	/**< Patch/merge has already been applied */
 	GIT_EPEEL           = -19,      /**< The requested peel operation is not possible */
 	GIT_EEOF            = -20,      /**< Unexpected EOF */
+	GIT_EINVALID        = -21,      /**< Invalid operation or input */
+	GIT_EUNCOMMITTED    = -22,	/**< Uncommitted changes in index prevented operation */
+	GIT_EDIRECTORY      = -23,      /**< The operation is not valid for a directory */
 
 	GIT_PASSTHROUGH     = -30,	/**< Internal only */
 	GIT_ITEROVER        = -31,	/**< Signals end of iteration with iterator */
@@ -109,18 +112,6 @@ GIT_EXTERN(const git_error *) giterr_last(void);
  * Clear the last library error that occurred for this thread.
  */
 GIT_EXTERN(void) giterr_clear(void);
-
-/**
- * Get the last error data and clear it.
- *
- * This copies the last error into the given `git_error` struct
- * and returns 0 if the copy was successful, leaving the error
- * cleared as if `giterr_clear` had been called.
- *
- * If there was no existing error in the library, -1 will be returned
- * and the contents of `cpy` will be left unmodified.
- */
-GIT_EXTERN(int) giterr_detach(git_error *cpy);
 
 /**
  * Set the error message string for this thread.

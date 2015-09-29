@@ -7,6 +7,9 @@
 #ifndef INCLUDE_util_h__
 #define INCLUDE_util_h__
 
+#include "git2/buffer.h"
+#include "buffer.h"
+
 #if defined(GIT_MSVC_CRTDBG)
 /* Enable MSVC CRTDBG memory leak reporting.
  *
@@ -35,6 +38,7 @@
  */
 #include <stdlib.h>
 #include <crtdbg.h>
+#include "win32/w32_crtdbg_stacktrace.h"
 #endif
 
 #include "common.h"
@@ -62,23 +66,24 @@
 #define CONST_STRLEN(x) ((sizeof(x)/sizeof(x[0])) - 1)
 
 #if defined(GIT_MSVC_CRTDBG)
+
 GIT_INLINE(void *) git__crtdbg__malloc(size_t len, const char *file, int line)
 {
-	void *ptr = _malloc_dbg(len, _NORMAL_BLOCK, file, line);
+	void *ptr = _malloc_dbg(len, _NORMAL_BLOCK, git_win32__crtdbg_stacktrace(1,file), line);
 	if (!ptr) giterr_set_oom();
 	return ptr;
 }
 
 GIT_INLINE(void *) git__crtdbg__calloc(size_t nelem, size_t elsize, const char *file, int line)
 {
-	void *ptr = _calloc_dbg(nelem, elsize, _NORMAL_BLOCK, file, line);
+	void *ptr = _calloc_dbg(nelem, elsize, _NORMAL_BLOCK, git_win32__crtdbg_stacktrace(1,file), line);
 	if (!ptr) giterr_set_oom();
 	return ptr;
 }
 
 GIT_INLINE(char *) git__crtdbg__strdup(const char *str, const char *file, int line)
 {
-	char *ptr = _strdup_dbg(str, _NORMAL_BLOCK, file, line);
+	char *ptr = _strdup_dbg(str, _NORMAL_BLOCK, git_win32__crtdbg_stacktrace(1,file), line);
 	if (!ptr) giterr_set_oom();
 	return ptr;
 }
@@ -118,7 +123,7 @@ GIT_INLINE(char *) git__crtdbg__substrdup(const char *start, size_t n, const cha
 
 GIT_INLINE(void *) git__crtdbg__realloc(void *ptr, size_t size, const char *file, int line)
 {
-	void *new_ptr = _realloc_dbg(ptr, size, _NORMAL_BLOCK, file, line);
+	void *new_ptr = _realloc_dbg(ptr, size, _NORMAL_BLOCK, git_win32__crtdbg_stacktrace(1,file), line);
 	if (!new_ptr) giterr_set_oom();
 	return new_ptr;
 }
@@ -126,8 +131,9 @@ GIT_INLINE(void *) git__crtdbg__realloc(void *ptr, size_t size, const char *file
 GIT_INLINE(void *) git__crtdbg__reallocarray(void *ptr, size_t nelem, size_t elsize, const char *file, int line)
 {
 	size_t newsize;
+
 	return GIT_MULTIPLY_SIZET_OVERFLOW(&newsize, nelem, elsize) ?
-		NULL : _realloc_dbg(ptr, newsize, _NORMAL_BLOCK, file, line);
+		NULL : _realloc_dbg(ptr, newsize, _NORMAL_BLOCK, git_win32__crtdbg_stacktrace(1,file), line);
 }
 
 GIT_INLINE(void *) git__crtdbg__mallocarray(size_t nelem, size_t elsize, const char *file, int line)
@@ -274,6 +280,15 @@ extern char *git__strsep(char **end, const char *sep);
 
 extern void git__strntolower(char *str, size_t len);
 extern void git__strtolower(char *str);
+
+#ifdef GIT_WIN32
+GIT_INLINE(int) git__tolower(int c)
+{
+	return (c >= 'A' && c <= 'Z') ? (c + 32) : c;
+}
+#else
+# define git__tolower(a) tolower(a)
+#endif
 
 GIT_INLINE(const char *) git__next_line(const char *s)
 {
@@ -586,5 +601,7 @@ GIT_INLINE(double) git__timer(void)
 }
 
 #endif
+
+extern int git__getenv(git_buf *out, const char *name);
 
 #endif /* INCLUDE_util_h__ */

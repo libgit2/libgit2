@@ -351,7 +351,7 @@ static int unpack_pkt(git_pkt **out, const char *line, size_t len)
 static int32_t parse_len(const char *line)
 {
 	char num[PKT_LEN_SIZE + 1];
-	int i, error;
+	int i, k, error;
 	int32_t len;
 	const char *num_end;
 
@@ -360,7 +360,14 @@ static int32_t parse_len(const char *line)
 
 	for (i = 0; i < PKT_LEN_SIZE; ++i) {
 		if (!isxdigit(num[i])) {
-			giterr_set(GITERR_NET, "Found invalid hex digit in length");
+			/* Make sure there are no special characters before passing to error message */
+			for (k = 0; k < PKT_LEN_SIZE; ++k) {
+				if(!isprint(num[k])) {
+					num[k] = '.';
+				}
+			}
+			
+			giterr_set(GITERR_NET, "invalid hex digit in length: '%s'", num);
 			return -1;
 		}
 	}
@@ -523,7 +530,7 @@ static int buffer_want_with_caps(const git_remote_head *head, transport_smart_ca
 
 	if (len > 0xffff) {
 		giterr_set(GITERR_NET,
-			"Tried to produce packet with invalid length %d", len);
+			"Tried to produce packet with invalid length %" PRIuZ, len);
 		return -1;
 	}
 

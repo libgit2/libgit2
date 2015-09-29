@@ -48,7 +48,35 @@ bool git_win32__findfirstfile_filter(git_win32_path dest, const char *src)
  * @param path The path which should receive the +H bit.
  * @return 0 on success; -1 on failure
  */
-int git_win32__sethidden(const char *path)
+int git_win32__set_hidden(const char *path, bool hidden)
+{
+	git_win32_path buf;
+	DWORD attrs, newattrs;
+
+	if (git_win32_path_from_utf8(buf, path) < 0)
+		return -1;
+
+	attrs = GetFileAttributesW(buf);
+
+	/* Ensure the path exists */
+	if (attrs == INVALID_FILE_ATTRIBUTES)
+		return -1;
+
+	if (hidden)
+		newattrs = attrs | FILE_ATTRIBUTE_HIDDEN;
+	else
+		newattrs = attrs & ~FILE_ATTRIBUTE_HIDDEN;
+
+	if (attrs != newattrs && !SetFileAttributesW(buf, newattrs)) {
+		giterr_set(GITERR_OS, "Failed to %s hidden bit for '%s'",
+			hidden ? "set" : "unset", path);
+		return -1;
+	}
+
+	return 0;
+}
+
+int git_win32__hidden(bool *out, const char *path)
 {
 	git_win32_path buf;
 	DWORD attrs;
@@ -62,11 +90,7 @@ int git_win32__sethidden(const char *path)
 	if (attrs == INVALID_FILE_ATTRIBUTES)
 		return -1;
 
-	/* If the item isn't already +H, add the bit */
-	if ((attrs & FILE_ATTRIBUTE_HIDDEN) == 0 &&
-		!SetFileAttributesW(buf, attrs | FILE_ATTRIBUTE_HIDDEN))
-		return -1;
-
+	*out = (attrs & FILE_ATTRIBUTE_HIDDEN) ? true : false;
 	return 0;
 }
 

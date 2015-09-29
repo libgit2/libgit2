@@ -6,6 +6,7 @@
 #include "util.h"
 #include "path.h"
 #include "../diff/diff_helpers.h"
+#include "../checkout/checkout_helpers.h"
 #include "git2/sys/diff.h"
 
 /**
@@ -194,7 +195,7 @@ void test_status_worktree__swap_subdir_with_recurse_and_pathspec(void)
 	cl_git_pass(p_rename("status/subdir", "status/current_file"));
 	cl_git_pass(p_rename("status/swap", "status/subdir"));
 	cl_git_mkfile("status/.new_file", "dummy");
-	cl_git_pass(git_futils_mkdir_r("status/zzz_new_dir", NULL, 0777));
+	cl_git_pass(git_futils_mkdir_r("status/zzz_new_dir", 0777));
 	cl_git_mkfile("status/zzz_new_dir/new_file", "dummy");
 	cl_git_mkfile("status/zzz_new_file", "dummy");
 
@@ -916,7 +917,7 @@ void test_status_worktree__long_filenames(void)
 
 	// Create directory with amazingly long filename
 	sprintf(path, "empty_standard_repo/%s", longname);
-	cl_git_pass(git_futils_mkdir_r(path, NULL, 0777));
+	cl_git_pass(git_futils_mkdir_r(path, 0777));
 	sprintf(path, "empty_standard_repo/%s/foo", longname);
 	cl_git_mkfile(path, "dummy");
 
@@ -956,6 +957,7 @@ void test_status_worktree__update_stat_cache_0(void)
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 	git_status_list *status;
 	git_diff_perfdata perf = GIT_DIFF_PERFDATA_INIT;
+	git_index *index;
 
 	opts.flags = GIT_STATUS_OPT_DEFAULTS;
 
@@ -966,6 +968,10 @@ void test_status_worktree__update_stat_cache_0(void)
 	cl_assert_equal_sz(5, perf.oid_calculations);
 
 	git_status_list_free(status);
+
+	/* tick the index so we avoid recalculating racily-clean entries */
+	cl_git_pass(git_repository_index__weakptr(&index, repo));
+	tick_index(index);
 
 	opts.flags |= GIT_STATUS_OPT_UPDATE_INDEX;
 
@@ -979,6 +985,8 @@ void test_status_worktree__update_stat_cache_0(void)
 
 	opts.flags &= ~GIT_STATUS_OPT_UPDATE_INDEX;
 
+	/* tick again as the index updating from the previous diff might have reset the timestamp */
+	tick_index(index);
 	cl_git_pass(git_status_list_new(&status, repo, &opts));
 	check_status0(status);
 	cl_git_pass(git_status_list_get_perfdata(&perf, status));
@@ -999,7 +1007,7 @@ void test_status_worktree__unreadable(void)
 	status_entry_counts counts = {0};
 
 	/* Create directory with no read permission */
-	cl_git_pass(git_futils_mkdir_r("empty_standard_repo/no_permission", NULL, 0777));
+	cl_git_pass(git_futils_mkdir_r("empty_standard_repo/no_permission", 0777));
 	cl_git_mkfile("empty_standard_repo/no_permission/foo", "dummy");
 	p_chmod("empty_standard_repo/no_permission", 0644);
 
@@ -1033,7 +1041,7 @@ void test_status_worktree__unreadable_not_included(void)
 	status_entry_counts counts = {0};
 
 	/* Create directory with no read permission */
-	cl_git_pass(git_futils_mkdir_r("empty_standard_repo/no_permission", NULL, 0777));
+	cl_git_pass(git_futils_mkdir_r("empty_standard_repo/no_permission", 0777));
 	cl_git_mkfile("empty_standard_repo/no_permission/foo", "dummy");
 	p_chmod("empty_standard_repo/no_permission", 0644);
 
@@ -1066,7 +1074,7 @@ void test_status_worktree__unreadable_as_untracked(void)
 	status_entry_counts counts = {0};
 
 	/* Create directory with no read permission */
-	cl_git_pass(git_futils_mkdir_r("empty_standard_repo/no_permission", NULL, 0777));
+	cl_git_pass(git_futils_mkdir_r("empty_standard_repo/no_permission", 0777));
 	cl_git_mkfile("empty_standard_repo/no_permission/foo", "dummy");
 	p_chmod("empty_standard_repo/no_permission", 0644);
 
@@ -1088,5 +1096,53 @@ void test_status_worktree__unreadable_as_untracked(void)
 	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
 	cl_assert_equal_i(0, counts.wrong_status_flags_count);
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
+}
+
+void test_status_worktree__update_index_with_symlink_doesnt_change_mode(void)
+{
+	git_repository *repo = cl_git_sandbox_init("testrepo");
+	git_reference *head;
+	git_object *head_object;
+	git_index *index;
+	const git_index_entry *idx_entry;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	status_entry_counts counts = {0};
+	const char *expected_paths[] = { "README" };
+	const unsigned int expected_statuses[] = {GIT_STATUS_WT_NEW};
+
+	opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
+	opts.flags = GIT_STATUS_OPT_DEFAULTS | GIT_STATUS_OPT_UPDATE_INDEX;
+
+	cl_git_pass(git_repository_head(&head, repo));
+	cl_git_pass(git_reference_peel(&head_object, head, GIT_OBJ_COMMIT));
+
+	cl_git_pass(git_reset(repo, head_object, GIT_RESET_HARD, NULL));
+
+	cl_git_rewritefile("testrepo/README", "This was rewritten.");
+
+	/* this status rewrites the index because we have changed the
+	 * contents of a tracked file
+	 */
+	counts.expected_entry_count = 1;
+	counts.expected_paths = expected_paths;
+	counts.expected_statuses = expected_statuses;
+
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts));
+	cl_assert_equal_i(1, counts.entry_count);
+
+	/* now ensure that the status's rewrite of the index did not screw
+	 * up the mode of the symlink `link_to_new.txt`, particularly
+	 * on platforms that don't support symlinks
+	 */
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_index_read(index, true));
+
+	cl_assert(idx_entry = git_index_get_bypath(index, "link_to_new.txt", 0));
+	cl_assert(S_ISLNK(idx_entry->mode));
+
+	git_index_free(index);
+	git_object_free(head_object);
+	git_reference_free(head);
 }
 

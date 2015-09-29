@@ -436,7 +436,7 @@ static int rebase_setupfiles_merge(git_rebase *rebase)
 	size_t i;
 	int error = 0;
 
-	if ((error = rebase_setupfile(rebase, END_FILE, -1, "%d\n", git_array_size(rebase->operations))) < 0 ||
+	if ((error = rebase_setupfile(rebase, END_FILE, -1, "%" PRIuZ "\n", git_array_size(rebase->operations))) < 0 ||
 		(error = rebase_setupfile(rebase, ONTO_NAME_FILE, -1, "%s\n", rebase->onto_name)) < 0)
 		goto done;
 
@@ -512,7 +512,7 @@ static int rebase_ensure_not_dirty(
 	git_tree *head = NULL;
 	git_index *index = NULL;
 	git_diff *diff = NULL;
-	int error;
+	int error = 0;
 
 	if (check_index) {
 		if ((error = git_repository_head_tree(&head, repo)) < 0 ||
@@ -789,7 +789,7 @@ static int rebase_next_merge(
 	normalize_checkout_options_for_apply(&checkout_opts, rebase, current_commit);
 
 	if ((error = git_indexwriter_init_for_operation(&indexwriter, rebase->repo, &checkout_opts.checkout_strategy)) < 0 ||
-		(error = rebase_setupfile(rebase, MSGNUM_FILE, -1, "%d\n", rebase->current+1)) < 0 ||
+		(error = rebase_setupfile(rebase, MSGNUM_FILE, -1, "%" PRIuZ "\n", rebase->current+1)) < 0 ||
 		(error = rebase_setupfile(rebase, CURRENT_FILE, -1, "%.*s\n", GIT_OID_HEXSZ, current_idstr)) < 0 ||
 		(error = git_merge_trees(&index, rebase->repo, parent_tree, head_tree, current_tree, NULL)) < 0 ||
 		(error = git_merge__check_result(rebase->repo, index)) < 0 ||

@@ -29,7 +29,14 @@ static int git_sysdir_guess_global_dirs(git_buf *out)
 #ifdef GIT_WIN32
 	return git_win32__find_global_dirs(out);
 #else
-	return git_buf_sets(out, getenv("HOME"));
+	int error = git__getenv(out, "HOME");
+
+	if (error == GIT_ENOTFOUND) {
+		giterr_clear();
+		error = 0;
+	}
+
+	return error;
 #endif
 }
 
@@ -38,15 +45,22 @@ static int git_sysdir_guess_xdg_dirs(git_buf *out)
 #ifdef GIT_WIN32
 	return git_win32__find_xdg_dirs(out);
 #else
-	const char *env = NULL;
+	git_buf env = GIT_BUF_INIT;
+	int error;
 
-	if ((env = getenv("XDG_CONFIG_HOME")) != NULL)
-		return git_buf_joinpath(out, env, "git");
-	else if ((env = getenv("HOME")) != NULL)
-		return git_buf_joinpath(out, env, ".config/git");
+	if ((error = git__getenv(&env, "XDG_CONFIG_HOME")) == 0)
+		error = git_buf_joinpath(out, env.ptr, "git");
 
-	git_buf_clear(out);
-	return 0;
+	if (error == GIT_ENOTFOUND && (error = git__getenv(&env, "HOME")) == 0)
+		error = git_buf_joinpath(out, env.ptr, ".config/git");
+
+	if (error == GIT_ENOTFOUND) {
+		giterr_clear();
+		error = 0;
+	}
+
+	git_buf_free(&env);
+	return error;
 #endif
 }
 

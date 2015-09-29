@@ -88,7 +88,7 @@ Under Unix-like systems, like Linux, \*BSD and Mac OS X, libgit2 expects `pthrea
 they should be installed by default on all systems. Under Windows, libgit2 uses the native Windows API
 for threading.
 
-The `libgit2` library is built using [CMake](<http://www.cmake.org>) (version 2.6 or newer) on all platforms.
+The `libgit2` library is built using [CMake](<http://www.cmake.org>) (version 2.8 or newer) on all platforms.
 
 On most systems you can build the library using the following commands
 
