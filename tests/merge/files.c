@@ -3,10 +3,10 @@
 #include "git2/merge.h"
 #include "buffer.h"
 #include "merge.h"
-#include "merge_file.h"
 #include "merge_helpers.h"
 #include "refs.h"
 #include "fileops.h"
+#include "diff_xdiff.h"
 
 #define TEST_REPO_PATH "merge-resolve"
 #define TEST_INDEX_PATH TEST_REPO_PATH "/.git/index"
@@ -296,11 +296,11 @@ void test_merge_files__skips_large_files(void)
 	git_merge_file_options opts = GIT_MERGE_FILE_OPTIONS_INIT;
 	git_merge_file_result result = {0};
 
-	ours.size = GIT_MERGE_FILE_XDIFF_MAX + 1;
+	ours.size = GIT_XDIFF_MAX_SIZE + 1;
 	ours.path = "testfile.txt";
 	ours.mode = 0100755;
 
-	theirs.size = GIT_MERGE_FILE_XDIFF_MAX + 1;
+	theirs.size = GIT_XDIFF_MAX_SIZE + 1;
 	theirs.path = "testfile.txt";
 	theirs.mode = 0100755;
 

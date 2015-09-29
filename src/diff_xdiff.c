@@ -4,6 +4,7 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
+#include "git2/errors.h"
 #include "common.h"
 #include "diff.h"
 #include "diff_driver.h"
@@ -207,6 +208,12 @@ static int git_xdiff(git_diff_output *output, git_patch *patch)
 
 	git_patch__old_data(&info.xd_old_data.ptr, &info.xd_old_data.size, patch);
 	git_patch__new_data(&info.xd_new_data.ptr, &info.xd_new_data.size, patch);
+
+	if (info.xd_old_data.size > GIT_XDIFF_MAX_SIZE ||
+		info.xd_new_data.size > GIT_XDIFF_MAX_SIZE) {
+		giterr_set(GITERR_INVALID, "files too large for diff");
+		return -1;
+	}
 
 	xdl_diff(&info.xd_old_data, &info.xd_new_data,
 		&xo->params, &xo->config, &xo->callback);

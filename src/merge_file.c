@@ -7,10 +7,10 @@
 
 #include "common.h"
 #include "repository.h"
-#include "merge_file.h"
 #include "posix.h"
 #include "fileops.h"
 #include "index.h"
+#include "diff_xdiff.h"
 
 #include "git2/repository.h"
 #include "git2/object.h"
@@ -199,7 +199,7 @@ static bool merge_file__is_binary(const git_merge_file_input *file)
 {
 	size_t len = file ? file->size : 0;
 
-	if (len > GIT_MERGE_FILE_XDIFF_MAX)
+	if (len > GIT_XDIFF_MAX_SIZE)
 		return true;
 	if (len > GIT_MERGE_FILE_BINARY_SIZE)
 		len = GIT_MERGE_FILE_BINARY_SIZE;

@@ -20,7 +20,6 @@
 #include "diff.h"
 #include "checkout.h"
 #include "tree.h"
-#include "merge_file.h"
 #include "blob.h"
 #include "oid.h"
 #include "index.h"
