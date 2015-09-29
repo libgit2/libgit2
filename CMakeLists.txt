@@ -516,6 +516,12 @@ ELSE()
 		ADD_DEFINITIONS(-DNO_MMAP)
 	ENDIF()
 	FILE(GLOB SRC_OS src/unix/*.c src/unix/*.h)
+	#Define to use futimes or futimens
+	IF (CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
+		SET (HAVE_FUTIMENS ON)
+	ELSE()
+		SET (HAVE_FUTIMES ON)
+	ENDIF()
 ENDIF()
 FILE(GLOB SRC_GIT2 src/*.c src/*.h src/transports/*.c src/transports/*.h src/xdiff/*.c src/xdiff/*.h)
 
