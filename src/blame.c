@@ -331,7 +331,7 @@ static int blame_internal(git_blame *blame)
 
 	blame->ent = ent;
 
-	git_blame__like_git(blame, blame->options.flags);
+	error = git_blame__like_git(blame, blame->options.flags);
 
 cleanup:
 	for (ent = blame->ent; ent; ) {
