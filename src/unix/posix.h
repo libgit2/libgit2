@@ -22,8 +22,11 @@ typedef int GIT_SOCKET;
 #define p_stat(p,b) stat(p, b)
 
 #define p_utimes(f, t) utimes(f, t)
+#ifdef HAVE_FUTIMES
 #define p_futimes(f, t) futimes(f, t)
-
+#else
+#define p_futimes(f, t) futimens(f, t)
+#endif
 #define p_readlink(a, b, c) readlink(a, b, c)
 #define p_symlink(o,n) symlink(o, n)
 #define p_link(o,n) link(o, n)

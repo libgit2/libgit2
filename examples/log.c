@@ -49,9 +49,10 @@ static int add_revision(struct log_state *s, const char *revstr);
 
 /** log_options holds other command line options that affect log output */
 struct log_options {
-	int show_diff;
+	int show_diff, show_log_size;
 	int skip, limit;
 	int min_parents, max_parents;
+	int ignore_case;
 	git_time_t before;
 	git_time_t after;
 	const char *author;
@@ -63,12 +64,12 @@ struct log_options {
 static int parse_options(
 	struct log_state *s, struct log_options *opt, int argc, char **argv);
 static void print_time(const git_time *intime, const char *prefix);
-static void print_commit(git_commit *commit);
+static void print_commit(git_commit *commit, struct log_options *opt);
 static int match_with_parent(git_commit *commit, int i, git_diff_options *);
 
 /** utility functions for filtering */
-static int signature_matches(const git_signature *sig, const char *filter);
-static int log_message_matches(const git_commit *commit, const char *filter);
+static int signature_matches(const git_signature *sig, const char *filter, int icase);
+static int log_message_matches(const git_commit *commit, const char *filter, int icase);
 
 int main(int argc, char *argv[])
 {
@@ -132,13 +133,13 @@ int main(int argc, char *argv[])
 				continue;
 		}
 
-		if (!signature_matches(git_commit_author(commit), opt.author))
+		if (!signature_matches(git_commit_author(commit), opt.author, opt.ignore_case))
 			continue;
 
-		if (!signature_matches(git_commit_committer(commit), opt.committer))
+		if (!signature_matches(git_commit_committer(commit), opt.committer, opt.ignore_case))
 			continue;
 
-		if (!log_message_matches(commit, opt.grep))
+		if (!log_message_matches(commit, opt.grep, opt.ignore_case))
 			continue;
 
 		if (count++ < opt.skip)
@@ -148,7 +149,7 @@ int main(int argc, char *argv[])
 			break;
 		}
 
-		print_commit(commit);
+		print_commit(commit, &opt);
 
 		if (opt.show_diff) {
 			git_tree *a = NULL, *b = NULL;
@@ -186,26 +187,31 @@ int main(int argc, char *argv[])
 }
 
 /** Determine if the given git_signature does not contain the filter text. */
-static int signature_matches(const git_signature *sig, const char *filter) {
+static int signature_matches(const git_signature *sig, const char *filter, int icase) {
 	if (filter == NULL)
 		return 1;
-
-	if (sig != NULL &&
-		(strstr(sig->name, filter) != NULL ||
-		strstr(sig->email, filter) != NULL))
-		return 1;
-
+	if (icase){
+		if (sig != NULL &&
+			(strcasestr(sig->name, filter) != NULL ||
+			strcasestr(sig->email, filter) != NULL))
+			return 1;
+	} else {
+		if (sig != NULL &&
+			(strstr(sig->name, filter) != NULL ||
+			strstr(sig->email, filter) != NULL))
+			return 1;
+	}
 	return 0;
 }
 
-static int log_message_matches(const git_commit *commit, const char *filter) {
+static int log_message_matches(const git_commit *commit, const char *filter, int icase) {
 	const char *message = NULL;
 
 	if (filter == NULL)
 		return 1;
 
 	if ((message = git_commit_message(commit)) != NULL &&
-		strstr(message, filter) != NULL)
+		(icase ? strcasestr(message, filter) : strstr(message, filter)) != NULL)
 		return 1;
 
 	return 0;
@@ -337,10 +343,11 @@ static void print_time(const git_time *intime, const char *prefix)
 }
 
 /** Helper to print a commit object. */
-static void print_commit(git_commit *commit)
+static void print_commit(git_commit *commit, struct log_options *opt)
 {
 	char buf[GIT_OID_HEXSZ + 1];
 	int i, count;
+	int log_size;
 	const git_signature *sig;
 	const char *scan, *eol;
 
@@ -366,9 +373,15 @@ static void print_commit(git_commit *commit)
 		for (eol = scan; *eol && *eol != '\n'; ++eol) /* find eol */;
 
 		printf("    %.*s\n", (int)(eol - scan), scan);
+		log_size+=strlen(scan)-3;
 		scan = *eol ? eol + 1 : NULL;
 	}
 	printf("\n");
+	if (opt->show_log_size) {
+		printf("Log size: %i\n", log_size);
+		printf("\n");
+	}
+	log_size = 0;
 }
 
 /** Helper to find how many files in a commit changed from its nth parent. */
@@ -440,6 +453,8 @@ static int parse_options(
 			set_sorting(s, GIT_SORT_TOPOLOGICAL);
 		else if (!strcmp(a, "--reverse"))
 			set_sorting(s, GIT_SORT_REVERSE);
+		else if (!strcmp(a, "--log-size"))
+			opt->show_log_size = 1;
 		else if (match_str_arg(&opt->author, &args, "--author"))
 			/** Found valid --author */;
 		else if (match_str_arg(&opt->committer, &args, "--committer"))
@@ -470,6 +485,8 @@ static int parse_options(
 			/** Found valid --min_parents. */;
 		else if (!strcmp(a, "-p") || !strcmp(a, "-u") || !strcmp(a, "--patch"))
 			opt->show_diff = 1;
+		else if (!strcmp(a, "-i") || !strcmp(a, "--regexp-ignore-case"))
+			opt->ignore_case = 1;
 		else
 			usage("Unsupported argument", a);
 	}
