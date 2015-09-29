@@ -1114,7 +1114,9 @@ static int check_file_directory_collision(git_index *index,
 }
 
 static int canonicalize_directory_path(
-	git_index *index, git_index_entry *entry)
+	git_index *index,
+	git_index_entry *entry,
+	git_index_entry *existing)
 {
 	const git_index_entry *match, *best = NULL;
 	char *search, *sep;
@@ -1124,8 +1126,8 @@ static int canonicalize_directory_path(
 		return 0;
 
 	/* item already exists in the index, simply re-use the existing case */
-	if ((match = git_index_get_bypath(index, entry->path, 0)) != NULL) {
-		memcpy((char *)entry->path, match->path, strlen(entry->path));
+	if (existing) {
+		memcpy((char *)entry->path, existing->path, strlen(existing->path));
 		return 0;
 	}
 
@@ -1190,6 +1192,52 @@ static int index_no_dups(void **old, void *new)
 	return GIT_EEXISTS;
 }
 
+static void index_existing_and_best(
+	const git_index_entry **existing,
+	size_t *existing_position,
+	const git_index_entry **best,
+	git_index *index,
+	const git_index_entry *entry)
+{
+	const git_index_entry *e;
+	size_t pos;
+	int error;
+
+	error = index_find(&pos,
+		index, entry->path, 0, GIT_IDXENTRY_STAGE(entry), false);
+
+	if (error == 0) {
+		*existing = index->entries.contents[pos];
+		*existing_position = pos;
+		*best = index->entries.contents[pos];
+		return;
+	}
+
+	*existing = NULL;
+	*existing_position = 0;
+	*best = NULL;
+
+	if (GIT_IDXENTRY_STAGE(entry) == 0) {
+		for (; pos < index->entries.length; pos++) {
+			int (*strcomp)(const char *a, const char *b) =
+				index->ignore_case ? git__strcasecmp : git__strcmp;
+
+			e = index->entries.contents[pos];
+
+			if (strcomp(entry->path, e->path) != 0)
+				break;
+
+			if (GIT_IDXENTRY_STAGE(e) == GIT_INDEX_STAGE_ANCESTOR) {
+				*best = e;
+				continue;
+			} else {
+				*best = e;
+				break;
+			}
+		}
+	}
+}
+
 /* index_insert takes ownership of the new entry - if it can't insert
  * it, then it will return an error **and also free the entry**.  When
  * it replaces an existing entry, it will update the entry_ptr with the
@@ -1208,7 +1256,7 @@ static int index_insert(
 {
 	int error = 0;
 	size_t path_length, position;
-	git_index_entry *existing = NULL, *entry;
+	git_index_entry *existing, *best, *entry;
 
 	assert(index && entry_ptr);
 
@@ -1231,20 +1279,19 @@ static int index_insert(
 
 	git_vector_sort(&index->entries);
 
-	/* look if an entry with this path already exists */
-	if (!index_find(
-			&position, index, entry->path, 0, GIT_IDXENTRY_STAGE(entry), false)) {
-		existing = index->entries.contents[position];
-		/* update filemode to existing values if stat is not trusted */
-		if (trust_mode)
-			entry->mode = git_index__create_mode(entry->mode);
-		else
-			entry->mode = index_merge_mode(index, existing, entry->mode);
-	}
+	/* look if an entry with this path already exists, either staged, or (if
+	 * this entry is a regular staged item) as the "ours" side of a conflict.
+	 */
+	index_existing_and_best(&existing, &position, &best, index, entry);
+
+	/* update the file mode */
+	entry->mode = trust_mode ?
+		git_index__create_mode(entry->mode) :
+		index_merge_mode(index, best, entry->mode);
 
 	/* canonicalize the directory name */
 	if (!trust_path)
-		error = canonicalize_directory_path(index, entry);
+		error = canonicalize_directory_path(index, entry, best);
 
 	/* look for tree / blob name collisions, removing conflicts if requested */
 	if (!error)
