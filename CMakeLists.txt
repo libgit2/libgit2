@@ -19,6 +19,7 @@ CMAKE_POLICY(SET CMP0015 NEW)
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
 
 INCLUDE(CheckLibraryExists)
+INCLUDE(CheckFunctionExists)
 INCLUDE(AddCFlagIfSupported)
 INCLUDE(FindPkgConfig)
 
@@ -446,6 +447,11 @@ ELSE ()
 	ADD_C_FLAG_IF_SUPPORTED(-Wdeclaration-after-statement)
 	ADD_C_FLAG_IF_SUPPORTED(-Wno-unused-const-variable)
 	ADD_C_FLAG_IF_SUPPORTED(-Wno-unused-function)
+
+	CHECK_FUNCTION_EXISTS(futimens HAVE_FUTIMENS)
+	IF (HAVE_FUTIMENS)
+		ADD_DEFINITIONS(-DHAVE_FUTIMENS)
+	ENDIF ()
 
 	IF (APPLE) # Apple deprecated OpenSSL
 		ADD_C_FLAG_IF_SUPPORTED(-Wno-deprecated-declarations)
