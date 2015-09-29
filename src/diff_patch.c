@@ -30,6 +30,10 @@ static void diff_patch_update_binary(git_patch *patch)
 		(patch->nfile.file->flags & GIT_DIFF_FLAG_BINARY) != 0)
 		patch->delta->flags |= GIT_DIFF_FLAG_BINARY;
 
+	else if (patch->ofile.file->size > GIT_XDIFF_MAX_SIZE ||
+			 patch->nfile.file->size > GIT_XDIFF_MAX_SIZE)
+		patch->delta->flags |= GIT_DIFF_FLAG_BINARY;
+
 	else if ((patch->ofile.file->flags & DIFF_FLAGS_NOT_BINARY) != 0 &&
 			 (patch->nfile.file->flags & DIFF_FLAGS_NOT_BINARY) != 0)
 		patch->delta->flags |= GIT_DIFF_FLAG_NOT_BINARY;
