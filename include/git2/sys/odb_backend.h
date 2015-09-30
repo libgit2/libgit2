@@ -83,6 +83,10 @@ struct git_odb_backend {
 		git_odb_writepack **, git_odb_backend *, git_odb *odb,
 		git_transfer_progress_cb progress_cb, void *progress_payload);
 
+	/**
+	 * Frees any resources held by the odb (including the `git_odb_backend`
+	 * itself). An odb backend implementation must provide this function.
+	 */
 	void (* free)(git_odb_backend *);
 };
 
