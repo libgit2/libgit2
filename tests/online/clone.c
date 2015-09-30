@@ -213,6 +213,33 @@ void test_online_clone__custom_remote_callbacks(void)
 	cl_assert(callcount > 0);
 }
 
+void test_online_clone__custom_headers(void)
+{
+	char *empty_header = "";
+	char *unnamed_header = "this is a header about nothing";
+	char *newlines = "X-Custom: almost OK\n";
+	char *conflict = "Accept: defined-by-git";
+	char *ok = "X-Custom: this should be ok";
+
+	g_options.fetch_opts.custom_headers.count = 1;
+
+	g_options.fetch_opts.custom_headers.strings = &empty_header;
+	cl_git_fail(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
+
+	g_options.fetch_opts.custom_headers.strings = &unnamed_header;
+	cl_git_fail(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
+
+	g_options.fetch_opts.custom_headers.strings = &newlines;
+	cl_git_fail(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
+
+	g_options.fetch_opts.custom_headers.strings = &conflict;
+	cl_git_fail(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
+
+	/* Finally, we got it right! */
+	g_options.fetch_opts.custom_headers.strings = &ok;
+	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
+}
+
 static int cred_failure_cb(
 	git_cred **cred,
 	const char *url,
