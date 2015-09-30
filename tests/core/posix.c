@@ -100,19 +100,24 @@ void test_core_posix__inet_pton(void)
 
 void test_core_posix__utimes(void)
 {
-	struct timeval times[2];
+#ifdef HAVE_FUTIMES
+	struct timeval time_val[2];
+#else
+	struct timeval time_val[2];
+	struct timespec time_spec[2];
+#endif
 	struct stat st;
 	time_t curtime;
 	int fd;
 
 	/* test p_utimes */
-	times[0].tv_sec = 1234567890;
-	times[0].tv_usec = 0;
-	times[1].tv_sec = 1234567890;
-	times[1].tv_usec = 0;
+	time_val[0].tv_sec = 1234567890;
+	time_val[0].tv_usec = 0;
+	time_val[1].tv_sec = 1234567890;
+	time_val[1].tv_usec = 0;
 
 	cl_git_mkfile("foo", "Dummy file.");
-	cl_must_pass(p_utimes("foo", times));
+	cl_must_pass(p_utimes("foo", time_val));
 
 	p_stat("foo", &st);
 	cl_assert_equal_i(1234567890, st.st_atime);
@@ -120,13 +125,22 @@ void test_core_posix__utimes(void)
 
 
 	/* test p_futimes */
-	times[0].tv_sec = 1414141414;
-	times[0].tv_usec = 0;
-	times[1].tv_sec = 1414141414;
-	times[1].tv_usec = 0;
+#ifdef HAVE_FUTIMES
+	time_val[0].tv_sec = 1414141414;
+	time_val[0].tv_usec = 0;
+	time_val[1].tv_sec = 1414141414;
+	time_val[1].tv_usec = 0;
 
 	cl_must_pass(fd = p_open("foo", O_RDWR));
-	cl_must_pass(p_futimes(fd, times));
+	cl_must_pass(p_futimes(fd, time_val));
+#else
+	time_spec[0].tv_sec = 1414141414;
+	time_spec[0].tv_nsec = 0;
+	time_spec[1].tv_sec = 1414141414;
+	time_spec[1].tv_nsec = 0;
+	cl_must_pass(fd = p_open("foo", O_RDWR));
+	cl_must_pass(p_futimes(fd, time_spec));
+#endif
 	p_close(fd);
 
 	p_stat("foo", &st);
