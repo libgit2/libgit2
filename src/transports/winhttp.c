@@ -325,6 +325,9 @@ static int userpass_from_url(wchar_t **user, int *user_len,
 	return 0;
 }
 
+#define SCHEME_HTTP  "http://"
+#define SCHEME_HTTPS "https://"
+
 static int winhttp_stream_connect(winhttp_stream *s)
 {
 	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
@@ -388,6 +391,15 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		WINHTTP_PROXY_INFO proxy_info;
 		wchar_t *proxy_wide;
 
+		if (!git__prefixcmp(proxy_url, SCHEME_HTTP)) {
+			t->proxy_connection_data.use_ssl = false;
+		} else if (!git__prefixcmp(proxy_url, SCHEME_HTTPS)) {
+			t->proxy_connection_data.use_ssl = true;
+		} else {
+			giterr_set(GITERR_NET, "invalid URL: '%s'", proxy_url);
+			return -1;
+		}
+
 		if ((error = gitno_extract_url_parts(&t->proxy_connection_data.host, &t->proxy_connection_data.port, NULL,
 				&t->proxy_connection_data.user, &t->proxy_connection_data.pass, proxy_url, NULL)) < 0)
 			goto on_error;
@@ -398,9 +410,9 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		}
 
 		if (t->proxy_connection_data.use_ssl)
-			git_buf_puts(&processed_url, "https://");
+			git_buf_PUTS(&processed_url, SCHEME_HTTPS);
 		else
-			git_buf_puts(&processed_url, "http://");
+			git_buf_PUTS(&processed_url, SCHEME_HTTP);
 
 		git_buf_puts(&processed_url, t->proxy_connection_data.host);
 		if (t->proxy_connection_data.port)
