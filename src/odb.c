@@ -600,8 +600,7 @@ static void odb_free(git_odb *db)
 		backend_internal *internal = git_vector_get(&db->backends, i);
 		git_odb_backend *backend = internal->backend;
 
-		if (backend->free) backend->free(backend);
-		else git__free(backend);
+		backend->free(backend);
 
 		git__free(internal);
 	}
