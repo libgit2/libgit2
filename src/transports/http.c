@@ -10,6 +10,7 @@
 #include "http_parser.h"
 #include "buffer.h"
 #include "netops.h"
+#include "global.h"
 #include "remote.h"
 #include "smart.h"
 #include "auth.h"
@@ -186,6 +187,16 @@ static int apply_credentials(git_buf *buf, http_subtransport *t)
 	return context->next_token(buf, context, cred);
 }
 
+static const char *user_agent(void)
+{
+	const char *custom = git_libgit2__user_agent();
+
+	if (custom)
+		return custom;
+
+	return "libgit2 " LIBGIT2_VERSION;
+}
+
 static int gen_request(
 	git_buf *buf,
 	http_stream *s,
@@ -197,7 +208,7 @@ static int gen_request(
 
 	git_buf_printf(buf, "%s %s%s HTTP/1.1\r\n", s->verb, path, s->service_url);
 
-	git_buf_puts(buf, "User-Agent: git/1.0 (libgit2 " LIBGIT2_VERSION ")\r\n");
+	git_buf_printf(buf, "User-Agent: git/1.0 (%s)\r\n", user_agent());
 	git_buf_printf(buf, "Host: %s\r\n", t->connection_data.host);
 
 	if (s->chunked || content_length > 0) {
