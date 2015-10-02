@@ -73,6 +73,12 @@ typedef struct {
 	 * to disallow it or a negative value to indicate an error.
 	 */
         git_transport_certificate_check_cb certificate_check;
+
+	/**
+	 * Payload to be provided to the credentials and certificate
+	 * check callbacks.
+	 */
+	void *payload;
 } git_proxy_options;
 
 #define GIT_PROXY_OPTIONS_VERSION 1
