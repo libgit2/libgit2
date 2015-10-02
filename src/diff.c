@@ -79,7 +79,7 @@ static bool diff_pathspec_match(
 	git_diff *diff,
 	const git_index_entry *entry)
 {
-	bool disable_pathspec_match = 
+	bool disable_pathspec_match =
 		DIFF_FLAG_IS_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH);
 
 	/* If we're disabling fnmatch, then the iterator has already applied
@@ -703,6 +703,31 @@ static bool diff_time_eq(
 		(!use_nanos || a->nanoseconds == b->nanoseconds);
 }
 
+/*
+ * Test if the given index time is newer than the given existing index entry.
+ * If the timestamps are exactly equivalent, then the given index time is
+ * considered "racily newer" than the existing index entry.
+ */
+static bool diff_newer_than_index(
+	const git_index_time *a, const git_index *b, bool use_nanos)
+{
+	bool is_newer = false;
+
+	if(!b)
+		return false;
+
+	is_newer = is_newer || (a->seconds > (int32_t) b->stamp.mtime.tv_sec);
+	is_newer = is_newer || (!use_nanos &&
+		(a->seconds == (int32_t) b->stamp.mtime.tv_sec));
+	if(use_nanos)
+	{
+		is_newer = is_newer || ((a->seconds == (int32_t) b->stamp.mtime.tv_sec) &&
+			(a->nanoseconds >= (uint32_t) b->stamp.mtime.tv_nsec));
+	}
+
+	return is_newer;
+}
+
 typedef struct {
 	git_repository *repo;
 	git_iterator *old_iter;
@@ -864,10 +889,7 @@ static int maybe_modified(
 			oitem->ino != nitem->ino ||
 			oitem->uid != nitem->uid ||
 			oitem->gid != nitem->gid ||
-			(index &&
-			 ((nitem->mtime.seconds > (int32_t) index->stamp.mtime.tv_sec) ||
-			   ((nitem->mtime.seconds == (int32_t) index->stamp.mtime.tv_sec) &&
-			     (nitem->mtime.nanoseconds >= (uint32_t) index->stamp.mtime.tv_nsec)))))
+			diff_newer_than_index(&nitem->mtime, index, use_nanos))
 		{
 			status = GIT_DELTA_MODIFIED;
 			modified_uncertain = true;
