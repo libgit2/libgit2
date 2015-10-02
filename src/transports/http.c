@@ -193,6 +193,7 @@ static int gen_request(
 {
 	http_subtransport *t = OWNING_SUBTRANSPORT(s);
 	const char *path = t->connection_data.path ? t->connection_data.path : "/";
+	size_t i;
 
 	git_buf_printf(buf, "%s %s%s HTTP/1.1\r\n", s->verb, path, s->service_url);
 
@@ -209,6 +210,11 @@ static int gen_request(
 			git_buf_printf(buf, "Content-Length: %"PRIuZ "\r\n", content_length);
 	} else
 		git_buf_puts(buf, "Accept: */*\r\n");
+
+	for (i = 0; i < t->owner->custom_headers.count; i++) {
+		if (t->owner->custom_headers.strings[i])
+			git_buf_printf(buf, "%s\r\n", t->owner->custom_headers.strings[i]);
+	}
 
 	/* Apply credentials to the request */
 	if (apply_credentials(buf, t) < 0)

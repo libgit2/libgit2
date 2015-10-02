@@ -77,5 +77,10 @@ void test_index_rename__casechanging(void)
 		cl_assert_equal_i(1, git_index_entrycount(index));
 	else
 		cl_assert_equal_i(2, git_index_entrycount(index));
+
+	git_index_free(index);
+	git_repository_free(repo);
+
+	cl_fixture_cleanup("rename");
 }
 

@@ -66,6 +66,84 @@ static int git_smart__set_callbacks(
 	return 0;
 }
 
+static int http_header_name_length(const char *http_header)
+{
+	const char *colon = strchr(http_header, ':');
+	if (!colon)
+		return 0;
+	return colon - http_header;
+}
+
+static bool is_malformed_http_header(const char *http_header)
+{
+	const char *c;
+	int name_len;
+
+	// Disallow \r and \n
+	c = strchr(http_header, '\r');
+	if (c)
+		return true;
+	c = strchr(http_header, '\n');
+	if (c)
+		return true;
+
+	// Require a header name followed by :
+	name_len = http_header_name_length(http_header);
+	if (name_len < 1)
+		return true;
+
+	return false;
+}
+
+static char *forbidden_custom_headers[] = {
+	"User-Agent",
+	"Host",
+	"Accept",
+	"Content-Type",
+	"Transfer-Encoding",
+	"Content-Length",
+};
+
+static bool is_forbidden_custom_header(const char *custom_header)
+{
+	unsigned long i;
+	int name_len = http_header_name_length(custom_header);
+
+	// Disallow headers that we set
+	for (i = 0; i < ARRAY_SIZE(forbidden_custom_headers); i++)
+		if (strncmp(forbidden_custom_headers[i], custom_header, name_len) == 0)
+			return true;
+
+	return false;
+}
+
+static int git_smart__set_custom_headers(
+	git_transport *transport,
+	const git_strarray *custom_headers)
+{
+	transport_smart *t = (transport_smart *)transport;
+	size_t i;
+
+	if (t->custom_headers.count)
+		git_strarray_free(&t->custom_headers);
+
+	if (!custom_headers)
+		return 0;
+
+	for (i = 0; i < custom_headers->count; i++) {
+		if (is_malformed_http_header(custom_headers->strings[i])) {
+			giterr_set(GITERR_INVALID, "custom HTTP header '%s' is malformed", custom_headers->strings[i]);
+			return -1;
+		}
+		if (is_forbidden_custom_header(custom_headers->strings[i])) {
+			giterr_set(GITERR_INVALID, "custom HTTP header '%s' is already set by libgit2", custom_headers->strings[i]);
+			return -1;
+		}
+	}
+
+	return git_strarray_copy(&t->custom_headers, custom_headers);
+}
+
 int git_smart__update_heads(transport_smart *t, git_vector *symrefs)
 {
 	size_t i;
@@ -362,6 +440,8 @@ static void git_smart__free(git_transport *transport)
 
 	git_vector_free(refs);
 
+	git_strarray_free(&t->custom_headers);
+
 	git__free(t);
 }
 
@@ -399,6 +479,7 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 
 	t->parent.version = GIT_TRANSPORT_VERSION;
 	t->parent.set_callbacks = git_smart__set_callbacks;
+	t->parent.set_custom_headers = git_smart__set_custom_headers;
 	t->parent.connect = git_smart__connect;
 	t->parent.close = git_smart__close;
 	t->parent.free = git_smart__free;

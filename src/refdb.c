@@ -61,12 +61,8 @@ int git_refdb_open(git_refdb **out, git_repository *repo)
 
 static void refdb_free_backend(git_refdb *db)
 {
-	if (db->backend) {
-		if (db->backend->free)
-			db->backend->free(db->backend);
-		else
-			git__free(db->backend);
-	}
+	if (db->backend)
+		db->backend->free(db->backend);
 }
 
 int git_refdb_set_backend(git_refdb *db, git_refdb_backend *backend)

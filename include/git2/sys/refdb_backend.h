@@ -130,8 +130,8 @@ struct git_refdb_backend {
 	int (*ensure_log)(git_refdb_backend *backend, const char *refname);
 
 	/**
-	 * Frees any resources held by the refdb.  A refdb implementation may
-	 * provide this function; if it is not provided, nothing will be done.
+	 * Frees any resources held by the refdb (including the `git_refdb_backend`
+	 * itself). A refdb backend implementation must provide this function.
 	 */
 	void (*free)(git_refdb_backend *backend);
 

@@ -241,9 +241,10 @@ GIT_EXTERN(const git_refspec *)git_remote_get_refspec(const git_remote *remote, 
  * @param direction GIT_DIRECTION_FETCH if you want to fetch or
  * GIT_DIRECTION_PUSH if you want to push
  * @param callbacks the callbacks to use for this connection
+ * @param custom_headers extra HTTP headers to use in this connection
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_remote_connect(git_remote *remote, git_direction direction, const git_remote_callbacks *callbacks);
+GIT_EXTERN(int) git_remote_connect(git_remote *remote, git_direction direction, const git_remote_callbacks *callbacks, const git_strarray *custom_headers);
 
 /**
  * Get the remote repository's reference advertisement list
@@ -546,6 +547,11 @@ typedef struct {
 	 * The default is to auto-follow tags.
 	 */
 	git_remote_autotag_option_t download_tags;
+
+	/**
+	 * Extra headers for this fetch operation
+	 */
+	git_strarray custom_headers;
 } git_fetch_options;
 
 #define GIT_FETCH_OPTIONS_VERSION 1
@@ -585,6 +591,11 @@ typedef struct {
 	 * Callbacks to use for this push operation
 	 */
 	git_remote_callbacks callbacks;
+
+	/**
+	 * Extra headers for this push operation
+	 */
+	git_strarray custom_headers;
 } git_push_options;
 
 #define GIT_PUSH_OPTIONS_VERSION 1

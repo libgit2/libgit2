@@ -40,6 +40,11 @@ struct git_transport {
 		git_transport_certificate_check_cb certificate_check_cb,
 		void *payload);
 
+	/* Set custom headers for HTTP requests */
+	int (*set_custom_headers)(
+		git_transport *transport,
+		const git_strarray *custom_headers);
+
 	/* Connect the transport to the remote repository, using the given
 	 * direction. */
 	int (*connect)(

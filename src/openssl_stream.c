@@ -302,6 +302,7 @@ cert_fail_name:
 typedef struct {
 	git_stream parent;
 	git_stream *io;
+	bool connected;
 	char *host;
 	SSL *ssl;
 	git_cert_x509 cert_info;
@@ -317,6 +318,8 @@ int openssl_connect(git_stream *stream)
 
 	if ((ret = git_stream_connect(st->io)) < 0)
 		return ret;
+
+	st->connected = true;
 
 	bio = BIO_new(&git_stream_bio_method);
 	GITERR_CHECK_ALLOC(bio);
@@ -406,8 +409,10 @@ int openssl_close(git_stream *stream)
 	openssl_stream *st = (openssl_stream *) stream;
 	int ret;
 
-	if ((ret = ssl_teardown(st->ssl)) < 0)
+	if (st->connected && (ret = ssl_teardown(st->ssl)) < 0)
 		return -1;
+
+	st->connected = false;
 
 	return git_stream_close(st->io);
 }

@@ -38,6 +38,7 @@ struct git_push {
 
 	/* options */
 	unsigned pb_parallelism;
+	const git_strarray *custom_headers;
 };
 
 /**

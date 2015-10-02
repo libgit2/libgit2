@@ -96,7 +96,8 @@ void test_diff_binary__add(void)
 		"Kc${Nk-~s>u4FC%O\n"
 		"\n" \
 		"literal 0\n" \
-		"Hc$@<O00001\n";
+		"Hc$@<O00001\n" \
+		"\n";
 
 	opts.flags = GIT_DIFF_SHOW_BINARY;
 	opts.id_abbrev = GIT_OID_HEXSZ;
@@ -136,7 +137,8 @@ void test_diff_binary__modify(void)
 		"Mc${NkU}WL~000&M4gdfE\n" \
 		"\n" \
 		"literal 3\n" \
-		"Kc${Nk-~s>u4FC%O\n";
+		"Kc${Nk-~s>u4FC%O\n" \
+		"\n";
 
 	opts.flags = GIT_DIFF_SHOW_BINARY;
 
@@ -177,7 +179,8 @@ void test_diff_binary__delete(void)
 		"Hc$@<O00001\n" \
 		"\n" \
 		"literal 3\n" \
-		"Kc${Nk-~s>u4FC%O\n";
+		"Kc${Nk-~s>u4FC%O\n" \
+		"\n";
 
 	opts.flags = GIT_DIFF_SHOW_BINARY;
 	opts.id_abbrev = GIT_OID_HEXSZ;
@@ -208,7 +211,8 @@ void test_diff_binary__delta(void)
 		"delta 198\n" \
 		"zc$}LmI8{(0BqLQJI6p64AwNwaIJGP_Pr*5}Br~;mqJ$<Jl;sX*mF<MGCYv&*L7AHu\n" \
 		"zGA1*^gt?gYVN82wTbPO_W)+x<&1+cP;HrPHR>PQ;Y(X&QMK*C5^Br3bjG4d=XI^5@\n" \
-		"JfH567LIF3FM2!Fd\n";
+		"JfH567LIF3FM2!Fd\n" \
+		"\n";
 
 	opts.flags = GIT_DIFF_SHOW_BINARY | GIT_DIFF_FORCE_BINARY;
 	opts.id_abbrev = GIT_OID_HEXSZ;
@@ -249,7 +253,8 @@ void test_diff_binary__delta_append(void)
 		"nc%1vf+QYWt3zLL@hC)e3Vu?a>QDRl4f_G*?PG(-ZA}<#J$+QbW\n" \
 		"\n" \
 		"delta 7\n" \
-		"Oc%18D`@*{63ljhg(E~C7\n";
+		"Oc%18D`@*{63ljhg(E~C7\n" \
+		"\n";
 
 	opts.flags = GIT_DIFF_SHOW_BINARY | GIT_DIFF_FORCE_BINARY;
 	opts.id_abbrev = GIT_OID_HEXSZ;
@@ -314,7 +319,8 @@ void test_diff_binary__index_to_workdir(void)
 		"nc%1vf+QYWt3zLL@hC)e3Vu?a>QDRl4f_G*?PG(-ZA}<#J$+QbW\n" \
 		"\n" \
 		"delta 7\n" \
-		"Oc%18D`@*{63ljhg(E~C7\n";
+		"Oc%18D`@*{63ljhg(E~C7\n" \
+		"\n";
 
 	opts.flags = GIT_DIFF_SHOW_BINARY | GIT_DIFF_FORCE_BINARY;
 	opts.id_abbrev = GIT_OID_HEXSZ;
@@ -379,7 +385,8 @@ void test_diff_binary__print_patch_from_diff(void)
 		"nc%1vf+QYWt3zLL@hC)e3Vu?a>QDRl4f_G*?PG(-ZA}<#J$+QbW\n" \
 		"\n" \
 		"delta 7\n" \
-		"Oc%18D`@*{63ljhg(E~C7\n";
+		"Oc%18D`@*{63ljhg(E~C7\n" \
+		"\n";
 
 	opts.flags = GIT_DIFF_SHOW_BINARY | GIT_DIFF_FORCE_BINARY;
 	opts.id_abbrev = GIT_OID_HEXSZ;
