@@ -15,6 +15,7 @@
 #include "smart.h"
 #include "remote.h"
 #include "repository.h"
+#include "global.h"
 
 #include <wincrypt.h>
 #include <winhttp.h>
@@ -567,12 +568,28 @@ static int winhttp_close_connection(winhttp_subtransport *t)
 	return ret;
 }
 
+static int user_agent(git_buf *ua)
+{
+	const char *custom = git_libgit2__user_agent();
+
+	git_buf_clear(ua);
+	git_buf_PUTS(ua, "git/1.0 (");
+
+	if (custom)
+		git_buf_puts(ua, custom);
+	else
+		git_buf_PUTS(ua, "libgit2 " LIBGIT2_VERSION);
+
+	return git_buf_putc(ua, ')');
+}
+
 static int winhttp_connect(
 	winhttp_subtransport *t)
 {
-	wchar_t *ua = L"git/1.0 (libgit2 " WIDEN(LIBGIT2_VERSION) L")";
 	wchar_t *wide_host;
 	int32_t port;
+	wchar_t *wide_ua;
+	git_buf ua = GIT_BUF_INIT;
 	int error = -1;
 	int default_timeout = TIMEOUT_INFINITE;
 	int default_connect_timeout = DEFAULT_CONNECT_TIMEOUT;
@@ -590,9 +607,23 @@ static int winhttp_connect(
 		return -1;
 	}
 
+	if ((error = user_agent(&ua)) < 0) {
+		git__free(wide_host);
+		return error;
+	}
+
+	if (git__utf8_to_16_alloc(&wide_ua, git_buf_cstr(&ua)) < 0) {
+		giterr_set(GITERR_OS, "Unable to convert host to wide characters");
+		git__free(wide_host);
+		git_buf_free(&ua);
+		return -1;
+	}
+
+	git_buf_free(&ua);
+
 	/* Establish session */
 	t->session = WinHttpOpen(
-		ua,
+		wide_ua,
 		WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
 		WINHTTP_NO_PROXY_NAME,
 		WINHTTP_NO_PROXY_BYPASS,
@@ -628,6 +659,7 @@ on_error:
 		winhttp_close_connection(t);
 
 	git__free(wide_host);
+	git__free(wide_ua);
 
 	return error;
 }
