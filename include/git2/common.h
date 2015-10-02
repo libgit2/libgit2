@@ -145,6 +145,7 @@ typedef enum {
 	GIT_OPT_GET_TEMPLATE_PATH,
 	GIT_OPT_SET_TEMPLATE_PATH,
 	GIT_OPT_SET_SSL_CERT_LOCATIONS,
+	GIT_OPT_SET_USER_AGENT,
 } git_libgit2_opt_t;
 
 /**
@@ -239,6 +240,8 @@ typedef enum {
  *		>   certificates, one per file.
  *		>
  * 		> Either parameter may be `NULL`, but not both.
+ *
+ *	* opts(GIT_OPT_SET_USER_AGENT, const char *user_agent)
  *
  * @param option Option key
  * @param ... value to set the option
