@@ -1081,6 +1081,9 @@ void git_futils_filestamp_set_from_stat(
 
 	if (st) {
 		stamp->mtime = *statmtime;
+#if !defined(GIT_USE_NSEC)
+		stamp->mtime.tv_nsec = 0;
+#endif
 		stamp->size  = (git_off_t)st->st_size;
 		stamp->ino   = (unsigned int)st->st_ino;
 	} else {
