@@ -18,6 +18,7 @@
 #include "git2/submodule.h"
 #include "git2/sys/index.h"
 #include "git2/sys/filter.h"
+#include "git2/merge.h"
 
 #include "refs.h"
 #include "repository.h"
@@ -27,7 +28,7 @@
 #include "diff.h"
 #include "pathspec.h"
 #include "buf_text.h"
-#include "merge_file.h"
+#include "diff_xdiff.h"
 #include "path.h"
 #include "attr.h"
 #include "pool.h"

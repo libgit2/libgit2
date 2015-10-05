@@ -20,7 +20,6 @@
 #include "diff.h"
 #include "checkout.h"
 #include "tree.h"
-#include "merge_file.h"
 #include "blob.h"
 #include "oid.h"
 #include "index.h"
@@ -60,12 +59,6 @@ struct merge_diff_df_data {
 	const char *prev_path;
 	git_merge_diff *prev_conflict;
 };
-
-GIT_INLINE(int) merge_diff_detect_binary(
-	bool *binary_out,
-	git_repository *repo,
-	const git_merge_diff *conflict);
-
 
 /* Merge base computation */
 
@@ -668,7 +661,6 @@ static int merge_conflict_resolve_automerge(
 	git_odb *odb = NULL;
 	git_oid automerge_oid;
 	int error = 0;
-	bool binary = false;
 
 	assert(resolved && diff_list && conflict);
 
@@ -701,12 +693,6 @@ static int merge_conflict_resolve_automerge(
 	if ((conflict->our_status & GIT_DELTA_RENAMED) == GIT_DELTA_RENAMED &&
 		(conflict->their_status & GIT_DELTA_RENAMED) == GIT_DELTA_RENAMED &&
 		strcmp(conflict->ancestor_entry.path, conflict->their_entry.path) != 0)
-		return 0;
-
-	/* Reject binary conflicts */
-	if ((error = merge_diff_detect_binary(&binary, diff_list->repo, conflict)) < 0)
-		return error;
-	if (binary)
 		return 0;
 
 	ancestor = GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->ancestor_entry) ?
@@ -1312,48 +1298,6 @@ GIT_INLINE(int) merge_diff_detect_type(
 		conflict->type = GIT_MERGE_DIFF_NONE;
 
 	return 0;
-}
-
-GIT_INLINE(int) merge_diff_detect_binary(
-	bool *binary_out,
-	git_repository *repo,
-	const git_merge_diff *conflict)
-{
-	git_blob *ancestor_blob = NULL, *our_blob = NULL, *their_blob = NULL;
-	int error = 0;
-	bool binary = false;
-
-	if (GIT_MERGE_INDEX_ENTRY_ISFILE(conflict->ancestor_entry)) {
-		if ((error = git_blob_lookup(&ancestor_blob, repo, &conflict->ancestor_entry.id)) < 0)
-			goto done;
-
-		binary = git_blob_is_binary(ancestor_blob);
-	}
-
-	if (!binary &&
-		GIT_MERGE_INDEX_ENTRY_ISFILE(conflict->our_entry)) {
-		if ((error = git_blob_lookup(&our_blob, repo, &conflict->our_entry.id)) < 0)
-			goto done;
-
-		binary = git_blob_is_binary(our_blob);
-	}
-
-	if (!binary &&
-		GIT_MERGE_INDEX_ENTRY_ISFILE(conflict->their_entry)) {
-		if ((error = git_blob_lookup(&their_blob, repo, &conflict->their_entry.id)) < 0)
-			goto done;
-
-		binary = git_blob_is_binary(their_blob);
-	}
-
-	*binary_out = binary;
-
-done:
-	git_blob_free(ancestor_blob);
-	git_blob_free(our_blob);
-	git_blob_free(their_blob);
-
-	return error;
 }
 
 GIT_INLINE(int) index_entry_dup_pool(
