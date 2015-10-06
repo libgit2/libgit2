@@ -575,7 +575,12 @@ INSTALL(FILES include/git2.h DESTINATION ${INCLUDE_INSTALL_DIR} )
 
 # Tests
 IF (BUILD_CLAR)
-	FIND_PACKAGE(PythonInterp REQUIRED)
+	FIND_PACKAGE(PythonInterp)
+
+	IF(NOT PYTHONINTERP_FOUND)
+	  MESSAGE(FATAL_ERROR "Could not find a python interpeter, which is needed to build the tests. "
+	    "Make sure python is available, or pass -DBUILD_CLAR=OFF to skip building the tests")
+	ENDIF()
 
 	SET(CLAR_FIXTURES "${CMAKE_CURRENT_SOURCE_DIR}/tests/resources/")
 	SET(CLAR_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tests")
