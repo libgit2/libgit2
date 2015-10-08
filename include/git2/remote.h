@@ -365,6 +365,13 @@ typedef struct {
 typedef int (*git_push_negotiation)(const git_push_update **updates, size_t len, void *payload);
 
 /**
+ * @param heads an array containing the remote heads got from the remote.
+ * @param len number of elements in `heads`.
+ * @param payload Payload provided by the caller.
+ */
+typedef int (*git_fetch_negotiation)(const git_remote_head **heads, size_t len, void *payload);
+
+/**
  * The callback settings structure
  *
  * Set the callbacks to be called by the remote when informing the user
@@ -438,10 +445,17 @@ struct git_remote_callbacks {
 	int (*push_update_reference)(const char *refname, const char *status, void *data);
 
 	/**
-	 * Called once between the negotiation step and the upload. It
+	 * Called once between the push negotiation step and the upload. It
 	 * provides information about what updates will be performed.
 	 */
 	git_push_negotiation push_negotiation;
+
+	/**
+	 * Called once between the fetch negotiation step and the download.
+	 * It provides information about what heads will be fetched.
+	 *
+	 */
+        git_fetch_negotiation fetch_negotiation;
 
 	/**
 	 * Create the transport to use for this operation. Leave NULL
