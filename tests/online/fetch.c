@@ -82,11 +82,11 @@ void test_online_fetch__fetch_twice(void)
 	git_remote *remote;
 	cl_git_pass(git_remote_create(&remote, _repo, "test", "git://github.com/libgit2/TestGitRepository.git"));
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL));
-	cl_git_pass(git_remote_download(remote, NULL, NULL));
+	cl_git_pass(git_remote_download(remote, NULL, NULL, GIT_REMOTE_DOWNLOAD_NORMAL));
     	git_remote_disconnect(remote);
     	
 	git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL);
-	cl_git_pass(git_remote_download(remote, NULL, NULL));
+	cl_git_pass(git_remote_download(remote, NULL, NULL, GIT_REMOTE_DOWNLOAD_NORMAL));
 	git_remote_disconnect(remote);
 	
 	git_remote_free(remote);
@@ -123,7 +123,7 @@ void test_online_fetch__doesnt_retrieve_a_pack_when_the_repository_is_up_to_date
 
 	options.callbacks.transfer_progress = &transferProgressCallback;
 	options.callbacks.payload = &invoked;
-	cl_git_pass(git_remote_download(remote, NULL, &options));
+	cl_git_pass(git_remote_download(remote, NULL, &options, GIT_REMOTE_DOWNLOAD_NORMAL));
 
 	cl_assert_equal_i(false, invoked);
 
@@ -156,7 +156,7 @@ void test_online_fetch__can_cancel(void)
 	options.callbacks.payload = &bytes_received;
 
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL));
-	cl_git_fail_with(git_remote_download(remote, NULL, &options), -4321);
+	cl_git_fail_with(git_remote_download(remote, NULL, &options, GIT_REMOTE_DOWNLOAD_NORMAL), -4321);
 	git_remote_disconnect(remote);
 	git_remote_free(remote);
 }

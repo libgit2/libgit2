@@ -878,7 +878,7 @@ static int ls_to_vector(git_vector *out, git_remote *remote)
 	return 0;
 }
 
-int git_remote_download(git_remote *remote, const git_strarray *refspecs, const git_fetch_options *opts)
+int git_remote_download(git_remote *remote, const git_strarray *refspecs, const git_fetch_options *opts, git_remote_download_option_t dl_opt)
 {
 	int error = -1;
 	size_t i;
@@ -892,52 +892,57 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs, const 
 		cbs = &opts->callbacks;
 	}
 
-	if (!git_remote_connected(remote) &&
-	    (error = git_remote_connect(remote, GIT_DIRECTION_FETCH, cbs)) < 0)
-		goto on_error;
+	if (dl_opt == GIT_REMOTE_DOWNLOAD_NORMAL || dl_opt == GIT_REMOTE_DOWNLOAD_NEGOTIATE_ONLY) {
+		if (!git_remote_connected(remote) &&
+		    (error = git_remote_connect(remote, GIT_DIRECTION_FETCH, cbs)) < 0)
+			goto on_error;
 
-	if (ls_to_vector(&refs, remote) < 0)
-		return -1;
+		if (ls_to_vector(&refs, remote) < 0)
+			return -1;
 
-	if ((git_vector_init(&specs, 0, NULL)) < 0)
-		goto on_error;
+		if ((git_vector_init(&specs, 0, NULL)) < 0)
+			goto on_error;
 
-	remote->passed_refspecs = 0;
-	if (!refspecs || !refspecs->count) {
-		to_active = &remote->refspecs;
-	} else {
-		for (i = 0; i < refspecs->count; i++) {
-			if ((error = add_refspec_to(&specs, refspecs->strings[i], true)) < 0)
-				goto on_error;
+		remote->passed_refspecs = 0;
+		if (!refspecs || !refspecs->count) {
+			to_active = &remote->refspecs;
+		} else {
+			for (i = 0; i < refspecs->count; i++) {
+				if ((error = add_refspec_to(&specs, refspecs->strings[i], true)) < 0)
+					goto on_error;
+			}
+
+			to_active = &specs;
+			remote->passed_refspecs = 1;
 		}
 
-		to_active = &specs;
-		remote->passed_refspecs = 1;
+		free_refspecs(&remote->passive_refspecs);
+		if ((error = dwim_refspecs(&remote->passive_refspecs, &remote->refspecs, &refs)) < 0)
+			goto on_error;
+
+		free_refspecs(&remote->active_refspecs);
+		error = dwim_refspecs(&remote->active_refspecs, to_active, &refs);
+
+		git_vector_free(&refs);
+		free_refspecs(&specs);
+		git_vector_free(&specs);
+
+		if (error < 0)
+			return error;
+
+		if (remote->push) {
+			git_push_free(remote->push);
+			remote->push = NULL;
+		}
+
+		if ((error = git_fetch_negotiate(remote, opts)) < 0)
+			return error;
 	}
 
-	free_refspecs(&remote->passive_refspecs);
-	if ((error = dwim_refspecs(&remote->passive_refspecs, &remote->refspecs, &refs)) < 0)
-		goto on_error;
+	if (dl_opt != GIT_REMOTE_DOWNLOAD_NEGOTIATE_ONLY)
+		return git_fetch_download_pack(remote, cbs);
 
-	free_refspecs(&remote->active_refspecs);
-	error = dwim_refspecs(&remote->active_refspecs, to_active, &refs);
-
-	git_vector_free(&refs);
-	free_refspecs(&specs);
-	git_vector_free(&specs);
-
-	if (error < 0)
-		return error;
-
-	if (remote->push) {
-		git_push_free(remote->push);
-		remote->push = NULL;
-	}
-
-	if ((error = git_fetch_negotiate(remote, opts)) < 0)
-		return error;
-
-	return git_fetch_download_pack(remote, cbs);
+	return GIT_OK;
 
 on_error:
 	git_vector_free(&refs);
@@ -969,7 +974,7 @@ int git_remote_fetch(
 	if ((error = git_remote_connect(remote, GIT_DIRECTION_FETCH, cbs)) != 0)
 		return error;
 
-	error = git_remote_download(remote, refspecs, opts);
+	error = git_remote_download(remote, refspecs, opts, GIT_REMOTE_DOWNLOAD_NORMAL);
 
 	/* We don't need to be connected anymore */
 	git_remote_disconnect(remote);

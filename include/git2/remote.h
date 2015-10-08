@@ -511,6 +511,21 @@ typedef enum {
 	GIT_REMOTE_DOWNLOAD_TAGS_ALL,
 } git_remote_autotag_option_t;
 
+typedef enum {
+	/**
+         * Normal download: negotiate and download pack.
+	 */
+	GIT_REMOTE_DOWNLOAD_NORMAL = 0,
+	/**
+	 * Negotiate only.
+	 */
+	GIT_REMOTE_DOWNLOAD_NEGOTIATE_ONLY,
+	/**
+	 * Download pack only assuming already connected and negotiated.
+	 */
+	GIT_REMOTE_DOWNLOAD_DOWNLOAD_PACK_ONLY,
+} git_remote_download_option_t;
+
 /**
  * Fetch options structure.
  *
@@ -546,6 +561,7 @@ typedef struct {
 	 * The default is to auto-follow tags.
 	 */
 	git_remote_autotag_option_t download_tags;
+
 } git_fetch_options;
 
 #define GIT_FETCH_OPTIONS_VERSION 1
@@ -619,7 +635,7 @@ GIT_EXTERN(int) git_push_init_options(
  * @param opts the options to use for this fetch
  * @return 0 or an error code
  */
- GIT_EXTERN(int) git_remote_download(git_remote *remote, const git_strarray *refspecs, const git_fetch_options *opts);
+ GIT_EXTERN(int) git_remote_download(git_remote *remote, const git_strarray *refspecs, const git_fetch_options *opts, git_remote_download_option_t dl_opt);
 
 /**
  * Create a packfile and send it to the server
