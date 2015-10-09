@@ -436,17 +436,23 @@ const char *git_commit_summary(git_commit *commit)
 
 	if (!commit->summary) {
 		for (msg = git_commit_message(commit), space = NULL; *msg; ++msg) {
-			if (msg[0] == '\n' && (!msg[1] || msg[1] == '\n'))
+			char next_character = msg[0];
+			// stop processing at the end of the first paragraph
+			if (next_character == '\n' && (!msg[1] || msg[1] == '\n'))
 				break;
-			else if (msg[0] == '\n')
-				git_buf_putc(&summary, ' ');
-			else if (git__isspace(msg[0]))
+			// record the beginning of contiguous whitespace runs
+			else if (git__isspace_nonlf(next_character))
 				space = space ? space : msg;
-			else if (space) {
-				git_buf_put(&summary, space, (msg - space) + 1);
-				space = NULL;
-			} else
-				git_buf_putc(&summary, *msg);
+			// the next character is non-space
+			else {
+				// copy any recorded whitespace
+				if (space) {
+					git_buf_put(&summary, space, (msg - space));
+					space = NULL;
+				}
+				// copy the next character, but convert newlines to spaces
+				git_buf_putc(&summary, next_character == '\n' ? ' ' : next_character);
+			}
 		}
 
 		commit->summary = git_buf_detach(&summary);
