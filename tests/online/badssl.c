@@ -4,7 +4,7 @@
 
 static git_repository *g_repo;
 
-#if defined(GIT_OPENSSL) || defined(GIT_WINHTTP) || defined(GIT_SECURE_TRANSPORT)
+#if defined(GIT_OPENSSL) || defined(GIT_WINHTTP) || defined(GIT_SECURE_TRANSPORT) || defined(GIT_MBEDTLS)
 
 void test_online_badssl__expired(void)
 {
