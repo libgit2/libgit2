@@ -28,6 +28,23 @@ static git_mutex *openssl_locks;
 # endif
 #endif
 
+#ifdef GIT_MBEDTLS
+#include "mbedtls/config.h"
+#include "mbedtls/platform.h"
+#include "mbedtls/net.h"
+#include "mbedtls/debug.h"
+#include "mbedtls/ssl.h"
+#include "mbedtls/entropy.h"
+#include "mbedtls/ctr_drbg.h"
+#include "mbedtls/error.h"
+#include "mbedtls/certs.h"
+mbedtls_ssl_config *git__ssl_conf;
+mbedtls_entropy_context *mbedtls_entropy;
+# ifdef GIT_THREADS
+static git_mutex *mbedtls_locks;
+# endif
+#endif
+
 static git_global_shutdown_fn git__shutdown_callbacks[MAX_SHUTDOWN_CB];
 static git_atomic git__n_shutdown_callbacks;
 static git_atomic git__n_inits;
@@ -117,6 +134,40 @@ static void init_ssl(void)
 		git__ssl_ctx = NULL;
 	}
 #endif
+
+#ifdef GIT_MBEDTLS
+	int ret = 0;
+	mbedtls_ctr_drbg_context *ctr_drbg = NULL;
+    mbedtls_x509_crt *cacert = NULL;
+
+	// Seeding the random number generator
+	mbedtls_entropy_init(mbedtls_entropy);
+    mbedtls_ctr_drbg_init(ctr_drbg);
+	if (!ret && ( ret = mbedtls_ctr_drbg_seed(ctr_drbg,
+				mbedtls_entropy_func,
+				mbedtls_entropy, NULL, 0) ) != 0) {
+	    mbedtls_ctr_drbg_free(ctr_drbg);
+	}
+
+	// Configure TLSv1
+	if (!ret) {
+		mbedtls_ssl_config_init(git__ssl_conf);
+		if ( (ret = mbedtls_ssl_config_defaults(git__ssl_conf,
+            	    MBEDTLS_SSL_IS_CLIENT,
+                	MBEDTLS_SSL_TRANSPORT_STREAM,
+                	MBEDTLS_SSL_PRESET_DEFAULT ) ) != 0) {
+        	mbedtls_ssl_config_free(git__ssl_conf);
+        	git__ssl_conf = NULL;
+        } else {
+		    mbedtls_ssl_conf_authmode(git__ssl_conf, MBEDTLS_SSL_VERIFY_NONE);
+    		mbedtls_ssl_conf_rng(git__ssl_conf, mbedtls_ctr_drbg_random, ctr_drbg);
+
+    		// Do not load certificates, initialize later through settings
+        	mbedtls_x509_crt_init(cacert);
+    		mbedtls_ssl_conf_ca_chain(git__ssl_conf, cacert, NULL);
+        }
+    }
+#endif
 }
 
 /**
@@ -129,6 +180,18 @@ static void uninit_ssl(void)
 	if (git__ssl_ctx) {
 		SSL_CTX_free(git__ssl_ctx);
 		git__ssl_ctx = NULL;
+	}
+#endif
+#ifdef GIT_MBEDTLS
+	if (git__ssl_conf) {
+	    mbedtls_x509_crt_free(git__ssl_conf->ca_chain);
+    	mbedtls_ctr_drbg_free(git__ssl_conf->p_rng);
+		mbedtls_ssl_config_free(git__ssl_conf);
+		git__ssl_conf = NULL;
+	}
+	if (mbedtls_entropy) {
+		mbedtls_entropy_free(mbedtls_entropy);
+		mbedtls_entropy = NULL;
 	}
 #endif
 }
