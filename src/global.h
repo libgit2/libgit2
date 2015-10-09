@@ -23,6 +23,11 @@ typedef struct {
 extern SSL_CTX *git__ssl_ctx;
 #endif
 
+#ifdef GIT_MBEDTLS
+# include "mbedtls/ssl.h"
+extern mbedtls_ssl_config *git__ssl_conf;
+#endif
+
 git_global_st *git__global_state(void);
 
 extern git_mutex git__mwindow_mutex;
