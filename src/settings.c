@@ -9,6 +9,10 @@
 # include <openssl/err.h>
 #endif
 
+#ifdef GIT_MBEDTLS
+# include <mbedtls/error.h>
+#endif
+
 #include <git2.h>
 #include "common.h"
 #include "sysdir.h"
@@ -148,8 +152,25 @@ int git_libgit2_opts(int key, ...)
 				error = -1;
 			}
 		}
+#elif GIT_MBEDTLS
+		{
+			const char *file = va_arg(ap, const char *);
+			const char *path = va_arg(ap, const char *);
+			int ret = 0;
+			char errbuf[512];
+			if (!file) {
+				ret = mbedtls_x509_crt_parse_file(git__ssl_conf->ca_chain, file);
+			} else if (!path) {
+				ret = mbedtls_x509_crt_parse_path(git__ssl_conf->ca_chain, path);
+			}
+			if (ret != 0) {
+				mbedtls_strerror( ret, errbuf, 512 );
+				giterr_set(GITERR_NET, "SSL error: %d - %s", ret, errbuf);
+				error = -1;
+			}
+		}
 #else
-		giterr_set(GITERR_NET, "Cannot set certificate locations: OpenSSL is not enabled");
+		giterr_set(GITERR_NET, "Cannot set certificate locations: OpenSSL or mbedTLS is not enabled");
 		error = -1;
 #endif
 		break;
