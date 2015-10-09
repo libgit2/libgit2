@@ -88,7 +88,7 @@ IF(MSVC)
 ENDIF()
 
 IF (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-	OPTION( USE_OPENSSL                     "Link with and use openssl library"             ON )
+	OPTION( USE_OPENSSL     "Link with and use openssl library"             ON )
 ENDIF()
 
 CHECK_STRUCT_HAS_MEMBER ("struct stat" st_mtim "sys/types.h;sys/stat.h"
@@ -109,7 +109,10 @@ ELSE ()
 ENDIF()
 
 IF (HAVE_STRUCT_STAT_NSEC OR WIN32)
-	OPTION( USE_NSEC		"Care about sub-second file mtimes and ctimes"	ON  )
+	OPTION( USE_NSEC		"Care about sub-second file mtimes and ctimes"	ON )
+
+IF (NOT USE_OPENSSL)
+	OPTION( USE_MBEDTLS     "Link with and use mbedtls library"             ON )
 ENDIF()
 
 # This variable will contain the libraries we need to put into
@@ -281,6 +284,10 @@ ELSE ()
 
 	IF (NOT AMIGA AND USE_OPENSSL)
 		FIND_PACKAGE(OpenSSL)
+	ENDIF ()
+
+	IF (NOT AMIGA AND USE_MBEDTLS AND NOT USE_OPENSSL)
+		FIND_PACKAGE(mbedTLS)
 	ENDIF ()
 
 	IF (CURL_FOUND)
@@ -542,6 +549,11 @@ IF (OPENSSL_FOUND)
   SET(SSL_LIBRARIES ${OPENSSL_LIBRARIES})
 ENDIF()
 
+IF (MBEDTLS_FOUND)
+  ADD_DEFINITIONS(-DGIT_MBEDTLS)
+  INCLUDE_DIRECTORIES(${MBEDTLS_INCLUDE_DIR})
+  SET(SSL_LIBRARIES ${MBEDTLS_LIBRARIES})
+ENDIF()
 
 
 IF (THREADSAFE)
