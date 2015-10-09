@@ -154,6 +154,13 @@ void test_refs_reflog_reflog__reading_the_reflog_from_a_reference_with_no_log_re
 	git_buf_free(&subtrees_log_path);
 }
 
+void test_refs_reflog_reflog__reading_a_reflog_with_invalid_format_returns_error(void)
+{
+	git_reflog *reflog;
+
+	cl_git_fail(git_reflog_read(&reflog, g_repo, "refs/heads/extra-newline"));
+}
+
 void test_refs_reflog_reflog__cannot_write_a_moved_reflog(void)
 {
 	git_reference *master, *new_master;
