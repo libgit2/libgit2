@@ -8,7 +8,7 @@ static const char *tree_oid = "1810dff58d8a660512d4832e740f692884338ccd";
 static const char *root_commit_message = "This is a root commit\n\
    This is a root commit and should be the only one in this branch\n";
 static const char *root_reflog_message = "commit (initial): This is a root commit \
-   This is a root commit and should be the only one in this branch";
+This is a root commit and should be the only one in this branch";
 static char *head_old;
 static git_reference *head, *branch;
 static git_commit *commit;
