@@ -38,11 +38,9 @@ static git_mutex *openssl_locks;
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/error.h"
 #include "mbedtls/certs.h"
+#define CRT_LOC "/etc/ssl/certs"
 mbedtls_ssl_config *git__ssl_conf;
 mbedtls_entropy_context *mbedtls_entropy;
-# ifdef GIT_THREADS
-static git_mutex *mbedtls_locks;
-# endif
 #endif
 
 static git_global_shutdown_fn git__shutdown_callbacks[MAX_SHUTDOWN_CB];
@@ -167,13 +165,24 @@ static void init_ssl(void)
 			git__free(git__ssl_conf);
 			git__ssl_conf = NULL;
 		} else {
-			mbedtls_ssl_conf_authmode(git__ssl_conf, MBEDTLS_SSL_VERIFY_NONE);
+			mbedtls_ssl_conf_authmode(git__ssl_conf, MBEDTLS_SSL_VERIFY_REQUIRED);
 			mbedtls_ssl_conf_rng(git__ssl_conf, mbedtls_ctr_drbg_random, ctr_drbg);
 
-			// Do not load certificates, initialize later through settings
 			cacert = git__malloc(sizeof(mbedtls_x509_crt));
 			mbedtls_x509_crt_init(cacert);
-			mbedtls_ssl_conf_ca_chain(git__ssl_conf, cacert, NULL);
+			ret = mbedtls_x509_crt_parse_path(cacert, CRT_LOC);
+			if (ret) {
+				giterr_set(GITERR_SSL, "failed to load CA certificates: %d", ret);
+				mbedtls_x509_crt_free(cacert);
+				git__free(cacert);
+				mbedtls_ctr_drbg_free(ctr_drbg);
+				git__free(ctr_drbg);
+				mbedtls_ssl_config_free(git__ssl_conf);
+				git__free(git__ssl_conf);
+				git__ssl_conf = NULL;
+			} else {
+				mbedtls_ssl_conf_ca_chain(git__ssl_conf, cacert, NULL);
+			}
 		}
 	}
 #endif
