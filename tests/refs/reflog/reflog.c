@@ -157,8 +157,13 @@ void test_refs_reflog_reflog__reading_the_reflog_from_a_reference_with_no_log_re
 void test_refs_reflog_reflog__reading_a_reflog_with_invalid_format_returns_error(void)
 {
 	git_reflog *reflog;
+	git_error *error;
 
 	cl_git_fail(git_reflog_read(&reflog, g_repo, "refs/heads/extra-newline"));
+
+	error = giterr_last();
+	cl_assert(error);
+	cl_assert_equal_s("Unable to parse OID - contains invalid characters", error->message);
 }
 
 void test_refs_reflog_reflog__cannot_write_a_moved_reflog(void)
