@@ -4,12 +4,12 @@
 #  MBEDTLS_ROOT_DIR - Set this variable to the root installation of mbedTLS
 #
 # Read-Only variables
-#  MBEDTLS_FOUND - system has Iconv
-#  MBEDTLS_INCLUDE_DIR - the Iconv include directory
-#  MBEDTLS_LIBRARIES - Link these to use Iconv
+#  MBEDTLS_FOUND - system has mbedTLS
+#  MBEDTLS_INCLUDE_DIR - the mbedTLS include directory
+#  MBEDTLS_LIBRARIES - Link these to use mbedTLS
 #
 
-FIND_PATH(MBEDTLS_ROOT_DIR NAMES include/mbedtls/ssl.h)
+FIND_PATH(MBEDTLS_ROOT_DIR NAMES include/mbedtls/version.h)
 
 IF(MBEDTLS_INCLUDE_DIR AND MBEDTLS_LIBRARIES)
     # Already in cache, be silent
