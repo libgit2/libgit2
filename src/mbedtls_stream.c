@@ -10,24 +10,17 @@
 #include <ctype.h>
 
 #include "global.h"
-#include "posix.h"
 #include "stream.h"
 #include "socket_stream.h"
-#include "netops.h"
 #include "git2/transport.h"
 
 #ifdef GIT_CURL
 # include "curl_stream.h"
 #endif
 
-#ifndef GIT_WIN32
-# include <sys/types.h>
-# include <sys/socket.h>
-# include <netinet/in.h>
-#endif
-
 #include <mbedtls/ssl.h>
 #include <mbedtls/x509.h>
+#include <mbedtls/x509_crt.h>
 #include <mbedtls/error.h>
 
 static int bio_read(void *b, unsigned char *buf, size_t len)
@@ -42,21 +35,30 @@ static int bio_write(void *b, const unsigned char *buf, size_t len)
     return (int) git_stream_write(io, (const char *)buf, len, 0);
 }
 
-static int ssl_set_error(int error)
+static int ssl_set_error(mbedtls_ssl_context *ssl, int error)
 {
     char errbuf[512];
+    int ret = -1;
 
     assert(error != MBEDTLS_ERR_SSL_WANT_READ);
     assert(error != MBEDTLS_ERR_SSL_WANT_WRITE);
 
-    if (error == 0) {
-        giterr_set(GITERR_NET, "SSL error: unknown error");
-    } else {
+    if (error != 0)
         mbedtls_strerror( error, errbuf, 512 );
-        giterr_set(GITERR_NET, "SSL error: %d - %s", error, errbuf);
+
+    switch(error){
+    case 0:
+        giterr_set(GITERR_SSL, "SSL error: unknown error");
+        break;
+    case MBEDTLS_ERR_X509_CERT_VERIFY_FAILED:
+        giterr_set(GITERR_SSL, "SSL error: %x[%x] - %s", error, ssl->session_negotiate->verify_result, errbuf);
+        ret = GIT_ECERTIFICATE;
+        break;
+    default:
+        giterr_set(GITERR_SSL, "SSL error: %x - %s", error, errbuf);
     }
 
-    return -1;
+    return ret;
 }
 
 static int ssl_teardown(mbedtls_ssl_context *ssl)
@@ -65,35 +67,37 @@ static int ssl_teardown(mbedtls_ssl_context *ssl)
 
     ret = mbedtls_ssl_close_notify(ssl);
     if (ret < 0)
-        ret = ssl_set_error(ret);
+        ret = ssl_set_error(ssl, ret);
 
     mbedtls_ssl_free(ssl);
     return ret;
 }
 
+static int check_host_name(const char *name, const char *host)
+{
+    if (!strcasecmp(name, host))
+        return 0;
+
+    if (gitno__match_host(name, host) < 0)
+        return -1;
+
+    return 0;
+}
+
 static int verify_server_cert(mbedtls_ssl_context *ssl, const char *host)
 {
     const mbedtls_x509_crt *cert;
-    int flags;
-    struct in6_addr addr6;
-    struct in_addr addr4;
-    void *addr;
+    const mbedtls_x509_sequence *alts;
+    int ret, matched = -1;
+    size_t sn_size = 512;
+    char subject_name[sn_size], alt_name[sn_size];
 
-    if( ( flags = mbedtls_ssl_get_verify_result(ssl) ) != 0 )
-    {
+
+    if (( ret = mbedtls_ssl_get_verify_result(ssl) ) != 0) {
         char vrfy_buf[512];
-        mbedtls_x509_crt_verify_info( vrfy_buf, sizeof( vrfy_buf ), "  ! ", flags );
+        mbedtls_x509_crt_verify_info( vrfy_buf, sizeof( vrfy_buf ), "  ! ", ret );
         giterr_set(GITERR_SSL, "The SSL certificate is invalid: %s", vrfy_buf);
         return GIT_ECERTIFICATE;
-    }
-
-    /* Try to parse the host as an IP address to see if it is */
-    if (p_inet_pton(AF_INET, host, &addr4)) {
-        addr = &addr4;
-    } else {
-        if(p_inet_pton(AF_INET6, host, &addr6)) {
-            addr = &addr6;
-        }
     }
 
     cert = mbedtls_ssl_get_peer_cert(ssl);
@@ -103,19 +107,44 @@ static int verify_server_cert(mbedtls_ssl_context *ssl, const char *host)
     }
 
     /* Check the alternative names */
-    //TODO: cert->subject_alt_names
+    alts = &cert->subject_alt_names;
+    while (alts != NULL && matched != 1) {
+        // Buffer is too small
+        if( alts->buf.len >= sn_size )
+            goto on_error;
+
+        memcpy(alt_name, alts->buf.p, alts->buf.len);
+        alt_name[alts->buf.len] = '\0';
+
+        if (!memchr(alt_name, '\0', alts->buf.len)) {
+            if (check_host_name(alt_name, host) < 0)
+                matched = 0;
+            else
+                matched = 1;
+        }
+
+        alts = alts->next;
+    }
+    if (matched == 0)
+        goto cert_fail_name;
+
+    if (matched == 1)
+        return 0;
 
     /* If no alternative names are available, check the common name */
-    /*TODO
-    mbedtls_x509_name peer_name = cert->subject;
-    if (peer_name == NULL)
+    ret = mbedtls_x509_dn_gets(subject_name, sn_size, &cert->subject);
+    if (ret == 0)
         goto on_error;
-    */
+    if (memchr(subject_name, '\0', ret))
+        goto cert_fail_name;
+
+    if (check_host_name(subject_name, host) < 0)
+        goto cert_fail_name;
 
     return 0;
 
 on_error:
-    return ssl_set_error(0);
+    return ssl_set_error(ssl, 0);
 
 cert_fail_name:
     giterr_set(GITERR_SSL, "hostname does not match certificate");
@@ -142,15 +171,12 @@ int mbedtls_connect(git_stream *stream)
 
     st->connected = true;
 
+    mbedtls_ssl_set_hostname(st->ssl, st->host);
+
     mbedtls_ssl_set_bio(st->ssl, st->io, bio_write, bio_read, NULL);
 
-    /* specify the host in case SNI is needed */
-#ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
-    mbedtls_ssl_set_hostname(st->ssl, st->host);
-#endif
-
     if ((ret = mbedtls_ssl_handshake(st->ssl)) != 0)
-        return ssl_set_error(ret);
+        return ssl_set_error(st->ssl, ret);
 
     return verify_server_cert(st->ssl, st->host);
 }
@@ -200,7 +226,7 @@ ssize_t mbedtls_write(git_stream *stream, const char *data, size_t len, int flag
     GIT_UNUSED(flags);
 
     if ((ret = mbedtls_ssl_write(st->ssl, (const unsigned char *)data, len)) <= 0) {
-        return ssl_set_error(ret);
+        return ssl_set_error(st->ssl, ret);
     }
 
     return ret;
@@ -212,7 +238,7 @@ ssize_t mbedtls_read(git_stream *stream, void *data, size_t len)
     int ret;
 
     if ((ret = mbedtls_ssl_read(st->ssl, (unsigned char *)data, len)) <= 0)
-        ssl_set_error(ret);
+        ssl_set_error(st->ssl, ret);
 
     return ret;
 }
@@ -295,7 +321,7 @@ int git_mbedtls_stream_new(git_stream **out, const char *host, const char *port)
     GIT_UNUSED(host);
     GIT_UNUSED(port);
 
-    giterr_set(GITERR_SSL, "openssl is not supported in this version");
+    giterr_set(GITERR_SSL, "mbedtls is not supported in this version");
     return -1;
 }
 
