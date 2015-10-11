@@ -33,7 +33,7 @@
 #endif
 
 static int check_repositoryformatversion(int *version, git_config *config);
-static int check_extensions(git_repository *repo, git_config *config);
+static int check_extensions(git_repository *repo, git_config *config, git_repository_extension_cb);
 
 #define GIT_FILE_CONTENT_PREFIX "gitdir:"
 
@@ -530,7 +530,7 @@ int git_repository_open_ext(
 
 	if (version >= 1) {
 		repo->has_extensions = 1;
-		if ((error = check_extensions(repo, config)) < 0)
+		if ((error = check_extensions(repo, config, extension_cb)) < 0)
 			goto cleanup;
 	}
 
@@ -997,22 +997,41 @@ static int check_repositoryformatversion(int *version, git_config *config)
 	return 0;
 }
 
-static int extension_each_cb(const git_config_entry *entry, void *payload)
+static int check_extensions(git_repository *repo, git_config *config, git_repository_extension_cb extension_cb)
 {
-	const char *name = entry->name + strlen("extensions.");
-	(void)payload;
+	git_config_iterator *iter;
+	git_config_entry *entry;
+	int error;
 
-	if (!strcmp(name, "noop"))
-		return 0;
+	if ((error = git_config_iterator_glob_new(&iter, config, "^extensions\\..*")) < 0)
+		return error;
 
-	giterr_set(GITERR_REPOSITORY, "Unknown Git repository extension: %s", name);
-	return GIT_EUNSUPPORTED;
-}
+	while ((error = git_config_next(&entry, iter)) == 0) {
+		/* This one is known and trivial */
+		if (!strcmp(entry->name, "extensions.noop"))
+			continue;
 
-static int check_extensions(git_repository *repo, git_config *config)
-{
-	return git_config_foreach_match(
-		config, "^extensions\\..*", extension_each_cb, repo);
+		/*
+		 * Otherwise we need to rely on the caller knowing
+		 * what the extension is.
+		 */
+		if (extension_cb == NULL) {
+			giterr_set(GITERR_REPOSITORY, "Unknown Git repository extension: %s", entry->name);
+			error = GIT_EUNSUPPORTED;
+			break;
+		}
+
+		error = extension_cb(repo, entry);
+		if (error < 0)
+			break;
+	}
+
+	git_config_iterator_free(iter);
+
+	if (error == GIT_ITEROVER)
+		error = 0;
+
+	return error;
 }
 
 static int repo_init_create_head(const char *git_dir, const char *ref_name)

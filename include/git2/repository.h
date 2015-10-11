@@ -103,7 +103,13 @@ typedef enum {
 	GIT_REPOSITORY_OPEN_BARE      = (1 << 2),
 } git_repository_open_flag_t;
 
-typedef int (*git_repository_extension_cb)(const git_config_entry *entry);
+/**
+ * Callback for the repository extensions in format 1
+ *
+ * This will be called for unknown extensions. Return 0 if your tool
+ * supports this extension, or an error code if it does not.
+ */
+typedef int (*git_repository_extension_cb)(git_repository *repo, const git_config_entry *entry);
 
 /**
  * Find and open a repository with extended controls.

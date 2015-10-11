@@ -60,11 +60,14 @@ void test_repo_open__format_version_1(void)
 }
 
 static int repo_open_cb_called;
-int repo_open_cb(const git_config_entry *entry)
+int repo_open_cb(git_repository *repo, const git_config_entry *entry)
 {
-	GIT_UNUSED(entry);
+	GIT_UNUSED(repo);
 
 	repo_open_cb_called++;
+	cl_assert_equal_s("extensions.foo", entry->name);
+	cl_assert_equal_s("false", entry->value);
+
 
 	return 0;
 }
@@ -89,7 +92,8 @@ void test_repo_open__format_version_1_callback(void)
 	cl_git_pass(git_repository_open_ext(&repo, "empty_bare.git", 0, NULL, repo_open_cb));
 	git_repository_free(repo);
 
-	cl_assert_equal_i(2, repo_open_cb_called);
+	/* 'noop' and 'foo' */
+	cl_assert_equal_i(1, repo_open_cb_called);
 
 }
 
