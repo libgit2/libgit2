@@ -59,6 +59,40 @@ void test_repo_open__format_version_1(void)
 	cl_git_fail(git_repository_open(&repo, "empty_bare.git"));
 }
 
+static int repo_open_cb_called;
+int repo_open_cb(const git_config_entry *entry)
+{
+	GIT_UNUSED(entry);
+
+	repo_open_cb_called++;
+
+	return 0;
+}
+
+void test_repo_open__format_version_1_callback(void)
+{
+	git_repository *repo;
+	git_config *config;
+
+	repo = cl_git_sandbox_init("empty_bare.git");
+	cl_git_pass(git_repository_open(&repo, "empty_bare.git"));
+
+	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_config_set_int32(config, "core.repositoryformatversion", 1));
+	cl_git_pass(git_config_set_string(config, "extensions.noop", "true"));
+	cl_git_pass(git_config_set_string(config, "extensions.foo", "false"));
+
+	git_config_free(config);
+	git_repository_free(repo);
+
+	repo_open_cb_called = 0;
+	cl_git_pass(git_repository_open_ext(&repo, "empty_bare.git", 0, NULL, repo_open_cb));
+	git_repository_free(repo);
+
+	cl_assert_equal_i(2, repo_open_cb_called);
+
+}
+
 void test_repo_open__standard_empty_repo_through_gitdir(void)
 {
 	git_repository *repo;
@@ -100,7 +134,7 @@ void test_repo_open__open_with_discover(void)
 	cl_git_pass(p_rename("attr/.gitted", "attr/.git"));
 
 	for (scan = variants; *scan != NULL; scan++) {
-		cl_git_pass(git_repository_open_ext(&repo, *scan, 0, NULL));
+		cl_git_pass(git_repository_open_ext(&repo, *scan, 0, NULL, NULL));
 		cl_assert(git__suffixcmp(git_repository_path(repo), "attr/.git/") == 0);
 		cl_assert(git__suffixcmp(git_repository_workdir(repo), "attr/") == 0);
 		git_repository_free(repo);
@@ -215,17 +249,17 @@ void test_repo_open__failures(void)
 	/* fail with no searching */
 	cl_git_fail(git_repository_open(&repo, "attr/sub"));
 	cl_git_fail(git_repository_open_ext(
-		&repo, "attr/sub", GIT_REPOSITORY_OPEN_NO_SEARCH, NULL));
+		&repo, "attr/sub", GIT_REPOSITORY_OPEN_NO_SEARCH, NULL, NULL));
 
 	/* fail with ceiling too low */
 	cl_git_pass(git_buf_joinpath(&ceiling, ceiling.ptr, "sub"));
-	cl_git_fail(git_repository_open_ext(&repo, "attr/sub", 0, ceiling.ptr));
+	cl_git_fail(git_repository_open_ext(&repo, "attr/sub", 0, ceiling.ptr, NULL));
 
 	/* fail with no repo */
 	cl_git_pass(p_mkdir("alternate", 0777));
 	cl_git_pass(p_mkdir("alternate/.git", 0777));
-	cl_git_fail(git_repository_open_ext(&repo, "alternate", 0, NULL));
-	cl_git_fail(git_repository_open_ext(&repo, "alternate/.git", 0, NULL));
+	cl_git_fail(git_repository_open_ext(&repo, "alternate", 0, NULL, NULL));
+	cl_git_fail(git_repository_open_ext(&repo, "alternate/.git", 0, NULL, NULL));
 
 	git_buf_free(&ceiling);
 }
@@ -248,7 +282,7 @@ void test_repo_open__bad_gitlinks(void)
 
 	for (scan = bad_links; *scan != NULL; scan++) {
 		make_gitlink_dir("alternate", *scan);
-		cl_git_fail(git_repository_open_ext(&repo, "alternate", 0, NULL));
+		cl_git_fail(git_repository_open_ext(&repo, "alternate", 0, NULL, NULL));
 	}
 
 	git_futils_rmdir_r("invalid", NULL, GIT_RMDIR_REMOVE_FILES);
@@ -390,7 +424,7 @@ void test_repo_open__force_bare(void)
 	cl_git_fail(git_repository_open_bare(&barerepo, "alternate/.git"));
 
 	cl_git_pass(git_repository_open_ext(
-		&barerepo, "alternate/.git", GIT_REPOSITORY_OPEN_BARE, NULL));
+		&barerepo, "alternate/.git", GIT_REPOSITORY_OPEN_BARE, NULL, NULL));
 	cl_assert(git_repository_is_bare(barerepo));
 	git_repository_free(barerepo);
 
@@ -401,7 +435,7 @@ void test_repo_open__force_bare(void)
 		&barerepo, "empty_standard_repo/subdir"));
 
 	cl_git_pass(git_repository_open_ext(
-		&barerepo, "empty_standard_repo/subdir", GIT_REPOSITORY_OPEN_BARE, NULL));
+		&barerepo, "empty_standard_repo/subdir", GIT_REPOSITORY_OPEN_BARE, NULL, NULL));
 	cl_assert(git_repository_is_bare(barerepo));
 	git_repository_free(barerepo);
 
@@ -412,7 +446,7 @@ void test_repo_open__force_bare(void)
 	cl_git_fail(git_repository_open_bare(&barerepo, "alternate/subdir/sub2"));
 
 	cl_git_pass(git_repository_open_ext(
-		&barerepo, "alternate/subdir/sub2", GIT_REPOSITORY_OPEN_BARE, NULL));
+		&barerepo, "alternate/subdir/sub2", GIT_REPOSITORY_OPEN_BARE, NULL, NULL));
 	cl_assert(git_repository_is_bare(barerepo));
 	git_repository_free(barerepo);
 }

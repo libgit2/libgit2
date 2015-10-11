@@ -486,7 +486,8 @@ int git_repository_open_ext(
 	git_repository **repo_ptr,
 	const char *start_path,
 	unsigned int flags,
-	const char *ceiling_dirs)
+	const char *ceiling_dirs,
+	git_repository_extension_cb extension_cb)
 {
 	int error;
 	git_buf path = GIT_BUF_INIT, parent = GIT_BUF_INIT,
@@ -557,7 +558,7 @@ cleanup:
 int git_repository_open(git_repository **repo_out, const char *path)
 {
 	return git_repository_open_ext(
-		repo_out, path, GIT_REPOSITORY_OPEN_NO_SEARCH, NULL);
+		repo_out, path, GIT_REPOSITORY_OPEN_NO_SEARCH, NULL, NULL);
 }
 
 int git_repository_wrap_odb(git_repository **repo_out, git_odb *odb)

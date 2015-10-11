@@ -1314,7 +1314,7 @@ static int git_submodule__open(
 	if (bare)
 		flags |= GIT_REPOSITORY_OPEN_BARE;
 
-	error = git_repository_open_ext(subrepo, path.ptr, flags, wd);
+	error = git_repository_open_ext(subrepo, path.ptr, flags, wd, NULL);
 
 	/* if we opened the submodule successfully, grab HEAD OID, etc. */
 	if (!error) {

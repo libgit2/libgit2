@@ -11,6 +11,7 @@
 #include "types.h"
 #include "oid.h"
 #include "buffer.h"
+#include "config.h"
 
 /**
  * @file git2/repository.h
@@ -102,6 +103,8 @@ typedef enum {
 	GIT_REPOSITORY_OPEN_BARE      = (1 << 2),
 } git_repository_open_flag_t;
 
+typedef int (*git_repository_extension_cb)(const git_config_entry *entry);
+
 /**
  * Find and open a repository with extended controls.
  *
@@ -123,7 +126,8 @@ GIT_EXTERN(int) git_repository_open_ext(
 	git_repository **out,
 	const char *path,
 	unsigned int flags,
-	const char *ceiling_dirs);
+	const char *ceiling_dirs,
+	git_repository_extension_cb extension_cb);
 
 /**
  * Open a bare repository on the serverside.
