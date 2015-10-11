@@ -10,6 +10,9 @@ v0.23 + 1
 * Symlinks are now followed when locking a file, which can be
   necessary when multiple worktrees share a base repository.
 
+* Support for `core.repositoryformatversion = 1` has been added. libgit2
+  will now take into account extensions from the `extensions.` namespace.
+
 ### API additions
 
 * `git_config_lock()` has been added, which allow for
