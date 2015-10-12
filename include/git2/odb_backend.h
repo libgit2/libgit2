@@ -129,6 +129,22 @@ struct git_odb_writepack {
 	void (*free)(git_odb_writepack *writepack);
 };
 
+/**
+ * Constructor for an odb backend which is registered.
+ */
+typedef int (*git_odb_backend_ctor)(void *payload);
+
+/**
+ * Register a backend to be used instead of the default of the
+ * repository is configured to do so.
+ *
+ * @param name the name of the extension
+ * @param ctor constructor to call
+ * @param payload data passed to the constructor
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_odb_backend_register(const char *name, git_odb_backend_ctor ctor, void *payload);
+
 GIT_END_DECL
 
 #endif
