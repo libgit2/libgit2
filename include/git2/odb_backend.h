@@ -132,7 +132,7 @@ struct git_odb_writepack {
 /**
  * Constructor for an odb backend which is registered.
  */
-typedef int (*git_odb_backend_ctor)(void *payload);
+typedef int (*git_odb_backend_ctor)(git_odb_backend **out, void *payload);
 
 /**
  * Register a backend to be used instead of the default of the
