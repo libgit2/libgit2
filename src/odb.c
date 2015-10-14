@@ -374,10 +374,14 @@ static int backend_sort_cmp(const void *a, const void *b)
 	const backend_internal *backend_a = (const backend_internal *)(a);
 	const backend_internal *backend_b = (const backend_internal *)(b);
 
-	if (backend_a->is_alternate == backend_b->is_alternate)
-		return (backend_b->priority - backend_a->priority);
-
-	return backend_a->is_alternate ? 1 : -1;
+	if (backend_b->priority == backend_a->priority) {
+		if (backend_a->is_alternate)
+			return -1;
+		if (backend_b->is_alternate)
+			return 1;
+		return 0;
+	}
+	return (backend_b->priority - backend_a->priority);
 }
 
 int git_odb_new(git_odb **out)
