@@ -110,7 +110,7 @@ static int commit_quick_parse(
 	const uint8_t *buffer_end = buffer + buffer_len;
 	const uint8_t *parents_start, *committer_start;
 	int i, parents = 0;
-	int commit_time;
+	int64_t commit_time;
 
 	buffer += strlen("tree ") + GIT_OID_HEXSZ + 1;
 
@@ -166,10 +166,10 @@ static int commit_quick_parse(
 			buffer--;
 	}
 
-	if ((buffer == committer_start) || (git__strtol32(&commit_time, (char *)(buffer + 1), NULL, 10) < 0))
+	if ((buffer == committer_start) || (git__strtol64(&commit_time, (char *)(buffer + 1), NULL, 10) < 0))
 		return commit_error(commit, "cannot parse commit time");
 
-	commit->time = (time_t)commit_time;
+	commit->time = commit_time;
 	commit->parsed = 1;
 	return 0;
 }
