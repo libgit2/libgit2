@@ -437,20 +437,20 @@ const char *git_commit_summary(git_commit *commit)
 	if (!commit->summary) {
 		for (msg = git_commit_message(commit), space = NULL; *msg; ++msg) {
 			char next_character = msg[0];
-			// stop processing at the end of the first paragraph
+			/* stop processing at the end of the first paragraph */
 			if (next_character == '\n' && (!msg[1] || msg[1] == '\n'))
 				break;
-			// record the beginning of contiguous whitespace runs
+			/* record the beginning of contiguous whitespace runs */
 			else if (git__isspace_nonlf(next_character))
 				space = space ? space : msg;
-			// the next character is non-space
+			/* the next character is non-space */
 			else {
-				// copy any recorded whitespace
+				/* copy any recorded whitespace */
 				if (space) {
 					git_buf_put(&summary, space, (msg - space));
 					space = NULL;
 				}
-				// copy the next character, but convert newlines to spaces
+				/* copy the next character, but convert newlines to spaces */
 				git_buf_putc(&summary, next_character == '\n' ? ' ' : next_character);
 			}
 		}
