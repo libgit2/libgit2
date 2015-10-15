@@ -1,4 +1,5 @@
 #include "clar_libgit2.h"
+#include "repository.h"
 #include "worktree_helpers.h"
 
 #define WORKTREE_PARENT "submodules-worktree-parent"
@@ -12,6 +13,9 @@ void test_worktree_open__repository(void)
 
 	cl_assert(git_repository_path(fixture.worktree) != NULL);
 	cl_assert(git_repository_workdir(fixture.worktree) != NULL);
+
+	cl_assert(!fixture.repo->is_worktree);
+	cl_assert(fixture.worktree->is_worktree);
 
 	cleanup_fixture_worktree(&fixture);
 }
@@ -39,6 +43,9 @@ void test_worktree_open__submodule_worktree_parent(void)
 	cl_assert(git_repository_path(fixture.worktree) != NULL);
 	cl_assert(git_repository_workdir(fixture.worktree) != NULL);
 
+	cl_assert(!fixture.repo->is_worktree);
+	cl_assert(fixture.worktree->is_worktree);
+
 	cleanup_fixture_worktree(&fixture);
 }
 
@@ -54,6 +61,10 @@ void test_worktree_open__submodule_worktree_child(void)
 		"submodules/testrepo/.gitted",
 		"submodules/testrepo/.git"));
 	setup_fixture_worktree(&child_fixture);
+
+	cl_assert(!parent_fixture.repo->is_worktree);
+	cl_assert(parent_fixture.worktree->is_worktree);
+	cl_assert(child_fixture.worktree->is_worktree);
 
 	cleanup_fixture_worktree(&child_fixture);
 	cleanup_fixture_worktree(&parent_fixture);

@@ -468,6 +468,14 @@ GIT_EXTERN(int) git_repository_set_workdir(
 GIT_EXTERN(int) git_repository_is_bare(git_repository *repo);
 
 /**
+ * Check if a repository is a linked work tree
+ *
+ * @param repo Repo to test
+ * @return 1 if the repository is a linked work tree, 0 otherwise.
+ */
+GIT_EXTERN(int) git_repository_is_worktree(git_repository *repo);
+
+/**
  * Get the configuration file for this repository.
  *
  * If a configuration file has not been set, the default
