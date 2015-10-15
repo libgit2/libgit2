@@ -950,6 +950,11 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs, const 
 	if ((error = git_fetch_negotiate(remote, opts)) < 0)
 		return error;
 
+	if (cbs && cbs->fetch_negotiation
+		&& (error = cbs->fetch_negotiation((const git_remote_head**)remote->refs.contents,
+			remote->refs.length, cbs->payload)) < 0)
+		return error;
+
 	return git_fetch_download_pack(remote, cbs);
 
 on_error:
