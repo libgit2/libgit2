@@ -22,7 +22,7 @@
 
 typedef struct git_commit_list_node {
 	git_oid oid;
-	uint32_t time;
+	int64_t time;
 	unsigned int seen:1,
 			 uninteresting:1,
 			 topo_delay:1,
