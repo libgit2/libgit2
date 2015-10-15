@@ -240,3 +240,91 @@ void test_index_bypath__add_honors_existing_case_4(void)
 	cl_assert_equal_s("just_a_dir/a/b/Z/y/X/foo.txt", entry->path);
 }
 
+void test_index_bypath__add_honors_mode(void)
+{
+	const git_index_entry *entry;
+	git_index_entry new_entry;
+
+	cl_assert((entry = git_index_get_bypath(g_idx, "README.txt", 0)) != NULL);
+
+	memcpy(&new_entry, entry, sizeof(git_index_entry));
+	new_entry.path = "README.txt";
+	new_entry.mode = GIT_FILEMODE_BLOB_EXECUTABLE;
+
+	cl_must_pass(p_chmod("submod2/README.txt", GIT_FILEMODE_BLOB_EXECUTABLE));
+
+	cl_git_pass(git_index_add(g_idx, &new_entry));
+	cl_git_pass(git_index_write(g_idx));
+
+	cl_git_rewritefile("submod2/README.txt", "Modified but still executable");
+
+	cl_git_pass(git_index_add_bypath(g_idx, "README.txt"));
+	cl_git_pass(git_index_write(g_idx));
+
+	cl_assert((entry = git_index_get_bypath(g_idx, "README.txt", 0)) != NULL);
+	cl_assert_equal_i(GIT_FILEMODE_BLOB_EXECUTABLE, entry->mode);
+}
+
+void test_index_bypath__add_honors_conflict_mode(void)
+{
+	const git_index_entry *entry;
+	git_index_entry new_entry;
+	int stage = 0;
+
+	cl_assert((entry = git_index_get_bypath(g_idx, "README.txt", 0)) != NULL);
+
+	memcpy(&new_entry, entry, sizeof(git_index_entry));
+	new_entry.path = "README.txt";
+	new_entry.mode = GIT_FILEMODE_BLOB_EXECUTABLE;
+
+	cl_must_pass(p_chmod("submod2/README.txt", GIT_FILEMODE_BLOB_EXECUTABLE));
+
+	cl_git_pass(git_index_remove_bypath(g_idx, "README.txt"));
+
+	for (stage = 1; stage <= 3; stage++) {
+		new_entry.flags = stage << GIT_IDXENTRY_STAGESHIFT;
+		cl_git_pass(git_index_add(g_idx, &new_entry));
+	}
+
+	cl_git_pass(git_index_write(g_idx));
+
+	cl_git_rewritefile("submod2/README.txt", "Modified but still executable");
+
+	cl_git_pass(git_index_add_bypath(g_idx, "README.txt"));
+	cl_git_pass(git_index_write(g_idx));
+
+	cl_assert((entry = git_index_get_bypath(g_idx, "README.txt", 0)) != NULL);
+	cl_assert_equal_i(GIT_FILEMODE_BLOB_EXECUTABLE, entry->mode);
+}
+
+void test_index_bypath__add_honors_conflict_case(void)
+{
+	const git_index_entry *entry;
+	git_index_entry new_entry;
+	int stage = 0;
+
+	cl_assert((entry = git_index_get_bypath(g_idx, "README.txt", 0)) != NULL);
+
+	memcpy(&new_entry, entry, sizeof(git_index_entry));
+	new_entry.path = "README.txt";
+	new_entry.mode = GIT_FILEMODE_BLOB_EXECUTABLE;
+
+	cl_must_pass(p_chmod("submod2/README.txt", GIT_FILEMODE_BLOB_EXECUTABLE));
+
+	cl_git_pass(git_index_remove_bypath(g_idx, "README.txt"));
+
+	for (stage = 1; stage <= 3; stage++) {
+		new_entry.flags = stage << GIT_IDXENTRY_STAGESHIFT;
+		cl_git_pass(git_index_add(g_idx, &new_entry));
+	}
+
+	cl_git_pass(git_index_write(g_idx));
+
+	cl_git_rewritefile("submod2/README.txt", "Modified but still executable");
+
+	cl_git_pass(git_index_add_bypath(g_idx, "README.txt"));
+	cl_git_pass(git_index_write(g_idx));
+
+	cl_assert((entry = git_index_get_bypath(g_idx, "README.txt", 0)) != NULL);
+	cl_assert_equal_i(GIT_FILEMODE_BLOB_EXECUTABLE, entry->mode);
+}

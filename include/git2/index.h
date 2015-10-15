@@ -154,13 +154,27 @@ typedef enum {
 	GIT_INDEX_ADD_CHECK_PATHSPEC = (1u << 2),
 } git_index_add_option_t;
 
-/**
- * Match any index stage.
- *
- * Some index APIs take a stage to match; pass this value to match
- * any entry matching the path regardless of stage.
- */
-#define GIT_INDEX_STAGE_ANY -1
+typedef enum {
+	/**
+	 * Match any index stage.
+	 *
+	 * Some index APIs take a stage to match; pass this value to match
+	 * any entry matching the path regardless of stage.
+	 */
+	GIT_INDEX_STAGE_ANY = -1,
+
+	/** A normal staged file in the index. */
+	GIT_INDEX_STAGE_NORMAL = 0,
+
+	/** The ancestor side of a conflict. */
+	GIT_INDEX_STAGE_ANCESTOR = 1,
+
+	/** The "ours" side of a conflict. */
+	GIT_INDEX_STAGE_OURS = 2,
+
+	/** The "theirs" side of a conflict. */
+	GIT_INDEX_STAGE_THEIRS = 3,
+} git_index_stage_t;
 
 /** @name Index File Functions
  *
