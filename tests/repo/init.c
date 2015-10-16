@@ -503,7 +503,7 @@ static void assert_mode_seems_okay(
 
 static const char *template_sandbox(const char *name)
 {
-	git_buf hooks_path = GIT_BUF_INIT, link_path = GIT_BUF_INIT;
+	git_buf hooks_path = GIT_BUF_INIT, link_path = GIT_BUF_INIT, dotfile_path = GIT_BUF_INIT;
 	const char *path = cl_fixture(name);
 
 	cl_fixture_sandbox(name);
@@ -520,6 +520,11 @@ static const char *template_sandbox(const char *name)
 #else
 	cl_must_pass(symlink("update.sample", link_path.ptr));
 #endif
+
+	/* create a file starting with a dot */
+	cl_git_pass(git_buf_joinpath(&dotfile_path, hooks_path.ptr, ".dotfile"));
+	cl_git_mkfile(dotfile_path.ptr, "something\n");
+	git_buf_free(&dotfile_path);
 
 	git_buf_free(&link_path);
 	git_buf_free(&hooks_path);
@@ -561,6 +566,10 @@ void test_repo_init__extended_with_template(void)
 	assert_hooks_match(
 		"template", git_repository_path(_repo),
 		"hooks/update.sample", filemode);
+
+	assert_hooks_match(
+		"template", git_repository_path(_repo),
+		"hooks/.dotfile", filemode);
 
 	assert_hooks_match(
 		"template", git_repository_path(_repo),
@@ -614,6 +623,9 @@ void test_repo_init__extended_with_template_and_shared_mode(void)
 	assert_hooks_match(
 		"template", git_repository_path(_repo),
 		"hooks/update.sample", filemode);
+	assert_hooks_match(
+		"template", git_repository_path(_repo),
+		"hooks/.dotfile", filemode);
 
 	/* for a symlinked hook, the permissions still should match the
 	 * source link, not the GIT_REPOSITORY_INIT_SHARED_GROUP value
