@@ -12,6 +12,7 @@
 #include "vector.h"
 #include "repository.h"
 
+#define GIT_CONFIG_FILENAME_PROGRAMDATA "config"
 #define GIT_CONFIG_FILENAME_SYSTEM "gitconfig"
 #define GIT_CONFIG_FILENAME_GLOBAL ".gitconfig"
 #define GIT_CONFIG_FILENAME_XDG    "config"

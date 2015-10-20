@@ -1086,6 +1086,12 @@ int git_config_find_system(git_buf *path)
 	return git_sysdir_find_system_file(path, GIT_CONFIG_FILENAME_SYSTEM);
 }
 
+int git_config_find_programdata(git_buf *path)
+{
+	git_buf_sanitize(path);
+	return git_sysdir_find_programdata_file(path, GIT_CONFIG_FILENAME_PROGRAMDATA);
+}
+
 int git_config__global_location(git_buf *buf)
 {
 	const git_buf *paths;
@@ -1132,6 +1138,10 @@ int git_config_open_default(git_config **out)
 	if (!error && !git_config_find_system(&buf))
 		error = git_config_add_file_ondisk(cfg, buf.ptr,
 			GIT_CONFIG_LEVEL_SYSTEM, 0);
+
+	if (!error && !git_config_find_programdata(&buf))
+		error = git_config_add_file_ondisk(cfg, buf.ptr,
+			GIT_CONFIG_LEVEL_PROGRAMDATA, 0);
 
 	git_buf_free(&buf);
 
