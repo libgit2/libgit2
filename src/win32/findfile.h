@@ -11,6 +11,7 @@
 extern int git_win32__find_system_dirs(git_buf *out, const wchar_t *subpath);
 extern int git_win32__find_global_dirs(git_buf *out);
 extern int git_win32__find_xdg_dirs(git_buf *out);
+extern int git_win32__find_programdata_dirs(git_buf *out);
 
 #endif
 

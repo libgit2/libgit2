@@ -585,7 +585,8 @@ static int load_config(
 	git_repository *repo,
 	const char *global_config_path,
 	const char *xdg_config_path,
-	const char *system_config_path)
+	const char *system_config_path,
+	const char *programdata_path)
 {
 	int error;
 	git_buf config_path = GIT_BUF_INIT;
@@ -626,6 +627,12 @@ static int load_config(
 		error != GIT_ENOTFOUND)
 		goto on_error;
 
+	if (programdata_path != NULL &&
+		(error = git_config_add_file_ondisk(
+			cfg, programdata_path, GIT_CONFIG_LEVEL_PROGRAMDATA, 0)) < 0 &&
+		error != GIT_ENOTFOUND)
+		goto on_error;
+
 	giterr_clear(); /* clear any lingering ENOTFOUND errors */
 
 	*out = cfg;
@@ -651,11 +658,13 @@ int git_repository_config__weakptr(git_config **out, git_repository *repo)
 		git_buf global_buf = GIT_BUF_INIT;
 		git_buf xdg_buf = GIT_BUF_INIT;
 		git_buf system_buf = GIT_BUF_INIT;
+		git_buf programdata_buf = GIT_BUF_INIT;
 		git_config *config;
 
 		git_config_find_global(&global_buf);
 		git_config_find_xdg(&xdg_buf);
 		git_config_find_system(&system_buf);
+		git_config_find_programdata(&programdata_buf);
 
 		/* If there is no global file, open a backend for it anyway */
 		if (git_buf_len(&global_buf) == 0)
@@ -665,7 +674,8 @@ int git_repository_config__weakptr(git_config **out, git_repository *repo)
 			&config, repo,
 			path_unless_empty(&global_buf),
 			path_unless_empty(&xdg_buf),
-			path_unless_empty(&system_buf));
+			path_unless_empty(&system_buf),
+			path_unless_empty(&programdata_buf));
 		if (!error) {
 			GIT_REFCOUNT_OWN(config, repo);
 
