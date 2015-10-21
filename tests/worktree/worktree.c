@@ -131,3 +131,75 @@ void test_worktree_worktree__lookup_nonexistent_worktree(void)
 	cl_git_fail(git_worktree_lookup(&wt, fixture.repo, "nonexistent"));
 	cl_assert_equal_p(wt, NULL);
 }
+
+void test_worktree_worktree__open(void)
+{
+	git_worktree *wt;
+	git_repository *repo;
+
+	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
+
+	cl_git_pass(git_repository_open_from_worktree(&repo, wt));
+	cl_assert_equal_s(git_repository_workdir(repo),
+		git_repository_workdir(fixture.worktree));
+
+	git_repository_free(repo);
+	git_worktree_free(wt);
+}
+
+void test_worktree_worktree__open_invalid_commondir(void)
+{
+	git_worktree *wt;
+	git_repository *repo;
+	git_buf buf = GIT_BUF_INIT, path = GIT_BUF_INIT;
+
+	cl_git_pass(git_buf_sets(&buf, "/path/to/nonexistent/commondir"));
+	cl_git_pass(git_buf_printf(&path,
+		    "%s/worktrees/testrepo-worktree/commondir",
+		    fixture.repo->commondir));
+	cl_git_pass(git_futils_writebuffer(&buf, path.ptr, O_RDWR, 0644));
+
+	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
+	cl_git_fail(git_repository_open_from_worktree(&repo, wt));
+
+	git_buf_free(&buf);
+	git_buf_free(&path);
+	git_worktree_free(wt);
+}
+
+void test_worktree_worktree__open_invalid_gitdir(void)
+{
+	git_worktree *wt;
+	git_repository *repo;
+	git_buf buf = GIT_BUF_INIT, path = GIT_BUF_INIT;
+
+	cl_git_pass(git_buf_sets(&buf, "/path/to/nonexistent/gitdir"));
+	cl_git_pass(git_buf_printf(&path,
+		    "%s/worktrees/testrepo-worktree/gitdir",
+		    fixture.repo->commondir));
+	cl_git_pass(git_futils_writebuffer(&buf, path.ptr, O_RDWR, 0644));
+
+	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
+	cl_git_fail(git_repository_open_from_worktree(&repo, wt));
+
+	git_buf_free(&buf);
+	git_buf_free(&path);
+	git_worktree_free(wt);
+}
+
+void test_worktree_worktree__open_invalid_parent(void)
+{
+	git_worktree *wt;
+	git_repository *repo;
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_pass(git_buf_sets(&buf, "/path/to/nonexistent/gitdir"));
+	cl_git_pass(git_futils_writebuffer(&buf,
+		    fixture.worktree->path_gitlink, O_RDWR, 0644));
+
+	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
+	cl_git_fail(git_repository_open_from_worktree(&repo, wt));
+
+	git_buf_free(&buf);
+	git_worktree_free(wt);
+}

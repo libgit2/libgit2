@@ -35,6 +35,17 @@ GIT_BEGIN_DECL
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_repository_open(git_repository **out, const char *path);
+/**
+ * Open working tree as a repository
+ *
+ * Open the working directory of the working tree as a normal
+ * repository that can then be worked on.
+ *
+ * @param out Output pointer containing opened repository
+ * @param wt Working tree to open
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_repository_open_from_worktree(git_repository **out, git_worktree *wt);
 
 /**
  * Create a "fake" repository to wrap an object database

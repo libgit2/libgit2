@@ -28,6 +28,7 @@
 #include "diff_driver.h"
 #include "annotated_commit.h"
 #include "submodule.h"
+#include "worktree.h"
 
 GIT__USE_STRMAP
 #include "strmap.h"
@@ -815,6 +816,36 @@ int git_repository_open(git_repository **repo_out, const char *path)
 {
 	return git_repository_open_ext(
 		repo_out, path, GIT_REPOSITORY_OPEN_NO_SEARCH, NULL);
+}
+
+int git_repository_open_from_worktree(git_repository **repo_out, git_worktree *wt)
+{
+	git_buf path = GIT_BUF_INIT;
+	git_repository *repo = NULL;
+	int len, err;
+
+	assert(repo_out && wt);
+
+	*repo_out = NULL;
+	len = strlen(wt->gitlink_path);
+
+	if (len <= 4 || strcasecmp(wt->gitlink_path + len - 4, ".git")) {
+		err = -1;
+		goto out;
+	}
+
+	if ((err = git_buf_set(&path, wt->gitlink_path, len - 4)) < 0)
+		goto out;
+
+	if ((err = git_repository_open(&repo, path.ptr)) < 0)
+		goto out;
+
+	*repo_out = repo;
+
+out:
+	git_buf_free(&path);
+
+	return err;
 }
 
 int git_repository_wrap_odb(git_repository **repo_out, git_odb *odb)
