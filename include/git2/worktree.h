@@ -32,6 +32,23 @@ GIT_BEGIN_DECL
  */
 GIT_EXTERN(int) git_worktree_list(git_strarray *out, git_repository *repo);
 
+/**
+ * Lookup a working tree by its name for a given repository
+ *
+ * @param out Output pointer to looked up worktree or `NULL`
+ * @param repo The repository containing worktrees
+ * @param name Name of the working tree to look up
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_worktree_lookup(git_worktree **out, git_repository *repo, const char *name);
+
+/**
+ * Free a previously allocated worktree
+ *
+ * @param wt worktree handle to close. If NULL nothing occurs.
+ */
+GIT_EXTERN(void) git_worktree_free(git_worktree *wt);
+
 /** @} */
 GIT_END_DECL
 #endif

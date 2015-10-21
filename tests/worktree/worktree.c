@@ -1,8 +1,8 @@
 #include "clar_libgit2.h"
 #include "worktree_helpers.h"
 
-#include "git2/worktree.h"
 #include "repository.h"
+#include "worktree.h"
 
 #define COMMON_REPO "testrepo"
 #define WORKTREE_REPO "testrepo-worktree"
@@ -104,4 +104,30 @@ void test_worktree_worktree__list_without_worktrees(void)
 	cl_assert_equal_i(wts.count, 0);
 
 	git_repository_free(repo);
+}
+
+void test_worktree_worktree__lookup(void)
+{
+	git_worktree *wt;
+	git_buf gitdir_path = GIT_BUF_INIT;
+
+	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
+
+	git_buf_printf(&gitdir_path, "%s/worktrees/%s", fixture.repo->commondir, "testrepo-worktree");
+
+	cl_assert_equal_s(wt->gitdir_path, gitdir_path.ptr);
+	cl_assert_equal_s(wt->parent_path, fixture.repo->path_repository);
+	cl_assert_equal_s(wt->gitlink_path, fixture.worktree->path_gitlink);
+	cl_assert_equal_s(wt->commondir_path, fixture.repo->commondir);
+
+	git_buf_free(&gitdir_path);
+	git_worktree_free(wt);
+}
+
+void test_worktree_worktree__lookup_nonexistent_worktree(void)
+{
+	git_worktree *wt;
+
+	cl_git_fail(git_worktree_lookup(&wt, fixture.repo, "nonexistent"));
+	cl_assert_equal_p(wt, NULL);
 }

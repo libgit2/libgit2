@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "repository.h"
+#include "worktree.h"
 
 static bool is_worktree_dir(git_buf *dir)
 {
@@ -55,4 +56,92 @@ exit:
 	git_buf_free(&path);
 
 	return error;
+}
+
+static char *read_link(const char *base, const char *file)
+{
+	git_buf path = GIT_BUF_INIT, buf = GIT_BUF_INIT;
+
+	assert(base && file);
+
+	if (git_buf_joinpath(&path, base, file) < 0)
+		goto err;
+	if (git_futils_readbuffer(&buf, path.ptr) < 0)
+		goto err;
+	git_buf_free(&path);
+
+	git_buf_rtrim(&buf);
+
+	if (!git_path_is_relative(buf.ptr))
+		return git_buf_detach(&buf);
+
+	if (git_buf_sets(&path, base) < 0)
+		goto err;
+	if (git_path_apply_relative(&path, buf.ptr) < 0)
+		goto err;
+	git_buf_free(&buf);
+
+	return git_buf_detach(&path);
+
+err:
+	git_buf_free(&buf);
+	git_buf_free(&path);
+
+	return NULL;
+}
+
+int git_worktree_lookup(git_worktree **out, git_repository *repo, const char *name)
+{
+	git_buf path = GIT_BUF_INIT;
+	git_worktree *wt = NULL;
+	int error;
+
+	assert(repo && name);
+
+	*out = NULL;
+
+	if ((error = git_buf_printf(&path, "%s/worktrees/%s", repo->commondir, name)) < 0)
+		goto out;
+
+	if (!is_worktree_dir(&path)) {
+		error = -1;
+		goto out;
+	}
+
+	if ((wt = git__malloc(sizeof(struct git_repository))) == NULL) {
+		error = -1;
+		goto out;
+	}
+
+	if ((wt->name = git__strdup(name)) == NULL
+	    || (wt->commondir_path = read_link(path.ptr, "commondir")) == NULL
+	    || (wt->gitlink_path = read_link(path.ptr, "gitdir")) == NULL
+	    || (wt->parent_path = git__strdup(git_repository_path(repo))) == NULL) {
+		error = -1;
+		goto out;
+	}
+	wt->gitdir_path = git_buf_detach(&path);
+
+	(*out) = wt;
+
+out:
+	git_buf_free(&path);
+
+	if (error)
+		git_worktree_free(wt);
+
+	return error;
+}
+
+void git_worktree_free(git_worktree *wt)
+{
+	if (!wt)
+		return;
+
+	git__free(wt->commondir_path);
+	git__free(wt->gitlink_path);
+	git__free(wt->gitdir_path);
+	git__free(wt->parent_path);
+	git__free(wt->name);
+	git__free(wt);
 }
