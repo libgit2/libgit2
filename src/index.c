@@ -1193,13 +1193,13 @@ static int index_no_dups(void **old, void *new)
 }
 
 static void index_existing_and_best(
-	const git_index_entry **existing,
+	git_index_entry **existing,
 	size_t *existing_position,
-	const git_index_entry **best,
+	git_index_entry **best,
 	git_index *index,
 	const git_index_entry *entry)
 {
-	const git_index_entry *e;
+	git_index_entry *e;
 	size_t pos;
 	int error;
 

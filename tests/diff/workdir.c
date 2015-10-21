@@ -2080,7 +2080,7 @@ void test_diff_workdir__to_index_pathlist(void)
 	cl_git_pass(git_repository_index(&index, g_repo));
 
 	opts.flags = GIT_DIFF_INCLUDE_IGNORED;
-	opts.pathspec.strings = pathlist.contents;
+	opts.pathspec.strings = (char **)pathlist.contents;
 	opts.pathspec.count = pathlist.length;
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, index, &opts));
