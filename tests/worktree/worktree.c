@@ -203,3 +203,53 @@ void test_worktree_worktree__open_invalid_parent(void)
 	git_buf_free(&buf);
 	git_worktree_free(wt);
 }
+
+void test_worktree_worktree__validate(void)
+{
+	git_worktree *wt;
+
+	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
+	cl_git_pass(git_worktree_validate(wt));
+
+	git_worktree_free(wt);
+}
+
+void test_worktree_worktree__validate_invalid_commondir(void)
+{
+	git_worktree *wt;
+
+	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
+	git__free(wt->commondir_path);
+	wt->commondir_path = "/path/to/invalid/commondir";
+
+	cl_git_fail(git_worktree_validate(wt));
+
+	wt->commondir_path = NULL;
+	git_worktree_free(wt);
+}
+
+void test_worktree_worktree__validate_invalid_gitdir(void)
+{
+	git_worktree *wt;
+
+	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
+	git__free(wt->gitdir_path);
+	wt->gitdir_path = "/path/to/invalid/gitdir";
+	cl_git_fail(git_worktree_validate(wt));
+
+	wt->gitdir_path = NULL;
+	git_worktree_free(wt);
+}
+
+void test_worktree_worktree__validate_invalid_parent(void)
+{
+	git_worktree *wt;
+
+	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
+	git__free(wt->parent_path);
+	wt->parent_path = "/path/to/invalid/parent";
+	cl_git_fail(git_worktree_validate(wt));
+
+	wt->parent_path = NULL;
+	git_worktree_free(wt);
+}

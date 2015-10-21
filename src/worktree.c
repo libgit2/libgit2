@@ -145,3 +145,41 @@ void git_worktree_free(git_worktree *wt)
 	git__free(wt->name);
 	git__free(wt);
 }
+
+int git_worktree_validate(const git_worktree *wt)
+{
+	git_buf buf = GIT_BUF_INIT;
+	int err = 0;
+
+	assert(wt);
+
+	git_buf_puts(&buf, wt->gitdir_path);
+	if (!is_worktree_dir(&buf)) {
+		giterr_set(GITERR_WORKTREE,
+			"Worktree gitdir ('%s') is not valid",
+			wt->gitlink_path);
+		err = -1;
+		goto out;
+	}
+
+	if (!git_path_exists(wt->parent_path)) {
+		giterr_set(GITERR_WORKTREE,
+			"Worktree parent directory ('%s') does not exist ",
+			wt->parent_path);
+		err = -2;
+		goto out;
+	}
+
+	if (!git_path_exists(wt->commondir_path)) {
+		giterr_set(GITERR_WORKTREE,
+			"Worktree common directory ('%s') does not exist ",
+			wt->commondir_path);
+		err = -3;
+		goto out;
+	}
+
+out:
+	git_buf_free(&buf);
+
+	return err;
+}

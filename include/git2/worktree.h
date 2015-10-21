@@ -49,6 +49,18 @@ GIT_EXTERN(int) git_worktree_lookup(git_worktree **out, git_repository *repo, co
  */
 GIT_EXTERN(void) git_worktree_free(git_worktree *wt);
 
+/**
+ * Check if worktree is valid
+ *
+ * A valid worktree requires both the git data structures inside
+ * the linked parent repository and the linked working copy to be
+ * present.
+ *
+ * @param wt Worktree to check
+ * @return 0 when worktree is valid, error-code otherwise
+ */
+GIT_EXTERN(int) git_worktree_validate(const git_worktree *wt);
+
 /** @} */
 GIT_END_DECL
 #endif
