@@ -143,6 +143,7 @@ int git_worktree_lookup(git_worktree **out, git_repository *repo, const char *na
 		goto out;
 	}
 	wt->gitdir_path = git_buf_detach(&path);
+	wt->locked = !!git_worktree_is_locked(NULL, wt);
 
 	(*out) = wt;
 
@@ -282,4 +283,76 @@ out:
 	git_repository_free(wt);
 
 	return err;
+}
+
+int git_worktree_lock(git_worktree *wt, char *creason)
+{
+	git_buf buf = GIT_BUF_INIT, path = GIT_BUF_INIT;
+	int err;
+
+	assert(wt);
+
+	if ((err = git_worktree_is_locked(NULL, wt)) < 0)
+		goto out;
+
+	if ((err = git_buf_joinpath(&path, wt->gitdir_path, "locked")) < 0)
+		goto out;
+
+	if (creason)
+		git_buf_attach_notowned(&buf, creason, strlen(creason));
+
+	if ((err = git_futils_writebuffer(&buf, path.ptr, O_CREAT|O_EXCL|O_WRONLY, 0644)) < 0)
+		goto out;
+
+	wt->locked = 1;
+
+out:
+	git_buf_free(&path);
+
+	return err;
+}
+
+int git_worktree_unlock(git_worktree *wt)
+{
+	git_buf path = GIT_BUF_INIT;
+
+	assert(wt);
+
+	if (!git_worktree_is_locked(NULL, wt))
+		return 0;
+
+	if (git_buf_joinpath(&path, wt->gitdir_path, "locked") < 0)
+		return -1;
+
+	if (p_unlink(path.ptr) != 0) {
+		git_buf_free(&path);
+		return -1;
+	}
+
+	wt->locked = 0;
+
+	git_buf_free(&path);
+
+	return 0;
+}
+
+int git_worktree_is_locked(git_buf *reason, const git_worktree *wt)
+{
+	git_buf path = GIT_BUF_INIT;
+	int ret;
+
+	assert(wt);
+
+	if (reason)
+		git_buf_clear(reason);
+
+	if ((ret = git_buf_joinpath(&path, wt->gitdir_path, "locked")) < 0)
+		goto out;
+	if ((ret = git_path_exists(path.ptr)) && reason)
+		git_futils_readbuffer(reason, path.ptr);
+
+out:
+	git_buf_free(&path);
+
+	return ret;
 }

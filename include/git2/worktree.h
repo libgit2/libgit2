@@ -8,6 +8,7 @@
 #define INCLUDE_git_worktree_h__
 
 #include "common.h"
+#include "buffer.h"
 #include "types.h"
 #include "strarray.h"
 
@@ -75,6 +76,41 @@ GIT_EXTERN(int) git_worktree_validate(const git_worktree *wt);
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_worktree_add(git_worktree **out, git_repository *repo, const char *name, const char *path);
+
+/*
+ * Lock worktree if not already locked
+ *
+ * Lock a worktree, optionally specifying a reason why the linked
+ * working tree is being locked.
+ *
+ * @param wt Worktree to lock
+ * @param reason Reason why the working tree is being locked
+ * @return 0 on success, non-zero otherwise
+ */
+GIT_EXTERN(int) git_worktree_lock(git_worktree *wt, char *reason);
+
+/**
+ * Unlock a locked worktree
+ *
+ * @param wt Worktree to unlock
+ * @return 0 on success, 1 if worktree was not locked, error-code
+ *  otherwise
+ */
+GIT_EXTERN(int) git_worktree_unlock(git_worktree *wt);
+
+/**
+ * Check if worktree is locked
+ *
+ * A worktree may be locked if the linked working tree is stored
+ * on a portable device which is not available.
+ *
+ * @param reason Buffer to store reason in. If NULL no reason is stored.
+ * @param wt Worktree to check
+ * @return 0 when the working tree not locked, a value greater
+ *  than zero if it is locked, less than zero if there was an
+ *  error
+ */
+GIT_EXTERN(int) git_worktree_is_locked(git_buf *reason, const git_worktree *wt);
 
 /** @} */
 GIT_END_DECL

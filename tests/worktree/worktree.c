@@ -336,3 +336,62 @@ void test_worktree_worktree__validate_invalid_parent(void)
 	wt->parent_path = NULL;
 	git_worktree_free(wt);
 }
+
+void test_worktree_worktree__lock_with_reason(void)
+{
+	git_worktree *wt;
+	git_buf reason = GIT_BUF_INIT;
+
+	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
+
+	cl_assert(!git_worktree_is_locked(NULL, wt));
+	cl_git_pass(git_worktree_lock(wt, "because"));
+	cl_assert(git_worktree_is_locked(&reason, wt) > 0);
+	cl_assert_equal_s(reason.ptr, "because");
+	cl_assert(wt->locked);
+
+	git_buf_free(&reason);
+	git_worktree_free(wt);
+}
+
+void test_worktree_worktree__lock_without_reason(void)
+{
+	git_worktree *wt;
+	git_buf reason = GIT_BUF_INIT;
+
+	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
+
+	cl_assert(!git_worktree_is_locked(NULL, wt));
+	cl_git_pass(git_worktree_lock(wt, NULL));
+	cl_assert(git_worktree_is_locked(&reason, wt) > 0);
+	cl_assert_equal_i(reason.size, 0);
+	cl_assert(wt->locked);
+
+	git_buf_free(&reason);
+	git_worktree_free(wt);
+}
+
+void test_worktree_worktree__unlock_unlocked_worktree(void)
+{
+	git_worktree *wt;
+
+	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
+	cl_assert(!git_worktree_is_locked(NULL, wt));
+	cl_assert(git_worktree_unlock(wt) == 0);
+	cl_assert(!wt->locked);
+
+	git_worktree_free(wt);
+}
+
+void test_worktree_worktree__unlock_locked_worktree(void)
+{
+	git_worktree *wt;
+
+	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
+	cl_git_pass(git_worktree_lock(wt, NULL));
+	cl_assert(git_worktree_is_locked(NULL, wt));
+	cl_git_pass(git_worktree_unlock(wt));
+	cl_assert(!wt->locked);
+
+	git_worktree_free(wt);
+}
