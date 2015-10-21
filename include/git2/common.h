@@ -20,7 +20,7 @@
 # define GIT_END_DECL	/* empty */
 #endif
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && _MSC_VER < 1800
  GIT_BEGIN_DECL
 # include "inttypes.h"
  GIT_END_DECL
