@@ -112,6 +112,32 @@ GIT_EXTERN(int) git_worktree_unlock(git_worktree *wt);
  */
 GIT_EXTERN(int) git_worktree_is_locked(git_buf *reason, const git_worktree *wt);
 
+/**
+ * Flags which can be passed to git_worktree_prune to alter its
+ * behavior.
+ */
+typedef enum {
+	/* Prune working tree even if working tree is valid */
+	GIT_WORKTREE_PRUNE_VALID = 1u << 0,
+	/* Prune working tree even if it is locked */
+	GIT_WORKTREE_PRUNE_LOCKED = 1u << 1,
+	/* Prune checked out working tree */
+	GIT_WORKTREE_PRUNE_WORKING_TREE = 1u << 2,
+} git_worktree_prune_t;
+
+/**
+ * Prune working tree
+ *
+ * Prune the working tree, that is remove the git data
+ * structures on disk. The repository will only be pruned of
+ * `git_worktree_is_prunable` succeeds.
+ *
+ * @param wt Worktree to prune
+ * @param flags git_worktree_prune_t flags
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_worktree_prune(git_worktree *wt, unsigned flags);
+
 /** @} */
 GIT_END_DECL
 #endif

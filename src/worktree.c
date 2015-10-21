@@ -356,3 +356,67 @@ out:
 
 	return ret;
 }
+
+int git_worktree_prune(git_worktree *wt, unsigned flags)
+{
+	git_buf reason = GIT_BUF_INIT, path = GIT_BUF_INIT;
+	char *wtpath;
+	int err;
+
+	if ((flags & GIT_WORKTREE_PRUNE_LOCKED) == 0 &&
+		git_worktree_is_locked(&reason, wt))
+	{
+		if (!reason.size)
+			git_buf_attach_notowned(&reason, "no reason given", 15);
+		giterr_set(GITERR_WORKTREE, "Not pruning locked working tree: '%s'", reason.ptr);
+
+		err = -1;
+		goto out;
+	}
+
+	if ((flags & GIT_WORKTREE_PRUNE_VALID) == 0 &&
+		git_worktree_validate(wt) == 0)
+	{
+		giterr_set(GITERR_WORKTREE, "Not pruning valid working tree");
+		err = -1;
+		goto out;
+	}
+
+	/* Delete gitdir in parent repository */
+	if ((err = git_buf_printf(&path, "%s/worktrees/%s", wt->parent_path, wt->name)) < 0)
+		goto out;
+	if (!git_path_exists(path.ptr))
+	{
+		giterr_set(GITERR_WORKTREE, "Worktree gitdir '%s' does not exist", path.ptr);
+		err = -1;
+		goto out;
+	}
+	if ((err = git_futils_rmdir_r(path.ptr, NULL, GIT_RMDIR_REMOVE_FILES)) < 0)
+		goto out;
+
+	/* Skip deletion of the actual working tree if it does
+	 * not exist or deletion was not requested */
+	if ((flags & GIT_WORKTREE_PRUNE_WORKING_TREE) == 0 ||
+		!git_path_exists(wt->gitlink_path))
+	{
+		goto out;
+	}
+
+	if ((wtpath = git_path_dirname(wt->gitlink_path)) == NULL)
+		goto out;
+	git_buf_attach(&path, wtpath, 0);
+	if (!git_path_exists(path.ptr))
+	{
+		giterr_set(GITERR_WORKTREE, "Working tree '%s' does not exist", path.ptr);
+		err = -1;
+		goto out;
+	}
+	if ((err = git_futils_rmdir_r(path.ptr, NULL, GIT_RMDIR_REMOVE_FILES)) < 0)
+		goto out;
+
+out:
+	git_buf_free(&reason);
+	git_buf_free(&path);
+
+	return err;
+}
