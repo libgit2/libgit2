@@ -35,6 +35,13 @@ void test_commit_signature__leading_and_trailing_spaces_are_trimmed(void)
 	assert_name_and_email("nulltoken", "emeric.fermas@gmail.com", " \t nulltoken \n", " \n  emeric.fermas@gmail.com  \n");
 }
 
+void test_commit_signature__leading_and_trailing_crud_is_trimmed(void)
+{
+	assert_name_and_email("nulltoken", "emeric.fermas@gmail.com", "\"nulltoken\"", "\"emeric.fermas@gmail.com\"");
+	assert_name_and_email("nulltoken w", "emeric.fermas@gmail.com", "nulltoken w.", "emeric.fermas@gmail.com");
+	assert_name_and_email("nulltoken \xe2\x98\xba", "emeric.fermas@gmail.com", "nulltoken \xe2\x98\xba", "emeric.fermas@gmail.com");
+}
+
 void test_commit_signature__angle_brackets_in_names_are_not_supported(void)
 {
 	cl_git_fail(try_build_signature("<Phil Haack", "phil@haack", 1234567890, 60));
