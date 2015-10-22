@@ -1701,8 +1701,15 @@ int git_merge__iterators(
 		if ((error = merge_conflict_resolve(&resolved, diff_list, conflict, opts.file_favor, opts.file_flags)) < 0)
 			goto done;
 
-		if (!resolved)
+		if (!resolved) {
+			if ((opts.tree_flags & GIT_MERGE_TREE_FAIL_ON_CONFLICT)) {
+				giterr_set(GITERR_MERGE, "merge conflicts exist");
+				error = GIT_EMERGECONFLICT;
+				goto done;
+			}
+
 			git_vector_insert(&diff_list->conflicts, conflict);
+		}
 	}
 
 	if (!given_opts || !given_opts->metric)

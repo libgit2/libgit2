@@ -49,6 +49,7 @@ typedef enum {
 	GIT_EINVALID        = -21,      /**< Invalid operation or input */
 	GIT_EUNCOMMITTED    = -22,	/**< Uncommitted changes in index prevented operation */
 	GIT_EDIRECTORY      = -23,      /**< The operation is not valid for a directory */
+	GIT_EMERGECONFLICT  = -24,	/**< A merge conflict exists and cannot continue */
 
 	GIT_PASSTHROUGH     = -30,	/**< Internal only */
 	GIT_ITEROVER        = -31,	/**< Signals end of iteration with iterator */

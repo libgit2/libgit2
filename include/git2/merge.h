@@ -72,6 +72,13 @@ typedef enum {
 	 * the ability to merge between a modified and renamed file.
 	 */
 	GIT_MERGE_TREE_FIND_RENAMES = (1 << 0),
+
+	/**
+	 * If a conflict occurs, exit immediately instead of attempting to
+	 * continue resolving conflicts.  The merge operation will fail with
+	 * GIT_EMERGECONFLICT and no index will be returned.
+	 */
+	GIT_MERGE_TREE_FAIL_ON_CONFLICT = (1 << 1),
 } git_merge_tree_flag_t;
 
 /**
