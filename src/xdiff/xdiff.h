@@ -20,7 +20,7 @@
  *
  */
 
-#include "util.h"
+#include "../util.h"
 
 #if !defined(XDIFF_H)
 #define XDIFF_H
