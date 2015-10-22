@@ -493,8 +493,10 @@ static int diff_list_apply_options(
 
 	/* Don't set GIT_DIFFCAPS_USE_DEV - compile time option in core git */
 
-	/* Set GIT_DIFFCAPS_TRUST_NANOSECS on a platform basis */
+	/* Don't trust nanoseconds; we do not load nanos from disk */
+#ifdef GIT_USE_NSEC
 	diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_TRUST_NANOSECS;
+#endif
 
 	/* If not given explicit `opts`, check `diff.xyz` configs */
 	if (!opts) {
