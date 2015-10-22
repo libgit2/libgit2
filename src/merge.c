@@ -1296,7 +1296,7 @@ int git_merge_diff_list__find_renames(
 
 	assert(diff_list && opts);
 
-	if ((opts->tree_flags & GIT_MERGE_TREE_FIND_RENAMES) == 0)
+	if ((opts->flags & GIT_MERGE_FIND_RENAMES) == 0)
 		return 0;
 
 	similarity_ours = git__calloc(diff_list->conflicts.length,
@@ -1632,8 +1632,8 @@ static int merge_normalize_opts(
 		git_merge_options init = GIT_MERGE_OPTIONS_INIT;
 		memcpy(opts, &init, sizeof(init));
 
-		opts->tree_flags = GIT_MERGE_TREE_FIND_RENAMES;
-		opts->rename_threshold = GIT_MERGE_TREE_RENAME_THRESHOLD;
+		opts->flags = GIT_MERGE_FIND_RENAMES;
+		opts->rename_threshold = GIT_MERGE_DEFAULT_RENAME_THRESHOLD;
 	}
 
 	if (!opts->target_limit) {
@@ -1643,7 +1643,7 @@ static int merge_normalize_opts(
 			limit = git_config__get_int_force(cfg, "diff.renamelimit", 0);
 
 		opts->target_limit = (limit <= 0) ?
-			GIT_MERGE_TREE_TARGET_LIMIT : (unsigned int)limit;
+			GIT_MERGE_DEFAULT_TARGET_LIMIT : (unsigned int)limit;
 	}
 
 	/* assign the internal metric with whitespace flag as payload */
@@ -1864,7 +1864,7 @@ int git_merge__iterators(
 			goto done;
 
 		if (!resolved) {
-			if ((opts.tree_flags & GIT_MERGE_TREE_FAIL_ON_CONFLICT)) {
+			if ((opts.flags & GIT_MERGE_FAIL_ON_CONFLICT)) {
 				giterr_set(GITERR_MERGE, "merge conflicts exist");
 				error = GIT_EMERGECONFLICT;
 				goto done;
@@ -1875,7 +1875,7 @@ int git_merge__iterators(
 	}
 
 	error = index_from_diff_list(out, diff_list,
-		(opts.tree_flags & GIT_MERGE_TREE_SKIP_REUC));
+		(opts.flags & GIT_MERGE_SKIP_REUC));
 
 done:
 	if (!given_opts || !given_opts->metric)

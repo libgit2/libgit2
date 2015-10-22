@@ -34,6 +34,14 @@ v0.23 + 1
 
 ### Breaking API changes
 
+* The `git_merge_tree_flag_t` is now `git_merge_flag_t`.  Subsequently,
+  its members are no longer prefixed with `GIT_MERGE_TREE_FLAG` but are
+  now prefixed with `GIT_MERGE_FLAG`, and the `tree_flags` field of the
+  `git_merge_options` structure is now named `flags`.
+
+* The `git_merge_file_flags_t` enum is now `git_merge_file_flag_t` for
+  consistency with other enum type names.
+
 * `git_cert` descendent types now have a proper `parent` member
 
 * It is the responsibility of the refdb backend to decide what to do

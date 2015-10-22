@@ -19,8 +19,8 @@
 #define GIT_MERGE_MODE_FILE		"MERGE_MODE"
 #define GIT_MERGE_FILE_MODE		0666
 
-#define GIT_MERGE_TREE_RENAME_THRESHOLD	50
-#define GIT_MERGE_TREE_TARGET_LIMIT		1000
+#define GIT_MERGE_DEFAULT_RENAME_THRESHOLD	50
+#define GIT_MERGE_DEFAULT_TARGET_LIMIT		1000
 
 /** Types of changes when files are merged from branch to branch. */
 typedef enum {

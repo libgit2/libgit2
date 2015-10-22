@@ -134,7 +134,7 @@ void test_merge_trees_commits__fail_on_conflict(void)
 	git_index *index;
 	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
 
-	opts.tree_flags |= GIT_MERGE_TREE_FAIL_ON_CONFLICT;
+	opts.flags |= GIT_MERGE_FAIL_ON_CONFLICT;
 
 	cl_git_fail_with(GIT_EMERGECONFLICT, 
 		merge_trees_from_branches(&index, repo, "df_side1", "df_side2", &opts));
