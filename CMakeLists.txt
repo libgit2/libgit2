@@ -137,13 +137,13 @@ FUNCTION(TARGET_OS_LIBRARIES target)
 	ENDIF()
 ENDFUNCTION()
 
-# For the MSVC IDE, this function splits up the source files like windows
-# explorer does. This is esp. useful with the libgit2_clar project, were
-# usually 2 or more files share the same name.  Sadly, this file grouping
-# is a per-directory option in cmake and not per-target, resulting in
-# empty virtual folders "tests" for the git2.dll
-FUNCTION(MSVC_SPLIT_SOURCES target)
-	IF(MSVC_IDE)
+# This function splits the sources files up into their appropriate
+# subdirectories.  This is especially useful for IDEs like Xcode and
+# Visual Studio, so that you can navigate into the libgit2_clar project,
+# and see the folders within the tests folder (instead of just seeing all
+# source and tests in a single folder.)
+FUNCTION(IDE_SPLIT_SOURCES target)
+	IF(MSVC_IDE OR CMAKE_GENERATOR STREQUAL Xcode)
 		GET_TARGET_PROPERTY(sources ${target} SOURCES)
 		FOREACH(source ${sources})
 			IF(source MATCHES ".*/")
@@ -560,7 +560,7 @@ IF(MSVC AND GIT_ARCH_64 AND NOT BUILD_SHARED_LIBS)
   SET_TARGET_PROPERTIES(git2 PROPERTIES STATIC_LIBRARY_FLAGS "/MACHINE:x64")
 ENDIF()
 
-MSVC_SPLIT_SOURCES(git2)
+IDE_SPLIT_SOURCES(git2)
 
 IF (SONAME)
 	SET_TARGET_PROPERTIES(git2 PROPERTIES VERSION ${LIBGIT2_VERSION_STRING})
@@ -629,7 +629,7 @@ IF (BUILD_CLAR)
 	TARGET_LINK_LIBRARIES(libgit2_clar ${GSSAPI_LIBRARIES})
 	TARGET_LINK_LIBRARIES(libgit2_clar ${ICONV_LIBRARIES})
 	TARGET_OS_LIBRARIES(libgit2_clar)
-	MSVC_SPLIT_SOURCES(libgit2_clar)
+	IDE_SPLIT_SOURCES(libgit2_clar)
 
 	IF (MSVC_IDE)
 		# Precompiled headers
