@@ -40,7 +40,7 @@ int merge_trees_from_branches(
 	cl_git_pass(git_commit_tree(&our_tree, our_commit));
 	cl_git_pass(git_commit_tree(&their_tree, their_commit));
 
-	cl_git_pass(git_merge_trees(index, repo, ancestor_tree, our_tree, their_tree, opts));
+	error = git_merge_trees(index, repo, ancestor_tree, our_tree, their_tree, opts);
 
 	git_buf_free(&branch_buf);
 	git_tree_free(our_tree);
@@ -50,7 +50,7 @@ int merge_trees_from_branches(
 	git_commit_free(their_commit);
 	git_commit_free(ancestor_commit);
 
-	return 0;
+	return error;
 }
 
 int merge_commits_from_branches(
@@ -61,6 +61,7 @@ int merge_commits_from_branches(
 	git_commit *our_commit, *their_commit;
 	git_oid our_oid, their_oid;
 	git_buf branch_buf = GIT_BUF_INIT;
+	int error;
 
 	git_buf_printf(&branch_buf, "%s%s", GIT_REFS_HEADS_DIR, ours_name);
 	cl_git_pass(git_reference_name_to_id(&our_oid, repo, branch_buf.ptr));
@@ -71,13 +72,13 @@ int merge_commits_from_branches(
 	cl_git_pass(git_reference_name_to_id(&their_oid, repo, branch_buf.ptr));
 	cl_git_pass(git_commit_lookup(&their_commit, repo, &their_oid));
 
-	cl_git_pass(git_merge_commits(index, repo, our_commit, their_commit, opts));
+	error = git_merge_commits(index, repo, our_commit, their_commit, opts);
 
 	git_buf_free(&branch_buf);
 	git_commit_free(our_commit);
 	git_commit_free(their_commit);
 
-	return 0;
+	return error;
 }
 
 int merge_branches(git_repository *repo,
