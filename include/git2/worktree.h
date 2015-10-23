@@ -61,6 +61,21 @@ GIT_EXTERN(void) git_worktree_free(git_worktree *wt);
  */
 GIT_EXTERN(int) git_worktree_validate(const git_worktree *wt);
 
+/**
+ * Add a new working tree
+ *
+ * Add a new working tree for the repository, that is create the
+ * required data structures inside the repository and check out
+ * the current HEAD at `path`
+ *
+ * @param out Output pointer containing new working tree
+ * @param repo Repository to create working tree for
+ * @param name Name of the working tree
+ * @param path Path to create working tree at
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_worktree_add(git_worktree **out, git_repository *repo, const char *name, const char *path);
+
 /** @} */
 GIT_END_DECL
 #endif

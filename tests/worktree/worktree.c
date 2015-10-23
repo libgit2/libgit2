@@ -204,6 +204,89 @@ void test_worktree_worktree__open_invalid_parent(void)
 	git_worktree_free(wt);
 }
 
+void test_worktree_worktree__init(void)
+{
+	git_worktree *wt;
+	git_repository *repo;
+	git_reference *branch;
+	git_buf path = GIT_BUF_INIT;
+
+	cl_git_pass(git_buf_joinpath(&path, fixture.repo->workdir, "../worktree-new"));
+	cl_git_pass(git_worktree_add(&wt, fixture.repo, "worktree-new", path.ptr));
+
+	/* Open and verify created repo */
+	cl_git_pass(git_repository_open(&repo, path.ptr));
+	cl_git_pass(git_branch_lookup(&branch, repo, "worktree-new", GIT_BRANCH_LOCAL));
+
+	git_buf_free(&path);
+	git_worktree_free(wt);
+	git_reference_free(branch);
+	git_repository_free(repo);
+}
+
+void test_worktree_worktree__init_existing_branch(void)
+{
+	git_reference *head, *branch;
+	git_commit *commit;
+	git_worktree *wt;
+	git_buf path = GIT_BUF_INIT;
+
+	cl_git_pass(git_repository_head(&head, fixture.repo));
+	cl_git_pass(git_commit_lookup(&commit, fixture.repo, &head->target.oid));
+	cl_git_pass(git_branch_create(&branch, fixture.repo, "worktree-new", commit, false));
+
+	cl_git_pass(git_buf_joinpath(&path, fixture.repo->workdir, "../worktree-new"));
+	cl_git_fail(git_worktree_add(&wt, fixture.repo, "worktree-new", path.ptr));
+
+	git_buf_free(&path);
+	git_commit_free(commit);
+	git_reference_free(head);
+	git_reference_free(branch);
+}
+
+void test_worktree_worktree__init_existing_worktree(void)
+{
+	git_worktree *wt;
+	git_buf path = GIT_BUF_INIT;
+
+	cl_git_pass(git_buf_joinpath(&path, fixture.repo->workdir, "../worktree-new"));
+	cl_git_fail(git_worktree_add(&wt, fixture.repo, "testrepo-worktree", path.ptr));
+
+	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
+	cl_assert_equal_s(wt->gitlink_path, fixture.worktree->path_gitlink);
+
+	git_buf_free(&path);
+	git_worktree_free(wt);
+}
+
+void test_worktree_worktree__init_existing_path(void)
+{
+	const char *wtfiles[] = { "HEAD", "commondir", "gitdir", "index" };
+	git_worktree *wt;
+	git_buf path = GIT_BUF_INIT;
+	unsigned i;
+
+	/* Delete files to verify they have not been created by
+	 * the init call */
+	for (i = 0; i < ARRAY_SIZE(wtfiles); i++) {
+		cl_git_pass(git_buf_joinpath(&path,
+			    fixture.worktree->path_repository, wtfiles[i]));
+		cl_git_pass(p_unlink(path.ptr));
+	}
+
+	cl_git_pass(git_buf_joinpath(&path, fixture.repo->workdir, "../testrepo-worktree"));
+	cl_git_fail(git_worktree_add(&wt, fixture.repo, "worktree-new", path.ptr));
+
+	/* Verify files have not been re-created */
+	for (i = 0; i < ARRAY_SIZE(wtfiles); i++) {
+		cl_git_pass(git_buf_joinpath(&path,
+			    fixture.worktree->path_repository, wtfiles[i]));
+		cl_assert(!git_path_exists(path.ptr));
+	}
+
+	git_buf_free(&path);
+}
+
 void test_worktree_worktree__validate(void)
 {
 	git_worktree *wt;

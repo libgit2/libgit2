@@ -5,9 +5,12 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "common.h"
+
+#include "git2/branch.h"
+#include "git2/commit.h"
 #include "git2/worktree.h"
 
-#include "common.h"
 #include "repository.h"
 #include "worktree.h"
 
@@ -88,6 +91,25 @@ err:
 	git_buf_free(&path);
 
 	return NULL;
+}
+
+static int write_wtfile(const char *base, const char *file, const git_buf *buf)
+{
+	git_buf path = GIT_BUF_INIT;
+	int err;
+
+	assert(base && file && buf);
+
+	if ((err = git_buf_joinpath(&path, base, file)) < 0)
+		goto out;
+
+	if ((err = git_futils_writebuffer(buf, path.ptr, O_CREAT|O_EXCL|O_WRONLY, 0644)) < 0)
+		goto out;
+
+out:
+	git_buf_free(&path);
+
+	return err;
 }
 
 int git_worktree_lookup(git_worktree **out, git_repository *repo, const char *name)
@@ -180,6 +202,84 @@ int git_worktree_validate(const git_worktree *wt)
 
 out:
 	git_buf_free(&buf);
+
+	return err;
+}
+
+int git_worktree_add(git_worktree **out, git_repository *repo, const char *name, const char *worktree)
+{
+	git_buf path = GIT_BUF_INIT, buf = GIT_BUF_INIT;
+	git_reference *ref = NULL, *head = NULL;
+	git_commit *commit = NULL;
+	git_repository *wt = NULL;
+	git_checkout_options coopts = GIT_CHECKOUT_OPTIONS_INIT;
+	int err;
+
+	assert(out && repo && name && worktree);
+
+	*out = NULL;
+
+	/* Create worktree related files in commondir */
+	if ((err = git_buf_joinpath(&path, repo->commondir, "worktrees")) < 0)
+		goto out;
+	if (!git_path_exists(path.ptr))
+		if ((err = git_futils_mkdir(path.ptr, 0755, GIT_MKDIR_EXCL)) < 0)
+			goto out;
+	if ((err = git_buf_joinpath(&path, path.ptr, name)) < 0)
+		goto out;
+	if ((err = git_futils_mkdir(path.ptr, 0755, GIT_MKDIR_EXCL)) < 0)
+		goto out;
+
+	/* Create worktree work dir */
+	if ((err = git_futils_mkdir(worktree, 0755, GIT_MKDIR_EXCL)) < 0)
+		goto out;
+
+	/* Create worktree .git file */
+	if ((err = git_buf_printf(&buf, "gitdir: %s\n", path.ptr)) < 0)
+		goto out;
+	if ((err = write_wtfile(worktree, ".git", &buf)) < 0)
+		goto out;
+
+	/* Create commondir files */
+	if ((err = git_buf_sets(&buf, repo->commondir)) < 0
+	    || (err = git_buf_putc(&buf, '\n')) < 0
+	    || (err = write_wtfile(path.ptr, "commondir", &buf)) < 0)
+		goto out;
+	if ((err = git_buf_joinpath(&buf, worktree, ".git")) < 0
+	    || (err = git_buf_putc(&buf, '\n')) < 0
+	    || (err = write_wtfile(path.ptr, "gitdir", &buf)) < 0)
+		goto out;
+
+	/* Create new branch */
+	if ((err = git_repository_head(&head, repo)) < 0)
+		goto out;
+	if ((err = git_commit_lookup(&commit, repo, &head->target.oid)) < 0)
+		goto out;
+	if ((err = git_branch_create(&ref, repo, name, commit, false)) < 0)
+		goto out;
+
+	/* Set worktree's HEAD */
+	if ((err = git_repository_create_head(path.ptr, name)) < 0)
+		goto out;
+	if ((err = git_repository_open(&wt, worktree)) < 0)
+		goto out;
+
+	/* Checkout worktree's HEAD */
+	coopts.checkout_strategy = GIT_CHECKOUT_FORCE;
+	if ((err = git_checkout_head(wt, &coopts)) < 0)
+		goto out;
+
+	/* Load result */
+	if ((err = git_worktree_lookup(out, repo, name)) < 0)
+		goto out;
+
+out:
+	git_buf_free(&path);
+	git_buf_free(&buf);
+	git_reference_free(ref);
+	git_reference_free(head);
+	git_commit_free(commit);
+	git_repository_free(wt);
 
 	return err;
 }
