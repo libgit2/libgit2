@@ -4,6 +4,7 @@
 #include "tree.h"
 #include "merge_helpers.h"
 #include "merge.h"
+#include "index.h"
 #include "git2/merge.h"
 #include "git2/sys/index.h"
 #include "git2/annotated_commit.h"
@@ -239,7 +240,7 @@ int merge_test_index(git_index *index, const struct merge_index_entry expected[]
 	const git_index_entry *index_entry;
 
 	/*
-	dump_index_entries(&index->entries);
+	merge__dump_index_entries(&index->entries);
 	*/
 
 	if (git_index_entrycount(index) != expected_len)

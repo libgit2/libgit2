@@ -74,16 +74,24 @@ typedef enum {
 	GIT_MERGE_FIND_RENAMES = (1 << 0),
 
 	/**
-	 * Do not write the REUC extension on the generated index
-	 */
-	GIT_MERGE_SKIP_REUC = (1 << 2),
-
-	/**
 	 * If a conflict occurs, exit immediately instead of attempting to
 	 * continue resolving conflicts.  The merge operation will fail with
 	 * GIT_EMERGECONFLICT and no index will be returned.
 	 */
 	GIT_MERGE_FAIL_ON_CONFLICT = (1 << 1),
+
+	/**
+	 * Do not write the REUC extension on the generated index
+	 */
+	GIT_MERGE_SKIP_REUC = (1 << 2),
+
+	/**
+	 * If the commits being merged have multiple merge bases, do not build
+	 * a recursive merge base (by merging the multiple merge bases),
+	 * instead simply use the first base.  This flag provides a similar
+	 * merge base to `git-merge-resolve`.
+	 */
+	GIT_MERGE_NO_RECURSIVE = (1 << 3),
 } git_merge_flag_t;
 
 /**
