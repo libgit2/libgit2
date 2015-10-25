@@ -8,6 +8,7 @@
 #define INCLUDE_git_buf_h__
 
 #include "common.h"
+#include "types.h"
 
 /**
  * @file git2/buffer.h
@@ -19,42 +20,6 @@
 GIT_BEGIN_DECL
 
 /**
- * A data buffer for exporting data from libgit2
- *
- * Sometimes libgit2 wants to return an allocated data buffer to the
- * caller and have the caller take responsibility for freeing that memory.
- * This can be awkward if the caller does not have easy access to the same
- * allocation functions that libgit2 is using.  In those cases, libgit2
- * will fill in a `git_buf` and the caller can use `git_buf_free()` to
- * release it when they are done.
- *
- * A `git_buf` may also be used for the caller to pass in a reference to
- * a block of memory they hold.  In this case, libgit2 will not resize or
- * free the memory, but will read from it as needed.
- *
- * A `git_buf` is a public structure with three fields:
- *
- * - `ptr` points to the start of the allocated memory.  If it is NULL,
- *   then the `git_buf` is considered empty and libgit2 will feel free
- *   to overwrite it with new data.
- *
- * - `size` holds the size (in bytes) of the data that is actually used.
- *
- * - `asize` holds the known total amount of allocated memory if the `ptr`
- *    was allocated by libgit2.  It may be larger than `size`.  If `ptr`
- *    was not allocated by libgit2 and should not be resized and/or freed,
- *    then `asize` will be set to zero.
- *
- * Some APIs may occasionally do something slightly unusual with a buffer,
- * such as setting `ptr` to a value that was passed in by the user.  In
- * those cases, the behavior will be clearly documented by the API.
- */
-typedef struct {
-	char   *ptr;
-	size_t asize, size;
-} git_buf;
-
-/**
  * Static initializer for git_buf from static buffer
  */
 #define GIT_BUF_INIT_CONST(STR,LEN) { (char *)(STR), 0, (size_t)(LEN) }
@@ -63,7 +28,7 @@ typedef struct {
  * Free the memory referred to by the git_buf.
  *
  * Note that this does not free the `git_buf` itself, just the memory
- * pointed to by `buffer->ptr`.  This will not free the memory if it looks
+ * referenced by the buffer.  This will not free the memory if it looks
  * like it was not allocated internally, but it will clear the buffer back
  * to the empty state.
  *
@@ -120,6 +85,43 @@ GIT_EXTERN(int) git_buf_is_binary(const git_buf *buf);
 * @return 1 if buffer contains a NUL byte
 */
 GIT_EXTERN(int) git_buf_contains_nul(const git_buf *buf);
+
+/**
+* Read data contained in the buffer
+*
+* @param bug Buffer to read
+* @param data_out Pointer to the buffer's data
+* @param datalen The length of the data in the buffer
+* @return 0 if success, otherwise -1
+*/
+GIT_EXTERN(int) git_buf_read(const git_buf *buffer, const char **data_out, size_t *datalen);
+
+/**
+* Gets the length of the buffer.
+*
+* @param buf Buffer to read
+* @return The length of the data contained in the buffer
+*/
+GIT_EXTERN(size_t) git_buf_len(const git_buf *buffer);
+
+/**
+* Gets the length of the buffer.
+*
+* @param buf Buffer to read
+* @return The size of the buffer
+*/
+GIT_EXTERN(size_t) git_buf_size(const git_buf *buffer);
+
+/**
+* Copies a buffer into an array.
+*
+* @param buffer Buffer to copy
+* @param copy_to The array to copy the buffer to
+* @param len The length of the array to be copied to
+* @param copiedlen_out The number of bytes copued from the buffer into the array
+* @return 0 if successful, otherwise -1
+*/
+GIT_EXTERN(int) git_buf_copy(const git_buf* buffer, char *copy_to, size_t len, size_t *copiedlen_out);
 
 GIT_END_DECL
 
