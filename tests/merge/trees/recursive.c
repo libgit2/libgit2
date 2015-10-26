@@ -18,7 +18,7 @@ void test_merge_trees_recursive__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-void test_merge_trees_recursive__one(void)
+void test_merge_trees_recursive__one_base_commit(void)
 {
 	git_index *index;
 	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
@@ -39,7 +39,7 @@ void test_merge_trees_recursive__one(void)
 	git_index_free(index);
 }
 
-void test_merge_trees_recursive__one_norecursive(void)
+void test_merge_trees_recursive__one_base_commit_norecursive(void)
 {
 	git_index *index;
 	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
@@ -62,7 +62,7 @@ void test_merge_trees_recursive__one_norecursive(void)
 	git_index_free(index);
 }
 
-void test_merge_trees_recursive__two(void)
+void test_merge_trees_recursive__two_base_commits(void)
 {
 	git_index *index;
 	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
@@ -83,7 +83,7 @@ void test_merge_trees_recursive__two(void)
 	git_index_free(index);
 }
 
-void test_merge_trees_recursive__two_norecursive(void)
+void test_merge_trees_recursive__two_base_commits_norecursive(void)
 {
 	git_index *index;
 	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
@@ -108,7 +108,7 @@ void test_merge_trees_recursive__two_norecursive(void)
 	git_index_free(index);
 }
 
-void test_merge_trees_recursive__three(void)
+void test_merge_trees_recursive__two_levels_of_multiple_bases(void)
 {
 	git_index *index;
 	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
@@ -129,7 +129,7 @@ void test_merge_trees_recursive__three(void)
 	git_index_free(index);
 }
 
-void test_merge_trees_recursive__three_norecursive(void)
+void test_merge_trees_recursive__two_levels_of_multiple_bases_norecursive(void)
 {
 	git_index *index;
 	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
@@ -154,7 +154,7 @@ void test_merge_trees_recursive__three_norecursive(void)
 	git_index_free(index);
 }
 
-void test_merge_trees_recursive__four(void)
+void test_merge_trees_recursive__three_levels_of_multiple_bases(void)
 {
 	git_index *index;
 	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
@@ -175,7 +175,7 @@ void test_merge_trees_recursive__four(void)
 	git_index_free(index);
 }
 
-void test_merge_trees_recursive__four_norecursive(void)
+void test_merge_trees_recursive__three_levels_of_multiple_bases_norecursive(void)
 {
 	git_index *index;
 	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
