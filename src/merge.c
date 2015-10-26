@@ -27,6 +27,7 @@
 #include "config.h"
 #include "oidarray.h"
 #include "annotated_commit.h"
+#include "commit.h"
 
 #include "git2/types.h"
 #include "git2/repository.h"
@@ -1922,6 +1923,117 @@ done:
 	return error;
 }
 
+#define INSERT_VIRTUAL_BASE_PARENT(commit, parent_id) \
+	do { \
+		id = git_array_alloc(commit->parent_ids); \
+		GITERR_CHECK_ALLOC(id); \
+		git_oid_cpy(id, parent_id); \
+	} while(0)
+
+static int build_virtual_base(
+	git_commit **out,
+	git_repository *repo,
+	const git_commit *one,
+	bool one_is_virtual,
+	const git_oid *two_id)
+{
+	git_commit *two = NULL, *result;
+	git_index *index = NULL;
+	git_oid tree_id, *id;
+	int error;
+
+	/* TODO: propagate merge options */
+	if ((error = git_commit_lookup(&two, repo, two_id)) < 0 ||
+		(error = git_merge_commits(&index, repo, one, two, NULL))  < 0)
+		goto done;
+
+	if ((error = git_index_write_tree_to(&tree_id, index, repo)) < 0)
+		goto done;
+
+	if ((result = git__calloc(1, sizeof(git_commit))) == NULL)
+		goto done;
+
+	result->object.repo = repo;
+
+	/* if the initial commit we were given is virtual, we are octopus
+	 * merging - that virtual base's parents should actually be the
+	 * parents that we use for our new virtual commit.  otherwise, it
+	 * is an actual parent.
+	 */
+	if (one_is_virtual) {
+		size_t i, cnt = git_commit_parentcount(one);
+
+		for (i = 0; i < cnt; i++)
+			INSERT_VIRTUAL_BASE_PARENT(result, git_commit_parent_id(one, i));
+	} else {
+		INSERT_VIRTUAL_BASE_PARENT(result, git_commit_id(one));
+	}
+
+	INSERT_VIRTUAL_BASE_PARENT(result, two_id);
+
+	git_oid_cpy(&result->tree_id, &tree_id);
+
+	*out = result;
+
+done:
+	git_index_free(index);
+	git_commit_free(two);
+	return error;
+}
+
+#undef INSERT_VIRTUAL_BASE_PARENT
+
+static int compute_base_tree(
+	git_tree **out,
+	git_repository *repo,
+	const git_commit *our_commit,
+	const git_commit *their_commit,
+	bool recursive)
+{
+	git_commit_list *base_list;
+	git_revwalk *walk;
+	git_commit *base = NULL;
+	bool base_virtual = false;
+	int error = 0;
+
+	*out = NULL;
+
+	if ((error = merge_bases(&base_list, &walk, repo,
+		git_commit_id(our_commit), git_commit_id(their_commit))) < 0)
+		return error;
+
+	if (error == GIT_ENOTFOUND) {
+		giterr_clear();
+		error = 0;
+		goto done;
+	}
+
+	if ((error = git_commit_lookup(&base, repo, &base_list->item->oid)) < 0)
+		goto done;
+
+	while (recursive && base_list->next) {
+		git_commit *new_base;
+
+		base_list = base_list->next;
+
+		if ((error = build_virtual_base(&new_base, repo, base, base_virtual,
+			&base_list->item->oid)) < 0)
+			goto done;
+
+		git_commit_free(base);
+		base = new_base;
+		base_virtual = true;
+	}
+
+	error = git_commit_tree(out, base);
+
+done:
+	git_commit_free(base);
+	git_commit_list_free(&base_list);
+	git_revwalk_free(walk);
+
+	return error;
+}
 
 int git_merge_commits(
 	git_index **out,
@@ -1930,18 +2042,20 @@ int git_merge_commits(
 	const git_commit *their_commit,
 	const git_merge_options *opts)
 {
-	git_oid ancestor_oid;
-	git_commit *ancestor_commit = NULL;
 	git_tree *our_tree = NULL, *their_tree = NULL, *ancestor_tree = NULL;
+	bool recursive;
 	int error = 0;
 
-	if ((error = git_merge_base(&ancestor_oid, repo, git_commit_id(our_commit), git_commit_id(their_commit))) < 0 &&
-		error == GIT_ENOTFOUND)
-		giterr_clear();
-	else if (error < 0 ||
-		(error = git_commit_lookup(&ancestor_commit, repo, &ancestor_oid)) < 0 ||
-		(error = git_commit_tree(&ancestor_tree, ancestor_commit)) < 0)
-		goto done;
+	recursive = !opts || (opts->flags & GIT_MERGE_NO_RECURSIVE) == 0;
+
+	if ((error = compute_base_tree(&ancestor_tree, repo,
+		our_commit, their_commit, recursive)) < 0) {
+
+		if (error == GIT_ENOTFOUND)
+			giterr_clear();
+		else
+			goto done;
+	}
 
 	if ((error = git_commit_tree(&our_tree, our_commit)) < 0 ||
 		(error = git_commit_tree(&their_tree, their_commit)) < 0 ||
@@ -1949,7 +2063,6 @@ int git_merge_commits(
 		goto done;
 
 done:
-	git_commit_free(ancestor_commit);
 	git_tree_free(our_tree);
 	git_tree_free(their_tree);
 	git_tree_free(ancestor_tree);
