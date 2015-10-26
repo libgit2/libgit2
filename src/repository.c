@@ -1262,7 +1262,7 @@ static int check_repositoryformatversion(git_config *config)
 	return 0;
 }
 
-static int repo_init_create_head(const char *git_dir, const char *ref_name)
+int git_repository_create_head(const char *git_dir, const char *ref_name)
 {
 	git_buf ref_path = GIT_BUF_INIT;
 	git_filebuf ref = GIT_FILEBUF_INIT;
@@ -1959,7 +1959,7 @@ int git_repository_init_ext(
 				repo_path.ptr, wd, opts)) &&
 			!(error = repo_init_config(
 				repo_path.ptr, wd, opts->flags, opts->mode)))
-			error = repo_init_create_head(
+			error = git_repository_create_head(
 				repo_path.ptr, opts->initial_head);
 	}
 	if (error < 0)
