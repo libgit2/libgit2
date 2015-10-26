@@ -1716,6 +1716,7 @@ int git_merge__iterators(
 		git__free(opts.metric);
 
 	error = index_from_diff_list(out, diff_list);
+	GIT_REFCOUNT_OWN(*out, repo);
 
 done:
 	git_merge_diff_list__free(diff_list);

@@ -50,6 +50,7 @@ static int merge_trivial(git_index **index, const char *ours, const char *theirs
 	cl_git_pass(git_commit_tree(&their_tree, their_commit));
 
 	cl_git_pass(git_merge_trees(index, repo, ancestor_tree, our_tree, their_tree, &opts));
+	cl_assert(git_index_owner(*index) == repo);
 
 	git_buf_free(&branch_buf);
 	git_tree_free(our_tree);
