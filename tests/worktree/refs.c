@@ -68,6 +68,41 @@ void test_worktree_refs__read_head(void)
 	git_reference_free(head);
 }
 
+void test_worktree_refs__set_head_fails_when_worktree_wants_linked_repos_HEAD(void)
+{
+	git_reference *head;
+
+	cl_git_pass(git_repository_head(&head, fixture.repo));
+	cl_git_fail(git_repository_set_head(fixture.worktree, git_reference_name(head)));
+
+	git_reference_free(head);
+}
+
+void test_worktree_refs__set_head_fails_when_main_repo_wants_worktree_head(void)
+{
+	git_reference *head;
+
+	cl_git_pass(git_repository_head(&head, fixture.worktree));
+	cl_git_fail(git_repository_set_head(fixture.repo, git_reference_name(head)));
+
+	git_reference_free(head);
+}
+
+void test_worktree_refs__set_head_works_for_current_HEAD(void)
+{
+	git_reference *head;
+
+	cl_git_pass(git_repository_head(&head, fixture.repo));
+	cl_git_pass(git_repository_set_head(fixture.repo, git_reference_name(head)));
+
+	git_reference_free(head);
+}
+
+void test_worktree_refs__set_head_fails_when_already_checked_out(void)
+{
+	cl_git_fail(git_repository_set_head(fixture.repo, "refs/heads/testrepo-worktree"));
+}
+
 void test_worktree_refs__delete_fails_for_checked_out_branch(void)
 {
        git_reference *branch;

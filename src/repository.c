@@ -2529,6 +2529,12 @@ int git_repository_set_head(
 	if (error < 0 && error != GIT_ENOTFOUND)
 		goto cleanup;
 
+	if (ref && current->type == GIT_REF_SYMBOLIC && git__strcmp(current->target.symbolic, ref->name) &&
+	    git_reference_is_branch(ref) && git_branch_is_checked_out(ref)) {
+		error = -1;
+		goto cleanup;
+	}
+
 	if (!error) {
 		if (git_reference_is_branch(ref)) {
 			error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_FILE,
