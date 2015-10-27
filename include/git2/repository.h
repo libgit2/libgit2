@@ -346,6 +346,17 @@ GIT_EXTERN(int) git_repository_init_ext(
 GIT_EXTERN(int) git_repository_head(git_reference **out, git_repository *repo);
 
 /**
+ * Retrieve the referenced HEAD for the worktree
+ *
+ * @param out pointer to the reference which will be retrieved
+ * @param repo a repository object
+ * @param name name of the worktree to retrieve HEAD for
+ * @return 0 when successful, error-code otherwise
+ */
+GIT_EXTERN(int) git_repository_head_for_worktree(git_reference **out, git_repository *repo,
+	const char *name);
+
+/**
  * Check if a repository's HEAD is detached
  *
  * A repository's HEAD is detached when it points directly to a commit
@@ -356,6 +367,20 @@ GIT_EXTERN(int) git_repository_head(git_reference **out, git_repository *repo);
  * was an error.
  */
 GIT_EXTERN(int) git_repository_head_detached(git_repository *repo);
+
+/*
+ * Check if a worktree's HEAD is detached
+ *
+ * A worktree's HEAD is detached when it points directly to a
+ * commit instead of a branch.
+ *
+ * @param repo a repository object
+ * @param name name of the worktree to retrieve HEAD for
+ * @return 1 if HEAD is detached, 0 if its not; error code if
+ *  there was an error
+ */
+GIT_EXTERN(int) git_repository_head_detached_for_worktree(git_repository *repo,
+	const char *name);
 
 /**
  * Check if the current branch is unborn

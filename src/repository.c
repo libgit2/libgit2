@@ -2032,6 +2032,49 @@ int git_repository_head_detached(git_repository *repo)
 	return exists;
 }
 
+static int read_worktree_head(git_buf *out, git_repository *repo, const char *name)
+{
+	git_buf path = GIT_BUF_INIT;
+	int err;
+
+	assert(out && repo && name);
+
+	git_buf_clear(out);
+
+	if ((err = git_buf_printf(&path, "%s/worktrees/%s/HEAD", repo->commondir, name)) < 0)
+		goto out;
+	if (!git_path_exists(path.ptr))
+	{
+		err = -1;
+		goto out;
+	}
+
+	if ((err = git_futils_readbuffer(out, path.ptr)) < 0)
+		goto out;
+	git_buf_rtrim(out);
+
+out:
+	git_buf_free(&path);
+
+	return err;
+}
+
+int git_repository_head_detached_for_worktree(git_repository *repo, const char *name)
+{
+	git_buf buf = GIT_BUF_INIT;
+	int ret;
+
+	assert(repo && name);
+
+	if (read_worktree_head(&buf, repo, name) < 0)
+		return -1;
+
+	ret = git__strncmp(buf.ptr, GIT_SYMREF, strlen(GIT_SYMREF)) != 0;
+	git_buf_free(&buf);
+
+	return ret;
+}
+
 int git_repository_head(git_reference **head_out, git_repository *repo)
 {
 	git_reference *head;
@@ -2049,6 +2092,48 @@ int git_repository_head(git_reference **head_out, git_repository *repo)
 	git_reference_free(head);
 
 	return error == GIT_ENOTFOUND ? GIT_EUNBORNBRANCH : error;
+}
+
+int git_repository_head_for_worktree(git_reference **out, git_repository *repo, const char *name)
+{
+	git_buf buf = GIT_BUF_INIT;
+	git_reference *head;
+	int err;
+
+	assert(out && repo && name);
+
+	*out = NULL;
+
+	if (git_repository_head_detached_for_worktree(repo, name))
+		return -1;
+	if ((err = read_worktree_head(&buf, repo, name)) < 0)
+		goto out;
+
+	/* We can only resolve symbolic references */
+	if (git__strncmp(buf.ptr, GIT_SYMREF, strlen(GIT_SYMREF)))
+	{
+		err = -1;
+		goto out;
+	}
+	git_buf_consume(&buf, buf.ptr + strlen(GIT_SYMREF));
+
+	if ((err = git_reference_lookup(&head, repo, buf.ptr)) < 0)
+		goto out;
+	if (git_reference_type(head) == GIT_REF_OID)
+	{
+		*out = head;
+		err = 0;
+		goto out;
+	}
+
+	err = git_reference_lookup_resolved(
+		out, repo, git_reference_symbolic_target(head), -1);
+	git_reference_free(head);
+
+out:
+	git_buf_free(&buf);
+
+	return err;
 }
 
 int git_repository_head_unborn(git_repository *repo)

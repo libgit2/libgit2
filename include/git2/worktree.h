@@ -77,7 +77,7 @@ GIT_EXTERN(int) git_worktree_validate(const git_worktree *wt);
  */
 GIT_EXTERN(int) git_worktree_add(git_worktree **out, git_repository *repo, const char *name, const char *path);
 
-/*
+/**
  * Lock worktree if not already locked
  *
  * Lock a worktree, optionally specifying a reason why the linked

@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "worktree_helpers.h"
 
+#include "checkout.h"
 #include "repository.h"
 #include "worktree.h"
 
