@@ -1726,13 +1726,13 @@ int git_merge__iterators(
 		}
 	}
 
-	if (!given_opts || !given_opts->metric)
-		git__free(opts.metric);
-
 	error = index_from_diff_list(out, diff_list,
 		(opts.tree_flags & GIT_MERGE_TREE_SKIP_REUC));
 
 done:
+	if (!given_opts || !given_opts->metric)
+		git__free(opts.metric);
+
 	git_merge_diff_list__free(diff_list);
 	git_iterator_free(empty_ancestor);
 	git_iterator_free(empty_ours);
