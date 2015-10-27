@@ -1255,10 +1255,12 @@ static int checkout_get_actions(
 	int error = 0, act;
 	const git_index_entry *wditem;
 	git_vector pathspec = GIT_VECTOR_INIT, *deltas;
-	git_pool pathpool = GIT_POOL_INIT_STRINGPOOL;
+	git_pool pathpool;
 	git_diff_delta *delta;
 	size_t i, *counts = NULL;
 	uint32_t *actions = NULL;
+
+	git_pool_init(&pathpool, 1);
 
 	if (data->opts.paths.count > 0 &&
 		git_pathspec__vinit(&pathspec, &data->opts.paths, &pathpool) < 0)
@@ -2439,10 +2441,11 @@ static int checkout_data_init(
 		git_config_entry_free(conflict_style);
 	}
 
+	git_pool_init(&data->pool, 1);
+
 	if ((error = git_vector_init(&data->removes, 0, git__strcmp_cb)) < 0 ||
 		(error = git_vector_init(&data->remove_conflicts, 0, NULL)) < 0 ||
 		(error = git_vector_init(&data->update_conflicts, 0, NULL)) < 0 ||
-		(error = git_pool_init(&data->pool, 1, 0)) < 0 ||
 		(error = git_buf_puts(&data->path, data->opts.target_directory)) < 0 ||
 		(error = git_path_to_dir(&data->path)) < 0 ||
 		(error = git_strmap_alloc(&data->mkdir_map)) < 0)

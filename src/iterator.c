@@ -567,7 +567,7 @@ static bool tree_iterator__pop_frame(tree_iterator *ti, bool final)
 	tree_iterator__move_to_next(ti, tf);
 
 	if (!final) { /* if final, don't bother to clean up */
-		git_pool_free_array(&ti->pool, tf->n_entries, (void **)tf->entries);
+		// TODO: maybe free the pool so far?
 		git_buf_rtruncate_at_char(&ti->path, '/');
 	}
 
@@ -822,8 +822,9 @@ int git_iterator_for_tree(
 	if ((error = iterator__update_ignore_case((git_iterator *)ti, options ? options->flags : 0)) < 0)
 		goto fail;
 
-	if ((error = git_pool_init(&ti->pool, sizeof(tree_iterator_entry),0)) < 0 ||
-		(error = tree_iterator__create_root_frame(ti, tree)) < 0 ||
+	git_pool_init(&ti->pool, sizeof(tree_iterator_entry));
+
+	if ((error = tree_iterator__create_root_frame(ti, tree)) < 0 ||
 		(error = tree_iterator__push_frame(ti)) < 0) /* expand root now */
 		goto fail;
 

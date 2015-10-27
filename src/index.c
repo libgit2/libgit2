@@ -439,7 +439,7 @@ int git_index_open(git_index **index_out, const char *index_path)
 		return -1;
 	}
 
-	git_pool_init(&index->tree_pool, 1, 0);
+	git_pool_init(&index->tree_pool, 1);
 
 	if (index_path != NULL) {
 		index->index_file_path = git__strdup(index_path);

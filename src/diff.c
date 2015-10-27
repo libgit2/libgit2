@@ -430,8 +430,9 @@ static git_diff *diff_list_alloc(
 	diff->new_src = new_iter->type;
 	memcpy(&diff->opts, &dflt, sizeof(diff->opts));
 
-	if (git_vector_init(&diff->deltas, 0, git_diff_delta__cmp) < 0 ||
-		git_pool_init(&diff->pool, 1, 0) < 0) {
+	git_pool_init(&diff->pool, 1);
+
+	if (git_vector_init(&diff->deltas, 0, git_diff_delta__cmp) < 0) {
 		git_diff_free(diff);
 		return NULL;
 	}
