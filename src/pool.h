@@ -38,12 +38,12 @@ typedef struct {
  *
  * To allocation strings, use like this:
  *
- *     git_pool_init(&string_pool, 1, 0);
+ *     git_pool_init(&string_pool, 1);
  *     my_string = git_pool_strdup(&string_pool, your_string);
  *
  * To allocate items of fixed size, use like this:
  *
- *     git_pool_init(&pool, sizeof(item), 0);
+ *     git_pool_init(&pool, sizeof(item));
  *     my_item = git_pool_malloc(&pool, 1);
  *
  * Of course, you can use this in other ways, but those are the
