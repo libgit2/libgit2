@@ -31,7 +31,6 @@ typedef struct {
 	git_pool_page *pages; /* pages with space left */
 	uint32_t item_size;  /* size of single alloc unit in bytes */
 	uint32_t page_size;  /* size of page in bytes */
-	uint32_t items;
 } git_pool;
 
 /**
@@ -66,17 +65,7 @@ extern void git_pool_swap(git_pool *a, git_pool *b);
  * Allocate space for one or more items from a pool.
  */
 extern void *git_pool_malloc(git_pool *pool, uint32_t items);
-
-/**
- * Allocate space and zero it out.
- */
-GIT_INLINE(void *) git_pool_mallocz(git_pool *pool, uint32_t items)
-{
-	void *ptr = git_pool_malloc(pool, items);
-	if (ptr)
-		memset(ptr, 0, (size_t)items * (size_t)pool->item_size);
-	return ptr;
-}
+extern void *git_pool_mallocz(git_pool *pool, uint32_t items);
 
 /**
  * Allocate space and duplicate string data into it.

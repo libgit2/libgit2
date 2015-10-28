@@ -626,7 +626,7 @@ static int merge_conflict_resolve_one_renamed(
 		git_oid__cmp(&conflict->our_entry.id, &conflict->their_entry.id) != 0)
 		return 0;
 
-	if ((merged = git_pool_malloc(&diff_list->pool, sizeof(git_index_entry))) == NULL)
+	if ((merged = git_pool_mallocz(&diff_list->pool, sizeof(git_index_entry))) == NULL)
 		return -1;
 
 	if (ours_changed)
@@ -711,7 +711,7 @@ static int merge_conflict_resolve_automerge(
 		(error = git_odb_write(&automerge_oid, odb, result.ptr, result.len, GIT_OBJ_BLOB)) < 0)
 		goto done;
 
-	if ((index_entry = git_pool_malloc(&diff_list->pool, sizeof(git_index_entry))) == NULL)
+	if ((index_entry = git_pool_mallocz(&diff_list->pool, sizeof(git_index_entry))) == NULL)
 	GITERR_CHECK_ALLOC(index_entry);
 
 	index_entry->path = git_pool_strdup(&diff_list->pool, result.path);
@@ -1342,7 +1342,7 @@ static git_merge_diff *merge_diff_from_index_entries(
 	git_merge_diff *conflict;
 	git_pool *pool = &diff_list->pool;
 
-	if ((conflict = git_pool_malloc(pool, sizeof(git_merge_diff))) == NULL)
+	if ((conflict = git_pool_mallocz(pool, sizeof(git_merge_diff))) == NULL)
 		return NULL;
 
 	if (index_entry_dup_pool(&conflict->ancestor_entry, pool, entries[TREE_IDX_ANCESTOR]) < 0 ||
@@ -1383,7 +1383,7 @@ static int merge_diff_list_insert_unmodified(
 	int error = 0;
 	git_index_entry *entry;
 
-	entry = git_pool_malloc(&diff_list->pool, sizeof(git_index_entry));
+	entry = git_pool_mallocz(&diff_list->pool, sizeof(git_index_entry));
 	GITERR_CHECK_ALLOC(entry);
 
 	if ((error = index_entry_dup_pool(entry, &diff_list->pool, tree_items[0])) >= 0)

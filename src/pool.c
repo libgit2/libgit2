@@ -51,7 +51,6 @@ void git_pool_clear(git_pool *pool)
 	}
 
 	pool->pages = NULL;
-	pool->items = 0;
 }
 
 void git_pool_swap(git_pool *a, git_pool *b)
@@ -73,7 +72,7 @@ static void *pool_alloc_page(git_pool *pool, uint32_t size)
 	size_t alloc_size;
 
 	if (GIT_ADD_SIZET_OVERFLOW(&alloc_size, new_page_size, sizeof(git_pool_page)) ||
-		!(page = git__calloc(1, alloc_size)))
+		!(page = git__malloc(alloc_size)))
 		return NULL;
 
 	page->size = new_page_size;
@@ -81,15 +80,12 @@ static void *pool_alloc_page(git_pool *pool, uint32_t size)
 	page->next = pool->pages;
 
 	pool->pages = page;
-	pool->items++;
 
 	return page->data;
 }
 
-void *git_pool_malloc(git_pool *pool, uint32_t items)
+static void *pool_alloc(git_pool *pool, uint32_t size)
 {
-	const uint32_t size = items * pool->item_size;
-
 	git_pool_page *page = pool->pages;
 	void *ptr = NULL;
 
@@ -98,8 +94,22 @@ void *git_pool_malloc(git_pool *pool, uint32_t items)
 
 	ptr = &page->data[page->size - page->avail];
 	page->avail -= size;
-	pool->items++;
 
+	return ptr;
+}
+
+void *git_pool_malloc(git_pool *pool, uint32_t items)
+{
+	const uint32_t size = items * pool->item_size;
+	return pool_alloc(pool, size);
+}
+
+void *git_pool_mallocz(git_pool *pool, uint32_t items)
+{
+	const uint32_t size = items * pool->item_size;
+	void *ptr = pool_alloc(pool, size);
+	if (ptr)
+		memset(ptr, 0x0, size);
 	return ptr;
 }
 
