@@ -28,7 +28,7 @@ typedef struct git_pool_page git_pool_page;
  * For examples of how to set up a `git_pool` see `git_pool_init`.
  */
 typedef struct {
-	git_pool_page *pages; /* pages with space left */
+	git_pool_page *pages; /* allocated pages */
 	uint32_t item_size;  /* size of single alloc unit in bytes */
 	uint32_t page_size;  /* size of page in bytes */
 } git_pool;
