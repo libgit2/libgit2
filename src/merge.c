@@ -626,7 +626,7 @@ static int merge_conflict_resolve_one_renamed(
 		git_oid__cmp(&conflict->our_entry.id, &conflict->their_entry.id) != 0)
 		return 0;
 
-	if ((merged = git_pool_mallocz(&diff_list->pool, sizeof(git_index_entry))) == NULL)
+	if ((merged = git_pool_malloc(&diff_list->pool, sizeof(git_index_entry))) == NULL)
 		return -1;
 
 	if (ours_changed)
@@ -1383,7 +1383,7 @@ static int merge_diff_list_insert_unmodified(
 	int error = 0;
 	git_index_entry *entry;
 
-	entry = git_pool_mallocz(&diff_list->pool, sizeof(git_index_entry));
+	entry = git_pool_malloc(&diff_list->pool, sizeof(git_index_entry));
 	GITERR_CHECK_ALLOC(entry);
 
 	if ((error = index_entry_dup_pool(entry, &diff_list->pool, tree_items[0])) >= 0)
