@@ -689,6 +689,7 @@ int git_repository_config__weakptr(git_config **out, git_repository *repo)
 		git_buf_free(&global_buf);
 		git_buf_free(&xdg_buf);
 		git_buf_free(&system_buf);
+		git_buf_free(&programdata_buf);
 	}
 
 	*out = repo->_config;
