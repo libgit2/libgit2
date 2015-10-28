@@ -19,4 +19,7 @@ struct git_annotated_commit {
 	char id_str[GIT_OID_HEXSZ+1];
 };
 
+extern int git_annotated_commit_from_head(git_annotated_commit **out,
+	git_repository *repo);
+
 #endif

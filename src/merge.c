@@ -28,6 +28,7 @@
 #include "oidarray.h"
 #include "annotated_commit.h"
 #include "commit.h"
+#include "oidarray.h"
 
 #include "git2/types.h"
 #include "git2/repository.h"
@@ -1925,6 +1926,7 @@ done:
 
 static int merge_trees_with_heads(
 	git_index **out,
+	git_commit **base_commit_out,
 	git_repository *repo,
 	const git_tree *ours,
 	const git_tree *theirs,
@@ -1938,23 +1940,61 @@ static int merge_trees_with_heads(
 		git_oid_cpy(_alloced, _id); \
 	} while(0)
 
-static int compute_base(
+static int create_virtual_base(
 	git_tree **out,
+	git_repository *repo,
+	git_tree *base_tree,
+	git_array_oid_t base_ids,
+	git_oid *next_commit_id,
+	const git_merge_options *opts)
+{
+	git_commit *next_commit = NULL, *intermediate_base = NULL;
+	git_tree *next_tree = NULL;
+	git_index *index = NULL;
+	git_oid new_tree_id;
+	int error;
+
+	if ((error = git_commit_lookup(&next_commit, repo, next_commit_id)) < 0 ||
+		(error = git_commit_tree(&next_tree, next_commit)) < 0)
+		goto done;
+
+	INSERT_ID(base_ids, git_commit_id(next_commit));
+
+	if ((error = merge_trees_with_heads(&index, &intermediate_base, repo,
+			base_tree, next_tree, base_ids.ptr, base_ids.size, opts)) < 0)
+		goto done;
+
+	/* TODO: conflicts!! */
+
+	if ((error = git_index_write_tree_to(&new_tree_id, index, repo)) < 0)
+		goto done;
+
+	error = git_tree_lookup(out, repo, &new_tree_id);
+
+done:
+	git_index_free(index);
+	git_tree_free(next_tree);
+	git_commit_free(intermediate_base);
+	git_commit_free(next_commit);
+
+	return error;
+}
+
+static int compute_base(
+	git_tree **tree_out,
+	git_commit **commit_out,
 	git_repository *repo,
 	const git_oid heads[],
 	size_t heads_len,
 	const git_merge_options *opts)
 {
-	git_commit_list *base_list = NULL;
+	git_commit_list *base_list = NULL, *base_iter;
 	git_revwalk *walk = NULL;
-	git_commit *base_commit = NULL, *next_commit = NULL;
+	git_commit *base_commit = NULL;
 	git_tree *base_tree = NULL, *next_tree = NULL;
-	git_array_t(git_oid) base_ids = GIT_ARRAY_INIT;
-	git_index *index = NULL;
+	git_array_oid_t base_ids = GIT_ARRAY_INIT;
 	bool recursive = !opts || (opts->flags & GIT_MERGE_NO_RECURSIVE) == 0;
 	int error = 0;
-
-	*out = NULL;
 
 	if ((error = merge_bases_many(&base_list, &walk, repo,
 		heads_len, heads)) < 0)
@@ -1966,58 +2006,40 @@ static int compute_base(
 		goto done;
 	}
 
+	base_iter = base_list;
+
 	if ((error = git_commit_lookup(&base_commit, repo,
-			&base_list->item->oid)) < 0 ||
+			&base_iter->item->oid)) < 0 ||
 		(error = git_commit_tree(&base_tree, base_commit)) < 0)
 		goto done;
 
 	INSERT_ID(base_ids, git_commit_id(base_commit));
 
-	while (recursive && base_list->next) {
-		git_tree *new_tree;
-		git_oid new_tree_id;
+	while (recursive && base_iter->next) {
+		base_iter = base_iter->next;
 
-		base_list = base_list->next;
-
-		if ((error = git_commit_lookup(&next_commit, repo,
-				&base_list->item->oid)) < 0 ||
-			(error = git_commit_tree(&next_tree, next_commit)) < 0)
+		if ((error = create_virtual_base(&next_tree, repo, base_tree,
+			base_ids, &base_iter->item->oid, opts)) < 0)
 			goto done;
-
-		INSERT_ID(base_ids, git_commit_id(next_commit));
-
-		if ((error = merge_trees_with_heads(&index, repo, base_tree,
-				next_tree, base_ids.ptr, base_ids.size, opts)) < 0)
-			goto done;
-
-		/* TODO: conflicts!! */
-
-		if ((error = git_index_write_tree_to(&new_tree_id, index, repo)) < 0 ||
-			(error = git_tree_lookup(&new_tree, repo, &new_tree_id)) < 0)
-			goto done;
-
-		git_index_free(index);
-		index = NULL;
-
-		git_tree_free(next_tree);
-		next_tree = NULL;
-
-		git_commit_free(next_commit);
-		next_commit = NULL;
 
 		git_tree_free(base_tree);
-		base_tree = new_tree;
+		base_tree = next_tree;
+		next_tree = NULL;
+
+		git_commit_free(base_commit);
+		base_commit = NULL;
 	}
 
-	*out = base_tree;
-	base_tree = NULL;
+	*tree_out = base_tree;
+	*commit_out = base_commit;
 
 done:
-	git_index_free(index);
+	if (error < 0) {
+		git_tree_free(base_tree);
+		git_commit_free(base_commit);
+	}
+
 	git_tree_free(next_tree);
-	git_tree_free(base_tree);
-	git_commit_free(next_commit);
-	git_commit_free(base_commit);
 	git_commit_list_free(&base_list);
 	git_revwalk_free(walk);
 	git_array_clear(base_ids);
@@ -2025,35 +2047,52 @@ done:
 	return error;
 }
 
+#undef INSERT_ID
+
 static int merge_trees_with_heads(
 	git_index **out,
+	git_commit **base_out,
 	git_repository *repo,
-	const git_tree *ours,
-	const git_tree *theirs,
+	const git_tree *our_tree,
+	const git_tree *their_tree,
 	const git_oid heads[],
 	size_t heads_len,
 	const git_merge_options *opts)
 {
-	git_tree *ancestor = NULL;
+	git_commit *ancestor_commit = NULL;
+	git_tree *ancestor_tree = NULL;
 	int error = 0;
 
-	if ((error = compute_base(&ancestor, repo, heads, heads_len, opts)) < 0) {
+	*out = NULL;
+	*base_out = NULL;
+
+	if ((error = compute_base(&ancestor_tree, &ancestor_commit, repo,
+		heads, heads_len, opts)) < 0) {
+
 		if (error == GIT_ENOTFOUND)
 			giterr_clear();
 		else
 			goto done;
 	}
 
-	error = git_merge_trees(out, repo, ancestor, ours, theirs, opts);
+	if ((error = git_merge_trees(out,
+		repo, ancestor_tree, our_tree, their_tree, opts)) < 0)
+		goto done;
+
+	*base_out = ancestor_commit;
 
 done:
-	git_tree_free(ancestor);
+	if (error < 0)
+		git_commit_free(ancestor_commit);
+
+	git_tree_free(ancestor_tree);
 
 	return error;
 }
 
-int git_merge_commits(
+static int merge_commits(
 	git_index **out,
+	git_commit **base_out,
 	git_repository *repo,
 	const git_commit *our_commit,
 	const git_commit *their_commit,
@@ -2070,14 +2109,31 @@ int git_merge_commits(
 
 	if ((error = git_commit_tree(&our_tree, our_commit)) < 0 ||
 		(error = git_commit_tree(&their_tree, their_commit)) < 0 ||
-		(error = merge_trees_with_heads(out, repo, our_tree, their_tree,
-			heads, 2, opts)) < 0)
+		(error = merge_trees_with_heads(out, base_out, repo,
+			our_tree, their_tree, heads, 2, opts)) < 0)
 		goto done;
 
 done:
 	git_tree_free(our_tree);
 	git_tree_free(their_tree);
 
+	return error;
+}
+
+int git_merge_commits(
+	git_index **out,
+	git_repository *repo,
+	const git_commit *our_commit,
+	const git_commit *their_commit,
+	const git_merge_options *opts)
+{
+	git_commit *base_commit = NULL;
+	int error;
+
+	error = merge_commits(out, &base_commit, repo,
+		our_commit, their_commit, opts);
+
+	git_commit_free(base_commit);
 	return error;
 }
 
@@ -2511,49 +2567,51 @@ const char *merge_their_label(const char *branchname)
 }
 
 static int merge_normalize_checkout_opts(
+	git_checkout_options *out,
 	git_repository *repo,
-	git_checkout_options *checkout_opts,
 	const git_checkout_options *given_checkout_opts,
-	const git_annotated_commit *ancestor_head,
+	unsigned int checkout_strategy,
+	git_commit *ancestor_commit,
 	const git_annotated_commit *our_head,
-	size_t their_heads_len,
-	const git_annotated_commit **their_heads)
+	const git_annotated_commit **their_heads,
+	size_t their_heads_len)
 {
+	git_checkout_options default_checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	int error = 0;
 
 	GIT_UNUSED(repo);
 
 	if (given_checkout_opts != NULL)
-		memcpy(checkout_opts, given_checkout_opts, sizeof(git_checkout_options));
-	else {
-		git_checkout_options default_checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
-		default_checkout_opts.checkout_strategy =  GIT_CHECKOUT_SAFE;
+		memcpy(out, given_checkout_opts, sizeof(git_checkout_options));
+	else
+		memcpy(out, &default_checkout_opts, sizeof(git_checkout_options));
 
-		memcpy(checkout_opts, &default_checkout_opts, sizeof(git_checkout_options));
-	}
+	out->checkout_strategy = checkout_strategy;
 
-	/* TODO: for multiple ancestors in merge-recursive, this is "merged common ancestors" */
-	if (!checkout_opts->ancestor_label) {
-		if (ancestor_head && ancestor_head->commit)
-			checkout_opts->ancestor_label = git_commit_summary(ancestor_head->commit);
+	/* TODO: disambiguate between merged common ancestors and no common
+	 * ancestor (although git.git does not!)
+	 */
+	if (!out->ancestor_label) {
+		if (ancestor_commit)
+			out->ancestor_label = git_commit_summary(ancestor_commit);
 		else
-			checkout_opts->ancestor_label = "ancestor";
+			out->ancestor_label = "merged common ancestors";
 	}
 
-	if (!checkout_opts->our_label) {
+	if (!out->our_label) {
 		if (our_head && our_head->ref_name)
-			checkout_opts->our_label = our_head->ref_name;
+			out->our_label = our_head->ref_name;
 		else
-			checkout_opts->our_label = "ours";
+			out->our_label = "ours";
 	}
 
-	if (!checkout_opts->their_label) {
+	if (!out->their_label) {
 		if (their_heads_len == 1 && their_heads[0]->ref_name)
-			checkout_opts->their_label = merge_their_label(their_heads[0]->ref_name);
+			out->their_label = merge_their_label(their_heads[0]->ref_name);
 		else if (their_heads_len == 1)
-			checkout_opts->their_label = their_heads[0]->id_str;
+			out->their_label = their_heads[0]->id_str;
 		else
-			checkout_opts->their_label = "theirs";
+			out->their_label = "theirs";
 	}
 
 	return error;
@@ -2906,11 +2964,11 @@ int git_merge(
 {
 	git_reference *our_ref = NULL;
 	git_checkout_options checkout_opts;
-	git_annotated_commit *ancestor_head = NULL, *our_head = NULL;
-	git_tree *ancestor_tree = NULL, *our_tree = NULL, **their_trees = NULL;
+	git_annotated_commit *our_head = NULL;
+	git_commit *base_commit = NULL;
 	git_index *index = NULL;
 	git_indexwriter indexwriter = GIT_INDEXWRITER_INIT;
-	size_t i;
+	unsigned int checkout_strategy;
 	int error = 0;
 
 	assert(repo && their_heads);
@@ -2920,61 +2978,49 @@ int git_merge(
 		return -1;
 	}
 
-	their_trees = git__calloc(their_heads_len, sizeof(git_tree *));
-	GITERR_CHECK_ALLOC(their_trees);
+	if ((error = git_repository__ensure_not_bare(repo, "merge")) < 0)
+		goto done;
 
-	if ((error = merge_heads(&ancestor_head, &our_head, repo, their_heads, their_heads_len)) < 0 ||
-		(error = merge_normalize_checkout_opts(repo, &checkout_opts, given_checkout_opts,
-			ancestor_head, our_head, their_heads_len, their_heads)) < 0 ||
-		(error = git_indexwriter_init_for_operation(&indexwriter, repo, &checkout_opts.checkout_strategy)) < 0)
-		goto on_error;
+	checkout_strategy = given_checkout_opts ?
+		given_checkout_opts->checkout_strategy :
+		GIT_CHECKOUT_SAFE;
 
-	/* Write the merge files to the repository. */
-	if ((error = git_merge__setup(repo, our_head, their_heads, their_heads_len)) < 0)
-		goto on_error;
+	if ((error = git_indexwriter_init_for_operation(&indexwriter, repo,
+		&checkout_strategy)) < 0)
+		goto done;
 
-	if (ancestor_head != NULL &&
-		(error = git_commit_tree(&ancestor_tree, ancestor_head->commit)) < 0)
-			goto on_error;
+	/* Write the merge setup files to the repository. */
+	if ((error = git_annotated_commit_from_head(&our_head, repo)) < 0 ||
+		(error = git_merge__setup(repo, our_head, their_heads,
+			their_heads_len)) < 0)
+		goto done;
 
-	if ((error = git_commit_tree(&our_tree, our_head->commit)) < 0)
-		goto on_error;
+	/* TODO: octopus */
 
-	for (i = 0; i < their_heads_len; i++) {
-		if ((error = git_commit_tree(&their_trees[i], their_heads[i]->commit)) < 0)
-			goto on_error;
-	}
-
-	/* TODO: recursive, octopus, etc... */
-
-	if ((error = git_merge_trees(&index, repo, ancestor_tree, our_tree, their_trees[0], merge_opts)) < 0 ||
+	if ((error = merge_commits(&index, &base_commit, repo, 
+			our_head->commit, their_heads[0]->commit, merge_opts)) < 0 ||
 		(error = git_merge__check_result(repo, index)) < 0 ||
-		(error = git_merge__append_conflicts_to_merge_msg(repo, index)) < 0 ||
-		(error = git_checkout_index(repo, index, &checkout_opts)) < 0 ||
-		(error = git_indexwriter_commit(&indexwriter)) < 0)
-		goto on_error;
+		(error = git_merge__append_conflicts_to_merge_msg(repo, index)) < 0)
+		goto done;
 
-	goto done;
+	/* check out the merge results */
 
-on_error:
-	merge_state_cleanup(repo);
+	if ((error = merge_normalize_checkout_opts(&checkout_opts, repo,
+			given_checkout_opts, checkout_strategy,
+			base_commit, our_head, their_heads, their_heads_len)) < 0 ||
+		(error = git_checkout_index(repo, index, &checkout_opts)) < 0)
+		goto done;
+
+	error = git_indexwriter_commit(&indexwriter);
 
 done:
+	if (error < 0)
+		merge_state_cleanup(repo);
+
 	git_indexwriter_cleanup(&indexwriter);
-
 	git_index_free(index);
-
-	git_tree_free(ancestor_tree);
-	git_tree_free(our_tree);
-
-	for (i = 0; i < their_heads_len; i++)
-		git_tree_free(their_trees[i]);
-
-	git__free(their_trees);
-
 	git_annotated_commit_free(our_head);
-	git_annotated_commit_free(ancestor_head);
-
+	git_commit_free(base_commit);
 	git_reference_free(our_ref);
 
 	return error;

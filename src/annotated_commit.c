@@ -7,6 +7,7 @@
 
 #include "common.h"
 #include "annotated_commit.h"
+#include "refs.h"
 
 #include "git2/commit.h"
 #include "git2/refs.h"
@@ -72,6 +73,26 @@ int git_annotated_commit_from_ref(
 		git_reference_name(ref), NULL);
 
 	git_reference_free(resolved);
+	return error;
+}
+
+int git_annotated_commit_from_head(
+	git_annotated_commit **out,
+	git_repository *repo)
+{
+	git_reference *head;
+	int error;
+
+	assert(out && repo);
+
+	*out = NULL;
+
+    if ((error = git_reference_lookup(&head, repo, GIT_HEAD_FILE)) < 0)
+		return -1;
+
+	error = git_annotated_commit_from_ref(out, repo, head);
+
+	git_reference_free(head);
 	return error;
 }
 
