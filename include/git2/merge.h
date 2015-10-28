@@ -79,6 +79,11 @@ typedef enum {
 	 * GIT_EMERGECONFLICT and no index will be returned.
 	 */
 	GIT_MERGE_TREE_FAIL_ON_CONFLICT = (1 << 1),
+
+	/**
+	 * Do not write the REUC extension on the generated index
+	 */
+	GIT_MERGE_TREE_SKIP_REUC = (1 << 2),
 } git_merge_tree_flag_t;
 
 /**

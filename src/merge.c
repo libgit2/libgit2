@@ -1541,7 +1541,45 @@ static int merge_index_insert_reuc(
 		mode[0], oid[0], mode[1], oid[1], mode[2], oid[2]);
 }
 
-int index_from_diff_list(git_index **out, git_merge_diff_list *diff_list)
+static int index_update_reuc(git_index *index, git_merge_diff_list *diff_list)
+{
+	int error;
+	size_t i;
+	git_merge_diff *conflict;
+
+	/* Add each entry in the resolved conflict to the REUC independently, since
+	 * the paths may differ due to renames. */
+	git_vector_foreach(&diff_list->resolved, i, conflict) {
+		const git_index_entry *ancestor =
+			GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->ancestor_entry) ?
+			&conflict->ancestor_entry : NULL;
+
+		const git_index_entry *ours =
+			GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->our_entry) ?
+			&conflict->our_entry : NULL;
+
+		const git_index_entry *theirs =
+			GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->their_entry) ?
+			&conflict->their_entry : NULL;
+
+		if (ancestor != NULL &&
+			(error = merge_index_insert_reuc(index, TREE_IDX_ANCESTOR, ancestor)) < 0)
+			return error;
+
+		if (ours != NULL &&
+			(error = merge_index_insert_reuc(index, TREE_IDX_OURS, ours)) < 0)
+			return error;
+
+		if (theirs != NULL &&
+			(error = merge_index_insert_reuc(index, TREE_IDX_THEIRS, theirs)) < 0)
+			return error;
+	}
+
+	return 0;
+}
+
+static int index_from_diff_list(git_index **out,
+	git_merge_diff_list *diff_list, bool skip_reuc)
 {
 	git_index *index;
 	size_t i;
@@ -1600,31 +1638,8 @@ int index_from_diff_list(git_index **out, git_merge_diff_list *diff_list)
 		}
 	}
 
-	/* Add each entry in the resolved conflict to the REUC independently, since
-	 * the paths may differ due to renames. */
-	git_vector_foreach(&diff_list->resolved, i, conflict) {
-		const git_index_entry *ancestor =
-			GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->ancestor_entry) ?
-			&conflict->ancestor_entry : NULL;
-
-		const git_index_entry *ours =
-			GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->our_entry) ?
-			&conflict->our_entry : NULL;
-
-		const git_index_entry *theirs =
-			GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->their_entry) ?
-			&conflict->their_entry : NULL;
-
-		if (ancestor != NULL &&
-			(error = merge_index_insert_reuc(index, TREE_IDX_ANCESTOR, ancestor)) < 0)
-			goto on_error;
-
-		if (ours != NULL &&
-			(error = merge_index_insert_reuc(index, TREE_IDX_OURS, ours)) < 0)
-			goto on_error;
-
-		if (theirs != NULL &&
-			(error = merge_index_insert_reuc(index, TREE_IDX_THEIRS, theirs)) < 0)
+	if (!skip_reuc) {
+		if ((error = index_update_reuc(index, diff_list)) < 0)
 			goto on_error;
 	}
 
@@ -1633,7 +1648,6 @@ int index_from_diff_list(git_index **out, git_merge_diff_list *diff_list)
 
 on_error:
 	git_index_free(index);
-
 	return error;
 }
 
@@ -1712,12 +1726,13 @@ int git_merge__iterators(
 		}
 	}
 
+	error = index_from_diff_list(out, diff_list,
+		(opts.tree_flags & GIT_MERGE_TREE_SKIP_REUC));
+
+done:
 	if (!given_opts || !given_opts->metric)
 		git__free(opts.metric);
 
-	error = index_from_diff_list(out, diff_list);
-
-done:
 	git_merge_diff_list__free(diff_list);
 	git_iterator_free(empty_ancestor);
 	git_iterator_free(empty_ours);
