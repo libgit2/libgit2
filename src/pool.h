@@ -28,18 +28,10 @@ typedef struct git_pool_page git_pool_page;
  * For examples of how to set up a `git_pool` see `git_pool_init`.
  */
 typedef struct {
-	git_pool_page *open; /* pages with space left */
-	git_pool_page *full; /* pages with no space left */
-	void *free_list;     /* optional: list of freed blocks */
+	git_pool_page *pages; /* allocated pages */
 	uint32_t item_size;  /* size of single alloc unit in bytes */
 	uint32_t page_size;  /* size of page in bytes */
-	uint32_t items;
-	unsigned has_string_alloc : 1; /* was the strdup function used */
-	unsigned has_multi_item_alloc : 1; /* was items ever > 1 in malloc */
-	unsigned has_large_page_alloc : 1; /* are any pages > page_size */
 } git_pool;
-
-#define GIT_POOL_INIT_STRINGPOOL { 0, 0, 0, 1, 4000, 0, 0, 0, 0 }
 
 /**
  * Initialize a pool.
@@ -57,8 +49,7 @@ typedef struct {
  * Of course, you can use this in other ways, but those are the
  * two most common patterns.
  */
-extern int git_pool_init(
-	git_pool *pool, uint32_t item_size, uint32_t items_per_page);
+extern void git_pool_init(git_pool *pool, uint32_t item_size);
 
 /**
  * Free all items in pool
@@ -74,17 +65,7 @@ extern void git_pool_swap(git_pool *a, git_pool *b);
  * Allocate space for one or more items from a pool.
  */
 extern void *git_pool_malloc(git_pool *pool, uint32_t items);
-
-/**
- * Allocate space and zero it out.
- */
-GIT_INLINE(void *) git_pool_mallocz(git_pool *pool, uint32_t items)
-{
-	void *ptr = git_pool_malloc(pool, items);
-	if (ptr)
-		memset(ptr, 0, (size_t)items * (size_t)pool->item_size);
-	return ptr;
-}
+extern void *git_pool_mallocz(git_pool *pool, uint32_t items);
 
 /**
  * Allocate space and duplicate string data into it.
@@ -114,35 +95,10 @@ extern char *git_pool_strdup_safe(git_pool *pool, const char *str);
  */
 extern char *git_pool_strcat(git_pool *pool, const char *a, const char *b);
 
-/**
- * Push a block back onto the free list for the pool.
- *
- * This is allowed only if the item_size is >= sizeof(void*).
- *
- * In some cases, it is helpful to "release" an allocated block
- * for reuse.  Pools don't support a general purpose free, but
- * they will keep a simple free blocks linked list provided the
- * native block size is large enough to hold a void pointer
- */
-extern void git_pool_free(git_pool *pool, void *ptr);
-
-/**
- * Push an array of pool allocated blocks efficiently onto the free list.
- *
- * This has the same constraints as `git_pool_free()` above.
- */
-extern void git_pool_free_array(git_pool *pool, size_t count, void **ptrs);
-
 /*
  * Misc utilities
  */
-
 extern uint32_t git_pool__open_pages(git_pool *pool);
-
-extern uint32_t git_pool__full_pages(git_pool *pool);
-
 extern bool git_pool__ptr_in_pool(git_pool *pool, void *ptr);
-
-extern uint32_t git_pool__suggest_items_per_page(uint32_t item_size);
 
 #endif

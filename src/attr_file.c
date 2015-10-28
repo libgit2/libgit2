@@ -35,11 +35,7 @@ int git_attr_file__new(
 		return -1;
 	}
 
-	if (git_pool_init(&attrs->pool, 1, 0) < 0) {
-		attr_file_free(attrs);
-		return -1;
-	}
-
+	git_pool_init(&attrs->pool, 1);
 	GIT_REFCOUNT_INC(attrs);
 	attrs->entry  = entry;
 	attrs->source = source;

@@ -8,7 +8,7 @@ void test_core_pool__0(void)
 	git_pool p;
 	void *ptr;
 
-	cl_git_pass(git_pool_init(&p, 1, 4000));
+	git_pool_init(&p, 1);
 
 	for (i = 1; i < 10000; i *= 2) {
 		ptr = git_pool_malloc(&p, i);
@@ -16,13 +16,6 @@ void test_core_pool__0(void)
 		cl_assert(git_pool__ptr_in_pool(&p, ptr));
 		cl_assert(!git_pool__ptr_in_pool(&p, &i));
 	}
-
-	/* 1+2+4+8+16+32+64+128+256+512+1024 -> original block */
-	/* 2048 -> 1 block */
-	/* 4096 -> 1 block */
-	/* 8192 -> 1 block */
-
-	cl_assert(git_pool__open_pages(&p) + git_pool__full_pages(&p) == 4);
 
 	git_pool_clear(&p);
 }
@@ -32,26 +25,24 @@ void test_core_pool__1(void)
 	int i;
 	git_pool p;
 
-	cl_git_pass(git_pool_init(&p, 1, 4000));
+	git_pool_init(&p, 1);
+	p.page_size = 4000;
 
 	for (i = 2010; i > 0; i--)
 		cl_assert(git_pool_malloc(&p, i) != NULL);
 
 	/* with fixed page size, allocation must end up with these values */
-	cl_assert_equal_i(1, git_pool__open_pages(&p));
-	cl_assert_equal_i(507, git_pool__full_pages(&p));
-
+	cl_assert_equal_i(590, git_pool__open_pages(&p));
 	git_pool_clear(&p);
 
-	cl_git_pass(git_pool_init(&p, 1, 4120));
+	git_pool_init(&p, 1);
+	p.page_size = 4120;
 
 	for (i = 2010; i > 0; i--)
 		cl_assert(git_pool_malloc(&p, i) != NULL);
 
 	/* with fixed page size, allocation must end up with these values */
-	cl_assert_equal_i(1, git_pool__open_pages(&p));
-	cl_assert_equal_i(492, git_pool__full_pages(&p));
-
+	cl_assert_equal_i(573, git_pool__open_pages(&p));
 	git_pool_clear(&p);
 }
 
@@ -66,7 +57,8 @@ void test_core_pool__2(void)
 
 	memset(oid_hex, '0', sizeof(oid_hex));
 
-	cl_git_pass(git_pool_init(&p, sizeof(git_oid), 100));
+	git_pool_init(&p, sizeof(git_oid));
+	p.page_size = 4000;
 
 	for (i = 1000; i < 10000; i++) {
 		oid = git_pool_malloc(&p, 1);
@@ -78,59 +70,7 @@ void test_core_pool__2(void)
 	}
 
 	/* with fixed page size, allocation must end up with these values */
-	cl_assert(git_pool__open_pages(&p) == 0);
-	cl_assert(git_pool__full_pages(&p) == 90);
-
-	git_pool_clear(&p);
-}
-
-void test_core_pool__free_list(void)
-{
-	int i;
-	git_pool p;
-	void *ptr, *ptrs[50];
-
-	cl_git_pass(git_pool_init(&p, 100, 100));
-
-	for (i = 0; i < 10; ++i) {
-		ptr = git_pool_malloc(&p, 1);
-		cl_assert(ptr != NULL);
-	}
-	cl_assert_equal_i(10, (int)p.items);
-
-	for (i = 0; i < 50; ++i) {
-		ptrs[i] = git_pool_malloc(&p, 1);
-		cl_assert(ptrs[i] != NULL);
-	}
-	cl_assert_equal_i(60, (int)p.items);
-
-	git_pool_free(&p, ptr);
-	cl_assert_equal_i(60, (int)p.items);
-
-	git_pool_free_array(&p, 50, ptrs);
-	cl_assert_equal_i(60, (int)p.items);
-
-	for (i = 0; i < 50; ++i) {
-		ptrs[i] = git_pool_malloc(&p, 1);
-		cl_assert(ptrs[i] != NULL);
-	}
-	cl_assert_equal_i(60, (int)p.items);
-
-	for (i = 0; i < 111; ++i) {
-		ptr = git_pool_malloc(&p, 1);
-		cl_assert(ptr != NULL);
-	}
-	cl_assert_equal_i(170, (int)p.items);
-
-	git_pool_free_array(&p, 50, ptrs);
-	cl_assert_equal_i(170, (int)p.items);
-
-	for (i = 0; i < 50; ++i) {
-		ptrs[i] = git_pool_malloc(&p, 1);
-		cl_assert(ptrs[i] != NULL);
-	}
-	cl_assert_equal_i(170, (int)p.items);
-
+	cl_assert_equal_i(sizeof(void *) == 8 ? 55 : 45, git_pool__open_pages(&p));
 	git_pool_clear(&p);
 }
 
@@ -138,7 +78,7 @@ void test_core_pool__strndup_limit(void)
 {
 	git_pool p;
 
-	cl_git_pass(git_pool_init(&p, 1, 100));
+	git_pool_init(&p, 1);
 	/* ensure 64 bit doesn't overflow */
 	cl_assert(git_pool_strndup(&p, "foo", (size_t)-1) == NULL);
 	git_pool_clear(&p);

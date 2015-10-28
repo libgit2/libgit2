@@ -47,7 +47,7 @@ git_commit_list *git_commit_list_insert_by_date(git_commit_list_node *item, git_
 
 git_commit_list_node *git_commit_list_alloc_node(git_revwalk *walk)
 {
-	return (git_commit_list_node *)git_pool_malloc(&walk->commit_pool, COMMIT_ALLOC);
+	return (git_commit_list_node *)git_pool_mallocz(&walk->commit_pool, 1);
 }
 
 static int commit_error(git_commit_list_node *commit, const char *msg)

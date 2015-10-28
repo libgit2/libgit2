@@ -711,7 +711,7 @@ static int merge_conflict_resolve_automerge(
 		(error = git_odb_write(&automerge_oid, odb, result.ptr, result.len, GIT_OBJ_BLOB)) < 0)
 		goto done;
 
-	if ((index_entry = git_pool_malloc(&diff_list->pool, sizeof(git_index_entry))) == NULL)
+	if ((index_entry = git_pool_mallocz(&diff_list->pool, sizeof(git_index_entry))) == NULL)
 	GITERR_CHECK_ALLOC(index_entry);
 
 	index_entry->path = git_pool_strdup(&diff_list->pool, result.path);
@@ -1307,7 +1307,6 @@ GIT_INLINE(int) index_entry_dup_pool(
 {
 	if (src != NULL) {
 		memcpy(out, src, sizeof(git_index_entry));
-
 		if ((out->path = git_pool_strdup(pool, src->path)) == NULL)
 			return -1;
 	}
@@ -1343,7 +1342,7 @@ static git_merge_diff *merge_diff_from_index_entries(
 	git_merge_diff *conflict;
 	git_pool *pool = &diff_list->pool;
 
-	if ((conflict = git_pool_malloc(pool, sizeof(git_merge_diff))) == NULL)
+	if ((conflict = git_pool_mallocz(pool, sizeof(git_merge_diff))) == NULL)
 		return NULL;
 
 	if (index_entry_dup_pool(&conflict->ancestor_entry, pool, entries[TREE_IDX_ANCESTOR]) < 0 ||
@@ -1442,10 +1441,11 @@ git_merge_diff_list *git_merge_diff_list__alloc(git_repository *repo)
 
 	diff_list->repo = repo;
 
+	git_pool_init(&diff_list->pool, 1);
+
 	if (git_vector_init(&diff_list->staged, 0, NULL) < 0 ||
 		git_vector_init(&diff_list->conflicts, 0, NULL) < 0 ||
-		git_vector_init(&diff_list->resolved, 0, NULL) < 0 ||
-		git_pool_init(&diff_list->pool, 1, 0) < 0) {
+		git_vector_init(&diff_list->resolved, 0, NULL) < 0) {
 		git_merge_diff_list__free(diff_list);
 		return NULL;
 	}

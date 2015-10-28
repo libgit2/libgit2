@@ -77,8 +77,7 @@ int git_transaction_new(git_transaction **out, git_repository *repo)
 
 	assert(out && repo);
 
-	if ((error = git_pool_init(&pool, 1, 0)) < 0)
-		return error;
+	git_pool_init(&pool, 1);
 
 	tx = git_pool_mallocz(&pool, sizeof(git_transaction));
 	if (!tx) {
