@@ -132,9 +132,9 @@ static void git_proto_stream_free(git_smart_subtransport_stream *stream)
 {
 	git_proto_stream *s = (git_proto_stream *)stream;
 	git_subtransport *t = OWNING_SUBTRANSPORT(s);
-	int ret;
 
-	GIT_UNUSED(ret);
+	if (!stream)
+		return;
 
 	t->current_stream = NULL;
 
