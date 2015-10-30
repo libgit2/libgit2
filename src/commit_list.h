@@ -13,6 +13,7 @@
 #define PARENT2  (1 << 1)
 #define RESULT   (1 << 2)
 #define STALE    (1 << 3)
+#define ALL_FLAGS (PARENT1 | PARENT2 | STALE | RESULT)
 
 #define PARENTS_PER_COMMIT	2
 #define COMMIT_ALLOC \
