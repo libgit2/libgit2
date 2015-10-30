@@ -418,7 +418,9 @@ static int remove_redundant(git_revwalk *walk, git_vector *commits)
 	int error = 0;
 
 	redundant = git__calloc(commits->length, 1);
+	GITERR_CHECK_ALLOC(redundant);
 	filled_index = git__calloc((commits->length - 1), sizeof(unsigned int));
+	GITERR_CHECK_ALLOC(filled_index);
 
 	for (i = 0; i < commits->length; ++i) {
 		if ((error = git_commit_list_parse(walk, commits->contents[i])) < 0)
@@ -511,7 +513,10 @@ int git_merge__bases_many(git_commit_list **out, git_revwalk *walk, git_commit_l
 				return -1;
 	}
 
-	/* more than one merge base -- remove redundants */
+	/*
+	 * more than one merge base -- see if there are redundant merge
+	 * bases and remove them
+	 */
 	if (result && result->next) {
 		git_vector redundant = GIT_VECTOR_INIT;
 
