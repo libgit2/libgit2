@@ -2899,6 +2899,7 @@ int git_index_read_index(
 {
 	git_vector new_entries = GIT_VECTOR_INIT,
 		remove_entries = GIT_VECTOR_INIT;
+	git_idxmap *new_entries_map = NULL;
 	git_iterator *index_iterator = NULL;
 	git_iterator *new_iterator = NULL;
 	git_iterator_options opts = GIT_ITERATOR_OPTIONS_INIT;
@@ -2908,8 +2909,14 @@ int git_index_read_index(
 	int error;
 
 	if ((error = git_vector_init(&new_entries, new_index->entries.length, index->entries._cmp)) < 0 ||
-		(error = git_vector_init(&remove_entries, index->entries.length, NULL)) < 0)
+		(error = git_vector_init(&remove_entries, index->entries.length, NULL)) < 0 ||
+		(error = git_idxmap_alloc(&new_entries_map)) < 0)
 		goto done;
+
+	if (index->ignore_case)
+		kh_resize(idxicase, (khash_t(idxicase) *) new_entries_map, new_index->entries.length);
+	else
+		kh_resize(idx, new_entries_map, new_index->entries.length);
 
 	opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
 
@@ -2924,6 +2931,7 @@ int git_index_read_index(
 		goto done;
 
 	while (true) {
+		git_index_entry *add_entry = NULL, *remove_entry = NULL;
 		int diff;
 
 		if (old_entry && new_entry)
@@ -2936,25 +2944,35 @@ int git_index_read_index(
 			break;
 
 		if (diff < 0) {
-			git_vector_insert(&remove_entries, (git_index_entry *)old_entry);
+			remove_entry = (git_index_entry *)old_entry;
 		} else if (diff > 0) {
-			if ((error = index_entry_dup(&entry, index, new_entry)) < 0)
+			if ((error = index_entry_dup(&add_entry, index, new_entry)) < 0)
 				goto done;
-
-			git_vector_insert(&new_entries, entry);
 		} else {
 			/* Path and stage are equal, if the OID is equal, keep it to
 			 * keep the stat cache data.
 			 */
 			if (git_oid_equal(&old_entry->id, &new_entry->id)) {
-				git_vector_insert(&new_entries, (git_index_entry *)old_entry);
+				add_entry = (git_index_entry *)old_entry;
 			} else {
-				if ((error = index_entry_dup(&entry, index, new_entry)) < 0)
+				if ((error = index_entry_dup(&add_entry, index, new_entry)) < 0)
 					goto done;
 
-				git_vector_insert(&new_entries, entry);
-				git_vector_insert(&remove_entries, (git_index_entry *)old_entry);
+				remove_entry = (git_index_entry *)old_entry;
 			}
+		}
+
+		if (add_entry) {
+			if ((error = git_vector_insert(&new_entries, add_entry)) == 0)
+				INSERT_IN_MAP_EX(index, new_entries_map, add_entry, error);
+		}
+
+		if (remove_entry && !error)
+			error = git_vector_insert(&remove_entries, remove_entry);
+
+		if (error < 0) {
+			giterr_set(GITERR_INDEX, "failed to insert entry");
+			return error;
 		}
 
 		if (diff <= 0) {
@@ -2974,6 +2992,7 @@ int git_index_read_index(
 	git_index_reuc_clear(index);
 
 	git_vector_swap(&new_entries, &index->entries);
+	new_entries_map = git__swap(index->entries_map, new_entries_map);
 
 	git_vector_foreach(&remove_entries, i, entry) {
 		if (index->tree)
@@ -2985,6 +3004,7 @@ int git_index_read_index(
 	error = 0;
 
 done:
+	git_idxmap_free(new_entries_map);
 	git_vector_free(&new_entries);
 	git_vector_free(&remove_entries);
 	git_iterator_free(index_iterator);
