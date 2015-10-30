@@ -318,7 +318,7 @@ static void clear_commit_marks_1(git_commit_list **plist,
 			git_commit_list_insert(p, plist);
 		}
 
-		commit = commit->parents[0];
+		commit = commit->out_degree ? commit->parents[0] : NULL;
 	}
 }
 
