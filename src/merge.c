@@ -1819,6 +1819,28 @@ static git_iterator *iterator_given_or_empty(git_iterator **empty, git_iterator 
 	return *empty;
 }
 
+static int lookup_file_favor(
+	git_merge_file_favor_t *file_favor,
+	git_repository *repo,
+	const char *path)
+{
+	int error = 0;
+	const char *value = NULL;
+
+	if (path) {
+		if ((error = git_attr_get(&value, repo, 0, path, "merge")) < 0)
+			goto done;
+
+		if (*file_favor == GIT_MERGE_FILE_FAVOR_NORMAL &&
+		    value && strcmp(value, "union") == 0) {
+			*file_favor |= GIT_MERGE_FILE_FAVOR_UNION;
+		}
+	}
+
+done:
+	return error;
+}
+
 int git_merge__iterators(
 	git_index **out,
 	git_repository *repo,
@@ -1876,6 +1898,10 @@ int git_merge__iterators(
 
 	git_vector_foreach(&changes, i, conflict) {
 		int resolved = 0;
+
+		/* Check for merge options in .gitattributes */
+		if ((error = lookup_file_favor(&opts.file_favor, repo, conflict->our_entry.path) < 0))
+			goto done;
 
 		if ((error = merge_conflict_resolve(
 			&resolved, diff_list, conflict, &file_opts)) < 0)
