@@ -1822,6 +1822,28 @@ static git_iterator *iterator_given_or_empty(git_iterator **empty, git_iterator 
 	return *empty;
 }
 
+static int lookup_file_favor(
+	git_merge_file_favor_t *file_favor,
+	git_repository *repo,
+	const char *path)
+{
+	int error = 0;
+	const char *value = NULL;
+
+	if (path) {
+		if ((error = git_attr_get(&value, repo, 0, path, "merge")) < 0)
+			goto done;
+
+		if (*file_favor == GIT_MERGE_FILE_FAVOR_NORMAL &&
+		    value && strcmp(value, "union") == 0) {
+			*file_favor |= GIT_MERGE_FILE_FAVOR_UNION;
+		}
+	}
+
+done:
+	return error;
+}
+
 int git_merge__iterators(
 	git_index **out,
 	git_repository *repo,
@@ -1879,6 +1901,10 @@ int git_merge__iterators(
 
 	git_vector_foreach(&changes, i, conflict) {
 		int resolved = 0;
+
+		/* Check for merge options in .gitattributes */
+		if ((error = lookup_file_favor(&opts.file_favor, repo, conflict->our_entry.path) < 0))
+			goto done;
 
 		if ((error = merge_conflict_resolve(
 			&resolved, diff_list, conflict, &file_opts)) < 0)
@@ -2087,7 +2113,7 @@ static int iterator_for_annotated_commit(
 	opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
 
 	if (commit == NULL) {
-		error = git_iterator_for_nothing(out, &opts); 
+		error = git_iterator_for_nothing(out, &opts);
 	} else if (commit->type == GIT_ANNOTATED_COMMIT_VIRTUAL) {
 		error = git_iterator_for_index(out, commit->index, &opts);
 	} else {
@@ -2431,7 +2457,7 @@ static int write_merge_msg(
 	assert(repo && heads);
 
 	entries = git__calloc(heads_len, sizeof(struct merge_msg_entry));
-	GITERR_CHECK_ALLOC(entries); 
+	GITERR_CHECK_ALLOC(entries);
 
 	if (git_vector_init(&matching, heads_len, NULL) < 0) {
 		git__free(entries);
@@ -2485,7 +2511,7 @@ static int write_merge_msg(
 
 	if (matching.length)
 		sep =',';
-	
+
 	if ((error = merge_msg_entries(&matching, entries, heads_len, msg_entry_is_tag)) < 0 ||
 		(error = merge_msg_write_tags(&file, &matching, sep)) < 0)
 		goto cleanup;
