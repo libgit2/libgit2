@@ -59,44 +59,6 @@ void test_repo_open__format_version_1(void)
 	cl_git_fail(git_repository_open(&repo, "empty_bare.git"));
 }
 
-static int repo_open_cb_called;
-int repo_open_cb(git_repository *repo, const git_config_entry *entry)
-{
-	GIT_UNUSED(repo);
-
-	repo_open_cb_called++;
-	cl_assert_equal_s("extensions.foo", entry->name);
-	cl_assert_equal_s("false", entry->value);
-
-
-	return 0;
-}
-
-void test_repo_open__format_version_1_callback(void)
-{
-	git_repository *repo;
-	git_config *config;
-
-	repo = cl_git_sandbox_init("empty_bare.git");
-	cl_git_pass(git_repository_open(&repo, "empty_bare.git"));
-
-	cl_git_pass(git_repository_config(&config, repo));
-	cl_git_pass(git_config_set_int32(config, "core.repositoryformatversion", 1));
-	cl_git_pass(git_config_set_string(config, "extensions.noop", "true"));
-	cl_git_pass(git_config_set_string(config, "extensions.foo", "false"));
-
-	git_config_free(config);
-	git_repository_free(repo);
-
-	repo_open_cb_called = 0;
-	cl_git_pass(git_repository_open_ext(&repo, "empty_bare.git", 0, NULL, repo_open_cb));
-	git_repository_free(repo);
-
-	/* 'noop' and 'foo' */
-	cl_assert_equal_i(1, repo_open_cb_called);
-
-}
-
 void test_repo_open__standard_empty_repo_through_gitdir(void)
 {
 	git_repository *repo;
