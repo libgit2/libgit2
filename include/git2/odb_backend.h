@@ -130,24 +130,27 @@ struct git_odb_writepack {
 };
 
 /**
- * Constructor for an odb backend which is registered.
+ * Constructor for an object db which is registered with the repository
  *
- * @param out the pointer in which to store the new backend
+ * @param out the pointer in which to store the new odb
+ * @param repo the repository for which the constructor is called
  * @param payload the payload provided during registration
  * @return 0 or an error code
  */
-typedef int (*git_odb_backend_ctor)(git_odb_backend **out, void *payload);
+typedef int (*git_odb_ctor)(git_odb **out, git_repository *repo, void *payload);
 
 /**
- * Register a backend to be used instead of the default if the
- * repository is configured to do so.
+ * Register an object db to be used with extensions.
+
+ * If there is a `extensions.odb` configuration entry matching the
+ * given name, this constructor will be called instead of the default.
  *
- * @param name the name of the extension
+ * @param name the name of the object db
  * @param ctor constructor to call
  * @param payload data passed to the constructor
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_odb_backend_register(const char *name, git_odb_backend_ctor ctor, void *payload);
+GIT_EXTERN(int) git_odb_register(const char *name, git_odb_ctor ctor, void *payload);
 
 GIT_END_DECL
 

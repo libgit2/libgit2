@@ -12,13 +12,13 @@
 
 typedef struct {
 	char *name;
-	git_odb_backend_ctor ctor;
+	git_odb_ctor ctor;
 	void *payload;
 } git_odb_registration;
 
 /**
  * Find an ODB registration by name
  */
-git_odb_registration *git_odb_backend__find(const char *name);
+git_odb_registration *git_odb_registration__find(const char *name);
 
 #endif
