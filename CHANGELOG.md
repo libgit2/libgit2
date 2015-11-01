@@ -20,6 +20,11 @@ v0.23 + 1
   the opportunity for concurrent operations and not committing any
   changes until the unlock.
 
+* `git_odb_register()` allows you to register a constructor to be
+  called when the repository has an extension `extensions.odb` with
+  the value you provide as a name. This object db will be used instead
+  of the default one.
+
 ### API removals
 
 ### Breaking API changes
