@@ -27,6 +27,7 @@
 #include "merge.h"
 #include "diff_driver.h"
 #include "annotated_commit.h"
+#include "backends.h"
 
 #ifdef GIT_WIN32
 # include "win32/w32_util.h"
@@ -997,6 +998,23 @@ static int check_repositoryformatversion(int *version, git_config *config)
 	return 0;
 }
 
+static int set_odb_from_registration(git_repository *repo, const char *name)
+{
+	int error;
+	git_odb_registration *reg;
+	git_odb *odb;
+
+	reg = git_odb_registration__find(name);
+	if (!reg)
+		return GIT_ENOTFOUND;
+
+	if ((error = reg->ctor(&odb, repo, reg->payload)) < 0)
+		return error;
+
+	git_repository_set_odb(repo, odb);
+	return 0;
+}
+
 static int check_extensions(git_repository *repo, git_config *config, git_repository_extension_cb extension_cb)
 {
 	git_config_iterator *iter;
@@ -1007,16 +1025,37 @@ static int check_extensions(git_repository *repo, git_config *config, git_reposi
 		return error;
 
 	while ((error = git_config_next(&entry, iter)) == 0) {
+		giterr_clear();
+
 		/* This one is known and trivial */
 		if (!strcmp(entry->name, "extensions.noop"))
 			continue;
+
+		if (!strcmp(entry->name, "extensions.odb") &&
+		    entry->value && strlen(entry->value) > 0 ) {
+			error = set_odb_from_registration(repo, entry->value);
+			if (error == GIT_ENOTFOUND)
+				giterr_set(GITERR_REPOSITORY, "no rigistration exists for odb '%s'", entry->name);
+
+			if (error < 0 && error != GIT_ENOTFOUND) {
+				if (!giterr_last())
+					giterr_set(GITERR_REPOSITORY, "user-provied odb constructor for '%s' failed", entry->name);
+
+				break;
+			}
+
+			continue;
+		}
 
 		/*
 		 * Otherwise we need to rely on the caller knowing
 		 * what the extension is.
 		 */
 		if (extension_cb == NULL) {
-			giterr_set(GITERR_REPOSITORY, "Unknown Git repository extension: %s", entry->name);
+			/* Leave the error message from earlier in the loop if it exists */
+			if (!giterr_last())
+				giterr_set(GITERR_REPOSITORY, "unknown Git repository extension: %s", entry->name);
+
 			error = GIT_EUNSUPPORTED;
 			break;
 		}
