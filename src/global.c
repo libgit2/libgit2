@@ -28,6 +28,20 @@ static git_mutex *openssl_locks;
 # endif
 #endif
 
+#ifdef GIT_MBEDTLS
+#include "mbedtls/config.h"
+#include "mbedtls/platform.h"
+#include "mbedtls/ssl.h"
+#include "mbedtls/entropy.h"
+#include "mbedtls/ctr_drbg.h"
+#include "mbedtls/certs.h"
+
+#define CRT_LOC "/etc/ssl/certs"
+
+mbedtls_ssl_config *git__ssl_conf;
+mbedtls_entropy_context *mbedtls_entropy;
+#endif
+
 static git_global_shutdown_fn git__shutdown_callbacks[MAX_SHUTDOWN_CB];
 static git_atomic git__n_shutdown_callbacks;
 static git_atomic git__n_inits;
@@ -117,6 +131,60 @@ static void init_ssl(void)
 		git__ssl_ctx = NULL;
 	}
 #endif
+
+#ifdef GIT_MBEDTLS
+	int ret = 0;
+	mbedtls_ctr_drbg_context *ctr_drbg;
+	mbedtls_x509_crt *cacert;
+
+	mbedtls_entropy = git__malloc(sizeof(mbedtls_entropy_context));
+	mbedtls_entropy_init(mbedtls_entropy);
+
+	// Seeding the random number generator
+	ctr_drbg = git__malloc(sizeof(mbedtls_ctr_drbg_context));
+	mbedtls_ctr_drbg_init(ctr_drbg);
+	if (!ret && ( ret = mbedtls_ctr_drbg_seed(ctr_drbg,
+				mbedtls_entropy_func,
+				mbedtls_entropy, NULL, 0) ) != 0) {
+		mbedtls_ctr_drbg_free(ctr_drbg);
+		git__free(ctr_drbg);
+	}
+
+	// Configure TLSv1
+	if (!ret) {
+		git__ssl_conf = git__malloc(sizeof(mbedtls_ssl_config));
+		mbedtls_ssl_config_init(git__ssl_conf);
+		if ( (ret = mbedtls_ssl_config_defaults(git__ssl_conf,
+					MBEDTLS_SSL_IS_CLIENT,
+					MBEDTLS_SSL_TRANSPORT_STREAM,
+					MBEDTLS_SSL_PRESET_DEFAULT ) ) != 0) {
+			mbedtls_ctr_drbg_free(ctr_drbg);
+			git__free(ctr_drbg);
+			mbedtls_ssl_config_free(git__ssl_conf);
+			git__free(git__ssl_conf);
+			git__ssl_conf = NULL;
+		} else {
+			mbedtls_ssl_conf_authmode(git__ssl_conf, MBEDTLS_SSL_VERIFY_REQUIRED);
+			mbedtls_ssl_conf_rng(git__ssl_conf, mbedtls_ctr_drbg_random, ctr_drbg);
+
+			cacert = git__malloc(sizeof(mbedtls_x509_crt));
+			mbedtls_x509_crt_init(cacert);
+			ret = mbedtls_x509_crt_parse_path(cacert, CRT_LOC);
+			if (ret) {
+				giterr_set(GITERR_SSL, "failed to load CA certificates: %d", ret);
+				mbedtls_x509_crt_free(cacert);
+				git__free(cacert);
+				mbedtls_ctr_drbg_free(ctr_drbg);
+				git__free(ctr_drbg);
+				mbedtls_ssl_config_free(git__ssl_conf);
+				git__free(git__ssl_conf);
+				git__ssl_conf = NULL;
+			} else {
+				mbedtls_ssl_conf_ca_chain(git__ssl_conf, cacert, NULL);
+			}
+		}
+	}
+#endif
 }
 
 /**
@@ -129,6 +197,22 @@ static void uninit_ssl(void)
 	if (git__ssl_ctx) {
 		SSL_CTX_free(git__ssl_ctx);
 		git__ssl_ctx = NULL;
+	}
+#endif
+#ifdef GIT_MBEDTLS
+	if (git__ssl_conf) {
+		mbedtls_x509_crt_free(git__ssl_conf->ca_chain);
+		git__free(git__ssl_conf->ca_chain);
+		mbedtls_ctr_drbg_free(git__ssl_conf->p_rng);
+		git__free(git__ssl_conf->p_rng);
+		mbedtls_ssl_config_free(git__ssl_conf);
+		git__free(git__ssl_conf);
+		git__ssl_conf = NULL;
+	}
+	if (mbedtls_entropy) {
+		mbedtls_entropy_free(mbedtls_entropy);
+		git__free(mbedtls_entropy);
+		mbedtls_entropy = NULL;
 	}
 #endif
 }

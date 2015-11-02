@@ -6,6 +6,11 @@ then
 	exit $?;
 fi
 
+if [ -n "$MBEDTLS" ];
+then
+    ./script/mbedtls.sh;
+fi
+
 mkdir _build
 cd _build
 # shellcheck disable=SC2086

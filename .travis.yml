@@ -48,6 +48,16 @@ matrix:
        - VALGRIND=1
          OPTIONS="-DBUILD_CLAR=ON -DBUILD_EXAMPLES=OFF -DCMAKE_BUILD_TYPE=Debug"
      os: linux
+   - compiler: gcc
+     env:
+       - MBEDTLS=1
+         OPTIONS="-DTHREADSAFE=ON -DCMAKE_BUILD_TYPE=Release -DUSE_OPENSSL=OFF -DMBEDTLS_ROOT_DIR=../mbedtls"
+     os: linux
+   - compiler: gcc
+     env:
+       - MBEDTLS=1
+         OPTIONS="-DTHREADSAFE=OFF -DBUILD_EXAMPLES=ON -DUSE_OPENSSL=OFF -DMBEDTLS_ROOT_DIR=../mbedtls"
+     os: linux
  allow_failures:
    - env: COVERITY=1
    - env:
