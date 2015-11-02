@@ -10,6 +10,7 @@
 
 #include "git2/net.h"
 #include "git2/types.h"
+#include "git2/strarray.h"
 
 /**
  * @file git2/sys/transport.h
