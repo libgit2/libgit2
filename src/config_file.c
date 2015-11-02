@@ -77,8 +77,7 @@ typedef struct git_config_file_iter {
 		 (iter) = (tmp))
 
 struct reader {
-	time_t file_mtime;
-	size_t file_size;
+	git_oid checksum;
 	char *file_path;
 	git_buf buffer;
 	char *read_ptr;
@@ -285,7 +284,7 @@ static int config_open(git_config_backend *cfg, git_config_level_t level)
 
 	git_buf_init(&reader->buffer, 0);
 	res = git_futils_readbuffer_updated(
-		&reader->buffer, b->file_path, &reader->file_mtime, &reader->file_size, NULL);
+		&reader->buffer, b->file_path, &reader->checksum, NULL);
 
 	/* It's fine if the file doesn't exist */
 	if (res == GIT_ENOTFOUND)
@@ -345,7 +344,7 @@ static int config_refresh(git_config_backend *cfg)
 		reader = git_array_get(b->readers, i);
 		error = git_futils_readbuffer_updated(
 			&reader->buffer, reader->file_path,
-			&reader->file_mtime, &reader->file_size, &updated);
+			&reader->checksum, &updated);
 
 		if (error < 0 && error != GIT_ENOTFOUND)
 			return error;
@@ -1618,7 +1617,7 @@ static int read_on_variable(
 		git_buf_init(&r->buffer, 0);
 
 		result = git_futils_readbuffer_updated(
-			&r->buffer, r->file_path, &r->file_mtime, &r->file_size, NULL);
+			&r->buffer, r->file_path, &r->checksum, NULL);
 
 		if (result == 0) {
 			result = config_read(parse_data->values, parse_data->cfg_file, r, parse_data->level, parse_data->depth+1);
@@ -1894,7 +1893,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	} else {
 		/* Lock the file */
 		if ((result = git_filebuf_open(
-			     &file, cfg->file_path, 0, GIT_CONFIG_FILE_MODE)) < 0) {
+			     &file, cfg->file_path, GIT_FILEBUF_HASH_CONTENTS, GIT_CONFIG_FILE_MODE)) < 0) {
 			git_buf_free(&reader->buffer);
 			return result;
 		}
@@ -1945,10 +1944,6 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 		git_buf_attach(&cfg->locked_content, git_buf_detach(&buf), len);
 	} else {
 		git_filebuf_write(&file, git_buf_cstr(&buf), git_buf_len(&buf));
-
-		/* refresh stats - if this errors, then commit will error too */
-		(void)git_filebuf_stats(&reader->file_mtime, &reader->file_size, &file);
-
 		result = git_filebuf_commit(&file);
 	}
 

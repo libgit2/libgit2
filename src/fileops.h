@@ -13,6 +13,7 @@
 #include "path.h"
 #include "pool.h"
 #include "strmap.h"
+#include "oid.h"
 
 /**
  * Filebuffer methods
@@ -21,7 +22,7 @@
  */
 extern int git_futils_readbuffer(git_buf *obj, const char *path);
 extern int git_futils_readbuffer_updated(
-	git_buf *obj, const char *path, time_t *mtime, size_t *size, int *updated);
+	git_buf *obj, const char *path, git_oid *checksum, int *updated);
 extern int git_futils_readbuffer_fd(git_buf *obj, git_file fd, size_t len);
 
 extern int git_futils_writebuffer(
