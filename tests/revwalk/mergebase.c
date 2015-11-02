@@ -509,5 +509,6 @@ void test_revwalk_mergebase__remove_redundant(void)
 	cl_assert_equal_i(1, result.count);
 	cl_assert_equal_oid(&base, &result.ids[0]);
 
+	git_oidarray_free(&result);
 	git_repository_free(repo);
 }
