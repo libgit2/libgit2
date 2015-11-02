@@ -56,7 +56,7 @@ static int diff_insert_delta(
 
 	if (diff->opts.notify_cb) {
 		error = diff->opts.notify_cb(
-			diff, delta, matched_pathspec, diff->opts.notify_payload);
+			diff, delta, matched_pathspec, diff->opts.payload);
 
 		if (error) {
 			git__free(delta);
@@ -1260,7 +1260,18 @@ int git_diff__from_iterators(
 
 	/* run iterators building diffs */
 	while (!error && (info.oitem || info.nitem)) {
-		int cmp = info.oitem ?
+		int cmp;
+
+		/* report progress */
+		if (opts && opts->progress_cb) {
+			if ((error = opts->progress_cb(diff,
+					info.oitem ? info.oitem->path : NULL,
+					info.nitem ? info.nitem->path : NULL,
+					opts->payload)))
+				break;
+		}
+
+		cmp = info.oitem ?
 			(info.nitem ? diff->entrycomp(info.oitem, info.nitem) : -1) : 1;
 
 		/* create DELETED records for old items not matched in new */

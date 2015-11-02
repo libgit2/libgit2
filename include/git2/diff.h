@@ -351,6 +351,22 @@ typedef int (*git_diff_notify_cb)(
 	void *payload);
 
 /**
+ * Diff progress callback.
+ *
+ * Called before each file comparison.
+ *
+ * @param diff_so_far The diff being generated.
+ * @param old_path The path to the old file or NULL.
+ * @param new_path The path to the new file or NULL.
+ * @return Non-zero to abort the diff.
+ */
+typedef int (*git_diff_progress_cb)(
+	const git_diff *diff_so_far,
+	const char *old_path,
+	const char *new_path,
+	void *payload);
+
+/**
  * Structure describing options about how the diff should be executed.
  *
  * Setting all values of the structure to zero will yield the default
@@ -370,8 +386,10 @@ typedef int (*git_diff_notify_cb)(
  * - `max_size` is a file size (in bytes) above which a blob will be marked
  *   as binary automatically; pass a negative value to disable.
  * - `notify_cb` is an optional callback function, notifying the consumer of
- *   which files are being examined as the diff is generated
- * - `notify_payload` is the payload data to pass to the `notify_cb` function
+ *   changes to the diff as new deltas are added.
+ * - `progress_cb` is an optional callback function, notifying the consumer of
+ *   which files are being examined as the diff is generated.
+ * - `payload` is the payload to pass to the callback functions.
  * - `ignore_submodules` overrides the submodule ignore setting for all
  *   submodules in the diff.
  */
@@ -383,8 +401,9 @@ typedef struct {
 
 	git_submodule_ignore_t ignore_submodules; /**< submodule ignore rule */
 	git_strarray       pathspec;     /**< defaults to include all paths */
-	git_diff_notify_cb notify_cb;
-	void              *notify_payload;
+	git_diff_notify_cb   notify_cb;
+	git_diff_progress_cb progress_cb;
+	void                *payload;
 
 	/* options controlling how to diff text is generated */
 
@@ -403,7 +422,7 @@ typedef struct {
  * `git_diff_options_init` programmatic initialization.
  */
 #define GIT_DIFF_OPTIONS_INIT \
-	{GIT_DIFF_OPTIONS_VERSION, 0, GIT_SUBMODULE_IGNORE_UNSPECIFIED, {NULL,0}, NULL, NULL, 3}
+	{GIT_DIFF_OPTIONS_VERSION, 0, GIT_SUBMODULE_IGNORE_UNSPECIFIED, {NULL,0}, NULL, NULL, NULL, 3}
 
 /**
  * Initializes a `git_diff_options` with default values. Equivalent to
