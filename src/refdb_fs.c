@@ -733,8 +733,11 @@ static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *
 
 	error = git_filebuf_open(file, ref_path.ptr, GIT_FILEBUF_FORCE, GIT_REFS_FILE_MODE);
 
+	if (error == GIT_EDIRECTORY)
+		giterr_set(GITERR_REFERENCE, "cannot lock ref '%s', there are refs beneath that folder", name);
+
 	git_buf_free(&ref_path);
-        return error;
+	return error;
 }
 
 static int loose_commit(git_filebuf *file, const git_reference *ref)

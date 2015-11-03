@@ -151,6 +151,23 @@ void test_refs_create__propagate_eexists(void)
 	cl_assert(error == GIT_EEXISTS);
 }
 
+void test_refs_create__existing_dir_propagates_edirectory(void)
+{
+	git_reference *new_reference, *fail_reference;
+	git_oid id;
+	const char *dir_head = "refs/heads/new-dir/new-head",
+		*fail_head = "refs/heads/new-dir";
+
+	git_oid_fromstr(&id, current_master_tip);
+
+	/* Create and write the new object id reference */
+	cl_git_pass(git_reference_create(&new_reference, g_repo, dir_head, &id, 1, NULL));
+	cl_git_fail_with(GIT_EDIRECTORY,
+		git_reference_create(&fail_reference, g_repo, fail_head, &id, false, NULL));
+
+	git_reference_free(new_reference);
+}
+
 static void test_invalid_name(const char *name)
 {
 	git_reference *new_reference;
