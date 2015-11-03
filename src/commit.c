@@ -431,22 +431,37 @@ const char *git_commit_summary(git_commit *commit)
 {
 	git_buf summary = GIT_BUF_INIT;
 	const char *msg, *space;
+	bool space_contains_newline = false;
 
 	assert(commit);
 
 	if (!commit->summary) {
 		for (msg = git_commit_message(commit), space = NULL; *msg; ++msg) {
-			if (msg[0] == '\n' && (!msg[1] || msg[1] == '\n'))
+			char next_character = msg[0];
+			/* stop processing at the end of the first paragraph */
+			if (next_character == '\n' && (!msg[1] || msg[1] == '\n'))
 				break;
-			else if (msg[0] == '\n')
-				git_buf_putc(&summary, ' ');
-			else if (git__isspace(msg[0]))
-				space = space ? space : msg;
-			else if (space) {
-				git_buf_put(&summary, space, (msg - space) + 1);
-				space = NULL;
-			} else
-				git_buf_putc(&summary, *msg);
+			/* record the beginning of contiguous whitespace runs */
+			else if (git__isspace(next_character)) {
+				if(space == NULL) {
+					space = msg;
+					space_contains_newline = false;
+				}
+				space_contains_newline |= next_character == '\n';
+			}
+			/* the next character is non-space */
+			else {
+				/* process any recorded whitespace */
+				if (space) {
+					if(space_contains_newline)
+						git_buf_putc(&summary, ' '); /* if the space contains a newline, collapse to ' ' */
+					else
+						git_buf_put(&summary, space, (msg - space)); /* otherwise copy it */
+					space = NULL;
+				}
+				/* copy the next character */
+				git_buf_putc(&summary, next_character);
+			}
 		}
 
 		commit->summary = git_buf_detach(&summary);
