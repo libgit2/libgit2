@@ -328,3 +328,32 @@ void test_index_bypath__add_honors_conflict_case(void)
 	cl_assert((entry = git_index_get_bypath(g_idx, "README.txt", 0)) != NULL);
 	cl_assert_equal_i(GIT_FILEMODE_BLOB_EXECUTABLE, entry->mode);
 }
+
+void test_index_bypath__add_honors_symlink(void)
+{
+	const git_index_entry *entry;
+	git_index_entry new_entry;
+	int symlinks;
+
+	cl_git_pass(git_repository__cvar(&symlinks, g_repo, GIT_CVAR_SYMLINKS));
+
+	if (symlinks)
+		cl_skip();
+
+	cl_assert((entry = git_index_get_bypath(g_idx, "README.txt", 0)) != NULL);
+
+	memcpy(&new_entry, entry, sizeof(git_index_entry));
+	new_entry.path = "README.txt";
+	new_entry.mode = GIT_FILEMODE_LINK;
+
+	cl_git_pass(git_index_add(g_idx, &new_entry));
+	cl_git_pass(git_index_write(g_idx));
+
+	cl_git_rewritefile("submod2/README.txt", "Modified but still a (fake) symlink");
+
+	cl_git_pass(git_index_add_bypath(g_idx, "README.txt"));
+	cl_git_pass(git_index_write(g_idx));
+
+	cl_assert((entry = git_index_get_bypath(g_idx, "README.txt", 0)) != NULL);
+	cl_assert_equal_i(GIT_FILEMODE_LINK, entry->mode);
+}
