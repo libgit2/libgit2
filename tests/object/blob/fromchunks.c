@@ -26,7 +26,7 @@ static int text_chunked_source_cb(char *content, size_t max_length, void *payloa
 	count = (int *)payload;
 	(*count)--;
 
-	if (*count == 0)
+	if (*count < 0)
 		return 0;
 
 	strcpy(content, textual_content);
@@ -37,7 +37,7 @@ void test_object_blob_fromchunks__can_create_a_blob_from_a_in_memory_chunk_provi
 {
 	git_oid expected_oid, oid;
 	git_object *blob;
-	int howmany = 7;
+	int howmany = 6;
 
 	cl_git_pass(git_oid_fromstr(&expected_oid, "321cbdf08803c744082332332838df6bd160f8f9"));
 
@@ -58,7 +58,7 @@ void test_object_blob_fromchunks__doesnot_overwrite_an_already_existing_object(v
 	git_buf path = GIT_BUF_INIT;
 	git_buf content = GIT_BUF_INIT;
 	git_oid expected_oid, oid;
-	int howmany = 7;
+	int howmany = 6;
 
 	cl_git_pass(git_oid_fromstr(&expected_oid, "321cbdf08803c744082332332838df6bd160f8f9"));
 
@@ -101,7 +101,7 @@ static void write_attributes(git_repository *repo)
 static void assert_named_chunked_blob(const char *expected_sha, const char *fake_name)
 {
 	git_oid expected_oid, oid;
-	int howmany = 7;
+	int howmany = 6;
 
 	cl_git_pass(git_oid_fromstr(&expected_oid, expected_sha));
 

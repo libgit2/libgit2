@@ -50,7 +50,7 @@ void test_object_blob_fromstream__multiple_write(void)
 	for (i = 0; i < howmany; i++)
 		cl_git_pass(stream->write(stream, textual_content, strlen(textual_content)));
 
-	cl_git_pass(git_blob_create_fromstream_end(&id, stream));
+	cl_git_pass(git_blob_create_fromstream_commit(&id, stream));
 	cl_assert_equal_oid(&expected_id, &id);
 
 	cl_git_pass(git_object_lookup(&blob, repo, &expected_id, GIT_OBJ_BLOB));
@@ -88,7 +88,7 @@ static void assert_named_chunked_blob(const char *expected_sha, const char *fake
 	for (i = 0; i < howmany; i++)
 		cl_git_pass(stream->write(stream, textual_content, strlen(textual_content)));
 
-	cl_git_pass(git_blob_create_fromstream_end(&id, stream));
+	cl_git_pass(git_blob_create_fromstream_commit(&id, stream));
 
 	cl_assert_equal_oid(&expected_id, &id);
 }
