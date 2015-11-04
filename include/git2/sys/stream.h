@@ -39,6 +39,19 @@ typedef struct git_stream {
 	void (*free)(struct git_stream *);
 } git_stream;
 
+typedef int (*git_stream_cb)(git_stream **out, const char *host, const char *port);
+
+/**
+ * Register a TLS stream constructor for the library to use
+ *
+ * If a constructor is already set, it will be overwritten. Pass
+ * `NULL` in order to deregister the current constructor.
+ *
+ * @param ctor the constructor to use
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_stream_register_tls(git_stream_cb ctor);
+
 GIT_END_DECL
 
 #endif

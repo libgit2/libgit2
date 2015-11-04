@@ -17,10 +17,15 @@ v0.23 + 1
   the opportunity for concurrent operations and not committing any
   changes until the unlock.
 
+
 * `git_diff_options` added a new callback `progress_cb` to report on the
   progress of the diff as files are being compared. The documentation of
   the existing callback `notify_cb` was updated to reflect that it only
   gets called when new deltas are added to the diff.
+
+* `git_stream_register_tls()` lets you register a callback to be used
+  as the constructor for a TLS stream instead of the libgit2 built-in
+  one.
 
 ### API removals
 

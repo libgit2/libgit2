@@ -11,8 +11,21 @@
 #include "openssl_stream.h"
 #include "stransport_stream.h"
 
+static git_stream_cb tls_ctor;
+
+int git_stream_register_tls(git_stream_cb ctor)
+{
+	tls_ctor = ctor;
+
+	return 0;
+}
+
 int git_tls_stream_new(git_stream **out, const char *host, const char *port)
 {
+
+	if (tls_ctor)
+		return tls_ctor(out, host, port);
+
 #ifdef GIT_SECURE_TRANSPORT
 	return git_stransport_stream_new(out, host, port);
 #elif defined(GIT_OPENSSL)
