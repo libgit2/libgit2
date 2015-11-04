@@ -1423,7 +1423,6 @@ static int submodule_update_head(git_submodule *submodule)
 	return 0;
 }
 
-
 int git_submodule_reload(git_submodule *sm, int force)
 {
 	int error = 0;
@@ -1433,35 +1432,30 @@ int git_submodule_reload(git_submodule *sm, int force)
 
 	assert(sm);
 
-	/* refresh index data */
-	if ((error = submodule_update_index(sm)) < 0)
-		return error;
+	if (!git_repository_is_bare(sm->repo)) {
+		/* refresh config data */
+		mods = gitmodules_snapshot(sm->repo);
+		if (mods != NULL) {
+			error = submodule_read_config(sm, mods);
+			git_config_free(mods);
 
-	/* refresh HEAD tree data */
-	if ((error = submodule_update_head(sm)) < 0)
-		return error;
-
-	/* done if bare */
-	if (git_repository_is_bare(sm->repo))
-		return error;
-
-	/* refresh config data */
-	mods = gitmodules_snapshot(sm->repo);
-	if (mods != NULL) {
-		error = submodule_read_config(sm, mods);
-		git_config_free(mods);
-
-		if (error < 0) {
-			return error;
+			if (error < 0)
+				return error;
 		}
+
+		/* refresh wd data */
+		sm->flags &=
+			~(GIT_SUBMODULE_STATUS_IN_WD |
+			  GIT_SUBMODULE_STATUS__WD_OID_VALID |
+			  GIT_SUBMODULE_STATUS__WD_FLAGS);
+
+		error = submodule_load_from_wd_lite(sm);
 	}
 
-	/* refresh wd data */
-	sm->flags &=
-		~(GIT_SUBMODULE_STATUS_IN_WD | GIT_SUBMODULE_STATUS__WD_OID_VALID |
-		  GIT_SUBMODULE_STATUS__WD_FLAGS);
+	if (error == 0 && (error = submodule_update_index(sm)) == 0)
+		error = submodule_update_head(sm);
 
-	return submodule_load_from_wd_lite(sm);
+	return error;
 }
 
 static void submodule_copy_oid_maybe(
