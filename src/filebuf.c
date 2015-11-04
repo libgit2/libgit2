@@ -273,6 +273,11 @@ cleanup:
 
 int git_filebuf_open(git_filebuf *file, const char *path, int flags, mode_t mode)
 {
+	return git_filebuf_open_withsize(file, path, flags, mode, WRITE_BUFFER_SIZE);
+}
+
+int git_filebuf_open_withsize(git_filebuf *file, const char *path, int flags, mode_t mode, size_t size)
+{
 	int compression, error = -1;
 	size_t path_len, alloc_len;
 
@@ -286,7 +291,7 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags, mode_t mode
 	if (flags & GIT_FILEBUF_DO_NOT_BUFFER)
 		file->do_not_buffer = true;
 
-	file->buf_size = WRITE_BUFFER_SIZE;
+	file->buf_size = size;
 	file->buf_pos = 0;
 	file->fd = -1;
 	file->last_error = BUFERR_OK;
