@@ -10,12 +10,6 @@
 #include <time.h>
 #include <stdlib.h>
 
-#ifdef _MSC_VER
-#	include "inttypes.h"
-#else
-#	include <inttypes.h>
-#endif
-
 #ifdef __cplusplus
 # define GIT_BEGIN_DECL extern "C" {
 # define GIT_END_DECL	}
@@ -24,6 +18,14 @@
 # define GIT_BEGIN_DECL /* empty */
  /** End declarations in C mode */
 # define GIT_END_DECL	/* empty */
+#endif
+
+#if defined(_MSC_VER) && _MSC_VER < 1800
+ GIT_BEGIN_DECL
+# include "inttypes.h"
+ GIT_END_DECL
+#else
+# include <inttypes.h>
 #endif
 
 /** Declare a public function exported for application use. */

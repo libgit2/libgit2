@@ -1790,27 +1790,24 @@ size_t git_index_reuc_entrycount(git_index *index)
 	return index->reuc.length;
 }
 
+static int index_reuc_on_dup(void **old, void *new)
+{
+	index_entry_reuc_free(*old);
+	*old = new;
+	return GIT_EEXISTS;
+}
+
 static int index_reuc_insert(
 	git_index *index,
-	git_index_reuc_entry *reuc,
-	int replace)
+	git_index_reuc_entry *reuc)
 {
-	git_index_reuc_entry **existing = NULL;
-	size_t position;
+	int res;
 
 	assert(index && reuc && reuc->path != NULL);
+	assert(git_vector_is_sorted(&index->reuc));
 
-	if (!git_index_reuc_find(&position, index, reuc->path))
-		existing = (git_index_reuc_entry **)&index->reuc.contents[position];
-
-	if (!replace || !existing)
-		return git_vector_insert(&index->reuc, reuc);
-
-	/* exists, replace it */
-	git__free(*existing);
-	*existing = reuc;
-
-	return 0;
+	res = git_vector_insert_sorted(&index->reuc, reuc, &index_reuc_on_dup);
+	return res == GIT_EEXISTS ? 0 : res;
 }
 
 int git_index_reuc_add(git_index *index, const char *path,
@@ -1825,7 +1822,7 @@ int git_index_reuc_add(git_index *index, const char *path,
 
 	if ((error = index_entry_reuc_init(&reuc, path, ancestor_mode,
 			ancestor_oid, our_mode, our_oid, their_mode, their_oid)) < 0 ||
-		(error = index_reuc_insert(index, reuc, 1)) < 0)
+		(error = index_reuc_insert(index, reuc)) < 0)
 		index_entry_reuc_free(reuc);
 
 	return error;
@@ -1845,7 +1842,7 @@ const git_index_reuc_entry *git_index_reuc_get_bypath(
 	if (!index->reuc.length)
 		return NULL;
 
-	git_vector_sort(&index->reuc);
+	assert(git_vector_is_sorted(&index->reuc));
 
 	if (git_index_reuc_find(&pos, index, path) < 0)
 		return NULL;
@@ -1857,8 +1854,8 @@ const git_index_reuc_entry *git_index_reuc_get_byindex(
 	git_index *index, size_t n)
 {
 	assert(index);
+	assert(git_vector_is_sorted(&index->reuc));
 
-	git_vector_sort(&index->reuc);
 	return git_vector_get(&index->reuc, n);
 }
 
@@ -1867,7 +1864,7 @@ int git_index_reuc_remove(git_index *index, size_t position)
 	int error;
 	git_index_reuc_entry *reuc;
 
-	git_vector_sort(&index->reuc);
+	assert(git_vector_is_sorted(&index->reuc));
 
 	reuc = git_vector_get(&index->reuc, position);
 	error = git_vector_remove(&index->reuc, position);

@@ -358,6 +358,7 @@ static int format_binary(
 		scan += chunk_len;
 		pi->line.num_lines++;
 	}
+	git_buf_putc(pi->buf, '\n');
 
 	return 0;
 }
@@ -416,7 +417,6 @@ static int diff_print_patch_file_binary(
 
 	if ((error = format_binary(pi, binary->new_file.type, binary->new_file.data,
 		binary->new_file.datalen, binary->new_file.inflatedlen)) < 0 ||
-		(error = git_buf_putc(pi->buf, '\n')) < 0 ||
 		(error = format_binary(pi, binary->old_file.type, binary->old_file.data,
 			binary->old_file.datalen, binary->old_file.inflatedlen)) < 0) {
 

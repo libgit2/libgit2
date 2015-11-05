@@ -756,8 +756,10 @@ static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *use
 	list = libssh2_userauth_list(session, username, strlen(username));
 
 	/* either error, or the remote accepts NONE auth, which is bizarre, let's punt */
-	if (list == NULL && !libssh2_userauth_authenticated(session))
+	if (list == NULL && !libssh2_userauth_authenticated(session)) {
+		ssh_error(session, "Failed to retrieve list of SSH authentication methods");
 		return -1;
+	}
 
 	ptr = list;
 	while (ptr) {

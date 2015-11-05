@@ -19,6 +19,7 @@ CMAKE_POLICY(SET CMP0015 NEW)
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
 
 INCLUDE(CheckLibraryExists)
+INCLUDE(CheckFunctionExists)
 INCLUDE(AddCFlagIfSupported)
 INCLUDE(FindPkgConfig)
 
@@ -94,6 +95,23 @@ SET(LIBGIT2_PC_LIBS "")
 SET(BIN_INSTALL_DIR bin CACHE PATH "Where to install binaries to.")
 SET(LIB_INSTALL_DIR lib CACHE PATH "Where to install libraries to.")
 SET(INCLUDE_INSTALL_DIR include CACHE PATH "Where to install headers to.")
+
+# Set a couple variables to be substituted inside the .pc file.
+# We can't just use LIB_INSTALL_DIR in the .pc file, as passing them as absolue
+# or relative paths is both valid and supported by cmake.
+SET (PKGCONFIG_PREFIX ${CMAKE_INSTALL_PREFIX})
+
+IF(IS_ABSOLUTE ${LIB_INSTALL_DIR})
+  SET (PKGCONFIG_LIBDIR ${LIB_INSTALL_DIR})
+ELSE(IS_ABSOLUTE ${LIB_INSTALL_DIR})
+  SET (PKGCONFIG_LIBDIR "\${prefix}/${LIB_INSTALL_DIR}")
+ENDIF (IS_ABSOLUTE ${LIB_INSTALL_DIR})
+
+IF(IS_ABSOLUTE ${INCLUDE_INSTALL_DIR})
+  SET (PKGCONFIG_INCLUDEDIR ${INCLUDE_INSTALL_DIR})
+ELSE(IS_ABSOLUTE ${INCLUDE_INSTALL_DIR})
+  SET (PKGCONFIG_INCLUDEDIR "\${prefix}/${INCLUDE_INSTALL_DIR}")
+ENDIF(IS_ABSOLUTE ${INCLUDE_INSTALL_DIR})
 
 FUNCTION(TARGET_OS_LIBRARIES target)
 	IF(WIN32)
@@ -440,6 +458,21 @@ ELSE ()
 	ENDIF ()
 ENDIF()
 
+CHECK_FUNCTION_EXISTS(futimens HAVE_FUTIMENS)
+IF (HAVE_FUTIMENS)
+	ADD_DEFINITIONS(-DHAVE_FUTIMENS)
+ENDIF ()
+
+CHECK_FUNCTION_EXISTS(qsort_r HAVE_QSORT_R)
+IF (HAVE_QSORT_R)
+	ADD_DEFINITIONS(-DHAVE_QSORT_R)
+ENDIF ()
+
+CHECK_FUNCTION_EXISTS(qsort_s HAVE_QSORT_S)
+IF (HAVE_QSORT_S)
+	ADD_DEFINITIONS(-DHAVE_QSORT_S)
+ENDIF ()
+
 IF( NOT CMAKE_CONFIGURATION_TYPES )
 	# Build Debug by default
 	IF (NOT CMAKE_BUILD_TYPE)
@@ -546,7 +579,12 @@ INSTALL(FILES include/git2.h DESTINATION ${INCLUDE_INSTALL_DIR} )
 
 # Tests
 IF (BUILD_CLAR)
-	FIND_PACKAGE(PythonInterp REQUIRED)
+	FIND_PACKAGE(PythonInterp)
+
+	IF(NOT PYTHONINTERP_FOUND)
+	  MESSAGE(FATAL_ERROR "Could not find a python interpeter, which is needed to build the tests. "
+	    "Make sure python is available, or pass -DBUILD_CLAR=OFF to skip building the tests")
+	ENDIF()
 
 	SET(CLAR_FIXTURES "${CMAKE_CURRENT_SOURCE_DIR}/tests/resources/")
 	SET(CLAR_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tests")
