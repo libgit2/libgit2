@@ -13,6 +13,7 @@
 #include "refs.h"
 #include "remote.h"
 #include "annotated_commit.h"
+#include "worktree.h"
 
 #include "git2/branch.h"
 
@@ -125,6 +126,62 @@ int git_branch_create_from_annotated(
 	return create_branch(ref_out,
 		repository, branch_name, commit->commit, commit->description, force);
 }
+
+int git_branch_is_checked_out(
+	const git_reference *branch)
+{
+	git_buf path = GIT_BUF_INIT, buf = GIT_BUF_INIT;
+	git_strarray worktrees;
+	git_reference *ref = NULL;
+	git_repository *repo;
+	const char *worktree;
+	int found = false;
+	size_t i;
+
+	assert(branch && git_reference_is_branch(branch));
+
+	repo = git_reference_owner(branch);
+
+	if (git_worktree_list(&worktrees, repo) < 0)
+		return -1;
+
+	for (i = 0; i < worktrees.count; i++) {
+		worktree = worktrees.strings[i];
+
+		if (git_repository_head_for_worktree(&ref, repo, worktree) < 0)
+			continue;
+
+		if (git__strcmp(ref->name, branch->name) == 0) {
+			found = true;
+			git_reference_free(ref);
+			break;
+		}
+
+		git_reference_free(ref);
+	}
+	git_strarray_free(&worktrees);
+
+	if (found)
+		return found;
+
+	/* Check HEAD of parent */
+	if (git_buf_joinpath(&path, repo->commondir, GIT_HEAD_FILE) < 0)
+		goto out;
+	if (git_futils_readbuffer(&buf, path.ptr) < 0)
+		goto out;
+	if (git__prefixcmp(buf.ptr, "ref: ") == 0)
+		git_buf_consume(&buf, buf.ptr + strlen("ref: "));
+	git_buf_rtrim(&buf);
+
+	found = git__strcmp(buf.ptr, branch->name) == 0;
+
+out:
+	git_buf_free(&buf);
+	git_buf_free(&path);
+
+	return found;
+}
+
 
 int git_branch_delete(git_reference *branch)
 {
