@@ -206,6 +206,12 @@ int git_branch_delete(git_reference *branch)
 		return -1;
 	}
 
+	if (git_reference_is_branch(branch) && git_branch_is_checked_out(branch)) {
+		giterr_set(GITERR_REFERENCE, "Cannot delete branch '%s' as it is "
+			"the current HEAD of a linked repository.", git_reference_name(branch));
+		return -1;
+	}
+
 	if (git_buf_join(&config_section, '.', "branch",
 			git_reference_name(branch) + strlen(GIT_REFS_HEADS_DIR)) < 0)
 		goto on_error;

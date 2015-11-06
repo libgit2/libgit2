@@ -1,4 +1,5 @@
 #include "clar_libgit2.h"
+#include "worktree.h"
 #include "worktree_helpers.h"
 
 #define COMMON_REPO "testrepo"
@@ -65,4 +66,30 @@ void test_worktree_refs__read_head(void)
 	cl_git_pass(git_repository_head(&head, fixture.worktree));
 
 	git_reference_free(head);
+}
+
+void test_worktree_refs__delete_fails_for_checked_out_branch(void)
+{
+       git_reference *branch;
+
+       cl_git_pass(git_branch_lookup(&branch, fixture.repo,
+               "testrepo-worktree", GIT_BRANCH_LOCAL));
+       cl_git_fail(git_branch_delete(branch));
+
+       git_reference_free(branch);
+}
+
+void test_worktree_refs__delete_succeeds_after_pruning_worktree(void)
+{
+       git_reference *branch;
+       git_worktree *worktree;
+
+       cl_git_pass(git_worktree_lookup(&worktree, fixture.repo, fixture.worktreename));
+       cl_git_pass(git_worktree_prune(worktree, GIT_WORKTREE_PRUNE_VALID));
+       git_worktree_free(worktree);
+
+       cl_git_pass(git_branch_lookup(&branch, fixture.repo,
+               "testrepo-worktree", GIT_BRANCH_LOCAL));
+       cl_git_pass(git_branch_delete(branch));
+       git_reference_free(branch);
 }
