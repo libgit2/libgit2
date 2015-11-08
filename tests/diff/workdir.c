@@ -2097,3 +2097,64 @@ void test_diff_workdir__to_index_pathlist(void)
 	git_vector_free(&pathlist);
 }
 
+void test_diff_workdir__symlink_changed_on_non_symlink_platform(void)
+{
+	git_tree *tree;
+	git_diff *diff;
+	diff_expects exp = {0};
+	const git_diff_delta *delta;
+	const char *commit = "7fccd7";
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_vector pathlist = GIT_VECTOR_INIT;
+	int symlinks;
+
+	g_repo = cl_git_sandbox_init("unsymlinked.git");
+
+	cl_git_pass(git_repository__cvar(&symlinks, g_repo, GIT_CVAR_SYMLINKS));
+
+	if (symlinks)
+		cl_skip();
+
+	cl_git_pass(git_vector_insert(&pathlist, "include/Nu/Nu.h"));
+
+	opts.pathspec.strings = (char **)pathlist.contents;
+	opts.pathspec.count = pathlist.length;
+
+	cl_must_pass(p_mkdir("symlink", 0777));
+	cl_git_pass(git_repository_set_workdir(g_repo, "symlink", false));
+
+	cl_assert((tree = resolve_commit_oid_to_tree(g_repo, commit)) != NULL);
+
+	/* first, do the diff with the original contents */
+
+	cl_git_pass(git_futils_mkpath2file("symlink/include/Nu/Nu.h", 0755));
+	cl_git_mkfile("symlink/include/Nu/Nu.h", "../../objc/Nu.h");
+
+	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, tree, &opts));
+	cl_assert_equal_i(0, git_diff_num_deltas(diff));
+	git_diff_free(diff);
+
+	/* now update the contents and expect a difference, but that the file
+	 * mode has persisted as a symbolic link.
+	 */
+
+	cl_git_rewritefile("symlink/include/Nu/Nu.h", "awesome content\n");
+
+	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, tree, &opts));
+
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(1, exp.files);
+
+	cl_assert_equal_i(1, git_diff_num_deltas(diff));
+	delta = git_diff_get_delta(diff, 0);
+	cl_assert_equal_i(GIT_FILEMODE_LINK, delta->old_file.mode);
+	cl_assert_equal_i(GIT_FILEMODE_LINK, delta->new_file.mode);
+
+	git_diff_free(diff);
+
+	cl_git_pass(git_futils_rmdir_r("symlink", NULL, GIT_RMDIR_REMOVE_FILES));
+
+	git_tree_free(tree);
+	git_vector_free(&pathlist);
+}

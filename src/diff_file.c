@@ -259,10 +259,35 @@ static int diff_file_content_load_blob(
 	return error;
 }
 
+static int diff_file_content_load_workdir_symlink_fake(
+	git_diff_file_content *fc, git_buf *path)
+{
+	git_buf target = GIT_BUF_INIT;
+	int error;
+
+	if ((error = git_futils_readbuffer(&target, path->ptr)) < 0)
+		return error;
+
+	fc->map.len = git_buf_len(&target);
+	fc->map.data = git_buf_detach(&target);
+	fc->flags |= GIT_DIFF_FLAG__FREE_DATA;
+
+	git_buf_free(&target);
+	return error;
+}
+
 static int diff_file_content_load_workdir_symlink(
 	git_diff_file_content *fc, git_buf *path)
 {
 	ssize_t alloc_len, read_len;
+	int symlink_supported, error;
+
+	if ((error = git_repository__cvar(
+		&symlink_supported, fc->repo, GIT_CVAR_SYMLINKS)) < 0)
+		return -1;
+
+	if (!symlink_supported)
+		return diff_file_content_load_workdir_symlink_fake(fc, path);
 
 	/* link path on disk could be UTF-16, so prepare a buffer that is
 	 * big enough to handle some UTF-8 data expansion
