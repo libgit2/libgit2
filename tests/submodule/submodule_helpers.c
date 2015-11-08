@@ -156,6 +156,21 @@ git_repository *setup_fixture_submodule_simple(void)
 	return repo;
 }
 
+git_repository *setup_fixture_submodule_with_path(void)
+{
+	git_repository *repo = cl_git_sandbox_init("submodule_with_path");
+
+	cl_fixture_sandbox("testrepo.git");
+	p_mkdir("submodule_with_path/lib", 0777);
+	p_mkdir("submodule_with_path/lib/testrepo", 0777);
+
+	cl_set_cleanup(cleanup_fixture_submodules, "testrepo.git");
+
+	cl_git_pass(git_repository_reinit_filesystem(repo, 1));
+
+	return repo;
+}
+
 void assert__submodule_exists(
 	git_repository *repo, const char *name,
 	const char *msg, const char *file, int line)
