@@ -15,6 +15,10 @@ v0.24 + 1
 
 ### API removals
 
+* `git_blob_create_fromchunks()` has been removed in favour of
+  `git_blob_create_fromstream()`.
+
+
 ### Breaking API changes
 
 v0.24
