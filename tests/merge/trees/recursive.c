@@ -269,3 +269,31 @@ void test_merge_trees_recursive__conflict(void)
 	git_index_free(index);
 }
 
+/* 
+ * Branch G-1 and G-2 have three common ancestors (815b5a1, ad2ace9, 483065d).
+ * The merge-base of the first two has two common ancestors (723181f, a34e5a1)
+ * which themselves have two common ancestors (8f35f30, 3a3f5a6), which
+ * finally has a common ancestor of 7c7bf85.  This virtual merge base will
+ * be computed and merged with 483065d which also has a common ancestor of
+ * 7c7bf85.
+ */
+void test_merge_trees_recursive__oh_so_many_levels_of_recursion(void)
+{
+	git_index *index;
+	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
+
+	struct merge_index_entry merge_index_entries[] = {
+		{ 0100644, "ffb36e513f5fdf8a6ba850a20142676a2ac4807d", 0, "asparagus.txt" },
+		{ 0100644, "68f6182f4c85d39e1309d97c7e456156dc9c0096", 0, "beef.txt" },
+		{ 0100644, "4b7c5650008b2e747fe1809eeb5a1dde0e80850a", 0, "bouilli.txt" },
+		{ 0100644, "c4e6cca3ec6ae0148ed231f97257df8c311e015f", 0, "gravy.txt" },
+		{ 0100644, "7c7e08f9559d9e1551b91e1cf68f1d0066109add", 0, "oyster.txt" },
+		{ 0100644, "898d12687fb35be271c27c795a6b32c8b51da79e", 0, "veal.txt" },
+	};
+
+	cl_git_pass(merge_commits_from_branches(&index, repo, "branchG-1", "branchG-2", &opts));
+
+	cl_assert(merge_test_index(index, merge_index_entries, 6));
+
+	git_index_free(index);
+}
