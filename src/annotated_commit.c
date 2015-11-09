@@ -8,6 +8,7 @@
 #include "common.h"
 #include "annotated_commit.h"
 #include "refs.h"
+#include "cache.h"
 
 #include "git2/commit.h"
 #include "git2/refs.h"
@@ -23,14 +24,17 @@ static int annotated_commit_init(
 	const char *remote_url)
 {
 	git_annotated_commit *annotated_commit;
+	git_commit *commit = NULL;
 	int error = 0;
 
 	assert(out && id);
 
 	*out = NULL;
 
-	annotated_commit = git__calloc(1, sizeof(git_annotated_commit));
-	GITERR_CHECK_ALLOC(annotated_commit);
+	if ((error = git_commit_lookup(&commit, repo, id)) < 0 ||
+		(error = git_annotated_commit_from_commit(&annotated_commit,
+			commit)) < 0)
+		goto done;
 
 	if (ref_name) {
 		annotated_commit->ref_name = git__strdup(ref_name);
@@ -42,15 +46,10 @@ static int annotated_commit_init(
 		GITERR_CHECK_ALLOC(annotated_commit->remote_url);
 	}
 
-	git_oid_fmt(annotated_commit->id_str, id);
-	annotated_commit->id_str[GIT_OID_HEXSZ] = '\0';
-
-	if ((error = git_commit_lookup(&annotated_commit->commit, repo, id)) < 0) {
-		git_annotated_commit_free(annotated_commit);
-		return error;
-	}
-
 	*out = annotated_commit;
+
+done:
+	git_commit_free(commit);
 	return error;
 }
 
@@ -94,6 +93,29 @@ int git_annotated_commit_from_head(
 
 	git_reference_free(head);
 	return error;
+}
+
+int git_annotated_commit_from_commit(
+	git_annotated_commit **out,
+	git_commit *commit)
+{
+	git_annotated_commit *annotated_commit;
+
+	assert(out && commit);
+
+	*out = NULL;
+
+	annotated_commit = git__calloc(1, sizeof(git_annotated_commit));
+	GITERR_CHECK_ALLOC(annotated_commit);
+
+	git_cached_obj_incref(commit);
+	annotated_commit->commit = commit;
+
+	git_oid_fmt(annotated_commit->id_str, git_commit_id(commit));
+	annotated_commit->id_str[GIT_OID_HEXSZ] = '\0';
+
+	*out = annotated_commit;
+	return 0;
 }
 
 int git_annotated_commit_lookup(
