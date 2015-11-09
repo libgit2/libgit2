@@ -3,6 +3,7 @@
 #include "git2/merge.h"
 #include "merge.h"
 #include "../merge_helpers.h"
+#include "../conflict_data.h"
 
 static git_repository *repo;
 
