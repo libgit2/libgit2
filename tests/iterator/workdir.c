@@ -613,6 +613,7 @@ void test_iterator_workdir__filesystem2(void)
 		"heads/ident",
 		"heads/long-file-name",
 		"heads/master",
+		"heads/merge-conflict",
 		"heads/packed-test",
 		"heads/subtrees",
 		"heads/test",
@@ -629,7 +630,7 @@ void test_iterator_workdir__filesystem2(void)
 
 	cl_git_pass(git_iterator_for_filesystem(
 		&i, "testrepo/.git/refs", NULL));
-	expect_iterator_items(i, 14, expect_base, 14, expect_base);
+	expect_iterator_items(i, 15, expect_base, 15, expect_base);
 	git_iterator_free(i);
 }
 
