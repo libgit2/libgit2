@@ -1691,7 +1691,7 @@ int git_index_conflict_add(git_index *index,
 	for (i = 0; i < 3; i++) {
 		if (entries[i] && !valid_filemode(entries[i]->mode)) {
 			giterr_set(GITERR_INDEX, "invalid filemode for stage %d entry",
-				i);
+				i + 1);
 			return -1;
 		}
 	}
