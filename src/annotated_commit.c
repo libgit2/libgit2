@@ -15,6 +15,8 @@
 #include "git2/repository.h"
 #include "git2/annotated_commit.h"
 #include "git2/revparse.h"
+#include "git2/tree.h"
+#include "git2/index.h"
 
 static int annotated_commit_init(
 	git_annotated_commit **out,
@@ -108,6 +110,8 @@ int git_annotated_commit_from_commit(
 	annotated_commit = git__calloc(1, sizeof(git_annotated_commit));
 	GITERR_CHECK_ALLOC(annotated_commit);
 
+	annotated_commit->type = GIT_ANNOTATED_COMMIT_REAL;
+
 	git_cached_obj_incref(commit);
 	annotated_commit->commit = commit;
 
@@ -179,14 +183,20 @@ void git_annotated_commit_free(git_annotated_commit *annotated_commit)
 	if (annotated_commit == NULL)
 		return;
 
-	if (annotated_commit->commit != NULL)
-		git_commit_free(annotated_commit->commit);
-
-	if (annotated_commit->ref_name != NULL)
-		git__free(annotated_commit->ref_name);
-
-	if (annotated_commit->remote_url != NULL)
-		git__free(annotated_commit->remote_url);
+	switch (annotated_commit->type) {
+		case GIT_ANNOTATED_COMMIT_REAL:
+			git_commit_free(annotated_commit->commit);
+			git_tree_free(annotated_commit->tree);
+			git__free(annotated_commit->ref_name);
+			git__free(annotated_commit->remote_url);
+			break;
+		case GIT_ANNOTATED_COMMIT_VIRTUAL:
+			git_index_free(annotated_commit->index);
+			git_array_clear(annotated_commit->parents);
+			break;
+		default:
+			abort();
+	}
 
 	git__free(annotated_commit);
 }

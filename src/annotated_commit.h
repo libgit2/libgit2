@@ -7,11 +7,31 @@
 #ifndef INCLUDE_annotated_commit_h__
 #define INCLUDE_annotated_commit_h__
 
+#include "oidarray.h"
+
 #include "git2/oid.h"
 
-/** Internal structure for merge inputs */
+typedef enum {
+	GIT_ANNOTATED_COMMIT_REAL = 1,
+	GIT_ANNOTATED_COMMIT_VIRTUAL = 2,
+} git_annotated_commit_t;
+
+/**
+ * Internal structure for merge inputs.  An annotated commit is generally
+ * "real" and backed by an actual commit in the repository, but merge will
+ * internally create "virtual" commits that are in-memory intermediate
+ * commits backed by an index.
+ */
 struct git_annotated_commit {
+	git_annotated_commit_t type;
+
+	/* real commit */
 	git_commit *commit;
+	git_tree *tree;
+
+	/* virtual commit structure */
+	git_index *index;
+	git_array_oid_t parents;
 
 	char *ref_name;
 	char *remote_url;

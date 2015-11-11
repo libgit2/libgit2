@@ -1928,58 +1928,59 @@ static int merge_annotated_commits(
 	git_index **index_out,
 	git_annotated_commit **base_out,
 	git_repository *repo,
-	const git_annotated_commit *our_commit,
-	const git_annotated_commit *their_commit,
+	git_annotated_commit *our_commit,
+	git_annotated_commit *their_commit,
 	size_t recursion_level,
 	const git_merge_options *opts);
-
-static int create_virtual_base(
-	git_annotated_commit **out,
-	git_repository *repo,
-	const git_annotated_commit *one,
-	const git_annotated_commit *two,
-	size_t recursion_level)
-{
-	git_index *index = NULL;
-	git_tree *tree = NULL;
-	git_commit *commit = NULL;
-	git_oid id, tree_id;
-	const git_commit *parents[2];
-	git_signature *signature = NULL;
-	int error;
-
-	parents[0] = one->commit;
-	parents[1] = two->commit;
-
-	if ((error = merge_annotated_commits(&index, NULL, repo, one, two,
-			recursion_level + 1, NULL)) < 0 ||
-		(error = git_index_write_tree_to(&tree_id, index, repo)) < 0 ||
-		(error = git_tree_lookup(&tree, repo, &tree_id)) < 0 ||
-		(error = git_signature_now(&signature, "Virtual", "virtual")) < 0 ||
-		(error = git_commit_create(&id, repo, NULL, signature, signature,
-			NULL, "virtual merged tree", tree, 2, parents)) < 0 ||
-		(error = git_commit_lookup(&commit, repo, &id)) < 0)
-		goto done;
-
-	error = git_annotated_commit_from_commit(out, commit);
-
-done:
-	git_commit_free(commit);
-	git_tree_free(tree);
-	git_index_free(index);
-	git_signature_free(signature);
-
-	return error;
-}
 
 GIT_INLINE(int) insert_head_ids(
 	git_array_oid_t *ids,
 	const git_annotated_commit *annotated_commit)
 {
-	git_oid *id = git_array_alloc(*ids);
-	GITERR_CHECK_ALLOC(id);
+	git_oid *id;
+	size_t i;
 
-	git_oid_cpy(id, git_commit_id(annotated_commit->commit));
+	if (annotated_commit->type == GIT_ANNOTATED_COMMIT_REAL) {
+		id = git_array_alloc(*ids);
+		GITERR_CHECK_ALLOC(id);
+
+		git_oid_cpy(id, git_commit_id(annotated_commit->commit));
+	} else {
+		for (i = 0; i < annotated_commit->parents.size; i++) {
+			id = git_array_alloc(*ids);
+			GITERR_CHECK_ALLOC(id);
+
+			git_oid_cpy(id, &annotated_commit->parents.ptr[i]);
+		}
+	}
+
+	return 0;
+}
+
+static int create_virtual_base(
+	git_annotated_commit **out,
+	git_repository *repo,
+	git_annotated_commit *one,
+	git_annotated_commit *two,
+	size_t recursion_level)
+{
+	git_annotated_commit *result = NULL;
+	git_index *index = NULL;
+
+	result = git__calloc(1, sizeof(git_annotated_commit));
+	GITERR_CHECK_ALLOC(result);
+
+	if ((merge_annotated_commits(&index, NULL, repo, one, two,
+			recursion_level + 1, NULL)) < 0)
+		return -1;
+
+	result->type = GIT_ANNOTATED_COMMIT_VIRTUAL;
+	result->index = index;
+
+	insert_head_ids(&result->parents, one);
+	insert_head_ids(&result->parents, two);
+
+	*out = result;
 	return 0;
 }
 
@@ -2039,35 +2040,59 @@ done:
 	return error;
 }
 
+static int iterator_for_annotated_commit(
+	git_iterator **out,
+	git_annotated_commit *commit)
+{
+	git_iterator_options opts = GIT_ITERATOR_OPTIONS_INIT;
+	int error;
+
+	opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+	if (commit == NULL) {
+		error = git_iterator_for_nothing(out, &opts); 
+	} else if (commit->type == GIT_ANNOTATED_COMMIT_VIRTUAL) {
+		error = git_iterator_for_index(out, commit->index, &opts);
+	} else {
+		if (!commit->tree &&
+			(error = git_commit_tree(&commit->tree, commit->commit)) < 0)
+			goto done;
+
+		error = git_iterator_for_tree(out, commit->tree, &opts);
+	}
+
+done:
+	return error;
+}
+
 static int merge_annotated_commits(
 	git_index **index_out,
 	git_annotated_commit **base_out,
 	git_repository *repo,
-	const git_annotated_commit *our_commit,
-	const git_annotated_commit *their_commit,
+	git_annotated_commit *ours,
+	git_annotated_commit *theirs,
 	size_t recursion_level,
 	const git_merge_options *opts)
 {
 	git_annotated_commit *base = NULL;
-	git_tree *base_tree = NULL, *our_tree = NULL, *their_tree = NULL;
+	git_iterator *base_iter = NULL, *our_iter = NULL, *their_iter = NULL;
 	bool recurse = !opts || !(opts->flags & GIT_MERGE_NO_RECURSIVE);
 	int error;
 
-    if ((error = compute_base(&base, repo, our_commit, their_commit,
-		recurse, recursion_level)) < 0) {
+    if ((error = compute_base(&base, repo, ours, theirs, recurse,
+		recursion_level)) < 0) {
 
         if (error != GIT_ENOTFOUND)
             goto done;
 
         giterr_clear();
-    } else if ((error = git_commit_tree(&base_tree, base->commit)) < 0) {
-		goto done;
-	}
+    }
 
-	if ((error = git_commit_tree(&our_tree, our_commit->commit)) < 0 ||
-		(error = git_commit_tree(&their_tree, their_commit->commit)) < 0 ||
-		(error = git_merge_trees(index_out, repo, base_tree, our_tree,
-			their_tree, opts)) < 0)
+	if ((error = iterator_for_annotated_commit(&base_iter, base)) < 0 ||
+		(error = iterator_for_annotated_commit(&our_iter, ours)) < 0 ||
+		(error = iterator_for_annotated_commit(&their_iter, theirs)) < 0 ||
+		(error = git_merge__iterators(index_out, repo, base_iter, our_iter,
+			their_iter, opts)) < 0)
 		goto done;
 
 	if (base_out) {
@@ -2077,9 +2102,9 @@ static int merge_annotated_commits(
 
 done:
 	git_annotated_commit_free(base);
-	git_tree_free(our_tree);
-	git_tree_free(their_tree);
-	git_tree_free(base_tree);
+	git_iterator_free(base_iter);
+	git_iterator_free(our_iter);
+	git_iterator_free(their_iter);
 	return error;
 }
 
@@ -2558,14 +2583,13 @@ static int merge_normalize_checkout_opts(
 
 	out->checkout_strategy = checkout_strategy;
 
-	/* TODO: disambiguate between merged common ancestors and no common
-	 * ancestor (although git.git does not!)
-	 */
 	if (!out->ancestor_label) {
-		if (ancestor)
+		if (ancestor && ancestor->type == GIT_ANNOTATED_COMMIT_REAL)
 			out->ancestor_label = git_commit_summary(ancestor->commit);
-		else
+		else if (ancestor)
 			out->ancestor_label = "merged common ancestors";
+		else
+			out->ancestor_label = "empty base";
 	}
 
 	if (!out->our_label) {
@@ -2967,7 +2991,7 @@ int git_merge(
 	/* TODO: octopus */
 
 	if ((error = merge_annotated_commits(&index, &base, repo, our_head,
-			their_heads[0], 0, merge_opts)) < 0 ||
+			(git_annotated_commit *)their_heads[0], 0, merge_opts)) < 0 ||
 		(error = git_merge__check_result(repo, index)) < 0 ||
 		(error = git_merge__append_conflicts_to_merge_msg(repo, index)) < 0)
 		goto done;
