@@ -10,6 +10,9 @@ v0.23 + 1
 * Symlinks are now followed when locking a file, which can be
   necessary when multiple worktrees share a base repository.
 
+* You can now set your own user-agent to be sent for HTTP requests by
+  using the `GIT_OPT_SET_USER_AGENT` with `git_libgit2_opts()`.
+
 ### API additions
 
 * `git_config_lock()` has been added, which allow for
