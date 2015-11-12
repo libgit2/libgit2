@@ -32,7 +32,7 @@ void test_core_pool__1(void)
 		cl_assert(git_pool_malloc(&p, i) != NULL);
 
 	/* with fixed page size, allocation must end up with these values */
-	cl_assert_equal_i(590, git_pool__open_pages(&p));
+	cl_assert_equal_i(591, git_pool__open_pages(&p));
 	git_pool_clear(&p);
 
 	git_pool_init(&p, 1);
@@ -42,7 +42,7 @@ void test_core_pool__1(void)
 		cl_assert(git_pool_malloc(&p, i) != NULL);
 
 	/* with fixed page size, allocation must end up with these values */
-	cl_assert_equal_i(573, git_pool__open_pages(&p));
+	cl_assert_equal_i(sizeof(void *) == 8 ? 575 : 573, git_pool__open_pages(&p));
 	git_pool_clear(&p);
 }
 
