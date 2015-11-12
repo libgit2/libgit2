@@ -41,10 +41,11 @@ v0.23 + 1
   with which to implement the transactional/atomic semantics for the
   configuration backend.
 
-* `git_index_add` will now use the case as provided by the caller on
-  case insensitive systems.  Previous versions would keep the case as
-  it existed in the index.  This does not affect the higher-level
-  `git_index_add_bypath` or `git_index_add_frombuffer` functions.
+* `git_index_add` and `git_index_conflict_add()` will now use the case
+  as provided by the caller on case insensitive systems.  Previous
+  versions would keep the case as it existed in the index.  This does
+  not affect the higher-level `git_index_add_bypath` or
+  `git_index_add_frombuffer` functions.
 
 * The `notify_payload` field of `git_diff_options` was renamed to `payload`
   to reflect that it's also the payload for the new progress callback.
