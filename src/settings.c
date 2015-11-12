@@ -57,6 +57,13 @@ static int config_level_to_sysdir(int config_level)
 	return val;
 }
 
+extern char *git__user_agent;
+
+const char *git_libgit2__user_agent()
+{
+	return git__user_agent;
+}
+
 int git_libgit2_opts(int key, ...)
 {
 	int error = 0;
@@ -152,6 +159,15 @@ int git_libgit2_opts(int key, ...)
 		giterr_set(GITERR_NET, "Cannot set certificate locations: OpenSSL is not enabled");
 		error = -1;
 #endif
+		break;
+	case GIT_OPT_SET_USER_AGENT:
+		git__free(git__user_agent);
+		git__user_agent = git__strdup(va_arg(ap, const char *));
+		if (!git__user_agent) {
+			giterr_set_oom();
+			error = -1;
+		}
+
 		break;
 	}
 

@@ -31,6 +31,7 @@ static git_mutex *openssl_locks;
 static git_global_shutdown_fn git__shutdown_callbacks[MAX_SHUTDOWN_CB];
 static git_atomic git__n_shutdown_callbacks;
 static git_atomic git__n_inits;
+char *git__user_agent;
 
 void git__on_shutdown(git_global_shutdown_fn callback)
 {
@@ -269,6 +270,8 @@ int git_libgit2_shutdown(void)
 		git_win32__crtdbg_stacktrace_cleanup();
 		git_win32__stack_cleanup();
 #endif
+
+		git__free(git__user_agent);
 	}
 
 	/* Exit the lock */
@@ -369,6 +372,7 @@ int git_libgit2_shutdown(void)
 
 	git__global_state_cleanup(ptr);
 	git__free(ptr);
+	git__free(git__user_agent);
 
 	pthread_key_delete(_tls_key);
 	git_mutex_free(&git__mwindow_mutex);
@@ -423,6 +427,7 @@ int git_libgit2_shutdown(void)
 	git__shutdown();
 	git__global_state_cleanup(&__state);
 	uninit_ssl();
+	git__free(git__user_agent);
 
 	return 0;
 }
