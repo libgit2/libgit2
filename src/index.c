@@ -1691,7 +1691,7 @@ int git_index_conflict_add(git_index *index,
 	for (i = 0; i < 3; i++) {
 		if (entries[i] && !valid_filemode(entries[i]->mode)) {
 			giterr_set(GITERR_INDEX, "invalid filemode for stage %d entry",
-				i);
+				i + 1);
 			return -1;
 		}
 	}
@@ -1718,7 +1718,7 @@ int git_index_conflict_add(git_index *index,
 		/* Make sure stage is correct */
 		GIT_IDXENTRY_STAGE_SET(entries[i], i + 1);
 
-		if ((ret = index_insert(index, &entries[i], 0, true, true)) < 0)
+		if ((ret = index_insert(index, &entries[i], 1, true, true)) < 0)
 			goto on_error;
 
 		entries[i] = NULL; /* don't free if later entry fails */
