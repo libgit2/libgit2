@@ -733,8 +733,11 @@ static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *
 
 	error = git_filebuf_open(file, ref_path.ptr, GIT_FILEBUF_FORCE, GIT_REFS_FILE_MODE);
 
+	if (error == GIT_EDIRECTORY)
+		giterr_set(GITERR_REFERENCE, "cannot lock ref '%s', there are refs beneath that folder", name);
+
 	git_buf_free(&ref_path);
-        return error;
+	return error;
 }
 
 static int loose_commit(git_filebuf *file, const git_reference *ref)
@@ -1785,10 +1788,17 @@ static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, co
 	/* If the new branch matches part of the namespace of a previously deleted branch,
 	 * there maybe an obsolete/unused directory (or directory hierarchy) in the way.
 	 */
-	if (git_path_isdir(git_buf_cstr(&path)) &&
-		(git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_RMDIR_SKIP_NONEMPTY) < 0)) {
-		error = -1;
-		goto cleanup;
+	if (git_path_isdir(git_buf_cstr(&path))) {
+		if ((git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_RMDIR_SKIP_NONEMPTY) < 0))
+			error = -1;
+		else if (git_path_isdir(git_buf_cstr(&path))) {
+			giterr_set(GITERR_REFERENCE, "cannot create reflog at '%s', there are reflogs beneath that folder",
+				ref->name);
+			error = GIT_EDIRECTORY;
+		}
+
+		if (error != 0)
+			goto cleanup;
 	}
 
 	error = git_futils_writebuffer(&buf, git_buf_cstr(&path), O_WRONLY|O_CREAT|O_APPEND, GIT_REFLOG_FILE_MODE);

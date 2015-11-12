@@ -125,6 +125,77 @@ void test_refs_reflog_reflog__renaming_the_reference_moves_the_reflog(void)
 	git_buf_free(&master_log_path);
 }
 
+void test_refs_reflog_reflog__deleting_the_reference_deletes_the_reflog(void)
+{
+	git_reference *master;
+	git_buf master_log_path = GIT_BUF_INIT;
+
+	git_buf_joinpath(&master_log_path, git_repository_path(g_repo), GIT_REFLOG_DIR);
+	git_buf_joinpath(&master_log_path, git_buf_cstr(&master_log_path), "refs/heads/master");
+
+	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&master_log_path)));
+
+	cl_git_pass(git_reference_lookup(&master, g_repo, "refs/heads/master"));
+	cl_git_pass(git_reference_delete(master));
+	git_reference_free(master);
+
+	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&master_log_path)));
+	git_buf_free(&master_log_path);
+}
+
+void test_refs_reflog_reflog__removes_empty_reflog_dir(void)
+{
+	git_reference *ref;
+	git_buf log_path = GIT_BUF_INIT;
+	git_oid id;
+
+	/* Create a new branch pointing at the HEAD */
+	git_oid_fromstr(&id, current_master_tip);
+	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/new-dir/new-head", &id, 0, NULL));
+
+	git_buf_joinpath(&log_path, git_repository_path(g_repo), GIT_REFLOG_DIR);
+	git_buf_joinpath(&log_path, git_buf_cstr(&log_path), "refs/heads/new-dir/new-head");
+
+	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&log_path)));
+
+	cl_git_pass(git_reference_delete(ref));
+	git_reference_free(ref);
+
+	/* new ref creation should succeed since new-dir is empty */
+	git_oid_fromstr(&id, current_master_tip);
+	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/new-dir", &id, 0, NULL));
+	git_reference_free(ref);
+
+	git_buf_free(&log_path);
+}
+
+void test_refs_reflog_reflog__fails_gracefully_on_nonempty_reflog_dir(void)
+{
+	git_reference *ref;
+	git_buf log_path = GIT_BUF_INIT;
+	git_oid id;
+
+	/* Create a new branch pointing at the HEAD */
+	git_oid_fromstr(&id, current_master_tip);
+	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/new-dir/new-head", &id, 0, NULL));
+	git_reference_free(ref);
+
+	git_buf_joinpath(&log_path, git_repository_path(g_repo), GIT_REFLOG_DIR);
+	git_buf_joinpath(&log_path, git_buf_cstr(&log_path), "refs/heads/new-dir/new-head");
+
+	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&log_path)));
+
+	/* delete the ref manually, leave the reflog */
+	cl_must_pass(p_unlink("testrepo.git/refs/heads/new-dir/new-head"));
+
+	/* new ref creation should fail since new-dir contains reflogs still */
+	git_oid_fromstr(&id, current_master_tip);
+	cl_git_fail_with(GIT_EDIRECTORY, git_reference_create(&ref, g_repo, "refs/heads/new-dir", &id, 0, NULL));
+	git_reference_free(ref);
+
+	git_buf_free(&log_path);
+}
+
 static void assert_has_reflog(bool expected_result, const char *name)
 {
 	cl_assert_equal_i(expected_result, git_reference_has_log(g_repo, name));

@@ -230,3 +230,12 @@ void test_core_filebuf__hidden_file(void)
 	git_filebuf_cleanup(&file);
 #endif
 }
+
+void test_core_filebuf__detects_directory(void)
+{
+	git_filebuf file = GIT_FILEBUF_INIT, fail = GIT_FILEBUF_INIT;
+
+	cl_must_pass(p_mkdir("foo", 0777));
+	cl_git_fail_with(GIT_EDIRECTORY, git_filebuf_open(&file, "foo", 0, 0666));
+	cl_must_pass(p_rmdir("foo"));
+}

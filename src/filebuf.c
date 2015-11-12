@@ -357,6 +357,12 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags, mode_t mode
 		memcpy(file->path_lock, file->path_original, path_len);
 		memcpy(file->path_lock + path_len, GIT_FILELOCK_EXTENSION, GIT_FILELOCK_EXTLENGTH);
 
+		if (git_path_isdir(file->path_original)) {
+			giterr_set(GITERR_FILESYSTEM, "path '%s' is a directory", file->path_original);
+			error = GIT_EDIRECTORY;
+			goto cleanup;
+		}
+
 		/* open the file for locking */
 		if ((error = lock_file(file, flags, mode)) < 0)
 			goto cleanup;
