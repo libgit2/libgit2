@@ -310,7 +310,7 @@ extern int git_futils_fake_symlink(const char *new, const char *old);
  * versions could be implemented in the future.
  */
 typedef struct {
-	git_time_t mtime;
+	struct timespec mtime;
 	git_off_t  size;
 	unsigned int ino;
 } git_futils_filestamp;

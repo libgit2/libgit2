@@ -20,6 +20,7 @@ SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Mo
 
 INCLUDE(CheckLibraryExists)
 INCLUDE(CheckFunctionExists)
+INCLUDE(CheckStructHasMember)
 INCLUDE(AddCFlagIfSupported)
 INCLUDE(FindPkgConfig)
 
@@ -83,6 +84,12 @@ ENDIF()
 
 IF (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	OPTION( USE_OPENSSL                     "Link with and use openssl library"             ON )
+ENDIF()
+
+CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtim.tv_nsec sys/stat.h
+	HAVE_STRUCT_STAT_NSEC LANGUAGE C)
+IF(HAVE_STRUCT_STAT_NSEC OR WIN32)
+	OPTION( USE_NSEC		"Care about sub-second file mtimes and ctimes"	OFF )
 ENDIF()
 
 # This variable will contain the libraries we need to put into
@@ -514,6 +521,10 @@ IF (THREADSAFE)
 	ENDIF()
 
 	ADD_DEFINITIONS(-DGIT_THREADS)
+ENDIF()
+
+IF (USE_NSEC)
+	ADD_DEFINITIONS(-DGIT_USE_NSEC)
 ENDIF()
 
 ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
