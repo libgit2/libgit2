@@ -100,13 +100,13 @@ void test_index_racy__write_index_just_after_file(void)
 	git_index_free(index);
 }
 
-void test_index_racy__empty_file_after_smudge(void)
+
+static void setup_race(void)
 {
-	git_index *index;
-	git_diff *diff;
 	git_buf path = GIT_BUF_INIT;
-	int i, found_race = 0;
+	git_index *index;
 	const git_index_entry *entry;
+	int i, found_race = 0;
 
 	/* Make sure we do have a timestamp */
 	cl_git_pass(git_repository_index__weakptr(&index, g_repo));
@@ -131,18 +131,46 @@ void test_index_racy__empty_file_after_smudge(void)
 			found_race = 1;
 			break;
 		}
-
 	}
 
 	if (!found_race)
 		cl_fail("failed to find race after 10 attempts");
 
+	git_buf_free(&path);
+}
+
+void test_index_racy__smudges_index_entry_on_save(void)
+{
+	git_index *index;
+	const git_index_entry *entry;
+
+	setup_race();
+
+	/* write the index, which will smudge anything that had the same timestamp
+	 * as the index when the index was loaded.  that way future loads of the
+	 * index (with the new timestamp) will know that these files were not
+	 * clean.
+	 */
+
+	cl_git_pass(git_repository_index__weakptr(&index, g_repo));
+	cl_git_pass(git_index_write(index));
+
+	cl_assert(entry = git_index_get_bypath(index, "A", 0));
 	cl_assert_equal_i(0, entry->file_size);
+}
+
+void test_index_racy__detects_diff_of_change_in_identical_timestamp(void)
+{
+	git_index *index;
+	git_diff *diff;
+
+	cl_git_pass(git_repository_index__weakptr(&index, g_repo));
+
+	setup_race();
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, index, NULL));
 	cl_assert_equal_i(1, git_diff_num_deltas(diff));
 
-	git_buf_free(&path);
 	git_diff_free(diff);
 }
 
@@ -204,7 +232,7 @@ void test_index_racy__reading_clears_uptodate_bit(void)
 	const git_index_entry *entry;
 
 	setup_uptodate_files();
-	
+
 	cl_git_pass(git_repository_index(&index, g_repo));
 	cl_git_pass(git_index_write(index));
 
