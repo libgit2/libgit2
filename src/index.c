@@ -767,7 +767,8 @@ static int truncate_racily_clean(git_index *index)
 
 	diff_opts.flags |= GIT_DIFF_INCLUDE_TYPECHANGE | GIT_DIFF_IGNORE_SUBMODULES | GIT_DIFF_DISABLE_PATHSPEC_MATCH;
 	git_vector_foreach(&index->entries, i, entry) {
-		if (!is_racy_timestamp(&index->stamp.mtime, entry))
+		if ((entry->flags_extended & GIT_IDXENTRY_UPTODATE) == 0 &&
+			is_racy_timestamp(&index->stamp.mtime, entry))
 			git_vector_insert(&paths, (char *)entry->path);
 	}
 
@@ -1294,6 +1295,9 @@ static int index_insert(
 		entry->flags |= path_length & GIT_IDXENTRY_NAMEMASK;
 	else
 		entry->flags |= GIT_IDXENTRY_NAMEMASK;
+
+	/* this entry is now up-to-date and should not be checked for raciness */
+	entry->flags_extended |= GIT_IDXENTRY_UPTODATE;
 
 	if (git_mutex_lock(&index->lock) < 0) {
 		giterr_set(GITERR_OS, "Unable to acquire index lock");
@@ -2558,7 +2562,8 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry)
 	if (entry->flags & GIT_IDXENTRY_EXTENDED) {
 		struct entry_long *ondisk_ext;
 		ondisk_ext = (struct entry_long *)ondisk;
-		ondisk_ext->flags_extended = htons(entry->flags_extended);
+		ondisk_ext->flags_extended = htons(entry->flags_extended &
+			GIT_IDXENTRY_EXTENDED_FLAGS);
 		path = ondisk_ext->path;
 	}
 	else
