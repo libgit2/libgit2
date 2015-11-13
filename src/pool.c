@@ -8,7 +8,7 @@ struct git_pool_page {
 	git_pool_page *next;
 	uint32_t size;
 	uint32_t avail;
-	char data[GIT_FLEX_ARRAY];
+	GIT_ALIGN(char data[GIT_FLEX_ARRAY], 8);
 };
 
 static void *pool_alloc_page(git_pool *pool, uint32_t size);
@@ -30,11 +30,8 @@ uint32_t git_pool__system_page_size(void)
 
 void git_pool_init(git_pool *pool, uint32_t item_size)
 {
-	const uint32_t align_size = sizeof(void *) - 1;
 	assert(pool);
-
-	if (item_size > 1)
-		item_size = (item_size + align_size) & ~align_size;
+	assert(item_size >= 1);
 
 	memset(pool, 0, sizeof(git_pool));
 	pool->item_size = item_size;
@@ -98,15 +95,26 @@ static void *pool_alloc(git_pool *pool, uint32_t size)
 	return ptr;
 }
 
+static uint32_t alloc_size(git_pool *pool, uint32_t count)
+{
+	const uint32_t align = sizeof(void *) - 1;
+
+	if (pool->item_size > 1) {
+		const uint32_t item_size = (pool->item_size + align) & ~align;
+		return item_size * count;
+	}
+
+	return (count + align) & ~align;
+}
+
 void *git_pool_malloc(git_pool *pool, uint32_t items)
 {
-	const uint32_t size = items * pool->item_size;
-	return pool_alloc(pool, size);
+	return pool_alloc(pool, alloc_size(pool, items));
 }
 
 void *git_pool_mallocz(git_pool *pool, uint32_t items)
 {
-	const uint32_t size = items * pool->item_size;
+	const uint32_t size = alloc_size(pool, items);
 	void *ptr = pool_alloc(pool, size);
 	if (ptr)
 		memset(ptr, 0x0, size);
