@@ -2746,6 +2746,15 @@ static int write_tree_extension(git_index *index, git_filebuf *file)
 	return error;
 }
 
+static void clear_uptodate(git_index *index)
+{
+	git_index_entry *entry;
+	size_t i;
+
+	git_vector_foreach(&index->entries, i, entry)
+		entry->flags_extended &= ~GIT_IDXENTRY_UPTODATE;
+}
+
 static int write_index(git_oid *checksum, git_index *index, git_filebuf *file)
 {
 	git_oid hash_final;
@@ -2785,7 +2794,13 @@ static int write_index(git_oid *checksum, git_index *index, git_filebuf *file)
 	git_oid_cpy(checksum, &hash_final);
 
 	/* write it at the end of the file */
-	return git_filebuf_write(file, hash_final.id, GIT_OID_RAWSZ);
+	if (git_filebuf_write(file, hash_final.id, GIT_OID_RAWSZ) < 0)
+		return -1;
+
+	/* file entries are no longer up to date */
+	clear_uptodate(index);
+
+	return 0;
 }
 
 int git_index_entry_stage(const git_index_entry *entry)
