@@ -86,10 +86,10 @@ int git_tree_entry_icmp(const git_tree_entry *e1, const git_tree_entry *e2)
  * owns it. This is useful when reading trees, so we don't allocate a
  * ton of small strings but can use the pool.
  */
-static git_tree_entry *alloc_entry_pooled(git_pool *pool, const char *filename)
+static git_tree_entry *alloc_entry_pooled(git_pool *pool, const char *filename, size_t filename_len)
 {
 	git_tree_entry *entry = NULL;
-	size_t filename_len = strlen(filename), tree_len;
+	size_t tree_len;
 
 	if (GIT_ADD_SIZET_OVERFLOW(&tree_len, sizeof(git_tree_entry), filename_len) ||
 		GIT_ADD_SIZET_OVERFLOW(&tree_len, tree_len, 1) ||
@@ -416,6 +416,8 @@ int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 
 	while (buffer < buffer_end) {
 		git_tree_entry *entry;
+		size_t filename_len;
+		const char *nul;
 		int attr;
 
 		if (git__strtol32(&attr, buffer, &buffer, 8) < 0 || !buffer)
@@ -424,12 +426,13 @@ int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 		if (*buffer++ != ' ')
 			return tree_error("Failed to parse tree. Object is corrupted", NULL);
 
-		if (memchr(buffer, 0, buffer_end - buffer) == NULL)
+		if ((nul = memchr(buffer, 0, buffer_end - buffer)) == NULL)
 			return tree_error("Failed to parse tree. Object is corrupted", NULL);
 
+		filename_len = nul - buffer;
 		/** Allocate the entry and store it in the entries vector */
 		{
-			entry = alloc_entry_pooled(&tree->pool, buffer);
+			entry = alloc_entry_pooled(&tree->pool, buffer, filename_len);
 			GITERR_CHECK_ALLOC(entry);
 
 			if (git_vector_insert(&tree->entries, entry) < 0)
@@ -439,7 +442,7 @@ int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 		}
 
 		/* Advance to the ID just after the path */
-		buffer += entry->filename_len + 1;
+		buffer += filename_len + 1;
 
 		git_oid_fromraw(&entry->oid, (const unsigned char *)buffer);
 		buffer += GIT_OID_RAWSZ;
