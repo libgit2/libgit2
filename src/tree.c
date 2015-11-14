@@ -414,10 +414,8 @@ int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 			entry->attr = attr;
 		}
 
-		while (buffer < buffer_end && *buffer != 0)
-			buffer++;
-
-		buffer++;
+		/* Advance to the ID just after the path */
+		buffer += entry->filename_len + 1;
 
 		git_oid_fromraw(&entry->oid, (const unsigned char *)buffer);
 		buffer += GIT_OID_RAWSZ;
