@@ -81,6 +81,30 @@ int git_tree_entry_icmp(const git_tree_entry *e1, const git_tree_entry *e2)
 		git__strncasecmp);
 }
 
+/**
+ * Allocate a tree entry, borrowing the filename from the tree which
+ * owns it. This is useful when reading trees, so we don't allocate a
+ * ton of small strings but can use the pool.
+ */
+static git_tree_entry *alloc_entry_pooled(git_pool *pool, const char *filename)
+{
+	git_tree_entry *entry = NULL;
+	size_t filename_len = strlen(filename), tree_len;
+
+	if (GIT_ADD_SIZET_OVERFLOW(&tree_len, sizeof(git_tree_entry), filename_len) ||
+		GIT_ADD_SIZET_OVERFLOW(&tree_len, tree_len, 1) ||
+		!(entry = git_pool_malloc(pool, tree_len)))
+		return NULL;
+
+	memset(entry, 0x0, sizeof(git_tree_entry));
+	memcpy(entry->filename, filename, filename_len);
+	entry->filename[filename_len] = 0;
+	entry->filename_len = filename_len;
+	entry->pooled = true;
+
+	return entry;
+}
+
 static git_tree_entry *alloc_entry(const char *filename)
 {
 	git_tree_entry *entry = NULL;
@@ -198,7 +222,7 @@ static int tree_key_search(
 
 void git_tree_entry_free(git_tree_entry *entry)
 {
-	if (entry == NULL)
+	if (entry == NULL || entry->pooled)
 		return;
 
 	git__free(entry);
@@ -233,6 +257,7 @@ void git_tree__free(void *_tree)
 		git_tree_entry_free(e);
 
 	git_vector_free(&tree->entries);
+	git_pool_clear(&tree->pool);
 	git__free(tree);
 }
 
@@ -385,6 +410,7 @@ int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 	const char *buffer = git_odb_object_data(odb_obj);
 	const char *buffer_end = buffer + git_odb_object_size(odb_obj);
 
+	git_pool_init(&tree->pool, 1);
 	if (git_vector_init(&tree->entries, DEFAULT_TREE_SIZE, entry_sort_cmp) < 0)
 		return -1;
 
@@ -403,13 +429,11 @@ int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 
 		/** Allocate the entry and store it in the entries vector */
 		{
-			entry = alloc_entry(buffer);
+			entry = alloc_entry_pooled(&tree->pool, buffer);
 			GITERR_CHECK_ALLOC(entry);
 
-			if (git_vector_insert(&tree->entries, entry) < 0) {
-				git__free(entry);
+			if (git_vector_insert(&tree->entries, entry) < 0)
 				return -1;
-			}
 
 			entry->attr = attr;
 		}
