@@ -250,3 +250,31 @@ void test_index_racy__reading_clears_uptodate_bit(void)
 
 	git_index_free(index);
 }
+
+void test_index_racy__read_tree_clears_uptodate_bit(void)
+{
+	git_index *index;
+	git_tree *tree;
+	const git_index_entry *entry;
+	git_oid id;
+
+	setup_uptodate_files();
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_write_tree_to(&id, index, g_repo));
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
+	cl_git_pass(git_index_read_tree(index, tree));
+
+	/* ensure that no files are uptodate */
+	cl_assert((entry = git_index_get_bypath(index, "A", 0)));
+	cl_assert_equal_i(0, (entry->flags_extended & GIT_IDXENTRY_UPTODATE));
+
+	cl_assert((entry = git_index_get_bypath(index, "B", 0)));
+	cl_assert_equal_i(0, (entry->flags_extended & GIT_IDXENTRY_UPTODATE));
+
+	cl_assert((entry = git_index_get_bypath(index, "C", 0)));
+	cl_assert_equal_i(0, (entry->flags_extended & GIT_IDXENTRY_UPTODATE));
+
+	git_tree_free(tree);
+	git_index_free(index);
+}
