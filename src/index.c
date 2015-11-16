@@ -1003,20 +1003,11 @@ static int index_entry_reuc_init(git_index_reuc_entry **reuc_out,
 
 static void index_entry_cpy(
 	git_index_entry *tgt,
-	git_index *index,
-	const git_index_entry *src,
-	bool update_path)
+	const git_index_entry *src)
 {
 	const char *tgt_path = tgt->path;
 	memcpy(tgt, src, sizeof(*tgt));
-
-	/* keep the existing path buffer, but update the path to the one
-	 * given by the caller, if we trust it.
-	 */
 	tgt->path = tgt_path;
-
-	if (index->ignore_case && update_path)
-		memcpy((char *)tgt->path, src->path, strlen(tgt->path));
 }
 
 static int index_entry_dup(
@@ -1024,18 +1015,32 @@ static int index_entry_dup(
 	git_index *index,
 	const git_index_entry *src)
 {
-	git_index_entry *entry;
-
-	if (!src) {
-		*out = NULL;
-		return 0;
-	}
-
-	if (index_entry_create(&entry, INDEX_OWNER(index), src->path) < 0)
+	if (index_entry_create(out, INDEX_OWNER(index), src->path) < 0)
 		return -1;
 
-	index_entry_cpy(entry, index, src, false);
-	*out = entry;
+	index_entry_cpy(*out, src);
+	return 0;
+}
+
+static void index_entry_cpy_nocache(
+	git_index_entry *tgt,
+	const git_index_entry *src)
+{
+	git_oid_cpy(&tgt->id, &src->id);
+	tgt->mode = src->mode;
+	tgt->flags = src->flags;
+	tgt->flags_extended = (src->flags_extended & GIT_IDXENTRY_EXTENDED_FLAGS);
+}
+
+static int index_entry_dup_nocache(
+	git_index_entry **out,
+	git_index *index,
+	const git_index_entry *src)
+{
+	if (index_entry_create(out, INDEX_OWNER(index), src->path) < 0)
+		return -1;
+
+	index_entry_cpy_nocache(*out, src);
 	return 0;
 }
 
@@ -1331,8 +1336,13 @@ static int index_insert(
 	 * and return it in place of the passed in one.
 	 */
 	else if (existing) {
-		if (replace)
-			index_entry_cpy(existing, index, entry, trust_path);
+		if (replace) {
+			index_entry_cpy(existing, entry);
+
+			if (trust_path)
+				memcpy((char *)existing->path, entry->path, strlen(entry->path));
+		}
+
 		index_entry_free(entry);
 		*entry_ptr = entry = existing;
 	}
@@ -1709,9 +1719,12 @@ int git_index_conflict_add(git_index *index,
 
 	assert (index);
 
-	if ((ret = index_entry_dup(&entries[0], index, ancestor_entry)) < 0 ||
-		(ret = index_entry_dup(&entries[1], index, our_entry)) < 0 ||
-		(ret = index_entry_dup(&entries[2], index, their_entry)) < 0)
+	if ((ancestor_entry &&
+			(ret = index_entry_dup(&entries[0], index, ancestor_entry)) < 0) ||
+		(our_entry &&
+			(ret = index_entry_dup(&entries[1], index, our_entry)) < 0) ||
+		(their_entry &&
+			(ret = index_entry_dup(&entries[2], index, their_entry)) < 0))
 		goto on_error;
 
 	/* Validate entries */
@@ -2849,7 +2862,7 @@ static int read_tree_cb(
 		entry->mode == old_entry->mode &&
 		git_oid_equal(&entry->id, &old_entry->id))
 	{
-		index_entry_cpy(entry, data->index, old_entry, false);
+		index_entry_cpy(entry, old_entry);
 		entry->flags_extended = 0;
 	}
 
@@ -2974,7 +2987,10 @@ int git_index_read_index(
 		goto done;
 
 	while (true) {
-		git_index_entry *add_entry = NULL, *remove_entry = NULL;
+		git_index_entry
+			*dup_entry = NULL,
+			*add_entry = NULL,
+			*remove_entry = NULL;
 		int diff;
 
 		if (old_entry && new_entry)
@@ -2989,8 +3005,7 @@ int git_index_read_index(
 		if (diff < 0) {
 			remove_entry = (git_index_entry *)old_entry;
 		} else if (diff > 0) {
-			if ((error = index_entry_dup(&add_entry, index, new_entry)) < 0)
-				goto done;
+			dup_entry = (git_index_entry *)new_entry;
 		} else {
 			/* Path and stage are equal, if the OID is equal, keep it to
 			 * keep the stat cache data.
@@ -2998,11 +3013,14 @@ int git_index_read_index(
 			if (git_oid_equal(&old_entry->id, &new_entry->id)) {
 				add_entry = (git_index_entry *)old_entry;
 			} else {
-				if ((error = index_entry_dup(&add_entry, index, new_entry)) < 0)
-					goto done;
-
+				dup_entry = (git_index_entry *)new_entry;
 				remove_entry = (git_index_entry *)old_entry;
 			}
+		}
+
+		if (dup_entry) {
+			if ((error = index_entry_dup_nocache(&add_entry, index, dup_entry)) < 0)
+				goto done;
 		}
 
 		if (add_entry) {

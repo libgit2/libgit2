@@ -278,3 +278,51 @@ void test_index_racy__read_tree_clears_uptodate_bit(void)
 	git_tree_free(tree);
 	git_index_free(index);
 }
+
+void test_index_racy__read_index_smudges(void)
+{
+	git_index *index, *newindex;
+	const git_index_entry *entry;
+
+	/* if we are reading an index into our new index, ensure that any
+	 * racy entries in the index that we're reading are smudged so that
+	 * we don't propagate their timestamps without further investigation.
+	 */
+	setup_race();
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_new(&newindex));
+	cl_git_pass(git_index_read_index(newindex, index));
+
+	cl_assert(entry = git_index_get_bypath(newindex, "A", 0));
+	cl_assert_equal_i(0, entry->file_size);
+
+	git_index_free(index);
+	git_index_free(newindex);
+}
+
+void test_index_racy__read_index_clears_uptodate_bit(void)
+{
+	git_index *index, *newindex;
+	const git_index_entry *entry;
+	git_oid id;
+
+	setup_uptodate_files();
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_new(&newindex));
+	cl_git_pass(git_index_read_index(newindex, index));
+
+	/* ensure that files brought in from the other index are not uptodate */
+	cl_assert((entry = git_index_get_bypath(newindex, "A", 0)));
+	cl_assert_equal_i(0, (entry->flags_extended & GIT_IDXENTRY_UPTODATE));
+
+	cl_assert((entry = git_index_get_bypath(newindex, "B", 0)));
+	cl_assert_equal_i(0, (entry->flags_extended & GIT_IDXENTRY_UPTODATE));
+
+	cl_assert((entry = git_index_get_bypath(newindex, "C", 0)));
+	cl_assert_equal_i(0, (entry->flags_extended & GIT_IDXENTRY_UPTODATE));
+
+	git_index_free(index);
+	git_index_free(newindex);
+}
