@@ -68,7 +68,6 @@ void test_config_global__open_xdg(void)
 
 void test_config_global__open_programdata(void)
 {
-	char *programdata;
 	git_config *cfg;
 	git_repository *repo;
 	git_buf config_path = GIT_BUF_INIT;
@@ -77,9 +76,12 @@ void test_config_global__open_programdata(void)
 	if (!cl_getenv("GITTEST_INVASIVE_FS_STRUCTURE"))
 		cl_skip();
 
-	programdata = cl_getenv("PROGRAMDATA");
-	cl_git_pass(git_buf_printf(&config_path, "%s/Git", programdata));
-	cl_git_pass(p_mkdir(config_path.ptr, 0777));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH,
+		GIT_CONFIG_LEVEL_PROGRAMDATA, &config_path));
+
+	if (!git_path_isdir(config_path.ptr))
+		cl_git_pass(p_mkdir(config_path.ptr, 0777));
+
 	cl_git_pass(git_buf_puts(&config_path, "/config"));
 
 	cl_git_pass(git_config_open_ondisk(&cfg, config_path.ptr));
