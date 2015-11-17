@@ -174,9 +174,9 @@ typedef enum {
  *	* opts(GIT_OPT_GET_SEARCH_PATH, int level, git_buf *buf)
  *
  *		> Get the search path for a given level of config data.  "level" must
- *		> be one of `GIT_CONFIG_LEVEL_SYSTEM`, `GIT_CONFIG_LEVEL_GLOBAL`, or
- *		> `GIT_CONFIG_LEVEL_XDG`.  The search path is written to the `out`
- *		> buffer.
+ *		> be one of `GIT_CONFIG_LEVEL_SYSTEM`, `GIT_CONFIG_LEVEL_GLOBAL`,
+ *		> `GIT_CONFIG_LEVEL_XDG`, or `GIT_CONFIG_LEVEL_PROGRAMDATA`.
+ *		> The search path is written to the `out` buffer.
  *
  *	* opts(GIT_OPT_SET_SEARCH_PATH, int level, const char *path)
  *
@@ -188,8 +188,9 @@ typedef enum {
  *		>   variables).  Use magic path `$PATH` to include the old value
  *		>   of the path (if you want to prepend or append, for instance).
  *		>
- *		> - `level` must be GIT_CONFIG_LEVEL_SYSTEM, GIT_CONFIG_LEVEL_GLOBAL,
- *		>   or GIT_CONFIG_LEVEL_XDG.
+ *		> - `level` must be `GIT_CONFIG_LEVEL_SYSTEM`,
+ *		>   `GIT_CONFIG_LEVEL_GLOBAL`, `GIT_CONFIG_LEVEL_XDG`, or
+ *		>   `GIT_CONFIG_LEVEL_PROGRAMDATA`.
  *
  *	* opts(GIT_OPT_SET_CACHE_OBJECT_LIMIT, git_otype type, size_t size)
  *
