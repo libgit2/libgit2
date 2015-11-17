@@ -49,9 +49,18 @@ static int config_level_to_sysdir(int config_level)
 	int val = -1;
 
 	switch (config_level) {
-	case GIT_CONFIG_LEVEL_SYSTEM: val = GIT_SYSDIR_SYSTEM; break;
-	case GIT_CONFIG_LEVEL_XDG:    val = GIT_SYSDIR_XDG; break;
-	case GIT_CONFIG_LEVEL_GLOBAL: val = GIT_SYSDIR_GLOBAL; break;
+	case GIT_CONFIG_LEVEL_SYSTEM:
+		val = GIT_SYSDIR_SYSTEM;
+		break;
+	case GIT_CONFIG_LEVEL_XDG:
+		val = GIT_SYSDIR_XDG;
+		break;
+	case GIT_CONFIG_LEVEL_GLOBAL:
+		val = GIT_SYSDIR_GLOBAL;
+		break;
+	case GIT_CONFIG_LEVEL_PROGRAMDATA:
+		val = GIT_SYSDIR_PROGRAMDATA;
+		break;
 	default:
 		giterr_set(
 			GITERR_INVALID, "Invalid config path selector %d", config_level);
