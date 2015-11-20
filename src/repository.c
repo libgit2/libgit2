@@ -2222,11 +2222,17 @@ int git_repository_state(git_repository *repo)
 		state = GIT_REPOSITORY_STATE_APPLY_MAILBOX_OR_REBASE;
 	else if (git_path_contains_file(&repo_path, GIT_MERGE_HEAD_FILE))
 		state = GIT_REPOSITORY_STATE_MERGE;
-	else if(git_path_contains_file(&repo_path, GIT_REVERT_HEAD_FILE))
+	else if (git_path_contains_file(&repo_path, GIT_REVERT_HEAD_FILE)) {
 		state = GIT_REPOSITORY_STATE_REVERT;
-	else if(git_path_contains_file(&repo_path, GIT_CHERRYPICK_HEAD_FILE))
+		if (git_path_contains_file(&repo_path, GIT_SEQUENCER_TODO_FILE)) {
+			state = GIT_REPOSITORY_STATE_REVERT_SEQUENCE;
+		}
+	} else if (git_path_contains_file(&repo_path, GIT_CHERRYPICK_HEAD_FILE)) {
 		state = GIT_REPOSITORY_STATE_CHERRYPICK;
-	else if(git_path_contains_file(&repo_path, GIT_BISECT_LOG_FILE))
+		if (git_path_contains_file(&repo_path, GIT_SEQUENCER_TODO_FILE)) {
+			state = GIT_REPOSITORY_STATE_CHERRYPICK_SEQUENCE;
+		}
+	} else if (git_path_contains_file(&repo_path, GIT_BISECT_LOG_FILE))
 		state = GIT_REPOSITORY_STATE_BISECT;
 
 	git_buf_free(&repo_path);
@@ -2271,6 +2277,7 @@ static const char *state_files[] = {
 	GIT_BISECT_LOG_FILE,
 	GIT_REBASE_MERGE_DIR,
 	GIT_REBASE_APPLY_DIR,
+	GIT_SEQUENCER_DIR,
 };
 
 int git_repository_state_cleanup(git_repository *repo)
