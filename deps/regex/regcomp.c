@@ -3057,6 +3057,9 @@ parse_bracket_exp (re_string_t *regexp, re_dfa_t *dfa, re_token_t *token,
     if (error_return)
     {
       *err = REG_ESPACE;
+#ifdef RE_ENABLE_I18N
+      free_charset (mbcset);
+#endif /* RE_ENABLE_I18N */
       return NULL;
     }
 
@@ -3607,6 +3610,9 @@ build_charclass_op (re_dfa_t *dfa, RE_TRANSLATE_TYPE trans,
     if (error_return)
     {
       *err = REG_ESPACE;
+#ifdef RE_ENABLE_I18N
+      free_charset (mbcset);
+#endif /* RE_ENABLE_I18N */
       return NULL;
     }
 
