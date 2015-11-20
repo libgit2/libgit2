@@ -13,6 +13,12 @@
 #include "win32/findfile.h"
 #endif
 
+#ifdef GIT_USE_STAT_ATIMESPEC
+#define st_atim st_atimespec
+#define st_ctim st_ctimespec
+#define st_mtim st_mtimespec
+#endif
+
 GIT__USE_STRMAP
 
 int git_futils_mkpath2file(const char *file_path, const mode_t mode)
@@ -1034,11 +1040,7 @@ int git_futils_filestamp_check(
 	git_futils_filestamp *stamp, const char *path)
 {
 	struct stat st;
-#if defined(__APPLE__)
-	const struct timespec *statmtime = &st.st_mtimespec;
-#else
 	const struct timespec *statmtime = &st.st_mtim;
-#endif
 
 	/* if the stamp is NULL, then always reload */
 	if (stamp == NULL)
@@ -1080,11 +1082,7 @@ void git_futils_filestamp_set(
 void git_futils_filestamp_set_from_stat(
 	git_futils_filestamp *stamp, struct stat *st)
 {
-#if defined(__APPLE__)
-	const struct timespec *statmtime = &st->st_mtimespec;
-#else
 	const struct timespec *statmtime = &st->st_mtim;
-#endif
 
 	if (st) {
 		stamp->mtime = *statmtime;
