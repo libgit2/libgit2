@@ -86,9 +86,20 @@ IF (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	OPTION( USE_OPENSSL                     "Link with and use openssl library"             ON )
 ENDIF()
 
-CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtim.tv_nsec sys/stat.h
-	HAVE_STRUCT_STAT_NSEC LANGUAGE C)
-IF(HAVE_STRUCT_STAT_NSEC OR WIN32)
+CHECK_STRUCT_HAS_MEMBER ("struct stat" st_atim "sys/types.h;sys/stat.h"
+	HAVE_STRUCT_STAT_ST_ATIM LANGUAGE C)
+CHECK_STRUCT_HAS_MEMBER ("struct stat" st_atimespec "sys/types.h;sys/stat.h"
+	HAVE_STRUCT_STAT_ST_ATIMESPEC LANGUAGE C)
+
+IF (HAVE_STRUCT_STAT_ST_ATIM)
+	CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtim.tv_nsec sys/stat.h
+		HAVE_STRUCT_STAT_NSEC LANGUAGE C)
+ELSEIF (HAVE_STRUCT_STAT_ST_ATIMESPEC)
+	CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtimespec.tv_nsec sys/stat.h
+		HAVE_STRUCT_STAT_NSEC LANGUAGE C)
+ENDIF()
+
+IF (HAVE_STRUCT_STAT_NSEC OR WIN32)
 	OPTION( USE_NSEC		"Care about sub-second file mtimes and ctimes"	OFF )
 ENDIF()
 
@@ -525,6 +536,10 @@ ENDIF()
 
 IF (USE_NSEC)
 	ADD_DEFINITIONS(-DGIT_USE_NSEC)
+ENDIF()
+
+IF (HAVE_STRUCT_STAT_ST_ATIMESPEC)
+	ADD_DEFINITIONS(-DGIT_USE_STAT_ATIMESPEC)
 ENDIF()
 
 ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
