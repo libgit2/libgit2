@@ -305,7 +305,6 @@ void test_index_racy__read_index_clears_uptodate_bit(void)
 {
 	git_index *index, *newindex;
 	const git_index_entry *entry;
-	git_oid id;
 
 	setup_uptodate_files();
 
