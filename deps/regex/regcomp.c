@@ -3026,7 +3026,7 @@ parse_bracket_exp (re_string_t *regexp, re_dfa_t *dfa, re_token_t *token,
 #endif /* not RE_ENABLE_I18N */
   int non_match = 0;
   bin_tree_t *work_tree;
-  int token_len;
+  int token_len, error_return;
   int first_round = 1;
 #ifdef _LIBC
   collseqmb = (const unsigned char *)
@@ -3050,10 +3050,11 @@ parse_bracket_exp (re_string_t *regexp, re_dfa_t *dfa, re_token_t *token,
   mbcset = (re_charset_t *) calloc (sizeof (re_charset_t), 1);
 #endif /* RE_ENABLE_I18N */
 #ifdef RE_ENABLE_I18N
-  if (BE (sbcset == NULL || mbcset == NULL, 0))
+  error_return = (BE (sbcset == NULL || mbcset == NULL, 0));
 #else
-  if (BE (sbcset == NULL, 0))
+  error_return = (BE (sbcset == NULL, 0));
 #endif /* RE_ENABLE_I18N */
+    if (error_return)
     {
       *err = REG_ESPACE;
       return NULL;
@@ -3591,6 +3592,7 @@ build_charclass_op (re_dfa_t *dfa, RE_TRANSLATE_TYPE trans,
   reg_errcode_t ret;
   re_token_t br_token;
   bin_tree_t *tree;
+  int error_return;
 
   sbcset = (re_bitset_ptr_t) calloc (sizeof (bitset_t), 1);
 #ifdef RE_ENABLE_I18N
@@ -3598,10 +3600,11 @@ build_charclass_op (re_dfa_t *dfa, RE_TRANSLATE_TYPE trans,
 #endif /* RE_ENABLE_I18N */
 
 #ifdef RE_ENABLE_I18N
-  if (BE (sbcset == NULL || mbcset == NULL, 0))
+  error_return = (BE (sbcset == NULL || mbcset == NULL, 0));
 #else /* not RE_ENABLE_I18N */
-  if (BE (sbcset == NULL, 0))
+  error_return = (BE (sbcset == NULL, 0));
 #endif /* not RE_ENABLE_I18N */
+    if (error_return)
     {
       *err = REG_ESPACE;
       return NULL;
