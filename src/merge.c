@@ -49,6 +49,19 @@
 #define GIT_MERGE_INDEX_ENTRY_EXISTS(X)	((X).mode != 0)
 #define GIT_MERGE_INDEX_ENTRY_ISFILE(X) S_ISREG((X).mode)
 
+
+/** Internal merge flags. */
+enum {
+	/** The merge is for a virtual base in a recursive merge. */
+	GIT_MERGE__VIRTUAL_BASE = (1 << 31),
+};
+
+enum {
+	/** Accept the conflict file, staging it as the merge result. */
+	GIT_MERGE_FILE_FAVOR__CONFLICTED = 4,
+};
+
+
 typedef enum {
 	TREE_IDX_ANCESTOR = 0,
 	TREE_IDX_OURS = 1,
@@ -801,11 +814,9 @@ static int merge_conflict_resolve_automerge(
 	int *resolved,
 	git_merge_diff_list *diff_list,
 	const git_merge_diff *conflict,
-	unsigned int merge_file_favor,
-	unsigned int file_flags)
+	const git_merge_file_options *file_opts)
 {
 	const git_index_entry *ancestor = NULL, *ours = NULL, *theirs = NULL;
-	git_merge_file_options opts = GIT_MERGE_FILE_OPTIONS_INIT;
 	git_merge_file_result result = {0};
 	git_index_entry *index_entry;
 	git_odb *odb = NULL;
@@ -852,12 +863,9 @@ static int merge_conflict_resolve_automerge(
 	theirs = GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->their_entry) ?
 		&conflict->their_entry : NULL;
 
-	opts.favor = merge_file_favor;
-	opts.flags = file_flags;
-
 	if ((error = git_repository_odb(&odb, diff_list->repo)) < 0 ||
-		(error = git_merge_file_from_index(&result, diff_list->repo, ancestor, ours, theirs, &opts)) < 0 ||
-		!result.automergeable ||
+		(error = git_merge_file_from_index(&result, diff_list->repo, ancestor, ours, theirs, file_opts)) < 0 ||
+		(!result.automergeable && !(file_opts->flags & GIT_MERGE_FILE_FAVOR__CONFLICTED)) ||
 		(error = git_odb_write(&automerge_oid, odb, result.ptr, result.len, GIT_OBJ_BLOB)) < 0)
 		goto done;
 
@@ -887,8 +895,7 @@ static int merge_conflict_resolve(
 	int *out,
 	git_merge_diff_list *diff_list,
 	const git_merge_diff *conflict,
-	unsigned int merge_file_favor,
-	unsigned int file_flags)
+	const git_merge_file_options *file_opts)
 {
 	int resolved = 0;
 	int error = 0;
@@ -904,8 +911,7 @@ static int merge_conflict_resolve(
 	if (!resolved && (error = merge_conflict_resolve_one_renamed(&resolved, diff_list, conflict)) < 0)
 		goto done;
 
-	if (!resolved && (error = merge_conflict_resolve_automerge(&resolved, diff_list, conflict,
-		merge_file_favor, file_flags)) < 0)
+	if (!resolved && (error = merge_conflict_resolve_automerge(&resolved, diff_list, conflict, file_opts)) < 0)
 		goto done;
 
 	*out = resolved;
@@ -1829,6 +1835,7 @@ int git_merge__iterators(
 		*empty_theirs = NULL;
 	git_merge_diff_list *diff_list;
 	git_merge_options opts;
+	git_merge_file_options file_opts = GIT_MERGE_FILE_OPTIONS_INIT;
 	git_merge_diff *conflict;
 	git_vector changes;
 	size_t i;
@@ -1843,6 +1850,17 @@ int git_merge__iterators(
 
 	if ((error = merge_normalize_opts(repo, &opts, given_opts)) < 0)
 		return error;
+
+	file_opts.favor = opts.file_favor;
+	file_opts.flags = opts.file_flags;
+
+	/* use the git-inspired labels when virtual base building */
+	if (opts.flags & GIT_MERGE__VIRTUAL_BASE) {
+		file_opts.ancestor_label = "merged common ancestors";
+		file_opts.our_label = "Temporary merge branch 1";
+		file_opts.their_label = "Temporary merge branch 2";
+		file_opts.flags |= GIT_MERGE_FILE_FAVOR__CONFLICTED;
+	}
 
 	diff_list = git_merge_diff_list__alloc(repo);
 	GITERR_CHECK_ALLOC(diff_list);
@@ -1862,7 +1880,8 @@ int git_merge__iterators(
 	git_vector_foreach(&changes, i, conflict) {
 		int resolved = 0;
 
-		if ((error = merge_conflict_resolve(&resolved, diff_list, conflict, opts.file_favor, opts.file_flags)) < 0)
+		if ((error = merge_conflict_resolve(
+			&resolved, diff_list, conflict, &file_opts)) < 0)
 			goto done;
 
 		if (!resolved) {
@@ -1962,16 +1981,27 @@ static int create_virtual_base(
 	git_repository *repo,
 	git_annotated_commit *one,
 	git_annotated_commit *two,
+	const git_merge_options *opts,
 	size_t recursion_level)
 {
 	git_annotated_commit *result = NULL;
 	git_index *index = NULL;
+	git_merge_options virtual_opts = GIT_MERGE_OPTIONS_INIT;
 
 	result = git__calloc(1, sizeof(git_annotated_commit));
 	GITERR_CHECK_ALLOC(result);
 
+	/* Conflicts in the merge base creation do not propagate to conflicts
+	 * in the result; the conflicted base will act as the common ancestor.
+	 */
+	if (opts)
+		memcpy(&virtual_opts, opts, sizeof(git_merge_options));
+
+	virtual_opts.flags &= ~GIT_MERGE_FAIL_ON_CONFLICT;
+	virtual_opts.flags |= GIT_MERGE__VIRTUAL_BASE;
+
 	if ((merge_annotated_commits(&index, NULL, repo, one, two,
-			recursion_level + 1, NULL)) < 0)
+			recursion_level + 1, &virtual_opts)) < 0)
 		return -1;
 
 	result->type = GIT_ANNOTATED_COMMIT_VIRTUAL;
@@ -1989,7 +2019,7 @@ static int compute_base(
 	git_repository *repo,
 	const git_annotated_commit *one,
 	const git_annotated_commit *two,
-	bool recurse,
+	const git_merge_options *opts,
 	size_t recursion_level)
 {
 	git_array_oid_t head_ids = GIT_ARRAY_INIT;
@@ -2007,7 +2037,7 @@ static int compute_base(
 	if ((error = git_merge_bases_many(&bases, repo,
 			head_ids.size, head_ids.ptr)) < 0 ||
 		(error = git_annotated_commit_lookup(&base, repo, &bases.ids[0])) < 0 ||
-		!recurse)
+		(opts && (opts->flags & GIT_MERGE_NO_RECURSIVE)))
 		goto done;
 
 	for (i = 1; i < bases.count; i++) {
@@ -2015,7 +2045,7 @@ static int compute_base(
 
 		if ((error = git_annotated_commit_lookup(&other, repo,
 				&bases.ids[i])) < 0 ||
-			(error = create_virtual_base(&new_base, repo, base, other,
+			(error = create_virtual_base(&new_base, repo, base, other, opts,
 				recursion_level)) < 0)
 			goto done;
 
@@ -2076,10 +2106,9 @@ static int merge_annotated_commits(
 {
 	git_annotated_commit *base = NULL;
 	git_iterator *base_iter = NULL, *our_iter = NULL, *their_iter = NULL;
-	bool recurse = !opts || !(opts->flags & GIT_MERGE_NO_RECURSIVE);
 	int error;
 
-    if ((error = compute_base(&base, repo, ours, theirs, recurse,
+    if ((error = compute_base(&base, repo, ours, theirs, opts,
 		recursion_level)) < 0) {
 
         if (error != GIT_ENOTFOUND)
