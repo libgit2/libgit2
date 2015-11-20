@@ -235,6 +235,7 @@ static int progress_abort_diff(
 	const char *new_path,
 	void *payload)
 {
+	GIT_UNUSED(diff_so_far);
 	GIT_UNUSED(old_path);
 	GIT_UNUSED(new_path);
 	GIT_UNUSED(payload);

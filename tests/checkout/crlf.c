@@ -278,7 +278,7 @@ void test_checkout_crlf__autocrlf_true_index_size_is_filtered_size(void)
 void test_checkout_crlf__with_ident(void)
 {
 	git_index *index;
-	git_index_entry *entry;
+	const git_index_entry *entry;
 	git_blob *blob;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
