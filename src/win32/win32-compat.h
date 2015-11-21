@@ -28,7 +28,7 @@ struct p_stat {
 	short st_uid;
 	short st_gid;
 	_dev_t st_rdev;
-	uint64_t st_size;
+	__int64 st_size;
 	struct timespec st_atim;
 	struct timespec st_mtim;
 	struct timespec st_ctim;
