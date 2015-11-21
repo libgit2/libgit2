@@ -28,6 +28,16 @@ pub struct git_buf {
     size: usize,
 }
 
+macro_rules! checked_add {
+    ($n:expr, $toadd:expr) => (match $n.checked_add($toadd) {
+        Option::Some(res) => res,
+        Option::None => {
+            giterr_set_oom();
+            return Err(-1);
+        },
+    })
+}
+
 impl git_buf {
     pub unsafe fn new() -> git_buf {
         git_buf {
@@ -49,6 +59,10 @@ impl git_buf {
         Ok(())
     }
 
+    unsafe fn set_oom(&mut self) {
+        self.ptr = git_buf__oom.as_mut_ptr();
+    }
+
     pub fn is_oom(&self) -> bool {
         self.ptr == unsafe { git_buf__oom.as_mut_ptr() }
     }
@@ -58,16 +72,9 @@ impl git_buf {
             self.clear();
         } else {
             if !data.is_null() {
-                match len.checked_add(1) {
-                    None => {
-                        giterr_set_oom();
-                        return Err(-1);
-                    },
-                    Some(alloclen) => {
-                        try!(self.grow(alloclen));
-                        memmove(self.ptr, data, len);
-                    },
-                }
+                let alloclen = checked_add!(len, 1);
+                try!(self.grow(alloclen));
+                memmove(self.ptr, data, len);
             }
 
             self.size = len;
@@ -164,6 +171,11 @@ impl git_buf {
         }
     }
 
+    pub unsafe fn grow_by(&mut self, additional_size: usize) -> Result<(), i32> {
+        let new_size = checked_add!(self.size, additional_size);
+        self.grow(new_size)
+    }
+
     pub unsafe fn clear(&mut self) {
         self.size = 0;
 
@@ -205,14 +217,12 @@ pub unsafe extern "C" fn git_buf_grow(buf: *mut git_buf, target_size: usize) -> 
 
 #[no_mangle]
 pub unsafe extern "C" fn git_buf_grow_by(buf: *mut git_buf, additional_size: usize) -> i32 {
-    match (*buf).size.checked_add(additional_size) {
-        None => {
-            (*buf).ptr = git_buf__oom.as_mut_ptr();
-            -1
+    match (*buf).grow_by(additional_size) {
+        Ok(()) => return 0,
+        Err(error) => {
+            (*buf).set_oom();
+            return error;
         },
-        Some(new_size) => {
-            (*buf).try_grow(new_size, true)
-        }
     }
 }
 
