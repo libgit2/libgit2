@@ -331,33 +331,33 @@ int git_vector_resize_to(git_vector *v, size_t new_length)
 	return 0;
 }
 
-int git_vector_grow_at(git_vector *v, size_t idx, size_t grow_len)
+int git_vector_insert_null(git_vector *v, size_t idx, size_t insert_len)
 {
 	size_t new_length;
 
-	assert(grow_len > 0 && idx <= v->length);
+	assert(insert_len > 0 && idx <= v->length);
 
-	GITERR_CHECK_ALLOC_ADD(&new_length, v->length, grow_len);
+	GITERR_CHECK_ALLOC_ADD(&new_length, v->length, insert_len);
 
 	if (new_length > v->_alloc_size && resize_vector(v, new_length) < 0)
 		return -1;
 
-	memmove(&v->contents[idx + grow_len], &v->contents[idx],
+	memmove(&v->contents[idx + insert_len], &v->contents[idx],
 		sizeof(void *) * (v->length - idx));
-	memset(&v->contents[idx], 0, sizeof(void *) * grow_len);
+	memset(&v->contents[idx], 0, sizeof(void *) * insert_len);
 
 	v->length = new_length;
 	return 0;
 }
 
-int git_vector_shrink_at(git_vector *v, size_t idx, size_t shrink_len)
+int git_vector_remove_range(git_vector *v, size_t idx, size_t remove_len)
 {
-	size_t new_length = v->length - shrink_len;
+	size_t new_length = v->length - remove_len;
 	size_t end_idx = 0;
 	
-	assert(shrink_len > 0);
+	assert(remove_len > 0);
 
-	if (git__add_sizet_overflow(&end_idx, idx, shrink_len))
+	if (git__add_sizet_overflow(&end_idx, idx, remove_len))
 		assert(0);
 
 	assert(end_idx <= v->length);
@@ -366,7 +366,7 @@ int git_vector_shrink_at(git_vector *v, size_t idx, size_t shrink_len)
 		memmove(&v->contents[idx], &v->contents[end_idx],
 			sizeof(void *) * (v->length - end_idx));
 
-	memset(&v->contents[new_length], 0, sizeof(void *) * shrink_len);
+	memset(&v->contents[new_length], 0, sizeof(void *) * remove_len);
 
 	v->length = new_length;
 	return 0;

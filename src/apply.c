@@ -137,10 +137,10 @@ static int update_hunk(
 	int error = 0;
 
 	if (postlen > prelen)
-		error = git_vector_grow_at(
+		error = git_vector_insert_null(
 			&image->lines, linenum, (postlen - prelen));
 	else if (prelen > postlen)
-		error = git_vector_shrink_at(
+		error = git_vector_remove_range(
 			&image->lines, linenum, (prelen - postlen));
 
 	if (error) {
