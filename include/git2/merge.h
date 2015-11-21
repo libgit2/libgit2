@@ -265,6 +265,14 @@ typedef struct {
 	/** Pluggable similarity metric; pass NULL to use internal metric */
 	git_diff_similarity_metric *metric;
 
+	/**
+	 * Maximum number of times to merge common ancestors to build a
+	 * virtual merge base when faced with criss-cross merges.  When this
+	 * limit is reached, the next ancestor will simply be used instead of
+	 * attempting to merge it.  The default is unlimited.
+	 */
+	unsigned int recursion_limit;
+
 	/** Flags for handling conflicting content. */
 	git_merge_file_favor_t file_favor;
 

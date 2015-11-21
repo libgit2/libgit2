@@ -2019,16 +2019,20 @@ static int compute_base(
 	git_repository *repo,
 	const git_annotated_commit *one,
 	const git_annotated_commit *two,
-	const git_merge_options *opts,
+	const git_merge_options *given_opts,
 	size_t recursion_level)
 {
 	git_array_oid_t head_ids = GIT_ARRAY_INIT;
 	git_oidarray bases = {0};
 	git_annotated_commit *base = NULL, *other = NULL, *new_base = NULL;
+	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
 	size_t i;
 	int error;
 
 	*out = NULL;
+
+	if (given_opts)
+		memcpy(&opts, given_opts, sizeof(git_merge_options));
 
 	if ((error = insert_head_ids(&head_ids, one)) < 0 ||
 		(error = insert_head_ids(&head_ids, two)) < 0)
@@ -2037,15 +2041,18 @@ static int compute_base(
 	if ((error = git_merge_bases_many(&bases, repo,
 			head_ids.size, head_ids.ptr)) < 0 ||
 		(error = git_annotated_commit_lookup(&base, repo, &bases.ids[0])) < 0 ||
-		(opts && (opts->flags & GIT_MERGE_NO_RECURSIVE)))
+		(opts.flags & GIT_MERGE_NO_RECURSIVE))
 		goto done;
 
 	for (i = 1; i < bases.count; i++) {
 		recursion_level++;
 
+		if (opts.recursion_limit && recursion_level > opts.recursion_limit)
+			break;
+
 		if ((error = git_annotated_commit_lookup(&other, repo,
 				&bases.ids[i])) < 0 ||
-			(error = create_virtual_base(&new_base, repo, base, other, opts,
+			(error = create_virtual_base(&new_base, repo, base, other, &opts,
 				recursion_level)) < 0)
 			goto done;
 
