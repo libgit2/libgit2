@@ -2,6 +2,7 @@
 #include "git2/sys/repository.h"
 
 #include "apply.h"
+#include "patch.h"
 #include "repository.h"
 #include "buf_text.h"
 
@@ -35,7 +36,7 @@ static int apply_patchfile(
 	unsigned int mode;
 	int error;
 
-	cl_git_pass(git_patch_from_patchfile(&patch, patchfile, strlen(patchfile), NULL));
+	cl_git_pass(git_patch_from_buffer(&patch, patchfile, strlen(patchfile), NULL));
 
 	error = git_apply__patch(&result, &filename, &mode, old, old_len, patch);
 
@@ -308,28 +309,28 @@ void test_apply_fromfile__noisy_nocontext(void)
 void test_apply_fromfile__fail_truncated_1(void)
 {
 	git_patch *patch;
-	cl_git_fail(git_patch_from_patchfile(&patch, PATCH_TRUNCATED_1,
+	cl_git_fail(git_patch_from_buffer(&patch, PATCH_TRUNCATED_1,
 		strlen(PATCH_TRUNCATED_1), NULL));
 }
 
 void test_apply_fromfile__fail_truncated_2(void)
 {
 	git_patch *patch;
-	cl_git_fail(git_patch_from_patchfile(&patch, PATCH_TRUNCATED_2,
+	cl_git_fail(git_patch_from_buffer(&patch, PATCH_TRUNCATED_2,
 		strlen(PATCH_TRUNCATED_2), NULL));
 }
 
 void test_apply_fromfile__fail_truncated_3(void)
 {
 	git_patch *patch;
-	cl_git_fail(git_patch_from_patchfile(&patch, PATCH_TRUNCATED_3,
+	cl_git_fail(git_patch_from_buffer(&patch, PATCH_TRUNCATED_3,
 		strlen(PATCH_TRUNCATED_3), NULL));
 }
 
 void test_apply_fromfile__fail_corrupt_githeader(void)
 {
 	git_patch *patch;
-	cl_git_fail(git_patch_from_patchfile(&patch, PATCH_CORRUPT_GIT_HEADER,
+	cl_git_fail(git_patch_from_buffer(&patch, PATCH_CORRUPT_GIT_HEADER,
 		strlen(PATCH_CORRUPT_GIT_HEADER), NULL));
 }
 
@@ -353,7 +354,7 @@ void test_apply_fromfile__append_no_nl(void)
 void test_apply_fromfile__fail_missing_new_file(void)
 {
 	git_patch *patch;
-	cl_git_fail(git_patch_from_patchfile(&patch,
+	cl_git_fail(git_patch_from_buffer(&patch,
 		PATCH_CORRUPT_MISSING_NEW_FILE,
 		strlen(PATCH_CORRUPT_MISSING_NEW_FILE), NULL));
 }
@@ -361,7 +362,7 @@ void test_apply_fromfile__fail_missing_new_file(void)
 void test_apply_fromfile__fail_missing_old_file(void)
 {
 	git_patch *patch;
-	cl_git_fail(git_patch_from_patchfile(&patch,
+	cl_git_fail(git_patch_from_buffer(&patch,
 		PATCH_CORRUPT_MISSING_OLD_FILE,
 		strlen(PATCH_CORRUPT_MISSING_OLD_FILE), NULL));
 }
@@ -369,7 +370,7 @@ void test_apply_fromfile__fail_missing_old_file(void)
 void test_apply_fromfile__fail_no_changes(void)
 {
 	git_patch *patch;
-	cl_git_fail(git_patch_from_patchfile(&patch,
+	cl_git_fail(git_patch_from_buffer(&patch,
 		PATCH_CORRUPT_NO_CHANGES,
 		strlen(PATCH_CORRUPT_NO_CHANGES), NULL));
 }
@@ -377,7 +378,7 @@ void test_apply_fromfile__fail_no_changes(void)
 void test_apply_fromfile__fail_missing_hunk_header(void)
 {
 	git_patch *patch;
-	cl_git_fail(git_patch_from_patchfile(&patch,
+	cl_git_fail(git_patch_from_buffer(&patch,
 		PATCH_CORRUPT_MISSING_HUNK_HEADER,
 		strlen(PATCH_CORRUPT_MISSING_HUNK_HEADER), NULL));
 }
@@ -385,7 +386,7 @@ void test_apply_fromfile__fail_missing_hunk_header(void)
 void test_apply_fromfile__fail_not_a_patch(void)
 {
 	git_patch *patch;
-	cl_git_fail(git_patch_from_patchfile(&patch, PATCH_NOT_A_PATCH,
+	cl_git_fail(git_patch_from_buffer(&patch, PATCH_NOT_A_PATCH,
 		strlen(PATCH_NOT_A_PATCH), NULL));
 }
 
@@ -442,6 +443,6 @@ void test_apply_fromfile__empty_file_not_allowed(void)
 {
 	git_patch *patch;
 
-	cl_git_fail(git_patch_from_patchfile(&patch, "", 0, NULL));
-	cl_git_fail(git_patch_from_patchfile(&patch, NULL, 0, NULL));
+	cl_git_fail(git_patch_from_buffer(&patch, "", 0, NULL));
+	cl_git_fail(git_patch_from_buffer(&patch, NULL, 0, NULL));
 }

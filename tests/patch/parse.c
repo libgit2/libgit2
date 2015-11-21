@@ -1,4 +1,5 @@
 #include "clar_libgit2.h"
+#include "patch.h"
 
 #include "patch_common.h"
 
@@ -8,7 +9,7 @@ void test_patch_parse__original_to_change_middle(void)
 	const git_diff_delta *delta;
 	char idstr[GIT_OID_HEXSZ+1] = {0};
 
-	cl_git_pass(git_patch_from_patchfile(
+	cl_git_pass(git_patch_from_buffer(
 		&patch, PATCH_ORIGINAL_TO_CHANGE_MIDDLE,
 		strlen(PATCH_ORIGINAL_TO_CHANGE_MIDDLE), NULL));
 

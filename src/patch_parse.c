@@ -956,7 +956,7 @@ static void patch_parsed__free(git_patch *p)
 	git__free(patch);
 }
 
-int git_patch_from_patchfile(
+int git_patch_from_buffer(
 	git_patch **out,
 	const char *content,
 	size_t content_len,
