@@ -72,6 +72,9 @@ static int parse_advance_expected(
 	return 0;
 }
 
+#define parse_advance_expected_s(ctx, str) \
+	parse_advance_expected(ctx, str, sizeof(str) - 1)
+
 static int parse_advance_ws(patch_parse_ctx *ctx)
 {
 	int ret = -1;
@@ -215,7 +218,7 @@ static int parse_header_git_index(
 {
 	if (parse_header_oid(&patch->base.delta->old_file.id,
 			&patch->base.delta->old_file.id_abbrev, ctx) < 0 ||
-		parse_advance_expected(ctx, "..", 2) < 0 ||
+		parse_advance_expected_s(ctx, "..") < 0 ||
 		parse_header_oid(&patch->base.delta->new_file.id,
 			&patch->base.delta->new_file.id_abbrev, ctx) < 0)
 		return -1;
@@ -317,7 +320,7 @@ static int parse_header_percent(uint16_t *out, patch_parse_ctx *ctx)
 
 	parse_advance_chars(ctx, (end - ctx->line));
 
-	if (parse_advance_expected(ctx, "%", 1) < 0)
+	if (parse_advance_expected_s(ctx, "%") < 0)
 		return -1;
 
 	if (val > 100)
@@ -382,7 +385,7 @@ static int parse_header_git(
 	int error = 0;
 
 	/* Parse the diff --git line */
-	if (parse_advance_expected(ctx, "diff --git ", 11) < 0)
+	if (parse_advance_expected_s(ctx, "diff --git ") < 0)
 		return parse_err("corrupt git diff header at line %d", ctx->line_num);
 
 	if (parse_header_path(&patch->header_old_path, ctx) < 0)
@@ -416,7 +419,7 @@ static int parse_header_git(
 				goto done;
 
 			parse_advance_ws(ctx);
-			parse_advance_expected(ctx, "\n", 1);
+			parse_advance_expected_s(ctx, "\n");
 
 			if (ctx->line_len > 0) {
 				error = parse_err("trailing data at line %d", ctx->line_num);
@@ -471,27 +474,27 @@ static int parse_hunk_header(
 	hunk->hunk.old_lines = 1;
 	hunk->hunk.new_lines = 1;
 
-	if (parse_advance_expected(ctx, "@@ -", 4) < 0 ||
+	if (parse_advance_expected_s(ctx, "@@ -") < 0 ||
 		parse_int(&hunk->hunk.old_start, ctx) < 0)
 		goto fail;
 
 	if (ctx->line_len > 0 && ctx->line[0] == ',') {
-		if (parse_advance_expected(ctx, ",", 1) < 0 ||
+		if (parse_advance_expected_s(ctx, ",") < 0 ||
 			parse_int(&hunk->hunk.old_lines, ctx) < 0)
 			goto fail;
 	}
 
-	if (parse_advance_expected(ctx, " +", 2) < 0 ||
+	if (parse_advance_expected_s(ctx, " +") < 0 ||
 		parse_int(&hunk->hunk.new_start, ctx) < 0)
 		goto fail;
 
 	if (ctx->line_len > 0 && ctx->line[0] == ',') {
-		if (parse_advance_expected(ctx, ",", 1) < 0 ||
+		if (parse_advance_expected_s(ctx, ",") < 0 ||
 			parse_int(&hunk->hunk.new_lines, ctx) < 0)
 			goto fail;
 	}
 
-	if (parse_advance_expected(ctx, " @@", 3) < 0)
+	if (parse_advance_expected_s(ctx, " @@") < 0)
 		goto fail;
 
 	parse_advance_line(ctx);
@@ -745,7 +748,7 @@ static int parsed_patch_binary(
 {
 	int error;
 
-	if (parse_advance_expected(ctx, "GIT binary patch", 16) < 0 ||
+	if (parse_advance_expected_s(ctx, "GIT binary patch") < 0 ||
 		parse_advance_nl(ctx) < 0)
 		return parse_err("corrupt git binary header at line %d", ctx->line_num);
 
