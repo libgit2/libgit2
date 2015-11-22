@@ -52,6 +52,7 @@ struct log_options {
 	int show_diff;
 	int skip, limit;
 	int min_parents, max_parents;
+	int show_log_size;
 	git_time_t before;
 	git_time_t after;
 	const char *author;
@@ -63,7 +64,7 @@ struct log_options {
 static int parse_options(
 	struct log_state *s, struct log_options *opt, int argc, char **argv);
 static void print_time(const git_time *intime, const char *prefix);
-static void print_commit(git_commit *commit);
+static void print_commit(git_commit *commit, struct log_options options);
 static int match_with_parent(git_commit *commit, int i, git_diff_options *);
 
 /** utility functions for filtering */
@@ -148,7 +149,7 @@ int main(int argc, char *argv[])
 			break;
 		}
 
-		print_commit(commit);
+		print_commit(commit, opt);
 
 		if (opt.show_diff) {
 			git_tree *a = NULL, *b = NULL;
@@ -337,17 +338,57 @@ static void print_time(const git_time *intime, const char *prefix)
 }
 
 /** Helper to print a commit object. */
-static void print_commit(git_commit *commit)
+static void print_commit(git_commit *commit, struct log_options options)
 {
 	char buf[GIT_OID_HEXSZ + 1];
 	int i, count;
 	const git_signature *sig;
 	const char *scan, *eol;
+	unsigned long length = 0;
 
 	git_oid_tostr(buf, sizeof(buf), git_commit_id(commit));
 	printf("commit %s\n", buf);
 
-	if ((count = (int)git_commit_parentcount(commit)) > 1) {
+	sig = git_commit_author(commit);
+	scan = git_commit_message(commit);
+	count = (int)git_commit_parentcount(commit);
+
+	if (options.show_log_size) {
+
+		if (sig != NULL) {
+
+			length += strlen(sig->name);
+			length += strlen(sig->email);
+
+			/* The date field (and other fixed-width fields) are added as
+			 * constants 
+			 */
+			length += 13;
+			length += 39;
+
+		}
+
+		if (count > 1)
+			length += 8*count + 12;
+
+
+		/* simulate the message-identation */
+		while (scan && *scan) {
+
+			if (*scan == '\n')
+				length += 4;
+			scan++;
+
+		}
+		scan = git_commit_message(commit);
+
+		length += strlen(scan);
+
+		printf("log size %lu\n", length);
+
+	}
+
+	if (count > 1) {
 		printf("Merge:");
 		for (i = 0; i < count; ++i) {
 			git_oid_tostr(buf, 8, git_commit_parent_id(commit, i));
@@ -356,13 +397,13 @@ static void print_commit(git_commit *commit)
 		printf("\n");
 	}
 
-	if ((sig = git_commit_author(commit)) != NULL) {
+	if (sig != NULL) {
 		printf("Author: %s <%s>\n", sig->name, sig->email);
 		print_time(&sig->when, "Date:   ");
 	}
 	printf("\n");
 
-	for (scan = git_commit_message(commit); scan && *scan; ) {
+	for (; scan && *scan; ) {
 		for (eol = scan; *eol && *eol != '\n'; ++eol) /* find eol */;
 
 		printf("    %.*s\n", (int)(eol - scan), scan);
@@ -420,6 +461,7 @@ static int parse_options(
 	memset(opt, 0, sizeof(*opt));
 	opt->max_parents = -1;
 	opt->limit = -1;
+	opt->show_log_size = 0;
 
 	for (args.pos = 1; args.pos < argc; ++args.pos) {
 		const char *a = argv[args.pos];
@@ -470,6 +512,8 @@ static int parse_options(
 			/** Found valid --min_parents. */;
 		else if (!strcmp(a, "-p") || !strcmp(a, "-u") || !strcmp(a, "--patch"))
 			opt->show_diff = 1;
+		else if (!strcmp(a, "--log-size"))
+			opt->show_log_size = 1;
 		else
 			usage("Unsupported argument", a);
 	}
