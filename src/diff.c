@@ -494,11 +494,6 @@ static int diff_list_apply_options(
 
 	/* Don't set GIT_DIFFCAPS_USE_DEV - compile time option in core git */
 
-	/* Don't trust nanoseconds; we do not load nanos from disk */
-#ifdef GIT_USE_NSEC
-	diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_TRUST_NANOSECS;
-#endif
-
 	/* If not given explicit `opts`, check `diff.xyz` configs */
 	if (!opts) {
 		int context = git_config__get_int_force(cfg, "diff.context", 3);
@@ -699,38 +694,6 @@ int git_diff__oid_for_entry(
 	return error;
 }
 
-static bool diff_time_eq(
-	const git_index_time *a, const git_index_time *b, bool use_nanos)
-{
-	return a->seconds == b->seconds &&
-		(!use_nanos || a->nanoseconds == b->nanoseconds);
-}
-
-/*
- * Test if the given index time is newer than the given existing index entry.
- * If the timestamps are exactly equivalent, then the given index time is
- * considered "racily newer" than the existing index entry.
- */
-static bool diff_newer_than_index(
-	const git_index_time *a, const git_index *b, bool use_nanos)
-{
-	bool is_newer = false;
-
-	if(!b)
-		return false;
-
-	is_newer = is_newer || (a->seconds > (int32_t) b->stamp.mtime.tv_sec);
-	is_newer = is_newer || (!use_nanos &&
-		(a->seconds == (int32_t) b->stamp.mtime.tv_sec));
-	if(use_nanos)
-	{
-		is_newer = is_newer || ((a->seconds == (int32_t) b->stamp.mtime.tv_sec) &&
-			(a->nanoseconds >= (uint32_t) b->stamp.mtime.tv_nsec));
-	}
-
-	return is_newer;
-}
-
 typedef struct {
 	git_repository *repo;
 	git_iterator *old_iter;
@@ -863,11 +826,6 @@ static int maybe_modified(
 	 */
 	} else if (git_oid_iszero(&nitem->id) && new_is_workdir) {
 		bool use_ctime = ((diff->diffcaps & GIT_DIFFCAPS_TRUST_CTIME) != 0);
-#ifdef GIT_USE_NSEC
-		bool use_nanos = ((diff->diffcaps & GIT_DIFFCAPS_TRUST_NANOSECS) != 0);
-#else
-		bool use_nanos = false;
-#endif
 		git_index *index;
 		git_iterator_index(&index, info->new_iter);
 
@@ -886,13 +844,12 @@ static int maybe_modified(
 			modified_uncertain =
 				(oitem->file_size <= 0 && nitem->file_size > 0);
 		}
-		else if (!diff_time_eq(&oitem->mtime, &nitem->mtime, use_nanos) ||
-			(use_ctime &&
-			 !diff_time_eq(&oitem->ctime, &nitem->ctime, use_nanos)) ||
+		else if (!git_index_time_eq(&oitem->mtime, &nitem->mtime) ||
+			(use_ctime && !git_index_time_eq(&oitem->ctime, &nitem->ctime)) ||
 			oitem->ino != nitem->ino ||
 			oitem->uid != nitem->uid ||
 			oitem->gid != nitem->gid ||
-			diff_newer_than_index(&nitem->mtime, index, use_nanos))
+			git_index_entry_newer_than_index(nitem, index))
 		{
 			status = GIT_DELTA_MODIFIED;
 			modified_uncertain = true;

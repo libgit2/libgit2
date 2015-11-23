@@ -200,8 +200,7 @@ static bool checkout_is_workdir_modified(
 	 * out.)
 	 */
 	if ((ie = git_index_get_bypath(data->index, wditem->path, 0)) != NULL) {
-		if (wditem->mtime.seconds == ie->mtime.seconds &&
-			wditem->mtime.nanoseconds == ie->mtime.nanoseconds &&
+		if (git_index_time_eq(&wditem->mtime, &ie->mtime) &&
 			wditem->file_size == ie->file_size)
 			return !is_workdir_base_or_new(&ie->id, baseitem, newitem);
 	}

@@ -720,27 +720,13 @@ int git_index__changed_relative_to(
 	return !!git_oid_cmp(&index->checksum, checksum);
 }
 
-static bool is_racy_timestamp(const struct timespec *stamp, git_index_entry *entry)
+static bool is_racy_entry(git_index *index, const git_index_entry *entry)
 {
 	/* Git special-cases submodules in the check */
 	if (S_ISGITLINK(entry->mode))
 		return false;
 
-	/* If we never read the index, we can't have this race either */
-	if(stamp->tv_sec == 0)
-		return false;
-
-	/* If the timestamp is the same or newer than the index, it's racy */
-#if defined(GIT_USE_NSEC)
-	if((int32_t) stamp->tv_sec < entry->mtime.seconds)
-		return true;
-	else if((int32_t) stamp->tv_sec > entry->mtime.seconds)
-		return false;
-	else
-		return (uint32_t) stamp->tv_nsec <= entry->mtime.nanoseconds;
-#else
-	return ((int32_t) stamp->tv_sec) <= entry->mtime.seconds;
-#endif
+	return git_index_entry_newer_than_index(entry, index);
 }
 
 /*
@@ -768,7 +754,7 @@ static int truncate_racily_clean(git_index *index)
 	diff_opts.flags |= GIT_DIFF_INCLUDE_TYPECHANGE | GIT_DIFF_IGNORE_SUBMODULES | GIT_DIFF_DISABLE_PATHSPEC_MATCH;
 	git_vector_foreach(&index->entries, i, entry) {
 		if ((entry->flags_extended & GIT_IDXENTRY_UPTODATE) == 0 &&
-			is_racy_timestamp(&index->stamp.mtime, entry))
+			is_racy_entry(index, entry))
 			git_vector_insert(&paths, (char *)entry->path);
 	}
 
