@@ -7,64 +7,70 @@ extern {
     pub fn git_pool__system_page_size() -> u32;
 }
 
+#[derive(Debug)]
 #[repr(C)]
-pub struct git_pool_page {
-    next: Option<Box<git_pool_page>>,
+pub struct Page {
+    next: Option<Box<Page>>,
     size: u32,
     avail: u32,
     // Ideally this would be aligned, but meh for now
     data: [u8; 1],
 }
 
+impl Page {
+    unsafe fn alloc(&mut self, size: u32) -> Option<*mut u8> {
+        if self.avail < size {
+            return None;
+        }
+
+        // Offset for unallocated data
+        let ptr = self.data.as_mut_ptr().offset((self.size - self.avail) as isize);
+        self.avail -= size;
+
+        Some(ptr)
+    }
+}
+
 #[repr(C)]
 pub struct git_pool {
-    // This should be *mut git_pool_page, but for whatever reason that
-    // takes up twice the size of *mut u8 and thus makes it not be the
-    // size of the C struct.
-    pages: *mut u8,
+    pages: Option<Box<Page>>,
     item_size: u32,
     page_size: u32
 }
 
 impl git_pool {
-    unsafe fn alloc_page(&mut self, size: u32) -> *mut u8 {
+    unsafe fn alloc_page(&mut self, size: u32) {
         let new_page_size: u32 =
             if size <= self.page_size { self.page_size } else { size };
 
-        let template = git_pool_page {
-            next: Some(Box::from_raw(self.pages as *mut git_pool_page)),
-            size: new_page_size,
-            avail: new_page_size - size,
-            data: [0; 1],
-        };
+        let page_ptr = match
+            new_page_size.checked_add(mem::size_of::<Page>() as u32)
+            .map(|s| malloc(s as usize)) {
+                None => { return },
+                Some(ptr) => ptr as *mut Page,
+            };
 
-        let page_ptr = new_page_size.checked_add(mem::size_of::<git_pool_page>() as u32)
-            .map(|s| malloc(s as usize));
+        // Zero out the data we're going to overwrite which avoids
+        // trying to free whatever the 'next' pointer ends up having.
+        ptr::write_bytes(page_ptr, 0, mem::size_of::<Page>());
 
-        if page_ptr.is_none() {
-            return ptr::null_mut();
-        }
-
-        let page = page_ptr.unwrap() as *mut git_pool_page;
-        ptr::write(page, template);
-        self.pages = mem::transmute(page);
-
-
-        (*page).data.as_mut_ptr()
+        let mut page = Box::from_raw(page_ptr);
+        page.size = new_page_size;
+        page.avail = new_page_size;
+        mem::swap(&mut page.next, &mut self.pages);
+        self.pages = Some(page);
     }
 
     unsafe fn alloc(&mut self, size: u32) -> *mut u8 {
-        let page = self.pages as *mut git_pool_page;
-
-        if page.is_null() || (*page).avail < size {
-            return self.alloc_page(size);
+        if self.pages.is_none() || self.pages.as_mut().unwrap().avail < size {
+            self.alloc_page(size);
         }
 
-        // Offset for unallocated data
-        let ptr = (*page).data.as_mut_ptr().offset(((*page).size - (*page).avail) as isize);
-        (*page).avail -= size;
-
-        ptr
+        match self.pages.as_mut().map(|page| page.alloc(size)) {
+            None => ptr::null_mut(),
+            Some(None) => panic!(),
+            Some(Some(ptr)) => ptr,
+        }
     }
 
     unsafe fn alloc_size(&mut self, count: u32) -> u32 {
@@ -80,17 +86,12 @@ impl git_pool {
     }
 
     unsafe fn clear(&mut self) {
-        let scan_ptr = self.pages as *mut git_pool_page;
-        let mut mscan = if scan_ptr.is_null() { None } else { Some(Box::from_raw(scan_ptr)) };
+        let mut mscan = mem::replace(&mut self.pages, None);
 
         while let Some(mut scan) = mscan {
-            let mut next = None;
-            mem::swap(&mut next, &mut scan.next);
+            mscan = mem::replace(&mut scan.next, None);
             free(Box::into_raw(scan) as *mut u8);
-            mscan = next;
         }
-
-        self.pages = ptr::null_mut();
     }
 }
 
@@ -117,7 +118,7 @@ pub unsafe extern "C" fn git_pool_init(pool: *mut git_pool, item_size: u32)
     assert!(item_size >= 1);
 
     let p = git_pool {
-        pages: ptr::null_mut(),
+        pages: None,
         item_size: item_size,
         page_size: git_pool__system_page_size(),
     };
