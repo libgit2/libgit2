@@ -4,44 +4,6 @@
 #include <unistd.h>
 #endif
 
-struct git_pool_page {
-	git_pool_page *next;
-	uint32_t size;
-	uint32_t avail;
-	char data[GIT_FLEX_ARRAY];
-};
-
-static void *pool_alloc_page(git_pool *pool, uint32_t size);
-
-uint32_t git_pool__system_page_size(void)
-{
-	static uint32_t size = 0;
-
-	if (!size) {
-		size_t page_size;
-		if (git__page_size(&page_size) < 0)
-			page_size = 4096;
-		/* allow space for malloc overhead */
-		size = page_size - (2 * sizeof(void *)) - sizeof(git_pool_page);
-	}
-
-	return size;
-}
-
-#if 0
-void git_pool_clear(git_pool *pool)
-{
-	git_pool_page *scan, *next;
-
-	for (scan = pool->pages; scan != NULL; scan = next) {
-		next = scan->next;
-		git__free(scan);
-	}
-
-	pool->pages = NULL;
-}
-#endif
-
 void git_pool_swap(git_pool *a, git_pool *b)
 {
 	git_pool temp;
@@ -100,22 +62,4 @@ char *git_pool_strcat(git_pool *pool, const char *a, const char *b)
 		*(((char *)ptr) + len_a + len_b) = '\0';
 	}
 	return ptr;
-}
-
-uint32_t git_pool__open_pages(git_pool *pool)
-{
-	uint32_t ct = 0;
-	git_pool_page *scan;
-	for (scan = pool->pages; scan != NULL; scan = scan->next) ct++;
-	return ct;
-}
-
-bool git_pool__ptr_in_pool(git_pool *pool, void *ptr)
-{
-	git_pool_page *scan;
-	for (scan = pool->pages; scan != NULL; scan = scan->next)
-		if ((void *)scan->data <= ptr &&
-			(void *)(((char *)scan->data) + scan->size) > ptr)
-			return true;
-	return false;
 }

@@ -4,11 +4,10 @@ use std::ptr;
 extern {
     pub fn malloc(size: usize) -> *mut u8;
     pub fn free(ptr: *mut u8);
-    pub fn git_pool__system_page_size() -> u32;
+    pub fn git__page_size(size: &mut usize) -> i32;
 }
 
 #[derive(Debug)]
-#[repr(C)]
 pub struct Page {
     next: Option<Box<Page>>,
     size: u32,
@@ -37,6 +36,8 @@ pub struct git_pool {
     item_size: u32,
     page_size: u32
 }
+
+static mut PAGE_SIZE: u32 = 0;
 
 impl git_pool {
     unsafe fn alloc_page(&mut self, size: u32) {
@@ -73,6 +74,19 @@ impl git_pool {
         }
     }
 
+    unsafe fn page_size() -> u32{
+        if PAGE_SIZE == 0 {
+            let mut size: usize = 0;
+            if git__page_size(&mut size) < 0 {
+                size = 4096;
+            }
+
+            PAGE_SIZE = (size - (2 * mem::size_of::<*mut u8>()) - mem::size_of::<Page>()) as u32;
+        }
+
+        PAGE_SIZE
+    }
+
     unsafe fn alloc_size(&mut self, count: u32) -> u32 {
         let align = (mem::size_of::<*mut u8>() - 1) as u32;
 
@@ -83,6 +97,31 @@ impl git_pool {
 
         return (count + align) & !(align as u32);
 
+    }
+
+    unsafe fn ptr_in_pool(&self, ptr: *const u8) -> bool {
+        let mut mscan = self.pages.as_ref();
+
+        while let Some(scan) = mscan {
+            if (&scan.data as *const u8) <= ptr && ((&scan.data as *const u8).offset(scan.size as isize))  > ptr {
+                return true;
+            }
+            mscan = scan.next.as_ref();
+        }
+
+        false
+    }
+
+    unsafe fn open_pages(&self) -> u32 {
+        let mut count: u32 = 0;
+        let mut mscan = self.pages.as_ref();
+
+        while let Some(scan) = mscan {
+            count += 1;
+            mscan = scan.next.as_ref();
+        }
+
+        count
     }
 
     unsafe fn clear(&mut self) {
@@ -120,7 +159,7 @@ pub unsafe extern "C" fn git_pool_init(pool: *mut git_pool, item_size: u32)
     let p = git_pool {
         pages: None,
         item_size: item_size,
-        page_size: git_pool__system_page_size(),
+        page_size: git_pool::page_size(),
     };
 
     ptr::write(pool, p);
@@ -130,4 +169,17 @@ pub unsafe extern "C" fn git_pool_init(pool: *mut git_pool, item_size: u32)
 pub unsafe extern "C" fn git_pool_clear(pool: *mut git_pool)
 {
     (*pool).clear();
+}
+
+#[allow(non_snake_case)]
+#[no_mangle]
+pub unsafe extern "C" fn git_pool__ptr_in_pool(pool: *const git_pool, ptr: *const u8) -> bool
+{
+    (*pool).ptr_in_pool(ptr)
+}
+
+#[allow(non_snake_case)]
+#[no_mangle]
+pub unsafe extern "C" fn git_pool__open_pages(pool: *const git_pool) -> u32 {
+    (*pool).open_pages()
 }
