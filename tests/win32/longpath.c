@@ -46,6 +46,8 @@ void assert_name_too_long(void)
 
 	/* check the suffix */
 	cl_assert_equal_s(expected_msg, err->message + (actual_len - expected_len));
+
+	git__free(expected_msg);
 }
 #endif
 

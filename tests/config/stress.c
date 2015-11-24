@@ -126,4 +126,7 @@ void test_config_stress__quick_write(void)
 		cl_git_pass(git_config_get_int32(&val, config_r, key));
 		cl_assert_equal_i(i, val);
 	}
+
+	git_config_free(config_r);
+	git_config_free(config_w);
 }

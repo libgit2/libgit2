@@ -73,7 +73,7 @@ void test_config_global__open_programdata(void)
 	git_buf config_path = GIT_BUF_INIT;
 	git_buf var_contents = GIT_BUF_INIT;
 
-	if (!cl_getenv("GITTEST_INVASIVE_FS_STRUCTURE"))
+	if (cl_is_env_set("GITTEST_INVASIVE_FS_STRUCTURE"))
 		cl_skip();
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH,
