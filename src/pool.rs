@@ -58,7 +58,7 @@ impl git_pool {
         let mut page = Box::from_raw(page_ptr);
         page.size = new_page_size;
         page.avail = new_page_size;
-        mem::swap(&mut page.next, &mut self.pages);
+        page.next = self.pages.take();
         self.pages = Some(page);
     }
 
@@ -67,10 +67,9 @@ impl git_pool {
             self.alloc_page(size);
         }
 
-        match self.pages.as_mut().map(|page| page.alloc(size)) {
+        match self.pages.as_mut().and_then(|page| page.alloc(size)) {
             None => ptr::null_mut(),
-            Some(None) => panic!(),
-            Some(Some(ptr)) => ptr,
+            Some(ptr) => ptr,
         }
     }
 
@@ -95,7 +94,7 @@ impl git_pool {
             return item_size * count;
         }
 
-        return (count + align) & !(align as u32);
+        return (count + align) & !align;
 
     }
 
@@ -125,10 +124,10 @@ impl git_pool {
     }
 
     unsafe fn clear(&mut self) {
-        let mut mscan = mem::replace(&mut self.pages, None);
+        let mut mscan = self.pages.take();
 
         while let Some(mut scan) = mscan {
-            mscan = mem::replace(&mut scan.next, None);
+            mscan = scan.next.take();
             free(Box::into_raw(scan) as *mut u8);
         }
     }
