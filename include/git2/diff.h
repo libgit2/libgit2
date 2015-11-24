@@ -1286,12 +1286,15 @@ typedef struct {
 	/** Summary of the change */
 	const char *summary;
 
+	/** Commit message's body */
+	const char *body;
+
 	/** Author of the change */
 	const git_signature *author;
 } git_diff_format_email_options;
 
 #define GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION 1
-#define GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT {GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION, 0, 1, 1, NULL, NULL, NULL}
+#define GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT {GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION, 0, 1, 1, NULL, NULL, NULL, NULL}
 
 /**
  * Create an e-mail ready patch from a diff.
