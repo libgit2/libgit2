@@ -7,7 +7,7 @@
 #include "common.h"
 #include "diff.h"
 #include "diff_file.h"
-#include "patch_diff.h"
+#include "patch_generate.h"
 #include "fileops.h"
 #include "zstream.h"
 #include "blob.h"

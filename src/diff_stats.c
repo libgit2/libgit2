@@ -7,7 +7,7 @@
 #include "common.h"
 #include "vector.h"
 #include "diff.h"
-#include "patch_diff.h"
+#include "patch_generate.h"
 
 #define DIFF_RENAME_FILE_SEPARATOR " => "
 #define STATS_FULL_MIN_SCALE 7
