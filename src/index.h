@@ -65,6 +65,45 @@ extern int git_index_entry_icmp(const void *a, const void *b);
 extern int git_index_entry_srch(const void *a, const void *b);
 extern int git_index_entry_isrch(const void *a, const void *b);
 
+/* Index time handling functions */
+GIT_INLINE(bool) git_index_time_eq(const git_index_time *one, const git_index_time *two)
+{
+	if (one->seconds != two->seconds)
+		return false;
+
+#ifdef GIT_USE_NSEC
+	if (one->nanoseconds != two->nanoseconds)
+		return false;
+#endif
+
+	return true;
+}
+
+/*
+ * Test if the given index time is newer than the given existing index entry.
+ * If the timestamps are exactly equivalent, then the given index time is
+ * considered "racily newer" than the existing index entry.
+ */
+GIT_INLINE(bool) git_index_entry_newer_than_index(
+	const git_index_entry *entry, git_index *index)
+{
+	/* If we never read the index, we can't have this race either */
+	if (!index || index->stamp.mtime.tv_sec == 0)
+		return false;
+
+	/* If the timestamp is the same or newer than the index, it's racy */
+#if defined(GIT_USE_NSEC)
+	if ((int32_t)index->stamp.tv_sec < entry->mtime.seconds)
+		return true;
+	else if ((int32_t)index->stamp.mtime.tv_sec > entry->mtime.seconds)
+		return false;
+	else
+		return (uint32_t)index->stamp.mtime.tv_nsec <= entry->mtime.nanoseconds;
+#else
+	return ((int32_t)index->stamp.mtime.tv_sec) <= entry->mtime.seconds;
+#endif
+}
+
 /* Search index for `path`, returning GIT_ENOTFOUND if it does not exist
  * (but not setting an error message).
  *

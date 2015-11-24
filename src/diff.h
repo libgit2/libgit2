@@ -28,7 +28,6 @@ enum {
 	GIT_DIFFCAPS_TRUST_MODE_BITS  = (1 << 2), /* use st_mode? */
 	GIT_DIFFCAPS_TRUST_CTIME      = (1 << 3), /* use st_ctime? */
 	GIT_DIFFCAPS_USE_DEV          = (1 << 4), /* use st_dev? */
-	GIT_DIFFCAPS_TRUST_NANOSECS   = (1 << 5), /* use stat time nanoseconds */
 };
 
 #define DIFF_FLAGS_KNOWN_BINARY (GIT_DIFF_FLAG_BINARY|GIT_DIFF_FLAG_NOT_BINARY)
