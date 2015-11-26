@@ -560,6 +560,7 @@ ELSE()
 	FILE(GLOB SRC_OS src/unix/*.c src/unix/*.h)
 ENDIF()
 FILE(GLOB SRC_GIT2 src/*.c src/*.h src/transports/*.c src/transports/*.h src/xdiff/*.c src/xdiff/*.h)
+FILE(GLOB SRC_RUST src/*.rs)
 
 # Determine architecture of the machine
 IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -571,6 +572,10 @@ ELSE()
 ENDIF()
 
 # Compile and link libgit2
+ADD_CUSTOM_COMMAND(OUTPUT rustsources COMMAND rustc -g --crate-type=staticlib --crate-name=git2core src/lib.rs
+  DEPENDS ${SRC_RUST})
+ADD_CUSTOM_TARGET(compile_rust ALL DEPENDS rustsources)
+
 ADD_LIBRARY(git2 ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SSH} ${SRC_SHA1} ${WIN_RC})
 TARGET_LINK_LIBRARIES(git2 ${SECURITY_DIRS})
 TARGET_LINK_LIBRARIES(git2 ${COREFOUNDATION_DIRS})
