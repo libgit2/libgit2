@@ -16,9 +16,9 @@
 
 struct git_tree_entry {
 	uint16_t attr;
+	uint16_t filename_len;
 	git_oid oid;
 	bool pooled;
-	size_t filename_len;
 	char filename[GIT_FLEX_ARRAY];
 };
 

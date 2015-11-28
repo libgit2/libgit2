@@ -125,7 +125,7 @@ static git_tree_entry *alloc_entry(const char *filename)
 
 struct tree_key_search {
 	const char *filename;
-	size_t filename_len;
+	uint16_t filename_len;
 };
 
 static int homing_search_cmp(const void *key, const void *array_member)
