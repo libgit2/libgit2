@@ -87,37 +87,40 @@ impl Oid {
         Ok(oid)
     }
 
-    unsafe fn strcmp(&self, mut pstr: *const u8) -> i32 {
-        for a in &self.id {
-            if *pstr == 0 {
-                break;
-            }
+    fn cmp_slice(&self, s: &[u8]) -> Ordering {
+        let mut s_iter = s.iter();
+        for a in self.id.iter() {
+            let c1 = match s_iter.next() {
+                None => break,
+                Some(c) => *c,
+            };
 
-            let mut hexval = fromhex(*pstr);
+            let mut hexval = fromhex(c1);
             if hexval < 0 {
-                return -1;
+                return Ordering::Less;
             }
-            pstr = pstr.offset(1);
 
             let mut strval = (hexval << 4) as u8;
 
-            if *pstr != 0 {
-                hexval = fromhex(*pstr);
-                pstr = pstr.offset(1);
-
+            if let Some(c2) = s_iter.next() {
+                hexval = fromhex(*c2);
                 if hexval < 0 {
-                    return -1;
+                    return Ordering::Less;
                 }
 
                 strval |= hexval as u8;
             }
 
             if *a != strval {
-                return (*a as i32) - (strval as i32);
+                return match (*a as i16) - (strval as i16) {
+                    v if v < 0 => Ordering::Less,
+                    v if v > 0 => Ordering::Greater,
+                    _ => panic!(),
+                }
             }
         }
 
-        0
+        Ordering::Equal
     }
 
     fn iszero(&self) -> bool {
@@ -160,22 +163,13 @@ impl Oid {
 
 impl PartialEq<[u8]> for Oid {
     fn eq(&self, other: &[u8]) -> bool {
-        unsafe {
-            self.strcmp(other.as_ptr()) == 0
-        }
+        self.cmp_slice(other) == Ordering::Equal
     }
 }
 
 impl PartialOrd<[u8]> for Oid {
     fn partial_cmp(&self, other: &[u8]) -> Option<Ordering> {
-        unsafe {
-            match self.strcmp(other.as_ptr()) {
-                v if v < 0 => Some(Ordering::Less),
-                0  => Some(Ordering::Equal),
-                v if v > 0  => Some(Ordering::Greater),
-                _ => panic!(),
-            }
-        }
+        Some(self.cmp_slice(other))
     }
 }
 
