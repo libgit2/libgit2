@@ -1,6 +1,6 @@
 use std::ptr;
 use std::slice;
-use std::cmp::Ordering::Equal;
+use std::cmp::Ordering;
 use super::errors::git_error_t;
 
 extern {
@@ -55,7 +55,7 @@ fn oid_error_invalid(msg: &[u8]) -> Result<Oid, i32> {
 }
 
 // git_oid
-#[derive(Default)]
+#[derive(Default, PartialEq, Eq, PartialOrd)]
 #[repr(C)]
 pub struct Oid {
     id: [u8; GIT_OID_RAWSZ],
@@ -144,7 +144,7 @@ impl Oid {
             return Err(-1);
         }
 
-        if header.cmp(&buffer[..header.len()]) != Equal {
+        if header.cmp(&buffer[..header.len()]) != Ordering::Equal {
             return Err(-1);
         }
 
@@ -155,6 +155,27 @@ impl Oid {
         let oid = try!(Oid::from_slice(&buffer[header.len()..header.len() + GIT_OID_HEXSZ]));
 
         Ok(oid)
+    }
+}
+
+impl PartialEq<[u8]> for Oid {
+    fn eq(&self, other: &[u8]) -> bool {
+        unsafe {
+            self.strcmp(other.as_ptr()) == 0
+        }
+    }
+}
+
+impl PartialOrd<[u8]> for Oid {
+    fn partial_cmp(&self, other: &[u8]) -> Option<Ordering> {
+        unsafe {
+            match self.strcmp(other.as_ptr()) {
+                v if v < 0 => Some(Ordering::Less),
+                0  => Some(Ordering::Equal),
+                v if v > 0  => Some(Ordering::Greater),
+                _ => panic!(),
+            }
+        }
     }
 }
 
@@ -170,7 +191,15 @@ pub unsafe extern "C" fn git_oid_cpy(out: &mut Oid, src: &Oid) {
 
 #[no_mangle]
 pub unsafe extern "C" fn git_oid_strcmp(oid: &Oid, pstr: *const u8) -> i32 {
-    oid.strcmp(pstr)
+    let len = strlen(pstr);
+    let slice = slice::from_raw_parts(pstr, len);
+
+    match oid.partial_cmp(slice) {
+        Some(Ordering::Less) => -1,
+        Some(Ordering::Equal) => 0,
+        Some(Ordering::Greater) => 1,
+        None => panic!(),
+    }
 }
 
 #[no_mangle]
