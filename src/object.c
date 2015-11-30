@@ -14,8 +14,6 @@
 #include "blob.h"
 #include "tag.h"
 
-static const int OBJECT_BASE_SIZE = 4096;
-
 typedef struct {
 	const char	*str;	/* type name string */
 	size_t		size;	/* size in bytes of the object structure */
