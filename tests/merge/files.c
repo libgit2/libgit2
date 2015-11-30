@@ -4,6 +4,7 @@
 #include "buffer.h"
 #include "merge.h"
 #include "merge_helpers.h"
+#include "conflict_data.h"
 #include "refs.h"
 #include "fileops.h"
 #include "diff_xdiff.h"

@@ -62,8 +62,8 @@ GIT_EXTERN(int) git_merge_file_init_input(
 	unsigned int version);
 
 /**
- * Flags for `git_merge_tree` options.  A combination of these flags can be
- * passed in via the `tree_flags` value in the `git_merge_options`.
+ * Flags for `git_merge` options.  A combination of these flags can be
+ * passed in via the `flags` value in the `git_merge_options`.
  */
 typedef enum {
 	/**
@@ -71,20 +71,28 @@ typedef enum {
 	 * side or the common ancestor and the "theirs" side.  This will enable
 	 * the ability to merge between a modified and renamed file.
 	 */
-	GIT_MERGE_TREE_FIND_RENAMES = (1 << 0),
+	GIT_MERGE_FIND_RENAMES = (1 << 0),
 
 	/**
 	 * If a conflict occurs, exit immediately instead of attempting to
 	 * continue resolving conflicts.  The merge operation will fail with
 	 * GIT_EMERGECONFLICT and no index will be returned.
 	 */
-	GIT_MERGE_TREE_FAIL_ON_CONFLICT = (1 << 1),
+	GIT_MERGE_FAIL_ON_CONFLICT = (1 << 1),
 
 	/**
 	 * Do not write the REUC extension on the generated index
 	 */
-	GIT_MERGE_TREE_SKIP_REUC = (1 << 2),
-} git_merge_tree_flag_t;
+	GIT_MERGE_SKIP_REUC = (1 << 2),
+
+	/**
+	 * If the commits being merged have multiple merge bases, do not build
+	 * a recursive merge base (by merging the multiple merge bases),
+	 * instead simply use the first base.  This flag provides a similar
+	 * merge base to `git-merge-resolve`.
+	 */
+	GIT_MERGE_NO_RECURSIVE = (1 << 3),
+} git_merge_flag_t;
 
 /**
  * Merge file favor options for `git_merge_options` instruct the file-level
@@ -152,7 +160,7 @@ typedef enum {
 
 	/** Take extra time to find minimal diff */
 	GIT_MERGE_FILE_DIFF_MINIMAL = (1 << 7),
-} git_merge_file_flags_t;
+} git_merge_file_flag_t;
 
 /**
  * Options for merging a file
@@ -181,8 +189,8 @@ typedef struct {
 	/** The file to favor in region conflicts. */
 	git_merge_file_favor_t favor;
 
-	/** see `git_merge_file_flags_t` above */
-	unsigned int flags;
+	/** see `git_merge_file_flag_t` above */
+	git_merge_file_flag_t flags;
 } git_merge_file_options;
 
 #define GIT_MERGE_FILE_OPTIONS_VERSION 1
@@ -232,11 +240,13 @@ typedef struct {
  */
 typedef struct {
 	unsigned int version;
-	git_merge_tree_flag_t tree_flags;
+
+	/** See `git_merge_flag_t` above */
+	git_merge_flag_t flags;
 
 	/**
 	 * Similarity to consider a file renamed (default 50).  If
-	 * `GIT_MERGE_TREE_FIND_RENAMES` is enabled, added files will be compared
+	 * `GIT_MERGE_FIND_RENAMES` is enabled, added files will be compared
 	 * with deleted files to determine their similarity.  Files that are
 	 * more similar than the rename threshold (percentage-wise) will be
 	 * treated as a rename.
@@ -255,11 +265,19 @@ typedef struct {
 	/** Pluggable similarity metric; pass NULL to use internal metric */
 	git_diff_similarity_metric *metric;
 
+	/**
+	 * Maximum number of times to merge common ancestors to build a
+	 * virtual merge base when faced with criss-cross merges.  When this
+	 * limit is reached, the next ancestor will simply be used instead of
+	 * attempting to merge it.  The default is unlimited.
+	 */
+	unsigned int recursion_limit;
+
 	/** Flags for handling conflicting content. */
 	git_merge_file_favor_t file_favor;
 
-	/** see `git_merge_file_flags_t` above */
-	unsigned int file_flags;
+	/** see `git_merge_file_flag_t` above */
+	git_merge_file_flag_t file_flags;
 } git_merge_options;
 
 #define GIT_MERGE_OPTIONS_VERSION 1

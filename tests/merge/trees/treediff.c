@@ -47,7 +47,7 @@ static void test_find_differences(
 	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 
 	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
-	opts.tree_flags |= GIT_MERGE_TREE_FIND_RENAMES;
+	opts.flags |= GIT_MERGE_FIND_RENAMES;
 	opts.target_limit = 1000;
 	opts.rename_threshold = 50;
 
