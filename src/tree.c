@@ -82,24 +82,47 @@ int git_tree_entry_icmp(const git_tree_entry *e1, const git_tree_entry *e2)
 }
 
 /**
- * Allocate a tree entry, borrowing the filename from the tree which
- * owns it. This is useful when reading trees, so we don't allocate a
- * ton of small strings but can use the pool.
+ * Allocate either from the pool or from the system allocator
  */
-static git_tree_entry *alloc_entry_pooled(git_pool *pool, const char *filename, size_t filename_len)
+static git_tree_entry *alloc_entry_base(git_pool *pool, const char *filename, size_t filename_len)
 {
 	git_tree_entry *entry = NULL;
 	size_t tree_len;
 
+	if (filename_len > UINT16_MAX) {
+		giterr_set(GITERR_INVALID, "tree entry is over UINT16_MAX in length");
+		return NULL;
+	}
+
 	if (GIT_ADD_SIZET_OVERFLOW(&tree_len, sizeof(git_tree_entry), filename_len) ||
-		GIT_ADD_SIZET_OVERFLOW(&tree_len, tree_len, 1) ||
-		!(entry = git_pool_malloc(pool, tree_len)))
+	    GIT_ADD_SIZET_OVERFLOW(&tree_len, tree_len, 1))
+		return NULL;
+
+	entry = pool ? git_pool_malloc(pool, tree_len) :
+		       git__malloc(tree_len);
+	if (!entry)
 		return NULL;
 
 	memset(entry, 0x0, sizeof(git_tree_entry));
 	memcpy(entry->filename, filename, filename_len);
 	entry->filename[filename_len] = 0;
 	entry->filename_len = filename_len;
+
+	return entry;
+}
+
+/**
+ * Allocate a tree entry, using the poolin the tree which owns
+ * it. This is useful when reading trees, so we don't allocate a ton
+ * of small strings but can use the pool.
+ */
+static git_tree_entry *alloc_entry_pooled(git_pool *pool, const char *filename, size_t filename_len)
+{
+	git_tree_entry *entry = NULL;
+
+	if (!(entry = alloc_entry_base(pool, filename, filename_len)))
+		return NULL;
+
 	entry->pooled = true;
 
 	return entry;
@@ -107,20 +130,7 @@ static git_tree_entry *alloc_entry_pooled(git_pool *pool, const char *filename, 
 
 static git_tree_entry *alloc_entry(const char *filename)
 {
-	git_tree_entry *entry = NULL;
-	size_t filename_len = strlen(filename), tree_len;
-
-	if (GIT_ADD_SIZET_OVERFLOW(&tree_len, sizeof(git_tree_entry), filename_len) ||
-		GIT_ADD_SIZET_OVERFLOW(&tree_len, tree_len, 1) ||
-		!(entry = git__malloc(tree_len)))
-		return NULL;
-
-	memset(entry, 0x0, sizeof(git_tree_entry));
-	memcpy(entry->filename, filename, filename_len);
-	entry->filename[filename_len] = 0;
-	entry->filename_len = filename_len;
-
-	return entry;
+	return alloc_entry_base(NULL, filename, strlen(filename));
 }
 
 struct tree_key_search {
