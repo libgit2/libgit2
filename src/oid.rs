@@ -47,7 +47,7 @@ const GIT_OID_RAWSZ: usize = 20;
 const GIT_OID_HEXSZ: usize = 40;
 
 #[inline]
-fn oid_error_invalid(msg: &[u8]) -> Result<Oid, i32> {
+fn oid_error_invalid(msg: &[u8]) -> Result<(), i32> {
     unsafe {
         giterr_set(git_error_t::GITERR_INVALID, b"Unable to parse OID - %s" as *const _, msg.as_ptr() as *const _);
     }
@@ -63,7 +63,7 @@ pub struct Oid {
 
 impl Oid {
 
-    pub fn from_slice(input: &[u8]) -> Result<Oid, i32> {
+    pub fn from_slice(out: &mut Oid, input: &[u8]) -> Result<(), i32> {
         if input.len() == 0 {
             return oid_error_invalid(b"too short");
         }
@@ -72,7 +72,8 @@ impl Oid {
             return oid_error_invalid(b"too long");
         }
 
-        let mut oid: Oid = Default::default();
+        out.id = [0; 20];
+
         for (p, c) in input.iter().enumerate() {
             let v = fromhex(*c);
             if v < 0 {
@@ -81,10 +82,10 @@ impl Oid {
 
             // Apply alternatingly to the higher or lower nibble
             let shift: u8 = ((!p & 0x1) * 4) as u8;
-            oid.id[p/2] |= (v as u8) << shift;
+            out.id[p/2] |= (v as u8) << shift;
         }
 
-        Ok(oid)
+        Ok(())
     }
 
     fn cmp_slice(&self, s: &[u8]) -> Ordering {
@@ -142,7 +143,7 @@ impl Oid {
         }
     }
 
-    fn parse_header(buffer: &[u8], header: &[u8]) -> Result<Oid, i32> {
+    fn parse_header(out: &mut Oid, buffer: &[u8], header: &[u8]) -> Result<(), i32> {
         if header.len() + GIT_OID_HEXSZ + 1 > buffer.len() {
             return Err(-1);
         }
@@ -155,9 +156,9 @@ impl Oid {
             return Err(-1);
         }
 
-        let oid = try!(Oid::from_slice(&buffer[header.len()..header.len() + GIT_OID_HEXSZ]));
+        try!(Oid::from_slice(out, &buffer[header.len()..header.len() + GIT_OID_HEXSZ]));
 
-        Ok(oid)
+        Ok(())
     }
 }
 
@@ -217,12 +218,9 @@ pub unsafe extern "C" fn git_oid_fromstrn(out: *mut Oid, pstr: *const u8, length
     ptr::write_bytes(out, 0, 1);
     let sl = slice::from_raw_parts(pstr, length);
 
-    match Oid::from_slice(sl) {
+    match Oid::from_slice(&mut *out, sl) {
         Err(error) => error,
-        Ok(ref oid) => {
-            ptr::copy_nonoverlapping(oid, out, 1);
-            0
-        },
+        Ok(_) => 0,
     }
 
 }
@@ -237,10 +235,9 @@ pub unsafe extern "C" fn git_oid__parse(out: *mut Oid, buffer_out: *mut *const u
     let buffer_len = (buffer_end as usize) - (buffer as usize);
     let buffer_slice = slice::from_raw_parts(buffer, buffer_len);
 
-    match Oid::parse_header(&buffer_slice, &header_slice) {
+    match Oid::parse_header(&mut *out, &buffer_slice, &header_slice) {
         Err(error) => error,
-        Ok(ref oid) => {
-            ptr::copy_nonoverlapping(oid, out, 1);
+        Ok(_) => {
             ptr::replace(buffer_out, buffer.offset((header_len + GIT_OID_HEXSZ + 1) as isize));
             0
         }
