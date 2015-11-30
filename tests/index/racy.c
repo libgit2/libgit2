@@ -178,7 +178,7 @@ static void setup_uptodate_files(void)
 {
 	git_buf path = GIT_BUF_INIT;
 	git_index *index;
-	git_index_entry new_entry = {0};
+	git_index_entry new_entry = {{0}};
 
 	cl_git_pass(git_repository_index(&index, g_repo));
 
