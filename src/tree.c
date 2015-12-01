@@ -253,6 +253,8 @@ int git_tree_entry_dup(git_tree_entry **dest, const git_tree_entry *source)
 
 	memcpy(copy, source, total_size);
 
+	copy->pooled = 0;
+
 	*dest = copy;
 	return 0;
 }
