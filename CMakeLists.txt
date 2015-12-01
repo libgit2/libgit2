@@ -235,7 +235,7 @@ IF (WIN32 AND WINHTTP)
 		SET(LIBWINHTTP_PATH "${CMAKE_CURRENT_BINARY_DIR}/deps/winhttp")
 		FILE(MAKE_DIRECTORY ${LIBWINHTTP_PATH})
 
-		IF ("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
+		IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
 			set(WINHTTP_DEF "${CMAKE_CURRENT_SOURCE_DIR}/deps/winhttp/winhttp64.def")
 		ELSE()
 			set(WINHTTP_DEF "${CMAKE_CURRENT_SOURCE_DIR}/deps/winhttp/winhttp.def")
@@ -564,10 +564,8 @@ FILE(GLOB SRC_GIT2 src/*.c src/*.h src/transports/*.c src/transports/*.h src/xdi
 # Determine architecture of the machine
 IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
 	ADD_DEFINITIONS(-DGIT_ARCH_64)
-ELSEIF (CMAKE_SIZEOF_VOID_P EQUAL 4)
-	ADD_DEFINITIONS(-DGIT_ARCH_32)
 ELSE()
-	MESSAGE(FATAL_ERROR "Unsupported architecture")
+	ADD_DEFINITIONS(-DGIT_ARCH_32)
 ENDIF()
 
 # Compile and link libgit2
