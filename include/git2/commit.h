@@ -128,6 +128,19 @@ GIT_EXTERN(const char *) git_commit_message_raw(const git_commit *commit);
 GIT_EXTERN(const char *) git_commit_summary(git_commit *commit);
 
 /**
+ * Get the long "body" of the git commit message.
+ *
+ * The returned message is the body of the commit, comprising
+ * everything but the first paragraph of the message. Leading and
+ * trailing whitespaces are trimmed.
+ *
+ * @param commit a previously loaded commit.
+ * @return the body of a commit or NULL when no the message only
+ *   consists of a summary
+ */
+GIT_EXTERN(const char *) git_commit_body(git_commit *commit);
+
+/**
  * Get the commit time (i.e. committer time) of a commit.
  *
  * @param commit a previously loaded commit.

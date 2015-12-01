@@ -63,6 +63,18 @@ void assert_commit_summary(const char *expected, const char *given)
 	git_commit__free(dummy);
 }
 
+void assert_commit_body(const char *expected, const char *given)
+{
+	git_commit *dummy;
+
+	cl_assert(dummy = git__calloc(1, sizeof(struct git_commit)));
+
+	dummy->raw_message = git__strdup(given);
+	cl_assert_equal_s(expected, git_commit_body(dummy));
+
+	git_commit_free(dummy);
+}
+
 void test_commit_commit__summary(void)
 {
 	assert_commit_summary("One-liner with no trailing newline", "One-liner with no trailing newline");
@@ -80,8 +92,35 @@ void test_commit_commit__summary(void)
 	assert_commit_summary("  Spaces after newlines are collapsed", "\n  Spaces after newlines\n  are\n  collapsed\n  "); /* newlines at the very beginning are ignored and not collapsed */
 	assert_commit_summary(" Spaces before newlines are collapsed", "  \nSpaces before newlines  \nare  \ncollapsed  \n");
 	assert_commit_summary(" Spaces around newlines are collapsed", "  \n  Spaces around newlines  \n  are  \n  collapsed  \n  ");
+	assert_commit_summary(" Trailing newlines are" , "  \n  Trailing newlines  \n  are  \n\n  collapsed  \n  ");
+	assert_commit_summary(" Trailing spaces are stripped", "  \n  Trailing spaces \n  are stripped \n\n  \n \t ");
 	assert_commit_summary("", "");
 	assert_commit_summary("", " ");
 	assert_commit_summary("", "\n");
 	assert_commit_summary("", "\n \n");
+}
+
+void test_commit_commit__body(void)
+{
+	assert_commit_body(NULL, "One-liner with no trailing newline");
+	assert_commit_body(NULL, "One-liner with trailing newline\n");
+	assert_commit_body(NULL, "\n\nTrimmed leading&trailing newlines\n\n");
+	assert_commit_body("(There are more!)", "\nFirst paragraph only\n\n(There are more!)");
+	assert_commit_body("(Yes, unwrapped!)", "\nFirst paragraph\nwith  unwrapped\ntrailing\tlines\n\n(Yes, unwrapped!)");
+	assert_commit_body("are preserved", "\tLeading\n\ttabs\n\nare preserved"); /* tabs around newlines are collapsed down to a single space */
+	assert_commit_body("are preserved", " Leading\n Spaces\n\nare preserved"); /* spaces around newlines are collapsed down to a single space */
+	assert_commit_body(NULL, "Trailing tabs\tare removed\t\t");
+	assert_commit_body(NULL, "Trailing spaces  are removed  ");
+	assert_commit_body("are removed", "Trailing tabs\t\n\nare removed");
+	assert_commit_body("are removed", "Trailing spaces \n\nare removed");
+	assert_commit_body(NULL,"Newlines\nare\nreplaced by spaces\n");
+	assert_commit_body(NULL , "\n  Spaces after newlines\n  are\n  collapsed\n  "); /* newlines at the very beginning are ignored and not collapsed */
+	assert_commit_body(NULL , "  \nSpaces before newlines  \nare  \ncollapsed  \n");
+	assert_commit_body(NULL , "  \n  Spaces around newlines  \n  are  \n  collapsed  \n  ");
+	assert_commit_body("collapsed" , "  \n  Trailing newlines  \n  are  \n\n  collapsed  \n  ");
+	assert_commit_body(NULL, "  \n  Trailing spaces \n  are stripped \n\n  \n \t ");
+	assert_commit_body(NULL , "");
+	assert_commit_body(NULL , " ");
+	assert_commit_body(NULL , "\n");
+	assert_commit_body(NULL , "\n \n");
 }
