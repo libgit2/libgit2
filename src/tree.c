@@ -416,6 +416,25 @@ static int tree_error(const char *str, const char *path)
 	return -1;
 }
 
+static int parse_mode(unsigned int *modep, const char *buffer, const char **buffer_out)
+{
+	unsigned char c;
+	unsigned int mode = 0;
+
+	if (*buffer == ' ')
+		return -1;
+
+	while ((c = *buffer++) != ' ') {
+		if (c < '0' || c > '7')
+			return -1;
+		mode = (mode << 3) + (c - '0');
+	}
+	*modep = mode;
+	*buffer_out = buffer;
+
+	return 0;
+}
+
 int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 {
 	git_tree *tree = _tree;
@@ -430,13 +449,10 @@ int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 		git_tree_entry *entry;
 		size_t filename_len;
 		const char *nul;
-		int attr;
+		unsigned int attr;
 
-		if (git__strtol32(&attr, buffer, &buffer, 8) < 0 || !buffer)
+		if (parse_mode(&attr, buffer, &buffer) < 0 || !buffer)
 			return tree_error("Failed to parse tree. Can't parse filemode", NULL);
-
-		if (*buffer++ != ' ')
-			return tree_error("Failed to parse tree. Object is corrupted", NULL);
 
 		if ((nul = memchr(buffer, 0, buffer_end - buffer)) == NULL)
 			return tree_error("Failed to parse tree. Object is corrupted", NULL);
