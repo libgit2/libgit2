@@ -330,6 +330,42 @@ void test_merge_workdir_simple__union(void)
 	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 4));
 }
 
+void test_merge_workdir_simple__gitattributes_union(void)
+{
+	git_buf conflicting_buf = GIT_BUF_INIT;
+
+	struct merge_index_entry merge_index_entries[] = {
+		ADDED_IN_MASTER_INDEX_ENTRY,
+		AUTOMERGEABLE_INDEX_ENTRY,
+		CHANGED_IN_BRANCH_INDEX_ENTRY,
+		CHANGED_IN_MASTER_INDEX_ENTRY,
+
+		{ 0100644, "72cdb057b340205164478565e91eb71647e66891", 0, "conflicting.txt" },
+
+		UNCHANGED_INDEX_ENTRY,
+	};
+
+	struct merge_reuc_entry merge_reuc_entries[] = {
+		AUTOMERGEABLE_REUC_ENTRY,
+		CONFLICTING_REUC_ENTRY,
+		REMOVED_IN_BRANCH_REUC_ENTRY,
+		REMOVED_IN_MASTER_REUC_ENTRY
+	};
+
+	set_core_autocrlf_to(repo, false);
+	cl_git_mkfile(TEST_REPO_PATH "/.gitattributes", "conflicting.txt merge=union\n");
+
+	merge_simple_branch(GIT_MERGE_FILE_FAVOR_NORMAL, 0);
+
+	cl_git_pass(git_futils_readbuffer(&conflicting_buf,
+		TEST_REPO_PATH "/conflicting.txt"));
+	cl_assert(strcmp(conflicting_buf.ptr, CONFLICTING_UNION_FILE) == 0);
+	git_buf_free(&conflicting_buf);
+
+	cl_assert(merge_test_index(repo_index, merge_index_entries, 6));
+	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 4));
+}
+
 void test_merge_workdir_simple__diff3_from_config(void)
 {
 	git_config *config;
