@@ -1167,7 +1167,7 @@ static int canonicalize_directory_path(
 		while ((match = git_vector_get(&index->entries, pos))) {
 			if (GIT_IDXENTRY_STAGE(match) != 0) {
 				/* conflicts do not contribute to canonical paths */
-			} else if (memcmp(search, match->path, search_len) == 0) {
+			} else if (strncmp(search, match->path, search_len) == 0) {
 				/* prefer an exact match to the input filename */
 				best = match;
 				best_len = search_len;
