@@ -1903,7 +1903,7 @@ int git_merge__iterators(
 		int resolved = 0;
 
 		/* Check for merge options in .gitattributes */
-		if ((error = lookup_file_favor(&opts.file_favor, repo, conflict->our_entry.path) < 0))
+		if ((error = lookup_file_favor(&file_opts.favor, repo, conflict->our_entry.path) < 0))
 			goto done;
 
 		if ((error = merge_conflict_resolve(
