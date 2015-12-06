@@ -476,7 +476,8 @@ int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 		buffer += GIT_OID_RAWSZ;
 	}
 
-	git_vector_sort(&tree->entries);
+	/* The tree is sorted by definition. Bad inputs give bad outputs */
+	tree->entries.flags |= GIT_VECTOR_SORTED;
 
 	return 0;
 }
