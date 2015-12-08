@@ -495,7 +495,7 @@ cleanup:
 
 int git_submodule_foreach(
 	git_repository *repo,
-	int (*callback)(git_submodule *sm, const char *name, void *payload),
+	git_submodule_cb callback,
 	void *payload)
 {
 	git_vector snapshot = GIT_VECTOR_INIT;
