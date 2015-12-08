@@ -13,6 +13,10 @@ v0.23 + 1
 * You can now set your own user-agent to be sent for HTTP requests by
   using the `GIT_OPT_SET_USER_AGENT` with `git_libgit2_opts()`.
 
+* Tree objects are now assumed to be sorted. If a tree is not
+  correctly formed, it will give bad results. This is the git approach
+  and cuts a significant amount of time when reading the trees.
+
 ### API additions
 
 * `git_config_lock()` has been added, which allow for
