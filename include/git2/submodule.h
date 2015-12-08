@@ -110,11 +110,10 @@ typedef enum {
 /**
  * Function pointer to receive each submodule
  *
- * `sm` is the `git_submodule` currently being visited.
- *
- * `name` is the name of the submodule.
- *
- * `payload` is the value you passed to the foreach function as payload.
+ * @param sm git_submodule currently being visited
+ * @param name name of the submodule
+ * @param payload value you passed to the foreach function as payload
+ * @return 0 on success or error code
  */
 typedef int (*git_submodule_cb)(
 	git_submodule *sm, const char *name, void *payload);
