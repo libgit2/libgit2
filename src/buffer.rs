@@ -9,7 +9,6 @@ extern {
     pub fn giterr_set(code: git_error_t, message: *const u8);
     pub fn realloc(ptr: *mut u8, size: usize) -> *mut u8;
     pub fn free(ptr: *mut u8);
-    pub fn memmove(dst: *mut u8, src: *const u8, len: usize);
 }
 
 // This serves as a way to make sure we always have a NUL-terminated
@@ -67,22 +66,16 @@ impl git_buf {
         self.ptr == unsafe { git_buf__oom.as_mut_ptr() }
     }
 
-    pub unsafe fn set(&mut self, data: *const u8, len: usize) -> Result<(), i32> {
-        if len == 0 || data.is_null() {
-            self.clear();
-        } else {
-            if !data.is_null() {
-                let alloclen = checked_add!(len, 1);
-                try!(self.grow(alloclen));
-                memmove(self.ptr, data, len);
-            }
+    pub fn set(&mut self, data: &[u8]) -> Result<(), i32> {
+        unsafe {
+            try!(self.grow(checked_add!(data.len(), 1)));
+            ptr::copy(data.as_ptr(), self.ptr, data.len());
+        }
+        self.size = data.len();
 
-            self.size = len;
-
-            if self.asize > self.size {
-                let mut s = slice::from_raw_parts_mut(self.ptr, self.asize);
-                s[self.size] = '\0' as u8;
-            }
+        if self.asize > self.size {
+            let mut s = unsafe { slice::from_raw_parts_mut(self.ptr, self.asize) };
+            s[self.size] = '\0' as u8;
         }
 
         Ok(())
@@ -239,7 +232,12 @@ pub unsafe extern "C" fn git_buf_sanitize(buf: *mut git_buf) {
 
 #[no_mangle]
 pub unsafe extern "C" fn git_buf_set(buf: *mut git_buf, data: *const u8, len: usize) -> i32 {
-    match (*buf).set(data, len) {
+    if len == 0 || data.is_null() {
+        (*buf).clear();
+        return 0;
+    }
+
+    match (*buf).set(slice::from_raw_parts(data, len)) {
         Ok(()) => return 0,
         Err(error) => return error,
     }
