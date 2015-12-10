@@ -322,3 +322,52 @@ void test_blame_simple__can_restrict_to_first_parent_commits(void)
 	check_blame_hunk_index(g_repo, g_blame, 2,  6, 5, 0, "63d671eb", "b.txt");
 	check_blame_hunk_index(g_repo, g_blame, 3, 11, 5, 0, "bc7c5ac2", "b.txt");
 }
+
+void test_blame_simple__can_follow_renames(void)
+{
+	git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
+
+	cl_git_pass(git_repository_open(&g_repo, cl_fixture("blametest.git")));
+
+	cl_git_pass(git_blame_file(&g_blame, g_repo, "c_exact.txt", &opts));
+	cl_assert_equal_i(1, git_blame_get_hunk_count(g_blame));
+	check_blame_hunk_index(g_repo, g_blame, 0,  1, 10, 0, "e348f517", "c.txt");
+
+	cl_git_pass(git_blame_file(&g_blame, g_repo, "d_similar.txt", &opts));
+	cl_assert_equal_i(3, git_blame_get_hunk_count(g_blame));
+	check_blame_hunk_index(g_repo, g_blame, 0,  1, 5, 0, "e348f517", "d.txt");
+	check_blame_hunk_index(g_repo, g_blame, 1,  6, 4, 0, "fa2ae14c", "d_similar.txt");
+	check_blame_hunk_index(g_repo, g_blame, 2,  10, 1, 0, "e348f517", "d.txt");
+}
+
+void test_blame_simple__can_follow_only_exact_renames(void)
+{
+	git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
+	opts.find_options.flags = GIT_DIFF_FIND_EXACT_MATCH_ONLY;
+
+	cl_git_pass(git_repository_open(&g_repo, cl_fixture("blametest.git")));
+
+	cl_git_pass(git_blame_file(&g_blame, g_repo, "c_exact.txt", &opts));
+	cl_assert_equal_i(1, git_blame_get_hunk_count(g_blame));
+	check_blame_hunk_index(g_repo, g_blame, 0,  1, 10, 0, "e348f517", "c.txt");
+
+	cl_git_pass(git_blame_file(&g_blame, g_repo, "d_similar.txt", &opts));
+	cl_assert_equal_i(1, git_blame_get_hunk_count(g_blame));
+	check_blame_hunk_index(g_repo, g_blame, 0,  1, 10, 0, "fa2ae14c", "d_similar.txt");
+}
+
+void test_blame_simple__does_not_follow_renames(void)
+{
+	git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
+	opts.find_options.flags = GIT_DIFF_FIND_NO_RENAMES;
+
+	cl_git_pass(git_repository_open(&g_repo, cl_fixture("blametest.git")));
+
+	cl_git_pass(git_blame_file(&g_blame, g_repo, "c_exact.txt", &opts));
+	cl_assert_equal_i(1, git_blame_get_hunk_count(g_blame));
+	check_blame_hunk_index(g_repo, g_blame, 0,  1, 10, 0, "dc0ba436", "c_exact.txt");
+
+	cl_git_pass(git_blame_file(&g_blame, g_repo, "d_similar.txt", &opts));
+	cl_assert_equal_i(1, git_blame_get_hunk_count(g_blame));
+	check_blame_hunk_index(g_repo, g_blame, 0,  1, 10, 0, "fa2ae14c", "d_similar.txt");
+}

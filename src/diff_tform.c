@@ -296,6 +296,9 @@ static int normalize_find_opts(
 	if (opts->flags & GIT_DIFF_BREAK_REWRITES)
 		opts->flags |= GIT_DIFF_FIND_REWRITES;
 
+	if (opts->flags & GIT_DIFF_FIND_NO_RENAMES)
+		opts->flags &= ~GIT_DIFF_FIND_ALL;
+
 #define USE_DEFAULT(X) ((X) == 0 || (X) > 100)
 
 	if (USE_DEFAULT(opts->rename_threshold))

@@ -611,6 +611,9 @@ typedef enum {
 	/** Turn on all finding features. */
 	GIT_DIFF_FIND_ALL = (0x0ff),
 
+	/** Does no work on trying to find renames. */
+	GIT_DIFF_FIND_NO_RENAMES = (1u << 8),
+
 	/** Measure similarity ignoring leading whitespace (default) */
 	GIT_DIFF_FIND_IGNORE_LEADING_WHITESPACE = 0,
 	/** Measure similarity ignoring all whitespace */

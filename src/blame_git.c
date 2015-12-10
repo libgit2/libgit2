@@ -432,7 +432,6 @@ static git_blame__origin* find_origin(
 		/* No changes; copy data */
 		git_blame__get_origin(&porigin, blame, parent, origin->path);
 	} else {
-		git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
 		int i;
 
 		/* Generate a full diff between the two trees */
@@ -441,9 +440,7 @@ static git_blame__origin* find_origin(
 		if (0 != git_diff_tree_to_tree(&difflist, blame->repository, ptree, otree, &diffopts))
 			goto cleanup;
 
-		/* Let diff find renames */
-		findopts.flags = GIT_DIFF_FIND_RENAMES;
-		if (0 != git_diff_find_similar(difflist, &findopts))
+		if (0 != git_diff_find_similar(difflist, &blame->options.find_options))
 			goto cleanup;
 
 		/* Find one that matches */
