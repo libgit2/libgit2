@@ -3014,7 +3014,7 @@ int git_index_read_index(
 				INSERT_IN_MAP_EX(index, new_entries_map, add_entry, error);
 		}
 
-		if (remove_entry && !error)
+		if (remove_entry && error >= 0)
 			error = git_vector_insert(&remove_entries, remove_entry);
 
 		if (error < 0) {
