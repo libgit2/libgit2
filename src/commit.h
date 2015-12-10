@@ -28,6 +28,7 @@ struct git_commit {
 	char *raw_header;
 
 	char *summary;
+	char *body;
 };
 
 void git_commit__free(void *commit);

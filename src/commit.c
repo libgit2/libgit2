@@ -31,6 +31,7 @@ void git_commit__free(void *_commit)
 	git__free(commit->raw_message);
 	git__free(commit->message_encoding);
 	git__free(commit->summary);
+	git__free(commit->body);
 
 	git__free(commit);
 }
@@ -470,6 +471,33 @@ const char *git_commit_summary(git_commit *commit)
 	}
 
 	return commit->summary;
+}
+
+const char *git_commit_body(git_commit *commit)
+{
+	const char *msg, *end;
+
+	assert(commit);
+
+	if (!commit->body) {
+		/* search for end of summary */
+		for (msg = git_commit_message(commit); *msg; ++msg)
+			if (msg[0] == '\n' && (!msg[1] || msg[1] == '\n'))
+				break;
+
+		/* trim leading and trailing whitespace */
+		for (; *msg; ++msg)
+			if (!git__isspace(*msg))
+				break;
+		for (end = msg + strlen(msg) - 1; msg <= end; --end)
+			if (!git__isspace(*end))
+				break;
+
+		if (*msg)
+			    commit->body = git__strndup(msg, end - msg + 1);
+	}
+
+	return commit->body;
 }
 
 int git_commit_tree(git_tree **tree_out, const git_commit *commit)

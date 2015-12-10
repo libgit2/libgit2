@@ -1659,6 +1659,7 @@ int git_diff_format_email__append_header_tobuf(
 	const git_oid *id,
 	const git_signature *author,
 	const char *summary,
+	const char *body,
 	size_t patch_no,
 	size_t total_patches,
 	bool exclude_patchno_marker)
@@ -1697,6 +1698,13 @@ int git_diff_format_email__append_header_tobuf(
 	}
 
 	error = git_buf_printf(out, "%s\n\n", summary);
+
+	if (body) {
+		git_buf_puts(out, body);
+
+		if (out->ptr[out->size - 1] != '\n')
+			git_buf_putc(out, '\n');
+	}
 
 	return error;
 }
@@ -1775,7 +1783,7 @@ int git_diff_format_email(
 
 	error = git_diff_format_email__append_header_tobuf(out,
 				opts->id, opts->author, summary == NULL ? opts->summary : summary,
-				opts->patch_no, opts->total_patches, ignore_marker);
+				opts->body, opts->patch_no, opts->total_patches, ignore_marker);
 
 	if (error < 0)
 		goto on_error;
@@ -1818,6 +1826,7 @@ int git_diff_commit_as_email(
 	opts.total_patches = total_patches;
 	opts.id = git_commit_id(commit);
 	opts.summary = git_commit_summary(commit);
+	opts.body = git_commit_body(commit);
 	opts.author = git_commit_author(commit);
 
 	if ((error = git_diff__commit(&diff, repo, commit, diff_opts)) < 0)
