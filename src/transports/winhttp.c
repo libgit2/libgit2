@@ -930,7 +930,10 @@ replay:
 					cred_error = t->owner->cred_acquire_cb(&t->cred, t->owner->url,
 						t->connection_data.user, allowed_types,	t->owner->cred_acquire_payload);
 
-					if (cred_error < 0)
+					/* Treat GIT_PASSTHROUGH as though git_cred_acquire_cb isn't set */
+					if (cred_error == GIT_PASSTHROUGH)
+						cred_error = 1;
+					else if (cred_error < 0)
 						return cred_error;
 				}
 
