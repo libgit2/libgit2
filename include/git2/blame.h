@@ -74,8 +74,8 @@ typedef struct git_blame_options {
 	uint16_t min_match_characters;
 	git_oid newest_commit;
 	git_oid oldest_commit;
-	uint32_t min_line;
-	uint32_t max_line;
+	size_t min_line;
+	size_t max_line;
 } git_blame_options;
 
 #define GIT_BLAME_OPTIONS_VERSION 1
@@ -113,15 +113,15 @@ GIT_EXTERN(int) git_blame_init_options(
  *   root, or the commit specified in git_blame_options.oldest_commit)
  */
 typedef struct git_blame_hunk {
-	uint16_t lines_in_hunk;
+	size_t lines_in_hunk;
 
 	git_oid final_commit_id;
-	uint16_t final_start_line_number;
+	size_t final_start_line_number;
 	git_signature *final_signature;
 
 	git_oid orig_commit_id;
 	const char *orig_path;
-	uint16_t orig_start_line_number;
+	size_t orig_start_line_number;
 	git_signature *orig_signature;
 
 	char boundary;
@@ -156,7 +156,7 @@ GIT_EXTERN(const git_blame_hunk*) git_blame_get_hunk_byindex(
  */
 GIT_EXTERN(const git_blame_hunk*) git_blame_get_hunk_byline(
 		git_blame *blame,
-		uint32_t lineno);
+		size_t lineno);
 
 /**
  * Get the blame for a single file.

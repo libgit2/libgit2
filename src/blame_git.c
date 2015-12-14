@@ -93,18 +93,25 @@ static bool same_suspect(git_blame__origin *a, git_blame__origin *b)
 }
 
 /* find the line number of the last line the target is suspected for */
-static int find_last_in_target(git_blame *blame, git_blame__origin *target)
+static bool find_last_in_target(size_t *out, git_blame *blame, git_blame__origin *target)
 {
 	git_blame__entry *e;
-	int last_in_target = -1;
+	size_t last_in_target = 0;
+	bool found = false;
+
+	*out = 0;
 
 	for (e=blame->ent; e; e=e->next) {
 		if (e->guilty || !same_suspect(e->suspect, target))
 			continue;
-		if (last_in_target < e->s_lno + e->num_lines)
+		if (last_in_target < e->s_lno + e->num_lines) {
+			found = true;
 			last_in_target = e->s_lno + e->num_lines;
+		}
 	}
-	return last_in_target;
+
+	*out = last_in_target;
+	return found;
 }
 
 /*
@@ -122,9 +129,9 @@ static int find_last_in_target(git_blame *blame, git_blame__origin *target)
  * to be blamed for the parent, and after that portion.
  */
 static void split_overlap(git_blame__entry *split, git_blame__entry *e,
-		int tlno, int plno, int same, git_blame__origin *parent)
+		size_t tlno, size_t plno, size_t same, git_blame__origin *parent)
 {
-	int chunk_end_lno;
+	size_t chunk_end_lno;
 
 	if (e->s_lno < tlno) {
 		/* there is a pre-chunk part not blamed on the parent */
@@ -265,9 +272,9 @@ static void decref_split(git_blame__entry *split)
 static void blame_overlap(
 		git_blame *blame,
 		git_blame__entry *e,
-		int tlno,
-		int plno,
-		int same,
+		size_t tlno,
+		size_t plno,
+		size_t same,
 		git_blame__origin *parent)
 {
 	git_blame__entry split[3] = {{0}};
@@ -285,9 +292,9 @@ static void blame_overlap(
  */
 static void blame_chunk(
 		git_blame *blame,
-		int tlno,
-		int plno,
-		int same,
+		size_t tlno,
+		size_t plno,
+		size_t same,
 		git_blame__origin *target,
 		git_blame__origin *parent)
 {
@@ -314,7 +321,7 @@ static int my_emit(
 	blame_chunk(d->blame, d->tlno, d->plno, start_b, d->target, d->parent);
 	d->plno = start_a + count_a;
 	d->tlno = start_b + count_b;
-	
+
 	return 0;
 }
 
@@ -376,12 +383,11 @@ static int pass_blame_to_parent(
 		git_blame__origin *target,
 		git_blame__origin *parent)
 {
-	int last_in_target;
+	size_t last_in_target;
 	mmfile_t file_p, file_o;
 	blame_chunk_cb_data d = { blame, target, parent, 0, 0 };
 
-	last_in_target = find_last_in_target(blame, target);
-	if (last_in_target < 0)
+	if (!find_last_in_target(&last_in_target, blame, target))
 		return 1; /* nothing remains for this target */
 
 	fill_origin_blob(parent, &file_p);
