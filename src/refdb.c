@@ -73,6 +73,19 @@ int git_refdb_set_backend(git_refdb *db, git_refdb_backend *backend)
 	return 0;
 }
 
+int git_refdb_get_backend(git_refdb_backend **out, git_refdb *db)
+{
+    assert(out && db);
+
+    if (db->backend) {
+        *out = db->backend;
+        return 0;
+    }
+
+    giterr_set(GITERR_REFERENCE, "REFDB backend was not set");
+    return GIT_ENOTFOUND;
+}
+
 int git_refdb_compress(git_refdb *db)
 {
 	assert(db);
