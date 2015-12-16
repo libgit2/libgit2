@@ -113,6 +113,8 @@ GIT_INLINE(bool) git_index_entry_newer_than_index(
 extern int git_index__find_pos(
 	size_t *at_pos, git_index *index, const char *path, size_t path_len, int stage);
 
+extern int git_index__fill(git_index *index, const git_vector *source_entries);
+
 extern void git_index__set_ignore_case(git_index *index, bool ignore_case);
 
 extern unsigned int git_index__create_mode(unsigned int mode);

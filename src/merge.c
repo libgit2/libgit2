@@ -1739,7 +1739,6 @@ static int index_from_diff_list(git_index **out,
 {
 	git_index *index;
 	size_t i;
-	git_index_entry *entry;
 	git_merge_diff *conflict;
 	int error = 0;
 
@@ -1748,10 +1747,8 @@ static int index_from_diff_list(git_index **out,
 	if ((error = git_index_new(&index)) < 0)
 		return error;
 
-	git_vector_foreach(&diff_list->staged, i, entry) {
-		if ((error = git_index_add(index, entry)) < 0)
-			goto on_error;
-	}
+	if ((error = git_index__fill(index, &diff_list->staged)) < 0)
+		goto on_error;
 
 	git_vector_foreach(&diff_list->conflicts, i, conflict) {
 		const git_index_entry *ancestor =

@@ -1542,6 +1542,43 @@ int git_index_remove_bypath(git_index *index, const char *path)
 	return 0;
 }
 
+int git_index__fill(git_index *index, const git_vector *source_entries)
+{
+	const git_index_entry *source_entry = NULL;
+	size_t i;
+	int ret = 0;
+
+	assert(index);
+
+	if (git_mutex_lock(&index->lock) < 0) {
+		giterr_set(GITERR_OS, "Unable to acquire index lock");
+		return -1;
+	}
+
+	git_vector_foreach(source_entries, i, source_entry) {
+		git_index_entry *entry = NULL;
+
+		if ((ret = index_entry_dup(&entry, index, source_entry)) < 0)
+			break;
+
+		entry->flags_extended |= GIT_IDXENTRY_UPTODATE;
+
+		ret = git_vector_insert(&index->entries, entry);
+		if (ret < 0)
+			break;
+
+		INSERT_IN_MAP(index, entry, ret);
+		if (ret < 0)
+			break;
+	}
+
+	if (!ret)
+		git_vector_sort(&index->entries);
+
+	git_mutex_unlock(&index->lock);
+	return ret;
+}
+
 
 int git_index_add(git_index *index, const git_index_entry *source_entry)
 {
