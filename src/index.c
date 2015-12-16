@@ -879,6 +879,18 @@ void git_index_entry__init_from_stat(
 	entry->file_size = st->st_size;
 }
 
+static void index_entry_adjust_namemask(
+		git_index_entry *entry,
+		size_t path_length)
+{
+	entry->flags &= ~GIT_IDXENTRY_NAMEMASK;
+
+	if (path_length < GIT_IDXENTRY_NAMEMASK)
+		entry->flags |= path_length & GIT_IDXENTRY_NAMEMASK;
+	else
+		entry->flags |= GIT_IDXENTRY_NAMEMASK;
+}
+
 static int index_entry_create(
 	git_index_entry **out,
 	git_repository *repo,
@@ -1279,13 +1291,7 @@ static int index_insert(
 
 	/* make sure that the path length flag is correct */
 	path_length = ((struct entry_internal *)entry)->pathlen;
-
-	entry->flags &= ~GIT_IDXENTRY_NAMEMASK;
-
-	if (path_length < GIT_IDXENTRY_NAMEMASK)
-		entry->flags |= path_length & GIT_IDXENTRY_NAMEMASK;
-	else
-		entry->flags |= GIT_IDXENTRY_NAMEMASK;
+	index_entry_adjust_namemask(entry, path_length);
 
 	/* this entry is now up-to-date and should not be checked for raciness */
 	entry->flags_extended |= GIT_IDXENTRY_UPTODATE;
@@ -1561,10 +1567,11 @@ int git_index__fill(git_index *index, const git_vector *source_entries)
 		if ((ret = index_entry_dup(&entry, index, source_entry)) < 0)
 			break;
 
+		index_entry_adjust_namemask(entry, ((struct entry_internal *)entry)->pathlen);
 		entry->flags_extended |= GIT_IDXENTRY_UPTODATE;
+		entry->mode = git_index__create_mode(entry->mode);
 
-		ret = git_vector_insert(&index->entries, entry);
-		if (ret < 0)
+		if ((ret = git_vector_insert(&index->entries, entry)) < 0)
 			break;
 
 		INSERT_IN_MAP(index, entry, ret);
@@ -2889,11 +2896,7 @@ static int read_tree_cb(
 		entry->flags_extended = 0;
 	}
 
-	if (path.size < GIT_IDXENTRY_NAMEMASK)
-		entry->flags = path.size & GIT_IDXENTRY_NAMEMASK;
-	else
-		entry->flags = GIT_IDXENTRY_NAMEMASK;
-
+	index_entry_adjust_namemask(entry, path.size);
 	git_buf_free(&path);
 
 	if (git_vector_insert(data->new_entries, entry) < 0) {
