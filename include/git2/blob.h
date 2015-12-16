@@ -171,8 +171,8 @@ typedef int (*git_blob_chunk_cb)(char *content, size_t max_length, void *payload
  *  - The `callback` must return the number of bytes that have been
  *    written to the `content` buffer.
  *
- *  - When there is no more data to stream, `callback` should return
- *    0. This will prevent it from being invoked anymore.
+ *  - When there is no more data to stream, `callback` should return 0.
+ *    This will prevent it from being invoked anymore.
  *
  *  - If an error occurs, the callback should return a negative value.
  *    This value will be returned to the caller.
