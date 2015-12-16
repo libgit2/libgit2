@@ -1556,8 +1556,16 @@ int git_index__fill(git_index *index, const git_vector *source_entries)
 
 	assert(index);
 
+	if (!source_entries->length)
+		return 0;
+
 	if (git_mutex_lock(&index->lock) < 0) {
 		giterr_set(GITERR_OS, "Unable to acquire index lock");
+		return -1;
+	}
+
+	if (git_vector_size_hint(&index->entries, source_entries->length) < 0) {
+		git_mutex_unlock(&index->lock);
 		return -1;
 	}
 

@@ -40,6 +40,13 @@ GIT_INLINE(int) resize_vector(git_vector *v, size_t new_size)
 	return 0;
 }
 
+int git_vector_size_hint(git_vector *v, size_t size_hint)
+{
+	if (v->_alloc_size >= size_hint)
+		return 0;
+	return resize_vector(v, size_hint);
+}
+
 int git_vector_dup(git_vector *v, const git_vector *src, git_vector_cmp cmp)
 {
 	size_t bytes;
