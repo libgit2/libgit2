@@ -72,7 +72,7 @@ void assert_commit_body(const char *expected, const char *given)
 	dummy->raw_message = git__strdup(given);
 	cl_assert_equal_s(expected, git_commit_body(dummy));
 
-	git_commit_free(dummy);
+	git_commit__free(dummy);
 }
 
 void test_commit_commit__summary(void)
