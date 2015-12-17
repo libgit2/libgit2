@@ -18,7 +18,7 @@ Additionally, the example code has been released to the public domain (see the
 * Website: [libgit2.github.com](http://libgit2.github.com)
 * StackOverflow Tag: [libgit2](http://stackoverflow.com/questions/tagged/libgit2)
 * Issues: [GitHub Issues](https://github.com/libgit2/libgit2/issues) (Right here!)
-* API documentation: <http://libgit2.github.com/libgit2>
+* API documentation: <http://libgit2.github.com/libgit2/>
 * IRC: [#libgit2](irc://irc.freenode.net/libgit2) on irc.freenode.net.
 * Mailing list: The libgit2 mailing list was
     traditionally hosted in Librelist but has been deprecated. We encourage you to
@@ -88,7 +88,7 @@ Under Unix-like systems, like Linux, \*BSD and Mac OS X, libgit2 expects `pthrea
 they should be installed by default on all systems. Under Windows, libgit2 uses the native Windows API
 for threading.
 
-The `libgit2` library is built using [CMake](<http://www.cmake.org>) (version 2.8 or newer) on all platforms.
+The `libgit2` library is built using [CMake](<https://cmake.org/>) (version 2.8 or newer) on all platforms.
 
 On most systems you can build the library using the following commands
 
@@ -103,7 +103,7 @@ To install the library you can specify the install prefix by setting:
 	$ cmake .. -DCMAKE_INSTALL_PREFIX=/install/prefix
 	$ cmake --build . --target install
 
-For more advanced use or questions about CMake please read <http://www.cmake.org/Wiki/CMake_FAQ>.
+For more advanced use or questions about CMake please read <https://cmake.org/Wiki/CMake_FAQ>.
 
 The following CMake variables are declared:
 
@@ -141,7 +141,7 @@ You need to run the CMake commands from the Visual Studio command
 prompt, not the regular or Windows SDK one. Select the right generator
 for your version with the `-G "Visual Studio X" option.
 
-See [the website](https://libgit2.github.com/docs/guides/build-and-link)
+See [the website](http://libgit2.github.com/docs/guides/build-and-link/)
 for more detailed instructions.
 
 Android
@@ -184,9 +184,9 @@ Here are the bindings to libgit2 that are currently available:
 * Go
     * git2go <https://github.com/libgit2/git2go>
 * GObject
-    * libgit2-glib <https://live.gnome.org/Libgit2-glib>
+    * libgit2-glib <https://wiki.gnome.org/Libgit2-glib>
 * Haskell
-    * hgit2 <https://github.com/fpco/gitlib>
+    * hgit2 <https://github.com/jwiegley/gitlib>
 * Java
     * Jagged <https://github.com/ethomson/jagged>
 * Julia
@@ -197,7 +197,7 @@ Here are the bindings to libgit2 that are currently available:
     * libgit2sharp <https://github.com/libgit2/libgit2sharp>
 * Node.js
     * node-gitteh <https://github.com/libgit2/node-gitteh>
-    * nodegit <https://github.com/tbranyen/nodegit>
+    * nodegit <https://github.com/nodegit/nodegit>
 * Objective-C
     * objective-git <https://github.com/libgit2/objective-git>
 * OCaml
