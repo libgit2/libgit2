@@ -358,7 +358,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	git_odb_object_free(target_obj);
 
 	/** Ensure the tag name doesn't conflict with an already existing
-	 *	reference unless overwriting has explictly been requested **/
+	 *	reference unless overwriting has explicitly been requested **/
 	if (error == 0 && !allow_ref_overwrite) {
 		giterr_set(GITERR_TAG, "Tag already exists");
 		return GIT_EEXISTS;
