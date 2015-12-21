@@ -357,7 +357,7 @@ void test_submodule_lookup__renamed(void)
 		cl_git_pass(git_index_add_bypath(idx, ".gitmodules"));
 	}
 
-	/* Change the worktree info in the the submodule's config */
+	/* Change the worktree info in the submodule's config */
 	{
 		git_config *cfg;
 
