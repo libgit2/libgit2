@@ -20,7 +20,9 @@
 
 #define OWNING_SUBTRANSPORT(s) ((ssh_subtransport *)(s)->parent.subtransport)
 
-static const char prefix_ssh[] = "ssh://";
+static const char * ssh_prefixes[] = { "ssh://", "ssh+git://", "git+ssh://" };
+#define SSH_PREFIX_COUNT (sizeof(ssh_prefixes) / sizeof(ssh_prefixes[0]))
+
 static const char cmd_uploadpack[] = "git-upload-pack";
 static const char cmd_receivepack[] = "git-receive-pack";
 
@@ -63,16 +65,23 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 	char *repo;
 	int len;
 
-	if (!git__prefixcmp(url, prefix_ssh)) {
-		url = url + strlen(prefix_ssh);
-		repo = strchr(url, '/');
-		if (repo && repo[1] == '~')
-			++repo;
-	} else {
-		repo = strchr(url, ':');
-		if (repo) repo++;
-	}
+	size_t i = 0;
+	for (i = 0; i < SSH_PREFIX_COUNT; ++i) {
+		const char *p = ssh_prefixes[i];
 
+		if (!git__prefixcmp(url, p)) {
+			url = url + strlen(p);
+			repo = strchr(url, '/');
+			if (repo && repo[1] == '~')
+				++repo;
+
+			goto done;
+		}
+	}
+	repo = strchr(url, ':');
+	if (repo) repo++;
+
+done:
 	if (!repo) {
 		giterr_set(GITERR_NET, "Malformed git protocol URL");
 		return -1;
@@ -509,16 +518,23 @@ static int _git_ssh_setup_conn(
 	s->session = NULL;
 	s->channel = NULL;
 
-	if (!git__prefixcmp(url, prefix_ssh)) {
-		if ((error = gitno_extract_url_parts(&host, &port, &path, &user, &pass, url, default_port)) < 0)
-			goto done;
-	} else {
-		if ((error = git_ssh_extract_url_parts(&host, &user, url)) < 0)
-			goto done;
-		port = git__strdup(default_port);
-		GITERR_CHECK_ALLOC(port);
-	}
+	size_t i = 0;
+	for (i = 0; i < SSH_PREFIX_COUNT; ++i) {
+		const char *p = ssh_prefixes[i];
 
+		if (!git__prefixcmp(url, p)) {
+			if ((error = gitno_extract_url_parts(&host, &port, &path, &user, &pass, url, default_port)) < 0)
+				goto done;
+
+			goto post_extract;
+		}
+	}
+	if ((error = git_ssh_extract_url_parts(&host, &user, url)) < 0)
+		goto done;
+	port = git__strdup(default_port);
+	GITERR_CHECK_ALLOC(port);
+
+post_extract:
 	if ((error = git_socket_stream_new(&s->io, host, port)) < 0 ||
 	    (error = git_stream_connect(s->io)) < 0)
 		goto done;
