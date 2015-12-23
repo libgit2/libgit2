@@ -12,8 +12,9 @@
 #include "pool.h"
 #include "iterator.h"
 
-#include "git2/merge.h"
 #include "git2/types.h"
+#include "git2/merge.h"
+#include "git2/sys/merge.h"
 
 #define GIT_MERGE_MSG_FILE		"MERGE_MSG"
 #define GIT_MERGE_MODE_FILE		"MERGE_MODE"
@@ -21,6 +22,49 @@
 
 #define GIT_MERGE_DEFAULT_RENAME_THRESHOLD	50
 #define GIT_MERGE_DEFAULT_TARGET_LIMIT		1000
+
+
+/** Internal merge flags. */
+enum {
+	/** The merge is for a virtual base in a recursive merge. */
+	GIT_MERGE__VIRTUAL_BASE = (1 << 31),
+};
+
+enum {
+	/** Accept the conflict file, staging it as the merge result. */
+	GIT_MERGE_FILE_FAVOR__CONFLICTED = 4,
+};
+
+
+/* Merge drivers */
+
+struct git_merge_driver_source {
+	git_repository *repo;
+	const git_merge_file_options *file_opts;
+
+	const git_index_entry *ancestor;
+	const git_index_entry *ours;
+	const git_index_entry *theirs;
+};
+
+extern int git_merge_driver_for_path(
+	char **name_out,
+	git_merge_driver **driver_out,
+	git_repository *repo,
+	const char *path);
+
+/* Basic (normal) merge driver, takes favor type as the payload argument */
+extern git_merge_driver git_merge_driver__normal;
+
+/* Merge driver for text files, performs a standard three-way merge */
+extern git_merge_driver git_merge_driver__text;
+
+/* Merge driver for union-style merging */
+extern git_merge_driver git_merge_driver__union;
+
+/* Merge driver for unmergeable (binary) files: always produces conflicts */
+extern git_merge_driver git_merge_driver__binary;
+
 
 /** Types of changes when files are merged from branch to branch. */
 typedef enum {
@@ -69,7 +113,6 @@ typedef enum {
 	/* The child of a folder that is in a directory/file conflict. */
 	GIT_MERGE_DIFF_DF_CHILD = (1 << 11),
 } git_merge_diff_type_t;
-
 
 typedef struct {
 	git_repository *repo;
@@ -132,6 +175,12 @@ int git_merge_diff_list__find_renames(git_repository *repo, git_merge_diff_list 
 
 void git_merge_diff_list__free(git_merge_diff_list *diff_list);
 
+/* Merge driver configuration */
+int git_merge_driver_for_source(
+	git_merge_driver **driver_out,
+	void **data_out,
+	const git_merge_driver_source *src);
+
 /* Merge metadata setup */
 
 int git_merge__setup(
@@ -151,5 +200,51 @@ int git_merge__iterators(
 int git_merge__check_result(git_repository *repo, git_index *index_new);
 
 int git_merge__append_conflicts_to_merge_msg(git_repository *repo, git_index *index);
+
+/* Merge files */
+
+GIT_INLINE(const char *) git_merge_file__best_path(
+	const char *ancestor,
+	const char *ours,
+	const char *theirs)
+{
+	if (!ancestor) {
+		if (ours && theirs && strcmp(ours, theirs) == 0)
+			return ours;
+
+		return NULL;
+	}
+
+	if (ours && strcmp(ancestor, ours) == 0)
+		return theirs;
+	else if(theirs && strcmp(ancestor, theirs) == 0)
+		return ours;
+
+	return NULL;
+}
+
+GIT_INLINE(uint32_t) git_merge_file__best_mode(
+	uint32_t ancestor, uint32_t ours, uint32_t theirs)
+{
+	/*
+	 * If ancestor didn't exist and either ours or theirs is executable,
+	 * assume executable.  Otherwise, if any mode changed from the ancestor,
+	 * use that one.
+	 */
+	if (!ancestor) {
+		if (ours == GIT_FILEMODE_BLOB_EXECUTABLE ||
+			theirs == GIT_FILEMODE_BLOB_EXECUTABLE)
+			return GIT_FILEMODE_BLOB_EXECUTABLE;
+
+		return GIT_FILEMODE_BLOB;
+	} else if (ours && theirs) {
+		if (ancestor == ours)
+			return theirs;
+
+		return ours;
+	}
+
+	return 0;
+}
 
 #endif
