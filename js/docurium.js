@@ -316,8 +316,13 @@ $(function() {
   var MainListView = Backbone.View.extend({
     template: _.template($('#index-template').html()),
 
+    initialize: function() {
+      this.listenTo(this.collection, 'reset', this.render)
+    },
+
     render: function() {
       this.el = this.template({groups: this.collection.toJSON()})
+      this.trigger('redraw')
       return this
     },
   })
@@ -549,27 +554,16 @@ $(function() {
       })
     },
 
-    setVersion: function (version, success) {
+    setVersion: function (version) {
       if(!version) {
         version = _.first(docurium.get('versions'))
       }
-
-      current = docurium.get('version')
-      if (current == version) {
-	if (success)
-	  success();
-	return;
-      }
-
       docurium.set({version: version})
-      p = this.loadDoc()
-      if (success)
-	p.then(success)
     },
 
     loadDoc: function() {
       version = this.get('version')
-      return $.getJSON(version + '.json').then(function(data) {
+      $.getJSON(version + '.json').then(function(data) {
         docurium.set({data: data})
       })
     },
@@ -653,50 +647,40 @@ $(function() {
     },
 
     main: function(version) {
-      var self = this
-      this.doc.setVersion(version, function() {
-	var view = new MainListView({collection: self.groups})
-	self.mainView.setActive(view)
-      })
+      this.doc.setVersion(version)
+      var view = new MainListView({collection: this.groups})
+      this.mainView.setActive(view)
     },
 
     group: function(version, gname) {
-      var self = this
-      this.doc.setVersion(version, function() {
-	var group = self.doc.getGroup(gname)
-	var fdata = self.doc.get('data')['functions']
-	var cdata = self.doc.get('data')['callbacks']
-	var version = self.doc.get('version')
-	var view = new GroupView({group: group, functions: fdata, callbacks: cdata, version: version})
-	self.mainView.setActive(view)
-      });
+      this.doc.setVersion(version)
+      var group = this.doc.getGroup(gname)
+      var fdata = this.doc.get('data')['functions']
+      var cdata = this.doc.get('data')['callbacks']
+      var version = this.doc.get('version')
+      var view = new GroupView({group: group, functions: fdata, callbacks: cdata, version: version})
+      this.mainView.setActive(view)
     },
 
     groupFun: function(version, gname, fname) {
-      var self = this
-      this.doc.setVersion(version, function() {
-	var model = new FunctionModel({docurium: self.doc, gname: gname, fname: fname})
-	var view = new FunctionView({model: model})
-	self.mainView.setActive(view)
-      })
+      this.doc.setVersion(version)
+      var model = new FunctionModel({docurium: this.doc, gname: gname, fname: fname})
+      var view = new FunctionView({model: model})
+      this.mainView.setActive(view)
     },
 
     showtype: function(version, tname) {
-      var self = this
-      this.doc.setVersion(version, function() {
-	var model = new TypeModel({docurium: self.doc, typename: tname})
-	var view = new TypeView({model: model})
-	self.mainView.setActive(view)
-      })
+      this.doc.setVersion(version)
+      var model = new TypeModel({docurium: this.doc, typename: tname})
+      var view = new TypeView({model: model})
+      this.mainView.setActive(view)
     },
 
     search: function(version, query) {
-      var self = this
-      this.doc.setVersion(version, function() {
-	var view = new SearchView({collection: self.search})
-	$('#search-field').val(query).keyup()
-	self.mainView.setActive(view)
-      })
+      this.doc.setVersion(version)
+      var view = new SearchView({collection: this.search})
+      $('#search-field').val(query).keyup()
+      this.mainView.setActive(view)
     },
 
     changelog: function(version, tname) {
@@ -705,9 +689,8 @@ $(function() {
       if (this.changelogView == undefined) {
 	this.changelogView = new ChangelogView({model: this.doc})
       }
-      this.doc.setVersion(undefined, function() {
-	this.mainView.setActive(this.changelogView)
-      })
+      this.doc.setVersion()
+      this.mainView.setActive(this.changelogView)
     },
   });
 
