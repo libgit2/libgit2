@@ -902,7 +902,7 @@ static int packed_remove_loose(refdb_fs_backend *backend)
 {
 	size_t i;
 	git_buf ref_content = GIT_BUF_INIT;
-	int failed = 0, error = 0;
+	int error = 0;
 
 	/* backend->refcache is already locked when this is called */
 
@@ -917,12 +917,12 @@ static int packed_remove_loose(refdb_fs_backend *backend)
 		/* We need to stop anybody from updating the ref while we try to do a safe delete */
 		error = loose_lock(&lock, backend, ref->name);
 		/* If someone else is updating it, let them do it */
-		if (error == GIT_EEXISTS)
+		if (error == GIT_EEXISTS || error == GIT_ENOTFOUND)
 			continue;
 
 		if (error < 0) {
-			failed = 1;
-			continue;
+			giterr_set(GITERR_REFERENCE, "failed to lock loose reference '%s'", ref->name);
+			return error;
 		}
 
 		error = git_futils_readbuffer(&ref_content, lock.path_original);
@@ -940,7 +940,6 @@ static int packed_remove_loose(refdb_fs_backend *backend)
 
 		/* Figure out the current id; if we fail record it but don't fail the whole operation */
 		if ((error = loose_parse_oid(&current_id, lock.path_original, &ref_content)) < 0) {
-			failed = 1;
 			git_filebuf_cleanup(&lock);
 			continue;
 		}
@@ -951,27 +950,17 @@ static int packed_remove_loose(refdb_fs_backend *backend)
 			continue;
 		}
 
-		if (p_unlink(lock.path_original) < 0) {
-			if (failed)
-				continue;
-
-			giterr_set(GITERR_REFERENCE,
-				"Failed to remove loose reference '%s' after packing: %s",
-				lock.path_original, strerror(errno));
-			failed = 1;
-		}
-
-		git_filebuf_cleanup(&lock);
-
 		/*
 		 * if we fail to remove a single file, this is *not* good,
 		 * but we should keep going and remove as many as possible.
-		 * After we've removed as many files as possible, we return
-		 * the error code anyway.
+		 * If we fail to remove, the ref is still in the old state, so
+		 * we haven't lost information.
 		 */
+		p_unlink(lock.path_original);
+		git_filebuf_cleanup(&lock);
 	}
 
-	return failed ? -1 : 0;
+	return 0;
 }
 
 /*
