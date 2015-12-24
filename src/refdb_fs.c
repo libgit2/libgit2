@@ -901,6 +901,7 @@ static int packed_write_ref(struct packref *ref, git_filebuf *file)
 static int packed_remove_loose(refdb_fs_backend *backend)
 {
 	size_t i;
+	git_filebuf lock = GIT_FILEBUF_INIT;
 	git_buf ref_content = GIT_BUF_INIT;
 	int error = 0;
 
@@ -908,11 +909,12 @@ static int packed_remove_loose(refdb_fs_backend *backend)
 
 	for (i = 0; i < git_sortedcache_entrycount(backend->refcache); ++i) {
 		struct packref *ref = git_sortedcache_entry(backend->refcache, i);
-		git_filebuf lock = GIT_FILEBUF_INIT;
 		git_oid current_id;
 
 		if (!ref || !(ref->flags & PACKREF_WAS_LOOSE))
 			continue;
+
+		git_filebuf_cleanup(&lock);
 
 		/* We need to stop anybody from updating the ref while we try to do a safe delete */
 		error = loose_lock(&lock, backend, ref->name);
@@ -927,28 +929,20 @@ static int packed_remove_loose(refdb_fs_backend *backend)
 
 		error = git_futils_readbuffer(&ref_content, lock.path_original);
 		/* Someone else beat us to cleaning up the ref, let's simply continue */
-		if (error == GIT_ENOTFOUND) {
-			git_filebuf_cleanup(&lock);
+		if (error == GIT_ENOTFOUND)
 			continue;
-		}
 
 		/* This became a symref between us packing and trying to delete it, so ignore it */
-		if (!git__prefixcmp(ref_content.ptr, GIT_SYMREF)) {
-			git_filebuf_cleanup(&lock);
+		if (!git__prefixcmp(ref_content.ptr, GIT_SYMREF))
 			continue;
-		}
 
-		/* Figure out the current id; if we fail record it but don't fail the whole operation */
-		if ((error = loose_parse_oid(&current_id, lock.path_original, &ref_content)) < 0) {
-			git_filebuf_cleanup(&lock);
+		/* Figure out the current id; if we find a bad ref file, skip it so we can do the rest */
+		if (loose_parse_oid(&current_id, lock.path_original, &ref_content) < 0)
 			continue;
-		}
 
 		/* If the ref moved since we packed it, we must not delete it */
-		if (!git_oid_equal(&current_id, &ref->oid)) {
-			git_filebuf_cleanup(&lock);
+		if (!git_oid_equal(&current_id, &ref->oid))
 			continue;
-		}
 
 		/*
 		 * if we fail to remove a single file, this is *not* good,
@@ -957,9 +951,9 @@ static int packed_remove_loose(refdb_fs_backend *backend)
 		 * we haven't lost information.
 		 */
 		p_unlink(lock.path_original);
-		git_filebuf_cleanup(&lock);
 	}
 
+	git_filebuf_cleanup(&lock);
 	return 0;
 }
 
