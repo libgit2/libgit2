@@ -301,3 +301,93 @@ void test_merge_driver__apply_can_defer(void)
 	git_merge_driver_unregister("defer");
 }
 
+static int conflict_driver_check(
+	git_merge_driver *s,
+	void **payload,
+	const char *name,
+	const git_merge_driver_source *src)
+{
+	GIT_UNUSED(s);
+	GIT_UNUSED(payload);
+	GIT_UNUSED(name);
+	GIT_UNUSED(src);
+
+	return GIT_EMERGECONFLICT;
+}
+
+static struct test_merge_driver test_driver_conflict_check = {
+	{
+		GIT_MERGE_DRIVER_VERSION,
+		test_driver_init,
+		test_driver_shutdown,
+		conflict_driver_check,
+		test_driver_apply,
+		test_driver_cleanup
+	},
+	0,
+	0,
+};
+
+void test_merge_driver__check_can_conflict(void)
+{
+	const git_index_entry *ancestor, *ours, *theirs;
+
+	cl_git_pass(git_merge_driver_register("conflict",
+		&test_driver_conflict_check.base));
+
+    set_gitattributes_to("conflict");
+    merge_branch();
+
+	cl_git_pass(git_index_conflict_get(&ancestor, &ours, &theirs,
+		repo_index, "automergeable.txt"));
+
+	git_merge_driver_unregister("conflict");
+}
+
+static int conflict_driver_apply(
+	git_merge_driver *s,
+	void **payload,
+	const char **path_out,
+	uint32_t *mode_out,
+	git_buf *merged_out,
+	const git_merge_driver_source *src)
+{
+	GIT_UNUSED(s);
+	GIT_UNUSED(payload);
+	GIT_UNUSED(path_out);
+	GIT_UNUSED(mode_out);
+	GIT_UNUSED(merged_out);
+	GIT_UNUSED(src);
+
+	return GIT_EMERGECONFLICT;
+}
+
+static struct test_merge_driver test_driver_conflict_apply = {
+	{
+		GIT_MERGE_DRIVER_VERSION,
+		test_driver_init,
+		test_driver_shutdown,
+		test_driver_check,
+		conflict_driver_apply,
+		test_driver_cleanup
+	},
+	0,
+	0,
+};
+
+void test_merge_driver__apply_can_conflict(void)
+{
+	const git_index_entry *ancestor, *ours, *theirs;
+
+	cl_git_pass(git_merge_driver_register("conflict",
+		&test_driver_conflict_apply.base));
+
+    set_gitattributes_to("conflict");
+    merge_branch();
+
+	cl_git_pass(git_index_conflict_get(&ancestor, &ours, &theirs,
+		repo_index, "automergeable.txt"));
+
+	git_merge_driver_unregister("conflict");
+}
+
