@@ -901,29 +901,67 @@ static int packed_write_ref(struct packref *ref, git_filebuf *file)
 static int packed_remove_loose(refdb_fs_backend *backend)
 {
 	size_t i;
-	git_buf full_path = GIT_BUF_INIT;
-	int failed = 0;
+	git_buf ref_content = GIT_BUF_INIT;
+	int failed = 0, error = 0;
 
 	/* backend->refcache is already locked when this is called */
 
 	for (i = 0; i < git_sortedcache_entrycount(backend->refcache); ++i) {
 		struct packref *ref = git_sortedcache_entry(backend->refcache, i);
+		git_filebuf lock = GIT_FILEBUF_INIT;
+		git_oid current_id;
 
 		if (!ref || !(ref->flags & PACKREF_WAS_LOOSE))
 			continue;
 
-		if (git_buf_joinpath(&full_path, backend->path, ref->name) < 0)
-			return -1; /* critical; do not try to recover on oom */
+		/* We need to stop anybody from updating the ref while we try to do a safe delete */
+		error = loose_lock(&lock, backend, ref->name);
+		/* If someone else is updating it, let them do it */
+		if (error == GIT_EEXISTS)
+			continue;
 
-		if (git_path_exists(full_path.ptr) && p_unlink(full_path.ptr) < 0) {
+		if (error < 0) {
+			failed = 1;
+			continue;
+		}
+
+		error = git_futils_readbuffer(&ref_content, lock.path_original);
+		/* Someone else beat us to cleaning up the ref, let's simply continue */
+		if (error == GIT_ENOTFOUND) {
+			git_filebuf_cleanup(&lock);
+			continue;
+		}
+
+		/* This became a symref between us packing and trying to delete it, so ignore it */
+		if (!git__prefixcmp(ref_content.ptr, GIT_SYMREF)) {
+			git_filebuf_cleanup(&lock);
+			continue;
+		}
+
+		/* Figure out the current id; if we fail record it but don't fail the whole operation */
+		if ((error = loose_parse_oid(&current_id, lock.path_original, &ref_content)) < 0) {
+			failed = 1;
+			git_filebuf_cleanup(&lock);
+			continue;
+		}
+
+		/* If the ref moved since we packed it, we must not delete it */
+		if (!git_oid_equal(&current_id, &ref->oid)) {
+			git_filebuf_cleanup(&lock);
+			continue;
+		}
+
+		if (p_unlink(lock.path_original) < 0) {
 			if (failed)
 				continue;
 
 			giterr_set(GITERR_REFERENCE,
 				"Failed to remove loose reference '%s' after packing: %s",
-				full_path.ptr, strerror(errno));
+				lock.path_original, strerror(errno));
 			failed = 1;
 		}
+
+		git_filebuf_cleanup(&lock);
 
 		/*
 		 * if we fail to remove a single file, this is *not* good,
@@ -933,7 +971,6 @@ static int packed_remove_loose(refdb_fs_backend *backend)
 		 */
 	}
 
-	git_buf_free(&full_path);
 	return failed ? -1 : 0;
 }
 
