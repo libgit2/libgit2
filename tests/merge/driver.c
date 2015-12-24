@@ -7,8 +7,11 @@
 #define TEST_REPO_PATH "merge-resolve"
 #define BRANCH_ID "7cb63eed597130ba4abb87b3e544b85021905520"
 
+#define AUTOMERGEABLE_IDSTR "f2e1550a0c9e53d5811175864a29536642ae3821"
+
 static git_repository *repo;
 static git_index *repo_index;
+static git_oid automergeable_id;
 
 static void test_drivers_register(void);
 static void test_drivers_unregister(void);
@@ -19,6 +22,8 @@ void test_merge_driver__initialize(void)
 
     repo = cl_git_sandbox_init(TEST_REPO_PATH);
     git_repository_index(&repo_index, repo);
+
+	git_oid_fromstr(&automergeable_id, AUTOMERGEABLE_IDSTR);
 
     /* Ensure that the user's merge.conflictstyle doesn't interfere */
     cl_git_pass(git_repository_config(&cfg, repo));
@@ -204,5 +209,95 @@ void test_merge_driver__shutdown_is_called(void)
 	cl_assert(!test_driver_wildcard.shutdown);
 
 	test_drivers_register();
+}
+
+static int defer_driver_check(
+	git_merge_driver *s,
+	void **payload,
+	const char *name,
+	const git_merge_driver_source *src)
+{
+	GIT_UNUSED(s);
+	GIT_UNUSED(payload);
+	GIT_UNUSED(name);
+	GIT_UNUSED(src);
+
+	return GIT_PASSTHROUGH;
+}
+
+static struct test_merge_driver test_driver_defer_check = {
+	{
+		GIT_MERGE_DRIVER_VERSION,
+		test_driver_init,
+		test_driver_shutdown,
+		defer_driver_check,
+		test_driver_apply,
+		test_driver_cleanup
+	},
+	0,
+	0,
+};
+
+void test_merge_driver__check_can_defer(void)
+{
+	const git_index_entry *idx;
+
+	cl_git_pass(git_merge_driver_register("defer",
+		&test_driver_defer_check.base));
+
+    set_gitattributes_to("defer");
+    merge_branch();
+
+	cl_assert((idx = git_index_get_bypath(repo_index, "automergeable.txt", 0)));
+	cl_assert_equal_oid(&automergeable_id, &idx->id);
+
+	git_merge_driver_unregister("defer");
+}
+
+static int defer_driver_apply(
+	git_merge_driver *s,
+	void **payload,
+	const char **path_out,
+	uint32_t *mode_out,
+	git_buf *merged_out,
+	const git_merge_driver_source *src)
+{
+	GIT_UNUSED(s);
+	GIT_UNUSED(payload);
+	GIT_UNUSED(path_out);
+	GIT_UNUSED(mode_out);
+	GIT_UNUSED(merged_out);
+	GIT_UNUSED(src);
+
+	return GIT_PASSTHROUGH;
+}
+
+static struct test_merge_driver test_driver_defer_apply = {
+	{
+		GIT_MERGE_DRIVER_VERSION,
+		test_driver_init,
+		test_driver_shutdown,
+		test_driver_check,
+		defer_driver_apply,
+		test_driver_cleanup
+	},
+	0,
+	0,
+};
+
+void test_merge_driver__apply_can_defer(void)
+{
+	const git_index_entry *idx;
+
+	cl_git_pass(git_merge_driver_register("defer",
+		&test_driver_defer_apply.base));
+
+    set_gitattributes_to("defer");
+    merge_branch();
+
+	cl_assert((idx = git_index_get_bypath(repo_index, "automergeable.txt", 0)));
+	cl_assert_equal_oid(&automergeable_id, &idx->id);
+
+	git_merge_driver_unregister("defer");
 }
 
