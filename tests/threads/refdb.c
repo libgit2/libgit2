@@ -52,7 +52,7 @@ static void *iterate_refs(void *arg)
 
 static void *create_refs(void *arg)
 {
-	int i;
+	int i, error;
 	struct th_data *data = (struct th_data *) arg;
 	git_oid head;
 	char name[128];
@@ -70,7 +70,9 @@ static void *create_refs(void *arg)
 		if (i == 5) {
 			git_refdb *refdb;
 			cl_git_pass(git_repository_refdb(&refdb, repo));
-			cl_git_pass(git_refdb_compress(refdb));
+			do {
+				error = git_refdb_compress(refdb);
+			} while (error == GIT_ELOCKED);
 			git_refdb_free(refdb);
 		}
 	}
@@ -86,7 +88,7 @@ static void *create_refs(void *arg)
 
 static void *delete_refs(void *arg)
 {
-	int i;
+	int i, error;
 	struct th_data *data = (struct th_data *) arg;
 	git_reference *ref;
 	char name[128];
@@ -99,14 +101,20 @@ static void *delete_refs(void *arg)
 			name, sizeof(name), "refs/heads/thread-%03d-%02d", (data->id) & ~0x3, i);
 
 		if (!git_reference_lookup(&ref, repo, name)) {
-			cl_git_pass(git_reference_delete(ref));
+			do {
+				error = git_reference_delete(ref);
+			} while (error == GIT_ELOCKED);
+			cl_git_pass(error);
 			git_reference_free(ref);
 		}
 
 		if (i == 5) {
 			git_refdb *refdb;
 			cl_git_pass(git_repository_refdb(&refdb, repo));
-			cl_git_pass(git_refdb_compress(refdb));
+			do {
+				error = git_refdb_compress(refdb);
+			} while (error == GIT_ELOCKED);
+			cl_git_pass(error);
 			git_refdb_free(refdb);
 		}
 	}
