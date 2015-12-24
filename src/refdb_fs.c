@@ -944,41 +944,42 @@ static int packed_write(refdb_fs_backend *backend)
 {
 	git_sortedcache *refcache = backend->refcache;
 	git_filebuf pack_file = GIT_FILEBUF_INIT;
+	int error;
 	size_t i;
 
 	/* lock the cache to updates while we do this */
-	if (git_sortedcache_wlock(refcache) < 0)
-		return -1;
+	if ((error = git_sortedcache_wlock(refcache)) < 0)
+		return error;
 
 	/* Open the file! */
-	if (git_filebuf_open(&pack_file, git_sortedcache_path(refcache), 0, GIT_PACKEDREFS_FILE_MODE) < 0)
+	if ((error = git_filebuf_open(&pack_file, git_sortedcache_path(refcache), 0, GIT_PACKEDREFS_FILE_MODE)) < 0)
 		goto fail;
 
 	/* Packfiles have a header... apparently
 	 * This is in fact not required, but we might as well print it
 	 * just for kicks */
-	if (git_filebuf_printf(&pack_file, "%s\n", GIT_PACKEDREFS_HEADER) < 0)
+	if ((error = git_filebuf_printf(&pack_file, "%s\n", GIT_PACKEDREFS_HEADER)) < 0)
 		goto fail;
 
 	for (i = 0; i < git_sortedcache_entrycount(refcache); ++i) {
 		struct packref *ref = git_sortedcache_entry(refcache, i);
 		assert(ref);
 
-		if (packed_find_peel(backend, ref) < 0)
+		if ((error = packed_find_peel(backend, ref)) < 0)
 			goto fail;
 
-		if (packed_write_ref(ref, &pack_file) < 0)
+		if ((error = packed_write_ref(ref, &pack_file)) < 0)
 			goto fail;
 	}
 
 	/* if we've written all the references properly, we can commit
 	 * the packfile to make the changes effective */
-	if (git_filebuf_commit(&pack_file) < 0)
+	if ((error = git_filebuf_commit(&pack_file)) < 0)
 		goto fail;
 
 	/* when and only when the packfile has been properly written,
 	 * we can go ahead and remove the loose refs */
-	if (packed_remove_loose(backend) < 0)
+	if ((error = packed_remove_loose(backend)) < 0)
 		goto fail;
 
 	git_sortedcache_updated(refcache);
@@ -991,7 +992,7 @@ fail:
 	git_filebuf_cleanup(&pack_file);
 	git_sortedcache_wunlock(refcache);
 
-	return -1;
+	return error;
 }
 
 static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, const git_oid *old, const git_oid *new, const git_signature *author, const char *message);
