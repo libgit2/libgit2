@@ -1383,14 +1383,15 @@ static int refdb_fs_backend__rename(
 
 static int refdb_fs_backend__compress(git_refdb_backend *_backend)
 {
+	int error;
 	refdb_fs_backend *backend = (refdb_fs_backend *)_backend;
 
 	assert(backend);
 
-	if (packed_reload(backend) < 0 || /* load the existing packfile */
-		packed_loadloose(backend) < 0 || /* add all the loose refs */
-		packed_write(backend) < 0) /* write back to disk */
-		return -1;
+	if ((error = packed_reload(backend)) < 0 || /* load the existing packfile */
+	    (error = packed_loadloose(backend)) < 0 || /* add all the loose refs */
+	    (error = packed_write(backend)) < 0) /* write back to disk */
+		return error;
 
 	return 0;
 }
