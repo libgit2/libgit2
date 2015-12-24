@@ -230,7 +230,7 @@ How Can I Contribute?
 ==================================
 
 Check the [contribution guidelines](CONTRIBUTING.md) to understand our
-workflow, the libgit2 [coding conventions](CONVENTIONS.md), and out list of
+workflow, the libgit2 [coding conventions](CONVENTIONS.md), and our list of
 [good starting projects](PROJECTS.md).
 
 License
