@@ -40,6 +40,7 @@ enum {
 
 struct git_merge_driver_source {
 	git_repository *repo;
+	const char *default_driver;
 	const git_merge_file_options *file_opts;
 
 	const git_index_entry *ancestor;

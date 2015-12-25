@@ -307,23 +307,11 @@ git_merge_driver *git_merge_driver_lookup(const char *name)
     return entry->driver;
 }
 
-static git_merge_driver *merge_driver_lookup_with_default(const char *name)
-{
-	git_merge_driver *driver = git_merge_driver_lookup(name);
-
-	if (driver == NULL)
-		driver = git_merge_driver_lookup("*");
-
-	if (driver == NULL)
-		driver = &git_merge_driver__text;
-
-	return driver;
-}
-
 static int merge_driver_name_for_path(
 	const char **out,
 	git_repository *repo,
-	const char *path)
+	const char *path,
+	const char *default_driver)
 {
 	const char *value;
 	int error;
@@ -334,26 +322,35 @@ static int merge_driver_name_for_path(
 		return error;
 
 	/* set: use the built-in 3-way merge driver ("text") */
-	if (GIT_ATTR_TRUE(value)) {
+	if (GIT_ATTR_TRUE(value))
 		*out = merge_driver_name__text;
-		return 0;
-	}
 
 	/* unset: do not merge ("binary") */
-	if (GIT_ATTR_FALSE(value)) {
+	else if (GIT_ATTR_FALSE(value))
 		*out = merge_driver_name__binary;
-		return 0;
-	}
 
-	if (GIT_ATTR_UNSPECIFIED(value)) {
-		/* TODO */
-		/* if there's a merge.default configuration value, use it */
+	else if (GIT_ATTR_UNSPECIFIED(value) && default_driver)
+		*out = default_driver;
+
+	else if (GIT_ATTR_UNSPECIFIED(value))
 		*out = merge_driver_name__text;
-		return 0;
-	}
-	
-	*out = value;
+
+	else
+		*out = value;
+
 	return 0;
+}
+
+
+GIT_INLINE(git_merge_driver *) merge_driver_lookup_with_wildcard(
+	const char *name)
+{
+	git_merge_driver *driver = git_merge_driver_lookup(name);
+
+	if (driver == NULL)
+		driver = git_merge_driver_lookup("*");
+
+	return driver;
 }
 
 int git_merge_driver_for_source(
@@ -371,20 +368,22 @@ int git_merge_driver_for_source(
 		src->ours ? src->ours->path : NULL,
 		src->theirs ? src->theirs->path : NULL);
 
-	if ((error = merge_driver_name_for_path(&driver_name, src->repo, path)) < 0)
+	if ((error = merge_driver_name_for_path(
+			&driver_name, src->repo, path, src->default_driver)) < 0)
 		return error;
 
-	driver = merge_driver_lookup_with_default(driver_name);
+	driver = merge_driver_lookup_with_wildcard(driver_name);
 
-	if (driver->check)
+	if (driver && driver->check) {
 		error = driver->check(driver, &data, driver_name, src);
 
-	if (error == GIT_PASSTHROUGH)
-		driver = &git_merge_driver__text;
-	else if (error == GIT_EMERGECONFLICT)
-		driver = &git_merge_driver__binary;
-	else
-		goto done;
+		if (error == GIT_PASSTHROUGH)
+			driver = &git_merge_driver__text;
+		else if (error == GIT_EMERGECONFLICT)
+			driver = &git_merge_driver__binary;
+		else
+			goto done;
+	}
 
 	error = 0;
 	data = NULL;

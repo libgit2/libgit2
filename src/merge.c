@@ -885,6 +885,7 @@ static int merge_conflict_resolve_contents(
 	int *resolved,
 	git_merge_diff_list *diff_list,
 	const git_merge_diff *conflict,
+	const git_merge_options *merge_opts,
 	const git_merge_file_options *file_opts)
 {
 	git_merge_driver_source source = {0};
@@ -903,6 +904,7 @@ static int merge_conflict_resolve_contents(
 		return 0;
 
 	source.repo = diff_list->repo;
+	source.default_driver = merge_opts->default_driver;
 	source.file_opts = file_opts;
 	source.ancestor = GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->ancestor_entry) ?
 		&conflict->ancestor_entry : NULL;
@@ -955,6 +957,7 @@ static int merge_conflict_resolve(
 	int *out,
 	git_merge_diff_list *diff_list,
 	const git_merge_diff *conflict,
+	const git_merge_options *merge_opts,
 	const git_merge_file_options *file_opts)
 {
 	int resolved = 0;
@@ -962,16 +965,20 @@ static int merge_conflict_resolve(
 
 	*out = 0;
 
-	if ((error = merge_conflict_resolve_trivial(&resolved, diff_list, conflict)) < 0)
+	if ((error = merge_conflict_resolve_trivial(
+			&resolved, diff_list, conflict)) < 0)
 		goto done;
 
-	if (!resolved && (error = merge_conflict_resolve_one_removed(&resolved, diff_list, conflict)) < 0)
+	if (!resolved && (error = merge_conflict_resolve_one_removed(
+			&resolved, diff_list, conflict)) < 0)
 		goto done;
 
-	if (!resolved && (error = merge_conflict_resolve_one_renamed(&resolved, diff_list, conflict)) < 0)
+	if (!resolved && (error = merge_conflict_resolve_one_renamed(
+			&resolved, diff_list, conflict)) < 0)
 		goto done;
 
-	if (!resolved && (error = merge_conflict_resolve_contents(&resolved, diff_list, conflict, file_opts)) < 0)
+	if (!resolved && (error = merge_conflict_resolve_contents(
+			&resolved, diff_list, conflict, merge_opts, file_opts)) < 0)
 		goto done;
 
 	*out = resolved;
@@ -1687,6 +1694,7 @@ static int merge_normalize_opts(
 	const git_merge_options *given)
 {
 	git_config *cfg = NULL;
+	git_config_entry *entry = NULL;
 	int error = 0;
 
 	assert(repo && opts);
@@ -1702,6 +1710,22 @@ static int merge_normalize_opts(
 
 		opts->flags = GIT_MERGE_FIND_RENAMES;
 		opts->rename_threshold = GIT_MERGE_DEFAULT_RENAME_THRESHOLD;
+	}
+
+	if (given && given->default_driver) {
+		opts->default_driver = git__strdup(given->default_driver);
+		GITERR_CHECK_ALLOC(opts->default_driver);
+	} else {
+		error = git_config_get_entry(&entry, cfg, "merge.default");
+
+		if (error == 0) {
+			opts->default_driver = git__strdup(entry->value);
+			GITERR_CHECK_ALLOC(opts->default_driver);
+		} else if (error == GIT_ENOTFOUND) {
+			error = 0;
+		} else {
+			goto done;
+		}
 	}
 
 	if (!opts->target_limit) {
@@ -1726,7 +1750,9 @@ static int merge_normalize_opts(
 		opts->metric->payload = (void *)GIT_HASHSIG_SMART_WHITESPACE;
 	}
 
-	return 0;
+done:
+	git_config_entry_free(entry);
+	return error;
 }
 
 
@@ -1938,7 +1964,7 @@ int git_merge__iterators(
 		int resolved = 0;
 
 		if ((error = merge_conflict_resolve(
-			&resolved, diff_list, conflict, &file_opts)) < 0)
+			&resolved, diff_list, conflict, &opts, &file_opts)) < 0)
 			goto done;
 
 		if (!resolved) {
@@ -1958,6 +1984,8 @@ int git_merge__iterators(
 done:
 	if (!given_opts || !given_opts->metric)
 		git__free(opts.metric);
+
+	git__free((char *)opts.default_driver);
 
 	git_merge_diff_list__free(diff_list);
 	git_iterator_free(empty_ancestor);
