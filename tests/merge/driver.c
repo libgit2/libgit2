@@ -391,3 +391,62 @@ void test_merge_driver__apply_can_conflict(void)
 	git_merge_driver_unregister("conflict");
 }
 
+void test_merge_driver__default_can_be_specified(void)
+{
+	git_oid their_id;
+	git_annotated_commit *their_head;
+	git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
+	const char *expected = "This is the `custom` driver.\n";
+
+	merge_opts.default_driver = "custom";
+
+	cl_git_pass(git_oid_fromstr(&their_id, BRANCH_ID));
+	cl_git_pass(git_annotated_commit_lookup(&their_head, repo, &their_id));
+
+	cl_git_pass(git_merge(repo, (const git_annotated_commit **)&their_head,
+		1, &merge_opts, NULL));
+
+	git_annotated_commit_free(their_head);
+
+	cl_assert_equal_file(expected, strlen(expected),
+		TEST_REPO_PATH "/applied.txt");
+}
+
+void test_merge_driver__honors_builtin_mergedefault(void)
+{
+	const git_index_entry *ancestor, *ours, *theirs;
+
+	cl_repo_set_string(repo, "merge.default", "binary");
+	merge_branch();
+
+	cl_git_pass(git_index_conflict_get(&ancestor, &ours, &theirs,
+		repo_index, "automergeable.txt"));
+}
+
+void test_merge_driver__honors_custom_mergedefault(void)
+{
+	const char *expected = "This is the `custom` driver.\n";
+
+	cl_repo_set_string(repo, "merge.default", "custom");
+	merge_branch();
+
+	cl_assert_equal_file(expected, strlen(expected),
+		TEST_REPO_PATH "/applied.txt");
+}
+
+void test_merge_driver__mergedefault_deferring_falls_back_to_text(void)
+{
+	const git_index_entry *idx;
+
+	cl_git_pass(git_merge_driver_register("defer",
+		&test_driver_defer_check.base));
+
+	cl_repo_set_string(repo, "merge.default", "defer");
+	merge_branch();
+
+	cl_assert((idx = git_index_get_bypath(repo_index, "automergeable.txt", 0)));
+	cl_assert_equal_oid(&automergeable_id, &idx->id);
+
+	git_merge_driver_unregister("defer");
+}
+
