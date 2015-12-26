@@ -184,7 +184,7 @@ Here are the bindings to libgit2 that are currently available:
 * Go
     * git2go <https://github.com/libgit2/git2go>
 * GObject
-    * libgit2-glib <https://wiki.gnome.org/Libgit2-glib>
+    * libgit2-glib <https://wiki.gnome.org/Projects/Libgit2-glib>
 * Haskell
     * hgit2 <https://github.com/jwiegley/gitlib>
 * Java
