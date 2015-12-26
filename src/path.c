@@ -1399,7 +1399,7 @@ int git_path_dirload(
 	git_vector *contents,
 	const char *path,
 	size_t prefix_len,
-	unsigned int flags)
+	uint32_t flags)
 {
 	git_path_diriter iter = GIT_PATH_DIRITER_INIT;
 	const char *name;

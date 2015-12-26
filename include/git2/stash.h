@@ -68,7 +68,7 @@ GIT_EXTERN(int) git_stash_save(
 	git_repository *repo,
 	const git_signature *stasher,
 	const char *message,
-	unsigned int flags);
+	uint32_t flags);
 
 /** Stash application flags. */
 typedef enum {
