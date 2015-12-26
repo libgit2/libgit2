@@ -146,7 +146,15 @@ static void set_gitattributes_to(const char *driver)
 {
 	git_buf line = GIT_BUF_INIT;
 
-	cl_git_pass(git_buf_printf(&line, "automergeable.txt merge=%s\n", driver));
+	if (driver && strcmp(driver, ""))
+		git_buf_printf(&line, "automergeable.txt merge=%s\n", driver);
+	else if (driver)
+		git_buf_printf(&line, "automergeable.txt merge\n");
+	else
+		git_buf_printf(&line, "automergeable.txt -merge\n");
+
+	cl_assert(!git_buf_oom(&line));
+
 	cl_git_mkfile(TEST_REPO_PATH "/.gitattributes", line.ptr);
 	git_buf_free(&line);
 }
@@ -450,3 +458,30 @@ void test_merge_driver__mergedefault_deferring_falls_back_to_text(void)
 	git_merge_driver_unregister("defer");
 }
 
+void test_merge_driver__set_forces_text(void)
+{
+	const git_index_entry *idx;
+
+	/* `merge` without specifying a driver indicates `text` */
+	set_gitattributes_to("");
+	cl_repo_set_string(repo, "merge.default", "custom");
+
+	merge_branch();
+
+	cl_assert((idx = git_index_get_bypath(repo_index, "automergeable.txt", 0)));
+	cl_assert_equal_oid(&automergeable_id, &idx->id);
+}
+
+void test_merge_driver__unset_forces_binary(void)
+{
+	const git_index_entry *ancestor, *ours, *theirs;
+
+	/* `-merge` without specifying a driver indicates `binary` */
+	set_gitattributes_to(NULL);
+	cl_repo_set_string(repo, "merge.default", "custom");
+
+	merge_branch();
+
+	cl_git_pass(git_index_conflict_get(&ancestor, &ours, &theirs,
+		repo_index, "automergeable.txt"));
+}
