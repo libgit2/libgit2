@@ -1438,7 +1438,9 @@ static int repo_init_structure(
 		}
 
 		if (tdir) {
-			uint32_t cpflags = GIT_CPDIR_COPY_SYMLINKS | GIT_CPDIR_SIMPLE_TO_MODE;
+			uint32_t cpflags = GIT_CPDIR_COPY_SYMLINKS |
+				GIT_CPDIR_SIMPLE_TO_MODE |
+				GIT_CPDIR_COPY_DOTFILES;
 			if (opts->mode != GIT_REPOSITORY_INIT_SHARED_UMASK)
 					cpflags |= GIT_CPDIR_CHMOD_DIRS;
 			error = git_futils_cp_r(tdir, repo_dir, cpflags, dmode);
