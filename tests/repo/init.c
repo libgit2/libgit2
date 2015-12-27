@@ -12,6 +12,7 @@ enum repo_mode {
 
 static git_repository *_repo = NULL;
 static git_buf _global_path = GIT_BUF_INIT;
+static git_buf _tmp_path = GIT_BUF_INIT;
 static mode_t g_umask = 0;
 
 void test_repo_init__initialize(void)
@@ -33,6 +34,10 @@ void test_repo_init__cleanup(void)
 	git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL,
 		_global_path.ptr);
 	git_buf_free(&_global_path);
+
+	if (_tmp_path.size > 0 && git_path_isdir(_tmp_path.ptr))
+		git_futils_rmdir_r(_tmp_path.ptr, NULL, GIT_RMDIR_REMOVE_FILES);
+	git_buf_free(&_tmp_path);
 }
 
 static void cleanup_repository(void *path)
@@ -544,14 +549,14 @@ static void configure_templatedir(const char *template_path)
 	git_buf config_data = GIT_BUF_INIT;
 
     cl_git_pass(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH,
-		GIT_CONFIG_LEVEL_GLOBAL, &config_path));
-	cl_git_pass(git_buf_puts(&config_path, ".tmp"));
+		GIT_CONFIG_LEVEL_GLOBAL, &_tmp_path));
+	cl_git_pass(git_buf_puts(&_tmp_path, ".tmp"));
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH,
-		GIT_CONFIG_LEVEL_GLOBAL, config_path.ptr));
+		GIT_CONFIG_LEVEL_GLOBAL, _tmp_path.ptr));
 
-	cl_must_pass(p_mkdir(config_path.ptr, 0777));
+	cl_must_pass(p_mkdir(_tmp_path.ptr, 0777));
 
-	cl_git_pass(git_buf_joinpath(&config_path, config_path.ptr, ".gitconfig"));
+	cl_git_pass(git_buf_joinpath(&config_path, _tmp_path.ptr, ".gitconfig"));
 
 	cl_git_pass(git_buf_printf(&config_data,
 		"[init]\n\ttemplatedir = \"%s\"\n", template_path));
@@ -636,12 +641,35 @@ void test_repo_init__external_templates_specified_in_config(void)
 
 	cl_git_pass(git_repository_init_ext(&_repo, "templated.git", &opts));
 
-	cl_assert(git_repository_is_bare(_repo));
-
-	cl_assert(!git__suffixcmp(git_repository_path(_repo), "/templated.git/"));
-
 	validate_templates(_repo, "template");
 	cl_fixture_cleanup("template");
+
+	git_buf_free(&template_path);
+}
+
+void test_repo_init__external_templates_with_leading_dot(void)
+{
+	git_buf template_path = GIT_BUF_INIT;
+
+	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
+
+	cl_set_cleanup(&cleanup_repository, "templated.git");
+	template_sandbox("template");
+
+	cl_must_pass(p_rename("template", ".template_with_leading_dot"));
+
+	cl_git_pass(git_buf_joinpath(&template_path, clar_sandbox_path(),
+		".template_with_leading_dot"));
+
+	configure_templatedir(template_path.ptr);
+
+	opts.flags = GIT_REPOSITORY_INIT_MKPATH | GIT_REPOSITORY_INIT_BARE |
+		GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE;
+
+	cl_git_pass(git_repository_init_ext(&_repo, "templated.git", &opts));
+
+	validate_templates(_repo, ".template_with_leading_dot");
+	cl_fixture_cleanup(".template_with_leading_dot");
 
 	git_buf_free(&template_path);
 }
