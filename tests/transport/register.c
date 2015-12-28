@@ -48,6 +48,9 @@ void test_transport_register__custom_transport_ssh(void)
 	cl_git_fail_with(git_transport_new(&transport, NULL, "git+ssh://somehost:somepath"), -1);
 	cl_git_fail_with(git_transport_new(&transport, NULL, "git@somehost:somepath"), -1);
 #else
+	cl_git_pass(git_transport_new(&transport, NULL, "ssh://somehost:somepath"));
+	cl_git_pass(git_transport_new(&transport, NULL, "ssh+git://somehost:somepath"));
+	cl_git_pass(git_transport_new(&transport, NULL, "git+ssh://somehost:somepath"));
 	cl_git_pass(git_transport_new(&transport, NULL, "git@somehost:somepath"));
 	transport->free(transport);
 #endif
@@ -66,6 +69,9 @@ void test_transport_register__custom_transport_ssh(void)
 	cl_git_fail_with(git_transport_new(&transport, NULL, "git+ssh://somehost:somepath"), -1);
 	cl_git_fail_with(git_transport_new(&transport, NULL, "git@somehost:somepath"), -1);
 #else
+	cl_git_pass(git_transport_new(&transport, NULL, "ssh://somehost:somepath"));
+	cl_git_pass(git_transport_new(&transport, NULL, "ssh+git://somehost:somepath"));
+	cl_git_pass(git_transport_new(&transport, NULL, "git+ssh://somehost:somepath"));
 	cl_git_pass(git_transport_new(&transport, NULL, "git@somehost:somepath"));
 	transport->free(transport);
 #endif
