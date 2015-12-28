@@ -21,8 +21,7 @@
 
 #define OWNING_SUBTRANSPORT(s) ((ssh_subtransport *)(s)->parent.subtransport)
 
-static const char * ssh_prefixes[] = { "ssh://", "ssh+git://", "git+ssh://" };
-#define SSH_PREFIX_COUNT (sizeof(ssh_prefixes) / sizeof(ssh_prefixes[0]))
+static const char *ssh_prefixes[] = { "ssh://", "ssh+git://", "git+ssh://" };
 
 static const char cmd_uploadpack[] = "git-upload-pack";
 static const char cmd_receivepack[] = "git-receive-pack";
@@ -65,9 +64,9 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 {
 	char *repo;
 	int len;
+	size_t i;
 
-	size_t i = 0;
-	for (i = 0; i < SSH_PREFIX_COUNT; ++i) {
+	for (i = 0; i < ARRAY_SIZE(ssh_prefixes); ++i) {
 		const char *p = ssh_prefixes[i];
 
 		if (!git__prefixcmp(url, p)) {
@@ -509,6 +508,7 @@ static int _git_ssh_setup_conn(
 	char *host=NULL, *port=NULL, *path=NULL, *user=NULL, *pass=NULL;
 	const char *default_port="22";
 	int auth_methods, error = 0;
+	size_t i;
 	ssh_stream *s;
 	git_cred *cred = NULL;
 	LIBSSH2_SESSION* session=NULL;
@@ -524,8 +524,7 @@ static int _git_ssh_setup_conn(
 	s->session = NULL;
 	s->channel = NULL;
 
-	size_t i = 0;
-	for (i = 0; i < SSH_PREFIX_COUNT; ++i) {
+	for (i = 0; i < ARRAY_SIZE(ssh_prefixes); ++i) {
 		const char *p = ssh_prefixes[i];
 
 		if (!git__prefixcmp(url, p)) {
