@@ -28,7 +28,6 @@ struct git_index {
 	git_vector entries;
 	git_idxmap *entries_map;
 
-	git_mutex  lock;    /* lock held while entries is being changed */
 	git_vector deleted; /* deleted entries if readers > 0 */
 	git_atomic readers; /* number of active iterators */
 
