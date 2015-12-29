@@ -136,9 +136,14 @@ static int ssh_stream_read(
 	 * not-found error, so read from stderr and signal EOF on
 	 * stderr.
 	 */
-	if (rc == 0 && (rc = libssh2_channel_read_stderr(s->channel, buffer, buf_size)) > 0) {
-		giterr_set(GITERR_SSH, "%*s", rc, buffer);
-		return GIT_EEOF;
+	if (rc == 0) {
+		if ((rc = libssh2_channel_read_stderr(s->channel, buffer, buf_size)) > 0) {
+			giterr_set(GITERR_SSH, "%*s", rc, buffer);
+			return GIT_EEOF;
+		} else if (rc < LIBSSH2_ERROR_NONE) {
+			ssh_error(s->session, "SSH could not read stderr");
+			return -1;
+		}
 	}
 
 
