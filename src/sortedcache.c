@@ -200,6 +200,7 @@ void git_sortedcache_runlock(git_sortedcache *sc)
 int git_sortedcache_lockandload(git_sortedcache *sc, git_buf *buf)
 {
 	int error, fd;
+	struct stat st;
 
 	if ((error = git_sortedcache_wlock(sc)) < 0)
 		return error;
@@ -207,19 +208,26 @@ int git_sortedcache_lockandload(git_sortedcache *sc, git_buf *buf)
 	if ((error = git_futils_filestamp_check(&sc->stamp, sc->path)) <= 0)
 		goto unlock;
 
-	if (!git__is_sizet(sc->stamp.size)) {
-		giterr_set(GITERR_INVALID, "Unable to load file larger than size_t");
-		error = -1;
-		goto unlock;
-	}
-
 	if ((fd = git_futils_open_ro(sc->path)) < 0) {
 		error = fd;
 		goto unlock;
 	}
 
+	if (p_fstat(fd, &st) < 0) {
+		giterr_set(GITERR_OS, "failed to stat file");
+		error = -1;
+		goto unlock;
+	}
+
+	if (!git__is_sizet(st.st_size)) {
+		giterr_set(GITERR_INVALID, "Unable to load file larger than size_t");
+		error = -1;
+		(void)p_close(fd);
+		goto unlock;
+	}
+
 	if (buf)
-		error = git_futils_readbuffer_fd(buf, fd, (size_t)sc->stamp.size);
+		error = git_futils_readbuffer_fd(buf, fd, (size_t)st.st_size);
 
 	(void)p_close(fd);
 
