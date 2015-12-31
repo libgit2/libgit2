@@ -1090,6 +1090,28 @@ static int handle_unmatched_new_item(
 				return error;
 			giterr_clear();
 
+			/* The above call to iterator_advance_into() returns GIT_ENOTFOUND
+			 * both when an existing directory is empty *AND* when the directory
+			 * itself does not exist. The latter can happen if the directory is
+			 * deleted after the fs_iterator__expand_dir() / dirload_with_stat()
+			 * code returns. In this case, the fs_iterator__pop_frame() code
+			 * memset's the "fi->entry" structure during the iteration.
+			 *
+			 * We have an alias to it in our "nitem" variable.
+			 *
+			 * Therefore, if the path is null, we need to skip it as if it never
+			 * existed, rather than trying to mark it ignored, since we no longer
+			 * have the pathname.  Also note that the iterator has already been
+			 * advanced, so we just return 0.
+			 *
+			 * This has only been observed when GIT_DIFF_RECURSE_UNTRACKED_DIRS
+			 * and GIT_DIFF_INCLUDE_IGNORED are set. (The former gets us into
+			 * this block and the latter is filtered in diff_delta__from_one().)
+			 */
+			if (info->new_iter->type == GIT_ITERATOR_TYPE_WORKDIR &&
+				nitem->path == NULL)
+				return 0;
+
 			/* if directory is empty, can't advance into it, so either skip
 			 * it or ignore it
 			 */
