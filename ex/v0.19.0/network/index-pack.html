@@ -119,7 +119,7 @@ the indexing to finish in a worker thread</p>
     <span class="k">if</span> <span class="p">(</span><span class="n">read_bytes</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
       <span class="k">break</span><span class="p">;</span>
 
-    <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_stream_add-2" class="fnlink" href="../../#v0.19.0/group/indexer/git_indexer_stream_add">git_indexer_stream_add</a></span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">read_bytes</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">stats</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n">git_indexer_stream_add</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">read_bytes</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">stats</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
       <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
 
     <span class="n">index_cb</span><span class="p">(</span><span class="o">&amp;</span><span class="n">stats</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
@@ -131,17 +131,17 @@ the indexing to finish in a worker thread</p>
     <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
   <span class="p">}</span>
 
-  <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_stream_finalize-3" class="fnlink" href="../../#v0.19.0/group/indexer/git_indexer_stream_finalize">git_indexer_stream_finalize</a></span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">stats</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_stream_finalize-2" class="fnlink" href="../../#v0.19.0/group/indexer/git_indexer_stream_finalize">git_indexer_stream_finalize</a></span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">stats</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
 
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\r</span><span class="s">Indexing %d of %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">stats</span><span class="p">.</span><span class="n">indexed_objects</span><span class="p">,</span> <span class="n">stats</span><span class="p">.</span><span class="n">total_objects</span><span class="p">);</span>
 
-  <span class="n"><a name="git_oid_fmt-6" class="fnlink" href="../../#v0.19.0/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">hash</span><span class="p">,</span> <span class="n"><a name="git_indexer_stream_hash-4" class="fnlink" href="../../#v0.19.0/group/indexer/git_indexer_stream_hash">git_indexer_stream_hash</a></span><span class="p">(</span><span class="n">idx</span><span class="p">));</span>
+  <span class="n"><a name="git_oid_fmt-5" class="fnlink" href="../../#v0.19.0/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">hash</span><span class="p">,</span> <span class="n"><a name="git_indexer_stream_hash-3" class="fnlink" href="../../#v0.19.0/group/indexer/git_indexer_stream_hash">git_indexer_stream_hash</a></span><span class="p">(</span><span class="n">idx</span><span class="p">));</span>
   <span class="n">puts</span><span class="p">(</span><span class="n">hash</span><span class="p">);</span>
 
  <span class="nl">cleanup:</span>
   <span class="n">close</span><span class="p">(</span><span class="n">fd</span><span class="p">);</span>
-  <span class="n"><a name="git_indexer_stream_free-5" class="fnlink" href="../../#v0.19.0/group/indexer/git_indexer_stream_free">git_indexer_stream_free</a></span><span class="p">(</span><span class="n">idx</span><span class="p">);</span>
+  <span class="n"><a name="git_indexer_stream_free-4" class="fnlink" href="../../#v0.19.0/group/indexer/git_indexer_stream_free">git_indexer_stream_free</a></span><span class="p">(</span><span class="n">idx</span><span class="p">);</span>
   <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
 <span class="p">}</span></pre></div>
       </td>
