@@ -28,6 +28,7 @@ uint32_t git_pool__system_page_size(void)
 	return size;
 }
 
+#ifndef GIT_DEBUG_POOL
 void git_pool_init(git_pool *pool, uint32_t item_size)
 {
 	assert(pool);
@@ -48,18 +49,6 @@ void git_pool_clear(git_pool *pool)
 	}
 
 	pool->pages = NULL;
-}
-
-void git_pool_swap(git_pool *a, git_pool *b)
-{
-	git_pool temp;
-
-	if (a == b)
-		return;
-
-	memcpy(&temp, a, sizeof(temp));
-	memcpy(a, b, sizeof(temp));
-	memcpy(b, &temp, sizeof(temp));
 }
 
 static void *pool_alloc_page(git_pool *pool, uint32_t size)
@@ -93,6 +82,83 @@ static void *pool_alloc(git_pool *pool, uint32_t size)
 	page->avail -= size;
 
 	return ptr;
+}
+
+uint32_t git_pool__open_pages(git_pool *pool)
+{
+	uint32_t ct = 0;
+	git_pool_page *scan;
+	for (scan = pool->pages; scan != NULL; scan = scan->next) ct++;
+	return ct;
+}
+
+bool git_pool__ptr_in_pool(git_pool *pool, void *ptr)
+{
+	git_pool_page *scan;
+	for (scan = pool->pages; scan != NULL; scan = scan->next)
+		if ((void *)scan->data <= ptr &&
+			(void *)(((char *)scan->data) + scan->size) > ptr)
+			return true;
+	return false;
+}
+
+#else
+
+static int git_pool__ptr_cmp(const void * a, const void * b)
+{
+	if(a > b) {
+		return 1;
+	}
+	if(a < b) {
+		return -1;
+	}
+	else {
+		return 0;
+	}
+}
+
+void git_pool_init(git_pool *pool, uint32_t item_size)
+{
+	assert(pool);
+	assert(item_size >= 1);
+
+	memset(pool, 0, sizeof(git_pool));
+	pool->item_size = item_size;
+	pool->page_size = git_pool__system_page_size();
+	git_vector_init(&pool->allocations, 100, git_pool__ptr_cmp);
+}
+
+void git_pool_clear(git_pool *pool)
+{
+	git_vector_free_deep(&pool->allocations);
+}
+
+static void *pool_alloc(git_pool *pool, uint32_t size) {
+	void *ptr = NULL;
+	if((ptr = git__malloc(size)) == NULL) {
+		return NULL;
+	}
+	git_vector_insert_sorted(&pool->allocations, ptr, NULL);
+	return ptr;
+}
+
+bool git_pool__ptr_in_pool(git_pool *pool, void *ptr)
+{
+	size_t pos;
+	return git_vector_bsearch(&pos, &pool->allocations, ptr) != GIT_ENOTFOUND;
+}
+#endif
+
+void git_pool_swap(git_pool *a, git_pool *b)
+{
+	git_pool temp;
+
+	if (a == b)
+		return;
+
+	memcpy(&temp, a, sizeof(temp));
+	memcpy(a, b, sizeof(temp));
+	memcpy(b, &temp, sizeof(temp));
 }
 
 static uint32_t alloc_size(git_pool *pool, uint32_t count)
@@ -167,22 +233,4 @@ char *git_pool_strcat(git_pool *pool, const char *a, const char *b)
 		*(((char *)ptr) + len_a + len_b) = '\0';
 	}
 	return ptr;
-}
-
-uint32_t git_pool__open_pages(git_pool *pool)
-{
-	uint32_t ct = 0;
-	git_pool_page *scan;
-	for (scan = pool->pages; scan != NULL; scan = scan->next) ct++;
-	return ct;
-}
-
-bool git_pool__ptr_in_pool(git_pool *pool, void *ptr)
-{
-	git_pool_page *scan;
-	for (scan = pool->pages; scan != NULL; scan = scan->next)
-		if ((void *)scan->data <= ptr &&
-			(void *)(((char *)scan->data) + scan->size) > ptr)
-			return true;
-	return false;
 }
