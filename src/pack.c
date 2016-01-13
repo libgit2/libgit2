@@ -21,7 +21,7 @@ GIT__USE_OIDMAP
 
 static int packfile_open(struct git_pack_file *p);
 static git_off_t nth_packed_object_offset(const struct git_pack_file *p, uint32_t n);
-int packfile_unpack_compressed(
+static int packfile_unpack_compressed(
 		git_rawobj *obj,
 		struct git_pack_file *p,
 		git_mwindow **w_curs,
@@ -843,7 +843,7 @@ void git_packfile_stream_free(git_packfile_stream *obj)
 	inflateEnd(&obj->zstream);
 }
 
-int packfile_unpack_compressed(
+static int packfile_unpack_compressed(
 	git_rawobj *obj,
 	struct git_pack_file *p,
 	git_mwindow **w_curs,
