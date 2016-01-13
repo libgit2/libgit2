@@ -489,7 +489,6 @@ int git_packfile_resolve_header(
 	int error;
 
 	error = git_packfile_unpack_header(&size, &type, &p->mwf, &w_curs, &curpos);
-	git_mwindow_close(&w_curs);
 	if (error < 0)
 		return error;
 
@@ -512,7 +511,6 @@ int git_packfile_resolve_header(
 	while (type == GIT_OBJ_OFS_DELTA || type == GIT_OBJ_REF_DELTA) {
 		curpos = base_offset;
 		error = git_packfile_unpack_header(&size, &type, &p->mwf, &w_curs, &curpos);
-		git_mwindow_close(&w_curs);
 		if (error < 0)
 			return error;
 		if (type != GIT_OBJ_OFS_DELTA && type != GIT_OBJ_REF_DELTA)
@@ -580,7 +578,6 @@ static int pack_dependency_chain(git_dependency_chain *chain_out,
 		elem->base_key = obj_offset;
 
 		error = git_packfile_unpack_header(&size, &type, &p->mwf, &w_curs, &curpos);
-		git_mwindow_close(&w_curs);
 
 		if (error < 0)
 			goto on_error;
