@@ -53,10 +53,15 @@ static const int no_check_cert_flags = SECURITY_FLAG_IGNORE_CERT_CN_INVALID |
 	SECURITY_FLAG_IGNORE_UNKNOWN_CA;
 
 #if defined(__MINGW32__)
-const CLSID CLSID_InternetSecurityManager = { 0x7B8A2D94, 0x0AC9, 0x11D1,
+static const CLSID CLSID_InternetSecurityManager_mingw =
+	{ 0x7B8A2D94, 0x0AC9, 0x11D1,
 	{ 0x89, 0x6C, 0x00, 0xC0, 0x4F, 0xB6, 0xBF, 0xC4 } };
-const IID IID_IInternetSecurityManager = { 0x79EAC9EE, 0xBAF9, 0x11CE,
+static const IID IID_IInternetSecurityManager_mingw =
+	{ 0x79EAC9EE, 0xBAF9, 0x11CE,
 	{ 0x8C, 0x82, 0x00, 0xAA, 0x00, 0x4B, 0xA9, 0x0B } };
+
+# define CLSID_InternetSecurityManager CLSID_InternetSecurityManager_mingw
+# define IID_IInternetSecurityManager IID_IInternetSecurityManager_mingw
 #endif
 
 #define OWNING_SUBTRANSPORT(s) ((winhttp_subtransport *)(s)->parent.subtransport)
