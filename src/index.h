@@ -92,7 +92,7 @@ GIT_INLINE(bool) git_index_entry_newer_than_index(
 
 	/* If the timestamp is the same or newer than the index, it's racy */
 #if defined(GIT_USE_NSEC)
-	if ((int32_t)index->stamp.tv_sec < entry->mtime.seconds)
+	if ((int32_t)index->stamp.mtime.tv_sec < entry->mtime.seconds)
 		return true;
 	else if ((int32_t)index->stamp.mtime.tv_sec > entry->mtime.seconds)
 		return false;
