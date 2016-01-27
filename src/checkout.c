@@ -278,6 +278,9 @@ static int checkout_action_common(
 		notify = GIT_CHECKOUT_NOTIFY_UPDATED;
 	}
 
+	if ((*action & CHECKOUT_ACTION__REMOVE) != 0)
+		notify = GIT_CHECKOUT_NOTIFY_UPDATED;
+
 	if ((*action & CHECKOUT_ACTION__CONFLICT) != 0)
 		notify = GIT_CHECKOUT_NOTIFY_CONFLICT;
 
