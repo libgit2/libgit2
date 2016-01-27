@@ -240,7 +240,7 @@ static int _git_uploadpack(
 		return 0;
 	}
 
-	giterr_set(GITERR_NET, "Must call UPLOADPACK_LS before UPLOADPACK");
+	giterr_set(GITERR_NET, "Must call UPLOADPACK_LS before UPLOADPACK (git)");
 	return -1;
 }
 
@@ -296,7 +296,7 @@ static int _git_receivepack(
 		return 0;
 	}
 
-	giterr_set(GITERR_NET, "Must call RECEIVEPACK_LS before RECEIVEPACK");
+	giterr_set(GITERR_NET, "Must call RECEIVEPACK_LS before RECEIVEPACK (git)");
 	return -1;
 }
 
