@@ -41,7 +41,7 @@ typedef struct {
 	/**
 	 * Used by `git_rebase_finish`, this is the name of the notes reference
 	 * used to rewrite notes for rebased commits when finishing the rebase;
-	 * if NULL, the contents of the coniguration option `notes.rewriteRef`
+	 * if NULL, the contents of the configuration option `notes.rewriteRef`
 	 * is examined, unless the configuration option `notes.rewrite.rebase`
 	 * is set to false.  If `notes.rewriteRef` is also NULL, notes will
 	 * not be rewritten.
