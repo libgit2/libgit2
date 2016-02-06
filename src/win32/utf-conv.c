@@ -8,7 +8,7 @@
 #include "common.h"
 #include "utf-conv.h"
 
-GIT_INLINE(DWORD) get_wc_flags(void)
+DWORD get_wc_flags(void)
 {
 	static char inited = 0;
 	static DWORD flags;
