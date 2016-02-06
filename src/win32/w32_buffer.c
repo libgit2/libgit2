@@ -31,7 +31,7 @@ int git_buf_put_w(git_buf *buf, const wchar_t *string_w, size_t len_w)
 	assert(string_w);
 
 	/* Measure the string necessary for conversion */
-	if ((utf8_len = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, string_w, len_w, NULL, 0, NULL, NULL)) == 0)
+	if ((utf8_len = WideCharToMultiByte(CP_UTF8, get_wc_flags(), string_w, len_w, NULL, 0, NULL, NULL)) == 0)
 		return 0;
 
 	assert(utf8_len > 0);
@@ -43,7 +43,7 @@ int git_buf_put_w(git_buf *buf, const wchar_t *string_w, size_t len_w)
 		return -1;
 
 	if ((utf8_write_len = WideCharToMultiByte(
-			CP_UTF8, WC_ERR_INVALID_CHARS, string_w, len_w, &buf->ptr[buf->size], utf8_len, NULL, NULL)) == 0)
+			CP_UTF8, get_wc_flags(), string_w, len_w, &buf->ptr[buf->size], utf8_len, NULL, NULL)) == 0)
 		return handle_wc_error();
 
 	assert(utf8_write_len == utf8_len);
