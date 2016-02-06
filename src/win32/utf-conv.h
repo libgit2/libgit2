@@ -15,6 +15,11 @@
 #endif
 
 /**
+ * As windowsXP does not support WC_ERR_INVALID_CHARS we need to use this function in w32_buffer.c
+ */
+DWORD get_wc_flags(void);
+
+/**
  * Converts a UTF-8 string to wide characters.
  *
  * @param dest The buffer to receive the wide string.
