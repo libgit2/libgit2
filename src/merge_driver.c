@@ -28,6 +28,9 @@ typedef struct {
 
 static struct merge_driver_registry *merge_driver_registry = NULL;
 
+static git_merge_file_favor_t merge_favor_normal = GIT_MERGE_FILE_FAVOR_NORMAL;
+static git_merge_file_favor_t merge_favor_union = GIT_MERGE_FILE_FAVOR_UNION;
+
 static int merge_driver_apply(
 	git_merge_driver *self,
 	void **payload,
@@ -37,6 +40,7 @@ static int merge_driver_apply(
 	const git_merge_driver_source *src)
 {
 	git_merge_file_options file_opts = GIT_MERGE_FILE_OPTIONS_INIT;
+	git_merge_file_favor_t *favor = (git_merge_file_favor_t *) *payload;
 	git_merge_file_result result = {0};
 	int error;
 
@@ -45,7 +49,8 @@ static int merge_driver_apply(
 	if (src->file_opts)
 		memcpy(&file_opts, src->file_opts, sizeof(git_merge_file_options));
 
-	file_opts.favor = (git_merge_file_favor_t) *payload;
+	if (favor)
+		file_opts.favor = *favor;
 
 	if ((error = git_merge_file_from_index(&result, src->repo,
 		src->ancestor, src->ours, src->theirs, &file_opts)) < 0)
@@ -87,7 +92,7 @@ static int merge_driver_text_check(
 	GIT_UNUSED(name);
 	GIT_UNUSED(src);
 
-	*payload = (void *)GIT_MERGE_FILE_FAVOR_NORMAL;
+	*payload = &merge_favor_normal;
 	return 0;
 }
 
@@ -101,7 +106,7 @@ static int merge_driver_union_check(
 	GIT_UNUSED(name);
 	GIT_UNUSED(src);
 
-	*payload = (void *)GIT_MERGE_FILE_FAVOR_UNION;
+	*payload = &merge_favor_union;
 	return 0;
 }
 

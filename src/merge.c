@@ -918,7 +918,7 @@ static int merge_conflict_resolve_contents(
 		 * favor flag) then let that override the gitattributes.
 		 */
 		driver = &git_merge_driver__normal;
-		data = (void *)file_opts->favor;
+		data = (void **)&file_opts->favor;
 	} else {
 		/* find the merge driver for this file */
 		if ((error = git_merge_driver_for_source(&driver, &data, &source)) < 0)
