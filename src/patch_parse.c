@@ -42,6 +42,15 @@ typedef struct {
 } patch_parse_ctx;
 
 
+GIT_INLINE(bool) parse_ctx_contains(
+	patch_parse_ctx *ctx, const char *str, size_t len)
+{
+	return (ctx->line_len >= len && memcmp(ctx->line, str, len) == 0);
+}
+
+#define parse_ctx_contains_s(ctx, str) \
+	parse_ctx_contains(ctx, str, sizeof(str) - 1)
+
 static void parse_advance_line(patch_parse_ctx *ctx)
 {
 	ctx->line += ctx->line_len;
@@ -589,11 +598,11 @@ static int parse_hunk_body(
 	}
 
 	/* Handle "\ No newline at end of file".  Only expect the leading
-	* backslash, though, because the rest of the string could be
-	* localized.  Because `diff` optimizes for the case where you
-	* want to apply the patch by hand.
-	*/
-	if (ctx->line_len >= 2 && memcmp(ctx->line, "\\ ", 2) == 0 &&
+	 * backslash, though, because the rest of the string could be
+	 * localized.  Because `diff` optimizes for the case where you
+	 * want to apply the patch by hand.
+	 */
+	if (parse_ctx_contains_s(ctx, "\\ ") &&
 		git_array_size(patch->base.lines) > 0) {
 
 		line = git_array_get(patch->base.lines, git_array_size(patch->base.lines) - 1);
@@ -624,8 +633,8 @@ static int parsed_patch_header(
 			continue;
 
 		/* This might be a hunk header without a patch header, provide a
-		* sensible error message. */
-		if (memcmp(ctx->line, "@@ -", 4) == 0) {
+		 * sensible error message. */
+		if (parse_ctx_contains_s(ctx, "@@ -")) {
 			size_t line_num = ctx->line_num;
 			git_patch_hunk hunk;
 
@@ -647,7 +656,7 @@ static int parsed_patch_header(
 			break;
 
 		/* A proper git patch */
-		if (ctx->line_len >= 11 && memcmp(ctx->line, "diff --git ", 11) == 0) {
+		if (parse_ctx_contains_s(ctx, "diff --git ")) {
 			error = parse_header_git(patch, ctx);
 			goto done;
 		}
@@ -671,16 +680,15 @@ static int parsed_patch_binary_side(
 	git_off_t len;
 	int error = 0;
 
-	if (ctx->line_len >= 8 && memcmp(ctx->line, "literal ", 8) == 0) {
+	if (parse_ctx_contains_s(ctx, "literal ")) {
 		type = GIT_DIFF_BINARY_LITERAL;
 		parse_advance_chars(ctx, 8);
-	}
-	else if (ctx->line_len >= 6 && memcmp(ctx->line, "delta ", 6) == 0) {
+	} else if (parse_ctx_contains_s(ctx, "delta ")) {
 		type = GIT_DIFF_BINARY_DELTA;
 		parse_advance_chars(ctx, 6);
-	}
-	else {
-		error = parse_err("unknown binary delta type at line %d", ctx->line_num);
+	} else {
+		error = parse_err(
+			"unknown binary delta type at line %d", ctx->line_num);
 		goto done;
 	}
 
@@ -777,8 +785,7 @@ static int parsed_patch_hunks(
 	git_patch_hunk *hunk;
 	int error = 0;
 
-	for (; ctx->line_len > 4 && memcmp(ctx->line, "@@ -", 4) == 0; ) {
-
+	while (parse_ctx_contains_s(ctx, "@@ -")) {
 		hunk = git_array_alloc(patch->base.hunks);
 		GITERR_CHECK_ALLOC(hunk);
 
@@ -799,10 +806,10 @@ done:
 static int parsed_patch_body(
 	git_patch_parsed *patch, patch_parse_ctx *ctx)
 {
-	if (ctx->line_len >= 16 && memcmp(ctx->line, "GIT binary patch", 16) == 0)
+	if (parse_ctx_contains_s(ctx, "GIT binary patch"))
 		return parsed_patch_binary(patch, ctx);
 
-	else if (ctx->line_len >= 4 && memcmp(ctx->line, "@@ -", 4) == 0)
+	else if (parse_ctx_contains_s(ctx, "@@ -"))
 		return parsed_patch_hunks(patch, ctx);
 
 	return 0;
