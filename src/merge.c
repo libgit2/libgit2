@@ -261,7 +261,7 @@ int git_merge_base(git_oid *out, git_repository *repo, const git_oid *one, const
 int git_merge_bases(git_oidarray *out, git_repository *repo, const git_oid *one, const git_oid *two)
 {
 	int error;
-        git_revwalk *walk;
+	git_revwalk *walk;
 	git_commit_list *result, *list;
 	git_array_oid_t array;
 
@@ -925,8 +925,8 @@ static int merge_conflict_resolve_contents(
 			goto done;
 	}
 
-    error = merge_conflict_invoke_driver(&merge_result,
-        driver, data, diff_list, &source);
+	error = merge_conflict_invoke_driver(&merge_result,
+		driver, data, diff_list, &source);
 
 	if (error == GIT_PASSTHROUGH) {
 		data = NULL;
@@ -934,12 +934,12 @@ static int merge_conflict_resolve_contents(
 			&git_merge_driver__text, data, diff_list, &source);
 	}
 
-    if (error < 0) {
-        if (error == GIT_EMERGECONFLICT)
-            error = 0;
+	if (error < 0) {
+		if (error == GIT_EMERGECONFLICT)
+			error = 0;
 
-        goto done;
-    }
+		goto done;
+	}
 
 	git_vector_insert(&diff_list->staged, merge_result);
 	git_vector_insert(&diff_list->resolved, (git_merge_diff *)conflict);
@@ -2199,14 +2199,14 @@ static int merge_annotated_commits(
 	git_iterator *base_iter = NULL, *our_iter = NULL, *their_iter = NULL;
 	int error;
 
-    if ((error = compute_base(&base, repo, ours, theirs, opts,
+	if ((error = compute_base(&base, repo, ours, theirs, opts,
 		recursion_level)) < 0) {
 
-        if (error != GIT_ENOTFOUND)
-            goto done;
+		if (error != GIT_ENOTFOUND)
+			goto done;
 
-        giterr_clear();
-    }
+		giterr_clear();
+	}
 
 	if ((error = iterator_for_annotated_commit(&base_iter, base)) < 0 ||
 		(error = iterator_for_annotated_commit(&our_iter, ours)) < 0 ||

@@ -143,20 +143,20 @@ static void merge_driver_registry_shutdown(void)
 {
 	struct merge_driver_registry *reg;
 	git_merge_driver_entry *entry;
-    size_t i;
+	size_t i;
 
-    if ((reg = git__swap(merge_driver_registry, NULL)) == NULL)
-        return;
+	if ((reg = git__swap(merge_driver_registry, NULL)) == NULL)
+		return;
 
-    git_vector_foreach(&reg->drivers, i, entry) {
-        if (entry && entry->driver->shutdown)
-            entry->driver->shutdown(entry->driver);
+	git_vector_foreach(&reg->drivers, i, entry) {
+		if (entry && entry->driver->shutdown)
+			entry->driver->shutdown(entry->driver);
 
-        git__free(entry);
-    }
+		git__free(entry);
+	}
 
-    git_vector_free(&reg->drivers);
-    git__free(reg);
+	git_vector_free(&reg->drivers);
+	git__free(reg);
 }
 
 git_merge_driver git_merge_driver__normal = {
@@ -202,15 +202,15 @@ static int merge_driver_registry_initialize(void)
 	reg = git__calloc(1, sizeof(struct merge_driver_registry));
 	GITERR_CHECK_ALLOC(reg);
 
-    if ((error = git_vector_init(&reg->drivers, 3, merge_driver_entry_cmp)) < 0)
+	if ((error = git_vector_init(&reg->drivers, 3, merge_driver_entry_cmp)) < 0)
 		goto done;
 	
-    reg = git__compare_and_swap(&merge_driver_registry, NULL, reg);
+	reg = git__compare_and_swap(&merge_driver_registry, NULL, reg);
 
-    if (reg != NULL)
-        goto done;
+	if (reg != NULL)
+		goto done;
 
-    git__on_shutdown(merge_driver_registry_shutdown);
+	git__on_shutdown(merge_driver_registry_shutdown);
 
 	if ((error = git_merge_driver_register(
 			merge_driver_name__text, &git_merge_driver__text)) < 0 ||
@@ -294,7 +294,7 @@ git_merge_driver *git_merge_driver_lookup(const char *name)
 	if (error == GIT_ENOTFOUND)
 		return NULL;
 
-    entry = git_vector_get(&merge_driver_registry->drivers, pos);
+	entry = git_vector_get(&merge_driver_registry->drivers, pos);
 
 	if (!entry->initialized) {
 		if (entry->driver->initialize &&
@@ -304,7 +304,7 @@ git_merge_driver *git_merge_driver_lookup(const char *name)
 		entry->initialized = 1;
 	}
 
-    return entry->driver;
+	return entry->driver;
 }
 
 static int merge_driver_name_for_path(
