@@ -275,7 +275,7 @@ GIT_INLINE(int) git_atomic_get(git_atomic *a)
 
 extern int git_online_cpus(void);
 
-#if defined(GIT_THREADS) && defined(GIT_WIN32)
+#if defined(GIT_THREADS) && defined(_MSC_VER)
 # define GIT_MEMORY_BARRIER MemoryBarrier()
 #elif defined(GIT_THREADS)
 # define GIT_MEMORY_BARRIER __sync_synchronize()
