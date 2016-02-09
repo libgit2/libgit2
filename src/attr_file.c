@@ -123,7 +123,7 @@ int git_attr_file__load(
 		break;
 	}
 	case GIT_ATTR_FILE__FROM_FILE: {
-		int fd;
+		int fd = -1;
 
 		/* For open or read errors, pretend that we got ENOTFOUND. */
 		/* TODO: issue warning when warning API is available */
@@ -133,7 +133,8 @@ int git_attr_file__load(
 			(fd = git_futils_open_ro(entry->fullpath)) < 0 ||
 			(error = git_futils_readbuffer_fd(&content, fd, (size_t)st.st_size)) < 0)
 			nonexistent = true;
-		else
+
+		if (fd >= 0)
 			p_close(fd);
 
 		break;
