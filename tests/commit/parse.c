@@ -443,6 +443,10 @@ cpxtDQQMGYFpXK/71stq\n\
 
 	cl_git_pass(parse_commit(&commit, passing_commit_cases[4]));
 
+	cl_git_pass(git_commit_header_field(&buf, commit, "tree"));
+	cl_assert_equal_s("6b79e22d69bf46e289df0345a14ca059dfc9bdf6", buf.ptr);
+	git_buf_clear(&buf);
+
 	cl_git_pass(git_commit_header_field(&buf, commit, "parent"));
 	cl_assert_equal_s("34734e478d6cf50c27c9d69026d93974d052c454", buf.ptr);
 	git_buf_clear(&buf);
