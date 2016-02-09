@@ -79,6 +79,7 @@ static int curls_certificate(git_cert **out, git_stream *stream)
 	for (slist = certinfo->certinfo[0]; slist; slist = slist->next) {
 		char *str = git__strdup(slist->data);
 		GITERR_CHECK_ALLOC(str);
+		git_vector_insert(&strings, str);
 	}
 
 	/* Copy the contents of the vector into a strarray so we can expose them */

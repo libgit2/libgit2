@@ -1985,9 +1985,6 @@ static int create_virtual_base(
 	git_index *index = NULL;
 	git_merge_options virtual_opts = GIT_MERGE_OPTIONS_INIT;
 
-	result = git__calloc(1, sizeof(git_annotated_commit));
-	GITERR_CHECK_ALLOC(result);
-
 	/* Conflicts in the merge base creation do not propagate to conflicts
 	 * in the result; the conflicted base will act as the common ancestor.
 	 */
@@ -2001,6 +1998,8 @@ static int create_virtual_base(
 			recursion_level + 1, &virtual_opts)) < 0)
 		return -1;
 
+	result = git__calloc(1, sizeof(git_annotated_commit));
+	GITERR_CHECK_ALLOC(result);
 	result->type = GIT_ANNOTATED_COMMIT_VIRTUAL;
 	result->index = index;
 
