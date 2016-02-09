@@ -91,7 +91,7 @@ static unsigned name_hash(const char *name)
 static int packbuilder_config(git_packbuilder *pb)
 {
 	git_config *config;
-	int ret;
+	int ret = 0;
 	int64_t val;
 
 	if ((ret = git_repository_config_snapshot(&config, pb->repo)) < 0)
@@ -100,8 +100,10 @@ static int packbuilder_config(git_packbuilder *pb)
 #define config_get(KEY,DST,DFLT) do { \
 	ret = git_config_get_int64(&val, config, KEY); \
 	if (!ret) (DST) = val; \
-	else if (ret == GIT_ENOTFOUND) (DST) = (DFLT); \
-	else if (ret < 0) return -1; } while (0)
+	else if (ret == GIT_ENOTFOUND) { \
+	    (DST) = (DFLT); \
+	    ret = 0; \
+	} else if (ret < 0) goto out; } while (0)
 
 	config_get("pack.deltaCacheSize", pb->max_delta_cache_size,
 		   GIT_PACK_DELTA_CACHE_SIZE);
@@ -113,9 +115,10 @@ static int packbuilder_config(git_packbuilder *pb)
 
 #undef config_get
 
+out:
 	git_config_free(config);
 
-	return 0;
+	return ret;
 }
 
 int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
