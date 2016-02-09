@@ -9,6 +9,8 @@
 
 #include "git2/sys/stream.h"
 
+extern int git_openssl_stream_global_init(void);
+
 extern int git_openssl_stream_new(git_stream **out, const char *host, const char *port);
 
 #endif
