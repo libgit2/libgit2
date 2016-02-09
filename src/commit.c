@@ -564,41 +564,45 @@ int git_commit_nth_gen_ancestor(
 
 int git_commit_header_field(git_buf *out, const git_commit *commit, const char *field)
 {
-	const char *buf = commit->raw_header;
-	const char *h, *eol;
+	const char *eol, *buf = commit->raw_header;
 
 	git_buf_sanitize(out);
-	while ((h = strchr(buf, '\n')) && h[1] != '\0' && h[1] != '\n') {
-		h++;
-		if (git__prefixcmp(h, field)) {
-			buf = h;
+
+	while ((eol = strchr(buf, '\n')) && eol[1] != '\0') {
+		/* We can skip continuations here */
+		if (buf[0] == ' ') {
+			buf = eol + 1;
 			continue;
 		}
 
-		h += strlen(field);
-		eol = strchr(h, '\n');
-		if (h[0] != ' ') {
-			buf = h;
+		/* Skip until we find the field we're after */
+		if (git__prefixcmp(buf, field)) {
+			buf = eol + 1;
 			continue;
 		}
-		if (!eol)
-			goto malformed;
 
-		h++; /* skip the SP */
+		buf += strlen(field);
+		/* Check that we're not matching a prefix but the field itself */
+		if (buf[0] != ' ') {
+			buf = eol + 1;
+			continue;
+		}
 
-		git_buf_put(out, h, eol - h);
+		buf++; /* skip the SP */
+
+		git_buf_put(out, buf, eol - buf);
 		if (git_buf_oom(out))
 			goto oom;
 
 		/* If the next line starts with SP, it's multi-line, we must continue */
 		while (eol[1] == ' ') {
 			git_buf_putc(out, '\n');
-			h = eol + 2;
-			eol = strchr(h, '\n');
+			buf = eol + 2;
+			eol = strchr(buf, '\n');
 			if (!eol)
 				goto malformed;
 
-			git_buf_put(out, h, eol - h);
+			git_buf_put(out, buf, eol - buf);
 		}
 
 		if (git_buf_oom(out))
@@ -607,6 +611,7 @@ int git_commit_header_field(git_buf *out, const git_commit *commit, const char *
 		return 0;
 	}
 
+	giterr_set(GITERR_OBJECT, "no such field '%s'", field);
 	return GIT_ENOTFOUND;
 
 malformed:
