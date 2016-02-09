@@ -13,12 +13,6 @@
 #include "win32/findfile.h"
 #endif
 
-#ifdef GIT_USE_STAT_ATIMESPEC
-#define st_atim st_atimespec
-#define st_ctim st_ctimespec
-#define st_mtim st_mtimespec
-#endif
-
 GIT__USE_STRMAP
 
 int git_futils_mkpath2file(const char *file_path, const mode_t mode)
