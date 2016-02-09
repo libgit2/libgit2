@@ -23,7 +23,7 @@ void git_libgit2_version(int *major, int *minor, int *rev)
 	*rev = LIBGIT2_VER_REVISION;
 }
 
-int git_libgit2_features()
+int git_libgit2_features(void)
 {
 	return 0
 #ifdef GIT_THREADS
@@ -73,12 +73,12 @@ static int config_level_to_sysdir(int config_level)
 extern char *git__user_agent;
 extern char *git__ssl_ciphers;
 
-const char *git_libgit2__user_agent()
+const char *git_libgit2__user_agent(void)
 {
 	return git__user_agent;
 }
 
-const char *git_libgit2__ssl_ciphers()
+const char *git_libgit2__ssl_ciphers(void)
 {
 	return git__ssl_ciphers;
 }
