@@ -1487,8 +1487,10 @@ static int blob_content_to_file(
 	if (!data->opts.disable_filters &&
 		(error = git_filter_list__load_ext(
 			&fl, data->repo, blob, hint_path,
-			GIT_FILTER_TO_WORKTREE, &filter_opts)))
+			GIT_FILTER_TO_WORKTREE, &filter_opts))) {
+		p_close(fd);
 		return error;
+	}
 
 	/* setup the writer */
 	memset(&writer, 0, sizeof(struct checkout_stream));

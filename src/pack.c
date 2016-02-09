@@ -790,7 +790,6 @@ int git_packfile_stream_open(git_packfile_stream *obj, struct git_pack_file *p, 
 	obj->zstream.next_out = Z_NULL;
 	st = inflateInit(&obj->zstream);
 	if (st != Z_OK) {
-		git__free(obj);
 		giterr_set(GITERR_ZLIB, "failed to init packfile stream");
 		return -1;
 	}
