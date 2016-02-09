@@ -621,3 +621,89 @@ oom:
 	giterr_set_oom();
 	return -1;
 }
+
+int git_commit_extract_signature(git_buf *signature, git_buf *signed_data, git_repository *repo, git_oid *commit_id, const char *field)
+{
+	git_odb_object *obj;
+	git_odb *odb;
+	const char *buf;
+	const char *h, *eol;
+	int error;
+
+	git_buf_sanitize(signature);
+	git_buf_sanitize(signed_data);
+
+	if (!field)
+		field = "gpgsig";
+
+	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0)
+		return error;
+
+	if ((error = git_odb_read(&obj, odb, commit_id)) < 0)
+		return error;
+
+	buf = git_odb_object_data(obj);
+
+	while ((h = strchr(buf, '\n')) && h[1] != '\0' && h[1] != '\n') {
+		h++;
+		if (git__prefixcmp(buf, field)) {
+			if (git_buf_put(signed_data, buf, h - buf) < 0)
+				return -1;
+
+			buf = h;
+			continue;
+		}
+
+		h = buf;
+		h += strlen(field);
+		eol = strchr(h, '\n');
+		if (h[0] != ' ') {
+			buf = h;
+			continue;
+		}
+		if (!eol)
+			goto malformed;
+
+		h++; /* skip the SP */
+
+		git_buf_put(signature, h, eol - h);
+		if (git_buf_oom(signature))
+			goto oom;
+
+		/* If the next line starts with SP, it's multi-line, we must continue */
+		while (eol[1] == ' ') {
+			git_buf_putc(signature, '\n');
+			h = eol + 2;
+			eol = strchr(h, '\n');
+			if (!eol)
+				goto malformed;
+
+			git_buf_put(signature, h, eol - h);
+		}
+
+		if (git_buf_oom(signature))
+			goto oom;
+
+		git_odb_object_free(obj);
+		return git_buf_puts(signed_data, eol+1);
+	}
+
+	giterr_set(GITERR_INVALID, "this commit is not signed");
+	error = GIT_ENOTFOUND;
+	goto cleanup;
+
+malformed:
+	giterr_set(GITERR_OBJECT, "malformed header");
+	error = -1;
+	goto cleanup;
+oom:
+	giterr_set_oom();
+	error = -1;
+	goto cleanup;
+
+cleanup:
+	git_odb_object_free(obj);
+	git_buf_clear(signature);
+	git_buf_clear(signed_data);
+	return error;
+}
