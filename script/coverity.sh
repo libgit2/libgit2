@@ -50,10 +50,9 @@ COVERITY_UNSUPPORTED=1 \
 tar czf libgit2.tgz cov-int
 SHA=$(git rev-parse --short HEAD)
 curl \
-	--form project=libgit2 \
 	--form token="$COVERITY_TOKEN" \
 	--form email=bs@github.com \
 	--form file=@libgit2.tgz \
 	--form version="$SHA" \
 	--form description="Travis build" \
-	http://scan5.coverity.com/cgi-bin/upload.py
+	https://scan.coverity.com/builds?project=libgit2
