@@ -218,6 +218,58 @@ void test_status_worktree__swap_subdir_with_recurse_and_pathspec(void)
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
 }
 
+static void stage_and_commit(git_repository *repo, const char *path)
+{
+	git_index *index;
+
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_index_add_bypath(index, path));
+	cl_repo_commit_from_index(NULL, repo, NULL, 1323847743, "Initial commit\n");
+	git_index_free(index);
+}
+
+void test_status_worktree__within_subdir(void)
+{
+	status_entry_counts counts;
+	git_repository *repo = cl_git_sandbox_init("status");
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	char *paths[] = { "zzz_new_dir" };
+	git_strarray pathsArray;
+
+	/* first alter the contents of the worktree */
+	cl_git_mkfile("status/.new_file", "dummy");
+	cl_git_pass(git_futils_mkdir_r("status/zzz_new_dir", 0777));
+	cl_git_mkfile("status/zzz_new_dir/new_file", "dummy");
+	cl_git_mkfile("status/zzz_new_file", "dummy");
+	cl_git_mkfile("status/wut", "dummy");
+
+	stage_and_commit(repo, "zzz_new_dir/new_file");
+
+	/* now get status */
+	memset(&counts, 0x0, sizeof(status_entry_counts));
+	counts.expected_entry_count = entry_count4;
+	counts.expected_paths = entry_paths4;
+	counts.expected_statuses = entry_statuses4;
+	counts.debug = true;
+
+	opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+		GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS |
+		GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH;
+
+	pathsArray.count = 1;
+	pathsArray.strings = paths;
+	opts.pathspec = pathsArray;
+
+	// We committed zzz_new_dir/new_file above. It shouldn't be reported.
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts)
+	);
+
+	cl_assert_equal_i(0, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
+}
+
 /* this test is equivalent to t18-status.c:singlestatus0 */
 void test_status_worktree__single_file(void)
 {
@@ -690,16 +742,6 @@ void test_status_worktree__conflict_has_no_oid(void)
 
 	git_index_free(index);
 	git_status_list_free(statuslist);
-}
-
-static void stage_and_commit(git_repository *repo, const char *path)
-{
-	git_index *index;
-
-	cl_git_pass(git_repository_index(&index, repo));
-	cl_git_pass(git_index_add_bypath(index, path));
-	cl_repo_commit_from_index(NULL, repo, NULL, 1323847743, "Initial commit\n");
-	git_index_free(index);
 }
 
 static void assert_ignore_case(
@@ -1228,3 +1270,4 @@ void test_status_worktree__with_directory_in_pathlist(void)
 			status->index_to_workdir->old_file.path);
 	}
 }
+
