@@ -109,15 +109,26 @@ static iterator_pathlist__match_t iterator_pathlist__match(
 	 * don't know that yet, since we're avoiding a stat unless it's necessary)
 	 * so see if the pathlist contains a file beneath this directory.
 	 */
+	idx = 0;
 	while ((p = git_vector_get(&iter->pathlist, idx)) != NULL) {
-		if (iter->prefixcomp(p, path) != 0)
+		size_t p_len;
+		int reversed, cmp, try_dir;
+
+		p_len = strlen(p);
+		reversed = path_len > p_len && p[p_len-1] == '/' && path[p_len-1] == '/';
+
+		cmp = reversed ? iter->prefixcomp(path, p) : iter->prefixcomp(p, path);
+		if (cmp != 0)
 			break;
 
 		/* an exact match would have been matched by the bsearch above */
 		assert(p[path_len]);
 
 		/* is this a literal directory entry (eg `foo/`) or a file beneath */
-		if (p[path_len] == '/') {
+		try_dir = reversed ? p[p_len-1] == '/' || p[p_len] == '/' :
+			p[path_len-1] == '/' || p[path_len] == '/';
+
+		if (try_dir) {
 			return (p[path_len+1] == '\0') ?
 				ITERATOR_PATHLIST_MATCH_DIRECTORY :
 				ITERATOR_PATHLIST_MATCH_CHILD;
@@ -703,7 +714,7 @@ static int tree_iterator__current(
 			m = iterator_pathlist__match(
 				self, entry->path, strlen(entry->path));
 
-			if (m != ITERATOR_PATHLIST_MATCH) {
+			if (m == ITERATOR_PATHLIST_NONE) {
 				if ((error = tree_iterator__advance_internal(self)) < 0)
 					return error;
 
