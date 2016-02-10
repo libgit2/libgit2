@@ -259,7 +259,7 @@ void test_status_worktree__within_subdir(void)
 
 	git_strarray pathsArray;
 	pathsArray.count = 1;
-	char *paths[] = { "zzz_new_dir" };
+	char *paths[] = { "zzz_new_dir/" };
 	pathsArray.strings = paths;
 	opts.pathspec = pathsArray;
 
