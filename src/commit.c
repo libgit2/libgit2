@@ -568,7 +568,7 @@ int git_commit_header_field(git_buf *out, const git_commit *commit, const char *
 
 	git_buf_sanitize(out);
 
-	while ((eol = strchr(buf, '\n')) && eol[1] != '\0') {
+	while ((eol = strchr(buf, '\n'))) {
 		/* We can skip continuations here */
 		if (buf[0] == ' ') {
 			buf = eol + 1;

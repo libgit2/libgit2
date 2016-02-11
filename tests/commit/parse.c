@@ -453,9 +453,16 @@ cpxtDQQMGYFpXK/71stq\n\
 
 	cl_git_pass(git_commit_header_field(&buf, commit, "gpgsig"));
 	cl_assert_equal_s(gpgsig, buf.ptr);
+	git_buf_clear(&buf);
 
 	cl_git_fail_with(GIT_ENOTFOUND, git_commit_header_field(&buf, commit, "awesomeness"));
 	cl_git_fail_with(GIT_ENOTFOUND, git_commit_header_field(&buf, commit, "par"));
+
+	git_commit__free(commit);
+	cl_git_pass(parse_commit(&commit, passing_commit_cases[0]));
+
+	cl_git_pass(git_commit_header_field(&buf, commit, "committer"));
+	cl_assert_equal_s("Vicent Marti <tanoku@gmail.com> 1273848544 +0200", buf.ptr);
 
 	git_buf_free(&buf);
 	git_commit__free(commit);
