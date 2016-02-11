@@ -238,7 +238,7 @@ void test_reset_hard__reflog_is_correct(void)
 
 void test_reset_hard__switch_file_to_dir(void)
 {
-	git_index_entry entry = { 0 };
+	git_index_entry entry = {{ 0 }};
 	git_index *idx;
 	git_object *commit;
 	git_tree *tree;
