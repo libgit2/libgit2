@@ -550,7 +550,7 @@ int git_pathspec_match_index(
 
 	iter_opts.flags = pathspec_match_iter_flags(flags);
 
-	if (!(error = git_iterator_for_index(&iter, index, &iter_opts))) {
+	if (!(error = git_iterator_for_index(&iter, git_index_owner(index), index, &iter_opts))) {
 		error = pathspec_match_from_iterator(out, iter, flags, ps);
 		git_iterator_free(iter);
 	}
@@ -718,4 +718,3 @@ const char * git_pathspec_match_list_failed_entry(
 
 	return entry ? *entry : NULL;
 }
-
