@@ -58,6 +58,11 @@ typedef struct {
 	const char *rewrite_notes_ref;
 
 	/**
+	 * Options to control how trees are merged during `git_rebase_next`.
+	 */
+	git_merge_options merge_options;
+
+	/**
 	 * Options to control how files are written during `git_rebase_init`,
 	 * `git_checkout_next` and `git_checkout_abort`.  Note that a minimum
 	 * strategy of `GIT_CHECKOUT_SAFE` is defaulted in `init` and `next`,
@@ -110,7 +115,8 @@ typedef enum {
 
 #define GIT_REBASE_OPTIONS_VERSION 1
 #define GIT_REBASE_OPTIONS_INIT \
-	{GIT_REBASE_OPTIONS_VERSION, 0, 0, NULL, GIT_CHECKOUT_OPTIONS_INIT}
+	{ GIT_REBASE_OPTIONS_VERSION, 0, 0, NULL, GIT_MERGE_OPTIONS_INIT, \
+	  GIT_CHECKOUT_OPTIONS_INIT}
 
 /** Indicates that a rebase operation is not (yet) in progress. */
 #define GIT_REBASE_NO_OPERATION SIZE_MAX
