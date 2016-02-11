@@ -133,7 +133,7 @@ int checkout_count_callback(
 void tick_index(git_index *index)
 {
 	struct timespec ts;
-	struct timeval times[2];
+	struct p_timeval times[2];
 
 	cl_assert(index->on_disk);
 	cl_assert(git_index_path(index));

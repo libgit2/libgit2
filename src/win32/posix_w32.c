@@ -210,7 +210,7 @@ int p_lstat_posixly(const char *filename, struct stat *buf)
 	return do_lstat(filename, buf, true);
 }
 
-int p_utimes(const char *filename, const struct timeval times[2])
+int p_utimes(const char *filename, const struct p_timeval times[2])
 {
 	int fd, error;
 
@@ -223,7 +223,7 @@ int p_utimes(const char *filename, const struct timeval times[2])
 	return error;
 }
 
-int p_futimes(int fd, const struct timeval times[2])
+int p_futimes(int fd, const struct p_timeval times[2])
 {
 	HANDLE handle;
 	FILETIME atime = {0}, mtime = {0};

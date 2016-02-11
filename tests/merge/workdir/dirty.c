@@ -133,7 +133,7 @@ static void hack_index(char *files[])
 	struct stat statbuf;
 	git_buf path = GIT_BUF_INIT;
 	git_index_entry *entry;
-	struct timeval times[2];
+	struct p_timeval times[2];
 	time_t now;
 	size_t i;
 

@@ -96,7 +96,7 @@ GIT_INLINE(void) git_win32__filetime_to_timespec(
 }
 
 GIT_INLINE(void) git_win32__timeval_to_filetime(
-	FILETIME *ft, const struct timeval tv)
+	FILETIME *ft, const struct p_timeval tv)
 {
 	long long ticks = (tv.tv_sec * 10000000LL) +
 		(tv.tv_usec * 10LL) + 116444736000000000LL;
