@@ -685,8 +685,8 @@ static int merge_indexes(
 	iter_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
 
 	if ((error = git_iterator_for_tree(&ancestor, ancestor_tree, &iter_opts)) < 0 ||
-		(error = git_iterator_for_index(&ours, ours_index, &iter_opts)) < 0 ||
-		(error = git_iterator_for_index(&theirs, theirs_index, &iter_opts)) < 0)
+		(error = git_iterator_for_index(&ours, repo, ours_index, &iter_opts)) < 0 ||
+		(error = git_iterator_for_index(&theirs, repo, theirs_index, &iter_opts)) < 0)
 		goto done;
 
 	error = git_merge__iterators(out, repo, ancestor, ours, theirs, NULL);
@@ -712,7 +712,7 @@ static int merge_index_and_tree(
 	iter_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
 
 	if ((error = git_iterator_for_tree(&ancestor, ancestor_tree, &iter_opts)) < 0 ||
-		(error = git_iterator_for_index(&ours, ours_index, &iter_opts)) < 0 ||
+		(error = git_iterator_for_index(&ours, repo, ours_index, &iter_opts)) < 0 ||
 		(error = git_iterator_for_tree(&theirs, theirs_tree, &iter_opts)) < 0)
 		goto done;
 
@@ -728,7 +728,7 @@ done:
 static void normalize_apply_options(
 	git_stash_apply_options *opts,
 	const git_stash_apply_options *given_apply_opts)
-{	
+{
 	if (given_apply_opts != NULL) {
 		memcpy(opts, given_apply_opts, sizeof(git_stash_apply_options));
 	} else {

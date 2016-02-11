@@ -1371,7 +1371,7 @@ int git_diff_tree_to_index(
 
 	DIFF_FROM_ITERATORS(
 		git_iterator_for_tree(&a, old_tree, &a_opts), iflag,
-		git_iterator_for_index(&b, index, &b_opts), iflag
+		git_iterator_for_index(&b, repo, index, &b_opts), iflag
 	);
 
 	/* if index is in case-insensitive order, re-sort deltas to match */
@@ -1395,7 +1395,7 @@ int git_diff_index_to_workdir(
 		return error;
 
 	DIFF_FROM_ITERATORS(
-		git_iterator_for_index(&a, index, &a_opts),
+		git_iterator_for_index(&a, repo, index, &a_opts),
 		GIT_ITERATOR_INCLUDE_CONFLICTS,
 
 		git_iterator_for_workdir(&b, repo, index, NULL, &b_opts),
@@ -1472,8 +1472,8 @@ int git_diff_index_to_index(
 	assert(diff && old_index && new_index);
 
 	DIFF_FROM_ITERATORS(
-		git_iterator_for_index(&a, old_index, &a_opts), GIT_ITERATOR_DONT_IGNORE_CASE,
-		git_iterator_for_index(&b, new_index, &b_opts), GIT_ITERATOR_DONT_IGNORE_CASE
+		git_iterator_for_index(&a, repo, old_index, &a_opts), GIT_ITERATOR_DONT_IGNORE_CASE,
+		git_iterator_for_index(&b, repo, new_index, &b_opts), GIT_ITERATOR_DONT_IGNORE_CASE
 	);
 
 	/* if index is in case-insensitive order, re-sort deltas to match */

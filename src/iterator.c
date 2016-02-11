@@ -1080,6 +1080,7 @@ static void index_iterator__free(git_iterator *self)
 
 int git_iterator_for_index(
 	git_iterator **iter,
+	git_repository *repo,
 	git_index  *index,
 	git_iterator_options *options)
 {
@@ -1093,7 +1094,7 @@ int git_iterator_for_index(
 	}
 	ii->index = index;
 
-	ITERATOR_BASE_INIT(ii, index, INDEX, git_index_owner(index));
+	ITERATOR_BASE_INIT(ii, index, INDEX, repo);
 
 	if ((error = iterator__update_ignore_case((git_iterator *)ii, options ? options->flags : 0)) < 0) {
 		git_iterator_free((git_iterator *)ii);
@@ -2071,7 +2072,7 @@ int git_iterator_advance_over_with_status(
 
 			if (!error)
 				continue;
-			
+
 			else if (error == GIT_ENOTFOUND) {
 				/* we entered this directory only hoping to find child matches to
 				 * our pathlist (eg, this is `foo` and we had a pathlist entry for

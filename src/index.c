@@ -2907,8 +2907,8 @@ int git_index_read_index(
 
 	opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
 
-	if ((error = git_iterator_for_index(&index_iterator, index, &opts)) < 0 ||
-		(error = git_iterator_for_index(&new_iterator, (git_index *)new_index, &opts)) < 0)
+	if ((error = git_iterator_for_index(&index_iterator, git_index_owner(index), index, &opts)) < 0 ||
+		(error = git_iterator_for_index(&new_iterator, git_index_owner(new_index), (git_index *)new_index, &opts)) < 0)
 		goto done;
 
 	if (((error = git_iterator_current(&old_entry, index_iterator)) < 0 &&

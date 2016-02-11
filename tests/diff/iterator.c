@@ -380,7 +380,7 @@ static void index_iterator_test(
 	iter_opts.start = start;
 	iter_opts.end = end;
 
-	cl_git_pass(git_iterator_for_index(&i, index, &iter_opts));
+	cl_git_pass(git_iterator_for_index(&i, repo, index, &iter_opts));
 
 	while (!(error = git_iterator_advance(&entry, i))) {
 		cl_assert(entry);
@@ -974,7 +974,7 @@ static void check_index_range(
 	i_opts.start = start;
 	i_opts.end = end;
 
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, repo, index, &i_opts));
 
 	cl_assert(git_iterator_ignore_case(i) == ignore_case);
 

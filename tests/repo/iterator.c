@@ -134,19 +134,19 @@ void test_repo_iterator__index(void)
 	cl_git_pass(git_repository_index(&index, g_repo));
 
 	/* autoexpand with no tree entries for index */
-	cl_git_pass(git_iterator_for_index(&i, index, NULL));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, NULL));
 	expect_iterator_items(i, 20, NULL, 20, NULL);
 	git_iterator_free(i);
 
 	/* auto expand with tree entries */
 	i_opts.flags = GIT_ITERATOR_INCLUDE_TREES;
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	expect_iterator_items(i, 22, NULL, 22, NULL);
 	git_iterator_free(i);
 
 	/* no auto expand (implies trees included) */
 	i_opts.flags = GIT_ITERATOR_DONT_AUTOEXPAND;
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	expect_iterator_items(i, 12, NULL, 22, NULL);
 	git_iterator_free(i);
 
@@ -171,13 +171,13 @@ void test_repo_iterator__index_icase(void)
 	/* autoexpand with no tree entries over range */
 	i_opts.start = "c";
 	i_opts.end = "k/D";
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	expect_iterator_items(i, 7, NULL, 7, NULL);
 	git_iterator_free(i);
 
 	i_opts.start = "k";
 	i_opts.end = "k/Z";
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	expect_iterator_items(i, 3, NULL, 3, NULL);
 	git_iterator_free(i);
 
@@ -186,13 +186,13 @@ void test_repo_iterator__index_icase(void)
 
 	i_opts.start = "c";
 	i_opts.end = "k/D";
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	expect_iterator_items(i, 8, NULL, 8, NULL);
 	git_iterator_free(i);
 
 	i_opts.start = "k";
 	i_opts.end = "k/Z";
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	expect_iterator_items(i, 4, NULL, 4, NULL);
 	git_iterator_free(i);
 
@@ -201,13 +201,13 @@ void test_repo_iterator__index_icase(void)
 
 	i_opts.start = "c";
 	i_opts.end = "k/D";
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	expect_iterator_items(i, 5, NULL, 8, NULL);
 	git_iterator_free(i);
 
 	i_opts.start = "k";
 	i_opts.end = "k/Z";
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	expect_iterator_items(i, 1, NULL, 4, NULL);
 	git_iterator_free(i);
 
@@ -219,13 +219,13 @@ void test_repo_iterator__index_icase(void)
 
 	i_opts.start = "c";
 	i_opts.end = "k/D";
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	expect_iterator_items(i, 13, NULL, 13, NULL);
 	git_iterator_free(i);
 
 	i_opts.start = "k";
 	i_opts.end = "k/Z";
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	expect_iterator_items(i, 5, NULL, 5, NULL);
 	git_iterator_free(i);
 
@@ -234,13 +234,13 @@ void test_repo_iterator__index_icase(void)
 
 	i_opts.start = "c";
 	i_opts.end = "k/D";
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	expect_iterator_items(i, 14, NULL, 14, NULL);
 	git_iterator_free(i);
 
 	i_opts.start = "k";
 	i_opts.end = "k/Z";
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	expect_iterator_items(i, 6, NULL, 6, NULL);
 	git_iterator_free(i);
 
@@ -249,13 +249,13 @@ void test_repo_iterator__index_icase(void)
 
 	i_opts.start = "c";
 	i_opts.end = "k/D";
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	expect_iterator_items(i, 9, NULL, 14, NULL);
 	git_iterator_free(i);
 
 	i_opts.start = "k";
 	i_opts.end = "k/Z";
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	expect_iterator_items(i, 1, NULL, 6, NULL);
 	git_iterator_free(i);
 
@@ -1108,14 +1108,14 @@ void test_repo_iterator__indexfilelist(void)
 
 	/* All indexfilelist iterator tests are "autoexpand with no tree entries" */
 
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	expect_iterator_items(i, 8, NULL, 8, NULL);
 	git_iterator_free(i);
 
 	i_opts.start = "c";
 	i_opts.end = NULL;
 
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	/* (c D e k/1 k/a L ==> 6) vs (c e k/1 k/a ==> 4) */
 	expect = ((default_icase) ? 6 : 4);
 	expect_iterator_items(i, expect, NULL, expect, NULL);
@@ -1124,7 +1124,7 @@ void test_repo_iterator__indexfilelist(void)
 	i_opts.start = NULL;
 	i_opts.end = "e";
 
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	/* (a B c D e ==> 5) vs (B D L/1 a c e ==> 6) */
 	expect = ((default_icase) ? 5 : 6);
 	expect_iterator_items(i, expect, NULL, expect, NULL);
@@ -1166,7 +1166,7 @@ void test_repo_iterator__indexfilelist_2(void)
 	/* (c D e k/1 k/a ==> 5) vs (c e k/1 ==> 3) */
 	expect = default_icase ? 5 : 3;
 
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	expect_iterator_items(i, expect, NULL, expect, NULL);
 	git_iterator_free(i);
 
@@ -1208,7 +1208,7 @@ void test_repo_iterator__indexfilelist_3(void)
 	/* (c D e k/1 k/a k/B k/c k/D) vs (c e k/1 k/B k/D) */
 	expect = default_icase ? 8 : 5;
 
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	expect_iterator_items(i, expect, NULL, expect, NULL);
 	git_iterator_free(i);
 
@@ -1250,7 +1250,7 @@ void test_repo_iterator__indexfilelist_4(void)
 	/* (c D e k/1 k/a k/B k/c k/D) vs (c e k/1 k/B k/D) */
 	expect = default_icase ? 8 : 5;
 
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	expect_iterator_items(i, expect, NULL, expect, NULL);
 	git_iterator_free(i);
 
@@ -1291,13 +1291,13 @@ void test_repo_iterator__indexfilelist_icase(void)
 
 	i_opts.start = "c";
 	i_opts.end = "k/D";
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	expect_iterator_items(i, 3, NULL, 3, NULL);
 	git_iterator_free(i);
 
 	i_opts.start = "k";
 	i_opts.end = "k/Z";
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	expect_iterator_items(i, 1, NULL, 1, NULL);
 	git_iterator_free(i);
 
@@ -1306,13 +1306,13 @@ void test_repo_iterator__indexfilelist_icase(void)
 
 	i_opts.start = "c";
 	i_opts.end = "k/D";
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	expect_iterator_items(i, 5, NULL, 5, NULL);
 	git_iterator_free(i);
 
 	i_opts.start = "k";
 	i_opts.end = "k/Z";
-	cl_git_pass(git_iterator_for_index(&i, index, &i_opts));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	expect_iterator_items(i, 2, NULL, 2, NULL);
 	git_iterator_free(i);
 

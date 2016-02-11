@@ -2521,7 +2521,8 @@ int git_checkout_iterator(
 
 	if (data.opts.baseline_index) {
 		if ((error = git_iterator_for_index(
-				&baseline, data.opts.baseline_index, &baseline_opts)) < 0)
+				&baseline, git_index_owner(data.opts.baseline_index),
+				data.opts.baseline_index, &baseline_opts)) < 0)
 			goto cleanup;
 	} else {
 		if ((error = git_iterator_for_tree(
@@ -2633,7 +2634,7 @@ int git_checkout_index(
 		return error;
 	GIT_REFCOUNT_INC(index);
 
-	if (!(error = git_iterator_for_index(&index_i, index, NULL)))
+	if (!(error = git_iterator_for_index(&index_i, repo, index, NULL)))
 		error = git_checkout_iterator(index_i, index, opts);
 
 	if (owned)

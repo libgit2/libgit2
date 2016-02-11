@@ -95,6 +95,7 @@ extern int git_iterator_for_tree(
  */
 extern int git_iterator_for_index(
 	git_iterator **out,
+	git_repository *repo,
 	git_index *index,
 	git_iterator_options *options);
 
