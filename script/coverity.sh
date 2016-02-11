@@ -33,6 +33,8 @@ if [ ! -d "$TOOL_BASE" ]; then
 	ln -s "$TOOL_DIR" "$TOOL_BASE"/cov-analysis
 fi
 
+cp script/user_nodefs.h "$TOOL_BASE"/cov-analysis/config/user_nodefs.h
+
 COV_BUILD="$TOOL_BASE/cov-analysis/bin/cov-build"
 
 # Configure and build
@@ -48,10 +50,9 @@ COVERITY_UNSUPPORTED=1 \
 tar czf libgit2.tgz cov-int
 SHA=$(git rev-parse --short HEAD)
 curl \
-	--form project=libgit2 \
 	--form token="$COVERITY_TOKEN" \
 	--form email=bs@github.com \
 	--form file=@libgit2.tgz \
 	--form version="$SHA" \
 	--form description="Travis build" \
-	http://scan5.coverity.com/cgi-bin/upload.py
+	https://scan.coverity.com/builds?project=libgit2
