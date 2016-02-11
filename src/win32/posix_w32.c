@@ -398,6 +398,22 @@ static int follow_and_lstat_link(git_win32_path path, struct stat* buf)
 	return lstat_w(target_w, buf, false);
 }
 
+int p_fstat(int fd, struct stat *buf)
+{
+	BY_HANDLE_FILE_INFORMATION fhInfo;
+
+	HANDLE fh = (HANDLE)_get_osfhandle(fd);
+
+	if (fh == INVALID_HANDLE_VALUE ||
+		!GetFileInformationByHandle(fh, &fhInfo)) {
+		errno = EBADF;
+		return -1;
+	}
+
+	git_win32__file_information_to_stat(buf, &fhInfo);
+	return 0;
+}
+
 int p_stat(const char* path, struct stat* buf)
 {
 	git_win32_path path_w;

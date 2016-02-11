@@ -17,9 +17,10 @@
 typedef SOCKET GIT_SOCKET;
 
 #define p_lseek(f,n,w) _lseeki64(f, n, w)
-#define p_fstat(f,b) _fstat64(f, b)
+
+extern int p_fstat(int fd, struct stat *buf);
 extern int p_lstat(const char *file_name, struct stat *buf);
-extern int p_stat(const char* path, struct stat* buf);
+extern int p_stat(const char* path, struct stat *buf);
 
 extern int p_utimes(const char *filename, const struct p_timeval times[2]);
 extern int p_futimes(int fd, const struct p_timeval times[2]);
