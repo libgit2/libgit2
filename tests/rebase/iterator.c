@@ -46,14 +46,17 @@ static void test_operations(git_rebase *rebase, size_t expected_current)
 	}
 }
 
-void test_rebase_iterator__iterates(void)
+void test_iterator(bool inmemory)
 {
 	git_rebase *rebase;
+	git_rebase_options opts = GIT_REBASE_OPTIONS_INIT;
 	git_reference *branch_ref, *upstream_ref;
 	git_annotated_commit *branch_head, *upstream_head;
 	git_rebase_operation *rebase_operation;
 	git_oid commit_id;
 	int error;
+
+	opts.inmemory = inmemory;
 
 	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/beef"));
 	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/master"));
@@ -61,11 +64,14 @@ void test_rebase_iterator__iterates(void)
 	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, &opts));
 	test_operations(rebase, GIT_REBASE_NO_OPERATION);
-	git_rebase_free(rebase);
 
-	cl_git_pass(git_rebase_open(&rebase, repo, NULL));
+	if (!inmemory) {
+		git_rebase_free(rebase);
+		cl_git_pass(git_rebase_open(&rebase, repo, NULL));
+	}
+
 	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
@@ -81,8 +87,10 @@ void test_rebase_iterator__iterates(void)
 		NULL, NULL));
 	test_operations(rebase, 2);
 
-	git_rebase_free(rebase);
-	cl_git_pass(git_rebase_open(&rebase, repo, NULL));
+	if (!inmemory) {
+		git_rebase_free(rebase);
+		cl_git_pass(git_rebase_open(&rebase, repo, NULL));
+	}
 
 	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
@@ -103,4 +111,14 @@ void test_rebase_iterator__iterates(void)
 	git_reference_free(branch_ref);
 	git_reference_free(upstream_ref);
 	git_rebase_free(rebase);
+}
+
+void test_rebase_iterator__iterates(void)
+{
+	test_iterator(false);
+}
+
+void test_rebase_iterator__iterates_inmemory(void)
+{
+	test_iterator(true);
 }

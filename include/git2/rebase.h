@@ -39,6 +39,15 @@ typedef struct {
 	int quiet;
 
 	/**
+	 * Used by `git_rebase_init`, this will begin an in-memory rebase,
+	 * which will allow callers to step through the rebase operations and
+	 * commit the rebased changes, but will not rewind HEAD or update the
+	 * repository to be in a rebasing state.  This will not interfere with
+	 * the working directory (if there is one).
+	 */
+	int inmemory;
+
+	/**
 	 * Used by `git_rebase_finish`, this is the name of the notes reference
 	 * used to rewrite notes for rebased commits when finishing the rebase;
 	 * if NULL, the contents of the configuration option `notes.rewriteRef`
@@ -101,7 +110,7 @@ typedef enum {
 
 #define GIT_REBASE_OPTIONS_VERSION 1
 #define GIT_REBASE_OPTIONS_INIT \
-	{GIT_REBASE_OPTIONS_VERSION, 0, NULL, GIT_CHECKOUT_OPTIONS_INIT}
+	{GIT_REBASE_OPTIONS_VERSION, 0, 0, NULL, GIT_CHECKOUT_OPTIONS_INIT}
 
 /** Indicates that a rebase operation is not (yet) in progress. */
 #define GIT_REBASE_NO_OPERATION SIZE_MAX
@@ -127,6 +136,12 @@ typedef struct {
 	 * be populated for operations of type `GIT_REBASE_OPERATION_EXEC`.
 	 */
 	const char *exec;
+
+	/**
+	 * The index that is the result of an operation.
+	 * This is set only for in-memory rebases.
+	 */
+	git_index *index;
 } git_rebase_operation;
 
 /**
