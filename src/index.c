@@ -1515,7 +1515,7 @@ int git_index__fill(git_index *index, const git_vector *source_entries)
 		return 0;
 
 	git_vector_size_hint(&index->entries, source_entries->length);
-	git_idxmap_resize(index->entries_map, source_entries->length * 1.3);
+	git_idxmap_resize(index->entries_map, (khint_t)(source_entries->length * 1.3));
 
 	git_vector_foreach(source_entries, i, source_entry) {
 		git_index_entry *entry = NULL;
