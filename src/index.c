@@ -826,8 +826,8 @@ const git_index_entry *git_index_get_bypath(
 void git_index_entry__init_from_stat(
 	git_index_entry *entry, struct stat *st, bool trust_mode)
 {
-	entry->ctime.seconds = (git_time_t)st->st_ctime;
-	entry->mtime.seconds = (git_time_t)st->st_mtime;
+	entry->ctime.seconds = (int32_t)st->st_ctime;
+	entry->mtime.seconds = (int32_t)st->st_mtime;
 #if defined(GIT_USE_NSEC)
 	entry->mtime.nanoseconds = st->st_mtim.tv_nsec;
 	entry->ctime.nanoseconds = st->st_ctim.tv_nsec;
@@ -838,7 +838,7 @@ void git_index_entry__init_from_stat(
 		git_index__create_mode(0666) : git_index__create_mode(st->st_mode);
 	entry->uid  = st->st_uid;
 	entry->gid  = st->st_gid;
-	entry->file_size = st->st_size;
+	entry->file_size = (uint32_t)st->st_size;
 }
 
 static void index_entry_adjust_namemask(
