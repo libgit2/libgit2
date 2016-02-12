@@ -778,9 +778,9 @@ int git_submodule_add_to_index(git_submodule *sm, int write_index)
 	if ((error = git_commit_lookup(&head, sm_repo, &sm->wd_oid)) < 0)
 		goto cleanup;
 
-	entry.ctime.seconds = git_commit_time(head);
+	entry.ctime.seconds = (int32_t)git_commit_time(head);
 	entry.ctime.nanoseconds = 0;
-	entry.mtime.seconds = git_commit_time(head);
+	entry.mtime.seconds = (int32_t)git_commit_time(head);
 	entry.mtime.nanoseconds = 0;
 
 	git_commit_free(head);
