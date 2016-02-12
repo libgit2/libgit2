@@ -603,14 +603,14 @@ const git_oid *git_index_checksum(git_index *index)
  */
 static int compare_checksum(git_index *index)
 {
-	int fd, error;
+	int fd;
 	ssize_t bytes_read;
 	git_oid checksum = {{ 0 }};
 
 	if ((fd = p_open(index->index_file_path, O_RDONLY)) < 0)
 		return fd;
 
-	if ((error = p_lseek(fd, -20, SEEK_END)) < 0) {
+	if (p_lseek(fd, -20, SEEK_END) < 0) {
 		p_close(fd);
 		giterr_set(GITERR_OS, "failed to seek to end of file");
 		return -1;
