@@ -36,7 +36,7 @@ void assert_name_too_long(void)
 {
 	const git_error *err;
 	size_t expected_len, actual_len;
-	const char *expected_msg;
+	char *expected_msg;
 
 	err = giterr_last();
 	actual_len = strlen(err->message);
