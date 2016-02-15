@@ -71,8 +71,8 @@ struct git_rebase {
 	size_t current;
 
 	/* Used by in-memory rebase */
+	git_index *index;
 	git_commit *last_commit;
-	git_index *last_index;
 
 	/* Used by regular (not in-memory) merge-style rebase */
 	git_oid orig_head_id;
@@ -856,10 +856,13 @@ static int rebase_next_inmemory(
 		(error = git_merge_trees(&index, rebase->repo, parent_tree, head_tree, current_tree, &rebase->options.merge_options)) < 0)
 		goto done;
 
-	git_index_free(rebase->last_index);
-	rebase->last_index = index;
-	operation->index = index;
-	index = NULL;
+	if (!rebase->index) {
+		rebase->index = index;
+		index = NULL;
+	} else {
+		if ((error = git_index_read_index(rebase->index, index)) < 0)
+			goto done;
+	}
 
 	*out = operation;
 
@@ -893,6 +896,18 @@ int git_rebase_next(
 		abort();
 
 	return error;
+}
+
+int git_rebase_inmemory_index(
+	git_index **out,
+	git_rebase *rebase)
+{
+	assert(out && rebase && rebase->index);
+
+	GIT_REFCOUNT_INC(rebase->index);
+	*out = rebase->index;
+
+	return 0;
 }
 
 static int rebase_commit__create(
@@ -1018,16 +1033,12 @@ static int rebase_commit_inmemory(
 	operation = git_array_get(rebase->operations, rebase->current);
 
 	assert(operation);
-	assert(operation->index);
+	assert(rebase->index);
 	assert(rebase->last_commit);
 
-	if ((error = rebase_commit__create(&commit, rebase, operation->index,
+	if ((error = rebase_commit__create(&commit, rebase, rebase->index,
 		rebase->last_commit, author, committer, message_encoding, message)) < 0)
 		goto done;
-
-	git_index_free(rebase->last_index);
-	operation->index = NULL;
-	rebase->last_index = NULL;
 
 	git_commit_free(rebase->last_commit);
 	rebase->last_commit = commit;
@@ -1313,7 +1324,7 @@ void git_rebase_free(git_rebase *rebase)
 	if (rebase == NULL)
 		return;
 
-	git_index_free(rebase->last_index);
+	git_index_free(rebase->index);
 	git_commit_free(rebase->last_commit);
 	git__free(rebase->onto_name);
 	git__free(rebase->orig_head_name);

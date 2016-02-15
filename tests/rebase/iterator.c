@@ -13,7 +13,8 @@ void test_rebase_iterator__initialize(void)
 {
 	repo = cl_git_sandbox_init("rebase");
 	cl_git_pass(git_repository_index(&_index, repo));
-	cl_git_pass(git_signature_now(&signature, "Rebaser", "rebaser@rebaser.rb"));
+	cl_git_pass(git_signature_new(&signature, "Rebaser",
+		"rebaser@rebaser.rb", 1405694510, 0));
 }
 
 void test_rebase_iterator__cleanup(void)
@@ -53,7 +54,7 @@ void test_iterator(bool inmemory)
 	git_reference *branch_ref, *upstream_ref;
 	git_annotated_commit *branch_head, *upstream_head;
 	git_rebase_operation *rebase_operation;
-	git_oid commit_id;
+	git_oid commit_id, expected_id;
 	int error;
 
 	opts.inmemory = inmemory;
@@ -77,15 +78,24 @@ void test_iterator(bool inmemory)
 		NULL, NULL));
 	test_operations(rebase, 0);
 
+	git_oid_fromstr(&expected_id, "776e4c48922799f903f03f5f6e51da8b01e4cce0");
+	cl_assert_equal_oid(&expected_id, &commit_id);
+
 	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 	test_operations(rebase, 1);
 
+	git_oid_fromstr(&expected_id, "ba1f9b4fd5cf8151f7818be2111cc0869f1eb95a");
+	cl_assert_equal_oid(&expected_id, &commit_id);
+
 	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 	test_operations(rebase, 2);
+
+	git_oid_fromstr(&expected_id, "948b12fe18b84f756223a61bece4c307787cd5d4");
+	cl_assert_equal_oid(&expected_id, &commit_id);
 
 	if (!inmemory) {
 		git_rebase_free(rebase);
@@ -97,10 +107,16 @@ void test_iterator(bool inmemory)
 		NULL, NULL));
 	test_operations(rebase, 3);
 
+	git_oid_fromstr(&expected_id, "d9d5d59d72c9968687f9462578d79878cd80e781");
+	cl_assert_equal_oid(&expected_id, &commit_id);
+
 	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 	test_operations(rebase, 4);
+
+	git_oid_fromstr(&expected_id, "9cf383c0a125d89e742c5dec58ed277dd07588b3");
+	cl_assert_equal_oid(&expected_id, &commit_id);
 
 	cl_git_fail(error = git_rebase_next(&rebase_operation, rebase));
 	cl_assert_equal_i(GIT_ITEROVER, error);
