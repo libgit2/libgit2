@@ -564,15 +564,16 @@ extern int git_path_from_url_or_path(git_buf *local_path_out, const char *url_or
 #define GIT_PATH_REJECT_TRAILING_COLON     (1 << 6)
 #define GIT_PATH_REJECT_DOS_PATHS          (1 << 7)
 #define GIT_PATH_REJECT_NT_CHARS           (1 << 8)
-#define GIT_PATH_REJECT_DOT_GIT_HFS        (1 << 9)
-#define GIT_PATH_REJECT_DOT_GIT_NTFS       (1 << 10)
+#define GIT_PATH_REJECT_DOT_GIT_LITERAL    (1 << 9)
+#define GIT_PATH_REJECT_DOT_GIT_HFS        (1 << 10)
+#define GIT_PATH_REJECT_DOT_GIT_NTFS       (1 << 11)
 
 /* Default path safety for writing files to disk: since we use the
  * Win32 "File Namespace" APIs ("\\?\") we need to protect from
  * paths that the normal Win32 APIs would not write.
  */
 #ifdef GIT_WIN32
-# define GIT_PATH_REJECT_DEFAULTS \
+# define GIT_PATH_REJECT_FILESYSTEM_DEFAULTS \
 	GIT_PATH_REJECT_TRAVERSAL | \
 	GIT_PATH_REJECT_BACKSLASH | \
 	GIT_PATH_REJECT_TRAILING_DOT | \
@@ -581,8 +582,17 @@ extern int git_path_from_url_or_path(git_buf *local_path_out, const char *url_or
 	GIT_PATH_REJECT_DOS_PATHS | \
 	GIT_PATH_REJECT_NT_CHARS
 #else
-# define GIT_PATH_REJECT_DEFAULTS GIT_PATH_REJECT_TRAVERSAL
+# define GIT_PATH_REJECT_FILESYSTEM_DEFAULTS \
+	GIT_PATH_REJECT_TRAVERSAL
 #endif
+
+ /* Paths that should never be written into the working directory. */
+#define GIT_PATH_REJECT_WORKDIR_DEFAULTS \
+	GIT_PATH_REJECT_FILESYSTEM_DEFAULTS | GIT_PATH_REJECT_DOT_GIT
+
+/* Paths that should never be written to the index. */
+#define GIT_PATH_REJECT_INDEX_DEFAULTS \
+	GIT_PATH_REJECT_TRAVERSAL | GIT_PATH_REJECT_DOT_GIT
 
 /*
  * Determine whether a path is a valid git path or not - this must not contain

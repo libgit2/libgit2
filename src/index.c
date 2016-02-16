@@ -891,17 +891,31 @@ static void index_entry_adjust_namemask(
 		entry->flags |= GIT_IDXENTRY_NAMEMASK;
 }
 
+/* When `from_workdir` is true, we will validate the paths to avoid placing
+ * paths that are invalid for the working directory on the current filesystem
+ * (eg, on Windows, we will disallow `GIT~1`, `AUX`, `COM1`, etc).  This
+ * function will *always* prevent `.git` and directory traversal `../` from
+ * being added to the index.
+ */
 static int index_entry_create(
 	git_index_entry **out,
 	git_repository *repo,
-	const char *path)
+	const char *path,
+	bool from_workdir)
 {
 	size_t pathlen = strlen(path), alloclen;
 	struct entry_internal *entry;
+	unsigned int path_valid_flags = GIT_PATH_REJECT_INDEX_DEFAULTS;
 
-	if (!git_path_isvalid(repo, path,
-		GIT_PATH_REJECT_DEFAULTS | GIT_PATH_REJECT_DOT_GIT)) {
-		giterr_set(GITERR_INDEX, "Invalid path: '%s'", path);
+	/* always reject placing `.git` in the index and directory traversal.
+	 * when requested, disallow platform-specific filenames and upgrade to
+	 * the platform-specific `.git` tests (eg, `git~1`, etc).
+	 */
+	if (from_workdir)
+		path_valid_flags |= GIT_PATH_REJECT_WORKDIR_DEFAULTS;
+
+	if (!git_path_isvalid(repo, path, path_valid_flags)) {
+		giterr_set(GITERR_INDEX, "invalid path: '%s'", path);
 		return -1;
 	}
 
@@ -933,7 +947,7 @@ static int index_entry_init(
 			"Could not initialize index entry. "
 			"Index is not backed up by an existing repository.");
 
-	if (index_entry_create(&entry, INDEX_OWNER(index), rel_path) < 0)
+	if (index_entry_create(&entry, INDEX_OWNER(index), rel_path, true) < 0)
 		return -1;
 
 	/* write the blob to disk and get the oid and stat info */
@@ -1013,7 +1027,7 @@ static int index_entry_dup(
 	git_index *index,
 	const git_index_entry *src)
 {
-	if (index_entry_create(out, INDEX_OWNER(index), src->path) < 0)
+	if (index_entry_create(out, INDEX_OWNER(index), src->path, false) < 0)
 		return -1;
 
 	index_entry_cpy(*out, src);
@@ -1035,7 +1049,7 @@ static int index_entry_dup_nocache(
 	git_index *index,
 	const git_index_entry *src)
 {
-	if (index_entry_create(out, INDEX_OWNER(index), src->path) < 0)
+	if (index_entry_create(out, INDEX_OWNER(index), src->path, false) < 0)
 		return -1;
 
 	index_entry_cpy_nocache(*out, src);
@@ -1447,7 +1461,7 @@ static int add_repo_as_submodule(git_index_entry **out, git_index *index, const 
 	struct stat st;
 	int error;
 
-	if (index_entry_create(&entry, INDEX_OWNER(index), path) < 0)
+	if (index_entry_create(&entry, INDEX_OWNER(index), path, true) < 0)
 		return -1;
 
 	if ((error = git_buf_joinpath(&abspath, git_repository_workdir(repo), path)) < 0)
@@ -2884,7 +2898,7 @@ static int read_tree_cb(
 	if (git_buf_joinpath(&path, root, tentry->filename) < 0)
 		return -1;
 
-	if (index_entry_create(&entry, INDEX_OWNER(data->index), path.ptr) < 0)
+	if (index_entry_create(&entry, INDEX_OWNER(data->index), path.ptr, false) < 0)
 		return -1;
 
 	entry->mode = tentry->attr;
