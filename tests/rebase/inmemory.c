@@ -54,7 +54,7 @@ void test_rebase_inmemory__can_resolve_conflicts(void)
 	git_status_list *status_list;
 	git_oid pick_id, commit_id, expected_commit_id;
 	git_signature *signature;
-	git_index *repo_index;
+	git_index *rebase_index, *repo_index;
 	git_index_entry resolution = {{0}};
 	git_rebase_options opts = GIT_REBASE_OPTIONS_INIT;
 
@@ -86,7 +86,8 @@ void test_rebase_inmemory__can_resolve_conflicts(void)
 	cl_assert_equal_i(0, git_status_list_entrycount(status_list));
 
 	/* but that the index returned from rebase does have conflicts */
-	cl_assert(git_index_has_conflicts(rebase_operation->index));
+	cl_git_pass(git_rebase_inmemory_index(&rebase_index, rebase));
+	cl_assert(git_index_has_conflicts(rebase_index));
 
 	cl_git_fail_with(GIT_EUNMERGED, git_rebase_commit(&commit_id, rebase, NULL, signature, NULL, NULL));
 
@@ -94,8 +95,8 @@ void test_rebase_inmemory__can_resolve_conflicts(void)
 	resolution.path = "asparagus.txt";
 	resolution.mode = GIT_FILEMODE_BLOB;
 	git_oid_fromstr(&resolution.id, "414dfc71ead79c07acd4ea47fecf91f289afc4b9");
-	cl_git_pass(git_index_conflict_remove(rebase_operation->index, "asparagus.txt"));
-	cl_git_pass(git_index_add(rebase_operation->index, &resolution));
+	cl_git_pass(git_index_conflict_remove(rebase_index, "asparagus.txt"));
+	cl_git_pass(git_index_add(rebase_index, &resolution));
 
 	/* and finally create a commit for the resolved rebase operation */
 	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature, NULL, NULL));
@@ -110,5 +111,6 @@ void test_rebase_inmemory__can_resolve_conflicts(void)
 	git_reference_free(branch_ref);
 	git_reference_free(upstream_ref);
 	git_index_free(repo_index);
+	git_index_free(rebase_index);
 	git_rebase_free(rebase);
 }

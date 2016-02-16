@@ -142,12 +142,6 @@ typedef struct {
 	 * be populated for operations of type `GIT_REBASE_OPERATION_EXEC`.
 	 */
 	const char *exec;
-
-	/**
-	 * The index that is the result of an operation.
-	 * This is set only for in-memory rebases.
-	 */
-	git_index *index;
 } git_rebase_operation;
 
 /**
@@ -245,6 +239,21 @@ GIT_EXTERN(git_rebase_operation *) git_rebase_operation_byindex(
  */
 GIT_EXTERN(int) git_rebase_next(
 	git_rebase_operation **operation,
+	git_rebase *rebase);
+
+/**
+ * Gets the index produced by the last operation, which is the result
+ * of `git_rebase_next` and which will be committed by the next
+ * invocation of `git_rebase_commit`.  This is useful for resolving
+ * conflicts in an in-memory rebase before committing them.  You must
+ * call `git_index_free` when you are finished with this.
+ *
+ * This is only applicable for in-memory rebases; for rebases within
+ * a working directory, the changes were applied to the repository's
+ * index.
+ */
+GIT_EXTERN(int) git_rebase_inmemory_index(
+	git_index **index,
 	git_rebase *rebase);
 
 /**
