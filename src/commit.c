@@ -642,6 +642,12 @@ int git_commit_extract_signature(git_buf *signature, git_buf *signed_data, git_r
 	if ((error = git_odb_read(&obj, odb, commit_id)) < 0)
 		return error;
 
+	if (obj->cached.type != GIT_OBJ_COMMIT) {
+		giterr_set(GITERR_INVALID, "the requested type does not match the type in ODB");
+		error = GIT_ENOTFOUND;
+		goto cleanup;
+	}
+
 	buf = git_odb_object_data(obj);
 
 	while ((h = strchr(buf, '\n')) && h[1] != '\0' && h[1] != '\n') {
@@ -688,7 +694,7 @@ int git_commit_extract_signature(git_buf *signature, git_buf *signed_data, git_r
 		return git_buf_puts(signed_data, eol+1);
 	}
 
-	giterr_set(GITERR_INVALID, "this commit is not signed");
+	giterr_set(GITERR_OBJECT, "this commit is not signed");
 	error = GIT_ENOTFOUND;
 	goto cleanup;
 
