@@ -461,6 +461,15 @@ GIT_EXTERN(int) git_commit_create_with_signature(
 	const char *signature,
 	const char *signature_field);
 
+/**
+ * Create an in-memory copy of a commit. The copy must be explicitly
+ * free'd or it will leak.
+ *
+ * @param out Pointer to store the copy of the commit
+ * @param source Original commit to copy
+ */
+GIT_EXTERN(int) git_commit_dup(git_commit **out, git_commit *source);
+
 /** @} */
 GIT_END_DECL
 #endif

@@ -820,7 +820,7 @@ int git_iterator_for_tree(
 	if (tree == NULL)
 		return git_iterator_for_nothing(iter, options);
 
-	if ((error = git_object_dup((git_object **)&tree, (git_object *)tree)) < 0)
+	if ((error = git_tree_dup(&tree, tree)) < 0)
 		return error;
 
 	ti = git__calloc(1, sizeof(tree_iterator));
@@ -1849,7 +1849,7 @@ int git_iterator_for_workdir_ext(
 		return error;
 	}
 
-	if (tree && (error = git_object_dup((git_object **)&wi->tree, (git_object *)tree)) < 0)
+	if (tree && (error = git_tree_dup(&wi->tree, tree)) < 0)
 		return error;
 
 	wi->index = index;

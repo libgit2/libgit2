@@ -409,6 +409,15 @@ GIT_EXTERN(int) git_tree_walk(
 	git_treewalk_cb callback,
 	void *payload);
 
+/**
+ * Create an in-memory copy of a tree. The copy must be explicitly
+ * free'd or it will leak.
+ *
+ * @param out Pointer to store the copy of the tree
+ * @param source Original tree to copy
+ */
+GIT_EXTERN(int) git_tree_dup(git_tree **out, git_tree *source);
+
 /** @} */
 
 GIT_END_DECL
