@@ -66,6 +66,8 @@ Key
 - Bi       - ignored blob (WD only)
 - T1,T2,T3 - trees with different SHAs,
 - Ti       - ignored tree (WD only)
+- S1,S2    - submodules with different SHAs
+- Sd       - dirty submodule (WD only)
 - x        - nothing
 
 Diff with 2 non-workdir iterators
@@ -162,6 +164,27 @@ Checkout From 3 Iterators (2 not workdir, 1 workdir)
 | 35+ |  T1 |     T2 |      x         | update locally deleted tree (SAFE+MISSING)                         |
 | 36* |  T1 |     T2 |  B1/Bi         | update to tree with typechanged tree->blob conflict (F-1)          |
 | 37  |  T1 |     T2 | T1/T2/T3       | update to existing tree (MAYBE SAFE)                               |
+| 38+ |   x |     S1 |      x         | add submodule (SAFE)                                               |
+| 39  |   x |     S1 |  S1/Sd         | independently added submodule (SUBMODULE)                          |
+| 40* |   x |     S1 |     B1         | add submodule with blob confilct (FORCEABLE)                       |
+| 41* |   x |     S1 |     T1         | add submodule with tree conflict (FORCEABLE)                       |
+| 42  |  S1 |      x |  S1/Sd         | deleted submodule (SUBMODULE)                                      |
+| 43  |  S1 |      x |      x         | independently deleted submodule (SUBMODULE)                        |
+| 44  |  S1 |      x |     B1         | independently deleted submodule with added blob (SAFE+MISSING)     |
+| 45  |  S1 |      x |     T1         | independently deleted submodule with added tree (SAFE+MISSING)     |
+| 46  |  S1 |     S1 |      x         | locally deleted submodule (SUBMODULE)                              |
+| 47+ |  S1 |     S2 |      x         | update locally deleted submodule (SAFE)                            |
+| 48  |  S1 |     S1 |     S2         | locally updated submodule commit (SUBMODULE)                       |
+| 49  |  S1 |     S2 |     S1         | updated submodule commit (SUBMODULE)                               |
+| 50+ |  S1 |     B1 |      x         | add blob with locally deleted submodule (SAFE+MISSING)             |
+| 51* |  S1 |     B1 |     S1         | typechange submodule->blob (SAFE)                                  |
+| 52* |  S1 |     B1 |     Sd         | typechange dirty submodule->blob (SAFE!?!?)                        |
+| 53+ |  S1 |     T1 |      x         | add tree with locally deleted submodule (SAFE+MISSING)             |
+| 54* |  S1 |     T1 |  S1/Sd         | typechange submodule->tree (MAYBE SAFE)                            |
+| 55+ |  B1 |     S1 |      x         | add submodule with locally deleted blob (SAFE+MISSING)             |
+| 56* |  B1 |     S1 |     B1         | typechange blob->submodule (SAFE)                                  |
+| 57+ |  T1 |     S1 |      x         | add submodule with locally deleted tree (SAFE+MISSING)             |
+| 58* |  T1 |     S1 |     T1         | typechange tree->submodule (SAFE)                                  |
 
 
 The number is followed by ' ' if no change is needed or '+' if the case
@@ -176,6 +199,8 @@ There are four tiers of safe cases:
                   content, which is unknown at this point
 * FORCEABLE == conflict unless FORCE is given
 * DIRTY     == no conflict but change is not applied unless FORCE
+* SUBMODULE == no conflict and no change is applied unless a deleted
+               submodule dir is empty
 
 Some slightly unusual circumstances:
 
@@ -198,7 +223,9 @@ Some slightly unusual circumstances:
     cases, if baseline == target, we don't touch the workdir (it is
     either already right or is "dirty").  However, since this case also
     implies that a ?/B1/x case will exist as well, it can be skipped.
+* 41 - It's not clear how core git distinguishes this case from 39 (mode?).
+* 52 - Core git makes destructive changes without any warning when the
+    submodule is dirty and the type changes to a blob.
 
 Cases 3, 17, 24, 26, and 29 are all considered conflicts even though
 none of them will require making any updates to the working directory.
-
