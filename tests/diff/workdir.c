@@ -1755,7 +1755,7 @@ void test_diff_workdir__with_stale_index(void)
 static int touch_file(void *payload, git_buf *path)
 {
 	struct stat st;
-	struct timeval times[2];
+	struct p_timeval times[2];
 
 	GIT_UNUSED(payload);
 	if (git_path_isdir(path->ptr))
@@ -2006,7 +2006,7 @@ void test_diff_workdir__only_writes_index_when_necessary(void)
 	git_oid initial, first, second;
 	git_buf path = GIT_BUF_INIT;
 	struct stat st;
-	struct timeval times[2];
+	struct p_timeval times[2];
 
 	opts.flags |= GIT_DIFF_INCLUDE_UNTRACKED | GIT_DIFF_UPDATE_INDEX;
 

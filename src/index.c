@@ -603,14 +603,14 @@ const git_oid *git_index_checksum(git_index *index)
  */
 static int compare_checksum(git_index *index)
 {
-	int fd, error;
+	int fd;
 	ssize_t bytes_read;
 	git_oid checksum = {{ 0 }};
 
 	if ((fd = p_open(index->index_file_path, O_RDONLY)) < 0)
 		return fd;
 
-	if ((error = p_lseek(fd, -20, SEEK_END)) < 0) {
+	if (p_lseek(fd, -20, SEEK_END) < 0) {
 		p_close(fd);
 		giterr_set(GITERR_OS, "failed to seek to end of file");
 		return -1;
@@ -826,8 +826,8 @@ const git_index_entry *git_index_get_bypath(
 void git_index_entry__init_from_stat(
 	git_index_entry *entry, struct stat *st, bool trust_mode)
 {
-	entry->ctime.seconds = (git_time_t)st->st_ctime;
-	entry->mtime.seconds = (git_time_t)st->st_mtime;
+	entry->ctime.seconds = (int32_t)st->st_ctime;
+	entry->mtime.seconds = (int32_t)st->st_mtime;
 #if defined(GIT_USE_NSEC)
 	entry->mtime.nanoseconds = st->st_mtim.tv_nsec;
 	entry->ctime.nanoseconds = st->st_ctim.tv_nsec;
@@ -838,7 +838,7 @@ void git_index_entry__init_from_stat(
 		git_index__create_mode(0666) : git_index__create_mode(st->st_mode);
 	entry->uid  = st->st_uid;
 	entry->gid  = st->st_gid;
-	entry->file_size = st->st_size;
+	entry->file_size = (uint32_t)st->st_size;
 }
 
 static void index_entry_adjust_namemask(
@@ -1529,7 +1529,7 @@ int git_index__fill(git_index *index, const git_vector *source_entries)
 		return 0;
 
 	git_vector_size_hint(&index->entries, source_entries->length);
-	git_idxmap_resize(index->entries_map, source_entries->length * 1.3);
+	git_idxmap_resize(index->entries_map, (khint_t)(source_entries->length * 1.3));
 
 	git_vector_foreach(source_entries, i, source_entry) {
 		git_index_entry *entry = NULL;

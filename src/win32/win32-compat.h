@@ -13,6 +13,13 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+typedef long suseconds_t;
+
+struct p_timeval {
+	time_t tv_sec;
+	suseconds_t tv_usec;
+};
+
 struct p_timespec {
 	time_t tv_sec;
 	long tv_nsec;

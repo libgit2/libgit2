@@ -96,7 +96,7 @@ GIT_INLINE(void) git_win32__filetime_to_timespec(
 }
 
 GIT_INLINE(void) git_win32__timeval_to_filetime(
-	FILETIME *ft, const struct timeval tv)
+	FILETIME *ft, const struct p_timeval tv)
 {
 	long long ticks = (tv.tv_sec * 10000000LL) +
 		(tv.tv_usec * 10LL) + 116444736000000000LL;
@@ -105,19 +105,25 @@ GIT_INLINE(void) git_win32__timeval_to_filetime(
 	ft->dwLowDateTime = (ticks & 0xffffffffLL);
 }
 
-GIT_INLINE(int) git_win32__file_attribute_to_stat(
+GIT_INLINE(void) git_win32__stat_init(
 	struct stat *st,
-	const WIN32_FILE_ATTRIBUTE_DATA *attrdata,
-	const wchar_t *path)
+	DWORD dwFileAttributes,
+	DWORD nFileSizeHigh,
+	DWORD nFileSizeLow,
+	FILETIME ftCreationTime,
+	FILETIME ftLastAccessTime,
+	FILETIME ftLastWriteTime)
 {
 	mode_t mode = S_IREAD;
 
-	if (attrdata->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+	memset(st, 0, sizeof(struct stat));
+
+	if (dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 		mode |= S_IFDIR;
 	else
 		mode |= S_IFREG;
 
-	if ((attrdata->dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0)
+	if ((dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0)
 		mode |= S_IWRITE;
 
 	st->st_ino = 0;
@@ -125,12 +131,39 @@ GIT_INLINE(int) git_win32__file_attribute_to_stat(
 	st->st_uid = 0;
 	st->st_nlink = 1;
 	st->st_mode = mode;
-	st->st_size = ((git_off_t)attrdata->nFileSizeHigh << 32) + attrdata->nFileSizeLow;
+	st->st_size = ((git_off_t)nFileSizeHigh << 32) + nFileSizeLow;
 	st->st_dev = _getdrive() - 1;
 	st->st_rdev = st->st_dev;
-	git_win32__filetime_to_timespec(&(attrdata->ftLastAccessTime), &(st->st_atim));
-	git_win32__filetime_to_timespec(&(attrdata->ftLastWriteTime), &(st->st_mtim));
-	git_win32__filetime_to_timespec(&(attrdata->ftCreationTime), &(st->st_ctim));
+	git_win32__filetime_to_timespec(&ftLastAccessTime, &(st->st_atim));
+	git_win32__filetime_to_timespec(&ftLastWriteTime, &(st->st_mtim));
+	git_win32__filetime_to_timespec(&ftCreationTime, &(st->st_ctim));
+}
+
+GIT_INLINE(void) git_win32__file_information_to_stat(
+	struct stat *st,
+	const BY_HANDLE_FILE_INFORMATION *fileinfo)
+{
+	git_win32__stat_init(st,
+		fileinfo->dwFileAttributes,
+		fileinfo->nFileSizeHigh,
+		fileinfo->nFileSizeLow,
+		fileinfo->ftCreationTime,
+		fileinfo->ftLastAccessTime,
+		fileinfo->ftLastWriteTime);
+}
+
+GIT_INLINE(int) git_win32__file_attribute_to_stat(
+	struct stat *st,
+	const WIN32_FILE_ATTRIBUTE_DATA *attrdata,
+	const wchar_t *path)
+{
+	git_win32__stat_init(st,
+		attrdata->dwFileAttributes,
+		attrdata->nFileSizeHigh,
+		attrdata->nFileSizeLow,
+		attrdata->ftCreationTime,
+		attrdata->ftLastAccessTime,
+		attrdata->ftLastWriteTime);
 
 	if (attrdata->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT && path) {
 		git_win32_path target;
@@ -139,7 +172,7 @@ GIT_INLINE(int) git_win32__file_attribute_to_stat(
 			st->st_mode = (st->st_mode & ~S_IFMT) | S_IFLNK;
 
 			/* st_size gets the UTF-8 length of the target name, in bytes,
-				* not counting the NULL terminator */
+			 * not counting the NULL terminator */
 			if ((st->st_size = git__utf16_to_8(NULL, 0, target)) < 0) {
 				giterr_set(GITERR_OS, "Could not convert reparse point name for '%s'", path);
 				return -1;

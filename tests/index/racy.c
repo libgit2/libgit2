@@ -54,7 +54,7 @@ void test_index_racy__write_index_just_after_file(void)
 	git_index *index;
 	git_diff *diff;
 	git_buf path = GIT_BUF_INIT;
-	struct timeval times[2];
+	struct p_timeval times[2];
 
 	/* Make sure we do have a timestamp */
 	cl_git_pass(git_repository_index(&index, g_repo));

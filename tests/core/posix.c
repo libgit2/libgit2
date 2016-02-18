@@ -100,7 +100,7 @@ void test_core_posix__inet_pton(void)
 
 void test_core_posix__utimes(void)
 {
-	struct timeval times[2];
+	struct p_timeval times[2];
 	struct stat st;
 	time_t curtime;
 	int fd;

@@ -210,7 +210,7 @@ int p_lstat_posixly(const char *filename, struct stat *buf)
 	return do_lstat(filename, buf, true);
 }
 
-int p_utimes(const char *filename, const struct timeval times[2])
+int p_utimes(const char *filename, const struct p_timeval times[2])
 {
 	int fd, error;
 
@@ -223,7 +223,7 @@ int p_utimes(const char *filename, const struct timeval times[2])
 	return error;
 }
 
-int p_futimes(int fd, const struct timeval times[2])
+int p_futimes(int fd, const struct p_timeval times[2])
 {
 	HANDLE handle;
 	FILETIME atime = {0}, mtime = {0};
@@ -396,6 +396,22 @@ static int follow_and_lstat_link(git_win32_path path, struct stat* buf)
 		return -1;
 
 	return lstat_w(target_w, buf, false);
+}
+
+int p_fstat(int fd, struct stat *buf)
+{
+	BY_HANDLE_FILE_INFORMATION fhInfo;
+
+	HANDLE fh = (HANDLE)_get_osfhandle(fd);
+
+	if (fh == INVALID_HANDLE_VALUE ||
+		!GetFileInformationByHandle(fh, &fhInfo)) {
+		errno = EBADF;
+		return -1;
+	}
+
+	git_win32__file_information_to_stat(buf, &fhInfo);
+	return 0;
 }
 
 int p_stat(const char* path, struct stat* buf)
