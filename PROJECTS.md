@@ -75,8 +75,6 @@ might make good smaller projects by themselves.
     * Extract the Git tests that exercise that command
     * Convert the tests to call our emulation
     * These tests could go in examples/tests/...
-* Fix symlink support for files in the .git directory (i.e. don't overwrite
-  the symlinks when writing the file contents back out)
 * Add hooks API to enumerate and manage hooks (not run them at this point)
     * Enumeration of available hooks
     * Lookup API to see which hooks have a script and get the script
@@ -85,8 +83,6 @@ might make good smaller projects by themselves.
       executes the action in question
 * Isolate logic of ignore evaluation into a standalone API
 * Upgrade internal libxdiff code to latest from core Git
-* Improve index internals with hashtable lookup for files instead of
-  using binary search every time
 * Tree builder improvements:
     * Extend to allow building a tree hierarchy
 * Apply-patch API
