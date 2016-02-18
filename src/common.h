@@ -62,6 +62,12 @@
 # endif
 #define GIT_STDLIB_CALL
 
+#ifdef GIT_USE_STAT_ATIMESPEC
+# define st_atim st_atimespec
+# define st_ctim st_ctimespec
+# define st_mtim st_mtimespec
+#endif
+
 # include <arpa/inet.h>
 
 #endif
