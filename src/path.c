@@ -1630,9 +1630,12 @@ static bool verify_component(
 		!verify_dotgit_ntfs(repo, component, len))
 		return false;
 
+	/* don't bother rerunning the `.git` test if we ran the HFS or NTFS
+	 * specific tests, they would have already rejected `.git`.
+	 */
 	if ((flags & GIT_PATH_REJECT_DOT_GIT_HFS) == 0 &&
 		(flags & GIT_PATH_REJECT_DOT_GIT_NTFS) == 0 &&
-		(flags & GIT_PATH_REJECT_DOT_GIT) &&
+		(flags & GIT_PATH_REJECT_DOT_GIT_LITERAL) &&
 		len == 4 &&
 		component[0] == '.' &&
 		(component[1] == 'g' || component[1] == 'G') &&
@@ -1648,6 +1651,8 @@ GIT_INLINE(unsigned int) dotgit_flags(
 	unsigned int flags)
 {
 	int protectHFS = 0, protectNTFS = 0;
+
+	flags |= GIT_PATH_REJECT_DOT_GIT_LITERAL;
 
 #ifdef __APPLE__
 	protectHFS = 1;
