@@ -8,10 +8,7 @@
 #define INCLUDE_pool_h__
 
 #include "common.h"
-
-#ifdef GIT_DEBUG_POOL
 #include "vector.h"
-#endif
 
 typedef struct git_pool_page git_pool_page;
 
