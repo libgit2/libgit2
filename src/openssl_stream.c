@@ -267,7 +267,6 @@ static int ssl_teardown(SSL *ssl)
 	else
 		ret = 0;
 
-	SSL_free(ssl);
 	return ret;
 }
 
@@ -530,6 +529,7 @@ void openssl_free(git_stream *stream)
 {
 	openssl_stream *st = (openssl_stream *) stream;
 
+	SSL_free(st->ssl);
 	git__free(st->host);
 	git__free(st->cert_info.data);
 	git_stream_free(st->io);
