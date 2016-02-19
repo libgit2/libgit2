@@ -261,6 +261,10 @@ int gitno_extract_url_parts(
 		*path = git__substrdup(_path, u.field_data[UF_PATH].len);
 		GITERR_CHECK_ALLOC(*path);
 	} else {
+		git__free(*port);
+		*port = NULL;
+		git__free(*host);
+		*host = NULL;
 		giterr_set(GITERR_NET, "invalid url, missing path");
 		return GIT_EINVALIDSPEC;
 	}
