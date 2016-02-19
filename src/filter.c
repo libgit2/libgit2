@@ -89,7 +89,7 @@ static void filter_registry_shutdown(void)
 static int filter_registry_initialize(void)
 {
 	int error = 0;
-	struct filter_registry *reg;
+	struct filter_registry *reg, *found;
 
 	if (git__filter_registry)
 		return 0;
@@ -101,8 +101,8 @@ static int filter_registry_initialize(void)
 			&reg->filters, 2, filter_def_priority_cmp)) < 0)
 		goto cleanup;
 
-	reg = git__compare_and_swap(&git__filter_registry, NULL, reg);
-	if (reg != NULL)
+	found = git__compare_and_swap(&git__filter_registry, NULL, reg);
+	if (found != NULL)
 		goto cleanup;
 
 	git__on_shutdown(filter_registry_shutdown);

@@ -96,7 +96,7 @@ static git_sysdir_guess_cb git_sysdir__dir_guess[GIT_SYSDIR__MAX] = {
 	git_sysdir_guess_template_dirs,
 };
 
-static int git_sysdir__dirs_shutdown_set = 0;
+static git_atomic git_sysdir__dirs_shutdown_set = {0};
 
 int git_sysdir_global_init(void)
 {
@@ -115,8 +115,6 @@ void git_sysdir_global_shutdown(void)
 	int i;
 	for (i = 0; i < GIT_SYSDIR__MAX; ++i)
 		git_buf_free(&git_sysdir__dirs[i]);
-
-	git_sysdir__dirs_shutdown_set = 0;
 }
 
 static int git_sysdir_check_selector(git_sysdir_t which)
@@ -139,9 +137,8 @@ int git_sysdir_get(const git_buf **out, git_sysdir_t which)
 
 	if (!git_buf_len(&git_sysdir__dirs[which])) {
 		/* prepare shutdown if we're going to need it */
-		if (!git_sysdir__dirs_shutdown_set) {
+		if (git_atomic_inc(&git_sysdir__dirs_shutdown_set) == 0) {
 			git__on_shutdown(git_sysdir_global_shutdown);
-			git_sysdir__dirs_shutdown_set = 1;
 		}
 
 		GITERR_CHECK_ERROR(
