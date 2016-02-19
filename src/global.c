@@ -22,14 +22,6 @@ git_mutex git__mwindow_mutex;
 
 #define MAX_SHUTDOWN_CB 8
 
-#ifdef GIT_OPENSSL
-# include <openssl/ssl.h>
-SSL_CTX *git__ssl_ctx;
-# ifdef GIT_THREADS
-static git_mutex *openssl_locks;
-# endif
-#endif
-
 static git_global_shutdown_fn git__shutdown_callbacks[MAX_SHUTDOWN_CB];
 static git_atomic git__n_shutdown_callbacks;
 static git_atomic git__n_inits;
