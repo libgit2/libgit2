@@ -13,140 +13,15 @@
 /* Used as default value for git_buf->ptr so that people can always
  * assume ptr is non-NULL and zero terminated even for new git_bufs.
  */
-char git_buf__initbuf[1];
+extern char git_buf__initbuf[1];
 
-char git_buf__oom[1];
+extern char git_buf__oom[1];
 
 #define ENSURE_SIZE(b, d) \
 	if ((d) > buf->asize && git_buf_grow(b, (d)) < 0)\
 		return -1;
 
-
-void git_buf_init(git_buf *buf, size_t initial_size)
-{
-	buf->asize = 0;
-	buf->size = 0;
-	buf->ptr = git_buf__initbuf;
-
-	if (initial_size)
-		git_buf_grow(buf, initial_size);
-}
-
-int git_buf_try_grow(
-	git_buf *buf, size_t target_size, bool mark_oom)
-{
-	char *new_ptr;
-	size_t new_size;
-
-	if (buf->ptr == git_buf__oom)
-		return -1;
-
-	if (buf->asize == 0 && buf->size != 0) {
-		giterr_set(GITERR_INVALID, "cannot grow a borrowed buffer");
-		return GIT_EINVALID;
-	}
-
-	if (!target_size)
-		target_size = buf->size;
-
-	if (target_size <= buf->asize)
-		return 0;
-
-	if (buf->asize == 0) {
-		new_size = target_size;
-		new_ptr = NULL;
-	} else {
-		new_size = buf->asize;
-		new_ptr = buf->ptr;
-	}
-
-	/* grow the buffer size by 1.5, until it's big enough
-	 * to fit our target size */
-	while (new_size < target_size)
-		new_size = (new_size << 1) - (new_size >> 1);
-
-	/* round allocation up to multiple of 8 */
-	new_size = (new_size + 7) & ~7;
-
-	if (new_size < buf->size) {
-		if (mark_oom)
-			buf->ptr = git_buf__oom;
-
-		giterr_set_oom();
-		return -1;
-	}
-
-	new_ptr = git__realloc(new_ptr, new_size);
-
-	if (!new_ptr) {
-		if (mark_oom) {
-			if (buf->ptr && (buf->ptr != git_buf__initbuf))
-				git__free(buf->ptr);
-			buf->ptr = git_buf__oom;
-		}
-		return -1;
-	}
-
-	buf->asize = new_size;
-	buf->ptr   = new_ptr;
-
-	/* truncate the existing buffer size if necessary */
-	if (buf->size >= buf->asize)
-		buf->size = buf->asize - 1;
-	buf->ptr[buf->size] = '\0';
-
-	return 0;
-}
-
-int git_buf_grow(git_buf *buffer, size_t target_size)
-{
-	return git_buf_try_grow(buffer, target_size, true);
-}
-
-int git_buf_grow_by(git_buf *buffer, size_t additional_size)
-{
-	size_t newsize;
-
-	if (GIT_ADD_SIZET_OVERFLOW(&newsize, buffer->size, additional_size)) {
-		buffer->ptr = git_buf__oom;
-		return -1;
-	}
-
-	return git_buf_try_grow(buffer, newsize, true);
-}
-
-void git_buf_free(git_buf *buf)
-{
-	if (!buf) return;
-
-	if (buf->asize > 0 && buf->ptr != NULL && buf->ptr != git_buf__oom)
-		git__free(buf->ptr);
-
-	git_buf_init(buf, 0);
-}
-
-void git_buf_sanitize(git_buf *buf)
-{
-	if (buf->ptr == NULL) {
-		assert(buf->size == 0 && buf->asize == 0);
-		buf->ptr = git_buf__initbuf;
-	} else if (buf->asize > buf->size)
-		buf->ptr[buf->size] = '\0';
-}
-
-void git_buf_clear(git_buf *buf)
-{
-	buf->size = 0;
-
-	if (!buf->ptr) {
-		buf->ptr = git_buf__initbuf;
-		buf->asize = 0;
-	}
-
-	if (buf->asize > 0)
-		buf->ptr[0] = '\0';
-}
-
+#if 0
 int git_buf_set(git_buf *buf, const void *data, size_t len)
 {
 	size_t alloclen;
@@ -167,6 +42,7 @@ int git_buf_set(git_buf *buf, const void *data, size_t len)
 	}
 	return 0;
 }
+#endif
 
 int git_buf_is_binary(const git_buf *buf)
 {

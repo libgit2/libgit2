@@ -561,6 +561,7 @@ ELSE()
 	FILE(GLOB SRC_OS src/unix/*.c src/unix/*.h)
 ENDIF()
 FILE(GLOB SRC_GIT2 src/*.c src/*.h src/transports/*.c src/transports/*.h src/xdiff/*.c src/xdiff/*.h)
+FILE(GLOB SRC_RUST src/*.rs)
 
 # Determine architecture of the machine
 IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -572,6 +573,10 @@ ELSE()
 ENDIF()
 
 # Compile and link libgit2
+ADD_CUSTOM_COMMAND(OUTPUT rustsources COMMAND rustc -g --crate-type=staticlib --crate-name=git2core src/lib.rs
+  DEPENDS ${SRC_RUST})
+ADD_CUSTOM_TARGET(compile_rust ALL DEPENDS rustsources)
+
 ADD_LIBRARY(git2 ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SSH} ${SRC_SHA1} ${WIN_RC})
 TARGET_LINK_LIBRARIES(git2 ${SECURITY_DIRS})
 TARGET_LINK_LIBRARIES(git2 ${COREFOUNDATION_DIRS})
@@ -579,6 +584,9 @@ TARGET_LINK_LIBRARIES(git2 ${SSL_LIBRARIES})
 TARGET_LINK_LIBRARIES(git2 ${SSH_LIBRARIES})
 TARGET_LINK_LIBRARIES(git2 ${GSSAPI_LIBRARIES})
 TARGET_LINK_LIBRARIES(git2 ${ICONV_LIBRARIES})
+TARGET_LINK_LIBRARIES(git2 "dl")
+TARGET_LINK_LIBRARIES(git2 "m")
+TARGET_LINK_LIBRARIES(git2 "${CMAKE_CURRENT_SOURCE_DIR}/libgit2core.a")
 TARGET_OS_LIBRARIES(git2)
 
 # Workaround for Cmake bug #0011240 (see http://public.kitware.com/Bug/view.php?id=11240)
@@ -636,6 +644,8 @@ IF (BUILD_CLAR)
 	FILE(GLOB_RECURSE SRC_TEST ${CLAR_PATH}/*/*.c ${CLAR_PATH}/*/*.h)
 	SET(SRC_CLAR "${CLAR_PATH}/main.c" "${CLAR_PATH}/clar_libgit2.c" "${CLAR_PATH}/clar_libgit2_trace.c" "${CLAR_PATH}/clar_libgit2_timer.c" "${CLAR_PATH}/clar.c")
 
+	FILE(GLOB SRC_RUST "${CMAKE_CURRENT_SOURCE_DIR}/*.a")
+
 	ADD_CUSTOM_COMMAND(
 		OUTPUT ${CLAR_PATH}/clar.suite
 		COMMAND ${PYTHON_EXECUTABLE} generate.py -f -xonline -xstress .
@@ -647,7 +657,7 @@ IF (BUILD_CLAR)
 		${CLAR_PATH}/clar.c
 		PROPERTIES OBJECT_DEPENDS ${CLAR_PATH}/clar.suite)
 
-	ADD_EXECUTABLE(libgit2_clar ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_CLAR} ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SSH} ${SRC_SHA1})
+	ADD_EXECUTABLE(libgit2_clar ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_CLAR} ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SSH} ${SRC_SHA1} ${SRC_RUST})
 
 	TARGET_LINK_LIBRARIES(libgit2_clar ${COREFOUNDATION_DIRS})
 	TARGET_LINK_LIBRARIES(libgit2_clar ${SECURITY_DIRS})
@@ -655,6 +665,10 @@ IF (BUILD_CLAR)
 	TARGET_LINK_LIBRARIES(libgit2_clar ${SSH_LIBRARIES})
 	TARGET_LINK_LIBRARIES(libgit2_clar ${GSSAPI_LIBRARIES})
 	TARGET_LINK_LIBRARIES(libgit2_clar ${ICONV_LIBRARIES})
+	TARGET_LINK_LIBRARIES(libgit2_clar "dl")
+	TARGET_LINK_LIBRARIES(libgit2_clar "m")
+	LINK_DIRECTORIES(libgit2_clar ${CMAKE_CURRENT_SOURCE_DIR})
+	TARGET_LINK_LIBRARIES(libgit2_clar "${CMAKE_CURRENT_SOURCE_DIR}/libgit2core.a")
 	TARGET_OS_LIBRARIES(libgit2_clar)
 	IDE_SPLIT_SOURCES(libgit2_clar)
 
