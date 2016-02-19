@@ -15,6 +15,7 @@
 #include "socket_stream.h"
 #include "netops.h"
 #include "git2/transport.h"
+#include "git2/sys/openssl.h"
 
 #ifdef GIT_CURL
 # include "curl_stream.h"
