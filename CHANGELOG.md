@@ -328,8 +328,8 @@ v0.23
 
 * `git_rebase_options` now contains a `git_checkout_options` struct
   that will be used for functions that modify the working directory,
-  namely `git_checkout_init`, `git_checkout_next` and
-  `git_checkout_abort`.  As a result, `git_rebase_open` now also takes
+  namely `git_rebase_init`, `git_rebase_next` and
+  `git_rebase_abort`.  As a result, `git_rebase_open` now also takes
   a `git_rebase_options` and only the `git_rebase_init` and
   `git_rebase_open` functions take a `git_rebase_options`, where they
   will persist the options to subsequent `git_rebase` calls.

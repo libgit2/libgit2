@@ -64,7 +64,7 @@ typedef struct {
 
 	/**
 	 * Options to control how files are written during `git_rebase_init`,
-	 * `git_checkout_next` and `git_checkout_abort`.  Note that a minimum
+	 * `git_rebase_next` and `git_rebase_abort`.  Note that a minimum
 	 * strategy of `GIT_CHECKOUT_SAFE` is defaulted in `init` and `next`,
 	 * and a minimum strategy of `GIT_CHECKOUT_FORCE` is defaulted in
 	 * `abort` to match git semantics.
