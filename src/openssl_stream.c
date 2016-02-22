@@ -545,6 +545,7 @@ int git_openssl_stream_new(git_stream **out, const char *host, const char *port)
 	st = git__calloc(1, sizeof(openssl_stream));
 	GITERR_CHECK_ALLOC(st);
 
+	st->io = NULL;
 #ifdef GIT_CURL
 	error = git_curl_stream_new(&st->io, host, port);
 #else
@@ -552,12 +553,13 @@ int git_openssl_stream_new(git_stream **out, const char *host, const char *port)
 #endif
 
 	if (error < 0)
-		return error;
+		goto out_err;
 
 	st->ssl = SSL_new(git__ssl_ctx);
 	if (st->ssl == NULL) {
 		giterr_set(GITERR_SSL, "failed to create ssl object");
-		return -1;
+		error = -1;
+		goto out_err;
 	}
 
 	st->host = git__strdup(host);
@@ -576,6 +578,12 @@ int git_openssl_stream_new(git_stream **out, const char *host, const char *port)
 
 	*out = (git_stream *) st;
 	return 0;
+
+out_err:
+	git_stream_free(st->io);
+	git__free(st);
+
+	return error;
 }
 
 #else
