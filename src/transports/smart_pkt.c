@@ -296,13 +296,12 @@ static int ng_pkt(git_pkt **out, const char *line, size_t len)
 	pkt = git__malloc(sizeof(*pkt));
 	GITERR_CHECK_ALLOC(pkt);
 
+	pkt->ref = NULL;
 	pkt->type = GIT_PKT_NG;
 
 	line += 3; /* skip "ng " */
-	if (!(ptr = strchr(line, ' '))) {
-		giterr_set(GITERR_NET, "Invalid packet line");
-		return -1;
-	}
+	if (!(ptr = strchr(line, ' ')))
+		goto out_err;
 	len = ptr - line;
 
 	GITERR_CHECK_ALLOC_ADD(&alloclen, len, 1);
@@ -313,12 +312,8 @@ static int ng_pkt(git_pkt **out, const char *line, size_t len)
 	pkt->ref[len] = '\0';
 
 	line = ptr + 1;
-	if (!(ptr = strchr(line, '\n'))) {
-		giterr_set(GITERR_NET, "Invalid packet line");
-		git__free(pkt->ref);
-		git__free(pkt);
-		return -1;
-	}
+	if (!(ptr = strchr(line, '\n')))
+		goto out_err;
 	len = ptr - line;
 
 	GITERR_CHECK_ALLOC_ADD(&alloclen, len, 1);
@@ -330,6 +325,12 @@ static int ng_pkt(git_pkt **out, const char *line, size_t len)
 
 	*out = (git_pkt *)pkt;
 	return 0;
+
+out_err:
+	giterr_set(GITERR_NET, "Invalid packet line");
+	git__free(pkt->ref);
+	git__free(pkt);
+	return -1;
 }
 
 static int unpack_pkt(git_pkt **out, const char *line, size_t len)
