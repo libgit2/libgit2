@@ -92,7 +92,11 @@ static int diff_print_info_init_frompatch(
 	git_diff_line_cb cb,
 	void *payload)
 {
-	git_repository *repo = patch && patch->diff ? patch->diff->repo : NULL;
+	git_repository *repo;
+
+	assert(patch);
+
+	repo = patch->diff ? patch->diff->repo : NULL;
 
 	memset(pi, 0, sizeof(diff_print_info));
 
