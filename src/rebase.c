@@ -257,12 +257,12 @@ done:
 	return error;
 }
 
-static git_rebase *rebase_alloc(const git_rebase_options *rebase_opts)
+static int rebase_alloc(git_rebase **out, const git_rebase_options *rebase_opts)
 {
 	git_rebase *rebase = git__calloc(1, sizeof(git_rebase));
+	GITERR_CHECK_ALLOC(rebase);
 
-	if (!rebase)
-		return NULL;
+	*out = NULL;
 
 	if (rebase_opts)
 		memcpy(&rebase->options, rebase_opts, sizeof(git_rebase_options));
@@ -270,14 +270,16 @@ static git_rebase *rebase_alloc(const git_rebase_options *rebase_opts)
 		git_rebase_init_options(&rebase->options, GIT_REBASE_OPTIONS_VERSION);
 
 	if (rebase_opts && rebase_opts->rewrite_notes_ref) {
-		if ((rebase->options.rewrite_notes_ref = git__strdup(rebase_opts->rewrite_notes_ref)) == NULL)
-			return NULL;
+		rebase->options.rewrite_notes_ref = git__strdup(rebase_opts->rewrite_notes_ref);
+		GITERR_CHECK_ALLOC(rebase->options.rewrite_notes_ref);
 	}
 
 	if ((rebase->options.checkout_options.checkout_strategy & (GIT_CHECKOUT_SAFE | GIT_CHECKOUT_FORCE)) == 0)
 		rebase->options.checkout_options.checkout_strategy = GIT_CHECKOUT_SAFE;
 
-	return rebase;
+	*out = rebase;
+
+	return 0;
 }
 
 static int rebase_check_versions(const git_rebase_options *given_opts)
@@ -305,8 +307,8 @@ int git_rebase_open(
 	if ((error = rebase_check_versions(given_opts)) < 0)
 		return error;
 
-	rebase = rebase_alloc(given_opts);
-	GITERR_CHECK_ALLOC(rebase);
+	if (rebase_alloc(&rebase, given_opts) < 0)
+		return -1;
 
 	rebase->repo = repo;
 
@@ -708,8 +710,8 @@ int git_rebase_init(
 		branch = head_branch;
 	}
 
-	rebase = rebase_alloc(given_opts);
-	GITERR_CHECK_ALLOC(rebase);
+	if (rebase_alloc(&rebase, given_opts) < 0)
+		return -1;
 
 	rebase->repo = repo;
 	rebase->inmemory = inmemory;
