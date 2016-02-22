@@ -629,10 +629,8 @@ static int write_pack(git_packbuilder *pb,
 	int error = 0;
 
 	write_order = compute_write_order(pb);
-	if (write_order == NULL) {
-		error = -1;
-		goto done;
-	}
+	if (write_order == NULL)
+		return -1;
 
 	/* Write pack header */
 	ph.hdr_signature = htonl(PACK_SIGNATURE);
