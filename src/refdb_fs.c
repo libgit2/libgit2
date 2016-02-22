@@ -1512,8 +1512,7 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 #undef seek_forward
 
 fail:
-	if (entry)
-		git_reflog_entry__free(entry);
+	git_reflog_entry__free(entry);
 
 	return -1;
 }
