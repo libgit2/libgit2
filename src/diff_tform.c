@@ -261,18 +261,23 @@ static int normalize_find_opts(
 	if (!given ||
 		 (given->flags & GIT_DIFF_FIND_ALL) == GIT_DIFF_FIND_BY_CONFIG)
 	{
-		char *rule =
-			git_config__get_string_force(cfg, "diff.renames", "true");
-		int boolval;
+		if (diff->repo) {
+			char *rule =
+				git_config__get_string_force(cfg, "diff.renames", "true");
+			int boolval;
 
-		if (!git__parse_bool(&boolval, rule) && !boolval)
-			/* don't set FIND_RENAMES if bool value is false */;
-		else if (!strcasecmp(rule, "copies") || !strcasecmp(rule, "copy"))
-			opts->flags |= GIT_DIFF_FIND_RENAMES | GIT_DIFF_FIND_COPIES;
-		else
+			if (!git__parse_bool(&boolval, rule) && !boolval)
+				/* don't set FIND_RENAMES if bool value is false */;
+			else if (!strcasecmp(rule, "copies") || !strcasecmp(rule, "copy"))
+				opts->flags |= GIT_DIFF_FIND_RENAMES | GIT_DIFF_FIND_COPIES;
+			else
+				opts->flags |= GIT_DIFF_FIND_RENAMES;
+
+			git__free(rule);
+		} else {
+			/* set default flag */
 			opts->flags |= GIT_DIFF_FIND_RENAMES;
-
-		git__free(rule);
+		}
 	}
 
 	/* some flags imply others */
