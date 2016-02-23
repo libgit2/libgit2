@@ -17,7 +17,7 @@ int git__page_size(size_t *page_size)
 {
 	long sc_page_size = sysconf(_SC_PAGE_SIZE);
 	if (sc_page_size < 0) {
-		giterr_set_str(GITERR_OS, "Can't determine system page size");
+		giterr_set(GITERR_OS, "can't determine system page size");
 		return -1;
 	}
 	*page_size = (size_t) sc_page_size;
