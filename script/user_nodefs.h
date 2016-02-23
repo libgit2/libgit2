@@ -6,6 +6,7 @@
  */
 
 #nodef GITERR_CHECK_ALLOC(ptr) if (ptr == NULL) { __coverity_panic__(); }
+#nodef GITERR_CHECK_ALLOC_BUF(buf) if (buf == NULL || git_buf_oom(buf)) { __coverity_panic__(); }
 
 #nodef GITERR_CHECK_ALLOC_ADD(out, one, two) \
 	if (GIT_ADD_SIZET_OVERFLOW(out, one, two)) { __coverity_panic__(); }

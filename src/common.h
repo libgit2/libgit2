@@ -90,6 +90,11 @@
 #define GITERR_CHECK_ALLOC(ptr) if (ptr == NULL) { return -1; }
 
 /**
+ * Check a buffer allocation result, returning -1 if it failed.
+ */
+#define GITERR_CHECK_ALLOC_BUF(buf) if ((void *)(buf) == NULL || git_buf_oom(buf)) { return -1; }
+
+/**
  * Check a return value and propagate result if non-zero.
  */
 #define GITERR_CHECK_ERROR(code) \
