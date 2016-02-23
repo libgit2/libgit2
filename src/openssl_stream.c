@@ -383,6 +383,8 @@ static int verify_server_cert(SSL *ssl, const char *host)
 			GITERR_CHECK_ALLOC(peer_cn);
 			memcpy(peer_cn, ASN1_STRING_data(str), size);
 			peer_cn[size] = '\0';
+		} else {
+			goto cert_fail_name;
 		}
 	} else {
 		int size = ASN1_STRING_to_UTF8(&peer_cn, str);
