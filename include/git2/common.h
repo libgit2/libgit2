@@ -245,6 +245,12 @@ typedef enum {
  *
  *	* opts(GIT_OPT_SET_USER_AGENT, const char *user_agent)
  *
+ *		> Set the value of the User-Agent header.  This value will be
+ *		> appended to "git/1.0", for compatibility with other git clients.
+ *		>
+ *		> - `user_agent` is the value that will be delivered as the
+ *		>   User-Agent header on HTTP requests.
+ *
  * @param option Option key
  * @param ... value to set the option
  * @return 0 on success, <0 on failure
