@@ -726,6 +726,18 @@ on_error:
 	return -1;
 }
 
+static git_otype otype_from_mode(git_filemode_t filemode)
+{
+	switch (filemode) {
+	case GIT_FILEMODE_TREE:
+		return GIT_OBJ_TREE;
+	case GIT_FILEMODE_COMMIT:
+		return GIT_OBJ_COMMIT;
+	default:
+		return GIT_OBJ_BLOB;
+	}
+}
+
 int git_treebuilder_insert(
 	const git_tree_entry **entry_out,
 	git_treebuilder *bld,
@@ -744,6 +756,9 @@ int git_treebuilder_insert(
 
 	if (!valid_entry_name(bld->repo, filename))
 		return tree_error("Failed to insert entry. Invalid name for a tree entry", filename);
+
+	if (!git_object__is_valid(bld->repo, id, otype_from_mode(filemode)))
+		return tree_error("Failed to insert entry; invalid object specified", filename);
 
 	pos = git_strmap_lookup_index(bld->map, filename);
 	if (git_strmap_valid_index(bld->map, pos)) {
