@@ -2135,11 +2135,11 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 
 		/* read 3 ASCII octal numbers for stage entries */
 		for (i = 0; i < 3; i++) {
-			int tmp;
+			int64_t tmp;
 
-			if (git__strtol32(&tmp, buffer, &endptr, 8) < 0 ||
+			if (git__strtol64(&tmp, buffer, &endptr, 8) < 0 ||
 				!endptr || endptr == buffer || *endptr ||
-				(unsigned)tmp > UINT_MAX) {
+				tmp < 0) {
 				index_entry_reuc_free(lost);
 				return index_error_invalid("reading reuc entry stage");
 			}
