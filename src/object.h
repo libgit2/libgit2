@@ -46,4 +46,20 @@ GIT_INLINE(bool) git_object__is_valid(
 	return valid;
 }
 
+GIT_INLINE(git_otype) git_object__type_from_filemode(git_filemode_t mode)
+{
+	switch (mode) {
+	case GIT_FILEMODE_TREE:
+		return GIT_OBJ_TREE;
+	case GIT_FILEMODE_COMMIT:
+		return GIT_OBJ_COMMIT;
+	case GIT_FILEMODE_BLOB:
+	case GIT_FILEMODE_BLOB_EXECUTABLE:
+	case GIT_FILEMODE_LINK:
+		return GIT_OBJ_BLOB;
+	default:
+		return GIT_OBJ_BAD;
+	}
+}
+
 #endif
