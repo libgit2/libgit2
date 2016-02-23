@@ -181,6 +181,9 @@ int git_libgit2_opts(int key, ...)
 		}
 
 		break;
+	default:
+		giterr_set(GITERR_INVALID, "invalid option key");
+		error = -1;
 	}
 
 	va_end(ap);
