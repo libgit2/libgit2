@@ -705,8 +705,7 @@ int git_path_resolve_relative(git_buf *path, size_t ceiling)
 	char *base, *to, *from, *next;
 	size_t len;
 
-	if (!path || git_buf_oom(path))
-		return -1;
+	GITERR_CHECK_ALLOC_BUF(path);
 
 	if (ceiling > path->size)
 		ceiling = path->size;
