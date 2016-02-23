@@ -30,4 +30,20 @@ int git_oid__parse(git_oid *oid, const char **buffer_out, const char *buffer_end
 
 void git_oid__writebuf(git_buf *buf, const char *header, const git_oid *oid);
 
+GIT_INLINE(bool) git_object__is_valid(
+	git_repository *repo, const git_oid *id, git_otype type)
+{
+	git_object *obj = NULL;
+	bool valid = true;
+
+	if (git_object__strict_input_validation) {
+		if (git_object_lookup(&obj, repo, id, type) < 0)
+			valid = false;
+
+		git_object_free(obj);
+	}
+
+	return valid;
+}
+
 #endif
