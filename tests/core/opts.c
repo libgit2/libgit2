@@ -17,3 +17,9 @@ void test_core_opts__readwrite(void)
 
 	cl_assert(new_val == old_val);
 }
+
+void test_core_opts__invalid_option(void)
+{
+	cl_git_fail(git_libgit2_opts(-1, "foobar"));
+}
+
