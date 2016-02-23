@@ -7,6 +7,8 @@
 #ifndef INCLUDE_object_h__
 #define INCLUDE_object_h__
 
+extern bool git_object__strict_input_validation;
+
 /** Base git object for inheritance */
 struct git_object {
 	git_cached_obj cached;
