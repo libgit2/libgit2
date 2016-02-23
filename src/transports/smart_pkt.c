@@ -543,7 +543,9 @@ static int buffer_want_with_caps(const git_remote_head *head, transport_smart_ca
 		"%04xwant %s %s\n", (unsigned int)len, oid, git_buf_cstr(&str));
 	git_buf_free(&str);
 
-	return git_buf_oom(buf);
+	GITERR_CHECK_ALLOC_BUF(buf);
+
+	return 0;
 }
 
 /*
