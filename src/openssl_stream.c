@@ -603,4 +603,10 @@ int git_openssl_stream_new(git_stream **out, const char *host, const char *port)
 	return -1;
 }
 
+int git_openssl_set_locking(void)
+{
+	/* No OpenSSL here, move along */
+	return 0;
+}
+
 #endif
