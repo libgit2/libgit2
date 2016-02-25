@@ -69,6 +69,8 @@ struct git_iterator {
 	git_repository *repo;
 	char *start;
 	char *end;
+	bool started;
+	bool ended;
 	git_vector pathlist;
 	size_t pathlist_walk_idx;
 	int (*strcomp)(const char *a, const char *b);
@@ -254,7 +256,7 @@ extern int git_iterator_current_tree_entry(
 	const git_tree_entry **entry_out, git_iterator *iter);
 
 extern int git_iterator_current_parent_tree(
-	const git_tree **tree_out, git_iterator *iter, const char *parent_path);
+	const git_tree **tree_out, git_iterator *iter, size_t depth);
 
 extern bool git_iterator_current_is_ignored(git_iterator *iter);
 

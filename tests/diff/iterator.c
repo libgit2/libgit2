@@ -264,37 +264,30 @@ static void check_tree_entry(
 	const git_index_entry *ie;
 	const git_tree_entry *te;
 	const git_tree *tree;
-	git_buf path = GIT_BUF_INIT;
 
 	cl_git_pass(git_iterator_current_tree_entry(&te, i));
 	cl_assert(te);
 	cl_assert(git_oid_streq(te->oid, oid) == 0);
 
 	cl_git_pass(git_iterator_current(&ie, i));
-	cl_git_pass(git_buf_sets(&path, ie->path));
 
 	if (oid_p) {
-		git_buf_rtruncate_at_char(&path, '/');
-		cl_git_pass(git_iterator_current_parent_tree(&tree, i, path.ptr));
+		cl_git_pass(git_iterator_current_parent_tree(&tree, i, 0));
 		cl_assert(tree);
 		cl_assert(git_oid_streq(git_tree_id(tree), oid_p) == 0);
 	}
 
 	if (oid_pp) {
-		git_buf_rtruncate_at_char(&path, '/');
-		cl_git_pass(git_iterator_current_parent_tree(&tree, i, path.ptr));
+		cl_git_pass(git_iterator_current_parent_tree(&tree, i, 1));
 		cl_assert(tree);
 		cl_assert(git_oid_streq(git_tree_id(tree), oid_pp) == 0);
 	}
 
 	if (oid_ppp) {
-		git_buf_rtruncate_at_char(&path, '/');
-		cl_git_pass(git_iterator_current_parent_tree(&tree, i, path.ptr));
+		cl_git_pass(git_iterator_current_parent_tree(&tree, i, 2));
 		cl_assert(tree);
 		cl_assert(git_oid_streq(git_tree_id(tree), oid_ppp) == 0);
 	}
-
-	git_buf_free(&path);
 }
 
 void test_diff_iterator__tree_special_functions(void)

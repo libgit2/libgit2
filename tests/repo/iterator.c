@@ -1455,7 +1455,7 @@ void test_repo_iterator__treefilelist(void)
 	git_repository_head_tree(&tree, g_repo);
 
 	/* All indexfilelist iterator tests are "autoexpand with no tree entries" */
-	/* In this test we DO NOT force a case on the iteratords and verify default behavior. */
+	/* In this test we DO NOT force a case on the iterators and verify default behavior. */
 
 	i_opts.pathlist.strings = (char **)filelist.contents;
 	i_opts.pathlist.count = filelist.length;
