@@ -6,6 +6,7 @@
  */
 
 #nodef GITERR_CHECK_ALLOC(ptr) if (ptr == NULL) { __coverity_panic__(); }
+#nodef GITERR_CHECK_ALLOC_BUF(buf) if (buf == NULL || git_buf_oom(buf)) { __coverity_panic__(); }
 
 #nodef GITERR_CHECK_ALLOC_ADD(out, one, two) \
 	if (GIT_ADD_SIZET_OVERFLOW(out, one, two)) { __coverity_panic__(); }
@@ -25,3 +26,9 @@
 #nodef GITERR_CHECK_VERSION(S,V,N) if (giterr__check_version(S,V,N) < 0)  { __coverity_panic__(); }
 
 #nodef LOOKS_LIKE_DRIVE_PREFIX(S) (strlen(S) >= 2 && git__isalpha((S)[0]) && (S)[1] == ':')
+
+#nodef git_vector_foreach(v, iter, elem)	\
+	for ((iter) = 0; (v)->contents != NULL && (iter) < (v)->length && ((elem) = (v)->contents[(iter)], 1); (iter)++ )
+
+#nodef git_vector_rforeach(v, iter, elem)	\
+	for ((iter) = (v)->length - 1; (v)->contents != NULL && (iter) < SIZE_MAX && ((elem) = (v)->contents[(iter)], 1); (iter)-- )

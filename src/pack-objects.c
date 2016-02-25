@@ -629,10 +629,8 @@ static int write_pack(git_packbuilder *pb,
 	int error = 0;
 
 	write_order = compute_write_order(pb);
-	if (write_order == NULL) {
-		error = -1;
-		goto done;
-	}
+	if (write_order == NULL)
+		return -1;
 
 	/* Write pack header */
 	ph.hdr_signature = htonl(PACK_SIGNATURE);
@@ -850,9 +848,11 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 
 		git_packbuilder__cache_unlock(pb);
 
-		if (overflow ||
-			!(trg_object->delta_data = git__realloc(delta_buf, delta_size)))
+		if (overflow)
 			return -1;
+
+		trg_object->delta_data = git__realloc(delta_buf, delta_size);
+		GITERR_CHECK_ALLOC(trg_object->delta_data);
 	} else {
 		/* create delta when writing the pack */
 		git_packbuilder__cache_unlock(pb);

@@ -223,8 +223,7 @@ static int push_glob(git_revwalk *walk, const char *glob, int hide)
 		git_buf_joinpath(&buf, GIT_REFS_DIR, glob);
 	else
 		git_buf_puts(&buf, glob);
-	if (git_buf_oom(&buf))
-		return -1;
+	GITERR_CHECK_ALLOC_BUF(&buf);
 
 	/* If no '?', '*' or '[' exist, we append '/ *' to the glob */
 	wildcard = strcspn(glob, "?*[");

@@ -2135,11 +2135,11 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 
 		/* read 3 ASCII octal numbers for stage entries */
 		for (i = 0; i < 3; i++) {
-			int tmp;
+			int64_t tmp;
 
-			if (git__strtol32(&tmp, buffer, &endptr, 8) < 0 ||
+			if (git__strtol64(&tmp, buffer, &endptr, 8) < 0 ||
 				!endptr || endptr == buffer || *endptr ||
-				(unsigned)tmp > UINT_MAX) {
+				tmp < 0) {
 				index_entry_reuc_free(lost);
 				return index_error_invalid("reading reuc entry stage");
 			}
@@ -2193,9 +2193,10 @@ static int read_conflict_names(git_index *index, const char *buffer, size_t size
 
 #define read_conflict_name(ptr) \
 	len = p_strnlen(buffer, size) + 1; \
-	if (size < len) \
-		return index_error_invalid("reading conflict name entries"); \
-	\
+	if (size < len) { \
+		index_error_invalid("reading conflict name entries"); \
+		goto out_err; \
+	} \
 	if (len == 1) \
 		ptr = NULL; \
 	else { \
@@ -2216,7 +2217,16 @@ static int read_conflict_names(git_index *index, const char *buffer, size_t size
 		read_conflict_name(conflict_name->theirs);
 
 		if (git_vector_insert(&index->names, conflict_name) < 0)
-			return -1;
+			goto out_err;
+
+		continue;
+
+out_err:
+		git__free(conflict_name->ancestor);
+		git__free(conflict_name->ours);
+		git__free(conflict_name->theirs);
+		git__free(conflict_name);
+		return -1;
 	}
 
 #undef read_conflict_name

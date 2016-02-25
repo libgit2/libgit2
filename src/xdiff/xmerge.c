@@ -646,6 +646,8 @@ int xdl_merge(mmfile_t *orig, mmfile_t *mf1, mmfile_t *mf2,
 	if (xdl_change_compact(&xe2.xdf1, &xe2.xdf2, xpp->flags) < 0 ||
 	    xdl_change_compact(&xe2.xdf2, &xe2.xdf1, xpp->flags) < 0 ||
 	    xdl_build_script(&xe2, &xscr2) < 0) {
+		xdl_free_script(xscr1);
+		xdl_free_env(&xe1);
 		xdl_free_env(&xe2);
 		return -1;
 	}

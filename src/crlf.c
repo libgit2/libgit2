@@ -346,7 +346,7 @@ static int crlf_apply(
 	/* initialize payload in case `check` was bypassed */
 	if (!*payload) {
 		int error = crlf_check(self, payload, src, NULL);
-		if (error < 0 && error != GIT_PASSTHROUGH)
+		if (error < 0)
 			return error;
 	}
 

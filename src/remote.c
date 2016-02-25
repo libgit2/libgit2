@@ -208,8 +208,8 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 
 	remote->repo = repo;
 
-	if (git_vector_init(&remote->refs, 32, NULL) < 0 ||
-		canonicalize_url(&canonical_url, url) < 0)
+	if ((error = git_vector_init(&remote->refs, 32, NULL)) < 0 ||
+		(error = canonicalize_url(&canonical_url, url)) < 0)
 		goto on_error;
 
 	remote->url = apply_insteadof(repo->_config, canonical_url.ptr, GIT_DIRECTION_FETCH);

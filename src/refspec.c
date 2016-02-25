@@ -323,8 +323,8 @@ int git_refspec__dwim_one(git_vector *out, git_refspec *spec, git_vector *refs)
 	if (git__prefixcmp(spec->src, GIT_REFS_DIR)) {
 		for (j = 0; formatters[j]; j++) {
 			git_buf_clear(&buf);
-			if (git_buf_printf(&buf, formatters[j], spec->src) < 0)
-				return -1;
+			git_buf_printf(&buf, formatters[j], spec->src);
+			GITERR_CHECK_ALLOC_BUF(&buf);
 
 			key.name = (char *) git_buf_cstr(&buf);
 			if (!git_vector_search(&pos, refs, &key)) {
@@ -348,8 +348,8 @@ int git_refspec__dwim_one(git_vector *out, git_refspec *spec, git_vector *refs)
 			git_buf_puts(&buf, GIT_REFS_HEADS_DIR);
 		}
 
-		if (git_buf_puts(&buf, spec->dst) < 0)
-			return -1;
+		git_buf_puts(&buf, spec->dst);
+		GITERR_CHECK_ALLOC_BUF(&buf);
 
 		cur->dst = git_buf_detach(&buf);
 	}
