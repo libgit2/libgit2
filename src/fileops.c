@@ -1034,7 +1034,6 @@ int git_futils_filestamp_check(
 	git_futils_filestamp *stamp, const char *path)
 {
 	struct stat st;
-	const struct timespec *statmtime = &st.st_mtim;
 
 	/* if the stamp is NULL, then always reload */
 	if (stamp == NULL)
@@ -1043,17 +1042,17 @@ int git_futils_filestamp_check(
 	if (p_stat(path, &st) < 0)
 		return GIT_ENOTFOUND;
 
-	if (stamp->mtime.tv_sec == statmtime->tv_sec &&
+	if (stamp->mtime.tv_sec == st.st_mtime &&
 #if defined(GIT_USE_NSEC)
-		stamp->mtime.tv_nsec == statmtime->tv_nsec &&
+		stamp->mtime.tv_nsec == st.st_mtime_nsec &&
 #endif
 		stamp->size  == (git_off_t)st.st_size   &&
 		stamp->ino   == (unsigned int)st.st_ino)
 		return 0;
 
-	stamp->mtime.tv_sec = statmtime->tv_sec;
+	stamp->mtime.tv_sec = st.st_mtime;
 #if defined(GIT_USE_NSEC)
-	stamp->mtime.tv_nsec = statmtime->tv_nsec;
+	stamp->mtime.tv_nsec = st.st_mtime_nsec;
 #endif
 	stamp->size  = (git_off_t)st.st_size;
 	stamp->ino   = (unsigned int)st.st_ino;
@@ -1076,11 +1075,11 @@ void git_futils_filestamp_set(
 void git_futils_filestamp_set_from_stat(
 	git_futils_filestamp *stamp, struct stat *st)
 {
-	const struct timespec *statmtime = &st->st_mtim;
-
 	if (st) {
-		stamp->mtime = *statmtime;
-#if !defined(GIT_USE_NSEC)
+		stamp->mtime.tv_sec = st->st_mtime;
+#if defined(GIT_USE_NSEC)
+		stamp->mtime.tv_nsec = st->st_mtime_nsec;
+#else
 		stamp->mtime.tv_nsec = 0;
 #endif
 		stamp->size  = (git_off_t)st->st_size;
