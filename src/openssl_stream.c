@@ -556,7 +556,8 @@ int git_openssl_stream_new(git_stream **out, const char *host, const char *port)
 
 	st->ssl = SSL_new(git__ssl_ctx);
 	if (st->ssl == NULL) {
-		giterr_set(GITERR_SSL, "failed to create ssl object");
+		giterr_set(GITERR_SSL, "failed to create ssl object: %s",
+		           ERR_error_string(ERR_get_error(), NULL));
 		return -1;
 	}
 
