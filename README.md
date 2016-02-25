@@ -80,6 +80,12 @@ Threading
 
 See [THREADING](THREADING.md) for information
 
+Conventions
+===========
+
+See [CONVENTIONS](CONVENTIONS.md) for an overview of the external
+and internal API/coding conventions we use.
+
 Building libgit2 - Using CMake
 ==============================
 
