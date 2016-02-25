@@ -365,8 +365,13 @@ static unsigned char *pack_window_open(
 	 * pointless to ask for an offset into the middle of that
 	 * hash, and the pack_window_contains function above wouldn't match
 	 * don't allow an offset too close to the end of the file.
+	 *
+	 * Don't allow a negative offset, as that means we've wrapped
+	 * around.
 	 */
 	if (offset > (p->mwf.size - 20))
+		return NULL;
+	if (offset < 0)
 		return NULL;
 
 	return git_mwindow_open(&p->mwf, w_cursor, offset, 20, left);
@@ -1175,6 +1180,7 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 static git_off_t nth_packed_object_offset(const struct git_pack_file *p, uint32_t n)
 {
 	const unsigned char *index = p->index_map.data;
+	const unsigned char *end = index + p->index_map.len;
 	index += 4 * 256;
 	if (p->index_version == 1) {
 		return ntohl(*((uint32_t *)(index + 24 * n)));
@@ -1185,6 +1191,11 @@ static git_off_t nth_packed_object_offset(const struct git_pack_file *p, uint32_
 		if (!(off & 0x80000000))
 			return off;
 		index += p->num_objects * 4 + (off & 0x7fffffff) * 8;
+
+		/* Make sure we're not being sent out of bounds */
+		if (index >= end - 8)
+			return -1;
+
 		return (((uint64_t)ntohl(*((uint32_t *)(index + 0)))) << 32) |
 					ntohl(*((uint32_t *)(index + 4)));
 	}
@@ -1264,6 +1275,7 @@ static int pack_entry_find_offset(
 	const unsigned char *index = p->index_map.data;
 	unsigned hi, lo, stride;
 	int pos, found = 0;
+	git_off_t offset;
 	const unsigned char *current = 0;
 
 	*offset_out = 0;
@@ -1336,7 +1348,12 @@ static int pack_entry_find_offset(
 	if (found > 1)
 		return git_odb__error_ambiguous("found multiple offsets for pack entry");
 
-	*offset_out = nth_packed_object_offset(p, pos);
+	if ((offset = nth_packed_object_offset(p, pos)) < 0) {
+		giterr_set(GITERR_ODB, "packfile index is corrupt");
+		return -1;
+	}
+
+	*offset_out = offset;
 	git_oid_fromraw(found_oid, current);
 
 #ifdef INDEX_DEBUG_LOOKUP
