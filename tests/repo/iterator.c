@@ -59,7 +59,7 @@ static void expect_iterator_items(
 
 	cl_assert_equal_i(expected_flat, count);
 
-	cl_git_pass(git_iterator_reset(i, NULL, NULL));
+	cl_git_pass(git_iterator_reset(i));
 
 	count = 0;
 	cl_git_pass(git_iterator_current(&entry, i));

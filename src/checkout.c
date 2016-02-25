@@ -2508,7 +2508,7 @@ int git_checkout_iterator(
 	workdir_opts.start = data.pfx;
 	workdir_opts.end = data.pfx;
 
-	if ((error = git_iterator_reset(target, data.pfx, data.pfx)) < 0 ||
+	if ((error = git_iterator_reset_range(target, data.pfx, data.pfx)) < 0 ||
 		(error = git_iterator_for_workdir_ext(
 			&workdir, data.repo, data.opts.target_directory, index, NULL,
 			&workdir_opts)) < 0)

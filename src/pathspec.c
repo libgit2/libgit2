@@ -418,7 +418,7 @@ static int pathspec_match_from_iterator(
 		GITERR_CHECK_ALLOC(m);
 	}
 
-	if ((error = git_iterator_reset(iter, ps->prefix, ps->prefix)) < 0)
+	if ((error = git_iterator_reset_range(iter, ps->prefix, ps->prefix)) < 0)
 		goto done;
 
 	if (git_iterator_type(iter) == GIT_ITERATOR_TYPE_WORKDIR &&

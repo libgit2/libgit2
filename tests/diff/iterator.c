@@ -54,7 +54,7 @@ static void tree_iterator_test(
 	cl_assert_equal_i(expected_count, count);
 
 	/* test reset */
-	cl_git_pass(git_iterator_reset(i, NULL, NULL));
+	cl_git_pass(git_iterator_reset(i));
 
 	while (!(error = git_iterator_advance(&entry, i))) {
 		cl_assert(entry);
@@ -634,7 +634,7 @@ static void workdir_iterator_test(
 	cl_assert_equal_i(expected_count, count);
 	cl_assert_equal_i(expected_count + expected_ignores, count_all);
 
-	cl_git_pass(git_iterator_reset(i, NULL, NULL));
+	cl_git_pass(git_iterator_reset(i));
 
 	error = git_iterator_current(&entry, i);
 	cl_assert((error == 0 && entry != NULL) ||

@@ -57,7 +57,8 @@ typedef struct {
 	int (*current)(const git_index_entry **, git_iterator *);
 	int (*advance)(const git_index_entry **, git_iterator *);
 	int (*advance_into)(const git_index_entry **, git_iterator *);
-	int (*reset)(git_iterator *, const char *start, const char *end);
+	int (*reset)(git_iterator *);
+	int (*reset_range)(git_iterator *, const char *start, const char *end);
 	int (*at_end)(git_iterator *);
 	void (*free)(git_iterator *);
 } git_iterator_callbacks;
@@ -201,15 +202,20 @@ GIT_INLINE(int) git_iterator_advance_into_or_over(
 
 /**
  * Go back to the start of the iteration.
- *
- * This resets the iterator to the start of the iteration.  It also allows
- * you to reset the `start` and `end` pathname boundaries of the iteration
- * when doing so.
  */
-GIT_INLINE(int) git_iterator_reset(
+GIT_INLINE(int) git_iterator_reset(git_iterator *iter)
+{
+	return iter->cb->reset(iter);
+}
+
+/**
+ * Go back to the start of the iteration after updating the `start` and
+ * `end` pathname boundaries of the iteration.
+ */
+GIT_INLINE(int) git_iterator_reset_range(
 	git_iterator *iter, const char *start, const char *end)
 {
-	return iter->cb->reset(iter, start, end);
+	return iter->cb->reset_range(iter, start, end);
 }
 
 /**

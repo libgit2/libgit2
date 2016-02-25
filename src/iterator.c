@@ -18,6 +18,7 @@
 	(P)->cb.advance = NAME_LC ## _iterator__advance; \
 	(P)->cb.advance_into = NAME_LC ## _iterator__advance_into; \
 	(P)->cb.reset   = NAME_LC ## _iterator__reset; \
+	(P)->cb.reset_range = NAME_LC ## _iterator__reset_range; \
 	(P)->cb.at_end  = NAME_LC ## _iterator__at_end; \
 	(P)->cb.free    = NAME_LC ## _iterator__free; \
 	} while (0)
@@ -199,16 +200,18 @@ static void iterator_pathlist__update_ignore_case(git_iterator *iter)
 static int iterator__reset_range(
 	git_iterator *iter, const char *start, const char *end)
 {
+	if (iter->start)
+		git__free(iter->start);
+
 	if (start) {
-		if (iter->start)
-			git__free(iter->start);
 		iter->start = git__strdup(start);
 		GITERR_CHECK_ALLOC(iter->start);
 	}
 
+	if (iter->end)
+		git__free(iter->end);
+
 	if (end) {
-		if (iter->end)
-			git__free(iter->end);
 		iter->end = git__strdup(end);
 		GITERR_CHECK_ALLOC(iter->end);
 	}
@@ -270,7 +273,14 @@ static int empty_iterator__noop(const git_index_entry **e, git_iterator *i)
 	return GIT_ITEROVER;
 }
 
-static int empty_iterator__reset(git_iterator *i, const char *s, const char *e)
+static int empty_iterator__reset(git_iterator *i)
+{
+	GIT_UNUSED(i);
+	return 0;
+}
+
+static int empty_iterator__reset_range(
+	git_iterator *i, const char *s, const char *e)
 {
 	GIT_UNUSED(i); GIT_UNUSED(s); GIT_UNUSED(e);
 	return 0;
@@ -741,17 +751,23 @@ static int tree_iterator__advance_into(
 	return tree_iterator__current(entry, self);
 }
 
-static int tree_iterator__reset(
-	git_iterator *self, const char *start, const char *end)
+static int tree_iterator__reset(git_iterator *self)
 {
 	tree_iterator *ti = (tree_iterator *)self;
 
-	tree_iterator__pop_all(ti, false, false);
+	ti->base.flags &= ~GIT_ITERATOR_FIRST_ACCESS;
 
+	tree_iterator__pop_all(ti, false, false);
+	return tree_iterator__push_frame(ti); /* re-expand root tree */
+}
+
+static int tree_iterator__reset_range(
+	git_iterator *self, const char *start, const char *end)
+{
 	if (iterator__reset_range(self, start, end) < 0)
 		return -1;
 
-	return tree_iterator__push_frame(ti); /* re-expand root tree */
+	return tree_iterator__reset(self);
 }
 
 static int tree_iterator__at_end(git_iterator *self)
@@ -1017,16 +1033,13 @@ static int index_iterator__advance_into(
 	return index_iterator__current(entry, self);
 }
 
-static int index_iterator__reset(
-	git_iterator *self, const char *start, const char *end)
+static int index_iterator__reset(git_iterator *self)
 {
 	index_iterator *ii = (index_iterator *)self;
 	const git_index_entry *ie;
 
-	if (iterator__reset_range(self, start, end) < 0)
-		return -1;
-
 	ii->current = 0;
+	ii->base.flags &= ~GIT_ITERATOR_FIRST_ACCESS;
 
 	iterator_pathlist_walk__reset(self);
 
@@ -1055,6 +1068,15 @@ static int index_iterator__reset(
 	index_iterator__next_prefix_tree(ii);
 
 	return 0;
+}
+
+static int index_iterator__reset_range(
+	git_iterator *self, const char *start, const char *end)
+{
+	if (iterator__reset_range(self, start, end) < 0)
+		return -1;
+
+	return index_iterator__reset(self);
 }
 
 static void index_iterator__free(git_iterator *self)
@@ -1098,7 +1120,7 @@ int git_iterator_for_index(
 	git_buf_init(&ii->partial, 0);
 	ii->tree_entry.mode = GIT_FILEMODE_TREE;
 
-	index_iterator__reset((git_iterator *)ii, NULL, NULL);
+	index_iterator__reset((git_iterator *)ii);
 
 	*iter = (git_iterator *)ii;
 	return 0;
@@ -1479,18 +1501,16 @@ static int fs_iterator__advance(
 	return fs_iterator__advance_over(entry, self);
 }
 
-static int fs_iterator__reset(
-	git_iterator *self, const char *start, const char *end)
+static int fs_iterator__reset(git_iterator *self)
 {
 	int error;
 	fs_iterator *fi = (fs_iterator *)self;
 
+	fi->base.flags &= ~GIT_ITERATOR_FIRST_ACCESS;
+
 	while (fi->stack != NULL && fi->stack->next != NULL)
 		fs_iterator__pop_frame(fi, fi->stack, false);
 	fi->depth = 0;
-
-	if ((error = iterator__reset_range(self, start, end)) < 0)
-		return error;
 
 	fs_iterator__seek_frame_start(fi, fi->stack);
 
@@ -1499,6 +1519,17 @@ static int fs_iterator__reset(
 		error = 0;
 
 	return error;
+}
+
+static int fs_iterator__reset_range(
+	git_iterator *self, const char *start, const char *end)
+{
+	int error;
+
+	if ((error = iterator__reset_range(self, start, end)) < 0)
+		return error;
+
+	return fs_iterator__reset(self);
 }
 
 static void fs_iterator__free(git_iterator *self)
