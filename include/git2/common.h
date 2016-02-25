@@ -24,7 +24,8 @@
  GIT_BEGIN_DECL
 # include "inttypes.h"
  GIT_END_DECL
-#else
+/** This check is needed for importing this file in an iOS/OS X framework throws an error in Xcode otherwise.*/
+#elif !defined(__CLANG_INTTYPES_H)
 # include <inttypes.h>
 #endif
 
