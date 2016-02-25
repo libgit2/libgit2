@@ -61,8 +61,17 @@ void test_index_nsec__staging_maintains_other_nanos(void)
 	cl_assert_equal_b(true, has_nsecs());
 
 	cl_assert((entry = git_index_get_bypath(repo_index, "a.txt", 0)));
+
+	/* if we are writing nanoseconds to the index, expect them to be
+	 * nonzero.  if we are *not*, expect that we truncated the entry.
+	 */
+#ifdef GIT_USE_NSEC
+	cl_assert(entry->ctime.nanoseconds != 0);
+	cl_assert(entry->mtime.nanoseconds != 0);
+#else
 	cl_assert_equal_i(0, entry->ctime.nanoseconds);
 	cl_assert_equal_i(0, entry->mtime.nanoseconds);
+#endif
 }
 
 void test_index_nsec__status_doesnt_clear_nsecs(void)
