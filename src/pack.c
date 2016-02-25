@@ -365,8 +365,13 @@ static unsigned char *pack_window_open(
 	 * pointless to ask for an offset into the middle of that
 	 * hash, and the pack_window_contains function above wouldn't match
 	 * don't allow an offset too close to the end of the file.
+	 *
+	 * Don't allow a negative offset, as that means we've wrapped
+	 * around.
 	 */
 	if (offset > (p->mwf.size - 20))
+		return NULL;
+	if (offset < 0)
 		return NULL;
 
 	return git_mwindow_open(&p->mwf, w_cursor, offset, 20, left);
