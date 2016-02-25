@@ -17,7 +17,6 @@
 	(P)->cb.current = NAME_LC ## _iterator__current; \
 	(P)->cb.advance = NAME_LC ## _iterator__advance; \
 	(P)->cb.advance_into = NAME_LC ## _iterator__advance_into; \
-	(P)->cb.seek    = NAME_LC ## _iterator__seek; \
 	(P)->cb.reset   = NAME_LC ## _iterator__reset; \
 	(P)->cb.at_end  = NAME_LC ## _iterator__at_end; \
 	(P)->cb.free    = NAME_LC ## _iterator__free; \
@@ -269,12 +268,6 @@ static int empty_iterator__noop(const git_index_entry **e, git_iterator *i)
 	GIT_UNUSED(i);
 	iterator__clear_entry(e);
 	return GIT_ITEROVER;
-}
-
-static int empty_iterator__seek(git_iterator *i, const char *p)
-{
-	GIT_UNUSED(i); GIT_UNUSED(p);
-	return -1;
 }
 
 static int empty_iterator__reset(git_iterator *i, const char *s, const char *e)
@@ -748,12 +741,6 @@ static int tree_iterator__advance_into(
 	return tree_iterator__current(entry, self);
 }
 
-static int tree_iterator__seek(git_iterator *self, const char *prefix)
-{
-	GIT_UNUSED(self); GIT_UNUSED(prefix);
-	return -1;
-}
-
 static int tree_iterator__reset(
 	git_iterator *self, const char *start, const char *end)
 {
@@ -1028,12 +1015,6 @@ static int index_iterator__advance_into(
 	}
 
 	return index_iterator__current(entry, self);
-}
-
-static int index_iterator__seek(git_iterator *self, const char *prefix)
-{
-	GIT_UNUSED(self); GIT_UNUSED(prefix);
-	return -1;
 }
 
 static int index_iterator__reset(
@@ -1496,16 +1477,6 @@ static int fs_iterator__advance(
 	}
 
 	return fs_iterator__advance_over(entry, self);
-}
-
-static int fs_iterator__seek(git_iterator *self, const char *prefix)
-{
-	GIT_UNUSED(self);
-	GIT_UNUSED(prefix);
-	/* pop stack until matching prefix */
-	/* find prefix item in current frame */
-	/* push subdirectories as deep as possible while matching */
-	return 0;
 }
 
 static int fs_iterator__reset(

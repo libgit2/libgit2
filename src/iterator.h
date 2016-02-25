@@ -57,7 +57,6 @@ typedef struct {
 	int (*current)(const git_index_entry **, git_iterator *);
 	int (*advance)(const git_index_entry **, git_iterator *);
 	int (*advance_into)(const git_index_entry **, git_iterator *);
-	int (*seek)(git_iterator *, const char *prefix);
 	int (*reset)(git_iterator *, const char *start, const char *end);
 	int (*at_end)(git_iterator *);
 	void (*free)(git_iterator *);
@@ -198,13 +197,6 @@ GIT_INLINE(int) git_iterator_advance_into_or_over(
 		error = iter->cb->advance(entry, iter);
 	}
 	return error;
-}
-
-/* Seek is currently unimplemented */
-GIT_INLINE(int) git_iterator_seek(
-	git_iterator *iter, const char *prefix)
-{
-	return iter->cb->seek(iter, prefix);
 }
 
 /**
