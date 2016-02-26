@@ -124,7 +124,7 @@ extern char *git_pool_strcat(git_pool *pool, const char *a, const char *b);
 /*
  * Misc utilities
  */
-#ifndef _DEBUG_POOL
+#ifndef GIT_DEBUG_POOL
 extern uint32_t git_pool__open_pages(git_pool *pool);
 #endif
 extern bool git_pool__ptr_in_pool(git_pool *pool, void *ptr);
