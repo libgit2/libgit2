@@ -29,6 +29,7 @@
 #include "annotated_commit.h"
 #include "commit.h"
 #include "oidarray.h"
+#include "merge_driver.h"
 
 #include "git2/types.h"
 #include "git2/repository.h"

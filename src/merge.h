@@ -36,37 +36,6 @@ enum {
 };
 
 
-/* Merge drivers */
-
-struct git_merge_driver_source {
-	git_repository *repo;
-	const char *default_driver;
-	const git_merge_file_options *file_opts;
-
-	const git_index_entry *ancestor;
-	const git_index_entry *ours;
-	const git_index_entry *theirs;
-};
-
-extern int git_merge_driver_for_path(
-	char **name_out,
-	git_merge_driver **driver_out,
-	git_repository *repo,
-	const char *path);
-
-/* Basic (normal) merge driver, takes favor type as the payload argument */
-extern git_merge_driver git_merge_driver__normal;
-
-/* Merge driver for text files, performs a standard three-way merge */
-extern git_merge_driver git_merge_driver__text;
-
-/* Merge driver for union-style merging */
-extern git_merge_driver git_merge_driver__union;
-
-/* Merge driver for unmergeable (binary) files: always produces conflicts */
-extern git_merge_driver git_merge_driver__binary;
-
-
 /** Types of changes when files are merged from branch to branch. */
 typedef enum {
 	/* No conflict - a change only occurs in one branch. */

@@ -9,6 +9,7 @@
 #include "vector.h"
 #include "global.h"
 #include "merge.h"
+#include "merge_driver.h"
 #include "git2/merge.h"
 #include "git2/sys/merge.h"
 
@@ -17,6 +18,7 @@ static const char *merge_driver_name__union = "union";
 static const char *merge_driver_name__binary = "binary";
 
 struct merge_driver_registry {
+	git_rwlock lock;
 	git_vector drivers;
 };
 
@@ -26,10 +28,13 @@ typedef struct {
 	char name[GIT_FLEX_ARRAY];
 } git_merge_driver_entry;
 
-static struct merge_driver_registry *merge_driver_registry = NULL;
+static struct merge_driver_registry merge_driver_registry;
 
 static git_merge_file_favor_t merge_favor_normal = GIT_MERGE_FILE_FAVOR_NORMAL;
 static git_merge_file_favor_t merge_favor_union = GIT_MERGE_FILE_FAVOR_UNION;
+
+static void git_merge_driver_global_shutdown(void);
+
 
 static int merge_driver_apply(
 	git_merge_driver *self,
@@ -144,26 +149,6 @@ static int merge_driver_entry_search(const void *a, const void *b)
 	return strcmp(name_a, entry_b->name);
 }
 
-static void merge_driver_registry_shutdown(void)
-{
-	struct merge_driver_registry *reg;
-	git_merge_driver_entry *entry;
-	size_t i;
-
-	if ((reg = git__swap(merge_driver_registry, NULL)) == NULL)
-		return;
-
-	git_vector_foreach(&reg->drivers, i, entry) {
-		if (entry && entry->driver->shutdown)
-			entry->driver->shutdown(entry->driver);
-
-		git__free(entry);
-	}
-
-	git_vector_free(&reg->drivers);
-	git__free(reg);
-}
-
 git_merge_driver git_merge_driver__normal = {
 	GIT_MERGE_DRIVER_VERSION,
 	NULL,
@@ -196,50 +181,11 @@ git_merge_driver git_merge_driver__binary = {
 	merge_driver_binary_apply
 };
 
-static int merge_driver_registry_initialize(void)
-{
-	struct merge_driver_registry *reg;
-	int error = 0;
-
-	if (merge_driver_registry)
-		return 0;
-
-	reg = git__calloc(1, sizeof(struct merge_driver_registry));
-	GITERR_CHECK_ALLOC(reg);
-
-	if ((error = git_vector_init(&reg->drivers, 3, merge_driver_entry_cmp)) < 0)
-		goto done;
-	
-	reg = git__compare_and_swap(&merge_driver_registry, NULL, reg);
-
-	if (reg != NULL)
-		goto done;
-
-	git__on_shutdown(merge_driver_registry_shutdown);
-
-	if ((error = git_merge_driver_register(
-			merge_driver_name__text, &git_merge_driver__text)) < 0 ||
-		(error = git_merge_driver_register(
-			merge_driver_name__union, &git_merge_driver__union)) < 0 ||
-		(error = git_merge_driver_register(
-			merge_driver_name__binary, &git_merge_driver__binary)) < 0)
-		goto done;
-
-done:
-	if (error < 0)
-		merge_driver_registry_shutdown();
-
-	return error;
-}
-
-int git_merge_driver_register(const char *name, git_merge_driver *driver)
+/* Note: callers must lock the registry before calling this function */
+static int merge_driver_registry_insert(
+	const char *name, git_merge_driver *driver)
 {
 	git_merge_driver_entry *entry;
-
-	assert(name && driver);
-
-	if (merge_driver_registry_initialize() < 0)
-		return -1;
 
 	entry = git__calloc(1, sizeof(git_merge_driver_entry) + strlen(name) + 1);
 	GITERR_CHECK_ALLOC(entry);
@@ -248,21 +194,120 @@ int git_merge_driver_register(const char *name, git_merge_driver *driver)
 	entry->driver = driver;
 
 	return git_vector_insert_sorted(
-		&merge_driver_registry->drivers, entry, NULL);
+		&merge_driver_registry.drivers, entry, NULL);
+}
+
+int git_merge_driver_global_init(void)
+{
+	int error;
+
+	if (git_rwlock_init(&merge_driver_registry.lock) < 0)
+		return -1;
+
+	if ((error = git_vector_init(&merge_driver_registry.drivers, 3,
+		merge_driver_entry_cmp)) < 0)
+		goto done;
+
+	if ((error = merge_driver_registry_insert(
+			merge_driver_name__text, &git_merge_driver__text)) < 0 ||
+		(error = merge_driver_registry_insert(
+			merge_driver_name__union, &git_merge_driver__union)) < 0 ||
+		(error = merge_driver_registry_insert(
+			merge_driver_name__binary, &git_merge_driver__binary)) < 0)
+
+	git__on_shutdown(git_merge_driver_global_shutdown);
+
+done:
+	if (error < 0)
+		git_vector_free_deep(&merge_driver_registry.drivers);
+
+	return error;
+}
+
+static void git_merge_driver_global_shutdown(void)
+{
+	git_merge_driver_entry *entry;
+	size_t i;
+
+	if (git_rwlock_wrlock(&merge_driver_registry.lock) < 0)
+		return;
+
+	git_vector_foreach(&merge_driver_registry.drivers, i, entry) {
+		if (entry->driver->shutdown)
+			entry->driver->shutdown(entry->driver);
+
+		git__free(entry);
+	}
+
+	git_vector_free(&merge_driver_registry.drivers);
+
+	git_rwlock_wrunlock(&merge_driver_registry.lock);
+	git_rwlock_free(&merge_driver_registry.lock);
+}
+
+/* Note: callers must lock the registry before calling this function */
+static int merge_driver_registry_find(size_t *pos, const char *name)
+{
+	return git_vector_search2(pos, &merge_driver_registry.drivers,
+		merge_driver_entry_search, name);
+}
+
+/* Note: callers must lock the registry before calling this function */
+static git_merge_driver_entry *merge_driver_registry_lookup(
+	size_t *pos, const char *name)
+{
+	git_merge_driver_entry *entry = NULL;
+
+	if (!merge_driver_registry_find(pos, name))
+		entry = git_vector_get(&merge_driver_registry.drivers, *pos);
+
+	return entry;
+}
+
+int git_merge_driver_register(const char *name, git_merge_driver *driver)
+{
+	int error;
+
+	assert(name && driver);
+
+	if (git_rwlock_wrlock(&merge_driver_registry.lock) < 0) {
+		giterr_set(GITERR_OS, "failed to lock merge driver registry");
+		return -1;
+	}
+
+	if (!merge_driver_registry_find(NULL, name)) {
+		giterr_set(GITERR_MERGE, "attempt to reregister existing driver '%s'",
+			name);
+		error = GIT_EEXISTS;
+		goto done;
+	}
+
+	error = merge_driver_registry_insert(name, driver);
+
+done:
+	git_rwlock_wrunlock(&merge_driver_registry.lock);
+	return error;
 }
 
 int git_merge_driver_unregister(const char *name)
 {
 	git_merge_driver_entry *entry;
 	size_t pos;
-	int error;
+	int error = 0;
 
-	if ((error = git_vector_search2(&pos, &merge_driver_registry->drivers,
-		merge_driver_entry_search, name)) < 0)
-		return error;
+	if (git_rwlock_wrlock(&merge_driver_registry.lock) < 0) {
+		giterr_set(GITERR_OS, "failed to lock merge driver registry");
+		return -1;
+	}
 
-	entry = git_vector_get(&merge_driver_registry->drivers, pos);
-	git_vector_remove(&merge_driver_registry->drivers, pos);
+	if ((entry = merge_driver_registry_lookup(&pos, name)) == NULL) {
+		giterr_set(GITERR_MERGE, "cannot find merge driver '%s' to unregister",
+			name);
+		error = GIT_ENOTFOUND;
+		goto done;
+	}
+
+	git_vector_remove(&merge_driver_registry.drivers, pos);
 
 	if (entry->initialized && entry->driver->shutdown) {
 		entry->driver->shutdown(entry->driver);
@@ -271,7 +316,9 @@ int git_merge_driver_unregister(const char *name)
 
 	git__free(entry);
 
-	return 0;
+done:
+	git_rwlock_wrunlock(&merge_driver_registry.lock);
+	return error;
 }
 
 git_merge_driver *git_merge_driver_lookup(const char *name)
@@ -282,24 +329,27 @@ git_merge_driver *git_merge_driver_lookup(const char *name)
 
 	/* If we've decided the merge driver to use internally - and not
 	 * based on user configuration (in merge_driver_name_for_path)
-	 * then we can use a hardcoded name instead of looking it up in
-	 * the vector.
+	 * then we can use a hardcoded name to compare instead of bothering
+	 * to take a lock and look it up in the vector.
 	 */
 	if (name == merge_driver_name__text)
 		return &git_merge_driver__text;
 	else if (name == merge_driver_name__binary)
 		return &git_merge_driver__binary;
 
-	if (merge_driver_registry_initialize() < 0)
+	if (git_rwlock_rdlock(&merge_driver_registry.lock) < 0) {
+		giterr_set(GITERR_OS, "failed to lock merge driver registry");
 		return NULL;
+	}
 
-	error = git_vector_search2(&pos, &merge_driver_registry->drivers,
-		merge_driver_entry_search, name);
+	entry = merge_driver_registry_lookup(&pos, name);
 
-	if (error == GIT_ENOTFOUND)
+	git_rwlock_rdunlock(&merge_driver_registry.lock);
+
+	if (entry == NULL) {
+		giterr_set(GITERR_MERGE, "cannot use an unregistered filter");
 		return NULL;
-
-	entry = git_vector_get(&merge_driver_registry->drivers, pos);
+	}
 
 	if (!entry->initialized) {
 		if (entry->driver->initialize &&
