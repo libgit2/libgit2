@@ -56,22 +56,12 @@ GIT_EXTERN(git_merge_file_options *) git_merge_driver_source_file_options(
 	const git_merge_driver_source *src);
 
 
-/*
- * struct git_merge_driver
- *
- * The merge driver lifecycle:
- * - initialize - first use of merge driver
- * - shutdown   - merge driver removed/unregistered from system
- * - check      - considering using merge driver for file
- * - apply      - apply merge driver to the file
- * - cleanup    - done with file
- */
-
 /**
  * Initialize callback on merge driver
  *
  * Specified as `driver.initialize`, this is an optional callback invoked
- * before a merge driver is first used.  It will be called once at most.
+ * before a merge driver is first used.  It will be called once at most
+ * per library lifetime.
  *
  * If non-NULL, the merge driver's `initialize` callback will be invoked
  * right before the first use of the driver, so you can defer expensive
@@ -170,20 +160,33 @@ typedef void (*git_merge_driver_cleanup_fn)(
  * To associate extra data with a driver, allocate extra data and put the
  * `git_merge_driver` struct at the start of your data buffer, then cast
  * the `self` pointer to your larger structure when your callback is invoked.
- *
- * `version` should be set to GIT_MERGE_DRIVER_VERSION
- *
- * The `initialize`, `shutdown`, `check`, `apply`, and `cleanup`
- * callbacks are all documented above with the respective function pointer
- * typedefs.
  */
 struct git_merge_driver {
+	/** The `version` should be set to `GIT_MERGE_DRIVER_VERSION`. */
 	unsigned int                 version;
 
+	/** Called when the merge driver is first used for any file. */
 	git_merge_driver_init_fn     initialize;
+
+	/** Called when the merge driver is unregistered from the system. */
 	git_merge_driver_shutdown_fn shutdown;
+
+	/**
+	 * Called to determine whether the merge driver should be invoked
+	 * for a given file.  If this function returns `GIT_PASSTHROUGH`
+	 * then the `apply` function will not be invoked and the default
+	 * (`text`) merge driver will instead be run.
+	 */
 	git_merge_driver_check_fn    check;
+
+	/**
+	 * Called to merge the contents of a conflict.  If this function
+	 * returns `GIT_PASSTHROUGH` then the default (`text`) merge driver
+	 * will instead be invoked.  If this function returns
+	 * `GIT_EMERGECONFLICT` then the file will remain conflicted.
 	git_merge_driver_apply_fn    apply;
+
+	/** Called when the system is done filtering for a file. */
 	git_merge_driver_cleanup_fn  cleanup;
 };
 
