@@ -19,7 +19,7 @@ void test_object_tree_write__cleanup(void)
 {
    cl_git_sandbox_cleanup();
 
-	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 0));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 1));
 }
 
 void test_object_tree_write__from_memory(void)
@@ -492,11 +492,11 @@ static void test_invalid_objects(bool should_allow_invalid)
 
 void test_object_tree_write__object_validity(void)
 {
-	/* Ensure that we can add invalid objects by default */
-	test_invalid_objects(true);
-
-	/* Ensure that we can turn on validation */
-	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 1));
+	/* Ensure that we cannot add invalid objects by default */
 	test_invalid_objects(false);
+
+	/* Ensure that we can turn off validation */
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 0));
+	test_invalid_objects(true);
 }
 

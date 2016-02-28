@@ -14,7 +14,7 @@
 #include "blob.h"
 #include "tag.h"
 
-bool git_object__strict_input_validation = false;
+bool git_object__strict_input_validation = true;
 
 typedef struct {
 	const char	*str;	/* type name string */

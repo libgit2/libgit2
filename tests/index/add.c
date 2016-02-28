@@ -20,7 +20,7 @@ void test_index_add__cleanup(void)
 	cl_git_sandbox_cleanup();
 	g_repo = NULL;
 
-	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 0));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 1));
 }
 
 static void test_add_entry(
@@ -42,29 +42,8 @@ static void test_add_entry(
 void test_index_add__invalid_entries_succeeds_by_default(void)
 {
 	/*
-	 * Ensure that there is no validation on ids by default
+	 * Ensure that there is validation on object ids by default
 	 */
-
-	/* ensure that we can add some actually good entries */
-	test_add_entry(true, valid_blob_id, GIT_FILEMODE_BLOB);
-	test_add_entry(true, valid_blob_id, GIT_FILEMODE_BLOB_EXECUTABLE);
-	test_add_entry(true, valid_blob_id, GIT_FILEMODE_LINK);
-
-	/* test that we fail to add some invalid (missing) blobs and trees */
-	test_add_entry(true, invalid_id, GIT_FILEMODE_BLOB);
-	test_add_entry(true, invalid_id, GIT_FILEMODE_BLOB_EXECUTABLE);
-	test_add_entry(true, invalid_id, GIT_FILEMODE_LINK);
-
-	/* test that we validate the types of objects */
-	test_add_entry(true, valid_commit_id, GIT_FILEMODE_BLOB);
-	test_add_entry(true, valid_tree_id, GIT_FILEMODE_BLOB_EXECUTABLE);
-	test_add_entry(true, valid_commit_id, GIT_FILEMODE_LINK);
-
-	/*
-	 * Ensure that strict object references will fail the `index_add`
-	 */
-
-	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 1));
 
 	/* ensure that we can add some actually good entries */
 	test_add_entry(true, valid_blob_id, GIT_FILEMODE_BLOB);
@@ -80,5 +59,26 @@ void test_index_add__invalid_entries_succeeds_by_default(void)
 	test_add_entry(false, valid_commit_id, GIT_FILEMODE_BLOB);
 	test_add_entry(false, valid_tree_id, GIT_FILEMODE_BLOB_EXECUTABLE);
 	test_add_entry(false, valid_commit_id, GIT_FILEMODE_LINK);
+
+	/*
+	 * Ensure that there we can disable validation
+	 */
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 0));
+
+	/* ensure that we can add some actually good entries */
+	test_add_entry(true, valid_blob_id, GIT_FILEMODE_BLOB);
+	test_add_entry(true, valid_blob_id, GIT_FILEMODE_BLOB_EXECUTABLE);
+	test_add_entry(true, valid_blob_id, GIT_FILEMODE_LINK);
+
+	/* test that we can now add some invalid (missing) blobs and trees */
+	test_add_entry(true, invalid_id, GIT_FILEMODE_BLOB);
+	test_add_entry(true, invalid_id, GIT_FILEMODE_BLOB_EXECUTABLE);
+	test_add_entry(true, invalid_id, GIT_FILEMODE_LINK);
+
+	/* test that we do not validate the types of objects */
+	test_add_entry(true, valid_commit_id, GIT_FILEMODE_BLOB);
+	test_add_entry(true, valid_tree_id, GIT_FILEMODE_BLOB_EXECUTABLE);
+	test_add_entry(true, valid_commit_id, GIT_FILEMODE_LINK);
 }
 

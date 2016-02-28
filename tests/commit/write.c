@@ -38,7 +38,7 @@ void test_commit_write__cleanup(void)
 
 	cl_git_sandbox_cleanup();
 
-	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 0));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 1));
 }
 
 
@@ -196,9 +196,11 @@ static int create_commit_from_ids(
 	return ret;
 }
 
-void test_commit_write__doesnt_validate_objects_by_default(void)
+void test_commit_write__can_write_invalid_objects(void)
 {
 	git_oid expected_id, tree_id, parent_id, commit_id;
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 0));
 
 	/* this is a valid tree and parent */
 	git_oid_fromstr(&tree_id, tree_id_str);
@@ -236,8 +238,6 @@ void test_commit_write__doesnt_validate_objects_by_default(void)
 void test_commit_write__can_validate_objects(void)
 {
 	git_oid tree_id, parent_id, commit_id;
-
-	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 1));
 
 	/* this is a valid tree and parent */
 	git_oid_fromstr(&tree_id, tree_id_str);
