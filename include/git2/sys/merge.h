@@ -83,41 +83,7 @@ typedef int (*git_merge_driver_init_fn)(git_merge_driver *self);
 typedef void (*git_merge_driver_shutdown_fn)(git_merge_driver *self);
 
 /**
- * Callback to decide if a given conflict can be resolved with this merge
- * driver.
- *
- * Specified as `driver.check`, this is an optional callback that checks
- * if the given conflict can be resolved with this merge driver.
- *
- * It should return 0 if the merge driver should be applied (i.e. success),
- * `GIT_PASSTHROUGH` if the driver is not available, which is the equivalent
- * of an unregistered or nonexistent merge driver.  In this case, the default
- * (`text`) driver will be run.  This is useful if you register a wildcard
- * merge driver but are not interested in handling the requested file (and
- * should just fallback).  The driver can also return `GIT_EMERGECONFLICT`
- * if the driver is not able to produce a merge result, and the file will
- * remain conflicted.  Any other errors will fail and return to the caller.
- *
- * The `name` will be set to the name of the driver as configured in the
- * attributes.
- *
- * The `src` contains the data about the file to be merged.
- *
- * The `payload` will be a pointer to a reference payload for the driver.
- * This will start as NULL, but `check` can assign to this pointer for
- * later use by the `apply` callback.  Note that the value should be heap
- * allocated (not stack), so that it doesn't go away before the `apply`
- * callback can use it.  If a driver allocates and assigns a value to the
- * `payload`, it will need a `cleanup` callback to free the payload.
- */
-typedef int (*git_merge_driver_check_fn)(
-	git_merge_driver *self,
-	void **payload,
-	const char *name,
-	const git_merge_driver_source *src);
-
-/**
- * Callback to actually perform the merge.
+ * Callback to perform the merge.
  *
  * Specified as `driver.apply`, this is the callback that actually does the
  * merge.  If it can successfully perform a merge, it should populate
@@ -129,30 +95,18 @@ typedef int (*git_merge_driver_check_fn)(
  * and the file will remain conflicted.  Any other errors will fail and
  * return to the caller.
  *
- * The `src` contains the data about the file to be merged.
+ * The `filter_name` contains the name of the filter that was invoked, as
+ * specified by the file's attributes.
  *
- * The `payload` value will refer to any payload that was set by the
- * `check` callback.  It may be read from or written to as needed.
+ * The `src` contains the data about the file to be merged.
  */
 typedef int (*git_merge_driver_apply_fn)(
 	git_merge_driver *self,
-	void **payload,
 	const char **path_out,
 	uint32_t *mode_out,
 	git_buf *merged_out,
+	const char *filter_name,
 	const git_merge_driver_source *src);
-
-/**
- * Callback to clean up after merge has been performed.
- *
- * Specified as `driver.cleanup`, this is an optional callback invoked
- * after the driver has been run.  If the `check` or `apply` callbacks
- * allocated a `payload` to keep per-source merge driver state, use this
- * callback to free that payload and release resources as required.
- */
-typedef void (*git_merge_driver_cleanup_fn)(
-	git_merge_driver *self,
-	void *payload);
 
 /**
  * Merge driver structure used to register custom merge drivers.
@@ -172,22 +126,12 @@ struct git_merge_driver {
 	git_merge_driver_shutdown_fn shutdown;
 
 	/**
-	 * Called to determine whether the merge driver should be invoked
-	 * for a given file.  If this function returns `GIT_PASSTHROUGH`
-	 * then the `apply` function will not be invoked and the default
-	 * (`text`) merge driver will instead be run.
-	 */
-	git_merge_driver_check_fn    check;
-
-	/**
 	 * Called to merge the contents of a conflict.  If this function
 	 * returns `GIT_PASSTHROUGH` then the default (`text`) merge driver
 	 * will instead be invoked.  If this function returns
 	 * `GIT_EMERGECONFLICT` then the file will remain conflicted.
+	 */
 	git_merge_driver_apply_fn    apply;
-
-	/** Called when the system is done filtering for a file. */
-	git_merge_driver_cleanup_fn  cleanup;
 };
 
 #define GIT_MERGE_DRIVER_VERSION 1

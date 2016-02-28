@@ -63,27 +63,12 @@ static void test_driver_shutdown(git_merge_driver *s)
 	self->shutdown = 1;
 }
 
-static int test_driver_check(
-	git_merge_driver *s,
-	void **payload,
-	const char *name,
-	const git_merge_driver_source *src)
-{
-	GIT_UNUSED(s);
-	GIT_UNUSED(src);
-
-	*payload = git__strdup(name);
-	GITERR_CHECK_ALLOC(*payload);
-
-	return 0;
-}
-
 static int test_driver_apply(
 	git_merge_driver *s,
-	void **payload,
 	const char **path_out,
 	uint32_t *mode_out,
 	git_buf *merged_out,
+	const char *filter_name,
 	const git_merge_driver_source *src)
 {
 	GIT_UNUSED(s);
@@ -93,25 +78,15 @@ static int test_driver_apply(
 	*mode_out = GIT_FILEMODE_BLOB;
 
 	return git_buf_printf(merged_out, "This is the `%s` driver.\n",
-		(char *)*payload);
+		filter_name);
 }
-
-static void test_driver_cleanup(git_merge_driver *s, void *payload)
-{
-	GIT_UNUSED(s);
-
-	git__free(payload);
-}
-
 
 static struct test_merge_driver test_driver_custom = {
 	{
 		GIT_MERGE_DRIVER_VERSION,
 		test_driver_init,
 		test_driver_shutdown,
-		test_driver_check,
 		test_driver_apply,
-		test_driver_cleanup
 	},
 	0,
 	0,
@@ -122,9 +97,7 @@ static struct test_merge_driver test_driver_wildcard = {
 		GIT_MERGE_DRIVER_VERSION,
 		test_driver_init,
 		test_driver_shutdown,
-		test_driver_check,
 		test_driver_apply,
-		test_driver_cleanup
 	},
 	0,
 	0,
@@ -219,62 +192,19 @@ void test_merge_driver__shutdown_is_called(void)
 	test_drivers_register();
 }
 
-static int defer_driver_check(
-	git_merge_driver *s,
-	void **payload,
-	const char *name,
-	const git_merge_driver_source *src)
-{
-	GIT_UNUSED(s);
-	GIT_UNUSED(payload);
-	GIT_UNUSED(name);
-	GIT_UNUSED(src);
-
-	return GIT_PASSTHROUGH;
-}
-
-static struct test_merge_driver test_driver_defer_check = {
-	{
-		GIT_MERGE_DRIVER_VERSION,
-		test_driver_init,
-		test_driver_shutdown,
-		defer_driver_check,
-		test_driver_apply,
-		test_driver_cleanup
-	},
-	0,
-	0,
-};
-
-void test_merge_driver__check_can_defer(void)
-{
-	const git_index_entry *idx;
-
-	cl_git_pass(git_merge_driver_register("defer",
-		&test_driver_defer_check.base));
-
-    set_gitattributes_to("defer");
-    merge_branch();
-
-	cl_assert((idx = git_index_get_bypath(repo_index, "automergeable.txt", 0)));
-	cl_assert_equal_oid(&automergeable_id, &idx->id);
-
-	git_merge_driver_unregister("defer");
-}
-
 static int defer_driver_apply(
 	git_merge_driver *s,
-	void **payload,
 	const char **path_out,
 	uint32_t *mode_out,
 	git_buf *merged_out,
+	const char *filter_name,
 	const git_merge_driver_source *src)
 {
 	GIT_UNUSED(s);
-	GIT_UNUSED(payload);
 	GIT_UNUSED(path_out);
 	GIT_UNUSED(mode_out);
 	GIT_UNUSED(merged_out);
+	GIT_UNUSED(filter_name);
 	GIT_UNUSED(src);
 
 	return GIT_PASSTHROUGH;
@@ -285,9 +215,7 @@ static struct test_merge_driver test_driver_defer_apply = {
 		GIT_MERGE_DRIVER_VERSION,
 		test_driver_init,
 		test_driver_shutdown,
-		test_driver_check,
 		defer_driver_apply,
-		test_driver_cleanup
 	},
 	0,
 	0,
@@ -309,62 +237,19 @@ void test_merge_driver__apply_can_defer(void)
 	git_merge_driver_unregister("defer");
 }
 
-static int conflict_driver_check(
-	git_merge_driver *s,
-	void **payload,
-	const char *name,
-	const git_merge_driver_source *src)
-{
-	GIT_UNUSED(s);
-	GIT_UNUSED(payload);
-	GIT_UNUSED(name);
-	GIT_UNUSED(src);
-
-	return GIT_EMERGECONFLICT;
-}
-
-static struct test_merge_driver test_driver_conflict_check = {
-	{
-		GIT_MERGE_DRIVER_VERSION,
-		test_driver_init,
-		test_driver_shutdown,
-		conflict_driver_check,
-		test_driver_apply,
-		test_driver_cleanup
-	},
-	0,
-	0,
-};
-
-void test_merge_driver__check_can_conflict(void)
-{
-	const git_index_entry *ancestor, *ours, *theirs;
-
-	cl_git_pass(git_merge_driver_register("conflict",
-		&test_driver_conflict_check.base));
-
-    set_gitattributes_to("conflict");
-    merge_branch();
-
-	cl_git_pass(git_index_conflict_get(&ancestor, &ours, &theirs,
-		repo_index, "automergeable.txt"));
-
-	git_merge_driver_unregister("conflict");
-}
-
 static int conflict_driver_apply(
 	git_merge_driver *s,
-	void **payload,
 	const char **path_out,
 	uint32_t *mode_out,
 	git_buf *merged_out,
+	const char *filter_name,
 	const git_merge_driver_source *src)
 {
 	GIT_UNUSED(s);
-	GIT_UNUSED(payload);
 	GIT_UNUSED(path_out);
 	GIT_UNUSED(mode_out);
 	GIT_UNUSED(merged_out);
+	GIT_UNUSED(filter_name);
 	GIT_UNUSED(src);
 
 	return GIT_EMERGECONFLICT;
@@ -375,9 +260,7 @@ static struct test_merge_driver test_driver_conflict_apply = {
 		GIT_MERGE_DRIVER_VERSION,
 		test_driver_init,
 		test_driver_shutdown,
-		test_driver_check,
 		conflict_driver_apply,
-		test_driver_cleanup
 	},
 	0,
 	0,
@@ -447,7 +330,7 @@ void test_merge_driver__mergedefault_deferring_falls_back_to_text(void)
 	const git_index_entry *idx;
 
 	cl_git_pass(git_merge_driver_register("defer",
-		&test_driver_defer_check.base));
+		&test_driver_defer_apply.base));
 
 	cl_repo_set_string(repo, "merge.default", "defer");
 	merge_branch();

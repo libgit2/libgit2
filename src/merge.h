@@ -145,12 +145,6 @@ int git_merge_diff_list__find_renames(git_repository *repo, git_merge_diff_list 
 
 void git_merge_diff_list__free(git_merge_diff_list *diff_list);
 
-/* Merge driver configuration */
-int git_merge_driver_for_source(
-	git_merge_driver **driver_out,
-	void **data_out,
-	const git_merge_driver_source *src);
-
 /* Merge metadata setup */
 
 int git_merge__setup(

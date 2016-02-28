@@ -838,10 +838,10 @@ static bool merge_conflict_can_resolve_contents(
 
 static int merge_conflict_invoke_driver(
 	git_index_entry **out,
+	const char *name,
 	git_merge_driver *driver,
-	void *data,
 	git_merge_diff_list *diff_list,
-	git_merge_driver_source *source)
+	git_merge_driver_source *src)
 {
 	git_index_entry *result;
 	git_buf buf = GIT_BUF_INIT;
@@ -853,10 +853,8 @@ static int merge_conflict_invoke_driver(
 
 	*out = NULL;
 
-	if ((error = driver->apply(driver, &data, &path, &mode, &buf, source)) < 0)
-		goto done;
-
-	if ((error = git_repository_odb(&odb, source->repo)) < 0 ||
+	if ((error = driver->apply(driver, &path, &mode, &buf, name, src)) < 0 ||
+		(error = git_repository_odb(&odb, src->repo)) < 0 ||
 		(error = git_odb_write(&oid, odb, buf.ptr, buf.size, GIT_OBJ_BLOB)) < 0)
 		goto done;
 
@@ -873,9 +871,6 @@ static int merge_conflict_invoke_driver(
 	*out = result;
 
 done:
-	if (driver->cleanup)
-		driver->cleanup(driver, data);
-
 	git_buf_free(&buf);
 	git_odb_free(odb);
 
@@ -892,9 +887,10 @@ static int merge_conflict_resolve_contents(
 	git_merge_driver_source source = {0};
 	git_merge_file_result result = {0};
 	git_merge_driver *driver;
+	git_merge_driver__builtin builtin = {{0}};
 	git_index_entry *merge_result;
 	git_odb *odb = NULL;
-	void *data;
+	const char *name;
 	int error = 0;
 
 	assert(resolved && diff_list && conflict);
@@ -916,23 +912,26 @@ static int merge_conflict_resolve_contents(
 
 	if (file_opts->favor != GIT_MERGE_FILE_FAVOR_NORMAL) {
 		/* if the user requested a particular type of resolution (via the
-		 * favor flag) then let that override the gitattributes.
+		 * favor flag) then let that override the gitattributes and use
+		 * the builtin driver.
 		 */
-		driver = &git_merge_driver__normal;
-		data = (void **)&file_opts->favor;
+		name = "text";
+		builtin.base.apply = git_merge_driver__builtin_apply;
+		builtin.favor = file_opts->favor;
+
+		driver = &builtin.base;
 	} else {
 		/* find the merge driver for this file */
-		if ((error = git_merge_driver_for_source(&driver, &data, &source)) < 0)
+		if ((error = git_merge_driver_for_source(&name, &driver, &source)) < 0)
 			goto done;
 	}
 
-	error = merge_conflict_invoke_driver(&merge_result,
-		driver, data, diff_list, &source);
+	error = merge_conflict_invoke_driver(&merge_result, name, driver,
+		diff_list, &source);
 
 	if (error == GIT_PASSTHROUGH) {
-		data = NULL;
-		error = merge_conflict_invoke_driver(&merge_result,
-			&git_merge_driver__text, data, diff_list, &source);
+		error = merge_conflict_invoke_driver(&merge_result, "text",
+			&git_merge_driver__text.base, diff_list, &source);
 	}
 
 	if (error < 0) {
