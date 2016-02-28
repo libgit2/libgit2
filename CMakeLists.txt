@@ -41,6 +41,11 @@ OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
 OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"   OFF )
 OPTION( VALGRIND			"Configure build for valgrind"			OFF )
 OPTION( CURL			"User curl for HTTP if available" ON)
+OPTION( DEBUG_POOL			"Enable debug pool allocator"			OFF )
+
+IF(DEBUG_POOL)
+	ADD_DEFINITIONS(-DGIT_DEBUG_POOL)
+ENDIF()
 
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	SET( USE_ICONV ON )

@@ -8,9 +8,11 @@
 #define INCLUDE_pool_h__
 
 #include "common.h"
+#include "vector.h"
 
 typedef struct git_pool_page git_pool_page;
 
+#ifndef GIT_DEBUG_POOL
 /**
  * Chunked allocator.
  *
@@ -32,6 +34,30 @@ typedef struct {
 	uint32_t item_size;  /* size of single alloc unit in bytes */
 	uint32_t page_size;  /* size of page in bytes */
 } git_pool;
+
+#else
+
+/**
+ * Debug chunked allocator.
+ *
+ * Acts just like `git_pool` but instead of actually pooling allocations it
+ * passes them through to `git__malloc`. This makes it possible to easily debug
+ * systems that use `git_pool` using valgrind.
+ *
+ * In order to track allocations during the lifetime of the pool we use a
+ * `git_vector`. When the pool is deallocated everything in the vector is
+ * freed.
+ *
+ * `API is exactly the same as the standard `git_pool` with one exception.
+ * Since we aren't allocating pages to hand out in chunks we can't easily
+ * implement `git_pool__open_pages`.
+ */
+typedef struct {
+	git_vector allocations;
+	uint32_t item_size;
+	uint32_t page_size;
+} git_pool;
+#endif
 
 /**
  * Initialize a pool.
@@ -98,7 +124,9 @@ extern char *git_pool_strcat(git_pool *pool, const char *a, const char *b);
 /*
  * Misc utilities
  */
+#ifndef GIT_DEBUG_POOL
 extern uint32_t git_pool__open_pages(git_pool *pool);
+#endif
 extern bool git_pool__ptr_in_pool(git_pool *pool, void *ptr);
 
 #endif
