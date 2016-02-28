@@ -133,15 +133,18 @@ void test_object_tree_write__sorted_subtrees(void)
 	  	{ GIT_FILEMODE_TREE, "vendors"}
 	};
 
-	git_oid blank_oid, tree_oid;
+	git_oid bid, tid, tree_oid;
 
-	memset(&blank_oid, 0x0, sizeof(blank_oid));
+	cl_git_pass(git_oid_fromstr(&bid, blob_oid));
+	cl_git_pass(git_oid_fromstr(&tid, first_tree));
 
 	cl_git_pass(git_treebuilder_new(&builder, g_repo, NULL));
 
 	for (i = 0; i < ARRAY_SIZE(entries); ++i) {
+		git_oid *id = entries[i].attr == GIT_FILEMODE_TREE ?  &tid : &bid; 
+
 		cl_git_pass(git_treebuilder_insert(NULL,
-			builder, entries[i].filename, &blank_oid, entries[i].attr));
+			builder, entries[i].filename, id, entries[i].attr));
 	}
 
 	cl_git_pass(git_treebuilder_write(&tree_oid, builder));
@@ -189,10 +192,10 @@ void test_object_tree_write__removing_and_re_adding_in_treebuilder(void)
 {
 	git_treebuilder *builder;
 	int i, aardvark_i, apple_i, apple_after_i, apple_extra_i, last_i;
-	git_oid blank_oid, tree_oid;
+	git_oid entry_oid, tree_oid;
 	git_tree *tree;
 
-	memset(&blank_oid, 0x0, sizeof(blank_oid));
+	cl_git_pass(git_oid_fromstr(&entry_oid, blob_oid));
 
 	cl_git_pass(git_treebuilder_new(&builder, g_repo, NULL));
 
@@ -200,7 +203,7 @@ void test_object_tree_write__removing_and_re_adding_in_treebuilder(void)
 
 	for (i = 0; _entries[i].filename; ++i)
 		cl_git_pass(git_treebuilder_insert(NULL,
-			builder, _entries[i].filename, &blank_oid, _entries[i].attr));
+			builder, _entries[i].filename, &entry_oid, _entries[i].attr));
 
 	cl_assert_equal_i(6, (int)git_treebuilder_entrycount(builder));
 
@@ -211,12 +214,12 @@ void test_object_tree_write__removing_and_re_adding_in_treebuilder(void)
 	cl_assert_equal_i(4, (int)git_treebuilder_entrycount(builder));
 
 	cl_git_pass(git_treebuilder_insert(
-		NULL, builder, "before_last", &blank_oid, GIT_FILEMODE_BLOB));
+		NULL, builder, "before_last", &entry_oid, GIT_FILEMODE_BLOB));
 	cl_assert_equal_i(5, (int)git_treebuilder_entrycount(builder));
 
 	/* reinsert apple_after */
 	cl_git_pass(git_treebuilder_insert(
-		NULL, builder, "apple_after", &blank_oid, GIT_FILEMODE_BLOB));
+		NULL, builder, "apple_after", &entry_oid, GIT_FILEMODE_BLOB));
 	cl_assert_equal_i(6, (int)git_treebuilder_entrycount(builder));
 
 	cl_git_pass(git_treebuilder_remove(builder, "last"));
@@ -224,11 +227,11 @@ void test_object_tree_write__removing_and_re_adding_in_treebuilder(void)
 
 	/* reinsert last */
 	cl_git_pass(git_treebuilder_insert(
-		NULL, builder, "last", &blank_oid, GIT_FILEMODE_BLOB));
+		NULL, builder, "last", &entry_oid, GIT_FILEMODE_BLOB));
 	cl_assert_equal_i(6, (int)git_treebuilder_entrycount(builder));
 
 	cl_git_pass(git_treebuilder_insert(
-		NULL, builder, "apple_extra", &blank_oid, GIT_FILEMODE_BLOB));
+		NULL, builder, "apple_extra", &entry_oid, GIT_FILEMODE_BLOB));
 	cl_assert_equal_i(7, (int)git_treebuilder_entrycount(builder));
 
 	cl_git_pass(git_treebuilder_write(&tree_oid, builder));
@@ -280,16 +283,16 @@ void test_object_tree_write__filtering(void)
 {
 	git_treebuilder *builder;
 	int i;
-	git_oid blank_oid, tree_oid;
+	git_oid entry_oid, tree_oid;
 	git_tree *tree;
 
-	memset(&blank_oid, 0x0, sizeof(blank_oid));
+	git_oid_fromstr(&entry_oid, blob_oid);
 
 	cl_git_pass(git_treebuilder_new(&builder, g_repo, NULL));
 
 	for (i = 0; _entries[i].filename; ++i)
 		cl_git_pass(git_treebuilder_insert(NULL,
-			builder, _entries[i].filename, &blank_oid, _entries[i].attr));
+			builder, _entries[i].filename, &entry_oid, _entries[i].attr));
 
 	cl_assert_equal_i(6, (int)git_treebuilder_entrycount(builder));
 
@@ -407,6 +410,8 @@ void test_object_tree_write__protect_filesystems(void)
 {
 	git_treebuilder *builder;
 	git_oid bid;
+
+	cl_git_pass(git_oid_fromstr(&bid, "fa49b077972391ad58037050f2a75f74e3671e92"));
 
 	/* Ensure that (by default) we can write objects with funny names on
 	 * platforms that are not affected.
