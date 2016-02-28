@@ -13,32 +13,31 @@
 /**
  * A negative ignore pattern can match a positive one without
  * wildcards if its pattern equals the tail of the positive
- * pattern. Thus
+ * pattern or if the positive pattern matches the tail of the
+ * negative one. Thus
  *
  * foo/bar
  * !bar
  *
- * would result in foo/bar being unignored again.
+ * would result in foo/bar being unignored again. Likewise
+ *
+ * bar
+ * !foo/bar
+ *
+ * would also result in foo/bar being unignored again.
+ *
  */
 static int does_negate_pattern(git_attr_fnmatch *rule, git_attr_fnmatch *neg)
 {
-	char *p;
+	int shorter_length;
 
 	if ((rule->flags & GIT_ATTR_FNMATCH_NEGATIVE) == 0
 		&& (neg->flags & GIT_ATTR_FNMATCH_NEGATIVE) != 0) {
 		/*
-		 * no chance of matching if rule is shorter than
-		 * the negated one
+		 * compare the tail of both patterns
 		 */
-		if (rule->length < neg->length)
-			return false;
-
-		/*
-		 * shift pattern so its tail aligns with the
-		 * negated pattern
-		 */
-		p = rule->pattern + rule->length - neg->length;
-		if (strcmp(p, neg->pattern) == 0)
+		shorter_length = min(rule->length, neg->length);
+		if (strcmp(rule->pattern + rule->length - shorter_length, neg->pattern + neg->length - shorter_length) == 0)
 			return true;
 	}
 
@@ -572,4 +571,3 @@ int git_ignore__check_pathspec_for_exact_ignores(
 
 	return error;
 }
-
