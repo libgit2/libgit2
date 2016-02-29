@@ -62,8 +62,11 @@ int p_getaddrinfo(
 	ai = ainfo;
 
 	for (p = 1; ainfo->ai_hostent->h_addr_list[p] != NULL; p++) {
-		ai->ai_next = malloc(sizeof(struct addrinfo));
-		memcpy(&ai->ai_next, ainfo, sizeof(struct addrinfo));
+		if (!(ai->ai_next = malloc(sizeof(struct addrinfo)))) {
+			p_freeaddrinfo(ainfo);
+			return -1;
+		}
+		memcpy(ai->ai_next, ainfo, sizeof(struct addrinfo));
 		memcpy(&ai->ai_next->ai_addr_in.sin_addr,
 			ainfo->ai_hostent->h_addr_list[p],
 			ainfo->ai_hostent->h_length);
