@@ -86,19 +86,41 @@ void test_rebase_abort__merge(void)
 	git_rebase_free(rebase);
 }
 
+void test_rebase_abort__merge_by_id(void)
+{
+	git_rebase *rebase;
+	git_oid branch_id, onto_id;
+	git_annotated_commit *branch_head, *onto_head;
+
+	cl_git_pass(git_oid_fromstr(&branch_id, "b146bd7608eac53d9bf9e1a6963543588b555c64"));
+	cl_git_pass(git_oid_fromstr(&onto_id, "efad0b11c47cb2f0220cbd6f5b0f93bb99064b00"));
+
+	cl_git_pass(git_annotated_commit_lookup(&branch_head, repo, &branch_id));
+	cl_git_pass(git_annotated_commit_lookup(&onto_head, repo, &onto_id));
+
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, NULL, onto_head, NULL));
+	cl_assert_equal_i(GIT_REPOSITORY_STATE_REBASE_MERGE, git_repository_state(repo));
+
+	test_abort(branch_head, onto_head);
+
+	git_annotated_commit_free(branch_head);
+	git_annotated_commit_free(onto_head);
+
+	git_rebase_free(rebase);
+}
+
 void test_rebase_abort__detached_head(void)
 {
 	git_rebase *rebase;
-	git_oid branch_id;
-	git_reference *onto_ref;
+	git_oid branch_id, onto_id;
 	git_signature *signature;
 	git_annotated_commit *branch_head, *onto_head;
 
 	git_oid_fromstr(&branch_id, "b146bd7608eac53d9bf9e1a6963543588b555c64");
-	cl_git_pass(git_reference_lookup(&onto_ref, repo, "refs/heads/master"));
+    git_oid_fromstr(&onto_id, "efad0b11c47cb2f0220cbd6f5b0f93bb99064b00");
 
 	cl_git_pass(git_annotated_commit_lookup(&branch_head, repo, &branch_id));
-	cl_git_pass(git_annotated_commit_from_ref(&onto_head, repo, onto_ref));
+	cl_git_pass(git_annotated_commit_lookup(&onto_head, repo, &onto_id));
 
 	cl_git_pass(git_signature_new(&signature, "Rebaser", "rebaser@example.com", 1404157834, -400));
 
@@ -112,7 +134,6 @@ void test_rebase_abort__detached_head(void)
 	git_annotated_commit_free(branch_head);
 	git_annotated_commit_free(onto_head);
 
-	git_reference_free(onto_ref);
 	git_rebase_free(rebase);
 }
 
