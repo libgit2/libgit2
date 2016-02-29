@@ -891,7 +891,8 @@ static int merge_conflict_resolve_contents(
 	git_index_entry *merge_result;
 	git_odb *odb = NULL;
 	const char *name;
-	int error = 0;
+	bool fallback = false;
+	int error;
 
 	assert(resolved && diff_list && conflict);
 
@@ -924,12 +925,20 @@ static int merge_conflict_resolve_contents(
 		/* find the merge driver for this file */
 		if ((error = git_merge_driver_for_source(&name, &driver, &source)) < 0)
 			goto done;
+
+		if (driver == NULL)
+			fallback = true;
 	}
 
-	error = merge_conflict_invoke_driver(&merge_result, name, driver,
-		diff_list, &source);
+	if (driver) {
+		error = merge_conflict_invoke_driver(&merge_result, name, driver,
+			diff_list, &source);
 
-	if (error == GIT_PASSTHROUGH) {
+		if (error == GIT_PASSTHROUGH)
+			fallback = true;
+	}
+
+	if (fallback) {
 		error = merge_conflict_invoke_driver(&merge_result, "text",
 			&git_merge_driver__text.base, diff_list, &source);
 	}

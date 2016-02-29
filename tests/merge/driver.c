@@ -368,3 +368,21 @@ void test_merge_driver__unset_forces_binary(void)
 	cl_git_pass(git_index_conflict_get(&ancestor, &ours, &theirs,
 		repo_index, "automergeable.txt"));
 }
+
+void test_merge_driver__not_configured_driver_falls_back(void)
+{
+	const git_index_entry *idx;
+
+	test_drivers_unregister();
+
+	/* `merge` without specifying a driver indicates `text` */
+	set_gitattributes_to("notfound");
+
+	merge_branch();
+
+	cl_assert((idx = git_index_get_bypath(repo_index, "automergeable.txt", 0)));
+	cl_assert_equal_oid(&automergeable_id, &idx->id);
+
+	test_drivers_register();
+}
+
