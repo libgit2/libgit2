@@ -633,8 +633,11 @@ int xdl_merge(mmfile_t *orig, mmfile_t *mf1, mmfile_t *mf2,
 	result->ptr = NULL;
 	result->size = 0;
 
-	if (xdl_do_diff(orig, mf1, xpp, &xe1) < 0 ||
-			xdl_do_diff(orig, mf2, xpp, &xe2) < 0) {
+	if (xdl_do_diff(orig, mf1, xpp, &xe1) < 0) {
+		return -1;
+	}
+	if (xdl_do_diff(orig, mf2, xpp, &xe2) < 0) {
+		xdl_free_env(&xe1);
 		return -1;
 	}
 	if (xdl_change_compact(&xe1.xdf1, &xe1.xdf2, xpp->flags) < 0 ||
