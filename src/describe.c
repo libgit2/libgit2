@@ -582,7 +582,8 @@ static int describe(
 	best = (struct possible_tag *)git_vector_get(&all_matches, 0);
 
 	if (gave_up_on) {
-		git_pqueue_insert(&list, gave_up_on);
+		if ((error = git_pqueue_insert(&list, gave_up_on)) < 0)
+			goto cleanup;
 		seen_commits--;
 	}
 	if ((error = finish_depth_computation(
