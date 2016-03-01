@@ -1032,6 +1032,11 @@ static int parse_section_header_ext(struct reader *reader, const char *line, con
 	 */
 
 	first_quote = strchr(line, '"');
+	if (first_quote == NULL) {
+		set_parse_error(reader, 0, "Missing quotation marks in section header");
+		return -1;
+	}
+
 	last_quote = strrchr(line, '"');
 	quoted_len = last_quote - first_quote;
 
