@@ -12,6 +12,7 @@
 #include "commit.h"
 #include "tree.h"
 #include "blob.h"
+#include "oid.h"
 #include "tag.h"
 
 bool git_object__strict_input_validation = true;
@@ -166,13 +167,9 @@ int git_object_lookup_prefix(
 			error = git_odb_read(&odb_obj, odb, id);
 		}
 	} else {
-		git_oid short_oid;
+		git_oid short_oid = {{ 0 }};
 
-		/* We copy the first len*4 bits from id and fill the remaining with 0s */
-		memcpy(short_oid.id, id->id, (len + 1) / 2);
-		if (len % 2)
-			short_oid.id[len / 2] &= 0xF0;
-		memset(short_oid.id + (len + 1) / 2, 0, (GIT_OID_HEXSZ - len) / 2);
+		git_oid__cpy_prefix(&short_oid, id, len);
 
 		/* If len < GIT_OID_HEXSZ (a strict short oid was given), we have
 		 * 2 options :
