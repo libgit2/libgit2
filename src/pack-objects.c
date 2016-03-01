@@ -848,8 +848,10 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 
 		git_packbuilder__cache_unlock(pb);
 
-		if (overflow)
+		if (overflow) {
+			git__free(delta_buf);
 			return -1;
+		}
 
 		trg_object->delta_data = git__realloc(delta_buf, delta_size);
 		GITERR_CHECK_ALLOC(trg_object->delta_data);
