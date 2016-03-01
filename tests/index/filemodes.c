@@ -236,12 +236,19 @@ void test_index_filemodes__invalid(void)
 {
 	git_index *index;
 	git_index_entry entry;
+	const git_index_entry *dummy;
 
 	cl_git_pass(git_repository_index(&index, g_repo));
+
+	/* add a dummy file so that we have a valid id */
+	cl_git_mkfile("./filemodes/dummy-file.txt", "new-file\n");
+	cl_git_pass(git_index_add_bypath(index, "dummy-file.txt"));
+	cl_assert((dummy = git_index_get_bypath(index, "dummy-file.txt", 0)));
 
 	GIT_IDXENTRY_STAGE_SET(&entry, 0);
 	entry.path = "foo";
 	entry.mode = GIT_OBJ_BLOB;
+	git_oid_cpy(&entry.id, &dummy->id);
 	cl_git_fail(git_index_add(index, &entry));
 
 	entry.mode = GIT_FILEMODE_BLOB;

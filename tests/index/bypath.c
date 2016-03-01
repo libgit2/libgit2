@@ -134,6 +134,7 @@ void test_index_bypath__add_honors_existing_case_2(void)
 		clar__skip();
 
 	dummy.mode = GIT_FILEMODE_BLOB;
+	cl_git_pass(git_oid_fromstr(&dummy.id, "f990a25a74d1a8281ce2ab018ea8df66795cd60b"));
 
 	/* note that `git_index_add` does no checking to canonical directories */
 	dummy.path = "Just_a_dir/file0.txt";
@@ -189,6 +190,7 @@ void test_index_bypath__add_honors_existing_case_3(void)
 		clar__skip();
 
 	dummy.mode = GIT_FILEMODE_BLOB;
+	cl_git_pass(git_oid_fromstr(&dummy.id, "f990a25a74d1a8281ce2ab018ea8df66795cd60b"));
 
 	dummy.path = "just_a_dir/filea.txt";
 	cl_git_pass(git_index_add(g_idx, &dummy));
@@ -219,6 +221,7 @@ void test_index_bypath__add_honors_existing_case_4(void)
 		clar__skip();
 
 	dummy.mode = GIT_FILEMODE_BLOB;
+	cl_git_pass(git_oid_fromstr(&dummy.id, "f990a25a74d1a8281ce2ab018ea8df66795cd60b"));
 
 	dummy.path = "just_a_dir/a/b/c/d/e/file1.txt";
 	cl_git_pass(git_index_add(g_idx, &dummy));

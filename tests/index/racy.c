@@ -178,6 +178,7 @@ static void setup_uptodate_files(void)
 {
 	git_buf path = GIT_BUF_INIT;
 	git_index *index;
+	const git_index_entry *a_entry;
 	git_index_entry new_entry = {{0}};
 
 	cl_git_pass(git_repository_index(&index, g_repo));
@@ -188,9 +189,12 @@ static void setup_uptodate_files(void)
 	/* Put 'A' into the index */
 	cl_git_pass(git_index_add_bypath(index, "A"));
 
+	cl_assert((a_entry = git_index_get_bypath(index, "A", 0)));
+
 	/* Put 'B' into the index */
 	new_entry.path = "B";
 	new_entry.mode = GIT_FILEMODE_BLOB;
+	git_oid_cpy(&new_entry.id, &a_entry->id);
 	cl_git_pass(git_index_add(index, &new_entry));
 
 	/* Put 'C' into the index */

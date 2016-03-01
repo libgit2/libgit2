@@ -17,6 +17,7 @@
 #include "signature.h"
 #include "message.h"
 #include "refs.h"
+#include "object.h"
 
 void git_commit__free(void *_commit)
 {
@@ -36,7 +37,7 @@ void git_commit__free(void *_commit)
 	git__free(commit);
 }
 
-int git_commit_create_from_callback(
+static int git_commit__create_internal(
 	git_oid *id,
 	git_repository *repo,
 	const char *update_ref,
@@ -46,7 +47,8 @@ int git_commit_create_from_callback(
 	const char *message,
 	const git_oid *tree,
 	git_commit_parent_callback parent_cb,
-	void *parent_payload)
+	void *parent_payload,
+	bool validate)
 {
 	git_reference *ref = NULL;
 	int error = 0, matched_parent = 0;
@@ -57,6 +59,9 @@ int git_commit_create_from_callback(
 	const git_oid *parent;
 
 	assert(id && repo && tree && parent_cb);
+
+	if (validate && !git_object__is_valid(repo, tree, GIT_OBJ_TREE))
+		return -1;
 
 	if (update_ref) {
 		error = git_reference_lookup_resolved(&ref, repo, update_ref, 10);
@@ -71,6 +76,11 @@ int git_commit_create_from_callback(
 	git_oid__writebuf(&commit, "tree ", tree);
 
 	while ((parent = parent_cb(i, parent_payload)) != NULL) {
+		if (validate && !git_object__is_valid(repo, parent, GIT_OBJ_COMMIT)) {
+			error = -1;
+			goto on_error;
+		}
+
 		git_oid__writebuf(&commit, "parent ", parent);
 		if (i == 0 && current_id && git_oid_equal(current_id, parent))
 			matched_parent = 1;
@@ -114,8 +124,24 @@ int git_commit_create_from_callback(
 
 on_error:
 	git_buf_free(&commit);
-	giterr_set(GITERR_OBJECT, "Failed to create commit.");
 	return -1;
+}
+
+int git_commit_create_from_callback(
+	git_oid *id,
+	git_repository *repo,
+	const char *update_ref,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message,
+	const git_oid *tree,
+	git_commit_parent_callback parent_cb,
+	void *parent_payload)
+{
+	return git_commit__create_internal(
+		id, repo, update_ref, author, committer, message_encoding, message,
+		tree, parent_cb, parent_payload, true);
 }
 
 typedef struct {
@@ -153,10 +179,10 @@ int git_commit_create_v(
 	data.total = parent_count;
 	va_start(data.args, parent_count);
 
-	error = git_commit_create_from_callback(
+	error = git_commit__create_internal(
 		id, repo, update_ref, author, committer,
 		message_encoding, message, git_tree_id(tree),
-		commit_parent_from_varargs, &data);
+		commit_parent_from_varargs, &data, false);
 
 	va_end(data.args);
 	return error;
@@ -187,10 +213,10 @@ int git_commit_create_from_ids(
 {
 	commit_parent_oids data = { parent_count, parents };
 
-	return git_commit_create_from_callback(
+	return git_commit__create_internal(
 		id, repo, update_ref, author, committer,
 		message_encoding, message, tree,
-		commit_parent_from_ids, &data);
+		commit_parent_from_ids, &data, true);
 }
 
 typedef struct {
@@ -227,10 +253,10 @@ int git_commit_create(
 
 	assert(tree && git_tree_owner(tree) == repo);
 
-	return git_commit_create_from_callback(
+	return git_commit__create_internal(
 		id, repo, update_ref, author, committer,
 		message_encoding, message, git_tree_id(tree),
-		commit_parent_from_array, &data);
+		commit_parent_from_array, &data, false);
 }
 
 static const git_oid *commit_parent_for_amend(size_t curr, void *payload)
@@ -290,9 +316,9 @@ int git_commit_amend(
 		}
 	}
 
-	error = git_commit_create_from_callback(
+	error = git_commit__create_internal(
 		id, repo, NULL, author, committer, message_encoding, message,
-		&tree_id, commit_parent_for_amend, (void *)commit_to_amend);
+		&tree_id, commit_parent_for_amend, (void *)commit_to_amend, false);
 
 	if (!error && update_ref) {
 		error = git_reference__update_for_commit(

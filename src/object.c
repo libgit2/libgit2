@@ -14,6 +14,8 @@
 #include "blob.h"
 #include "tag.h"
 
+bool git_object__strict_input_validation = true;
+
 typedef struct {
 	const char	*str;	/* type name string */
 	size_t		size;	/* size in bytes of the object structure */
@@ -463,5 +465,29 @@ int git_object_short_id(git_buf *out, const git_object *obj)
 	git_odb_free(odb);
 
 	return error;
+}
+
+bool git_object__is_valid(
+	git_repository *repo, const git_oid *id, git_otype expected_type)
+{
+	git_odb *odb;
+	git_otype actual_type;
+	size_t len;
+	int error;
+
+	if (!git_object__strict_input_validation)
+		return true;
+
+	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||
+		(error = git_odb_read_header(&len, &actual_type, odb, id)) < 0)
+		return false;
+
+	if (expected_type != GIT_OBJ_ANY && expected_type != actual_type) {
+		giterr_set(GITERR_INVALID,
+			"the requested type does not match the type in the ODB");
+		return false;
+	}
+
+	return true;
 }
 

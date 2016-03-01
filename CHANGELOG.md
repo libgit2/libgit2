@@ -29,6 +29,11 @@ v0.23 + 1
 * Rebases can now be performed purely in-memory, without touching the
   repository's workdir.
 
+* When adding objects to the index, or when creating new tree or commit
+  objects, the inputs are validated to ensure that the dependent objects
+  exist and are of the correct type.  This object validation can be
+  disabled with the GIT_OPT_ENABLE_STRICT_OBJECT_CREATION option.
+
 ### API additions
 
 * `git_config_lock()` has been added, which allow for

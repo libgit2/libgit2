@@ -18,6 +18,8 @@ void test_refs_create__initialize(void)
 void test_refs_create__cleanup(void)
 {
    cl_git_sandbox_cleanup();
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 0));
 }
 
 void test_refs_create__symbolic(void)
@@ -119,15 +121,35 @@ void test_refs_create__oid(void)
 	git_reference_free(looked_up_ref);
 }
 
-void test_refs_create__oid_unknown(void)
+/* Can by default create a reference that targets at an unknown id */
+void test_refs_create__oid_unknown_succeeds_by_default(void)
 {
-   // Can not create a new OID reference which targets at an unknown id
 	git_reference *new_reference, *looked_up_ref;
 	git_oid id;
 
 	const char *new_head = "refs/heads/new-head";
 
 	git_oid_fromstr(&id, "deadbeef3f795b2b4353bcce3a527ad0a4f7f644");
+
+	/* Create and write the new object id reference */
+	cl_git_pass(git_reference_create(&new_reference, g_repo, new_head, &id, 0, NULL));
+
+	/* Ensure the reference can't be looked-up... */
+	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, new_head));
+	git_reference_free(looked_up_ref);
+}
+
+/* Strict object enforcement enforces valid object id */
+void test_refs_create__oid_unknown_fails_strict_mode(void)
+{
+	git_reference *new_reference, *looked_up_ref;
+	git_oid id;
+
+	const char *new_head = "refs/heads/new-head";
+
+	git_oid_fromstr(&id, "deadbeef3f795b2b4353bcce3a527ad0a4f7f644");
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 1));
 
 	/* Create and write the new object id reference */
 	cl_git_fail(git_reference_create(&new_reference, g_repo, new_head, &id, 0, NULL));
