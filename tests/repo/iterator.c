@@ -53,7 +53,7 @@ static void expect_iterator_items(
 				cl_assert(entry->mode != GIT_FILEMODE_TREE);
 		}
 
-		if (++count > expected_flat)
+		if (++count >= expected_flat)
 			break;
 	}
 
@@ -99,7 +99,7 @@ static void expect_iterator_items(
 			cl_assert(!error || error == GIT_ITEROVER);
 		}
 
-		if (++count > expected_total)
+		if (++count >= expected_total)
 			break;
 	}
 
