@@ -926,10 +926,11 @@ replay:
 			if (parse_unauthorized_response(s->request, &allowed_types, &t->auth_mechanism) < 0)
 				return -1;
 
-			if (allowed_types &&
-				(!t->cred || 0 == (t->cred->credtype & allowed_types))) {
+			if (allowed_types) {
 				int cred_error = 1;
 
+				git_cred_free(t->cred);
+				t->cred = NULL;
 				/* Start with the user-supplied credential callback, if present */
 				if (t->owner->cred_acquire_cb) {
 					cred_error = t->owner->cred_acquire_cb(&t->cred, t->owner->url,
