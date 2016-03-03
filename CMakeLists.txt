@@ -109,7 +109,7 @@ ELSE ()
 ENDIF()
 
 IF (HAVE_STRUCT_STAT_NSEC OR WIN32)
-	OPTION( USE_NSEC		"Care about sub-second file mtimes and ctimes"	OFF )
+	OPTION( USE_NSEC		"Care about sub-second file mtimes and ctimes"	ON  )
 ENDIF()
 
 # This variable will contain the libraries we need to put into
