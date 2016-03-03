@@ -37,7 +37,7 @@ build_script:
     if "%GENERATOR%"=="MSYS Makefiles" (C:\MinGW\msys\1.0\bin\sh --login /c/projects/libgit2/script/appveyor-mingw.sh)
 test_script:
 - ps: |
-    ctest -V .
+    ctest -V -R libgit2_clar
     $env:GITTEST_REMOTE_URL="https://github.com/libgit2/non-existent"
     $env:GITTEST_REMOTE_USER="libgit2test"
-    .\Debug\libgit2_clar -sonline::clone::cred_callback
+    ctest -V -R libgit2_clar-cred_callback

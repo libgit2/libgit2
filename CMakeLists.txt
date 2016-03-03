@@ -682,6 +682,10 @@ IF (BUILD_CLAR)
 	ELSE ()
 		ADD_TEST(libgit2_clar libgit2_clar -v)
 	ENDIF ()
+
+	# Add a test target which runs the cred callback tests, to be
+	# called after setting the url and user
+	ADD_TEST(libgit2_clar-cred_callback libgit2_clar -v -sonline::clone::cred_callback)
 ENDIF ()
 
 IF (TAGS)
