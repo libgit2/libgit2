@@ -25,7 +25,7 @@ git daemon --listen=localhost --export-all --enable=receive-pack --base-path="$H
 export GITTEST_REMOTE_URL="git://localhost/test.git"
 
 # Run the test suite
-ctest -V . || exit $?
+ctest -V -R libgit2_clar || exit $?
 
 # Now that we've tested the raw git protocol, let's set up ssh to we
 # can do the push tests over it
@@ -56,3 +56,7 @@ if [ -e ./libgit2_clar ]; then
         ./libgit2_clar -sonline::clone::cred_callback || exit $?
     fi
 fi
+
+export GITTEST_REMOTE_URL="https://github.com/libgit2/non-existent"
+export GITTEST_REMOTE_USER="libgit2test"
+ctest -V -R libgit2_clar-cred_callback
