@@ -15,6 +15,7 @@
 #include "smart.h"
 #include "cred.h"
 #include "socket_stream.h"
+#include "ssh.h"
 
 #ifdef GIT_SSH
 
@@ -874,5 +875,20 @@ int git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *p
 
 	giterr_set(GITERR_INVALID, "Cannot create SSH transport. Library was built without SSH support");
 	return -1;
+#endif
+}
+
+int git_transport_ssh_global_init(void)
+{
+#ifdef GIT_SSH
+
+	libssh2_init(0);
+	return 0;
+
+#else
+
+	/* Nothing to initialize */
+	return 0;
+
 #endif
 }
