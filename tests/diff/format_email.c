@@ -124,7 +124,7 @@ void test_diff_format_email__with_message(void)
 	" file3\n" \
 	"+file3\n" \
 	"--\n" \
-	"libgit2 0.23.0\n" \
+	"libgit2 " LIBGIT2_VERSION "\n" \
 	"\n";
 
 	opts.body = "Modify content of file3.txt by appending a new line. Make this\n" \
