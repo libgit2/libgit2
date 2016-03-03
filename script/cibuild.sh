@@ -56,3 +56,7 @@ if [ -e ./libgit2_clar ]; then
         ./libgit2_clar -sonline::clone::cred_callback || exit $?
     fi
 fi
+
+export GITTEST_REMOTE_URL="https://github.com/libgit2/non-existent"
+export GITTEST_REMOTE_USER="libgit2test"
+./libgit2_clar -sonline::clone::cred_callback || exit $?
