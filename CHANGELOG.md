@@ -1,4 +1,15 @@
-v0.23 + 1
+v0.24 + 1
+-------
+
+### Changes or improvements
+
+### API additions
+
+### API removals
+
+### Breaking API changes
+
+v0.24
 -------
 
 ### Changes or improvements
@@ -64,6 +75,8 @@ v0.23 + 1
   can verify it.
 
 ### API removals
+
+* No APIs were removed in this version.
 
 ### Breaking API changes
 
