@@ -133,6 +133,7 @@ void test_refs_create__oid_unknown_succeeds_by_default(void)
 
 	/* Create and write the new object id reference */
 	cl_git_pass(git_reference_create(&new_reference, g_repo, new_head, &id, 0, NULL));
+	git_reference_free(new_reference);
 
 	/* Ensure the reference can't be looked-up... */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, new_head));
