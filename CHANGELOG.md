@@ -34,6 +34,9 @@ v0.23 + 1
   exist and are of the correct type.  This object validation can be
   disabled with the GIT_OPT_ENABLE_STRICT_OBJECT_CREATION option.
 
+* The WinHTTP transport's handling of bad credentials now behaves like
+  the others, asking for credentials again.
+
 ### API additions
 
 * `git_config_lock()` has been added, which allow for
