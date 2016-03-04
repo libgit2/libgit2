@@ -25,6 +25,7 @@ msvc/Release/
 *.opensdf
 *.aps
 *.cmake
+*.idea
 !cmake/Modules/*.cmake
 .DS_Store
 *~
