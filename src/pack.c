@@ -1015,7 +1015,7 @@ static int packfile_open(struct git_pack_file *p)
 	unsigned char *idx_sha1;
 
 	if (p->index_version == -1 && pack_index_open(p) < 0)
-		return git_odb__error_notfound("failed to open packfile", NULL);
+		return git_odb__error_notfound("failed to open packfile", NULL, 0);
 
 	/* if mwf opened by another thread, return now */
 	if (git_mutex_lock(&p->lock) < 0)
@@ -1096,7 +1096,7 @@ int git_packfile__name(char **out, const char *path)
 	path_len = strlen(path);
 
 	if (path_len < strlen(".idx"))
-		return git_odb__error_notfound("invalid packfile path", NULL);
+		return git_odb__error_notfound("invalid packfile path", NULL, 0);
 
 	if (git_buf_printf(&buf, "%.*s.pack", (int)(path_len - strlen(".idx")), path) < 0)
 		return -1;
@@ -1114,7 +1114,7 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 	*pack_out = NULL;
 
 	if (path_len < strlen(".idx"))
-		return git_odb__error_notfound("invalid packfile path", NULL);
+		return git_odb__error_notfound("invalid packfile path", NULL, 0);
 
 	GITERR_CHECK_ALLOC_ADD(&alloc_len, sizeof(*p), path_len);
 	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 2);
@@ -1140,7 +1140,7 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 
 	if (p_stat(p->pack_name, &st) < 0 || !S_ISREG(st.st_mode)) {
 		git__free(p);
-		return git_odb__error_notfound("packfile not found", NULL);
+		return git_odb__error_notfound("packfile not found", NULL, 0);
 	}
 
 	/* ok, it looks sane as far as we can check without
@@ -1341,7 +1341,7 @@ static int pack_entry_find_offset(
 	}
 
 	if (!found)
-		return git_odb__error_notfound("failed to find offset for pack entry", short_oid);
+		return git_odb__error_notfound("failed to find offset for pack entry", short_oid, len);
 	if (found > 1)
 		return git_odb__error_ambiguous("found multiple offsets for pack entry");
 
