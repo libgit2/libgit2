@@ -112,12 +112,7 @@ void test_checkout_typechange__checkout_typechanges_safe(void)
 	for (i = 0; g_typechange_oids[i] != NULL; ++i) {
 		cl_git_pass(git_revparse_single(&obj, g_repo, g_typechange_oids[i]));
 
-		opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-		/* There are bugs in some submodule->tree changes that prevent
-		 * SAFE from passing here, even though the following should work:
-		 */
-		/* !i ? GIT_CHECKOUT_FORCE : GIT_CHECKOUT_SAFE; */
+		opts.checkout_strategy = !i ? GIT_CHECKOUT_FORCE : GIT_CHECKOUT_SAFE;
 
 		cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
 
