@@ -18,6 +18,7 @@
 
 #include "git2/odb_backend.h"
 #include "git2/oid.h"
+#include "git2/oidarray.h"
 
 #define GIT_ALTERNATES_FILE "info/alternates"
 
@@ -651,7 +652,7 @@ int git_odb_exists(git_odb *db, const git_oid *id)
 
 	if ((object = git_cache_get_raw(odb_cache(db), id)) != NULL) {
 		git_odb_object_free(object);
-		return (int)true;
+		return 1;
 	}
 
 	if (odb_exists_1(db, id, false))
@@ -716,10 +717,8 @@ int git_odb_exists_prefix(
 
 	if (len < GIT_OID_MINPREFIXLEN)
 		return git_odb__error_ambiguous("prefix length too short");
-	if (len > GIT_OID_HEXSZ)
-		len = GIT_OID_HEXSZ;
 
-	if (len == GIT_OID_HEXSZ) {
+	if (len >= GIT_OID_HEXSZ) {
 		if (git_odb_exists(db, short_id)) {
 			if (out)
 				git_oid_cpy(out, short_id);
@@ -730,10 +729,7 @@ int git_odb_exists_prefix(
 		}
 	}
 
-	/* just copy valid part of short_id */
-	memcpy(&key.id, short_id->id, (len + 1) / 2);
-	if (len & 1)
-		key.id[len / 2] &= 0xF0;
+	git_oid__cpy_prefix(&key, short_id, len);
 
 	error = odb_exists_prefix_1(out, db, &key, len, false);
 
@@ -742,6 +738,69 @@ int git_odb_exists_prefix(
 
 	if (error == GIT_ENOTFOUND)
 		return git_odb__error_notfound("no match for id prefix", &key, len);
+
+	return error;
+}
+
+int git_odb_exists_many_prefixes(
+	git_odb *db,
+	git_oid *ids,
+	size_t *id_lengths,
+	git_otype *types,
+	size_t cnt)
+{
+	size_t len, i;
+	int error;
+
+	assert(db && ids && id_lengths);
+
+	for (i = 0; i < cnt; i++) {
+		git_oid *actual_id = NULL, tmp;
+		git_otype actual_type = 0;
+
+		/* if we were given a full object ID, simply look it up */
+		if (id_lengths[i] >= GIT_OID_HEXSZ) {
+			error = git_odb_read_header(&len, &actual_type, db, &ids[i]);
+		}
+
+		/* otherwise, resolve the short id to full, then (optionally)
+		 * read the header.
+		 */
+		else if (id_lengths[i] >= GIT_OID_MINPREFIXLEN) {
+	    	error = odb_exists_prefix_1(&tmp,
+				db, &ids[i], id_lengths[i], false);
+
+			if (!error) {
+				actual_id = &tmp;
+
+				if (types && types[i] != GIT_OBJ_ANY)
+					error = git_odb_read_header(&len, &actual_type, db, &tmp);
+				else
+					actual_type = GIT_OBJ_ANY;
+			}
+		}
+
+		if (error < 0 && error != GIT_ENOTFOUND && error != GIT_EAMBIGUOUS)
+			break;
+
+		error = 0;
+
+		if (types && types[i] != GIT_OBJ_ANY && types[i] != actual_type)
+			actual_type = 0;
+
+		if (!actual_type) {
+			id_lengths[i] = 0;
+			memset(&ids[i], 0, sizeof(git_oid));
+		} else {
+			id_lengths[i] = GIT_OID_HEXSZ;
+
+			if (actual_id)
+				git_oid_cpy(&ids[i], actual_id);
+		}
+	}
+
+	if (!error)
+		giterr_clear();
 
 	return error;
 }
@@ -957,10 +1016,7 @@ int git_odb_read_prefix(
 			return 0;
 	}
 
-	/* just copy valid part of short_id */
-	memcpy(&key.id, short_id->id, (len + 1) / 2);
-	if (len & 1)
-		key.id[len / 2] &= 0xF0;
+	git_oid__cpy_prefix(&key, short_id, len);
 
 	error = read_prefix_1(out, db, &key, len, false);
 

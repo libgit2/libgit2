@@ -10,6 +10,7 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
+#include "oidarray.h"
 
 /**
  * @file git2/odb.h
@@ -159,7 +160,8 @@ GIT_EXTERN(int) git_odb_read_header(size_t *len_out, git_otype *type_out, git_od
 GIT_EXTERN(int) git_odb_exists(git_odb *db, const git_oid *id);
 
 /**
- * Determine if objects can be found in the object database from a short OID.
+ * Determine if an object can be found in the object database by an
+ * abbreviated object ID.
  *
  * @param out The full OID of the found object if just one is found.
  * @param db The database to be searched for the given object.
@@ -170,6 +172,34 @@ GIT_EXTERN(int) git_odb_exists(git_odb *db, const git_oid *id);
  */
 GIT_EXTERN(int) git_odb_exists_prefix(
 	git_oid *out, git_odb *db, const git_oid *short_id, size_t len);
+
+/**
+ * Determine if one or more objects can be found in the object database
+ * by their abbreviated object IDs.  Callers may further restrict the
+ * lookup based on type.  This function will write the complete object
+ * ID to the `id`s array, and the updated length to the `id_lengths`
+ * array.  (If an object is found, it will have its length updated to
+ * `GIT_OID_HEXSZ`; if an object is not found, will be be `0`.)
+ *
+ * Note that since this function operates on multiple objects, the
+ * underlying database will not be asked to be reloaded if an object is
+ * not found (which is unlike other object database operations.)
+ *
+ * @param db The database to be searched for the given objects.
+ * @param ids An array of object IDs to search for
+ * @param id_lengths The corresponding length of each entry in the `ids`
+ *                   array
+ * @param types The corresponding type of each entry in the `ids` array
+ *              (or null to lookup an object of any type)
+ * @param cnt The length of the `ids`, `id_lengths` and `types` arrays
+ * @return 0 on success or an error code on failure
+ */
+GIT_EXTERN(int) git_odb_exists_many_prefixes(
+	git_odb *db,
+	git_oid *ids,
+	size_t *id_lengths,
+	git_otype *types,
+	size_t cnt);
 
 /**
  * Refresh the object database to load newly added files.
