@@ -757,7 +757,8 @@ int git_treebuilder_insert(
 	if (!valid_entry_name(bld->repo, filename))
 		return tree_error("Failed to insert entry. Invalid name for a tree entry", filename);
 
-	if (!git_object__is_valid(bld->repo, id, otype_from_mode(filemode)))
+	if (filemode != GIT_FILEMODE_COMMIT &&
+	    !git_object__is_valid(bld->repo, id, otype_from_mode(filemode)))
 		return tree_error("Failed to insert entry; invalid object specified", filename);
 
 	pos = git_strmap_lookup_index(bld->map, filename);

@@ -490,13 +490,25 @@ static void test_invalid_objects(bool should_allow_invalid)
 	git_treebuilder_free(builder);
 }
 
+static void test_inserting_submodule(void)
+{
+	git_treebuilder *bld;
+	git_oid sm_id;
+
+	cl_git_pass(git_treebuilder_new(&bld, g_repo, NULL));
+	cl_git_pass(git_treebuilder_insert(NULL, bld, "sm", &sm_id, GIT_FILEMODE_COMMIT));
+	git_treebuilder_free(bld);
+}
+
 void test_object_tree_write__object_validity(void)
 {
 	/* Ensure that we cannot add invalid objects by default */
 	test_invalid_objects(false);
+	test_inserting_submodule();
 
 	/* Ensure that we can turn off validation */
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 0));
 	test_invalid_objects(true);
+	test_inserting_submodule();
 }
 
