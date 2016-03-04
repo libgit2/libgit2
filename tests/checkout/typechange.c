@@ -6,6 +6,36 @@
 
 static git_repository *g_repo = NULL;
 
+/*
+From the test repo used for this test:
+--------------------------------------
+
+This is a test repo for libgit2 where tree entries have type changes
+
+The key types that could be found in tree entries are:
+
+1 - GIT_FILEMODE_NEW             = 0000000
+2 - GIT_FILEMODE_TREE            = 0040000
+3 - GIT_FILEMODE_BLOB            = 0100644
+4 - GIT_FILEMODE_BLOB_EXECUTABLE = 0100755
+5 - GIT_FILEMODE_LINK            = 0120000
+6 - GIT_FILEMODE_COMMIT          = 0160000
+
+I will try to have every type of transition somewhere in the history
+of this repo.
+
+Commits
+-------
+Initial commit - a(1)    b(1)    c(1)    d(1)    e(1)
+Create content - a(1->2) b(1->3) c(1->4) d(1->5) e(1->6)
+Changes #1     - a(2->3) b(3->4) c(4->5) d(5->6) e(6->2)
+Changes #2     - a(3->5) b(4->6) c(5->2) d(6->3) e(2->4)
+Changes #3     - a(5->3) b(6->4) c(2->5) d(3->6) e(4->2)
+Changes #4     - a(3->2) b(4->3) c(5->4) d(6->5) e(2->6)
+Changes #5     - a(2->1) b(3->1) c(4->1) d(5->1) e(6->1)
+
+*/
+
 static const char *g_typechange_oids[] = {
 	"79b9f23e85f55ea36a472a902e875bc1121a94cb",
 	"9bdb75b73836a99e3dbeea640a81de81031fdc29",
@@ -19,6 +49,14 @@ static const char *g_typechange_oids[] = {
 
 static bool g_typechange_empty[] = {
 	true, false, false, false, false, false, true, true
+};
+
+static const int g_typechange_expected_conflicts[] = {
+	1, 2, 2, 2, 2, 2, 1
+};
+
+static const int g_typechange_expected_untracked[] = {
+	6, 4, 3, 2, 3, 2, 5
 };
 
 void test_checkout_typechange__initialize(void)
@@ -211,8 +249,11 @@ void test_checkout_typechange__checkout_with_conflicts(void)
 		memset(&cts, 0, sizeof(cts));
 
 		cl_git_fail(git_checkout_tree(g_repo, obj, &opts));
-		cl_assert(cts.conflicts > 0);
-		cl_assert(cts.untracked > 0);
+		cl_assert_equal_i(cts.conflicts, g_typechange_expected_conflicts[i]);
+		cl_assert_equal_i(cts.untracked, g_typechange_expected_untracked[i]);
+		cl_assert_equal_i(cts.dirty, 0);
+		cl_assert_equal_i(cts.updates, 0);
+		cl_assert_equal_i(cts.ignored, 0);
 
 		opts.checkout_strategy =
 			GIT_CHECKOUT_FORCE | GIT_CHECKOUT_REMOVE_UNTRACKED;
