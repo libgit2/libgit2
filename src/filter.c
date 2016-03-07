@@ -911,14 +911,15 @@ static int stream_list_init(
 				last_stream);
 
 		if (error < 0)
-			return error;
+			goto done;
 
 		git_vector_insert(streams, filter_stream);
 		last_stream = filter_stream;
 	}
 
+done:
 	*out = last_stream;
-	return 0;
+	return error;
 }
 
 void stream_list_free(git_vector *streams)
