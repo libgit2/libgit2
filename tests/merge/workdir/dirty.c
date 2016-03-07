@@ -165,8 +165,8 @@ static void hack_index(char *files[])
 		entry->ctime.seconds = (int32_t)statbuf.st_ctime;
 		entry->mtime.seconds = (int32_t)statbuf.st_mtime;
 #if defined(GIT_USE_NSEC)
-		entry->ctime.nanoseconds = statbuf.st_ctim.tv_nsec;
-		entry->mtime.nanoseconds = statbuf.st_mtim.tv_nsec;
+		entry->ctime.nanoseconds = statbuf.st_ctime_nsec;
+		entry->mtime.nanoseconds = statbuf.st_mtime_nsec;
 #else
 		entry->ctime.nanoseconds = 0;
 		entry->mtime.nanoseconds = 0;
