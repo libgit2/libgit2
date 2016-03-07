@@ -52,7 +52,7 @@ static bool g_typechange_empty[] = {
 };
 
 static const int g_typechange_expected_conflicts[] = {
-	1, 2, 2, 2, 2, 2, 1
+	1, 2, 3, 3, 2, 3, 2
 };
 
 static const int g_typechange_expected_untracked[] = {
@@ -223,6 +223,35 @@ static void force_create_file(const char *file)
 	cl_git_rewritefile(file, "yowza!!");
 }
 
+static int make_submodule_dirty(git_submodule *sm, const char *name, void *payload)
+{
+	git_buf submodulepath = GIT_BUF_INIT;
+	git_buf dirtypath = GIT_BUF_INIT;
+
+	/* remove submodule directory in preparation for init and repo_init */
+	cl_git_pass(git_buf_joinpath(
+		&submodulepath,
+		git_repository_workdir(g_repo),
+		git_submodule_path(sm)
+	));
+	git_futils_rmdir_r(git_buf_cstr(&submodulepath), NULL, GIT_RMDIR_REMOVE_FILES);
+
+	/* initialize submodule and its repository */
+	cl_git_pass(git_submodule_init(sm, 1));
+	git_repository *submodule_repo;
+	cl_git_pass(git_submodule_repo_init(&submodule_repo, sm, 0));
+
+	/* create a file in the submodule workdir to make it dirty */
+	cl_git_pass(
+		git_buf_joinpath(&dirtypath, git_repository_workdir(submodule_repo), "dirty"));
+	force_create_file(git_buf_cstr(&dirtypath));
+
+	git_buf_free(&dirtypath);
+	git_buf_free(&submodulepath);
+
+	return 0;
+}
+
 void test_checkout_typechange__checkout_with_conflicts(void)
 {
 	int i;
@@ -244,6 +273,7 @@ void test_checkout_typechange__checkout_with_conflicts(void)
 		git_futils_rmdir_r("typechanges/d", NULL, GIT_RMDIR_REMOVE_FILES);
 		p_mkdir("typechanges/d", 0777); /* intentionally empty dir */
 		force_create_file("typechanges/untracked");
+		cl_git_pass(git_submodule_foreach(g_repo, make_submodule_dirty, NULL));
 
 		opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 		memset(&cts, 0, sizeof(cts));
