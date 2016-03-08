@@ -28,11 +28,11 @@
 // **libgit2** (for the most part) only implements the core plumbing
 // functions, not really the higher level porcelain stuff. For a primer on
 // Git Internals that you will need to know to work with Git at this level,
-// check out [Chapter 9][pg] of the Pro Git book.
+// check out [Chapter 10][pg] of the Pro Git book.
 //
 // [lg]: http://libgit2.github.com
 // [ap]: http://libgit2.github.com/libgit2
-// [pg]: http://progit.org/book/ch9-0.html
+// [pg]: https://git-scm.com/book/en/v2/Git-Internals-Plumbing-and-Porcelain
 
 // ### Includes
 
@@ -528,4 +528,3 @@ int main (int argc, char** argv)
 
   return 0;
 }
-
