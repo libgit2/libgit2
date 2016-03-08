@@ -175,11 +175,12 @@ GIT_EXTERN(int) git_odb_exists_prefix(
 
 /**
  * Determine if one or more objects can be found in the object database
- * by their abbreviated object IDs.  Callers may further restrict the
- * lookup based on type.  This function will write the complete object
- * ID to the `id`s array, and the updated length to the `id_lengths`
- * array.  (If an object is found, it will have its length updated to
- * `GIT_OID_HEXSZ`; if an object is not found, will be be `0`.)
+ * by their abbreviated object ID and type.  The given array will be
+ * updated in place:  for each abbreviated ID that is unique in the
+ * database, and of the given type (if specified), the full object ID,
+ * object ID length (`GIT_OID_HEXSZ`) and type will be written back to
+ * the array.  For IDs that are not found (or are ambiguous), the
+ * array entry will be zeroed.
  *
  * Note that since this function operates on multiple objects, the
  * underlying database will not be asked to be reloaded if an object is
@@ -194,7 +195,7 @@ GIT_EXTERN(int) git_odb_exists_prefix(
  * @param cnt The length of the `ids`, `id_lengths` and `types` arrays
  * @return 0 on success or an error code on failure
  */
-GIT_EXTERN(int) git_odb_exists_many_prefixes(
+GIT_EXTERN(int) git_odb_expand_ids(
 	git_odb *db,
 	git_oid *ids,
 	size_t *id_lengths,

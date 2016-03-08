@@ -742,7 +742,7 @@ int git_odb_exists_prefix(
 	return error;
 }
 
-int git_odb_exists_many_prefixes(
+int git_odb_expand_ids(
 	git_odb *db,
 	git_oid *ids,
 	size_t *id_lengths,
@@ -773,7 +773,7 @@ int git_odb_exists_many_prefixes(
 			if (!error) {
 				actual_id = &tmp;
 
-				if (types && types[i] != GIT_OBJ_ANY)
+				if (types)
 					error = git_odb_read_header(&len, &actual_type, db, &tmp);
 				else
 					actual_type = GIT_OBJ_ANY;
@@ -789,13 +789,19 @@ int git_odb_exists_many_prefixes(
 			actual_type = 0;
 
 		if (!actual_type) {
-			id_lengths[i] = 0;
 			memset(&ids[i], 0, sizeof(git_oid));
-		} else {
-			id_lengths[i] = GIT_OID_HEXSZ;
+			id_lengths[i] = 0;
 
+			if (types)
+				types[i] = 0;
+		} else {
 			if (actual_id)
 				git_oid_cpy(&ids[i], actual_id);
+
+			id_lengths[i] = GIT_OID_HEXSZ;
+
+			if (types)
+				types[i] = actual_type;
 		}
 	}
 

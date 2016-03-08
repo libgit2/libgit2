@@ -109,13 +109,13 @@ void test_odb_mixed__dup_oid_prefix_0(void) {
 	git_odb_object_free(obj);
 }
 
-struct odb_test_data {
+struct expand_id_test_data {
 	char *lookup_id;
 	char *expected_id;
 	git_otype expected_type;
 };
 
-struct odb_test_data prefix_data[] = {
+struct expand_id_test_data expand_id_test_data[] = {
 	/* some prefixes and their expected values */
 	{ "dea509d0",  NULL, GIT_OBJ_ANY },
 	{ "00000000",  NULL, GIT_OBJ_ANY },
@@ -155,16 +155,16 @@ static void setup_prefix_query(
 	git_otype *types;
 	size_t num, *lengths, i;
 
-	num = ARRAY_SIZE(prefix_data);
+	num = ARRAY_SIZE(expand_id_test_data);
 
 	cl_assert((ids = git__calloc(num, sizeof(git_oid))));
 	cl_assert((lengths = git__calloc(num, sizeof(size_t))));
 	cl_assert((types = git__calloc(num, sizeof(git_otype))));
 
 	for (i = 0; i < num; i++) {
-		lengths[i] = strlen(prefix_data[i].lookup_id);
-		git_oid_fromstrn(&ids[i], prefix_data[i].lookup_id, lengths[i]);
-		types[i] = prefix_data[i].expected_type;
+		lengths[i] = strlen(expand_id_test_data[i].lookup_id);
+		git_oid_fromstrn(&ids[i], expand_id_test_data[i].lookup_id, lengths[i]);
+		types[i] = expand_id_test_data[i].expected_type;
 	}
 
 	*out_ids = ids;
@@ -173,40 +173,50 @@ static void setup_prefix_query(
 	*out_num = num;
 }
 
-static void assert_found_objects(git_oid *ids, size_t *lengths)
+static void assert_found_objects(
+	git_oid *ids, size_t *lengths, git_otype *types)
 {
 	size_t num, i;
 
-	num = ARRAY_SIZE(prefix_data);
+	num = ARRAY_SIZE(expand_id_test_data);
 
 	for (i = 0; i < num; i++) {
 		git_oid expected_id = {{0}};
 		size_t expected_len = 0;
+		git_otype expected_type = 0;
 
-		if (prefix_data[i].expected_id) {
-			git_oid_fromstr(&expected_id, prefix_data[i].expected_id);
+		if (expand_id_test_data[i].expected_id) {
+			git_oid_fromstr(&expected_id, expand_id_test_data[i].expected_id);
 			expected_len = GIT_OID_HEXSZ;
+			expected_type = expand_id_test_data[i].expected_type;
 		}
 
 		cl_assert_equal_i(expected_len, lengths[i]);
 		cl_assert_equal_oid(&expected_id, &ids[i]);
+
+		if (types)
+			cl_assert_equal_i(expected_type, types[i]);
 	}
 }
 
-static void assert_notfound_objects(git_oid *ids, size_t *lengths)
+static void assert_notfound_objects(
+	git_oid *ids, size_t *lengths, git_otype *types)
 {
 	git_oid expected_id = {{0}};
 	size_t num, i;
 
-	num = ARRAY_SIZE(prefix_data);
+	num = ARRAY_SIZE(expand_id_test_data);
 
 	for (i = 0; i < num; i++) {
 		cl_assert_equal_i(0, lengths[i]);
 		cl_assert_equal_oid(&expected_id, &ids[i]);
+
+		if (types)
+			cl_assert_equal_i(0, types[i]);
 	}
 }
 
-void test_odb_mixed__prefix_many(void)
+void test_odb_mixed__expand_ids(void)
 {
 	git_oid *ids;
 	size_t i, num, *lengths;
@@ -215,15 +225,15 @@ void test_odb_mixed__prefix_many(void)
 	/* test looking for the actual (correct) types */
 
 	setup_prefix_query(&ids, &lengths, &types, &num);
-	cl_git_pass(git_odb_exists_many_prefixes(_odb, ids, lengths, types, num));
-	assert_found_objects(ids, lengths);
+	cl_git_pass(git_odb_expand_ids(_odb, ids, lengths, types, num));
+	assert_found_objects(ids, lengths, types);
 	git__free(ids); git__free(lengths); git__free(types);
 
 	/* test looking for no specified types (types array == NULL) */
 
 	setup_prefix_query(&ids, &lengths, &types, &num);
-	cl_git_pass(git_odb_exists_many_prefixes(_odb, ids, lengths, NULL, num));
-	assert_found_objects(ids, lengths);
+	cl_git_pass(git_odb_expand_ids(_odb, ids, lengths, NULL, num));
+	assert_found_objects(ids, lengths, NULL);
 	git__free(ids); git__free(lengths); git__free(types);
 
 	/* test looking for an explicit GIT_OBJ_ANY */
@@ -233,8 +243,8 @@ void test_odb_mixed__prefix_many(void)
 	for (i = 0; i < num; i++)
 		types[i] = GIT_OBJ_ANY;
 
-	cl_git_pass(git_odb_exists_many_prefixes(_odb, ids, lengths, types, num));
-	assert_found_objects(ids, lengths);
+	cl_git_pass(git_odb_expand_ids(_odb, ids, lengths, types, num));
+	assert_found_objects(ids, lengths, types);
 	git__free(ids); git__free(lengths); git__free(types);
 
 	/* test looking for the completely wrong type */
@@ -244,8 +254,8 @@ void test_odb_mixed__prefix_many(void)
 	for (i = 0; i < num; i++)
 		types[i] = (types[i] == GIT_OBJ_BLOB) ? GIT_OBJ_TREE : GIT_OBJ_BLOB;
 
-	cl_git_pass(git_odb_exists_many_prefixes(_odb, ids, lengths, types, num));
-	assert_notfound_objects(ids, lengths);
+	cl_git_pass(git_odb_expand_ids(_odb, ids, lengths, types, num));
+	assert_notfound_objects(ids, lengths, types);
 	git__free(ids); git__free(lengths); git__free(types);
 }
 
