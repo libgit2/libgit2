@@ -547,7 +547,8 @@ static int locate_object_short_oid(
 
 	/* Check that directory exists */
 	if (git_path_isdir(object_location->ptr) == false)
-		return git_odb__error_notfound("no matching loose object for prefix", short_oid);
+		return git_odb__error_notfound("no matching loose object for prefix",
+			short_oid, len);
 
 	state.dir_len = git_buf_len(object_location);
 	state.short_oid_len = len;
@@ -560,7 +561,8 @@ static int locate_object_short_oid(
 		return error;
 
 	if (!state.found)
-		return git_odb__error_notfound("no matching loose object for prefix", short_oid);
+		return git_odb__error_notfound("no matching loose object for prefix",
+			short_oid, len);
 
 	if (state.found > 1)
 		return git_odb__error_ambiguous("multiple matches in loose objects");
@@ -613,9 +615,10 @@ static int loose_backend__read_header(size_t *len_p, git_otype *type_p, git_odb_
 	raw.len = 0;
 	raw.type = GIT_OBJ_BAD;
 
-	if (locate_object(&object_path, (loose_backend *)backend, oid) < 0)
-		error = git_odb__error_notfound("no matching loose object", oid);
-	else if ((error = read_header_loose(&raw, &object_path)) == 0) {
+	if (locate_object(&object_path, (loose_backend *)backend, oid) < 0) {
+		error = git_odb__error_notfound("no matching loose object",
+			oid, GIT_OID_HEXSZ);
+	} else if ((error = read_header_loose(&raw, &object_path)) == 0) {
 		*len_p = raw.len;
 		*type_p = raw.type;
 	}
@@ -633,9 +636,10 @@ static int loose_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p
 
 	assert(backend && oid);
 
-	if (locate_object(&object_path, (loose_backend *)backend, oid) < 0)
-		error = git_odb__error_notfound("no matching loose object", oid);
-	else if ((error = read_loose(&raw, &object_path)) == 0) {
+	if (locate_object(&object_path, (loose_backend *)backend, oid) < 0) {
+		error = git_odb__error_notfound("no matching loose object",
+			oid, GIT_OID_HEXSZ);
+	} else if ((error = read_loose(&raw, &object_path)) == 0) {
 		*buffer_p = raw.data;
 		*len_p = raw.len;
 		*type_p = raw.type;

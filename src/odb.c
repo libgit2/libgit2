@@ -18,6 +18,7 @@
 
 #include "git2/odb_backend.h"
 #include "git2/oid.h"
+#include "git2/oidarray.h"
 
 #define GIT_ALTERNATES_FILE "info/alternates"
 
@@ -651,7 +652,7 @@ int git_odb_exists(git_odb *db, const git_oid *id)
 
 	if ((object = git_cache_get_raw(odb_cache(db), id)) != NULL) {
 		git_odb_object_free(object);
-		return (int)true;
+		return 1;
 	}
 
 	if (odb_exists_1(db, id, false))
@@ -716,23 +717,19 @@ int git_odb_exists_prefix(
 
 	if (len < GIT_OID_MINPREFIXLEN)
 		return git_odb__error_ambiguous("prefix length too short");
-	if (len > GIT_OID_HEXSZ)
-		len = GIT_OID_HEXSZ;
 
-	if (len == GIT_OID_HEXSZ) {
+	if (len >= GIT_OID_HEXSZ) {
 		if (git_odb_exists(db, short_id)) {
 			if (out)
 				git_oid_cpy(out, short_id);
 			return 0;
 		} else {
-			return git_odb__error_notfound("no match for id prefix", short_id);
+			return git_odb__error_notfound(
+				"no match for id prefix", short_id, len);
 		}
 	}
 
-	/* just copy valid part of short_id */
-	memcpy(&key.id, short_id->id, (len + 1) / 2);
-	if (len & 1)
-		key.id[len / 2] &= 0xF0;
+	git_oid__cpy_prefix(&key, short_id, len);
 
 	error = odb_exists_prefix_1(out, db, &key, len, false);
 
@@ -740,7 +737,63 @@ int git_odb_exists_prefix(
 		error = odb_exists_prefix_1(out, db, &key, len, true);
 
 	if (error == GIT_ENOTFOUND)
-		return git_odb__error_notfound("no match for id prefix", &key);
+		return git_odb__error_notfound("no match for id prefix", &key, len);
+
+	return error;
+}
+
+int git_odb_expand_ids(
+	git_odb *db,
+	git_odb_expand_id *ids,
+	size_t count)
+{
+	size_t len, i;
+	int error;
+
+	assert(db && ids);
+
+	for (i = 0; i < count; i++) {
+		git_odb_expand_id *query = &ids[i];
+		git_oid *actual_id = NULL, tmp;
+		git_otype query_type = (query->type == GIT_OBJ_ANY) ? 0 : query->type;
+		git_otype actual_type = 0;
+
+		/* if we were given a full object ID, simply look it up */
+		if (query->length >= GIT_OID_HEXSZ) {
+			error = git_odb_read_header(&len, &actual_type, db, &query->id);
+		}
+
+		/* otherwise, resolve the short id to full, then (optionally)
+		 * read the header.
+		 */
+		else if (query->length >= GIT_OID_MINPREFIXLEN) {
+	    	error = odb_exists_prefix_1(&tmp,
+				db, &query->id, query->length, false);
+
+			if (!error) {
+				actual_id = &tmp;
+				error = git_odb_read_header(&len, &actual_type, db, &tmp);
+			}
+		}
+
+		if (error < 0 && error != GIT_ENOTFOUND && error != GIT_EAMBIGUOUS)
+			break;
+
+		if (error == 0 && (query_type == actual_type || !query_type)) {
+			if (actual_id)
+				git_oid_cpy(&query->id, actual_id);
+
+			query->length = GIT_OID_HEXSZ;
+			query->type = actual_type;
+		} else {
+			memset(&query->id, 0, sizeof(git_oid));
+			query->length = 0;
+			query->type = 0;
+		}
+	}
+
+	if (!error)
+		giterr_clear();
 
 	return error;
 }
@@ -881,7 +934,7 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 		error = odb_read_1(out, db, id, true);
 
 	if (error == GIT_ENOTFOUND)
-		return git_odb__error_notfound("no match for id", id);
+		return git_odb__error_notfound("no match for id", id, GIT_OID_HEXSZ);
 
 	return error;
 }
@@ -956,10 +1009,7 @@ int git_odb_read_prefix(
 			return 0;
 	}
 
-	/* just copy valid part of short_id */
-	memcpy(&key.id, short_id->id, (len + 1) / 2);
-	if (len & 1)
-		key.id[len / 2] &= 0xF0;
+	git_oid__cpy_prefix(&key, short_id, len);
 
 	error = read_prefix_1(out, db, &key, len, false);
 
@@ -967,7 +1017,7 @@ int git_odb_read_prefix(
 		error = read_prefix_1(out, db, &key, len, true);
 
 	if (error == GIT_ENOTFOUND)
-		return git_odb__error_notfound("no match for prefix", &key);
+		return git_odb__error_notfound("no match for prefix", &key, len);
 
 	return error;
 }
@@ -1223,12 +1273,14 @@ int git_odb_refresh(struct git_odb *db)
 	return 0;
 }
 
-int git_odb__error_notfound(const char *message, const git_oid *oid)
+int git_odb__error_notfound(
+	const char *message, const git_oid *oid, size_t oid_len)
 {
 	if (oid != NULL) {
 		char oid_str[GIT_OID_HEXSZ + 1];
-		git_oid_tostr(oid_str, sizeof(oid_str), oid);
-		giterr_set(GITERR_ODB, "Object not found - %s (%s)", message, oid_str);
+		git_oid_tostr(oid_str, oid_len, oid);
+		giterr_set(GITERR_ODB, "Object not found - %s (%.*s)",
+			message, oid_len, oid_str);
 	} else
 		giterr_set(GITERR_ODB, "Object not found - %s", message);
 

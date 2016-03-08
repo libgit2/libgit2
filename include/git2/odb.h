@@ -10,6 +10,7 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
+#include "oidarray.h"
 
 /**
  * @file git2/odb.h
@@ -159,7 +160,8 @@ GIT_EXTERN(int) git_odb_read_header(size_t *len_out, git_otype *type_out, git_od
 GIT_EXTERN(int) git_odb_exists(git_odb *db, const git_oid *id);
 
 /**
- * Determine if objects can be found in the object database from a short OID.
+ * Determine if an object can be found in the object database by an
+ * abbreviated object ID.
  *
  * @param out The full OID of the found object if just one is found.
  * @param db The database to be searched for the given object.
@@ -170,6 +172,50 @@ GIT_EXTERN(int) git_odb_exists(git_odb *db, const git_oid *id);
  */
 GIT_EXTERN(int) git_odb_exists_prefix(
 	git_oid *out, git_odb *db, const git_oid *short_id, size_t len);
+
+/**
+ * The information about object IDs to query in `git_odb_expand_ids`,
+ * which will be populated upon return.
+ */
+typedef struct git_odb_expand_id {
+	/** The object ID to expand */
+	git_oid id;
+
+	/**
+	 * The length of the object ID (in nibbles, or packets of 4 bits; the
+	 * number of hex characters)
+	 * */
+	unsigned short length;
+
+	/**
+	 * The (optional) type of the object to search for; leave as `0` or set
+	 * to `GIT_OBJ_ANY` to query for any object matching the ID.
+	 */
+	git_otype type;
+} git_odb_expand_id;
+
+/**
+ * Determine if one or more objects can be found in the object database
+ * by their abbreviated object ID and type.  The given array will be
+ * updated in place:  for each abbreviated ID that is unique in the
+ * database, and of the given type (if specified), the full object ID,
+ * object ID length (`GIT_OID_HEXSZ`) and type will be written back to
+ * the array.  For IDs that are not found (or are ambiguous), the
+ * array entry will be zeroed.
+ *
+ * Note that since this function operates on multiple objects, the
+ * underlying database will not be asked to be reloaded if an object is
+ * not found (which is unlike other object database operations.)
+ *
+ * @param db The database to be searched for the given objects.
+ * @param ids An array of short object IDs to search for
+ * @param count The length of the `ids` array
+ * @return 0 on success or an error code on failure
+ */
+GIT_EXTERN(int) git_odb_expand_ids(
+	git_odb *db,
+	git_odb_expand_id *ids,
+	size_t count);
 
 /**
  * Refresh the object database to load newly added files.
