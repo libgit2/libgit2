@@ -394,6 +394,52 @@ GIT_EXTERN(int) git_commit_amend(
 	const char *message,
 	const git_tree *tree);
 
+/**
+ * Create a commit and write it into a buffer
+ *
+ * Create a commit as with `git_commit_create()` but instead of
+ * writing it to the objectdb, write the contents of the object into a
+ * buffer.
+ *
+ * @param out the buffer into which to write the commit object content
+ *
+ * @param repo Repository where the referenced tree and parents live
+ *
+ * @param author Signature with author and author time of commit
+ *
+ * @param committer Signature with committer and * commit time of commit
+ *
+ * @param message_encoding The encoding for the message in the
+ *  commit, represented with a standard encoding name.
+ *  E.g. "UTF-8". If NULL, no encoding header is written and
+ *  UTF-8 is assumed.
+ *
+ * @param message Full message for this commit
+ *
+ * @param tree An instance of a `git_tree` object that will
+ *  be used as the tree for the commit. This tree object must
+ *  also be owned by the given `repo`.
+ *
+ * @param parent_count Number of parents for this commit
+ *
+ * @param parents Array of `parent_count` pointers to `git_commit`
+ *  objects that will be used as the parents for this commit. This
+ *  array may be NULL if `parent_count` is 0 (root commit). All the
+ *  given commits must be owned by the `repo`.
+ *
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_commit_create_buffer(
+	git_buf *out,
+	git_repository *repo,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message,
+	const git_tree *tree,
+	size_t parent_count,
+	const git_commit *parents[]);
+
 /** @} */
 GIT_END_DECL
 #endif

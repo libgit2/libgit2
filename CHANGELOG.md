@@ -5,6 +5,9 @@ v0.24 + 1
 
 ### API additions
 
+* `git_commit_create_buffer()` creates a commit and writes it into a
+  user-provided buffer instead of writing it into the object db.
+
 ### API removals
 
 ### Breaking API changes
