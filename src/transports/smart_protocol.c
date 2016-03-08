@@ -719,30 +719,58 @@ static int add_push_report_pkt(git_push *push, git_pkt *pkt)
 	return 0;
 }
 
-static int add_push_report_sideband_pkt(git_push *push, git_buf *data_pkt_buf)
+static int add_push_report_sideband_pkt(git_push *push, git_pkt_data *data_pkt, git_buf *data_pkt_buf)
 {
 	git_pkt *pkt;
-	const char *line_end;
+	const char *line, *line_end;
+	size_t line_len;
 	int error;
+	int reading_from_buf = data_pkt_buf->size > 0;
 
-	while (data_pkt_buf->size > 0) {
-		error = git_pkt_parse_line(&pkt, data_pkt_buf->ptr, &line_end, data_pkt_buf->size);
+	if (reading_from_buf) {
+		/* We had an existing partial packet, so add the new
+		 * packet to the buffer and parse the whole thing */
+		git_buf_put(data_pkt_buf, data_pkt->data, data_pkt->len);
+		line = data_pkt_buf->ptr;
+		line_len = data_pkt_buf->size;
+	}
+	else {
+		line = data_pkt->data;
+		line_len = data_pkt->len;
+	}
 
-		if (error < 0)
-			return error;
+	while (line_len > 0) {
+		error = git_pkt_parse_line(&pkt, line, &line_end, line_len);
+
+		if (error == GIT_EBUFS) {
+			/* Buffer the data when the inner packet is split
+			 * across multiple sideband packets */
+			if (!reading_from_buf)
+				git_buf_put(data_pkt_buf, line, line_len);
+			error = 0;
+			goto done;
+		}
+		else if (error < 0)
+			goto done;
 
 		/* Advance in the buffer */
-		git_buf_consume(data_pkt_buf, line_end);
+		line_len -= (line_end - line);
+		line = line_end;
 
 		error = add_push_report_pkt(push, pkt);
 
 		git_pkt_free(pkt);
 
 		if (error < 0 && error != GIT_ITEROVER)
-			return error;
+			goto done;
 	}
 
-	return 0;
+	error = 0;
+
+done:
+	if (reading_from_buf)
+		git_buf_consume(data_pkt_buf, line_end);
+	return error;
 }
 
 static int parse_report(transport_smart *transport, git_push *push)
@@ -752,7 +780,6 @@ static int parse_report(transport_smart *transport, git_push *push)
 	gitno_buffer *buf = &transport->buffer;
 	int error, recvd;
 	git_buf data_pkt_buf = GIT_BUF_INIT;
-	git_pkt_data *data_pkt;
 
 	for (;;) {
 		if (buf->offset > 0)
@@ -786,14 +813,8 @@ static int parse_report(transport_smart *transport, git_push *push)
 
 		switch (pkt->type) {
 			case GIT_PKT_DATA:
-				/* This is a sideband packet which contains other packets
-				 * Buffer the data in case the inner packet is split
-				 * across multiple sideband packets */
-				data_pkt = (git_pkt_data *)pkt;
-				git_buf_put(&data_pkt_buf, data_pkt->data, data_pkt->len);
-				error = add_push_report_sideband_pkt(push, &data_pkt_buf);
-				if (error == GIT_EBUFS)
-					error = 0;
+				/* This is a sideband packet which contains other packets */
+				error = add_push_report_sideband_pkt(push, (git_pkt_data *)pkt, &data_pkt_buf);
 				break;
 			case GIT_PKT_ERR:
 				giterr_set(GITERR_NET, "report-status: Error reported: %s",
