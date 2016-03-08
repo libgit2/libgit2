@@ -744,64 +744,51 @@ int git_odb_exists_prefix(
 
 int git_odb_expand_ids(
 	git_odb *db,
-	git_oid *ids,
-	size_t *id_lengths,
-	git_otype *types,
-	size_t cnt)
+	git_odb_expand_id *ids,
+	size_t count)
 {
 	size_t len, i;
 	int error;
 
-	assert(db && ids && id_lengths);
+	assert(db && ids);
 
-	for (i = 0; i < cnt; i++) {
+	for (i = 0; i < count; i++) {
+		git_odb_expand_id *query = &ids[i];
 		git_oid *actual_id = NULL, tmp;
+		git_otype query_type = (query->type == GIT_OBJ_ANY) ? 0 : query->type;
 		git_otype actual_type = 0;
 
 		/* if we were given a full object ID, simply look it up */
-		if (id_lengths[i] >= GIT_OID_HEXSZ) {
-			error = git_odb_read_header(&len, &actual_type, db, &ids[i]);
+		if (query->length >= GIT_OID_HEXSZ) {
+			error = git_odb_read_header(&len, &actual_type, db, &query->id);
 		}
 
 		/* otherwise, resolve the short id to full, then (optionally)
 		 * read the header.
 		 */
-		else if (id_lengths[i] >= GIT_OID_MINPREFIXLEN) {
+		else if (query->length >= GIT_OID_MINPREFIXLEN) {
 	    	error = odb_exists_prefix_1(&tmp,
-				db, &ids[i], id_lengths[i], false);
+				db, &query->id, query->length, false);
 
 			if (!error) {
 				actual_id = &tmp;
-
-				if (types)
-					error = git_odb_read_header(&len, &actual_type, db, &tmp);
-				else
-					actual_type = GIT_OBJ_ANY;
+				error = git_odb_read_header(&len, &actual_type, db, &tmp);
 			}
 		}
 
 		if (error < 0 && error != GIT_ENOTFOUND && error != GIT_EAMBIGUOUS)
 			break;
 
-		error = 0;
-
-		if (types && types[i] != GIT_OBJ_ANY && types[i] != actual_type)
-			actual_type = 0;
-
-		if (!actual_type) {
-			memset(&ids[i], 0, sizeof(git_oid));
-			id_lengths[i] = 0;
-
-			if (types)
-				types[i] = 0;
-		} else {
+		if (error == 0 && (query_type == actual_type || !query_type)) {
 			if (actual_id)
-				git_oid_cpy(&ids[i], actual_id);
+				git_oid_cpy(&query->id, actual_id);
 
-			id_lengths[i] = GIT_OID_HEXSZ;
-
-			if (types)
-				types[i] = actual_type;
+			query->length = GIT_OID_HEXSZ;
+			query->type = actual_type;
+		} else {
+			memset(&query->id, 0, sizeof(git_oid));
+			query->length = 0;
+			query->type = 0;
 		}
 	}
 

@@ -146,35 +146,31 @@ struct expand_id_test_data expand_id_test_data[] = {
 };
 
 static void setup_prefix_query(
-	git_oid **out_ids,
-	size_t **out_lengths,
-	git_otype **out_types,
+	git_odb_expand_id **out_ids,
 	size_t *out_num)
 {
-	git_oid *ids;
-	git_otype *types;
-	size_t num, *lengths, i;
+	git_odb_expand_id *ids;
+	size_t num, i;
 
 	num = ARRAY_SIZE(expand_id_test_data);
 
-	cl_assert((ids = git__calloc(num, sizeof(git_oid))));
-	cl_assert((lengths = git__calloc(num, sizeof(size_t))));
-	cl_assert((types = git__calloc(num, sizeof(git_otype))));
+	cl_assert((ids = git__calloc(num, sizeof(git_odb_expand_id))));
 
 	for (i = 0; i < num; i++) {
-		lengths[i] = strlen(expand_id_test_data[i].lookup_id);
-		git_oid_fromstrn(&ids[i], expand_id_test_data[i].lookup_id, lengths[i]);
-		types[i] = expand_id_test_data[i].expected_type;
+		git_odb_expand_id *id = &ids[i];
+
+		size_t len = strlen(expand_id_test_data[i].lookup_id);
+
+		git_oid_fromstrn(&id->id, expand_id_test_data[i].lookup_id, len);
+		id->length = (unsigned short)len;
+		id->type = expand_id_test_data[i].expected_type;
 	}
 
 	*out_ids = ids;
-	*out_lengths = lengths;
-	*out_types = types;
 	*out_num = num;
 }
 
-static void assert_found_objects(
-	git_oid *ids, size_t *lengths, git_otype *types)
+static void assert_found_objects(git_odb_expand_id *ids)
 {
 	size_t num, i;
 
@@ -191,16 +187,13 @@ static void assert_found_objects(
 			expected_type = expand_id_test_data[i].expected_type;
 		}
 
-		cl_assert_equal_i(expected_len, lengths[i]);
-		cl_assert_equal_oid(&expected_id, &ids[i]);
-
-		if (types)
-			cl_assert_equal_i(expected_type, types[i]);
+		cl_assert_equal_oid(&expected_id, &ids[i].id);
+		cl_assert_equal_i(expected_len, ids[i].length);
+		cl_assert_equal_i(expected_type, ids[i].type);
 	}
 }
 
-static void assert_notfound_objects(
-	git_oid *ids, size_t *lengths, git_otype *types)
+static void assert_notfound_objects(git_odb_expand_id *ids)
 {
 	git_oid expected_id = {{0}};
 	size_t num, i;
@@ -208,54 +201,56 @@ static void assert_notfound_objects(
 	num = ARRAY_SIZE(expand_id_test_data);
 
 	for (i = 0; i < num; i++) {
-		cl_assert_equal_i(0, lengths[i]);
-		cl_assert_equal_oid(&expected_id, &ids[i]);
-
-		if (types)
-			cl_assert_equal_i(0, types[i]);
+		cl_assert_equal_oid(&expected_id, &ids[i].id);
+		cl_assert_equal_i(0, ids[i].length);
+		cl_assert_equal_i(0, ids[i].type);
 	}
 }
 
 void test_odb_mixed__expand_ids(void)
 {
-	git_oid *ids;
-	size_t i, num, *lengths;
-	git_otype *types;
+	git_odb_expand_id *ids;
+	size_t i, num;
 
 	/* test looking for the actual (correct) types */
 
-	setup_prefix_query(&ids, &lengths, &types, &num);
-	cl_git_pass(git_odb_expand_ids(_odb, ids, lengths, types, num));
-	assert_found_objects(ids, lengths, types);
-	git__free(ids); git__free(lengths); git__free(types);
+	setup_prefix_query(&ids, &num);
+	cl_git_pass(git_odb_expand_ids(_odb, ids, num));
+	assert_found_objects(ids);
+	git__free(ids);
 
-	/* test looking for no specified types (types array == NULL) */
+	/* test looking for an explicit `type == 0` */
 
-	setup_prefix_query(&ids, &lengths, &types, &num);
-	cl_git_pass(git_odb_expand_ids(_odb, ids, lengths, NULL, num));
-	assert_found_objects(ids, lengths, NULL);
-	git__free(ids); git__free(lengths); git__free(types);
+	setup_prefix_query(&ids, &num);
+
+	for (i = 0; i < num; i++)
+		ids[i].type = 0;
+
+	cl_git_pass(git_odb_expand_ids(_odb, ids, num));
+	assert_found_objects(ids);
+	git__free(ids);
 
 	/* test looking for an explicit GIT_OBJ_ANY */
 
-	setup_prefix_query(&ids, &lengths, &types, &num);
+	setup_prefix_query(&ids, &num);
 
 	for (i = 0; i < num; i++)
-		types[i] = GIT_OBJ_ANY;
+		ids[i].type = GIT_OBJ_ANY;
 
-	cl_git_pass(git_odb_expand_ids(_odb, ids, lengths, types, num));
-	assert_found_objects(ids, lengths, types);
-	git__free(ids); git__free(lengths); git__free(types);
+	cl_git_pass(git_odb_expand_ids(_odb, ids, num));
+	assert_found_objects(ids);
+	git__free(ids);
 
 	/* test looking for the completely wrong type */
 
-	setup_prefix_query(&ids, &lengths, &types, &num);
+	setup_prefix_query(&ids, &num);
 
 	for (i = 0; i < num; i++)
-		types[i] = (types[i] == GIT_OBJ_BLOB) ? GIT_OBJ_TREE : GIT_OBJ_BLOB;
+		ids[i].type = (ids[i].type == GIT_OBJ_BLOB) ?
+			GIT_OBJ_TREE : GIT_OBJ_BLOB;
 
-	cl_git_pass(git_odb_expand_ids(_odb, ids, lengths, types, num));
-	assert_notfound_objects(ids, lengths, types);
-	git__free(ids); git__free(lengths); git__free(types);
+	cl_git_pass(git_odb_expand_ids(_odb, ids, num));
+	assert_notfound_objects(ids);
+	git__free(ids);
 }
 

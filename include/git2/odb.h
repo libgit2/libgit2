@@ -174,6 +174,27 @@ GIT_EXTERN(int) git_odb_exists_prefix(
 	git_oid *out, git_odb *db, const git_oid *short_id, size_t len);
 
 /**
+ * The information about object IDs to query in `git_odb_expand_ids`,
+ * which will be populated upon return.
+ */
+typedef struct git_odb_expand_id {
+	/** The object ID to expand */
+	git_oid id;
+
+	/**
+	 * The length of the object ID (in nibbles, or packets of 4 bits; the
+	 * number of hex characters)
+	 * */
+	unsigned short length;
+
+	/**
+	 * The (optional) type of the object to search for; leave as `0` or set
+	 * to `GIT_OBJ_ANY` to query for any object matching the ID.
+	 */
+	git_otype type;
+} git_odb_expand_id;
+
+/**
  * Determine if one or more objects can be found in the object database
  * by their abbreviated object ID and type.  The given array will be
  * updated in place:  for each abbreviated ID that is unique in the
@@ -187,20 +208,14 @@ GIT_EXTERN(int) git_odb_exists_prefix(
  * not found (which is unlike other object database operations.)
  *
  * @param db The database to be searched for the given objects.
- * @param ids An array of object IDs to search for
- * @param id_lengths The corresponding length of each entry in the `ids`
- *                   array
- * @param types The corresponding type of each entry in the `ids` array
- *              (or null to lookup an object of any type)
- * @param cnt The length of the `ids`, `id_lengths` and `types` arrays
+ * @param ids An array of short object IDs to search for
+ * @param count The length of the `ids` array
  * @return 0 on success or an error code on failure
  */
 GIT_EXTERN(int) git_odb_expand_ids(
 	git_odb *db,
-	git_oid *ids,
-	size_t *id_lengths,
-	git_otype *types,
-	size_t cnt);
+	git_odb_expand_id *ids,
+	size_t count);
 
 /**
  * Refresh the object database to load newly added files.
