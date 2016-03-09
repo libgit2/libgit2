@@ -49,7 +49,36 @@ static git_cache *odb_cache(git_odb *odb)
 	return &odb->own_cache;
 }
 
+static int odb_otype_fast(git_otype *type_p, git_odb *db, const git_oid *id);
 static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_depth);
+
+static git_otype odb_hardcoded_type(const git_oid *id)
+{
+	static git_oid empty_blob = {{ 0xe6, 0x9d, 0xe2, 0x9b, 0xb2, 0xd1, 0xd6, 0x43, 0x4b, 0x8b,
+					   0x29, 0xae, 0x77, 0x5a, 0xd8, 0xc2, 0xe4, 0x8c, 0x53, 0x91 }};
+	static git_oid empty_tree = {{ 0x4b, 0x82, 0x5d, 0xc6, 0x42, 0xcb, 0x6e, 0xb9, 0xa0, 0x60,
+					   0xe5, 0x4b, 0xf8, 0xd6, 0x92, 0x88, 0xfb, 0xee, 0x49, 0x04 }};
+
+	if (!git_oid_cmp(id, &empty_blob))
+		return GIT_OBJ_BLOB;
+
+	if (!git_oid_cmp(id, &empty_tree))
+		return GIT_OBJ_TREE;
+
+	return GIT_OBJ_BAD;
+}
+
+static int odb_read_hardcoded(git_rawobj *raw, const git_oid *id)
+{
+	git_otype type = odb_hardcoded_type(id);
+	if (type == GIT_OBJ_BAD)
+		return -1;
+
+	raw->type = type;
+	raw->len = 0;
+	raw->data = git__calloc(1, sizeof(uint8_t));
+	return 0;
+}
 
 int git_odb__format_object_header(char *hdr, size_t n, git_off_t obj_len, git_otype obj_type)
 {
@@ -747,55 +776,65 @@ int git_odb_expand_ids(
 	git_odb_expand_id *ids,
 	size_t count)
 {
-	size_t len, i;
-	int error;
+	size_t i;
 
 	assert(db && ids);
 
 	for (i = 0; i < count; i++) {
 		git_odb_expand_id *query = &ids[i];
-		git_oid *actual_id = NULL, tmp;
-		git_otype query_type = (query->type == GIT_OBJ_ANY) ? 0 : query->type;
-		git_otype actual_type = 0;
+		int error = GIT_EAMBIGUOUS;
 
-		/* if we were given a full object ID, simply look it up */
-		if (query->length >= GIT_OID_HEXSZ) {
-			error = git_odb_read_header(&len, &actual_type, db, &query->id);
-		}
+		if (!query->type)
+			query->type = GIT_OBJ_ANY;
 
-		/* otherwise, resolve the short id to full, then (optionally)
-		 * read the header.
-		 */
-		else if (query->length >= GIT_OID_MINPREFIXLEN) {
-	    	error = odb_exists_prefix_1(&tmp,
-				db, &query->id, query->length, false);
+		/* if we have a short OID, expand it first */
+		if (query->length >= GIT_OID_MINPREFIXLEN && query->length < GIT_OID_HEXSZ) {
+			git_oid actual_id;
 
+			error = odb_exists_prefix_1(&actual_id, db, &query->id, query->length, false);
 			if (!error) {
-				actual_id = &tmp;
-				error = git_odb_read_header(&len, &actual_type, db, &tmp);
+				git_oid_cpy(&query->id, &actual_id);
+				query->length = GIT_OID_HEXSZ;
 			}
 		}
 
-		if (error < 0 && error != GIT_ENOTFOUND && error != GIT_EAMBIGUOUS)
-			break;
+		/*
+		 * now we ought to have a 40-char OID, either because we've expanded it
+		 * or because the user passed a full OID. Ensure its type is right.
+		 */
+		if (query->length >= GIT_OID_HEXSZ) {
+			git_otype actual_type;
 
-		if (error == 0 && (query_type == actual_type || !query_type)) {
-			if (actual_id)
-				git_oid_cpy(&query->id, actual_id);
+			error = odb_otype_fast(&actual_type, db, &query->id);
+			if (!error) {
+				if (query->type != GIT_OBJ_ANY && query->type != actual_type)
+					error = GIT_ENOTFOUND;
+				else
+					query->type = actual_type;
+			}
+		}
 
-			query->length = GIT_OID_HEXSZ;
-			query->type = actual_type;
-		} else {
+		switch (error) {
+		/* no errors, so we've successfully expanded the OID */
+		case 0:
+			continue;
+
+		/* the object is missing or ambiguous */
+		case GIT_ENOTFOUND:
+		case GIT_EAMBIGUOUS:
 			memset(&query->id, 0, sizeof(git_oid));
 			query->length = 0;
 			query->type = 0;
+			break;
+
+		/* something went very wrong with the ODB; bail hard */
+		default:
+			return error;
 		}
 	}
 
-	if (!error)
-		giterr_clear();
-
-	return error;
+	giterr_clear();
+	return 0;
 }
 
 int git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git_oid *id)
@@ -811,11 +850,53 @@ int git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git
 	return error;
 }
 
+static int odb_read_header_1(
+	size_t *len_p, git_otype *type_p, git_odb *db,
+	const git_oid *id, bool only_refreshed)
+{
+	size_t i;
+	git_otype ht;
+	bool passthrough = false;
+	int error;
+
+	if (!only_refreshed && (ht = odb_hardcoded_type(id)) != GIT_OBJ_BAD) {
+		*type_p = ht;
+		*len_p = 0;
+		return 0;
+	}
+
+	for (i = 0; i < db->backends.length; ++i) {
+		backend_internal *internal = git_vector_get(&db->backends, i);
+		git_odb_backend *b = internal->backend;
+
+		if (only_refreshed && !b->refresh)
+			continue;
+
+		if (!b->read_header) {
+			passthrough = true;
+			continue;
+		}
+
+		error = b->read_header(len_p, type_p, b, id);
+
+		switch (error) {
+		case GIT_PASSTHROUGH:
+			passthrough = true;
+			break;
+		case GIT_ENOTFOUND:
+			break;
+		default:
+			return error;
+		}
+	}
+
+	return passthrough ? GIT_PASSTHROUGH : GIT_ENOTFOUND;
+}
+
 int git_odb__read_header_or_object(
 	git_odb_object **out, size_t *len_p, git_otype *type_p,
 	git_odb *db, const git_oid *id)
 {
-	size_t i;
 	int error = GIT_ENOTFOUND;
 	git_odb_object *object;
 
@@ -829,52 +910,32 @@ int git_odb__read_header_or_object(
 	}
 
 	*out = NULL;
+	error = odb_read_header_1(len_p, type_p, db, id, false);
 
-	for (i = 0; i < db->backends.length && error < 0; ++i) {
-		backend_internal *internal = git_vector_get(&db->backends, i);
-		git_odb_backend *b = internal->backend;
+	if (error == GIT_ENOTFOUND && !git_odb_refresh(db))
+		error = odb_read_header_1(len_p, type_p, db, id, true);
 
-		if (b->read_header != NULL)
-			error = b->read_header(len_p, type_p, b, id);
+	if (error == GIT_ENOTFOUND)
+		return git_odb__error_notfound("cannot read header for", id, GIT_OID_HEXSZ);
+
+	/* we found the header; return early */
+	if (!error)
+		return 0;
+
+	if (error == GIT_PASSTHROUGH) {
+		/*
+		 * no backend has header-reading functionality
+		 * so try using `git_odb_read` instead
+		 */
+		error = git_odb_read(&object, db, id);
+		if (!error) {
+			*len_p = object->cached.size;
+			*type_p = object->cached.type;
+			*out = object;
+		}
 	}
 
-	if (!error || error == GIT_PASSTHROUGH)
-		return 0;
-
-	/*
-	 * no backend could read only the header.
-	 * try reading the whole object and freeing the contents
-	 */
-	if ((error = git_odb_read(&object, db, id)) < 0)
-		return error; /* error already set - pass along */
-
-	*len_p = object->cached.size;
-	*type_p = object->cached.type;
-	*out = object;
-
-	return 0;
-}
-
-static git_oid empty_blob = {{ 0xe6, 0x9d, 0xe2, 0x9b, 0xb2, 0xd1, 0xd6, 0x43, 0x4b, 0x8b,
-			       0x29, 0xae, 0x77, 0x5a, 0xd8, 0xc2, 0xe4, 0x8c, 0x53, 0x91 }};
-static git_oid empty_tree = {{ 0x4b, 0x82, 0x5d, 0xc6, 0x42, 0xcb, 0x6e, 0xb9, 0xa0, 0x60,
-			       0xe5, 0x4b, 0xf8, 0xd6, 0x92, 0x88, 0xfb, 0xee, 0x49, 0x04 }};
-
-static int hardcoded_objects(git_rawobj *raw, const git_oid *id)
-{
-	if (!git_oid_cmp(id, &empty_blob)) {
-		raw->type = GIT_OBJ_BLOB;
-		raw->len = 0;
-		raw->data = git__calloc(1, sizeof(uint8_t));
-		return 0;
-	} else if (!git_oid_cmp(id, &empty_tree)) {
-		raw->type = GIT_OBJ_TREE;
-		raw->len = 0;
-		raw->data = git__calloc(1, sizeof(uint8_t));
-		return 0;
-	} else {
-		return GIT_ENOTFOUND;
-	}
+	return error;
 }
 
 static int odb_read_1(git_odb_object **out, git_odb *db, const git_oid *id,
@@ -885,7 +946,7 @@ static int odb_read_1(git_odb_object **out, git_odb *db, const git_oid *id,
 	git_odb_object *object;
 	bool found = false;
 
-	if (!hardcoded_objects(&raw, id))
+	if (!only_refreshed && odb_read_hardcoded(&raw, id) == 0)
 		found = true;
 
 	for (i = 0; i < db->backends.length && !found; ++i) {
@@ -935,6 +996,29 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 
 	if (error == GIT_ENOTFOUND)
 		return git_odb__error_notfound("no match for id", id, GIT_OID_HEXSZ);
+
+	return error;
+}
+
+static int odb_otype_fast(git_otype *type_p, git_odb *db, const git_oid *id)
+{
+	git_odb_object *object;
+	size_t _unused;
+	int error;
+
+	if ((object = git_cache_get_raw(odb_cache(db), id)) != NULL) {
+		*type_p = object->cached.type;
+		return 0;
+	}
+	
+	error = odb_read_header_1(&_unused, type_p, db, id, false);
+
+	if (error == GIT_PASSTHROUGH) {
+		error = odb_read_1(&object, db, id, false);
+		if (!error)
+			*type_p = object->cached.type;
+		git_odb_object_free(object);
+	}
 
 	return error;
 }

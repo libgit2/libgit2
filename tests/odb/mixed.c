@@ -130,6 +130,9 @@ struct expand_id_test_data expand_id_test_data[] = {
 	{ "0ddeaded9", "0ddeaded9502971eefe1e41e34d0e536853ae20f", GIT_OBJ_BLOB },
 	{ "f00b4e",    NULL, GIT_OBJ_ANY },
 
+	/* this OID is too short and should be ambiguous! */
+	{ "f00",    NULL, GIT_OBJ_ANY },
+
 	/* some full-length object ids */
 	{ "0000000000000000000000000000000000000000", NULL, GIT_OBJ_ANY },
 	{
@@ -143,6 +146,12 @@ struct expand_id_test_data expand_id_test_data[] = {
 	  "4d5979b468252190cb572ae758aca36928e8a91e",
 	  GIT_OBJ_TREE
 	},
+
+	 /*
+	  * ensure we're not leaking the return error code for the
+	  * last lookup if the last object is invalid
+	  */
+	{ "0ddeadedfff",  NULL, GIT_OBJ_ANY },
 };
 
 static void setup_prefix_query(
