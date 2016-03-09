@@ -855,8 +855,9 @@ static int odb_read_header_1(
 	const git_oid *id, bool only_refreshed)
 {
 	size_t i;
-	int error = GIT_PASSTHROUGH;
 	git_otype ht;
+	bool passthrough = false;
+	int error;
 
 	if (!only_refreshed && (ht = odb_hardcoded_type(id)) != GIT_OBJ_BAD) {
 		*type_p = ht;
@@ -864,18 +865,32 @@ static int odb_read_header_1(
 		return 0;
 	}
 
-	for (i = 0; i < db->backends.length && error < 0; ++i) {
+	for (i = 0; i < db->backends.length; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
 		git_odb_backend *b = internal->backend;
 
 		if (only_refreshed && !b->refresh)
 			continue;
 
-		if (b->read_header != NULL)
-			error = b->read_header(len_p, type_p, b, id);
+		if (!b->read_header) {
+			passthrough = true;
+			continue;
+		}
+
+		error = b->read_header(len_p, type_p, b, id);
+
+		switch (error) {
+		case GIT_PASSTHROUGH:
+			passthrough = true;
+			break;
+		case GIT_ENOTFOUND:
+			break;
+		default:
+			return error;
+		}
 	}
 
-	return error;
+	return passthrough ? GIT_PASSTHROUGH : GIT_ENOTFOUND;
 }
 
 int git_odb__read_header_or_object(
