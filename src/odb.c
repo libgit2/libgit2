@@ -748,7 +748,7 @@ int git_odb_expand_ids(
 	size_t count)
 {
 	size_t len, i;
-	int error;
+	int error = 0;
 
 	assert(db && ids);
 
