@@ -296,8 +296,18 @@ static git_mwindow *new_window(
 	 */
 
 	if (git_futils_mmap_ro(&w->window_map, fd, w->offset, (size_t)len) < 0) {
-		git__free(w);
-		return NULL;
+		/*
+		 * The first error might be down to memory fragmentation even if
+		 * we're below our soft limits, so free up what we can and try again.
+		 */
+
+		while (git_mwindow_close_lru(mwf) == 0)
+			/* nop */;
+
+		if (git_futils_mmap_ro(&w->window_map, fd, w->offset, (size_t)len) < 0) {
+			git__free(w);
+			return NULL;
+		}
 	}
 
 	ctl->mmap_calls++;
