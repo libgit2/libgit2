@@ -748,54 +748,59 @@ int git_odb_expand_ids(
 	size_t count)
 {
 	size_t len, i;
-	int error;
 
 	assert(db && ids);
 
 	for (i = 0; i < count; i++) {
 		git_odb_expand_id *query = &ids[i];
-		git_oid *actual_id = NULL, tmp;
+		git_oid actual_id;
 		git_otype query_type = (query->type == GIT_OBJ_ANY) ? 0 : query->type;
 		git_otype actual_type = 0;
+		int error = GIT_EAMBIGUOUS;
 
 		/* if we were given a full object ID, simply look it up */
 		if (query->length >= GIT_OID_HEXSZ) {
 			error = git_odb_read_header(&len, &actual_type, db, &query->id);
+			git_oid_cpy(&actual_id, &query->id);
 		}
 
-		/* otherwise, resolve the short id to full, then (optionally)
-		 * read the header.
+		/*
+		 * otherwise, resolve the short id to full if it's long enough, then
+		 * (optionally) read the header
 		 */
 		else if (query->length >= GIT_OID_MINPREFIXLEN) {
-	    	error = odb_exists_prefix_1(&tmp,
-				db, &query->id, query->length, false);
-
-			if (!error) {
-				actual_id = &tmp;
-				error = git_odb_read_header(&len, &actual_type, db, &tmp);
-			}
+			error = odb_exists_prefix_1(&actual_id, db, &query->id, query->length, false);
+			if (!error)
+				error = git_odb_read_header(&len, &actual_type, db, &actual_id);
 		}
 
-		if (error < 0 && error != GIT_ENOTFOUND && error != GIT_EAMBIGUOUS)
-			break;
+		/* Ensure that the looked up type matches the type we were expecting */
+		if (query_type && query_type != actual_type)
+			error = GIT_ENOTFOUND;
 
-		if (error == 0 && (query_type == actual_type || !query_type)) {
-			if (actual_id)
-				git_oid_cpy(&query->id, actual_id);
-
+		switch (error) {
+		case 0:
+			git_oid_cpy(&query->id, &actual_id);
 			query->length = GIT_OID_HEXSZ;
 			query->type = actual_type;
-		} else {
+			break;
+
+		/* the object is missing or ambiguous */
+		case GIT_ENOTFOUND:
+		case GIT_EAMBIGUOUS:
 			memset(&query->id, 0, sizeof(git_oid));
 			query->length = 0;
 			query->type = 0;
+			break;
+
+		/* something went very wrong with the ODB; bail hard */
+		default:
+			return error;
 		}
 	}
 
-	if (!error)
-		giterr_clear();
-
-	return error;
+	giterr_clear();
+	return 0;
 }
 
 int git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git_oid *id)
