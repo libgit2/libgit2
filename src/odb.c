@@ -782,37 +782,42 @@ int git_odb_expand_ids(
 
 	for (i = 0; i < count; i++) {
 		git_odb_expand_id *query = &ids[i];
-		git_oid actual_id;
-		git_otype query_type = (query->type == GIT_OBJ_ANY) ? 0 : query->type;
-		git_otype actual_type = 0;
 		int error = GIT_EAMBIGUOUS;
 
-		/* if we were given a full object ID, simply look it up */
-		if (query->length >= GIT_OID_HEXSZ) {
-			error = odb_otype_fast(&actual_type, db, &query->id);
-			git_oid_cpy(&actual_id, &query->id);
+		if (!query->type)
+			query->type = GIT_OBJ_ANY;
+
+		/* if we have a short OID, expand it first */
+		if (query->length >= GIT_OID_MINPREFIXLEN && query->length < GIT_OID_HEXSZ) {
+			git_oid actual_id;
+
+			error = odb_exists_prefix_1(&actual_id, db, &query->id, query->length, false);
+			if (!error) {
+				git_oid_cpy(&query->id, &actual_id);
+				query->length = GIT_OID_HEXSZ;
+			}
 		}
 
 		/*
-		 * otherwise, resolve the short id to full if it's long enough, then
-		 * (optionally) read the header
+		 * now we ought to have a 40-char OID, either because we've expanded it
+		 * or because the user passed a full OID. Ensure its type is right.
 		 */
-		else if (query->length >= GIT_OID_MINPREFIXLEN) {
-			error = odb_exists_prefix_1(&actual_id, db, &query->id, query->length, false);
-			if (!error)
-				error = odb_otype_fast(&actual_type, db, &actual_id);
+		if (query->length >= GIT_OID_HEXSZ) {
+			git_otype actual_type;
+
+			error = odb_otype_fast(&actual_type, db, &query->id);
+			if (!error) {
+				if (query->type != GIT_OBJ_ANY && query->type != actual_type)
+					error = GIT_ENOTFOUND;
+				else
+					query->type = actual_type;
+			}
 		}
 
-		/* Ensure that the looked up type matches the type we were expecting */
-		if (query_type && query_type != actual_type)
-			error = GIT_ENOTFOUND;
-
 		switch (error) {
+		/* no errors, so we've successfully expanded the OID */
 		case 0:
-			git_oid_cpy(&query->id, &actual_id);
-			query->length = GIT_OID_HEXSZ;
-			query->type = actual_type;
-			break;
+			continue;
 
 		/* the object is missing or ambiguous */
 		case GIT_ENOTFOUND:
