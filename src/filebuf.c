@@ -70,6 +70,7 @@ static int lock_file(git_filebuf *file, int flags, mode_t mode)
 		git_file source;
 		char buffer[FILEIO_BUFSIZE];
 		ssize_t read_bytes;
+		int error;
 
 		source = p_open(file->path_original, O_RDONLY);
 		if (source < 0) {
@@ -80,7 +81,8 @@ static int lock_file(git_filebuf *file, int flags, mode_t mode)
 		}
 
 		while ((read_bytes = p_read(source, buffer, sizeof(buffer))) > 0) {
-			p_write(file->fd, buffer, read_bytes);
+			if ((error = p_write(file->fd, buffer, read_bytes)) < 0)
+				break;
 			if (file->compute_digest)
 				git_hash_update(&file->digest, buffer, read_bytes);
 		}
@@ -89,6 +91,9 @@ static int lock_file(git_filebuf *file, int flags, mode_t mode)
 
 		if (read_bytes < 0) {
 			giterr_set(GITERR_OS, "Failed to read file '%s'", file->path_original);
+			return -1;
+		} else if (error < 0) {
+			giterr_set(GITERR_OS, "Failed to write file '%s'", file->path_lock);
 			return -1;
 		}
 	}
