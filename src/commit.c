@@ -820,3 +820,67 @@ int git_commit_create_buffer(git_buf *out,
 	git_array_clear(parents_arr);
 	return error;
 }
+
+/**
+ * Append to 'out' properly marking continuations when there's a newline in 'content'
+ */
+static void format_header_field(git_buf *out, const char *field, const char *content)
+{
+	const char *lf;
+
+	assert(out && field && content);
+
+	git_buf_puts(out, field);
+	git_buf_putc(out, ' ');
+
+	while ((lf = strchr(content, '\n')) != NULL) {
+		git_buf_put(out, content, lf - content);
+		git_buf_puts(out, "\n ");
+		content = lf + 1;
+	}
+
+	git_buf_puts(out, content);
+	git_buf_putc(out, '\n');
+}
+
+int git_commit_create_with_signature(
+	git_oid *out,
+	git_repository *repo,
+	const char *commit_content,
+	const char *signature,
+	const char *signature_field)
+{
+	git_odb *odb;
+	int error = 0;
+	const char *field;
+	const char *header_end;
+	git_buf commit = GIT_BUF_INIT;
+
+	/* We start by identifying the end of the commit header */
+	header_end = strstr(commit_content, "\n\n");
+	if (!header_end) {
+		giterr_set(GITERR_INVALID, "malformed commit contents");
+		return -1;
+	}
+
+	field = signature_field ? signature_field : "gpgsig";
+
+	/* The header ends after the first LF */
+	header_end++;
+	git_buf_put(&commit, commit_content, header_end - commit_content);
+	format_header_field(&commit, field, signature);
+	git_buf_puts(&commit, header_end);
+
+	if (git_buf_oom(&commit))
+		return -1;
+
+	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0)
+		goto cleanup;
+
+	if ((error = git_odb_write(out, odb, commit.ptr, commit.size, GIT_OBJ_COMMIT)) < 0)
+		goto cleanup;
+
+cleanup:
+	git_buf_free(&commit);
+	return error;
+}
