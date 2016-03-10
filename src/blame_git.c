@@ -525,7 +525,8 @@ static int pass_blame(git_blame *blame, git_blame__origin *origin, uint32_t opt)
 		if (sg_origin[i])
 			continue;
 
-		git_commit_parent(&p, origin->commit, i);
+		if ((error = git_commit_parent(&p, origin->commit, i)) < 0)
+			goto finish;
 		porigin = find_origin(blame, p, origin);
 
 		if (!porigin)
