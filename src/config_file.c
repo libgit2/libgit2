@@ -232,7 +232,10 @@ static refcounted_strmap *refcounted_strmap_take(diskfile_header *h)
 {
 	refcounted_strmap *map;
 
-	git_mutex_lock(&h->values_mutex);
+	if (git_mutex_lock(&h->values_mutex) < 0) {
+	    giterr_set(GITERR_OS, "Failed to lock config backend");
+	    return NULL;
+	}
 
 	map = h->values;
 	git_atomic_inc(&map->refcount);
@@ -318,7 +321,10 @@ static int config__refresh(git_config_backend *cfg)
 	if ((error = config_read(values->values, b, reader, b->level, 0)) < 0)
 		goto out;
 
-	git_mutex_lock(&b->header.values_mutex);
+	if ((error = git_mutex_lock(&b->header.values_mutex)) < 0) {
+		giterr_set(GITERR_OS, "Failed to lock config backend");
+		goto out;
+	}
 
 	tmp = b->header.values;
 	b->header.values = values;
@@ -460,7 +466,8 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 	if ((rval = git_config__normalize_name(name, &key)) < 0)
 		return rval;
 
-	map = refcounted_strmap_take(&b->header);
+	if ((map = refcounted_strmap_take(&b->header)) == NULL)
+		return -1;
 	values = map->values;
 
 	/*
@@ -527,7 +534,8 @@ static int config_get(git_config_backend *cfg, const char *key, git_config_entry
 	if (!h->parent.readonly && ((error = config_refresh(cfg)) < 0))
 		return error;
 
-	map = refcounted_strmap_take(h);
+	if ((map = refcounted_strmap_take(h)) == NULL)
+		return -1;
 	values = map->values;
 
 	pos = git_strmap_lookup_index(values, key);
@@ -565,7 +573,8 @@ static int config_set_multivar(
 	if ((result = git_config__normalize_name(name, &key)) < 0)
 		return result;
 
-	map = refcounted_strmap_take(&b->header);
+	if ((map = refcounted_strmap_take(&b->header)) == NULL)
+		return -1;
 	values = b->header.values->values;
 
 	pos = git_strmap_lookup_index(values, key);
@@ -610,7 +619,8 @@ static int config_delete(git_config_backend *cfg, const char *name)
 	if ((result = git_config__normalize_name(name, &key)) < 0)
 		return result;
 
-	map = refcounted_strmap_take(&b->header);
+	if ((map = refcounted_strmap_take(&b->header)) == NULL)
+		return -1;
 	values = b->header.values->values;
 
 	pos = git_strmap_lookup_index(values, key);
@@ -649,7 +659,8 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 	if ((result = git_config__normalize_name(name, &key)) < 0)
 		return result;
 
-	map = refcounted_strmap_take(&b->header);
+	if ((map = refcounted_strmap_take(&b->header)) == NULL)
+		return -1;
 	values = b->header.values->values;
 
 	pos = git_strmap_lookup_index(values, key);
@@ -832,7 +843,8 @@ static int config_readonly_open(git_config_backend *cfg, git_config_level_t leve
 	/* We're just copying data, don't care about the level */
 	GIT_UNUSED(level);
 
-	src_map = refcounted_strmap_take(src_header);
+	if ((src_map = refcounted_strmap_take(src_header)) == NULL)
+		return -1;
 	b->header.values = src_map;
 
 	return 0;
