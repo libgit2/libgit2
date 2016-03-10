@@ -178,7 +178,7 @@ const git_blame_hunk *git_blame_get_hunk_byline(git_blame *blame, size_t lineno)
 	return NULL;
 }
 
-static void normalize_options(
+static int normalize_options(
 		git_blame_options *out,
 		const git_blame_options *in,
 		git_repository *repo)
@@ -190,7 +190,9 @@ static void normalize_options(
 
 	/* No newest_commit => HEAD */
 	if (git_oid_iszero(&out->newest_commit)) {
-		git_reference_name_to_id(&out->newest_commit, repo, "HEAD");
+		if (git_reference_name_to_id(&out->newest_commit, repo, "HEAD") < 0) {
+			return -1;
+		}
 	}
 
 	/* min_line 0 really means 1 */
@@ -204,6 +206,8 @@ static void normalize_options(
 		out->flags |= GIT_BLAME_TRACK_COPIES_SAME_COMMIT_MOVES;
 	if (out->flags & GIT_BLAME_TRACK_COPIES_SAME_COMMIT_MOVES)
 		out->flags |= GIT_BLAME_TRACK_COPIES_SAME_FILE;
+
+	return 0;
 }
 
 static git_blame_hunk *split_hunk_in_vector(
@@ -362,7 +366,8 @@ int git_blame_file(
 	git_blame *blame = NULL;
 
 	assert(out && repo && path);
-	normalize_options(&normOptions, options, repo);
+	if ((error = normalize_options(&normOptions, options, repo)) < 0)
+		goto on_error;
 
 	blame = git_blame__alloc(repo, normOptions, path);
 	GITERR_CHECK_ALLOC(blame);
