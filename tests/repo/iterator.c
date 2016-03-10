@@ -1012,6 +1012,36 @@ void test_repo_iterator__fs2(void)
 	git_iterator_free(i);
 }
 
+void test_repo_iterator__fs_gunk(void)
+{
+	git_iterator *i;
+	git_buf parent = GIT_BUF_INIT;
+	int n;
+
+	if (!cl_is_env_set("GITTEST_INVASIVE_FS_STRUCTURE"))
+		cl_skip();
+
+	g_repo = cl_git_sandbox_init("testrepo");
+
+	for (n = 0; n < 100000; n++) {
+		git_buf_clear(&parent);
+		git_buf_printf(&parent, "%s/refs/heads/foo/%d/subdir",
+			git_repository_path(g_repo), n);
+		cl_assert(!git_buf_oom(&parent));
+
+		cl_git_pass(git_futils_mkdir(parent.ptr, 0775, GIT_MKDIR_PATH));
+	}
+
+	cl_git_pass(git_iterator_for_filesystem(&i, "testrepo/.git/refs", NULL));
+
+	/* should only have 13 items, since we're not asking for trees to be
+	 * returned.  the goal of this test is simply to not crash.
+	 */
+	expect_iterator_items(i, 13, NULL, 13, NULL);
+	git_iterator_free(i);
+	git_buf_free(&parent);
+}
+
 void test_repo_iterator__skips_unreadable_dirs(void)
 {
 	git_iterator *i;
