@@ -1012,7 +1012,7 @@ void test_repo_iterator__fs2(void)
 	git_iterator_free(i);
 }
 
-void test_repo_iterator__unreadable_dir(void)
+void test_repo_iterator__skips_unreadable_dirs(void)
 {
 	git_iterator *i;
 	const git_index_entry *e;
@@ -1028,14 +1028,20 @@ void test_repo_iterator__unreadable_dir(void)
 	cl_git_mkfile("empty_standard_repo/r/b/problem", "not me");
 	cl_must_pass(p_chmod("empty_standard_repo/r/b", 0000));
 	cl_must_pass(p_mkdir("empty_standard_repo/r/c", 0777));
+	cl_git_mkfile("empty_standard_repo/r/c/foo", "aloha");
 	cl_git_mkfile("empty_standard_repo/r/d", "final");
 
 	cl_git_pass(git_iterator_for_filesystem(
 		&i, "empty_standard_repo/r", NULL));
 
 	cl_git_pass(git_iterator_advance(&e, i)); /* a */
-	cl_git_fail(git_iterator_advance(&e, i)); /* b */
-	cl_assert_equal_i(GIT_ITEROVER, git_iterator_advance(&e, i));
+	cl_assert_equal_s("a", e->path);
+
+	cl_git_pass(git_iterator_advance(&e, i)); /* c/foo */
+	cl_assert_equal_s("c/foo", e->path);
+
+	cl_git_pass(git_iterator_advance(&e, i)); /* d */
+	cl_assert_equal_s("d", e->path);
 
 	cl_must_pass(p_chmod("empty_standard_repo/r/b", 0777));
 
