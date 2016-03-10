@@ -1281,15 +1281,14 @@ static int refdb_fs_backend__delete_tail(
 	if (git_buf_joinpath(&loose_path, backend->path, ref_name) < 0)
 		return -1;
 
-	if (git_path_isfile(loose_path.ptr)) {
-		error = p_unlink(loose_path.ptr);
-		loose_deleted = 1;
-	}
 
-	git_buf_free(&loose_path);
-
-	if (error != 0)
+	error = p_unlink(loose_path.ptr);
+	if (error < 0 && errno == ENOENT)
+		error = 0;
+	else if (error < 0)
 		goto cleanup;
+	else if (error == 0)
+		loose_deleted = 1;
 
 	if ((error = packed_reload(backend)) < 0)
 		goto cleanup;
@@ -1312,6 +1311,7 @@ static int refdb_fs_backend__delete_tail(
 	error = packed_write(backend);
 
 cleanup:
+	git_buf_free(&loose_path);
 	git_filebuf_cleanup(file);
 
 	return error;
