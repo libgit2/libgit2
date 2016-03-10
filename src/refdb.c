@@ -125,13 +125,15 @@ int git_refdb_lookup(git_reference **out, git_refdb *db, const char *ref_name)
 
 int git_refdb_iterator(git_reference_iterator **out, git_refdb *db, const char *glob)
 {
+	int error;
+
 	if (!db->backend || !db->backend->iterator) {
 		giterr_set(GITERR_REFERENCE, "This backend doesn't support iterators");
 		return -1;
 	}
 
-	if (db->backend->iterator(out, db->backend, glob) < 0)
-		return -1;
+	if ((error = db->backend->iterator(out, db->backend, glob)) < 0)
+		return error;
 
 	GIT_REFCOUNT_INC(db);
 	(*out)->db = db;

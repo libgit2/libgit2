@@ -644,6 +644,10 @@ int git_path_set_error(int errno_value, const char *path, const char *action)
 		giterr_set(GITERR_OS, "Failed %s - '%s' already exists", action, path);
 		return GIT_EEXISTS;
 
+	case EACCES:
+		giterr_set(GITERR_OS, "Failed %s - '%s' is locked", action, path);
+		return GIT_ELOCKED;
+
 	default:
 		giterr_set(GITERR_OS, "Could not %s '%s'", action, path);
 		return -1;

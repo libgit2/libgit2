@@ -326,12 +326,13 @@ static int refdb_fs_backend__exists(
 {
 	refdb_fs_backend *backend = (refdb_fs_backend *)_backend;
 	git_buf ref_path = GIT_BUF_INIT;
+	int error;
 
 	assert(backend);
 
-	if (packed_reload(backend) < 0 ||
-		git_buf_joinpath(&ref_path, backend->path, ref_name) < 0)
-		return -1;
+	if ((error = packed_reload(backend)) < 0 ||
+		(error = git_buf_joinpath(&ref_path, backend->path, ref_name)) < 0)
+		return error;
 
 	*exists = git_path_isfile(ref_path.ptr) ||
 		(git_sortedcache_lookup(backend->refcache, ref_name) != NULL);
@@ -409,8 +410,8 @@ static int packed_lookup(
 	int error = 0;
 	struct packref *entry;
 
-	if (packed_reload(backend) < 0)
-		return -1;
+	if ((error = packed_reload(backend)) < 0)
+		return error;
 
 	if (git_sortedcache_rlock(backend->refcache) < 0)
 		return -1;
@@ -615,13 +616,14 @@ static int refdb_fs_backend__iterator_next_name(
 static int refdb_fs_backend__iterator(
 	git_reference_iterator **out, git_refdb_backend *_backend, const char *glob)
 {
+	int error;
 	refdb_fs_iter *iter;
 	refdb_fs_backend *backend = (refdb_fs_backend *)_backend;
 
 	assert(backend);
 
-	if (packed_reload(backend) < 0)
-		return -1;
+	if ((error = packed_reload(backend)) < 0)
+		return error;
 
 	iter = git__calloc(1, sizeof(refdb_fs_iter));
 	GITERR_CHECK_ALLOC(iter);
@@ -674,16 +676,18 @@ static int reference_path_available(
 	int force)
 {
 	size_t i;
+	int error;
 
-	if (packed_reload(backend) < 0)
-		return -1;
+	if ((error = packed_reload(backend)) < 0)
+		return error;
 
 	if (!force) {
 		int exists;
 
-		if (refdb_fs_backend__exists(
-				&exists, (git_refdb_backend *)backend, new_ref) < 0)
-			return -1;
+		if ((error = refdb_fs_backend__exists(
+			&exists, (git_refdb_backend *)backend, new_ref)) < 0) {
+			return error;
+		}
 
 		if (exists) {
 			giterr_set(GITERR_REFERENCE,
@@ -1164,8 +1168,7 @@ static int refdb_fs_backend__write(
 
 	assert(backend);
 
-	error = reference_path_available(backend, ref->name, NULL, force);
-	if (error < 0)
+	if ((error = reference_path_available(backend, ref->name, NULL, force)) < 0)
 		return error;
 
 	/* We need to perform the reflog append and old value check under the ref's lock */
@@ -1811,9 +1814,10 @@ static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, co
 	 * there maybe an obsolete/unused directory (or directory hierarchy) in the way.
 	 */
 	if (git_path_isdir(git_buf_cstr(&path))) {
-		if ((git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_RMDIR_SKIP_NONEMPTY) < 0))
-			error = -1;
-		else if (git_path_isdir(git_buf_cstr(&path))) {
+		if ((error = git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_RMDIR_SKIP_NONEMPTY)) < 0) {
+			if (error == GIT_ENOTFOUND)
+				error = 0;
+		} else if (git_path_isdir(git_buf_cstr(&path))) {
 			giterr_set(GITERR_REFERENCE, "cannot create reflog at '%s', there are reflogs beneath that folder",
 				ref->name);
 			error = GIT_EDIRECTORY;

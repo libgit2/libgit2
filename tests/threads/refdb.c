@@ -29,11 +29,14 @@ static void *iterate_refs(void *arg)
 	struct th_data *data = (struct th_data *) arg;
 	git_reference_iterator *i;
 	git_reference *ref;
-	int count = 0;
+	int count = 0, error;
 	git_repository *repo;
 
 	cl_git_pass(git_repository_open(&repo, data->path));
-	cl_git_pass(git_reference_iterator_new(&i, repo));
+	do {
+		error = git_reference_iterator_new(&i, repo);
+	} while (error == GIT_ELOCKED);
+	cl_git_pass(error);
 
 	for (count = 0; !git_reference_next(&ref, i); ++count) {
 		cl_assert(ref != NULL);
@@ -61,11 +64,17 @@ static void *create_refs(void *arg)
 
 	cl_git_pass(git_repository_open(&repo, data->path));
 
-	cl_git_pass(git_reference_name_to_id(&head, repo, "HEAD"));
+	do {
+		error = git_reference_name_to_id(&head, repo, "HEAD");
+	} while (error == GIT_ELOCKED);
+	cl_git_pass(error);
 
 	for (i = 0; i < 10; ++i) {
 		p_snprintf(name, sizeof(name), "refs/heads/thread-%03d-%02d", data->id, i);
-		cl_git_pass(git_reference_create(&ref[i], repo, name, &head, 0, NULL));
+		do {
+			error = git_reference_create(&ref[i], repo, name, &head, 0, NULL);
+		} while (error == GIT_ELOCKED);
+		cl_git_pass(error);
 
 		if (i == 5) {
 			git_refdb *refdb;
