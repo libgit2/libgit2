@@ -104,6 +104,10 @@ static void *delete_refs(void *arg)
 			do {
 				error = git_reference_delete(ref);
 			} while (error == GIT_ELOCKED);
+			/* Sometimes we race with other deleter threads */
+			if (error == GIT_ENOTFOUND)
+				error = 0;
+
 			cl_git_pass(error);
 			git_reference_free(ref);
 		}
