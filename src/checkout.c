@@ -394,7 +394,7 @@ static int checkout_action_wd_only(
 		git_buf_sets(&data->tmp, wd->path);
 		saved_wd.path = data->tmp.ptr;
 
-		error = git_iterator_advance_over_with_status(
+		error = git_iterator_advance_over(
 			wditem, &untracked_state, workdir);
 		if (error == GIT_ITEROVER)
 			over = true;
@@ -930,7 +930,7 @@ static int checkout_conflicts_load(checkout_data *data, git_iterator *workdir, g
 	git_index *index;
 
 	/* Only write conficts from sources that have them: indexes. */
-	if ((index = git_iterator_get_index(data->target)) == NULL)
+	if ((index = git_iterator_index(data->target)) == NULL)
 		return 0;
 
 	data->update_conflicts._cmp = checkout_conflictdata_cmp;
@@ -1080,7 +1080,7 @@ static int checkout_conflicts_coalesce_renames(
 	size_t i, names;
 	int error = 0;
 
-	if ((index = git_iterator_get_index(data->target)) == NULL)
+	if ((index = git_iterator_index(data->target)) == NULL)
 		return 0;
 
 	/* Juggle entries based on renames */
@@ -1138,7 +1138,7 @@ static int checkout_conflicts_mark_directoryfile(
 	const char *path;
 	int prefixed, error = 0;
 
-	if ((index = git_iterator_get_index(data->target)) == NULL)
+	if ((index = git_iterator_index(data->target)) == NULL)
 		return 0;
 
 	len = git_index_entrycount(index);
@@ -2378,7 +2378,7 @@ static int checkout_data_init(
 		if ((error = git_repository_index(&data->index, data->repo)) < 0)
 			goto cleanup;
 
-		if (data->index != git_iterator_get_index(target)) {
+		if (data->index != git_iterator_index(target)) {
 			if ((error = git_index_read(data->index, true)) < 0)
 				goto cleanup;
 
@@ -2600,7 +2600,7 @@ int git_checkout_iterator(
 		(error = checkout_create_conflicts(&data)) < 0)
 		goto cleanup;
 
-	if (data.index != git_iterator_get_index(target) &&
+	if (data.index != git_iterator_index(target) &&
 		(error = checkout_extensions_update_index(&data)) < 0)
 		goto cleanup;
 

@@ -826,8 +826,7 @@ static int maybe_modified(
 	 */
 	} else if (git_oid_iszero(&nitem->id) && new_is_workdir) {
 		bool use_ctime = ((diff->diffcaps & GIT_DIFFCAPS_TRUST_CTIME) != 0);
-		git_index *index;
-		git_iterator_index(&index, info->new_iter);
+		git_index *index = git_iterator_index(info->new_iter);
 
 		status = GIT_DELTA_UNMODIFIED;
 
@@ -980,15 +979,14 @@ static int iterator_advance_into(
 	return error;
 }
 
-static int iterator_advance_over_with_status(
+static int iterator_advance_over(
 	const git_index_entry **entry,
 	git_iterator_status_t *status,
 	git_iterator *iterator)
 {
-	int error;
+	int error = git_iterator_advance_over(entry, status, iterator);
 
-	if ((error = git_iterator_advance_over_with_status(
-			entry, status, iterator)) == GIT_ITEROVER) {
+	if (error == GIT_ITEROVER) {
 		*entry = NULL;
 		error = 0;
 	}
@@ -1056,7 +1054,7 @@ static int handle_unmatched_new_item(
 				return iterator_advance(&info->nitem, info->new_iter);
 
 			/* iterate into dir looking for an actual untracked file */
-			if ((error = iterator_advance_over_with_status(
+			if ((error = iterator_advance_over(
 					&info->nitem, &untracked_state, info->new_iter)) < 0)
 				return error;
 
