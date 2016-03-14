@@ -34,12 +34,12 @@ build_script:
 test_script:
 - ps: |
     $ErrorActionPreference="Stop"
+    # Run this early so we know it's ready by the time we need it
+    Start-Job { java -jar $Env:APPVEYOR_BUILD_FOLDER\build\poxyproxy.jar -d --port 8080 --credentials foo:bar }
     ctest -V -R libgit2_clar
     $env:GITTEST_REMOTE_URL="https://github.com/libgit2/non-existent"
     $env:GITTEST_REMOTE_USER="libgit2test"
     ctest -V -R libgit2_clar-cred_callback
-    Start-Job { java -jar $Env:APPVEYOR_BUILD_FOLDER\build\poxyproxy.jar -d --port 8080 --credentials foo:bar }
-    ctest -V .
     $env:GITTEST_REMOTE_PROXY_URL = "http://foo:bar@localhost:8080"
     .\Debug\libgit2_clar.exe -sonline::clone::proxy_credentials_in_url
     $env:GITTEST_REMOTE_PROXY_URL = "http://localhost:8080"
