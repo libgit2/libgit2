@@ -36,5 +36,6 @@ extern void git__on_shutdown(git_global_shutdown_fn callback);
 extern void git__free_tls_data(void);
 
 extern const char *git_libgit2__user_agent(void);
+extern const char *git_libgit2__ssl_ciphers(void);
 
 #endif
