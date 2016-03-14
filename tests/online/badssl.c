@@ -36,3 +36,11 @@ void test_online_badssl__self_signed(void)
 	cl_git_fail_with(GIT_ECERTIFICATE,
 			 git_clone(&g_repo, "https://self-signed.badssl.com/fake.git", "./fake", NULL));
 }
+
+void test_online_badssl__old_cipher(void)
+{
+	if (!g_has_ssl)
+		cl_skip();
+
+	cl_git_fail(git_clone(&g_repo, "https://rc4.badssl.com/fake.git", "./fake", NULL));
+}

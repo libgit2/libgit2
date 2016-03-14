@@ -71,10 +71,16 @@ static int config_level_to_sysdir(int config_level)
 }
 
 extern char *git__user_agent;
+extern char *git__ssl_ciphers;
 
 const char *git_libgit2__user_agent()
 {
 	return git__user_agent;
+}
+
+const char *git_libgit2__ssl_ciphers()
+{
+	return git__ssl_ciphers;
 }
 
 int git_libgit2_opts(int key, ...)
@@ -169,7 +175,7 @@ int git_libgit2_opts(int key, ...)
 			}
 		}
 #else
-		giterr_set(GITERR_NET, "Cannot set certificate locations: OpenSSL is not enabled");
+		giterr_set(GITERR_NET, "cannot set certificate locations: OpenSSL is not enabled");
 		error = -1;
 #endif
 		break;
@@ -185,6 +191,22 @@ int git_libgit2_opts(int key, ...)
 
 	case GIT_OPT_ENABLE_STRICT_OBJECT_CREATION:
 		git_object__strict_input_validation = (va_arg(ap, int) != 0);
+		break;
+
+	case GIT_OPT_SET_SSL_CIPHERS:
+#ifdef GIT_OPENSSL
+		{
+			git__free(git__ssl_ciphers);
+			git__ssl_ciphers = git__strdup(va_arg(ap, const char *));
+			if (!git__ssl_ciphers) {
+				giterr_set_oom();
+				error = -1;
+			}
+		}
+#else
+		giterr_set(GITERR_NET, "cannot set custom ciphers: OpenSSL is not enabled");
+		error = -1;
+#endif
 		break;
 
 	default:
