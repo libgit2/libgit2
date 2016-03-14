@@ -464,7 +464,8 @@ static int checkout_action_with_wd(
 			*action = CHECKOUT_ACTION_IF(SAFE, REMOVE, NONE);
 		break;
 	case GIT_DELTA_MODIFIED: /* case 16, 17, 18 (or 36 but not really) */
-		if (checkout_is_workdir_modified(data, &delta->old_file, &delta->new_file, wd))
+		if (wd->mode != GIT_FILEMODE_COMMIT &&
+			checkout_is_workdir_modified(data, &delta->old_file, &delta->new_file, wd))
 			*action = CHECKOUT_ACTION_IF(FORCE, UPDATE_BLOB, CONFLICT);
 		else
 			*action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
