@@ -47,6 +47,10 @@ enum {
 	CACHE_NONE = 2
 };
 
+#define DEFAULT_THRESHOLD 50
+#define DEFAULT_BREAK_REWRITE_THRESHOLD 60
+#define USE_DEFAULT(X) ((X) == 0 || (X) > 100) 
+
 /** The 'opts' struct captures all the various parsed command line options. */
 struct opts {
 	git_diff_options diffopts;
@@ -66,6 +70,7 @@ static void parse_opts(struct opts *o, int argc, char *argv[]);
 static int color_printer(
 	const git_diff_delta*, const git_diff_hunk*, const git_diff_line*, void*);
 static void diff_print_stats(git_diff *diff, struct opts *o);
+int extract_break_rewrites(int *m, int *n, const char *arg);
 
 int main(int argc, char *argv[])
 {
@@ -215,10 +220,13 @@ static int color_printer(
 static void parse_opts(struct opts *o, int argc, char *argv[])
 {
 	struct args_info args = ARGS_INFO_INIT;
+	const char *break_rewrite_arg;
+	int m,n,err;
 
 
 	for (args.pos = 1; args.pos < argc; ++args.pos) {
 		const char *a = argv[args.pos];
+
 
 		if (a[0] != '-') {
 			if (o->treeish1 == NULL)
@@ -290,9 +298,22 @@ static void parse_opts(struct opts *o, int argc, char *argv[])
 			o->findopts.flags |= GIT_DIFF_FIND_COPIES;
 		else if (!strcmp(a, "--find-copies-harder"))
 			o->findopts.flags |= GIT_DIFF_FIND_COPIES_FROM_UNMODIFIED;
-		else if (is_prefixed(a, "-B") || is_prefixed(a, "--break-rewrites"))
-			/* TODO: parse thresholds */
+		else if (optional_str_arg(
+				&break_rewrite_arg, &args, "-B", NULL) || 
+			optional_str_arg(
+				&break_rewrite_arg, &args, "--break-rewrites", NULL)) {
+
 			o->findopts.flags |= GIT_DIFF_FIND_REWRITES;
+			err = extract_break_rewrites(&m, &n, break_rewrite_arg);
+			if (err==-1) 
+				usage("Invalid input format", a);
+			o->findopts.rename_from_rewrite_threshold = (uint16_t) m;
+			o->findopts.break_rewrite_threshold = (uint16_t) n;
+			if (USE_DEFAULT(o->findopts.rename_from_rewrite_threshold))
+				o->findopts.rename_from_rewrite_threshold = DEFAULT_THRESHOLD;
+			if (USE_DEFAULT(o->findopts.break_rewrite_threshold))
+				o->findopts.break_rewrite_threshold = DEFAULT_BREAK_REWRITE_THRESHOLD;
+		}
 		else if (!match_uint16_arg(
 				&o->diffopts.context_lines, &args, "-U") &&
 			!match_uint16_arg(
@@ -334,4 +355,31 @@ static void diff_print_stats(git_diff *diff, struct opts *o)
 
 	git_buf_free(&b);
 	git_diff_stats_free(stats);
+}
+
+int extract_break_rewrites(int *m, int *n, const char *arg)
+{
+	int err;
+	const char *slash = strchr(arg, '/');
+
+	/* slash either not found or not at the beginning of arg, parse n */
+	if (slash != arg) {
+		err = sscanf(arg, "%d", n);
+		/* Invalid input format, return -1 to indicate error */
+		if (err != 1 || err == EOF)
+			return -1;
+	} else {
+		*n = 0;
+	}
+
+	/* slash found, parse m one character after it */
+	if (slash != NULL) {
+		err = sscanf(slash + 1, "%d", m);
+		/* Invalid input format, return -1 to indicate error */
+		if (err != 1 || err == EOF)
+			return -1;
+	} else {
+		*m = 0;
+	}
+	return 0;
 }
