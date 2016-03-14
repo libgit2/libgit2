@@ -381,7 +381,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		if (git_remote__get_http_proxy(t->owner->owner, !!t->connection_data.use_ssl, &proxy_url) < 0)
 			goto on_error;
 	}
-	else if (proxy_opts->type == GIT_PROXY_HTTP) {
+	else if (proxy_opts->type == GIT_PROXY_SPECIFIED) {
 		proxy_url = git__strdup(proxy_opts->url);
 		GITERR_CHECK_ALLOC(proxy_url);
 	}

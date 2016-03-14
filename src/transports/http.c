@@ -575,7 +575,7 @@ static int apply_proxy_config(http_subtransport *t)
 		if ((error = git_remote__get_http_proxy(t->owner->owner, !!t->connection_data.use_ssl, &url)) < 0)
 			return error;
 
-		opts.type = GIT_PROXY_HTTP;
+		opts.type = GIT_PROXY_SPECIFIED;
 		opts.url = url;
 		error = git_stream_set_proxy(t->io, &opts);
 		git__free(url);

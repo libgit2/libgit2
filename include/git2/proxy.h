@@ -18,6 +18,9 @@ GIT_BEGIN_DECL
 typedef enum {
 	/**
 	 * Do not attempt to connect through a proxy
+	 *
+	 * If built against lbicurl, it itself may attempt to connect
+	 * to a proxy if the environment variables specify it.
 	 */
 	GIT_PROXY_NONE,
 	/**
@@ -25,17 +28,9 @@ typedef enum {
 	 */
 	GIT_PROXY_AUTO,
 	/**
-	 * Connect through a HTTP proxy
+	 * Connect via the URL given in the options
 	 */
-	GIT_PROXY_HTTP,
-	/**
-	 * Connect through a SOCKS v4 proxy
-	 */
-	GIT_PROXY_SOCKS4,
-	/**
-	 * Connect through a SOCKS v5 proxy
-	 */
-	GIT_PROXY_SOCKS5,
+	GIT_PROXY_SPECIFIED,
 } git_proxy_t;
 
 /**
