@@ -412,7 +412,7 @@ IF (MSVC)
 	# /MTd - Statically link the multithreaded debug version of the CRT
 	# /MDd - Dynamically link the multithreaded debug version of the CRT
 	# /RTC1 - Run time checks
-	SET(CMAKE_C_FLAGS_DEBUG "/Zi /Od /D_DEBUG /RTC1 ${CRT_FLAG_DEBUG}")
+	SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Zi /Od /D_DEBUG /RTC1 ${CRT_FLAG_DEBUG}")
 
 	# /DNDEBUG - Disables asserts
 	# /MT - Statically link the multithreaded release version of the CRT
@@ -464,7 +464,7 @@ ELSE ()
 	ENDIF()
 
 	IF (WIN32 AND NOT CYGWIN)
-		SET(CMAKE_C_FLAGS_DEBUG "-D_DEBUG")
+		SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -D_DEBUG")
 	ENDIF ()
 
 	IF (MINGW) # MinGW always does PIC and complains if we tell it to
