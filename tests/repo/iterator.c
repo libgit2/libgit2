@@ -1641,6 +1641,165 @@ void test_repo_iterator__workdir_pathlist_with_dirs(void)
 	git_vector_free(&filelist);
 }
 
+static void create_paths(const char *root, int depth)
+{
+	git_buf fullpath = GIT_BUF_INIT;
+	size_t root_len;
+	int i;
+
+	cl_git_pass(git_buf_puts(&fullpath, root));
+	cl_git_pass(git_buf_putc(&fullpath, '/'));
+
+	root_len = fullpath.size;
+
+	for (i = 0; i < 8; i++) {
+		bool file = (depth == 0 || (i % 2) == 0);
+		git_buf_truncate(&fullpath, root_len);
+		cl_git_pass(git_buf_printf(&fullpath, "item%d", i));
+
+		if (file) {
+			cl_git_rewritefile(fullpath.ptr, "This is a file!\n");
+		} else {
+			cl_must_pass(p_mkdir(fullpath.ptr, 0777));
+
+			if (depth > 0)
+				create_paths(fullpath.ptr, (depth - 1));
+		}
+	}
+}
+
+void test_repo_iterator__workdir_pathlist_for_deeply_nested_item(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_vector filelist;
+
+	cl_git_pass(git_vector_init(&filelist, 5, NULL));
+
+	g_repo = cl_git_sandbox_init("icase");
+	create_paths(git_repository_workdir(g_repo), 3);
+
+	/* Ensure that we find the single path we're interested in, and we find
+	 * it efficiently, and don't stat the entire world to get there.
+	 */
+	{
+		const char *expected[] = { "item1/item3/item5/item7" };
+		size_t expected_len = 1;
+
+		git_vector_clear(&filelist);
+		cl_git_pass(git_vector_insert(&filelist, "item1/item3/item5/item7"));
+
+		i_opts.pathlist.strings = (char **)filelist.contents;
+		i_opts.pathlist.count = filelist.length;
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		cl_assert_equal_i(4, i->stat_calls);
+		git_iterator_free(i);
+	}
+
+	/* Ensure that we find the single path we're interested in, and we find
+	 * it efficiently, and don't stat the entire world to get there.
+	 */
+	{
+		const char *expected[] = {
+			"item1/item3/item5/item0", "item1/item3/item5/item1",
+			"item1/item3/item5/item2", "item1/item3/item5/item3",
+			"item1/item3/item5/item4", "item1/item3/item5/item5",
+			"item1/item3/item5/item6", "item1/item3/item5/item7",
+		};
+		size_t expected_len = 8;
+
+		git_vector_clear(&filelist);
+		cl_git_pass(git_vector_insert(&filelist, "item1/item3/item5/"));
+
+		i_opts.pathlist.strings = (char **)filelist.contents;
+		i_opts.pathlist.count = filelist.length;
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		cl_assert_equal_i(11, i->stat_calls);
+		git_iterator_free(i);
+	}
+
+	/* Ensure that we find the single path we're interested in, and we find
+	 * it efficiently, and don't stat the entire world to get there.
+	 */
+	{
+		const char *expected[] = {
+			"item1/item3/item0",
+			"item1/item3/item1/item0", "item1/item3/item1/item1",
+			"item1/item3/item1/item2", "item1/item3/item1/item3",
+			"item1/item3/item1/item4", "item1/item3/item1/item5",
+			"item1/item3/item1/item6", "item1/item3/item1/item7",
+			"item1/item3/item2",
+			"item1/item3/item3/item0", "item1/item3/item3/item1",
+			"item1/item3/item3/item2", "item1/item3/item3/item3",
+			"item1/item3/item3/item4", "item1/item3/item3/item5",
+			"item1/item3/item3/item6", "item1/item3/item3/item7",
+			"item1/item3/item4",
+			"item1/item3/item5/item0", "item1/item3/item5/item1",
+			"item1/item3/item5/item2", "item1/item3/item5/item3",
+			"item1/item3/item5/item4", "item1/item3/item5/item5",
+			"item1/item3/item5/item6", "item1/item3/item5/item7",
+			"item1/item3/item6",
+			"item1/item3/item7/item0", "item1/item3/item7/item1",
+			"item1/item3/item7/item2", "item1/item3/item7/item3",
+			"item1/item3/item7/item4", "item1/item3/item7/item5",
+			"item1/item3/item7/item6", "item1/item3/item7/item7",
+		};
+		size_t expected_len = 36;
+
+		git_vector_clear(&filelist);
+		cl_git_pass(git_vector_insert(&filelist, "item1/item3/"));
+
+		i_opts.pathlist.strings = (char **)filelist.contents;
+		i_opts.pathlist.count = filelist.length;
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		cl_assert_equal_i(42, i->stat_calls);
+		git_iterator_free(i);
+	}
+
+	/* Ensure that we find the single path we're interested in, and we find
+	 * it efficiently, and don't stat the entire world to get there.
+	 */
+	{
+		const char *expected[] = {
+			"item0", "item1/item2", "item5/item7/item4", "item6",
+			"item7/item3/item1/item6" };
+		size_t expected_len = 5;
+
+		git_vector_clear(&filelist);
+		cl_git_pass(git_vector_insert(&filelist, "item7/item3/item1/item6"));
+		cl_git_pass(git_vector_insert(&filelist, "item6"));
+		cl_git_pass(git_vector_insert(&filelist, "item5/item7/item4"));
+		cl_git_pass(git_vector_insert(&filelist, "item1/item2"));
+		cl_git_pass(git_vector_insert(&filelist, "item0"));
+
+		/* also add some things that don't exist or don't match the right type */
+		cl_git_pass(git_vector_insert(&filelist, "item2/"));
+		cl_git_pass(git_vector_insert(&filelist, "itemN"));
+		cl_git_pass(git_vector_insert(&filelist, "item1/itemA"));
+		cl_git_pass(git_vector_insert(&filelist, "item5/item3/item4/"));
+
+		i_opts.pathlist.strings = (char **)filelist.contents;
+		i_opts.pathlist.count = filelist.length;
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		cl_assert_equal_i(14, i->stat_calls);
+		git_iterator_free(i);
+	}
+
+	git_vector_free(&filelist);
+}
+
 void test_repo_iterator__workdir_bounded_submodules(void)
 {
 	git_iterator *i;
