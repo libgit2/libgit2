@@ -1879,6 +1879,83 @@ void test_repo_iterator__workdir_bounded_submodules(void)
 	git_tree_free(head);
 }
 
+static void expect_advance_over(
+	git_iterator *i,
+	const char *expected_path,
+	git_iterator_status_t expected_status)
+{
+	const git_index_entry *entry;
+	git_iterator_status_t status;
+	int error;
+
+	cl_git_pass(git_iterator_current(&entry, i));
+	cl_assert_equal_s(expected_path, entry->path);
+
+	error = git_iterator_advance_over(&entry, &status, i);
+	cl_assert(!error || error == GIT_ITEROVER);
+	cl_assert_equal_i(expected_status, status);
+}
+
+void test_repo_iterator__workdir_advance_over(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+
+	i_opts.flags |= GIT_ITERATOR_DONT_IGNORE_CASE |
+		GIT_ITERATOR_DONT_AUTOEXPAND;
+
+	g_repo = cl_git_sandbox_init("icase");
+
+	/* create an empty directory */
+	cl_must_pass(p_mkdir("icase/empty", 0777));
+
+	/* create a directory in which all contents are ignored */
+	cl_must_pass(p_mkdir("icase/all_ignored", 0777));
+	cl_git_rewritefile("icase/all_ignored/one", "This is ignored\n");
+	cl_git_rewritefile("icase/all_ignored/two", "This, too, is ignored\n");
+	cl_git_rewritefile("icase/all_ignored/.gitignore", ".gitignore\none\ntwo\n");
+
+	/* create a directory in which not all contents are ignored */
+	cl_must_pass(p_mkdir("icase/some_ignored", 0777));
+	cl_git_rewritefile("icase/some_ignored/one", "This is ignored\n");
+	cl_git_rewritefile("icase/some_ignored/two", "This is not ignored\n");
+	cl_git_rewritefile("icase/some_ignored/.gitignore", ".gitignore\none\n");
+
+	/* create a directory which has some empty children */
+	cl_must_pass(p_mkdir("icase/empty_children", 0777));
+	cl_must_pass(p_mkdir("icase/empty_children/empty1", 0777));
+	cl_must_pass(p_mkdir("icase/empty_children/empty2", 0777));
+	cl_must_pass(p_mkdir("icase/empty_children/empty3", 0777));
+
+	/* create a directory which will disappear! */
+	cl_must_pass(p_mkdir("icase/missing_directory", 0777));
+
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+
+	cl_must_pass(p_rmdir("icase/missing_directory"));
+
+	expect_advance_over(i, "B", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "D", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "F", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "H", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "J", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "L/", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "a", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "all_ignored/", GIT_ITERATOR_STATUS_IGNORED);
+	expect_advance_over(i, "c", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "e", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "empty/", GIT_ITERATOR_STATUS_EMPTY);
+	expect_advance_over(i, "empty_children/", GIT_ITERATOR_STATUS_EMPTY);
+	expect_advance_over(i, "g", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "i", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "k/", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "missing_directory/", GIT_ITERATOR_STATUS_EMPTY);
+	expect_advance_over(i, "some_ignored/", GIT_ITERATOR_STATUS_NORMAL);
+
+	cl_git_fail_with(GIT_ITEROVER, git_iterator_advance(NULL, i));
+	git_iterator_free(i);
+}
+
 void test_repo_iterator__treefilelist(void)
 {
 	git_iterator *i;
