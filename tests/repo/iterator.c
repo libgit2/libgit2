@@ -1370,15 +1370,13 @@ void test_repo_iterator__indexfilelist_icase(void)
 	git_vector_free(&filelist);
 }
 
-void test_repo_iterator__workdirfilelist(void)
+void test_repo_iterator__workdir_pathlist(void)
 {
 	git_iterator *i;
 	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
 	git_vector filelist;
-	bool default_icase;
-	int expect;
 
-	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
+	cl_git_pass(git_vector_init(&filelist, 100, NULL));
 	cl_git_pass(git_vector_insert(&filelist, "a"));
 	cl_git_pass(git_vector_insert(&filelist, "B"));
 	cl_git_pass(git_vector_insert(&filelist, "c"));
@@ -1393,87 +1391,251 @@ void test_repo_iterator__workdirfilelist(void)
 
 	g_repo = cl_git_sandbox_init("icase");
 
-	/* All indexfilelist iterator tests are "autoexpand with no tree entries" */
-	/* In this test we DO NOT force a case on the iteratords and verify default behavior. */
+	/* Test iterators with default case sensitivity, without returning
+	 * tree entries (but autoexpanding.
+	 */
 
 	i_opts.pathlist.strings = (char **)filelist.contents;
 	i_opts.pathlist.count = filelist.length;
 
-	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
-	expect_iterator_items(i, 8, NULL, 8, NULL);
-	git_iterator_free(i);
+	/* Case sensitive */
+	{
+		const char *expected[] = {
+			"B", "D", "L/1", "a", "c", "e", "k/1", "k/a" };
+		size_t expected_len = 8;
 
-	i_opts.start = "c";
-	i_opts.end = NULL;
-	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
-	default_icase = git_iterator_ignore_case(i);
-	/* (c D e k/1 k/a L ==> 6) vs (c e k/1 k/a ==> 4) */
-	expect = ((default_icase) ? 6 : 4);
-	expect_iterator_items(i, expect, NULL, expect, NULL);
-	git_iterator_free(i);
+		i_opts.start = NULL;
+		i_opts.end = NULL;
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
 
-	i_opts.start = NULL;
-	i_opts.end = "e";
-	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
-	default_icase = git_iterator_ignore_case(i);
-	/* (a B c D e ==> 5) vs (B D L/1 a c e ==> 6) */
-	expect = ((default_icase) ? 5 : 6);
-	expect_iterator_items(i, expect, NULL, expect, NULL);
-	git_iterator_free(i);
+		cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	/* Case INsensitive */
+	{
+		const char *expected[] = {
+			"a", "B", "c", "D", "e", "k/1", "k/a", "L/1" };
+		size_t expected_len = 8;
+
+		i_opts.start = NULL;
+		i_opts.end = NULL;
+		i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	/* Set a start, but no end.  Case sensitive. */
+	{
+		const char *expected[] = { "c", "e", "k/1", "k/a" };
+		size_t expected_len = 4;
+
+		i_opts.start = "c";
+		i_opts.end = NULL;
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	/* Set a start, but no end.  Case INsensitive. */
+	{
+		const char *expected[] = { "c", "D", "e", "k/1", "k/a", "L/1" };
+		size_t expected_len = 6;
+
+		i_opts.start = "c";
+		i_opts.end = NULL;
+		i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	/* Set no start, but an end.  Case sensitive. */
+	{
+		const char *expected[] = { "B", "D", "L/1", "a", "c", "e" };
+		size_t expected_len = 6;
+
+		i_opts.start = NULL;
+		i_opts.end = "e";
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	/* Set no start, but an end.  Case INsensitive. */
+	{
+		const char *expected[] = { "a", "B", "c", "D", "e" };
+		size_t expected_len = 5;
+
+		i_opts.start = NULL;
+		i_opts.end = "e";
+		i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	/* Start and an end, case sensitive */
+	{
+		const char *expected[] = { "c", "e", "k/1" };
+		size_t expected_len = 3;
+
+		i_opts.start = "c";
+		i_opts.end = "k/D";
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	/* Start and an end, case sensitive */
+	{
+		const char *expected[] = { "k/1" };
+		size_t expected_len = 1;
+
+		i_opts.start = "k";
+		i_opts.end = "k/D";
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	/* Start and an end, case INsensitive */
+	{
+		const char *expected[] = { "c", "D", "e", "k/1", "k/a" };
+		size_t expected_len = 5;
+
+		i_opts.start = "c";
+		i_opts.end = "k/D";
+		i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	/* Start and an end, case INsensitive */
+	{
+		const char *expected[] = { "k/1", "k/a" };
+		size_t expected_len = 2;
+
+		i_opts.start = "k";
+		i_opts.end = "k/D";
+		i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
 
 	git_vector_free(&filelist);
 }
 
-void test_repo_iterator__workdirfilelist_icase(void)
+void test_repo_iterator__workdir_pathlist_with_dirs(void)
 {
 	git_iterator *i;
 	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
 	git_vector filelist;
 
-	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
-	cl_git_pass(git_vector_insert(&filelist, "a"));
-	cl_git_pass(git_vector_insert(&filelist, "B"));
-	cl_git_pass(git_vector_insert(&filelist, "c"));
-	cl_git_pass(git_vector_insert(&filelist, "D"));
-	cl_git_pass(git_vector_insert(&filelist, "e"));
-	cl_git_pass(git_vector_insert(&filelist, "k.a"));
-	cl_git_pass(git_vector_insert(&filelist, "k.b"));
-	cl_git_pass(git_vector_insert(&filelist, "k/1"));
-	cl_git_pass(git_vector_insert(&filelist, "k/a"));
-	cl_git_pass(git_vector_insert(&filelist, "kZZZZ"));
-	cl_git_pass(git_vector_insert(&filelist, "L/1"));
+	cl_git_pass(git_vector_init(&filelist, 5, NULL));
 
 	g_repo = cl_git_sandbox_init("icase");
 
-	i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
-	i_opts.pathlist.strings = (char **)filelist.contents;
-	i_opts.pathlist.count = filelist.length;
+	/* Test that a prefix `k` matches folders, even without trailing slash */
+	{
+		const char *expected[] = { "k/1", "k/B", "k/D", "k/a", "k/c" };
+		size_t expected_len = 5;
 
-	i_opts.start = "c";
-	i_opts.end = "k/D";
-	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
-	expect_iterator_items(i, 3, NULL, 3, NULL);
-	git_iterator_free(i);
+		git_vector_clear(&filelist);
+		cl_git_pass(git_vector_insert(&filelist, "k"));
 
-	i_opts.start = "k";
-	i_opts.end = "k/Z";
-	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
-	expect_iterator_items(i, 1, NULL, 1, NULL);
-	git_iterator_free(i);
+		i_opts.pathlist.strings = (char **)filelist.contents;
+		i_opts.pathlist.count = filelist.length;
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
 
-	i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
+		cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
 
-	i_opts.start = "c";
-	i_opts.end = "k/D";
-	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
-	expect_iterator_items(i, 5, NULL, 5, NULL);
-	git_iterator_free(i);
+	/* Test that a `k/` matches a folder */
+	{
+		const char *expected[] = { "k/1", "k/B", "k/D", "k/a", "k/c" };
+		size_t expected_len = 5;
 
-	i_opts.start = "k";
-	i_opts.end = "k/Z";
-	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
-	expect_iterator_items(i, 2, NULL, 2, NULL);
-	git_iterator_free(i);
+		git_vector_clear(&filelist);
+		cl_git_pass(git_vector_insert(&filelist, "k/"));
+
+		i_opts.pathlist.strings = (char **)filelist.contents;
+		i_opts.pathlist.count = filelist.length;
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	/* When the iterator is case sensitive, ensure we can't lookup the
+	 * directory with the wrong case.
+	 */
+	{
+		git_vector_clear(&filelist);
+		cl_git_pass(git_vector_insert(&filelist, "K/"));
+
+		i_opts.pathlist.strings = (char **)filelist.contents;
+		i_opts.pathlist.count = filelist.length;
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+		cl_git_fail_with(GIT_ITEROVER, git_iterator_advance(NULL, i));
+		git_iterator_free(i);
+	}
+
+	/* Test that case insensitive matching works. */
+	{
+		const char *expected[] = { "k/1", "k/a", "k/B", "k/c", "k/D" };
+		size_t expected_len = 5;
+
+		git_vector_clear(&filelist);
+		cl_git_pass(git_vector_insert(&filelist, "K/"));
+
+		i_opts.pathlist.strings = (char **)filelist.contents;
+		i_opts.pathlist.count = filelist.length;
+		i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	/* Test that case insensitive matching works without trailing slash. */
+	{
+		const char *expected[] = { "k/1", "k/a", "k/B", "k/c", "k/D" };
+		size_t expected_len = 5;
+
+		git_vector_clear(&filelist);
+		cl_git_pass(git_vector_insert(&filelist, "K"));
+
+		i_opts.pathlist.strings = (char **)filelist.contents;
+		i_opts.pathlist.count = filelist.length;
+		i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
 
 	git_vector_free(&filelist);
 }
