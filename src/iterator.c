@@ -351,6 +351,9 @@ typedef struct {
 	int path_ambiguities;
 	bool path_has_filename;
 	bool entry_is_current;
+
+	/* used internally to track the currently matching root) */
+	char* pathlist_match_root;
 } tree_iterator;
 
 static char *tree_iterator__current_filename(
@@ -697,17 +700,62 @@ static int tree_iterator__current(
 {
 	const git_index_entry *entry = NULL;
 	iterator_pathlist__match_t m;
+	char *dir;
 	int error;
+	char *pathlist_match_root;
 
 	do {
 		if ((error = tree_iterator__current_internal(&entry, self)) < 0)
 			return error;
 
-		if (self->pathlist.length) {
-			m = iterator_pathlist__match(
-				self, entry->path, strlen(entry->path));
+		pathlist_match_root = ((tree_iterator *)self)->pathlist_match_root;
 
-			if (m != ITERATOR_PATHLIST_MATCH) {
+		if (self->pathlist.length) {
+			/* if we have encountered a parent directory before which was
+			 * matching the pathlist, report this entry, according to
+			 * GIT_DIFF_DISABLE_PATHSPEC_MATCH. */
+			if (pathlist_match_root != NULL &&
+			    self->prefixcomp(entry->path, pathlist_match_root) == 0)
+				m = ITERATOR_PATHLIST_MATCH_DIRECTORY;
+			else {
+				if (pathlist_match_root != NULL) {
+					git__free(pathlist_match_root);
+					((tree_iterator *)self)->pathlist_match_root = NULL;
+				}
+
+				m = iterator_pathlist__match(self, entry->path, strlen(entry->path));
+
+				/* if this entry isn't exactly matched by the pathlist (as file),
+				 * check whether it's matched as directory or whether its parent
+				 * directory is matched. */
+				if (m != ITERATOR_PATHLIST_MATCH) {
+					if (entry->mode != GIT_FILEMODE_TREE) {
+						dir = git_path_dirname(entry->path);
+						if (strlen(dir) == 1 && dir[0] == '.')
+							dir[0] = '\0';
+					}
+					else if (entry->path[strlen(entry->path) - 1] == '/'){
+						dir = git__strdup(entry->path);
+						dir[strlen(entry->path) - 1] = '\0';
+					}
+					else
+						goto check_match;
+
+					m = iterator_pathlist__match(self, dir, strlen(dir));
+					if (m == ITERATOR_PATHLIST_MATCH ||
+					    m == ITERATOR_PATHLIST_MATCH_DIRECTORY) {
+						((tree_iterator *)self)->pathlist_match_root = dir;
+					}
+					else
+						git__free(dir);
+				}
+				else if (m == ITERATOR_PATHLIST_MATCH && entry->mode == GIT_FILEMODE_TREE)
+					((tree_iterator *)self)->pathlist_match_root = git__strdup(entry->path);
+			}
+
+			check_match:
+			if (m != ITERATOR_PATHLIST_MATCH &&
+			    m != ITERATOR_PATHLIST_MATCH_DIRECTORY) {
 				if ((error = tree_iterator__advance_internal(self)) < 0)
 					return error;
 
@@ -781,6 +829,10 @@ static void tree_iterator__free(git_iterator *self)
 		tree_iterator__pop_all(ti, true, false);
 		git_tree_free(ti->head->entries[0]->tree);
 		git__free(ti->head);
+	}
+
+	if (ti->pathlist_match_root) {
+		git__free(ti->pathlist_match_root);
 	}
 
 	git_pool_clear(&ti->pool);
