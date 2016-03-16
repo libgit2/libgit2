@@ -224,6 +224,13 @@ int git__page_size(size_t *page_size)
 	return 0;
 }
 
+int git__mmap_alignment(size_t *alignment)
+{
+	/* dummy; here we don't need any alignment anyway */
+	*alignment = 4096;
+	return 0;
+}
+
 
 int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
 {
