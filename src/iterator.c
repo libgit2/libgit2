@@ -437,8 +437,10 @@ GIT_INLINE(bool) iterator_has_started(git_iterator *iter, const char *path)
 
 GIT_INLINE(bool) iterator_has_ended(git_iterator *iter, const char *path)
 {
-	if (iter->end == NULL || iter->ended == true)
+	if (iter->end == NULL)
 		return false;
+	else if (iter->ended)
+		return true;
 
 	iter->ended = (iter->prefixcomp(path, iter->end) > 0);
 	return iter->ended;

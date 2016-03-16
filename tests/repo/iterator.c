@@ -16,6 +16,17 @@ void test_repo_iterator__cleanup(void)
 	g_repo = NULL;
 }
 
+static void assert_at_end(git_iterator *i, bool verbose)
+{
+	const git_index_entry *end;
+	int error = git_iterator_advance(&end, i);
+
+	if (verbose && error != GIT_ITEROVER)
+		fprintf(stderr, "Expected end of iterator, got '%s'\n", end->path);
+
+	cl_git_fail_with(GIT_ITEROVER, error);
+}
+
 static void expect_iterator_items(
 	git_iterator *i,
 	int expected_flat,
@@ -57,6 +68,7 @@ static void expect_iterator_items(
 			break;
 	}
 
+	assert_at_end(i, v);
 	cl_assert_equal_i(expected_flat, count);
 
 	cl_git_pass(git_iterator_reset(i));
@@ -103,6 +115,7 @@ static void expect_iterator_items(
 			break;
 	}
 
+	assert_at_end(i, v);
 	cl_assert_equal_i(expected_total, count);
 }
 
