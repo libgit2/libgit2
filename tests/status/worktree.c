@@ -1146,3 +1146,85 @@ void test_status_worktree__update_index_with_symlink_doesnt_change_mode(void)
 	git_reference_free(head);
 }
 
+static const char *testrepo2_subdir_paths[] = {
+		"subdir/README",
+		"subdir/new.txt",
+		"subdir/subdir2/README",
+		"subdir/subdir2/new.txt",
+};
+
+static const char *testrepo2_subdir_paths_icase[] = {
+		"subdir/new.txt",
+		"subdir/README",
+		"subdir/subdir2/new.txt",
+		"subdir/subdir2/README"
+};
+
+void test_status_worktree__with_directory_in_pathlist(void)
+{
+	git_repository *repo = cl_git_sandbox_init("testrepo2");
+	git_index *index;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	git_status_list *statuslist;
+	const git_status_entry *status;
+	size_t i, entrycount;
+	bool native_ignore_case;
+
+	cl_git_pass(git_repository_index(&index, repo));
+	native_ignore_case =
+			(git_index_caps(index) & GIT_INDEXCAP_IGNORE_CASE) != 0;
+	git_index_free(index);
+
+	opts.pathspec.count = 1;
+	opts.pathspec.strings = malloc(opts.pathspec.count * sizeof(char *));
+	opts.pathspec.strings[0] = "subdir";
+	opts.flags =
+			GIT_STATUS_OPT_DEFAULTS |
+			GIT_STATUS_OPT_INCLUDE_UNMODIFIED |
+			GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH;
+
+	opts.show = GIT_STATUS_SHOW_WORKDIR_ONLY;
+	git_status_list_new(&statuslist, repo, &opts);
+
+	entrycount = git_status_list_entrycount(statuslist);
+	cl_assert_equal_i(4, entrycount);
+
+	for (i = 0; i < entrycount; i++) {
+		status = git_status_byindex(statuslist, i);
+		cl_assert_equal_i(0, status->status);
+		cl_assert_equal_s(native_ignore_case ?
+			testrepo2_subdir_paths_icase[i] :
+			testrepo2_subdir_paths[i],
+			status->index_to_workdir->old_file.path);
+	}
+
+	opts.show = GIT_STATUS_SHOW_INDEX_ONLY;
+	git_status_list_new(&statuslist, repo, &opts);
+
+	entrycount = git_status_list_entrycount(statuslist);
+	cl_assert_equal_i(4, entrycount);
+
+	for (i = 0; i < entrycount; i++) {
+		status = git_status_byindex(statuslist, i);
+		cl_assert_equal_i(0, status->status);
+		cl_assert_equal_s(native_ignore_case ?
+			testrepo2_subdir_paths_icase[i] :
+			testrepo2_subdir_paths[i],
+			status->head_to_index->old_file.path);
+	}
+
+	opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
+	git_status_list_new(&statuslist, repo, &opts);
+
+	entrycount = git_status_list_entrycount(statuslist);
+	cl_assert_equal_i(4, entrycount);
+
+	for (i = 0; i < entrycount; i++) {
+		status = git_status_byindex(statuslist, i);
+		cl_assert_equal_i(0, status->status);
+		cl_assert_equal_s(native_ignore_case ?
+			testrepo2_subdir_paths_icase[i] :
+			testrepo2_subdir_paths[i],
+			status->index_to_workdir->old_file.path);
+	}
+}
