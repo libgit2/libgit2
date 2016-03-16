@@ -1956,6 +1956,66 @@ void test_repo_iterator__workdir_advance_over(void)
 	git_iterator_free(i);
 }
 
+void test_repo_iterator__workdir_advance_over_with_pathlist(void)
+{
+	git_vector pathlist = GIT_VECTOR_INIT;
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+
+	git_vector_insert(&pathlist, "dirA/subdir1/subdir2/file");
+	git_vector_insert(&pathlist, "dirB/subdir1/subdir2");
+	git_vector_insert(&pathlist, "dirC/subdir1/nonexistent");
+	git_vector_insert(&pathlist, "dirD/subdir1/nonexistent");
+	git_vector_insert(&pathlist, "dirD/subdir1/subdir2");
+	git_vector_insert(&pathlist, "dirD/nonexistent");
+
+	i_opts.pathlist.strings = (char **)pathlist.contents;
+	i_opts.pathlist.count = pathlist.length;
+	i_opts.flags |= GIT_ITERATOR_DONT_IGNORE_CASE |
+		GIT_ITERATOR_DONT_AUTOEXPAND;
+
+	g_repo = cl_git_sandbox_init("icase");
+
+	/* Create a directory that has a file that is included in our pathlist */
+	cl_must_pass(p_mkdir("icase/dirA", 0777));
+	cl_must_pass(p_mkdir("icase/dirA/subdir1", 0777));
+	cl_must_pass(p_mkdir("icase/dirA/subdir1/subdir2", 0777));
+	cl_git_rewritefile("icase/dirA/subdir1/subdir2/file", "foo!");
+
+	/* Create a directory that has a directory that is included in our pathlist */
+	cl_must_pass(p_mkdir("icase/dirB", 0777));
+	cl_must_pass(p_mkdir("icase/dirB/subdir1", 0777));
+	cl_must_pass(p_mkdir("icase/dirB/subdir1/subdir2", 0777));
+	cl_git_rewritefile("icase/dirB/subdir1/subdir2/file", "foo!");
+
+	/* Create a directory that would contain an entry in our pathlist, but
+	 * that entry does not actually exist.  We don't know this until we
+	 * advance_over it.  We want to distinguish this from an actually empty
+	 * or ignored directory.
+	 */
+	cl_must_pass(p_mkdir("icase/dirC", 0777));
+	cl_must_pass(p_mkdir("icase/dirC/subdir1", 0777));
+	cl_must_pass(p_mkdir("icase/dirC/subdir1/subdir2", 0777));
+	cl_git_rewritefile("icase/dirC/subdir1/subdir2/file", "foo!");
+
+	/* Create a directory that has a mix of actual and nonexistent paths */
+	cl_must_pass(p_mkdir("icase/dirD", 0777));
+	cl_must_pass(p_mkdir("icase/dirD/subdir1", 0777));
+	cl_must_pass(p_mkdir("icase/dirD/subdir1/subdir2", 0777));
+	cl_git_rewritefile("icase/dirD/subdir1/subdir2/file", "foo!");
+
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+
+	expect_advance_over(i, "dirA/", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "dirB/", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "dirC/", GIT_ITERATOR_STATUS_FILTERED);
+	expect_advance_over(i, "dirD/", GIT_ITERATOR_STATUS_NORMAL);
+
+	cl_git_fail_with(GIT_ITEROVER, git_iterator_advance(NULL, i));
+	git_iterator_free(i);
+	git_vector_free(&pathlist);
+}
+
 void test_repo_iterator__treefilelist(void)
 {
 	git_iterator *i;
