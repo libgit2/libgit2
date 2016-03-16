@@ -1321,6 +1321,31 @@ void test_repo_iterator__indexfilelist_icase(void)
 	git_vector_free(&filelist);
 }
 
+void test_repo_iterator__indexfilelist_with_directory(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_vector filelist;
+	git_tree *tree;
+	git_index *index;
+
+	g_repo = cl_git_sandbox_init("testrepo2");
+	git_repository_head_tree(&tree, g_repo);
+
+	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
+	cl_git_pass(git_vector_insert(&filelist, "subdir"));
+
+	i_opts.pathlist.strings = (char **)filelist.contents;
+	i_opts.pathlist.count = filelist.length;
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+	expect_iterator_items(i, 4, NULL, 4, NULL);
+	git_iterator_free(i);
+	git_index_free(index);
+	git_vector_free(&filelist);
+}
+
 void test_repo_iterator__workdirfilelist(void)
 {
 	git_iterator *i;
@@ -1424,6 +1449,27 @@ void test_repo_iterator__workdirfilelist_icase(void)
 	i_opts.end = "k/Z";
 	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
 	expect_iterator_items(i, 2, NULL, 2, NULL);
+	git_iterator_free(i);
+
+	git_vector_free(&filelist);
+}
+
+void test_repo_iterator__workdir_filelist_with_directory(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_vector filelist;
+
+	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
+	cl_git_pass(git_vector_insert(&filelist, "subdir/"));
+
+	g_repo = cl_git_sandbox_init("testrepo2");
+
+	i_opts.pathlist.strings = (char **)filelist.contents;
+	i_opts.pathlist.count = filelist.length;
+
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+	expect_iterator_items(i, 4, NULL, 4, NULL);
 	git_iterator_free(i);
 
 	git_vector_free(&filelist);
@@ -1542,3 +1588,94 @@ void test_repo_iterator__treefilelist_icase(void)
 	git_vector_free(&filelist);
 	git_tree_free(tree);
 }
+
+void test_repo_iterator__tree_filelist_with_directory(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_vector filelist;
+	git_tree *tree;
+
+	g_repo = cl_git_sandbox_init("testrepo2");
+	git_repository_head_tree(&tree, g_repo);
+
+	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
+	cl_git_pass(git_vector_insert(&filelist, "subdir"));
+
+	i_opts.pathlist.strings = (char **)filelist.contents;
+	i_opts.pathlist.count = filelist.length;
+
+	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
+	expect_iterator_items(i, 4, NULL, 4, NULL);
+	git_iterator_free(i);
+
+	git_vector_clear(&filelist);
+	cl_git_pass(git_vector_insert(&filelist, "subdir/"));
+
+	i_opts.pathlist.strings = (char **)filelist.contents;
+	i_opts.pathlist.count = filelist.length;
+
+	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
+	expect_iterator_items(i, 4, NULL, 4, NULL);
+	git_iterator_free(i);
+
+	git_vector_clear(&filelist);
+	cl_git_pass(git_vector_insert(&filelist, "subdir/subdir2"));
+
+	i_opts.pathlist.strings = (char **)filelist.contents;
+	i_opts.pathlist.count = filelist.length;
+
+	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
+	expect_iterator_items(i, 2, NULL, 2, NULL);
+	git_iterator_free(i);
+
+	git_vector_free(&filelist);
+}
+
+void test_repo_iterator__tree_filelist_with_directory_include_tree_nodes(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_vector filelist;
+	git_tree *tree;
+
+	g_repo = cl_git_sandbox_init("testrepo2");
+	git_repository_head_tree(&tree, g_repo);
+
+	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
+	cl_git_pass(git_vector_insert(&filelist, "subdir"));
+
+	i_opts.flags |= GIT_ITERATOR_INCLUDE_TREES;
+	i_opts.pathlist.strings = (char **)filelist.contents;
+	i_opts.pathlist.count = filelist.length;
+
+	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
+	expect_iterator_items(i, 6, NULL, 6, NULL);
+	git_iterator_free(i);
+
+	git_vector_free(&filelist);
+}
+
+void test_repo_iterator__tree_filelist_no_match(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_vector filelist;
+	git_tree *tree;
+	git_index_entry *entry;
+
+	g_repo = cl_git_sandbox_init("testrepo2");
+	git_repository_head_tree(&tree, g_repo);
+
+	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
+	cl_git_pass(git_vector_insert(&filelist, "nonexistent/"));
+
+	i_opts.pathlist.strings = (char **)filelist.contents;
+	i_opts.pathlist.count = filelist.length;
+
+	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
+	cl_assert_equal_i(GIT_ITEROVER, git_iterator_current(&entry, i));
+
+	git_vector_free(&filelist);
+}
+
