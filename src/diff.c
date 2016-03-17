@@ -1091,7 +1091,7 @@ static int handle_unmatched_new_item(
 			/* if directory is empty, can't advance into it, so either skip
 			 * it or ignore it
 			 */
-			if (contains_oitem)
+			if (error == GIT_ENOTFOUND || contains_oitem)
 				return iterator_advance(&info->nitem, info->new_iter);
 			delta_type = GIT_DELTA_IGNORED;
 		}
