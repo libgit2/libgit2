@@ -2041,6 +2041,65 @@ void test_repo_iterator__workdir_advance_over_with_pathlist(void)
 	git_vector_free(&pathlist);
 }
 
+static void expect_advance_into(
+	git_iterator *i,
+	const char *expected_path)
+{
+	const git_index_entry *entry;
+	int error;
+
+	cl_git_pass(git_iterator_current(&entry, i));
+	cl_assert_equal_s(expected_path, entry->path);
+
+	if (S_ISDIR(entry->mode))
+		error = git_iterator_advance_into(&entry, i);
+	else
+		error = git_iterator_advance(&entry, i);
+
+	cl_assert(!error || error == GIT_ITEROVER);
+}
+
+void test_repo_iterator__workdir_advance_into(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+
+	g_repo = cl_git_sandbox_init("icase");
+
+	i_opts.flags |= GIT_ITERATOR_DONT_IGNORE_CASE |
+		GIT_ITERATOR_DONT_AUTOEXPAND;
+
+	cl_must_pass(p_mkdir("icase/Empty", 0777));
+
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+	expect_advance_into(i, "B");
+	expect_advance_into(i, "D");
+	expect_advance_into(i, "Empty/");
+	expect_advance_into(i, "F");
+	expect_advance_into(i, "H");
+	expect_advance_into(i, "J");
+	expect_advance_into(i, "L/");
+	expect_advance_into(i, "L/1");
+	expect_advance_into(i, "L/B");
+	expect_advance_into(i, "L/D");
+	expect_advance_into(i, "L/a");
+	expect_advance_into(i, "L/c");
+	expect_advance_into(i, "a");
+	expect_advance_into(i, "c");
+	expect_advance_into(i, "e");
+	expect_advance_into(i, "g");
+	expect_advance_into(i, "i");
+	expect_advance_into(i, "k/");
+	expect_advance_into(i, "k/1");
+	expect_advance_into(i, "k/B");
+	expect_advance_into(i, "k/D");
+	expect_advance_into(i, "k/a");
+	expect_advance_into(i, "k/c");
+
+	cl_git_fail_with(GIT_ITEROVER, git_iterator_advance(NULL, i));
+	git_iterator_free(i);
+}
+
 void test_repo_iterator__workdir_filelist_with_directory(void)
 {
 	git_iterator *i;
