@@ -11,6 +11,7 @@
 #include "fileops.h"
 #include "index.h"
 #include "diff_xdiff.h"
+#include "merge.h"
 
 #include "git2/repository.h"
 #include "git2/object.h"
@@ -25,52 +26,6 @@
 #define GIT_MERGE_FILE_BINARY_SIZE 8000
 
 #define GIT_MERGE_FILE_SIDE_EXISTS(X)	((X)->mode != 0)
-
-GIT_INLINE(const char *) merge_file_best_path(
-	const git_merge_file_input *ancestor,
-	const git_merge_file_input *ours,
-	const git_merge_file_input *theirs)
-{
-	if (!ancestor) {
-		if (ours && theirs && strcmp(ours->path, theirs->path) == 0)
-			return ours->path;
-
-		return NULL;
-	}
-
-	if (ours && strcmp(ancestor->path, ours->path) == 0)
-		return theirs ? theirs->path : NULL;
-	else if(theirs && strcmp(ancestor->path, theirs->path) == 0)
-		return ours ? ours->path : NULL;
-
-	return NULL;
-}
-
-GIT_INLINE(int) merge_file_best_mode(
-	const git_merge_file_input *ancestor,
-	const git_merge_file_input *ours,
-	const git_merge_file_input *theirs)
-{
-	/*
-	 * If ancestor didn't exist and either ours or theirs is executable,
-	 * assume executable.  Otherwise, if any mode changed from the ancestor,
-	 * use that one.
-	 */
-	if (!ancestor) {
-		if ((ours && ours->mode == GIT_FILEMODE_BLOB_EXECUTABLE) ||
-			(theirs && theirs->mode == GIT_FILEMODE_BLOB_EXECUTABLE))
-			return GIT_FILEMODE_BLOB_EXECUTABLE;
-
-		return GIT_FILEMODE_BLOB;
-	} else if (ours && theirs) {
-		if (ancestor->mode == ours->mode)
-			return theirs->mode;
-
-		return ours->mode;
-	}
-
-	return 0;
-}
 
 int git_merge_file__input_from_index(
 	git_merge_file_input *input_out,
@@ -177,8 +132,12 @@ static int merge_file__xdiff(
 		goto done;
 	}
 
-	if ((path = merge_file_best_path(ancestor, ours, theirs)) != NULL &&
-		(out->path = strdup(path)) == NULL) {
+	path = git_merge_file__best_path(
+		ancestor ? ancestor->path : NULL,
+		ours ? ours->path : NULL,
+		theirs ? theirs->path : NULL);
+
+	if (path != NULL && (out->path = git__strdup(path)) == NULL) {
 		error = -1;
 		goto done;
 	}
@@ -186,7 +145,10 @@ static int merge_file__xdiff(
 	out->automergeable = (xdl_result == 0);
 	out->ptr = (const char *)mmbuffer.ptr;
 	out->len = mmbuffer.size;
-	out->mode = merge_file_best_mode(ancestor, ours, theirs);
+	out->mode = git_merge_file__best_mode(
+		ancestor ? ancestor->mode : 0,
+		ours ? ours->mode : 0,
+		theirs ? theirs->mode : 0);
 
 done:
 	if (error < 0)
