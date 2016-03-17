@@ -440,6 +440,27 @@ GIT_EXTERN(int) git_commit_create_buffer(
 	size_t parent_count,
 	const git_commit *parents[]);
 
+/**
+ * Create a commit object from the given buffer and signature
+ *
+ * Given the unsigned commit object's contents, its signature and the
+ * header field in which to store the signature, attach the signature
+ * to the commit and write it into the given repository.
+ *
+ * @param out the resulting commit id
+ * @param commit_content the content of the unsigned commit object
+ * @param signature the signature to add to the commit
+ * @param signature_field which header field should contain this
+ * signature. Leave `NULL` for the default of "gpgsig"
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_commit_create_with_signature(
+	git_oid *out,
+	git_repository *repo,
+	const char *commit_content,
+	const char *signature,
+	const char *signature_field);
+
 /** @} */
 GIT_END_DECL
 #endif
