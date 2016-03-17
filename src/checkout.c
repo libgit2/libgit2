@@ -657,7 +657,7 @@ static int checkout_action(
 			if (cmp == 0) {
 				if (wd->mode == GIT_FILEMODE_TREE) {
 					/* case 2 - entry prefixed by workdir tree */
-					error = git_iterator_advance_into_or_over(wditem, workdir);
+					error = git_iterator_advance_into(wditem, workdir);
 					if (error < 0 && error != GIT_ITEROVER)
 						goto done;
 					continue;

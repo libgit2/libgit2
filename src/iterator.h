@@ -223,25 +223,6 @@ GIT_INLINE(int) git_iterator_advance_over(
 }
 
 /**
- * Advance into a tree or skip over it if it is empty.
- *
- * Because `git_iterator_advance_into` may return GIT_ENOTFOUND if the
- * directory is empty (only with filesystem and working directory
- * iterators) and a common response is to just call `git_iterator_advance`
- * when that happens, this bundles the two into a single simple call.
- */
-GIT_INLINE(int) git_iterator_advance_into_or_over(
-	const git_index_entry **entry, git_iterator *iter)
-{
-	int error = iter->cb->advance_into(entry, iter);
-	if (error == GIT_ENOTFOUND) {
-		giterr_clear();
-		error = iter->cb->advance(entry, iter);
-	}
-	return error;
-}
-
-/**
  * Go back to the start of the iteration.
  */
 GIT_INLINE(int) git_iterator_reset(git_iterator *iter)
