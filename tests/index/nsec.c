@@ -56,7 +56,7 @@ static bool should_expect_nsecs(void)
 
 	p_unlink(nsec_path.ptr);
 
-	git_buf_clear(&nsec_path);
+	git_buf_free(&nsec_path);
 
 	return expect;
 }
@@ -89,7 +89,7 @@ void test_index_nsec__staging_maintains_other_nanos(void)
 	const git_index_entry *entry;
 	bool expect_nsec, test_file_has_nsec;
 
-    expect_nsec = should_expect_nsecs();
+	expect_nsec = should_expect_nsecs();
 	test_file_has_nsec = try_create_file_with_nsec_timestamp("nsecs/a.txt");
 
 	cl_assert_equal_b(expect_nsec, test_file_has_nsec);
