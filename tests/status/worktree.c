@@ -657,7 +657,7 @@ void test_status_worktree__conflict_has_no_oid(void)
 
 	entry.mode = 0100644;
 	entry.path = "modified_file";
-	git_oid_fromstr(&entry.id, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef");
+	git_oid_fromstr(&entry.id, "452e4244b5d083ddf0460acf1ecc74db9dcfa11a");
 
 	cl_git_pass(git_repository_index(&index, repo));
 	cl_git_pass(git_index_conflict_add(index, &entry, &entry, &entry));
