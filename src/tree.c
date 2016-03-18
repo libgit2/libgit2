@@ -466,7 +466,11 @@ int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 		filename_len = nul - buffer;
 		/** Allocate the entry and store it in the entries vector */
 		{
+#ifdef GIT_WIN32
+			entry = alloc_entry(buffer);
+#else
 			entry = alloc_entry_pooled(&tree->pool, buffer, filename_len);
+#endif
 			GITERR_CHECK_ALLOC(entry);
 
 			if (git_vector_insert(&tree->entries, entry) < 0)
