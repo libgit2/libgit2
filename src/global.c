@@ -224,6 +224,20 @@ void git__free_tls_data(void)
 	TlsSetValue(_tls_index, NULL);
 }
 
+BOOL WINAPI DllMain(HINSTANCE hInstDll, DWORD fdwReason, LPVOID lpvReserved)
+{
+	/* This is how Windows lets us know our thread is being shut down */
+	if (fdwReason == DLL_THREAD_DETACH) {
+		git__free_tls_data();
+	}
+
+	/*
+	 * Windows pays attention to this during library loading. We don't do anything
+	 * so we trivially succeed.
+	 */
+	return TRUE;
+}
+
 #elif defined(GIT_THREADS) && defined(_POSIX_THREADS)
 
 static pthread_key_t _tls_key;
