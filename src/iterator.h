@@ -77,7 +77,9 @@ typedef struct {
 struct git_iterator {
 	git_iterator_type_t type;
 	git_iterator_callbacks *cb;
+
 	git_repository *repo;
+	git_index *index;
 
 	char *start;
 	size_t start_len;
@@ -260,6 +262,11 @@ GIT_INLINE(git_repository *) git_iterator_owner(git_iterator *iter)
 	return iter->repo;
 }
 
+GIT_INLINE(git_index *) git_iterator_index(git_iterator *iter)
+{
+	return iter->index;
+}
+
 GIT_INLINE(git_iterator_flag_t) git_iterator_flags(git_iterator *iter)
 {
 	return iter->flags;
@@ -281,9 +288,6 @@ extern int git_iterator_current_parent_tree(
 extern bool git_iterator_current_is_ignored(git_iterator *iter);
 
 extern bool git_iterator_current_tree_is_ignored(git_iterator *iter);
-
-extern int git_iterator_cmp(
-	git_iterator *iter, const char *path_prefix);
 
 /**
  * Get full path of the current item from a workdir iterator.  This will

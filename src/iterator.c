@@ -1321,7 +1321,7 @@ static int is_submodule(
 		}
 	}
 
-	if (!is_submodule && iter->index) {
+	if (!is_submodule && iter->base.index) {
 		size_t pos;
 
 		error = git_index_snapshot_find(&pos,
@@ -2090,7 +2090,7 @@ static int iterator_for_filesystem(
 	if (tree && (error = git_tree_dup(&iter->tree, tree)) < 0)
 		goto on_error;
 
-	if ((iter->index = index) != NULL &&
+	if ((iter->base.index = index) != NULL &&
 		(error = git_index_snapshot_new(&iter->index_snapshot, index)) < 0)
 		goto on_error;
 
@@ -2156,7 +2156,6 @@ int git_iterator_for_workdir_ext(
 typedef struct {
 	git_iterator base;
 	git_iterator_callbacks cb;
-	git_index *index;
 	git_vector entries;
 	git_vector_cmp entry_srch;
 	size_t current;
@@ -2389,8 +2388,8 @@ static int index_iterator__reset_range(
 static void index_iterator__free(git_iterator *self)
 {
 	index_iterator *ii = (index_iterator *)self;
-	git_index_snapshot_release(&ii->entries, ii->index);
-	ii->index = NULL;
+	git_index_snapshot_release(&ii->entries, ii->base.index);
+	ii->base.index = NULL;
 	git_buf_free(&ii->partial);
 }
 
@@ -2408,7 +2407,7 @@ int git_iterator_for_index(
 		git__free(ii);
 		return error;
 	}
-	ii->index = index;
+	ii->base.index = index;
 
 	ITERATOR_BASE_INIT(ii, index, INDEX, repo);
 
@@ -2434,6 +2433,9 @@ int git_iterator_for_index(
 }
 
 
+/* Iterator API */
+
+
 void git_iterator_free(git_iterator *iter)
 {
 	if (iter == NULL)
@@ -2448,33 +2450,6 @@ void git_iterator_free(git_iterator *iter)
 	memset(iter, 0, sizeof(*iter));
 
 	git__free(iter);
-}
-
-int git_iterator_cmp(git_iterator *iter, const char *path_prefix)
-{
-	const git_index_entry *entry;
-
-	/* a "done" iterator is after every prefix */
-	if (git_iterator_current(&entry, iter) < 0 || entry == NULL)
-		return 1;
-
-	/* a NULL prefix is after any valid iterator */
-	if (!path_prefix)
-		return -1;
-
-	return iter->prefixcomp(entry->path, path_prefix);
-}
-
-git_index *git_iterator_index(git_iterator *iter)
-{
-	if (iter->type == GIT_ITERATOR_TYPE_INDEX)
-		return ((index_iterator *)iter)->index;
-
-	if (iter->type == GIT_ITERATOR_TYPE_FS ||
-		iter->type == GIT_ITERATOR_TYPE_WORKDIR)
-		return ((filesystem_iterator *)iter)->index;
-
-	return NULL;
 }
 
 int git_iterator_walk(
