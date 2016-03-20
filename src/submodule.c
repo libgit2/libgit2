@@ -1417,7 +1417,7 @@ static int submodule_update_head(git_submodule *submodule)
 		git_tree_entry_bypath(&te, head, submodule->path) < 0)
 		giterr_clear();
 	else
-		submodule_update_from_head_data(submodule, te->attr, &te->oid);
+		submodule_update_from_head_data(submodule, te->attr, git_tree_entry_id(te));
 
 	git_tree_entry_free(te);
 	git_tree_free(head);
