@@ -458,7 +458,7 @@ static int tree_iterator__set_next(tree_iterator *ti, tree_iterator_frame *tf)
 		/* try to load trees for items in [current,next) range */
 		if (!error && git_tree_entry__is_tree(te))
 			error = git_tree_lookup(
-				&tf->entries[tf->next]->tree, ti->base.repo, &te->oid);
+				&tf->entries[tf->next]->tree, ti->base.repo, te->oid);
 	}
 
 	if (tf->next > tf->current + 1)
@@ -603,7 +603,7 @@ static int tree_iterator__update_entry(tree_iterator *ti)
     te = tf->entries[tf->current]->te;
 
 	ti->entry.mode = te->attr;
-	git_oid_cpy(&ti->entry.id, &te->oid);
+	git_oid_cpy(&ti->entry.id, te->oid);
 
 	ti->entry.path = tree_iterator__current_filename(ti, te);
 	GITERR_CHECK_ALLOC(ti->entry.path);

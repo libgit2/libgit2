@@ -2836,7 +2836,7 @@ static int read_tree_cb(
 		return -1;
 
 	entry->mode = tentry->attr;
-	entry->id = tentry->oid;
+	git_oid_cpy(&entry->id, git_tree_entry_id(tentry));
 
 	/* look for corresponding old entry and copy data to new entry */
 	if (data->old_entries != NULL &&

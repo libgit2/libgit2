@@ -374,9 +374,9 @@ static int enqueue_object(
 		case GIT_OBJ_COMMIT:
 			return 0;
 		case GIT_OBJ_TREE:
-			return git_packbuilder_insert_tree(pb, &entry->oid);
+			return git_packbuilder_insert_tree(pb, entry->oid);
 		default:
-			return git_packbuilder_insert(pb, &entry->oid, entry->filename);
+			return git_packbuilder_insert(pb, entry->oid, entry->filename);
 	}
 }
 
@@ -396,7 +396,7 @@ static int queue_differences(
 		const git_tree_entry *d_entry = git_tree_entry_byindex(delta, j);
 		int cmp = 0;
 
-		if (!git_oid__cmp(&b_entry->oid, &d_entry->oid))
+		if (!git_oid__cmp(b_entry->oid, d_entry->oid))
 			goto loop;
 
 		cmp = strcmp(b_entry->filename, d_entry->filename);
@@ -407,15 +407,15 @@ static int queue_differences(
 			git_tree_entry__is_tree(b_entry) &&
 			git_tree_entry__is_tree(d_entry)) {
 			/* Add the right-hand entry */
-			if ((error = git_packbuilder_insert(pb, &d_entry->oid,
+			if ((error = git_packbuilder_insert(pb, d_entry->oid,
 				d_entry->filename)) < 0)
 				goto on_error;
 
 			/* Acquire the subtrees and recurse */
 			if ((error = git_tree_lookup(&b_child,
-					git_tree_owner(base), &b_entry->oid)) < 0 ||
+					git_tree_owner(base), b_entry->oid)) < 0 ||
 				(error = git_tree_lookup(&d_child,
-					git_tree_owner(delta), &d_entry->oid)) < 0 ||
+					git_tree_owner(delta), d_entry->oid)) < 0 ||
 				(error = queue_differences(b_child, d_child, pb)) < 0)
 				goto on_error;
 
