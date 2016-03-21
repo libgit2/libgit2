@@ -13,42 +13,6 @@
 #include "submodule.h"
 #include <ctype.h>
 
-#define ITERATOR_SET_CB(P,NAME_LC) do { \
-	(P)->cb.current = NAME_LC ## _iterator__current; \
-	(P)->cb.advance = NAME_LC ## _iterator__advance; \
-	(P)->cb.advance_into = NAME_LC ## _iterator__advance_into; \
-	(P)->cb.reset   = NAME_LC ## _iterator__reset; \
-	(P)->cb.reset_range = NAME_LC ## _iterator__reset_range; \
-	(P)->cb.at_end  = NAME_LC ## _iterator__at_end; \
-	(P)->cb.free    = NAME_LC ## _iterator__free; \
-	} while (0)
-
-#define ITERATOR_CASE_FLAGS \
-	(GIT_ITERATOR_IGNORE_CASE | GIT_ITERATOR_DONT_IGNORE_CASE)
-
-#define ITERATOR_BASE_INIT(P,NAME_LC,NAME_UC,REPO) do { \
-	(P)->base.type    = GIT_ITERATOR_TYPE_ ## NAME_UC; \
-	(P)->base.cb      = &(P)->cb; \
-	ITERATOR_SET_CB(P,NAME_LC); \
-	(P)->base.repo    = (REPO); \
-	(P)->base.start   = options && options->start ? \
-		git__strdup(options->start) : NULL; \
-	(P)->base.end     = options && options->end ? \
-		git__strdup(options->end) : NULL; \
-	if ((options && options->start && !(P)->base.start) || \
-		(options && options->end && !(P)->base.end)) { \
-		git__free(P); return -1; } \
-	(P)->base.strcomp = git__strcmp; \
-	(P)->base.strncomp = git__strncmp; \
-	(P)->base.prefixcomp = git__prefixcmp; \
-	(P)->base.flags = options ? options->flags & ~ITERATOR_CASE_FLAGS : 0; \
-	if ((P)->base.flags & GIT_ITERATOR_DONT_AUTOEXPAND) \
-		(P)->base.flags |= GIT_ITERATOR_INCLUDE_TREES; \
-	if (options && options->pathlist.count && \
-		iterator_pathlist__init(&P->base, &options->pathlist) < 0) { \
-		git__free(P); return -1; } \
-	} while (0)
-
 #define GIT_ITERATOR_FIRST_ACCESS   (1 << 15)
 #define GIT_ITERATOR_HONOR_IGNORES  (1 << 16)
 #define GIT_ITERATOR_IGNORE_DOT_GIT (1 << 17)
@@ -63,219 +27,21 @@
 #define iterator__honor_ignores(I)     iterator__flag(I,HONOR_IGNORES)
 #define iterator__ignore_dot_git(I)    iterator__flag(I,IGNORE_DOT_GIT)
 
-#define iterator__end(I) ((git_iterator *)(I))->end
-#define iterator__past_end(I,PATH) \
-	(iterator__end(I) && ((git_iterator *)(I))->prefixcomp((PATH),iterator__end(I)) > 0)
 
-
-typedef enum {
-	ITERATOR_PATHLIST_NONE = 0,
-	ITERATOR_PATHLIST_MATCH = 1,
-	ITERATOR_PATHLIST_MATCH_DIRECTORY = 2,
-	ITERATOR_PATHLIST_MATCH_CHILD = 3,
-} iterator_pathlist__match_t;
-
-static int iterator_pathlist__init(git_iterator *iter, git_strarray *pathspec)
+static void iterator_set_ignore_case(git_iterator *iter, bool ignore_case)
 {
-	size_t i;
+	if (ignore_case)
+		iter->flags |= GIT_ITERATOR_IGNORE_CASE;
+	else
+		iter->flags &= ~GIT_ITERATOR_IGNORE_CASE;
 
-	if (git_vector_init(&iter->pathlist, pathspec->count,
-			(git_vector_cmp)iter->strcomp) < 0)
-		return -1;
+	iter->strcomp = ignore_case ? git__strcasecmp : git__strcmp;
+	iter->strncomp = ignore_case ? git__strncasecmp : git__strncmp;
+	iter->prefixcomp = ignore_case ? git__prefixcmp_icase : git__prefixcmp;
+	iter->entry_srch = ignore_case ? git_index_entry_srch : git_index_entry_isrch;
 
-	for (i = 0; i < pathspec->count; i++) {
-		if (!pathspec->strings[i])
-			continue;
-
-		if (git_vector_insert(&iter->pathlist, pathspec->strings[i]) < 0)
-			return -1;
-	}
-
-	git_vector_sort(&iter->pathlist);
-
-	return 0;
-}
-
-static iterator_pathlist__match_t iterator_pathlist__match(
-	git_iterator *iter, const char *path, size_t path_len)
-{
-	const char *p;
-	size_t idx;
-	int error;
-
-	error = git_vector_bsearch2(&idx, &iter->pathlist,
-		(git_vector_cmp)iter->strcomp, path);
-
-	if (error == 0)
-		return ITERATOR_PATHLIST_MATCH;
-
-	/* at this point, the path we're examining may be a directory (though we
-	 * don't know that yet, since we're avoiding a stat unless it's necessary)
-	 * so see if the pathlist contains a file beneath this directory.
-	 */
-	while ((p = git_vector_get(&iter->pathlist, idx)) != NULL) {
-		if (iter->prefixcomp(p, path) != 0)
-			break;
-
-		/* an exact match would have been matched by the bsearch above */
-		assert(p[path_len]);
-
-		/* is this a literal directory entry (eg `foo/`) or a file beneath */
-		if (p[path_len] == '/') {
-			return (p[path_len+1] == '\0') ?
-				ITERATOR_PATHLIST_MATCH_DIRECTORY :
-				ITERATOR_PATHLIST_MATCH_CHILD;
-		}
-
-		if (p[path_len] > '/')
-			break;
-
-		idx++;
-	}
-
-	return ITERATOR_PATHLIST_NONE;
-}
-
-static void iterator_pathlist_walk__reset(git_iterator *iter)
-{
-	iter->pathlist_walk_idx = 0;
-}
-
-/* walker for the index iterator that allows it to walk the sorted pathlist
- * entries alongside the sorted index entries.  the `iter->pathlist_walk_idx`
- * stores the starting position for subsequent calls, the position is advanced
- * along with the index iterator, with a special case for handling directories
- * in the pathlist that are specified without trailing '/'.  (eg, `foo`).
- * we do not advance over these entries until we're certain that the index
- * iterator will not ask us for a file beneath that directory (eg, `foo/bar`).
- */
-static bool iterator_pathlist_walk__contains(git_iterator *iter, const char *path)
-{
-	size_t i;
-	char *p;
-	size_t p_len;
-	int cmp;
-
-	for (i = iter->pathlist_walk_idx; i < iter->pathlist.length; i++) {
-		p = iter->pathlist.contents[i];
-		p_len = strlen(p);
-
-		/* see if the pathlist entry is a prefix of this path */
-		cmp = iter->strncomp(p, path, p_len);
-
-		/* this pathlist entry sorts before the given path, try the next */
-		if (!p_len || cmp < 0)
-			iter->pathlist_walk_idx++;
-
-		/* this pathlist sorts after the given path, no match. */
-		else if (cmp > 0)
-			return false;
-
-		/* match!  an exact match (`foo` vs `foo`), the path is a child of an
-		 * explicit directory in the pathlist (`foo/` vs `foo/bar`) or the path
-		 * is a child of an entry in the pathlist (`foo` vs `foo/bar`)
-		 */
-		else if (path[p_len] == '\0' || p[p_len - 1] == '/' || path[p_len] == '/')
-			return true;
-
-		/* only advance the start index for future callers if we know that we
-		 * will not see a child of this path.  eg, a pathlist entry `foo` is
-		 * a prefix for `foo.txt` and `foo/bar`.  don't advance the start
-		 * pathlist index when we see `foo.txt` or we would miss a subsequent
-		 * inspection of `foo/bar`.  only advance when there are no more
-		 * potential children.
-		 */
-		else if (path[p_len] > '/')
-			iter->pathlist_walk_idx++;
-	}
-
-	return false;
-}
-
-static void iterator_pathlist__update_ignore_case(git_iterator *iter)
-{
 	git_vector_set_cmp(&iter->pathlist, (git_vector_cmp)iter->strcomp);
-	git_vector_sort(&iter->pathlist);
-
-	iter->pathlist_walk_idx = 0;
 }
-
-
-static int iterator__reset_range(
-	git_iterator *iter, const char *start, const char *end)
-{
-	if (iter->start)
-		git__free(iter->start);
-
-	if (start) {
-		iter->start = git__strdup(start);
-		GITERR_CHECK_ALLOC(iter->start);
-	}
-
-	if (iter->end)
-		git__free(iter->end);
-
-	if (end) {
-		iter->end = git__strdup(end);
-		GITERR_CHECK_ALLOC(iter->end);
-	}
-
-	iter->flags &= ~GIT_ITERATOR_FIRST_ACCESS;
-
-	return 0;
-}
-
-int git_iterator_set_ignore_case(git_iterator *iter, bool ignore_case)
-{
-	if (ignore_case) {
-		iter->flags = (iter->flags | GIT_ITERATOR_IGNORE_CASE);
-
-		iter->strcomp = git__strcasecmp;
-		iter->strncomp = git__strncasecmp;
-		iter->prefixcomp = git__prefixcmp_icase;
-		iter->entry_srch = git_index_entry_isrch;
-	} else {
-		iter->flags = (iter->flags & ~GIT_ITERATOR_IGNORE_CASE);
-
-		iter->strcomp = git__strcmp;
-		iter->strncomp = git__strncmp;
-		iter->prefixcomp = git__prefixcmp;
-		iter->entry_srch = git_index_entry_srch;
-	}
-
-	iterator_pathlist__update_ignore_case(iter);
-
-	return 0;
-}
-
-static int iterator__update_ignore_case(
-	git_iterator *iter,
-	git_iterator_flag_t flags)
-{
-	bool ignore_case;
-	int error;
-
-	if ((flags & GIT_ITERATOR_IGNORE_CASE) != 0)
-		ignore_case = true;
-	else if ((flags & GIT_ITERATOR_DONT_IGNORE_CASE) != 0)
-		ignore_case = false;
-	else {
-		git_index *index;
-
-		if ((error = git_repository_index__weakptr(&index, iter->repo)) < 0)
-			return error;
-
-		ignore_case = (index->ignore_case == 1);
-	}
-
-	return git_iterator_set_ignore_case(iter, ignore_case);
-}
-
-GIT_INLINE(void) iterator__clear_entry(const git_index_entry **entry)
-{
-	if (entry) *entry = NULL;
-}
-
 
 static int iterator_range_init(
 	git_iterator *iter, const char *start, const char *end)
@@ -315,7 +81,7 @@ static void iterator_range_free(git_iterator *iter)
 	}
 }
 
-static int iterator_range_reset(
+static int iterator_reset_range(
 	git_iterator *iter, const char *start, const char *end)
 {
 	iterator_range_free(iter);
@@ -326,8 +92,7 @@ static int iterator_pathlist_init(git_iterator *iter, git_strarray *pathlist)
 {
 	size_t i;
 
-	if (git_vector_init(&iter->pathlist, pathlist->count,
-		(git_vector_cmp)iter->strcomp) < 0)
+	if (git_vector_init(&iter->pathlist, pathlist->count, NULL) < 0)
 		return -1;
 
 	for (i = 0; i < pathlist->count; i++) {
@@ -338,7 +103,6 @@ static int iterator_pathlist_init(git_iterator *iter, git_strarray *pathlist)
 			return -1;
 	}
 
-	git_vector_sort(&iter->pathlist);
 	return 0;
 }
 
@@ -392,15 +156,11 @@ static int iterator_init_common(
 	if ((iter->flags & GIT_ITERATOR_DONT_AUTOEXPAND))
 		iter->flags |= GIT_ITERATOR_INCLUDE_TREES;
 
-	iter->strcomp = ignore_case ? git__strcasecmp : git__strcmp;
-	iter->strncomp = ignore_case ? git__strncasecmp : git__strncmp;
-	iter->prefixcomp = ignore_case ? git__prefixcmp_icase : git__prefixcmp;
-	iter->entry_srch = ignore_case ? git_index_entry_srch : git_index_entry_isrch;
-
 	if ((error = iterator_range_init(iter, options->start, options->end)) < 0 ||
 		(error = iterator_pathlist_init(iter, &options->pathlist)) < 0)
 		return error;
 
+	iterator_set_ignore_case(iter, ignore_case);
 	return 0;
 }
 
@@ -460,6 +220,8 @@ static bool iterator_pathlist_next_is(git_iterator *iter, const char *path)
 	if (iter->pathlist.length == 0)
 		return true;
 
+	git_vector_sort(&iter->pathlist);
+
 	path_len = strlen(path);
 
 	/* for comparison, drop the trailing slash on the current '/' */
@@ -515,7 +277,7 @@ static bool iterator_pathlist_next_is(git_iterator *iter, const char *path)
 }
 
 typedef enum {
-	ITERATOR_PATHLIST_NOT_FOUND = 0,
+	ITERATOR_PATHLIST_NONE = 0,
 	ITERATOR_PATHLIST_IS_FILE = 1,
 	ITERATOR_PATHLIST_IS_DIR = 2,
 	ITERATOR_PATHLIST_IS_PARENT = 3,
@@ -528,6 +290,11 @@ static iterator_pathlist_search_t iterator_pathlist_search(
 	const char *p;
 	size_t idx;
 	int error;
+
+	if (iter->pathlist.length == 0)
+		return ITERATOR_PATHLIST_FULL;
+
+	git_vector_sort(&iter->pathlist);
 
 	error = git_vector_bsearch2(&idx, &iter->pathlist,
 		(git_vector_cmp)iter->strcomp, path);
@@ -567,7 +334,7 @@ static iterator_pathlist_search_t iterator_pathlist_search(
 		idx++;
 	}
 
-	return ITERATOR_PATHLIST_NOT_FOUND;
+	return ITERATOR_PATHLIST_NONE;
 }
 
 /* Empty iterator */
@@ -575,7 +342,10 @@ static iterator_pathlist_search_t iterator_pathlist_search(
 static int empty_iterator_noop(const git_index_entry **e, git_iterator *i)
 {
 	GIT_UNUSED(i);
-	iterator__clear_entry(e);
+
+	if (e)
+		*e = NULL;
+
 	return GIT_ITEROVER;
 }
 
@@ -584,29 +354,14 @@ static int empty_iterator_advance_over(
 	git_iterator_status_t *s,
 	git_iterator *i)
 {
-	GIT_UNUSED(i);
 	*s = GIT_ITERATOR_STATUS_EMPTY;
-	iterator__clear_entry(e);
-	return GIT_ITEROVER;
+	return empty_iterator_noop(e, i);
 }
 
 static int empty_iterator_reset(git_iterator *i)
 {
 	GIT_UNUSED(i);
 	return 0;
-}
-
-static int empty_iterator_reset_range(
-	git_iterator *i, const char *s, const char *e)
-{
-	GIT_UNUSED(i); GIT_UNUSED(s); GIT_UNUSED(e);
-	return 0;
-}
-
-static int empty_iterator_at_end(git_iterator *i)
-{
-	GIT_UNUSED(i);
-	return 1;
 }
 
 static void empty_iterator_free(git_iterator *i)
@@ -631,8 +386,6 @@ int git_iterator_for_nothing(
 		empty_iterator_noop,
 		empty_iterator_advance_over,
 		empty_iterator_reset,
-		empty_iterator_reset_range,
-		empty_iterator_at_end,
 		empty_iterator_free
 	};
 
@@ -1135,22 +888,6 @@ static int tree_iterator_reset(git_iterator *i)
 	return tree_iterator_init(iter);
 }
 
-static int tree_iterator_reset_range(
-	git_iterator *i, const char *start, const char *end)
-{
-	if (iterator_range_reset(i, start, end) < 0)
-		return -1;
-
-	return tree_iterator_reset(i);
-}
-
-static int tree_iterator_at_end(git_iterator *i)
-{
-	tree_iterator *iter = (tree_iterator *)i;
-
-	return (iter->frames.size == 0);
-}
-
 static void tree_iterator_free(git_iterator *i)
 {
 	tree_iterator *iter = (tree_iterator *)i;
@@ -1175,8 +912,6 @@ int git_iterator_for_tree(
 		tree_iterator_advance_into,
 		tree_iterator_advance_over,
 		tree_iterator_reset,
-		tree_iterator_reset_range,
-		tree_iterator_at_end,
 		tree_iterator_free
 	};
 
@@ -1326,7 +1061,7 @@ static int filesystem_iterator_entry_cmp_icase(const void *_a, const void *_b)
  * We consider it a submodule if the path is listed as a submodule in
  * either the tree or the index.
  */
-static int is_submodule(
+static int filesystem_iterator_is_submodule(
 	bool *out, filesystem_iterator *iter, const char *path, size_t path_len)
 {
 	bool is_submodule = false;
@@ -1366,18 +1101,6 @@ static int is_submodule(
 
 	*out = is_submodule;
 	return 0;
-}
-
-GIT_INLINE(git_dir_flag) filesystem_iterator_dir_flag(git_index_entry *entry)
-{
-#if defined(GIT_WIN32) && !defined(__MINGW32__)
-	return (entry && entry->mode) ?
-		(S_ISDIR(entry->mode) ? GIT_DIR_FLAG_TRUE : GIT_DIR_FLAG_FALSE) :
-		GIT_DIR_FLAG_UNKNOWN;
-#else
-	GIT_UNUSED(entry);
-	return GIT_DIR_FLAG_UNKNOWN;
-#endif
 }
 
 static void filesystem_iterator_frame_push_ignores(
@@ -1433,7 +1156,7 @@ GIT_INLINE(bool) filesystem_iterator_examine_path(
 	iterator_pathlist_search_t match = ITERATOR_PATHLIST_FULL;
 
 	*is_dir_out = false;
-	*match_out = ITERATOR_PATHLIST_NOT_FOUND;
+	*match_out = ITERATOR_PATHLIST_NONE;
 
 	if (iter->base.start_len) {
 		int cmp = iter->base.strncomp(path, iter->base.start, path_len);
@@ -1471,7 +1194,7 @@ GIT_INLINE(bool) filesystem_iterator_examine_path(
 		else
 			match = iterator_pathlist_search(&iter->base, path, path_len);
 
-		if (match == ITERATOR_PATHLIST_NOT_FOUND)
+		if (match == ITERATOR_PATHLIST_NONE)
 			return false;
 
 		/* Ensure that the pathlist entry lines up with what we expected */
@@ -1649,7 +1372,8 @@ static int filesystem_iterator_frame_push(
 		if (S_ISDIR(statbuf.st_mode)) {
 			bool submodule = false;
 
-			if ((error = is_submodule(&submodule, iter, path, path_len)) < 0)
+			if ((error = filesystem_iterator_is_submodule(&submodule,
+					iter, path, path_len)) < 0)
 				goto done;
 
 			if (submodule)
@@ -2037,22 +1761,6 @@ static int filesystem_iterator_reset(git_iterator *i)
 	return filesystem_iterator_init(iter);
 }
 
-static int filesystem_iterator_reset_range(
-	git_iterator *i, const char *start, const char *end)
-{
-	if (iterator_range_reset(i, start, end) < 0)
-		return -1;
-
-	return filesystem_iterator_reset(i);
-}
-
-static int filesystem_iterator_at_end(git_iterator *i)
-{
-	filesystem_iterator *iter = (filesystem_iterator *)i;
-
-	return (iter->frames.size == 0);
-}
-
 static void filesystem_iterator_free(git_iterator *i)
 {
 	filesystem_iterator *iter = (filesystem_iterator *)i;
@@ -2078,8 +1786,6 @@ static int iterator_for_filesystem(
 		filesystem_iterator_advance_into,
 		filesystem_iterator_advance_over,
 		filesystem_iterator_reset,
-		filesystem_iterator_reset_range,
-		filesystem_iterator_at_end,
 		filesystem_iterator_free
 	};
 
@@ -2336,7 +2042,9 @@ static int index_iterator_advance_into(
 	index_iterator *iter = (index_iterator *)i;
 
 	if (! S_ISDIR(iter->tree_entry.mode)) {
-		*out = NULL;
+		if (out)
+			*out = NULL;
+
 		return 0;
 	}
 
@@ -2384,22 +2092,6 @@ static int index_iterator_reset(git_iterator *i)
 	return index_iterator_init(iter);
 }
 
-static int index_iterator_reset_range(
-	git_iterator *i, const char *start, const char *end)
-{
-	if (iterator_range_reset(i, start, end) < 0)
-		return -1;
-
-	return index_iterator_reset(i);
-}
-
-static int index_iterator_at_end(git_iterator *i)
-{
-	index_iterator *iter = (index_iterator *)i;
-
-	return (iter->entry == NULL);
-}
-
 static void index_iterator_free(git_iterator *i)
 {
 	index_iterator *iter = (index_iterator *)i;
@@ -2422,8 +2114,6 @@ int git_iterator_for_index(
 		index_iterator_advance_into,
 		index_iterator_advance_over,
 		index_iterator_reset,
-		index_iterator_reset_range,
-		index_iterator_at_end,
 		index_iterator_free
 	};
 
@@ -2443,7 +2133,6 @@ int git_iterator_for_index(
 		(error = index_iterator_init(iter)) < 0)
 		goto on_error;
 
-	/* TODO: make sure this keeps the entries sort if they were already */
 	git_vector_set_cmp(&iter->entries, iterator__ignore_case(&iter->base) ?
 		git_index_entry_icmp : git_index_entry_cmp);
 	git_vector_sort(&iter->entries);
@@ -2459,6 +2148,20 @@ on_error:
 
 /* Iterator API */
 
+int git_iterator_reset_range(
+	git_iterator *i, const char *start, const char *end)
+{
+	if (iterator_reset_range(i, start, end) < 0)
+		return -1;
+
+	return i->cb->reset(i);
+}
+
+void git_iterator_set_ignore_case(git_iterator *i, bool ignore_case)
+{
+	assert(!iterator__has_been_accessed(i));
+	iterator_set_ignore_case(i, ignore_case);
+}
 
 void git_iterator_free(git_iterator *iter)
 {

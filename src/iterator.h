@@ -69,8 +69,6 @@ typedef struct {
 	int (*advance_over)(
 		const git_index_entry **, git_iterator_status_t *, git_iterator *);
 	int (*reset)(git_iterator *);
-	int (*reset_range)(git_iterator *, const char *start, const char *end);
-	int (*at_end)(git_iterator *);
 	void (*free)(git_iterator *);
 } git_iterator_callbacks;
 
@@ -232,21 +230,8 @@ GIT_INLINE(int) git_iterator_reset(git_iterator *iter)
  * Go back to the start of the iteration after updating the `start` and
  * `end` pathname boundaries of the iteration.
  */
-GIT_INLINE(int) git_iterator_reset_range(
-	git_iterator *iter, const char *start, const char *end)
-{
-	return iter->cb->reset_range(iter, start, end);
-}
-
-/**
- * Check if the iterator is at the end
- *
- * @return 0 if not at end, >0 if at end
- */
-GIT_INLINE(int) git_iterator_at_end(git_iterator *iter)
-{
-	return iter->cb->at_end(iter);
-}
+extern int git_iterator_reset_range(
+	git_iterator *iter, const char *start, const char *end);
 
 GIT_INLINE(git_iterator_type_t) git_iterator_type(git_iterator *iter)
 {
@@ -273,7 +258,8 @@ GIT_INLINE(bool) git_iterator_ignore_case(git_iterator *iter)
 	return ((iter->flags & GIT_ITERATOR_IGNORE_CASE) != 0);
 }
 
-extern int git_iterator_set_ignore_case(git_iterator *iter, bool ignore_case);
+extern void git_iterator_set_ignore_case(
+	git_iterator *iter, bool ignore_case);
 
 extern int git_iterator_current_tree_entry(
 	const git_tree_entry **entry_out, git_iterator *iter);
