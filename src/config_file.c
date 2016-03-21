@@ -553,29 +553,14 @@ static int config_set_multivar(
 	git_config_backend *cfg, const char *name, const char *regexp, const char *value)
 {
 	diskfile_backend *b = (diskfile_backend *)cfg;
-	refcounted_strmap *map;
-	git_strmap *values;
 	char *key;
 	regex_t preg;
 	int result;
-	khiter_t pos;
 
 	assert(regexp);
 
 	if ((result = git_config__normalize_name(name, &key)) < 0)
 		return result;
-
-	map = refcounted_strmap_take(&b->header);
-	values = b->header.values->values;
-
-	pos = git_strmap_lookup_index(values, key);
-	if (!git_strmap_valid_index(values, pos)) {
-		/* If we don't have it, behave like a normal set */
-		result = config_set(cfg, name, value);
-		refcounted_strmap_free(map);
-		git__free(key);
-		return result;
-	}
 
 	result = regcomp(&preg, regexp, REG_EXTENDED);
 	if (result != 0) {
@@ -591,7 +576,6 @@ static int config_set_multivar(
 	result = config_refresh(cfg);
 
 out:
-	refcounted_strmap_free(map);
 	git__free(key);
 	regfree(&preg);
 
