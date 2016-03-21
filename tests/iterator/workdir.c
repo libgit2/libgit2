@@ -641,7 +641,7 @@ void test_iterator_workdir__filesystem_gunk(void)
 	git_buf parent = GIT_BUF_INIT;
 	int n;
 
-	if (!cl_is_env_set("GITTEST_INVASIVE_FS_STRUCTURE"))
+	if (!cl_is_env_set("GITTEST_INVASIVE_SPEED"))
 		cl_skip();
 
 	g_repo = cl_git_sandbox_init("testrepo");
