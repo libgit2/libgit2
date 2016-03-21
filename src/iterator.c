@@ -345,6 +345,7 @@ static int iterator_pathlist_init(git_iterator *iter, git_strarray *pathlist)
 static int iterator_init_common(
 	git_iterator *iter,
 	git_repository *repo,
+	git_index *index,
 	git_iterator_options *given_opts)
 {
 	static git_iterator_options default_opts = GIT_ITERATOR_OPTIONS_INIT;
@@ -354,6 +355,7 @@ static int iterator_init_common(
 	int error;
 
 	iter->repo = repo;
+	iter->index = index;
 	iter->flags = options->flags;
 
 	if ((iter->flags & GIT_ITERATOR_IGNORE_CASE) != 0) {
@@ -495,14 +497,10 @@ static bool iterator_pathlist_next_is(git_iterator *iter, const char *path)
 			 */
 			if (p[cmp_len] == '/' && path[cmp_len] == '/')
 				return true;
-
-			/* examine the next character */
-			cmp = (int)((const unsigned char)p[cmp_len]) -
-				(int)((const unsigned char)path[cmp_len]);
 		}
 
 		/* this pathlist entry sorts before the given path, try the next */
-		if (cmp < 0) {
+		else if (cmp < 0) {
 			iter->pathlist_walk_idx++;
 			continue;
 		}
@@ -1164,7 +1162,7 @@ int git_iterator_for_tree(
 	iter->base.cb = &callbacks;
 
 	if ((error = iterator_init_common(&iter->base,
-			git_tree_owner(tree), options)) < 0 ||
+			git_tree_owner(tree), NULL, options)) < 0 ||
 		(error = git_tree_dup(&iter->root, tree)) < 0 ||
 		(error = tree_iterator_init(iter)) < 0)
 		goto on_error;
@@ -2083,14 +2081,13 @@ static int iterator_for_filesystem(
 	iter->base.type = type;
 	iter->base.cb = &callbacks;
 
-
-	if ((error = iterator_init_common(&iter->base, repo, options)) < 0)
+	if ((error = iterator_init_common(&iter->base, repo, index, options)) < 0)
 		goto on_error;
 
 	if (tree && (error = git_tree_dup(&iter->tree, tree)) < 0)
 		goto on_error;
 
-	if ((iter->base.index = index) != NULL &&
+	if (index &&
 		(error = git_index_snapshot_new(&iter->index_snapshot, index)) < 0)
 		goto on_error;
 
@@ -2155,281 +2152,278 @@ int git_iterator_for_workdir_ext(
 
 typedef struct {
 	git_iterator base;
-	git_iterator_callbacks cb;
 	git_vector entries;
-	git_vector_cmp entry_srch;
-	size_t current;
-	/* when limiting with a pathlist, this is the current index into it */
-	size_t pathlist_idx;
-	/* when not in autoexpand mode, use these to represent "tree" state */
-	git_buf partial;
-	size_t partial_pos;
-	char restore_terminator;
+	size_t next_idx;
+
+	/* the pseudotree entry */
 	git_index_entry tree_entry;
+	git_buf tree_buf;
+	bool skip_tree;
+
+	const git_index_entry *entry;
 } index_iterator;
 
-static const git_index_entry *index_iterator__index_entry(index_iterator *ii)
+static int index_iterator_current(
+	const git_index_entry **out, git_iterator *i)
 {
-	const git_index_entry *ie = git_vector_get(&ii->entries, ii->current);
+	index_iterator *iter = (index_iterator *)i;
 
-	if (ie != NULL && iterator__past_end(ii, ie->path)) {
-		ii->current = git_vector_length(&ii->entries);
-		ie = NULL;
+	if (!iterator__has_been_accessed(i))
+		return iter->base.cb->advance(out, i);
+
+	if (iter->entry == NULL) {
+		*out = NULL;
+		return GIT_ITEROVER;
 	}
 
-	return ie;
+	*out = iter->entry;
+	return 0;
 }
 
-static const git_index_entry *index_iterator__advance_over_unwanted(
-	index_iterator *ii)
+static bool index_iterator_create_pseudotree(
+	const git_index_entry **out,
+	index_iterator *iter,
+	const char *path)
 {
-	const git_index_entry *ie = index_iterator__index_entry(ii);
-	bool match;
+	const char *prev_path, *relative_path, *dirsep;
+	size_t common_len;
 
-	while (ie) {
-		if (!iterator__include_conflicts(ii) &&
-				git_index_entry_is_conflict(ie)) {
-			ii->current++;
-			ie = index_iterator__index_entry(ii);
+	prev_path = iter->entry ? iter->entry->path : "";
+
+	/* determine if the new path is in a different directory from the old */
+	common_len = git_path_common_dirlen(prev_path, path);
+	relative_path = path + common_len;
+
+	if ((dirsep = strchr(relative_path, '/')) == NULL)
+		return false;
+
+	git_buf_clear(&iter->tree_buf);
+	git_buf_put(&iter->tree_buf, path, (dirsep - path) + 1);
+
+	iter->tree_entry.mode = GIT_FILEMODE_TREE;
+	iter->tree_entry.path = iter->tree_buf.ptr;
+
+	*out = &iter->tree_entry;
+	return true;
+}
+
+static int index_iterator_skip_pseudotree(index_iterator *iter)
+{
+	assert(iterator__has_been_accessed(&iter->base));
+	assert(S_ISDIR(iter->entry->mode));
+
+	while (true) {
+		const git_index_entry *next_entry = NULL;
+
+		if (++iter->next_idx >= iter->entries.length)
+			return GIT_ITEROVER;
+
+		next_entry = iter->entries.contents[iter->next_idx];
+
+		if (iter->base.strncomp(iter->tree_buf.ptr, next_entry->path,
+			iter->tree_buf.size) != 0)
+			break;
+	}
+
+	iter->skip_tree = false;
+	return 0;
+}
+
+static int index_iterator_advance(
+	const git_index_entry **out, git_iterator *i)
+{
+	index_iterator *iter = (index_iterator *)i;
+	const git_index_entry *entry = NULL;
+	int error = 0;
+
+	iter->base.flags |= GIT_ITERATOR_FIRST_ACCESS;
+
+	while (true) {
+		if (iter->next_idx >= iter->entries.length) {
+			error = GIT_ITEROVER;
+			break;
+		}
+
+		/* we were not asked to expand this pseudotree.  advance over it. */
+		if (iter->skip_tree) {
+			index_iterator_skip_pseudotree(iter);
 			continue;
 		}
 
-		/* if we have a pathlist, this entry's path must be in it to be
-		 * returned.  walk the pathlist in unison with the index to
-		 * compare paths.
-		 */
-		if (ii->base.pathlist.length) {
-			match = iterator_pathlist_walk__contains(&ii->base, ie->path);
+		entry = iter->entries.contents[iter->next_idx];
 
-			if (!match) {
-				ii->current++;
-				ie = index_iterator__index_entry(ii);
-				continue;
-			}
+		if (!iterator_has_started(&iter->base, entry->path)) {
+			iter->next_idx++;
+			continue;
 		}
 
+		if (iterator_has_ended(&iter->base, entry->path)) {
+			error = GIT_ITEROVER;
+			break;
+		}
+
+		/* if we have a list of paths we're interested in, examine it */
+		if (!iterator_pathlist_next_is(&iter->base, entry->path)) {
+			iter->next_idx++;
+			continue;
+		}
+
+		/* if this is a conflict, skip it unless we're including conflicts */
+		if (git_index_entry_is_conflict(entry) &&
+			!iterator__include_conflicts(&iter->base)) {
+			iter->next_idx++;
+			continue;
+		}
+
+		/* we've found what will be our next _file_ entry.  but if we are
+		 * returning trees entries, we may need to return a pseudotree
+		 * entry that will contain this.  don't advance over this entry,
+		 * though, we still need to return it on the next `advance`.
+		 */
+		if (iterator__include_trees(&iter->base) &&
+			index_iterator_create_pseudotree(&entry, iter, entry->path)) {
+
+			/* Note whether this pseudo tree should be expanded or not */
+			iter->skip_tree = iterator__dont_autoexpand(&iter->base);
+			break;
+		}
+
+		iter->next_idx++;
 		break;
 	}
 
-	return ie;
+	iter->entry = (error == 0) ? entry : NULL;
+
+	if (out)
+		*out = iter->entry;
+
+	return error;
 }
 
-static void index_iterator__next_prefix_tree(index_iterator *ii)
+static int index_iterator_advance_into(
+	const git_index_entry **out, git_iterator *i)
 {
-	const char *slash;
+	index_iterator *iter = (index_iterator *)i;
 
-	if (!iterator__include_trees(ii))
-		return;
-
-	slash = strchr(&ii->partial.ptr[ii->partial_pos], '/');
-
-	if (slash != NULL) {
-		ii->partial_pos = (slash - ii->partial.ptr) + 1;
-		ii->restore_terminator = ii->partial.ptr[ii->partial_pos];
-		ii->partial.ptr[ii->partial_pos] = '\0';
-	} else {
-		ii->partial_pos = ii->partial.size;
+	if (! S_ISDIR(iter->tree_entry.mode)) {
+		*out = NULL;
+		return 0;
 	}
 
-	if (index_iterator__index_entry(ii) == NULL)
-		ii->partial_pos = ii->partial.size;
+	iter->skip_tree = false;
+	return index_iterator_advance(out, i);
 }
 
-static int index_iterator__first_prefix_tree(index_iterator *ii)
+static int index_iterator_advance_over(
+	const git_index_entry **out,
+	git_iterator_status_t *status,
+	git_iterator *i)
 {
-	const git_index_entry *ie = index_iterator__advance_over_unwanted(ii);
-	const char *scan, *prior, *slash;
+	index_iterator *iter = (index_iterator *)i;
+	const git_index_entry *entry;
+	int error;
 
-	if (!ie || !iterator__include_trees(ii))
-		return 0;
+	if ((error = index_iterator_current(&entry, i)) < 0)
+		return error;
 
-	/* find longest common prefix with prior index entry */
-	for (scan = slash = ie->path, prior = ii->partial.ptr;
-		 *scan && *scan == *prior; ++scan, ++prior)
-		if (*scan == '/')
-			slash = scan;
+	if (S_ISDIR(entry->mode))
+		index_iterator_skip_pseudotree(iter);
 
-	if (git_buf_sets(&ii->partial, ie->path) < 0)
-		return -1;
+	*status = GIT_ITERATOR_STATUS_NORMAL;
+	return index_iterator_advance(out, i);
+}
 
-	ii->partial_pos = (slash - ie->path) + 1;
-	index_iterator__next_prefix_tree(ii);
+static void index_iterator_clear(index_iterator *iter)
+{
+	iterator_clear(&iter->base);
+}
 
+static int index_iterator_init(index_iterator *iter)
+{
+	iter->base.flags &= ~GIT_ITERATOR_FIRST_ACCESS;
+	iter->next_idx = 0;
+	iter->skip_tree = false;
 	return 0;
 }
 
-#define index_iterator__at_tree(I) \
-	(iterator__include_trees(I) && (I)->partial_pos < (I)->partial.size)
-
-static int index_iterator__current(
-	const git_index_entry **entry, git_iterator *self)
+static int index_iterator_reset(git_iterator *i)
 {
-	index_iterator *ii = (index_iterator *)self;
-	const git_index_entry *ie = git_vector_get(&ii->entries, ii->current);
+	index_iterator *iter = (index_iterator *)i;
 
-	if (ie != NULL && index_iterator__at_tree(ii)) {
-		ii->tree_entry.path = ii->partial.ptr;
-		ie = &ii->tree_entry;
-	}
-
-	if (entry)
-		*entry = ie;
-
-	ii->base.flags |= GIT_ITERATOR_FIRST_ACCESS;
-
-	return (ie != NULL) ? 0 : GIT_ITEROVER;
+	index_iterator_clear(iter);
+	return index_iterator_init(iter);
 }
 
-static int index_iterator__at_end(git_iterator *self)
+static int index_iterator_reset_range(
+	git_iterator *i, const char *start, const char *end)
 {
-	index_iterator *ii = (index_iterator *)self;
-	return (ii->current >= git_vector_length(&ii->entries));
-}
-
-static int index_iterator__advance(
-	const git_index_entry **entry, git_iterator *self)
-{
-	index_iterator *ii = (index_iterator *)self;
-	size_t entrycount = git_vector_length(&ii->entries);
-	const git_index_entry *ie;
-
-	if (!iterator__has_been_accessed(ii))
-		return index_iterator__current(entry, self);
-
-	if (index_iterator__at_tree(ii)) {
-		if (iterator__do_autoexpand(ii)) {
-			ii->partial.ptr[ii->partial_pos] = ii->restore_terminator;
-			index_iterator__next_prefix_tree(ii);
-		} else {
-			/* advance to sibling tree (i.e. find entry with new prefix) */
-			while (ii->current < entrycount) {
-				ii->current++;
-
-				if (!(ie = git_vector_get(&ii->entries, ii->current)) ||
-					ii->base.prefixcomp(ie->path, ii->partial.ptr) != 0)
-					break;
-			}
-
-			if (index_iterator__first_prefix_tree(ii) < 0)
-				return -1;
-		}
-	} else {
-		if (ii->current < entrycount)
-			ii->current++;
-
-		if (index_iterator__first_prefix_tree(ii) < 0)
-			return -1;
-	}
-
-	return index_iterator__current(entry, self);
-}
-
-static int index_iterator__advance_into(
-	const git_index_entry **entry, git_iterator *self)
-{
-	index_iterator *ii = (index_iterator *)self;
-	const git_index_entry *ie = git_vector_get(&ii->entries, ii->current);
-
-	if (ie != NULL && index_iterator__at_tree(ii)) {
-		if (ii->restore_terminator)
-			ii->partial.ptr[ii->partial_pos] = ii->restore_terminator;
-		index_iterator__next_prefix_tree(ii);
-	}
-
-	return index_iterator__current(entry, self);
-}
-
-static int index_iterator__reset(git_iterator *self)
-{
-	index_iterator *ii = (index_iterator *)self;
-	const git_index_entry *ie;
-
-	ii->current = 0;
-	ii->base.flags &= ~GIT_ITERATOR_FIRST_ACCESS;
-
-	iterator_pathlist_walk__reset(self);
-
-	/* if we're given a start prefix, find it; if we're given a pathlist, find
-	 * the first of those.  start at the later of the two.
-	 */
-	if (ii->base.start)
-		git_index_snapshot_find(
-			&ii->current, &ii->entries, ii->entry_srch, ii->base.start, 0, 0);
-
-	if ((ie = index_iterator__advance_over_unwanted(ii)) == NULL)
-		return 0;
-
-	if (git_buf_sets(&ii->partial, ie->path) < 0)
+	if (iterator_range_reset(i, start, end) < 0)
 		return -1;
 
-	ii->partial_pos = 0;
-
-	if (ii->base.start) {
-		size_t startlen = strlen(ii->base.start);
-
-		ii->partial_pos = (startlen > ii->partial.size) ?
-			ii->partial.size : startlen;
-	}
-
-	index_iterator__next_prefix_tree(ii);
-
-	return 0;
+	return index_iterator_reset(i);
 }
 
-static int index_iterator__reset_range(
-	git_iterator *self, const char *start, const char *end)
+static int index_iterator_at_end(git_iterator *i)
 {
-	if (iterator__reset_range(self, start, end) < 0)
-		return -1;
+	index_iterator *iter = (index_iterator *)i;
 
-	return index_iterator__reset(self);
+	return (iter->entry == NULL);
 }
 
-static void index_iterator__free(git_iterator *self)
+static void index_iterator_free(git_iterator *i)
 {
-	index_iterator *ii = (index_iterator *)self;
-	git_index_snapshot_release(&ii->entries, ii->base.index);
-	ii->base.index = NULL;
-	git_buf_free(&ii->partial);
+	index_iterator *iter = (index_iterator *)i;
+
+	git_index_snapshot_release(&iter->entries, iter->base.index);
 }
 
 int git_iterator_for_index(
-	git_iterator **iter,
+	git_iterator **out,
 	git_repository *repo,
 	git_index  *index,
 	git_iterator_options *options)
 {
-	int error = 0;
-	index_iterator *ii = git__calloc(1, sizeof(index_iterator));
-	GITERR_CHECK_ALLOC(ii);
+	index_iterator *iter;
+	int error;
 
-	if ((error = git_index_snapshot_new(&ii->entries, index)) < 0) {
-		git__free(ii);
-		return error;
-	}
-	ii->base.index = index;
+	static git_iterator_callbacks callbacks = {
+		index_iterator_current,
+		index_iterator_advance,
+		index_iterator_advance_into,
+		index_iterator_advance_over,
+		index_iterator_reset,
+		index_iterator_reset_range,
+		index_iterator_at_end,
+		index_iterator_free
+	};
 
-	ITERATOR_BASE_INIT(ii, index, INDEX, repo);
+	*out = NULL;
 
-	if ((error = iterator__update_ignore_case((git_iterator *)ii, options ? options->flags : 0)) < 0) {
-		git_iterator_free((git_iterator *)ii);
-		return error;
-	}
+	if (index == NULL)
+		return git_iterator_for_nothing(out, options);
 
-	ii->entry_srch = iterator__ignore_case(ii) ?
-		git_index_entry_isrch : git_index_entry_srch;
+	iter = git__calloc(1, sizeof(index_iterator));
+	GITERR_CHECK_ALLOC(iter);
 
-	git_vector_set_cmp(&ii->entries, iterator__ignore_case(ii) ?
+	iter->base.type = GIT_ITERATOR_TYPE_INDEX;
+	iter->base.cb = &callbacks;
+
+	if ((error = iterator_init_common(&iter->base, repo, index, options)) < 0 ||
+		(error = git_index_snapshot_new(&iter->entries, index)) < 0 ||
+		(error = index_iterator_init(iter)) < 0)
+		goto on_error;
+
+	/* TODO: make sure this keeps the entries sort if they were already */
+	git_vector_set_cmp(&iter->entries, iterator__ignore_case(&iter->base) ?
 		git_index_entry_icmp : git_index_entry_cmp);
-	git_vector_sort(&ii->entries);
+	git_vector_sort(&iter->entries);
 
-	git_buf_init(&ii->partial, 0);
-	ii->tree_entry.mode = GIT_FILEMODE_TREE;
-
-	index_iterator__reset((git_iterator *)ii);
-
-	*iter = (git_iterator *)ii;
+	*out = &iter->base;
 	return 0;
+
+on_error:
+	git_iterator_free(&iter->base);
+	return error;
 }
 
 

@@ -108,3 +108,39 @@ void expect_iterator_items(
 	cl_assert_equal_i(expected_total, count);
 }
 
+
+void expect_advance_over(
+	git_iterator *i,
+	const char *expected_path,
+	git_iterator_status_t expected_status)
+{
+	const git_index_entry *entry;
+	git_iterator_status_t status;
+	int error;
+
+	cl_git_pass(git_iterator_current(&entry, i));
+	cl_assert_equal_s(expected_path, entry->path);
+
+	error = git_iterator_advance_over(&entry, &status, i);
+	cl_assert(!error || error == GIT_ITEROVER);
+	cl_assert_equal_i(expected_status, status);
+}
+
+void expect_advance_into(
+	git_iterator *i,
+	const char *expected_path)
+{
+	const git_index_entry *entry;
+	int error;
+
+	cl_git_pass(git_iterator_current(&entry, i));
+	cl_assert_equal_s(expected_path, entry->path);
+
+	if (S_ISDIR(entry->mode))
+		error = git_iterator_advance_into(&entry, i);
+	else
+		error = git_iterator_advance(&entry, i);
+
+	cl_assert(!error || error == GIT_ITEROVER);
+}
+

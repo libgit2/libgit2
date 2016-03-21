@@ -466,8 +466,6 @@ void test_iterator_index__pathlist(void)
 	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
 	git_index *index;
 	git_vector filelist;
-	int default_icase;
-	int expect;
 
 	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
 	cl_git_pass(git_vector_insert(&filelist, "a"));
@@ -483,35 +481,251 @@ void test_iterator_index__pathlist(void)
 
 	cl_git_pass(git_repository_index(&index, g_repo));
 
-	/* In this test we DO NOT force a case setting on the index. */
-	default_icase = ((git_index_caps(index) & GIT_INDEXCAP_IGNORE_CASE) != 0);
-
 	i_opts.pathlist.strings = (char **)filelist.contents;
 	i_opts.pathlist.count = filelist.length;
 
-	/* All iterator tests are "autoexpand with no tree entries" */
+	/* Case sensitive */
+	{
+		const char *expected[] = {
+			"B", "D", "L/1", "a", "c", "e", "k/1", "k/a" };
+		size_t expected_len = 8;
 
-	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
-	expect_iterator_items(i, 8, NULL, 8, NULL);
-	git_iterator_free(i);
+		i_opts.start = NULL;
+		i_opts.end = NULL;
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
 
-	i_opts.start = "c";
-	i_opts.end = NULL;
+		cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
 
-	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
-	/* (c D e k/1 k/a L ==> 6) vs (c e k/1 k/a ==> 4) */
-	expect = ((default_icase) ? 6 : 4);
-	expect_iterator_items(i, expect, NULL, expect, NULL);
-	git_iterator_free(i);
+	/* Case INsensitive */
+	{
+		const char *expected[] = {
+			"a", "B", "c", "D", "e", "k/1", "k/a", "L/1" };
+		size_t expected_len = 8;
 
-	i_opts.start = NULL;
-	i_opts.end = "e";
+		i_opts.start = NULL;
+		i_opts.end = NULL;
+		i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
 
-	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
-	/* (a B c D e ==> 5) vs (B D L/1 a c e ==> 6) */
-	expect = ((default_icase) ? 5 : 6);
-	expect_iterator_items(i, expect, NULL, expect, NULL);
-	git_iterator_free(i);
+		cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	/* Set a start, but no end.  Case sensitive. */
+	{
+		const char *expected[] = { "c", "e", "k/1", "k/a" };
+		size_t expected_len = 4;
+
+		i_opts.start = "c";
+		i_opts.end = NULL;
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	/* Set a start, but no end.  Case INsensitive. */
+	{
+		const char *expected[] = { "c", "D", "e", "k/1", "k/a", "L/1" };
+		size_t expected_len = 6;
+
+		i_opts.start = "c";
+		i_opts.end = NULL;
+		i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	/* Set no start, but an end.  Case sensitive. */
+	{
+		const char *expected[] = { "B", "D", "L/1", "a", "c", "e" };
+		size_t expected_len = 6;
+
+		i_opts.start = NULL;
+		i_opts.end = "e";
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	/* Set no start, but an end.  Case INsensitive. */
+	{
+		const char *expected[] = { "a", "B", "c", "D", "e" };
+		size_t expected_len = 5;
+
+		i_opts.start = NULL;
+		i_opts.end = "e";
+		i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	/* Start and an end, case sensitive */
+	{
+		const char *expected[] = { "c", "e", "k/1" };
+		size_t expected_len = 3;
+
+		i_opts.start = "c";
+		i_opts.end = "k/D";
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	/* Start and an end, case sensitive */
+	{
+		const char *expected[] = { "k/1" };
+		size_t expected_len = 1;
+
+		i_opts.start = "k";
+		i_opts.end = "k/D";
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	/* Start and an end, case INsensitive */
+	{
+		const char *expected[] = { "c", "D", "e", "k/1", "k/a" };
+		size_t expected_len = 5;
+
+		i_opts.start = "c";
+		i_opts.end = "k/D";
+		i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	/* Start and an end, case INsensitive */
+	{
+		const char *expected[] = { "k/1", "k/a" };
+		size_t expected_len = 2;
+
+		i_opts.start = "k";
+		i_opts.end = "k/D";
+		i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	git_index_free(index);
+	git_vector_free(&filelist);
+}
+
+void test_iterator_index__pathlist_with_dirs(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_index *index;
+	git_vector filelist;
+
+	cl_git_pass(git_vector_init(&filelist, 5, NULL));
+
+	g_repo = cl_git_sandbox_init("icase");
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	/* Test that a prefix `k` matches folders, even without trailing slash */
+	{
+		const char *expected[] = { "k/1", "k/B", "k/D", "k/a", "k/c" };
+		size_t expected_len = 5;
+
+		git_vector_clear(&filelist);
+		cl_git_pass(git_vector_insert(&filelist, "k"));
+
+		i_opts.pathlist.strings = (char **)filelist.contents;
+		i_opts.pathlist.count = filelist.length;
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	/* Test that a `k/` matches a folder */
+	{
+		const char *expected[] = { "k/1", "k/B", "k/D", "k/a", "k/c" };
+		size_t expected_len = 5;
+
+		git_vector_clear(&filelist);
+		cl_git_pass(git_vector_insert(&filelist, "k/"));
+
+		i_opts.pathlist.strings = (char **)filelist.contents;
+		i_opts.pathlist.count = filelist.length;
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	/* When the iterator is case sensitive, ensure we can't lookup the
+	 * directory with the wrong case.
+	 */
+	{
+		git_vector_clear(&filelist);
+		cl_git_pass(git_vector_insert(&filelist, "K/"));
+
+		i_opts.pathlist.strings = (char **)filelist.contents;
+		i_opts.pathlist.count = filelist.length;
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+		cl_git_fail_with(GIT_ITEROVER, git_iterator_advance(NULL, i));
+		git_iterator_free(i);
+	}
+
+	/* Test that case insensitive matching works. */
+	{
+		const char *expected[] = { "k/1", "k/a", "k/B", "k/c", "k/D" };
+		size_t expected_len = 5;
+
+		git_vector_clear(&filelist);
+		cl_git_pass(git_vector_insert(&filelist, "K/"));
+
+		i_opts.pathlist.strings = (char **)filelist.contents;
+		i_opts.pathlist.count = filelist.length;
+		i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	/* Test that case insensitive matching works without trailing slash. */
+	{
+		const char *expected[] = { "k/1", "k/a", "k/B", "k/c", "k/D" };
+		size_t expected_len = 5;
+
+		git_vector_clear(&filelist);
+		cl_git_pass(git_vector_insert(&filelist, "K"));
+
+		i_opts.pathlist.strings = (char **)filelist.contents;
+		i_opts.pathlist.count = filelist.length;
+		i_opts.flags = GIT_ITERATOR_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
 
 	git_index_free(index);
 	git_vector_free(&filelist);
@@ -729,3 +943,410 @@ void test_iterator_index__pathlist_with_directory(void)
 	git_vector_free(&filelist);
 }
 
+static void create_paths(git_index *index, const char *root, int depth)
+{
+	git_buf fullpath = GIT_BUF_INIT;
+	git_index_entry entry;
+	size_t root_len;
+	int i;
+
+	if (root) {
+		cl_git_pass(git_buf_puts(&fullpath, root));
+		cl_git_pass(git_buf_putc(&fullpath, '/'));
+	}
+
+	root_len = fullpath.size;
+
+	for (i = 0; i < 8; i++) {
+		bool file = (depth == 0 || (i % 2) == 0);
+		git_buf_truncate(&fullpath, root_len);
+		cl_git_pass(git_buf_printf(&fullpath, "item%d", i));
+
+		if (file) {
+			memset(&entry, 0, sizeof(git_index_entry));
+			entry.path = fullpath.ptr;
+			entry.mode = GIT_FILEMODE_BLOB;
+			git_oid_fromstr(&entry.id, "d44e18fb93b7107b5cd1b95d601591d77869a1b6");
+
+			cl_git_pass(git_index_add(index, &entry));
+		} else if (depth > 0) {
+			create_paths(index, fullpath.ptr, (depth - 1));
+		}
+	}
+
+	git_buf_free(&fullpath);
+}
+
+void test_iterator_index__pathlist_for_deeply_nested_item(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_index *index;
+	git_vector filelist;
+
+	cl_git_pass(git_vector_init(&filelist, 5, NULL));
+
+	g_repo = cl_git_sandbox_init("icase");
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	create_paths(index, NULL, 3);
+
+	/* Ensure that we find the single path we're interested in */
+	{
+		const char *expected[] = { "item1/item3/item5/item7" };
+		size_t expected_len = 1;
+
+		git_vector_clear(&filelist);
+		cl_git_pass(git_vector_insert(&filelist, "item1/item3/item5/item7"));
+
+		i_opts.pathlist.strings = (char **)filelist.contents;
+		i_opts.pathlist.count = filelist.length;
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	{
+		const char *expected[] = {
+			"item1/item3/item5/item0", "item1/item3/item5/item1",
+			"item1/item3/item5/item2", "item1/item3/item5/item3",
+			"item1/item3/item5/item4", "item1/item3/item5/item5",
+			"item1/item3/item5/item6", "item1/item3/item5/item7",
+		};
+		size_t expected_len = 8;
+
+		git_vector_clear(&filelist);
+		cl_git_pass(git_vector_insert(&filelist, "item1/item3/item5/"));
+
+		i_opts.pathlist.strings = (char **)filelist.contents;
+		i_opts.pathlist.count = filelist.length;
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	{
+		const char *expected[] = {
+			"item1/item3/item0",
+			"item1/item3/item1/item0", "item1/item3/item1/item1",
+			"item1/item3/item1/item2", "item1/item3/item1/item3",
+			"item1/item3/item1/item4", "item1/item3/item1/item5",
+			"item1/item3/item1/item6", "item1/item3/item1/item7",
+			"item1/item3/item2",
+			"item1/item3/item3/item0", "item1/item3/item3/item1",
+			"item1/item3/item3/item2", "item1/item3/item3/item3",
+			"item1/item3/item3/item4", "item1/item3/item3/item5",
+			"item1/item3/item3/item6", "item1/item3/item3/item7",
+			"item1/item3/item4",
+			"item1/item3/item5/item0", "item1/item3/item5/item1",
+			"item1/item3/item5/item2", "item1/item3/item5/item3",
+			"item1/item3/item5/item4", "item1/item3/item5/item5",
+			"item1/item3/item5/item6", "item1/item3/item5/item7",
+			"item1/item3/item6",
+			"item1/item3/item7/item0", "item1/item3/item7/item1",
+			"item1/item3/item7/item2", "item1/item3/item7/item3",
+			"item1/item3/item7/item4", "item1/item3/item7/item5",
+			"item1/item3/item7/item6", "item1/item3/item7/item7",
+		};
+		size_t expected_len = 36;
+
+		git_vector_clear(&filelist);
+		cl_git_pass(git_vector_insert(&filelist, "item1/item3/"));
+
+		i_opts.pathlist.strings = (char **)filelist.contents;
+		i_opts.pathlist.count = filelist.length;
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	/* Ensure that we find the single path we're interested in, and we find
+	 * it efficiently, and don't stat the entire world to get there.
+	 */
+	{
+		const char *expected[] = {
+			"item0", "item1/item2", "item5/item7/item4", "item6",
+			"item7/item3/item1/item6" };
+		size_t expected_len = 5;
+
+		git_vector_clear(&filelist);
+		cl_git_pass(git_vector_insert(&filelist, "item7/item3/item1/item6"));
+		cl_git_pass(git_vector_insert(&filelist, "item6"));
+		cl_git_pass(git_vector_insert(&filelist, "item5/item7/item4"));
+		cl_git_pass(git_vector_insert(&filelist, "item1/item2"));
+		cl_git_pass(git_vector_insert(&filelist, "item0"));
+
+		/* also add some things that don't exist or don't match the right type */
+		cl_git_pass(git_vector_insert(&filelist, "item2/"));
+		cl_git_pass(git_vector_insert(&filelist, "itemN"));
+		cl_git_pass(git_vector_insert(&filelist, "item1/itemA"));
+		cl_git_pass(git_vector_insert(&filelist, "item5/item3/item4/"));
+
+		i_opts.pathlist.strings = (char **)filelist.contents;
+		i_opts.pathlist.count = filelist.length;
+		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+		cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
+		git_iterator_free(i);
+	}
+
+	git_index_free(index);
+	git_vector_free(&filelist);
+}
+
+void test_iterator_index__advance_over(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_index *index;
+
+	i_opts.flags |= GIT_ITERATOR_DONT_IGNORE_CASE |
+		GIT_ITERATOR_DONT_AUTOEXPAND;
+
+	g_repo = cl_git_sandbox_init("icase");
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	create_paths(index, NULL, 1);
+
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+
+	expect_advance_over(i, "B", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "D", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "F", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "H", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "J", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "L/", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "a", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "c", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "e", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "g", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "i", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "item0", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "item1/", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "item2", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "item3/", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "item4", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "item5/", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "item6", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "item7/", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "k/", GIT_ITERATOR_STATUS_NORMAL);
+
+	cl_git_fail_with(GIT_ITEROVER, git_iterator_advance(NULL, i));
+	git_iterator_free(i);
+	git_index_free(index);
+}
+
+void test_iterator_index__advance_into(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_index *index;
+
+	g_repo = cl_git_sandbox_init("icase");
+
+	i_opts.flags |= GIT_ITERATOR_DONT_IGNORE_CASE |
+		GIT_ITERATOR_DONT_AUTOEXPAND;
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+	expect_advance_into(i, "B");
+	expect_advance_into(i, "D");
+	expect_advance_into(i, "F");
+	expect_advance_into(i, "H");
+	expect_advance_into(i, "J");
+	expect_advance_into(i, "L/");
+	expect_advance_into(i, "L/1");
+	expect_advance_into(i, "L/B");
+	expect_advance_into(i, "L/D");
+	expect_advance_into(i, "L/a");
+	expect_advance_into(i, "L/c");
+	expect_advance_into(i, "a");
+	expect_advance_into(i, "c");
+	expect_advance_into(i, "e");
+	expect_advance_into(i, "g");
+	expect_advance_into(i, "i");
+	expect_advance_into(i, "k/");
+	expect_advance_into(i, "k/1");
+	expect_advance_into(i, "k/B");
+	expect_advance_into(i, "k/D");
+	expect_advance_into(i, "k/a");
+	expect_advance_into(i, "k/c");
+
+	cl_git_fail_with(GIT_ITEROVER, git_iterator_advance(NULL, i));
+	git_iterator_free(i);
+	git_index_free(index);
+}
+
+void test_iterator_index__advance_into_and_over(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_index *index;
+
+	g_repo = cl_git_sandbox_init("icase");
+
+	i_opts.flags |= GIT_ITERATOR_DONT_IGNORE_CASE |
+	GIT_ITERATOR_DONT_AUTOEXPAND;
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	create_paths(index, NULL, 2);
+
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+	expect_advance_into(i, "B");
+	expect_advance_into(i, "D");
+	expect_advance_into(i, "F");
+	expect_advance_into(i, "H");
+	expect_advance_into(i, "J");
+	expect_advance_into(i, "L/");
+	expect_advance_into(i, "L/1");
+	expect_advance_into(i, "L/B");
+	expect_advance_into(i, "L/D");
+	expect_advance_into(i, "L/a");
+	expect_advance_into(i, "L/c");
+	expect_advance_into(i, "a");
+	expect_advance_into(i, "c");
+	expect_advance_into(i, "e");
+	expect_advance_into(i, "g");
+	expect_advance_into(i, "i");
+	expect_advance_into(i, "item0");
+	expect_advance_into(i, "item1/");
+	expect_advance_into(i, "item1/item0");
+	expect_advance_into(i, "item1/item1/");
+	expect_advance_into(i, "item1/item1/item0");
+	expect_advance_into(i, "item1/item1/item1");
+	expect_advance_into(i, "item1/item1/item2");
+	expect_advance_into(i, "item1/item1/item3");
+	expect_advance_into(i, "item1/item1/item4");
+	expect_advance_into(i, "item1/item1/item5");
+	expect_advance_into(i, "item1/item1/item6");
+	expect_advance_into(i, "item1/item1/item7");
+	expect_advance_into(i, "item1/item2");
+	expect_advance_over(i, "item1/item3/", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "item1/item4", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "item1/item5/", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "item1/item6", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "item1/item7/", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_into(i, "item2");
+	expect_advance_over(i, "item3/", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "item4", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "item5/", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "item6", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "item7/", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_into(i, "k/");
+	expect_advance_into(i, "k/1");
+	expect_advance_into(i, "k/B");
+	expect_advance_into(i, "k/D");
+	expect_advance_into(i, "k/a");
+	expect_advance_into(i, "k/c");
+
+	cl_git_fail_with(GIT_ITEROVER, git_iterator_advance(NULL, i));
+	git_iterator_free(i);
+	git_index_free(index);
+}
+
+static void add_conflict(
+	git_index *index,
+	const char *ancestor_path,
+	const char *our_path,
+	const char *their_path)
+{
+	git_index_entry ancestor = {{0}}, ours = {{0}}, theirs = {{0}};
+
+	ancestor.path = ancestor_path;
+	ancestor.mode = GIT_FILEMODE_BLOB;
+	git_oid_fromstr(&ancestor.id, "d44e18fb93b7107b5cd1b95d601591d77869a1b6");
+	GIT_IDXENTRY_STAGE_SET(&ancestor, 1);
+
+	ours.path = our_path;
+	ours.mode = GIT_FILEMODE_BLOB;
+	git_oid_fromstr(&ours.id, "d44e18fb93b7107b5cd1b95d601591d77869a1b6");
+	GIT_IDXENTRY_STAGE_SET(&ours, 2);
+
+	theirs.path = their_path;
+	theirs.mode = GIT_FILEMODE_BLOB;
+	git_oid_fromstr(&theirs.id, "d44e18fb93b7107b5cd1b95d601591d77869a1b6");
+	GIT_IDXENTRY_STAGE_SET(&theirs, 3);
+
+	cl_git_pass(git_index_conflict_add(index, &ancestor, &ours, &theirs));
+}
+
+void test_iterator_index__include_conflicts(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_index *index;
+
+	i_opts.flags |= GIT_ITERATOR_DONT_IGNORE_CASE |
+		GIT_ITERATOR_DONT_AUTOEXPAND;
+
+	g_repo = cl_git_sandbox_init("icase");
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	add_conflict(index, "CONFLICT1", "CONFLICT1" ,"CONFLICT1");
+	add_conflict(index, "ZZZ-CONFLICT2.ancestor", "ZZZ-CONFLICT2.ours", "ZZZ-CONFLICT2.theirs");
+	add_conflict(index, "ancestor.conflict3", "ours.conflict3", "theirs.conflict3");
+	add_conflict(index, "zzz-conflict4", "zzz-conflict4", "zzz-conflict4");
+
+	/* Iterate the index, ensuring that conflicts are not included */
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+
+	expect_advance_over(i, "B", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "D", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "F", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "H", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "J", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "L/", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "a", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "c", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "e", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "g", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "i", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "k/", GIT_ITERATOR_STATUS_NORMAL);
+
+	cl_git_fail_with(GIT_ITEROVER, git_iterator_advance(NULL, i));
+	git_iterator_free(i);
+
+	/* Try again, returning conflicts */
+	i_opts.flags |= GIT_ITERATOR_INCLUDE_CONFLICTS;
+
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+
+	expect_advance_over(i, "B", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "CONFLICT1", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "CONFLICT1", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "CONFLICT1", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "D", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "F", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "H", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "J", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "L/", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "ZZZ-CONFLICT2.ancestor", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "ZZZ-CONFLICT2.ours", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "ZZZ-CONFLICT2.theirs", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "a", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "ancestor.conflict3", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "c", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "e", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "g", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "i", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "k/", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "ours.conflict3", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "theirs.conflict3", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "zzz-conflict4", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "zzz-conflict4", GIT_ITERATOR_STATUS_NORMAL);
+	expect_advance_over(i, "zzz-conflict4", GIT_ITERATOR_STATUS_NORMAL);
+
+	cl_git_fail_with(GIT_ITEROVER, git_iterator_advance(NULL, i));
+	git_iterator_free(i);
+
+	git_index_free(index);
+}
