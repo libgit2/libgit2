@@ -1070,6 +1070,15 @@ static int tree_iterator_advance_into(
 	return tree_iterator_advance(out, i);
 }
 
+static int tree_iterator_advance_over(
+	const git_index_entry **out,
+	git_iterator_status_t *status,
+	git_iterator *i)
+{
+	*status = GIT_ITERATOR_STATUS_NORMAL;
+	return git_iterator_advance(out, i);
+}
+
 static void tree_iterator_clear(tree_iterator *iter)
 {
 	while (iter->frames.size)
@@ -1143,7 +1152,7 @@ int git_iterator_for_tree(
 		tree_iterator_current,
 		tree_iterator_advance,
 		tree_iterator_advance_into,
-		NULL, /* advance_over */
+		tree_iterator_advance_over,
 		tree_iterator_reset,
 		tree_iterator_reset_range,
 		tree_iterator_at_end,

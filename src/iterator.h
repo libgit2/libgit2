@@ -217,11 +217,7 @@ GIT_INLINE(int) git_iterator_advance_over(
 	git_iterator_status_t *status,
 	git_iterator *iter)
 {
-	if (iter->cb->advance_over)
-		return iter->cb->advance_over(entry, status, iter);
-
-	*status = GIT_ITERATOR_STATUS_NORMAL;
-	return git_iterator_advance(entry, iter);
+	return iter->cb->advance_over(entry, status, iter);
 }
 
 /**
