@@ -572,33 +572,44 @@ static iterator_pathlist_search_t iterator_pathlist_search(
 
 /* Empty iterator */
 
-static int empty_iterator__noop(const git_index_entry **e, git_iterator *i)
+static int empty_iterator_noop(const git_index_entry **e, git_iterator *i)
 {
 	GIT_UNUSED(i);
 	iterator__clear_entry(e);
 	return GIT_ITEROVER;
 }
 
-static int empty_iterator__reset(git_iterator *i)
+static int empty_iterator_advance_over(
+	const git_index_entry **e,
+	git_iterator_status_t *s,
+	git_iterator *i)
+{
+	GIT_UNUSED(i);
+	*s = GIT_ITERATOR_STATUS_EMPTY;
+	iterator__clear_entry(e);
+	return GIT_ITEROVER;
+}
+
+static int empty_iterator_reset(git_iterator *i)
 {
 	GIT_UNUSED(i);
 	return 0;
 }
 
-static int empty_iterator__reset_range(
+static int empty_iterator_reset_range(
 	git_iterator *i, const char *s, const char *e)
 {
 	GIT_UNUSED(i); GIT_UNUSED(s); GIT_UNUSED(e);
 	return 0;
 }
 
-static int empty_iterator__at_end(git_iterator *i)
+static int empty_iterator_at_end(git_iterator *i)
 {
 	GIT_UNUSED(i);
 	return 1;
 }
 
-static void empty_iterator__free(git_iterator *i)
+static void empty_iterator_free(git_iterator *i)
 {
 	GIT_UNUSED(i);
 }
@@ -609,22 +620,32 @@ typedef struct {
 } empty_iterator;
 
 int git_iterator_for_nothing(
-	git_iterator **iter,
+	git_iterator **out,
 	git_iterator_options *options)
 {
-	empty_iterator *i = git__calloc(1, sizeof(empty_iterator));
-	GITERR_CHECK_ALLOC(i);
+	empty_iterator *iter;
 
-#define empty_iterator__current empty_iterator__noop
-#define empty_iterator__advance empty_iterator__noop
-#define empty_iterator__advance_into empty_iterator__noop
+	static git_iterator_callbacks callbacks = {
+		empty_iterator_noop,
+		empty_iterator_noop,
+		empty_iterator_noop,
+		empty_iterator_advance_over,
+		empty_iterator_reset,
+		empty_iterator_reset_range,
+		empty_iterator_at_end,
+		empty_iterator_free
+	};
 
-	ITERATOR_BASE_INIT(i, empty, EMPTY, NULL);
+	*out = NULL;
 
-	if (options && (options->flags & GIT_ITERATOR_IGNORE_CASE) != 0)
-		i->base.flags |= GIT_ITERATOR_IGNORE_CASE;
+	iter = git__calloc(1, sizeof(empty_iterator));
+	GITERR_CHECK_ALLOC(iter);
 
-	*iter = (git_iterator *)i;
+	iter->base.type = GIT_ITERATOR_TYPE_EMPTY;
+	iter->base.cb = &callbacks;
+	iter->base.flags = options->flags;
+
+	*out = &iter->base;
 	return 0;
 }
 
