@@ -89,10 +89,46 @@ int git_futils_creat_locked_withpath(const char *path, const mode_t dirmode, con
 
 int git_futils_open_ro(const char *path)
 {
+#ifdef GIT_WIN32
+
+	git_win32_path buf;
+	HANDLE h;
+	int fd;
+
+	if (git_win32_path_from_utf8(buf, path) < 0)
+		return -1;
+
+	/*
+	 * We use this function to read references and config, which should be readable by multiple
+	 * proceses concurrently.
+	 */
+	h = CreateFileW(buf,
+		GENERIC_READ,
+		FILE_SHARE_READ | FILE_SHARE_DELETE,
+		NULL,
+		OPEN_EXISTING,
+		FILE_FLAG_BACKUP_SEMANTICS,
+		NULL);
+	
+	if (h == INVALID_HANDLE_VALUE) {
+		giterr_set(GITERR_OS, "failed to open '%s'", path);
+		return -1;
+	}
+
+	fd = _open_osfhandle(h, _O_RDONLY);
+	if (fd < 0)
+		giterr_set(GITERR_OS, "failed to open '%s'", path);
+
+	return fd;
+
+#else
+
 	int fd = p_open(path, O_RDONLY);
 	if (fd < 0)
 		return git_path_set_error(errno, path, "open");
 	return fd;
+
+#endif
 }
 
 git_off_t git_futils_filesize(git_file fd)
