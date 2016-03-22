@@ -104,10 +104,10 @@ int git_futils_open_ro(const char *path)
 	 */
 	h = CreateFileW(buf,
 		GENERIC_READ,
-		FILE_SHARE_READ | FILE_SHARE_DELETE,
+		FILE_SHARE_READ,
 		NULL,
 		OPEN_EXISTING,
-		FILE_FLAG_BACKUP_SEMANTICS,
+		FILE_ATTRIBUTE_NORMAL,
 		NULL);
 	
 	if (h == INVALID_HANDLE_VALUE) {
