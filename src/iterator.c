@@ -204,8 +204,8 @@ GIT_INLINE(bool) iterator_has_ended(git_iterator *iter, const char *path)
 	return iter->ended;
 }
 
-/* walker for the index iterator that allows it to walk the sorted pathlist
- * entries alongside sorted iterator entries.
+/* walker for the index and tree iterator that allows it to walk the sorted
+ * pathlist entries alongside sorted iterator entries.
  */
 static bool iterator_pathlist_next_is(git_iterator *iter, const char *path)
 {
