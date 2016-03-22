@@ -731,6 +731,37 @@ void test_iterator_index__pathlist_with_dirs(void)
 	git_vector_free(&filelist);
 }
 
+void test_iterator_index__pathlist_with_dirs_include_trees(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_index *index;
+	git_vector filelist;
+
+	const char *expected[] = { "k/", "k/1", "k/B", "k/D", "k/a", "k/c" };
+	size_t expected_len = 6;
+
+	cl_git_pass(git_vector_init(&filelist, 5, NULL));
+
+	g_repo = cl_git_sandbox_init("icase");
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	git_vector_clear(&filelist);
+	cl_git_pass(git_vector_insert(&filelist, "k"));
+
+	i_opts.pathlist.strings = (char **)filelist.contents;
+	i_opts.pathlist.count = filelist.length;
+	i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE | GIT_ITERATOR_INCLUDE_TREES;
+
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+	expect_iterator_items(i, expected_len, expected, expected_len, expected);
+	git_iterator_free(i);
+
+	git_index_free(index);
+	git_vector_free(&filelist);
+}
+
 void test_iterator_index__pathlist_1(void)
 {
 	git_iterator *i;
