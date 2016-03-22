@@ -122,11 +122,14 @@ v0.24
   `GIT_CONFIG_LEVEL_PROGRAMDATA` which represent a rough Windows equivalent
   to the system level configuration.
 
-* `git_rebase_init()` not also takes a merge options.
+* `git_rebase_options` now has a `merge_options` field.
 
 * The index no longer performs locking itself. This is not something
   users of the library should have been relying on as it's not part of
   the concurrency guarantees.
+
+* `git_remote_connect()` now takes a `custom_headers` argument to set
+  the extra HTTP header fields to send.
 
 v0.23
 ------
