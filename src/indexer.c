@@ -914,12 +914,17 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 	git_filebuf index_file = {0};
 	void *packfile_trailer;
 
+	if (!idx->parsed_header) {
+		giterr_set(GITERR_INDEXER, "incomplete pack header");
+		return -1;
+	}
+
 	if (git_hash_ctx_init(&ctx) < 0)
 		return -1;
 
 	/* Test for this before resolve_deltas(), as it plays with idx->off */
-	if (idx->off < idx->pack->mwf.size - 20) {
-		giterr_set(GITERR_INDEXER, "Unexpected data at the end of the pack");
+	if (idx->off + 20 < idx->pack->mwf.size) {
+		giterr_set(GITERR_INDEXER, "unexpected data at the end of the pack");
 		return -1;
 	}
 
