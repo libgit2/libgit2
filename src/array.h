@@ -82,4 +82,44 @@ on_oom:
 
 #define git_array_valid_index(a, i) ((i) < (a).size)
 
+#define git_array_foreach(a, i, element) \
+	for ((i) = 0; (i) < (a).size && ((element) = &(a).ptr[(i)]); (i)++)
+
+
+GIT_INLINE(int) git_array__search(
+	size_t *out,
+	void *array_ptr,
+	size_t item_size,
+	size_t array_len,
+	int (*compare)(const void *, const void *),
+	const void *key)
+{
+	size_t lim;
+	unsigned char *part, *array = array_ptr, *base = array_ptr;
+	int cmp;
+
+	for (lim = array_len; lim != 0; lim >>= 1) {
+		part = base + (lim >> 1) * item_size;
+		cmp = (*compare)(key, part);
+
+		if (cmp == 0) {
+			base = part;
+			break;
+		}
+		if (cmp > 0) { /* key > p; take right partition */
+			base = part + 1 * item_size;
+			lim--;
+		} /* else take left partition */
+	}
+
+	if (out)
+		*out = (base - array) / item_size;
+
+	return (cmp == 0) ? 0 : GIT_ENOTFOUND;
+}
+
+#define git_array_search(out, a, cmp, key) \
+	git_array__search(out, (a).ptr, sizeof(*(a).ptr), (a).size, \
+		(cmp), (key))
+
 #endif

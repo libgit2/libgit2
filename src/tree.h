@@ -24,8 +24,7 @@ struct git_tree_entry {
 struct git_tree {
 	git_object object;
 	git_odb_object *odb_obj;
-	git_array_t(git_tree_entry) entries_arr;
-	git_vector entries;
+	git_array_t(git_tree_entry) entries;
 };
 
 struct git_treebuilder {
