@@ -8,10 +8,6 @@
 #include "iterator.h"
 #include "tree.h"
 #include "index.h"
-#include "ignore.h"
-#include "buffer.h"
-#include "submodule.h"
-#include <ctype.h>
 
 #define GIT_ITERATOR_FIRST_ACCESS   (1 << 15)
 #define GIT_ITERATOR_HONOR_IGNORES  (1 << 16)
