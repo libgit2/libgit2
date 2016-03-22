@@ -163,7 +163,10 @@ static int homing_search_cmp(const void *key, const void *array_member)
  * around the area for our target file.
  */
 static int tree_key_search(
-	size_t *at_pos, git_vector *entries, const char *filename, size_t filename_len)
+	size_t *at_pos,
+	const git_tree *tree,
+	const char *filename,
+	size_t filename_len)
 {
 	struct tree_key_search ksearch;
 	const git_tree_entry *entry;
@@ -176,13 +179,15 @@ static int tree_key_search(
 
 	/* Initial homing search; find an entry on the tree with
 	 * the same prefix as the filename we're looking for */
-	if (git_vector_bsearch2(&homing, entries, &homing_search_cmp, &ksearch) < 0)
+
+	if (git_array_search(&homing,
+		tree->entries, &homing_search_cmp, &ksearch) < 0)
 		return GIT_ENOTFOUND; /* just a signal error; not passed back to user */
 
 	/* We found a common prefix. Look forward as long as
 	 * there are entries that share the common prefix */
-	for (i = homing; i < entries->length; ++i) {
-		entry = entries->contents[i];
+	for (i = homing; i < tree->entries.size; ++i) {
+		entry = git_array_get(tree->entries, i);
 
 		if (homing_search_cmp(&ksearch, entry) < 0)
 			break;
@@ -202,7 +207,7 @@ static int tree_key_search(
 		i = homing - 1;
 
 		do {
-			entry = entries->contents[i];
+			entry = git_array_get(tree->entries, i);
 
 			if (homing_search_cmp(&ksearch, entry) > 0)
 				break;
@@ -250,8 +255,7 @@ void git_tree__free(void *_tree)
 	git_tree *tree = _tree;
 
 	git_odb_object_free(tree->odb_obj);
-	git_vector_free(&tree->entries);
-	git_array_clear(tree->entries_arr);
+	git_array_clear(tree->entries);
 	git__free(tree);
 }
 
@@ -303,13 +307,10 @@ static const git_tree_entry *entry_fromname(
 {
 	size_t idx;
 
-	/* be safe when we cast away constness - i.e. don't trigger a sort */
-	assert(git_vector_is_sorted(&tree->entries));
-
-	if (tree_key_search(&idx, (git_vector *)&tree->entries, name, name_len) < 0)
+	if (tree_key_search(&idx, tree, name, name_len) < 0)
 		return NULL;
 
-	return git_vector_get(&tree->entries, idx);
+	return git_array_get(tree->entries, idx);
 }
 
 const git_tree_entry *git_tree_entry_byname(
@@ -324,7 +325,7 @@ const git_tree_entry *git_tree_entry_byindex(
 	const git_tree *tree, size_t idx)
 {
 	assert(tree);
-	return git_vector_get(&tree->entries, idx);
+	return git_array_get(tree->entries, idx);
 }
 
 const git_tree_entry *git_tree_entry_byid(
@@ -335,7 +336,7 @@ const git_tree_entry *git_tree_entry_byid(
 
 	assert(tree);
 
-	git_vector_foreach(&tree->entries, i, e) {
+	git_array_foreach(tree->entries, i, e) {
 		if (memcmp(&e->oid->id, &id->id, sizeof(id->id)) == 0)
 			return e;
 	}
@@ -345,7 +346,6 @@ const git_tree_entry *git_tree_entry_byid(
 
 int git_tree__prefix_position(const git_tree *tree, const char *path)
 {
-	const git_vector *entries = &tree->entries;
 	struct tree_key_search ksearch;
 	size_t at_pos, path_len;
 
@@ -358,21 +358,20 @@ int git_tree__prefix_position(const git_tree *tree, const char *path)
 	ksearch.filename = path;
 	ksearch.filename_len = (uint16_t)path_len;
 
-	/* be safe when we cast away constness - i.e. don't trigger a sort */
-	assert(git_vector_is_sorted(&tree->entries));
-
 	/* Find tree entry with appropriate prefix */
-	git_vector_bsearch2(
-		&at_pos, (git_vector *)entries, &homing_search_cmp, &ksearch);
+	git_array_search(
+		&at_pos, tree->entries, &homing_search_cmp, &ksearch);
 
-	for (; at_pos < entries->length; ++at_pos) {
-		const git_tree_entry *entry = entries->contents[at_pos];
+	for (; at_pos < tree->entries.size; ++at_pos) {
+		const git_tree_entry *entry = git_array_get(tree->entries, at_pos);
 		if (homing_search_cmp(&ksearch, entry) < 0)
 			break;
 	}
 
 	for (; at_pos > 0; --at_pos) {
-		const git_tree_entry *entry = entries->contents[at_pos - 1];
+		const git_tree_entry *entry =
+			git_array_get(tree->entries, at_pos - 1);
+
 		if (homing_search_cmp(&ksearch, entry) > 0)
 			break;
 	}
@@ -383,7 +382,7 @@ int git_tree__prefix_position(const git_tree *tree, const char *path)
 size_t git_tree_entrycount(const git_tree *tree)
 {
 	assert(tree);
-	return tree->entries.length;
+	return tree->entries.size;
 }
 
 unsigned int git_treebuilder_entrycount(git_treebuilder *bld)
@@ -423,7 +422,6 @@ static int parse_mode(unsigned int *modep, const char *buffer, const char **buff
 
 int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 {
-	size_t i;
 	git_tree *tree = _tree;
 	const char *buffer;
 	const char *buffer_end;
@@ -434,8 +432,8 @@ int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 	buffer = git_odb_object_data(tree->odb_obj);
 	buffer_end = buffer + git_odb_object_size(tree->odb_obj);
 
-	git_array_init_to_size(tree->entries_arr, DEFAULT_TREE_SIZE);
-	GITERR_CHECK_ARRAY(tree->entries_arr);
+	git_array_init_to_size(tree->entries, DEFAULT_TREE_SIZE);
+	GITERR_CHECK_ARRAY(tree->entries);
 
 	while (buffer < buffer_end) {
 		git_tree_entry *entry;
@@ -450,9 +448,9 @@ int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 			return tree_error("Failed to parse tree. Object is corrupted", NULL);
 
 		filename_len = nul - buffer;
-		/** Allocate the entry and store it in the entries vector */
+		/* Allocate the entry */
 		{
-			entry = git_array_alloc(tree->entries_arr);
+			entry = git_array_alloc(tree->entries);
 			GITERR_CHECK_ALLOC(entry);
 
 			entry->attr = attr;
@@ -464,18 +462,6 @@ int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 		buffer += filename_len + 1;
 		buffer += GIT_OID_RAWSZ;
 	}
-
-	/* Add the entries to the vector here, as we may reallocate during the loop */
-	if (git_vector_init(&tree->entries, tree->entries_arr.size, entry_sort_cmp) < 0)
-		return -1;
-
-	for (i = 0; i < tree->entries_arr.size; i++) {
-		if (git_vector_insert(&tree->entries, git_array_get(tree->entries_arr, i)) < 0)
-			return -1;
-	}
-
-	/* The tree is sorted by definition. Bad inputs give bad outputs */
-	tree->entries.flags |= GIT_VECTOR_SORTED;
 
 	return 0;
 }
@@ -700,7 +686,7 @@ int git_treebuilder_new(
 	if (source != NULL) {
 		git_tree_entry *entry_src;
 
-		git_vector_foreach(&source->entries, i, entry_src) {
+		git_array_foreach(source->entries, i, entry_src) {
 			if (append_entry(
 				bld, entry_src->filename,
 				entry_src->oid,
@@ -845,7 +831,6 @@ int git_treebuilder_write(git_oid *oid, git_treebuilder *bld)
 			error = -1;
 	}
 
-	git_vector_free(&entries);
 
 	if (!error &&
 		!(error = git_repository_odb__weakptr(&odb, bld->repo)))
@@ -975,7 +960,7 @@ static int tree_walk(
 	size_t i;
 	const git_tree_entry *entry;
 
-	git_vector_foreach(&tree->entries, i, entry) {
+	git_array_foreach(tree->entries, i, entry) {
 		if (preorder) {
 			error = callback(path->ptr, entry, payload);
 			if (error < 0) { /* negative value stops iteration */
