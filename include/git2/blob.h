@@ -192,6 +192,49 @@ GIT_EXTERN(int) git_blob_create_fromchunks(
 	void *payload);
 
 /**
+ * Create a stream to write a new blob into the object db
+ *
+ * This function may need to buffer the data on disk and will in
+ * general not be the right choice if you know the size of the data
+ * to write. If you have data in memory, use
+ * `git_blob_create_frombuffer()`. If you do not, but know the size of
+ * the contents (and don't want/need to perform filtering), use
+ * `git_odb_open_wstream()`.
+ *
+ * Don't close this stream yourself but pass it to
+ * `git_blob_create_fromstream_commit()` to commit the write to the
+ * object db and get the object id.
+ *
+ * If the `hintpath` parameter is filled, it will be used to determine
+ * what git filters should be applied to the object before it is written
+ * to the object database.
+ *
+ * @param out the stream into which to write
+ * @param repo Repository where the blob will be written.
+ *        This repository can be bare or not.
+ * @param hintpath If not NULL, will be used to select data filters
+ *        to apply onto the content of the blob to be created.
+ * @return 0 or error code
+ */
+GIT_EXTERN(int) git_blob_create_fromstream(
+	git_writestream **out,
+	git_repository *repo,
+	const char *hintpath);
+
+/**
+ * Close the stream and write the blob to the object db
+ *
+ * The stream will be closed and freed.
+ *
+ * @param out the id of the new blob
+ * @param stream the stream to close
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_blob_create_fromstream_commit(
+	git_oid *out,
+	git_writestream *stream);
+
+/**
  * Write an in-memory buffer to the ODB as a blob
  *
  * @param id return the id of the written blob
