@@ -581,7 +581,7 @@ IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
 ELSEIF (CMAKE_SIZEOF_VOID_P EQUAL 4)
 	ADD_DEFINITIONS(-DGIT_ARCH_32)
 ELSE()
-	MESSAGE(FATAL_ERROR "Unsupported architecture")
+	MESSAGE(FATAL_ERROR "Unsupported architecture (pointer size is ${CMAKE_SIZEOF_VOID_P} bytes)")
 ENDIF()
 
 # Compile and link libgit2
