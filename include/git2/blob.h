@@ -259,6 +259,15 @@ GIT_EXTERN(int) git_blob_create_frombuffer(
  */
 GIT_EXTERN(int) git_blob_is_binary(const git_blob *blob);
 
+/**
+ * Create an in-memory copy of a blob. The copy must be explicitly
+ * free'd or it will leak.
+ *
+ * @param out Pointer to store the copy of the object
+ * @param source Original object to copy
+ */
+GIT_EXTERN(int) git_blob_dup(git_blob **out, git_blob *source);
+
 /** @} */
 GIT_END_DECL
 #endif

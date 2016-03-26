@@ -652,3 +652,23 @@ void test_core_path__15_resolve_relative(void)
 
 	git_buf_free(&buf);
 }
+
+#define assert_common_dirlen(i, p, q) \
+	cl_assert_equal_i((i), git_path_common_dirlen((p), (q)));
+
+void test_core_path__16_resolve_relative(void)
+{
+	assert_common_dirlen(0, "", "");
+	assert_common_dirlen(0, "", "bar.txt");
+	assert_common_dirlen(0, "foo.txt", "bar.txt");
+	assert_common_dirlen(0, "foo.txt", "");
+	assert_common_dirlen(0, "foo/bar.txt", "bar/foo.txt");
+	assert_common_dirlen(0, "foo/bar.txt", "../foo.txt");
+
+	assert_common_dirlen(1, "/one.txt", "/two.txt");
+	assert_common_dirlen(4, "foo/one.txt", "foo/two.txt");
+	assert_common_dirlen(5, "/foo/one.txt", "/foo/two.txt");
+
+	assert_common_dirlen(6, "a/b/c/foo.txt", "a/b/c/d/e/bar.txt");
+	assert_common_dirlen(7, "/a/b/c/foo.txt", "/a/b/c/d/e/bar.txt");
+}

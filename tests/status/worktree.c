@@ -218,6 +218,58 @@ void test_status_worktree__swap_subdir_with_recurse_and_pathspec(void)
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
 }
 
+static void stage_and_commit(git_repository *repo, const char *path)
+{
+	git_index *index;
+
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_index_add_bypath(index, path));
+	cl_repo_commit_from_index(NULL, repo, NULL, 1323847743, "Initial commit\n");
+	git_index_free(index);
+}
+
+void test_status_worktree__within_subdir(void)
+{
+	status_entry_counts counts;
+	git_repository *repo = cl_git_sandbox_init("status");
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	char *paths[] = { "zzz_new_dir" };
+	git_strarray pathsArray;
+
+	/* first alter the contents of the worktree */
+	cl_git_mkfile("status/.new_file", "dummy");
+	cl_git_pass(git_futils_mkdir_r("status/zzz_new_dir", 0777));
+	cl_git_mkfile("status/zzz_new_dir/new_file", "dummy");
+	cl_git_mkfile("status/zzz_new_file", "dummy");
+	cl_git_mkfile("status/wut", "dummy");
+
+	stage_and_commit(repo, "zzz_new_dir/new_file");
+
+	/* now get status */
+	memset(&counts, 0x0, sizeof(status_entry_counts));
+	counts.expected_entry_count = entry_count4;
+	counts.expected_paths = entry_paths4;
+	counts.expected_statuses = entry_statuses4;
+	counts.debug = true;
+
+	opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+		GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS |
+		GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH;
+
+	pathsArray.count = 1;
+	pathsArray.strings = paths;
+	opts.pathspec = pathsArray;
+
+	// We committed zzz_new_dir/new_file above. It shouldn't be reported.
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts)
+	);
+
+	cl_assert_equal_i(0, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
+}
+
 /* this test is equivalent to t18-status.c:singlestatus0 */
 void test_status_worktree__single_file(void)
 {
@@ -657,7 +709,7 @@ void test_status_worktree__conflict_has_no_oid(void)
 
 	entry.mode = 0100644;
 	entry.path = "modified_file";
-	git_oid_fromstr(&entry.id, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef");
+	git_oid_fromstr(&entry.id, "452e4244b5d083ddf0460acf1ecc74db9dcfa11a");
 
 	cl_git_pass(git_repository_index(&index, repo));
 	cl_git_pass(git_index_conflict_add(index, &entry, &entry, &entry));
@@ -690,16 +742,6 @@ void test_status_worktree__conflict_has_no_oid(void)
 
 	git_index_free(index);
 	git_status_list_free(statuslist);
-}
-
-static void stage_and_commit(git_repository *repo, const char *path)
-{
-	git_index *index;
-
-	cl_git_pass(git_repository_index(&index, repo));
-	cl_git_pass(git_index_add_bypath(index, path));
-	cl_repo_commit_from_index(NULL, repo, NULL, 1323847743, "Initial commit\n");
-	git_index_free(index);
 }
 
 static void assert_ignore_case(
@@ -1144,5 +1186,88 @@ void test_status_worktree__update_index_with_symlink_doesnt_change_mode(void)
 	git_index_free(index);
 	git_object_free(head_object);
 	git_reference_free(head);
+}
+
+static const char *testrepo2_subdir_paths[] = {
+		"subdir/README",
+		"subdir/new.txt",
+		"subdir/subdir2/README",
+		"subdir/subdir2/new.txt",
+};
+
+static const char *testrepo2_subdir_paths_icase[] = {
+		"subdir/new.txt",
+		"subdir/README",
+		"subdir/subdir2/new.txt",
+		"subdir/subdir2/README"
+};
+
+void test_status_worktree__with_directory_in_pathlist(void)
+{
+	git_repository *repo = cl_git_sandbox_init("testrepo2");
+	git_index *index;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	git_status_list *statuslist;
+	const git_status_entry *status;
+	size_t i, entrycount;
+	bool native_ignore_case;
+
+	cl_git_pass(git_repository_index(&index, repo));
+	native_ignore_case =
+			(git_index_caps(index) & GIT_INDEXCAP_IGNORE_CASE) != 0;
+	git_index_free(index);
+
+	opts.pathspec.count = 1;
+	opts.pathspec.strings = malloc(opts.pathspec.count * sizeof(char *));
+	opts.pathspec.strings[0] = "subdir";
+	opts.flags =
+			GIT_STATUS_OPT_DEFAULTS |
+			GIT_STATUS_OPT_INCLUDE_UNMODIFIED |
+			GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH;
+
+	opts.show = GIT_STATUS_SHOW_WORKDIR_ONLY;
+	git_status_list_new(&statuslist, repo, &opts);
+
+	entrycount = git_status_list_entrycount(statuslist);
+	cl_assert_equal_i(4, entrycount);
+
+	for (i = 0; i < entrycount; i++) {
+		status = git_status_byindex(statuslist, i);
+		cl_assert_equal_i(0, status->status);
+		cl_assert_equal_s(native_ignore_case ?
+			testrepo2_subdir_paths_icase[i] :
+			testrepo2_subdir_paths[i],
+			status->index_to_workdir->old_file.path);
+	}
+
+	opts.show = GIT_STATUS_SHOW_INDEX_ONLY;
+	git_status_list_new(&statuslist, repo, &opts);
+
+	entrycount = git_status_list_entrycount(statuslist);
+	cl_assert_equal_i(4, entrycount);
+
+	for (i = 0; i < entrycount; i++) {
+		status = git_status_byindex(statuslist, i);
+		cl_assert_equal_i(0, status->status);
+		cl_assert_equal_s(native_ignore_case ?
+			testrepo2_subdir_paths_icase[i] :
+			testrepo2_subdir_paths[i],
+			status->head_to_index->old_file.path);
+	}
+
+	opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
+	git_status_list_new(&statuslist, repo, &opts);
+
+	entrycount = git_status_list_entrycount(statuslist);
+	cl_assert_equal_i(4, entrycount);
+
+	for (i = 0; i < entrycount; i++) {
+		status = git_status_byindex(statuslist, i);
+		cl_assert_equal_i(0, status->status);
+		cl_assert_equal_s(native_ignore_case ?
+			testrepo2_subdir_paths_icase[i] :
+			testrepo2_subdir_paths[i],
+			status->index_to_workdir->old_file.path);
+	}
 }
 

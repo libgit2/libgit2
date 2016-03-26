@@ -15,7 +15,7 @@
 #include "tag.h"
 
 /**
- * Blob
+ * Commit
  */
 int git_commit_lookup(git_commit **out, git_repository *repo, const git_oid *id)
 {
@@ -42,6 +42,10 @@ git_repository *git_commit_owner(const git_commit *obj)
 	return git_object_owner((const git_object *)obj);
 }
 
+int git_commit_dup(git_commit **out, git_commit *obj)
+{
+	return git_object_dup((git_object **)out, (git_object *)obj);
+}
 
 /**
  * Tree
@@ -71,6 +75,10 @@ git_repository *git_tree_owner(const git_tree *obj)
 	return git_object_owner((const git_object *)obj);
 }
 
+int git_tree_dup(git_tree **out, git_tree *obj)
+{
+	return git_object_dup((git_object **)out, (git_object *)obj);
+}
 
 /**
  * Tag
@@ -100,6 +108,11 @@ git_repository *git_tag_owner(const git_tag *obj)
 	return git_object_owner((const git_object *)obj);
 }
 
+int git_tag_dup(git_tag **out, git_tag *obj)
+{
+	return git_object_dup((git_object **)out, (git_object *)obj);
+}
+
 /**
  * Blob
  */
@@ -126,4 +139,9 @@ const git_oid *git_blob_id(const git_blob *obj)
 git_repository *git_blob_owner(const git_blob *obj)
 {
 	return git_object_owner((const git_object *)obj);
+}
+
+int git_blob_dup(git_blob **out, git_blob *obj)
+{
+	return git_object_dup((git_object **)out, (git_object *)obj);
 }
