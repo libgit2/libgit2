@@ -1472,7 +1472,7 @@ static int config_parse(
 	int (*on_section)(struct reader **reader, const char *current_section, const char *line, size_t line_len, void *data),
 	int (*on_variable)(struct reader **reader, const char *current_section, char *var_name, char *var_value, const char *line, size_t line_len, void *data),
 	int (*on_comment)(struct reader **reader, const char *line, size_t line_len, void *data),
-	int (*on_eof)(struct reader **reader, void *data),
+	int (*on_eof)(struct reader **reader, const char *current_section, void *data),
 	void *data)
 {
 	char *current_section = NULL, *var_name, *var_value, *line_start;
@@ -1523,7 +1523,7 @@ static int config_parse(
 	}
 
 	if (on_eof)
-		result = on_eof(&reader, data);
+		result = on_eof(&reader, current_section, data);
 
 	git__free(current_section);
 	return result;
@@ -1839,7 +1839,8 @@ static int write_on_comment(struct reader **reader, const char *line, size_t lin
 	return write_line_to(&write_data->buffered_comment, line, line_len);
 }
 
-static int write_on_eof(struct reader **reader, void *data)
+static int write_on_eof(
+	struct reader **reader, const char *current_section, void *data)
 {
 	struct write_data *write_data = (struct write_data *)data;
 	int result = 0;
@@ -1858,7 +1859,11 @@ static int write_on_eof(struct reader **reader, void *data)
 	 * value.
 	 */
 	if ((!write_data->preg || !write_data->preg_replaced) && write_data->value) {
-		if ((result = write_section(write_data->buf, write_data->section)) == 0)
+		/* write the section header unless we're already in it */
+		if (!current_section || strcmp(current_section, write_data->section))
+			result = write_section(write_data->buf, write_data->section);
+
+		if (!result)
 			result = write_value(write_data);
 	}
 
