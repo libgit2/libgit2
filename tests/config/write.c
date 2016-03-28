@@ -700,7 +700,7 @@ void test_config_write__repeated(void)
 {
 	const char *filename = "config-repeated";
 	git_config *cfg;
-	git_buf result;
+	git_buf result = GIT_BUF_INIT;
 	const char *expected = "[sample \"prefix\"]\n\
 \tsetting1 = someValue1\n\
 \tsetting2 = someValue2\n\
