@@ -51,5 +51,7 @@ void test_core_array__bsearch2(void)
 	expect_pos(50, 10, GIT_ENOTFOUND);
 	expect_pos(68, 10, GIT_ENOTFOUND);
 	expect_pos(256, 12, GIT_OK);
+
+	git_array_clear(integers);
 }
 
