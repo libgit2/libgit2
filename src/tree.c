@@ -837,6 +837,8 @@ int git_treebuilder_write(git_oid *oid, git_treebuilder *bld)
 		error = git_odb_write(oid, odb, tree.ptr, tree.size, GIT_OBJ_TREE);
 
 	git_buf_free(&tree);
+	git_vector_free(&entries);
+
 	return error;
 }
 
