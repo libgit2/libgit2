@@ -667,6 +667,7 @@ done:
 static void tree_iterator_frame_pop(tree_iterator *iter)
 {
 	tree_iterator_frame *frame;
+	git_buf *buf = NULL;
 
 	assert(iter->frames.size);
 
@@ -674,6 +675,14 @@ static void tree_iterator_frame_pop(tree_iterator *iter)
 
 	git_vector_free(&frame->entries);
 	git_tree_free(frame->tree);
+
+	do {
+		buf = git_array_pop(frame->similar_paths);
+		git_buf_free(buf);
+	} while (buf != NULL);
+
+	git_array_clear(frame->similar_paths);
+	git_buf_free(&frame->path);
 }
 
 static int tree_iterator_current(
@@ -1760,6 +1769,10 @@ static int filesystem_iterator_reset(git_iterator *i)
 static void filesystem_iterator_free(git_iterator *i)
 {
 	filesystem_iterator *iter = (filesystem_iterator *)i;
+	git__free(iter->root);
+	git_buf_free(&iter->current_path);
+	if (iter->index)
+		git_index_snapshot_release(&iter->index_snapshot, iter->index);
 	filesystem_iterator_clear(iter);
 }
 
@@ -1823,6 +1836,7 @@ static int iterator_for_filesystem(
 		(error = git_index_snapshot_new(&iter->index_snapshot, index)) < 0)
 		goto on_error;
 
+	iter->index = index;
 	iter->dirload_flags =
 		(iterator__ignore_case(&iter->base) ? GIT_PATH_DIR_IGNORE_CASE : 0) |
 		(iterator__flag(&iter->base, PRECOMPOSE_UNICODE) ?
