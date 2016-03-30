@@ -712,10 +712,13 @@ void test_config_write__repeated(void)
 	cl_git_pass(git_config_set_string(cfg, "sample.prefix.setting2", "someValue2"));
 	cl_git_pass(git_config_set_string(cfg, "sample.prefix.setting3", "someValue3"));
 	cl_git_pass(git_config_set_string(cfg, "sample.prefix.setting4", "someValue4"));
+	git_config_free(cfg);
 
 	cl_git_pass(git_config_open_ondisk(&cfg, filename));
 
 	cl_git_pass(git_futils_readbuffer(&result, filename));
 	cl_assert_equal_s(expected, result.ptr);
 	git_buf_free(&result);
+
+	git_config_free(cfg);
 }

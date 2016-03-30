@@ -1030,6 +1030,8 @@ static void create_paths(const char *root, int depth)
 				create_paths(fullpath.ptr, (depth - 1));
 		}
 	}
+
+	git_buf_free(&fullpath);
 }
 
 void test_iterator_workdir__pathlist_for_deeply_nested_item(void)
