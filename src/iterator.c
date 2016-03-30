@@ -408,6 +408,9 @@ typedef struct {
 typedef struct {
 	git_tree *tree;
 
+	/* path to this particular frame (folder) */
+	git_buf path;
+
 	/* a sorted list of the entries for this frame (folder), these are
 	 * actually pointers to the iterator's entry pool.
 	 */
@@ -416,13 +419,13 @@ typedef struct {
 
 	size_t next_idx;
 
-	/* the path to this particular frame (folder); on case insensitive
-	 * iterations, we also have an array of other paths that we were
-	 * case insensitively equal to this one, whose contents we have
-	 * coalesced into this frame.  a child `tree_iterator_entry` will
-	 * contain a pointer to its actual parent path.
+	/* on case insensitive iterations, we also have an array of other
+	 * paths that were case insensitively equal to this one, and their
+	 * tree objects.  we have coalesced the tree entries into this frame.
+	 * a child `tree_iterator_entry` will contain a pointer to its actual
+	 * parent path.
 	 */
-	git_buf path;
+	git_vector similar_trees;
 	git_array_t(git_buf) similar_paths;
 } tree_iterator_frame;
 
@@ -604,6 +607,9 @@ GIT_INLINE(int) tree_iterator_frame_push_neighbors(
 			iter->base.repo, entry->tree_entry->oid)) < 0)
 			break;
 
+		if (git_vector_insert(&parent_frame->similar_trees, tree) < 0)
+			break;
+
 		path = git_array_alloc(parent_frame->similar_paths);
 		GITERR_CHECK_ALLOC(path);
 
@@ -668,6 +674,8 @@ static void tree_iterator_frame_pop(tree_iterator *iter)
 {
 	tree_iterator_frame *frame;
 	git_buf *buf = NULL;
+	git_tree *tree;
+	size_t i;
 
 	assert(iter->frames.size);
 
@@ -682,6 +690,12 @@ static void tree_iterator_frame_pop(tree_iterator *iter)
 	} while (buf != NULL);
 
 	git_array_clear(frame->similar_paths);
+
+	git_vector_foreach(&frame->similar_trees, i, tree)
+		git_tree_free(tree);
+
+	git_vector_free(&frame->similar_trees);
+
 	git_buf_free(&frame->path);
 }
 
@@ -1771,6 +1785,7 @@ static void filesystem_iterator_free(git_iterator *i)
 	filesystem_iterator *iter = (filesystem_iterator *)i;
 	git__free(iter->root);
 	git_buf_free(&iter->current_path);
+	git_tree_free(iter->tree);
 	if (iter->index)
 		git_index_snapshot_release(&iter->index_snapshot, iter->index);
 	filesystem_iterator_clear(iter);
@@ -2107,6 +2122,7 @@ static void index_iterator_free(git_iterator *i)
 	index_iterator *iter = (index_iterator *)i;
 
 	git_index_snapshot_release(&iter->entries, iter->base.index);
+	git_buf_free(&iter->tree_buf);
 }
 
 int git_iterator_for_index(
