@@ -970,7 +970,9 @@ void test_iterator_index__pathlist_with_directory(void)
 	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
 	expect_iterator_items(i, 4, NULL, 4, NULL);
 	git_iterator_free(i);
+
 	git_index_free(index);
+	git_tree_free(tree);
 	git_vector_free(&filelist);
 }
 
