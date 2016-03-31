@@ -29,6 +29,14 @@
 # include <inttypes.h>
 #endif
 
+#ifdef DOCURIUM
+/*
+ * This is so clang's doc parser acknowledges comments on functions
+ * with size_t parameters.
+ */
+typedef size_t size_t;
+#endif
+
 /** Declare a public function exported for application use. */
 #if __GNUC__ >= 4
 # define GIT_EXTERN(type) extern \
