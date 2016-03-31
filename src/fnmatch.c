@@ -88,6 +88,7 @@ p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 						break;
 				case '*':
 						c = *pattern;
+						bool pattern_path_delimiter_start = false;
 
 						/* Let '**' override PATHNAME match for this segment.
 						 * It will be restored if/when we recurse below.
@@ -96,8 +97,10 @@ p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 							flags &= ~FNM_PATHNAME;
 							while (c == '*')
 								c = *++pattern;
-							if (c == '/')
+							if (c == '/') {
 								c = *++pattern;
+								pattern_path_delimiter_start = true;
+							}
 						}
 
 						if (*string == '.' && (flags & FNM_PERIOD) &&
@@ -119,15 +122,18 @@ p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 								break;
 						}
 
+						bool string_path_delimiter_start = true;
 						/* General case, use recursion. */
 						while ((test = *string) != EOS) {
 								int e;
 
 								e = p_fnmatchx(pattern, string, recurs_flags, recurs);
-								if (e != FNM_NOMATCH)
-										return e;
-								if (test == '/' && (flags & FNM_PATHNAME))
-										break;
+								if (e != FNM_NOMATCH && !(pattern_path_delimiter_start && !string_path_delimiter_start)) {
+									return e;
+								}
+								string_path_delimiter_start = test == '/';
+								if (string_path_delimiter_start && (flags & FNM_PATHNAME))
+									break;
 								++string;
 						}
 						return (FNM_NOMATCH);
