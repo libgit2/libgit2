@@ -777,7 +777,6 @@ static int fix_thin_pack(git_indexer *idx, git_transfer_progress *stats)
 
 		curpos = delta->delta_off;
 		error = git_packfile_unpack_header(&size, &type, &idx->pack->mwf, &w, &curpos);
-		git_mwindow_close(&w);
 		if (error < 0)
 			return error;
 
