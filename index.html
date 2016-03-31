@@ -92,6 +92,7 @@
 	 <% }) %>
        </ul>
      </li>
+     <% if (examples.length > 0) { %>
      <li>
        <h3><a href="#">Examples</a></h3>
        <ul>
@@ -102,6 +103,7 @@
 	 <% }) %>
        </ul>
      </li>
+    <% } %> <!-- if we have examples -->
     </script>
 
     <!-- Listing of the details of a single function -->
@@ -162,14 +164,14 @@
      </ul>
      </div>
      <% } %> <!-- if we have examples -->
-     <% if (alsoLinks) { %>
+     <% if (alsoLinks && (alsoLinks.length > 0)) { %>
      <div class="also">
        Also in <a href="<%= alsoGroup %>"><%= groupName %></a> group: <br/>
        <% _.each(_.initial(alsoLinks), function(link) { %>
        <a href="<%= link.url %>"><%= link.name %></a>, 
        <% }) %>
        <% var link = _.last(alsoLinks) %>
-       <a href="<%= link.url %>"><%= link.name %></a>
+       <a href="<%= link.url %>"><%= link.name %></a>.
      </div>
      <% } %> <!-- if we have "also" links -->
     </script>
@@ -191,21 +193,21 @@
 
     <script type="text/template" id="uses-template">
       <% if (returns.length > 0) { %>
-      <h3>Returns</h3>
+      <h3>Returned by</h3>
       <% _.each(_.initial(returns), function(fun) { %>
-      <a href="<%= fun.url %>"><%= fun.name %></a>
+      <a href="<%= fun.url %>"><%= fun.name %></a>,
       <% }) %> <!-- loop over each 'return' -->
       <% var fun = _.last(returns) %>
-      <a href="<%= fun.url %>"><%= fun.name %></a>
+      <a href="<%= fun.url %>"><%= fun.name %></a>.
       <% } %> <!-- if we have 'returns' -->
 
       <% if (needs.length > 0) { %>
-      <h3>Argument In</h3>
+      <h3>Argument in</h3>
       <% _.each(_.initial(needs), function(fun) { %>
-      <a href="<%= fun.url %>"><%= fun.name %></a>
+      <a href="<%= fun.url %>"><%= fun.name %></a>,
       <% }) %> <!-- loop over each 'need' -->
       <% var fun = _.last(needs) %>
-      <a href="<%= fun.url %>"><%= fun.name %></a>
+      <a href="<%= fun.url %>"><%= fun.name %></a>.
       <% } %> <!-- if we have 'needs' -->
 
       <div class="fileLink">
