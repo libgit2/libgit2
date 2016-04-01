@@ -252,3 +252,16 @@ void test_attr_ignore__dont_ignore_files_for_folder(void)
 	if (cl_repo_get_bool(g_repo, "core.ignorecase"))
 		assert_is_ignored(false, "dir/TeSt");
 }
+
+void test_attr_ignore__symlink_to_outside(void)
+{
+#ifdef GIT_WIN32
+	cl_skip();
+#endif
+
+	cl_git_rewritefile("attr/.gitignore", "symlink\n");
+	cl_git_mkfile("target", "target");
+	cl_git_pass(p_symlink("../target", "attr/symlink"));
+	assert_is_ignored(true, "symlink");
+	assert_is_ignored(true, "lala/../symlink");
+}

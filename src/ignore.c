@@ -263,10 +263,18 @@ int git_ignore__for_path(
 		goto cleanup;
 
 	/* given a unrooted path in a non-bare repo, resolve it */
-	if (workdir && git_path_root(path) < 0)
-		error = git_path_find_dir(&ignores->dir, path, workdir);
-	else
+	if (workdir && git_path_root(path) < 0) {
+		git_buf local = GIT_BUF_INIT;
+
+		if ((error = git_path_dirname_r(&local, path)) < 0 ||
+		    (error = git_path_resolve_relative(&local, 0)) < 0 ||
+		    (error = git_path_to_dir(&local)) < 0 ||
+		    (error = git_buf_joinpath(&ignores->dir, workdir, local.ptr)) < 0)
+		{;} /* Nothing, we just want to stop on the first error */
+		git_buf_free(&local);
+	} else {
 		error = git_buf_joinpath(&ignores->dir, path, "");
+	}
 	if (error < 0)
 		goto cleanup;
 
