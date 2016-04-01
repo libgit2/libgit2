@@ -140,7 +140,6 @@ void test_attr_ignore__globs_and_path_delimiters(void)
 	assert_is_ignored(true, "_test/a/file");
 
 	cl_git_rewritefile("attr/.gitignore", "**/_*/foo/bar/*ux");
-
 	assert_is_ignored(true, "_test/foo/bar/qux/file");
 	assert_is_ignored(true, "_test/foo/bar/crux/file");
 	assert_is_ignored(false, "_test/foo/bar/code/file");
