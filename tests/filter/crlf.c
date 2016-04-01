@@ -16,6 +16,7 @@ void test_filter_crlf__initialize(void)
 
 void test_filter_crlf__cleanup(void)
 {
+	git_warning_set_callback(NULL, NULL);
 	cl_git_sandbox_cleanup();
 }
 
@@ -192,11 +193,28 @@ void test_filter_crlf__no_safecrlf(void)
 	git_buf_free(&out);
 }
 
+static int crlf_warn_cb(git_warning *warning, void *payload)
+{
+	git_warning_crlf *warn_crlf;
+	int *called = (int *) payload;
+
+	*called = 1;
+	cl_assert_equal_i(GIT_WARNING_CRLF, warning->type);
+	cl_assert_equal_s("LF would be replaced by CRLF in ''", warning->str);
+
+	warn_crlf = (git_warning_crlf *) warning;
+	/* We have "bare" filter lists, so we don't know the path */
+	cl_assert_equal_s("", warn_crlf->path);
+
+	return 0;
+}
+
 void test_filter_crlf__safecrlf_warn(void)
 {
 	git_filter_list *fl;
 	git_filter *crlf;
 	git_buf in = {0}, out = GIT_BUF_INIT;
+	int warning_called;
 
 	cl_repo_set_string(g_repo, "core.safecrlf", "warn");
 
@@ -219,9 +237,12 @@ void test_filter_crlf__safecrlf_warn(void)
 	in.ptr = "Mixed\nup\r\nLF\nand\r\nCRLF\nline-endings.\r\n";
 	in.size = strlen(in.ptr);
 
+	warning_called = 0;
+	cl_git_pass(git_warning_set_callback(crlf_warn_cb, &warning_called));
 	cl_git_pass(git_filter_list_apply_to_data(&out, fl, &in));
-	/* TODO: check for warning */
 	cl_assert_equal_s("Mixed\nup\nLF\nand\nCRLF\nline-endings.\n", out.ptr);
+	cl_assert(warning_called);
+	cl_git_pass(git_warning_set_callback(NULL, NULL));
 
 	/* Normalized \n is reversible, so does not fail with safecrlf=warn */
 	in.ptr = "Normal\nLF\nonly\nline-endings.\n";

@@ -16,6 +16,7 @@
 #include "filter.h"
 #include "buf_text.h"
 #include "repository.h"
+#include "warning.h"
 
 struct crlf_attrs {
 	int crlf_action;
@@ -118,6 +119,8 @@ static int has_cr_in_index(const git_filter_source *src)
 	return found_cr;
 }
 
+static const char *lfwarning = "LF would be replaced by CRLF in '%s'";
+
 static int crlf_apply_to_odb(
 	struct crlf_attrs *ca,
 	git_buf *to,
@@ -147,11 +150,28 @@ static int crlf_apply_to_odb(
 			switch (ca->safe_crlf) {
 			case GIT_SAFE_CRLF_FAIL:
 				giterr_set(
-					GITERR_FILTER, "LF would be replaced by CRLF in '%s'",
-					git_filter_source_path(src));
+					GITERR_FILTER, lfwarning, git_filter_source_path(src));
 				return -1;
 			case GIT_SAFE_CRLF_WARN:
-				/* TODO: issue warning when warning API is available */;
+			{
+				int ret;
+				git_warning_crlf warning;
+				git_buf buf = GIT_BUF_INIT;
+
+				if (git_buf_printf(&buf, lfwarning, git_filter_source_path(src)) < 0)
+					return -1;
+
+				warning.parent.type = GIT_WARNING_CRLF;
+				warning.parent.str = buf.ptr;
+				warning.path = git_filter_source_path(src);
+
+				ret = git_warning__raise(&warning.parent);
+				git_buf_free(&buf);
+
+				giterr_set_after_callback(ret);
+				if (ret < 0)
+					return ret;
+			}
 				break;
 			default:
 				break;

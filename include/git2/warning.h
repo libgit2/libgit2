@@ -26,6 +26,11 @@ typedef enum {
 	 * available.
 	 */
 	GIT_WARNING_GENERIC,
+
+	/**
+	 * Warning related to line ending conversion.
+	 */
+	GIT_WARNING_CRLF,
 } git_warning_t;
 
 /**
@@ -44,6 +49,14 @@ typedef struct {
 	 */
 	const char *str;
 } git_warning;
+
+typedef struct {
+	/** The base struct */
+	git_warning parent;
+
+	/** The file this warning refers to */
+	const char *path;
+} git_warning_crlf;
 
 /**
  * User-specified callback for warnings
