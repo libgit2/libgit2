@@ -3,6 +3,7 @@ extern void rewrite_gitmodules(const char *workdir);
 /* these will automatically set a cleanup callback */
 extern git_repository *setup_fixture_submodules(void);
 extern git_repository *setup_fixture_submod2(void);
+extern git_repository *setup_fixture_submod3(void);
 extern git_repository *setup_fixture_submodule_simple(void);
 extern git_repository *setup_fixture_super(void);
 extern git_repository *setup_fixture_submodule_with_path(void);

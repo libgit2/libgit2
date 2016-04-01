@@ -34,7 +34,7 @@ static void iterator_set_ignore_case(git_iterator *iter, bool ignore_case)
 	iter->strcomp = ignore_case ? git__strcasecmp : git__strcmp;
 	iter->strncomp = ignore_case ? git__strncasecmp : git__strncmp;
 	iter->prefixcomp = ignore_case ? git__prefixcmp_icase : git__prefixcmp;
-	iter->entry_srch = ignore_case ? git_index_entry_srch : git_index_entry_isrch;
+	iter->entry_srch = ignore_case ? git_index_entry_isrch : git_index_entry_srch;
 
 	git_vector_set_cmp(&iter->pathlist, (git_vector_cmp)iter->strcomp);
 }
