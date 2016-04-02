@@ -169,7 +169,8 @@ static void iterator_clear(git_iterator *iter)
 	iter->flags &= ~GIT_ITERATOR_FIRST_ACCESS;
 }
 
-GIT_INLINE(bool) iterator_has_started(git_iterator *iter, const char *path)
+GIT_INLINE(bool) iterator_has_started(
+	git_iterator *iter, const char *path, bool is_submodule)
 {
 	size_t path_len;
 
@@ -181,19 +182,32 @@ GIT_INLINE(bool) iterator_has_started(git_iterator *iter, const char *path)
 	 */
 	iter->started = (iter->prefixcomp(path, iter->start) >= 0);
 
+	if (iter->started)
+		return true;
+
+	path_len = strlen(path);
+
+	/* if, however, we are a submodule, then we support `start` being
+	 * suffixed with a `/` for crazy legacy reasons.  match `submod`
+	 * with a start path of `submod/`.
+	 */
+	if (is_submodule && iter->start_len && path_len == iter->start_len - 1 &&
+		iter->start[iter->start_len-1] == '/')
+		return true;
+
 	/* if, however, our current path is a directory, and our starting path
 	 * is _beneath_ that directory, then recurse into the directory (even
 	 * though we have not yet "started")
 	 */
-	if (!iter->started &&
-		(path_len = strlen(path)) > 0 && path[path_len-1] == '/' &&
+	if (path_len > 0 && path[path_len-1] == '/' &&
 		iter->strncomp(path, iter->start, path_len) == 0)
 		return true;
 
-	return iter->started;
+	return false;
 }
 
-GIT_INLINE(bool) iterator_has_ended(git_iterator *iter, const char *path)
+GIT_INLINE(bool) iterator_has_ended(
+	git_iterator *iter, const char *path, bool is_submodule)
 {
 	if (iter->end == NULL)
 		return false;
@@ -779,11 +793,11 @@ static int tree_iterator_advance(const git_index_entry **out, git_iterator *i)
 			break;
 
 		/* if this path is before our start, advance over this entry */
-		if (!iterator_has_started(&iter->base, iter->entry_path.ptr))
+		if (!iterator_has_started(&iter->base, iter->entry_path.ptr, false))
 			continue;
 
 		/* if this path is after our end, stop */
-		if (iterator_has_ended(&iter->base, iter->entry_path.ptr)) {
+		if (iterator_has_ended(&iter->base, iter->entry_path.ptr, false)) {
 			error = GIT_ITEROVER;
 			break;
 		}
@@ -1400,7 +1414,7 @@ static int filesystem_iterator_frame_push(
 		}
 
 		/* Ensure that the pathlist entry lines up with what we expected */
-		if (dir_expected && !S_ISDIR(statbuf.st_mode))
+		else if (dir_expected)
 			continue;
 
 		entry = filesystem_iterator_entry_init(new_frame,
@@ -1995,6 +2009,7 @@ static int index_iterator_advance(
 {
 	index_iterator *iter = (index_iterator *)i;
 	const git_index_entry *entry = NULL;
+	bool is_submodule;
 	int error = 0;
 
 	iter->base.flags |= GIT_ITERATOR_FIRST_ACCESS;
@@ -2012,13 +2027,14 @@ static int index_iterator_advance(
 		}
 
 		entry = iter->entries.contents[iter->next_idx];
+		is_submodule = S_ISGITLINK(entry->mode);
 
-		if (!iterator_has_started(&iter->base, entry->path)) {
+		if (!iterator_has_started(&iter->base, entry->path, is_submodule)) {
 			iter->next_idx++;
 			continue;
 		}
 
-		if (iterator_has_ended(&iter->base, entry->path)) {
+		if (iterator_has_ended(&iter->base, entry->path, is_submodule)) {
 			error = GIT_ITEROVER;
 			break;
 		}
