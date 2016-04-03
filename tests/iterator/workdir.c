@@ -1197,8 +1197,11 @@ void test_iterator_workdir__bounded_submodules(void)
 		git_iterator_free(i);
 	}
 
-	/* Test that a submodule never matches when suffixed with a '/' */
+	/* Test that a submodule still matches when suffixed with a '/' */
 	{
+		const char *expected[] = { "sm_changed_head" };
+		size_t expected_len = 1;
+
 		git_vector_clear(&filelist);
 		cl_git_pass(git_vector_insert(&filelist, "sm_changed_head/"));
 
@@ -1207,7 +1210,7 @@ void test_iterator_workdir__bounded_submodules(void)
 		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
 
 		cl_git_pass(git_iterator_for_workdir(&i, g_repo, index, head, &i_opts));
-		cl_git_fail_with(GIT_ITEROVER, git_iterator_advance(NULL, i));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
 		git_iterator_free(i);
 	}
 
@@ -1227,16 +1230,19 @@ void test_iterator_workdir__bounded_submodules(void)
 		git_iterator_free(i);
 	}
 
-	/* Test that start and end do not allow '/' suffixes of submodules */
+	/* Test that start and end allow '/' suffixes of submodules */
 	{
-		i_opts.start = "sm_changed_head/";
-		i_opts.end = "sm_changed_head/";
+		const char *expected[] = { "sm_changed_head", "sm_changed_index" };
+		size_t expected_len = 2;
+
+		i_opts.start = "sm_changed_head";
+		i_opts.end = "sm_changed_index";
 		i_opts.pathlist.strings = NULL;
 		i_opts.pathlist.count = 0;
 		i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
 
 		cl_git_pass(git_iterator_for_workdir(&i, g_repo, index, head, &i_opts));
-		cl_git_fail_with(GIT_ITEROVER, git_iterator_advance(NULL, i));
+		expect_iterator_items(i, expected_len, expected, expected_len, expected);
 		git_iterator_free(i);
 	}
 
