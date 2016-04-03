@@ -206,6 +206,12 @@ void test_repo_open__failures(void)
 	cl_git_fail(git_repository_open_ext(&repo, "alternate", 0, NULL));
 	cl_git_fail(git_repository_open_ext(&repo, "alternate/.git", 0, NULL));
 
+	/* fail with no searching and no appending .git */
+	cl_git_fail(git_repository_open_ext(
+		&repo, "attr",
+		GIT_REPOSITORY_OPEN_NO_SEARCH | GIT_REPOSITORY_OPEN_NO_DOTGIT,
+		NULL));
+
 	git_buf_free(&ceiling);
 }
 

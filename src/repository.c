@@ -370,11 +370,12 @@ static int find_repo(
 
 	/* in_dot_git toggles each loop:
 	 * /a/b/c/.git, /a/b/c, /a/b/.git, /a/b, /a/.git, /a
-	 * With GIT_REPOSITORY_OPEN_BARE, we assume we started with /a/b/c.git
-	 * and don't append .git the first time through.
+	 * With GIT_REPOSITORY_OPEN_BARE or GIT_REPOSITORY_OPEN_NO_DOTGIT, we
+	 * assume we started with /a/b/c.git and don't append .git the first
+	 * time through.
 	 * min_iterations indicates the number of iterations left before going
 	 * further counts as a search. */
-	if (flags & GIT_REPOSITORY_OPEN_BARE) {
+	if (flags & (GIT_REPOSITORY_OPEN_BARE | GIT_REPOSITORY_OPEN_NO_DOTGIT)) {
 		in_dot_git = true;
 		min_iterations = 1;
 	} else {
@@ -384,10 +385,12 @@ static int find_repo(
 
 	while (!error && (min_iterations || !(path.ptr[ceiling_offset] == 0 ||
 					      (flags & GIT_REPOSITORY_OPEN_NO_SEARCH)))) {
-		if (!in_dot_git)
-			if ((error = git_buf_joinpath(&path, path.ptr, DOT_GIT)) < 0)
-				break;
-		in_dot_git = !in_dot_git;
+		if (!(flags & GIT_REPOSITORY_OPEN_NO_DOTGIT)) {
+			if (!in_dot_git)
+				if ((error = git_buf_joinpath(&path, path.ptr, DOT_GIT)) < 0)
+					break;
+			in_dot_git = !in_dot_git;
+		}
 
 		if (p_stat(path.ptr, &st) == 0) {
 			/* check that we have not crossed device boundaries */

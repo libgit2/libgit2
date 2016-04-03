@@ -95,11 +95,15 @@ GIT_EXTERN(int) git_repository_discover(
  * * GIT_REPOSITORY_OPEN_BARE - Open repository as a bare repo regardless
  *   of core.bare config, and defer loading config file for faster setup.
  *   Unlike `git_repository_open_bare`, this can follow gitlinks.
+ * * GIT_REPOSITORY_OPEN_NO_DOTGIT - Do not check for a repository by
+ *   appending /.git to the start_path; only open the repository if
+ *   start_path itself points to the git directory.
  */
 typedef enum {
 	GIT_REPOSITORY_OPEN_NO_SEARCH = (1 << 0),
 	GIT_REPOSITORY_OPEN_CROSS_FS  = (1 << 1),
 	GIT_REPOSITORY_OPEN_BARE      = (1 << 2),
+	GIT_REPOSITORY_OPEN_NO_DOTGIT = (1 << 3),
 } git_repository_open_flag_t;
 
 /**
