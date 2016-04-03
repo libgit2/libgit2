@@ -239,9 +239,13 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 	out->data = NULL;
 	out->len = 0;
 
-	if ((prot & GIT_PROT_WRITE) && ((flags & GIT_MAP_TYPE) == GIT_MAP_SHARED)) {
-		giterr_set(GITERR_OS, "Trying to map shared-writeable");
-		return -1;
+	if (prot & GIT_PROT_WRITE) {
+		if ((p_lseek(fd, offset, SEEK_SET) < 0) || p_write(fd, out->data, len)) {
+			giterr_set(GITERR_OS, "index write failed");
+			return -1;
+		}
+		out->len = 0; /* write not shared */
+		return 0;
 	}
 
 	out->data = malloc(len);
