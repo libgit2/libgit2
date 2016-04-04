@@ -118,12 +118,22 @@ void test_repo_discover__0(void)
 	cl_git_fail(git_repository_discover(&found_path, ALTERNATE_MALFORMED_FOLDER3, 0, ceiling_dirs));
 	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_discover(&found_path, ALTERNATE_NOT_FOUND_FOLDER, 0, ceiling_dirs));
 
+	append_ceiling_dir(&ceiling_dirs_buf, SUB_REPOSITORY_FOLDER_SUB);
+	ceiling_dirs = git_buf_cstr(&ceiling_dirs_buf);
+
+	/* this must pass as ceiling_directories cannot prevent the current
+	 * working directory to be checked */
+	ensure_repository_discover(SUB_REPOSITORY_FOLDER, ceiling_dirs, &sub_repository_path);
+	ensure_repository_discover(SUB_REPOSITORY_FOLDER_SUB, ceiling_dirs, &sub_repository_path);
+	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_discover(&found_path, SUB_REPOSITORY_FOLDER_SUB_SUB, 0, ceiling_dirs));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_discover(&found_path, SUB_REPOSITORY_FOLDER_SUB_SUB_SUB, 0, ceiling_dirs));
+
 	append_ceiling_dir(&ceiling_dirs_buf, SUB_REPOSITORY_FOLDER);
 	ceiling_dirs = git_buf_cstr(&ceiling_dirs_buf);
 
 	//this must pass as ceiling_directories cannot predent the current
 	//working directory to be checked
-	cl_git_pass(git_repository_discover(&found_path, SUB_REPOSITORY_FOLDER, 0, ceiling_dirs));
+	ensure_repository_discover(SUB_REPOSITORY_FOLDER, ceiling_dirs, &sub_repository_path);
 	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_discover(&found_path, SUB_REPOSITORY_FOLDER_SUB, 0, ceiling_dirs));
 	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_discover(&found_path, SUB_REPOSITORY_FOLDER_SUB_SUB, 0, ceiling_dirs));
 	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_discover(&found_path, SUB_REPOSITORY_FOLDER_SUB_SUB_SUB, 0, ceiling_dirs));

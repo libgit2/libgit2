@@ -196,8 +196,9 @@ void test_repo_open__failures(void)
 		&repo, "attr/sub", GIT_REPOSITORY_OPEN_NO_SEARCH, NULL));
 
 	/* fail with ceiling too low */
-	cl_git_pass(git_buf_joinpath(&ceiling, ceiling.ptr, "sub"));
 	cl_git_fail(git_repository_open_ext(&repo, "attr/sub", 0, ceiling.ptr));
+	cl_git_pass(git_buf_joinpath(&ceiling, ceiling.ptr, "sub"));
+	cl_git_fail(git_repository_open_ext(&repo, "attr/sub/sub", 0, ceiling.ptr));
 
 	/* fail with no repo */
 	cl_git_pass(p_mkdir("alternate", 0777));
