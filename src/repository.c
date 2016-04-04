@@ -359,7 +359,8 @@ static int find_repo(
 	git_buf path = GIT_BUF_INIT;
 	struct stat st;
 	dev_t initial_device = 0;
-	bool try_with_dot_git = ((flags & GIT_REPOSITORY_OPEN_BARE) != 0);
+	int min_iterations;
+	bool in_dot_git;
 	int ceiling_offset;
 
 	git_buf_free(repo_path);
@@ -367,13 +368,27 @@ static int find_repo(
 	if ((error = git_path_prettify(&path, start_path, NULL)) < 0)
 		return error;
 
-	ceiling_offset = find_ceiling_dir_offset(path.ptr, ceiling_dirs);
+	/* in_dot_git toggles each loop:
+	 * /a/b/c/.git, /a/b/c, /a/b/.git, /a/b, /a/.git, /a
+	 * With GIT_REPOSITORY_OPEN_BARE, we assume we started with /a/b/c.git
+	 * and don't append .git the first time through.
+	 * min_iterations indicates the number of iterations left before going
+	 * further counts as a search. */
+	if (flags & GIT_REPOSITORY_OPEN_BARE) {
+		in_dot_git = true;
+		min_iterations = 1;
+	} else {
+		in_dot_git = false;
+		min_iterations = 2;
+	}
 
-	if (!try_with_dot_git &&
-		(error = git_buf_joinpath(&path, path.ptr, DOT_GIT)) < 0)
-		return error;
+	while (!error && (min_iterations || !(path.ptr[ceiling_offset] == 0 ||
+					      (flags & GIT_REPOSITORY_OPEN_NO_SEARCH)))) {
+		if (!in_dot_git)
+			if ((error = git_buf_joinpath(&path, path.ptr, DOT_GIT)) < 0)
+				break;
+		in_dot_git = !in_dot_git;
 
-	while (!error && !git_buf_len(repo_path)) {
 		if (p_stat(path.ptr, &st) == 0) {
 			/* check that we have not crossed device boundaries */
 			if (initial_device == 0)
@@ -414,17 +429,10 @@ static int find_repo(
 			break;
 		}
 
-		if (try_with_dot_git) {
-			/* if we tried original dir with and without .git AND either hit
-			 * directory ceiling or NO_SEARCH was requested, then be done.
-			 */
-			if (path.ptr[ceiling_offset] == '\0' ||
-				(flags & GIT_REPOSITORY_OPEN_NO_SEARCH) != 0)
-				break;
-			/* otherwise look first for .git item */
-			error = git_buf_joinpath(&path, path.ptr, DOT_GIT);
-		}
-		try_with_dot_git = !try_with_dot_git;
+		/* Once we've checked the directory (and .git if applicable),
+		 * find the ceiling for a search. */
+		if (min_iterations && (--min_iterations == 0))
+			ceiling_offset = find_ceiling_dir_offset(path.ptr, ceiling_dirs);
 	}
 
 	if (!error && parent_path && !(flags & GIT_REPOSITORY_OPEN_BARE)) {
