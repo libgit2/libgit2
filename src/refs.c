@@ -289,6 +289,9 @@ cleanup:
 			"Could not use '%s' as valid reference name", git_buf_cstr(&name));
 	}
 
+	if (error == GIT_ENOTFOUND)
+		giterr_set(GITERR_REFERENCE, "no reference found for shorthand '%s'", refname);
+
 	git_buf_free(&name);
 	git_buf_free(&refnamebuf);
 	return error;
