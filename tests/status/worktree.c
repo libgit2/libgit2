@@ -1006,6 +1006,9 @@ void test_status_worktree__unreadable(void)
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 	status_entry_counts counts = {0};
 
+	if (geteuid() == 0)
+		cl_skip();
+
 	/* Create directory with no read permission */
 	cl_git_pass(git_futils_mkdir_r("empty_standard_repo/no_permission", 0777));
 	cl_git_mkfile("empty_standard_repo/no_permission/foo", "dummy");
