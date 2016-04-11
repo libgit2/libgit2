@@ -227,6 +227,7 @@ static int make_submodule_dirty(git_submodule *sm, const char *name, void *paylo
 {
 	git_buf submodulepath = GIT_BUF_INIT;
 	git_buf dirtypath = GIT_BUF_INIT;
+	git_repository *submodule_repo;
 
 	/* remove submodule directory in preparation for init and repo_init */
 	cl_git_pass(git_buf_joinpath(
@@ -238,7 +239,6 @@ static int make_submodule_dirty(git_submodule *sm, const char *name, void *paylo
 
 	/* initialize submodule and its repository */
 	cl_git_pass(git_submodule_init(sm, 1));
-	git_repository *submodule_repo;
 	cl_git_pass(git_submodule_repo_init(&submodule_repo, sm, 0));
 
 	/* create a file in the submodule workdir to make it dirty */
