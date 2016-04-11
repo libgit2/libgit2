@@ -695,3 +695,30 @@ void test_config_write__locking(void)
 
 	git_config_free(cfg);
 }
+
+void test_config_write__repeated(void)
+{
+	const char *filename = "config-repeated";
+	git_config *cfg;
+	git_buf result = GIT_BUF_INIT;
+	const char *expected = "[sample \"prefix\"]\n\
+\tsetting1 = someValue1\n\
+\tsetting2 = someValue2\n\
+\tsetting3 = someValue3\n\
+\tsetting4 = someValue4\n\
+";
+	cl_git_pass(git_config_open_ondisk(&cfg, filename));
+	cl_git_pass(git_config_set_string(cfg, "sample.prefix.setting1", "someValue1"));
+	cl_git_pass(git_config_set_string(cfg, "sample.prefix.setting2", "someValue2"));
+	cl_git_pass(git_config_set_string(cfg, "sample.prefix.setting3", "someValue3"));
+	cl_git_pass(git_config_set_string(cfg, "sample.prefix.setting4", "someValue4"));
+	git_config_free(cfg);
+
+	cl_git_pass(git_config_open_ondisk(&cfg, filename));
+
+	cl_git_pass(git_futils_readbuffer(&result, filename));
+	cl_assert_equal_s(expected, result.ptr);
+	git_buf_free(&result);
+
+	git_config_free(cfg);
+}

@@ -449,7 +449,7 @@ static void hash_partially(git_indexer *idx, const uint8_t *data, size_t size)
 static int write_at(git_indexer *idx, const void *data, git_off_t offset, size_t size)
 {
 	git_file fd = idx->pack->mwf.fd;
-	size_t page_size;
+	size_t mmap_alignment;
 	size_t page_offset;
 	git_off_t page_start;
 	unsigned char *map_data;
@@ -458,11 +458,11 @@ static int write_at(git_indexer *idx, const void *data, git_off_t offset, size_t
 
 	assert(data && size);
 
-	if ((error = git__page_size(&page_size)) < 0)
+	if ((error = git__mmap_alignment(&mmap_alignment)) < 0)
 		return error;
 
-	/* the offset needs to be at the beginning of the a page boundary */
-	page_offset = offset % page_size;
+	/* the offset needs to be at the mmap boundary for the platform */
+	page_offset = offset % mmap_alignment;
 	page_start = offset - page_offset;
 
 	if ((error = p_mmap(&map, page_offset + size, GIT_PROT_WRITE, GIT_MAP_SHARED, fd, page_start)) < 0)
@@ -777,7 +777,6 @@ static int fix_thin_pack(git_indexer *idx, git_transfer_progress *stats)
 
 		curpos = delta->delta_off;
 		error = git_packfile_unpack_header(&size, &type, &idx->pack->mwf, &w, &curpos);
-		git_mwindow_close(&w);
 		if (error < 0)
 			return error;
 
@@ -914,12 +913,17 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 	git_filebuf index_file = {0};
 	void *packfile_trailer;
 
+	if (!idx->parsed_header) {
+		giterr_set(GITERR_INDEXER, "incomplete pack header");
+		return -1;
+	}
+
 	if (git_hash_ctx_init(&ctx) < 0)
 		return -1;
 
 	/* Test for this before resolve_deltas(), as it plays with idx->off */
-	if (idx->off < idx->pack->mwf.size - 20) {
-		giterr_set(GITERR_INDEXER, "Unexpected data at the end of the pack");
+	if (idx->off + 20 < idx->pack->mwf.size) {
+		giterr_set(GITERR_INDEXER, "unexpected data at the end of the pack");
 		return -1;
 	}
 

@@ -261,7 +261,7 @@ static int normalize_find_opts(
 	if (!given ||
 		 (given->flags & GIT_DIFF_FIND_ALL) == GIT_DIFF_FIND_BY_CONFIG)
 	{
-		if (diff->repo) {
+		if (cfg) {
 			char *rule =
 				git_config__get_string_force(cfg, "diff.renames", "true");
 			int boolval;
@@ -318,8 +318,10 @@ static int normalize_find_opts(
 #undef USE_DEFAULT
 
 	if (!opts->rename_limit) {
-		opts->rename_limit = git_config__get_int_force(
-			cfg, "diff.renamelimit", DEFAULT_RENAME_LIMIT);
+		if (cfg) {
+			opts->rename_limit = git_config__get_int_force(
+				cfg, "diff.renamelimit", DEFAULT_RENAME_LIMIT);
+		}
 
 		if (opts->rename_limit <= 0)
 			opts->rename_limit = DEFAULT_RENAME_LIMIT;

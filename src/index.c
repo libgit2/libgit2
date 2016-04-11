@@ -963,14 +963,20 @@ static int index_entry_reuc_init(git_index_reuc_entry **reuc_out,
 	*reuc_out = reuc = reuc_entry_alloc(path);
 	GITERR_CHECK_ALLOC(reuc);
 
-	if ((reuc->mode[0] = ancestor_mode) > 0)
+	if ((reuc->mode[0] = ancestor_mode) > 0) {
+		assert(ancestor_oid);
 		git_oid_cpy(&reuc->oid[0], ancestor_oid);
+	}
 
-	if ((reuc->mode[1] = our_mode) > 0)
+	if ((reuc->mode[1] = our_mode) > 0) {
+		assert(our_oid);
 		git_oid_cpy(&reuc->oid[1], our_oid);
+	}
 
-	if ((reuc->mode[2] = their_mode) > 0)
+	if ((reuc->mode[2] = their_mode) > 0) {
+		assert(their_oid);
 		git_oid_cpy(&reuc->oid[2], their_oid);
+	}
 
 	return 0;
 }
@@ -2830,7 +2836,7 @@ static int read_tree_cb(
 		return -1;
 
 	entry->mode = tentry->attr;
-	entry->id = tentry->oid;
+	git_oid_cpy(&entry->id, git_tree_entry_id(tentry));
 
 	/* look for corresponding old entry and copy data to new entry */
 	if (data->old_entries != NULL &&

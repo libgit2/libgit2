@@ -58,3 +58,11 @@ void test_refs_lookup__namespace(void)
 	error = git_reference_lookup(&ref, g_repo, "refs/heads/");
 	cl_assert_equal_i(error, GIT_EINVALIDSPEC);
 }
+
+void test_refs_lookup__dwim_notfound(void)
+{
+	git_reference *ref;
+
+	cl_git_fail_with(GIT_ENOTFOUND, git_reference_dwim(&ref, g_repo, "idontexist"));
+	cl_assert_equal_s("no reference found for shorthand 'idontexist'", giterr_last()->message);
+}

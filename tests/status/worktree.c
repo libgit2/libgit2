@@ -657,7 +657,7 @@ void test_status_worktree__conflict_has_no_oid(void)
 
 	entry.mode = 0100644;
 	entry.path = "modified_file";
-	git_oid_fromstr(&entry.id, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef");
+	git_oid_fromstr(&entry.id, "452e4244b5d083ddf0460acf1ecc74db9dcfa11a");
 
 	cl_git_pass(git_repository_index(&index, repo));
 	cl_git_pass(git_index_conflict_add(index, &entry, &entry, &entry));
@@ -1005,6 +1005,9 @@ void test_status_worktree__unreadable(void)
 	git_repository *repo = cl_git_sandbox_init("empty_standard_repo");
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 	status_entry_counts counts = {0};
+
+	if (geteuid() == 0)
+		cl_skip();
 
 	/* Create directory with no read permission */
 	cl_git_pass(git_futils_mkdir_r("empty_standard_repo/no_permission", 0777));

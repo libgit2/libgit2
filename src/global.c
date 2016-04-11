@@ -27,6 +27,7 @@ static git_global_shutdown_fn git__shutdown_callbacks[MAX_SHUTDOWN_CB];
 static git_atomic git__n_shutdown_callbacks;
 static git_atomic git__n_inits;
 char *git__user_agent;
+char *git__ssl_ciphers;
 
 void git__on_shutdown(git_global_shutdown_fn callback)
 {
@@ -83,6 +84,7 @@ static void shutdown_common(void)
 	}
 
 	git__free(git__user_agent);
+	git__free(git__ssl_ciphers);
 
 #if defined(GIT_MSVC_CRTDBG)
 	git_win32__crtdbg_stacktrace_cleanup();
@@ -220,6 +222,20 @@ void git__free_tls_data(void)
 	git__global_state_cleanup(ptr);
 	git__free(ptr);
 	TlsSetValue(_tls_index, NULL);
+}
+
+BOOL WINAPI DllMain(HINSTANCE hInstDll, DWORD fdwReason, LPVOID lpvReserved)
+{
+	/* This is how Windows lets us know our thread is being shut down */
+	if (fdwReason == DLL_THREAD_DETACH) {
+		git__free_tls_data();
+	}
+
+	/*
+	 * Windows pays attention to this during library loading. We don't do anything
+	 * so we trivially succeed.
+	 */
+	return TRUE;
 }
 
 #elif defined(GIT_THREADS) && defined(_POSIX_THREADS)

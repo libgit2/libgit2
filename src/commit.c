@@ -676,7 +676,7 @@ int git_commit_extract_signature(git_buf *signature, git_buf *signed_data, git_r
 
 	buf = git_odb_object_data(obj);
 
-	while ((h = strchr(buf, '\n')) && h[1] != '\0' && h[1] != '\n') {
+	while ((h = strchr(buf, '\n')) && h[1] != '\0') {
 		h++;
 		if (git__prefixcmp(buf, field)) {
 			if (git_buf_put(signed_data, buf, h - buf) < 0)

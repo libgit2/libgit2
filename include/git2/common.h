@@ -24,8 +24,17 @@
  GIT_BEGIN_DECL
 # include "inttypes.h"
  GIT_END_DECL
-#else
+/** This check is needed for importing this file in an iOS/OS X framework throws an error in Xcode otherwise.*/
+#elif !defined(__CLANG_INTTYPES_H)
 # include <inttypes.h>
+#endif
+
+#ifdef DOCURIUM
+/*
+ * This is so clang's doc parser acknowledges comments on functions
+ * with size_t parameters.
+ */
+typedef size_t size_t;
 #endif
 
 /** Declare a public function exported for application use. */
@@ -148,6 +157,7 @@ typedef enum {
 	GIT_OPT_SET_SSL_CERT_LOCATIONS,
 	GIT_OPT_SET_USER_AGENT,
 	GIT_OPT_ENABLE_STRICT_OBJECT_CREATION,
+	GIT_OPT_SET_SSL_CIPHERS,
 } git_libgit2_opt_t;
 
 /**
@@ -259,6 +269,11 @@ typedef enum {
  *		> example, when this is enabled, the parent(s) and tree inputs
  *		> will be validated when creating a new commit.  This defaults
  *		> to disabled.
+ *	* opts(GIT_OPT_SET_SSL_CIPHERS, const char *ciphers)
+ *
+ *		> Set the SSL ciphers use for HTTPS connections.
+ *		>
+ *		> - `ciphers` is the list of ciphers that are eanbled.
  *
  * @param option Option key
  * @param ... value to set the option

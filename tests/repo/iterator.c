@@ -1020,6 +1020,11 @@ void test_repo_iterator__unreadable_dir(void)
 	if (!cl_is_chmod_supported())
 		return;
 
+#ifndef GIT_WIN32
+	if (geteuid() == 0)
+		cl_skip();
+#endif
+
 	g_repo = cl_git_sandbox_init("empty_standard_repo");
 
 	cl_must_pass(p_mkdir("empty_standard_repo/r", 0777));

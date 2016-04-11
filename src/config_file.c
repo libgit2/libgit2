@@ -553,29 +553,14 @@ static int config_set_multivar(
 	git_config_backend *cfg, const char *name, const char *regexp, const char *value)
 {
 	diskfile_backend *b = (diskfile_backend *)cfg;
-	refcounted_strmap *map;
-	git_strmap *values;
 	char *key;
 	regex_t preg;
 	int result;
-	khiter_t pos;
 
 	assert(regexp);
 
 	if ((result = git_config__normalize_name(name, &key)) < 0)
 		return result;
-
-	map = refcounted_strmap_take(&b->header);
-	values = b->header.values->values;
-
-	pos = git_strmap_lookup_index(values, key);
-	if (!git_strmap_valid_index(values, pos)) {
-		/* If we don't have it, behave like a normal set */
-		result = config_set(cfg, name, value);
-		refcounted_strmap_free(map);
-		git__free(key);
-		return result;
-	}
 
 	result = regcomp(&preg, regexp, REG_EXTENDED);
 	if (result != 0) {
@@ -591,7 +576,6 @@ static int config_set_multivar(
 	result = config_refresh(cfg);
 
 out:
-	refcounted_strmap_free(map);
 	git__free(key);
 	regfree(&preg);
 
@@ -1032,6 +1016,11 @@ static int parse_section_header_ext(struct reader *reader, const char *line, con
 	 */
 
 	first_quote = strchr(line, '"');
+	if (first_quote == NULL) {
+		set_parse_error(reader, 0, "Missing quotation marks in section header");
+		return -1;
+	}
+
 	last_quote = strrchr(line, '"');
 	quoted_len = last_quote - first_quote;
 
@@ -1483,7 +1472,7 @@ static int config_parse(
 	int (*on_section)(struct reader **reader, const char *current_section, const char *line, size_t line_len, void *data),
 	int (*on_variable)(struct reader **reader, const char *current_section, char *var_name, char *var_value, const char *line, size_t line_len, void *data),
 	int (*on_comment)(struct reader **reader, const char *line, size_t line_len, void *data),
-	int (*on_eof)(struct reader **reader, void *data),
+	int (*on_eof)(struct reader **reader, const char *current_section, void *data),
 	void *data)
 {
 	char *current_section = NULL, *var_name, *var_value, *line_start;
@@ -1534,7 +1523,7 @@ static int config_parse(
 	}
 
 	if (on_eof)
-		result = on_eof(&reader, data);
+		result = on_eof(&reader, current_section, data);
 
 	git__free(current_section);
 	return result;
@@ -1850,7 +1839,8 @@ static int write_on_comment(struct reader **reader, const char *line, size_t lin
 	return write_line_to(&write_data->buffered_comment, line, line_len);
 }
 
-static int write_on_eof(struct reader **reader, void *data)
+static int write_on_eof(
+	struct reader **reader, const char *current_section, void *data)
 {
 	struct write_data *write_data = (struct write_data *)data;
 	int result = 0;
@@ -1869,7 +1859,11 @@ static int write_on_eof(struct reader **reader, void *data)
 	 * value.
 	 */
 	if ((!write_data->preg || !write_data->preg_replaced) && write_data->value) {
-		if ((result = write_section(write_data->buf, write_data->section)) == 0)
+		/* write the section header unless we're already in it */
+		if (!current_section || strcmp(current_section, write_data->section))
+			result = write_section(write_data->buf, write_data->section);
+
+		if (!result)
 			result = write_value(write_data);
 	}
 
