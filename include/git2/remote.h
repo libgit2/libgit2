@@ -376,7 +376,7 @@ struct git_remote_callbacks {
 	/**
 	 * Textual progress from the remote. Text send over the
 	 * progress side-band will be passed to this function (this is
-	 * the 'counting objects' output.
+	 * the 'counting objects' output).
 	 */
 	git_transport_message_cb sideband_progress;
 
