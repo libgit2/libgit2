@@ -61,6 +61,7 @@ static int rangematch(const char *, char, int, char **);
 static int
 p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 {
+		bool string_is_after_path_delimiter, match_path_delimiter;
 		const char *stringstart;
 		char *newp;
 		char c, test;
@@ -88,6 +89,7 @@ p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 						break;
 				case '*':
 						c = *pattern;
+						match_path_delimiter = false;
 
 						/* Let '**' override PATHNAME match for this segment.
 						 * It will be restored if/when we recurse below.
@@ -96,8 +98,10 @@ p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 							flags &= ~FNM_PATHNAME;
 							while (c == '*')
 								c = *++pattern;
-							if (c == '/')
+							if (c == '/') {
 								c = *++pattern;
+								match_path_delimiter = true;
+							}
 						}
 
 						if (*string == '.' && (flags & FNM_PERIOD) &&
@@ -119,15 +123,24 @@ p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 								break;
 						}
 
+						string_is_after_path_delimiter = true;
 						/* General case, use recursion. */
 						while ((test = *string) != EOS) {
 								int e;
 
 								e = p_fnmatchx(pattern, string, recurs_flags, recurs);
-								if (e != FNM_NOMATCH)
-										return e;
-								if (test == '/' && (flags & FNM_PATHNAME))
+								if (e != FNM_NOMATCH) {
+									/* Break if it should match a path delimiter, but the character before the match isn't one. */
+									if (match_path_delimiter && !string_is_after_path_delimiter) {
 										break;
+									} else {
+										return e;
+									}
+								}
+
+								string_is_after_path_delimiter = test == '/';
+								if (string_is_after_path_delimiter && (flags & FNM_PATHNAME))
+									break;
 								++string;
 						}
 						return (FNM_NOMATCH);
