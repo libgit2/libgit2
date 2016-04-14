@@ -151,6 +151,7 @@ typedef enum {
 	GIT_STATUS_OPT_UPDATE_INDEX                     = (1u << 13),
 	GIT_STATUS_OPT_INCLUDE_UNREADABLE               = (1u << 14),
 	GIT_STATUS_OPT_INCLUDE_UNREADABLE_AS_UNTRACKED  = (1u << 15),
+	GIT_STATUS_OPT_DONT_RECURSE                     = (1u << 16),
 } git_status_opt_t;
 
 #define GIT_STATUS_OPT_DEFAULTS \

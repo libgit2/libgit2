@@ -89,9 +89,9 @@ void expect_iterator_items(
 			error = git_iterator_advance_into(&entry, i);
 
 			/* could return NOTFOUND if directory is empty */
-			cl_assert(!error || error == GIT_ENOTFOUND);
+			cl_assert(!error || error == GIT_ENOTFOUND || error == GIT_ITEROVER);
 
-			if (error == GIT_ENOTFOUND) {
+			if (error == GIT_ENOTFOUND || error == GIT_ITEROVER) {
 				error = git_iterator_advance(&entry, i);
 				cl_assert(!error || error == GIT_ITEROVER);
 			}

@@ -38,6 +38,8 @@ typedef enum {
 	GIT_ITERATOR_DONT_PRECOMPOSE_UNICODE = (1u << 5),
 	/** include conflicts */
 	GIT_ITERATOR_INCLUDE_CONFLICTS = (1u << 6),
+	/** match specified pathlist only non-recursively */
+	GIT_ITERATOR_PATHLIST_NON_RECURSIVE = (1u << 7),
 } git_iterator_flag_t;
 
 typedef enum {

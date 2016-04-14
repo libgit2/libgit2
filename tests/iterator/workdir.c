@@ -1469,3 +1469,105 @@ void test_iterator_workdir__pathlist_with_directory_include_trees(void)
 	git_vector_free(&filelist);
 }
 
+void test_iterator_workdir__pathlist_with_non_recursive_root_directory(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_vector filelist;
+
+	const char *expected[] = { "README", "new.txt" };
+	size_t expected_len = 2;
+
+	const char *expected_with_trees[] = { "README", "new.txt", "subdir/" };
+	size_t expected_with_trees_len = 3;
+
+	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
+	cl_git_pass(git_vector_insert(&filelist, ""));
+
+	g_repo = cl_git_sandbox_init("testrepo2");
+
+	i_opts.pathlist.strings = (char **)filelist.contents;
+	i_opts.pathlist.count = filelist.length;
+	i_opts.flags |= GIT_ITERATOR_DONT_IGNORE_CASE | GIT_ITERATOR_PATHLIST_NON_RECURSIVE;
+
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+	expect_iterator_items(i, expected_len, expected, expected_len, expected);
+	git_iterator_free(i);
+
+	i_opts.flags |= GIT_ITERATOR_INCLUDE_TREES;
+
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+	expect_iterator_items(i, expected_with_trees_len, expected_with_trees, expected_with_trees_len, expected_with_trees);
+	git_iterator_free(i);
+
+	git_vector_free(&filelist);
+}
+
+void test_iterator_workdir__pathlist_with_non_recursive_mid_directory(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_vector filelist;
+
+	const char *expected[] = { "subdir/README", "subdir/new.txt" };
+	size_t expected_len = 2;
+
+	const char *expected_with_trees[] = { "subdir/", "subdir/README", "subdir/new.txt",  "subdir/subdir2/" };
+	size_t expected_with_trees_len = 4;
+
+	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
+	cl_git_pass(git_vector_insert(&filelist, "subdir/"));
+
+	g_repo = cl_git_sandbox_init("testrepo2");
+
+	i_opts.pathlist.strings = (char **)filelist.contents;
+	i_opts.pathlist.count = filelist.length;
+	i_opts.flags |= GIT_ITERATOR_DONT_IGNORE_CASE | GIT_ITERATOR_PATHLIST_NON_RECURSIVE;
+
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+	expect_iterator_items(i, expected_len, expected, expected_len, expected);
+	git_iterator_free(i);
+
+	i_opts.flags |= GIT_ITERATOR_INCLUDE_TREES;
+
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+	expect_iterator_items(i, expected_with_trees_len, expected_with_trees, expected_with_trees_len, expected_with_trees);
+	git_iterator_free(i);
+
+	git_vector_free(&filelist);
+}
+
+void test_iterator_workdir__pathlist_with_multiple_non_recursive_directories(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_vector filelist;
+
+	const char *expected[] = { "README", "new.txt", "subdir/subdir2/README", "subdir/subdir2/new.txt" };
+	size_t expected_len = 4;
+
+	const char *expected_with_trees[] = { "README", "new.txt", "subdir/", "subdir/subdir2/", "subdir/subdir2/README", "subdir/subdir2/new.txt" };
+	size_t expected_with_trees_len = 6;
+
+	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
+	cl_git_pass(git_vector_insert(&filelist, ""));
+	cl_git_pass(git_vector_insert(&filelist, "subdir/subdir2"));
+
+	g_repo = cl_git_sandbox_init("testrepo2");
+
+	i_opts.pathlist.strings = (char **)filelist.contents;
+	i_opts.pathlist.count = filelist.length;
+	i_opts.flags |= GIT_ITERATOR_DONT_IGNORE_CASE | GIT_ITERATOR_PATHLIST_NON_RECURSIVE;
+
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+	expect_iterator_items(i, expected_len, expected, expected_len, expected);
+	git_iterator_free(i);
+
+	i_opts.flags |= GIT_ITERATOR_INCLUDE_TREES;
+
+	cl_git_pass(git_iterator_for_workdir(&i, g_repo, NULL, NULL, &i_opts));
+	expect_iterator_items(i, expected_with_trees_len, expected_with_trees, expected_with_trees_len, expected_with_trees);
+	git_iterator_free(i);
+
+	git_vector_free(&filelist);
+}
