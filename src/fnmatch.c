@@ -69,8 +69,7 @@ p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 		if (recurs-- == 0)
 				return FNM_NORES;
 
-		for (stringstart = string;;) {
-				bool match_slash = false;
+		for (stringstart = string;;)
 				switch (c = *pattern++) {
 				case EOS:
 						if ((flags & FNM_LEADING_DIR) && *string == '/')
@@ -103,8 +102,15 @@ p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 								return (FNM_NOMATCH);
 
 							c = *++pattern;
-							flags &= ~FNM_PATHNAME;
-							match_slash = true;
+							do {
+								int e = p_fnmatchx(pattern, string, recurs_flags, recurs);
+								if (e != FNM_NOMATCH)
+									return e;
+								string = strchr(string, '/');
+							} while (string++);
+
+							/* If we get here, we didn't find a match */
+							return FNM_NOMATCH;
 						}
 
 						if (*string == '.' && (flags & FNM_PERIOD) &&
@@ -135,17 +141,7 @@ p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 										return e;
 								if (test == '/' && (flags & FNM_PATHNAME))
 										break;
-
-								/* searching for star-star, so we jump over entire dirs */
-								if (match_slash) {
-									const char *slash;
-									if (!(slash = strchr(string, '/')))
-										break;
-
-									string = slash + 1;
-								} else {
-									++string;
-								}
+								++string;
 						}
 						return (FNM_NOMATCH);
 				case '[':
@@ -187,7 +183,6 @@ p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 						++string;
 						break;
 				}
-		}
 		/* NOTREACHED */
 }
 
