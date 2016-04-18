@@ -134,13 +134,25 @@ void test_attr_ignore__leading_stars(void)
 
 void test_attr_ignore__globs_and_path_delimiters(void)
 {
+	cl_git_rewritefile("attr/.gitignore", "foo/bar/**");
+	assert_is_ignored(true, "foo/bar/baz");
+	assert_is_ignored(true, "foo/bar/baz/quux");
+
+	cl_git_rewritefile("attr/.gitignore", "_*/");
+	assert_is_ignored(true, "sub/_test/a/file");
+	assert_is_ignored(false, "test_folder/file");
+	assert_is_ignored(true, "_test/file");
+	assert_is_ignored(true, "_test/a/file");
+
 	cl_git_rewritefile("attr/.gitignore", "**/_*/");
+	assert_is_ignored(true, "sub/_test/a/file");
 	assert_is_ignored(false, "test_folder/file");
 	assert_is_ignored(true, "_test/file");
 	assert_is_ignored(true, "_test/a/file");
 
 	cl_git_rewritefile("attr/.gitignore", "**/_*/foo/bar/*ux");
 
+	assert_is_ignored(true, "sub/_test/foo/bar/qux/file");
 	assert_is_ignored(true, "_test/foo/bar/qux/file");
 	assert_is_ignored(true, "_test/foo/bar/crux/file");
 	assert_is_ignored(false, "_test/foo/bar/code/file");
