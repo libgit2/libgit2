@@ -8,6 +8,7 @@
 #include "git2/blob.h"
 #include "git2/submodule.h"
 #include "diff.h"
+#include "diff_generate.h"
 #include "diff_file.h"
 #include "odb.h"
 #include "fileops.h"

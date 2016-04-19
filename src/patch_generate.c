@@ -7,6 +7,7 @@
 #include "common.h"
 #include "git2/blob.h"
 #include "diff.h"
+#include "diff_generate.h"
 #include "diff_file.h"
 #include "diff_driver.h"
 #include "patch_generate.h"

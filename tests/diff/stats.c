@@ -4,6 +4,7 @@
 #include "buffer.h"
 #include "commit.h"
 #include "diff.h"
+#include "diff_generate.h"
 
 static git_repository *_repo;
 static git_diff_stats *_stats;

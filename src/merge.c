@@ -18,6 +18,8 @@
 #include "iterator.h"
 #include "refs.h"
 #include "diff.h"
+#include "diff_generate.h"
+#include "diff_tform.h"
 #include "checkout.h"
 #include "tree.h"
 #include "blob.h"
