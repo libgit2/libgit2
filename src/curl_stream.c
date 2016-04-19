@@ -13,6 +13,7 @@
 #include "git2/transport.h"
 #include "buffer.h"
 #include "vector.h"
+#include "proxy.h"
 
 typedef struct {
 	git_stream parent;
@@ -21,6 +22,8 @@ typedef struct {
 	char curl_error[CURL_ERROR_SIZE + 1];
 	git_cert_x509 cert_info;
 	git_strarray cert_info_strings;
+	git_proxy_options proxy;
+	git_cred *proxy_cred;
 } curl_stream;
 
 static int seterr_curl(curl_stream *s)
@@ -29,21 +32,94 @@ static int seterr_curl(curl_stream *s)
 	return -1;
 }
 
+GIT_INLINE(int) error_no_credentials(void)
+{
+	giterr_set(GITERR_NET, "proxy authentication required, but no callback provided");
+	return GIT_EAUTH;
+}
+
+static int apply_proxy_creds(curl_stream *s)
+{
+	CURLcode res;
+	git_cred_userpass_plaintext *userpass;
+
+	if (!s->proxy_cred)
+		return GIT_ENOTFOUND;
+
+	userpass = (git_cred_userpass_plaintext *) s->proxy_cred;
+	if ((res = curl_easy_setopt(s->handle, CURLOPT_PROXYUSERNAME, userpass->username)) != CURLE_OK)
+		return seterr_curl(s);
+	if ((res = curl_easy_setopt(s->handle, CURLOPT_PROXYPASSWORD, userpass->password)) != CURLE_OK)
+		return seterr_curl(s);
+
+	return 0;
+}
+
+static int ask_and_apply_proxy_creds(curl_stream *s)
+{
+	int error;
+	git_proxy_options *opts = &s->proxy;
+
+	if (!opts->credentials)
+		return error_no_credentials();
+
+	/* TODO: see if PROXYAUTH_AVAIL helps us here */
+	git_cred_free(s->proxy_cred);
+	s->proxy_cred = NULL;
+	giterr_clear();
+	error = opts->credentials(&s->proxy_cred, opts->url, NULL, GIT_CREDTYPE_USERPASS_PLAINTEXT, opts->payload);
+	if (error == GIT_PASSTHROUGH)
+		return error_no_credentials();
+	if (error < 0) {
+		if (!giterr_last())
+			giterr_set(GITERR_NET, "proxy authentication was aborted by the user");
+		return error;
+	}
+
+	if (s->proxy_cred->credtype != GIT_CREDTYPE_USERPASS_PLAINTEXT) {
+		giterr_set(GITERR_NET, "credentials callback returned invalid credential type");
+		return -1;
+	}
+
+	return apply_proxy_creds(s);
+}
+
 static int curls_connect(git_stream *stream)
 {
 	curl_stream *s = (curl_stream *) stream;
-	long sockextr;
-	int failed_cert = 0;
+	long sockextr, connect_last = 0;
+	int failed_cert = 0, error;
+	bool retry_connect;
 	CURLcode res;
-	res = curl_easy_perform(s->handle);
+
+	/* Apply any credentials we've already established */
+	error = apply_proxy_creds(s);
+	if (error < 0 && error != GIT_ENOTFOUND)
+		return seterr_curl(s);
+
+	do {
+		retry_connect = 0;
+		res = curl_easy_perform(s->handle);
+
+		curl_easy_getinfo(s->handle, CURLINFO_HTTP_CONNECTCODE, &connect_last);
+
+		/* HTTP 407 Proxy Authentication Required */
+		if (connect_last == 407) {
+			if ((error = ask_and_apply_proxy_creds(s)) < 0)
+				return error;
+
+			retry_connect = true;
+		}
+	} while (retry_connect);
 
 	if (res != CURLE_OK && res != CURLE_PEER_FAILED_VERIFICATION)
 		return seterr_curl(s);
 	if (res == CURLE_PEER_FAILED_VERIFICATION)
 		failed_cert = 1;
 
-	if ((res = curl_easy_getinfo(s->handle, CURLINFO_LASTSOCKET, &sockextr)) != CURLE_OK)
+	if ((res = curl_easy_getinfo(s->handle, CURLINFO_LASTSOCKET, &sockextr)) != CURLE_OK) {
 		return seterr_curl(s);
+	}
 
 	s->socket = sockextr;
 
@@ -95,12 +171,19 @@ static int curls_certificate(git_cert **out, git_stream *stream)
 	return 0;
 }
 
-static int curls_set_proxy(git_stream *stream, const char *proxy_url)
+static int curls_set_proxy(git_stream *stream, const git_proxy_options *proxy_opts)
 {
+	int error;
 	CURLcode res;
 	curl_stream *s = (curl_stream *) stream;
 
-	if ((res = curl_easy_setopt(s->handle, CURLOPT_PROXY, proxy_url)) != CURLE_OK)
+	if ((error = git_proxy_options_dup(&s->proxy, proxy_opts)) < 0)
+		return error;
+
+	if ((res = curl_easy_setopt(s->handle, CURLOPT_PROXY, s->proxy.url)) != CURLE_OK)
+		return seterr_curl(s);
+
+	if ((res = curl_easy_setopt(s->handle, CURLOPT_PROXYAUTH, CURLAUTH_ANY)) != CURLE_OK)
 		return seterr_curl(s);
 
 	return 0;

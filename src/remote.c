@@ -695,7 +695,7 @@ static int set_transport_custom_headers(git_transport *t, const git_strarray *cu
 	return t->set_custom_headers(t, custom_headers);
 }
 
-int git_remote_connect(git_remote *remote, git_direction direction, const git_remote_callbacks *callbacks, const git_strarray *custom_headers)
+int git_remote_connect(git_remote *remote, git_direction direction, const git_remote_callbacks *callbacks, const git_proxy_options *proxy, const git_strarray *custom_headers)
 {
 	git_transport *t;
 	const char *url;
@@ -713,6 +713,9 @@ int git_remote_connect(git_remote *remote, git_direction direction, const git_re
 		transport   = callbacks->transport;
 		payload     = callbacks->payload;
 	}
+
+	if (proxy)
+		GITERR_CHECK_VERSION(proxy, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
 
 	t = remote->transport;
 
@@ -738,7 +741,7 @@ int git_remote_connect(git_remote *remote, git_direction direction, const git_re
 		goto on_error;
 
 	if ((error = set_transport_callbacks(t, callbacks)) < 0 ||
-	    (error = t->connect(t, url, credentials, payload, direction, flags)) != 0)
+	    (error = t->connect(t, url, credentials, payload, proxy, direction, flags)) != 0)
 		goto on_error;
 
 	remote->transport = t;
@@ -896,6 +899,7 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs, const 
 	git_vector *to_active, specs = GIT_VECTOR_INIT, refs = GIT_VECTOR_INIT;
 	const git_remote_callbacks *cbs = NULL;
 	const git_strarray *custom_headers = NULL;
+	const git_proxy_options *proxy = NULL;
 
 	assert(remote);
 
@@ -903,10 +907,12 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs, const 
 		GITERR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
 		cbs = &opts->callbacks;
 		custom_headers = &opts->custom_headers;
+		GITERR_CHECK_VERSION(&opts->proxy_opts, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
+		proxy = &opts->proxy_opts;
 	}
 
 	if (!git_remote_connected(remote) &&
-	    (error = git_remote_connect(remote, GIT_DIRECTION_FETCH, cbs, custom_headers)) < 0)
+	    (error = git_remote_connect(remote, GIT_DIRECTION_FETCH, cbs, proxy, custom_headers)) < 0)
 		goto on_error;
 
 	if (ls_to_vector(&refs, remote) < 0)
@@ -971,6 +977,7 @@ int git_remote_fetch(
 	git_buf reflog_msg_buf = GIT_BUF_INIT;
 	const git_remote_callbacks *cbs = NULL;
 	const git_strarray *custom_headers = NULL;
+	const git_proxy_options *proxy = NULL;
 
 	if (opts) {
 		GITERR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
@@ -978,10 +985,12 @@ int git_remote_fetch(
 		custom_headers = &opts->custom_headers;
 		update_fetchhead = opts->update_fetchhead;
 		tagopt = opts->download_tags;
+		GITERR_CHECK_VERSION(&opts->proxy_opts, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
+		proxy = &opts->proxy_opts;
 	}
 
 	/* Connect and download everything */
-	if ((error = git_remote_connect(remote, GIT_DIRECTION_FETCH, cbs, custom_headers)) != 0)
+	if ((error = git_remote_connect(remote, GIT_DIRECTION_FETCH, cbs, proxy, custom_headers)) != 0)
 		return error;
 
 	error = git_remote_download(remote, refspecs, opts);
@@ -2393,16 +2402,18 @@ int git_remote_upload(git_remote *remote, const git_strarray *refspecs, const gi
 	git_refspec *spec;
 	const git_remote_callbacks *cbs = NULL;
 	const git_strarray *custom_headers = NULL;
+	const git_proxy_options *proxy = NULL;
 
 	assert(remote);
 
 	if (opts) {
 		cbs = &opts->callbacks;
 		custom_headers = &opts->custom_headers;
+		proxy = &opts->proxy_opts;
 	}
 
 	if (!git_remote_connected(remote) &&
-	    (error = git_remote_connect(remote, GIT_DIRECTION_PUSH, cbs, custom_headers)) < 0)
+	    (error = git_remote_connect(remote, GIT_DIRECTION_PUSH, cbs, proxy, custom_headers)) < 0)
 		goto cleanup;
 
 	free_refspecs(&remote->active_refspecs);
@@ -2452,16 +2463,19 @@ int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_
 	int error;
 	const git_remote_callbacks *cbs = NULL;
 	const git_strarray *custom_headers = NULL;
+	const git_proxy_options *proxy = NULL;
 
 	if (opts) {
 		GITERR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
 		cbs = &opts->callbacks;
 		custom_headers = &opts->custom_headers;
+		GITERR_CHECK_VERSION(&opts->proxy_opts, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
+		proxy = &opts->proxy_opts;
 	}
 
 	assert(remote && refspecs);
 
-	if ((error = git_remote_connect(remote, GIT_DIRECTION_PUSH, cbs, custom_headers)) < 0)
+	if ((error = git_remote_connect(remote, GIT_DIRECTION_PUSH, cbs, proxy, custom_headers)) < 0)
 		return error;
 
 	if ((error = git_remote_upload(remote, refspecs, opts)) < 0)

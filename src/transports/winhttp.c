@@ -91,12 +91,38 @@ typedef struct {
 	git_smart_subtransport parent;
 	transport_smart *owner;
 	gitno_connection_data connection_data;
+	gitno_connection_data proxy_connection_data;
 	git_cred *cred;
 	git_cred *url_cred;
+	git_cred *proxy_cred;
 	int auth_mechanism;
 	HINTERNET session;
 	HINTERNET connection;
 } winhttp_subtransport;
+
+static int apply_basic_credential_proxy(HINTERNET request, git_cred *cred)
+{
+	git_cred_userpass_plaintext *c = (git_cred_userpass_plaintext *)cred;
+	wchar_t *user, *pass;
+	int error;
+
+	if ((error = git__utf8_to_16_alloc(&user, c->username)) < 0)
+		return error;
+
+	if ((error = git__utf8_to_16_alloc(&pass, c->password)) < 0)
+		return error;
+
+	if (!WinHttpSetCredentials(request, WINHTTP_AUTH_TARGET_PROXY, WINHTTP_AUTH_SCHEME_BASIC,
+	                           user, pass, NULL)) {
+		giterr_set(GITERR_OS, "failed to set proxy auth");
+		error = -1;
+	}
+
+	git__free(user);
+	git__free(pass);
+
+	return error;
+}
 
 static int apply_basic_credential(HINTERNET request, git_cred *cred)
 {
@@ -271,6 +297,37 @@ static void winhttp_stream_close(winhttp_stream *s)
 	s->sent_request = 0;
 }
 
+/**
+ * Extract the url and password from a URL. The outputs are pointers
+ * into the input.
+ */
+static int userpass_from_url(wchar_t **user, int *user_len,
+			     wchar_t **pass, int *pass_len,
+			     const wchar_t *url, int url_len)
+{
+	URL_COMPONENTS components = { 0 };
+
+	components.dwStructSize = sizeof(components);
+	/* These tell WinHttpCrackUrl that we're interested in the fields */
+	components.dwUserNameLength = 1;
+	components.dwPasswordLength = 1;
+
+	if (!WinHttpCrackUrl(url, url_len, 0, &components)) {
+		giterr_set(GITERR_OS, "failed to extract user/pass from url");
+		return -1;
+	}
+
+	*user     = components.lpszUserName;
+	*user_len = components.dwUserNameLength;
+	*pass     = components.lpszPassword;
+	*pass_len = components.dwPasswordLength;
+
+	return 0;
+}
+
+#define SCHEME_HTTP  "http://"
+#define SCHEME_HTTPS "https://"
+
 static int winhttp_stream_connect(winhttp_stream *s)
 {
 	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
@@ -284,6 +341,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	int default_timeout = TIMEOUT_INFINITE;
 	int default_connect_timeout = DEFAULT_CONNECT_TIMEOUT;
 	size_t i;
+	const git_proxy_options *proxy_opts;
 
 	/* Prepare URL */
 	git_buf_printf(&buf, "%s%s", t->connection_data.path, s->service_url);
@@ -317,26 +375,59 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		goto on_error;
 	}
 
-	/* Set proxy if necessary */
-	if (git_remote__get_http_proxy(t->owner->owner, !!t->connection_data.use_ssl, &proxy_url) < 0)
-		goto on_error;
+	proxy_opts = &t->owner->proxy;
+	if (proxy_opts->type == GIT_PROXY_AUTO) {
+		/* Set proxy if necessary */
+		if (git_remote__get_http_proxy(t->owner->owner, !!t->connection_data.use_ssl, &proxy_url) < 0)
+			goto on_error;
+	}
+	else if (proxy_opts->type == GIT_PROXY_SPECIFIED) {
+		proxy_url = git__strdup(proxy_opts->url);
+		GITERR_CHECK_ALLOC(proxy_url);
+	}
 
 	if (proxy_url) {
+		git_buf processed_url = GIT_BUF_INIT;
 		WINHTTP_PROXY_INFO proxy_info;
 		wchar_t *proxy_wide;
 
-		/* Convert URL to wide characters */
-		int proxy_wide_len = git__utf8_to_16_alloc(&proxy_wide, proxy_url);
+		if (!git__prefixcmp(proxy_url, SCHEME_HTTP)) {
+			t->proxy_connection_data.use_ssl = false;
+		} else if (!git__prefixcmp(proxy_url, SCHEME_HTTPS)) {
+			t->proxy_connection_data.use_ssl = true;
+		} else {
+			giterr_set(GITERR_NET, "invalid URL: '%s'", proxy_url);
+			return -1;
+		}
 
-		if (proxy_wide_len < 0) {
-			giterr_set(GITERR_OS, "Failed to convert string to wide form");
+		if ((error = gitno_extract_url_parts(&t->proxy_connection_data.host, &t->proxy_connection_data.port, NULL,
+				&t->proxy_connection_data.user, &t->proxy_connection_data.pass, proxy_url, NULL)) < 0)
+			goto on_error;
+
+		if (t->proxy_connection_data.user && t->proxy_connection_data.pass) {
+			if ((error = git_cred_userpass_plaintext_new(&t->proxy_cred, t->proxy_connection_data.user, t->proxy_connection_data.pass)) < 0)
+				goto on_error;
+		}
+
+		if (t->proxy_connection_data.use_ssl)
+			git_buf_PUTS(&processed_url, SCHEME_HTTPS);
+		else
+			git_buf_PUTS(&processed_url, SCHEME_HTTP);
+
+		git_buf_puts(&processed_url, t->proxy_connection_data.host);
+		if (t->proxy_connection_data.port)
+			git_buf_printf(&processed_url, ":%s", t->proxy_connection_data.port);
+
+		if (git_buf_oom(&processed_url)) {
+			giterr_set_oom();
+			error = -1;
 			goto on_error;
 		}
 
-		/* Strip any trailing forward slash on the proxy URL;
-		 * WinHTTP doesn't like it if one is present */
-		if (proxy_wide_len > 1 && L'/' == proxy_wide[proxy_wide_len - 2])
-			proxy_wide[proxy_wide_len - 2] = L'\0';
+		/* Convert URL to wide characters */
+		if ((error = git__utf8_to_16_alloc(&proxy_wide, processed_url.ptr)) < 0)
+			goto on_error;
+
 
 		proxy_info.dwAccessType = WINHTTP_ACCESS_TYPE_NAMED_PROXY;
 		proxy_info.lpszProxy = proxy_wide;
@@ -352,6 +443,14 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		}
 
 		git__free(proxy_wide);
+
+		if (t->proxy_cred) {
+			if (t->proxy_cred->credtype == GIT_CREDTYPE_USERPASS_PLAINTEXT) {
+				if ((error = apply_basic_credential_proxy(s->request, t->proxy_cred)) < 0)
+					goto on_error;
+			}
+		}
+
 	}
 
 	/* Disable WinHTTP redirects so we can handle them manually. Why, you ask?
@@ -916,6 +1015,26 @@ replay:
 			}
 
 			git__free(location8);
+			goto replay;
+		}
+
+		/* Handle proxy authentication failures */
+		if (status_code == HTTP_STATUS_PROXY_AUTH_REQ) {
+			int allowed_types;
+
+			if (parse_unauthorized_response(s->request, &allowed_types, &t->auth_mechanism) < 0)
+				return -1;
+
+			/* TODO: extract the username from the url, no payload? */
+			if (t->owner->proxy.credentials) {
+				int cred_error = 1;
+				cred_error = t->owner->proxy.credentials(&t->proxy_cred, t->owner->proxy.url, NULL, allowed_types, NULL);
+
+				if (cred_error < 0)
+					return cred_error;
+			}
+
+			winhttp_stream_close(s);
 			goto replay;
 		}
 

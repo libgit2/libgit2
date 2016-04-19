@@ -6,6 +6,11 @@ then
 	exit $?;
 fi
 
+# Should we ask Travis to cache this file?
+curl -L https://github.com/ethomson/poxyproxy/releases/download/v0.1.0/poxyproxy-0.1.0.jar >poxyproxy.jar || exit $?
+# Run this early so we know it's ready by the time we need it
+java -jar poxyproxy.jar -d --port 8080 --credentials foo:bar &
+
 mkdir _build
 cd _build
 # shellcheck disable=SC2086
@@ -49,12 +54,22 @@ export GITTEST_REMOTE_SSH_KEY="$HOME/.ssh/id_rsa"
 export GITTEST_REMOTE_SSH_PUBKEY="$HOME/.ssh/id_rsa.pub"
 export GITTEST_REMOTE_SSH_PASSPHRASE=""
 
+
 if [ -e ./libgit2_clar ]; then
     ./libgit2_clar -sonline::push -sonline::clone::ssh_cert &&
     ./libgit2_clar -sonline::clone::ssh_with_paths || exit $?
     if [ "$TRAVIS_OS_NAME" = "linux" ]; then
         ./libgit2_clar -sonline::clone::cred_callback || exit $?
     fi
+
+    # Use the proxy we started at the beginning
+    export GITTEST_REMOTE_PROXY_URL="http://foo:bar@localhost:8080/"
+    ./libgit2_clar -sonline::clone::proxy_credentials_in_url || exit $?
+    export GITTEST_REMOTE_PROXY_URL="http://localhost:8080/"
+    export GITTEST_REMOTE_PROXY_USER="foo"
+    export GITTEST_REMOTE_PROXY_PASS="bar"
+    ./libgit2_clar -sonline::clone::proxy_credentials_request || exit $?
+
 fi
 
 export GITTEST_REMOTE_URL="https://github.com/libgit2/non-existent"

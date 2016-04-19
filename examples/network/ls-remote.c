@@ -26,7 +26,7 @@ static int use_remote(git_repository *repo, char *name)
 	 */
 	callbacks.credentials = cred_acquire_cb;
 
-	error = git_remote_connect(remote, GIT_DIRECTION_FETCH, &callbacks, NULL);
+	error = git_remote_connect(remote, GIT_DIRECTION_FETCH, &callbacks, NULL, NULL);
 	if (error < 0)
 		goto cleanup;
 

@@ -81,11 +81,11 @@ void test_online_fetch__fetch_twice(void)
 {
 	git_remote *remote;
 	cl_git_pass(git_remote_create(&remote, _repo, "test", "git://github.com/libgit2/TestGitRepository.git"));
-	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL));
+	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
 	cl_git_pass(git_remote_download(remote, NULL, NULL));
     	git_remote_disconnect(remote);
     	
-	git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL);
+	git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL);
 	cl_git_pass(git_remote_download(remote, NULL, NULL));
 	git_remote_disconnect(remote);
 	
@@ -117,7 +117,7 @@ void test_online_fetch__doesnt_retrieve_a_pack_when_the_repository_is_up_to_date
 	cl_git_pass(git_repository_open(&_repository, "./fetch/lg2"));
 
 	cl_git_pass(git_remote_lookup(&remote, _repository, "origin"));
-	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL));
+	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
 
 	cl_assert_equal_i(false, invoked);
 
@@ -155,7 +155,7 @@ void test_online_fetch__can_cancel(void)
 	options.callbacks.transfer_progress = cancel_at_half;
 	options.callbacks.payload = &bytes_received;
 
-	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL));
+	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
 	cl_git_fail_with(git_remote_download(remote, NULL, &options), -4321);
 	git_remote_disconnect(remote);
 	git_remote_free(remote);
@@ -169,7 +169,7 @@ void test_online_fetch__ls_disconnected(void)
 
 	cl_git_pass(git_remote_create(&remote, _repo, "test",
 				"http://github.com/libgit2/TestGitRepository.git"));
-	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL));
+	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
 	cl_git_pass(git_remote_ls(&refs, &refs_len_before, remote));
 	git_remote_disconnect(remote);
 	cl_git_pass(git_remote_ls(&refs, &refs_len_after, remote));
@@ -187,7 +187,7 @@ void test_online_fetch__remote_symrefs(void)
 
 	cl_git_pass(git_remote_create(&remote, _repo, "test",
 				"http://github.com/libgit2/TestGitRepository.git"));
-	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL));
+	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
 	git_remote_disconnect(remote);
 	cl_git_pass(git_remote_ls(&refs, &refs_len, remote));
 

@@ -26,7 +26,7 @@ static void assert_default_branch(const char *should)
 {
 	git_buf name = GIT_BUF_INIT;
 
-	cl_git_pass(git_remote_connect(g_remote, GIT_DIRECTION_FETCH, NULL, NULL));
+	cl_git_pass(git_remote_connect(g_remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
 	cl_git_pass(git_remote_default_branch(&name, g_remote));
 	cl_assert_equal_s(should, name.ptr);
 	git_buf_free(&name);
@@ -57,7 +57,7 @@ void test_network_remote_defaultbranch__no_default_branch(void)
 	git_buf buf = GIT_BUF_INIT;
 
 	cl_git_pass(git_remote_create(&remote_b, g_repo_b, "self", git_repository_path(g_repo_b)));
-	cl_git_pass(git_remote_connect(remote_b, GIT_DIRECTION_FETCH, NULL, NULL));
+	cl_git_pass(git_remote_connect(remote_b, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
 	cl_git_pass(git_remote_ls(&heads, &len, remote_b));
 	cl_assert_equal_i(0, len);
 
@@ -80,7 +80,7 @@ void test_network_remote_defaultbranch__detached_sharing_nonbranch_id(void)
 	cl_git_pass(git_reference_create(&ref, g_repo_a, "refs/foo/bar", &id, 1, NULL));
 	git_reference_free(ref);
 
-	cl_git_pass(git_remote_connect(g_remote, GIT_DIRECTION_FETCH, NULL, NULL));
+	cl_git_pass(git_remote_connect(g_remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
 	cl_git_fail_with(GIT_ENOTFOUND, git_remote_default_branch(&buf, g_remote));
 
 	cl_git_pass(git_clone(&cloned_repo, git_repository_path(g_repo_a), "./local-detached", NULL));

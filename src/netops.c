@@ -257,16 +257,18 @@ int gitno_extract_url_parts(
 		*port = git__strdup(default_port);
 	GITERR_CHECK_ALLOC(*port);
 
-	if (u.field_set & (1 << UF_PATH)) {
-		*path = git__substrdup(_path, u.field_data[UF_PATH].len);
-		GITERR_CHECK_ALLOC(*path);
-	} else {
-		git__free(*port);
-		*port = NULL;
-		git__free(*host);
-		*host = NULL;
-		giterr_set(GITERR_NET, "invalid url, missing path");
-		return GIT_EINVALIDSPEC;
+	if (path) {
+		if (u.field_set & (1 << UF_PATH)) {
+			*path = git__substrdup(_path, u.field_data[UF_PATH].len);
+			GITERR_CHECK_ALLOC(*path);
+		} else {
+			git__free(*port);
+			*port = NULL;
+			git__free(*host);
+			*host = NULL;
+			giterr_set(GITERR_NET, "invalid url, missing path");
+			return GIT_EINVALIDSPEC;
+		}
 	}
 
 	if (u.field_set & (1 << UF_USERINFO)) {

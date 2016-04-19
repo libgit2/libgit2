@@ -133,6 +133,7 @@ typedef struct {
 	char *url;
 	git_cred_acquire_cb cred_acquire_cb;
 	void *cred_acquire_payload;
+	git_proxy_options proxy;
 	int direction;
 	int flags;
 	git_transport_message_cb progress_cb;
