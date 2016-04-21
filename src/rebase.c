@@ -1262,48 +1262,59 @@ done:
 	return error;
 }
 
-int git_rebase_finish(
-	git_rebase *rebase,
-	const git_signature *signature)
+static int return_to_orig_head(git_rebase *rebase)
 {
 	git_reference *terminal_ref = NULL, *branch_ref = NULL, *head_ref = NULL;
 	git_commit *terminal_commit = NULL;
 	git_buf branch_msg = GIT_BUF_INIT, head_msg = GIT_BUF_INIT;
 	char onto[GIT_OID_HEXSZ];
-	int error;
-
-	assert(rebase);
-
-	if (rebase->inmemory)
-		return 0;
+	int error = 0;
 
 	git_oid_fmt(onto, &rebase->onto_id);
 
-	if ((error = git_buf_printf(&branch_msg, "rebase finished: %s onto %.*s",
-			rebase->orig_head_name, GIT_OID_HEXSZ, onto)) < 0 ||
-		(error = git_buf_printf(&head_msg, "rebase finished: returning to %s",
-			rebase->orig_head_name)) < 0 ||
-		(error = git_repository_head(&terminal_ref, rebase->repo)) < 0 ||
+	if ((error = git_buf_printf(&branch_msg,
+			"rebase finished: %s onto %.*s",
+			rebase->orig_head_name, GIT_OID_HEXSZ, onto)) == 0 &&
+		(error = git_buf_printf(&head_msg,
+			"rebase finished: returning to %s",
+			rebase->orig_head_name)) == 0 &&
+		(error = git_repository_head(&terminal_ref, rebase->repo)) == 0 &&
 		(error = git_reference_peel((git_object **)&terminal_commit,
-			terminal_ref, GIT_OBJ_COMMIT)) < 0 ||
+			terminal_ref, GIT_OBJ_COMMIT)) == 0 &&
 		(error = git_reference_create_matching(&branch_ref,
-			rebase->repo, rebase->orig_head_name, git_commit_id(terminal_commit), 1,
-			&rebase->orig_head_id, branch_msg.ptr)) < 0 ||
-		(error = git_reference_symbolic_create(&head_ref,
+			rebase->repo, rebase->orig_head_name,
+			git_commit_id(terminal_commit), 1,
+			&rebase->orig_head_id, branch_msg.ptr)) == 0)
+		error = git_reference_symbolic_create(&head_ref,
 			rebase->repo, GIT_HEAD_FILE, rebase->orig_head_name, 1,
-			head_msg.ptr)) < 0 ||
-		(error = rebase_copy_notes(rebase, signature)) < 0)
-		goto done;
+			head_msg.ptr);
 
-	error = rebase_cleanup(rebase);
-
-done:
 	git_buf_free(&head_msg);
 	git_buf_free(&branch_msg);
 	git_commit_free(terminal_commit);
 	git_reference_free(head_ref);
 	git_reference_free(branch_ref);
 	git_reference_free(terminal_ref);
+
+	return error;
+}
+
+int git_rebase_finish(
+	git_rebase *rebase,
+	const git_signature *signature)
+{
+	int error = 0;
+
+	assert(rebase);
+
+	if (rebase->inmemory)
+		return 0;
+
+	if (!rebase->head_detached)
+		error = return_to_orig_head(rebase);
+
+	if (error == 0 && (error = rebase_copy_notes(rebase, signature)) == 0)
+		error = rebase_cleanup(rebase);
 
 	return error;
 }
