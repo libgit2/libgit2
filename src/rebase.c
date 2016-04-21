@@ -472,6 +472,7 @@ done:
 static int rebase_setupfiles(git_rebase *rebase)
 {
 	char onto[GIT_OID_HEXSZ], orig_head[GIT_OID_HEXSZ];
+	const char *orig_head_name;
 
 	git_oid_fmt(onto, &rebase->onto_id);
 	git_oid_fmt(orig_head, &rebase->orig_head_id);
@@ -481,8 +482,11 @@ static int rebase_setupfiles(git_rebase *rebase)
 		return -1;
 	}
 
+	orig_head_name = rebase->head_detached ? ORIG_DETACHED_HEAD :
+		rebase->orig_head_name;
+
 	if (git_repository__set_orig_head(rebase->repo, &rebase->orig_head_id) < 0 ||
-		rebase_setupfile(rebase, HEAD_NAME_FILE, -1, "%s\n", rebase->orig_head_name) < 0 ||
+		rebase_setupfile(rebase, HEAD_NAME_FILE, -1, "%s\n", orig_head_name) < 0 ||
 		rebase_setupfile(rebase, ONTO_FILE, -1, "%.*s\n", GIT_OID_HEXSZ, onto) < 0 ||
 		rebase_setupfile(rebase, ORIG_HEAD_FILE, -1, "%.*s\n", GIT_OID_HEXSZ, orig_head) < 0 ||
 		rebase_setupfile(rebase, QUIET_FILE, -1, rebase->quiet ? "t\n" : "\n") < 0)
@@ -626,8 +630,12 @@ static int rebase_init_merge(
 	rebase->state_path = git_buf_detach(&state_path);
 	GITERR_CHECK_ALLOC(rebase->state_path);
 
-	rebase->orig_head_name = git__strdup(branch->ref_name ? branch->ref_name : ORIG_DETACHED_HEAD);
-	GITERR_CHECK_ALLOC(rebase->orig_head_name);
+	if (branch->ref_name) {
+		rebase->orig_head_name = git__strdup(branch->ref_name);
+		GITERR_CHECK_ALLOC(rebase->orig_head_name);
+	} else {
+		rebase->head_detached = 1;
+	}
 
 	rebase->onto_name = git__strdup(rebase_onto_name(onto));
 	GITERR_CHECK_ALLOC(rebase->onto_name);
