@@ -666,8 +666,10 @@ void test_online_clone__start_with_http(void)
 static int called_proxy_creds;
 static int proxy_creds(git_cred **out, const char *url, const char *username, unsigned int allowed, void *payload)
 {
-	GIT_UNUSED(payload);
+	GIT_UNUSED(url);
 	GIT_UNUSED(username);
+	GIT_UNUSED(allowed);
+	GIT_UNUSED(payload);
 
 	called_proxy_creds = 1;
 	return git_cred_userpass_plaintext_new(out, _remote_proxy_user, _remote_proxy_pass);
