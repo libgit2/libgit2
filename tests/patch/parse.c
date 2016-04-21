@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "patch.h"
+#include "patch_parse.h"
 
 #include "patch_common.h"
 

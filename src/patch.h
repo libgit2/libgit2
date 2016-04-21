@@ -61,21 +61,6 @@ typedef struct {
 
 #define GIT_PATCH_OPTIONS_INIT { 1 }
 
-/**
- * Create a patch for a single file from the contents of a patch buffer.
- *
- * @param out The patch to be created
- * @param contents The contents of a patch file
- * @param contents_len The length of the patch file
- * @param opts The git_patch_options
- * @return 0 on success, <0 on failure.
- */
-extern int git_patch_from_buffer(
-	git_patch **out,
-	const char *contents,
-	size_t contents_len,
-	git_patch_options *opts);
-
 extern void git_patch_free(git_patch *patch);
 
 #endif
