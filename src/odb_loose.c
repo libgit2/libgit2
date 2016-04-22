@@ -610,7 +610,7 @@ static int loose_backend__read_header(size_t *len_p, git_otype *type_p, git_odb_
 	git_rawobj raw;
 	int error;
 
-	assert(backend && oid);
+	assert(len_p && backend && oid);
 
 	raw.len = 0;
 	raw.type = GIT_OBJ_BAD;
@@ -620,7 +620,8 @@ static int loose_backend__read_header(size_t *len_p, git_otype *type_p, git_odb_
 			oid, GIT_OID_HEXSZ);
 	} else if ((error = read_header_loose(&raw, &object_path)) == 0) {
 		*len_p = raw.len;
-		*type_p = raw.type;
+		if (type_p)
+			*type_p = raw.type;
 	}
 
 	git_buf_free(&object_path);

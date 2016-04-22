@@ -355,7 +355,7 @@ static int pack_backend__read_header(
 	struct git_pack_entry e;
 	int error;
 
-	assert(len_p && type_p && backend && oid);
+	assert(len_p && backend && oid);
 
 	if ((error = pack_entry_find(&e, (struct pack_backend *)backend, oid)) < 0)
 		return error;

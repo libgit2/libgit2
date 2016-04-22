@@ -513,6 +513,13 @@ int git_packfile_resolve_header(
 	} else
 		*size_p = size;
 
+	/*
+	 * If the caller isn't interested in the type, we can return
+	 * now instead of trying to resolve the deltas.
+	 */
+	if (type_p == NULL)
+		return 0;
+
 	while (type == GIT_OBJ_OFS_DELTA || type == GIT_OBJ_REF_DELTA) {
 		curpos = base_offset;
 		error = git_packfile_unpack_header(&size, &type, &p->mwf, &w_curs, &curpos);

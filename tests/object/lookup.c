@@ -63,3 +63,22 @@ void test_object_lookup__lookup_wrong_type_eventually_returns_enotfound(void)
 		GIT_ENOTFOUND, git_object_lookup(&object, g_repo, &oid, GIT_OBJ_TAG));
 }
 
+void test_object_lookup__read_only_size(void)
+{
+	git_odb *odb;
+	git_oid id;
+	size_t len;
+	const char *obj1 = "e90810b8df3e80c413d903f631643c716887138d";
+	const char *obj2 = "08b041783f40edfe12bb406c9c9a8a040177c125";
+
+
+	cl_git_pass(git_repository_odb__weakptr(&odb, g_repo));
+
+	/* This object is packed */
+	cl_git_pass(git_oid_fromstr(&id, obj1));
+	cl_git_pass(git_odb_read_header(&len, NULL, odb, &id));
+
+	/* This object is loose */
+	cl_git_pass(git_oid_fromstr(&id, obj2));
+	cl_git_pass(git_odb_read_header(&len, NULL, odb, &id));
+}

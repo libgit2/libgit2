@@ -900,11 +900,12 @@ int git_odb__read_header_or_object(
 	int error = GIT_ENOTFOUND;
 	git_odb_object *object;
 
-	assert(db && id && out && len_p && type_p);
+	assert(db && id && out && len_p);
 
 	if ((object = git_cache_get_raw(odb_cache(db), id)) != NULL) {
 		*len_p = object->cached.size;
-		*type_p = object->cached.type;
+		if (type_p)
+			*type_p = object->cached.type;
 		*out = object;
 		return 0;
 	}
