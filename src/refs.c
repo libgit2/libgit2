@@ -105,6 +105,18 @@ git_reference *git_reference__set_name(
 	return rewrite;
 }
 
+int git_reference_dup(git_reference **dest, git_reference *source)
+{
+	if (source->type == GIT_REF_SYMBOLIC)
+		*dest = git_reference__alloc_symbolic(source->name, source->target.symbolic);
+	else
+		*dest = git_reference__alloc(source->name, &source->target.oid, &source->peel);
+
+	GITERR_CHECK_ALLOC(*dest);
+
+	return 0;
+}
+
 void git_reference_free(git_reference *reference)
 {
 	if (reference == NULL)
@@ -448,7 +460,7 @@ int git_reference_create_matching(
 {
 	int error;
 	git_signature *who = NULL;
-	
+
 	assert(id);
 
 	if ((error = git_reference__log_signature(&who, repo)) < 0)

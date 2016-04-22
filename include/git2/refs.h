@@ -462,6 +462,17 @@ GIT_EXTERN(int) git_reference_foreach_name(
 	void *payload);
 
 /**
+ * Create a copy of an existing reference.
+ *
+ * Call `git_reference_free` to free the data.
+ *
+ * @param dest pointer where to store the copy
+ * @param source object to copy
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_reference_dup(git_reference **dest, git_reference *source);
+
+/**
  * Free the given reference.
  *
  * @param ref git_reference
