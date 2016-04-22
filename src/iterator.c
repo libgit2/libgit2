@@ -206,8 +206,7 @@ GIT_INLINE(bool) iterator_has_started(
 	return false;
 }
 
-GIT_INLINE(bool) iterator_has_ended(
-	git_iterator *iter, const char *path, bool is_submodule)
+GIT_INLINE(bool) iterator_has_ended(git_iterator *iter, const char *path)
 {
 	if (iter->end == NULL)
 		return false;
@@ -797,7 +796,7 @@ static int tree_iterator_advance(const git_index_entry **out, git_iterator *i)
 			continue;
 
 		/* if this path is after our end, stop */
-		if (iterator_has_ended(&iter->base, iter->entry_path.ptr, false)) {
+		if (iterator_has_ended(&iter->base, iter->entry_path.ptr)) {
 			error = GIT_ITEROVER;
 			break;
 		}
@@ -2034,7 +2033,7 @@ static int index_iterator_advance(
 			continue;
 		}
 
-		if (iterator_has_ended(&iter->base, entry->path, is_submodule)) {
+		if (iterator_has_ended(&iter->base, entry->path)) {
 			error = GIT_ITEROVER;
 			break;
 		}

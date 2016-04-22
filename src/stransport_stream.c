@@ -116,11 +116,13 @@ int stransport_certificate(git_cert **out, git_stream *stream)
 	return 0;
 }
 
-int stransport_set_proxy(git_stream *stream, const char *proxy)
+int stransport_set_proxy(
+	git_stream *stream,
+	const git_proxy_options *proxy_opts)
 {
 	stransport_stream *st = (stransport_stream *) stream;
 
-	return git_stream_set_proxy(st->io, proxy);
+	return git_stream_set_proxy(st->io, proxy_opts);
 }
 
 /*
