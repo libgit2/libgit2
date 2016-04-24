@@ -671,7 +671,8 @@ static int parse_patch_header(
 		continue;
 	}
 
-	error = parse_err("no header in patch file");
+	giterr_set(GITERR_PATCH, "no patch found");
+	error = GIT_ENOTFOUND;
 
 done:
 	return error;
