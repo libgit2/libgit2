@@ -51,7 +51,7 @@ int git_diff_delta__casecmp(const void *a, const void *b)
 	return val ? val : ((int)da->status - (int)db->status);
 }
 
-static int diff_entry_cmp(const void *a, const void *b)
+int git_diff__entry_cmp(const void *a, const void *b)
 {
 	const git_index_entry *entry_a = a;
 	const git_index_entry *entry_b = b;
@@ -59,7 +59,7 @@ static int diff_entry_cmp(const void *a, const void *b)
 	return strcmp(entry_a->path, entry_b->path);
 }
 
-static int diff_entry_icmp(const void *a, const void *b)
+int git_diff__entry_icmp(const void *a, const void *b)
 {
 	const git_index_entry *entry_a = a;
 	const git_index_entry *entry_b = b;

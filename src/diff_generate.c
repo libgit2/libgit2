@@ -358,22 +358,6 @@ static const char *diff_mnemonic_prefix(
 	return pfx;
 }
 
-static int diff_entry_cmp(const void *a, const void *b)
-{
-	const git_index_entry *entry_a = a;
-	const git_index_entry *entry_b = b;
-
-	return strcmp(entry_a->path, entry_b->path);
-}
-
-static int diff_entry_icmp(const void *a, const void *b)
-{
-	const git_index_entry *entry_a = a;
-	const git_index_entry *entry_b = b;
-
-	return strcasecmp(entry_a->path, entry_b->path);
-}
-
 void git_diff__set_ignore_case(git_diff *diff, bool ignore_case)
 {
 	if (!ignore_case) {
@@ -382,7 +366,7 @@ void git_diff__set_ignore_case(git_diff *diff, bool ignore_case)
 		diff->strcomp    = git__strcmp;
 		diff->strncomp   = git__strncmp;
 		diff->pfxcomp    = git__prefixcmp;
-		diff->entrycomp  = diff_entry_cmp;
+		diff->entrycomp  = git_diff__entry_cmp;
 
 		git_vector_set_cmp(&diff->deltas, git_diff_delta__cmp);
 	} else {
@@ -391,7 +375,7 @@ void git_diff__set_ignore_case(git_diff *diff, bool ignore_case)
 		diff->strcomp    = git__strcasecmp;
 		diff->strncomp   = git__strncasecmp;
 		diff->pfxcomp    = git__prefixcmp_icase;
-		diff->entrycomp  = diff_entry_icmp;
+		diff->entrycomp  = git_diff__entry_icmp;
 
 		git_vector_set_cmp(&diff->deltas, git_diff_delta__casecmp);
 	}

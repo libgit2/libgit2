@@ -25,6 +25,7 @@
 typedef enum {
 	GIT_DIFF_TYPE_UNKNOWN = 0,
 	GIT_DIFF_TYPE_GENERATED = 1,
+	GIT_DIFF_TYPE_PARSED = 2,
 } git_diff_origin_t;
 
 struct git_diff {
@@ -55,6 +56,9 @@ extern int git_diff_delta__format_file_header(
 
 extern int git_diff_delta__cmp(const void *a, const void *b);
 extern int git_diff_delta__casecmp(const void *a, const void *b);
+
+extern int git_diff__entry_cmp(const void *a, const void *b);
+extern int git_diff__entry_icmp(const void *a, const void *b);
 
 #endif
 

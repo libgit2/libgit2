@@ -1174,6 +1174,11 @@ GIT_EXTERN(int) git_diff_buffers(
 	git_diff_line_cb line_cb,
 	void *payload);
 
+GIT_EXTERN(int) git_diff_from_buffer(
+	git_diff **out,
+	const char *content,
+	size_t content_len);
+
 /**
  * This is an opaque structure which is allocated by `git_diff_get_stats`.
  * You are responsible for releasing the object memory when done, using the
