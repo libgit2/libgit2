@@ -1,8 +1,14 @@
 #include "clar_libgit2.h"
 #include "patch.h"
 #include "patch_parse.h"
+#include "diff_helpers.h"
 
 #include "../patch/patch_common.h"
+
+void test_diff_parse__cleanup(void)
+{
+	cl_git_sandbox_cleanup();
+}
 
 void test_diff_parse__nonpatches_fail_with_notfound(void)
 {
@@ -56,5 +62,67 @@ void test_diff_parse__invalid_patches_fails(void)
 	test_parse_invalid_diff(PATCH_CORRUPT_MISSING_OLD_FILE);
 	test_parse_invalid_diff(PATCH_CORRUPT_NO_CHANGES);
 	test_parse_invalid_diff(PATCH_CORRUPT_MISSING_HUNK_HEADER);
+}
+
+static void test_tree_to_tree_computed_to_parsed(
+	const char *sandbox, const char *a_id, const char *b_id)
+{
+	git_repository *repo;
+	git_diff *computed, *parsed;
+	git_tree *a, *b;
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
+	git_buf computed_buf = GIT_BUF_INIT;
+
+	repo = cl_git_sandbox_init(sandbox);
+
+	opts.id_abbrev = GIT_OID_HEXSZ;
+	opts.flags = GIT_DIFF_SHOW_BINARY;
+
+	cl_assert((a = resolve_commit_oid_to_tree(repo, a_id)) != NULL);
+	cl_assert((b = resolve_commit_oid_to_tree(repo, b_id)) != NULL);
+
+	cl_git_pass(git_diff_tree_to_tree(&computed, repo, a, b, &opts));
+	cl_git_pass(git_diff_to_buf(&computed_buf,
+		computed, GIT_DIFF_FORMAT_PATCH));
+
+	cl_git_pass(git_diff_from_buffer(&parsed,
+		computed_buf.ptr, computed_buf.size));
+
+	diff_assert_equal(computed, parsed);
+
+	git_tree_free(a);
+	git_tree_free(b);
+
+	git_diff_free(computed);
+	git_diff_free(parsed);
+
+	git_buf_free(&computed_buf);
+
+	cl_git_sandbox_cleanup();
+}
+
+void test_diff_parse__can_parse_generated_diff(void)
+{
+	test_tree_to_tree_computed_to_parsed("diff", "d70d245e", "7a9e0b02");
+	test_tree_to_tree_computed_to_parsed(
+		"unsymlinked.git", "806999", "a8595c");
+	test_tree_to_tree_computed_to_parsed("diff",
+		"d70d245ed97ed2aa596dd1af6536e4bfdb047b69",
+		"7a9e0b02e63179929fed24f0a3e0f19168114d10");
+	test_tree_to_tree_computed_to_parsed(
+		"unsymlinked.git", "7fccd7", "806999");
+	test_tree_to_tree_computed_to_parsed(
+		"unsymlinked.git", "7fccd7", "a8595c");
+	test_tree_to_tree_computed_to_parsed("attr", "605812a", "370fe9ec22");
+	test_tree_to_tree_computed_to_parsed(
+		"attr", "f5b0af1fb4f5c", "370fe9ec22");
+	test_tree_to_tree_computed_to_parsed("diff", "d70d245e", "d70d245e");
+	test_tree_to_tree_computed_to_parsed("diff_format_email",
+		"873806f6f27e631eb0b23e4b56bea2bfac14a373",
+		"897d3af16ca9e420cd071b1c4541bd2b91d04c8c");
+	test_tree_to_tree_computed_to_parsed("diff_format_email",
+		"897d3af16ca9e420cd071b1c4541bd2b91d04c8c",
+		"873806f6f27e631eb0b23e4b56bea2bfac14a373");
 }
 
