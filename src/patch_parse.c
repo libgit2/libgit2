@@ -933,19 +933,31 @@ static int check_filenames(git_patch_parsed *patch)
 
 static int check_patch(git_patch_parsed *patch)
 {
+	git_diff_delta *delta = patch->base.delta;
+
 	if (check_filenames(patch) < 0)
 		return -1;
 
-	if (patch->base.delta->old_file.path &&
-			patch->base.delta->status != GIT_DELTA_DELETED &&
-			!patch->base.delta->new_file.mode)
-		patch->base.delta->new_file.mode = patch->base.delta->old_file.mode;
+	if (delta->old_file.path &&
+			delta->status != GIT_DELTA_DELETED &&
+			!delta->new_file.mode)
+		delta->new_file.mode = delta->old_file.mode;
 
-	if (patch->base.delta->status == GIT_DELTA_MODIFIED &&
-		!(patch->base.delta->flags & GIT_DIFF_FLAG_BINARY) &&
-		patch->base.delta->new_file.mode == patch->base.delta->old_file.mode &&
-		git_array_size(patch->base.hunks) == 0)
+	if (delta->status == GIT_DELTA_MODIFIED &&
+			!(delta->flags & GIT_DIFF_FLAG_BINARY) &&
+			delta->new_file.mode == delta->old_file.mode &&
+			git_array_size(patch->base.hunks) == 0)
 		return parse_err("patch with no hunks");
+
+	if (delta->status == GIT_DELTA_ADDED) {
+		memset(&delta->old_file.id, 0x0, sizeof(git_oid));
+		delta->old_file.id_abbrev = 0;
+	}
+
+	if (delta->status == GIT_DELTA_DELETED) {
+		memset(&delta->new_file.id, 0x0, sizeof(git_oid));
+		delta->new_file.id_abbrev = 0;
+	}
 
 	return 0;
 }
