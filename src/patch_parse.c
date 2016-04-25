@@ -361,6 +361,7 @@ typedef struct {
 } header_git_op;
 
 static const header_git_op header_git_ops[] = {
+	{ "diff --git ", NULL },
 	{ "@@ -", NULL },
 	{ "GIT binary patch", NULL },
 	{ "--- ", parse_header_git_oldpath },
@@ -437,7 +438,8 @@ static int parse_header_git(
 		}
 		
 		if (!found) {
-			error = parse_err("invalid patch header at line %d", ctx->line_num);
+			error = parse_err("invalid patch header at line %d",
+				ctx->line_num);
 			goto done;
 		}
 	}
