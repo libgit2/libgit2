@@ -810,6 +810,8 @@ static int parse_patch_hunks(
 			goto done;
 	}
 
+	patch->base.delta->flags |= GIT_DIFF_FLAG_NOT_BINARY;
+
 done:
 	return error;
 }
@@ -819,11 +821,8 @@ static int parse_patch_body(
 {
 	if (parse_ctx_contains_s(ctx, "GIT binary patch"))
 		return parse_patch_binary(patch, ctx);
-
-	else if (parse_ctx_contains_s(ctx, "@@ -"))
+	else
 		return parse_patch_hunks(patch, ctx);
-
-	return 0;
 }
 
 int check_header_names(
