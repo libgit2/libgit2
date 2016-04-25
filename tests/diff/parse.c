@@ -65,7 +65,8 @@ void test_diff_parse__invalid_patches_fails(void)
 }
 
 static void test_tree_to_tree_computed_to_parsed(
-	const char *sandbox, const char *a_id, const char *b_id)
+	const char *sandbox, const char *a_id, const char *b_id,
+	uint32_t diff_flags, uint32_t find_flags)
 {
 	git_repository *repo;
 	git_diff *computed, *parsed;
@@ -77,12 +78,17 @@ static void test_tree_to_tree_computed_to_parsed(
 	repo = cl_git_sandbox_init(sandbox);
 
 	opts.id_abbrev = GIT_OID_HEXSZ;
-	opts.flags = GIT_DIFF_SHOW_BINARY;
+	opts.flags = GIT_DIFF_SHOW_BINARY | diff_flags;
+	findopts.flags = find_flags;
 
 	cl_assert((a = resolve_commit_oid_to_tree(repo, a_id)) != NULL);
 	cl_assert((b = resolve_commit_oid_to_tree(repo, b_id)) != NULL);
 
 	cl_git_pass(git_diff_tree_to_tree(&computed, repo, a, b, &opts));
+
+	if (find_flags)
+		cl_git_pass(git_diff_find_similar(computed, &findopts));
+
 	cl_git_pass(git_diff_to_buf(&computed_buf,
 		computed, GIT_DIFF_FORMAT_PATCH));
 
@@ -104,25 +110,34 @@ static void test_tree_to_tree_computed_to_parsed(
 
 void test_diff_parse__can_parse_generated_diff(void)
 {
-	test_tree_to_tree_computed_to_parsed("diff", "d70d245e", "7a9e0b02");
 	test_tree_to_tree_computed_to_parsed(
-		"unsymlinked.git", "806999", "a8595c");
+		"diff", "d70d245e", "7a9e0b02", 0, 0);
+	test_tree_to_tree_computed_to_parsed(
+		"unsymlinked.git", "806999", "a8595c", 0, 0);
 	test_tree_to_tree_computed_to_parsed("diff",
 		"d70d245ed97ed2aa596dd1af6536e4bfdb047b69",
-		"7a9e0b02e63179929fed24f0a3e0f19168114d10");
+		"7a9e0b02e63179929fed24f0a3e0f19168114d10", 0, 0);
 	test_tree_to_tree_computed_to_parsed(
-		"unsymlinked.git", "7fccd7", "806999");
+		"unsymlinked.git", "7fccd7", "806999", 0, 0);
 	test_tree_to_tree_computed_to_parsed(
-		"unsymlinked.git", "7fccd7", "a8595c");
-	test_tree_to_tree_computed_to_parsed("attr", "605812a", "370fe9ec22");
+		"unsymlinked.git", "7fccd7", "a8595c", 0, 0);
 	test_tree_to_tree_computed_to_parsed(
-		"attr", "f5b0af1fb4f5c", "370fe9ec22");
-	test_tree_to_tree_computed_to_parsed("diff", "d70d245e", "d70d245e");
+		"attr", "605812a", "370fe9ec22", 0, 0);
+	test_tree_to_tree_computed_to_parsed(
+		"attr", "f5b0af1fb4f5c", "370fe9ec22", 0, 0);
+	test_tree_to_tree_computed_to_parsed(
+		"diff", "d70d245e", "d70d245e", 0, 0);
 	test_tree_to_tree_computed_to_parsed("diff_format_email",
 		"873806f6f27e631eb0b23e4b56bea2bfac14a373",
-		"897d3af16ca9e420cd071b1c4541bd2b91d04c8c");
+		"897d3af16ca9e420cd071b1c4541bd2b91d04c8c",
+		GIT_DIFF_SHOW_BINARY, 0);
 	test_tree_to_tree_computed_to_parsed("diff_format_email",
 		"897d3af16ca9e420cd071b1c4541bd2b91d04c8c",
-		"873806f6f27e631eb0b23e4b56bea2bfac14a373");
+		"873806f6f27e631eb0b23e4b56bea2bfac14a373",
+		GIT_DIFF_SHOW_BINARY, 0);
+	test_tree_to_tree_computed_to_parsed("renames",
+		"31e47d8c1fa36d7f8d537b96158e3f024de0a9f2",
+		"2bc7f351d20b53f1c72c16c4b036e491c478c49a",
+		0, GIT_DIFF_FIND_RENAMES);
 }
 
