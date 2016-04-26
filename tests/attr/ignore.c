@@ -190,6 +190,19 @@ void test_attr_ignore__subdirectory_gitignore(void)
 	assert_is_ignored(false, "dir/file3");
 }
 
+void test_attr_ignore__negated_patterns(void)
+{
+	cl_git_rewritefile(
+		"attr/.gitignore",
+		"dir\n"
+		"!/foo/dir\n");
+
+	assert_is_ignored(true, "dir");
+	assert_is_ignored(true, "dir/file1");
+	assert_is_ignored(false, "foo/dir");
+	assert_is_ignored(false, "foo/dir/file1");
+}
+
 void test_attr_ignore__expand_tilde_to_homedir(void)
 {
 	git_config *cfg;
