@@ -351,9 +351,6 @@ void test_diff_format_email__mode_change(void)
 	"diff --git a/file1.txt.renamed b/file1.txt.renamed\n" \
 	"old mode 100644\n" \
 	"new mode 100755\n" \
-	"index a97157a..a97157a\n" \
-	"--- a/file1.txt.renamed\n" \
-	"+++ b/file1.txt.renamed\n" \
 	"--\n" \
 	"libgit2 " LIBGIT2_VERSION "\n" \
 	"\n";

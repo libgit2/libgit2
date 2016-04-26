@@ -310,6 +310,20 @@ static int parse_header_renameto(
 	return parse_header_rename(&patch->rename_new_path, ctx);
 }
 
+static int parse_header_copyfrom(
+	git_patch_parsed *patch, git_patch_parse_ctx *ctx)
+{
+	patch->base.delta->status = GIT_DELTA_COPIED;
+	return parse_header_rename(&patch->rename_old_path, ctx);
+}
+
+static int parse_header_copyto(
+	git_patch_parsed *patch, git_patch_parse_ctx *ctx)
+{
+	patch->base.delta->status = GIT_DELTA_COPIED;
+	return parse_header_rename(&patch->rename_new_path, ctx);
+}
+
 static int parse_header_percent(uint16_t *out, git_patch_parse_ctx *ctx)
 {
 	int32_t val;
@@ -375,6 +389,8 @@ static const header_git_op header_git_ops[] = {
 	{ "rename to ", parse_header_renameto },
 	{ "rename old ", parse_header_renamefrom },
 	{ "rename new ", parse_header_renameto },
+	{ "copy from ", parse_header_copyfrom },
+	{ "copy to ", parse_header_copyto },
 	{ "similarity index ", parse_header_similarity },
 	{ "dissimilarity index ", parse_header_dissimilarity },
 };

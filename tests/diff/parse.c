@@ -143,6 +143,11 @@ void test_diff_parse__can_parse_generated_diff(void)
 		"31e47d8c1fa36d7f8d537b96158e3f024de0a9f2",
 		"2bc7f351d20b53f1c72c16c4b036e491c478c49a",
 		GIT_DIFF_INCLUDE_UNMODIFIED,
+		0);
+	test_tree_to_tree_computed_to_parsed("renames",
+		"31e47d8c1fa36d7f8d537b96158e3f024de0a9f2",
+		"2bc7f351d20b53f1c72c16c4b036e491c478c49a",
+		GIT_DIFF_INCLUDE_UNMODIFIED,
 		GIT_DIFF_FIND_COPIES_FROM_UNMODIFIED | GIT_DIFF_FIND_EXACT_MATCH_ONLY);
 }
 

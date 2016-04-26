@@ -331,11 +331,12 @@ static int diff_delta_format_with_paths(
 	return git_buf_printf(out, template, oldpath, newpath);
 }
 
-int diff_delta_format_rename_header(
+int diff_delta_format_similarity_header(
 	git_buf *out,
 	const git_diff_delta *delta)
 {
 	git_buf old_path = GIT_BUF_INIT, new_path = GIT_BUF_INIT;
+	const char *type;
 	int error = 0;
 
 	if (delta->similarity > 100) {
@@ -343,6 +344,13 @@ int diff_delta_format_rename_header(
 		error = -1;
 		goto done;
 	}
+
+	if (delta->status == GIT_DELTA_RENAMED)
+		type = "rename";
+	else if (delta->status == GIT_DELTA_COPIED)
+		type = "copy";
+	else
+		abort();
 
 	if ((error = git_buf_puts(&old_path, delta->old_file.path)) < 0 ||
 		(error = git_buf_puts(&new_path, delta->new_file.path)) < 0 ||
@@ -352,11 +360,11 @@ int diff_delta_format_rename_header(
 
 	git_buf_printf(out,
 		"similarity index %d%%\n"
-		"rename from %s\n"
-		"rename to %s\n",
+		"%s from %s\n"
+		"%s to %s\n",
 		delta->similarity,
-		old_path.ptr,
-		new_path.ptr);
+		type, old_path.ptr,
+		type, new_path.ptr);
 
 	if (git_buf_oom(out))
 		error = -1;
@@ -368,6 +376,22 @@ done:
 	return error;
 }
 
+static bool delta_is_unchanged(const git_diff_delta *delta)
+{
+	if (git_oid_iszero(&delta->old_file.id) &&
+		git_oid_iszero(&delta->new_file.id))
+		return true;
+
+	if (delta->old_file.mode == GIT_FILEMODE_COMMIT ||
+		delta->new_file.mode == GIT_FILEMODE_COMMIT)
+		return false;
+
+	if (git_oid_equal(&delta->old_file.id, &delta->new_file.id))
+		return true;
+
+	return false;
+}
+
 int git_diff_delta__format_file_header(
 	git_buf *out,
 	const git_diff_delta *delta,
@@ -376,7 +400,7 @@ int git_diff_delta__format_file_header(
 	int id_strlen)
 {
 	git_buf old_path = GIT_BUF_INIT, new_path = GIT_BUF_INIT;
-	bool unchanged;
+	bool unchanged = delta_is_unchanged(delta);
 	int error = 0;
 
 	if (!oldpfx)
@@ -397,13 +421,11 @@ int git_diff_delta__format_file_header(
 	git_buf_printf(out, "diff --git %s %s\n",
 		old_path.ptr, new_path.ptr);
 
-	if (delta->status == GIT_DELTA_RENAMED) {
-		if ((error = diff_delta_format_rename_header(out, delta)) < 0)
+	if (delta->status == GIT_DELTA_RENAMED ||
+		(delta->status == GIT_DELTA_COPIED && unchanged)) {
+		if ((error = diff_delta_format_similarity_header(out, delta)) < 0)
 			goto done;
 	}
-
-	unchanged = (git_oid_iszero(&delta->old_file.id) &&
-		git_oid_iszero(&delta->new_file.id));
 
 	if (!unchanged) {
 		if ((error = diff_print_oid_range(out, delta, id_strlen)) < 0)
