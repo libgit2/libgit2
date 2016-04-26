@@ -195,5 +195,5 @@ int git_reset_from_annotated(
 	git_reset_t reset_type,
 	const git_checkout_options *checkout_opts)
 {
-	return reset(repo, (git_object *) commit->commit, commit->ref_name, reset_type, checkout_opts);
+	return reset(repo, (git_object *) commit->commit, commit->description, reset_type, checkout_opts);
 }
