@@ -36,7 +36,9 @@ test_script:
     Invoke-WebRequest https://github.com/ethomson/poxyproxy/releases/download/v0.1.0/poxyproxy-0.1.0.jar -OutFile poxyproxy.jar
     # Run this early so we know it's ready by the time we need it
     $proxyJob = Start-Job { java -jar $Env:APPVEYOR_BUILD_FOLDER\build\poxyproxy.jar -d --port 8080 --credentials foo:bar }
-    ctest -V -R libgit2_clar
+    # Create a CTest testfile with all the suites listed so we can ask CTest to run them
+    python "$env:APPVEYOR_BUILD_FOLDER\script\ctest-jobs.py" "$env:APPVEYOR_BUILD_FOLDER\build\Debug\libgit2_clar.exe" "$env:APPVEYOR_BUILD_FOLDER\build\CTestTestfile.cmake"
+    ctest -V -j8 -R libgit2_clar
     $env:GITTEST_REMOTE_URL="https://github.com/libgit2/non-existent"
     $env:GITTEST_REMOTE_USER="libgit2test"
     ctest -V -R libgit2_clar-cred_callback
