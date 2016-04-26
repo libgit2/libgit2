@@ -308,7 +308,7 @@ clar_usage(const char *arg)
 	exit(-1);
 }
 
-static void
+static int
 clar_parse_args(int argc, char **argv)
 {
 	int i;
@@ -377,7 +377,7 @@ clar_parse_args(int argc, char **argv)
 			for (j = 0; j < _clar_suite_count; ++j)
 				printf(" %3d: %s\n", (int)j, _clar_suites[j].name);
 
-			exit(0);
+			return 1;
 		}
 
 		case 'v':
@@ -388,6 +388,8 @@ clar_parse_args(int argc, char **argv)
 			clar_usage(argv[0]);
 		}
 	}
+
+	return 0;
 }
 
 void
@@ -411,8 +413,13 @@ clar_test_init(int argc, char **argv)
 int
 clar_test_run()
 {
+	int should_exit;
+
 	if (_clar.argc > 1)
-		clar_parse_args(_clar.argc, _clar.argv);
+		should_exit = clar_parse_args(_clar.argc, _clar.argv);
+
+	if (should_exit)
+		return 0;
 
 	if (!_clar.suites_ran) {
 		size_t i;
