@@ -121,7 +121,8 @@ int git_branch_create_from_annotated(
 	const git_annotated_commit *commit,
 	int force)
 {
-	return create_branch(ref_out, repository, branch_name, commit->commit, commit->ref_name, force);
+	return create_branch(ref_out,
+		repository, branch_name, commit->commit, commit->description, force);
 }
 
 int git_branch_delete(git_reference *branch)

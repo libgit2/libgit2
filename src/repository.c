@@ -2162,7 +2162,7 @@ int git_repository_set_head_detached_from_annotated(
 {
 	assert(repo && commitish);
 
-	return detach(repo, git_annotated_commit_id(commitish), commitish->ref_name);
+	return detach(repo, git_annotated_commit_id(commitish), commitish->description);
 }
 
 int git_repository_detach_head(git_repository* repo)
