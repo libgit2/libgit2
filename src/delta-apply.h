@@ -8,6 +8,7 @@
 #define INCLUDE_delta_apply_h__
 
 #include "odb.h"
+#include "pack.h"
 
 /**
  * Apply a git binary delta to recover the original content.
@@ -46,5 +47,16 @@ extern int git__delta_read_header(
 	size_t delta_len,
 	size_t *base_sz,
 	size_t *res_sz);
+
+/**
+ * Read the header of a git binary delta
+ *
+ * This variant reads just enough from the packfile stream to read the
+ * delta header.
+ */
+extern int git__delta_read_header_fromstream(
+	size_t *base_sz,
+	size_t *res_sz,
+	git_packfile_stream *stream);
 
 #endif

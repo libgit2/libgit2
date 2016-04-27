@@ -499,15 +499,14 @@ int git_packfile_resolve_header(
 
 	if (type == GIT_OBJ_OFS_DELTA || type == GIT_OBJ_REF_DELTA) {
 		size_t base_size;
-		git_rawobj delta;
+		git_packfile_stream stream;
+
 		base_offset = get_delta_base(p, &w_curs, &curpos, type, offset);
 		git_mwindow_close(&w_curs);
-		error = packfile_unpack_compressed(&delta, p, &w_curs, &curpos, size, type);
-		git_mwindow_close(&w_curs);
-		if (error < 0)
+		if ((error = git_packfile_stream_open(&stream, p, curpos)) < 0)
 			return error;
-		error = git__delta_read_header(delta.data, delta.len, &base_size, size_p);
-		git__free(delta.data);
+		error = git__delta_read_header_fromstream(&base_size, size_p, &stream);
+		git_packfile_stream_free(&stream);
 		if (error < 0)
 			return error;
 	} else
