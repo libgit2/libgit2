@@ -63,6 +63,19 @@ GIT_EXTERN(int) git_signature_now(git_signature **out, const char *name, const c
 GIT_EXTERN(int) git_signature_default(git_signature **out, git_repository *repo);
 
 /**
+ * Create a new signature by parsing the given buffer, which is
+ * expected to be in the format "Real Name <email> timestamp tzoffset",
+ * where `timestamp` is the number of seconds since the Unix epoch and
+ * `tzoffset` is the timezone offset in `hhmm` format (note the lack
+ * of a colon separator).
+ *
+ * @param out new signature
+ * @param buf signature string
+ * @return 0 on success, or an error code
+ */
+GIT_EXTERN(int) git_signature_from_buffer(git_signature **out, const char *buf);
+
+/**
  * Create a copy of an existing signature.  All internal strings are also
  * duplicated.
  *
