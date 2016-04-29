@@ -523,7 +523,7 @@ ssize_t openssl_read(git_stream *stream, void *data, size_t len)
 	int ret;
 
 	if ((ret = SSL_read(st->ssl, data, len)) <= 0)
-		ssl_set_error(st->ssl, ret);
+		return ssl_set_error(st->ssl, ret);
 
 	return ret;
 }
