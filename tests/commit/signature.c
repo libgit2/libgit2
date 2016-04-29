@@ -86,3 +86,16 @@ void test_commit_signature__create_zero_char(void)
 	cl_git_fail(git_signature_new(&sign, "", "x@y.z", 1234567890, 60));
 	cl_assert(sign == NULL);
 }
+
+void test_commit_signature__from_buf(void)
+{
+	git_signature *sign;
+
+	cl_git_pass(git_signature_from_buffer(&sign, "Test User <test@test.tt> 1461698487 +0200"));
+	cl_assert_equal_s("Test User", sign->name);
+	cl_assert_equal_s("test@test.tt", sign->email);
+	cl_assert_equal_i(1461698487, sign->when.time);
+	cl_assert_equal_i(120, sign->when.offset);
+	git_signature_free(sign);
+}
+
