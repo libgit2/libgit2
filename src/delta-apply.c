@@ -90,13 +90,13 @@ int git__delta_apply(
 			size_t off = 0, len = 0;
 
 			if (cmd & 0x01) off = *delta++;
-			if (cmd & 0x02) off |= *delta++ << 8;
-			if (cmd & 0x04) off |= *delta++ << 16;
-			if (cmd & 0x08) off |= *delta++ << 24;
+			if (cmd & 0x02) off |= *delta++ << 8UL;
+			if (cmd & 0x04) off |= *delta++ << 16UL;
+			if (cmd & 0x08) off |= *delta++ << 24UL;
 
 			if (cmd & 0x10) len = *delta++;
-			if (cmd & 0x20) len |= *delta++ << 8;
-			if (cmd & 0x40) len |= *delta++ << 16;
+			if (cmd & 0x20) len |= *delta++ << 8UL;
+			if (cmd & 0x40) len |= *delta++ << 16UL;
 			if (!len)		len = 0x10000;
 
 			if (base_len < off + len || res_sz < len)
