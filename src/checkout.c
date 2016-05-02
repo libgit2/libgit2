@@ -1342,9 +1342,11 @@ fail:
 
 static bool should_remove_existing(checkout_data *data)
 {
-	int ignorecase = 0;
+	int ignorecase;
 
-	git_repository__cvar(&ignorecase, data->repo, GIT_CVAR_IGNORECASE);
+	if (git_repository__cvar(&ignorecase, data->repo, GIT_CVAR_IGNORECASE) < 0) {
+		ignorecase = 0;
+	}
 
 	return (ignorecase &&
 		(data->strategy & GIT_CHECKOUT_DONT_REMOVE_EXISTING) == 0);
