@@ -3008,7 +3008,7 @@ int git_index_read_index(
 
 		if (error < 0) {
 			giterr_set(GITERR_INDEX, "failed to insert entry");
-			return error;
+			goto done;
 		}
 
 		if (diff <= 0) {
