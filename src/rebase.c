@@ -852,6 +852,7 @@ static int rebase_next_inmemory(
 	git_tree *current_tree = NULL, *head_tree = NULL, *parent_tree = NULL;
 	git_rebase_operation *operation;
 	git_index *index = NULL;
+	unsigned int parent_count;
 	int error;
 
 	*out = NULL;
@@ -859,10 +860,20 @@ static int rebase_next_inmemory(
 	operation = git_array_get(rebase->operations, rebase->current);
 
 	if ((error = git_commit_lookup(&current_commit, rebase->repo, &operation->id)) < 0 ||
-		(error = git_commit_tree(&current_tree, current_commit)) < 0 ||
-		(error = git_commit_parent(&parent_commit, current_commit, 0)) < 0 ||
-		(error = git_commit_tree(&parent_tree, parent_commit)) < 0 ||
-		(error = git_commit_tree(&head_tree, rebase->last_commit)) < 0 ||
+		(error = git_commit_tree(&current_tree, current_commit)) < 0)
+		goto done;
+
+	if ((parent_count = git_commit_parentcount(current_commit)) > 1) {
+		giterr_set(GITERR_REBASE, "Cannot rebase a merge commit");
+		error = -1;
+		goto done;
+	} else if (parent_count) {
+		if ((error = git_commit_parent(&parent_commit, current_commit, 0)) < 0 ||
+			(error = git_commit_tree(&parent_tree, parent_commit)) < 0)
+			goto done;
+	}
+
+	if ((error = git_commit_tree(&head_tree, rebase->last_commit)) < 0 ||
 		(error = git_merge_trees(&index, rebase->repo, parent_tree, head_tree, current_tree, &rebase->options.merge_options)) < 0)
 		goto done;
 
