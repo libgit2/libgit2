@@ -51,6 +51,91 @@ void test_commit_commit__create_unexisting_update_ref(void)
 	git_reference_free(ref);
 }
 
+void test_commit_commit__create_initial_commit(void)
+{
+	git_oid oid;
+	git_tree *tree;
+	git_commit *commit;
+	git_signature *s;
+	git_reference *ref;
+
+	git_oid_fromstr(&oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+	cl_git_pass(git_commit_lookup(&commit, _repo, &oid));
+
+	git_oid_fromstr(&oid, "944c0f6e4dfa41595e6eb3ceecdb14f50fe18162");
+	cl_git_pass(git_tree_lookup(&tree, _repo, &oid));
+
+	cl_git_pass(git_signature_now(&s, "alice", "alice@example.com"));
+
+	cl_git_fail(git_reference_lookup(&ref, _repo, "refs/heads/foo/bar"));
+	cl_git_pass(git_commit_create(&oid, _repo, "refs/heads/foo/bar", s, s,
+				      NULL, "initial commit", tree, 0, NULL));
+
+	cl_git_pass(git_reference_lookup(&ref, _repo, "refs/heads/foo/bar"));
+
+	cl_assert_equal_oid(&oid, git_reference_target(ref));
+
+	git_tree_free(tree);
+	git_commit_free(commit);
+	git_signature_free(s);
+	git_reference_free(ref);
+}
+
+void test_commit_commit__create_initial_commit_parent_not_current(void)
+{
+	git_oid oid;
+	git_tree *tree;
+	git_commit *commit;
+	git_signature *s;
+	git_reference *origRef;
+	git_reference *origRefTarget;
+	git_reference *ref;
+	git_reference *refTarget;
+
+	git_oid_fromstr(&oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+	cl_git_pass(git_commit_lookup(&commit, _repo, &oid));
+
+	git_oid_fromstr(&oid, "944c0f6e4dfa41595e6eb3ceecdb14f50fe18162");
+	cl_git_pass(git_tree_lookup(&tree, _repo, &oid));
+
+	cl_git_pass(git_signature_now(&s, "alice", "alice@example.com"));
+
+	cl_git_pass(git_reference_lookup(&origRef, _repo, "HEAD"));
+
+	cl_git_fail(git_commit_create(&oid, _repo, "HEAD", s, s,
+				      NULL, "initial commit", tree, 0, NULL));
+
+	cl_git_pass(git_reference_lookup(&ref, _repo, "HEAD"));
+
+	cl_git_pass(
+		git_reference_lookup(
+			&origRefTarget,
+			_repo,
+			git_reference_symbolic_target(origRef)
+		)
+	);
+	cl_git_pass(
+		git_reference_lookup(
+			&refTarget,
+			_repo,
+			git_reference_symbolic_target(ref)
+		)
+	);
+
+	cl_assert_equal_oid(
+		git_reference_target(origRefTarget),
+		git_reference_target(refTarget)
+	);
+
+	git_tree_free(tree);
+	git_commit_free(commit);
+	git_signature_free(s);
+	git_reference_free(origRef);
+	git_reference_free(origRefTarget);
+	git_reference_free(ref);
+	git_reference_free(refTarget);
+}
+
 void assert_commit_summary(const char *expected, const char *given)
 {
 	git_commit *dummy;
