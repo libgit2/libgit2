@@ -5,15 +5,20 @@
 #include <fcntl.h>
 
 static git_repository *repo;
+static git_signature *signature;
 
 // Fixture setup and teardown
 void test_rebase_inmemory__initialize(void)
 {
 	repo = cl_git_sandbox_init("rebase");
+
+	cl_git_pass(git_signature_new(&signature,
+		"Rebaser", "rebaser@rebaser.rb", 1405694510, 0));
 }
 
 void test_rebase_inmemory__cleanup(void)
 {
+	git_signature_free(signature);
 	cl_git_sandbox_cleanup();
 }
 
@@ -53,13 +58,9 @@ void test_rebase_inmemory__can_resolve_conflicts(void)
 	git_rebase_operation *rebase_operation;
 	git_status_list *status_list;
 	git_oid pick_id, commit_id, expected_commit_id;
-	git_signature *signature;
 	git_index *rebase_index, *repo_index;
 	git_index_entry resolution = {{0}};
 	git_rebase_options opts = GIT_REBASE_OPTIONS_INIT;
-
-	cl_git_pass(git_signature_new(&signature,
-		"Rebaser", "rebaser@rebaser.rb", 1405694510, 0));
 
 	opts.inmemory = true;
 
@@ -104,7 +105,6 @@ void test_rebase_inmemory__can_resolve_conflicts(void)
 	cl_git_pass(git_oid_fromstr(&expected_commit_id, "db7af47222181e548810da2ab5fec0e9357c5637"));
 	cl_assert_equal_oid(&commit_id, &expected_commit_id);
 
-	git_signature_free(signature);
 	git_status_list_free(status_list);
 	git_annotated_commit_free(branch_head);
 	git_annotated_commit_free(upstream_head);
@@ -112,5 +112,56 @@ void test_rebase_inmemory__can_resolve_conflicts(void)
 	git_reference_free(upstream_ref);
 	git_index_free(repo_index);
 	git_index_free(rebase_index);
+	git_rebase_free(rebase);
+}
+
+void test_rebase_inmemory__no_common_ancestor(void)
+{
+	git_rebase *rebase;
+	git_reference *branch_ref, *upstream_ref;
+	git_annotated_commit *branch_head, *upstream_head;
+	git_rebase_operation *rebase_operation;
+	git_oid commit_id, expected_final_id;
+	git_rebase_options opts = GIT_REBASE_OPTIONS_INIT;
+
+	opts.inmemory = true;
+
+	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/barley"));
+	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/master"));
+
+	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
+	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
+
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, &opts));
+
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
+		NULL, NULL));
+
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
+		NULL, NULL));
+
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
+		NULL, NULL));
+
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
+		NULL, NULL));
+
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
+		NULL, NULL));
+
+	cl_git_pass(git_rebase_finish(rebase, signature));
+
+	git_oid_fromstr(&expected_final_id, "71e7ee8d4fe7d8bf0d107355197e0a953dfdb7f3");
+	cl_assert_equal_oid(&expected_final_id, &commit_id);
+
+	git_annotated_commit_free(branch_head);
+	git_annotated_commit_free(upstream_head);
+	git_reference_free(branch_ref);
+	git_reference_free(upstream_ref);
 	git_rebase_free(rebase);
 }
