@@ -51,6 +51,66 @@ void test_commit_commit__create_unexisting_update_ref(void)
 	git_reference_free(ref);
 }
 
+void test_commit_commit__create_initial_commit(void)
+{
+	git_oid oid;
+	git_tree *tree;
+	git_commit *commit;
+	git_signature *s;
+	git_reference *ref;
+
+	git_oid_fromstr(&oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+	cl_git_pass(git_commit_lookup(&commit, _repo, &oid));
+
+	git_oid_fromstr(&oid, "944c0f6e4dfa41595e6eb3ceecdb14f50fe18162");
+	cl_git_pass(git_tree_lookup(&tree, _repo, &oid));
+
+	cl_git_pass(git_signature_now(&s, "alice", "alice@example.com"));
+
+	cl_git_fail(git_reference_lookup(&ref, _repo, "refs/heads/foo/bar"));
+	cl_git_pass(git_commit_create(&oid, _repo, "refs/heads/foo/bar", s, s,
+				      NULL, "initial commit", tree, 0, NULL));
+
+	cl_git_pass(git_reference_lookup(&ref, _repo, "refs/heads/foo/bar"));
+
+	cl_assert_equal_oid(&oid, git_reference_target(ref));
+
+	git_tree_free(tree);
+	git_commit_free(commit);
+	git_signature_free(s);
+	git_reference_free(ref);
+}
+
+void test_commit_commit__create_initial_commit_parent_not_current(void)
+{
+	git_oid oid;
+	git_oid original_oid;
+	git_tree *tree;
+	git_commit *commit;
+	git_signature *s;
+
+	git_oid_fromstr(&oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+	cl_git_pass(git_commit_lookup(&commit, _repo, &oid));
+
+	git_oid_fromstr(&oid, "944c0f6e4dfa41595e6eb3ceecdb14f50fe18162");
+	cl_git_pass(git_tree_lookup(&tree, _repo, &oid));
+
+	cl_git_pass(git_signature_now(&s, "alice", "alice@example.com"));
+
+	cl_git_pass(git_reference_name_to_id(&original_oid, _repo, "HEAD"));
+
+	cl_git_fail(git_commit_create(&oid, _repo, "HEAD", s, s,
+				      NULL, "initial commit", tree, 0, NULL));
+
+	cl_git_pass(git_reference_name_to_id(&oid, _repo, "HEAD"));
+
+	cl_assert_equal_oid(&oid, &original_oid);
+
+	git_tree_free(tree);
+	git_commit_free(commit);
+	git_signature_free(s);
+}
+
 void assert_commit_summary(const char *expected, const char *given)
 {
 	git_commit *dummy;
