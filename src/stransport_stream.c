@@ -33,6 +33,7 @@ int stransport_error(OSStatus ret)
 	CFRelease(message);
 #else
     giterr_set(GITERR_NET, "SecureTransport error: OSStatus %d", (unsigned int)ret);
+    GIT_UNUSED(message);
 #endif
 
 	return -1;
