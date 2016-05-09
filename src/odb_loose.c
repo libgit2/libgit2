@@ -91,7 +91,7 @@ static int object_mkdir(const git_buf *name, const loose_backend *be)
 
 static size_t get_binary_object_header(obj_hdr *hdr, git_buf *obj)
 {
-	unsigned char c;
+	unsigned long c;
 	unsigned char *data = (unsigned char *)obj->ptr;
 	size_t shift, size, used = 0;
 

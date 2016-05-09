@@ -1083,17 +1083,13 @@ static int handle_unmatched_new_item(
 		if (recurse_into_dir) {
 			error = iterator_advance_into(&info->nitem, info->new_iter);
 
-			/* if real error or no error, proceed with iteration */
-			if (error != GIT_ENOTFOUND)
-				return error;
-			giterr_clear();
+			/* if directory is empty, can't advance into it, so skip it */
+			if (error == GIT_ENOTFOUND) {
+				giterr_clear();
+				error = iterator_advance(&info->nitem, info->new_iter);
+			}
 
-			/* if directory is empty, can't advance into it, so either skip
-			 * it or ignore it
-			 */
-			if (error == GIT_ENOTFOUND || contains_oitem)
-				return iterator_advance(&info->nitem, info->new_iter);
-			delta_type = GIT_DELTA_IGNORED;
+			return error;
 		}
 	}
 
