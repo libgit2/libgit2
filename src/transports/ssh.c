@@ -8,6 +8,7 @@
 #ifdef GIT_SSH
 #include <libssh2.h>
 #endif
+#include <dlfcn.h>
 
 #include "git2.h"
 #include "buffer.h"
@@ -15,6 +16,7 @@
 #include "smart.h"
 #include "cred.h"
 #include "socket_stream.h"
+#include "global.h"
 #include "ssh.h"
 
 #ifdef GIT_SSH
@@ -817,6 +819,8 @@ static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *use
 }
 #endif
 
+static void *libssh2_handle = NULL;
+
 int git_smart_subtransport_ssh(
 	git_smart_subtransport **out, git_transport *owner, void *param)
 {
@@ -826,6 +830,13 @@ int git_smart_subtransport_ssh(
 	assert(out);
 
 	GIT_UNUSED(param);
+
+	if (libssh2_handle == NULL) {
+		*out = NULL;
+
+		giterr_set(GITERR_INVALID, "Cannot create SSH transport. SSH support unavailable");
+		return -1;
+	}
 
 	t = git__calloc(sizeof(ssh_subtransport), 1);
 	GITERR_CHECK_ALLOC(t);
@@ -863,6 +874,15 @@ int git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *p
 		NULL,
 	};
 
+	assert(out);
+
+	if (libssh2_handle == NULL) {
+		*out = NULL;
+
+		giterr_set(GITERR_INVALID, "Cannot create SSH transport. SSH support unavailable");
+		return -1;
+	}
+
 	if (paths->count != 2) {
 		giterr_set(GITERR_SSH, "invalid ssh paths, must be two strings");
 		return GIT_EINVALIDSPEC;
@@ -893,9 +913,24 @@ int git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *p
 #endif
 }
 
+void git_transport_ssh_global_shutdown(void);
+
 int git_transport_ssh_global_init(void)
 {
 #ifdef GIT_SSH
+#ifdef GIT_WIN32
+	const char *(*libssh2_version)(int) = NULL;
+#else
+	libssh2_handle = dlopen("libssh2.dylib", RTLD_LAZY);
+	const char *(*libssh2_version)(int) = dlsym(libssh2_handle, "libssh2_version");
+#endif
+
+	// Check that libssh2's version is sufficient for us
+	if (!libssh2_version || !libssh2_version(LIBSSH2_VERSION_NUM)) {
+		return 0;
+	}
+
+	git__on_shutdown(git_transport_ssh_global_shutdown);
 
 	libssh2_init(0);
 	return 0;
@@ -904,6 +939,14 @@ int git_transport_ssh_global_init(void)
 
 	/* Nothing to initialize */
 	return 0;
+#endif
+}
 
+void git_transport_ssh_global_shutdown(void)
+{
+#ifdef WIN
+
+#else
+	dlclose(libssh2_handle);
 #endif
 }
