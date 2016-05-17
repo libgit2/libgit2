@@ -3,6 +3,8 @@ v0.24 + 1
 
 ### Changes or improvements
 
+* Support for reading and writing git index v4 files
+
 ### API additions
 
 * `git_commit_create_buffer()` creates a commit and writes it into a
@@ -12,6 +14,9 @@ v0.24 + 1
   `git_blob_create_fromstream_commit()` allow you to create a blob by
   writing into a stream. Useful when you do not know the final size or
   want to copy the contents from another stream.
+
+* `git_index_version()` and `git_set_index_version()` to get and set
+  the index version
 
 ### API removals
 
