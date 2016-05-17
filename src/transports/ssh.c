@@ -28,11 +28,13 @@
  */
 #ifdef GIT_WIN32
 
+static HMODULE git_libssh2_handle = NULL;
+
 #define DECLARE_LIBSSH2_SYMBOL(symbol) \
 	static typeof(symbol) *git_ ## symbol = NULL
 
 #define DEFINE_LIBSSH2_SYMBOL(symbol) \
-	git_ ## symbol = symbol
+	git_ ## symbol = GetProcAddress(git_libssh2_handle, #symbol)
 
 #else
 static void *git_libssh2_handle = NULL;
@@ -984,7 +986,7 @@ int git_transport_ssh_global_init(void)
 {
 #ifdef GIT_SSH
 #ifdef GIT_WIN32
-
+	git_libssh2_handle = LoadLibrary(TEXT(GIT_LIBSSH2_SOVERSION));
 #else
 	git_libssh2_handle = dlopen(GIT_LIBSSH2_SOVERSION, RTLD_LAZY);
 	if (git_libssh2_handle == NULL) {
@@ -1039,6 +1041,7 @@ int git_transport_ssh_global_init(void)
 void git_transport_ssh_global_shutdown(void)
 {
 #ifdef GIT_WIN32
+	FreeLibrary(git_libssh2_handle);
 #else
 	dlclose(git_libssh2_handle);
 #endif
