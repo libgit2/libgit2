@@ -73,7 +73,9 @@ DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_list);
 DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_password_ex);
 DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_publickey);
 DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_publickey_fromfile_ex);
+#ifdef GIT_SSH_MEMORY_CREDENTIALS
 DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_publickey_frommemory);
+#endif
 
 /* Redefine functions that underlies macros so they use our namespaced versions */
 
