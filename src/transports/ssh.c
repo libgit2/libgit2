@@ -8,7 +8,9 @@
 #ifdef GIT_SSH
 #include <libssh2.h>
 #endif
+#ifndef GIT_WIN32
 #include <dlfcn.h>
+#endif
 
 #include "git2.h"
 #include "buffer.h"
@@ -20,6 +22,69 @@
 #include "ssh.h"
 
 #ifdef GIT_SSH
+
+/* These macros allow us to refer to libssh2 symbols while
+ * supporting dynamic linking.
+ */
+#ifdef GIT_WIN32
+
+#define DECLARE_LIBSSH2_SYMBOL(symbol) \
+	static typeof(symbol) *git_ ## symbol = NULL
+
+#define DEFINE_LIBSSH2_SYMBOL(symbol) \
+	git_ ## symbol = symbol
+
+#else
+static void *git_libssh2_handle = NULL;
+
+#define DECLARE_LIBSSH2_SYMBOL(symbol) \
+	static typeof(symbol) *git_ ## symbol = NULL
+
+#define DEFINE_LIBSSH2_SYMBOL(symbol) \
+	git_ ## symbol = dlsym(git_libssh2_handle, #symbol)
+
+#endif
+
+DECLARE_LIBSSH2_SYMBOL(libssh2_agent_connect);
+DECLARE_LIBSSH2_SYMBOL(libssh2_agent_disconnect);
+DECLARE_LIBSSH2_SYMBOL(libssh2_agent_free);
+DECLARE_LIBSSH2_SYMBOL(libssh2_agent_get_identity);
+DECLARE_LIBSSH2_SYMBOL(libssh2_agent_init);
+DECLARE_LIBSSH2_SYMBOL(libssh2_agent_list_identities);
+DECLARE_LIBSSH2_SYMBOL(libssh2_agent_userauth);
+DECLARE_LIBSSH2_SYMBOL(libssh2_channel_close);
+DECLARE_LIBSSH2_SYMBOL(libssh2_channel_free);
+DECLARE_LIBSSH2_SYMBOL(libssh2_channel_open_ex);
+DECLARE_LIBSSH2_SYMBOL(libssh2_channel_process_startup);
+DECLARE_LIBSSH2_SYMBOL(libssh2_channel_read_ex);
+DECLARE_LIBSSH2_SYMBOL(libssh2_channel_set_blocking);
+DECLARE_LIBSSH2_SYMBOL(libssh2_channel_write_ex);
+DECLARE_LIBSSH2_SYMBOL(libssh2_hostkey_hash);
+DECLARE_LIBSSH2_SYMBOL(libssh2_init);
+DECLARE_LIBSSH2_SYMBOL(libssh2_session_abstract);
+DECLARE_LIBSSH2_SYMBOL(libssh2_session_free);
+DECLARE_LIBSSH2_SYMBOL(libssh2_session_init_ex);
+DECLARE_LIBSSH2_SYMBOL(libssh2_session_last_error);
+DECLARE_LIBSSH2_SYMBOL(libssh2_session_set_blocking);
+DECLARE_LIBSSH2_SYMBOL(libssh2_session_startup);
+DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_authenticated);
+DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_keyboard_interactive_ex);
+DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_list);
+DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_password_ex);
+DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_publickey);
+DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_publickey_fromfile_ex);
+DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_publickey_frommemory);
+
+/* Redefine functions that underlies macros so they use our namespaced versions */
+
+#define libssh2_channel_open_ex git_libssh2_channel_open_ex
+#define libssh2_session_init_ex git_libssh2_session_init_ex
+#define libssh2_userauth_keyboard_interactive_ex git_libssh2_userauth_keyboard_interactive_ex
+#define libssh2_userauth_password_ex git_libssh2_userauth_password_ex
+#define libssh2_userauth_publickey_fromfile_ex git_libssh2_userauth_publickey_fromfile_ex
+#define libssh2_channel_process_startup git_libssh2_channel_process_startup
+#define libssh2_channel_read_ex git_libssh2_channel_read_ex
+#define libssh2_channel_write_ex git_libssh2_channel_write_ex
 
 #define OWNING_SUBTRANSPORT(s) ((ssh_subtransport *)(s)->parent.subtransport)
 
@@ -52,7 +117,7 @@ static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *use
 static void ssh_error(LIBSSH2_SESSION *session, const char *errmsg)
 {
 	char *ssherr;
-	libssh2_session_last_error(session, &ssherr, NULL, 0);
+	git_libssh2_session_last_error(session, &ssherr, NULL, 0);
 
 	giterr_set(GITERR_SSH, "%s: %s", errmsg, ssherr);
 }
@@ -204,13 +269,13 @@ static void ssh_stream_free(git_smart_subtransport_stream *stream)
 	t->current_stream = NULL;
 
 	if (s->channel) {
-		libssh2_channel_close(s->channel);
-		libssh2_channel_free(s->channel);
+		git_libssh2_channel_close(s->channel);
+		git_libssh2_channel_free(s->channel);
 		s->channel = NULL;
 	}
 
 	if (s->session) {
-		libssh2_session_free(s->session);
+		git_libssh2_session_free(s->session);
 		s->session = NULL;
 	}
 
@@ -291,23 +356,23 @@ static int ssh_agent_auth(LIBSSH2_SESSION *session, git_cred_ssh_key *c) {
 
 	struct libssh2_agent_publickey *curr, *prev = NULL;
 
-	LIBSSH2_AGENT *agent = libssh2_agent_init(session);
+	LIBSSH2_AGENT *agent = git_libssh2_agent_init(session);
 
 	if (agent == NULL)
 		return -1;
 
-	rc = libssh2_agent_connect(agent);
+	rc = git_libssh2_agent_connect(agent);
 
 	if (rc != LIBSSH2_ERROR_NONE)
 		goto shutdown;
 
-	rc = libssh2_agent_list_identities(agent);
+	rc = git_libssh2_agent_list_identities(agent);
 
 	if (rc != LIBSSH2_ERROR_NONE)
 		goto shutdown;
 
 	while (1) {
-		rc = libssh2_agent_get_identity(agent, &curr, prev);
+		rc = git_libssh2_agent_get_identity(agent, &curr, prev);
 
 		if (rc < 0)
 			goto shutdown;
@@ -321,7 +386,7 @@ static int ssh_agent_auth(LIBSSH2_SESSION *session, git_cred_ssh_key *c) {
 			goto shutdown;
 		}
 
-		rc = libssh2_agent_userauth(agent, c->username, curr);
+		rc = git_libssh2_agent_userauth(agent, c->username, curr);
 
 		if (rc == 0)
 			break;
@@ -334,8 +399,8 @@ shutdown:
 	if (rc != LIBSSH2_ERROR_NONE)
 		ssh_error(session, "error authenticating");
 
-	libssh2_agent_disconnect(agent);
-	libssh2_agent_free(agent);
+	git_libssh2_agent_disconnect(agent);
+	git_libssh2_agent_free(agent);
 
 	return rc;
 }
@@ -369,13 +434,13 @@ static int _git_ssh_authenticate_session(
 		case GIT_CREDTYPE_SSH_CUSTOM: {
 			git_cred_ssh_custom *c = (git_cred_ssh_custom *)cred;
 
-			rc = libssh2_userauth_publickey(
+			rc = git_libssh2_userauth_publickey(
 				session, c->username, (const unsigned char *)c->publickey,
 				c->publickey_len, c->sign_callback, &c->payload);
 			break;
 		}
 		case GIT_CREDTYPE_SSH_INTERACTIVE: {
-			void **abstract = libssh2_session_abstract(session);
+			void **abstract = git_libssh2_session_abstract(session);
 			git_cred_ssh_interactive *c = (git_cred_ssh_interactive *)cred;
 
 			/* ideally, we should be able to set this by calling
@@ -402,7 +467,7 @@ static int _git_ssh_authenticate_session(
 			assert(c->username);
 			assert(c->privatekey);
 
-			rc = libssh2_userauth_publickey_frommemory(
+			rc = git_libssh2_userauth_publickey_frommemory(
 				session,
 				c->username,
 				strlen(c->username),
@@ -485,16 +550,16 @@ static int _git_ssh_session_create(
 	}
 
 	do {
-		rc = libssh2_session_startup(s, socket->s);
+		rc = git_libssh2_session_startup(s, socket->s);
 	} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
 
 	if (rc != LIBSSH2_ERROR_NONE) {
 		ssh_error(s, "failed to start SSH session");
-		libssh2_session_free(s);
+		git_libssh2_session_free(s);
 		return -1;
 	}
 
-	libssh2_session_set_blocking(s, 1);
+	git_libssh2_session_set_blocking(s, 1);
 
 	*session = s;
 
@@ -555,13 +620,13 @@ post_extract:
 
 		cert.parent.cert_type = GIT_CERT_HOSTKEY_LIBSSH2;
 
-		key = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_SHA1);
+		key = git_libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_SHA1);
 		if (key != NULL) {
 			cert.type |= GIT_CERT_SSH_SHA1;
 			memcpy(&cert.hash_sha1, key, 20);
 		}
 
-		key = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_MD5);
+		key = git_libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_MD5);
 		if (key != NULL) {
 			cert.type |= GIT_CERT_SSH_MD5;
 			memcpy(&cert.hash_md5, key, 16);
@@ -638,7 +703,7 @@ post_extract:
 		goto done;
 	}
 
-	libssh2_channel_set_blocking(channel, 1);
+	git_libssh2_channel_set_blocking(channel, 1);
 
 	s->session = session;
 	s->channel = channel;
@@ -650,7 +715,7 @@ done:
 		ssh_stream_free(*stream);
 
 		if (session)
-			libssh2_session_free(session);
+			git_libssh2_session_free(session);
 	}
 
 	if (cred)
@@ -776,10 +841,10 @@ static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *use
 
 	*out = 0;
 
-	list = libssh2_userauth_list(session, username, strlen(username));
+	list = git_libssh2_userauth_list(session, username, strlen(username));
 
 	/* either error, or the remote accepts NONE auth, which is bizarre, let's punt */
-	if (list == NULL && !libssh2_userauth_authenticated(session)) {
+	if (list == NULL && !git_libssh2_userauth_authenticated(session)) {
 		ssh_error(session, "Failed to retrieve list of SSH authentication methods");
 		return -1;
 	}
@@ -819,8 +884,6 @@ static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *use
 }
 #endif
 
-static void *libssh2_handle = NULL;
-
 int git_smart_subtransport_ssh(
 	git_smart_subtransport **out, git_transport *owner, void *param)
 {
@@ -831,7 +894,7 @@ int git_smart_subtransport_ssh(
 
 	GIT_UNUSED(param);
 
-	if (libssh2_handle == NULL) {
+	if (git_libssh2_handle == NULL) {
 		*out = NULL;
 
 		giterr_set(GITERR_INVALID, "Cannot create SSH transport. SSH support unavailable");
@@ -876,7 +939,7 @@ int git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *p
 
 	assert(out);
 
-	if (libssh2_handle == NULL) {
+	if (git_libssh2_handle == NULL) {
 		*out = NULL;
 
 		giterr_set(GITERR_INVALID, "Cannot create SSH transport. SSH support unavailable");
@@ -919,20 +982,49 @@ int git_transport_ssh_global_init(void)
 {
 #ifdef GIT_SSH
 #ifdef GIT_WIN32
-	const char *(*libssh2_version)(int) = NULL;
-#else
-	libssh2_handle = dlopen("libssh2.dylib", RTLD_LAZY);
-	const char *(*libssh2_version)(int) = dlsym(libssh2_handle, "libssh2_version");
-#endif
 
-	// Check that libssh2's version is sufficient for us
-	if (!libssh2_version || !libssh2_version(LIBSSH2_VERSION_NUM)) {
+#else
+	git_libssh2_handle = dlopen(GIT_LIBSSH2_SOVERSION, RTLD_LAZY);
+	if (git_libssh2_handle == NULL) {
 		return 0;
 	}
 
+	DEFINE_LIBSSH2_SYMBOL(libssh2_agent_connect);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_agent_disconnect);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_agent_free);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_agent_get_identity);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_agent_init);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_agent_list_identities);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_agent_userauth);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_channel_close);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_channel_free);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_channel_open_ex);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_channel_process_startup);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_channel_read_ex);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_channel_set_blocking);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_channel_write_ex);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_hostkey_hash);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_init);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_session_abstract);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_session_free);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_session_init_ex);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_session_last_error);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_session_set_blocking);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_session_startup);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_userauth_authenticated);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_userauth_keyboard_interactive_ex);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_userauth_list);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_userauth_password_ex);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_userauth_publickey);
+	DEFINE_LIBSSH2_SYMBOL(libssh2_userauth_publickey_fromfile_ex);
+#ifdef GIT_SSH_MEMORY_CREDENTIALS
+	DEFINE_LIBSSH2_SYMBOL(libssh2_userauth_publickey_frommemory);
+#endif
+#endif
+
 	git__on_shutdown(git_transport_ssh_global_shutdown);
 
-	libssh2_init(0);
+	git_libssh2_init(0);
 	return 0;
 
 #else
@@ -947,6 +1039,6 @@ void git_transport_ssh_global_shutdown(void)
 #ifdef WIN
 
 #else
-	dlclose(libssh2_handle);
+	dlclose(git_libssh2_handle);
 #endif
 }
