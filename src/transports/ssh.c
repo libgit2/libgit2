@@ -990,6 +990,7 @@ int git_transport_ssh_global_init(void)
 	if (git_libssh2_handle == NULL) {
 		return 0;
 	}
+#endif
 
 	DEFINE_LIBSSH2_SYMBOL(libssh2_agent_connect);
 	DEFINE_LIBSSH2_SYMBOL(libssh2_agent_disconnect);
@@ -1022,7 +1023,6 @@ int git_transport_ssh_global_init(void)
 #ifdef GIT_SSH_MEMORY_CREDENTIALS
 	DEFINE_LIBSSH2_SYMBOL(libssh2_userauth_publickey_frommemory);
 #endif
-#endif
 
 	git__on_shutdown(git_transport_ssh_global_shutdown);
 
@@ -1038,8 +1038,7 @@ int git_transport_ssh_global_init(void)
 
 void git_transport_ssh_global_shutdown(void)
 {
-#ifdef WIN
-
+#ifdef GIT_WIN32
 #else
 	dlclose(git_libssh2_handle);
 #endif
