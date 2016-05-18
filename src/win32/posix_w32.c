@@ -93,17 +93,31 @@ int p_unlink(const char *path)
 {
 	git_win32_path buf;
 	int error;
+	int unlink_tries;
 
 	if (git_win32_path_from_utf8(buf, path) < 0)
 		return -1;
 
-	error = _wunlink(buf);
-
-	/* If the file could not be deleted because it was
-	 * read-only, clear the bit and try again */
-	if (error == -1 && errno == EACCES) {
-		_wchmod(buf, 0666);
+	/* wait up to 50ms if file is locked by another thread or process */
+	unlink_tries = 0;
+	while (unlink_tries < 10) {
 		error = _wunlink(buf);
+
+		/* If the file could not be deleted because it was
+		 * read-only, clear the bit and try again */
+		if (error == -1 && errno == EACCES) {
+			_wchmod(buf, 0666);
+			error = _wunlink(buf);
+
+			if (error == -1 && errno == EACCES) {
+				Sleep(5);
+				unlink_tries++;
+			} else {
+				break;
+			}
+		} else {
+			break;
+		}
 	}
 
 	return error;
@@ -284,6 +298,8 @@ int p_open(const char *path, int flags, ...)
 {
 	git_win32_path buf;
 	mode_t mode = 0;
+	int open_tries;
+	int handle;
 
 	if (git_win32_path_from_utf8(buf, path) < 0)
 		return -1;
@@ -296,7 +312,23 @@ int p_open(const char *path, int flags, ...)
 		va_end(arg_list);
 	}
 
-	return _wopen(buf, flags | STANDARD_OPEN_FLAGS, mode & WIN32_MODE_MASK);
+	/* wait up to 50ms if file is locked by another thread or process */
+	open_tries = 0;
+	while (open_tries < 10) {
+		handle = _wopen(buf, flags | STANDARD_OPEN_FLAGS, mode & WIN32_MODE_MASK);
+		if (handle != -1) {
+			break;
+		}
+
+		if (errno == EACCES) {
+			Sleep(5);
+			open_tries++;
+		} else {
+			break;
+		}
+	}
+
+	return handle;
 }
 
 int p_creat(const char *path, mode_t mode)
