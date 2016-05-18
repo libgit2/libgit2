@@ -1034,3 +1034,248 @@ int git_tree_walk(
 	return error;
 }
 
+static int compare_entries(const void *_a, const void *_b)
+{
+	const git_tree_update *a = (git_tree_update *) _a;
+	const git_tree_update *b = (git_tree_update *) _b;
+
+	return strcmp(a->path, b->path);
+}
+
+static int on_dup_entry(void **old, void *new)
+{
+	GIT_UNUSED(old); GIT_UNUSED(new);
+
+	giterr_set(GITERR_TREE, "duplicate entries given for update");
+	return -1;
+}
+
+/*
+ * We keep the previous tree and the new one at each level of the
+ * stack. When we leave a level we're done with that tree and we can
+ * write it out to the odb.
+ */
+typedef struct {
+	git_treebuilder *bld;
+	git_tree *tree;
+	char *name;
+} tree_stack_entry;
+
+/** Count how many slashes (i.e. path components) there are in this string */
+GIT_INLINE(size_t) count_slashes(const char *path)
+{
+	size_t count = 0;
+	const char *slash;
+
+	while ((slash = strchr(path, '/')) != NULL) {
+		count++;
+		path = slash + 1;
+	}
+
+	return count;
+}
+
+static bool next_component(git_buf *out, const char *in)
+{
+	const char *slash = strchr(in, '/');
+
+	git_buf_clear(out);
+
+	if (slash)
+		git_buf_put(out, in, slash - in);
+
+	return !!slash;
+}
+
+static int create_popped_tree(tree_stack_entry *current, tree_stack_entry *popped, git_buf *component)
+{
+	int error;
+	git_oid new_tree;
+
+	git_tree_free(popped->tree);
+	error = git_treebuilder_write(&new_tree, popped->bld);
+	git_treebuilder_free(popped->bld);
+
+	if (error < 0) {
+		git__free(popped->name);
+		return error;
+	}
+
+	/* We've written out the tree, now we have to put the new value into its parent */
+	git_buf_clear(component);
+	git_buf_puts(component, popped->name);
+	git__free(popped->name);
+
+	GITERR_CHECK_ALLOC(component->ptr);
+
+	/* Error out if this would create a D/F conflict in this update */
+	if (current->tree) {
+		const git_tree_entry *to_replace;
+		to_replace = git_tree_entry_byname(current->tree, component->ptr);
+		if (to_replace && git_tree_entry_type(to_replace) != GIT_OBJ_TREE) {
+			giterr_set(GITERR_TREE, "D/F conflict when updating tree");
+			return -1;
+		}
+	}
+
+	return git_treebuilder_insert(NULL, current->bld, component->ptr, &new_tree, GIT_FILEMODE_TREE);
+}
+
+int git_tree_create_updated(git_oid *out, git_repository *repo, git_tree *baseline, size_t nupdates, const git_tree_update *updates)
+{
+	git_array_t(tree_stack_entry) stack = GIT_ARRAY_INIT;
+	tree_stack_entry *root_elem;
+	git_vector entries;
+	int error;
+	size_t i;
+	git_buf component = GIT_BUF_INIT;
+
+	if ((error = git_vector_init(&entries, nupdates, compare_entries)) < 0)
+		return error;
+
+	/* Sort the entries for treversal */
+	for (i = 0 ; i < nupdates; i++)	{
+		if ((error = git_vector_insert_sorted(&entries, (void *) &updates[i], on_dup_entry)) < 0)
+			goto cleanup;
+	}
+
+	root_elem = git_array_alloc(stack);
+	GITERR_CHECK_ALLOC(root_elem);
+	memset(root_elem, 0, sizeof(*root_elem));
+
+	if (baseline && (error = git_tree_dup(&root_elem->tree, baseline)) < 0)
+		goto cleanup;
+
+	if ((error = git_treebuilder_new(&root_elem->bld, repo, root_elem->tree)) < 0)
+		goto cleanup;
+
+	for (i = 0; i < nupdates; i++) {
+		const git_tree_update *last_update = i == 0 ? NULL : &updates[i-1];
+		const git_tree_update *update = &updates[i];
+		size_t common_prefix = 0, steps_up, j;
+		const char *path;
+
+		/* Figure out how much we need to change from the previous tree */
+		if (last_update)
+			common_prefix = git_path_common_dirlen(last_update->path, update->path);
+
+		/*
+		 * The entries are sorted, so when we find we're no
+		 * longer in the same directory, we need to abandon
+		 * the old tree (steps up) and dive down to the next
+		 * one.
+		 */
+		steps_up = last_update == NULL ? 0 : count_slashes(&last_update->path[common_prefix]);
+
+		for (j = 0; j < steps_up; j++) {
+			tree_stack_entry *current, *popped = git_array_pop(stack);
+			assert(popped);
+
+			current = git_array_last(stack);
+			assert(current);
+
+			if ((error = create_popped_tree(current, popped, &component)) < 0)
+				goto cleanup;
+		}
+
+		/* Now that we've created the trees we popped from the stack, let's go back down */
+		path = &update->path[common_prefix];
+		while (next_component(&component, path)) {
+			tree_stack_entry *last, *new_entry;
+			const git_tree_entry *entry;
+
+			last = git_array_last(stack);
+			entry = last->tree ? git_tree_entry_byname(last->tree, component.ptr) : NULL;
+			if (entry && git_tree_entry_type(entry) != GIT_OBJ_TREE) {
+				giterr_set(GITERR_TREE, "D/F conflict when updating tree");
+				error = -1;
+				goto cleanup;
+			}
+
+			new_entry = git_array_alloc(stack);
+			GITERR_CHECK_ALLOC(new_entry);
+			memset(new_entry, 0, sizeof(*new_entry));
+
+			new_entry->tree = NULL;
+			if (entry && (error = git_tree_lookup(&new_entry->tree, repo, git_tree_entry_id(entry))) < 0)
+				goto cleanup;
+
+			if ((error = git_treebuilder_new(&new_entry->bld, repo, new_entry->tree)) < 0)
+				goto cleanup;
+
+			new_entry->name = git__strdup(component.ptr);
+			GITERR_CHECK_ALLOC(new_entry->name);
+
+			/* Get to the start of the next component */
+			path += component.size + 1;
+		}
+
+		/* After all that, we're finally at the place where we want to perform the update */
+		switch (update->action) {
+			case GIT_TREE_UPDATE_UPSERT:
+			{
+				/* Make sure we're replacing something of the same type */
+				tree_stack_entry *last = git_array_last(stack);
+				const char *basename = git_path_basename(update->path);
+				const git_tree_entry *e = git_treebuilder_get(last->bld, basename);
+				if (e && git_tree_entry_type(e) != git_object__type_from_filemode(update->filemode)) {
+					giterr_set(GITERR_TREE, "Cannot replace '%s' with '%s' at '%s'",
+						   git_object_type2string(git_tree_entry_type(e)),
+						   git_object_type2string(git_object__type_from_filemode(update->filemode)),
+						   update->path);
+					return -1;
+				}
+
+				error = git_treebuilder_insert(NULL, last->bld, basename, &update->id, update->filemode);
+				break;
+			}
+			case GIT_TREE_UPDATE_REMOVE:
+				error = git_treebuilder_remove(git_array_last(stack)->bld, update->path);
+				break;
+			default:
+				giterr_set(GITERR_TREE, "unkown action for update");
+				error = -1;
+				goto cleanup;
+		}
+
+		if (error < 0)
+			goto cleanup;
+	}
+
+	/* We're done, go up the stack again and write out the tree */
+	{
+		tree_stack_entry *current = NULL, *popped = NULL;
+		while ((popped = git_array_pop(stack)) != NULL) {
+			current = git_array_last(stack);
+			/* We've reached the top, current is the root tree */
+			if (!current)
+				break;
+
+			if ((error = create_popped_tree(current, popped, &component)) < 0)
+				goto cleanup;
+		}
+
+		/* Write out the root tree */
+		git__free(popped->name);
+		git_tree_free(popped->tree);
+
+		error = git_treebuilder_write(out, popped->bld);
+		git_treebuilder_free(popped->bld);
+		if (error < 0)
+			goto cleanup;
+	}
+
+cleanup:
+	{
+		tree_stack_entry *e;
+		while ((e = git_array_pop(stack)) != NULL) {
+			git_treebuilder_free(e->bld);
+			git_tree_free(e->tree);
+			git__free(e->name);
+		}
+	}
+
+	git_array_clear(stack);
+	git_vector_free(&entries);
+	return error;
+}
