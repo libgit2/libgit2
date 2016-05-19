@@ -1230,7 +1230,7 @@ int git_tree_create_updated(git_oid *out, git_repository *repo, git_tree *baseli
 				break;
 			}
 			case GIT_TREE_UPDATE_REMOVE:
-				error = git_treebuilder_remove(git_array_last(stack)->bld, update->path);
+				error = git_treebuilder_remove(git_array_last(stack)->bld, git_path_basename(update->path));
 				break;
 			default:
 				giterr_set(GITERR_TREE, "unkown action for update");
