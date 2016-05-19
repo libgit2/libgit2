@@ -127,7 +127,6 @@ void test_object_tree_update__add_blobs(void)
 	};
 
 	cl_git_pass(git_oid_fromstr(&base_id, "c4dc1555e4d4fa0e0c9c3fc46734c7c35b3ce90b"));
-	cl_git_pass(git_tree_lookup(&base_tree, g_repo, &base_id));
 
 	entry.mode = GIT_FILEMODE_BLOB;
 	cl_git_pass(git_oid_fromstr(&entry.id, "fa49b077972391ad58037050f2a75f74e3671e92"));
@@ -161,6 +160,8 @@ void test_object_tree_update__add_blobs(void)
 
 		cl_assert_equal_oid(&tree_index_id, &tree_updater_id);
 	}
+
+	git_tree_free(base_tree);
 }
 
 void test_object_tree_update__add_conflict(void)

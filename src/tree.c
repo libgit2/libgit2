@@ -1216,22 +1216,29 @@ int git_tree_create_updated(git_oid *out, git_repository *repo, git_tree *baseli
 			{
 				/* Make sure we're replacing something of the same type */
 				tree_stack_entry *last = git_array_last(stack);
-				const char *basename = git_path_basename(update->path);
+				char *basename = git_path_basename(update->path);
 				const git_tree_entry *e = git_treebuilder_get(last->bld, basename);
 				if (e && git_tree_entry_type(e) != git_object__type_from_filemode(update->filemode)) {
+					git__free(basename);
 					giterr_set(GITERR_TREE, "Cannot replace '%s' with '%s' at '%s'",
 						   git_object_type2string(git_tree_entry_type(e)),
 						   git_object_type2string(git_object__type_from_filemode(update->filemode)),
 						   update->path);
-					return -1;
+					error = -1;
+					goto cleanup;
 				}
 
 				error = git_treebuilder_insert(NULL, last->bld, basename, &update->id, update->filemode);
+				git__free(basename);
 				break;
 			}
 			case GIT_TREE_UPDATE_REMOVE:
-				error = git_treebuilder_remove(git_array_last(stack)->bld, git_path_basename(update->path));
+			{
+				char *basename = git_path_basename(update->path);
+				error = git_treebuilder_remove(git_array_last(stack)->bld, basename);
+				git__free(basename);
 				break;
+			}
 			default:
 				giterr_set(GITERR_TREE, "unkown action for update");
 				error = -1;
@@ -1275,6 +1282,7 @@ cleanup:
 		}
 	}
 
+	git_buf_free(&component);
 	git_array_clear(stack);
 	git_vector_free(&entries);
 	return error;
