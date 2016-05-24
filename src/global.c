@@ -10,7 +10,11 @@
 #include "sysdir.h"
 #include "filter.h"
 #include "merge_driver.h"
+#ifdef GIT_OPENSSL
 #include "openssl_stream.h"
+#elif GIT_MBEDTLS
+#include "mbedtls_stream.h"
+#endif
 #include "thread-utils.h"
 #include "git2/global.h"
 #include "transports/ssh.h"
@@ -62,7 +66,11 @@ static int init_common(void)
 		(ret = git_filter_global_init()) == 0 &&
 		(ret = git_merge_driver_global_init()) == 0 &&
 		(ret = git_transport_ssh_global_init()) == 0)
+#ifdef GIT_OPENSSL
 		ret = git_openssl_stream_global_init();
+#elif GIT_MBEDTLS
+		ret = git_mbedtls_stream_global_init();
+#endif
 
 	GIT_MEMORY_BARRIER;
 
