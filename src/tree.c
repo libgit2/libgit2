@@ -1093,6 +1093,15 @@ static int create_popped_tree(tree_stack_entry *current, tree_stack_entry *poppe
 	git_oid new_tree;
 
 	git_tree_free(popped->tree);
+
+	/* If the tree would be empty, remove it from the one higher up */
+	if (git_treebuilder_entrycount(popped->bld) == 0) {
+		git_treebuilder_free(popped->bld);
+		error = git_treebuilder_remove(current->bld, popped->name);
+		git__free(popped->name);
+		return error;
+	}
+
 	error = git_treebuilder_write(&new_tree, popped->bld);
 	git_treebuilder_free(popped->bld);
 

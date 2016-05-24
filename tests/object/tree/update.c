@@ -71,6 +71,38 @@ void test_object_tree_update__remove_blob_deeper(void)
 	git_tree_free(base_tree);
 }
 
+void test_object_tree_update__remove_all_entries(void)
+{
+	git_oid tree_index_id, tree_updater_id, base_id;
+	git_tree *base_tree;
+	git_index *idx;
+	const char *path1 = "subdir/subdir2/README";
+	const char *path2 = "subdir/subdir2/new.txt";
+
+	git_tree_update updates[] = {
+		{ GIT_TREE_UPDATE_REMOVE, {{0}}, GIT_FILEMODE_BLOB /* ignored */, path1},
+		{ GIT_TREE_UPDATE_REMOVE, {{0}}, GIT_FILEMODE_BLOB /* ignored */, path2},
+	};
+
+	cl_git_pass(git_oid_fromstr(&base_id, "c4dc1555e4d4fa0e0c9c3fc46734c7c35b3ce90b"));
+	cl_git_pass(git_tree_lookup(&base_tree, g_repo, &base_id));
+
+	/* Create it with an index */
+	cl_git_pass(git_index_new(&idx));
+	cl_git_pass(git_index_read_tree(idx, base_tree));
+	cl_git_pass(git_index_remove(idx, path1, 0));
+	cl_git_pass(git_index_remove(idx, path2, 0));
+	cl_git_pass(git_index_write_tree_to(&tree_index_id, idx, g_repo));
+	git_index_free(idx);
+
+	/* Perform the same operation via the tree updater */
+	cl_git_pass(git_tree_create_updated(&tree_updater_id, g_repo, base_tree, 2, updates));
+
+	cl_assert_equal_oid(&tree_index_id, &tree_updater_id);
+
+	git_tree_free(base_tree);
+}
+
 void test_object_tree_update__replace_blob(void)
 {
 	git_oid tree_index_id, tree_updater_id, base_id;
