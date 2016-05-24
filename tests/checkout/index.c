@@ -294,11 +294,12 @@ void test_checkout_index__options_dir_modes(void)
 	(void)p_umask(um = p_umask(022));
 
 	cl_git_pass(p_stat("./testrepo/a", &st));
-	cl_assert_equal_i_fmt(st.st_mode, (GIT_FILEMODE_TREE | 0701) & ~um, "%07o");
+	/* Haiku & Hurd use other mode bits, so we must mask them out */
+	cl_assert_equal_i_fmt(st.st_mode & (S_IFMT | 07777), (GIT_FILEMODE_TREE | 0701) & ~um, "%07o");
 
 	/* File-mode test, since we're on the 'dir' branch */
 	cl_git_pass(p_stat("./testrepo/a/b.txt", &st));
-	cl_assert_equal_i_fmt(st.st_mode, GIT_FILEMODE_BLOB_EXECUTABLE & ~um, "%07o");
+	cl_assert_equal_i_fmt(st.st_mode & (S_IFMT | 07777), GIT_FILEMODE_BLOB_EXECUTABLE & ~um, "%07o");
 
 	git_commit_free(commit);
 }
