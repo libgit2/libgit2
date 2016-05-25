@@ -33,7 +33,7 @@ int git_libgit2_features(void)
 #ifdef GIT_THREADS
 		| GIT_FEATURE_THREADS
 #endif
-#if defined(GIT_OPENSSL) || defined(GIT_WINHTTP) || defined(GIT_SECURE_TRANSPORT)
+#if defined(GIT_OPENSSL) || defined(GIT_WINHTTP) || defined(GIT_SECURE_TRANSPORT) || defined(GIT_MBEDTLS)
 		| GIT_FEATURE_HTTPS
 #endif
 #if defined(GIT_SSH)
