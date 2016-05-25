@@ -147,8 +147,9 @@ void test_object_tree_update__add_blobs(void)
 	git_index_entry entry = { {0} };
 	int i;
 	const char *paths[] = {
-		"some/deep/path",
 		"some/other/path",
+		"some/deep/path",
+		"some/other/deep/path",
 		"a/path/elsewhere",
 	};
 
@@ -156,6 +157,7 @@ void test_object_tree_update__add_blobs(void)
 		{ GIT_TREE_UPDATE_UPSERT, {{0}}, GIT_FILEMODE_BLOB, paths[0]},
 		{ GIT_TREE_UPDATE_UPSERT, {{0}}, GIT_FILEMODE_BLOB, paths[1]},
 		{ GIT_TREE_UPDATE_UPSERT, {{0}}, GIT_FILEMODE_BLOB, paths[2]},
+		{ GIT_TREE_UPDATE_UPSERT, {{0}}, GIT_FILEMODE_BLOB, paths[3]},
 	};
 
 	cl_git_pass(git_oid_fromstr(&base_id, "c4dc1555e4d4fa0e0c9c3fc46734c7c35b3ce90b"));
@@ -179,7 +181,7 @@ void test_object_tree_update__add_blobs(void)
 			cl_git_pass(git_index_read_tree(idx, base_tree));
 		}
 
-		for (j = 0; j < 3; j++) {
+		for (j = 0; j < 4; j++) {
 			entry.path = paths[j];
 			cl_git_pass(git_index_add(idx, &entry));
 		}
