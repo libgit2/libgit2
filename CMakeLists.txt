@@ -110,9 +110,10 @@ ENDIF()
 
 IF (HAVE_STRUCT_STAT_NSEC OR WIN32)
 	OPTION( USE_NSEC		"Care about sub-second file mtimes and ctimes"	ON )
+ENDIF()
 
 IF (NOT USE_OPENSSL)
-	OPTION( USE_MBEDTLS     "Link with and use mbedtls library"             ON )
+	OPTION( USE_MBEDTLS     "Link with and use mbedTLS library"             ON )
 ENDIF()
 
 # This variable will contain the libraries we need to put into
@@ -286,7 +287,7 @@ ELSE ()
 		FIND_PACKAGE(OpenSSL)
 	ENDIF ()
 
-	IF (NOT AMIGA AND USE_MBEDTLS AND NOT USE_OPENSSL)
+	IF (NOT AMIGA AND USE_MBEDTLS)
 		FIND_PACKAGE(mbedTLS)
 	ENDIF ()
 

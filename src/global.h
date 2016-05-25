@@ -24,6 +24,7 @@ extern SSL_CTX *git__ssl_ctx;
 #endif
 
 #ifdef GIT_MBEDTLS
+# include "mbedtls/platform.h"
 # include "mbedtls/ssl.h"
 extern mbedtls_ssl_config *git__ssl_conf;
 #endif
