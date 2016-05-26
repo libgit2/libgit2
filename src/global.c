@@ -226,6 +226,9 @@ void git__free_tls_data(void)
 
 BOOL WINAPI DllMain(HINSTANCE hInstDll, DWORD fdwReason, LPVOID lpvReserved)
 {
+	GIT_UNUSED(hInstDll);
+	GIT_UNUSED(lpvReserved);
+
 	/* This is how Windows lets us know our thread is being shut down */
 	if (fdwReason == DLL_THREAD_DETACH) {
 		git__free_tls_data();
