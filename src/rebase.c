@@ -1047,15 +1047,12 @@ static int rebase_commit_inmemory(
 	const char *message_encoding,
 	const char *message)
 {
-	git_rebase_operation *operation;
 	git_commit *commit = NULL;
 	int error = 0;
 
-	operation = git_array_get(rebase->operations, rebase->current);
-
-	assert(operation);
 	assert(rebase->index);
 	assert(rebase->last_commit);
+	assert(rebase->current < rebase->operations.size);
 
 	if ((error = rebase_commit__create(&commit, rebase, rebase->index,
 		rebase->last_commit, author, committer, message_encoding, message)) < 0)
