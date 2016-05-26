@@ -45,7 +45,7 @@ GIT_INLINE(git_filemode_t) normalize_filemode(git_filemode_t filemode)
 	if (GIT_MODE_TYPE(filemode) == GIT_FILEMODE_COMMIT)
 		return GIT_FILEMODE_COMMIT;
 
-	/* 12XXXX means commit */
+	/* 12XXXX means symlink */
 	if (GIT_MODE_TYPE(filemode) == GIT_FILEMODE_LINK)
 		return GIT_FILEMODE_LINK;
 
