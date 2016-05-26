@@ -176,6 +176,10 @@ static bool checkout_is_workdir_modified(
 		const git_oid *sm_oid = NULL;
 		bool rval = false;
 
+		/* Submodules are not modified by checkout. */
+		if (newitem->mode == GIT_FILEMODE_COMMIT)
+			return false;
+
 		if (git_submodule_lookup(&sm, data->repo, wditem->path) < 0) {
 			giterr_clear();
 			return true;

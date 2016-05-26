@@ -186,6 +186,27 @@ Checkout From 3 Iterators (2 not workdir, 1 workdir)
 | 57+ |  T1 |     S1 |      x         | add submodule with locally deleted tree (SAFE+MISSING)             |
 | 58* |  T1 |     S1 |     T1         | typechange tree->submodule (SAFE)                                  |
 
+| 38+ |   x |     S1 |      x         | add submodule (SAFE)                                               |
+| 39  |   x |     S1 |  S1/Sd         | independently added submodule (SUBMODULE)                          |
+| 40* |   x |     S1 |     B1         | add submodule with blob confilct (FORCEABLE)                       |
+| 41* |   x |     S1 |     T1         | add submodule with tree conflict (FORCEABLE)                       |
+| 42  |  S1 |      x |  S1/Sd         | deleted submodule (SUBMODULE)                                      |
+| 43  |  S1 |      x |      x         | independently deleted submodule (SUBMODULE)                        |
+| 44  |  S1 |      x |     B1         | independently deleted submodule with added blob (SAFE+MISSING)     |
+| 45  |  S1 |      x |     T1         | independently deleted submodule with added tree (SAFE+MISSING)     |
+| 46  |  S1 |     S1 |      x         | locally deleted submodule (SUBMODULE)                              |
+| 47+ |  S1 |     S2 |      x         | update locally deleted submodule (SAFE)                            |
+| 48  |  S1 |     S1 |     S2         | locally updated submodule commit (SUBMODULE)                       |
+| 49  |  S1 |     S2 |     S1         | updated submodule commit (SUBMODULE)                               |
+| 50+ |  S1 |     B1 |      x         | add blob with locally deleted submodule (SAFE+MISSING)             |
+| 51* |  S1 |     B1 |     S1         | typechange submodule->blob (SAFE)                                  |
+| 52* |  S1 |     B1 |     Sd         | typechange dirty submodule->blob (SAFE!?!?)                        |
+| 53+ |  S1 |     T1 |      x         | add tree with locally deleted submodule (SAFE+MISSING)             |
+| 54* |  S1 |     T1 |  S1/Sd         | typechange submodule->tree (MAYBE SAFE)                            |
+| 55+ |  B1 |     S1 |      x         | add submodule with locally deleted blob (SAFE+MISSING)             |
+| 56* |  B1 |     S1 |     B1         | typechange blob->submodule (SAFE)                                  |
+| 57+ |  T1 |     S1 |      x         | add submodule with locally deleted tree (SAFE+MISSING)             |
+| 58* |  T1 |     S1 |     T1         | typechange tree->submodule (SAFE)                                  |
 
 The number is followed by ' ' if no change is needed or '+' if the case
 needs to write to disk or '-' if something must be deleted and '*' if
