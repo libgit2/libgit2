@@ -229,6 +229,9 @@ static int make_submodule_dirty(git_submodule *sm, const char *name, void *paylo
 	git_buf dirtypath = GIT_BUF_INIT;
 	git_repository *submodule_repo;
 
+	GIT_UNUSED(name);
+	GIT_UNUSED(payload);
+
 	/* remove submodule directory in preparation for init and repo_init */
 	cl_git_pass(git_buf_joinpath(
 		&submodulepath,
