@@ -70,7 +70,7 @@ static int lock_file(git_filebuf *file, int flags, mode_t mode)
 		git_file source;
 		char buffer[FILEIO_BUFSIZE];
 		ssize_t read_bytes;
-		int error;
+		int error = 0;
 
 		source = p_open(file->path_original, O_RDONLY);
 		if (source < 0) {
