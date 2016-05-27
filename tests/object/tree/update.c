@@ -190,7 +190,7 @@ void test_object_tree_update__add_blobs(void)
 		git_index_free(idx);
 
 		/* Perform the same operations via the tree updater */
-		cl_git_pass(git_tree_create_updated(&tree_updater_id, g_repo, base_tree, 3, updates));
+		cl_git_pass(git_tree_create_updated(&tree_updater_id, g_repo, base_tree, 4, updates));
 
 		cl_assert_equal_oid(&tree_index_id, &tree_updater_id);
 	}
