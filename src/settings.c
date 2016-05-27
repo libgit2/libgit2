@@ -184,15 +184,24 @@ int git_libgit2_opts(int key, ...)
 			const char *path = va_arg(ap, const char *);
 			int ret = 0;
 			char errbuf[512];
-			if (!file) {
-				ret = mbedtls_x509_crt_parse_file(git__ssl_conf->ca_chain, file);
-			} else if (!path) {
-				ret = mbedtls_x509_crt_parse_path(git__ssl_conf->ca_chain, path);
+			mbedtls_x509_crt *cacert;
+			cacert = git__malloc(sizeof(mbedtls_x509_crt));
+			mbedtls_x509_crt_init(cacert);
+			if (file) {
+				ret = mbedtls_x509_crt_parse_file(cacert, file);
+			} else if (path) {
+				ret = mbedtls_x509_crt_parse_path(cacert, path);
 			}
-			if (ret != 0) {
+			if (!ret) {
+				mbedtls_x509_crt_free(cacert);
+				git__free(cacert);
 				mbedtls_strerror( ret, errbuf, 512 );
-				giterr_set(GITERR_NET, "SSL error: %d - %s", ret, errbuf);
+				giterr_set(GITERR_SSL, "SSL error: failed to load CA certificates : %s (%d)", ret, errbuf);
 				error = -1;
+			} else {
+				mbedtls_x509_crt_free(git__ssl_conf->ca_chain);
+				git__free(git__ssl_conf->ca_chain);
+				mbedtls_ssl_conf_ca_chain(git__ssl_conf, cacert, NULL);
 			}
 		}
 #else

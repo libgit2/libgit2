@@ -29,7 +29,13 @@
 #include "mbedtls/error.h"
 #include "mbedtls/certs.h"
 
-#define CRT_LOC "/etc/ssl/certs"
+#ifndef OPENSSLDIR
+# define OPENSSLDIR              "/usr/lib/ssl"
+#endif
+#define X509_CERT_DIR            OPENSSLDIR "/certs"
+#define X509_CERT_FILE           OPENSSLDIR "/cert.pem"
+#define X509_CERT_DIR_EVP        "SSL_CERT_DIR"
+#define X509_CERT_FILE_EVP       "SSL_CERT_FILE"
 
 mbedtls_ssl_config *git__ssl_conf;
 mbedtls_entropy_context *mbedtls_entropy;
@@ -60,12 +66,13 @@ static void shutdown_ssl(void)
 
 int git_mbedtls_stream_global_init(void)
 {
-    int ret;
+    int ret, isdir;
+    char *crtpath;
+    struct stat statbuf;
     // const int *cipherids;
     // const char *ciphers = git_libgit2__ssl_ciphers();
 
     mbedtls_ctr_drbg_context *ctr_drbg;
-    mbedtls_x509_crt *cacert;
 
     mbedtls_entropy = git__malloc(sizeof(mbedtls_entropy_context));
     mbedtls_entropy_init(mbedtls_entropy);
@@ -101,28 +108,63 @@ int git_mbedtls_stream_global_init(void)
     mbedtls_ssl_conf_authmode(git__ssl_conf, MBEDTLS_SSL_VERIFY_REQUIRED);
     mbedtls_ssl_conf_rng(git__ssl_conf, mbedtls_ctr_drbg_random, ctr_drbg);
 
-    // set the list of allowed ciphersuites
-    // if (!ciphers) {
-    //     cipherids = mbedtls_ssl_list_ciphersuites();
-    // }
-    // mbedtls_ssl_conf_ciphersuites(git__ssl_conf, cipherids);
-
-    // set root certificates
-    cacert = git__malloc(sizeof(mbedtls_x509_crt));
-    mbedtls_x509_crt_init(cacert);
-    ret = mbedtls_x509_crt_parse_path(cacert, CRT_LOC);
+    // find locations for which CA certificates
+    isdir = 0;
+    crtpath = getenv(X509_CERT_FILE_EVP);
+    ret = crtpath != NULL && stat(crtpath, &statbuf) == 0 && S_ISREG(statbuf.st_mode) ? 0 : 1;
     if (ret) {
-        giterr_set(GITERR_SSL, "failed to load CA certificates: %d", ret);
-        mbedtls_x509_crt_free(cacert);
-        git__free(cacert);
+        isdir = 1;
+        crtpath = getenv(X509_CERT_DIR_EVP);
+        ret = crtpath != NULL && stat(crtpath, &statbuf) == 0 && S_ISDIR(statbuf.st_mode) ? 0 : 1;
+    }
+    if (ret) {
+        isdir = 0;
+        crtpath = X509_CERT_FILE;
+        ret = crtpath != NULL && stat(crtpath, &statbuf) == 0 && S_ISREG(statbuf.st_mode) ? 0 : 1;
+    }
+    if (ret) {
+        isdir = 1;
+        crtpath = X509_CERT_DIR;
+        ret = crtpath != NULL && stat(crtpath, &statbuf) == 0 && S_ISDIR(statbuf.st_mode) ? 0 : 1;
+    }
+
+    // cannot find CA certificates
+    if (ret) {
         mbedtls_ctr_drbg_free(ctr_drbg);
         git__free(ctr_drbg);
         mbedtls_ssl_config_free(git__ssl_conf);
         git__free(git__ssl_conf);
         git__ssl_conf = NULL;
+        return -1;
     } else {
-        mbedtls_ssl_conf_ca_chain(git__ssl_conf, cacert, NULL);
+        // set root certificates
+        mbedtls_x509_crt *cacert = git__malloc(sizeof(mbedtls_x509_crt));
+        mbedtls_x509_crt_init(cacert);
+        if (isdir)
+            ret = mbedtls_x509_crt_parse_path(cacert, crtpath);
+        else
+            ret = mbedtls_x509_crt_parse_file(cacert, crtpath);
+
+        if (ret) {
+            giterr_set(GITERR_SSL, "failed to load CA certificates: %d", ret);
+            mbedtls_x509_crt_free(cacert);
+            git__free(cacert);
+            mbedtls_ctr_drbg_free(ctr_drbg);
+            git__free(ctr_drbg);
+            mbedtls_ssl_config_free(git__ssl_conf);
+            git__free(git__ssl_conf);
+            git__ssl_conf = NULL;
+            return -1;
+        } else {
+            mbedtls_ssl_conf_ca_chain(git__ssl_conf, cacert, NULL);
+        }
     }
+
+    // set the list of allowed ciphersuites
+    // if (!ciphers) {
+    //     cipherids = mbedtls_ssl_list_ciphersuites();
+    // }
+    // mbedtls_ssl_conf_ciphersuites(git__ssl_conf, cipherids);
 
     git__on_shutdown(shutdown_ssl);
 
