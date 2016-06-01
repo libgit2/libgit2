@@ -2968,6 +2968,8 @@ int git_index_read_index(
 			*remove_entry = NULL;
 		int diff;
 
+		error = 0;
+
 		if (old_entry && new_entry)
 			diff = git_index_entry_cmp(old_entry, new_entry);
 		else if (!old_entry && new_entry)
