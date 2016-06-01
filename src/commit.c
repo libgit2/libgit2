@@ -40,7 +40,6 @@ void git_commit__free(void *_commit)
 
 static int git_commit__create_buffer_internal(
 	git_buf *out,
-	git_repository *repo,
 	const git_signature *author,
 	const git_signature *committer,
 	const char *message_encoding,
@@ -51,7 +50,7 @@ static int git_commit__create_buffer_internal(
 	size_t i = 0;
 	const git_oid *parent;
 
-	assert(out && repo && tree);
+	assert(out && tree);
 
 	git_oid__writebuf(out, "tree ", tree);
 
@@ -150,7 +149,7 @@ static int git_commit__create_internal(
 	if ((error = validate_tree_and_parents(&parents, repo, tree, parent_cb, parent_payload, current_id, validate)) < 0)
 		goto cleanup;
 
-	error = git_commit__create_buffer_internal(&buf, repo, author, committer,
+	error = git_commit__create_buffer_internal(&buf, author, committer,
 						   message_encoding, message, tree,
 						   &parents);
 
@@ -813,7 +812,7 @@ int git_commit_create_buffer(git_buf *out,
 		return error;
 
 	error = git_commit__create_buffer_internal(
-		out, repo, author, committer,
+		out, author, committer,
 		message_encoding, message, tree_id,
 		&parents_arr);
 
