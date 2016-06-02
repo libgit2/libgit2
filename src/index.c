@@ -3004,6 +3004,12 @@ int git_index_read_index(
 				((struct entry_internal *)add_entry)->pathlen);
 		}
 
+		/* invalidate this path in the tree cache if this is new (to
+		 * invalidate the parent trees)
+		 */
+		if (dup_entry && !remove_entry && index->tree)
+			git_tree_cache_invalidate_path(index->tree, dup_entry->path);
+
 		if (add_entry) {
 			if ((error = git_vector_insert(&new_entries, add_entry)) == 0)
 				INSERT_IN_MAP_EX(index, new_entries_map, add_entry, error);
