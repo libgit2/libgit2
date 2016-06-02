@@ -2987,7 +2987,8 @@ int git_index_read_index(
 			/* Path and stage are equal, if the OID is equal, keep it to
 			 * keep the stat cache data.
 			 */
-			if (git_oid_equal(&old_entry->id, &new_entry->id)) {
+			if (git_oid_equal(&old_entry->id, &new_entry->id) &&
+				old_entry->mode == new_entry->mode) {
 				add_entry = (git_index_entry *)old_entry;
 			} else {
 				dup_entry = (git_index_entry *)new_entry;
