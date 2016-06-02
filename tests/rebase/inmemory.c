@@ -165,3 +165,46 @@ void test_rebase_inmemory__no_common_ancestor(void)
 	git_reference_free(upstream_ref);
 	git_rebase_free(rebase);
 }
+
+void test_rebase_inmemory__with_directories(void)
+{
+	git_rebase *rebase;
+	git_reference *branch_ref, *upstream_ref;
+	git_annotated_commit *branch_head, *upstream_head;
+	git_rebase_operation *rebase_operation;
+	git_oid commit_id, tree_id;
+	git_commit *commit;
+	git_rebase_options opts = GIT_REBASE_OPTIONS_INIT;
+
+	opts.inmemory = true;
+
+	git_oid_fromstr(&tree_id, "a4d6d9c3d57308fd8e320cf2525bae8f1adafa57");
+
+	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/deep_gravy"));
+	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/veal"));
+
+	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
+	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
+
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, &opts));
+
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
+		NULL, NULL));
+
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
+		NULL, NULL));
+
+	cl_git_fail_with(GIT_ITEROVER, git_rebase_next(&rebase_operation, rebase));
+
+	cl_git_pass(git_commit_lookup(&commit, repo, &commit_id));
+	cl_assert_equal_oid(&tree_id, git_commit_tree_id(commit));
+
+	git_commit_free(commit);
+	git_annotated_commit_free(branch_head);
+	git_annotated_commit_free(upstream_head);
+	git_reference_free(branch_ref);
+	git_reference_free(upstream_ref);
+	git_rebase_free(rebase);
+}
