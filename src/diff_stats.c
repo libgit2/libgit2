@@ -315,8 +315,8 @@ int git_diff_stats_to_buf(
 		            return error;
 		}
 		
-        if (git_buf_putc(out, '\n') < 0)
-            return error;
+		if (git_buf_putc(out, '\n') < 0)
+		    return error;
 	}
 
 	if (format & GIT_DIFF_STATS_INCLUDE_SUMMARY) {
