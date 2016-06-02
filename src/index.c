@@ -2968,6 +2968,8 @@ int git_index_read_index(
 			*remove_entry = NULL;
 		int diff;
 
+		error = 0;
+
 		if (old_entry && new_entry)
 			diff = git_index_entry_cmp(old_entry, new_entry);
 		else if (!old_entry && new_entry)
@@ -2985,7 +2987,8 @@ int git_index_read_index(
 			/* Path and stage are equal, if the OID is equal, keep it to
 			 * keep the stat cache data.
 			 */
-			if (git_oid_equal(&old_entry->id, &new_entry->id)) {
+			if (git_oid_equal(&old_entry->id, &new_entry->id) &&
+				old_entry->mode == new_entry->mode) {
 				add_entry = (git_index_entry *)old_entry;
 			} else {
 				dup_entry = (git_index_entry *)new_entry;
@@ -2996,7 +2999,16 @@ int git_index_read_index(
 		if (dup_entry) {
 			if ((error = index_entry_dup_nocache(&add_entry, index, dup_entry)) < 0)
 				goto done;
+
+			index_entry_adjust_namemask(add_entry,
+				((struct entry_internal *)add_entry)->pathlen);
 		}
+
+		/* invalidate this path in the tree cache if this is new (to
+		 * invalidate the parent trees)
+		 */
+		if (dup_entry && !remove_entry && index->tree)
+			git_tree_cache_invalidate_path(index->tree, dup_entry->path);
 
 		if (add_entry) {
 			if ((error = git_vector_insert(&new_entries, add_entry)) == 0)
