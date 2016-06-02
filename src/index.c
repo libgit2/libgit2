@@ -2999,6 +2999,9 @@ int git_index_read_index(
 		if (dup_entry) {
 			if ((error = index_entry_dup_nocache(&add_entry, index, dup_entry)) < 0)
 				goto done;
+
+			index_entry_adjust_namemask(add_entry,
+				((struct entry_internal *)add_entry)->pathlen);
 		}
 
 		if (add_entry) {
