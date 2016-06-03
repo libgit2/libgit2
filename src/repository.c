@@ -1747,10 +1747,16 @@ int git_repository_head(git_reference **head_out, git_repository *repo)
 		return 0;
 	}
 
-	error = git_reference_lookup_resolved(head_out, repo, git_reference_symbolic_target(head), -1);
-	git_reference_free(head);
+	error = git_reference_lookup_resolved(head_out,
+		repo, git_reference_symbolic_target(head), -1);
 
-	return error == GIT_ENOTFOUND ? GIT_EUNBORNBRANCH : error;
+	if (error == GIT_ENOTFOUND) {
+		*head_out = head;
+		return GIT_EUNBORNBRANCH;
+	}
+
+	git_reference_free(head);
+	return error;
 }
 
 int git_repository_head_unborn(git_repository *repo)
