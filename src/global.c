@@ -85,11 +85,6 @@ static void shutdown_common(void)
 
 	git__free(git__user_agent);
 	git__free(git__ssl_ciphers);
-
-#if defined(GIT_MSVC_CRTDBG)
-	git_win32__crtdbg_stacktrace_cleanup();
-	git_win32__stack_cleanup();
-#endif
 }
 
 /**
@@ -181,6 +176,11 @@ int git_libgit2_shutdown(void)
 
 		TlsFree(_tls_index);
 		git_mutex_free(&git__mwindow_mutex);
+
+#if defined(GIT_MSVC_CRTDBG)
+		git_win32__crtdbg_stacktrace_cleanup();
+		git_win32__stack_cleanup();
+#endif
 	}
 
 	/* Exit the lock */
