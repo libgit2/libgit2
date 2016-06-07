@@ -240,8 +240,7 @@ static int make_submodule_dirty(git_submodule *sm, const char *name, void *paylo
 	));
 	git_futils_rmdir_r(git_buf_cstr(&submodulepath), NULL, GIT_RMDIR_REMOVE_FILES);
 
-	/* initialize submodule and its repository */
-	cl_git_pass(git_submodule_init(sm, 1));
+	/* initialize submodule's repository */
 	cl_git_pass(git_submodule_repo_init(&submodule_repo, sm, 0));
 
 	/* create a file in the submodule workdir to make it dirty */
@@ -251,6 +250,7 @@ static int make_submodule_dirty(git_submodule *sm, const char *name, void *paylo
 
 	git_buf_free(&dirtypath);
 	git_buf_free(&submodulepath);
+	git_repository_free(submodule_repo);
 
 	return 0;
 }
