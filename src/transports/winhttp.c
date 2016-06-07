@@ -400,11 +400,17 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			return -1;
 		}
 
+		gitno_connection_data_free_ptrs(&t->proxy_connection_data);
+
 		if ((error = gitno_extract_url_parts(&t->proxy_connection_data.host, &t->proxy_connection_data.port, NULL,
 				&t->proxy_connection_data.user, &t->proxy_connection_data.pass, proxy_url, NULL)) < 0)
 			goto on_error;
 
 		if (t->proxy_connection_data.user && t->proxy_connection_data.pass) {
+			if (t->proxy_cred) {
+				t->proxy_cred->free(t->proxy_cred);
+			}
+
 			if ((error = git_cred_userpass_plaintext_new(&t->proxy_cred, t->proxy_connection_data.user, t->proxy_connection_data.pass)) < 0)
 				goto on_error;
 		}
@@ -425,9 +431,10 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		}
 
 		/* Convert URL to wide characters */
-		if ((error = git__utf8_to_16_alloc(&proxy_wide, processed_url.ptr)) < 0)
+		error = git__utf8_to_16_alloc(&proxy_wide, processed_url.ptr);
+		git_buf_free(&processed_url);
+		if (error < 0)
 			goto on_error;
-
 
 		proxy_info.dwAccessType = WINHTTP_ACCESS_TYPE_NAMED_PROXY;
 		proxy_info.lpszProxy = proxy_wide;
@@ -1481,10 +1488,17 @@ static int winhttp_close(git_smart_subtransport *subtransport)
 
 	gitno_connection_data_free_ptrs(&t->connection_data);
 	memset(&t->connection_data, 0x0, sizeof(gitno_connection_data));
+	gitno_connection_data_free_ptrs(&t->proxy_connection_data);
+	memset(&t->proxy_connection_data, 0x0, sizeof(gitno_connection_data));
 
 	if (t->cred) {
 		t->cred->free(t->cred);
 		t->cred = NULL;
+	}
+
+	if (t->proxy_cred) {
+		t->proxy_cred->free(t->proxy_cred);
+		t->proxy_cred = NULL;
 	}
 
 	if (t->url_cred) {
