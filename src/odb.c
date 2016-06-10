@@ -1362,8 +1362,8 @@ int git_odb__error_notfound(
 {
 	if (oid != NULL) {
 		size_t buf_len = oid_len;
-		if (oid_len == GIT_OID_HEXSZ) buf_len++;
 		char oid_str[GIT_OID_HEXSZ + 1];
+		if (oid_len == GIT_OID_HEXSZ) buf_len++;
 		git_oid_tostr(oid_str, buf_len, oid);
 		giterr_set(GITERR_ODB, "Object not found - %s (%.*s)",
 			message, oid_len, oid_str);
