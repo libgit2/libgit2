@@ -1423,7 +1423,11 @@ static int update_tips_for_spec(
 		/* In autotag mode, don't overwrite any locally-existing tags */
 		error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, !autotag, 
 				log_message);
-		if (error < 0 && error != GIT_EEXISTS)
+
+		if (error == GIT_EEXISTS)
+			continue;
+
+		if (error < 0)
 			goto on_error;
 
 		git_reference_free(ref);
