@@ -236,6 +236,7 @@ static bool is_index_modified(
 	const git_index_entry *wditem)
 {
 	const git_index_entry *ie;
+	const char *lookup_path;
 
 	/* Don't bother investigate if we're checking out the current
 	 * index, it is canonical.
@@ -243,7 +244,16 @@ static bool is_index_modified(
 	if (data->index == git_iterator_index(data->target))
 		return false;
 
-	if ((ie = git_index_get_bypath(data->index, wditem->path, 0)) == NULL)
+	if (!S_ISDIR(baseitem->mode))
+		lookup_path = baseitem->path;
+	else if (!S_ISDIR(newitem->mode))
+		lookup_path = newitem->path;
+	else if (!S_ISDIR(wditem->mode))
+		lookup_path = wditem->path;
+	else
+		return true;
+
+	if ((ie = git_index_get_bypath(data->index, lookup_path, 0)) == NULL)
 		return true;
 
 	/* consider the index entry modified if it's different than both
@@ -552,7 +562,7 @@ static int checkout_action_with_wd(
 			} else
 				*action = CHECKOUT_ACTION_IF(FORCE, REMOVE, CONFLICT);
 		}
-		else if (is_workdir_modified(data, &delta->old_file, &delta->new_file, wd))
+		else if (is_workdir_or_index_modified(data, &delta->old_file, &delta->new_file, wd))
 			*action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
 		else
 			*action = CHECKOUT_ACTION_IF(SAFE, REMOVE_AND_UPDATE, NONE);

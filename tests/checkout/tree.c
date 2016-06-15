@@ -1687,3 +1687,48 @@ void test_checkout_tree__modified_in_index_reverted_in_workdir_modified_in_targe
 	git_index_free(index);
 }
 
+void test_checkout_tree__modified_in_index_reverted_in_workdir_typechange_in_target_is_conflict(void)
+{
+	git_index *index;
+	git_reference *head;
+	git_oid target_id;
+	git_object *obj, *target;
+	git_status_list *status;
+	git_index_entry modified_entry = {{0}};
+
+	assert_on_branch(g_repo, "master");
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_repository_head(&head, g_repo));
+	cl_git_pass(git_reference_peel(&obj, head, GIT_OBJ_COMMIT));
+
+	cl_git_pass(git_reset(g_repo, obj, GIT_RESET_HARD, NULL));
+
+	/* refs/heads/br2 */
+	cl_git_pass(git_oid_fromstr(&target_id, "6759f8c30605b2928a4e07a5a8a850d5676286cb"));
+	cl_git_pass(git_object_lookup(&target, g_repo, &target_id, GIT_OBJ_COMMIT));
+
+	/* change the file's id in the index */
+	modified_entry.mode = GIT_FILEMODE_BLOB;
+	modified_entry.path = "README";
+	cl_git_pass(git_oid_fromstr(&modified_entry.id, "a71586c1dfe8a71c6cbf6c129f404c5642ff31bd"));
+
+	cl_git_pass(git_index_add(index, &modified_entry));
+	cl_git_pass(git_index_write(index));
+
+	g_opts.checkout_strategy &= ~GIT_CHECKOUT_FORCE;
+	cl_git_fail_with(GIT_ECONFLICT, git_checkout_tree(g_repo, target, &g_opts));
+
+	g_opts.checkout_strategy |= GIT_CHECKOUT_FORCE;
+	cl_git_pass(git_checkout_tree(g_repo, target, &g_opts));
+	cl_git_pass(git_repository_set_head_detached(g_repo, &target_id));
+
+	cl_git_pass(git_status_list_new(&status, g_repo, NULL));
+	cl_assert_equal_i(0, git_status_list_entrycount(status));
+	git_status_list_free(status);
+
+	git_object_free(target);
+	git_object_free(obj);
+	git_reference_free(head);
+	git_index_free(index);
+}
+
