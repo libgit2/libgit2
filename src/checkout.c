@@ -2408,8 +2408,13 @@ static int checkout_data_init(
 
 	if (!data->opts.baseline && !data->opts.baseline_index) {
 		data->opts_free_baseline = true;
+		error = 0;
 
-		error = checkout_lookup_head_tree(&data->opts.baseline, repo);
+		/* if we don't have an index, this is an initial checkout and
+		 * should be against an empty baseline
+		 */
+		if (data->index->on_disk)
+			error = checkout_lookup_head_tree(&data->opts.baseline, repo);
 
 		if (error == GIT_EUNBORNBRANCH) {
 			error = 0;
