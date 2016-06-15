@@ -1479,3 +1479,75 @@ void test_checkout_tree__baseline_is_empty_when_no_index(void)
 	git_reference_free(head);
 }
 
+/* ensure that checking out a file with no changes between the baseline
+ * and the target will maintain changes in the index, but forcing will
+ * update that file
+ */
+void test_checkout_tree__modified_in_index_reverted_in_workdir_stays_modified(void)
+{
+	git_index *index;
+	git_reference *head;
+	git_object *obj;
+	git_status_list *status;
+	git_index_entry modified_entry = {{0}};
+
+	assert_on_branch(g_repo, "master");
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_repository_head(&head, g_repo));
+	cl_git_pass(git_reference_peel(&obj, head, GIT_OBJ_COMMIT));
+
+	cl_git_pass(git_reset(g_repo, obj, GIT_RESET_HARD, NULL));
+
+	cl_git_pass(git_status_list_new(&status, g_repo, NULL));
+	cl_assert_equal_i(0, git_status_list_entrycount(status));
+	git_status_list_free(status);
+
+	/* change the file's id in the index */
+	modified_entry.mode = GIT_FILEMODE_BLOB;
+	modified_entry.path = "README";
+	cl_git_pass(git_oid_fromstr(&modified_entry.id, "a71586c1dfe8a71c6cbf6c129f404c5642ff31bd"));
+
+	cl_git_pass(git_index_add(index, &modified_entry));
+	cl_git_pass(git_index_write(index));
+
+	g_opts.checkout_strategy &= ~GIT_CHECKOUT_FORCE;
+	cl_git_pass(git_checkout_tree(g_repo, obj, &g_opts));
+
+	cl_git_pass(git_status_list_new(&status, g_repo, NULL));
+	cl_assert_equal_i(1, git_status_list_entrycount(status));
+	git_status_list_free(status);
+
+	g_opts.checkout_strategy |= GIT_CHECKOUT_FORCE;
+	cl_git_pass(git_checkout_tree(g_repo, obj, &g_opts));
+
+	cl_git_pass(git_status_list_new(&status, g_repo, NULL));
+	cl_assert_equal_i(0, git_status_list_entrycount(status));
+	git_status_list_free(status);
+
+	/* update the mode but not the id */
+	modified_entry.mode = GIT_FILEMODE_BLOB_EXECUTABLE;
+	modified_entry.path = "README";
+	cl_git_pass(git_oid_fromstr(&modified_entry.id, "a8233120f6ad708f843d861ce2b7228ec4e3dec6"));
+
+	cl_git_pass(git_index_add(index, &modified_entry));
+	cl_git_pass(git_index_write(index));
+
+	g_opts.checkout_strategy &= ~GIT_CHECKOUT_FORCE;
+	cl_git_pass(git_checkout_tree(g_repo, obj, &g_opts));
+
+	cl_git_pass(git_status_list_new(&status, g_repo, NULL));
+	cl_assert_equal_i(1, git_status_list_entrycount(status));
+	git_status_list_free(status);
+
+	g_opts.checkout_strategy |= GIT_CHECKOUT_FORCE;
+	cl_git_pass(git_checkout_tree(g_repo, obj, &g_opts));
+
+	cl_git_pass(git_status_list_new(&status, g_repo, NULL));
+	cl_assert_equal_i(0, git_status_list_entrycount(status));
+	git_status_list_free(status);
+
+	git_object_free(obj);
+	git_reference_free(head);
+	git_index_free(index);
+}
+
