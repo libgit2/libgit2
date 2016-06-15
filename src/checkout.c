@@ -522,7 +522,7 @@ static int checkout_action_with_wd(
 			*action = CHECKOUT_ACTION_IF(FORCE, UPDATE_BLOB, CONFLICT);
 		break;
 	case GIT_DELTA_DELETED: /* case 9 or 10 (or 26 but not really) */
-		if (is_workdir_modified(data, &delta->old_file, &delta->new_file, wd))
+		if (is_workdir_or_index_modified(data, &delta->old_file, &delta->new_file, wd))
 			*action = CHECKOUT_ACTION_IF(FORCE, REMOVE, CONFLICT);
 		else
 			*action = CHECKOUT_ACTION_IF(SAFE, REMOVE, NONE);
