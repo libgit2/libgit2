@@ -1479,10 +1479,56 @@ void test_checkout_tree__baseline_is_empty_when_no_index(void)
 	git_reference_free(head);
 }
 
+void test_checkout_tree__mode_change_is_force_updated(void)
+{
+	git_index *index;
+	git_reference *head;
+	git_object *obj;
+	git_status_list *status;
+
+	if (!cl_is_chmod_supported())
+		clar__skip();
+
+	assert_on_branch(g_repo, "master");
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_repository_head(&head, g_repo));
+	cl_git_pass(git_reference_peel(&obj, head, GIT_OBJ_COMMIT));
+
+	cl_git_pass(git_reset(g_repo, obj, GIT_RESET_HARD, NULL));
+
+	cl_git_pass(git_status_list_new(&status, g_repo, NULL));
+	cl_assert_equal_i(0, git_status_list_entrycount(status));
+	git_status_list_free(status);
+
+	/* update the mode on-disk */
+	cl_must_pass(p_chmod("testrepo/README", 0755));
+
+	cl_git_pass(git_checkout_tree(g_repo, obj, &g_opts));
+
+	cl_git_pass(git_status_list_new(&status, g_repo, NULL));
+	cl_assert_equal_i(0, git_status_list_entrycount(status));
+	git_status_list_free(status);
+
+	/* update the mode on-disk and in the index */
+	cl_must_pass(p_chmod("testrepo/README", 0755));
+	cl_must_pass(git_index_add_bypath(index, "README"));
+
+	cl_git_pass(git_checkout_tree(g_repo, obj, &g_opts));
+
+	cl_git_pass(git_status_list_new(&status, g_repo, NULL));
+	cl_assert_equal_i(0, git_status_list_entrycount(status));
+	git_status_list_free(status);
+
+	git_object_free(obj);
+	git_reference_free(head);
+	git_index_free(index);
+}
+
 /* ensure that checking out a file with no changes between the baseline
  * and the target will maintain changes in the index, but forcing will
  * update that file
  */
+
 void test_checkout_tree__modified_in_index_reverted_in_workdir_stays_modified(void)
 {
 	git_index *index;
