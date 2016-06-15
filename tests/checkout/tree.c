@@ -1416,3 +1416,66 @@ void test_checkout_tree__safe_proceeds_if_no_index(void)
 	git_object_free(obj);
 }
 
+static int checkout_conflict_count_cb(
+	git_checkout_notify_t why,
+	const char *path,
+	const git_diff_file *b,
+	const git_diff_file *t,
+	const git_diff_file *w,
+	void *payload)
+{
+	size_t *n = payload;
+
+	GIT_UNUSED(why);
+	GIT_UNUSED(path);
+	GIT_UNUSED(b);
+	GIT_UNUSED(t);
+	GIT_UNUSED(w);
+
+	(*n)++;
+
+	return 0;
+}
+
+/* A repo that has a HEAD (even a properly born HEAD that peels to
+ * a commit) but no index should be treated as if it's an empty baseline
+ */
+void test_checkout_tree__baseline_is_empty_when_no_index(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_reference *head;
+	git_object *obj;
+	git_status_list *status;
+	size_t conflicts = 0;
+
+	assert_on_branch(g_repo, "master");
+	cl_git_pass(git_repository_head(&head, g_repo));
+	cl_git_pass(git_reference_peel(&obj, head, GIT_OBJ_COMMIT));
+
+	cl_git_pass(git_reset(g_repo, obj, GIT_RESET_HARD, NULL));
+
+	cl_must_pass(p_unlink("testrepo/.git/index"));
+
+	/* for a safe checkout, we should have checkout conflicts with
+	 * the existing untracked files.
+	 */
+	opts.checkout_strategy &= ~GIT_CHECKOUT_FORCE;
+	opts.notify_flags = GIT_CHECKOUT_NOTIFY_CONFLICT;
+	opts.notify_cb = checkout_conflict_count_cb;
+	opts.notify_payload = &conflicts;
+
+	cl_git_fail_with(GIT_ECONFLICT, git_checkout_tree(g_repo, obj, &opts));
+	cl_assert_equal_i(4, conflicts);
+
+	/* but force should succeed and update the index */
+	opts.checkout_strategy |= GIT_CHECKOUT_FORCE;
+	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
+
+	cl_git_pass(git_status_list_new(&status, g_repo, NULL));
+	cl_assert_equal_i(0, git_status_list_entrycount(status));
+	git_status_list_free(status);
+
+	git_object_free(obj);
+	git_reference_free(head);
+}
+
