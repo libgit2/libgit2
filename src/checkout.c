@@ -160,6 +160,11 @@ GIT_INLINE(bool) is_workdir_base_or_new(
 		git_oid__cmp(&newitem->id, workdir_id) == 0);
 }
 
+GIT_INLINE(bool) is_file_mode_changed(git_filemode_t a, git_filemode_t b)
+{
+	return (S_ISREG(a) && S_ISREG(b) && a != b);
+}
+
 static bool is_workdir_modified(
 	checkout_data *data,
 	const git_diff_file *baseitem,
@@ -201,7 +206,8 @@ static bool is_workdir_modified(
 	 */
 	if ((ie = git_index_get_bypath(data->index, wditem->path, 0)) != NULL) {
 		if (git_index_time_eq(&wditem->mtime, &ie->mtime) &&
-			wditem->file_size == ie->file_size)
+			wditem->file_size == ie->file_size &&
+			!is_file_mode_changed(wditem->mode, ie->mode))
 			return !is_workdir_base_or_new(&ie->id, baseitem, newitem);
 	}
 
@@ -209,6 +215,9 @@ static bool is_workdir_modified(
 	 * the actual size of the data, so we can't rely on this shortcut.
 	 */
 	if (baseitem->size && wditem->file_size != baseitem->size)
+		return true;
+
+	if (is_file_mode_changed(baseitem->mode, wditem->mode))
 		return true;
 
 	if (git_diff__oid_for_entry(&oid, data->diff, wditem, wditem->mode, NULL) < 0)
