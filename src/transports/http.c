@@ -114,7 +114,7 @@ static bool challenge_match(git_http_auth_scheme *scheme, void *data)
 	size_t scheme_len;
 
 	scheme_len = strlen(scheme_name);
-	return (strncmp(challenge, scheme_name, scheme_len) == 0 &&
+	return (strncasecmp(challenge, scheme_name, scheme_len) == 0 &&
 		(challenge[scheme_len] == '\0' || challenge[scheme_len] == ' '));
 }
 
