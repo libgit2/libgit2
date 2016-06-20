@@ -15,18 +15,30 @@ with any kind of software without having to release its source code.
 Additionally, the example code has been released to the public domain (see the
 [separate license](examples/COPYING) for more information).
 
-* Website: [libgit2.github.com](http://libgit2.github.com)
-* StackOverflow Tag: [libgit2](http://stackoverflow.com/questions/tagged/libgit2)
-* Issues: [GitHub Issues](https://github.com/libgit2/libgit2/issues) (Right here!)
-* API documentation: <http://libgit2.github.com/libgit2/>
-* IRC: [#libgit2](irc://irc.freenode.net/libgit2) on irc.freenode.net.
-* Mailing list: The libgit2 mailing list was
-    traditionally hosted in Librelist but has been deprecated. We encourage you to
-    [use StackOverflow](http://stackoverflow.com/questions/tagged/libgit2) instead for any questions regarding
-    the library, or [open an issue](https://github.com/libgit2/libgit2/issues)
-    on GitHub for bug reports.  The mailing list archives are still available at
-    <http://librelist.com/browser/libgit2/>.
+Getting Help
+============
 
+**Join us on Slack**
+
+Visit [slack.libgit2.org](http://slack.libgit2.org/) to sign up, then join
+us in `#libgit2`.  If you prefer IRC, you can also point your client to our
+slack channel once you've registered.
+
+**Getting Help**
+
+If you have questions about the library, please be sure to check out the
+[API documentation](http://libgit2.github.com/libgit2/).  If you still have
+questions, reach out to us on Slack or post a question on 
+[StackOverflow](http://stackoverflow.com/questions/tagged/libgit2) (with the `libgit2` tag).
+
+**Reporting Bugs**
+
+Please open a [GitHub Issue](https://github.com/libgit2/libgit2/issues) and
+include as much information as possible.  If possible, provide sample code
+that illustrates the problem you're seeing.  If you're seeing a bug only
+on a specific repository, please provide a link to it if possible.
+
+We ask that you not open a GitHub Issue for help, only for bug reports.
 
 What It Can Do
 ==============
