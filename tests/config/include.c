@@ -108,6 +108,23 @@ void test_config_include__missing(void)
 	git_config_free(cfg);
 }
 
+void test_config_include__missing_homedir(void)
+{
+	git_config *cfg;
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_mkfile("including", "[include]\npath = ~/.nonexistentfile\n[foo]\nbar = baz");
+
+	giterr_clear();
+	cl_git_pass(git_config_open_ondisk(&cfg, "including"));
+	cl_assert(giterr_last() == NULL);
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.bar"));
+	cl_assert_equal_s("baz", git_buf_cstr(&buf));
+
+	git_buf_free(&buf);
+	git_config_free(cfg);
+}
+
 #define replicate10(s) s s s s s s s s s s
 void test_config_include__depth2(void)
 {
