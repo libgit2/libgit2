@@ -52,7 +52,6 @@ typedef git_atomic git_atomic_ssize;
 #define git_cond_free(c) 	pthread_cond_destroy(c)
 #define git_cond_wait(c, l)	pthread_cond_wait(c, l)
 #define git_cond_signal(c)	pthread_cond_signal(c)
-#define git_cond_broadcast(c)	pthread_cond_broadcast(c)
 
 /* Pthread (-ish) rwlock
  *
