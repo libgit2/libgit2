@@ -67,28 +67,25 @@ int git_thread_join(
 	return 0;
 }
 
-int pthread_mutex_init(
-	pthread_mutex_t *GIT_RESTRICT mutex,
-	const pthread_mutexattr_t *GIT_RESTRICT mutexattr)
+int git_mutex_init(git_mutex *GIT_RESTRICT mutex)
 {
-	GIT_UNUSED(mutexattr);
 	InitializeCriticalSection(mutex);
 	return 0;
 }
 
-int pthread_mutex_destroy(pthread_mutex_t *mutex)
+int git_mutex_free(git_mutex *mutex)
 {
 	DeleteCriticalSection(mutex);
 	return 0;
 }
 
-int pthread_mutex_lock(pthread_mutex_t *mutex)
+int git_mutex_lock(git_mutex *mutex)
 {
 	EnterCriticalSection(mutex);
 	return 0;
 }
 
-int pthread_mutex_unlock(pthread_mutex_t *mutex)
+int git_mutex_unlock(git_mutex *mutex)
 {
 	LeaveCriticalSection(mutex);
 	return 0;
@@ -124,7 +121,7 @@ int pthread_cond_destroy(pthread_cond_t *cond)
 	return 0;
 }
 
-int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
+int pthread_cond_wait(pthread_cond_t *cond, git_mutex *mutex)
 {
 	int error;
 	DWORD wait_result;
@@ -133,7 +130,7 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
 		return EINVAL;
 
 	/* The caller must be holding the mutex. */
-	error = pthread_mutex_unlock(mutex);
+	error = git_mutex_unlock(mutex);
 
 	if (error)
 		return error;
@@ -142,7 +139,7 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
 	assert(WAIT_OBJECT_0 == wait_result);
 	GIT_UNUSED(wait_result);
 
-	return pthread_mutex_lock(mutex);
+	return git_mutex_lock(mutex);
 }
 
 int pthread_cond_signal(pthread_cond_t *cond)
