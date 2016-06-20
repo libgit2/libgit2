@@ -202,7 +202,6 @@ Here are the bindings to libgit2 that are currently available:
 * .NET
     * libgit2sharp <https://github.com/libgit2/libgit2sharp>
 * Node.js
-    * node-gitteh <https://github.com/libgit2/node-gitteh>
     * nodegit <https://github.com/nodegit/nodegit>
 * Objective-C
     * objective-git <https://github.com/libgit2/objective-git>
@@ -215,7 +214,7 @@ Here are the bindings to libgit2 that are currently available:
 * PHP
     * php-git <https://github.com/libgit2/php-git>
 * PowerShell
-    * GitPowerShell <https://github.com/ethomson/gitpowershell>
+    * PSGit <https://github.com/PoshCode/PSGit>
 * Python
     * pygit2 <https://github.com/libgit2/pygit2>
 * R
