@@ -23,11 +23,6 @@ typedef struct {
 	void *result;
 } git_thread;
 
-typedef int pthread_mutexattr_t;
-typedef int pthread_condattr_t;
-typedef int pthread_attr_t;
-typedef int pthread_rwlockattr_t;
-
 typedef CRITICAL_SECTION git_mutex;
 typedef HANDLE git_cond;
 
@@ -39,8 +34,6 @@ typedef struct {
 		CRITICAL_SECTION csec;
 	} native;
 } git_rwlock;
-
-#define PTHREAD_MUTEX_INITIALIZER  {(void*)-1}
 
 int git_thread_create(git_thread *GIT_RESTRICT,
 	void *(*) (void *),
