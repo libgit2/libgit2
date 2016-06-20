@@ -473,17 +473,19 @@ ELSE ()
 		SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -D_DEBUG")
 	ENDIF ()
 
-	IF (MINGW) # MinGW always does PIC and complains if we tell it to
+	IF (MINGW OR MSYS) # MinGW and MSYS always do PIC and complain if we tell them to
 		STRING(REGEX REPLACE "-fPIC" "" CMAKE_SHARED_LIBRARY_C_FLAGS "${CMAKE_SHARED_LIBRARY_C_FLAGS}")
-		# MinGW >= 3.14 uses the C99-style stdio functions
-		# automatically, but forks like mingw-w64 still want
-		# us to define this in order to use them
-		ADD_DEFINITIONS(-D__USE_MINGW_ANSI_STDIO=1)
-
 	ELSEIF (BUILD_SHARED_LIBS)
 		ADD_C_FLAG_IF_SUPPORTED(-fvisibility=hidden)
 
 		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+	ENDIF ()
+
+	IF (MINGW)
+		# MinGW >= 3.14 uses the C99-style stdio functions
+		# automatically, but forks like mingw-w64 still want
+		# us to define this in order to use them
+		ADD_DEFINITIONS(-D__USE_MINGW_ANSI_STDIO=1)
 	ENDIF ()
 
 	ADD_C_FLAG_IF_SUPPORTED(-Wdocumentation)
