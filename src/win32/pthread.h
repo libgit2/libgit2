@@ -29,7 +29,7 @@ typedef int pthread_attr_t;
 typedef int pthread_rwlockattr_t;
 
 typedef CRITICAL_SECTION git_mutex;
-typedef HANDLE pthread_cond_t;
+typedef HANDLE git_cond;
 
 typedef struct { void *Ptr; } GIT_SRWLOCK;
 
@@ -52,10 +52,10 @@ int git_mutex_free(git_mutex *);
 int git_mutex_lock(git_mutex *);
 int git_mutex_unlock(git_mutex *);
 
-int pthread_cond_init(pthread_cond_t *, const pthread_condattr_t *);
-int pthread_cond_destroy(pthread_cond_t *);
-int pthread_cond_wait(pthread_cond_t *, git_mutex *);
-int pthread_cond_signal(pthread_cond_t *);
+int git_cond_init(git_cond *);
+int git_cond_free(git_cond *);
+int git_cond_wait(git_cond *, git_mutex *);
+int git_cond_signal(git_cond *);
 
 int pthread_num_processors_np(void);
 
