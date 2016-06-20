@@ -17,4 +17,11 @@ typedef struct {
 #define git_thread_join(git_thread_ptr, status) \
 	pthread_join((git_thread_ptr)->thread, status)
 
+/* Git Mutex */
+#define git_mutex pthread_mutex_t
+#define git_mutex_init(a)	pthread_mutex_init(a, NULL)
+#define git_mutex_lock(a)	pthread_mutex_lock(a)
+#define git_mutex_unlock(a)     pthread_mutex_unlock(a)
+#define git_mutex_free(a)	pthread_mutex_destroy(a)
+
 #endif /* INCLUDE_unix_pthread_h__ */

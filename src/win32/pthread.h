@@ -28,7 +28,7 @@ typedef int pthread_condattr_t;
 typedef int pthread_attr_t;
 typedef int pthread_rwlockattr_t;
 
-typedef CRITICAL_SECTION pthread_mutex_t;
+typedef CRITICAL_SECTION git_mutex;
 typedef HANDLE pthread_cond_t;
 
 typedef struct { void *Ptr; } GIT_SRWLOCK;
@@ -47,16 +47,14 @@ int git_thread_create(git_thread *GIT_RESTRICT,
 	void *GIT_RESTRICT);
 int git_thread_join(git_thread *, void **);
 
-int pthread_mutex_init(
-	pthread_mutex_t *GIT_RESTRICT mutex,
-	const pthread_mutexattr_t *GIT_RESTRICT mutexattr);
-int pthread_mutex_destroy(pthread_mutex_t *);
-int pthread_mutex_lock(pthread_mutex_t *);
-int pthread_mutex_unlock(pthread_mutex_t *);
+int git_mutex_init(git_mutex *GIT_RESTRICT mutex);
+int git_mutex_free(git_mutex *);
+int git_mutex_lock(git_mutex *);
+int git_mutex_unlock(git_mutex *);
 
 int pthread_cond_init(pthread_cond_t *, const pthread_condattr_t *);
 int pthread_cond_destroy(pthread_cond_t *);
-int pthread_cond_wait(pthread_cond_t *, pthread_mutex_t *);
+int pthread_cond_wait(pthread_cond_t *, git_mutex *);
 int pthread_cond_signal(pthread_cond_t *);
 /* pthread_cond_broadcast is not supported on Win32 yet. */
 

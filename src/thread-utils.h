@@ -40,16 +40,11 @@ typedef git_atomic git_atomic_ssize;
 
 #ifdef GIT_THREADS
 
-#if !defined(GIT_WIN32)
+#ifdef GIT_WIN32
+#   include "win32/pthread.h"
+#else
 #   include "unix/pthread.h"
 #endif
-
-/* Pthreads Mutex */
-#define git_mutex pthread_mutex_t
-#define git_mutex_init(a)	pthread_mutex_init(a, NULL)
-#define git_mutex_lock(a)	pthread_mutex_lock(a)
-#define git_mutex_unlock(a) pthread_mutex_unlock(a)
-#define git_mutex_free(a)	pthread_mutex_destroy(a)
 
 /* Pthreads condition vars */
 #define git_cond pthread_cond_t
