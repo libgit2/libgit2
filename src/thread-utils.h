@@ -41,7 +41,7 @@ typedef git_atomic git_atomic_ssize;
 #ifdef GIT_THREADS
 
 #ifdef GIT_WIN32
-#   include "win32/pthread.h"
+#   include "win32/thread.h"
 #else
 #   include "unix/pthread.h"
 #endif
