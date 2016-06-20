@@ -244,7 +244,7 @@ License
 
 `libgit2` is under GPL2 **with linking exception**. This means you can link to
 and use the library from any program, proprietary or open source; paid or
-gratis.  However, you cannot modify libgit2 and distribute it without
-supplying the source.
+gratis.  However, if you modify libgit2 itself, you must distribute the
+source to your modified version of libgit2.
 
 See the [COPYING file](COPYING) for the full license text.
