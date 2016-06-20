@@ -152,17 +152,6 @@ int git_cond_signal(git_cond *cond)
 	return 0;
 }
 
-int pthread_num_processors_np(void)
-{
-	DWORD_PTR p, s;
-	int n = 0;
-
-	if (GetProcessAffinityMask(GetCurrentProcess(), &p, &s))
-		for (; p; p >>= 1)
-			n += p&1;
-
-	return n ? n : 1;
-}
 
 typedef void (WINAPI *win32_srwlock_fn)(GIT_SRWLOCK *);
 
