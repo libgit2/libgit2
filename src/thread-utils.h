@@ -46,13 +46,6 @@ typedef git_atomic git_atomic_ssize;
 #   include "unix/pthread.h"
 #endif
 
-/* Pthreads condition vars */
-#define git_cond pthread_cond_t
-#define git_cond_init(c)	pthread_cond_init(c, NULL)
-#define git_cond_free(c) 	pthread_cond_destroy(c)
-#define git_cond_wait(c, l)	pthread_cond_wait(c, l)
-#define git_cond_signal(c)	pthread_cond_signal(c)
-
 /* Pthread (-ish) rwlock
  *
  * This differs from normal pthreads rwlocks in two ways:

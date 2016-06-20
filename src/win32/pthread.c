@@ -91,12 +91,8 @@ int git_mutex_unlock(git_mutex *mutex)
 	return 0;
 }
 
-int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr)
+int git_cond_init(git_cond *cond)
 {
-	/* We don't support non-default attributes. */
-	if (attr)
-		return EINVAL;
-
 	/* This is an auto-reset event. */
 	*cond = CreateEventW(NULL, FALSE, FALSE, NULL);
 	assert(*cond);
@@ -106,7 +102,7 @@ int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr)
 	return *cond ? 0 : ENOMEM;
 }
 
-int pthread_cond_destroy(pthread_cond_t *cond)
+int git_cond_free(git_cond *cond)
 {
 	BOOL closed;
 
@@ -121,7 +117,7 @@ int pthread_cond_destroy(pthread_cond_t *cond)
 	return 0;
 }
 
-int pthread_cond_wait(pthread_cond_t *cond, git_mutex *mutex)
+int git_cond_wait(git_cond *cond, git_mutex *mutex)
 {
 	int error;
 	DWORD wait_result;
@@ -142,7 +138,7 @@ int pthread_cond_wait(pthread_cond_t *cond, git_mutex *mutex)
 	return git_mutex_lock(mutex);
 }
 
-int pthread_cond_signal(pthread_cond_t *cond)
+int git_cond_signal(git_cond *cond)
 {
 	BOOL signaled;
 
