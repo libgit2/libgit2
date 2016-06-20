@@ -156,10 +156,6 @@ int pthread_cond_signal(pthread_cond_t *cond)
 	return 0;
 }
 
-/* pthread_cond_broadcast is not implemented because doing so with just
- * Win32 events is quite complicated, and no caller in libgit2 uses it
- * yet.
- */
 int pthread_num_processors_np(void)
 {
 	DWORD_PTR p, s;
