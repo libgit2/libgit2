@@ -12,6 +12,7 @@ typedef struct {
 	pthread_t thread;
 } git_thread;
 
+#define git_threads_init() (void)0
 #define git_thread_create(git_thread_ptr, start_routine, arg) \
 	pthread_create(&(git_thread_ptr)->thread, NULL, start_routine, arg)
 #define git_thread_join(git_thread_ptr, status) \

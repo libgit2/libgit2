@@ -10,6 +10,14 @@
 
 #define CLEAN_THREAD_EXIT 0x6F012842
 
+typedef void (WINAPI *win32_srwlock_fn)(GIT_SRWLOCK *);
+
+static win32_srwlock_fn win32_srwlock_initialize;
+static win32_srwlock_fn win32_srwlock_acquire_shared;
+static win32_srwlock_fn win32_srwlock_release_shared;
+static win32_srwlock_fn win32_srwlock_acquire_exclusive;
+static win32_srwlock_fn win32_srwlock_release_exclusive;
+
 /* The thread procedure stub used to invoke the caller's procedure
  * and capture the return value for later collection. Windows will
  * only hold a DWORD, but we need to be able to store an entire
@@ -23,6 +31,26 @@ static DWORD WINAPI git_win32__threadproc(LPVOID lpParameter)
 	git__free_tls_data();
 
 	return CLEAN_THREAD_EXIT;
+}
+
+int git_threads_init(void)
+{
+	HMODULE hModule = GetModuleHandleW(L"kernel32");
+
+	if (hModule) {
+		win32_srwlock_initialize = (win32_srwlock_fn)
+			GetProcAddress(hModule, "InitializeSRWLock");
+		win32_srwlock_acquire_shared = (win32_srwlock_fn)
+			GetProcAddress(hModule, "AcquireSRWLockShared");
+		win32_srwlock_release_shared = (win32_srwlock_fn)
+			GetProcAddress(hModule, "ReleaseSRWLockShared");
+		win32_srwlock_acquire_exclusive = (win32_srwlock_fn)
+			GetProcAddress(hModule, "AcquireSRWLockExclusive");
+		win32_srwlock_release_exclusive = (win32_srwlock_fn)
+			GetProcAddress(hModule, "ReleaseSRWLockExclusive");
+	}
+
+	return 0;
 }
 
 int git_thread_create(
@@ -152,15 +180,6 @@ int git_cond_signal(git_cond *cond)
 	return 0;
 }
 
-
-typedef void (WINAPI *win32_srwlock_fn)(GIT_SRWLOCK *);
-
-static win32_srwlock_fn win32_srwlock_initialize;
-static win32_srwlock_fn win32_srwlock_acquire_shared;
-static win32_srwlock_fn win32_srwlock_release_shared;
-static win32_srwlock_fn win32_srwlock_acquire_exclusive;
-static win32_srwlock_fn win32_srwlock_release_exclusive;
-
 int git_rwlock_init(git_rwlock *GIT_RESTRICT lock)
 {
 	if (win32_srwlock_initialize)
@@ -216,25 +235,5 @@ int git_rwlock_free(git_rwlock *lock)
 	if (!win32_srwlock_initialize)
 		DeleteCriticalSection(&lock->native.csec);
 	git__memzero(lock, sizeof(*lock));
-	return 0;
-}
-
-int win32_pthread_initialize(void)
-{
-	HMODULE hModule = GetModuleHandleW(L"kernel32");
-
-	if (hModule) {
-		win32_srwlock_initialize = (win32_srwlock_fn)
-			GetProcAddress(hModule, "InitializeSRWLock");
-		win32_srwlock_acquire_shared = (win32_srwlock_fn)
-			GetProcAddress(hModule, "AcquireSRWLockShared");
-		win32_srwlock_release_shared = (win32_srwlock_fn)
-			GetProcAddress(hModule, "ReleaseSRWLockShared");
-		win32_srwlock_acquire_exclusive = (win32_srwlock_fn)
-			GetProcAddress(hModule, "AcquireSRWLockExclusive");
-		win32_srwlock_release_exclusive = (win32_srwlock_fn)
-			GetProcAddress(hModule, "ReleaseSRWLockExclusive");
-	}
-
 	return 0;
 }

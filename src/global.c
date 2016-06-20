@@ -132,7 +132,7 @@ static int synchronized_threads_init(void)
 
 	_tls_index = TlsAlloc();
 
-	win32_pthread_initialize();
+	git_threads_init();
 
 	if (git_mutex_init(&git__mwindow_mutex))
 		return -1;

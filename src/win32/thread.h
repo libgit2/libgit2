@@ -35,6 +35,8 @@ typedef struct {
 	} native;
 } git_rwlock;
 
+int git_threads_init(void);
+
 int git_thread_create(git_thread *GIT_RESTRICT,
 	void *(*) (void *),
 	void *GIT_RESTRICT);
@@ -56,7 +58,5 @@ int git_rwlock_rdunlock(git_rwlock *);
 int git_rwlock_wrlock(git_rwlock *);
 int git_rwlock_wrunlock(git_rwlock *);
 int git_rwlock_free(git_rwlock *);
-
-extern int win32_pthread_initialize(void);
 
 #endif /* INCLUDE_win32_thread_h__ */
