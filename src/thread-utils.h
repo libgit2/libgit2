@@ -41,16 +41,7 @@ typedef git_atomic git_atomic_ssize;
 #ifdef GIT_THREADS
 
 #if !defined(GIT_WIN32)
-
-typedef struct {
-	pthread_t thread;
-} git_thread;
-
-#define git_thread_create(git_thread_ptr, attr, start_routine, arg) \
-	pthread_create(&(git_thread_ptr)->thread, attr, start_routine, arg)
-#define git_thread_join(git_thread_ptr, status) \
-	pthread_join((git_thread_ptr)->thread, status)
-
+#   include "unix/pthread.h"
 #endif
 
 /* Pthreads Mutex */
@@ -178,7 +169,7 @@ GIT_INLINE(int64_t) git_atomic64_add(git_atomic64 *a, int64_t addend)
 #else
 
 #define git_thread unsigned int
-#define git_thread_create(thread, attr, start_routine, arg) 0
+#define git_thread_create(thread, start_routine, arg) 0
 #define git_thread_join(id, status) (void)0
 
 /* Pthreads Mutex */
