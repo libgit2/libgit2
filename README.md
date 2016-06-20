@@ -235,9 +235,15 @@ we can add it to the list.
 How Can I Contribute?
 ==================================
 
-Check the [contribution guidelines](CONTRIBUTING.md) to understand our
-workflow, the libgit2 [coding conventions](CONVENTIONS.md), and our list of
-[good starting projects](PROJECTS.md).
+We welcome new contributors!  We have a number of issues marked as
+["up for grabs"](https://github.com/libgit2/libgit2/issues?q=is%3Aissue+is%3Aopen+label%3A%22up+for+grabs%22)
+and
+["easy fix"](https://github.com/libgit2/libgit2/issues?utf8=✓&q=is%3Aissue+is%3Aopen+label%3A%22easy+fix%22)
+that are good places to jump in and get started.  There's much more detailed
+information in our list of [outstanding projects](PROJECTS.md).
+
+Please be sure to check the [contribution guidelines](CONTRIBUTING.md) to
+understand our workflow, and the libgit2 [coding conventions](CONVENTIONS.md).
 
 License
 ==================================
