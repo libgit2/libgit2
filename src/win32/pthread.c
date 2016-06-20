@@ -172,12 +172,8 @@ static win32_srwlock_fn win32_srwlock_release_shared;
 static win32_srwlock_fn win32_srwlock_acquire_exclusive;
 static win32_srwlock_fn win32_srwlock_release_exclusive;
 
-int pthread_rwlock_init(
-	pthread_rwlock_t *GIT_RESTRICT lock,
-	const pthread_rwlockattr_t *GIT_RESTRICT attr)
+int git_rwlock_init(git_rwlock *GIT_RESTRICT lock)
 {
-	GIT_UNUSED(attr);
-
 	if (win32_srwlock_initialize)
 		win32_srwlock_initialize(&lock->native.srwl);
 	else
@@ -186,7 +182,7 @@ int pthread_rwlock_init(
 	return 0;
 }
 
-int pthread_rwlock_rdlock(pthread_rwlock_t *lock)
+int git_rwlock_rdlock(git_rwlock *lock)
 {
 	if (win32_srwlock_acquire_shared)
 		win32_srwlock_acquire_shared(&lock->native.srwl);
@@ -196,7 +192,7 @@ int pthread_rwlock_rdlock(pthread_rwlock_t *lock)
 	return 0;
 }
 
-int pthread_rwlock_rdunlock(pthread_rwlock_t *lock)
+int git_rwlock_rdunlock(git_rwlock *lock)
 {
 	if (win32_srwlock_release_shared)
 		win32_srwlock_release_shared(&lock->native.srwl);
@@ -206,7 +202,7 @@ int pthread_rwlock_rdunlock(pthread_rwlock_t *lock)
 	return 0;
 }
 
-int pthread_rwlock_wrlock(pthread_rwlock_t *lock)
+int git_rwlock_wrlock(git_rwlock *lock)
 {
 	if (win32_srwlock_acquire_exclusive)
 		win32_srwlock_acquire_exclusive(&lock->native.srwl);
@@ -216,7 +212,7 @@ int pthread_rwlock_wrlock(pthread_rwlock_t *lock)
 	return 0;
 }
 
-int pthread_rwlock_wrunlock(pthread_rwlock_t *lock)
+int git_rwlock_wrunlock(git_rwlock *lock)
 {
 	if (win32_srwlock_release_exclusive)
 		win32_srwlock_release_exclusive(&lock->native.srwl);
@@ -226,7 +222,7 @@ int pthread_rwlock_wrunlock(pthread_rwlock_t *lock)
 	return 0;
 }
 
-int pthread_rwlock_destroy(pthread_rwlock_t *lock)
+int git_rwlock_free(git_rwlock *lock)
 {
 	if (!win32_srwlock_initialize)
 		DeleteCriticalSection(&lock->native.csec);

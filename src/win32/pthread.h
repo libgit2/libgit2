@@ -38,7 +38,7 @@ typedef struct {
 		GIT_SRWLOCK srwl;
 		CRITICAL_SECTION csec;
 	} native;
-} pthread_rwlock_t;
+} git_rwlock;
 
 #define PTHREAD_MUTEX_INITIALIZER  {(void*)-1}
 
@@ -59,14 +59,12 @@ int git_cond_signal(git_cond *);
 
 int pthread_num_processors_np(void);
 
-int pthread_rwlock_init(
-	pthread_rwlock_t *GIT_RESTRICT lock,
-	const pthread_rwlockattr_t *GIT_RESTRICT attr);
-int pthread_rwlock_rdlock(pthread_rwlock_t *);
-int pthread_rwlock_rdunlock(pthread_rwlock_t *);
-int pthread_rwlock_wrlock(pthread_rwlock_t *);
-int pthread_rwlock_wrunlock(pthread_rwlock_t *);
-int pthread_rwlock_destroy(pthread_rwlock_t *);
+int git_rwlock_init(git_rwlock *GIT_RESTRICT lock);
+int git_rwlock_rdlock(git_rwlock *);
+int git_rwlock_rdunlock(git_rwlock *);
+int git_rwlock_wrlock(git_rwlock *);
+int git_rwlock_wrunlock(git_rwlock *);
+int git_rwlock_free(git_rwlock *);
 
 extern int win32_pthread_initialize(void);
 
