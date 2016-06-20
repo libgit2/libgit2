@@ -5,8 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifndef GIT_PTHREAD_H
-#define GIT_PTHREAD_H
+#ifndef INCLUDE_win32_thread_h__
+#define INCLUDE_win32_thread_h__
 
 #include "../common.h"
 
@@ -59,4 +59,4 @@ int git_rwlock_free(git_rwlock *);
 
 extern int win32_pthread_initialize(void);
 
-#endif
+#endif /* INCLUDE_win32_thread_h__ */
