@@ -21,7 +21,7 @@ typedef struct {
 	void *(*proc)(void *);
 	void *param;
 	void *result;
-} git_win32_thread;
+} git_thread;
 
 typedef int pthread_mutexattr_t;
 typedef int pthread_condattr_t;
@@ -42,26 +42,10 @@ typedef struct {
 
 #define PTHREAD_MUTEX_INITIALIZER  {(void*)-1}
 
-int git_win32__thread_create(
-	git_win32_thread *GIT_RESTRICT,
-	const pthread_attr_t *GIT_RESTRICT,
+int git_thread_create(git_thread *GIT_RESTRICT,
 	void *(*) (void *),
 	void *GIT_RESTRICT);
-
-int git_win32__thread_join(
-	git_win32_thread *,
-	void **);
-
-#ifdef GIT_THREADS
-
-typedef git_win32_thread git_thread;
-
-#define git_thread_create(git_thread_ptr, attr, start_routine, arg) \
-	git_win32__thread_create(git_thread_ptr, attr, start_routine, arg)
-#define git_thread_join(git_thread_ptr, status) \
-	git_win32__thread_join(git_thread_ptr, status)
-
-#endif
+int git_thread_join(git_thread *, void **);
 
 int pthread_mutex_init(
 	pthread_mutex_t *GIT_RESTRICT mutex,

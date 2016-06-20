@@ -16,7 +16,7 @@
  * void pointer. This requires the indirection. */
 static DWORD WINAPI git_win32__threadproc(LPVOID lpParameter)
 {
-	git_win32_thread *thread = lpParameter;
+	git_thread *thread = lpParameter;
 
 	thread->result = thread->proc(thread->param);
 
@@ -25,14 +25,11 @@ static DWORD WINAPI git_win32__threadproc(LPVOID lpParameter)
 	return CLEAN_THREAD_EXIT;
 }
 
-int git_win32__thread_create(
-	git_win32_thread *GIT_RESTRICT thread,
-	const pthread_attr_t *GIT_RESTRICT attr,
+int git_thread_create(
+	git_thread *GIT_RESTRICT thread,
 	void *(*start_routine)(void*),
 	void *GIT_RESTRICT arg)
 {
-	GIT_UNUSED(attr);
-
 	thread->result = NULL;
 	thread->param = arg;
 	thread->proc = start_routine;
@@ -42,8 +39,8 @@ int git_win32__thread_create(
 	return thread->thread ? 0 : -1;
 }
 
-int git_win32__thread_join(
-	git_win32_thread *thread,
+int git_thread_join(
+	git_thread *thread,
 	void **value_ptr)
 {
 	DWORD exit;

@@ -75,7 +75,7 @@ void test_threads_refdb__iterator(void)
 		for (t = 0; t < THREADS; ++t) {
 			id[t] = t;
 #ifdef GIT_THREADS
-			cl_git_pass(git_thread_create(&th[t], NULL, iterate_refs, &id[t]));
+			cl_git_pass(git_thread_create(&th[t], iterate_refs, &id[t]));
 #else
 			th[t] = t;
 			iterate_refs(&id[t]);
@@ -196,7 +196,7 @@ void test_threads_refdb__edit_while_iterate(void)
 		 * for now by just running on a single thread...
 		 */
 /* #ifdef GIT_THREADS */
-/*		cl_git_pass(git_thread_create(&th[t], NULL, fn, &id[t])); */
+/*		cl_git_pass(git_thread_create(&th[t], fn, &id[t])); */
 /* #else */
 		fn(&id[t]);
 /* #endif */
@@ -211,7 +211,7 @@ void test_threads_refdb__edit_while_iterate(void)
 
 	for (t = 0; t < THREADS; ++t) {
 		id[t] = t;
-		cl_git_pass(git_thread_create(&th[t], NULL, iterate_refs, &id[t]));
+		cl_git_pass(git_thread_create(&th[t], iterate_refs, &id[t]));
 	}
 
 	for (t = 0; t < THREADS; ++t) {
