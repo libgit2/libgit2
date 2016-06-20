@@ -57,8 +57,6 @@ int git_cond_free(git_cond *);
 int git_cond_wait(git_cond *, git_mutex *);
 int git_cond_signal(git_cond *);
 
-int pthread_num_processors_np(void);
-
 int git_rwlock_init(git_rwlock *GIT_RESTRICT lock);
 int git_rwlock_rdlock(git_rwlock *);
 int git_rwlock_rdunlock(git_rwlock *);
