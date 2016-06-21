@@ -547,53 +547,6 @@ static int lookup_remote_prune_config(git_remote *remote, git_config *config, co
 	return error;
 }
 
-static int update_config_refspec(const git_remote *remote, git_config *config, int direction)
-{
-	git_buf name = GIT_BUF_INIT;
-	unsigned int push;
-	const char *dir;
-	size_t i;
-	int error = 0;
-	const char *cname;
-
-	push = direction == GIT_DIRECTION_PUSH;
-	dir = push ? "push" : "fetch";
-
-	if (git_buf_printf(&name, "remote.%s.%s", remote->name, dir) < 0)
-		return -1;
-	cname = git_buf_cstr(&name);
-
-	/* Clear out the existing config */
-	while (!error)
-		error = git_config_delete_multivar(config, cname, ".*");
-
-	if (error != GIT_ENOTFOUND)
-		return error;
-
-	for (i = 0; i < remote->refspecs.length; i++) {
-		git_refspec *spec = git_vector_get(&remote->refspecs, i);
-
-		if (spec->push != push)
-			continue;
-
-		// "$^" is a unmatcheable regexp: it will not match anything at all, so
-		// all values will be considered new and we will not replace any
-		// present value.
-		if ((error = git_config_set_multivar(
-				config, cname, "$^", spec->string)) < 0) {
-			goto cleanup;
-		}
-	}
-
-	giterr_clear();
-	error = 0;
-
-cleanup:
-	git_buf_free(&name);
-
-	return error;
-}
-
 const char *git_remote_name(const git_remote *remote)
 {
 	assert(remote);
@@ -2101,34 +2054,6 @@ int git_remote_add_fetch(git_repository *repo, const char *remote, const char *r
 int git_remote_add_push(git_repository *repo, const char *remote, const char *refspec)
 {
 	return write_add_refspec(repo, remote, refspec, false);
-}
-
-static int set_refspecs(git_remote *remote, git_strarray *array, int push)
-{
-	git_vector *vec = &remote->refspecs;
-	git_refspec *spec;
-	size_t i;
-
-	/* Start by removing any refspecs of the same type */
-	for (i = 0; i < vec->length; i++) {
-		spec = git_vector_get(vec, i);
-		if (spec->push != push)
-			continue;
-
-		git_refspec__free(spec);
-		git__free(spec);
-		git_vector_remove(vec, i);
-		i--;
-	}
-
-	/* And now we add the new ones */
-
-	for (i = 0; i < array->count; i++) {
-		if (add_refspec(remote, array->strings[i], !push) < 0)
-			return -1;
-	}
-
-	return 0;
 }
 
 static int copy_refspecs(git_strarray *array, const git_remote *remote, unsigned int push)

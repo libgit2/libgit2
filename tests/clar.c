@@ -409,7 +409,7 @@ clar_test_init(int argc, char **argv)
 }
 
 int
-clar_test_run()
+clar_test_run(void)
 {
 	if (_clar.argc > 1)
 		clar_parse_args(_clar.argc, _clar.argv);
@@ -424,7 +424,7 @@ clar_test_run()
 }
 
 void
-clar_test_shutdown()
+clar_test_shutdown(void)
 {
 	clar_print_shutdown(
 		_clar.tests_ran,

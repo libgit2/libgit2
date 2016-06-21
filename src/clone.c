@@ -461,14 +461,6 @@ int git_clone_init_options(git_clone_options *opts, unsigned int version)
 	return 0;
 }
 
-static const char *repository_base(git_repository *repo)
-{
-	if (git_repository_is_bare(repo))
-		return git_repository_path(repo);
-
-	return git_repository_workdir(repo);
-}
-
 static bool can_link(const char *src, const char *dst, int link)
 {
 #ifdef GIT_WIN32
