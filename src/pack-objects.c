@@ -1186,7 +1186,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 		git_mutex_init(&p[i].mutex);
 		git_cond_init(&p[i].cond);
 
-		ret = git_thread_create(&p[i].thread, NULL,
+		ret = git_thread_create(&p[i].thread,
 					threaded_find_deltas, &p[i]);
 		if (ret) {
 			giterr_set(GITERR_THREAD, "unable to create thread");

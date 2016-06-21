@@ -5,10 +5,18 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "pthread.h"
+#include "thread.h"
 #include "../global.h"
 
 #define CLEAN_THREAD_EXIT 0x6F012842
+
+typedef void (WINAPI *win32_srwlock_fn)(GIT_SRWLOCK *);
+
+static win32_srwlock_fn win32_srwlock_initialize;
+static win32_srwlock_fn win32_srwlock_acquire_shared;
+static win32_srwlock_fn win32_srwlock_release_shared;
+static win32_srwlock_fn win32_srwlock_acquire_exclusive;
+static win32_srwlock_fn win32_srwlock_release_exclusive;
 
 /* The thread procedure stub used to invoke the caller's procedure
  * and capture the return value for later collection. Windows will
@@ -16,7 +24,7 @@
  * void pointer. This requires the indirection. */
 static DWORD WINAPI git_win32__threadproc(LPVOID lpParameter)
 {
-	git_win32_thread *thread = lpParameter;
+	git_thread *thread = lpParameter;
 
 	thread->result = thread->proc(thread->param);
 
@@ -25,14 +33,31 @@ static DWORD WINAPI git_win32__threadproc(LPVOID lpParameter)
 	return CLEAN_THREAD_EXIT;
 }
 
-int git_win32__thread_create(
-	git_win32_thread *GIT_RESTRICT thread,
-	const pthread_attr_t *GIT_RESTRICT attr,
+int git_threads_init(void)
+{
+	HMODULE hModule = GetModuleHandleW(L"kernel32");
+
+	if (hModule) {
+		win32_srwlock_initialize = (win32_srwlock_fn)
+			GetProcAddress(hModule, "InitializeSRWLock");
+		win32_srwlock_acquire_shared = (win32_srwlock_fn)
+			GetProcAddress(hModule, "AcquireSRWLockShared");
+		win32_srwlock_release_shared = (win32_srwlock_fn)
+			GetProcAddress(hModule, "ReleaseSRWLockShared");
+		win32_srwlock_acquire_exclusive = (win32_srwlock_fn)
+			GetProcAddress(hModule, "AcquireSRWLockExclusive");
+		win32_srwlock_release_exclusive = (win32_srwlock_fn)
+			GetProcAddress(hModule, "ReleaseSRWLockExclusive");
+	}
+
+	return 0;
+}
+
+int git_thread_create(
+	git_thread *GIT_RESTRICT thread,
 	void *(*start_routine)(void*),
 	void *GIT_RESTRICT arg)
 {
-	GIT_UNUSED(attr);
-
 	thread->result = NULL;
 	thread->param = arg;
 	thread->proc = start_routine;
@@ -42,8 +67,8 @@ int git_win32__thread_create(
 	return thread->thread ? 0 : -1;
 }
 
-int git_win32__thread_join(
-	git_win32_thread *thread,
+int git_thread_join(
+	git_thread *thread,
 	void **value_ptr)
 {
 	DWORD exit;
@@ -70,39 +95,32 @@ int git_win32__thread_join(
 	return 0;
 }
 
-int pthread_mutex_init(
-	pthread_mutex_t *GIT_RESTRICT mutex,
-	const pthread_mutexattr_t *GIT_RESTRICT mutexattr)
+int git_mutex_init(git_mutex *GIT_RESTRICT mutex)
 {
-	GIT_UNUSED(mutexattr);
 	InitializeCriticalSection(mutex);
 	return 0;
 }
 
-int pthread_mutex_destroy(pthread_mutex_t *mutex)
+int git_mutex_free(git_mutex *mutex)
 {
 	DeleteCriticalSection(mutex);
 	return 0;
 }
 
-int pthread_mutex_lock(pthread_mutex_t *mutex)
+int git_mutex_lock(git_mutex *mutex)
 {
 	EnterCriticalSection(mutex);
 	return 0;
 }
 
-int pthread_mutex_unlock(pthread_mutex_t *mutex)
+int git_mutex_unlock(git_mutex *mutex)
 {
 	LeaveCriticalSection(mutex);
 	return 0;
 }
 
-int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr)
+int git_cond_init(git_cond *cond)
 {
-	/* We don't support non-default attributes. */
-	if (attr)
-		return EINVAL;
-
 	/* This is an auto-reset event. */
 	*cond = CreateEventW(NULL, FALSE, FALSE, NULL);
 	assert(*cond);
@@ -112,7 +130,7 @@ int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr)
 	return *cond ? 0 : ENOMEM;
 }
 
-int pthread_cond_destroy(pthread_cond_t *cond)
+int git_cond_free(git_cond *cond)
 {
 	BOOL closed;
 
@@ -127,7 +145,7 @@ int pthread_cond_destroy(pthread_cond_t *cond)
 	return 0;
 }
 
-int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
+int git_cond_wait(git_cond *cond, git_mutex *mutex)
 {
 	int error;
 	DWORD wait_result;
@@ -136,7 +154,7 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
 		return EINVAL;
 
 	/* The caller must be holding the mutex. */
-	error = pthread_mutex_unlock(mutex);
+	error = git_mutex_unlock(mutex);
 
 	if (error)
 		return error;
@@ -145,10 +163,10 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
 	assert(WAIT_OBJECT_0 == wait_result);
 	GIT_UNUSED(wait_result);
 
-	return pthread_mutex_lock(mutex);
+	return git_mutex_lock(mutex);
 }
 
-int pthread_cond_signal(pthread_cond_t *cond)
+int git_cond_signal(git_cond *cond)
 {
 	BOOL signaled;
 
@@ -162,36 +180,8 @@ int pthread_cond_signal(pthread_cond_t *cond)
 	return 0;
 }
 
-/* pthread_cond_broadcast is not implemented because doing so with just
- * Win32 events is quite complicated, and no caller in libgit2 uses it
- * yet.
- */
-int pthread_num_processors_np(void)
+int git_rwlock_init(git_rwlock *GIT_RESTRICT lock)
 {
-	DWORD_PTR p, s;
-	int n = 0;
-
-	if (GetProcessAffinityMask(GetCurrentProcess(), &p, &s))
-		for (; p; p >>= 1)
-			n += p&1;
-
-	return n ? n : 1;
-}
-
-typedef void (WINAPI *win32_srwlock_fn)(GIT_SRWLOCK *);
-
-static win32_srwlock_fn win32_srwlock_initialize;
-static win32_srwlock_fn win32_srwlock_acquire_shared;
-static win32_srwlock_fn win32_srwlock_release_shared;
-static win32_srwlock_fn win32_srwlock_acquire_exclusive;
-static win32_srwlock_fn win32_srwlock_release_exclusive;
-
-int pthread_rwlock_init(
-	pthread_rwlock_t *GIT_RESTRICT lock,
-	const pthread_rwlockattr_t *GIT_RESTRICT attr)
-{
-	GIT_UNUSED(attr);
-
 	if (win32_srwlock_initialize)
 		win32_srwlock_initialize(&lock->native.srwl);
 	else
@@ -200,7 +190,7 @@ int pthread_rwlock_init(
 	return 0;
 }
 
-int pthread_rwlock_rdlock(pthread_rwlock_t *lock)
+int git_rwlock_rdlock(git_rwlock *lock)
 {
 	if (win32_srwlock_acquire_shared)
 		win32_srwlock_acquire_shared(&lock->native.srwl);
@@ -210,7 +200,7 @@ int pthread_rwlock_rdlock(pthread_rwlock_t *lock)
 	return 0;
 }
 
-int pthread_rwlock_rdunlock(pthread_rwlock_t *lock)
+int git_rwlock_rdunlock(git_rwlock *lock)
 {
 	if (win32_srwlock_release_shared)
 		win32_srwlock_release_shared(&lock->native.srwl);
@@ -220,7 +210,7 @@ int pthread_rwlock_rdunlock(pthread_rwlock_t *lock)
 	return 0;
 }
 
-int pthread_rwlock_wrlock(pthread_rwlock_t *lock)
+int git_rwlock_wrlock(git_rwlock *lock)
 {
 	if (win32_srwlock_acquire_exclusive)
 		win32_srwlock_acquire_exclusive(&lock->native.srwl);
@@ -230,7 +220,7 @@ int pthread_rwlock_wrlock(pthread_rwlock_t *lock)
 	return 0;
 }
 
-int pthread_rwlock_wrunlock(pthread_rwlock_t *lock)
+int git_rwlock_wrunlock(git_rwlock *lock)
 {
 	if (win32_srwlock_release_exclusive)
 		win32_srwlock_release_exclusive(&lock->native.srwl);
@@ -240,30 +230,10 @@ int pthread_rwlock_wrunlock(pthread_rwlock_t *lock)
 	return 0;
 }
 
-int pthread_rwlock_destroy(pthread_rwlock_t *lock)
+int git_rwlock_free(git_rwlock *lock)
 {
 	if (!win32_srwlock_initialize)
 		DeleteCriticalSection(&lock->native.csec);
 	git__memzero(lock, sizeof(*lock));
-	return 0;
-}
-
-int win32_pthread_initialize(void)
-{
-	HMODULE hModule = GetModuleHandleW(L"kernel32");
-
-	if (hModule) {
-		win32_srwlock_initialize = (win32_srwlock_fn)
-			GetProcAddress(hModule, "InitializeSRWLock");
-		win32_srwlock_acquire_shared = (win32_srwlock_fn)
-			GetProcAddress(hModule, "AcquireSRWLockShared");
-		win32_srwlock_release_shared = (win32_srwlock_fn)
-			GetProcAddress(hModule, "ReleaseSRWLockShared");
-		win32_srwlock_acquire_exclusive = (win32_srwlock_fn)
-			GetProcAddress(hModule, "AcquireSRWLockExclusive");
-		win32_srwlock_release_exclusive = (win32_srwlock_fn)
-			GetProcAddress(hModule, "ReleaseSRWLockExclusive");
-	}
-
 	return 0;
 }
