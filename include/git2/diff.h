@@ -167,6 +167,10 @@ typedef enum {
 	/** Include unreadable files in the diff */
 	GIT_DIFF_INCLUDE_UNREADABLE_AS_UNTRACKED = (1u << 17),
 
+	/** If pathspecs hold a simple pathlist (i.e. GIT_DIFF_DISABLE_PATHSPEC_MATCH
+	 * is set), only match this list non-recursively */
+	GIT_DIFF_OPT_DONT_RECURSE = (1u << 18),
+
 	/*
 	 * Options controlling how output will be generated
 	 */

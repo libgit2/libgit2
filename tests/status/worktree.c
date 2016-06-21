@@ -1280,3 +1280,63 @@ void test_status_worktree__with_directory_in_pathlist(void)
 	git_status_list_free(statuslist);
 }
 
+void test_status_worktree__non_recursive(void)
+{
+	git_repository *repo = cl_git_sandbox_init("testrepo2");
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	git_status_list *statuslist;
+	const git_status_entry *status;
+
+	opts.pathspec.count = 1;
+	opts.pathspec.strings = malloc(opts.pathspec.count * sizeof(char *));
+	opts.pathspec.strings[0] = "subdir/";
+	opts.flags =
+			GIT_STATUS_OPT_DEFAULTS | GIT_STATUS_OPT_INCLUDE_UNMODIFIED |
+			GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH | GIT_STATUS_OPT_DONT_RECURSE |
+			GIT_STATUS_OPT_SORT_CASE_SENSITIVELY;
+
+	opts.show = GIT_STATUS_SHOW_INDEX_ONLY;
+	git_status_list_new(&statuslist, repo, &opts);
+
+	cl_assert_equal_i(2, git_status_list_entrycount(statuslist));
+
+	status = git_status_byindex(statuslist, 0);
+	cl_assert_equal_i(0, status->status);
+	cl_assert_equal_s("subdir/README", status->head_to_index->old_file.path);
+
+	status = git_status_byindex(statuslist, 1);
+	cl_assert_equal_i(0, status->status);
+	cl_assert_equal_s("subdir/new.txt", status->head_to_index->old_file.path);
+
+	git_status_list_free(statuslist);
+
+	opts.show = GIT_STATUS_SHOW_WORKDIR_ONLY;
+	git_status_list_new(&statuslist, repo, &opts);
+
+	cl_assert_equal_i(2, git_status_list_entrycount(statuslist));
+
+	status = git_status_byindex(statuslist, 0);
+	cl_assert_equal_i(0, status->status);
+	cl_assert_equal_s("subdir/README", status->index_to_workdir->old_file.path);
+
+	status = git_status_byindex(statuslist, 1);
+	cl_assert_equal_i(0, status->status);
+	cl_assert_equal_s("subdir/new.txt", status->index_to_workdir->old_file.path);
+
+	git_status_list_free(statuslist);
+
+	opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
+	git_status_list_new(&statuslist, repo, &opts);
+
+	cl_assert_equal_i(2, git_status_list_entrycount(statuslist));
+
+	status = git_status_byindex(statuslist, 0);
+	cl_assert_equal_i(0, status->status);
+	cl_assert_equal_s("subdir/README", status->index_to_workdir->old_file.path);
+
+	status = git_status_byindex(statuslist, 1);
+	cl_assert_equal_i(0, status->status);
+	cl_assert_equal_s("subdir/new.txt", status->index_to_workdir->old_file.path);
+
+	git_status_list_free(statuslist);
+}

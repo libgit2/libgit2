@@ -217,6 +217,21 @@ GIT_INLINE(bool) iterator_has_ended(git_iterator *iter, const char *path)
 	return iter->ended;
 }
 
+GIT_INLINE(int) get_parent_path_length(const char *path) {
+	int i = strlen(path) - 1;
+	if (path[i] == '/')
+		i--;
+
+	if (i == 0)
+		return -1;
+
+	for (; i > 0; i--)
+		if (path[i] == '/')
+			break;
+
+	return i;
+}
+
 /* walker for the index and tree iterator that allows it to walk the sorted
  * pathlist entries alongside sorted iterator entries.
  */
@@ -249,6 +264,17 @@ static bool iterator_pathlist_next_is(git_iterator *iter, const char *path)
 		/* see if the pathlist entry is a prefix of this path */
 		cmp = iter->strncomp(p, path, cmp_len);
 
+		/* if it is and the pathlist should be treated as non-recursive,
+		 * check whether this pathlist entry is matching exactly or is an _immediate_
+		 * parent of the path. if it's not, then this pathlist entry can be
+		 * considered as sorting _before_ the path
+		 */
+		if (cmp == 0 && (iter->flags & GIT_ITERATOR_PATHLIST_NON_RECURSIVE) != 0) {
+			if (cmp_len != p_len || (cmp_len != path_len && cmp_len != get_parent_path_length(path))) {
+				cmp = -1;
+			}
+		}
+
 		/* prefix match - see if there's an exact match, or if we were
 		 * given a path that matches the directory
 		 */
@@ -256,10 +282,10 @@ static bool iterator_pathlist_next_is(git_iterator *iter, const char *path)
 			/* if this pathlist entry is not suffixed with a '/' then
 			 * it matches a path that is a file or a directory.
 			 * (eg, pathlist = "foo" and path is "foo" or "foo/" or
-			 * "foo/something")
+			 * "foo/bar/something")
 			 */
 			if (p[cmp_len] == '\0' &&
-				(path[cmp_len] == '\0' || path[cmp_len] == '/'))
+				(path[cmp_len] == '\0' || path[cmp_len] == '/' || strlen(p) == 0))
 				return true;
 
 			/* if this pathlist entry _is_ suffixed with a '/' then
@@ -318,6 +344,9 @@ static iterator_pathlist_search_t iterator_pathlist_search(
 
 		return ITERATOR_PATHLIST_IS_FILE;
 	}
+
+	if (path[path_len - 1] == '/')
+		path_len--;
 
 	/* at this point, the path we're examining may be a directory (though we
 	 * don't know that yet, since we're avoiding a stat unless it's necessary)
@@ -1223,6 +1252,8 @@ GIT_INLINE(bool) filesystem_iterator_examine_path(
 		/* if our parent was explicitly included, so too are we */
 		if (frame_entry && frame_entry->match != ITERATOR_PATHLIST_IS_PARENT)
 			match = ITERATOR_PATHLIST_FULL;
+		else if (strlen(iter->base.pathlist.contents[0]) == 0)
+			match = ITERATOR_PATHLIST_FULL;
 		else
 			match = iterator_pathlist_search(&iter->base, path, path_len);
 
@@ -1495,6 +1526,9 @@ static int filesystem_iterator_advance(
 {
 	filesystem_iterator *iter = (filesystem_iterator *)i;
 	int error = 0;
+	bool report;
+	git_buf search_path = GIT_BUF_INIT;
+	iterator_pathlist_search_t result;
 
 	iter->base.flags |= GIT_ITERATOR_FIRST_ACCESS;
 
@@ -1518,6 +1552,26 @@ static int filesystem_iterator_advance(
 		entry = frame->entries.contents[frame->next_idx];
 		frame->next_idx++;
 
+		if ((iter->base.flags & GIT_ITERATOR_PATHLIST_NON_RECURSIVE) != 0) {
+			git_buf_set(&search_path, entry->path, entry->path[entry->path_len - 1] == '/' ? entry->path_len - 1 :entry->path_len);
+
+			result = iterator_pathlist_search(i, search_path.ptr, search_path.size);
+			if ((result == ITERATOR_PATHLIST_NONE || result == ITERATOR_PATHLIST_IS_PARENT) && entry->path_len > 0) {
+				git_path_dirname_r(&search_path, search_path.ptr);
+				if (search_path.size == 1 && search_path.ptr[0] == '.')
+					git_buf_set(&search_path, "", 0);
+				result = iterator_pathlist_search(i, search_path.ptr, search_path.size);
+			}
+			if (result == ITERATOR_PATHLIST_NONE)
+				continue;
+			else if (result == ITERATOR_PATHLIST_IS_PARENT)
+				report = false;
+			else
+				report = true;
+		}
+		else
+			report = true;
+
 		if (S_ISDIR(entry->st.st_mode)) {
 			if (iterator__do_autoexpand(iter)) {
 				error = filesystem_iterator_frame_push(iter, entry);
@@ -1535,6 +1589,9 @@ static int filesystem_iterator_advance(
 				continue;
 		}
 
+		if (!report)
+			continue;
+
 		filesystem_iterator_set_current(iter, entry);
 		break;
 	}
@@ -1542,6 +1599,7 @@ static int filesystem_iterator_advance(
 	if (out)
 		*out = (error == 0) ? &iter->entry : NULL;
 
+	git_buf_free(&search_path);
 	return error;
 }
 

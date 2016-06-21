@@ -1351,7 +1351,8 @@ int git_diff_tree_to_index(
 	const git_diff_options *opts)
 {
 	git_iterator_flag_t iflag = GIT_ITERATOR_DONT_IGNORE_CASE |
-		GIT_ITERATOR_INCLUDE_CONFLICTS;
+	                            GIT_ITERATOR_INCLUDE_CONFLICTS |
+	                            (opts != NULL && (opts->flags & GIT_DIFF_OPT_DONT_RECURSE) ? GIT_ITERATOR_PATHLIST_NON_RECURSIVE : 0);
 	bool index_ignore_case = false;
 	int error = 0;
 
@@ -1381,6 +1382,7 @@ int git_diff_index_to_workdir(
 	const git_diff_options *opts)
 {
 	int error = 0;
+	int recurse_flags = opts != NULL && (opts->flags & GIT_DIFF_OPT_DONT_RECURSE) != 0 ? GIT_ITERATOR_PATHLIST_NON_RECURSIVE : 0;
 
 	assert(diff && repo);
 
@@ -1389,10 +1391,10 @@ int git_diff_index_to_workdir(
 
 	DIFF_FROM_ITERATORS(
 		git_iterator_for_index(&a, repo, index, &a_opts),
-		GIT_ITERATOR_INCLUDE_CONFLICTS,
+		GIT_ITERATOR_INCLUDE_CONFLICTS | recurse_flags,
 
 		git_iterator_for_workdir(&b, repo, index, NULL, &b_opts),
-		GIT_ITERATOR_DONT_AUTOEXPAND
+		GIT_ITERATOR_DONT_AUTOEXPAND | recurse_flags
 	);
 
 	if (!error && DIFF_FLAG_IS_SET(*diff, GIT_DIFF_UPDATE_INDEX) && (*diff)->index_updated)

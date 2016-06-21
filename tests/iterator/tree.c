@@ -1078,3 +1078,115 @@ void test_iterator_tree__pathlist_no_match(void)
 	git_vector_free(&filelist);
 }
 
+void test_iterator_tree__pathlist_with_non_recursive_root_directory(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_vector filelist;
+	git_tree *tree;
+
+	const char *expected[] = { "README", "new.txt" };
+	size_t expected_len = 2;
+
+	const char *expected_with_trees[] = { "README", "new.txt", "subdir/" };
+	size_t expected_with_trees_len = 3;
+
+	g_repo = cl_git_sandbox_init("testrepo2");
+	git_repository_head_tree(&tree, g_repo);
+
+	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
+	cl_git_pass(git_vector_insert(&filelist, ""));
+
+	i_opts.pathlist.strings = (char **)filelist.contents;
+	i_opts.pathlist.count = filelist.length;
+	i_opts.flags |= GIT_ITERATOR_DONT_IGNORE_CASE | GIT_ITERATOR_PATHLIST_NON_RECURSIVE;
+
+	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
+	expect_iterator_items(i, expected_len, expected, expected_len, expected);
+	git_iterator_free(i);
+
+	i_opts.flags |= GIT_ITERATOR_INCLUDE_TREES;
+
+	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
+	expect_iterator_items(i, expected_with_trees_len, expected_with_trees, expected_with_trees_len, expected_with_trees);
+	git_iterator_free(i);
+
+	git_tree_free(tree);
+	git_vector_free(&filelist);
+}
+
+void test_iterator_tree__pathlist_with_non_recursive_mid_directory(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_vector filelist;
+	git_tree *tree;
+
+	const char *expected[] = { "subdir/README", "subdir/new.txt" };
+	size_t expected_len = 2;
+
+	const char *expected_with_trees[] = { "subdir/", "subdir/README", "subdir/new.txt",  "subdir/subdir2/" };
+	size_t expected_with_trees_len = 4;
+
+	g_repo = cl_git_sandbox_init("testrepo2");
+	git_repository_head_tree(&tree, g_repo);
+
+	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
+	cl_git_pass(git_vector_insert(&filelist, "subdir/"));
+
+	i_opts.pathlist.strings = (char **)filelist.contents;
+	i_opts.pathlist.count = filelist.length;
+	i_opts.flags |= GIT_ITERATOR_DONT_IGNORE_CASE | GIT_ITERATOR_PATHLIST_NON_RECURSIVE;
+
+	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
+	expect_iterator_items(i, expected_len, expected, expected_len, expected);
+	git_iterator_free(i);
+
+	i_opts.flags |= GIT_ITERATOR_INCLUDE_TREES;
+
+	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
+	expect_iterator_items(i, expected_with_trees_len, expected_with_trees, expected_with_trees_len, expected_with_trees);
+	git_iterator_free(i);
+
+	git_tree_free(tree);
+	git_vector_free(&filelist);
+}
+
+void test_iterator_tree__pathlist_with_multiple_non_recursive_directories(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_vector filelist;
+	git_tree *tree;
+
+	const char *expected[] = { "README", "new.txt", "subdir/subdir2/README", "subdir/subdir2/new.txt" };
+	size_t expected_len = 4;
+
+	const char *expected_with_trees[] = { "README", "new.txt", "subdir/", "subdir/subdir2/", "subdir/subdir2/README", "subdir/subdir2/new.txt" };
+	size_t expected_with_trees_len = 6;
+
+	g_repo = cl_git_sandbox_init("testrepo2");
+	git_repository_head_tree(&tree, g_repo);
+
+	cl_git_pass(git_vector_init(&filelist, 100, &git__strcmp_cb));
+	cl_git_pass(git_vector_insert(&filelist, ""));
+	cl_git_pass(git_vector_insert(&filelist, "subdir/subdir2"));
+
+	i_opts.pathlist.strings = (char **)filelist.contents;
+	i_opts.pathlist.count = filelist.length;
+	i_opts.flags |= GIT_ITERATOR_DONT_IGNORE_CASE | GIT_ITERATOR_PATHLIST_NON_RECURSIVE;
+
+	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
+	expect_iterator_items(i, expected_len, expected, expected_len, expected);
+	git_iterator_free(i);
+
+	i_opts.flags |= GIT_ITERATOR_INCLUDE_TREES;
+
+	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
+	expect_iterator_items(i, expected_with_trees_len, expected_with_trees, expected_with_trees_len, expected_with_trees);
+	git_iterator_free(i);
+
+	git_tree_free(tree);
+	git_vector_free(&filelist);
+}
+

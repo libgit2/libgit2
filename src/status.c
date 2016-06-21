@@ -253,6 +253,13 @@ static int status_validate_options(const git_status_options *opts)
 		return -1;
 	}
 
+	if ((opts->flags & GIT_STATUS_OPT_DONT_RECURSE) != 0 &&
+		(opts->flags & GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH) == 0) {
+		giterr_set(GITERR_INVALID, "Non-recursive status is only available "
+			"if pathspec matching has been disabled");
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -323,6 +330,8 @@ int git_status_list_new(
 		diffopt.flags = diffopt.flags | GIT_DIFF_INCLUDE_UNREADABLE;
 	if ((flags & GIT_STATUS_OPT_INCLUDE_UNREADABLE_AS_UNTRACKED) != 0)
 		diffopt.flags = diffopt.flags | GIT_DIFF_INCLUDE_UNREADABLE_AS_UNTRACKED;
+	if ((flags & GIT_STATUS_OPT_DONT_RECURSE) != 0)
+		diffopt.flags = diffopt.flags | GIT_DIFF_OPT_DONT_RECURSE;
 
 	if ((flags & GIT_STATUS_OPT_RENAMES_FROM_REWRITES) != 0)
 		findopt.flags = findopt.flags |
