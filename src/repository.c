@@ -357,6 +357,7 @@ static int find_repo(
 {
 	int error;
 	git_buf path = GIT_BUF_INIT;
+	git_buf repo_link = GIT_BUF_INIT;
 	struct stat st;
 	dev_t initial_device = 0;
 	int min_iterations;
@@ -365,7 +366,8 @@ static int find_repo(
 
 	git_buf_free(repo_path);
 
-	if ((error = git_path_prettify(&path, start_path, NULL)) < 0)
+	error = git_path_prettify(&path, start_path, NULL);
+	if (error < 0)
 		return error;
 
 	/* in_dot_git toggles each loop:
@@ -383,12 +385,13 @@ static int find_repo(
 		min_iterations = 2;
 	}
 
-	while (!error && (min_iterations || !(path.ptr[ceiling_offset] == 0 ||
-					      (flags & GIT_REPOSITORY_OPEN_NO_SEARCH)))) {
+	for (;;) {
 		if (!(flags & GIT_REPOSITORY_OPEN_NO_DOTGIT)) {
-			if (!in_dot_git)
-				if ((error = git_buf_joinpath(&path, path.ptr, DOT_GIT)) < 0)
+			if (!in_dot_git) {
+				error = git_buf_joinpath(&path, path.ptr, DOT_GIT);
+				if (error < 0)
 					break;
+			}
 			in_dot_git = !in_dot_git;
 		}
 
@@ -397,7 +400,7 @@ static int find_repo(
 			if (initial_device == 0)
 				initial_device = st.st_dev;
 			else if (st.st_dev != initial_device &&
-				(flags & GIT_REPOSITORY_OPEN_CROSS_FS) == 0)
+				 !(flags & GIT_REPOSITORY_OPEN_CROSS_FS))
 				break;
 
 			if (S_ISDIR(st.st_mode)) {
@@ -408,25 +411,22 @@ static int find_repo(
 				}
 			}
 			else if (S_ISREG(st.st_mode)) {
-				git_buf repo_link = GIT_BUF_INIT;
-
-				if (!(error = read_gitfile(&repo_link, path.ptr))) {
-					if (valid_repository_path(&repo_link)) {
-						git_buf_swap(repo_path, &repo_link);
-
-						if (link_path)
-							error = git_buf_put(link_path, 
-								path.ptr, path.size);
-					}
-
-					git_buf_free(&repo_link);
+				error = read_gitfile(&repo_link, path.ptr);
+				if (error < 0)
 					break;
+				if (valid_repository_path(&repo_link)) {
+					git_buf_swap(repo_path, &repo_link);
+
+					if (link_path)
+						error = git_buf_put(link_path, path.ptr, path.size);
 				}
-				git_buf_free(&repo_link);
+				break;
 			}
 		}
 
-		/* move up one directory level */
+		/* Move up one directory. If we're in_dot_git, we'll search the
+		 * parent itself next. If we're !in_dot_git, we'll search .git
+		 * in the parent directory next (added at the top of the loop). */
 		if (git_path_dirname_r(&path, path.ptr) < 0) {
 			error = -1;
 			break;
@@ -436,6 +436,12 @@ static int find_repo(
 		 * find the ceiling for a search. */
 		if (min_iterations && (--min_iterations == 0))
 			ceiling_offset = find_ceiling_dir_offset(path.ptr, ceiling_dirs);
+
+		/* Check if we should stop searching here. */
+		if (min_iterations == 0
+		    && (path.ptr[ceiling_offset] == 0
+			|| (flags & GIT_REPOSITORY_OPEN_NO_SEARCH)))
+			break;
 	}
 
 	if (!error && parent_path && !(flags & GIT_REPOSITORY_OPEN_BARE)) {
@@ -449,14 +455,16 @@ static int find_repo(
 			return -1;
 	}
 
-	git_buf_free(&path);
-
+	/* If we didn't find the repository, and we don't have any other error
+	 * to report, report that. */
 	if (!git_buf_len(repo_path) && !error) {
 		giterr_set(GITERR_REPOSITORY,
 			"Could not find repository from '%s'", start_path);
 		error = GIT_ENOTFOUND;
 	}
 
+	git_buf_free(&path);
+	git_buf_free(&repo_link);
 	return error;
 }
 
