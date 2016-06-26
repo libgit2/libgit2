@@ -473,3 +473,51 @@ void test_revwalk_basic__big_timestamp(void)
 	git_signature_free(sig);
 
 }
+
+/* Ensure that we correctly hide a commit that is (timewise) older
+ * than the commits that we are showing.
+ *
+ * % git rev-list 8e73b76..bd75801
+ * bd758010071961f28336333bc41e9c64c9a64866
+ */
+void test_revwalk_basic__old_hidden_commit_one(void)
+{
+	git_oid new_id, old_id, oid;
+
+	revwalk_basic_setup_walk("testrepo.git");
+
+	cl_git_pass(git_oid_fromstr(&new_id, "bd758010071961f28336333bc41e9c64c9a64866"));
+	cl_git_pass(git_revwalk_push(_walk, &new_id));
+
+	cl_git_pass(git_oid_fromstr(&old_id, "8e73b769e97678d684b809b163bebdae2911720f"));
+	cl_git_pass(git_revwalk_hide(_walk, &old_id));
+
+	cl_git_pass(git_revwalk_next(&oid, _walk));
+	cl_assert(!git_oid_streq(&oid, "bd758010071961f28336333bc41e9c64c9a64866"));
+
+	cl_git_fail_with(GIT_ITEROVER, git_revwalk_next(&oid, _walk));
+}
+
+/* Ensure that we correctly hide a commit that is (timewise) older
+ * than the commits that we are showing.
+ *
+ * % git rev-list bd75801 ^b91e763
+ * bd758010071961f28336333bc41e9c64c9a64866
+ */
+void test_revwalk_basic__old_hidden_commit_two(void)
+{
+	git_oid new_id, old_id, oid;
+
+	revwalk_basic_setup_walk("testrepo.git");
+
+	cl_git_pass(git_oid_fromstr(&new_id, "bd758010071961f28336333bc41e9c64c9a64866"));
+	cl_git_pass(git_revwalk_push(_walk, &new_id));
+
+	cl_git_pass(git_oid_fromstr(&old_id, "b91e763008b10db366442469339f90a2b8400d0a"));
+	cl_git_pass(git_revwalk_hide(_walk, &old_id));
+
+	cl_git_pass(git_revwalk_next(&oid, _walk));
+	cl_assert(!git_oid_streq(&oid, "bd758010071961f28336333bc41e9c64c9a64866"));
+
+	cl_git_fail_with(GIT_ITEROVER, git_revwalk_next(&oid, _walk));
+}
