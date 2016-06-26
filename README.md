@@ -15,18 +15,30 @@ with any kind of software without having to release its source code.
 Additionally, the example code has been released to the public domain (see the
 [separate license](examples/COPYING) for more information).
 
-* Website: [libgit2.github.com](http://libgit2.github.com)
-* StackOverflow Tag: [libgit2](http://stackoverflow.com/questions/tagged/libgit2)
-* Issues: [GitHub Issues](https://github.com/libgit2/libgit2/issues) (Right here!)
-* API documentation: <http://libgit2.github.com/libgit2/>
-* IRC: [#libgit2](irc://irc.freenode.net/libgit2) on irc.freenode.net.
-* Mailing list: The libgit2 mailing list was
-    traditionally hosted in Librelist but has been deprecated. We encourage you to
-    [use StackOverflow](http://stackoverflow.com/questions/tagged/libgit2) instead for any questions regarding
-    the library, or [open an issue](https://github.com/libgit2/libgit2/issues)
-    on GitHub for bug reports.  The mailing list archives are still available at
-    <http://librelist.com/browser/libgit2/>.
+Getting Help
+============
 
+**Join us on Slack**
+
+Visit [slack.libgit2.org](http://slack.libgit2.org/) to sign up, then join
+us in `#libgit2`.  If you prefer IRC, you can also point your client to our
+slack channel once you've registered.
+
+**Getting Help**
+
+If you have questions about the library, please be sure to check out the
+[API documentation](http://libgit2.github.com/libgit2/).  If you still have
+questions, reach out to us on Slack or post a question on 
+[StackOverflow](http://stackoverflow.com/questions/tagged/libgit2) (with the `libgit2` tag).
+
+**Reporting Bugs**
+
+Please open a [GitHub Issue](https://github.com/libgit2/libgit2/issues) and
+include as much information as possible.  If possible, provide sample code
+that illustrates the problem you're seeing.  If you're seeing a bug only
+on a specific repository, please provide a link to it if possible.
+
+We ask that you not open a GitHub Issue for help, only for bug reports.
 
 What It Can Do
 ==============
@@ -202,7 +214,6 @@ Here are the bindings to libgit2 that are currently available:
 * .NET
     * libgit2sharp <https://github.com/libgit2/libgit2sharp>
 * Node.js
-    * node-gitteh <https://github.com/libgit2/node-gitteh>
     * nodegit <https://github.com/nodegit/nodegit>
 * Objective-C
     * objective-git <https://github.com/libgit2/objective-git>
@@ -215,7 +226,7 @@ Here are the bindings to libgit2 that are currently available:
 * PHP
     * php-git <https://github.com/libgit2/php-git>
 * PowerShell
-    * GitPowerShell <https://github.com/ethomson/gitpowershell>
+    * PSGit <https://github.com/PoshCode/PSGit>
 * Python
     * pygit2 <https://github.com/libgit2/pygit2>
 * R
@@ -235,16 +246,22 @@ we can add it to the list.
 How Can I Contribute?
 ==================================
 
-Check the [contribution guidelines](CONTRIBUTING.md) to understand our
-workflow, the libgit2 [coding conventions](CONVENTIONS.md), and our list of
-[good starting projects](PROJECTS.md).
+We welcome new contributors!  We have a number of issues marked as
+["up for grabs"](https://github.com/libgit2/libgit2/issues?q=is%3Aissue+is%3Aopen+label%3A%22up+for+grabs%22)
+and
+["easy fix"](https://github.com/libgit2/libgit2/issues?utf8=✓&q=is%3Aissue+is%3Aopen+label%3A%22easy+fix%22)
+that are good places to jump in and get started.  There's much more detailed
+information in our list of [outstanding projects](PROJECTS.md).
+
+Please be sure to check the [contribution guidelines](CONTRIBUTING.md) to
+understand our workflow, and the libgit2 [coding conventions](CONVENTIONS.md).
 
 License
 ==================================
 
 `libgit2` is under GPL2 **with linking exception**. This means you can link to
 and use the library from any program, proprietary or open source; paid or
-gratis.  However, you cannot modify libgit2 and distribute it without
-supplying the source.
+gratis.  However, if you modify libgit2 itself, you must distribute the
+source to your modified version of libgit2.
 
 See the [COPYING file](COPYING) for the full license text.
