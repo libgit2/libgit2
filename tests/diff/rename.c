@@ -1702,3 +1702,49 @@ void test_diff_rename__blank_files_not_renamed_when_not_ignoring_whitespace(void
 	expect_files_not_renamed("", "\n\n\n\n",  GIT_DIFF_FIND_DONT_IGNORE_WHITESPACE);
 	expect_files_not_renamed("\n\n\n\n", "\r\n\r\n\r\n",  GIT_DIFF_FIND_DONT_IGNORE_WHITESPACE);
 }
+
+/* test that 100% renames and copies emit the correct patch file
+ * git diff --find-copies-harder -M100 -B100 \
+ *          31e47d8c1fa36d7f8d537b96158e3f024de0a9f2 \
+ *          2bc7f351d20b53f1c72c16c4b036e491c478c49a
+ */
+void test_diff_rename__identical(void)
+{
+	const char *old_sha = "31e47d8c1fa36d7f8d537b96158e3f024de0a9f2";
+	const char *new_sha = "2bc7f351d20b53f1c72c16c4b036e491c478c49a";
+	git_tree *old_tree, *new_tree;
+    git_diff *diff;
+	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options find_opts = GIT_DIFF_FIND_OPTIONS_INIT;
+	git_buf diff_buf = GIT_BUF_INIT;
+	const char *expected =
+		"diff --git a/serving.txt b/sixserving.txt\n"
+		"similarity index 100%\n"
+		"rename from serving.txt\n"
+		"rename to sixserving.txt\n"
+		"diff --git a/sevencities.txt b/songofseven.txt\n"
+		"similarity index 100%\n"
+		"copy from sevencities.txt\n"
+		"copy to songofseven.txt\n";
+
+	old_tree = resolve_commit_oid_to_tree(g_repo, old_sha);
+	new_tree = resolve_commit_oid_to_tree(g_repo, new_sha);
+
+	diff_opts.flags |= GIT_DIFF_INCLUDE_UNMODIFIED;
+	find_opts.flags = GIT_DIFF_FIND_COPIES_FROM_UNMODIFIED |
+		GIT_DIFF_FIND_EXACT_MATCH_ONLY;
+
+	cl_git_pass(git_diff_tree_to_tree(&diff,
+		g_repo, old_tree, new_tree, &diff_opts));
+	cl_git_pass(git_diff_find_similar(diff, &find_opts));
+
+	cl_git_pass(git_diff_to_buf(&diff_buf, diff, GIT_DIFF_FORMAT_PATCH));
+
+	cl_assert_equal_s(expected, diff_buf.ptr);
+
+	git_buf_free(&diff_buf);
+	git_diff_free(diff);
+	git_tree_free(old_tree);
+	git_tree_free(new_tree);
+}
+

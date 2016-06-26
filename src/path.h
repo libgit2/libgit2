@@ -244,6 +244,12 @@ extern int git_path_join_unrooted(
 	git_buf *path_out, const char *path, const char *base, ssize_t *root_at);
 
 /**
+ * Removes multiple occurrences of '/' in a row, squashing them into a
+ * single '/'.
+ */
+extern void git_path_squash_slashes(git_buf *path);
+
+/**
  * Clean up path, prepending base if it is not already rooted.
  */
 extern int git_path_prettify(git_buf *path_out, const char *path, const char *base);

@@ -8,8 +8,8 @@
 #include "common.h"
 #include "diff.h"
 #include "diff_driver.h"
-#include "diff_patch.h"
 #include "diff_xdiff.h"
+#include "patch_generate.h"
 
 static int git_xdiff_scan_int(const char **str, int *value)
 {
@@ -56,7 +56,7 @@ fail:
 
 typedef struct {
 	git_xdiff_output *xo;
-	git_patch *patch;
+	git_patch_generated *patch;
 	git_diff_hunk hunk;
 	int old_lineno, new_lineno;
 	mmfile_t xd_old_data, xd_new_data;
@@ -110,9 +110,9 @@ static int diff_update_lines(
 static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 {
 	git_xdiff_info *info = priv;
-	git_patch *patch = info->patch;
-	const git_diff_delta *delta = git_patch_get_delta(patch);
-	git_diff_output *output = &info->xo->output;
+	git_patch_generated *patch = info->patch;
+	const git_diff_delta *delta = patch->base.delta;
+	git_patch_generated_output *output = &info->xo->output;
 	git_diff_line line;
 
 	if (len == 1) {
@@ -181,7 +181,7 @@ static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 	return output->error;
 }
 
-static int git_xdiff(git_diff_output *output, git_patch *patch)
+static int git_xdiff(git_patch_generated_output *output, git_patch_generated *patch)
 {
 	git_xdiff_output *xo = (git_xdiff_output *)output;
 	git_xdiff_info info;
@@ -194,7 +194,7 @@ static int git_xdiff(git_diff_output *output, git_patch *patch)
 	xo->callback.priv = &info;
 
 	git_diff_find_context_init(
-		&xo->config.find_func, &findctxt, git_patch__driver(patch));
+		&xo->config.find_func, &findctxt, git_patch_generated_driver(patch));
 	xo->config.find_func_priv = &findctxt;
 
 	if (xo->config.find_func != NULL)
@@ -206,8 +206,8 @@ static int git_xdiff(git_diff_output *output, git_patch *patch)
 	 * updates are needed to xo->params.flags
 	 */
 
-	git_patch__old_data(&info.xd_old_data.ptr, &info.xd_old_data.size, patch);
-	git_patch__new_data(&info.xd_new_data.ptr, &info.xd_new_data.size, patch);
+	git_patch_generated_old_data(&info.xd_old_data.ptr, &info.xd_old_data.size, patch);
+	git_patch_generated_new_data(&info.xd_new_data.ptr, &info.xd_new_data.size, patch);
 
 	if (info.xd_old_data.size > GIT_XDIFF_MAX_SIZE ||
 		info.xd_new_data.size > GIT_XDIFF_MAX_SIZE) {

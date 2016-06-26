@@ -13,7 +13,7 @@
 #include "fileops.h"
 #include "hash.h"
 #include "odb.h"
-#include "delta-apply.h"
+#include "delta.h"
 #include "sha1_lookup.h"
 #include "mwindow.h"
 #include "pack.h"

@@ -7,7 +7,7 @@
 #include "common.h"
 #include "vector.h"
 #include "diff.h"
-#include "diff_patch.h"
+#include "patch_generate.h"
 
 #define DIFF_RENAME_FILE_SEPARATOR " => "
 #define STATS_FULL_MIN_SCALE 7
@@ -190,8 +190,9 @@ int git_diff_get_stats(
 			break;
 
 		/* keep a count of renames because it will affect formatting */
-		delta = git_patch_get_delta(patch);
+		delta = patch->delta;
 
+		/* TODO ugh */
 		namelen = strlen(delta->new_file.path);
 		if (strcmp(delta->old_file.path, delta->new_file.path) != 0) {
 			namelen += strlen(delta->old_file.path);

@@ -26,6 +26,7 @@
 #include "filter.h"
 #include "blob.h"
 #include "diff.h"
+#include "diff_generate.h"
 #include "pathspec.h"
 #include "buf_text.h"
 #include "diff_xdiff.h"
