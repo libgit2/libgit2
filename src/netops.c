@@ -306,13 +306,13 @@ int gitno_extract_url_data_parts(
 	}
 
 #define GITNO_COPY_URL_PART(dest, field) \
-		if(u.field_set & (1 << (field))) { \
+		do { if(u.field_set & (1 << (field))) { \
 			*(dest) = git__substrdup(url + u.field_data[field].off, u.field_data[field].len); \
 			GITERR_CHECK_ALLOC(*(dest)); \
 		} \
 		else { \
 			*(dest) = NULL; \
-		}
+		} } while(0)
 
 	GITNO_COPY_URL_PART(scheme, UF_SCHEMA);
 	GITNO_COPY_URL_PART(host, UF_HOST);
