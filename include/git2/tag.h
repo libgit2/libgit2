@@ -347,6 +347,15 @@ GIT_EXTERN(int) git_tag_peel(
 	git_object **tag_target_out,
 	const git_tag *tag);
 
+/**
+ * Create an in-memory copy of a tag. The copy must be explicitly
+ * free'd or it will leak.
+ *
+ * @param out Pointer to store the copy of the tag
+ * @param source Original tag to copy
+ */
+GIT_EXTERN(int) git_tag_dup(git_tag **out, git_tag *source);
+
 /** @} */
 GIT_END_DECL
 #endif

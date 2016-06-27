@@ -32,6 +32,7 @@ void git_vector_free_deep(git_vector *v); /* free each entry and self */
 void git_vector_clear(git_vector *v);
 int git_vector_dup(git_vector *v, const git_vector *src, git_vector_cmp cmp);
 void git_vector_swap(git_vector *a, git_vector *b);
+int git_vector_size_hint(git_vector *v, size_t size_hint);
 
 void **git_vector_detach(size_t *size, size_t *asize, git_vector *v);
 
@@ -92,6 +93,9 @@ void git_vector_remove_matching(
 	void *payload);
 
 int git_vector_resize_to(git_vector *v, size_t new_length);
+int git_vector_insert_null(git_vector *v, size_t idx, size_t insert_len);
+int git_vector_remove_range(git_vector *v, size_t idx, size_t remove_len);
+
 int git_vector_set(void **old, git_vector *v, size_t position, void *value);
 
 /** Check if vector is sorted */

@@ -480,14 +480,16 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 	int error = 0;
 	git_buf path = GIT_BUF_INIT;
 	git_iterator *fsit = NULL;
+	git_iterator_options fsit_opts = GIT_ITERATOR_OPTIONS_INIT;
 	const git_index_entry *entry = NULL;
 
 	if (!backend->path) /* do nothing if no path for loose refs */
 		return 0;
 
+	fsit_opts.flags = backend->iterator_flags;
+
 	if ((error = git_buf_printf(&path, "%s/refs", backend->path)) < 0 ||
-		(error = git_iterator_for_filesystem(
-			&fsit, path.ptr, backend->iterator_flags, NULL, NULL)) < 0) {
+		(error = git_iterator_for_filesystem(&fsit, path.ptr, &fsit_opts)) < 0) {
 		git_buf_free(&path);
 		return error;
 	}
@@ -624,8 +626,9 @@ static int refdb_fs_backend__iterator(
 	iter = git__calloc(1, sizeof(refdb_fs_iter));
 	GITERR_CHECK_ALLOC(iter);
 
-	if (git_pool_init(&iter->pool, 1, 0) < 0 ||
-		git_vector_init(&iter->loose, 8, NULL) < 0)
+	git_pool_init(&iter->pool, 1);
+
+	if (git_vector_init(&iter->loose, 8, NULL) < 0)
 		goto fail;
 
 	if (glob != NULL &&
@@ -714,7 +717,7 @@ static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *
 
 	assert(file && backend && name);
 
-	if (!git_path_isvalid(backend->repo, name, GIT_PATH_REJECT_DEFAULTS)) {
+	if (!git_path_isvalid(backend->repo, name, GIT_PATH_REJECT_FILESYSTEM_DEFAULTS)) {
 		giterr_set(GITERR_INVALID, "Invalid reference name '%s'.", name);
 		return GIT_EINVALIDSPEC;
 	}
@@ -730,8 +733,11 @@ static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *
 
 	error = git_filebuf_open(file, ref_path.ptr, GIT_FILEBUF_FORCE, GIT_REFS_FILE_MODE);
 
+	if (error == GIT_EDIRECTORY)
+		giterr_set(GITERR_REFERENCE, "cannot lock ref '%s', there are refs beneath that folder", name);
+
 	git_buf_free(&ref_path);
-        return error;
+	return error;
 }
 
 static int loose_commit(git_filebuf *file, const git_reference *ref)
@@ -956,6 +962,7 @@ static int packed_write(refdb_fs_backend *backend)
 
 	for (i = 0; i < git_sortedcache_entrycount(refcache); ++i) {
 		struct packref *ref = git_sortedcache_entry(refcache, i);
+		assert(ref);
 
 		if (packed_find_peel(backend, ref) < 0)
 			goto fail;
@@ -1411,7 +1418,8 @@ static int setup_namespace(git_buf *path, git_repository *repo)
 	git__free(parts);
 
 	/* Make sure that the folder with the namespace exists */
-	if (git_futils_mkdir_r(git_buf_cstr(path), repo->path_repository, 0777) < 0)
+	if (git_futils_mkdir_relative(git_buf_cstr(path), repo->path_repository,
+			0777, GIT_MKDIR_PATH, NULL) < 0)
 		return -1;
 
 	/* Return root of the namespaced path, i.e. without the trailing '/refs' */
@@ -1460,7 +1468,7 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 		entry = git__calloc(1, sizeof(git_reflog_entry));
 		GITERR_CHECK_ALLOC(entry);
 
-		entry->committer = git__malloc(sizeof(git_signature));
+		entry->committer = git__calloc(1, sizeof(git_signature));
 		GITERR_CHECK_ALLOC(entry->committer);
 
 		if (git_oid_fromstrn(&entry->oid_old, buf, GIT_OID_HEXSZ) < 0)
@@ -1505,8 +1513,7 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 #undef seek_forward
 
 fail:
-	if (entry)
-		git_reflog_entry__free(entry);
+	git_reflog_entry__free(entry);
 
 	return -1;
 }
@@ -1665,7 +1672,7 @@ static int lock_reflog(git_filebuf *file, refdb_fs_backend *backend, const char 
 
 	repo = backend->repo;
 
-	if (!git_path_isvalid(backend->repo, refname, GIT_PATH_REJECT_DEFAULTS)) {
+	if (!git_path_isvalid(backend->repo, refname, GIT_PATH_REJECT_FILESYSTEM_DEFAULTS)) {
 		giterr_set(GITERR_INVALID, "Invalid reference name '%s'.", refname);
 		return GIT_EINVALIDSPEC;
 	}
@@ -1781,10 +1788,17 @@ static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, co
 	/* If the new branch matches part of the namespace of a previously deleted branch,
 	 * there maybe an obsolete/unused directory (or directory hierarchy) in the way.
 	 */
-	if (git_path_isdir(git_buf_cstr(&path)) &&
-		(git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_RMDIR_SKIP_NONEMPTY) < 0)) {
-		error = -1;
-		goto cleanup;
+	if (git_path_isdir(git_buf_cstr(&path))) {
+		if ((git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_RMDIR_SKIP_NONEMPTY) < 0))
+			error = -1;
+		else if (git_path_isdir(git_buf_cstr(&path))) {
+			giterr_set(GITERR_REFERENCE, "cannot create reflog at '%s', there are reflogs beneath that folder",
+				ref->name);
+			error = GIT_EDIRECTORY;
+		}
+
+		if (error != 0)
+			goto cleanup;
 	}
 
 	error = git_futils_writebuffer(&buf, git_buf_cstr(&path), O_WRONLY|O_CREAT|O_APPEND, GIT_REFLOG_FILE_MODE);

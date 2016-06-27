@@ -57,10 +57,28 @@ void test_repo_state__revert(void)
 	assert_repo_state(GIT_REPOSITORY_STATE_NONE);
 }
 
+void test_repo_state__revert_sequence(void)
+{
+	setup_simple_state(GIT_REVERT_HEAD_FILE);
+	setup_simple_state(GIT_SEQUENCER_TODO_FILE);
+	assert_repo_state(GIT_REPOSITORY_STATE_REVERT_SEQUENCE);
+	cl_git_pass(git_repository_state_cleanup(_repo));
+	assert_repo_state(GIT_REPOSITORY_STATE_NONE);
+}
+
 void test_repo_state__cherry_pick(void)
 {
 	setup_simple_state(GIT_CHERRYPICK_HEAD_FILE);
 	assert_repo_state(GIT_REPOSITORY_STATE_CHERRYPICK);
+	cl_git_pass(git_repository_state_cleanup(_repo));
+	assert_repo_state(GIT_REPOSITORY_STATE_NONE);
+}
+
+void test_repo_state__cherrypick_sequence(void)
+{
+	setup_simple_state(GIT_CHERRYPICK_HEAD_FILE);
+	setup_simple_state(GIT_SEQUENCER_TODO_FILE);
+	assert_repo_state(GIT_REPOSITORY_STATE_CHERRYPICK_SEQUENCE);
 	cl_git_pass(git_repository_state_cleanup(_repo));
 	assert_repo_state(GIT_REPOSITORY_STATE_NONE);
 }

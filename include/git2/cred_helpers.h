@@ -34,7 +34,7 @@ typedef struct git_cred_userpass_payload {
  *
  * @param cred The newly created credential object.
  * @param url The resource for which we are demanding a credential.
- * @param user_from_url The username that was embedded in a "user@host"
+ * @param user_from_url The username that was embedded in a "user\@host"
  *                          remote url, or NULL if not included.
  * @param allowed_types A bitmask stating which cred types are OK to return.
  * @param payload The payload provided when specifying this callback.  (This is

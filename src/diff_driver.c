@@ -9,7 +9,6 @@
 #include "git2/attr.h"
 
 #include "diff.h"
-#include "diff_patch.h"
 #include "diff_driver.h"
 #include "strmap.h"
 #include "map.h"
@@ -59,7 +58,7 @@ static git_diff_driver global_drivers[3] = {
 	{ DIFF_DRIVER_TEXT,   GIT_DIFF_FORCE_TEXT, 0 },
 };
 
-git_diff_driver_registry *git_diff_driver_registry_new()
+git_diff_driver_registry *git_diff_driver_registry_new(void)
 {
 	git_diff_driver_registry *reg =
 		git__calloc(1, sizeof(git_diff_driver_registry));
@@ -97,8 +96,7 @@ static int diff_driver_add_patterns(
 	for (scan = regex_str; scan; scan = end) {
 		/* get pattern to fill in */
 		if ((pat = git_array_alloc(drv->fn_patterns)) == NULL) {
-			error = -1;
-			break;
+			return -1;
 		}
 
 		pat->flags = regex_flags;
@@ -117,10 +115,9 @@ static int diff_driver_add_patterns(
 			break;
 
 		if ((error = regcomp(&pat->re, buf.ptr, regex_flags)) != 0) {
-			/* if regex fails to compile, warn? fail? */
-			error = giterr_set_regex(&pat->re, error);
-			regfree(&pat->re);
-			break;
+			/*
+			 * TODO: issue a warning
+			 */
 		}
 	}
 
@@ -128,7 +125,8 @@ static int diff_driver_add_patterns(
 		(void)git_array_pop(drv->fn_patterns); /* release last item */
 	git_buf_free(&buf);
 
-	return error;
+	/* We want to ignore bad patterns, so return success regardless */
+	return 0;
 }
 
 static int diff_driver_xfuncname(const git_config_entry *entry, void *payload)

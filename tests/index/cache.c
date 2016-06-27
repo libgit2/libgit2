@@ -111,7 +111,7 @@ void test_index_cache__read_tree_no_children(void)
 	memset(&entry, 0x0, sizeof(git_index_entry));
 	entry.path = "new.txt";
 	entry.mode = GIT_FILEMODE_BLOB;
-	git_oid_fromstr(&entry.id, "45b983be36b73c0788dc9cbcb76cbb80fc7bb057");
+	git_oid_fromstr(&entry.id, "d4bcc68acd4410bf836a39f20afb2c2ece09584e");
 
 	cl_git_pass(git_index_add(index, &entry));
 	cl_assert_equal_i(-1, index->tree->entry_count);
@@ -191,7 +191,7 @@ void test_index_cache__read_tree_children(void)
 	memset(&entry, 0x0, sizeof(git_index_entry));
 	entry.path = "top-level";
 	entry.mode = GIT_FILEMODE_BLOB;
-	git_oid_fromstr(&entry.id, "45b983be36b73c0788dc9cbcb76cbb80fc7bb057");
+	git_oid_fromstr(&entry.id, "ee3fa1b8c00aff7fe02065fdb50864bb0d932ccf");
 	cl_git_pass(git_index_add(index, &entry));
 
 
@@ -217,7 +217,7 @@ void test_index_cache__read_tree_children(void)
 
 	/* override with a slightly different id, also dummy */
 	entry.path = "subdir/some-file";
-	git_oid_fromstr(&entry.id, "45b983be36b73c0788dc9cbcb76cbb80fc7bb058");
+	git_oid_fromstr(&entry.id, "ee3fa1b8c00aff7fe02065fdb50864bb0d932ccf");
 	cl_git_pass(git_index_add(index, &entry));
 
 	cl_assert_equal_i(-1, index->tree->entry_count);

@@ -49,6 +49,7 @@ typedef enum {
 	GIT_EINVALID        = -21,      /**< Invalid operation or input */
 	GIT_EUNCOMMITTED    = -22,	/**< Uncommitted changes in index prevented operation */
 	GIT_EDIRECTORY      = -23,      /**< The operation is not valid for a directory */
+	GIT_EMERGECONFLICT  = -24,	/**< A merge conflict exists and cannot continue */
 
 	GIT_PASSTHROUGH     = -30,	/**< Internal only */
 	GIT_ITEROVER        = -31,	/**< Signals end of iteration with iterator */
@@ -97,7 +98,8 @@ typedef enum {
 	GITERR_CHERRYPICK,
 	GITERR_DESCRIBE,
 	GITERR_REBASE,
-	GITERR_FILESYSTEM
+	GITERR_FILESYSTEM,
+	GITERR_PATCH,
 } git_error_t;
 
 /**
@@ -114,18 +116,6 @@ GIT_EXTERN(const git_error *) giterr_last(void);
 GIT_EXTERN(void) giterr_clear(void);
 
 /**
- * Get the last error data and clear it.
- *
- * This copies the last error into the given `git_error` struct
- * and returns 0 if the copy was successful, leaving the error
- * cleared as if `giterr_clear` had been called.
- *
- * If there was no existing error in the library, -1 will be returned
- * and the contents of `cpy` will be left unmodified.
- */
-GIT_EXTERN(int) giterr_detach(git_error *cpy);
-
-/**
  * Set the error message string for this thread.
  *
  * This function is public so that custom ODB backends and the like can
@@ -136,11 +126,6 @@ GIT_EXTERN(int) giterr_detach(git_error *cpy);
  *
  * This error message is stored in thread-local storage and only applies
  * to the particular thread that this libgit2 call is made from.
- *
- * NOTE: Passing the `error_class` as GITERR_OS has a special behavior: we
- * attempt to append the system default error message for the last OS error
- * that occurred and then clear the last error.  The specific implementation
- * of looking up and clearing this last OS error will vary by platform.
  *
  * @param error_class One of the `git_error_t` enum above describing the
  *                    general subsystem that is responsible for the error.

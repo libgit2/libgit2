@@ -493,3 +493,50 @@ void test_diff_submodules__skips_empty_includes_used(void)
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNTRACKED]);
 	git_diff_free(diff);
 }
+
+static void ensure_submodules_found(
+	git_repository *repo,
+	const char **paths,
+	size_t cnt)
+{
+	git_diff *diff = NULL;
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	const git_diff_delta *delta;
+	size_t i, pathlen;
+
+	opts.pathspec.strings = (char **)paths;
+	opts.pathspec.count = cnt;
+
+	git_diff_index_to_workdir(&diff, repo, NULL, &opts);
+
+	cl_assert_equal_i(cnt, git_diff_num_deltas(diff));
+
+	for (i = 0; i < cnt; i++) {
+		delta = git_diff_get_delta(diff, i);
+
+		/* ensure that the given path is returned w/o trailing slashes. */
+		pathlen = strlen(opts.pathspec.strings[i]);
+
+		while (pathlen && opts.pathspec.strings[i][pathlen - 1] == '/')
+			pathlen--;
+
+		cl_assert_equal_strn(opts.pathspec.strings[i], delta->new_file.path, pathlen);
+	}
+
+	git_diff_free(diff);
+}
+
+void test_diff_submodules__can_be_identified_by_trailing_slash_in_pathspec(void)
+{
+	const char *one_path_without_slash[] = { "sm_changed_head" };
+	const char *one_path_with_slash[] = { "sm_changed_head/" };
+	const char *many_paths_without_slashes[] = { "sm_changed_head", "sm_changed_index" };
+	const char *many_paths_with_slashes[] = { "sm_changed_head/", "sm_changed_index/" };
+
+	g_repo = setup_fixture_submod2();
+
+	ensure_submodules_found(g_repo, one_path_without_slash, ARRAY_SIZE(one_path_without_slash));
+	ensure_submodules_found(g_repo, one_path_with_slash, ARRAY_SIZE(one_path_with_slash));
+	ensure_submodules_found(g_repo, many_paths_without_slashes, ARRAY_SIZE(many_paths_without_slashes));
+	ensure_submodules_found(g_repo, many_paths_with_slashes, ARRAY_SIZE(many_paths_with_slashes));
+}

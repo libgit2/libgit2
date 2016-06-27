@@ -23,6 +23,7 @@
 #include "iterator.h"
 #include "merge.h"
 #include "diff.h"
+#include "diff_generate.h"
 
 static int create_error(int error, const char *msg)
 {
@@ -679,12 +680,14 @@ static int merge_indexes(
 	git_index *theirs_index)
 {
 	git_iterator *ancestor = NULL, *ours = NULL, *theirs = NULL;
-	const git_iterator_flag_t flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 	int error;
 
-	if ((error = git_iterator_for_tree(&ancestor, ancestor_tree, flags, NULL, NULL)) < 0 ||
-		(error = git_iterator_for_index(&ours, ours_index, flags, NULL, NULL)) < 0 ||
-		(error = git_iterator_for_index(&theirs, theirs_index, flags, NULL, NULL)) < 0)
+	iter_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+	if ((error = git_iterator_for_tree(&ancestor, ancestor_tree, &iter_opts)) < 0 ||
+		(error = git_iterator_for_index(&ours, repo, ours_index, &iter_opts)) < 0 ||
+		(error = git_iterator_for_index(&theirs, repo, theirs_index, &iter_opts)) < 0)
 		goto done;
 
 	error = git_merge__iterators(out, repo, ancestor, ours, theirs, NULL);
@@ -704,12 +707,14 @@ static int merge_index_and_tree(
 	git_tree *theirs_tree)
 {
 	git_iterator *ancestor = NULL, *ours = NULL, *theirs = NULL;
-	const git_iterator_flag_t flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 	int error;
 
-	if ((error = git_iterator_for_tree(&ancestor, ancestor_tree, flags, NULL, NULL)) < 0 ||
-		(error = git_iterator_for_index(&ours, ours_index, flags, NULL, NULL)) < 0 ||
-		(error = git_iterator_for_tree(&theirs, theirs_tree, flags, NULL, NULL)) < 0)
+	iter_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+
+	if ((error = git_iterator_for_tree(&ancestor, ancestor_tree, &iter_opts)) < 0 ||
+		(error = git_iterator_for_index(&ours, repo, ours_index, &iter_opts)) < 0 ||
+		(error = git_iterator_for_tree(&theirs, theirs_tree, &iter_opts)) < 0)
 		goto done;
 
 	error = git_merge__iterators(out, repo, ancestor, ours, theirs, NULL);
@@ -724,7 +729,7 @@ done:
 static void normalize_apply_options(
 	git_stash_apply_options *opts,
 	const git_stash_apply_options *given_apply_opts)
-{	
+{
 	if (given_apply_opts != NULL) {
 		memcpy(opts, given_apply_opts, sizeof(git_stash_apply_options));
 	} else {
@@ -797,14 +802,15 @@ static int stage_new_files(
 	git_tree *tree)
 {
 	git_iterator *iterators[2] = { NULL, NULL };
+	git_iterator_options iterator_options = GIT_ITERATOR_OPTIONS_INIT;
 	git_index *index = NULL;
 	int error;
 
 	if ((error = git_index_new(&index)) < 0 ||
-		(error = git_iterator_for_tree(&iterators[0], parent_tree,
-			GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0 ||
-		(error = git_iterator_for_tree(&iterators[1], tree,
-			GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0)
+		(error = git_iterator_for_tree(
+			&iterators[0], parent_tree, &iterator_options)) < 0 ||
+		(error = git_iterator_for_tree(
+			&iterators[1], tree, &iterator_options)) < 0)
 		goto done;
 
 	error = git_iterator_walk(iterators, 2, stage_new_file, index);

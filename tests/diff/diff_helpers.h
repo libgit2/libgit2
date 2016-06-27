@@ -68,3 +68,6 @@ extern int diff_foreach_via_iterator(
 
 extern void diff_print(FILE *fp, git_diff *diff);
 extern void diff_print_raw(FILE *fp, git_diff *diff);
+
+extern void diff_assert_equal(git_diff *a, git_diff *b);
+

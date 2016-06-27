@@ -215,3 +215,13 @@ int git_win32__find_xdg_dirs(git_buf *out)
 
 	return win32_find_existing_dirs(out, global_tmpls);
 }
+
+int git_win32__find_programdata_dirs(git_buf *out)
+{
+	static const wchar_t *programdata_tmpls[2] = {
+		L"%PROGRAMDATA%\\Git",
+		NULL,
+	};
+
+	return win32_find_existing_dirs(out, programdata_tmpls);
+}

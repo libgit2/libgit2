@@ -138,13 +138,6 @@ int git_packfile_resolve_header(
 		git_off_t offset);
 
 int git_packfile_unpack(git_rawobj *obj, struct git_pack_file *p, git_off_t *obj_offset);
-int packfile_unpack_compressed(
-	git_rawobj *obj,
-	struct git_pack_file *p,
-	git_mwindow **w_curs,
-	git_off_t *curpos,
-	size_t size,
-	git_otype type);
 
 int git_packfile_stream_open(git_packfile_stream *obj, struct git_pack_file *p, git_off_t curpos);
 ssize_t git_packfile_stream_read(git_packfile_stream *obj, void *buffer, size_t len);

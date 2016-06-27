@@ -12,17 +12,19 @@
 #include "odb.h"
 #include "vector.h"
 #include "strmap.h"
+#include "pool.h"
 
 struct git_tree_entry {
 	uint16_t attr;
-	git_oid oid;
-	size_t filename_len;
-	char filename[1];
+	uint16_t filename_len;
+	const git_oid *oid;
+	const char *filename;
 };
 
 struct git_tree {
 	git_object object;
-	git_vector entries;
+	git_odb_object *odb_obj;
+	git_array_t(git_tree_entry) entries;
 };
 
 struct git_treebuilder {

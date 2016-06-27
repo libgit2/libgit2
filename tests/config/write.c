@@ -1,6 +1,9 @@
 #include "clar_libgit2.h"
 #include "buffer.h"
 #include "fileops.h"
+#include "git2/sys/config.h"
+#include "config_file.h"
+#include "config.h"
 
 void test_config_write__initialize(void)
 {
@@ -527,6 +530,9 @@ void test_config_write__outside_change(void)
 	git_config_free(cfg);
 }
 
+#define FOO_COMMENT \
+	";  another comment!\n"
+
 #define SECTION_FOO \
 	"\n"                     \
 	"    \n"                 \
@@ -534,7 +540,8 @@ void test_config_write__outside_change(void)
 	" # here's a comment\n"  \
 	"\tname = \"value\"\n"   \
 	"  name2 = \"value2\"\n" \
-	";  another comment!\n"
+
+#define SECTION_FOO_WITH_COMMENT SECTION_FOO FOO_COMMENT
 
 #define SECTION_BAR \
 	"[section \"bar\"]\t\n"  \
@@ -550,7 +557,7 @@ void test_config_write__preserves_whitespace_and_comments(void)
 	git_buf newfile = GIT_BUF_INIT;
 
 	/* This config can occur after removing and re-adding the origin remote */
-	const char *file_content = SECTION_FOO SECTION_BAR;
+	const char *file_content = SECTION_FOO_WITH_COMMENT SECTION_BAR;
 
 	/* Write the test config and make sure the expected entry exists */
 	cl_git_mkfile(file_name, file_content);
@@ -564,9 +571,10 @@ void test_config_write__preserves_whitespace_and_comments(void)
 
 	cl_assert_equal_strn(SECTION_FOO, n, strlen(SECTION_FOO));
 	n += strlen(SECTION_FOO);
-
 	cl_assert_equal_strn("\tother = otherval\n", n, strlen("\tother = otherval\n"));
 	n += strlen("\tother = otherval\n");
+	cl_assert_equal_strn(FOO_COMMENT, n, strlen(FOO_COMMENT));
+	n += strlen(FOO_COMMENT);
 
 	cl_assert_equal_strn(SECTION_BAR, n, strlen(SECTION_BAR));
 	n += strlen(SECTION_BAR);
@@ -630,3 +638,87 @@ void test_config_write__to_file_with_only_comment(void)
 	git_buf_free(&result);
 }
 
+void test_config_write__locking(void)
+{
+	git_config *cfg, *cfg2;
+	git_config_entry *entry;
+	git_transaction *tx;
+	const char *filename = "locked-file";
+
+	/* Open the config and lock it */
+	cl_git_mkfile(filename, "[section]\n\tname = value\n");
+	cl_git_pass(git_config_open_ondisk(&cfg, filename));
+	cl_git_pass(git_config_get_entry(&entry, cfg, "section.name"));
+	cl_assert_equal_s("value", entry->value);
+	git_config_entry_free(entry);
+	cl_git_pass(git_config_lock(&tx, cfg));
+
+	/* Change entries in the locked backend */
+	cl_git_pass(git_config_set_string(cfg, "section.name", "other value"));
+	cl_git_pass(git_config_set_string(cfg, "section2.name3", "more value"));
+
+	/* We can see that the file we read from hasn't changed */
+	cl_git_pass(git_config_open_ondisk(&cfg2, filename));
+	cl_git_pass(git_config_get_entry(&entry, cfg2, "section.name"));
+	cl_assert_equal_s("value", entry->value);
+	git_config_entry_free(entry);
+	cl_git_fail_with(GIT_ENOTFOUND, git_config_get_entry(&entry, cfg2, "section2.name3"));
+	git_config_free(cfg2);
+
+	/* And we also get the old view when we read from the locked config */
+	cl_git_pass(git_config_get_entry(&entry, cfg, "section.name"));
+	cl_assert_equal_s("value", entry->value);
+	git_config_entry_free(entry);
+	cl_git_fail_with(GIT_ENOTFOUND, git_config_get_entry(&entry, cfg, "section2.name3"));
+
+	cl_git_pass(git_transaction_commit(tx));
+	git_transaction_free(tx);
+
+	/* Now that we've unlocked it, we should see both updates */
+	cl_git_pass(git_config_get_entry(&entry, cfg, "section.name"));
+	cl_assert_equal_s("other value", entry->value);
+	git_config_entry_free(entry);
+	cl_git_pass(git_config_get_entry(&entry, cfg, "section2.name3"));
+	cl_assert_equal_s("more value", entry->value);
+	git_config_entry_free(entry);
+
+	git_config_free(cfg);
+
+	/* We should also see the changes after reopening the config */
+	cl_git_pass(git_config_open_ondisk(&cfg, filename));
+	cl_git_pass(git_config_get_entry(&entry, cfg, "section.name"));
+	cl_assert_equal_s("other value", entry->value);
+	git_config_entry_free(entry);
+	cl_git_pass(git_config_get_entry(&entry, cfg, "section2.name3"));
+	cl_assert_equal_s("more value", entry->value);
+	git_config_entry_free(entry);
+
+	git_config_free(cfg);
+}
+
+void test_config_write__repeated(void)
+{
+	const char *filename = "config-repeated";
+	git_config *cfg;
+	git_buf result = GIT_BUF_INIT;
+	const char *expected = "[sample \"prefix\"]\n\
+\tsetting1 = someValue1\n\
+\tsetting2 = someValue2\n\
+\tsetting3 = someValue3\n\
+\tsetting4 = someValue4\n\
+";
+	cl_git_pass(git_config_open_ondisk(&cfg, filename));
+	cl_git_pass(git_config_set_string(cfg, "sample.prefix.setting1", "someValue1"));
+	cl_git_pass(git_config_set_string(cfg, "sample.prefix.setting2", "someValue2"));
+	cl_git_pass(git_config_set_string(cfg, "sample.prefix.setting3", "someValue3"));
+	cl_git_pass(git_config_set_string(cfg, "sample.prefix.setting4", "someValue4"));
+	git_config_free(cfg);
+
+	cl_git_pass(git_config_open_ondisk(&cfg, filename));
+
+	cl_git_pass(git_futils_readbuffer(&result, filename));
+	cl_assert_equal_s(expected, result.ptr);
+	git_buf_free(&result);
+
+	git_config_free(cfg);
+}

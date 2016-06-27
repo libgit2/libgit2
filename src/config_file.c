@@ -77,8 +77,7 @@ typedef struct git_config_file_iter {
 		 (iter) = (tmp))
 
 struct reader {
-	time_t file_mtime;
-	size_t file_size;
+	git_oid checksum;
 	char *file_path;
 	git_buf buffer;
 	char *read_ptr;
@@ -104,6 +103,10 @@ typedef struct {
 	git_config_level_t level;
 
 	git_array_t(struct reader) readers;
+
+	bool locked;
+	git_filebuf locked_buf;
+	git_buf locked_content;
 
 	char  *file_path;
 } diskfile_backend;
@@ -229,7 +232,10 @@ static refcounted_strmap *refcounted_strmap_take(diskfile_header *h)
 {
 	refcounted_strmap *map;
 
-	git_mutex_lock(&h->values_mutex);
+	if (git_mutex_lock(&h->values_mutex) < 0) {
+	    giterr_set(GITERR_OS, "Failed to lock config backend");
+	    return NULL;
+	}
 
 	map = h->values;
 	git_atomic_inc(&map->refcount);
@@ -281,7 +287,7 @@ static int config_open(git_config_backend *cfg, git_config_level_t level)
 
 	git_buf_init(&reader->buffer, 0);
 	res = git_futils_readbuffer_updated(
-		&reader->buffer, b->file_path, &reader->file_mtime, &reader->file_size, NULL);
+		&reader->buffer, b->file_path, &reader->checksum, NULL);
 
 	/* It's fine if the file doesn't exist */
 	if (res == GIT_ENOTFOUND)
@@ -315,7 +321,10 @@ static int config__refresh(git_config_backend *cfg)
 	if ((error = config_read(values->values, b, reader, b->level, 0)) < 0)
 		goto out;
 
-	git_mutex_lock(&b->header.values_mutex);
+	if ((error = git_mutex_lock(&b->header.values_mutex)) < 0) {
+		giterr_set(GITERR_OS, "Failed to lock config backend");
+		goto out;
+	}
 
 	tmp = b->header.values;
 	b->header.values = values;
@@ -341,7 +350,7 @@ static int config_refresh(git_config_backend *cfg)
 		reader = git_array_get(b->readers, i);
 		error = git_futils_readbuffer_updated(
 			&reader->buffer, reader->file_path,
-			&reader->file_mtime, &reader->file_size, &updated);
+			&reader->checksum, &updated);
 
 		if (error < 0 && error != GIT_ENOTFOUND)
 			return error;
@@ -457,7 +466,8 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 	if ((rval = git_config__normalize_name(name, &key)) < 0)
 		return rval;
 
-	map = refcounted_strmap_take(&b->header);
+	if ((map = refcounted_strmap_take(&b->header)) == NULL)
+		return -1;
 	values = map->values;
 
 	/*
@@ -524,7 +534,8 @@ static int config_get(git_config_backend *cfg, const char *key, git_config_entry
 	if (!h->parent.readonly && ((error = config_refresh(cfg)) < 0))
 		return error;
 
-	map = refcounted_strmap_take(h);
+	if ((map = refcounted_strmap_take(h)) == NULL)
+		return -1;
 	values = map->values;
 
 	pos = git_strmap_lookup_index(values, key);
@@ -550,29 +561,14 @@ static int config_set_multivar(
 	git_config_backend *cfg, const char *name, const char *regexp, const char *value)
 {
 	diskfile_backend *b = (diskfile_backend *)cfg;
-	refcounted_strmap *map;
-	git_strmap *values;
 	char *key;
 	regex_t preg;
 	int result;
-	khiter_t pos;
 
 	assert(regexp);
 
 	if ((result = git_config__normalize_name(name, &key)) < 0)
 		return result;
-
-	map = refcounted_strmap_take(&b->header);
-	values = b->header.values->values;
-
-	pos = git_strmap_lookup_index(values, key);
-	if (!git_strmap_valid_index(values, pos)) {
-		/* If we don't have it, behave like a normal set */
-		result = config_set(cfg, name, value);
-		refcounted_strmap_free(map);
-		git__free(key);
-		return result;
-	}
 
 	result = regcomp(&preg, regexp, REG_EXTENDED);
 	if (result != 0) {
@@ -588,7 +584,6 @@ static int config_set_multivar(
 	result = config_refresh(cfg);
 
 out:
-	refcounted_strmap_free(map);
 	git__free(key);
 	regfree(&preg);
 
@@ -607,7 +602,8 @@ static int config_delete(git_config_backend *cfg, const char *name)
 	if ((result = git_config__normalize_name(name, &key)) < 0)
 		return result;
 
-	map = refcounted_strmap_take(&b->header);
+	if ((map = refcounted_strmap_take(&b->header)) == NULL)
+		return -1;
 	values = b->header.values->values;
 
 	pos = git_strmap_lookup_index(values, key);
@@ -646,7 +642,8 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 	if ((result = git_config__normalize_name(name, &key)) < 0)
 		return result;
 
-	map = refcounted_strmap_take(&b->header);
+	if ((map = refcounted_strmap_take(&b->header)) == NULL)
+		return -1;
 	values = b->header.values->values;
 
 	pos = git_strmap_lookup_index(values, key);
@@ -685,6 +682,42 @@ static int config_snapshot(git_config_backend **out, git_config_backend *in)
 	return git_config_file__snapshot(out, b);
 }
 
+static int config_lock(git_config_backend *_cfg)
+{
+	diskfile_backend *cfg = (diskfile_backend *) _cfg;
+	int error;
+
+	if ((error = git_filebuf_open(&cfg->locked_buf, cfg->file_path, 0, GIT_CONFIG_FILE_MODE)) < 0)
+		return error;
+
+	error = git_futils_readbuffer(&cfg->locked_content, cfg->file_path);
+	if (error < 0 && error != GIT_ENOTFOUND) {
+		git_filebuf_cleanup(&cfg->locked_buf);
+		return error;
+	}
+
+	cfg->locked = true;
+	return 0;
+
+}
+
+static int config_unlock(git_config_backend *_cfg, int success)
+{
+	diskfile_backend *cfg = (diskfile_backend *) _cfg;
+	int error = 0;
+
+	if (success) {
+		git_filebuf_write(&cfg->locked_buf, cfg->locked_content.ptr, cfg->locked_content.size);
+		error = git_filebuf_commit(&cfg->locked_buf);
+	}
+
+	git_filebuf_cleanup(&cfg->locked_buf);
+	git_buf_free(&cfg->locked_content);
+	cfg->locked = false;
+
+	return error;
+}
+
 int git_config_file__ondisk(git_config_backend **out, const char *path)
 {
 	diskfile_backend *backend;
@@ -706,6 +739,8 @@ int git_config_file__ondisk(git_config_backend **out, const char *path)
 	backend->header.parent.del_multivar = config_delete_multivar;
 	backend->header.parent.iterator = config_iterator_new;
 	backend->header.parent.snapshot = config_snapshot;
+	backend->header.parent.lock = config_lock;
+	backend->header.parent.unlock = config_unlock;
 	backend->header.parent.free = backend_free;
 
 	*out = (git_config_backend *)backend;
@@ -750,6 +785,21 @@ static int config_delete_readonly(git_config_backend *cfg, const char *name)
 	return config_error_readonly();
 }
 
+static int config_lock_readonly(git_config_backend *_cfg)
+{
+	GIT_UNUSED(_cfg);
+
+	return config_error_readonly();
+}
+
+static int config_unlock_readonly(git_config_backend *_cfg, int success)
+{
+	GIT_UNUSED(_cfg);
+	GIT_UNUSED(success);
+
+	return config_error_readonly();
+}
+
 static void backend_readonly_free(git_config_backend *_backend)
 {
 	diskfile_backend *backend = (diskfile_backend *)_backend;
@@ -776,7 +826,8 @@ static int config_readonly_open(git_config_backend *cfg, git_config_level_t leve
 	/* We're just copying data, don't care about the level */
 	GIT_UNUSED(level);
 
-	src_map = refcounted_strmap_take(src_header);
+	if ((src_map = refcounted_strmap_take(src_header)) == NULL)
+		return -1;
 	b->header.values = src_map;
 
 	return 0;
@@ -803,6 +854,8 @@ int git_config_file__snapshot(git_config_backend **out, diskfile_backend *in)
 	backend->header.parent.del = config_delete_readonly;
 	backend->header.parent.del_multivar = config_delete_multivar_readonly;
 	backend->header.parent.iterator = config_iterator_new;
+	backend->header.parent.lock = config_lock_readonly;
+	backend->header.parent.unlock = config_unlock_readonly;
 	backend->header.parent.free = backend_readonly_free;
 
 	*out = (git_config_backend *)backend;
@@ -974,6 +1027,11 @@ static int parse_section_header_ext(struct reader *reader, const char *line, con
 	 */
 
 	first_quote = strchr(line, '"');
+	if (first_quote == NULL) {
+		set_parse_error(reader, 0, "Missing quotation marks in section header");
+		return -1;
+	}
+
 	last_quote = strrchr(line, '"');
 	quoted_len = last_quote - first_quote;
 
@@ -1425,7 +1483,7 @@ static int config_parse(
 	int (*on_section)(struct reader **reader, const char *current_section, const char *line, size_t line_len, void *data),
 	int (*on_variable)(struct reader **reader, const char *current_section, char *var_name, char *var_value, const char *line, size_t line_len, void *data),
 	int (*on_comment)(struct reader **reader, const char *line, size_t line_len, void *data),
-	int (*on_eof)(struct reader **reader, void *data),
+	int (*on_eof)(struct reader **reader, const char *current_section, void *data),
 	void *data)
 {
 	char *current_section = NULL, *var_name, *var_value, *line_start;
@@ -1476,7 +1534,7 @@ static int config_parse(
 	}
 
 	if (on_eof)
-		result = on_eof(&reader, data);
+		result = on_eof(&reader, current_section, data);
 
 	git__free(current_section);
 	return result;
@@ -1559,7 +1617,7 @@ static int read_on_variable(
 		git_buf_init(&r->buffer, 0);
 
 		result = git_futils_readbuffer_updated(
-			&r->buffer, r->file_path, &r->file_mtime, &r->file_size, NULL);
+			&r->buffer, r->file_path, &r->checksum, NULL);
 
 		if (result == 0) {
 			result = config_read(parse_data->values, parse_data->cfg_file, r, parse_data->level, parse_data->depth+1);
@@ -1602,7 +1660,7 @@ static int config_read(git_strmap *values, diskfile_backend *cfg_file, struct re
 	return config_parse(reader, NULL, read_on_variable, NULL, NULL, &parse_data);
 }
 
-static int write_section(git_filebuf *file, const char *key)
+static int write_section(git_buf *fbuf, const char *key)
 {
 	int result;
 	const char *dot;
@@ -1626,7 +1684,7 @@ static int write_section(git_filebuf *file, const char *key)
 	if (git_buf_oom(&buf))
 		return -1;
 
-	result = git_filebuf_write(file, git_buf_cstr(&buf), buf.size);
+	result = git_buf_put(fbuf, git_buf_cstr(&buf), buf.size);
 	git_buf_free(&buf);
 
 	return result;
@@ -1651,7 +1709,8 @@ static const char *quotes_for_value(const char *value)
 }
 
 struct write_data {
-	git_filebuf *file;
+	git_buf *buf;
+	git_buf buffered_comment;
 	unsigned int in_section : 1,
 		preg_replaced : 1;
 	const char *section;
@@ -1660,14 +1719,19 @@ struct write_data {
 	const char *value;
 };
 
-static int write_line(struct write_data *write_data, const char *line, size_t line_len)
+static int write_line_to(git_buf *buf, const char *line, size_t line_len)
 {
-	int result = git_filebuf_write(write_data->file, line, line_len);
+	int result = git_buf_put(buf, line, line_len);
 
 	if (!result && line_len && line[line_len-1] != '\n')
-		result = git_filebuf_printf(write_data->file, "\n");
+		result = git_buf_printf(buf, "\n");
 
 	return result;
+}
+
+static int write_line(struct write_data *write_data, const char *line, size_t line_len)
+{
+	return write_line_to(write_data->buf, line, line_len);
 }
 
 static int write_value(struct write_data *write_data)
@@ -1676,7 +1740,7 @@ static int write_value(struct write_data *write_data)
 	int result;
 
 	q = quotes_for_value(write_data->value);
-	result = git_filebuf_printf(write_data->file,
+	result = git_buf_printf(write_data->buf,
 		"\t%s = %s%s%s\n", write_data->name, q, write_data->value, q);
 
 	/* If we are updating a single name/value, we're done.  Setting `value`
@@ -1711,6 +1775,14 @@ static int write_on_section(
 
 	write_data->in_section = strcmp(current_section, write_data->section) == 0;
 
+	/*
+	 * If there were comments just before this section, dump them as well.
+	 */
+	if (!result) {
+		result = git_buf_put(write_data->buf, write_data->buffered_comment.ptr, write_data->buffered_comment.size);
+		git_buf_clear(&write_data->buffered_comment);
+	}
+
 	if (!result)
 		result = write_line(write_data, line, line_len);
 
@@ -1728,9 +1800,18 @@ static int write_on_variable(
 {
 	struct write_data *write_data = (struct write_data *)data;
 	bool has_matched = false;
+	int error;
 
 	GIT_UNUSED(reader);
 	GIT_UNUSED(current_section);
+
+	/*
+	 * If there were comments just before this variable, let's dump them as well.
+	 */
+	if ((error = git_buf_put(write_data->buf, write_data->buffered_comment.ptr, write_data->buffered_comment.size)) < 0)
+		return error;
+
+	git_buf_clear(&write_data->buffered_comment);
 
 	/* See if we are to update this name/value pair; first examine name */
 	if (write_data->in_section &&
@@ -1766,15 +1847,22 @@ static int write_on_comment(struct reader **reader, const char *line, size_t lin
 	GIT_UNUSED(reader);
 
 	write_data = (struct write_data *)data;
-	return write_line(write_data, line, line_len);
+	return write_line_to(&write_data->buffered_comment, line, line_len);
 }
 
-static int write_on_eof(struct reader **reader, void *data)
+static int write_on_eof(
+	struct reader **reader, const char *current_section, void *data)
 {
 	struct write_data *write_data = (struct write_data *)data;
 	int result = 0;
 
 	GIT_UNUSED(reader);
+
+	/*
+	 * If we've buffered comments when reaching EOF, make sure to dump them.
+	 */
+	if ((result = git_buf_put(write_data->buf, write_data->buffered_comment.ptr, write_data->buffered_comment.size)) < 0)
+		return result;
 
 	/* If we are at the EOF and have not written our value (again, for a
 	 * simple name/value set, not a multivar) then we have never seen the
@@ -1782,7 +1870,11 @@ static int write_on_eof(struct reader **reader, void *data)
 	 * value.
 	 */
 	if ((!write_data->preg || !write_data->preg_replaced) && write_data->value) {
-		if ((result = write_section(write_data->file, write_data->section)) == 0)
+		/* write the section header unless we're already in it */
+		if (!current_section || strcmp(current_section, write_data->section))
+			result = write_section(write_data->buf, write_data->section);
+
+		if (!result)
 			result = write_value(write_data);
 	}
 
@@ -1797,18 +1889,23 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	int result;
 	char *section, *name, *ldot;
 	git_filebuf file = GIT_FILEBUF_INIT;
+	git_buf buf = GIT_BUF_INIT;
 	struct reader *reader = git_array_get(cfg->readers, 0);
 	struct write_data write_data;
 
-	/* Lock the file */
-	if ((result = git_filebuf_open(
-		&file, cfg->file_path, 0, GIT_CONFIG_FILE_MODE)) < 0) {
+	if (cfg->locked) {
+		result = git_buf_puts(&reader->buffer, git_buf_cstr(&cfg->locked_content));
+	} else {
+		/* Lock the file */
+		if ((result = git_filebuf_open(
+			     &file, cfg->file_path, GIT_FILEBUF_HASH_CONTENTS, GIT_CONFIG_FILE_MODE)) < 0) {
 			git_buf_free(&reader->buffer);
 			return result;
-	}
+		}
 
-	/* We need to read in our own config file */
-	result = git_futils_readbuffer(&reader->buffer, cfg->file_path);
+		/* We need to read in our own config file */
+		result = git_futils_readbuffer(&reader->buffer, cfg->file_path);
+	}
 
 	/* Initialise the reading position */
 	if (result == GIT_ENOTFOUND) {
@@ -1827,7 +1924,8 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	name = ldot + 1;
 	section = git__strndup(key, ldot - key);
 
-	write_data.file = &file;
+	write_data.buf = &buf;
+	git_buf_init(&write_data.buffered_comment, 0);
 	write_data.section = section;
 	write_data.in_section = 0;
 	write_data.preg_replaced = 0;
@@ -1837,19 +1935,25 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 
 	result = config_parse(reader, write_on_section, write_on_variable, write_on_comment, write_on_eof, &write_data);
 	git__free(section);
+	git_buf_free(&write_data.buffered_comment);
 
 	if (result < 0) {
 		git_filebuf_cleanup(&file);
 		goto done;
 	}
 
-	/* refresh stats - if this errors, then commit will error too */
-	(void)git_filebuf_stats(&reader->file_mtime, &reader->file_size, &file);
-
-	result = git_filebuf_commit(&file);
-	git_buf_free(&reader->buffer);
+	if (cfg->locked) {
+		size_t len = buf.asize;
+		/* Update our copy with the modified contents */
+		git_buf_free(&cfg->locked_content);
+		git_buf_attach(&cfg->locked_content, git_buf_detach(&buf), len);
+	} else {
+		git_filebuf_write(&file, git_buf_cstr(&buf), git_buf_len(&buf));
+		result = git_filebuf_commit(&file);
+	}
 
 done:
+	git_buf_free(&buf);
 	git_buf_free(&reader->buffer);
 	return result;
 }

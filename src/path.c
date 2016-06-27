@@ -10,7 +10,7 @@
 #include "repository.h"
 #ifdef GIT_WIN32
 #include "win32/posix.h"
-#include "win32/buffer.h"
+#include "win32/w32_buffer.h"
 #include "win32/w32_util.h"
 #include "win32/version.h"
 #else
@@ -306,6 +306,25 @@ int git_path_join_unrooted(
 	return 0;
 }
 
+void git_path_squash_slashes(git_buf *path)
+{
+	char *p, *q;
+
+	if (path->size == 0)
+		return;
+
+	for (p = path->ptr, q = path->ptr; *q; p++, q++) {
+		*p = *q;
+
+		while (*q == '/' && *(q+1) == '/') {
+			path->size--;
+			q++;
+		}
+	}
+
+	*p = '\0';
+}
+
 int git_path_prettify(git_buf *path_out, const char *path, const char *base)
 {
 	char buf[GIT_PATH_MAX];
@@ -526,6 +545,17 @@ bool git_path_isfile(const char *path)
 	return S_ISREG(st.st_mode) != 0;
 }
 
+bool git_path_islink(const char *path)
+{
+	struct stat st;
+
+	assert(path);
+	if (p_lstat(path, &st) < 0)
+		return false;
+
+	return S_ISLNK(st.st_mode) != 0;
+}
+
 #ifdef GIT_WIN32
 
 bool git_path_is_empty_dir(const char *path)
@@ -694,8 +724,7 @@ int git_path_resolve_relative(git_buf *path, size_t ceiling)
 	char *base, *to, *from, *next;
 	size_t len;
 
-	if (!path || git_buf_oom(path))
-		return -1;
+	GITERR_CHECK_ALLOC_BUF(path);
 
 	if (ceiling > path->size)
 		ceiling = path->size;
@@ -798,6 +827,20 @@ int git_path_cmp(
 		c2 = '/';
 
 	return (c1 < c2) ? -1 : (c1 > c2) ? 1 : 0;
+}
+
+size_t git_path_common_dirlen(const char *one, const char *two)
+{
+	const char *p, *q, *dirsep = NULL;
+
+	for (p = one, q = two; *p && *q; p++, q++) {
+		if (*p == '/' && *q == '/')
+			dirsep = p;
+		else if (*p != *q)
+			break;
+	}
+
+	return dirsep ? (dirsep - one) + 1 : 0;
 }
 
 int git_path_make_relative(git_buf *path, const char *parent)
@@ -1166,7 +1209,11 @@ static int diriter_update_paths(git_path_diriter *diriter)
 	diriter->path[path_len-1] = L'\0';
 
 	git_buf_truncate(&diriter->path_utf8, diriter->parent_utf8_len);
-	git_buf_putc(&diriter->path_utf8, '/');
+
+	if (diriter->parent_utf8_len > 0 &&
+		diriter->path_utf8.ptr[diriter->parent_utf8_len-1] != '/')
+		git_buf_putc(&diriter->path_utf8, '/');
+
 	git_buf_put_w(&diriter->path_utf8, diriter->current.cFileName, filename_len);
 
 	if (git_buf_oom(&diriter->path_utf8))
@@ -1315,7 +1362,11 @@ int git_path_diriter_next(git_path_diriter *diriter)
 #endif
 
 	git_buf_truncate(&diriter->path, diriter->parent_len);
-	git_buf_putc(&diriter->path, '/');
+
+	if (diriter->parent_len > 0 &&
+		diriter->path.ptr[diriter->parent_len-1] != '/')
+		git_buf_putc(&diriter->path, '/');
+
 	git_buf_put(&diriter->path, filename, filename_len);
 
 	if (git_buf_oom(&diriter->path))
@@ -1380,7 +1431,7 @@ int git_path_dirload(
 	git_vector *contents,
 	const char *path,
 	size_t prefix_len,
-	unsigned int flags)
+	uint32_t flags)
 {
 	git_path_diriter iter = GIT_PATH_DIRITER_INIT;
 	const char *name;
@@ -1611,9 +1662,12 @@ static bool verify_component(
 		!verify_dotgit_ntfs(repo, component, len))
 		return false;
 
+	/* don't bother rerunning the `.git` test if we ran the HFS or NTFS
+	 * specific tests, they would have already rejected `.git`.
+	 */
 	if ((flags & GIT_PATH_REJECT_DOT_GIT_HFS) == 0 &&
 		(flags & GIT_PATH_REJECT_DOT_GIT_NTFS) == 0 &&
-		(flags & GIT_PATH_REJECT_DOT_GIT) &&
+		(flags & GIT_PATH_REJECT_DOT_GIT_LITERAL) &&
 		len == 4 &&
 		component[0] == '.' &&
 		(component[1] == 'g' || component[1] == 'G') &&
@@ -1629,6 +1683,8 @@ GIT_INLINE(unsigned int) dotgit_flags(
 	unsigned int flags)
 {
 	int protectHFS = 0, protectNTFS = 0;
+
+	flags |= GIT_PATH_REJECT_DOT_GIT_LITERAL;
 
 #ifdef __APPLE__
 	protectHFS = 1;

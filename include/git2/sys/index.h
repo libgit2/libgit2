@@ -25,7 +25,7 @@ typedef struct git_index_name_entry {
 
 /** Representation of a resolve undo entry in the index. */
 typedef struct git_index_reuc_entry {
-	unsigned int mode[3];
+	uint32_t mode[3];
 	git_oid oid[3];
 	char *path;
 } git_index_reuc_entry;

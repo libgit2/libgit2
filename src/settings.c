@@ -14,6 +14,7 @@
 #include "sysdir.h"
 #include "cache.h"
 #include "global.h"
+#include "object.h"
 
 void git_libgit2_version(int *major, int *minor, int *rev)
 {
@@ -22,7 +23,7 @@ void git_libgit2_version(int *major, int *minor, int *rev)
 	*rev = LIBGIT2_VER_REVISION;
 }
 
-int git_libgit2_features()
+int git_libgit2_features(void)
 {
 	return 0
 #ifdef GIT_THREADS
@@ -33,6 +34,9 @@ int git_libgit2_features()
 #endif
 #if defined(GIT_SSH)
 		| GIT_FEATURE_SSH
+#endif
+#if defined(GIT_USE_NSEC)
+		| GIT_FEATURE_NSEC
 #endif
 	;
 }
@@ -46,15 +50,37 @@ static int config_level_to_sysdir(int config_level)
 	int val = -1;
 
 	switch (config_level) {
-	case GIT_CONFIG_LEVEL_SYSTEM: val = GIT_SYSDIR_SYSTEM; break;
-	case GIT_CONFIG_LEVEL_XDG:    val = GIT_SYSDIR_XDG; break;
-	case GIT_CONFIG_LEVEL_GLOBAL: val = GIT_SYSDIR_GLOBAL; break;
+	case GIT_CONFIG_LEVEL_SYSTEM:
+		val = GIT_SYSDIR_SYSTEM;
+		break;
+	case GIT_CONFIG_LEVEL_XDG:
+		val = GIT_SYSDIR_XDG;
+		break;
+	case GIT_CONFIG_LEVEL_GLOBAL:
+		val = GIT_SYSDIR_GLOBAL;
+		break;
+	case GIT_CONFIG_LEVEL_PROGRAMDATA:
+		val = GIT_SYSDIR_PROGRAMDATA;
+		break;
 	default:
 		giterr_set(
 			GITERR_INVALID, "Invalid config path selector %d", config_level);
 	}
 
 	return val;
+}
+
+extern char *git__user_agent;
+extern char *git__ssl_ciphers;
+
+const char *git_libgit2__user_agent(void)
+{
+	return git__user_agent;
+}
+
+const char *git_libgit2__ssl_ciphers(void)
+{
+	return git__ssl_ciphers;
 }
 
 int git_libgit2_opts(int key, ...)
@@ -149,10 +175,43 @@ int git_libgit2_opts(int key, ...)
 			}
 		}
 #else
-		giterr_set(GITERR_NET, "Cannot set certificate locations: OpenSSL is not enabled");
+		giterr_set(GITERR_NET, "cannot set certificate locations: OpenSSL is not enabled");
 		error = -1;
 #endif
 		break;
+	case GIT_OPT_SET_USER_AGENT:
+		git__free(git__user_agent);
+		git__user_agent = git__strdup(va_arg(ap, const char *));
+		if (!git__user_agent) {
+			giterr_set_oom();
+			error = -1;
+		}
+
+		break;
+
+	case GIT_OPT_ENABLE_STRICT_OBJECT_CREATION:
+		git_object__strict_input_validation = (va_arg(ap, int) != 0);
+		break;
+
+	case GIT_OPT_SET_SSL_CIPHERS:
+#ifdef GIT_OPENSSL
+		{
+			git__free(git__ssl_ciphers);
+			git__ssl_ciphers = git__strdup(va_arg(ap, const char *));
+			if (!git__ssl_ciphers) {
+				giterr_set_oom();
+				error = -1;
+			}
+		}
+#else
+		giterr_set(GITERR_NET, "cannot set custom ciphers: OpenSSL is not enabled");
+		error = -1;
+#endif
+		break;
+
+	default:
+		giterr_set(GITERR_INVALID, "invalid option key");
+		error = -1;
 	}
 
 	va_end(ap);

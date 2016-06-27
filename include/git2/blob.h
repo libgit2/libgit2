@@ -150,46 +150,48 @@ GIT_EXTERN(int) git_blob_create_fromworkdir(git_oid *id, git_repository *repo, c
  */
 GIT_EXTERN(int) git_blob_create_fromdisk(git_oid *id, git_repository *repo, const char *path);
 
-
-typedef int (*git_blob_chunk_cb)(char *content, size_t max_length, void *payload);
-
 /**
- * Write a loose blob to the Object Database from a
- * provider of chunks of data.
+ * Create a stream to write a new blob into the object db
+ *
+ * This function may need to buffer the data on disk and will in
+ * general not be the right choice if you know the size of the data
+ * to write. If you have data in memory, use
+ * `git_blob_create_frombuffer()`. If you do not, but know the size of
+ * the contents (and don't want/need to perform filtering), use
+ * `git_odb_open_wstream()`.
+ *
+ * Don't close this stream yourself but pass it to
+ * `git_blob_create_fromstream_commit()` to commit the write to the
+ * object db and get the object id.
  *
  * If the `hintpath` parameter is filled, it will be used to determine
  * what git filters should be applied to the object before it is written
  * to the object database.
  *
- * The implementation of the callback MUST respect the following rules:
- *
- *  - `content` must be filled by the callback. The maximum number of
- *    bytes that the buffer can accept per call is defined by the
- *    `max_length` parameter. Allocation and freeing of the buffer will
- *    be taken care of by libgit2.
- *
- *  - The `callback` must return the number of bytes that have been
- *    written to the `content` buffer.
- *
- *  - When there is no more data to stream, `callback` should return
- *    0. This will prevent it from being invoked anymore.
- *
- *  - If an error occurs, the callback should return a negative value.
- *    This value will be returned to the caller.
- *
- * @param id Return the id of the written blob
+ * @param out the stream into which to write
  * @param repo Repository where the blob will be written.
  *        This repository can be bare or not.
  * @param hintpath If not NULL, will be used to select data filters
  *        to apply onto the content of the blob to be created.
- * @return 0 or error code (from either libgit2 or callback function)
+ * @return 0 or error code
  */
-GIT_EXTERN(int) git_blob_create_fromchunks(
-	git_oid *id,
+GIT_EXTERN(int) git_blob_create_fromstream(
+	git_writestream **out,
 	git_repository *repo,
-	const char *hintpath,
-	git_blob_chunk_cb callback,
-	void *payload);
+	const char *hintpath);
+
+/**
+ * Close the stream and write the blob to the object db
+ *
+ * The stream will be closed and freed.
+ *
+ * @param out the id of the new blob
+ * @param stream the stream to close
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_blob_create_fromstream_commit(
+	git_oid *out,
+	git_writestream *stream);
 
 /**
  * Write an in-memory buffer to the ODB as a blob
@@ -215,6 +217,15 @@ GIT_EXTERN(int) git_blob_create_frombuffer(
  * as binary; 0 otherwise.
  */
 GIT_EXTERN(int) git_blob_is_binary(const git_blob *blob);
+
+/**
+ * Create an in-memory copy of a blob. The copy must be explicitly
+ * free'd or it will leak.
+ *
+ * @param out Pointer to store the copy of the object
+ * @param source Original object to copy
+ */
+GIT_EXTERN(int) git_blob_dup(git_blob **out, git_blob *source);
 
 /** @} */
 GIT_END_DECL

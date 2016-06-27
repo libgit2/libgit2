@@ -72,7 +72,7 @@ extern const char *git_path_topdir(const char *path);
  * This will return a number >= 0 which is the offset to the start of the
  * path, if the path is rooted (i.e. "/rooted/path" returns 0 and
  * "c:/windows/rooted/path" returns 2).  If the path is not rooted, this
- * returns < 0.
+ * returns -1.
  */
 extern int git_path_root(const char *path);
 
@@ -169,6 +169,12 @@ extern bool git_path_isdir(const char *path);
 extern bool git_path_isfile(const char *path);
 
 /**
+ * Check if the given path points to a symbolic link.
+ * @return true or false
+ */
+extern bool git_path_islink(const char *path);
+
+/**
  * Check if the given path is a directory, and is empty.
  */
 extern bool git_path_is_empty_dir(const char *path);
@@ -195,6 +201,18 @@ extern bool git_path_contains(git_buf *dir, const char *item);
  * @return true if subdirectory exists, false otherwise.
  */
 extern bool git_path_contains_dir(git_buf *parent, const char *subdir);
+
+/**
+ * Determine the common directory length between two paths, including
+ * the final path separator.  For example, given paths 'a/b/c/1.txt
+ * and 'a/b/c/d/2.txt', the common directory is 'a/b/c/', and this
+ * will return the length of the string 'a/b/c/', which is 6.
+ *
+ * @param one The first path
+ * @param two The second path
+ * @return The length of the common directory
+ */
+extern size_t git_path_common_dirlen(const char *one, const char *two);
 
 /**
  * Make the path relative to the given parent path.
@@ -224,6 +242,12 @@ extern bool git_path_contains_file(git_buf *dir, const char *file);
  */
 extern int git_path_join_unrooted(
 	git_buf *path_out, const char *path, const char *base, ssize_t *root_at);
+
+/**
+ * Removes multiple occurrences of '/' in a row, squashing them into a
+ * single '/'.
+ */
+extern void git_path_squash_slashes(git_buf *path);
 
 /**
  * Clean up path, prepending base if it is not already rooted.
@@ -319,7 +343,7 @@ extern int git_path_cmp(
  * @param callback Function to invoke on each path.  Passed the `payload`
  *		and the buffer containing the current path.  The path should not
  *		be modified in any way. Return non-zero to stop iteration.
- * @param state Passed to fn as the first ath.
+ * @param payload Passed to fn as the first ath.
  */
 extern int git_path_walk_up(
 	git_buf *pathbuf,
@@ -558,15 +582,16 @@ extern int git_path_from_url_or_path(git_buf *local_path_out, const char *url_or
 #define GIT_PATH_REJECT_TRAILING_COLON     (1 << 6)
 #define GIT_PATH_REJECT_DOS_PATHS          (1 << 7)
 #define GIT_PATH_REJECT_NT_CHARS           (1 << 8)
-#define GIT_PATH_REJECT_DOT_GIT_HFS        (1 << 9)
-#define GIT_PATH_REJECT_DOT_GIT_NTFS       (1 << 10)
+#define GIT_PATH_REJECT_DOT_GIT_LITERAL    (1 << 9)
+#define GIT_PATH_REJECT_DOT_GIT_HFS        (1 << 10)
+#define GIT_PATH_REJECT_DOT_GIT_NTFS       (1 << 11)
 
 /* Default path safety for writing files to disk: since we use the
  * Win32 "File Namespace" APIs ("\\?\") we need to protect from
  * paths that the normal Win32 APIs would not write.
  */
 #ifdef GIT_WIN32
-# define GIT_PATH_REJECT_DEFAULTS \
+# define GIT_PATH_REJECT_FILESYSTEM_DEFAULTS \
 	GIT_PATH_REJECT_TRAVERSAL | \
 	GIT_PATH_REJECT_BACKSLASH | \
 	GIT_PATH_REJECT_TRAILING_DOT | \
@@ -575,8 +600,17 @@ extern int git_path_from_url_or_path(git_buf *local_path_out, const char *url_or
 	GIT_PATH_REJECT_DOS_PATHS | \
 	GIT_PATH_REJECT_NT_CHARS
 #else
-# define GIT_PATH_REJECT_DEFAULTS GIT_PATH_REJECT_TRAVERSAL
+# define GIT_PATH_REJECT_FILESYSTEM_DEFAULTS \
+	GIT_PATH_REJECT_TRAVERSAL
 #endif
+
+ /* Paths that should never be written into the working directory. */
+#define GIT_PATH_REJECT_WORKDIR_DEFAULTS \
+	GIT_PATH_REJECT_FILESYSTEM_DEFAULTS | GIT_PATH_REJECT_DOT_GIT
+
+/* Paths that should never be written to the index. */
+#define GIT_PATH_REJECT_INDEX_DEFAULTS \
+	GIT_PATH_REJECT_TRAVERSAL | GIT_PATH_REJECT_DOT_GIT
 
 /*
  * Determine whether a path is a valid git path or not - this must not contain

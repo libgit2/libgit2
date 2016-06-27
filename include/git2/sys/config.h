@@ -67,6 +67,20 @@ struct git_config_backend {
 	int (*iterator)(git_config_iterator **, struct git_config_backend *);
 	/** Produce a read-only version of this backend */
 	int (*snapshot)(struct git_config_backend **, struct git_config_backend *);
+	/**
+	 * Lock this backend.
+	 *
+	 * Prevent any writes to the data store backing this
+	 * backend. Any updates must not be visible to any other
+	 * readers.
+	 */
+	int (*lock)(struct git_config_backend *);
+	/**
+	 * Unlock the data store backing this backend. If success is
+	 * true, the changes should be committed, otherwise rolled
+	 * back.
+	 */
+	int (*unlock)(struct git_config_backend *, int success);
 	void (*free)(struct git_config_backend *);
 };
 #define GIT_CONFIG_BACKEND_VERSION 1
@@ -76,7 +90,7 @@ struct git_config_backend {
  * Initializes a `git_config_backend` with default values. Equivalent to
  * creating an instance with GIT_CONFIG_BACKEND_INIT.
  *
- * @param opts the `git_config_backend` struct to initialize.
+ * @param backend the `git_config_backend` struct to initialize.
  * @param version Version of struct; pass `GIT_CONFIG_BACKEND_VERSION`
  * @return Zero on success; -1 on failure.
  */

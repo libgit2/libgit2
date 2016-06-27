@@ -299,6 +299,8 @@ const char* cl_git_path_url(const char *path)
 		in_buf++;
 	}
 
+	cl_assert(url_buf.size < 4096);
+
 	strncpy(url, git_buf_cstr(&url_buf), 4096);
 	git_buf_free(&url_buf);
 	git_buf_free(&path_buf);
@@ -539,14 +541,23 @@ void cl_fake_home(void)
 
 void cl_sandbox_set_search_path_defaults(void)
 {
-	const char *sandbox_path = clar_sandbox_path();
+	git_buf path = GIT_BUF_INIT;
+
+	git_buf_joinpath(&path, clar_sandbox_path(), "__config");
+
+	if (!git_path_exists(path.ptr))
+		cl_must_pass(p_mkdir(path.ptr, 0777));
 
 	git_libgit2_opts(
-		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, sandbox_path);
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, path.ptr);
 	git_libgit2_opts(
-		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, sandbox_path);
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, path.ptr);
 	git_libgit2_opts(
-		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, sandbox_path);
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, path.ptr);
+	git_libgit2_opts(
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_PROGRAMDATA, path.ptr);
+
+	git_buf_free(&path);
 }
 
 #ifdef GIT_WIN32

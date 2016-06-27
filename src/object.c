@@ -12,9 +12,10 @@
 #include "commit.h"
 #include "tree.h"
 #include "blob.h"
+#include "oid.h"
 #include "tag.h"
 
-static const int OBJECT_BASE_SIZE = 4096;
+bool git_object__strict_input_validation = true;
 
 typedef struct {
 	const char	*str;	/* type name string */
@@ -166,13 +167,9 @@ int git_object_lookup_prefix(
 			error = git_odb_read(&odb_obj, odb, id);
 		}
 	} else {
-		git_oid short_oid;
+		git_oid short_oid = {{ 0 }};
 
-		/* We copy the first len*4 bits from id and fill the remaining with 0s */
-		memcpy(short_oid.id, id->id, (len + 1) / 2);
-		if (len % 2)
-			short_oid.id[len / 2] &= 0xF0;
-		memset(short_oid.id + (len + 1) / 2, 0, (GIT_OID_HEXSZ - len) / 2);
+		git_oid__cpy_prefix(&short_oid, id, len);
 
 		/* If len < GIT_OID_HEXSZ (a strict short oid was given), we have
 		 * 2 options :
@@ -465,5 +462,29 @@ int git_object_short_id(git_buf *out, const git_object *obj)
 	git_odb_free(odb);
 
 	return error;
+}
+
+bool git_object__is_valid(
+	git_repository *repo, const git_oid *id, git_otype expected_type)
+{
+	git_odb *odb;
+	git_otype actual_type;
+	size_t len;
+	int error;
+
+	if (!git_object__strict_input_validation)
+		return true;
+
+	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||
+		(error = git_odb_read_header(&len, &actual_type, odb, id)) < 0)
+		return false;
+
+	if (expected_type != GIT_OBJ_ANY && expected_type != actual_type) {
+		giterr_set(GITERR_INVALID,
+			"the requested type does not match the type in the ODB");
+		return false;
+	}
+
+	return true;
 }
 

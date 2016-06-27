@@ -11,7 +11,7 @@
 #include "posix.h"
 
 #ifdef GIT_WIN32
-# include "win32/buffer.h"
+# include "win32/w32_buffer.h"
 #endif
 
 #ifdef _MSC_VER
@@ -66,6 +66,12 @@ int git_strarray_copy(git_strarray *tgt, const git_strarray *src)
 
 int git__strtol64(int64_t *result, const char *nptr, const char **endptr, int base)
 {
+
+	return git__strntol64(result, nptr, (size_t)-1, endptr, base);
+}
+
+int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const char **endptr, int base)
+{
 	const char *p;
 	int64_t n, nn;
 	int c, ovfl, v, neg, ndig;
@@ -111,7 +117,7 @@ int git__strtol64(int64_t *result, const char *nptr, const char **endptr, int ba
 	/*
 	 * Non-empty sequence of digits
 	 */
-	for (;; p++,ndig++) {
+	for (; nptr_len > 0; p++,ndig++,nptr_len--) {
 		c = *p;
 		v = base;
 		if ('0'<=c && c<='9')
@@ -148,11 +154,17 @@ Return:
 
 int git__strtol32(int32_t *result, const char *nptr, const char **endptr, int base)
 {
+
+	return git__strntol32(result, nptr, (size_t)-1, endptr, base);
+}
+
+int git__strntol32(int32_t *result, const char *nptr, size_t nptr_len, const char **endptr, int base)
+{
 	int error;
 	int32_t tmp_int;
 	int64_t tmp_long;
 
-	if ((error = git__strtol64(&tmp_long, nptr, endptr, base)) < 0)
+	if ((error = git__strntol64(&tmp_long, nptr, nptr_len, endptr, base)) < 0)
 		return error;
 
 	tmp_int = tmp_long & 0xFFFFFFFF;
@@ -319,6 +331,12 @@ char *git__strsep(char **end, const char *sep)
 	}
 
 	return NULL;
+}
+
+size_t git__linenlen(const char *buffer, size_t buffer_len)
+{
+	char *nl = memchr(buffer, '\n', buffer_len);
+	return nl ? (size_t)(nl - buffer) + 1 : buffer_len;
 }
 
 void git__hexdump(const char *buffer, size_t len)
@@ -611,7 +629,7 @@ size_t git__unescape(char *str)
 	return (pos - str);
 }
 
-#if defined(GIT_WIN32) || defined(BSD)
+#if defined(HAVE_QSORT_S) || (defined(HAVE_QSORT_R) && defined(BSD))
 typedef struct {
 	git__sort_r_cmp cmp;
 	void *payload;
@@ -628,21 +646,16 @@ static int GIT_STDLIB_CALL git__qsort_r_glue_cmp(
 void git__qsort_r(
 	void *els, size_t nel, size_t elsize, git__sort_r_cmp cmp, void *payload)
 {
-#if defined(__MINGW32__) || defined(AMIGA) || \
-	defined(__OpenBSD__) || defined(__NetBSD__) || \
-	defined(__gnu_hurd__) || defined(__ANDROID_API__) || \
-	defined(__sun) || defined(__CYGWIN__) || \
-	(__GLIBC__ == 2 && __GLIBC_MINOR__ < 8) || \
-	(defined(_MSC_VER) && _MSC_VER < 1500)
-	git__insertsort_r(els, nel, elsize, NULL, cmp, payload);
-#elif defined(GIT_WIN32)
-	git__qsort_r_glue glue = { cmp, payload };
-	qsort_s(els, nel, elsize, git__qsort_r_glue_cmp, &glue);
-#elif defined(BSD)
+#if defined(HAVE_QSORT_R) && defined(BSD)
 	git__qsort_r_glue glue = { cmp, payload };
 	qsort_r(els, nel, elsize, &glue, git__qsort_r_glue_cmp);
-#else
+#elif defined(HAVE_QSORT_R) && defined(__GLIBC__)
 	qsort_r(els, nel, elsize, cmp, payload);
+#elif defined(HAVE_QSORT_S)
+	git__qsort_r_glue glue = { cmp, payload };
+	qsort_s(els, nel, elsize, git__qsort_r_glue_cmp, &glue);
+#else
+	git__insertsort_r(els, nel, elsize, NULL, cmp, payload);
 #endif
 }
 

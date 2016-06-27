@@ -105,6 +105,18 @@ git_reference *git_reference__set_name(
 	return rewrite;
 }
 
+int git_reference_dup(git_reference **dest, git_reference *source)
+{
+	if (source->type == GIT_REF_SYMBOLIC)
+		*dest = git_reference__alloc_symbolic(source->name, source->target.symbolic);
+	else
+		*dest = git_reference__alloc(source->name, &source->target.oid, &source->peel);
+
+	GITERR_CHECK_ALLOC(*dest);
+
+	return 0;
+}
+
 void git_reference_free(git_reference *reference)
 {
 	if (reference == NULL)
@@ -289,6 +301,9 @@ cleanup:
 			"Could not use '%s' as valid reference name", git_buf_cstr(&name));
 	}
 
+	if (error == GIT_ENOTFOUND)
+		giterr_set(GITERR_REFERENCE, "no reference found for shorthand '%s'", refname);
+
 	git_buf_free(&name);
 	git_buf_free(&refnamebuf);
 	return error;
@@ -377,15 +392,9 @@ static int reference__create(
 		return error;
 
 	if (oid != NULL) {
-		git_odb *odb;
-
 		assert(symbolic == NULL);
 
-		/* Sanity check the reference being created - target must exist. */
-		if ((error = git_repository_odb__weakptr(&odb, repo)) < 0)
-			return error;
-
-		if (!git_odb_exists(odb, oid)) {
+		if (!git_object__is_valid(repo, oid, GIT_OBJ_ANY)) {
 			giterr_set(GITERR_REFERENCE,
 				"Target OID for the reference doesn't exist on the repository");
 			return -1;
@@ -451,7 +460,7 @@ int git_reference_create_matching(
 {
 	int error;
 	git_signature *who = NULL;
-	
+
 	assert(id);
 
 	if ((error = git_reference__log_signature(&who, repo)) < 0)

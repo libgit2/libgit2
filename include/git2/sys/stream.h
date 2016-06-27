@@ -9,6 +9,7 @@
 
 #include "git2/common.h"
 #include "git2/types.h"
+#include "git2/proxy.h"
 
 GIT_BEGIN_DECL
 
@@ -32,12 +33,25 @@ typedef struct git_stream {
 	int proxy_support;
 	int (*connect)(struct git_stream *);
 	int (*certificate)(git_cert **, struct git_stream *);
-	int (*set_proxy)(struct git_stream *, const char *proxy_url);
+	int (*set_proxy)(struct git_stream *, const git_proxy_options *proxy_opts);
 	ssize_t (*read)(struct git_stream *, void *, size_t);
 	ssize_t (*write)(struct git_stream *, const char *, size_t, int);
 	int (*close)(struct git_stream *);
 	void (*free)(struct git_stream *);
 } git_stream;
+
+typedef int (*git_stream_cb)(git_stream **out, const char *host, const char *port);
+
+/**
+ * Register a TLS stream constructor for the library to use
+ *
+ * If a constructor is already set, it will be overwritten. Pass
+ * `NULL` in order to deregister the current constructor.
+ *
+ * @param ctor the constructor to use
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_stream_register_tls(git_stream_cb ctor);
 
 GIT_END_DECL
 

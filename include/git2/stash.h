@@ -68,7 +68,7 @@ GIT_EXTERN(int) git_stash_save(
 	git_repository *repo,
 	const git_signature *stasher,
 	const char *message,
-	unsigned int flags);
+	uint32_t flags);
 
 /** Stash application flags. */
 typedef enum {
@@ -150,7 +150,7 @@ typedef struct git_stash_apply_options {
  *        `GIT_STASH_APPLY_OPTIONS_INIT` here.
  * @return Zero on success; -1 on failure.
  */
-int git_stash_apply_init_options(
+GIT_EXTERN(int) git_stash_apply_init_options(
 	git_stash_apply_options *opts, unsigned int version);
 
 /**

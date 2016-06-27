@@ -25,6 +25,7 @@
 #include "odb.h"
 #include "push.h"
 #include "remote.h"
+#include "proxy.h"
 
 typedef struct {
 	git_transport parent;
@@ -199,6 +200,7 @@ static int local_connect(
 	const char *url,
 	git_cred_acquire_cb cred_acquire_cb,
 	void *cred_acquire_payload,
+	const git_proxy_options *proxy,
 	int direction, int flags)
 {
 	git_repository *repo;
@@ -209,6 +211,7 @@ static int local_connect(
 
 	GIT_UNUSED(cred_acquire_cb);
 	GIT_UNUSED(cred_acquire_payload);
+	GIT_UNUSED(proxy);
 
 	if (t->connected)
 		return 0;
@@ -439,7 +442,7 @@ static int local_push(
 
 		if (!url || t->parent.close(&t->parent) < 0 ||
 			t->parent.connect(&t->parent, url,
-			NULL, NULL, GIT_DIRECTION_PUSH, flags))
+			NULL, NULL, NULL, GIT_DIRECTION_PUSH, flags))
 			goto on_error;
 	}
 

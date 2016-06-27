@@ -154,13 +154,27 @@ typedef enum {
 	GIT_INDEX_ADD_CHECK_PATHSPEC = (1u << 2),
 } git_index_add_option_t;
 
-/**
- * Match any index stage.
- *
- * Some index APIs take a stage to match; pass this value to match
- * any entry matching the path regardless of stage.
- */
-#define GIT_INDEX_STAGE_ANY -1
+typedef enum {
+	/**
+	 * Match any index stage.
+	 *
+	 * Some index APIs take a stage to match; pass this value to match
+	 * any entry matching the path regardless of stage.
+	 */
+	GIT_INDEX_STAGE_ANY = -1,
+
+	/** A normal staged file in the index. */
+	GIT_INDEX_STAGE_NORMAL = 0,
+
+	/** The ancestor side of a conflict. */
+	GIT_INDEX_STAGE_ANCESTOR = 1,
+
+	/** The "ours" side of a conflict. */
+	GIT_INDEX_STAGE_OURS = 2,
+
+	/** The "theirs" side of a conflict. */
+	GIT_INDEX_STAGE_THEIRS = 3,
+} git_index_stage_t;
 
 /** @name Index File Functions
  *
@@ -642,6 +656,17 @@ GIT_EXTERN(int) git_index_update_all(
  * @return a zero-based position in the index if found; GIT_ENOTFOUND otherwise
  */
 GIT_EXTERN(int) git_index_find(size_t *at_pos, git_index *index, const char *path);
+
+/**
+ * Find the first position of any entries matching a prefix. To find the first position
+ * of a path inside a given folder, suffix the prefix with a '/'.
+ *
+ * @param at_pos the address to which the position of the index entry is written (optional)
+ * @param index an existing index object
+ * @param prefix the prefix to search for
+ * @return 0 with valid value in at_pos; an error code otherwise
+ */
+GIT_EXTERN(int) git_index_find_prefix(size_t *at_pos, git_index *index, const char *prefix);
 
 /**@}*/
 

@@ -91,7 +91,6 @@ static int cred_acquire_cb(
 
 /**
  * git_push_status_foreach callback that records status entries.
- * @param data (git_vector *) of push_status instances
  */
 static int record_push_status_cb(const char *ref, const char *msg, void *payload)
 {
@@ -299,7 +298,7 @@ static void verify_update_tips_callback(git_remote *remote, expected_ref expecte
 			goto failed;
 		}
 
-		if (git_oid_cmp(expected_refs[i].oid, tip->new_oid) != 0) {
+		if (git_oid_cmp(expected_refs[i].oid, &tip->new_oid) != 0) {
 			git_buf_printf(&msg, "Updated tip ID does not match expected ID");
 			failed = 1;
 			goto failed;
@@ -373,7 +372,7 @@ void test_online_push__initialize(void)
 
 	record_callbacks_data_clear(&_record_cbs_data);
 
-	cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH, &_record_cbs));
+	cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH, &_record_cbs, NULL, NULL));
 
 	/* Clean up previously pushed branches.  Fails if receive.denyDeletes is
 	 * set on the remote.  Also, on Git 1.7.0 and newer, you must run

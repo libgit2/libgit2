@@ -108,6 +108,7 @@ static int append_symref(const char **out, git_vector *symrefs, const char *ptr)
 		if (giterr_last()->klass != GITERR_NOMEMORY)
 			goto on_invalid;
 
+		git__free(mapping);
 		return error;
 	}
 
@@ -120,6 +121,7 @@ static int append_symref(const char **out, git_vector *symrefs, const char *ptr)
 on_invalid:
 	giterr_set(GITERR_NET, "remote sent invalid symref");
 	git_refspec__free(mapping);
+	git__free(mapping);
 	return -1;
 }
 
@@ -719,32 +721,66 @@ static int add_push_report_pkt(git_push *push, git_pkt *pkt)
 	return 0;
 }
 
-static int add_push_report_sideband_pkt(git_push *push, git_pkt_data *data_pkt)
+static int add_push_report_sideband_pkt(git_push *push, git_pkt_data *data_pkt, git_buf *data_pkt_buf)
 {
 	git_pkt *pkt;
-	const char *line = data_pkt->data, *line_end;
-	size_t line_len = data_pkt->len;
+	const char *line, *line_end;
+	size_t line_len;
 	int error;
+	int reading_from_buf = data_pkt_buf->size > 0;
+
+	if (reading_from_buf) {
+		/* We had an existing partial packet, so add the new
+		 * packet to the buffer and parse the whole thing */
+		git_buf_put(data_pkt_buf, data_pkt->data, data_pkt->len);
+		line = data_pkt_buf->ptr;
+		line_len = data_pkt_buf->size;
+	}
+	else {
+		line = data_pkt->data;
+		line_len = data_pkt->len;
+	}
 
 	while (line_len > 0) {
 		error = git_pkt_parse_line(&pkt, line, &line_end, line_len);
 
-		if (error < 0)
-			return error;
+		if (error == GIT_EBUFS) {
+			/* Buffer the data when the inner packet is split
+			 * across multiple sideband packets */
+			if (!reading_from_buf)
+				git_buf_put(data_pkt_buf, line, line_len);
+			error = 0;
+			goto done;
+		}
+		else if (error < 0)
+			goto done;
 
 		/* Advance in the buffer */
 		line_len -= (line_end - line);
 		line = line_end;
+
+		/* When a valid packet with no content has been
+		 * read, git_pkt_parse_line does not report an
+		 * error, but the pkt pointer has not been set.
+		 * Handle this by skipping over empty packets.
+		 */
+		if (pkt == NULL)
+			continue;
 
 		error = add_push_report_pkt(push, pkt);
 
 		git_pkt_free(pkt);
 
 		if (error < 0 && error != GIT_ITEROVER)
-			return error;
+			goto done;
 	}
 
-	return 0;
+	error = 0;
+
+done:
+	if (reading_from_buf)
+		git_buf_consume(data_pkt_buf, line_end);
+	return error;
 }
 
 static int parse_report(transport_smart *transport, git_push *push)
@@ -753,6 +789,7 @@ static int parse_report(transport_smart *transport, git_push *push)
 	const char *line_end = NULL;
 	gitno_buffer *buf = &transport->buffer;
 	int error, recvd;
+	git_buf data_pkt_buf = GIT_BUF_INIT;
 
 	for (;;) {
 		if (buf->offset > 0)
@@ -761,16 +798,21 @@ static int parse_report(transport_smart *transport, git_push *push)
 		else
 			error = GIT_EBUFS;
 
-		if (error < 0 && error != GIT_EBUFS)
-			return -1;
+		if (error < 0 && error != GIT_EBUFS) {
+			error = -1;
+			goto done;
+		}
 
 		if (error == GIT_EBUFS) {
-			if ((recvd = gitno_recv(buf)) < 0)
-				return recvd;
+			if ((recvd = gitno_recv(buf)) < 0) {
+				error = recvd;
+				goto done;
+			}
 
 			if (recvd == 0) {
 				giterr_set(GITERR_NET, "early EOF");
-				return GIT_EEOF;
+				error = GIT_EEOF;
+				goto done;
 			}
 			continue;
 		}
@@ -779,10 +821,13 @@ static int parse_report(transport_smart *transport, git_push *push)
 
 		error = 0;
 
+		if (pkt == NULL)
+			continue;
+
 		switch (pkt->type) {
 			case GIT_PKT_DATA:
 				/* This is a sideband packet which contains other packets */
-				error = add_push_report_sideband_pkt(push, (git_pkt_data *)pkt);
+				error = add_push_report_sideband_pkt(push, (git_pkt_data *)pkt, &data_pkt_buf);
 				break;
 			case GIT_PKT_ERR:
 				giterr_set(GITERR_NET, "report-status: Error reported: %s",
@@ -803,12 +848,24 @@ static int parse_report(transport_smart *transport, git_push *push)
 		git_pkt_free(pkt);
 
 		/* add_push_report_pkt returns GIT_ITEROVER when it receives a flush */
-		if (error == GIT_ITEROVER)
-			return 0;
+		if (error == GIT_ITEROVER) {
+			error = 0;
+			if (data_pkt_buf.size > 0) {
+				/* If there was data remaining in the pack data buffer,
+				 * then the server sent a partial pkt-line */
+				giterr_set(GITERR_NET, "Incomplete pack data pkt-line");
+				error = GIT_ERROR;
+			}
+			goto done;
+		}
 
-		if (error < 0)
-			return error;
+		if (error < 0) {
+			goto done;
+		}
 	}
+done:
+	git_buf_free(&data_pkt_buf);
+	return error;
 }
 
 static int add_ref_from_push_spec(git_vector *refs, push_spec *push_spec)
@@ -957,7 +1014,7 @@ int git_smart__push(git_transport *transport, git_push *push, const git_remote_c
 
 	packbuilder_payload.pb = push->pb;
 
-	if (cbs && cbs->transfer_progress) {
+	if (cbs && cbs->push_transfer_progress) {
 		packbuilder_payload.cb = cbs->push_transfer_progress;
 		packbuilder_payload.cb_payload = cbs->payload;
 	}

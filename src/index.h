@@ -10,6 +10,7 @@
 #include "fileops.h"
 #include "filebuf.h"
 #include "vector.h"
+#include "idxmap.h"
 #include "tree-cache.h"
 #include "git2/odb.h"
 #include "git2/index.h"
@@ -25,8 +26,8 @@ struct git_index {
 	git_oid checksum;   /* checksum at the end of the file */
 
 	git_vector entries;
+	git_idxmap *entries_map;
 
-	git_mutex  lock;    /* lock held while entries is being changed */
 	git_vector deleted; /* deleted entries if readers > 0 */
 	git_atomic readers; /* number of active iterators */
 
@@ -63,6 +64,45 @@ extern int git_index_entry_icmp(const void *a, const void *b);
 extern int git_index_entry_srch(const void *a, const void *b);
 extern int git_index_entry_isrch(const void *a, const void *b);
 
+/* Index time handling functions */
+GIT_INLINE(bool) git_index_time_eq(const git_index_time *one, const git_index_time *two)
+{
+	if (one->seconds != two->seconds)
+		return false;
+
+#ifdef GIT_USE_NSEC
+	if (one->nanoseconds != two->nanoseconds)
+		return false;
+#endif
+
+	return true;
+}
+
+/*
+ * Test if the given index time is newer than the given existing index entry.
+ * If the timestamps are exactly equivalent, then the given index time is
+ * considered "racily newer" than the existing index entry.
+ */
+GIT_INLINE(bool) git_index_entry_newer_than_index(
+	const git_index_entry *entry, git_index *index)
+{
+	/* If we never read the index, we can't have this race either */
+	if (!index || index->stamp.mtime.tv_sec == 0)
+		return false;
+
+	/* If the timestamp is the same or newer than the index, it's racy */
+#if defined(GIT_USE_NSEC)
+	if ((int32_t)index->stamp.mtime.tv_sec < entry->mtime.seconds)
+		return true;
+	else if ((int32_t)index->stamp.mtime.tv_sec > entry->mtime.seconds)
+		return false;
+	else
+		return (uint32_t)index->stamp.mtime.tv_nsec <= entry->mtime.nanoseconds;
+#else
+	return ((int32_t)index->stamp.mtime.tv_sec) <= entry->mtime.seconds;
+#endif
+}
+
 /* Search index for `path`, returning GIT_ENOTFOUND if it does not exist
  * (but not setting an error message).
  *
@@ -71,6 +111,8 @@ extern int git_index_entry_isrch(const void *a, const void *b);
  */
 extern int git_index__find_pos(
 	size_t *at_pos, git_index *index, const char *path, size_t path_len, int stage);
+
+extern int git_index__fill(git_index *index, const git_vector *source_entries);
 
 extern void git_index__set_ignore_case(git_index *index, bool ignore_case);
 

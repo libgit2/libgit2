@@ -11,12 +11,6 @@
 
 #undef stat
 
-#if _WIN32_WINNT >= 0x0601
-#define stat __stat64
-#else
-#define stat _stati64
-#endif
-
 #if _WIN32_WINNT < 0x0600 && !defined(__MINGW64_VERSION_MAJOR)
 #undef MemoryBarrier
 void __mingworg_MemoryBarrier(void);

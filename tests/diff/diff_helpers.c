@@ -241,3 +241,76 @@ void diff_print_raw(FILE *fp, git_diff *diff)
 		git_diff_print(diff, GIT_DIFF_FORMAT_RAW,
 			git_diff_print_callback__to_file_handle, fp ? fp : stderr));
 }
+
+static size_t num_modified_deltas(git_diff *diff)
+{
+	const git_diff_delta *delta;
+	size_t i, cnt = 0;
+
+	for (i = 0; i < git_diff_num_deltas(diff); i++) {
+		delta = git_diff_get_delta(diff, i);
+
+		if (delta->status != GIT_DELTA_UNMODIFIED)
+			cnt++;
+	}
+
+	return cnt;
+}
+
+void diff_assert_equal(git_diff *a, git_diff *b)
+{
+	const git_diff_delta *ad, *bd;
+	size_t i, j;
+
+	assert(a && b);
+
+	cl_assert_equal_i(num_modified_deltas(a), num_modified_deltas(b));
+
+	for (i = 0, j = 0;
+		i < git_diff_num_deltas(a) && j < git_diff_num_deltas(b); ) {
+
+		ad = git_diff_get_delta(a, i);
+		bd = git_diff_get_delta(b, j);
+
+		if (ad->status == GIT_DELTA_UNMODIFIED) {
+			i++;
+			continue;
+		}
+		if (bd->status == GIT_DELTA_UNMODIFIED) {
+			j++;
+			continue;
+		}
+
+		cl_assert_equal_i(ad->status, bd->status);
+		cl_assert_equal_i(ad->flags, bd->flags);
+		cl_assert_equal_i(ad->similarity, bd->similarity);
+		cl_assert_equal_i(ad->nfiles, bd->nfiles);
+
+		/* Don't examine the size or the flags of the deltas;
+		 * computed deltas have sizes (parsed deltas do not) and
+		 * computed deltas will have flags of `VALID_ID` and
+		 * `EXISTS` (parsed deltas will not query the ODB.)
+		 */
+
+		/* an empty id indicates that it wasn't presented, because
+		 * the diff was identical.  (eg, pure rename, mode change only, etc)
+		 */
+		if (ad->old_file.id_abbrev && bd->old_file.id_abbrev) {
+			cl_assert_equal_i(ad->old_file.id_abbrev, bd->old_file.id_abbrev);
+			cl_assert_equal_oid(&ad->old_file.id, &bd->old_file.id);
+			cl_assert_equal_i(ad->old_file.mode, bd->old_file.mode);
+		}
+		cl_assert_equal_s(ad->old_file.path, bd->old_file.path);
+
+		if (ad->new_file.id_abbrev && bd->new_file.id_abbrev) {
+			cl_assert_equal_oid(&ad->new_file.id, &bd->new_file.id);
+			cl_assert_equal_i(ad->new_file.id_abbrev, bd->new_file.id_abbrev);
+			cl_assert_equal_i(ad->new_file.mode, bd->new_file.mode);
+		}
+		cl_assert_equal_s(ad->new_file.path, bd->new_file.path);
+
+		i++;
+		j++;
+	}
+}
+

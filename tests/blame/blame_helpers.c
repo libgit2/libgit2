@@ -4,7 +4,7 @@ void hunk_message(size_t idx, const git_blame_hunk *hunk, const char *fmt, ...)
 {
 	va_list arglist;
 
-	printf("Hunk %"PRIuZ" (line %d +%d): ", idx,
+	printf("Hunk %"PRIuZ" (line %"PRIuZ" +%"PRIuZ"): ", idx,
 			hunk->final_start_line_number, hunk->lines_in_hunk-1);
 
 	va_start(arglist, fmt);
@@ -15,7 +15,7 @@ void hunk_message(size_t idx, const git_blame_hunk *hunk, const char *fmt, ...)
 }
 
 void check_blame_hunk_index(git_repository *repo, git_blame *blame, int idx,
-		int start_line, int len, char boundary, const char *commit_id, const char *orig_path)
+		size_t start_line, size_t len, char boundary, const char *commit_id, const char *orig_path)
 {
 	char expected[GIT_OID_HEXSZ+1] = {0}, actual[GIT_OID_HEXSZ+1] = {0};
 	const git_blame_hunk *hunk = git_blame_get_hunk_byindex(blame, idx);

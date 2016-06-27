@@ -38,7 +38,7 @@ void test_revwalk_signatureparsing__do_not_choke_when_name_contains_angle_bracke
 
 	signature = git_commit_committer(commit);
 	cl_assert_equal_s("foo@example.com", signature->email);
-	cl_assert_equal_s("<Yu V. Bin Haacked>", signature->name);
+	cl_assert_equal_s("Yu V. Bin Haacked", signature->name);
 	cl_assert_equal_i(1323847743, (int)signature->when.time);
 	cl_assert_equal_i(60, signature->when.offset);
 

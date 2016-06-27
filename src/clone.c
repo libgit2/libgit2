@@ -440,14 +440,14 @@ int git_clone(
 
 	if (error != 0) {
 		git_error_state last_error = {0};
-		giterr_capture(&last_error, error);
+		giterr_state_capture(&last_error, error);
 
 		git_repository_free(repo);
 		repo = NULL;
 
 		(void)git_futils_rmdir_r(local_path, NULL, rmdir_flags);
 
-		giterr_restore(&last_error);
+		giterr_state_restore(&last_error);
 	}
 
 	*out = repo;
@@ -459,14 +459,6 @@ int git_clone_init_options(git_clone_options *opts, unsigned int version)
 	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
 		opts, version, git_clone_options, GIT_CLONE_OPTIONS_INIT);
 	return 0;
-}
-
-static const char *repository_base(git_repository *repo)
-{
-	if (git_repository_is_bare(repo))
-		return git_repository_path(repo);
-
-	return git_repository_workdir(repo);
 }
 
 static bool can_link(const char *src, const char *dst, int link)

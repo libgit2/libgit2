@@ -281,6 +281,18 @@ void test_blame_simple__can_restrict_lines_both(void)
 	check_blame_hunk_index(g_repo, g_blame, 2,  6, 2, 0, "63d671eb", "b.txt");
 }
 
+void test_blame_simple__can_blame_huge_file(void)
+{
+	git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
+
+	cl_git_pass(git_repository_open(&g_repo, cl_fixture("blametest.git")));
+
+	cl_git_pass(git_blame_file(&g_blame, g_repo, "huge.txt", &opts));
+	cl_assert_equal_i(2, git_blame_get_hunk_count(g_blame));
+	check_blame_hunk_index(g_repo, g_blame, 0, 1,     65536, 0, "4eecfea", "huge.txt");
+	check_blame_hunk_index(g_repo, g_blame, 1, 65537, 1,     0, "6653ff4", "huge.txt");
+}
+
 /*
  * $ git blame -n branch_file.txt be3563a..HEAD
  *    orig line no                          final line no

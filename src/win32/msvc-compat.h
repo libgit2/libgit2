@@ -9,9 +9,6 @@
 
 #if defined(_MSC_VER)
 
-/* 64-bit stat information, regardless of USE_32BIT_TIME_T define */
-#define stat __stat64
-
 typedef unsigned short mode_t;
 typedef SSIZE_T ssize_t;
 

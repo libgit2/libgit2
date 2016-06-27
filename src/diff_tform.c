@@ -11,6 +11,7 @@
 #include "git2/sys/hashsig.h"
 
 #include "diff.h"
+#include "diff_generate.h"
 #include "path.h"
 #include "fileops.h"
 #include "config.h"
@@ -134,10 +135,10 @@ int git_diff__merge(
 		return -1;
 	}
 
-	if (git_vector_init(
-			&onto_new, onto->deltas.length, git_diff_delta__cmp) < 0 ||
-		git_pool_init(&onto_pool, 1, 0) < 0)
+	if (git_vector_init(&onto_new, onto->deltas.length, git_diff_delta__cmp) < 0)
 		return -1;
+
+	git_pool_init(&onto_pool, 1);
 
 	for (i = 0, j = 0; i < onto->deltas.length || j < from->deltas.length; ) {
 		git_diff_delta *o = GIT_VECTOR_GET(&onto->deltas, i);
@@ -261,18 +262,23 @@ static int normalize_find_opts(
 	if (!given ||
 		 (given->flags & GIT_DIFF_FIND_ALL) == GIT_DIFF_FIND_BY_CONFIG)
 	{
-		char *rule =
-			git_config__get_string_force(cfg, "diff.renames", "true");
-		int boolval;
+		if (cfg) {
+			char *rule =
+				git_config__get_string_force(cfg, "diff.renames", "true");
+			int boolval;
 
-		if (!git__parse_bool(&boolval, rule) && !boolval)
-			/* don't set FIND_RENAMES if bool value is false */;
-		else if (!strcasecmp(rule, "copies") || !strcasecmp(rule, "copy"))
-			opts->flags |= GIT_DIFF_FIND_RENAMES | GIT_DIFF_FIND_COPIES;
-		else
+			if (!git__parse_bool(&boolval, rule) && !boolval)
+				/* don't set FIND_RENAMES if bool value is false */;
+			else if (!strcasecmp(rule, "copies") || !strcasecmp(rule, "copy"))
+				opts->flags |= GIT_DIFF_FIND_RENAMES | GIT_DIFF_FIND_COPIES;
+			else
+				opts->flags |= GIT_DIFF_FIND_RENAMES;
+
+			git__free(rule);
+		} else {
+			/* set default flag */
 			opts->flags |= GIT_DIFF_FIND_RENAMES;
-
-		git__free(rule);
+		}
 	}
 
 	/* some flags imply others */
@@ -313,8 +319,10 @@ static int normalize_find_opts(
 #undef USE_DEFAULT
 
 	if (!opts->rename_limit) {
-		opts->rename_limit = git_config__get_int_force(
-			cfg, "diff.renamelimit", DEFAULT_RENAME_LIMIT);
+		if (cfg) {
+			opts->rename_limit = git_config__get_int_force(
+				cfg, "diff.renamelimit", DEFAULT_RENAME_LIMIT);
+		}
 
 		if (opts->rename_limit <= 0)
 			opts->rename_limit = DEFAULT_RENAME_LIMIT;

@@ -5,7 +5,7 @@
 
 void test_core_stat__initialize(void)
 {
-	cl_git_pass(git_futils_mkdir("root/d1/d2", NULL, 0755, GIT_MKDIR_PATH));
+	cl_git_pass(git_futils_mkdir("root/d1/d2", 0755, GIT_MKDIR_PATH));
 	cl_git_mkfile("root/file", "whatever\n");
 	cl_git_mkfile("root/d1/file", "whatever\n");
 }

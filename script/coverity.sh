@@ -33,6 +33,8 @@ if [ ! -d "$TOOL_BASE" ]; then
 	ln -s "$TOOL_DIR" "$TOOL_BASE"/cov-analysis
 fi
 
+cp script/user_nodefs.h "$TOOL_BASE"/cov-analysis/config/user_nodefs.h
+
 COV_BUILD="$TOOL_BASE/cov-analysis/bin/cov-build"
 
 # Configure and build
@@ -47,11 +49,24 @@ COVERITY_UNSUPPORTED=1 \
 # Upload results
 tar czf libgit2.tgz cov-int
 SHA=$(git rev-parse --short HEAD)
-curl \
-	--form project=libgit2 \
+
+HTML="$(curl \
+	--silent \
+	--write-out "\n%{http_code}" \
 	--form token="$COVERITY_TOKEN" \
 	--form email=bs@github.com \
 	--form file=@libgit2.tgz \
 	--form version="$SHA" \
 	--form description="Travis build" \
-	http://scan5.coverity.com/cgi-bin/upload.py
+	https://scan.coverity.com/builds?project=libgit2)"
+# Body is everything up to the last line
+BODY="$(echo "$HTML" | head -n-1)"
+# Status code is the last line
+STATUS_CODE="$(echo "$HTML" | tail -n1)"
+
+echo "${BODY}"
+
+if [ "${STATUS_CODE}" != "201" ]; then
+	echo "Received error code ${STATUS_CODE} from Coverity"
+	exit 1
+fi

@@ -9,6 +9,7 @@
 #include "commit.h"
 #include "blob.h"
 #include "xdiff/xinclude.h"
+#include "diff_xdiff.h"
 
 /*
  * Origin is refcounted and usually we keep the blob contents to be
@@ -92,18 +93,25 @@ static bool same_suspect(git_blame__origin *a, git_blame__origin *b)
 }
 
 /* find the line number of the last line the target is suspected for */
-static int find_last_in_target(git_blame *blame, git_blame__origin *target)
+static bool find_last_in_target(size_t *out, git_blame *blame, git_blame__origin *target)
 {
 	git_blame__entry *e;
-	int last_in_target = -1;
+	size_t last_in_target = 0;
+	bool found = false;
+
+	*out = 0;
 
 	for (e=blame->ent; e; e=e->next) {
 		if (e->guilty || !same_suspect(e->suspect, target))
 			continue;
-		if (last_in_target < e->s_lno + e->num_lines)
+		if (last_in_target < e->s_lno + e->num_lines) {
+			found = true;
 			last_in_target = e->s_lno + e->num_lines;
+		}
 	}
-	return last_in_target;
+
+	*out = last_in_target;
+	return found;
 }
 
 /*
@@ -121,9 +129,9 @@ static int find_last_in_target(git_blame *blame, git_blame__origin *target)
  * to be blamed for the parent, and after that portion.
  */
 static void split_overlap(git_blame__entry *split, git_blame__entry *e,
-		int tlno, int plno, int same, git_blame__origin *parent)
+		size_t tlno, size_t plno, size_t same, git_blame__origin *parent)
 {
-	int chunk_end_lno;
+	size_t chunk_end_lno;
 
 	if (e->s_lno < tlno) {
 		/* there is a pre-chunk part not blamed on the parent */
@@ -264,9 +272,9 @@ static void decref_split(git_blame__entry *split)
 static void blame_overlap(
 		git_blame *blame,
 		git_blame__entry *e,
-		int tlno,
-		int plno,
-		int same,
+		size_t tlno,
+		size_t plno,
+		size_t same,
 		git_blame__origin *parent)
 {
 	git_blame__entry split[3] = {{0}};
@@ -284,9 +292,9 @@ static void blame_overlap(
  */
 static void blame_chunk(
 		git_blame *blame,
-		int tlno,
-		int plno,
-		int same,
+		size_t tlno,
+		size_t plno,
+		size_t same,
 		git_blame__origin *target,
 		git_blame__origin *parent)
 {
@@ -313,7 +321,7 @@ static int my_emit(
 	blame_chunk(d->blame, d->tlno, d->plno, start_b, d->target, d->parent);
 	d->plno = start_a + count_a;
 	d->tlno = start_b + count_b;
-	
+
 	return 0;
 }
 
@@ -351,6 +359,13 @@ static int diff_hunks(mmfile_t file_a, mmfile_t file_b, void *cb_data)
 	ecb.priv = cb_data;
 
 	trim_common_tail(&file_a, &file_b, 0);
+
+	if (file_a.size > GIT_XDIFF_MAX_SIZE ||
+		file_b.size > GIT_XDIFF_MAX_SIZE) {
+		giterr_set(GITERR_INVALID, "file too large to blame");
+		return -1;
+	}
+
 	return xdl_diff(&file_a, &file_b, &xpp, &xecfg, &ecb);
 }
 
@@ -368,18 +383,19 @@ static int pass_blame_to_parent(
 		git_blame__origin *target,
 		git_blame__origin *parent)
 {
-	int last_in_target;
+	size_t last_in_target;
 	mmfile_t file_p, file_o;
 	blame_chunk_cb_data d = { blame, target, parent, 0, 0 };
 
-	last_in_target = find_last_in_target(blame, target);
-	if (last_in_target < 0)
+	if (!find_last_in_target(&last_in_target, blame, target))
 		return 1; /* nothing remains for this target */
 
 	fill_origin_blob(parent, &file_p);
 	fill_origin_blob(target, &file_o);
 
-	diff_hunks(file_p, file_o, &d);
+	if (diff_hunks(file_p, file_o, &d) < 0)
+		return -1;
+
 	/* The reset (i.e. anything after tlno) are the same as the parent */
 	blame_chunk(blame, d.tlno, d.plno, last_in_target, target, parent);
 
@@ -477,12 +493,13 @@ static void pass_whole_blame(git_blame *blame,
 	}
 }
 
-static void pass_blame(git_blame *blame, git_blame__origin *origin, uint32_t opt)
+static int pass_blame(git_blame *blame, git_blame__origin *origin, uint32_t opt)
 {
 	git_commit *commit = origin->commit;
 	int i, num_parents;
 	git_blame__origin *sg_buf[16];
 	git_blame__origin *porigin, **sg_origin = sg_buf;
+	int ret, error = 0;
 
 	num_parents = git_commit_parentcount(commit);
 	if (!git_oid_cmp(git_commit_id(commit), &blame->options.oldest_commit))
@@ -508,7 +525,8 @@ static void pass_blame(git_blame *blame, git_blame__origin *origin, uint32_t opt
 		if (sg_origin[i])
 			continue;
 
-		git_commit_parent(&p, origin->commit, i);
+		if ((error = git_commit_parent(&p, origin->commit, i)) < 0)
+			goto finish;
 		porigin = find_origin(blame, p, origin);
 
 		if (!porigin)
@@ -540,8 +558,13 @@ static void pass_blame(git_blame *blame, git_blame__origin *origin, uint32_t opt
 			origin_incref(porigin);
 			origin->previous = porigin;
 		}
-		if (pass_blame_to_parent(blame, origin, porigin))
+
+		if ((ret = pass_blame_to_parent(blame, origin, porigin)) != 0) {
+			if (ret < 0)
+				error = -1;
+
 			goto finish;
+		}
 	}
 
 	/* TODO: optionally find moves in parents' files */
@@ -554,7 +577,7 @@ finish:
 			origin_decref(sg_origin[i]);
 	if (sg_origin != sg_buf)
 		git__free(sg_origin);
-	return;
+	return error;
 }
 
 /*
@@ -583,7 +606,7 @@ static void coalesce(git_blame *blame)
 	}
 }
 
-void git_blame__like_git(git_blame *blame, uint32_t opt)
+int git_blame__like_git(git_blame *blame, uint32_t opt)
 {
 	while (true) {
 		git_blame__entry *ent;
@@ -594,11 +617,13 @@ void git_blame__like_git(git_blame *blame, uint32_t opt)
 			if (!ent->guilty)
 				suspect = ent->suspect;
 		if (!suspect)
-			return; /* all done */
+			return 0; /* all done */
 
 		/* We'll use this suspect later in the loop, so hold on to it for now. */
 		origin_incref(suspect);
-		pass_blame(blame, suspect, opt);
+
+		if (pass_blame(blame, suspect, opt) < 0)
+			return -1;
 
 		/* Take responsibility for the remaining entries */
 		for (ent = blame->ent; ent; ent = ent->next) {
@@ -613,6 +638,8 @@ void git_blame__like_git(git_blame *blame, uint32_t opt)
 	}
 
 	coalesce(blame);
+
+	return 0;
 }
 
 void git_blame__free_entry(git_blame__entry *ent)

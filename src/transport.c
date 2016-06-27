@@ -35,6 +35,8 @@ static transport_definition transports[] = {
 	{ "file://",  git_transport_local, NULL },
 #ifdef GIT_SSH
 	{ "ssh://",   git_transport_smart, &ssh_subtransport_definition },
+	{ "ssh+git://",   git_transport_smart, &ssh_subtransport_definition },
+	{ "git+ssh://",   git_transport_smart, &ssh_subtransport_definition },
 #endif
 	{ NULL, 0, 0 }
 };

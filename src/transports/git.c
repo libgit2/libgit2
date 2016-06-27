@@ -50,6 +50,8 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 	}
 
 	repo = delim;
+	if (repo[1] == '~')
+		++repo;
 
 	delim = strchr(url, ':');
 	if (delim == NULL)
@@ -128,11 +130,14 @@ static int git_proto_stream_write(
 
 static void git_proto_stream_free(git_smart_subtransport_stream *stream)
 {
-	git_proto_stream *s = (git_proto_stream *)stream;
-	git_subtransport *t = OWNING_SUBTRANSPORT(s);
-	int ret;
+	git_proto_stream *s;
+	git_subtransport *t;
 
-	GIT_UNUSED(ret);
+	if (!stream)
+		return;
+
+	s = (git_proto_stream *)stream;
+	t = OWNING_SUBTRANSPORT(s);
 
 	t->current_stream = NULL;
 

@@ -47,7 +47,7 @@ git_commit_list *git_commit_list_insert_by_date(git_commit_list_node *item, git_
 
 git_commit_list_node *git_commit_list_alloc_node(git_revwalk *walk)
 {
-	return (git_commit_list_node *)git_pool_malloc(&walk->commit_pool, COMMIT_ALLOC);
+	return (git_commit_list_node *)git_pool_mallocz(&walk->commit_pool, 1);
 }
 
 static int commit_error(git_commit_list_node *commit, const char *msg)
@@ -110,7 +110,7 @@ static int commit_quick_parse(
 	const uint8_t *buffer_end = buffer + buffer_len;
 	const uint8_t *parents_start, *committer_start;
 	int i, parents = 0;
-	int commit_time;
+	int64_t commit_time;
 
 	buffer += strlen("tree ") + GIT_OID_HEXSZ + 1;
 
@@ -166,10 +166,10 @@ static int commit_quick_parse(
 			buffer--;
 	}
 
-	if ((buffer == committer_start) || (git__strtol32(&commit_time, (char *)(buffer + 1), NULL, 10) < 0))
+	if ((buffer == committer_start) || (git__strtol64(&commit_time, (char *)(buffer + 1), NULL, 10) < 0))
 		return commit_error(commit, "cannot parse commit time");
 
-	commit->time = (time_t)commit_time;
+	commit->time = commit_time;
 	commit->parsed = 1;
 	return 0;
 }

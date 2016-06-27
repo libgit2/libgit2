@@ -63,6 +63,7 @@ static int transfer_progress_cb(const git_transfer_progress *stats, void *payloa
 		       stats->received_objects, stats->total_objects,
 		       stats->indexed_objects, stats->received_bytes);
 	}
+	return 0;
 }
 
 /** Entry point for this command */

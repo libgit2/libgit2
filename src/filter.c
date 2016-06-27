@@ -56,80 +56,15 @@ static int filter_def_priority_cmp(const void *a, const void *b)
 	return (pa < pb) ? -1 : (pa > pb) ? 1 : 0;
 }
 
-struct filter_registry {
+struct git_filter_registry {
+	git_rwlock lock;
 	git_vector filters;
 };
 
-static struct filter_registry *git__filter_registry = NULL;
+static struct git_filter_registry filter_registry;
 
-static void filter_registry_shutdown(void)
-{
-	struct filter_registry *reg = NULL;
-	size_t pos;
-	git_filter_def *fdef;
+static void git_filter_global_shutdown(void);
 
-	if ((reg = git__swap(git__filter_registry, NULL)) == NULL)
-		return;
-
-	git_vector_foreach(&reg->filters, pos, fdef) {
-		if (fdef->filter && fdef->filter->shutdown) {
-			fdef->filter->shutdown(fdef->filter);
-			fdef->initialized = false;
-		}
-
-		git__free(fdef->filter_name);
-		git__free(fdef->attrdata);
-		git__free(fdef);
-	}
-
-	git_vector_free(&reg->filters);
-	git__free(reg);
-}
-
-static int filter_registry_initialize(void)
-{
-	int error = 0;
-	struct filter_registry *reg;
-
-	if (git__filter_registry)
-		return 0;
-
-	reg = git__calloc(1, sizeof(struct filter_registry));
-	GITERR_CHECK_ALLOC(reg);
-
-	if ((error = git_vector_init(
-			&reg->filters, 2, filter_def_priority_cmp)) < 0)
-		goto cleanup;
-
-	reg = git__compare_and_swap(&git__filter_registry, NULL, reg);
-	if (reg != NULL)
-		goto cleanup;
-
-	git__on_shutdown(filter_registry_shutdown);
-
-	/* try to register both default filters */
-	{
-		git_filter *crlf = git_crlf_filter_new();
-		git_filter *ident = git_ident_filter_new();
-
-		if (crlf && git_filter_register(
-				GIT_FILTER_CRLF, crlf, GIT_FILTER_CRLF_PRIORITY) < 0)
-			crlf = NULL;
-		if (ident && git_filter_register(
-				GIT_FILTER_IDENT, ident, GIT_FILTER_IDENT_PRIORITY) < 0)
-			ident = NULL;
-
-		if (!crlf || !ident)
-			return -1;
-	}
-
-	return 0;
-
-cleanup:
-	git_vector_free(&reg->filters);
-	git__free(reg);
-	return error;
-}
 
 static int filter_def_scan_attrs(
 	git_buf *attrs, size_t *nattr, size_t *nmatch, const char *attr_str)
@@ -210,39 +145,13 @@ static int filter_def_filter_key_check(const void *key, const void *fdef)
 	return (key == filter) ? 0 : -1;
 }
 
-static int filter_registry_find(size_t *pos, const char *name)
-{
-	return git_vector_search2(
-		pos, &git__filter_registry->filters, filter_def_name_key_check, name);
-}
-
-static git_filter_def *filter_registry_lookup(size_t *pos, const char *name)
-{
-	git_filter_def *fdef = NULL;
-
-	if (!filter_registry_find(pos, name))
-		fdef = git_vector_get(&git__filter_registry->filters, *pos);
-
-	return fdef;
-}
-
-int git_filter_register(
+/* Note: callers must lock the registry before calling this function */
+static int filter_registry_insert(
 	const char *name, git_filter *filter, int priority)
 {
 	git_filter_def *fdef;
 	size_t nattr = 0, nmatch = 0, alloc_len;
 	git_buf attrs = GIT_BUF_INIT;
-
-	assert(name && filter);
-
-	if (filter_registry_initialize() < 0)
-		return -1;
-
-	if (!filter_registry_find(NULL, name)) {
-		giterr_set(
-			GITERR_FILTER, "Attempt to reregister existing filter '%s'", name);
-		return GIT_EEXISTS;
-	}
 
 	if (filter_def_scan_attrs(&attrs, &nattr, &nmatch, filter->attributes) < 0)
 		return -1;
@@ -265,21 +174,123 @@ int git_filter_register(
 
 	filter_def_set_attrs(fdef);
 
-	if (git_vector_insert(&git__filter_registry->filters, fdef) < 0) {
+	if (git_vector_insert(&filter_registry.filters, fdef) < 0) {
 		git__free(fdef->filter_name);
 		git__free(fdef->attrdata);
 		git__free(fdef);
 		return -1;
 	}
 
-	git_vector_sort(&git__filter_registry->filters);
+	git_vector_sort(&filter_registry.filters);
 	return 0;
+}
+
+int git_filter_global_init(void)
+{
+	git_filter *crlf = NULL, *ident = NULL;
+	int error = 0;
+
+	if (git_rwlock_init(&filter_registry.lock) < 0)
+		return -1;
+
+	if ((error = git_vector_init(&filter_registry.filters, 2,
+		filter_def_priority_cmp)) < 0)
+		goto done;
+
+	if ((crlf = git_crlf_filter_new()) == NULL ||
+		filter_registry_insert(
+			GIT_FILTER_CRLF, crlf, GIT_FILTER_CRLF_PRIORITY) < 0 ||
+		(ident = git_ident_filter_new()) == NULL ||
+		filter_registry_insert(
+			GIT_FILTER_IDENT, ident, GIT_FILTER_IDENT_PRIORITY) < 0)
+		error = -1;
+
+	git__on_shutdown(git_filter_global_shutdown);
+
+done:
+	if (error) {
+		git_filter_free(crlf);
+		git_filter_free(ident);
+	}
+
+	return error;
+}
+
+static void git_filter_global_shutdown(void)
+{
+	size_t pos;
+	git_filter_def *fdef;
+
+	if (git_rwlock_wrlock(&filter_registry.lock) < 0)
+		return;
+
+	git_vector_foreach(&filter_registry.filters, pos, fdef) {
+		if (fdef->filter && fdef->filter->shutdown) {
+			fdef->filter->shutdown(fdef->filter);
+			fdef->initialized = false;
+		}
+
+		git__free(fdef->filter_name);
+		git__free(fdef->attrdata);
+		git__free(fdef);
+	}
+
+	git_vector_free(&filter_registry.filters);
+
+	git_rwlock_wrunlock(&filter_registry.lock);
+	git_rwlock_free(&filter_registry.lock);
+}
+
+/* Note: callers must lock the registry before calling this function */
+static int filter_registry_find(size_t *pos, const char *name)
+{
+	return git_vector_search2(
+		pos, &filter_registry.filters, filter_def_name_key_check, name);
+}
+
+/* Note: callers must lock the registry before calling this function */
+static git_filter_def *filter_registry_lookup(size_t *pos, const char *name)
+{
+	git_filter_def *fdef = NULL;
+
+	if (!filter_registry_find(pos, name))
+		fdef = git_vector_get(&filter_registry.filters, *pos);
+
+	return fdef;
+}
+
+
+int git_filter_register(
+	const char *name, git_filter *filter, int priority)
+{
+	int error;
+
+	assert(name && filter);
+
+	if (git_rwlock_wrlock(&filter_registry.lock) < 0) {
+		giterr_set(GITERR_OS, "failed to lock filter registry");
+		return -1;
+	}
+
+	if (!filter_registry_find(NULL, name)) {
+		giterr_set(
+			GITERR_FILTER, "attempt to reregister existing filter '%s'", name);
+		error = GIT_EEXISTS;
+		goto done;
+	}
+
+	error = filter_registry_insert(name, filter, priority);
+
+done:
+	git_rwlock_wrunlock(&filter_registry.lock);
+	return error;
 }
 
 int git_filter_unregister(const char *name)
 {
 	size_t pos;
 	git_filter_def *fdef;
+	int error = 0;
 
 	assert(name);
 
@@ -289,12 +300,18 @@ int git_filter_unregister(const char *name)
 		return -1;
 	}
 
-	if ((fdef = filter_registry_lookup(&pos, name)) == NULL) {
-		giterr_set(GITERR_FILTER, "Cannot find filter '%s' to unregister", name);
-		return GIT_ENOTFOUND;
+	if (git_rwlock_wrlock(&filter_registry.lock) < 0) {
+		giterr_set(GITERR_OS, "failed to lock filter registry");
+		return -1;
 	}
 
-	(void)git_vector_remove(&git__filter_registry->filters, pos);
+	if ((fdef = filter_registry_lookup(&pos, name)) == NULL) {
+		giterr_set(GITERR_FILTER, "Cannot find filter '%s' to unregister", name);
+		error = GIT_ENOTFOUND;
+		goto done;
+	}
+
+	git_vector_remove(&filter_registry.filters, pos);
 
 	if (fdef->initialized && fdef->filter && fdef->filter->shutdown) {
 		fdef->filter->shutdown(fdef->filter);
@@ -305,21 +322,18 @@ int git_filter_unregister(const char *name)
 	git__free(fdef->attrdata);
 	git__free(fdef);
 
-	return 0;
+done:
+	git_rwlock_wrunlock(&filter_registry.lock);
+	return error;
 }
 
 static int filter_initialize(git_filter_def *fdef)
 {
 	int error = 0;
 
-	if (!fdef->initialized &&
-		fdef->filter &&
-		fdef->filter->initialize &&
-		(error = fdef->filter->initialize(fdef->filter)) < 0)
-	{
-		/* auto-unregister if initialize fails */
-		git_filter_unregister(fdef->filter_name);
-		return error;
+	if (!fdef->initialized && fdef->filter && fdef->filter->initialize) {
+		if ((error = fdef->filter->initialize(fdef->filter)) < 0)
+			return error;
 	}
 
 	fdef->initialized = true;
@@ -330,17 +344,22 @@ git_filter *git_filter_lookup(const char *name)
 {
 	size_t pos;
 	git_filter_def *fdef;
+	git_filter *filter = NULL;
 
-	if (filter_registry_initialize() < 0)
+	if (git_rwlock_rdlock(&filter_registry.lock) < 0) {
+		giterr_set(GITERR_OS, "failed to lock filter registry");
 		return NULL;
+	}
 
-	if ((fdef = filter_registry_lookup(&pos, name)) == NULL)
-		return NULL;
+	if ((fdef = filter_registry_lookup(&pos, name)) == NULL ||
+		(!fdef->initialized && filter_initialize(fdef) < 0))
+		goto done;
 
-	if (!fdef->initialized && filter_initialize(fdef) < 0)
-		return NULL;
+	filter = fdef->filter;
 
-	return fdef->filter;
+done:
+	git_rwlock_rdunlock(&filter_registry.lock);
+	return filter;
 }
 
 void git_filter_free(git_filter *filter)
@@ -478,8 +497,10 @@ int git_filter_list__load_ext(
 	size_t idx;
 	git_filter_def *fdef;
 
-	if (filter_registry_initialize() < 0)
+	if (git_rwlock_rdlock(&filter_registry.lock) < 0) {
+		giterr_set(GITERR_OS, "failed to lock filter registry");
 		return -1;
+	}
 
 	src.repo = repo;
 	src.path = path;
@@ -489,7 +510,7 @@ int git_filter_list__load_ext(
 	if (blob)
 		git_oid_cpy(&src.oid, git_blob_id(blob));
 
-	git_vector_foreach(&git__filter_registry->filters, idx, fdef) {
+	git_vector_foreach(&filter_registry.filters, idx, fdef) {
 		const char **values = NULL;
 		void *payload = NULL;
 
@@ -523,7 +544,7 @@ int git_filter_list__load_ext(
 		else {
 			if (!fl) {
 				if ((error = filter_list_new(&fl, &src)) < 0)
-					return error;
+					break;
 
 				fl->temp_buf = filter_opts->temp_buf;
 			}
@@ -536,6 +557,8 @@ int git_filter_list__load_ext(
 			fe->payload = payload;
 		}
 	}
+
+	git_rwlock_rdunlock(&filter_registry.lock);
 
 	if (error && fl != NULL) {
 		git_array_clear(fl->filters);
@@ -604,19 +627,27 @@ int git_filter_list_push(
 {
 	int error = 0;
 	size_t pos;
-	git_filter_def *fdef;
+	git_filter_def *fdef = NULL;
 	git_filter_entry *fe;
 
 	assert(fl && filter);
 
-	if (git_vector_search2(
-			&pos, &git__filter_registry->filters,
-			filter_def_filter_key_check, filter) < 0) {
-		giterr_set(GITERR_FILTER, "Cannot use an unregistered filter");
+	if (git_rwlock_rdlock(&filter_registry.lock) < 0) {
+		giterr_set(GITERR_OS, "failed to lock filter registry");
 		return -1;
 	}
 
-	fdef = git_vector_get(&git__filter_registry->filters, pos);
+	if (git_vector_search2(
+			&pos, &filter_registry.filters,
+			filter_def_filter_key_check, filter) == 0)
+		fdef = git_vector_get(&filter_registry.filters, pos);
+
+	git_rwlock_rdunlock(&filter_registry.lock);
+
+	if (fdef == NULL) {
+		giterr_set(GITERR_FILTER, "Cannot use an unregistered filter");
+		return -1;
+	}
 
 	if (!fdef->initialized && (error = filter_initialize(fdef)) < 0)
 		return error;

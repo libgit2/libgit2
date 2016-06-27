@@ -49,4 +49,6 @@ GIT_INLINE(khint_t) git_oidmap_hash(const git_oid *oid)
 
 #define git_oidmap_size(h) kh_size(h)
 
+#define git_oidmap_clear(h) kh_clear(oid, h)
+
 #endif

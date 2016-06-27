@@ -77,7 +77,7 @@ void test_repo_discover__0(void)
 	const char *ceiling_dirs;
 	const mode_t mode = 0777;
 
-	git_futils_mkdir_r(DISCOVER_FOLDER, NULL, mode);
+	git_futils_mkdir_r(DISCOVER_FOLDER, mode);
 	append_ceiling_dir(&ceiling_dirs_buf, TEMP_REPO_FOLDER);
 	ceiling_dirs = git_buf_cstr(&ceiling_dirs_buf);
 
@@ -88,15 +88,15 @@ void test_repo_discover__0(void)
 	git_repository_free(repo);
 
 	cl_git_pass(git_repository_init(&repo, SUB_REPOSITORY_FOLDER, 0));
-	cl_git_pass(git_futils_mkdir_r(SUB_REPOSITORY_FOLDER_SUB_SUB_SUB, NULL, mode));
+	cl_git_pass(git_futils_mkdir_r(SUB_REPOSITORY_FOLDER_SUB_SUB_SUB, mode));
 	cl_git_pass(git_repository_discover(&sub_repository_path, SUB_REPOSITORY_FOLDER, 0, ceiling_dirs));
 
-	cl_git_pass(git_futils_mkdir_r(SUB_REPOSITORY_FOLDER_SUB_SUB_SUB, NULL, mode));
+	cl_git_pass(git_futils_mkdir_r(SUB_REPOSITORY_FOLDER_SUB_SUB_SUB, mode));
 	ensure_repository_discover(SUB_REPOSITORY_FOLDER_SUB, ceiling_dirs, &sub_repository_path);
 	ensure_repository_discover(SUB_REPOSITORY_FOLDER_SUB_SUB, ceiling_dirs, &sub_repository_path);
 	ensure_repository_discover(SUB_REPOSITORY_FOLDER_SUB_SUB_SUB, ceiling_dirs, &sub_repository_path);
 
-	cl_git_pass(git_futils_mkdir_r(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB_SUB, NULL, mode));
+	cl_git_pass(git_futils_mkdir_r(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB_SUB, mode));
 	write_file(REPOSITORY_ALTERNATE_FOLDER "/" DOT_GIT, "gitdir: ../" SUB_REPOSITORY_FOLDER_NAME "/" DOT_GIT);
 	write_file(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB "/" DOT_GIT, "gitdir: ../../../" SUB_REPOSITORY_FOLDER_NAME "/" DOT_GIT);
 	write_file(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB_SUB "/" DOT_GIT, "gitdir: ../../../../");
@@ -105,13 +105,13 @@ void test_repo_discover__0(void)
 	ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB, ceiling_dirs, &sub_repository_path);
 	ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB_SUB, ceiling_dirs, &repository_path);
 
-	cl_git_pass(git_futils_mkdir_r(ALTERNATE_MALFORMED_FOLDER1, NULL, mode));
+	cl_git_pass(git_futils_mkdir_r(ALTERNATE_MALFORMED_FOLDER1, mode));
 	write_file(ALTERNATE_MALFORMED_FOLDER1 "/" DOT_GIT, "Anything but not gitdir:");
-	cl_git_pass(git_futils_mkdir_r(ALTERNATE_MALFORMED_FOLDER2, NULL, mode));
+	cl_git_pass(git_futils_mkdir_r(ALTERNATE_MALFORMED_FOLDER2, mode));
 	write_file(ALTERNATE_MALFORMED_FOLDER2 "/" DOT_GIT, "gitdir:");
-	cl_git_pass(git_futils_mkdir_r(ALTERNATE_MALFORMED_FOLDER3, NULL, mode));
+	cl_git_pass(git_futils_mkdir_r(ALTERNATE_MALFORMED_FOLDER3, mode));
 	write_file(ALTERNATE_MALFORMED_FOLDER3 "/" DOT_GIT, "gitdir: \n\n\n");
-	cl_git_pass(git_futils_mkdir_r(ALTERNATE_NOT_FOUND_FOLDER, NULL, mode));
+	cl_git_pass(git_futils_mkdir_r(ALTERNATE_NOT_FOUND_FOLDER, mode));
 	write_file(ALTERNATE_NOT_FOUND_FOLDER "/" DOT_GIT, "gitdir: a_repository_that_surely_does_not_exist");
 	cl_git_fail(git_repository_discover(&found_path, ALTERNATE_MALFORMED_FOLDER1, 0, ceiling_dirs));
 	cl_git_fail(git_repository_discover(&found_path, ALTERNATE_MALFORMED_FOLDER2, 0, ceiling_dirs));

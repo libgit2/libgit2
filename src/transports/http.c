@@ -10,6 +10,7 @@
 #include "http_parser.h"
 #include "buffer.h"
 #include "netops.h"
+#include "global.h"
 #include "remote.h"
 #include "smart.h"
 #include "auth.h"
@@ -36,6 +37,8 @@ static const char *post_verb = "POST";
 
 #define PARSE_ERROR_GENERIC	-1
 #define PARSE_ERROR_REPLAY	-2
+/** Look at the user field */
+#define PARSE_ERROR_EXT         -3
 
 #define CHUNK_SIZE	4096
 
@@ -78,6 +81,7 @@ typedef struct {
 	git_vector www_authenticate;
 	enum last_cb last_cb;
 	int parse_error;
+	int error;
 	unsigned parse_finished : 1;
 
 	/* Authentication */
@@ -110,7 +114,7 @@ static bool challenge_match(git_http_auth_scheme *scheme, void *data)
 	size_t scheme_len;
 
 	scheme_len = strlen(scheme_name);
-	return (strncmp(challenge, scheme_name, scheme_len) == 0 &&
+	return (strncasecmp(challenge, scheme_name, scheme_len) == 0 &&
 		(challenge[scheme_len] == '\0' || challenge[scheme_len] == ' '));
 }
 
@@ -183,6 +187,16 @@ static int apply_credentials(git_buf *buf, http_subtransport *t)
 	return context->next_token(buf, context, cred);
 }
 
+static const char *user_agent(void)
+{
+	const char *custom = git_libgit2__user_agent();
+
+	if (custom)
+		return custom;
+
+	return "libgit2 " LIBGIT2_VERSION;
+}
+
 static int gen_request(
 	git_buf *buf,
 	http_stream *s,
@@ -190,10 +204,11 @@ static int gen_request(
 {
 	http_subtransport *t = OWNING_SUBTRANSPORT(s);
 	const char *path = t->connection_data.path ? t->connection_data.path : "/";
+	size_t i;
 
 	git_buf_printf(buf, "%s %s%s HTTP/1.1\r\n", s->verb, path, s->service_url);
 
-	git_buf_puts(buf, "User-Agent: git/1.0 (libgit2 " LIBGIT2_VERSION ")\r\n");
+	git_buf_printf(buf, "User-Agent: git/1.0 (%s)\r\n", user_agent());
 	git_buf_printf(buf, "Host: %s\r\n", t->connection_data.host);
 
 	if (s->chunked || content_length > 0) {
@@ -206,6 +221,11 @@ static int gen_request(
 			git_buf_printf(buf, "Content-Length: %"PRIuZ "\r\n", content_length);
 	} else
 		git_buf_puts(buf, "Accept: */*\r\n");
+
+	for (i = 0; i < t->owner->custom_headers.count; i++) {
+		if (t->owner->custom_headers.strings[i])
+			git_buf_printf(buf, "%s\r\n", t->owner->custom_headers.strings[i]);
+	}
 
 	/* Apply credentials to the request */
 	if (apply_credentials(buf, t) < 0)
@@ -255,7 +275,7 @@ static int on_header_ready(http_subtransport *t)
 			GITERR_CHECK_ALLOC(t->content_type);
 		}
 	}
-	else if (!strcmp("WWW-Authenticate", git_buf_cstr(name))) {
+	else if (!strcasecmp("WWW-Authenticate", git_buf_cstr(name))) {
 		char *dup = git__strdup(git_buf_cstr(value));
 		GITERR_CHECK_ALLOC(dup);
 
@@ -351,7 +371,8 @@ static int on_headers_complete(http_parser *parser)
 				if (error == GIT_PASSTHROUGH) {
 					no_callback = 1;
 				} else if (error < 0) {
-					return PARSE_ERROR_GENERIC;
+					t->error = error;
+					return t->parse_error = PARSE_ERROR_EXT;
 				} else {
 					assert(t->cred);
 
@@ -534,10 +555,40 @@ static int write_chunk(git_stream *io, const char *buffer, size_t len)
 	return 0;
 }
 
+static int apply_proxy_config(http_subtransport *t)
+{
+	int error;
+	git_proxy_t proxy_type;
+
+	if (!git_stream_supports_proxy(t->io))
+		return 0;
+
+	proxy_type = t->owner->proxy.type;
+
+	if (proxy_type == GIT_PROXY_NONE)
+		return 0;
+
+	if (proxy_type == GIT_PROXY_AUTO) {
+		char *url;
+		git_proxy_options opts = GIT_PROXY_OPTIONS_INIT;
+
+		if ((error = git_remote__get_http_proxy(t->owner->owner, !!t->connection_data.use_ssl, &url)) < 0)
+			return error;
+
+		opts.type = GIT_PROXY_SPECIFIED;
+		opts.url = url;
+		error = git_stream_set_proxy(t->io, &opts);
+		git__free(url);
+
+		return error;
+	}
+
+	return git_stream_set_proxy(t->io, &t->owner->proxy);
+}
+
 static int http_connect(http_subtransport *t)
 {
 	int error;
-	char *proxy_url;
 
 	if (t->connected &&
 		http_should_keep_alive(&t->parser) &&
@@ -565,14 +616,7 @@ static int http_connect(http_subtransport *t)
 
 	GITERR_CHECK_VERSION(t->io, GIT_STREAM_VERSION, "git_stream");
 
-	if (git_stream_supports_proxy(t->io) &&
-	    !git_remote__get_http_proxy(t->owner->owner, !!t->connection_data.use_ssl, &proxy_url)) {
-		error = git_stream_set_proxy(t->io, proxy_url);
-		git__free(proxy_url);
-
-		if (error < 0)
-			return error;
-	}
+	apply_proxy_config(t);
 
 	error = git_stream_connect(t->io);
 
@@ -710,6 +754,10 @@ replay:
 				return error;
 
 			goto replay;
+		}
+
+		if (t->parse_error == PARSE_ERROR_EXT) {
+			return t->error;
 		}
 
 		if (t->parse_error < 0)

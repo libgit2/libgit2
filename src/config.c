@@ -13,6 +13,7 @@
 #include "vector.h"
 #include "buf_text.h"
 #include "config_file.h"
+#include "transaction.h"
 #if GIT_WIN32
 # include <windows.h>
 #endif
@@ -1085,6 +1086,12 @@ int git_config_find_system(git_buf *path)
 	return git_sysdir_find_system_file(path, GIT_CONFIG_FILENAME_SYSTEM);
 }
 
+int git_config_find_programdata(git_buf *path)
+{
+	git_buf_sanitize(path);
+	return git_sysdir_find_programdata_file(path, GIT_CONFIG_FILENAME_PROGRAMDATA);
+}
+
 int git_config__global_location(git_buf *buf)
 {
 	const git_buf *paths;
@@ -1132,6 +1139,10 @@ int git_config_open_default(git_config **out)
 		error = git_config_add_file_ondisk(cfg, buf.ptr,
 			GIT_CONFIG_LEVEL_SYSTEM, 0);
 
+	if (!error && !git_config_find_programdata(&buf))
+		error = git_config_add_file_ondisk(cfg, buf.ptr,
+			GIT_CONFIG_LEVEL_PROGRAMDATA, 0);
+
 	git_buf_free(&buf);
 
 	if (error) {
@@ -1142,6 +1153,41 @@ int git_config_open_default(git_config **out)
 	*out = cfg;
 
 	return error;
+}
+
+int git_config_lock(git_transaction **out, git_config *cfg)
+{
+	int error;
+	git_config_backend *file;
+	file_internal *internal;
+
+	internal = git_vector_get(&cfg->files, 0);
+	if (!internal || !internal->file) {
+		giterr_set(GITERR_CONFIG, "cannot lock; the config has no backends/files");
+		return -1;
+	}
+	file = internal->file;
+
+	if ((error = file->lock(file)) < 0)
+		return error;
+
+	return git_transaction_config_new(out, cfg);
+}
+
+int git_config_unlock(git_config *cfg, int commit)
+{
+	git_config_backend *file;
+	file_internal *internal;
+
+	internal = git_vector_get(&cfg->files, 0);
+	if (!internal || !internal->file) {
+		giterr_set(GITERR_CONFIG, "cannot lock; the config has no backends/files");
+		return -1;
+	}
+
+	file = internal->file;
+
+	return file->unlock(file, commit);
 }
 
 /***********

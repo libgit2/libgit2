@@ -34,13 +34,27 @@ static bool contains_angle_brackets(const char *input)
 	return strchr(input, '<') != NULL || strchr(input, '>') != NULL;
 }
 
+static bool is_crud(unsigned char c)
+{
+	return  c <= 32  ||
+		c == '.' ||
+		c == ',' ||
+		c == ':' ||
+		c == ';' ||
+		c == '<' ||
+		c == '>' ||
+		c == '"' ||
+		c == '\\' ||
+		c == '\'';
+}
+
 static char *extract_trimmed(const char *ptr, size_t len)
 {
-	while (len && git__isspace(ptr[0])) {
+	while (len && is_crud((unsigned char)ptr[0])) {
 		ptr++; len--;
 	}
 
-	while (len && git__isspace(ptr[len - 1])) {
+	while (len && is_crud((unsigned char)ptr[len - 1])) {
 		len--;
 	}
 
@@ -65,10 +79,9 @@ int git_signature_new(git_signature **sig_out, const char *name, const char *ema
 	GITERR_CHECK_ALLOC(p);
 
 	p->name = extract_trimmed(name, strlen(name));
+	GITERR_CHECK_ALLOC(p->name);
 	p->email = extract_trimmed(email, strlen(email));
-
-	if (p->name == NULL || p->email == NULL)
-		return -1; /* oom */
+	GITERR_CHECK_ALLOC(p->email);
 
 	if (p->name[0] == '\0' || p->email[0] == '\0') {
 		git_signature_free(p);
@@ -187,7 +200,8 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 
 	memset(sig, 0, sizeof(git_signature));
 
-	if ((buffer_end = memchr(buffer, ender, buffer_end - buffer)) == NULL)
+	if (ender &&
+		(buffer_end = memchr(buffer, ender, buffer_end - buffer)) == NULL)
 		return signature_error("no newline given");
 
 	if (header) {
@@ -247,6 +261,30 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 
 	*buffer_out = buffer_end + 1;
 	return 0;
+}
+
+int git_signature_from_buffer(git_signature **out, const char *buf)
+{
+	git_signature *sig;
+	const char *buf_end;
+	int error;
+
+	assert(out && buf);
+
+	*out = NULL;
+
+	sig = git__calloc(1, sizeof(git_signature));
+	GITERR_CHECK_ALLOC(sig);
+
+	buf_end = buf + strlen(buf);
+	error = git_signature__parse(sig, &buf, buf_end, NULL, '\0');
+
+	if (error)
+		git__free(sig);
+	else
+		*out = sig;
+
+	return error;
 }
 
 void git_signature__writebuf(git_buf *buf, const char *header, const git_signature *sig)

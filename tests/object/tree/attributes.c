@@ -82,6 +82,7 @@ void test_object_tree_attributes__normalize_attributes_when_creating_a_tree_from
 	cl_git_pass(git_treebuilder_new(&builder, repo, tree));
 	
 	entry = git_treebuilder_get(builder, "old_mode.txt");
+	cl_assert(entry != NULL);
 	cl_assert_equal_i(
 		GIT_FILEMODE_BLOB,
 		git_tree_entry_filemode(entry));
@@ -92,6 +93,7 @@ void test_object_tree_attributes__normalize_attributes_when_creating_a_tree_from
 
 	cl_git_pass(git_tree_lookup(&tree, repo, &tid2));
 	entry = git_tree_entry_byname(tree, "old_mode.txt");
+	cl_assert(entry != NULL);
 	cl_assert_equal_i(
 		GIT_FILEMODE_BLOB,
 		git_tree_entry_filemode(entry));

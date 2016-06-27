@@ -37,22 +37,19 @@ matrix:
    - os: osx
      compiler: gcc
  include:
-   - compiler: i586-mingw32msvc-gcc
-     env: OPTIONS="-DCMAKE_TOOLCHAIN_FILE=../script/toolchain-mingw32.cmake" SKIP_TESTS=1
-     os: linux
    - compiler: gcc
      env: COVERITY=1
      os: linux
    - compiler: gcc
      env:
        - VALGRIND=1
-         OPTIONS="-DBUILD_CLAR=ON -DBUILD_EXAMPLES=OFF -DCMAKE_BUILD_TYPE=Debug"
+         OPTIONS="-DBUILD_CLAR=ON -DBUILD_EXAMPLES=OFF -DDEBUG_POOL=ON -DCMAKE_BUILD_TYPE=Debug"
      os: linux
  allow_failures:
    - env: COVERITY=1
    - env:
        - VALGRIND=1
-         OPTIONS="-DBUILD_CLAR=ON -DBUILD_EXAMPLES=OFF -DCMAKE_BUILD_TYPE=Debug"
+         OPTIONS="-DBUILD_CLAR=ON -DBUILD_EXAMPLES=OFF -DDEBUG_POOL=ON -DCMAKE_BUILD_TYPE=Debug"
 
 install:
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then ./script/install-deps-${TRAVIS_OS_NAME}.sh; fi

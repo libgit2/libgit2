@@ -7,10 +7,8 @@ void check_blame_hunk_index(
 		git_repository *repo,
 		git_blame *blame,
 		int idx,
-		int start_line,
-		int len,
+		size_t start_line,
+		size_t len,
 		char boundary,
 		const char *commit_id,
 		const char *orig_path);
-
-

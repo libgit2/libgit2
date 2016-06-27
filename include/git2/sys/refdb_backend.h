@@ -130,8 +130,8 @@ struct git_refdb_backend {
 	int (*ensure_log)(git_refdb_backend *backend, const char *refname);
 
 	/**
-	 * Frees any resources held by the refdb.  A refdb implementation may
-	 * provide this function; if it is not provided, nothing will be done.
+	 * Frees any resources held by the refdb (including the `git_refdb_backend`
+	 * itself). A refdb backend implementation must provide this function.
 	 */
 	void (*free)(git_refdb_backend *backend);
 
@@ -176,7 +176,7 @@ struct git_refdb_backend {
  * Initializes a `git_refdb_backend` with default values. Equivalent to
  * creating an instance with GIT_REFDB_BACKEND_INIT.
  *
- * @param opts the `git_refdb_backend` struct to initialize
+ * @param backend the `git_refdb_backend` struct to initialize
  * @param version Version of struct; pass `GIT_REFDB_BACKEND_VERSION`
  * @return Zero on success; -1 on failure.
  */

@@ -12,12 +12,13 @@
 #include "fileops.h"
 #include "hash.h"
 #include "odb.h"
-#include "delta-apply.h"
+#include "delta.h"
 #include "filter.h"
 #include "repository.h"
 
 #include "git2/odb_backend.h"
 #include "git2/oid.h"
+#include "git2/oidarray.h"
 
 #define GIT_ALTERNATES_FILE "info/alternates"
 
@@ -48,7 +49,36 @@ static git_cache *odb_cache(git_odb *odb)
 	return &odb->own_cache;
 }
 
+static int odb_otype_fast(git_otype *type_p, git_odb *db, const git_oid *id);
 static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_depth);
+
+static git_otype odb_hardcoded_type(const git_oid *id)
+{
+	static git_oid empty_blob = {{ 0xe6, 0x9d, 0xe2, 0x9b, 0xb2, 0xd1, 0xd6, 0x43, 0x4b, 0x8b,
+					   0x29, 0xae, 0x77, 0x5a, 0xd8, 0xc2, 0xe4, 0x8c, 0x53, 0x91 }};
+	static git_oid empty_tree = {{ 0x4b, 0x82, 0x5d, 0xc6, 0x42, 0xcb, 0x6e, 0xb9, 0xa0, 0x60,
+					   0xe5, 0x4b, 0xf8, 0xd6, 0x92, 0x88, 0xfb, 0xee, 0x49, 0x04 }};
+
+	if (!git_oid_cmp(id, &empty_blob))
+		return GIT_OBJ_BLOB;
+
+	if (!git_oid_cmp(id, &empty_tree))
+		return GIT_OBJ_TREE;
+
+	return GIT_OBJ_BAD;
+}
+
+static int odb_read_hardcoded(git_rawobj *raw, const git_oid *id)
+{
+	git_otype type = odb_hardcoded_type(id);
+	if (type == GIT_OBJ_BAD)
+		return -1;
+
+	raw->type = type;
+	raw->len = 0;
+	raw->data = git__calloc(1, sizeof(uint8_t));
+	return 0;
+}
 
 int git_odb__format_object_header(char *hdr, size_t n, git_off_t obj_len, git_otype obj_type)
 {
@@ -374,10 +404,14 @@ static int backend_sort_cmp(const void *a, const void *b)
 	const backend_internal *backend_a = (const backend_internal *)(a);
 	const backend_internal *backend_b = (const backend_internal *)(b);
 
-	if (backend_a->is_alternate == backend_b->is_alternate)
-		return (backend_b->priority - backend_a->priority);
-
-	return backend_a->is_alternate ? 1 : -1;
+	if (backend_b->priority == backend_a->priority) {
+		if (backend_a->is_alternate)
+			return -1;
+		if (backend_b->is_alternate)
+			return 1;
+		return 0;
+	}
+	return (backend_b->priority - backend_a->priority);
 }
 
 int git_odb_new(git_odb **out)
@@ -600,8 +634,7 @@ static void odb_free(git_odb *db)
 		backend_internal *internal = git_vector_get(&db->backends, i);
 		git_odb_backend *backend = internal->backend;
 
-		if (backend->free) backend->free(backend);
-		else git__free(backend);
+		backend->free(backend);
 
 		git__free(internal);
 	}
@@ -621,22 +654,17 @@ void git_odb_free(git_odb *db)
 	GIT_REFCOUNT_DEC(db, odb_free);
 }
 
-int git_odb_exists(git_odb *db, const git_oid *id)
+static int odb_exists_1(git_odb *db, const git_oid *id, bool only_refreshed)
 {
-	git_odb_object *object;
 	size_t i;
 	bool found = false;
-
-	assert(db && id);
-
-	if ((object = git_cache_get_raw(odb_cache(db), id)) != NULL) {
-		git_odb_object_free(object);
-		return (int)true;
-	}
 
 	for (i = 0; i < db->backends.length && !found; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
 		git_odb_backend *b = internal->backend;
+
+		if (only_refreshed && !b->refresh)
+			continue;
 
 		if (b->exists != NULL)
 			found = (bool)b->exists(b, id);
@@ -645,43 +673,45 @@ int git_odb_exists(git_odb *db, const git_oid *id)
 	return (int)found;
 }
 
-int git_odb_exists_prefix(
-	git_oid *out, git_odb *db, const git_oid *short_id, size_t len)
+int git_odb_exists(git_odb *db, const git_oid *id)
 {
-	int error = GIT_ENOTFOUND, num_found = 0;
-	size_t i;
-	git_oid key = {{0}}, last_found = {{0}}, found;
+	git_odb_object *object;
 
-	assert(db && short_id);
+	assert(db && id);
 
-	if (len < GIT_OID_MINPREFIXLEN)
-		return git_odb__error_ambiguous("prefix length too short");
-	if (len > GIT_OID_HEXSZ)
-		len = GIT_OID_HEXSZ;
-
-	if (len == GIT_OID_HEXSZ) {
-		if (git_odb_exists(db, short_id)) {
-			if (out)
-				git_oid_cpy(out, short_id);
-			return 0;
-		} else {
-			return git_odb__error_notfound("no match for id prefix", short_id);
-		}
+	if ((object = git_cache_get_raw(odb_cache(db), id)) != NULL) {
+		git_odb_object_free(object);
+		return 1;
 	}
 
-	/* just copy valid part of short_id */
-	memcpy(&key.id, short_id->id, (len + 1) / 2);
-	if (len & 1)
-		key.id[len / 2] &= 0xF0;
+	if (odb_exists_1(db, id, false))
+		return 1;
+
+	if (!git_odb_refresh(db))
+		return odb_exists_1(db, id, true);
+
+	/* Failed to refresh, hence not found */
+	return 0;
+}
+
+static int odb_exists_prefix_1(git_oid *out, git_odb *db,
+	const git_oid *key, size_t len, bool only_refreshed)
+{
+	size_t i;
+	int error = GIT_ENOTFOUND, num_found = 0;
+	git_oid last_found = {{0}}, found;
 
 	for (i = 0; i < db->backends.length; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
 		git_odb_backend *b = internal->backend;
 
+		if (only_refreshed && !b->refresh)
+			continue;
+
 		if (!b->exists_prefix)
 			continue;
 
-		error = b->exists_prefix(&found, b, &key, len);
+		error = b->exists_prefix(&found, b, key, len);
 		if (error == GIT_ENOTFOUND || error == GIT_PASSTHROUGH)
 			continue;
 		if (error)
@@ -698,10 +728,112 @@ int git_odb_exists_prefix(
 	}
 
 	if (!num_found)
-		return git_odb__error_notfound("no match for id prefix", &key);
+		return GIT_ENOTFOUND;
+
 	if (out)
 		git_oid_cpy(out, &last_found);
 
+	return 0;
+}
+
+int git_odb_exists_prefix(
+	git_oid *out, git_odb *db, const git_oid *short_id, size_t len)
+{
+	int error;
+	git_oid key = {{0}}; 
+
+	assert(db && short_id);
+
+	if (len < GIT_OID_MINPREFIXLEN)
+		return git_odb__error_ambiguous("prefix length too short");
+
+	if (len >= GIT_OID_HEXSZ) {
+		if (git_odb_exists(db, short_id)) {
+			if (out)
+				git_oid_cpy(out, short_id);
+			return 0;
+		} else {
+			return git_odb__error_notfound(
+				"no match for id prefix", short_id, len);
+		}
+	}
+
+	git_oid__cpy_prefix(&key, short_id, len);
+
+	error = odb_exists_prefix_1(out, db, &key, len, false);
+
+	if (error == GIT_ENOTFOUND && !git_odb_refresh(db))
+		error = odb_exists_prefix_1(out, db, &key, len, true);
+
+	if (error == GIT_ENOTFOUND)
+		return git_odb__error_notfound("no match for id prefix", &key, len);
+
+	return error;
+}
+
+int git_odb_expand_ids(
+	git_odb *db,
+	git_odb_expand_id *ids,
+	size_t count)
+{
+	size_t i;
+
+	assert(db && ids);
+
+	for (i = 0; i < count; i++) {
+		git_odb_expand_id *query = &ids[i];
+		int error = GIT_EAMBIGUOUS;
+
+		if (!query->type)
+			query->type = GIT_OBJ_ANY;
+
+		/* if we have a short OID, expand it first */
+		if (query->length >= GIT_OID_MINPREFIXLEN && query->length < GIT_OID_HEXSZ) {
+			git_oid actual_id;
+
+			error = odb_exists_prefix_1(&actual_id, db, &query->id, query->length, false);
+			if (!error) {
+				git_oid_cpy(&query->id, &actual_id);
+				query->length = GIT_OID_HEXSZ;
+			}
+		}
+
+		/*
+		 * now we ought to have a 40-char OID, either because we've expanded it
+		 * or because the user passed a full OID. Ensure its type is right.
+		 */
+		if (query->length >= GIT_OID_HEXSZ) {
+			git_otype actual_type;
+
+			error = odb_otype_fast(&actual_type, db, &query->id);
+			if (!error) {
+				if (query->type != GIT_OBJ_ANY && query->type != actual_type)
+					error = GIT_ENOTFOUND;
+				else
+					query->type = actual_type;
+			}
+		}
+
+		switch (error) {
+		/* no errors, so we've successfully expanded the OID */
+		case 0:
+			continue;
+
+		/* the object is missing or ambiguous */
+		case GIT_ENOTFOUND:
+		case GIT_EAMBIGUOUS:
+			memset(&query->id, 0, sizeof(git_oid));
+			query->length = 0;
+			query->type = 0;
+			break;
+
+		/* something went very wrong with the ODB; bail hard */
+		default:
+			return error;
+		}
+	}
+
+	giterr_clear();
 	return 0;
 }
 
@@ -718,11 +850,53 @@ int git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git
 	return error;
 }
 
+static int odb_read_header_1(
+	size_t *len_p, git_otype *type_p, git_odb *db,
+	const git_oid *id, bool only_refreshed)
+{
+	size_t i;
+	git_otype ht;
+	bool passthrough = false;
+	int error;
+
+	if (!only_refreshed && (ht = odb_hardcoded_type(id)) != GIT_OBJ_BAD) {
+		*type_p = ht;
+		*len_p = 0;
+		return 0;
+	}
+
+	for (i = 0; i < db->backends.length; ++i) {
+		backend_internal *internal = git_vector_get(&db->backends, i);
+		git_odb_backend *b = internal->backend;
+
+		if (only_refreshed && !b->refresh)
+			continue;
+
+		if (!b->read_header) {
+			passthrough = true;
+			continue;
+		}
+
+		error = b->read_header(len_p, type_p, b, id);
+
+		switch (error) {
+		case GIT_PASSTHROUGH:
+			passthrough = true;
+			break;
+		case GIT_ENOTFOUND:
+			break;
+		default:
+			return error;
+		}
+	}
+
+	return passthrough ? GIT_PASSTHROUGH : GIT_ENOTFOUND;
+}
+
 int git_odb__read_header_or_object(
 	git_odb_object **out, size_t *len_p, git_otype *type_p,
 	git_odb *db, const git_oid *id)
 {
-	size_t i;
 	int error = GIT_ENOTFOUND;
 	git_odb_object *object;
 
@@ -736,84 +910,66 @@ int git_odb__read_header_or_object(
 	}
 
 	*out = NULL;
+	error = odb_read_header_1(len_p, type_p, db, id, false);
 
-	for (i = 0; i < db->backends.length && error < 0; ++i) {
-		backend_internal *internal = git_vector_get(&db->backends, i);
-		git_odb_backend *b = internal->backend;
+	if (error == GIT_ENOTFOUND && !git_odb_refresh(db))
+		error = odb_read_header_1(len_p, type_p, db, id, true);
 
-		if (b->read_header != NULL)
-			error = b->read_header(len_p, type_p, b, id);
-	}
+	if (error == GIT_ENOTFOUND)
+		return git_odb__error_notfound("cannot read header for", id, GIT_OID_HEXSZ);
 
-	if (!error || error == GIT_PASSTHROUGH)
+	/* we found the header; return early */
+	if (!error)
 		return 0;
 
-	/*
-	 * no backend could read only the header.
-	 * try reading the whole object and freeing the contents
-	 */
-	if ((error = git_odb_read(&object, db, id)) < 0)
-		return error; /* error already set - pass along */
-
-	*len_p = object->cached.size;
-	*type_p = object->cached.type;
-	*out = object;
-
-	return 0;
-}
-
-static git_oid empty_blob = {{ 0xe6, 0x9d, 0xe2, 0x9b, 0xb2, 0xd1, 0xd6, 0x43, 0x4b, 0x8b,
-			       0x29, 0xae, 0x77, 0x5a, 0xd8, 0xc2, 0xe4, 0x8c, 0x53, 0x91 }};
-static git_oid empty_tree = {{ 0x4b, 0x82, 0x5d, 0xc6, 0x42, 0xcb, 0x6e, 0xb9, 0xa0, 0x60,
-			       0xe5, 0x4b, 0xf8, 0xd6, 0x92, 0x88, 0xfb, 0xee, 0x49, 0x04 }};
-
-static int hardcoded_objects(git_rawobj *raw, const git_oid *id)
-{
-	if (!git_oid_cmp(id, &empty_blob)) {
-		raw->type = GIT_OBJ_BLOB;
-		raw->len = 0;
-		raw->data = git__calloc(1, sizeof(uint8_t));
-		return 0;
-	} else if (!git_oid_cmp(id, &empty_tree)) {
-		raw->type = GIT_OBJ_TREE;
-		raw->len = 0;
-		raw->data = git__calloc(1, sizeof(uint8_t));
-		return 0;
-	} else {
-		return GIT_ENOTFOUND;
-	}
-}
-
-int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
-{
-	size_t i, reads = 0;
-	int error;
-	git_rawobj raw;
-	git_odb_object *object;
-
-	assert(out && db && id);
-
-	*out = git_cache_get_raw(odb_cache(db), id);
-	if (*out != NULL)
-		return 0;
-
-	error = hardcoded_objects(&raw, id);
-
-	for (i = 0; i < db->backends.length && error < 0; ++i) {
-		backend_internal *internal = git_vector_get(&db->backends, i);
-		git_odb_backend *b = internal->backend;
-
-		if (b->read != NULL) {
-			++reads;
-			error = b->read(&raw.data, &raw.len, &raw.type, b, id);
+	if (error == GIT_PASSTHROUGH) {
+		/*
+		 * no backend has header-reading functionality
+		 * so try using `git_odb_read` instead
+		 */
+		error = git_odb_read(&object, db, id);
+		if (!error) {
+			*len_p = object->cached.size;
+			*type_p = object->cached.type;
+			*out = object;
 		}
 	}
 
-	if (error && error != GIT_PASSTHROUGH) {
-		if (!reads)
-			return git_odb__error_notfound("no match for id", id);
-		return error;
+	return error;
+}
+
+static int odb_read_1(git_odb_object **out, git_odb *db, const git_oid *id,
+		bool only_refreshed)
+{
+	size_t i;
+	git_rawobj raw;
+	git_odb_object *object;
+	bool found = false;
+
+	if (!only_refreshed && odb_read_hardcoded(&raw, id) == 0)
+		found = true;
+
+	for (i = 0; i < db->backends.length && !found; ++i) {
+		backend_internal *internal = git_vector_get(&db->backends, i);
+		git_odb_backend *b = internal->backend;
+
+		if (only_refreshed && !b->refresh)
+			continue;
+
+		if (b->read != NULL) {
+			int error = b->read(&raw.data, &raw.len, &raw.type, b, id);
+			if (error == GIT_PASSTHROUGH || error == GIT_ENOTFOUND)
+				continue;
+
+			if (error < 0)
+				return error;
+
+			found = true;
+		}
 	}
+
+	if (!found)
+		return GIT_ENOTFOUND;
 
 	giterr_clear();
 	if ((object = odb_object__alloc(id, &raw)) == NULL)
@@ -823,42 +979,71 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 	return 0;
 }
 
-int git_odb_read_prefix(
-	git_odb_object **out, git_odb *db, const git_oid *short_id, size_t len)
+int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
+{
+	int error;
+
+	assert(out && db && id);
+
+	*out = git_cache_get_raw(odb_cache(db), id);
+	if (*out != NULL)
+		return 0;
+
+	error = odb_read_1(out, db, id, false);
+
+	if (error == GIT_ENOTFOUND && !git_odb_refresh(db))
+		error = odb_read_1(out, db, id, true);
+
+	if (error == GIT_ENOTFOUND)
+		return git_odb__error_notfound("no match for id", id, GIT_OID_HEXSZ);
+
+	return error;
+}
+
+static int odb_otype_fast(git_otype *type_p, git_odb *db, const git_oid *id)
+{
+	git_odb_object *object;
+	size_t _unused;
+	int error;
+
+	if ((object = git_cache_get_raw(odb_cache(db), id)) != NULL) {
+		*type_p = object->cached.type;
+		return 0;
+	}
+	
+	error = odb_read_header_1(&_unused, type_p, db, id, false);
+
+	if (error == GIT_PASSTHROUGH) {
+		error = odb_read_1(&object, db, id, false);
+		if (!error)
+			*type_p = object->cached.type;
+		git_odb_object_free(object);
+	}
+
+	return error;
+}
+
+static int read_prefix_1(git_odb_object **out, git_odb *db,
+		const git_oid *key, size_t len, bool only_refreshed)
 {
 	size_t i;
 	int error = GIT_ENOTFOUND;
-	git_oid key = {{0}}, found_full_oid = {{0}};
+	git_oid found_full_oid = {{0}};
 	git_rawobj raw;
 	void *data = NULL;
 	bool found = false;
 	git_odb_object *object;
 
-	assert(out && db);
-
-	if (len < GIT_OID_MINPREFIXLEN)
-		return git_odb__error_ambiguous("prefix length too short");
-	if (len > GIT_OID_HEXSZ)
-		len = GIT_OID_HEXSZ;
-
-	if (len == GIT_OID_HEXSZ) {
-		*out = git_cache_get_raw(odb_cache(db), short_id);
-		if (*out != NULL)
-			return 0;
-	}
-
-	/* just copy valid part of short_id */
-	memcpy(&key.id, short_id->id, (len + 1) / 2);
-	if (len & 1)
-		key.id[len / 2] &= 0xF0;
-
 	for (i = 0; i < db->backends.length; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
 		git_odb_backend *b = internal->backend;
 
+		if (only_refreshed && !b->refresh)
+			continue;
+
 		if (b->read_prefix != NULL) {
 			git_oid full_oid;
-			error = b->read_prefix(&full_oid, &raw.data, &raw.len, &raw.type, b, &key, len);
+			error = b->read_prefix(&full_oid, &raw.data, &raw.len, &raw.type, b, key, len);
 			if (error == GIT_ENOTFOUND || error == GIT_PASSTHROUGH)
 				continue;
 
@@ -879,13 +1064,46 @@ int git_odb_read_prefix(
 	}
 
 	if (!found)
-		return git_odb__error_notfound("no match for prefix", &key);
+		return GIT_ENOTFOUND;
 
 	if ((object = odb_object__alloc(&found_full_oid, &raw)) == NULL)
 		return -1;
 
 	*out = git_cache_store_raw(odb_cache(db), object);
 	return 0;
+}
+
+int git_odb_read_prefix(
+	git_odb_object **out, git_odb *db, const git_oid *short_id, size_t len)
+{
+	git_oid key = {{0}};
+	int error;
+
+	assert(out && db);
+
+	if (len < GIT_OID_MINPREFIXLEN)
+		return git_odb__error_ambiguous("prefix length too short");
+
+	if (len > GIT_OID_HEXSZ)
+		len = GIT_OID_HEXSZ;
+
+	if (len == GIT_OID_HEXSZ) {
+		*out = git_cache_get_raw(odb_cache(db), short_id);
+		if (*out != NULL)
+			return 0;
+	}
+
+	git_oid__cpy_prefix(&key, short_id, len);
+
+	error = read_prefix_1(out, db, &key, len, false);
+
+	if (error == GIT_ENOTFOUND && !git_odb_refresh(db))
+		error = read_prefix_1(out, db, &key, len, true);
+
+	if (error == GIT_ENOTFOUND)
+		return git_odb__error_notfound("no match for prefix", &key, len);
+
+	return error;
 }
 
 int git_odb_foreach(git_odb *db, git_odb_foreach_cb cb, void *payload)
@@ -1139,12 +1357,14 @@ int git_odb_refresh(struct git_odb *db)
 	return 0;
 }
 
-int git_odb__error_notfound(const char *message, const git_oid *oid)
+int git_odb__error_notfound(
+	const char *message, const git_oid *oid, size_t oid_len)
 {
 	if (oid != NULL) {
 		char oid_str[GIT_OID_HEXSZ + 1];
-		git_oid_tostr(oid_str, sizeof(oid_str), oid);
-		giterr_set(GITERR_ODB, "Object not found - %s (%s)", message, oid_str);
+		git_oid_tostr(oid_str, oid_len+1, oid);
+		giterr_set(GITERR_ODB, "Object not found - %s (%.*s)",
+			message, oid_len, oid_str);
 	} else
 		giterr_set(GITERR_ODB, "Object not found - %s", message);
 
