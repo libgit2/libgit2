@@ -3,6 +3,7 @@
 #include "git2/merge.h"
 #include "merge.h"
 #include "../merge_helpers.h"
+#include "../conflict_data.h"
 
 static git_repository *repo;
 
@@ -94,7 +95,6 @@ void test_merge_trees_commits__no_ancestor(void)
 	git_index_free(index);
 }
 
-
 void test_merge_trees_commits__df_conflict(void)
 {
 	git_index *index;
@@ -129,3 +129,20 @@ void test_merge_trees_commits__df_conflict(void)
 
 	git_index_free(index);
 }
+
+void test_merge_trees_commits__fail_on_conflict(void)
+{
+	git_index *index;
+	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
+
+	opts.flags |= GIT_MERGE_FAIL_ON_CONFLICT;
+
+	cl_git_fail_with(GIT_EMERGECONFLICT, 
+		merge_trees_from_branches(&index, repo, "df_side1", "df_side2", &opts));
+
+	cl_git_fail_with(GIT_EMERGECONFLICT, 
+		merge_commits_from_branches(&index, repo, "master", "unrelated", &opts));
+	cl_git_fail_with(GIT_EMERGECONFLICT, 
+		merge_commits_from_branches(&index, repo, "master", "branch", &opts));
+}
+

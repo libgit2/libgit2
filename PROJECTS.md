@@ -48,7 +48,7 @@ These are good small projects to get started with libgit2.
   a new example that mirrors the behavior.  Examples don't have to be
   perfect emulations, but should demonstrate how to use the libgit2 APIs
   to get results that are similar to Git commands.  This lets you (and us)
-  easily exercise a particular facet of the API and measure compatability
+  easily exercise a particular facet of the API and measure compatibility
   and feature parity with core git.
 * Submit a PR to clarify documentation! While we do try to document all of
   the APIs, your fresh eyes on the documentation will find areas that are
@@ -75,8 +75,6 @@ might make good smaller projects by themselves.
     * Extract the Git tests that exercise that command
     * Convert the tests to call our emulation
     * These tests could go in examples/tests/...
-* Fix symlink support for files in the .git directory (i.e. don't overwrite
-  the symlinks when writing the file contents back out)
 * Add hooks API to enumerate and manage hooks (not run them at this point)
     * Enumeration of available hooks
     * Lookup API to see which hooks have a script and get the script
@@ -85,8 +83,6 @@ might make good smaller projects by themselves.
       executes the action in question
 * Isolate logic of ignore evaluation into a standalone API
 * Upgrade internal libxdiff code to latest from core Git
-* Improve index internals with hashtable lookup for files instead of
-  using binary search every time
 * Tree builder improvements:
     * Extend to allow building a tree hierarchy
 * Apply-patch API

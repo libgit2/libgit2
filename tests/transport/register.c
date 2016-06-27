@@ -40,15 +40,23 @@ void test_transport_register__custom_transport_error_remove_non_existing(void)
 
 void test_transport_register__custom_transport_ssh(void)
 {
+	const char *urls[] = {
+		"ssh://somehost:somepath",
+		"ssh+git://somehost:somepath",
+		"git+ssh://somehost:somepath",
+		"git@somehost:somepath",
+	};
 	git_transport *transport;
+	unsigned i;
 
+	for (i = 0; i < ARRAY_SIZE(urls); i++) {
 #ifndef GIT_SSH
-	cl_git_fail_with(git_transport_new(&transport, NULL, "ssh://somehost:somepath"), -1);
-	cl_git_fail_with(git_transport_new(&transport, NULL, "git@somehost:somepath"), -1);
+		cl_git_fail_with(git_transport_new(&transport, NULL, urls[i]), -1);
 #else
-	cl_git_pass(git_transport_new(&transport, NULL, "git@somehost:somepath"));
-	transport->free(transport);
+		cl_git_pass(git_transport_new(&transport, NULL, urls[i]));
+		transport->free(transport);
 #endif
+	}
 
 	cl_git_pass(git_transport_register("ssh", dummy_transport, NULL));
 
@@ -58,11 +66,12 @@ void test_transport_register__custom_transport_ssh(void)
 
 	cl_git_pass(git_transport_unregister("ssh"));
 
+	for (i = 0; i < ARRAY_SIZE(urls); i++) {
 #ifndef GIT_SSH
-	cl_git_fail_with(git_transport_new(&transport, NULL, "ssh://somehost:somepath"), -1);
-	cl_git_fail_with(git_transport_new(&transport, NULL, "git@somehost:somepath"), -1);
+		cl_git_fail_with(git_transport_new(&transport, NULL, urls[i]), -1);
 #else
-	cl_git_pass(git_transport_new(&transport, NULL, "git@somehost:somepath"));
-	transport->free(transport);
+		cl_git_pass(git_transport_new(&transport, NULL, urls[i]));
+		transport->free(transport);
 #endif
+	}
 }

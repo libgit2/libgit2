@@ -137,8 +137,14 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 
 	tag->message = NULL;
 	if (buffer < buffer_end) {
-		if( *buffer != '\n' )
-			return tag_error("No new line before message");
+		/* If we're not at the end of the header, search for it */
+		if( *buffer != '\n' ) {
+			search = strstr(buffer, "\n\n");
+			if (search)
+				buffer = search + 1;
+			else
+				return tag_error("tag contains no message");
+		}
 
 		text_len = buffer_end - ++buffer;
 
@@ -358,7 +364,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	git_odb_object_free(target_obj);
 
 	/** Ensure the tag name doesn't conflict with an already existing
-	 *	reference unless overwriting has explictly been requested **/
+	 *	reference unless overwriting has explicitly been requested **/
 	if (error == 0 && !allow_ref_overwrite) {
 		giterr_set(GITERR_TAG, "Tag already exists");
 		return GIT_EEXISTS;

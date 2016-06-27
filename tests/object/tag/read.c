@@ -140,3 +140,40 @@ void test_object_tag_read__without_tagger_nor_message(void)
 	git_tag_free(tag);
 	git_repository_free(repo);
 }
+
+static const char *silly_tag = "object c054ccaefbf2da31c3b19178f9e3ef20a3867924\n\
+type commit\n\
+tag v1_0_1\n\
+tagger Jamis Buck <jamis@37signals.com> 1107717917\n\
+diff --git a/lib/sqlite3/version.rb b/lib/sqlite3/version.rb\n\
+index 0b3bf69..4ee8fc2 100644\n\
+--- a/lib/sqlite3/version.rb\n\
++++ b/lib/sqlite3/version.rb\n\
+@@ -36,7 +36,7 @@ module SQLite3\n\
+ \n\
+     MAJOR = 1\n\
+     MINOR = 0\n\
+-    TINY  = 0\n\
++    TINY  = 1\n\
+ \n\
+     STRING = [ MAJOR, MINOR, TINY ].join( \".\" )\n\
+ \n\
+ -0600\n\
+\n\
+v1_0_1 release\n";
+
+void test_object_tag_read__extra_header_fields(void)
+{
+	git_tag *tag;
+	git_odb *odb;
+	git_oid id;
+
+	cl_git_pass(git_repository_odb__weakptr(&odb, g_repo));
+
+	cl_git_pass(git_odb_write(&id, odb, silly_tag, strlen(silly_tag), GIT_OBJ_TAG));
+	cl_git_pass(git_tag_lookup(&tag, g_repo, &id));
+
+	cl_assert_equal_s("v1_0_1 release\n", git_tag_message(tag));
+
+	git_tag_free(tag);
+}

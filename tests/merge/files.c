@@ -4,8 +4,10 @@
 #include "buffer.h"
 #include "merge.h"
 #include "merge_helpers.h"
+#include "conflict_data.h"
 #include "refs.h"
 #include "fileops.h"
+#include "diff_xdiff.h"
 
 #define TEST_REPO_PATH "merge-resolve"
 #define TEST_INDEX_PATH TEST_REPO_PATH "/.git/index"
@@ -288,3 +290,90 @@ void test_merge_files__doesnt_add_newline(void)
 	git_merge_file_result_free(&result);
 }
 
+void test_merge_files__skips_large_files(void)
+{
+	git_merge_file_input ours = GIT_MERGE_FILE_INPUT_INIT,
+		theirs = GIT_MERGE_FILE_INPUT_INIT;
+	git_merge_file_options opts = GIT_MERGE_FILE_OPTIONS_INIT;
+	git_merge_file_result result = {0};
+
+	ours.size = GIT_XDIFF_MAX_SIZE + 1;
+	ours.path = "testfile.txt";
+	ours.mode = 0100755;
+
+	theirs.size = GIT_XDIFF_MAX_SIZE + 1;
+	theirs.path = "testfile.txt";
+	theirs.mode = 0100755;
+
+	cl_git_pass(git_merge_file(&result, NULL, &ours, &theirs, &opts));
+
+	cl_assert_equal_i(0, result.automergeable);
+
+	git_merge_file_result_free(&result);
+}
+
+void test_merge_files__skips_binaries(void)
+{
+	git_merge_file_input ancestor = GIT_MERGE_FILE_INPUT_INIT,
+		ours = GIT_MERGE_FILE_INPUT_INIT,
+		theirs = GIT_MERGE_FILE_INPUT_INIT;
+	git_merge_file_result result = {0};
+
+	ancestor.ptr = "ance\0stor\0";
+	ancestor.size = 10;
+	ancestor.path = "ancestor.txt";
+	ancestor.mode = 0100755;
+
+	ours.ptr = "foo\0bar\0";
+	ours.size = 8;
+	ours.path = "ours.txt";
+	ours.mode = 0100755;
+
+	theirs.ptr = "bar\0foo\0";
+	theirs.size = 8;
+	theirs.path = "theirs.txt";
+	theirs.mode = 0100644;
+
+	cl_git_pass(git_merge_file(&result, &ancestor, &ours, &theirs, NULL));
+
+	cl_assert_equal_i(0, result.automergeable);
+
+	git_merge_file_result_free(&result);
+}
+
+void test_merge_files__handles_binaries_when_favored(void)
+{
+	git_merge_file_input ancestor = GIT_MERGE_FILE_INPUT_INIT,
+		ours = GIT_MERGE_FILE_INPUT_INIT,
+		theirs = GIT_MERGE_FILE_INPUT_INIT;
+	git_merge_file_options opts = GIT_MERGE_FILE_OPTIONS_INIT;
+	git_merge_file_result result = {0};
+
+	ancestor.ptr = "ance\0stor\0";
+	ancestor.size = 10;
+	ancestor.path = "ancestor.txt";
+	ancestor.mode = 0100755;
+
+	ours.ptr = "foo\0bar\0";
+	ours.size = 8;
+	ours.path = "ours.txt";
+	ours.mode = 0100755;
+
+	theirs.ptr = "bar\0foo\0";
+	theirs.size = 8;
+	theirs.path = "theirs.txt";
+	theirs.mode = 0100644;
+
+	opts.favor = GIT_MERGE_FILE_FAVOR_OURS;
+	cl_git_pass(git_merge_file(&result, &ancestor, &ours, &theirs, &opts));
+
+	cl_assert_equal_i(1, result.automergeable);
+
+	cl_assert_equal_s("ours.txt", result.path);
+	cl_assert_equal_i(0100755, result.mode);
+
+	cl_assert_equal_i(ours.size, result.len);
+	cl_assert(memcmp(result.ptr, ours.ptr, ours.size) == 0);
+
+	git_merge_file_result_free(&result);
+}

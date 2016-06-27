@@ -129,8 +129,12 @@ typedef enum {
 	 */
 	GIT_DIFF_INCLUDE_CASECHANGE = (1u << 11),
 
-	/** If the pathspec is set in the diff options, this flags means to
-	 *  apply it as an exact match instead of as an fnmatch pattern.
+	/** If the pathspec is set in the diff options, this flags indicates
+	 *  that the paths will be treated as literal paths instead of
+	 *  fnmatch patterns.  Each path in the list must either be a full
+	 *  path to a file or a directory.  (A trailing slash indicates that
+	 *  the path will _only_ match a directory).  If a directory is
+	 *  specified, all children will be included.
 	 */
 	GIT_DIFF_DISABLE_PATHSPEC_MATCH = (1u << 12),
 
@@ -260,9 +264,14 @@ typedef enum {
  * link, a submodule commit id, or even a tree (although that only if you
  * are tracking type changes or ignored/untracked directories).
  *
- * The `oid` is the `git_oid` of the item.  If the entry represents an
+ * The `id` is the `git_oid` of the item.  If the entry represents an
  * absent side of a diff (e.g. the `old_file` of a `GIT_DELTA_ADDED` delta),
  * then the oid will be zeroes.
+ *
+ * The `id_abbrev` represents the known length of the `id` field, when
+ * converted to a hex string.  It is generally `GIT_OID_HEXSZ`, unless this
+ * delta was created from reading a patch file, in which case it may be
+ * abbreviated to something reasonable, like 7 characters.
  *
  * `path` is the NUL-terminated path to the entry relative to the working
  * directory of the repository.
@@ -276,6 +285,7 @@ typedef enum {
  */
 typedef struct {
 	git_oid     id;
+	int         id_abbrev;
 	const char *path;
 	git_off_t   size;
 	uint32_t    flags;
@@ -347,6 +357,22 @@ typedef int (*git_diff_notify_cb)(
 	void *payload);
 
 /**
+ * Diff progress callback.
+ *
+ * Called before each file comparison.
+ *
+ * @param diff_so_far The diff being generated.
+ * @param old_path The path to the old file or NULL.
+ * @param new_path The path to the new file or NULL.
+ * @return Non-zero to abort the diff.
+ */
+typedef int (*git_diff_progress_cb)(
+	const git_diff *diff_so_far,
+	const char *old_path,
+	const char *new_path,
+	void *payload);
+
+/**
  * Structure describing options about how the diff should be executed.
  *
  * Setting all values of the structure to zero will yield the default
@@ -366,8 +392,10 @@ typedef int (*git_diff_notify_cb)(
  * - `max_size` is a file size (in bytes) above which a blob will be marked
  *   as binary automatically; pass a negative value to disable.
  * - `notify_cb` is an optional callback function, notifying the consumer of
- *   which files are being examined as the diff is generated
- * - `notify_payload` is the payload data to pass to the `notify_cb` function
+ *   changes to the diff as new deltas are added.
+ * - `progress_cb` is an optional callback function, notifying the consumer of
+ *   which files are being examined as the diff is generated.
+ * - `payload` is the payload to pass to the callback functions.
  * - `ignore_submodules` overrides the submodule ignore setting for all
  *   submodules in the diff.
  */
@@ -379,8 +407,9 @@ typedef struct {
 
 	git_submodule_ignore_t ignore_submodules; /**< submodule ignore rule */
 	git_strarray       pathspec;     /**< defaults to include all paths */
-	git_diff_notify_cb notify_cb;
-	void              *notify_payload;
+	git_diff_notify_cb   notify_cb;
+	git_diff_progress_cb progress_cb;
+	void                *payload;
 
 	/* options controlling how to diff text is generated */
 
@@ -399,7 +428,7 @@ typedef struct {
  * `git_diff_options_init` programmatic initialization.
  */
 #define GIT_DIFF_OPTIONS_INIT \
-	{GIT_DIFF_OPTIONS_VERSION, 0, GIT_SUBMODULE_IGNORE_UNSPECIFIED, {NULL,0}, NULL, NULL, 3}
+	{GIT_DIFF_OPTIONS_VERSION, 0, GIT_SUBMODULE_IGNORE_UNSPECIFIED, {NULL,0}, NULL, NULL, NULL, 3}
 
 /**
  * Initializes a `git_diff_options` with default values. Equivalent to
@@ -424,6 +453,8 @@ typedef int (*git_diff_file_cb)(
 	const git_diff_delta *delta,
 	float progress,
 	void *payload);
+
+#define GIT_DIFF_HUNK_HEADER_SIZE	128
 
 /**
  * When producing a binary diff, the binary data returned will be
@@ -476,12 +507,12 @@ typedef int(*git_diff_binary_cb)(
  * Structure describing a hunk of a diff.
  */
 typedef struct {
-	int    old_start;     /**< Starting line number in old_file */
-	int    old_lines;     /**< Number of lines in old_file */
-	int    new_start;     /**< Starting line number in new_file */
-	int    new_lines;     /**< Number of lines in new_file */
-	size_t header_len;    /**< Number of bytes in header text */
-	char   header[128];   /**< Header text, NUL-byte terminated */
+	int    old_start;     /** Starting line number in old_file */
+	int    old_lines;     /** Number of lines in old_file */
+	int    new_start;     /** Starting line number in new_file */
+	int    new_lines;     /** Number of lines in new_file */
+	size_t header_len;    /** Number of bytes in header text */
+	char   header[GIT_DIFF_HUNK_HEADER_SIZE];   /** Header text, NUL-byte terminated */
 } git_diff_hunk;
 
 /**
@@ -1023,6 +1054,21 @@ GIT_EXTERN(int) git_diff_print(
 	git_diff_line_cb print_cb,
 	void *payload);
 
+/**
+ * Produce the complete formatted text output from a diff into a
+ * buffer.
+ *
+ * @param out A pointer to a user-allocated git_buf that will
+ *            contain the diff text
+ * @param diff A git_diff generated by one of the above functions.
+ * @param format A git_diff_format_t value to pick the text format.
+ * @return 0 on success or error code
+ */
+GIT_EXTERN(int) git_diff_to_buf(
+	git_buf *out,
+	git_diff *diff,
+	git_diff_format_t format);
+
 /**@}*/
 
 
@@ -1143,6 +1189,11 @@ GIT_EXTERN(int) git_diff_buffers(
 	git_diff_line_cb line_cb,
 	void *payload);
 
+GIT_EXTERN(int) git_diff_from_buffer(
+	git_diff **out,
+	const char *content,
+	size_t content_len);
+
 /**
  * This is an opaque structure which is allocated by `git_diff_get_stats`.
  * You are responsible for releasing the object memory when done, using the
@@ -1171,7 +1222,7 @@ typedef enum {
 } git_diff_stats_format_t;
 
 /**
- * Accumlate diff statistics for all patches.
+ * Accumulate diff statistics for all patches.
  *
  * @param out Structure containg the diff statistics.
  * @param diff A git_diff generated by one of the above functions.
@@ -1263,12 +1314,15 @@ typedef struct {
 	/** Summary of the change */
 	const char *summary;
 
+	/** Commit message's body */
+	const char *body;
+
 	/** Author of the change */
 	const git_signature *author;
 } git_diff_format_email_options;
 
 #define GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION 1
-#define GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT {GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION, 0, 1, 1, NULL, NULL, NULL}
+#define GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT {GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION, 0, 1, 1, NULL, NULL, NULL, NULL}
 
 /**
  * Create an e-mail ready patch from a diff.

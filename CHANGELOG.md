@@ -1,23 +1,144 @@
-v0.23 + 1
+v0.24 + 1
 -------
 
 ### Changes or improvements
+
+### API additions
+
+* `git_commit_create_buffer()` creates a commit and writes it into a
+  user-provided buffer instead of writing it into the object db.
+
+* `git_blob_create_fromstream()` and
+  `git_blob_create_fromstream_commit()` allow you to create a blob by
+  writing into a stream. Useful when you do not know the final size or
+  want to copy the contents from another stream.
+
+### API removals
+
+* `git_blob_create_fromchunks()` has been removed in favour of
+  `git_blob_create_fromstream()`.
+
+
+### Breaking API changes
+
+v0.24
+-------
+
+### Changes or improvements
+
+* Custom merge drivers can now be registered, which allows callers to
+  configure callbacks to honor `merge=driver` configuration in
+  `.gitattributes`.
 
 * Custom filters can now be registered with wildcard attributes, for
   example `filter=*`.  Consumers should examine the attributes parameter
   of the `check` function for details.
 
+* Symlinks are now followed when locking a file, which can be
+  necessary when multiple worktrees share a base repository.
+
+* You can now set your own user-agent to be sent for HTTP requests by
+  using the `GIT_OPT_SET_USER_AGENT` with `git_libgit2_opts()`.
+
+* You can set custom HTTP header fields to be sent along with requests
+  by passing them in the fetch and push options.
+
+* Tree objects are now assumed to be sorted. If a tree is not
+  correctly formed, it will give bad results. This is the git approach
+  and cuts a significant amount of time when reading the trees.
+
+* Filter registration is now protected against concurrent
+  registration.
+
+* Filenames which are not valid on Windows in an index no longer cause
+  to fail to parse it on that OS.
+
+* Rebases can now be performed purely in-memory, without touching the
+  repository's workdir.
+
+* When adding objects to the index, or when creating new tree or commit
+  objects, the inputs are validated to ensure that the dependent objects
+  exist and are of the correct type.  This object validation can be
+  disabled with the GIT_OPT_ENABLE_STRICT_OBJECT_CREATION option.
+
+* The WinHTTP transport's handling of bad credentials now behaves like
+  the others, asking for credentials again.
+
 ### API additions
+
+* `git_config_lock()` has been added, which allow for
+  transactional/atomic complex updates to the configuration, removing
+  the opportunity for concurrent operations and not committing any
+  changes until the unlock.
+
+* `git_diff_options` added a new callback `progress_cb` to report on the
+  progress of the diff as files are being compared. The documentation of
+  the existing callback `notify_cb` was updated to reflect that it only
+  gets called when new deltas are added to the diff.
+
+* `git_fetch_options` and `git_push_options` have gained a `custom_headers`
+  field to set the extra HTTP header fields to send.
+
+* `git_stream_register_tls()` lets you register a callback to be used
+  as the constructor for a TLS stream instead of the libgit2 built-in
+  one.
+
+* `git_commit_header_field()` allows you to look up a specific header
+  field in a commit.
+
+* `git_commit_extract_signature()` extracts the signature from a
+  commit and gives you both the signature and the signed data so you
+  can verify it.
 
 ### API removals
 
+* No APIs were removed in this version.
+
 ### Breaking API changes
+
+* `git_merge_options` now provides a `default_driver` that can be used
+  to provide the name of a merge driver to be used to handle files changed
+  during a merge.
+
+* The `git_merge_tree_flag_t` is now `git_merge_flag_t`.  Subsequently,
+  its members are no longer prefixed with `GIT_MERGE_TREE_FLAG` but are
+  now prefixed with `GIT_MERGE_FLAG`, and the `tree_flags` field of the
+  `git_merge_options` structure is now named `flags`.
+
+* The `git_merge_file_flags_t` enum is now `git_merge_file_flag_t` for
+  consistency with other enum type names.
 
 * `git_cert` descendent types now have a proper `parent` member
 
-* It is the responsibility fo the refdb backend to decide what to do
+* It is the responsibility of the refdb backend to decide what to do
   with the reflog on ref deletion. The file-based backend must delete
   it, a database-backed one may wish to archive it.
+
+* `git_config_backend` has gained two entries. `lock` and `unlock`
+  with which to implement the transactional/atomic semantics for the
+  configuration backend.
+
+* `git_index_add` and `git_index_conflict_add()` will now use the case
+  as provided by the caller on case insensitive systems.  Previous
+  versions would keep the case as it existed in the index.  This does
+  not affect the higher-level `git_index_add_bypath` or
+  `git_index_add_frombuffer` functions.
+
+* The `notify_payload` field of `git_diff_options` was renamed to `payload`
+  to reflect that it's also the payload for the new progress callback.
+
+* The `git_config_level_t` enum has gained a higher-priority value
+  `GIT_CONFIG_LEVEL_PROGRAMDATA` which represent a rough Windows equivalent
+  to the system level configuration.
+
+* `git_rebase_options` now has a `merge_options` field.
+
+* The index no longer performs locking itself. This is not something
+  users of the library should have been relying on as it's not part of
+  the concurrency guarantees.
+
+* `git_remote_connect()` now takes a `custom_headers` argument to set
+  the extra HTTP header fields to send.
 
 v0.23
 ------
@@ -251,8 +372,8 @@ v0.23
 
 * `git_rebase_options` now contains a `git_checkout_options` struct
   that will be used for functions that modify the working directory,
-  namely `git_checkout_init`, `git_checkout_next` and
-  `git_checkout_abort`.  As a result, `git_rebase_open` now also takes
+  namely `git_rebase_init`, `git_rebase_next` and
+  `git_rebase_abort`.  As a result, `git_rebase_open` now also takes
   a `git_rebase_options` and only the `git_rebase_init` and
   `git_rebase_open` functions take a `git_rebase_options`, where they
   will persist the options to subsequent `git_rebase` calls.

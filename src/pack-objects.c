@@ -91,7 +91,7 @@ static unsigned name_hash(const char *name)
 static int packbuilder_config(git_packbuilder *pb)
 {
 	git_config *config;
-	int ret;
+	int ret = 0;
 	int64_t val;
 
 	if ((ret = git_repository_config_snapshot(&config, pb->repo)) < 0)
@@ -100,8 +100,10 @@ static int packbuilder_config(git_packbuilder *pb)
 #define config_get(KEY,DST,DFLT) do { \
 	ret = git_config_get_int64(&val, config, KEY); \
 	if (!ret) (DST) = val; \
-	else if (ret == GIT_ENOTFOUND) (DST) = (DFLT); \
-	else if (ret < 0) return -1; } while (0)
+	else if (ret == GIT_ENOTFOUND) { \
+	    (DST) = (DFLT); \
+	    ret = 0; \
+	} else if (ret < 0) goto out; } while (0)
 
 	config_get("pack.deltaCacheSize", pb->max_delta_cache_size,
 		   GIT_PACK_DELTA_CACHE_SIZE);
@@ -113,9 +115,10 @@ static int packbuilder_config(git_packbuilder *pb)
 
 #undef config_get
 
+out:
 	git_config_free(config);
 
-	return 0;
+	return ret;
 }
 
 int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
@@ -135,14 +138,13 @@ int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
 	if (!pb->walk_objects)
 		goto on_error;
 
-	if (git_pool_init(&pb->object_pool, sizeof(git_walk_object), 0) < 0)
-		goto on_error;
+	git_pool_init(&pb->object_pool, sizeof(git_walk_object));
 
 	pb->repo = repo;
 	pb->nr_threads = 1; /* do not spawn any thread by default */
 
 	if (git_hash_ctx_init(&pb->ctx) < 0 ||
-		git_zstream_init(&pb->zstream) < 0 ||
+		git_zstream_init(&pb->zstream, GIT_ZSTREAM_DEFLATE) < 0 ||
 		git_repository_odb(&pb->odb, repo) < 0 ||
 		packbuilder_config(pb) < 0)
 		goto on_error;
@@ -272,6 +274,7 @@ static int get_delta(void **out, git_odb *odb, git_pobject *po)
 	git_odb_object *src = NULL, *trg = NULL;
 	unsigned long delta_size;
 	void *delta_buf;
+	int error;
 
 	*out = NULL;
 
@@ -279,12 +282,15 @@ static int get_delta(void **out, git_odb *odb, git_pobject *po)
 	    git_odb_read(&trg, odb, &po->id) < 0)
 		goto on_error;
 
-	delta_buf = git_delta(
-		git_odb_object_data(src), (unsigned long)git_odb_object_size(src),
-		git_odb_object_data(trg), (unsigned long)git_odb_object_size(trg),
-		&delta_size, 0);
+	error = git_delta(&delta_buf, &delta_size,
+		git_odb_object_data(src), git_odb_object_size(src),
+		git_odb_object_data(trg), git_odb_object_size(trg),
+		0);
 
-	if (!delta_buf || delta_size != po->delta_size) {
+	if (error < 0 && error != GIT_EBUFS)
+		goto on_error;
+
+	if (error == GIT_EBUFS || delta_size != po->delta_size) {
 		giterr_set(GITERR_INVALID, "Delta size changed");
 		goto on_error;
 	}
@@ -606,6 +612,7 @@ static git_pobject **compute_write_order(git_packbuilder *pb)
 	}
 
 	if (wo_end != pb->nr_objects) {
+		git__free(wo);
 		giterr_set(GITERR_INVALID, "invalid write order");
 		return NULL;
 	}
@@ -626,10 +633,8 @@ static int write_pack(git_packbuilder *pb,
 	int error = 0;
 
 	write_order = compute_write_order(pb);
-	if (write_order == NULL) {
-		error = -1;
-		goto done;
-	}
+	if (write_order == NULL)
+		return -1;
 
 	/* Write pack header */
 	ph.hdr_signature = htonl(PACK_SIGNATURE);
@@ -814,16 +819,14 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 		*mem_usage += sz;
 	}
 	if (!src->index) {
-		src->index = git_delta_create_index(src->data, src_size);
-		if (!src->index)
+		if (git_delta_index_init(&src->index, src->data, src_size) < 0)
 			return 0; /* suboptimal pack - out of memory */
 
-		*mem_usage += git_delta_sizeof_index(src->index);
+		*mem_usage += git_delta_index_size(src->index);
 	}
 
-	delta_buf = git_delta_create(src->index, trg->data, trg_size,
-				     &delta_size, max_size);
-	if (!delta_buf)
+	if (git_delta_create_from_index(&delta_buf, &delta_size, src->index, trg->data, trg_size,
+		max_size) < 0)
 		return 0;
 
 	if (trg_object->delta) {
@@ -847,9 +850,13 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 
 		git_packbuilder__cache_unlock(pb);
 
-		if (overflow ||
-			!(trg_object->delta_data = git__realloc(delta_buf, delta_size)))
+		if (overflow) {
+			git__free(delta_buf);
 			return -1;
+		}
+
+		trg_object->delta_data = git__realloc(delta_buf, delta_size);
+		GITERR_CHECK_ALLOC(trg_object->delta_data);
 	} else {
 		/* create delta when writing the pack */
 		git_packbuilder__cache_unlock(pb);
@@ -880,9 +887,14 @@ static unsigned int check_delta_limit(git_pobject *me, unsigned int n)
 
 static unsigned long free_unpacked(struct unpacked *n)
 {
-	unsigned long freed_mem = git_delta_sizeof_index(n->index);
-	git_delta_free_index(n->index);
+	unsigned long freed_mem = 0;
+
+	if (n->index) {
+		freed_mem += git_delta_index_size(n->index);
+		git_delta_index_free(n->index);
+	}
 	n->index = NULL;
+
 	if (n->data) {
 		freed_mem += (unsigned long)n->object->size;
 		git__free(n->data);
@@ -1181,7 +1193,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 		git_mutex_init(&p[i].mutex);
 		git_cond_init(&p[i].cond);
 
-		ret = git_thread_create(&p[i].thread, NULL,
+		ret = git_thread_create(&p[i].thread,
 					threaded_find_deltas, &p[i]);
 		if (ret) {
 			giterr_set(GITERR_THREAD, "unable to create thread");

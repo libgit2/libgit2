@@ -18,6 +18,8 @@ void test_object_tree_write__initialize(void)
 void test_object_tree_write__cleanup(void)
 {
    cl_git_sandbox_cleanup();
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 1));
 }
 
 void test_object_tree_write__from_memory(void)
@@ -131,15 +133,18 @@ void test_object_tree_write__sorted_subtrees(void)
 	  	{ GIT_FILEMODE_TREE, "vendors"}
 	};
 
-	git_oid blank_oid, tree_oid;
+	git_oid bid, tid, tree_oid;
 
-	memset(&blank_oid, 0x0, sizeof(blank_oid));
+	cl_git_pass(git_oid_fromstr(&bid, blob_oid));
+	cl_git_pass(git_oid_fromstr(&tid, first_tree));
 
 	cl_git_pass(git_treebuilder_new(&builder, g_repo, NULL));
 
 	for (i = 0; i < ARRAY_SIZE(entries); ++i) {
+		git_oid *id = entries[i].attr == GIT_FILEMODE_TREE ?  &tid : &bid; 
+
 		cl_git_pass(git_treebuilder_insert(NULL,
-			builder, entries[i].filename, &blank_oid, entries[i].attr));
+			builder, entries[i].filename, id, entries[i].attr));
 	}
 
 	cl_git_pass(git_treebuilder_write(&tree_oid, builder));
@@ -187,10 +192,10 @@ void test_object_tree_write__removing_and_re_adding_in_treebuilder(void)
 {
 	git_treebuilder *builder;
 	int i, aardvark_i, apple_i, apple_after_i, apple_extra_i, last_i;
-	git_oid blank_oid, tree_oid;
+	git_oid entry_oid, tree_oid;
 	git_tree *tree;
 
-	memset(&blank_oid, 0x0, sizeof(blank_oid));
+	cl_git_pass(git_oid_fromstr(&entry_oid, blob_oid));
 
 	cl_git_pass(git_treebuilder_new(&builder, g_repo, NULL));
 
@@ -198,7 +203,7 @@ void test_object_tree_write__removing_and_re_adding_in_treebuilder(void)
 
 	for (i = 0; _entries[i].filename; ++i)
 		cl_git_pass(git_treebuilder_insert(NULL,
-			builder, _entries[i].filename, &blank_oid, _entries[i].attr));
+			builder, _entries[i].filename, &entry_oid, _entries[i].attr));
 
 	cl_assert_equal_i(6, (int)git_treebuilder_entrycount(builder));
 
@@ -209,12 +214,12 @@ void test_object_tree_write__removing_and_re_adding_in_treebuilder(void)
 	cl_assert_equal_i(4, (int)git_treebuilder_entrycount(builder));
 
 	cl_git_pass(git_treebuilder_insert(
-		NULL, builder, "before_last", &blank_oid, GIT_FILEMODE_BLOB));
+		NULL, builder, "before_last", &entry_oid, GIT_FILEMODE_BLOB));
 	cl_assert_equal_i(5, (int)git_treebuilder_entrycount(builder));
 
 	/* reinsert apple_after */
 	cl_git_pass(git_treebuilder_insert(
-		NULL, builder, "apple_after", &blank_oid, GIT_FILEMODE_BLOB));
+		NULL, builder, "apple_after", &entry_oid, GIT_FILEMODE_BLOB));
 	cl_assert_equal_i(6, (int)git_treebuilder_entrycount(builder));
 
 	cl_git_pass(git_treebuilder_remove(builder, "last"));
@@ -222,11 +227,11 @@ void test_object_tree_write__removing_and_re_adding_in_treebuilder(void)
 
 	/* reinsert last */
 	cl_git_pass(git_treebuilder_insert(
-		NULL, builder, "last", &blank_oid, GIT_FILEMODE_BLOB));
+		NULL, builder, "last", &entry_oid, GIT_FILEMODE_BLOB));
 	cl_assert_equal_i(6, (int)git_treebuilder_entrycount(builder));
 
 	cl_git_pass(git_treebuilder_insert(
-		NULL, builder, "apple_extra", &blank_oid, GIT_FILEMODE_BLOB));
+		NULL, builder, "apple_extra", &entry_oid, GIT_FILEMODE_BLOB));
 	cl_assert_equal_i(7, (int)git_treebuilder_entrycount(builder));
 
 	cl_git_pass(git_treebuilder_write(&tree_oid, builder));
@@ -278,16 +283,16 @@ void test_object_tree_write__filtering(void)
 {
 	git_treebuilder *builder;
 	int i;
-	git_oid blank_oid, tree_oid;
+	git_oid entry_oid, tree_oid;
 	git_tree *tree;
 
-	memset(&blank_oid, 0x0, sizeof(blank_oid));
+	git_oid_fromstr(&entry_oid, blob_oid);
 
 	cl_git_pass(git_treebuilder_new(&builder, g_repo, NULL));
 
 	for (i = 0; _entries[i].filename; ++i)
 		cl_git_pass(git_treebuilder_insert(NULL,
-			builder, _entries[i].filename, &blank_oid, _entries[i].attr));
+			builder, _entries[i].filename, &entry_oid, _entries[i].attr));
 
 	cl_assert_equal_i(6, (int)git_treebuilder_entrycount(builder));
 
@@ -406,6 +411,8 @@ void test_object_tree_write__protect_filesystems(void)
 	git_treebuilder *builder;
 	git_oid bid;
 
+	cl_git_pass(git_oid_fromstr(&bid, "fa49b077972391ad58037050f2a75f74e3671e92"));
+
 	/* Ensure that (by default) we can write objects with funny names on
 	 * platforms that are not affected.
 	 */
@@ -440,3 +447,68 @@ void test_object_tree_write__protect_filesystems(void)
 
 	git_treebuilder_free(builder);
 }
+
+static void test_invalid_objects(bool should_allow_invalid)
+{
+	git_treebuilder *builder;
+	git_oid valid_blob_id, invalid_blob_id, valid_tree_id, invalid_tree_id;
+
+#define assert_allowed(expr) \
+	clar__assert(!(expr) == should_allow_invalid, __FILE__, __LINE__, \
+		(should_allow_invalid ? \
+		 "Expected function call to succeed: " #expr : \
+		 "Expected function call to fail: " #expr), \
+		NULL, 1)
+
+	cl_git_pass(git_oid_fromstr(&valid_blob_id, blob_oid));
+	cl_git_pass(git_oid_fromstr(&invalid_blob_id,
+		"1234567890123456789012345678901234567890"));
+	cl_git_pass(git_oid_fromstr(&valid_tree_id, first_tree));
+	cl_git_pass(git_oid_fromstr(&invalid_tree_id,
+		"0000000000111111111122222222223333333333"));
+
+	cl_git_pass(git_treebuilder_new(&builder, g_repo, NULL));
+
+	/* test valid blobs and trees (these should always pass) */
+	cl_git_pass(git_treebuilder_insert(NULL, builder, "file.txt", &valid_blob_id, GIT_FILEMODE_BLOB));
+	cl_git_pass(git_treebuilder_insert(NULL, builder, "folder", &valid_tree_id, GIT_FILEMODE_TREE));
+
+	/* replace valid files and folders with invalid ones */
+	assert_allowed(git_treebuilder_insert(NULL, builder, "file.txt", &invalid_blob_id, GIT_FILEMODE_BLOB));
+	assert_allowed(git_treebuilder_insert(NULL, builder, "folder", &invalid_blob_id, GIT_FILEMODE_BLOB));
+
+	/* insert new invalid files and folders */
+	assert_allowed(git_treebuilder_insert(NULL, builder, "invalid_file.txt", &invalid_blob_id, GIT_FILEMODE_BLOB));
+	assert_allowed(git_treebuilder_insert(NULL, builder, "invalid_folder", &invalid_blob_id, GIT_FILEMODE_BLOB));
+
+	/* insert valid blobs as trees and trees as blobs */
+	assert_allowed(git_treebuilder_insert(NULL, builder, "file_as_folder", &valid_blob_id, GIT_FILEMODE_TREE));
+	assert_allowed(git_treebuilder_insert(NULL, builder, "folder_as_file.txt", &valid_tree_id, GIT_FILEMODE_BLOB));
+
+#undef assert_allowed
+
+	git_treebuilder_free(builder);
+}
+
+static void test_inserting_submodule(void)
+{
+	git_treebuilder *bld;
+	git_oid sm_id;
+
+	cl_git_pass(git_treebuilder_new(&bld, g_repo, NULL));
+	cl_git_pass(git_treebuilder_insert(NULL, bld, "sm", &sm_id, GIT_FILEMODE_COMMIT));
+	git_treebuilder_free(bld);
+}
+
+void test_object_tree_write__object_validity(void)
+{
+	/* Ensure that we cannot add invalid objects by default */
+	test_invalid_objects(false);
+	test_inserting_submodule();
+
+	/* Ensure that we can turn off validation */
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 0));
+	test_invalid_objects(true);
+	test_inserting_submodule();
+}
+

@@ -108,3 +108,158 @@ void test_odb_mixed__dup_oid_prefix_0(void) {
 	cl_git_pass(git_odb_read_prefix(&obj, _odb, &oid, strlen(hex)));
 	git_odb_object_free(obj);
 }
+
+struct expand_id_test_data {
+	char *lookup_id;
+	char *expected_id;
+	git_otype expected_type;
+};
+
+struct expand_id_test_data expand_id_test_data[] = {
+	/* some prefixes and their expected values */
+	{ "dea509d0",  NULL, GIT_OBJ_ANY },
+	{ "00000000",  NULL, GIT_OBJ_ANY },
+	{ "dea509d0",  NULL, GIT_OBJ_ANY },
+	{ "dea509d09", "dea509d097ce692e167dfc6a48a7a280cc5e877e", GIT_OBJ_BLOB },
+	{ "dea509d0b", "dea509d0b3cb8ee0650f6ca210bc83f4678851ba", GIT_OBJ_BLOB },
+	{ "ce0136250", "ce013625030ba8dba906f756967f9e9ca394464a", GIT_OBJ_BLOB },
+	{ "0ddeaded",  NULL, GIT_OBJ_ANY },
+	{ "4d5979b",   "4d5979b468252190cb572ae758aca36928e8a91e", GIT_OBJ_TREE },
+	{ "0ddeaded",  NULL, GIT_OBJ_ANY },
+	{ "0ddeadede", "0ddeadede9e6d6ccddce0ee1e5749eed0485e5ea", GIT_OBJ_BLOB },
+	{ "0ddeaded9", "0ddeaded9502971eefe1e41e34d0e536853ae20f", GIT_OBJ_BLOB },
+	{ "f00b4e",    NULL, GIT_OBJ_ANY },
+
+	/* this OID is too short and should be ambiguous! */
+	{ "f00",    NULL, GIT_OBJ_ANY },
+
+	/* some full-length object ids */
+	{ "0000000000000000000000000000000000000000", NULL, GIT_OBJ_ANY },
+	{
+	  "dea509d097ce692e167dfc6a48a7a280cc5e877e",
+	  "dea509d097ce692e167dfc6a48a7a280cc5e877e",
+	  GIT_OBJ_BLOB
+	},
+	{ "f00f00f00f00f00f00f00f00f00f00f00f00f00f", NULL, GIT_OBJ_ANY },
+	{
+	  "4d5979b468252190cb572ae758aca36928e8a91e",
+	  "4d5979b468252190cb572ae758aca36928e8a91e",
+	  GIT_OBJ_TREE
+	},
+
+	 /*
+	  * ensure we're not leaking the return error code for the
+	  * last lookup if the last object is invalid
+	  */
+	{ "0ddeadedfff",  NULL, GIT_OBJ_ANY },
+};
+
+static void setup_prefix_query(
+	git_odb_expand_id **out_ids,
+	size_t *out_num)
+{
+	git_odb_expand_id *ids;
+	size_t num, i;
+
+	num = ARRAY_SIZE(expand_id_test_data);
+
+	cl_assert((ids = git__calloc(num, sizeof(git_odb_expand_id))));
+
+	for (i = 0; i < num; i++) {
+		git_odb_expand_id *id = &ids[i];
+
+		size_t len = strlen(expand_id_test_data[i].lookup_id);
+
+		git_oid_fromstrn(&id->id, expand_id_test_data[i].lookup_id, len);
+		id->length = (unsigned short)len;
+		id->type = expand_id_test_data[i].expected_type;
+	}
+
+	*out_ids = ids;
+	*out_num = num;
+}
+
+static void assert_found_objects(git_odb_expand_id *ids)
+{
+	size_t num, i;
+
+	num = ARRAY_SIZE(expand_id_test_data);
+
+	for (i = 0; i < num; i++) {
+		git_oid expected_id = {{0}};
+		size_t expected_len = 0;
+		git_otype expected_type = 0;
+
+		if (expand_id_test_data[i].expected_id) {
+			git_oid_fromstr(&expected_id, expand_id_test_data[i].expected_id);
+			expected_len = GIT_OID_HEXSZ;
+			expected_type = expand_id_test_data[i].expected_type;
+		}
+
+		cl_assert_equal_oid(&expected_id, &ids[i].id);
+		cl_assert_equal_i(expected_len, ids[i].length);
+		cl_assert_equal_i(expected_type, ids[i].type);
+	}
+}
+
+static void assert_notfound_objects(git_odb_expand_id *ids)
+{
+	git_oid expected_id = {{0}};
+	size_t num, i;
+
+	num = ARRAY_SIZE(expand_id_test_data);
+
+	for (i = 0; i < num; i++) {
+		cl_assert_equal_oid(&expected_id, &ids[i].id);
+		cl_assert_equal_i(0, ids[i].length);
+		cl_assert_equal_i(0, ids[i].type);
+	}
+}
+
+void test_odb_mixed__expand_ids(void)
+{
+	git_odb_expand_id *ids;
+	size_t i, num;
+
+	/* test looking for the actual (correct) types */
+
+	setup_prefix_query(&ids, &num);
+	cl_git_pass(git_odb_expand_ids(_odb, ids, num));
+	assert_found_objects(ids);
+	git__free(ids);
+
+	/* test looking for an explicit `type == 0` */
+
+	setup_prefix_query(&ids, &num);
+
+	for (i = 0; i < num; i++)
+		ids[i].type = 0;
+
+	cl_git_pass(git_odb_expand_ids(_odb, ids, num));
+	assert_found_objects(ids);
+	git__free(ids);
+
+	/* test looking for an explicit GIT_OBJ_ANY */
+
+	setup_prefix_query(&ids, &num);
+
+	for (i = 0; i < num; i++)
+		ids[i].type = GIT_OBJ_ANY;
+
+	cl_git_pass(git_odb_expand_ids(_odb, ids, num));
+	assert_found_objects(ids);
+	git__free(ids);
+
+	/* test looking for the completely wrong type */
+
+	setup_prefix_query(&ids, &num);
+
+	for (i = 0; i < num; i++)
+		ids[i].type = (ids[i].type == GIT_OBJ_BLOB) ?
+			GIT_OBJ_TREE : GIT_OBJ_BLOB;
+
+	cl_git_pass(git_odb_expand_ids(_odb, ids, num));
+	assert_notfound_objects(ids);
+	git__free(ids);
+}
+

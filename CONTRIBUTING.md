@@ -94,7 +94,7 @@ the change, but pass with your changes.
 In addition to new tests, please ensure that your changes do not cause
 any other test failures.  Running the entire test suite is helpful
 before you submit a pull request.  When you build libgit2, the test
-suite will also be built.  You can run all tests by simply running
+suite will also be built.  You can run most of the tests by simply running
 the resultant `libgit2_clar` binary.  If you want to run a specific
 unit test, you can name it with the `-s` option.  For example:
 
@@ -104,6 +104,21 @@ Or you can run an entire class of tests.  For example, to run all the
 worktree status tests:
 
     libgit2_clar -sstatus::worktree
+
+The default test run is fairly exhaustive, but it will exclude some
+unit tests by default: in particular, those that talk to network
+servers and the tests that manipulate the filesystem in onerous
+ways (and may need to have special privileges to run).  To run the
+network tests:
+
+    libgit2_clar -ionline
+
+In addition, various tests may be enabled by environment variables,
+like the ones that write exceptionally large repositories or manipulate
+the filesystem structure in unexpected ways.  These tests *may be
+dangerous* to run on a normal machine and may harm your filesystem.  It's
+not recommended that you run these; instead, the continuous integration
+servers will run these (in a sandbox).
 
 ## Porting Code From Other Open-Source Projects
 

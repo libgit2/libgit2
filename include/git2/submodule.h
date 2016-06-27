@@ -108,6 +108,17 @@ typedef enum {
 	GIT_SUBMODULE_STATUS_WD_UNTRACKED)) != 0)
 
 /**
+ * Function pointer to receive each submodule
+ *
+ * @param sm git_submodule currently being visited
+ * @param name name of the submodule
+ * @param payload value you passed to the foreach function as payload
+ * @return 0 on success or error code
+ */
+typedef int (*git_submodule_cb)(
+	git_submodule *sm, const char *name, void *payload);
+
+/**
  * Submodule update options structure
  *
  * Use the GIT_SUBMODULE_UPDATE_OPTIONS_INIT to get the default settings,
@@ -239,7 +250,7 @@ GIT_EXTERN(void) git_submodule_free(git_submodule *submodule);
  */
 GIT_EXTERN(int) git_submodule_foreach(
 	git_repository *repo,
-	int (*callback)(git_submodule *sm, const char *name, void *payload),
+	git_submodule_cb callback,
 	void *payload);
 
 /**

@@ -127,17 +127,6 @@ GIT_EXTERN(git_filter_mode_t) git_filter_source_mode(const git_filter_source *sr
  */
 GIT_EXTERN(uint32_t) git_filter_source_flags(const git_filter_source *src);
 
-/*
- * struct git_filter
- *
- * The filter lifecycle:
- * - initialize - first use of filter
- * - shutdown   - filter removed/unregistered from system
- * - check      - considering filter for file
- * - apply      - apply filter to file contents
- * - cleanup    - done with file
- */
-
 /**
  * Initialize callback on filter
  *
@@ -233,31 +222,51 @@ typedef void (*git_filter_cleanup_fn)(
  * To associate extra data with a filter, allocate extra data and put the
  * `git_filter` struct at the start of your data buffer, then cast the
  * `self` pointer to your larger structure when your callback is invoked.
- *
- * `version` should be set to GIT_FILTER_VERSION
- *
- * `attributes` is a whitespace-separated list of attribute names to check
- * for this filter (e.g. "eol crlf text").  If the attribute name is bare,
- * it will be simply loaded and passed to the `check` callback.  If it has
- * a value (i.e. "name=value"), the attribute must match that value for
- * the filter to be applied.  The value may be a wildcard (eg, "name=*"),
- * in which case the filter will be invoked for any value for the given
- * attribute name.  See the attribute parameter of the `check` callback
- * for the attribute value that was specified.
- *
- * The `initialize`, `shutdown`, `check`, `apply`, and `cleanup` callbacks
- * are all documented above with the respective function pointer typedefs.
  */
 struct git_filter {
+	/** The `version` field should be set to `GIT_FILTER_VERSION`. */
 	unsigned int           version;
 
+ 	/**
+	 * A whitespace-separated list of attribute names to check for this
+	 * filter (e.g. "eol crlf text").  If the attribute name is bare, it
+	 * will be simply loaded and passed to the `check` callback.  If it
+	 * has a value (i.e. "name=value"), the attribute must match that
+	 * value for the filter to be applied.  The value may be a wildcard
+	 * (eg, "name=*"), in which case the filter will be invoked for any
+	 * value for the given attribute name.  See the attribute parameter
+	 * of the `check` callback for the attribute value that was specified.
+	 */
 	const char            *attributes;
 
+	/** Called when the filter is first used for any file. */
 	git_filter_init_fn     initialize;
+
+	/** Called when the filter is removed or unregistered from the system. */
 	git_filter_shutdown_fn shutdown;
+
+	/**
+	 * Called to determine whether the filter should be invoked for a
+	 * given file.  If this function returns `GIT_PASSTHROUGH` then the
+	 * `apply` function will not be invoked and the contents will be passed
+	 * through unmodified.
+	 */
 	git_filter_check_fn    check;
+
+	/**
+	 * Called to actually apply the filter to file contents.  If this
+	 * function returns `GIT_PASSTHROUGH` then the contents will be passed
+	 * through unmodified.
+	 */
 	git_filter_apply_fn    apply;
+
+	/**
+	 * Called to apply the filter in a streaming manner.  If this is not
+	 * specified then the system will call `apply` with the whole buffer.
+	 */
 	git_filter_stream_fn   stream;
+
+	/** Called when the system is done filtering for a file. */
 	git_filter_cleanup_fn  cleanup;
 };
 

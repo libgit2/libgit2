@@ -24,6 +24,9 @@ static char *_remote_ssh_pubkey = NULL;
 static char *_remote_ssh_privkey = NULL;
 static char *_remote_ssh_passphrase = NULL;
 static char *_remote_ssh_fingerprint = NULL;
+static char *_remote_proxy_url = NULL;
+static char *_remote_proxy_user = NULL;
+static char *_remote_proxy_pass = NULL;
 
 
 void test_online_clone__initialize(void)
@@ -46,6 +49,9 @@ void test_online_clone__initialize(void)
 	_remote_ssh_privkey = cl_getenv("GITTEST_REMOTE_SSH_KEY");
 	_remote_ssh_passphrase = cl_getenv("GITTEST_REMOTE_SSH_PASSPHRASE");
 	_remote_ssh_fingerprint = cl_getenv("GITTEST_REMOTE_SSH_FINGERPRINT");
+	_remote_proxy_url = cl_getenv("GITTEST_REMOTE_PROXY_URL");
+	_remote_proxy_user = cl_getenv("GITTEST_REMOTE_PROXY_USER");
+	_remote_proxy_pass = cl_getenv("GITTEST_REMOTE_PROXY_PASS");
 }
 
 void test_online_clone__cleanup(void)
@@ -63,6 +69,9 @@ void test_online_clone__cleanup(void)
 	git__free(_remote_ssh_privkey);
 	git__free(_remote_ssh_passphrase);
 	git__free(_remote_ssh_fingerprint);
+	git__free(_remote_proxy_url);
+	git__free(_remote_proxy_user);
+	git__free(_remote_proxy_pass);
 }
 
 void test_online_clone__network_full(void)
@@ -211,6 +220,33 @@ void test_online_clone__custom_remote_callbacks(void)
 
 	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 	cl_assert(callcount > 0);
+}
+
+void test_online_clone__custom_headers(void)
+{
+	char *empty_header = "";
+	char *unnamed_header = "this is a header about nothing";
+	char *newlines = "X-Custom: almost OK\n";
+	char *conflict = "Accept: defined-by-git";
+	char *ok = "X-Custom: this should be ok";
+
+	g_options.fetch_opts.custom_headers.count = 1;
+
+	g_options.fetch_opts.custom_headers.strings = &empty_header;
+	cl_git_fail(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
+
+	g_options.fetch_opts.custom_headers.strings = &unnamed_header;
+	cl_git_fail(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
+
+	g_options.fetch_opts.custom_headers.strings = &newlines;
+	cl_git_fail(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
+
+	g_options.fetch_opts.custom_headers.strings = &conflict;
+	cl_git_fail(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
+
+	/* Finally, we got it right! */
+	g_options.fetch_opts.custom_headers.strings = &ok;
+	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 }
 
 static int cred_failure_cb(
@@ -625,4 +661,41 @@ void test_online_clone__start_with_http(void)
 	g_options.fetch_opts.callbacks.certificate_check = succeed_certificate_check;
 
 	cl_git_pass(git_clone(&g_repo, "http://github.com/libgit2/TestGitRepository", "./foo", &g_options));
+}
+
+static int called_proxy_creds;
+static int proxy_creds(git_cred **out, const char *url, const char *username, unsigned int allowed, void *payload)
+{
+	GIT_UNUSED(url);
+	GIT_UNUSED(username);
+	GIT_UNUSED(allowed);
+	GIT_UNUSED(payload);
+
+	called_proxy_creds = 1;
+	return git_cred_userpass_plaintext_new(out, _remote_proxy_user, _remote_proxy_pass);
+}
+
+void test_online_clone__proxy_credentials_request(void)
+{
+	if (!_remote_proxy_url || !_remote_proxy_user || !_remote_proxy_pass)
+		cl_skip();
+
+	g_options.fetch_opts.proxy_opts.type = GIT_PROXY_SPECIFIED;
+	g_options.fetch_opts.proxy_opts.url = _remote_proxy_url;
+	g_options.fetch_opts.proxy_opts.credentials = proxy_creds;
+	called_proxy_creds = 0;
+	cl_git_pass(git_clone(&g_repo, "http://github.com/libgit2/TestGitRepository", "./foo", &g_options));
+	cl_assert(called_proxy_creds);
+}
+
+void test_online_clone__proxy_credentials_in_url(void)
+{
+	if (!_remote_proxy_url)
+		cl_skip();
+
+	g_options.fetch_opts.proxy_opts.type = GIT_PROXY_SPECIFIED;
+	g_options.fetch_opts.proxy_opts.url = _remote_proxy_url;
+	called_proxy_creds = 0;
+	cl_git_pass(git_clone(&g_repo, "http://github.com/libgit2/TestGitRepository", "./foo", &g_options));
+	cl_assert(called_proxy_creds == 0);
 }

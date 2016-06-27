@@ -20,6 +20,8 @@
  *
  */
 
+#include "../util.h"
+
 #if !defined(XDIFF_H)
 #define XDIFF_H
 
@@ -106,9 +108,9 @@ typedef struct s_bdiffparam {
 } bdiffparam_t;
 
 
-#define xdl_malloc(x) malloc(x)
-#define xdl_free(ptr) free(ptr)
-#define xdl_realloc(ptr,x) realloc(ptr,x)
+#define xdl_malloc(x) git__malloc(x)
+#define xdl_free(ptr) git__free(ptr)
+#define xdl_realloc(ptr,x) git__realloc(ptr,x)
 
 void *xdl_mmfile_first(mmfile_t *mmf, long *size);
 long xdl_mmfile_size(mmfile_t *mmf);

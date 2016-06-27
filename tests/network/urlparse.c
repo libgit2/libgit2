@@ -121,6 +121,15 @@ void test_network_urlparse__user_pass_port(void)
 	cl_assert_equal_s(pass, "pass");
 }
 
+void test_network_urlparse__optional_path(void)
+{
+	cl_git_fail(gitno_extract_url_parts(&host, &port, &path, &user, &pass,
+				"https://user:pass@example.com:9191", "8080"));
+
+	cl_git_pass(gitno_extract_url_parts(&host, &port, NULL, &user, &pass,
+				"https://user:pass@example.com:9191", "8080"));
+}
+
 void test_network_urlparse__connection_data_http(void)
 {
 	cl_git_pass(gitno_connection_data_from_url(&conndata,

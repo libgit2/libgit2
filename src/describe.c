@@ -197,7 +197,7 @@ static int commit_name_dup(struct commit_name **out, struct commit_name *in)
 	name->tag = NULL;
 	name->path = NULL;
 
-	if (in->tag && git_object_dup((git_object **) &name->tag, (git_object *) in->tag) < 0)
+	if (in->tag && git_tag_dup(&name->tag, in->tag) < 0)
 		return -1;
 
 	name->path = git__strdup(in->path);
@@ -582,7 +582,8 @@ static int describe(
 	best = (struct possible_tag *)git_vector_get(&all_matches, 0);
 
 	if (gave_up_on) {
-		git_pqueue_insert(&list, gave_up_on);
+		if ((error = git_pqueue_insert(&list, gave_up_on)) < 0)
+			goto cleanup;
 		seen_commits--;
 	}
 	if ((error = finish_depth_computation(

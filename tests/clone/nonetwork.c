@@ -297,16 +297,19 @@ static void assert_correct_reflog(const char *name)
 {
 	git_reflog *log;
 	const git_reflog_entry *entry;
-	char expected_log_message[128] = {0};
+	git_buf expected_message = GIT_BUF_INIT;
 
-	sprintf(expected_log_message, "clone: from %s", cl_git_fixture_url("testrepo.git"));
+	git_buf_printf(&expected_message,
+		"clone: from %s", cl_git_fixture_url("testrepo.git"));
 
 	cl_git_pass(git_reflog_read(&log, g_repo, name));
 	cl_assert_equal_i(1, git_reflog_entrycount(log));
 	entry = git_reflog_entry_byindex(log, 0);
-	cl_assert_equal_s(expected_log_message, git_reflog_entry_message(entry));
+	cl_assert_equal_s(expected_message.ptr, git_reflog_entry_message(entry));
 
 	git_reflog_free(log);
+
+	git_buf_free(&expected_message);
 }
 
 void test_clone_nonetwork__clone_updates_reflog_properly(void)

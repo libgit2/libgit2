@@ -86,7 +86,8 @@ int git_config__cvar(int *out, git_config *config, git_cvar_cached cvar)
 	struct map_data *data = &_cvar_maps[(int)cvar];
 	git_config_entry *entry;
 
-	git_config__lookup_entry(&entry, config, data->cvar_name, false);
+	if ((error = git_config__lookup_entry(&entry, config, data->cvar_name, false)) < 0)
+		return error;
 
 	if (!entry)
 		*out = data->default_value;

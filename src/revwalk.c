@@ -223,8 +223,7 @@ static int push_glob(git_revwalk *walk, const char *glob, int hide)
 		git_buf_joinpath(&buf, GIT_REFS_DIR, glob);
 	else
 		git_buf_puts(&buf, glob);
-	if (git_buf_oom(&buf))
-		return -1;
+	GITERR_CHECK_ALLOC_BUF(&buf);
 
 	/* If no '?', '*' or '[' exist, we append '/ *' to the glob */
 	wildcard = strcspn(glob, "?*[");
@@ -535,12 +534,10 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 	walk->commits = git_oidmap_alloc();
 	GITERR_CHECK_ALLOC(walk->commits);
 
-	if (git_pqueue_init(
-			&walk->iterator_time, 0, 8, git_commit_list_time_cmp) < 0 ||
-		git_pool_init(&walk->commit_pool, 1,
-			git_pool__suggest_items_per_page(COMMIT_ALLOC) * COMMIT_ALLOC) < 0)
+	if (git_pqueue_init(&walk->iterator_time, 0, 8, git_commit_list_time_cmp) < 0)
 		return -1;
 
+	git_pool_init(&walk->commit_pool, COMMIT_ALLOC);
 	walk->get_next = &revwalk_next_unsorted;
 	walk->enqueue = &revwalk_enqueue_unsorted;
 

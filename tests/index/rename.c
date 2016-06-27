@@ -48,3 +48,39 @@ void test_index_rename__single_file(void)
 
 	cl_fixture_cleanup("rename");
 }
+
+void test_index_rename__casechanging(void)
+{
+	git_repository *repo;
+	git_index *index;
+	const git_index_entry *entry;
+	git_index_entry new = {{0}};
+
+	p_mkdir("rename", 0700);
+
+	cl_git_pass(git_repository_init(&repo, "./rename", 0));
+	cl_git_pass(git_repository_index(&index, repo));
+
+	cl_git_mkfile("./rename/lame.name.txt", "new_file\n");
+
+	cl_git_pass(git_index_add_bypath(index, "lame.name.txt"));
+	cl_assert_equal_i(1, git_index_entrycount(index));
+	cl_assert((entry = git_index_get_bypath(index, "lame.name.txt", 0)));
+
+	memcpy(&new, entry, sizeof(git_index_entry));
+	new.path = "LAME.name.TXT";
+
+	cl_git_pass(git_index_add(index, &new));
+	cl_assert((entry = git_index_get_bypath(index, "LAME.name.TXT", 0)));
+
+	if (cl_repo_get_bool(repo, "core.ignorecase"))
+		cl_assert_equal_i(1, git_index_entrycount(index));
+	else
+		cl_assert_equal_i(2, git_index_entrycount(index));
+
+	git_index_free(index);
+	git_repository_free(repo);
+
+	cl_fixture_cleanup("rename");
+}
+

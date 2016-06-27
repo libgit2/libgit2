@@ -10,6 +10,8 @@
 
 #include "git2/net.h"
 #include "git2/types.h"
+#include "git2/strarray.h"
+#include "git2/proxy.h"
 
 /**
  * @file git2/sys/transport.h
@@ -40,6 +42,11 @@ struct git_transport {
 		git_transport_certificate_check_cb certificate_check_cb,
 		void *payload);
 
+	/* Set custom headers for HTTP requests */
+	int (*set_custom_headers)(
+		git_transport *transport,
+		const git_strarray *custom_headers);
+
 	/* Connect the transport to the remote repository, using the given
 	 * direction. */
 	int (*connect)(
@@ -47,6 +54,7 @@ struct git_transport {
 		const char *url,
 		git_cred_acquire_cb cred_acquire_cb,
 		void *cred_acquire_payload,
+		const git_proxy_options *proxy_opts,
 		int direction,
 		int flags);
 
@@ -59,7 +67,7 @@ struct git_transport {
 		git_transport *transport);
 
 	/* Executes the push whose context is in the git_push object. */
-	int (*push)(git_transport *transport, git_push *push, const git_remote_callbacks *callbacks);
+	int(*push)(git_transport *transport, git_push *push, const git_remote_callbacks *callbacks);
 
 	/* This function may be called after a successful call to connect(), when
 	 * the direction is FETCH. The function performs a negotiation to calculate
@@ -210,6 +218,28 @@ GIT_EXTERN(int) git_transport_smart(
 	git_transport **out,
 	git_remote *owner,
 	/* (git_smart_subtransport_definition *) */ void *payload);
+
+/**
+ * Call the certificate check for this transport.
+ *
+ * @param transport a smart transport
+ * @param cert the certificate to pass to the caller
+ * @param valid whether we believe the certificate is valid
+ * @param hostname the hostname we connected to
+ * @return the return value of the callback
+ */
+GIT_EXTERN(int) git_transport_smart_certificate_check(git_transport *transport, git_cert *cert, int valid, const char *hostname);
+
+/**
+ * Call the credentials callback for this transport
+ *
+ * @param out the pointer where the creds are to be stored
+ * @param transport a smart transport
+ * @param user the user we saw on the url (if any)
+ * @param methods available methods for authentication
+ * @return the return value of the callback
+ */
+GIT_EXTERN(int) git_transport_smart_credentials(git_cred **out, git_transport *transport, const char *user, int methods);
 
 /*
  *** End of base transport interface ***

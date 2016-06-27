@@ -3,6 +3,38 @@
 We like to keep the source consistent and readable.  Herein are some
 guidelines that should help with that.
 
+## External API
+
+We have a few rules to avoid surprising ways of calling functions and
+some rules for consumers of the library to avoid stepping on each
+other's toes.
+
+ - Property accessors return the value directly (e.g. an `int` or
+   `const char *`) but if a function can fail, we return a `int` value
+   and the output parameters go first in the parameter list, followed
+   by the object that a function is operating on, and then any other
+   arguments the function may need.
+
+ - If a function returns an object as a return value, that function is
+   a getter and the object's lifetime is tied to the parent
+   object. Objects which are returned as the first argument as a
+   pointer-to-pointer are owned by the caller and it is repsponsible
+   for freeing it. Strings are returned via `git_buf` in order to
+   allow for re-use and safe freeing.
+
+ - Most of what libgit2 does relates to I/O so you as a general rule
+   you should assume that any function can fail due to errors as even
+   getting data from the filesystem can result in all sorts of errors
+   and complex failure cases.
+
+ - Paths inside the Git system are separated by a slash (0x2F). If a
+   function accepts a path on disk, then backslashes (0x5C) are also
+   accepted on Windows.
+
+ - Do not mix allocators. If something has been allocated by libgit2,
+   you do not know which is the right free function in the general
+   case. Use the free functions provided for each object type.
+
 ## Compatibility
 
 `libgit2` runs on many different platforms with many different compilers.

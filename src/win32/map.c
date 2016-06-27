@@ -17,10 +17,23 @@ static DWORD get_page_size(void)
 
 	if (!page_size) {
 		GetSystemInfo(&sys);
-		page_size = sys.dwAllocationGranularity;
+		page_size = sys.dwPageSize;
 	}
 
 	return page_size;
+}
+
+static DWORD get_allocation_granularity(void)
+{
+	static DWORD granularity;
+	SYSTEM_INFO sys;
+
+	if (!granularity) {
+		GetSystemInfo(&sys);
+		granularity = sys.dwAllocationGranularity;
+	}
+
+	return granularity;
 }
 
 int git__page_size(size_t *page_size)
@@ -29,10 +42,16 @@ int git__page_size(size_t *page_size)
 	return 0;
 }
 
+int git__mmap_alignment(size_t *page_size)
+{
+	*page_size = get_allocation_granularity();
+	return 0;
+}
+
 int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
 {
 	HANDLE fh = (HANDLE)_get_osfhandle(fd);
-	DWORD page_size = get_page_size();
+	DWORD alignment = get_allocation_granularity();
 	DWORD fmap_prot = 0;
 	DWORD view_prot = 0;
 	DWORD off_low = 0;
@@ -62,12 +81,12 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 	if (prot & GIT_PROT_READ)
 		view_prot |= FILE_MAP_READ;
 
-	page_start = (offset / page_size) * page_size;
+	page_start = (offset / alignment) * alignment;
 	page_offset = offset - page_start;
 
-	if (page_offset != 0) { /* offset must be multiple of page size */
+	if (page_offset != 0) { /* offset must be multiple of the allocation granularity */
 		errno = EINVAL;
-		giterr_set(GITERR_OS, "Failed to mmap. Offset must be multiple of page size");
+		giterr_set(GITERR_OS, "Failed to mmap. Offset must be multiple of allocation granularity");
 		return -1;
 	}
 

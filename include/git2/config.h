@@ -29,25 +29,28 @@ GIT_BEGIN_DECL
  * priority levels as well.
  */
 typedef enum {
+	/** System-wide on Windows, for compatibility with portable git */
+	GIT_CONFIG_LEVEL_PROGRAMDATA = 1,
+
 	/** System-wide configuration file; /etc/gitconfig on Linux systems */
-	GIT_CONFIG_LEVEL_SYSTEM = 1,
+	GIT_CONFIG_LEVEL_SYSTEM = 2,
 
 	/** XDG compatible configuration file; typically ~/.config/git/config */
-	GIT_CONFIG_LEVEL_XDG = 2,
+	GIT_CONFIG_LEVEL_XDG = 3,
 
 	/** User-specific configuration file (also called Global configuration
 	 * file); typically ~/.gitconfig
 	 */
-	GIT_CONFIG_LEVEL_GLOBAL = 3,
+	GIT_CONFIG_LEVEL_GLOBAL = 4,
 
 	/** Repository specific configuration file; $WORK_DIR/.git/config on
 	 * non-bare repos
 	 */
-	GIT_CONFIG_LEVEL_LOCAL = 4,
+	GIT_CONFIG_LEVEL_LOCAL = 5,
 
 	/** Application specific configuration file; freely defined by applications
 	 */
-	GIT_CONFIG_LEVEL_APP = 5,
+	GIT_CONFIG_LEVEL_APP = 6,
 
 	/** Represents the highest level available config file (i.e. the most
 	 * specific config file available that actually is loaded)
@@ -142,6 +145,17 @@ GIT_EXTERN(int) git_config_find_xdg(git_buf *out);
 GIT_EXTERN(int) git_config_find_system(git_buf *out);
 
 /**
+ * Locate the path to the configuration file in ProgramData
+ *
+ * Look for the file in %PROGRAMDATA%\Git\config used by portable git.
+ *
+ * @param out Pointer to a user-allocated git_buf in which to store the path
+ * @return 0 if a ProgramData configuration file has been
+ *	found. Its path will be stored in `out`.
+ */
+GIT_EXTERN(int) git_config_find_programdata(git_buf *out);
+
+/**
  * Open the global, XDG and system configuration files
  *
  * Utility wrapper that finds the global, XDG and system configuration files
@@ -170,6 +184,9 @@ GIT_EXTERN(int) git_config_new(git_config **out);
  * The on-disk file pointed at by `path` will be opened and
  * parsed; it's expected to be a native Git config file following
  * the default Git config syntax (see man git-config).
+ *
+ * If the file does not exist, the file will still be added and it
+ * will be created the first time we write to it.
  *
  * Note that the configuration object will free the file
  * automatically.
@@ -202,8 +219,7 @@ GIT_EXTERN(int) git_config_add_file_ondisk(
  *
  * @param out The configuration instance to create
  * @param path Path to the on-disk file to open
- * @return 0 on success, GIT_ENOTFOUND when the file doesn't exist
- * or an error code
+ * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_config_open_ondisk(git_config **out, const char *path);
 
@@ -688,6 +704,24 @@ GIT_EXTERN(int) git_config_backend_foreach_match(
 	git_config_foreach_cb callback,
 	void *payload);
 
+
+/**
+ * Lock the backend with the highest priority
+ *
+ * Locking disallows anybody else from writing to that backend. Any
+ * updates made after locking will not be visible to a reader until
+ * the file is unlocked.
+ *
+ * You can apply the changes by calling `git_transaction_commit()`
+ * before freeing the transaction. Either of these actions will unlock
+ * the config.
+ *
+ * @param tx the resulting transaction, use this to commit or undo the
+ * changes
+ * @param cfg the configuration in which to lock
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_config_lock(git_transaction **tx, git_config *cfg);
 
 /** @} */
 GIT_END_DECL

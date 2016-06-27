@@ -25,7 +25,7 @@ void test_core_copy__file_in_dir(void)
 	struct stat st;
 	const char *content = "This is some other stuff to copy\n";
 
-	cl_git_pass(git_futils_mkdir("an_dir/in_a_dir", NULL, 0775, GIT_MKDIR_PATH));
+	cl_git_pass(git_futils_mkdir("an_dir/in_a_dir", 0775, GIT_MKDIR_PATH));
 	cl_git_mkfile("an_dir/in_a_dir/copy_me", content);
 	cl_assert(git_path_isdir("an_dir"));
 
@@ -60,9 +60,9 @@ void test_core_copy__tree(void)
 	struct stat st;
 	const char *content = "File content\n";
 
-	cl_git_pass(git_futils_mkdir("src/b", NULL, 0775, GIT_MKDIR_PATH));
-	cl_git_pass(git_futils_mkdir("src/c/d", NULL, 0775, GIT_MKDIR_PATH));
-	cl_git_pass(git_futils_mkdir("src/c/e", NULL, 0775, GIT_MKDIR_PATH));
+	cl_git_pass(git_futils_mkdir("src/b", 0775, GIT_MKDIR_PATH));
+	cl_git_pass(git_futils_mkdir("src/c/d", 0775, GIT_MKDIR_PATH));
+	cl_git_pass(git_futils_mkdir("src/c/e", 0775, GIT_MKDIR_PATH));
 
 	cl_git_mkfile("src/f1", content);
 	cl_git_mkfile("src/b/f2", content);

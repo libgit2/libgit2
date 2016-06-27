@@ -41,10 +41,11 @@
 # include <ws2tcpip.h>
 # include "win32/msvc-compat.h"
 # include "win32/mingw-compat.h"
+# include "win32/win32-compat.h"
 # include "win32/error.h"
 # include "win32/version.h"
 # ifdef GIT_THREADS
-#	include "win32/pthread.h"
+#	include "win32/thread.h"
 # endif
 # if defined(GIT_MSVC_CRTDBG)
 #   include "win32/w32_stack.h"
@@ -60,6 +61,12 @@
 #	include <sched.h>
 # endif
 #define GIT_STDLIB_CALL
+
+#ifdef GIT_USE_STAT_ATIMESPEC
+# define st_atim st_atimespec
+# define st_ctim st_ctimespec
+# define st_mtim st_mtimespec
+#endif
 
 # include <arpa/inet.h>
 
@@ -81,6 +88,11 @@
  * Check a pointer allocation result, returning -1 if it failed.
  */
 #define GITERR_CHECK_ALLOC(ptr) if (ptr == NULL) { return -1; }
+
+/**
+ * Check a buffer allocation result, returning -1 if it failed.
+ */
+#define GITERR_CHECK_ALLOC_BUF(buf) if ((void *)(buf) == NULL || git_buf_oom(buf)) { return -1; }
 
 /**
  * Check a return value and propagate result if non-zero.
@@ -207,6 +219,15 @@ GIT_INLINE(void) git__init_structure(void *structure, size_t len, unsigned int v
 /** Check for additive overflow, failing if it would occur. */
 #define GITERR_CHECK_ALLOC_ADD(out, one, two) \
 	if (GIT_ADD_SIZET_OVERFLOW(out, one, two)) { return -1; }
+
+#define GITERR_CHECK_ALLOC_ADD3(out, one, two, three) \
+	if (GIT_ADD_SIZET_OVERFLOW(out, one, two) || \
+		GIT_ADD_SIZET_OVERFLOW(out, *(out), three)) { return -1; }
+
+#define GITERR_CHECK_ALLOC_ADD4(out, one, two, three, four) \
+	if (GIT_ADD_SIZET_OVERFLOW(out, one, two) || \
+		GIT_ADD_SIZET_OVERFLOW(out, *(out), three) || \
+		GIT_ADD_SIZET_OVERFLOW(out, *(out), four)) { return -1; }
 
 /** Check for multiplicative overflow, failing if it would occur. */
 #define GITERR_CHECK_ALLOC_MULTIPLY(out, nelem, elsize) \
