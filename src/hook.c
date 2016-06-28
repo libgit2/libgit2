@@ -13,16 +13,25 @@
 
 #define GIT_HOOKS_DIR "hooks/"
 
-const char * const hooks[] = {
+const char * const githooks[] = {
 	"applypatch-msg",
-	"commit-msg",
-	"post-update",
 	"pre-applypatch",
+	"post-applypatch",
 	"pre-commit",
-	"pre-push",
-	"pre-rebase",
 	"prepare-commit-msg",
+	"commit-msg",
+	"post-commit",
+	"pre-rebase",
+	"post-checkout",
+	"post-merge",
+	"pre-push",
+	"pre-receive",
 	"update",
+	"post-receive",
+	"post-update",
+	"push-to-checkout",
+	"pre-auto-gc",
+	"post-rewrite",
 };
 
 #define MAX_HOOK_LEN 18+1
@@ -69,8 +78,8 @@ int git_hook_enumerate(
 {
 	assert(repo && callback);
 
-	for (size_t hook_id = 0; hook_id <= sizeof(*hooks); hook_id++) {
-		const char *hook_name = hooks[hook_id];
+	for (size_t hook_id = 0; hook_id <= sizeof(*githooks); hook_id++) {
+		const char *hook_name = githooks[hook_id];
 		int err = 0;
 		char *hook_path = NULL;
 
