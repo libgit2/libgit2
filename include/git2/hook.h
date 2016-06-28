@@ -27,19 +27,26 @@ GIT_EXTERN(int) git_hook_enumerate(
 	void *payload
 );
 
+typedef struct {
+	char *path;
+	git_strarray args;
+} git_hook_env;
 
-
-typedef int (*git_hook_execute_cb)(
-	const git_buf *hook_path,
-	void *payload,
-	...
+typedef int (*git_hook_execution_cb)(
+	git_hook_env env,
+	void *payload
 );
 
-GIT_EXTERN(int) git_hook_register(
+GIT_EXTERN(int) git_hook_register_callback(
+	git_repository *repo,
+	git_hook_execution_cb callback,
+	void *payload
+);
+
+GIT_EXTERN(int) git_hook_execute(
 	git_repository *repo,
 	const char *hook_name,
-	git_hook_execute_cb callback,
-	void *payload
+	...
 );
 
 /* @} */

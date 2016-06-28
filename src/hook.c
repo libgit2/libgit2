@@ -97,3 +97,56 @@ int git_hook_enumerate(
 	return 0;
 }
 
+int git_hook_register_callback(git_repository *repo, git_hook_execution_cb callback, void *payload)
+{
+	assert(repo && callback);
+
+	repo->hook_executor = callback;
+	repo->hook_payload = payload;
+
+	return 0;
+}
+
+int git_hook_exec_va(git_repository *repo, const char *name, va_list args)
+{
+	int err = 0;
+	char *arg;
+	git_vector arg_vector = GIT_VECTOR_INIT;
+	git_hook_env env;
+
+	assert(repo && name);
+
+	err = build_hook_path(&env.path, repo, name);
+	if (err != 0) goto cleanup;
+
+	err = check_hook_path(env.path);
+	if (err != 0) goto cleanup;
+
+	while ((arg = va_arg(args, char *)))
+	{
+		if (arg == NULL) break;
+		git_vector_insert(&arg_vector, arg);
+	}
+
+	va_end(args);
+
+	env.args.strings = (char **)git_vector_detach(&env.args.count, NULL, &arg_vector);
+
+	err = repo->hook_executor(env, repo->hook_payload);
+
+cleanup:
+	git__free(env.path);
+	return err;
+}
+
+int git_hook_execute(git_repository *repo, const char *hook_name, ...)
+{
+	int err = 0;
+	va_list hook_args;
+
+	va_start(hook_args, hook_name);
+	err = git_hook_exec_va(repo, hook_name, hook_args);
+	va_end(hook_args);
+
+	return err;
+}
