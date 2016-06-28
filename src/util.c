@@ -122,8 +122,8 @@ int git__strtol64(int64_t *result, const char *nptr, const char **endptr, int ba
 			v = c - 'A' + 10;
 		if (v >= base)
 			break;
-		nn = n*base + v;
-		if (nn < n)
+		nn = n * base + (neg ? -v : v);
+		if ((!neg && nn < n) || (neg && nn > n))
 			ovfl = 1;
 		n = nn;
 	}
@@ -142,7 +142,7 @@ Return:
 		return -1;
 	}
 
-	*result = neg ? -n : n;
+	*result = n;
 	return 0;
 }
 
