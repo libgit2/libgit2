@@ -90,34 +90,3 @@ int git_hook_enumerate(
 	return 0;
 }
 
-int git_hook_load(git_buf *out, git_repository *repo, const char *hook_name)
-{
-	char *hook_path;
-	int err;
-
-	assert(out && repo && hook_name);
-
-	err = build_hook_path(&hook_path, repo, hook_name);
-	if (err) {
-		giterr_set(GITERR_REPOSITORY, "hook \"%s\" does not exist");
-		return -1;
-	}
-
-	return git_futils_readbuffer(out, hook_path);
-}
-
-int git_hook_save(git_buf *contents, git_repository *repo, const char *hook_name)
-{
-	char *hook_path;
-	int err;
-
-	assert(contents && repo && hook_name);
-
-	err = build_hook_path(&hook_path, repo, hook_name);
-	if (err) {
-		giterr_set(GITERR_REPOSITORY, "hook \"%s\" does not exist");
-		return -1;
-	}
-
-	return git_futils_writebuffer(contents, hook_path, O_CREAT | O_TRUNC | O_WRONLY, HOOK_FILE_MODE);
-}

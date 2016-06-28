@@ -27,17 +27,7 @@ GIT_EXTERN(int) git_hook_enumerate(
 	void *payload
 );
 
-GIT_EXTERN(int) git_hook_load(
-	git_buf *out,
-	git_repository *repo,
-	const char *hook_name
-);
 
-GIT_EXTERN(int) git_hook_save(
-	git_buf *contents,
-	git_repository *repo,
-	const char *hook_name
-);
 
 typedef int (*git_hook_execute_cb)(
 	const git_buf *hook_path,
