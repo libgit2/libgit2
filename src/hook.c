@@ -78,7 +78,7 @@ int git_hook_enumerate(
 {
 	assert(repo && callback);
 
-	for (size_t hook_id = 0; hook_id <= sizeof(*githooks); hook_id++) {
+	for (size_t hook_id = 0; hook_id < sizeof(githooks) / sizeof(char *); hook_id++) {
 		const char *hook_name = githooks[hook_id];
 		int err = 0;
 		char *hook_path = NULL;
