@@ -45,29 +45,21 @@ static int build_hook_path(char **hook_path, git_repository *repo, const char *h
 	return 0;
 }
 
-static int check_hook(git_repository *repo, const char *hook_name)
+static int check_hook_path(const char *hook_path)
 {
 	int err;
-	char *hook_path;
 	struct stat hook_stat;
 
-	assert(repo && hook_name);
-
-	err = build_hook_path(&hook_path, repo, hook_name);
-	if (err) goto error;
+	assert(hook_path);
 
 	/* Skip missing hooks */
 	err = p_stat(hook_path, &hook_stat);
-	if (err) goto error;
+	if (err) return -1;
 
 	/* Check exec bits */
-	if ((hook_stat.st_mode & (S_IXUSR|S_IXGRP|S_IXOTH)) == 0) goto error;
+	if ((hook_stat.st_mode & (S_IXUSR|S_IXGRP|S_IXOTH)) == 0) return -1;
 
 	return 0;
-
-error:
-	git__free(hook_path);
-	return -1;
 }
 
 int git_hook_enumerate(
@@ -80,9 +72,15 @@ int git_hook_enumerate(
 	for (size_t hook_id = 0; hook_id <= sizeof(*hooks); hook_id++) {
 		const char *hook_name = hooks[hook_id];
 		int err = 0;
+		char *hook_path = NULL;
 
-		err = check_hook(repo, hook_name);
-		if (err) continue;
+		err = build_hook_path(&hook_path, repo, hook_name);
+		if (err != 0) continue;
+
+		err = check_hook_path(hook_path);
+		git__free(hook_path);
+
+		if (err != 0) continue;
 
 		callback(hook_name, payload);
 	}
