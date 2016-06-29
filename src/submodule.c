@@ -93,6 +93,7 @@ static git_config_backend *open_gitmodules(git_repository *repo, int gitmod);
 static git_config *gitmodules_snapshot(git_repository *repo);
 static int get_url_base(git_buf *url, git_repository *repo);
 static int lookup_head_remote_key(git_buf *remote_key, git_repository *repo);
+static int lookup_default_remote(git_remote **remote, git_repository *repo);
 static int submodule_load_each(const git_config_entry *entry, void *payload);
 static int submodule_read_config(git_submodule *sm, git_config *cfg);
 static int submodule_load_from_wd_lite(git_submodule *);
@@ -1131,7 +1132,7 @@ int git_submodule_update(git_submodule *sm, int init, git_submodule_update_optio
 			if (error != GIT_ENOTFOUND)
 				goto done;
 
-			if (error == GIT_ENOTFOUND && !init) {
+			if (!init) {
 				giterr_set(GITERR_SUBMODULE, "Submodule is not initialized.");
 				error = GIT_ERROR;
 				goto done;
@@ -1171,9 +1172,20 @@ int git_submodule_update(git_submodule *sm, int init, git_submodule_update_optio
 		 * update the workdir contents of the subrepository, and set the subrepository's
 		 * head to the new commit.
 		 */
-		if ((error = git_submodule_open(&sub_repo, sm)) < 0 ||
-			(error = git_object_lookup(&target_commit, sub_repo, git_submodule_index_id(sm), GIT_OBJ_COMMIT)) < 0 ||
-			(error = git_checkout_tree(sub_repo, target_commit, &update_options.checkout_opts)) != 0 ||
+		if ((error = git_submodule_open(&sub_repo, sm)) < 0)
+			goto done;
+
+		/* Look up the target commit in the submodule. */
+		if ((error = git_object_lookup(&target_commit, sub_repo, git_submodule_index_id(sm), GIT_OBJ_COMMIT)) < 0) {
+			/* If it isn't found then fetch and try again. */
+			if (error != GIT_ENOTFOUND || !update_options.allow_fetch ||
+				(error = lookup_default_remote(&remote, sub_repo)) < 0 ||
+				(error = git_remote_fetch(remote, NULL, &update_options.fetch_opts, NULL)) < 0 ||
+				(error = git_object_lookup(&target_commit, sub_repo, git_submodule_index_id(sm), GIT_OBJ_COMMIT)) < 0)
+				goto done;
+		}
+
+		if ((error = git_checkout_tree(sub_repo, target_commit, &update_options.checkout_opts)) != 0 ||
 			(error = git_repository_set_head_detached(sub_repo, git_submodule_index_id(sm))) < 0)
 			goto done;
 
