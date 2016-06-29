@@ -1,20 +1,13 @@
 #include "clar_libgit2.h"
 #include "index.h"
 #include "git2/repository.h"
+#include "conflicts.h"
 
 static git_repository *repo;
 static git_index *repo_index;
 
 #define TEST_REPO_PATH "mergedrepo"
 #define TEST_INDEX_PATH TEST_REPO_PATH "/.git/index"
-
-#define CONFLICTS_ONE_ANCESTOR_OID "1f85ca51b8e0aac893a621b61a9c2661d6aa6d81"
-#define CONFLICTS_ONE_OUR_OID "6aea5f295304c36144ad6e9247a291b7f8112399"
-#define CONFLICTS_ONE_THEIR_OID "516bd85f78061e09ccc714561d7b504672cb52da"
-
-#define CONFLICTS_TWO_ANCESTOR_OID "84af62840be1b1c47b778a8a249f3ff45155038c"
-#define CONFLICTS_TWO_OUR_OID "8b3f43d2402825c200f835ca1762413e386fd0b2"
-#define CONFLICTS_TWO_THEIR_OID "220bd62631c8cf7a83ef39c6b94595f00517211e"
 
 // Fixture setup and teardown
 void test_index_conflicts__initialize(void)

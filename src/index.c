@@ -2952,7 +2952,8 @@ static int git_index_read_iterator(
 	else if (new_length_hint)
 		kh_resize(idx, new_entries_map, new_length_hint);
 
-	opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+	opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE |
+		GIT_ITERATOR_INCLUDE_CONFLICTS;
 
 	if ((error = git_iterator_for_index(&index_iterator,
 			git_index_owner(index), index, &opts)) < 0 ||
@@ -3070,14 +3071,14 @@ int git_index_read_index(
 	git_iterator_options opts = GIT_ITERATOR_OPTIONS_INIT;
 	int error;
 
-	opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+	opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE |
+		GIT_ITERATOR_INCLUDE_CONFLICTS;
 
 	if ((error = git_iterator_for_index(&new_iterator,
-		git_index_owner(new_index), (git_index *)new_index, &opts)) < 0)
+		git_index_owner(new_index), (git_index *)new_index, &opts)) < 0 ||
+		(error = git_index_read_iterator(index, new_iterator,
+		new_index->entries.length)) < 0)
 		goto done;
-
-	error = git_index_read_iterator(index, new_iterator,
-		new_index->entries.length);
 
 done:
 	git_iterator_free(new_iterator);
