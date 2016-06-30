@@ -2925,38 +2925,39 @@ cleanup:
 	return error;
 }
 
-int git_index_read_index(
+static int git_index_read_iterator(
 	git_index *index,
-	const git_index *new_index)
+	git_iterator *new_iterator,
+	size_t new_length_hint)
 {
 	git_vector new_entries = GIT_VECTOR_INIT,
 		remove_entries = GIT_VECTOR_INIT;
 	git_idxmap *new_entries_map = NULL;
 	git_iterator *index_iterator = NULL;
-	git_iterator *new_iterator = NULL;
 	git_iterator_options opts = GIT_ITERATOR_OPTIONS_INIT;
 	const git_index_entry *old_entry, *new_entry;
 	git_index_entry *entry;
 	size_t i;
 	int error;
 
-	if ((error = git_vector_init(&new_entries, new_index->entries.length, index->entries._cmp)) < 0 ||
+	assert((new_iterator->flags & GIT_ITERATOR_DONT_IGNORE_CASE));
+
+	if ((error = git_vector_init(&new_entries, new_length_hint, index->entries._cmp)) < 0 ||
 		(error = git_vector_init(&remove_entries, index->entries.length, NULL)) < 0 ||
 		(error = git_idxmap_alloc(&new_entries_map)) < 0)
 		goto done;
 
-	if (index->ignore_case)
-		kh_resize(idxicase, (khash_t(idxicase) *) new_entries_map, new_index->entries.length);
-	else
-		kh_resize(idx, new_entries_map, new_index->entries.length);
+	if (index->ignore_case && new_length_hint)
+		kh_resize(idxicase, (khash_t(idxicase) *) new_entries_map, new_length_hint);
+	else if (new_length_hint)
+		kh_resize(idx, new_entries_map, new_length_hint);
 
-	opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+	opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE |
+		GIT_ITERATOR_INCLUDE_CONFLICTS;
 
-	if ((error = git_iterator_for_index(&index_iterator, git_index_owner(index), index, &opts)) < 0 ||
-		(error = git_iterator_for_index(&new_iterator, git_index_owner(new_index), (git_index *)new_index, &opts)) < 0)
-		goto done;
-
-	if (((error = git_iterator_current(&old_entry, index_iterator)) < 0 &&
+	if ((error = git_iterator_for_index(&index_iterator,
+			git_index_owner(index), index, &opts)) < 0 ||
+		((error = git_iterator_current(&old_entry, index_iterator)) < 0 &&
 			error != GIT_ITEROVER) ||
 		((error = git_iterator_current(&new_entry, new_iterator)) < 0 &&
 			error != GIT_ITEROVER))
@@ -3050,6 +3051,8 @@ int git_index_read_index(
 		index_entry_free(entry);
 	}
 
+	clear_uptodate(index);
+
 	error = 0;
 
 done:
@@ -3057,6 +3060,27 @@ done:
 	git_vector_free(&new_entries);
 	git_vector_free(&remove_entries);
 	git_iterator_free(index_iterator);
+	return error;
+}
+
+int git_index_read_index(
+	git_index *index,
+	const git_index *new_index)
+{
+	git_iterator *new_iterator = NULL;
+	git_iterator_options opts = GIT_ITERATOR_OPTIONS_INIT;
+	int error;
+
+	opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE |
+		GIT_ITERATOR_INCLUDE_CONFLICTS;
+
+	if ((error = git_iterator_for_index(&new_iterator,
+		git_index_owner(new_index), (git_index *)new_index, &opts)) < 0 ||
+		(error = git_index_read_iterator(index, new_iterator,
+		new_index->entries.length)) < 0)
+		goto done;
+
+done:
 	git_iterator_free(new_iterator);
 	return error;
 }
