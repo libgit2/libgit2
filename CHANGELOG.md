@@ -3,6 +3,13 @@ v0.24 + 1
 
 ### Changes or improvements
 
+* Fix repository discovery with `git_repository_discover` and
+  `git_repository_open_ext` to match git's handling of a ceiling
+  directory at the current directory. git only checks ceiling
+  directories when its search ascends to a parent directory.  A ceiling
+  directory matching the starting directory will not prevent git from
+  finding a repository in the starting directory or a parent directory.
+
 ### API additions
 
 * `git_commit_create_buffer()` creates a commit and writes it into a
