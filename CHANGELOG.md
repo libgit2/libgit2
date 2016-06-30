@@ -20,6 +20,25 @@ v0.24 + 1
   writing into a stream. Useful when you do not know the final size or
   want to copy the contents from another stream.
 
+* New flags for `git_repository_open_ext`:
+
+    * `GIT_REPOSITORY_OPEN_NO_DOTGIT` - Do not check for a repository by
+      appending `/.git` to the `start_path`; only open the repository if
+      `start_path` itself points to the git directory.
+    * `GIT_REPOSITORY_OPEN_FROM_ENV` - Find and open a git repository,
+      respecting the environment variables used by the git command-line
+      tools. If set, `git_repository_open_ext` will ignore the other
+      flags and the `ceiling_dirs` argument, and will allow a NULL
+      `path` to use `GIT_DIR` or search from the current directory. The
+      search for a repository will respect `$GIT_CEILING_DIRECTORIES`
+      and `$GIT_DISCOVERY_ACROSS_FILESYSTEM`.  The opened repository
+      will respect `$GIT_INDEX_FILE`, `$GIT_NAMESPACE`,
+      `$GIT_OBJECT_DIRECTORY`, and `$GIT_ALTERNATE_OBJECT_DIRECTORIES`.
+      In the future, this flag will also cause `git_repository_open_ext`
+      to respect `$GIT_WORK_TREE` and `$GIT_COMMON_DIR`; currently,
+      `git_repository_open_ext` with this flag will error out if either
+      `$GIT_WORK_TREE` or `$GIT_COMMON_DIR` is set.
+
 ### API removals
 
 * `git_blob_create_fromchunks()` has been removed in favour of
