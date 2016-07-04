@@ -34,21 +34,18 @@ const char * const githooks[] = {
 	"post-rewrite",
 };
 
-#define MAX_HOOK_LEN 18+1
-
 static int build_hook_path(char **hook_path, git_repository *repo, const char *hook_name)
 {
-	int hook_dir_len;
+	git_buf tmp_path = GIT_BUF_INIT;
 
 	assert(hook_path);
 
-	hook_dir_len = strlen(repo->path_repository) + strlen(GIT_HOOKS_DIR);
-	*hook_path = git__malloc(hook_dir_len + MAX_HOOK_LEN);
-	GITERR_CHECK_ALLOC(*hook_path);
 
-	strcpy(*hook_path, repo->path_repository);
-	strcat(*hook_path, GIT_HOOKS_DIR);
-	strcat(*hook_path, hook_name);
+	git_buf_puts(&tmp_path, repo->path_repository);
+	git_buf_puts(&tmp_path, GIT_HOOKS_DIR);
+	git_buf_puts(&tmp_path, hook_name);
+
+	*hook_path = git_buf_detach(&tmp_path);
 
 	return 0;
 }
