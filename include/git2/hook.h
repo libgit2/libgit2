@@ -21,11 +21,10 @@ GIT_BEGIN_DECL
 
 typedef int (*git_hook_foreach_cb)(const char *hook_name, void *payload);
 
-GIT_EXTERN(int) git_hook_enumerate(
+GIT_EXTERN(int) git_hook_foreach(
 	git_repository *repo,
 	git_hook_foreach_cb callback,
-	void *payload
-);
+	void *payload);
 
 typedef struct {
 	char *path;
@@ -34,20 +33,17 @@ typedef struct {
 
 typedef int (*git_hook_execution_cb)(
 	git_hook_env env,
-	void *payload
-);
+	void *payload);
 
 GIT_EXTERN(int) git_hook_register_callback(
 	git_repository *repo,
 	git_hook_execution_cb callback,
-	void *payload
-);
+	void *payload);
 
 GIT_EXTERN(int) git_hook_execute(
 	git_repository *repo,
 	const char *hook_name,
-	...
-);
+	...);
 
 /* @} */
 GIT_END_DECL

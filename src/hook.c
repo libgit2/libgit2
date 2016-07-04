@@ -35,7 +35,6 @@ const char * const githooks[] = {
 };
 
 #define MAX_HOOK_LEN 18+1
-#define HOOK_FILE_MODE 0776
 
 static int build_hook_path(char **hook_path, git_repository *repo, const char *hook_name)
 {
@@ -71,14 +70,16 @@ static int check_hook_path(const char *hook_path)
 	return 0;
 }
 
-int git_hook_enumerate(
+int git_hook_foreach(
 	git_repository *repo,
 	git_hook_foreach_cb callback,
 	void *payload)
 {
+	size_t hook_id = 0;
+
 	assert(repo && callback);
 
-	for (size_t hook_id = 0; hook_id < sizeof(githooks) / sizeof(char *); hook_id++) {
+	for (hook_id = 0; hook_id < ARRAY_SIZE(githooks); hook_id++) {
 		const char *hook_name = githooks[hook_id];
 		int err = 0;
 		char *hook_path = NULL;
@@ -107,7 +108,7 @@ int git_hook_register_callback(git_repository *repo, git_hook_execution_cb callb
 	return 0;
 }
 
-int git_hook_exec_va(git_repository *repo, const char *name, va_list args)
+int git_hook_execute_va(git_repository *repo, const char *name, va_list args)
 {
 	int err = 0;
 	char *arg;
@@ -122,8 +123,7 @@ int git_hook_exec_va(git_repository *repo, const char *name, va_list args)
 	err = check_hook_path(env.path);
 	if (err != 0) goto cleanup;
 
-	while ((arg = va_arg(args, char *)))
-	{
+	while ((arg = va_arg(args, char *))) {
 		if (arg == NULL) break;
 		git_vector_insert(&arg_vector, arg);
 	}
@@ -145,7 +145,7 @@ int git_hook_execute(git_repository *repo, const char *hook_name, ...)
 	va_list hook_args;
 
 	va_start(hook_args, hook_name);
-	err = git_hook_exec_va(repo, hook_name, hook_args);
+	err = git_hook_execute_va(repo, hook_name, hook_args);
 	va_end(hook_args);
 
 	return err;

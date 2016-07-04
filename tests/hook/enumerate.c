@@ -20,7 +20,7 @@ int test_git_hook_foreach_cb(const char *hook_name, void *payload)
 	return 0;
 }
 
-void test_hook_enumerate__enumerate_hooks(void)
+void test_hook_enumerate__foreach_hooks(void)
 {
 	git_buf hook_list;
 	git_buf expected_list;
@@ -30,7 +30,7 @@ void test_hook_enumerate__enumerate_hooks(void)
 	git_buf_puts(&expected_list, "commit-msg");
 	git_buf_puts(&expected_list, "post-merge");
 
-	cl_git_pass(git_hook_enumerate(g_repo, test_git_hook_foreach_cb, &hook_list));
+	cl_git_pass(git_hook_foreach(g_repo, test_git_hook_foreach_cb, &hook_list));
 
 	cl_assert_equal_s(git_buf_cstr(&hook_list), git_buf_cstr(&expected_list));
 }
