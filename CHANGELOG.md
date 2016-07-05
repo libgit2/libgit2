@@ -12,6 +12,10 @@ v0.24 + 1
 
 ### API additions
 
+* You can now get the user-agent used by libgit2 using the
+  `GIT_OPT_GET_USER_AGENT` option with `git_libgit2_opts()`.
+  It is the counterpart to `GIT_OPT_SET_USER_AGENT`.
+
 * `git_commit_create_buffer()` creates a commit and writes it into a
   user-provided buffer instead of writing it into the object db.
 

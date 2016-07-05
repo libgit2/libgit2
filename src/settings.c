@@ -209,6 +209,14 @@ int git_libgit2_opts(int key, ...)
 #endif
 		break;
 
+	case GIT_OPT_GET_USER_AGENT:
+		{
+			git_buf *out = va_arg(ap, git_buf *);
+			git_buf_sanitize(out);
+			error = git_buf_sets(out, git__user_agent);
+		}
+		break;
+
 	default:
 		giterr_set(GITERR_INVALID, "invalid option key");
 		error = -1;
