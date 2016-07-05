@@ -105,7 +105,7 @@ int git_hook_register_callback(git_repository *repo, git_hook_execution_cb callb
 	return 0;
 }
 
-int git_hook_execute_va(git_repository *repo, const char *name, va_list args)
+static int hook_execute_va(git_repository *repo, const char *name, va_list args)
 {
 	int err = 0;
 	char *arg;
@@ -143,7 +143,7 @@ int git_hook_execute(git_repository *repo, const char *hook_name, ...)
 	va_list hook_args;
 
 	va_start(hook_args, hook_name);
-	err = git_hook_execute_va(repo, hook_name, hook_args);
+	err = hook_execute_va(repo, hook_name, hook_args);
 	va_end(hook_args);
 
 	return err;
