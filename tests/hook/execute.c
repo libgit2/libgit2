@@ -13,7 +13,7 @@ void test_hook_execute__cleanup(void)
 	g_repo = NULL;
 }
 
-static int hook_post_merge(git_hook_env env, void *payload)
+static int hook_exec_1(git_hook_env env, void *payload)
 {
 	int *hook_called = payload;
 
@@ -25,10 +25,10 @@ static int hook_post_merge(git_hook_env env, void *payload)
 	return 0;
 }
 
-void test_hook_execute__post_merge(void)
+void test_hook_execute__hook_called(void)
 {
 	int hook_called = 0;
-	cl_must_pass(git_hook_register_callback(g_repo, hook_post_merge, &hook_called));
+	cl_must_pass(git_hook_register_callback(g_repo, hook_exec_1, &hook_called));
 	cl_must_pass(git_hook_execute(g_repo, "post-merge", "1", NULL));
 	cl_assert_equal_i_(hook_called, 1, "hook wasn't called");
 }
