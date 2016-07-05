@@ -133,6 +133,7 @@ int git_hook_execute_va(git_repository *repo, const char *name, va_list args)
 
 cleanup:
 	git__free(env.path);
+	git__free(env.args.strings);
 	return err;
 }
 

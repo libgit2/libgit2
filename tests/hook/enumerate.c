@@ -33,4 +33,6 @@ void test_hook_enumerate__foreach_hooks(void)
 	cl_git_pass(git_hook_foreach(g_repo, test_git_hook_foreach_cb, &hook_list));
 
 	cl_assert_equal_s(git_buf_cstr(&hook_list), git_buf_cstr(&expected_list));
+	git_buf_free(&hook_list);
+	git_buf_free(&expected_list);
 }
