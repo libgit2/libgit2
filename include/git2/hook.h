@@ -29,6 +29,7 @@ GIT_EXTERN(int) git_hook_foreach(
 typedef struct {
 	char *path;
 	git_strarray args;
+	git_buf *io;
 } git_hook_env;
 
 typedef int (*git_hook_execution_cb)(
@@ -41,6 +42,12 @@ GIT_EXTERN(int) git_hook_register_callback(
 	void *payload);
 
 GIT_EXTERN(int) git_hook_execute(
+	git_repository *repo,
+	const char *hook_name,
+	...);
+
+GIT_EXTERN(int) git_hook_execute_io(
+	git_buf *io,
 	git_repository *repo,
 	const char *hook_name,
 	...);

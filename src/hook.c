@@ -105,7 +105,7 @@ int git_hook_register_callback(git_repository *repo, git_hook_execution_cb callb
 	return 0;
 }
 
-static int hook_execute_va(git_repository *repo, const char *name, va_list args)
+static int hook_execute_va(git_buf *io, git_repository *repo, const char *name, va_list args)
 {
 	int err = 0;
 	char *arg;
@@ -127,6 +127,8 @@ static int hook_execute_va(git_repository *repo, const char *name, va_list args)
 
 	va_end(args);
 
+	env.io = io;
+
 	env.args.strings = (char **)git_vector_detach(&env.args.count, NULL, &arg_vector);
 
 	err = repo->hook_executor(env, repo->hook_payload);
@@ -143,7 +145,19 @@ int git_hook_execute(git_repository *repo, const char *hook_name, ...)
 	va_list hook_args;
 
 	va_start(hook_args, hook_name);
-	err = hook_execute_va(repo, hook_name, hook_args);
+	err = hook_execute_va(NULL, repo, hook_name, hook_args);
+	va_end(hook_args);
+
+	return err;
+}
+
+int git_hook_execute_io(git_buf *io, git_repository *repo, const char *hook_name, ...)
+{
+	int err = 0;
+	va_list hook_args;
+
+	va_start(hook_args, hook_name);
+	err = hook_execute_va(io, repo, hook_name, hook_args);
 	va_end(hook_args);
 
 	return err;
