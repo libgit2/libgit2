@@ -34,18 +34,48 @@ const char * const githooks[] = {
 	"post-rewrite",
 };
 
-static int build_hook_path(char **hook_path, git_repository *repo, const char *hook_name)
+int git_hook_dir(git_buf *out_dir, git_repository *repo)
 {
+	int err;
 	git_buf tmp_path = GIT_BUF_INIT;
+	git_buf cfg_path = GIT_BUF_INIT;
+	git_config *cfg;
 
-	assert(hook_path);
+	assert(out_dir && repo);
 
+	/* We need to check for an override in the repo config */
+	err = git_repository_config__weakptr(&cfg, repo);
+	if (err != 0) return err;
 
-	git_buf_puts(&tmp_path, repo->path_repository);
-	git_buf_puts(&tmp_path, GIT_HOOKS_DIR);
-	git_buf_puts(&tmp_path, hook_name);
+	err = git_config_get_path(&cfg_path, cfg, "core.hooksPath");
+	if (err == GIT_ENOTFOUND) {
+		git_buf_puts(&tmp_path, repo->path_repository);
+		git_buf_joinpath(&tmp_path, tmp_path.ptr, GIT_HOOKS_DIR);
+	} else if (err == GIT_OK) {
+		git_buf_joinpath(&tmp_path, repo->path_repository, cfg_path.ptr);
+		git_path_resolve_relative(&tmp_path, 0);
+	} else {
+		/* XXX: error reporting */
+		return NULL;
+	}
 
-	*hook_path = git_buf_detach(&tmp_path);
+	*out_dir = tmp_path;
+	return 0;
+}
+
+static int build_hook_path(char **out_path, git_repository *repo, const char *hook_name)
+{
+	int err;
+	git_buf hook_path = GIT_BUF_INIT;
+
+	assert(hook_name);
+
+	err = git_hook_dir(&hook_path, repo);
+	if (err != 0) return -1;
+
+	git_buf_joinpath(&hook_path, hook_path.ptr, hook_name);
+
+	*out_path = git_buf_detach(&hook_path);
 
 	return 0;
 }

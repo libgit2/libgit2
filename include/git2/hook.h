@@ -19,6 +19,8 @@
  */
 GIT_BEGIN_DECL
 
+GIT_EXTERN(int) git_hook_dir(git_buf *out_dir, git_repository *repo);
+
 typedef int (*git_hook_foreach_cb)(const char *hook_name, void *payload);
 
 GIT_EXTERN(int) git_hook_foreach(
