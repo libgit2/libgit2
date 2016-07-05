@@ -11,6 +11,7 @@
 #include "types.h"
 #include "oid.h"
 #include "buffer.h"
+#include "oidarray.h"
 
 /**
  * @file git2/repository.h
@@ -744,6 +745,15 @@ GIT_EXTERN(const char *) git_repository_get_namespace(git_repository *repo);
  * @return 1 if shallow, zero if not
  */
 GIT_EXTERN(int) git_repository_is_shallow(git_repository *repo);
+
+/**
+ * Determine the shallow roots of the repository
+ *
+ * @param out An array of shallow oids. Can be NULL.
+ * @param repo The repository
+ * @return 1 if shallow, zero if not
+ */
+GIT_EXTERN(int) git_repository_shallow_roots(git_oidarray *out, git_repository *repo);
 
 /**
  * Retrieve the configured identity to use for reflogs

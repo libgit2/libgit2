@@ -2477,26 +2477,62 @@ int git_repository_state_cleanup(git_repository *repo)
 	return git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files));
 }
 
-int git_repository_is_shallow(git_repository *repo)
+int git_repository_shallow_roots(git_oidarray *out, git_repository *repo)
 {
 	git_buf path = GIT_BUF_INIT;
+	git_buf contents = GIT_BUF_INIT;
+	git_array_oid_t array;
 	struct stat st;
 	int error;
+	size_t start, end;
 
 	if ((error = git_buf_joinpath(&path, repo->path_repository, "shallow")) < 0)
 		return error;
 
 	error = git_path_lstat(path.ptr, &st);
-	git_buf_free(&path);
 
 	if (error == GIT_ENOTFOUND) {
+		git_buf_free(&path);
 		giterr_clear();
 		return 0;
 	}
 
+	if (out == NULL) {
+		git_buf_free(&path);
+		return st.st_size == 0 ? 0 : 1;
+	}
+
+	error = git_futils_readbuffer(&contents, git_buf_cstr(&path));
+	git_buf_free(&path);
+
 	if (error < 0)
 		return error;
-	return st.st_size == 0 ? 0 : 1;
+
+	git_array_init(array);
+
+	start = end = 0;
+	while (end < contents.size) {
+		if (contents.ptr[end] == '\n' || end == contents.size) {
+			if (end - start == GIT_OID_HEXSZ) {
+				git_oid *oid = git_array_alloc(array);
+				error = git_oid_fromstrn(oid, contents.ptr + start, GIT_OID_HEXSZ);
+				if (error < 0) {
+					/* TODO: Warn ? */
+				}
+			}
+			start = end + 1;
+		}
+		end++;
+	}
+
+	git_oidarray__from_array(out, &array);
+
+	return (out->count > 0 ? 0 : 1);
+}
+
+int git_repository_is_shallow(git_repository *repo)
+{
+	return git_repository_shallow_roots(NULL, repo);
 }
 
 int git_repository_init_init_options(
