@@ -145,6 +145,7 @@ struct git_repository {
 
 	git_hook_execution_cb hook_executor;
 	void *hook_payload;
+	git_hook_destructor_cb hook_payload_free;
 
 	git_cvar_value cvar_cache[GIT_CVAR_CACHE_MAX];
 };

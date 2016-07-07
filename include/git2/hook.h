@@ -34,13 +34,16 @@ typedef struct {
 	git_buf *io;
 } git_hook_env;
 
+typedef void (*git_hook_destructor_cb)(void *payload);
+
 typedef int (*git_hook_execution_cb)(
 	git_hook_env env,
 	void *payload);
 
 GIT_EXTERN(int) git_hook_register_callback(
 	git_repository *repo,
-	git_hook_execution_cb callback,
+	git_hook_execution_cb executor,
+	git_hook_destructor_cb destructor,
 	void *payload);
 
 GIT_EXTERN(int) git_hook_execute(

@@ -132,12 +132,16 @@ int git_hook_foreach(
 	return 0;
 }
 
-int git_hook_register_callback(git_repository *repo, git_hook_execution_cb callback, void *payload)
+int git_hook_register_callback(git_repository *repo,
+							   git_hook_execution_cb executor,
+							   git_hook_destructor_cb destructor,
+							   void *payload)
 {
-	assert(repo && callback);
+	assert(repo && executor);
 
-	repo->hook_executor = callback;
+	repo->hook_executor = executor;
 	repo->hook_payload = payload;
+	repo->hook_payload_free = destructor;
 
 	return 0;
 }
