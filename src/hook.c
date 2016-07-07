@@ -139,6 +139,12 @@ int git_hook_register_callback(git_repository *repo,
 {
 	assert(repo && executor);
 
+	/* Unset our payload-memory-management if needed */
+	if (repo->hook_payload != NULL && repo->hook_payload_free != NULL) {
+		repo->hook_payload_free(repo->hook_payload);
+		repo->hook_payload_free = NULL;
+	}
+
 	repo->hook_executor = executor;
 	repo->hook_payload = payload;
 	repo->hook_payload_free = destructor;
