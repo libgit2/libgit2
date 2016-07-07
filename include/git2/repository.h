@@ -749,9 +749,9 @@ GIT_EXTERN(int) git_repository_is_shallow(git_repository *repo);
 /**
  * Determine the shallow roots of the repository
  *
- * @param out An array of shallow oids. Can be NULL.
+ * @param out An array of shallow oids.
  * @param repo The repository
- * @return 1 if shallow, zero if not
+ * @return 0 on success, an error otherwise.
  */
 GIT_EXTERN(int) git_repository_shallow_roots(git_oidarray *out, git_repository *repo);
 
