@@ -94,8 +94,10 @@ static int check_hook_path(const char *hook_path)
 	if (err)
 		return -1;
 
+#ifndef GIT_WIN32
 	/* Check exec bits */
 	if ((hook_stat.st_mode & (S_IXUSR|S_IXGRP|S_IXOTH)) == 0) return -1;
+#endif
 
 	return 0;
 }
