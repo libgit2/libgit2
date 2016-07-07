@@ -2511,7 +2511,7 @@ int git_repository__shallow_roots(git_array_oid_t *out, git_repository *repo)
 		goto unchanged;
 	}
 
-	git_array_init(repo->shallow_oids);
+	git_array_clear(repo->shallow_oids);
 
 	start = end = 0;
 	while (end < contents.size) {
