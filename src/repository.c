@@ -2481,9 +2481,8 @@ int git_repository__shallow_roots(git_array_oid_t *out, git_repository *repo)
 {
 	git_buf path = GIT_BUF_INIT;
 	git_buf contents = GIT_BUF_INIT;
-	git_array_oid_t array;
 	struct stat st;
-	int error;
+	int error, updated;
 	size_t start, end;
 
 	if ((error = git_buf_joinpath(&path, repo->path_repository, "shallow")) < 0)
@@ -2502,19 +2501,23 @@ int git_repository__shallow_roots(git_array_oid_t *out, git_repository *repo)
 		return st.st_size == 0 ? 0 : 1;
 	}
 
-	error = git_futils_readbuffer(&contents, git_buf_cstr(&path));
+	error = git_futils_readbuffer_updated(&contents, git_buf_cstr(&path), &repo->shallow_checksum, &updated);
 	git_buf_free(&path);
 
 	if (error < 0)
 		return error;
 
-	git_array_init(array);
+	if (!updated) {
+		goto unchanged;
+	}
+
+	git_array_init(repo->shallow_oids);
 
 	start = end = 0;
 	while (end < contents.size) {
 		if (contents.ptr[end] == '\n' || end == contents.size) {
 			if (end - start == GIT_OID_HEXSZ) {
-				git_oid *oid = git_array_alloc(array);
+				git_oid *oid = git_array_alloc(repo->shallow_oids);
 				error = git_oid_fromstrn(oid, contents.ptr + start, GIT_OID_HEXSZ);
 				if (error < 0) {
 					/* TODO: Warn ? */
@@ -2525,9 +2528,10 @@ int git_repository__shallow_roots(git_array_oid_t *out, git_repository *repo)
 		end++;
 	}
 
-	*out = array;
+unchanged:
+	*out = repo->shallow_oids;
 
-	return (git_array_size(array) > 0 ? 0 : 1);
+	return (git_array_size(repo->shallow_oids) > 0 ? 0 : 1);
 }
 
 int git_repository_shallow_roots(git_oidarray *out, git_repository *repo)
