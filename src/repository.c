@@ -2477,7 +2477,7 @@ int git_repository_state_cleanup(git_repository *repo)
 	return git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files));
 }
 
-int git_repository_shallow_roots(git_oidarray *out, git_repository *repo)
+int git_repository__shallow_roots(git_array_oid_t *out, git_repository *repo)
 {
 	git_buf path = GIT_BUF_INIT;
 	git_buf contents = GIT_BUF_INIT;
@@ -2525,9 +2525,21 @@ int git_repository_shallow_roots(git_oidarray *out, git_repository *repo)
 		end++;
 	}
 
-	git_oidarray__from_array(out, &array);
+	*out = array;
 
-	return (out->count > 0 ? 0 : 1);
+	return (git_array_size(array) > 0 ? 0 : 1);
+}
+
+int git_repository_shallow_roots(git_oidarray *out, git_repository *repo)
+{
+	git_array_oid_t array;
+
+	int ret = git_repository__shallow_roots((out ? &array : NULL), repo);
+
+	if (out)
+		git_oidarray__from_array(out, &array);
+
+	return ret;
 }
 
 int git_repository_is_shallow(git_repository *repo)
