@@ -2506,10 +2506,10 @@ int git_repository__shallow_roots(git_array_oid_t *out, git_repository *repo)
 		if (contents.ptr[end] == '\n' || end == contents.size) {
 			if (end - start == GIT_OID_HEXSZ) {
 				git_oid *oid = git_array_alloc(repo->shallow_oids);
+
 				error = git_oid_fromstrn(oid, contents.ptr + start, GIT_OID_HEXSZ);
-				if (error < 0) {
-					/* TODO: Warn ? */
-				}
+				if (error < 0)
+					return error;
 			}
 			start = end + 1;
 		}
