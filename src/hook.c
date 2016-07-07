@@ -45,7 +45,8 @@ int git_hook_dir(git_buf *out_dir, git_repository *repo)
 
 	/* We need to check for an override in the repo config */
 	err = git_repository_config__weakptr(&cfg, repo);
-	if (err != 0) return err;
+	if (err != 0)
+		return err;
 
 	err = git_config_get_path(&cfg_path, cfg, "core.hooksPath");
 	if (err == GIT_ENOTFOUND) {
@@ -71,7 +72,8 @@ static int build_hook_path(char **out_path, git_repository *repo, const char *ho
 	assert(hook_name);
 
 	err = git_hook_dir(&hook_path, repo);
-	if (err != 0) return -1;
+	if (err != 0)
+		return -1;
 
 	git_buf_joinpath(&hook_path, hook_path.ptr, hook_name);
 
@@ -89,7 +91,8 @@ static int check_hook_path(const char *hook_path)
 
 	/* Skip missing hooks */
 	err = p_stat(hook_path, &hook_stat);
-	if (err) return -1;
+	if (err)
+		return -1;
 
 	/* Check exec bits */
 	if ((hook_stat.st_mode & (S_IXUSR|S_IXGRP|S_IXOTH)) == 0) return -1;
@@ -112,12 +115,14 @@ int git_hook_foreach(
 		char *hook_path = NULL;
 
 		err = build_hook_path(&hook_path, repo, hook_name);
-		if (err != 0) continue;
+		if (err != 0)
+			continue;
 
 		err = check_hook_path(hook_path);
 		git__free(hook_path);
 
-		if (err != 0) continue;
+		if (err != 0)
+			continue;
 
 		callback(hook_name, payload);
 	}
@@ -145,13 +150,17 @@ static int hook_execute_va(git_buf *io, git_repository *repo, const char *name, 
 	assert(repo && name);
 
 	err = build_hook_path(&env.path, repo, name);
-	if (err != 0) goto cleanup;
+	if (err != 0)
+		goto cleanup;
 
 	err = check_hook_path(env.path);
-	if (err != 0) goto cleanup;
+	if (err != 0)
+		goto cleanup;
 
 	while ((arg = va_arg(args, char *))) {
-		if (arg == NULL) break;
+		if (arg == NULL)
+			break;
+
 		git_vector_insert(&arg_vector, arg);
 	}
 
