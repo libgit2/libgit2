@@ -2481,25 +2481,13 @@ int git_repository__shallow_roots(git_array_oid_t *out, git_repository *repo)
 {
 	git_buf path = GIT_BUF_INIT;
 	git_buf contents = GIT_BUF_INIT;
-	struct stat st;
 	int error, updated;
 	size_t start, end;
 
+	assert(out);
+
 	if ((error = git_buf_joinpath(&path, repo->path_repository, "shallow")) < 0)
 		return error;
-
-	error = git_path_lstat(path.ptr, &st);
-
-	if (error == GIT_ENOTFOUND) {
-		git_buf_free(&path);
-		giterr_clear();
-		return 0;
-	}
-
-	if (out == NULL) {
-		git_buf_free(&path);
-		return st.st_size == 0 ? 0 : 1;
-	}
 
 	error = git_futils_readbuffer_updated(&contents, git_buf_cstr(&path), &repo->shallow_checksum, &updated);
 	git_buf_free(&path);
@@ -2531,24 +2519,40 @@ int git_repository__shallow_roots(git_array_oid_t *out, git_repository *repo)
 unchanged:
 	*out = repo->shallow_oids;
 
-	return (git_array_size(repo->shallow_oids) > 0 ? 0 : 1);
+	return 0;
 }
 
 int git_repository_shallow_roots(git_oidarray *out, git_repository *repo)
 {
 	git_array_oid_t array;
 
-	int ret = git_repository__shallow_roots((out ? &array : NULL), repo);
+	assert(out);
 
-	if (out)
-		git_oidarray__from_array(out, &array);
+	int ret = git_repository__shallow_roots(&array, repo);
+
+	git_oidarray__from_array(out, &array);
 
 	return ret;
 }
 
 int git_repository_is_shallow(git_repository *repo)
 {
-	return git_repository_shallow_roots(NULL, repo);
+	git_buf path = GIT_BUF_INIT;
+	struct stat st;
+	int error;
+
+	if ((error = git_buf_joinpath(&path, repo->path_repository, "shallow")) < 0)
+		return error;
+
+	error = git_path_lstat(path.ptr, &st);
+	git_buf_free(&path);
+
+	if (error == GIT_ENOTFOUND) {
+		giterr_clear();
+		return 0;
+	}
+
+	return st.st_size == 0 ? 0 : 1;
 }
 
 int git_repository_init_init_options(
