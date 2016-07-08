@@ -138,6 +138,10 @@ v0.25
   `git_merge_driver_source_file_options()` added as accessors to
   `git_merge_driver_source`.
 
+* `git_remote_create_unattached()` creates a remote that is not associated
+  to any repository (and does not apply configuration like 'insteadof' rules).
+  This is mostly useful for e.g. emulating `git ls-remote` behavior.
+
 ### API removals
 
 * `git_blob_create_fromchunks()` has been removed in favour of

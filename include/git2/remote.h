@@ -76,6 +76,24 @@ GIT_EXTERN(int) git_remote_create_anonymous(
 		const char *url);
 
 /**
+ * Create a remote without a connected local repo
+ *
+ * Create a remote with the given url in-memory. You can use this when
+ * you have a URL instead of a remote's name.
+ *
+ * Contrasted with git_remote_create_anonymous, a detached remote
+ * will not consider any repo configuration values (such as insteadof url
+ * substitutions).
+ *
+ * @param out pointer to the new remote objects
+ * @param url the remote repository's URL
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_remote_create_detached(
+		git_remote **out,
+		const char *url);
+
+/**
  * Get the information for a particular remote
  *
  * The name will be checked for validity.
