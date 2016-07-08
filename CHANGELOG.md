@@ -43,6 +43,10 @@ v0.24 + 1
       `git_repository_open_ext` with this flag will error out if either
       `$GIT_WORK_TREE` or `$GIT_COMMON_DIR` is set.
 
+* `git_remote_create_anonymous2()` creates a remote that is not associated
+  to any repository (and does not apply configuration like 'insteadof' rules).
+  This is mostly useful for e.g. emulating `git ls-remote` behavior.
+
 ### API removals
 
 * `git_blob_create_fromchunks()` has been removed in favour of
