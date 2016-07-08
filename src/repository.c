@@ -2524,11 +2524,12 @@ unchanged:
 
 int git_repository_shallow_roots(git_oidarray *out, git_repository *repo)
 {
+	int ret;
 	git_array_oid_t array;
 
 	assert(out);
 
-	int ret = git_repository__shallow_roots(&array, repo);
+	ret = git_repository__shallow_roots(&array, repo);
 
 	git_oidarray__from_array(out, &array);
 
