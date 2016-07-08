@@ -55,6 +55,7 @@ int git_hook_dir(git_buf *out_dir, git_repository *repo)
 	} else if (err == GIT_OK) {
 		git_buf_joinpath(&tmp_path, repo->path_repository, cfg_path.ptr);
 		git_path_resolve_relative(&tmp_path, 0);
+		git_buf_free(&cfg_path);
 	} else {
 		/* XXX: error reporting */
 		return NULL;

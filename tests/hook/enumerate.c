@@ -65,6 +65,7 @@ void test_hook_enumerate__foreach_hooks_config_override(void)
 	git_buf_joinpath(&alt_hook, alt_hook.ptr, "post-merge");
 	cl_git_mkfile(git_buf_cstr(&alt_hook), NULL);
 	cl_must_pass(p_chmod(git_buf_cstr(&alt_hook), 0776));
+	git_buf_free(&alt_hook);
 
 	/* Check that we get the correct hooks */
 	git_buf_init(&hook_list, 0);
