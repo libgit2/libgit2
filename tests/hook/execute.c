@@ -69,7 +69,10 @@ static int destruct_called = 0;
 
 static void hook_exec_destruct(void *payload)
 {
-	git__free(payload);
+	char **malloc_str = (char **)payload;
+	git__free(*malloc_str);
+	git__free(malloc_str);
+
 	destruct_called = 1;
 }
 
@@ -83,9 +86,10 @@ static int hook_exec_cleanup(git_hook_env env, void *payload)
 void test_hook_execute__free_payload(void)
 {
 	git_repository *repo;
+	const char * test_str = "a test string";
 	char **malloc_str = git__malloc(sizeof(*malloc_str));
-
-	asprintf(malloc_str, "a test string");
+	*malloc_str = git__calloc(strlen(test_str), sizeof(*malloc_str));
+	strcpy(*malloc_str, test_str);
 
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
 	cl_must_pass(git_hook_register_callback(repo, hook_exec_cleanup, hook_exec_destruct, malloc_str));
