@@ -197,10 +197,10 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 	git_buf var = GIT_BUF_INIT;
 	int error = -1;
 
-	/* name is optional */
-	assert(out && repo && url);
+	/* repo, name, and fetch are optional */
+	assert(out && url);
 
-	if ((error = git_repository_config__weakptr(&config, repo)) < 0)
+	if (repo && (error = git_repository_config__weakptr(&config, repo)) < 0)
 		return error;
 
 	remote = git__calloc(1, sizeof(git_remote));
@@ -212,7 +212,10 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 		(error = canonicalize_url(&canonical_url, url)) < 0)
 		goto on_error;
 
-	remote->url = apply_insteadof(repo->_config, canonical_url.ptr, GIT_DIRECTION_FETCH);
+	if (repo != NULL)
+		remote->url = apply_insteadof(repo->_config, canonical_url.ptr, GIT_DIRECTION_FETCH);
+	else
+		remote->url = git__strdup(canonical_url.ptr);
 
 	if (name != NULL) {
 		remote->name = git__strdup(name);
@@ -331,35 +334,9 @@ int git_remote_create_anonymous(git_remote **out, git_repository *repo, const ch
 	return create_internal(out, repo, NULL, url, NULL);
 }
 
-int git_remote_create_anonymous2(git_remote **out, const char *url)
+int git_remote_create_unattached(git_remote **out, const char *url)
 {
-	git_remote *remote;
-	git_buf canonical_url = GIT_BUF_INIT;
-	int error = -1;
-
-	assert(out && url);
-
-	remote = git__calloc(1, sizeof(git_remote));
-	GITERR_CHECK_ALLOC(remote);
-
-	if ((error = git_vector_init(&remote->refs, 32, NULL)) < 0 ||
-		(error = canonicalize_url(&canonical_url, url)) < 0)
-		goto on_error;
-
-	remote->url = git__strdup(canonical_url.ptr);
-
-	/* A remote without a name doesn't download tags */
-	remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_NONE;
-
-	*out = remote;
-	error = 0;
-
-on_error:
-	if (error)
-		git_remote_free(remote);
-
-	git_buf_free(&canonical_url);
-	return error;
+	return create_internal(out, NULL, NULL, url, NULL);
 }
 
 int git_remote_dup(git_remote **dest, git_remote *source)
