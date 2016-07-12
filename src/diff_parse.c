@@ -103,3 +103,9 @@ int git_diff_from_buffer(
 	return error;
 }
 
+int git_diff_from_string(
+	git_diff **out,
+	const char *content)
+{
+	return git_diff_from_buffer(out, content, strlen(content));
+}

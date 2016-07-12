@@ -91,7 +91,7 @@ void test_commit_signature__from_buf(void)
 {
 	git_signature *sign;
 
-	cl_git_pass(git_signature_from_buffer(&sign, "Test User <test@test.tt> 1461698487 +0200"));
+	cl_git_pass(git_signature_from_string(&sign, "Test User <test@test.tt> 1461698487 +0200"));
 	cl_assert_equal_s("Test User", sign->name);
 	cl_assert_equal_s("test@test.tt", sign->email);
 	cl_assert_equal_i(1461698487, sign->when.time);
