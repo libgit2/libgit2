@@ -363,6 +363,18 @@ static int pack_backend__read_header(
 	return git_packfile_resolve_header(len_p, type_p, e.p, e.offset);
 }
 
+static int pack_backend__freshen(
+	git_odb_backend *backend, const git_oid *oid)
+{
+	struct git_pack_entry e;
+	int error;
+
+	if ((error = pack_entry_find(&e, (struct pack_backend *)backend, oid)) < 0)
+		return error;
+
+	return git_futils_touch(e.p->pack_name);
+}
+
 static int pack_backend__read(
 	void **buffer_p, size_t *len_p, git_otype *type_p,
 	git_odb_backend *backend, const git_oid *oid)
@@ -560,6 +572,7 @@ static int pack_backend__alloc(struct pack_backend **out, size_t initial_size)
 	backend->parent.refresh = &pack_backend__refresh;
 	backend->parent.foreach = &pack_backend__foreach;
 	backend->parent.writepack = &pack_backend__writepack;
+	backend->parent.freshen = &pack_backend__freshen;
 	backend->parent.free = &pack_backend__free;
 
 	*out = backend;

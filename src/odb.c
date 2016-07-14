@@ -654,7 +654,10 @@ void git_odb_free(git_odb *db)
 	GIT_REFCOUNT_DEC(db, odb_free);
 }
 
-static int odb_exists_1(git_odb *db, const git_oid *id, bool only_refreshed)
+static int odb_exists_1(
+	git_odb *db,
+	const git_oid *id,
+	bool only_refreshed)
 {
 	size_t i;
 	bool found = false;
@@ -671,6 +674,44 @@ static int odb_exists_1(git_odb *db, const git_oid *id, bool only_refreshed)
 	}
 
 	return (int)found;
+}
+
+static int odb_freshen_1(
+	git_odb *db,
+	const git_oid *id,
+	bool only_refreshed)
+{
+	size_t i;
+	bool found = false;
+
+	for (i = 0; i < db->backends.length && !found; ++i) {
+		backend_internal *internal = git_vector_get(&db->backends, i);
+		git_odb_backend *b = internal->backend;
+
+		if (only_refreshed && !b->refresh)
+			continue;
+
+		if (b->freshen != NULL)
+			found = !b->freshen(b, id);
+		else if (b->exists != NULL)
+			found = b->exists(b, id);
+	}
+
+	return (int)found;
+}
+
+static int odb_freshen(git_odb *db, const git_oid *id)
+{
+	assert(db && id);
+
+	if (odb_freshen_1(db, id, false))
+		return 1;
+
+	if (!git_odb_refresh(db))
+		return odb_freshen_1(db, id, true);
+
+	/* Failed to refresh, hence not found */
+	return 0;
 }
 
 int git_odb_exists(git_odb *db, const git_oid *id)
@@ -1131,7 +1172,7 @@ int git_odb_write(
 	assert(oid && db);
 
 	git_odb_hash(oid, data, len, type);
-	if (git_odb_exists(db, oid))
+	if (odb_freshen(db, oid))
 		return 0;
 
 	for (i = 0; i < db->backends.length && error < 0; ++i) {
@@ -1257,7 +1298,7 @@ int git_odb_stream_finalize_write(git_oid *out, git_odb_stream *stream)
 
 	git_hash_final(out, stream->hash_ctx);
 
-	if (git_odb_exists(stream->backend->odb, out))
+	if (odb_freshen(stream->backend->odb, out))
 		return 0;
 
 	return stream->finalize_write(stream, out);
