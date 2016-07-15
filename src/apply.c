@@ -53,7 +53,10 @@ static int patch_image_init_fromstr(
 	for (start = in; start < in + in_len; start = end) {
 		end = memchr(start, '\n', in_len);
 
-		if (end < in + in_len)
+		if (end == NULL)
+			end = in + in_len;
+
+		else if (end < in + in_len)
 			end++;
 
 		line = git_pool_mallocz(&out->pool, 1);
