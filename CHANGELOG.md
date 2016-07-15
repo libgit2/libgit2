@@ -10,6 +10,9 @@ v0.24 + 1
   directory matching the starting directory will not prevent git from
   finding a repository in the starting directory or a parent directory.
 
+* Do not fail when deleting remotes in the presence of broken
+  global configs which contain branches.
+
 ### API additions
 
 * You can now get the user-agent used by libgit2 using the
