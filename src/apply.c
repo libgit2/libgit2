@@ -97,7 +97,7 @@ static bool match_hunk(
 		git_diff_line *preimage_line = git_vector_get(&preimage->lines, i);
 		git_diff_line *image_line = git_vector_get(&image->lines, linenum + i);
 
-		if (preimage_line->content_len != preimage_line->content_len ||
+		if (preimage_line->content_len != image_line->content_len ||
 			memcmp(preimage_line->content, image_line->content, image_line->content_len) != 0) {
 			match = 0;
 			break;
