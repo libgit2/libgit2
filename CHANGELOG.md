@@ -51,6 +51,13 @@ v0.24 + 1
 
 ### Breaking API changes
 
+* `git_packbuilder_object_count` and `git_packbuilder_written` now
+  return a `size_t` instead of a `uint32_t` for more thorough
+  compatibility with the rest of the library.
+
+* `git_packbuiler_progress` now provides explicitly sized `uint32_t`
+  values instead of `unsigned int`.
+
 v0.24
 -------
 
