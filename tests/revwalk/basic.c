@@ -38,8 +38,9 @@ static const int commit_sorting_time_reverse[][6] = {
 	{4, 5, 2, 1, 3, 0}
 };
 
+/* This is specified unsorted, so both combinations are possible */
 static const int commit_sorting_segment[][6] = {
-	{1, 2, -1, -1, -1, -1}
+	{1, 2, -1, -1, -1, -1}, {2, 1, -1, -1, -1, -1}
 };
 
 #define commit_count 6
@@ -155,9 +156,8 @@ void test_revwalk_basic__glob_heads(void)
 
 	cl_git_pass(git_revwalk_push_glob(_walk, "heads"));
 
-	while (git_revwalk_next(&oid, _walk) == 0) {
+	while (git_revwalk_next(&oid, _walk) == 0)
 		i++;
-	}
 
 	/* git log --branches --oneline | wc -l => 14 */
 	cl_assert_equal_i(i, 14);
@@ -338,7 +338,7 @@ void test_revwalk_basic__push_range(void)
 	git_revwalk_reset(_walk);
 	git_revwalk_sorting(_walk, 0);
 	cl_git_pass(git_revwalk_push_range(_walk, "9fd738e~2..9fd738e"));
-	cl_git_pass(test_walk_only(_walk, commit_sorting_segment, 1));
+	cl_git_pass(test_walk_only(_walk, commit_sorting_segment, 2));
 }
 
 void test_revwalk_basic__push_mixed(void)
