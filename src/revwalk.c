@@ -86,7 +86,7 @@ static int mark_uninteresting(git_revwalk *walk, git_commit_list_node *commit)
 		tmp = git_array_pop(pending);
 		commit = tmp ? *tmp : NULL;
 
-	} while (commit != NULL && !interesting_arr(pending));
+	} while (commit != NULL && interesting_arr(pending));
 
 	git_array_clear(pending);
 
