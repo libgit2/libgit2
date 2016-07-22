@@ -2160,12 +2160,12 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 
 			if (git__strtol64(&tmp, buffer, &endptr, 8) < 0 ||
 				!endptr || endptr == buffer || *endptr ||
-				tmp < 0) {
+				tmp < 0 || tmp > UINT32_MAX) {
 				index_entry_reuc_free(lost);
 				return index_error_invalid("reading reuc entry stage");
 			}
 
-			lost->mode[i] = tmp;
+			lost->mode[i] = (uint32_t)tmp;
 
 			len = (endptr + 1) - buffer;
 			if (size <= len) {
