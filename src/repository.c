@@ -264,7 +264,7 @@ cleanup:
  * the stack could remove directories name limits, but at the cost of doing
  * repeated malloc/frees inside the loop below, so let's not do it now.
  */
-static int find_ceiling_dir_offset(
+static size_t find_ceiling_dir_offset(
 	const char *path,
 	const char *ceiling_directories)
 {
@@ -278,7 +278,7 @@ static int find_ceiling_dir_offset(
 	min_len = (size_t)(git_path_root(path) + 1);
 
 	if (ceiling_directories == NULL || min_len == 0)
-		return (int)min_len;
+		return min_len;
 
 	for (sep = ceil = ceiling_directories; *sep; ceil = sep + 1) {
 		for (sep = ceil; *sep && *sep != GIT_PATH_LIST_SEPARATOR; sep++);
@@ -305,7 +305,7 @@ static int find_ceiling_dir_offset(
 		}
 	}
 
-	return (int)(max_len <= min_len ? min_len : max_len);
+	return (max_len <= min_len ? min_len : max_len);
 }
 
 /*
@@ -362,7 +362,7 @@ static int find_repo(
 	dev_t initial_device = 0;
 	int min_iterations;
 	bool in_dot_git;
-	int ceiling_offset;
+	size_t ceiling_offset = 0;
 
 	git_buf_free(repo_path);
 
