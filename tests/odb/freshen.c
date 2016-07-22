@@ -68,6 +68,7 @@ void test_odb_freshen__packed_object(void)
 	cl_must_pass(p_utimes("testrepo.git/objects/pack/" PACKED_FN, old_times));
 	cl_must_pass(p_lstat("testrepo.git/objects/pack/" PACKED_FN, &before));
 
+	/* ensure that packfile is freshened */
 	cl_git_pass(git_odb_write(&id, odb, PACKED_STR,
 		CONST_STRLEN(PACKED_STR), GIT_OBJ_BLOB));
 	cl_assert_equal_oid(&expected_id, &id);
@@ -75,5 +76,18 @@ void test_odb_freshen__packed_object(void)
 
 	cl_assert(before.st_atime < after.st_atime);
 	cl_assert(before.st_mtime < after.st_mtime);
+
+	memcpy(&before, &after, sizeof(struct stat));
+
+	/* ensure that the pack file is not freshened again immediately */
+	cl_git_pass(git_odb_write(&id, odb, PACKED_STR,
+		CONST_STRLEN(PACKED_STR), GIT_OBJ_BLOB));
+	cl_assert_equal_oid(&expected_id, &id);
+	cl_must_pass(p_lstat("testrepo.git/objects/pack/" PACKED_FN, &after));
+
+	cl_assert(before.st_atime == after.st_atime);
+	cl_assert(before.st_atime_nsec == after.st_atime_nsec);
+	cl_assert(before.st_mtime == after.st_mtime);
+	cl_assert(before.st_mtime_nsec == after.st_mtime_nsec);
 }
 

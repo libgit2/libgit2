@@ -929,7 +929,7 @@ static int loose_backend__freshen(
 	if (object_file_name(&path, backend, oid) < 0)
 		return -1;
 
-	error = git_futils_touch(path.ptr);
+	error = git_futils_touch(path.ptr, NULL);
 	git_buf_free(&path);
 
 	return error;

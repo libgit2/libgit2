@@ -837,16 +837,13 @@ int git_futils_cp(const char *from, const char *to, mode_t filemode)
 	return cp_by_fd(ifd, ofd, true);
 }
 
-int git_futils_touch(const char *path)
+int git_futils_touch(const char *path, time_t *when)
 {
 	struct p_timeval times[2];
-	time_t now = time(NULL);
 	int ret;
 
-	times[0].tv_sec = now;
-	times[0].tv_usec = 0;
-	times[1].tv_sec = now;
-	times[1].tv_usec = 0;
+	times[0].tv_sec =  times[1].tv_sec  = when ? *when : time(NULL);
+	times[0].tv_usec = times[1].tv_usec = 0;
 
 	ret = p_utimes(path, times);
 
