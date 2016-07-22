@@ -6,6 +6,10 @@ then
 	exit $?;
 fi
 
+if [ "$TRAVIS_OS_NAME" = "osx" ]; then
+    export PKG_CONFIG_PATH=$(ls -d /usr/local/Cellar/zlib/*/lib/pkgconfig | paste -s -d':' -)
+fi
+
 mkdir _build
 cd _build
 # shellcheck disable=SC2086
