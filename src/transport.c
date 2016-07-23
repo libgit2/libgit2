@@ -91,7 +91,8 @@ static int transport_find_fn(
 
 	/* It could be a SSH remote path. Check to see if there's a : */
 	if (!definition && strrchr(url, ':')) {
-		// re-search transports again with ssh:// as url so that we can find a third party ssh transport
+		/* re-search transports again with ssh:// as url
+		 * so that we can find a third party ssh transport */
 		definition = transport_find_by_url("ssh://");
 	}
 
