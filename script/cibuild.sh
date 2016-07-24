@@ -7,7 +7,7 @@ then
 fi
 
 if [ "$TRAVIS_OS_NAME" = "osx" ]; then
-	export PKG_CONFIG_PATH=$(ls -d /usr/local/Cellar/zlib/*/lib/pkgconfig | paste -s -d':' -)
+	export PKG_CONFIG_PATH=$(ls -d /usr/local/Cellar/{curl,zlib}/*/lib/pkgconfig | paste -s -d':' -)
 fi
 
 # Should we ask Travis to cache this file?
