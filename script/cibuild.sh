@@ -6,6 +6,10 @@ then
 	exit $?;
 fi
 
+if [ "$TRAVIS_OS_NAME" = "osx" ]; then
+	export PKG_CONFIG_PATH=$(ls -d /usr/local/Cellar/{curl,zlib}/*/lib/pkgconfig | paste -s -d':' -)
+fi
+
 # Should we ask Travis to cache this file?
 curl -L https://github.com/ethomson/poxyproxy/releases/download/v0.1.0/poxyproxy-0.1.0.jar >poxyproxy.jar || exit $?
 # Run this early so we know it's ready by the time we need it
