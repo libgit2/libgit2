@@ -196,7 +196,7 @@ GIT_EXTERN(int) git_packbuilder_foreach(git_packbuilder *pb, git_packbuilder_for
  * @param pb the packbuilder
  * @return the number of objects in the packfile
  */
-GIT_EXTERN(uint32_t) git_packbuilder_object_count(git_packbuilder *pb);
+GIT_EXTERN(size_t) git_packbuilder_object_count(git_packbuilder *pb);
 
 /**
  * Get the number of objects the packbuilder has already written out
@@ -204,13 +204,13 @@ GIT_EXTERN(uint32_t) git_packbuilder_object_count(git_packbuilder *pb);
  * @param pb the packbuilder
  * @return the number of objects which have already been written
  */
-GIT_EXTERN(uint32_t) git_packbuilder_written(git_packbuilder *pb);
+GIT_EXTERN(size_t) git_packbuilder_written(git_packbuilder *pb);
 
 /** Packbuilder progress notification function */
 typedef int (*git_packbuilder_progress)(
 	int stage,
-	unsigned int current,
-	unsigned int total,
+	uint32_t current,
+	uint32_t total,
 	void *payload);
 
 /**

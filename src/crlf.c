@@ -289,6 +289,7 @@ static int crlf_check(
 		ca.eol = check_eol(attr_values[1]); /* eol */
 	}
 	ca.auto_crlf = GIT_AUTO_CRLF_DEFAULT;
+	ca.safe_crlf = GIT_SAFE_CRLF_DEFAULT;
 
 	/*
 	 * Use the core Git logic to see if we should perform CRLF for this file

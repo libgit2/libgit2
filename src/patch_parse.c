@@ -897,7 +897,7 @@ done:
 	*out_len = (path - path_start);
 	*out = git__strndup(path_start, *out_len);
 
-	return (out == NULL) ? -1 : 0;
+	return (*out == NULL) ? -1 : 0;
 }
 
 static int check_filenames(git_patch_parsed *patch)
