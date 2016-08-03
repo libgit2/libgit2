@@ -59,8 +59,9 @@ static int init_common(void)
 	if ((ret = git_hash_global_init()) == 0 &&
 		(ret = git_sysdir_global_init()) == 0 &&
 		(ret = git_filter_global_init()) == 0 &&
-		(ret = git_transport_ssh_global_init()) == 0)
-		ret = git_openssl_stream_global_init();
+		(ret = git_transport_ssh_global_init()) == 0 &&
+		(ret = git_openssl_stream_global_init()) == 0)
+		ret = git_mwindow_global_init();
 
 	GIT_MEMORY_BARRIER;
 

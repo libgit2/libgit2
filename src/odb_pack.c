@@ -591,9 +591,6 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 	struct pack_backend *backend = NULL;
 	git_buf path = GIT_BUF_INIT;
 
-	if (git_mwindow_files_init() < 0)
-		return -1;
-
 	if (pack_backend__alloc(&backend, 8) < 0)
 		return -1;
 
