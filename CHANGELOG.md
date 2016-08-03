@@ -51,7 +51,6 @@ v0.24 + 1
 * `git_blob_create_fromchunks()` has been removed in favour of
   `git_blob_create_fromstream()`.
 
-
 ### Breaking API changes
 
 * `git_packbuilder_object_count` and `git_packbuilder_written` now
@@ -60,6 +59,9 @@ v0.24 + 1
 
 * `git_packbuiler_progress` now provides explicitly sized `uint32_t`
   values instead of `unsigned int`.
+
+* `git_diff_file` now includes an `id_abbrev` field that reflects the
+  number of nibbles set in the `id` field.
 
 v0.24
 -------
