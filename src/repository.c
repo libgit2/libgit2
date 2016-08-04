@@ -2481,8 +2481,9 @@ int git_repository__shallow_roots(git_array_oid_t *out, git_repository *repo)
 {
 	git_buf path = GIT_BUF_INIT;
 	git_buf contents = GIT_BUF_INIT;
-	int error, updated;
-	size_t start, end;
+	int error, updated, line_num = 1;
+	char *line;
+	char *buffer;
 
 	assert(out);
 
@@ -2501,19 +2502,23 @@ int git_repository__shallow_roots(git_array_oid_t *out, git_repository *repo)
 
 	git_array_clear(repo->shallow_oids);
 
-	start = end = 0;
-	while (end < contents.size) {
-		if (contents.ptr[end] == '\n' || end == contents.size) {
-			if (end - start == GIT_OID_HEXSZ) {
-				git_oid *oid = git_array_alloc(repo->shallow_oids);
+	buffer = contents.ptr;
+	while ((line = git__strsep(&buffer, "\n")) != NULL) {
+		git_oid *oid = git_array_alloc(repo->shallow_oids);
 
-				error = git_oid_fromstrn(oid, contents.ptr + start, GIT_OID_HEXSZ);
-				if (error < 0)
-					return error;
-			}
-			start = end + 1;
+		error = git_oid_fromstr(oid, line);
+		if (error < 0) {
+			giterr_set(GITERR_REPOSITORY, "Invalid OID at line %d", line_num);
+			git_array_clear(repo->shallow_oids);
+			return -1;
 		}
-		end++;
+		++line_num;
+	}
+
+	if (*buffer) {
+		giterr_set(GITERR_REPOSITORY, "No EOL at line %d", line_num);
+		git_array_clear(repo->shallow_oids);
+		return -1;
 	}
 
 unchanged:

@@ -75,3 +75,18 @@ void test_repo_shallow__cache_clearing(void)
 	cl_assert_equal_oid(&g_shallow_oid, &oids2.ids[0]);
 	cl_assert_equal_oid(&tmp_oid, &oids2.ids[1]);
 }
+
+void test_repo_shallow__errors_on_borked(void)
+{
+	git_oidarray oids;
+
+	g_repo = cl_git_sandbox_init("shallow.git");
+
+	cl_git_mkfile("shallow.git/shallow", "lolno");
+
+	cl_git_fail_with(git_repository_shallow_roots(&oids, g_repo), -1);
+
+	cl_git_mkfile("shallow.git/shallow", "lolno\n");
+
+	cl_git_fail_with(git_repository_shallow_roots(&oids, g_repo), -1);
+}
