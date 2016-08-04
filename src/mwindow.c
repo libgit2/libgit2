@@ -34,16 +34,23 @@ static git_mwindow_ctl mem_ctl;
 git_strmap *git__pack_cache = NULL;
 
 /**
- * Run under mwindow lock
+ * Cannot run under the git__mwindow_mutex lock.
  */
 int git_mwindow_files_init(void)
 {
-	if (git__pack_cache)
-		return 0;
+	int error = 0;
+	if (git_mutex_lock(&git__mwindow_mutex) < 0) {
+		giterr_set(GITERR_OS, "failed to lock mwindow mutex");
+		return -1;
+	}
 
-	git__on_shutdown(git_mwindow_files_free);
+        if (git__pack_cache == NULL) {
+		git__on_shutdown(git_mwindow_files_free);
+		error = git_strmap_alloc(&git__pack_cache);
+	}
 
-	return git_strmap_alloc(&git__pack_cache);
+	git_mutex_unlock(&git__mwindow_mutex);
+	return error;
 }
 
 void git_mwindow_files_free(void)
@@ -61,6 +68,10 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 	git_strmap_iter pos;
 	struct git_pack_file *pack;
 
+	if (git_mwindow_files_init() < 0) {
+		return -1;
+	}
+
 	if ((error = git_packfile__name(&packname, path)) < 0)
 		return error;
 
@@ -69,11 +80,6 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 		return -1;
 	}
 
-	if (git_mwindow_files_init() < 0) {
-		git_mutex_unlock(&git__mwindow_mutex);
-		git__free(packname);
-		return -1;
-	}
 
 	pos = git_strmap_lookup_index(git__pack_cache, packname);
 	git__free(packname);
