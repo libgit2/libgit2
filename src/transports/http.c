@@ -620,7 +620,6 @@ static int http_connect(http_subtransport *t)
 
 	error = git_stream_connect(t->io);
 
-#if defined(GIT_OPENSSL) || defined(GIT_SECURE_TRANSPORT) || defined(GIT_CURL)
 	if ((!error || error == GIT_ECERTIFICATE) && t->owner->certificate_check_cb != NULL &&
 	    git_stream_is_encrypted(t->io)) {
 		git_cert *cert;
@@ -640,7 +639,7 @@ static int http_connect(http_subtransport *t)
 			return error;
 		}
 	}
-#endif
+
 	if (error < 0)
 		return error;
 
