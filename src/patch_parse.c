@@ -192,7 +192,7 @@ static int parse_header_mode(uint16_t *mode, git_patch_parse_ctx *ctx)
 
 static int parse_header_oid(
 	git_oid *oid,
-	int *oid_len,
+	uint16_t *oid_len,
 	git_patch_parse_ctx *ctx)
 {
 	size_t len;
@@ -202,14 +202,14 @@ static int parse_header_oid(
 			break;
 	}
 
-	if (len < GIT_OID_MINPREFIXLEN ||
+	if (len < GIT_OID_MINPREFIXLEN || len > GIT_OID_HEXSZ ||
 		git_oid_fromstrn(oid, ctx->line, len) < 0)
 		return parse_err("invalid hex formatted object id at line %d",
 			ctx->line_num);
 
 	parse_advance_chars(ctx, len);
 
-	*oid_len = (int)len;
+	*oid_len = (uint16_t)len;
 
 	return 0;
 }
