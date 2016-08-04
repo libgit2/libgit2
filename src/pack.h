@@ -102,6 +102,8 @@ struct git_pack_file {
 
 	git_pack_cache bases; /* delta base cache */
 
+	time_t last_freshen; /* last time the packfile was freshened */
+
 	/* something like ".git/objects/pack/xxxxx.pack" */
 	char pack_name[GIT_FLEX_ARRAY]; /* more */
 };
