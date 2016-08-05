@@ -2,29 +2,33 @@
 #include "odb.h"
 #include "filebuf.h"
 
+#define TEST_REPO_PATH "redundant.git"
+
 git_repository *g_repo;
+git_odb *g_odb;
 
 void test_odb_emptyobjects__initialize(void)
 {
-	cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo.git")));
-}
-void test_odb_emptyobjects__cleanup(void)
-{
-	git_repository_free(g_repo);
+	g_repo = cl_git_sandbox_init(TEST_REPO_PATH);
+	cl_git_pass(git_repository_odb(&g_odb, g_repo));
 }
 
-void test_odb_emptyobjects__read(void)
+void test_odb_emptyobjects__cleanup(void)
 {
-	git_oid id;
+	git_odb_free(g_odb);
+	cl_git_sandbox_cleanup();
+}
+
+void test_odb_emptyobjects__blob_notfound(void)
+{
+	git_oid id, written_id;
 	git_blob *blob;
 
 	cl_git_pass(git_oid_fromstr(&id, "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"));
-	cl_git_pass(git_blob_lookup(&blob, g_repo, &id));
-	cl_assert_equal_i(GIT_OBJ_BLOB, git_object_type((git_object *) blob));
-	cl_assert(git_blob_rawcontent(blob));
-	cl_assert_equal_s("", git_blob_rawcontent(blob));
-	cl_assert_equal_i(0, git_blob_rawsize(blob));
-	git_blob_free(blob);
+	cl_git_fail_with(GIT_ENOTFOUND, git_blob_lookup(&blob, g_repo, &id));
+
+	cl_git_pass(git_odb_write(&written_id, g_odb, "", 0, GIT_OBJ_BLOB));
+	cl_assert(git_path_exists(TEST_REPO_PATH "/objects/e6/9de29bb2d1d6434b8b29ae775ad8c2e48c5391"));
 }
 
 void test_odb_emptyobjects__read_tree(void)
@@ -43,15 +47,12 @@ void test_odb_emptyobjects__read_tree(void)
 void test_odb_emptyobjects__read_tree_odb(void)
 {
 	git_oid id;
-	git_odb *odb;
 	git_odb_object *tree_odb;
 
 	cl_git_pass(git_oid_fromstr(&id, "4b825dc642cb6eb9a060e54bf8d69288fbee4904"));
-	cl_git_pass(git_repository_odb(&odb, g_repo));
-	cl_git_pass(git_odb_read(&tree_odb, odb, &id));
+	cl_git_pass(git_odb_read(&tree_odb, g_odb, &id));
 	cl_assert(git_odb_object_data(tree_odb));
 	cl_assert_equal_s("", git_odb_object_data(tree_odb));
 	cl_assert_equal_i(0, git_odb_object_size(tree_odb));
 	git_odb_object_free(tree_odb);
-	git_odb_free(odb);
 }
