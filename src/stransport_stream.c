@@ -67,6 +67,9 @@ int stransport_connect(git_stream *stream)
 	if ((ret = SSLCopyPeerTrust(st->ctx, &trust)) != noErr)
 		goto on_error;
 
+	if (!trust)
+		return GIT_ECERTIFICATE;
+
 	if ((ret = SecTrustEvaluate(trust, &sec_res)) != noErr)
 		goto on_error;
 
