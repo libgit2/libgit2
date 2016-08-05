@@ -340,6 +340,12 @@ clar_parse_args(int argc, char **argv)
 				if (strncmp(argument, _clar_suites[j].name, cmplen) == 0) {
 					int exact = (arglen >= suitelen);
 
+					/* Do we have a real suite prefix separated by a
+					 * trailing '::' or just a matching substring? */
+					if (arglen > suitelen && (argument[suitelen] != ':'
+						    || argument[suitelen + 1] != ':'))
+					    continue;
+
 					++found;
 
 					if (!exact)
