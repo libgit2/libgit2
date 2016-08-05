@@ -38,7 +38,7 @@ static void patch_line_init(
 	out->content_offset = in_offset;
 }
 
-#define PATCH_IMAGE_INIT { {0} }
+#define PATCH_IMAGE_INIT { GIT_POOL_INIT, GIT_VECTOR_INIT }
 
 static int patch_image_init_fromstr(
 	patch_image *out, const char *in, size_t in_len)
