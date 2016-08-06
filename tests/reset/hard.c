@@ -240,14 +240,18 @@ void test_reset_hard__switch_file_to_dir(void)
 {
 	git_index_entry entry = {{ 0 }};
 	git_index *idx;
+	git_odb *odb;
 	git_object *commit;
 	git_tree *tree;
 	git_signature *sig;
 	git_oid src_tree_id, tgt_tree_id;
 	git_oid src_id, tgt_id;
 
+	cl_git_pass(git_repository_odb(&odb, repo));
+	cl_git_pass(git_odb_write(&entry.id, odb, "", 0, GIT_OBJ_BLOB));
+	git_odb_free(odb);
+
 	entry.mode = GIT_FILEMODE_BLOB;
-	cl_git_pass(git_oid_fromstr(&entry.id, "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"));
 	cl_git_pass(git_index_new(&idx));
 	cl_git_pass(git_signature_now(&sig, "foo", "bar"));
 
