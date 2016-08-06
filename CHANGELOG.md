@@ -46,6 +46,9 @@ v0.24 + 1
       `git_repository_open_ext` with this flag will error out if either
       `$GIT_WORK_TREE` or `$GIT_COMMON_DIR` is set.
 
+* `git_diff_from_buffer` can create a `git_diff` object from the contents
+  of a git-style patch file.
+
 ### API removals
 
 * `git_blob_create_fromchunks()` has been removed in favour of
