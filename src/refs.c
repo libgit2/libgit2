@@ -402,12 +402,7 @@ static int reference__create(
 
 		ref = git_reference__alloc(normalized, oid, NULL);
 	} else {
-		git_refname_t normalized_target;
-
-		if ((error = reference_normalize_for_repo(normalized_target, repo, symbolic)) < 0)
-			return error;
-
-		ref = git_reference__alloc_symbolic(normalized, normalized_target);
+		ref = git_reference__alloc_symbolic(normalized, symbolic);
 	}
 
 	GITERR_CHECK_ALLOC(ref);
