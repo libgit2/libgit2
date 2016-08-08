@@ -261,6 +261,7 @@ int git_stransport_stream_new(git_stream **out, const char *host, const char *po
 	st->ctx = SSLCreateContext(NULL, kSSLClientSide, kSSLStreamType);
 	if (!st->ctx) {
 		giterr_set(GITERR_NET, "failed to create SSL context");
+		git__free(st);
 		return -1;
 	}
 
@@ -270,7 +271,8 @@ int git_stransport_stream_new(git_stream **out, const char *host, const char *po
 	    (ret = SSLSetProtocolVersionMin(st->ctx, kTLSProtocol1)) != noErr ||
 	    (ret = SSLSetProtocolVersionMax(st->ctx, kTLSProtocol12)) != noErr ||
 	    (ret = SSLSetPeerDomainName(st->ctx, host, strlen(host))) != noErr) {
-		git_stream_free((git_stream *)st);
+		CFRelease(st->ctx);
+		git__free(st);
 		return stransport_error(ret);
 	}
 
