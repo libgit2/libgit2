@@ -16,7 +16,7 @@
 #include "socket_stream.h"
 #include "curl_stream.h"
 
-int stransport_error(OSStatus ret)
+static int stransport_error(OSStatus ret)
 {
 	CFStringRef message;
 
@@ -47,7 +47,7 @@ typedef struct {
 	git_cert_x509 cert_info;
 } stransport_stream;
 
-int stransport_connect(git_stream *stream)
+static int stransport_connect(git_stream *stream)
 {
 	stransport_stream *st = (stransport_stream *) stream;
 	int error;
@@ -93,7 +93,7 @@ on_error:
 	return stransport_error(ret);
 }
 
-int stransport_certificate(git_cert **out, git_stream *stream)
+static int stransport_certificate(git_cert **out, git_stream *stream)
 {
 	stransport_stream *st = (stransport_stream *) stream;
 	SecTrustRef trust = NULL;
@@ -120,7 +120,7 @@ int stransport_certificate(git_cert **out, git_stream *stream)
 	return 0;
 }
 
-int stransport_set_proxy(git_stream *stream, const char *proxy)
+static int stransport_set_proxy(git_stream *stream, const char *proxy)
 {
 	stransport_stream *st = (stransport_stream *) stream;
 
@@ -150,7 +150,7 @@ static OSStatus write_cb(SSLConnectionRef conn, const void *data, size_t *len)
 	return noErr;
 }
 
-ssize_t stransport_write(git_stream *stream, const char *data, size_t len, int flags)
+static ssize_t stransport_write(git_stream *stream, const char *data, size_t len, int flags)
 {
 	stransport_stream *st = (stransport_stream *) stream;
 	size_t data_len, processed;
@@ -199,7 +199,7 @@ static OSStatus read_cb(SSLConnectionRef conn, void *data, size_t *len)
 	return error;
 }
 
-ssize_t stransport_read(git_stream *stream, void *data, size_t len)
+static ssize_t stransport_read(git_stream *stream, void *data, size_t len)
 {
 	stransport_stream *st = (stransport_stream *) stream;
 	size_t processed;
@@ -211,7 +211,7 @@ ssize_t stransport_read(git_stream *stream, void *data, size_t len)
 	return processed;
 }
 
-int stransport_close(git_stream *stream)
+static int stransport_close(git_stream *stream)
 {
 	stransport_stream *st = (stransport_stream *) stream;
 	OSStatus ret;
@@ -223,7 +223,7 @@ int stransport_close(git_stream *stream)
 	return git_stream_close(st->io);
 }
 
-void stransport_free(git_stream *stream)
+static void stransport_free(git_stream *stream)
 {
 	stransport_stream *st = (stransport_stream *) stream;
 
