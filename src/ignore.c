@@ -170,10 +170,6 @@ static int parse_ignore_file(
 
 			scan = git__next_line(scan);
 
-			/* if a negative match doesn't actually do anything, throw it away */
-			if (match->flags & GIT_ATTR_FNMATCH_NEGATIVE)
-				error = does_negate_rule(&valid_rule, &attrs->rules, match);
-
 			if (!error && valid_rule)
 				error = git_vector_insert(&attrs->rules, match);
 		}
@@ -580,4 +576,3 @@ int git_ignore__check_pathspec_for_exact_ignores(
 
 	return error;
 }
-
