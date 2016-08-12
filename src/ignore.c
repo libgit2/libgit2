@@ -11,35 +11,64 @@
 #define GIT_IGNORE_DEFAULT_RULES ".\n..\n.git\n"
 
 /**
- * A negative ignore pattern can match a positive one without
- * wildcards if its pattern equals the tail of the positive
- * pattern. Thus
+ * A negative ignore pattern can negate a positive one without
+ * wildcards if it is a basename only and equals the basename of
+ * the positive pattern. Thus
  *
  * foo/bar
  * !bar
  *
- * would result in foo/bar being unignored again.
+ * would result in foo/bar being unignored again while
+ *
+ * moo/foo/bar
+ * !foo/bar
+ *
+ * would do nothing. The reverse also holds true: a positive
+ * basename pattern can be negated by unignoring the basename in
+ * subdirectories. Thus
+ *
+ * bar
+ * !foo/bar
+ *
+ * would result in foo/bar being unignored again. As with the
+ * first case,
+ *
+ * foo/bar
+ * !moo/foo/bar
+ *
+ * would do nothing, again.
  */
 static int does_negate_pattern(git_attr_fnmatch *rule, git_attr_fnmatch *neg)
 {
+	git_attr_fnmatch *longer, *shorter;
 	char *p;
 
 	if ((rule->flags & GIT_ATTR_FNMATCH_NEGATIVE) == 0
 		&& (neg->flags & GIT_ATTR_FNMATCH_NEGATIVE) != 0) {
-		/*
-		 * no chance of matching if rule is shorter than
-		 * the negated one
-		 */
-		if (rule->length < neg->length)
+
+		/* If lengths match we need to have an exact match */
+		if (rule->length == neg->length) {
+			return strcmp(rule->pattern, neg->pattern) == 0;
+		} else if (rule->length < neg->length) {
+			shorter = rule;
+			longer = neg;
+		} else {
+			shorter = neg;
+			longer = rule;
+		}
+
+		/* Otherwise, we need to check if the shorter
+		 * rule is a basename only (that is, it contains
+		 * no path separator) and, if so, if it
+		 * matches the tail of the longer rule */
+		p = longer->pattern + longer->length - shorter->length;
+
+		if (p[-1] != '/')
+			return false;
+		if (memchr(shorter->pattern, '/', shorter->length) != NULL)
 			return false;
 
-		/*
-		 * shift pattern so its tail aligns with the
-		 * negated pattern
-		 */
-		p = rule->pattern + rule->length - neg->length;
-		if (strcmp(p, neg->pattern) == 0)
-			return true;
+		return memcmp(p, shorter->pattern, shorter->length) == 0;
 	}
 
 	return false;
