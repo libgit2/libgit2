@@ -78,7 +78,10 @@ static void check_error(int error_code, const char *action)
 
 int main (int argc, char** argv)
 {
+	int error;
 	git_oid oid;
+	char *repo_path;
+	git_repository *repo;
 
 	/**
 	 * Initialize the library, this will set up any global state which libgit2 needs
@@ -97,9 +100,7 @@ int main (int argc, char** argv)
 	 *
 	 * [me]: http://libgit2.github.com/libgit2/#HEAD/group/repository
 	 */
-	int error;
-	const char *repo_path = (argc > 1) ? argv[1] : "/opt/libgit2-test/.git";
-	git_repository *repo;
+	repo_path = (argc > 1) ? argv[1] : "/opt/libgit2-test/.git";
 
 	error = git_repository_open(&repo, repo_path);
 	check_error(error, "opening repository");
@@ -216,9 +217,9 @@ static void object_database(git_repository *repo, git_oid *oid)
 	 * a string representation of that value (and vice-versa).
 	 */
 	str_type = git_object_type2string(otype);
-	printf("object length and type: %d, %s\n",
+	printf("object length and type: %d, %s\nobject data: %s\n",
 			(int)git_odb_object_size(obj),
-			str_type);
+			str_type, data);
 
 	/**
 	 * For proper memory management, close the object when you are done with
@@ -339,7 +340,7 @@ static void commit_parsing(git_repository *repo)
 	const char *message;
 	unsigned int parents, p;
 	int error;
-	time_t ctime;
+	time_t time;
 
 	printf("\n*Commit Parsing*\n");
 
@@ -357,14 +358,17 @@ static void commit_parsing(git_repository *repo)
 	message  = git_commit_message(commit);
 	author   = git_commit_author(commit);
 	cmtter   = git_commit_committer(commit);
-	ctime    = git_commit_time(commit);
+	time    = git_commit_time(commit);
 
 	/**
 	 * The author and committer methods return [git_signature] structures,
 	 * which give you name, email and `when`, which is a `git_time` structure,
 	 * giving you a timestamp and timezone offset.
 	 */
-	printf("Author: %s (%s)\n", author->name, author->email);
+	printf("Author: %s (%s)\nCommitter: %s (%s)\nDate: %s\nMessage: %s\n",
+		author->name, author->email,
+		cmtter->name, cmtter->email,
+		ctime(&time), message);
 
 	/**
 	 * Commits can have zero or more parents. The first (root) commit will
@@ -424,7 +428,8 @@ static void tag_parsing(git_repository *repo)
 	name = git_tag_name(tag);		/* "test" */
 	type = git_tag_target_type(tag);	/* GIT_OBJ_COMMIT (otype enum) */
 	message = git_tag_message(tag);		/* "tag message\n" */
-	printf("Tag Message: %s\n", message);
+	printf("Tag Name: %s\nTag Type: %s\nTag Message: %s\n",
+		name, git_object_type2string(type), message);
 
 	git_commit_free(commit);
 }
