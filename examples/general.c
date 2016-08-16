@@ -12,33 +12,37 @@
  * <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 
-// [**libgit2**][lg] is a portable, pure C implementation of the Git core
-// methods provided as a re-entrant linkable library with a solid API,
-// allowing you to write native speed custom Git applications in any
-// language which supports C bindings.
-//
-// This file is an example of using that API in a real, compilable C file.
-// As the API is updated, this file will be updated to demonstrate the new
-// functionality.
-//
-// If you're trying to write something in C using [libgit2][lg], you should
-// also check out the generated [API documentation][ap]. We try to link to
-// the relevant sections of the API docs in each section in this file.
-//
-// **libgit2** (for the most part) only implements the core plumbing
-// functions, not really the higher level porcelain stuff. For a primer on
-// Git Internals that you will need to know to work with Git at this level,
-// check out [Chapter 10][pg] of the Pro Git book.
-//
-// [lg]: http://libgit2.github.com
-// [ap]: http://libgit2.github.com/libgit2
-// [pg]: https://git-scm.com/book/en/v2/Git-Internals-Plumbing-and-Porcelain
+/**
+ * [**libgit2**][lg] is a portable, pure C implementation of the Git core
+ * methods provided as a re-entrant linkable library with a solid API,
+ * allowing you to write native speed custom Git applications in any
+ * language which supports C bindings.
+ *
+ * This file is an example of using that API in a real, compilable C file.
+ * As the API is updated, this file will be updated to demonstrate the new
+ * functionality.
+ *
+ * If you're trying to write something in C using [libgit2][lg], you should
+ * also check out the generated [API documentation][ap]. We try to link to
+ * the relevant sections of the API docs in each section in this file.
+ *
+ * **libgit2** (for the most part) only implements the core plumbing
+ * functions, not really the higher level porcelain stuff. For a primer on
+ * Git Internals that you will need to know to work with Git at this level,
+ * check out [Chapter 10][pg] of the Pro Git book.
+ *
+ * [lg]: http://libgit2.github.com
+ * [ap]: http://libgit2.github.com/libgit2
+ * [pg]: https://git-scm.com/book/en/v2/Git-Internals-Plumbing-and-Porcelain
+ */
 
-// ### Includes
-
-// Including the `git2.h` header will include all the other libgit2 headers
-// that you need.  It should be the only thing you need to include in order
-// to compile properly and get all the libgit2 API.
+/**
+ * ### Includes
+ *
+ * Including the `git2.h` header will include all the other libgit2 headers
+ * that you need.  It should be the only thing you need to include in order
+ * to compile properly and get all the libgit2 API.
+ */
 #include <git2.h>
 #include <stdio.h>
 #include <string.h>
@@ -55,9 +59,11 @@ static void index_walking(git_repository *repo);
 static void reference_listing(git_repository *repo);
 static void config_files(const char *repo_path);
 
-// Almost all libgit2 functions return 0 on success or negative on error.
-// This is not production quality error checking, but should be sufficient
-// as an example.
+/**
+ * Almost all libgit2 functions return 0 on success or negative on error.
+ * This is not production quality error checking, but should be sufficient
+ * as an example.
+ */
 static void check_error(int error_code, const char *action)
 {
 	const git_error *error = giterr_last();
@@ -74,19 +80,23 @@ int main (int argc, char** argv)
 {
 	git_oid oid;
 
-	// Initialize the library, this will set up any global state which libgit2 needs
-	// including threading and crypto
+	/**
+	 * Initialize the library, this will set up any global state which libgit2 needs
+	 * including threading and crypto
+	 */
 	git_libgit2_init();
 
-	// ### Opening the Repository
-
-	// There are a couple of methods for opening a repository, this being the
-	// simplest.  There are also [methods][me] for specifying the index file
-	// and work tree locations, here we assume they are in the normal places.
-	//
-	// (Try running this program against tests/resources/testrepo.git.)
-	//
-	// [me]: http://libgit2.github.com/libgit2/#HEAD/group/repository
+	/**
+	 * ### Opening the Repository
+	 *
+	 * There are a couple of methods for opening a repository, this being the
+	 * simplest.  There are also [methods][me] for specifying the index file
+	 * and work tree locations, here we assume they are in the normal places.
+	 *
+	 * (Try running this program against tests/resources/testrepo.git.)
+	 *
+	 * [me]: http://libgit2.github.com/libgit2/#HEAD/group/repository
+	 */
 	int error;
 	const char *repo_path = (argc > 1) ? argv[1] : "/opt/libgit2-test/.git";
 	git_repository *repo;
@@ -106,7 +116,9 @@ int main (int argc, char** argv)
 	reference_listing(repo);
 	config_files(repo_path);
 
-	// Finally, when you're done with the repository, you can free it as well.
+	/**
+	 * Finally, when you're done with the repository, you can free it as well.
+	 */
 	git_repository_free(repo);
 
 	return 0;
