@@ -41,7 +41,9 @@
 // to compile properly and get all the libgit2 API.
 #include <git2.h>
 #include <stdio.h>
+#include <string.h>
 
+static void reference_listing(git_repository *repo);
 static void config_files(const char *repo_path);
 
 // Almost all libgit2 functions return 0 on success or negative on error.
@@ -459,34 +461,53 @@ int main (int argc, char** argv)
 
 	git_index_free(index);
 
-	// ### References
+	reference_listing(repo);
+	config_files(repo_path);
 
-	// The [reference API][ref] allows you to list, resolve, create and update
-	// references such as branches, tags and remote references (everything in
-	// the .git/refs directory).
-	//
-	// [ref]: http://libgit2.github.com/libgit2/#HEAD/group/reference
+	// Finally, when you're done with the repository, you can free it as well.
+	git_repository_free(repo);
+
+	return 0;
+}
+
+/**
+ * ### References
+ *
+ * The [reference API][ref] allows you to list, resolve, create and update
+ * references such as branches, tags and remote references (everything in
+ * the .git/refs directory).
+ *
+ * [ref]: http://libgit2.github.com/libgit2/#HEAD/group/reference
+ */
+static void reference_listing(git_repository *repo)
+{
+	git_strarray ref_list;
+	const char *refname;
+	git_reference *ref;
+	unsigned i;
+	char oid_hex[GIT_OID_HEXSZ+1];
 
 	printf("\n*Reference Listing*\n");
 
-	// Here we will implement something like `git for-each-ref` simply listing
-	// out all available references and the object SHA they resolve to.
-	git_strarray ref_list;
+	/**
+	 * Here we will implement something like `git for-each-ref` simply listing
+	 * out all available references and the object SHA they resolve to.
+	 *
+	 * Now that we have the list of reference names, we can lookup each ref
+	 * one at a time and resolve them to the SHA, then print both values out.
+	 */
+
 	git_reference_list(&ref_list, repo);
 
-	const char *refname;
-	git_reference *ref;
-
-	// Now that we have the list of reference names, we can lookup each ref
-	// one at a time and resolve them to the SHA, then print both values out.
 	for (i = 0; i < ref_list.count; ++i) {
+		memset(oid_hex, 0, sizeof(oid_hex));
 		refname = ref_list.strings[i];
 		git_reference_lookup(&ref, repo, refname);
 
 		switch (git_reference_type(ref)) {
 			case GIT_REF_OID:
-				git_oid_fmt(out, git_reference_target(ref));
-				printf("%s [%s]\n", refname, out);
+				git_oid_fmt(oid_hex, git_reference_target(ref));
+				printf("%s [%s]\n", refname, oid_hex);
 				break;
 
 			case GIT_REF_SYMBOLIC:
@@ -499,13 +520,6 @@ int main (int argc, char** argv)
 	}
 
 	git_strarray_free(&ref_list);
-
-	config_files(repo_path);
-
-	// Finally, when you're done with the repository, you can free it as well.
-	git_repository_free(repo);
-
-	return 0;
 }
 
 /**
