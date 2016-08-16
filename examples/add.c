@@ -75,15 +75,14 @@ int print_matched_cb(const char *path, const char *matched_pathspec, void *paylo
 {
 	struct print_payload p = *(struct print_payload*)(payload);
 	int ret;
-	git_status_t status;
+	unsigned status;
 	(void)matched_pathspec;
 
-	if (git_status_file((unsigned int*)(&status), p.repo, path)) {
-		return -1; //abort
+	if (git_status_file(&status, p.repo, path)) {
+		return -1;
 	}
 
-	if (status & GIT_STATUS_WT_MODIFIED ||
-	         status & GIT_STATUS_WT_NEW) {
+	if (status & GIT_STATUS_WT_MODIFIED || status & GIT_STATUS_WT_NEW) {
 		printf("add '%s'\n", path);
 		ret = 0;
 	} else {
