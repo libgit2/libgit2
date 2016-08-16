@@ -43,6 +43,7 @@
 #include <stdio.h>
 #include <string.h>
 
+static void revwalking(git_repository *repo);
 static void index_walking(git_repository *repo);
 static void reference_listing(git_repository *repo);
 static void config_files(const char *repo_path);
@@ -373,43 +374,63 @@ int main (int argc, char** argv)
 	printf("Blob Size: %ld\n", (long)git_blob_rawsize(blob)); // 8
 	git_blob_rawcontent(blob); // "content"
 
-	// ### Revwalking
+	revwalking(repo);
+	index_walking(repo);
+	reference_listing(repo);
+	config_files(repo_path);
 
-	// The libgit2 [revision walking api][rw] provides methods to traverse the
-	// directed graph created by the parent pointers of the commit objects.
-	// Since all commits point back to the commit that came directly before
-	// them, you can walk this parentage as a graph and find all the commits
-	// that were ancestors of (reachable from) a given starting point.  This
-	// can allow you to create `git log` type functionality.
-	//
-	// [rw]: http://libgit2.github.com/libgit2/#HEAD/group/revwalk
+	// Finally, when you're done with the repository, you can free it as well.
+	git_repository_free(repo);
 
-	printf("\n*Revwalking*\n");
+	return 0;
+}
+
+/**
+ * ### Revwalking
+ *
+ * The libgit2 [revision walking api][rw] provides methods to traverse the
+ * directed graph created by the parent pointers of the commit objects.
+ * Since all commits point back to the commit that came directly before
+ * them, you can walk this parentage as a graph and find all the commits
+ * that were ancestors of (reachable from) a given starting point.  This
+ * can allow you to create `git log` type functionality.
+ *
+ * [rw]: http://libgit2.github.com/libgit2/#HEAD/group/revwalk
+ */
+static void revwalking(git_repository *repo)
+{
+	const git_signature *cauth;
+	const char *cmsg;
+	int error;
 	git_revwalk *walk;
 	git_commit *wcommit;
+	git_oid oid;
+
+	printf("\n*Revwalking*\n");
 
 	git_oid_fromstr(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644");
 
-	// To use the revwalker, create a new walker, tell it how you want to sort
-	// the output and then push one or more starting points onto the walker.
-	// If you want to emulate the output of `git log` you would push the SHA
-	// of the commit that HEAD points to into the walker and then start
-	// traversing them.  You can also 'hide' commits that you want to stop at
-	// or not see any of their ancestors.  So if you want to emulate `git log
-	// branch1..branch2`, you would push the oid of `branch2` and hide the oid
-	// of `branch1`.
+	/**
+	 * To use the revwalker, create a new walker, tell it how you want to sort
+	 * the output and then push one or more starting points onto the walker.
+	 * If you want to emulate the output of `git log` you would push the SHA
+	 * of the commit that HEAD points to into the walker and then start
+	 * traversing them.  You can also 'hide' commits that you want to stop at
+	 * or not see any of their ancestors.  So if you want to emulate `git log
+	 * branch1..branch2`, you would push the oid of `branch2` and hide the oid
+	 * of `branch1`.
+	 */
 	git_revwalk_new(&walk, repo);
 	git_revwalk_sorting(walk, GIT_SORT_TOPOLOGICAL | GIT_SORT_REVERSE);
 	git_revwalk_push(walk, &oid);
 
-	const git_signature *cauth;
-	const char *cmsg;
-
-	// Now that we have the starting point pushed onto the walker, we start
-	// asking for ancestors. It will return them in the sorting order we asked
-	// for as commit oids.  We can then lookup and parse the committed pointed
-	// at by the returned OID; note that this operation is specially fast
-	// since the raw contents of the commit object will be cached in memory
+	/**
+	 * Now that we have the starting point pushed onto the walker, we start
+	 * asking for ancestors. It will return them in the sorting order we asked
+	 * for as commit oids.  We can then lookup and parse the committed pointed
+	 * at by the returned OID; note that this operation is specially fast
+	 * since the raw contents of the commit object will be cached in memory
+	 */
 	while ((git_revwalk_next(&oid, walk)) == 0) {
 		error = git_commit_lookup(&wcommit, repo, &oid);
 		check_error(error, "looking up commit during revwalk");
@@ -421,20 +442,13 @@ int main (int argc, char** argv)
 		git_commit_free(wcommit);
 	}
 
-	// Like the other objects, be sure to free the revwalker when you're done
-	// to prevent memory leaks.  Also, make sure that the repository being
-	// walked it not deallocated while the walk is in progress, or it will
-	// result in undefined behavior
+	/**
+	 * Like the other objects, be sure to free the revwalker when you're done
+	 * to prevent memory leaks.  Also, make sure that the repository being
+	 * walked it not deallocated while the walk is in progress, or it will
+	 * result in undefined behavior
+	 */
 	git_revwalk_free(walk);
-
-	index_walking(repo);
-	reference_listing(repo);
-	config_files(repo_path);
-
-	// Finally, when you're done with the repository, you can free it as well.
-	git_repository_free(repo);
-
-	return 0;
 }
 
 /**
