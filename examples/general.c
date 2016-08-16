@@ -42,6 +42,8 @@
 #include <git2.h>
 #include <stdio.h>
 
+static void config_files(const char *repo_path);
+
 // Almost all libgit2 functions return 0 on success or negative on error.
 // This is not production quality error checking, but should be sufficient
 // as an example.
@@ -498,22 +500,34 @@ int main (int argc, char** argv)
 
 	git_strarray_free(&ref_list);
 
-	// ### Config Files
+	config_files(repo_path);
 
-	// The [config API][config] allows you to list and updatee config values
-	// in any of the accessible config file locations (system, global, local).
-	//
-	// [config]: http://libgit2.github.com/libgit2/#HEAD/group/config
+	// Finally, when you're done with the repository, you can free it as well.
+	git_repository_free(repo);
+
+	return 0;
+}
+
+/**
+ * ### Config Files
+ *
+ * The [config API][config] allows you to list and updatee config values
+ * in any of the accessible config file locations (system, global, local).
+ *
+ * [config]: http://libgit2.github.com/libgit2/#HEAD/group/config
+ */
+static void config_files(const char *repo_path)
+{
+	const char *email;
+	char config_path[256];
+	int32_t j;
+	git_config *cfg;
 
 	printf("\n*Config Listing*\n");
 
-	const char *email;
-	int32_t j;
-
-	git_config *cfg;
-
-	// Open a config object so we can read global values from it.
-	char config_path[256];
+	/**
+	 * Open a config object so we can read global values from it.
+	 */
 	sprintf(config_path, "%s/config", repo_path);
 	check_error(git_config_open_ondisk(&cfg, config_path), "opening config");
 
@@ -522,9 +536,4 @@ int main (int argc, char** argv)
 
 	git_config_get_string(&email, cfg, "user.email");
 	printf("Email: %s\n", email);
-
-	// Finally, when you're done with the repository, you can free it as well.
-	git_repository_free(repo);
-
-	return 0;
 }
