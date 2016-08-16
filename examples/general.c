@@ -43,6 +43,7 @@
 #include <stdio.h>
 #include <string.h>
 
+static void object_database(git_repository *repo, git_oid *oid);
 static void commit_writing(git_repository *repo);
 static void commit_parsing(git_repository *repo);
 static void tag_parsing(git_repository *repo);
@@ -116,66 +117,7 @@ int main (int argc, char** argv)
 	git_oid_fmt(out, &oid);
 	printf("SHA hex string: %s\n", out);
 
-	// ### Working with the Object Database
-
-	// **libgit2** provides [direct access][odb] to the object database.  The
-	// object database is where the actual objects are stored in Git. For
-	// working with raw objects, we'll need to get this structure from the
-	// repository.
-	//
-	// [odb]: http://libgit2.github.com/libgit2/#HEAD/group/odb
-	git_odb *odb;
-	git_repository_odb(&odb, repo);
-
-	// #### Raw Object Reading
-
-	printf("\n*Raw Object Read*\n");
-	git_odb_object *obj;
-	git_otype otype;
-	const unsigned char *data;
-	const char *str_type;
-
-	// We can read raw objects directly from the object database if we have
-	// the oid (SHA) of the object.  This allows us to access objects without
-	// knowing their type and inspect the raw bytes unparsed.
-	error = git_odb_read(&obj, odb, &oid);
-	check_error(error, "finding object in repository");
-
-	// A raw object only has three properties - the type (commit, blob, tree
-	// or tag), the size of the raw data and the raw, unparsed data itself.
-	// For a commit or tag, that raw data is human readable plain ASCII
-	// text. For a blob it is just file contents, so it could be text or
-	// binary data. For a tree it is a special binary format, so it's unlikely
-	// to be hugely helpful as a raw object.
-	data = (const unsigned char *)git_odb_object_data(obj);
-	otype = git_odb_object_type(obj);
-
-	// We provide methods to convert from the object type which is an enum, to
-	// a string representation of that value (and vice-versa).
-	str_type = git_object_type2string(otype);
-	printf("object length and type: %d, %s\n",
-			(int)git_odb_object_size(obj),
-			str_type);
-
-	// For proper memory management, close the object when you are done with
-	// it or it will leak memory.
-	git_odb_object_free(obj);
-
-	// #### Raw Object Writing
-
-	printf("\n*Raw Object Write*\n");
-
-	// You can also write raw object data to Git. This is pretty cool because
-	// it gives you direct access to the key/value properties of Git.  Here
-	// we'll write a new blob object that just contains a simple string.
-	// Notice that we have to specify the object type as the `git_otype` enum.
-	git_odb_write(&oid, odb, "test data", sizeof("test data") - 1, GIT_OBJ_BLOB);
-
-	// Now that we've written the object, we can check out what SHA1 was
-	// generated when the object was written to our database.
-	git_oid_fmt(out, &oid);
-	printf("Written Object: %s\n", out);
-
+	object_database(repo, &oid);
 	commit_writing(repo);
 	commit_parsing(repo);
 	tag_parsing(repo);
@@ -190,6 +132,90 @@ int main (int argc, char** argv)
 	git_repository_free(repo);
 
 	return 0;
+}
+
+/**
+ * ### Working with the Object Database
+ *
+ * **libgit2** provides [direct access][odb] to the object database.  The
+ * object database is where the actual objects are stored in Git. For
+ * working with raw objects, we'll need to get this structure from the
+ * repository.
+ *
+ * [odb]: http://libgit2.github.com/libgit2/#HEAD/group/odb
+ */
+static void object_database(git_repository *repo, git_oid *oid)
+{
+	char oid_hex[GIT_OID_HEXSZ+1] = { 0 };
+	const unsigned char *data;
+	const char *str_type;
+	int error;
+	git_odb_object *obj;
+	git_odb *odb;
+	git_otype otype;
+
+	git_repository_odb(&odb, repo);
+
+	/**
+	 * #### Raw Object Reading
+	 */
+
+	printf("\n*Raw Object Read*\n");
+
+	/**
+	 * We can read raw objects directly from the object database if we have
+	 * the oid (SHA) of the object.  This allows us to access objects without
+	 * knowing their type and inspect the raw bytes unparsed.
+	 */
+	error = git_odb_read(&obj, odb, oid);
+	check_error(error, "finding object in repository");
+
+	/**
+	 * A raw object only has three properties - the type (commit, blob, tree
+	 * or tag), the size of the raw data and the raw, unparsed data itself.
+	 * For a commit or tag, that raw data is human readable plain ASCII
+	 * text. For a blob it is just file contents, so it could be text or
+	 * binary data. For a tree it is a special binary format, so it's unlikely
+	 * to be hugely helpful as a raw object.
+	 */
+	data = (const unsigned char *)git_odb_object_data(obj);
+	otype = git_odb_object_type(obj);
+
+	/**
+	 * We provide methods to convert from the object type which is an enum, to
+	 * a string representation of that value (and vice-versa).
+	 */
+	str_type = git_object_type2string(otype);
+	printf("object length and type: %d, %s\n",
+			(int)git_odb_object_size(obj),
+			str_type);
+
+	/**
+	 * For proper memory management, close the object when you are done with
+	 * it or it will leak memory.
+	 */
+	git_odb_object_free(obj);
+
+	/**
+	 * #### Raw Object Writing
+	 */
+
+	printf("\n*Raw Object Write*\n");
+
+	/**
+	 * You can also write raw object data to Git. This is pretty cool because
+	 * it gives you direct access to the key/value properties of Git.  Here
+	 * we'll write a new blob object that just contains a simple string.
+	 * Notice that we have to specify the object type as the `git_otype` enum.
+	 */
+	git_odb_write(oid, odb, "test data", sizeof("test data") - 1, GIT_OBJ_BLOB);
+
+	/**
+	 * Now that we've written the object, we can check out what SHA1 was
+	 * generated when the object was written to our database.
+	 */
+	git_oid_fmt(oid_hex, oid);
+	printf("Written Object: %s\n", oid_hex);
 }
 
 /**
