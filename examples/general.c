@@ -43,6 +43,7 @@
 #include <stdio.h>
 #include <string.h>
 
+static void commit_writing(git_repository *repo);
 static void commit_parsing(git_repository *repo);
 static void tag_parsing(git_repository *repo);
 static void tree_parsing(git_repository *repo);
@@ -175,58 +176,7 @@ int main (int argc, char** argv)
 	git_oid_fmt(out, &oid);
 	printf("Written Object: %s\n", out);
 
-
-	// #### Writing Commits
-
-	// libgit2 provides a couple of methods to create commit objects easily as
-	// well. There are four different create signatures, we'll just show one
-	// of them here.  You can read about the other ones in the [commit API
-	// docs][cd].
-	//
-	// [cd]: http://libgit2.github.com/libgit2/#HEAD/group/commit
-
-	printf("\n*Commit Writing*\n");
-	git_oid tree_id, parent_id, commit_id;
-	git_tree *tree;
-	git_commit *parent;
-	const git_signature *author, *cmtter;
-
-	// Creating signatures for an authoring identity and time is simple.  You
-	// will need to do this to specify who created a commit and when.  Default
-	// values for the name and email should be found in the `user.name` and
-	// `user.email` configuration options.  See the `config` section of this
-	// example file to see how to access config values.
-	git_signature_new((git_signature **)&author,
-			"Scott Chacon", "schacon@gmail.com", 123456789, 60);
-	git_signature_new((git_signature **)&cmtter,
-			"Scott A Chacon", "scott@github.com", 987654321, 90);
-
-	// Commit objects need a tree to point to and optionally one or more
-	// parents.  Here we're creating oid objects to create the commit with,
-	// but you can also use
-	git_oid_fromstr(&tree_id, "f60079018b664e4e79329a7ef9559c8d9e0378d1");
-	git_tree_lookup(&tree, repo, &tree_id);
-	git_oid_fromstr(&parent_id, "5b5b025afb0b4c913b4c338a42934a3863bf3644");
-	git_commit_lookup(&parent, repo, &parent_id);
-
-	// Here we actually create the commit object with a single call with all
-	// the values we need to create the commit.  The SHA key is written to the
-	// `commit_id` variable here.
-	git_commit_create_v(
-			&commit_id, /* out id */
-			repo,
-			NULL, /* do not update the HEAD */
-			author,
-			cmtter,
-			NULL, /* use default message encoding */
-			"example commit",
-			tree,
-			1, parent);
-
-	// Now we can take a look at the commit SHA we've generated.
-	git_oid_fmt(out, &commit_id);
-	printf("New Commit: %s\n", out);
-
+	commit_writing(repo);
 	commit_parsing(repo);
 	tag_parsing(repo);
 	tree_parsing(repo);
@@ -240,6 +190,71 @@ int main (int argc, char** argv)
 	git_repository_free(repo);
 
 	return 0;
+}
+
+/**
+ * #### Writing Commits
+ *
+ * libgit2 provides a couple of methods to create commit objects easily as
+ * well. There are four different create signatures, we'll just show one
+ * of them here.  You can read about the other ones in the [commit API
+ * docs][cd].
+ *
+ * [cd]: http://libgit2.github.com/libgit2/#HEAD/group/commit
+ */
+static void commit_writing(git_repository *repo)
+{
+	git_oid tree_id, parent_id, commit_id;
+	git_tree *tree;
+	git_commit *parent;
+	const git_signature *author, *cmtter;
+	char oid_hex[GIT_OID_HEXSZ+1] = { 0 };
+
+	printf("\n*Commit Writing*\n");
+
+	/**
+	 * Creating signatures for an authoring identity and time is simple.  You
+	 * will need to do this to specify who created a commit and when.  Default
+	 * values for the name and email should be found in the `user.name` and
+	 * `user.email` configuration options.  See the `config` section of this
+	 * example file to see how to access config values.
+	 */
+	git_signature_new((git_signature **)&author,
+			"Scott Chacon", "schacon@gmail.com", 123456789, 60);
+	git_signature_new((git_signature **)&cmtter,
+			"Scott A Chacon", "scott@github.com", 987654321, 90);
+
+	/**
+	 * Commit objects need a tree to point to and optionally one or more
+	 * parents.  Here we're creating oid objects to create the commit with,
+	 * but you can also use
+	 */
+	git_oid_fromstr(&tree_id, "f60079018b664e4e79329a7ef9559c8d9e0378d1");
+	git_tree_lookup(&tree, repo, &tree_id);
+	git_oid_fromstr(&parent_id, "5b5b025afb0b4c913b4c338a42934a3863bf3644");
+	git_commit_lookup(&parent, repo, &parent_id);
+
+	/**
+	 * Here we actually create the commit object with a single call with all
+	 * the values we need to create the commit.  The SHA key is written to the
+	 * `commit_id` variable here.
+	 */
+	git_commit_create_v(
+			&commit_id, /* out id */
+			repo,
+			NULL, /* do not update the HEAD */
+			author,
+			cmtter,
+			NULL, /* use default message encoding */
+			"example commit",
+			tree,
+			1, parent);
+
+	/**
+	 * Now we can take a look at the commit SHA we've generated.
+	 */
+	git_oid_fmt(oid_hex, &commit_id);
+	printf("New Commit: %s\n", oid_hex);
 }
 
 /**
