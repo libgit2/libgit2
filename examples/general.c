@@ -43,6 +43,10 @@
 #include <stdio.h>
 #include <string.h>
 
+static void commit_parsing(git_repository *repo);
+static void tag_parsing(git_repository *repo);
+static void tree_parsing(git_repository *repo);
+static void blob_parsing(git_repository *repo);
 static void revwalking(git_repository *repo);
 static void index_walking(git_repository *repo);
 static void reference_listing(git_repository *repo);
@@ -171,63 +175,6 @@ int main (int argc, char** argv)
 	git_oid_fmt(out, &oid);
 	printf("Written Object: %s\n", out);
 
-	// ### Object Parsing
-
-	// libgit2 has methods to parse every object type in Git so you don't have
-	// to work directly with the raw data. This is much faster and simpler
-	// than trying to deal with the raw data yourself.
-
-	// #### Commit Parsing
-
-	// [Parsing commit objects][pco] is simple and gives you access to all the
-	// data in the commit - the author (name, email, datetime), committer
-	// (same), tree, message, encoding and parent(s).
-	//
-	// [pco]: http://libgit2.github.com/libgit2/#HEAD/group/commit
-
-	printf("\n*Commit Parsing*\n");
-
-	git_commit *commit;
-	git_oid_fromstr(&oid, "8496071c1b46c854b31185ea97743be6a8774479");
-
-	error = git_commit_lookup(&commit, repo, &oid);
-	check_error(error, "looking up commit");
-
-	const git_signature *author, *cmtter;
-	const char *message;
-	time_t ctime;
-	unsigned int parents, p;
-
-	// Each of the properties of the commit object are accessible via methods,
-	// including commonly needed variations, such as `git_commit_time` which
-	// returns the author time and `git_commit_message` which gives you the
-	// commit message (as a NUL-terminated string).
-	message  = git_commit_message(commit);
-	author   = git_commit_author(commit);
-	cmtter   = git_commit_committer(commit);
-	ctime    = git_commit_time(commit);
-
-	// The author and committer methods return [git_signature] structures,
-	// which give you name, email and `when`, which is a `git_time` structure,
-	// giving you a timestamp and timezone offset.
-	printf("Author: %s (%s)\n", author->name, author->email);
-
-	// Commits can have zero or more parents. The first (root) commit will
-	// have no parents, most commits will have one (i.e. the commit it was
-	// based on) and merge commits will have two or more.  Commits can
-	// technically have any number, though it's rare to have more than two.
-	parents  = git_commit_parentcount(commit);
-	for (p = 0;p < parents;p++) {
-		git_commit *parent;
-		git_commit_parent(&parent, commit, p);
-		git_oid_fmt(out, git_commit_id(parent));
-		printf("Parent: %s\n", out);
-		git_commit_free(parent);
-	}
-
-	// Don't forget to close the object to prevent memory leaks. You will have
-	// to do this for all the objects you open and parse.
-	git_commit_free(commit);
 
 	// #### Writing Commits
 
@@ -242,6 +189,7 @@ int main (int argc, char** argv)
 	git_oid tree_id, parent_id, commit_id;
 	git_tree *tree;
 	git_commit *parent;
+	const git_signature *author, *cmtter;
 
 	// Creating signatures for an authoring identity and time is simple.  You
 	// will need to do this to specify who created a commit and when.  Default
@@ -279,101 +227,10 @@ int main (int argc, char** argv)
 	git_oid_fmt(out, &commit_id);
 	printf("New Commit: %s\n", out);
 
-	// #### Tag Parsing
-
-	// You can parse and create tags with the [tag management API][tm], which
-	// functions very similarly to the commit lookup, parsing and creation
-	// methods, since the objects themselves are very similar.
-	//
-	// [tm]: http://libgit2.github.com/libgit2/#HEAD/group/tag
-	printf("\n*Tag Parsing*\n");
-	git_tag *tag;
-	const char *tmessage, *tname;
-	git_otype ttype;
-
-	// We create an oid for the tag object if we know the SHA and look it up
-	// the same way that we would a commit (or any other object).
-	git_oid_fromstr(&oid, "b25fa35b38051e4ae45d4222e795f9df2e43f1d1");
-
-	error = git_tag_lookup(&tag, repo, &oid);
-	check_error(error, "looking up tag");
-
-	// Now that we have the tag object, we can extract the information it
-	// generally contains: the target (usually a commit object), the type of
-	// the target object (usually 'commit'), the name ('v1.0'), the tagger (a
-	// git_signature - name, email, timestamp), and the tag message.
-	git_tag_target((git_object **)&commit, tag);
-	tname = git_tag_name(tag);		// "test"
-	ttype = git_tag_target_type(tag);	// GIT_OBJ_COMMIT (otype enum)
-	tmessage = git_tag_message(tag);	// "tag message\n"
-	printf("Tag Message: %s\n", tmessage);
-
-	git_commit_free(commit);
-
-	// #### Tree Parsing
-
-	// [Tree parsing][tp] is a bit different than the other objects, in that
-	// we have a subtype which is the tree entry.  This is not an actual
-	// object type in Git, but a useful structure for parsing and traversing
-	// tree entries.
-	//
-	// [tp]: http://libgit2.github.com/libgit2/#HEAD/group/tree
-	printf("\n*Tree Parsing*\n");
-
-	const git_tree_entry *entry;
-	git_object *objt;
-
-	// Create the oid and lookup the tree object just like the other objects.
-	git_oid_fromstr(&oid, "2a741c18ac5ff082a7caaec6e74db3075a1906b5");
-	git_tree_lookup(&tree, repo, &oid);
-
-	// Getting the count of entries in the tree so you can iterate over them
-	// if you want to.
-	size_t cnt = git_tree_entrycount(tree); // 3
-	printf("tree entries: %d\n", (int)cnt);
-
-	entry = git_tree_entry_byindex(tree, 0);
-	printf("Entry name: %s\n", git_tree_entry_name(entry)); // "hello.c"
-
-	// You can also access tree entries by name if you know the name of the
-	// entry you're looking for.
-	entry = git_tree_entry_byname(tree, "README");
-	git_tree_entry_name(entry); // "hello.c"
-
-	// Once you have the entry object, you can access the content or subtree
-	// (or commit, in the case of submodules) that it points to.  You can also
-	// get the mode if you want.
-	git_tree_entry_to_object(&objt, repo, entry); // blob
-
-	// Remember to close the looked-up object once you are done using it
-	git_object_free(objt);
-
-	// #### Blob Parsing
-
-	// The last object type is the simplest and requires the least parsing
-	// help. Blobs are just file contents and can contain anything, there is
-	// no structure to it. The main advantage to using the [simple blob
-	// api][ba] is that when you're creating blobs you don't have to calculate
-	// the size of the content.  There is also a helper for reading a file
-	// from disk and writing it to the db and getting the oid back so you
-	// don't have to do all those steps yourself.
-	//
-	// [ba]: http://libgit2.github.com/libgit2/#HEAD/group/blob
-
-	printf("\n*Blob Parsing*\n");
-	git_blob *blob;
-
-	git_oid_fromstr(&oid, "1385f264afb75a56a5bec74243be9b367ba4ca08");
-	git_blob_lookup(&blob, repo, &oid);
-
-	// You can access a buffer with the raw contents of the blob directly.
-	// Note that this buffer may not be contain ASCII data for certain blobs
-	// (e.g. binary files): do not consider the buffer a NULL-terminated
-	// string, and use the `git_blob_rawsize` attribute to find out its exact
-	// size in bytes
-	printf("Blob Size: %ld\n", (long)git_blob_rawsize(blob)); // 8
-	git_blob_rawcontent(blob); // "content"
-
+	commit_parsing(repo);
+	tag_parsing(repo);
+	tree_parsing(repo);
+	blob_parsing(repo);
 	revwalking(repo);
 	index_walking(repo);
 	reference_listing(repo);
@@ -383,6 +240,212 @@ int main (int argc, char** argv)
 	git_repository_free(repo);
 
 	return 0;
+}
+
+/**
+ * ### Object Parsing
+ *
+ * libgit2 has methods to parse every object type in Git so you don't have
+ * to work directly with the raw data. This is much faster and simpler
+ * than trying to deal with the raw data yourself.
+ */
+
+/**
+ * #### Commit Parsing
+ *
+ * [Parsing commit objects][pco] is simple and gives you access to all the
+ * data in the commit - the author (name, email, datetime), committer
+ * (same), tree, message, encoding and parent(s).
+ *
+ * [pco]: http://libgit2.github.com/libgit2/#HEAD/group/commit
+ */
+static void commit_parsing(git_repository *repo)
+{
+	const git_signature *author, *cmtter;
+	git_commit *commit, *parent;
+	git_oid oid;
+	char oid_hex[GIT_OID_HEXSZ+1];
+	const char *message;
+	unsigned int parents, p;
+	int error;
+	time_t ctime;
+
+	printf("\n*Commit Parsing*\n");
+
+	git_oid_fromstr(&oid, "8496071c1b46c854b31185ea97743be6a8774479");
+
+	error = git_commit_lookup(&commit, repo, &oid);
+	check_error(error, "looking up commit");
+
+	/**
+	 * Each of the properties of the commit object are accessible via methods,
+	 * including commonly needed variations, such as `git_commit_time` which
+	 * returns the author time and `git_commit_message` which gives you the
+	 * commit message (as a NUL-terminated string).
+	 */
+	message  = git_commit_message(commit);
+	author   = git_commit_author(commit);
+	cmtter   = git_commit_committer(commit);
+	ctime    = git_commit_time(commit);
+
+	/**
+	 * The author and committer methods return [git_signature] structures,
+	 * which give you name, email and `when`, which is a `git_time` structure,
+	 * giving you a timestamp and timezone offset.
+	 */
+	printf("Author: %s (%s)\n", author->name, author->email);
+
+	/**
+	 * Commits can have zero or more parents. The first (root) commit will
+	 * have no parents, most commits will have one (i.e. the commit it was
+	 * based on) and merge commits will have two or more.  Commits can
+	 * technically have any number, though it's rare to have more than two.
+	 */
+	parents  = git_commit_parentcount(commit);
+	for (p = 0;p < parents;p++) {
+		memset(oid_hex, 0, sizeof(oid_hex));
+
+		git_commit_parent(&parent, commit, p);
+		git_oid_fmt(oid_hex, git_commit_id(parent));
+		printf("Parent: %s\n", oid_hex);
+		git_commit_free(parent);
+	}
+
+	git_commit_free(commit);
+}
+
+/**
+ * #### Tag Parsing
+ *
+ * You can parse and create tags with the [tag management API][tm], which
+ * functions very similarly to the commit lookup, parsing and creation
+ * methods, since the objects themselves are very similar.
+ *
+ * [tm]: http://libgit2.github.com/libgit2/#HEAD/group/tag
+ */
+static void tag_parsing(git_repository *repo)
+{
+	git_commit *commit;
+	git_otype type;
+	git_tag *tag;
+	git_oid oid;
+	const char *name, *message;
+	int error;
+
+	printf("\n*Tag Parsing*\n");
+
+	/**
+	 * We create an oid for the tag object if we know the SHA and look it up
+	 * the same way that we would a commit (or any other object).
+	 */
+	git_oid_fromstr(&oid, "b25fa35b38051e4ae45d4222e795f9df2e43f1d1");
+
+	error = git_tag_lookup(&tag, repo, &oid);
+	check_error(error, "looking up tag");
+
+	/**
+	 * Now that we have the tag object, we can extract the information it
+	 * generally contains: the target (usually a commit object), the type of
+	 * the target object (usually 'commit'), the name ('v1.0'), the tagger (a
+	 * git_signature - name, email, timestamp), and the tag message.
+	 */
+	git_tag_target((git_object **)&commit, tag);
+	name = git_tag_name(tag);		/* "test" */
+	type = git_tag_target_type(tag);	/* GIT_OBJ_COMMIT (otype enum) */
+	message = git_tag_message(tag);		/* "tag message\n" */
+	printf("Tag Message: %s\n", message);
+
+	git_commit_free(commit);
+}
+
+/**
+ * #### Tree Parsing
+ *
+ * [Tree parsing][tp] is a bit different than the other objects, in that
+ * we have a subtype which is the tree entry.  This is not an actual
+ * object type in Git, but a useful structure for parsing and traversing
+ * tree entries.
+ *
+ * [tp]: http://libgit2.github.com/libgit2/#HEAD/group/tree
+ */
+static void tree_parsing(git_repository *repo)
+{
+	const git_tree_entry *entry;
+	size_t cnt;
+	git_object *obj;
+	git_tree *tree;
+	git_oid oid;
+
+	printf("\n*Tree Parsing*\n");
+
+	/**
+	 * Create the oid and lookup the tree object just like the other objects.
+	 */
+	git_oid_fromstr(&oid, "f60079018b664e4e79329a7ef9559c8d9e0378d1");
+	git_tree_lookup(&tree, repo, &oid);
+
+	/**
+	 * Getting the count of entries in the tree so you can iterate over them
+	 * if you want to.
+	 */
+	cnt = git_tree_entrycount(tree); /* 2 */
+	printf("tree entries: %d\n", (int) cnt);
+
+	entry = git_tree_entry_byindex(tree, 0);
+	printf("Entry name: %s\n", git_tree_entry_name(entry)); /* "README" */
+
+	/**
+	 * You can also access tree entries by name if you know the name of the
+	 * entry you're looking for.
+	 */
+	entry = git_tree_entry_byname(tree, "README");
+	git_tree_entry_name(entry); /* "README" */
+
+	/**
+	 * Once you have the entry object, you can access the content or subtree
+	 * (or commit, in the case of submodules) that it points to.  You can also
+	 * get the mode if you want.
+	 */
+	git_tree_entry_to_object(&obj, repo, entry); /* blob */
+
+	/**
+	 * Remember to close the looked-up object once you are done using it
+	 */
+	git_object_free(obj);
+}
+
+/**
+ * #### Blob Parsing
+ *
+ * The last object type is the simplest and requires the least parsing
+ * help. Blobs are just file contents and can contain anything, there is
+ * no structure to it. The main advantage to using the [simple blob
+ * api][ba] is that when you're creating blobs you don't have to calculate
+ * the size of the content.  There is also a helper for reading a file
+ * from disk and writing it to the db and getting the oid back so you
+ * don't have to do all those steps yourself.
+ *
+ * [ba]: http://libgit2.github.com/libgit2/#HEAD/group/blob
+ */
+static void blob_parsing(git_repository *repo)
+{
+	git_blob *blob;
+	git_oid oid;
+
+	printf("\n*Blob Parsing*\n");
+
+	git_oid_fromstr(&oid, "1385f264afb75a56a5bec74243be9b367ba4ca08");
+	git_blob_lookup(&blob, repo, &oid);
+
+	/**
+	 * You can access a buffer with the raw contents of the blob directly.
+	 * Note that this buffer may not be contain ASCII data for certain blobs
+	 * (e.g. binary files): do not consider the buffer a NULL-terminated
+	 * string, and use the `git_blob_rawsize` attribute to find out its exact
+	 * size in bytes
+	 * */
+	printf("Blob Size: %ld\n", (long)git_blob_rawsize(blob)); /* 8 */
+	git_blob_rawcontent(blob); /* "content" */
 }
 
 /**
