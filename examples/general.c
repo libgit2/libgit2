@@ -43,6 +43,7 @@
 #include <stdio.h>
 #include <string.h>
 
+static void index_walking(git_repository *repo);
 static void reference_listing(git_repository *repo);
 static void config_files(const char *repo_path);
 
@@ -426,30 +427,46 @@ int main (int argc, char** argv)
 	// result in undefined behavior
 	git_revwalk_free(walk);
 
-	// ### Index File Manipulation
+	index_walking(repo);
+	reference_listing(repo);
+	config_files(repo_path);
 
-	// The [index file API][gi] allows you to read, traverse, update and write
-	// the Git index file (sometimes thought of as the staging area).
-	//
-	// [gi]: http://libgit2.github.com/libgit2/#HEAD/group/index
+	// Finally, when you're done with the repository, you can free it as well.
+	git_repository_free(repo);
 
-	printf("\n*Index Walking*\n");
+	return 0;
+}
 
+/**
+ * ### Index File Manipulation *
+ * The [index file API][gi] allows you to read, traverse, update and write
+ * the Git index file (sometimes thought of as the staging area).
+ *
+ * [gi]: http://libgit2.github.com/libgit2/#HEAD/group/index
+ */
+static void index_walking(git_repository *repo)
+{
 	git_index *index;
 	unsigned int i, ecount;
 
-	// You can either open the index from the standard location in an open
-	// repository, as we're doing here, or you can open and manipulate any
-	// index file with `git_index_open_bare()`. The index for the repository
-	// will be located and loaded from disk.
+	printf("\n*Index Walking*\n");
+
+	/**
+	 * You can either open the index from the standard location in an open
+	 * repository, as we're doing here, or you can open and manipulate any
+	 * index file with `git_index_open_bare()`. The index for the repository
+	 * will be located and loaded from disk.
+	 */
 	git_repository_index(&index, repo);
 
-	// For each entry in the index, you can get a bunch of information
-	// including the SHA (oid), path and mode which map to the tree objects
-	// that are written out.  It also has filesystem properties to help
-	// determine what to inspect for changes (ctime, mtime, dev, ino, uid,
-	// gid, file_size and flags) All these properties are exported publicly in
-	// the `git_index_entry` struct
+	/**
+	 * For each entry in the index, you can get a bunch of information
+	 * including the SHA (oid), path and mode which map to the tree objects
+	 * that are written out.  It also has filesystem properties to help
+	 * determine what to inspect for changes (ctime, mtime, dev, ino, uid,
+	 * gid, file_size and flags) All these properties are exported publicly in
+	 * the `git_index_entry` struct
+	 */
 	ecount = git_index_entrycount(index);
 	for (i = 0; i < ecount; ++i) {
 		const git_index_entry *e = git_index_get_byindex(index, i);
@@ -460,14 +477,6 @@ int main (int argc, char** argv)
 	}
 
 	git_index_free(index);
-
-	reference_listing(repo);
-	config_files(repo_path);
-
-	// Finally, when you're done with the repository, you can free it as well.
-	git_repository_free(repo);
-
-	return 0;
 }
 
 /**
