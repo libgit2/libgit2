@@ -1036,6 +1036,8 @@ static int http_close(git_smart_subtransport *subtransport)
 
 	clear_parser_state(t);
 
+	t->connected = 0;
+
 	if (t->io) {
 		git_stream_close(t->io);
 		git_stream_free(t->io);
