@@ -13,6 +13,8 @@ v0.24 + 1
 * Do not fail when deleting remotes in the presence of broken
   global configs which contain branches.
 
+* Support for reading and writing git index v4 files
+
 ### API additions
 
 * You can now get the user-agent used by libgit2 using the
@@ -48,6 +50,9 @@ v0.24 + 1
 
 * `git_diff_from_buffer` can create a `git_diff` object from the contents
   of a git-style patch file.
+
+* `git_index_version()` and `git_index_set_version()` to get and set
+  the index version
 
 ### API removals
 
