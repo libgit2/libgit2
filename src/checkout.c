@@ -2722,7 +2722,7 @@ int git_checkout_tree(
 	if ((error = git_repository_index(&index, repo)) < 0)
 		return error;
 
-	if ((opts->checkout_strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)) {
+	if (opts && (opts->checkout_strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)) {
 		iter_opts.pathlist.count = opts->paths.count;
 		iter_opts.pathlist.strings = opts->paths.strings;
 	}

@@ -1479,3 +1479,7 @@ void test_checkout_tree__baseline_is_empty_when_no_index(void)
 	git_reference_free(head);
 }
 
+void test_checkout_tree__nullopts(void)
+{
+	cl_git_pass(git_checkout_tree(g_repo, NULL, NULL));
+}
