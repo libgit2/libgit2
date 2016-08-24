@@ -42,6 +42,8 @@ extern void git_patch_generated_old_data(
 	char **, size_t *, git_patch_generated *);
 extern void git_patch_generated_new_data(
 	char **, size_t *, git_patch_generated *);
+extern int git_patch_generated_from_diff(
+	git_patch **, git_diff *, size_t);
 
 typedef struct git_patch_generated_output git_patch_generated_output;
 
