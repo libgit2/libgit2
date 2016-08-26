@@ -79,10 +79,7 @@ void test_checkout_crlf__more_lf_autocrlf_true(void)
 
 	git_checkout_head(g_repo, &opts);
 
-	if (GIT_EOL_NATIVE == GIT_EOL_LF)
-		check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
-	else
-		check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
 }
 
 void test_checkout_crlf__more_crlf_autocrlf_true(void)
@@ -94,10 +91,7 @@ void test_checkout_crlf__more_crlf_autocrlf_true(void)
 
 	git_checkout_head(g_repo, &opts);
 
-	if (GIT_EOL_NATIVE == GIT_EOL_LF)
-		check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
-	else
-		check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
 }
 
 void test_checkout_crlf__all_crlf_autocrlf_true(void)

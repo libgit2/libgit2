@@ -56,9 +56,10 @@ GIT_INLINE(int) git_buf_text_puts_escape_regex(git_buf *buf, const char *string)
 extern void git_buf_text_unescape(git_buf *buf);
 
 /**
- * Replace all \r\n with \n. Does not modify \r without trailing \n.
+ * Replace all \r\n with \n.
  *
- * @return 0 on success, -1 on memory error
+ * @return 0 on success, -1 on memory error, GIT_PASSTHROUGH if the
+ * source buffer has mixed line endings.
  */
 extern int git_buf_text_crlf_to_lf(git_buf *tgt, const git_buf *src);
 
@@ -75,14 +76,6 @@ extern int git_buf_text_lf_to_crlf(git_buf *tgt, const git_buf *src);
  * Buffer will be set to empty if there is no common prefix
  */
 extern int git_buf_text_common_prefix(git_buf *buf, const git_strarray *strs);
-
-/**
- * Check quickly if buffer looks like it contains binary data
- *
- * @param buf Buffer to check
- * @return true if buffer looks like non-text data
- */
-extern bool git_buf_text_is_binary(const git_buf *buf);
 
 /**
  * Check quickly if buffer contains a NUL byte

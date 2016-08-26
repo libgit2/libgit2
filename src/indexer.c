@@ -18,6 +18,8 @@
 #include "oidmap.h"
 #include "zstream.h"
 
+extern git_mutex git__mwindow_mutex;
+
 #define UINT31_MAX (0x7FFFFFFF)
 
 struct entry {
@@ -1048,6 +1050,11 @@ void git_indexer_free(git_indexer *idx)
 	}
 
 	git_vector_free_deep(&idx->deltas);
-	git_packfile_free(idx->pack);
+
+	if (!git_mutex_lock(&git__mwindow_mutex)) {
+		git_packfile_free(idx->pack);
+		git_mutex_unlock(&git__mwindow_mutex);
+	}
+
 	git__free(idx);
 }
