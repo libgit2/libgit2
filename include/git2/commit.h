@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "types.h"
+#include "diff.h"
 #include "oid.h"
 #include "object.h"
 
@@ -351,6 +352,22 @@ GIT_EXTERN(int) git_commit_amend(
 	const char *message_encoding,
 	const char *message,
 	const git_tree *tree);
+
+/**
+ * Create a diff between a commit and one of its parents.
+ *
+ * The returned diff must be freed explicitly with `git_diff_free`.
+ *
+ * @param diff output pointer to a git_diff pointer to be allocated.
+ * @param commit the commit for the diff
+ * @param mainline the parent of the commit, if it is a merge
+ * @param opts structure with options to influence diff or NULL for defaults.
+ */
+GIT_EXTERN(int) git_commit_diff(
+	git_diff **diff,
+	const git_commit *commit,
+	unsigned int mainline,
+	const git_diff_options *opts);
 
 /** @} */
 GIT_END_DECL

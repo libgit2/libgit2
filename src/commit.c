@@ -534,3 +534,60 @@ int git_commit_nth_gen_ancestor(
 	*ancestor = parent;
 	return 0;
 }
+
+int git_commit_diff(
+	git_diff **out,
+	const git_commit *commit,
+	unsigned int mainline,
+	const git_diff_options *opts)
+{
+	git_commit *parent = NULL;
+	git_diff *diff = NULL;
+	git_tree *old_tree = NULL, *new_tree = NULL;
+	char commit_oidstr[GIT_OID_HEXSZ + 1];
+	unsigned int parentcount;
+	int error;
+
+	assert(out && commit);
+
+	parentcount = git_commit_parentcount(commit);
+
+	if (parentcount > 1 && mainline == 0) {
+		git_oid_fmt(commit_oidstr, git_commit_id(commit));
+		commit_oidstr[GIT_OID_HEXSZ] = '\0';
+
+		giterr_set(GITERR_INVALID, "Mainline branch is not specified but %s is a merge commit", commit_oidstr);
+		return -1;
+	}
+
+	if (parentcount <= 1 && mainline != 0) {
+		git_oid_fmt(commit_oidstr, git_commit_id(commit));
+		commit_oidstr[GIT_OID_HEXSZ] = '\0';
+
+		giterr_set(GITERR_INVALID, "Mainline branch specified but %s is not a merge commit", commit_oidstr);
+		return -1;
+	}
+
+	if (parentcount > 0) {
+		if (parentcount > 1)
+			mainline--;
+
+		if ((error = git_commit_parent(&parent, commit, mainline)) < 0 ||
+			(error = git_commit_tree(&old_tree, parent)) < 0)
+			goto on_error;
+	}
+
+	if ((error = git_commit_tree(&new_tree, commit)) < 0 ||
+		(error = git_diff_tree_to_tree(&diff, git_commit_owner(commit),
+			old_tree, new_tree, opts)) < 0)
+		goto on_error;
+
+	*out = diff;
+
+on_error:
+	git_tree_free(old_tree);
+	git_tree_free(new_tree);
+	git_commit_free(parent);
+
+	return error;
+}
