@@ -44,7 +44,7 @@ COVERITY_UNSUPPORTED=1 \
 	$COV_BUILD --dir cov-int \
 	cmake --build .
 
-# Upload results
+# Upload ALL results
 tar czf libgit2.tgz cov-int
 SHA=`git rev-parse --short HEAD`
 curl \
