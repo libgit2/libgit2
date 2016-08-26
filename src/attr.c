@@ -271,7 +271,7 @@ int git_attr_cache__push_file(
 	int error;
 	git_buf path = GIT_BUF_INIT;
 	git_attr_file *file = NULL;
-	const char *cache_key;
+	const char *cache_key, *workdir;
 
 	if (base != NULL) {
 		if (git_buf_joinpath(&path, base, filename) < 0)
@@ -281,8 +281,10 @@ int git_attr_cache__push_file(
 
 	/* either get attr_file from cache or read from disk */
 	cache_key = filename;
-	if (repo && git__prefixcmp(cache_key, git_repository_workdir(repo)) == 0)
-		cache_key += strlen(git_repository_workdir(repo));
+	workdir = git_repository_workdir(repo);
+
+	if (repo && workdir && git__prefixcmp(cache_key, workdir) == 0)
+		cache_key += strlen(workdir);
 
 	error = git_attr_cache__lookup_or_create_file(
 		repo, cache_key, filename, loader, &file);
@@ -314,7 +316,6 @@ static int collect_attr_files(
 	int error;
 	git_buf dir = GIT_BUF_INIT;
 	const char *workdir = git_repository_workdir(repo);
-	attr_walk_up_info info;
 
 	if (git_attr_cache__init(repo) < 0 ||
 		git_vector_init(files, 4, NULL) < 0)
@@ -326,7 +327,8 @@ static int collect_attr_files(
 
 	/* in precendence order highest to lowest:
 	 * - $GIT_DIR/info/attributes
-	 * - path components with .gitattributes
+	 * - path components with .gitattributes up to the top level
+	 *   of the worktree
 	 * - config core.attributesfile
 	 * - $GIT_PREFIX/etc/gitattributes
 	 */
@@ -336,11 +338,15 @@ static int collect_attr_files(
 	if (error < 0)
 		goto cleanup;
 
-	info.repo = repo;
-	info.files = files;
-	error = git_path_walk_up(&dir, workdir, push_one_attr, &info);
-	if (error < 0)
-		goto cleanup;
+	if (!git_repository_is_bare(repo)) {
+		attr_walk_up_info info;
+
+		info.repo = repo;
+		info.files = files;
+		error = git_path_walk_up(&dir, workdir, push_one_attr, &info);
+		if (error < 0)
+			goto cleanup;
+	}
 
 	if (git_repository_attr_cache(repo)->cfg_attr_file != NULL) {
 		error = push_attrs(
