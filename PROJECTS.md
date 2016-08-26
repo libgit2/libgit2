@@ -10,10 +10,11 @@ ideas that no one is actively working on.
 
 ## Before You Start
 
-Please start by reading the README.md, CONTRIBUTING.md, and CONVENTIONS.md
-files before diving into one of these projects.  Those will explain our
-work flow and coding conventions to help ensure that your work will be
-easily integrated into libgit2.
+Please start by reading the [README.md](README.md),
+[CONTRIBUTING.md](CONTRIBUTING.md), and [CONVENTIONS.md](CONVENTIONS.md)
+files before diving into one of these projects.  Those explain our work
+flow and coding conventions to help ensure that your work will be easily
+integrated into libgit2.
 
 Next, work through the build instructions and make sure you can clone the
 repository, compile it, and run the tests successfully.  That will make
@@ -27,7 +28,7 @@ These are good small projects to get started with libgit2.
 * Look at the `examples/` programs, find an existing one that mirrors a
   core Git command and add a missing command-line option.  There are many
   gaps right now and this helps demonstrate how to use the library.  Here
-  are some specific ideas:
+  are some specific ideas (though there are many more):
     * Fix the `examples/diff.c` implementation of the `-B`
       (a.k.a. `--break-rewrites`) command line option to actually look for
       the optional `[<n>][/<m>]` configuration values. There is an
@@ -67,19 +68,44 @@ into one of these as a first project for libgit2 - we'd rather get to
 know you first by successfully shipping your work on one of the smaller
 projects above.
 
+Some of these projects are broken down into subprojects and/or have
+some incremental steps listed towards the larger goal.  Those steps
+might make good smaller projects by themselves.
+
 * Port part of the Git test suite to run against the command line emulation
   in examples/
+    * Pick a Git command that is emulated in our examples/ area
+    * Extract the Git tests that exercise that command
+    * Convert the tests to call our emulation
+    * These tests could go in examples/tests/...
 * Fix symlink support for files in the .git directory (i.e. don't overwrite
   the symlinks when writing the file contents back out)
 * Implement a 'git describe' like API
 * Add hooks API to enumerate and manage hooks (not run them at this point)
+    * Enumeration of available hooks
+    * Lookup API to see which hooks have a script and get the script
+    * Read/write API to load a hook script and write a hook script
+    * Eventually, callback API to invoke a hook callback when libgit2
+      executes the action in question
 * Isolate logic of ignore evaluation into a standalone API
 * Upgrade internal libxdiff code to latest from core Git
-* Add a hashtable lookup for files in the index instead of binary search
-  every time
+* Improve index internals with hashtable lookup for files instead of
+  using binary search every time
 * Make the index write the cache out to disk (with tests to gain
   confidence that the caching invalidation works correctly)
-* Have the tree builder use a hash table when building instead of a
-  list.
+* Tree builder improvements:
+    * Use a hash table when building instead of a list
+    * Extend to allow building a tree hierarchy
 * Move the tagopt mechanism to the newer git 1.9 interpretation of
   --tags [#2120](https://github.com/libgit2/libgit2/issues/2120)
+* Apply-patch API
+* Add a patch editing API to enable "git add -p" type operations
+* Textconv API to filter binary data before generating diffs (something
+  like the current Filter API, probably).
+* Performance profiling and improvement
+* Build in handling of "empty tree" and "empty blob" SHAs
+* Support "git replace" ref replacements
+* Include conflicts in diff results and in status
+    * GIT_DELTA_CONFLICT for items in conflict (with multiple files)
+    * Appropriate flags for status
+* Support sparse checkout (i.e. "core.sparsecheckout" and ".git/info/sparse-checkout")
