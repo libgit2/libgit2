@@ -13,6 +13,7 @@
 
 PROJECT(libgit2 C)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+CMAKE_POLICY(SET CMP0015 NEW)
 
 # Add find modules to the path
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
@@ -55,13 +56,15 @@ IF(MSVC)
 	# are linking statically
 	OPTION( STATIC_CRT		"Link the static CRT libraries"	ON  )
 
-	# By default, libgit2 is built with WinHTTP.  To use the built-in
-	# HTTP transport, invoke CMake with the "-DWINHTTP=OFF" argument.
-	OPTION( WINHTTP			"Use Win32 WinHTTP routines"	ON  )
-
 	ADD_DEFINITIONS(-D_SCL_SECURE_NO_WARNINGS)
 	ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
 	ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_DEPRECATE)
+ENDIF()
+
+IF(WIN32)
+	# By default, libgit2 is built with WinHTTP.  To use the built-in
+	# HTTP transport, invoke CMake with the "-DWINHTTP=OFF" argument.
+	OPTION(	WINHTTP			"Use Win32 WinHTTP routines"	ON	)
 ENDIF()
 
 # This variable will contain the libraries we need to put into
@@ -133,10 +136,38 @@ STRING(REGEX REPLACE "^.*LIBGIT2_SOVERSION ([0-9]+)$" "\\1" LIBGIT2_SOVERSION "$
 # Find required dependencies
 INCLUDE_DIRECTORIES(src include)
 
-IF (WIN32 AND WINHTTP AND NOT MINGW)
+IF (WIN32 AND WINHTTP)
 	ADD_DEFINITIONS(-DGIT_WINHTTP)
 	INCLUDE_DIRECTORIES(deps/http-parser)
 	FILE(GLOB SRC_HTTP deps/http-parser/*.c deps/http-parser/*.h)
+
+	# Since MinGW does not come with headers or an import library for winhttp,
+	# we have to include a private header and generate our own import library
+	IF (MINGW)
+		FIND_PROGRAM(DLLTOOL dlltool CMAKE_FIND_ROOT_PATH_BOTH)
+		IF (NOT DLLTOOL)
+			MESSAGE(FATAL_ERROR "Could not find dlltool command")
+		ENDIF ()
+
+		SET(LIBWINHTTP_PATH "${CMAKE_CURRENT_SOURCE_DIR}/deps/winhttp_mingw")
+
+		ADD_CUSTOM_COMMAND(
+			OUTPUT ${LIBWINHTTP_PATH}/libwinhttp.a
+			COMMAND ${DLLTOOL} -d winhttp.def -k -D winhttp.dll -l libwinhttp.a
+			DEPENDS ${LIBWINHTTP_PATH}/winhttp.def
+			WORKING_DIRECTORY ${LIBWINHTTP_PATH}
+		)
+
+		SET_SOURCE_FILES_PROPERTIES(
+			${CMAKE_CURRENT_SOURCE_DIR}/src/transports/winhttp.c
+			PROPERTIES OBJECT_DEPENDS ${LIBWINHTTP_PATH}/libwinhttp.a
+		)
+
+		INCLUDE_DIRECTORIES(deps/winhttp_mingw)
+		LINK_DIRECTORIES(deps/winhttp_mingw)
+	ENDIF ()
+
+	LINK_LIBRARIES(winhttp rpcrt4)
 ELSE ()
 	IF (NOT AMIGA)
 		FIND_PACKAGE(OpenSSL)

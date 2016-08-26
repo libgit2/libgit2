@@ -16,6 +16,15 @@ GIT_INLINE(bool) git_win32__isalpha(wchar_t c)
 }
 
 /**
+ * Enables the library to check if it is running in a Wine environment
+ * and enable workaround behavior as appropriate for bugs in that platform.
+ */
+GIT_INLINE(bool) git_win32__is_wine(void)
+{
+	return !!GetProcAddress(GetModuleHandleW(L"ntdll"), "wine_get_version");
+}
+
+/**
  * Creates a FindFirstFile(Ex) filter string from a UTF-8 path.
  * The filter string enumerates all items in the directory.
  *

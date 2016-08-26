@@ -16,6 +16,12 @@ mkdir _build
 cd _build
 cmake .. -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS || exit $?
 cmake --build . --target install || exit $?
+
+if [ -n "$SKIP_TESTS" ];
+then
+	exit $?;
+fi
+
 ctest -V . || exit $?
 
 # Now that we've tested the raw git protocol, let's set up ssh to we

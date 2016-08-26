@@ -52,7 +52,10 @@ static void do_symlink(const char *old, const char *new, int is_dir)
 		clar__skip();
 
 	cl_assert(module = GetModuleHandle("kernel32"));
-	cl_assert(pCreateSymbolicLink = (create_symlink_func)GetProcAddress(module, "CreateSymbolicLinkA"));
+	pCreateSymbolicLink = (create_symlink_func)GetProcAddress(module, "CreateSymbolicLinkA");
+
+	if (!pCreateSymbolicLink)
+		clar__skip();
 
 	cl_win32_pass(pCreateSymbolicLink(new, old, is_dir));
 #endif
@@ -71,7 +74,10 @@ static void do_hardlink(const char *old, const char *new)
 		clar__skip();
 
 	cl_assert(module = GetModuleHandle("kernel32"));
-	cl_assert(pCreateHardLink = (create_hardlink_func)GetProcAddress(module, "CreateHardLinkA"));
+	pCreateHardLink = (create_hardlink_func)GetProcAddress(module, "CreateHardLinkA");
+
+	if (!pCreateHardLink)
+		clar__skip();
 
 	cl_win32_pass(pCreateHardLink(new, old, 0));
 #endif
@@ -89,6 +95,9 @@ static void do_junction(const char *old, const char *new)
 	int subst_utf16_len, subst_byte_len, print_utf16_len, print_byte_len, ret;
 	USHORT reparse_buflen;
 	size_t i;
+
+	if (git_win32__is_wine())
+		clar__skip();
 
 	/* Junction targets must be the unparsed name, starting with \??\, using
 	 * backslashes instead of forward, and end in a trailing backslash.
@@ -158,6 +167,9 @@ static void do_custom_reparse(const char *path)
 	const char *reparse_data = "Reparse points are silly.";
 	size_t reparse_buflen = REPARSE_GUID_DATA_BUFFER_HEADER_SIZE +
 		strlen(reparse_data) + 1;
+
+    if (git_win32__is_wine())
+        clar__skip();
 
 	reparse_buf = LocalAlloc(LMEM_FIXED|LMEM_ZEROINIT, reparse_buflen);
 	cl_assert(reparse_buf);
@@ -525,6 +537,11 @@ void test_core_link__readlink_nonexistent_file(void)
 void test_core_link__readlink_normal_file(void)
 {
 	char buf[2048];
+
+#ifdef GIT_WIN32
+    if (git_win32__is_wine())
+        clar__skip();
+#endif
 
 	cl_git_rewritefile("readlink_regfile", "This is a regular file!\n");
 	cl_must_fail(p_readlink("readlink_regfile", buf, 2048));

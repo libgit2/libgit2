@@ -28,6 +28,12 @@
  *    inheritable on Windows, so specify the flag to get default behavior back. */
 #define STANDARD_OPEN_FLAGS (_O_BINARY | _O_NOINHERIT)
 
+/* Allowable mode bits on Win32.
+ *
+ * Win32 does not support full rwx permissions for world, group, owner.
+ * This mask contains the only acceptable bits. */
+#define WIN32_MODE_MASK (_S_IREAD | _S_IWRITE)
+
 /* GetFinalPathNameByHandleW signature */
 typedef DWORD(WINAPI *PFGetFinalPathNameByHandleW)(HANDLE, LPWSTR, DWORD, DWORD);
 
@@ -314,6 +320,8 @@ int p_open(const char *path, int flags, ...)
 {
 	git_win32_path buf;
 	mode_t mode = 0;
+	int fd, umask;
+	DWORD attrs;
 
 	if (utf8_to_16_with_errno(buf, path) < 0)
 		return -1;
@@ -326,17 +334,34 @@ int p_open(const char *path, int flags, ...)
 		va_end(arg_list);
 	}
 
-	return _wopen(buf, flags | STANDARD_OPEN_FLAGS, mode);
+	fd = _wopen(buf, flags | STANDARD_OPEN_FLAGS, mode & WIN32_MODE_MASK);
+
+	if (fd != -1 && (flags & O_CREAT)) {
+		umask = _umask(0);
+		_umask(umask);
+
+		if (!((mode & ~umask) & _S_IWRITE)) {
+			/* The file should be marked +R on disk, but some CRT
+			 * implementations (Wine is a notable one) do not mark
+			 * FILE_ATTRIBUTE_READONLY on file creation, making us
+			 * come back to double-check. */
+			attrs = GetFileAttributesW(buf);
+
+			if (attrs == INVALID_FILE_ATTRIBUTES ||
+				(!(attrs & FILE_ATTRIBUTE_READONLY) &&
+				 !SetFileAttributesW(buf, attrs | FILE_ATTRIBUTE_READONLY))) {
+				_close(fd);
+				return -1;
+			}
+		}
+	}
+
+	return fd;
 }
 
 int p_creat(const char *path, mode_t mode)
 {
-	git_win32_path buf;
-
-	if (utf8_to_16_with_errno(buf, path) < 0)
-		return -1;
-
-	return _wopen(buf, _O_WRONLY | _O_CREAT | _O_TRUNC | STANDARD_OPEN_FLAGS, mode);
+	return p_open(path, _O_WRONLY | _O_CREAT | _O_TRUNC, mode);
 }
 
 int p_getcwd(char *buffer_out, size_t size)
@@ -588,7 +613,7 @@ int p_access(const char* path, mode_t mode)
 	if (utf8_to_16_with_errno(buf, path) < 0)
 		return -1;
 
-	return _waccess(buf, mode);
+	return _waccess(buf, mode & WIN32_MODE_MASK);
 }
 
 int p_rename(const char *from, const char *to)

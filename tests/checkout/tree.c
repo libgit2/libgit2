@@ -763,6 +763,9 @@ void test_checkout_tree__fails_when_dir_in_use(void)
 	git_oid oid;
 	git_object *obj = NULL;
 
+	if (git_win32__is_wine())
+		clar__skip();
+
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/dir"));
@@ -795,6 +798,9 @@ void test_checkout_tree__can_continue_when_dir_in_use(void)
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid oid;
 	git_object *obj = NULL;
+
+	if (git_win32__is_wine())
+		clar__skip();
 
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE |
 		GIT_CHECKOUT_SKIP_LOCKED_DIRECTORIES;

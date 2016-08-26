@@ -17,26 +17,16 @@
 #include "repository.h"
 
 #include <winhttp.h>
-#pragma comment(lib, "winhttp")
-
-#include <strsafe.h>
-
-/* For IInternetSecurityManager zone check */
 #include <objbase.h>
 #include <urlmon.h>
-
-/* For UuidCreate */
-#pragma comment(lib, "rpcrt4")
 
 #define WIDEN2(s) L ## s
 #define WIDEN(s) WIDEN2(s)
 
 #define MAX_CONTENT_TYPE_LEN	100
-#define WINHTTP_OPTION_PEERDIST_EXTENSION_STATE	109
 #define CACHED_POST_BODY_BUF_SIZE	4096
 #define UUID_LENGTH_CCH	32
 
-static const char *prefix_http = "http://";
 static const char *prefix_https = "https://";
 static const char *upload_pack_service = "upload-pack";
 static const char *upload_pack_ls_service_url = "/info/refs?service=git-upload-pack";
@@ -51,6 +41,13 @@ static const wchar_t *transfer_encoding = L"Transfer-Encoding: chunked";
 static const int no_check_cert_flags = SECURITY_FLAG_IGNORE_CERT_CN_INVALID |
 	SECURITY_FLAG_IGNORE_CERT_DATE_INVALID |
 	SECURITY_FLAG_IGNORE_UNKNOWN_CA;
+
+#if defined(__MINGW32__)
+static const CLSID CLSID_InternetSecurityManager = { 0x7B8A2D94, 0x0AC9, 0x11D1,
+	{ 0x89, 0x6C, 0x00, 0xC0, 0x4F, 0xB6, 0xBF, 0xC4 } };
+static const IID IID_IInternetSecurityManager = { 0x79EAC9EE, 0xBAF9, 0x11CE,
+	{ 0x8C, 0x82, 0x00, 0xAA, 0x00, 0x4B, 0xA9, 0x0B } };
+#endif
 
 #define OWNING_SUBTRANSPORT(s) ((winhttp_subtransport *)(s)->parent.subtransport)
 
@@ -154,6 +151,9 @@ static int fallback_cred_acquire_cb(
 {
 	int error = 1;
 
+	GIT_UNUSED(username_from_url);
+	GIT_UNUSED(payload);
+
 	/* If the target URI supports integrated Windows authentication
 	 * as an authentication mechanism */
 	if (GIT_CREDTYPE_DEFAULT & allowed_types) {
@@ -204,8 +204,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	git_buf buf = GIT_BUF_INIT;
 	char *proxy_url = NULL;
 	wchar_t ct[MAX_CONTENT_TYPE_LEN];
-	wchar_t *types[] = { L"*/*", NULL };
-	BOOL peerdist = FALSE;
+	LPCWSTR types[] = { L"*/*", NULL };
 	int error = -1;
 	unsigned long disable_redirects = WINHTTP_DISABLE_REDIRECTS;
 
@@ -228,7 +227,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			s->request_uri,
 			NULL,
 			WINHTTP_NO_REFERER,
-			types,
+			s->verb != post_verb ? types : &types[1],
 			t->connection_data.use_ssl ? WINHTTP_FLAG_SECURE : 0);
 
 	if (!s->request) {
@@ -283,14 +282,6 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			giterr_set(GITERR_OS, "Failed to disable redirects");
 			goto on_error;
 	}
-
-	/* Strip unwanted headers (X-P2P-PeerDist, X-P2P-PeerDistEx) that WinHTTP
-	 * adds itself. This option may not be supported by the underlying
-	 * platform, so we do not error-check it */
-	WinHttpSetOption(s->request,
-		WINHTTP_OPTION_PEERDIST_EXTENSION_STATE,
-		&peerdist,
-		sizeof(peerdist));
 
 	/* Send Pragma: no-cache header */
 	if (!WinHttpAddRequestHeaders(s->request, pragma_nocache, (ULONG) -1L, WINHTTP_ADDREQ_FLAG_ADD)) {
@@ -405,10 +396,14 @@ static int parse_unauthorized_response(
 		*auth_mechanism = GIT_WINHTTP_AUTH_BASIC;
 	}
 
-	if ((WINHTTP_AUTH_SCHEME_NTLM & supported) ||
-		(WINHTTP_AUTH_SCHEME_NEGOTIATE & supported)) {
-		*allowed_types |= GIT_CREDTYPE_DEFAULT;
-		*auth_mechanism = GIT_WINHTTP_AUTH_NEGOTIATE;
+	/* On Wine 1.4 and earlier, the NTLM and Negotiate schemes may be returned
+	 * by WinHttpQueryAuthSchemes when they have not really been advertised. */
+	if (!git_win32__is_wine()) {
+		if ((WINHTTP_AUTH_SCHEME_NTLM & supported) ||
+			(WINHTTP_AUTH_SCHEME_NEGOTIATE & supported)) {
+			*allowed_types |= GIT_CREDTYPE_DEFAULT;
+			*auth_mechanism = GIT_WINHTTP_AUTH_NEGOTIATE;
+		}
 	}
 
 	return 0;
@@ -455,13 +450,11 @@ static int write_chunk(HINTERNET request, const char *buffer, size_t len)
 }
 
 static int winhttp_connect(
-	winhttp_subtransport *t,
-	const char *url)
+	winhttp_subtransport *t)
 {
 	wchar_t *ua = L"git/1.0 (libgit2 " WIDEN(LIBGIT2_VERSION) L")";
 	wchar_t *wide_host;
 	int32_t port;
-	const char *default_port = "80";
 	int error = -1;
 
 	/* Prepare port */
@@ -689,7 +682,7 @@ replay:
 					return -1;
 				}
 
-				winhttp_connect(t, location8);
+				winhttp_connect(t);
 			}
 
 			git__free(location8);
@@ -793,7 +786,6 @@ static int winhttp_stream_write_single(
 	size_t len)
 {
 	winhttp_stream *s = (winhttp_stream *)stream;
-	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
 	DWORD bytes_written;
 
 	if (!s->request && winhttp_stream_connect(s) < 0)
@@ -832,7 +824,7 @@ static int put_uuid_string(LPWSTR buffer, size_t buffer_len_cch)
 {
 	UUID uuid;
 	RPC_STATUS status = UuidCreate(&uuid);
-	HRESULT result;
+	int result;
 
 	if (RPC_S_OK != status &&
 		RPC_S_UUID_LOCAL_ONLY != status &&
@@ -846,14 +838,14 @@ static int put_uuid_string(LPWSTR buffer, size_t buffer_len_cch)
 		return -1;
 	}
 
-	result = StringCbPrintfW(
-		buffer, buffer_len_cch,
+	result = wsprintfW(
+		buffer,
 		L"%08x%04x%04x%02x%02x%02x%02x%02x%02x%02x%02x",
 		uuid.Data1, uuid.Data2, uuid.Data3,
 		uuid.Data4[0], uuid.Data4[1], uuid.Data4[2], uuid.Data4[3],
 		uuid.Data4[4], uuid.Data4[5], uuid.Data4[6], uuid.Data4[7]);
 
-	if (FAILED(result)) {
+	if (result < UUID_LENGTH_CCH) {
 		giterr_set(GITERR_OS, "Unable to generate name for temp file");
 		return -1;
 	}
@@ -887,7 +879,6 @@ static int winhttp_stream_write_buffered(
 	size_t len)
 {
 	winhttp_stream *s = (winhttp_stream *)stream;
-	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
 	DWORD bytes_written;
 
 	if (!s->request && winhttp_stream_connect(s) < 0)
@@ -933,7 +924,6 @@ static int winhttp_stream_write_chunked(
 	size_t len)
 {
 	winhttp_stream *s = (winhttp_stream *)stream;
-	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
 
 	if (!s->request && winhttp_stream_connect(s) < 0)
 		return -1;
@@ -973,7 +963,7 @@ static int winhttp_stream_write_chunked(
 	}
 	else {
 		/* Append as much to the buffer as we can */
-		int count = min(CACHED_POST_BODY_BUF_SIZE - s->chunk_buffer_len, (int)len);
+		int count = (int)min(CACHED_POST_BODY_BUF_SIZE - s->chunk_buffer_len, len);
 
 		if (!s->chunk_buffer)
 			s->chunk_buffer = git__malloc(CACHED_POST_BODY_BUF_SIZE);
@@ -1052,6 +1042,8 @@ static int winhttp_uploadpack_ls(
 	winhttp_subtransport *t,
 	winhttp_stream *s)
 {
+	GIT_UNUSED(t);
+
 	s->service = upload_pack_service;
 	s->service_url = upload_pack_ls_service_url;
 	s->verb = get_verb;
@@ -1063,6 +1055,8 @@ static int winhttp_uploadpack(
 	winhttp_subtransport *t,
 	winhttp_stream *s)
 {
+	GIT_UNUSED(t);
+
 	s->service = upload_pack_service;
 	s->service_url = upload_pack_service_url;
 	s->verb = post_verb;
@@ -1074,6 +1068,8 @@ static int winhttp_receivepack_ls(
 	winhttp_subtransport *t,
 	winhttp_stream *s)
 {
+	GIT_UNUSED(t);
+
 	s->service = receive_pack_service;
 	s->service_url = receive_pack_ls_service_url;
 	s->verb = get_verb;
@@ -1085,6 +1081,8 @@ static int winhttp_receivepack(
 	winhttp_subtransport *t,
 	winhttp_stream *s)
 {
+	GIT_UNUSED(t);
+
 	/* WinHTTP only supports Transfer-Encoding: chunked
 	 * on Windows Vista (NT 6.0) and higher. */
 	s->chunked = git_has_win32_version(6, 0, 0);
@@ -1113,7 +1111,7 @@ static int winhttp_action(
 
 	if (!t->connection)
 		if (gitno_connection_data_from_url(&t->connection_data, url, NULL) < 0 ||
-			 winhttp_connect(t, url) < 0)
+			 winhttp_connect(t) < 0)
 			return -1;
 
 	if (winhttp_stream_alloc(t, &s) < 0)
