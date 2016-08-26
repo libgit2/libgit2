@@ -408,6 +408,32 @@ IF (SONAME)
 ENDIF()
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/libgit2.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libgit2.pc @ONLY)
 
+
+# Create LibGit2Config.cmake which makes it trivial to use libgit2 with cmake
+IF (${CMAKE_VERSION} VERSION_GREATER "2.8.8")
+    INCLUDE(CMakePackageConfigHelpers)
+    # Write LibGit2ConfigVersion.cmake
+    WRITE_BASIC_PACKAGE_VERSION_FILE(${CMAKE_BINARY_DIR}/LIBGIT2CONFIGVERSION.CMAKE
+                                    VERSION ${LIBGIT2_VERSION_STRING}
+                                    COMPATIBILITY SameMajorVersion
+    )
+    # Create the CMake Config files
+    CONFIGURE_PACKAGE_CONFIG_FILE(LibGit2Config.cmake.in
+                                ${CMAKE_BINARY_DIR}/LibGit2Config.cmake
+                                INSTALL_DESTINATION ${LIB_INSTALL_DIR}/cmake/LibGit2
+                                PATH_VARS LIB_INSTALL_DIR INCLUDE_INSTALL_DIR
+    )
+    INSTALL(FILES ${CMAKE_BINARY_DIR}/LibGit2Config.cmake
+                ${CMAKE_BINARY_DIR}/LibGit2ConfigVersion.cmake
+            DESTINATION ${LIB_INSTALL_DIR}/cmake/LibGit2
+    )
+    INSTALL(EXPORT LibGit2Export FILE LibGit2Targets.cmake
+            DESTINATION ${LIB_INSTALL_DIR}/cmake/LibGit2
+            NAMESPACE LibGit2::
+    )
+ENDIF()
+
+
 IF (MSVC_IDE)
    # Precompiled headers
    SET_TARGET_PROPERTIES(git2 PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
@@ -415,7 +441,7 @@ IF (MSVC_IDE)
 ENDIF ()
 
 # Install
-INSTALL(TARGETS git2
+INSTALL(TARGETS git2 EXPORT LibGit2Export
 	RUNTIME DESTINATION ${BIN_INSTALL_DIR}
 	LIBRARY DESTINATION ${LIB_INSTALL_DIR}
 	ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
