@@ -16,7 +16,13 @@ mkdir _build
 cd _build
 cmake .. -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS || exit $?
 cmake --build . --target install || exit $?
-ctest -V . || exit $?
+umask
+ctest -V .
+ret=$?
+umask
+ls -Rl /tmp
+
+exit $ret
 
 # Now that we've tested the raw git protocol, let's set up ssh to we
 # can do the push tests over it
