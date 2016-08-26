@@ -366,6 +366,7 @@ int git_diff_foreach(
 			else
 				error = get_blob_content(
 					diff->repo, &delta->old_file.oid, &old_data, &old_blob);
+
 			if (error < 0)
 				goto cleanup;
 		}
@@ -380,12 +381,14 @@ int git_diff_foreach(
 			else
 				error = get_blob_content(
 					diff->repo, &delta->new_file.oid, &new_data, &new_blob);
+
 			if (error < 0)
 				goto cleanup;
 
 			if ((delta->new_file.flags | GIT_DIFF_FILE_VALID_OID) == 0) {
 				error = git_odb_hash(
 					&delta->new_file.oid, new_data.data, new_data.len, GIT_OBJ_BLOB);
+
 				if (error < 0)
 					goto cleanup;
 
@@ -541,8 +544,8 @@ static int print_oid_range(diff_print_info *pi, git_diff_delta *delta)
 	char start_oid[8], end_oid[8];
 
 	/* TODO: Determine a good actual OID range to print */
-	git_oid_to_string(start_oid, sizeof(start_oid), &delta->old_file.oid);
-	git_oid_to_string(end_oid, sizeof(end_oid), &delta->new_file.oid);
+	git_oid_tostr(start_oid, sizeof(start_oid), &delta->old_file.oid);
+	git_oid_tostr(end_oid, sizeof(end_oid), &delta->new_file.oid);
 
 	/* TODO: Match git diff more closely */
 	if (delta->old_file.mode == delta->new_file.mode) {
@@ -688,7 +691,6 @@ int git_diff_print_patch(
 
 
 int git_diff_blobs(
-	git_repository *repo,
 	git_blob *old_blob,
 	git_blob *new_blob,
 	git_diff_options *options,
@@ -702,8 +704,6 @@ int git_diff_blobs(
 	xpparam_t xdiff_params;
 	xdemitconf_t xdiff_config;
 	xdemitcb_t xdiff_callback;
-
-	assert(repo);
 
 	if (options && (options->flags & GIT_DIFF_REVERSE)) {
 		git_blob *swap = old_blob;

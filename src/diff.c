@@ -35,10 +35,10 @@ static bool diff_path_matches_pathspec(git_diff_list *diff, const char *path)
 		return true;
 
 	git_vector_foreach(&diff->pathspec, i, match) {
-		int result = git__fnmatch(match->pattern, path, 0);
+		int result = p_fnmatch(match->pattern, path, 0);
 
 		/* if we didn't match, look for exact dirname prefix match */
-		if (result == GIT_ENOMATCH &&
+		if (result == FNM_NOMATCH &&
 			(match->flags & GIT_ATTR_FNMATCH_HASWILD) == 0 &&
 			strncmp(path, match->pattern, match->length) == 0 &&
 			path[match->length] == '/')
@@ -46,9 +46,6 @@ static bool diff_path_matches_pathspec(git_diff_list *diff, const char *path)
 
 		if (result == 0)
 			return (match->flags & GIT_ATTR_FNMATCH_NEGATIVE) ? false : true;
-
-		if (result != GIT_ENOMATCH)
-			giterr_clear();
 	}
 
 	return false;
@@ -68,6 +65,7 @@ static git_diff_delta *diff_delta__alloc(
 		git__free(delta);
 		return NULL;
 	}
+
 	delta->new_file.path = delta->old_file.path;
 
 	if (diff->opts.flags & GIT_DIFF_REVERSE) {
@@ -543,6 +541,7 @@ static int diff_from_iterators(
 			{
 				if (git_iterator_advance(new_iter, &nitem) < 0)
 					goto fail;
+
 				continue;
 			}
 
@@ -557,8 +556,10 @@ static int diff_from_iterators(
 				{
 					if (is_ignored)
 						ignore_prefix = nitem->path;
+
 					if (git_iterator_advance_into_directory(new_iter, &nitem) < 0)
 						goto fail;
+
 					continue;
 				}
 				delta_type = GIT_DELTA_UNTRACKED;

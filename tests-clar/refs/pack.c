@@ -1,0 +1,67 @@
+#include "clar_libgit2.h"
+
+#include "repository.h"
+#include "git2/reflog.h"
+#include "reflog.h"
+
+static const char *loose_tag_ref_name = "refs/tags/e90810b";
+
+static git_repository *g_repo;
+
+void test_refs_pack__initialize(void)
+{
+   g_repo = cl_git_sandbox_init("testrepo");
+}
+
+void test_refs_pack__cleanup(void)
+{
+   cl_git_sandbox_cleanup();
+}
+
+void test_refs_pack__empty(void)
+{
+   // create a packfile for an empty folder
+	git_buf temp_path = GIT_BUF_INIT;
+
+	cl_git_pass(git_buf_join_n(&temp_path, '/', 3, g_repo->path_repository, GIT_REFS_HEADS_DIR, "empty_dir"));
+	cl_git_pass(git_futils_mkdir_r(temp_path.ptr, NULL, GIT_REFS_DIR_MODE));
+	git_buf_free(&temp_path);
+
+	cl_git_pass(git_reference_packall(g_repo));
+}
+
+void test_refs_pack__loose(void)
+{
+   // create a packfile from all the loose rn a repo
+	git_reference *reference;
+	git_buf temp_path = GIT_BUF_INIT;
+
+	/* Ensure a known loose ref can be looked up */
+	cl_git_pass(git_reference_lookup(&reference, g_repo, loose_tag_ref_name));
+	cl_assert(git_reference_is_packed(reference) == 0);
+	cl_assert_equal_s(reference->name, loose_tag_ref_name);
+	git_reference_free(reference);
+
+	/*
+	 * We are now trying to pack also a loose reference
+	 * called `points_to_blob`, to make sure we can properly
+	 * pack weak tags
+	 */
+	cl_git_pass(git_reference_packall(g_repo));
+
+	/* Ensure the packed-refs file exists */
+	cl_git_pass(git_buf_joinpath(&temp_path, g_repo->path_repository, GIT_PACKEDREFS_FILE));
+	cl_assert(git_path_exists(temp_path.ptr));
+
+	/* Ensure the known ref can still be looked up but is now packed */
+	cl_git_pass(git_reference_lookup(&reference, g_repo, loose_tag_ref_name));
+	cl_assert(git_reference_is_packed(reference));
+	cl_assert_equal_s(reference->name, loose_tag_ref_name);
+
+	/* Ensure the known ref has been removed from the loose folder structure */
+	cl_git_pass(git_buf_joinpath(&temp_path, g_repo->path_repository, loose_tag_ref_name));
+	cl_assert(!git_path_exists(temp_path.ptr));
+
+	git_reference_free(reference);
+	git_buf_free(&temp_path);
+}

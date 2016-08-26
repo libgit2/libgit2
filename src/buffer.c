@@ -146,17 +146,21 @@ int git_buf_puts(git_buf *buf, const char *string)
 	return git_buf_put(buf, string, strlen(string));
 }
 
-int git_buf_printf(git_buf *buf, const char *format, ...)
+int git_buf_vprintf(git_buf *buf, const char *format, va_list ap)
 {
 	int len;
-	va_list arglist;
 
-	ENSURE_SIZE(buf, buf->size + 1);
+	ENSURE_SIZE(buf, buf->size + (strlen(format) * 2));
 
 	while (1) {
-		va_start(arglist, format);
-		len = p_vsnprintf(buf->ptr + buf->size, buf->asize - buf->size, format, arglist);
-		va_end(arglist);
+		va_list args;
+		va_copy(args, ap);
+
+		len = p_vsnprintf(
+			buf->ptr + buf->size,
+			buf->asize - buf->size,
+			format, args
+		);
 
 		if (len < 0) {
 			git__free(buf->ptr);
@@ -173,6 +177,18 @@ int git_buf_printf(git_buf *buf, const char *format, ...)
 	}
 
 	return 0;
+}
+
+int git_buf_printf(git_buf *buf, const char *format, ...)
+{
+	int r;
+	va_list ap;
+
+	va_start(ap, format);
+	r = git_buf_vprintf(buf, format, ap);
+	va_end(ap);
+
+	return r;
 }
 
 void git_buf_copy_cstr(char *data, size_t datasize, const git_buf *buf)

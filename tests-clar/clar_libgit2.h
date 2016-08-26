@@ -13,9 +13,9 @@
  * return error codes!
  */
 #define cl_git_pass(expr) do { \
-	git_clearerror(); \
-	if ((expr) != GIT_SUCCESS) \
-		clar__assert(0, __FILE__, __LINE__, "Function call failed: " #expr, git_lasterror(), 1); \
+	giterr_clear(); \
+	if ((expr) != 0) \
+		clar__assert(0, __FILE__, __LINE__, "Function call failed: " #expr, giterr_last()->message, 1); \
 	} while(0)
 
 /**

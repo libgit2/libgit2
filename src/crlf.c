@@ -216,8 +216,7 @@ int git_filter_add__crlf_to_odb(git_vector *filters, git_repository *repo, const
 	/* If we're good, we create a new filter object and push it
 	 * into the filters array */
 	filter = git__malloc(sizeof(struct crlf_filter));
-	if (filter == NULL)
-		return GIT_ENOMEM;
+	GITERR_CHECK_ALLOC(filter);
 
 	filter->f.apply = &crlf_apply_to_odb;
 	filter->f.do_free = NULL;

@@ -28,7 +28,6 @@ after_script:
 branches:
  only:
    - development
-   - new-error-handling
    
 # Notify development list when needed
 notifications:

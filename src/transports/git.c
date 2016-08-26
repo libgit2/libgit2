@@ -72,7 +72,7 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 	git_buf_putc(request, '\0');
 
 	if (git_buf_oom(request))
-		return GIT_ENOMEM;
+		return -1;
 
 	return 0;
 }

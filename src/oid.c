@@ -94,7 +94,7 @@ char *git_oid_allocfmt(const git_oid *oid)
 	return str;
 }
 
-char *git_oid_to_string(char *out, size_t n, const git_oid *oid)
+char *git_oid_tostr(char *out, size_t n, const git_oid *oid)
 {
 	char str[GIT_OID_HEXSZ];
 

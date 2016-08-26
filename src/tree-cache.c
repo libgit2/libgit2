@@ -82,24 +82,19 @@ static int read_tree_internal(git_tree_cache **out,
 	git_tree_cache *tree = NULL;
 	const char *name_start, *buffer;
 	int count;
-	int error = GIT_SUCCESS;
 	size_t name_len;
 
 	buffer = name_start = *buffer_in;
 
-	if ((buffer = memchr(buffer, '\0', buffer_end - buffer)) == NULL) {
-		error = GIT_EOBJCORRUPTED;
-		goto cleanup;
-	}
+	if ((buffer = memchr(buffer, '\0', buffer_end - buffer)) == NULL)
+		goto corrupted;
 
-	if (++buffer >= buffer_end) {
-		error = GIT_EOBJCORRUPTED;
-		goto cleanup;
-	}
+	if (++buffer >= buffer_end)
+		goto corrupted;
 
 	name_len = strlen(name_start);
-	if ((tree = git__malloc(sizeof(git_tree_cache) + name_len + 1)) == NULL)
-		return GIT_ENOMEM;
+	tree = git__malloc(sizeof(git_tree_cache) + name_len + 1);
+	GITERR_CHECK_ALLOC(tree);
 
 	memset(tree, 0x0, sizeof(git_tree_cache));
 	tree->parent = parent;
@@ -109,39 +104,28 @@ static int read_tree_internal(git_tree_cache **out,
 	tree->name[name_len] = '\0';
 
 	/* Blank-terminated ASCII decimal number of entries in this tree */
-	if (git__strtol32(&count, buffer, &buffer, 10) < GIT_SUCCESS || count < -1) {
-		error = GIT_EOBJCORRUPTED;
-		goto cleanup;
-	}
+	if (git__strtol32(&count, buffer, &buffer, 10) < 0 || count < -1)
+		goto corrupted;
 
 	tree->entries = count;
 
-	if (*buffer != ' ' || ++buffer >= buffer_end) {
-		error = GIT_EOBJCORRUPTED;
-		goto cleanup;
-	}
+	if (*buffer != ' ' || ++buffer >= buffer_end)
+		goto corrupted;
 
 	 /* Number of children of the tree, newline-terminated */
-	if (git__strtol32(&count, buffer, &buffer, 10) < GIT_SUCCESS ||
-		count < 0) {
-		error = GIT_EOBJCORRUPTED;
-		goto cleanup;
-	}
+	if (git__strtol32(&count, buffer, &buffer, 10) < 0 || count < 0)
+		goto corrupted;
 
 	tree->children_count = count;
 
-	if (*buffer != '\n' || ++buffer > buffer_end) {
-		error = GIT_EOBJCORRUPTED;
-		goto cleanup;
-	}
+	if (*buffer != '\n' || ++buffer > buffer_end)
+		goto corrupted;
 
 	/* The SHA1 is only there if it's not invalidated */
 	if (tree->entries >= 0) {
 		/* 160-bit SHA-1 for this tree and it's children */
-		if (buffer + GIT_OID_RAWSZ > buffer_end) {
-			error = GIT_EOBJCORRUPTED;
-			goto cleanup;
-		}
+		if (buffer + GIT_OID_RAWSZ > buffer_end)
+			goto corrupted;
 
 		git_oid_fromraw(&tree->oid, (const unsigned char *)buffer);
 		buffer += GIT_OID_RAWSZ;
@@ -150,40 +134,39 @@ static int read_tree_internal(git_tree_cache **out,
 	/* Parse children: */
 	if (tree->children_count > 0) {
 		unsigned int i;
-		int err;
 
 		tree->children = git__malloc(tree->children_count * sizeof(git_tree_cache *));
-		if (tree->children == NULL)
-			goto cleanup;
+		GITERR_CHECK_ALLOC(tree->children);
 
 		for (i = 0; i < tree->children_count; ++i) {
-			err = read_tree_internal(&tree->children[i], &buffer, buffer_end, tree);
-
-			if (err < GIT_SUCCESS)
-				goto cleanup;
+			if (read_tree_internal(&tree->children[i], &buffer, buffer_end, tree) < 0)
+				return -1;
 		}
 	}
 
 	*buffer_in = buffer;
 	*out = tree;
-	return GIT_SUCCESS;
+	return 0;
 
- cleanup:
+ corrupted:
 	git_tree_cache_free(tree);
-	return error;
+	giterr_set(GITERR_INDEX, "Corruped TREE extension in index");
+	return -1;
 }
 
 int git_tree_cache_read(git_tree_cache **tree, const char *buffer, size_t buffer_size)
 {
 	const char *buffer_end = buffer + buffer_size;
-	int error;
 
-	error = read_tree_internal(tree, &buffer, buffer_end, NULL);
+	if (read_tree_internal(tree, &buffer, buffer_end, NULL) < 0)
+		return -1;
 
-	if (buffer < buffer_end)
-		return GIT_EOBJCORRUPTED;
+	if (buffer < buffer_end) {
+		giterr_set(GITERR_INDEX, "Corruped TREE extension in index (unexpected trailing data)");
+		return -1;
+	}
 
-	return error;
+	return 0;
 }
 
 void git_tree_cache_free(git_tree_cache *tree)

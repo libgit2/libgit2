@@ -9,6 +9,7 @@
 
 #include "git2.h"
 #include "refs.h"
+#include "config.h"
 
 static int find_subtree(git_tree **subtree, const git_oid *root,
 			git_repository *repo, const char *target, int *fanout)
@@ -262,6 +263,25 @@ static int note_remove(git_repository *repo,
 	return error;
 }
 
+static int note_get_default_ref(const char **out, git_repository *repo)
+{
+	int error;
+	git_config *cfg;
+
+	*out = NULL;
+
+	if (git_repository_config__weakptr(&cfg, repo) < 0)
+		return -1;
+
+	error = git_config_get_string(cfg, "core.notesRef", out);
+	if (error == GIT_ENOTFOUND) {
+		*out = GIT_NOTES_DEFAULT_REF;
+		return 0;
+	}
+
+	return error;
+}
+
 int git_note_read(git_note **out, git_repository *repo,
 		  const char *notes_ref, const git_oid *oid)
 {
@@ -273,8 +293,11 @@ int git_note_read(git_note **out, git_repository *repo,
 
 	*out = NULL;
 
-	if (!notes_ref)
-		notes_ref = GIT_NOTES_DEFAULT_REF;
+	if (!notes_ref) {
+		error = note_get_default_ref(&notes_ref, repo);
+		if (error < 0)
+			return error;
+	}
 
 	error = git_reference_lookup(&ref, repo, notes_ref);
 	if (error < 0)
@@ -314,8 +337,11 @@ int git_note_create(
 	git_commit *commit = NULL;
 	git_reference *ref;
 
-	if (!notes_ref)
-		notes_ref = GIT_NOTES_DEFAULT_REF;
+	if (!notes_ref) {
+		error = note_get_default_ref(&notes_ref, repo);
+		if (error < 0)
+			return error;
+	}
 
 	error = git_reference_lookup(&ref, repo, notes_ref);
 	if (error < 0 && error != GIT_ENOTFOUND)
@@ -359,8 +385,11 @@ int git_note_remove(git_repository *repo, const char *notes_ref,
 	git_commit *commit;
 	git_reference *ref;
 
-	if (!notes_ref)
-		notes_ref = GIT_NOTES_DEFAULT_REF;
+	if (!notes_ref) {
+		error = note_get_default_ref(&notes_ref, repo);
+		if (error < 0)
+			return error;
+	}
 
 	error = git_reference_lookup(&ref, repo, notes_ref);
 	if (error < 0)
@@ -386,6 +415,12 @@ int git_note_remove(git_repository *repo, const char *notes_ref,
 	git__free(target);
 	git_commit_free(commit);
 	return error;
+}
+
+int git_note_default_ref(const char **out, git_repository *repo)
+{
+	assert(repo);
+	return note_get_default_ref(out, repo);
 }
 
 const char * git_note_message(git_note *note)

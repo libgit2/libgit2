@@ -486,7 +486,7 @@ static int push_glob_cb(const char *refname, void *data_)
 {
 	struct push_cb_data *data = (struct push_cb_data *)data_;
 
-	if (!git__fnmatch(data->glob, refname, 0))
+	if (!p_fnmatch(data->glob, refname, 0))
 		return push_ref(data->walk, refname, data->hide);
 
 	return 0;

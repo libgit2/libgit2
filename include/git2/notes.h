@@ -92,6 +92,16 @@ GIT_EXTERN(int) git_note_remove(git_repository *repo, const char *notes_ref,
  */
 GIT_EXTERN(void) git_note_free(git_note *note);
 
+/**
+ * Get the default notes reference for a repository
+ *
+ * @param out Pointer to the default notes reference
+ * @param repo The Git repository
+ *
+ * @return GIT_SUCCESS or an error code
+ */
+GIT_EXTERN(int) git_note_default_ref(const char **out, git_repository *repo);
+
 /** @} */
 GIT_END_DECL
 #endif

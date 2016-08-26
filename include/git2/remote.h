@@ -201,6 +201,14 @@ GIT_EXTERN(int) git_remote_update_tips(git_remote *remote, int (*cb)(const char 
 GIT_EXTERN(int) git_remote_valid_url(const char *url);
 
 /**
+ * Return whether the passed URL is supported by this version of the library.
+ *
+ * @param url the url to check
+ * @return 1 if the url is supported, 0 otherwise
+*/
+GIT_EXTERN(int) git_remote_supported_url(const char* url);
+
+/**
  * Get a list of the configured remotes for a repo
  *
  * The string array must be freed by the user.

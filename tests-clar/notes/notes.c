@@ -33,11 +33,11 @@ void test_notes_notes__1(void)
 
 	cl_git_pass(git_note_read(&_note, _repo, NULL, &oid));
 
-	cl_assert(!strcmp(git_note_message(_note), "hello world\n"));
+	cl_assert_equal_s(git_note_message(_note), "hello world\n");
 	cl_assert(!git_oid_cmp(git_note_oid(_note), &note_oid));
 
 	cl_git_pass(git_blob_lookup(&_blob, _repo, &note_oid));
-	cl_assert(!strcmp(git_note_message(_note), git_blob_rawcontent(_blob)));
+	cl_assert_equal_s(git_note_message(_note), git_blob_rawcontent(_blob));
 
 	cl_git_fail(git_note_create(&note_oid, _repo, _sig, _sig, NULL, &oid, "hello world\n"));
 	cl_git_fail(git_note_create(&note_oid, _repo, _sig, _sig, "refs/notes/some/namespace", &oid, "hello world\n"));

@@ -939,22 +939,18 @@ static int config_parse(diskfile_backend *cfg_file)
 static int write_section(git_filebuf *file, const char *key)
 {
 	int result;
-	const char *fdot, *ldot;
+	const char *dot;
 	git_buf buf = GIT_BUF_INIT;
 
 	/* All of this just for [section "subsection"] */
-	fdot = strchr(key, '.');
+	dot = strchr(key, '.');
 	git_buf_putc(&buf, '[');
-	if (fdot == NULL)
+	if (dot == NULL) {
 		git_buf_puts(&buf, key);
-	else
-		git_buf_put(&buf, key, fdot - key);
-	ldot = strrchr(key, '.');
-	if (fdot != ldot && fdot != NULL) {
-		git_buf_putc(&buf, '"');
+	} else {
+		git_buf_put(&buf, key, dot - key);
 		/* TODO: escape  */
-		git_buf_put(&buf, fdot + 1, ldot - fdot - 1);
-		git_buf_putc(&buf, '"');
+		git_buf_printf(&buf, " \"%s\"", dot + 1);
 	}
 	git_buf_puts(&buf, "]\n");
 

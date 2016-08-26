@@ -31,7 +31,7 @@ void cl_git_mkfile(const char *filename, const char *content)
 void cl_git_write2file(const char *filename, const char *new_content, int flags)
 {
 	int fd = p_open(filename, flags);
-	cl_assert(fd != 0);
+	cl_assert(fd >= 0);
 	if (!new_content)
 		new_content = "\n";
 	cl_must_pass(p_write(fd, new_content, strlen(new_content)));

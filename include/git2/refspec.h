@@ -7,6 +7,7 @@
 #ifndef INCLUDE_git_refspec_h__
 #define INCLUDE_git_refspec_h__
 
+#include "common.h"
 #include "types.h"
 
 /**
@@ -35,14 +36,13 @@ const char *git_refspec_src(const git_refspec *refspec);
 const char *git_refspec_dst(const git_refspec *refspec);
 
 /**
- * Match a refspec's source descriptor with a reference name
+ * Check if a refspec's source descriptor matches a reference 
  *
  * @param refspec the refspec
  * @param refname the name of the reference to check
- * @return GIT_SUCCESS on successful match; GIT_ENOMACH on match
- * failure or an error code on other failure
+ * @return 1 if the refspec matches, 0 otherwise
  */
-int git_refspec_src_match(const git_refspec *refspec, const char *refname);
+int git_refspec_src_matches(const git_refspec *refspec, const char *refname);
 
 /**
  * Transform a reference to its target following the refspec's rules

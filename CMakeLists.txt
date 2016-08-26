@@ -51,8 +51,7 @@ SET(INSTALL_INC include CACHE PATH "Where to install headers to.")
 # Build options
 OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" ON)
 OPTION (THREADSAFE "Build libgit2 as threadsafe" OFF)
-OPTION (BUILD_TESTS "Build Tests" ON)
-OPTION (BUILD_CLAR "Build Tests using the Clar suite" OFF)
+OPTION (BUILD_CLAR "Build Tests using the Clar suite" ON)
 OPTION (TAGS "Generate tags" OFF)
 
 # Platform specific compilation flags
@@ -60,14 +59,15 @@ IF (MSVC)
 	# Not using __stdcall with the CRT causes problems
 	OPTION (STDCALL "Buildl libgit2 with the __stdcall convention" ON)
 
-	SET(CMAKE_C_FLAGS "/W4 /nologo /Zi ${CMAKE_C_FLAGS}")
+	SET(CMAKE_C_FLAGS "/W4 /MP /nologo /Zi ${CMAKE_C_FLAGS}")
 	IF (STDCALL)
 	  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gz")
 	ENDIF ()
-	# TODO: bring back /RTC1 /RTCc
-	SET(CMAKE_C_FLAGS_DEBUG "/Od /DEBUG /MTd")
+	SET(CMAKE_C_FLAGS_DEBUG "/Od /DEBUG /MTd /RTC1 /RTCs /RTCu")
 	SET(CMAKE_C_FLAGS_RELEASE "/MT /O2")
 	SET(WIN_RC "src/win32/git2.rc")
+
+   # Precompiled headers
 ELSE ()
 	SET(CMAKE_C_FLAGS "-O2 -g -D_GNU_SOURCE -Wall -Wextra -Wno-missing-field-initializers -Wstrict-aliasing=2 -Wstrict-prototypes -Wmissing-prototypes ${CMAKE_C_FLAGS}")
 	SET(CMAKE_C_FLAGS_DEBUG "-O0 -g")
@@ -127,31 +127,15 @@ INSTALL(DIRECTORY include/git2 DESTINATION ${INSTALL_INC} )
 INSTALL(FILES include/git2.h DESTINATION ${INSTALL_INC} )
 
 # Tests
-IF (BUILD_TESTS)
-	SET(TEST_RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests/resources" CACHE PATH "Path to test resources.")
-	ADD_DEFINITIONS(-DTEST_RESOURCES=\"${TEST_RESOURCES}\")
-
-	INCLUDE_DIRECTORIES(tests)
-	FILE(GLOB SRC_TEST tests/t??-*.c)
-
-	ADD_EXECUTABLE(libgit2_test tests/test_main.c tests/test_lib.c tests/test_helpers.c ${SRC} ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX})
-	TARGET_LINK_LIBRARIES(libgit2_test ${CMAKE_THREAD_LIBS_INIT})
-	IF (WIN32)
-		TARGET_LINK_LIBRARIES(libgit2_test ws2_32)
-	ELSEIF (CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
-		TARGET_LINK_LIBRARIES(libgit2_test socket nsl)
-	ENDIF ()
-
-	ENABLE_TESTING()
-	ADD_TEST(libgit2_test libgit2_test)
-ENDIF ()
-
 IF (BUILD_CLAR)
+
 	FIND_PACKAGE(PythonInterp REQUIRED)
 
-	SET(CLAR_FIXTURES "${CMAKE_CURRENT_SOURCE_DIR}/tests/resources/")
+	SET(CLAR_FIXTURES "${CMAKE_CURRENT_SOURCE_DIR}/tests-clar/resources/")
 	SET(CLAR_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tests-clar")
+	SET(CLAR_RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests-clar/resources" CACHE PATH "Path to test resources.")
 	ADD_DEFINITIONS(-DCLAR_FIXTURE_PATH=\"${CLAR_FIXTURES}\")
+	ADD_DEFINITIONS(-DCLAR_RESOURCES=\"${TEST_RESOURCES}\")
 
 	INCLUDE_DIRECTORIES(${CLAR_PATH})
 	FILE(GLOB_RECURSE SRC_TEST ${CLAR_PATH}/*/*.c ${CLAR_PATH}/clar_helpers.c ${CLAR_PATH}/testlib.c)

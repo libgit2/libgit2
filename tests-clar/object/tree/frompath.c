@@ -35,7 +35,7 @@ static void assert_tree_from_path(git_tree *root, const char *path, int expected
 	
 	cl_assert(containing_tree != NULL && expected_result == GIT_SUCCESS);
 
-	cl_assert(git_oid_streq(git_object_id((const git_object *)containing_tree), expected_raw_oid) == GIT_SUCCESS);
+	cl_git_pass(git_oid_streq(git_object_id((const git_object *)containing_tree), expected_raw_oid));
 
 	git_tree_free(containing_tree);
 }
@@ -43,7 +43,7 @@ static void assert_tree_from_path(git_tree *root, const char *path, int expected
 static void assert_tree_from_path_klass(git_tree *root, const char *path, int expected_result, const char *expected_raw_oid)
 {
 	assert_tree_from_path(root, path, GIT_ERROR, expected_raw_oid);
-	cl_assert(git_error_last()->klass == expected_result);
+	cl_assert(giterr_last()->klass == expected_result);
 }
 
 void test_object_tree_frompath__retrieve_tree_from_path_to_treeentry(void)

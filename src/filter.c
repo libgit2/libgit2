@@ -92,11 +92,11 @@ int git_filters_load(git_vector *filters, git_repository *repo, const char *path
 	if (mode == GIT_FILTER_TO_ODB) {
 		/* Load the CRLF cleanup filter when writing to the ODB */
 		error = git_filter_add__crlf_to_odb(filters, repo, path);
-		if (error < GIT_SUCCESS)
+		if (error < 0)
 			return error;
 	} else {
 		giterr_set(GITERR_INVALID, "Worktree filters are not implemented yet");
-		return GIT_ENOTIMPLEMENTED;
+		return -1;
 	}
 
 	return (int)filters->length;
@@ -135,7 +135,7 @@ int git_filters_apply(git_buf *dest, git_buf *source, git_vector *filters)
 	/* Pre-grow the destination buffer to more or less the size
 	 * we expect it to have */
 	if (git_buf_grow(dest, git_buf_len(source)) < 0)
-		return GIT_ENOMEM;
+		return -1;
 
 	for (i = 0; i < filters->length; ++i) {
 		git_filter *filter = git_vector_get(filters, i);
@@ -153,7 +153,7 @@ int git_filters_apply(git_buf *dest, git_buf *source, git_vector *filters)
 			src = dst;
 
 		if (git_buf_oom(dbuffer[dst]))
-			return GIT_ENOMEM;
+			return -1;
 	}
 
 	/* Ensure that the output ends up in dbuffer[1] (i.e. the dest) */

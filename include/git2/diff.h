@@ -339,7 +339,6 @@ GIT_EXTERN(int) git_diff_print_patch(
  * Directly run a text diff on two blobs.
  */
 GIT_EXTERN(int) git_diff_blobs(
-	git_repository *repo,
 	git_blob *old_blob,
 	git_blob *new_blob,
 	git_diff_options *options,

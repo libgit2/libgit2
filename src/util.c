@@ -60,22 +60,6 @@ int git_strarray_copy(git_strarray *tgt, const git_strarray *src)
 	return 0;
 }
 
-int git__fnmatch(const char *pattern, const char *name, int flags)
-{
-	int ret;
-
-	ret = p_fnmatch(pattern, name, flags);
-	switch (ret) {
-	case 0:
-		return 0;
-	case FNM_NOMATCH:
-		return GIT_ENOMATCH;
-	default:
-		giterr_set(GITERR_OS, "Error trying to match path");
-		return -1;
-	}
-}
-
 int git__strtol64(int64_t *result, const char *nptr, const char **endptr, int base)
 {
 	const char *p;

@@ -59,8 +59,7 @@ int git_config_new(git_config **out)
 	git_config *cfg;
 
 	cfg = git__malloc(sizeof(git_config));
-	if (cfg == NULL)
-		return GIT_ENOMEM;
+	GITERR_CHECK_ALLOC(cfg);
 
 	memset(cfg, 0x0, sizeof(git_config));
 
@@ -221,7 +220,7 @@ int git_config_parse_bool(int *out, const char *value)
 		return 0;
 	}
 
-	return GIT_EINVALIDTYPE;
+	return -1;
 }
 
 static int parse_int64(int64_t *out, const char *value)

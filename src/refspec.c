@@ -10,6 +10,7 @@
 #include "common.h"
 #include "refspec.h"
 #include "util.h"
+#include "posix.h"
 
 int git_refspec_parse(git_refspec *refspec, const char *str)
 {
@@ -52,9 +53,12 @@ const char *git_refspec_dst(const git_refspec *refspec)
 	return refspec == NULL ? NULL : refspec->dst;
 }
 
-int git_refspec_src_match(const git_refspec *refspec, const char *refname)
+int git_refspec_src_matches(const git_refspec *refspec, const char *refname)
 {
-	return (refspec == NULL || refspec->src == NULL) ? GIT_ENOMATCH : git__fnmatch(refspec->src, refname, 0);
+	if (refspec == NULL || refspec->src == NULL)
+		return false;
+
+	return (p_fnmatch(refspec->src, refname, 0) == 0);
 }
 
 int git_refspec_transform(char *out, size_t outlen, const git_refspec *spec, const char *name)
