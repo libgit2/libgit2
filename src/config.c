@@ -76,7 +76,7 @@ int git_config_new(git_config **out)
 
 	memset(cfg, 0x0, sizeof(git_config));
 
-	if (git_vector_init(&cfg->files, 3, config_backend_cmp) < 0) {
+	if (git_vector_init(&cfg->files, 4, config_backend_cmp) < 0) {
 		git__free(cfg);
 		return -1;
 	}
