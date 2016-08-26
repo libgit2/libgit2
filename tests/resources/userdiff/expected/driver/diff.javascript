@@ -1,19 +1,19 @@
 diff --git a/files/file.javascript b/files/file.javascript
-index b9f1286..7cd3c5a 100644
+index 6d7415d..3ddf7da 100644
 --- a/files/file.javascript
 +++ b/files/file.javascript
-@@ -16,3 +16,4 @@ function getViewportH ()
+@@ -37,3 +37,4 @@ function getViewportH ()
      var client = docElem['clientHeight'],
 -      inner = window['innerHeight'];
 +      inner = window['innerHeight'],
 +      sample = window['otherProperty'];
  
-@@ -27,3 +28,3 @@ function getOffset (el)
+@@ -48,3 +49,3 @@ function getOffset (el)
        if (!isNaN(el.offsetTop)) {
 -        offsetTop += el.offsetTop;
 +        offsetTop += el.offsetTop + 1;
        }
-@@ -43,8 +44,7 @@ function isElementInViewport (el, h)
+@@ -64,8 +65,7 @@ function isElementInViewport (el, h)
          viewed = scrolled + getViewportH(),
 -        elH = el.offsetHeight,
          elTop = getOffset(el).top,
@@ -24,17 +24,17 @@ index b9f1286..7cd3c5a 100644
 -    return (elTop + elH * h) <= viewed && (elBottom) >= scrolled;
 +    return (elTop + el.offsetHeight * h) <= viewed && (elBottom) >= scrolled;
    }
-@@ -60,4 +60,2 @@ _init: function ()
+@@ -81,4 +81,2 @@ _init: function ()
  
 -  //  Initialize all scrollreveals, triggering all
 -  //  reveals on visible elements.
        this.elems.forEach(function (el, i) {
-@@ -71,3 +69,3 @@ var scrollHandler = function ()
+@@ -92,3 +90,3 @@ var scrollHandler = function ()
              self._scrollPage();
 -          }, 60);
 +          }, 61);
          }
-@@ -101,2 +99,3 @@ _scrollPage: function ()
+@@ -122,2 +120,3 @@ _scrollPage: function ()
          this.scrolled = false;
 +		this.tested = true;
      },

@@ -1,19 +1,19 @@
 diff --git a/files/file.javascript b/files/file.javascript
-index b9f1286..7cd3c5a 100644
+index 6d7415d..3ddf7da 100644
 --- a/files/file.javascript
 +++ b/files/file.javascript
-@@ -16,3 +16,4 @@
+@@ -37,3 +37,4 @@
      var client = docElem['clientHeight'],
 -      inner = window['innerHeight'];
 +      inner = window['innerHeight'],
 +      sample = window['otherProperty'];
  
-@@ -27,3 +28,3 @@
+@@ -48,3 +49,3 @@
        if (!isNaN(el.offsetTop)) {
 -        offsetTop += el.offsetTop;
 +        offsetTop += el.offsetTop + 1;
        }
-@@ -43,8 +44,7 @@
+@@ -64,8 +65,7 @@
          viewed = scrolled + getViewportH(),
 -        elH = el.offsetHeight,
          elTop = getOffset(el).top,
@@ -24,17 +24,17 @@ index b9f1286..7cd3c5a 100644
 -    return (elTop + elH * h) <= viewed && (elBottom) >= scrolled;
 +    return (elTop + el.offsetHeight * h) <= viewed && (elBottom) >= scrolled;
    }
-@@ -60,4 +60,2 @@
+@@ -81,4 +81,2 @@
  
 -  //  Initialize all scrollreveals, triggering all
 -  //  reveals on visible elements.
        this.elems.forEach(function (el, i) {
-@@ -71,3 +69,3 @@
+@@ -92,3 +90,3 @@
              self._scrollPage();
 -          }, 60);
 +          }, 61);
          }
-@@ -101,2 +99,3 @@
+@@ -122,2 +120,3 @@
          this.scrolled = false;
 +		this.tested = true;
      },
