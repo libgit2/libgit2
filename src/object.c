@@ -221,7 +221,7 @@ git_otype git_object_type(const git_object *obj)
 	return obj->cached.type;
 }
 
-git_repository *git_object_owner(const git_object *obj)
+const git_repository *git_object_owner(const git_object *obj)
 {
 	assert(obj);
 	return obj->repo;

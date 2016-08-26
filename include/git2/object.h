@@ -138,7 +138,7 @@ GIT_EXTERN(git_otype) git_object_type(const git_object *obj);
  * @param obj the object
  * @return the repository who owns this object
  */
-GIT_EXTERN(git_repository *) git_object_owner(const git_object *obj);
+GIT_EXTERN(const git_repository *) git_object_owner(const git_object *obj);
 
 /**
  * Close an open object
