@@ -49,6 +49,26 @@ GIT_EXTERN(int) git_tag_lookup_prefix(
 	git_tag **out, git_repository *repo, const git_oid *id, size_t len);
 
 /**
+ * Lookup a tag by its name in a repository.
+ *
+ * The generated reference must be freed by the user.
+ *
+ * The valid names are the names returned by calls to
+ * git_tag_list and git_tag_list_match.
+ *
+ * @see git_tag_list
+ *
+ * @param out pointer to the looked up tag
+ * @param repo the repo to use when location the tag
+ * @param tag_name the name of the tag to locate
+ * @return 0 on success, GIT_ENOTFOUND, GIT_EINVALIDSPEC or an error code
+ */
+GIT_EXTERN(int) git_tag_lookup_byname(
+	git_reference **out,
+	git_repository *repo,
+	const char *tag_name);
+
+/**
  * Close an open tag
  *
  * You can no longer use the git_tag pointer after this call.
