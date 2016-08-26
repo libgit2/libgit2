@@ -788,3 +788,41 @@ void test_status_ignore__negative_ignores_inside_ignores(void)
 	refute_is_ignored("top/mid/btm/tracked");
 	refute_is_ignored("top/mid/btm/untracked");
 }
+
+void test_status_ignore__negative_ignores_in_slash_star(void)
+{
+	git_status_options status_opts = GIT_STATUS_OPTIONS_INIT;
+	git_status_list *list;
+	int found_look_ma = 0, found_what_about = 0;
+	size_t i;
+	static const char *test_files[] = {
+		"empty_standard_repo/bin/look-ma.txt",
+		"empty_standard_repo/bin/what-about-me.txt",
+		NULL
+	};
+
+	make_test_data("empty_standard_repo", test_files);
+	cl_git_mkfile(
+		"empty_standard_repo/.gitignore",
+		"bin/*\n"
+		"!bin/w*\n");
+
+	assert_is_ignored("bin/look-ma.txt");
+	refute_is_ignored("bin/what-about-me.txt");
+
+	status_opts.flags = GIT_STATUS_OPT_DEFAULTS;
+	cl_git_pass(git_status_list_new(&list, g_repo, &status_opts));
+	for (i = 0; i < git_status_list_entrycount(list); i++) {
+		const git_status_entry *entry = git_status_byindex(list, i);
+
+		if (!strcmp("bin/look-ma.txt", entry->index_to_workdir->new_file.path))
+			found_look_ma = 1;
+
+		if (!strcmp("bin/what-about-me.txt", entry->index_to_workdir->new_file.path))
+			found_what_about = 1;
+	}
+	git_status_list_free(list);
+
+	cl_assert(found_look_ma);
+	cl_assert(found_what_about);
+}
