@@ -76,6 +76,10 @@ GIT_INLINE(uint16_t) default_swab16(uint16_t val)
 #define bswap32(x) _byteswap_ulong(x)
 #define bswap16(x) _byteswap_ushort(x)
 
+#else
+
+#include <arpa/inet.h>
+
 #endif
 
 #ifdef bswap32
