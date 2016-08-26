@@ -149,7 +149,7 @@ int git_merge__setup(
 	const git_merge_head *heads[],
 	size_t heads_len);
 
-int git_merge__indexes(git_repository *repo, git_index *index_new);
+int git_merge__check_result(git_repository *repo, git_index *index_new);
 
 int git_merge__append_conflicts_to_merge_msg(git_repository *repo, git_index *index);
 

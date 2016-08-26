@@ -97,7 +97,7 @@ static int merge_branch(void)
 	cl_git_pass(git_oid_fromstr(&their_oids[0], MERGE_BRANCH_OID));
 	cl_git_pass(git_merge_head_from_id(&their_heads[0], repo, &their_oids[0]));
 
-	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_ALLOW_CONFLICTS;
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 	error = git_merge(repo, (const git_merge_head **)their_heads, 1, &merge_opts, &checkout_opts);
 
 	git_merge_head_free(their_heads[0]);
