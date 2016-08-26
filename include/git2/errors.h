@@ -56,6 +56,10 @@ typedef enum {
 typedef struct {
 	char *message;
 	int klass;
+	int os_error;
+#ifdef GIT_WIN32
+	DWORD win32_os_error;
+#endif
 } git_error;
 
 /** Error classes */
