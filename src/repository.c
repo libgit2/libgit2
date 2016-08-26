@@ -733,6 +733,12 @@ int git_repository_index__weakptr(git_index **out, git_repository *repo)
 
 	assert(out && repo);
 
+    if (repo->is_bare) {
+        giterr_set(GIT_EBAREREPO, "Bare repositories don't have an index");
+        *out = NULL;
+        return -1;
+    }
+
 	if (repo->_index == NULL) {
 		git_buf index_path = GIT_BUF_INIT;
 		git_index *index;
