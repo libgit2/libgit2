@@ -145,6 +145,43 @@ with full path to the toolchain):
 Add `-DCMAKE_TOOLCHAIN_FILE={pathToToolchainFile} -DANDROID=1` to cmake command
 when configuring.
 
+Building libgit2 on OS X
+------------------------
+
+If you want to build a universal binary for Mac OS X, CMake sets it
+all up for you if you use `-DCMAKE_OSX_ARCHITECTURES="i386;x86_64"`
+when configuring.
+
+Building libgit2 on Windows using MSVC
+--------------------------------------
+
+To build libgit2 on Windows using MSVC, you don't have to install full Visual Studio,
+however, you would need to install Microsoft Windows SDK.
+
+To generate **msbuild** (part of Win SDK) build files, open "Windows SDK Command Prompt" and setup using:
+
+   >"c:\Program Files (x86)\CMake 2.8\bin\cmake.exe" -G "Visual Studio 10" -DBUILD_CLAR=off ..\libgit2
+
+The **-DBUILD_CLAR=off** just instructs CMake not to build CLAR testsuite. You would need Python development
+files for that. libgit2 won't build with **nmake**!
+
+If you plan to use libgit2 from some high-level language such as Python/Ruby/Smalltalk using FFI, then you
+should build **without** __stdcall convention as __stdcall mangles function names. To do so, add 
+   
+   -DSTDCALL=off
+
+to a command shown above. 
+
+If you want to build 32bit binary on 64 bit system, issue:
+
+  > setenv /x86
+
+prior generating makefiles and building.
+
+Finally, build libgit2 using **msbuild**:
+
+  > msbuild git2.vcxproj
+
 Language Bindings
 ==================================
 
