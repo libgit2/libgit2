@@ -87,7 +87,7 @@ void test_odb_foreach__files_in_objects_dir(void)
 	git_repository *repo;
 	git_odb *odb;
 	git_buf buf = GIT_BUF_INIT;
-	size_t nobj = 0;
+	int nobj = 0;
 
 	cl_fixture_sandbox("testrepo.git");
 	cl_git_pass(git_repository_open(&repo, "testrepo.git"));

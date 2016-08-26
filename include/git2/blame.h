@@ -146,7 +146,7 @@ GIT_EXTERN(uint32_t) git_blame_get_hunk_count(git_blame *blame);
  */
 GIT_EXTERN(const git_blame_hunk*) git_blame_get_hunk_byindex(
 		git_blame *blame,
-		uint32_t index);
+		size_t index);
 
 /**
  * Gets the hunk that relates to the given line number in the newest commit.
@@ -157,7 +157,7 @@ GIT_EXTERN(const git_blame_hunk*) git_blame_get_hunk_byindex(
  */
 GIT_EXTERN(const git_blame_hunk*) git_blame_get_hunk_byline(
 		git_blame *blame,
-		uint32_t lineno);
+		size_t lineno);
 
 /**
  * Get the blame for a single file.

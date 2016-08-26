@@ -156,19 +156,19 @@ uint32_t git_blame_get_hunk_count(git_blame *blame)
 	return (uint32_t)blame->hunks.length;
 }
 
-const git_blame_hunk *git_blame_get_hunk_byindex(git_blame *blame, uint32_t index)
+const git_blame_hunk *git_blame_get_hunk_byindex(git_blame *blame, size_t index)
 {
 	assert(blame);
 	return (git_blame_hunk*)git_vector_get(&blame->hunks, index);
 }
 
-const git_blame_hunk *git_blame_get_hunk_byline(git_blame *blame, uint32_t lineno)
+const git_blame_hunk *git_blame_get_hunk_byline(git_blame *blame, size_t lineno)
 {
 	size_t i, new_lineno = (size_t)lineno;
 	assert(blame);
 
 	if (!git_vector_bsearch2(&i, &blame->hunks, hunk_byfinalline_search_cmp, &new_lineno)) {
-		return git_blame_get_hunk_byindex(blame, (uint32_t)i);
+		return git_blame_get_hunk_byindex(blame, i);
 	}
 
 	return NULL;

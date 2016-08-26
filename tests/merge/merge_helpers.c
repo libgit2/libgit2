@@ -327,7 +327,7 @@ int merge_test_reuc(git_index *index, const struct merge_reuc_entry expected[], 
 
 int dircount(void *payload, git_buf *pathbuf)
 {
-	int *entries = payload;
+	size_t *entries = payload;
 	size_t len = git_buf_len(pathbuf);
 
 	if (len < 5 || strcmp(pathbuf->ptr + (git_buf_len(pathbuf) - 5), "/.git") != 0)
