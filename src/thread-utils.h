@@ -56,7 +56,11 @@ typedef struct {
 #if defined(GIT_WIN32)
 #define git_thread_yield() Sleep(0)
 #else
+#if defined(__FreeBSD__) || defined(__MidnightBSD__) || defined(__DragonFly__)
+#define git_thread_yield() pthread_yield()
+#else
 #define git_thread_yield() sched_yield()
+#endif
 #endif
 
 /* Pthreads Mutex */
