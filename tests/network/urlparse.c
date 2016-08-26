@@ -183,6 +183,22 @@ void test_network_urlparse__connection_data_relative_redirect_ssl(void)
 	cl_assert_equal_i(conndata.use_ssl, true);
 }
 
+void test_network_urlparse__no_path(void){
+	cl_git_pass(gitno_connection_data_from_url(&conndata, "http://foo.com", 
+				NULL));
+	cl_assert_equal_s(conndata.host, "foo.com");
+	cl_assert_equal_s(conndata.port, "80");
+	cl_assert_equal_p(conndata.path, NULL);
+	cl_assert_equal_p(conndata.user, NULL);
+	cl_assert_equal_p(conndata.pass, NULL);
+	cl_assert_equal_i(conndata.use_ssl, false);
+}
+
+void test_network_urlparse__no_host(void){
+	cl_git_fail(gitno_connection_data_from_url(&conndata, "http://", 
+				NULL));
+}
+
 /* Run this under valgrind */
 void test_network_urlparse__connection_data_cleanup(void)
 {
