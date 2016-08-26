@@ -8,6 +8,7 @@
 #define INCLUDE_diff_h__
 
 #include "git2/diff.h"
+#include "git2/patch.h"
 #include "git2/sys/diff.h"
 #include "git2/oid.h"
 
@@ -44,6 +45,7 @@ struct git_diff {
 	int (*pfxcomp)(const char *str, const char *pfx);
 	int (*entrycomp)(const void *a, const void *b);
 
+	int (*patch_fn)(git_patch **out, git_diff *diff, size_t idx);
 	void (*free_fn)(git_diff *diff);
 };
 

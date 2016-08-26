@@ -7,6 +7,7 @@
 #include "git2/patch.h"
 #include "patch.h"
 #include "patch_parse.h"
+#include "diff_parse.h"
 #include "path.h"
 
 #define parse_err(...) \
@@ -1023,6 +1024,20 @@ static void patch_parse_ctx_free(git_patch_parse_ctx *ctx)
 void git_patch_parse_ctx_free(git_patch_parse_ctx *ctx)
 {
 	GIT_REFCOUNT_DEC(ctx, patch_parse_ctx_free);
+}
+
+int git_patch_parsed_from_diff(git_patch **out, git_diff *d, size_t idx)
+{
+	git_diff_parsed *diff = (git_diff_parsed *)d;
+	git_patch *p;
+
+	if ((p = git_vector_get(&diff->patches, idx)) == NULL)
+		return -1;
+
+	GIT_REFCOUNT_INC(p);
+	*out = p;
+
+	return 0;
 }
 
 static void patch_parsed__free(git_patch *p)

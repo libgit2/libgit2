@@ -746,7 +746,7 @@ int git_patch_from_buffers(
 	return patch_from_sources(out, &osrc, &nsrc, opts);
 }
 
-int git_patch_from_diff(
+int git_patch_generated_from_diff(
 	git_patch **patch_ptr, git_diff *diff, size_t idx)
 {
 	int error = 0;

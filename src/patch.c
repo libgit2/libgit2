@@ -194,6 +194,12 @@ int git_patch_get_line_in_hunk(
 	return 0;
 }
 
+int git_patch_from_diff(git_patch **out, git_diff *diff, size_t idx)
+{
+	assert(out && diff && diff->patch_fn);
+	return diff->patch_fn(out, diff, idx);
+}
+
 static void git_patch__free(git_patch *patch)
 {
 	if (patch->free_fn)

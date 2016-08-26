@@ -51,4 +51,6 @@ extern int git_patch_parse(
 	git_patch **out,
 	git_patch_parse_ctx *ctx);
 
+extern int git_patch_parsed_from_diff(git_patch **, git_diff *, size_t);
+
 #endif
