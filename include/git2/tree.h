@@ -324,6 +324,33 @@ GIT_EXTERN(int) git_treebuilder_insert(
 	const git_oid *id,
 	git_filemode_t filemode);
 
+
+/**
+ * Add or update a blob in the builder
+ *
+ * Just like git_treebuilder_insert, but inserts the entry with the
+ * correct attributes for a blob.
+ */
+GIT_EXTERN(int) git_treebuilder_insert_blob(
+	const git_tree_entry **entry_out,
+	git_treebuilder *bld,
+	const char *filename,
+	const git_oid *id,
+	int executable);
+
+/**
+ * Add or update a tree in the builder
+ *
+ * Just like git_treebuilder_insert, but inserts the entry with the
+ * correct attributes for a tree.
+ */
+GIT_EXTERN(int) git_treebuilder_insert_tree(
+	const git_tree_entry **entry_out,
+	git_treebuilder *bld,
+	const char *filename,
+	const git_oid *id);
+
+
 /**
  * Remove an entry from the builder by its filename
  *

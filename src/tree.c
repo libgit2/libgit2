@@ -643,6 +643,30 @@ on_error:
 	return -1;
 }
 
+int git_treebuilder_insert_blob(
+	const git_tree_entry **entry_out,
+	git_treebuilder *bld,
+	const char *filename,
+	const git_oid *id,
+	int executable)
+{
+	unsigned int attr = S_IFREG;
+
+	attr |= executable ? 0755 : 0644;
+
+	return git_treebuilder_insert(entry_out, bld, filename, id, attr);
+}
+
+int git_treebuilder_insert_tree(
+	const git_tree_entry **entry_out,
+	git_treebuilder *bld,
+	const char *filename,
+	const git_oid *id)
+{
+	return git_treebuilder_insert(entry_out, bld, filename, id, 040000);
+}
+
+
 int git_treebuilder_insert(
 	const git_tree_entry **entry_out,
 	git_treebuilder *bld,
