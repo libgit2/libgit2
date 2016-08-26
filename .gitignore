@@ -30,3 +30,7 @@ msvc/Release/
 *~
 tags
 mkmf.log
+Makefile
+*.Makefile
+*.target.mk
+out/
