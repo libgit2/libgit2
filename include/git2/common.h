@@ -157,6 +157,7 @@ typedef enum {
 	GIT_OPT_SET_SSL_CERT_LOCATIONS,
 	GIT_OPT_SET_USER_AGENT,
 	GIT_OPT_ENABLE_STRICT_OBJECT_CREATION,
+	GIT_OPT_ENABLE_SYMBOLIC_REF_TARGET_VALIDATION,
 	GIT_OPT_SET_SSL_CIPHERS,
 	GIT_OPT_GET_USER_AGENT,
 } git_libgit2_opt_t;
@@ -270,6 +271,18 @@ typedef enum {
  *		> example, when this is enabled, the parent(s) and tree inputs
  *		> will be validated when creating a new commit.  This defaults
  *		> to disabled.
+ *
+ *	* opts(GIT_OPT_ENABLE_SYMBOLIC_REF_TARGET_VALIDATION, int enabled)
+ *
+ *		> Validate the target of a symbolic ref when creating it.
+ *		> For example, 'foobar' is not a valid ref,
+ *		> therefore 'foobar' is not a valid target
+ *		> for a symbolic ref by default,
+ *		> where as 'refs/heads/foobar' is.
+ *		> Disabling this bypasses validation so that an arbitrary
+ *		> strings such as 'foobar' can be used for a symbolic ref target.
+ *		> This defaults to enabled.
+ *
  *	* opts(GIT_OPT_SET_SSL_CIPHERS, const char *ciphers)
  *
  *		> Set the SSL ciphers use for HTTPS connections.
