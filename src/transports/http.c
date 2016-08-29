@@ -599,6 +599,7 @@ static int http_connect(http_subtransport *t)
 		git_stream_close(t->io);
 		git_stream_free(t->io);
 		t->io = NULL;
+		t->connected = 0;
 	}
 
 	if (t->connection_data.use_ssl) {
@@ -1034,6 +1035,8 @@ static int http_close(git_smart_subtransport *subtransport)
 	size_t i;
 
 	clear_parser_state(t);
+
+	t->connected = 0;
 
 	if (t->io) {
 		git_stream_close(t->io);
