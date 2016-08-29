@@ -161,7 +161,12 @@ GIT_INLINE(bool) is_workdir_base_or_new(
 		git_oid__cmp(&newitem->id, workdir_id) == 0);
 }
 
-static bool checkout_is_workdir_modified(
+GIT_INLINE(bool) is_file_mode_changed(git_filemode_t a, git_filemode_t b)
+{
+	return (S_ISREG(a) && S_ISREG(b) && a != b);
+}
+
+static bool is_workdir_modified(
 	checkout_data *data,
 	const git_diff_file *baseitem,
 	const git_diff_file *newitem,
@@ -202,7 +207,8 @@ static bool checkout_is_workdir_modified(
 	 */
 	if ((ie = git_index_get_bypath(data->index, wditem->path, 0)) != NULL) {
 		if (git_index_time_eq(&wditem->mtime, &ie->mtime) &&
-			wditem->file_size == ie->file_size)
+			wditem->file_size == ie->file_size &&
+			!is_file_mode_changed(wditem->mode, ie->mode))
 			return !is_workdir_base_or_new(&ie->id, baseitem, newitem);
 	}
 
@@ -212,6 +218,9 @@ static bool checkout_is_workdir_modified(
 	if (baseitem->size && wditem->file_size != baseitem->size)
 		return true;
 
+	if (is_file_mode_changed(baseitem->mode, wditem->mode))
+		return true;
+
 	if (git_diff__oid_for_entry(&oid, data->diff, wditem, wditem->mode, NULL) < 0)
 		return false;
 
@@ -219,6 +228,53 @@ static bool checkout_is_workdir_modified(
 	 * target's contents are already in the working directory.
 	 */
 	return !is_workdir_base_or_new(&oid, baseitem, newitem);
+}
+
+static bool is_index_modified(
+	checkout_data *data,
+	const git_diff_file *baseitem,
+	const git_diff_file *newitem,
+	const git_index_entry *wditem)
+{
+	const git_index_entry *ie;
+	const char *lookup_path;
+
+	/* Don't bother investigate if we're checking out the current
+	 * index, it is canonical.
+	 */
+	if (data->index == git_iterator_index(data->target))
+		return false;
+
+	if (!S_ISDIR(baseitem->mode))
+		lookup_path = baseitem->path;
+	else if (!S_ISDIR(newitem->mode))
+		lookup_path = newitem->path;
+	else if (!S_ISDIR(wditem->mode))
+		lookup_path = wditem->path;
+	else
+		return true;
+
+	if ((ie = git_index_get_bypath(data->index, lookup_path, 0)) == NULL)
+		return true;
+
+	/* consider the index entry modified if it's different than both
+	 * the base _and_ the target.
+	 */
+	return (
+		(git_oid__cmp(&baseitem->id, &ie->id) != 0 ||
+		 baseitem->mode != ie->mode) &&
+		(git_oid__cmp(&newitem->id, &ie->id) != 0 ||
+		 newitem->mode != ie->mode));
+}
+
+static bool is_workdir_or_index_modified(
+	checkout_data *data,
+	const git_diff_file *baseitem,
+	const git_diff_file *newitem,
+	const git_index_entry *wditem)
+{
+	return is_workdir_modified(data, baseitem, newitem, wditem) ||
+		is_index_modified(data, baseitem, newitem, wditem);
 }
 
 #define CHECKOUT_ACTION_IF(FLAG,YES,NO) \
@@ -464,7 +520,7 @@ static int checkout_action_with_wd(
 
 	switch (delta->status) {
 	case GIT_DELTA_UNMODIFIED: /* case 14/15 or 33 */
-		if (checkout_is_workdir_modified(data, &delta->old_file, &delta->new_file, wd)) {
+		if (is_workdir_or_index_modified(data, &delta->old_file, &delta->new_file, wd)) {
 			GITERR_CHECK_ERROR(
 				checkout_notify(data, GIT_CHECKOUT_NOTIFY_DIRTY, delta, wd) );
 			*action = CHECKOUT_ACTION_IF(FORCE, UPDATE_BLOB, NONE);
@@ -477,14 +533,14 @@ static int checkout_action_with_wd(
 			*action = CHECKOUT_ACTION_IF(FORCE, UPDATE_BLOB, CONFLICT);
 		break;
 	case GIT_DELTA_DELETED: /* case 9 or 10 (or 26 but not really) */
-		if (checkout_is_workdir_modified(data, &delta->old_file, &delta->new_file, wd))
+		if (is_workdir_or_index_modified(data, &delta->old_file, &delta->new_file, wd))
 			*action = CHECKOUT_ACTION_IF(FORCE, REMOVE, CONFLICT);
 		else
 			*action = CHECKOUT_ACTION_IF(SAFE, REMOVE, NONE);
 		break;
 	case GIT_DELTA_MODIFIED: /* case 16, 17, 18 (or 36 but not really) */
 		if (wd->mode != GIT_FILEMODE_COMMIT &&
-			checkout_is_workdir_modified(data, &delta->old_file, &delta->new_file, wd))
+			is_workdir_or_index_modified(data, &delta->old_file, &delta->new_file, wd))
 			*action = CHECKOUT_ACTION_IF(FORCE, UPDATE_BLOB, CONFLICT);
 		else
 			*action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
@@ -507,7 +563,7 @@ static int checkout_action_with_wd(
 			} else
 				*action = CHECKOUT_ACTION_IF(FORCE, REMOVE, CONFLICT);
 		}
-		else if (checkout_is_workdir_modified(data, &delta->old_file, &delta->new_file, wd))
+		else if (is_workdir_or_index_modified(data, &delta->old_file, &delta->new_file, wd))
 			*action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
 		else
 			*action = CHECKOUT_ACTION_IF(SAFE, REMOVE_AND_UPDATE, NONE);
