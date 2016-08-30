@@ -79,8 +79,6 @@ void test_index_collision__add_with_highstage_2(void)
 {
 	git_index_entry entry;
 
-	cl_git_pass(git_repository_index(&g_index, g_repo));
-
 	memset(&entry, 0, sizeof(entry));
 	entry.ctime.seconds = 12346789;
 	entry.mtime.seconds = 12346789;
