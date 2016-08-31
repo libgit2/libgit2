@@ -425,6 +425,38 @@ static int contains(git_pqueue *list, git_commit_list_node *node)
 	return 0;
 }
 
+static void mark_parents_uninteresting(git_commit_list_node *commit)
+{
+	unsigned short i;
+	git_commit_list *parents = NULL;
+
+	for (i = 0; i < commit->out_degree; i++)
+		git_commit_list_insert(commit->parents[i], &parents);
+
+
+	while (parents) {
+		git_commit_list_node *commit = git_commit_list_pop(&parents);
+
+		while (commit) {
+			if (commit->uninteresting)
+				break;
+
+			commit->uninteresting = 1;
+			/*
+			 * If we've reached this commit some other way
+			 * already, we need to mark its parents uninteresting
+			 * as well.
+			 */
+			if (!commit->parents)
+				break;
+
+			for (i = 0; i < commit->out_degree; i++)
+				git_commit_list_insert(commit->parents[i], &parents);
+			commit = commit->parents[0];
+		}
+	}
+}
+
 static int premark_uninteresting(git_revwalk *walk)
 {
 	int error = 0;
@@ -439,6 +471,9 @@ static int premark_uninteresting(git_revwalk *walk)
 	for (list = walk->user_input; list; list = list->next) {
 		if ((error = git_commit_list_parse(walk, list->item)) < 0)
 			goto cleanup;
+
+		if (list->item->uninteresting)
+			mark_parents_uninteresting(list->item);
 
 		if ((error = git_pqueue_insert(&q, list->item)) < 0)
 			goto cleanup;
