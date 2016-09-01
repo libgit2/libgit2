@@ -43,6 +43,7 @@
 #include <stdio.h>
 #include <string.h>
 
+static void oid_parsing(git_oid *out);
 static void object_database(git_repository *repo, git_oid *oid);
 static void commit_writing(git_repository *repo);
 static void commit_parsing(git_repository *repo);
@@ -71,6 +72,8 @@ static void check_error(int error_code, const char *action)
 
 int main (int argc, char** argv)
 {
+	git_oid oid;
+
 	// Initialize the library, this will set up any global state which libgit2 needs
 	// including threading and crypto
 	git_libgit2_init();
@@ -91,32 +94,7 @@ int main (int argc, char** argv)
 	error = git_repository_open(&repo, repo_path);
 	check_error(error, "opening repository");
 
-	// ### SHA-1 Value Conversions
-
-	// For our first example, we will convert a 40 character hex value to the
-	// 20 byte raw SHA1 value.
-	printf("*Hex to Raw*\n");
-	char hex[] = "4a202b346bb0fb0db7eff3cffeb3c70babbd2045";
-
-	// The `git_oid` is the structure that keeps the SHA value. We will use
-	// this throughout the example for storing the value of the current SHA
-	// key we're working with.
-	git_oid oid;
-	git_oid_fromstr(&oid, hex);
-
-	// Once we've converted the string into the oid value, we can get the raw
-	// value of the SHA by accessing `oid.id`
-
-	// Next we will convert the 20 byte raw SHA1 value to a human readable 40
-	// char hex value.
-	printf("\n*Raw to Hex*\n");
-	char out[GIT_OID_HEXSZ+1];
-	out[GIT_OID_HEXSZ] = '\0';
-
-	// If you have a oid, you can easily get the hex value of the SHA as well.
-	git_oid_fmt(out, &oid);
-	printf("SHA hex string: %s\n", out);
-
+	oid_parsing(&oid);
 	object_database(repo, &oid);
 	commit_writing(repo);
 	commit_parsing(repo);
@@ -132,6 +110,46 @@ int main (int argc, char** argv)
 	git_repository_free(repo);
 
 	return 0;
+}
+
+/**
+ * ### SHA-1 Value Conversions
+ */
+static void oid_parsing(git_oid *oid)
+{
+	char out[GIT_OID_HEXSZ+1];
+	char hex[] = "4a202b346bb0fb0db7eff3cffeb3c70babbd2045";
+
+	printf("*Hex to Raw*\n");
+
+	/**
+	 * For our first example, we will convert a 40 character hex value to the
+	 * 20 byte raw SHA1 value.
+	 *
+	 * The `git_oid` is the structure that keeps the SHA value. We will use
+	 * this throughout the example for storing the value of the current SHA
+	 * key we're working with.
+	 */
+	git_oid_fromstr(oid, hex);
+
+	// Once we've converted the string into the oid value, we can get the raw
+	// value of the SHA by accessing `oid.id`
+
+	// Next we will convert the 20 byte raw SHA1 value to a human readable 40
+	// char hex value.
+	printf("\n*Raw to Hex*\n");
+	out[GIT_OID_HEXSZ] = '\0';
+
+	/**
+	 * If you have a oid, you can easily get the hex value of the SHA as well.
+	 */
+	git_oid_fmt(out, oid);
+
+	/**
+	 * If you have a oid, you can easily get the hex value of the SHA as well.
+	 */
+	git_oid_fmt(out, oid);
+	printf("SHA hex string: %s\n", out);
 }
 
 /**
