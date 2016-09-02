@@ -342,7 +342,7 @@ done:
 
 static int diff_binary(git_patch_generated_output *output, git_patch_generated *patch)
 {
-	git_diff_binary binary = {{0}};
+	git_diff_binary binary = {0};
 	const char *old_data = patch->ofile.map.data;
 	const char *new_data = patch->nfile.map.data;
 	size_t old_len = patch->ofile.map.len,
@@ -352,6 +352,8 @@ static int diff_binary(git_patch_generated_output *output, git_patch_generated *
 	/* Only load contents if the user actually wants to diff
 	 * binary files. */
 	if (patch->base.diff_opts.flags & GIT_DIFF_SHOW_BINARY) {
+		binary.contains_data = 1;
+
 		/* Create the old->new delta (as the "new" side of the patch),
 		 * and the new->old delta (as the "old" side)
 		 */
@@ -492,8 +494,17 @@ static int diff_single_generate(patch_generated_with_delta *pd, git_xdiff_output
 	patch_generated_init_common(patch);
 
 	if (pd->delta.status == GIT_DELTA_UNMODIFIED &&
-		!(patch->ofile.opts_flags & GIT_DIFF_INCLUDE_UNMODIFIED))
+		!(patch->ofile.opts_flags & GIT_DIFF_INCLUDE_UNMODIFIED)) {
+
+		/* Even empty patches are flagged as binary, and even though
+		 * there's no difference, we flag this as "containing data"
+		 * (the data is known to be empty, as opposed to wholly unknown).
+		 */
+		if (patch->base.diff_opts.flags & GIT_DIFF_SHOW_BINARY)
+			patch->base.binary.contains_data = 1;
+
 		return error;
+	}
 
 	error = patch_generated_invoke_file_callback(patch, (git_patch_generated_output *)xo);
 

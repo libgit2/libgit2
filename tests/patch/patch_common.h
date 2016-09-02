@@ -661,3 +661,8 @@
 	"\n" \
 	"delta 48\n" \
 	"mc$~Y)c#%<%fq{_;hPgsAGK(h)CJASj=y9P)1m{m|^9BI99|yz$\n\n"
+
+#define PATCH_BINARY_NOT_PRINTED \
+	"diff --git a/binary.bin b/binary.bin\n" \
+	"index 27184d9..7c94f9e 100644\n" \
+	"Binary files a/binary.bin and b/binary.bin differ\n"

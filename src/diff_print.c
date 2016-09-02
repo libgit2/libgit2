@@ -500,7 +500,6 @@ static int diff_print_patch_file_binary_noshow(
 			&new_path, new_pfx, delta->new_file.path)) < 0)
 		goto done;
 
-
 	pi->line.num_lines = 1;
 	error = diff_delta_format_with_paths(
 		pi->buf, delta, "Binary files %s and %s differ\n",
@@ -524,7 +523,7 @@ static int diff_print_patch_file_binary(
 	if (delta->status == GIT_DELTA_UNMODIFIED)
 		return 0;
 
-	if ((pi->flags & GIT_DIFF_SHOW_BINARY) == 0)
+	if ((pi->flags & GIT_DIFF_SHOW_BINARY) == 0 || !binary->contains_data)
 		return diff_print_patch_file_binary_noshow(
 			pi, delta, old_pfx, new_pfx);
 
@@ -563,8 +562,11 @@ static int diff_print_patch_file(
 	bool binary = (delta->flags & GIT_DIFF_FLAG_BINARY) ||
 		(pi->flags & GIT_DIFF_FORCE_BINARY);
 	bool show_binary = !!(pi->flags & GIT_DIFF_SHOW_BINARY);
-	int id_strlen = binary && show_binary ?
-		GIT_OID_HEXSZ : pi->id_strlen;
+	int id_strlen = pi->id_strlen;
+
+	if (binary && show_binary)
+		id_strlen = delta->old_file.id_abbrev ? delta->old_file.id_abbrev :
+			delta->new_file.id_abbrev;
 
 	GIT_UNUSED(progress);
 

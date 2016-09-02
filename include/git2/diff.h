@@ -490,6 +490,14 @@ typedef struct {
 
 /** Structure describing the binary contents of a diff. */
 typedef struct {
+	/**
+	 * Whether there is data in this binary structure or not.  If this
+	 * is `1`, then this was produced and included binary content.  If
+	 * this is `0` then this was generated knowing only that a binary
+	 * file changed but without providing the data, probably from a patch
+	 * that said `Binary files a/file.txt and b/file.txt differ`.
+	 */
+	unsigned int contains_data;
 	git_diff_binary_file old_file; /**< The contents of the old file. */
 	git_diff_binary_file new_file; /**< The contents of the new file. */
 } git_diff_binary;
