@@ -349,20 +349,24 @@ static int diff_binary(git_patch_generated_output *output, git_patch_generated *
 		new_len = patch->nfile.map.len;
 	int error;
 
-	/* Create the old->new delta (as the "new" side of the patch),
-	 * and the new->old delta (as the "old" side)
-	 */
-	if ((error = create_binary(&binary.old_file.type,
-			(char **)&binary.old_file.data,
-			&binary.old_file.datalen,
-			&binary.old_file.inflatedlen,
-			new_data, new_len, old_data, old_len)) < 0 ||
-		(error = create_binary(&binary.new_file.type,
-			(char **)&binary.new_file.data,
-			&binary.new_file.datalen,
-			&binary.new_file.inflatedlen,
-			old_data, old_len, new_data, new_len)) < 0)
-		return error;
+	/* Only load contents if the user actually wants to diff
+	 * binary files. */
+	if (patch->base.diff_opts.flags & GIT_DIFF_SHOW_BINARY) {
+		/* Create the old->new delta (as the "new" side of the patch),
+		 * and the new->old delta (as the "old" side)
+		 */
+		if ((error = create_binary(&binary.old_file.type,
+				(char **)&binary.old_file.data,
+				&binary.old_file.datalen,
+				&binary.old_file.inflatedlen,
+				new_data, new_len, old_data, old_len)) < 0 ||
+			(error = create_binary(&binary.new_file.type,
+				(char **)&binary.new_file.data,
+				&binary.new_file.datalen,
+				&binary.new_file.inflatedlen,
+				old_data, old_len, new_data, new_len)) < 0)
+			return error;
+	}
 
 	error = giterr_set_after_callback_function(
 		output->binary_cb(patch->base.delta, &binary, output->payload),
