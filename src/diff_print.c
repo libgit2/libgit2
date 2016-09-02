@@ -521,12 +521,12 @@ static int diff_print_patch_file_binary(
 	size_t pre_binary_size;
 	int error;
 
+	if (delta->status == GIT_DELTA_UNMODIFIED)
+		return 0;
+
 	if ((pi->flags & GIT_DIFF_SHOW_BINARY) == 0)
 		return diff_print_patch_file_binary_noshow(
 			pi, delta, old_pfx, new_pfx);
-
-	if (binary->new_file.datalen == 0 && binary->old_file.datalen == 0)
-		return 0;
 
 	pre_binary_size = pi->buf->size;
 	git_buf_printf(pi->buf, "GIT binary patch\n");
