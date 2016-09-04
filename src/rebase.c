@@ -472,6 +472,7 @@ done:
 static int rebase_setupfiles(git_rebase *rebase)
 {
 	char onto[GIT_OID_HEXSZ], orig_head[GIT_OID_HEXSZ];
+	const char *orig_head_name;
 
 	git_oid_fmt(onto, &rebase->onto_id);
 	git_oid_fmt(orig_head, &rebase->orig_head_id);
@@ -481,8 +482,11 @@ static int rebase_setupfiles(git_rebase *rebase)
 		return -1;
 	}
 
+	orig_head_name = rebase->head_detached ? ORIG_DETACHED_HEAD :
+		rebase->orig_head_name;
+
 	if (git_repository__set_orig_head(rebase->repo, &rebase->orig_head_id) < 0 ||
-		rebase_setupfile(rebase, HEAD_NAME_FILE, -1, "%s\n", rebase->orig_head_name) < 0 ||
+		rebase_setupfile(rebase, HEAD_NAME_FILE, -1, "%s\n", orig_head_name) < 0 ||
 		rebase_setupfile(rebase, ONTO_FILE, -1, "%.*s\n", GIT_OID_HEXSZ, onto) < 0 ||
 		rebase_setupfile(rebase, ORIG_HEAD_FILE, -1, "%.*s\n", GIT_OID_HEXSZ, orig_head) < 0 ||
 		rebase_setupfile(rebase, QUIET_FILE, -1, rebase->quiet ? "t\n" : "\n") < 0)
@@ -626,8 +630,12 @@ static int rebase_init_merge(
 	rebase->state_path = git_buf_detach(&state_path);
 	GITERR_CHECK_ALLOC(rebase->state_path);
 
-	rebase->orig_head_name = git__strdup(branch->ref_name ? branch->ref_name : ORIG_DETACHED_HEAD);
-	GITERR_CHECK_ALLOC(rebase->orig_head_name);
+	if (branch->ref_name) {
+		rebase->orig_head_name = git__strdup(branch->ref_name);
+		GITERR_CHECK_ALLOC(rebase->orig_head_name);
+	} else {
+		rebase->head_detached = 1;
+	}
 
 	rebase->onto_name = git__strdup(rebase_onto_name(onto));
 	GITERR_CHECK_ALLOC(rebase->onto_name);
@@ -844,6 +852,7 @@ static int rebase_next_inmemory(
 	git_tree *current_tree = NULL, *head_tree = NULL, *parent_tree = NULL;
 	git_rebase_operation *operation;
 	git_index *index = NULL;
+	unsigned int parent_count;
 	int error;
 
 	*out = NULL;
@@ -851,10 +860,20 @@ static int rebase_next_inmemory(
 	operation = git_array_get(rebase->operations, rebase->current);
 
 	if ((error = git_commit_lookup(&current_commit, rebase->repo, &operation->id)) < 0 ||
-		(error = git_commit_tree(&current_tree, current_commit)) < 0 ||
-		(error = git_commit_parent(&parent_commit, current_commit, 0)) < 0 ||
-		(error = git_commit_tree(&parent_tree, parent_commit)) < 0 ||
-		(error = git_commit_tree(&head_tree, rebase->last_commit)) < 0 ||
+		(error = git_commit_tree(&current_tree, current_commit)) < 0)
+		goto done;
+
+	if ((parent_count = git_commit_parentcount(current_commit)) > 1) {
+		giterr_set(GITERR_REBASE, "Cannot rebase a merge commit");
+		error = -1;
+		goto done;
+	} else if (parent_count) {
+		if ((error = git_commit_parent(&parent_commit, current_commit, 0)) < 0 ||
+			(error = git_commit_tree(&parent_tree, parent_commit)) < 0)
+			goto done;
+	}
+
+	if ((error = git_commit_tree(&head_tree, rebase->last_commit)) < 0 ||
 		(error = git_merge_trees(&index, rebase->repo, parent_tree, head_tree, current_tree, &rebase->options.merge_options)) < 0)
 		goto done;
 
@@ -1028,15 +1047,12 @@ static int rebase_commit_inmemory(
 	const char *message_encoding,
 	const char *message)
 {
-	git_rebase_operation *operation;
 	git_commit *commit = NULL;
 	int error = 0;
 
-	operation = git_array_get(rebase->operations, rebase->current);
-
-	assert(operation);
 	assert(rebase->index);
 	assert(rebase->last_commit);
+	assert(rebase->current < rebase->operations.size);
 
 	if ((error = rebase_commit__create(&commit, rebase, rebase->index,
 		rebase->last_commit, author, committer, message_encoding, message)) < 0)
@@ -1254,48 +1270,59 @@ done:
 	return error;
 }
 
-int git_rebase_finish(
-	git_rebase *rebase,
-	const git_signature *signature)
+static int return_to_orig_head(git_rebase *rebase)
 {
 	git_reference *terminal_ref = NULL, *branch_ref = NULL, *head_ref = NULL;
 	git_commit *terminal_commit = NULL;
 	git_buf branch_msg = GIT_BUF_INIT, head_msg = GIT_BUF_INIT;
 	char onto[GIT_OID_HEXSZ];
-	int error;
-
-	assert(rebase);
-
-	if (rebase->inmemory)
-		return 0;
+	int error = 0;
 
 	git_oid_fmt(onto, &rebase->onto_id);
 
-	if ((error = git_buf_printf(&branch_msg, "rebase finished: %s onto %.*s",
-			rebase->orig_head_name, GIT_OID_HEXSZ, onto)) < 0 ||
-		(error = git_buf_printf(&head_msg, "rebase finished: returning to %s",
-			rebase->orig_head_name)) < 0 ||
-		(error = git_repository_head(&terminal_ref, rebase->repo)) < 0 ||
+	if ((error = git_buf_printf(&branch_msg,
+			"rebase finished: %s onto %.*s",
+			rebase->orig_head_name, GIT_OID_HEXSZ, onto)) == 0 &&
+		(error = git_buf_printf(&head_msg,
+			"rebase finished: returning to %s",
+			rebase->orig_head_name)) == 0 &&
+		(error = git_repository_head(&terminal_ref, rebase->repo)) == 0 &&
 		(error = git_reference_peel((git_object **)&terminal_commit,
-			terminal_ref, GIT_OBJ_COMMIT)) < 0 ||
+			terminal_ref, GIT_OBJ_COMMIT)) == 0 &&
 		(error = git_reference_create_matching(&branch_ref,
-			rebase->repo, rebase->orig_head_name, git_commit_id(terminal_commit), 1,
-			&rebase->orig_head_id, branch_msg.ptr)) < 0 ||
-		(error = git_reference_symbolic_create(&head_ref,
+			rebase->repo, rebase->orig_head_name,
+			git_commit_id(terminal_commit), 1,
+			&rebase->orig_head_id, branch_msg.ptr)) == 0)
+		error = git_reference_symbolic_create(&head_ref,
 			rebase->repo, GIT_HEAD_FILE, rebase->orig_head_name, 1,
-			head_msg.ptr)) < 0 ||
-		(error = rebase_copy_notes(rebase, signature)) < 0)
-		goto done;
+			head_msg.ptr);
 
-	error = rebase_cleanup(rebase);
-
-done:
 	git_buf_free(&head_msg);
 	git_buf_free(&branch_msg);
 	git_commit_free(terminal_commit);
 	git_reference_free(head_ref);
 	git_reference_free(branch_ref);
 	git_reference_free(terminal_ref);
+
+	return error;
+}
+
+int git_rebase_finish(
+	git_rebase *rebase,
+	const git_signature *signature)
+{
+	int error = 0;
+
+	assert(rebase);
+
+	if (rebase->inmemory)
+		return 0;
+
+	if (!rebase->head_detached)
+		error = return_to_orig_head(rebase);
+
+	if (error == 0 && (error = rebase_copy_notes(rebase, signature)) == 0)
+		error = rebase_cleanup(rebase);
 
 	return error;
 }

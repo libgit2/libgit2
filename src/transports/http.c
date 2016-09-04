@@ -114,7 +114,7 @@ static bool challenge_match(git_http_auth_scheme *scheme, void *data)
 	size_t scheme_len;
 
 	scheme_len = strlen(scheme_name);
-	return (strncmp(challenge, scheme_name, scheme_len) == 0 &&
+	return (strncasecmp(challenge, scheme_name, scheme_len) == 0 &&
 		(challenge[scheme_len] == '\0' || challenge[scheme_len] == ' '));
 }
 
@@ -555,10 +555,40 @@ static int write_chunk(git_stream *io, const char *buffer, size_t len)
 	return 0;
 }
 
+static int apply_proxy_config(http_subtransport *t)
+{
+	int error;
+	git_proxy_t proxy_type;
+
+	if (!git_stream_supports_proxy(t->io))
+		return 0;
+
+	proxy_type = t->owner->proxy.type;
+
+	if (proxy_type == GIT_PROXY_NONE)
+		return 0;
+
+	if (proxy_type == GIT_PROXY_AUTO) {
+		char *url;
+		git_proxy_options opts = GIT_PROXY_OPTIONS_INIT;
+
+		if ((error = git_remote__get_http_proxy(t->owner->owner, !!t->connection_data.use_ssl, &url)) < 0)
+			return error;
+
+		opts.type = GIT_PROXY_SPECIFIED;
+		opts.url = url;
+		error = git_stream_set_proxy(t->io, &opts);
+		git__free(url);
+
+		return error;
+	}
+
+	return git_stream_set_proxy(t->io, &t->owner->proxy);
+}
+
 static int http_connect(http_subtransport *t)
 {
 	int error;
-	char *proxy_url;
 
 	if (t->connected &&
 		http_should_keep_alive(&t->parser) &&
@@ -569,6 +599,7 @@ static int http_connect(http_subtransport *t)
 		git_stream_close(t->io);
 		git_stream_free(t->io);
 		t->io = NULL;
+		t->connected = 0;
 	}
 
 	if (t->connection_data.use_ssl) {
@@ -586,18 +617,10 @@ static int http_connect(http_subtransport *t)
 
 	GITERR_CHECK_VERSION(t->io, GIT_STREAM_VERSION, "git_stream");
 
-	if (git_stream_supports_proxy(t->io) &&
-	    !git_remote__get_http_proxy(t->owner->owner, !!t->connection_data.use_ssl, &proxy_url)) {
-		error = git_stream_set_proxy(t->io, proxy_url);
-		git__free(proxy_url);
-
-		if (error < 0)
-			return error;
-	}
+	apply_proxy_config(t);
 
 	error = git_stream_connect(t->io);
 
-#if defined(GIT_OPENSSL) || defined(GIT_SECURE_TRANSPORT) || defined(GIT_CURL)
 	if ((!error || error == GIT_ECERTIFICATE) && t->owner->certificate_check_cb != NULL &&
 	    git_stream_is_encrypted(t->io)) {
 		git_cert *cert;
@@ -617,7 +640,7 @@ static int http_connect(http_subtransport *t)
 			return error;
 		}
 	}
-#endif
+
 	if (error < 0)
 		return error;
 
@@ -1012,6 +1035,8 @@ static int http_close(git_smart_subtransport *subtransport)
 	size_t i;
 
 	clear_parser_state(t);
+
+	t->connected = 0;
 
 	if (t->io) {
 		git_stream_close(t->io);

@@ -18,6 +18,8 @@
 #include "iterator.h"
 #include "refs.h"
 #include "diff.h"
+#include "diff_generate.h"
+#include "diff_tform.h"
 #include "checkout.h"
 #include "tree.h"
 #include "blob.h"
@@ -2827,6 +2829,7 @@ static int merge_check_workdir(size_t *conflicts, git_repository *repo, git_inde
 	opts.flags |= GIT_DIFF_DISABLE_PATHSPEC_MATCH;
 	opts.pathspec.count = merged_paths->length;
 	opts.pathspec.strings = (char **)merged_paths->contents;
+	opts.ignore_submodules = GIT_SUBMODULE_IGNORE_ALL;
 
 	if ((error = git_diff_index_to_workdir(&wd_diff_list, repo, NULL, &opts)) < 0)
 		goto done;

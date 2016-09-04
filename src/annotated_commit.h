@@ -33,8 +33,11 @@ struct git_annotated_commit {
 	git_index *index;
 	git_array_oid_t parents;
 
-	char *ref_name;
-	char *remote_url;
+	/* how this commit was looked up */
+	const char *description;
+
+	const char *ref_name;
+	const char *remote_url;
 
 	char id_str[GIT_OID_HEXSZ+1];
 };

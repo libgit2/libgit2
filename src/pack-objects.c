@@ -28,7 +28,7 @@ struct unpacked {
 	git_pobject *object;
 	void *data;
 	struct git_delta_index *index;
-	int depth;
+	size_t depth;
 };
 
 struct tree_walk_context {
@@ -99,8 +99,15 @@ static int packbuilder_config(git_packbuilder *pb)
 
 #define config_get(KEY,DST,DFLT) do { \
 	ret = git_config_get_int64(&val, config, KEY); \
-	if (!ret) (DST) = val; \
-	else if (ret == GIT_ENOTFOUND) { \
+	if (!ret) { \
+		if (!git__is_sizet(val)) { \
+			giterr_set(GITERR_CONFIG, \
+				"configuration value '%s' is too large", KEY); \
+			ret = -1; \
+			goto out; \
+		} \
+		(DST) = (size_t)val; \
+	} else if (ret == GIT_ENOTFOUND) { \
 	    (DST) = (DFLT); \
 	    ret = 0; \
 	} else if (ret < 0) goto out; } while (0)
@@ -144,7 +151,7 @@ int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
 	pb->nr_threads = 1; /* do not spawn any thread by default */
 
 	if (git_hash_ctx_init(&pb->ctx) < 0 ||
-		git_zstream_init(&pb->zstream) < 0 ||
+		git_zstream_init(&pb->zstream, GIT_ZSTREAM_DEFLATE) < 0 ||
 		git_repository_odb(&pb->odb, repo) < 0 ||
 		packbuilder_config(pb) < 0)
 		goto on_error;
@@ -187,7 +194,7 @@ static void rehash(git_packbuilder *pb)
 {
 	git_pobject *po;
 	khiter_t pos;
-	unsigned int i;
+	size_t i;
 	int ret;
 
 	kh_clear(oid, pb->object_ix);
@@ -222,7 +229,7 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 			return -1;
 		}
 
-		pb->nr_alloc = (uint32_t)newsize;
+		pb->nr_alloc = newsize;
 
 		pb->object_list = git__reallocarray(pb->object_list,
 			pb->nr_alloc, sizeof(*po));
@@ -272,8 +279,9 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 static int get_delta(void **out, git_odb *odb, git_pobject *po)
 {
 	git_odb_object *src = NULL, *trg = NULL;
-	unsigned long delta_size;
+	size_t delta_size;
 	void *delta_buf;
+	int error;
 
 	*out = NULL;
 
@@ -281,12 +289,15 @@ static int get_delta(void **out, git_odb *odb, git_pobject *po)
 	    git_odb_read(&trg, odb, &po->id) < 0)
 		goto on_error;
 
-	delta_buf = git_delta(
-		git_odb_object_data(src), (unsigned long)git_odb_object_size(src),
-		git_odb_object_data(trg), (unsigned long)git_odb_object_size(trg),
-		&delta_size, 0);
+	error = git_delta(&delta_buf, &delta_size,
+		git_odb_object_data(src), git_odb_object_size(src),
+		git_odb_object_data(trg), git_odb_object_size(trg),
+		0);
 
-	if (!delta_buf || delta_size != po->delta_size) {
+	if (error < 0 && error != GIT_EBUFS)
+		goto on_error;
+
+	if (error == GIT_EBUFS || delta_size != po->delta_size) {
 		giterr_set(GITERR_INVALID, "Delta size changed");
 		goto on_error;
 	}
@@ -437,8 +448,8 @@ static int write_one(
 	return write_object(pb, po, write_cb, cb_data);
 }
 
-GIT_INLINE(void) add_to_write_order(git_pobject **wo, unsigned int *endp,
-				    git_pobject *po)
+GIT_INLINE(void) add_to_write_order(git_pobject **wo, size_t *endp,
+	git_pobject *po)
 {
 	if (po->filled)
 		return;
@@ -446,8 +457,8 @@ GIT_INLINE(void) add_to_write_order(git_pobject **wo, unsigned int *endp,
 	po->filled = 1;
 }
 
-static void add_descendants_to_write_order(git_pobject **wo, unsigned int *endp,
-					   git_pobject *po)
+static void add_descendants_to_write_order(git_pobject **wo, size_t *endp,
+	git_pobject *po)
 {
 	int add_to_order = 1;
 	while (po) {
@@ -488,8 +499,8 @@ static void add_descendants_to_write_order(git_pobject **wo, unsigned int *endp,
 	};
 }
 
-static void add_family_to_write_order(git_pobject **wo, unsigned int *endp,
-				      git_pobject *po)
+static void add_family_to_write_order(git_pobject **wo, size_t *endp,
+	git_pobject *po)
 {
 	git_pobject *root;
 
@@ -520,7 +531,7 @@ static int cb_tag_foreach(const char *name, git_oid *oid, void *data)
 
 static git_pobject **compute_write_order(git_packbuilder *pb)
 {
-	unsigned int i, wo_end, last_untagged;
+	size_t i, wo_end, last_untagged;
 	git_pobject **wo;
 
 	if ((wo = git__mallocarray(pb->nr_objects, sizeof(*wo))) == NULL)
@@ -625,12 +636,17 @@ static int write_pack(git_packbuilder *pb,
 	enum write_one_status status;
 	struct git_pack_header ph;
 	git_oid entry_oid;
-	unsigned int i = 0;
+	size_t i = 0;
 	int error = 0;
 
 	write_order = compute_write_order(pb);
 	if (write_order == NULL)
 		return -1;
+
+	if (!git__is_uint32(pb->nr_objects)) {
+		giterr_set(GITERR_INVALID, "too many objects");
+		return -1;
+	}
 
 	/* Write pack header */
 	ph.hdr_signature = htonl(PACK_SIGNATURE);
@@ -707,11 +723,18 @@ static int type_size_sort(const void *_a, const void *_b)
 	return a < b ? -1 : (a > b); /* newest first */
 }
 
-static int delta_cacheable(git_packbuilder *pb, unsigned long src_size,
-			   unsigned long trg_size, unsigned long delta_size)
+static int delta_cacheable(
+	git_packbuilder *pb,
+	size_t src_size,
+	size_t trg_size,
+	size_t delta_size)
 {
-	if (pb->max_delta_cache_size &&
-		pb->delta_cache_size + delta_size > pb->max_delta_cache_size)
+	size_t new_size;
+
+	if (git__add_sizet_overflow(&new_size, pb->delta_cache_size, delta_size))
+		return 0;
+
+	if (pb->max_delta_cache_size && new_size > pb->max_delta_cache_size)
 		return 0;
 
 	if (delta_size < pb->cache_max_small_delta_size)
@@ -725,15 +748,14 @@ static int delta_cacheable(git_packbuilder *pb, unsigned long src_size,
 }
 
 static int try_delta(git_packbuilder *pb, struct unpacked *trg,
-		     struct unpacked *src, int max_depth,
-		     unsigned long *mem_usage, int *ret)
+		     struct unpacked *src, size_t max_depth,
+			 size_t *mem_usage, int *ret)
 {
 	git_pobject *trg_object = trg->object;
 	git_pobject *src_object = src->object;
 	git_odb_object *obj;
-	unsigned long trg_size, src_size, delta_size,
-		      sizediff, max_size, sz;
-	unsigned int ref_depth;
+	size_t trg_size, src_size, delta_size, sizediff, max_size, sz;
+	size_t ref_depth;
 	void *delta_buf;
 
 	/* Don't bother doing diffs between different types */
@@ -751,7 +773,7 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 		return 0;
 
 	/* Now some size filtering heuristics. */
-	trg_size = (unsigned long)trg_object->size;
+	trg_size = trg_object->size;
 	if (!trg_object->delta) {
 		max_size = trg_size/2 - 20;
 		ref_depth = 1;
@@ -765,7 +787,7 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 	if (max_size == 0)
 		return 0;
 
-	src_size = (unsigned long)src_object->size;
+	src_size = src_object->size;
 	sizediff = src_size < trg_size ? trg_size - src_size : 0;
 	if (sizediff >= max_size)
 		return 0;
@@ -777,7 +799,7 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 		if (git_odb_read(&obj, pb->odb, &trg_object->id) < 0)
 			return -1;
 
-		sz = (unsigned long)git_odb_object_size(obj);
+		sz = git_odb_object_size(obj);
 		trg->data = git__malloc(sz);
 		GITERR_CHECK_ALLOC(trg->data);
 		memcpy(trg->data, git_odb_object_data(obj), sz);
@@ -799,7 +821,7 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 			!git__is_ulong(obj_sz = git_odb_object_size(obj)))
 			return -1;
 
-		sz = (unsigned long)obj_sz;
+		sz = obj_sz;
 		src->data = git__malloc(sz);
 		GITERR_CHECK_ALLOC(src->data);
 		memcpy(src->data, git_odb_object_data(obj), sz);
@@ -815,16 +837,14 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 		*mem_usage += sz;
 	}
 	if (!src->index) {
-		src->index = git_delta_create_index(src->data, src_size);
-		if (!src->index)
+		if (git_delta_index_init(&src->index, src->data, src_size) < 0)
 			return 0; /* suboptimal pack - out of memory */
 
-		*mem_usage += git_delta_sizeof_index(src->index);
+		*mem_usage += git_delta_index_size(src->index);
 	}
 
-	delta_buf = git_delta_create(src->index, trg->data, trg_size,
-				     &delta_size, max_size);
-	if (!delta_buf)
+	if (git_delta_create_from_index(&delta_buf, &delta_size, src->index, trg->data, trg_size,
+		max_size) < 0)
 		return 0;
 
 	if (trg_object->delta) {
@@ -839,11 +859,12 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 	git_packbuilder__cache_lock(pb);
 	if (trg_object->delta_data) {
 		git__free(trg_object->delta_data);
+		assert(pb->delta_cache_size >= trg_object->delta_size);
 		pb->delta_cache_size -= trg_object->delta_size;
 		trg_object->delta_data = NULL;
 	}
 	if (delta_cacheable(pb, src_size, trg_size, delta_size)) {
-		bool overflow = git__add_uint64_overflow(
+		bool overflow = git__add_sizet_overflow(
 			&pb->delta_cache_size, pb->delta_cache_size, delta_size);
 
 		git_packbuilder__cache_unlock(pb);
@@ -869,13 +890,13 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 	return 0;
 }
 
-static unsigned int check_delta_limit(git_pobject *me, unsigned int n)
+static size_t check_delta_limit(git_pobject *me, size_t n)
 {
 	git_pobject *child = me->delta_child;
-	unsigned int m = n;
+	size_t m = n;
 
 	while (child) {
-		unsigned int c = check_delta_limit(child, n + 1);
+		size_t c = check_delta_limit(child, n + 1);
 		if (m < c)
 			m = c;
 		child = child->delta_sibling;
@@ -883,13 +904,18 @@ static unsigned int check_delta_limit(git_pobject *me, unsigned int n)
 	return m;
 }
 
-static unsigned long free_unpacked(struct unpacked *n)
+static size_t free_unpacked(struct unpacked *n)
 {
-	unsigned long freed_mem = git_delta_sizeof_index(n->index);
-	git_delta_free_index(n->index);
+	size_t freed_mem = 0;
+
+	if (n->index) {
+		freed_mem += git_delta_index_size(n->index);
+		git_delta_index_free(n->index);
+	}
 	n->index = NULL;
+
 	if (n->data) {
-		freed_mem += (unsigned long)n->object->size;
+		freed_mem += n->object->size;
 		git__free(n->data);
 		n->data = NULL;
 	}
@@ -898,7 +924,8 @@ static unsigned long free_unpacked(struct unpacked *n)
 	return freed_mem;
 }
 
-static int report_delta_progress(git_packbuilder *pb, uint32_t count, bool force)
+static int report_delta_progress(
+	git_packbuilder *pb, uint32_t count, bool force)
 {
 	int ret;
 
@@ -922,15 +949,14 @@ static int report_delta_progress(git_packbuilder *pb, uint32_t count, bool force
 }
 
 static int find_deltas(git_packbuilder *pb, git_pobject **list,
-		       unsigned int *list_size, unsigned int window,
-		       int depth)
+	size_t *list_size, size_t window, size_t depth)
 {
 	git_pobject *po;
 	git_buf zbuf = GIT_BUF_INIT;
 	struct unpacked *array;
-	uint32_t idx = 0, count = 0;
-	unsigned long mem_usage = 0;
-	unsigned int i;
+	size_t idx = 0, count = 0;
+	size_t mem_usage = 0;
+	size_t i;
 	int error = -1;
 
 	array = git__calloc(window, sizeof(struct unpacked));
@@ -938,7 +964,7 @@ static int find_deltas(git_packbuilder *pb, git_pobject **list,
 
 	for (;;) {
 		struct unpacked *n = array + idx;
-		int max_depth, j, best_base = -1;
+		size_t max_depth, j, best_base = SIZE_MAX;
 
 		git_packbuilder__progress_lock(pb);
 		if (!*list_size) {
@@ -959,7 +985,7 @@ static int find_deltas(git_packbuilder *pb, git_pobject **list,
 		while (pb->window_memory_limit &&
 		       mem_usage > pb->window_memory_limit &&
 		       count > 1) {
-			uint32_t tail = (idx + window - count) % window;
+			size_t tail = (idx + window - count) % window;
 			mem_usage -= free_unpacked(array + tail);
 			count--;
 		}
@@ -971,15 +997,18 @@ static int find_deltas(git_packbuilder *pb, git_pobject **list,
 		 */
 		max_depth = depth;
 		if (po->delta_child) {
-			max_depth -= check_delta_limit(po, 0);
-			if (max_depth <= 0)
+			size_t delta_limit = check_delta_limit(po, 0);
+
+			if (delta_limit > max_depth)
 				goto next;
+
+			max_depth -= delta_limit;
 		}
 
 		j = window;
 		while (--j > 0) {
 			int ret;
-			uint32_t other_idx = idx + j;
+			size_t other_idx = idx + j;
 			struct unpacked *m;
 
 			if (other_idx >= window)
@@ -1020,7 +1049,7 @@ static int find_deltas(git_packbuilder *pb, git_pobject **list,
 			GITERR_CHECK_ALLOC(po->delta_data);
 
 			memcpy(po->delta_data, zbuf.ptr, zbuf.size);
-			po->z_delta_size = (unsigned long)zbuf.size;
+			po->z_delta_size = zbuf.size;
 			git_buf_clear(&zbuf);
 
 			git_packbuilder__cache_lock(pb);
@@ -1044,10 +1073,10 @@ static int find_deltas(git_packbuilder *pb, git_pobject **list,
 		 */
 		if (po->delta) {
 			struct unpacked swap = array[best_base];
-			int dist = (window + idx - best_base) % window;
-			int dst = best_base;
+			size_t dist = (window + idx - best_base) % window;
+			size_t dst = best_base;
 			while (dist--) {
-				int src = (dst + 1) % window;
+				size_t src = (dst + 1) % window;
 				array[dst] = array[src];
 				dst = src;
 			}
@@ -1085,13 +1114,13 @@ struct thread_params {
 	git_cond cond;
 	git_mutex mutex;
 
-	unsigned int list_size;
-	unsigned int remaining;
+	size_t list_size;
+	size_t remaining;
 
-	int window;
-	int depth;
-	int working;
-	int data_ready;
+	size_t window;
+	size_t depth;
+	size_t working;
+	size_t data_ready;
 };
 
 static void *threaded_find_deltas(void *arg)
@@ -1133,11 +1162,11 @@ static void *threaded_find_deltas(void *arg)
 }
 
 static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
-			  unsigned int list_size, unsigned int window,
-			  int depth)
+			  size_t list_size, size_t window, size_t depth)
 {
 	struct thread_params *p;
-	int i, ret, active_threads = 0;
+	size_t i;
+	int ret, active_threads = 0;
 
 	if (!pb->nr_threads)
 		pb->nr_threads = git_online_cpus();
@@ -1152,7 +1181,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 
 	/* Partition the work among the threads */
 	for (i = 0; i < pb->nr_threads; ++i) {
-		unsigned sub_size = list_size / (pb->nr_threads - i);
+		size_t sub_size = list_size / (pb->nr_threads - i);
 
 		/* don't use too small segments or no deltas will be found */
 		if (sub_size < 2*window && i+1 < pb->nr_threads)
@@ -1186,7 +1215,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 		git_mutex_init(&p[i].mutex);
 		git_cond_init(&p[i].cond);
 
-		ret = git_thread_create(&p[i].thread, NULL,
+		ret = git_thread_create(&p[i].thread,
 					threaded_find_deltas, &p[i]);
 		if (ret) {
 			giterr_set(GITERR_THREAD, "unable to create thread");
@@ -1206,7 +1235,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 	while (active_threads) {
 		struct thread_params *target = NULL;
 		struct thread_params *victim = NULL;
-		unsigned sub_size = 0;
+		size_t sub_size = 0;
 
 		/* Start by locating a thread that has transitioned its
 		 * 'working' flag from 1 -> 0. This indicates that it is
@@ -1286,7 +1315,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 static int prepare_pack(git_packbuilder *pb)
 {
 	git_pobject **delta_list;
-	unsigned int i, n = 0;
+	size_t i, n = 0;
 
 	if (pb->nr_objects == 0 || pb->done)
 		return 0; /* nothing to do */
@@ -1473,12 +1502,12 @@ cleanup:
 	return error;
 }
 
-uint32_t git_packbuilder_object_count(git_packbuilder *pb)
+size_t git_packbuilder_object_count(git_packbuilder *pb)
 {
 	return pb->nr_objects;
 }
 
-uint32_t git_packbuilder_written(git_packbuilder *pb)
+size_t git_packbuilder_written(git_packbuilder *pb)
 {
 	return pb->nr_written;
 }

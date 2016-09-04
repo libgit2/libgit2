@@ -12,7 +12,7 @@
 #include "fileops.h"
 #include "hash.h"
 #include "odb.h"
-#include "delta-apply.h"
+#include "delta.h"
 #include "filebuf.h"
 
 #include "git2/odb_backend.h"
@@ -91,7 +91,7 @@ static int object_mkdir(const git_buf *name, const loose_backend *be)
 
 static size_t get_binary_object_header(obj_hdr *hdr, git_buf *obj)
 {
-	unsigned char c;
+	unsigned long c;
 	unsigned char *data = (unsigned char *)obj->ptr;
 	size_t shift, size, used = 0;
 
@@ -918,6 +918,23 @@ cleanup:
 	return error;
 }
 
+static int loose_backend__freshen(
+	git_odb_backend *_backend,
+	const git_oid *oid)
+{
+	loose_backend *backend = (loose_backend *)_backend;
+	git_buf path = GIT_BUF_INIT;
+	int error;
+
+	if (object_file_name(&path, backend, oid) < 0)
+		return -1;
+
+	error = git_futils_touch(path.ptr, NULL);
+	git_buf_free(&path);
+
+	return error;
+}
+
 static void loose_backend__free(git_odb_backend *_backend)
 {
 	loose_backend *backend;
@@ -975,6 +992,7 @@ int git_odb_backend_loose(
 	backend->parent.exists = &loose_backend__exists;
 	backend->parent.exists_prefix = &loose_backend__exists_prefix;
 	backend->parent.foreach = &loose_backend__foreach;
+	backend->parent.freshen = &loose_backend__freshen;
 	backend->parent.free = &loose_backend__free;
 
 	*backend_out = (git_odb_backend *)backend;

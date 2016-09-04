@@ -84,6 +84,17 @@ struct git_odb_backend {
 		git_transfer_progress_cb progress_cb, void *progress_payload);
 
 	/**
+	 * "Freshens" an already existing object, updating its last-used
+	 * time.  This occurs when `git_odb_write` was called, but the
+	 * object already existed (and will not be re-written).  The
+	 * underlying implementation may want to update last-used timestamps.
+	 *
+	 * If callers implement this, they should return `0` if the object
+	 * exists and was freshened, and non-zero otherwise.
+	 */
+	int (* freshen)(git_odb_backend *, const git_oid *);
+
+	/**
 	 * Frees any resources held by the odb (including the `git_odb_backend`
 	 * itself). An odb backend implementation must provide this function.
 	 */

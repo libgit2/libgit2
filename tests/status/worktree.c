@@ -1048,6 +1048,9 @@ void test_status_worktree__unreadable(void)
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 	status_entry_counts counts = {0};
 
+	if (geteuid() == 0)
+		cl_skip();
+
 	/* Create directory with no read permission */
 	cl_git_pass(git_futils_mkdir_r("empty_standard_repo/no_permission", 0777));
 	cl_git_mkfile("empty_standard_repo/no_permission/foo", "dummy");
@@ -1211,15 +1214,15 @@ void test_status_worktree__with_directory_in_pathlist(void)
 	const git_status_entry *status;
 	size_t i, entrycount;
 	bool native_ignore_case;
+	char *subdir_path = "subdir";
 
 	cl_git_pass(git_repository_index(&index, repo));
 	native_ignore_case =
 			(git_index_caps(index) & GIT_INDEXCAP_IGNORE_CASE) != 0;
 	git_index_free(index);
 
+	opts.pathspec.strings = &subdir_path;
 	opts.pathspec.count = 1;
-	opts.pathspec.strings = malloc(opts.pathspec.count * sizeof(char *));
-	opts.pathspec.strings[0] = "subdir";
 	opts.flags =
 			GIT_STATUS_OPT_DEFAULTS |
 			GIT_STATUS_OPT_INCLUDE_UNMODIFIED |
@@ -1240,6 +1243,8 @@ void test_status_worktree__with_directory_in_pathlist(void)
 			status->index_to_workdir->old_file.path);
 	}
 
+	git_status_list_free(statuslist);
+
 	opts.show = GIT_STATUS_SHOW_INDEX_ONLY;
 	git_status_list_new(&statuslist, repo, &opts);
 
@@ -1255,6 +1260,8 @@ void test_status_worktree__with_directory_in_pathlist(void)
 			status->head_to_index->old_file.path);
 	}
 
+	git_status_list_free(statuslist);
+
 	opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	git_status_list_new(&statuslist, repo, &opts);
 
@@ -1269,5 +1276,7 @@ void test_status_worktree__with_directory_in_pathlist(void)
 			testrepo2_subdir_paths[i],
 			status->index_to_workdir->old_file.path);
 	}
+
+	git_status_list_free(statuslist);
 }
 

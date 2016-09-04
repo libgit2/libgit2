@@ -40,7 +40,7 @@ static void connect_to_local_repository(const char *local_repository)
 	git_buf_sets(&file_path_buf, cl_git_path_url(local_repository));
 
 	cl_git_pass(git_remote_create_anonymous(&remote, repo, git_buf_cstr(&file_path_buf)));
-	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL));
+	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
 }
 
 void test_network_remote_local__connected(void)
@@ -214,7 +214,7 @@ void test_network_remote_local__push_to_bare_remote(void)
 
 	/* Connect to the bare repo */
 	cl_git_pass(git_remote_create_anonymous(&localremote, repo, "./localbare.git"));
-	cl_git_pass(git_remote_connect(localremote, GIT_DIRECTION_PUSH, NULL, NULL));
+	cl_git_pass(git_remote_connect(localremote, GIT_DIRECTION_PUSH, NULL, NULL, NULL));
 
 	/* Try to push */
 	cl_git_pass(git_remote_upload(localremote, &push_array, NULL));
@@ -253,7 +253,7 @@ void test_network_remote_local__push_to_bare_remote_with_file_url(void)
 
 	/* Connect to the bare repo */
 	cl_git_pass(git_remote_create_anonymous(&localremote, repo, url));
-	cl_git_pass(git_remote_connect(localremote, GIT_DIRECTION_PUSH, NULL, NULL));
+	cl_git_pass(git_remote_connect(localremote, GIT_DIRECTION_PUSH, NULL, NULL, NULL));
 
 	/* Try to push */
 	cl_git_pass(git_remote_upload(localremote, &push_array, NULL));
@@ -290,7 +290,7 @@ void test_network_remote_local__push_to_non_bare_remote(void)
 
 	/* Connect to the bare repo */
 	cl_git_pass(git_remote_create_anonymous(&localremote, repo, "./localnonbare"));
-	cl_git_pass(git_remote_connect(localremote, GIT_DIRECTION_PUSH, NULL, NULL));
+	cl_git_pass(git_remote_connect(localremote, GIT_DIRECTION_PUSH, NULL, NULL, NULL));
 
 	/* Try to push */
 	cl_git_fail_with(GIT_EBAREREPO, git_remote_upload(localremote, &push_array, NULL));

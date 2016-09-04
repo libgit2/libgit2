@@ -134,8 +134,8 @@ static int merge_file__xdiff(
 
 	path = git_merge_file__best_path(
 		ancestor ? ancestor->path : NULL,
-		ours ? ours->path : NULL,
-		theirs ? theirs->path : NULL);
+		ours->path,
+		theirs->path);
 
 	if (path != NULL && (out->path = git__strdup(path)) == NULL) {
 		error = -1;
@@ -147,8 +147,8 @@ static int merge_file__xdiff(
 	out->len = mmbuffer.size;
 	out->mode = git_merge_file__best_mode(
 		ancestor ? ancestor->mode : 0,
-		ours ? ours->mode : 0,
-		theirs ? theirs->mode : 0);
+		ours->mode,
+		theirs->mode);
 
 done:
 	if (error < 0)

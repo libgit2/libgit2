@@ -169,7 +169,8 @@ static void iterator_clear(git_iterator *iter)
 	iter->flags &= ~GIT_ITERATOR_FIRST_ACCESS;
 }
 
-GIT_INLINE(bool) iterator_has_started(git_iterator *iter, const char *path)
+GIT_INLINE(bool) iterator_has_started(
+	git_iterator *iter, const char *path, bool is_submodule)
 {
 	size_t path_len;
 
@@ -181,16 +182,28 @@ GIT_INLINE(bool) iterator_has_started(git_iterator *iter, const char *path)
 	 */
 	iter->started = (iter->prefixcomp(path, iter->start) >= 0);
 
+	if (iter->started)
+		return true;
+
+	path_len = strlen(path);
+
+	/* if, however, we are a submodule, then we support `start` being
+	 * suffixed with a `/` for crazy legacy reasons.  match `submod`
+	 * with a start path of `submod/`.
+	 */
+	if (is_submodule && iter->start_len && path_len == iter->start_len - 1 &&
+		iter->start[iter->start_len-1] == '/')
+		return true;
+
 	/* if, however, our current path is a directory, and our starting path
 	 * is _beneath_ that directory, then recurse into the directory (even
 	 * though we have not yet "started")
 	 */
-	if (!iter->started &&
-		(path_len = strlen(path)) > 0 && path[path_len-1] == '/' &&
+	if (path_len > 0 && path[path_len-1] == '/' &&
 		iter->strncomp(path, iter->start, path_len) == 0)
 		return true;
 
-	return iter->started;
+	return false;
 }
 
 GIT_INLINE(bool) iterator_has_ended(git_iterator *iter, const char *path)
@@ -408,6 +421,9 @@ typedef struct {
 typedef struct {
 	git_tree *tree;
 
+	/* path to this particular frame (folder) */
+	git_buf path;
+
 	/* a sorted list of the entries for this frame (folder), these are
 	 * actually pointers to the iterator's entry pool.
 	 */
@@ -416,13 +432,13 @@ typedef struct {
 
 	size_t next_idx;
 
-	/* the path to this particular frame (folder); on case insensitive
-	 * iterations, we also have an array of other paths that we were
-	 * case insensitively equal to this one, whose contents we have
-	 * coalesced into this frame.  a child `tree_iterator_entry` will
-	 * contain a pointer to its actual parent path.
+	/* on case insensitive iterations, we also have an array of other
+	 * paths that were case insensitively equal to this one, and their
+	 * tree objects.  we have coalesced the tree entries into this frame.
+	 * a child `tree_iterator_entry` will contain a pointer to its actual
+	 * parent path.
 	 */
-	git_buf path;
+	git_vector similar_trees;
 	git_array_t(git_buf) similar_paths;
 } tree_iterator_frame;
 
@@ -604,6 +620,9 @@ GIT_INLINE(int) tree_iterator_frame_push_neighbors(
 			iter->base.repo, entry->tree_entry->oid)) < 0)
 			break;
 
+		if (git_vector_insert(&parent_frame->similar_trees, tree) < 0)
+			break;
+
 		path = git_array_alloc(parent_frame->similar_paths);
 		GITERR_CHECK_ALLOC(path);
 
@@ -667,6 +686,9 @@ done:
 static void tree_iterator_frame_pop(tree_iterator *iter)
 {
 	tree_iterator_frame *frame;
+	git_buf *buf = NULL;
+	git_tree *tree;
+	size_t i;
 
 	assert(iter->frames.size);
 
@@ -674,6 +696,20 @@ static void tree_iterator_frame_pop(tree_iterator *iter)
 
 	git_vector_free(&frame->entries);
 	git_tree_free(frame->tree);
+
+	do {
+		buf = git_array_pop(frame->similar_paths);
+		git_buf_free(buf);
+	} while (buf != NULL);
+
+	git_array_clear(frame->similar_paths);
+
+	git_vector_foreach(&frame->similar_trees, i, tree)
+		git_tree_free(tree);
+
+	git_vector_free(&frame->similar_trees);
+
+	git_buf_free(&frame->path);
 }
 
 static int tree_iterator_current(
@@ -756,7 +792,7 @@ static int tree_iterator_advance(const git_index_entry **out, git_iterator *i)
 			break;
 
 		/* if this path is before our start, advance over this entry */
-		if (!iterator_has_started(&iter->base, iter->entry_path.ptr))
+		if (!iterator_has_started(&iter->base, iter->entry_path.ptr, false))
 			continue;
 
 		/* if this path is after our end, stop */
@@ -1377,7 +1413,7 @@ static int filesystem_iterator_frame_push(
 		}
 
 		/* Ensure that the pathlist entry lines up with what we expected */
-		if (dir_expected && !S_ISDIR(statbuf.st_mode))
+		else if (dir_expected)
 			continue;
 
 		entry = filesystem_iterator_entry_init(new_frame,
@@ -1760,6 +1796,11 @@ static int filesystem_iterator_reset(git_iterator *i)
 static void filesystem_iterator_free(git_iterator *i)
 {
 	filesystem_iterator *iter = (filesystem_iterator *)i;
+	git__free(iter->root);
+	git_buf_free(&iter->current_path);
+	git_tree_free(iter->tree);
+	if (iter->index)
+		git_index_snapshot_release(&iter->index_snapshot, iter->index);
 	filesystem_iterator_clear(iter);
 }
 
@@ -1793,6 +1834,9 @@ static int iterator_for_filesystem(
 	iter = git__calloc(1, sizeof(filesystem_iterator));
 	GITERR_CHECK_ALLOC(iter);
 
+	iter->base.type = type;
+	iter->base.cb = &callbacks;
+
 	root_len = strlen(root);
 
 	iter->root = git__malloc(root_len+2);
@@ -1810,9 +1854,6 @@ static int iterator_for_filesystem(
 	if ((error = git_buf_puts(&iter->current_path, iter->root)) < 0)
 		goto on_error;
 
-	iter->base.type = type;
-	iter->base.cb = &callbacks;
-
 	if ((error = iterator_init_common(&iter->base, repo, index, options)) < 0)
 		goto on_error;
 
@@ -1823,6 +1864,7 @@ static int iterator_for_filesystem(
 		(error = git_index_snapshot_new(&iter->index_snapshot, index)) < 0)
 		goto on_error;
 
+	iter->index = index;
 	iter->dirload_flags =
 		(iterator__ignore_case(&iter->base) ? GIT_PATH_DIR_IGNORE_CASE : 0) |
 		(iterator__flag(&iter->base, PRECOMPOSE_UNICODE) ?
@@ -1835,8 +1877,6 @@ static int iterator_for_filesystem(
 	return 0;
 
 on_error:
-	git__free(iter->root);
-	git_buf_free(&iter->current_path);
 	git_iterator_free(&iter->base);
 	return error;
 }
@@ -1966,6 +2006,7 @@ static int index_iterator_advance(
 {
 	index_iterator *iter = (index_iterator *)i;
 	const git_index_entry *entry = NULL;
+	bool is_submodule;
 	int error = 0;
 
 	iter->base.flags |= GIT_ITERATOR_FIRST_ACCESS;
@@ -1983,8 +2024,9 @@ static int index_iterator_advance(
 		}
 
 		entry = iter->entries.contents[iter->next_idx];
+		is_submodule = S_ISGITLINK(entry->mode);
 
-		if (!iterator_has_started(&iter->base, entry->path)) {
+		if (!iterator_has_started(&iter->base, entry->path, is_submodule)) {
 			iter->next_idx++;
 			continue;
 		}
@@ -2093,6 +2135,7 @@ static void index_iterator_free(git_iterator *i)
 	index_iterator *iter = (index_iterator *)i;
 
 	git_index_snapshot_release(&iter->entries, iter->base.index);
+	git_buf_free(&iter->tree_buf);
 }
 
 int git_iterator_for_index(

@@ -475,6 +475,104 @@ void test_rebase_merge__finish(void)
 	git_rebase_free(rebase);
 }
 
+void test_rebase_merge__finish_with_ids(void)
+{
+	git_rebase *rebase;
+	git_reference *head_ref;
+	git_oid branch_id, upstream_id;
+	git_annotated_commit *branch_head, *upstream_head;
+	git_rebase_operation *rebase_operation;
+	git_oid commit_id;
+	git_reflog *reflog;
+	const git_reflog_entry *reflog_entry;
+	int error;
+
+	cl_git_pass(git_oid_fromstr(&branch_id, "d616d97082eb7bb2dc6f180a7cca940993b7a56f"));
+	cl_git_pass(git_oid_fromstr(&upstream_id, "f87d14a4a236582a0278a916340a793714256864"));
+
+	cl_git_pass(git_annotated_commit_lookup(&branch_head, repo, &branch_id));
+	cl_git_pass(git_annotated_commit_lookup(&upstream_head, repo, &upstream_id));
+
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
+
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
+		NULL, NULL));
+
+	cl_git_fail(error = git_rebase_next(&rebase_operation, rebase));
+	cl_assert_equal_i(GIT_ITEROVER, error);
+
+	cl_git_pass(git_rebase_finish(rebase, signature));
+
+	cl_assert_equal_i(GIT_REPOSITORY_STATE_NONE, git_repository_state(repo));
+
+	cl_git_pass(git_reference_lookup(&head_ref, repo, "HEAD"));
+	cl_assert_equal_i(GIT_REF_OID, git_reference_type(head_ref));
+	cl_assert_equal_oid(&commit_id, git_reference_target(head_ref));
+
+	/* reflogs are not updated as if we were operating on proper
+	 * branches.  check that the last reflog entry is the rebase.
+	 */
+	cl_git_pass(git_reflog_read(&reflog, repo, "HEAD"));
+	cl_assert(reflog_entry = git_reflog_entry_byindex(reflog, 0));
+	cl_assert_equal_oid(&commit_id, git_reflog_entry_id_new(reflog_entry));
+	cl_assert_equal_s("rebase: Modification 3 to gravy", git_reflog_entry_message(reflog_entry));
+	git_reflog_free(reflog);
+
+	git_annotated_commit_free(branch_head);
+	git_annotated_commit_free(upstream_head);
+	git_reference_free(head_ref);
+	git_rebase_free(rebase);
+}
+
+void test_rebase_merge__no_common_ancestor(void)
+{
+	git_rebase *rebase;
+	git_reference *branch_ref, *upstream_ref;
+	git_annotated_commit *branch_head, *upstream_head;
+	git_rebase_operation *rebase_operation;
+	git_oid commit_id, expected_final_id;
+
+	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/barley"));
+	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/master"));
+
+	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
+	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
+
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
+
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
+		NULL, NULL));
+
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
+		NULL, NULL));
+
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
+		NULL, NULL));
+
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
+		NULL, NULL));
+
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
+		NULL, NULL));
+
+	cl_git_pass(git_rebase_finish(rebase, signature));
+
+	git_oid_fromstr(&expected_final_id, "71e7ee8d4fe7d8bf0d107355197e0a953dfdb7f3");
+	cl_assert_equal_oid(&expected_final_id, &commit_id);
+
+	git_annotated_commit_free(branch_head);
+	git_annotated_commit_free(upstream_head);
+	git_reference_free(branch_ref);
+	git_reference_free(upstream_ref);
+	git_rebase_free(rebase);
+}
+
 static void test_copy_note(
 	const git_rebase_options *opts,
 	bool should_exist)
@@ -652,3 +750,42 @@ void test_rebase_merge__custom_merge_options(void)
 	git_rebase_free(rebase);
 }
 
+void test_rebase_merge__with_directories(void)
+{
+	git_rebase *rebase;
+	git_reference *branch_ref, *upstream_ref;
+	git_annotated_commit *branch_head, *upstream_head;
+	git_rebase_operation *rebase_operation;
+	git_oid commit_id, tree_id;
+	git_commit *commit;
+
+	git_oid_fromstr(&tree_id, "a4d6d9c3d57308fd8e320cf2525bae8f1adafa57");
+
+	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/deep_gravy"));
+	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/veal"));
+
+	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
+	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
+
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
+
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
+		NULL, NULL));
+
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
+		NULL, NULL));
+
+	cl_git_fail_with(GIT_ITEROVER, git_rebase_next(&rebase_operation, rebase));
+
+	cl_git_pass(git_commit_lookup(&commit, repo, &commit_id));
+	cl_assert_equal_oid(&tree_id, git_commit_tree_id(commit));
+
+	git_commit_free(commit);
+	git_annotated_commit_free(branch_head);
+	git_annotated_commit_free(upstream_head);
+	git_reference_free(branch_ref);
+	git_reference_free(upstream_ref);
+	git_rebase_free(rebase);
+}

@@ -40,57 +40,11 @@ typedef git_atomic git_atomic_ssize;
 
 #ifdef GIT_THREADS
 
-#if !defined(GIT_WIN32)
-
-typedef struct {
-	pthread_t thread;
-} git_thread;
-
-#define git_thread_create(git_thread_ptr, attr, start_routine, arg) \
-	pthread_create(&(git_thread_ptr)->thread, attr, start_routine, arg)
-#define git_thread_join(git_thread_ptr, status) \
-	pthread_join((git_thread_ptr)->thread, status)
-
+#ifdef GIT_WIN32
+#   include "win32/thread.h"
+#else
+#   include "unix/pthread.h"
 #endif
-
-/* Pthreads Mutex */
-#define git_mutex pthread_mutex_t
-#define git_mutex_init(a)	pthread_mutex_init(a, NULL)
-#define git_mutex_lock(a)	pthread_mutex_lock(a)
-#define git_mutex_unlock(a) pthread_mutex_unlock(a)
-#define git_mutex_free(a)	pthread_mutex_destroy(a)
-
-/* Pthreads condition vars */
-#define git_cond pthread_cond_t
-#define git_cond_init(c)	pthread_cond_init(c, NULL)
-#define git_cond_free(c) 	pthread_cond_destroy(c)
-#define git_cond_wait(c, l)	pthread_cond_wait(c, l)
-#define git_cond_signal(c)	pthread_cond_signal(c)
-#define git_cond_broadcast(c)	pthread_cond_broadcast(c)
-
-/* Pthread (-ish) rwlock
- *
- * This differs from normal pthreads rwlocks in two ways:
- * 1. Separate APIs for releasing read locks and write locks (as
- *    opposed to the pure POSIX API which only has one unlock fn)
- * 2. You should not use recursive read locks (i.e. grabbing a read
- *    lock in a thread that already holds a read lock) because the
- *    Windows implementation doesn't support it
- */
-#define git_rwlock pthread_rwlock_t
-#define git_rwlock_init(a)		pthread_rwlock_init(a, NULL)
-#define git_rwlock_rdlock(a)	pthread_rwlock_rdlock(a)
-#define git_rwlock_rdunlock(a)	pthread_rwlock_rdunlock(a)
-#define git_rwlock_wrlock(a)	pthread_rwlock_wrlock(a)
-#define git_rwlock_wrunlock(a)	pthread_rwlock_wrunlock(a)
-#define git_rwlock_free(a)		pthread_rwlock_destroy(a)
-#define GIT_RWLOCK_STATIC_INIT	PTHREAD_RWLOCK_INITIALIZER
-
-#ifndef GIT_WIN32
-#define pthread_rwlock_rdunlock pthread_rwlock_unlock
-#define pthread_rwlock_wrunlock pthread_rwlock_unlock
-#endif
-
 
 GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)
 {
@@ -178,7 +132,7 @@ GIT_INLINE(int64_t) git_atomic64_add(git_atomic64 *a, int64_t addend)
 #else
 
 #define git_thread unsigned int
-#define git_thread_create(thread, attr, start_routine, arg) 0
+#define git_thread_create(thread, start_routine, arg) 0
 #define git_thread_join(id, status) (void)0
 
 /* Pthreads Mutex */

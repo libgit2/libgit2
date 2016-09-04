@@ -8,6 +8,7 @@
 #include "git2/blob.h"
 #include "git2/submodule.h"
 #include "diff.h"
+#include "diff_generate.h"
 #include "diff_file.h"
 #include "odb.h"
 #include "fileops.h"
@@ -149,12 +150,14 @@ int git_diff_file_content__init_from_src(
 		if (src->blob) {
 			fc->file->size = git_blob_rawsize(src->blob);
 			git_oid_cpy(&fc->file->id, git_blob_id(src->blob));
+			fc->file->id_abbrev = GIT_OID_HEXSZ;
 
 			fc->map.len  = (size_t)fc->file->size;
 			fc->map.data = (char *)git_blob_rawcontent(src->blob);
 		} else {
 			fc->file->size = src->buflen;
 			git_odb_hash(&fc->file->id, src->buf, src->buflen, GIT_OBJ_BLOB);
+			fc->file->id_abbrev = GIT_OID_HEXSZ;
 
 			fc->map.len  = src->buflen;
 			fc->map.data = (char *)src->buf;

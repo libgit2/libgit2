@@ -8,20 +8,20 @@
 #define INCLUDE_diff_xdiff_h__
 
 #include "diff.h"
-#include "diff_patch.h"
 #include "xdiff/xdiff.h"
+#include "patch_generate.h"
 
 /* xdiff cannot cope with large files.  these files should not be passed to
  * xdiff.  callers should treat these large files as binary.
  */
 #define GIT_XDIFF_MAX_SIZE (1024LL * 1024 * 1023)
 
-/* A git_xdiff_output is a git_diff_output with extra fields necessary
- * to use libxdiff.  Calling git_xdiff_init() will set the diff_cb field
- * of the output to use xdiff to generate the diffs.
+/* A git_xdiff_output is a git_patch_generate_output with extra fields
+ * necessary to use libxdiff.  Calling git_xdiff_init() will set the diff_cb
+ * field of the output to use xdiff to generate the diffs.
  */
 typedef struct {
-	git_diff_output output;
+	git_patch_generated_output output;
 
 	xdemitconf_t config;
 	xpparam_t    params;

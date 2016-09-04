@@ -132,6 +132,32 @@ void test_attr_ignore__leading_stars(void)
 	assert_is_ignored(false, "dir1/kid2/file");
 }
 
+void test_attr_ignore__globs_and_path_delimiters(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "foo/bar/**");
+	assert_is_ignored(true, "foo/bar/baz");
+	assert_is_ignored(true, "foo/bar/baz/quux");
+
+	cl_git_rewritefile("attr/.gitignore", "_*/");
+	assert_is_ignored(true, "sub/_test/a/file");
+	assert_is_ignored(false, "test_folder/file");
+	assert_is_ignored(true, "_test/file");
+	assert_is_ignored(true, "_test/a/file");
+
+	cl_git_rewritefile("attr/.gitignore", "**/_*/");
+	assert_is_ignored(true, "sub/_test/a/file");
+	assert_is_ignored(false, "test_folder/file");
+	assert_is_ignored(true, "_test/file");
+	assert_is_ignored(true, "_test/a/file");
+
+	cl_git_rewritefile("attr/.gitignore", "**/_*/foo/bar/*ux");
+
+	assert_is_ignored(true, "sub/_test/foo/bar/qux/file");
+	assert_is_ignored(true, "_test/foo/bar/qux/file");
+	assert_is_ignored(true, "_test/foo/bar/crux/file");
+	assert_is_ignored(false, "_test/foo/bar/code/file");
+}
+
 void test_attr_ignore__skip_gitignore_directory(void)
 {
 	cl_git_rewritefile("attr/.git/info/exclude", "/NewFolder\n/NewFolder/NewFolder");
@@ -251,4 +277,17 @@ void test_attr_ignore__dont_ignore_files_for_folder(void)
 	assert_is_ignored(false, "dir/test");
 	if (cl_repo_get_bool(g_repo, "core.ignorecase"))
 		assert_is_ignored(false, "dir/TeSt");
+}
+
+void test_attr_ignore__symlink_to_outside(void)
+{
+#ifdef GIT_WIN32
+	cl_skip();
+#endif
+
+	cl_git_rewritefile("attr/.gitignore", "symlink\n");
+	cl_git_mkfile("target", "target");
+	cl_git_pass(p_symlink("../target", "attr/symlink"));
+	assert_is_ignored(true, "symlink");
+	assert_is_ignored(true, "lala/../symlink");
 }

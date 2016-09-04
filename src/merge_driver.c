@@ -178,6 +178,7 @@ int git_merge_driver_global_init(void)
 			merge_driver_name__union, &git_merge_driver__union.base)) < 0 ||
 		(error = merge_driver_registry_insert(
 			merge_driver_name__binary, &git_merge_driver__binary)) < 0)
+		goto done;
 
 	git__on_shutdown(git_merge_driver_global_shutdown);
 

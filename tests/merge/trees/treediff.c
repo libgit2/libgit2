@@ -3,6 +3,7 @@
 #include "merge.h"
 #include "../merge_helpers.h"
 #include "diff.h"
+#include "diff_tform.h"
 #include "git2/sys/hashsig.h"
 
 static git_repository *repo;

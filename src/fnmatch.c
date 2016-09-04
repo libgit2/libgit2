@@ -93,11 +93,24 @@ p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 						 * It will be restored if/when we recurse below.
 						 */
 						if (c == '*') {
-							flags &= ~FNM_PATHNAME;
-							while (c == '*')
-								c = *++pattern;
-							if (c == '/')
-								c = *++pattern;
+							c = *++pattern;
+							/* star-star-slash is at the end, match by default */
+							if (c == EOS)
+								return 0;
+							/* Double-star must be at end or between slashes */
+							if (c != '/')
+								return (FNM_NOMATCH);
+
+							c = *++pattern;
+							do {
+								int e = p_fnmatchx(pattern, string, recurs_flags, recurs);
+								if (e != FNM_NOMATCH)
+									return e;
+								string = strchr(string, '/');
+							} while (string++);
+
+							/* If we get here, we didn't find a match */
+							return FNM_NOMATCH;
 						}
 
 						if (*string == '.' && (flags & FNM_PERIOD) &&

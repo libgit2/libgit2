@@ -24,7 +24,7 @@ void run_in_parallel(
 		for (t = 0; t < threads; ++t) {
 			id[t] = t;
 #ifdef GIT_THREADS
-			cl_git_pass(git_thread_create(&th[t], NULL, func, &id[t]));
+			cl_git_pass(git_thread_create(&th[t], func, &id[t]));
 #else
 			cl_assert(func(&id[t]) == &id[t]);
 #endif

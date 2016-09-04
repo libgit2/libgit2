@@ -93,6 +93,9 @@ void git_vector_remove_matching(
 	void *payload);
 
 int git_vector_resize_to(git_vector *v, size_t new_length);
+int git_vector_insert_null(git_vector *v, size_t idx, size_t insert_len);
+int git_vector_remove_range(git_vector *v, size_t idx, size_t remove_len);
+
 int git_vector_set(void **old, git_vector *v, size_t position, void *value);
 
 /** Check if vector is sorted */

@@ -263,7 +263,10 @@ GIT_INLINE(int) git__signum(int val)
 }
 
 extern int git__strtol32(int32_t *n, const char *buff, const char **end_buf, int base);
+extern int git__strntol32(int32_t *n, const char *buff, size_t buff_len, const char **end_buf, int base);
 extern int git__strtol64(int64_t *n, const char *buff, const char **end_buf, int base);
+extern int git__strntol64(int64_t *n, const char *buff, size_t buff_len, const char **end_buf, int base);
+
 
 extern void git__hexdump(const char *buffer, size_t n);
 extern uint32_t git__hash(const void *key, int len, uint32_t seed);
@@ -289,6 +292,8 @@ GIT_INLINE(int) git__tolower(int c)
 #else
 # define git__tolower(a) tolower(a)
 #endif
+
+extern size_t git__linenlen(const char *buffer, size_t buffer_len);
 
 GIT_INLINE(const char *) git__next_line(const char *s)
 {
@@ -464,6 +469,11 @@ GIT_INLINE(bool) git__isspace_nonlf(int c)
 GIT_INLINE(bool) git__iswildcard(int c)
 {
 	return (c == '*' || c == '?' || c == '[');
+}
+
+GIT_INLINE(bool) git__isxdigit(int c)
+{
+	return ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'));
 }
 
 /*

@@ -11,6 +11,7 @@
 #include "git2/sys/hashsig.h"
 
 #include "diff.h"
+#include "diff_generate.h"
 #include "path.h"
 #include "fileops.h"
 #include "config.h"

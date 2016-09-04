@@ -1020,6 +1020,7 @@ void test_iterator_tree__pathlist_with_directory(void)
 	expect_iterator_items(i, expected_len2, expected2, expected_len2, expected2);
 	git_iterator_free(i);
 
+	git_tree_free(tree);
 	git_vector_free(&filelist);
 }
 
@@ -1048,6 +1049,7 @@ void test_iterator_tree__pathlist_with_directory_include_tree_nodes(void)
 	expect_iterator_items(i, expected_len, expected, expected_len, expected);
 	git_iterator_free(i);
 
+	git_tree_free(tree);
 	git_vector_free(&filelist);
 }
 
@@ -1070,7 +1072,9 @@ void test_iterator_tree__pathlist_no_match(void)
 
 	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
 	cl_assert_equal_i(GIT_ITEROVER, git_iterator_current(&entry, i));
+	git_iterator_free(i);
 
+	git_tree_free(tree);
 	git_vector_free(&filelist);
 }
 

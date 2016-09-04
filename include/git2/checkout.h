@@ -313,6 +313,13 @@ GIT_EXTERN(int) git_checkout_init_options(
  * Updates files in the index and the working tree to match the content of
  * the commit pointed at by HEAD.
  *
+ * Note that this is _not_ the correct mechanism used to switch branches;
+ * do not change your `HEAD` and then call this method, that would leave
+ * you with checkout conflicts since your working directory would then
+ * appear to be dirty.  Instead, checkout the target of the branch and
+ * then update `HEAD` using `git_repository_set_head` to point to the
+ * branch you checked out.
+ *
  * @param repo repository to check out (must be non-bare)
  * @param opts specifies checkout options (may be NULL)
  * @return 0 on success, GIT_EUNBORNBRANCH if HEAD points to a non

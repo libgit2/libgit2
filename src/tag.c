@@ -137,8 +137,14 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 
 	tag->message = NULL;
 	if (buffer < buffer_end) {
-		if( *buffer != '\n' )
-			return tag_error("No new line before message");
+		/* If we're not at the end of the header, search for it */
+		if( *buffer != '\n' ) {
+			search = strstr(buffer, "\n\n");
+			if (search)
+				buffer = search + 1;
+			else
+				return tag_error("tag contains no message");
+		}
 
 		text_len = buffer_end - ++buffer;
 
