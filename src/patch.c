@@ -17,6 +17,9 @@ int git_patch__invoke_callbacks(
 	if (file_cb)
 		error = file_cb(patch->delta, 0, payload);
 
+	if (error)
+		return error;
+
 	if ((patch->delta->flags & GIT_DIFF_FLAG_BINARY) != 0) {
 		if (binary_cb)
 			error = binary_cb(patch->delta, &patch->binary, payload);
