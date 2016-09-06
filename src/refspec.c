@@ -53,8 +53,10 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 
 	if (rhs) {
 		size_t rlen = strlen(++rhs);
-		is_glob = (1 <= rlen && strchr(rhs, '*'));
-		refspec->dst = git__strndup(rhs, rlen);
+		if (rlen || !is_fetch) {
+			is_glob = (1 <= rlen && strchr(rhs, '*'));
+			refspec->dst = git__strndup(rhs, rlen);
+		}
 	}
 
 	llen = (rhs ? (size_t)(rhs - lhs - 1) : strlen(lhs));
