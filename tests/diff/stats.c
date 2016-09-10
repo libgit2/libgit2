@@ -138,7 +138,7 @@ void test_diff_stats__shortstat_nodeletions(void)
 	" 1 file changed, 3 insertions(+)\n";
 
 	diff_stats_from_commit_oid(
-	&_stats, "5219b9784f9a92d7bd7cb567a6d6a21bfb86697e", false);
+		&_stats, "5219b9784f9a92d7bd7cb567a6d6a21bfb86697e", false);
 
 	cl_assert_equal_sz(1, git_diff_stats_files_changed(_stats));
 	cl_assert_equal_sz(3, git_diff_stats_insertions(_stats));
@@ -158,7 +158,7 @@ void test_diff_stats__rename(void)
 	" 2 files changed, 4 insertions(+), 1 deletion(-)\n";
 
 	diff_stats_from_commit_oid(
-	&_stats, "8947a46e2097638ca6040ad4877246f4186ec3bd", true);
+		&_stats, "8947a46e2097638ca6040ad4877246f4186ec3bd", true);
 
 	cl_assert_equal_sz(2, git_diff_stats_files_changed(_stats));
 	cl_assert_equal_sz(4, git_diff_stats_insertions(_stats));
