@@ -783,6 +783,11 @@ int git__utf8_iterate(const uint8_t *str, int str_len, int32_t *dst)
 	return length;
 }
 
+double git_time_monotonic(void)
+{
+	return git__timer();
+}
+
 #ifdef GIT_WIN32
 int git__getenv(git_buf *out, const char *name)
 {
