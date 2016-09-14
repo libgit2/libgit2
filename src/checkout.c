@@ -212,6 +212,10 @@ static bool checkout_is_workdir_modified(
 	if (baseitem->size && wditem->file_size != baseitem->size)
 		return true;
 
+	/* if the workdir item is a directory, it cannot be a modified file */
+	if (S_ISDIR(wditem->mode))
+		return false;
+
 	if (git_diff__oid_for_entry(&oid, data->diff, wditem, wditem->mode, NULL) < 0)
 		return false;
 
