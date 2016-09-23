@@ -159,6 +159,9 @@ typedef enum {
 	 */
 	GIT_DIFF_SHOW_UNMODIFIED = (1u << 26),
 
+	/* Disable mmap in patches generated from this diff.*/
+	GIT_DIFF_DISABLE_MMAP = (1u << 27),
+
 	/** Use the "patience diff" algorithm */
 	GIT_DIFF_PATIENCE = (1u << 28),
 	/** Take extra time to find minimal diff */
