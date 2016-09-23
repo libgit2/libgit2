@@ -35,6 +35,7 @@ extern int git_pqueue_init(
 #define git_pqueue_clear git_vector_clear
 #define git_pqueue_size  git_vector_length
 #define git_pqueue_get   git_vector_get
+#define git_pqueue_reverse git_vector_reverse
 
 /**
  * Insert a new item into the queue
