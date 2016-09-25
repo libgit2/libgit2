@@ -69,8 +69,6 @@ int git_mbedtls_stream_global_init(void)
     int ret, isdir;
     char *crtpath;
     struct stat statbuf;
-    // const int *cipherids;
-    // const char *ciphers = git_libgit2__ssl_ciphers();
 
     mbedtls_ctr_drbg_context *ctr_drbg;
 
@@ -159,12 +157,6 @@ int git_mbedtls_stream_global_init(void)
             mbedtls_ssl_conf_ca_chain(git__ssl_conf, cacert, NULL);
         }
     }
-
-    // set the list of allowed ciphersuites
-    // if (!ciphers) {
-    //     cipherids = mbedtls_ssl_list_ciphersuites();
-    // }
-    // mbedtls_ssl_conf_ciphersuites(git__ssl_conf, cipherids);
 
     git__on_shutdown(shutdown_ssl);
 
@@ -480,4 +472,3 @@ int git_mbedtls_stream_new(git_stream **out, const char *host, const char *port)
 }
 
 #endif
-

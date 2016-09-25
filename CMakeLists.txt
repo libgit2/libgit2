@@ -88,7 +88,7 @@ IF(MSVC)
 ENDIF()
 
 IF (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-	OPTION( USE_OPENSSL     "Link with and use openssl library"             ON )
+	OPTION( USE_OPENSSL                     "Link with and use openssl library"             ON )
 ENDIF()
 
 CHECK_STRUCT_HAS_MEMBER ("struct stat" st_mtim "sys/types.h;sys/stat.h"
@@ -109,7 +109,7 @@ ELSE ()
 ENDIF()
 
 IF (HAVE_STRUCT_STAT_NSEC OR WIN32)
-	OPTION( USE_NSEC		"Care about sub-second file mtimes and ctimes"	ON )
+	OPTION( USE_NSEC		"Care about sub-second file mtimes and ctimes"	ON  )
 ENDIF()
 
 IF (NOT USE_OPENSSL)
