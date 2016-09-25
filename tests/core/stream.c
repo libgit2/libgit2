@@ -38,7 +38,7 @@ void test_core_stream__register_tls(void)
 	 * with Security framework).
 	 */
 #if defined(GIT_WIN32) || \
-	(!defined(GIT_SECURE_TRANSPORT) && !defined(GIT_OPENSSL))
+	(!defined(GIT_SECURE_TRANSPORT) && !(defined(GIT_OPENSSL) || defined(GIT_MBEDTLS)))
 	cl_git_fail_with(-1, error);
 #else
 	cl_git_pass(error);

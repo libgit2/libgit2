@@ -88,7 +88,7 @@ IF(MSVC)
 ENDIF()
 
 IF (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-	OPTION( USE_OPENSSL                     "Link with and use openssl library"             ON )
+	OPTION( USE_OPENSSL     "Link with and use openssl library"             ON )
 ENDIF()
 
 CHECK_STRUCT_HAS_MEMBER ("struct stat" st_mtim "sys/types.h;sys/stat.h"
@@ -109,7 +109,11 @@ ELSE ()
 ENDIF()
 
 IF (HAVE_STRUCT_STAT_NSEC OR WIN32)
-	OPTION( USE_NSEC		"Care about sub-second file mtimes and ctimes"	ON  )
+	OPTION( USE_NSEC		"Care about sub-second file mtimes and ctimes"	ON )
+ENDIF()
+
+IF (NOT USE_OPENSSL)
+	OPTION( USE_MBEDTLS     "Link with and use mbedTLS library"             ON )
 ENDIF()
 
 # This variable will contain the libraries we need to put into
@@ -283,6 +287,10 @@ ELSE ()
 		FIND_PACKAGE(OpenSSL)
 	ENDIF ()
 
+	IF (NOT AMIGA AND USE_MBEDTLS)
+		FIND_PACKAGE(mbedTLS)
+	ENDIF ()
+
 	IF (CURL_FOUND)
 		ADD_DEFINITIONS(-DGIT_CURL)
 		INCLUDE_DIRECTORIES(${CURL_INCLUDE_DIRS})
@@ -316,6 +324,9 @@ ELSEIF (OPENSSL_FOUND AND NOT SHA1_TYPE STREQUAL "builtin")
 	ELSE()
 		SET(LIBGIT2_PC_REQUIRES "${LIBGIT2_PC_REQUIRES} openssl")
 	ENDIF ()
+ELSEIF (MBEDTLS_FOUND AND NOT SHA1_TYPE STREQUAL "builtin")
+	ADD_DEFINITIONS(-DMBEDTLS_SHA1)
+	FILE(GLOB SRC_SHA1 src/hash/hash_mbedtls.c)
 ELSE()
 	FILE(GLOB SRC_SHA1 src/hash/hash_generic.c)
 ENDIF()
@@ -543,6 +554,11 @@ IF (OPENSSL_FOUND)
   SET(SSL_LIBRARIES ${OPENSSL_LIBRARIES})
 ENDIF()
 
+IF (MBEDTLS_FOUND)
+  ADD_DEFINITIONS(-DGIT_MBEDTLS)
+  INCLUDE_DIRECTORIES(${MBEDTLS_INCLUDE_DIR})
+  SET(SSL_LIBRARIES ${MBEDTLS_LIBRARIES})
+ENDIF()
 
 
 IF (THREADSAFE)
@@ -690,7 +706,7 @@ IF (BUILD_CLAR)
 	ENDIF ()
 
 	ENABLE_TESTING()
-	IF (WINHTTP OR OPENSSL_FOUND OR SECURITY_FOUND)
+	IF (WINHTTP OR OPENSSL_FOUND OR SECURITY_FOUND OR MBEDTLS_FOUND)
 		ADD_TEST(libgit2_clar libgit2_clar -ionline)
 	ELSE ()
 		ADD_TEST(libgit2_clar libgit2_clar -v)

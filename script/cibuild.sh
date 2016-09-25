@@ -15,6 +15,11 @@ curl -L https://github.com/ethomson/poxyproxy/releases/download/v0.1.0/poxyproxy
 # Run this early so we know it's ready by the time we need it
 java -jar poxyproxy.jar -d --port 8080 --credentials foo:bar &
 
+if [ -n "$MBEDTLS" ];
+then
+    ./script/mbedtls.sh;
+fi
+
 mkdir _build
 cd _build
 # shellcheck disable=SC2086
