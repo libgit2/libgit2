@@ -89,7 +89,11 @@ ENDIF()
 
 IF (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	OPTION( USE_OPENSSL                     "Link with and use openssl library"             ON )
+	IF (NOT USE_OPENSSL)
+		OPTION(USE_MBEDTLS "Link with and use mbedTLS library" ON)
+	ENDIF()
 ENDIF()
+
 
 CHECK_STRUCT_HAS_MEMBER ("struct stat" st_mtim "sys/types.h;sys/stat.h"
 	HAVE_STRUCT_STAT_ST_MTIM LANGUAGE C)
@@ -110,10 +114,6 @@ ENDIF()
 
 IF (HAVE_STRUCT_STAT_NSEC OR WIN32)
 	OPTION( USE_NSEC		"Care about sub-second file mtimes and ctimes"	ON  )
-ENDIF()
-
-IF (NOT USE_OPENSSL)
-	OPTION( USE_MBEDTLS     "Link with and use mbedTLS library"             ON )
 ENDIF()
 
 # This variable will contain the libraries we need to put into
