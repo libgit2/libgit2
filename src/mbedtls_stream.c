@@ -359,11 +359,11 @@ int mbedtls_certificate(git_cert **out, git_stream *stream)
     return 0;
 }
 
-static int mbedtls_set_proxy(git_stream *stream, const char *proxy_url)
+static int mbedtls_set_proxy(git_stream *stream, const git_proxy_options *proxy_options)
 {
     mbedtls_stream *st = (mbedtls_stream *) stream;
 
-    return git_stream_set_proxy(st->io, proxy_url);
+    return git_stream_set_proxy(st->io, proxy_options);
 }
 
 ssize_t mbedtls_stream_write(git_stream *stream, const char *data, size_t len, int flags)
