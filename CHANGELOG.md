@@ -61,6 +61,10 @@ v0.24 + 1
 * `git_blob_create_fromchunks()` has been removed in favour of
   `git_blob_create_fromstream()`.
 
+* `clone_checkout_strategy` has been removed from
+  `git_submodule_update_option` as it is no longer necessary after
+  removing the `GIT_CHECKOUT_SAFE_CREATE` flag in favour of the 'GIT_CHECKOUT_SAFE' flag.
+
 ### Breaking API changes
 
 * `git_packbuilder_object_count` and `git_packbuilder_written` now
