@@ -524,7 +524,7 @@ char *p_realpath(const char *orig_path, char *buffer)
 
 int p_vsnprintf(char *buffer, size_t count, const char *format, va_list argptr)
 {
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) || !_WIN64
 	int len;
 
 	if (count == 0)
