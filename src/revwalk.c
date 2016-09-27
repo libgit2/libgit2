@@ -13,6 +13,7 @@
 #include "revwalk.h"
 #include "git2/revparse.h"
 #include "merge.h"
+#include "vector.h"
 
 GIT__USE_OIDMAP
 
@@ -39,97 +40,6 @@ git_commit_list_node *git_revwalk__commit_lookup(
 	kh_value(walk->commits, pos) = commit;
 
 	return commit;
-}
-
-typedef git_array_t(git_commit_list_node*) commit_list_node_array;
-
-static bool interesting_arr(commit_list_node_array arr)
-{
-	git_commit_list_node **n;
-	size_t i = 0, size;
-
-	size = git_array_size(arr);
-	for (i = 0; i < size; i++) {
-		n = git_array_get(arr, i);
-		if (!*n)
-			break;
-
-		if (!(*n)->uninteresting)
-			return true;
-	}
-
-	return false;
-}
-
-static int mark_uninteresting(git_revwalk *walk, git_commit_list_node *commit)
-{
-	int error;
-	unsigned short i;
-	commit_list_node_array pending = GIT_ARRAY_INIT;
-	git_commit_list_node **tmp;
-
-	assert(commit);
-
-	do {
-		commit->uninteresting = 1;
-
-		if ((error = git_commit_list_parse(walk, commit)) < 0)
-			return error;
-
-		for (i = 0; i < commit->out_degree; ++i)
-			if (!commit->parents[i]->uninteresting) {
-				git_commit_list_node **node = git_array_alloc(pending);
-				GITERR_CHECK_ALLOC(node);
-				*node = commit->parents[i];
-			}
-
-		tmp = git_array_pop(pending);
-		commit = tmp ? *tmp : NULL;
-
-	} while (commit != NULL && interesting_arr(pending));
-
-	git_array_clear(pending);
-
-	return 0;
-}
-
-static int process_commit(git_revwalk *walk, git_commit_list_node *commit, int hide)
-{
-	int error;
-
-	if (!hide && walk->hide_cb)
-		hide = walk->hide_cb(&commit->oid, walk->hide_cb_payload);
-
-	if (hide && mark_uninteresting(walk, commit) < 0)
-		return -1;
-
-	if (commit->seen)
-		return 0;
-
-	commit->seen = 1;
-
-	if ((error = git_commit_list_parse(walk, commit)) < 0)
-		return error;
-
-	if (!hide)
-		return walk->enqueue(walk, commit);
-
-	return 0;
-}
-
-static int process_commit_parents(git_revwalk *walk, git_commit_list_node *commit)
-{
-	unsigned short i, max;
-	int error = 0;
-
-	max = commit->out_degree;
-	if (walk->first_parent && commit->out_degree)
-		max = 1;
-
-	for (i = 0; i < max && !error; ++i)
-		error = process_commit(walk, commit->parents[i], commit->uninteresting);
-
-	return error;
 }
 
 static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting, int from_glob)
@@ -321,17 +231,12 @@ static int revwalk_enqueue_unsorted(git_revwalk *walk, git_commit_list_node *com
 
 static int revwalk_next_timesort(git_commit_list_node **object_out, git_revwalk *walk)
 {
-	int error;
 	git_commit_list_node *next;
 
-	while ((next = git_pqueue_pop(&walk->iterator_time)) != NULL)
-		if (!next->uninteresting) {
-			if ((error = process_commit_parents(walk, next)) < 0)
-				return error;
-
-			*object_out = next;
-			return 0;
-		}
+	if ((next = git_pqueue_pop(&walk->iterator_time)) != NULL) {
+		*object_out = next;
+		return 0;
+	}
 
 	giterr_clear();
 	return GIT_ITEROVER;
@@ -339,17 +244,12 @@ static int revwalk_next_timesort(git_commit_list_node **object_out, git_revwalk 
 
 static int revwalk_next_unsorted(git_commit_list_node **object_out, git_revwalk *walk)
 {
-	int error;
 	git_commit_list_node *next;
 
-	while ((next = git_commit_list_pop(&walk->iterator_rand)) != NULL)
-		if (!next->uninteresting) {
-			if ((error = process_commit_parents(walk, next)) < 0)
-				return error;
-
-			*object_out = next;
-			return 0;
-		}
+	if ((next = git_commit_list_pop(&walk->iterator_rand)) != NULL) {
+		*object_out = next;
+		return 0;
+	}
 
 	giterr_clear();
 	return GIT_ITEROVER;
@@ -373,19 +273,6 @@ static int revwalk_next_reverse(git_commit_list_node **object_out, git_revwalk *
 {
 	*object_out = git_commit_list_pop(&walk->iterator_reverse);
 	return *object_out ? 0 : GIT_ITEROVER;
-}
-
-static int contains(git_pqueue *list, git_commit_list_node *node)
-{
-	size_t i;
-
-	for (i = 0; i < git_pqueue_size(list); i++) {
-		git_commit_list_node *commit = git_pqueue_get(list, i);
-		if (commit == node)
-			return 1;
-	}
-
-	return 0;
 }
 
 static void mark_parents_uninteresting(git_commit_list_node *commit)
