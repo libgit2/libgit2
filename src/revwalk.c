@@ -489,10 +489,8 @@ static int everybody_uninteresting(git_commit_list *orig)
 	while (list) {
 		git_commit_list_node *commit = list->item;
 		list = list->next;
-		if (commit->uninteresting)
-			continue;
-
-		return 0;
+		if (!commit->uninteresting)
+			return 0;
 	}
 
 	return 1;
