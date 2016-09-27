@@ -13,10 +13,15 @@
 
 int git_commit_list_time_cmp(const void *a, const void *b)
 {
-	const git_commit_list_node *commit_a = a;
-	const git_commit_list_node *commit_b = b;
+	int64_t time_a = ((git_commit_list_node *) a)->time;
+	int64_t time_b = ((git_commit_list_node *) b)->time;
 
-	return (commit_a->time < commit_b->time);
+	if (time_a < time_b)
+		return 1;
+	if (time_a > time_b)
+		return -1;
+
+	return 0;
 }
 
 git_commit_list *git_commit_list_insert(git_commit_list_node *item, git_commit_list **list_p)
