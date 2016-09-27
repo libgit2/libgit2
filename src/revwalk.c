@@ -357,39 +357,16 @@ static int revwalk_next_unsorted(git_commit_list_node **object_out, git_revwalk 
 
 static int revwalk_next_toposort(git_commit_list_node **object_out, git_revwalk *walk)
 {
-	git_commit_list_node *next;
-	unsigned short i, max;
+	git_commit_list_node *node;
 
-	for (;;) {
-		next = git_commit_list_pop(&walk->iterator_topo);
-		if (next == NULL) {
-			giterr_clear();
-			return GIT_ITEROVER;
-		}
-
-		if (next->in_degree > 0) {
-			next->topo_delay = 1;
-			continue;
-		}
-
-
-		max = next->out_degree;
-		if (walk->first_parent && next->out_degree)
-			max = 1;
-
-		for (i = 0; i < max; ++i) {
-			git_commit_list_node *parent = next->parents[i];
-
-			if (--parent->in_degree == 0 && parent->topo_delay) {
-				parent->topo_delay = 0;
-				if (git_commit_list_insert(parent, &walk->iterator_topo) == NULL)
-					return -1;
-			}
-		}
-
-		*object_out = next;
+	node = git_commit_list_pop(&walk->iterator_topo);
+	if (node) {
+		*object_out = node;
 		return 0;
 	}
+
+	giterr_clear();
+	return GIT_ITEROVER;
 }
 
 static int revwalk_next_reverse(git_commit_list_node **object_out, git_revwalk *walk)
@@ -453,8 +430,6 @@ static int add_parents_to_list(git_revwalk *walk, git_commit_list_node *commit, 
 
 	commit->added = 1;
 
-	/* TODO: add the insertion callback here as well */
-
 	/*
 	 * Go full on in the uninteresting case as we want to include
 	 * as many of these as we can.
@@ -494,7 +469,7 @@ static int add_parents_to_list(git_revwalk *walk, git_commit_list_node *commit, 
 			return error;
 
 		if (walk->hide_cb && walk->hide_cb(&p->oid, walk->hide_cb_payload))
-				continue;
+			continue;
 
 		if (!p->seen) {
 			p->seen = 1;
@@ -578,8 +553,102 @@ static int limit_list(git_commit_list **out, git_revwalk *walk, git_commit_list 
 		p = &git_commit_list_insert(commit, p)->next;
 	}
 
+	git_commit_list_free(&list);
 	*out = newlist;
 	return 0;
+}
+
+static int sort_in_topological_order(git_commit_list **out, git_revwalk *walk)
+{
+	git_commit_list *list = NULL, *ll = NULL, *newlist, **pptr;
+	git_commit_list_node *next;
+	git_pqueue queue;
+	git_vector_cmp queue_cmp = NULL;
+	unsigned short i;
+	int error;
+
+	if (walk->sorting & GIT_SORT_TIME)
+		queue_cmp = git_commit_list_time_cmp;
+
+	if ((error = git_pqueue_init(&queue, 0, 8, queue_cmp)))
+		return error;
+
+	/*
+	 * Start by resetting the in-degree to 1 for the commits in
+	 * our list. We want to go through this list again, so we
+	 * store it in the commit list as we extract it from the lower
+	 * machinery.
+	 */
+	while ((error = walk->get_next(&next, walk)) == 0) {
+		next->in_degree = 1;
+		git_commit_list_insert(next, &list);
+	}
+
+	if (error != GIT_ITEROVER)
+		goto cleanup;
+
+	error = 0;
+
+	/*
+	 * Count up how many children each commit has. We limit
+	 * ourselves to those commits in the original list (in-degree
+	 * of 1) avoiding setting it for any parent that was hidden.
+	 */
+	for(ll = list; ll; ll = ll->next) {
+		for (i = 0; i < ll->item->out_degree; ++i) {
+			git_commit_list_node *parent = ll->item->parents[i];
+			if (parent->in_degree)
+				parent->in_degree++;
+		}
+	}
+
+	/*
+	 * Now we find the tips i.e. those not reachable from any other node
+	 * i.e. those which still have an in-degree of 1.
+	 */
+	for(ll = list; ll; ll = ll->next) {
+		if (ll->item->in_degree == 1) {
+			if ((error = git_pqueue_insert(&queue, ll->item)))
+				goto cleanup;
+		}
+	}
+
+	/*
+	 * We need to output the tips in the order that they came out of the
+	 * traversal, so if we're not doing time-sorting, we need to reverse the
+	 * pqueue in order to get them to come out as we inserted them.
+	 */
+	if ((walk->sorting & GIT_SORT_TIME) == 0)
+		git_pqueue_reverse(&queue);
+
+
+	pptr = &newlist;
+	newlist = NULL;
+	while ((next = git_pqueue_pop(&queue)) != NULL) {
+		for (i = 0; i < next->out_degree; ++i) {
+			git_commit_list_node *parent = next->parents[i];
+			if (parent->in_degree == 0)
+				continue;
+
+			if (--parent->in_degree == 1) {
+				if ((error = git_pqueue_insert(&queue, parent)))
+					goto cleanup;
+			}
+		}
+
+		/* All the children of 'item' have been emitted (since we got to it via the priority queue) */
+		next->in_degree = 0;
+
+		pptr = &git_commit_list_insert(next, pptr)->next;
+	}
+
+	*out = newlist;
+	error = 0;
+
+cleanup:
+	git_commit_list_free(&list);
+	git_pqueue_free(&queue);
+	return error;
 }
 
 static int prepare_walk(git_revwalk *walk)
@@ -615,25 +684,16 @@ static int prepare_walk(git_revwalk *walk)
 		if (list->item->uninteresting)
 			continue;
 
-		if ((error = walk->enqueue(walk, list->item)) < 0)
+		if ((error = walk->enqueue(walk, list->item)) < 0) {
+			git_commit_list_free(&commits);
 			return error;
+		}
 	}
 
+	git_commit_list_free(&commits);
 
 	if (walk->sorting & GIT_SORT_TOPOLOGICAL) {
-		unsigned short i;
-
-		while ((error = walk->get_next(&next, walk)) == 0) {
-			for (i = 0; i < next->out_degree; ++i) {
-				git_commit_list_node *parent = next->parents[i];
-				parent->in_degree++;
-			}
-
-			if (git_commit_list_insert(next, &walk->iterator_topo) == NULL)
-				return -1;
-		}
-
-		if (error != GIT_ITEROVER)
+		if ((error = sort_in_topological_order(&walk->iterator_topo, walk)))
 			return error;
 
 		walk->get_next = &revwalk_next_toposort;
