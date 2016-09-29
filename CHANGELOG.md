@@ -15,6 +15,8 @@ v0.24 + 1
 
 * Support for reading and writing git index v4 files
 
+* Improve the performance of the revwalk and bring us closer to git's code.
+
 ### API additions
 
 * You can now get the user-agent used by libgit2 using the
