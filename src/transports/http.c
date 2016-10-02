@@ -114,7 +114,7 @@ static bool challenge_match(git_http_auth_scheme *scheme, void *data)
 	size_t scheme_len;
 
 	scheme_len = strlen(scheme_name);
-	return (strncmp(challenge, scheme_name, scheme_len) == 0 &&
+	return (strncasecmp(challenge, scheme_name, scheme_len) == 0 &&
 		(challenge[scheme_len] == '\0' || challenge[scheme_len] == ' '));
 }
 
@@ -569,6 +569,7 @@ static int http_connect(http_subtransport *t)
 		git_stream_close(t->io);
 		git_stream_free(t->io);
 		t->io = NULL;
+		t->connected = 0;
 	}
 
 	if (t->connection_data.use_ssl) {

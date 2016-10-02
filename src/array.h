@@ -96,7 +96,7 @@ GIT_INLINE(int) git_array__search(
 {
 	size_t lim;
 	unsigned char *part, *array = array_ptr, *base = array_ptr;
-	int cmp;
+	int cmp = -1;
 
 	for (lim = array_len; lim != 0; lim >>= 1) {
 		part = base + (lim >> 1) * item_size;

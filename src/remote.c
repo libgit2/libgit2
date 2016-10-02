@@ -1414,7 +1414,11 @@ static int update_tips_for_spec(
 		/* In autotag mode, don't overwrite any locally-existing tags */
 		error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, !autotag, 
 				log_message);
-		if (error < 0 && error != GIT_EEXISTS)
+
+		if (error == GIT_EEXISTS)
+			continue;
+
+		if (error < 0)
 			goto on_error;
 
 		git_reference_free(ref);
@@ -2224,15 +2228,21 @@ static int remove_branch_config_related_entries(
 		if (git_buf_printf(&buf, "branch.%.*s.merge", (int)branch_len, branch) < 0)
 			break;
 
-		if ((error = git_config_delete_entry(config, git_buf_cstr(&buf))) < 0)
-			break;
+		if ((error = git_config_delete_entry(config, git_buf_cstr(&buf))) < 0) {
+			if (error != GIT_ENOTFOUND)
+				break;
+			giterr_clear();
+		}
 
 		git_buf_clear(&buf);
 		if (git_buf_printf(&buf, "branch.%.*s.remote", (int)branch_len, branch) < 0)
 			break;
 
-		if ((error = git_config_delete_entry(config, git_buf_cstr(&buf))) < 0)
-			break;
+		if ((error = git_config_delete_entry(config, git_buf_cstr(&buf))) < 0) {
+			if (error != GIT_ENOTFOUND)
+				break;
+			giterr_clear();
+		}
 	}
 
 	if (error == GIT_ITEROVER)

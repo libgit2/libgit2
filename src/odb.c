@@ -803,19 +803,12 @@ int git_odb__read_header_or_object(
 	return 0;
 }
 
-static git_oid empty_blob = {{ 0xe6, 0x9d, 0xe2, 0x9b, 0xb2, 0xd1, 0xd6, 0x43, 0x4b, 0x8b,
-			       0x29, 0xae, 0x77, 0x5a, 0xd8, 0xc2, 0xe4, 0x8c, 0x53, 0x91 }};
 static git_oid empty_tree = {{ 0x4b, 0x82, 0x5d, 0xc6, 0x42, 0xcb, 0x6e, 0xb9, 0xa0, 0x60,
 			       0xe5, 0x4b, 0xf8, 0xd6, 0x92, 0x88, 0xfb, 0xee, 0x49, 0x04 }};
 
 static int hardcoded_objects(git_rawobj *raw, const git_oid *id)
 {
-	if (!git_oid_cmp(id, &empty_blob)) {
-		raw->type = GIT_OBJ_BLOB;
-		raw->len = 0;
-		raw->data = git__calloc(1, sizeof(uint8_t));
-		return 0;
-	} else if (!git_oid_cmp(id, &empty_tree)) {
+	if (!git_oid_cmp(id, &empty_tree)) {
 		raw->type = GIT_OBJ_TREE;
 		raw->len = 0;
 		raw->data = git__calloc(1, sizeof(uint8_t));
@@ -1229,7 +1222,7 @@ int git_odb__error_notfound(
 {
 	if (oid != NULL) {
 		char oid_str[GIT_OID_HEXSZ + 1];
-		git_oid_tostr(oid_str, oid_len, oid);
+		git_oid_tostr(oid_str, oid_len+1, oid);
 		giterr_set(GITERR_ODB, "Object not found - %s (%.*s)",
 			message, oid_len, oid_str);
 	} else

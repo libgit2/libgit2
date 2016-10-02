@@ -464,7 +464,8 @@ static int checkout_action_with_wd(
 			*action = CHECKOUT_ACTION_IF(SAFE, REMOVE, NONE);
 		break;
 	case GIT_DELTA_MODIFIED: /* case 16, 17, 18 (or 36 but not really) */
-		if (checkout_is_workdir_modified(data, &delta->old_file, &delta->new_file, wd))
+		if (wd->mode != GIT_FILEMODE_COMMIT &&
+			checkout_is_workdir_modified(data, &delta->old_file, &delta->new_file, wd))
 			*action = CHECKOUT_ACTION_IF(FORCE, UPDATE_BLOB, CONFLICT);
 		else
 			*action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
@@ -1342,9 +1343,11 @@ fail:
 
 static bool should_remove_existing(checkout_data *data)
 {
-	int ignorecase = 0;
+	int ignorecase;
 
-	git_repository__cvar(&ignorecase, data->repo, GIT_CVAR_IGNORECASE);
+	if (git_repository__cvar(&ignorecase, data->repo, GIT_CVAR_IGNORECASE) < 0) {
+		ignorecase = 0;
+	}
 
 	return (ignorecase &&
 		(data->strategy & GIT_CHECKOUT_DONT_REMOVE_EXISTING) == 0);
@@ -2405,8 +2408,13 @@ static int checkout_data_init(
 
 	if (!data->opts.baseline && !data->opts.baseline_index) {
 		data->opts_free_baseline = true;
+		error = 0;
 
-		error = checkout_lookup_head_tree(&data->opts.baseline, repo);
+		/* if we don't have an index, this is an initial checkout and
+		 * should be against an empty baseline
+		 */
+		if (data->index->on_disk)
+			error = checkout_lookup_head_tree(&data->opts.baseline, repo);
 
 		if (error == GIT_EUNBORNBRANCH) {
 			error = 0;
@@ -2691,7 +2699,7 @@ int git_checkout_tree(
 	if ((error = git_repository_index(&index, repo)) < 0)
 		return error;
 
-	if ((opts->checkout_strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)) {
+	if (opts && (opts->checkout_strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)) {
 		iter_opts.pathlist.count = opts->paths.count;
 		iter_opts.pathlist.strings = opts->paths.strings;
 	}

@@ -40,7 +40,7 @@ OPTION( USE_ICONV			"Link with and use iconv library" 		OFF )
 OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
 OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"   OFF )
 OPTION( VALGRIND			"Configure build for valgrind"			OFF )
-OPTION( CURL			"User curl for HTTP if available" ON)
+OPTION( CURL			"Use curl for HTTP if available" ON)
 OPTION( DEBUG_POOL			"Enable debug pool allocator"			OFF )
 
 IF(DEBUG_POOL)
@@ -151,6 +151,10 @@ FUNCTION(TARGET_OS_LIBRARIES target)
 		TARGET_LINK_LIBRARIES(${target} socket nsl)
 		LIST(APPEND LIBGIT2_PC_LIBS "-lsocket" "-lnsl")
 		SET(LIBGIT2_PC_LIBS ${LIBGIT2_PC_LIBS} PARENT_SCOPE)
+	ELSEIF(CMAKE_SYSTEM_NAME MATCHES "Haiku")
+		TARGET_LINK_LIBRARIES(${target} network)
+		LIST(APPEND LIBGIT2_PC_LIBS "-lnetwork")
+		SET(LIBGIT2_PC_LIBS ${LIBGIT2_PC_LIBS} PARENT_SCOPE)
 	ENDIF()
 	CHECK_LIBRARY_EXISTS(rt clock_gettime "time.h" NEED_LIBRT)
 	IF(NEED_LIBRT)
@@ -161,6 +165,8 @@ FUNCTION(TARGET_OS_LIBRARIES target)
 
 	IF(THREADSAFE)
 		TARGET_LINK_LIBRARIES(${target} ${CMAKE_THREAD_LIBS_INIT})
+		LIST(APPEND LIBGIT2_PC_LIBS ${CMAKE_THREAD_LIBS_INIT})
+		SET(LIBGIT2_PC_LIBS ${LIBGIT2_PC_LIBS} PARENT_SCOPE)
 	ENDIF()
 ENDFUNCTION()
 
@@ -280,6 +286,7 @@ ELSE ()
 	IF (CURL_FOUND)
 		ADD_DEFINITIONS(-DGIT_CURL)
 		INCLUDE_DIRECTORIES(${CURL_INCLUDE_DIRS})
+		LINK_DIRECTORIES(${CURL_LIBRARY_DIRS})
 		LINK_LIBRARIES(${CURL_LIBRARIES})
 		LIST(APPEND LIBGIT2_PC_LIBS ${CURL_LDFLAGS})
 	ENDIF()
@@ -467,17 +474,19 @@ ELSE ()
 		SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -D_DEBUG")
 	ENDIF ()
 
-	IF (MINGW) # MinGW always does PIC and complains if we tell it to
+	IF (MINGW OR MSYS) # MinGW and MSYS always do PIC and complain if we tell them to
 		STRING(REGEX REPLACE "-fPIC" "" CMAKE_SHARED_LIBRARY_C_FLAGS "${CMAKE_SHARED_LIBRARY_C_FLAGS}")
-		# MinGW >= 3.14 uses the C99-style stdio functions
-		# automatically, but forks like mingw-w64 still want
-		# us to define this in order to use them
-		ADD_DEFINITIONS(-D__USE_MINGW_ANSI_STDIO=1)
-
 	ELSEIF (BUILD_SHARED_LIBS)
 		ADD_C_FLAG_IF_SUPPORTED(-fvisibility=hidden)
 
 		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+	ENDIF ()
+
+	IF (MINGW)
+		# MinGW >= 3.14 uses the C99-style stdio functions
+		# automatically, but forks like mingw-w64 still want
+		# us to define this in order to use them
+		ADD_DEFINITIONS(-D__USE_MINGW_ANSI_STDIO=1)
 	ENDIF ()
 
 	ADD_C_FLAG_IF_SUPPORTED(-Wdocumentation)

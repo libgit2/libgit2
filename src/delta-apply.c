@@ -49,6 +49,37 @@ int git__delta_read_header(
 	return 0;
 }
 
+#define DELTA_HEADER_BUFFER_LEN 16
+int git__delta_read_header_fromstream(size_t *base_sz, size_t *res_sz, git_packfile_stream *stream)
+{
+	static const size_t buffer_len = DELTA_HEADER_BUFFER_LEN;
+	unsigned char buffer[DELTA_HEADER_BUFFER_LEN];
+	const unsigned char *delta, *delta_end;
+	size_t len;
+	ssize_t read;
+
+	len = read = 0;
+	while (len < buffer_len) {
+		read = git_packfile_stream_read(stream, &buffer[len], buffer_len - len);
+
+		if (read == 0)
+			break;
+
+		if (read == GIT_EBUFS)
+			continue;
+
+		len += read;
+	}
+
+	delta = buffer;
+	delta_end = delta + len;
+	if ((hdr_sz(base_sz, &delta, delta_end) < 0) ||
+	    (hdr_sz(res_sz, &delta, delta_end) < 0))
+		return -1;
+
+	return 0;
+}
+
 int git__delta_apply(
 	git_rawobj *out,
 	const unsigned char *base,
@@ -90,13 +121,13 @@ int git__delta_apply(
 			size_t off = 0, len = 0;
 
 			if (cmd & 0x01) off = *delta++;
-			if (cmd & 0x02) off |= *delta++ << 8;
-			if (cmd & 0x04) off |= *delta++ << 16;
-			if (cmd & 0x08) off |= *delta++ << 24;
+			if (cmd & 0x02) off |= *delta++ << 8UL;
+			if (cmd & 0x04) off |= *delta++ << 16UL;
+			if (cmd & 0x08) off |= *delta++ << 24UL;
 
 			if (cmd & 0x10) len = *delta++;
-			if (cmd & 0x20) len |= *delta++ << 8;
-			if (cmd & 0x40) len |= *delta++ << 16;
+			if (cmd & 0x20) len |= *delta++ << 8UL;
+			if (cmd & 0x40) len |= *delta++ << 16UL;
 			if (!len)		len = 0x10000;
 
 			if (base_len < off + len || res_sz < len)

@@ -433,6 +433,7 @@ int git_pkt_parse_line(
 	 * line?
 	 */
 	if (len == PKT_LEN_SIZE) {
+		*head = NULL;
 		*out = line;
 		return 0;
 	}

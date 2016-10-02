@@ -59,8 +59,9 @@ static int init_common(void)
 	if ((ret = git_hash_global_init()) == 0 &&
 		(ret = git_sysdir_global_init()) == 0 &&
 		(ret = git_filter_global_init()) == 0 &&
-		(ret = git_transport_ssh_global_init()) == 0)
-		ret = git_openssl_stream_global_init();
+		(ret = git_transport_ssh_global_init()) == 0 &&
+		(ret = git_openssl_stream_global_init()) == 0)
+		ret = git_mwindow_global_init();
 
 	GIT_MEMORY_BARRIER;
 
@@ -85,11 +86,6 @@ static void shutdown_common(void)
 
 	git__free(git__user_agent);
 	git__free(git__ssl_ciphers);
-
-#if defined(GIT_MSVC_CRTDBG)
-	git_win32__crtdbg_stacktrace_cleanup();
-	git_win32__stack_cleanup();
-#endif
 }
 
 /**
@@ -137,7 +133,7 @@ static int synchronized_threads_init(void)
 
 	_tls_index = TlsAlloc();
 
-	win32_pthread_initialize();
+	git_threads_init();
 
 	if (git_mutex_init(&git__mwindow_mutex))
 		return -1;
@@ -181,6 +177,11 @@ int git_libgit2_shutdown(void)
 
 		TlsFree(_tls_index);
 		git_mutex_free(&git__mwindow_mutex);
+
+#if defined(GIT_MSVC_CRTDBG)
+		git_win32__crtdbg_stacktrace_cleanup();
+		git_win32__stack_cleanup();
+#endif
 	}
 
 	/* Exit the lock */
@@ -226,6 +227,9 @@ void git__free_tls_data(void)
 
 BOOL WINAPI DllMain(HINSTANCE hInstDll, DWORD fdwReason, LPVOID lpvReserved)
 {
+	GIT_UNUSED(hInstDll);
+	GIT_UNUSED(lpvReserved);
+
 	/* This is how Windows lets us know our thread is being shut down */
 	if (fdwReason == DLL_THREAD_DETACH) {
 		git__free_tls_data();

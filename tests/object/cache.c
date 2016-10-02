@@ -220,7 +220,7 @@ void test_object_cache__threadmania(void)
 			fn = (th & 1) ? cache_parsed : cache_raw;
 
 #ifdef GIT_THREADS
-			cl_git_pass(git_thread_create(&t[th], NULL, fn, data));
+			cl_git_pass(git_thread_create(&t[th], fn, data));
 #else
 			cl_assert(fn(data) == data);
 			git__free(data);
@@ -267,7 +267,7 @@ void test_object_cache__fast_thread_rush(void)
 			data[th] = th;
 #ifdef GIT_THREADS
 			cl_git_pass(
-				git_thread_create(&t[th], NULL, cache_quick, &data[th]));
+				git_thread_create(&t[th], cache_quick, &data[th]));
 #else
 			cl_assert(cache_quick(&data[th]) == &data[th]);
 #endif
