@@ -443,9 +443,9 @@ static int limit_list(git_commit_list **out, git_revwalk *walk, git_commit_list 
 	return 0;
 }
 
-static int sort_in_topological_order(git_commit_list **out, git_revwalk *walk)
+static int sort_in_topological_order(git_commit_list **out, git_revwalk *walk, git_commit_list *list)
 {
-	git_commit_list *list = NULL, *ll = NULL, *newlist, **pptr;
+	git_commit_list *ll = NULL, *newlist, **pptr;
 	git_commit_list_node *next;
 	git_pqueue queue;
 	git_vector_cmp queue_cmp = NULL;
@@ -464,15 +464,9 @@ static int sort_in_topological_order(git_commit_list **out, git_revwalk *walk)
 	 * store it in the commit list as we extract it from the lower
 	 * machinery.
 	 */
-	while ((error = walk->get_next(&next, walk)) == 0) {
-		next->in_degree = 1;
-		git_commit_list_insert(next, &list);
+	for (ll = list; ll; ll = ll->next) {
+		ll->item->in_degree = 1;
 	}
-
-	if (error != GIT_ITEROVER)
-		goto cleanup;
-
-	error = 0;
 
 	/*
 	 * Count up how many children each commit has. We limit
@@ -531,7 +525,6 @@ static int sort_in_topological_order(git_commit_list **out, git_revwalk *walk)
 	error = 0;
 
 cleanup:
-	git_commit_list_free(&list);
 	git_pqueue_free(&queue);
 	return error;
 }
@@ -562,26 +555,32 @@ static int prepare_walk(git_revwalk *walk)
 		}
 	}
 
+	for (list = commits; list; list = list->next) {
+		printf("%s: commit %s\n", __func__, git_oid_tostr_s(&list->item->oid));
+	}
+
 	if ((error = limit_list(&commits, walk, commits)) < 0)
 		return error;
 
-	for (list = commits; list; list = list->next) {
-		if (list->item->uninteresting)
-			continue;
-
-		if ((error = walk->enqueue(walk, list->item)) < 0) {
-			git_commit_list_free(&commits);
-			return error;
-		}
-	}
-
-	git_commit_list_free(&commits);
-
 	if (walk->sorting & GIT_SORT_TOPOLOGICAL) {
-		if ((error = sort_in_topological_order(&walk->iterator_topo, walk)))
+		error = sort_in_topological_order(&walk->iterator_topo, walk, commits);
+		git_commit_list_free(&commits);
+
+		if (error < 0)
 			return error;
 
 		walk->get_next = &revwalk_next_toposort;
+	} else if (walk->sorting & GIT_SORT_TIME) {
+		for (list = commits; list && !error; list = list->next)
+			error = walk->enqueue(walk, list->item);
+
+		git_commit_list_free(&commits);
+
+		if (error < 0)
+			return error;
+	} else {
+		walk->iterator_rand = commits;
+		walk->get_next = revwalk_next_unsorted;
 	}
 
 	if (walk->sorting & GIT_SORT_REVERSE) {
