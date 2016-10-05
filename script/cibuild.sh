@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -x
+
 if [ -n "$COVERITY" ];
 then
 	./script/coverity.sh;
