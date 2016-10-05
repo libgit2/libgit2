@@ -555,10 +555,6 @@ static int prepare_walk(git_revwalk *walk)
 		}
 	}
 
-	for (list = commits; list; list = list->next) {
-		printf("%s: commit %s\n", __func__, git_oid_tostr_s(&list->item->oid));
-	}
-
 	if ((error = limit_list(&commits, walk, commits)) < 0)
 		return error;
 
