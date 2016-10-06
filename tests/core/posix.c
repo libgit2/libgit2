@@ -11,6 +11,7 @@
 
 #include "clar_libgit2.h"
 #include "posix.h"
+#include "userdiff.h"
 
 void test_core_posix__initialize(void)
 {
@@ -39,7 +40,7 @@ void test_core_posix__inet_pton(void)
 	struct in_addr addr;
 	struct in6_addr addr6;
 	size_t i;
-	
+
 	struct in_addr_data {
 		const char *p;
 		const uint8_t n[4];
@@ -145,4 +146,28 @@ void test_core_posix__utimes(void)
 	cl_assert((st.st_mtime - curtime) < 5);
 
 	p_unlink("foo");
+}
+
+void test_core_posix__p_regcomp_compile_single_byte_regexps(void)
+{
+	regex_t preg;
+
+	cl_must_pass(p_regcomp(&preg, "[\xc0-\xff][\x80-\xbf]", REG_EXTENDED));
+
+	regfree(&preg);
+}
+
+void test_core_posix__p_regcomp_compile_userdiff_regexps(void)
+{
+	regex_t preg;
+	size_t idx;
+
+	for (idx = 0; idx < ARRAY_SIZE(builtin_defs); ++idx) {
+		git_diff_driver_definition ddef = builtin_defs[idx];
+
+		cl_must_pass(p_regcomp(&preg, ddef.fns, REG_EXTENDED | ddef.flags));
+		cl_must_pass(p_regcomp(&preg, ddef.words, REG_EXTENDED));
+	}
+
+	regfree(&preg);
 }
