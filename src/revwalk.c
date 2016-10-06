@@ -86,7 +86,7 @@ static int mark_uninteresting(git_revwalk *walk, git_commit_list_node *commit)
 		tmp = git_array_pop(pending);
 		commit = tmp ? *tmp : NULL;
 
-	} while (commit != NULL && !interesting_arr(pending));
+	} while (commit != NULL && interesting_arr(pending));
 
 	git_array_clear(pending);
 
@@ -425,48 +425,36 @@ static int contains(git_pqueue *list, git_commit_list_node *node)
 	return 0;
 }
 
-static int premark_uninteresting(git_revwalk *walk)
+static void mark_parents_uninteresting(git_commit_list_node *commit)
 {
-	int error = 0;
 	unsigned short i;
-	git_pqueue q;
-	git_commit_list *list;
-	git_commit_list_node *commit, *parent;
+	git_commit_list *parents = NULL;
 
-	if ((error = git_pqueue_init(&q, 0, 8, git_commit_list_time_cmp)) < 0)
-		return error;
+	for (i = 0; i < commit->out_degree; i++)
+		git_commit_list_insert(commit->parents[i], &parents);
 
-	for (list = walk->user_input; list; list = list->next) {
-		if ((error = git_commit_list_parse(walk, list->item)) < 0)
-			goto cleanup;
 
-		if ((error = git_pqueue_insert(&q, list->item)) < 0)
-			goto cleanup;
-	}
+	while (parents) {
+		git_commit_list_node *commit = git_commit_list_pop(&parents);
 
-	while (interesting(&q)) {
-		commit = git_pqueue_pop(&q);
-
-		for (i = 0; i < commit->out_degree; i++) {
-			parent = commit->parents[i];
-
-			if ((error = git_commit_list_parse(walk, parent)) < 0)
-				goto cleanup;
-
+		while (commit) {
 			if (commit->uninteresting)
-				parent->uninteresting = 1;
+				break;
 
-			if (contains(&q, parent))
-				continue;
+			commit->uninteresting = 1;
+			/*
+			 * If we've reached this commit some other way
+			 * already, we need to mark its parents uninteresting
+			 * as well.
+			 */
+			if (!commit->parents)
+				break;
 
-			if ((error = git_pqueue_insert(&q, parent)) < 0)
-				goto cleanup;
+			for (i = 0; i < commit->out_degree; i++)
+				git_commit_list_insert(commit->parents[i], &parents);
+			commit = commit->parents[0];
 		}
 	}
-
-cleanup:
-	git_pqueue_free(&q);
-	return error;
 }
 
 static int prepare_walk(git_revwalk *walk)
@@ -481,14 +469,16 @@ static int prepare_walk(git_revwalk *walk)
 		return GIT_ITEROVER;
 	}
 
-	if (walk->did_hide && (error = premark_uninteresting(walk)) < 0)
-		return error;
-
 	for (list = walk->user_input; list; list = list->next) {
+		if ((error = git_commit_list_parse(walk, list->item)) < 0)
+			return error;
+
+		if (list->item->uninteresting)
+			mark_parents_uninteresting(list->item);
+
 		if (process_commit(walk, list->item, list->item->uninteresting) < 0)
 			return -1;
 	}
-
 
 	if (walk->sorting & GIT_SORT_TOPOLOGICAL) {
 		unsigned short i;
