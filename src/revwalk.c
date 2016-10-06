@@ -246,9 +246,12 @@ static int revwalk_next_unsorted(git_commit_list_node **object_out, git_revwalk 
 {
 	git_commit_list_node *next;
 
-	if ((next = git_commit_list_pop(&walk->iterator_rand)) != NULL) {
-		*object_out = next;
-		return 0;
+	while ((next = git_commit_list_pop(&walk->iterator_rand)) != NULL) {
+		/* Some commits might become uninteresting after being added to the list */
+		if (!next->uninteresting) {
+			*object_out = next;
+			return 0;
+		}
 	}
 
 	giterr_clear();
@@ -257,12 +260,14 @@ static int revwalk_next_unsorted(git_commit_list_node **object_out, git_revwalk 
 
 static int revwalk_next_toposort(git_commit_list_node **object_out, git_revwalk *walk)
 {
-	git_commit_list_node *node;
+	git_commit_list_node *next;
 
-	node = git_commit_list_pop(&walk->iterator_topo);
-	if (node) {
-		*object_out = node;
-		return 0;
+	while ((next = git_commit_list_pop(&walk->iterator_topo)) != NULL) {
+		/* Some commits might become uninteresting after being added to the list */
+		if (!next->uninteresting) {
+			*object_out = next;
+			return 0;
+		}
 	}
 
 	giterr_clear();
