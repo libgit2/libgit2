@@ -25,17 +25,15 @@ GIT_BEGIN_DECL
  */
 typedef enum {
 	/**
-	 * Sort the repository contents in no particular ordering;
-	 * this sorting is arbitrary, implementation-specific
-	 * and subject to change at any time.
+	 * Sort the output with the same default time-order method from git.
 	 * This is the default sorting for new walkers.
 	 */
 	GIT_SORT_NONE = 0,
 
 	/**
-	 * Sort the repository contents in topological order
-	 * (parents before children); this sorting mode
-	 * can be combined with time sorting.
+	 * Sort the repository contents in topological order (parents before
+	 * children); this sorting mode can be combined with time sorting to
+	 * produce git's "time-order".
 	 */
 	GIT_SORT_TOPOLOGICAL = 1 << 0,
 
