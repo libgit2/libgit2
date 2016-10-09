@@ -459,10 +459,11 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 	buffer = buffer_start + header_len + 1;
 
 	/* extract commit message */
-	if (buffer <= buffer_end) {
+	if (buffer <= buffer_end)
 		commit->raw_message = git__strndup(buffer, buffer_end - buffer);
-		GITERR_CHECK_ALLOC(commit->raw_message);
-	}
+	else
+		commit->raw_message = git__strdup("");
+	GITERR_CHECK_ALLOC(commit->raw_message);
 
 	return 0;
 
