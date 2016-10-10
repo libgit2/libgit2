@@ -20,7 +20,7 @@ java -jar poxyproxy.jar -d --port 8080 --credentials foo:bar &
 mkdir _build
 cd _build
 # shellcheck disable=SC2086
-cmake .. -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS || exit $?
+cmake .. -DBUILD_EXAMPLES=ON -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS || exit $?
 make -j2 install || exit $?
 
 # If this platform doesn't support test execution, bail out now
