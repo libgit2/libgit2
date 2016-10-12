@@ -156,10 +156,14 @@ int git_openssl_set_locking(void)
 
 static int bio_create(BIO *b)
 {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	b->init = 1;
 	b->num = 0;
 	b->ptr = NULL;
 	b->flags = 0;
+#else
+	BIO_set_init(b, 1);
+#endif
 
 	return 1;
 }
@@ -169,23 +173,36 @@ static int bio_destroy(BIO *b)
 	if (!b)
 		return 0;
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	b->init = 0;
 	b->num = 0;
 	b->ptr = NULL;
 	b->flags = 0;
+#else
+	BIO_set_init(b, 0);
+	BIO_set_data(b, NULL);
+#endif
 
 	return 1;
 }
 
 static int bio_read(BIO *b, char *buf, int len)
 {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	git_stream *io = (git_stream *) b->ptr;
+#else
+	git_stream *io = (git_stream *) BIO_get_data(b);
+#endif
 	return (int) git_stream_read(io, buf, len);
 }
 
 static int bio_write(BIO *b, const char *buf, int len)
 {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	git_stream *io = (git_stream *) b->ptr;
+#else
+	git_stream *io = (git_stream *) BIO_get_data(b);
+#endif
 	return (int) git_stream_write(io, buf, len, 0);
 }
 
@@ -214,6 +231,7 @@ static int bio_puts(BIO *b, const char *str)
 	return bio_write(b, str, strlen(str));
 }
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 static BIO_METHOD git_stream_bio_method = {
 	BIO_TYPE_SOURCE_SINK,
 	"git_stream",
@@ -225,6 +243,9 @@ static BIO_METHOD git_stream_bio_method = {
 	bio_create,
 	bio_destroy
 };
+#else
+static BIO_METHOD *git_stream_bio_method = NULL;
+#endif
 
 static int ssl_set_error(SSL *ssl, int error)
 {
@@ -445,9 +466,25 @@ int openssl_connect(git_stream *stream)
 
 	st->connected = true;
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	bio = BIO_new(&git_stream_bio_method);
+#else
+	git_stream_bio_method = BIO_meth_new(BIO_TYPE_SOURCE_SINK | BIO_get_new_index(), "git_stream");
+	BIO_meth_set_write(git_stream_bio_method, bio_write);
+	BIO_meth_set_read(git_stream_bio_method, bio_read);
+	BIO_meth_set_puts(git_stream_bio_method, bio_puts);
+	BIO_meth_set_gets(git_stream_bio_method, bio_gets);
+	BIO_meth_set_ctrl(git_stream_bio_method, bio_ctrl);
+	BIO_meth_set_create(git_stream_bio_method, bio_create);
+	BIO_meth_set_destroy(git_stream_bio_method, bio_destroy);
+	bio = BIO_new(git_stream_bio_method);
+#endif
 	GITERR_CHECK_ALLOC(bio);
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	bio->ptr = st->io;
+#else
+	BIO_set_data(bio, st->io);
+#endif
 
 	SSL_set_bio(st->ssl, bio, bio);
 	/* specify the host in case SNI is needed */
