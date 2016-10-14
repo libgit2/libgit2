@@ -15,6 +15,13 @@
 #endif
 
 /**
+ * Gets the conversion flags to convert a wide string to UTF-8.
+ * 
+ * @return The dwFlags argument that should be used when calling WideStringToMultiByte.
+ */
+DWORD git__get_utf6_to_8_flags();
+
+/**
  * Converts a UTF-8 string to wide characters.
  *
  * @param dest The buffer to receive the wide string.
