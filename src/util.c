@@ -128,8 +128,8 @@ int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const cha
 			v = c - 'A' + 10;
 		if (v >= base)
 			break;
-		nn = n*base + v;
-		if (nn < n)
+		nn = n * base + (neg ? -v : v);
+		if ((!neg && nn < n) || (neg && nn > n))
 			ovfl = 1;
 		n = nn;
 	}
@@ -148,7 +148,7 @@ Return:
 		return -1;
 	}
 
-	*result = neg ? -n : n;
+	*result = n;
 	return 0;
 }
 
@@ -781,6 +781,11 @@ int git__utf8_iterate(const uint8_t *str, int str_len, int32_t *dst)
 
 	*dst = uc;
 	return length;
+}
+
+double git_time_monotonic(void)
+{
+	return git__timer();
 }
 
 #ifdef GIT_WIN32

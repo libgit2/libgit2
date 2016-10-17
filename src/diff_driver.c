@@ -114,7 +114,7 @@ static int diff_driver_add_patterns(
 		if (error < 0)
 			break;
 
-		if ((error = regcomp(&pat->re, buf.ptr, regex_flags)) != 0) {
+		if ((error = p_regcomp(&pat->re, buf.ptr, regex_flags)) != 0) {
 			/*
 			 * TODO: issue a warning
 			 */
@@ -210,7 +210,7 @@ static int git_diff_driver_builtin(
 		goto done;
 
 	if (ddef->words &&
-		(error = regcomp(
+		(error = p_regcomp(
 			&drv->word_pattern, ddef->words, ddef->flags | REG_EXTENDED)))
 	{
 		error = giterr_set_regex(&drv->word_pattern, error);
@@ -314,7 +314,7 @@ static int git_diff_driver_load(
 		goto done;
 	if (!ce || !ce->value)
 		/* no diff.<driver>.wordregex, so just continue */;
-	else if (!(error = regcomp(&drv->word_pattern, ce->value, REG_EXTENDED)))
+	else if (!(error = p_regcomp(&drv->word_pattern, ce->value, REG_EXTENDED)))
 		found_driver = true;
 	else {
 		/* TODO: warn about bad regex instead of failure */
@@ -519,4 +519,3 @@ void git_diff_find_context_clear(git_diff_find_context_payload *payload)
 		payload->driver = NULL;
 	}
 }
-

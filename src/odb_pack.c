@@ -20,6 +20,9 @@
 
 #include "git2/odb_backend.h"
 
+/* re-freshen pack files no more than every 2 seconds */
+#define FRESHEN_FREQUENCY 2
+
 struct pack_backend {
 	git_odb_backend parent;
 	git_vector packs;
@@ -363,6 +366,28 @@ static int pack_backend__read_header(
 	return git_packfile_resolve_header(len_p, type_p, e.p, e.offset);
 }
 
+static int pack_backend__freshen(
+	git_odb_backend *backend, const git_oid *oid)
+{
+	struct git_pack_entry e;
+	time_t now;
+	int error;
+
+	if ((error = pack_entry_find(&e, (struct pack_backend *)backend, oid)) < 0)
+		return error;
+
+	now = time(NULL);
+
+	if (e.p->last_freshen > now - FRESHEN_FREQUENCY)
+		return 0;
+
+	if ((error = git_futils_touch(e.p->pack_name, &now)) < 0)
+		return error;
+
+	e.p->last_freshen = now;
+	return 0;
+}
+
 static int pack_backend__read(
 	void **buffer_p, size_t *len_p, git_otype *type_p,
 	git_odb_backend *backend, const git_oid *oid)
@@ -560,6 +585,7 @@ static int pack_backend__alloc(struct pack_backend **out, size_t initial_size)
 	backend->parent.refresh = &pack_backend__refresh;
 	backend->parent.foreach = &pack_backend__foreach;
 	backend->parent.writepack = &pack_backend__writepack;
+	backend->parent.freshen = &pack_backend__freshen;
 	backend->parent.free = &pack_backend__free;
 
 	*out = backend;
@@ -590,9 +616,6 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 	int error = 0;
 	struct pack_backend *backend = NULL;
 	git_buf path = GIT_BUF_INIT;
-
-	if (git_mwindow_files_init() < 0)
-		return -1;
 
 	if (pack_backend__alloc(&backend, 8) < 0)
 		return -1;

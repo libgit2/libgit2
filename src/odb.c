@@ -54,13 +54,8 @@ static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_
 
 static git_otype odb_hardcoded_type(const git_oid *id)
 {
-	static git_oid empty_blob = {{ 0xe6, 0x9d, 0xe2, 0x9b, 0xb2, 0xd1, 0xd6, 0x43, 0x4b, 0x8b,
-					   0x29, 0xae, 0x77, 0x5a, 0xd8, 0xc2, 0xe4, 0x8c, 0x53, 0x91 }};
 	static git_oid empty_tree = {{ 0x4b, 0x82, 0x5d, 0xc6, 0x42, 0xcb, 0x6e, 0xb9, 0xa0, 0x60,
 					   0xe5, 0x4b, 0xf8, 0xd6, 0x92, 0x88, 0xfb, 0xee, 0x49, 0x04 }};
-
-	if (!git_oid_cmp(id, &empty_blob))
-		return GIT_OBJ_BLOB;
 
 	if (!git_oid_cmp(id, &empty_tree))
 		return GIT_OBJ_TREE;
@@ -654,7 +649,10 @@ void git_odb_free(git_odb *db)
 	GIT_REFCOUNT_DEC(db, odb_free);
 }
 
-static int odb_exists_1(git_odb *db, const git_oid *id, bool only_refreshed)
+static int odb_exists_1(
+	git_odb *db,
+	const git_oid *id,
+	bool only_refreshed)
 {
 	size_t i;
 	bool found = false;
@@ -671,6 +669,44 @@ static int odb_exists_1(git_odb *db, const git_oid *id, bool only_refreshed)
 	}
 
 	return (int)found;
+}
+
+static int odb_freshen_1(
+	git_odb *db,
+	const git_oid *id,
+	bool only_refreshed)
+{
+	size_t i;
+	bool found = false;
+
+	for (i = 0; i < db->backends.length && !found; ++i) {
+		backend_internal *internal = git_vector_get(&db->backends, i);
+		git_odb_backend *b = internal->backend;
+
+		if (only_refreshed && !b->refresh)
+			continue;
+
+		if (b->freshen != NULL)
+			found = !b->freshen(b, id);
+		else if (b->exists != NULL)
+			found = b->exists(b, id);
+	}
+
+	return (int)found;
+}
+
+static int odb_freshen(git_odb *db, const git_oid *id)
+{
+	assert(db && id);
+
+	if (odb_freshen_1(db, id, false))
+		return 1;
+
+	if (!git_odb_refresh(db))
+		return odb_freshen_1(db, id, true);
+
+	/* Failed to refresh, hence not found */
+	return 0;
 }
 
 int git_odb_exists(git_odb *db, const git_oid *id)
@@ -1131,7 +1167,7 @@ int git_odb_write(
 	assert(oid && db);
 
 	git_odb_hash(oid, data, len, type);
-	if (git_odb_exists(db, oid))
+	if (odb_freshen(db, oid))
 		return 0;
 
 	for (i = 0; i < db->backends.length && error < 0; ++i) {
@@ -1257,7 +1293,7 @@ int git_odb_stream_finalize_write(git_oid *out, git_odb_stream *stream)
 
 	git_hash_final(out, stream->hash_ctx);
 
-	if (git_odb_exists(stream->backend->odb, out))
+	if (odb_freshen(stream->backend->odb, out))
 		return 0;
 
 	return stream->finalize_write(stream, out);

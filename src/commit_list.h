@@ -28,6 +28,7 @@ typedef struct git_commit_list_node {
 			 uninteresting:1,
 			 topo_delay:1,
 			 parsed:1,
+			 added:1,
 			 flags : FLAG_BITS;
 
 	unsigned short in_degree;

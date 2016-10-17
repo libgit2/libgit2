@@ -50,7 +50,7 @@ static int build_regex(regex_t *regex, const char *pattern)
 		return GIT_EINVALIDSPEC;
 	}
 
-	error = regcomp(regex, pattern, REG_EXTENDED);
+	error = p_regcomp(regex, pattern, REG_EXTENDED);
 	if (!error)
 		return 0;
 

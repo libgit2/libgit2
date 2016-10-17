@@ -252,6 +252,31 @@ GIT_EXTERN(int) git_index_caps(const git_index *index);
 GIT_EXTERN(int) git_index_set_caps(git_index *index, int caps);
 
 /**
+ * Get index on-disk version.
+ *
+ * Valid return values are 2, 3, or 4.  If 3 is returned, an index
+ * with version 2 may be written instead, if the extension data in
+ * version 3 is not necessary.
+ *
+ * @param index An existing index object
+ * @return the index version
+ */
+GIT_EXTERN(unsigned int) git_index_version(git_index *index);
+
+/**
+ * Set index on-disk version.
+ *
+ * Valid values are 2, 3, or 4.  If 2 is given, git_index_write may
+ * write an index with version 3 instead, if necessary to accurately
+ * represent the index.
+ *
+ * @param index An existing index object
+ * @param version The new version number
+ * @return 0 on success, -1 on failure
+ */
+GIT_EXTERN(int) git_index_set_version(git_index *index, unsigned int version);
+
+/**
  * Update the contents of an existing index object in memory by reading
  * from the hard disk.
  *

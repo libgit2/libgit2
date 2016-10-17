@@ -6,14 +6,9 @@
  */
 #include "common.h"
 #include "diff.h"
+#include "diff_parse.h"
 #include "patch.h"
 #include "patch_parse.h"
-
-typedef struct {
-	struct git_diff base;
-
-	git_vector patches;
-} git_diff_parsed;
 
 static void diff_parsed_free(git_diff *d)
 {
@@ -47,6 +42,7 @@ static git_diff_parsed *diff_parsed_alloc(void)
 	diff->base.strncomp = git__strncmp;
 	diff->base.pfxcomp = git__prefixcmp;
 	diff->base.entrycomp = git_diff__entry_cmp;
+	diff->base.patch_fn = git_patch_parsed_from_diff;
 	diff->base.free_fn = diff_parsed_free;
 
 	git_pool_init(&diff->base.pool, 1);

@@ -43,8 +43,7 @@ int git_mwindow_file_register(git_mwindow_file *mwf);
 void git_mwindow_file_deregister(git_mwindow_file *mwf);
 void git_mwindow_close(git_mwindow **w_cursor);
 
-int git_mwindow_files_init(void);
-void git_mwindow_files_free(void);
+extern int git_mwindow_global_init(void);
 
 struct git_pack_file; /* just declaration to avoid cyclical includes */
 int git_mwindow_get_pack(struct git_pack_file **out, const char *path);

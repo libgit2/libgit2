@@ -158,6 +158,7 @@ typedef enum {
 	GIT_OPT_SET_USER_AGENT,
 	GIT_OPT_ENABLE_STRICT_OBJECT_CREATION,
 	GIT_OPT_SET_SSL_CIPHERS,
+	GIT_OPT_GET_USER_AGENT,
 } git_libgit2_opt_t;
 
 /**
@@ -268,7 +269,8 @@ typedef enum {
  *		> to ensure that all inputs to the new objects are valid.  For
  *		> example, when this is enabled, the parent(s) and tree inputs
  *		> will be validated when creating a new commit.  This defaults
- *		> to disabled.
+ *		> to enabled.
+ *
  *	* opts(GIT_OPT_SET_SSL_CIPHERS, const char *ciphers)
  *
  *		> Set the SSL ciphers use for HTTPS connections.

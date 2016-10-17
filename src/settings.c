@@ -29,9 +29,7 @@ int git_libgit2_features(void)
 #ifdef GIT_THREADS
 		| GIT_FEATURE_THREADS
 #endif
-#if defined(GIT_OPENSSL) || defined(GIT_WINHTTP) || defined(GIT_SECURE_TRANSPORT)
 		| GIT_FEATURE_HTTPS
-#endif
 #if defined(GIT_SSH)
 		| GIT_FEATURE_SSH
 #endif
@@ -207,6 +205,14 @@ int git_libgit2_opts(int key, ...)
 		giterr_set(GITERR_NET, "cannot set custom ciphers: OpenSSL is not enabled");
 		error = -1;
 #endif
+		break;
+
+	case GIT_OPT_GET_USER_AGENT:
+		{
+			git_buf *out = va_arg(ap, git_buf *);
+			git_buf_sanitize(out);
+			error = git_buf_sets(out, git__user_agent);
+		}
 		break;
 
 	default:

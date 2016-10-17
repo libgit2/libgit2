@@ -212,6 +212,10 @@ static bool checkout_is_workdir_modified(
 	if (baseitem->size && wditem->file_size != baseitem->size)
 		return true;
 
+	/* if the workdir item is a directory, it cannot be a modified file */
+	if (S_ISDIR(wditem->mode))
+		return false;
+
 	if (git_diff__oid_for_entry(&oid, data->diff, wditem, wditem->mode, NULL) < 0)
 		return false;
 
@@ -2722,7 +2726,7 @@ int git_checkout_tree(
 	if ((error = git_repository_index(&index, repo)) < 0)
 		return error;
 
-	if ((opts->checkout_strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)) {
+	if (opts && (opts->checkout_strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)) {
 		iter_opts.pathlist.count = opts->paths.count;
 		iter_opts.pathlist.strings = opts->paths.strings;
 	}

@@ -113,7 +113,7 @@ void test_diff_format_email__with_message(void)
 	"Also test if new paragraphs are included correctly.\n" \
 	"---\n" \
 	" file3.txt | 1 +\n" \
-	" 1 file changed, 1 insertion(+), 0 deletions(-)\n" \
+	" 1 file changed, 1 insertion(+)\n" \
 	"\n" \
 	"diff --git a/file3.txt b/file3.txt\n" \
 	"index 9a2d780..7309653 100644\n" \
@@ -156,7 +156,7 @@ void test_diff_format_email__multiple(void)
 	"---\n" \
 	" file2.txt | 5 +++++\n" \
 	" file3.txt | 5 +++++\n" \
-	" 2 files changed, 10 insertions(+), 0 deletions(-)\n" \
+	" 2 files changed, 10 insertions(+)\n" \
 	" create mode 100644 file2.txt\n" \
 	" create mode 100644 file3.txt\n" \
 	"\n" \

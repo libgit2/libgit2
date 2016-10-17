@@ -166,3 +166,9 @@ void test_patch_print__not_reversible(void)
 	patch_print_from_patchfile(PATCH_BINARY_NOT_REVERSIBLE,
 		strlen(PATCH_BINARY_NOT_REVERSIBLE));
 }
+
+void test_patch_print__binary_not_shown(void)
+{
+	patch_print_from_patchfile(PATCH_BINARY_NOT_PRINTED,
+		strlen(PATCH_BINARY_NOT_PRINTED));
+}

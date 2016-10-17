@@ -9,8 +9,11 @@
 # endif
 #endif
 
+#include <locale.h>
+
 #include "clar_libgit2.h"
 #include "posix.h"
+#include "userdiff.h"
 
 void test_core_posix__initialize(void)
 {
@@ -39,7 +42,7 @@ void test_core_posix__inet_pton(void)
 	struct in_addr addr;
 	struct in6_addr addr6;
 	size_t i;
-	
+
 	struct in_addr_data {
 		const char *p;
 		const uint8_t n[4];
@@ -145,4 +148,48 @@ void test_core_posix__utimes(void)
 	cl_assert((st.st_mtime - curtime) < 5);
 
 	p_unlink("foo");
+}
+
+void test_core_posix__p_regcomp_ignores_global_locale_ctype(void)
+{
+	regex_t preg;
+	int error = 0;
+
+	const char* oldlocale = setlocale(LC_CTYPE, NULL);
+
+	if (!setlocale(LC_CTYPE, "UTF-8") &&
+	    !setlocale(LC_CTYPE, "c.utf8") &&
+			!setlocale(LC_CTYPE, "en_US.UTF-8"))
+		cl_skip();
+
+	if (MB_CUR_MAX == 1) {
+		setlocale(LC_CTYPE, oldlocale);
+		cl_fail("Expected locale to be switched to multibyte");
+	}
+
+	p_regcomp(&preg, "[\xc0-\xff][\x80-\xbf]", REG_EXTENDED);
+	regfree(&preg);
+
+	setlocale(LC_CTYPE, oldlocale);
+
+	cl_must_pass(error);
+}
+
+void test_core_posix__p_regcomp_compile_userdiff_regexps(void)
+{
+	size_t idx;
+
+	for (idx = 0; idx < ARRAY_SIZE(builtin_defs); ++idx) {
+		git_diff_driver_definition ddef = builtin_defs[idx];
+		int error = 0;
+		regex_t preg;
+
+		error = p_regcomp(&preg, ddef.fns, REG_EXTENDED | ddef.flags);
+		regfree(&preg);
+		cl_must_pass(error);
+
+		error = p_regcomp(&preg, ddef.words, REG_EXTENDED);
+		regfree(&preg);
+		cl_must_pass(error);
+	}
 }

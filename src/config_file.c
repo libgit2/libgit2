@@ -570,7 +570,7 @@ static int config_set_multivar(
 	if ((result = git_config__normalize_name(name, &key)) < 0)
 		return result;
 
-	result = regcomp(&preg, regexp, REG_EXTENDED);
+	result = p_regcomp(&preg, regexp, REG_EXTENDED);
 	if (result != 0) {
 		giterr_set_regex(&preg, result);
 		result = -1;
@@ -657,7 +657,7 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 
 	refcounted_strmap_free(map);
 
-	result = regcomp(&preg, regexp, REG_EXTENDED);
+	result = p_regcomp(&preg, regexp, REG_EXTENDED);
 	if (result != 0) {
 		giterr_set_regex(&preg, result);
 		result = -1;
@@ -1957,4 +1957,3 @@ done:
 	git_buf_free(&reader->buffer);
 	return result;
 }
-

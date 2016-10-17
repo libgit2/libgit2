@@ -264,7 +264,7 @@ cleanup:
  * the stack could remove directories name limits, but at the cost of doing
  * repeated malloc/frees inside the loop below, so let's not do it now.
  */
-static int find_ceiling_dir_offset(
+static size_t find_ceiling_dir_offset(
 	const char *path,
 	const char *ceiling_directories)
 {
@@ -278,7 +278,7 @@ static int find_ceiling_dir_offset(
 	min_len = (size_t)(git_path_root(path) + 1);
 
 	if (ceiling_directories == NULL || min_len == 0)
-		return (int)min_len;
+		return min_len;
 
 	for (sep = ceil = ceiling_directories; *sep; ceil = sep + 1) {
 		for (sep = ceil; *sep && *sep != GIT_PATH_LIST_SEPARATOR; sep++);
@@ -305,7 +305,7 @@ static int find_ceiling_dir_offset(
 		}
 	}
 
-	return (int)(max_len <= min_len ? min_len : max_len);
+	return (max_len <= min_len ? min_len : max_len);
 }
 
 /*
@@ -357,29 +357,50 @@ static int find_repo(
 {
 	int error;
 	git_buf path = GIT_BUF_INIT;
+	git_buf repo_link = GIT_BUF_INIT;
 	struct stat st;
 	dev_t initial_device = 0;
-	bool try_with_dot_git = ((flags & GIT_REPOSITORY_OPEN_BARE) != 0);
-	int ceiling_offset;
+	int min_iterations;
+	bool in_dot_git;
+	size_t ceiling_offset = 0;
 
 	git_buf_free(repo_path);
 
-	if ((error = git_path_prettify(&path, start_path, NULL)) < 0)
+	error = git_path_prettify(&path, start_path, NULL);
+	if (error < 0)
 		return error;
 
-	ceiling_offset = find_ceiling_dir_offset(path.ptr, ceiling_dirs);
+	/* in_dot_git toggles each loop:
+	 * /a/b/c/.git, /a/b/c, /a/b/.git, /a/b, /a/.git, /a
+	 * With GIT_REPOSITORY_OPEN_BARE or GIT_REPOSITORY_OPEN_NO_DOTGIT, we
+	 * assume we started with /a/b/c.git and don't append .git the first
+	 * time through.
+	 * min_iterations indicates the number of iterations left before going
+	 * further counts as a search. */
+	if (flags & (GIT_REPOSITORY_OPEN_BARE | GIT_REPOSITORY_OPEN_NO_DOTGIT)) {
+		in_dot_git = true;
+		min_iterations = 1;
+	} else {
+		in_dot_git = false;
+		min_iterations = 2;
+	}
 
-	if (!try_with_dot_git &&
-		(error = git_buf_joinpath(&path, path.ptr, DOT_GIT)) < 0)
-		return error;
+	for (;;) {
+		if (!(flags & GIT_REPOSITORY_OPEN_NO_DOTGIT)) {
+			if (!in_dot_git) {
+				error = git_buf_joinpath(&path, path.ptr, DOT_GIT);
+				if (error < 0)
+					break;
+			}
+			in_dot_git = !in_dot_git;
+		}
 
-	while (!error && !git_buf_len(repo_path)) {
 		if (p_stat(path.ptr, &st) == 0) {
 			/* check that we have not crossed device boundaries */
 			if (initial_device == 0)
 				initial_device = st.st_dev;
 			else if (st.st_dev != initial_device &&
-				(flags & GIT_REPOSITORY_OPEN_CROSS_FS) == 0)
+				 !(flags & GIT_REPOSITORY_OPEN_CROSS_FS))
 				break;
 
 			if (S_ISDIR(st.st_mode)) {
@@ -390,41 +411,37 @@ static int find_repo(
 				}
 			}
 			else if (S_ISREG(st.st_mode)) {
-				git_buf repo_link = GIT_BUF_INIT;
-
-				if (!(error = read_gitfile(&repo_link, path.ptr))) {
-					if (valid_repository_path(&repo_link)) {
-						git_buf_swap(repo_path, &repo_link);
-
-						if (link_path)
-							error = git_buf_put(link_path, 
-								path.ptr, path.size);
-					}
-
-					git_buf_free(&repo_link);
+				error = read_gitfile(&repo_link, path.ptr);
+				if (error < 0)
 					break;
+				if (valid_repository_path(&repo_link)) {
+					git_buf_swap(repo_path, &repo_link);
+
+					if (link_path)
+						error = git_buf_put(link_path, path.ptr, path.size);
 				}
-				git_buf_free(&repo_link);
+				break;
 			}
 		}
 
-		/* move up one directory level */
+		/* Move up one directory. If we're in_dot_git, we'll search the
+		 * parent itself next. If we're !in_dot_git, we'll search .git
+		 * in the parent directory next (added at the top of the loop). */
 		if (git_path_dirname_r(&path, path.ptr) < 0) {
 			error = -1;
 			break;
 		}
 
-		if (try_with_dot_git) {
-			/* if we tried original dir with and without .git AND either hit
-			 * directory ceiling or NO_SEARCH was requested, then be done.
-			 */
-			if (path.ptr[ceiling_offset] == '\0' ||
-				(flags & GIT_REPOSITORY_OPEN_NO_SEARCH) != 0)
-				break;
-			/* otherwise look first for .git item */
-			error = git_buf_joinpath(&path, path.ptr, DOT_GIT);
-		}
-		try_with_dot_git = !try_with_dot_git;
+		/* Once we've checked the directory (and .git if applicable),
+		 * find the ceiling for a search. */
+		if (min_iterations && (--min_iterations == 0))
+			ceiling_offset = find_ceiling_dir_offset(path.ptr, ceiling_dirs);
+
+		/* Check if we should stop searching here. */
+		if (min_iterations == 0
+		    && (path.ptr[ceiling_offset] == 0
+			|| (flags & GIT_REPOSITORY_OPEN_NO_SEARCH)))
+			break;
 	}
 
 	if (!error && parent_path && !(flags & GIT_REPOSITORY_OPEN_BARE)) {
@@ -438,14 +455,16 @@ static int find_repo(
 			return -1;
 	}
 
-	git_buf_free(&path);
-
+	/* If we didn't find the repository, and we don't have any other error
+	 * to report, report that. */
 	if (!git_buf_len(repo_path) && !error) {
 		giterr_set(GITERR_REPOSITORY,
 			"Could not find repository from '%s'", start_path);
 		error = GIT_ENOTFOUND;
 	}
 
+	git_buf_free(&path);
+	git_buf_free(&repo_link);
 	return error;
 }
 
@@ -480,6 +499,172 @@ int git_repository_open_bare(
 	return 0;
 }
 
+static int _git_repository_open_ext_from_env(
+	git_repository **out,
+	const char *start_path)
+{
+	git_repository *repo = NULL;
+	git_index *index = NULL;
+	git_odb *odb = NULL;
+	git_buf dir_buf = GIT_BUF_INIT;
+	git_buf ceiling_dirs_buf = GIT_BUF_INIT;
+	git_buf across_fs_buf = GIT_BUF_INIT;
+	git_buf index_file_buf = GIT_BUF_INIT;
+	git_buf namespace_buf = GIT_BUF_INIT;
+	git_buf object_dir_buf = GIT_BUF_INIT;
+	git_buf alts_buf = GIT_BUF_INIT;
+	git_buf work_tree_buf = GIT_BUF_INIT;
+	git_buf common_dir_buf = GIT_BUF_INIT;
+	const char *ceiling_dirs = NULL;
+	unsigned flags = 0;
+	int error;
+
+	if (!start_path) {
+		error = git__getenv(&dir_buf, "GIT_DIR");
+		if (error == GIT_ENOTFOUND) {
+			giterr_clear();
+			start_path = ".";
+		} else if (error < 0)
+			goto error;
+		else {
+			start_path = git_buf_cstr(&dir_buf);
+			flags |= GIT_REPOSITORY_OPEN_NO_SEARCH;
+			flags |= GIT_REPOSITORY_OPEN_NO_DOTGIT;
+		}
+	}
+
+	error = git__getenv(&ceiling_dirs_buf, "GIT_CEILING_DIRECTORIES");
+	if (error == GIT_ENOTFOUND)
+		giterr_clear();
+	else if (error < 0)
+		goto error;
+	else
+		ceiling_dirs = git_buf_cstr(&ceiling_dirs_buf);
+
+	error = git__getenv(&across_fs_buf, "GIT_DISCOVERY_ACROSS_FILESYSTEM");
+	if (error == GIT_ENOTFOUND)
+		giterr_clear();
+	else if (error < 0)
+		goto error;
+	else {
+		int across_fs = 0;
+		error = git_config_parse_bool(&across_fs, git_buf_cstr(&across_fs_buf));
+		if (error < 0)
+			goto error;
+		if (across_fs)
+			flags |= GIT_REPOSITORY_OPEN_CROSS_FS;
+	}
+
+	error = git__getenv(&index_file_buf, "GIT_INDEX_FILE");
+	if (error == GIT_ENOTFOUND)
+		giterr_clear();
+	else if (error < 0)
+		goto error;
+	else {
+		error = git_index_open(&index, git_buf_cstr(&index_file_buf));
+		if (error < 0)
+			goto error;
+	}
+
+	error = git__getenv(&namespace_buf, "GIT_NAMESPACE");
+	if (error == GIT_ENOTFOUND)
+		giterr_clear();
+	else if (error < 0)
+		goto error;
+
+	error = git__getenv(&object_dir_buf, "GIT_OBJECT_DIRECTORY");
+	if (error == GIT_ENOTFOUND)
+		giterr_clear();
+	else if (error < 0)
+		goto error;
+	else {
+		error = git_odb_open(&odb, git_buf_cstr(&object_dir_buf));
+		if (error < 0)
+			goto error;
+	}
+
+	error = git__getenv(&work_tree_buf, "GIT_WORK_TREE");
+	if (error == GIT_ENOTFOUND)
+		giterr_clear();
+	else if (error < 0)
+		goto error;
+	else {
+		giterr_set(GITERR_INVALID, "GIT_WORK_TREE unimplemented");
+		error = GIT_ERROR;
+		goto error;
+	}
+
+	error = git__getenv(&work_tree_buf, "GIT_COMMON_DIR");
+	if (error == GIT_ENOTFOUND)
+		giterr_clear();
+	else if (error < 0)
+		goto error;
+	else {
+		giterr_set(GITERR_INVALID, "GIT_COMMON_DIR unimplemented");
+		error = GIT_ERROR;
+		goto error;
+	}
+
+	error = git_repository_open_ext(&repo, start_path, flags, ceiling_dirs);
+	if (error < 0)
+		goto error;
+
+	if (odb)
+		git_repository_set_odb(repo, odb);
+
+	error = git__getenv(&alts_buf, "GIT_ALTERNATE_OBJECT_DIRECTORIES");
+	if (error == GIT_ENOTFOUND)
+		giterr_clear();
+	else if (error < 0)
+		goto error;
+        else {
+		const char *end;
+		char *alt, *sep;
+		if (!odb) {
+			error = git_repository_odb(&odb, repo);
+			if (error < 0)
+				goto error;
+		}
+
+		end = git_buf_cstr(&alts_buf) + git_buf_len(&alts_buf);
+		for (sep = alt = alts_buf.ptr; sep != end; alt = sep+1) {
+			for (sep = alt; *sep && *sep != GIT_PATH_LIST_SEPARATOR; sep++)
+				;
+			if (*sep)
+				*sep = '\0';
+			error = git_odb_add_disk_alternate(odb, alt);
+			if (error < 0)
+				goto error;
+		}
+	}
+
+	error = git_repository_set_namespace(repo, git_buf_cstr(&namespace_buf));
+	if (error < 0)
+		goto error;
+
+	git_repository_set_index(repo, index);
+
+	if (out) {
+		*out = repo;
+		goto success;
+	}
+error:
+	git_repository_free(repo);
+success:
+	git_odb_free(odb);
+	git_index_free(index);
+	git_buf_free(&common_dir_buf);
+	git_buf_free(&work_tree_buf);
+	git_buf_free(&alts_buf);
+	git_buf_free(&object_dir_buf);
+	git_buf_free(&namespace_buf);
+	git_buf_free(&index_file_buf);
+	git_buf_free(&across_fs_buf);
+	git_buf_free(&ceiling_dirs_buf);
+	git_buf_free(&dir_buf);
+	return error;
+}
+
 int git_repository_open_ext(
 	git_repository **repo_ptr,
 	const char *start_path,
@@ -491,6 +676,9 @@ int git_repository_open_ext(
 		link_path = GIT_BUF_INIT;
 	git_repository *repo;
 	git_config *config = NULL;
+
+	if (flags & GIT_REPOSITORY_OPEN_FROM_ENV)
+		return _git_repository_open_ext_from_env(repo_ptr, start_path);
 
 	if (repo_ptr)
 		*repo_ptr = NULL;

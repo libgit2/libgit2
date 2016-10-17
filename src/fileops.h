@@ -185,6 +185,12 @@ extern int git_futils_cp(
 	mode_t filemode);
 
 /**
+ * Set the files atime and mtime to the given time, or the current time
+ * if `ts` is NULL.
+ */
+extern int git_futils_touch(const char *path, time_t *when);
+
+/**
  * Flags that can be passed to `git_futils_cp_r`.
  *
  * - GIT_CPDIR_CREATE_EMPTY_DIRS: create directories even if there are no

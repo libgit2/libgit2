@@ -586,7 +586,7 @@ static int rebase_init_operations(
 		(error = git_revwalk_hide(revwalk, git_annotated_commit_id(upstream))) < 0)
 		goto done;
 
-	git_revwalk_sorting(revwalk, GIT_SORT_REVERSE | GIT_SORT_TIME);
+	git_revwalk_sorting(revwalk, GIT_SORT_REVERSE);
 
 	while ((error = git_revwalk_next(&id, revwalk)) == 0) {
 		if ((error = git_commit_lookup(&commit, repo, &id)) < 0)

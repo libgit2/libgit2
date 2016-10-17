@@ -284,7 +284,7 @@ static int create_binary(
 	size_t b_datalen)
 {
 	git_buf deflate = GIT_BUF_INIT, delta = GIT_BUF_INIT;
-	unsigned long delta_data_len;
+	size_t delta_data_len;
 	int error;
 
 	/* The git_delta function accepts unsigned long only */
@@ -310,7 +310,7 @@ static int create_binary(
 
 		if (error == 0) {
 			error = git_zstream_deflatebuf(
-				&delta, delta_data, (size_t)delta_data_len);
+				&delta, delta_data, delta_data_len);
 
 			git__free(delta_data);
 		} else if (error == GIT_EBUFS) {
@@ -342,27 +342,33 @@ done:
 
 static int diff_binary(git_patch_generated_output *output, git_patch_generated *patch)
 {
-	git_diff_binary binary = {{0}};
+	git_diff_binary binary = {0};
 	const char *old_data = patch->ofile.map.data;
 	const char *new_data = patch->nfile.map.data;
 	size_t old_len = patch->ofile.map.len,
 		new_len = patch->nfile.map.len;
 	int error;
 
-	/* Create the old->new delta (as the "new" side of the patch),
-	 * and the new->old delta (as the "old" side)
-	 */
-	if ((error = create_binary(&binary.old_file.type,
-			(char **)&binary.old_file.data,
-			&binary.old_file.datalen,
-			&binary.old_file.inflatedlen,
-			new_data, new_len, old_data, old_len)) < 0 ||
-		(error = create_binary(&binary.new_file.type,
-			(char **)&binary.new_file.data,
-			&binary.new_file.datalen,
-			&binary.new_file.inflatedlen,
-			old_data, old_len, new_data, new_len)) < 0)
-		return error;
+	/* Only load contents if the user actually wants to diff
+	 * binary files. */
+	if (patch->base.diff_opts.flags & GIT_DIFF_SHOW_BINARY) {
+		binary.contains_data = 1;
+
+		/* Create the old->new delta (as the "new" side of the patch),
+		 * and the new->old delta (as the "old" side)
+		 */
+		if ((error = create_binary(&binary.old_file.type,
+				(char **)&binary.old_file.data,
+				&binary.old_file.datalen,
+				&binary.old_file.inflatedlen,
+				new_data, new_len, old_data, old_len)) < 0 ||
+			(error = create_binary(&binary.new_file.type,
+				(char **)&binary.new_file.data,
+				&binary.new_file.datalen,
+				&binary.new_file.inflatedlen,
+				old_data, old_len, new_data, new_len)) < 0)
+			return error;
+	}
 
 	error = giterr_set_after_callback_function(
 		output->binary_cb(patch->base.delta, &binary, output->payload),
@@ -488,8 +494,17 @@ static int diff_single_generate(patch_generated_with_delta *pd, git_xdiff_output
 	patch_generated_init_common(patch);
 
 	if (pd->delta.status == GIT_DELTA_UNMODIFIED &&
-		!(patch->ofile.opts_flags & GIT_DIFF_INCLUDE_UNMODIFIED))
+		!(patch->ofile.opts_flags & GIT_DIFF_INCLUDE_UNMODIFIED)) {
+
+		/* Even empty patches are flagged as binary, and even though
+		 * there's no difference, we flag this as "containing data"
+		 * (the data is known to be empty, as opposed to wholly unknown).
+		 */
+		if (patch->base.diff_opts.flags & GIT_DIFF_SHOW_BINARY)
+			patch->base.binary.contains_data = 1;
+
 		return error;
+	}
 
 	error = patch_generated_invoke_file_callback(patch, (git_patch_generated_output *)xo);
 
@@ -746,7 +761,7 @@ int git_patch_from_buffers(
 	return patch_from_sources(out, &osrc, &nsrc, opts);
 }
 
-int git_patch_from_diff(
+int git_patch_generated_from_diff(
 	git_patch **patch_ptr, git_diff *diff, size_t idx)
 {
 	int error = 0;

@@ -158,6 +158,7 @@ void test_revwalk_hidecb__hide_some_commits(void)
 
 	cl_git_pass(git_revwalk_new(&walk, _repo));
 	cl_git_pass(git_revwalk_push(walk, &_head_id));
+	git_revwalk_sorting(walk, GIT_SORT_TOPOLOGICAL);
 
 	/* Add hide callback */
 	cl_git_pass(git_revwalk_add_hide_cb(walk, hide_commit_cb, NULL));
@@ -182,6 +183,7 @@ void test_revwalk_hidecb__test_payload(void)
 
 	cl_git_pass(git_revwalk_new(&walk, _repo));
 	cl_git_pass(git_revwalk_push(walk, &_head_id));
+	git_revwalk_sorting(walk, GIT_SORT_TOPOLOGICAL);
 
 	/* Add hide callback, pass id of parent of initial commit as payload data */
 	cl_git_pass(git_revwalk_add_hide_cb(walk, hide_commit_use_payload_cb, &commit_ids[5]));

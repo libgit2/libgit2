@@ -7,6 +7,7 @@
 #include "common.h"
 #include "diff.h"
 #include "diff_generate.h"
+#include "patch_generate.h"
 #include "fileops.h"
 #include "config.h"
 #include "attr_file.h"
@@ -414,6 +415,7 @@ static git_diff_generated *diff_generated_alloc(
 	diff->base.repo = repo;
 	diff->base.old_src = old_iter->type;
 	diff->base.new_src = new_iter->type;
+	diff->base.patch_fn = git_patch_generated_from_diff;
 	diff->base.free_fn = diff_generated_free;
 	memcpy(&diff->base.opts, &dflt, sizeof(git_diff_options));
 

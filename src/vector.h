@@ -118,4 +118,9 @@ GIT_INLINE(void) git_vector_set_cmp(git_vector *v, git_vector_cmp cmp)
 /* Just use this in tests, not for realz. returns -1 if not sorted */
 int git_vector_verify_sorted(const git_vector *v);
 
+/**
+ * Reverse the vector in-place.
+ */
+void git_vector_reverse(git_vector *v);
+
 #endif

@@ -268,11 +268,6 @@ typedef enum {
  * absent side of a diff (e.g. the `old_file` of a `GIT_DELTA_ADDED` delta),
  * then the oid will be zeroes.
  *
- * The `id_abbrev` represents the known length of the `id` field, when
- * converted to a hex string.  It is generally `GIT_OID_HEXSZ`, unless this
- * delta was created from reading a patch file, in which case it may be
- * abbreviated to something reasonable, like 7 characters.
- *
  * `path` is the NUL-terminated path to the entry relative to the working
  * directory of the repository.
  *
@@ -282,14 +277,19 @@ typedef enum {
  *
  * `mode` is, roughly, the stat() `st_mode` value for the item.  This will
  * be restricted to one of the `git_filemode_t` values.
+ *
+ * The `id_abbrev` represents the known length of the `id` field, when
+ * converted to a hex string.  It is generally `GIT_OID_HEXSZ`, unless this
+ * delta was created from reading a patch file, in which case it may be
+ * abbreviated to something reasonable, like 7 characters.
  */
 typedef struct {
 	git_oid     id;
-	int         id_abbrev;
 	const char *path;
 	git_off_t   size;
 	uint32_t    flags;
 	uint16_t    mode;
+	uint16_t    id_abbrev;
 } git_diff_file;
 
 /**
@@ -490,6 +490,14 @@ typedef struct {
 
 /** Structure describing the binary contents of a diff. */
 typedef struct {
+	/**
+	 * Whether there is data in this binary structure or not.  If this
+	 * is `1`, then this was produced and included binary content.  If
+	 * this is `0` then this was generated knowing only that a binary
+	 * file changed but without providing the data, probably from a patch
+	 * that said `Binary files a/file.txt and b/file.txt differ`.
+	 */
+	unsigned int contains_data;
 	git_diff_binary_file old_file; /**< The contents of the old file. */
 	git_diff_binary_file new_file; /**< The contents of the new file. */
 } git_diff_binary;
@@ -1189,6 +1197,25 @@ GIT_EXTERN(int) git_diff_buffers(
 	git_diff_line_cb line_cb,
 	void *payload);
 
+/**
+ * Read the contents of a git patch file into a `git_diff` object.
+ *
+ * The diff object produced is similar to the one that would be
+ * produced if you actually produced it computationally by comparing
+ * two trees, however there may be subtle differences.  For example,
+ * a patch file likely contains abbreviated object IDs, so the
+ * object IDs in a `git_diff_delta` produced by this function will
+ * also be abbreviated.
+ *
+ * This function will only read patch files created by a git
+ * implementation, it will not read unified diffs produced by
+ * the `diff` program, nor any other types of patch files.
+ *
+ * @param out A pointer to a git_diff pointer that will be allocated.
+ * @param content The contents of a patch file
+ * @param content_len The length of the patch file contents
+ * @return 0 or an error code
+ */
 GIT_EXTERN(int) git_diff_from_buffer(
 	git_diff **out,
 	const char *content,

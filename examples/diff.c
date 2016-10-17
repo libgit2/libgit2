@@ -293,11 +293,11 @@ static void parse_opts(struct opts *o, int argc, char *argv[])
 		else if (is_prefixed(a, "-B") || is_prefixed(a, "--break-rewrites"))
 			/* TODO: parse thresholds */
 			o->findopts.flags |= GIT_DIFF_FIND_REWRITES;
-		else if (!match_uint16_arg(
+		else if (!match_uint32_arg(
 				&o->diffopts.context_lines, &args, "-U") &&
-			!match_uint16_arg(
+			!match_uint32_arg(
 				&o->diffopts.context_lines, &args, "--unified") &&
-			!match_uint16_arg(
+			!match_uint32_arg(
 				&o->diffopts.interhunk_lines, &args, "--inter-hunk-context") &&
 			!match_uint16_arg(
 				&o->diffopts.id_abbrev, &args, "--abbrev") &&
