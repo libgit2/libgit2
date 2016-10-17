@@ -143,4 +143,7 @@ extern int git_submodule_parse_ignore(
 extern int git_submodule_parse_update(
 	git_submodule_update_t *out, const char *value);
 
+/* Check to see if the submodule working directory has been initialized. */
+extern int git_submodule_wd_is_initialized(git_submodule *submodule);
+
 #endif
