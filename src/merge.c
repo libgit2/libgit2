@@ -2018,6 +2018,26 @@ int git_merge_trees(
 	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 	int error;
 
+	assert(out && repo);
+
+	/* if one side is treesame to the ancestor, take the other side */
+	if (ancestor_tree && merge_opts && (merge_opts->flags & GIT_MERGE_SKIP_REUC)) {
+		const git_tree *result = NULL;
+		const git_oid *ancestor_tree_id = git_tree_id(ancestor_tree);
+
+		if (our_tree && !git_oid_cmp(ancestor_tree_id, git_tree_id(our_tree)))
+			result = their_tree;
+		else if (their_tree && !git_oid_cmp(ancestor_tree_id, git_tree_id(their_tree)))
+			result = our_tree;
+
+		if (result) {
+			if ((error = git_index_new(out)) == 0)
+			error = git_index_read_tree(*out, result);
+
+			return error;
+		}
+	}
+
 	iter_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
 
 	if ((error = git_iterator_for_tree(
