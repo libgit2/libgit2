@@ -404,4 +404,6 @@ void test_core_vector__reverse(void)
 
 	for (i = 0; i < 5; i++)
 		cl_assert_equal_p(out2[i], git_vector_get(&v, i));
+
+	git_vector_free(&v);
 }
