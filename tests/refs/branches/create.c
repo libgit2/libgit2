@@ -65,10 +65,14 @@ void test_refs_branches_create__can_force_create_over_an_existing_branch(void)
 	cl_assert_equal_s("refs/heads/br2", git_reference_name(branch));
 }
 
-void test_refs_branches_create__cannot_force_create_over_current_branch(void)
+void test_refs_branches_create__cannot_force_create_over_current_branch_in_nonbare_repo(void)
 {
 	const git_oid *oid;
 	git_reference *branch2;
+
+	/* Default repo for these tests is a bare repo, but this test requires a non-bare one */
+	cl_git_sandbox_cleanup();
+	repo = cl_git_sandbox_init("testrepo");
 	retrieve_known_commit(&target, repo);
 
 	cl_git_pass(git_branch_lookup(&branch2, repo, "master", GIT_BRANCH_LOCAL));
@@ -77,6 +81,26 @@ void test_refs_branches_create__cannot_force_create_over_current_branch(void)
 	oid = git_reference_target(branch2);
 
 	cl_git_fail_with(-1, git_branch_create(&branch, repo, "master", target, 1));
+	branch = NULL;
+	cl_git_pass(git_branch_lookup(&branch, repo, "master", GIT_BRANCH_LOCAL));
+	cl_assert_equal_s("refs/heads/master", git_reference_name(branch));
+	cl_git_pass(git_oid_cmp(git_reference_target(branch), oid));
+	git_reference_free(branch2);
+}
+
+void test_refs_branches_create__can_force_create_over_current_branch_in_bare_repo(void)
+{
+	const git_oid *oid;
+	git_reference *branch2;
+	retrieve_known_commit(&target, repo);
+
+	cl_git_pass(git_branch_lookup(&branch2, repo, "master", GIT_BRANCH_LOCAL));
+	cl_assert_equal_s("refs/heads/master", git_reference_name(branch2));
+	cl_assert_equal_i(true, git_branch_is_head(branch2));
+	oid = git_commit_id(target);
+
+	cl_git_pass(git_branch_create(&branch, repo, "master", target, 1));
+	git_reference_free(branch);
 	branch = NULL;
 	cl_git_pass(git_branch_lookup(&branch, repo, "master", GIT_BRANCH_LOCAL));
 	cl_assert_equal_s("refs/heads/master", git_reference_name(branch));
