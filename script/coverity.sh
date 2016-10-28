@@ -12,12 +12,11 @@ then
 	exit 0
 fi
 
-COV_VERSION=6.6.1
 case $(uname -m) in
 	i?86)				BITS=32 ;;
 	amd64|x86_64)	BITS=64 ;;
 esac
-SCAN_TOOL=https://scan.coverity.com/download/linux-${BITS}
+SCAN_TOOL=https://scan.coverity.com/download/cxx/linux${BITS}
 TOOL_BASE=$(pwd)/_coverity-scan
 
 # Install coverity tools
