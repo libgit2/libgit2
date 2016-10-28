@@ -5,10 +5,10 @@ set -e
 [ -z "$COVERITY_TOKEN" ] && echo "Need to set a coverity token" && exit 1
 
 # Only run this on our branches
-echo "Pull request: $TRAVIS_PULL_REQUEST  |  Slug: $TRAVIS_REPO_SLUG"
-if [ "$TRAVIS_PULL_REQUEST" != "false" -o "$TRAVIS_REPO_SLUG" != "libgit2/libgit2" ];
+echo "Branch: $TRAVIS_BRANCH  |  Pull request: $TRAVIS_PULL_REQUEST  |  Slug: $TRAVIS_REPO_SLUG"
+if [ "$TRAVIS_BRANCH" != "master" -o "$TRAVIS_PULL_REQUEST" != "false" -o "$TRAVIS_REPO_SLUG" != "libgit2/libgit2" ];
 then
-	echo "Only analyzing 'development' on the main repo."
+	echo "Only analyzing the 'master' brach of the main repository."
 	exit 0
 fi
 
