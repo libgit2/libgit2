@@ -86,8 +86,9 @@ int git_pqueue_insert(git_pqueue *pq, void *item)
 	if ((pq->flags & GIT_PQUEUE_FIXED_SIZE) != 0 &&
 		pq->length >= pq->_alloc_size)
 	{
-		/* skip this item if below min item in heap */
-		if (pq->_cmp(item, git_vector_get(pq, 0)) <= 0)
+		/* skip this item if below min item in heap or if
+		 * we do not have a comparison function */
+		if (!pq->_cmp || pq->_cmp(item, git_vector_get(pq, 0)) <= 0)
 			return 0;
 		/* otherwise remove the min item before inserting new */
 		(void)git_pqueue_pop(pq);

@@ -93,7 +93,29 @@ void test_core_pqueue__max_heap_size(void)
 	cl_assert_equal_i(0, git_pqueue_size(&pq));
 
 	git_pqueue_free(&pq);
+}
 
+void test_core_pqueue__max_heap_size_without_comparison(void)
+{
+	git_pqueue pq;
+	int i, vals[100] = { 0 };
+
+	cl_git_pass(git_pqueue_init(&pq, GIT_PQUEUE_FIXED_SIZE, 50, NULL));
+
+	for (i = 0; i < 100; ++i)
+		cl_git_pass(git_pqueue_insert(&pq, &vals[i]));
+
+	cl_assert_equal_i(50, git_pqueue_size(&pq));
+
+	/* As we have no comparison function, we cannot make any
+	 * actual assumptions about which entries are part of the
+	 * pqueue */
+	for (i = 0; i < 50; ++i)
+		cl_assert(git_pqueue_pop(&pq));
+
+	cl_assert_equal_i(0, git_pqueue_size(&pq));
+
+	git_pqueue_free(&pq);
 }
 
 static int cmp_ints_like_commit_time(const void *a, const void *b)
