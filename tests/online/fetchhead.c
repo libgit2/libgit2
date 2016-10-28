@@ -126,6 +126,8 @@ void test_online_fetchhead__explicit_dst_refspec_creates_branch(void)
 
 	cl_git_pass(git_branch_lookup(&ref, g_repo, "explicit-refspec", GIT_BRANCH_ALL));
 	cl_assert_equal_i(refs + 1, count_references());
+
+	git_reference_free(ref);
 }
 
 void test_online_fetchhead__empty_dst_refspec_creates_no_branch(void)
