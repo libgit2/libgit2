@@ -153,9 +153,9 @@ int git_hook_foreach(
 }
 
 int git_hook_register_callback(git_repository *repo,
-							   git_hook_execution_cb executor,
-							   git_hook_destructor_cb destructor,
-							   void *payload)
+	git_hook_execution_cb executor,
+	git_hook_destructor_cb destructor,
+	void *payload)
 {
 	assert(repo && executor);
 
