@@ -143,7 +143,7 @@ void git_repository_free(git_repository *repo)
 	git__free(repo->ident_name);
 	git__free(repo->ident_email);
 
-	if (repo->hook_payload != NULL && repo->hook_payload_free) {
+	if (repo->hook_payload != NULL && repo->hook_payload_free != NULL) {
 		repo->hook_payload_free(repo->hook_payload);
 	}
 
