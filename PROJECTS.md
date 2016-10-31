@@ -70,11 +70,11 @@ some incremental steps listed towards the larger goal.  Those steps
 might make good smaller projects by themselves.
 
 * Port part of the Git test suite to run against the command line emulation
-  in examples/
-    * Pick a Git command that is emulated in our examples/ area
+  in `examples/`
+    * Pick a Git command that is emulated in our `examples/` area
     * Extract the Git tests that exercise that command
     * Convert the tests to call our emulation
-    * These tests could go in examples/tests/...
+    * These tests could go in `examples/tests/`...
 * Add hooks API to enumerate and manage hooks (not run them at this point)
     * Enumeration of available hooks
     * Lookup API to see which hooks have a script and get the script
