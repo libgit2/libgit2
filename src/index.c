@@ -19,6 +19,7 @@
 #include "blob.h"
 #include "idxmap.h"
 #include "diff.h"
+#include "varint.h"
 
 #include "git2/odb.h"
 #include "git2/oid.h"
@@ -65,8 +66,11 @@ static int index_apply_to_wd_diff(git_index *index, int action, const git_strarr
 static const size_t INDEX_FOOTER_SIZE = GIT_OID_RAWSZ;
 static const size_t INDEX_HEADER_SIZE = 12;
 
-static const unsigned int INDEX_VERSION_NUMBER = 2;
+static const unsigned int INDEX_VERSION_NUMBER_DEFAULT = 2;
+static const unsigned int INDEX_VERSION_NUMBER_LB = 2;
 static const unsigned int INDEX_VERSION_NUMBER_EXT = 3;
+static const unsigned int INDEX_VERSION_NUMBER_COMP = 4;
+static const unsigned int INDEX_VERSION_NUMBER_UB = 4;
 
 static const unsigned int INDEX_HEADER_SIG = 0x44495243;
 static const char INDEX_EXT_TREECACHE_SIG[] = {'T', 'R', 'E', 'E'};
@@ -434,6 +438,7 @@ int git_index_open(git_index **index_out, const char *index_path)
 	index->entries_search = git_index_entry_srch;
 	index->entries_search_path = index_entry_srch_path;
 	index->reuc_search = reuc_srch;
+	index->version = INDEX_VERSION_NUMBER_DEFAULT;
 
 	if (index_path != NULL && (error = git_index_read(index, true)) < 0)
 		goto fail;
@@ -744,6 +749,28 @@ static int truncate_racily_clean(git_index *index)
 done:
 	git_diff_free(diff);
 	git_vector_free(&paths);
+	return 0;
+}
+
+unsigned git_index_version(git_index *index)
+{
+	assert(index);
+
+	return index->version;
+}
+
+int git_index_set_version(git_index *index, unsigned int version)
+{
+	assert(index);
+
+	if (version < INDEX_VERSION_NUMBER_LB ||
+	    version > INDEX_VERSION_NUMBER_UB) {
+		giterr_set(GITERR_INDEX, "Invalid version number");
+		return -1;
+	}
+
+	index->version = version;
+
 	return 0;
 }
 
@@ -2160,12 +2187,12 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 
 			if (git__strtol64(&tmp, buffer, &endptr, 8) < 0 ||
 				!endptr || endptr == buffer || *endptr ||
-				tmp < 0) {
+				tmp < 0 || tmp > UINT32_MAX) {
 				index_entry_reuc_free(lost);
 				return index_error_invalid("reading reuc entry stage");
 			}
 
-			lost->mode[i] = tmp;
+			lost->mode[i] = (uint32_t)tmp;
 
 			len = (endptr + 1) - buffer;
 			if (size <= len) {
@@ -2262,12 +2289,15 @@ static size_t read_entry(
 	git_index_entry **out,
 	git_index *index,
 	const void *buffer,
-	size_t buffer_size)
+	size_t buffer_size,
+	const char **last)
 {
 	size_t path_length, entry_size;
 	const char *path_ptr;
 	struct entry_short source;
 	git_index_entry entry = {{0}};
+	bool compressed = index->version >= INDEX_VERSION_NUMBER_COMP;
+	char *tmp_path = NULL;
 
 	if (INDEX_FOOTER_SIZE + minimal_entry_size > buffer_size)
 		return 0;
@@ -2302,33 +2332,56 @@ static size_t read_entry(
 	} else
 		path_ptr = (const char *) buffer + offsetof(struct entry_short, path);
 
-	path_length = entry.flags & GIT_IDXENTRY_NAMEMASK;
+	if (!compressed) {
+		path_length = entry.flags & GIT_IDXENTRY_NAMEMASK;
 
-	/* if this is a very long string, we must find its
-	 * real length without overflowing */
-	if (path_length == 0xFFF) {
-		const char *path_end;
+		/* if this is a very long string, we must find its
+		 * real length without overflowing */
+		if (path_length == 0xFFF) {
+			const char *path_end;
 
-		path_end = memchr(path_ptr, '\0', buffer_size);
-		if (path_end == NULL)
+			path_end = memchr(path_ptr, '\0', buffer_size);
+			if (path_end == NULL)
+				return 0;
+
+			path_length = path_end - path_ptr;
+		}
+
+		if (entry.flags & GIT_IDXENTRY_EXTENDED)
+			entry_size = long_entry_size(path_length);
+		else
+			entry_size = short_entry_size(path_length);
+
+		if (INDEX_FOOTER_SIZE + entry_size > buffer_size)
 			return 0;
 
-		path_length = path_end - path_ptr;
+		entry.path = (char *)path_ptr;
+	} else {
+		size_t varint_len;
+		size_t shared = git_decode_varint((const unsigned char *)path_ptr, 
+						  &varint_len);
+		size_t len = strlen(path_ptr + varint_len);
+		size_t last_len = strlen(*last);
+		size_t tmp_path_len;
+
+		if (varint_len == 0)
+			return index_error_invalid("incorrect prefix length");
+
+		GITERR_CHECK_ALLOC_ADD(&tmp_path_len, shared, len + 1);
+		tmp_path = git__malloc(tmp_path_len);
+		GITERR_CHECK_ALLOC(tmp_path);
+		memcpy(tmp_path, last, last_len);
+		memcpy(tmp_path + last_len, path_ptr + varint_len, len);
+		entry_size = long_entry_size(shared + len);
+		entry.path = tmp_path;
 	}
 
-	if (entry.flags & GIT_IDXENTRY_EXTENDED)
-		entry_size = long_entry_size(path_length);
-	else
-		entry_size = short_entry_size(path_length);
-
-	if (INDEX_FOOTER_SIZE + entry_size > buffer_size)
+	if (index_entry_dup(out, index, &entry) < 0) {
+		git__free(tmp_path);
 		return 0;
+	}
 
-	entry.path = (char *)path_ptr;
-
-	if (index_entry_dup(out, index, &entry) < 0)
-		return 0;
-
+	git__free(tmp_path);
 	return entry_size;
 }
 
@@ -2341,8 +2394,8 @@ static int read_header(struct index_header *dest, const void *buffer)
 		return index_error_invalid("incorrect header signature");
 
 	dest->version = ntohl(source->version);
-	if (dest->version != INDEX_VERSION_NUMBER_EXT &&
-		dest->version != INDEX_VERSION_NUMBER)
+	if (dest->version < INDEX_VERSION_NUMBER_LB ||
+		dest->version > INDEX_VERSION_NUMBER_UB)
 		return index_error_invalid("incorrect header version");
 
 	dest->entry_count = ntohl(source->entry_count);
@@ -2395,6 +2448,8 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	unsigned int i;
 	struct index_header header = { 0 };
 	git_oid checksum_calculated, checksum_expected;
+	const char **last = NULL;
+	const char *empty = "";
 
 #define seek_forward(_increase) { \
 	if (_increase >= buffer_size) { \
@@ -2415,6 +2470,10 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	if ((error = read_header(&header, buffer)) < 0)
 		return error;
 
+	index->version = header.version;
+	if (index->version >= INDEX_VERSION_NUMBER_COMP)
+		last = &empty;
+
 	seek_forward(INDEX_HEADER_SIZE);
 
 	assert(!index->entries.length);
@@ -2427,7 +2486,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	/* Parse all the entries */
 	for (i = 0; i < header.entry_count && buffer_size > INDEX_FOOTER_SIZE; ++i) {
 		git_index_entry *entry;
-		size_t entry_size = read_entry(&entry, index, buffer, buffer_size);
+		size_t entry_size = read_entry(&entry, index, buffer, buffer_size, last);
 
 		/* 0 bytes read means an object corruption */
 		if (entry_size == 0) {
@@ -2518,14 +2577,30 @@ static bool is_index_extended(git_index *index)
 	return (extended > 0);
 }
 
-static int write_disk_entry(git_filebuf *file, git_index_entry *entry)
+static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const char **last)
 {
 	void *mem = NULL;
 	struct entry_short *ondisk;
 	size_t path_len, disk_size;
 	char *path;
+	const char *path_start = entry->path;
+	size_t same_len = 0;
 
 	path_len = ((struct entry_internal *)entry)->pathlen;
+
+	if (last) {
+		const char *last_c = *last;
+
+		while (*path_start == *last_c) {
+			if (!*path_start || !*last_c)
+				break;
+			++path_start;
+			++last_c;
+			++same_len;
+		}
+		path_len -= same_len;
+		*last = entry->path;
+	}
 
 	if (entry->flags & GIT_IDXENTRY_EXTENDED)
 		disk_size = long_entry_size(path_len);
@@ -2574,7 +2649,12 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry)
 	else
 		path = ondisk->path;
 
-	memcpy(path, entry->path, path_len);
+	if (last) {
+		path += git_encode_varint((unsigned char *) path,
+					  disk_size,
+					  path_len - same_len);
+	}
+	memcpy(path, path_start, path_len);
 
 	return 0;
 }
@@ -2585,6 +2665,8 @@ static int write_entries(git_index *index, git_filebuf *file)
 	size_t i;
 	git_vector case_sorted, *entries;
 	git_index_entry *entry;
+	const char **last = NULL;
+	const char *empty = "";
 
 	/* If index->entries is sorted case-insensitively, then we need
 	 * to re-sort it case-sensitively before writing */
@@ -2596,8 +2678,11 @@ static int write_entries(git_index *index, git_filebuf *file)
 		entries = &index->entries;
 	}
 
+	if (index->version >= INDEX_VERSION_NUMBER_COMP)
+		last = &empty;
+
 	git_vector_foreach(entries, i, entry)
-		if ((error = write_disk_entry(file, entry)) < 0)
+		if ((error = write_disk_entry(file, entry, last)) < 0)
 			break;
 
 	if (index->ignore_case)
@@ -2762,8 +2847,12 @@ static int write_index(git_oid *checksum, git_index *index, git_filebuf *file)
 
 	assert(index && file);
 
-	is_extended = is_index_extended(index);
-	index_version_number = is_extended ? INDEX_VERSION_NUMBER_EXT : INDEX_VERSION_NUMBER;
+	if (index->version <= INDEX_VERSION_NUMBER_EXT)  {
+		is_extended = is_index_extended(index);
+		index_version_number = is_extended ? INDEX_VERSION_NUMBER_EXT : INDEX_VERSION_NUMBER_LB;
+	} else {
+		index_version_number = index->version;
+	}
 
 	header.signature = htonl(INDEX_HEADER_SIG);
 	header.version = htonl(index_version_number);
@@ -2925,38 +3014,39 @@ cleanup:
 	return error;
 }
 
-int git_index_read_index(
+static int git_index_read_iterator(
 	git_index *index,
-	const git_index *new_index)
+	git_iterator *new_iterator,
+	size_t new_length_hint)
 {
 	git_vector new_entries = GIT_VECTOR_INIT,
 		remove_entries = GIT_VECTOR_INIT;
 	git_idxmap *new_entries_map = NULL;
 	git_iterator *index_iterator = NULL;
-	git_iterator *new_iterator = NULL;
 	git_iterator_options opts = GIT_ITERATOR_OPTIONS_INIT;
 	const git_index_entry *old_entry, *new_entry;
 	git_index_entry *entry;
 	size_t i;
 	int error;
 
-	if ((error = git_vector_init(&new_entries, new_index->entries.length, index->entries._cmp)) < 0 ||
+	assert((new_iterator->flags & GIT_ITERATOR_DONT_IGNORE_CASE));
+
+	if ((error = git_vector_init(&new_entries, new_length_hint, index->entries._cmp)) < 0 ||
 		(error = git_vector_init(&remove_entries, index->entries.length, NULL)) < 0 ||
 		(error = git_idxmap_alloc(&new_entries_map)) < 0)
 		goto done;
 
-	if (index->ignore_case)
-		kh_resize(idxicase, (khash_t(idxicase) *) new_entries_map, new_index->entries.length);
-	else
-		kh_resize(idx, new_entries_map, new_index->entries.length);
+	if (index->ignore_case && new_length_hint)
+		kh_resize(idxicase, (khash_t(idxicase) *) new_entries_map, new_length_hint);
+	else if (new_length_hint)
+		kh_resize(idx, new_entries_map, new_length_hint);
 
-	opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+	opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE |
+		GIT_ITERATOR_INCLUDE_CONFLICTS;
 
-	if ((error = git_iterator_for_index(&index_iterator, git_index_owner(index), index, &opts)) < 0 ||
-		(error = git_iterator_for_index(&new_iterator, git_index_owner(new_index), (git_index *)new_index, &opts)) < 0)
-		goto done;
-
-	if (((error = git_iterator_current(&old_entry, index_iterator)) < 0 &&
+	if ((error = git_iterator_for_index(&index_iterator,
+			git_index_owner(index), index, &opts)) < 0 ||
+		((error = git_iterator_current(&old_entry, index_iterator)) < 0 &&
 			error != GIT_ITEROVER) ||
 		((error = git_iterator_current(&new_entry, new_iterator)) < 0 &&
 			error != GIT_ITEROVER))
@@ -3050,6 +3140,8 @@ int git_index_read_index(
 		index_entry_free(entry);
 	}
 
+	clear_uptodate(index);
+
 	error = 0;
 
 done:
@@ -3057,6 +3149,27 @@ done:
 	git_vector_free(&new_entries);
 	git_vector_free(&remove_entries);
 	git_iterator_free(index_iterator);
+	return error;
+}
+
+int git_index_read_index(
+	git_index *index,
+	const git_index *new_index)
+{
+	git_iterator *new_iterator = NULL;
+	git_iterator_options opts = GIT_ITERATOR_OPTIONS_INIT;
+	int error;
+
+	opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE |
+		GIT_ITERATOR_INCLUDE_CONFLICTS;
+
+	if ((error = git_iterator_for_index(&new_iterator,
+		git_index_owner(new_index), (git_index *)new_index, &opts)) < 0 ||
+		(error = git_index_read_iterator(index, new_iterator,
+		new_index->entries.length)) < 0)
+		goto done;
+
+done:
 	git_iterator_free(new_iterator);
 	return error;
 }

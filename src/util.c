@@ -66,6 +66,12 @@ int git_strarray_copy(git_strarray *tgt, const git_strarray *src)
 
 int git__strtol64(int64_t *result, const char *nptr, const char **endptr, int base)
 {
+
+	return git__strntol64(result, nptr, (size_t)-1, endptr, base);
+}
+
+int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const char **endptr, int base)
+{
 	const char *p;
 	int64_t n, nn;
 	int c, ovfl, v, neg, ndig;
@@ -111,7 +117,7 @@ int git__strtol64(int64_t *result, const char *nptr, const char **endptr, int ba
 	/*
 	 * Non-empty sequence of digits
 	 */
-	for (;; p++,ndig++) {
+	for (; nptr_len > 0; p++,ndig++,nptr_len--) {
 		c = *p;
 		v = base;
 		if ('0'<=c && c<='9')
@@ -122,8 +128,8 @@ int git__strtol64(int64_t *result, const char *nptr, const char **endptr, int ba
 			v = c - 'A' + 10;
 		if (v >= base)
 			break;
-		nn = n*base + v;
-		if (nn < n)
+		nn = n * base + (neg ? -v : v);
+		if ((!neg && nn < n) || (neg && nn > n))
 			ovfl = 1;
 		n = nn;
 	}
@@ -142,17 +148,23 @@ Return:
 		return -1;
 	}
 
-	*result = neg ? -n : n;
+	*result = n;
 	return 0;
 }
 
 int git__strtol32(int32_t *result, const char *nptr, const char **endptr, int base)
 {
+
+	return git__strntol32(result, nptr, (size_t)-1, endptr, base);
+}
+
+int git__strntol32(int32_t *result, const char *nptr, size_t nptr_len, const char **endptr, int base)
+{
 	int error;
 	int32_t tmp_int;
 	int64_t tmp_long;
 
-	if ((error = git__strtol64(&tmp_long, nptr, endptr, base)) < 0)
+	if ((error = git__strntol64(&tmp_long, nptr, nptr_len, endptr, base)) < 0)
 		return error;
 
 	tmp_int = tmp_long & 0xFFFFFFFF;
@@ -319,6 +331,12 @@ char *git__strsep(char **end, const char *sep)
 	}
 
 	return NULL;
+}
+
+size_t git__linenlen(const char *buffer, size_t buffer_len)
+{
+	char *nl = memchr(buffer, '\n', buffer_len);
+	return nl ? (size_t)(nl - buffer) + 1 : buffer_len;
 }
 
 void git__hexdump(const char *buffer, size_t len)
@@ -763,6 +781,11 @@ int git__utf8_iterate(const uint8_t *str, int str_len, int32_t *dst)
 
 	*dst = uc;
 	return length;
+}
+
+double git_time_monotonic(void)
+{
+	return git__timer();
 }
 
 #ifdef GIT_WIN32

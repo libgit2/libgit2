@@ -40,6 +40,7 @@ void test_revwalk_simplify__first_parent(void)
 
 	git_oid_fromstr(&id, commit_head);
 	cl_git_pass(git_revwalk_push(walk, &id));
+	git_revwalk_sorting(walk, GIT_SORT_TOPOLOGICAL);
 	git_revwalk_simplify_first_parent(walk);
 
 	i = 0;

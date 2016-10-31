@@ -447,7 +447,12 @@ int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 		if ((nul = memchr(buffer, 0, buffer_end - buffer)) == NULL)
 			return tree_error("Failed to parse tree. Object is corrupted", NULL);
 
-		filename_len = nul - buffer;
+		if ((filename_len = nul - buffer) == 0)
+			return tree_error("Failed to parse tree. Can't parse filename", NULL);
+
+		if ((buffer_end - (nul + 1)) < GIT_OID_RAWSZ)
+			return tree_error("Failed to parse tree. Can't parse OID", NULL);
+
 		/* Allocate the entry */
 		{
 			entry = git_array_alloc(tree->entries);

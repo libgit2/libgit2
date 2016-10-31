@@ -148,7 +148,7 @@ int git_openssl_set_locking(void)
 	git__on_shutdown(shutdown_ssl_locking);
 	return 0;
 #else
-	giterr_set(GITERR_THREAD, "libgit2 as not built with threads");
+	giterr_set(GITERR_THREAD, "libgit2 was not built with threads");
 	return -1;
 #endif
 }

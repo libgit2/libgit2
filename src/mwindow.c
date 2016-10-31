@@ -33,25 +33,20 @@ static git_mwindow_ctl mem_ctl;
 /* Global list of mwindow files, to open packs once across repos */
 git_strmap *git__pack_cache = NULL;
 
-/**
- * Run under mwindow lock
- */
-int git_mwindow_files_init(void)
-{
-	if (git__pack_cache)
-		return 0;
-
-	git__on_shutdown(git_mwindow_files_free);
-
-	return git_strmap_alloc(&git__pack_cache);
-}
-
-void git_mwindow_files_free(void)
+static void git_mwindow_files_free(void)
 {
 	git_strmap *tmp = git__pack_cache;
 
 	git__pack_cache = NULL;
 	git_strmap_free(tmp);
+}
+
+int git_mwindow_global_init(void)
+{
+	assert(!git__pack_cache);
+
+	git__on_shutdown(git_mwindow_files_free);
+	return git_strmap_alloc(&git__pack_cache);
 }
 
 int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
@@ -66,12 +61,6 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 
 	if (git_mutex_lock(&git__mwindow_mutex) < 0) {
 		giterr_set(GITERR_OS, "failed to lock mwindow mutex");
-		return -1;
-	}
-
-	if (git_mwindow_files_init() < 0) {
-		git_mutex_unlock(&git__mwindow_mutex);
-		git__free(packname);
 		return -1;
 	}
 

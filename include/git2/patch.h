@@ -191,7 +191,7 @@ GIT_EXTERN(int) git_patch_get_hunk(
  *
  * @param patch The git_patch object
  * @param hunk_idx Index of the hunk
- * @return Number of lines in hunk or -1 if invalid hunk index
+ * @return Number of lines in hunk or GIT_ENOTFOUND if invalid hunk index
  */
 GIT_EXTERN(int) git_patch_num_lines_in_hunk(
 	const git_patch *patch,

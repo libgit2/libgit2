@@ -3,7 +3,25 @@ v0.24 + 1
 
 ### Changes or improvements
 
+* Fix repository discovery with `git_repository_discover` and
+  `git_repository_open_ext` to match git's handling of a ceiling
+  directory at the current directory. git only checks ceiling
+  directories when its search ascends to a parent directory.  A ceiling
+  directory matching the starting directory will not prevent git from
+  finding a repository in the starting directory or a parent directory.
+
+* Do not fail when deleting remotes in the presence of broken
+  global configs which contain branches.
+
+* Support for reading and writing git index v4 files
+
+* Improve the performance of the revwalk and bring us closer to git's code.
+
 ### API additions
+
+* You can now get the user-agent used by libgit2 using the
+  `GIT_OPT_GET_USER_AGENT` option with `git_libgit2_opts()`.
+  It is the counterpart to `GIT_OPT_SET_USER_AGENT`.
 
 * `git_commit_create_buffer()` creates a commit and writes it into a
   user-provided buffer instead of writing it into the object db.
@@ -13,13 +31,54 @@ v0.24 + 1
   writing into a stream. Useful when you do not know the final size or
   want to copy the contents from another stream.
 
+* New flags for `git_repository_open_ext`:
+
+    * `GIT_REPOSITORY_OPEN_NO_DOTGIT` - Do not check for a repository by
+      appending `/.git` to the `start_path`; only open the repository if
+      `start_path` itself points to the git directory.
+    * `GIT_REPOSITORY_OPEN_FROM_ENV` - Find and open a git repository,
+      respecting the environment variables used by the git command-line
+      tools. If set, `git_repository_open_ext` will ignore the other
+      flags and the `ceiling_dirs` argument, and will allow a NULL
+      `path` to use `GIT_DIR` or search from the current directory. The
+      search for a repository will respect `$GIT_CEILING_DIRECTORIES`
+      and `$GIT_DISCOVERY_ACROSS_FILESYSTEM`.  The opened repository
+      will respect `$GIT_INDEX_FILE`, `$GIT_NAMESPACE`,
+      `$GIT_OBJECT_DIRECTORY`, and `$GIT_ALTERNATE_OBJECT_DIRECTORIES`.
+      In the future, this flag will also cause `git_repository_open_ext`
+      to respect `$GIT_WORK_TREE` and `$GIT_COMMON_DIR`; currently,
+      `git_repository_open_ext` with this flag will error out if either
+      `$GIT_WORK_TREE` or `$GIT_COMMON_DIR` is set.
+
+* `git_diff_from_buffer` can create a `git_diff` object from the contents
+  of a git-style patch file.
+
+* `git_index_version()` and `git_index_set_version()` to get and set
+  the index version
+
 ### API removals
 
 * `git_blob_create_fromchunks()` has been removed in favour of
   `git_blob_create_fromstream()`.
 
-
 ### Breaking API changes
+
+* `git_packbuilder_object_count` and `git_packbuilder_written` now
+  return a `size_t` instead of a `uint32_t` for more thorough
+  compatibility with the rest of the library.
+
+* `git_packbuiler_progress` now provides explicitly sized `uint32_t`
+  values instead of `unsigned int`.
+
+* `git_diff_file` now includes an `id_abbrev` field that reflects the
+  number of nibbles set in the `id` field.
+
+* `git_odb_backend` now has a `freshen` function pointer.  This optional
+  function pointer is similar to the `exists` function, but it will update
+  a last-used marker.  For filesystem-based object databases, this updates
+  the timestamp of the file containing the object, to indicate "freshness".
+  If this is `NULL`, then it will not be called and the `exists` function
+  will be used instead.
 
 v0.24
 -------

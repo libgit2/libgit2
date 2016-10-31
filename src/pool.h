@@ -35,6 +35,8 @@ typedef struct {
 	uint32_t page_size;  /* size of page in bytes */
 } git_pool;
 
+#define GIT_POOL_INIT { NULL, 0, 0 }
+
 #else
 
 /**
@@ -57,6 +59,9 @@ typedef struct {
 	uint32_t item_size;
 	uint32_t page_size;
 } git_pool;
+
+#define GIT_POOL_INIT { GIT_VECTOR_INIT, 0, 0 }
+
 #endif
 
 /**

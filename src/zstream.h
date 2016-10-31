@@ -12,8 +12,14 @@
 #include "common.h"
 #include "buffer.h"
 
+typedef enum {
+	GIT_ZSTREAM_INFLATE,
+	GIT_ZSTREAM_DEFLATE,
+} git_zstream_t;
+
 typedef struct {
 	z_stream z;
+	git_zstream_t type;
 	const char *in;
 	size_t in_len;
 	int zerr;
@@ -21,7 +27,7 @@ typedef struct {
 
 #define GIT_ZSTREAM_INIT {{0}}
 
-int git_zstream_init(git_zstream *zstream);
+int git_zstream_init(git_zstream *zstream, git_zstream_t type);
 void git_zstream_free(git_zstream *zstream);
 
 int git_zstream_set_input(git_zstream *zstream, const void *in, size_t in_len);
@@ -35,5 +41,6 @@ bool git_zstream_done(git_zstream *zstream);
 void git_zstream_reset(git_zstream *zstream);
 
 int git_zstream_deflatebuf(git_buf *out, const void *in, size_t in_len);
+int git_zstream_inflatebuf(git_buf *out, const void *in, size_t in_len);
 
 #endif /* INCLUDE_zstream_h__ */

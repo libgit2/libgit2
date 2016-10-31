@@ -17,22 +17,6 @@ void test_object_blob_fromstream__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-static int text_chunked_source_cb(char *content, size_t max_length, void *payload)
-{
-	int *count;
-
-	GIT_UNUSED(max_length);
-
-	count = (int *)payload;
-	(*count)--;
-
-	if (*count == 0)
-		return 0;
-
-	strcpy(content, textual_content);
-	return (int)strlen(textual_content);
-}
-
 void test_object_blob_fromstream__multiple_write(void)
 {
 	git_oid expected_id, id;

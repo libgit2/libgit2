@@ -103,9 +103,4 @@ extern int git_sysdir_get_str(char *out, size_t outlen, git_sysdir_t which);
  */
 extern int git_sysdir_set(git_sysdir_t which, const char *paths);
 
-/**
- * Free the configuration file search paths.
- */
-extern void git_sysdir_global_shutdown(void);
-
 #endif /* INCLUDE_sysdir_h__ */

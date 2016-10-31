@@ -35,6 +35,19 @@ static void fetchhead_test_clone(void)
 	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 }
 
+static int count_references(void)
+{
+	git_strarray array;
+	int refs;
+
+	cl_git_pass(git_reference_list(&array, g_repo));
+	refs = array.count;
+
+	git_strarray_free(&array);
+
+	return refs;
+}
+
 static void fetchhead_test_fetch(const char *fetchspec, const char *expected_fetchhead)
 {
 	git_remote *remote;
@@ -100,4 +113,44 @@ void test_online_fetchhead__no_merges(void)
 	fetchhead_test_fetch(NULL, FETCH_HEAD_NO_MERGE_DATA);
 	cl_git_pass(git_tag_delete(g_repo, "commit_tree"));
 	fetchhead_test_fetch(NULL, FETCH_HEAD_NO_MERGE_DATA3);
+}
+
+void test_online_fetchhead__explicit_dst_refspec_creates_branch(void)
+{
+	git_reference *ref;
+	int refs;
+
+	fetchhead_test_clone();
+	refs = count_references();
+	fetchhead_test_fetch("refs/heads/first-merge:refs/heads/explicit-refspec", FETCH_HEAD_EXPLICIT_DATA);
+
+	cl_git_pass(git_branch_lookup(&ref, g_repo, "explicit-refspec", GIT_BRANCH_ALL));
+	cl_assert_equal_i(refs + 1, count_references());
+
+	git_reference_free(ref);
+}
+
+void test_online_fetchhead__empty_dst_refspec_creates_no_branch(void)
+{
+	git_reference *ref;
+	int refs;
+
+	fetchhead_test_clone();
+	refs = count_references();
+
+	fetchhead_test_fetch("refs/heads/first-merge", FETCH_HEAD_EXPLICIT_DATA);
+	cl_git_fail(git_branch_lookup(&ref, g_repo, "first-merge", GIT_BRANCH_ALL));
+
+	cl_assert_equal_i(refs, count_references());
+}
+
+void test_online_fetchhead__colon_only_dst_refspec_creates_no_branch(void)
+{
+	int refs;
+
+	fetchhead_test_clone();
+	refs = count_references();
+	fetchhead_test_fetch("refs/heads/first-merge:", FETCH_HEAD_EXPLICIT_DATA);
+
+	cl_assert_equal_i(refs, count_references());
 }

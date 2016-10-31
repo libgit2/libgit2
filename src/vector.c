@@ -7,6 +7,7 @@
 
 #include "common.h"
 #include "vector.h"
+#include "integer.h"
 
 /* In elements, not bytes */
 #define MIN_ALLOCSIZE	8
@@ -330,6 +331,47 @@ int git_vector_resize_to(git_vector *v, size_t new_length)
 	return 0;
 }
 
+int git_vector_insert_null(git_vector *v, size_t idx, size_t insert_len)
+{
+	size_t new_length;
+
+	assert(insert_len > 0 && idx <= v->length);
+
+	GITERR_CHECK_ALLOC_ADD(&new_length, v->length, insert_len);
+
+	if (new_length > v->_alloc_size && resize_vector(v, new_length) < 0)
+		return -1;
+
+	memmove(&v->contents[idx + insert_len], &v->contents[idx],
+		sizeof(void *) * (v->length - idx));
+	memset(&v->contents[idx], 0, sizeof(void *) * insert_len);
+
+	v->length = new_length;
+	return 0;
+}
+
+int git_vector_remove_range(git_vector *v, size_t idx, size_t remove_len)
+{
+	size_t new_length = v->length - remove_len;
+	size_t end_idx = 0;
+	
+	assert(remove_len > 0);
+
+	if (git__add_sizet_overflow(&end_idx, idx, remove_len))
+		assert(0);
+
+	assert(end_idx <= v->length);
+
+	if (end_idx < v->length)
+		memmove(&v->contents[idx], &v->contents[end_idx],
+			sizeof(void *) * (v->length - end_idx));
+
+	memset(&v->contents[new_length], 0, sizeof(void *) * remove_len);
+
+	v->length = new_length;
+	return 0;
+}
+
 int git_vector_set(void **old, git_vector *v, size_t position, void *value)
 {
 	if (position + 1 > v->length) {
@@ -358,4 +400,20 @@ int git_vector_verify_sorted(const git_vector *v)
 	}
 
 	return 0;
+}
+
+void git_vector_reverse(git_vector *v)
+{
+	size_t a, b;
+
+	a = 0;
+	b = v->length - 1;
+
+	while (a < b) {
+		void *tmp = v->contents[a];
+		v->contents[a] = v->contents[b];
+		v->contents[b] = tmp;
+		a++;
+		b--;
+	}
 }

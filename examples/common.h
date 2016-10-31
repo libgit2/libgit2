@@ -73,6 +73,15 @@ extern int match_uint16_arg(
 	uint16_t *out, struct args_info *args, const char *opt);
 
 /**
+ * Check current `args` entry against `opt` string parsing as uint32.  If
+ * `opt` matches exactly, take the next arg as a uint16_t value; if `opt`
+ * is a prefix (equal sign optional), take the remainder of the arg as a
+ * uint32_t value; otherwise return 0.
+ */
+extern int match_uint32_arg(
+	uint32_t *out, struct args_info *args, const char *opt);
+
+/**
  * Check current `args` entry against `opt` string parsing as int.  If
  * `opt` matches exactly, take the next arg as an int value; if it matches
  * as a prefix (equal sign optional), take the remainder of the arg as a

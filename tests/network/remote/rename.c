@@ -16,16 +16,6 @@ void test_network_remote_rename__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-static int dont_call_me_cb(const char *fetch_refspec, void *payload)
-{
-	GIT_UNUSED(fetch_refspec);
-	GIT_UNUSED(payload);
-
-	cl_assert(false);
-
-	return -1;
-}
-
 void test_network_remote_rename__renaming_a_remote_moves_related_configuration_section(void)
 {
 	git_strarray problems = {0};

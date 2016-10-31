@@ -1,9 +1,9 @@
 
 extern void expect_iterator_items(
 	git_iterator *i,
-	int expected_flat,
+	size_t expected_flat,
 	const char **expected_flat_paths,
-	int expected_total,
+	size_t expected_total,
 	const char **expected_total_paths);
 
 extern void expect_advance_over(

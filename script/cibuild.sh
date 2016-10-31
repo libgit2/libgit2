@@ -1,9 +1,15 @@
 #!/bin/sh
 
+set -x
+
 if [ -n "$COVERITY" ];
 then
 	./script/coverity.sh;
 	exit $?;
+fi
+
+if [ "$TRAVIS_OS_NAME" = "osx" ]; then
+	export PKG_CONFIG_PATH=$(ls -d /usr/local/Cellar/{curl,zlib}/*/lib/pkgconfig | paste -s -d':' -)
 fi
 
 # Should we ask Travis to cache this file?
@@ -14,7 +20,7 @@ java -jar poxyproxy.jar -d --port 8080 --credentials foo:bar &
 mkdir _build
 cd _build
 # shellcheck disable=SC2086
-cmake .. -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS || exit $?
+cmake .. -DBUILD_EXAMPLES=ON -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS || exit $?
 make -j2 install || exit $?
 
 # If this platform doesn't support test execution, bail out now
@@ -45,8 +51,13 @@ ssh-keygen -t rsa -f ~/.ssh/id_rsa -N "" -q
 cat ~/.ssh/id_rsa.pub >>~/.ssh/authorized_keys
 ssh-keyscan -t rsa localhost >>~/.ssh/known_hosts
 
-# Get the fingerprint for localhost and remove the colons so we can parse it as a hex number
-export GITTEST_REMOTE_SSH_FINGERPRINT=$(ssh-keygen -F localhost -l | tail -n 1 | cut -d ' ' -f 2 | tr -d ':')
+# Get the fingerprint for localhost and remove the colons so we can parse it as
+# a hex number. The Mac version is newer so it has a different output format.
+if [ "$TRAVIS_OS_NAME" = "osx" ]; then
+    export GITTEST_REMOTE_SSH_FINGERPRINT=$(ssh-keygen -E md5 -F localhost -l | tail -n 1 | cut -d ' ' -f 3 | cut -d : -f2- | tr -d :)
+else
+    export GITTEST_REMOTE_SSH_FINGERPRINT=$(ssh-keygen -F localhost -l | tail -n 1 | cut -d ' ' -f 2 | tr -d ':')
+fi
 
 export GITTEST_REMOTE_URL="ssh://localhost/$HOME/_temp/test.git"
 export GITTEST_REMOTE_USER=$USER

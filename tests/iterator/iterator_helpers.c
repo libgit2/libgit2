@@ -18,18 +18,16 @@ static void assert_at_end(git_iterator *i, bool verbose)
 
 void expect_iterator_items(
 	git_iterator *i,
-	int expected_flat,
+	size_t expected_flat,
 	const char **expected_flat_paths,
-	int expected_total,
+	size_t expected_total,
 	const char **expected_total_paths)
 {
 	const git_index_entry *entry;
-	int count, error;
+	size_t count;
 	int no_trees = !(git_iterator_flags(i) & GIT_ITERATOR_INCLUDE_TREES);
 	bool v = false;
-
-	if (expected_flat < 0) { v = true; expected_flat = -expected_flat; }
-	if (expected_total < 0) { v = true; expected_total = -expected_total; }
+	int error;
 
 	if (v) fprintf(stderr, "== %s ==\n", no_trees ? "notrees" : "trees");
 

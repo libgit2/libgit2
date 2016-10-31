@@ -83,45 +83,43 @@ static int git_sysdir_guess_template_dirs(git_buf *out)
 #endif
 }
 
-typedef int (*git_sysdir_guess_cb)(git_buf *out);
-
-static git_buf git_sysdir__dirs[GIT_SYSDIR__MAX] =
-	{ GIT_BUF_INIT, GIT_BUF_INIT, GIT_BUF_INIT, GIT_BUF_INIT, GIT_BUF_INIT };
-
-static git_sysdir_guess_cb git_sysdir__dir_guess[GIT_SYSDIR__MAX] = {
-	git_sysdir_guess_system_dirs,
-	git_sysdir_guess_global_dirs,
-	git_sysdir_guess_xdg_dirs,
-	git_sysdir_guess_programdata_dirs,
-	git_sysdir_guess_template_dirs,
+struct git_sysdir__dir {
+	git_buf buf;
+	int (*guess)(git_buf *out);
 };
 
-static int git_sysdir__dirs_shutdown_set = 0;
+static struct git_sysdir__dir git_sysdir__dirs[] = {
+	{ GIT_BUF_INIT, git_sysdir_guess_system_dirs },
+	{ GIT_BUF_INIT, git_sysdir_guess_global_dirs },
+	{ GIT_BUF_INIT, git_sysdir_guess_xdg_dirs },
+	{ GIT_BUF_INIT, git_sysdir_guess_programdata_dirs },
+	{ GIT_BUF_INIT, git_sysdir_guess_template_dirs },
+};
+
+static void git_sysdir_global_shutdown(void)
+{
+	size_t i;
+
+	for (i = 0; i < ARRAY_SIZE(git_sysdir__dirs); ++i)
+		git_buf_free(&git_sysdir__dirs[i].buf);
+}
 
 int git_sysdir_global_init(void)
 {
-	git_sysdir_t i;
-	const git_buf *path;
+	size_t i;
 	int error = 0;
 
-	for (i = 0; !error && i < GIT_SYSDIR__MAX; i++)
-		error = git_sysdir_get(&path, i);
+	for (i = 0; !error && i < ARRAY_SIZE(git_sysdir__dirs); i++)
+		error = git_sysdir__dirs[i].guess(&git_sysdir__dirs[i].buf);
+
+	git__on_shutdown(git_sysdir_global_shutdown);
 
 	return error;
 }
 
-void git_sysdir_global_shutdown(void)
-{
-	int i;
-	for (i = 0; i < GIT_SYSDIR__MAX; ++i)
-		git_buf_free(&git_sysdir__dirs[i]);
-
-	git_sysdir__dirs_shutdown_set = 0;
-}
-
 static int git_sysdir_check_selector(git_sysdir_t which)
 {
-	if (which < GIT_SYSDIR__MAX)
+	if (which < ARRAY_SIZE(git_sysdir__dirs))
 		return 0;
 
 	giterr_set(GITERR_INVALID, "config directory selector out of range");
@@ -137,18 +135,7 @@ int git_sysdir_get(const git_buf **out, git_sysdir_t which)
 
 	GITERR_CHECK_ERROR(git_sysdir_check_selector(which));
 
-	if (!git_buf_len(&git_sysdir__dirs[which])) {
-		/* prepare shutdown if we're going to need it */
-		if (!git_sysdir__dirs_shutdown_set) {
-			git__on_shutdown(git_sysdir_global_shutdown);
-			git_sysdir__dirs_shutdown_set = 1;
-		}
-
-		GITERR_CHECK_ERROR(
-			git_sysdir__dir_guess[which](&git_sysdir__dirs[which]));
-	}
-
-	*out = &git_sysdir__dirs[which];
+	*out = &git_sysdir__dirs[which].buf;
 	return 0;
 }
 
@@ -183,31 +170,38 @@ int git_sysdir_set(git_sysdir_t which, const char *search_path)
 	if (search_path != NULL)
 		expand_path = strstr(search_path, PATH_MAGIC);
 
-	/* init with default if not yet done and needed (ignoring error) */
-	if ((!search_path || expand_path) &&
-		!git_buf_len(&git_sysdir__dirs[which]))
-		git_sysdir__dir_guess[which](&git_sysdir__dirs[which]);
+	/* reset the default if this path has been cleared */
+	if (!search_path || expand_path)
+		git_sysdir__dirs[which].guess(&git_sysdir__dirs[which].buf);
 
 	/* if $PATH is not referenced, then just set the path */
-	if (!expand_path)
-		return git_buf_sets(&git_sysdir__dirs[which], search_path);
+	if (!expand_path) {
+		if (search_path)
+			git_buf_sets(&git_sysdir__dirs[which].buf, search_path);
+
+		goto done;
+	}
 
 	/* otherwise set to join(before $PATH, old value, after $PATH) */
 	if (expand_path > search_path)
 		git_buf_set(&merge, search_path, expand_path - search_path);
 
-	if (git_buf_len(&git_sysdir__dirs[which]))
+	if (git_buf_len(&git_sysdir__dirs[which].buf))
 		git_buf_join(&merge, GIT_PATH_LIST_SEPARATOR,
-			merge.ptr, git_sysdir__dirs[which].ptr);
+			merge.ptr, git_sysdir__dirs[which].buf.ptr);
 
 	expand_path += strlen(PATH_MAGIC);
 	if (*expand_path)
 		git_buf_join(&merge, GIT_PATH_LIST_SEPARATOR, merge.ptr, expand_path);
 
-	git_buf_swap(&git_sysdir__dirs[which], &merge);
+	git_buf_swap(&git_sysdir__dirs[which].buf, &merge);
 	git_buf_free(&merge);
 
-	return git_buf_oom(&git_sysdir__dirs[which]) ? -1 : 0;
+done:
+	if (git_buf_oom(&git_sysdir__dirs[which].buf))
+		return -1;
+
+	return 0;
 }
 
 static int git_sysdir_find_in_dirlist(

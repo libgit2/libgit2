@@ -26,6 +26,7 @@
 #include "filter.h"
 #include "blob.h"
 #include "diff.h"
+#include "diff_generate.h"
 #include "pathspec.h"
 #include "buf_text.h"
 #include "diff_xdiff.h"
@@ -210,6 +211,10 @@ static bool checkout_is_workdir_modified(
 	 */
 	if (baseitem->size && wditem->file_size != baseitem->size)
 		return true;
+
+	/* if the workdir item is a directory, it cannot be a modified file */
+	if (S_ISDIR(wditem->mode))
+		return false;
 
 	if (git_diff__oid_for_entry(&oid, data->diff, wditem, wditem->mode, NULL) < 0)
 		return false;
@@ -2430,8 +2435,13 @@ static int checkout_data_init(
 
 	if (!data->opts.baseline && !data->opts.baseline_index) {
 		data->opts_free_baseline = true;
+		error = 0;
 
-		error = checkout_lookup_head_tree(&data->opts.baseline, repo);
+		/* if we don't have an index, this is an initial checkout and
+		 * should be against an empty baseline
+		 */
+		if (data->index->on_disk)
+			error = checkout_lookup_head_tree(&data->opts.baseline, repo);
 
 		if (error == GIT_EUNBORNBRANCH) {
 			error = 0;
@@ -2716,7 +2726,7 @@ int git_checkout_tree(
 	if ((error = git_repository_index(&index, repo)) < 0)
 		return error;
 
-	if ((opts->checkout_strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)) {
+	if (opts && (opts->checkout_strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)) {
 		iter_opts.pathlist.count = opts->paths.count;
 		iter_opts.pathlist.strings = opts->paths.strings;
 	}

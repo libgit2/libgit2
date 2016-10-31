@@ -478,7 +478,7 @@ int git_config_iterator_glob_new(git_config_iterator **out, const git_config *cf
 	iter = git__calloc(1, sizeof(all_iter));
 	GITERR_CHECK_ALLOC(iter);
 
-	if ((result = regcomp(&iter->regex, regexp, REG_EXTENDED)) != 0) {
+	if ((result = p_regcomp(&iter->regex, regexp, REG_EXTENDED)) != 0) {
 		giterr_set_regex(&iter->regex, result);
 		git__free(iter);
 		return -1;
@@ -512,7 +512,7 @@ int git_config_backend_foreach_match(
 	int error = 0;
 
 	if (regexp != NULL) {
-		if ((error = regcomp(&regex, regexp, REG_EXTENDED)) != 0) {
+		if ((error = p_regcomp(&regex, regexp, REG_EXTENDED)) != 0) {
 			giterr_set_regex(&regex, error);
 			regfree(&regex);
 			return -1;
@@ -1003,7 +1003,7 @@ int git_config_multivar_iterator_new(git_config_iterator **out, const git_config
 		goto on_error;
 
 	if (regexp != NULL) {
-		error = regcomp(&iter->regex, regexp, REG_EXTENDED);
+		error = p_regcomp(&iter->regex, regexp, REG_EXTENDED);
 		if (error != 0) {
 			giterr_set_regex(&iter->regex, error);
 			error = -1;

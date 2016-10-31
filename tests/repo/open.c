@@ -3,6 +3,7 @@
 #include "sysdir.h"
 #include <ctype.h>
 
+
 void test_repo_open__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
@@ -196,14 +197,21 @@ void test_repo_open__failures(void)
 		&repo, "attr/sub", GIT_REPOSITORY_OPEN_NO_SEARCH, NULL));
 
 	/* fail with ceiling too low */
-	cl_git_pass(git_buf_joinpath(&ceiling, ceiling.ptr, "sub"));
 	cl_git_fail(git_repository_open_ext(&repo, "attr/sub", 0, ceiling.ptr));
+	cl_git_pass(git_buf_joinpath(&ceiling, ceiling.ptr, "sub"));
+	cl_git_fail(git_repository_open_ext(&repo, "attr/sub/sub", 0, ceiling.ptr));
 
 	/* fail with no repo */
 	cl_git_pass(p_mkdir("alternate", 0777));
 	cl_git_pass(p_mkdir("alternate/.git", 0777));
 	cl_git_fail(git_repository_open_ext(&repo, "alternate", 0, NULL));
 	cl_git_fail(git_repository_open_ext(&repo, "alternate/.git", 0, NULL));
+
+	/* fail with no searching and no appending .git */
+	cl_git_fail(git_repository_open_ext(
+		&repo, "attr",
+		GIT_REPOSITORY_OPEN_NO_SEARCH | GIT_REPOSITORY_OPEN_NO_DOTGIT,
+		NULL));
 
 	git_buf_free(&ceiling);
 }
@@ -394,3 +402,4 @@ void test_repo_open__force_bare(void)
 	cl_assert(git_repository_is_bare(barerepo));
 	git_repository_free(barerepo);
 }
+

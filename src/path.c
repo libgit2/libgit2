@@ -306,6 +306,25 @@ int git_path_join_unrooted(
 	return 0;
 }
 
+void git_path_squash_slashes(git_buf *path)
+{
+	char *p, *q;
+
+	if (path->size == 0)
+		return;
+
+	for (p = path->ptr, q = path->ptr; *q; p++, q++) {
+		*p = *q;
+
+		while (*q == '/' && *(q+1) == '/') {
+			path->size--;
+			q++;
+		}
+	}
+
+	*p = '\0';
+}
+
 int git_path_prettify(git_buf *path_out, const char *path, const char *base)
 {
 	char buf[GIT_PATH_MAX];

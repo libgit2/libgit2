@@ -37,8 +37,13 @@ static void origin_decref(git_blame__origin *o)
 static int make_origin(git_blame__origin **out, git_commit *commit, const char *path)
 {
 	git_blame__origin *o;
+	git_object *blob;
 	size_t path_len = strlen(path), alloc_len;
 	int error = 0;
+
+	if ((error = git_object_lookup_bypath(&blob, (git_object*)commit,
+			path, GIT_OBJ_BLOB)) < 0)
+		return error;
 
 	GITERR_CHECK_ALLOC_ADD(&alloc_len, sizeof(*o), path_len);
 	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 1);
@@ -46,16 +51,13 @@ static int make_origin(git_blame__origin **out, git_commit *commit, const char *
 	GITERR_CHECK_ALLOC(o);
 
 	o->commit = commit;
+	o->blob = (git_blob *) blob;
 	o->refcnt = 1;
 	strcpy(o->path, path);
 
-	if (!(error = git_object_lookup_bypath((git_object**)&o->blob, (git_object*)commit,
-			path, GIT_OBJ_BLOB))) {
-		*out = o;
-	} else {
-		origin_decref(o);
-	}
-	return error;
+	*out = o;
+
+	return 0;
 }
 
 /* Locate an existing origin or create a new one. */
@@ -529,8 +531,16 @@ static int pass_blame(git_blame *blame, git_blame__origin *origin, uint32_t opt)
 			goto finish;
 		porigin = find_origin(blame, p, origin);
 
-		if (!porigin)
+		if (!porigin) {
+			/*
+			 * We only have to decrement the parent's
+			 * reference count when no porigin has
+			 * been created, as otherwise the commit
+			 * is assigned to the created object.
+			 */
+			git_commit_free(p);
 			continue;
+		}
 		if (porigin->blob && origin->blob &&
 		    !git_oid_cmp(git_blob_id(porigin->blob), git_blob_id(origin->blob))) {
 			pass_whole_blame(blame, origin, porigin);

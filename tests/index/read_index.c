@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "posix.h"
 #include "index.h"
+#include "conflicts.h"
 
 static git_repository *_repo;
 static git_index *_index;
@@ -125,4 +126,107 @@ void test_index_read_index__read_and_writes(void)
 	git_tree_free(tree);
 	git_index_free(tree_index);
 	git_index_free(new_index);
+}
+
+static void add_conflicts(git_index *index, const char *filename)
+{
+	git_index_entry ancestor_entry, our_entry, their_entry;
+	static int conflict_idx = 0;
+	char *ancestor_ids[] =
+		{ CONFLICTS_ONE_ANCESTOR_OID, CONFLICTS_TWO_ANCESTOR_OID };
+	char *our_ids[] =
+		{ CONFLICTS_ONE_OUR_OID, CONFLICTS_TWO_OUR_OID };
+	char *their_ids[] =
+		{ CONFLICTS_ONE_THEIR_OID, CONFLICTS_TWO_THEIR_OID };
+
+	conflict_idx = (conflict_idx + 1) % 2;
+
+	memset(&ancestor_entry, 0x0, sizeof(git_index_entry));
+	memset(&our_entry, 0x0, sizeof(git_index_entry));
+	memset(&their_entry, 0x0, sizeof(git_index_entry));
+
+	ancestor_entry.path = filename;
+	ancestor_entry.mode = 0100644;
+	GIT_IDXENTRY_STAGE_SET(&ancestor_entry, 1);
+	git_oid_fromstr(&ancestor_entry.id, ancestor_ids[conflict_idx]);
+
+	our_entry.path = filename;
+	our_entry.mode = 0100644;
+	GIT_IDXENTRY_STAGE_SET(&our_entry, 2);
+	git_oid_fromstr(&our_entry.id, our_ids[conflict_idx]);
+
+	their_entry.path = filename;
+	their_entry.mode = 0100644;
+	GIT_IDXENTRY_STAGE_SET(&ancestor_entry, 2);
+	git_oid_fromstr(&their_entry.id, their_ids[conflict_idx]);
+
+	cl_git_pass(git_index_conflict_add(index, &ancestor_entry,
+		&our_entry, &their_entry));
+}
+
+void test_index_read_index__handles_conflicts(void)
+{
+	git_oid tree_id;
+	git_tree *tree;
+	git_index *index, *new_index;
+	git_index_conflict_iterator *conflict_iterator;
+	const git_index_entry *ancestor, *ours, *theirs;
+
+	cl_git_pass(git_oid_fromstr(&tree_id, "ae90f12eea699729ed24555e40b9fd669da12a12"));
+	cl_git_pass(git_tree_lookup(&tree, _repo, &tree_id));
+	cl_git_pass(git_index_new(&index));
+	cl_git_pass(git_index_new(&new_index));
+	cl_git_pass(git_index_read_tree(index, tree));
+	cl_git_pass(git_index_read_tree(new_index, tree));
+
+	/* put some conflicts in only the old side, these should be removed */
+	add_conflicts(index, "orig_side-1.txt");
+	add_conflicts(index, "orig_side-2.txt");
+
+	/* put some conflicts in both indexes, these should be unchanged */
+	add_conflicts(index, "both_sides-1.txt");
+	add_conflicts(new_index,  "both_sides-1.txt");
+	add_conflicts(index, "both_sides-2.txt");
+	add_conflicts(new_index,  "both_sides-2.txt");
+
+	/* put some conflicts in the new index, these should be added */
+	add_conflicts(new_index, "new_side-1.txt");
+	add_conflicts(new_index, "new_side-2.txt");
+
+	cl_git_pass(git_index_read_index(index, new_index));
+	cl_git_pass(git_index_conflict_iterator_new(&conflict_iterator, index));
+
+	cl_git_pass(git_index_conflict_next(
+		&ancestor, &ours, &theirs, conflict_iterator));
+	cl_assert_equal_s("both_sides-1.txt", ancestor->path);
+	cl_assert_equal_s("both_sides-1.txt", ours->path);
+	cl_assert_equal_s("both_sides-1.txt", theirs->path);
+
+	cl_git_pass(git_index_conflict_next(
+		&ancestor, &ours, &theirs, conflict_iterator));
+	cl_assert_equal_s("both_sides-2.txt", ancestor->path);
+	cl_assert_equal_s("both_sides-2.txt", ours->path);
+	cl_assert_equal_s("both_sides-2.txt", theirs->path);
+
+	cl_git_pass(git_index_conflict_next(
+		&ancestor, &ours, &theirs, conflict_iterator));
+	cl_assert_equal_s("new_side-1.txt", ancestor->path);
+	cl_assert_equal_s("new_side-1.txt", ours->path);
+	cl_assert_equal_s("new_side-1.txt", theirs->path);
+
+	cl_git_pass(git_index_conflict_next(
+		&ancestor, &ours, &theirs, conflict_iterator));
+	cl_assert_equal_s("new_side-2.txt", ancestor->path);
+	cl_assert_equal_s("new_side-2.txt", ours->path);
+	cl_assert_equal_s("new_side-2.txt", theirs->path);
+
+
+	cl_git_fail_with(GIT_ITEROVER, git_index_conflict_next(
+		&ancestor, &ours, &theirs, conflict_iterator));
+
+	git_index_conflict_iterator_free(conflict_iterator);
+
+	git_tree_free(tree);
+	git_index_free(new_index);
+	git_index_free(index);
 }

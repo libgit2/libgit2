@@ -28,20 +28,31 @@ static int zstream_seterr(git_zstream *zs)
 	return -1;
 }
 
-int git_zstream_init(git_zstream *zstream)
+int git_zstream_init(git_zstream *zstream, git_zstream_t type)
 {
-	zstream->zerr = deflateInit(&zstream->z, Z_DEFAULT_COMPRESSION);
+	zstream->type = type;
+
+	if (zstream->type == GIT_ZSTREAM_INFLATE)
+		zstream->zerr = inflateInit(&zstream->z);
+	else
+		zstream->zerr = deflateInit(&zstream->z, Z_DEFAULT_COMPRESSION);
 	return zstream_seterr(zstream);
 }
 
 void git_zstream_free(git_zstream *zstream)
 {
-	deflateEnd(&zstream->z);
+	if (zstream->type == GIT_ZSTREAM_INFLATE)
+		inflateEnd(&zstream->z);
+	else
+		deflateEnd(&zstream->z);
 }
 
 void git_zstream_reset(git_zstream *zstream)
 {
-	deflateReset(&zstream->z);
+	if (zstream->type == GIT_ZSTREAM_INFLATE)
+		inflateReset(&zstream->z);
+	else
+		deflateReset(&zstream->z);
 	zstream->in = NULL;
 	zstream->in_len = 0;
 	zstream->zerr = Z_STREAM_END;
@@ -75,6 +86,11 @@ int git_zstream_get_output(void *out, size_t *out_len, git_zstream *zstream)
 	int zflush = Z_FINISH;
 	size_t out_remain = *out_len;
 
+	if (zstream->in_len && zstream->zerr == Z_STREAM_END) {
+		giterr_set(GITERR_ZLIB, "zlib input had trailing garbage");
+		return -1;
+	}
+
 	while (out_remain > 0 && zstream->zerr != Z_STREAM_END) {
 		size_t out_queued, in_queued, out_used, in_used;
 
@@ -97,7 +113,10 @@ int git_zstream_get_output(void *out, size_t *out_len, git_zstream *zstream)
 		out_queued = (size_t)zstream->z.avail_out;
 
 		/* compress next chunk */
-		zstream->zerr = deflate(&zstream->z, zflush);
+		if (zstream->type == GIT_ZSTREAM_INFLATE)
+			zstream->zerr = inflate(&zstream->z, zflush);
+		else
+			zstream->zerr = deflate(&zstream->z, zflush);
 
 		if (zstream->zerr == Z_STREAM_ERROR)
 			return zstream_seterr(zstream);
@@ -120,12 +139,12 @@ int git_zstream_get_output(void *out, size_t *out_len, git_zstream *zstream)
 	return 0;
 }
 
-int git_zstream_deflatebuf(git_buf *out, const void *in, size_t in_len)
+static int zstream_buf(git_buf *out, const void *in, size_t in_len, git_zstream_t type)
 {
 	git_zstream zs = GIT_ZSTREAM_INIT;
 	int error = 0;
 
-	if ((error = git_zstream_init(&zs)) < 0)
+	if ((error = git_zstream_init(&zs, type)) < 0)
 		return error;
 
 	if ((error = git_zstream_set_input(&zs, in, in_len)) < 0)
@@ -153,4 +172,14 @@ int git_zstream_deflatebuf(git_buf *out, const void *in, size_t in_len)
 done:
 	git_zstream_free(&zs);
 	return error;
+}
+
+int git_zstream_deflatebuf(git_buf *out, const void *in, size_t in_len)
+{
+	return zstream_buf(out, in, in_len, GIT_ZSTREAM_DEFLATE);
+}
+
+int git_zstream_inflatebuf(git_buf *out, const void *in, size_t in_len)
+{
+	return zstream_buf(out, in, in_len, GIT_ZSTREAM_INFLATE);
 }
