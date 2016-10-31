@@ -5,6 +5,7 @@
 #include <git2.h>
 #include <posix.h>
 #include "common.h"
+#include "vector.h"
 
 /**
  * Replace for `clar_must_pass` that passes the last library error as the
@@ -96,6 +97,23 @@ GIT_INLINE(void) clar__assert_equal_oid(
 #define cl_assert_equal_oid(one, two) \
 	clar__assert_equal_oid(__FILE__, __LINE__, \
 		"OID mismatch: " #one " != " #two, (one), (two))
+
+GIT_INLINE(void) clar__assert_equal_vector_str(
+	const char *file, int line,
+	const git_vector *a, const git_vector *b)
+{
+	clar__assert_equal(file, line, "Vector length mismatch: %" PRIuZ " != %" PRIuZ, 1, PRIuZ, git_vector_length(a), git_vector_length(b));
+
+	size_t i;
+	char *string;
+	git_vector_foreach(a, i, string) {
+		clar__assert_equal(file, line, "Vector element mismatch: %s != %s", 1, "%s", string, git_vector_get(b, i));
+	}
+}
+
+#define cl_assert_equal_v_str(a, b) \
+	clar__assert_equal_vector_str(__FILE__, __LINE__, \
+		(a), (b))
 
 /*
  * Some utility macros for building long strings

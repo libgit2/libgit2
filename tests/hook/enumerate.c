@@ -13,28 +13,27 @@ void test_hook_enumerate__cleanup(void)
 	g_repo = NULL;
 }
 
-int test_git_hook_foreach_cb(const char *hook_name, void *payload)
+static int test_git_hook_foreach_cb(const char *hook_name, void *payload)
 {
-	git_buf *hook_list = payload;
-	git_buf_puts(hook_list, hook_name);
+	git_vector *hook_list = payload;
+	git_vector_insert(hook_list, (char *)hook_name);
 	return 0;
 }
 
 void test_hook_enumerate__foreach_hooks(void)
 {
-	git_buf hook_list;
-	git_buf expected_list;
-	git_buf_init(&hook_list, 0);
-	git_buf_init(&expected_list, 0);
+	git_vector hook_list = GIT_VECTOR_INIT;
+	git_vector expected_list = GIT_VECTOR_INIT;
 
-	git_buf_puts(&expected_list, "commit-msg");
-	git_buf_puts(&expected_list, "post-merge");
+	git_vector_insert(&expected_list, "commit-msg");
+	git_vector_insert(&expected_list, "post-merge");
 
 	cl_git_pass(git_hook_foreach(g_repo, test_git_hook_foreach_cb, &hook_list));
 
-	cl_assert_equal_s(git_buf_cstr(&hook_list), git_buf_cstr(&expected_list));
-	git_buf_free(&hook_list);
-	git_buf_free(&expected_list);
+	cl_assert_equal_v_str(&hook_list, &expected_list);
+
+	git_vector_free(&hook_list);
+	git_vector_free(&expected_list);
 }
 
 #define ALT_HOOK_DIR "../testhooks"
@@ -43,8 +42,8 @@ void test_hook_enumerate__foreach_hooks_config_override(void)
 {
 	git_config *cfg;
 	git_buf alt_hook = GIT_BUF_INIT;
-	git_buf hook_list = GIT_BUF_INIT;
-	git_buf expected_list = GIT_BUF_INIT;
+	git_vector hook_list = GIT_VECTOR_INIT;
+	git_vector expected_list = GIT_VECTOR_INIT;
 
 	/* Change the repository hooks  */
 	cl_git_pass(git_repository_config(&cfg, g_repo));
@@ -68,17 +67,15 @@ void test_hook_enumerate__foreach_hooks_config_override(void)
 	git_buf_free(&alt_hook);
 
 	/* Check that we get the correct hooks */
-	git_buf_init(&hook_list, 0);
-	git_buf_init(&expected_list, 0);
-
-	git_buf_puts(&expected_list, "commit-msg");
-	git_buf_puts(&expected_list, "post-merge");
+	git_vector_insert(&expected_list, "commit-msg");
+	git_vector_insert(&expected_list, "post-merge");
 
 	cl_git_pass(git_hook_foreach(g_repo, test_git_hook_foreach_cb, &hook_list));
 
-	cl_assert_equal_s(git_buf_cstr(&hook_list), git_buf_cstr(&expected_list));
-	git_buf_free(&hook_list);
-	git_buf_free(&expected_list);
+	cl_assert_equal_v_str(&hook_list, &expected_list);
+
+	git_vector_free(&hook_list);
+	git_vector_free(&expected_list);
 }
 
 #undef ALT_HOOK_DIR
