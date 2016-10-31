@@ -1,9 +1,6 @@
 #!/bin/bash
 set -e
 
-# Environment check
-[ -z "$COVERITY_TOKEN" ] && echo "Need to set a coverity token" && exit 1
-
 # Only run this on our branches
 echo "Branch: $TRAVIS_BRANCH  |  Pull request: $TRAVIS_PULL_REQUEST  |  Slug: $TRAVIS_REPO_SLUG"
 if [ "$TRAVIS_BRANCH" != "master" -o "$TRAVIS_PULL_REQUEST" != "false" -o "$TRAVIS_REPO_SLUG" != "libgit2/libgit2" ];
@@ -11,6 +8,9 @@ then
 	echo "Only analyzing the 'master' brach of the main repository."
 	exit 0
 fi
+
+# Environment check
+[ -z "$COVERITY_TOKEN" ] && echo "Need to set a coverity token" && exit 1
 
 case $(uname -m) in
 	i?86)				BITS=32 ;;
