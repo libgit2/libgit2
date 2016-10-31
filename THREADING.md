@@ -88,7 +88,7 @@ of libssh2 as described above, `git_openssl_set_locking()` is a no-op.
 
 If your programming language offers a package/bindings for OpenSSL,
 you should very strongly prefer to use that in order to set up
-locking, as they provide a level of coördination which is impossible
+locking, as they provide a level of coordination which is impossible
 when using this function.
 
 See the
@@ -102,7 +102,7 @@ if there are alternatives provided by the system.
 libssh2 may be linked against OpenSSL or libgcrypt. If it uses OpenSSL,
 see the above paragraphs. If it uses libgcrypt, then you need to
 set up its locking before using it multi-threaded. libgit2 has no
-direct connection to libgcrypt and thus has not convenience functions for
+direct connection to libgcrypt and thus has no convenience functions for
 it (but libgcrypt has macros). Read libgcrypt's
 [threading documentation for more information](http://www.gnupg.org/documentation/manuals/gcrypt/Multi_002dThreading.html)
 

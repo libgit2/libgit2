@@ -5,7 +5,7 @@ So, you want to start helping out with `libgit2`? That's fantastic! We
 welcome contributions and we promise we'll try to be nice.
 
 This is a list of libgit2 related projects that new contributors can take
-on.  It includes a number of good starter projects and well as some larger
+on.  It includes a number of good starter projects as well as some larger
 ideas that no one is actively working on.
 
 ## Before You Start
