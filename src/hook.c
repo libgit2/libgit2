@@ -34,7 +34,7 @@ const char * const githooks[] = {
 	"post-rewrite",
 };
 
-int git_hook_dir(git_buf *out_dir, git_repository *repo)
+static int hook_dir(git_buf *out_dir, git_repository *repo)
 {
 	int err;
 	git_buf tmp_path = GIT_BUF_INIT;
@@ -65,6 +65,23 @@ int git_hook_dir(git_buf *out_dir, git_repository *repo)
 	return 0;
 }
 
+int git_hook_dir(char **out_dir, git_repository *repo) {
+	git_buf hook_dir_buf = GIT_BUF_INIT;
+	int err;
+
+	assert(out_dir != NULL);
+
+	err = hook_dir(&hook_dir_buf, repo);
+	if (err != 0) {
+		*out_dir = NULL;
+		return -1;
+	}
+
+	*out_dir = git_buf_detach(&hook_dir_buf);
+
+	return 0;
+}
+
 static int build_hook_path(char **out_path, git_repository *repo, const char *hook_name)
 {
 	int err;
@@ -72,7 +89,7 @@ static int build_hook_path(char **out_path, git_repository *repo, const char *ho
 
 	assert(hook_name);
 
-	err = git_hook_dir(&hook_path, repo);
+	err = hook_dir(&hook_path, repo);
 	if (err != 0)
 		return -1;
 

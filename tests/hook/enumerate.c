@@ -42,6 +42,7 @@ void test_hook_enumerate__foreach_hooks_config_override(void)
 {
 	git_config *cfg;
 	git_buf alt_hook = GIT_BUF_INIT;
+	char *alt_hook_str;
 	git_vector hook_list = GIT_VECTOR_INIT;
 	git_vector expected_list = GIT_VECTOR_INIT;
 
@@ -49,7 +50,8 @@ void test_hook_enumerate__foreach_hooks_config_override(void)
 	cl_git_pass(git_repository_config(&cfg, g_repo));
 	cl_git_pass(git_config_set_string(cfg, "core.hooksPath", ALT_HOOK_DIR));
 
-	cl_git_pass(git_hook_dir(&alt_hook, g_repo));
+	cl_git_pass(git_hook_dir(&alt_hook_str, g_repo));
+	cl_git_pass(git_buf_sets(&alt_hook, alt_hook_str));
 
 	/* Setup an alternate hook directory */
 	cl_must_pass(p_mkdir(git_buf_cstr(&alt_hook), 0777));

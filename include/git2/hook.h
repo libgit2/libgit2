@@ -24,11 +24,11 @@ GIT_BEGIN_DECL
  *
  * This will obey core.hooksPath.
  *
- * @param out_dir A pointer to a git_buf that will be filled with the absolute path.
+ * @param out_dir The absolute path to the hooks location.
  * @param repo The repository to get the hooks location from.
  * @return 0 on success, or an error code.
  */
-GIT_EXTERN(int) git_hook_dir(git_buf *out_dir, git_repository *repo);
+GIT_EXTERN(int) git_hook_dir(char **out_dir, git_repository *repo);
 
 typedef int (*git_hook_foreach_cb)(const char *hook_name, void *payload);
 
