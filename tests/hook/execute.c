@@ -13,12 +13,12 @@ void test_hook_execute__cleanup(void)
 	g_repo = NULL;
 }
 
-static int hook_exec_1(git_hook_env env, void *payload)
+static int hook_exec_1(git_hook_env *env, void *payload)
 {
 	int *hook_called = payload;
 
-	cl_assert_equal_i(env.args.count, 1);
-	cl_assert_equal_s(env.args.strings[0], "1");
+	cl_assert_equal_i(env->args.count, 1);
+	cl_assert_equal_s(env->args.strings[0], "1");
 
 	*hook_called = 1;
 
@@ -33,17 +33,17 @@ void test_hook_execute__hook_called(void)
 	cl_assert_equal_i_(hook_called, 1, "hook wasn't called");
 }
 
-static int hook_exec_2(git_hook_env env, void *payload)
+static int hook_exec_2(git_hook_env *env, void *payload)
 {
 	int *hook_called = payload;
 
-	cl_assert_equal_i(env.args.count, 0);
-	cl_assert_equal_s(git_buf_cstr(env.io), "input-data");
+	cl_assert_equal_i(env->args.count, 0);
+	cl_assert_equal_s(git_buf_cstr(env->io), "input-data");
 
 	*hook_called = 1;
 
-	git_buf_clear(env.io);
-	git_buf_puts(env.io, "output-data");
+	git_buf_clear(env->io);
+	git_buf_puts(env->io, "output-data");
 
 	return 0;
 }
@@ -76,7 +76,7 @@ static void hook_exec_destruct(void *payload)
 	destruct_called = 1;
 }
 
-static int hook_exec_cleanup(git_hook_env env, void *payload)
+static int hook_exec_cleanup(git_hook_env *env, void *payload)
 {
 	GIT_UNUSED(env);
 	GIT_UNUSED(payload);

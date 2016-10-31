@@ -183,7 +183,7 @@ static int hook_execute_va(git_buf *io, git_repository *repo, const char *name, 
 
 	env.args.strings = (char **)git_vector_detach(&env.args.count, NULL, &arg_vector);
 
-	err = repo->hook_executor(env, repo->hook_payload);
+	err = repo->hook_executor(&env, repo->hook_payload);
 
 cleanup:
 	git__free(env.path);

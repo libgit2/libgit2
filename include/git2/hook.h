@@ -68,7 +68,7 @@ typedef struct {
 typedef void (*git_hook_destructor_cb)(void *payload);
 
 typedef int (*git_hook_execution_cb)(
-	git_hook_env env,
+	git_hook_env *env,
 	void *payload);
 
 /**
