@@ -13,7 +13,7 @@ void test_hook_execute__cleanup(void)
 	g_repo = NULL;
 }
 
-static int hook_exec_1(git_hook_env *env, void *payload)
+static int hook_exec__called_with_argument(git_hook_env *env, void *payload)
 {
 	int *hook_called = payload;
 
@@ -25,15 +25,15 @@ static int hook_exec_1(git_hook_env *env, void *payload)
 	return 0;
 }
 
-void test_hook_execute__hook_called(void)
+void test_hook_execute__hook_called_with_argument(void)
 {
 	int hook_called = 0;
-	cl_must_pass(git_hook_register_callback(g_repo, hook_exec_1, NULL, &hook_called));
+	cl_must_pass(git_hook_register_callback(g_repo, hook_exec__called_with_argument, NULL, &hook_called));
 	cl_must_pass(git_hook_execute(g_repo, "post-merge", "1", NULL));
 	cl_assert_equal_i_(hook_called, 1, "hook wasn't called");
 }
 
-static int hook_exec_2(git_hook_env *env, void *payload)
+static int hook_exec__called_with_io(git_hook_env *env, void *payload)
 {
 	int *hook_called = payload;
 
@@ -56,7 +56,7 @@ void test_hook_execute__hook_called_with_io(void)
 	git_buf_init(&input_data, 0);
 	git_buf_puts(&input_data, "input-data");
 
-	cl_must_pass(git_hook_register_callback(g_repo, hook_exec_2, NULL, &hook_called));
+	cl_must_pass(git_hook_register_callback(g_repo, hook_exec__called_with_io, NULL, &hook_called));
 	cl_must_pass(git_hook_execute_io(&input_data, g_repo, "post-merge", NULL));
 
 	cl_assert_equal_i_(hook_called, 1, "hook wasn't called");
@@ -65,9 +65,16 @@ void test_hook_execute__hook_called_with_io(void)
 	git_buf_free(&input_data);
 }
 
+static int hook_exec__frees_payload_with_repo(git_hook_env *env, void *payload)
+{
+	GIT_UNUSED(env);
+	GIT_UNUSED(payload);
+	return 0;
+}
+
 static int destruct_called = 0;
 
-static void hook_exec_destruct(void *payload)
+static void hook_destruct__frees_payload_with_repo(void *payload)
 {
 	char **malloc_str = (char **)payload;
 	git__free(*malloc_str);
@@ -76,14 +83,7 @@ static void hook_exec_destruct(void *payload)
 	destruct_called = 1;
 }
 
-static int hook_exec_cleanup(git_hook_env *env, void *payload)
-{
-	GIT_UNUSED(env);
-	GIT_UNUSED(payload);
-	return 0;
-}
-
-void test_hook_execute__free_payload(void)
+void test_hook_execute__frees_payload_with_repo(void)
 {
 	git_repository *repo;
 	const char * test_str = "a test string";
@@ -92,7 +92,10 @@ void test_hook_execute__free_payload(void)
 	strcpy(*malloc_str, test_str);
 
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
-	cl_must_pass(git_hook_register_callback(repo, hook_exec_cleanup, hook_exec_destruct, malloc_str));
+	cl_must_pass(git_hook_register_callback(repo,
+		hook_exec__frees_payload_with_repo,
+		hook_destruct__frees_payload_with_repo,
+		malloc_str));
 	git_repository_free(repo);
 
 	cl_assert_equal_i(destruct_called, 1);
