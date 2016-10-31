@@ -76,7 +76,9 @@ static int build_hook_path(char **out_path, git_repository *repo, const char *ho
 	if (err != 0)
 		return -1;
 
-	git_buf_joinpath(&hook_path, hook_path.ptr, hook_name);
+	err = git_buf_joinpath(&hook_path, hook_path.ptr, hook_name);
+	if (err != 0)
+		return -1;
 
 	*out_path = git_buf_detach(&hook_path);
 
