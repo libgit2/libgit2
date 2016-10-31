@@ -48,20 +48,24 @@ GIT_EXTERN(int) git_hook_foreach(
 	void *payload);
 
 /**
- * A hook environment
+ * A hook environment.
  *
  * This structure will be provided by the library when a hook needs to
- * be executed.
- *
- * - `path` is the absolute path to the hook executable.
- * - `args` is the argument list for the hook.
- * - `io` is either an in/out pointer to either data that must be provided to
- *        the hook, a pointer where the executor will stash data outputted by
- *        the hook, or both.
+ * be executed. You do not need to free it.
  */
 typedef struct {
+	/** The absolute path to the hook executable. */
 	char *path;
+
+	/** The argument list for the hook. */
 	git_strarray args;
+
+	/**
+	 * On entering the hook executor, it will contain data that must be provided
+	 * to the hook (i.e its stdin)
+	 * On exiting the hook, you can set it to the hook output for
+	 * FIXME: what for actually ?
+	 */
 	git_buf *io;
 } git_hook_env;
 
