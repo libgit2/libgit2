@@ -177,8 +177,6 @@ static int hook_execute_va(git_buf *io, git_repository *repo, const char *name, 
 		git_vector_insert(&arg_vector, arg);
 	}
 
-	va_end(args);
-
 	env.io = io;
 
 	env.args.strings = (char **)git_vector_detach(&env.args.count, NULL, &arg_vector);
