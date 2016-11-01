@@ -65,7 +65,7 @@ void test_hook_execute__hook_called_with_io(void)
 	git_buf_free(&input_data);
 }
 
-static int hook_exec__frees_payload_with_repo(git_hook_env *env, void *payload)
+static int hook_exec__executes_destructor_on_repo_free(git_hook_env *env, void *payload)
 {
 	GIT_UNUSED(env);
 	GIT_UNUSED(payload);
@@ -74,21 +74,21 @@ static int hook_exec__frees_payload_with_repo(git_hook_env *env, void *payload)
 
 static int destruct_called = 0;
 
-static void hook_destruct__frees_payload_with_repo(void *payload)
+static void hook_destruct__executes_destructor_on_repo_free(void *payload)
 {
 	GIT_UNUSED(payload);
 
 	destruct_called = 1;
 }
 
-void test_hook_execute__frees_payload_with_repo(void)
+void test_hook_execute__executes_destructor_on_repo_free(void)
 {
 	git_repository *repo;
 
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
 	cl_must_pass(git_hook_register_callback(repo,
-		hook_exec__frees_payload_with_repo,
-		hook_destruct__frees_payload_with_repo,
+		hook_exec__executes_destructor_on_repo_free,
+		hook_destruct__executes_destructor_on_repo_free,
 		NULL));
 	git_repository_free(repo);
 
