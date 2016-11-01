@@ -358,6 +358,8 @@ typedef struct {
 } git_push_update;
 
 /**
+ * Callback used to inform of upcoming updates.
+ *
  * @param updates an array containing the updates which will be sent
  * as commands to the destination.
  * @param len number of elements in `updates`
@@ -401,7 +403,7 @@ struct git_remote_callbacks {
 	 * connection to proceed. Returns 1 to allow the connection, 0
 	 * to disallow it or a negative value to indicate an error.
 	 */
-        git_transport_certificate_check_cb certificate_check;
+	git_transport_certificate_check_cb certificate_check;
 
 	/**
 	 * During the download of new data, this will be regularly
