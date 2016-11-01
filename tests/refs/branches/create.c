@@ -100,6 +100,7 @@ void test_refs_branches_create__can_force_create_over_current_branch_in_bare_rep
 	oid = git_commit_id(target);
 
 	cl_git_pass(git_branch_create(&branch, repo, "master", target, 1));
+	git_reference_free(branch);
 	branch = NULL;
 	cl_git_pass(git_branch_lookup(&branch, repo, "master", GIT_BRANCH_LOCAL));
 	cl_assert_equal_s("refs/heads/master", git_reference_name(branch));
