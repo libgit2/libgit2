@@ -50,7 +50,7 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 			if ((recvd = gitno_recv(buf)) < 0)
 				return recvd;
 
-			if (recvd == 0 && !flush) {
+			if (recvd == 0) {
 				giterr_set(GITERR_NET, "early EOF");
 				return GIT_EEOF;
 			}
