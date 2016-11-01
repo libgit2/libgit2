@@ -102,10 +102,11 @@ GIT_INLINE(void) clar__assert_equal_vector_str(
 	const char *file, int line,
 	const git_vector *a, const git_vector *b)
 {
-	clar__assert_equal(file, line, "Vector length mismatch: %" PRIuZ " != %" PRIuZ, 1, PRIuZ, git_vector_length(a), git_vector_length(b));
-
 	size_t i;
 	char *string;
+
+	clar__assert_equal(file, line, "Vector length mismatch: %" PRIuZ " != %" PRIuZ, 1, PRIuZ, git_vector_length(a), git_vector_length(b));
+
 	git_vector_foreach(a, i, string) {
 		clar__assert_equal(file, line, "Vector element mismatch: %s != %s", 1, "%s", string, git_vector_get(b, i));
 	}
