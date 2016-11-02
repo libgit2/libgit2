@@ -13,6 +13,7 @@
 #include "posix.h"
 #include "stream.h"
 #include "socket_stream.h"
+#include "openssl_stream.h"
 #include "netops.h"
 #include "git2/transport.h"
 #include "git2/sys/openssl.h"
@@ -71,12 +72,20 @@ static void shutdown_ssl_locking(void)
 
 #endif /* GIT_THREADS */
 
+static BIO_METHOD *git_stream_bio_method;
+static int init_bio_method(void);
+
 /**
  * This function aims to clean-up the SSL context which
  * we allocated.
  */
 static void shutdown_ssl(void)
 {
+	if (git_stream_bio_method) {
+		BIO_meth_free(git_stream_bio_method);
+		git_stream_bio_method = NULL;
+	}
+
 	if (git__ssl_ctx) {
 		SSL_CTX_free(git__ssl_ctx);
 		git__ssl_ctx = NULL;
@@ -121,6 +130,13 @@ int git_openssl_stream_global_init(void)
 		git__ssl_ctx = NULL;
 		return -1;
 	}
+
+	if (init_bio_method() < 0) {
+		SSL_CTX_free(git__ssl_ctx);
+		git__ssl_ctx = NULL;
+		return -1;
+	}
+
 #endif
 
 	git__on_shutdown(shutdown_ssl);
@@ -156,10 +172,8 @@ int git_openssl_set_locking(void)
 
 static int bio_create(BIO *b)
 {
-	b->init = 1;
-	b->num = 0;
-	b->ptr = NULL;
-	b->flags = 0;
+	BIO_set_init(b, 1);
+	BIO_set_data(b, NULL);
 
 	return 1;
 }
@@ -169,23 +183,22 @@ static int bio_destroy(BIO *b)
 	if (!b)
 		return 0;
 
-	b->init = 0;
-	b->num = 0;
-	b->ptr = NULL;
-	b->flags = 0;
+	BIO_set_data(b, NULL);
 
 	return 1;
 }
 
 static int bio_read(BIO *b, char *buf, int len)
 {
-	git_stream *io = (git_stream *) b->ptr;
+	git_stream *io = (git_stream *) BIO_get_data(b);
+
 	return (int) git_stream_read(io, buf, len);
 }
 
 static int bio_write(BIO *b, const char *buf, int len)
 {
-	git_stream *io = (git_stream *) b->ptr;
+	git_stream *io = (git_stream *) BIO_get_data(b);
+
 	return (int) git_stream_write(io, buf, len, 0);
 }
 
@@ -214,17 +227,22 @@ static int bio_puts(BIO *b, const char *str)
 	return bio_write(b, str, strlen(str));
 }
 
-static BIO_METHOD git_stream_bio_method = {
-	BIO_TYPE_SOURCE_SINK,
-	"git_stream",
-	bio_write,
-	bio_read,
-	bio_puts,
-	bio_gets,
-	bio_ctrl,
-	bio_create,
-	bio_destroy
-};
+static int init_bio_method(void)
+{
+	/* Set up the BIO_METHOD we use for wrapping our own stream implementations */
+	git_stream_bio_method = BIO_meth_new(BIO_TYPE_SOURCE_SINK | BIO_get_new_index(), "git_stream");
+	GITERR_CHECK_ALLOC(git_stream_bio_method);
+
+	BIO_meth_set_write(git_stream_bio_method, bio_write);
+	BIO_meth_set_read(git_stream_bio_method, bio_read);
+	BIO_meth_set_puts(git_stream_bio_method, bio_puts);
+	BIO_meth_set_gets(git_stream_bio_method, bio_gets);
+	BIO_meth_set_ctrl(git_stream_bio_method, bio_ctrl);
+	BIO_meth_set_create(git_stream_bio_method, bio_create);
+	BIO_meth_set_destroy(git_stream_bio_method, bio_destroy);
+
+	return 0;
+}
 
 static int ssl_set_error(SSL *ssl, int error)
 {
@@ -339,7 +357,7 @@ static int verify_server_cert(SSL *ssl, const char *host)
 		num = sk_GENERAL_NAME_num(alts);
 		for (i = 0; i < num && matched != 1; i++) {
 			const GENERAL_NAME *gn = sk_GENERAL_NAME_value(alts, i);
-			const char *name = (char *) ASN1_STRING_data(gn->d.ia5);
+			const char *name = (char *) ASN1_STRING_get0_data(gn->d.ia5);
 			size_t namelen = (size_t) ASN1_STRING_length(gn->d.ia5);
 
 			/* Skip any names of a type we're not looking for */
@@ -394,7 +412,7 @@ static int verify_server_cert(SSL *ssl, const char *host)
 		if (size > 0) {
 			peer_cn = OPENSSL_malloc(size + 1);
 			GITERR_CHECK_ALLOC(peer_cn);
-			memcpy(peer_cn, ASN1_STRING_data(str), size);
+			memcpy(peer_cn, ASN1_STRING_get0_data(str), size);
 			peer_cn[size] = '\0';
 		} else {
 			goto cert_fail_name;
@@ -445,11 +463,12 @@ int openssl_connect(git_stream *stream)
 
 	st->connected = true;
 
-	bio = BIO_new(&git_stream_bio_method);
+	bio = BIO_new(git_stream_bio_method);
 	GITERR_CHECK_ALLOC(bio);
-	bio->ptr = st->io;
 
+	BIO_set_data(bio, st->io);
 	SSL_set_bio(st->ssl, bio, bio);
+
 	/* specify the host in case SNI is needed */
 #ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
 	SSL_set_tlsext_host_name(st->ssl, st->host);
