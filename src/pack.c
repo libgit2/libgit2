@@ -1268,8 +1268,8 @@ static int pack_entry_find_offset(
 	const git_oid *short_oid,
 	size_t len)
 {
-	const uint32_t *level1_ofs = p->index_map.data;
-	const unsigned char *index = p->index_map.data;
+	const uint32_t *level1_ofs;
+	const unsigned char *index;
 	unsigned hi, lo, stride;
 	int pos, found = 0;
 	git_off_t offset;
@@ -1283,10 +1283,10 @@ static int pack_entry_find_offset(
 		if ((error = pack_index_open(p)) < 0)
 			return error;
 		assert(p->index_map.data);
-
-		index = p->index_map.data;
-		level1_ofs = p->index_map.data;
 	}
+
+	index = p->index_map.data;
+	level1_ofs = p->index_map.data;
 
 	if (p->index_version > 1) {
 		level1_ofs += 2;
