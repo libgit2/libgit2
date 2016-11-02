@@ -357,7 +357,7 @@ static int verify_server_cert(SSL *ssl, const char *host)
 		num = sk_GENERAL_NAME_num(alts);
 		for (i = 0; i < num && matched != 1; i++) {
 			const GENERAL_NAME *gn = sk_GENERAL_NAME_value(alts, i);
-			const char *name = (char *) ASN1_STRING_data(gn->d.ia5);
+			const char *name = (char *) ASN1_STRING_get0_data(gn->d.ia5);
 			size_t namelen = (size_t) ASN1_STRING_length(gn->d.ia5);
 
 			/* Skip any names of a type we're not looking for */
@@ -412,7 +412,7 @@ static int verify_server_cert(SSL *ssl, const char *host)
 		if (size > 0) {
 			peer_cn = OPENSSL_malloc(size + 1);
 			GITERR_CHECK_ALLOC(peer_cn);
-			memcpy(peer_cn, ASN1_STRING_data(str), size);
+			memcpy(peer_cn, ASN1_STRING_get0_data(str), size);
 			peer_cn[size] = '\0';
 		} else {
 			goto cert_fail_name;

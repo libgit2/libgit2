@@ -108,6 +108,11 @@ GIT_INLINE(void*) BIO_get_data(BIO *a)
 	return a->ptr;
 }
 
+GIT_INLINE(const unsigned char *) ASN1_STRING_get0_data(const ASN1_STRING *x)
+{
+	return ASN1_STRING_data((ASN1_STRING *)x);
+}
+
 # endif
 
 #endif
