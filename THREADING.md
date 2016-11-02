@@ -63,7 +63,7 @@ General Case
 ------------
 
 By default we use libcurl, which has its own ![recommendations for
-thread safety](http://curl.haxx.se/libcurl/c/libcurl-tutorial.html#Multi-threading).
+thread safety](https://curl.haxx.se/libcurl/c/threadsafe.html).
 
 If libcurl was not found or was disabled, libgit2 uses OpenSSL to be
 able to use HTTPS as a transport. This library is made to be
