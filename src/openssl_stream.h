@@ -7,11 +7,6 @@
 #ifndef INCLUDE_openssl_stream_h__
 #define INCLUDE_openssl_stream_h__
 
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/x509v3.h>
-#include <openssl/bio.h>
-
 #include "git2/sys/stream.h"
 
 extern int git_openssl_stream_global_init(void);
@@ -24,6 +19,14 @@ extern int git_openssl_stream_new(git_stream **out, const char *host, const char
  * we can program against the interface instead of littering the implementation
  * with ifdefs.
  */
+#ifdef GIT_OPENSSL
+# include <openssl/ssl.h>
+# include <openssl/err.h>
+# include <openssl/x509v3.h>
+# include <openssl/bio.h>
+
+
+
 # if OPENSSL_VERSION_NUMBER < 0x10100000L
 
 GIT_INLINE(BIO_METHOD*) BIO_meth_new(int type, const char *name)
@@ -113,6 +116,7 @@ GIT_INLINE(const unsigned char *) ASN1_STRING_get0_data(const ASN1_STRING *x)
 	return ASN1_STRING_data((ASN1_STRING *)x);
 }
 
-# endif
+# endif // OpenSSL < 1.1
+#endif // GIT_OPENSSL
 
 #endif
