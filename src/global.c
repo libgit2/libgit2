@@ -341,7 +341,7 @@ int git_libgit2_init(void)
 {
 	int ret;
 
-	/* Only init SSL the first time */
+	/* Only init subsystems the first time */
 	if ((ret = git_atomic_inc(&git__n_inits)) != 1)
 		return ret;
 
@@ -359,6 +359,7 @@ int git_libgit2_shutdown(void)
 	if ((ret = git_atomic_dec(&git__n_inits)) == 0) {
 		shutdown_common();
 		git__global_state_cleanup(&__state);
+		memset(&__state, 0, sizeof(__state));
 	}
 
 	return ret;
