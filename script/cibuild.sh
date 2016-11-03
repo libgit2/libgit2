@@ -44,8 +44,13 @@ ssh-keygen -t rsa -f ~/.ssh/id_rsa -N "" -q
 cat ~/.ssh/id_rsa.pub >>~/.ssh/authorized_keys
 ssh-keyscan -t rsa localhost >>~/.ssh/known_hosts
 
-# Get the fingerprint for localhost and remove the colons so we can parse it as a hex number
-export GITTEST_REMOTE_SSH_FINGERPRINT=$(ssh-keygen -F localhost -l | tail -n 1 | cut -d ' ' -f 2 | tr -d ':')
+# Get the fingerprint for localhost and remove the colons so we can parse it as
+# a hex number. The Mac version is newer so it has a different output format.
+if [ "$TRAVIS_OS_NAME" = "osx" ]; then
+    export GITTEST_REMOTE_SSH_FINGERPRINT=$(ssh-keygen -E md5 -F localhost -l | tail -n 1 | cut -d ' ' -f 3 | cut -d : -f2- | tr -d :)
+else
+    export GITTEST_REMOTE_SSH_FINGERPRINT=$(ssh-keygen -F localhost -l | tail -n 1 | cut -d ' ' -f 2 | tr -d ':')
+fi
 
 export GITTEST_REMOTE_URL="ssh://localhost/$HOME/_temp/test.git"
 export GITTEST_REMOTE_USER=$USER
