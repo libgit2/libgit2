@@ -126,8 +126,8 @@ struct git_repository {
 	git_attr_cache *attrcache;
 	git_diff_driver_registry *diff_drivers;
 
-	char *path_repository;
-	char *path_gitlink;
+	char *gitlink;
+	char *gitdir;
 	char *commondir;
 	char *workdir;
 	char *namespace;

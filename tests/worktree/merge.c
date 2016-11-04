@@ -72,7 +72,7 @@ void test_worktree_merge__merge_setup(void)
 	for (i = 0; i < ARRAY_SIZE(merge_files); i++) {
 		git_buf_clear(&path);
 		cl_git_pass(git_buf_printf(&path, "%s/%s",
-			    fixture.worktree->path_repository, merge_files[i]));
+			    fixture.worktree->gitdir, merge_files[i]));
 		cl_assert(git_path_exists(path.ptr));
 	}
 

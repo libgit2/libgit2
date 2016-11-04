@@ -117,8 +117,8 @@ void test_worktree_worktree__lookup(void)
 	git_buf_printf(&gitdir_path, "%s/worktrees/%s", fixture.repo->commondir, "testrepo-worktree");
 
 	cl_assert_equal_s(wt->gitdir_path, gitdir_path.ptr);
-	cl_assert_equal_s(wt->parent_path, fixture.repo->path_repository);
-	cl_assert_equal_s(wt->gitlink_path, fixture.worktree->path_gitlink);
+	cl_assert_equal_s(wt->parent_path, fixture.repo->gitdir);
+	cl_assert_equal_s(wt->gitlink_path, fixture.worktree->gitlink);
 	cl_assert_equal_s(wt->commondir_path, fixture.repo->commondir);
 
 	git_buf_free(&gitdir_path);
@@ -196,7 +196,7 @@ void test_worktree_worktree__open_invalid_parent(void)
 
 	cl_git_pass(git_buf_sets(&buf, "/path/to/nonexistent/gitdir"));
 	cl_git_pass(git_futils_writebuffer(&buf,
-		    fixture.worktree->path_gitlink, O_RDWR, 0644));
+		    fixture.worktree->gitlink, O_RDWR, 0644));
 
 	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
 	cl_git_fail(git_repository_open_from_worktree(&repo, wt));
@@ -254,7 +254,7 @@ void test_worktree_worktree__init_existing_worktree(void)
 	cl_git_fail(git_worktree_add(&wt, fixture.repo, "testrepo-worktree", path.ptr));
 
 	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
-	cl_assert_equal_s(wt->gitlink_path, fixture.worktree->path_gitlink);
+	cl_assert_equal_s(wt->gitlink_path, fixture.worktree->gitlink);
 
 	git_buf_free(&path);
 	git_worktree_free(wt);
@@ -271,7 +271,7 @@ void test_worktree_worktree__init_existing_path(void)
 	 * the init call */
 	for (i = 0; i < ARRAY_SIZE(wtfiles); i++) {
 		cl_git_pass(git_buf_joinpath(&path,
-			    fixture.worktree->path_repository, wtfiles[i]));
+			    fixture.worktree->gitdir, wtfiles[i]));
 		cl_git_pass(p_unlink(path.ptr));
 	}
 
@@ -281,7 +281,7 @@ void test_worktree_worktree__init_existing_path(void)
 	/* Verify files have not been re-created */
 	for (i = 0; i < ARRAY_SIZE(wtfiles); i++) {
 		cl_git_pass(git_buf_joinpath(&path,
-			    fixture.worktree->path_repository, wtfiles[i]));
+			    fixture.worktree->gitdir, wtfiles[i]));
 		cl_assert(!git_path_exists(path.ptr));
 	}
 

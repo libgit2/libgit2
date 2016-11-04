@@ -115,7 +115,7 @@ int git_fetchhead_write(git_repository *repo, git_vector *fetchhead_refs)
 
 	assert(repo && fetchhead_refs);
 
-	if (git_buf_joinpath(&path, repo->path_repository, GIT_FETCH_HEAD_FILE) < 0)
+	if (git_buf_joinpath(&path, repo->gitdir, GIT_FETCH_HEAD_FILE) < 0)
 		return -1;
 
 	if (git_filebuf_open(&file, path.ptr, GIT_FILEBUF_FORCE, GIT_REFS_FILE_MODE) < 0) {
@@ -249,7 +249,7 @@ int git_repository_fetchhead_foreach(git_repository *repo,
 
 	assert(repo && cb);
 
-	if (git_buf_joinpath(&path, repo->path_repository, GIT_FETCH_HEAD_FILE) < 0)
+	if (git_buf_joinpath(&path, repo->gitdir, GIT_FETCH_HEAD_FILE) < 0)
 		return -1;
 
 	if ((error = git_futils_readbuffer(&file, git_buf_cstr(&path))) < 0)

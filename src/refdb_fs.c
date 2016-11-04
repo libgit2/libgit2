@@ -1435,13 +1435,13 @@ static int setup_namespace(git_buf *gitpath, git_repository *repo)
 	char *parts, *start, *end;
 
 	/* Not all repositories have a gitpath */
-	if (repo->path_repository == NULL)
+	if (repo->gitdir == NULL)
 		return 0;
 	if (repo->commondir == NULL)
 		return 0;
 
 	/* Load the path to the repo first */
-	git_buf_puts(gitpath, repo->path_repository);
+	git_buf_puts(gitpath, repo->gitdir);
 
 	/* if the repo is not namespaced, nothing else to do */
 	if (repo->namespace == NULL)
@@ -1877,7 +1877,7 @@ static int refdb_reflog_fs__rename(git_refdb_backend *_backend, const char *old_
 		&normalized, new_name, GIT_REF_FORMAT_ALLOW_ONELEVEL)) < 0)
 			return error;
 
-	if (git_buf_joinpath(&temp_path, repo->path_repository, GIT_REFLOG_DIR) < 0)
+	if (git_buf_joinpath(&temp_path, repo->gitdir, GIT_REFLOG_DIR) < 0)
 		return -1;
 
 	if (git_buf_joinpath(&old_path, git_buf_cstr(&temp_path), old_name) < 0)

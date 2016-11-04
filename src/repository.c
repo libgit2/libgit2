@@ -165,8 +165,8 @@ void git_repository_free(git_repository *repo)
 		git_buf_free(git_array_get(repo->reserved_names, i));
 	git_array_clear(repo->reserved_names);
 
-	git__free(repo->path_gitlink);
-	git__free(repo->path_repository);
+	git__free(repo->gitlink);
+	git__free(repo->gitdir);
 	git__free(repo->commondir);
 	git__free(repo->workdir);
 	git__free(repo->namespace);
@@ -288,7 +288,7 @@ static int load_workdir(git_repository *repo, git_config *config, git_buf *paren
 
 	if (ce && ce->value) {
 		if ((error = git_path_prettify_dir(
-				&worktree, ce->value, repo->path_repository)) < 0)
+				&worktree, ce->value, repo->gitdir)) < 0)
 			goto cleanup;
 
 		repo->workdir = git_buf_detach(&worktree);
@@ -296,7 +296,7 @@ static int load_workdir(git_repository *repo, git_config *config, git_buf *paren
 	else if (parent_path && git_path_isdir(parent_path->ptr))
 		repo->workdir = git_buf_detach(parent_path);
 	else {
-		if (git_path_dirname_r(&worktree, repo->path_repository) < 0 ||
+		if (git_path_dirname_r(&worktree, repo->gitdir) < 0 ||
 		    git_path_to_dir(&worktree) < 0) {
 			error = -1;
 			goto cleanup;
@@ -553,8 +553,8 @@ int git_repository_open_bare(
 	repo = repository_alloc();
 	GITERR_CHECK_ALLOC(repo);
 
-	repo->path_repository = git_buf_detach(&path);
-	GITERR_CHECK_ALLOC(repo->path_repository);
+	repo->gitdir = git_buf_detach(&path);
+	GITERR_CHECK_ALLOC(repo->gitdir);
 	repo->commondir = git_buf_detach(&common_path);
 	GITERR_CHECK_ALLOC(repo->commondir);
 
@@ -763,19 +763,19 @@ int git_repository_open_ext(
 	repo = repository_alloc();
 	GITERR_CHECK_ALLOC(repo);
 
-	repo->path_repository = git_buf_detach(&path);
-	GITERR_CHECK_ALLOC(repo->path_repository);
+	repo->gitdir = git_buf_detach(&path);
+	GITERR_CHECK_ALLOC(repo->gitdir);
 
 	if (link_path.size) {
-		repo->path_gitlink = git_buf_detach(&link_path);
-		GITERR_CHECK_ALLOC(repo->path_gitlink);
+		repo->gitlink = git_buf_detach(&link_path);
+		GITERR_CHECK_ALLOC(repo->gitlink);
 	}
 	if (common_path.size) {
 		repo->commondir = git_buf_detach(&common_path);
 		GITERR_CHECK_ALLOC(repo->commondir);
 	}
 
-	if (repo->path_gitlink && repo->commondir && strcmp(repo->path_gitlink, repo->commondir))
+	if (repo->gitlink && repo->commondir && strcmp(repo->gitlink, repo->commondir))
 		repo->is_worktree = 1;
 
 	/*
@@ -1114,7 +1114,7 @@ int git_repository_index__weakptr(git_index **out, git_repository *repo)
 		git_buf index_path = GIT_BUF_INIT;
 		git_index *index;
 
-		if ((error = git_buf_joinpath(&index_path, repo->path_repository, GIT_INDEX_FILE)) < 0)
+		if ((error = git_buf_joinpath(&index_path, repo->gitdir, GIT_INDEX_FILE)) < 0)
 			return error;
 
 		error = git_index_open(&index, index_path.ptr);
@@ -1230,13 +1230,13 @@ bool git_repository__reserved_names(
 			prefixcmp = (error || ignorecase) ? git__prefixcmp_icase :
 				git__prefixcmp;
 
-			if (repo->path_gitlink &&
-				reserved_names_add8dot3(repo, repo->path_gitlink) < 0)
+			if (repo->gitlink &&
+				reserved_names_add8dot3(repo, repo->gitlink) < 0)
 				goto on_error;
 
-			if (repo->path_repository &&
-				prefixcmp(repo->path_repository, repo->workdir) == 0 &&
-				reserved_names_add8dot3(repo, repo->path_repository) < 0)
+			if (repo->gitdir &&
+				prefixcmp(repo->gitdir, repo->workdir) == 0 &&
+				reserved_names_add8dot3(repo, repo->gitdir) < 0)
 				goto on_error;
 		}
 	}
@@ -2237,7 +2237,7 @@ int git_repository_item_path(git_buf *out, git_repository *repo, git_repository_
 const char *git_repository_path(git_repository *repo)
 {
 	assert(repo);
-	return repo->path_repository;
+	return repo->gitdir;
 }
 
 const char *git_repository_workdir(git_repository *repo)
@@ -2366,7 +2366,7 @@ int git_repository__set_orig_head(git_repository *repo, const git_oid *orig_head
 
 	git_oid_fmt(orig_head_str, orig_head);
 
-	if ((error = git_buf_joinpath(&file_path, repo->path_repository, GIT_ORIG_HEAD_FILE)) == 0 &&
+	if ((error = git_buf_joinpath(&file_path, repo->gitdir, GIT_ORIG_HEAD_FILE)) == 0 &&
 		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_MERGE_FILE_MODE)) == 0 &&
 		(error = git_filebuf_printf(&file, "%.*s\n", GIT_OID_HEXSZ, orig_head_str)) == 0)
 		error = git_filebuf_commit(&file);
@@ -2387,7 +2387,7 @@ int git_repository_message(git_buf *out, git_repository *repo)
 
 	git_buf_sanitize(out);
 
-	if (git_buf_joinpath(&path, repo->path_repository, GIT_MERGE_MSG_FILE) < 0)
+	if (git_buf_joinpath(&path, repo->gitdir, GIT_MERGE_MSG_FILE) < 0)
 		return -1;
 
 	if ((error = p_stat(git_buf_cstr(&path), &st)) < 0) {
@@ -2408,7 +2408,7 @@ int git_repository_message_remove(git_repository *repo)
 	git_buf path = GIT_BUF_INIT;
 	int error;
 
-	if (git_buf_joinpath(&path, repo->path_repository, GIT_MERGE_MSG_FILE) < 0)
+	if (git_buf_joinpath(&path, repo->gitdir, GIT_MERGE_MSG_FILE) < 0)
 		return -1;
 
 	error = p_unlink(git_buf_cstr(&path));
@@ -2650,7 +2650,7 @@ int git_repository_state(git_repository *repo)
 
 	assert(repo);
 
-	if (git_buf_puts(&repo_path, repo->path_repository) < 0)
+	if (git_buf_puts(&repo_path, repo->gitdir) < 0)
 		return -1;
 
 	if (git_path_contains_file(&repo_path, GIT_REBASE_MERGE_INTERACTIVE_FILE))
@@ -2692,7 +2692,7 @@ int git_repository__cleanup_files(
 	for (error = 0, i = 0; !error && i < files_len; ++i) {
 		const char *path;
 
-		if (git_buf_joinpath(&buf, repo->path_repository, files[i]) < 0)
+		if (git_buf_joinpath(&buf, repo->gitdir, files[i]) < 0)
 			return -1;
 
 		path = git_buf_cstr(&buf);
@@ -2736,7 +2736,7 @@ int git_repository_is_shallow(git_repository *repo)
 	struct stat st;
 	int error;
 
-	if ((error = git_buf_joinpath(&path, repo->path_repository, "shallow")) < 0)
+	if ((error = git_buf_joinpath(&path, repo->gitdir, "shallow")) < 0)
 		return error;
 
 	error = git_path_lstat(path.ptr, &st);
