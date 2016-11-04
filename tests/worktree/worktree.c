@@ -217,6 +217,7 @@ void test_worktree_worktree__init(void)
 
 	/* Open and verify created repo */
 	cl_git_pass(git_repository_open(&repo, path.ptr));
+	cl_assert(git__suffixcmp(git_repository_workdir(repo), "worktree-new/") == 0);
 	cl_git_pass(git_branch_lookup(&branch, repo, "worktree-new", GIT_BRANCH_LOCAL));
 
 	git_buf_free(&path);

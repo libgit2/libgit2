@@ -61,6 +61,7 @@ static const struct {
 static int check_repositoryformatversion(git_config *config);
 
 #define GIT_COMMONDIR_FILE "commondir"
+#define GIT_GITDIR_FILE "gitdir"
 
 #define GIT_FILE_CONTENT_PREFIX "gitdir:"
 
@@ -275,9 +276,10 @@ static int load_config_data(git_repository *repo, const git_config *config)
 
 static int load_workdir(git_repository *repo, git_config *config, git_buf *parent_path)
 {
-	int         error;
+	int error;
 	git_config_entry *ce;
-	git_buf     worktree = GIT_BUF_INIT;
+	git_buf worktree = GIT_BUF_INIT;
+	git_buf path = GIT_BUF_INIT;
 
 	if (repo->is_bare)
 		return 0;
@@ -286,7 +288,24 @@ static int load_workdir(git_repository *repo, git_config *config, git_buf *paren
 			&ce, config, "core.worktree", false)) < 0)
 		return error;
 
-	if (ce && ce->value) {
+	if (repo->is_worktree) {
+		char *gitlink = git_worktree__read_link(repo->gitdir, GIT_GITDIR_FILE);
+		if (!gitlink) {
+			error = -1;
+			goto cleanup;
+		}
+
+		git_buf_attach(&worktree, gitlink, 0);
+
+		if ((git_path_dirname_r(&worktree, worktree.ptr)) < 0 ||
+		    git_path_to_dir(&worktree) < 0) {
+			error = -1;
+			goto cleanup;
+		}
+
+		repo->workdir = git_buf_detach(&worktree);
+	}
+	else if (ce && ce->value) {
 		if ((error = git_path_prettify_dir(
 				&worktree, ce->value, repo->gitdir)) < 0)
 			goto cleanup;
@@ -307,6 +326,7 @@ static int load_workdir(git_repository *repo, git_config *config, git_buf *paren
 
 	GITERR_CHECK_ALLOC(repo->workdir);
 cleanup:
+	git_buf_free(&path);
 	git_config_entry_free(ce);
 	return error;
 }
@@ -465,6 +485,9 @@ static int find_repo(
 					git_path_to_dir(&path);
 					git_buf_set(repo_path, path.ptr, path.size);
 
+					if (link_path)
+						git_buf_attach(link_path,
+							git_worktree__read_link(path.ptr, GIT_GITDIR_FILE), 0);
 					if (common_path)
 						git_buf_swap(&common_link, common_path);
 
@@ -775,7 +798,11 @@ int git_repository_open_ext(
 		GITERR_CHECK_ALLOC(repo->commondir);
 	}
 
-	if (repo->gitlink && repo->commondir && strcmp(repo->gitlink, repo->commondir))
+	if ((error = git_buf_joinpath(&path, repo->gitdir, "gitdir")) < 0)
+		goto cleanup;
+	/* A 'gitdir' file inside a git directory is currently
+	 * only used when the repository is a working tree. */
+	if (git_path_exists(path.ptr))
 		repo->is_worktree = 1;
 
 	/*
@@ -801,6 +828,7 @@ int git_repository_open_ext(
 	}
 
 cleanup:
+	git_buf_free(&path);
 	git_buf_free(&parent);
 	git_config_free(config);
 

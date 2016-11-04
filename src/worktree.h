@@ -30,4 +30,6 @@ struct git_worktree {
 	int locked:1;
 };
 
+char *git_worktree__read_link(const char *base, const char *file);
+
 #endif

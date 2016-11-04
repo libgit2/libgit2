@@ -61,7 +61,7 @@ exit:
 	return error;
 }
 
-static char *read_link(const char *base, const char *file)
+char *git_worktree__read_link(const char *base, const char *file)
 {
 	git_buf path = GIT_BUF_INIT, buf = GIT_BUF_INIT;
 
@@ -136,8 +136,8 @@ int git_worktree_lookup(git_worktree **out, git_repository *repo, const char *na
 	}
 
 	if ((wt->name = git__strdup(name)) == NULL
-	    || (wt->commondir_path = read_link(path.ptr, "commondir")) == NULL
-	    || (wt->gitlink_path = read_link(path.ptr, "gitdir")) == NULL
+	    || (wt->commondir_path = git_worktree__read_link(path.ptr, "commondir")) == NULL
+	    || (wt->gitlink_path = git_worktree__read_link(path.ptr, "gitdir")) == NULL
 	    || (wt->parent_path = git__strdup(git_repository_path(repo))) == NULL) {
 		error = -1;
 		goto out;
