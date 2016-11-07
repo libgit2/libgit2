@@ -178,7 +178,7 @@ static int hook_execute_va(git_buf *io, git_repository *repo, const char *name, 
 	int err = 0;
 	char *arg;
 	git_vector arg_vector = GIT_VECTOR_INIT;
-	git_hook_env env;
+	git_hook_env env = {};
 
 	assert(repo && name);
 
