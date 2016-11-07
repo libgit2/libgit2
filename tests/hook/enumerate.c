@@ -51,7 +51,7 @@ void test_hook_enumerate__foreach_hooks_config_override(void)
 	cl_git_pass(git_config_set_string(cfg, "core.hooksPath", ALT_HOOK_DIR));
 
 	cl_git_pass(git_hook_dir(&alt_hook_str, g_repo));
-	cl_git_pass(git_buf_sets(&alt_hook, alt_hook_str));
+	git_buf_attach(&alt_hook, alt_hook_str, strlen(alt_hook_str));
 
 	/* Setup an alternate hook directory */
 	cl_must_pass(p_mkdir(git_buf_cstr(&alt_hook), 0777));
