@@ -205,7 +205,11 @@ static int hook_execute_va(git_buf *io, git_repository *repo, const char *name, 
 
 	env.args.strings = (char **)git_vector_detach(&env.args.count, NULL, &arg_vector);
 
+	giterr_clear();
 	err = repo->hook_executor(&env, repo->hook_payload);
+	if (err < 0 && !giterr_last()) {
+		giterr_set(GITERR_HOOK, "hook \"%s\" reported failure", name);
+	}
 
 cleanup:
 	git__free(env.path);
