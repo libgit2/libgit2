@@ -187,8 +187,12 @@ static int hook_execute_va(git_buf *io, git_repository *repo, const char *name, 
 		goto cleanup;
 
 	err = check_hook_path(env.path);
-	if (err != 0)
+	if (err != 0) {
+		/* Ignore missing hook */
+		giterr_clear();
+		err = 0;
 		goto cleanup;
+	}
 
 	while ((arg = va_arg(args, char *))) {
 		if (arg == NULL)
