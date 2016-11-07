@@ -8,6 +8,7 @@
 #include "common.h"
 #include "posix.h"
 #include "repository.h"
+#include "annotated_commit.h"
 
 #include "git2/hook.h"
 
@@ -237,6 +238,28 @@ int git_hook_execute_io(git_buf *io, git_repository *repo, const char *hook_name
 	va_start(hook_args, hook_name);
 	err = hook_execute_va(io, repo, hook_name, hook_args);
 	va_end(hook_args);
+
+	return err;
+}
+
+/** High-level hook calls */
+
+int git_hook_call_pre_rebase(git_repository *repo, git_annotated_commit *upstream, git_annotated_commit *rebased)
+{
+	int err = 0;
+	const char *rebased_name;
+
+	assert(repo);
+
+	if (upstream && !upstream->ref_name)
+		return 0;
+
+	if (rebased && !rebased->ref_name)
+		return 0;
+
+	rebased_name = (rebased ? rebased->ref_name : "");
+
+	err = git_hook_execute(repo, "pre-rebase", upstream->ref_name, rebased_name, NULL);
 
 	return err;
 }
