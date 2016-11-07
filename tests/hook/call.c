@@ -36,7 +36,7 @@ int hook_exec__pre_rebase(git_hook_env *env, void *payload)
 {
 	GIT_UNUSED(payload);
 
-	if (strcasestr(env->args.strings[0], "master") != NULL) {
+	if (strstr(env->args.strings[0], "master") != NULL) {
 		return -1;
 	}
 
