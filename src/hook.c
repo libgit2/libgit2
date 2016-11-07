@@ -50,6 +50,7 @@ static int hook_dir(git_buf *out_dir, git_repository *repo)
 
 	err = git_config_get_path(&cfg_path, cfg, "core.hooksPath");
 	if (err == GIT_ENOTFOUND) {
+		giterr_clear();
 		git_buf_puts(&tmp_path, repo->path_repository);
 		git_buf_joinpath(&tmp_path, tmp_path.ptr, GIT_HOOKS_DIR);
 	} else if (err == GIT_OK) {
