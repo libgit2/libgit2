@@ -92,3 +92,30 @@ void test_worktree_open__submodule_worktree_child(void)
 	cleanup_fixture_worktree(&child_fixture);
 	cleanup_fixture_worktree(&parent_fixture);
 }
+
+void test_worktree_open__open_discovered_submodule_worktree(void)
+{
+	worktree_fixture parent_fixture =
+		WORKTREE_FIXTURE_INIT("submodules", WORKTREE_PARENT);
+	worktree_fixture child_fixture =
+		WORKTREE_FIXTURE_INIT(NULL, WORKTREE_CHILD);
+	git_buf path = GIT_BUF_INIT;
+	git_repository *repo;
+
+	setup_fixture_worktree(&parent_fixture);
+	cl_git_pass(p_rename(
+		"submodules/testrepo/.gitted",
+		"submodules/testrepo/.git"));
+	setup_fixture_worktree(&child_fixture);
+
+	cl_git_pass(git_repository_discover(&path,
+		git_repository_workdir(child_fixture.worktree), false, NULL));
+	cl_git_pass(git_repository_open(&repo, path.ptr));
+	cl_assert_equal_s(git_repository_workdir(child_fixture.worktree),
+		git_repository_workdir(repo));
+
+	git_buf_free(&path);
+	git_repository_free(repo);
+	cleanup_fixture_worktree(&child_fixture);
+	cleanup_fixture_worktree(&parent_fixture);
+}
