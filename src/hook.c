@@ -58,7 +58,7 @@ static int hook_dir(git_buf *out_dir, git_repository *repo)
 		git_buf_free(&cfg_path);
 	} else {
 		/* XXX: error reporting */
-		return NULL;
+		return -1;
 	}
 
 	*out_dir = tmp_path;
