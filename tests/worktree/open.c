@@ -8,18 +8,91 @@
 #define COMMON_REPO "testrepo"
 #define WORKTREE_REPO "testrepo-worktree"
 
+static void assert_worktree_valid(git_repository *wt, const char *parentdir, const char *wtdir)
+{
+	git_buf path = GIT_BUF_INIT;
+
+	cl_assert(wt->is_worktree);
+
+	cl_git_pass(git_buf_joinpath(&path, clar_sandbox_path(), wtdir));
+	cl_git_pass(git_path_prettify(&path, path.ptr, NULL));
+	cl_git_pass(git_path_to_dir(&path));
+	cl_assert_equal_s(wt->workdir, path.ptr);
+
+	cl_git_pass(git_buf_joinpath(&path, path.ptr, ".git"));
+	cl_git_pass(git_path_prettify(&path, path.ptr, NULL));
+	cl_assert_equal_s(wt->gitlink, path.ptr);
+
+	cl_git_pass(git_buf_joinpath(&path, clar_sandbox_path(), parentdir));
+	cl_git_pass(git_buf_joinpath(&path, path.ptr, ".git"));
+	cl_git_pass(git_buf_joinpath(&path, path.ptr, "worktrees"));
+	cl_git_pass(git_buf_joinpath(&path, path.ptr, wtdir));
+	cl_git_pass(git_path_prettify(&path, path.ptr, NULL));
+	cl_git_pass(git_path_to_dir(&path));
+	cl_assert_equal_s(wt->gitdir, path.ptr);
+
+	git_buf_free(&path);
+}
+
 void test_worktree_open__repository(void)
 {
 	worktree_fixture fixture =
 		WORKTREE_FIXTURE_INIT(COMMON_REPO, WORKTREE_REPO);
 	setup_fixture_worktree(&fixture);
 
-	cl_assert(git_repository_path(fixture.worktree) != NULL);
-	cl_assert(git_repository_workdir(fixture.worktree) != NULL);
+	assert_worktree_valid(fixture.worktree, COMMON_REPO, WORKTREE_REPO);
 
-	cl_assert(!fixture.repo->is_worktree);
-	cl_assert(fixture.worktree->is_worktree);
+	cleanup_fixture_worktree(&fixture);
+}
 
+void test_worktree_open__repository_through_workdir(void)
+{
+	worktree_fixture fixture =
+		WORKTREE_FIXTURE_INIT(COMMON_REPO, WORKTREE_REPO);
+	git_repository *wt;
+
+	setup_fixture_worktree(&fixture);
+
+	cl_git_pass(git_repository_open(&wt, WORKTREE_REPO));
+	assert_worktree_valid(wt, COMMON_REPO, WORKTREE_REPO);
+
+	git_repository_free(wt);
+	cleanup_fixture_worktree(&fixture);
+}
+
+void test_worktree_open__repository_through_gitlink(void)
+{
+	worktree_fixture fixture =
+		WORKTREE_FIXTURE_INIT(COMMON_REPO, WORKTREE_REPO);
+	git_repository *wt;
+
+	setup_fixture_worktree(&fixture);
+
+	cl_git_pass(git_repository_open(&wt, WORKTREE_REPO "/.git"));
+	assert_worktree_valid(wt, COMMON_REPO, WORKTREE_REPO);
+
+	git_repository_free(wt);
+	cleanup_fixture_worktree(&fixture);
+}
+
+void test_worktree_open__repository_through_gitdir(void)
+{
+	worktree_fixture fixture =
+		WORKTREE_FIXTURE_INIT(COMMON_REPO, WORKTREE_REPO);
+	git_buf gitdir_path = GIT_BUF_INIT;
+	git_repository *wt;
+
+	setup_fixture_worktree(&fixture);
+
+	cl_git_pass(git_buf_joinpath(&gitdir_path, COMMON_REPO, ".git"));
+	cl_git_pass(git_buf_joinpath(&gitdir_path, gitdir_path.ptr, "worktrees"));
+	cl_git_pass(git_buf_joinpath(&gitdir_path, gitdir_path.ptr, "testrepo-worktree"));
+
+	cl_git_pass(git_repository_open(&wt, gitdir_path.ptr));
+	assert_worktree_valid(wt, COMMON_REPO, WORKTREE_REPO);
+
+	git_buf_free(&gitdir_path);
+	git_repository_free(wt);
 	cleanup_fixture_worktree(&fixture);
 }
 
