@@ -121,6 +121,11 @@ static int curls_connect(git_stream *stream)
 		return seterr_curl(s);
 	}
 
+	if (sockextr == -1) {
+		giterr_set(GITERR_NET, "curl socket is no longer valid");
+		return -1;
+	}
+
 	s->socket = sockextr;
 
 	if (s->parent.encrypted && failed_cert)
@@ -198,6 +203,7 @@ static int wait_for(curl_socket_t fd, bool reading)
 	FD_ZERO(&outfd);
 	FD_ZERO(&errfd);
 
+	assert(fd >= 0);
 	FD_SET(fd, &errfd);
 	if (reading)
 		FD_SET(fd, &infd);
