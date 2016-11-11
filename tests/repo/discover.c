@@ -189,3 +189,13 @@ void test_repo_discover__ceiling_should_not_affect_gitdir_redirection(void)
 	ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB, ceiling_dirs.ptr, SUB_REPOSITORY_GITDIR);
 	ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB_SUB, ceiling_dirs.ptr, DISCOVER_FOLDER);
 }
+
+void test_repo_discover__discovery_starting_at_file_succeeds(void)
+{
+	int fd;
+
+	cl_assert((fd = p_creat(SUB_REPOSITORY_FOLDER "/file", 0600)) >= 0);
+	cl_assert(p_close(fd) == 0);
+
+	ensure_repository_discover(SUB_REPOSITORY_FOLDER "/file", ceiling_dirs.ptr, SUB_REPOSITORY_GITDIR);
+}
