@@ -616,8 +616,10 @@ static int submodule_repo_init(
 	 * Old style: sub-repo goes directly into repo/<name>/.git/
 	 */
 	 if (use_gitlink) {
-		error = git_buf_join3(
-			&repodir, '/', git_repository_path(parent_repo), "modules", path);
+		error = git_repository_item_path(&repodir, parent_repo, GIT_REPOSITORY_ITEM_MODULES);
+		if (error < 0)
+			goto cleanup;
+		error = git_buf_joinpath(&repodir, repodir.ptr, path);
 		if (error < 0)
 			goto cleanup;
 
@@ -1084,8 +1086,10 @@ static int submodule_repo_create(
 	 * <repo-dir>/modules/<name>/ with a gitlink in the
 	 * sub-repo workdir directory to that repository.
 	 */
-	error = git_buf_join3(
-		&repodir, '/', git_repository_path(parent_repo), "modules", path);
+	error = git_repository_item_path(&repodir, parent_repo, GIT_REPOSITORY_ITEM_MODULES);
+	if (error < 0)
+		goto cleanup;
+	error = git_buf_joinpath(&repodir, repodir.ptr, path);
 	if (error < 0)
 		goto cleanup;
 

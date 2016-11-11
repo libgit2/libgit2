@@ -992,7 +992,8 @@ int git_repository_odb__weakptr(git_odb **out, git_repository *repo)
 		git_buf odb_path = GIT_BUF_INIT;
 		git_odb *odb;
 
-		if ((error = git_buf_joinpath(&odb_path, repo->commondir, GIT_OBJECTS_DIR)) < 0)
+		if ((error = git_repository_item_path(&odb_path, repo,
+				GIT_REPOSITORY_ITEM_OBJECTS)) < 0)
 			return error;
 
 		error = git_odb_open(&odb, odb_path.ptr);
