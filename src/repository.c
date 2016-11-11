@@ -36,6 +36,27 @@ GIT__USE_STRMAP
 # include "win32/w32_util.h"
 #endif
 
+static const struct {
+    git_repository_item_t parent;
+    const char *name;
+    bool directory;
+} items[] = {
+	{ GIT_REPOSITORY_ITEM_GITDIR, NULL, true },
+	{ GIT_REPOSITORY_ITEM_WORKDIR, NULL, true },
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, NULL, true },
+	{ GIT_REPOSITORY_ITEM_GITDIR, "index", false },
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, "objects", true },
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, "refs", true },
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, "packed-refs", false },
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, "remotes", true },
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, "config", false },
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, "info", true },
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, "hooks", true },
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, "logs", true },
+	{ GIT_REPOSITORY_ITEM_GITDIR, "modules", true },
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, "worktrees", true }
+};
+
 static int check_repositoryformatversion(git_config *config);
 
 #define GIT_COMMONDIR_FILE "commondir"
@@ -2050,6 +2071,46 @@ int git_repository_is_empty(git_repository *repo)
 	git_reference_free(head);
 
 	return is_empty;
+}
+
+int git_repository_item_path(git_buf *out, git_repository *repo, git_repository_item_t item)
+{
+	const char *parent;
+
+	switch (items[item].parent) {
+		case GIT_REPOSITORY_ITEM_GITDIR:
+			parent = git_repository_path(repo);
+			break;
+		case GIT_REPOSITORY_ITEM_WORKDIR:
+			parent = git_repository_workdir(repo);
+			break;
+		case GIT_REPOSITORY_ITEM_COMMONDIR:
+			parent = git_repository_commondir(repo);
+			break;
+		default:
+			giterr_set(GITERR_INVALID, "Invalid item directory");
+			return -1;
+	}
+
+	if (parent == NULL) {
+		giterr_set(GITERR_INVALID, "Path cannot exist in repository");
+		return -1;
+	}
+
+	if (git_buf_sets(out, parent) < 0)
+		return -1;
+
+	if (items[item].name) {
+		if (git_buf_joinpath(out, parent, items[item].name) < 0)
+			return -1;
+	}
+
+	if (items[item].directory) {
+		if (git_path_to_dir(out) < 0)
+			return -1;
+	}
+
+	return 0;
 }
 
 const char *git_repository_path(git_repository *repo)
