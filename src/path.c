@@ -1347,7 +1347,7 @@ int git_path_diriter_next(git_path_diriter *diriter)
 				return GIT_ITEROVER;
 
 			giterr_set(GITERR_OS,
-				"Could not read directory '%s'", diriter->path);
+				"Could not read directory '%s'", diriter->path.ptr);
 			return -1;
 		}
 	} while (skip_dot && git_path_is_dot_or_dotdot(de->d_name));
