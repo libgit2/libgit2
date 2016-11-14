@@ -613,9 +613,10 @@ static int _git_repository_open_ext_from_env(
 		git_repository_set_odb(repo, odb);
 
 	error = git__getenv(&alts_buf, "GIT_ALTERNATE_OBJECT_DIRECTORIES");
-	if (error == GIT_ENOTFOUND)
+	if (error == GIT_ENOTFOUND) {
 		giterr_clear();
-	else if (error < 0)
+		error = 0;
+	} else if (error < 0)
 		goto error;
         else {
 		const char *end;
@@ -638,9 +639,11 @@ static int _git_repository_open_ext_from_env(
 		}
 	}
 
-	error = git_repository_set_namespace(repo, git_buf_cstr(&namespace_buf));
-	if (error < 0)
-		goto error;
+	if (git_buf_len(&namespace_buf)) {
+		error = git_repository_set_namespace(repo, git_buf_cstr(&namespace_buf));
+		if (error < 0)
+			goto error;
+	}
 
 	git_repository_set_index(repo, index);
 
