@@ -1966,7 +1966,7 @@ static int checkout_path_suffixed(git_buf *path, const char *suffix)
 	if (i == INT_MAX) {
 		git_buf_truncate(path, path_len);
 
-		giterr_set(GITERR_CHECKOUT, "Could not write '%s': working directory file exists", path);
+		giterr_set(GITERR_CHECKOUT, "Could not write '%s': working directory file exists", path->ptr);
 		return GIT_EEXISTS;
 	}
 
@@ -2469,7 +2469,7 @@ static int checkout_data_init(
 			data->opts.checkout_strategy |= GIT_CHECKOUT_CONFLICT_STYLE_DIFF3;
 		else {
 			giterr_set(GITERR_CHECKOUT, "unknown style '%s' given for 'merge.conflictstyle'",
-				conflict_style);
+				conflict_style->value);
 			error = -1;
 			git_config_entry_free(conflict_style);
 			goto cleanup;

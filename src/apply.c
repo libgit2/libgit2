@@ -173,7 +173,7 @@ static int apply_hunk(
 		git_diff_line *line = git_array_get(patch->lines, linenum);
 
 		if (!line) {
-			error = apply_err("Preimage does not contain line %d", linenum);
+			error = apply_err("Preimage does not contain line %"PRIuZ, linenum);
 			goto done;
 		}
 
