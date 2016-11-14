@@ -18,6 +18,8 @@ void test_threads_refdb__cleanup(void)
 
 #define REPEAT 20
 #define THREADS 20
+/* Number of references to create or delete in each thread */
+#define NREFS 10
 
 struct th_data {
 	int id;
@@ -59,7 +61,7 @@ static void *create_refs(void *arg)
 	struct th_data *data = (struct th_data *) arg;
 	git_oid head;
 	char name[128];
-	git_reference *ref[10];
+	git_reference *ref[NREFS];
 	git_repository *repo;
 
 	cl_git_pass(git_repository_open(&repo, data->path));
@@ -69,14 +71,14 @@ static void *create_refs(void *arg)
 	} while (error == GIT_ELOCKED);
 	cl_git_pass(error);
 
-	for (i = 0; i < 10; ++i) {
+	for (i = 0; i < NREFS; ++i) {
 		p_snprintf(name, sizeof(name), "refs/heads/thread-%03d-%02d", data->id, i);
 		do {
 			error = git_reference_create(&ref[i], repo, name, &head, 0, NULL);
 		} while (error == GIT_ELOCKED);
 		cl_git_pass(error);
 
-		if (i == 5) {
+		if (i == NREFS/2) {
 			git_refdb *refdb;
 			cl_git_pass(git_repository_refdb(&refdb, repo));
 			do {
@@ -86,7 +88,7 @@ static void *create_refs(void *arg)
 		}
 	}
 
-	for (i = 0; i < 10; ++i)
+	for (i = 0; i < NREFS; ++i)
 		git_reference_free(ref[i]);
 
 	git_repository_free(repo);
@@ -105,7 +107,7 @@ static void *delete_refs(void *arg)
 
 	cl_git_pass(git_repository_open(&repo, data->path));
 
-	for (i = 0; i < 10; ++i) {
+	for (i = 0; i < NREFS; ++i) {
 		p_snprintf(
 			name, sizeof(name), "refs/heads/thread-%03d-%02d", (data->id) & ~0x3, i);
 
@@ -121,7 +123,7 @@ static void *delete_refs(void *arg)
 			git_reference_free(ref);
 		}
 
-		if (i == 5) {
+		if (i == NREFS/2) {
 			git_refdb *refdb;
 			cl_git_pass(git_repository_refdb(&refdb, repo));
 			do {
