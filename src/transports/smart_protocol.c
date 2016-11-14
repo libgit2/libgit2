@@ -50,7 +50,7 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 			if ((recvd = gitno_recv(buf)) < 0)
 				return recvd;
 
-			if (recvd == 0 && !flush) {
+			if (recvd == 0) {
 				giterr_set(GITERR_NET, "early EOF");
 				return GIT_EEOF;
 			}
@@ -222,8 +222,12 @@ static int recv_pkt(git_pkt **out, gitno_buffer *buf)
 		if (error < 0 && error != GIT_EBUFS)
 			return error;
 
-		if ((ret = gitno_recv(buf)) < 0)
+		if ((ret = gitno_recv(buf)) < 0) {
 			return ret;
+		} else if (ret == 0) {
+			giterr_set(GITERR_NET, "early EOF");
+			return GIT_EEOF;
+		}
 	} while (error);
 
 	gitno_consume(buf, line_end);
