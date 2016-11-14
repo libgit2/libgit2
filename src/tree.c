@@ -1164,8 +1164,8 @@ int git_tree_create_updated(git_oid *out, git_repository *repo, git_tree *baseli
 		goto cleanup;
 
 	for (i = 0; i < nupdates; i++) {
-		const git_tree_update *last_update = i == 0 ? NULL : &updates[i-1];
-		const git_tree_update *update = &updates[i];
+		const git_tree_update *last_update = i == 0 ? NULL : git_vector_get(&entries, i-1);
+		const git_tree_update *update = git_vector_get(&entries, i);
 		size_t common_prefix = 0, steps_up, j;
 		const char *path;
 
