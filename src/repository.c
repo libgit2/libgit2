@@ -410,7 +410,7 @@ static int find_repo(
 					break;
 				}
 			}
-			else if (S_ISREG(st.st_mode)) {
+			else if (S_ISREG(st.st_mode) && git__suffixcmp(path.ptr, "/" DOT_GIT) == 0) {
 				error = read_gitfile(&repo_link, path.ptr);
 				if (error < 0)
 					break;
