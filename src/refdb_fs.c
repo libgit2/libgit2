@@ -927,6 +927,7 @@ static int packed_remove_loose(refdb_fs_backend *backend)
 			continue;
 
 		if (error < 0) {
+			git_buf_free(&ref_content);
 			giterr_set(GITERR_REFERENCE, "failed to lock loose reference '%s'", ref->name);
 			return error;
 		}
@@ -957,6 +958,7 @@ static int packed_remove_loose(refdb_fs_backend *backend)
 		p_unlink(lock.path_original);
 	}
 
+	git_buf_free(&ref_content);
 	git_filebuf_cleanup(&lock);
 	return 0;
 }
