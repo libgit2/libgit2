@@ -44,7 +44,7 @@ static void ensure_repository_discover(const char *start_path,
 static void write_file(const char *path, const char *content)
 {
 	git_file file;
-   int error;
+	int error;
 
 	if (git_path_exists(path)) {
 		cl_git_pass(p_unlink(path));
