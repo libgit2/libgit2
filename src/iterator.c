@@ -1311,7 +1311,7 @@ static int filesystem_iterator_frame_push(
 
 	if (iter->frames.size == FILESYSTEM_MAX_DEPTH) {
 		giterr_set(GITERR_REPOSITORY,
-			"directory nesting too deep (%d)", iter->frames.size);
+			"directory nesting too deep (%"PRIuZ")", iter->frames.size);
 		return -1;
 	}
 

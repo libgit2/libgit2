@@ -149,7 +149,7 @@ static int fetchhead_ref_parse(
 
 	if (!*line) {
 		giterr_set(GITERR_FETCHHEAD,
-			"Empty line in FETCH_HEAD line %d", line_num);
+			"Empty line in FETCH_HEAD line %"PRIuZ, line_num);
 		return -1;
 	}
 
@@ -163,7 +163,7 @@ static int fetchhead_ref_parse(
 
 	if (strlen(oid_str) != GIT_OID_HEXSZ) {
 		giterr_set(GITERR_FETCHHEAD,
-			"Invalid object ID in FETCH_HEAD line %d", line_num);
+			"Invalid object ID in FETCH_HEAD line %"PRIuZ, line_num);
 		return -1;
 	}
 
@@ -171,7 +171,7 @@ static int fetchhead_ref_parse(
 		const git_error *oid_err = giterr_last();
 		const char *err_msg = oid_err ? oid_err->message : "Invalid object ID";
 
-		giterr_set(GITERR_FETCHHEAD, "%s in FETCH_HEAD line %d",
+		giterr_set(GITERR_FETCHHEAD, "%s in FETCH_HEAD line %"PRIuZ,
 			err_msg, line_num);
 		return -1;
 	}
@@ -180,7 +180,7 @@ static int fetchhead_ref_parse(
 	if (*line) {
 		if ((is_merge_str = git__strsep(&line, "\t")) == NULL) {
 			giterr_set(GITERR_FETCHHEAD,
-				"Invalid description data in FETCH_HEAD line %d", line_num);
+				"Invalid description data in FETCH_HEAD line %"PRIuZ, line_num);
 			return -1;
 		}
 
@@ -190,13 +190,13 @@ static int fetchhead_ref_parse(
 			*is_merge = 0;
 		else {
 			giterr_set(GITERR_FETCHHEAD,
-				"Invalid for-merge entry in FETCH_HEAD line %d", line_num);
+				"Invalid for-merge entry in FETCH_HEAD line %"PRIuZ, line_num);
 			return -1;
 		}
 
 		if ((desc = line) == NULL) {
 			giterr_set(GITERR_FETCHHEAD,
-				"Invalid description in FETCH_HEAD line %d", line_num);
+				"Invalid description in FETCH_HEAD line %"PRIuZ, line_num);
 			return -1;
 		}
 
@@ -213,7 +213,7 @@ static int fetchhead_ref_parse(
 			if ((desc = strstr(name, "' ")) == NULL ||
 				git__prefixcmp(desc, "' of ") != 0) {
 				giterr_set(GITERR_FETCHHEAD,
-					"Invalid description in FETCH_HEAD line %d", line_num);
+					"Invalid description in FETCH_HEAD line %"PRIuZ, line_num);
 				return -1;
 			}
 
@@ -277,7 +277,7 @@ int git_repository_fetchhead_foreach(git_repository *repo,
 	}
 
 	if (*buffer) {
-		giterr_set(GITERR_FETCHHEAD, "No EOL at line %d", line_num+1);
+		giterr_set(GITERR_FETCHHEAD, "No EOL at line %"PRIuZ, line_num+1);
 		error = -1;
 		goto done;
 	}

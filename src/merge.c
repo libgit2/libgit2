@@ -591,7 +591,7 @@ int git_repository_mergehead_foreach(
 	}
 
 	if (*buffer) {
-		giterr_set(GITERR_MERGE, "No EOL at line %d", line_num);
+		giterr_set(GITERR_MERGE, "No EOL at line %"PRIuZ, line_num);
 		error = -1;
 		goto cleanup;
 	}
