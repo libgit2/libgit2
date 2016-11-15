@@ -42,6 +42,9 @@ int git_cancellation_new(git_cancellation **out)
 
 void git_cancellation_free(git_cancellation *c)
 {
+	if (!c)
+		return;
+
 	git_array_clear(c->registrations);
 	git__free(c);
 }
