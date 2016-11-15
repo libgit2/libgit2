@@ -1014,8 +1014,10 @@ git_patch_parse_ctx *git_patch_parse_ctx_init(
 		return NULL;
 
 	if (content_len) {
-		if ((ctx->content = git__malloc(content_len)) == NULL)
+		if ((ctx->content = git__malloc(content_len)) == NULL) {
+			git__free(ctx);
 			return NULL;
+		}
 
 		memcpy((char *)ctx->content, content, content_len);
 	}
