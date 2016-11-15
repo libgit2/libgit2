@@ -1,4 +1,15 @@
-v0.24 + 1
+v0.25 + 1
+-------
+
+### Changes or improvements
+
+### API additions
+
+### API removals
+
+### Breaking API changes
+
+v0.25
 -------
 
 ### Changes or improvements
