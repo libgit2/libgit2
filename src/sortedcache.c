@@ -216,6 +216,7 @@ int git_sortedcache_lockandload(git_sortedcache *sc, git_buf *buf)
 	if (p_fstat(fd, &st) < 0) {
 		giterr_set(GITERR_OS, "failed to stat file");
 		error = -1;
+		(void)p_close(fd);
 		goto unlock;
 	}
 
