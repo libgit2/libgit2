@@ -72,4 +72,32 @@ GIT_EXTERN(int) git_cancellation_register(git_cancellation *c, git_cancellation_
  */
 GIT_EXTERN(int) git_cancellation_request(git_cancellation *c);
 
+/**
+ * Activate the cancellation for this thread
+ *
+ * Put the cancellation structure in thread-local storage where the next public
+ * function which supports cancellations can make use of it. This overwrites any
+ * cancellation that is currently active.
+ *
+ * The ownership of the cancellation moves to the library. Do not free its
+ * memory after calling this function.
+ *
+ * @param c the cancellation to activate
+ * @return 0
+ */
+GIT_EXTERN(int) git_cancellation_activate(git_cancellation *c);
+
+/**
+ * Deactivate the current cancellation for this thread
+ *
+ * If there is a cancellation set for this thread, remove it from thread-local
+ * storage and free it.
+ *
+ * You can use this after calling into the library to make sure there are no
+ * spurious cancellation triggers.
+ *
+ * @return 0
+ */
+GIT_EXTERN(int) git_cancellation_deactivate(void);
+
 #endif

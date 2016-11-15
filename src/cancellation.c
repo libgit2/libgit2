@@ -6,16 +6,17 @@
  */
 
 #include "common.h"
+#include "global.h"
 #include "array.h"
 
-#include "git2/cancellation.h"
+#include "cancellation.h"
 
 typedef struct {
 	git_cancellation_cb cb;
 	void *payload;
 } registration;
 
-struct  git_cancellation {
+struct git_cancellation {
 	/* Lock over the whole structure */
 	git_mutex lock;
 	git_array_t(registration) registrations;
@@ -116,4 +117,24 @@ int git_cancellation_request(git_cancellation *c)
  unlock:
 	git_mutex_unlock(&c->lock);
 	return error;
+}
+
+int git_cancellation_activate(git_cancellation *c)
+{
+	git_cancellation *old;
+
+	old = git__swap(GIT_GLOBAL->cancellation, c);
+
+	git_cancellation_free(old);
+	return 0;
+}
+
+int git_cancellation_deactivate(void)
+{
+	git_cancellation *old;
+
+	old = git__swap(GIT_GLOBAL->cancellation, NULL);
+
+	git_cancellation_free(old);
+	return 0;
 }
