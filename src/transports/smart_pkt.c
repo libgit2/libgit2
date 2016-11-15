@@ -437,13 +437,13 @@ int git_pkt_parse_line(
 
 	line += PKT_LEN_SIZE;
 	/*
-	 * TODO: How do we deal with empty lines? Try again? with the next
-	 * line?
+	 * The Git protocol does not specify empty lines as part
+	 * of the protocol. Not knowing what to do with an empty
+	 * line, we should return an error upon hitting one.
 	 */
 	if (len == PKT_LEN_SIZE) {
-		*head = NULL;
-		*out = line;
-		return 0;
+		giterr_set_str(GITERR_NET, "Invalid empty packet");
+		return GIT_ERROR;
 	}
 
 	if (len == 0) { /* Flush pkt */

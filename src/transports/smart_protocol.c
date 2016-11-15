@@ -763,14 +763,6 @@ static int add_push_report_sideband_pkt(git_push *push, git_pkt_data *data_pkt, 
 		line_len -= (line_end - line);
 		line = line_end;
 
-		/* When a valid packet with no content has been
-		 * read, git_pkt_parse_line does not report an
-		 * error, but the pkt pointer has not been set.
-		 * Handle this by skipping over empty packets.
-		 */
-		if (pkt == NULL)
-			continue;
-
 		error = add_push_report_pkt(push, pkt);
 
 		git_pkt_free(pkt);
@@ -824,9 +816,6 @@ static int parse_report(transport_smart *transport, git_push *push)
 		gitno_consume(buf, line_end);
 
 		error = 0;
-
-		if (pkt == NULL)
-			continue;
 
 		switch (pkt->type) {
 			case GIT_PKT_DATA:
