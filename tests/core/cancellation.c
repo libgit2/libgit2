@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "array.h"
+#include "cancellation.h"
 
 void test_core_cancellation__can_cancel(void)
 {
@@ -113,5 +114,19 @@ void test_core_cancellation__trigger_failure(void)
 	cl_assert_equal_i(1, cancelled_times);
 
 	git_cancellation_free(c);
+}
+
+void test_core_cancellation__detect_current(void)
+{
+	git_cancellation *c;
+
+	cl_git_pass(git_cancellation_new(&c));
+	cl_git_pass(git_cancellation_activate(c));
+
+	cl_assert_equal_i(0, git_cancellation__canceled());
+	cl_git_pass(git_cancellation_request(c));
+	cl_assert_equal_i(1, git_cancellation__canceled());
+
+	cl_git_pass(git_cancellation_deactivate());
 }
 

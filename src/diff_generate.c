@@ -16,6 +16,7 @@
 #include "index.h"
 #include "odb.h"
 #include "submodule.h"
+#include "cancellation.h"
 
 #define DIFF_FLAG_IS_SET(DIFF,FLAG) \
 	(((DIFF)->base.opts.flags & (FLAG)) != 0)
@@ -1211,6 +1212,12 @@ int git_diff__from_iterators(
 	/* run iterators building diffs */
 	while (!error && (info.oitem || info.nitem)) {
 		int cmp;
+
+		if (git_cancellation__canceled()) {
+			giterr_set(GITERR_CANCELLATION, "the operation was canceled");
+			error = GIT_ECANCELLED;
+			goto cleanup;
+		}
 
 		/* report progress */
 		if (opts && opts->progress_cb) {

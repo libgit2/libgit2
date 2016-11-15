@@ -14,7 +14,7 @@
 /**
  * Check whether there's an active cancellation that's been canceled.
  */
-GIT_INLINE(bool) git_cancellation__cancelled(void)
+GIT_INLINE(bool) git_cancellation__canceled(void)
 {
 	git_cancellation *c = GIT_GLOBAL->cancellation;
 
