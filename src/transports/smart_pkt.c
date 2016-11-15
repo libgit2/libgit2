@@ -427,6 +427,14 @@ int git_pkt_parse_line(
 	if (bufflen > 0 && bufflen < (size_t)len)
 		return GIT_EBUFS;
 
+	/*
+	 * The length has to be exactly 0 in case of a flush
+	 * packet or greater than PKT_LEN_SIZE, as the decoded
+	 * length includes its own encoded length of four bytes.
+	 */
+	if (len != 0 && len < PKT_LEN_SIZE)
+		return GIT_ERROR;
+
 	line += PKT_LEN_SIZE;
 	/*
 	 * TODO: How do we deal with empty lines? Try again? with the next
