@@ -209,6 +209,11 @@ git_repository *git_patch_owner(const git_patch *patch)
 	return patch->repo;
 }
 
+int git_patch_context_lines(const git_patch *patch)
+{
+	return patch->diff_opts.context_lines;
+}
+
 int git_patch_from_diff(git_patch **out, git_diff *diff, size_t idx)
 {
 	GIT_ASSERT_ARG(out);
