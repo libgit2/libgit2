@@ -39,14 +39,14 @@ void test_core_init__concurrent_init_succeeds(void)
 	git_thread threads[10];
 	unsigned i;
 
-	cl_assert_equal_i(0, git_libgit2_shutdown());
+	cl_assert_equal_i(2, git_libgit2_init());
 
 	for (i = 0; i < ARRAY_SIZE(threads); i++)
 		git_thread_create(&threads[i], reinit, NULL);
 	for (i = 0; i < ARRAY_SIZE(threads); i++)
 		git_thread_join(&threads[i], NULL);
 
-	cl_assert_equal_i(1, git_libgit2_init());
+	cl_assert_equal_i(1, git_libgit2_shutdown());
 	cl_sandbox_set_search_path_defaults();
 #else
 	cl_skip();

@@ -41,6 +41,51 @@
 	} \
 	} while(0)
 
+/**
+ * Thread safe assertions; you cannot use `cl_git_report_failure` from a
+ * child thread since it will try to `longjmp` to abort and "the effect of
+ * a call to longjmp() where initialization of the jmp_buf structure was
+ * not performed in the calling thread is undefined."
+ *
+ * Instead, callers can provide a clar thread error context to a thread,
+ * which will populate and return it on failure.  Callers can check the
+ * status with `cl_git_thread_check`.
+ */
+typedef struct {
+	int error;
+	const char *file;
+	int line;
+	const char *expr;
+	char error_msg[4096];
+} cl_git_thread_err;
+
+#ifdef GIT_THREADS
+# define cl_git_thread_pass(threaderr, expr) cl_git_thread_pass_(threaderr, (expr), __FILE__, __LINE__)
+#else
+# define cl_git_thread_pass(threaderr, expr) cl_git_pass(expr)
+#endif
+
+#define cl_git_thread_pass_(__threaderr, __expr, __file, __line) do { \
+	giterr_clear(); \
+	if ((((cl_git_thread_err *)__threaderr)->error = (__expr)) != 0) { \
+		const git_error *_last = giterr_last(); \
+		((cl_git_thread_err *)__threaderr)->file = __file; \
+		((cl_git_thread_err *)__threaderr)->line = __line; \
+		((cl_git_thread_err *)__threaderr)->expr = "Function call failed: " #__expr; \
+		p_snprintf(((cl_git_thread_err *)__threaderr)->error_msg, 4096, "thread 0x%" PRIxZ " - error %d - %s", \
+			git_thread_currentid(), ((cl_git_thread_err *)__threaderr)->error, \
+			_last ? _last->message : "<no message>"); \
+		git_thread_exit(__threaderr); \
+	} \
+	} while (0)
+
+static void cl_git_thread_check(void *data)
+{
+	cl_git_thread_err *threaderr = (cl_git_thread_err *)data;
+	if (threaderr->error != 0)
+		clar__assert(0, threaderr->file, threaderr->line, threaderr->expr, threaderr->error_msg, 1);
+}
+
 void cl_git_report_failure(int, const char *, int, const char *);
 
 #define cl_assert_at_line(expr,file,line) \
