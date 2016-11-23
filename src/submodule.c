@@ -1544,13 +1544,22 @@ int git_submodule__status(
 		return 0;
 	}
 
-	/* refresh the index OID */
-	if (submodule_update_index(sm) < 0)
-		return -1;
+	/* If the user has requested caching submodule state, performing these
+	 * expensive operations (especially `submodule_update_head`, which is
+	 * bottlenecked on `git_repository_head_tree`) eliminates much of the
+	 * advantage.  We will, therefore, interpret the request for caching to
+	 * apply here to and skip them.
+	 */
 
-	/* refresh the HEAD OID */
-	if (submodule_update_head(sm) < 0)
-		return -1;
+	if (sm->repo->submodule_cache == NULL) {
+		/* refresh the index OID */
+		if (submodule_update_index(sm) < 0)
+			return -1;
+
+		/* refresh the HEAD OID */
+		if (submodule_update_head(sm) < 0)
+			return -1;
+	}
 
 	/* for ignore == dirty, don't scan the working directory */
 	if (ign == GIT_SUBMODULE_IGNORE_DIRTY) {
