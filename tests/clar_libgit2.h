@@ -79,7 +79,7 @@ typedef struct {
 	} \
 	} while (0)
 
-static void cl_git_thread_check(void *data)
+GIT_INLINE(void) cl_git_thread_check(void *data)
 {
 	cl_git_thread_err *threaderr = (cl_git_thread_err *)data;
 	if (threaderr->error != 0)
