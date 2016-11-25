@@ -412,12 +412,12 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 
 		if (i % 20 == 0 && t->rpc) {
 			git_pkt_ack *pkt;
-			unsigned int i;
+			unsigned int j;
 
 			if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
 				goto on_error;
 
-			git_vector_foreach(&t->common, i, pkt) {
+			git_vector_foreach(&t->common, j, pkt) {
 				if ((error = git_pkt_buffer_have(&pkt->oid, &data)) < 0)
 					goto on_error;
 			}
@@ -432,12 +432,12 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 	/* Tell the other end that we're done negotiating */
 	if (t->rpc && t->common.length > 0) {
 		git_pkt_ack *pkt;
-		unsigned int i;
+		unsigned int j;
 
 		if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
 			goto on_error;
 
-		git_vector_foreach(&t->common, i, pkt) {
+		git_vector_foreach(&t->common, j, pkt) {
 			if ((error = git_pkt_buffer_have(&pkt->oid, &data)) < 0)
 				goto on_error;
 		}
