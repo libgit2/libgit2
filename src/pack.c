@@ -509,8 +509,10 @@ int git_packfile_resolve_header(
 		git_packfile_stream_free(&stream);
 		if (error < 0)
 			return error;
-	} else
+	} else {
 		*size_p = size;
+		base_offset = 0;
+	}
 
 	while (type == GIT_OBJ_OFS_DELTA || type == GIT_OBJ_REF_DELTA) {
 		curpos = base_offset;

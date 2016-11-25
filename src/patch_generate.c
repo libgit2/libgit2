@@ -284,7 +284,7 @@ static int create_binary(
 	size_t b_datalen)
 {
 	git_buf deflate = GIT_BUF_INIT, delta = GIT_BUF_INIT;
-	size_t delta_data_len;
+	size_t delta_data_len = 0;
 	int error;
 
 	/* The git_delta function accepts unsigned long only */
