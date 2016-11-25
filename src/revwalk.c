@@ -290,7 +290,7 @@ static void mark_parents_uninteresting(git_commit_list_node *commit)
 
 
 	while (parents) {
-		git_commit_list_node *commit = git_commit_list_pop(&parents);
+		commit = git_commit_list_pop(&parents);
 
 		while (commit) {
 			if (commit->uninteresting)
