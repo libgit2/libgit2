@@ -353,19 +353,24 @@ void test_fetchhead_nonetwork__quote_in_branch_name(void)
 }
 
 static bool found_master;
-static bool find_master_called;
+static bool found_haacked;
+static bool find_master_haacked_called;
 
-int find_master(const char *ref_name, const char *remote_url, const git_oid *oid, unsigned int is_merge, void *payload)
+int find_master_haacked(const char *ref_name, const char *remote_url, const git_oid *oid, unsigned int is_merge, void *payload)
 {
 	GIT_UNUSED(remote_url);
 	GIT_UNUSED(oid);
 	GIT_UNUSED(payload);
 
-	find_master_called = true;
+	find_master_haacked_called = true;
 
 	if (!strcmp("refs/heads/master", ref_name)) {
 		cl_assert(is_merge);
 		found_master = true;
+	}
+	if (!strcmp("refs/heads/haacked", ref_name)) {
+		cl_assert(is_merge);
+		found_haacked = true;
 	}
 
 	return 0;
@@ -375,10 +380,12 @@ void test_fetchhead_nonetwork__create_when_refpecs_given(void)
 {
 	git_remote *remote;
 	git_buf path = GIT_BUF_INIT;
-	char *refspec = "refs/heads/master";
+	char *refspec1 = "refs/heads/master";
+	char *refspec2 = "refs/heads/haacked";
+	char *refspecs[] = { refspec1, refspec2 };
 	git_strarray specs = {
-		&refspec,
-		1,
+		refspecs,
+		2,
 	};
 
 	cl_set_cleanup(&cleanup_repository, "./test1");
@@ -391,9 +398,10 @@ void test_fetchhead_nonetwork__create_when_refpecs_given(void)
 	cl_git_pass(git_remote_fetch(remote, &specs, NULL, NULL));
 	cl_assert(git_path_exists(path.ptr));
 
-	cl_git_pass(git_repository_fetchhead_foreach(g_repo, find_master, NULL));
-	cl_assert(find_master_called);
+	cl_git_pass(git_repository_fetchhead_foreach(g_repo, find_master_haacked, NULL));
+	cl_assert(find_master_haacked_called);
 	cl_assert(found_master);
+	cl_assert(found_haacked);
 
 	git_remote_free(remote);
 	git_buf_free(&path);
