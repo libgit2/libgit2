@@ -1,4 +1,5 @@
 #include "clar_libgit2.h"
+#include "git2/checkout.h"
 #include "git2/rebase.h"
 #include "posix.h"
 #include "signature.h"
@@ -470,6 +471,58 @@ void test_rebase_merge__finish(void)
 	git_annotated_commit_free(branch_head);
 	git_annotated_commit_free(upstream_head);
 	git_reference_free(head_ref);
+	git_reference_free(branch_ref);
+	git_reference_free(upstream_ref);
+	git_rebase_free(rebase);
+}
+
+void test_rebase_merge__detached_finish(void)
+{
+	git_rebase *rebase;
+	git_reference *branch_ref, *upstream_ref, *head_ref;
+	git_annotated_commit *branch_head, *upstream_head;
+	git_rebase_operation *rebase_operation;
+	git_oid commit_id;
+	git_reflog *reflog;
+	const git_reflog_entry *reflog_entry;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	int error;
+
+	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/gravy"));
+	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/veal"));
+
+	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
+	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
+
+	cl_git_pass(git_repository_set_head_detached_from_annotated(repo, branch_head));
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+	git_checkout_head(repo, &opts);
+
+	cl_git_pass(git_rebase_init(&rebase, repo, NULL, upstream_head, NULL, NULL));
+
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
+		NULL, NULL));
+
+	cl_git_fail(error = git_rebase_next(&rebase_operation, rebase));
+	cl_assert_equal_i(GIT_ITEROVER, error);
+
+	cl_git_pass(git_rebase_finish(rebase, signature));
+
+	cl_assert_equal_i(GIT_REPOSITORY_STATE_NONE, git_repository_state(repo));
+
+	cl_git_pass(git_reference_lookup(&head_ref, repo, "HEAD"));
+	cl_assert_equal_i(GIT_REF_OID, git_reference_type(head_ref));
+
+	/* Make sure the reflogs are updated appropriately */
+	cl_git_pass(git_reflog_read(&reflog, repo, "HEAD"));
+	cl_assert(reflog_entry = git_reflog_entry_byindex(reflog, 0));
+	cl_assert_equal_oid(git_annotated_commit_id(upstream_head), git_reflog_entry_id_old(reflog_entry));
+	cl_assert_equal_oid(&commit_id, git_reflog_entry_id_new(reflog_entry));
+
+	git_reflog_free(reflog);
+	git_annotated_commit_free(branch_head);
+	git_annotated_commit_free(upstream_head);
 	git_reference_free(branch_ref);
 	git_reference_free(upstream_ref);
 	git_rebase_free(rebase);

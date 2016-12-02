@@ -630,7 +630,7 @@ static int rebase_init_merge(
 	rebase->state_path = git_buf_detach(&state_path);
 	GITERR_CHECK_ALLOC(rebase->state_path);
 
-	if (branch->ref_name) {
+	if (branch->ref_name && strcmp(branch->ref_name, "HEAD")) {
 		rebase->orig_head_name = git__strdup(branch->ref_name);
 		GITERR_CHECK_ALLOC(rebase->orig_head_name);
 	} else {
