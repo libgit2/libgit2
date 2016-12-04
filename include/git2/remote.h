@@ -569,7 +569,7 @@ typedef struct {
  * Initializes a `git_fetch_options` with default values. Equivalent to
  * creating an instance with GIT_FETCH_OPTIONS_INIT.
  *
- * @param opts the `git_push_options` instance to initialize.
+ * @param opts the `git_fetch_options` instance to initialize.
  * @param version the version of the struct; you should pass
  *        `GIT_FETCH_OPTIONS_VERSION` here.
  * @return Zero on success; -1 on failure.
