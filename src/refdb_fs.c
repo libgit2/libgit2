@@ -729,8 +729,8 @@ static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *
 	/* Remove a possibly existing empty directory hierarchy
 	 * which name would collide with the reference name
 	 */
-	if (git_futils_rmdir_r(name, backend->path, GIT_RMDIR_SKIP_NONEMPTY) < 0)
-		return -1;
+	if ((error = git_futils_rmdir_r(name, backend->path, GIT_RMDIR_SKIP_NONEMPTY)) < 0)
+		return error;
 
 	if (git_buf_joinpath(&ref_path, backend->path, name) < 0)
 		return -1;
