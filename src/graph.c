@@ -59,7 +59,7 @@ static int mark_parents(git_revwalk *walk, git_commit_list_node *one,
 	/* as long as there are non-STALE commits */
 	while (interesting(&list, roots)) {
 		git_commit_list_node *commit = git_pqueue_pop(&list);
-		int flags;
+		unsigned int flags;
 
 		if (commit == NULL)
 			break;

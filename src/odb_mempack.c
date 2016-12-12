@@ -24,7 +24,7 @@ struct memobject {
 	git_oid oid;
 	size_t len;
 	git_otype type;
-	char data[];
+	char data[GIT_FLEX_ARRAY];
 };
 
 struct memory_packer_db {

@@ -1145,7 +1145,6 @@ int git_path_diriter_init(
 	unsigned int flags)
 {
 	git_win32_path path_filter;
-	git_buf hack = {0};
 
 	static int is_win7_or_later = -1;
 	if (is_win7_or_later < 0)
