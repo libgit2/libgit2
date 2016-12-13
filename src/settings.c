@@ -227,6 +227,10 @@ int git_libgit2_opts(int key, ...)
 		git_smart__ofs_delta_enabled = (va_arg(ap, int) != 0);
 		break;
 
+	case GIT_OPT_ENABLE_SYNCHRONIZED_OBJECT_CREATION:
+		git_object__synchronized_writing = (va_arg(ap, int) != 0);
+		break;
+
 	default:
 		giterr_set(GITERR_INVALID, "invalid option key");
 		error = -1;

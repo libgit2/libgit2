@@ -14,6 +14,7 @@
 #include "odb.h"
 #include "delta.h"
 #include "filebuf.h"
+#include "object.h"
 
 #include "git2/odb_backend.h"
 #include "git2/types.h"
@@ -843,7 +844,7 @@ static int filebuf_flags(loose_backend *backend)
 	int flags = GIT_FILEBUF_TEMPORARY |
 		(backend->object_zlib_level << GIT_FILEBUF_DEFLATE_SHIFT);
 
-	if (backend->fsync_object_files)
+	if (backend->fsync_object_files || git_object__synchronized_writing)
 		flags |= GIT_FILEBUF_FSYNC;
 
 	return flags;
