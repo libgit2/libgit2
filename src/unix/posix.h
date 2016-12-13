@@ -40,8 +40,13 @@ typedef int GIT_SOCKET;
 #define p_link(o,n) link(o, n)
 #define p_unlink(p) unlink(p)
 #define p_mkdir(p,m) mkdir(p, m)
-#define p_fsync(fd) fsync(fd)
 extern char *p_realpath(const char *, char *);
+
+GIT_INLINE(int) p_fsync(int fd)
+{
+	p_fsync__cnt++;
+	return fsync(fd);
+}
 
 #define p_recv(s,b,l,f) recv(s,b,l,f)
 #define p_send(s,b,l,f) send(s,b,l,f)

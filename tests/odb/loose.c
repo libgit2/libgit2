@@ -56,11 +56,13 @@ static void test_read_object(object_data *data)
 
 void test_odb_loose__initialize(void)
 {
+	p_fsync__cnt = 0;
 	cl_must_pass(p_mkdir("test-objects", GIT_OBJECT_DIR_MODE));
 }
 
 void test_odb_loose__cleanup(void)
 {
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONIZED_OBJECT_CREATION, 0));
 	cl_fixture_cleanup("test-objects");
 }
 
@@ -149,4 +151,36 @@ void test_odb_loose_permissions_readonly(void)
 void test_odb_loose__permissions_readwrite(void)
 {
 	test_write_object_permission(0777, 0666, 0777, 0666);
+}
+
+static void write_object_to_loose_odb(int fsync)
+{
+	git_odb *odb;
+	git_odb_backend *backend;
+	git_oid oid;
+
+	cl_git_pass(git_odb_new(&odb));
+	cl_git_pass(git_odb_backend_loose(&backend, "test-objects", -1, fsync, 0777, 0666));
+	cl_git_pass(git_odb_add_backend(odb, backend, 1));
+	cl_git_pass(git_odb_write(&oid, odb, "Test data\n", 10, GIT_OBJ_BLOB));
+	git_odb_free(odb);
+}
+
+void test_odb_loose__does_not_fsync_by_default(void)
+{
+	write_object_to_loose_odb(0);
+	cl_assert_equal_sz(0, p_fsync__cnt);
+}
+
+void test_odb_loose__fsync_obeys_odb_option(void)
+{
+	write_object_to_loose_odb(1);
+	cl_assert(p_fsync__cnt > 0);
+}
+
+void test_odb_loose__fsync_obeys_global_setting(void)
+{
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONIZED_OBJECT_CREATION, 1));
+	write_object_to_loose_odb(0);
+	cl_assert(p_fsync__cnt > 0);
 }
