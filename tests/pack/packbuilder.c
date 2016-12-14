@@ -23,12 +23,15 @@ void test_pack_packbuilder__initialize(void)
 	cl_git_pass(git_vector_init(&_commits, 0, NULL));
 	_commits_is_initialized = 1;
 	memset(&_stats, 0, sizeof(_stats));
+	p_fsync__cnt = 0;
 }
 
 void test_pack_packbuilder__cleanup(void)
 {
 	git_oid *o;
 	unsigned int i;
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONIZED_OBJECT_CREATION, 0));
 
 	if (_commits_is_initialized) {
 		_commits_is_initialized = 0;
@@ -186,6 +189,22 @@ void test_pack_packbuilder__permissions_readonly(void)
 void test_pack_packbuilder__permissions_readwrite(void)
 {
 	test_write_pack_permission(0666, 0666);
+}
+
+void test_pack_packbuilder__does_not_fsync_by_default(void)
+{
+	seed_packbuilder();
+	git_packbuilder_write(_packbuilder, ".", 0666, NULL, NULL);
+	cl_assert_equal_sz(0, p_fsync__cnt);
+}
+
+void test_pack_packbuilder__fsync_when_asked(void)
+{
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONIZED_OBJECT_CREATION, 1));
+	p_fsync__cnt = 0;
+	seed_packbuilder();
+	git_packbuilder_write(_packbuilder, ".", 0666, NULL, NULL);
+	cl_assert_equal_sz(2, p_fsync__cnt);
 }
 
 static int foreach_cb(void *buf, size_t len, void *payload)
