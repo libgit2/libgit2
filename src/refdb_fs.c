@@ -736,7 +736,7 @@ static int reference_path_available(
 
 static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *name)
 {
-	int error;
+	int error, filebuf_flags;
 	git_buf ref_path = GIT_BUF_INIT;
 
 	assert(file && backend && name);
@@ -755,7 +755,11 @@ static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *
 	if (git_buf_joinpath(&ref_path, backend->gitpath, name) < 0)
 		return -1;
 
-	error = git_filebuf_open(file, ref_path.ptr, GIT_FILEBUF_FORCE, GIT_REFS_FILE_MODE);
+	filebuf_flags = GIT_FILEBUF_FORCE;
+	if (git_object__synchronized_writing)
+		filebuf_flags |= GIT_FILEBUF_FSYNC;
+
+	error = git_filebuf_open(file, ref_path.ptr, filebuf_flags, GIT_REFS_FILE_MODE);
 
 	if (error == GIT_EDIRECTORY)
 		giterr_set(GITERR_REFERENCE, "cannot lock ref '%s', there are refs beneath that folder", name);
@@ -1784,7 +1788,7 @@ success:
 /* Append to the reflog, must be called under reference lock */
 static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, const git_oid *old, const git_oid *new, const git_signature *who, const char *message)
 {
-	int error, is_symbolic;
+	int error, is_symbolic, open_flags;
 	git_oid old_id = {{0}}, new_id = {{0}};
 	git_buf buf = GIT_BUF_INIT, path = GIT_BUF_INIT;
 	git_repository *repo = backend->repo;
@@ -1852,7 +1856,12 @@ static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, co
 			goto cleanup;
 	}
 
-	error = git_futils_writebuffer(&buf, git_buf_cstr(&path), O_WRONLY|O_CREAT|O_APPEND, GIT_REFLOG_FILE_MODE);
+	open_flags = O_WRONLY | O_CREAT | O_APPEND;
+
+	if (git_object__synchronized_writing)
+		open_flags |= O_FSYNC;
+
+	error = git_futils_writebuffer(&buf, git_buf_cstr(&path), open_flags, GIT_REFLOG_FILE_MODE);
 
 cleanup:
 	git_buf_free(&buf);

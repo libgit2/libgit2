@@ -13,6 +13,7 @@ static git_repository *g_repo;
 void test_refs_create__initialize(void)
 {
 	g_repo = cl_git_sandbox_init("testrepo");
+	p_fsync__cnt = 0;
 }
 
 void test_refs_create__cleanup(void)
@@ -21,6 +22,7 @@ void test_refs_create__cleanup(void)
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 1));
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_SYMBOLIC_REF_CREATION, 1));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONIZED_OBJECT_CREATION, 0));
 }
 
 void test_refs_create__symbolic(void)
@@ -296,4 +298,29 @@ void test_refs_create__creating_a_loose_ref_with_invalid_windows_name(void)
 	test_win32_name("refs/heads/aux.foo/bar");
 
 	test_win32_name("refs/heads/com1");
+}
+
+void test_refs_create__does_not_fsync_by_default(void)
+{
+	git_reference *ref = NULL;
+	git_oid id;
+
+	git_oid_fromstr(&id, current_master_tip);
+	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/fsync_test", &id, 0, "log message"));
+	git_reference_free(ref);
+	cl_assert_equal_i(0, p_fsync__cnt);
+}
+
+void test_refs_create__fsyncs_when_requested(void)
+{
+	git_reference *ref = NULL;
+	git_oid id;
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONIZED_OBJECT_CREATION, 1));
+	p_fsync__cnt = 0;
+
+	git_oid_fromstr(&id, current_master_tip);
+	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/fsync_test", &id, 0, "log message"));
+	git_reference_free(ref);
+	cl_assert_equal_i(2, p_fsync__cnt);
 }
