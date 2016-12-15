@@ -994,15 +994,18 @@ static int packed_write(refdb_fs_backend *backend)
 {
 	git_sortedcache *refcache = backend->refcache;
 	git_filebuf pack_file = GIT_FILEBUF_INIT;
-	int error;
+	int error, open_flags = 0;
 	size_t i;
 
 	/* lock the cache to updates while we do this */
 	if ((error = git_sortedcache_wlock(refcache)) < 0)
 		return error;
 
+	if (git_object__synchronized_writing)
+		open_flags = GIT_FILEBUF_FSYNC;
+
 	/* Open the file! */
-	if ((error = git_filebuf_open(&pack_file, git_sortedcache_path(refcache), 0, GIT_PACKEDREFS_FILE_MODE)) < 0)
+	if ((error = git_filebuf_open(&pack_file, git_sortedcache_path(refcache), open_flags, GIT_PACKEDREFS_FILE_MODE)) < 0)
 		goto fail;
 
 	/* Packfiles have a header... apparently

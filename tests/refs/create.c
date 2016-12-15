@@ -303,17 +303,24 @@ void test_refs_create__creating_a_loose_ref_with_invalid_windows_name(void)
 void test_refs_create__does_not_fsync_by_default(void)
 {
 	git_reference *ref = NULL;
+	git_refdb *refdb;
 	git_oid id;
 
 	git_oid_fromstr(&id, current_master_tip);
 	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/fsync_test", &id, 0, "log message"));
 	git_reference_free(ref);
+
+	cl_git_pass(git_repository_refdb(&refdb, g_repo));
+	cl_git_pass(git_refdb_compress(refdb));
+	git_refdb_free(refdb);
+
 	cl_assert_equal_i(0, p_fsync__cnt);
 }
 
 void test_refs_create__fsyncs_when_requested(void)
 {
 	git_reference *ref = NULL;
+	git_refdb *refdb;
 	git_oid id;
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONIZED_OBJECT_CREATION, 1));
@@ -323,4 +330,12 @@ void test_refs_create__fsyncs_when_requested(void)
 	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/fsync_test", &id, 0, "log message"));
 	git_reference_free(ref);
 	cl_assert_equal_i(2, p_fsync__cnt);
+
+	p_fsync__cnt = 0;
+
+	cl_git_pass(git_repository_refdb(&refdb, g_repo));
+	cl_git_pass(git_refdb_compress(refdb));
+	git_refdb_free(refdb);
+
+	cl_assert_equal_i(1, p_fsync__cnt);
 }
