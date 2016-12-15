@@ -235,10 +235,16 @@ int git_futils_readbuffer(git_buf *buf, const char *path)
 int git_futils_writebuffer(
 	const git_buf *buf,	const char *path, int flags, mode_t mode)
 {
-	int fd, error = 0;
+	int fd, do_fsync = 0, error = 0;
+
+	if ((flags & O_FSYNC) != 0)
+		do_fsync = 1;
+
+	flags &= ~O_FSYNC;
 
 	if (flags <= 0)
 		flags = O_CREAT | O_TRUNC | O_WRONLY;
+
 	if (!mode)
 		mode = GIT_FILEMODE_BLOB;
 
@@ -250,6 +256,12 @@ int git_futils_writebuffer(
 	if ((error = p_write(fd, git_buf_cstr(buf), git_buf_len(buf))) < 0) {
 		giterr_set(GITERR_OS, "could not write to '%s'", path);
 		(void)p_close(fd);
+		return error;
+	}
+
+	if (do_fsync && (error = p_fsync(fd)) < 0) {
+		giterr_set(GITERR_OS, "could not fsync '%s'", path);
+		p_close(fd);
 		return error;
 	}
 

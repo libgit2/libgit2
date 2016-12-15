@@ -25,6 +25,13 @@ extern int git_futils_readbuffer_updated(
 	git_buf *obj, const char *path, git_oid *checksum, int *updated);
 extern int git_futils_readbuffer_fd(git_buf *obj, git_file fd, size_t len);
 
+/* Additional constants for `git_futils_writebuffer`'s `open_flags`.  We
+ * support these internally and they will be removed before the `open` call.
+ */
+#ifndef O_FSYNC
+# define O_FSYNC (1 << 31)
+#endif
+
 extern int git_futils_writebuffer(
 	const git_buf *buf, const char *path, int open_flags, mode_t mode);
 
