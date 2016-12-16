@@ -5,6 +5,12 @@
 static git_repository *g_repo;
 static int g_expected = 0;
 
+#ifdef GIT_WIN32
+static bool concurrent_compress = false;
+#else
+static bool concurrent_compress = true;
+#endif
+
 void test_threads_refdb__initialize(void)
 {
 	g_repo = NULL;
@@ -79,7 +85,7 @@ static void *create_refs(void *arg)
 		} while (error == GIT_ELOCKED);
 		cl_git_thread_pass(data, error);
 
-		if (i == NREFS/2) {
+		if (concurrent_compress && i == NREFS/2) {
 			git_refdb *refdb;
 			cl_git_thread_pass(data, git_repository_refdb(&refdb, repo));
 			do {
@@ -125,7 +131,7 @@ static void *delete_refs(void *arg)
 			git_reference_free(ref);
 		}
 
-		if (i == NREFS/2) {
+		if (concurrent_compress && i == NREFS/2) {
 			git_refdb *refdb;
 			cl_git_thread_pass(data, git_repository_refdb(&refdb, repo));
 			do {
