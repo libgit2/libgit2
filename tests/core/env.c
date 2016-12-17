@@ -298,3 +298,24 @@ void test_core_env__2(void)
 	git_buf_free(&path);
 	git_buf_free(&found);
 }
+
+void test_core_env__substitution(void)
+{
+  git_buf buf = GIT_BUF_INIT, expected = GIT_BUF_INIT;
+
+  /* Set it to something non-default so we have controllable values */
+  cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, "/tmp/a"));
+  cl_git_pass(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &buf));
+  cl_assert_equal_s("/tmp/a", buf.ptr);
+
+  git_buf_clear(&buf);
+  cl_git_pass(git_buf_join(&buf, GIT_PATH_LIST_SEPARATOR, "$PATH", "/tmp/b"));
+  cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, buf.ptr));
+  cl_git_pass(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &buf));
+
+  cl_git_pass(git_buf_join(&expected, GIT_PATH_LIST_SEPARATOR, "/tmp/a", "/tmp/b"));
+  cl_assert_equal_s(expected.ptr, buf.ptr);
+
+  git_buf_free(&expected);
+  git_buf_free(&buf);
+}
