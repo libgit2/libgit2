@@ -523,6 +523,7 @@ void test_rebase_merge__detached_finish(void)
 	git_reflog_free(reflog);
 	git_annotated_commit_free(branch_head);
 	git_annotated_commit_free(upstream_head);
+	git_reference_free(head_ref);
 	git_reference_free(branch_ref);
 	git_reference_free(upstream_ref);
 	git_rebase_free(rebase);
