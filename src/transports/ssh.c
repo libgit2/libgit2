@@ -982,7 +982,7 @@ static const char *supported_filenames[] = {
 #ifdef __APPLE__
 	"libssh2.1.dylib",
 #else
-	"libssh2.so.2.1.0",
+	"libssh2.so.1",
 #endif
 	NULL,
 };
