@@ -39,7 +39,7 @@ OPTION( LIBGIT2_FILENAME	"Name of the produced binary"			OFF )
 
 OPTION( USE_SHA1DC			"Use SHA-1 with collision detection"	OFF )
 OPTION( USE_ICONV			"Link with and use iconv library" 		OFF )
-OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
+OPTION( USE_SSH				"Enable runtime detection of libssh2 for SSH support" ON )
 OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"   OFF )
 OPTION( VALGRIND			"Configure build for valgrind"			OFF )
 OPTION( CURL			"Use curl for HTTP if available" ON)
@@ -67,10 +67,6 @@ IF(MSVC)
 	# This option must match the settings used in your program, in particular if you
 	# are linking statically
 	OPTION( STATIC_CRT		"Link the static CRT libraries"	ON  )
-
-	# If you want to embed a copy of libssh2 into libgit2, pass a
-	# path to libssh2
-	OPTION( EMBED_SSH_PATH		"Path to libssh2 to embed (Windows)" OFF )
 
 	ADD_DEFINITIONS(-D_SCL_SECURE_NO_WARNINGS)
 	ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
@@ -229,13 +225,6 @@ IF (COREFOUNDATION_FOUND)
 ENDIF()
 
 
-IF (WIN32 AND EMBED_SSH_PATH)
-	FILE(GLOB SRC_SSH "${EMBED_SSH_PATH}/src/*.c")
-	INCLUDE_DIRECTORIES("${EMBED_SSH_PATH}/include")
-	FILE(WRITE "${EMBED_SSH_PATH}/src/libssh2_config.h" "#define HAVE_WINCNG\n#define LIBSSH2_WINCNG\n#include \"../win32/libssh2_config.h\"")
-	ADD_DEFINITIONS(-DGIT_SSH)
-ENDIF()
-
 IF (WIN32 AND WINHTTP)
 	ADD_DEFINITIONS(-DGIT_WINHTTP)
 
@@ -352,32 +341,10 @@ ELSE()
 	FILE(GLOB SRC_ZLIB deps/zlib/*.c deps/zlib/*.h)
 ENDIF()
 
-# Optional external dependency: libssh2
+# Optional dependency to load at run-time: libssh2
 IF (USE_SSH)
-	PKG_CHECK_MODULES(LIBSSH2 libssh2)
-ENDIF()
-IF (LIBSSH2_FOUND)
-	ADD_DEFINITIONS(-DGIT_SSH)
-	INCLUDE_DIRECTORIES(${LIBSSH2_INCLUDE_DIRS})
-	LINK_DIRECTORIES(${LIBSSH2_LIBRARY_DIRS})
-	LIST(APPEND LIBGIT2_PC_LIBS ${LIBSSH2_LDFLAGS})
-	#SET(LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS} ${LIBSSH2_LDFLAGS}")
-	IF(WIN32)
-		ADD_DEFINITIONS(-DGIT_LIBSSH2_SOVERSION="libssh2.dll")
-	ELSEIF(DARWIN)
-		ADD_DEFINITIONS(-DGIT_LIBSSH2_SOVERSION="libssh2.1.dylib")
-	ELSE()
-		ADD_DEFINITIONS(-DGIT_LIBSSH2_SOVERSION="libssh2.so.2.1.0")
-	ENDIF()
-
-	SET(SSH_LIBRARIES ${LIBSSH2_LIBRARIES})
-
-	CHECK_LIBRARY_EXISTS("${LIBSSH2_LIBRARIES}" libssh2_userauth_publickey_frommemory "${LIBSSH2_LIBRARY_DIRS}" HAVE_LIBSSH2_MEMORY_CREDENTIALS)
-	IF (HAVE_LIBSSH2_MEMORY_CREDENTIALS)
-		ADD_DEFINITIONS(-DGIT_SSH_MEMORY_CREDENTIALS)
-	ENDIF()
-ELSE()
-	MESSAGE(STATUS "LIBSSH2 not found. Set CMAKE_PREFIX_PATH if it is installed outside of the default search path.")
+   ADD_DEFINITIONS(-DGIT_SSH)
+	INCLUDE_DIRECTORIES(deps/libssh2)
 ENDIF()
 
 # Optional external dependency: libgssapi

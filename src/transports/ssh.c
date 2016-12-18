@@ -5,9 +5,6 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifdef GIT_SSH
-#include <libssh2.h>
-#endif
 #ifndef GIT_WIN32
 #include <dlfcn.h>
 #endif
@@ -22,6 +19,8 @@
 #include "ssh.h"
 
 #ifdef GIT_SSH
+
+#include "libssh2.h"
 
 /* These macros allow us to refer to libssh2 symbols while
  * supporting dynamic linking.
@@ -75,9 +74,7 @@ DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_list);
 DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_password_ex);
 DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_publickey);
 DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_publickey_fromfile_ex);
-#ifdef GIT_SSH_MEMORY_CREDENTIALS
 DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_publickey_frommemory);
-#endif
 
 /* Redefine functions that underlies macros so they use our namespaced versions */
 
@@ -464,9 +461,13 @@ static int _git_ssh_authenticate_session(
 				session, c->username, c->prompt_callback);
 			break;
 		}
-#ifdef GIT_SSH_MEMORY_CREDENTIALS
 		case GIT_CREDTYPE_SSH_MEMORY: {
 			git_cred_ssh_key *c = (git_cred_ssh_key *)cred;
+
+			if (!git_libssh2_userauth_publickey_frommemory) {
+				rc = LIBSSH2_ERROR_AUTHENTICATION_FAILED;
+				break;
+			}
 
 			assert(c->username);
 			assert(c->privatekey);
@@ -482,7 +483,6 @@ static int _git_ssh_authenticate_session(
 				c->passphrase);
 			break;
 		}
-#endif
 		default:
 			rc = LIBSSH2_ERROR_AUTHENTICATION_FAILED;
 		}
@@ -861,9 +861,10 @@ static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *use
 		if (!git__prefixcmp(ptr, SSH_AUTH_PUBLICKEY)) {
 			*out |= GIT_CREDTYPE_SSH_KEY;
 			*out |= GIT_CREDTYPE_SSH_CUSTOM;
-#ifdef GIT_SSH_MEMORY_CREDENTIALS
-			*out |= GIT_CREDTYPE_SSH_MEMORY;
-#endif
+
+			if (git_libssh2_userauth_publickey_frommemory)
+				*out |= GIT_CREDTYPE_SSH_MEMORY;
+
 			ptr += strlen(SSH_AUTH_PUBLICKEY);
 			continue;
 		}
@@ -980,19 +981,55 @@ int git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *p
 #endif
 }
 
+static const char *supported_filenames[] = {
+#ifdef __APPLE__
+	"libssh2.1.dylib",
+#else
+	"libssh2.so.2.1.0",
+#endif
+	NULL,
+};
+
+/**
+ * Try to load a supported version of libssh2
+ */
+static void load_libssh2(void)
+{
+#ifdef GIT_WIN32
+	/* Windows doesn't do SOVERSIONs but you ship your own library so we're probably OK */
+	git_libssh2_handle = LoadLibrary("libssh2.dll");
+#else
+	int i;
+	for (i = 0; !git_libssh2_handle; i++){
+		const char *filename = supported_filenames[i];
+		if (!filename)
+			break;
+
+		git_libssh2_handle = dlopen(filename, RTLD_LAZY);
+	}
+
+#endif
+}
+
+static void unload_libssh2(void)
+{
+#ifdef GIT_WIN32
+	FreeLibrary(git_libssh2_handle);
+#else
+	dlclose(git_libssh2_handle);
+#endif
+}
+
 void git_transport_ssh_global_shutdown(void);
 
 int git_transport_ssh_global_init(void)
 {
 #ifdef GIT_SSH
-#ifdef GIT_WIN32
-	git_libssh2_handle = LoadLibrary(TEXT(GIT_LIBSSH2_SOVERSION));
-#else
-	git_libssh2_handle = dlopen(GIT_LIBSSH2_SOVERSION, RTLD_LAZY);
+	load_libssh2();
+
 	if (git_libssh2_handle == NULL) {
 		return 0;
 	}
-#endif
 
 	DEFINE_LIBSSH2_SYMBOL(libssh2_agent_connect);
 	DEFINE_LIBSSH2_SYMBOL(libssh2_agent_disconnect);
@@ -1022,9 +1059,7 @@ int git_transport_ssh_global_init(void)
 	DEFINE_LIBSSH2_SYMBOL(libssh2_userauth_password_ex);
 	DEFINE_LIBSSH2_SYMBOL(libssh2_userauth_publickey);
 	DEFINE_LIBSSH2_SYMBOL(libssh2_userauth_publickey_fromfile_ex);
-#ifdef GIT_SSH_MEMORY_CREDENTIALS
 	DEFINE_LIBSSH2_SYMBOL(libssh2_userauth_publickey_frommemory);
-#endif
 
 	git__on_shutdown(git_transport_ssh_global_shutdown);
 
@@ -1040,9 +1075,6 @@ int git_transport_ssh_global_init(void)
 
 void git_transport_ssh_global_shutdown(void)
 {
-#ifdef GIT_WIN32
-	FreeLibrary(git_libssh2_handle);
-#else
-	dlclose(git_libssh2_handle);
-#endif
+	unload_libssh2();
+	git_libssh2_handle = NULL;
 }
