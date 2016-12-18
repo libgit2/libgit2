@@ -27,57 +27,54 @@
  */
 #ifdef GIT_WIN32
 
-static HMODULE git_libssh2_handle = NULL;
+static HMODULE git_libssh2_handle;
 
-#define DECLARE_LIBSSH2_SYMBOL(symbol) \
-	static typeof(symbol) *git_ ## symbol = NULL
-
-#define DEFINE_LIBSSH2_SYMBOL(symbol) \
+#define LOOKUP_LIBSSH2_SYMBOL(symbol) \
 	git_ ## symbol = GetProcAddress(git_libssh2_handle, #symbol)
 
 #else
-static void *git_libssh2_handle = NULL;
 
-#define DECLARE_LIBSSH2_SYMBOL(symbol) \
-	static typeof(symbol) *git_ ## symbol = NULL
+static void *git_libssh2_handle;
 
-#define DEFINE_LIBSSH2_SYMBOL(symbol) \
+#define LOOKUP_LIBSSH2_SYMBOL(symbol) \
 	git_ ## symbol = dlsym(git_libssh2_handle, #symbol)
 
 #endif
 
-DECLARE_LIBSSH2_SYMBOL(libssh2_agent_connect);
-DECLARE_LIBSSH2_SYMBOL(libssh2_agent_disconnect);
-DECLARE_LIBSSH2_SYMBOL(libssh2_agent_free);
-DECLARE_LIBSSH2_SYMBOL(libssh2_agent_get_identity);
-DECLARE_LIBSSH2_SYMBOL(libssh2_agent_init);
-DECLARE_LIBSSH2_SYMBOL(libssh2_agent_list_identities);
-DECLARE_LIBSSH2_SYMBOL(libssh2_agent_userauth);
-DECLARE_LIBSSH2_SYMBOL(libssh2_channel_close);
-DECLARE_LIBSSH2_SYMBOL(libssh2_channel_free);
-DECLARE_LIBSSH2_SYMBOL(libssh2_channel_open_ex);
-DECLARE_LIBSSH2_SYMBOL(libssh2_channel_process_startup);
-DECLARE_LIBSSH2_SYMBOL(libssh2_channel_read_ex);
-DECLARE_LIBSSH2_SYMBOL(libssh2_channel_set_blocking);
-DECLARE_LIBSSH2_SYMBOL(libssh2_channel_write_ex);
-DECLARE_LIBSSH2_SYMBOL(libssh2_hostkey_hash);
-DECLARE_LIBSSH2_SYMBOL(libssh2_init);
-DECLARE_LIBSSH2_SYMBOL(libssh2_session_abstract);
-DECLARE_LIBSSH2_SYMBOL(libssh2_session_free);
-DECLARE_LIBSSH2_SYMBOL(libssh2_session_init_ex);
-DECLARE_LIBSSH2_SYMBOL(libssh2_session_last_error);
-DECLARE_LIBSSH2_SYMBOL(libssh2_session_set_blocking);
-DECLARE_LIBSSH2_SYMBOL(libssh2_session_startup);
-DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_authenticated);
-DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_keyboard_interactive_ex);
-DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_list);
-DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_password_ex);
-DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_publickey);
-DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_publickey_fromfile_ex);
-DECLARE_LIBSSH2_SYMBOL(libssh2_userauth_publickey_frommemory);
+static int (* git_libssh2_agent_connect)(LIBSSH2_AGENT *agent);
+static int (* git_libssh2_agent_disconnect)(LIBSSH2_AGENT *agent);
+static void (* git_libssh2_agent_free)(LIBSSH2_AGENT *agent);
+static int (* git_libssh2_agent_get_identity)(LIBSSH2_AGENT *agent, struct libssh2_agent_publickey **store, struct libssh2_agent_publickey *prev);
+static LIBSSH2_AGENT * (* git_libssh2_agent_init)(LIBSSH2_SESSION *session);
+static int (* git_libssh2_agent_list_identities)(LIBSSH2_AGENT *agent);
+static int (* git_libssh2_agent_userauth)(LIBSSH2_AGENT *agent, const char *username, struct libssh2_agent_publickey *identity);
+static int (* git_libssh2_channel_close)(LIBSSH2_CHANNEL *channel);
+static int (* git_libssh2_channel_free)(LIBSSH2_CHANNEL *channel);
+static LIBSSH2_CHANNEL * (*git_libssh2_channel_open_ex)(LIBSSH2_SESSION *session, const char *channel_type, unsigned int channel_type_len, unsigned int window_size, unsigned int packet_size, const char *message, unsigned int message_len);
+static int (* git_libssh2_channel_process_startup)(LIBSSH2_CHANNEL *channel, const char *request, unsigned int request_len, const char *message, unsigned int message_len);
+static ssize_t (* git_libssh2_channel_read_ex)(LIBSSH2_CHANNEL *channel, int stream_id, char *buf, size_t buflen);
+static void (* git_libssh2_channel_set_blocking)(LIBSSH2_CHANNEL *channel, int blocking);
+static ssize_t (* git_libssh2_channel_write_ex)(LIBSSH2_CHANNEL *channel, int stream_id, const char *buf, size_t buflen);
+static const char * (* git_libssh2_hostkey_hash)(LIBSSH2_SESSION *session, int hash_type);
+static int (* git_libssh2_init)(int flags);
+static void ** (*git_libssh2_session_abstract)(LIBSSH2_SESSION *session);
+static int (* git_libssh2_session_free)(LIBSSH2_SESSION *session);
+static LIBSSH2_SESSION * (* git_libssh2_session_init_ex)(LIBSSH2_ALLOC_FUNC((*my_alloc)), LIBSSH2_FREE_FUNC((*my_free)), LIBSSH2_REALLOC_FUNC((*my_realloc)), void *abstract);
+static int (*git_libssh2_session_last_error)(LIBSSH2_SESSION *session, char **errmsg, int *errmsg_len, int want_buf);
+static void (*git_libssh2_session_set_blocking)(LIBSSH2_SESSION* session, int blocking);
+static int (*git_libssh2_session_startup)(LIBSSH2_SESSION *session, int sock);
+static int (*git_libssh2_userauth_authenticated)(LIBSSH2_SESSION *session);
+static int (*git_libssh2_userauth_keyboard_interactive_ex)(LIBSSH2_SESSION* session, const char *username, unsigned int username_len, LIBSSH2_USERAUTH_KBDINT_RESPONSE_FUNC((*response_callback)));
+static char * (*git_libssh2_userauth_list)(LIBSSH2_SESSION *session, const char *username, unsigned int username_len);
+static int (*git_libssh2_userauth_password_ex)(LIBSSH2_SESSION *session, const char *username, unsigned int username_len, const char *password, unsigned int password_len, LIBSSH2_PASSWD_CHANGEREQ_FUNC((*passwd_change_cb)));
+static int (*git_libssh2_userauth_publickey)(LIBSSH2_SESSION *session, const char *username, const unsigned char *pubkeydata, size_t pubkeydata_len, LIBSSH2_USERAUTH_PUBLICKEY_SIGN_FUNC((*sign_callback)), void **abstract);
+static int (*git_libssh2_userauth_publickey_fromfile_ex)(LIBSSH2_SESSION *session, const char *username, unsigned int username_len, const char *publickey, const char *privatekey, const char *passphrase);
+static int (*git_libssh2_userauth_publickey_frommemory)(LIBSSH2_SESSION *session, const char *username, size_t username_len, const char *publickeyfiledata, size_t publickeyfiledata_len, const char *privatekeyfiledata, size_t privatekeyfiledata_len, const char *passphrase);
 
-/* Redefine functions that underlies macros so they use our namespaced versions */
-
+/*
+ * The simpler API are macros that call to the _ex variant of the functions.
+ * This makes those macros use our variables to call the functions instead.
+ */
 #define libssh2_channel_open_ex git_libssh2_channel_open_ex
 #define libssh2_session_init_ex git_libssh2_session_init_ex
 #define libssh2_userauth_keyboard_interactive_ex git_libssh2_userauth_keyboard_interactive_ex
@@ -1031,35 +1028,36 @@ int git_transport_ssh_global_init(void)
 		return 0;
 	}
 
-	DEFINE_LIBSSH2_SYMBOL(libssh2_agent_connect);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_agent_disconnect);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_agent_free);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_agent_get_identity);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_agent_init);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_agent_list_identities);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_agent_userauth);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_channel_close);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_channel_free);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_channel_open_ex);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_channel_process_startup);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_channel_read_ex);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_channel_set_blocking);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_channel_write_ex);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_hostkey_hash);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_init);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_session_abstract);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_session_free);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_session_init_ex);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_session_last_error);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_session_set_blocking);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_session_startup);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_userauth_authenticated);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_userauth_keyboard_interactive_ex);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_userauth_list);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_userauth_password_ex);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_userauth_publickey);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_userauth_publickey_fromfile_ex);
-	DEFINE_LIBSSH2_SYMBOL(libssh2_userauth_publickey_frommemory);
+
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_agent_connect);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_agent_disconnect);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_agent_free);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_agent_get_identity);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_agent_init);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_agent_list_identities);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_agent_userauth);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_channel_close);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_channel_free);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_channel_open_ex);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_channel_process_startup);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_channel_read_ex);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_channel_set_blocking);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_channel_write_ex);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_hostkey_hash);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_init);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_session_abstract);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_session_free);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_session_init_ex);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_session_last_error);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_session_set_blocking);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_session_startup);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_userauth_authenticated);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_userauth_keyboard_interactive_ex);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_userauth_list);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_userauth_password_ex);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_userauth_publickey);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_userauth_publickey_fromfile_ex);
+	LOOKUP_LIBSSH2_SYMBOL(libssh2_userauth_publickey_frommemory);
 
 	git__on_shutdown(git_transport_ssh_global_shutdown);
 
