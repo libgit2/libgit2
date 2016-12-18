@@ -30,7 +30,7 @@
 static HMODULE git_libssh2_handle;
 
 #define LOOKUP_LIBSSH2_SYMBOL(symbol) \
-	git_ ## symbol = GetProcAddress(git_libssh2_handle, #symbol)
+	git_ ## symbol = (void *) GetProcAddress(git_libssh2_handle, #symbol)
 
 #else
 
