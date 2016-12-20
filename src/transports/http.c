@@ -208,7 +208,7 @@ static int gen_request(
 
 	git_buf_printf(buf, "%s %s%s HTTP/1.1\r\n", s->verb, path, s->service_url);
 
-	git_buf_printf(buf, "User-Agent: git/1.0 (%s)\r\n", user_agent());
+	git_buf_printf(buf, "User-Agent: git/2.0 (%s)\r\n", user_agent());
 	git_buf_printf(buf, "Host: %s\r\n", t->connection_data.host);
 
 	if (s->chunked || content_length > 0) {
