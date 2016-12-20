@@ -171,7 +171,7 @@ int git_sysdir_set(git_sysdir_t which, const char *search_path)
 		expand_path = strstr(search_path, PATH_MAGIC);
 
 	/* reset the default if this path has been cleared */
-	if (!search_path || expand_path)
+	if (!search_path)
 		git_sysdir__dirs[which].guess(&git_sysdir__dirs[which].buf);
 
 	/* if $PATH is not referenced, then just set the path */
