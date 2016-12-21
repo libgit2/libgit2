@@ -685,7 +685,7 @@ static int ssh_uploadpack(
 		return 0;
 	}
 
-	giterr_set(GITERR_NET, "Must call UPLOADPACK_LS before UPLOADPACK");
+	giterr_set(GITERR_NET, "Must call UPLOADPACK_LS before UPLOADPACK (ssh)");
 	return -1;
 }
 
@@ -712,7 +712,7 @@ static int ssh_receivepack(
 		return 0;
 	}
 
-	giterr_set(GITERR_NET, "Must call RECEIVEPACK_LS before RECEIVEPACK");
+	giterr_set(GITERR_NET, "Must call RECEIVEPACK_LS before RECEIVEPACK (ssh)");
 	return -1;
 }
 
