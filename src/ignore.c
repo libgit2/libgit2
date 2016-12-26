@@ -278,7 +278,7 @@ int git_ignore__for_path(
 	int error = 0;
 	const char *workdir = git_repository_workdir(repo);
 
-	assert(ignores && path);
+	assert(repo && ignores && path);
 
 	memset(ignores, 0, sizeof(*ignores));
 	ignores->repo = repo;
@@ -503,9 +503,9 @@ int git_ignore_path_is_ignored(
 	unsigned int i;
 	git_attr_file *file;
 
-	assert(ignored && pathname);
+	assert(repo && ignored && pathname);
 
-	workdir = repo ? git_repository_workdir(repo) : NULL;
+	workdir = git_repository_workdir(repo);
 
 	memset(&path, 0, sizeof(path));
 	memset(&ignores, 0, sizeof(ignores));
