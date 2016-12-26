@@ -1738,7 +1738,7 @@ int git_packbuilder_insert_walk(git_packbuilder *pb, git_revwalk *walk)
 	if (error == GIT_ITEROVER)
 		error = 0;
 
-	return 0;
+	return error;
 }
 
 int git_packbuilder_set_callbacks(git_packbuilder *pb, git_packbuilder_progress progress_cb, void *progress_cb_payload)
