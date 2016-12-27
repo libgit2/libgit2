@@ -237,13 +237,13 @@ int git_futils_writebuffer(
 {
 	int fd, do_fsync = 0, error = 0;
 
+	if (!flags)
+		flags = O_CREAT | O_TRUNC | O_WRONLY;
+
 	if ((flags & O_FSYNC) != 0)
 		do_fsync = 1;
 
 	flags &= ~O_FSYNC;
-
-	if (flags <= 0)
-		flags = O_CREAT | O_TRUNC | O_WRONLY;
 
 	if (!mode)
 		mode = GIT_FILEMODE_BLOB;
