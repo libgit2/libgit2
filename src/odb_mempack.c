@@ -177,6 +177,7 @@ int git_mempack_new(git_odb_backend **out)
 
 	db->objects = git_oidmap_alloc();
 
+	db->parent.version = GIT_ODB_BACKEND_VERSION;
 	db->parent.read = &impl__read;
 	db->parent.write = &impl__write;
 	db->parent.read_header = &impl__read_header;
