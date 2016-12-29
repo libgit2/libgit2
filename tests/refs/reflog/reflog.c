@@ -261,7 +261,7 @@ void test_refs_reflog_reflog__reading_a_reflog_with_invalid_format_returns_error
 	error = giterr_last();
 
 	cl_assert(error != NULL);
-	cl_assert_equal_s("Unable to parse OID - contains invalid characters", error->message);
+	cl_assert_equal_s("unable to parse OID - contains invalid characters", error->message);
 
 	git_reference_free(ref);
 	git_buf_free(&logpath);
