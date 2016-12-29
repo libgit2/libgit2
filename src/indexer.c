@@ -477,13 +477,29 @@ static int write_at(git_indexer *idx, const void *data, git_off_t offset, size_t
 
 static int append_to_pack(git_indexer *idx, const void *data, size_t size)
 {
+	git_off_t new_size;
+	size_t mmap_alignment;
+	size_t page_offset;
+	git_off_t page_start;
 	git_off_t current_size = idx->pack->mwf.size;
 	int fd = idx->pack->mwf.fd;
+	int error;
 
 	if (!size)
 		return 0;
 
-	if (p_lseek(fd, current_size + size - 1, SEEK_SET) < 0 ||
+	if ((error = git__mmap_alignment(&mmap_alignment)) < 0)
+		return error;
+
+	/* Write a single byte to force the file system to allocate space now or
+	 * report an error, since we can't report errors when writing using mmap.
+	 * Round the size up to the nearest page so that we only need to perform file
+	 * I/O when we add a page, instead of whenever we write even a single byte. */
+	new_size = current_size + size;
+	page_offset = new_size % mmap_alignment;
+	page_start = new_size - page_offset;
+
+	if (p_lseek(fd, page_start + mmap_alignment - 1, SEEK_SET) < 0 ||
 	    p_write(idx->pack->mwf.fd, data, 1) < 0) {
 		giterr_set(GITERR_OS, "cannot extend packfile '%s'", idx->pack->pack_name);
 		return -1;
@@ -1041,6 +1057,13 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 		goto on_error;
 
 	git_mwindow_free_all(&idx->pack->mwf);
+
+	/* Truncate file to undo rounding up to next page_size in append_to_pack */
+	if (p_ftruncate(idx->pack->mwf.fd, idx->pack->mwf.size) < 0) {
+		giterr_set(GITERR_OS, "failed to truncate pack file '%s'", idx->pack->pack_name);
+		return -1;
+	}
+
 	/* We need to close the descriptor here so Windows doesn't choke on commit_at */
 	if (p_close(idx->pack->mwf.fd) < 0) {
 		giterr_set(GITERR_OS, "failed to close packfile");
