@@ -83,12 +83,12 @@ static int parse_header(struct git_pack_header *hdr, struct git_pack_file *pack)
 
 	/* Verify we recognize this pack file format. */
 	if (hdr->hdr_signature != ntohl(PACK_SIGNATURE)) {
-		giterr_set(GITERR_INDEXER, "Wrong pack signature");
+		giterr_set(GITERR_INDEXER, "wrong pack signature");
 		return -1;
 	}
 
 	if (!pack_version_ok(hdr->hdr_version)) {
-		giterr_set(GITERR_INDEXER, "Wrong pack version");
+		giterr_set(GITERR_INDEXER, "wrong pack version");
 		return -1;
 	}
 
@@ -376,7 +376,7 @@ static int hash_and_save(git_indexer *idx, git_rawobj *obj, git_off_t entry_star
 	GITERR_CHECK_ALLOC(entry);
 
 	if (git_odb__hashobj(&oid, obj) < 0) {
-		giterr_set(GITERR_INDEXER, "Failed to hash object");
+		giterr_set(GITERR_INDEXER, "failed to hash object");
 		goto on_error;
 	}
 

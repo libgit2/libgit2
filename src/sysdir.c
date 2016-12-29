@@ -150,7 +150,7 @@ int git_sysdir_get_str(
 	GITERR_CHECK_ERROR(git_sysdir_get(&path, which));
 
 	if (!out || path->size >= outlen) {
-		giterr_set(GITERR_NOMEMORY, "Buffer is too short for the path");
+		giterr_set(GITERR_NOMEMORY, "buffer is too short for the path");
 		return GIT_EBUFS;
 	}
 
@@ -241,7 +241,7 @@ static int git_sysdir_find_in_dirlist(
 
 done:
 	git_buf_free(path);
-	giterr_set(GITERR_OS, "The %s file '%s' doesn't exist", label, name);
+	giterr_set(GITERR_OS, "the %s file '%s' doesn't exist", label, name);
 	return GIT_ENOTFOUND;
 }
 

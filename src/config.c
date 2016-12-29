@@ -109,7 +109,7 @@ int git_config_add_file_ondisk(
 
 	res = p_stat(path, &st);
 	if (res < 0 && errno != ENOENT) {
-		giterr_set(GITERR_CONFIG, "Error stat'ing config file '%s'", path);
+		giterr_set(GITERR_CONFIG, "failed to stat '%s'", path);
 		return -1;
 	}
 
@@ -203,7 +203,7 @@ static int find_internal_file_by_level(
 
 	if (pos == -1) {
 		giterr_set(GITERR_CONFIG,
-			"No config file exists for the given level '%i'", (int)level);
+			"no config file exists for the given level '%i'", (int)level);
 		return GIT_ENOTFOUND;
 	}
 
@@ -218,7 +218,7 @@ static int duplicate_level(void **old_raw, void *new_raw)
 
 	GIT_UNUSED(new_raw);
 
-	giterr_set(GITERR_CONFIG, "A file with the same level (%i) has already been added to the config", (int)(*old)->level);
+	giterr_set(GITERR_CONFIG, "a file with the same level (%i) has already been added to the config", (int)(*old)->level);
 	return GIT_EEXISTS;
 }
 
@@ -579,7 +579,7 @@ int git_config_foreach_match(
 static int config_error_nofiles(const char *name)
 {
 	giterr_set(GITERR_CONFIG,
-		"Cannot set value for '%s' when no config files exist", name);
+		"cannot set value for '%s' when no config files exist", name);
 	return GIT_ENOTFOUND;
 }
 
@@ -620,7 +620,7 @@ int git_config_set_string(git_config *cfg, const char *name, const char *value)
 	file_internal *internal;
 
 	if (!value) {
-		giterr_set(GITERR_CONFIG, "The value to set cannot be NULL");
+		giterr_set(GITERR_CONFIG, "the value to set cannot be NULL");
 		return -1;
 	}
 
@@ -674,7 +674,7 @@ int git_config__update_entry(
 
 static int config_error_notfound(const char *name)
 {
-	giterr_set(GITERR_CONFIG, "Config value '%s' was not found", name);
+	giterr_set(GITERR_CONFIG, "config value '%s' was not found", name);
 	return GIT_ENOTFOUND;
 }
 
@@ -1236,7 +1236,7 @@ int git_config_lookup_map_value(
 	}
 
 fail_parse:
-	giterr_set(GITERR_CONFIG, "Failed to map '%s'", value);
+	giterr_set(GITERR_CONFIG, "failed to map '%s'", value);
 	return -1;
 }
 
@@ -1270,7 +1270,7 @@ int git_config_parse_bool(int *out, const char *value)
 		return 0;
 	}
 
-	giterr_set(GITERR_CONFIG, "Failed to parse '%s' as a boolean value", value);
+	giterr_set(GITERR_CONFIG, "failed to parse '%s' as a boolean value", value);
 	return -1;
 }
 
@@ -1313,7 +1313,7 @@ int git_config_parse_int64(int64_t *out, const char *value)
 	}
 
 fail_parse:
-	giterr_set(GITERR_CONFIG, "Failed to parse '%s' as an integer", value ? value : "(null)");
+	giterr_set(GITERR_CONFIG, "failed to parse '%s' as an integer", value ? value : "(null)");
 	return -1;
 }
 
@@ -1333,7 +1333,7 @@ int git_config_parse_int32(int32_t *out, const char *value)
 	return 0;
 
 fail_parse:
-	giterr_set(GITERR_CONFIG, "Failed to parse '%s' as a 32-bit integer", value ? value : "(null)");
+	giterr_set(GITERR_CONFIG, "failed to parse '%s' as a 32-bit integer", value ? value : "(null)");
 	return -1;
 }
 
@@ -1398,7 +1398,7 @@ int git_config__normalize_name(const char *in, char **out)
 
 invalid:
 	git__free(name);
-	giterr_set(GITERR_CONFIG, "Invalid config item name '%s'", in);
+	giterr_set(GITERR_CONFIG, "invalid config item name '%s'", in);
 	return GIT_EINVALIDSPEC;
 }
 
@@ -1461,7 +1461,7 @@ int git_config_rename_section(
 			replace.ptr, strchr(replace.ptr, '.'))) < 0)
 	{
 		giterr_set(
-			GITERR_CONFIG, "Invalid config section '%s'", new_section_name);
+			GITERR_CONFIG, "invalid config section '%s'", new_section_name);
 		goto cleanup;
 	}
 

@@ -23,7 +23,7 @@ static int zstream_seterr(git_zstream *zs)
 	else if (zs->z.msg)
 		giterr_set_str(GITERR_ZLIB, zs->z.msg);
 	else
-		giterr_set(GITERR_ZLIB, "Unknown compression error");
+		giterr_set(GITERR_ZLIB, "unknown compression error");
 
 	return -1;
 }

@@ -83,7 +83,7 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 
 done:
 	if (!repo) {
-		giterr_set(GITERR_NET, "Malformed git protocol URL");
+		giterr_set(GITERR_NET, "malformed git protocol URL");
 		return -1;
 	}
 
@@ -274,7 +274,7 @@ static int git_ssh_extract_url_parts(
 	}
 
 	if (colon == NULL || (colon < start)) {
-		giterr_set(GITERR_NET, "Malformed URL");
+		giterr_set(GITERR_NET, "malformed URL");
 		return -1;
 	}
 
@@ -445,7 +445,7 @@ static int request_creds(git_cred **out, ssh_subtransport *t, const char *user, 
 		else if (error < 0)
 			return error;
 		else if (!cred) {
-			giterr_set(GITERR_SSH, "Callback failed to initialize SSH credentials");
+			giterr_set(GITERR_SSH, "callback failed to initialize SSH credentials");
 			return -1;
 		}
 	}
@@ -478,7 +478,7 @@ static int _git_ssh_session_create(
 
 	s = libssh2_session_init();
 	if (!s) {
-		giterr_set(GITERR_NET, "Failed to initialize SSH session");
+		giterr_set(GITERR_NET, "failed to initialize SSH session");
 		return -1;
 	}
 
@@ -487,7 +487,7 @@ static int _git_ssh_session_create(
 	} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
 
 	if (rc != LIBSSH2_ERROR_NONE) {
-		ssh_error(s, "Failed to start SSH session");
+		ssh_error(s, "failed to start SSH session");
 		libssh2_session_free(s);
 		return -1;
 	}
@@ -685,7 +685,7 @@ static int ssh_uploadpack(
 		return 0;
 	}
 
-	giterr_set(GITERR_NET, "Must call UPLOADPACK_LS before UPLOADPACK");
+	giterr_set(GITERR_NET, "must call UPLOADPACK_LS before UPLOADPACK");
 	return -1;
 }
 
@@ -712,7 +712,7 @@ static int ssh_receivepack(
 		return 0;
 	}
 
-	giterr_set(GITERR_NET, "Must call RECEIVEPACK_LS before RECEIVEPACK");
+	giterr_set(GITERR_NET, "must call RECEIVEPACK_LS before RECEIVEPACK");
 	return -1;
 }
 
@@ -844,7 +844,7 @@ int git_smart_subtransport_ssh(
 	assert(out);
 	*out = NULL;
 
-	giterr_set(GITERR_INVALID, "Cannot create SSH transport. Library was built without SSH support");
+	giterr_set(GITERR_INVALID, "cannot create SSH transport. Library was built without SSH support");
 	return -1;
 #endif
 }
@@ -888,7 +888,7 @@ int git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *p
 	assert(out);
 	*out = NULL;
 
-	giterr_set(GITERR_INVALID, "Cannot create SSH transport. Library was built without SSH support");
+	giterr_set(GITERR_INVALID, "cannot create SSH transport. Library was built without SSH support");
 	return -1;
 #endif
 }

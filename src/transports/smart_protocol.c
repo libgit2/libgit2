@@ -60,7 +60,7 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 
 		gitno_consume(buf, line_end);
 		if (pkt->type == GIT_PKT_ERR) {
-			giterr_set(GITERR_NET, "Remote error: %s", ((git_pkt_err *)pkt)->error);
+			giterr_set(GITERR_NET, "remote error: %s", ((git_pkt_err *)pkt)->error);
 			git__free(pkt);
 			return -1;
 		}

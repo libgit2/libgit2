@@ -61,7 +61,7 @@ static int commit_error(git_commit_list_node *commit, const char *msg)
 	git_oid_fmt(commit_oid, &commit->oid);
 	commit_oid[GIT_OID_HEXSZ] = '\0';
 
-	giterr_set(GITERR_ODB, "Failed to parse commit %s - %s", commit_oid, msg);
+	giterr_set(GITERR_ODB, "failed to parse commit %s - %s", commit_oid, msg);
 
 	return -1;
 }
@@ -191,7 +191,7 @@ int git_commit_list_parse(git_revwalk *walk, git_commit_list_node *commit)
 		return error;
 
 	if (obj->cached.type != GIT_OBJ_COMMIT) {
-		giterr_set(GITERR_INVALID, "Object is no commit object");
+		giterr_set(GITERR_INVALID, "object is no commit object");
 		error = -1;
 	} else
 		error = commit_quick_parse(

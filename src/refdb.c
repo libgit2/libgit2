@@ -128,7 +128,7 @@ int git_refdb_iterator(git_reference_iterator **out, git_refdb *db, const char *
 	int error;
 
 	if (!db->backend || !db->backend->iterator) {
-		giterr_set(GITERR_REFERENCE, "This backend doesn't support iterators");
+		giterr_set(GITERR_REFERENCE, "this backend doesn't support iterators");
 		return -1;
 	}
 

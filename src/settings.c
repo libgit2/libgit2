@@ -64,7 +64,7 @@ static int config_level_to_sysdir(int config_level)
 		break;
 	default:
 		giterr_set(
-			GITERR_INVALID, "Invalid config path selector %d", config_level);
+			GITERR_INVALID, "invalid config path selector %d", config_level);
 	}
 
 	return val;

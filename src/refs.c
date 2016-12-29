@@ -236,7 +236,7 @@ int git_reference_lookup_resolved(
 
 	if (scan_type != GIT_REF_OID && max_nesting != 0) {
 		giterr_set(GITERR_REFERENCE,
-			"Cannot resolve reference (>%u levels deep)", max_nesting);
+			"cannot resolve reference (>%u levels deep)", max_nesting);
 		git_reference_free(ref);
 		return -1;
 	}
@@ -298,7 +298,7 @@ cleanup:
 	if (error && !foundvalid) {
 		/* never found a valid reference name */
 		giterr_set(GITERR_REFERENCE,
-			"Could not use '%s' as valid reference name", git_buf_cstr(&name));
+			"could not use '%s' as valid reference name", git_buf_cstr(&name));
 	}
 
 	if (error == GIT_ENOTFOUND)
@@ -396,7 +396,7 @@ static int reference__create(
 
 		if (!git_object__is_valid(repo, oid, GIT_OBJ_ANY)) {
 			giterr_set(GITERR_REFERENCE,
-				"Target OID for the reference doesn't exist on the repository");
+				"target OID for the reference doesn't exist on the repository");
 			return -1;
 		}
 
@@ -524,7 +524,7 @@ static int ensure_is_an_updatable_direct_reference(git_reference *ref)
 	if (ref->type == GIT_REF_OID)
 		return 0;
 
-	giterr_set(GITERR_REFERENCE, "Cannot set OID on symbolic reference");
+	giterr_set(GITERR_REFERENCE, "cannot set OID on symbolic reference");
 	return -1;
 }
 
@@ -552,7 +552,7 @@ static int ensure_is_an_updatable_symbolic_reference(git_reference *ref)
 	if (ref->type == GIT_REF_SYMBOLIC)
 		return 0;
 
-	giterr_set(GITERR_REFERENCE, "Cannot set symbolic target on a direct reference");
+	giterr_set(GITERR_REFERENCE, "cannot set symbolic target on a direct reference");
 	return -1;
 }
 
@@ -599,7 +599,7 @@ static int reference__rename(git_reference **out, git_reference *ref, const char
 	/* Update HEAD it was pointing to the reference being renamed */
 	if (should_head_be_updated &&
 		(error = git_repository_set_head(ref->db->repo, normalized)) < 0) {
-		giterr_set(GITERR_REFERENCE, "Failed to update HEAD after renaming reference");
+		giterr_set(GITERR_REFERENCE, "failed to update HEAD after renaming reference");
 		return error;
 	}
 
@@ -636,7 +636,7 @@ int git_reference_resolve(git_reference **ref_out, const git_reference *ref)
 		return git_reference_lookup_resolved(ref_out, ref->db->repo, ref->target.symbolic, -1);
 
 	default:
-		giterr_set(GITERR_REFERENCE, "Invalid reference");
+		giterr_set(GITERR_REFERENCE, "invalid reference");
 		return -1;
 	}
 }
@@ -973,7 +973,7 @@ cleanup:
 	if (error == GIT_EINVALIDSPEC)
 		giterr_set(
 			GITERR_REFERENCE,
-			"The given reference name '%s' is not valid", name);
+			"the given reference name '%s' is not valid", name);
 
 	if (error && normalize)
 		git_buf_free(buf);
@@ -1000,7 +1000,7 @@ int git_reference_normalize_name(
 	if (git_buf_len(&buf) > buffer_size - 1) {
 		giterr_set(
 		GITERR_REFERENCE,
-		"The provided buffer is too short to hold the normalization of '%s'", name);
+		"the provided buffer is too short to hold the normalization of '%s'", name);
 		error = GIT_EBUFS;
 		goto cleanup;
 	}
@@ -1046,7 +1046,7 @@ static int get_terminal(git_reference **out, git_repository *repo, const char *r
 	int error = 0;
 
 	if (nesting > MAX_NESTING_LEVEL) {
-		giterr_set(GITERR_REFERENCE, "Reference chain too deep (%d)", nesting);
+		giterr_set(GITERR_REFERENCE, "reference chain too deep (%d)", nesting);
 		return GIT_ENOTFOUND;
 	}
 
@@ -1229,7 +1229,7 @@ static int peel_error(int error, git_reference *ref, const char* msg)
 {
 	giterr_set(
 		GITERR_INVALID,
-		"The reference '%s' cannot be peeled - %s", git_reference_name(ref), msg);
+		"the reference '%s' cannot be peeled - %s", git_reference_name(ref), msg);
 	return error;
 }
 

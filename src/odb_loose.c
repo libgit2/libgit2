@@ -214,7 +214,7 @@ static int finish_inflate(z_stream *s)
 	inflateEnd(s);
 
 	if ((status != Z_STREAM_END) || (s->avail_in != 0)) {
-		giterr_set(GITERR_ZLIB, "Failed to finish ZLib inflation. Stream aborted prematurely");
+		giterr_set(GITERR_ZLIB, "failed to finish zlib inflation; stream aborted prematurely");
 		return -1;
 	}
 
@@ -243,7 +243,7 @@ static int inflate_buffer(void *in, size_t inlen, void *out, size_t outlen)
 	zs.avail_in = (uInt)inlen;
 
 	if (inflateInit(&zs) < Z_OK) {
-		giterr_set(GITERR_ZLIB, "Failed to inflate buffer");
+		giterr_set(GITERR_ZLIB, "failed to inflate buffer");
 		return -1;
 	}
 
@@ -255,7 +255,7 @@ static int inflate_buffer(void *in, size_t inlen, void *out, size_t outlen)
 	if (status != Z_STREAM_END /* || zs.avail_in != 0 */ ||
 		zs.total_out != outlen)
 	{
-		giterr_set(GITERR_ZLIB, "Failed to inflate buffer. Stream aborted prematurely");
+		giterr_set(GITERR_ZLIB, "failed to inflate buffer; stream aborted prematurely");
 		return -1;
 	}
 
@@ -319,7 +319,7 @@ static int inflate_packlike_loose_disk_obj(git_rawobj *out, git_buf *obj)
 	 */
 	if ((used = get_binary_object_header(&hdr, obj)) == 0 ||
 		!git_object_typeisloose(hdr.type)) {
-		giterr_set(GITERR_ODB, "Failed to inflate loose object.");
+		giterr_set(GITERR_ODB, "failed to inflate loose object");
 		return -1;
 	}
 
@@ -366,7 +366,7 @@ static int inflate_disk_obj(git_rawobj *out, git_buf *obj)
 		(used = get_object_header(&hdr, head)) == 0 ||
 		!git_object_typeisloose(hdr.type))
 	{
-		giterr_set(GITERR_ODB, "Failed to inflate disk object.");
+		giterr_set(GITERR_ODB, "failed to inflate disk object");
 		return -1;
 	}
 
@@ -455,7 +455,7 @@ static int read_header_loose(git_rawobj *out, git_buf *loc)
 		|| get_object_header(&header_obj, inflated_buffer) == 0
 		|| git_object_typeisloose(header_obj.type) == 0)
 	{
-		giterr_set(GITERR_ZLIB, "Failed to read loose object header");
+		giterr_set(GITERR_ZLIB, "failed to read loose object header");
 		error = -1;
 	} else {
 		out->len = header_obj.size;

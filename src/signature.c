@@ -25,7 +25,7 @@ void git_signature_free(git_signature *sig)
 
 static int signature_error(const char *msg)
 {
-	giterr_set(GITERR_INVALID, "Failed to parse signature - %s", msg);
+	giterr_set(GITERR_INVALID, "failed to parse signature - %s", msg);
 	return -1;
 }
 

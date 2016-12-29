@@ -107,13 +107,13 @@ static int negotiate_next_token(
 	challenge_len = ctx->challenge ? strlen(ctx->challenge) : 0;
 
 	if (challenge_len < 9) {
-		giterr_set(GITERR_NET, "No negotiate challenge sent from server");
+		giterr_set(GITERR_NET, "no negotiate challenge sent from server");
 		error = -1;
 		goto done;
 	} else if (challenge_len > 9) {
 		if (git_buf_decode_base64(&input_buf,
 				ctx->challenge + 10, challenge_len - 10) < 0) {
-			giterr_set(GITERR_NET, "Invalid negotiate challenge from server");
+			giterr_set(GITERR_NET, "invalid negotiate challenge from server");
 			error = -1;
 			goto done;
 		}
@@ -122,7 +122,7 @@ static int negotiate_next_token(
 		input_token.length = input_buf.size;
 		input_token_ptr = &input_token;
 	} else if (ctx->gss_context != GSS_C_NO_CONTEXT) {
-		giterr_set(GITERR_NET, "Could not restart authentication");
+		giterr_set(GITERR_NET, "could not restart authentication");
 		error = -1;
 		goto done;
 	}
@@ -228,7 +228,7 @@ static int negotiate_init_context(
 	gss_release_oid_set(&status_minor, &mechanism_list);
 
 	if (!ctx->oid) {
-		giterr_set(GITERR_NET, "Negotiate authentication is not supported");
+		giterr_set(GITERR_NET, "negotiate authentication is not supported");
 		return -1;
 	}
 
