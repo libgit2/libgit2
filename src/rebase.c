@@ -731,7 +731,7 @@ int git_rebase_init(
 	if (inmemory)
 		error = rebase_init_inmemory(rebase, repo, branch, upstream, onto);
 	else
-		rebase_init_merge(rebase, repo, branch ,upstream, onto);
+		error = rebase_init_merge(rebase, repo, branch ,upstream, onto);
 
 	if (error == 0)
 		*out = rebase;
