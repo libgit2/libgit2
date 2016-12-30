@@ -57,7 +57,7 @@ static void blob_parsing(git_repository *repo);
 static void revwalking(git_repository *repo);
 static void index_walking(git_repository *repo);
 static void reference_listing(git_repository *repo);
-static void config_files(const char *repo_path);
+static void config_files(const char *repo_path, git_repository *repo);
 
 /**
  * Almost all libgit2 functions return 0 on success or negative on error.
@@ -115,7 +115,7 @@ int main (int argc, char** argv)
 	revwalking(repo);
 	index_walking(repo);
 	reference_listing(repo);
-	config_files(repo_path);
+	config_files(repo_path, repo);
 
 	/**
 	 * Finally, when you're done with the repository, you can free it as well.
@@ -692,12 +692,13 @@ static void reference_listing(git_repository *repo)
  *
  * [config]: http://libgit2.github.com/libgit2/#HEAD/group/config
  */
-static void config_files(const char *repo_path)
+static void config_files(const char *repo_path, git_repository* repo)
 {
 	const char *email;
 	char config_path[256];
 	int32_t j;
 	git_config *cfg;
+	git_config *snap_cfg;
 
 	printf("\n*Config Listing*\n");
 
@@ -710,6 +711,7 @@ static void config_files(const char *repo_path)
 	git_config_get_int32(&j, cfg, "help.autocorrect");
 	printf("Autocorrect: %d\n", j);
 
-	git_config_get_string(&email, cfg, "user.email");
+	check_error(git_repository_config_snapshot(&snap_cfg, repo), "config snapshot");
+	git_config_get_string(&email, snap_cfg, "user.email");
 	printf("Email: %s\n", email);
 }
