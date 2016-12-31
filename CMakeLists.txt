@@ -235,19 +235,6 @@ IF (WIN32 AND EMBED_SSH_PATH)
 	ADD_DEFINITIONS(-DGIT_SSH)
 ENDIF()
 
-
-FIND_PACKAGE(HTTP_Parser)
-IF (HTTP_PARSER_FOUND AND HTTP_PARSER_VERSION_MAJOR EQUAL 2)
-	INCLUDE_DIRECTORIES(${HTTP_PARSER_INCLUDE_DIRS})
-	LINK_LIBRARIES(${HTTP_PARSER_LIBRARIES})
-	LIST(APPEND LIBGIT2_PC_LIBS "-lhttp_parser")
-ELSE()
-	MESSAGE(STATUS "http-parser was not found or is too old; using bundled 3rd-party sources.")
-	INCLUDE_DIRECTORIES(deps/http-parser)
-	FILE(GLOB SRC_HTTP deps/http-parser/*.c deps/http-parser/*.h)
-ENDIF()
-
-
 IF (WIN32 AND WINHTTP)
 	ADD_DEFINITIONS(-DGIT_WINHTTP)
 
@@ -330,6 +317,18 @@ ENDIF()
 IF(WIN32 OR AMIGA OR CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
 	INCLUDE_DIRECTORIES(deps/regex)
 	SET(SRC_REGEX deps/regex/regex.c)
+ENDIF()
+
+# Optional external dependency: http-parser
+FIND_PACKAGE(HTTP_Parser)
+IF (HTTP_PARSER_FOUND AND HTTP_PARSER_VERSION_MAJOR EQUAL 2)
+	INCLUDE_DIRECTORIES(${HTTP_PARSER_INCLUDE_DIRS})
+	LINK_LIBRARIES(${HTTP_PARSER_LIBRARIES})
+	LIST(APPEND LIBGIT2_PC_LIBS "-lhttp_parser")
+ELSE()
+	MESSAGE(STATUS "http-parser version 2 was not found; using bundled 3rd-party sources.")
+	INCLUDE_DIRECTORIES(deps/http-parser)
+	FILE(GLOB SRC_HTTP deps/http-parser/*.c deps/http-parser/*.h)
 ENDIF()
 
 # Optional external dependency: zlib
