@@ -160,11 +160,13 @@ GIT_EXTERN(int) git_repository_open_bare(git_repository **out, const char *bare_
 /**
  * Free a previously allocated repository
  *
- * Note that after a repository is free'd, all the objects it has spawned
- * will still exist until they are manually closed by the user
- * with `git_object_free`, but accessing any of the attributes of
- * an object without a backing repository will result in undefined
- * behavior
+ * Note that after a repository is free'd, all objects it has spawned will still
+ * exist until they are manually closed by the user (e.g. with
+ * `git_object_free`), but using the object in any other manner without a
+ * backing repository will result in undefined behavior. The exceptions to this
+ * rule are `git_config`, `git_config_entry`, `git_index`, `git_index_entry`,
+ * `git_odb`, `gt_reflog_entry`, `git_tree_entry`, `git_signature` and
+ * `git_note` objects.
  *
  * @param repo repository handle to close. If NULL nothing occurs.
  */
