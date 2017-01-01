@@ -242,6 +242,8 @@ void test_merge_trees_renames__no_rename_index(void)
 		{ 0100644, "b69fe837e4cecfd4c9a40cdca7c138468687df07", 3, "7-both-renamed.txt" },
 	};
 
+	opts.flags &= ~GIT_MERGE_FIND_RENAMES;
+
 	cl_git_pass(merge_trees_from_branches(&index, repo,
 		BRANCH_RENAME_OURS, BRANCH_RENAME_THEIRS,
 		&opts));

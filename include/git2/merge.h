@@ -290,7 +290,8 @@ typedef struct {
 } git_merge_options;
 
 #define GIT_MERGE_OPTIONS_VERSION 1
-#define GIT_MERGE_OPTIONS_INIT {GIT_MERGE_OPTIONS_VERSION}
+#define GIT_MERGE_OPTIONS_INIT { \
+	GIT_MERGE_OPTIONS_VERSION, GIT_MERGE_FIND_RENAMES }
 
 /**
  * Initializes a `git_merge_options` with default values. Equivalent to
