@@ -724,6 +724,7 @@ static void config_files(const char *repo_path, git_repository* repo)
 	int32_t autocorrect;
 	git_config *cfg;
 	git_config *snap_cfg;
+	int error_code;
 
 	printf("\n*Config Listing*\n");
 
@@ -740,9 +741,33 @@ static void config_files(const char *repo_path, git_repository* repo)
 	git_config_get_string(&email, snap_cfg, "user.email");
 	printf("Email: %s\n", email);
 
-	/**
-	 * Remember to free the configurations after usage.
-	 */
+	error_code = git_config_get_int32(&autocorrect, cfg, "help.autocorrect");
+	switch (error_code)
+	{
+		case 0:
+			printf("Autocorrect: %d\n", autocorrect);
+			break;
+		case GIT_ENOTFOUND:
+			printf("Autocorrect: Undefined\n");
+			break;
+		default:
+			check_error(error_code, "get_int32 failed");
+	}
 	git_config_free(cfg);
+
+	check_error(git_repository_config_snapshot(&snap_cfg, repo), "config snapshot");
+	error_code = git_config_get_string(&email, snap_cfg, "user.email");
+	switch (error_code)
+	{
+		case 0:
+			printf("Email: %s\n", email);
+			break;
+		case GIT_ENOTFOUND:
+			printf("Email: Undefined\n");
+			break;
+		default:
+			check_error(error_code, "get_string failed");
+	}
+
 	git_config_free(snap_cfg);
 }
