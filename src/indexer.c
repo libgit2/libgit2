@@ -151,6 +151,12 @@ cleanup:
 	if (fd != -1)
 		p_close(fd);
 
+	if (git_buf_is_allocated(&tmp_path))
+		(void)p_unlink(git_buf_cstr(&tmp_path));
+
+	if (idx->pack != NULL)
+		(void)p_unlink(idx->pack->pack_name);
+
 	git_buf_free(&path);
 	git_buf_free(&tmp_path);
 	git__free(idx);
@@ -1083,6 +1089,9 @@ void git_indexer_free(git_indexer *idx)
 	}
 
 	git_vector_free_deep(&idx->deltas);
+
+	/* Try to delete the temporary file in case it was not committed. */
+	(void)p_unlink(idx->pack->pack_name);
 
 	if (!git_mutex_lock(&git__mwindow_mutex)) {
 		git_packfile_free(idx->pack);
