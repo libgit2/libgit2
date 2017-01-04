@@ -1091,6 +1091,12 @@ void git_indexer_free(git_indexer *idx)
 	git_vector_free_deep(&idx->deltas);
 
 	/* Try to delete the temporary file in case it was not committed. */
+	git_mwindow_free_all(&idx->pack->mwf);
+	/* We need to close the descriptor here so Windows doesn't choke on unlink */
+	if (idx->pack->mwf.fd != -1) {
+		(void)p_close(idx->pack->mwf.fd);
+		idx->pack->mwf.fd = -1;
+	}
 	(void)p_unlink(idx->pack->pack_name);
 
 	if (!git_mutex_lock(&git__mwindow_mutex)) {
