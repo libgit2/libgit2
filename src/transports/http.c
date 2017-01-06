@@ -624,13 +624,12 @@ static int http_connect(http_subtransport *t)
 	if ((!error || error == GIT_ECERTIFICATE) && t->owner->certificate_check_cb != NULL &&
 	    git_stream_is_encrypted(t->io)) {
 		git_cert *cert;
-		int is_valid;
+		int is_valid = (error == GIT_OK);
 
 		if ((error = git_stream_certificate(&cert, t->io)) < 0)
 			return error;
 
 		giterr_clear();
-		is_valid = error != GIT_ECERTIFICATE;
 		error = t->owner->certificate_check_cb(cert, is_valid, t->connection_data.host, t->owner->message_cb_payload);
 
 		if (error < 0) {
