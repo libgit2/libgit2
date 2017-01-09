@@ -427,15 +427,23 @@ int git_pkt_parse_line(
 	if (bufflen > 0 && bufflen < (size_t)len)
 		return GIT_EBUFS;
 
+	/*
+	 * The length has to be exactly 0 in case of a flush
+	 * packet or greater than PKT_LEN_SIZE, as the decoded
+	 * length includes its own encoded length of four bytes.
+	 */
+	if (len != 0 && len < PKT_LEN_SIZE)
+		return GIT_ERROR;
+
 	line += PKT_LEN_SIZE;
 	/*
-	 * TODO: How do we deal with empty lines? Try again? with the next
-	 * line?
+	 * The Git protocol does not specify empty lines as part
+	 * of the protocol. Not knowing what to do with an empty
+	 * line, we should return an error upon hitting one.
 	 */
 	if (len == PKT_LEN_SIZE) {
-		*head = NULL;
-		*out = line;
-		return 0;
+		giterr_set_str(GITERR_NET, "Invalid empty packet");
+		return GIT_ERROR;
 	}
 
 	if (len == 0) { /* Flush pkt */
