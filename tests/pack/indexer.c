@@ -85,7 +85,7 @@ void test_pack_indexer__fix_thin(void)
 	cl_assert_equal_i(stats.indexed_objects, 2);
 	cl_assert_equal_i(stats.local_objects, 1);
 
-	git_oid_fromstr(&should_id, "11f0f69b334728fdd8bc86b80499f22f29d85b15");
+	git_oid_fromstr(&should_id, "fefdb2d740a3a6b6c03a0c7d6ce431c6d5810e13");
 	cl_assert_equal_oid(&should_id, git_indexer_hash(idx));
 
 	git_indexer_free(idx);
@@ -102,7 +102,7 @@ void test_pack_indexer__fix_thin(void)
 		int fd;
 		ssize_t read;
 		struct stat st;
-		const char *name = "pack-11f0f69b334728fdd8bc86b80499f22f29d85b15.pack";
+		const char *name = "pack-fefdb2d740a3a6b6c03a0c7d6ce431c6d5810e13.pack";
 
 		fd = p_open(name, O_RDONLY);
 		cl_assert(fd != -1);
