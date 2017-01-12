@@ -698,7 +698,7 @@ static void config_files(const char *repo_path, git_repository* repo)
 {
 	const char *email;
 	char config_path[256];
-	int32_t j;
+	int32_t autocorrect;
 	git_config *cfg;
 	git_config *snap_cfg;
 
@@ -710,8 +710,8 @@ static void config_files(const char *repo_path, git_repository* repo)
 	sprintf(config_path, "%s/config", repo_path);
 	check_error(git_config_open_ondisk(&cfg, config_path), "opening config");
 
-	git_config_get_int32(&j, cfg, "help.autocorrect");
-	printf("Autocorrect: %d\n", j);
+	if (git_config_get_int32(&autocorrect, cfg, "help.autocorrect") == 0)
+		printf("Autocorrect: %d\n", autocorrect);
 
 	check_error(git_repository_config_snapshot(&snap_cfg, repo), "config snapshot");
 	git_config_get_string(&email, snap_cfg, "user.email");
