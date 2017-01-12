@@ -247,6 +247,11 @@ static void object_database(git_repository *repo, git_oid *oid)
 	 */
 	git_oid_fmt(oid_hex, oid);
 	printf("Written Object: %s\n", oid_hex);
+
+	/**
+	 * Free the object database after usage.
+	 */
+	git_odb_free(odb);
 }
 
 /**
@@ -312,6 +317,14 @@ static void commit_writing(git_repository *repo)
 	 */
 	git_oid_fmt(oid_hex, &commit_id);
 	printf("New Commit: %s\n", oid_hex);
+
+	/**
+	 * Free all objects used in the meanwhile.
+	 */
+	git_tree_free(tree);
+	git_commit_free(parent);
+	git_signature_free(author);
+	git_signature_free(committer);
 }
 
 /**
@@ -431,7 +444,11 @@ static void tag_parsing(git_repository *repo)
 	printf("Tag Name: %s\nTag Type: %s\nTag Message: %s\n",
 		name, git_object_type2string(type), message);
 
+	/**
+	 * Free both the commit and tag after usage.
+	 */
 	git_commit_free(commit);
+	git_tag_free(tag);
 }
 
 /**
@@ -485,9 +502,10 @@ static void tree_parsing(git_repository *repo)
 	git_tree_entry_to_object(&obj, repo, entry); /* blob */
 
 	/**
-	 * Remember to close the looked-up object once you are done using it
+	 * Remember to close the looked-up object and tree once you are done using it
 	 */
 	git_object_free(obj);
+	git_tree_free(tree);
 }
 
 /**
@@ -522,6 +540,11 @@ static void blob_parsing(git_repository *repo)
 	 * */
 	printf("Blob Size: %ld\n", (long)git_blob_rawsize(blob)); /* 8 */
 	git_blob_rawcontent(blob); /* "content" */
+
+	/**
+	 * Free the blob after usage.
+	 */
+	git_blob_free(blob);
 }
 
 /**
@@ -716,4 +739,10 @@ static void config_files(const char *repo_path, git_repository* repo)
 	check_error(git_repository_config_snapshot(&snap_cfg, repo), "config snapshot");
 	git_config_get_string(&email, snap_cfg, "user.email");
 	printf("Email: %s\n", email);
+
+	/**
+	 * Remember to free the configurations after usage.
+	 */
+	git_config_free(cfg);
+	git_config_free(snap_cfg);
 }
