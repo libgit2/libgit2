@@ -264,7 +264,7 @@ static void commit_writing(git_repository *repo)
 	git_oid tree_id, parent_id, commit_id;
 	git_tree *tree;
 	git_commit *parent;
-	const git_signature *author, *cmtter;
+	git_signature *author, *committer;
 	char oid_hex[GIT_OID_HEXSZ+1] = { 0 };
 
 	printf("\n*Commit Writing*\n");
@@ -276,9 +276,9 @@ static void commit_writing(git_repository *repo)
 	 * `user.email` configuration options.  See the `config` section of this
 	 * example file to see how to access config values.
 	 */
-	git_signature_new((git_signature **)&author,
+	git_signature_new(&author,
 			"Scott Chacon", "schacon@gmail.com", 123456789, 60);
-	git_signature_new((git_signature **)&cmtter,
+	git_signature_new(&committer,
 			"Scott A Chacon", "scott@github.com", 987654321, 90);
 
 	/**
@@ -301,7 +301,7 @@ static void commit_writing(git_repository *repo)
 			repo,
 			NULL, /* do not update the HEAD */
 			author,
-			cmtter,
+			committer,
 			NULL, /* use default message encoding */
 			"example commit",
 			tree,
