@@ -644,10 +644,7 @@ static void index_walking(git_repository *repo)
 static void reference_listing(git_repository *repo)
 {
 	git_strarray ref_list;
-	const char *refname;
-	git_reference *ref;
 	unsigned i;
-	char oid_hex[GIT_OID_HEXSZ+1];
 
 	printf("\n*Reference Listing*\n");
 
@@ -662,7 +659,10 @@ static void reference_listing(git_repository *repo)
 	git_reference_list(&ref_list, repo);
 
 	for (i = 0; i < ref_list.count; ++i) {
-		memset(oid_hex, 0, sizeof(oid_hex));
+		git_reference *ref;
+		char oid_hex[GIT_OID_HEXSZ+1] = GIT_OID_HEX_ZERO;
+		const char *refname;
+
 		refname = ref_list.strings[i];
 		git_reference_lookup(&ref, repo, refname);
 
@@ -679,6 +679,8 @@ static void reference_listing(git_repository *repo)
 				fprintf(stderr, "Unexpected reference type\n");
 				exit(1);
 		}
+
+		git_reference_free(ref);
 	}
 
 	git_strarray_free(&ref_list);
