@@ -130,13 +130,13 @@ int git_cherrypick_commit(
 	if (git_commit_parentcount(cherrypick_commit) > 1) {
 		if (!mainline)
 			return cherrypick_seterr(cherrypick_commit,
-				"Mainline branch is not specified but %s is a merge commit");
+				"mainline branch is not specified but %s is a merge commit");
 
 		parent = mainline;
 	} else {
 		if (mainline)
 			return cherrypick_seterr(cherrypick_commit,
-				"Mainline branch specified but %s is not a merge commit");
+				"mainline branch specified but %s is not a merge commit");
 
 		parent = git_commit_parentcount(cherrypick_commit);
 	}

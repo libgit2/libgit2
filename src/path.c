@@ -341,7 +341,7 @@ int git_path_prettify(git_buf *path_out, const char *path, const char *base)
 	if (p_realpath(path, buf) == NULL) {
 		/* giterr_set resets the errno when dealing with a GITERR_OS kind of error */
 		int error = (errno == ENOENT || errno == ENOTDIR) ? GIT_ENOTFOUND : -1;
-		giterr_set(GITERR_OS, "Failed to resolve path '%s'", path);
+		giterr_set(GITERR_OS, "failed to resolve path '%s'", path);
 
 		git_buf_clear(path_out);
 
@@ -632,24 +632,24 @@ int git_path_set_error(int errno_value, const char *path, const char *action)
 	switch (errno_value) {
 	case ENOENT:
 	case ENOTDIR:
-		giterr_set(GITERR_OS, "Could not find '%s' to %s", path, action);
+		giterr_set(GITERR_OS, "could not find '%s' to %s", path, action);
 		return GIT_ENOTFOUND;
 
 	case EINVAL:
 	case ENAMETOOLONG:
-		giterr_set(GITERR_OS, "Invalid path for filesystem '%s'", path);
+		giterr_set(GITERR_OS, "invalid path for filesystem '%s'", path);
 		return GIT_EINVALIDSPEC;
 
 	case EEXIST:
-		giterr_set(GITERR_OS, "Failed %s - '%s' already exists", action, path);
+		giterr_set(GITERR_OS, "failed %s - '%s' already exists", action, path);
 		return GIT_EEXISTS;
 
 	case EACCES:
-		giterr_set(GITERR_OS, "Failed %s - '%s' is locked", action, path);
+		giterr_set(GITERR_OS, "failed %s - '%s' is locked", action, path);
 		return GIT_ELOCKED;
 
 	default:
-		giterr_set(GITERR_OS, "Could not %s '%s'", action, path);
+		giterr_set(GITERR_OS, "could not %s '%s'", action, path);
 		return -1;
 	}
 }
@@ -758,7 +758,7 @@ int git_path_resolve_relative(git_buf *path, size_t ceiling)
 			/* error out if trying to up one from a hard base */
 			if (to == base && ceiling != 0) {
 				giterr_set(GITERR_INVALID,
-					"Cannot strip root component off url");
+					"cannot strip root component off url");
 				return -1;
 			}
 
@@ -987,7 +987,7 @@ int git_path_iconv(git_path_iconv_t *ic, const char **in, size_t *inlen)
 	return 0;
 
 fail:
-	giterr_set(GITERR_OS, "Unable to convert unicode path data");
+	giterr_set(GITERR_OS, "unable to convert unicode path data");
 	return -1;
 }
 
@@ -1080,7 +1080,7 @@ int git_path_direach(
 	wd_len = git_buf_len(path);
 
 	if ((dir = opendir(path->ptr)) == NULL) {
-		giterr_set(GITERR_OS, "Failed to open directory '%s'", path->ptr);
+		giterr_set(GITERR_OS, "failed to open directory '%s'", path->ptr);
 		if (errno == ENOENT)
 			return GIT_ENOTFOUND;
 
@@ -1161,13 +1161,13 @@ int git_path_diriter_init(
 	git_path_trim_slashes(&diriter->path_utf8);
 
 	if (diriter->path_utf8.size == 0) {
-		giterr_set(GITERR_FILESYSTEM, "Could not open directory '%s'", path);
+		giterr_set(GITERR_FILESYSTEM, "could not open directory '%s'", path);
 		return -1;
 	}
 
 	if ((diriter->parent_len = git_win32_path_from_utf8(diriter->path, diriter->path_utf8.ptr)) < 0 ||
 			!git_win32__findfirstfile_filter(path_filter, diriter->path_utf8.ptr)) {
-		giterr_set(GITERR_OS, "Could not parse the directory path '%s'", path);
+		giterr_set(GITERR_OS, "could not parse the directory path '%s'", path);
 		return -1;
 	}
 
@@ -1180,7 +1180,7 @@ int git_path_diriter_init(
 		is_win7_or_later ? FIND_FIRST_EX_LARGE_FETCH : 0);
 
 	if (diriter->handle == INVALID_HANDLE_VALUE) {
-		giterr_set(GITERR_OS, "Could not open directory '%s'", path);
+		giterr_set(GITERR_OS, "could not open directory '%s'", path);
 		return -1;
 	}
 
@@ -1310,14 +1310,14 @@ int git_path_diriter_init(
 	git_path_trim_slashes(&diriter->path);
 
 	if (diriter->path.size == 0) {
-		giterr_set(GITERR_FILESYSTEM, "Could not open directory '%s'", path);
+		giterr_set(GITERR_FILESYSTEM, "could not open directory '%s'", path);
 		return -1;
 	}
 
 	if ((diriter->dir = opendir(diriter->path.ptr)) == NULL) {
 		git_buf_free(&diriter->path);
 
-		giterr_set(GITERR_OS, "Failed to open directory '%s'", path);
+		giterr_set(GITERR_OS, "failed to open directory '%s'", path);
 		return -1;
 	}
 
@@ -1350,7 +1350,7 @@ int git_path_diriter_next(git_path_diriter *diriter)
 				return GIT_ITEROVER;
 
 			giterr_set(GITERR_OS,
-				"Could not read directory '%s'", diriter->path.ptr);
+				"could not read directory '%s'", diriter->path.ptr);
 			return -1;
 		}
 	} while (skip_dot && git_path_is_dot_or_dotdot(de->d_name));

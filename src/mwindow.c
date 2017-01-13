@@ -231,7 +231,7 @@ static int git_mwindow_close_lru(git_mwindow_file *mwf)
 	}
 
 	if (!lru_w) {
-		giterr_set(GITERR_OS, "Failed to close memory window. Couldn't find LRU");
+		giterr_set(GITERR_OS, "failed to close memory window; couldn't find LRU");
 		return -1;
 	}
 

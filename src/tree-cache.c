@@ -137,7 +137,7 @@ static int read_tree_internal(git_tree_cache **out,
 	return 0;
 
  corrupted:
-	giterr_set(GITERR_INDEX, "Corrupted TREE extension in index");
+	giterr_set(GITERR_INDEX, "corrupted TREE extension in index");
 	return -1;
 }
 
@@ -149,7 +149,7 @@ int git_tree_cache_read(git_tree_cache **tree, const char *buffer, size_t buffer
 		return -1;
 
 	if (buffer < buffer_end) {
-		giterr_set(GITERR_INDEX, "Corrupted TREE extension in index (unexpected trailing data)");
+		giterr_set(GITERR_INDEX, "corrupted TREE extension in index (unexpected trailing data)");
 		return -1;
 	}
 

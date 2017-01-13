@@ -257,10 +257,10 @@ static int ssl_set_error(SSL *ssl, int error)
 	switch (err) {
 	case SSL_ERROR_WANT_CONNECT:
 	case SSL_ERROR_WANT_ACCEPT:
-		giterr_set(GITERR_NET, "SSL error: connection failure\n");
+		giterr_set(GITERR_NET, "SSL error: connection failure");
 		break;
 	case SSL_ERROR_WANT_X509_LOOKUP:
-		giterr_set(GITERR_NET, "SSL error: x509 error\n");
+		giterr_set(GITERR_NET, "SSL error: x509 error");
 		break;
 	case SSL_ERROR_SYSCALL:
 		e = ERR_get_error();
@@ -327,7 +327,7 @@ static int verify_server_cert(SSL *ssl, const char *host)
 	int i = -1,j;
 
 	if (SSL_get_verify_result(ssl) != X509_V_OK) {
-		giterr_set(GITERR_SSL, "The SSL certificate is invalid");
+		giterr_set(GITERR_SSL, "the SSL certificate is invalid");
 		return GIT_ECERTIFICATE;
 	}
 

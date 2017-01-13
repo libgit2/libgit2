@@ -468,7 +468,7 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 	return 0;
 
 bad_buffer:
-	giterr_set(GITERR_OBJECT, "Failed to parse bad commit object");
+	giterr_set(GITERR_OBJECT, "failed to parse bad commit object");
 	return -1;
 }
 
@@ -598,7 +598,7 @@ int git_commit_parent(
 
 	parent_id = git_commit_parent_id(commit, n);
 	if (parent_id == NULL) {
-		giterr_set(GITERR_INVALID, "Parent %u does not exist", n);
+		giterr_set(GITERR_INVALID, "parent %u does not exist", n);
 		return GIT_ENOTFOUND;
 	}
 

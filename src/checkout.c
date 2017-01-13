@@ -1021,13 +1021,13 @@ static int checkout_conflicts_load_byname_entry(
 	*theirs_out = NULL;
 
 	if (!name_entry->ancestor) {
-		giterr_set(GITERR_INDEX, "A NAME entry exists without an ancestor");
+		giterr_set(GITERR_INDEX, "a NAME entry exists without an ancestor");
 		error = -1;
 		goto done;
 	}
 
 	if (!name_entry->ours && !name_entry->theirs) {
-		giterr_set(GITERR_INDEX, "A NAME entry exists without an ours or theirs");
+		giterr_set(GITERR_INDEX, "a NAME entry exists without an ours or theirs");
 		error = -1;
 		goto done;
 	}
@@ -1035,7 +1035,7 @@ static int checkout_conflicts_load_byname_entry(
 	if ((ancestor = checkout_conflicts_search_ancestor(data,
 		name_entry->ancestor)) == NULL) {
 		giterr_set(GITERR_INDEX,
-			"A NAME entry referenced ancestor entry '%s' which does not exist in the main index",
+			"a NAME entry referenced ancestor entry '%s' which does not exist in the main index",
 			name_entry->ancestor);
 		error = -1;
 		goto done;
@@ -1047,7 +1047,7 @@ static int checkout_conflicts_load_byname_entry(
 		else if ((ours = checkout_conflicts_search_branch(data, name_entry->ours)) == NULL ||
 			ours->ours == NULL) {
 			giterr_set(GITERR_INDEX,
-				"A NAME entry referenced our entry '%s' which does not exist in the main index",
+				"a NAME entry referenced our entry '%s' which does not exist in the main index",
 				name_entry->ours);
 			error = -1;
 			goto done;
@@ -1062,7 +1062,7 @@ static int checkout_conflicts_load_byname_entry(
 		else if ((theirs = checkout_conflicts_search_branch(data, name_entry->theirs)) == NULL ||
 			theirs->theirs == NULL) {
 			giterr_set(GITERR_INDEX,
-				"A NAME entry referenced their entry '%s' which does not exist in the main index",
+				"a NAME entry referenced their entry '%s' which does not exist in the main index",
 				name_entry->theirs);
 			error = -1;
 			goto done;
@@ -1161,7 +1161,7 @@ static int checkout_conflicts_mark_directoryfile(
 		if ((error = git_index_find(&j, index, path)) < 0) {
 			if (error == GIT_ENOTFOUND)
 				giterr_set(GITERR_INDEX,
-					"Index inconsistency, could not find entry for expected conflict '%s'", path);
+					"index inconsistency, could not find entry for expected conflict '%s'", path);
 
 			goto done;
 		}
@@ -1169,7 +1169,7 @@ static int checkout_conflicts_mark_directoryfile(
 		for (; j < len; j++) {
 			if ((entry = git_index_get_byindex(index, j)) == NULL) {
 				giterr_set(GITERR_INDEX,
-					"Index inconsistency, truncated index while loading expected conflict '%s'", path);
+					"index inconsistency, truncated index while loading expected conflict '%s'", path);
 				error = -1;
 				goto done;
 			}
@@ -1254,14 +1254,14 @@ static int checkout_verify_paths(
 
 	if (action & CHECKOUT_ACTION__REMOVE) {
 		if (!git_path_isvalid(repo, delta->old_file.path, flags)) {
-			giterr_set(GITERR_CHECKOUT, "Cannot remove invalid path '%s'", delta->old_file.path);
+			giterr_set(GITERR_CHECKOUT, "cannot remove invalid path '%s'", delta->old_file.path);
 			return -1;
 		}
 	}
 
 	if (action & ~CHECKOUT_ACTION__REMOVE) {
 		if (!git_path_isvalid(repo, delta->new_file.path, flags)) {
-			giterr_set(GITERR_CHECKOUT, "Cannot checkout to invalid path '%s'", delta->new_file.path);
+			giterr_set(GITERR_CHECKOUT, "cannot checkout to invalid path '%s'", delta->new_file.path);
 			return -1;
 		}
 	}
@@ -1430,7 +1430,7 @@ static int mkpath2file(
 			 */
 			error = git_futils_rmdir_r(path, NULL, GIT_RMDIR_REMOVE_FILES);
 		} else if (errno != ENOENT) {
-			giterr_set(GITERR_OS, "Failed to stat file '%s'", path);
+			giterr_set(GITERR_OS, "failed to stat '%s'", path);
 			return GIT_EEXISTS;
 		} else {
 			giterr_clear();
@@ -1454,7 +1454,7 @@ static int checkout_stream_write(
 	int ret;
 
 	if ((ret = p_write(stream->fd, buffer, len)) < 0)
-		giterr_set(GITERR_OS, "Could not write to '%s'", stream->path);
+		giterr_set(GITERR_OS, "could not write to '%s'", stream->path);
 
 	return ret;
 }
@@ -1503,7 +1503,7 @@ static int blob_content_to_file(
 		mode = GIT_FILEMODE_BLOB;
 
 	if ((fd = p_open(path, flags, mode)) < 0) {
-		giterr_set(GITERR_OS, "Could not open '%s' for writing", path);
+		giterr_set(GITERR_OS, "could not open '%s' for writing", path);
 		return fd;
 	}
 
@@ -1540,7 +1540,7 @@ static int blob_content_to_file(
 		data->perfdata.stat_calls++;
 
 		if ((error = p_stat(path, st)) < 0) {
-			giterr_set(GITERR_OS, "Error statting '%s'", path);
+			giterr_set(GITERR_OS, "failed to stat '%s'", path);
 			return error;
 		}
 
@@ -1567,7 +1567,7 @@ static int blob_content_to_link(
 
 	if (data->can_symlink) {
 		if ((error = p_symlink(git_buf_cstr(&linktarget), path)) < 0)
-			giterr_set(GITERR_OS, "Could not create symlink %s", path);
+			giterr_set(GITERR_OS, "could not create symlink %s", path);
 	} else {
 		error = git_futils_fake_symlink(git_buf_cstr(&linktarget), path);
 	}
@@ -1576,7 +1576,7 @@ static int blob_content_to_link(
 		data->perfdata.stat_calls++;
 
 		if ((error = p_lstat(path, st)) < 0)
-			giterr_set(GITERR_CHECKOUT, "Could not stat symlink %s", path);
+			giterr_set(GITERR_CHECKOUT, "could not stat symlink %s", path);
 
 		st->st_mode = GIT_FILEMODE_LINK;
 	}
@@ -1621,7 +1621,7 @@ static int checkout_submodule_update_index(
 	data->perfdata.stat_calls++;
 	if (p_stat(fullpath->ptr, &st) < 0) {
 		giterr_set(
-			GITERR_CHECKOUT, "Could not stat submodule %s\n", file->path);
+			GITERR_CHECKOUT, "could not stat submodule %s\n", file->path);
 		return GIT_ENOTFOUND;
 	}
 
@@ -1694,7 +1694,7 @@ static int checkout_safe_for_update_only(
 			return 0;
 
 		/* otherwise, stat error and no update */
-		giterr_set(GITERR_OS, "Failed to stat file '%s'", path);
+		giterr_set(GITERR_OS, "failed to stat '%s'", path);
 		return -1;
 	}
 
@@ -1966,7 +1966,7 @@ static int checkout_path_suffixed(git_buf *path, const char *suffix)
 	if (i == INT_MAX) {
 		git_buf_truncate(path, path_len);
 
-		giterr_set(GITERR_CHECKOUT, "Could not write '%s': working directory file exists", path->ptr);
+		giterr_set(GITERR_CHECKOUT, "could not write '%s': working directory file exists", path->ptr);
 		return GIT_EEXISTS;
 	}
 
@@ -2097,7 +2097,7 @@ static int checkout_write_merge(
 		goto done;
 
 	if (result.path == NULL || result.mode == 0) {
-		giterr_set(GITERR_CHECKOUT, "Could not merge contents of file");
+		giterr_set(GITERR_CHECKOUT, "could not merge contents of file");
 		error = GIT_ECONFLICT;
 		goto done;
 	}
@@ -2345,7 +2345,7 @@ static int checkout_data_init(
 	memset(data, 0, sizeof(*data));
 
 	if (!repo) {
-		giterr_set(GITERR_CHECKOUT, "Cannot checkout nothing");
+		giterr_set(GITERR_CHECKOUT, "cannot checkout nothing");
 		return -1;
 	}
 
@@ -2647,7 +2647,7 @@ int git_checkout_index(
 
 	if (!index && !repo) {
 		giterr_set(GITERR_CHECKOUT,
-			"Must provide either repository or index to checkout");
+			"must provide either repository or index to checkout");
 		return -1;
 	}
 
@@ -2655,7 +2655,7 @@ int git_checkout_index(
 		git_index_owner(index) &&
 		git_index_owner(index) != repo) {
 		giterr_set(GITERR_CHECKOUT,
-			"Index to checkout does not match repository");
+			"index to checkout does not match repository");
 		return -1;
 	} else if(index && repo && !git_index_owner(index)) {
 		GIT_REFCOUNT_OWN(index, repo);
@@ -2694,12 +2694,12 @@ int git_checkout_tree(
 
 	if (!treeish && !repo) {
 		giterr_set(GITERR_CHECKOUT,
-			"Must provide either repository or tree to checkout");
+			"must provide either repository or tree to checkout");
 		return -1;
 	}
 	if (treeish && repo && git_object_owner(treeish) != repo) {
 		giterr_set(GITERR_CHECKOUT,
-			"Object to checkout does not match repository");
+			"object to checkout does not match repository");
 		return -1;
 	}
 
@@ -2709,7 +2709,7 @@ int git_checkout_tree(
 	if (treeish) {
 		if (git_object_peel((git_object **)&tree, treeish, GIT_OBJ_TREE) < 0) {
 			giterr_set(
-				GITERR_CHECKOUT, "Provided object cannot be peeled to a tree");
+				GITERR_CHECKOUT, "provided object cannot be peeled to a tree");
 			return -1;
 		}
 	}

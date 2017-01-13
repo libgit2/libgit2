@@ -226,7 +226,7 @@ static int ref_pkt(git_pkt **out, const char *line, size_t len)
 
 	/* Check for a bit of consistency */
 	if (line[GIT_OID_HEXSZ] != ' ') {
-		giterr_set(GITERR_NET, "Error parsing pkt-line");
+		giterr_set(GITERR_NET, "error parsing pkt-line");
 		error = -1;
 		goto error_out;
 	}
@@ -270,7 +270,7 @@ static int ok_pkt(git_pkt **out, const char *line, size_t len)
 
 	line += 3; /* skip "ok " */
 	if (!(ptr = strchr(line, '\n'))) {
-		giterr_set(GITERR_NET, "Invalid packet line");
+		giterr_set(GITERR_NET, "invalid packet line");
 		git__free(pkt);
 		return -1;
 	}
@@ -327,7 +327,7 @@ static int ng_pkt(git_pkt **out, const char *line, size_t len)
 	return 0;
 
 out_err:
-	giterr_set(GITERR_NET, "Invalid packet line");
+	giterr_set(GITERR_NET, "invalid packet line");
 	git__free(pkt->ref);
 	git__free(pkt);
 	return -1;
@@ -543,7 +543,7 @@ static int buffer_want_with_caps(const git_remote_head *head, transport_smart_ca
 
 	if (len > 0xffff) {
 		giterr_set(GITERR_NET,
-			"Tried to produce packet with invalid length %" PRIuZ, len);
+			"tried to produce packet with invalid length %" PRIuZ, len);
 		return -1;
 	}
 

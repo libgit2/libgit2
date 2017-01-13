@@ -15,7 +15,7 @@
 
 static int note_error_notfound(void)
 {
-	giterr_set(GITERR_INVALID, "Note could not be found");
+	giterr_set(GITERR_INVALID, "note could not be found");
 	return GIT_ENOTFOUND;
 }
 
@@ -226,7 +226,7 @@ static int remove_note_in_tree_enotfound_cb(
 	GIT_UNUSED(note_oid);
 	GIT_UNUSED(fanout);
 
-	giterr_set(GITERR_REPOSITORY, "Object '%s' has no note", annotated_object_sha);
+	giterr_set(GITERR_REPOSITORY, "object '%s' has no note", annotated_object_sha);
 	return current_error;
 }
 
@@ -244,7 +244,7 @@ static int insert_note_in_tree_eexists_cb(git_tree **out,
 	GIT_UNUSED(note_oid);
 	GIT_UNUSED(fanout);
 
-	giterr_set(GITERR_REPOSITORY, "Note for '%s' exists already", annotated_object_sha);
+	giterr_set(GITERR_REPOSITORY, "note for '%s' exists already", annotated_object_sha);
 	return current_error;
 }
 

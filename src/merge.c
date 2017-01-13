@@ -78,7 +78,7 @@ int merge_bases_many(git_commit_list **out, git_revwalk **walk_out, git_reposito
 	unsigned int i;
 
 	if (length < 2) {
-		giterr_set(GITERR_INVALID, "At least two commits are required to find an ancestor. Provided 'length' was %" PRIuZ ".", length);
+		giterr_set(GITERR_INVALID, "at least two commits are required to find an ancestor");
 		return -1;
 	}
 
@@ -104,7 +104,7 @@ int merge_bases_many(git_commit_list **out, git_revwalk **walk_out, git_reposito
 		goto on_error;
 
 	if (!result) {
-		giterr_set(GITERR_MERGE, "No merge base found");
+		giterr_set(GITERR_MERGE, "no merge base found");
 		error = GIT_ENOTFOUND;
 		goto on_error;
 	}
@@ -184,7 +184,7 @@ int git_merge_base_octopus(git_oid *out, git_repository *repo, size_t length, co
 	assert(out && repo && input_array);
 
 	if (length < 2) {
-		giterr_set(GITERR_INVALID, "At least two commits are required to find an ancestor. Provided 'length' was %" PRIuZ ".", length);
+		giterr_set(GITERR_INVALID, "at least two commits are required to find an ancestor");
 		return -1;
 	}
 
@@ -230,7 +230,7 @@ static int merge_bases(git_commit_list **out, git_revwalk **walk_out, git_reposi
 
 	if (!result) {
 		git_revwalk_free(walk);
-		giterr_set(GITERR_MERGE, "No merge base found");
+		giterr_set(GITERR_MERGE, "no merge base found");
 		return GIT_ENOTFOUND;
 	}
 
@@ -574,7 +574,7 @@ int git_repository_mergehead_foreach(
 
 	while ((line = git__strsep(&buffer, "\n")) != NULL) {
 		if (strlen(line) != GIT_OID_HEXSZ) {
-			giterr_set(GITERR_INVALID, "Unable to parse OID - invalid length");
+			giterr_set(GITERR_INVALID, "unable to parse OID - invalid length");
 			error = -1;
 			goto cleanup;
 		}
@@ -591,7 +591,7 @@ int git_repository_mergehead_foreach(
 	}
 
 	if (*buffer) {
-		giterr_set(GITERR_MERGE, "No EOL at line %"PRIuZ, line_num);
+		giterr_set(GITERR_MERGE, "no EOL at line %"PRIuZ, line_num);
 		error = -1;
 		goto cleanup;
 	}
@@ -3043,7 +3043,7 @@ int git_merge_analysis(
 	assert(analysis_out && preference_out && repo && their_heads);
 
 	if (their_heads_len != 1) {
-		giterr_set(GITERR_MERGE, "Can only merge a single branch");
+		giterr_set(GITERR_MERGE, "can only merge a single branch");
 		error = -1;
 		goto done;
 	}
@@ -3099,7 +3099,7 @@ int git_merge(
 	assert(repo && their_heads);
 
 	if (their_heads_len != 1) {
-		giterr_set(GITERR_MERGE, "Can only merge a single branch");
+		giterr_set(GITERR_MERGE, "can only merge a single branch");
 		return -1;
 	}
 

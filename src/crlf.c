@@ -218,7 +218,7 @@ static const char *line_ending(struct crlf_attrs *ca)
 		return "\r\n";
 
 line_ending_error:
-	giterr_set(GITERR_INVALID, "Invalid input to line ending filter");
+	giterr_set(GITERR_INVALID, "invalid input to line ending filter");
 	return NULL;
 }
 

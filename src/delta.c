@@ -131,7 +131,7 @@ static int lookup_index_alloc(
 	GITERR_CHECK_ALLOC_ADD(&index_len, index_len, hash_len);
 
 	if (!git__is_ulong(index_len)) {
-		giterr_set(GITERR_NOMEMORY, "Overly large delta");
+		giterr_set(GITERR_NOMEMORY, "overly large delta");
 		return -1;
 	}
 
@@ -544,12 +544,12 @@ int git_delta_apply(
 	* base object, resulting in data corruption or segfault.
 	*/
 	if ((hdr_sz(&base_sz, &delta, delta_end) < 0) || (base_sz != base_len)) {
-		giterr_set(GITERR_INVALID, "Failed to apply delta. Base size does not match given data");
+		giterr_set(GITERR_INVALID, "failed to apply delta: base size does not match given data");
 		return -1;
 	}
 
 	if (hdr_sz(&res_sz, &delta, delta_end) < 0) {
-		giterr_set(GITERR_INVALID, "Failed to apply delta. Base size does not match given data");
+		giterr_set(GITERR_INVALID, "failed to apply delta: base size does not match given data");
 		return -1;
 	}
 
@@ -614,6 +614,6 @@ fail:
 	*out = NULL;
 	*out_len = 0;
 
-	giterr_set(GITERR_INVALID, "Failed to apply delta");
+	giterr_set(GITERR_INVALID, "failed to apply delta");
 	return -1;
 }

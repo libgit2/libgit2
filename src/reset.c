@@ -137,7 +137,7 @@ static int reset(
 		(git_repository_state(repo) == GIT_REPOSITORY_STATE_MERGE ||
 		 git_index_has_conflicts(index)))
 	{
-		giterr_set(GITERR_OBJECT, "%s (soft) in the middle of a merge.", ERROR_MSG);
+		giterr_set(GITERR_OBJECT, "%s (soft) in the middle of a merge", ERROR_MSG);
 		error = GIT_EUNMERGED;
 		goto cleanup;
 	}

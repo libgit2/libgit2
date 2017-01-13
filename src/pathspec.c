@@ -487,7 +487,7 @@ static int pathspec_match_from_iterator(
 
 	/* if every pattern failed to match, then we have failed */
 	if ((flags & GIT_PATHSPEC_NO_MATCH_ERROR) != 0 && !found_files) {
-		giterr_set(GITERR_INVALID, "No matching files were found");
+		giterr_set(GITERR_INVALID, "no matching files were found");
 		error = GIT_ENOTFOUND;
 	}
 
@@ -658,7 +658,7 @@ int git_pathspec_match_diff(
 
 	/* if every pattern failed to match, then we have failed */
 	if ((flags & GIT_PATHSPEC_NO_MATCH_ERROR) != 0 && !found_deltas) {
-		giterr_set(GITERR_INVALID, "No matching deltas were found");
+		giterr_set(GITERR_INVALID, "no matching deltas were found");
 		error = GIT_ENOTFOUND;
 	}
 

@@ -124,8 +124,8 @@ static void submodule_set_lookup_error(int error, const char *name)
 		return;
 
 	giterr_set(GITERR_SUBMODULE, (error == GIT_ENOTFOUND) ?
-		"No submodule named '%s'" :
-		"Submodule '%s' has not been added yet", name);
+		"no submodule named '%s'" :
+		"submodule '%s' has not been added yet", name);
 }
 
 typedef struct {
@@ -618,7 +618,7 @@ int git_submodule_add_setup(
 		giterr_clear();
 	else {
 		giterr_set(GITERR_SUBMODULE,
-			"Attempt to add submodule '%s' that already exists", path);
+			"attempt to add submodule '%s' that already exists", path);
 		return GIT_EEXISTS;
 	}
 
@@ -628,7 +628,7 @@ int git_submodule_add_setup(
 		path += strlen(git_repository_workdir(repo));
 
 	if (git_path_root(path) >= 0) {
-		giterr_set(GITERR_SUBMODULE, "Submodule path must be a relative path");
+		giterr_set(GITERR_SUBMODULE, "submodule path must be a relative path");
 		error = -1;
 		goto cleanup;
 	}
@@ -637,7 +637,7 @@ int git_submodule_add_setup(
 
 	if (!(mods = open_gitmodules(repo, GITMODULES_CREATE))) {
 		giterr_set(GITERR_SUBMODULE,
-			"Adding submodules to a bare repository is not supported");
+			"adding submodules to a bare repository is not supported");
 		return -1;
 	}
 
@@ -758,7 +758,7 @@ int git_submodule_add_to_index(git_submodule *sm, int write_index)
 	/* read stat information for submodule working directory */
 	if (p_stat(path.ptr, &st) < 0) {
 		giterr_set(GITERR_SUBMODULE,
-			"Cannot add submodule without working directory");
+			"cannot add submodule without working directory");
 		error = -1;
 		goto cleanup;
 	}
@@ -771,7 +771,7 @@ int git_submodule_add_to_index(git_submodule *sm, int write_index)
 	/* calling git_submodule_open will have set sm->wd_oid if possible */
 	if ((sm->flags & GIT_SUBMODULE_STATUS__WD_OID_VALID) == 0) {
 		giterr_set(GITERR_SUBMODULE,
-			"Cannot add submodule without HEAD to index");
+			"cannot add submodule without HEAD to index");
 		error = -1;
 		goto cleanup;
 	}
@@ -861,7 +861,7 @@ int git_submodule_resolve_url(git_buf *out, git_repository *repo, const char *ur
 	} else if (strchr(url, ':') != NULL || url[0] == '/') {
 		error = git_buf_sets(out, url);
 	} else {
-		giterr_set(GITERR_SUBMODULE, "Invalid format for submodule URL");
+		giterr_set(GITERR_SUBMODULE, "invalid format for submodule URL");
 		error = -1;
 	}
 
@@ -1133,7 +1133,7 @@ int git_submodule_update(git_submodule *sm, int init, git_submodule_update_optio
 				goto done;
 
 			if (!init) {
-				giterr_set(GITERR_SUBMODULE, "Submodule is not initialized.");
+				giterr_set(GITERR_SUBMODULE, "submodule is not initialized");
 				error = GIT_ERROR;
 				goto done;
 			}
@@ -1215,7 +1215,7 @@ int git_submodule_init(git_submodule *sm, int overwrite)
 
 	if (!sm->url) {
 		giterr_set(GITERR_SUBMODULE,
-			"No URL configured for submodule '%s'", sm->name);
+			"no URL configured for submodule '%s'", sm->name);
 		return -1;
 	}
 
@@ -1259,7 +1259,7 @@ int git_submodule_sync(git_submodule *sm)
 
 	if (!sm->url) {
 		giterr_set(GITERR_SUBMODULE,
-			"No URL configured for submodule '%s'", sm->name);
+			"no URL configured for submodule '%s'", sm->name);
 		return -1;
 	}
 
@@ -1578,7 +1578,7 @@ static int submodule_alloc(
 	git_submodule *sm;
 
 	if (!name || !(namelen = strlen(name))) {
-		giterr_set(GITERR_SUBMODULE, "Invalid submodule name");
+		giterr_set(GITERR_SUBMODULE, "invalid submodule name");
 		return -1;
 	}
 
@@ -1630,7 +1630,7 @@ void git_submodule_free(git_submodule *sm)
 static int submodule_config_error(const char *property, const char *value)
 {
 	giterr_set(GITERR_INVALID,
-		"Invalid value for submodule '%s' property: '%s'", property, value);
+		"invalid value for submodule '%s' property: '%s'", property, value);
 	return -1;
 }
 
@@ -1968,7 +1968,7 @@ static int lookup_default_remote(git_remote **remote, git_repository *repo)
 	if (error == GIT_ENOTFOUND)
 		giterr_set(
 			GITERR_SUBMODULE,
-			"Cannot get default remote for submodule - no local tracking "
+			"cannot get default remote for submodule - no local tracking "
 			"branch for HEAD and origin does not exist");
 
 	return error;

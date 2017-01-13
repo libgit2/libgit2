@@ -121,7 +121,7 @@ int git_transport_new(git_transport **out, git_remote *owner, const char *url)
 	int error;
 
 	if ((error = transport_find_fn(&fn, url, &param)) == GIT_ENOTFOUND) {
-		giterr_set(GITERR_NET, "Unsupported URL protocol");
+		giterr_set(GITERR_NET, "unsupported URL protocol");
 		return -1;
 	} else if (error < 0)
 		return error;

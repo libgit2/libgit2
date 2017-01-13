@@ -332,7 +332,7 @@ static int read_gitfile(git_buf *path_out, const char *file_path)
 		memcmp(git_buf_cstr(&file), GIT_FILE_CONTENT_PREFIX, prefix_len) != 0)
 	{
 		giterr_set(GITERR_REPOSITORY,
-			"The `.git` file at '%s' is malformed", file_path);
+			"the `.git` file at '%s' is malformed", file_path);
 		error = -1;
 	}
 	else if ((error = git_path_dirname_r(path_out, file_path)) >= 0) {
@@ -459,7 +459,7 @@ static int find_repo(
 	 * to report, report that. */
 	if (!git_buf_len(repo_path) && !error) {
 		giterr_set(GITERR_REPOSITORY,
-			"Could not find repository from '%s'", start_path);
+			"could not find repository from '%s'", start_path);
 		error = GIT_ENOTFOUND;
 	}
 
@@ -481,7 +481,7 @@ int git_repository_open_bare(
 
 	if (!valid_repository_path(&path)) {
 		git_buf_free(&path);
-		giterr_set(GITERR_REPOSITORY, "Path is not a repository: %s", bare_path);
+		giterr_set(GITERR_REPOSITORY, "path is not a repository: %s", bare_path);
 		return GIT_ENOTFOUND;
 	}
 
@@ -1180,7 +1180,7 @@ static int check_repositoryformatversion(git_config *config)
 
 	if (GIT_REPO_VERSION < version) {
 		giterr_set(GITERR_REPOSITORY,
-			"Unsupported repository version %d. Only versions up to %d are supported.",
+			"unsupported repository version %d. Only versions up to %d are supported.",
 			version, GIT_REPO_VERSION);
 		return -1;
 	}
@@ -1274,12 +1274,12 @@ static int create_empty_file(const char *path, mode_t mode)
 	int fd;
 
 	if ((fd = p_creat(path, mode)) < 0) {
-		giterr_set(GITERR_OS, "Error while creating '%s'", path);
+		giterr_set(GITERR_OS, "error while creating '%s'", path);
 		return -1;
 	}
 
 	if (p_close(fd) < 0) {
-		giterr_set(GITERR_OS, "Error while closing '%s'", path);
+		giterr_set(GITERR_OS, "error while closing '%s'", path);
 		return -1;
 	}
 
@@ -1508,7 +1508,7 @@ static int repo_write_template(
 
 	if (error)
 		giterr_set(GITERR_OS,
-			"Failed to initialize repository with template '%s'", file);
+			"failed to initialize repository with template '%s'", file);
 
 	return error;
 }
@@ -1539,7 +1539,7 @@ static int repo_write_gitlink(
 
 	if (!p_stat(buf.ptr, &st) && !S_ISREG(st.st_mode)) {
 		giterr_set(GITERR_REPOSITORY,
-			"Cannot overwrite gitlink file into path '%s'", in_dir);
+			"cannot overwrite gitlink file into path '%s'", in_dir);
 		error = GIT_EEXISTS;
 		goto cleanup;
 	}
@@ -1593,7 +1593,7 @@ static int repo_init_structure(
 	if ((opts->flags & GIT_REPOSITORY_INIT__HAS_DOTGIT) != 0) {
 		if (git_win32__set_hidden(repo_dir, true) < 0) {
 			giterr_set(GITERR_OS,
-				"Failed to mark Git repository folder as hidden");
+				"failed to mark Git repository folder as hidden");
 			return -1;
 		}
 	}
@@ -1747,7 +1747,7 @@ static int repo_init_directories(
 			if (git_path_dirname_r(wd_path, repo_path->ptr) < 0)
 				return -1;
 		} else {
-			giterr_set(GITERR_REPOSITORY, "Cannot pick working directory"
+			giterr_set(GITERR_REPOSITORY, "cannot pick working directory"
 				" for non-bare repository that isn't a '.git' directory");
 			return -1;
 		}
@@ -1867,7 +1867,7 @@ int git_repository_init_ext(
 
 		if ((opts->flags & GIT_REPOSITORY_INIT_NO_REINIT) != 0) {
 			giterr_set(GITERR_REPOSITORY,
-				"Attempt to reinitialize '%s'", given_repo);
+				"attempt to reinitialize '%s'", given_repo);
 			error = GIT_EEXISTS;
 			goto cleanup;
 		}
@@ -2149,7 +2149,7 @@ int git_repository_message(git_buf *out, git_repository *repo)
 	if ((error = p_stat(git_buf_cstr(&path), &st)) < 0) {
 		if (errno == ENOENT)
 			error = GIT_ENOTFOUND;
-		giterr_set(GITERR_OS, "Could not access message file");
+		giterr_set(GITERR_OS, "could not access message file");
 	} else {
 		error = git_futils_readbuffer(out, git_buf_cstr(&path));
 	}
@@ -2227,7 +2227,7 @@ int git_repository_hashfile(
 	}
 
 	if (!git__is_sizet(len)) {
-		giterr_set(GITERR_OS, "File size overflow for 32-bit systems");
+		giterr_set(GITERR_OS, "file size overflow for 32-bit systems");
 		error = -1;
 		goto cleanup;
 	}

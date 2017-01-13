@@ -304,7 +304,7 @@ static int diff_file_content_load_workdir_symlink(
 
 	read_len = p_readlink(git_buf_cstr(path), fc->map.data, alloc_len);
 	if (read_len < 0) {
-		giterr_set(GITERR_OS, "Failed to read symlink '%s'", fc->file->path);
+		giterr_set(GITERR_OS, "failed to read symlink '%s'", fc->file->path);
 		return -1;
 	}
 
