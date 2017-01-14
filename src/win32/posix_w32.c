@@ -438,17 +438,33 @@ int p_symlink(const char *old, const char *new)
 	return git_futils_fake_symlink(old, new);
 }
 
-GIT_INLINE(int) open_once(const wchar_t *path, int flags, mode_t mode)
+GIT_INLINE(int) open_once(
+	const wchar_t *path,
+	DWORD access,
+	DWORD sharing,
+	DWORD creation_disposition,
+	DWORD attributes,
+	int osf_flags)
 {
-	int ret = _wopen(path, flags, mode);
+	HANDLE handle = CreateFileW(path, access, sharing, NULL,
+		creation_disposition, attributes, 0);
 
-	return (ret < 0 && last_error_retryable()) ? GIT_RETRY : ret;
+	if (handle == INVALID_HANDLE_VALUE) {
+		if (last_error_retryable())
+			return GIT_RETRY;
+
+		set_errno();
+		return -1;
+	}
+
+	return _open_osfhandle((intptr_t)handle, osf_flags);
 }
 
 int p_open(const char *path, int flags, ...)
 {
 	git_win32_path wpath;
 	mode_t mode = 0;
+	DWORD access, sharing, creation, attributes, osf_flags;
 
 	if (git_win32_path_from_utf8(wpath, path) < 0)
 		return -1;
@@ -461,8 +477,44 @@ int p_open(const char *path, int flags, ...)
 		va_end(arg_list);
 	}
 
+	switch (flags & (O_WRONLY | O_RDWR)) {
+	case O_WRONLY:
+		access = GENERIC_WRITE;
+		break;
+	case O_RDWR:
+		access = GENERIC_READ | GENERIC_WRITE;
+		break;
+	default:
+		access = GENERIC_READ;
+		break;
+	}
+
+	sharing = FILE_SHARE_READ | FILE_SHARE_WRITE;
+
+	switch (flags & (O_CREAT | O_TRUNC | O_EXCL)) {
+	case O_CREAT | O_EXCL:
+	case O_CREAT | O_TRUNC | O_EXCL:
+		creation = CREATE_NEW;
+		break;
+	case O_CREAT | O_TRUNC:
+		creation = CREATE_ALWAYS;
+		break;
+	case O_TRUNC:
+		creation = TRUNCATE_EXISTING;
+		break;
+	case O_CREAT:
+		creation = OPEN_ALWAYS;
+		break;
+	default:
+		creation = OPEN_EXISTING;
+		break;
+	}
+
+	attributes = (mode & S_IWRITE) ? FILE_ATTRIBUTE_NORMAL : FILE_ATTRIBUTE_READONLY;
+	osf_flags = flags & (O_RDONLY | O_APPEND);
+
 	do_with_retries(
-		open_once(wpath, flags | STANDARD_OPEN_FLAGS, mode & WIN32_MODE_MASK),
+		open_once(wpath, access, sharing, creation, attributes, osf_flags),
 		0);
 }
 
