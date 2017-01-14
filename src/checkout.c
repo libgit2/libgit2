@@ -2553,6 +2553,10 @@ int git_checkout_iterator(
 		GIT_ITERATOR_IGNORE_CASE : GIT_ITERATOR_DONT_IGNORE_CASE;
 	baseline_opts.start = data.pfx;
 	baseline_opts.end = data.pfx;
+	if (opts && (opts->checkout_strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)) {
+		baseline_opts.pathlist.count = opts->paths.count;
+		baseline_opts.pathlist.strings = opts->paths.strings;
+	}
 
 	if (data.opts.baseline_index) {
 		if ((error = git_iterator_for_index(
