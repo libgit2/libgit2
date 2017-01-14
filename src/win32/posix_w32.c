@@ -303,14 +303,7 @@ int p_open(const char *path, int flags, ...)
 
 int p_creat(const char *path, mode_t mode)
 {
-	git_win32_path buf;
-
-	if (git_win32_path_from_utf8(buf, path) < 0)
-		return -1;
-
-	return _wopen(buf,
-		_O_WRONLY | _O_CREAT | _O_TRUNC | STANDARD_OPEN_FLAGS,
-		mode & WIN32_MODE_MASK);
+	return p_open(path, _O_WRONLY | _O_CREAT | _O_TRUNC, mode);
 }
 
 int p_getcwd(char *buffer_out, size_t size)
