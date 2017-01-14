@@ -231,6 +231,24 @@ int git_libgit2_opts(int key, ...)
 		git_object__synchronous_writing = (va_arg(ap, int) != 0);
 		break;
 
+	case GIT_OPT_GET_WINDOWS_SHAREMODE:
+#ifdef GIT_WIN32
+		*(va_arg(ap, DWORD *)) = git_posix_w32__windows_sharemode;
+#else
+		giterr_set(GITERR_INVALID, "cannot set windows share mode on non Windows builds");
+		error = -1;
+#endif
+		break;
+
+	case GIT_OPT_SET_WINDOWS_SHAREMODE:
+#ifdef GIT_WIN32
+		git_posix_w32__windows_sharemode = (va_arg(ap, DWORD) & (FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE));
+#else
+		giterr_set(GITERR_INVALID, "cannot set windows share mode on non Windows builds");
+		error = -1;
+#endif
+		break;
+
 	default:
 		giterr_set(GITERR_INVALID, "invalid option key");
 		error = -1;

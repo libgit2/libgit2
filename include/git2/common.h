@@ -180,6 +180,8 @@ typedef enum {
 	GIT_OPT_GET_USER_AGENT,
 	GIT_OPT_ENABLE_OFS_DELTA,
 	GIT_OPT_ENABLE_SYNCHRONOUS_OBJECT_CREATION,
+	GIT_OPT_GET_WINDOWS_SHAREMODE,
+	GIT_OPT_SET_WINDOWS_SHAREMODE,
 } git_libgit2_opt_t;
 
 /**
@@ -283,6 +285,16 @@ typedef enum {
  *		>
  *		> - `user_agent` is the value that will be delivered as the
  *		>   User-Agent header on HTTP requests.
+ *
+ *	* opts(GIT_OPT_SET_WINDOWS_SHAREMODE, DWORD value)
+ *
+ *		> Set the default share modes on Windows for opening files.
+ *		> This can be used to add FILE_SHARE_DELETE.
+ *		> The Windows default is: FILE_SHARE_READ | FILE_SHARE_WRITE.
+ *
+ *	* opts(GIT_OPT_GET_WINDOWS_SHAREMODE, DWORD *value)
+ *
+ *		> Get the default share modes on Windows for opening files.
  *
  *	* opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, int enabled)
  *

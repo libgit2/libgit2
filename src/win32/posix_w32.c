@@ -18,6 +18,8 @@
 #include <fcntl.h>
 #include <ws2tcpip.h>
 
+DWORD git_posix_w32__windows_sharemode = FILE_SHARE_READ | FILE_SHARE_WRITE;
+
 #ifndef FILE_NAME_NORMALIZED
 # define FILE_NAME_NORMALIZED 0
 #endif
@@ -358,7 +360,7 @@ int p_open(const char *path, int flags, ...)
 		return  -1;
 	}
 
-	handle = CreateFileW(buf, desired_access, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, creation_disposition, flags_and_attributes, 0);
+	handle = CreateFileW(buf, desired_access, git_posix_w32__windows_sharemode, NULL, creation_disposition, flags_and_attributes, 0);
 	if (handle == INVALID_HANDLE_VALUE)
 	{
 		_dosmaperr(GetLastError());

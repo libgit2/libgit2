@@ -14,6 +14,8 @@
 #include "utf-conv.h"
 #include "dir.h"
 
+extern DWORD git_posix_w32__windows_sharemode;
+
 typedef SOCKET GIT_SOCKET;
 
 #define p_lseek(f,n,w) _lseeki64(f, n, w)
