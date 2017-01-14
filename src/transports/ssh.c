@@ -5,7 +5,11 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifndef GIT_WIN32
+#if defined(GIT_WIN32) || defined(__MINGW32__)
+# define GIT_SSH_LOADLIBRARY
+#endif
+
+#ifndef GIT_SSH_LOADLIBRARY
 #include <dlfcn.h>
 #endif
 
@@ -25,7 +29,7 @@
 /* These macros allow us to refer to libssh2 symbols while
  * supporting dynamic linking.
  */
-#ifdef GIT_WIN32
+#ifdef GIT_SSH_LOADLIBRARY
 
 static HMODULE git_libssh2_handle;
 
@@ -992,7 +996,7 @@ static const char *supported_filenames[] = {
  */
 static void load_libssh2(void)
 {
-#ifdef GIT_WIN32
+#ifdef GIT_SSH_LOADLIBRARY
 	/* Windows doesn't do SOVERSIONs but you ship your own library so we're probably OK */
 	git_libssh2_handle = LoadLibrary("libssh2.dll");
 #else
@@ -1010,7 +1014,7 @@ static void load_libssh2(void)
 
 static void unload_libssh2(void)
 {
-#ifdef GIT_WIN32
+#ifdef GIT_SSH_LOADLIBRARY
 	FreeLibrary(git_libssh2_handle);
 #else
 	dlclose(git_libssh2_handle);
