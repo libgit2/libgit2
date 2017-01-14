@@ -121,9 +121,8 @@ typedef enum {
    */
 	GIT_FEATURE_HTTPS	= (1 << 1),
   /**
-   * If set, libgit2 was built with and linked against libssh2. A custom
-   * transport may still be added by the user to support libssh2 regardless of
-   * this.
+   * If set, libgit2 was built with support to load libssh2 at runtime and use
+   * it for SSH.
    */
 	GIT_FEATURE_SSH		= (1 << 2),
   /**
