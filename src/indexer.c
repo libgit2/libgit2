@@ -151,11 +151,11 @@ cleanup:
 	if (fd != -1)
 		p_close(fd);
 
-	if (git_buf_is_allocated(&tmp_path))
-		(void)p_unlink(git_buf_cstr(&tmp_path));
+	if (git_buf_len(&tmp_path) > 0)
+		p_unlink(git_buf_cstr(&tmp_path));
 
 	if (idx->pack != NULL)
-		(void)p_unlink(idx->pack->pack_name);
+		p_unlink(idx->pack->pack_name);
 
 	git_buf_free(&path);
 	git_buf_free(&tmp_path);
@@ -1094,10 +1094,10 @@ void git_indexer_free(git_indexer *idx)
 	git_mwindow_free_all(&idx->pack->mwf);
 	/* We need to close the descriptor here so Windows doesn't choke on unlink */
 	if (idx->pack->mwf.fd != -1) {
-		(void)p_close(idx->pack->mwf.fd);
+		p_close(idx->pack->mwf.fd);
 		idx->pack->mwf.fd = -1;
 	}
-	(void)p_unlink(idx->pack->pack_name);
+	p_unlink(idx->pack->pack_name);
 
 	if (!git_mutex_lock(&git__mwindow_mutex)) {
 		git_packfile_free(idx->pack);
