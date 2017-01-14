@@ -1713,15 +1713,15 @@ static int merge_normalize_opts(
 	if ((error = git_repository_config__weakptr(&cfg, repo)) < 0)
 		return error;
 
-	if (given != NULL)
+	if (given != NULL) {
 		memcpy(opts, given, sizeof(git_merge_options));
-	else {
+	} else {
 		git_merge_options init = GIT_MERGE_OPTIONS_INIT;
 		memcpy(opts, &init, sizeof(init));
-
-		opts->flags = GIT_MERGE_FIND_RENAMES;
-		opts->rename_threshold = GIT_MERGE_DEFAULT_RENAME_THRESHOLD;
 	}
+
+	if ((opts->flags & GIT_MERGE_FIND_RENAMES) && !opts->rename_threshold)
+		opts->rename_threshold = GIT_MERGE_DEFAULT_RENAME_THRESHOLD;
 
 	if (given && given->default_driver) {
 		opts->default_driver = git__strdup(given->default_driver);
