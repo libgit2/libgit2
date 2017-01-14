@@ -26,15 +26,6 @@
 #define IO_REPARSE_TAG_SYMLINK (0xA000000CL)
 #endif
 
-/* Options which we always provide to _wopen.
- *
- * _O_BINARY - Raw access; no translation of CR or LF characters
- * _O_NOINHERIT - Do not mark the created handle as inheritable by child processes.
- *    The Windows default is 'not inheritable', but the CRT's default (following
- *    POSIX convention) is 'inheritable'. We have no desire for our handles to be
- *    inheritable on Windows, so specify the flag to get default behavior back. */
-#define STANDARD_OPEN_FLAGS (_O_BINARY | _O_NOINHERIT)
-
 /* Allowable mode bits on Win32.  Using mode bits that are not supported on
  * Win32 (eg S_IRWXU) is generally ignored, but Wine warns loudly about it
  * so we simply remove them.
@@ -43,6 +34,9 @@
 
 /* GetFinalPathNameByHandleW signature */
 typedef DWORD(WINAPI *PFGetFinalPathNameByHandleW)(HANDLE, LPWSTR, DWORD, DWORD);
+
+unsigned long git_win32__createfile_sharemode =
+ FILE_SHARE_READ | FILE_SHARE_WRITE;
 
 GIT_INLINE(void) set_errno(void)
 {
@@ -489,7 +483,7 @@ int p_open(const char *path, int flags, ...)
 		break;
 	}
 
-	sharing = FILE_SHARE_READ | FILE_SHARE_WRITE;
+	sharing = (DWORD)git_win32__createfile_sharemode;
 
 	switch (flags & (O_CREAT | O_TRUNC | O_EXCL)) {
 	case O_CREAT | O_EXCL:
@@ -510,7 +504,8 @@ int p_open(const char *path, int flags, ...)
 		break;
 	}
 
-	attributes = (mode & S_IWRITE) ? FILE_ATTRIBUTE_NORMAL : FILE_ATTRIBUTE_READONLY;
+	attributes = ((flags & O_CREAT) && !(mode & S_IWRITE)) ?
+		FILE_ATTRIBUTE_READONLY : FILE_ATTRIBUTE_NORMAL;
 	osf_flags = flags & (O_RDONLY | O_APPEND);
 
 	do_with_retries(

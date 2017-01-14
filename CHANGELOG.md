@@ -9,6 +9,10 @@ v0.25 + 1
 
 ### API additions
 
+* You can now set the default share mode on Windows for opening files using
+  `GIT_OPT_SET_WINDOWS_SHAREMODE` option with `git_libgit2_opts()`.
+  You can query the current share mode with `GIT_OPT_GET_WINDOWS_SHAREMODE`.
+
 ### API removals
 
 ### Breaking API changes
