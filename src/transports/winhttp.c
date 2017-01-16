@@ -68,7 +68,8 @@ static const IID IID_IInternetSecurityManager_mingw =
 
 typedef enum {
 	GIT_WINHTTP_AUTH_BASIC = 1,
-	GIT_WINHTTP_AUTH_NEGOTIATE = 2,
+	GIT_WINHTTP_AUTH_NTLM = 2,
+	GIT_WINHTTP_AUTH_NEGOTIATE = 4,
 } winhttp_authmechanism_t;
 
 typedef struct {
@@ -95,28 +96,34 @@ typedef struct {
 	git_cred *cred;
 	git_cred *url_cred;
 	git_cred *proxy_cred;
-	int auth_mechanism;
+	int auth_mechanisms;
 	HINTERNET session;
 	HINTERNET connection;
 } winhttp_subtransport;
 
-static int apply_basic_credential_proxy(HINTERNET request, git_cred *cred)
+static int _apply_userpass_credential(HINTERNET request, DWORD target, DWORD scheme, git_cred *cred)
 {
 	git_cred_userpass_plaintext *c = (git_cred_userpass_plaintext *)cred;
 	wchar_t *user, *pass;
-	int error;
+	int user_len = 0, pass_len = 0, error = 0;
 
-	if ((error = git__utf8_to_16_alloc(&user, c->username)) < 0)
-		return error;
+	if ((error = user_len = git__utf8_to_16_alloc(&user, c->username)) < 0)
+		goto done;
 
-	if ((error = git__utf8_to_16_alloc(&pass, c->password)) < 0)
-		return error;
+	if ((error = pass_len = git__utf8_to_16_alloc(&pass, c->password)) < 0)
+		goto done;
 
-	if (!WinHttpSetCredentials(request, WINHTTP_AUTH_TARGET_PROXY, WINHTTP_AUTH_SCHEME_BASIC,
-	                           user, pass, NULL)) {
-		giterr_set(GITERR_OS, "failed to set proxy auth");
+	if (!WinHttpSetCredentials(request, target, scheme, user, pass, NULL)) {
+		giterr_set(GITERR_OS, "failed to set credentials");
 		error = -1;
 	}
+
+done:
+	if (user_len > 0)
+		git__memzero(user, user_len * sizeof(wchar_t));
+
+	if (pass_len > 0)
+		git__memzero(pass, pass_len * sizeof(wchar_t));
 
 	git__free(user);
 	git__free(pass);
@@ -124,50 +131,31 @@ static int apply_basic_credential_proxy(HINTERNET request, git_cred *cred)
 	return error;
 }
 
-static int apply_basic_credential(HINTERNET request, git_cred *cred)
+static int apply_userpass_credential_proxy(HINTERNET request, git_cred *cred)
 {
-	git_cred_userpass_plaintext *c = (git_cred_userpass_plaintext *)cred;
-	git_buf buf = GIT_BUF_INIT, raw = GIT_BUF_INIT;
-	wchar_t *wide = NULL;
-	int error = -1, wide_len;
-
-	git_buf_printf(&raw, "%s:%s", c->username, c->password);
-
-	if (git_buf_oom(&raw) ||
-		git_buf_puts(&buf, "Authorization: Basic ") < 0 ||
-		git_buf_encode_base64(&buf, git_buf_cstr(&raw), raw.size) < 0)
-		goto on_error;
-
-	if ((wide_len = git__utf8_to_16_alloc(&wide, git_buf_cstr(&buf))) < 0) {
-		giterr_set(GITERR_OS, "failed to convert string to wide form");
-		goto on_error;
-	}
-
-	if (!WinHttpAddRequestHeaders(request, wide, (ULONG) -1L, WINHTTP_ADDREQ_FLAG_ADD)) {
-		giterr_set(GITERR_OS, "failed to add a header to the request");
-		goto on_error;
-	}
-
-	error = 0;
-
-on_error:
-	/* We were dealing with plaintext passwords, so clean up after ourselves a bit. */
-	if (wide)
-		memset(wide, 0x0, wide_len * sizeof(wchar_t));
-
-	if (buf.size)
-		memset(buf.ptr, 0x0, buf.size);
-
-	if (raw.size)
-		memset(raw.ptr, 0x0, raw.size);
-
-	git__free(wide);
-	git_buf_free(&buf);
-	git_buf_free(&raw);
-	return error;
+	return _apply_userpass_credential(request, WINHTTP_AUTH_TARGET_PROXY,
+		WINHTTP_AUTH_SCHEME_BASIC, cred);
 }
 
-static int apply_default_credentials(HINTERNET request)
+static int apply_userpass_credential(HINTERNET request, int mechanisms, git_cred *cred)
+{
+	DWORD native_scheme;
+
+	if ((mechanisms & GIT_WINHTTP_AUTH_NTLM) ||
+		(mechanisms & GIT_WINHTTP_AUTH_NEGOTIATE)) {
+		native_scheme = WINHTTP_AUTH_SCHEME_NTLM;
+	} else if (mechanisms & GIT_WINHTTP_AUTH_BASIC) {
+		native_scheme = WINHTTP_AUTH_SCHEME_BASIC;
+	} else {
+		giterr_set(GITERR_NET, "invalid authentication scheme");
+		return -1;
+	}
+
+	return _apply_userpass_credential(request, WINHTTP_AUTH_TARGET_SERVER,
+		native_scheme, cred);
+}
+
+static int apply_default_credentials(HINTERNET request, int mechanisms)
 {
 	/* Either the caller explicitly requested that default credentials be passed,
 	 * or our fallback credential callback was invoked and checked that the target
@@ -176,6 +164,12 @@ static int apply_default_credentials(HINTERNET request)
 	 * is "medium" which applies to the intranet and sounds like it would correspond
 	 * to Internet Explorer security zones, but in fact does not. */
 	DWORD data = WINHTTP_AUTOLOGON_SECURITY_LEVEL_LOW;
+
+	if ((mechanisms & GIT_WINHTTP_AUTH_NTLM) == 0 &&
+		(mechanisms & GIT_WINHTTP_AUTH_NEGOTIATE) == 0) {
+		giterr_set(GITERR_NET, "invalid authentication scheme");
+		return -1;
+	}
 
 	if (!WinHttpSetOption(request, WINHTTP_OPTION_AUTOLOGON_POLICY, &data, sizeof(DWORD)))
 		return -1;
@@ -453,7 +447,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 
 		if (t->proxy_cred) {
 			if (t->proxy_cred->credtype == GIT_CREDTYPE_USERPASS_PLAINTEXT) {
-				if ((error = apply_basic_credential_proxy(s->request, t->proxy_cred)) < 0)
+				if ((error = apply_userpass_credential_proxy(s->request, t->proxy_cred)) < 0)
 					goto on_error;
 			}
 		}
@@ -550,13 +544,11 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	/* If we have a credential on the subtransport, apply it to the request */
 	if (t->cred &&
 		t->cred->credtype == GIT_CREDTYPE_USERPASS_PLAINTEXT &&
-		t->auth_mechanism == GIT_WINHTTP_AUTH_BASIC &&
-		apply_basic_credential(s->request, t->cred) < 0)
+		apply_userpass_credential(s->request, t->auth_mechanisms, t->cred) < 0)
 		goto on_error;
 	else if (t->cred &&
 		t->cred->credtype == GIT_CREDTYPE_DEFAULT &&
-		t->auth_mechanism == GIT_WINHTTP_AUTH_NEGOTIATE &&
-		apply_default_credentials(s->request) < 0)
+		apply_default_credentials(s->request, t->auth_mechanisms) < 0)
 		goto on_error;
 
 	/* If no other credentials have been applied and the URL has username and
@@ -565,7 +557,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		if (!t->url_cred &&
 			git_cred_userpass_plaintext_new(&t->url_cred, t->connection_data.user, t->connection_data.pass) < 0)
 			goto on_error;
-		if (apply_basic_credential(s->request, t->url_cred) < 0)
+		if (apply_userpass_credential(s->request, GIT_WINHTTP_AUTH_BASIC, t->url_cred) < 0)
 			goto on_error;
 	}
 
@@ -585,12 +577,12 @@ on_error:
 static int parse_unauthorized_response(
 	HINTERNET request,
 	int *allowed_types,
-	int *auth_mechanism)
+	int *allowed_mechanisms)
 {
 	DWORD supported, first, target;
 
 	*allowed_types = 0;
-	*auth_mechanism = 0;
+	*allowed_mechanisms = 0;
 
 	/* WinHttpQueryHeaders() must be called before WinHttpQueryAuthSchemes(). 
 	 * We can assume this was already done, since we know we are unauthorized. 
@@ -600,15 +592,20 @@ static int parse_unauthorized_response(
 		return -1;
 	}
 
-	if (WINHTTP_AUTH_SCHEME_BASIC & supported) {
+	if (WINHTTP_AUTH_SCHEME_NTLM & supported) {
 		*allowed_types |= GIT_CREDTYPE_USERPASS_PLAINTEXT;
-		*auth_mechanism = GIT_WINHTTP_AUTH_BASIC;
+		*allowed_types |= GIT_CREDTYPE_DEFAULT;
+		*allowed_mechanisms = GIT_WINHTTP_AUTH_NEGOTIATE;
 	}
 
-	if ((WINHTTP_AUTH_SCHEME_NTLM & supported) ||
-		(WINHTTP_AUTH_SCHEME_NEGOTIATE & supported)) {
+	if (WINHTTP_AUTH_SCHEME_NEGOTIATE & supported) {
 		*allowed_types |= GIT_CREDTYPE_DEFAULT;
-		*auth_mechanism = GIT_WINHTTP_AUTH_NEGOTIATE;
+		*allowed_mechanisms = GIT_WINHTTP_AUTH_NEGOTIATE;
+	}
+
+	if (WINHTTP_AUTH_SCHEME_BASIC & supported) {
+		*allowed_types |= GIT_CREDTYPE_USERPASS_PLAINTEXT;
+		*allowed_mechanisms |= GIT_WINHTTP_AUTH_BASIC;
 	}
 
 	return 0;
@@ -1029,7 +1026,7 @@ replay:
 		if (status_code == HTTP_STATUS_PROXY_AUTH_REQ) {
 			int allowed_types;
 
-			if (parse_unauthorized_response(s->request, &allowed_types, &t->auth_mechanism) < 0)
+			if (parse_unauthorized_response(s->request, &allowed_types, &t->auth_mechanisms) < 0)
 				return -1;
 
 			/* TODO: extract the username from the url, no payload? */
@@ -1049,7 +1046,7 @@ replay:
 		if (HTTP_STATUS_DENIED == status_code && get_verb == s->verb) {
 			int allowed_types;
 
-			if (parse_unauthorized_response(s->request, &allowed_types, &t->auth_mechanism) < 0)
+			if (parse_unauthorized_response(s->request, &allowed_types, &t->auth_mechanisms) < 0)
 				return -1;
 
 			if (allowed_types) {
