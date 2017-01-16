@@ -1087,7 +1087,6 @@ int git_submodule_update_init_options(git_submodule_update_options *opts, unsign
 int git_submodule_update(git_submodule *sm, int init, git_submodule_update_options *_update_options)
 {
 	int error;
-	unsigned int submodule_status;
 	git_config *config = NULL;
 	const char *submodule_url;
 	git_repository *sub_repo = NULL;
@@ -1107,15 +1106,11 @@ int git_submodule_update(git_submodule *sm, int init, git_submodule_update_optio
 	/* Copy over the remote callbacks */
 	memcpy(&clone_options.fetch_opts, &update_options.fetch_opts, sizeof(git_fetch_options));
 
-	/* Get the status of the submodule to determine if it is already initialized  */
-	if ((error = git_submodule_status(&submodule_status, sm->repo, sm->name, GIT_SUBMODULE_IGNORE_UNSPECIFIED)) < 0)
-		goto done;
-
 	/*
 	 * If submodule work dir is not already initialized, check to see
 	 * what we need to do (initialize, clone, return error...)
 	 */
-	if (submodule_status & GIT_SUBMODULE_STATUS_WD_UNINITIALIZED) {
+	if(!git_submodule_wd_is_initialized(sm)) {
 		/*
 		 * Work dir is not initialized, check to see if the submodule
 		 * info has been copied into .git/config
@@ -2032,8 +2027,17 @@ static void submodule_get_wd_status(
 	}
 	else if (!wd_oid) {
 		if ((sm->flags & GIT_SUBMODULE_STATUS__WD_SCANNED) != 0 &&
-			(sm->flags & GIT_SUBMODULE_STATUS_IN_WD) == 0)
+			(sm->flags & GIT_SUBMODULE_STATUS_IN_WD) == 0) {
+
+			/*
+			* This implementation needs to be identical to
+			* git_submodule_wd_is_initialized(). submodule_get_wd_status()
+			* doesn't call git_submodule_wd_is_initialized() because it
+			* performs additional work.
+			*/
+
 			*status |= GIT_SUBMODULE_STATUS_WD_UNINITIALIZED;
+		}
 		else
 			*status |= GIT_SUBMODULE_STATUS_WD_DELETED;
 	}
@@ -2087,4 +2091,27 @@ static void submodule_get_wd_status(
 		git_diff_free(diff);
 		diff = NULL;
 	}
+}
+
+/*
+ * This implementation needs to be identical to submodule_get_wd_status().
+ * submodule_get_wd_status() doesn't call this function because it performs
+ * additional work.
+*/
+int git_submodule_wd_is_initialized(git_submodule *submodule)
+{
+	const git_oid *index_oid = git_submodule_index_id(submodule);
+	const git_oid *wd_oid =
+		(submodule->flags & GIT_SUBMODULE_STATUS__WD_OID_VALID)
+		? &submodule->wd_oid : NULL;
+
+	if(index_oid
+		&& !wd_oid
+		&& (submodule->flags & GIT_SUBMODULE_STATUS__WD_SCANNED) != 0
+		&& (submodule->flags & GIT_SUBMODULE_STATUS_IN_WD) == 0) {
+
+		return 0;
+	}
+
+	return 1;
 }
