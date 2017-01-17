@@ -967,6 +967,16 @@ static int rebase_commit__create(
 		goto done;
 	}
 
+	if (git_oid_equal(&tree_id, git_commit_tree_id(current_commit)) &&
+			git_commit_parentcount(current_commit) != 0 &&
+			git_oid_equal(git_commit_id(parent_commit), git_commit_parent_id(current_commit, 0)) &&
+	    (!author || git_signature__equal(author, git_commit_author(current_commit))) &&
+	    (!message || git__strcmp(message, git_commit_message(current_commit)) == 0) &&
+	    (!message_encoding || git__strcmp(message_encoding, git_commit_message_encoding(current_commit)) == 0)) {
+		git_commit_dup(out, current_commit);
+		goto done;
+	}
+
 	if (!author)
 		author = git_commit_author(current_commit);
 
@@ -1022,12 +1032,14 @@ static int rebase_commit_merge(
 			rebase->repo, NULL, "HEAD", git_commit_id(commit), "rebase")) < 0)
 		goto done;
 
-	git_oid_fmt(old_idstr, &operation->id);
-	git_oid_fmt(new_idstr, git_commit_id(commit));
+	if (!git_oid_equal(&operation->id, git_commit_id(commit))) {
+		git_oid_fmt(old_idstr, &operation->id);
+		git_oid_fmt(new_idstr, git_commit_id(commit));
 
-	if ((error = rebase_setupfile(rebase, REWRITTEN_FILE, O_CREAT|O_WRONLY|O_APPEND,
-		"%.*s %.*s\n", GIT_OID_HEXSZ, old_idstr, GIT_OID_HEXSZ, new_idstr)) < 0)
-		goto done;
+		if ((error = rebase_setupfile(rebase, REWRITTEN_FILE, O_CREAT|O_WRONLY|O_APPEND,
+			"%.*s %.*s\n", GIT_OID_HEXSZ, old_idstr, GIT_OID_HEXSZ, new_idstr)) < 0)
+			goto done;
+	}
 
 	git_oid_cpy(commit_id, git_commit_id(commit));
 
