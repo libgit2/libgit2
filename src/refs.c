@@ -177,7 +177,7 @@ int git_reference_name_to_id(
 	return 0;
 }
 
-static int reference__normalize_for_repo(
+static int reference_normalize_for_repo(
 	git_refname_t out,
 	git_repository *repo,
 	const char *name,
@@ -190,27 +190,10 @@ static int reference__normalize_for_repo(
 		precompose)
 		flags |= GIT_REF_FORMAT__PRECOMPOSE_UNICODE;
 
-	if (!validate) {
-		flags |= GIT_REF_VALIDATION_DISABLE;
-	}
+	if (!validate)
+		flags |= GIT_REF_FORMAT__VALIDATION_DISABLE;
 
 	return git_reference_normalize_name(out, GIT_REFNAME_MAX, name, flags);
-}
-
-static int reference_normalize_for_repo(
-	git_refname_t out,
-	git_repository *repo,
-	const char *name)
-{
-	return reference__normalize_for_repo(out, repo, name, true);
-}
-
-static int reference_normalize_for_repo_without_validation(
-	git_refname_t out,
-	git_repository *repo,
-	const char *name)
-{
-	return reference__normalize_for_repo(out, repo, name, false);
 }
 
 int git_reference_lookup_resolved(
@@ -236,7 +219,7 @@ int git_reference_lookup_resolved(
 
 	scan_type = GIT_REF_SYMBOLIC;
 
-	if ((error = reference_normalize_for_repo(scan_name, repo, name)) < 0)
+	if ((error = reference_normalize_for_repo(scan_name, repo, name, true)) < 0)
 		return error;
 
 	if ((error = git_repository_refdb__weakptr(&refdb, repo)) < 0)
@@ -406,7 +389,7 @@ static int reference__create(
 	if (ref_out)
 		*ref_out = NULL;
 
-	error = reference_normalize_for_repo(normalized, repo, name);
+	error = reference_normalize_for_repo(normalized, repo, name, true);
 	if (error < 0)
 		return error;
 
@@ -427,11 +410,8 @@ static int reference__create(
 	} else {
 		git_refname_t normalized_target;
 
-		if (git_reference__enable_symbolic_ref_target_validation) {
-			error = reference_normalize_for_repo(normalized_target, repo, symbolic);
-		} else {
-			error = reference_normalize_for_repo_without_validation(normalized_target, repo, symbolic);
-		}
+		error = reference_normalize_for_repo(normalized_target, repo,
+			symbolic, git_reference__enable_symbolic_ref_target_validation);
 
 		if (error < 0)
 			return error;
@@ -612,7 +592,7 @@ static int reference__rename(git_reference **out, git_reference *ref, const char
 	assert(ref && new_name && signature);
 
 	if ((error = reference_normalize_for_repo(
-			normalized, git_reference_owner(ref), new_name)) < 0)
+		normalized, git_reference_owner(ref), new_name, true)) < 0)
 		return error;
 
 
@@ -905,7 +885,7 @@ int git_reference__normalize_name(
 	int segment_len, segments_count = 0, error = GIT_EINVALIDSPEC;
 	unsigned int process_flags;
 	bool normalize = (buf != NULL);
-	bool validate = (flags & GIT_REF_VALIDATION_DISABLE) == 0;
+	bool validate = (flags & GIT_REF_FORMAT__VALIDATION_DISABLE) == 0;
 
 #ifdef GIT_USE_ICONV
 	git_path_iconv_t ic = GIT_PATH_ICONV_INIT;

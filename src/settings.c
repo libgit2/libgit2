@@ -192,7 +192,7 @@ int git_libgit2_opts(int key, ...)
 		git_object__strict_input_validation = (va_arg(ap, int) != 0);
 		break;
 
-	case GIT_OPT_ENABLE_SYMBOLIC_REF_TARGET_VALIDATION:
+	case GIT_OPT_ENABLE_STRICT_SYMBOLIC_REF_CREATION:
 		git_reference__enable_symbolic_ref_target_validation = (va_arg(ap, int) != 0);
 		break;
 
