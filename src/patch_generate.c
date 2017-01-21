@@ -451,8 +451,10 @@ int git_diff_foreach(
 
 		if (binary_cb || hunk_cb || data_cb) {
 			if ((error = patch_generated_init(&patch, diff, idx)) != 0 ||
-				(error = patch_generated_load(&patch, &xo.output)) != 0)
+				(error = patch_generated_load(&patch, &xo.output)) != 0) {
+				git_patch_free(&patch.base);
 				return error;
+			}
 		}
 
 		if ((error = patch_generated_invoke_file_callback(&patch, &xo.output)) == 0) {
