@@ -991,6 +991,18 @@ git_off_t get_delta_base(
  *
  ***********************************************************/
 
+void git_packfile_close(struct git_pack_file *p, bool unlink_packfile)
+{
+	if (p->mwf.fd >= 0) {
+		git_mwindow_free_all_locked(&p->mwf);
+		p_close(p->mwf.fd);
+		p->mwf.fd = -1;
+	}
+
+	if (unlink_packfile)
+		p_unlink(p->pack_name);
+}
+
 void git_packfile_free(struct git_pack_file *p)
 {
 	if (!p)
@@ -998,10 +1010,7 @@ void git_packfile_free(struct git_pack_file *p)
 
 	cache_free(&p->bases);
 
-	if (p->mwf.fd >= 0) {
-		git_mwindow_free_all_locked(&p->mwf);
-		p_close(p->mwf.fd);
-	}
+	git_packfile_close(p, false);
 
 	pack_index_free(p);
 
