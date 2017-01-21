@@ -247,6 +247,11 @@ static void object_database(git_repository *repo, git_oid *oid)
 	 */
 	git_oid_fmt(oid_hex, oid);
 	printf("Written Object: %s\n", oid_hex);
+
+	/**
+	 * Free the object database after usage.
+	 */
+	git_odb_free(odb);
 }
 
 /**
@@ -264,7 +269,7 @@ static void commit_writing(git_repository *repo)
 	git_oid tree_id, parent_id, commit_id;
 	git_tree *tree;
 	git_commit *parent;
-	const git_signature *author, *cmtter;
+	git_signature *author, *committer;
 	char oid_hex[GIT_OID_HEXSZ+1] = { 0 };
 
 	printf("\n*Commit Writing*\n");
@@ -276,9 +281,9 @@ static void commit_writing(git_repository *repo)
 	 * `user.email` configuration options.  See the `config` section of this
 	 * example file to see how to access config values.
 	 */
-	git_signature_new((git_signature **)&author,
+	git_signature_new(&author,
 			"Scott Chacon", "schacon@gmail.com", 123456789, 60);
-	git_signature_new((git_signature **)&cmtter,
+	git_signature_new(&committer,
 			"Scott A Chacon", "scott@github.com", 987654321, 90);
 
 	/**
@@ -301,7 +306,7 @@ static void commit_writing(git_repository *repo)
 			repo,
 			NULL, /* do not update the HEAD */
 			author,
-			cmtter,
+			committer,
 			NULL, /* use default message encoding */
 			"example commit",
 			tree,
@@ -312,6 +317,14 @@ static void commit_writing(git_repository *repo)
 	 */
 	git_oid_fmt(oid_hex, &commit_id);
 	printf("New Commit: %s\n", oid_hex);
+
+	/**
+	 * Free all objects used in the meanwhile.
+	 */
+	git_tree_free(tree);
+	git_commit_free(parent);
+	git_signature_free(author);
+	git_signature_free(committer);
 }
 
 /**
@@ -431,7 +444,11 @@ static void tag_parsing(git_repository *repo)
 	printf("Tag Name: %s\nTag Type: %s\nTag Message: %s\n",
 		name, git_object_type2string(type), message);
 
+	/**
+	 * Free both the commit and tag after usage.
+	 */
 	git_commit_free(commit);
+	git_tag_free(tag);
 }
 
 /**
@@ -485,9 +502,10 @@ static void tree_parsing(git_repository *repo)
 	git_tree_entry_to_object(&obj, repo, entry); /* blob */
 
 	/**
-	 * Remember to close the looked-up object once you are done using it
+	 * Remember to close the looked-up object and tree once you are done using it
 	 */
 	git_object_free(obj);
+	git_tree_free(tree);
 }
 
 /**
@@ -522,6 +540,11 @@ static void blob_parsing(git_repository *repo)
 	 * */
 	printf("Blob Size: %ld\n", (long)git_blob_rawsize(blob)); /* 8 */
 	git_blob_rawcontent(blob); /* "content" */
+
+	/**
+	 * Free the blob after usage.
+	 */
+	git_blob_free(blob);
 }
 
 /**
@@ -644,10 +667,7 @@ static void index_walking(git_repository *repo)
 static void reference_listing(git_repository *repo)
 {
 	git_strarray ref_list;
-	const char *refname;
-	git_reference *ref;
 	unsigned i;
-	char oid_hex[GIT_OID_HEXSZ+1];
 
 	printf("\n*Reference Listing*\n");
 
@@ -662,7 +682,10 @@ static void reference_listing(git_repository *repo)
 	git_reference_list(&ref_list, repo);
 
 	for (i = 0; i < ref_list.count; ++i) {
-		memset(oid_hex, 0, sizeof(oid_hex));
+		git_reference *ref;
+		char oid_hex[GIT_OID_HEXSZ+1] = GIT_OID_HEX_ZERO;
+		const char *refname;
+
 		refname = ref_list.strings[i];
 		git_reference_lookup(&ref, repo, refname);
 
@@ -679,6 +702,8 @@ static void reference_listing(git_repository *repo)
 				fprintf(stderr, "Unexpected reference type\n");
 				exit(1);
 		}
+
+		git_reference_free(ref);
 	}
 
 	git_strarray_free(&ref_list);
@@ -696,7 +721,7 @@ static void config_files(const char *repo_path, git_repository* repo)
 {
 	const char *email;
 	char config_path[256];
-	int32_t j;
+	int32_t autocorrect;
 	git_config *cfg;
 	git_config *snap_cfg;
 
@@ -708,10 +733,16 @@ static void config_files(const char *repo_path, git_repository* repo)
 	sprintf(config_path, "%s/config", repo_path);
 	check_error(git_config_open_ondisk(&cfg, config_path), "opening config");
 
-	git_config_get_int32(&j, cfg, "help.autocorrect");
-	printf("Autocorrect: %d\n", j);
+	if (git_config_get_int32(&autocorrect, cfg, "help.autocorrect") == 0)
+		printf("Autocorrect: %d\n", autocorrect);
 
 	check_error(git_repository_config_snapshot(&snap_cfg, repo), "config snapshot");
 	git_config_get_string(&email, snap_cfg, "user.email");
 	printf("Email: %s\n", email);
+
+	/**
+	 * Remember to free the configurations after usage.
+	 */
+	git_config_free(cfg);
+	git_config_free(snap_cfg);
 }
