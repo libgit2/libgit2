@@ -131,7 +131,7 @@ int git_diff__merge(
 	if (ignore_case != ((from->opts.flags & GIT_DIFF_IGNORE_CASE) != 0) ||
 		reversed    != ((from->opts.flags & GIT_DIFF_REVERSE) != 0)) {
 		giterr_set(GITERR_INVALID,
-			"Attempt to merge diffs created with conflicting options");
+			"attempt to merge diffs created with conflicting options");
 		return -1;
 	}
 

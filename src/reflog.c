@@ -93,7 +93,7 @@ int git_reflog_append(git_reflog *reflog, const git_oid *new_oid, const git_sign
 
 		if (newline) {
 			if (newline[1] != '\0') {
-				giterr_set(GITERR_INVALID, "Reflog message cannot contain newline");
+				giterr_set(GITERR_INVALID, "reflog message cannot contain newline");
 				goto cleanup;
 			}
 
@@ -193,7 +193,7 @@ int git_reflog_drop(git_reflog *reflog, size_t idx, int rewrite_previous_entry)
 	entry = (git_reflog_entry *)git_reflog_entry_byindex(reflog, idx);
 
 	if (entry == NULL) {
-		giterr_set(GITERR_REFERENCE, "No reflog entry at index %"PRIuZ, idx);
+		giterr_set(GITERR_REFERENCE, "no reflog entry at index %"PRIuZ, idx);
 		return GIT_ENOTFOUND;
 	}
 

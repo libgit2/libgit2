@@ -23,7 +23,7 @@ static int verify_last_error(git_filebuf *file)
 {
 	switch (file->last_error) {
 	case BUFERR_WRITE:
-		giterr_set(GITERR_OS, "Failed to write out file");
+		giterr_set(GITERR_OS, "failed to write out file");
 		return -1;
 
 	case BUFERR_MEM:
@@ -48,7 +48,7 @@ static int lock_file(git_filebuf *file, int flags, mode_t mode)
 		else {
 			giterr_clear(); /* actual OS error code just confuses */
 			giterr_set(GITERR_OS,
-				"Failed to lock file '%s' for writing", file->path_lock);
+				"failed to lock file '%s' for writing", file->path_lock);
 			return GIT_ELOCKED;
 		}
 	}
@@ -75,7 +75,7 @@ static int lock_file(git_filebuf *file, int flags, mode_t mode)
 		source = p_open(file->path_original, O_RDONLY);
 		if (source < 0) {
 			giterr_set(GITERR_OS,
-				"Failed to open file '%s' for reading",
+				"failed to open file '%s' for reading",
 				file->path_original);
 			return -1;
 		}
@@ -90,10 +90,10 @@ static int lock_file(git_filebuf *file, int flags, mode_t mode)
 		p_close(source);
 
 		if (read_bytes < 0) {
-			giterr_set(GITERR_OS, "Failed to read file '%s'", file->path_original);
+			giterr_set(GITERR_OS, "failed to read file '%s'", file->path_original);
 			return -1;
 		} else if (error < 0) {
-			giterr_set(GITERR_OS, "Failed to write file '%s'", file->path_lock);
+			giterr_set(GITERR_OS, "failed to write file '%s'", file->path_lock);
 			return -1;
 		}
 	}
@@ -316,7 +316,7 @@ int git_filebuf_open_withsize(git_filebuf *file, const char *path, int flags, mo
 	if (compression != 0) {
 		/* Initialize the ZLib stream */
 		if (deflateInit(&file->zs, compression) != Z_OK) {
-			giterr_set(GITERR_ZLIB, "Failed to initialize zlib");
+			giterr_set(GITERR_ZLIB, "failed to initialize zlib");
 			goto cleanup;
 		}
 
@@ -426,14 +426,14 @@ int git_filebuf_commit(git_filebuf *file)
 	file->fd_is_open = false;
 
 	if (p_close(file->fd) < 0) {
-		giterr_set(GITERR_OS, "Failed to close file at '%s'", file->path_lock);
+		giterr_set(GITERR_OS, "failed to close file at '%s'", file->path_lock);
 		goto on_error;
 	}
 
 	file->fd = -1;
 
 	if (p_rename(file->path_lock, file->path_original) < 0) {
-		giterr_set(GITERR_OS, "Failed to rename lockfile to '%s'", file->path_original);
+		giterr_set(GITERR_OS, "failed to rename lockfile to '%s'", file->path_original);
 		goto on_error;
 	}
 
@@ -571,7 +571,7 @@ int git_filebuf_stats(time_t *mtime, size_t *size, git_filebuf *file)
 		res = p_stat(file->path_original, &st);
 
 	if (res < 0) {
-		giterr_set(GITERR_OS, "Could not get stat info for '%s'",
+		giterr_set(GITERR_OS, "could not get stat info for '%s'",
 			file->path_original);
 		return res;
 	}

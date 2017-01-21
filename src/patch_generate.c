@@ -284,7 +284,7 @@ static int create_binary(
 	size_t b_datalen)
 {
 	git_buf deflate = GIT_BUF_INIT, delta = GIT_BUF_INIT;
-	size_t delta_data_len;
+	size_t delta_data_len = 0;
 	int error;
 
 	/* The git_delta function accepts unsigned long only */
@@ -417,7 +417,7 @@ static int diff_required(git_diff *diff, const char *action)
 {
 	if (diff)
 		return 0;
-	giterr_set(GITERR_INVALID, "Must provide valid diff to %s", action);
+	giterr_set(GITERR_INVALID, "must provide valid diff to %s", action);
 	return -1;
 }
 
@@ -776,7 +776,7 @@ int git_patch_generated_from_diff(
 
 	delta = git_vector_get(&diff->deltas, idx);
 	if (!delta) {
-		giterr_set(GITERR_INVALID, "Index out of range for delta in diff");
+		giterr_set(GITERR_INVALID, "index out of range for delta in diff");
 		return GIT_ENOTFOUND;
 	}
 

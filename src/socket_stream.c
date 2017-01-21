@@ -57,7 +57,7 @@ static int close_socket(GIT_SOCKET s)
 		return -1;
 
 	if (0 != WSACleanup()) {
-		giterr_set(GITERR_OS, "Winsock cleanup failed");
+		giterr_set(GITERR_OS, "winsock cleanup failed");
 		return -1;
 	}
 
@@ -82,13 +82,13 @@ int socket_connect(git_stream *stream)
 	WSADATA wsd;
 
 	if (WSAStartup(MAKEWORD(2,2), &wsd) != 0) {
-		giterr_set(GITERR_OS, "Winsock init failed");
+		giterr_set(GITERR_OS, "winsock init failed");
 		return -1;
 	}
 
 	if (LOBYTE(wsd.wVersion) != 2 || HIBYTE(wsd.wVersion) != 2) {
 		WSACleanup();
-		giterr_set(GITERR_OS, "Winsock init failed");
+		giterr_set(GITERR_OS, "winsock init failed");
 		return -1;
 	}
 #endif
@@ -99,7 +99,7 @@ int socket_connect(git_stream *stream)
 
 	if ((ret = p_getaddrinfo(st->host, st->port, &hints, &info)) != 0) {
 		giterr_set(GITERR_NET,
-			   "Failed to resolve address for %s: %s", st->host, p_gai_strerror(ret));
+			   "failed to resolve address for %s: %s", st->host, p_gai_strerror(ret));
 		return -1;
 	}
 
@@ -121,7 +121,7 @@ int socket_connect(git_stream *stream)
 
 	/* Oops, we couldn't connect to any address */
 	if (s == INVALID_SOCKET && p == NULL) {
-		giterr_set(GITERR_OS, "Failed to connect to %s", st->host);
+		giterr_set(GITERR_OS, "failed to connect to %s", st->host);
 		p_freeaddrinfo(info);
 		return -1;
 	}

@@ -29,7 +29,9 @@ int git_libgit2_features(void)
 #ifdef GIT_THREADS
 		| GIT_FEATURE_THREADS
 #endif
+#if defined(GIT_OPENSSL) || defined(GIT_WINHTTP) || defined(GIT_SECURE_TRANSPORT)
 		| GIT_FEATURE_HTTPS
+#endif
 #if defined(GIT_SSH)
 		| GIT_FEATURE_SSH
 #endif
@@ -62,7 +64,7 @@ static int config_level_to_sysdir(int config_level)
 		break;
 	default:
 		giterr_set(
-			GITERR_INVALID, "Invalid config path selector %d", config_level);
+			GITERR_INVALID, "invalid config path selector %d", config_level);
 	}
 
 	return val;

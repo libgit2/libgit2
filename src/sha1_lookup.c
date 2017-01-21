@@ -206,7 +206,7 @@ int sha1_entry_pos(const void *table,
 #endif
 
 		if (!(lo <= mi && mi < hi)) {
-			giterr_set(GITERR_INVALID, "Assertion failure. Binary search invariant is false");
+			giterr_set(GITERR_INVALID, "assertion failure: binary search invariant is false");
 			return -1;
 		}
 

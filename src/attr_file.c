@@ -30,7 +30,7 @@ int git_attr_file__new(
 	GITERR_CHECK_ALLOC(attrs);
 
 	if (git_mutex_init(&attrs->lock) < 0) {
-		giterr_set(GITERR_OS, "Failed to initialize lock");
+		giterr_set(GITERR_OS, "failed to initialize lock");
 		git__free(attrs);
 		return -1;
 	}
@@ -49,7 +49,7 @@ int git_attr_file__clear_rules(git_attr_file *file, bool need_lock)
 	git_attr_rule *rule;
 
 	if (need_lock && git_mutex_lock(&file->lock) < 0) {
-		giterr_set(GITERR_OS, "Failed to lock attribute file");
+		giterr_set(GITERR_OS, "failed to lock attribute file");
 		return -1;
 	}
 
@@ -140,7 +140,7 @@ int git_attr_file__load(
 		break;
 	}
 	default:
-		giterr_set(GITERR_INVALID, "Unknown file source %d", source);
+		giterr_set(GITERR_INVALID, "unknown file source %d", source);
 		return -1;
 	}
 
@@ -212,7 +212,7 @@ int git_attr_file__out_of_date(
 	}
 
 	default:
-		giterr_set(GITERR_INVALID, "Invalid file type %d", file->source);
+		giterr_set(GITERR_INVALID, "invalid file type %d", file->source);
 		return -1;
 	}
 }
@@ -238,7 +238,7 @@ int git_attr_file__parse_buffer(
 		context = attrs->entry->path;
 
 	if (git_mutex_lock(&attrs->lock) < 0) {
-		giterr_set(GITERR_OS, "Failed to lock attribute file");
+		giterr_set(GITERR_OS, "failed to lock attribute file");
 		return -1;
 	}
 

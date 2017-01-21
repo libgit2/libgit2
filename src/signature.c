@@ -25,7 +25,7 @@ void git_signature_free(git_signature *sig)
 
 static int signature_error(const char *msg)
 {
-	giterr_set(GITERR_INVALID, "Failed to parse signature - %s", msg);
+	giterr_set(GITERR_INVALID, "failed to parse signature - %s", msg);
 	return -1;
 }
 
@@ -251,7 +251,7 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 			 * only store timezone if it's not overflowing;
 			 * see http://www.worldtimezone.com/faq.html
 			 */
-			if (hours < 14 && mins < 59) {
+			if (hours <= 14 && mins <= 59) {
 				sig->when.offset = (hours * 60) + mins;
 				if (tz_start[0] == '-')
 					sig->when.offset = -sig->when.offset;

@@ -50,7 +50,7 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 			if ((recvd = gitno_recv(buf)) < 0)
 				return recvd;
 
-			if (recvd == 0 && !flush) {
+			if (recvd == 0) {
 				giterr_set(GITERR_NET, "early EOF");
 				return GIT_EEOF;
 			}
@@ -60,7 +60,7 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 
 		gitno_consume(buf, line_end);
 		if (pkt->type == GIT_PKT_ERR) {
-			giterr_set(GITERR_NET, "Remote error: %s", ((git_pkt_err *)pkt)->error);
+			giterr_set(GITERR_NET, "remote error: %s", ((git_pkt_err *)pkt)->error);
 			git__free(pkt);
 			return -1;
 		}
@@ -222,8 +222,12 @@ static int recv_pkt(git_pkt **out, gitno_buffer *buf)
 		if (error < 0 && error != GIT_EBUFS)
 			return error;
 
-		if ((ret = gitno_recv(buf)) < 0)
+		if ((ret = gitno_recv(buf)) < 0) {
 			return ret;
+		} else if (ret == 0) {
+			giterr_set(GITERR_NET, "early EOF");
+			return GIT_EEOF;
+		}
 	} while (error);
 
 	gitno_consume(buf, line_end);
@@ -408,12 +412,12 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 
 		if (i % 20 == 0 && t->rpc) {
 			git_pkt_ack *pkt;
-			unsigned int i;
+			unsigned int j;
 
 			if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
 				goto on_error;
 
-			git_vector_foreach(&t->common, i, pkt) {
+			git_vector_foreach(&t->common, j, pkt) {
 				if ((error = git_pkt_buffer_have(&pkt->oid, &data)) < 0)
 					goto on_error;
 			}
@@ -428,12 +432,12 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 	/* Tell the other end that we're done negotiating */
 	if (t->rpc && t->common.length > 0) {
 		git_pkt_ack *pkt;
-		unsigned int i;
+		unsigned int j;
 
 		if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
 			goto on_error;
 
-		git_vector_foreach(&t->common, i, pkt) {
+		git_vector_foreach(&t->common, j, pkt) {
 			if ((error = git_pkt_buffer_have(&pkt->oid, &data)) < 0)
 				goto on_error;
 		}
@@ -724,7 +728,7 @@ static int add_push_report_pkt(git_push *push, git_pkt *pkt)
 static int add_push_report_sideband_pkt(git_push *push, git_pkt_data *data_pkt, git_buf *data_pkt_buf)
 {
 	git_pkt *pkt;
-	const char *line, *line_end;
+	const char *line, *line_end = NULL;
 	size_t line_len;
 	int error;
 	int reading_from_buf = data_pkt_buf->size > 0;
@@ -758,14 +762,6 @@ static int add_push_report_sideband_pkt(git_push *push, git_pkt_data *data_pkt, 
 		/* Advance in the buffer */
 		line_len -= (line_end - line);
 		line = line_end;
-
-		/* When a valid packet with no content has been
-		 * read, git_pkt_parse_line does not report an
-		 * error, but the pkt pointer has not been set.
-		 * Handle this by skipping over empty packets.
-		 */
-		if (pkt == NULL)
-			continue;
 
 		error = add_push_report_pkt(push, pkt);
 
@@ -820,9 +816,6 @@ static int parse_report(transport_smart *transport, git_push *push)
 		gitno_consume(buf, line_end);
 
 		error = 0;
-
-		if (pkt == NULL)
-			continue;
 
 		switch (pkt->type) {
 			case GIT_PKT_DATA:

@@ -143,4 +143,7 @@ extern int git_submodule_parse_ignore(
 extern int git_submodule_parse_update(
 	git_submodule_update_t *out, const char *value);
 
+extern int git_submodule__map(
+	git_repository *repo,
+	git_strmap *map);
 #endif

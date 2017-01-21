@@ -70,7 +70,7 @@ int git_cache_init(git_cache *cache)
 	cache->map = git_oidmap_alloc();
 	GITERR_CHECK_ALLOC(cache->map);
 	if (git_rwlock_init(&cache->lock)) {
-		giterr_set(GITERR_OS, "Failed to initialize cache rwlock");
+		giterr_set(GITERR_OS, "failed to initialize cache rwlock");
 		return -1;
 	}
 	return 0;

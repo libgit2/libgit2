@@ -175,7 +175,7 @@ static int parse_ignore_file(
 		context = attrs->entry->path;
 
 	if (git_mutex_lock(&attrs->lock) < 0) {
-		giterr_set(GITERR_OS, "Failed to lock ignore file");
+		giterr_set(GITERR_OS, "failed to lock ignore file");
 		return -1;
 	}
 

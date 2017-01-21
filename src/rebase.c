@@ -152,7 +152,7 @@ GIT_INLINE(int) rebase_readint(
 		return error;
 
 	if (git__strtol32(&num, asc_out->ptr, &eol, 10) < 0 || num < 0 || *eol) {
-		giterr_set(GITERR_REBASE, "The file '%s' contains an invalid numeric value", filename);
+		giterr_set(GITERR_REBASE, "the file '%s' contains an invalid numeric value", filename);
 		return -1;
 	}
 
@@ -170,7 +170,7 @@ GIT_INLINE(int) rebase_readoid(
 		return error;
 
 	if (str_out->size != GIT_OID_HEXSZ || git_oid_fromstr(out, str_out->ptr) < 0) {
-		giterr_set(GITERR_REBASE, "The file '%s' contains an invalid object ID", filename);
+		giterr_set(GITERR_REBASE, "the file '%s' contains an invalid object ID", filename);
 		return -1;
 	}
 
@@ -316,7 +316,7 @@ int git_rebase_open(
 		goto done;
 
 	if (rebase->type == GIT_REBASE_TYPE_NONE) {
-		giterr_set(GITERR_REBASE, "There is no rebase in progress");
+		giterr_set(GITERR_REBASE, "there is no rebase in progress");
 		error = GIT_ENOTFOUND;
 		goto done;
 	}
@@ -372,14 +372,14 @@ int git_rebase_open(
 
 	switch (rebase->type) {
 	case GIT_REBASE_TYPE_INTERACTIVE:
-		giterr_set(GITERR_REBASE, "Interactive rebase is not supported");
+		giterr_set(GITERR_REBASE, "interactive rebase is not supported");
 		error = -1;
 		break;
 	case GIT_REBASE_TYPE_MERGE:
 		error = rebase_open_merge(rebase);
 		break;
 	case GIT_REBASE_TYPE_APPLY:
-		giterr_set(GITERR_REBASE, "Patch application rebase is not supported");
+		giterr_set(GITERR_REBASE, "patch application rebase is not supported");
 		error = -1;
 		break;
 	default:
@@ -478,7 +478,7 @@ static int rebase_setupfiles(git_rebase *rebase)
 	git_oid_fmt(orig_head, &rebase->orig_head_id);
 
 	if (p_mkdir(rebase->state_path, REBASE_DIR_MODE) < 0) {
-		giterr_set(GITERR_OS, "Failed to create rebase directory '%s'", rebase->state_path);
+		giterr_set(GITERR_OS, "failed to create rebase directory '%s'", rebase->state_path);
 		return -1;
 	}
 
@@ -511,7 +511,7 @@ static int rebase_ensure_not_in_progress(git_repository *repo)
 		return error;
 
 	if (type != GIT_REBASE_TYPE_NONE) {
-		giterr_set(GITERR_REBASE, "There is an existing rebase in progress");
+		giterr_set(GITERR_REBASE, "there is an existing rebase in progress");
 		return -1;
 	}
 
@@ -536,7 +536,7 @@ static int rebase_ensure_not_dirty(
 			goto done;
 
 		if (git_diff_num_deltas(diff) > 0) {
-			giterr_set(GITERR_REBASE, "Uncommitted changes exist in index");
+			giterr_set(GITERR_REBASE, "uncommitted changes exist in index");
 			error = fail_with;
 			goto done;
 		}
@@ -550,7 +550,7 @@ static int rebase_ensure_not_dirty(
 			goto done;
 
 		if (git_diff_num_deltas(diff) > 0) {
-			giterr_set(GITERR_REBASE, "Unstaged changes exist in workdir");
+			giterr_set(GITERR_REBASE, "unstaged changes exist in workdir");
 			error = fail_with;
 			goto done;
 		}
@@ -630,7 +630,7 @@ static int rebase_init_merge(
 	rebase->state_path = git_buf_detach(&state_path);
 	GITERR_CHECK_ALLOC(rebase->state_path);
 
-	if (branch->ref_name) {
+	if (branch->ref_name && strcmp(branch->ref_name, "HEAD")) {
 		rebase->orig_head_name = git__strdup(branch->ref_name);
 		GITERR_CHECK_ALLOC(rebase->orig_head_name);
 	} else {
@@ -731,7 +731,7 @@ int git_rebase_init(
 	if (inmemory)
 		error = rebase_init_inmemory(rebase, repo, branch, upstream, onto);
 	else
-		rebase_init_merge(rebase, repo, branch ,upstream, onto);
+		error = rebase_init_merge(rebase, repo, branch ,upstream, onto);
 
 	if (error == 0)
 		*out = rebase;
@@ -807,7 +807,7 @@ static int rebase_next_merge(
 		goto done;
 
 	if ((parent_count = git_commit_parentcount(current_commit)) > 1) {
-		giterr_set(GITERR_REBASE, "Cannot rebase a merge commit");
+		giterr_set(GITERR_REBASE, "cannot rebase a merge commit");
 		error = -1;
 		goto done;
 	} else if (parent_count) {
@@ -864,7 +864,7 @@ static int rebase_next_inmemory(
 		goto done;
 
 	if ((parent_count = git_commit_parentcount(current_commit)) > 1) {
-		giterr_set(GITERR_REBASE, "Cannot rebase a merge commit");
+		giterr_set(GITERR_REBASE, "cannot rebase a merge commit");
 		error = -1;
 		goto done;
 	} else if (parent_count) {
@@ -1259,7 +1259,7 @@ static int rebase_copy_notes(
 	goto done;
 
 on_error:
-	giterr_set(GITERR_REBASE, "Invalid rewritten file at line %d", linenum);
+	giterr_set(GITERR_REBASE, "invalid rewritten file at line %d", linenum);
 	error = -1;
 
 done:

@@ -45,12 +45,12 @@ extern int git_futils_writebuffer(
 extern int git_futils_creat_withpath(const char *path, const mode_t dirmode, const mode_t mode);
 
 /**
- * Create an open a process-locked file
+ * Create and open a process-locked file
  */
 extern int git_futils_creat_locked(const char *path, const mode_t mode);
 
 /**
- * Create an open a process-locked file, while
+ * Create and open a process-locked file, while
  * also creating all the folders in its path
  */
 extern int git_futils_creat_locked_withpath(const char *path, const mode_t dirmode, const mode_t mode);

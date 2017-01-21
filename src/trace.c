@@ -32,7 +32,7 @@ int git_trace_set(git_trace_level_t level, git_trace_callback callback)
 	GIT_UNUSED(callback);
 
 	giterr_set(GITERR_INVALID,
-		"This version of libgit2 was not built with tracing.");
+		"this version of libgit2 was not built with tracing.");
 	return -1;
 #endif
 }

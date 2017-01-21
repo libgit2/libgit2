@@ -61,7 +61,7 @@ const char *git_tag_message(const git_tag *t)
 
 static int tag_error(const char *str)
 {
-	giterr_set(GITERR_TAG, "Failed to parse tag. %s", str);
+	giterr_set(GITERR_TAG, "failed to parse tag: %s", str);
 	return -1;
 }
 
@@ -76,13 +76,13 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 	char *search;
 
 	if (git_oid__parse(&tag->target, &buffer, buffer_end, "object ") < 0)
-		return tag_error("Object field invalid");
+		return tag_error("object field invalid");
 
 	if (buffer + 5 >= buffer_end)
-		return tag_error("Object too short");
+		return tag_error("object too short");
 
 	if (memcmp(buffer, "type ", 5) != 0)
-		return tag_error("Type field not found");
+		return tag_error("type field not found");
 	buffer += 5;
 
 	tag->type = GIT_OBJ_BAD;
@@ -91,7 +91,7 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 		size_t type_length = strlen(tag_types[i]);
 
 		if (buffer + type_length >= buffer_end)
-			return tag_error("Object too short");
+			return tag_error("object too short");
 
 		if (memcmp(buffer, tag_types[i], type_length) == 0) {
 			tag->type = i;
@@ -101,19 +101,19 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 	}
 
 	if (tag->type == GIT_OBJ_BAD)
-		return tag_error("Invalid object type");
+		return tag_error("invalid object type");
 
 	if (buffer + 4 >= buffer_end)
-		return tag_error("Object too short");
+		return tag_error("object too short");
 
 	if (memcmp(buffer, "tag ", 4) != 0)
-		return tag_error("Tag field not found");
+		return tag_error("tag field not found");
 
 	buffer += 4;
 
 	search = memchr(buffer, '\n', buffer_end - buffer);
 	if (search == NULL)
-		return tag_error("Object too short");
+		return tag_error("object too short");
 
 	text_len = search - buffer;
 
@@ -234,7 +234,7 @@ static int write_tag_annotation(
 
 on_error:
 	git_buf_free(&tag);
-	giterr_set(GITERR_OBJECT, "Failed to create tag annotation.");
+	giterr_set(GITERR_OBJECT, "failed to create tag annotation");
 	return -1;
 }
 
@@ -257,7 +257,7 @@ static int git_tag_create__internal(
 	assert(!create_tag_annotation || (tagger && message));
 
 	if (git_object_owner(target) != repo) {
-		giterr_set(GITERR_INVALID, "The given target does not belong to this repository");
+		giterr_set(GITERR_INVALID, "the given target does not belong to this repository");
 		return -1;
 	}
 
@@ -269,7 +269,7 @@ static int git_tag_create__internal(
 	 *	reference unless overwriting has explicitly been requested **/
 	if (error == 0 && !allow_ref_overwrite) {
 		git_buf_free(&ref_name);
-		giterr_set(GITERR_TAG, "Tag already exists");
+		giterr_set(GITERR_TAG, "tag already exists");
 		return GIT_EEXISTS;
 	}
 
@@ -349,7 +349,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 		goto on_error;
 
 	if (tag.type != target_obj->cached.type) {
-		giterr_set(GITERR_TAG, "The type for the given target is invalid");
+		giterr_set(GITERR_TAG, "the type for the given target is invalid");
 		goto on_error;
 	}
 
@@ -366,7 +366,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	/** Ensure the tag name doesn't conflict with an already existing
 	 *	reference unless overwriting has explicitly been requested **/
 	if (error == 0 && !allow_ref_overwrite) {
-		giterr_set(GITERR_TAG, "Tag already exists");
+		giterr_set(GITERR_TAG, "tag already exists");
 		return GIT_EEXISTS;
 	}
 

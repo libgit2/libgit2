@@ -50,7 +50,7 @@ static int sideband_progress(const char *str, int len, void *payload)
 {
 	(void)payload; // unused
 
-	printf("remote: %*s", len, str);
+	printf("remote: %.*s", len, str);
 	fflush(stdout);
 	return 0;
 }

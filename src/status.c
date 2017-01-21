@@ -243,13 +243,13 @@ static int status_validate_options(const git_status_options *opts)
 	GITERR_CHECK_VERSION(opts, GIT_STATUS_OPTIONS_VERSION, "git_status_options");
 
 	if (opts->show > GIT_STATUS_SHOW_WORKDIR_ONLY) {
-		giterr_set(GITERR_INVALID, "Unknown status 'show' option");
+		giterr_set(GITERR_INVALID, "unknown status 'show' option");
 		return -1;
 	}
 
 	if ((opts->flags & GIT_STATUS_OPT_NO_REFRESH) != 0 &&
 		(opts->flags & GIT_STATUS_OPT_UPDATE_INDEX) != 0) {
-		giterr_set(GITERR_INVALID, "Updating index from status "
+		giterr_set(GITERR_INVALID, "updating index from status "
 			"is not allowed when index refresh is disabled");
 		return -1;
 	}
@@ -510,13 +510,13 @@ int git_status_file(
 
 	if (error < 0 && sfi.ambiguous) {
 		giterr_set(GITERR_INVALID,
-			"Ambiguous path '%s' given to git_status_file", sfi.expected);
+			"ambiguous path '%s' given to git_status_file", sfi.expected);
 		error = GIT_EAMBIGUOUS;
 	}
 
 	if (!error && !sfi.count) {
 		giterr_set(GITERR_INVALID,
-			"Attempt to get status of nonexistent file '%s'", path);
+			"attempt to get status of nonexistent file '%s'", path);
 		error = GIT_ENOTFOUND;
 	}
 

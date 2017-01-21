@@ -133,13 +133,13 @@ int git_revert_commit(
 	if (git_commit_parentcount(revert_commit) > 1) {
 		if (!mainline)
 			return revert_seterr(revert_commit,
-				"Mainline branch is not specified but %s is a merge commit");
+				"mainline branch is not specified but %s is a merge commit");
 
 		parent = mainline;
 	} else {
 		if (mainline)
 			return revert_seterr(revert_commit,
-				"Mainline branch specified but %s is not a merge commit");
+				"mainline branch specified but %s is not a merge commit");
 
 		parent = git_commit_parentcount(revert_commit);
 	}

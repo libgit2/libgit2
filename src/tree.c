@@ -627,7 +627,7 @@ int git_tree__write_index(
 
 	if (git_index_has_conflicts(index)) {
 		giterr_set(GITERR_INDEX,
-			"Cannot create a tree from a not fully merged index.");
+			"cannot create a tree from a not fully merged index.");
 		return GIT_EUNMERGED;
 	}
 
@@ -909,7 +909,7 @@ int git_tree_entry_bypath(
 	filename_len = subpath_len(path);
 
 	if (filename_len == 0) {
-		giterr_set(GITERR_TREE, "Invalid tree path given");
+		giterr_set(GITERR_TREE, "invalid tree path given");
 		return GIT_ENOTFOUND;
 	}
 
@@ -917,7 +917,7 @@ int git_tree_entry_bypath(
 
 	if (entry == NULL) {
 		giterr_set(GITERR_TREE,
-			   "the path '%.*s' does not exist in the given tree", filename_len, path);
+			   "the path '%.*s' does not exist in the given tree", (int) filename_len, path);
 		return GIT_ENOTFOUND;
 	}
 
@@ -927,7 +927,7 @@ int git_tree_entry_bypath(
 		 * then this entry *must* be a tree */
 		if (!git_tree_entry__is_tree(entry)) {
 			giterr_set(GITERR_TREE,
-				   "the path '%.*s' exists but is not a tree", filename_len, path);
+				   "the path '%.*s' exists but is not a tree", (int) filename_len, path);
 			return GIT_ENOTFOUND;
 		}
 
@@ -1027,7 +1027,7 @@ int git_tree_walk(
 	git_buf root_path = GIT_BUF_INIT;
 
 	if (mode != GIT_TREEWALK_POST && mode != GIT_TREEWALK_PRE) {
-		giterr_set(GITERR_INVALID, "Invalid walking mode for tree walk");
+		giterr_set(GITERR_INVALID, "invalid walking mode for tree walk");
 		return -1;
 	}
 
@@ -1164,8 +1164,8 @@ int git_tree_create_updated(git_oid *out, git_repository *repo, git_tree *baseli
 		goto cleanup;
 
 	for (i = 0; i < nupdates; i++) {
-		const git_tree_update *last_update = i == 0 ? NULL : &updates[i-1];
-		const git_tree_update *update = &updates[i];
+		const git_tree_update *last_update = i == 0 ? NULL : git_vector_get(&entries, i-1);
+		const git_tree_update *update = git_vector_get(&entries, i);
 		size_t common_prefix = 0, steps_up, j;
 		const char *path;
 
@@ -1200,6 +1200,9 @@ int git_tree_create_updated(git_oid *out, git_repository *repo, git_tree *baseli
 
 			last = git_array_last(stack);
 			entry = last->tree ? git_tree_entry_byname(last->tree, component.ptr) : NULL;
+			if (!entry)
+				entry = treebuilder_get(last->bld, component.ptr);
+
 			if (entry && git_tree_entry_type(entry) != GIT_OBJ_TREE) {
 				giterr_set(GITERR_TREE, "D/F conflict when updating tree");
 				error = -1;
@@ -1234,7 +1237,7 @@ int git_tree_create_updated(git_oid *out, git_repository *repo, git_tree *baseli
 				const git_tree_entry *e = git_treebuilder_get(last->bld, basename);
 				if (e && git_tree_entry_type(e) != git_object__type_from_filemode(update->filemode)) {
 					git__free(basename);
-					giterr_set(GITERR_TREE, "Cannot replace '%s' with '%s' at '%s'",
+					giterr_set(GITERR_TREE, "cannot replace '%s' with '%s' at '%s'",
 						   git_object_type2string(git_tree_entry_type(e)),
 						   git_object_type2string(git_object__type_from_filemode(update->filemode)),
 						   update->path);
@@ -1254,7 +1257,7 @@ int git_tree_create_updated(git_oid *out, git_repository *repo, git_tree *baseli
 				break;
 			}
 			default:
-				giterr_set(GITERR_TREE, "unkown action for update");
+				giterr_set(GITERR_TREE, "unknown action for update");
 				error = -1;
 				goto cleanup;
 		}

@@ -19,7 +19,7 @@ typedef enum {
 	/**
 	 * Do not attempt to connect through a proxy
 	 *
-	 * If built against lbicurl, it itself may attempt to connect
+	 * If built against libcurl, it itself may attempt to connect
 	 * to a proxy if the environment variables specify it.
 	 */
 	GIT_PROXY_NONE,

@@ -33,7 +33,7 @@ static int retrieve_branch_reference(
 		/* OOM */;
 	else if ((error = git_reference_lookup(&branch, repo, ref_name.ptr)) < 0)
 		giterr_set(
-			GITERR_REFERENCE, "Cannot locate %s branch '%s'",
+			GITERR_REFERENCE, "cannot locate %s branch '%s'",
 			is_remote ? "remote-tracking" : "local", branch_name);
 
 	*branch_reference_out = branch; /* will be NULL on error */
@@ -46,7 +46,7 @@ static int not_a_local_branch(const char *reference_name)
 {
 	giterr_set(
 		GITERR_INVALID,
-		"Reference '%s' is not a local branch.", reference_name);
+		"reference '%s' is not a local branch.", reference_name);
 	return -1;
 }
 
@@ -58,16 +58,17 @@ static int create_branch(
 	const char *from,
 	int force)
 {
-	int is_head = 0;
+	int is_unmovable_head = 0;
 	git_reference *branch = NULL;
 	git_buf canonical_branch_name = GIT_BUF_INIT,
 			  log_message = GIT_BUF_INIT;
 	int error = -1;
+	int bare = git_repository_is_bare(repository);
 
 	assert(branch_name && commit && ref_out);
 	assert(git_object_owner((const git_object *)commit) == repository);
 
-	if (force && git_branch_lookup(&branch, repository, branch_name, GIT_BRANCH_LOCAL) == 0) {
+	if (force && !bare && git_branch_lookup(&branch, repository, branch_name, GIT_BRANCH_LOCAL) == 0) {
 		error = git_branch_is_head(branch);
 		git_reference_free(branch);
 		branch = NULL;
@@ -75,11 +76,11 @@ static int create_branch(
 		if (error < 0)
 			goto cleanup;
 
-		is_head = error;
+		is_unmovable_head = error;
 	}
 
-	if (is_head && force) {
-		giterr_set(GITERR_REFERENCE, "Cannot force update branch '%s' as it is "
+	if (is_unmovable_head && force) {
+		giterr_set(GITERR_REFERENCE, "cannot force update branch '%s' as it is "
 			"the current HEAD of the repository.", branch_name);
 		error = -1;
 		goto cleanup;
@@ -134,7 +135,7 @@ int git_branch_delete(git_reference *branch)
 	assert(branch);
 
 	if (!git_reference_is_branch(branch) && !git_reference_is_remote(branch)) {
-		giterr_set(GITERR_INVALID, "Reference '%s' is not a valid branch.",
+		giterr_set(GITERR_INVALID, "reference '%s' is not a valid branch.",
 			git_reference_name(branch));
 		return GIT_ENOTFOUND;
 	}
@@ -143,7 +144,7 @@ int git_branch_delete(git_reference *branch)
 		return is_head;
 
 	if (is_head) {
-		giterr_set(GITERR_REFERENCE, "Cannot delete branch '%s' as it is "
+		giterr_set(GITERR_REFERENCE, "cannot delete branch '%s' as it is "
 			"the current HEAD of the repository.", git_reference_name(branch));
 		return -1;
 	}
@@ -305,7 +306,7 @@ int git_branch_name(
 		branch_name += strlen(GIT_REFS_REMOTES_DIR);
 	} else {
 		giterr_set(GITERR_INVALID,
-				"Reference '%s' is neither a local nor a remote branch.", ref->name);
+				"reference '%s' is neither a local nor a remote branch.", ref->name);
 		return -1;
 	}
 	*out = branch_name;
@@ -435,7 +436,7 @@ int git_branch_remote_name(git_buf *buf, git_repository *repo, const char *refna
 
 	/* Verify that this is a remote branch */
 	if (!git_reference__is_remote(refname)) {
-		giterr_set(GITERR_INVALID, "Reference '%s' is not a remote branch.",
+		giterr_set(GITERR_INVALID, "reference '%s' is not a remote branch.",
 			refname);
 		error = GIT_ERROR;
 		goto cleanup;
@@ -462,7 +463,7 @@ int git_branch_remote_name(git_buf *buf, git_repository *repo, const char *refna
 				git_remote_free(remote);
 
 				giterr_set(GITERR_REFERENCE,
-					"Reference '%s' is ambiguous", refname);
+					"reference '%s' is ambiguous", refname);
 				error = GIT_EAMBIGUOUS;
 				goto cleanup;
 			}
@@ -476,7 +477,7 @@ int git_branch_remote_name(git_buf *buf, git_repository *repo, const char *refna
 		error = git_buf_puts(buf, remote_name);
 	} else {
 		giterr_set(GITERR_REFERENCE,
-			"Could not determine remote for '%s'", refname);
+			"could not determine remote for '%s'", refname);
 		error = GIT_ENOTFOUND;
 	}
 
@@ -565,7 +566,7 @@ int git_branch_set_upstream(git_reference *branch, const char *upstream_name)
 		local = 0;
 	else {
 		giterr_set(GITERR_REFERENCE,
-			"Cannot set upstream for branch '%s'", shortname);
+			"cannot set upstream for branch '%s'", shortname);
 		return GIT_ENOTFOUND;
 	}
 

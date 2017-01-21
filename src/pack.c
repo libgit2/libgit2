@@ -45,7 +45,7 @@ static int pack_entry_find_offset(
 
 static int packfile_error(const char *message)
 {
-	giterr_set(GITERR_ODB, "Invalid pack file - %s", message);
+	giterr_set(GITERR_ODB, "invalid pack file - %s", message);
 	return -1;
 }
 
@@ -99,7 +99,7 @@ static int cache_init(git_pack_cache *cache)
 	cache->memory_limit = GIT_PACK_CACHE_MEMORY_LIMIT;
 
 	if (git_mutex_init(&cache->lock)) {
-		giterr_set(GITERR_OS, "Failed to initialize pack cache mutex");
+		giterr_set(GITERR_OS, "failed to initialize pack cache mutex");
 
 		git__free(cache->entries);
 		cache->entries = NULL;
@@ -226,7 +226,7 @@ static int pack_index_check(const char *path, struct git_pack_file *p)
 
 	if (p_fstat(fd, &st) < 0) {
 		p_close(fd);
-		giterr_set(GITERR_OS, "Unable to stat pack index '%s'", path);
+		giterr_set(GITERR_OS, "unable to stat pack index '%s'", path);
 		return -1;
 	}
 
@@ -235,7 +235,7 @@ static int pack_index_check(const char *path, struct git_pack_file *p)
 		(idx_size = (size_t)st.st_size) < 4 * 256 + 20 + 20)
 	{
 		p_close(fd);
-		giterr_set(GITERR_ODB, "Invalid pack index '%s'", path);
+		giterr_set(GITERR_ODB, "invalid pack index '%s'", path);
 		return -1;
 	}
 
@@ -509,8 +509,10 @@ int git_packfile_resolve_header(
 		git_packfile_stream_free(&stream);
 		if (error < 0)
 			return error;
-	} else
+	} else {
 		*size_p = size;
+		base_offset = 0;
+	}
 
 	while (type == GIT_OBJ_OFS_DELTA || type == GIT_OBJ_REF_DELTA) {
 		curpos = base_offset;
@@ -757,8 +759,11 @@ int git_packfile_unpack(
 	}
 
 cleanup:
-	if (error < 0)
+	if (error < 0) {
 		git__free(obj->data);
+		if (cached)
+			git_atomic_dec(&cached->refcount);
+	}
 
 	if (elem)
 		*obj_offset = curpos;
@@ -986,6 +991,18 @@ git_off_t get_delta_base(
  *
  ***********************************************************/
 
+void git_packfile_close(struct git_pack_file *p, bool unlink_packfile)
+{
+	if (p->mwf.fd >= 0) {
+		git_mwindow_free_all_locked(&p->mwf);
+		p_close(p->mwf.fd);
+		p->mwf.fd = -1;
+	}
+
+	if (unlink_packfile)
+		p_unlink(p->pack_name);
+}
+
 void git_packfile_free(struct git_pack_file *p)
 {
 	if (!p)
@@ -993,10 +1010,7 @@ void git_packfile_free(struct git_pack_file *p)
 
 	cache_free(&p->bases);
 
-	if (p->mwf.fd >= 0) {
-		git_mwindow_free_all_locked(&p->mwf);
-		p_close(p->mwf.fd);
-	}
+	git_packfile_close(p, false);
 
 	pack_index_free(p);
 
@@ -1077,7 +1091,7 @@ static int packfile_open(struct git_pack_file *p)
 	return 0;
 
 cleanup:
-	giterr_set(GITERR_OS, "Invalid packfile '%s'", p->pack_name);
+	giterr_set(GITERR_OS, "invalid packfile '%s'", p->pack_name);
 
 	if (p->mwf.fd >= 0)
 		p_close(p->mwf.fd);
@@ -1153,7 +1167,7 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 	p->index_version = -1;
 
 	if (git_mutex_init(&p->lock)) {
-		giterr_set(GITERR_OS, "Failed to initialize packfile mutex");
+		giterr_set(GITERR_OS, "failed to initialize packfile mutex");
 		git__free(p);
 		return -1;
 	}
@@ -1268,8 +1282,8 @@ static int pack_entry_find_offset(
 	const git_oid *short_oid,
 	size_t len)
 {
-	const uint32_t *level1_ofs = p->index_map.data;
-	const unsigned char *index = p->index_map.data;
+	const uint32_t *level1_ofs;
+	const unsigned char *index;
 	unsigned hi, lo, stride;
 	int pos, found = 0;
 	git_off_t offset;
@@ -1283,10 +1297,10 @@ static int pack_entry_find_offset(
 		if ((error = pack_index_open(p)) < 0)
 			return error;
 		assert(p->index_map.data);
-
-		index = p->index_map.data;
-		level1_ofs = p->index_map.data;
 	}
+
+	index = p->index_map.data;
+	level1_ofs = p->index_map.data;
 
 	if (p->index_version > 1) {
 		level1_ofs += 2;

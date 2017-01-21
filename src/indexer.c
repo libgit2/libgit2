@@ -33,7 +33,7 @@ struct entry {
 
 struct git_indexer {
 	unsigned int parsed_header :1,
-		opened_pack :1,
+		pack_committed :1,
 		have_stream :1,
 		have_delta :1;
 	struct git_pack_header hdr;
@@ -83,12 +83,12 @@ static int parse_header(struct git_pack_header *hdr, struct git_pack_file *pack)
 
 	/* Verify we recognize this pack file format. */
 	if (hdr->hdr_signature != ntohl(PACK_SIGNATURE)) {
-		giterr_set(GITERR_INDEXER, "Wrong pack signature");
+		giterr_set(GITERR_INDEXER, "wrong pack signature");
 		return -1;
 	}
 
 	if (!pack_version_ok(hdr->hdr_version)) {
-		giterr_set(GITERR_INDEXER, "Wrong pack version");
+		giterr_set(GITERR_INDEXER, "wrong pack version");
 		return -1;
 	}
 
@@ -150,6 +150,12 @@ int git_indexer_new(
 cleanup:
 	if (fd != -1)
 		p_close(fd);
+
+	if (git_buf_len(&tmp_path) > 0)
+		p_unlink(git_buf_cstr(&tmp_path));
+
+	if (idx->pack != NULL)
+		p_unlink(idx->pack->pack_name);
 
 	git_buf_free(&path);
 	git_buf_free(&tmp_path);
@@ -376,7 +382,7 @@ static int hash_and_save(git_indexer *idx, git_rawobj *obj, git_off_t entry_star
 	GITERR_CHECK_ALLOC(entry);
 
 	if (git_odb__hashobj(&oid, obj) < 0) {
-		giterr_set(GITERR_INDEXER, "Failed to hash object");
+		giterr_set(GITERR_INDEXER, "failed to hash object");
 		goto on_error;
 	}
 
@@ -1054,6 +1060,7 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 
 	/* And don't forget to rename the packfile to its new place. */
 	p_rename(idx->pack->pack_name, git_buf_cstr(&filename));
+	idx->pack_committed = 1;
 
 	git_buf_free(&filename);
 	git_hash_ctx_cleanup(&ctx);
@@ -1074,7 +1081,7 @@ void git_indexer_free(git_indexer *idx)
 
 	git_vector_free_deep(&idx->objects);
 
-	if (idx->pack && idx->pack->idx_cache) {
+	if (idx->pack->idx_cache) {
 		struct git_pack_entry *pentry;
 		kh_foreach_value(
 			idx->pack->idx_cache, pentry, { git__free(pentry); });
@@ -1085,6 +1092,9 @@ void git_indexer_free(git_indexer *idx)
 	git_vector_free_deep(&idx->deltas);
 
 	if (!git_mutex_lock(&git__mwindow_mutex)) {
+		if (!idx->pack_committed)
+			git_packfile_close(idx->pack, true);
+
 		git_packfile_free(idx->pack);
 		git_mutex_unlock(&git__mwindow_mutex);
 	}

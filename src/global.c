@@ -247,6 +247,7 @@ BOOL WINAPI DllMain(HINSTANCE hInstDll, DWORD fdwReason, LPVOID lpvReserved)
 #elif defined(GIT_THREADS) && defined(_POSIX_THREADS)
 
 static pthread_key_t _tls_key;
+static pthread_mutex_t _init_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_once_t _once_init = PTHREAD_ONCE_INIT;
 int init_error = 0;
 
@@ -268,12 +269,19 @@ static void init_once(void)
 
 int git_libgit2_init(void)
 {
-	int ret;
+	int ret, err;
 
 	ret = git_atomic_inc(&git__n_inits);
-	pthread_once(&_once_init, init_once);
 
-	return init_error ? init_error : ret;
+	if ((err = pthread_mutex_lock(&_init_mutex)) != 0)
+		return err;
+	err = pthread_once(&_once_init, init_once);
+	err |= pthread_mutex_unlock(&_init_mutex);
+
+	if (err || init_error)
+		return err | init_error;
+
+	return ret;
 }
 
 int git_libgit2_shutdown(void)
@@ -283,6 +291,9 @@ int git_libgit2_shutdown(void)
 	int ret;
 
 	if ((ret = git_atomic_dec(&git__n_inits)) != 0)
+		return ret;
+
+	if ((ret = pthread_mutex_lock(&_init_mutex)) != 0)
 		return ret;
 
 	/* Shut down any subsystems that have global state */
@@ -297,6 +308,9 @@ int git_libgit2_shutdown(void)
 	pthread_key_delete(_tls_key);
 	git_mutex_free(&git__mwindow_mutex);
 	_once_init = new_once;
+
+	if ((ret = pthread_mutex_unlock(&_init_mutex)) != 0)
+		return ret;
 
 	return 0;
 }
@@ -327,7 +341,7 @@ int git_libgit2_init(void)
 {
 	int ret;
 
-	/* Only init SSL the first time */
+	/* Only init subsystems the first time */
 	if ((ret = git_atomic_inc(&git__n_inits)) != 1)
 		return ret;
 
@@ -345,6 +359,7 @@ int git_libgit2_shutdown(void)
 	if ((ret = git_atomic_dec(&git__n_inits)) == 0) {
 		shutdown_common();
 		git__global_state_cleanup(&__state);
+		memset(&__state, 0, sizeof(__state));
 	}
 
 	return ret;

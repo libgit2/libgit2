@@ -962,14 +962,14 @@ int git_buf_unquote(git_buf *buf)
 			case '0': case '1': case '2': case '3':
 				if (j == buf->size-3) {
 					giterr_set(GITERR_INVALID,
-						"Truncated quoted character \\%c", ch);
+						"truncated quoted character \\%c", ch);
 					return -1;
 				}
 
 				if (buf->ptr[j+1] < '0' || buf->ptr[j+1] > '7' ||
 					buf->ptr[j+2] < '0' || buf->ptr[j+2] > '7') {
 					giterr_set(GITERR_INVALID,
-						"Truncated quoted character \\%c%c%c",
+						"truncated quoted character \\%c%c%c",
 						buf->ptr[j], buf->ptr[j+1], buf->ptr[j+2]);
 					return -1;
 				}
@@ -981,7 +981,7 @@ int git_buf_unquote(git_buf *buf)
 				break;
 
 			default:
-				giterr_set(GITERR_INVALID, "Invalid quoted character \\%c", ch);
+				giterr_set(GITERR_INVALID, "invalid quoted character \\%c", ch);
 				return -1;
 			}
 		}
@@ -995,6 +995,6 @@ int git_buf_unquote(git_buf *buf)
 	return 0;
 
 invalid:
-	giterr_set(GITERR_INVALID, "Invalid quoted line");
+	giterr_set(GITERR_INVALID, "invalid quoted line");
 	return -1;
 }

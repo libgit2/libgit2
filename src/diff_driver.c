@@ -151,7 +151,7 @@ static git_diff_driver_registry *git_repository_driver_registry(
 	}
 
 	if (!repo->diff_drivers)
-		giterr_set(GITERR_REPOSITORY, "Unable to create diff driver registry");
+		giterr_set(GITERR_REPOSITORY, "unable to create diff driver registry");
 
 	return repo->diff_drivers;
 }

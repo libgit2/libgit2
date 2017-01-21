@@ -162,7 +162,7 @@ int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
 		git_mutex_init(&pb->progress_mutex) ||
 		git_cond_init(&pb->progress_cond))
 	{
-		giterr_set(GITERR_OS, "Failed to initialize packbuilder mutex");
+		giterr_set(GITERR_OS, "failed to initialize packbuilder mutex");
 		goto on_error;
 	}
 
@@ -225,7 +225,7 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 		GITERR_CHECK_ALLOC_MULTIPLY(&newsize, newsize, 3 / 2);
 
 		if (!git__is_uint32(newsize)) {
-			giterr_set(GITERR_NOMEMORY, "Packfile too large to fit in memory.");
+			giterr_set(GITERR_NOMEMORY, "packfile too large to fit in memory.");
 			return -1;
 		}
 
@@ -298,7 +298,7 @@ static int get_delta(void **out, git_odb *odb, git_pobject *po)
 		goto on_error;
 
 	if (error == GIT_EBUFS || delta_size != po->delta_size) {
-		giterr_set(GITERR_INVALID, "Delta size changed");
+		giterr_set(GITERR_INVALID, "delta size changed");
 		goto on_error;
 	}
 
@@ -808,7 +808,7 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 
 		if (sz != trg_size) {
 			giterr_set(GITERR_INVALID,
-				   "Inconsistent target object length");
+				   "inconsistent target object length");
 			return -1;
 		}
 
@@ -830,7 +830,7 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 
 		if (sz != src_size) {
 			giterr_set(GITERR_INVALID,
-				   "Inconsistent source object length");
+				   "inconsistent source object length");
 			return -1;
 		}
 

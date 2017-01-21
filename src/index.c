@@ -552,7 +552,7 @@ int git_index_clear(git_index *index)
 
 static int create_index_error(int error, const char *msg)
 {
-	giterr_set(GITERR_INDEX, msg);
+	giterr_set_str(GITERR_INDEX, msg);
 	return error;
 }
 
@@ -570,7 +570,7 @@ int git_index_set_caps(git_index *index, int caps)
 
 		if (!repo)
 			return create_index_error(
-				-1, "Cannot access repository to set index caps");
+				-1, "cannot access repository to set index caps");
 
 		if (!git_repository__cvar(&val, repo, GIT_CVAR_IGNORECASE))
 			index->ignore_case = (val != 0);
@@ -639,7 +639,7 @@ int git_index_read(git_index *index, int force)
 
 	if (!index->index_file_path)
 		return create_index_error(-1,
-			"Failed to read index: The index is in-memory only");
+			"failed to read index: The index is in-memory only");
 
 	index->on_disk = git_path_exists(index->index_file_path);
 
@@ -653,7 +653,7 @@ int git_index_read(git_index *index, int force)
 	    ((updated = compare_checksum(index)) < 0)) {
 		giterr_set(
 			GITERR_INDEX,
-			"Failed to read index: '%s' no longer exists",
+			"failed to read index: '%s' no longer exists",
 			index->index_file_path);
 		return updated;
 	}
@@ -765,7 +765,7 @@ int git_index_set_version(git_index *index, unsigned int version)
 
 	if (version < INDEX_VERSION_NUMBER_LB ||
 	    version > INDEX_VERSION_NUMBER_UB) {
-		giterr_set(GITERR_INDEX, "Invalid version number");
+		giterr_set(GITERR_INDEX, "invalid version number");
 		return -1;
 	}
 
@@ -805,7 +805,7 @@ int git_index_write_tree(git_oid *oid, git_index *index)
 
 	if (repo == NULL)
 		return create_index_error(-1, "Failed to write tree. "
-		  "The index file is not backed up by an existing repository");
+		  "the index file is not backed up by an existing repository");
 
 	return git_tree__write_index(oid, index, repo);
 }
@@ -847,7 +847,7 @@ const git_index_entry *git_index_get_bypath(
 	if (git_idxmap_valid_index(index->entries_map, pos))
 		return git_idxmap_value_at(index->entries_map, pos);
 
-	giterr_set(GITERR_INDEX, "Index does not contain %s", path);
+	giterr_set(GITERR_INDEX, "index does not contain '%s'", path);
 	return NULL;
 }
 
@@ -934,7 +934,7 @@ static int index_entry_init(
 
 	if (INDEX_OWNER(index) == NULL)
 		return create_index_error(-1,
-			"Could not initialize index entry. "
+			"could not initialize index entry. "
 			"Index is not backed up by an existing repository.");
 
 	if (index_entry_create(&entry, INDEX_OWNER(index), rel_path, true) < 0)
@@ -1423,7 +1423,7 @@ int git_index_add_frombuffer(
 
 	if (INDEX_OWNER(index) == NULL)
 		return create_index_error(-1,
-			"Could not initialize index entry. "
+			"could not initialize index entry. "
 			"Index is not backed up by an existing repository.");
 
 	if (!valid_filemode(source_entry->mode)) {
@@ -1637,7 +1637,7 @@ int git_index_remove(git_index *index, const char *path, int stage)
 
 	if (index_find(&position, index, path, 0, stage) < 0) {
 		giterr_set(
-			GITERR_INDEX, "Index does not contain %s at stage %d", path, stage);
+			GITERR_INDEX, "index does not contain %s at stage %d", path, stage);
 		error = GIT_ENOTFOUND;
 	} else {
 		error = index_remove_entry(index, position);
@@ -1709,7 +1709,7 @@ int git_index_find(size_t *at_pos, git_index *index, const char *path)
 
 	if (git_vector_bsearch2(
 			&pos, &index->entries, index->entries_search_path, path) < 0) {
-		giterr_set(GITERR_INDEX, "Index does not contain %s", path);
+		giterr_set(GITERR_INDEX, "index does not contain %s", path);
 		return GIT_ENOTFOUND;
 	}
 
@@ -2153,7 +2153,7 @@ void git_index_reuc_clear(git_index *index)
 
 static int index_error_invalid(const char *message)
 {
-	giterr_set(GITERR_INDEX, "Invalid data in index - %s", message);
+	giterr_set(GITERR_INDEX, "invalid data in index - %s", message);
 	return -1;
 }
 
@@ -3390,7 +3390,7 @@ static int index_apply_to_all(
 				i--; /* back up foreach if we removed this */
 			break;
 		default:
-			giterr_set(GITERR_INVALID, "Unknown index action %d", action);
+			giterr_set(GITERR_INVALID, "unknown index action %d", action);
 			error = -1;
 			break;
 		}
@@ -3475,13 +3475,13 @@ int git_indexwriter_init(
 
 	if (!index->index_file_path)
 		return create_index_error(-1,
-			"Failed to write index: The index is in-memory only");
+			"failed to write index: The index is in-memory only");
 
 	if ((error = git_filebuf_open(
 		&writer->file, index->index_file_path, GIT_FILEBUF_HASH_CONTENTS, GIT_INDEX_FILE_MODE)) < 0) {
 
 		if (error == GIT_ELOCKED)
-			giterr_set(GITERR_INDEX, "The index is locked. This might be due to a concurrent or crashed process");
+			giterr_set(GITERR_INDEX, "the index is locked; this might be due to a concurrent or crashed process");
 
 		return error;
 	}
@@ -3530,7 +3530,7 @@ int git_indexwriter_commit(git_indexwriter *writer)
 
 	if ((error = git_futils_filestamp_check(
 		&writer->index->stamp, writer->index->index_file_path)) < 0) {
-		giterr_set(GITERR_OS, "Could not read index timestamp");
+		giterr_set(GITERR_OS, "could not read index timestamp");
 		return -1;
 	}
 

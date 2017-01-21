@@ -16,7 +16,7 @@ static char to_hex[] = "0123456789abcdef";
 
 static int oid_error_invalid(const char *msg)
 {
-	giterr_set(GITERR_INVALID, "Unable to parse OID - %s", msg);
+	giterr_set(GITERR_INVALID, "unable to parse OID - %s", msg);
 	return -1;
 }
 
@@ -380,7 +380,7 @@ int git_oid_shorten_add(git_oid_shorten *os, const char *text_oid)
 	node_index idx;
 
 	if (os->full) {
-		giterr_set(GITERR_INVALID, "Unable to shorten OID - OID set full");
+		giterr_set(GITERR_INVALID, "unable to shorten OID - OID set full");
 		return -1;
 	}
 
@@ -395,7 +395,7 @@ int git_oid_shorten_add(git_oid_shorten *os, const char *text_oid)
 		trie_node *node;
 
 		if (c == -1) {
-			giterr_set(GITERR_INVALID, "Unable to shorten OID - invalid hex value");
+			giterr_set(GITERR_INVALID, "unable to shorten OID - invalid hex value");
 			return -1;
 		}
 
@@ -410,7 +410,7 @@ int git_oid_shorten_add(git_oid_shorten *os, const char *text_oid)
 			node = push_leaf(os, idx, git__fromhex(tail[0]), &tail[1]);
 			if (node == NULL) {
 				if (os->full)
-					giterr_set(GITERR_INVALID, "Unable to shorten OID - OID set full");
+					giterr_set(GITERR_INVALID, "unable to shorten OID - OID set full");
 				return -1;
 			}
 		}
@@ -418,7 +418,7 @@ int git_oid_shorten_add(git_oid_shorten *os, const char *text_oid)
 		if (node->children[c] == 0) {
 			if (push_leaf(os, idx, c, &text_oid[i + 1]) == NULL) {
 				if (os->full)
-					giterr_set(GITERR_INVALID, "Unable to shorten OID - OID set full");
+					giterr_set(GITERR_INVALID, "unable to shorten OID - OID set full");
 				return -1;
 			}
 			break;

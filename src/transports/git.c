@@ -45,7 +45,7 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 
 	delim = strchr(url, '/');
 	if (delim == NULL) {
-		giterr_set(GITERR_NET, "Malformed URL");
+		giterr_set(GITERR_NET, "malformed URL");
 		return -1;
 	}
 
@@ -240,7 +240,7 @@ static int _git_uploadpack(
 		return 0;
 	}
 
-	giterr_set(GITERR_NET, "Must call UPLOADPACK_LS before UPLOADPACK");
+	giterr_set(GITERR_NET, "must call UPLOADPACK_LS before UPLOADPACK");
 	return -1;
 }
 
@@ -296,7 +296,7 @@ static int _git_receivepack(
 		return 0;
 	}
 
-	giterr_set(GITERR_NET, "Must call RECEIVEPACK_LS before RECEIVEPACK");
+	giterr_set(GITERR_NET, "must call RECEIVEPACK_LS before RECEIVEPACK");
 	return -1;
 }
 

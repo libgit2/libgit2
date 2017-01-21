@@ -27,7 +27,7 @@
 
 static int create_error(int error, const char *msg)
 {
-	giterr_set(GITERR_STASH, "Cannot stash changes - %s", msg);
+	giterr_set(GITERR_STASH, "cannot stash changes - %s", msg);
 	return error;
 }
 
@@ -36,7 +36,7 @@ static int retrieve_head(git_reference **out, git_repository *repo)
 	int error = git_repository_head(out, repo);
 
 	if (error == GIT_EUNBORNBRANCH)
-		return create_error(error, "You do not have the initial commit yet.");
+		return create_error(error, "you do not have the initial commit yet.");
 
 	return error;
 }
@@ -198,7 +198,7 @@ static int stash_update_index_from_diff(
 			/* Unimplemented */
 			giterr_set(
 				GITERR_INVALID,
-				"Cannot update index. Unimplemented status (%d)",
+				"cannot update index. Unimplemented status (%d)",
 				delta->status);
 			return -1;
 		}
@@ -479,7 +479,7 @@ static int ensure_there_are_changes_to_stash(
 		return 0;
 
 	if (!error)
-		return create_error(GIT_ENOTFOUND, "There is nothing to stash.");
+		return create_error(GIT_ENOTFOUND, "there is nothing to stash.");
 
 	return error;
 }
@@ -593,7 +593,7 @@ static int retrieve_stash_commit(
 	max = git_reflog_entrycount(reflog);
 	if (!max || index > max - 1) {
 		error = GIT_ENOTFOUND;
-		giterr_set(GITERR_STASH, "No stashed state at position %" PRIuZ, index);
+		giterr_set(GITERR_STASH, "no stashed state at position %" PRIuZ, index);
 		goto cleanup;
 	}
 
@@ -1036,7 +1036,7 @@ int git_stash_drop(
 
 	if (!max || index > max - 1) {
 		error = GIT_ENOTFOUND;
-		giterr_set(GITERR_STASH, "No stashed state at position %" PRIuZ, index);
+		giterr_set(GITERR_STASH, "no stashed state at position %" PRIuZ, index);
 		goto cleanup;
 	}
 

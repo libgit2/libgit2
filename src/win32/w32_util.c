@@ -68,7 +68,7 @@ int git_win32__set_hidden(const char *path, bool hidden)
 		newattrs = attrs & ~FILE_ATTRIBUTE_HIDDEN;
 
 	if (attrs != newattrs && !SetFileAttributesW(buf, newattrs)) {
-		giterr_set(GITERR_OS, "Failed to %s hidden bit for '%s'",
+		giterr_set(GITERR_OS, "failed to %s hidden bit for '%s'",
 			hidden ? "set" : "unset", path);
 		return -1;
 	}
