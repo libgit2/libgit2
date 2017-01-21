@@ -1081,7 +1081,7 @@ void git_indexer_free(git_indexer *idx)
 
 	git_vector_free_deep(&idx->objects);
 
-	if (idx->pack && idx->pack->idx_cache) {
+	if (idx->pack->idx_cache) {
 		struct git_pack_entry *pentry;
 		kh_foreach_value(
 			idx->pack->idx_cache, pentry, { git__free(pentry); });
@@ -1091,17 +1091,10 @@ void git_indexer_free(git_indexer *idx)
 
 	git_vector_free_deep(&idx->deltas);
 
-	/* Try to delete the temporary file in case it was not committed. */
-	git_mwindow_free_all(&idx->pack->mwf);
-
-	/* We need to close the descriptor here so Windows doesn't choke on unlink */
-	if (idx->pack->mwf.fd != -1)
-		p_close(idx->pack->mwf.fd);
-
-	if (!idx->pack_committed)
-		p_unlink(idx->pack->pack_name);
-
 	if (!git_mutex_lock(&git__mwindow_mutex)) {
+		if (!idx->pack_committed)
+			git_packfile_close(idx->pack, true);
+
 		git_packfile_free(idx->pack);
 		git_mutex_unlock(&git__mwindow_mutex);
 	}
