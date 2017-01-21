@@ -33,7 +33,7 @@ struct entry {
 
 struct git_indexer {
 	unsigned int parsed_header :1,
-		opened_pack :1,
+		pack_committed :1,
 		have_stream :1,
 		have_delta :1;
 	struct git_pack_header hdr;
@@ -150,6 +150,12 @@ int git_indexer_new(
 cleanup:
 	if (fd != -1)
 		p_close(fd);
+
+	if (git_buf_len(&tmp_path) > 0)
+		p_unlink(git_buf_cstr(&tmp_path));
+
+	if (idx->pack != NULL)
+		p_unlink(idx->pack->pack_name);
 
 	git_buf_free(&path);
 	git_buf_free(&tmp_path);
@@ -1054,6 +1060,7 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 
 	/* And don't forget to rename the packfile to its new place. */
 	p_rename(idx->pack->pack_name, git_buf_cstr(&filename));
+	idx->pack_committed = 1;
 
 	git_buf_free(&filename);
 	git_hash_ctx_cleanup(&ctx);
@@ -1083,6 +1090,16 @@ void git_indexer_free(git_indexer *idx)
 	}
 
 	git_vector_free_deep(&idx->deltas);
+
+	/* Try to delete the temporary file in case it was not committed. */
+	git_mwindow_free_all(&idx->pack->mwf);
+
+	/* We need to close the descriptor here so Windows doesn't choke on unlink */
+	if (idx->pack->mwf.fd != -1)
+		p_close(idx->pack->mwf.fd);
+
+	if (!idx->pack_committed)
+		p_unlink(idx->pack->pack_name);
 
 	if (!git_mutex_lock(&git__mwindow_mutex)) {
 		git_packfile_free(idx->pack);
