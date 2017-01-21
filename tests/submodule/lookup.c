@@ -388,3 +388,28 @@ void test_submodule_lookup__renamed(void)
 	cl_git_pass(git_submodule_foreach(g_repo, sm_lookup_cb, &data));
 	cl_assert_equal_i(8, data.count);
 }
+
+void test_submodule_lookup_cached(void) {
+	git_submodule *sm;
+	git_submodule *sm2;
+	/* See that the simple tests still pass. */
+
+	git_repository_submodule_cache_all(g_repo);
+	test_submodule_lookup__simple_lookup();
+	git_repository_submodule_cache_clear(g_repo);
+	test_submodule_lookup__simple_lookup();
+
+	/* Check that subsequent calls return different objects when cached. */
+	git_repository_submodule_cache_all(g_repo);
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_unchanged"));
+	cl_git_pass(git_submodule_lookup(&sm2, g_repo, "sm_unchanged"));
+	cl_assert_equal_p(sm, sm2);
+	git_submodule_free(sm2);
+
+	/* and that we get new objects again after clearing the cache. */
+	git_repository_submodule_cache_clear(g_repo);
+	cl_git_pass(git_submodule_lookup(&sm2, g_repo, "sm_unchanged"));
+	cl_assert(sm != sm2);
+	git_submodule_free(sm);
+	git_submodule_free(sm2);
+}

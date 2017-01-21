@@ -27,6 +27,10 @@
 #include "merge.h"
 #include "diff_driver.h"
 #include "annotated_commit.h"
+#include "submodule.h"
+
+GIT__USE_STRMAP
+#include "strmap.h"
 
 #ifdef GIT_WIN32
 # include "win32/w32_util.h"
@@ -109,6 +113,7 @@ void git_repository__cleanup(git_repository *repo)
 {
 	assert(repo);
 
+	git_repository_submodule_cache_clear(repo);
 	git_cache_clear(&repo->objects);
 	git_attr_cache_flush(repo);
 
@@ -2539,5 +2544,33 @@ int git_repository_set_ident(git_repository *repo, const char *name, const char 
 	git__free(tmp_name);
 	git__free(tmp_email);
 
+	return 0;
+}
+
+int git_repository_submodule_cache_all(git_repository *repo)
+{
+	int error;
+
+	assert(repo);
+
+	if ((error = git_strmap_alloc(&repo->submodule_cache)))
+		return error;
+
+	error = git_submodule__map(repo, repo->submodule_cache);
+	return error;
+}
+
+int git_repository_submodule_cache_clear(git_repository *repo)
+{
+	git_submodule *sm;
+	assert(repo);
+	if (repo->submodule_cache == NULL) {
+		return 0;
+	}
+	git_strmap_foreach_value(repo->submodule_cache, sm, {
+		git_submodule_free(sm);
+	});
+	git_strmap_free(repo->submodule_cache);
+	repo->submodule_cache = 0;
 	return 0;
 }
