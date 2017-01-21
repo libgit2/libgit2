@@ -1081,7 +1081,7 @@ void git_indexer_free(git_indexer *idx)
 
 	git_vector_free_deep(&idx->objects);
 
-	if (idx->pack && idx->pack->idx_cache) {
+	if (idx->pack->idx_cache) {
 		struct git_pack_entry *pentry;
 		kh_foreach_value(
 			idx->pack->idx_cache, pentry, { git__free(pentry); });
