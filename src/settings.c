@@ -15,6 +15,7 @@
 #include "cache.h"
 #include "global.h"
 #include "object.h"
+#include "refs.h"
 
 void git_libgit2_version(int *major, int *minor, int *rev)
 {
@@ -191,6 +192,10 @@ int git_libgit2_opts(int key, ...)
 
 	case GIT_OPT_ENABLE_STRICT_OBJECT_CREATION:
 		git_object__strict_input_validation = (va_arg(ap, int) != 0);
+		break;
+
+	case GIT_OPT_ENABLE_STRICT_SYMBOLIC_REF_CREATION:
+		git_reference__enable_symbolic_ref_target_validation = (va_arg(ap, int) != 0);
 		break;
 
 	case GIT_OPT_SET_SSL_CIPHERS:

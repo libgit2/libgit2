@@ -15,6 +15,8 @@
 #include "buffer.h"
 #include "oid.h"
 
+extern bool git_reference__enable_symbolic_ref_target_validation;
+
 #define GIT_REFS_DIR "refs/"
 #define GIT_REFS_HEADS_DIR GIT_REFS_DIR "heads/"
 #define GIT_REFS_TAGS_DIR GIT_REFS_DIR "tags/"
@@ -53,6 +55,7 @@
 #define GIT_REFS_STASH_FILE GIT_REFS_DIR GIT_STASH_FILE
 
 #define GIT_REF_FORMAT__PRECOMPOSE_UNICODE	(1u << 16)
+#define GIT_REF_FORMAT__VALIDATION_DISABLE	(1u << 15)
 
 #define GIT_REFNAME_MAX 1024
 
