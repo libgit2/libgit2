@@ -13,6 +13,10 @@ v0.25 + 1
 
 ### Breaking API changes
 
+* `clone_checkout_strategy` has been removed from
+  `git_submodule_update_option`. The checkout strategy used to clone will
+  be the same strategy specified in `checkout_opts`.
+
 v0.25
 -------
 
@@ -134,10 +138,6 @@ v0.25
 
 * `git_blob_create_fromchunks()` has been removed in favour of
   `git_blob_create_fromstream()`.
-
-* `clone_checkout_strategy` has been removed from
-  `git_submodule_update_option`. The checkout strategy used to clone will
-  be the same strategy specified in `checkout_opts`.
 
 ### Breaking API changes
 
