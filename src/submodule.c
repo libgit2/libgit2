@@ -512,12 +512,12 @@ int git_submodule__map(git_repository *repo, git_strmap *map)
 			goto cleanup;
 	}
 	/* add back submodule information from index */
-	if (idx) {
+	if (mods && idx) {
 		if ((error = submodules_from_index(map, idx, mods)) < 0)
 			goto cleanup;
 	}
 	/* add submodule information from HEAD */
-	if (head) {
+	if (mods && head) {
 		if ((error = submodules_from_head(map, head, mods)) < 0)
 			goto cleanup;
 	}
