@@ -349,9 +349,10 @@ done:
 static int submodules_from_index(git_strmap *map, git_index *idx, git_config *cfg)
 {
 	int error;
-	git_iterator *i;
+	git_iterator *i = NULL;
 	const git_index_entry *entry;
 	git_strmap *names = 0;
+
 	git_strmap_alloc(&names);
 	if ((error = load_submodule_names(names, cfg)))
 		goto done;
