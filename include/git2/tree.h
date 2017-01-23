@@ -381,7 +381,7 @@ GIT_EXTERN(int) git_treebuilder_write(
  *
  * @see git_treebuilder_write
  *
- * @param id Pointer to store the OID of the newly written tree
+ * @param oid Pointer to store the OID of the newly written tree
  * @param bld Tree builder to write
  * @param tree Shared buffer for writing the tree. Will be grown as necessary.
  * @return 0 or an error code
