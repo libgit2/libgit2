@@ -242,8 +242,12 @@ static int certificate_check(winhttp_stream *s, int valid)
 	git_cert_x509 cert;
 
 	/* If there is no override, we should fail if WinHTTP doesn't think it's fine */
-	if (t->owner->certificate_check_cb == NULL && !valid)
+	if (t->owner->certificate_check_cb == NULL && !valid) {
+		if (!giterr_last())
+			giterr_set(GITERR_NET, "unknown certificate check failure");
+
 		return GIT_ECERTIFICATE;
+	}
 
 	if (t->owner->certificate_check_cb == NULL || !t->connection_data.use_ssl)
 		return 0;
@@ -691,6 +695,38 @@ static int user_agent(git_buf *ua)
 	return git_buf_putc(ua, ')');
 }
 
+static void CALLBACK winhttp_status(
+	HINTERNET connection,
+	DWORD_PTR ctx,
+	DWORD code,
+	LPVOID info,
+	DWORD info_len)
+{
+	DWORD status;
+
+	if (code != WINHTTP_CALLBACK_STATUS_SECURE_FAILURE)
+		return;
+
+	status = *((DWORD *)info);
+
+	if ((status & WINHTTP_CALLBACK_STATUS_FLAG_CERT_CN_INVALID))
+		giterr_set(GITERR_NET, "SSL certificate issued for different common name");
+	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_CERT_DATE_INVALID))
+		giterr_set(GITERR_NET, "SSL certificate has expired");
+	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_INVALID_CA))
+		giterr_set(GITERR_NET, "SSL certificate signed by unknown CA");
+	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_INVALID_CERT))
+		giterr_set(GITERR_NET, "SSL certificate is invalid");
+	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_CERT_REV_FAILED))
+		giterr_set(GITERR_NET, "certificate revocation check failed");
+	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_CERT_REVOKED))
+		giterr_set(GITERR_NET, "SSL certificate was revoked");
+	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_SECURITY_CHANNEL_ERROR))
+		giterr_set(GITERR_NET, "security libraries could not be loaded");
+	else
+		giterr_set(GITERR_NET, "unknown security error %d", status);
+}
+
 static int winhttp_connect(
 	winhttp_subtransport *t)
 {
@@ -760,6 +796,11 @@ static int winhttp_connect(
 		goto on_error;
 	}
 
+	if (WinHttpSetStatusCallback(t->connection, winhttp_status, WINHTTP_CALLBACK_FLAG_SECURE_FAILURE, 0) == WINHTTP_INVALID_STATUS_CALLBACK) {
+		giterr_set(GITERR_OS, "failed to set status callback");
+		goto on_error;
+	}
+
 	error = 0;
 
 on_error:
@@ -798,16 +839,15 @@ static int send_request(winhttp_stream *s, size_t len, int ignore_length)
 	int request_failed = 0, cert_valid = 1, error = 0;
 	DWORD ignore_flags;
 
-	if ((error = do_send_request(s, len, ignore_length)) < 0)
-		request_failed = 1;
-
-	if (request_failed) {
+	giterr_clear();
+	if ((error = do_send_request(s, len, ignore_length)) < 0) {
 		if (GetLastError() != ERROR_WINHTTP_SECURE_FAILURE) {
 			giterr_set(GITERR_OS, "failed to send request");
 			return -1;
-		} else {
-			cert_valid = 0;
 		}
+
+		request_failed = 1;
+		cert_valid = 0;
 	}
 
 	giterr_clear();
