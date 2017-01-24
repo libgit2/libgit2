@@ -121,20 +121,22 @@ static int attr_cache_remove(git_attr_cache *cache, git_attr_file *file)
 {
 	int error = 0;
 	git_attr_file_entry *entry;
+	git_attr_file *old = NULL;
 
 	if (!file)
 		return 0;
+
 	if ((error = attr_cache_lock(cache)) < 0)
 		return error;
 
 	if ((entry = attr_cache_lookup_entry(cache, file->entry->path)) != NULL)
-		file = git__compare_and_swap(&entry->file[file->source], file, NULL);
+		old = git__compare_and_swap(&entry->file[file->source], file, NULL);
 
 	attr_cache_unlock(cache);
 
-	if (file) {
-		GIT_REFCOUNT_OWN(file, NULL);
-		git_attr_file__free(file);
+	if (old) {
+		GIT_REFCOUNT_OWN(old, NULL);
+		git_attr_file__free(old);
 	}
 
 	return error;
