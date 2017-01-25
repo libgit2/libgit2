@@ -169,7 +169,7 @@ static int cache_add(
 			while (cache->memory_used + base->len > cache->memory_limit)
 				free_lowest_entry(cache);
 
-			k = kh_put(off, cache->entries, offset, &error);
+			k = git_offmap_put(cache->entries, offset, &error);
 			assert(error != 0);
 			git_oidmap_value_at(cache->entries, k) = entry;
 			cache->memory_used += entry->raw.len;

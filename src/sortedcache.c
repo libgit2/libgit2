@@ -294,7 +294,7 @@ int git_sortedcache_upsert(void **out, git_sortedcache *sc, const char *key)
 	item_key = ((char *)item) + sc->item_path_offset;
 	memcpy(item_key, key, keylen);
 
-	pos = kh_put(str, sc->map, item_key, &error);
+	pos = git_strmap_put(sc->map, item_key, &error);
 	if (error < 0)
 		goto done;
 

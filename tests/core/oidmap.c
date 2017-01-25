@@ -36,7 +36,7 @@ void test_core_oidmap__basic(void)
 		pos = git_oidmap_lookup_index(map, &items[i].oid);
 		cl_assert(!git_oidmap_valid_index(map, pos));
 
-		pos = kh_put(oid, map, &items[i].oid, &ret);
+		pos = git_oidmap_put(map, &items[i].oid, &ret);
 		cl_assert(ret != 0);
 
 		git_oidmap_value_at(map, pos) = &items[i];
@@ -90,7 +90,7 @@ void test_core_oidmap__hash_collision(void)
 		pos = git_oidmap_lookup_index(map, &items[i].oid);
 		cl_assert(!git_oidmap_valid_index(map, pos));
 
-		pos = kh_put(oid, map, &items[i].oid, &ret);
+		pos = git_oidmap_put(map, &items[i].oid, &ret);
 		cl_assert(ret != 0);
 
 		git_oidmap_value_at(map, pos) = &items[i];

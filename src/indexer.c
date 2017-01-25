@@ -294,7 +294,7 @@ static int store_object(git_indexer *idx)
 	git_oid_cpy(&pentry->sha1, &oid);
 	pentry->offset = entry_start;
 
-	k = kh_put(oid, idx->pack->idx_cache, &pentry->sha1, &error);
+	k = git_oidmap_put(idx->pack->idx_cache, &pentry->sha1, &error);
 	if (error == -1) {
 		git__free(pentry);
 		giterr_set_oom();
@@ -349,7 +349,7 @@ static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_ent
 	}
 
 	pentry->offset = entry_start;
-	k = kh_put(oid, idx->pack->idx_cache, &pentry->sha1, &error);
+	k = git_oidmap_put(idx->pack->idx_cache, &pentry->sha1, &error);
 
 	if (error <= 0) {
 		giterr_set(GITERR_INDEXER, "cannot insert object into pack");

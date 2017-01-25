@@ -41,7 +41,7 @@ static int impl__write(git_odb_backend *_backend, const git_oid *oid, const void
 	size_t alloc_len;
 	int rval;
 
-	pos = kh_put(oid, db->objects, oid, &rval);
+	pos = git_oidmap_put(db->objects, oid, &rval);
 	if (rval < 0)
 		return -1;
 

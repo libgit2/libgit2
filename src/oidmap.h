@@ -43,6 +43,8 @@ GIT_INLINE(khint_t) git_oidmap_hash(const git_oid *oid)
 #define git_oidmap_value_at(h, idx)  kh_val(h, idx)
 #define git_oidmap_delete_at(h, idx) kh_del(oid, h, idx)
 
+#define git_oidmap_put(h, k, err) kh_put(oid, h, k, err)
+
 #define git_oidmap_insert(h, key, val, rval) do { \
 	khiter_t __pos = kh_put(oid, h, key, &rval); \
 	if (rval >= 0) { \

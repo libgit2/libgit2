@@ -329,7 +329,7 @@ static int submodule_get_or_create(git_submodule **out, git_repository *repo, gi
 	if ((error = submodule_alloc(&sm, repo, name)) < 0)
 		return error;
 
-	pos = kh_put(str, map, sm->name, &error);
+	pos = git_strmap_put(map, sm->name, &error);
 	/* nobody can beat us to adding it */
 	assert(error != 0);
 	if (error < 0) {
