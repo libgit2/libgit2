@@ -333,9 +333,7 @@ on_error:
 
 GIT_INLINE(bool) has_entry(git_indexer *idx, git_oid *id)
 {
-	khiter_t k;
-	k = kh_get(oid, idx->pack->idx_cache, id);
-	return (k != kh_end(idx->pack->idx_cache));
+	return git_oidmap_exists(idx->pack->idx_cache, id);
 }
 
 static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_entry *pentry, git_off_t entry_start)

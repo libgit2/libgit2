@@ -164,7 +164,7 @@ static int cache_add(
 			return -1;
 		}
 		/* Add it to the cache if nobody else has */
-		exists = kh_get(off, cache->entries, offset) != kh_end(cache->entries);
+		exists = git_offmap_exists(cache->entries, offset);
 		if (!exists) {
 			while (cache->memory_used + base->len > cache->memory_limit)
 				free_lowest_entry(cache);

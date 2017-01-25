@@ -216,8 +216,7 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 
 	/* If the object already exists in the hash table, then we don't
 	 * have any work to do */
-	pos = kh_get(oid, pb->object_ix, oid);
-	if (pos != kh_end(pb->object_ix))
+	if (git_oidmap_exists(pb->object_ix, oid))
 		return 0;
 
 	if (pb->nr_objects >= pb->nr_alloc) {
