@@ -127,7 +127,7 @@ static void cache_evict_entries(git_cache *cache)
 	while (evict_count > 0) {
 		khiter_t pos = seed++ % git_oidmap_end(cache->map);
 
-		if (kh_exist(cache->map, pos)) {
+		if (git_oidmap_has_data(cache->map, pos)) {
 			git_cached_obj *evict = kh_val(cache->map, pos);
 
 			evict_count--;
