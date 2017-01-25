@@ -117,7 +117,7 @@ static git_pack_cache_entry *cache_get(git_pack_cache *cache, git_off_t offset)
 	if (git_mutex_lock(&cache->lock) < 0)
 		return NULL;
 
-	k = kh_get(off, cache->entries, offset);
+	k = git_offmap_lookup_index(cache->entries, offset);
 	if (git_offmap_valid_index(cache->entries, k)) { /* found it */
 		entry = kh_value(cache->entries, k);
 		git_atomic_inc(&entry->refcount);
@@ -956,7 +956,7 @@ git_off_t get_delta_base(
 			git_oid oid;
 
 			git_oid_fromraw(&oid, base_info);
-			k = kh_get(oid, p->idx_cache, &oid);
+			k = git_oidmap_lookup_index(p->idx_cache, &oid);
 			if (git_oidmap_valid_index(p->idx_cache, k)) {
 				*curpos += 20;
 				return ((struct git_pack_entry *)kh_value(p->idx_cache, k))->offset;

@@ -156,7 +156,7 @@ static void *cache_get(git_cache *cache, const git_oid *oid, unsigned int flags)
 	if (!git_cache__enabled || git_rwlock_rdlock(&cache->lock) < 0)
 		return NULL;
 
-	pos = kh_get(oid, cache->map, oid);
+	pos = git_oidmap_lookup_index(cache->map, oid);
 	if (git_oidmap_valid_index(cache->map, pos)) {
 		entry = kh_val(cache->map, pos);
 
@@ -193,7 +193,7 @@ static void *cache_store(git_cache *cache, git_cached_obj *entry)
 	if (git_cache__current_storage.val > git_cache__max_storage)
 		cache_evict_entries(cache);
 
-	pos = kh_get(oid, cache->map, &entry->oid);
+	pos = git_oidmap_lookup_index(cache->map, &entry->oid);
 
 	/* not found */
 	if (!git_oidmap_valid_index(cache->map, pos)) {

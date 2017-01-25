@@ -82,7 +82,7 @@ static int impl__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_odb
 	struct memobject *obj = NULL;
 	khiter_t pos;
 
-	pos = kh_get(oid, db->objects, oid);
+	pos = git_oidmap_lookup_index(db->objects, oid);
 	if (!git_oidmap_valid_index(db->objects, pos))
 		return GIT_ENOTFOUND;
 
@@ -103,7 +103,7 @@ static int impl__read_header(size_t *len_p, git_otype *type_p, git_odb_backend *
 	struct memobject *obj = NULL;
 	khiter_t pos;
 
-	pos = kh_get(oid, db->objects, oid);
+	pos = git_oidmap_lookup_index(db->objects, oid);
 	if (!git_oidmap_valid_index(db->objects, pos))
 		return GIT_ENOTFOUND;
 
