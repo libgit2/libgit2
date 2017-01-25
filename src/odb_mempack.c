@@ -57,7 +57,7 @@ static int impl__write(git_odb_backend *_backend, const git_oid *oid, const void
 	obj->len = len;
 	obj->type = type;
 
-	kh_key(db->objects, pos) = &obj->oid;
+	git_oidmap_key(db->objects, pos) = &obj->oid;
 	git_oidmap_value_at(db->objects, pos) = obj;
 
 	if (type == GIT_OBJ_COMMIT) {

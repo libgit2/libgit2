@@ -199,10 +199,8 @@ static void *cache_store(git_cache *cache, git_cached_obj *entry)
 	if (!git_oidmap_valid_index(cache->map, pos)) {
 		int rval;
 
-		pos = kh_put(oid, cache->map, &entry->oid, &rval);
+		git_oidmap_insert(cache->map, &entry->oid, entry, rval);
 		if (rval >= 0) {
-			kh_key(cache->map, pos) = &entry->oid;
-			git_oidmap_value_at(cache->map, pos) = entry;
 			git_cached_obj_incref(entry);
 			cache->used_memory += entry->size;
 			git_atomic_ssize_add(&git_cache__current_storage, (ssize_t)entry->size);
@@ -221,7 +219,7 @@ static void *cache_store(git_cache *cache, git_cached_obj *entry)
 			git_cached_obj_decref(stored_entry);
 			git_cached_obj_incref(entry);
 
-			kh_key(cache->map, pos) = &entry->oid;
+			git_oidmap_key(cache->map, pos) = &entry->oid;
 			git_oidmap_value_at(cache->map, pos) = entry;
 		} else {
 			/* NO OP */
