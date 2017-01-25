@@ -58,7 +58,7 @@ static int impl__write(git_odb_backend *_backend, const git_oid *oid, const void
 	obj->type = type;
 
 	kh_key(db->objects, pos) = &obj->oid;
-	kh_val(db->objects, pos) = obj;
+	git_oidmap_value_at(db->objects, pos) = obj;
 
 	if (type == GIT_OBJ_COMMIT) {
 		struct memobject **store = git_array_alloc(db->commits);
@@ -86,7 +86,7 @@ static int impl__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_odb
 	if (!git_oidmap_valid_index(db->objects, pos))
 		return GIT_ENOTFOUND;
 
-	obj = kh_val(db->objects, pos);
+	obj = git_oidmap_value_at(db->objects, pos);
 
 	*len_p = obj->len;
 	*type_p = obj->type;
@@ -107,7 +107,7 @@ static int impl__read_header(size_t *len_p, git_otype *type_p, git_odb_backend *
 	if (!git_oidmap_valid_index(db->objects, pos))
 		return GIT_ENOTFOUND;
 
-	obj = kh_val(db->objects, pos);
+	obj = git_oidmap_value_at(db->objects, pos);
 
 	*len_p = obj->len;
 	*type_p = obj->type;

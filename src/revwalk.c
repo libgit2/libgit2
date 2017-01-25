@@ -27,7 +27,7 @@ git_commit_list_node *git_revwalk__commit_lookup(
 	/* lookup and reserve space if not already present */
 	pos = git_oidmap_lookup_index(walk->commits, oid);
 	if (git_oidmap_valid_index(walk->commits, pos))
-		return kh_value(walk->commits, pos);
+		return git_oidmap_value_at(walk->commits, pos);
 
 	commit = git_commit_list_alloc_node(walk);
 	if (commit == NULL)
@@ -37,7 +37,7 @@ git_commit_list_node *git_revwalk__commit_lookup(
 
 	pos = kh_put(oid, walk->commits, &commit->oid, &ret);
 	assert(ret != 0);
-	kh_value(walk->commits, pos) = commit;
+	git_oidmap_value_at(walk->commits, pos) = commit;
 
 	return commit;
 }

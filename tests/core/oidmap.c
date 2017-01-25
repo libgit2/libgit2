@@ -39,7 +39,7 @@ void test_core_oidmap__basic(void)
 		pos = kh_put(oid, map, &items[i].oid, &ret);
 		cl_assert(ret != 0);
 
-		kh_val(map, pos) = &items[i];
+		git_oidmap_value_at(map, pos) = &items[i];
 	}
 
 
@@ -49,7 +49,7 @@ void test_core_oidmap__basic(void)
 		pos = git_oidmap_lookup_index(map, &items[i].oid);
 		cl_assert(git_oidmap_valid_index(map, pos));
 
-		cl_assert_equal_p(kh_val(map, pos), &items[i]);
+		cl_assert_equal_p(git_oidmap_value_at(map, pos), &items[i]);
 	}
 
 	git_oidmap_free(map);
@@ -93,7 +93,7 @@ void test_core_oidmap__hash_collision(void)
 		pos = kh_put(oid, map, &items[i].oid, &ret);
 		cl_assert(ret != 0);
 
-		kh_val(map, pos) = &items[i];
+		git_oidmap_value_at(map, pos) = &items[i];
 	}
 
 
@@ -103,7 +103,7 @@ void test_core_oidmap__hash_collision(void)
 		pos = git_oidmap_lookup_index(map, &items[i].oid);
 		cl_assert(git_oidmap_valid_index(map, pos));
 
-		cl_assert_equal_p(kh_val(map, pos), &items[i]);
+		cl_assert_equal_p(git_oidmap_value_at(map, pos), &items[i]);
 	}
 
 	git_oidmap_free(map);

@@ -119,7 +119,7 @@ static git_pack_cache_entry *cache_get(git_pack_cache *cache, git_off_t offset)
 
 	k = git_offmap_lookup_index(cache->entries, offset);
 	if (git_offmap_valid_index(cache->entries, k)) { /* found it */
-		entry = kh_value(cache->entries, k);
+		entry = git_offmap_value_at(cache->entries, k);
 		git_atomic_inc(&entry->refcount);
 		entry->last_usage = cache->use_ctr++;
 	}
@@ -171,7 +171,7 @@ static int cache_add(
 
 			k = kh_put(off, cache->entries, offset, &error);
 			assert(error != 0);
-			kh_value(cache->entries, k) = entry;
+			git_oidmap_value_at(cache->entries, k) = entry;
 			cache->memory_used += entry->raw.len;
 
 			*cached_out = entry;
@@ -959,7 +959,7 @@ git_off_t get_delta_base(
 			k = git_oidmap_lookup_index(p->idx_cache, &oid);
 			if (git_oidmap_valid_index(p->idx_cache, k)) {
 				*curpos += 20;
-				return ((struct git_pack_entry *)kh_value(p->idx_cache, k))->offset;
+				return ((struct git_pack_entry *)git_oidmap_value_at(p->idx_cache, k))->offset;
 			} else {
 				/* If we're building an index, don't try to find the pack
 				 * entry; we just haven't seen it yet.  We'll make
