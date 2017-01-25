@@ -149,7 +149,7 @@ void git_mempack_reset(git_odb_backend *_backend)
 	struct memory_packer_db *db = (struct memory_packer_db *)_backend;
 	struct memobject *object = NULL;
 
-	kh_foreach_value(db->objects, object, {
+	git_oidmap_foreach_value(db->objects, object, {
 		git__free(object);
 	});
 

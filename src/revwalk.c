@@ -702,7 +702,7 @@ void git_revwalk_reset(git_revwalk *walk)
 
 	assert(walk);
 
-	kh_foreach_value(walk->commits, commit, {
+	git_oidmap_foreach_value(walk->commits, commit, {
 		commit->seen = 0;
 		commit->in_degree = 0;
 		commit->topo_delay = 0;

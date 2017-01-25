@@ -1106,8 +1106,9 @@ void git_indexer_free(git_indexer *idx)
 
 	if (idx->pack->idx_cache) {
 		struct git_pack_entry *pentry;
-		kh_foreach_value(
-			idx->pack->idx_cache, pentry, { git__free(pentry); });
+		git_oidmap_foreach_value(idx->pack->idx_cache, pentry, {
+			git__free(pentry);
+		});
 
 		git_oidmap_free(idx->pack->idx_cache);
 	}

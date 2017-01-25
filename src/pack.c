@@ -78,13 +78,12 @@ static void free_cache_object(void *o)
 
 static void cache_free(git_pack_cache *cache)
 {
-	khiter_t k;
+	git_pack_cache_entry *entry;
 
 	if (cache->entries) {
-		for (k = kh_begin(cache->entries); k != kh_end(cache->entries); k++) {
-			if (kh_exist(cache->entries, k))
-				free_cache_object(kh_value(cache->entries, k));
-		}
+		git_offmap_foreach_value(cache->entries, entry, {
+			free_cache_object(entry);
+		});
 
 		git_offmap_free(cache->entries);
 		cache->entries = NULL;
@@ -135,18 +134,13 @@ static void free_lowest_entry(git_pack_cache *cache)
 	git_pack_cache_entry *entry;
 	khiter_t k;
 
-	for (k = kh_begin(cache->entries); k != kh_end(cache->entries); k++) {
-		if (!kh_exist(cache->entries, k))
-			continue;
-
-		entry = kh_value(cache->entries, k);
-
+	git_offmap_foreach(cache->entries, k, entry, {
 		if (entry && entry->refcount.val == 0) {
 			cache->memory_used -= entry->raw.len;
 			kh_del(off, cache->entries, k);
 			free_cache_object(entry);
 		}
-	}
+	});
 }
 
 static int cache_add(

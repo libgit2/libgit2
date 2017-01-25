@@ -53,7 +53,7 @@ void git_cache_dump_stats(git_cache *cache)
 	printf("Cache %p: %"PRIuZ" items cached, %"PRIdZ" bytes\n",
 		cache, git_cache_size(cache), cache->used_memory);
 
-	kh_foreach_value(cache->map, object, {
+	git_oidmap_foreach_value(cache->map, object, {
 		char oid_str[9];
 		printf(" %s%c %s (%"PRIuZ")\n",
 			git_object_type2string(object->type),
@@ -84,7 +84,7 @@ static void clear_cache(git_cache *cache)
 	if (git_cache_size(cache) == 0)
 		return;
 
-	kh_foreach_value(cache->map, evict, {
+	git_oidmap_foreach_value(cache->map, evict, {
 		git_cached_obj_decref(evict);
 	});
 

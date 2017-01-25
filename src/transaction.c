@@ -323,7 +323,6 @@ static int update_target(git_refdb *db, transaction_node *node)
 int git_transaction_commit(git_transaction *tx)
 {
 	transaction_node *node;
-	git_strmap_iter pos;
 	int error = 0;
 
 	assert(tx);
@@ -335,11 +334,7 @@ int git_transaction_commit(git_transaction *tx)
 		return error;
 	}
 
-	for (pos = kh_begin(tx->locks); pos < kh_end(tx->locks); pos++) {
-		if (!git_strmap_has_data(tx->locks, pos))
-			continue;
-
-		node = git_strmap_value_at(tx->locks, pos);
+	git_strmap_foreach_value(tx->locks, node, {
 		if (node->reflog) {
 			if ((error = tx->db->backend->reflog_write(tx->db->backend, node->reflog)) < 0)
 				return error;
@@ -349,7 +344,7 @@ int git_transaction_commit(git_transaction *tx)
 			if ((error = update_target(tx->db, node)) < 0)
 				return error;
 		}
-	}
+	});
 
 	return 0;
 }
@@ -358,7 +353,6 @@ void git_transaction_free(git_transaction *tx)
 {
 	transaction_node *node;
 	git_pool pool;
-	git_strmap_iter pos;
 
 	assert(tx);
 
@@ -373,16 +367,12 @@ void git_transaction_free(git_transaction *tx)
 	}
 
 	/* start by unlocking the ones we've left hanging, if any */
-	for (pos = kh_begin(tx->locks); pos < kh_end(tx->locks); pos++) {
-		if (!git_strmap_has_data(tx->locks, pos))
-			continue;
-
-		node = git_strmap_value_at(tx->locks, pos);
+	git_strmap_foreach_value(tx->locks, node, {
 		if (node->committed)
 			continue;
 
 		git_refdb_unlock(tx->db, node->payload, false, false, NULL, NULL, NULL);
-	}
+	});
 
 	git_refdb_free(tx->db);
 	git_strmap_free(tx->locks);
