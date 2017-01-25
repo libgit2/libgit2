@@ -555,7 +555,7 @@ int git_submodule_foreach(
 		goto done;
 
 	if (!(error = git_vector_init(
-			&snapshot, kh_size(submodules), submodule_cmp))) {
+			&snapshot, git_strmap_num_entries(submodules), submodule_cmp))) {
 
 		git_strmap_foreach_value(submodules, sm, {
 			if ((error = git_vector_insert(&snapshot, sm)) < 0)
