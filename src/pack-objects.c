@@ -517,7 +517,7 @@ static int cb_tag_foreach(const char *name, git_oid *oid, void *data)
 	GIT_UNUSED(name);
 
 	pos = kh_get(oid, pb->object_ix, oid);
-	if (pos == kh_end(pb->object_ix))
+	if (!git_oidmap_valid_index(pb->object_ix, pos))
 		return 0;
 
 	po = kh_value(pb->object_ix, pos);

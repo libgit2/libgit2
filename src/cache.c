@@ -125,7 +125,7 @@ static void cache_evict_entries(git_cache *cache)
 	}
 
 	while (evict_count > 0) {
-		khiter_t pos = seed++ % kh_end(cache->map);
+		khiter_t pos = seed++ % git_oidmap_end(cache->map);
 
 		if (kh_exist(cache->map, pos)) {
 			git_cached_obj *evict = kh_val(cache->map, pos);
@@ -157,7 +157,7 @@ static void *cache_get(git_cache *cache, const git_oid *oid, unsigned int flags)
 		return NULL;
 
 	pos = kh_get(oid, cache->map, oid);
-	if (pos != kh_end(cache->map)) {
+	if (git_oidmap_valid_index(cache->map, pos)) {
 		entry = kh_val(cache->map, pos);
 
 		if (flags && entry->flags != flags) {
@@ -196,7 +196,7 @@ static void *cache_store(git_cache *cache, git_cached_obj *entry)
 	pos = kh_get(oid, cache->map, &entry->oid);
 
 	/* not found */
-	if (pos == kh_end(cache->map)) {
+	if (!git_oidmap_valid_index(cache->map, pos)) {
 		int rval;
 
 		pos = kh_put(oid, cache->map, &entry->oid, &rval);

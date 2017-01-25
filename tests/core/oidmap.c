@@ -34,7 +34,7 @@ void test_core_oidmap__basic(void)
 		int ret;
 
 		pos = kh_get(oid, map, &items[i].oid);
-		cl_assert(pos == kh_end(map));
+		cl_assert(!git_oidmap_valid_index(map, pos));
 
 		pos = kh_put(oid, map, &items[i].oid, &ret);
 		cl_assert(ret != 0);
@@ -47,7 +47,7 @@ void test_core_oidmap__basic(void)
 		khiter_t pos;
 
 		pos = kh_get(oid, map, &items[i].oid);
-		cl_assert(pos != kh_end(map));
+		cl_assert(git_oidmap_valid_index(map, pos));
 
 		cl_assert_equal_p(kh_val(map, pos), &items[i]);
 	}
@@ -88,7 +88,7 @@ void test_core_oidmap__hash_collision(void)
 		int ret;
 
 		pos = kh_get(oid, map, &items[i].oid);
-		cl_assert(pos == kh_end(map));
+		cl_assert(!git_oidmap_valid_index(map, pos));
 
 		pos = kh_put(oid, map, &items[i].oid, &ret);
 		cl_assert(ret != 0);
@@ -101,7 +101,7 @@ void test_core_oidmap__hash_collision(void)
 		khiter_t pos;
 
 		pos = kh_get(oid, map, &items[i].oid);
-		cl_assert(pos != kh_end(map));
+		cl_assert(git_oidmap_valid_index(map, pos));
 
 		cl_assert_equal_p(kh_val(map, pos), &items[i]);
 	}

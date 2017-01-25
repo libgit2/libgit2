@@ -83,7 +83,7 @@ static int impl__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_odb
 	khiter_t pos;
 
 	pos = kh_get(oid, db->objects, oid);
-	if (pos == kh_end(db->objects))
+	if (!git_oidmap_valid_index(db->objects, pos))
 		return GIT_ENOTFOUND;
 
 	obj = kh_val(db->objects, pos);
@@ -104,7 +104,7 @@ static int impl__read_header(size_t *len_p, git_otype *type_p, git_odb_backend *
 	khiter_t pos;
 
 	pos = kh_get(oid, db->objects, oid);
-	if (pos == kh_end(db->objects))
+	if (!git_oidmap_valid_index(db->objects, pos))
 		return GIT_ENOTFOUND;
 
 	obj = kh_val(db->objects, pos);
