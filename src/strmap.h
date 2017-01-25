@@ -49,16 +49,6 @@ typedef khiter_t git_strmap_iter;
 		kh_val(h, __pos) = val; \
 	} } while (0)
 
-#define git_strmap_insert2(h, key, val, oldv, rval) do { \
-	khiter_t __pos = kh_put(str, h, key, &rval); \
-	if (rval >= 0) { \
-		if (rval == 0) { \
-			oldv = kh_val(h, __pos); \
-			kh_key(h, __pos) = key; \
-		} else { oldv = NULL; } \
-		kh_val(h, __pos) = val; \
-	} } while (0)
-
 #define git_strmap_delete(h, key) do { \
 	khiter_t __pos = git_strmap_lookup_index(h, key); \
 	if (git_strmap_valid_index(h, __pos)) \
