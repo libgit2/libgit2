@@ -137,7 +137,7 @@ static void free_lowest_entry(git_pack_cache *cache)
 	git_offmap_foreach(cache->entries, k, entry, {
 		if (entry && entry->refcount.val == 0) {
 			cache->memory_used -= entry->raw.len;
-			kh_del(off, cache->entries, k);
+			git_offmap_delete_at(cache->entries, k);
 			free_cache_object(entry);
 		}
 	});
