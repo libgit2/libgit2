@@ -197,7 +197,7 @@ static void rehash(git_packbuilder *pb)
 	size_t i;
 	int ret;
 
-	kh_clear(oid, pb->object_ix);
+	git_oidmap_clear(pb->object_ix);
 	for (i = 0, po = pb->object_list; i < pb->nr_objects; i++, po++) {
 		pos = kh_put(oid, pb->object_ix, &po->id, &ret);
 		kh_value(pb->object_ix, pos) = po;

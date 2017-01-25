@@ -88,7 +88,7 @@ static void clear_cache(git_cache *cache)
 		git_cached_obj_decref(evict);
 	});
 
-	kh_clear(oid, cache->map);
+	git_oidmap_clear(cache->map);
 	git_atomic_ssize_add(&git_cache__current_storage, -cache->used_memory);
 	cache->used_memory = 0;
 }
