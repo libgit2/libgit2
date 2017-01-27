@@ -30,37 +30,32 @@ GIT_INLINE(khint_t) git_oidmap_hash(const git_oid *oid)
 #define GIT__USE_OIDMAP \
 	__KHASH_IMPL(oid, static kh_inline, const git_oid *, void *, 1, git_oidmap_hash, git_oid_equal)
 
-#define git_oidmap_alloc() kh_init(oid)
-#define git_oidmap_free(h) kh_destroy(oid,h), h = NULL
+git_oidmap *git_oidmap_alloc(void);
+#define git_oidmap_free(h) git_oidmap__free(h); (h) = NULL
+void git_oidmap__free(git_oidmap *map);
+void git_oidmap_clear(git_oidmap *map);
 
-#define git_oidmap_lookup_index(h, k) kh_get(oid, h, k)
-#define git_oidmap_valid_index(h, idx) (idx != kh_end(h))
+size_t git_oidmap_size(git_oidmap *map);
 
-#define git_oidmap_exists(h, k) (kh_get(oid, h, k) != kh_end(h))
-#define git_oidmap_has_data(h, idx) kh_exist(h, idx)
+size_t git_oidmap_lookup_index(git_oidmap *map, const git_oid *key);
+int git_oidmap_valid_index(git_oidmap *map, size_t idx);
 
-#define git_oidmap_key(h, idx)             kh_key(h, idx)
-#define git_oidmap_set_key_at(h, idx, k)   kh_key(h, idx) = k
-#define git_oidmap_value_at(h, idx)        kh_val(h, idx)
-#define git_oidmap_set_value_at(h, idx, v) kh_val(h, idx) = v
-#define git_oidmap_delete_at(h, idx)       kh_del(oid, h, idx)
+int git_oidmap_exists(git_oidmap *map, const git_oid *key);
+int git_oidmap_has_data(git_oidmap *map, size_t idx);
 
-#define git_oidmap_put(h, k, err) kh_put(oid, h, k, err)
+const git_oid *git_oidmap_key(git_oidmap *map, size_t idx);
+void git_oidmap_set_key_at(git_oidmap *map, size_t idx, git_oid *key);
+void *git_oidmap_value_at(git_oidmap *map, size_t idx);
+void git_oidmap_set_value_at(git_oidmap *map, size_t idx, void *value);
+void git_oidmap_delete_at(git_oidmap *map, size_t idx);
 
-#define git_oidmap_insert(h, key, val, rval) do { \
-	khiter_t __pos = kh_put(oid, h, key, rval); \
-	if ((*rval) >= 0) { \
-		if ((*rval) == 0) kh_key(h, __pos) = key; \
-		kh_val(h, __pos) = val; \
-	} } while (0)
+int git_oidmap_put(git_oidmap *map, const git_oid *key, int *err);
+void git_oidmap_insert(git_oidmap *map, const git_oid *key, void *value, int *rval);
+void git_oidmap_delete(git_oidmap *map, const git_oid *key);
 
 #define git_oidmap_foreach_value kh_foreach_value
 
 #define git_oidmap_begin	kh_begin
 #define git_oidmap_end		kh_end
-
-#define git_oidmap_size(h) kh_size(h)
-
-#define git_oidmap_clear(h) kh_clear(oid, h)
 
 #endif
