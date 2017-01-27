@@ -41,9 +41,9 @@ typedef khash_t(off) git_offmap;
 #define git_offmap_put(h, k, err)          kh_put(off, h, k, err)
 
 #define git_offmap_insert(h, key, val, rval) do { \
-	khiter_t __pos = kh_put(off, h, key, &rval); \
-	if (rval >= 0) { \
-		if (rval == 0) kh_key(h, __pos) = key; \
+	khiter_t __pos = kh_put(off, h, key, rval); \
+	if ((*rval) >= 0) { \
+		if ((*rval) == 0) kh_key(h, __pos) = key; \
 		kh_val(h, __pos) = val; \
 	} } while (0)
 

@@ -1540,7 +1540,7 @@ static int retrieve_object(git_walk_object **out, git_packbuilder *pb, const git
 		if ((error = lookup_walk_object(&obj, pb, id)) < 0)
 			return error;
 
-		git_oidmap_insert(pb->walk_objects, &obj->id, obj, error);
+		git_oidmap_insert(pb->walk_objects, &obj->id, obj, &error);
 	}
 
 	*out = obj;

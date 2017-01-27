@@ -36,7 +36,7 @@ static void insert_strings(git_strmap *table, int count)
 		for (j = 0, over = i / 26; over > 0; j++, over = over / 26)
 			str[j] = 'A' + (over % 26);
 
-		git_strmap_insert(table, str, str, err);
+		git_strmap_insert(table, str, str, &err);
 		cl_assert(err >= 0);
 	}
 

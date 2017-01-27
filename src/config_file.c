@@ -179,7 +179,7 @@ static int append_entry(git_strmap *values, cvar_t *var)
 
 	pos = git_strmap_lookup_index(values, var->entry->name);
 	if (!git_strmap_valid_index(values, pos)) {
-		git_strmap_insert(values, var->entry->name, var, error);
+		git_strmap_insert(values, var->entry->name, var, &error);
 	} else {
 		existing = git_strmap_value_at(values, pos);
 		while (existing->next != NULL) {

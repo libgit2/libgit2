@@ -199,7 +199,7 @@ static void *cache_store(git_cache *cache, git_cached_obj *entry)
 	if (!git_oidmap_valid_index(cache->map, pos)) {
 		int rval;
 
-		git_oidmap_insert(cache->map, &entry->oid, entry, rval);
+		git_oidmap_insert(cache->map, &entry->oid, entry, &rval);
 		if (rval >= 0) {
 			git_cached_obj_incref(entry);
 			cache->used_memory += entry->size;

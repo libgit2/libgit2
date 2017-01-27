@@ -46,9 +46,9 @@ typedef khiter_t git_strmap_iter;
 #define git_strmap_put(h, k, err)          kh_put(str, h, k, err)
 
 #define git_strmap_insert(h, key, val, rval) do { \
-	khiter_t __pos = kh_put(str, h, key, &rval); \
-	if (rval >= 0) { \
-		if (rval == 0) kh_key(h, __pos) = key; \
+	khiter_t __pos = kh_put(str, h, key, rval); \
+	if ((*rval) >= 0) { \
+		if ((*rval) == 0) kh_key(h, __pos) = key; \
 		kh_val(h, __pos) = val; \
 	} } while (0)
 

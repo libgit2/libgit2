@@ -186,7 +186,7 @@ static int load_submodule_names(git_strmap *out, git_config *cfg)
 		ldot = strrchr(entry->name, '.');
 
 		git_buf_put(&buf, fdot + 1, ldot - fdot - 1);
-		git_strmap_insert(out, entry->value, git_buf_detach(&buf), rval);
+		git_strmap_insert(out, entry->value, git_buf_detach(&buf), &rval);
 		if (rval < 0) {
 			giterr_set(GITERR_NOMEMORY, "error inserting submodule into hash table");
 			return -1;
@@ -1866,7 +1866,7 @@ static int submodule_load_each(const git_config_entry *entry, void *payload)
 		goto done;
 	}
 
-	git_strmap_insert(map, sm->name, sm, error);
+	git_strmap_insert(map, sm->name, sm, &error);
 	assert(error != 0);
 	if (error < 0)
 		goto done;

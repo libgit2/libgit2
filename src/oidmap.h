@@ -48,9 +48,9 @@ GIT_INLINE(khint_t) git_oidmap_hash(const git_oid *oid)
 #define git_oidmap_put(h, k, err) kh_put(oid, h, k, err)
 
 #define git_oidmap_insert(h, key, val, rval) do { \
-	khiter_t __pos = kh_put(oid, h, key, &rval); \
-	if (rval >= 0) { \
-		if (rval == 0) kh_key(h, __pos) = key; \
+	khiter_t __pos = kh_put(oid, h, key, rval); \
+	if ((*rval) >= 0) { \
+		if ((*rval) == 0) kh_key(h, __pos) = key; \
 		kh_val(h, __pos) = val; \
 	} } while (0)
 

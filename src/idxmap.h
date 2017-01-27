@@ -51,16 +51,16 @@ static kh_inline khint_t idxentry_hash(const git_index_entry *e)
 	((*(hp) = kh_init(idxicase)) == NULL) ? giterr_set_oom(), -1 : 0
 
 #define git_idxmap_insert(h, key, val, rval) do { \
-	khiter_t __pos = kh_put(idx, h, key, &rval); \
-	if (rval >= 0) { \
-		if (rval == 0) kh_key(h, __pos) = key; \
+	khiter_t __pos = kh_put(idx, h, key, rval); \
+	if ((*rval) >= 0) { \
+		if ((*rval) == 0) kh_key(h, __pos) = key; \
 		kh_val(h, __pos) = val; \
 	} } while (0)
 
 #define git_idxmap_icase_insert(h, key, val, rval) do { \
-	khiter_t __pos = kh_put(idxicase, h, key, &rval); \
-	if (rval >= 0) { \
-		if (rval == 0) kh_key(h, __pos) = key; \
+	khiter_t __pos = kh_put(idxicase, h, key, rval); \
+	if ((*rval) >= 0) { \
+		if ((*rval) == 0) kh_key(h, __pos) = key; \
 		kh_val(h, __pos) = val; \
 	} } while (0)
 

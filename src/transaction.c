@@ -120,7 +120,7 @@ int git_transaction_lock_ref(git_transaction *tx, const char *refname)
 	if ((error = git_refdb_lock(&node->payload, tx->db, refname)) < 0)
 		return error;
 
-	git_strmap_insert(tx->locks, node->name, node, error);
+	git_strmap_insert(tx->locks, node->name, node, &error);
 	if (error < 0) 
 		goto cleanup;
 

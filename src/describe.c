@@ -127,7 +127,7 @@ static int add_to_known_names(
 		if (!found) {
 			int ret;
 
-			git_oidmap_insert(names, &e->peeled, e, ret);
+			git_oidmap_insert(names, &e->peeled, e, &ret);
 			if (ret < 0)
 				return -1;
 		}

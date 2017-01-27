@@ -82,7 +82,7 @@ static int attr_cache_make_entry(
 		&entry, git_repository_workdir(repo), path, &cache->pool);
 
 	if (!error) {
-		git_strmap_insert(cache->files, entry->path, entry, error);
+		git_strmap_insert(cache->files, entry->path, entry, &error);
 		if (error > 0)
 			error = 0;
 	}
@@ -435,7 +435,7 @@ int git_attr_cache__insert_macro(git_repository *repo, git_attr_rule *macro)
 		giterr_set(GITERR_OS, "unable to get attr cache lock");
 		error = -1;
 	} else {
-		git_strmap_insert(macros, macro->match.pattern, macro, error);
+		git_strmap_insert(macros, macro->match.pattern, macro, &error);
 		git_mutex_unlock(&cache->lock);
 	}
 
