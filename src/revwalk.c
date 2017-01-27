@@ -37,7 +37,7 @@ git_commit_list_node *git_revwalk__commit_lookup(
 
 	pos = git_oidmap_put(walk->commits, &commit->oid, &ret);
 	assert(ret != 0);
-	git_oidmap_value_at(walk->commits, pos) = commit;
+	git_oidmap_set_value_at(walk->commits, pos, commit);
 
 	return commit;
 }

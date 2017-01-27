@@ -171,7 +171,7 @@ static int cache_add(
 
 			k = git_offmap_put(cache->entries, offset, &error);
 			assert(error != 0);
-			git_oidmap_value_at(cache->entries, k) = entry;
+			git_offmap_set_value_at(cache->entries, k, entry);
 			cache->memory_used += entry->raw.len;
 
 			*cached_out = entry;

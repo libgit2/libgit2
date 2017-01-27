@@ -299,8 +299,8 @@ int git_sortedcache_upsert(void **out, git_sortedcache *sc, const char *key)
 		goto done;
 
 	if (!error)
-		git_strmap_key(sc->map, pos) = item_key;
-	git_strmap_value_at(sc->map, pos) = item;
+		git_strmap_set_key_at(sc->map, pos, item_key);
+	git_strmap_set_value_at(sc->map, pos, item);
 
 	error = git_vector_insert(&sc->items, item);
 	if (error < 0)

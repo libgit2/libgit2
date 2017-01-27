@@ -308,7 +308,7 @@ static int store_object(git_indexer *idx)
 	}
 
 
-	git_oidmap_value_at(idx->pack->idx_cache, k) = pentry;
+	git_oidmap_set_value_at(idx->pack->idx_cache, k, pentry);
 
 	git_oid_cpy(&entry->oid, &oid);
 
@@ -356,7 +356,7 @@ static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_ent
 		return -1;
 	}
 
-	git_oidmap_value_at(idx->pack->idx_cache, k) = pentry;
+	git_oidmap_set_value_at(idx->pack->idx_cache, k, pentry);
 
 	/* Add the object to the list */
 	if (git_vector_insert(&idx->objects, entry) < 0)

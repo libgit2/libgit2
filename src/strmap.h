@@ -38,6 +38,7 @@ typedef khiter_t git_strmap_iter;
 #define git_strmap_has_data(h, idx) kh_exist(h, idx)
 
 #define git_strmap_key(h, idx)             kh_key(h, idx)
+#define git_strmap_set_key_at(h, idx, k)   kh_val(h, idx) = k
 #define git_strmap_value_at(h, idx)        kh_val(h, idx)
 #define git_strmap_set_value_at(h, idx, v) kh_val(h, idx) = v
 #define git_strmap_delete_at(h, idx)       kh_del(str, h, idx)

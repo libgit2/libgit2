@@ -200,7 +200,7 @@ static void rehash(git_packbuilder *pb)
 	git_oidmap_clear(pb->object_ix);
 	for (i = 0, po = pb->object_list; i < pb->nr_objects; i++, po++) {
 		pos = git_oidmap_put(pb->object_ix, &po->id, &ret);
-		git_oidmap_value_at(pb->object_ix, pos) = po;
+		git_oidmap_set_value_at(pb->object_ix, pos, po);
 	}
 }
 
@@ -252,7 +252,7 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 		return ret;
 	}
 	assert(ret != 0);
-	git_oidmap_value_at(pb->object_ix, pos) = po;
+	git_oidmap_set_value_at(pb->object_ix, pos, po);
 
 	pb->done = false;
 

@@ -39,9 +39,11 @@ GIT_INLINE(khint_t) git_oidmap_hash(const git_oid *oid)
 #define git_oidmap_exists(h, k) (kh_get(oid, h, k) != kh_end(h))
 #define git_oidmap_has_data(h, idx) kh_exist(h, idx)
 
-#define git_oidmap_key(h, idx)       kh_key(h, idx)
-#define git_oidmap_value_at(h, idx)  kh_val(h, idx)
-#define git_oidmap_delete_at(h, idx) kh_del(oid, h, idx)
+#define git_oidmap_key(h, idx)             kh_key(h, idx)
+#define git_oidmap_set_key_at(h, idx, k)   kh_key(h, idx) = k
+#define git_oidmap_value_at(h, idx)        kh_val(h, idx)
+#define git_oidmap_set_value_at(h, idx, v) kh_val(h, idx) = v
+#define git_oidmap_delete_at(h, idx)       kh_del(oid, h, idx)
 
 #define git_oidmap_put(h, k, err) kh_put(oid, h, k, err)
 

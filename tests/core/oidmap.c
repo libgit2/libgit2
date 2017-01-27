@@ -39,7 +39,7 @@ void test_core_oidmap__basic(void)
 		pos = git_oidmap_put(map, &items[i].oid, &ret);
 		cl_assert(ret != 0);
 
-		git_oidmap_value_at(map, pos) = &items[i];
+		git_oidmap_set_value_at(map, pos, &items[i]);
 	}
 
 
@@ -93,7 +93,7 @@ void test_core_oidmap__hash_collision(void)
 		pos = git_oidmap_put(map, &items[i].oid, &ret);
 		cl_assert(ret != 0);
 
-		git_oidmap_value_at(map, pos) = &items[i];
+		git_oidmap_set_value_at(map, pos, &items[i]);
 	}
 
 

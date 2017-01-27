@@ -219,8 +219,8 @@ static void *cache_store(git_cache *cache, git_cached_obj *entry)
 			git_cached_obj_decref(stored_entry);
 			git_cached_obj_incref(entry);
 
-			git_oidmap_key(cache->map, pos) = &entry->oid;
-			git_oidmap_value_at(cache->map, pos) = entry;
+			git_oidmap_set_key_at(cache->map, pos, &entry->oid);
+			git_oidmap_set_value_at(cache->map, pos, entry);
 		} else {
 			/* NO OP */
 		}
