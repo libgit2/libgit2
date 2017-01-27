@@ -1,7 +1,5 @@
 #include "sortedcache.h"
 
-GIT__USE_STRMAP
-
 int git_sortedcache_new(
 	git_sortedcache **out,
 	size_t item_path_offset,

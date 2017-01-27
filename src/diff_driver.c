@@ -16,8 +16,6 @@
 #include "config.h"
 #include "repository.h"
 
-GIT__USE_STRMAP
-
 typedef enum {
 	DIFF_DRIVER_AUTO = 0,
 	DIFF_DRIVER_BINARY = 1,

@@ -14,8 +14,6 @@
 #include "strmap.h"
 #include "pack.h"
 
-GIT__USE_STRMAP
-
 #define DEFAULT_WINDOW_SIZE \
 	(sizeof(void*) >= 8 \
 		? 1 * 1024 * 1024 * 1024 \

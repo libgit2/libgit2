@@ -5,8 +5,6 @@
 #include "sysdir.h"
 #include "ignore.h"
 
-GIT__USE_STRMAP
-
 GIT_INLINE(int) attr_cache_lock(git_attr_cache *cache)
 {
 	GIT_UNUSED(cache); /* avoid warning if threading is off */

@@ -19,8 +19,6 @@
 #include "git2/sys/refs.h"
 #include "git2/sys/refdb_backend.h"
 
-GIT__USE_STRMAP
-
 typedef enum {
 	TRANSACTION_NONE,
 	TRANSACTION_REFS,

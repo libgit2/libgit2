@@ -30,7 +30,6 @@
 #include "submodule.h"
 #include "worktree.h"
 
-GIT__USE_STRMAP
 #include "strmap.h"
 
 #ifdef GIT_WIN32

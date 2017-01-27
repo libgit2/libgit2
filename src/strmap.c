@@ -7,7 +7,7 @@
 
 #include "strmap.h"
 
-GIT__USE_STRMAP
+__KHASH_IMPL(str, static kh_inline, const char *, void *, 1, kh_str_hash_func, kh_str_hash_equal)
 
 int git_strmap_alloc(git_strmap **map)
 {

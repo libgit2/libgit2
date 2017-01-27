@@ -13,8 +13,6 @@
 #include "win32/findfile.h"
 #endif
 
-GIT__USE_STRMAP
-
 int git_futils_mkpath2file(const char *file_path, const mode_t mode)
 {
 	return git_futils_mkdir(

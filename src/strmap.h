@@ -20,9 +20,6 @@ __KHASH_TYPE(str, const char *, void *)
 typedef khash_t(str) git_strmap;
 typedef khiter_t git_strmap_iter;
 
-#define GIT__USE_STRMAP \
-	__KHASH_IMPL(str, static kh_inline, const char *, void *, 1, kh_str_hash_func, kh_str_hash_equal)
-
 int git_strmap_alloc(git_strmap **map);
 
 #define git_strmap_free(h) git_strmap__free(h); (h) = NULL

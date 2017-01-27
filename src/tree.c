@@ -20,8 +20,6 @@
 #define TREE_ENTRY_CHECK_NAMELEN(n) \
 	if (n > UINT16_MAX) { giterr_set(GITERR_INVALID, "tree entry path too long"); }
 
-GIT__USE_STRMAP
-
 static bool valid_filemode(const int filemode)
 {
 	return (filemode == GIT_FILEMODE_TREE

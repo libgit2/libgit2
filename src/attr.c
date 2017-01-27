@@ -7,8 +7,6 @@
 #include "git2/oid.h"
 #include <ctype.h>
 
-GIT__USE_STRMAP
-
 const char *git_attr__true  = "[internal]__TRUE__";
 const char *git_attr__false = "[internal]__FALSE__";
 const char *git_attr__unset = "[internal]__UNSET__";

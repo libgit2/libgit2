@@ -21,8 +21,6 @@
 #include <sys/types.h>
 #include <regex.h>
 
-GIT__USE_STRMAP
-
 typedef struct cvar_t {
 	struct cvar_t *next;
 	git_config_entry *entry;
