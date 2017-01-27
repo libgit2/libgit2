@@ -15,8 +15,6 @@
 #include "merge.h"
 #include "vector.h"
 
-GIT__USE_OIDMAP
-
 git_commit_list_node *git_revwalk__commit_lookup(
 	git_revwalk *walk, const git_oid *oid)
 {

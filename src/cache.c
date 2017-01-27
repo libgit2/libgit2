@@ -15,8 +15,6 @@
 #include "object.h"
 #include "git2/oid.h"
 
-GIT__USE_OIDMAP
-
 bool git_cache__enabled = true;
 ssize_t git_cache__max_storage = (256 * 1024 * 1024);
 git_atomic_ssize git_cache__current_storage = {0};

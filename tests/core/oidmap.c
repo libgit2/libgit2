@@ -1,8 +1,6 @@
 #include "clar_libgit2.h"
 #include "oidmap.h"
 
-GIT__USE_OIDMAP
-
 typedef struct {
 	git_oid oid;
 	size_t extra;

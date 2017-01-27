@@ -20,16 +20,6 @@
 __KHASH_TYPE(oid, const git_oid *, void *)
 typedef khash_t(oid) git_oidmap;
 
-GIT_INLINE(khint_t) git_oidmap_hash(const git_oid *oid)
-{
-	khint_t h;
-	memcpy(&h, oid, sizeof(khint_t));
-	return h;
-}
-
-#define GIT__USE_OIDMAP \
-	__KHASH_IMPL(oid, static kh_inline, const git_oid *, void *, 1, git_oidmap_hash, git_oid_equal)
-
 git_oidmap *git_oidmap_alloc(void);
 #define git_oidmap_free(h) git_oidmap__free(h); (h) = NULL
 void git_oidmap__free(git_oidmap *map);
