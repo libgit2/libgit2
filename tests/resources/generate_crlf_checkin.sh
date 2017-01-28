@@ -8,9 +8,9 @@
 # configuration will match byte-for-byte the configuration that git produces.
 #
 # To update the test resource data, from the test resource directory:
-#     git rm -r ./crlf_data/checkin_results
+#     git rm -r ./crlf_data/checkin_results/{posix,windows}
 #     sh ./generate_crlf_checkin.sh ./crlf_data/checkin_input_files ./crlf_data/checkin_results /tmp/crlf_gitdirs
-#     git add ./crlf_data/checkin_results
+#     git add ./crlf_data/checkin_results/{posix,windows}
 
 set -e
 
@@ -41,11 +41,12 @@ create_test_data() {
 	local input=$1
 	local output=$2
 	local tempdir=$3
-	local safecrlf=$4
-	local autocrlf=$5
-	local attr=$6
+	local systype=$4
+	local safecrlf=$5
+	local autocrlf=$6
+	local attr=$7
 
-	local destdir="${output}/safecrlf_${safecrlf},autocrlf_${autocrlf}"
+	local destdir="${output}/${systype}/safecrlf_${safecrlf},autocrlf_${autocrlf}"
 
 	if [ "$attr" != "" ]; then
 		local attrdir=`echo $attr | sed -e "s/ /,/g" | sed -e "s/=/_/g"`
@@ -53,9 +54,9 @@ create_test_data() {
 	fi
 
 	if [ "$tempdir" = "" ]; then
-		tempdir="${output}/generate_crlf_${RANDOM}"
+		tempdir="${output}/${systype}/generate_crlf_${RANDOM}"
 	else
-		tempdir="${tempdir}/generate_crlf_${RANDOM}"
+		tempdir="${tempdir}/${systype}/generate_crlf_${RANDOM}"
 	fi
 
 	echo "Generating ${destdir}"
@@ -105,6 +106,12 @@ function process_file() {
 
 export LC_ALL=C
 
+if [[ `uname -s` == MINGW* ]]; then
+	systype="windows"
+else
+	systype="posix"
+fi
+
 for safecrlf in true false warn; do
 	for autocrlf in true false input; do
 		for attr in "" text text=auto -text crlf -crlf eol=lf eol=crlf \
@@ -112,7 +119,7 @@ for safecrlf in true false warn; do
 			"text=auto eol=lf" "text=auto eol=crlf"; do
 	
 			create_test_data "${input}" "${output}" "${tempdir}" \
-				"${safecrlf}" "${autocrlf}" "${attr}"
+				"${systype}" "${safecrlf}" "${autocrlf}" "${attr}"
 		done
 	done
 done

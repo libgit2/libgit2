@@ -1,3 +1,4 @@
 This test data was generated using the `tests/resources/generate_crlf.sh`
 (posix and windows directories) and `tests/resources/generate_crlf_checkin.sh`
-(checkin_results directory) scripts. Please see these scripts for usage information.
+(checkin_results/posix and checkin_results/windows directories) scripts.
+Please see these scripts for usage information.
