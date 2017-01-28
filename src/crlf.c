@@ -71,6 +71,9 @@ static int crlf_input_action(struct crlf_attrs *ca)
 	if (ca->eol == GIT_EOL_LF)
 		return GIT_CRLF_INPUT;
 
+	if (ca->crlf_action == GIT_CRLF_AUTO)
+		return GIT_CRLF_AUTO;
+
 	if (ca->eol == GIT_EOL_CRLF)
 		return GIT_CRLF_CRLF;
 
@@ -200,6 +203,8 @@ static const char *line_ending(struct crlf_attrs *ca)
 		break;
 
 	case GIT_CRLF_AUTO:
+		if (ca->eol == GIT_EOL_CRLF)
+			return "\r\n";
 	case GIT_CRLF_TEXT:
 		break;
 
@@ -253,8 +258,7 @@ static int crlf_apply_to_workdir(
 		ca->crlf_action == GIT_CRLF_GUESS) {
 
 		/* If we have any existing CR or CRLF line endings, do nothing */
-		if (ca->crlf_action == GIT_CRLF_GUESS &&
-			stats.cr > 0 && stats.crlf > 0)
+		if (stats.cr > 0 && stats.crlf > 0)
 			return GIT_PASSTHROUGH;
 
 		/* If we have bare CR characters, do nothing */
@@ -314,7 +318,7 @@ static int crlf_check(
 			ca.auto_crlf == GIT_AUTO_CRLF_FALSE)
 			return GIT_PASSTHROUGH;
 
-		if (ca.auto_crlf == GIT_AUTO_CRLF_INPUT &&
+		if (ca.auto_crlf == GIT_AUTO_CRLF_INPUT && ca.eol != GIT_EOL_CRLF &&
 			git_filter_source_mode(src) == GIT_FILTER_SMUDGE)
 			return GIT_PASSTHROUGH;
 	}

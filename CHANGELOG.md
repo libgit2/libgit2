@@ -3,6 +3,8 @@ v0.27 + 1
 
 ### Changes or improvements
 
+* Update CrLf checkout code to vanilla Git >= 2.9 logic
+
 ### API additions
 
 ### API removals
