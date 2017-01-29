@@ -165,9 +165,10 @@ static int crlf_apply_to_odb(
 
 	/* If safecrlf is enabled, sanity-check the result. */
 	if (ca->crlf_action == GIT_CRLF_INPUT ||
-		(ca->auto_crlf == GIT_AUTO_CRLF_INPUT &&
-		(ca->crlf_action == GIT_CRLF_GUESS || ca->crlf_action == GIT_CRLF_AUTO ||
-		(ca->crlf_action == GIT_CRLF_TEXT && ca->eol == GIT_EOL_UNSET)))) {
+		(ca->crlf_action == GIT_CRLF_GUESS || ca->crlf_action == GIT_CRLF_AUTO || ca->crlf_action == GIT_CRLF_TEXT) && ca->eol == GIT_EOL_LF ||
+		(ca->auto_crlf == GIT_AUTO_CRLF_INPUT && (ca->crlf_action == GIT_CRLF_GUESS)) ||
+		(ca->auto_crlf == GIT_AUTO_CRLF_INPUT && (ca->crlf_action == GIT_CRLF_AUTO || ca->crlf_action == GIT_CRLF_TEXT) && ca->eol == GIT_EOL_UNSET) ||
+		(GIT_EOL_NATIVE != GIT_EOL_CRLF && ca->auto_crlf == GIT_AUTO_CRLF_FALSE && (ca->crlf_action == GIT_CRLF_AUTO || ca->crlf_action == GIT_CRLF_TEXT) && ca->eol == GIT_EOL_UNSET)) {
 		if (stats.crlf) {
 			switch (ca->safe_crlf) {
 			case GIT_SAFE_CRLF_FAIL:
@@ -182,9 +183,11 @@ static int crlf_apply_to_odb(
 				break;
 			}
 		}
-	} else if (ca->crlf_action == GIT_CRLF_CRLF ||
-				(ca->auto_crlf == GIT_AUTO_CRLF_TRUE && ca->crlf_action == GIT_CRLF_GUESS ||
-				((ca->crlf_action == GIT_CRLF_TEXT || ca->crlf_action == GIT_CRLF_AUTO) && ca->eol == GIT_EOL_UNSET))) {
+	} else if ((ca->crlf_action == GIT_CRLF_CRLF ||
+		((ca->crlf_action == GIT_CRLF_GUESS || ca->crlf_action == GIT_CRLF_AUTO || ca->crlf_action == GIT_CRLF_TEXT) && ca->eol == GIT_EOL_CRLF) ||
+		(ca->auto_crlf == GIT_AUTO_CRLF_TRUE && (ca->crlf_action == GIT_CRLF_GUESS)) ||
+		(ca->crlf_action == GIT_CRLF_AUTO || ca->crlf_action == GIT_CRLF_TEXT)) &&
+		!(GIT_EOL_NATIVE != GIT_EOL_CRLF && ca->auto_crlf == GIT_AUTO_CRLF_FALSE && (ca->crlf_action == GIT_CRLF_AUTO || ca->crlf_action == GIT_CRLF_TEXT) && ca->eol == GIT_EOL_UNSET)) {
 		if (stats.lf != stats.crlf) {
 			switch (ca->safe_crlf) {
 			case GIT_SAFE_CRLF_FAIL:
@@ -326,8 +329,6 @@ static int crlf_check(
 	 * Use the core Git logic to see if we should perform CRLF for this file
 	 * based on its attributes & the value of `core.autocrlf`
 	 */
-	ca.crlf_action = crlf_input_action(&ca);
-
 	if (ca.crlf_action == GIT_CRLF_BINARY)
 		return GIT_PASSTHROUGH;
 
@@ -335,6 +336,8 @@ static int crlf_check(
 		((ca.crlf_action == GIT_CRLF_AUTO ||
 		ca.crlf_action == GIT_CRLF_TEXT) &&
 		git_filter_source_mode(src) == GIT_FILTER_SMUDGE)) {
+
+		ca.crlf_action = crlf_input_action(&ca);
 
 		if (ca.crlf_action == GIT_CRLF_GUESS &&
 			ca.auto_crlf == GIT_AUTO_CRLF_FALSE)

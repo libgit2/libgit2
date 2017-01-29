@@ -14,12 +14,18 @@
 static git_repository *g_repo;
 static git_index *g_index;
 
+static const char *systype;
 static git_buf expected_fixture = GIT_BUF_INIT;
 
 void test_index_crlf__initialize(void)
 {
 	g_repo = cl_git_sandbox_init_new("crlf");
 	cl_git_pass(git_repository_index(&g_index, g_repo));
+
+	if (GIT_EOL_NATIVE == GIT_EOL_CRLF)
+		systype = "windows";
+	else
+		systype = "posix";
 }
 
 void test_index_crlf__cleanup(void)
@@ -108,8 +114,8 @@ static int add_and_check_file(void *payload, git_buf *actual_path)
 done:
 	if (failed) {
 		git_buf details = GIT_BUF_INIT;
-		git_buf_printf(&details, "filename=%s, safecrlf=%s, autocrlf=%s, attrs={%s}",
-			git_path_basename(actual_path->ptr), cd->safecrlf, cd->autocrlf, cd->attrs);
+		git_buf_printf(&details, "filename=%s, system=%s, safecrlf=%s, autocrlf=%s, attrs={%s}",
+			git_path_basename(actual_path->ptr), systype, cd->safecrlf, cd->autocrlf, cd->attrs);
 		clar__fail(__FILE__, __LINE__,
 			"adding file did not work as expected", details.ptr, 0);
 		git_buf_free(&details);
@@ -163,6 +169,7 @@ static void test_add_index(const char *safecrlf, const char *autocrlf, const cha
 	cl_git_pass(git_index_clear(g_index));
 
 	git_buf_joinpath(&expected_dirname, "crlf_data", "checkin_results");
+	git_buf_joinpath(&expected_dirname, expected_dirname.ptr, systype);
 	git_buf_joinpath(&expected_fixture, expected_dirname.ptr, sandboxname.ptr);
 	cl_fixture_sandbox(expected_fixture.ptr);
 
