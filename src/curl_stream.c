@@ -52,6 +52,7 @@ static int apply_proxy_creds(curl_stream *s)
 {
 	CURLcode res;
 	git_cred_userpass_plaintext *userpass;
+	long auth_types;
 
 	if (!s->proxy_cred)
 		return GIT_ENOTFOUND;
@@ -61,6 +62,19 @@ static int apply_proxy_creds(curl_stream *s)
 		return seterr_curl(s);
 	if ((res = curl_easy_setopt(s->handle, CURLOPT_PROXYPASSWORD, userpass->password)) != CURLE_OK)
 		return seterr_curl(s);
+
+	curl_easy_getinfo(s->handle, CURLINFO_PROXYAUTH_AVAIL, &auth_types);
+
+	if (auth_types & CURLAUTH_NTLM) {
+		if ((res = curl_easy_setopt(s->handle, CURLOPT_PROXYAUTH, CURLAUTH_NTLM)) != CURLE_OK)
+			return seterr_curl(s);
+	} else if (auth_types & CURLAUTH_DIGEST) {
+		if ((res = curl_easy_setopt(s->handle, CURLOPT_PROXYAUTH, CURLAUTH_DIGEST)) != CURLE_OK)
+			return seterr_curl(s);
+	} else if (auth_types & CURLAUTH_BASIC) {
+		if ((res = curl_easy_setopt(s->handle, CURLOPT_PROXYAUTH, CURLAUTH_BASIC)) != CURLE_OK)
+			return seterr_curl(s);
+	}
 
 	return 0;
 }
