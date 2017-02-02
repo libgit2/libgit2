@@ -7,7 +7,7 @@
 
 #include "offmap.h"
 
-GIT__USE_OFFMAP
+__KHASH_IMPL(off, static kh_inline, git_off_t, void *, 1, kh_int64_hash_func, kh_int64_hash_equal)
 
 git_offmap *git_offmap_alloc(void)
 {

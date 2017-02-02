@@ -20,9 +20,6 @@
 __KHASH_TYPE(off, git_off_t, void *)
 typedef khash_t(off) git_offmap;
 
-#define GIT__USE_OFFMAP \
-	__KHASH_IMPL(off, static kh_inline, git_off_t, void *, 1, kh_int64_hash_func, kh_int64_hash_equal)
-
 git_offmap *git_offmap_alloc(void);
 #define git_offmap_free(h) git_offmap__free(h); (h) = NULL
 void git_offmap__free(git_offmap *map);
