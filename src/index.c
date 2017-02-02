@@ -27,9 +27,6 @@
 #include "git2/config.h"
 #include "git2/sys/index.h"
 
-GIT__USE_IDXMAP
-GIT__USE_IDXMAP_ICASE
-
 #define INSERT_IN_MAP_EX(idx, map, e, err) do {				\
 		if ((idx)->ignore_case)					\
 			git_idxmap_icase_insert((khash_t(idxicase) *) (map), (e), (e), (err)); \
