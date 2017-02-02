@@ -71,6 +71,7 @@ static kh_inline khint_t idxentry_hash(const git_index_entry *e)
 #define git_idxmap_has_data(h, idx) kh_exist(h, idx)
 
 #define git_idxmap_resize(h,s)  kh_resize(idx, h, s)
+#define git_idxmap_icase_resize(h,s)  kh_resize(idxicase, h, s)
 #define git_idxmap_free(h)  kh_destroy(idx, h), h = NULL
 #define git_idxmap_clear(h) kh_clear(idx, h)
 
