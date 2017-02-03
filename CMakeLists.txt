@@ -27,29 +27,29 @@ INCLUDE(FindPkgConfig)
 
 # Build options
 #
-OPTION( SONAME				"Set the (SO)VERSION of the target"		ON  )
-OPTION( BUILD_SHARED_LIBS	"Build Shared Library (OFF for Static)"	ON  )
-OPTION( THREADSAFE			"Build libgit2 as threadsafe"			ON )
-OPTION( BUILD_CLAR			"Build Tests using the Clar suite"		ON  )
-OPTION( BUILD_EXAMPLES		"Build library usage example apps"		OFF )
-OPTION( TAGS				"Generate tags"							OFF )
-OPTION( PROFILE				"Generate profiling information"		OFF )
-OPTION( ENABLE_TRACE		"Enables tracing support"				OFF )
-OPTION( LIBGIT2_FILENAME	"Name of the produced binary"			OFF )
+OPTION(SONAME              "Set the (SO)VERSION of the target"           ON )
+OPTION(BUILD_SHARED_LIBS   "Build Shared Library (OFF for Static)"       ON )
+OPTION(THREADSAFE          "Build libgit2 as threadsafe"                 ON )
+OPTION(BUILD_CLAR          "Build Tests using the Clar suite"            ON )
+OPTION(BUILD_EXAMPLES      "Build library usage example apps"            OFF)
+OPTION(TAGS                "Generate tags"                               OFF)
+OPTION(PROFILEi            "Generate profiling information"              OFF)
+OPTION(ENABLE_TRACE        "Enables tracing support"                     OFF)
+OPTION(LIBGIT2_FILENAME    "Name of the produced binary"                 OFF)
 
-OPTION( USE_ICONV			"Link with and use iconv library" 		OFF )
-OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
-OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"   OFF )
-OPTION( VALGRIND			"Configure build for valgrind"			OFF )
-OPTION( CURL			"Use curl for HTTP if available" ON)
-OPTION( DEBUG_POOL			"Enable debug pool allocator"			OFF )
+OPTION(USE_ICONV           "Link with and use iconv library"             OFF)
+OPTION(USE_SSH             "Link with libssh to enable SSH support"      ON )
+OPTION(USE_GSSAPI          "Link with libgssapi for SPNEGO auth"         OFF)
+OPTION(VALGRIND            "Configure build for valgrind"                OFF)
+OPTION(CURL                "Use curl for HTTP if available"              ON )
+OPTION(DEBUG_POOL          "Enable debug pool allocator"                 OFF)
 
 IF(DEBUG_POOL)
 	ADD_DEFINITIONS(-DGIT_DEBUG_POOL)
 ENDIF()
 
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-	SET( USE_ICONV ON )
+	SET(USE_ICONV ON)
 	FIND_PACKAGE(Security)
 	FIND_PACKAGE(CoreFoundation REQUIRED)
 ENDIF()
@@ -61,15 +61,15 @@ IF(MSVC)
 	#
 	# If you are writing a CLR program and want to link to libgit2, you'll want
 	# to turn this on by invoking CMake with the "-DSTDCALL=ON" argument.
-	OPTION( STDCALL			"Build libgit2 with the __stdcall convention"	OFF  )
+	OPTION(STDCALL         "Build libgit2 with the __stdcall convention" OFF)
 
 	# This option must match the settings used in your program, in particular if you
 	# are linking statically
-	OPTION( STATIC_CRT		"Link the static CRT libraries"	ON  )
+	OPTION(STATIC_CRT      "Link the static CRT libraries"               ON )
 
 	# If you want to embed a copy of libssh2 into libgit2, pass a
 	# path to libssh2
-	OPTION( EMBED_SSH_PATH		"Path to libssh2 to embed (Windows)" OFF )
+	OPTION(EMBED_SSH_PATH  "Path to libssh2 to embed (Windows)"          OFF)
 
 	ADD_DEFINITIONS(-D_SCL_SECURE_NO_WARNINGS)
 	ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
@@ -80,16 +80,16 @@ ENDIF()
 IF(WIN32)
 	# By default, libgit2 is built with WinHTTP.  To use the built-in
 	# HTTP transport, invoke CMake with the "-DWINHTTP=OFF" argument.
-	OPTION(	WINHTTP			"Use Win32 WinHTTP routines"	ON	)
+	OPTION(WINHTTP         "Use Win32 WinHTTP routines"	                 ON )
 ENDIF()
 
 IF(MSVC)
 	# Enable MSVC CRTDBG memory leak reporting when in debug mode.
-	OPTION(MSVC_CRTDBG "Enable CRTDBG memory leak reporting" OFF)
+	OPTION(MSVC_CRTDBG     "Enable CRTDBG memory leak reporting"         OFF)
 ENDIF()
 
 IF (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-	OPTION( USE_OPENSSL                     "Link with and use openssl library"             ON )
+	OPTION(USE_OPENSSL     "Link with and use openssl library"           ON )
 ENDIF()
 
 CHECK_STRUCT_HAS_MEMBER ("struct stat" st_mtim "sys/types.h;sys/stat.h"
@@ -110,7 +110,7 @@ ELSE ()
 ENDIF()
 
 IF (HAVE_STRUCT_STAT_NSEC OR WIN32)
-	OPTION( USE_NSEC		"Care about sub-second file mtimes and ctimes"	ON  )
+	OPTION(USE_NSEC        "Use sub-second file mtimes and ctimes"       ON )
 ENDIF()
 
 # This variable will contain the libraries we need to put into
