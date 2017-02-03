@@ -357,11 +357,9 @@ out:
 	return ret;
 }
 
-int git_worktree_prune(git_worktree *wt, unsigned flags)
+int git_worktree_is_prunable(git_worktree *wt, unsigned flags)
 {
-	git_buf reason = GIT_BUF_INIT, path = GIT_BUF_INIT;
-	char *wtpath;
-	int err;
+	git_buf reason = GIT_BUF_INIT;
 
 	if ((flags & GIT_WORKTREE_PRUNE_LOCKED) == 0 &&
 		git_worktree_is_locked(&reason, wt))
@@ -369,15 +367,28 @@ int git_worktree_prune(git_worktree *wt, unsigned flags)
 		if (!reason.size)
 			git_buf_attach_notowned(&reason, "no reason given", 15);
 		giterr_set(GITERR_WORKTREE, "Not pruning locked working tree: '%s'", reason.ptr);
+		git_buf_free(&reason);
 
-		err = -1;
-		goto out;
+		return 0;
 	}
 
 	if ((flags & GIT_WORKTREE_PRUNE_VALID) == 0 &&
 		git_worktree_validate(wt) == 0)
 	{
 		giterr_set(GITERR_WORKTREE, "Not pruning valid working tree");
+		return 0;
+	}
+
+	return 1;
+}
+
+int git_worktree_prune(git_worktree *wt, unsigned flags)
+{
+	git_buf path = GIT_BUF_INIT;
+	char *wtpath;
+	int err;
+
+	if (!git_worktree_is_prunable(wt, flags)) {
 		err = -1;
 		goto out;
 	}
@@ -415,7 +426,6 @@ int git_worktree_prune(git_worktree *wt, unsigned flags)
 		goto out;
 
 out:
-	git_buf_free(&reason);
 	git_buf_free(&path);
 
 	return err;

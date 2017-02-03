@@ -126,6 +126,24 @@ typedef enum {
 } git_worktree_prune_t;
 
 /**
+ * Is the worktree prunable with the given set of flags?
+ *
+ * A worktree is not prunable in the following scenarios:
+ *
+ * - the worktree is linking to a valid on-disk worktree. The
+ *   GIT_WORKTREE_PRUNE_VALID flag will cause this check to be
+ *   ignored.
+ * - the worktree is not valid but locked. The
+ *   GIT_WORKRTEE_PRUNE_LOCKED flag will cause this check to be
+ *   ignored.
+ *
+ * If the worktree is not valid and not locked or if the above
+ * flags have been passed in, this function will return a
+ * positive value.
+ */
+GIT_EXTERN(int) git_worktree_is_prunable(git_worktree *wt, unsigned flags);
+
+/**
  * Prune working tree
  *
  * Prune the working tree, that is remove the git data
