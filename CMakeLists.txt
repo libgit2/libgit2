@@ -173,7 +173,7 @@ ENDFUNCTION()
 
 # This function splits the sources files up into their appropriate
 # subdirectories.  This is especially useful for IDEs like Xcode and
-# Visual Studio, so that you can navigate into the libgit2_clar project,
+# Visual Studio, so that you can navigate into the git2_tests project,
 # and see the folders within the tests folder (instead of just seeing all
 # source and tests in a single folder.)
 FUNCTION(IDE_SPLIT_SOURCES target)
@@ -678,20 +678,21 @@ IF (BUILD_CLAR)
 		${CLAR_PATH}/clar.c
 		PROPERTIES OBJECT_DEPENDS ${CLAR_PATH}/clar.suite)
 
-	ADD_EXECUTABLE(libgit2_clar ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_CLAR} ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SSH} ${SRC_SHA1})
+	ADD_EXECUTABLE(git2_tests ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_CLAR} ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SSH} ${SRC_SHA1})
 
-	TARGET_LINK_LIBRARIES(libgit2_clar ${COREFOUNDATION_DIRS})
-	TARGET_LINK_LIBRARIES(libgit2_clar ${SECURITY_DIRS})
-	TARGET_LINK_LIBRARIES(libgit2_clar ${SSL_LIBRARIES})
-	TARGET_LINK_LIBRARIES(libgit2_clar ${SSH_LIBRARIES})
-	TARGET_LINK_LIBRARIES(libgit2_clar ${GSSAPI_LIBRARIES})
-	TARGET_LINK_LIBRARIES(libgit2_clar ${ICONV_LIBRARIES})
-	TARGET_OS_LIBRARIES(libgit2_clar)
-	IDE_SPLIT_SOURCES(libgit2_clar)
+	TARGET_LINK_LIBRARIES(git2_tests ${COREFOUNDATION_DIRS})
+	TARGET_LINK_LIBRARIES(git2_tests ${SECURITY_DIRS})
+	TARGET_LINK_LIBRARIES(git2_tests ${SSL_LIBRARIES})
+	TARGET_LINK_LIBRARIES(git2_tests ${SSH_LIBRARIES})
+	TARGET_LINK_LIBRARIES(git2_tests ${GSSAPI_LIBRARIES})
+	TARGET_LINK_LIBRARIES(git2_tests ${ICONV_LIBRARIES})
+	TARGET_OS_LIBRARIES(git2_tests)
+	IDE_SPLIT_SOURCES(git2_tests)
+	SET_TARGET_PROPERTIES(git2_tests PROPERTIES OUTPUT_NAME libgit2_clar)
 
 	IF (MSVC_IDE)
 		# Precompiled headers
-		SET_TARGET_PROPERTIES(libgit2_clar PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
+		SET_TARGET_PROPERTIES(git2_tests PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
 	ENDIF ()
 
 	ENABLE_TESTING()
