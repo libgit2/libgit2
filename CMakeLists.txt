@@ -602,8 +602,13 @@ ENDIF()
 
 SET(SRC_LIBGIT2 ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SSH} ${SRC_SHA1})
 
+# Compile the objects that make up our library; we will create an actual
+# shared/static library with them later.
+ADD_LIBRARY(git2_src OBJECT ${SRC_LIBGIT2})
+IDE_SPLIT_SOURCES(git2_src)
+
 # Compile and link libgit2
-ADD_LIBRARY(git2 ${SRC_LIBGIT2} ${WIN_RC})
+ADD_LIBRARY(git2 $<TARGET_OBJECTS:git2_src> ${WIN_RC})
 TARGET_LINK_LIBRARIES(git2 ${SECURITY_DIRS})
 TARGET_LINK_LIBRARIES(git2 ${COREFOUNDATION_DIRS})
 TARGET_LINK_LIBRARIES(git2 ${SSL_LIBRARIES})
@@ -680,7 +685,7 @@ IF (BUILD_CLAR)
 		${CLAR_PATH}/clar.c
 		PROPERTIES OBJECT_DEPENDS ${CLAR_PATH}/clar.suite)
 
-	ADD_EXECUTABLE(git2_tests ${SRC_CLAR} ${SRC_TEST} ${SRC_LIBGIT2})
+	ADD_EXECUTABLE(git2_tests ${SRC_CLAR} ${SRC_TEST} $<TARGET_OBJECTS:git2_src>)
 
 	TARGET_LINK_LIBRARIES(git2_tests ${COREFOUNDATION_DIRS})
 	TARGET_LINK_LIBRARIES(git2_tests ${SECURITY_DIRS})
