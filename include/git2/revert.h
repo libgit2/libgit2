@@ -75,7 +75,7 @@ GIT_EXTERN(int) git_revert_commit(
  *
  * @param repo the repository to revert
  * @param commit the commit to revert
- * @param given_opts merge flags
+ * @param given_opts the revert options (or null for defaults)
  * @return zero on success, -1 on failure.
  */
 GIT_EXTERN(int) git_revert(
