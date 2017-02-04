@@ -19,12 +19,16 @@
 #include "refspec.h"
 #include "fetchhead.h"
 #include "push.h"
+#include "http_parser.h"
 
 #define CONFIG_URL_FMT "remote.%s.url"
 #define CONFIG_PUSHURL_FMT "remote.%s.pushurl"
 #define CONFIG_FETCH_FMT "remote.%s.fetch"
 #define CONFIG_PUSH_FMT "remote.%s.push"
 #define CONFIG_TAGOPT_FMT "remote.%s.tagopt"
+
+#define GIT_REMOTE_PROXY_PATH_WEIGHT_AMT 2
+#define GIT_REMOTE_PROXY_USER_WEIGHT_AMT 1
 
 static int dwim_refspecs(git_vector *out, git_vector *refspecs, git_vector *refs);
 static int lookup_remote_prune_config(git_remote *remote, git_config *config, const char *name);
@@ -722,11 +726,363 @@ int git_remote_ls(const git_remote_head ***out, size_t *size, git_remote *remote
 	return remote->transport->ls(out, size, remote->transport);
 }
 
+int git_remote__get_default_port_for_scheme(const char *scheme, char **port)
+{
+	assert(scheme && port);
+
+	if(strcasecmp(scheme, "https") == 0) {
+		*port = git__strdup("443");
+	}
+	else if(strcasecmp(scheme, "http") == 0) {
+		*port = git__strdup("80");
+	}
+	else if(strcasecmp(scheme, "ssh") == 0) {
+		*port = git__strdup("22");
+	}
+	else if(strcasecmp(scheme, "git") == 0) {
+		*port = git__strdup("9418");
+	}
+	else {
+		*port = NULL;
+	}
+
+	return *port == NULL ? (int)GIT_ERROR : 0;
+}
+
+/* For each matching path segment GIT_REMOTE_PROXY_PATH_WEIGHT_AMT is added. Path segments are delimited by a '/' */
+int git_remote__calculate_url_path_score_for_proxy(char *configPath, char *remoteUrlPath)
+{
+	int score = 0;
+	int charCounter = 0;
+
+	if(!configPath || !remoteUrlPath || !configPath[0] || !remoteUrlPath[0]) {
+		return score;
+	}
+
+	/* eat leading '/' as they don't affect the score */
+
+	while(*configPath && *remoteUrlPath
+		&& (*configPath == '/' || *remoteUrlPath == '/')) {
+
+		if(*configPath == '/') {
+			++configPath;
+		}
+
+		if(*remoteUrlPath == '/') {
+			++remoteUrlPath;
+		}
+	}
+
+	while(*configPath && *remoteUrlPath) {
+
+		if(*configPath == '/' && *remoteUrlPath == '/') {
+
+			if(charCounter > 0) {
+				score += GIT_REMOTE_PROXY_PATH_WEIGHT_AMT;
+				charCounter = 0;
+			}
+
+			++configPath;
+			++remoteUrlPath;
+		}
+		else if(charCounter == 0 && *configPath == '/') {
+			/* we hit this if configPath has multiple consecutive '/' characters, which we ignore */
+			++configPath;
+		}
+		else if(charCounter == 0 && *remoteUrlPath == '/') {
+			/* we hit this if remoteUrlPath has multiple consecutive '/' characters, which we ignore */
+			++remoteUrlPath;
+		}
+		else if(*configPath == *remoteUrlPath) {
+			++charCounter;
+			++configPath;
+			++remoteUrlPath;
+		}
+		else {
+			break;
+		}
+	}
+
+	/* Either the 2 paths are identical, which means both pointers are pointing to NULL,
+	 * or there was a character mismatch. Character mismatches cased by trailing '/' characters
+	 * don't matter. Character mismatches due to differing paths cause a match failure and return -1.
+	 */
+	if((*configPath == 0 && *remoteUrlPath == 0)
+		|| (*configPath == 0 && *remoteUrlPath == '/')) {
+
+		/* remoteUrlPath is allowed to have path segments beyond the termination of configPath as long
+		 * as it occurs on the boundary of a delimiting '/'.
+		 */
+		if(charCounter > 0) {
+			score += GIT_REMOTE_PROXY_PATH_WEIGHT_AMT;
+		}
+	}
+	else if(*configPath == '/' && *remoteUrlPath == 0) {
+		
+		/* eat trailing '/' characters, break if we encounter another path segment */
+		while(*configPath && *configPath == '/') {
+			++configPath;
+		}
+
+		if(*configPath == 0) {
+			if(charCounter > 0) {
+				score += GIT_REMOTE_PROXY_PATH_WEIGHT_AMT;
+			}
+		}
+		else {
+			/* configPath had another path segment so there is no match */
+			score = -1;
+		}
+	}
+	else if(*configPath != 0) {
+		/* mismatch on the path segment, there is no match*/
+		score = -1;
+	}
+
+	return score;
+}
+
+/*
+ * From the docs: http://git-scm.com/docs/git-config
+ *
+ * http.<url>.*
+ * Any of the http.* options above can be applied selectively to some URLs. For a config key to match a URL,
+ * each element of the config key is compared to that of the URL, in the following order:
+ *
+ * Scheme (e.g., https in https://example.com/). This field must match exactly between the config key and the URL.
+ *
+ * Host/domain name (e.g., example.com in https://example.com/). This field must match exactly between the config key and the URL.
+ *
+ * Port number (e.g., 8080 in http://example.com:8080/). This field must match exactly between the config key and the URL.
+ * Omitted port numbers are automatically converted to the correct default for the scheme before matching.
+ *
+ * Path (e.g., repo.git in https://example.com/repo.git). The path field of the config key must match the path field of the URL
+ * either exactly or as a prefix of slash-delimited path elements. This means a config key with path foo/ matches URL path foo/bar.
+ * A prefix can only match on a slash (/) boundary. Longer matches take precedence (so a config key with path foo/bar is a better
+ * match to URL path foo/bar than a config key with just path foo/).
+ *
+ * User name (e.g., user in https://user@example.com/repo.git). If the config key has a user name it must match the user name in the URL exactly.
+ * If the config key does not have a user name, that config key will match a URL with any user name (including none), but at a lower precedence
+ * than a config key with a user name.
+ *
+ * The list above is ordered by decreasing precedence; a URL that matches a config key’s path is preferred to one that matches its user name.
+ * For example, if the URL is https://user@example.com/foo/bar a config key match of https://example.com/foo will be preferred over
+ * a config key match of https://user@example.com.
+ *
+ * All URLs are normalized before attempting any matching (the password part, if embedded in the URL, is always ignored for matching purposes)
+ * so that equivalent URLs that are simply spelled differently will match properly. Environment variable settings always override any matches.
+ * The URLs that are matched against are those given directly to Git commands. This means any URLs visited as a result of a redirection
+ * do not participate in matching.
+ *
+ * http.proxy
+ * Override the HTTP proxy, normally configured using the http_proxy, https_proxy, and all_proxy environment variables (see curl(1)). This can be overridden on a per-remote basis; see remote.<name>.proxy
+ */
+int git_remote__find_http_proxy_for_url(git_remote *remote, git_config *cfg, char **proxy_url)
+{
+	gitno_url_data urlData = { 0 };
+	gitno_url_data entryUrlData = { 0 };
+	git_config_iterator *iter = NULL;
+	git_config_entry *ce = NULL;
+	char *dotPre = NULL;
+	char *dotPost = NULL;
+	git_buf buf = GIT_BUF_INIT;
+	int error = 0;
+	int matchedScore = 0;
+	int currentScore = 0;
+
+	if(!remote->url || !remote->url[0]) {
+		return (int)GIT_ERROR;
+	}
+
+	/* Initialize proxy_url to NULL so that we can guarantee its current value. */
+	*proxy_url = NULL;
+
+	error = gitno_url_data_from_string(&urlData, remote->url);
+
+	if(error < 0) {
+		goto cleanup;
+	}
+	else if(!urlData.scheme || !urlData.host
+		|| (strcasecmp(urlData.scheme, "http") != 0 && strcasecmp(urlData.scheme, "https") != 0)) {
+		
+		error = (int)GIT_ERROR;
+		goto cleanup;
+	}
+
+	/* environment variable settings override config settings (http://git-scm.com/docs/git-config) */
+	if(strcasecmp(urlData.scheme, "https") == 0) {
+		error = git__getenv(&buf, "HTTPS_PROXY");
+	}
+	else if(strcasecmp(urlData.scheme, "http") == 0) {
+		error = git__getenv(&buf, "HTTP_PROXY");
+	}
+
+	if(error < 0) {
+		giterr_clear();
+		error = git__getenv(&buf, "ALL_PROXY");
+
+		if(error < 0) {
+			giterr_clear();
+			error = 0;
+		}
+		else {
+			*proxy_url = git_buf_detach(&buf);
+			error = 0;
+			goto cleanup;
+		}
+	}
+	else {
+		*proxy_url = git_buf_detach(&buf);
+		error = 0;
+		goto cleanup;
+	}
+
+	if(!urlData.port) {
+		git_remote__get_default_port_for_scheme(urlData.scheme, &urlData.port);
+	}
+
+	error = git_config_iterator_glob_new(&iter, cfg, "http[.].+[.]proxy");
+
+	if(error < 0) {
+		goto cleanup;
+	}
+
+	while((error = git_config_next(&ce, iter)) == 0) {
+
+		dotPre = strchr(ce->name, '.');
+
+		if(!dotPre) {
+			continue;
+		}
+
+		dotPost = strrchr(ce->name, '.');
+
+		if(!dotPost || (size_t)dotPost - (size_t)dotPre <= 1) {
+			continue;
+		}
+
+		dotPre = git__substrdup(dotPre + 1, (size_t)dotPost - (size_t)dotPre - 1);
+
+		if(!dotPre) {
+			error = (int)GIT_ERROR;
+			goto cleanup;
+		}
+
+		error = gitno_url_data_from_string(&entryUrlData, dotPre);
+		
+		git__free(dotPre);
+		dotPre = NULL;
+
+		if(error < 0 || !entryUrlData.scheme || !entryUrlData.host
+			|| (entryUrlData.path && !urlData.path)
+			|| (entryUrlData.user && !urlData.user)
+			|| (entryUrlData.user && strcmp(entryUrlData.user, urlData.user))
+			|| strcmp(urlData.scheme, entryUrlData.scheme)
+			|| strcmp(urlData.host, entryUrlData.host)) {
+
+			continue;
+		}
+
+		if(!entryUrlData.port) {
+			git_remote__get_default_port_for_scheme(entryUrlData.scheme, &entryUrlData.port);
+		}
+
+		if(strcmp(urlData.port, entryUrlData.port)) {
+			continue;
+		}
+
+		/* At this point we know the scheme, user name, and host have been matched which means it's a valid proxy entry.
+		 * We now need to determine if it's the most relevant entry. A score is calculated by adding GIT_REMOTE_PROXY_PATH_WEIGHT_AMT for each
+		 * path segment that matches and GIT_REMOTE_PROXY_USER_WEIGHT_AMT if the user names match.
+		 */
+
+		currentScore = git_remote__calculate_url_path_score_for_proxy(entryUrlData.path, urlData.path);
+
+		if(currentScore < 0) {
+			continue;
+		}
+
+		/* Checked for equality above so here we just have to see if it exists.
+		 * Path matching has a higher weight according to the docs so we only give a user name matches a separate weight.
+		 */
+
+		if(entryUrlData.user && entryUrlData.user[0]) {
+			currentScore += GIT_REMOTE_PROXY_USER_WEIGHT_AMT;
+		}
+
+		if(*proxy_url) {
+
+			if(currentScore > matchedScore) {
+
+				matchedScore = currentScore;
+				git__free(*proxy_url);
+
+				/* Allow invalid proxies? */
+				if(!ce->value) {
+					*proxy_url = git__strdup("");
+				}
+				else {
+					*proxy_url = git__strdup(ce->value);
+				}
+
+				if(!(*proxy_url)) {
+					error = GIT_ERROR;
+					goto cleanup;
+				}
+			}
+		}
+		else {
+			matchedScore = currentScore;
+
+			/* Allow invalid proxies? */
+			if(!ce->value) {
+				*proxy_url = git__strdup("");
+			}
+			else {
+				*proxy_url = git__strdup(ce->value);
+			}
+
+			if(!(*proxy_url)) {
+				error = GIT_ERROR;
+				goto cleanup;
+			}
+		}
+	}
+
+	if(*proxy_url) {
+		error = 0;
+	}
+	else if(error == 0) {
+		error = (int)GIT_ERROR;
+	}
+
+cleanup:
+
+	gitno_url_data_free_ptrs(&urlData);
+	gitno_url_data_free_ptrs(&entryUrlData);
+
+	if(iter) {
+		git_config_iterator_free(iter);
+		iter = NULL;
+	}
+
+	if(error < 0 && *proxy_url) {
+		git__free(*proxy_url);
+		*proxy_url = NULL;
+	}
+
+	return error;
+}
+
 int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_url)
 {
 	git_config *cfg;
 	git_config_entry *ce = NULL;
-	git_buf val = GIT_BUF_INIT;
+	char *urlStr = NULL;
+	git_buf buf = GIT_BUF_INIT;
+	struct http_parser_url url = { 0 };
+	uint16_t urlStartOffset = 0;
+	uint16_t urlLength = 0;
 	int error;
 
 	assert(remote);
@@ -744,7 +1100,6 @@ int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_ur
 
 	/* remote.<name>.proxy config setting */
 	if (remote->name && remote->name[0]) {
-		git_buf buf = GIT_BUF_INIT;
 
 		if ((error = git_buf_printf(&buf, "remote.%s.proxy", remote->name)) < 0)
 			return error;
@@ -755,38 +1110,40 @@ int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_ur
 		if (error < 0)
 			return error;
 
-		if (ce && ce->value) {
-			*proxy_url = git__strdup(ce->value);
-			goto found;
+		if (ce) {
+			if(ce->value) {
+				*proxy_url = git__strdup(ce->value);
+				git_config_entry_free(ce);
+				goto found;
+			}
+			else {
+				git_config_entry_free(ce);
+			}
 		}
+	}
+
+    /* http.<url>.proxy config setting */
+	if(git_remote__find_http_proxy_for_url(remote, cfg, proxy_url) == 0) {
+		goto found;
 	}
 
 	/* http.proxy config setting */
 	if ((error = git_config__lookup_entry(&ce, cfg, "http.proxy", false)) < 0)
 		return error;
 
-	if (ce && ce->value) {
-		*proxy_url = git__strdup(ce->value);
-		goto found;
-	}
-
-	/* HTTP_PROXY / HTTPS_PROXY environment variables */
-	error = git__getenv(&val, use_ssl ? "HTTPS_PROXY" : "HTTP_PROXY");
-
-	if (error < 0) {
-		if (error == GIT_ENOTFOUND) {
-			giterr_clear();
-			error = 0;
+	if (ce) {
+		if(ce->value) {
+			*proxy_url = git__strdup(ce->value);
+			git_config_entry_free(ce);
+			goto found;
 		}
-
-		return error;
+		else {
+			git_config_entry_free(ce);
+		}
 	}
-
-	*proxy_url = git_buf_detach(&val);
 
 found:
 	GITERR_CHECK_ALLOC(*proxy_url);
-	git_config_entry_free(ce);
 
 	return 0;
 }

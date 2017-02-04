@@ -278,11 +278,97 @@ int gitno_extract_url_parts(
 			*password = unescape(git__substrdup(colon+1, u.field_data[UF_USERINFO].len - (colon+1-_userinfo)));
 			GITERR_CHECK_ALLOC(*password);
 		} else {
-			*username = git__substrdup(_userinfo, u.field_data[UF_USERINFO].len);
+			*username = unescape(git__substrdup(_userinfo, u.field_data[UF_USERINFO].len));
 		}
 		GITERR_CHECK_ALLOC(*username);
 
 	}
 
 	return 0;
+}
+
+int gitno_extract_url_data_parts(
+	char **scheme,
+	char **host,
+	char **port,
+	char **path,
+	char **username,
+	char **password,
+	char **query,
+	const char *url)
+{
+	struct http_parser_url u = { 0 };
+	const char *_userinfo;
+
+	if(http_parser_parse_url(url, strlen(url), false, &u)) {
+		giterr_set(GITERR_NET, "Malformed URL '%s'", url);
+		return GIT_EINVALIDSPEC;
+	}
+
+#define GITNO_COPY_URL_PART(dest, field) \
+		do { if(u.field_set & (1 << (field))) { \
+			*(dest) = git__substrdup(url + u.field_data[field].off, u.field_data[field].len); \
+			GITERR_CHECK_ALLOC(*(dest)); \
+		} \
+		else { \
+			*(dest) = NULL; \
+		} } while(0)
+
+	GITNO_COPY_URL_PART(scheme, UF_SCHEMA);
+	GITNO_COPY_URL_PART(host, UF_HOST);
+	GITNO_COPY_URL_PART(port, UF_PORT);
+	GITNO_COPY_URL_PART(path, UF_PATH);
+	GITNO_COPY_URL_PART(query, UF_QUERY);
+
+#undef GITNO_COPY_URL_PART
+
+	if(u.field_set & (1 << UF_USERINFO)) {
+		_userinfo = url + u.field_data[UF_USERINFO].off;
+		const char *colon = memchr(_userinfo, ':', u.field_data[UF_USERINFO].len);
+
+		if(colon) {
+			*username = unescape(git__substrdup(_userinfo, colon - _userinfo));
+			*password = unescape(git__substrdup(colon + 1, u.field_data[UF_USERINFO].len - (colon + 1 - _userinfo)));
+			GITERR_CHECK_ALLOC(*password);
+		}
+		else {
+			*username = unescape(git__substrdup(_userinfo, u.field_data[UF_USERINFO].len));
+			*password = NULL;
+		}
+
+		GITERR_CHECK_ALLOC(*username);
+	}
+	else
+	{
+		*username = NULL;
+		*password = NULL;
+	}
+
+	return 0;
+}
+
+int gitno_url_data_from_string(
+	gitno_url_data *data,
+	const char *url)
+{
+	assert(data && url);
+
+	gitno_url_data_free_ptrs(data);
+
+	return gitno_extract_url_data_parts(&data->scheme, &data->host, &data->port, &data->path, &data->user, &data->pass, &data->query, url);
+}
+
+void gitno_url_data_free_ptrs(gitno_url_data *data)
+{
+#define GITNO_SAFE_FREE(ptr) if(ptr) { git__free(ptr); (ptr) = NULL; }
+
+	GITNO_SAFE_FREE(data->scheme);
+	GITNO_SAFE_FREE(data->host);
+	GITNO_SAFE_FREE(data->port);
+	GITNO_SAFE_FREE(data->path);
+	GITNO_SAFE_FREE(data->user);
+	GITNO_SAFE_FREE(data->pass);
+	GITNO_SAFE_FREE(data->query);
+
+#undef GITNO_SAFE_FREE
 }
