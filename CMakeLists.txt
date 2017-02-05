@@ -31,6 +31,7 @@ INCLUDE(CheckSymbolExists)
 INCLUDE(CheckStructHasMember)
 INCLUDE(AddCFlagIfSupported)
 INCLUDE(FindPkgConfig)
+INCLUDE(FindStatNsec)
 
 # Build options
 #
@@ -101,23 +102,6 @@ IF(MSVC)
 	ADD_DEFINITIONS(-D_SCL_SECURE_NO_WARNINGS)
 	ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
 	ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_DEPRECATE)
-ENDIF()
-
-CHECK_STRUCT_HAS_MEMBER ("struct stat" st_mtim "sys/types.h;sys/stat.h"
-	HAVE_STRUCT_STAT_ST_MTIM LANGUAGE C)
-CHECK_STRUCT_HAS_MEMBER ("struct stat" st_mtimespec "sys/types.h;sys/stat.h"
-	HAVE_STRUCT_STAT_ST_MTIMESPEC LANGUAGE C)
-CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtime_nsec sys/stat.h
-	HAVE_STRUCT_STAT_MTIME_NSEC LANGUAGE C)
-
-IF (HAVE_STRUCT_STAT_ST_MTIM)
-	CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtim.tv_nsec sys/stat.h
-		HAVE_STRUCT_STAT_NSEC LANGUAGE C)
-ELSEIF (HAVE_STRUCT_STAT_ST_MTIMESPEC)
-	CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtimespec.tv_nsec sys/stat.h
-		HAVE_STRUCT_STAT_NSEC LANGUAGE C)
-ELSE ()
-	SET( HAVE_STRUCT_STAT_NSEC ON )
 ENDIF()
 
 # This variable will contain the libraries we need to put into
