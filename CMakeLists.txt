@@ -32,6 +32,7 @@ INCLUDE(CheckStructHasMember)
 INCLUDE(AddCFlagIfSupported)
 INCLUDE(FindPkgConfig)
 INCLUDE(FindStatNsec)
+INCLUDE(IdeSplitSources)
 
 # Build options
 #
