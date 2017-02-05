@@ -44,6 +44,42 @@ OPTION(VALGRIND            "Configure build for valgrind"                OFF)
 OPTION(CURL                "Use curl for HTTP if available"              ON )
 OPTION(DEBUG_POOL          "Enable debug pool allocator"                 OFF)
 
+IF (MSVC)
+	# This option is only available when building with MSVC. By default, libgit2
+	# is build using the cdecl calling convention, which is useful if you're
+	# writing C. However, the CLR and Win32 API both expect stdcall.
+	#
+	# If you are writing a CLR program and want to link to libgit2, you'll want
+	# to turn this on by invoking CMake with the "-DSTDCALL=ON" argument.
+	OPTION(STDCALL         "Build libgit2 with the __stdcall convention" OFF)
+
+	# This option must match the settings used in your program, in particular
+	# if are linking statically
+	OPTION(STATIC_CRT      "Link the static CRT libraries"               ON )
+
+	# If you want to embed a copy of libssh2 into libgit2, pass a
+	# path to libssh2
+	OPTION(EMBED_SSH_PATH  "Path to libssh2 to embed (Windows)"          OFF)
+
+	# Enable MSVC CRTDBG memory leak reporting when in debug mode.
+	OPTION(MSVC_CRTDBG     "Enable CRTDBG memory leak reporting"         OFF)
+ENDIF()
+
+IF (WIN32)
+	# By default, libgit2 is built with WinHTTP.  To use the built-in
+	# HTTP transport, invoke CMake with the "-DWINHTTP=OFF" argument.
+	OPTION(WINHTTP         "Use Win32 WinHTTP routines"	                 ON )
+ENDIF()
+
+IF (HAVE_STRUCT_STAT_NSEC OR WIN32)
+	OPTION(USE_NSEC        "Use sub-second file mtimes and ctimes"       ON )
+ENDIF()
+
+IF (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+	OPTION(USE_OPENSSL     "Link with and use openssl library"           ON )
+ENDIF()
+
+
 IF(DEBUG_POOL)
 	ADD_DEFINITIONS(-DGIT_DEBUG_POOL)
 ENDIF()
@@ -55,41 +91,9 @@ IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 ENDIF()
 
 IF(MSVC)
-	# This option is only available when building with MSVC. By default, libgit2
-	# is build using the cdecl calling convention, which is useful if you're
-	# writing C. However, the CLR and Win32 API both expect stdcall.
-	#
-	# If you are writing a CLR program and want to link to libgit2, you'll want
-	# to turn this on by invoking CMake with the "-DSTDCALL=ON" argument.
-	OPTION(STDCALL         "Build libgit2 with the __stdcall convention" OFF)
-
-	# This option must match the settings used in your program, in particular if you
-	# are linking statically
-	OPTION(STATIC_CRT      "Link the static CRT libraries"               ON )
-
-	# If you want to embed a copy of libssh2 into libgit2, pass a
-	# path to libssh2
-	OPTION(EMBED_SSH_PATH  "Path to libssh2 to embed (Windows)"          OFF)
-
 	ADD_DEFINITIONS(-D_SCL_SECURE_NO_WARNINGS)
 	ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
 	ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_DEPRECATE)
-ENDIF()
-
-
-IF(WIN32)
-	# By default, libgit2 is built with WinHTTP.  To use the built-in
-	# HTTP transport, invoke CMake with the "-DWINHTTP=OFF" argument.
-	OPTION(WINHTTP         "Use Win32 WinHTTP routines"	                 ON )
-ENDIF()
-
-IF(MSVC)
-	# Enable MSVC CRTDBG memory leak reporting when in debug mode.
-	OPTION(MSVC_CRTDBG     "Enable CRTDBG memory leak reporting"         OFF)
-ENDIF()
-
-IF (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-	OPTION(USE_OPENSSL     "Link with and use openssl library"           ON )
 ENDIF()
 
 CHECK_STRUCT_HAS_MEMBER ("struct stat" st_mtim "sys/types.h;sys/stat.h"
@@ -107,10 +111,6 @@ ELSEIF (HAVE_STRUCT_STAT_ST_MTIMESPEC)
 		HAVE_STRUCT_STAT_NSEC LANGUAGE C)
 ELSE ()
 	SET( HAVE_STRUCT_STAT_NSEC ON )
-ENDIF()
-
-IF (HAVE_STRUCT_STAT_NSEC OR WIN32)
-	OPTION(USE_NSEC        "Use sub-second file mtimes and ctimes"       ON )
 ENDIF()
 
 # This variable will contain the libraries we need to put into
@@ -547,7 +547,6 @@ IF (OPENSSL_FOUND)
   INCLUDE_DIRECTORIES(${OPENSSL_INCLUDE_DIR})
   SET(SSL_LIBRARIES ${OPENSSL_LIBRARIES})
 ENDIF()
-
 
 
 IF (THREADSAFE)
