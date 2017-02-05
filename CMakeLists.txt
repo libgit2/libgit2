@@ -587,7 +587,7 @@ ELSE()
 	ENDIF()
 	FILE(GLOB SRC_OS src/unix/*.c src/unix/*.h)
 ENDIF()
-FILE(GLOB SRC_GIT2 src/*.c src/*.h src/transports/*.c src/transports/*.h src/xdiff/*.c src/xdiff/*.h)
+FILE(GLOB SRC_COMMON src/*.c src/*.h src/transports/*.c src/transports/*.h src/xdiff/*.c src/xdiff/*.h)
 
 # Determine architecture of the machine
 IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -600,7 +600,7 @@ ELSE()
 	MESSAGE(FATAL_ERROR "Unsupported architecture (CMAKE_SIZEOF_VOID_P is unset)")
 ENDIF()
 
-SET(SRC_LIBGIT2 ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SSH} ${SRC_SHA1})
+SET(SRC_LIBGIT2 ${SRC_COMMON} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SSH} ${SRC_SHA1})
 
 # On a sufficiently new cmake, we can compile the objects that make up our
 # library as a separate target (without needing to link a library or an
