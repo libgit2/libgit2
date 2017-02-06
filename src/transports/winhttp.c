@@ -1083,7 +1083,7 @@ replay:
 			/* TODO: extract the username from the url, no payload? */
 			if (t->owner->proxy.credentials) {
 				int cred_error = 1;
-				cred_error = t->owner->proxy.credentials(&t->proxy_cred, t->owner->proxy.url, NULL, allowed_types, NULL);
+				cred_error = t->owner->proxy.credentials(&t->proxy_cred, t->owner->proxy.url, NULL, allowed_types, t->owner->proxy.payload);
 
 				if (cred_error < 0)
 					return cred_error;
