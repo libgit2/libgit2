@@ -774,6 +774,18 @@ int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_ur
 	error = git__getenv(&val, use_ssl ? "HTTPS_PROXY" : "HTTP_PROXY");
 
 	if (error < 0) {
+		if (error != GIT_ENOTFOUND) {
+			return error;
+		}
+
+		giterr_clear();
+		error = 0;
+	}
+
+	/* try lowercase environment variables */
+	error = git__getenv(&val, use_ssl ? "https_proxy" : "http_proxy");
+
+	if (error < 0) {
 		if (error == GIT_ENOTFOUND) {
 			giterr_clear();
 			error = 0;
