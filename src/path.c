@@ -111,13 +111,41 @@ Exit:
 }
 
 /*
+ * Determine if the path is a Windows prefix and, if so, returns
+ * its actual lentgh. If it is not a prefix, returns -1.
+ */
+static int win32_prefix_length(const char *path, int len)
+{
+#ifndef GIT_WIN32
+	GIT_UNUSED(path);
+	GIT_UNUSED(len);
+#else
+	/*
+	 * Mimic unix behavior where '/.git' returns '/': 'C:/.git' will return
+	 * 'C:/' here
+	 */
+	if (len == 2 && LOOKS_LIKE_DRIVE_PREFIX(path))
+		return 3;
+
+	/*
+	 * Similarly checks if we're dealing with a network computer name
+	 * '//computername/.git' will return '//computername/'
+	 */
+	if (looks_like_network_computer_name(path, len))
+		return len + 1;
+#endif
+
+	return -1;
+}
+
+/*
  * Based on the Android implementation, BSD licensed.
  * Check http://android.git.kernel.org/
  */
 int git_path_dirname_r(git_buf *buffer, const char *path)
 {
 	const char *endp;
-	int result, len;
+	int len;
 
 	/* Empty or NULL string gets treated as "." */
 	if (path == NULL || *path == '\0') {
@@ -146,35 +174,17 @@ int git_path_dirname_r(git_buf *buffer, const char *path)
 		endp--;
 	} while (endp > path && *endp == '/');
 
+	if ((len = win32_prefix_length(path, endp - path + 1)) > 0)
+		goto Exit;
+
 	/* Cast is safe because max path < max int */
 	len = (int)(endp - path + 1);
 
-#ifdef GIT_WIN32
-	/* Mimic unix behavior where '/.git' returns '/': 'C:/.git' will return
-		'C:/' here */
-
-	if (len == 2 && LOOKS_LIKE_DRIVE_PREFIX(path)) {
-		len = 3;
-		goto Exit;
-	}
-
-	/* Similarly checks if we're dealing with a network computer name
-		'//computername/.git' will return '//computername/' */
-
-	if (looks_like_network_computer_name(path, len)) {
-		len++;
-		goto Exit;
-	}
-
-#endif
-
 Exit:
-	result = len;
-
 	if (buffer != NULL && git_buf_set(buffer, path, len) < 0)
 		return -1;
 
-	return result;
+	return len;
 }
 
 
