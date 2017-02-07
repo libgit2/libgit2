@@ -159,6 +159,9 @@ int git_path_dirname_r(git_buf *buffer, const char *path)
 	while (endp > path && *endp == '/')
 		endp--;
 
+	if ((len = win32_prefix_length(path, endp - path + 1)) > 0)
+		goto Exit;
+
 	/* Find the start of the dir */
 	while (endp > path && *endp != '/')
 		endp--;
