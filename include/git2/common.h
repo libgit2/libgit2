@@ -178,6 +178,7 @@ typedef enum {
 	GIT_OPT_ENABLE_STRICT_SYMBOLIC_REF_CREATION,
 	GIT_OPT_SET_SSL_CIPHERS,
 	GIT_OPT_GET_USER_AGENT,
+	GIT_OPT_ENABLE_OFS_DELTA,
 } git_libgit2_opt_t;
 
 /**
@@ -304,6 +305,16 @@ typedef enum {
  *		> Set the SSL ciphers use for HTTPS connections.
  *		>
  *		> - `ciphers` is the list of ciphers that are eanbled.
+ *
+ *	* opts(GIT_OPT_ENABLE_OFS_DELTA, int enabled)
+ *
+ *		> Enable or disable the use of "offset deltas" when creating packfiles,
+ *		> and the negotiation of them when talking to a remote server.
+ *		> Offset deltas store a delta base location as an offset into the
+ *		> packfile from the current location, which provides a shorter encoding
+ *		> and thus smaller resultant packfiles.
+ *		> Packfiles containing offset deltas can still be read.
+ *		> This defaults to enabled.
  *
  * @param option Option key
  * @param ... value to set the option
