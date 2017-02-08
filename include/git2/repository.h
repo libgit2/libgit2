@@ -50,6 +50,17 @@ GIT_EXTERN(int) git_repository_open(git_repository **out, const char *path);
 GIT_EXTERN(int) git_repository_wrap_odb(git_repository **out, git_odb *odb);
 
 /**
+ * Set object database to an existing repository
+ *
+ * Set an object database onto a repository replacing any existing odb.
+ * Can be use dot swap out the fs odb while keeping the fs refdb configured.
+ *
+ * @param repo the repository to set this odb on
+ * @param odb the object database to wrap
+ */
+GIT_EXTERN(void) git_repository_set_odb(git_repository *repo, git_odb *odb);
+
+/**
  * Look for a git repository and copy its path in the given buffer.
  * The lookup start from base_path and walk across parent directories
  * if nothing has been found. The lookup ends when the first repository
