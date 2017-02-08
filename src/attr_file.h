@@ -41,8 +41,9 @@ typedef enum {
 	GIT_ATTR_FILE__IN_MEMORY   = 0,
 	GIT_ATTR_FILE__FROM_FILE   = 1,
 	GIT_ATTR_FILE__FROM_INDEX  = 2,
+	GIT_ATTR_FILE__FROM_TREE   = 3,
 
-	GIT_ATTR_FILE_NUM_SOURCES  = 3
+	GIT_ATTR_FILE_NUM_SOURCES  = 4
 } git_attr_file_source;
 
 extern const char *git_attr__true;
@@ -127,7 +128,8 @@ extern int git_attr_get_many_with_session(
 	uint32_t flags,
 	const char *path,
 	size_t num_attr,
-	const char **names);
+	const char **names,
+	const git_tree *lookup_tree);
 
 typedef int (*git_attr_file_parser)(
 	git_repository *repo,
@@ -151,7 +153,8 @@ int git_attr_file__load(
 	git_attr_session *attr_session,
 	git_attr_file_entry *ce,
 	git_attr_file_source source,
-	git_attr_file_parser parser);
+	git_attr_file_parser parser,
+	const git_tree *lookup_tree);
 
 int git_attr_file__load_standalone(
 	git_attr_file **out, const char *path);

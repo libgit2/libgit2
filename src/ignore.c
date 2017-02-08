@@ -234,7 +234,7 @@ static int push_ignore_file(
 
 	error = git_attr_cache__get(
 		&file, ignores->repo, NULL, GIT_ATTR_FILE__FROM_FILE,
-		base, filename, parse_ignore_file);
+		base, filename, parse_ignore_file, NULL);
 	if (error < 0)
 		return error;
 
@@ -261,7 +261,7 @@ static int get_internal_ignores(git_attr_file **out, git_repository *repo)
 		return error;
 
 	error = git_attr_cache__get(
-		out, repo, NULL, GIT_ATTR_FILE__IN_MEMORY, NULL, GIT_IGNORE_INTERNAL, NULL);
+		out, repo, NULL, GIT_ATTR_FILE__IN_MEMORY, NULL, GIT_IGNORE_INTERNAL, NULL, NULL);
 
 	/* if internal rules list is empty, insert default rules */
 	if (!error && !(*out)->rules.length)

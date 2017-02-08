@@ -433,7 +433,7 @@ static int filter_list_check_attributes(
 	GITERR_CHECK_ALLOC(strs);
 
 	error = git_attr_get_many_with_session(
-		strs, repo, attr_session, 0, src->path, fdef->nattrs, fdef->attrs);
+		strs, repo, attr_session, 0, src->path, fdef->nattrs, fdef->attrs, NULL);
 
 	/* if no values were found but no matches are needed, it's okay! */
 	if (error == GIT_ENOTFOUND && !fdef->nmatches) {

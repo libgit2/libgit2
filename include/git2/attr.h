@@ -149,6 +149,14 @@ GIT_EXTERN(int) git_attr_get(
 	const char *path,
 	const char *name);
 
+GIT_EXTERN(int) git_attr_get_by_tree(
+	const char **value_out,
+	git_repository *repo,
+	uint32_t flags,
+	const char *path,
+	const char *name,
+	const git_tree *lookup);
+
 /**
  * Look up a list of git attributes for path.
  *
@@ -186,6 +194,15 @@ GIT_EXTERN(int) git_attr_get_many(
 	size_t num_attr,
 	const char **names);
 
+GIT_EXTERN(int) git_attr_get_many_by_tree(
+	const char **values_out,
+	git_repository *repo,
+	uint32_t flags,
+	const char *path,
+	size_t num_attr,
+	const char **names,
+	const git_tree* lookup_tree);
+
 typedef int (*git_attr_foreach_cb)(const char *name, const char *value, void *payload);
 
 /**
@@ -212,6 +229,14 @@ GIT_EXTERN(int) git_attr_foreach(
 	const char *path,
 	git_attr_foreach_cb callback,
 	void *payload);
+
+GIT_EXTERN(int) git_attr_foreach_by_tree(
+	git_repository *repo,
+	uint32_t flags,
+	const char *path,
+	git_attr_foreach_cb callback,
+	void *payload,
+	const git_tree *lookup_tree);
 
 /**
  * Flush the gitattributes cache.
