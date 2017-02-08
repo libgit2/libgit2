@@ -90,9 +90,11 @@ void test_core_path__00_dirname(void)
 
 #ifdef GIT_WIN32
 	check_dirname("C:/", "C:/");
+	check_dirname("C:", "C:/");
 	check_dirname("C:/path/", "C:/");
 	check_dirname("C:/path", "C:/");
 	check_dirname("//computername/", "//computername/");
+	check_dirname("//computername", "//computername/");
 	check_dirname("//computername/path/", "//computername/");
 	check_dirname("//computername/path", "//computername/");
 	check_dirname("//computername/sub/path/", "//computername/sub");

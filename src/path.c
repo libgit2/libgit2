@@ -125,14 +125,14 @@ static int win32_prefix_length(const char *path, int len)
 	 * 'C:/' here
 	 */
 	if (len == 2 && LOOKS_LIKE_DRIVE_PREFIX(path))
-		return 3;
+		return 2;
 
 	/*
 	 * Similarly checks if we're dealing with a network computer name
 	 * '//computername/.git' will return '//computername/'
 	 */
 	if (looks_like_network_computer_name(path, len))
-		return len + 1;
+		return len;
 #endif
 
 	return -1;
@@ -145,7 +145,7 @@ static int win32_prefix_length(const char *path, int len)
 int git_path_dirname_r(git_buf *buffer, const char *path)
 {
 	const char *endp;
-	int len;
+	int is_prefix = 0, len;
 
 	/* Empty or NULL string gets treated as "." */
 	if (path == NULL || *path == '\0') {
@@ -159,8 +159,10 @@ int git_path_dirname_r(git_buf *buffer, const char *path)
 	while (endp > path && *endp == '/')
 		endp--;
 
-	if ((len = win32_prefix_length(path, endp - path + 1)) > 0)
+	if ((len = win32_prefix_length(path, endp - path + 1)) > 0) {
+		is_prefix = 1;
 		goto Exit;
+	}
 
 	/* Find the start of the dir */
 	while (endp > path && *endp != '/')
@@ -177,15 +179,21 @@ int git_path_dirname_r(git_buf *buffer, const char *path)
 		endp--;
 	} while (endp > path && *endp == '/');
 
-	if ((len = win32_prefix_length(path, endp - path + 1)) > 0)
+	if ((len = win32_prefix_length(path, endp - path + 1)) > 0) {
+		is_prefix = 1;
 		goto Exit;
+	}
 
 	/* Cast is safe because max path < max int */
 	len = (int)(endp - path + 1);
 
 Exit:
-	if (buffer != NULL && git_buf_set(buffer, path, len) < 0)
-		return -1;
+	if (buffer) {
+		if (git_buf_set(buffer, path, len) < 0)
+			return -1;
+		if (is_prefix && git_buf_putc(buffer, '/') < 0)
+			return -1;
+	}
 
 	return len;
 }
