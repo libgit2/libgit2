@@ -70,6 +70,7 @@ typedef enum {
 	GIT_WINHTTP_AUTH_BASIC = 1,
 	GIT_WINHTTP_AUTH_NTLM = 2,
 	GIT_WINHTTP_AUTH_NEGOTIATE = 4,
+	GIT_WINHTTP_AUTH_DIGEST = 8,
 } winhttp_authmechanism_t;
 
 typedef struct {
@@ -131,8 +132,13 @@ done:
 	return error;
 }
 
-static int apply_userpass_credential_proxy(HINTERNET request, git_cred *cred)
+static int apply_userpass_credential_proxy(HINTERNET request, git_cred *cred, int mechanisms)
 {
+	if (GIT_WINHTTP_AUTH_DIGEST & mechanisms) {
+		return _apply_userpass_credential(request, WINHTTP_AUTH_TARGET_PROXY,
+			WINHTTP_AUTH_SCHEME_DIGEST, cred);
+	}
+
 	return _apply_userpass_credential(request, WINHTTP_AUTH_TARGET_PROXY,
 		WINHTTP_AUTH_SCHEME_BASIC, cred);
 }
@@ -451,7 +457,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 
 		if (t->proxy_cred) {
 			if (t->proxy_cred->credtype == GIT_CREDTYPE_USERPASS_PLAINTEXT) {
-				if ((error = apply_userpass_credential_proxy(s->request, t->proxy_cred)) < 0)
+				if ((error = apply_userpass_credential_proxy(s->request, t->proxy_cred, t->auth_mechanisms)) < 0)
 					goto on_error;
 			}
 		}
@@ -588,11 +594,11 @@ static int parse_unauthorized_response(
 	*allowed_types = 0;
 	*allowed_mechanisms = 0;
 
-	/* WinHttpQueryHeaders() must be called before WinHttpQueryAuthSchemes(). 
-	 * We can assume this was already done, since we know we are unauthorized. 
+	/* WinHttpQueryHeaders() must be called before WinHttpQueryAuthSchemes().
+	 * We can assume this was already done, since we know we are unauthorized.
 	 */
 	if (!WinHttpQueryAuthSchemes(request, &supported, &first, &target)) {
-		giterr_set(GITERR_OS, "failed to parse supported auth schemes"); 
+		giterr_set(GITERR_OS, "failed to parse supported auth schemes");
 		return -1;
 	}
 
@@ -610,6 +616,11 @@ static int parse_unauthorized_response(
 	if (WINHTTP_AUTH_SCHEME_BASIC & supported) {
 		*allowed_types |= GIT_CREDTYPE_USERPASS_PLAINTEXT;
 		*allowed_mechanisms |= GIT_WINHTTP_AUTH_BASIC;
+	}
+
+	if (WINHTTP_AUTH_SCHEME_DIGEST & supported) {
+		*allowed_types |= GIT_CREDTYPE_USERPASS_PLAINTEXT;
+		*allowed_mechanisms |= GIT_WINHTTP_AUTH_DIGEST;
 	}
 
 	return 0;
@@ -783,7 +794,7 @@ static int winhttp_connect(
 		goto on_error;
 	}
 
-	
+
 	/* Establish connection */
 	t->connection = WinHttpConnect(
 		t->session,
@@ -863,7 +874,7 @@ static int send_request(winhttp_stream *s, size_t len, int ignore_length)
 		return 0;
 
 	ignore_flags = no_check_cert_flags;
-	
+
 	if (!WinHttpSetOption(s->request, WINHTTP_OPTION_SECURITY_FLAGS, &ignore_flags, sizeof(ignore_flags))) {
 		giterr_set(GITERR_OS, "failed to set security options");
 		return -1;
@@ -1072,7 +1083,7 @@ replay:
 			/* TODO: extract the username from the url, no payload? */
 			if (t->owner->proxy.credentials) {
 				int cred_error = 1;
-				cred_error = t->owner->proxy.credentials(&t->proxy_cred, t->owner->proxy.url, NULL, allowed_types, NULL);
+				cred_error = t->owner->proxy.credentials(&t->proxy_cred, t->owner->proxy.url, NULL, allowed_types, t->owner->proxy.payload);
 
 				if (cred_error < 0)
 					return cred_error;
