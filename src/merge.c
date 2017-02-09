@@ -1075,7 +1075,7 @@ static int index_entry_similarity_inexact(
 	int score = 0;
 	int error = 0;
 
-	if (GIT_MODE_TYPE(a->mode) != GIT_MODE_TYPE(b->mode))
+	if (!GIT_MODE_ISBLOB(a->mode) || !GIT_MODE_ISBLOB(b->mode))
 		return 0;
 
 	/* update signature cache if needed */
