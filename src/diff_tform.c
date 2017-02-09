@@ -553,8 +553,8 @@ static int similarity_measure(
 
 	*score = -1;
 
-	/* don't try to compare files of different types */
-	if (GIT_MODE_TYPE(a_file->mode) != GIT_MODE_TYPE(b_file->mode))
+	/* don't try to compare things that aren't files */
+	if (!GIT_MODE_ISBLOB(a_file->mode) || !GIT_MODE_ISBLOB(b_file->mode))
 		return 0;
 
 	/* if exact match is requested, force calculation of missing OIDs now */
