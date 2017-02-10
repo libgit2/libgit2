@@ -173,7 +173,7 @@ GIT_EXTERN(int) git_stash_apply_init_options(
  * @param repo The owning repository.
  * @param index The position within the stash list. 0 points to the
  *              most recent stashed state.
- * @param options Options to control how stashes are applied.
+ * @param options Optional options to control how stashes are applied.
  *
  * @return 0 on success, GIT_ENOTFOUND if there's no stashed state for the
  *         given index, GIT_EMERGECONFLICT if changes exist in the working
@@ -242,7 +242,7 @@ GIT_EXTERN(int) git_stash_drop(
  * @param repo The owning repository.
  * @param index The position within the stash list. 0 points to the
  *              most recent stashed state.
- * @param options Options to control how stashes are applied.
+ * @param options Optional options to control how stashes are applied.
  *
  * @return 0 on success, GIT_ENOTFOUND if there's no stashed state for the given
  * index, or error code. (see git_stash_apply() above for details)
