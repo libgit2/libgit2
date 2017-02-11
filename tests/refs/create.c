@@ -13,6 +13,7 @@ static git_repository *g_repo;
 void test_refs_create__initialize(void)
 {
    g_repo = cl_git_sandbox_init("testrepo");
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 0));
 }
 
 void test_refs_create__cleanup(void)
