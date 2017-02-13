@@ -766,8 +766,9 @@ int git_commit_extract_signature(git_buf *signature, git_buf *signed_data, git_r
 		if (git_buf_oom(signature))
 			goto oom;
 
+		error = git_buf_puts(signed_data, eol+1);
 		git_odb_object_free(obj);
-		return git_buf_puts(signed_data, eol+1);
+		return error;
 	}
 
 	giterr_set(GITERR_OBJECT, "this commit is not signed");
