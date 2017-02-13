@@ -513,9 +513,8 @@ static int clone_local_into(git_repository *repo, git_remote *remote, const git_
 		return error;
 	}
 
-	git_buf_joinpath(&src_odb, git_repository_path(src), GIT_OBJECTS_DIR);
-	git_buf_joinpath(&dst_odb, git_repository_path(repo), GIT_OBJECTS_DIR);
-	if (git_buf_oom(&src_odb) || git_buf_oom(&dst_odb)) {
+	if (git_repository_item_path(&src_odb, src, GIT_REPOSITORY_ITEM_OBJECTS) < 0
+		|| git_repository_item_path(&dst_odb, repo, GIT_REPOSITORY_ITEM_OBJECTS) < 0) {
 		error = -1;
 		goto cleanup;
 	}
