@@ -642,7 +642,7 @@ int git_commit_header_field(git_buf *out, const git_commit *commit, const char *
 {
 	const char *eol, *buf = commit->raw_header;
 
-	git_buf_sanitize(out);
+	git_buf_clear(out);
 
 	while ((eol = strchr(buf, '\n'))) {
 		/* We can skip continuations here */
@@ -706,8 +706,8 @@ int git_commit_extract_signature(git_buf *signature, git_buf *signed_data, git_r
 	const char *h, *eol;
 	int error;
 
-	git_buf_sanitize(signature);
-	git_buf_sanitize(signed_data);
+	git_buf_clear(signature);
+	git_buf_clear(signed_data);
 
 	if (!field)
 		field = "gpgsig";
