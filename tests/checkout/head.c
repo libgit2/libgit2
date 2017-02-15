@@ -38,7 +38,7 @@ void test_checkout_head__with_index_only_tree(void)
 	cl_git_pass(git_repository_index(&index, g_repo));
 
 	p_mkdir("testrepo/newdir", 0777);
-    cl_git_mkfile("testrepo/newdir/newfile.txt", "new file\n");
+	cl_git_mkfile("testrepo/newdir/newfile.txt", "new file\n");
 
 	cl_git_pass(git_index_add_bypath(index, "newdir/newfile.txt"));
 	cl_git_pass(git_index_write(index));
