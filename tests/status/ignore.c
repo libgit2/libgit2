@@ -20,8 +20,8 @@ static void assert_ignored_(
 	bool expected, const char *filepath, const char *file, int line)
 {
 	int is_ignored = 0;
-	cl_git_pass_(
-		git_status_should_ignore(&is_ignored, g_repo, filepath), file, line);
+	cl_git_expect(
+		git_status_should_ignore(&is_ignored, g_repo, filepath), 0, file, line);
 	clar__assert(
 		(expected != 0) == (is_ignored != 0),
 		file, line, "expected != is_ignored", filepath, 1);
