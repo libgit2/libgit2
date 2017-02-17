@@ -12,11 +12,11 @@
  *
  * Use this wrapper around all `git_` library calls that return error codes!
  */
-#define cl_git_pass(expr) cl_git_exec((expr), 0, __FILE__, __LINE__)
+#define cl_git_pass(expr) cl_git_expect((expr), 0, __FILE__, __LINE__)
 
-#define cl_git_fail_with(error, expr) cl_git_exec((expr), error, __FILE__, __LINE__)
+#define cl_git_fail_with(error, expr) cl_git_expect((expr), error, __FILE__, __LINE__)
 
-#define cl_git_exec(expr, expected, file, line) do { \
+#define cl_git_expect(expr, expected, file, line) do { \
 	int _lg2_error; \
 	giterr_clear(); \
 	if ((_lg2_error = (expr)) != expected) \
