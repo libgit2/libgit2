@@ -844,7 +844,7 @@ static int filebuf_flags(loose_backend *backend)
 	int flags = GIT_FILEBUF_TEMPORARY |
 		(backend->object_zlib_level << GIT_FILEBUF_DEFLATE_SHIFT);
 
-	if (backend->fsync_object_files || git_object__synchronized_writing)
+	if (backend->fsync_object_files || git_object__synchronous_writing)
 		flags |= GIT_FILEBUF_FSYNC;
 
 	return flags;

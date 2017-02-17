@@ -31,7 +31,7 @@ void test_pack_packbuilder__cleanup(void)
 	git_oid *o;
 	unsigned int i;
 
-	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONIZED_OBJECT_CREATION, 0));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONOUS_OBJECT_CREATION, 0));
 
 	if (_commits_is_initialized) {
 		_commits_is_initialized = 0;
@@ -200,7 +200,7 @@ void test_pack_packbuilder__does_not_fsync_by_default(void)
 
 void test_pack_packbuilder__fsync_when_asked(void)
 {
-	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONIZED_OBJECT_CREATION, 1));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONOUS_OBJECT_CREATION, 1));
 	p_fsync__cnt = 0;
 	seed_packbuilder();
 	git_packbuilder_write(_packbuilder, ".", 0666, NULL, NULL);

@@ -10,7 +10,7 @@
 #include "repository.h"
 
 extern bool git_object__strict_input_validation;
-extern bool git_object__synchronized_writing;
+extern bool git_object__synchronous_writing;
 
 /** Base git object for inheritance */
 struct git_object {

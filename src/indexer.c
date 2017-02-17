@@ -991,7 +991,7 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 
 	if (git_filebuf_open(&index_file, filename.ptr,
 		GIT_FILEBUF_HASH_CONTENTS |
-		(git_object__synchronized_writing ? GIT_FILEBUF_FSYNC : 0),
+		(git_object__synchronous_writing ? GIT_FILEBUF_FSYNC : 0),
 		idx->mode) < 0)
 		goto on_error;
 
@@ -1069,7 +1069,7 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 		return -1;
 	}
 
-	if (git_object__synchronized_writing && p_fsync(idx->pack->mwf.fd) < 0) {
+	if (git_object__synchronous_writing && p_fsync(idx->pack->mwf.fd) < 0) {
 		giterr_set(GITERR_OS, "failed to fsync packfile");
 		goto on_error;
 	}
@@ -1090,7 +1090,7 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 		goto on_error;
 
 	/* And fsync the parent directory if we're asked to. */
-	if (git_object__synchronized_writing &&
+	if (git_object__synchronous_writing &&
 		git_futils_fsync_parent(git_buf_cstr(&filename)) < 0)
 		goto on_error;
 

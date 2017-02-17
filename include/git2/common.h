@@ -179,7 +179,7 @@ typedef enum {
 	GIT_OPT_SET_SSL_CIPHERS,
 	GIT_OPT_GET_USER_AGENT,
 	GIT_OPT_ENABLE_OFS_DELTA,
-	GIT_OPT_ENABLE_SYNCHRONIZED_OBJECT_CREATION,
+	GIT_OPT_ENABLE_SYNCHRONOUS_OBJECT_CREATION,
 } git_libgit2_opt_t;
 
 /**
@@ -317,7 +317,7 @@ typedef enum {
  *		> Packfiles containing offset deltas can still be read.
  *		> This defaults to enabled.
  *
- *	* opts(GIT_OPT_ENABLE_SYNCHRONIZED_OBJECT_CREATION, int enabled)
+ *	* opts(GIT_OPT_ENABLE_SYNCHRONOUS_OBJECT_CREATION, int enabled)
  *
  *		> Enable synchronized writes of new objects using `fsync`
  *		> (or the platform equivalent) to ensure that new object data

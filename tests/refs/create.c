@@ -22,7 +22,7 @@ void test_refs_create__cleanup(void)
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 1));
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_SYMBOLIC_REF_CREATION, 1));
-	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONIZED_OBJECT_CREATION, 0));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONOUS_OBJECT_CREATION, 0));
 }
 
 void test_refs_create__symbolic(void)
@@ -323,7 +323,7 @@ void test_refs_create__fsyncs_when_requested(void)
 	git_refdb *refdb;
 	git_oid id;
 
-	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONIZED_OBJECT_CREATION, 1));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONOUS_OBJECT_CREATION, 1));
 	p_fsync__cnt = 0;
 
 	git_oid_fromstr(&id, current_master_tip);
