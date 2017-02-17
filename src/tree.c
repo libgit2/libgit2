@@ -20,8 +20,6 @@
 #define TREE_ENTRY_CHECK_NAMELEN(n) \
 	if (n > UINT16_MAX) { giterr_set(GITERR_INVALID, "tree entry path too long"); }
 
-GIT__USE_STRMAP
-
 static bool valid_filemode(const int filemode)
 {
 	return (filemode == GIT_FILEMODE_TREE
@@ -505,7 +503,7 @@ static int append_entry(
 
 	entry->attr = (uint16_t)filemode;
 
-	git_strmap_insert(bld->map, entry->filename, entry, error);
+	git_strmap_insert(bld->map, entry->filename, entry, &error);
 	if (error < 0) {
 		git_tree_entry_free(entry);
 		giterr_set(GITERR_TREE, "failed to append entry %s to the tree builder", filename);
@@ -754,7 +752,7 @@ int git_treebuilder_insert(
 		entry = alloc_entry(filename, strlen(filename), id);
 		GITERR_CHECK_ALLOC(entry);
 
-		git_strmap_insert(bld->map, entry->filename, entry, error);
+		git_strmap_insert(bld->map, entry->filename, entry, &error);
 
 		if (error < 0) {
 			git_tree_entry_free(entry);

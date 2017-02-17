@@ -15,8 +15,6 @@
 #include "merge.h"
 #include "vector.h"
 
-GIT__USE_OIDMAP
-
 git_commit_list_node *git_revwalk__commit_lookup(
 	git_revwalk *walk, const git_oid *oid)
 {
@@ -25,9 +23,9 @@ git_commit_list_node *git_revwalk__commit_lookup(
 	int ret;
 
 	/* lookup and reserve space if not already present */
-	pos = kh_get(oid, walk->commits, oid);
-	if (pos != kh_end(walk->commits))
-		return kh_value(walk->commits, pos);
+	pos = git_oidmap_lookup_index(walk->commits, oid);
+	if (git_oidmap_valid_index(walk->commits, pos))
+		return git_oidmap_value_at(walk->commits, pos);
 
 	commit = git_commit_list_alloc_node(walk);
 	if (commit == NULL)
@@ -35,9 +33,9 @@ git_commit_list_node *git_revwalk__commit_lookup(
 
 	git_oid_cpy(&commit->oid, oid);
 
-	pos = kh_put(oid, walk->commits, &commit->oid, &ret);
+	pos = git_oidmap_put(walk->commits, &commit->oid, &ret);
 	assert(ret != 0);
-	kh_value(walk->commits, pos) = commit;
+	git_oidmap_set_value_at(walk->commits, pos, commit);
 
 	return commit;
 }
@@ -702,7 +700,7 @@ void git_revwalk_reset(git_revwalk *walk)
 
 	assert(walk);
 
-	kh_foreach_value(walk->commits, commit, {
+	git_oidmap_foreach_value(walk->commits, commit, {
 		commit->seen = 0;
 		commit->in_degree = 0;
 		commit->topo_delay = 0;

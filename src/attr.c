@@ -7,8 +7,6 @@
 #include "git2/oid.h"
 #include <ctype.h>
 
-GIT__USE_STRMAP
-
 const char *git_attr__true  = "[internal]__TRUE__";
 const char *git_attr__false = "[internal]__FALSE__";
 const char *git_attr__unset = "[internal]__UNSET__";
@@ -209,7 +207,7 @@ int git_attr_foreach(
 				if (git_strmap_exists(seen, assign->name))
 					continue;
 
-				git_strmap_insert(seen, assign->name, assign, error);
+				git_strmap_insert(seen, assign->name, assign, &error);
 				if (error < 0)
 					goto cleanup;
 

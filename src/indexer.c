@@ -18,8 +18,6 @@
 #include "oidmap.h"
 #include "zstream.h"
 
-GIT__USE_OIDMAP
-
 extern git_mutex git__mwindow_mutex;
 
 #define UINT31_MAX (0x7FFFFFFF)
@@ -294,7 +292,7 @@ static int store_object(git_indexer *idx)
 	git_oid_cpy(&pentry->sha1, &oid);
 	pentry->offset = entry_start;
 
-	k = kh_put(oid, idx->pack->idx_cache, &pentry->sha1, &error);
+	k = git_oidmap_put(idx->pack->idx_cache, &pentry->sha1, &error);
 	if (error == -1) {
 		git__free(pentry);
 		giterr_set_oom();
@@ -308,7 +306,7 @@ static int store_object(git_indexer *idx)
 	}
 
 
-	kh_value(idx->pack->idx_cache, k) = pentry;
+	git_oidmap_set_value_at(idx->pack->idx_cache, k, pentry);
 
 	git_oid_cpy(&entry->oid, &oid);
 
@@ -333,9 +331,7 @@ on_error:
 
 GIT_INLINE(bool) has_entry(git_indexer *idx, git_oid *id)
 {
-	khiter_t k;
-	k = kh_get(oid, idx->pack->idx_cache, id);
-	return (k != kh_end(idx->pack->idx_cache));
+	return git_oidmap_exists(idx->pack->idx_cache, id);
 }
 
 static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_entry *pentry, git_off_t entry_start)
@@ -351,14 +347,14 @@ static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_ent
 	}
 
 	pentry->offset = entry_start;
-	k = kh_put(oid, idx->pack->idx_cache, &pentry->sha1, &error);
+	k = git_oidmap_put(idx->pack->idx_cache, &pentry->sha1, &error);
 
 	if (error <= 0) {
 		giterr_set(GITERR_INDEXER, "cannot insert object into pack");
 		return -1;
 	}
 
-	kh_value(idx->pack->idx_cache, k) = pentry;
+	git_oidmap_set_value_at(idx->pack->idx_cache, k, pentry);
 
 	/* Add the object to the list */
 	if (git_vector_insert(&idx->objects, entry) < 0)
@@ -1106,8 +1102,9 @@ void git_indexer_free(git_indexer *idx)
 
 	if (idx->pack->idx_cache) {
 		struct git_pack_entry *pentry;
-		kh_foreach_value(
-			idx->pack->idx_cache, pentry, { git__free(pentry); });
+		git_oidmap_foreach_value(idx->pack->idx_cache, pentry, {
+			git__free(pentry);
+		});
 
 		git_oidmap_free(idx->pack->idx_cache);
 	}
