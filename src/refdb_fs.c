@@ -365,12 +365,17 @@ static const char *loose_parse_symbolic(git_buf *file_content)
 	return refname_start;
 }
 
+/*
+ * Returns whether a reference is stored per worktree or not.
+ * Per-worktree references are:
+ *
+ * - all pseudorefs, e.g. HEAD and MERGE_HEAD
+ * - all references stored inside of "refs/bisect/"
+ */
 static bool is_per_worktree_ref(const char *ref_name)
 {
-	return strcmp("HEAD", ref_name) == 0 ||
-	    strcmp("FETCH_HEAD", ref_name) == 0 ||
-	    strcmp("MERGE_HEAD", ref_name) == 0 ||
-	    strcmp("ORIG_HEAD", ref_name) == 0;
+	return git__prefixcmp(ref_name, "refs/") != 0 ||
+	    git__prefixcmp(ref_name, "refs/bisect/") == 0;
 }
 
 static int loose_lookup(
