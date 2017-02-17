@@ -1127,6 +1127,10 @@ void git_futils_filestamp_set_from_stat(
 
 int git_futils_fsync_dir(const char *path)
 {
+#ifdef GIT_WIN32
+	GIT_UNUSED(path);
+	return 0;
+#else
 	int fd, error = -1;
 
 	if ((fd = p_open(path, O_RDONLY)) < 0) {
@@ -1139,6 +1143,7 @@ int git_futils_fsync_dir(const char *path)
 
 	p_close(fd);
 	return error;
+#endif
 }
 
 int git_futils_fsync_parent(const char *path)

@@ -323,13 +323,24 @@ void test_refs_create__fsyncs_when_requested(void)
 	git_refdb *refdb;
 	git_oid id;
 
+	/* Creating a loose ref involves fsync'ing the reference, the
+	 * reflog and (on non-Windows) the containing directories.
+	 * Creating a packed ref involves fsync'ing the packed ref file
+	 * and (on non-Windows) the containing directory.
+	 */
+#ifdef GIT_WIN32
+	int expected_create = 2, expected_compress = 1;
+#else
+	int expected_create = 4, expected_compress = 2;
+#endif
+
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONOUS_OBJECT_CREATION, 1));
 	p_fsync__cnt = 0;
 
 	git_oid_fromstr(&id, current_master_tip);
 	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/fsync_test", &id, 0, "log message"));
 	git_reference_free(ref);
-	cl_assert_equal_i(4, p_fsync__cnt);
+	cl_assert_equal_i(expected_create, p_fsync__cnt);
 
 	p_fsync__cnt = 0;
 
@@ -337,5 +348,5 @@ void test_refs_create__fsyncs_when_requested(void)
 	cl_git_pass(git_refdb_compress(refdb));
 	git_refdb_free(refdb);
 
-	cl_assert_equal_i(2, p_fsync__cnt);
+	cl_assert_equal_i(expected_compress, p_fsync__cnt);
 }

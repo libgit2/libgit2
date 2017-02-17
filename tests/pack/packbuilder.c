@@ -200,11 +200,20 @@ void test_pack_packbuilder__does_not_fsync_by_default(void)
 
 void test_pack_packbuilder__fsync_when_asked(void)
 {
+	/* We fsync the packfile and index.  On non-Windows, we also fsync
+	 * the parent directories.
+	 */
+#ifdef GIT_WIN32
+	int expected = 2;
+#else
+	int expected = 4;
+#endif
+
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONOUS_OBJECT_CREATION, 1));
 	p_fsync__cnt = 0;
 	seed_packbuilder();
 	git_packbuilder_write(_packbuilder, ".", 0666, NULL, NULL);
-	cl_assert_equal_sz(4, p_fsync__cnt);
+	cl_assert_equal_sz(expected, p_fsync__cnt);
 }
 
 static int foreach_cb(void *buf, size_t len, void *payload)
