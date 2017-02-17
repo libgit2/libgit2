@@ -265,8 +265,13 @@ int git_futils_writebuffer(
 		return error;
 	}
 
-	if ((error = p_close(fd)) < 0)
+	if ((error = p_close(fd)) < 0) {
 		giterr_set(GITERR_OS, "error while closing '%s'", path);
+		return error;
+	}
+
+	if (do_fsync && (flags & O_CREAT))
+		error = git_futils_fsync_parent(path);
 
 	return error;
 }
@@ -1118,4 +1123,29 @@ void git_futils_filestamp_set_from_stat(
 	} else {
 		memset(stamp, 0, sizeof(*stamp));
 	}
+}
+
+int git_futils_fsync_dir(const char *path)
+{
+	int fd, error = -1;
+
+	if ((fd = p_open(path, O_RDONLY)) < 0) {
+		giterr_set(GITERR_OS, "failed to open directory '%s' for fsync", path);
+		return -1;
+	}
+
+	if ((error = p_fsync(fd)) < 0)
+		giterr_set(GITERR_OS, "failed to fsync directory '%s'", path);
+
+	p_close(fd);
+	return error;
+}
+
+int git_futils_fsync_parent(const char *path)
+{
+	char *parent = git_path_dirname(path);
+	int error = git_futils_fsync_dir(parent);
+
+	git__free(parent);
+	return error;
 }

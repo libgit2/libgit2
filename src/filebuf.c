@@ -445,6 +445,9 @@ int git_filebuf_commit(git_filebuf *file)
 		goto on_error;
 	}
 
+	if (file->do_fsync && git_futils_fsync_parent(file->path_original) < 0)
+		goto on_error;
+
 	file->did_rename = true;
 
 	git_filebuf_cleanup(file);

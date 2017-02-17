@@ -204,7 +204,7 @@ void test_pack_packbuilder__fsync_when_asked(void)
 	p_fsync__cnt = 0;
 	seed_packbuilder();
 	git_packbuilder_write(_packbuilder, ".", 0666, NULL, NULL);
-	cl_assert_equal_sz(2, p_fsync__cnt);
+	cl_assert_equal_sz(4, p_fsync__cnt);
 }
 
 static int foreach_cb(void *buf, size_t len, void *payload)

@@ -329,7 +329,7 @@ void test_refs_create__fsyncs_when_requested(void)
 	git_oid_fromstr(&id, current_master_tip);
 	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/fsync_test", &id, 0, "log message"));
 	git_reference_free(ref);
-	cl_assert_equal_i(2, p_fsync__cnt);
+	cl_assert_equal_i(4, p_fsync__cnt);
 
 	p_fsync__cnt = 0;
 
@@ -337,5 +337,5 @@ void test_refs_create__fsyncs_when_requested(void)
 	cl_git_pass(git_refdb_compress(refdb));
 	git_refdb_free(refdb);
 
-	cl_assert_equal_i(1, p_fsync__cnt);
+	cl_assert_equal_i(2, p_fsync__cnt);
 }

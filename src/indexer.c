@@ -1086,7 +1086,14 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 		goto on_error;
 
 	/* And don't forget to rename the packfile to its new place. */
-	p_rename(idx->pack->pack_name, git_buf_cstr(&filename));
+	if (p_rename(idx->pack->pack_name, git_buf_cstr(&filename)) < 0)
+		goto on_error;
+
+	/* And fsync the parent directory if we're asked to. */
+	if (git_object__synchronized_writing &&
+		git_futils_fsync_parent(git_buf_cstr(&filename)) < 0)
+		goto on_error;
+
 	idx->pack_committed = 1;
 
 	git_buf_free(&filename);
