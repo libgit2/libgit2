@@ -354,7 +354,7 @@ static void attr_cache__free(git_attr_cache *cache)
 	git__free(cache);
 }
 
-int git_attr_cache__do_init(git_repository *repo)
+int git_attr_cache__init(git_repository *repo)
 {
 	int ret = 0;
 	git_attr_cache *cache = git_repository_attr_cache(repo);
