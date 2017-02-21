@@ -309,7 +309,7 @@ static void attr_cache__free(git_attr_cache *cache)
 	if (!cache)
 		return;
 
-	unlock = (git_mutex_lock(&cache->lock) == 0);
+	unlock = (attr_cache_lock(cache) == 0);
 
 	if (cache->files != NULL) {
 		git_attr_file_entry *entry;
@@ -345,7 +345,7 @@ static void attr_cache__free(git_attr_cache *cache)
 	cache->cfg_excl_file = NULL;
 
 	if (unlock)
-		git_mutex_unlock(&cache->lock);
+		attr_cache_unlock(cache);
 	git_mutex_free(&cache->lock);
 
 	git__free(cache);
@@ -429,7 +429,7 @@ int git_attr_cache__insert_macro(git_repository *repo, git_attr_rule *macro)
 	if (macro->assigns.length == 0)
 		return 0;
 
-	if (git_mutex_lock(&cache->lock) < 0) {
+	if (attr_cache_lock(cache) < 0) {
 		giterr_set(GITERR_OS, "unable to get attr cache lock");
 		error = -1;
 	} else {
