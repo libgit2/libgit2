@@ -103,8 +103,11 @@ static int attr_cache_upsert(git_attr_cache *cache, git_attr_file *file)
 	GIT_REFCOUNT_OWN(file, entry);
 	GIT_REFCOUNT_INC(file);
 
-	old = git__compare_and_swap(
-		&entry->file[file->source], entry->file[file->source], file);
+	/*
+	 * Replace the existing value if another thread has
+	 * created it in the meantime.
+	 */
+	old = git__swap(entry->file[file->source], file);
 
 	if (old) {
 		GIT_REFCOUNT_OWN(old, NULL);
