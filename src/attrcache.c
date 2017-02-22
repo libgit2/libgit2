@@ -103,8 +103,11 @@ static int attr_cache_upsert(git_attr_cache *cache, git_attr_file *file)
 	GIT_REFCOUNT_OWN(file, entry);
 	GIT_REFCOUNT_INC(file);
 
-	old = git__compare_and_swap(
-		&entry->file[file->source], entry->file[file->source], file);
+	/*
+	 * Replace the existing value if another thread has
+	 * created it in the meantime.
+	 */
+	old = git__swap(entry->file[file->source], file);
 
 	if (old) {
 		GIT_REFCOUNT_OWN(old, NULL);
@@ -309,7 +312,7 @@ static void attr_cache__free(git_attr_cache *cache)
 	if (!cache)
 		return;
 
-	unlock = (git_mutex_lock(&cache->lock) == 0);
+	unlock = (attr_cache_lock(cache) == 0);
 
 	if (cache->files != NULL) {
 		git_attr_file_entry *entry;
@@ -345,13 +348,13 @@ static void attr_cache__free(git_attr_cache *cache)
 	cache->cfg_excl_file = NULL;
 
 	if (unlock)
-		git_mutex_unlock(&cache->lock);
+		attr_cache_unlock(cache);
 	git_mutex_free(&cache->lock);
 
 	git__free(cache);
 }
 
-int git_attr_cache__do_init(git_repository *repo)
+int git_attr_cache__init(git_repository *repo)
 {
 	int ret = 0;
 	git_attr_cache *cache = git_repository_attr_cache(repo);
@@ -429,7 +432,7 @@ int git_attr_cache__insert_macro(git_repository *repo, git_attr_rule *macro)
 	if (macro->assigns.length == 0)
 		return 0;
 
-	if (git_mutex_lock(&cache->lock) < 0) {
+	if (attr_cache_lock(cache) < 0) {
 		giterr_set(GITERR_OS, "unable to get attr cache lock");
 		error = -1;
 	} else {
