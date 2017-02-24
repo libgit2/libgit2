@@ -128,13 +128,13 @@ static git_pack_cache_entry *cache_get(git_pack_cache *cache, git_off_t offset)
 /* Run with the cache lock held */
 static void free_lowest_entry(git_pack_cache *cache)
 {
+	git_off_t offset;
 	git_pack_cache_entry *entry;
-	khiter_t k;
 
-	git_offmap_foreach(cache->entries, k, entry, {
+	git_offmap_foreach(cache->entries, offset, entry, {
 		if (entry && entry->refcount.val == 0) {
 			cache->memory_used -= entry->raw.len;
-			git_offmap_delete_at(cache->entries, k);
+			git_offmap_delete(cache->entries, offset);
 			free_cache_object(entry);
 		}
 	});
