@@ -12,13 +12,15 @@
  *
  * Use this wrapper around all `git_` library calls that return error codes!
  */
-#define cl_git_pass(expr) cl_git_pass_((expr), __FILE__, __LINE__)
+#define cl_git_pass(expr) cl_git_expect((expr), 0, __FILE__, __LINE__)
 
-#define cl_git_pass_(expr, file, line) do { \
+#define cl_git_fail_with(error, expr) cl_git_expect((expr), error, __FILE__, __LINE__)
+
+#define cl_git_expect(expr, expected, file, line) do { \
 	int _lg2_error; \
 	giterr_clear(); \
-	if ((_lg2_error = (expr)) != 0) \
-		cl_git_report_failure(_lg2_error, file, line, "Function call failed: " #expr); \
+	if ((_lg2_error = (expr)) != expected) \
+		cl_git_report_failure(_lg2_error, expected, file, line, "Function call failed: " #expr); \
 	} while (0)
 
 /**
@@ -26,9 +28,11 @@
  * just for consistency. Use with `git_` library
  * calls that are supposed to fail!
  */
-#define cl_git_fail(expr) cl_must_fail(expr)
-
-#define cl_git_fail_with(expr, error) cl_assert_equal_i(error,expr)
+#define cl_git_fail(expr) do { \
+	giterr_clear(); \
+	if ((expr) == 0) \
+		cl_git_report_failure(0, 0, __FILE__, __LINE__, "Function call succeeded: " #expr); \
+	} while (0)
 
 /**
  * Like cl_git_pass, only for Win32 error code conventions
@@ -37,7 +41,7 @@
 	int _win32_res; \
 	if ((_win32_res = (expr)) == 0) { \
 		giterr_set(GITERR_OS, "Returned: %d, system error code: %d", _win32_res, GetLastError()); \
-		cl_git_report_failure(_win32_res, __FILE__, __LINE__, "System call failed: " #expr); \
+		cl_git_report_failure(_win32_res, 0, __FILE__, __LINE__, "System call failed: " #expr); \
 	} \
 	} while(0)
 
@@ -86,7 +90,7 @@ GIT_INLINE(void) cl_git_thread_check(void *data)
 		clar__assert(0, threaderr->file, threaderr->line, threaderr->expr, threaderr->error_msg, 1);
 }
 
-void cl_git_report_failure(int, const char *, int, const char *);
+void cl_git_report_failure(int, int, const char *, int, const char *);
 
 #define cl_assert_at_line(expr,file,line) \
 	clar__assert((expr) != 0, file, line, "Expression is not true: " #expr, NULL, 1)

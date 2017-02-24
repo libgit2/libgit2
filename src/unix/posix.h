@@ -50,7 +50,7 @@ extern char *p_realpath(const char *, char *);
 #define p_strcasecmp(s1, s2) strcasecmp(s1, s2)
 #define p_strncasecmp(s1, s2, c) strncasecmp(s1, s2, c)
 #define p_vsnprintf(b, c, f, a) vsnprintf(b, c, f, a)
-#define p_snprintf(b, c, f, ...) snprintf(b, c, f, __VA_ARGS__)
+#define p_snprintf(b, c, ...) snprintf(b, c, __VA_ARGS__)
 #define p_mkstemp(p) mkstemp(p)
 #define p_chdir(p) chdir(p)
 #define p_chmod(p,m) chmod(p, m)

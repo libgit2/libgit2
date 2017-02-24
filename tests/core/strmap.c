@@ -1,8 +1,6 @@
 #include "clar_libgit2.h"
 #include "strmap.h"
 
-GIT__USE_STRMAP
-
 git_strmap *g_table;
 
 void test_core_strmap__initialize(void)
@@ -36,7 +34,7 @@ static void insert_strings(git_strmap *table, int count)
 		for (j = 0, over = i / 26; over > 0; j++, over = over / 26)
 			str[j] = 'A' + (over % 26);
 
-		git_strmap_insert(table, str, str, err);
+		git_strmap_insert(table, str, str, &err);
 		cl_assert(err >= 0);
 	}
 

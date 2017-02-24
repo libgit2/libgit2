@@ -21,8 +21,8 @@ static void assert_is_ignored_(
 {
 	int is_ignored = 0;
 
-	cl_git_pass_(
-		git_ignore_path_is_ignored(&is_ignored, g_repo, filepath), file, line);
+	cl_git_expect(
+		git_ignore_path_is_ignored(&is_ignored, g_repo, filepath), 0, file, line);
 
 	clar__assert_equal(
 		file, line, "expected != is_ignored", 1, "%d",

@@ -1,7 +1,5 @@
 #include "sortedcache.h"
 
-GIT__USE_STRMAP
-
 int git_sortedcache_new(
 	git_sortedcache **out,
 	size_t item_path_offset,
@@ -294,13 +292,13 @@ int git_sortedcache_upsert(void **out, git_sortedcache *sc, const char *key)
 	item_key = ((char *)item) + sc->item_path_offset;
 	memcpy(item_key, key, keylen);
 
-	pos = kh_put(str, sc->map, item_key, &error);
+	pos = git_strmap_put(sc->map, item_key, &error);
 	if (error < 0)
 		goto done;
 
 	if (!error)
-		kh_key(sc->map, pos) = item_key;
-	kh_val(sc->map, pos) = item;
+		git_strmap_set_key_at(sc->map, pos, item_key);
+	git_strmap_set_value_at(sc->map, pos, item);
 
 	error = git_vector_insert(&sc->items, item);
 	if (error < 0)

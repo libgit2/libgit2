@@ -19,6 +19,8 @@
 /* The minimal interval between progress updates (in seconds). */
 #define MIN_PROGRESS_UPDATE_INTERVAL 0.5
 
+bool git_smart__ofs_delta_enabled = true;
+
 int git_smart__store_refs(transport_smart *t, int flushes)
 {
 	gitno_buffer *buf = &t->buffer;
@@ -138,7 +140,7 @@ int git_smart__detect_caps(git_pkt_ref *pkt, transport_smart_caps *caps, git_vec
 		if (*ptr == ' ')
 			ptr++;
 
-		if (!git__prefixcmp(ptr, GIT_CAP_OFS_DELTA)) {
+		if (git_smart__ofs_delta_enabled && !git__prefixcmp(ptr, GIT_CAP_OFS_DELTA)) {
 			caps->common = caps->ofs_delta = 1;
 			ptr += strlen(GIT_CAP_OFS_DELTA);
 			continue;

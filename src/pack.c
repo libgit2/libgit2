@@ -16,9 +16,6 @@
 
 #include <zlib.h>
 
-GIT__USE_OFFMAP
-GIT__USE_OIDMAP
-
 static int packfile_open(struct git_pack_file *p);
 static git_off_t nth_packed_object_offset(const struct git_pack_file *p, uint32_t n);
 static int packfile_unpack_compressed(
@@ -78,13 +75,12 @@ static void free_cache_object(void *o)
 
 static void cache_free(git_pack_cache *cache)
 {
-	khiter_t k;
+	git_pack_cache_entry *entry;
 
 	if (cache->entries) {
-		for (k = kh_begin(cache->entries); k != kh_end(cache->entries); k++) {
-			if (kh_exist(cache->entries, k))
-				free_cache_object(kh_value(cache->entries, k));
-		}
+		git_offmap_foreach_value(cache->entries, entry, {
+			free_cache_object(entry);
+		});
 
 		git_offmap_free(cache->entries);
 		cache->entries = NULL;
@@ -118,9 +114,9 @@ static git_pack_cache_entry *cache_get(git_pack_cache *cache, git_off_t offset)
 	if (git_mutex_lock(&cache->lock) < 0)
 		return NULL;
 
-	k = kh_get(off, cache->entries, offset);
-	if (k != kh_end(cache->entries)) { /* found it */
-		entry = kh_value(cache->entries, k);
+	k = git_offmap_lookup_index(cache->entries, offset);
+	if (git_offmap_valid_index(cache->entries, k)) { /* found it */
+		entry = git_offmap_value_at(cache->entries, k);
 		git_atomic_inc(&entry->refcount);
 		entry->last_usage = cache->use_ctr++;
 	}
@@ -132,21 +128,16 @@ static git_pack_cache_entry *cache_get(git_pack_cache *cache, git_off_t offset)
 /* Run with the cache lock held */
 static void free_lowest_entry(git_pack_cache *cache)
 {
+	git_off_t offset;
 	git_pack_cache_entry *entry;
-	khiter_t k;
 
-	for (k = kh_begin(cache->entries); k != kh_end(cache->entries); k++) {
-		if (!kh_exist(cache->entries, k))
-			continue;
-
-		entry = kh_value(cache->entries, k);
-
+	git_offmap_foreach(cache->entries, offset, entry, {
 		if (entry && entry->refcount.val == 0) {
 			cache->memory_used -= entry->raw.len;
-			kh_del(off, cache->entries, k);
+			git_offmap_delete(cache->entries, offset);
 			free_cache_object(entry);
 		}
-	}
+	});
 }
 
 static int cache_add(
@@ -170,14 +161,14 @@ static int cache_add(
 			return -1;
 		}
 		/* Add it to the cache if nobody else has */
-		exists = kh_get(off, cache->entries, offset) != kh_end(cache->entries);
+		exists = git_offmap_exists(cache->entries, offset);
 		if (!exists) {
 			while (cache->memory_used + base->len > cache->memory_limit)
 				free_lowest_entry(cache);
 
-			k = kh_put(off, cache->entries, offset, &error);
+			k = git_offmap_put(cache->entries, offset, &error);
 			assert(error != 0);
-			kh_value(cache->entries, k) = entry;
+			git_offmap_set_value_at(cache->entries, k, entry);
 			cache->memory_used += entry->raw.len;
 
 			*cached_out = entry;
@@ -962,10 +953,10 @@ git_off_t get_delta_base(
 			git_oid oid;
 
 			git_oid_fromraw(&oid, base_info);
-			k = kh_get(oid, p->idx_cache, &oid);
-			if (k != kh_end(p->idx_cache)) {
+			k = git_oidmap_lookup_index(p->idx_cache, &oid);
+			if (git_oidmap_valid_index(p->idx_cache, k)) {
 				*curpos += 20;
-				return ((struct git_pack_entry *)kh_value(p->idx_cache, k))->offset;
+				return ((struct git_pack_entry *)git_oidmap_value_at(p->idx_cache, k))->offset;
 			} else {
 				/* If we're building an index, don't try to find the pack
 				 * entry; we just haven't seen it yet.  We'll make

@@ -375,7 +375,8 @@ static int local_push(
 		goto on_error;
 	}
 
-	if ((error = git_buf_joinpath(&odb_path, git_repository_path(remote_repo), "objects/pack")) < 0)
+	if ((error = git_repository_item_path(&odb_path, remote_repo, GIT_REPOSITORY_ITEM_OBJECTS)) < 0
+		|| (error = git_buf_joinpath(&odb_path, odb_path.ptr, "pack")) < 0)
 		goto on_error;
 
 	error = git_packbuilder_write(push->pb, odb_path.ptr, 0, transfer_to_push_transfer, (void *) cbs);

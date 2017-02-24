@@ -199,3 +199,12 @@ void test_repo_discover__discovery_starting_at_file_succeeds(void)
 
 	ensure_repository_discover(SUB_REPOSITORY_FOLDER "/file", ceiling_dirs.ptr, SUB_REPOSITORY_GITDIR);
 }
+
+void test_repo_discover__discovery_starting_at_system_root_causes_no_hang(void)
+{
+#ifdef GIT_WIN32
+	git_buf out = GIT_BUF_INIT;
+	cl_git_fail(git_repository_discover(&out, "C:/", 0, NULL));
+	cl_git_fail(git_repository_discover(&out, "//localhost/", 0, NULL));
+#endif
+}

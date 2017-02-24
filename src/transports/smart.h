@@ -26,6 +26,8 @@
 #define GIT_CAP_THIN_PACK "thin-pack"
 #define GIT_CAP_SYMREF "symref"
 
+extern bool git_smart__ofs_delta_enabled;
+
 enum git_pkt_type {
 	GIT_PKT_CMD,
 	GIT_PKT_FLUSH,

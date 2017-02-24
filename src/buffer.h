@@ -66,7 +66,8 @@ extern int git_buf_try_grow(
  * library, when providing git_buf's, may wish to provide a NULL ptr for
  * ease of handling.  The buffer routines, however, expect a non-NULL ptr
  * always.  This helper method simply handles NULL input, converting to a
- * git_buf__initbuf.
+ * git_buf__initbuf. If a buffer with a non-NULL ptr is passed in, this method
+ * assures that the buffer is '\0'-terminated.
  */
 extern void git_buf_sanitize(git_buf *buf);
 

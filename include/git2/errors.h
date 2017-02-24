@@ -100,6 +100,7 @@ typedef enum {
 	GITERR_REBASE,
 	GITERR_FILESYSTEM,
 	GITERR_PATCH,
+	GITERR_WORKTREE
 } git_error_t;
 
 /**

@@ -277,6 +277,7 @@ int git_ignore__for_path(
 {
 	int error = 0;
 	const char *workdir = git_repository_workdir(repo);
+	git_buf infopath = GIT_BUF_INIT;
 
 	assert(repo && ignores && path);
 
@@ -322,10 +323,14 @@ int git_ignore__for_path(
 			goto cleanup;
 	}
 
+	if ((error = git_repository_item_path(&infopath,
+			repo, GIT_REPOSITORY_ITEM_INFO)) < 0)
+		goto cleanup;
+
 	/* load .git/info/exclude */
 	error = push_ignore_file(
 		ignores, &ignores->ign_global,
-		git_repository_path(repo), GIT_IGNORE_FILE_INREPO);
+		infopath.ptr, GIT_IGNORE_FILE_INREPO);
 	if (error < 0)
 		goto cleanup;
 
@@ -336,6 +341,7 @@ int git_ignore__for_path(
 			git_repository_attr_cache(repo)->cfg_excl_file);
 
 cleanup:
+	git_buf_free(&infopath);
 	if (error < 0)
 		git_ignore__free(ignores);
 

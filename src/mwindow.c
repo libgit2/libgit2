@@ -14,8 +14,6 @@
 #include "strmap.h"
 #include "pack.h"
 
-GIT__USE_STRMAP
-
 #define DEFAULT_WINDOW_SIZE \
 	(sizeof(void*) >= 8 \
 		? 1 * 1024 * 1024 * 1024 \
@@ -84,7 +82,7 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 
 	git_atomic_inc(&pack->refcount);
 
-	git_strmap_insert(git__pack_cache, pack->pack_name, pack, error);
+	git_strmap_insert(git__pack_cache, pack->pack_name, pack, &error);
 	git_mutex_unlock(&git__mwindow_mutex);
 
 	if (error < 0) {

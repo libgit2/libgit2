@@ -41,8 +41,6 @@ struct pack_write_context {
 	git_transfer_progress *stats;
 };
 
-GIT__USE_OIDMAP
-
 #ifdef GIT_THREADS
 
 #define GIT_PACKBUILDER__MUTEX_OP(pb, mtx, op) do { \
@@ -197,10 +195,10 @@ static void rehash(git_packbuilder *pb)
 	size_t i;
 	int ret;
 
-	kh_clear(oid, pb->object_ix);
+	git_oidmap_clear(pb->object_ix);
 	for (i = 0, po = pb->object_list; i < pb->nr_objects; i++, po++) {
-		pos = kh_put(oid, pb->object_ix, &po->id, &ret);
-		kh_value(pb->object_ix, pos) = po;
+		pos = git_oidmap_put(pb->object_ix, &po->id, &ret);
+		git_oidmap_set_value_at(pb->object_ix, pos, po);
 	}
 }
 
@@ -216,8 +214,7 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 
 	/* If the object already exists in the hash table, then we don't
 	 * have any work to do */
-	pos = kh_get(oid, pb->object_ix, oid);
-	if (pos != kh_end(pb->object_ix))
+	if (git_oidmap_exists(pb->object_ix, oid))
 		return 0;
 
 	if (pb->nr_objects >= pb->nr_alloc) {
@@ -247,13 +244,13 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 	git_oid_cpy(&po->id, oid);
 	po->hash = name_hash(name);
 
-	pos = kh_put(oid, pb->object_ix, &po->id, &ret);
+	pos = git_oidmap_put(pb->object_ix, &po->id, &ret);
 	if (ret < 0) {
 		giterr_set_oom();
 		return ret;
 	}
 	assert(ret != 0);
-	kh_value(pb->object_ix, pos) = po;
+	git_oidmap_set_value_at(pb->object_ix, pos, po);
 
 	pb->done = false;
 
@@ -517,11 +514,11 @@ static int cb_tag_foreach(const char *name, git_oid *oid, void *data)
 
 	GIT_UNUSED(name);
 
-	pos = kh_get(oid, pb->object_ix, oid);
-	if (pos == kh_end(pb->object_ix))
+	pos = git_oidmap_lookup_index(pb->object_ix, oid);
+	if (!git_oidmap_valid_index(pb->object_ix, pos))
 		return 0;
 
-	po = kh_value(pb->object_ix, pos);
+	po = git_oidmap_value_at(pb->object_ix, pos);
 	po->tagged = 1;
 
 	/* TODO: peel objects */
@@ -1541,7 +1538,7 @@ static int retrieve_object(git_walk_object **out, git_packbuilder *pb, const git
 		if ((error = lookup_walk_object(&obj, pb, id)) < 0)
 			return error;
 
-		git_oidmap_insert(pb->walk_objects, &obj->id, obj, error);
+		git_oidmap_insert(pb->walk_objects, &obj->id, obj, &error);
 	}
 
 	*out = obj;

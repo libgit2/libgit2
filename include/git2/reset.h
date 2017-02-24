@@ -53,7 +53,7 @@ typedef enum {
  *
  * @param reset_type Kind of reset operation to perform.
  *
- * @param checkout_opts Checkout options to be used for a HARD reset.
+ * @param checkout_opts Optional checkout options to be used for a HARD reset.
  * The checkout_strategy field will be overridden (based on reset_type).
  * This parameter can be used to propagate notify and progress callbacks.
  *

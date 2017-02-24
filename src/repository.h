@@ -126,8 +126,9 @@ struct git_repository {
 	git_attr_cache *attrcache;
 	git_diff_driver_registry *diff_drivers;
 
-	char *path_repository;
-	char *path_gitlink;
+	char *gitlink;
+	char *gitdir;
+	char *commondir;
 	char *workdir;
 	char *namespace;
 
@@ -137,6 +138,7 @@ struct git_repository {
 	git_array_t(git_buf) reserved_names;
 
 	unsigned is_bare:1;
+	unsigned is_worktree:1;
 
 	unsigned int lru_counter;
 
@@ -152,6 +154,7 @@ GIT_INLINE(git_attr_cache *) git_repository_attr_cache(git_repository *repo)
 }
 
 int git_repository_head_tree(git_tree **tree, git_repository *repo);
+int git_repository_create_head(const char *git_dir, const char *ref_name);
 
 /*
  * Weak pointers to repository internals.

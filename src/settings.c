@@ -16,6 +16,7 @@
 #include "global.h"
 #include "object.h"
 #include "refs.h"
+#include "transports/smart.h"
 
 void git_libgit2_version(int *major, int *minor, int *rev)
 {
@@ -220,6 +221,10 @@ int git_libgit2_opts(int key, ...)
 			git_buf_sanitize(out);
 			error = git_buf_sets(out, git__user_agent);
 		}
+		break;
+
+	case GIT_OPT_ENABLE_OFS_DELTA:
+		git_smart__ofs_delta_enabled = (va_arg(ap, int) != 0);
 		break;
 
 	default:
