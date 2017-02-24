@@ -2,6 +2,7 @@ version: '{build}'
 branches:
   only:
   - master
+  - appveyor
   - /^maint.*/
 environment:
   GITTEST_INVASIVE_FS_STRUCTURE: 1
