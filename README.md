@@ -124,6 +124,14 @@ On most systems you can build the library using the following commands
 
 Alternatively you can point the CMake GUI tool to the CMakeLists.txt file and generate platform specific build project or IDE workspace.
 
+Once built, you can run the tests from the `build` directory with the command
+
+	$ make test
+
+Alternatively you can run the test suite directly using,
+
+	$ ./libgit2_clar
+
 To install the library you can specify the install prefix by setting:
 
 	$ cmake .. -DCMAKE_INSTALL_PREFIX=/install/prefix
