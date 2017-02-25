@@ -12,12 +12,12 @@ static git_repository *g_repo;
 
 void test_refs_create__initialize(void)
 {
-   g_repo = cl_git_sandbox_init("testrepo");
+	g_repo = cl_git_sandbox_init("testrepo");
 }
 
 void test_refs_create__cleanup(void)
 {
-   cl_git_sandbox_cleanup();
+	cl_git_sandbox_cleanup();
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 1));
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_SYMBOLIC_REF_CREATION, 1));
@@ -25,7 +25,7 @@ void test_refs_create__cleanup(void)
 
 void test_refs_create__symbolic(void)
 {
-   // create a new symbolic reference
+	/* create a new symbolic reference */
 	git_reference *new_reference, *looked_up_ref, *resolved_ref;
 	git_repository *repo2;
 	git_oid id;
@@ -116,7 +116,7 @@ void test_refs_create__symbolic_with_arbitrary_content(void)
 
 void test_refs_create__deep_symbolic(void)
 {
-   // create a deep symbolic reference
+	/* create a deep symbolic reference */
 	git_reference *new_reference, *looked_up_ref, *resolved_ref;
 	git_oid id;
 
@@ -136,7 +136,7 @@ void test_refs_create__deep_symbolic(void)
 
 void test_refs_create__oid(void)
 {
-   // create a new OID reference
+	/* create a new OID reference */
 	git_reference *new_reference, *looked_up_ref;
 	git_repository *repo2;
 	git_oid id;
