@@ -1130,6 +1130,18 @@ int git_reference__update_terminal(
 	return error;
 }
 
+static const char *commit_type(const git_commit *commit)
+{
+	unsigned int count = git_commit_parentcount(commit);
+
+	if (count >= 2)
+		return " (merge)";
+	else if (count == 0)
+		return " (initial)";
+	else
+		return "";
+}
+
 int git_reference__update_for_commit(
 	git_repository *repo,
 	git_reference *ref,
@@ -1146,7 +1158,7 @@ int git_reference__update_for_commit(
 	if ((error = git_commit_lookup(&commit, repo, id)) < 0 ||
 		(error = git_buf_printf(&reflog_msg, "%s%s: %s",
 			operation ? operation : "commit",
-			git_commit_parentcount(commit) == 0 ? " (initial)" : "",
+			commit_type(commit),
 			git_commit_summary(commit))) < 0)
 		goto done;
 
