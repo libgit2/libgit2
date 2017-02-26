@@ -18,11 +18,11 @@ other's toes.
  - If a function returns an object as a return value, that function is
    a getter and the object's lifetime is tied to the parent
    object. Objects which are returned as the first argument as a
-   pointer-to-pointer are owned by the caller and it is repsponsible
+   pointer-to-pointer are owned by the caller and it is responsible
    for freeing it. Strings are returned via `git_buf` in order to
    allow for re-use and safe freeing.
 
- - Most of what libgit2 does relates to I/O so you as a general rule
+ - Most of what libgit2 does relates to I/O so as a general rule
    you should assume that any function can fail due to errors as even
    getting data from the filesystem can result in all sorts of errors
    and complex failure cases.
