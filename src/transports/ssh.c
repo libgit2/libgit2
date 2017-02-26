@@ -36,12 +36,28 @@ static HMODULE git_libssh2_handle;
 #define LOOKUP_LIBSSH2_SYMBOL(symbol) \
 	git_ ## symbol = (void *) GetProcAddress(git_libssh2_handle, #symbol)
 
+#define LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(symbol)                                   \
+        do {                                                            \
+                git_ ## symbol = (void *) GetProcAddress(git_libssh2_handle, #symbol); \
+                if (git_ ## symbol == NULL) {                           \
+                        giterr_set(GITERR_SSH, "failed to lookup required function"); \
+                }                                                       \
+        } while(0)
+
 #else
 
 static void *git_libssh2_handle;
 
 #define LOOKUP_LIBSSH2_SYMBOL(symbol) \
 	git_ ## symbol = dlsym(git_libssh2_handle, #symbol)
+
+#define LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(symbol)                           \
+        do {                                                            \
+                git_ ## symbol = dlsym(git_libssh2_handle, #symbol);    \
+                if (git_ ## symbol == NULL) {                           \
+                        giterr_set(GITERR_SSH, "failed to lookup required function"); \
+                }                                                       \
+        } while(0)
 
 #endif
 
@@ -1033,34 +1049,34 @@ int git_transport_ssh_global_init(void)
 	}
 
 
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_agent_connect);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_agent_disconnect);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_agent_free);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_agent_get_identity);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_agent_init);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_agent_list_identities);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_agent_userauth);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_channel_close);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_channel_free);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_channel_open_ex);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_channel_process_startup);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_channel_read_ex);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_channel_set_blocking);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_channel_write_ex);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_hostkey_hash);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_init);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_session_abstract);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_session_free);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_session_init_ex);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_session_last_error);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_session_set_blocking);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_session_startup);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_userauth_authenticated);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_userauth_keyboard_interactive_ex);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_userauth_list);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_userauth_password_ex);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_userauth_publickey);
-	LOOKUP_LIBSSH2_SYMBOL(libssh2_userauth_publickey_fromfile_ex);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_agent_connect);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_agent_disconnect);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_agent_free);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_agent_get_identity);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_agent_init);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_agent_list_identities);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_agent_userauth);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_channel_close);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_channel_free);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_channel_open_ex);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_channel_process_startup);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_channel_read_ex);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_channel_set_blocking);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_channel_write_ex);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_hostkey_hash);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_init);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_session_abstract);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_session_free);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_session_init_ex);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_session_last_error);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_session_set_blocking);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_session_startup);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_userauth_authenticated);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_userauth_keyboard_interactive_ex);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_userauth_list);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_userauth_password_ex);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_userauth_publickey);
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_userauth_publickey_fromfile_ex);
 	LOOKUP_LIBSSH2_SYMBOL(libssh2_userauth_publickey_frommemory);
 
 	git__on_shutdown(git_transport_ssh_global_shutdown);
