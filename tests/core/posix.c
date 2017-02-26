@@ -94,10 +94,10 @@ void test_core_posix__inet_pton(void)
 	cl_assert(p_inet_pton(AF_INET, "10.foo.bar.1", &addr) == 0);
 
 	/* Test unsupported address families */
-	cl_git_fail(p_inet_pton(12, "52.472", NULL)); /* AF_DECnet */
+	cl_git_fail(p_inet_pton(12, "52.472", &addr)); /* AF_DECnet */
 	cl_assert_equal_i(EAFNOSUPPORT, errno);
 
-	cl_git_fail(p_inet_pton(5, "315.124", NULL)); /* AF_CHAOS */
+	cl_git_fail(p_inet_pton(5, "315.124", &addr)); /* AF_CHAOS */
 	cl_assert_equal_i(EAFNOSUPPORT, errno);
 }
 
