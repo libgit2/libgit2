@@ -13,7 +13,14 @@
 
 PROJECT(libgit2 C)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+
 CMAKE_POLICY(SET CMP0015 NEW)
+IF (POLICY CMP0042)
+	CMAKE_POLICY(SET CMP0042 NEW)
+ENDIF()
+IF (POLICY CMP0051)
+	CMAKE_POLICY(SET CMP0051 NEW)
+ENDIF()
 
 # Add find modules to the path
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
@@ -24,93 +31,78 @@ INCLUDE(CheckSymbolExists)
 INCLUDE(CheckStructHasMember)
 INCLUDE(AddCFlagIfSupported)
 INCLUDE(FindPkgConfig)
+INCLUDE(FindStatNsec)
+INCLUDE(IdeSplitSources)
 
 # Build options
 #
-OPTION( SONAME				"Set the (SO)VERSION of the target"		ON  )
-OPTION( BUILD_SHARED_LIBS	"Build Shared Library (OFF for Static)"	ON  )
-OPTION( THREADSAFE			"Build libgit2 as threadsafe"			ON )
-OPTION( BUILD_CLAR			"Build Tests using the Clar suite"		ON  )
-OPTION( BUILD_EXAMPLES		"Build library usage example apps"		OFF )
-OPTION( TAGS				"Generate tags"							OFF )
-OPTION( PROFILE				"Generate profiling information"		OFF )
-OPTION( ENABLE_TRACE		"Enables tracing support"				OFF )
-OPTION( LIBGIT2_FILENAME	"Name of the produced binary"			OFF )
+OPTION(SONAME              "Set the (SO)VERSION of the target"           ON )
+OPTION(BUILD_SHARED_LIBS   "Build Shared Library (OFF for Static)"       ON )
+OPTION(THREADSAFE          "Build libgit2 as threadsafe"                 ON )
+OPTION(BUILD_CLAR          "Build Tests using the Clar suite"            ON )
+OPTION(BUILD_EXAMPLES      "Build library usage example apps"            OFF)
+OPTION(TAGS                "Generate tags"                               OFF)
+OPTION(PROFILEi            "Generate profiling information"              OFF)
+OPTION(ENABLE_TRACE        "Enables tracing support"                     OFF)
+OPTION(LIBGIT2_FILENAME    "Name of the produced binary"                 OFF)
 
-OPTION( USE_ICONV			"Link with and use iconv library" 		OFF )
-OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
-OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"   OFF )
-OPTION( VALGRIND			"Configure build for valgrind"			OFF )
-OPTION( CURL			"Use curl for HTTP if available" ON)
-OPTION( DEBUG_POOL			"Enable debug pool allocator"			OFF )
+OPTION(USE_ICONV           "Link with and use iconv library"             OFF)
+OPTION(USE_SSH             "Link with libssh to enable SSH support"      ON )
+OPTION(USE_GSSAPI          "Link with libgssapi for SPNEGO auth"         OFF)
+OPTION(VALGRIND            "Configure build for valgrind"                OFF)
+OPTION(CURL                "Use curl for HTTP if available"              ON )
+OPTION(DEBUG_POOL          "Enable debug pool allocator"                 OFF)
 
-IF(DEBUG_POOL)
-	ADD_DEFINITIONS(-DGIT_DEBUG_POOL)
-ENDIF()
-
-IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-	SET( USE_ICONV ON )
-	FIND_PACKAGE(Security)
-	FIND_PACKAGE(CoreFoundation REQUIRED)
-ENDIF()
-
-IF(MSVC)
+IF (MSVC)
 	# This option is only available when building with MSVC. By default, libgit2
 	# is build using the cdecl calling convention, which is useful if you're
 	# writing C. However, the CLR and Win32 API both expect stdcall.
 	#
 	# If you are writing a CLR program and want to link to libgit2, you'll want
 	# to turn this on by invoking CMake with the "-DSTDCALL=ON" argument.
-	OPTION( STDCALL			"Build libgit2 with the __stdcall convention"	OFF  )
+	OPTION(STDCALL         "Build libgit2 with the __stdcall convention" OFF)
 
-	# This option must match the settings used in your program, in particular if you
-	# are linking statically
-	OPTION( STATIC_CRT		"Link the static CRT libraries"	ON  )
+	# This option must match the settings used in your program, in particular
+	# if are linking statically
+	OPTION(STATIC_CRT      "Link the static CRT libraries"               ON )
 
 	# If you want to embed a copy of libssh2 into libgit2, pass a
 	# path to libssh2
-	OPTION( EMBED_SSH_PATH		"Path to libssh2 to embed (Windows)" OFF )
+	OPTION(EMBED_SSH_PATH  "Path to libssh2 to embed (Windows)"          OFF)
 
-	ADD_DEFINITIONS(-D_SCL_SECURE_NO_WARNINGS)
-	ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
-	ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_DEPRECATE)
+	# Enable MSVC CRTDBG memory leak reporting when in debug mode.
+	OPTION(MSVC_CRTDBG     "Enable CRTDBG memory leak reporting"         OFF)
 ENDIF()
 
-
-IF(WIN32)
+IF (WIN32)
 	# By default, libgit2 is built with WinHTTP.  To use the built-in
 	# HTTP transport, invoke CMake with the "-DWINHTTP=OFF" argument.
-	OPTION(	WINHTTP			"Use Win32 WinHTTP routines"	ON	)
-ENDIF()
-
-IF(MSVC)
-	# Enable MSVC CRTDBG memory leak reporting when in debug mode.
-	OPTION(MSVC_CRTDBG "Enable CRTDBG memory leak reporting" OFF)
-ENDIF()
-
-IF (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-	OPTION( USE_OPENSSL                     "Link with and use openssl library"             ON )
-ENDIF()
-
-CHECK_STRUCT_HAS_MEMBER ("struct stat" st_mtim "sys/types.h;sys/stat.h"
-	HAVE_STRUCT_STAT_ST_MTIM LANGUAGE C)
-CHECK_STRUCT_HAS_MEMBER ("struct stat" st_mtimespec "sys/types.h;sys/stat.h"
-	HAVE_STRUCT_STAT_ST_MTIMESPEC LANGUAGE C)
-CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtime_nsec sys/stat.h
-	HAVE_STRUCT_STAT_MTIME_NSEC LANGUAGE C)
-
-IF (HAVE_STRUCT_STAT_ST_MTIM)
-	CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtim.tv_nsec sys/stat.h
-		HAVE_STRUCT_STAT_NSEC LANGUAGE C)
-ELSEIF (HAVE_STRUCT_STAT_ST_MTIMESPEC)
-	CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtimespec.tv_nsec sys/stat.h
-		HAVE_STRUCT_STAT_NSEC LANGUAGE C)
-ELSE ()
-	SET( HAVE_STRUCT_STAT_NSEC ON )
+	OPTION(WINHTTP         "Use Win32 WinHTTP routines"	                 ON )
 ENDIF()
 
 IF (HAVE_STRUCT_STAT_NSEC OR WIN32)
-	OPTION( USE_NSEC		"Care about sub-second file mtimes and ctimes"	ON  )
+	OPTION(USE_NSEC        "Use sub-second file mtimes and ctimes"       ON )
+ENDIF()
+
+IF (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+	OPTION(USE_OPENSSL     "Link with and use openssl library"           ON )
+ENDIF()
+
+
+IF(DEBUG_POOL)
+	ADD_DEFINITIONS(-DGIT_DEBUG_POOL)
+ENDIF()
+
+IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+	SET(USE_ICONV ON)
+	FIND_PACKAGE(Security)
+	FIND_PACKAGE(CoreFoundation REQUIRED)
+ENDIF()
+
+IF(MSVC)
+	ADD_DEFINITIONS(-D_SCL_SECURE_NO_WARNINGS)
+	ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
+	ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_DEPRECATE)
 ENDIF()
 
 # This variable will contain the libraries we need to put into
@@ -173,7 +165,7 @@ ENDFUNCTION()
 
 # This function splits the sources files up into their appropriate
 # subdirectories.  This is especially useful for IDEs like Xcode and
-# Visual Studio, so that you can navigate into the libgit2_clar project,
+# Visual Studio, so that you can navigate into the git2_tests project,
 # and see the folders within the tests folder (instead of just seeing all
 # source and tests in a single folder.)
 FUNCTION(IDE_SPLIT_SOURCES target)
@@ -549,7 +541,6 @@ IF (OPENSSL_FOUND)
 ENDIF()
 
 
-
 IF (THREADSAFE)
 	IF (NOT WIN32)
 		FIND_PACKAGE(Threads REQUIRED)
@@ -587,7 +578,7 @@ ELSE()
 	ENDIF()
 	FILE(GLOB SRC_OS src/unix/*.c src/unix/*.h)
 ENDIF()
-FILE(GLOB SRC_GIT2 src/*.c src/*.h src/transports/*.c src/transports/*.h src/xdiff/*.c src/xdiff/*.h)
+FILE(GLOB SRC_COMMON src/*.c src/*.h src/transports/*.c src/transports/*.h src/xdiff/*.c src/xdiff/*.h)
 
 # Determine architecture of the machine
 IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -600,8 +591,21 @@ ELSE()
 	MESSAGE(FATAL_ERROR "Unsupported architecture (CMAKE_SIZEOF_VOID_P is unset)")
 ENDIF()
 
+SET(SRC_LIBGIT2 ${SRC_COMMON} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SSH} ${SRC_SHA1})
+
+# On a sufficiently new cmake, we can compile the objects that make up our
+# library as a separate target (without needing to link a library or an
+# executable).  This will satisfy the dependency for our tests, and saves
+# us from having to recompile them.
+IF (${CMAKE_VERSION} VERSION_GREATER 2.8.7)
+	ADD_LIBRARY(git2_src OBJECT ${SRC_LIBGIT2})
+	IDE_SPLIT_SOURCES(git2_src)
+
+	SET(SRC_LIBGIT2 $<TARGET_OBJECTS:git2_src>)
+ENDIF()
+
 # Compile and link libgit2
-ADD_LIBRARY(git2 ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SSH} ${SRC_SHA1} ${WIN_RC})
+ADD_LIBRARY(git2 ${SRC_LIBGIT2} ${WIN_RC})
 TARGET_LINK_LIBRARIES(git2 ${SECURITY_DIRS})
 TARGET_LINK_LIBRARIES(git2 ${COREFOUNDATION_DIRS})
 TARGET_LINK_LIBRARIES(git2 ${SSL_LIBRARIES})
@@ -678,20 +682,21 @@ IF (BUILD_CLAR)
 		${CLAR_PATH}/clar.c
 		PROPERTIES OBJECT_DEPENDS ${CLAR_PATH}/clar.suite)
 
-	ADD_EXECUTABLE(libgit2_clar ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_CLAR} ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SSH} ${SRC_SHA1})
+	ADD_EXECUTABLE(git2_tests ${SRC_CLAR} ${SRC_TEST} ${SRC_LIBGIT2})
 
-	TARGET_LINK_LIBRARIES(libgit2_clar ${COREFOUNDATION_DIRS})
-	TARGET_LINK_LIBRARIES(libgit2_clar ${SECURITY_DIRS})
-	TARGET_LINK_LIBRARIES(libgit2_clar ${SSL_LIBRARIES})
-	TARGET_LINK_LIBRARIES(libgit2_clar ${SSH_LIBRARIES})
-	TARGET_LINK_LIBRARIES(libgit2_clar ${GSSAPI_LIBRARIES})
-	TARGET_LINK_LIBRARIES(libgit2_clar ${ICONV_LIBRARIES})
-	TARGET_OS_LIBRARIES(libgit2_clar)
-	IDE_SPLIT_SOURCES(libgit2_clar)
+	TARGET_LINK_LIBRARIES(git2_tests ${COREFOUNDATION_DIRS})
+	TARGET_LINK_LIBRARIES(git2_tests ${SECURITY_DIRS})
+	TARGET_LINK_LIBRARIES(git2_tests ${SSL_LIBRARIES})
+	TARGET_LINK_LIBRARIES(git2_tests ${SSH_LIBRARIES})
+	TARGET_LINK_LIBRARIES(git2_tests ${GSSAPI_LIBRARIES})
+	TARGET_LINK_LIBRARIES(git2_tests ${ICONV_LIBRARIES})
+	TARGET_OS_LIBRARIES(git2_tests)
+	IDE_SPLIT_SOURCES(git2_tests)
+	SET_TARGET_PROPERTIES(git2_tests PROPERTIES OUTPUT_NAME libgit2_clar)
 
 	IF (MSVC_IDE)
 		# Precompiled headers
-		SET_TARGET_PROPERTIES(libgit2_clar PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
+		SET_TARGET_PROPERTIES(git2_tests PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
 	ENDIF ()
 
 	ENABLE_TESTING()
