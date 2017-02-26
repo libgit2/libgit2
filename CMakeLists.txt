@@ -345,6 +345,9 @@ ENDIF()
 IF (USE_SSH)
    ADD_DEFINITIONS(-DGIT_SSH)
 	INCLUDE_DIRECTORIES(deps/libssh2)
+  IF(NOT WIN32)
+    SET(SSH_LIBRARIES "dl")
+  ENDIF()
 ENDIF()
 
 # Optional external dependency: libgssapi
