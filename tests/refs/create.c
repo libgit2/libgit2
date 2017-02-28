@@ -300,53 +300,68 @@ void test_refs_create__creating_a_loose_ref_with_invalid_windows_name(void)
 	test_win32_name("refs/heads/com1");
 }
 
-void test_refs_create__does_not_fsync_by_default(void)
-{
-	git_reference *ref = NULL;
-	git_refdb *refdb;
-	git_oid id;
-
-	git_oid_fromstr(&id, current_master_tip);
-	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/fsync_test", &id, 0, "log message"));
-	git_reference_free(ref);
-
-	cl_git_pass(git_repository_refdb(&refdb, g_repo));
-	cl_git_pass(git_refdb_compress(refdb));
-	git_refdb_free(refdb);
-
-	cl_assert_equal_i(0, p_fsync__cnt);
-}
-
-void test_refs_create__fsyncs_when_requested(void)
-{
-	git_reference *ref = NULL;
-	git_refdb *refdb;
-	git_oid id;
-
-	/* Creating a loose ref involves fsync'ing the reference, the
-	 * reflog and (on non-Windows) the containing directories.
-	 * Creating a packed ref involves fsync'ing the packed ref file
-	 * and (on non-Windows) the containing directory.
-	 */
+/* Creating a loose ref involves fsync'ing the reference, the
+ * reflog and (on non-Windows) the containing directories.
+ * Creating a packed ref involves fsync'ing the packed ref file
+ * and (on non-Windows) the containing directory.
+ */
 #ifdef GIT_WIN32
-	int expected_create = 2, expected_compress = 1;
+static int expected_fsyncs_create = 2, expected_fsyncs_compress = 1;
 #else
-	int expected_create = 4, expected_compress = 2;
+static int expected_fsyncs_create = 4, expected_fsyncs_compress = 2;
 #endif
 
-	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONOUS_OBJECT_CREATION, 1));
+static void count_fsyncs(size_t *create_count, size_t *compress_count)
+{
+	git_reference *ref = NULL;
+	git_refdb *refdb;
+	git_oid id;
+
 	p_fsync__cnt = 0;
 
 	git_oid_fromstr(&id, current_master_tip);
 	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/fsync_test", &id, 0, "log message"));
 	git_reference_free(ref);
-	cl_assert_equal_i(expected_create, p_fsync__cnt);
 
+	*create_count = p_fsync__cnt;
 	p_fsync__cnt = 0;
 
 	cl_git_pass(git_repository_refdb(&refdb, g_repo));
 	cl_git_pass(git_refdb_compress(refdb));
 	git_refdb_free(refdb);
 
-	cl_assert_equal_i(expected_compress, p_fsync__cnt);
+	*compress_count = p_fsync__cnt;
+	p_fsync__cnt = 0;
+}
+
+void test_refs_create__does_not_fsync_by_default(void)
+{
+	size_t create_count, compress_count;
+	count_fsyncs(&create_count, &compress_count);
+
+	cl_assert_equal_i(0, create_count);
+	cl_assert_equal_i(0, compress_count);
+}
+
+void test_refs_create__fsyncs_when_global_opt_set(void)
+{
+	size_t create_count, compress_count;
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONOUS_OBJECT_CREATION, 1));
+	count_fsyncs(&create_count, &compress_count);
+
+	cl_assert_equal_i(expected_fsyncs_create, create_count);
+	cl_assert_equal_i(expected_fsyncs_compress, compress_count);
+}
+
+void test_refs_create__fsyncs_when_repo_config_set(void)
+{
+	size_t create_count, compress_count;
+
+	cl_repo_set_bool(g_repo, "core.fsyncObjectFiles", true);
+
+	count_fsyncs(&create_count, &compress_count);
+
+	cl_assert_equal_i(expected_fsyncs_create, create_count);
+	cl_assert_equal_i(expected_fsyncs_compress, compress_count);
 }

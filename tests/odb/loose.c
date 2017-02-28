@@ -3,6 +3,7 @@
 #include "git2/odb_backend.h"
 #include "posix.h"
 #include "loose_data.h"
+#include "repository.h"
 
 #ifdef __ANDROID_API__
 # define S_IREAD        S_IRUSR
@@ -183,4 +184,24 @@ void test_odb_loose__fsync_obeys_global_setting(void)
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONOUS_OBJECT_CREATION, 1));
 	write_object_to_loose_odb(0);
 	cl_assert(p_fsync__cnt > 0);
+}
+
+void test_odb_loose__fsync_obeys_repo_setting(void)
+{
+	git_repository *repo;
+	git_odb *odb;
+	git_oid oid;
+
+	cl_git_pass(git_repository_init(&repo, "test-objects", 1));
+	cl_git_pass(git_repository_odb__weakptr(&odb, repo));
+	cl_git_pass(git_odb_write(&oid, odb, "No fsync here\n", 14, GIT_OBJ_BLOB));
+	cl_assert(p_fsync__cnt == 0);
+	git_repository_free(repo);
+
+	cl_git_pass(git_repository_open(&repo, "test-objects"));
+	cl_repo_set_bool(repo, "core.fsyncObjectFiles", true);
+	cl_git_pass(git_repository_odb__weakptr(&odb, repo));
+	cl_git_pass(git_odb_write(&oid, odb, "Now fsync\n", 10, GIT_OBJ_BLOB));
+	cl_assert(p_fsync__cnt > 0);
+	git_repository_free(repo);
 }

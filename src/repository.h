@@ -46,6 +46,7 @@ typedef enum {
 	GIT_CVAR_LOGALLREFUPDATES, /* core.logallrefupdates */
 	GIT_CVAR_PROTECTHFS,    /* core.protectHFS */
 	GIT_CVAR_PROTECTNTFS,   /* core.protectNTFS */
+	GIT_CVAR_FSYNCOBJECTFILES, /* core.fsyncObjectFiles */
 	GIT_CVAR_CACHE_MAX
 } git_cvar_cached;
 
@@ -106,6 +107,8 @@ typedef enum {
 	GIT_PROTECTHFS_DEFAULT = GIT_CVAR_FALSE,
 	/* core.protectNTFS */
 	GIT_PROTECTNTFS_DEFAULT = GIT_CVAR_FALSE,
+	/* core.fsyncObjectFiles */
+	GIT_FSYNCOBJECTFILES_DEFAULT = GIT_CVAR_FALSE,
 } git_cvar_value;
 
 /* internal repository init flags */

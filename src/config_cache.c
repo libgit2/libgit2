@@ -78,6 +78,7 @@ static struct map_data _cvar_maps[] = {
 	{"core.logallrefupdates", NULL, 0, GIT_LOGALLREFUPDATES_DEFAULT },
 	{"core.protecthfs", NULL, 0, GIT_PROTECTHFS_DEFAULT },
 	{"core.protectntfs", NULL, 0, GIT_PROTECTNTFS_DEFAULT },
+	{"core.fsyncobjectfiles", NULL, 0, GIT_FSYNCOBJECTFILES_DEFAULT },
 };
 
 int git_config__cvar(int *out, git_config *config, git_cvar_cached cvar)

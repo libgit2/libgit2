@@ -1385,12 +1385,16 @@ int git_packbuilder_write(
 	git_indexer *indexer;
 	git_transfer_progress stats;
 	struct pack_write_context ctx;
+	int t;
 
 	PREPARE_PACK;
 
 	if (git_indexer_new(
 		&indexer, path, mode, pb->odb, progress_cb, progress_cb_payload) < 0)
 		return -1;
+
+	if (!git_repository__cvar(&t, pb->repo, GIT_CVAR_FSYNCOBJECTFILES) && t)
+		git_indexer__set_fsync(indexer, 1);
 
 	ctx.indexer = indexer;
 	ctx.stats = &stats;
