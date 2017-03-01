@@ -4,7 +4,7 @@
 #include "git2/reflog.h"
 #include "reflog.h"
 
-
+static const char *merge_reflog_message = "commit (merge): Merge commit";
 static const char *new_ref = "refs/heads/test-reflog";
 static const char *current_master_tip = "a65fedf39aefe402d3bb6e24df4d4f5fe4547750";
 #define commit_msg "commit: bla bla"
@@ -447,4 +447,46 @@ void test_refs_reflog_reflog__logallrefupdates_nonbare_set_false(void)
 	git_config_free(config);
 
 	assert_no_reflog_update();
+}
+
+void test_refs_reflog_reflog__show_merge_for_merge_commits(void)
+{
+	git_oid b1_oid;
+	git_oid b2_oid;
+	git_oid merge_commit_oid;
+	git_commit *b1_commit;
+	git_commit *b2_commit;
+	git_signature *s;
+	git_commit *parent_commits[2];
+	git_tree *tree;
+	git_reflog *log;
+	const git_reflog_entry *entry;
+
+	cl_git_pass(git_signature_now(&s, "alice", "alice@example.com"));
+
+	cl_git_pass(git_reference_name_to_id(&b1_oid, g_repo, "HEAD"));
+	cl_git_pass(git_reference_name_to_id(&b2_oid, g_repo, "refs/heads/test"));
+
+	cl_git_pass(git_commit_lookup(&b1_commit, g_repo, &b1_oid));
+	cl_git_pass(git_commit_lookup(&b2_commit, g_repo, &b2_oid));
+
+	parent_commits[0] = b1_commit;
+	parent_commits[1] = b2_commit;
+
+	cl_git_pass(git_commit_tree(&tree, b1_commit));
+
+	cl_git_pass(git_commit_create(&merge_commit_oid,
+		g_repo, "HEAD", s, s, NULL,
+		"Merge commit", tree,
+		2, (const struct git_commit **) parent_commits));
+
+	cl_git_pass(git_reflog_read(&log, g_repo, "HEAD"));
+	entry = git_reflog_entry_byindex(log, 0);
+	cl_assert_equal_s(merge_reflog_message, git_reflog_entry_message(entry));
+
+	git_reflog_free(log);
+	git_tree_free(tree);
+	git_commit_free(b1_commit);
+	git_commit_free(b2_commit);
+	git_signature_free(s);
 }
