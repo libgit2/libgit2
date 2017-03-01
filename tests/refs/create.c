@@ -92,6 +92,7 @@ void test_refs_create__symbolic_with_arbitrary_content(void)
 	cl_assert(git_reference_type(looked_up_ref) & GIT_REF_SYMBOLIC);
 	cl_assert(reference_is_packed(looked_up_ref) == 0);
 	cl_assert_equal_s(looked_up_ref->name, new_head_tracker);
+	git_reference_free(looked_up_ref);
 
 	/* Ensure the target is what we expect it to be */
 	cl_assert_equal_s(git_reference_symbolic_target(new_reference), arbitrary_target);
@@ -111,7 +112,6 @@ void test_refs_create__symbolic_with_arbitrary_content(void)
 	git_repository_free(repo2);
 	git_reference_free(new_reference);
 	git_reference_free(looked_up_ref);
-
 }
 
 void test_refs_create__deep_symbolic(void)
