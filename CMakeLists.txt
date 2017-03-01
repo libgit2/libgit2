@@ -464,7 +464,11 @@ IF (MSVC)
    # Precompiled headers
 
 ELSE ()
-	SET(CMAKE_C_FLAGS "-D_GNU_SOURCE -Wall -Wextra ${CMAKE_C_FLAGS}")
+	SET(CMAKE_C_FLAGS "-D_GNU_SOURCE -Wall ${CMAKE_C_FLAGS}")
+	
+	if (NOT CMAKE_SYSTEM_NAME MATCHES "Haiku") # Haiku uses GCC 2 which doesn't support -Wextra
+		SET(CMAKE_C_FLAGS "-Wextra ${CMAKE_C_FLAGS}")
+	endif()
 
 	IF (CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
 		SET(CMAKE_C_FLAGS "-std=c99 -D_POSIX_C_SOURCE=200112L -D__EXTENSIONS__ -D_POSIX_PTHREAD_SEMANTICS ${CMAKE_C_FLAGS}")
