@@ -14,6 +14,7 @@
 PROJECT(libgit2 C)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 CMAKE_POLICY(SET CMP0015 NEW)
+CMAKE_POLICY(SET CMP0042 NEW)
 
 # Add find modules to the path
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
@@ -37,11 +38,11 @@ OPTION( PROFILE				"Generate profiling information"		OFF )
 OPTION( ENABLE_TRACE		"Enables tracing support"				OFF )
 OPTION( LIBGIT2_FILENAME	"Name of the produced binary"			OFF )
 
-OPTION( USE_ICONV			"Link with and use iconv library" 		OFF )
+OPTION( USE_ICONV			"Link with and use iconv library"		OFF )
 OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
-OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"   OFF )
+OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"	OFF )
 OPTION( VALGRIND			"Configure build for valgrind"			OFF )
-OPTION( CURL			"Use curl for HTTP if available" ON)
+OPTION( CURL				"User curl for HTTP if available"		ON)
 OPTION( DEBUG_POOL			"Enable debug pool allocator"			OFF )
 
 IF(DEBUG_POOL)
@@ -52,6 +53,8 @@ IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	SET( USE_ICONV ON )
 	FIND_PACKAGE(Security)
 	FIND_PACKAGE(CoreFoundation REQUIRED)
+	OPTION( BUILD_FRAMEWORK	"Build libgit2 as a framework"			OFF )
+	SET( INSTALL_NAME_DIR /Library/Frameworks )
 ENDIF()
 
 IF(MSVC)
@@ -613,6 +616,24 @@ TARGET_LINK_LIBRARIES(git2 ${GSSAPI_LIBRARIES})
 TARGET_LINK_LIBRARIES(git2 ${ICONV_LIBRARIES})
 TARGET_OS_LIBRARIES(git2)
 
+# Build as a framework
+IF (BUILD_FRAMEWORK)
+	# We have to do separate steps to preserve the layout
+	SET_PROPERTY(SOURCE include/git2.h PROPERTY MACOSX_PACKAGE_LOCATION "Headers/")
+
+	FILE(GLOB HEADERS include/git2/*.h)
+	SET_PROPERTY(SOURCE ${HEADERS} PROPERTY MACOSX_PACKAGE_LOCATION "Headers/git2/")
+
+	FILE(GLOB SYS_HEADERS include/git2/sys/*.h)
+	SET_PROPERTY(SOURCE ${SYS_HEADERS} PROPERTY MACOSX_PACKAGE_LOCATION "Headers/git2/sys/")
+
+	SET_TARGET_PROPERTIES(git2 PROPERTIES
+		FRAMEWORK TRUE
+		FRAMEWORK_VERSION A
+		MACOSX_FRAMEWORK_IDENTIFIER "org.libgit2.framework"
+	)
+ENDIF()
+
 # Workaround for Cmake bug #0011240 (see http://public.kitware.com/Bug/view.php?id=11240)
 # Win64+MSVC+static libs = linker error
 IF(MSVC AND GIT_ARCH_64 AND NOT BUILD_SHARED_LIBS)
@@ -645,6 +666,7 @@ INSTALL(TARGETS git2
 	RUNTIME DESTINATION ${BIN_INSTALL_DIR}
 	LIBRARY DESTINATION ${LIB_INSTALL_DIR}
 	ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
+	FRAMEWORK DESTINATION ${INSTALL_NAME_DIR}
 )
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/libgit2.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig )
 INSTALL(DIRECTORY include/git2 DESTINATION ${INCLUDE_INSTALL_DIR} )
