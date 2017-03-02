@@ -651,10 +651,11 @@ static int collect_attr_files(
 			if (!error) {
 				int length = strlen(path);
 				char *attr_file_parent_path = malloc((length + 1) * sizeof(char));
+				int i;
 
 				// Then push potential gitattribute files along the path components
 				// of the full file path.
-				for (int i = 0; i < length; i++) {
+				for (i = 0; i < length; i++) {
 					if (path[i] == '/') {
 						strncpy(attr_file_parent_path, path, i);
 
