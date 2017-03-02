@@ -211,6 +211,7 @@ int git_attr_file__out_of_date(
 
 	switch (file->source) {
 	case GIT_ATTR_FILE__IN_MEMORY:
+	case GIT_ATTR_FILE__FROM_TREE:
 		return 0;
 
 	case GIT_ATTR_FILE__FROM_FILE:

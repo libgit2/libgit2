@@ -589,32 +589,6 @@ static void release_attr_files(git_vector *files)
 	git_vector_free(files);
 }
 
-static int walk_tree(
-	const char *root,
-	const git_tree_entry *entry,
-	void *payload)
-{
-	int error = 0;
-	size_t compare_len = 0;
-	static size_t git_attr_file_len = sizeof(GIT_ATTR_FILE);
-	attr_walk_up_info *info = (attr_walk_up_info *)payload;
-
-	const char *filename = git_tree_entry_name(entry);
-
-	compare_len = min(strlen(filename), git_attr_file_len);
-
-	if (compare_len != git_attr_file_len &&
-			memcmp((void *)filename, GIT_ATTR_FILE, compare_len) == 0) {
-		git_attr_file_source src[1] = {GIT_ATTR_FILE__FROM_TREE};
-
-		error = push_attr_file(info->repo, info->attr_session,
-			info->files, src[0], root, GIT_ATTR_FILE, info->lookup_tree);
-	}
-
-	return error;
-}
-
-
 static int collect_attr_files(
 	git_repository *repo,
 	git_attr_session *attr_session,
@@ -670,8 +644,29 @@ static int collect_attr_files(
 		if (lookup_tree != NULL) {
 			info.lookup_tree = lookup_tree;
 
-			/* walk this tree in the repo */
-			error = git_tree_walk(lookup_tree, GIT_TREEWALK_PRE, walk_tree, &info);
+			// Push the root .gitattributes file first
+			error = push_attr_file(info.repo, info.attr_session,
+				info.files, GIT_ATTR_FILE__FROM_TREE, NULL, GIT_ATTR_FILE, info.lookup_tree);
+
+			if (!error) {
+				int length = strlen(path);
+				char *attr_file_parent_path = malloc((length + 1) * sizeof(char));
+
+				// Then push potential gitattribute files along the path components
+				// of the full file path.
+				for (int i = 0; i < length; i++) {
+					if (path[i] == '/') {
+						strncpy(attr_file_parent_path, path, i);
+
+						error = push_attr_file(info.repo, info.attr_session,
+							info.files, GIT_ATTR_FILE__FROM_TREE, attr_file_parent_path, GIT_ATTR_FILE, info.lookup_tree);
+						if (error && error != GIT_ENOTFOUND)
+							break;
+					}
+				}
+
+				free(attr_file_parent_path);
+			}
 		} else {
 			/* walk the checkout on disk */
 			error = git_path_walk_up(&dir, workdir, push_one_attr, &info);
