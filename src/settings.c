@@ -9,6 +9,10 @@
 # include <openssl/err.h>
 #endif
 
+#ifdef GIT_MBEDTLS
+# include <mbedtls/error.h>
+#endif
+
 #include <git2.h>
 #include "common.h"
 #include "sysdir.h"
@@ -176,8 +180,34 @@ int git_libgit2_opts(int key, ...)
 				error = -1;
 			}
 		}
+#elif GIT_MBEDTLS
+		{
+			const char *file = va_arg(ap, const char *);
+			const char *path = va_arg(ap, const char *);
+			int ret = 0;
+			char errbuf[512];
+			mbedtls_x509_crt *cacert;
+			cacert = git__malloc(sizeof(mbedtls_x509_crt));
+			mbedtls_x509_crt_init(cacert);
+			if (file) {
+				ret = mbedtls_x509_crt_parse_file(cacert, file);
+			} else if (path) {
+				ret = mbedtls_x509_crt_parse_path(cacert, path);
+			}
+			if (!ret) {
+				mbedtls_x509_crt_free(cacert);
+				git__free(cacert);
+				mbedtls_strerror( ret, errbuf, 512 );
+				giterr_set(GITERR_SSL, "SSL error: failed to load CA certificates : %s (%d)", ret, errbuf);
+				error = -1;
+			} else {
+				mbedtls_x509_crt_free(git__ssl_conf->ca_chain);
+				git__free(git__ssl_conf->ca_chain);
+				mbedtls_ssl_conf_ca_chain(git__ssl_conf, cacert, NULL);
+			}
+		}
 #else
-		giterr_set(GITERR_NET, "cannot set certificate locations: OpenSSL is not enabled");
+		giterr_set(GITERR_NET, "Cannot set certificate locations: OpenSSL or mbedTLS is not enabled");
 		error = -1;
 #endif
 		break;
