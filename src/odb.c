@@ -695,7 +695,7 @@ static int odb_freshen_1(
 	return (int)found;
 }
 
-static int odb_freshen(git_odb *db, const git_oid *id)
+int git_odb__freshen(git_odb *db, const git_oid *id)
 {
 	assert(db && id);
 
@@ -1167,7 +1167,7 @@ int git_odb_write(
 	assert(oid && db);
 
 	git_odb_hash(oid, data, len, type);
-	if (odb_freshen(db, oid))
+	if (git_odb__freshen(db, oid))
 		return 0;
 
 	for (i = 0; i < db->backends.length && error < 0; ++i) {
@@ -1293,7 +1293,7 @@ int git_odb_stream_finalize_write(git_oid *out, git_odb_stream *stream)
 
 	git_hash_final(out, stream->hash_ctx);
 
-	if (odb_freshen(stream->backend->odb, out))
+	if (git_odb__freshen(stream->backend->odb, out))
 		return 0;
 
 	return stream->finalize_write(stream, out);

@@ -159,6 +159,9 @@ static int git_commit__create_internal(
 	if (git_repository_odb__weakptr(&odb, repo) < 0)
 		goto cleanup;
 
+	if (git_odb__freshen(odb, tree) < 0)
+		goto cleanup;
+
 	if (git_odb_write(id, odb, buf.ptr, buf.size, GIT_OBJ_COMMIT) < 0)
 		goto cleanup;
 
