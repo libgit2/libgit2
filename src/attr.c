@@ -634,7 +634,7 @@ static int collect_attr_files(
 	info.attr_session = attr_session;
 	info.flags = flags;
 	info.workdir = workdir;
-	if (git_repository_index__weakptr(&info.index, repo) < 0)
+	if (!repo->is_bare && git_repository_index__weakptr(&info.index, repo) < 0)
 		giterr_clear(); /* no error even if there is no index */
 	info.files = files;
 
