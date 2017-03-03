@@ -546,7 +546,9 @@ static int rebase_ensure_not_dirty(
 	}
 
 	if (check_workdir) {
-		if ((error = git_diff_index_to_workdir(&diff, repo, index, NULL)) < 0)
+		git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
+		diff_opts.ignore_submodules = GIT_SUBMODULE_IGNORE_UNTRACKED;
+		if ((error = git_diff_index_to_workdir(&diff, repo, index, &diff_opts)) < 0)
 			goto done;
 
 		if (git_diff_num_deltas(diff) > 0) {
