@@ -98,6 +98,9 @@ int git_odb__read_header_or_object(
 	git_odb_object **out, size_t *len_p, git_otype *type_p,
 	git_odb *db, const git_oid *id);
 
+/* freshen an entry in the object database */
+int git_odb__freshen(git_odb *db, const git_oid *id);
+
 /* fully free the object; internal method, DO NOT EXPORT */
 void git_odb_object__free(void *object);
 
