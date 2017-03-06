@@ -1433,26 +1433,25 @@ static void refdb_fs_backend__free(git_refdb_backend *_backend)
 	git__free(backend);
 }
 
-static int setup_namespace(git_buf *gitpath, git_repository *repo)
+static char *setup_namespace(git_repository *repo, const char *in)
 {
-	char *parts, *start, *end;
+	git_buf path = GIT_BUF_INIT;
+	char *parts, *start, *end, *out = NULL;
 
-	/* Not all repositories have a gitpath */
-	if (repo->gitdir == NULL)
-		return 0;
-	if (repo->commondir == NULL)
-		return 0;
+	if (!in)
+		goto done;
 
-	/* Load the path to the repo first */
-	git_buf_puts(gitpath, repo->gitdir);
+	git_buf_puts(&path, in);
 
 	/* if the repo is not namespaced, nothing else to do */
-	if (repo->namespace == NULL)
-		return 0;
+	if (repo->namespace == NULL) {
+		out = git_buf_detach(&path);
+		goto done;
+	}
 
 	parts = end = git__strdup(repo->namespace);
 	if (parts == NULL)
-		return -1;
+		goto done;
 
 	/*
 	 * From `man gitnamespaces`:
@@ -1460,21 +1459,24 @@ static int setup_namespace(git_buf *gitpath, git_repository *repo)
 	 *  of namespaces; for example, GIT_NAMESPACE=foo/bar will store
 	 *  refs under refs/namespaces/foo/refs/namespaces/bar/
 	 */
-	while ((start = git__strsep(&end, "/")) != NULL) {
-		git_buf_printf(gitpath, "refs/namespaces/%s/", start);
-	}
+	while ((start = git__strsep(&end, "/")) != NULL)
+		git_buf_printf(&path, "refs/namespaces/%s/", start);
 
-	git_buf_printf(gitpath, "refs/namespaces/%s/refs", end);
+	git_buf_printf(&path, "refs/namespaces/%s/refs", end);
 	git__free(parts);
 
 	/* Make sure that the folder with the namespace exists */
-	if (git_futils_mkdir_relative(git_buf_cstr(gitpath), repo->commondir,
-			0777, GIT_MKDIR_PATH, NULL) < 0)
-		return -1;
+	if (git_futils_mkdir_relative(git_buf_cstr(&path), in, 0777,
+			GIT_MKDIR_PATH, NULL) < 0)
+		goto done;
 
 	/* Return root of the namespaced gitpath, i.e. without the trailing '/refs' */
-	git_buf_rtruncate_at_char(gitpath, '/');
-	return 0;
+	git_buf_rtruncate_at_char(&path, '/');
+	out = git_buf_detach(&path);
+
+done:
+	git_buf_free(&path);
+	return out;
 }
 
 static int reflog_alloc(git_reflog **reflog, const char *name)
@@ -1979,12 +1981,19 @@ int git_refdb_backend_fs(
 
 	backend->repo = repository;
 
-	if (setup_namespace(&gitpath, repository) < 0)
-		goto fail;
+	if (repository->gitdir) {
+		backend->gitpath = setup_namespace(repository, repository->gitdir);
 
-	backend->gitpath = backend->commonpath =  git_buf_detach(&gitpath);
-	if (repository->commondir)
-		backend->commonpath = git__strdup(repository->commondir);
+		if (backend->gitpath == NULL)
+			goto fail;
+	}
+
+	if (repository->commondir) {
+		backend->commonpath = setup_namespace(repository, repository->commondir);
+
+		if (backend->commonpath == NULL)
+			goto fail;
+	}
 
 	if (git_buf_joinpath(&gitpath, backend->commonpath, GIT_PACKEDREFS_FILE) < 0 ||
 		git_sortedcache_new(
