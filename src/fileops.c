@@ -196,28 +196,29 @@ int git_futils_readbuffer_updated(
 
 	p_close(fd);
 
-	if ((error = git_hash_buf(&checksum_new, buf.ptr, buf.size)) < 0) {
-		git_buf_free(&buf);
-		return error;
-	}
+	if (checksum) {
+		if ((error = git_hash_buf(&checksum_new, buf.ptr, buf.size)) < 0) {
+			git_buf_free(&buf);
+			return error;
+		}
 
-	/*
-	 * If we were given a checksum, we only want to use it if it's different
-	 */
-	if (checksum && !git_oid__cmp(checksum, &checksum_new)) {
-		git_buf_free(&buf);
-		if (updated)
-			*updated = 0;
+		/*
+		 * If we were given a checksum, we only want to use it if it's different
+		 */
+		if (!git_oid__cmp(checksum, &checksum_new)) {
+			git_buf_free(&buf);
+			if (updated)
+				*updated = 0;
 
-		return 0;
+			return 0;
+		}
+
+		git_oid_cpy(checksum, &checksum_new);
 	}
 
 	/*
 	 * If we're here, the file did change, or the user didn't have an old version
 	 */
-	if (checksum)
-		git_oid_cpy(checksum, &checksum_new);
-
 	if (updated != NULL)
 		*updated = 1;
 
