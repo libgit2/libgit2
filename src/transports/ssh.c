@@ -1033,7 +1033,8 @@ static void unload_libssh2(void)
 #ifdef GIT_SSH_LOADLIBRARY
 	FreeLibrary(git_libssh2_handle);
 #else
-	dlclose(git_libssh2_handle);
+	if (git_libssh2_handle != RTLD_DEFAULT)
+		dlclose(git_libssh2_handle);
 #endif
 }
 
@@ -1042,12 +1043,15 @@ void git_transport_ssh_global_shutdown(void);
 int git_transport_ssh_global_init(void)
 {
 #ifdef GIT_SSH
+# ifdef GIT_SSH_RUNTIME
 	load_libssh2();
 
 	if (git_libssh2_handle == NULL) {
 		return 0;
 	}
-
+# else
+	git_libssh2_handle = RTLD_DEFAULT;
+# endif
 
 	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_agent_connect);
 	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_agent_disconnect);
