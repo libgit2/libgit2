@@ -61,6 +61,8 @@ static void *git_libssh2_handle;
 
 #endif
 
+static bool git_libssh2_loaded;
+
 static int (* git_libssh2_agent_connect)(LIBSSH2_AGENT *agent);
 static int (* git_libssh2_agent_disconnect)(LIBSSH2_AGENT *agent);
 static void (* git_libssh2_agent_free)(LIBSSH2_AGENT *agent);
@@ -916,7 +918,7 @@ int git_smart_subtransport_ssh(
 
 	GIT_UNUSED(param);
 
-	if (git_libssh2_handle == NULL) {
+	if (!git_libssh2_loaded) {
 		*out = NULL;
 
 		giterr_set(GITERR_INVALID, "Cannot create SSH transport. SSH support unavailable");
@@ -961,7 +963,7 @@ int git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *p
 
 	assert(out);
 
-	if (git_libssh2_handle == NULL) {
+	if (!git_libssh2_loaded) {
 		*out = NULL;
 
 		giterr_set(GITERR_INVALID, "Cannot create SSH transport. SSH support unavailable");
@@ -1036,6 +1038,8 @@ static void unload_libssh2(void)
 	if (git_libssh2_handle != RTLD_DEFAULT)
 		dlclose(git_libssh2_handle);
 #endif
+
+	git_libssh2_loaded = false;
 }
 
 void git_transport_ssh_global_shutdown(void);
@@ -1085,6 +1089,7 @@ int git_transport_ssh_global_init(void)
 
 	git__on_shutdown(git_transport_ssh_global_shutdown);
 
+	git_libssh2_loaded = true;
 	git_libssh2_init(0);
 	return 0;
 
