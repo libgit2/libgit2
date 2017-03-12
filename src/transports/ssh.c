@@ -9,7 +9,7 @@
 # define GIT_SSH_LOADLIBRARY
 #endif
 
-#ifndef GIT_SSH_LOADLIBRARY
+#if defined(GIT_SSH_RUNTIME) && !defined(GIT_SSH_LOADLIBRARY)
 #include <dlfcn.h>
 #endif
 
