@@ -1062,6 +1062,7 @@ int git_transport_ssh_global_init(void)
 	git_libssh2_handle = RTLD_DEFAULT;
 # endif
 
+	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_init);
 	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_agent_connect);
 	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_agent_disconnect);
 	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_agent_free);
