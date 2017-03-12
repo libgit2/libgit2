@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#if defined(GIT_WIN32) || defined(__MINGW32__)
+#if defined(GIT_SSH_RUNTIME) && (defined(GIT_WIN32) || defined(__MINGW32__))
 # define GIT_SSH_LOADLIBRARY
 #endif
 
@@ -63,6 +63,7 @@ static void *git_libssh2_handle;
 
 #endif
 
+# ifdef GIT_SSH_RUNTIME
 static bool git_libssh2_loaded;
 
 static int (* git_libssh2_agent_connect)(LIBSSH2_AGENT *agent);
@@ -94,6 +95,40 @@ static int (*git_libssh2_userauth_password_ex)(LIBSSH2_SESSION *session, const c
 static int (*git_libssh2_userauth_publickey)(LIBSSH2_SESSION *session, const char *username, const unsigned char *pubkeydata, size_t pubkeydata_len, LIBSSH2_USERAUTH_PUBLICKEY_SIGN_FUNC((*sign_callback)), void **abstract);
 static int (*git_libssh2_userauth_publickey_fromfile_ex)(LIBSSH2_SESSION *session, const char *username, unsigned int username_len, const char *publickey, const char *privatekey, const char *passphrase);
 static int (*git_libssh2_userauth_publickey_frommemory)(LIBSSH2_SESSION *session, const char *username, size_t username_len, const char *publickeyfiledata, size_t publickeyfiledata_len, const char *privatekeyfiledata, size_t privatekeyfiledata_len, const char *passphrase);
+
+# else	/* GIT_SSH_RUNTIME */
+
+#define git_libssh2_init libssh2_init
+#define git_libssh2_agent_connect libssh2_agent_connect
+#define git_libssh2_agent_disconnect libssh2_agent_disconnect
+#define git_libssh2_agent_free libssh2_agent_free
+#define git_libssh2_agent_get_identity libssh2_agent_get_identity
+#define git_libssh2_agent_init libssh2_agent_init
+#define git_libssh2_agent_list_identities libssh2_agent_list_identities
+#define git_libssh2_agent_userauth libssh2_agent_userauth
+#define git_libssh2_channel_close libssh2_channel_close
+#define git_libssh2_channel_free libssh2_channel_free
+#define git_libssh2_channel_open_ex libssh2_channel_open_ex
+#define git_libssh2_channel_process_startup libssh2_channel_process_startup
+#define git_libssh2_channel_read_ex libssh2_channel_read_ex
+#define git_libssh2_channel_set_blocking libssh2_channel_set_blocking
+#define git_libssh2_channel_write_ex libssh2_channel_write_ex
+#define git_libssh2_hostkey_hash libssh2_hostkey_hash
+#define git_libssh2_session_abstract libssh2_session_abstract
+#define git_libssh2_session_free libssh2_session_free
+#define git_libssh2_session_init_ex libssh2_session_init_ex
+#define git_libssh2_session_last_error libssh2_session_last_error
+#define git_libssh2_session_set_blocking libssh2_session_set_blocking
+#define git_libssh2_session_startup libssh2_session_startup
+#define git_libssh2_userauth_authenticated libssh2_userauth_authenticated
+#define git_libssh2_userauth_keyboard_interactive_ex libssh2_userauth_keyboard_interactive_ex
+#define git_libssh2_userauth_list libssh2_userauth_list
+#define git_libssh2_userauth_password_ex libssh2_userauth_password_ex
+#define git_libssh2_userauth_publickey libssh2_userauth_publickey
+#define git_libssh2_userauth_publickey_fromfile_ex libssh2_userauth_publickey_fromfile_ex
+#define git_libssh2_userauth_publickey_frommemory libssh2_userauth_publickey_frommemory
+
+# endif
 
 /*
  * The simpler API are macros that call to the _ex variant of the functions.
@@ -482,13 +517,16 @@ static int _git_ssh_authenticate_session(
 				session, c->username, c->prompt_callback);
 			break;
 		}
+#if defined(GIT_SSH_RUNTIME) || defined(GIT_SSH_MEMORY_CREDENTIALS)
 		case GIT_CREDTYPE_SSH_MEMORY: {
 			git_cred_ssh_key *c = (git_cred_ssh_key *)cred;
 
+# ifdef GIT_SSH_RUNTIME
 			if (!git_libssh2_userauth_publickey_frommemory) {
 				rc = LIBSSH2_ERROR_AUTHENTICATION_FAILED;
 				break;
 			}
+# endif
 
 			assert(c->username);
 			assert(c->privatekey);
@@ -504,6 +542,7 @@ static int _git_ssh_authenticate_session(
 				c->passphrase);
 			break;
 		}
+#endif
 		default:
 			rc = LIBSSH2_ERROR_AUTHENTICATION_FAILED;
 		}
@@ -920,12 +959,14 @@ int git_smart_subtransport_ssh(
 
 	GIT_UNUSED(param);
 
+# ifdef GIT_SSH_RUNTIME
 	if (!git_libssh2_loaded) {
 		*out = NULL;
 
 		giterr_set(GITERR_INVALID, "Cannot create SSH transport. SSH support unavailable");
 		return -1;
 	}
+# endif
 
 	t = git__calloc(sizeof(ssh_subtransport), 1);
 	GITERR_CHECK_ALLOC(t);
@@ -965,12 +1006,14 @@ int git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *p
 
 	assert(out);
 
+# ifdef GIT_SSH_RUNTIME
 	if (!git_libssh2_loaded) {
 		*out = NULL;
 
 		giterr_set(GITERR_INVALID, "Cannot create SSH transport. SSH support unavailable");
 		return -1;
 	}
+# endif
 
 	if (paths->count != 2) {
 		giterr_set(GITERR_SSH, "invalid ssh paths, must be two strings");
@@ -1037,15 +1080,18 @@ static void load_libssh2(void)
 static void unload_libssh2(void)
 {
 #ifdef GIT_SSH
-# ifdef GIT_SSH_LOADLIBRARY
+# ifdef GIT_SSH_RUNTIME
+#  ifdef GIT_SSH_LOADLIBRARY
 	FreeLibrary(git_libssh2_handle);
-# else
+#  else
 	if (git_libssh2_handle != RTLD_DEFAULT)
 		dlclose(git_libssh2_handle);
-# endif
+#  endif
 
 	git_libssh2_loaded = false;
 	git_libssh2_handle = NULL;
+# endif /* GIT_SSH_RUNTIME */
+
 #endif /* GIT_SSH */
 }
 
@@ -1060,9 +1106,6 @@ int git_transport_ssh_global_init(void)
 	if (git_libssh2_handle == NULL) {
 		return 0;
 	}
-# else
-	git_libssh2_handle = RTLD_DEFAULT;
-# endif
 
 	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_init);
 	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_agent_connect);
@@ -1098,6 +1141,7 @@ int git_transport_ssh_global_init(void)
 	git__on_shutdown(git_transport_ssh_global_shutdown);
 
 	git_libssh2_loaded = true;
+# endif
 	git_libssh2_init(0);
 	return 0;
 
