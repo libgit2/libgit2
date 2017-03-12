@@ -921,9 +921,13 @@ static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *use
 		if (!git__prefixcmp(ptr, SSH_AUTH_PUBLICKEY)) {
 			*out |= GIT_CREDTYPE_SSH_KEY;
 			*out |= GIT_CREDTYPE_SSH_CUSTOM;
-
+#ifdef GIT_SSH_RUNTIME
 			if (git_libssh2_userauth_publickey_frommemory)
 				*out |= GIT_CREDTYPE_SSH_MEMORY;
+#elif defined(GIT_SSH_MEMORY_CREDENTIALS)
+			*out |= GIT_CREDTYPE_SSH_MEMORY;
+#endif
+
 
 			ptr += strlen(SSH_AUTH_PUBLICKEY);
 			continue;
