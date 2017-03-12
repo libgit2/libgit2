@@ -1107,7 +1107,6 @@ int git_transport_ssh_global_init(void)
 		return 0;
 	}
 
-	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_init);
 	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_agent_connect);
 	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_agent_disconnect);
 	LOOKUP_LIBSSH2_SYMBOL_OR_RETURN(libssh2_agent_free);
