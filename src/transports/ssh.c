@@ -1012,12 +1012,13 @@ static const char *supported_filenames[] = {
 /**
  * Try to load a supported version of libssh2
  */
+#ifdef GIT_SSH
 static void load_libssh2(void)
 {
-#ifdef GIT_SSH_LOADLIBRARY
+# ifdef GIT_SSH_LOADLIBRARY
 	/* Windows doesn't do SOVERSIONs but you ship your own library so we're probably OK */
 	git_libssh2_handle = LoadLibrary("libssh2.dll");
-#else
+# else
 	int i;
 	for (i = 0; !git_libssh2_handle; i++){
 		const char *filename = supported_filenames[i];
@@ -1027,19 +1028,23 @@ static void load_libssh2(void)
 		git_libssh2_handle = dlopen(filename, RTLD_LAZY);
 	}
 
-#endif
+# endif
 }
+#endif /* GIT_SSH */
 
 static void unload_libssh2(void)
 {
-#ifdef GIT_SSH_LOADLIBRARY
+#ifdef GIT_SSH
+# ifdef GIT_SSH_LOADLIBRARY
 	FreeLibrary(git_libssh2_handle);
-#else
+# else
 	if (git_libssh2_handle != RTLD_DEFAULT)
 		dlclose(git_libssh2_handle);
-#endif
+# endif
 
 	git_libssh2_loaded = false;
+	git_libssh2_handle = NULL;
+#endif /* GIT_SSH */
 }
 
 void git_transport_ssh_global_shutdown(void);
@@ -1103,5 +1108,4 @@ int git_transport_ssh_global_init(void)
 void git_transport_ssh_global_shutdown(void)
 {
 	unload_libssh2();
-	git_libssh2_handle = NULL;
 }
