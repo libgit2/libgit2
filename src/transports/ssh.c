@@ -41,6 +41,7 @@ static HMODULE git_libssh2_handle;
                 git_ ## symbol = (void *) GetProcAddress(git_libssh2_handle, #symbol); \
                 if (git_ ## symbol == NULL) {                           \
                         giterr_set(GITERR_SSH, "failed to lookup required function"); \
+			return -1;					\
                 }                                                       \
         } while(0)
 
@@ -56,6 +57,7 @@ static void *git_libssh2_handle;
                 git_ ## symbol = dlsym(git_libssh2_handle, #symbol);    \
                 if (git_ ## symbol == NULL) {                           \
                         giterr_set(GITERR_SSH, "failed to lookup required function"); \
+			return -1;					\
                 }                                                       \
         } while(0)
 
