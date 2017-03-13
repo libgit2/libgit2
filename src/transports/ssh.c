@@ -1061,7 +1061,7 @@ static const char *supported_filenames[] = {
 /**
  * Try to load a supported version of libssh2
  */
-#ifdef GIT_SSH
+#ifdef GIT_SSH_RUNTIME
 static void load_libssh2(void)
 {
 # ifdef GIT_SSH_LOADLIBRARY
@@ -1079,7 +1079,7 @@ static void load_libssh2(void)
 
 # endif
 }
-#endif /* GIT_SSH */
+#endif /* GIT_SSH_RUNTIME */
 
 static void unload_libssh2(void)
 {
