@@ -562,8 +562,9 @@ static int parse_hunk_body(
 	int newlines = hunk->hunk.new_lines;
 
 	for (;
-		ctx->remain_len > 4 && (oldlines || newlines) &&
-		memcmp(ctx->line, "@@ -", 4) != 0;
+		ctx->remain_len > 1 &&
+		(oldlines || newlines) &&
+		(ctx->remain_len <= 4 || memcmp(ctx->line, "@@ -", 4) != 0);
 		parse_advance_line(ctx)) {
 
 		int origin;
