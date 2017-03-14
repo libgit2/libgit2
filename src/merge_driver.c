@@ -32,7 +32,6 @@ static struct merge_driver_registry merge_driver_registry;
 
 static void git_merge_driver_global_shutdown(void);
 
-/** Get the repository that the source data is coming from. */
 git_repository* git_merge_driver_source_repo(const git_merge_driver_source *src)
 {
 	assert(src);
