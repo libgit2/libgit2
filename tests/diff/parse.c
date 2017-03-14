@@ -196,3 +196,32 @@ void test_diff_parse__get_patch_from_diff(void)
 
 	cl_git_sandbox_cleanup();
 }
+
+static int file_cb(const git_diff_delta *delta, float progress, void *payload)
+{
+    int *called = (int *) payload;
+    GIT_UNUSED(delta);
+    GIT_UNUSED(progress);
+    (*called)++;
+    return 0;
+}
+
+void test_diff_parse__foreach_works_with_parsed_patch(void)
+{
+	const char patch[] =
+	    "diff --git a/obj1 b/obj2\n"
+	    "index 1234567..7654321 10644\n"
+	    "--- a/obj1\n"
+	    "+++ b/obj2\n"
+	    "@@ -1 +1 @@\n"
+	    "-abcde\n"
+	    "+12345\n";
+	int called = 0;
+	git_diff *diff;
+
+	cl_git_pass(git_diff_from_buffer(&diff, patch, strlen(patch)));
+	cl_git_pass(git_diff_foreach(diff, file_cb, NULL, NULL, NULL, &called));
+	cl_assert_equal_i(called, 1);
+
+	git_diff_free(diff);
+}

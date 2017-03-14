@@ -409,39 +409,25 @@ int git_diff_foreach(
 	void *payload)
 {
 	int error = 0;
-	git_xdiff_output xo;
+	git_diff_delta *delta;
 	size_t idx;
-	git_patch_generated patch;
 
 	if ((error = diff_required(diff, "git_diff_foreach")) < 0)
 		return error;
 
-	memset(&xo, 0, sizeof(xo));
-	memset(&patch, 0, sizeof(patch));
-	diff_output_init(
-		&xo.output, &diff->opts, file_cb, binary_cb, hunk_cb, data_cb, payload);
-	git_xdiff_init(&xo, &diff->opts);
-
-	git_vector_foreach(&diff->deltas, idx, patch.base.delta) {
+	git_vector_foreach(&diff->deltas, idx, delta) {
+		git_patch *patch;
 
 		/* check flags against patch status */
-		if (git_diff_delta__should_skip(&diff->opts, patch.base.delta))
+		if (git_diff_delta__should_skip(&diff->opts, delta))
 			continue;
 
-		if (binary_cb || hunk_cb || data_cb) {
-			if ((error = patch_generated_init(&patch, diff, idx)) != 0 ||
-				(error = patch_generated_load(&patch, &xo.output)) != 0) {
-				git_patch_free(&patch.base);
-				return error;
-			}
-		}
+		if ((error = git_patch_from_diff(&patch, diff, idx)) != 0)
+			break;
 
-		if ((error = patch_generated_invoke_file_callback(&patch, &xo.output)) == 0) {
-			if (binary_cb || hunk_cb || data_cb)
-					error = patch_generated_create(&patch, &xo.output);
-		}
-
-		git_patch_free(&patch.base);
+		error = git_patch__invoke_callbacks(patch, file_cb, binary_cb,
+						    hunk_cb, data_cb, payload);
+		git_patch_free(patch);
 
 		if (error)
 			break;
