@@ -1212,6 +1212,8 @@ int git_submodule_update(git_submodule *sm, int init, git_submodule_update_optio
 			(error = git_checkout_head(sub_repo, &update_options.checkout_opts)) != 0)
 			goto done;
 	} else {
+		const git_oid *oid;
+
 		/**
 		 * Work dir is initialized - look up the commit in the parent repository's index,
 		 * update the workdir contents of the subrepository, and set the subrepository's
@@ -1220,8 +1222,14 @@ int git_submodule_update(git_submodule *sm, int init, git_submodule_update_optio
 		if ((error = git_submodule_open(&sub_repo, sm)) < 0)
 			goto done;
 
+		if ((oid = git_submodule_index_id(sm)) == NULL) {
+			giterr_set(GITERR_SUBMODULE, "could not get ID of submodule in index");
+			error = -1;
+			goto done;
+		}
+
 		/* Look up the target commit in the submodule. */
-		if ((error = git_object_lookup(&target_commit, sub_repo, git_submodule_index_id(sm), GIT_OBJ_COMMIT)) < 0) {
+		if ((error = git_object_lookup(&target_commit, sub_repo, oid, GIT_OBJ_COMMIT)) < 0) {
 			/* If it isn't found then fetch and try again. */
 			if (error != GIT_ENOTFOUND || !update_options.allow_fetch ||
 				(error = lookup_default_remote(&remote, sub_repo)) < 0 ||
