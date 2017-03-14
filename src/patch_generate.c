@@ -400,42 +400,6 @@ static int diff_required(git_diff *diff, const char *action)
 	return -1;
 }
 
-int git_diff_foreach(
-	git_diff *diff,
-	git_diff_file_cb file_cb,
-	git_diff_binary_cb binary_cb,
-	git_diff_hunk_cb hunk_cb,
-	git_diff_line_cb data_cb,
-	void *payload)
-{
-	int error = 0;
-	git_diff_delta *delta;
-	size_t idx;
-
-	if ((error = diff_required(diff, "git_diff_foreach")) < 0)
-		return error;
-
-	git_vector_foreach(&diff->deltas, idx, delta) {
-		git_patch *patch;
-
-		/* check flags against patch status */
-		if (git_diff_delta__should_skip(&diff->opts, delta))
-			continue;
-
-		if ((error = git_patch_from_diff(&patch, diff, idx)) != 0)
-			break;
-
-		error = git_patch__invoke_callbacks(patch, file_cb, binary_cb,
-						    hunk_cb, data_cb, payload);
-		git_patch_free(patch);
-
-		if (error)
-			break;
-	}
-
-	return error;
-}
-
 typedef struct {
 	git_patch_generated patch;
 	git_diff_delta delta;
