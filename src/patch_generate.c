@@ -206,35 +206,14 @@ static int patch_generated_load(git_patch_generated *patch, git_patch_generated_
 		 ((patch->nfile.flags & GIT_DIFF_FLAG__NO_DATA) != 0 ||
 		  (patch->nfile.file->flags & GIT_DIFF_FLAG_VALID_ID) != 0));
 
-	/* always try to load workdir content first because filtering may
-	 * need 2x data size and this minimizes peak memory footprint
-	 */
-	if (patch->ofile.src == GIT_ITERATOR_TYPE_WORKDIR) {
-		if ((error = git_diff_file_content__load(
-				&patch->ofile, &patch->base.diff_opts)) < 0 ||
-			should_skip_binary(patch, patch->ofile.file))
-			goto cleanup;
-	}
-	if (patch->nfile.src == GIT_ITERATOR_TYPE_WORKDIR) {
-		if ((error = git_diff_file_content__load(
-				&patch->nfile, &patch->base.diff_opts)) < 0 ||
-			should_skip_binary(patch, patch->nfile.file))
-			goto cleanup;
-	}
-
-	/* once workdir has been tried, load other data as needed */
-	if (patch->ofile.src != GIT_ITERATOR_TYPE_WORKDIR) {
-		if ((error = git_diff_file_content__load(
-				&patch->ofile, &patch->base.diff_opts)) < 0 ||
-			should_skip_binary(patch, patch->ofile.file))
-			goto cleanup;
-	}
-	if (patch->nfile.src != GIT_ITERATOR_TYPE_WORKDIR) {
-		if ((error = git_diff_file_content__load(
-				&patch->nfile, &patch->base.diff_opts)) < 0 ||
-			should_skip_binary(patch, patch->nfile.file))
-			goto cleanup;
-	}
+	if ((error = git_diff_file_content__load(
+			&patch->ofile, &patch->base.diff_opts)) < 0 ||
+		should_skip_binary(patch, patch->ofile.file))
+		goto cleanup;
+	if ((error = git_diff_file_content__load(
+			&patch->nfile, &patch->base.diff_opts)) < 0 ||
+		should_skip_binary(patch, patch->nfile.file))
+		goto cleanup;
 
 	/* if previously missing an oid, and now that we have it the two sides
 	 * are the same (and not submodules), update MODIFIED -> UNMODIFIED
