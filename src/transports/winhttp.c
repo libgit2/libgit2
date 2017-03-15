@@ -881,7 +881,7 @@ static int send_request(winhttp_stream *s, size_t len, int ignore_length)
 	}
 
 	if ((error = do_send_request(s, len, ignore_length)) < 0)
-		giterr_set(GITERR_OS, "failed to send request");
+		giterr_set(GITERR_OS, "failed to send request with unchecked certificate");
 
 	return error;
 }

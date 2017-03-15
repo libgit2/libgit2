@@ -32,6 +32,35 @@ static struct merge_driver_registry merge_driver_registry;
 
 static void git_merge_driver_global_shutdown(void);
 
+git_repository* git_merge_driver_source_repo(const git_merge_driver_source *src)
+{
+	assert(src);
+	return src->repo;
+}
+
+git_index_entry* git_merge_driver_source_ancestor(const git_merge_driver_source *src)
+{
+	assert(src);
+	return src->ancestor;
+}
+
+git_index_entry* git_merge_driver_source_ours(const git_merge_driver_source *src)
+{
+	assert(src);
+	return src->ours;
+}
+
+git_index_entry* git_merge_driver_source_theirs(const git_merge_driver_source *src)
+{
+	assert(src);
+	return src->theirs;
+}
+
+git_merge_file_options* git_merge_driver_source_file_options(const git_merge_driver_source *src)
+{
+	assert(src);
+	return src->file_opts;
+}
 
 int git_merge_driver__builtin_apply(
 	git_merge_driver *self,

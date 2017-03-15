@@ -231,9 +231,12 @@ static int revwalk_next_timesort(git_commit_list_node **object_out, git_revwalk 
 {
 	git_commit_list_node *next;
 
-	if ((next = git_pqueue_pop(&walk->iterator_time)) != NULL) {
-		*object_out = next;
-		return 0;
+	while ((next = git_pqueue_pop(&walk->iterator_time)) != NULL) {
+		/* Some commits might become uninteresting after being added to the list */
+		if (!next->uninteresting) {
+			*object_out = next;
+			return 0;
+		}
 	}
 
 	giterr_clear();
