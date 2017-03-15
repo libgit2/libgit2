@@ -24,7 +24,7 @@ struct git_worktree {
 	/* Path to the common directory contained in the parent
 	 * repository */
 	char *commondir_path;
-	/* Path to the parent's .git directory */
+	/* Path to the parent's working directory */
 	char *parent_path;
 
 	int locked:1;

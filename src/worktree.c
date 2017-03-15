@@ -174,7 +174,7 @@ int git_worktree_lookup(git_worktree **out, git_repository *repo, const char *na
 	if ((error = git_buf_printf(&path, "%s/worktrees/%s", repo->commondir, name)) < 0)
 		goto out;
 
-	if ((error = (open_worktree_dir(out, git_repository_path(repo), path.ptr, name))) < 0)
+	if ((error = (open_worktree_dir(out, git_repository_workdir(repo), path.ptr, name))) < 0)
 		goto out;
 
 out:
@@ -202,7 +202,7 @@ int git_worktree_open_from_repository(git_worktree **out, git_repository *repo)
 	gitdir = git_repository_path(repo);
 	commondir = git_repository_commondir(repo);
 
-	if ((error = git_path_prettify_dir(&parent, commondir, NULL)) < 0)
+	if ((error = git_path_prettify_dir(&parent, "..", commondir)) < 0)
 		goto out;
 
 	/* The name is defined by the last component in '.git/worktree/%s' */
@@ -457,7 +457,7 @@ int git_worktree_prune(git_worktree *wt, unsigned flags)
 	}
 
 	/* Delete gitdir in parent repository */
-	if ((err = git_buf_printf(&path, "%s/worktrees/%s", wt->parent_path, wt->name)) < 0)
+	if ((err = git_buf_printf(&path, "%s/worktrees/%s", wt->commondir_path, wt->name)) < 0)
 		goto out;
 	if (!git_path_exists(path.ptr))
 	{
