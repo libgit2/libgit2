@@ -44,6 +44,18 @@ GIT_EXTERN(int) git_worktree_list(git_strarray *out, git_repository *repo);
 GIT_EXTERN(int) git_worktree_lookup(git_worktree **out, git_repository *repo, const char *name);
 
 /**
+ * Open a worktree of a given repository
+ *
+ * If a repository is not the main tree but a worktree, this
+ * function will look up the worktree inside the parent
+ * repository and create a new `git_worktree` structure.
+ *
+ * @param out Out-pointer for the newly allocated worktree
+ * @param repo Repository to look up worktree for
+ */
+GIT_EXTERN(int) git_worktree_open_from_repository(git_worktree **out, git_repository *repo);
+
+/**
  * Free a previously allocated worktree
  *
  * @param wt worktree handle to close. If NULL nothing occurs.

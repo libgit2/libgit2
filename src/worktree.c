@@ -186,6 +186,39 @@ out:
 	return error;
 }
 
+int git_worktree_open_from_repository(git_worktree **out, git_repository *repo)
+{
+	git_buf parent = GIT_BUF_INIT;
+	const char *gitdir, *commondir;
+	char *name = NULL;
+	int error = 0;
+
+	if (!git_repository_is_worktree(repo)) {
+		giterr_set(GITERR_WORKTREE, "cannot open worktree of a non-worktree repo");
+		error = -1;
+		goto out;
+	}
+
+	gitdir = git_repository_path(repo);
+	commondir = git_repository_commondir(repo);
+
+	if ((error = git_path_prettify_dir(&parent, commondir, NULL)) < 0)
+		goto out;
+
+	/* The name is defined by the last component in '.git/worktree/%s' */
+	name = git_path_basename(gitdir);
+
+	if ((error = open_worktree_dir(out, parent.ptr, gitdir, name)) < 0)
+		goto out;
+
+out:
+	if (error)
+		free(name);
+	git_buf_free(&parent);
+
+	return error;
+}
+
 void git_worktree_free(git_worktree *wt)
 {
 	if (!wt)

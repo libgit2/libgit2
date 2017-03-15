@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "repository.h"
+#include "worktree.h"
 #include "worktree_helpers.h"
 
 #define COMMON_REPO "testrepo"
@@ -114,4 +115,29 @@ void test_worktree_open__repository_with_nonexistent_parent(void)
 	cl_git_fail(git_repository_open(&repo, WORKTREE_REPO));
 
 	cl_fixture_cleanup(WORKTREE_REPO);
+}
+
+void test_worktree_open__open_from_repository(void)
+{
+	git_worktree *opened, *lookedup;
+
+	cl_git_pass(git_worktree_open_from_repository(&opened, fixture.worktree));
+	cl_git_pass(git_worktree_lookup(&lookedup, fixture.repo, WORKTREE_REPO));
+
+	cl_assert_equal_s(opened->name, lookedup->name);
+	cl_assert_equal_s(opened->gitdir_path, lookedup->gitdir_path);
+	cl_assert_equal_s(opened->gitlink_path, lookedup->gitlink_path);
+	cl_assert_equal_s(opened->parent_path, lookedup->parent_path);
+	cl_assert_equal_s(opened->commondir_path, lookedup->commondir_path);
+	cl_assert_equal_i(opened->locked, lookedup->locked);
+
+	git_worktree_free(opened);
+	git_worktree_free(lookedup);
+}
+
+void test_worktree_open__open_from_nonworktree_fails(void)
+{
+	git_worktree *wt;
+
+	cl_git_fail(git_worktree_open_from_repository(&wt, fixture.repo));
 }
