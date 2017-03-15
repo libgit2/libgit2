@@ -3,7 +3,7 @@ static void clar_print_init(int test_count, int suite_count, const char *suite_n
 {
 	(void)test_count;
 	printf("Loaded %d suites: %s\n", (int)suite_count, suite_names);
-	printf("Started (test status codes: OK='.' FAILURE='F' SKIPPED='S')\n");
+	printf("Started (test status codes: OK='.' FAILURE='F' BROKEN='B' SKIPPED='S')\n");
 }
 
 static void clar_print_shutdown(int test_count, int suite_count, int error_count)
@@ -46,6 +46,7 @@ static void clar_print_ontest(const char *test_name, int test_number, enum cl_te
 	switch(status) {
 	case CL_TEST_OK: printf("."); break;
 	case CL_TEST_FAILURE: printf("F"); break;
+	case CL_TEST_BROKEN: printf("B"); break;
 	case CL_TEST_SKIP: printf("S"); break;
 	}
 

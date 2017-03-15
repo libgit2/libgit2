@@ -117,6 +117,7 @@ static struct {
 
 	int total_skipped;
 	int total_errors;
+	int total_broken;
 
 	int tests_ran;
 	int suites_ran;
@@ -511,6 +512,13 @@ void clar__skip(void)
 {
 	_clar.test_status = CL_TEST_SKIP;
 	_clar.total_skipped++;
+	abort_test();
+}
+
+void clar__broken(void)
+{
+	_clar.test_status = CL_TEST_BROKEN;
+	_clar.total_broken++;
 	abort_test();
 }
 

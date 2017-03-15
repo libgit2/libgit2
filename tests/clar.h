@@ -12,6 +12,7 @@
 enum cl_test_status {
 	CL_TEST_OK,
 	CL_TEST_FAILURE,
+	CL_TEST_BROKEN,
 	CL_TEST_SKIP
 };
 
@@ -107,6 +108,7 @@ void cl_fixture_cleanup(const char *fixture_name);
  */
 #define cl_fail(desc) clar__fail(__FILE__, __LINE__, "Test failed.", desc, 1)
 #define cl_warning(desc) clar__fail(__FILE__, __LINE__, "Warning during test execution:", desc, 0)
+#define cl_break(desc) clar__broken()
 
 #define cl_skip() clar__skip()
 
@@ -134,6 +136,8 @@ void cl_fixture_cleanup(const char *fixture_name);
 #define cl_assert_equal_p(p1,p2) clar__assert_equal(__FILE__,__LINE__,"Pointer mismatch: " #p1 " != " #p2, 1, "%p", (p1), (p2))
 
 void clar__skip(void);
+
+void clar__broken(void);
 
 void clar__fail(
 	const char *file,
