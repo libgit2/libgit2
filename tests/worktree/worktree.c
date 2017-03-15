@@ -115,7 +115,7 @@ void test_worktree_worktree__lookup(void)
 
 	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
 
-	git_buf_printf(&gitdir_path, "%s/worktrees/%s", fixture.repo->commondir, "testrepo-worktree");
+	cl_git_pass(git_buf_joinpath(&gitdir_path, fixture.repo->commondir, "worktrees/testrepo-worktree/"));
 
 	cl_assert_equal_s(wt->gitdir_path, gitdir_path.ptr);
 	cl_assert_equal_s(wt->parent_path, fixture.repo->gitdir);
