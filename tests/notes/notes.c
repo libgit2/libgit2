@@ -375,6 +375,46 @@ static char *messages[] = {
 
 #define MESSAGES_COUNT (sizeof(messages)/sizeof(messages[0])) - 1
 
+/* Test that we can read a note */
+void test_notes_notes__can_read_a_note(void)
+{
+	git_oid note_oid, target_oid;
+	git_note *note;
+
+	create_note(&note_oid, "refs/notes/i-can-see-dead-notes", "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", "I decorate 4a20\n");
+
+	cl_git_pass(git_oid_fromstr(&target_oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045"));
+
+	cl_git_pass(git_note_read(&note, _repo, "refs/notes/i-can-see-dead-notes", &target_oid));
+
+	cl_assert_equal_s(git_note_message(note), "I decorate 4a20\n");
+
+	git_note_free(note);
+}
+
+/* Test that we can read a note with from commit api */
+void test_notes_notes__can_read_a_note_from_a_commit(void)
+{
+	git_oid oid, notes_commit_oid;
+	git_commit *notes_commit;
+	git_note *note;
+
+	cl_git_pass(git_oid_fromstr(&oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045"));
+
+	cl_git_pass(git_note_commit_create(&notes_commit_oid, NULL, _repo, NULL, _sig, _sig, &oid, "I decorate 4a20\n", 1));
+
+	git_commit_lookup(&notes_commit, _repo, &notes_commit_oid);
+
+	cl_assert(notes_commit);
+
+	cl_git_pass(git_note_commit_read(&note, _repo, notes_commit, &oid));
+
+	cl_assert_equal_s(git_note_message(note), "I decorate 4a20\n");
+
+	git_commit_free(notes_commit);
+	git_note_free(note);
+}
+
 /*
  * $ git ls-tree refs/notes/fanout
  * 040000 tree 4b22b35d44b5a4f589edf3dc89196399771796ea    84

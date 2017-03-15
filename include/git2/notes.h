@@ -94,6 +94,25 @@ GIT_EXTERN(int) git_note_read(
 	const char *notes_ref,
 	const git_oid *oid);
 
+
+/**
+ * Read the note for an object from a note commit
+ *
+ * The note must be freed manually by the user.
+ *
+ * @param out pointer to the read note; NULL in case of error
+ * @param repo repository where to look up the note
+ * @param notes_commit a pointer to the notes commit object
+ * @param oid OID of the git object to read the note from
+ *
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_note_commit_read(
+	git_note **out,
+	git_repository *repo,
+	git_commit *notes_commit,
+	const git_oid *oid);
+
 /**
  * Get the note author
  *
