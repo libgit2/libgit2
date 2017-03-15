@@ -323,7 +323,7 @@ int git_worktree_add(git_worktree **out, git_repository *repo, const char *name,
 		goto out;
 
 	/* Set worktree's HEAD */
-	if ((err = git_repository_create_head(path.ptr, name)) < 0)
+	if ((err = git_repository_create_head(path.ptr, git_reference_name(ref))) < 0)
 		goto out;
 	if ((err = git_repository_open(&wt, worktree)) < 0)
 		goto out;
