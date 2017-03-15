@@ -204,6 +204,37 @@ clar_report_errors(void)
 }
 
 static void
+clar_set_error(
+	const char *file,
+	int line,
+	const char *error_msg,
+	const char *description)
+{
+	struct clar_error *error = calloc(1, sizeof(struct clar_error));
+
+	if (_clar.errors == NULL)
+		_clar.errors = error;
+
+	if (_clar.last_error != NULL)
+		_clar.last_error->next = error;
+
+	_clar.last_error = error;
+
+	error->test = _clar.active_test;
+	error->test_number = _clar.tests_ran;
+	error->suite = _clar.active_suite;
+	error->file = file;
+	error->line_number = line;
+	error->error_msg = error_msg;
+
+	if (description != NULL)
+		error->description = strdup(description);
+
+	_clar.total_errors++;
+	_clar.test_status = CL_TEST_FAILURE;
+}
+
+static void
 clar_run_test(
 	const struct clar_func *test,
 	const struct clar_func *initialize,
@@ -487,28 +518,7 @@ void clar__fail(
 	const char *description,
 	int should_abort)
 {
-	struct clar_error *error = calloc(1, sizeof(struct clar_error));
-
-	if (_clar.errors == NULL)
-		_clar.errors = error;
-
-	if (_clar.last_error != NULL)
-		_clar.last_error->next = error;
-
-	_clar.last_error = error;
-
-	error->test = _clar.active_test;
-	error->test_number = _clar.tests_ran;
-	error->suite = _clar.active_suite;
-	error->file = file;
-	error->line_number = line;
-	error->error_msg = error_msg;
-
-	if (description != NULL)
-		error->description = strdup(description);
-
-	_clar.total_errors++;
-	_clar.test_status = CL_TEST_FAILURE;
+	clar_set_error(file, line, error_msg, description);
 
 	if (should_abort)
 		abort_test();
