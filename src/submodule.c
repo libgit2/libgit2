@@ -22,6 +22,7 @@
 #include "iterator.h"
 #include "path.h"
 #include "index.h"
+#include "worktree.h"
 
 #define GIT_MODULES_FILE ".gitmodules"
 
@@ -2030,17 +2031,28 @@ static int lookup_default_remote(git_remote **remote, git_repository *repo)
 static int get_url_base(git_buf *url, git_repository *repo)
 {
 	int error;
+	git_worktree *wt = NULL;
 	git_remote *remote = NULL;
 
-	if (!(error = lookup_default_remote(&remote, repo))) {
+	if ((error = lookup_default_remote(&remote, repo)) == 0) {
 		error = git_buf_sets(url, git_remote_url(remote));
-		git_remote_free(remote);
-	}
-	else if (error == GIT_ENOTFOUND) {
-		/* if repository does not have a default remote, use workdir instead */
+		goto out;
+	} else if (error != GIT_ENOTFOUND)
+		goto out;
+	else
 		giterr_clear();
+
+	/* if repository does not have a default remote, use workdir instead */
+	if (git_repository_is_worktree(repo)) {
+		if ((error = git_worktree_open_from_repository(&wt, repo)) < 0)
+			goto out;
+		error = git_buf_sets(url, wt->parent_path);
+	} else
 		error = git_buf_sets(url, git_repository_workdir(repo));
-	}
+
+out:
+	git_remote_free(remote);
+	git_worktree_free(wt);
 
 	return error;
 }
