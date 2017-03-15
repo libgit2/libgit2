@@ -515,11 +515,23 @@ void clar__skip(void)
 	abort_test();
 }
 
-void clar__broken(void)
+void clar__broken(
+	int condition,
+	const char *file,
+	int line,
+	const char *error,
+	const char *description,
+	int should_abort)
 {
-	_clar.test_status = CL_TEST_BROKEN;
-	_clar.total_broken++;
-	abort_test();
+	if (condition) {
+		_clar.test_status = CL_TEST_BROKEN;
+		_clar.total_broken++;
+	} else {
+		clar_set_error(file, line, error, description, CL_TEST_UNBROKEN);
+	}
+
+	if (should_abort)
+		abort_test();
 }
 
 void clar__fail(

@@ -13,6 +13,7 @@ enum cl_test_status {
 	CL_TEST_OK,
 	CL_TEST_FAILURE,
 	CL_TEST_BROKEN,
+	CL_TEST_UNBROKEN,
 	CL_TEST_SKIP
 };
 
@@ -80,6 +81,7 @@ void cl_fixture_cleanup(const char *fixture_name);
  */
 #define cl_must_pass_(expr, desc) clar__assert((expr) >= 0, __FILE__, __LINE__, "Function call failed: " #expr, desc, 1)
 #define cl_must_fail_(expr, desc) clar__assert((expr) < 0, __FILE__, __LINE__, "Expected function call to fail: " #expr, desc, 1)
+#define cl_must_break_(expr, desc) clar__broken((expr) == 0, __FILE__, __LINE__, "Expected function call to break: " #expr, desc, 1)
 #define cl_assert_(expr, desc) clar__assert((expr) != 0, __FILE__, __LINE__, "Expression is not true: " #expr, desc, 1)
 
 /**
@@ -87,6 +89,7 @@ void cl_fixture_cleanup(const char *fixture_name);
  */
 #define cl_check_pass_(expr, desc) clar__assert((expr) >= 0, __FILE__, __LINE__, "Function call failed: " #expr, desc, 0)
 #define cl_check_fail_(expr, desc) clar__assert((expr) < 0, __FILE__, __LINE__, "Expected function call to fail: " #expr, desc, 0)
+#define cl_check_break_(expr, desc) clar__broken((expr) == 0, __FILE__, __LINE__, "Expected function call to break: " #expr, desc, 0)
 #define cl_check_(expr, desc) clar__assert((expr) != 0, __FILE__, __LINE__, "Expression is not true: " #expr, desc, 0)
 
 /**
@@ -94,6 +97,7 @@ void cl_fixture_cleanup(const char *fixture_name);
  */
 #define cl_must_pass(expr) cl_must_pass_(expr, NULL)
 #define cl_must_fail(expr) cl_must_fail_(expr, NULL)
+#define cl_must_break(expr) cl_must_break_(expr, NULL)
 #define cl_assert(expr) cl_assert_(expr, NULL)
 
 /**
@@ -101,6 +105,7 @@ void cl_fixture_cleanup(const char *fixture_name);
  */
 #define cl_check_pass(expr) cl_check_pass_(expr, NULL)
 #define cl_check_fail(expr) cl_check_fail_(expr, NULL)
+#define cl_check_break(expr) cl_check_break_(expr, NULL)
 #define cl_check(expr) cl_check_(expr, NULL)
 
 /**
@@ -108,7 +113,7 @@ void cl_fixture_cleanup(const char *fixture_name);
  */
 #define cl_fail(desc) clar__fail(__FILE__, __LINE__, "Test failed.", desc, 1)
 #define cl_warning(desc) clar__fail(__FILE__, __LINE__, "Warning during test execution:", desc, 0)
-#define cl_break(desc) clar__broken()
+#define cl_break(desc) clar__broken(1, __FILE__, __LINE__, "Known breakage.", desc, 1)
 
 #define cl_skip() clar__skip()
 
@@ -137,7 +142,13 @@ void cl_fixture_cleanup(const char *fixture_name);
 
 void clar__skip(void);
 
-void clar__broken(void);
+void clar__broken(
+	int condition,
+	const char *file,
+	int line,
+	const char *error,
+	const char *description,
+	int should_abort);
 
 void clar__fail(
 	const char *file,
