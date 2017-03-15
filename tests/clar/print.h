@@ -18,7 +18,10 @@ static void clar_print_shutdown(int test_count, int suite_count, int error_count
 
 static void clar_print_error(int num, const struct clar_error *error)
 {
-	printf("  %d) Failure:\n", num);
+	if (error->status == CL_TEST_FAILURE)
+		printf("  %d) Failure:\n", num);
+	else
+		return;
 
 	printf("%s::%s [%s:%d]\n",
 		error->suite,

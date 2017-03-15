@@ -100,6 +100,7 @@ struct clar_error {
 	const char *suite;
 	const char *file;
 	int line_number;
+	enum cl_test_status status;
 	const char *error_msg;
 	char *description;
 
@@ -208,7 +209,8 @@ clar_set_error(
 	const char *file,
 	int line,
 	const char *error_msg,
-	const char *description)
+	const char *description,
+	enum cl_test_status status)
 {
 	struct clar_error *error = calloc(1, sizeof(struct clar_error));
 
@@ -225,13 +227,14 @@ clar_set_error(
 	error->suite = _clar.active_suite;
 	error->file = file;
 	error->line_number = line;
+	error->status = status;
 	error->error_msg = error_msg;
 
 	if (description != NULL)
 		error->description = strdup(description);
 
 	_clar.total_errors++;
-	_clar.test_status = CL_TEST_FAILURE;
+	_clar.test_status = status;
 }
 
 static void
@@ -518,7 +521,7 @@ void clar__fail(
 	const char *description,
 	int should_abort)
 {
-	clar_set_error(file, line, error_msg, description);
+	clar_set_error(file, line, error_msg, description, CL_TEST_FAILURE);
 
 	if (should_abort)
 		abort_test();
