@@ -14,11 +14,20 @@
 #include "repository.h"
 #include "worktree.h"
 
-static bool is_worktree_dir(git_buf *dir)
+static bool is_worktree_dir(const char *dir)
 {
-	return git_path_contains_file(dir, "commondir")
-		&& git_path_contains_file(dir, "gitdir")
-		&& git_path_contains_file(dir, "HEAD");
+	git_buf buf = GIT_BUF_INIT;
+	int error;
+
+	if (git_buf_sets(&buf, dir) < 0)
+		return -1;
+
+	error = git_path_contains_file(&buf, "commondir")
+		&& git_path_contains_file(&buf, "gitdir")
+		&& git_path_contains_file(&buf, "HEAD");
+
+	git_buf_free(&buf);
+	return error;
 }
 
 int git_worktree_list(git_strarray *wts, git_repository *repo)
@@ -47,7 +56,7 @@ int git_worktree_list(git_strarray *wts, git_repository *repo)
 		git_buf_truncate(&path, len);
 		git_buf_puts(&path, worktree);
 
-		if (!is_worktree_dir(&path)) {
+		if (!is_worktree_dir(path.ptr)) {
 			git_vector_remove(&worktrees, i);
 			git__free(worktree);
 		}
@@ -125,7 +134,7 @@ int git_worktree_lookup(git_worktree **out, git_repository *repo, const char *na
 	if ((error = git_buf_printf(&path, "%s/worktrees/%s", repo->commondir, name)) < 0)
 		goto out;
 
-	if (!is_worktree_dir(&path)) {
+	if (!is_worktree_dir(path.ptr)) {
 		error = -1;
 		goto out;
 	}
@@ -177,7 +186,7 @@ int git_worktree_validate(const git_worktree *wt)
 	assert(wt);
 
 	git_buf_puts(&buf, wt->gitdir_path);
-	if (!is_worktree_dir(&buf)) {
+	if (!is_worktree_dir(buf.ptr)) {
 		giterr_set(GITERR_WORKTREE,
 			"Worktree gitdir ('%s') is not valid",
 			wt->gitlink_path);
