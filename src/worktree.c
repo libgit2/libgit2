@@ -121,6 +121,46 @@ out:
 	return err;
 }
 
+static int open_worktree_dir(git_worktree **out, const char *parent, const char *dir, const char *name)
+{
+	git_buf gitdir = GIT_BUF_INIT;
+	git_worktree *wt = NULL;
+	int error = 0;
+
+	if (!is_worktree_dir(dir)) {
+		error = -1;
+		goto out;
+	}
+
+	if ((wt = git__calloc(1, sizeof(struct git_repository))) == NULL) {
+		error = -1;
+		goto out;
+	}
+
+	if ((wt->name = git__strdup(name)) == NULL
+	    || (wt->commondir_path = git_worktree__read_link(dir, "commondir")) == NULL
+	    || (wt->gitlink_path = git_worktree__read_link(dir, "gitdir")) == NULL
+	    || (wt->parent_path = git__strdup(parent)) == NULL) {
+		error = -1;
+		goto out;
+	}
+
+	if ((error = git_path_prettify_dir(&gitdir, dir, NULL)) < 0)
+		goto out;
+	wt->gitdir_path = git_buf_detach(&gitdir);
+
+	wt->locked = !!git_worktree_is_locked(NULL, wt);
+
+	*out = wt;
+
+out:
+	if (error)
+		git_worktree_free(wt);
+	git_buf_free(&gitdir);
+
+	return error;
+}
+
 int git_worktree_lookup(git_worktree **out, git_repository *repo, const char *name)
 {
 	git_buf path = GIT_BUF_INIT;
@@ -134,27 +174,8 @@ int git_worktree_lookup(git_worktree **out, git_repository *repo, const char *na
 	if ((error = git_buf_printf(&path, "%s/worktrees/%s", repo->commondir, name)) < 0)
 		goto out;
 
-	if (!is_worktree_dir(path.ptr)) {
-		error = -1;
+	if ((error = (open_worktree_dir(out, git_repository_path(repo), path.ptr, name))) < 0)
 		goto out;
-	}
-
-	if ((wt = git__malloc(sizeof(struct git_repository))) == NULL) {
-		error = -1;
-		goto out;
-	}
-
-	if ((wt->name = git__strdup(name)) == NULL
-	    || (wt->commondir_path = git_worktree__read_link(path.ptr, "commondir")) == NULL
-	    || (wt->gitlink_path = git_worktree__read_link(path.ptr, "gitdir")) == NULL
-	    || (wt->parent_path = git__strdup(git_repository_path(repo))) == NULL) {
-		error = -1;
-		goto out;
-	}
-	wt->gitdir_path = git_buf_detach(&path);
-	wt->locked = !!git_worktree_is_locked(NULL, wt);
-
-	(*out) = wt;
 
 out:
 	git_buf_free(&path);
