@@ -460,6 +460,50 @@ void test_notes_notes__can_read_a_note_in_an_existing_fanout(void)
 	git_note_free(note);
 }
 
+/* Can remove a note */
+void test_notes_notes__can_remove_a_note(void)
+{
+	git_oid note_oid, target_oid;
+	git_note *note;
+
+	create_note(&note_oid, "refs/notes/i-can-see-dead-notes", "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", "I decorate 4a20\n");
+
+	cl_git_pass(git_oid_fromstr(&target_oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045"));
+	cl_git_pass(git_note_remove(_repo, "refs/notes/i-can-see-dead-notes", _sig, _sig, &target_oid));
+
+	cl_git_fail(git_note_read(&note, _repo, "refs/notes/i-can-see-dead-notes", &target_oid));
+}
+
+/* Can remove a note from a commit */
+void test_notes_notes__can_remove_a_note_from_commit(void)
+{
+	git_oid oid, notes_commit_oid;
+	git_note *note = NULL;
+	git_commit *existing_notes_commit;
+	git_reference *ref;
+
+	cl_git_pass(git_oid_fromstr(&oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045"));
+
+	cl_git_pass(git_note_commit_create(&notes_commit_oid, NULL, _repo, NULL, _sig, _sig, &oid, "I decorate 4a20\n", 0));
+
+	git_commit_lookup(&existing_notes_commit, _repo, &notes_commit_oid);
+
+	cl_assert(existing_notes_commit);
+
+	cl_git_pass(git_note_commit_remove(&notes_commit_oid, _repo, existing_notes_commit, _sig, _sig, &oid));
+
+	/* remove_from_commit will not update any ref,
+	 * so we must manually create the ref, that points to the commit */
+	cl_git_pass(git_reference_create(&ref, _repo, "refs/notes/i-can-see-dead-notes", &notes_commit_oid, 0, NULL));
+
+	cl_git_fail(git_note_read(&note, _repo, "refs/notes/i-can-see-dead-notes", &oid));
+
+	git_commit_free(existing_notes_commit);
+	git_reference_free(ref);
+	git_note_free(note);
+}
+
+
 void test_notes_notes__can_remove_a_note_in_an_existing_fanout(void)
 {
 	git_oid target_oid;
