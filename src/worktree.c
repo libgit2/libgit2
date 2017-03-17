@@ -272,7 +272,7 @@ out:
 
 int git_worktree_add(git_worktree **out, git_repository *repo, const char *name, const char *worktree)
 {
-	git_buf gitdir = GIT_BUF_INIT, buf = GIT_BUF_INIT;
+	git_buf gitdir = GIT_BUF_INIT, wddir = GIT_BUF_INIT, buf = GIT_BUF_INIT;
 	git_reference *ref = NULL, *head = NULL;
 	git_commit *commit = NULL;
 	git_repository *wt = NULL;
@@ -293,23 +293,27 @@ int git_worktree_add(git_worktree **out, git_repository *repo, const char *name,
 		goto out;
 	if ((err = git_futils_mkdir(gitdir.ptr, 0755, GIT_MKDIR_EXCL)) < 0)
 		goto out;
+	if ((err = git_path_prettify_dir(&gitdir, gitdir.ptr, NULL)) < 0)
+		goto out;
 
 	/* Create worktree work dir */
 	if ((err = git_futils_mkdir(worktree, 0755, GIT_MKDIR_EXCL)) < 0)
+		goto out;
+	if ((err = git_path_prettify_dir(&wddir, worktree, NULL)) < 0)
 		goto out;
 
 	/* Create worktree .git file */
 	if ((err = git_buf_printf(&buf, "gitdir: %s\n", gitdir.ptr)) < 0)
 		goto out;
-	if ((err = write_wtfile(worktree, ".git", &buf)) < 0)
+	if ((err = write_wtfile(wddir.ptr, ".git", &buf)) < 0)
 		goto out;
 
 	/* Create gitdir files */
-	if ((err = git_buf_sets(&buf, repo->commondir)) < 0
+	if ((err = git_path_prettify_dir(&buf, repo->commondir, NULL) < 0)
 	    || (err = git_buf_putc(&buf, '\n')) < 0
 	    || (err = write_wtfile(gitdir.ptr, "commondir", &buf)) < 0)
 		goto out;
-	if ((err = git_buf_joinpath(&buf, worktree, ".git")) < 0
+	if ((err = git_buf_joinpath(&buf, wddir.ptr, ".git")) < 0
 	    || (err = git_buf_putc(&buf, '\n')) < 0
 	    || (err = write_wtfile(gitdir.ptr, "gitdir", &buf)) < 0)
 		goto out;
@@ -325,7 +329,7 @@ int git_worktree_add(git_worktree **out, git_repository *repo, const char *name,
 	/* Set worktree's HEAD */
 	if ((err = git_repository_create_head(gitdir.ptr, git_reference_name(ref))) < 0)
 		goto out;
-	if ((err = git_repository_open(&wt, worktree)) < 0)
+	if ((err = git_repository_open(&wt, wddir.ptr)) < 0)
 		goto out;
 
 	/* Checkout worktree's HEAD */
@@ -339,6 +343,7 @@ int git_worktree_add(git_worktree **out, git_repository *repo, const char *name,
 
 out:
 	git_buf_free(&gitdir);
+	git_buf_free(&wddir);
 	git_buf_free(&buf);
 	git_reference_free(ref);
 	git_reference_free(head);

@@ -306,7 +306,9 @@ void test_worktree_worktree__init_submodule(void)
 	cl_git_pass(git_worktree_add(&worktree, sm, "repo-worktree", path.ptr));
 	cl_git_pass(git_repository_open_from_worktree(&wt, worktree));
 
+	cl_git_pass(git_path_prettify_dir(&path, path.ptr, NULL));
 	cl_assert_equal_s(path.ptr, wt->workdir);
+	cl_git_pass(git_path_prettify_dir(&path, sm->commondir, NULL));
 	cl_assert_equal_s(sm->commondir, wt->commondir);
 
 	cl_git_pass(git_buf_joinpath(&path, sm->gitdir, "worktrees/repo-worktree/"));
