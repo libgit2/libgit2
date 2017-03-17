@@ -738,6 +738,7 @@ static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *
 {
 	int error;
 	git_buf ref_path = GIT_BUF_INIT;
+	const char *basedir;
 
 	assert(file && backend && name);
 
@@ -746,13 +747,18 @@ static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *
 		return GIT_EINVALIDSPEC;
 	}
 
+	if (is_per_worktree_ref(name))
+		basedir = backend->gitpath;
+	else
+		basedir = backend->commonpath;
+
 	/* Remove a possibly existing empty directory hierarchy
 	 * which name would collide with the reference name
 	 */
-	if ((error = git_futils_rmdir_r(name, backend->gitpath, GIT_RMDIR_SKIP_NONEMPTY)) < 0)
+	if ((error = git_futils_rmdir_r(name, basedir, GIT_RMDIR_SKIP_NONEMPTY)) < 0)
 		return error;
 
-	if (git_buf_joinpath(&ref_path, backend->gitpath, name) < 0)
+	if (git_buf_joinpath(&ref_path, basedir, name) < 0)
 		return -1;
 
 	error = git_filebuf_open(file, ref_path.ptr, GIT_FILEBUF_FORCE, GIT_REFS_FILE_MODE);
