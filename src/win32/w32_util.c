@@ -95,6 +95,59 @@ int git_win32__hidden(bool *out, const char *path)
 }
 
 /**
+* Checks if the given path (file or folder) has the +H (hidden) attribute set.
+*
+* @param path The path which should receive the +H bit.
+* @return True if hidden, false if visible
+*/
+int git_win32__ishidden(const char *path)
+{
+	git_win32_path buf;
+	DWORD attrs;
+
+	if (git_win32_path_from_utf8(buf, path) < 0)
+		return 0;
+
+	attrs = GetFileAttributesW(buf);
+
+	if (attrs == INVALID_FILE_ATTRIBUTES)
+		return -1;
+
+	if (attrs & FILE_ATTRIBUTE_HIDDEN)
+		return 1;
+
+	return -1;
+}
+
+/**
+* Ensures the given path (file or folder) does not have the +H (hidden) attribute set.
+*
+* @param path The path which should not have the +H bit.
+* @return 0 on success; -1 on failure
+*/
+int git_win32__setvisible(const char *path)
+{
+	git_win32_path buf;
+	DWORD attrs;
+
+	if (git_win32_path_from_utf8(buf, path) < 0)
+		return -1;
+
+	attrs = GetFileAttributesW(buf);
+
+	/* Ensure the path exists */
+	if (attrs == INVALID_FILE_ATTRIBUTES)
+		return -1;
+
+	/* If the item is already +H, remove the bit */
+	if ((attrs & FILE_ATTRIBUTE_HIDDEN) == FILE_ATTRIBUTE_HIDDEN &&
+		!SetFileAttributesW(buf, attrs & ~FILE_ATTRIBUTE_HIDDEN))
+		return -1;
+
+	return 0;
+}
+
+/**
  * Removes any trailing backslashes from a path, except in the case of a drive
  * letter path (C:\, D:\, etc.). This function cannot fail.
  *
