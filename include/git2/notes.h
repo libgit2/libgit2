@@ -52,6 +52,20 @@ GIT_EXTERN(int) git_note_iterator_new(
 	const char *notes_ref);
 
 /**
+ * Creates a new iterator for notes from a commit
+ *
+ * The iterator must be freed manually by the user.
+ *
+ * @param out pointer to the iterator
+ * @param notes_commit a pointer to the notes commit object
+ *
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_note_commit_iterator_new(
+	git_note_iterator **out,
+	git_commit *notes_commit);
+
+/**
  * Frees an git_note_iterator
  *
  * @param it pointer to the iterator

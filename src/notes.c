@@ -766,6 +766,25 @@ cleanup:
 	return error;
 }
 
+int git_note_commit_iterator_new(
+	git_note_iterator **it,
+	git_commit *notes_commit)
+{
+	int error;
+	git_tree *tree;
+
+	if ((error = git_commit_tree(&tree, notes_commit)) < 0)
+		goto cleanup;
+
+	if ((error = git_iterator_for_tree(it, tree, NULL)) < 0)
+		git_iterator_free(*it);
+
+cleanup:
+	git_tree_free(tree);
+
+	return error;
+}
+
 int git_note_next(
 	git_oid* note_id,
 	git_oid* annotated_id,
