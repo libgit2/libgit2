@@ -1041,8 +1041,9 @@ static int parse_section_header_ext(struct reader *reader, const char *line, con
 	GITERR_CHECK_ALLOC_ADD(&alloc_len, base_name_len, quoted_len);
 	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 2);
 
-	git_buf_grow(&buf, alloc_len);
-	git_buf_printf(&buf, "%s.", base_name);
+	if (git_buf_grow(&buf, alloc_len) < 0 ||
+	    git_buf_printf(&buf, "%s.", base_name) < 0)
+		goto end_parse;
 
 	rpos = 0;
 
@@ -1082,6 +1083,11 @@ static int parse_section_header_ext(struct reader *reader, const char *line, con
 	} while (line + rpos < last_quote);
 
 end_parse:
+	if (git_buf_oom(&buf)) {
+		git_buf_free(&buf);
+		return -1;
+	}
+
 	if (line[rpos] != '"' || line[rpos + 1] != ']') {
 		set_parse_error(reader, rpos, "Unexpected text after closing quotes");
 		git_buf_free(&buf);
