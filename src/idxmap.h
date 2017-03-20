@@ -39,8 +39,7 @@ int git_idxmap_has_data(git_idxmap *map, size_t idx);
 
 void git_idxmap_resize(git_idxmap *map, size_t size);
 void git_idxmap_icase_resize(git_idxmap_icase *map, size_t size);
-#define git_idxmap_free(h) git_idxmap__free(h); (h) = NULL
-void git_idxmap__free(git_idxmap *map);
+void git_idxmap_free(git_idxmap *map);
 void git_idxmap_clear(git_idxmap *map);
 
 void git_idxmap_delete_at(git_idxmap *map, size_t idx);

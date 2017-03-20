@@ -14,7 +14,7 @@ git_offmap *git_offmap_alloc(void)
 	return kh_init(off);
 }
 
-void git_offmap__free(git_offmap *map)
+void git_offmap_free(git_offmap *map)
 {
 	kh_destroy(off, map);
 }
