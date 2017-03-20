@@ -444,9 +444,9 @@ static int parse_header_git(
 				goto done;
 
 			parse_advance_ws(ctx);
-			parse_advance_expected_str(ctx, "\n");
 
-			if (ctx->line_len > 0) {
+			if (parse_advance_expected_str(ctx, "\n") < 0 ||
+			    ctx->line_len > 0) {
 				error = parse_err("trailing data at line %"PRIuZ, ctx->line_num);
 				goto done;
 			}
