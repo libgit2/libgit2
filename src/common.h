@@ -211,11 +211,11 @@ GIT_INLINE(void) git__init_structure(void *structure, size_t len, unsigned int v
 
 /** Check for additive overflow, setting an error if would occur. */
 #define GIT_ADD_SIZET_OVERFLOW(out, one, two) \
-	(git__add_sizet_overflow(out, one, two) ? (giterr_set_oom(), 1) : 0)
+	(git__add_sizet_overflow(out, one, two) ? (giterr_set_overflow(), 1) : 0)
 
 /** Check for additive overflow, setting an error if would occur. */
 #define GIT_MULTIPLY_SIZET_OVERFLOW(out, nelem, elsize) \
-	(git__multiply_sizet_overflow(out, nelem, elsize) ? (giterr_set_oom(), 1) : 0)
+	(git__multiply_sizet_overflow(out, nelem, elsize) ? (giterr_set_overflow(), 1) : 0)
 
 /** Check for additive overflow, failing if it would occur. */
 #define GITERR_CHECK_ADD(out, one, two) \

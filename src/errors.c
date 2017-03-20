@@ -18,6 +18,11 @@ static git_error g_git_oom_error = {
 	GITERR_NOMEMORY
 };
 
+static git_error g_git_overflow_error = {
+	"Integer overflow",
+	GITERR_OVERFLOW
+};
+
 static void set_error_from_buffer(int error_class)
 {
 	git_error *error = &GIT_GLOBAL->error_t;
@@ -45,6 +50,11 @@ static void set_error(int error_class, char *string)
 void giterr_set_oom(void)
 {
 	GIT_GLOBAL->last_error = &g_git_oom_error;
+}
+
+void giterr_set_overflow(void)
+{
+	GIT_GLOBAL->last_error = &g_git_overflow_error;
 }
 
 void giterr_set(int error_class, const char *string, ...)
