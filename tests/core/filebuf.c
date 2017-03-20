@@ -187,6 +187,35 @@ void test_core_filebuf__symlink_follow(void)
 	cl_git_pass(git_futils_rmdir_r(dir, NULL, GIT_RMDIR_REMOVE_FILES));
 }
 
+void test_core_filebuf__symlink_follow_absolute_paths(void)
+{
+	git_filebuf file = GIT_FILEBUF_INIT;
+	git_buf source = GIT_BUF_INIT, target = GIT_BUF_INIT;
+
+#ifdef GIT_WIN32
+	cl_skip();
+#endif
+
+	cl_git_pass(git_buf_joinpath(&source, clar_sandbox_path(), "linkdir/link"));
+	cl_git_pass(git_buf_joinpath(&target, clar_sandbox_path(), "linkdir/target"));
+	cl_git_pass(p_mkdir("linkdir", 0777));
+	cl_git_pass(p_symlink(target.ptr, source.ptr));
+
+	cl_git_pass(git_filebuf_open(&file, source.ptr, 0, 0666));
+	cl_git_pass(git_filebuf_printf(&file, "%s\n", "libgit2 rocks"));
+
+	cl_assert_equal_i(true, git_path_exists("linkdir/target.lock"));
+
+	cl_git_pass(git_filebuf_commit(&file));
+	cl_assert_equal_i(true, git_path_exists("linkdir/target"));
+
+	git_filebuf_cleanup(&file);
+	git_buf_free(&source);
+	git_buf_free(&target);
+
+	cl_git_pass(git_futils_rmdir_r("linkdir", NULL, GIT_RMDIR_REMOVE_FILES));
+}
+
 void test_core_filebuf__symlink_depth(void)
 {
 	git_filebuf file = GIT_FILEBUF_INIT;

@@ -246,7 +246,7 @@ static int resolve_symlink(git_buf *out, const char *path)
 
 		root = git_path_root(target.ptr);
 		if (root >= 0) {
-			if ((error = git_buf_puts(&curpath, target.ptr)) < 0)
+			if ((error = git_buf_sets(&curpath, target.ptr)) < 0)
 				goto cleanup;
 		} else {
 			git_buf dir = GIT_BUF_INIT;
