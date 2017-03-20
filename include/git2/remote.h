@@ -796,7 +796,7 @@ GIT_EXTERN(int) git_remote_is_valid_name(const char *remote_name);
 * for the remote will be removed.
 *
 * @param repo the repository in which to act
-* @param name the name of the remove to delete
+* @param name the name of the remote to delete
 * @return 0 on success, or an error code.
 */
 GIT_EXTERN(int) git_remote_delete(git_repository *repo, const char *name);
