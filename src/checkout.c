@@ -2319,8 +2319,6 @@ static void checkout_data_clear(checkout_data *data)
 	git__free(data->pfx);
 	data->pfx = NULL;
 
-	git_strmap_free(data->mkdir_map);
-
 	git_buf_free(&data->target_path);
 	git_buf_free(&data->tmp);
 
@@ -2328,6 +2326,7 @@ static void checkout_data_clear(checkout_data *data)
 	data->index = NULL;
 
 	git_strmap_free(data->mkdir_map);
+	data->mkdir_map = NULL;
 
 	git_attr_session__free(&data->attr_session);
 }
