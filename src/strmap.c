@@ -19,7 +19,7 @@ int git_strmap_alloc(git_strmap **map)
 	return 0;
 }
 
-void git_strmap__free(git_strmap *map)
+void git_strmap_free(git_strmap *map)
 {
 	kh_destroy(str, map);
 }

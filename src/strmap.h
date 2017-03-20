@@ -21,9 +21,7 @@ typedef khash_t(str) git_strmap;
 typedef khiter_t git_strmap_iter;
 
 int git_strmap_alloc(git_strmap **map);
-
-#define git_strmap_free(h) git_strmap__free(h); (h) = NULL
-void git_strmap__free(git_strmap *map);
+void git_strmap_free(git_strmap *map);
 void git_strmap_clear(git_strmap *map);
 
 size_t git_strmap_num_entries(git_strmap *map);

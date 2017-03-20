@@ -21,7 +21,7 @@ git_oidmap *git_oidmap_alloc()
 	return kh_init(oid);
 }
 
-void git_oidmap__free(git_oidmap *map)
+void git_oidmap_free(git_oidmap *map)
 {
 	kh_destroy(oid, map);
 }

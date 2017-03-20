@@ -21,8 +21,7 @@ __KHASH_TYPE(oid, const git_oid *, void *)
 typedef khash_t(oid) git_oidmap;
 
 git_oidmap *git_oidmap_alloc(void);
-#define git_oidmap_free(h) git_oidmap__free(h); (h) = NULL
-void git_oidmap__free(git_oidmap *map);
+void git_oidmap_free(git_oidmap *map);
 void git_oidmap_clear(git_oidmap *map);
 
 size_t git_oidmap_size(git_oidmap *map);

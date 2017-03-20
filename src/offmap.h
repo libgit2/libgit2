@@ -21,8 +21,7 @@ __KHASH_TYPE(off, git_off_t, void *)
 typedef khash_t(off) git_offmap;
 
 git_offmap *git_offmap_alloc(void);
-#define git_offmap_free(h) git_offmap__free(h); (h) = NULL
-void git_offmap__free(git_offmap *map);
+void git_offmap_free(git_offmap *map);
 void git_offmap_clear(git_offmap *map);
 
 size_t git_offmap_num_entries(git_offmap *map);

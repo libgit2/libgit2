@@ -99,7 +99,7 @@ void git_idxmap_icase_resize(git_idxmap_icase *map, size_t size)
 	kh_resize(idxicase, map, size);
 }
 
-void git_idxmap__free(git_idxmap *map)
+void git_idxmap_free(git_idxmap *map)
 {
 	kh_destroy(idx, map);
 }
