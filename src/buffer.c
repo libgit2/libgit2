@@ -239,7 +239,7 @@ int git_buf_encode_base64(git_buf *buf, const char *data, size_t len)
 	size_t blocks = (len / 3) + !!extra, alloclen;
 
 	GITERR_CHECK_ALLOC_ADD(&blocks, blocks, 1);
-	GITERR_CHECK_ALLOC_MULTIPLY(&alloclen, blocks, 4);
+	GITERR_CHECK_MULTIPLY(&alloclen, blocks, 4);
 	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, buf->size);
 
 	ENSURE_SIZE(buf, alloclen);
@@ -337,7 +337,7 @@ int git_buf_encode_base85(git_buf *buf, const char *data, size_t len)
 {
 	size_t blocks = (len / 4) + !!(len % 4), alloclen;
 
-	GITERR_CHECK_ALLOC_MULTIPLY(&alloclen, blocks, 5);
+	GITERR_CHECK_MULTIPLY(&alloclen, blocks, 5);
 	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, buf->size);
 	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
 
@@ -459,7 +459,7 @@ int git_buf_vprintf(git_buf *buf, const char *format, va_list ap)
 	size_t expected_size, new_size;
 	int len;
 
-	GITERR_CHECK_ALLOC_MULTIPLY(&expected_size, strlen(format), 2);
+	GITERR_CHECK_MULTIPLY(&expected_size, strlen(format), 2);
 	GITERR_CHECK_ALLOC_ADD(&expected_size, expected_size, buf->size);
 	ENSURE_SIZE(buf, expected_size);
 

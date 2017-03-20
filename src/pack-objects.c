@@ -219,7 +219,7 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 
 	if (pb->nr_objects >= pb->nr_alloc) {
 		GITERR_CHECK_ALLOC_ADD(&newsize, pb->nr_alloc, 1024);
-		GITERR_CHECK_ALLOC_MULTIPLY(&newsize, newsize, 3 / 2);
+		GITERR_CHECK_MULTIPLY(&newsize, newsize, 3 / 2);
 
 		if (!git__is_uint32(newsize)) {
 			giterr_set(GITERR_NOMEMORY, "packfile too large to fit in memory.");

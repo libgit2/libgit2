@@ -159,7 +159,7 @@ void test_core_errors__restore_oom(void)
 static int test_arraysize_multiply(size_t nelem, size_t size)
 {
 	size_t out;
-	GITERR_CHECK_ALLOC_MULTIPLY(&out, nelem, size);
+	GITERR_CHECK_MULTIPLY(&out, nelem, size);
 	return 0;
 }
 

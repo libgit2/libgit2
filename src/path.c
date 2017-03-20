@@ -909,7 +909,7 @@ int git_path_make_relative(git_buf *path, const char *parent)
 	for (; (q = strchr(q, '/')) && *(q + 1); q++)
 		depth++;
 
-	GITERR_CHECK_ALLOC_MULTIPLY(&newlen, depth, 3);
+	GITERR_CHECK_MULTIPLY(&newlen, depth, 3);
 	GITERR_CHECK_ALLOC_ADD(&newlen, newlen, plen);
 
 	GITERR_CHECK_ALLOC_ADD(&alloclen, newlen, 1);

@@ -54,7 +54,7 @@ int git_vector_dup(git_vector *v, const git_vector *src, git_vector_cmp cmp)
 
 	assert(v && src);
 
-	GITERR_CHECK_ALLOC_MULTIPLY(&bytes, src->length, sizeof(void *));
+	GITERR_CHECK_MULTIPLY(&bytes, src->length, sizeof(void *));
 
 	v->_alloc_size = src->length;
 	v->_cmp = cmp ? cmp : src->_cmp;

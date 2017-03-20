@@ -1401,7 +1401,7 @@ int git_merge_diff_list__find_renames(
 		goto done;
 
 	if (diff_list->conflicts.length <= opts->target_limit) {
-		GITERR_CHECK_ALLOC_MULTIPLY(&cache_size, diff_list->conflicts.length, 3);
+		GITERR_CHECK_MULTIPLY(&cache_size, diff_list->conflicts.length, 3);
 		cache = git__calloc(cache_size, sizeof(void *));
 		GITERR_CHECK_ALLOC(cache);
 

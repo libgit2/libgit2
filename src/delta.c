@@ -124,8 +124,8 @@ static int lookup_index_alloc(
 {
 	size_t entries_len, hash_len, index_len;
 
-	GITERR_CHECK_ALLOC_MULTIPLY(&entries_len, entries, sizeof(struct index_entry));
-	GITERR_CHECK_ALLOC_MULTIPLY(&hash_len, hash_count, sizeof(struct index_entry *));
+	GITERR_CHECK_MULTIPLY(&entries_len, entries, sizeof(struct index_entry));
+	GITERR_CHECK_MULTIPLY(&hash_len, hash_count, sizeof(struct index_entry *));
 
 	GITERR_CHECK_ALLOC_ADD(&index_len, sizeof(struct git_delta_index), entries_len);
 	GITERR_CHECK_ALLOC_ADD(&index_len, index_len, hash_len);

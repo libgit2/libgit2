@@ -156,8 +156,8 @@ static int filter_registry_insert(
 	if (filter_def_scan_attrs(&attrs, &nattr, &nmatch, filter->attributes) < 0)
 		return -1;
 
-	GITERR_CHECK_ALLOC_MULTIPLY(&alloc_len, nattr, 2);
-	GITERR_CHECK_ALLOC_MULTIPLY(&alloc_len, alloc_len, sizeof(char *));
+	GITERR_CHECK_MULTIPLY(&alloc_len, nattr, 2);
+	GITERR_CHECK_MULTIPLY(&alloc_len, alloc_len, sizeof(char *));
 	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, sizeof(git_filter_def));
 
 	fdef = git__calloc(1, alloc_len);

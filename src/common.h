@@ -231,7 +231,7 @@ GIT_INLINE(void) git__init_structure(void *structure, size_t len, unsigned int v
 		GIT_ADD_SIZET_OVERFLOW(out, *(out), four)) { return -1; }
 
 /** Check for multiplicative overflow, failing if it would occur. */
-#define GITERR_CHECK_ALLOC_MULTIPLY(out, nelem, elsize) \
+#define GITERR_CHECK_MULTIPLY(out, nelem, elsize) \
 	if (GIT_MULTIPLY_SIZET_OVERFLOW(out, nelem, elsize)) { return -1; }
 
 /* NOTE: other giterr functions are in the public errors.h header file */

@@ -303,7 +303,7 @@ static int histogram_diff(
 
 	index.table_bits = xdl_hashbits(count1);
 	sz = index.records_size = 1 << index.table_bits;
-	GITERR_CHECK_ALLOC_MULTIPLY(&sz, sz, sizeof(struct record *));
+	GITERR_CHECK_MULTIPLY(&sz, sz, sizeof(struct record *));
 
 	if (!(index.records = (struct record **) xdl_malloc(sz)))
 		goto cleanup;

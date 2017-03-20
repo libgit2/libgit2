@@ -20,7 +20,7 @@
 		GIT_ADD_SIZET_OVERFLOW(out, *(out), three) || \
 		GIT_ADD_SIZET_OVERFLOW(out, *(out), four)) { __coverity_panic__(); }
 
-#nodef GITERR_CHECK_ALLOC_MULTIPLY(out, nelem, elsize) \
+#nodef GITERR_CHECK_MULTIPLY(out, nelem, elsize) \
 	if (GIT_MULTIPLY_SIZET_OVERFLOW(out, nelem, elsize)) { __coverity_panic__(); }
 
 #nodef GITERR_CHECK_VERSION(S,V,N) if (giterr__check_version(S,V,N) < 0)  { __coverity_panic__(); }
