@@ -44,7 +44,11 @@ static git_diff_parsed *diff_parsed_alloc(void)
 	diff->base.patch_fn = git_patch_parsed_from_diff;
 	diff->base.free_fn = diff_parsed_free;
 
-	git_diff_init_options(&diff->base.opts, GIT_DIFF_OPTIONS_VERSION);
+	if (git_diff_init_options(&diff->base.opts, GIT_DIFF_OPTIONS_VERSION) < 0) {
+		git__free(&diff);
+		return NULL;
+	}
+
 	diff->base.opts.flags &= ~GIT_DIFF_IGNORE_CASE;
 
 	git_pool_init(&diff->base.pool, 1);
