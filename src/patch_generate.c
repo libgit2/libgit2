@@ -206,35 +206,14 @@ static int patch_generated_load(git_patch_generated *patch, git_patch_generated_
 		 ((patch->nfile.flags & GIT_DIFF_FLAG__NO_DATA) != 0 ||
 		  (patch->nfile.file->flags & GIT_DIFF_FLAG_VALID_ID) != 0));
 
-	/* always try to load workdir content first because filtering may
-	 * need 2x data size and this minimizes peak memory footprint
-	 */
-	if (patch->ofile.src == GIT_ITERATOR_TYPE_WORKDIR) {
-		if ((error = git_diff_file_content__load(
-				&patch->ofile, &patch->base.diff_opts)) < 0 ||
-			should_skip_binary(patch, patch->ofile.file))
-			goto cleanup;
-	}
-	if (patch->nfile.src == GIT_ITERATOR_TYPE_WORKDIR) {
-		if ((error = git_diff_file_content__load(
-				&patch->nfile, &patch->base.diff_opts)) < 0 ||
-			should_skip_binary(patch, patch->nfile.file))
-			goto cleanup;
-	}
-
-	/* once workdir has been tried, load other data as needed */
-	if (patch->ofile.src != GIT_ITERATOR_TYPE_WORKDIR) {
-		if ((error = git_diff_file_content__load(
-				&patch->ofile, &patch->base.diff_opts)) < 0 ||
-			should_skip_binary(patch, patch->ofile.file))
-			goto cleanup;
-	}
-	if (patch->nfile.src != GIT_ITERATOR_TYPE_WORKDIR) {
-		if ((error = git_diff_file_content__load(
-				&patch->nfile, &patch->base.diff_opts)) < 0 ||
-			should_skip_binary(patch, patch->nfile.file))
-			goto cleanup;
-	}
+	if ((error = git_diff_file_content__load(
+			&patch->ofile, &patch->base.diff_opts)) < 0 ||
+		should_skip_binary(patch, patch->ofile.file))
+		goto cleanup;
+	if ((error = git_diff_file_content__load(
+			&patch->nfile, &patch->base.diff_opts)) < 0 ||
+		should_skip_binary(patch, patch->nfile.file))
+		goto cleanup;
 
 	/* if previously missing an oid, and now that we have it the two sides
 	 * are the same (and not submodules), update MODIFIED -> UNMODIFIED
@@ -419,56 +398,6 @@ static int diff_required(git_diff *diff, const char *action)
 		return 0;
 	giterr_set(GITERR_INVALID, "must provide valid diff to %s", action);
 	return -1;
-}
-
-int git_diff_foreach(
-	git_diff *diff,
-	git_diff_file_cb file_cb,
-	git_diff_binary_cb binary_cb,
-	git_diff_hunk_cb hunk_cb,
-	git_diff_line_cb data_cb,
-	void *payload)
-{
-	int error = 0;
-	git_xdiff_output xo;
-	size_t idx;
-	git_patch_generated patch;
-
-	if ((error = diff_required(diff, "git_diff_foreach")) < 0)
-		return error;
-
-	memset(&xo, 0, sizeof(xo));
-	memset(&patch, 0, sizeof(patch));
-	diff_output_init(
-		&xo.output, &diff->opts, file_cb, binary_cb, hunk_cb, data_cb, payload);
-	git_xdiff_init(&xo, &diff->opts);
-
-	git_vector_foreach(&diff->deltas, idx, patch.base.delta) {
-
-		/* check flags against patch status */
-		if (git_diff_delta__should_skip(&diff->opts, patch.base.delta))
-			continue;
-
-		if (binary_cb || hunk_cb || data_cb) {
-			if ((error = patch_generated_init(&patch, diff, idx)) != 0 ||
-				(error = patch_generated_load(&patch, &xo.output)) != 0) {
-				git_patch_free(&patch.base);
-				return error;
-			}
-		}
-
-		if ((error = patch_generated_invoke_file_callback(&patch, &xo.output)) == 0) {
-			if (binary_cb || hunk_cb || data_cb)
-					error = patch_generated_create(&patch, &xo.output);
-		}
-
-		git_patch_free(&patch.base);
-
-		if (error)
-			break;
-	}
-
-	return error;
 }
 
 typedef struct {

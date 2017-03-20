@@ -120,6 +120,41 @@ int git_diff_get_perfdata(git_diff_perfdata *out, const git_diff *diff)
 	return 0;
 }
 
+int git_diff_foreach(
+	git_diff *diff,
+	git_diff_file_cb file_cb,
+	git_diff_binary_cb binary_cb,
+	git_diff_hunk_cb hunk_cb,
+	git_diff_line_cb data_cb,
+	void *payload)
+{
+	int error = 0;
+	git_diff_delta *delta;
+	size_t idx;
+
+	assert(diff);
+
+	git_vector_foreach(&diff->deltas, idx, delta) {
+		git_patch *patch;
+
+		/* check flags against patch status */
+		if (git_diff_delta__should_skip(&diff->opts, delta))
+			continue;
+
+		if ((error = git_patch_from_diff(&patch, diff, idx)) != 0)
+			break;
+
+		error = git_patch__invoke_callbacks(patch, file_cb, binary_cb,
+						    hunk_cb, data_cb, payload);
+		git_patch_free(patch);
+
+		if (error)
+			break;
+	}
+
+	return error;
+}
+
 int git_diff_format_email__append_header_tobuf(
 	git_buf *out,
 	const git_oid *id,
