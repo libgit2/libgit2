@@ -36,23 +36,23 @@ GIT_EXTERN(git_merge_driver *) git_merge_driver_lookup(const char *name);
 typedef struct git_merge_driver_source git_merge_driver_source;
 
 /** Get the repository that the source data is coming from. */
-GIT_EXTERN(git_repository *) git_merge_driver_source_repo(
+GIT_EXTERN(const git_repository *) git_merge_driver_source_repo(
 	const git_merge_driver_source *src);
 
 /** Gets the ancestor of the file to merge. */
-GIT_EXTERN(git_index_entry *) git_merge_driver_source_ancestor(
+GIT_EXTERN(const git_index_entry *) git_merge_driver_source_ancestor(
 	const git_merge_driver_source *src);
 
 /** Gets the ours side of the file to merge. */
-GIT_EXTERN(git_index_entry *) git_merge_driver_source_ours(
+GIT_EXTERN(const git_index_entry *) git_merge_driver_source_ours(
 	const git_merge_driver_source *src);
 
 /** Gets the theirs side of the file to merge. */
-GIT_EXTERN(git_index_entry *) git_merge_driver_source_theirs(
+GIT_EXTERN(const git_index_entry *) git_merge_driver_source_theirs(
 	const git_merge_driver_source *src);
 
 /** Gets the merge file options that the merge was invoked with */
-GIT_EXTERN(git_merge_file_options *) git_merge_driver_source_file_options(
+GIT_EXTERN(const git_merge_file_options *) git_merge_driver_source_file_options(
 	const git_merge_driver_source *src);
 
 
