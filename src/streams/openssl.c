@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "openssl_stream.h"
+#include "streams/openssl.h"
 
 #ifdef GIT_OPENSSL
 
@@ -14,13 +14,13 @@
 #include "global.h"
 #include "posix.h"
 #include "stream.h"
-#include "socket_stream.h"
+#include "streams/socket.h"
 #include "netops.h"
 #include "git2/transport.h"
 #include "git2/sys/openssl.h"
 
 #ifdef GIT_CURL
-# include "curl_stream.h"
+# include "streams/curl.h"
 #endif
 
 #ifndef GIT_WIN32

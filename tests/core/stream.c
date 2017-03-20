@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 #include "git2/sys/stream.h"
-#include "tls_stream.h"
+#include "streams/tls.h"
 #include "stream.h"
 
 static git_stream test_stream;

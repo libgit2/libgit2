@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "curl_stream.h"
+#include "streams/curl.h"
 
 #ifdef GIT_CURL
 

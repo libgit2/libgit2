@@ -5,12 +5,12 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "tls_stream.h"
+#include "streams/tls.h"
 
 #include "git2/errors.h"
 
-#include "openssl_stream.h"
-#include "stransport_stream.h"
+#include "streams/openssl.h"
+#include "streams/stransport.h"
 
 static git_stream_cb tls_ctor;
 

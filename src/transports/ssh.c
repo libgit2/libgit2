@@ -17,7 +17,7 @@
 #include "netops.h"
 #include "smart.h"
 #include "cred.h"
-#include "socket_stream.h"
+#include "streams/socket.h"
 
 #ifdef GIT_SSH
 

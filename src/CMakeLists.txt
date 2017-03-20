@@ -320,7 +320,10 @@ ELSE()
 	ENDIF()
 	FILE(GLOB SRC_OS unix/*.c unix/*.h)
 ENDIF()
-FILE(GLOB SRC_GIT2 *.c *.h transports/*.c transports/*.h xdiff/*.c xdiff/*.h)
+FILE(GLOB SRC_GIT2 *.c *.h
+	streams/*.c streams/*.h
+	transports/*.c transports/*.h
+	xdiff/*.c xdiff/*.h)
 
 # Determine architecture of the machine
 IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
