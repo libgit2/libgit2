@@ -13,8 +13,8 @@ int git_sortedcache_new(
 
 	pathlen = path ? strlen(path) : 0;
 
-	GITERR_CHECK_ALLOC_ADD(&alloclen, sizeof(git_sortedcache), pathlen);
-	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
+	GITERR_CHECK_ADD(&alloclen, sizeof(git_sortedcache), pathlen);
+	GITERR_CHECK_ADD(&alloclen, alloclen, 1);
 	sc = git__calloc(1, alloclen);
 	GITERR_CHECK_ALLOC(sc);
 

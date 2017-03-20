@@ -1038,8 +1038,8 @@ static int parse_section_header_ext(struct reader *reader, const char *line, con
 		return -1;
 	}
 
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, base_name_len, quoted_len);
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 2);
+	GITERR_CHECK_ADD(&alloc_len, base_name_len, quoted_len);
+	GITERR_CHECK_ADD(&alloc_len, alloc_len, 2);
 
 	git_buf_grow(&buf, alloc_len);
 	git_buf_printf(&buf, "%s.", base_name);
@@ -1112,7 +1112,7 @@ static int parse_section_header(struct reader *reader, char **section_out)
 		return -1;
 	}
 
-	GITERR_CHECK_ALLOC_ADD(&line_len, (size_t)(name_end - line), 1);
+	GITERR_CHECK_ADD(&line_len, (size_t)(name_end - line), 1);
 	name = git__malloc(line_len);
 	GITERR_CHECK_ALLOC(name);
 

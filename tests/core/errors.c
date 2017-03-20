@@ -181,7 +181,7 @@ void test_core_errors__integer_overflow_alloc_multiply(void)
 static int test_arraysize_add(size_t one, size_t two)
 {
 	size_t out;
-	GITERR_CHECK_ALLOC_ADD(&out, one, two);
+	GITERR_CHECK_ADD(&out, one, two);
 	return 0;
 }
 

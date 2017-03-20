@@ -46,7 +46,7 @@ static int impl__write(git_odb_backend *_backend, const git_oid *oid, const void
 	if (rval == 0)
 		return 0;
 
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, sizeof(struct memobject), len);
+	GITERR_CHECK_ADD(&alloc_len, sizeof(struct memobject), len);
 	obj = git__malloc(alloc_len);
 	GITERR_CHECK_ALLOC(obj);
 

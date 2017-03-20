@@ -906,8 +906,8 @@ static int index_entry_create(
 		return -1;
 	}
 
-	GITERR_CHECK_ALLOC_ADD(&alloclen, sizeof(struct entry_internal), pathlen);
-	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
+	GITERR_CHECK_ADD(&alloclen, sizeof(struct entry_internal), pathlen);
+	GITERR_CHECK_ADD(&alloclen, alloclen, 1);
 	entry = git__calloc(1, alloclen);
 	GITERR_CHECK_ALLOC(entry);
 
@@ -2364,7 +2364,7 @@ static size_t read_entry(
 		if (varint_len == 0)
 			return index_error_invalid("incorrect prefix length");
 
-		GITERR_CHECK_ALLOC_ADD(&tmp_path_len, shared, len + 1);
+		GITERR_CHECK_ADD(&tmp_path_len, shared, len + 1);
 		tmp_path = git__malloc(tmp_path_len);
 		GITERR_CHECK_ALLOC(tmp_path);
 		memcpy(tmp_path, last, last_len);

@@ -218,7 +218,7 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 		return 0;
 
 	if (pb->nr_objects >= pb->nr_alloc) {
-		GITERR_CHECK_ALLOC_ADD(&newsize, pb->nr_alloc, 1024);
+		GITERR_CHECK_ADD(&newsize, pb->nr_alloc, 1024);
 		GITERR_CHECK_MULTIPLY(&newsize, newsize, 3 / 2);
 
 		if (!git__is_uint32(newsize)) {

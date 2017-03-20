@@ -337,7 +337,7 @@ int git_vector_insert_null(git_vector *v, size_t idx, size_t insert_len)
 
 	assert(insert_len > 0 && idx <= v->length);
 
-	GITERR_CHECK_ALLOC_ADD(&new_length, v->length, insert_len);
+	GITERR_CHECK_ADD(&new_length, v->length, insert_len);
 
 	if (new_length > v->_alloc_size && resize_vector(v, new_length) < 0)
 		return -1;

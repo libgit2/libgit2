@@ -162,8 +162,8 @@ static int diff_driver_alloc(
 		namelen = strlen(name),
 		alloclen;
 
-	GITERR_CHECK_ALLOC_ADD(&alloclen, driverlen, namelen);
-	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
+	GITERR_CHECK_ADD(&alloclen, driverlen, namelen);
+	GITERR_CHECK_ADD(&alloclen, alloclen, 1);
 
 	driver = git__calloc(1, alloclen);
 	GITERR_CHECK_ALLOC(driver);

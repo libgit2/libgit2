@@ -127,8 +127,8 @@ static int lookup_index_alloc(
 	GITERR_CHECK_MULTIPLY(&entries_len, entries, sizeof(struct index_entry));
 	GITERR_CHECK_MULTIPLY(&hash_len, hash_count, sizeof(struct index_entry *));
 
-	GITERR_CHECK_ALLOC_ADD(&index_len, sizeof(struct git_delta_index), entries_len);
-	GITERR_CHECK_ALLOC_ADD(&index_len, index_len, hash_len);
+	GITERR_CHECK_ADD(&index_len, sizeof(struct git_delta_index), entries_len);
+	GITERR_CHECK_ADD(&index_len, index_len, hash_len);
 
 	if (!git__is_ulong(index_len)) {
 		giterr_set(GITERR_NOMEMORY, "overly large delta");
@@ -553,7 +553,7 @@ int git_delta_apply(
 		return -1;
 	}
 
-	GITERR_CHECK_ALLOC_ADD(&alloc_sz, res_sz, 1);
+	GITERR_CHECK_ADD(&alloc_sz, res_sz, 1);
 	res_dp = git__malloc(alloc_sz);
 	GITERR_CHECK_ALLOC(res_dp);
 

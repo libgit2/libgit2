@@ -2660,7 +2660,7 @@ static int merge_ancestor_head(
 
 	assert(repo && our_head && their_heads);
 
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, their_heads_len, 1);
+	GITERR_CHECK_ADD(&alloc_len, their_heads_len, 1);
 	oids = git__calloc(alloc_len, sizeof(git_oid));
 	GITERR_CHECK_ALLOC(oids);
 

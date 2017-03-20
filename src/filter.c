@@ -158,7 +158,7 @@ static int filter_registry_insert(
 
 	GITERR_CHECK_MULTIPLY(&alloc_len, nattr, 2);
 	GITERR_CHECK_MULTIPLY(&alloc_len, alloc_len, sizeof(char *));
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, sizeof(git_filter_def));
+	GITERR_CHECK_ADD(&alloc_len, alloc_len, sizeof(git_filter_def));
 
 	fdef = git__calloc(1, alloc_len);
 	GITERR_CHECK_ALLOC(fdef);
@@ -403,8 +403,8 @@ static int filter_list_new(
 	git_filter_list *fl = NULL;
 	size_t pathlen = src->path ? strlen(src->path) : 0, alloclen;
 
-	GITERR_CHECK_ALLOC_ADD(&alloclen, sizeof(git_filter_list), pathlen);
-	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
+	GITERR_CHECK_ADD(&alloclen, sizeof(git_filter_list), pathlen);
+	GITERR_CHECK_ADD(&alloclen, alloclen, 1);
 
 	fl = git__calloc(1, alloclen);
 	GITERR_CHECK_ALLOC(fl);

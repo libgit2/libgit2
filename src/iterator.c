@@ -631,7 +631,7 @@ GIT_INLINE(int) tree_iterator_frame_push_neighbors(
 		if ((error = tree_iterator_compute_path(path, entry)) < 0)
 			break;
 
-		GITERR_CHECK_ALLOC_ADD(&new_size,
+		GITERR_CHECK_ADD(&new_size,
 			frame->entries.length, tree->entries.size);
 		git_vector_size_hint(&frame->entries, new_size);
 

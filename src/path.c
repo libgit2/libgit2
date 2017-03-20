@@ -910,9 +910,9 @@ int git_path_make_relative(git_buf *path, const char *parent)
 		depth++;
 
 	GITERR_CHECK_MULTIPLY(&newlen, depth, 3);
-	GITERR_CHECK_ALLOC_ADD(&newlen, newlen, plen);
+	GITERR_CHECK_ADD(&newlen, newlen, plen);
 
-	GITERR_CHECK_ALLOC_ADD(&alloclen, newlen, 1);
+	GITERR_CHECK_ADD(&alloclen, newlen, 1);
 
 	/* save the offset as we might realllocate the pointer */
 	offset = p - path->ptr;
@@ -971,7 +971,7 @@ int git_path_iconv(git_path_iconv_t *ic, const char **in, size_t *inlen)
 	git_buf_clear(&ic->buf);
 
 	while (1) {
-		GITERR_CHECK_ALLOC_ADD(&alloclen, wantlen, 1);
+		GITERR_CHECK_ADD(&alloclen, wantlen, 1);
 		if (git_buf_grow(&ic->buf, alloclen) < 0)
 			return -1;
 

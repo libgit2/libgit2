@@ -104,8 +104,8 @@ static int comment_pkt(git_pkt **out, const char *line, size_t len)
 	git_pkt_comment *pkt;
 	size_t alloclen;
 
-	GITERR_CHECK_ALLOC_ADD(&alloclen, sizeof(git_pkt_comment), len);
-	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
+	GITERR_CHECK_ADD(&alloclen, sizeof(git_pkt_comment), len);
+	GITERR_CHECK_ADD(&alloclen, alloclen, 1);
 	pkt = git__malloc(alloclen);
 	GITERR_CHECK_ALLOC(pkt);
 
@@ -127,8 +127,8 @@ static int err_pkt(git_pkt **out, const char *line, size_t len)
 	line += 4;
 	len -= 4;
 
-	GITERR_CHECK_ALLOC_ADD(&alloclen, sizeof(git_pkt_progress), len);
-	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
+	GITERR_CHECK_ADD(&alloclen, sizeof(git_pkt_progress), len);
+	GITERR_CHECK_ADD(&alloclen, alloclen, 1);
 	pkt = git__malloc(alloclen);
 	GITERR_CHECK_ALLOC(pkt);
 
@@ -150,7 +150,7 @@ static int data_pkt(git_pkt **out, const char *line, size_t len)
 	line++;
 	len--;
 
-	GITERR_CHECK_ALLOC_ADD(&alloclen, sizeof(git_pkt_progress), len);
+	GITERR_CHECK_ADD(&alloclen, sizeof(git_pkt_progress), len);
 	pkt = git__malloc(alloclen);
 	GITERR_CHECK_ALLOC(pkt);
 
@@ -171,7 +171,7 @@ static int sideband_progress_pkt(git_pkt **out, const char *line, size_t len)
 	line++;
 	len--;
 
-	GITERR_CHECK_ALLOC_ADD(&alloclen, sizeof(git_pkt_progress), len);
+	GITERR_CHECK_ADD(&alloclen, sizeof(git_pkt_progress), len);
 	pkt = git__malloc(alloclen);
 	GITERR_CHECK_ALLOC(pkt);
 
@@ -192,8 +192,8 @@ static int sideband_error_pkt(git_pkt **out, const char *line, size_t len)
 	line++;
 	len--;
 
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, sizeof(git_pkt_err), len);
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 1);
+	GITERR_CHECK_ADD(&alloc_len, sizeof(git_pkt_err), len);
+	GITERR_CHECK_ADD(&alloc_len, alloc_len, 1);
 	pkt = git__malloc(alloc_len);
 	GITERR_CHECK_ALLOC(pkt);
 
@@ -238,7 +238,7 @@ static int ref_pkt(git_pkt **out, const char *line, size_t len)
 	if (line[len - 1] == '\n')
 		--len;
 
-	GITERR_CHECK_ALLOC_ADD(&alloclen, len, 1);
+	GITERR_CHECK_ADD(&alloclen, len, 1);
 	pkt->head.name = git__malloc(alloclen);
 	GITERR_CHECK_ALLOC(pkt->head.name);
 
@@ -276,7 +276,7 @@ static int ok_pkt(git_pkt **out, const char *line, size_t len)
 	}
 	len = ptr - line;
 
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, len, 1);
+	GITERR_CHECK_ADD(&alloc_len, len, 1);
 	pkt->ref = git__malloc(alloc_len);
 	GITERR_CHECK_ALLOC(pkt->ref);
 
@@ -304,7 +304,7 @@ static int ng_pkt(git_pkt **out, const char *line, size_t len)
 		goto out_err;
 	len = ptr - line;
 
-	GITERR_CHECK_ALLOC_ADD(&alloclen, len, 1);
+	GITERR_CHECK_ADD(&alloclen, len, 1);
 	pkt->ref = git__malloc(alloclen);
 	GITERR_CHECK_ALLOC(pkt->ref);
 
@@ -316,7 +316,7 @@ static int ng_pkt(git_pkt **out, const char *line, size_t len)
 		goto out_err;
 	len = ptr - line;
 
-	GITERR_CHECK_ALLOC_ADD(&alloclen, len, 1);
+	GITERR_CHECK_ADD(&alloclen, len, 1);
 	pkt->msg = git__malloc(alloclen);
 	GITERR_CHECK_ALLOC(pkt->msg);
 
