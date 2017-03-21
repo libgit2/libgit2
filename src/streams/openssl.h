@@ -15,6 +15,8 @@ extern int git_openssl_stream_global_init(void);
 
 extern int git_openssl_stream_new(git_stream **out, const char *host, const char *port);
 
+extern int git_openssl__set_cert_location(const char *file, const char *path);
+
 /*
  * OpenSSL 1.1 made BIO opaque so we have to use functions to interact with it
  * which do not exist in previous versions. We define these inline functions so

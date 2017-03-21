@@ -628,6 +628,16 @@ out_err:
 	return error;
 }
 
+int git_openssl__set_cert_location(const char *file, const char *path)
+{
+	if (SSL_CTX_load_verify_locations(git__ssl_ctx, file, path) == 0) {
+		giterr_set(GITERR_SSL, "OpenSSL error: failed to load certificates: %s",
+				   ERR_error_string(ERR_get_error(), NULL));
+		return -1;
+	}
+	return 0;
+}
+
 #else
 
 #include "stream.h"
@@ -649,6 +659,15 @@ int git_openssl_stream_new(git_stream **out, const char *host, const char *port)
 	GIT_UNUSED(out);
 	GIT_UNUSED(host);
 	GIT_UNUSED(port);
+
+	giterr_set(GITERR_SSL, "openssl is not supported in this version");
+	return -1;
+}
+
+int git_openssl__set_cert_location(const char *file, const char *path)
+{
+	GIT_UNUSED(file);
+	GIT_UNUSED(path);
 
 	giterr_set(GITERR_SSL, "openssl is not supported in this version");
 	return -1;
