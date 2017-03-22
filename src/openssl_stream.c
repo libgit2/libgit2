@@ -66,7 +66,7 @@ static void shutdown_ssl_locking(void)
 	CRYPTO_set_locking_callback(NULL);
 
 	for (i = 0; i < num_locks; ++i)
-		git_mutex_free(openssl_locks);
+		git_mutex_free(&openssl_locks[i]);
 	git__free(openssl_locks);
 }
 
