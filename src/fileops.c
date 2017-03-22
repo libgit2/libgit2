@@ -236,10 +236,16 @@ int git_futils_readbuffer(git_buf *buf, const char *path)
 int git_futils_writebuffer(
 	const git_buf *buf,	const char *path, int flags, mode_t mode)
 {
-	int fd, error = 0;
+	int fd, do_fsync = 0, error = 0;
 
-	if (flags <= 0)
+	if (!flags)
 		flags = O_CREAT | O_TRUNC | O_WRONLY;
+
+	if ((flags & O_FSYNC) != 0)
+		do_fsync = 1;
+
+	flags &= ~O_FSYNC;
+
 	if (!mode)
 		mode = GIT_FILEMODE_BLOB;
 
@@ -254,8 +260,19 @@ int git_futils_writebuffer(
 		return error;
 	}
 
-	if ((error = p_close(fd)) < 0)
+	if (do_fsync && (error = p_fsync(fd)) < 0) {
+		giterr_set(GITERR_OS, "could not fsync '%s'", path);
+		p_close(fd);
+		return error;
+	}
+
+	if ((error = p_close(fd)) < 0) {
 		giterr_set(GITERR_OS, "error while closing '%s'", path);
+		return error;
+	}
+
+	if (do_fsync && (flags & O_CREAT))
+		error = git_futils_fsync_parent(path);
 
 	return error;
 }
@@ -1107,4 +1124,34 @@ void git_futils_filestamp_set_from_stat(
 	} else {
 		memset(stamp, 0, sizeof(*stamp));
 	}
+}
+
+int git_futils_fsync_dir(const char *path)
+{
+#ifdef GIT_WIN32
+	GIT_UNUSED(path);
+	return 0;
+#else
+	int fd, error = -1;
+
+	if ((fd = p_open(path, O_RDONLY)) < 0) {
+		giterr_set(GITERR_OS, "failed to open directory '%s' for fsync", path);
+		return -1;
+	}
+
+	if ((error = p_fsync(fd)) < 0)
+		giterr_set(GITERR_OS, "failed to fsync directory '%s'", path);
+
+	p_close(fd);
+	return error;
+#endif
+}
+
+int git_futils_fsync_parent(const char *path)
+{
+	char *parent = git_path_dirname(path);
+	int error = git_futils_fsync_dir(parent);
+
+	git__free(parent);
+	return error;
 }

@@ -1055,18 +1055,22 @@ int git_repository_odb__weakptr(git_odb **out, git_repository *repo)
 		git_odb *odb;
 
 		if ((error = git_repository_item_path(&odb_path, repo,
-				GIT_REPOSITORY_ITEM_OBJECTS)) < 0)
+				GIT_REPOSITORY_ITEM_OBJECTS)) < 0 ||
+			(error = git_odb_new(&odb)) < 0)
 			return error;
 
-		error = git_odb_open(&odb, odb_path.ptr);
-		if (!error) {
-			GIT_REFCOUNT_OWN(odb, repo);
+		GIT_REFCOUNT_OWN(odb, repo);
 
-			odb = git__compare_and_swap(&repo->_odb, NULL, odb);
-			if (odb != NULL) {
-				GIT_REFCOUNT_OWN(odb, NULL);
-				git_odb_free(odb);
-			}
+		if ((error = git_odb__set_caps(odb, GIT_ODB_CAP_FROM_OWNER)) < 0 ||
+			(error = git_odb__add_default_backends(odb, odb_path.ptr, 0, 0)) < 0) {
+			git_odb_free(odb);
+			return error;
+		}
+
+		odb = git__compare_and_swap(&repo->_odb, NULL, odb);
+		if (odb != NULL) {
+			GIT_REFCOUNT_OWN(odb, NULL);
+			git_odb_free(odb);
 		}
 
 		git_buf_free(&odb_path);

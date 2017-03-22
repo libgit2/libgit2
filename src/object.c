@@ -16,6 +16,7 @@
 #include "tag.h"
 
 bool git_object__strict_input_validation = true;
+bool git_object__synchronous_writing = false;
 
 typedef struct {
 	const char	*str;	/* type name string */

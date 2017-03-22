@@ -14,6 +14,7 @@
 #include "odb.h"
 #include "delta.h"
 #include "filebuf.h"
+#include "object.h"
 
 #include "git2/odb_backend.h"
 #include "git2/types.h"
@@ -838,6 +839,17 @@ static void loose_backend__stream_free(git_odb_stream *_stream)
 	git__free(stream);
 }
 
+static int filebuf_flags(loose_backend *backend)
+{
+	int flags = GIT_FILEBUF_TEMPORARY |
+		(backend->object_zlib_level << GIT_FILEBUF_DEFLATE_SHIFT);
+
+	if (backend->fsync_object_files || git_object__synchronous_writing)
+		flags |= GIT_FILEBUF_FSYNC;
+
+	return flags;
+}
+
 static int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_backend, git_off_t length, git_otype type)
 {
 	loose_backend *backend;
@@ -864,9 +876,7 @@ static int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_
 	stream->stream.mode = GIT_STREAM_WRONLY;
 
 	if (git_buf_joinpath(&tmp_path, backend->objects_dir, "tmp_object") < 0 ||
-		git_filebuf_open(&stream->fbuf, tmp_path.ptr,
-			GIT_FILEBUF_TEMPORARY |
-			(backend->object_zlib_level << GIT_FILEBUF_DEFLATE_SHIFT),
+		git_filebuf_open(&stream->fbuf, tmp_path.ptr, filebuf_flags(backend),
 			backend->object_file_mode) < 0 ||
 		stream->stream.write((git_odb_stream *)stream, hdr, hdrlen) < 0)
 	{
@@ -894,9 +904,7 @@ static int loose_backend__write(git_odb_backend *_backend, const git_oid *oid, c
 	header_len = git_odb__format_object_header(header, sizeof(header), len, type);
 
 	if (git_buf_joinpath(&final_path, backend->objects_dir, "tmp_object") < 0 ||
-		git_filebuf_open(&fbuf, final_path.ptr,
-			GIT_FILEBUF_TEMPORARY |
-			(backend->object_zlib_level << GIT_FILEBUF_DEFLATE_SHIFT),
+		git_filebuf_open(&fbuf, final_path.ptr, filebuf_flags(backend),
 			backend->object_file_mode) < 0)
 	{
 		error = -1;

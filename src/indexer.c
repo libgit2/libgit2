@@ -17,6 +17,7 @@
 #include "oid.h"
 #include "oidmap.h"
 #include "zstream.h"
+#include "object.h"
 
 extern git_mutex git__mwindow_mutex;
 
@@ -33,7 +34,8 @@ struct git_indexer {
 	unsigned int parsed_header :1,
 		pack_committed :1,
 		have_stream :1,
-		have_delta :1;
+		have_delta :1,
+		do_fsync :1;
 	struct git_pack_header hdr;
 	struct git_pack_file *pack;
 	unsigned int mode;
@@ -123,6 +125,9 @@ int git_indexer_new(
 	git_hash_ctx_init(&idx->hash_ctx);
 	git_hash_ctx_init(&idx->trailer);
 
+	if (git_object__synchronous_writing)
+		idx->do_fsync = 1;
+
 	error = git_buf_joinpath(&path, prefix, suff);
 	if (error < 0)
 		goto cleanup;
@@ -159,6 +164,11 @@ cleanup:
 	git_buf_free(&tmp_path);
 	git__free(idx);
 	return -1;
+}
+
+void git_indexer__set_fsync(git_indexer *idx, int do_fsync)
+{
+	idx->do_fsync = !!do_fsync;
 }
 
 /* Try to store the delta so we can try to resolve it later */
@@ -989,7 +999,9 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 		return -1;
 
 	if (git_filebuf_open(&index_file, filename.ptr,
-		GIT_FILEBUF_HASH_CONTENTS, idx->mode) < 0)
+		GIT_FILEBUF_HASH_CONTENTS |
+		(idx->do_fsync ? GIT_FILEBUF_FSYNC : 0),
+		idx->mode) < 0)
 		goto on_error;
 
 	/* Write out the header */
@@ -1066,6 +1078,11 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 		return -1;
 	}
 
+	if (idx->do_fsync && p_fsync(idx->pack->mwf.fd) < 0) {
+		giterr_set(GITERR_OS, "failed to fsync packfile");
+		goto on_error;
+	}
+
 	/* We need to close the descriptor here so Windows doesn't choke on commit_at */
 	if (p_close(idx->pack->mwf.fd) < 0) {
 		giterr_set(GITERR_OS, "failed to close packfile");
@@ -1078,7 +1095,14 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 		goto on_error;
 
 	/* And don't forget to rename the packfile to its new place. */
-	p_rename(idx->pack->pack_name, git_buf_cstr(&filename));
+	if (p_rename(idx->pack->pack_name, git_buf_cstr(&filename)) < 0)
+		goto on_error;
+
+	/* And fsync the parent directory if we're asked to. */
+	if (idx->do_fsync &&
+		git_futils_fsync_parent(git_buf_cstr(&filename)) < 0)
+		goto on_error;
+
 	idx->pack_committed = 1;
 
 	git_buf_free(&filename);

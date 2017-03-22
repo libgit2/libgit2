@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <ctype.h>
 
+size_t p_fsync__cnt = 0;
+
 #ifndef GIT_WIN32
 
 #ifdef NO_ADDRINFO

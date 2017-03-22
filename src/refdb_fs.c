@@ -62,6 +62,7 @@ typedef struct refdb_fs_backend {
 	int peeling_mode;
 	git_iterator_flag_t iterator_flags;
 	uint32_t direach_flags;
+	int fsync;
 } refdb_fs_backend;
 
 static int refdb_reflog_fs__delete(git_refdb_backend *_backend, const char *name);
@@ -736,7 +737,7 @@ static int reference_path_available(
 
 static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *name)
 {
-	int error;
+	int error, filebuf_flags;
 	git_buf ref_path = GIT_BUF_INIT;
 
 	assert(file && backend && name);
@@ -755,7 +756,11 @@ static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *
 	if (git_buf_joinpath(&ref_path, backend->gitpath, name) < 0)
 		return -1;
 
-	error = git_filebuf_open(file, ref_path.ptr, GIT_FILEBUF_FORCE, GIT_REFS_FILE_MODE);
+	filebuf_flags = GIT_FILEBUF_FORCE;
+	if (backend->fsync)
+		filebuf_flags |= GIT_FILEBUF_FSYNC;
+
+	error = git_filebuf_open(file, ref_path.ptr, filebuf_flags, GIT_REFS_FILE_MODE);
 
 	if (error == GIT_EDIRECTORY)
 		giterr_set(GITERR_REFERENCE, "cannot lock ref '%s', there are refs beneath that folder", name);
@@ -990,15 +995,18 @@ static int packed_write(refdb_fs_backend *backend)
 {
 	git_sortedcache *refcache = backend->refcache;
 	git_filebuf pack_file = GIT_FILEBUF_INIT;
-	int error;
+	int error, open_flags = 0;
 	size_t i;
 
 	/* lock the cache to updates while we do this */
 	if ((error = git_sortedcache_wlock(refcache)) < 0)
 		return error;
 
+	if (backend->fsync)
+		open_flags = GIT_FILEBUF_FSYNC;
+
 	/* Open the file! */
-	if ((error = git_filebuf_open(&pack_file, git_sortedcache_path(refcache), 0, GIT_PACKEDREFS_FILE_MODE)) < 0)
+	if ((error = git_filebuf_open(&pack_file, git_sortedcache_path(refcache), open_flags, GIT_PACKEDREFS_FILE_MODE)) < 0)
 		goto fail;
 
 	/* Packfiles have a header... apparently
@@ -1786,7 +1794,7 @@ success:
 /* Append to the reflog, must be called under reference lock */
 static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, const git_oid *old, const git_oid *new, const git_signature *who, const char *message)
 {
-	int error, is_symbolic;
+	int error, is_symbolic, open_flags;
 	git_oid old_id = {{0}}, new_id = {{0}};
 	git_buf buf = GIT_BUF_INIT, path = GIT_BUF_INIT;
 	git_repository *repo = backend->repo;
@@ -1854,7 +1862,12 @@ static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, co
 			goto cleanup;
 	}
 
-	error = git_futils_writebuffer(&buf, git_buf_cstr(&path), O_WRONLY|O_CREAT|O_APPEND, GIT_REFLOG_FILE_MODE);
+	open_flags = O_WRONLY | O_CREAT | O_APPEND;
+
+	if (backend->fsync)
+		open_flags |= O_FSYNC;
+
+	error = git_futils_writebuffer(&buf, git_buf_cstr(&path), open_flags, GIT_REFLOG_FILE_MODE);
 
 cleanup:
 	git_buf_free(&buf);
@@ -2011,6 +2024,9 @@ int git_refdb_backend_fs(
 		backend->iterator_flags |= GIT_ITERATOR_PRECOMPOSE_UNICODE;
 		backend->direach_flags  |= GIT_PATH_DIR_PRECOMPOSE_UNICODE;
 	}
+	if ((!git_repository__cvar(&t, backend->repo, GIT_CVAR_FSYNCOBJECTFILES) && t) ||
+		git_object__synchronous_writing)
+		backend->fsync = 1;
 
 	backend->parent.exists = &refdb_fs_backend__exists;
 	backend->parent.lookup = &refdb_fs_backend__lookup;

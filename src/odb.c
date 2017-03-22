@@ -496,7 +496,7 @@ int git_odb_get_backend(git_odb_backend **out, git_odb *odb, size_t pos)
 	return GIT_ENOTFOUND;
 }
 
-static int add_default_backends(
+int git_odb__add_default_backends(
 	git_odb *db, const char *objects_dir,
 	bool as_alternates, int alternate_depth)
 {
@@ -531,7 +531,7 @@ static int add_default_backends(
 #endif
 
 	/* add the loose object backend */
-	if (git_odb_backend_loose(&loose, objects_dir, -1, 0, 0, 0) < 0 ||
+	if (git_odb_backend_loose(&loose, objects_dir, -1, db->do_fsync, 0, 0) < 0 ||
 		add_backend_internal(db, loose, GIT_LOOSE_PRIORITY, as_alternates, inode) < 0)
 		return -1;
 
@@ -586,7 +586,7 @@ static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_
 			alternate = git_buf_cstr(&alternates_path);
 		}
 
-		if ((result = add_default_backends(odb, alternate, true, alternate_depth + 1)) < 0)
+		if ((result = git_odb__add_default_backends(odb, alternate, true, alternate_depth + 1)) < 0)
 			break;
 	}
 
@@ -598,7 +598,7 @@ static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_
 
 int git_odb_add_disk_alternate(git_odb *odb, const char *path)
 {
-	return add_default_backends(odb, path, true, 0);
+	return git_odb__add_default_backends(odb, path, true, 0);
 }
 
 int git_odb_open(git_odb **out, const char *objects_dir)
@@ -612,12 +612,30 @@ int git_odb_open(git_odb **out, const char *objects_dir)
 	if (git_odb_new(&db) < 0)
 		return -1;
 
-	if (add_default_backends(db, objects_dir, 0, 0) < 0) {
+	if (git_odb__add_default_backends(db, objects_dir, 0, 0) < 0) {
 		git_odb_free(db);
 		return -1;
 	}
 
 	*out = db;
+	return 0;
+}
+
+int git_odb__set_caps(git_odb *odb, int caps)
+{
+	if (caps == GIT_ODB_CAP_FROM_OWNER) {
+		git_repository *repo = odb->rc.owner;
+		int val;
+
+		if (!repo) {
+			giterr_set(GITERR_ODB, "cannot access repository to set odb caps");
+			return -1;
+		}
+
+		if (!git_repository__cvar(&val, repo, GIT_CVAR_FSYNCOBJECTFILES))
+			odb->do_fsync = !!val;
+	}
+
 	return 0;
 }
 

@@ -38,7 +38,24 @@ struct git_odb {
 	git_refcount rc;
 	git_vector backends;
 	git_cache own_cache;
+	unsigned int do_fsync :1;
 };
+
+typedef enum {
+	GIT_ODB_CAP_FROM_OWNER = -1,
+} git_odb_cap_t;
+
+/*
+ * Set the capabilities for the object database.
+ */
+int git_odb__set_caps(git_odb *odb, int caps);
+
+/*
+ * Add the default loose and packed backends for a database.
+ */
+int git_odb__add_default_backends(
+	git_odb *db, const char *objects_dir,
+	bool as_alternates, int alternate_depth);
 
 /*
  * Hash a git_rawobj internally.
