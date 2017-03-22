@@ -115,11 +115,12 @@ void test_worktree_worktree__lookup(void)
 
 	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
 
-	git_buf_printf(&gitdir_path, "%s/worktrees/%s", fixture.repo->commondir, "testrepo-worktree");
+	cl_git_pass(git_buf_joinpath(&gitdir_path, fixture.repo->commondir, "worktrees/testrepo-worktree/"));
 
 	cl_assert_equal_s(wt->gitdir_path, gitdir_path.ptr);
-	cl_assert_equal_s(wt->parent_path, fixture.repo->gitdir);
+	cl_assert_equal_s(wt->parent_path, fixture.repo->workdir);
 	cl_assert_equal_s(wt->gitlink_path, fixture.worktree->gitlink);
+	cl_assert_equal_s(wt->commondir_path, fixture.repo->gitdir);
 	cl_assert_equal_s(wt->commondir_path, fixture.repo->commondir);
 
 	git_buf_free(&gitdir_path);
@@ -305,7 +306,9 @@ void test_worktree_worktree__init_submodule(void)
 	cl_git_pass(git_worktree_add(&worktree, sm, "repo-worktree", path.ptr));
 	cl_git_pass(git_repository_open_from_worktree(&wt, worktree));
 
+	cl_git_pass(git_path_prettify_dir(&path, path.ptr, NULL));
 	cl_assert_equal_s(path.ptr, wt->workdir);
+	cl_git_pass(git_path_prettify_dir(&path, sm->commondir, NULL));
 	cl_assert_equal_s(sm->commondir, wt->commondir);
 
 	cl_git_pass(git_buf_joinpath(&path, sm->gitdir, "worktrees/repo-worktree/"));
