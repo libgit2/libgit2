@@ -28,18 +28,8 @@ GIT_INLINE(int) git_hash_init(git_hash_ctx *ctx)
 
 GIT_INLINE(int) git_hash_update(git_hash_ctx *ctx, const void *data, size_t len)
 {
-    const char *p = data;
-
 	assert(ctx);
-
-	/* We expect a size_t, but sha1dc only takes an int */
-	while (len > INT_MAX) {
-		SHA1DCUpdate(&ctx->c, p, INT_MAX);
-		p += INT_MAX;
-		len -= INT_MAX;
-	}
-
-	SHA1DCUpdate(&ctx->c, p, len);
+	SHA1DCUpdate(&ctx->c, data, len);
 	return 0;
 }
 
