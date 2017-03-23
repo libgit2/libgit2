@@ -1339,9 +1339,6 @@ fail_parse:
 
 int git_config_parse_path(git_buf *out, const char *value)
 {
-	int error = 0;
-	const git_buf *home;
-
 	assert(out && value);
 
 	git_buf_sanitize(out);
@@ -1352,16 +1349,7 @@ int git_config_parse_path(git_buf *out, const char *value)
 			return -1;
 		}
 
-		if ((error = git_sysdir_get(&home, GIT_SYSDIR_GLOBAL)) < 0)
-			return error;
-
-		git_buf_sets(out, home->ptr);
-		git_buf_puts(out, value + 1);
-
-		if (git_buf_oom(out))
-			return -1;
-
-		return 0;
+		return git_sysdir_expand_global_file(out, value[1] ? &value[2] : NULL);
 	}
 
 	return git_buf_sets(out, value);
