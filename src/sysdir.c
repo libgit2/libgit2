@@ -275,3 +275,14 @@ int git_sysdir_find_template_dir(git_buf *path)
 		path, NULL, GIT_SYSDIR_TEMPLATE, "template");
 }
 
+int git_sysdir_expand_global_file(git_buf *path, const char *filename)
+{
+	int error;
+
+	if ((error = git_sysdir_find_global_file(path, NULL)) == 0) {
+		if (filename)
+			error = git_buf_joinpath(path, path->ptr, filename);
+	}
+
+	return error;
+}
