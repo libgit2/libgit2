@@ -2032,7 +2032,7 @@ int git_merge_trees(
 
 		if (result) {
 			if ((error = git_index_new(out)) == 0)
-			error = git_index_read_tree(*out, result);
+    			error = git_index_read_tree(*out, result);
 
 			return error;
 		}
