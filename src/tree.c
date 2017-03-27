@@ -847,12 +847,13 @@ int git_treebuilder_write_with_buffer(git_oid *oid, git_treebuilder *bld, git_bu
 		git_buf_put(tree, entry->filename, entry->filename_len + 1);
 		git_buf_put(tree, (char *)entry->oid->id, GIT_OID_RAWSZ);
 
-		if (git_buf_oom(tree))
+		if (git_buf_oom(tree)) {
 			error = -1;
+			goto out;
+		}
 	}
 
-	if (!error &&
-		!(error = git_repository_odb__weakptr(&odb, bld->repo)))
+	if ((error = git_repository_odb__weakptr(&odb, bld->repo)) == 0)
 		error = git_odb_write(oid, odb, tree->ptr, tree->size, GIT_OBJ_TREE);
 
 out:
