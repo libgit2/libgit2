@@ -841,7 +841,7 @@ int git_treebuilder_write_with_buffer(git_oid *oid, git_treebuilder *bld, git_bu
 	git_vector_sort(&entries);
 
 	for (i = 0; i < entries.length && !error; ++i) {
-		git_tree_entry *entry = git_vector_get(&entries, i);
+		entry = git_vector_get(&entries, i);
 
 		git_buf_printf(tree, "%o ", entry->attr);
 		git_buf_put(tree, entry->filename, entry->filename_len + 1);
