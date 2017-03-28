@@ -818,7 +818,7 @@ int git_treebuilder_write_with_buffer(git_oid *oid, git_treebuilder *bld, git_bu
 	size_t i, entrycount;
 	git_odb *odb;
 	git_tree_entry *entry;
-	git_vector entries;
+	git_vector entries = GIT_VECTOR_INIT;
 
 	assert(bld);
 	assert(tree);
@@ -826,35 +826,37 @@ int git_treebuilder_write_with_buffer(git_oid *oid, git_treebuilder *bld, git_bu
 	git_buf_clear(tree);
 
 	entrycount = git_strmap_num_entries(bld->map);
-	if (git_vector_init(&entries, entrycount, entry_sort_cmp) < 0)
-		return -1;
+	if ((error = git_vector_init(&entries, entrycount, entry_sort_cmp)) < 0)
+		goto out;
 
 	if (tree->asize == 0 &&
-		(error = git_buf_grow(tree, entrycount * 72)) < 0)
-		return error;
+	    (error = git_buf_grow(tree, entrycount * 72)) < 0)
+		goto out;
 
 	git_strmap_foreach_value(bld->map, entry, {
-		if (git_vector_insert(&entries, entry) < 0)
-			return -1;
+		if ((error = git_vector_insert(&entries, entry)) < 0)
+			goto out;
 	});
 
 	git_vector_sort(&entries);
 
 	for (i = 0; i < entries.length && !error; ++i) {
-		git_tree_entry *entry = git_vector_get(&entries, i);
+		entry = git_vector_get(&entries, i);
 
 		git_buf_printf(tree, "%o ", entry->attr);
 		git_buf_put(tree, entry->filename, entry->filename_len + 1);
 		git_buf_put(tree, (char *)entry->oid->id, GIT_OID_RAWSZ);
 
-		if (git_buf_oom(tree))
+		if (git_buf_oom(tree)) {
 			error = -1;
+			goto out;
+		}
 	}
 
-	if (!error &&
-		!(error = git_repository_odb__weakptr(&odb, bld->repo)))
+	if ((error = git_repository_odb__weakptr(&odb, bld->repo)) == 0)
 		error = git_odb_write(oid, odb, tree->ptr, tree->size, GIT_OBJ_TREE);
 
+out:
 	git_vector_free(&entries);
 
 	return error;
