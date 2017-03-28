@@ -517,11 +517,12 @@ static int pass_blame(git_blame *blame, git_blame__origin *origin, uint32_t opt)
 	if (!num_parents) {
 		git_oid_cpy(&blame->options.oldest_commit, git_commit_id(commit));
 		goto finish;
-	}
-	else if (num_parents < (int)ARRAY_SIZE(sg_buf))
+	} else if (num_parents < (int)ARRAY_SIZE(sg_buf))
 		memset(sg_buf, 0, sizeof(sg_buf));
-	else
+	else {
 		sg_origin = git__calloc(num_parents, sizeof(*sg_origin));
+		GITERR_CHECK_ALLOC(sg_origin);
+	}
 
 	for (i=0; i<num_parents; i++) {
 		git_commit *p;
