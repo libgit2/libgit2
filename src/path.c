@@ -826,8 +826,8 @@ int git_path_resolve_relative(git_buf *path, size_t ceiling)
 
 int git_path_apply_relative(git_buf *target, const char *relpath)
 {
-	git_buf_joinpath(target, git_buf_cstr(target), relpath);
-	return git_path_resolve_relative(target, 0);
+	return git_buf_joinpath(target, git_buf_cstr(target), relpath) ||
+	    git_path_resolve_relative(target, 0);
 }
 
 int git_path_cmp(
