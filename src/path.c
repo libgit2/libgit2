@@ -700,7 +700,8 @@ static bool _check_dir_contents(
 		return false;
 
 	/* save excursion */
-	git_buf_joinpath(dir, dir->ptr, sub);
+	if (git_buf_joinpath(dir, dir->ptr, sub) < 0)
+		return false;
 
 	result = predicate(dir->ptr);
 
