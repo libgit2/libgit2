@@ -547,7 +547,6 @@ static int pass_blame(git_blame *blame, git_blame__origin *origin, uint32_t opt)
 		if (porigin->blob && origin->blob &&
 		    !git_oid_cmp(git_blob_id(porigin->blob), git_blob_id(origin->blob))) {
 			error = pass_whole_blame(blame, origin, porigin);
-				goto finish;
 			origin_decref(porigin);
 			goto finish;
 		}
