@@ -749,62 +749,47 @@ int p_access(const char* path, mode_t mode)
 	return _waccess(buf, mode & WIN32_MODE_MASK);
 }
 
-static int ensure_writable(wchar_t *fpath)
+static int ensure_writable(wchar_t *path)
 {
 	DWORD attrs;
 
-	attrs = GetFileAttributesW(fpath);
-	if (attrs == INVALID_FILE_ATTRIBUTES) {
-		if (GetLastError() == ERROR_FILE_NOT_FOUND)
-			return 0;
+	if ((attrs = GetFileAttributesW(path)) == INVALID_FILE_ATTRIBUTES)
+		goto on_error;
 
-		giterr_set(GITERR_OS, "failed to get attributes");
-		return -1;
-	}
-
-	if (!(attrs & FILE_ATTRIBUTE_READONLY))
+	if ((attrs & FILE_ATTRIBUTE_READONLY) == 0)
 		return 0;
 
-	attrs &= ~FILE_ATTRIBUTE_READONLY;
-	if (!SetFileAttributesW(fpath, attrs)) {
-		giterr_set(GITERR_OS, "failed to set attributes");
-		return -1;
-	}
+	if (!SetFileAttributesW(path, (attrs & ~FILE_ATTRIBUTE_READONLY)))
+		goto on_error;
 
 	return 0;
+
+on_error:
+	set_errno();
+	return -1;
+}
+
+GIT_INLINE(int) rename_once(const wchar_t *from, const wchar_t *to)
+{
+	if (MoveFileExW(from, to, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED))
+		return 0;
+
+	if (last_error_retryable())
+		return GIT_RETRY;
+
+	set_errno();
+	return -1;
 }
 
 int p_rename(const char *from, const char *to)
 {
-	git_win32_path wfrom;
-	git_win32_path wto;
-	int rename_tries;
-	int rename_succeeded;
-	int error;
+	git_win32_path wfrom, wto;
 
 	if (git_win32_path_from_utf8(wfrom, from) < 0 ||
 		git_win32_path_from_utf8(wto, to) < 0)
 		return -1;
 
-	/* wait up to 50ms if file is locked by another thread or process */
-	rename_tries = 0;
-	rename_succeeded = 0;
-	while (rename_tries < 10) {
-		if (ensure_writable(wto) == 0 &&
-		    MoveFileExW(wfrom, wto, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED) != 0) {
-			rename_succeeded = 1;
-			break;
-		}
-		
-		error = GetLastError();
-		if (error == ERROR_SHARING_VIOLATION || error == ERROR_ACCESS_DENIED) {
-			Sleep(5);
-			rename_tries++;
-		} else
-			break;
-	}
-	
-	return rename_succeeded ? 0 : -1;
+	do_with_retries(rename_once(wfrom, wto), ensure_writable(wto));
 }
 
 int p_recv(GIT_SOCKET socket, void *buffer, size_t length, int flags)
