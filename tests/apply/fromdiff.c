@@ -150,6 +150,52 @@ void test_apply_fromdiff__prepend_nocontext(void)
 		PATCH_ORIGINAL_TO_PREPEND_NOCONTEXT, &diff_opts));
 }
 
+void test_apply_fromdiff__prepend_and_change(void)
+{
+	cl_git_pass(apply_buf(
+		FILE_ORIGINAL, "file.txt",
+		FILE_PREPEND_AND_CHANGE, "file.txt",
+		PATCH_ORIGINAL_TO_PREPEND_AND_CHANGE, NULL));
+}
+
+void test_apply_fromdiff__prepend_and_change_nocontext(void)
+{
+	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
+	diff_opts.context_lines = 0;
+
+	cl_git_pass(apply_buf(
+		FILE_ORIGINAL, "file.txt",
+		FILE_PREPEND_AND_CHANGE, "file.txt",
+		PATCH_ORIGINAL_TO_PREPEND_AND_CHANGE_NOCONTEXT, &diff_opts));
+}
+
+void test_apply_fromdiff__delete_and_change(void)
+{
+	cl_git_pass(apply_buf(
+		FILE_ORIGINAL, "file.txt",
+		FILE_DELETE_AND_CHANGE, "file.txt",
+		PATCH_ORIGINAL_TO_DELETE_AND_CHANGE, NULL));
+}
+
+void test_apply_fromdiff__delete_and_change_nocontext(void)
+{
+	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
+	diff_opts.context_lines = 0;
+
+	cl_git_pass(apply_buf(
+		FILE_ORIGINAL, "file.txt",
+		FILE_DELETE_AND_CHANGE, "file.txt",
+		PATCH_ORIGINAL_TO_DELETE_AND_CHANGE_NOCONTEXT, &diff_opts));
+}
+
+void test_apply_fromdiff__delete_firstline(void)
+{
+	cl_git_pass(apply_buf(
+		FILE_ORIGINAL, "file.txt",
+		FILE_DELETE_FIRSTLINE, "file.txt",
+		PATCH_ORIGINAL_TO_DELETE_FIRSTLINE, NULL));
+}
+
 void test_apply_fromdiff__append(void)
 {
 	cl_git_pass(apply_buf(
