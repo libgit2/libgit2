@@ -12,7 +12,6 @@
 #include "array.h"
 #include "patch.h"
 #include "fileops.h"
-#include "apply.h"
 #include "delta.h"
 #include "zstream.h"
 
@@ -341,13 +340,13 @@ done:
 	return error;
 }
 
-int git_apply__patch(
+int git_patch_apply(
 	git_buf *contents_out,
 	char **filename_out,
 	unsigned int *mode_out,
+	git_patch *patch,
 	const char *source,
 	size_t source_len,
-	git_patch *patch,
 	git_diff_hunk_cb hunk_cb,
 	void *payload)
 {

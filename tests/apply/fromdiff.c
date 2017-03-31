@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "git2/sys/repository.h"
 
-#include "apply.h"
+#include "patch.h"
 #include "repository.h"
 #include "buf_text.h"
 
@@ -49,7 +49,7 @@ static int apply_gitbuf(
 		cl_assert_equal_s(patch_expected, patchbuf.ptr);
 	}
 
-	error = git_apply__patch(&result, &filename, &mode, old ? old->ptr : NULL, old ? old->size : 0, patch, NULL, NULL);
+	error = git_patch_apply(&result, &filename, &mode, patch, old ? old->ptr : NULL, old ? old->size : 0, NULL, NULL);
 
 	if (error == 0 && new == NULL) {
 		cl_assert_equal_i(0, result.size);

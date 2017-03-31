@@ -267,6 +267,35 @@ GIT_EXTERN(int) git_patch_to_buf(
 	git_buf *out,
 	git_patch *patch);
 
+/**
+ * Apply a patch to a buffer.
+ *
+ * Attempts to apply the changes represented by a patch to a source buffer
+ * producing a new output buffer. A hunk callback can be given to choose
+ * which hunks are applied.
+ *
+ * @param out The output buffer to be filled
+ * @param filename The output name of the new file
+ * @param mode The output mode of the new file
+ * @param patch The patch to apply
+ * @param source The input source buffer
+ * @param source_len The length of the source buffer
+ * @param hunk_cb A callback function to choose which hunks are applied.
+ *                Return <0 to abort, >0 to skip this hunk or 0 to apply.
+ *                Pass NULL to apply all hunks in the patch.
+ * @param payload The payload to pass to the hunk callback.
+ * @return 0 on success, <0 on failure.
+ */
+GIT_EXTERN(int) git_patch_apply(
+	git_buf *out,
+	char **filename,
+	unsigned int *mode,
+	git_patch *patch,
+	const char *source,
+	size_t source_len,
+	git_diff_hunk_cb hunk_cb,
+	void *payload);
+
 GIT_END_DECL
 
 /**@}*/
