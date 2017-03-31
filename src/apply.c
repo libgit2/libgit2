@@ -162,7 +162,8 @@ static int update_hunk(
 static int apply_hunk(
 	patch_image *image,
 	git_patch *patch,
-	git_patch_hunk *hunk)
+	git_patch_hunk *hunk,
+	int skipped_lines)
 {
 	patch_image preimage = PATCH_IMAGE_INIT, postimage = PATCH_IMAGE_INIT;
 	size_t line_num, i;
@@ -190,11 +191,10 @@ static int apply_hunk(
 		}
 	}
 
-	line_num = hunk->hunk.new_start ? hunk->hunk.new_start - 1 : 0;
+	line_num = hunk->hunk.new_start ? hunk->hunk.new_start - skipped_lines - 1 : 0;
 
 	if (!find_hunk_linenum(&line_num, image, &preimage, line_num)) {
-		error = apply_err("hunk at line %d did not apply",
-			hunk->hunk.new_start);
+		error = apply_err("hunk at line %d did not apply", (int) line_num + 1);
 		goto done;
 	}
 
@@ -211,19 +211,35 @@ static int apply_hunks(
 	git_buf *out,
 	const char *source,
 	size_t source_len,
-	git_patch *patch)
+	git_patch *patch,
+	git_diff_hunk_cb hunk_cb,
+	void *payload)
 {
 	git_patch_hunk *hunk;
 	git_diff_line *line;
 	patch_image image;
 	size_t i;
+	int skipped_lines = 0;
 	int error = 0;
 
 	if ((error = patch_image_init_fromstr(&image, source, source_len)) < 0)
 		goto done;
 
 	git_array_foreach(patch->hunks, i, hunk) {
-		if ((error = apply_hunk(&image, patch, hunk)) < 0)
+		if (hunk_cb) {
+			/* abort on <0 */
+			if ((error = hunk_cb(patch->delta, &hunk->hunk, payload)) < 0)
+				goto done;
+
+			/* skip on >0 */
+			if (error > 0) {
+				skipped_lines += (hunk->hunk.new_lines - hunk->hunk.old_lines);
+				error = 0;
+				continue;
+			}
+		}
+
+		if ((error = apply_hunk(&image, patch, hunk, skipped_lines)) < 0)
 			goto done;
 	}
 
@@ -331,7 +347,9 @@ int git_apply__patch(
 	unsigned int *mode_out,
 	const char *source,
 	size_t source_len,
-	git_patch *patch)
+	git_patch *patch,
+	git_diff_hunk_cb hunk_cb,
+	void *payload)
 {
 	char *filename = NULL;
 	unsigned int mode = 0;
@@ -353,7 +371,7 @@ int git_apply__patch(
 	if (patch->delta->flags & GIT_DIFF_FLAG_BINARY)
 		error = apply_binary(contents_out, source, source_len, patch);
 	else if (patch->hunks.size)
-		error = apply_hunks(contents_out, source, source_len, patch);
+		error = apply_hunks(contents_out, source, source_len, patch, hunk_cb, payload);
 	else
 		error = git_buf_put(contents_out, source, source_len);
 

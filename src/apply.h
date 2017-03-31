@@ -16,6 +16,8 @@ extern int git_apply__patch(
 	unsigned int *mode,
 	const char *source,
 	size_t source_len,
-	git_patch *patch);
+	git_patch *patch,
+	git_diff_hunk_cb hunk_cb,
+	void *payload);
 
 #endif
