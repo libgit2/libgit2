@@ -157,6 +157,27 @@ GIT_INLINE(void) set_errno(void)
 	}
 }
 
+GIT_INLINE(bool) last_error_retryable(void)
+{
+	int os_error = GetLastError();
+
+	return (os_error == ERROR_SHARING_VIOLATION ||
+		os_error == ERROR_ACCESS_DENIED);
+}
+
+#define do_with_retries(fn, cleanup) \
+	do {                                                             \
+		int __tries, __ret;                                          \
+		for (__tries = 0; __tries < 10; __tries++) {                 \
+			if (__tries && (__ret = (cleanup)) != 0)                 \
+				return __ret;                                        \
+			if ((__ret = (fn)) != GIT_RETRY)                         \
+				return __ret;                                        \
+			Sleep(5);                                                \
+		}                                                            \
+		return -1;                                                   \
+	} while (0)                                                      \
+
 /**
  * Truncate or extend file.
  *
