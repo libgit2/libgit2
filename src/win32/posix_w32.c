@@ -178,6 +178,26 @@ GIT_INLINE(bool) last_error_retryable(void)
 		return -1;                                                   \
 	} while (0)                                                      \
 
+static int ensure_writable(wchar_t *path)
+{
+	DWORD attrs;
+
+	if ((attrs = GetFileAttributesW(path)) == INVALID_FILE_ATTRIBUTES)
+		goto on_error;
+
+	if ((attrs & FILE_ATTRIBUTE_READONLY) == 0)
+		return 0;
+
+	if (!SetFileAttributesW(path, (attrs & ~FILE_ATTRIBUTE_READONLY)))
+		goto on_error;
+
+	return 0;
+
+on_error:
+	set_errno();
+	return -1;
+}
+
 /**
  * Truncate or extend file.
  *
@@ -223,38 +243,26 @@ int p_link(const char *old, const char *new)
 	return -1;
 }
 
+GIT_INLINE(int) unlink_once(const wchar_t *path)
+{
+	if (DeleteFileW(path))
+		return 0;
+
+	if (last_error_retryable())
+		return GIT_RETRY;
+
+	set_errno();
+	return -1;
+}
+
 int p_unlink(const char *path)
 {
-	git_win32_path buf;
-	int error;
-	int unlink_tries;
+	git_win32_path wpath;
 
-	if (git_win32_path_from_utf8(buf, path) < 0)
+	if (git_win32_path_from_utf8(wpath, path) < 0)
 		return -1;
 
-	/* wait up to 50ms if file is locked by another thread or process */
-	unlink_tries = 0;
-	while (unlink_tries < 10) {
-		error = _wunlink(buf);
-
-		/* If the file could not be deleted because it was
-		 * read-only, clear the bit and try again */
-		if (error == -1 && errno == EACCES) {
-			_wchmod(buf, 0666);
-			error = _wunlink(buf);
-
-			if (error == -1 && errno == EACCES) {
-				Sleep(5);
-				unlink_tries++;
-			} else {
-				break;
-			}
-		} else {
-			break;
-		}
-	}
-
-	return error;
+	do_with_retries(unlink_once(wpath), ensure_writable(wpath));
 }
 
 int p_fsync(int fd)
@@ -747,26 +755,6 @@ int p_access(const char* path, mode_t mode)
 		return -1;
 
 	return _waccess(buf, mode & WIN32_MODE_MASK);
-}
-
-static int ensure_writable(wchar_t *path)
-{
-	DWORD attrs;
-
-	if ((attrs = GetFileAttributesW(path)) == INVALID_FILE_ATTRIBUTES)
-		goto on_error;
-
-	if ((attrs & FILE_ATTRIBUTE_READONLY) == 0)
-		return 0;
-
-	if (!SetFileAttributesW(path, (attrs & ~FILE_ATTRIBUTE_READONLY)))
-		goto on_error;
-
-	return 0;
-
-on_error:
-	set_errno();
-	return -1;
 }
 
 GIT_INLINE(int) rename_once(const wchar_t *from, const wchar_t *to)
