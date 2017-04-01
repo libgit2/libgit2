@@ -438,14 +438,19 @@ int p_symlink(const char *old, const char *new)
 	return git_futils_fake_symlink(old, new);
 }
 
+GIT_INLINE(int) open_once(const wchar_t *path, int flags, mode_t mode)
+{
+	int ret = _wopen(path, flags, mode);
+
+	return (ret < 0 && last_error_retryable()) ? GIT_RETRY : ret;
+}
+
 int p_open(const char *path, int flags, ...)
 {
-	git_win32_path buf;
+	git_win32_path wpath;
 	mode_t mode = 0;
-	int open_tries;
-	int handle;
 
-	if (git_win32_path_from_utf8(buf, path) < 0)
+	if (git_win32_path_from_utf8(wpath, path) < 0)
 		return -1;
 
 	if (flags & O_CREAT) {
@@ -456,23 +461,9 @@ int p_open(const char *path, int flags, ...)
 		va_end(arg_list);
 	}
 
-	/* wait up to 50ms if file is locked by another thread or process */
-	open_tries = 0;
-	while (open_tries < 10) {
-		handle = _wopen(buf, flags | STANDARD_OPEN_FLAGS, mode & WIN32_MODE_MASK);
-		if (handle != -1) {
-			break;
-		}
-
-		if (errno == EACCES) {
-			Sleep(5);
-			open_tries++;
-		} else {
-			break;
-		}
-	}
-
-	return handle;
+	do_with_retries(
+		open_once(wpath, flags | STANDARD_OPEN_FLAGS, mode & WIN32_MODE_MASK),
+		0);
 }
 
 int p_creat(const char *path, mode_t mode)
