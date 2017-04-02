@@ -2525,7 +2525,9 @@ static int checkout_message(git_buf *out, git_reference *old, const char *new)
 
 	git_buf_puts(out, " to ");
 
-	if (git_reference__is_branch(new) || git_reference__is_tag(new))
+	if (git_reference__is_branch(new) ||
+		git_reference__is_tag(new) ||
+		git_reference__is_remote(new))
 		git_buf_puts(out, git_reference__shorthand(new));
 	else
 		git_buf_puts(out, new);
@@ -2603,7 +2605,7 @@ int git_repository_set_head(
 					git_reference_name(ref), true, git_buf_cstr(&log_message));
 		} else {
 			error = detach(repo, git_reference_target(ref),
-				git_reference_is_tag(ref) ? refname : NULL);
+				git_reference_is_tag(ref) || git_reference_is_remote(ref) ? refname : NULL);
 		}
 	} else if (git_reference__is_branch(refname)) {
 		error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_FILE, refname,
