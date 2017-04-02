@@ -488,7 +488,7 @@ GIT_EXTERN(git_otype) git_odb_object_type(git_odb_object *object);
  * The backends are checked in relative ordering, based on the
  * value of the `priority` parameter.
  *
- * Read <odb_backends.h> for more information.
+ * Read <sys/odb_backend.h> for more information.
  *
  * @param odb database to add the backend to
  * @param backend pointer to a git_odb_backend instance
@@ -509,7 +509,7 @@ GIT_EXTERN(int) git_odb_add_backend(git_odb *odb, git_odb_backend *backend, int 
  *
  * Writing is disabled on alternate backends.
  *
- * Read <odb_backends.h> for more information.
+ * Read <sys/odb_backend.h> for more information.
  *
  * @param odb database to add the backend to
  * @param backend pointer to a git_odb_backend instance
