@@ -440,7 +440,14 @@ GIT_INLINE(int) open_once(
 	DWORD attributes,
 	int osf_flags)
 {
-	HANDLE handle = CreateFileW(path, access, sharing, NULL,
+	SECURITY_ATTRIBUTES security;
+	int fd;
+
+	security.nLength = sizeof(SECURITY_ATTRIBUTES);
+	security.lpSecurityDescriptor = NULL;
+	security.bInheritHandle = 0;
+
+	HANDLE handle = CreateFileW(path, access, sharing, &security,
 		creation_disposition, attributes, 0);
 
 	if (handle == INVALID_HANDLE_VALUE) {
