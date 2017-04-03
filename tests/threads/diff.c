@@ -19,12 +19,20 @@ static git_repository *_repo;
 static git_tree *_a, *_b;
 static git_atomic _counts[4];
 static int _check_counts;
+static int _retries;
 
 #define THREADS 20
+
+void test_threads_diff__initialize(void)
+{
+	_retries = git_win32__retries;
+	git_win32__retries = 1;
+}
 
 void test_threads_diff__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
+	git_win32__retries = _retries;
 }
 
 static void setup_trees(void)

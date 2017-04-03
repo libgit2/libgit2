@@ -37,6 +37,7 @@ typedef DWORD(WINAPI *PFGetFinalPathNameByHandleW)(HANDLE, LPWSTR, DWORD, DWORD)
 
 unsigned long git_win32__createfile_sharemode =
  FILE_SHARE_READ | FILE_SHARE_WRITE;
+int git_win32__retries = 10;
 
 GIT_INLINE(void) set_errno(void)
 {
@@ -162,7 +163,7 @@ GIT_INLINE(bool) last_error_retryable(void)
 #define do_with_retries(fn, cleanup) \
 	do {                                                             \
 		int __tries, __ret;                                          \
-		for (__tries = 0; __tries < 10; __tries++) {                 \
+		for (__tries = 0; __tries < git_win32__retries; __tries++) { \
 			if (__tries && (__ret = (cleanup)) != 0)                 \
 				return __ret;                                        \
 			if ((__ret = (fn)) != GIT_RETRY)                         \

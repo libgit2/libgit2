@@ -15,6 +15,7 @@
 #include "dir.h"
 
 extern unsigned long git_win32__createfile_sharemode;
+extern int git_win32__retries;
 
 typedef SOCKET GIT_SOCKET;
 
