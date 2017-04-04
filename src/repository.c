@@ -2137,6 +2137,38 @@ out:
 	return error;
 }
 
+int git_repository_foreach_head(git_repository *repo, git_repository_foreach_head_cb cb, void *payload)
+{
+	git_strarray worktrees = GIT_VECTOR_INIT;
+	git_buf path = GIT_BUF_INIT;
+	int error;
+	size_t i;
+
+	/* Execute callback for HEAD of commondir */
+	if ((error = git_buf_joinpath(&path, repo->commondir, GIT_HEAD_FILE)) < 0 ||
+	    (error = cb(repo, path.ptr, payload) != 0))
+		goto out;
+
+	if ((error = git_worktree_list(&worktrees, repo)) < 0) {
+		error = 0;
+		goto out;
+	}
+
+	/* Execute callback for all worktree HEADs */
+	for (i = 0; i < worktrees.count; i++) {
+		if (get_worktree_file_path(&path, repo, worktrees.strings[i], GIT_HEAD_FILE) < 0)
+			continue;
+
+		if ((error = cb(repo, path.ptr, payload)) != 0)
+			goto out;
+	}
+
+out:
+	git_buf_free(&path);
+	git_strarray_free(&worktrees);
+	return error;
+}
+
 int git_repository_head_unborn(git_repository *repo)
 {
 	git_reference *ref = NULL;
