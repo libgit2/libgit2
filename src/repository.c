@@ -2562,6 +2562,8 @@ int git_repository_set_head(
 
 	if (ref && current->type == GIT_REF_SYMBOLIC && git__strcmp(current->target.symbolic, ref->name) &&
 	    git_reference_is_branch(ref) && git_branch_is_checked_out(ref)) {
+		giterr_set(GITERR_REPOSITORY, "cannot set HEAD to reference '%s' as it is the current HEAD "
+			"of a linked repository.", git_reference_name(ref));
 		error = -1;
 		goto cleanup;
 	}
