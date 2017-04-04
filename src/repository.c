@@ -2063,6 +2063,12 @@ int git_repository_head_detached(git_repository *repo)
 	return exists;
 }
 
+static int get_worktree_file_path(git_buf *out, git_repository *repo, const char *worktree, const char *file)
+{
+	git_buf_clear(out);
+	return git_buf_printf(out, "%s/worktrees/%s/%s", repo->commondir, worktree, file);
+}
+
 static int read_worktree_head(git_buf *out, git_repository *repo, const char *name)
 {
 	git_buf path = GIT_BUF_INIT;
@@ -2070,17 +2076,8 @@ static int read_worktree_head(git_buf *out, git_repository *repo, const char *na
 
 	assert(out && repo && name);
 
-	git_buf_clear(out);
-
-	if ((err = git_buf_printf(&path, "%s/worktrees/%s/HEAD", repo->commondir, name)) < 0)
-		goto out;
-	if (!git_path_exists(path.ptr))
-	{
-		err = -1;
-		goto out;
-	}
-
-	if ((err = git_futils_readbuffer(out, path.ptr)) < 0)
+	if ((err = get_worktree_file_path(&path, repo, name, "HEAD")) < 0 ||
+	    (err = git_futils_readbuffer(out, path.ptr)) < 0)
 		goto out;
 	git_buf_rtrim(out);
 
