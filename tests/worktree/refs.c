@@ -131,6 +131,20 @@ void test_worktree_refs__delete_succeeds_after_pruning_worktree(void)
 	git_reference_free(branch);
 }
 
+void test_worktree_refs__renaming_reference_updates_worktree_heads(void)
+{
+	git_reference *head, *branch, *renamed;
+
+	cl_git_pass(git_branch_lookup(&branch, fixture.repo,
+		    "testrepo-worktree", GIT_BRANCH_LOCAL));
+	cl_git_pass(git_reference_rename(&renamed, branch, "refs/heads/renamed", 0, NULL));
+	cl_git_pass(git_repository_head(&head, fixture.worktree));
+
+	git_reference_free(head);
+	git_reference_free(branch);
+	git_reference_free(renamed);
+}
+
 void test_worktree_refs__creating_refs_uses_commondir(void)
 {
 	   git_reference *head, *branch, *lookup;
