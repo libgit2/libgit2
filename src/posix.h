@@ -24,6 +24,10 @@
 #define _S_IFLNK S_IFLNK
 #endif
 
+#ifndef S_IWUSR
+#define S_IWUSR 00200
+#endif
+
 #ifndef S_IXUSR
 #define S_IXUSR 00100
 #endif

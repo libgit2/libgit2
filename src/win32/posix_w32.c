@@ -363,44 +363,6 @@ int p_lstat_posixly(const char *filename, struct stat *buf)
 	return do_lstat(filename, buf, true);
 }
 
-int p_utimes(const char *filename, const struct p_timeval times[2])
-{
-	int fd, error;
-
-	if ((fd = p_open(filename, O_RDWR)) < 0)
-		return fd;
-
-	error = p_futimes(fd, times);
-
-	close(fd);
-	return error;
-}
-
-int p_futimes(int fd, const struct p_timeval times[2])
-{
-	HANDLE handle;
-	FILETIME atime = {0}, mtime = {0};
-
-	if (times == NULL) {
-		SYSTEMTIME st;
-
-		GetSystemTime(&st);
-		SystemTimeToFileTime(&st, &atime);
-		SystemTimeToFileTime(&st, &mtime);
-	} else {
-		git_win32__timeval_to_filetime(&atime, times[0]);
-		git_win32__timeval_to_filetime(&mtime, times[1]);
-	}
-
-	if ((handle = (HANDLE)_get_osfhandle(fd)) == INVALID_HANDLE_VALUE)
-		return -1;
-
-	if (SetFileTime(handle, NULL, &atime, &mtime) == 0)
-		return -1;
-
-	return 0;
-}
-
 int p_readlink(const char *path, char *buf, size_t bufsiz)
 {
 	git_win32_path path_w, target_w;
@@ -433,23 +395,69 @@ int p_symlink(const char *old, const char *new)
 	return git_futils_fake_symlink(old, new);
 }
 
+struct open_opts {
+	DWORD access;
+	DWORD sharing;
+	SECURITY_ATTRIBUTES security;
+	DWORD creation_disposition;
+	DWORD attributes;
+	int osf_flags;
+};
+
+GIT_INLINE(void) open_opts_from_posix(struct open_opts *opts, int flags, mode_t mode)
+{
+	memset(opts, 0, sizeof(struct open_opts));
+
+	switch (flags & (O_WRONLY | O_RDWR)) {
+	case O_WRONLY:
+		opts->access = GENERIC_WRITE;
+		break;
+	case O_RDWR:
+		opts->access = GENERIC_READ | GENERIC_WRITE;
+		break;
+	default:
+		opts->access = GENERIC_READ;
+		break;
+	}
+
+	opts->sharing = (DWORD)git_win32__createfile_sharemode;
+
+	switch (flags & (O_CREAT | O_TRUNC | O_EXCL)) {
+	case O_CREAT | O_EXCL:
+	case O_CREAT | O_TRUNC | O_EXCL:
+		opts->creation_disposition = CREATE_NEW;
+		break;
+	case O_CREAT | O_TRUNC:
+		opts->creation_disposition = CREATE_ALWAYS;
+		break;
+	case O_TRUNC:
+		opts->creation_disposition = TRUNCATE_EXISTING;
+		break;
+	case O_CREAT:
+		opts->creation_disposition = OPEN_ALWAYS;
+		break;
+	default:
+		opts->creation_disposition = OPEN_EXISTING;
+		break;
+	}
+
+	opts->attributes = ((flags & O_CREAT) && !(mode & S_IWRITE)) ?
+		FILE_ATTRIBUTE_READONLY : FILE_ATTRIBUTE_NORMAL;
+	opts->osf_flags = flags & (O_RDONLY | O_APPEND);
+
+	opts->security.nLength = sizeof(SECURITY_ATTRIBUTES);
+	opts->security.lpSecurityDescriptor = NULL;
+	opts->security.bInheritHandle = 0;
+}
+
 GIT_INLINE(int) open_once(
 	const wchar_t *path,
-	DWORD access,
-	DWORD sharing,
-	DWORD creation_disposition,
-	DWORD attributes,
-	int osf_flags)
+	struct open_opts *opts)
 {
-	SECURITY_ATTRIBUTES security;
 	int fd;
 
-	security.nLength = sizeof(SECURITY_ATTRIBUTES);
-	security.lpSecurityDescriptor = NULL;
-	security.bInheritHandle = 0;
-
-	HANDLE handle = CreateFileW(path, access, sharing, &security,
-		creation_disposition, attributes, 0);
+	HANDLE handle = CreateFileW(path, opts->access, opts->sharing,
+		&opts->security, opts->creation_disposition, opts->attributes, 0);
 
 	if (handle == INVALID_HANDLE_VALUE) {
 		if (last_error_retryable())
@@ -459,14 +467,17 @@ GIT_INLINE(int) open_once(
 		return -1;
 	}
 
-	return _open_osfhandle((intptr_t)handle, osf_flags);
+	if ((fd = _open_osfhandle((intptr_t)handle, opts->osf_flags)) < 0)
+		CloseHandle(handle);
+
+	return fd;
 }
 
 int p_open(const char *path, int flags, ...)
 {
 	git_win32_path wpath;
 	mode_t mode = 0;
-	DWORD access, sharing, creation, attributes, osf_flags;
+	struct open_opts opts = {0};
 
 	if (git_win32_path_from_utf8(wpath, path) < 0)
 		return -1;
@@ -479,51 +490,83 @@ int p_open(const char *path, int flags, ...)
 		va_end(arg_list);
 	}
 
-	switch (flags & (O_WRONLY | O_RDWR)) {
-	case O_WRONLY:
-		access = GENERIC_WRITE;
-		break;
-	case O_RDWR:
-		access = GENERIC_READ | GENERIC_WRITE;
-		break;
-	default:
-		access = GENERIC_READ;
-		break;
-	}
-
-	sharing = (DWORD)git_win32__createfile_sharemode;
-
-	switch (flags & (O_CREAT | O_TRUNC | O_EXCL)) {
-	case O_CREAT | O_EXCL:
-	case O_CREAT | O_TRUNC | O_EXCL:
-		creation = CREATE_NEW;
-		break;
-	case O_CREAT | O_TRUNC:
-		creation = CREATE_ALWAYS;
-		break;
-	case O_TRUNC:
-		creation = TRUNCATE_EXISTING;
-		break;
-	case O_CREAT:
-		creation = OPEN_ALWAYS;
-		break;
-	default:
-		creation = OPEN_EXISTING;
-		break;
-	}
-
-	attributes = ((flags & O_CREAT) && !(mode & S_IWRITE)) ?
-		FILE_ATTRIBUTE_READONLY : FILE_ATTRIBUTE_NORMAL;
-	osf_flags = flags & (O_RDONLY | O_APPEND);
+	open_opts_from_posix(&opts, flags, mode);
 
 	do_with_retries(
-		open_once(wpath, access, sharing, creation, attributes, osf_flags),
+		open_once(wpath, &opts),
 		0);
 }
 
 int p_creat(const char *path, mode_t mode)
 {
 	return p_open(path, O_WRONLY | O_CREAT | O_TRUNC, mode);
+}
+
+int p_utimes(const char *path, const struct p_timeval times[2])
+{
+	git_win32_path wpath;
+	int fd, error;
+	DWORD attrs_orig, attrs_new = 0;
+	struct open_opts opts = { 0 };
+
+	if (git_win32_path_from_utf8(wpath, path) < 0)
+		return -1;
+
+	attrs_orig = GetFileAttributesW(wpath);
+
+	if (attrs_orig & FILE_ATTRIBUTE_READONLY) {
+		attrs_new = attrs_orig & ~FILE_ATTRIBUTE_READONLY;
+
+		if (!SetFileAttributesW(wpath, attrs_new)) {
+			giterr_set(GITERR_OS, "failed to set attributes");
+			return -1;
+		}
+	}
+
+	open_opts_from_posix(&opts, O_RDWR, 0);
+
+	if ((fd = open_once(wpath, &opts)) < 0) {
+		error = -1;
+		goto done;
+	}
+
+	error = p_futimes(fd, times);
+	close(fd);
+
+done:
+	if (attrs_orig != attrs_new) {
+		DWORD os_error = GetLastError();
+		SetFileAttributesW(wpath, attrs_orig);
+		SetLastError(os_error);
+	}
+
+	return error;
+}
+
+int p_futimes(int fd, const struct p_timeval times[2])
+{
+	HANDLE handle;
+	FILETIME atime = { 0 }, mtime = { 0 };
+
+	if (times == NULL) {
+		SYSTEMTIME st;
+
+		GetSystemTime(&st);
+		SystemTimeToFileTime(&st, &atime);
+		SystemTimeToFileTime(&st, &mtime);
+	}
+	else {
+		git_win32__timeval_to_filetime(&atime, times[0]);
+		git_win32__timeval_to_filetime(&mtime, times[1]);
+	}
+
+	if ((handle = (HANDLE)_get_osfhandle(fd)) == INVALID_HANDLE_VALUE)
+		return -1;
+
+	if (SetFileTime(handle, NULL, &atime, &mtime) == 0)
+		return -1;
+
+	return 0;
 }
 
 int p_getcwd(char *buffer_out, size_t size)
