@@ -1027,7 +1027,7 @@ static int parse_section_header_ext(struct reader *reader, const char *line, con
 	first_quote = strchr(line, '"');
 	if (first_quote == NULL) {
 		set_parse_error(reader, 0, "Missing quotation marks in section header");
-		return -1;
+		goto end_error;
 	}
 
 	last_quote = strrchr(line, '"');
@@ -1035,7 +1035,7 @@ static int parse_section_header_ext(struct reader *reader, const char *line, con
 
 	if (quoted_len == 0) {
 		set_parse_error(reader, 0, "Missing closing quotation mark in section header");
-		return -1;
+		goto end_error;
 	}
 
 	GITERR_CHECK_ALLOC_ADD(&alloc_len, base_name_len, quoted_len);
@@ -1043,7 +1043,7 @@ static int parse_section_header_ext(struct reader *reader, const char *line, con
 
 	if (git_buf_grow(&buf, alloc_len) < 0 ||
 	    git_buf_printf(&buf, "%s.", base_name) < 0)
-		goto end_parse;
+		goto end_error;
 
 	rpos = 0;
 
@@ -1059,8 +1059,7 @@ static int parse_section_header_ext(struct reader *reader, const char *line, con
 		switch (c) {
 		case 0:
 			set_parse_error(reader, 0, "Unexpected end-of-line in section header");
-			git_buf_free(&buf);
-			return -1;
+			goto end_error;
 
 		case '"':
 			goto end_parse;
@@ -1070,8 +1069,7 @@ static int parse_section_header_ext(struct reader *reader, const char *line, con
 
 			if (c == 0) {
 				set_parse_error(reader, rpos, "Unexpected end-of-line in section header");
-				git_buf_free(&buf);
-				return -1;
+				goto end_error;
 			}
 
 		default:
@@ -1083,10 +1081,8 @@ static int parse_section_header_ext(struct reader *reader, const char *line, con
 	} while (line + rpos < last_quote);
 
 end_parse:
-	if (git_buf_oom(&buf)) {
-		git_buf_free(&buf);
-		return -1;
-	}
+	if (git_buf_oom(&buf))
+		goto end_error;
 
 	if (line[rpos] != '"' || line[rpos + 1] != ']') {
 		set_parse_error(reader, rpos, "Unexpected text after closing quotes");
@@ -1096,6 +1092,11 @@ end_parse:
 
 	*section_name = git_buf_detach(&buf);
 	return 0;
+
+end_error:
+	git_buf_free(&buf);
+
+	return -1;
 }
 
 static int parse_section_header(struct reader *reader, char **section_out)
