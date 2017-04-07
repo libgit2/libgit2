@@ -103,8 +103,13 @@ int git_openssl_stream_global_init(void)
 	ssl_opts |= SSL_OP_NO_COMPRESSION;
 #endif
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	SSL_load_error_strings();
 	OpenSSL_add_ssl_algorithms();
+#else
+	OPENSSL_init_ssl(0, NULL);
+#endif
+
 	/*
 	 * Load SSLv{2,3} and TLSv1 so that we can talk with servers
 	 * which use the SSL hellos, which are often used for
