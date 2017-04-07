@@ -911,14 +911,19 @@ static int stream_list_init(
 				last_stream);
 
 		if (error < 0)
-			return error;
+			goto out;
 
 		git_vector_insert(streams, filter_stream);
 		last_stream = filter_stream;
 	}
 
-	*out = last_stream;
-	return 0;
+out:
+	if (error)
+		last_stream->close(last_stream);
+	else
+		*out = last_stream;
+
+	return error;
 }
 
 void stream_list_free(git_vector *streams)
@@ -943,12 +948,13 @@ int git_filter_list_stream_file(
 	git_vector filter_streams = GIT_VECTOR_INIT;
 	git_writestream *stream_start;
 	ssize_t readlen;
-	int fd = -1, error;
+	int fd = -1, error, initialized = 0;
 
 	if ((error = stream_list_init(
 			&stream_start, &filter_streams, filters, target)) < 0 ||
 		(error = git_path_join_unrooted(&abspath, path, base, NULL)) < 0)
 		goto done;
+	initialized = 1;
 
 	if ((fd = git_futils_open_ro(abspath.ptr)) < 0) {
 		error = fd;
@@ -960,13 +966,13 @@ int git_filter_list_stream_file(
 			goto done;
 	}
 
-	if (!readlen)
-		error = stream_start->close(stream_start);
-	else if (readlen < 0)
+	if (readlen < 0)
 		error = readlen;
 
-
 done:
+	if (initialized)
+		error |= stream_start->close(stream_start);
+
 	if (fd >= 0)
 		p_close(fd);
 	stream_list_free(&filter_streams);
@@ -981,20 +987,24 @@ int git_filter_list_stream_data(
 {
 	git_vector filter_streams = GIT_VECTOR_INIT;
 	git_writestream *stream_start;
-	int error = 0, close_error;
+	int error, initialized = 0;
 
 	git_buf_sanitize(data);
 
 	if ((error = stream_list_init(&stream_start, &filter_streams, filters, target)) < 0)
 		goto out;
+	initialized = 1;
 
-	error = stream_start->write(stream_start, data->ptr, data->size);
+	if ((error = stream_start->write(
+			stream_start, data->ptr, data->size)) < 0)
+		goto out;
 
 out:
-	close_error = stream_start->close(stream_start);
+	if (initialized)
+		error |= stream_start->close(stream_start);
+
 	stream_list_free(&filter_streams);
-	/* propagate the stream init or write error */
-	return error < 0 ? error : close_error;
+	return error;
 }
 
 int git_filter_list_stream_blob(

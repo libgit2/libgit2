@@ -106,3 +106,36 @@ git_filter *create_reverse_filter(const char *attrs)
 
 	return filter;
 }
+
+int erroneous_filter_stream(
+	git_writestream **out,
+	git_filter *self,
+	void **payload,
+	const git_filter_source *src,
+	git_writestream *next)
+{
+	GIT_UNUSED(out);
+	GIT_UNUSED(self);
+	GIT_UNUSED(payload);
+	GIT_UNUSED(src);
+	GIT_UNUSED(next);
+	return -1;
+}
+
+static void erroneous_filter_free(git_filter *f)
+{
+	git__free(f);
+}
+
+git_filter *create_erroneous_filter(const char *attrs)
+{
+	git_filter *filter = git__calloc(1, sizeof(git_filter));
+	cl_assert(filter);
+
+	filter->version = GIT_FILTER_VERSION;
+	filter->attributes = attrs;
+	filter->stream = erroneous_filter_stream;
+	filter->shutdown = erroneous_filter_free;
+
+	return filter;
+}
