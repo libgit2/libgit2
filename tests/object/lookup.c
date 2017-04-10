@@ -62,3 +62,33 @@ void test_object_lookup__lookup_wrong_type_eventually_returns_enotfound(void)
 		GIT_ENOTFOUND, git_object_lookup(&object, g_repo, &oid, GIT_OBJ_TAG));
 }
 
+void test_object_lookup__lookup_corrupt_object_returns_error(void)
+{
+	const char *commit = "8e73b769e97678d684b809b163bebdae2911720f",
+	      *file = "objects/8e/73b769e97678d684b809b163bebdae2911720f";
+	git_buf path = GIT_BUF_INIT, contents = GIT_BUF_INIT;
+	git_oid oid;
+	git_object *object;
+	size_t i;
+
+	cl_git_pass(git_oid_fromstr(&oid, commit));
+	cl_git_pass(git_buf_joinpath(&path, git_repository_path(g_repo), file));
+	cl_git_pass(git_futils_readbuffer(&contents, path.ptr));
+
+	/* Corrupt and try to read the object */
+	for (i = 0; i < contents.size; i++) {
+		contents.ptr[i] ^= 0x1;
+		cl_git_pass(git_futils_writebuffer(&contents, path.ptr, O_RDWR, 0644));
+		cl_git_fail(git_object_lookup(&object, g_repo, &oid, GIT_OBJ_COMMIT));
+		contents.ptr[i] ^= 0x1;
+	}
+
+	/* Restore original content and assert we can read the object */
+	cl_git_pass(git_futils_writebuffer(&contents, path.ptr, O_RDWR, 0644));
+	cl_git_pass(git_object_lookup(&object, g_repo, &oid, GIT_OBJ_COMMIT));
+
+	git_object_free(object);
+	git_buf_free(&path);
+	git_buf_free(&contents);
+}
+
