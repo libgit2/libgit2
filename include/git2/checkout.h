@@ -112,7 +112,6 @@ typedef enum {
 	/** Allow all updates to force working directory to look like index */
 	GIT_CHECKOUT_FORCE = (1u << 1),
 
-
 	/** Allow checkout to recreate missing files */
 	GIT_CHECKOUT_RECREATE_MISSING = (1u << 2),
 
@@ -295,7 +294,7 @@ typedef struct git_checkout_options {
 } git_checkout_options;
 
 #define GIT_CHECKOUT_OPTIONS_VERSION 1
-#define GIT_CHECKOUT_OPTIONS_INIT {GIT_CHECKOUT_OPTIONS_VERSION}
+#define GIT_CHECKOUT_OPTIONS_INIT {.version = GIT_CHECKOUT_OPTIONS_VERSION}
 
 /**
 * Initializes a `git_checkout_options` with default values. Equivalent to
