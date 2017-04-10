@@ -92,3 +92,25 @@ void test_object_lookup__lookup_corrupt_object_returns_error(void)
 	git_buf_free(&contents);
 }
 
+void test_object_lookup__lookup_object_with_wrong_hash_returns_error(void)
+{
+	const char *oldloose = "objects/8e/73b769e97678d684b809b163bebdae2911720f",
+	      *newloose = "objects/8e/73b769e97678d684b809b163bebdae2911720e",
+	      *commit = "8e73b769e97678d684b809b163bebdae2911720e";
+	git_buf oldpath = GIT_BUF_INIT, newpath = GIT_BUF_INIT;
+	git_object *object;
+	git_oid oid;
+
+	cl_git_pass(git_oid_fromstr(&oid, commit));
+
+	/* Copy object to another location with wrong hash */
+	cl_git_pass(git_buf_joinpath(&oldpath, git_repository_path(g_repo), oldloose));
+	cl_git_pass(git_buf_joinpath(&newpath, git_repository_path(g_repo), newloose));
+	cl_git_pass(git_futils_cp(oldpath.ptr, newpath.ptr, 0644));
+
+	/* Verify that lookup fails due to a hashsum mismatch */
+	cl_git_fail_with(GIT_EMISMATCH, git_object_lookup(&object, g_repo, &oid, GIT_OBJ_COMMIT));
+
+	git_buf_free(&oldpath);
+	git_buf_free(&newpath);
+}

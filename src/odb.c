@@ -998,7 +998,9 @@ static int odb_read_1(git_odb_object **out, git_odb *db, const git_oid *id,
 	size_t i;
 	git_rawobj raw;
 	git_odb_object *object;
+	git_oid hashed;
 	bool found = false;
+	int error;
 
 	if (!only_refreshed && odb_read_hardcoded(&raw, id) == 0)
 		found = true;
@@ -1011,7 +1013,7 @@ static int odb_read_1(git_odb_object **out, git_odb *db, const git_oid *id,
 			continue;
 
 		if (b->read != NULL) {
-			int error = b->read(&raw.data, &raw.len, &raw.type, b, id);
+			error = b->read(&raw.data, &raw.len, &raw.type, b, id);
 			if (error == GIT_PASSTHROUGH || error == GIT_ENOTFOUND)
 				continue;
 
@@ -1025,12 +1027,24 @@ static int odb_read_1(git_odb_object **out, git_odb *db, const git_oid *id,
 	if (!found)
 		return GIT_ENOTFOUND;
 
+	if ((error = git_odb_hash(&hashed, raw.data, raw.len, raw.type)) < 0)
+		goto out;
+
+	if (!git_oid_equal(id, &hashed)) {
+		error = git_odb__error_mismatch(id, &hashed);
+		goto out;
+	}
+
 	giterr_clear();
 	if ((object = odb_object__alloc(id, &raw)) == NULL)
-		return -1;
+		goto out;
 
 	*out = git_cache_store_raw(odb_cache(db), object);
-	return 0;
+
+out:
+	if (error)
+		git__free(raw.data);
+	return error;
 }
 
 int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
@@ -1409,6 +1423,19 @@ int git_odb_refresh(struct git_odb *db)
 	}
 
 	return 0;
+}
+
+int git_odb__error_mismatch(const git_oid *expected, const git_oid *actual)
+{
+	char expected_oid[GIT_OID_HEXSZ + 1], actual_oid[GIT_OID_HEXSZ + 1];
+
+	git_oid_tostr(expected_oid, sizeof(expected_oid), expected);
+	git_oid_tostr(actual_oid, sizeof(actual_oid), actual);
+
+	giterr_set(GITERR_ODB, "object hash mismatch - expected %s but got %s",
+		expected_oid, actual_oid);
+
+	return GIT_EMISMATCH;
 }
 
 int git_odb__error_notfound(

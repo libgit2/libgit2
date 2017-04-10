@@ -96,6 +96,12 @@ int git_odb__hashfd_filtered(
  */
 int git_odb__hashlink(git_oid *out, const char *path);
 
+/**
+ * Generate a GIT_EMISMATCH error for the ODB.
+ */
+int git_odb__error_mismatch(
+	const git_oid *expected, const git_oid *actual);
+
 /*
  * Generate a GIT_ENOTFOUND error for the ODB.
  */

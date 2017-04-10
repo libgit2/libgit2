@@ -18,6 +18,7 @@ static fake_backend *_fake;
 static git_oid _oid;
 
 #define HASH "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+#define EMPTY_HASH "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
 
 static int fake_backend__exists(git_odb_backend *backend, const git_oid *oid)
 {
@@ -225,7 +226,7 @@ void test_odb_backend_nonrefreshing__read_is_invoked_once_on_success(void)
 {
 	git_object *obj;
 
-	setup_repository_and_backend(GIT_OK, HASH);
+	setup_repository_and_backend(GIT_OK, EMPTY_HASH);
 
 	cl_git_pass(git_object_lookup(&obj, _repo, &_oid, GIT_OBJ_ANY));
 
