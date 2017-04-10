@@ -6,13 +6,12 @@ static git_repository *g_repo;
 
 void test_object_lookup__initialize(void)
 {
-   cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo.git")));
+	g_repo = cl_git_sandbox_init("testrepo.git");
 }
 
 void test_object_lookup__cleanup(void)
 {
-	git_repository_free(g_repo);
-	g_repo = NULL;
+	cl_git_sandbox_cleanup();
 }
 
 void test_object_lookup__lookup_wrong_type_returns_enotfound(void)
