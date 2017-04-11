@@ -37,7 +37,7 @@ SSL_CTX *git__ssl_ctx;
 
 #define GIT_SSL_DEFAULT_CIPHERS "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-DSS-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:DHE-DSS-AES128-SHA256:DHE-DSS-AES256-SHA256:DHE-DSS-AES128-SHA:DHE-DSS-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA"
 
-#ifdef GIT_THREADS
+#if defined(GIT_THREADS) && OPENSSL_VERSION_NUMBER < 0x10100000L
 
 static git_mutex *openssl_locks;
 
@@ -70,7 +70,7 @@ static void shutdown_ssl_locking(void)
 	git__free(openssl_locks);
 }
 
-#endif /* GIT_THREADS */
+#endif /* GIT_THREADS && OPENSSL_VERSION_NUMBER < 0x10100000L */
 
 static BIO_METHOD *git_stream_bio_method;
 static int init_bio_method(void);
@@ -103,8 +103,13 @@ int git_openssl_stream_global_init(void)
 	ssl_opts |= SSL_OP_NO_COMPRESSION;
 #endif
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	SSL_load_error_strings();
 	OpenSSL_add_ssl_algorithms();
+#else
+	OPENSSL_init_ssl(0, NULL);
+#endif
+
 	/*
 	 * Load SSLv{2,3} and TLSv1 so that we can talk with servers
 	 * which use the SSL hellos, which are often used for
@@ -146,7 +151,7 @@ int git_openssl_stream_global_init(void)
 
 int git_openssl_set_locking(void)
 {
-#ifdef GIT_THREADS
+#if defined(GIT_THREADS) && OPENSSL_VERSION_NUMBER < 0x10100000L
 	int num_locks, i;
 
 	num_locks = CRYPTO_num_locks();
@@ -162,6 +167,8 @@ int git_openssl_set_locking(void)
 
 	CRYPTO_set_locking_callback(openssl_locking_function);
 	git__on_shutdown(shutdown_ssl_locking);
+	return 0;
+#elif OPENSSL_VERSION_NUMBER >= 0x10100000L
 	return 0;
 #else
 	giterr_set(GITERR_THREAD, "libgit2 was not built with threads");
