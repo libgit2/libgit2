@@ -68,6 +68,16 @@ The library provides:
 * descriptive and detailed error messages
 * ...and more (over 175 different API calls)
 
+As libgit2 is purely a consumer of the Git system, we have to
+adjust to changes made upstream. This has two major consequences:
+
+* Some changes may require us to change provided interfaces. While we try to
+  implement functions in a generic way so that no future changes are required,
+  we cannot promise a completely stable API.
+* As we have to keep up with changes in behavior made upstream, we may lag
+  behind in some areas. We usually to document these incompatibilities in our
+  issue tracker with the label "git change".
+
 Optional dependencies
 =====================
 
