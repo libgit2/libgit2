@@ -46,6 +46,33 @@ static int skip_change(
 	return (hunk->new_lines == hunk->old_lines) ? 1 : 0;
 }
 
+static int abort_addition(
+	const git_diff_hunk *hunk,
+	void *payload)
+{
+	GIT_UNUSED(payload);
+
+	return (hunk->new_lines > hunk->old_lines) ? GIT_EUSER : 0;
+}
+
+static int abort_deletion(
+	const git_diff_hunk *hunk,
+	void *payload)
+{
+	GIT_UNUSED(payload);
+
+	return (hunk->new_lines < hunk->old_lines) ? GIT_EUSER : 0;
+}
+
+static int abort_change(
+	const git_diff_hunk *hunk,
+	void *payload)
+{
+	GIT_UNUSED(payload);
+
+	return (hunk->new_lines == hunk->old_lines) ? GIT_EUSER : 0;
+}
+
 static int apply_buf(
 	const char *old,
 	const char *oldname,
@@ -103,6 +130,17 @@ void test_apply_partial__prepend_and_change_nocontext_skip_addition(void)
 		FILE_CHANGE_MIDDLE, &diff_opts, skip_addition, NULL));
 }
 
+void test_apply_partial__prepend_and_change_nocontext_abort_addition(void)
+{
+	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
+	diff_opts.context_lines = 0;
+
+	cl_git_fail(apply_buf(
+		FILE_ORIGINAL, "file.txt",
+		FILE_PREPEND_AND_CHANGE, "file.txt",
+		FILE_ORIGINAL, &diff_opts, abort_addition, NULL));
+}
+
 void test_apply_partial__prepend_and_change_skip_change(void)
 {
 	cl_git_pass(apply_buf(
@@ -120,6 +158,17 @@ void test_apply_partial__prepend_and_change_nocontext_skip_change(void)
 		FILE_ORIGINAL, "file.txt",
 		FILE_PREPEND_AND_CHANGE, "file.txt",
 		FILE_PREPEND, &diff_opts, skip_change, NULL));
+}
+
+void test_apply_partial__prepend_and_change_nocontext_abort_change(void)
+{
+	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
+	diff_opts.context_lines = 0;
+
+	cl_git_fail(apply_buf(
+		FILE_ORIGINAL, "file.txt",
+		FILE_PREPEND_AND_CHANGE, "file.txt",
+		FILE_PREPEND, &diff_opts, abort_change, NULL));
 }
 
 void test_apply_partial__delete_and_change_skip_deletion(void)
@@ -141,6 +190,17 @@ void test_apply_partial__delete_and_change_nocontext_skip_deletion(void)
 		FILE_CHANGE_MIDDLE, &diff_opts, skip_deletion, NULL));
 }
 
+void test_apply_partial__delete_and_change_nocontext_abort_deletion(void)
+{
+	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
+	diff_opts.context_lines = 0;
+
+	cl_git_fail(apply_buf(
+		FILE_ORIGINAL, "file.txt",
+		FILE_DELETE_AND_CHANGE, "file.txt",
+		FILE_ORIGINAL, &diff_opts, abort_deletion, NULL));
+}
+
 void test_apply_partial__delete_and_change_skip_change(void)
 {
 	cl_git_pass(apply_buf(
@@ -158,4 +218,15 @@ void test_apply_partial__delete_and_change_nocontext_skip_change(void)
 		FILE_ORIGINAL, "file.txt",
 		FILE_DELETE_AND_CHANGE, "file.txt",
 		FILE_DELETE_FIRSTLINE, &diff_opts, skip_change, NULL));
+}
+
+void test_apply_partial__delete_and_change_nocontext_abort_change(void)
+{
+	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
+	diff_opts.context_lines = 0;
+
+	cl_git_fail(apply_buf(
+		FILE_ORIGINAL, "file.txt",
+		FILE_DELETE_AND_CHANGE, "file.txt",
+		FILE_DELETE_FIRSTLINE, &diff_opts, abort_change, NULL));
 }
