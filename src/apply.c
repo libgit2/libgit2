@@ -342,7 +342,7 @@ done:
 
 int git_patch_apply(
 	git_buf *contents_out,
-	char **filename_out,
+	char **path_out,
 	unsigned int *mode_out,
 	git_patch *patch,
 	const char *source,
@@ -350,19 +350,21 @@ int git_patch_apply(
 	git_diff_hunk_cb hunk_cb,
 	void *payload)
 {
-	char *filename = NULL;
+	char *path = NULL;
 	unsigned int mode = 0;
 	int error = 0;
 
-	assert(contents_out && filename_out && mode_out && (source || !source_len) && patch);
+	assert(contents_out && (source || !source_len) && patch);
 
-	*filename_out = NULL;
-	*mode_out = 0;
+	if (path_out)
+		*path_out = NULL;
+	if (mode_out)
+		*mode_out = 0;
 
 	if (patch->delta->status != GIT_DELTA_DELETED) {
 		const git_diff_file *newfile = &patch->delta->new_file;
 
-		filename = git__strdup(newfile->path);
+		path = git__strdup(newfile->path);
 		mode = newfile->mode ?
 			newfile->mode : GIT_FILEMODE_BLOB;
 	}
@@ -383,12 +385,14 @@ int git_patch_apply(
 		goto done;
 	}
 
-	*filename_out = filename;
-	*mode_out = mode;
+	if (path_out)
+		*path_out = path;
+	if (mode_out)
+		*mode_out = mode;
 
 done:
-	if (error < 0)
-		git__free(filename);
+	if (error < 0 || !path_out)
+		git__free(path);
 
 	return error;
 }

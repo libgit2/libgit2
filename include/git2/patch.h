@@ -275,8 +275,8 @@ GIT_EXTERN(int) git_patch_to_buf(
  * which hunks are applied.
  *
  * @param out The output buffer to be filled
- * @param filename The output name of the new file
- * @param mode The output mode of the new file
+ * @param path Optional output path of the new file
+ * @param mode Optional output mode of the new file
  * @param patch The patch to apply
  * @param source The input source buffer
  * @param source_len The length of the source buffer
@@ -288,7 +288,7 @@ GIT_EXTERN(int) git_patch_to_buf(
  */
 GIT_EXTERN(int) git_patch_apply(
 	git_buf *out,
-	char **filename,
+	char **path,
 	unsigned int *mode,
 	git_patch *patch,
 	const char *source,
