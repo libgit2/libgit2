@@ -27,7 +27,7 @@ static int skip_addition(
 	GIT_UNUSED(delta);
 	GIT_UNUSED(payload);
 
-	return (hunk->new_lines > hunk->old_lines) ? 1 : 0;
+	return (hunk->new_lines > hunk->old_lines) ? GIT_PATCH_SKIP : GIT_PATCH_APPLY;
 }
 
 static int skip_deletion(
@@ -38,7 +38,7 @@ static int skip_deletion(
 	GIT_UNUSED(delta);
 	GIT_UNUSED(payload);
 
-	return (hunk->new_lines < hunk->old_lines) ? 1 : 0;
+	return (hunk->new_lines < hunk->old_lines) ? GIT_PATCH_SKIP : GIT_PATCH_APPLY;
 }
 
 static int skip_change(
@@ -49,7 +49,7 @@ static int skip_change(
 	GIT_UNUSED(delta);
 	GIT_UNUSED(payload);
 
-	return (hunk->new_lines == hunk->old_lines) ? 1 : 0;
+	return (hunk->new_lines == hunk->old_lines) ? GIT_PATCH_SKIP : GIT_PATCH_APPLY;
 }
 
 static int apply_buf(

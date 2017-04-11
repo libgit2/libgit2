@@ -226,12 +226,12 @@ static int apply_hunks(
 
 	git_array_foreach(patch->hunks, i, hunk) {
 		if (hunk_cb) {
-			/* abort on <0 */
-			if ((error = hunk_cb(patch->delta, &hunk->hunk, payload)) < 0)
+			/* Abort on GIT_PATCH_ABORT. */
+			if ((error = hunk_cb(patch->delta, &hunk->hunk, payload)) == GIT_PATCH_ABORT)
 				goto done;
 
-			/* skip on >0 */
-			if (error > 0) {
+			/* Skip on GIT_PATCH_SKIP. */
+			if (error == GIT_PATCH_SKIP) {
 				skipped_lines += (hunk->hunk.new_lines - hunk->hunk.old_lines);
 				error = 0;
 				continue;
