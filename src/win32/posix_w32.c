@@ -18,6 +18,8 @@
 #include <fcntl.h>
 #include <ws2tcpip.h>
 
+DWORD git_posix_w32__windows_sharemode = FILE_SHARE_READ | FILE_SHARE_WRITE;
+
 #ifndef FILE_NAME_NORMALIZED
 # define FILE_NAME_NORMALIZED 0
 #endif
@@ -25,15 +27,6 @@
 #ifndef IO_REPARSE_TAG_SYMLINK
 #define IO_REPARSE_TAG_SYMLINK (0xA000000CL)
 #endif
-
-/* Options which we always provide to _wopen.
- *
- * _O_BINARY - Raw access; no translation of CR or LF characters
- * _O_NOINHERIT - Do not mark the created handle as inheritable by child processes.
- *    The Windows default is 'not inheritable', but the CRT's default (following
- *    POSIX convention) is 'inheritable'. We have no desire for our handles to be
- *    inheritable on Windows, so specify the flag to get default behavior back. */
-#define STANDARD_OPEN_FLAGS (_O_BINARY | _O_NOINHERIT)
 
 /* Allowable mode bits on Win32.  Using mode bits that are not supported on
  * Win32 (eg S_IRWXU) is generally ignored, but Wine warns loudly about it
@@ -285,32 +278,101 @@ int p_symlink(const char *old, const char *new)
 int p_open(const char *path, int flags, ...)
 {
 	git_win32_path buf;
-	mode_t mode = 0;
+	HANDLE handle;
+	DWORD desired_access;
+	DWORD creation_disposition;
+	DWORD flags_and_attributes = FILE_ATTRIBUTE_NORMAL;
+	int osfhandle_flags = 0;
 
 	if (git_win32_path_from_utf8(buf, path) < 0)
 		return -1;
 
 	if (flags & O_CREAT) {
 		va_list arg_list;
+		mode_t mode = 0;
 
 		va_start(arg_list, flags);
 		mode = (mode_t)va_arg(arg_list, int);
 		va_end(arg_list);
+
+		if (!(mode & _S_IWRITE))
+			flags_and_attributes = FILE_ATTRIBUTE_READONLY;
 	}
 
-	return _wopen(buf, flags | STANDARD_OPEN_FLAGS, mode & WIN32_MODE_MASK);
+	/* we only support _O_BINARY and set this by default */
+	if (flags & (_O_TEXT | _O_WTEXT | _O_U16TEXT | _O_U8TEXT)) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	/* currently unsupported */
+	if (flags & (_O_SEQUENTIAL | _O_RANDOM | _O_TEMPORARY | _O_SHORT_LIVED)) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	switch (flags & (_O_RDONLY | _O_WRONLY | _O_RDWR | _O_APPEND)) {
+	case _O_RDONLY:
+		desired_access = GENERIC_READ;
+		osfhandle_flags = _O_RDONLY;
+		break;
+	case _O_WRONLY | _O_APPEND:
+		osfhandle_flags = _O_APPEND;
+	case _O_WRONLY:
+		desired_access = GENERIC_WRITE;
+		break;
+	case _O_RDWR | _O_APPEND:
+		osfhandle_flags = _O_APPEND;
+	case _O_RDWR:
+		desired_access = GENERIC_READ | GENERIC_WRITE;
+		break;
+	default:
+		/* invalid or unsupported flag (combination) */
+		errno = EINVAL;
+		return -1;
+	}
+
+	switch (flags & (_O_CREAT | _O_EXCL | _O_TRUNC)) {
+	case 0:
+		creation_disposition = OPEN_EXISTING;
+		break;
+
+	case _O_CREAT:
+		creation_disposition = OPEN_ALWAYS;
+		break;
+
+	case _O_CREAT | _O_TRUNC:
+		creation_disposition = CREATE_ALWAYS;
+		break;
+
+	case _O_CREAT | _O_EXCL:
+	case _O_CREAT | _O_TRUNC | _O_EXCL:
+		creation_disposition = CREATE_NEW;
+		break;
+
+	case _O_TRUNC:
+		creation_disposition = TRUNCATE_EXISTING;
+		break;
+
+	default:
+		/* _O_EXCL required O_CREAT to be set, IIRC this is no error in MSVC implementaton */
+		errno = EINVAL;
+		return  -1;
+	}
+
+	handle = CreateFileW(buf, desired_access, git_posix_w32__windows_sharemode, NULL, creation_disposition, flags_and_attributes, 0);
+	if (handle == INVALID_HANDLE_VALUE)
+	{
+		_dosmaperr(GetLastError());
+		return -1;
+	}
+
+	return _open_osfhandle((intptr_t)handle, osfhandle_flags);
 }
 
 int p_creat(const char *path, mode_t mode)
 {
-	git_win32_path buf;
-
-	if (git_win32_path_from_utf8(buf, path) < 0)
-		return -1;
-
-	return _wopen(buf,
-		_O_WRONLY | _O_CREAT | _O_TRUNC | STANDARD_OPEN_FLAGS,
-		mode & WIN32_MODE_MASK);
+	return p_open(path, _O_WRONLY | _O_CREAT | _O_TRUNC, mode);
 }
 
 int p_getcwd(char *buffer_out, size_t size)

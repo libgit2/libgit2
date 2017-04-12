@@ -56,6 +56,10 @@ v0.25
 
 ### API additions
 
+* You can now set the default share modes on Windows for opening files using
+  `GIT_OPT_SET_WINDOWS_SHAREMODE` option with `git_libgit2_opts()`.
+  It is the counterpart to `GIT_OPT_GET_WINDOWS_SHAREMODE`.
+
 * You can now get the user-agent used by libgit2 using the
   `GIT_OPT_GET_USER_AGENT` option with `git_libgit2_opts()`.
   It is the counterpart to `GIT_OPT_SET_USER_AGENT`.
