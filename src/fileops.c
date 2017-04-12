@@ -304,15 +304,19 @@ int git_futils_mmap_ro_file(git_map *out, const char *path)
 	if (fd < 0)
 		return fd;
 
-	if ((len = git_futils_filesize(fd)) < 0)
-		return -1;
+	if ((len = git_futils_filesize(fd)) < 0) {
+		result = -1;
+		goto out;
+	}
 
 	if (!git__is_sizet(len)) {
 		giterr_set(GITERR_OS, "file `%s` too large to mmap", path);
-		return -1;
+		result = -1;
+		goto out;
 	}
 
 	result = git_futils_mmap_ro(out, fd, 0, (size_t)len);
+out:
 	p_close(fd);
 	return result;
 }
