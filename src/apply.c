@@ -162,7 +162,7 @@ static int apply_hunk(
 	patch_image *image,
 	git_patch *patch,
 	git_patch_hunk *hunk,
-	int skipped_lines)
+	ssize_t skipped_lines)
 {
 	patch_image preimage = PATCH_IMAGE_INIT, postimage = PATCH_IMAGE_INIT;
 	size_t line_num, i;
@@ -218,7 +218,7 @@ static int apply_hunks(
 	git_diff_line *line;
 	patch_image image;
 	size_t i;
-	int skipped_lines = 0;
+	ssize_t skipped_lines = 0;
 	int error = 0;
 
 	if ((error = patch_image_init_fromstr(&image, source, source_len)) < 0)
