@@ -14,6 +14,9 @@
 #include "utf-conv.h"
 #include "dir.h"
 
+extern unsigned long git_win32__createfile_sharemode;
+extern int git_win32__retries;
+
 typedef SOCKET GIT_SOCKET;
 
 #define p_lseek(f,n,w) _lseeki64(f, n, w)
