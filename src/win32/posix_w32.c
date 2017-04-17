@@ -160,11 +160,11 @@ GIT_INLINE(bool) last_error_retryable(void)
 		os_error == ERROR_ACCESS_DENIED);
 }
 
-#define do_with_retries(fn, cleanup) \
+#define do_with_retries(fn, remediation) \
 	do {                                                             \
 		int __tries, __ret;                                          \
 		for (__tries = 0; __tries < git_win32__retries; __tries++) { \
-			if (__tries && (__ret = (cleanup)) != 0)                 \
+			if (__tries && (__ret = (remediation)) != 0)             \
 				return __ret;                                        \
 			if ((__ret = (fn)) != GIT_RETRY)                         \
 				return __ret;                                        \
