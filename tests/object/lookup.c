@@ -111,6 +111,11 @@ void test_object_lookup__lookup_object_with_wrong_hash_returns_error(void)
 	/* Verify that lookup fails due to a hashsum mismatch */
 	cl_git_fail_with(GIT_EMISMATCH, git_object_lookup(&object, g_repo, &oid, GIT_OBJ_COMMIT));
 
+	/* Disable verification and try again */
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_HASH_VERIFICATION, 0));
+	cl_git_pass(git_object_lookup(&object, g_repo, &oid, GIT_OBJ_COMMIT));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_HASH_VERIFICATION, 1));
+
 	git_buf_free(&oldpath);
 	git_buf_free(&newpath);
 }

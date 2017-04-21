@@ -31,6 +31,8 @@
 
 #define GIT_ALTERNATES_MAX_DEPTH 5
 
+bool git_odb__strict_hash_verification = true;
+
 typedef struct
 {
 	git_odb_backend *backend;
@@ -1027,12 +1029,14 @@ static int odb_read_1(git_odb_object **out, git_odb *db, const git_oid *id,
 	if (!found)
 		return GIT_ENOTFOUND;
 
-	if ((error = git_odb_hash(&hashed, raw.data, raw.len, raw.type)) < 0)
-		goto out;
+	if (git_odb__strict_hash_verification) {
+		if ((error = git_odb_hash(&hashed, raw.data, raw.len, raw.type)) < 0)
+			goto out;
 
-	if (!git_oid_equal(id, &hashed)) {
-		error = git_odb__error_mismatch(id, &hashed);
-		goto out;
+		if (!git_oid_equal(id, &hashed)) {
+			error = git_odb__error_mismatch(id, &hashed);
+			goto out;
+		}
 	}
 
 	giterr_clear();
