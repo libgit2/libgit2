@@ -19,7 +19,9 @@ static git_repository *_repo;
 static git_tree *_a, *_b;
 static git_atomic _counts[4];
 static int _check_counts;
+#ifdef GIT_WIN32
 static int _retries;
+#endif
 
 #define THREADS 20
 
