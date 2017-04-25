@@ -4,7 +4,7 @@
 
 static git_repository *g_repo;
 
-#if defined(GIT_OPENSSL) || defined(GIT_WINHTTP) || defined(GIT_SECURE_TRANSPORT)
+#ifdef GIT_HTTPS
 static bool g_has_ssl = true;
 #else
 static bool g_has_ssl = false;
