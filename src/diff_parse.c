@@ -45,7 +45,7 @@ static git_diff_parsed *diff_parsed_alloc(void)
 	diff->base.free_fn = diff_parsed_free;
 
 	if (git_diff_init_options(&diff->base.opts, GIT_DIFF_OPTIONS_VERSION) < 0) {
-		git__free(&diff);
+		git__free(diff);
 		return NULL;
 	}
 
