@@ -106,10 +106,8 @@ int socket_connect(git_stream *stream)
 	for (p = info; p != NULL; p = p->ai_next) {
 		s = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
 
-		if (s == INVALID_SOCKET) {
-			net_set_error("error creating socket");
-			break;
-		}
+		if (s == INVALID_SOCKET)
+			continue;
 
 		if (connect(s, p->ai_addr, (socklen_t)p->ai_addrlen) == 0)
 			break;
