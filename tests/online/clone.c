@@ -547,7 +547,7 @@ void test_online_clone__ssh_cert(void)
 	if (!_remote_ssh_fingerprint)
 		cl_skip();
 
-	cl_git_fail_with(GIT_EUSER, git_clone(&g_repo, "ssh://localhost/foo", "./foo", &g_options));
+	cl_git_fail_with(GIT_EUSER, git_clone(&g_repo, _remote_url, "./foo", &g_options));
 }
 
 static char *read_key_file(const char *path)
