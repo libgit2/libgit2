@@ -1099,9 +1099,9 @@ static int read_prefix_1(git_odb_object **out, git_odb *db,
 		const git_oid *key, size_t len, bool only_refreshed)
 {
 	size_t i;
-	int error = GIT_ENOTFOUND;
+	int error;
 	git_oid found_full_oid = {{0}};
-	git_rawobj raw;
+	git_rawobj raw = {0};
 	void *data = NULL;
 	bool found = false;
 	git_odb_object *object;
@@ -1120,14 +1120,22 @@ static int read_prefix_1(git_odb_object **out, git_odb *db,
 				continue;
 
 			if (error)
-				return error;
+				goto out;
 
 			git__free(data);
 			data = raw.data;
 
 			if (found && git_oid__cmp(&full_oid, &found_full_oid)) {
-				git__free(raw.data);
-				return git_odb__error_ambiguous("multiple matches for prefix");
+				git_buf buf = GIT_BUF_INIT;
+
+				git_buf_printf(&buf, "multiple matches for prefix: %s",
+					git_oid_tostr_s(&full_oid));
+				git_buf_printf(&buf, " %s",
+					git_oid_tostr_s(&found_full_oid));
+
+				error = git_odb__error_ambiguous(buf.ptr);
+				git_buf_free(&buf);
+				goto out;
 			}
 
 			found_full_oid = full_oid;
@@ -1139,10 +1147,15 @@ static int read_prefix_1(git_odb_object **out, git_odb *db,
 		return GIT_ENOTFOUND;
 
 	if ((object = odb_object__alloc(&found_full_oid, &raw)) == NULL)
-		return -1;
+		goto out;
 
 	*out = git_cache_store_raw(odb_cache(db), object);
-	return 0;
+
+out:
+	if (error)
+		git__free(raw.data);
+
+	return error;
 }
 
 int git_odb_read_prefix(
