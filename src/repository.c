@@ -2063,47 +2063,27 @@ int git_repository_head_detached(git_repository *repo)
 	return exists;
 }
 
-static int read_worktree_head(git_buf *out, git_repository *repo, const char *name)
+static int get_worktree_file_path(git_buf *out, git_repository *repo, const char *worktree, const char *file)
 {
-	git_buf path = GIT_BUF_INIT;
-	int err;
-
-	assert(out && repo && name);
-
 	git_buf_clear(out);
-
-	if ((err = git_buf_printf(&path, "%s/worktrees/%s/HEAD", repo->commondir, name)) < 0)
-		goto out;
-	if (!git_path_exists(path.ptr))
-	{
-		err = -1;
-		goto out;
-	}
-
-	if ((err = git_futils_readbuffer(out, path.ptr)) < 0)
-		goto out;
-	git_buf_rtrim(out);
-
-out:
-	git_buf_free(&path);
-
-	return err;
+	return git_buf_printf(out, "%s/worktrees/%s/%s", repo->commondir, worktree, file);
 }
 
 int git_repository_head_detached_for_worktree(git_repository *repo, const char *name)
 {
-	git_buf buf = GIT_BUF_INIT;
-	int ret;
+	git_reference *ref = NULL;
+	int error;
 
 	assert(repo && name);
 
-	if (read_worktree_head(&buf, repo, name) < 0)
-		return -1;
+	if ((error = git_repository_head_for_worktree(&ref, repo, name)) < 0)
+		goto out;
 
-	ret = git__strncmp(buf.ptr, GIT_SYMREF, strlen(GIT_SYMREF)) != 0;
-	git_buf_free(&buf);
+	error = (git_reference_type(ref) != GIT_REF_SYMBOLIC);
+out:
+	git_reference_free(ref);
 
-	return ret;
+	return error;
 }
 
 int git_repository_head(git_reference **head_out, git_repository *repo)
@@ -2127,44 +2107,66 @@ int git_repository_head(git_reference **head_out, git_repository *repo)
 
 int git_repository_head_for_worktree(git_reference **out, git_repository *repo, const char *name)
 {
-	git_buf buf = GIT_BUF_INIT;
-	git_reference *head;
-	int err;
+	git_buf path = GIT_BUF_INIT;
+	git_reference *head = NULL;
+	int error;
 
 	assert(out && repo && name);
 
 	*out = NULL;
 
-	if (git_repository_head_detached_for_worktree(repo, name))
-		return -1;
-	if ((err = read_worktree_head(&buf, repo, name)) < 0)
+	if ((error = get_worktree_file_path(&path, repo, name, GIT_HEAD_FILE)) < 0 ||
+	    (error = git_reference__read_head(&head, repo, path.ptr)) < 0)
 		goto out;
 
-	/* We can only resolve symbolic references */
-	if (git__strncmp(buf.ptr, GIT_SYMREF, strlen(GIT_SYMREF)))
-	{
-		err = -1;
-		goto out;
-	}
-	git_buf_consume(&buf, buf.ptr + strlen(GIT_SYMREF));
+	if (git_reference_type(head) != GIT_REF_OID) {
+		git_reference *resolved;
 
-	if ((err = git_reference_lookup(&head, repo, buf.ptr)) < 0)
-		goto out;
-	if (git_reference_type(head) == GIT_REF_OID)
-	{
-		*out = head;
-		err = 0;
-		goto out;
+		error = git_reference_lookup_resolved(&resolved, repo, git_reference_symbolic_target(head), -1);
+		git_reference_free(head);
+		head = resolved;
 	}
 
-	err = git_reference_lookup_resolved(
-		out, repo, git_reference_symbolic_target(head), -1);
-	git_reference_free(head);
+	*out = head;
 
 out:
-	git_buf_free(&buf);
+	if (error)
+		git_reference_free(head);
+	git_buf_clear(&path);
 
-	return err;
+	return error;
+}
+
+int git_repository_foreach_head(git_repository *repo, git_repository_foreach_head_cb cb, void *payload)
+{
+	git_strarray worktrees = GIT_VECTOR_INIT;
+	git_buf path = GIT_BUF_INIT;
+	int error;
+	size_t i;
+
+	/* Execute callback for HEAD of commondir */
+	if ((error = git_buf_joinpath(&path, repo->commondir, GIT_HEAD_FILE)) < 0 ||
+	    (error = cb(repo, path.ptr, payload) != 0))
+		goto out;
+
+	if ((error = git_worktree_list(&worktrees, repo)) < 0) {
+		error = 0;
+		goto out;
+	}
+
+	/* Execute callback for all worktree HEADs */
+	for (i = 0; i < worktrees.count; i++) {
+		if (get_worktree_file_path(&path, repo, worktrees.strings[i], GIT_HEAD_FILE) < 0)
+			continue;
+
+		if ((error = cb(repo, path.ptr, payload)) != 0)
+			goto out;
+	}
+
+out:
+	git_buf_free(&path);
+	git_strarray_free(&worktrees);
+	return error;
 }
 
 int git_repository_head_unborn(git_repository *repo)
@@ -2562,6 +2564,8 @@ int git_repository_set_head(
 
 	if (ref && current->type == GIT_REF_SYMBOLIC && git__strcmp(current->target.symbolic, ref->name) &&
 	    git_reference_is_branch(ref) && git_branch_is_checked_out(ref)) {
+		giterr_set(GITERR_REPOSITORY, "cannot set HEAD to reference '%s' as it is the current HEAD "
+			"of a linked repository.", git_reference_name(ref));
 		error = -1;
 		goto cleanup;
 	}

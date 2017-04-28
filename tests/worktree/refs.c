@@ -107,28 +107,42 @@ void test_worktree_refs__set_head_fails_when_already_checked_out(void)
 
 void test_worktree_refs__delete_fails_for_checked_out_branch(void)
 {
-       git_reference *branch;
+	git_reference *branch;
 
-       cl_git_pass(git_branch_lookup(&branch, fixture.repo,
-               "testrepo-worktree", GIT_BRANCH_LOCAL));
-       cl_git_fail(git_branch_delete(branch));
+	cl_git_pass(git_branch_lookup(&branch, fixture.repo,
+		    "testrepo-worktree", GIT_BRANCH_LOCAL));
+	cl_git_fail(git_branch_delete(branch));
 
-       git_reference_free(branch);
+	git_reference_free(branch);
 }
 
 void test_worktree_refs__delete_succeeds_after_pruning_worktree(void)
 {
-       git_reference *branch;
-       git_worktree *worktree;
+	git_reference *branch;
+	git_worktree *worktree;
 
-       cl_git_pass(git_worktree_lookup(&worktree, fixture.repo, fixture.worktreename));
-       cl_git_pass(git_worktree_prune(worktree, GIT_WORKTREE_PRUNE_VALID));
-       git_worktree_free(worktree);
+	cl_git_pass(git_worktree_lookup(&worktree, fixture.repo, fixture.worktreename));
+	cl_git_pass(git_worktree_prune(worktree, GIT_WORKTREE_PRUNE_VALID));
+	git_worktree_free(worktree);
 
-       cl_git_pass(git_branch_lookup(&branch, fixture.repo,
-               "testrepo-worktree", GIT_BRANCH_LOCAL));
-       cl_git_pass(git_branch_delete(branch));
-       git_reference_free(branch);
+	cl_git_pass(git_branch_lookup(&branch, fixture.repo,
+		    "testrepo-worktree", GIT_BRANCH_LOCAL));
+	cl_git_pass(git_branch_delete(branch));
+	git_reference_free(branch);
+}
+
+void test_worktree_refs__renaming_reference_updates_worktree_heads(void)
+{
+	git_reference *head, *branch, *renamed;
+
+	cl_git_pass(git_branch_lookup(&branch, fixture.repo,
+		    "testrepo-worktree", GIT_BRANCH_LOCAL));
+	cl_git_pass(git_reference_rename(&renamed, branch, "refs/heads/renamed", 0, NULL));
+	cl_git_pass(git_repository_head(&head, fixture.worktree));
+
+	git_reference_free(head);
+	git_reference_free(branch);
+	git_reference_free(renamed);
 }
 
 void test_worktree_refs__creating_refs_uses_commondir(void)

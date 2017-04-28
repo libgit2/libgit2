@@ -127,61 +127,28 @@ int git_branch_create_from_annotated(
 		repository, branch_name, commit->commit, commit->description, force);
 }
 
-int git_branch_is_checked_out(
-	const git_reference *branch)
+static int branch_equals(git_repository *repo, const char *path, void *payload)
 {
-	git_buf path = GIT_BUF_INIT, buf = GIT_BUF_INIT;
-	git_strarray worktrees;
-	git_reference *ref = NULL;
-	git_repository *repo;
-	const char *worktree;
-	int found = false;
-	size_t i;
+	git_reference *branch = (git_reference *) payload;
+	git_reference *head;
+	int equal;
 
-	assert(branch && git_reference_is_branch(branch));
+	if (git_reference__read_head(&head, repo, path) < 0 ||
+	    git_reference_type(head) != GIT_REF_SYMBOLIC)
+		return 0;
 
-	repo = git_reference_owner(branch);
-
-	if (git_worktree_list(&worktrees, repo) < 0)
-		return -1;
-
-	for (i = 0; i < worktrees.count; i++) {
-		worktree = worktrees.strings[i];
-
-		if (git_repository_head_for_worktree(&ref, repo, worktree) < 0)
-			continue;
-
-		if (git__strcmp(ref->name, branch->name) == 0) {
-			found = true;
-			git_reference_free(ref);
-			break;
-		}
-
-		git_reference_free(ref);
-	}
-	git_strarray_free(&worktrees);
-
-	if (found)
-		return found;
-
-	/* Check HEAD of parent */
-	if (git_buf_joinpath(&path, repo->commondir, GIT_HEAD_FILE) < 0)
-		goto out;
-	if (git_futils_readbuffer(&buf, path.ptr) < 0)
-		goto out;
-	if (git__prefixcmp(buf.ptr, "ref: ") == 0)
-		git_buf_consume(&buf, buf.ptr + strlen("ref: "));
-	git_buf_rtrim(&buf);
-
-	found = git__strcmp(buf.ptr, branch->name) == 0;
-
-out:
-	git_buf_free(&buf);
-	git_buf_free(&path);
-
-	return found;
+	equal = !git__strcmp(head->target.symbolic, branch->name);
+	git_reference_free(head);
+	return equal;
 }
 
+int git_branch_is_checked_out(const git_reference *branch)
+{
+	assert(branch && git_reference_is_branch(branch));
+
+	return git_repository_foreach_head(git_reference_owner(branch),
+		branch_equals, (void *) branch) == 1;
+}
 
 int git_branch_delete(git_reference *branch)
 {

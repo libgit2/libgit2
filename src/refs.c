@@ -249,6 +249,40 @@ int git_reference_lookup_resolved(
 	return 0;
 }
 
+int git_reference__read_head(
+	git_reference **out,
+	git_repository *repo,
+	const char *path)
+{
+	git_buf reference = GIT_BUF_INIT;
+	char *name = NULL;
+	int error;
+
+	if ((error = git_futils_readbuffer(&reference, path)) < 0)
+		goto out;
+	git_buf_rtrim(&reference);
+
+	if (git__strncmp(reference.ptr, GIT_SYMREF, strlen(GIT_SYMREF)) == 0) {
+		git_buf_consume(&reference, reference.ptr + strlen(GIT_SYMREF));
+
+		name = git_path_basename(path);
+
+		if ((*out = git_reference__alloc_symbolic(name, reference.ptr)) == NULL) {
+			error = -1;
+			goto out;
+		}
+	} else {
+		if ((error = git_reference_lookup(out, repo, reference.ptr)) < 0)
+			goto out;
+	}
+
+out:
+	free(name);
+	git_buf_clear(&reference);
+
+	return error;
+}
+
 int git_reference_dwim(git_reference **out, git_repository *repo, const char *refname)
 {
 	int error = 0, i;
@@ -580,19 +614,52 @@ int git_reference_symbolic_set_target(
 		out, ref->db->repo, ref->name, target, 1, ref->target.symbolic, log_message);
 }
 
+typedef struct {
+    const char *old_name;
+    git_refname_t new_name;
+} rename_cb_data;
+
+static int update_wt_heads(git_repository *repo, const char *path, void *payload)
+{
+	rename_cb_data *data = (rename_cb_data *) payload;
+	git_reference *head;
+	char *gitdir = NULL;
+	int error = 0;
+
+	if (git_reference__read_head(&head, repo, path) < 0 ||
+	    git_reference_type(head) != GIT_REF_SYMBOLIC ||
+	    git__strcmp(head->target.symbolic, data->old_name) != 0 ||
+	    (gitdir = git_path_dirname(path)) == NULL)
+		goto out;
+
+	/* Update HEAD it was pointing to the reference being renamed */
+	if ((error = git_repository_create_head(gitdir, data->new_name)) < 0) {
+		giterr_set(GITERR_REFERENCE, "failed to update HEAD after renaming reference");
+		goto out;
+	}
+
+out:
+	git_reference_free(head);
+	git__free(gitdir);
+
+	return error;
+}
+
 static int reference__rename(git_reference **out, git_reference *ref, const char *new_name, int force,
 				 const git_signature *signature, const char *message)
 {
+	git_repository *repo;
 	git_refname_t normalized;
 	bool should_head_be_updated = false;
 	int error = 0;
 
 	assert(ref && new_name && signature);
 
-	if ((error = reference_normalize_for_repo(
-		normalized, git_reference_owner(ref), new_name, true)) < 0)
-		return error;
+	repo = git_reference_owner(ref);
 
+	if ((error = reference_normalize_for_repo(
+		normalized, repo, new_name, true)) < 0)
+		return error;
 
 	/* Check if we have to update HEAD. */
 	if ((error = git_branch_is_head(ref)) < 0)
@@ -603,14 +670,18 @@ static int reference__rename(git_reference **out, git_reference *ref, const char
 	if ((error = git_refdb_rename(out, ref->db, ref->name, normalized, force, signature, message)) < 0)
 		return error;
 
-	/* Update HEAD it was pointing to the reference being renamed */
-	if (should_head_be_updated &&
-		(error = git_repository_set_head(ref->db->repo, normalized)) < 0) {
-		giterr_set(GITERR_REFERENCE, "failed to update HEAD after renaming reference");
-		return error;
+	/* Update HEAD if it was pointing to the reference being renamed */
+	if (should_head_be_updated) {
+		error = git_repository_set_head(ref->db->repo, normalized);
+	} else {
+		rename_cb_data payload;
+		payload.old_name = ref->name;
+		memcpy(&payload.new_name, &normalized, sizeof(normalized));
+
+		error = git_repository_foreach_head(repo, update_wt_heads, &payload);
 	}
 
-	return 0;
+	return error;
 }
 
 
