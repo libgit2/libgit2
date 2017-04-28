@@ -1146,6 +1146,18 @@ static int read_prefix_1(git_odb_object **out, git_odb *db,
 	if (!found)
 		return GIT_ENOTFOUND;
 
+	if (git_odb__strict_hash_verification) {
+		git_oid hash;
+
+		if ((error = git_odb_hash(&hash, raw.data, raw.len, raw.type)) < 0)
+			goto out;
+
+		if (!git_oid_equal(&found_full_oid, &hash)) {
+			error = git_odb__error_mismatch(&found_full_oid, &hash);
+			goto out;
+		}
+	}
+
 	if ((object = odb_object__alloc(&found_full_oid, &raw)) == NULL)
 		goto out;
 
