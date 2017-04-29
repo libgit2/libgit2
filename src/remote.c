@@ -2412,7 +2412,7 @@ int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_
 		proxy = &opts->proxy_opts;
 	}
 
-	assert(remote && refspecs);
+	assert(remote);
 
 	if ((error = git_remote_connect(remote, GIT_DIRECTION_PUSH, cbs, proxy, custom_headers)) < 0)
 		return error;
