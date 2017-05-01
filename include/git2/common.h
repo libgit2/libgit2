@@ -182,6 +182,7 @@ typedef enum {
 	GIT_OPT_ENABLE_SYNCHRONOUS_OBJECT_CREATION,
 	GIT_OPT_GET_WINDOWS_SHAREMODE,
 	GIT_OPT_SET_WINDOWS_SHAREMODE,
+	GIT_OPT_ENABLE_STRICT_HASH_VERIFICATION,
 } git_libgit2_opt_t;
 
 /**
@@ -336,6 +337,13 @@ typedef enum {
  *		> (or the platform equivalent) to ensure that new object data
  *		> is written to permanent storage, not simply cached.  This
  *		> defaults to disabled.
+ *
+ *	 opts(GIT_OPT_ENABLE_STRICT_HASH_VERIFICATION, int enabled)
+ *
+ *		> Enable strict verification of object hashsums when reading
+ *		> objects from disk. This may impact performance due to an
+ *		> additional checksum calculation on each object. This defaults
+ *		> to enabled.
  *
  * @param option Option key
  * @param ... value to set the option

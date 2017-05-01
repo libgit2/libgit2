@@ -15,6 +15,7 @@
 #include "cache.h"
 #include "global.h"
 #include "object.h"
+#include "odb.h"
 #include "refs.h"
 #include "transports/smart.h"
 
@@ -241,6 +242,10 @@ int git_libgit2_opts(int key, ...)
 #ifdef GIT_WIN32
 		git_win32__createfile_sharemode = va_arg(ap, unsigned long);
 #endif
+		break;
+
+	case GIT_OPT_ENABLE_STRICT_HASH_VERIFICATION:
+		git_odb__strict_hash_verification = (va_arg(ap, int) != 0);
 		break;
 
 	default:
