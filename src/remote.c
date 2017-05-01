@@ -260,7 +260,6 @@ on_error:
 	if (error)
 		git_remote_free(remote);
 
-	git_config_free(config);
 	git_buf_free(&canonical_url);
 	git_buf_free(&var);
 	return error;
