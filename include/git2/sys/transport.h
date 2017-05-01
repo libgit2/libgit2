@@ -241,6 +241,16 @@ GIT_EXTERN(int) git_transport_smart_certificate_check(git_transport *transport, 
  */
 GIT_EXTERN(int) git_transport_smart_credentials(git_cred **out, git_transport *transport, const char *user, int methods);
 
+/**
+ * Get a copy of the proxy options
+ *
+ * The url is copied and must be freed by the caller.
+ *
+ * @param out options struct to fill
+ * @param transport the transport to extract the data from.
+ */
+GIT_EXTERN(int) git_transport_smart_proxy_options(git_proxy_options *out, git_transport *transport);
+
 /*
  *** End of base transport interface ***
  *** Begin interface for subtransports for the smart transport ***
