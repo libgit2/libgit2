@@ -116,6 +116,7 @@ void test_object_lookup__lookup_object_with_wrong_hash_returns_error(void)
 	cl_git_pass(git_object_lookup(&object, g_repo, &oid, GIT_OBJ_COMMIT));
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_HASH_VERIFICATION, 1));
 
+	git_object_free(object);
 	git_buf_free(&oldpath);
 	git_buf_free(&newpath);
 }
