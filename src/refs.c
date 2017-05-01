@@ -277,8 +277,8 @@ int git_reference__read_head(
 	}
 
 out:
-	free(name);
-	git_buf_clear(&reference);
+	git__free(name);
+	git_buf_free(&reference);
 
 	return error;
 }
