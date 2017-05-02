@@ -9,6 +9,7 @@
 #include <libssh2.h>
 #endif
 
+#include "global.h"
 #include "git2.h"
 #include "buffer.h"
 #include "netops.h"
@@ -893,6 +894,13 @@ int git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *p
 #endif
 }
 
+#ifdef GIT_SSH
+static void shutdown_ssh(void)
+{
+    libssh2_exit();
+}
+#endif
+
 int git_transport_ssh_global_init(void)
 {
 #ifdef GIT_SSH
@@ -901,6 +909,7 @@ int git_transport_ssh_global_init(void)
 		return -1;
 	}
 
+	git__on_shutdown(shutdown_ssh);
 	return 0;
 
 #else
