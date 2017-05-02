@@ -896,8 +896,11 @@ int git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *p
 int git_transport_ssh_global_init(void)
 {
 #ifdef GIT_SSH
+	if (libssh2_init(0) < 0) {
+		giterr_set(GITERR_SSH, "unable to initialize libssh2");
+		return -1;
+	}
 
-	libssh2_init(0);
 	return 0;
 
 #else
