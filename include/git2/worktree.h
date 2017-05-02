@@ -74,6 +74,25 @@ GIT_EXTERN(void) git_worktree_free(git_worktree *wt);
  */
 GIT_EXTERN(int) git_worktree_validate(const git_worktree *wt);
 
+typedef struct git_worktree_add_options {
+	unsigned int version;
+} git_worktree_add_options;
+
+#define GIT_WORKTREE_ADD_OPTIONS_VERSION 1
+#define GIT_WORKTREE_ADD_OPTIONS_INIT {GIT_WORKTREE_ADD_OPTIONS_VERSION}
+
+/**
+ * Initializes a `git_worktree_add_options` with default vaules.
+ * Equivalent to creating an instance with
+ * GIT_WORKTREE_ADD_OPTIONS_INIT.
+ *
+ * @param opts the struct to initialize
+ * @param version Verison of struct; pass `GIT_WORKTREE_ADD_OPTIONS_VERSION`
+ * @return Zero on success; -1 on failure.
+ */
+int git_worktree_add_init_options(git_worktree_add_options *opts,
+	unsigned int version);
+
 /**
  * Add a new working tree
  *
@@ -85,9 +104,12 @@ GIT_EXTERN(int) git_worktree_validate(const git_worktree *wt);
  * @param repo Repository to create working tree for
  * @param name Name of the working tree
  * @param path Path to create working tree at
+ * @param opts Options to modify default behavior. May be NULL
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_worktree_add(git_worktree **out, git_repository *repo, const char *name, const char *path);
+GIT_EXTERN(int) git_worktree_add(git_worktree **out, git_repository *repo,
+	const char *name, const char *path,
+	const git_worktree_add_options *opts);
 
 /**
  * Lock worktree if not already locked

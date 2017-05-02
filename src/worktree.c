@@ -269,14 +269,31 @@ out:
 	return err;
 }
 
-int git_worktree_add(git_worktree **out, git_repository *repo, const char *name, const char *worktree)
+int git_worktree_add_init_options(git_worktree_add_options *opts,
+	unsigned int version)
+{
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(opts, version,
+		git_worktree_add_options, GIT_WORKTREE_ADD_OPTIONS_INIT);
+	return 0;
+}
+
+int git_worktree_add(git_worktree **out, git_repository *repo,
+	const char *name, const char *worktree,
+	const git_worktree_add_options *opts)
 {
 	git_buf gitdir = GIT_BUF_INIT, wddir = GIT_BUF_INIT, buf = GIT_BUF_INIT;
 	git_reference *ref = NULL, *head = NULL;
 	git_commit *commit = NULL;
 	git_repository *wt = NULL;
 	git_checkout_options coopts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_worktree_add_options wtopts = GIT_WORKTREE_ADD_OPTIONS_INIT;
 	int err;
+
+	GITERR_CHECK_VERSION(
+		opts, GIT_WORKTREE_ADD_OPTIONS_VERSION, "git_worktree_add_options");
+
+	if (opts)
+		memcpy(&wtopts, opts, sizeof(wtopts));
 
 	assert(out && repo && name && worktree);
 

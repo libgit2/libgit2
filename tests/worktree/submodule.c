@@ -74,7 +74,7 @@ void test_worktree_submodule__resolve_relative_url(void)
 	cl_git_pass(git_repository_open(&child.repo, WORKTREE_CHILD));
 
 	/* Create worktree of submodule repository */
-	cl_git_pass(git_worktree_add(&wt, child.repo, "subdir", wt_path.ptr));
+	cl_git_pass(git_worktree_add(&wt, child.repo, "subdir", wt_path.ptr, NULL));
 	cl_git_pass(git_repository_open_from_worktree(&repo, wt));
 
 	cl_git_pass(git_submodule_resolve_url(&sm_relative_path, repo,

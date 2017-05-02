@@ -215,7 +215,7 @@ void test_worktree_worktree__init(void)
 	git_buf path = GIT_BUF_INIT;
 
 	cl_git_pass(git_buf_joinpath(&path, fixture.repo->workdir, "../worktree-new"));
-	cl_git_pass(git_worktree_add(&wt, fixture.repo, "worktree-new", path.ptr));
+	cl_git_pass(git_worktree_add(&wt, fixture.repo, "worktree-new", path.ptr, NULL));
 
 	/* Open and verify created repo */
 	cl_git_pass(git_repository_open(&repo, path.ptr));
@@ -240,7 +240,7 @@ void test_worktree_worktree__init_existing_branch(void)
 	cl_git_pass(git_branch_create(&branch, fixture.repo, "worktree-new", commit, false));
 
 	cl_git_pass(git_buf_joinpath(&path, fixture.repo->workdir, "../worktree-new"));
-	cl_git_fail(git_worktree_add(&wt, fixture.repo, "worktree-new", path.ptr));
+	cl_git_fail(git_worktree_add(&wt, fixture.repo, "worktree-new", path.ptr, NULL));
 
 	git_buf_free(&path);
 	git_commit_free(commit);
@@ -254,7 +254,7 @@ void test_worktree_worktree__init_existing_worktree(void)
 	git_buf path = GIT_BUF_INIT;
 
 	cl_git_pass(git_buf_joinpath(&path, fixture.repo->workdir, "../worktree-new"));
-	cl_git_fail(git_worktree_add(&wt, fixture.repo, "testrepo-worktree", path.ptr));
+	cl_git_fail(git_worktree_add(&wt, fixture.repo, "testrepo-worktree", path.ptr, NULL));
 
 	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
 	cl_assert_equal_s(wt->gitlink_path, fixture.worktree->gitlink);
@@ -279,7 +279,7 @@ void test_worktree_worktree__init_existing_path(void)
 	}
 
 	cl_git_pass(git_buf_joinpath(&path, fixture.repo->workdir, "../testrepo-worktree"));
-	cl_git_fail(git_worktree_add(&wt, fixture.repo, "worktree-new", path.ptr));
+	cl_git_fail(git_worktree_add(&wt, fixture.repo, "worktree-new", path.ptr, NULL));
 
 	/* Verify files have not been re-created */
 	for (i = 0; i < ARRAY_SIZE(wtfiles); i++) {
@@ -303,7 +303,7 @@ void test_worktree_worktree__init_submodule(void)
 	cl_git_pass(git_buf_joinpath(&path, repo->workdir, "sm_unchanged"));
 	cl_git_pass(git_repository_open(&sm, path.ptr));
 	cl_git_pass(git_buf_joinpath(&path, repo->workdir, "../worktree/"));
-	cl_git_pass(git_worktree_add(&worktree, sm, "repo-worktree", path.ptr));
+	cl_git_pass(git_worktree_add(&worktree, sm, "repo-worktree", path.ptr, NULL));
 	cl_git_pass(git_repository_open_from_worktree(&wt, worktree));
 
 	cl_git_pass(git_path_prettify_dir(&path, path.ptr, NULL));
