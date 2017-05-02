@@ -318,6 +318,21 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 	if ((err = git_path_prettify_dir(&wddir, worktree, NULL)) < 0)
 		goto out;
 
+	if (wtopts.lock) {
+		int fd;
+
+		if ((err = git_buf_joinpath(&buf, gitdir.ptr, "locked")) < 0)
+			goto out;
+
+		if ((fd = p_creat(buf.ptr, 0644)) < 0) {
+			err = fd;
+			goto out;
+		}
+
+		p_close(fd);
+		git_buf_clear(&buf);
+	}
+
 	/* Create worktree .git file */
 	if ((err = git_buf_printf(&buf, "gitdir: %s\n", gitdir.ptr)) < 0)
 		goto out;

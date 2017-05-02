@@ -76,10 +76,12 @@ GIT_EXTERN(int) git_worktree_validate(const git_worktree *wt);
 
 typedef struct git_worktree_add_options {
 	unsigned int version;
+
+	char lock; /**< lock newly created worktree */
 } git_worktree_add_options;
 
 #define GIT_WORKTREE_ADD_OPTIONS_VERSION 1
-#define GIT_WORKTREE_ADD_OPTIONS_INIT {GIT_WORKTREE_ADD_OPTIONS_VERSION}
+#define GIT_WORKTREE_ADD_OPTIONS_INIT {GIT_WORKTREE_ADD_OPTIONS_VERSION,0}
 
 /**
  * Initializes a `git_worktree_add_options` with default vaules.

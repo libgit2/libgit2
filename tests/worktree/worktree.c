@@ -228,6 +228,31 @@ void test_worktree_worktree__init(void)
 	git_repository_free(repo);
 }
 
+void test_worktree_worktree__add_locked(void)
+{
+	git_worktree *wt;
+	git_repository *repo;
+	git_reference *branch;
+	git_buf path = GIT_BUF_INIT;
+	git_worktree_add_options opts = GIT_WORKTREE_ADD_OPTIONS_INIT;
+
+	opts.lock = 1;
+
+	cl_git_pass(git_buf_joinpath(&path, fixture.repo->workdir, "../worktree-locked"));
+	cl_git_pass(git_worktree_add(&wt, fixture.repo, "worktree-locked", path.ptr, &opts));
+
+	/* Open and verify created repo */
+	cl_assert(git_worktree_is_locked(NULL, wt));
+	cl_git_pass(git_repository_open(&repo, path.ptr));
+	cl_assert(git__suffixcmp(git_repository_workdir(repo), "worktree-locked/") == 0);
+	cl_git_pass(git_branch_lookup(&branch, repo, "worktree-locked", GIT_BRANCH_LOCAL));
+
+	git_buf_free(&path);
+	git_worktree_free(wt);
+	git_reference_free(branch);
+	git_repository_free(repo);
+}
+
 void test_worktree_worktree__init_existing_branch(void)
 {
 	git_reference *head, *branch;
