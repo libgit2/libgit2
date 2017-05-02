@@ -456,11 +456,29 @@ out:
 	return ret;
 }
 
-int git_worktree_is_prunable(git_worktree *wt, unsigned flags)
+int git_worktree_prune_init_options(
+	git_worktree_prune_options *opts,
+	unsigned int version)
+{
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(opts, version,
+		git_worktree_prune_options, GIT_WORKTREE_PRUNE_OPTIONS_INIT);
+	return 0;
+}
+
+int git_worktree_is_prunable(git_worktree *wt,
+	git_worktree_prune_options *opts)
 {
 	git_buf reason = GIT_BUF_INIT;
+	git_worktree_prune_options popts = GIT_WORKTREE_PRUNE_OPTIONS_INIT;
 
-	if ((flags & GIT_WORKTREE_PRUNE_LOCKED) == 0 &&
+	GITERR_CHECK_VERSION(
+		opts, GIT_WORKTREE_PRUNE_OPTIONS_VERSION,
+		"git_worktree_prune_options");
+
+	if (opts)
+		memcpy(&popts, opts, sizeof(popts));
+
+	if ((popts.flags & GIT_WORKTREE_PRUNE_LOCKED) == 0 &&
 		git_worktree_is_locked(&reason, wt))
 	{
 		if (!reason.size)
@@ -471,7 +489,7 @@ int git_worktree_is_prunable(git_worktree *wt, unsigned flags)
 		return 0;
 	}
 
-	if ((flags & GIT_WORKTREE_PRUNE_VALID) == 0 &&
+	if ((popts.flags & GIT_WORKTREE_PRUNE_VALID) == 0 &&
 		git_worktree_validate(wt) == 0)
 	{
 		giterr_set(GITERR_WORKTREE, "Not pruning valid working tree");
@@ -481,13 +499,22 @@ int git_worktree_is_prunable(git_worktree *wt, unsigned flags)
 	return 1;
 }
 
-int git_worktree_prune(git_worktree *wt, unsigned flags)
+int git_worktree_prune(git_worktree *wt,
+	git_worktree_prune_options *opts)
 {
+	git_worktree_prune_options popts = GIT_WORKTREE_PRUNE_OPTIONS_INIT;
 	git_buf path = GIT_BUF_INIT;
 	char *wtpath;
 	int err;
 
-	if (!git_worktree_is_prunable(wt, flags)) {
+	GITERR_CHECK_VERSION(
+		opts, GIT_WORKTREE_PRUNE_OPTIONS_VERSION,
+		"git_worktree_prune_options");
+
+	if (opts)
+		memcpy(&popts, opts, sizeof(popts));
+
+	if (!git_worktree_is_prunable(wt, &popts)) {
 		err = -1;
 		goto out;
 	}
@@ -506,7 +533,7 @@ int git_worktree_prune(git_worktree *wt, unsigned flags)
 
 	/* Skip deletion of the actual working tree if it does
 	 * not exist or deletion was not requested */
-	if ((flags & GIT_WORKTREE_PRUNE_WORKING_TREE) == 0 ||
+	if ((popts.flags & GIT_WORKTREE_PRUNE_WORKING_TREE) == 0 ||
 		!git_path_exists(wt->gitlink_path))
 	{
 		goto out;
