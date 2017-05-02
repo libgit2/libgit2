@@ -26,7 +26,7 @@ build_script:
     mkdir build
     cd build
     if ($env:GENERATOR -ne "MSYS Makefiles") {
-      cmake -D ENABLE_TRACE=ON -D BUILD_CLAR=ON -D MSVC_CRTDBG=ON .. -G"$env:GENERATOR"
+      cmake -D ENABLE_TRACE=ON -D BUILD_CLAR=ON -D MSVC_CRTDBG=ON -D USE_SSH=ON -D USE_SSH_RUNTIME=ON .. -G"$env:GENERATOR"
       cmake --build . --config Debug
     }
 - cmd: |
@@ -35,6 +35,17 @@ test_script:
 - ps: |
     $ErrorActionPreference="Stop"
     Start-FileDownload https://github.com/ethomson/poxyproxy/releases/download/v0.1.0/poxyproxy-0.1.0.jar -FileName poxyproxy.jar
+    if ($env:GENERATOR -eq "MSYS Makefiles") {
+      Set-Variable -Name "libssh2_target" -Value $Env:APPVEYOR_BUILD_FOLDER\build
+    } else {
+      Set-Variable -Name "libssh2_target" -Value $Env:APPVEYOR_BUILD_FOLDER\build\Debug
+    }
+    if ($env:ARCH -eq "64") {
+       curl https://dl.bintray.com/libgit2/compiled-binaries/win64/libssh2.dll -OutFile $libssh2_target\libssh2.dll
+    } else {
+        curl https://dl.bintray.com/libgit2/compiled-binaries/libssh2.dll -OutFile $libssh2_target\libssh2.dll
+    }
+    ls
     # Run this early so we know it's ready by the time we need it
     $proxyJob = Start-Job { java -jar $Env:APPVEYOR_BUILD_FOLDER\build\poxyproxy.jar -d --port 8080 --credentials foo:bar }
     ctest -V -R libgit2_clar
