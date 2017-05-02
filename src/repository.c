@@ -2132,7 +2132,8 @@ int git_repository_head_for_worktree(git_reference **out, git_repository *repo, 
 out:
 	if (error)
 		git_reference_free(head);
-	git_buf_clear(&path);
+
+	git_buf_free(&path);
 
 	return error;
 }

@@ -130,14 +130,16 @@ int git_branch_create_from_annotated(
 static int branch_equals(git_repository *repo, const char *path, void *payload)
 {
 	git_reference *branch = (git_reference *) payload;
-	git_reference *head;
-	int equal;
+	git_reference *head = NULL;
+	int equal = 0;
 
 	if (git_reference__read_head(&head, repo, path) < 0 ||
-	    git_reference_type(head) != GIT_REF_SYMBOLIC)
-		return 0;
+		git_reference_type(head) != GIT_REF_SYMBOLIC)
+		goto done;
 
 	equal = !git__strcmp(head->target.symbolic, branch->name);
+
+done:
 	git_reference_free(head);
 	return equal;
 }

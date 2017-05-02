@@ -205,6 +205,11 @@ static int start_inflate(z_stream *s, git_buf *obj, void *out, size_t len)
 	return inflate(s, 0);
 }
 
+static void abort_inflate(z_stream *s)
+{
+	inflateEnd(s);
+}
+
 static int finish_inflate(z_stream *s)
 {
 	int status = Z_OK;
@@ -367,6 +372,7 @@ static int inflate_disk_obj(git_rawobj *out, git_buf *obj)
 		(used = get_object_header(&hdr, head)) == 0 ||
 		!git_object_typeisloose(hdr.type))
 	{
+		abort_inflate(&zs);
 		giterr_set(GITERR_ODB, "failed to inflate disk object");
 		return -1;
 	}
