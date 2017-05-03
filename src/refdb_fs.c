@@ -1139,7 +1139,7 @@ out:
  */
 static int maybe_append_head(refdb_fs_backend *backend, const git_reference *ref, const git_signature *who, const char *message)
 {
-	int error;
+	int error = 0;
 	git_oid old_id = {{0}};
 	git_reference *tmp = NULL, *head = NULL, *peeled = NULL;
 	const char *name;
@@ -1150,11 +1150,8 @@ static int maybe_append_head(refdb_fs_backend *backend, const git_reference *ref
 	/* if we can't resolve, we use {0}*40 as old id */
 	git_reference_name_to_id(&old_id, backend->repo, ref->name);
 
-	if ((error = git_reference_lookup(&head, backend->repo, GIT_HEAD_FILE)) < 0)
-		return error;
-
-	if (git_reference_type(head) == GIT_REF_OID)
-		goto cleanup;
+	if (git_reference_lookup(&head, backend->repo, GIT_HEAD_FILE) < 0 || git_reference_type(head) == GIT_REF_OID)
+        goto cleanup; // we don't actually mind if we don't have a head, we just want to update it if we _do_
 
 	if ((error = git_reference_lookup(&tmp, backend->repo, GIT_HEAD_FILE)) < 0)
 		goto cleanup;
