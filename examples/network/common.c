@@ -1,5 +1,7 @@
 #include "common.h"
 #include <stdio.h>
+#include <string.h>
+#include <errno.h>
 
 /* Shamelessly borrowed from http://stackoverflow.com/questions/3417837/
  * with permission of the original author, Martin Pool.
@@ -20,15 +22,27 @@ int cred_acquire_cb(git_cred **out,
 		unsigned int UNUSED(allowed_types),
 		void * UNUSED(payload))
 {
-	char username[128] = {0};
-	char password[128] = {0};
+	char *username = NULL, *password = NULL;
+	int error;
 
 	printf("Username: ");
-	scanf("%s", username);
+	if (getline(&username, NULL, stdin) < 0) {
+		fprintf(stderr, "Unable to read username: %s", strerror(errno));
+		return -1;
+	}
 
 	/* Yup. Right there on your terminal. Careful where you copy/paste output. */
 	printf("Password: ");
-	scanf("%s", password);
+	if (getline(&password, NULL, stdin) < 0) {
+		fprintf(stderr, "Unable to read password: %s", strerror(errno));
+		free(username);
+		return -1;
+	}
 
-	return git_cred_userpass_plaintext_new(out, username, password);
+	error = git_cred_userpass_plaintext_new(out, username, password);
+
+	free(username);
+	free(password);
+
+	return error;
 }
