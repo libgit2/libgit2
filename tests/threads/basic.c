@@ -54,12 +54,6 @@ static void *return_normally(void *param)
 {
 	return param;
 }
-
-static void *exit_abruptly(void *param)
-{
-	git_thread_exit(param);
-	return NULL;
-}
 #endif
 
 void test_threads_basic__exit(void)
