@@ -883,8 +883,11 @@ static int rebase_next_inmemory(
 		rebase->index = index;
 		index = NULL;
 	} else {
-		if ((error = git_index_read_index(rebase->index, index)) < 0)
-			goto done;
+		git_index *tmp = NULL;
+
+		tmp = rebase->index;
+		rebase->index = index;
+		index = tmp;
 	}
 
 	*out = operation;
