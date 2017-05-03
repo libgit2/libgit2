@@ -266,7 +266,7 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 	return 0;
 }
 
-int git_signature_from_buffer(git_signature **out, const char *buf)
+int git_signature_from_buffer(git_signature **out, const char *buf, size_t buf_len)
 {
 	git_signature *sig;
 	const char *buf_end;
@@ -279,7 +279,7 @@ int git_signature_from_buffer(git_signature **out, const char *buf)
 	sig = git__calloc(1, sizeof(git_signature));
 	GITERR_CHECK_ALLOC(sig);
 
-	buf_end = buf + strlen(buf);
+	buf_end = buf + buf_len;
 	error = git_signature__parse(sig, &buf, buf_end, NULL, '\0');
 
 	if (error)
@@ -288,6 +288,11 @@ int git_signature_from_buffer(git_signature **out, const char *buf)
 		*out = sig;
 
 	return error;
+}
+
+int git_signature_from_string(git_signature **out, const char *buf)
+{
+	return git_signature_from_buffer(out, buf, strlen(buf));
 }
 
 void git_signature__writebuf(git_buf *buf, const char *header, const git_signature *sig)
