@@ -262,9 +262,10 @@ GIT_EXTERN(int) git_submodule_foreach(
  * from the working directory to the new repo.
  *
  * To fully emulate "git submodule add" call this function, then open the
- * submodule repo and perform the clone step as needed.  Lastly, call
- * `git_submodule_add_finalize()` to wrap up adding the new submodule and
- * .gitmodules to the index to be ready to commit.
+ * submodule repo, lookup the "origin" remote and perform the clone step
+ * using `git_clone_into()`.  Lastly, call `git_submodule_add_finalize()`
+ * to wrap up adding the new submodule and .gitmodules to the index to be
+ * ready to commit.
  *
  * You must call `git_submodule_free` on the submodule object when done.
  *
