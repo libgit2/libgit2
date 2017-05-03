@@ -1094,3 +1094,42 @@ void test_merge_workdir_setup__unlocked_after_conflict(void)
 	git_annotated_commit_free(our_head);
 	git_annotated_commit_free(their_heads[0]);
 }
+
+/**
+ * This test duplicates the above test but uses an IGNORED
+ * file rather than an UNTRACKED file.  The Git CLC currently
+ * fails the merge in both cases because the new file (whether
+ * untracked or ignored) would be overwritten during the merge.
+ *
+ * The purpose of this test is to confirm that libgit2 also
+ * aborts the merge and cleans up the mess.
+ */ 
+void test_merge_workdir_setup__removed_after_failure2(void)
+{
+	git_oid our_oid;
+	git_reference *octo1_ref;
+	git_annotated_commit *our_head, *their_heads[1];
+
+	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
+	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
+
+	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
+	cl_git_pass(git_annotated_commit_from_ref(&their_heads[0], repo, octo1_ref));
+
+	cl_git_rewritefile("merge-resolve/.gitignore", "new*\n");
+	cl_git_rewritefile("merge-resolve/new-in-octo1.txt",
+		"Conflicting file!\n\nMerge will fail!\n");
+
+	cl_git_fail(git_merge(
+		repo, (const git_annotated_commit **)&their_heads[0], 1, NULL, NULL));
+
+	cl_assert(!git_path_exists("merge-resolve/" GIT_MERGE_HEAD_FILE));
+	cl_assert(!git_path_exists("merge-resolve/" GIT_ORIG_HEAD_FILE));
+	cl_assert(!git_path_exists("merge-resolve/" GIT_MERGE_MODE_FILE));
+	cl_assert(!git_path_exists("merge-resolve/" GIT_MERGE_MSG_FILE));
+
+	git_reference_free(octo1_ref);
+
+	git_annotated_commit_free(our_head);
+	git_annotated_commit_free(their_heads[0]);
+}
