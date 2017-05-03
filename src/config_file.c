@@ -1255,8 +1255,16 @@ static int strip_comments(char *line, int in_quotes)
 static int included_path(git_buf *out, const char *dir, const char *path)
 {
 	/* From the user's home */
-	if (path[0] == '~' && path[1] == '/')
-		return git_sysdir_find_global_file(out, &path[1]);
+	int result;
+	if (path[0] == '~' && path[1] == '/') {
+		result = git_sysdir_find_global_file(out, &path[1]);
+		if (result == GIT_ENOTFOUND) {
+			git_buf_sets(out, &path[1]);
+			return 0;
+		}
+
+		return result;
+	}
 
 	return git_path_join_unrooted(out, path, dir, NULL);
 }
