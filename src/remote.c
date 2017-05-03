@@ -1734,6 +1734,11 @@ int git_remote_prune_refs(const git_remote *remote)
 	return remote->prune_refs;
 }
 
+void git_remote_set_prune_refs(git_remote *remote, int value)
+{
+	remote->prune_refs = value;
+}
+
 static int rename_remote_config_section(
 	git_repository *repo,
 	const char *old_name,

@@ -756,6 +756,16 @@ GIT_EXTERN(int) git_remote_set_autotag(git_repository *repo, const char *remote,
 GIT_EXTERN(int) git_remote_prune_refs(const git_remote *remote);
 
 /**
+* Set the ref-prune setting
+*
+* @param remote the remote to configure
+* @param value 0 to disable ref-prune
+*/
+GIT_EXTERN(void) git_remote_set_prune_refs(
+	git_remote *remote,
+	int value);
+
+/**
  * Give the remote a new name
  *
  * All remote-tracking branches and configuration settings
