@@ -279,11 +279,11 @@ int git_branch_move(
 		return not_a_local_branch(git_reference_name(branch));
 
 	if ((error = git_buf_joinpath(&new_reference_name, GIT_REFS_HEADS_DIR, new_branch_name)) < 0)
-		goto done;
+		goto cleanup;
 
 	if ((error = git_buf_printf(&log_message, "branch: renamed %s to %s",
 				    git_reference_name(branch), git_buf_cstr(&new_reference_name))) < 0)
-			goto done;
+			goto cleanup;
 
 	/* first update ref then config so failure won't trash config */
 
@@ -291,7 +291,7 @@ int git_branch_move(
 		out, branch, git_buf_cstr(&new_reference_name), force,
 		git_buf_cstr(&log_message));
 	if (error < 0)
-		goto done;
+		goto cleanup;
 
 	git_buf_join(&old_config_section, '.', "branch",
 		git_reference_name(branch) + strlen(GIT_REFS_HEADS_DIR));
@@ -302,7 +302,7 @@ int git_branch_move(
 		git_buf_cstr(&old_config_section),
 		git_buf_cstr(&new_config_section));
 
-done:
+cleanup:
 	git_buf_free(&new_reference_name);
 	git_buf_free(&old_config_section);
 	git_buf_free(&new_config_section);
