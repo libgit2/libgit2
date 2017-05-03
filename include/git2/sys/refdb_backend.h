@@ -213,6 +213,17 @@ GIT_EXTERN(int) git_refdb_set_backend(
 	git_refdb *refdb,
 	git_refdb_backend *backend);
 
+/**
+ * Lookup the custom backend of an existing reference DB
+ *
+ * @param out output pointer to ODB backend at pos
+ * @param odb object database
+ * @return 0 on success; GIT_ENOTFOUND if backend was not set
+ */
+GIT_EXTERN(int) git_refdb_get_backend(
+  git_refdb_backend **out,
+    git_refdb *refdb);
+
 GIT_END_DECL
 
 #endif
