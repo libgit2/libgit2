@@ -121,6 +121,16 @@ GIT_EXTERN(int) git_buf_is_binary(const git_buf *buf);
 */
 GIT_EXTERN(int) git_buf_contains_nul(const git_buf *buf);
 
+/**
+* Append to an existing buffer a copy of some raw data.
+*
+* @param buffer The buffer to append to
+* @param data The data to copy into the buffer
+* @param len The length of the data to copy into the buffer
+* @return 0 on success, -1 on allocation failure
+*/
+GIT_EXTERN(int) git_buf_put(git_buf *buf, const char *data, size_t len);
+
 GIT_END_DECL
 
 /** @} */
