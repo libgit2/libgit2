@@ -801,7 +801,7 @@ int git_treebuilder_remove(git_treebuilder *bld, const char *filename)
 	return 0;
 }
 
-int git_treebuilder_write(git_oid *oid, git_treebuilder *bld)
+int git_treebuilder_write(git_oid *oid, const git_treebuilder *bld)
 {
 	int error;
 	git_buf buffer = GIT_BUF_INIT;
