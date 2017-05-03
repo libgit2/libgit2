@@ -40,8 +40,6 @@ These are good small projects to get started with libgit2.
       the data is available, you would just need to add the code into the
       `print_commit()` routine (along with a way of passing the option
       into that function).
-    * As an extension to the matching idea for `examples/log.c`, add the
-      `-i` option to use `strcasestr()` for matches.
     * For `examples/log.c`, implement the `--first-parent` option now that
       libgit2 supports it in the revwalk API.
 * Pick a Git command that is not already emulated in `examples/` and write

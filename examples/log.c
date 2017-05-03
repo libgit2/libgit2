@@ -52,6 +52,7 @@ struct log_options {
 	int show_diff;
 	int skip, limit;
 	int min_parents, max_parents;
+	int ignore_case;
 	git_time_t before;
 	git_time_t after;
 	const char *author;
@@ -68,7 +69,8 @@ static int match_with_parent(git_commit *commit, int i, git_diff_options *);
 
 /** utility functions for filtering */
 static int signature_matches(const git_signature *sig, const char *filter);
-static int log_message_matches(const git_commit *commit, const char *filter);
+static int log_message_matches(
+	const git_commit *commit, const char *filter, int ignore_case);
 
 int main(int argc, char *argv[])
 {
@@ -138,7 +140,7 @@ int main(int argc, char *argv[])
 		if (!signature_matches(git_commit_committer(commit), opt.committer))
 			continue;
 
-		if (!log_message_matches(commit, opt.grep))
+		if (!log_message_matches(commit, opt.grep, opt.ignore_case))
 			continue;
 
 		if (count++ < opt.skip)
@@ -198,14 +200,18 @@ static int signature_matches(const git_signature *sig, const char *filter) {
 	return 0;
 }
 
-static int log_message_matches(const git_commit *commit, const char *filter) {
+static int log_message_matches(
+	const git_commit *commit, const char *filter, int ignore_case) {
 	const char *message = NULL;
+	char *(*cmp_function)(const char *haystack, const char *needle);
 
 	if (filter == NULL)
 		return 1;
 
+	cmp_function = ignore_case ? strcasestr : strstr;
+
 	if ((message = git_commit_message(commit)) != NULL &&
-		strstr(message, filter) != NULL)
+		cmp_function(message, filter) != NULL)
 		return 1;
 
 	return 0;
@@ -470,6 +476,8 @@ static int parse_options(
 			/** Found valid --min_parents. */;
 		else if (!strcmp(a, "-p") || !strcmp(a, "-u") || !strcmp(a, "--patch"))
 			opt->show_diff = 1;
+		else if (!strcmp(a, "-i"))
+			opt->ignore_case = 1;
 		else
 			usage("Unsupported argument", a);
 	}
