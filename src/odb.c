@@ -1326,9 +1326,9 @@ static int git_odb_stream__invalid_length(
 {
 	giterr_set(GITERR_ODB,
 		"cannot %s - "
-		"Invalid length. %"PRIuZ" was expected. The "
-		"total size of the received chunks amounts to %"PRIuZ".",
-		action, stream->declared_size, stream->received_bytes);		
+		"Invalid length. %"PRIdZ" was expected. The "
+		"total size of the received chunks amounts to %"PRIdZ".",
+		action, stream->declared_size, stream->received_bytes);
 
 	return -1;
 }
