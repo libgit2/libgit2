@@ -54,6 +54,8 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 	DWORD alignment = get_allocation_granularity();
 	DWORD fmap_prot = 0;
 	DWORD view_prot = 0;
+	DWORD max_size_low = 0;
+	DWORD max_size_hi = 0;
 	DWORD off_low = 0;
 	DWORD off_hi = 0;
 	git_off_t page_start;
@@ -90,7 +92,9 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 		return -1;
 	}
 
-	out->fmh = CreateFileMapping(fh, NULL, fmap_prot, 0, 0, NULL);
+	max_size_low = (DWORD)(page_start + len);
+	max_size_hi = (DWORD)((page_start + len) >> 32);
+	out->fmh = CreateFileMapping(fh, NULL, fmap_prot, max_size_hi, max_size_low, NULL);
 	if (!out->fmh || out->fmh == INVALID_HANDLE_VALUE) {
 		giterr_set(GITERR_OS, "failed to mmap. Invalid handle value");
 		out->fmh = NULL;
