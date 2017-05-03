@@ -79,6 +79,11 @@ void test_repo_head__set_head_Attaches_HEAD_to_un_unborn_branch_when_the_branch_
 	cl_assert_equal_i(false, git_repository_head_detached(repo));
 
 	cl_assert_equal_i(GIT_EUNBORNBRANCH, git_repository_head(&head, repo));
+
+	cl_assert(head);
+	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(head));
+	cl_assert_equal_s("HEAD", git_reference_name(head));
+	cl_assert_equal_s("refs/heads/doesnt/exist/yet", git_reference_symbolic_target(head));
 }
 
 void test_repo_head__set_head_Returns_ENOTFOUND_when_the_reference_doesnt_exist(void)
