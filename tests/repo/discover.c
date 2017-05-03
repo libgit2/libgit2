@@ -33,7 +33,7 @@ static void ensure_repository_discover(const char *start_path,
 	git_buf_attach(&resolved, p_realpath(expected_path, NULL), 0);
 	cl_assert(resolved.size > 0);
 	cl_git_pass(git_path_to_dir(&resolved));
-	cl_git_pass(git_repository_discover(&found_path, start_path, 0, ceiling_dirs));
+	cl_git_pass(git_repository_discover(&found_path, start_path, 1, ceiling_dirs));
 
 	cl_assert_equal_s(found_path.ptr, resolved.ptr);
 

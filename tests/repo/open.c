@@ -398,7 +398,8 @@ void test_repo_open__force_bare(void)
 	cl_git_fail(git_repository_open_bare(&barerepo, "alternate/subdir/sub2"));
 
 	cl_git_pass(git_repository_open_ext(
-		&barerepo, "alternate/subdir/sub2", GIT_REPOSITORY_OPEN_BARE, NULL));
+		&barerepo, "alternate/subdir/sub2",
+		GIT_REPOSITORY_OPEN_BARE|GIT_REPOSITORY_OPEN_CROSS_FS, NULL));
 	cl_assert(git_repository_is_bare(barerepo));
 	git_repository_free(barerepo);
 }
