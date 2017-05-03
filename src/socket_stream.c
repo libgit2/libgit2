@@ -124,6 +124,17 @@ int socket_connect(git_stream *stream)
 		return -1;
 	}
 
+	/* Configure a 30 seconds timeout for recv() and send() on the socket */
+	struct timeval tv;
+	tv.tv_sec = 30;
+	tv.tv_usec = 0;
+	if (setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
+		net_set_error("error setting socket receive timeout");
+	}
+	if (setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) < 0) {
+		net_set_error("error setting socket send timeout");
+	}
+
 	st->s = s;
 	p_freeaddrinfo(info);
 	return 0;
