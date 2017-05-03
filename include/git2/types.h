@@ -155,6 +155,9 @@ typedef struct git_note git_note;
 /** Representation of a git packbuilder */
 typedef struct git_packbuilder git_packbuilder;
 
+/* Opaque structure to hold blame results */
+typedef struct git_blame git_blame;
+
 /** Time in a signature */
 typedef struct git_time {
 	git_time_t time; /**< time in seconds from epoch */

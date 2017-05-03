@@ -127,10 +127,6 @@ typedef struct git_blame_hunk {
 	char boundary;
 } git_blame_hunk;
 
-
-/* Opaque structure to hold blame results */
-typedef struct git_blame git_blame;
-
 /**
  * Gets the number of hunks that exist in the blame structure.
  */
