@@ -291,3 +291,24 @@ void test_attr_ignore__symlink_to_outside(void)
 	assert_is_ignored(true, "symlink");
 	assert_is_ignored(true, "lala/../symlink");
 }
+
+void test_attr_ignore__dont_ignore_not_path(void)
+{
+    /* Create gitignore */
+    cl_git_rmfile("attr/.gitignore");
+  	cl_git_mkfile("attr/.gitignore", "test\n!dir1/test\n");
+
+    /* Create directory structure */
+    cl_must_pass(p_mkdir("attr/dir1", 0777));
+    cl_must_pass(p_mkdir("attr/dir2", 0777));
+
+    /* Add files */
+    cl_git_mkfile("attr/dir1/test", "test/\n");
+    cl_git_mkfile("attr/test", "test/\n");
+    cl_git_mkfile("attr/dir2/test", "test/\n");
+
+    /* Check test file is ignored depending on parent directory */
+    assert_is_ignored(true, "test");
+    assert_is_ignored(false, "dir1/test");
+    assert_is_ignored(true, "dir2/test");
+}
