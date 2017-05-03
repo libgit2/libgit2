@@ -122,6 +122,14 @@ static void test_id(
 	test_id_inrepo(spec, expected_left, expected_right, expected_flags, g_repo);
 }
 
+static void test_invalid_revspec(const char* invalid_spec)
+{
+	git_revspec revspec;
+
+	cl_assert_equal_i(
+		GIT_EINVALIDSPEC, git_revparse(&revspec, g_repo, invalid_spec));
+}
+
 void test_refs_revparse__initialize(void)
 {
 	cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo.git")));
@@ -749,6 +757,33 @@ void test_refs_revparse__parses_range_operator(void)
 		"4a202b346bb0fb0db7eff3cffeb3c70babbd2045",
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
 		GIT_REVPARSE_RANGE | GIT_REVPARSE_MERGE_BASE);
+
+	test_id("HEAD~3..",
+		"4a202b346bb0fb0db7eff3cffeb3c70babbd2045",
+		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
+		GIT_REVPARSE_RANGE);
+
+	test_id("HEAD~3...",
+		"4a202b346bb0fb0db7eff3cffeb3c70babbd2045",
+		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
+		GIT_REVPARSE_RANGE | GIT_REVPARSE_MERGE_BASE);
+
+	test_id("..HEAD~3",
+		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
+		"4a202b346bb0fb0db7eff3cffeb3c70babbd2045",
+		GIT_REVPARSE_RANGE);
+
+	test_id("...HEAD~3",
+		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
+		"4a202b346bb0fb0db7eff3cffeb3c70babbd2045",
+		GIT_REVPARSE_RANGE | GIT_REVPARSE_MERGE_BASE);
+
+	test_id("...",
+		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
+		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
+		GIT_REVPARSE_RANGE | GIT_REVPARSE_MERGE_BASE);
+
+	test_invalid_revspec("..");
 }
 
 void test_refs_revparse__ext_retrieves_both_the_reference_and_its_target(void)
