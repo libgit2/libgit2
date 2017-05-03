@@ -1002,7 +1002,7 @@ static int odb_read_1(git_odb_object **out, git_odb *db, const git_oid *id,
 	git_odb_object *object;
 	git_oid hashed;
 	bool found = false;
-	int error;
+	int error = 0;
 
 	if (!only_refreshed && odb_read_hardcoded(&raw, id) == 0)
 		found = true;
@@ -1099,7 +1099,7 @@ static int read_prefix_1(git_odb_object **out, git_odb *db,
 		const git_oid *key, size_t len, bool only_refreshed)
 {
 	size_t i;
-	int error;
+	int error = 0;
 	git_oid found_full_oid = {{0}};
 	git_rawobj raw = {0};
 	void *data = NULL;
