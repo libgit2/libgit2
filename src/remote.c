@@ -861,6 +861,11 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs, const 
 
 	assert(remote);
 
+	if (!remote->repo) {
+		giterr_set(GITERR_INVALID, "cannot download detached remote");
+		return -1;
+	}
+
 	if (opts) {
 		GITERR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
 		cbs = &opts->callbacks;
@@ -2346,6 +2351,11 @@ int git_remote_upload(git_remote *remote, const git_strarray *refspecs, const gi
 
 	assert(remote);
 
+	if (!remote->repo) {
+		giterr_set(GITERR_INVALID, "cannot download detached remote");
+		return -1;
+	}
+
 	if (opts) {
 		cbs = &opts->callbacks;
 		custom_headers = &opts->custom_headers;
@@ -2404,6 +2414,13 @@ int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_
 	const git_remote_callbacks *cbs = NULL;
 	const git_strarray *custom_headers = NULL;
 	const git_proxy_options *proxy = NULL;
+
+	assert(remote);
+
+	if (!remote->repo) {
+		giterr_set(GITERR_INVALID, "cannot download detached remote");
+		return -1;
+	}
 
 	if (opts) {
 		GITERR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");

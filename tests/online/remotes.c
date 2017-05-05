@@ -53,3 +53,36 @@ void test_online_remotes__restricted_refspecs(void)
 
 	cl_git_fail_with(GIT_EINVALIDSPEC, git_clone(&repo, "git://github.com/libgit2/TestGitRepository", "./restrict-refspec", &opts));
 }
+
+void test_online_remotes__detached_remote_fails_downloading(void)
+{
+	git_remote *remote;
+
+	cl_git_pass(git_remote_create_detached(&remote, URL));
+	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
+	cl_git_fail(git_remote_download(remote, NULL, NULL));
+
+	git_remote_free(remote);
+}
+
+void test_online_remotes__detached_remote_fails_uploading(void)
+{
+	git_remote *remote;
+
+	cl_git_pass(git_remote_create_detached(&remote, URL));
+	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
+	cl_git_fail(git_remote_upload(remote, NULL, NULL));
+
+	git_remote_free(remote);
+}
+
+void test_online_remotes__detached_remote_fails_pushing(void)
+{
+	git_remote *remote;
+
+	cl_git_pass(git_remote_create_detached(&remote, URL));
+	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
+	cl_git_fail(git_remote_push(remote, NULL, NULL));
+
+	git_remote_free(remote);
+}
