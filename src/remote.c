@@ -674,7 +674,9 @@ int git_remote_connect(git_remote *remote, git_direction direction, const git_re
 	url = git_remote__urlfordirection(remote, direction);
 	if (url == NULL) {
 		giterr_set(GITERR_INVALID,
-			"Malformed remote '%s' - missing URL", remote->name);
+			"Malformed remote '%s' - missing %s URL",
+			remote->name ? remote->name : "(anonymous)",
+			direction == GIT_DIRECTION_FETCH ? "fetch" : "push");
 		return -1;
 	}
 
