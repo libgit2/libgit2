@@ -87,3 +87,41 @@ void test_online_remotes__detached_remote_fails_pushing(void)
 
 	git_remote_free(remote);
 }
+
+void test_online_remotes__detached_remote_succeeds_ls(void)
+{
+	const char *refs[] = {
+	    "HEAD",
+	    "refs/heads/first-merge",
+	    "refs/heads/master",
+	    "refs/heads/no-parent",
+	    "refs/tags/annotated_tag",
+	    "refs/tags/annotated_tag^{}",
+	    "refs/tags/blob",
+	    "refs/tags/commit_tree",
+	    "refs/tags/nearly-dangling",
+	};
+	const git_remote_head **heads;
+	git_remote *remote;
+	size_t i, j, n;
+
+	cl_git_pass(git_remote_create_detached(&remote, URL));
+	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
+	cl_git_pass(git_remote_ls(&heads, &n, remote));
+
+	cl_assert_equal_sz(n, 9);
+	for (i = 0; i < n; i++) {
+		char found = false;
+
+		for (j = 0; j < ARRAY_SIZE(refs); j++) {
+			if (!strcmp(heads[i]->name, refs[j])) {
+				found = true;
+				break;
+			}
+		}
+
+		cl_assert_(found, heads[i]->name);
+	}
+
+	git_remote_free(remote);
+}
