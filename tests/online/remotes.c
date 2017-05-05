@@ -1,12 +1,13 @@
 #include "clar_libgit2.h"
 
-static const char *refspec = "refs/heads/first-merge:refs/remotes/origin/first-merge";
+#define URL "git://github.com/libgit2/TestGitRepository"
+#define REFSPEC "refs/heads/first-merge:refs/remotes/origin/first-merge"
 
 static int remote_single_branch(git_remote **out, git_repository *repo, const char *name, const char *url, void *payload)
 {
 	GIT_UNUSED(payload);
 
-	cl_git_pass(git_remote_create_with_fetchspec(out, repo, name, url, refspec));
+	cl_git_pass(git_remote_create_with_fetchspec(out, repo, name, url, REFSPEC));
 
 	return 0;
 }
@@ -22,7 +23,7 @@ void test_online_remotes__single_branch(void)
 	opts.remote_cb = remote_single_branch;
 	opts.checkout_branch = "first-merge";
 
-	cl_git_pass(git_clone(&repo, "git://github.com/libgit2/TestGitRepository", "./single-branch", &opts));
+	cl_git_pass(git_clone(&repo, URL, "./single-branch", &opts));
 	cl_git_pass(git_reference_list(&refs, repo));
 
 	for (i = 0; i < refs.count; i++) {
@@ -37,7 +38,7 @@ void test_online_remotes__single_branch(void)
 	cl_git_pass(git_remote_get_fetch_refspecs(&refs, remote));
 
 	cl_assert_equal_i(1, refs.count);
-	cl_assert_equal_s(refspec, refs.strings[0]);
+	cl_assert_equal_s(REFSPEC, refs.strings[0]);
 
 	git_strarray_free(&refs);
 	git_remote_free(remote);
@@ -51,7 +52,7 @@ void test_online_remotes__restricted_refspecs(void)
 
 	opts.remote_cb = remote_single_branch;
 
-	cl_git_fail_with(GIT_EINVALIDSPEC, git_clone(&repo, "git://github.com/libgit2/TestGitRepository", "./restrict-refspec", &opts));
+	cl_git_fail_with(GIT_EINVALIDSPEC, git_clone(&repo, URL, "./restrict-refspec", &opts));
 }
 
 void test_online_remotes__detached_remote_fails_downloading(void)
