@@ -549,7 +549,7 @@ int git_index_clear(git_index *index)
 
 static int create_index_error(int error, const char *msg)
 {
-	giterr_set_str(GITERR_INDEX, msg);
+	giterr_set_str(GITERR_INDEX, "index creation error '%s'", msg);
 	return error;
 }
 
