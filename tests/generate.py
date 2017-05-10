@@ -8,7 +8,7 @@
 
 from __future__ import with_statement
 from string import Template
-import re, fnmatch, os, codecs, pickle
+import re, fnmatch, os, sys, codecs, pickle
 
 class Module(object):
     class Template(object):
@@ -234,11 +234,14 @@ if __name__ == '__main__':
     parser.add_option('-x', '--exclude', dest='excluded', action='append', default=[])
 
     options, args = parser.parse_args()
+    if len(args) > 1:
+        print("More than one path given")
+        sys.exit(1)
 
-    for path in args or ['.']:
-        suite = TestSuite(path)
-        suite.load(options.force)
-        suite.disable(options.excluded)
-        if suite.write():
-            print("Written `clar.suite` (%d tests in %d suites)" % (suite.callback_count(), suite.suite_count()))
+    path = args.pop() if args else '.'
+    suite = TestSuite(path)
+    suite.load(options.force)
+    suite.disable(options.excluded)
+    if suite.write():
+        print("Written `clar.suite` (%d tests in %d suites)" % (suite.callback_count(), suite.suite_count()))
 
