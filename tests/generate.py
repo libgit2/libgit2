@@ -158,7 +158,7 @@ class TestSuite(object):
         return modules
 
     def load_cache(self):
-        path = os.path.join(self.path, '.clarcache')
+        path = os.path.join(self.output, '.clarcache')
         cache = {}
 
         try:
@@ -171,7 +171,7 @@ class TestSuite(object):
         return cache
 
     def save_cache(self):
-        path = os.path.join(self.path, '.clarcache')
+        path = os.path.join(self.output, '.clarcache')
         with open(path, 'wb') as cache:
             pickle.dump(self.modules, cache)
 
