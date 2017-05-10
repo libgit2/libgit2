@@ -97,6 +97,18 @@ typedef struct {
 } git_cvar_map;
 
 /**
+ * Locate the path to the local configuration file
+ *
+ * The returned path may be used on any `git_config` call to load the local
+ * configuration file.
+ *
+ * @param out Pointer to a user-allocated git_buf in which to store the path
+ * @param repo The repository whose local configuration file to find
+ * @return 0 if a local configuration file has been found. Its path will be stored in `out`.
+ */
+GIT_EXTERN(int) git_config_find_local(git_buf *out, git_repository *repo);
+
+/**
  * Locate the path to the global configuration file
  *
  * The user or global configuration file is usually
