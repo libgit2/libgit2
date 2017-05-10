@@ -100,7 +100,11 @@ static void assert_name_is(const char *expected)
 	char *actual;
 	size_t actual_len, expected_len, start;
 
+	if (!cl_sandbox_supports_8dot3())
+		clar__skip();
+
 	cl_assert(actual = get_filename(expected));
+	cl_assert(actual = test_realpath(expected));
 
 	expected_len = strlen(expected);
 	actual_len = strlen(actual);

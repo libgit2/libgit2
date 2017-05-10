@@ -97,9 +97,16 @@ void test_path_win32__dot_and_dotdot(void)
 void test_path_win32__absolute_from_no_drive_letter(void)
 {
 #ifdef GIT_WIN32
+	char cwd_backup[MAX_PATH];
+
+	cl_must_pass(p_getcwd(cwd_backup, MAX_PATH));
+	cl_must_pass(p_chdir("C:/"));
+
 	test_utf8_to_utf16("\\Foo", L"\\\\?\\C:\\Foo");
 	test_utf8_to_utf16("\\Foo\\Bar", L"\\\\?\\C:\\Foo\\Bar");
 	test_utf8_to_utf16("/Foo/Bar", L"\\\\?\\C:\\Foo\\Bar");
+
+	cl_must_pass(p_chdir(cwd_backup));
 #endif
 }
 

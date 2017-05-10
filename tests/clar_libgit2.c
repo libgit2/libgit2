@@ -588,5 +588,36 @@ bool cl_sandbox_supports_8dot3(void)
 
 	return supported;
 }
+
+bool cl_sandbox_supports_reparse_points(void)
+{
+	unsigned int flags = 0;
+	char path[8];
+	char drive = 'A' + _getdrive() - 1;
+
+	sprintf(path, "%c:\\", drive);
+
+	GetVolumeInformation(path, NULL, 0, NULL, NULL, &flags, NULL, 0);
+
+	return flags & FILE_SUPPORTS_REPARSE_POINTS;
+}
 #endif
 
+bool cl_sandbox_supports_links(void)
+{
+#ifdef GIT_WIN32
+	unsigned int path_flags = 0;
+	unsigned int cl_flags = 0;
+	char path[8];
+	char drive = 'A' + _getdrive() - 1;
+
+	sprintf(path, "%c:\\", drive);
+
+	GetVolumeInformation(_cl_sandbox, NULL, 0, NULL, NULL, &cl_flags, NULL, 0);
+	GetVolumeInformation(path, NULL, 0, NULL, NULL, &path_flags, NULL, 0);
+
+	return cl_flags & path_flags & FILE_SUPPORTS_HARD_LINKS;
+#else
+	return true;
+#endif
+}
