@@ -128,8 +128,9 @@ class Module(object):
 
 class TestSuite(object):
 
-    def __init__(self, path):
+    def __init__(self, path, output):
         self.path = path
+        self.output = output
 
     def should_generate(self, path):
         if not os.path.isfile(path):
@@ -200,7 +201,7 @@ class TestSuite(object):
         return sum(len(module.callbacks) for module in self.modules.values())
 
     def write(self):
-        output = os.path.join(self.path, 'clar.suite')
+        output = os.path.join(self.output, 'clar.suite')
 
         if not self.should_generate(output):
             return False
@@ -232,6 +233,7 @@ if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option('-f', '--force', action="store_true", dest='force', default=False)
     parser.add_option('-x', '--exclude', dest='excluded', action='append', default=[])
+    parser.add_option('-o', '--output', dest='output')
 
     options, args = parser.parse_args()
     if len(args) > 1:
@@ -239,7 +241,8 @@ if __name__ == '__main__':
         sys.exit(1)
 
     path = args.pop() if args else '.'
-    suite = TestSuite(path)
+    output = options.output or path
+    suite = TestSuite(path, output)
     suite.load(options.force)
     suite.disable(options.excluded)
     if suite.write():
