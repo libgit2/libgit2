@@ -2355,21 +2355,24 @@ static size_t read_entry(
 		entry.path = (char *)path_ptr;
 	} else {
 		size_t varint_len;
-		size_t shared = git_decode_varint((const unsigned char *)path_ptr, 
-						  &varint_len);
-		size_t len = strlen(path_ptr + varint_len);
+		size_t strip_len = git_decode_varint((const unsigned char *)path_ptr,
+						     &varint_len);
 		size_t last_len = strlen(*last);
-		size_t tmp_path_len;
+		size_t prefix_len = last_len - strip_len;
+		size_t suffix_len = strlen(path_ptr + varint_len);
+		size_t path_len;
 
 		if (varint_len == 0)
 			return index_error_invalid("incorrect prefix length");
 
-		GITERR_CHECK_ALLOC_ADD(&tmp_path_len, shared, len + 1);
-		tmp_path = git__malloc(tmp_path_len);
+		GITERR_CHECK_ALLOC_ADD(&path_len, prefix_len, suffix_len);
+		GITERR_CHECK_ALLOC_ADD(&path_len, path_len, 1);
+		tmp_path = git__malloc(path_len);
 		GITERR_CHECK_ALLOC(tmp_path);
-		memcpy(tmp_path, last, last_len);
-		memcpy(tmp_path + last_len, path_ptr + varint_len, len);
-		entry_size = long_entry_size(shared + len);
+
+		memcpy(tmp_path, last, prefix_len);
+		memcpy(tmp_path + prefix_len, path_ptr + varint_len, suffix_len + 1);
+		entry_size = long_entry_size(prefix_len + suffix_len);
 		entry.path = tmp_path;
 	}
 
