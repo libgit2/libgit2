@@ -43,10 +43,9 @@ We ask that you not open a GitHub Issue for help, only for bug reports.
 What It Can Do
 ==============
 
-The goal of this library is to allow its users the ability to handle Git data in
-their applications from their programming language of choice, as is used in
-production for many applications including the GitHub.com site, in Plastic SCM
-and also powering Microsoft's Visual Studio tools for Git.
+libgit2 provides you with the ability to manage Git repositories in the
+programming language of your choice.  It's used in production to power many
+applications including GitHub.com, Plastic SCM and Visual Studio Team Services.
 
 It does not aim to replace the git tool or its user-facing commands. Some APIs
 resemble the plumbing commands as those align closely with the concepts of the
