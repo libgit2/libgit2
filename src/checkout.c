@@ -192,6 +192,12 @@ static bool checkout_is_workdir_modified(
 		return rval;
 	}
 
+	/* If the executable bit differ we need to checkout
+	 */
+	if ((baseitem->mode == GIT_FILEMODE_BLOB && wditem->mode == GIT_FILEMODE_BLOB_EXECUTABLE)
+		|| (baseitem->mode == GIT_FILEMODE_BLOB_EXECUTABLE && wditem->mode == GIT_FILEMODE_BLOB))
+		return true;
+
 	/* Look at the cache to decide if the workdir is modified.  If not,
 	 * we can simply compare the oid in the cache to the baseitem instead
 	 * of hashing the file.  If so, we allow the checkout to proceed if the
