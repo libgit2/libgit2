@@ -91,6 +91,7 @@ ENDIF()
 
 IF (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	OPTION( USE_OPENSSL                     "Link with and use openssl library"             ON )
+	OPTION( REQUIRE_OPENSSL                 "Fail configuration if openssl not found"       OFF )
 ENDIF()
 
 CHECK_STRUCT_HAS_MEMBER ("struct stat" st_mtim "sys/types.h;sys/stat.h"
@@ -281,7 +282,11 @@ ELSE ()
 	ENDIF ()
 
 	IF (NOT AMIGA AND USE_OPENSSL)
-		FIND_PACKAGE(OpenSSL)
+		IF (REQUIRE_OPENSSL)
+			FIND_PACKAGE(OpenSSL REQUIRED)
+		ELSE ()
+			FIND_PACKAGE(OpenSSL)
+		ENDIF ()
 	ENDIF ()
 
 	IF (CURL_FOUND)
