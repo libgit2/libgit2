@@ -2287,7 +2287,7 @@ static size_t read_entry(
 	git_index *index,
 	const void *buffer,
 	size_t buffer_size,
-	const char **last)
+	const char *last)
 {
 	size_t path_length, entry_size;
 	const char *path_ptr;
@@ -2357,7 +2357,7 @@ static size_t read_entry(
 		size_t varint_len;
 		size_t strip_len = git_decode_varint((const unsigned char *)path_ptr,
 						     &varint_len);
-		size_t last_len = strlen(*last);
+		size_t last_len = strlen(last);
 		size_t prefix_len = last_len - strip_len;
 		size_t suffix_len = strlen(path_ptr + varint_len);
 		size_t path_len;
@@ -2448,7 +2448,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	unsigned int i;
 	struct index_header header = { 0 };
 	git_oid checksum_calculated, checksum_expected;
-	const char **last = NULL;
+	const char *last = NULL;
 	const char *empty = "";
 
 #define seek_forward(_increase) { \
@@ -2472,7 +2472,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 
 	index->version = header.version;
 	if (index->version >= INDEX_VERSION_NUMBER_COMP)
-		last = &empty;
+		last = empty;
 
 	seek_forward(INDEX_HEADER_SIZE);
 
@@ -2506,6 +2506,9 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 			goto done;
 		}
 		error = 0;
+
+		if (index->version >= INDEX_VERSION_NUMBER_COMP)
+			last = entry->path;
 
 		seek_forward(entry_size);
 	}
