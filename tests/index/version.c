@@ -3,6 +3,12 @@
 
 static git_repository *g_repo = NULL;
 
+void test_index_version__cleanup(void)
+{
+        cl_git_sandbox_cleanup();
+        g_repo = NULL;
+}
+
 void test_index_version__can_write_v4(void)
 {
 	git_index *index;
@@ -32,10 +38,4 @@ void test_index_version__can_write_v4(void)
 	cl_assert(entry);
 
 	git_index_free(index);
-}
-
-void test_index_version__cleanup(void)
-{
-        cl_git_sandbox_cleanup();
-        g_repo = NULL;
 }
