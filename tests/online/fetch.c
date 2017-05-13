@@ -84,11 +84,11 @@ void test_online_fetch__fetch_twice(void)
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
 	cl_git_pass(git_remote_download(remote, NULL, NULL));
     	git_remote_disconnect(remote);
-    	
+
 	git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL);
 	cl_git_pass(git_remote_download(remote, NULL, NULL));
 	git_remote_disconnect(remote);
-	
+
 	git_remote_free(remote);
 }
 
@@ -203,6 +203,39 @@ void test_online_fetch__twice(void)
 
 	cl_git_pass(git_remote_create(&remote, _repo, "test", "http://github.com/libgit2/TestGitRepository.git"));
 	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
+	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
+
+	git_remote_free(remote);
+}
+
+void test_online_fetch__fake_httpcookiefile(void)
+{
+	git_remote *remote;
+	git_config *cfg;
+
+	cl_git_pass(git_remote_create(&remote, _repo, "test", "http://github.com/libgit2/TestGitRepository.git"));
+	cl_git_pass(git_repository_config(&cfg, _repo));
+	cl_git_pass(git_config_set_string(cfg, "http.cookieFile", "fake.cookie"));
+	git_config_free(cfg);
+	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
+
+	git_remote_free(remote);
+}
+
+void test_online_fetch__with_httpcookiefile(void)
+{
+	git_remote *remote;
+	git_config *cfg;
+	struct stat st;
+	const char *cookie = cl_fixture("cookie");
+
+	// make sure file exists
+	cl_git_pass(p_stat(cookie, &st));
+	cl_git_pass(git_remote_create(&remote, _repo, "test", "http://github.com/libgit2/TestGitRepository.git"));
+	cl_git_pass(git_repository_config(&cfg, _repo));
+
+	cl_git_pass(git_config_set_string(cfg, "http.cookieFile", cookie));
+	git_config_free(cfg);
 	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
 
 	git_remote_free(remote);

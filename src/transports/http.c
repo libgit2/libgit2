@@ -18,6 +18,7 @@
 #include "tls_stream.h"
 #include "socket_stream.h"
 #include "curl_stream.h"
+#include "cookie.h"
 
 git_http_auth_scheme auth_schemes[] = {
 	{ GIT_AUTHTYPE_NEGOTIATE, "Negotiate", GIT_CREDTYPE_DEFAULT, git_http_auth_negotiate },
@@ -205,7 +206,10 @@ static int gen_request(
 	http_subtransport *t = OWNING_SUBTRANSPORT(s);
 	const char *path = t->connection_data.path ? t->connection_data.path : "/";
 	size_t i;
-
+	int error;
+	const char *cookie_file = NULL;
+	int cookie_count = 0;
+	git_config *config;
 	git_buf_printf(buf, "%s %s%s HTTP/1.1\r\n", s->verb, path, s->service_url);
 
 	git_buf_printf(buf, "User-Agent: git/2.0 (%s)\r\n", user_agent());
@@ -221,6 +225,39 @@ static int gen_request(
 			git_buf_printf(buf, "Content-Length: %"PRIuZ "\r\n", content_length);
 	} else
 		git_buf_puts(buf, "Accept: */*\r\n");
+
+	if ((error = git_repository_config_snapshot(&config, t->owner->owner->repo)) < 0)
+		return error;
+	if ((error = git_config_get_string(&cookie_file, config, "http.cookieFile")) < 0) {
+		if (error == GIT_ENOTFOUND) {
+			giterr_clear();
+			error = 0;
+		} else {
+			git_config_free(config);
+			return error;
+		}
+	}
+	git_config_free(config);
+	if (cookie_file) {
+		struct CookieInfo *c = cookie_loadfile(cookie_file);
+		if (c){
+			struct Cookie *co = cookie_getlist(c, t->connection_data.host, t->connection_data.path, t->connection_data.use_ssl);
+			while (co) {
+				if(co->value) {
+					if (0 == cookie_count) {
+						git_buf_printf(buf, "Cookie: ");
+					}
+					git_buf_printf(buf, "%s%s=%s", cookie_count?"; ":"", co->name, co->value);
+					cookie_count++;
+				}
+				co=co->next;
+			}
+			cookie_cleanup(c);
+		}
+	}
+	if (cookie_count){
+		git_buf_printf(buf, "\r\n");
+	}
 
 	for (i = 0; i < t->owner->custom_headers.count; i++) {
 		if (t->owner->custom_headers.strings[i])
