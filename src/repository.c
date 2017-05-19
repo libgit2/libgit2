@@ -763,6 +763,13 @@ static int repo_is_worktree(unsigned *out, const git_repository *repo)
 	git_buf gitdir_link = GIT_BUF_INIT;
 	int error;
 
+	/* Worktrees cannot have the same commondir and gitdir */
+	if (repo->commondir && repo->gitdir
+	    && !strcmp(repo->commondir, repo->gitdir)) {
+		*out = 0;
+		return 0;
+	}
+
 	if ((error = git_buf_joinpath(&gitdir_link, repo->gitdir, "gitdir")) < 0)
 		return -1;
 

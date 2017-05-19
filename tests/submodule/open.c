@@ -69,3 +69,22 @@ void test_submodule_open__direct_open_succeeds(void)
 
 	git_buf_free(&path);
 }
+
+void test_submodule_open__direct_open_succeeds_for_broken_sm_with_gitdir(void)
+{
+	git_buf path = GIT_BUF_INIT;
+
+	/*
+	 * This is actually not a valid submodule, but we
+	 * encountered at least one occasion where the gitdir
+	 * file existed inside of a submodule's gitdir. As we are
+	 * now able to open these submodules correctly, we still
+	 * add a test for this.
+	 */
+	cl_git_mkfile("submod2/.git/modules/sm_unchanged/gitdir", ".git");
+	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_parent), "sm_unchanged"));
+	cl_git_pass(git_repository_open(&g_child, path.ptr));
+	assert_sm_valid(g_parent, g_child, "sm_unchanged");
+
+	git_buf_free(&path);
+}
