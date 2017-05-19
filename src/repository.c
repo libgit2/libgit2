@@ -440,7 +440,7 @@ static int find_repo(
 	bool in_dot_git;
 	size_t ceiling_offset = 0;
 
-	git_buf_free(repo_path);
+	git_buf_clear(repo_path);
 
 	error = git_path_prettify(&path, start_path, NULL);
 	if (error < 0)
