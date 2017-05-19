@@ -2597,6 +2597,7 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const cha
 	void *mem = NULL;
 	struct entry_short *ondisk;
 	size_t path_len, disk_size;
+	int varint_len = 0;
 	char *path;
 	const char *path_start = entry->path;
 	size_t same_len = 0;
@@ -2614,12 +2615,10 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const cha
 			++same_len;
 		}
 		path_len -= same_len;
+		varint_len = git_encode_varint(NULL, 0, same_len);
 	}
 
-	if (entry->flags & GIT_IDXENTRY_EXTENDED)
-		disk_size = long_entry_size(path_len);
-	else
-		disk_size = short_entry_size(path_len);
+	disk_size = index_entry_size(path_len, varint_len, entry->flags);
 
 	if (git_filebuf_reserve(file, &mem, disk_size) < 0)
 		return -1;
