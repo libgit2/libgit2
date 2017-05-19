@@ -422,10 +422,10 @@ static int read_gitfile(git_buf *path_out, const char *file_path)
 }
 
 static int find_repo(
-	git_buf *repo_path,
-	git_buf *parent_path,
-	git_buf *link_path,
-	git_buf *common_path,
+	git_buf *gitdir_path,
+	git_buf *workdir_path,
+	git_buf *gitlink_path,
+	git_buf *commondir_path,
 	const char *start_path,
 	uint32_t flags,
 	const char *ceiling_dirs)
@@ -440,7 +440,7 @@ static int find_repo(
 	bool in_dot_git;
 	size_t ceiling_offset = 0;
 
-	git_buf_clear(repo_path);
+	git_buf_clear(gitdir_path);
 
 	error = git_path_prettify(&path, start_path, NULL);
 	if (error < 0)
@@ -482,13 +482,13 @@ static int find_repo(
 			if (S_ISDIR(st.st_mode)) {
 				if (valid_repository_path(&path, &common_link)) {
 					git_path_to_dir(&path);
-					git_buf_set(repo_path, path.ptr, path.size);
+					git_buf_set(gitdir_path, path.ptr, path.size);
 
-					if (link_path)
-						git_buf_attach(link_path,
+					if (gitlink_path)
+						git_buf_attach(gitlink_path,
 							git_worktree__read_link(path.ptr, GIT_GITDIR_FILE), 0);
-					if (common_path)
-						git_buf_swap(&common_link, common_path);
+					if (commondir_path)
+						git_buf_swap(&common_link, commondir_path);
 
 					break;
 				}
@@ -498,12 +498,12 @@ static int find_repo(
 				if (error < 0)
 					break;
 				if (valid_repository_path(&repo_link, &common_link)) {
-					git_buf_swap(repo_path, &repo_link);
+					git_buf_swap(gitdir_path, &repo_link);
 
-					if (link_path)
-						error = git_buf_put(link_path, path.ptr, path.size);
-					if (common_path)
-						git_buf_swap(&common_link, common_path);
+					if (gitlink_path)
+						error = git_buf_put(gitlink_path, path.ptr, path.size);
+					if (commondir_path)
+						git_buf_swap(&common_link, commondir_path);
 				}
 				break;
 			}
@@ -529,20 +529,20 @@ static int find_repo(
 			break;
 	}
 
-	if (!error && parent_path && !(flags & GIT_REPOSITORY_OPEN_BARE)) {
-		if (!git_buf_len(repo_path))
-			git_buf_clear(parent_path);
+	if (!error && workdir_path && !(flags & GIT_REPOSITORY_OPEN_BARE)) {
+		if (!git_buf_len(gitdir_path))
+			git_buf_clear(workdir_path);
 		else {
-			git_path_dirname_r(parent_path, path.ptr);
-			git_path_to_dir(parent_path);
+			git_path_dirname_r(workdir_path, path.ptr);
+			git_path_to_dir(workdir_path);
 		}
-		if (git_buf_oom(parent_path))
+		if (git_buf_oom(workdir_path))
 			return -1;
 	}
 
 	/* If we didn't find the repository, and we don't have any other error
 	 * to report, report that. */
-	if (!git_buf_len(repo_path) && !error) {
+	if (!git_buf_len(gitdir_path) && !error) {
 		giterr_set(GITERR_REPOSITORY,
 			"could not find repository from '%s'", start_path);
 		error = GIT_ENOTFOUND;
@@ -765,8 +765,8 @@ int git_repository_open_ext(
 	const char *ceiling_dirs)
 {
 	int error;
-	git_buf path = GIT_BUF_INIT, parent = GIT_BUF_INIT,
-		link_path = GIT_BUF_INIT, common_path = GIT_BUF_INIT;
+	git_buf gitdir = GIT_BUF_INIT, workdir = GIT_BUF_INIT,
+		gitlink = GIT_BUF_INIT, commondir = GIT_BUF_INIT;
 	git_repository *repo;
 	git_config *config = NULL;
 
@@ -777,7 +777,7 @@ int git_repository_open_ext(
 		*repo_ptr = NULL;
 
 	error = find_repo(
-		&path, &parent, &link_path, &common_path, start_path, flags, ceiling_dirs);
+		&gitdir, &workdir, &gitlink, &commondir, start_path, flags, ceiling_dirs);
 
 	if (error < 0 || !repo_ptr)
 		return error;
@@ -785,23 +785,23 @@ int git_repository_open_ext(
 	repo = repository_alloc();
 	GITERR_CHECK_ALLOC(repo);
 
-	repo->gitdir = git_buf_detach(&path);
+	repo->gitdir = git_buf_detach(&gitdir);
 	GITERR_CHECK_ALLOC(repo->gitdir);
 
-	if (link_path.size) {
-		repo->gitlink = git_buf_detach(&link_path);
+	if (gitlink.size) {
+		repo->gitlink = git_buf_detach(&gitlink);
 		GITERR_CHECK_ALLOC(repo->gitlink);
 	}
-	if (common_path.size) {
-		repo->commondir = git_buf_detach(&common_path);
+	if (commondir.size) {
+		repo->commondir = git_buf_detach(&commondir);
 		GITERR_CHECK_ALLOC(repo->commondir);
 	}
 
-	if ((error = git_buf_joinpath(&path, repo->gitdir, "gitdir")) < 0)
+	if ((error = git_buf_joinpath(&gitdir, repo->gitdir, "gitdir")) < 0)
 		goto cleanup;
 	/* A 'gitdir' file inside a git directory is currently
 	 * only used when the repository is a working tree. */
-	if (git_path_exists(path.ptr))
+	if (git_path_exists(gitdir.ptr))
 		repo->is_worktree = 1;
 
 	/*
@@ -822,13 +822,13 @@ int git_repository_open_ext(
 
 		if (config &&
 		    ((error = load_config_data(repo, config)) < 0 ||
-		     (error = load_workdir(repo, config, &parent)) < 0))
+		     (error = load_workdir(repo, config, &workdir)) < 0))
 			goto cleanup;
 	}
 
 cleanup:
-	git_buf_free(&path);
-	git_buf_free(&parent);
+	git_buf_free(&gitdir);
+	git_buf_free(&workdir);
 	git_config_free(config);
 
 	if (error < 0)
