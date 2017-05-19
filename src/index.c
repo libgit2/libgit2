@@ -54,10 +54,6 @@ static int index_apply_to_wd_diff(git_index *index, int action, const git_strarr
 				  unsigned int flags,
 				  git_index_matched_path_cb cb, void *payload);
 
-#define entry_size(type,len) ((offsetof(type, path) + (len) + 8) & ~7)
-#define short_entry_size(len) entry_size(struct entry_short, len)
-#define long_entry_size(len) entry_size(struct entry_long, len)
-
 #define minimal_entry_size (offsetof(struct entry_short, path))
 
 static const size_t INDEX_FOOTER_SIZE = GIT_OID_RAWSZ;
@@ -2290,10 +2286,12 @@ static size_t index_entry_size(size_t path_len, size_t varint_len, uint32_t flag
 		else
 			return offsetof(struct entry_short, path) + path_len + 1 + varint_len;
 	} else {
+#define entry_size(type,len) ((offsetof(type, path) + (len) + 8) & ~7)
 		if (flags & GIT_IDXENTRY_EXTENDED)
-			return long_entry_size(path_len);
+			return entry_size(struct entry_long, path_len);
 		else
-			return short_entry_size(path_len);
+			return entry_size(struct entry_short, path_len);
+#undef entry_size
 	}
 }
 
