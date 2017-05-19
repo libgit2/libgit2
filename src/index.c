@@ -2358,10 +2358,6 @@ static size_t read_entry(
 		}
 
 		entry_size = index_entry_size(path_length, 0, entry.flags);
-
-		if (INDEX_FOOTER_SIZE + entry_size > buffer_size)
-			return 0;
-
 		entry.path = (char *)path_ptr;
 	} else {
 		size_t varint_len;
@@ -2385,6 +2381,9 @@ static size_t read_entry(
 		entry_size = index_entry_size(suffix_len, varint_len, entry.flags);
 		entry.path = tmp_path;
 	}
+
+	if (INDEX_FOOTER_SIZE + entry_size > buffer_size)
+		return 0;
 
 	if (index_entry_dup(out, index, &entry) < 0) {
 		git__free(tmp_path);
