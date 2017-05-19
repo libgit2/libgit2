@@ -2282,6 +2282,21 @@ out_err:
 	return 0;
 }
 
+static size_t index_entry_size(size_t path_len, size_t varint_len, uint32_t flags)
+{
+	if (varint_len) {
+		if (flags & GIT_IDXENTRY_EXTENDED)
+			return offsetof(struct entry_long, path) + path_len + 1 + varint_len;
+		else
+			return offsetof(struct entry_short, path) + path_len + 1 + varint_len;
+	} else {
+		if (flags & GIT_IDXENTRY_EXTENDED)
+			return long_entry_size(path_len);
+		else
+			return short_entry_size(path_len);
+	}
+}
+
 static size_t read_entry(
 	git_index_entry **out,
 	git_index *index,
@@ -2344,10 +2359,7 @@ static size_t read_entry(
 			path_length = path_end - path_ptr;
 		}
 
-		if (entry.flags & GIT_IDXENTRY_EXTENDED)
-			entry_size = long_entry_size(path_length);
-		else
-			entry_size = short_entry_size(path_length);
+		entry_size = index_entry_size(path_length, 0, entry.flags);
 
 		if (INDEX_FOOTER_SIZE + entry_size > buffer_size)
 			return 0;
@@ -2372,7 +2384,7 @@ static size_t read_entry(
 
 		memcpy(tmp_path, last, prefix_len);
 		memcpy(tmp_path + prefix_len, path_ptr + varint_len, suffix_len + 1);
-		entry_size = long_entry_size(prefix_len + suffix_len);
+		entry_size = index_entry_size(suffix_len, varint_len, entry.flags);
 		entry.path = tmp_path;
 	}
 
