@@ -758,6 +758,22 @@ success:
 	return error;
 }
 
+static int repo_is_worktree(unsigned *out, const git_repository *repo)
+{
+	git_buf gitdir_link = GIT_BUF_INIT;
+	int error;
+
+	if ((error = git_buf_joinpath(&gitdir_link, repo->gitdir, "gitdir")) < 0)
+		return -1;
+
+	/* A 'gitdir' file inside a git directory is currently
+	 * only used when the repository is a working tree. */
+	*out = !!git_path_exists(gitdir_link.ptr);
+
+	git_buf_free(&gitdir_link);
+	return error;
+}
+
 int git_repository_open_ext(
 	git_repository **repo_ptr,
 	const char *start_path,
@@ -765,6 +781,7 @@ int git_repository_open_ext(
 	const char *ceiling_dirs)
 {
 	int error;
+	unsigned is_worktree;
 	git_buf gitdir = GIT_BUF_INIT, workdir = GIT_BUF_INIT,
 		gitlink = GIT_BUF_INIT, commondir = GIT_BUF_INIT;
 	git_repository *repo;
@@ -797,12 +814,9 @@ int git_repository_open_ext(
 		GITERR_CHECK_ALLOC(repo->commondir);
 	}
 
-	if ((error = git_buf_joinpath(&gitdir, repo->gitdir, "gitdir")) < 0)
+	if ((error = repo_is_worktree(&is_worktree, repo)) < 0)
 		goto cleanup;
-	/* A 'gitdir' file inside a git directory is currently
-	 * only used when the repository is a working tree. */
-	if (git_path_exists(gitdir.ptr))
-		repo->is_worktree = 1;
+	repo->is_worktree = is_worktree;
 
 	/*
 	 * We'd like to have the config, but git doesn't particularly
