@@ -34,18 +34,31 @@ void test_index_version__can_read_v4(void)
 
 void test_index_version__can_write_v4(void)
 {
+	const char *paths[] = {
+	    "foo",
+	    "foox",
+	    "foobar",
+	    "foobal",
+	    "x",
+	    "xz",
+	    "xyzzyx"
+	};
+	git_index_entry entry;
 	git_index *index;
-	const git_index_entry *entry;
+	size_t i;
 
-	g_repo = cl_git_sandbox_init("filemodes");
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
 	cl_git_pass(git_repository_index(&index, g_repo));
-
-	cl_assert(index->on_disk);
-	cl_assert(git_index_version(index) == 2);
-
-	cl_assert(git_index_entrycount(index) == 6);
-
 	cl_git_pass(git_index_set_version(index, 4));
+
+	for (i = 0; i < ARRAY_SIZE(paths); i++) {
+		memset(&entry, 0, sizeof(entry));
+		entry.path = paths[i];
+		entry.mode = GIT_FILEMODE_BLOB;
+		cl_git_pass(git_index_add_frombuffer(index, &entry, paths[i],
+						     strlen(paths[i]) + 1));
+	}
+	cl_assert_equal_sz(git_index_entrycount(index), ARRAY_SIZE(paths));
 
 	cl_git_pass(git_index_write(index));
 	git_index_free(index);
@@ -53,12 +66,12 @@ void test_index_version__can_write_v4(void)
 	cl_git_pass(git_repository_index(&index, g_repo));
 	cl_assert(git_index_version(index) == 4);
 
-	entry = git_index_get_bypath(index, "exec_off", 0);
-	cl_assert(entry);
-	entry = git_index_get_bypath(index, "exec_off2on_staged", 0);
-	cl_assert(entry);
-	entry = git_index_get_bypath(index, "exec_on", 0);
-	cl_assert(entry);
+	for (i = 0; i < ARRAY_SIZE(paths); i++) {
+		const git_index_entry *e;
+
+		cl_assert(e = git_index_get_bypath(index, paths[i], 0));
+		cl_assert_equal_s(paths[i], e->path);
+	}
 
 	git_index_free(index);
 }
