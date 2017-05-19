@@ -2580,7 +2580,7 @@ static bool is_index_extended(git_index *index)
 	return (extended > 0);
 }
 
-static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const char **last)
+static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const char *last)
 {
 	void *mem = NULL;
 	struct entry_short *ondisk;
@@ -2592,7 +2592,7 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const cha
 	path_len = ((struct entry_internal *)entry)->pathlen;
 
 	if (last) {
-		const char *last_c = *last;
+		const char *last_c = last;
 
 		while (*path_start == *last_c) {
 			if (!*path_start || !*last_c)
@@ -2602,7 +2602,6 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const cha
 			++same_len;
 		}
 		path_len -= same_len;
-		*last = entry->path;
 	}
 
 	if (entry->flags & GIT_IDXENTRY_EXTENDED)
@@ -2668,8 +2667,7 @@ static int write_entries(git_index *index, git_filebuf *file)
 	size_t i;
 	git_vector case_sorted, *entries;
 	git_index_entry *entry;
-	const char **last = NULL;
-	const char *empty = "";
+	const char *last = NULL;
 
 	/* If index->entries is sorted case-insensitively, then we need
 	 * to re-sort it case-sensitively before writing */
@@ -2682,11 +2680,14 @@ static int write_entries(git_index *index, git_filebuf *file)
 	}
 
 	if (index->version >= INDEX_VERSION_NUMBER_COMP)
-		last = &empty;
+		last = "";
 
-	git_vector_foreach(entries, i, entry)
+	git_vector_foreach(entries, i, entry) {
 		if ((error = write_disk_entry(file, entry, last)) < 0)
 			break;
+		if (index->version >= INDEX_VERSION_NUMBER_COMP)
+			last = entry->path;
+	}
 
 	if (index->ignore_case)
 		git_vector_free(&case_sorted);
