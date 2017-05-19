@@ -2655,15 +2655,34 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const cha
 		ondisk_ext->flags_extended = htons(entry->flags_extended &
 			GIT_IDXENTRY_EXTENDED_FLAGS);
 		path = ondisk_ext->path;
-	}
-	else
+		disk_size -= offsetof(struct entry_long, path);
+	} else {
 		path = ondisk->path;
+		disk_size -= offsetof(struct entry_short, path);
+	}
 
 	if (last) {
-		path += git_encode_varint((unsigned char *) path,
+		varint_len = git_encode_varint((unsigned char *) path,
 					  disk_size, same_len);
+		assert(varint_len > 0);
+		path += varint_len;
+		disk_size -= varint_len;
+
+		/*
+		 * If using path compression, we are not allowed
+		 * to have additional trailing NULs.
+		 */
+		assert(disk_size == path_len + 1);
+	} else {
+		/*
+		 * If no path compression is used, we do have
+		 * NULs as padding. As such, simply assert that
+		 * we have enough space left to write the path.
+		 */
+		assert(disk_size > path_len);
 	}
-	memcpy(path, path_start, path_len);
+
+	memcpy(path, path_start, path_len + 1);
 
 	return 0;
 }
