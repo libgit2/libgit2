@@ -2661,8 +2661,7 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const cha
 
 	if (last) {
 		path += git_encode_varint((unsigned char *) path,
-					  disk_size,
-					  path_len - same_len);
+					  disk_size, same_len);
 	}
 	memcpy(path, path_start, path_len);
 
