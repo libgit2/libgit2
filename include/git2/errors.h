@@ -103,7 +103,8 @@ typedef enum {
 	GITERR_FILESYSTEM,
 	GITERR_PATCH,
 	GITERR_WORKTREE,
-	GITERR_SHA1
+	GITERR_SHA1,
+	GITERR_OVERFLOW
 } git_error_t;
 
 /**
@@ -147,6 +148,17 @@ GIT_EXTERN(void) giterr_set_str(int error_class, const char *string);
  * internal value.
  */
 GIT_EXTERN(void) giterr_set_oom(void);
+
+/**
+ * Set the error message to a special value for integer overflows.
+ *
+ * The normal `giterr_set_str()` function attempts to `strdup()` the string
+ * that is passed in.  This is not a good idea when the error in question
+ * is a memory allocation failure.  That circumstance has a special setter
+ * function that sets the error string to a known and statically allocated
+ * internal value.
+ */
+GIT_EXTERN(void) giterr_set_overflow(void);
 
 /** @} */
 GIT_END_DECL

@@ -117,7 +117,7 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 
 	text_len = search - buffer;
 
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, text_len, 1);
+	GITERR_CHECK_ADD(&alloc_len, text_len, 1);
 	tag->tag_name = git__malloc(alloc_len);
 	GITERR_CHECK_ALLOC(tag->tag_name);
 
@@ -148,7 +148,7 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 
 		text_len = buffer_end - ++buffer;
 
-		GITERR_CHECK_ALLOC_ADD(&alloc_len, text_len, 1);
+		GITERR_CHECK_ADD(&alloc_len, text_len, 1);
 		tag->message = git__malloc(alloc_len);
 		GITERR_CHECK_ALLOC(tag->message);
 

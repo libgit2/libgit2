@@ -689,7 +689,7 @@ int git_packfile_unpack(
 	if (cached && stack_size == 1) {
 		void *data = obj->data;
 
-		GITERR_CHECK_ALLOC_ADD(&alloclen, obj->len, 1);
+		GITERR_CHECK_ADD(&alloclen, obj->len, 1);
 		obj->data = git__malloc(alloclen);
 		GITERR_CHECK_ALLOC(obj->data);
 
@@ -853,7 +853,7 @@ static int packfile_unpack_compressed(
 	z_stream stream;
 	unsigned char *buffer, *in;
 
-	GITERR_CHECK_ALLOC_ADD(&buf_size, size, 1);
+	GITERR_CHECK_ADD(&buf_size, size, 1);
 	buffer = git__calloc(1, buf_size);
 	GITERR_CHECK_ALLOC(buffer);
 
@@ -1121,8 +1121,8 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 	if (path_len < strlen(".idx"))
 		return git_odb__error_notfound("invalid packfile path", NULL, 0);
 
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, sizeof(*p), path_len);
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 2);
+	GITERR_CHECK_ADD(&alloc_len, sizeof(*p), path_len);
+	GITERR_CHECK_ADD(&alloc_len, alloc_len, 2);
 
 	p = git__calloc(1, alloc_len);
 	GITERR_CHECK_ALLOC(p);

@@ -159,7 +159,7 @@ void test_core_errors__restore_oom(void)
 static int test_arraysize_multiply(size_t nelem, size_t size)
 {
 	size_t out;
-	GITERR_CHECK_ALLOC_MULTIPLY(&out, nelem, size);
+	GITERR_CHECK_MULTIPLY(&out, nelem, size);
 	return 0;
 }
 
@@ -174,14 +174,14 @@ void test_core_errors__integer_overflow_alloc_multiply(void)
 	cl_git_fail(test_arraysize_multiply(SIZE_MAX-1, sizeof(void *)));
 	cl_git_fail(test_arraysize_multiply((SIZE_MAX/sizeof(void *))+1, sizeof(void *)));
 
-	cl_assert_equal_i(GITERR_NOMEMORY, giterr_last()->klass);
-	cl_assert_equal_s("Out of memory", giterr_last()->message);
+	cl_assert_equal_i(GITERR_OVERFLOW, giterr_last()->klass);
+	cl_assert_equal_s("Integer overflow", giterr_last()->message);
 }
 
 static int test_arraysize_add(size_t one, size_t two)
 {
 	size_t out;
-	GITERR_CHECK_ALLOC_ADD(&out, one, two);
+	GITERR_CHECK_ADD(&out, one, two);
 	return 0;
 }
 
@@ -194,8 +194,8 @@ void test_core_errors__integer_overflow_alloc_add(void)
 	cl_git_fail(test_arraysize_multiply(SIZE_MAX-1, 2));
 	cl_git_fail(test_arraysize_multiply(SIZE_MAX, SIZE_MAX));
 
-	cl_assert_equal_i(GITERR_NOMEMORY, giterr_last()->klass);
-	cl_assert_equal_s("Out of memory", giterr_last()->message);
+	cl_assert_equal_i(GITERR_OVERFLOW, giterr_last()->klass);
+	cl_assert_equal_s("Integer overflow", giterr_last()->message);
 }
 
 void test_core_errors__integer_overflow_sets_oom(void)
@@ -212,11 +212,11 @@ void test_core_errors__integer_overflow_sets_oom(void)
 
 	giterr_clear();
 	cl_assert(GIT_ADD_SIZET_OVERFLOW(&out, SIZE_MAX, SIZE_MAX));
-	cl_assert_equal_i(GITERR_NOMEMORY, giterr_last()->klass);
-	cl_assert_equal_s("Out of memory", giterr_last()->message);
+	cl_assert_equal_i(GITERR_OVERFLOW, giterr_last()->klass);
+	cl_assert_equal_s("Integer overflow", giterr_last()->message);
 
 	giterr_clear();
 	cl_assert(GIT_ADD_SIZET_OVERFLOW(&out, SIZE_MAX, SIZE_MAX));
-	cl_assert_equal_i(GITERR_NOMEMORY, giterr_last()->klass);
-	cl_assert_equal_s("Out of memory", giterr_last()->message);
+	cl_assert_equal_i(GITERR_OVERFLOW, giterr_last()->klass);
+	cl_assert_equal_s("Integer overflow", giterr_last()->message);
 }

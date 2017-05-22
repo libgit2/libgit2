@@ -211,27 +211,27 @@ GIT_INLINE(void) git__init_structure(void *structure, size_t len, unsigned int v
 
 /** Check for additive overflow, setting an error if would occur. */
 #define GIT_ADD_SIZET_OVERFLOW(out, one, two) \
-	(git__add_sizet_overflow(out, one, two) ? (giterr_set_oom(), 1) : 0)
+	(git__add_sizet_overflow(out, one, two) ? (giterr_set_overflow(), 1) : 0)
 
 /** Check for additive overflow, setting an error if would occur. */
 #define GIT_MULTIPLY_SIZET_OVERFLOW(out, nelem, elsize) \
-	(git__multiply_sizet_overflow(out, nelem, elsize) ? (giterr_set_oom(), 1) : 0)
+	(git__multiply_sizet_overflow(out, nelem, elsize) ? (giterr_set_overflow(), 1) : 0)
 
 /** Check for additive overflow, failing if it would occur. */
-#define GITERR_CHECK_ALLOC_ADD(out, one, two) \
+#define GITERR_CHECK_ADD(out, one, two) \
 	if (GIT_ADD_SIZET_OVERFLOW(out, one, two)) { return -1; }
 
-#define GITERR_CHECK_ALLOC_ADD3(out, one, two, three) \
+#define GITERR_CHECK_ADD3(out, one, two, three) \
 	if (GIT_ADD_SIZET_OVERFLOW(out, one, two) || \
 		GIT_ADD_SIZET_OVERFLOW(out, *(out), three)) { return -1; }
 
-#define GITERR_CHECK_ALLOC_ADD4(out, one, two, three, four) \
+#define GITERR_CHECK_ADD4(out, one, two, three, four) \
 	if (GIT_ADD_SIZET_OVERFLOW(out, one, two) || \
 		GIT_ADD_SIZET_OVERFLOW(out, *(out), three) || \
 		GIT_ADD_SIZET_OVERFLOW(out, *(out), four)) { return -1; }
 
 /** Check for multiplicative overflow, failing if it would occur. */
-#define GITERR_CHECK_ALLOC_MULTIPLY(out, nelem, elsize) \
+#define GITERR_CHECK_MULTIPLY(out, nelem, elsize) \
 	if (GIT_MULTIPLY_SIZET_OVERFLOW(out, nelem, elsize)) { return -1; }
 
 /* NOTE: other giterr functions are in the public errors.h header file */

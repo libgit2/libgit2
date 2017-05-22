@@ -139,7 +139,7 @@ int git_futils_readbuffer_fd(git_buf *buf, git_file fd, size_t len)
 		return -1;
 	}
 
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, len, 1);
+	GITERR_CHECK_ADD(&alloc_len, len, 1);
 	if (git_buf_grow(buf, alloc_len) < 0)
 		return -1;
 
@@ -621,7 +621,7 @@ retry_lstat:
 			char *cache_path;
 			size_t alloc_size;
 
-			GITERR_CHECK_ALLOC_ADD(&alloc_size, make_path.size, 1);
+			GITERR_CHECK_ADD(&alloc_size, make_path.size, 1);
 			if (!git__is_uint32(alloc_size))
 				return -1;
 			cache_path = git_pool_malloc(opts->pool, (uint32_t)alloc_size);
@@ -887,7 +887,7 @@ static int cp_link(const char *from, const char *to, size_t link_size)
 	char *link_data;
 	size_t alloc_size;
 
-	GITERR_CHECK_ALLOC_ADD(&alloc_size, link_size, 1);
+	GITERR_CHECK_ADD(&alloc_size, link_size, 1);
 	link_data = git__malloc(alloc_size);
 	GITERR_CHECK_ALLOC(link_data);
 

@@ -8,19 +8,19 @@
 #nodef GITERR_CHECK_ALLOC(ptr) if (ptr == NULL) { __coverity_panic__(); }
 #nodef GITERR_CHECK_ALLOC_BUF(buf) if (buf == NULL || git_buf_oom(buf)) { __coverity_panic__(); }
 
-#nodef GITERR_CHECK_ALLOC_ADD(out, one, two) \
+#nodef GITERR_CHECK_ADD(out, one, two) \
 	if (GIT_ADD_SIZET_OVERFLOW(out, one, two)) { __coverity_panic__(); }
 
-#nodef GITERR_CHECK_ALLOC_ADD3(out, one, two, three) \
+#nodef GITERR_CHECK_ADD3(out, one, two, three) \
 	if (GIT_ADD_SIZET_OVERFLOW(out, one, two) || \
 		GIT_ADD_SIZET_OVERFLOW(out, *(out), three)) { __coverity_panic__(); }
 
-#nodef GITERR_CHECK_ALLOC_ADD4(out, one, two, three, four) \
+#nodef GITERR_CHECK_ADD4(out, one, two, three, four) \
 	if (GIT_ADD_SIZET_OVERFLOW(out, one, two) || \
 		GIT_ADD_SIZET_OVERFLOW(out, *(out), three) || \
 		GIT_ADD_SIZET_OVERFLOW(out, *(out), four)) { __coverity_panic__(); }
 
-#nodef GITERR_CHECK_ALLOC_MULTIPLY(out, nelem, elsize) \
+#nodef GITERR_CHECK_MULTIPLY(out, nelem, elsize) \
 	if (GIT_MULTIPLY_SIZET_OVERFLOW(out, nelem, elsize)) { __coverity_panic__(); }
 
 #nodef GITERR_CHECK_VERSION(S,V,N) if (giterr__check_version(S,V,N) < 0)  { __coverity_panic__(); }

@@ -363,7 +363,7 @@ int git_filebuf_open_withsize(git_filebuf *file, const char *path, int flags, mo
 		file->path_original = git_buf_detach(&resolved_path);
 
 		/* create the locking path by appending ".lock" to the original */
-		GITERR_CHECK_ALLOC_ADD(&alloc_len, path_len, GIT_FILELOCK_EXTLENGTH);
+		GITERR_CHECK_ADD(&alloc_len, path_len, GIT_FILELOCK_EXTLENGTH);
 		file->path_lock = git__malloc(alloc_len);
 		GITERR_CHECK_ALLOC(file->path_lock);
 

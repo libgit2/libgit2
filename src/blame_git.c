@@ -45,8 +45,8 @@ static int make_origin(git_blame__origin **out, git_commit *commit, const char *
 			path, GIT_OBJ_BLOB)) < 0)
 		return error;
 
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, sizeof(*o), path_len);
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 1);
+	GITERR_CHECK_ADD(&alloc_len, sizeof(*o), path_len);
+	GITERR_CHECK_ADD(&alloc_len, alloc_len, 1);
 	o = git__calloc(1, alloc_len);
 	GITERR_CHECK_ALLOC(o);
 

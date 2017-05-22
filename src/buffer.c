@@ -155,7 +155,7 @@ int git_buf_set(git_buf *buf, const void *data, size_t len)
 		git_buf_clear(buf);
 	} else {
 		if (data != buf->ptr) {
-			GITERR_CHECK_ALLOC_ADD(&alloclen, len, 1);
+			GITERR_CHECK_ADD(&alloclen, len, 1);
 			ENSURE_SIZE(buf, alloclen);
 			memmove(buf->ptr, data, len);
 		}
@@ -186,7 +186,7 @@ int git_buf_sets(git_buf *buf, const char *string)
 int git_buf_putc(git_buf *buf, char c)
 {
 	size_t new_size;
-	GITERR_CHECK_ALLOC_ADD(&new_size, buf->size, 2);
+	GITERR_CHECK_ADD(&new_size, buf->size, 2);
 	ENSURE_SIZE(buf, new_size);
 	buf->ptr[buf->size++] = c;
 	buf->ptr[buf->size] = '\0';
@@ -196,8 +196,8 @@ int git_buf_putc(git_buf *buf, char c)
 int git_buf_putcn(git_buf *buf, char c, size_t len)
 {
 	size_t new_size;
-	GITERR_CHECK_ALLOC_ADD(&new_size, buf->size, len);
-	GITERR_CHECK_ALLOC_ADD(&new_size, new_size, 1);
+	GITERR_CHECK_ADD(&new_size, buf->size, len);
+	GITERR_CHECK_ADD(&new_size, new_size, 1);
 	ENSURE_SIZE(buf, new_size);
 	memset(buf->ptr + buf->size, c, len);
 	buf->size += len;
@@ -212,8 +212,8 @@ int git_buf_put(git_buf *buf, const char *data, size_t len)
 
 		assert(data);
 		
-		GITERR_CHECK_ALLOC_ADD(&new_size, buf->size, len);
-		GITERR_CHECK_ALLOC_ADD(&new_size, new_size, 1);
+		GITERR_CHECK_ADD(&new_size, buf->size, len);
+		GITERR_CHECK_ADD(&new_size, new_size, 1);
 		ENSURE_SIZE(buf, new_size);
 		memmove(buf->ptr + buf->size, data, len);
 		buf->size += len;
@@ -238,9 +238,9 @@ int git_buf_encode_base64(git_buf *buf, const char *data, size_t len)
 	const uint8_t *read = (const uint8_t *)data;
 	size_t blocks = (len / 3) + !!extra, alloclen;
 
-	GITERR_CHECK_ALLOC_ADD(&blocks, blocks, 1);
-	GITERR_CHECK_ALLOC_MULTIPLY(&alloclen, blocks, 4);
-	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, buf->size);
+	GITERR_CHECK_ADD(&blocks, blocks, 1);
+	GITERR_CHECK_MULTIPLY(&alloclen, blocks, 4);
+	GITERR_CHECK_ADD(&alloclen, alloclen, buf->size);
 
 	ENSURE_SIZE(buf, alloclen);
 	write = (uint8_t *)&buf->ptr[buf->size];
@@ -305,8 +305,8 @@ int git_buf_decode_base64(git_buf *buf, const char *base64, size_t len)
 	}
 
 	assert(len % 4 == 0);
-	GITERR_CHECK_ALLOC_ADD(&new_size, (len / 4 * 3), buf->size);
-	GITERR_CHECK_ALLOC_ADD(&new_size, new_size, 1);
+	GITERR_CHECK_ADD(&new_size, (len / 4 * 3), buf->size);
+	GITERR_CHECK_ADD(&new_size, new_size, 1);
 	ENSURE_SIZE(buf, new_size);
 
 	for (i = 0; i < len; i += 4) {
@@ -337,9 +337,9 @@ int git_buf_encode_base85(git_buf *buf, const char *data, size_t len)
 {
 	size_t blocks = (len / 4) + !!(len % 4), alloclen;
 
-	GITERR_CHECK_ALLOC_MULTIPLY(&alloclen, blocks, 5);
-	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, buf->size);
-	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
+	GITERR_CHECK_MULTIPLY(&alloclen, blocks, 5);
+	GITERR_CHECK_ADD(&alloclen, alloclen, buf->size);
+	GITERR_CHECK_ADD(&alloclen, alloclen, 1);
 
 	ENSURE_SIZE(buf, alloclen);
 
@@ -406,8 +406,8 @@ int git_buf_decode_base85(
 		return -1;
 	}
 
-	GITERR_CHECK_ALLOC_ADD(&new_size, output_len, buf->size);
-	GITERR_CHECK_ALLOC_ADD(&new_size, new_size, 1);
+	GITERR_CHECK_ADD(&new_size, output_len, buf->size);
+	GITERR_CHECK_ADD(&new_size, new_size, 1);
 	ENSURE_SIZE(buf, new_size);
 
 	while (output_len) {
@@ -459,8 +459,8 @@ int git_buf_vprintf(git_buf *buf, const char *format, va_list ap)
 	size_t expected_size, new_size;
 	int len;
 
-	GITERR_CHECK_ALLOC_MULTIPLY(&expected_size, strlen(format), 2);
-	GITERR_CHECK_ALLOC_ADD(&expected_size, expected_size, buf->size);
+	GITERR_CHECK_MULTIPLY(&expected_size, strlen(format), 2);
+	GITERR_CHECK_ADD(&expected_size, expected_size, buf->size);
 	ENSURE_SIZE(buf, expected_size);
 
 	while (1) {
@@ -486,8 +486,8 @@ int git_buf_vprintf(git_buf *buf, const char *format, va_list ap)
 			break;
 		}
 
-		GITERR_CHECK_ALLOC_ADD(&new_size, buf->size, len);
-		GITERR_CHECK_ALLOC_ADD(&new_size, new_size, 1);
+		GITERR_CHECK_ADD(&new_size, buf->size, len);
+		GITERR_CHECK_ADD(&new_size, new_size, 1);
 		ENSURE_SIZE(buf, new_size);
 	}
 
@@ -630,10 +630,10 @@ int git_buf_join_n(git_buf *buf, char separator, int nbuf, ...)
 
 		segment_len = strlen(segment);
 
-		GITERR_CHECK_ALLOC_ADD(&total_size, total_size, segment_len);
+		GITERR_CHECK_ADD(&total_size, total_size, segment_len);
 
 		if (segment_len == 0 || segment[segment_len - 1] != separator)
-			GITERR_CHECK_ALLOC_ADD(&total_size, total_size, 1);
+			GITERR_CHECK_ADD(&total_size, total_size, 1);
 	}
 	va_end(ap);
 
@@ -641,7 +641,7 @@ int git_buf_join_n(git_buf *buf, char separator, int nbuf, ...)
 	if (total_size == 0)
 		return 0;
 
-	GITERR_CHECK_ALLOC_ADD(&total_size, total_size, 1);
+	GITERR_CHECK_ADD(&total_size, total_size, 1);
 	if (git_buf_grow_by(buf, total_size) < 0)
 		return -1;
 
@@ -721,9 +721,9 @@ int git_buf_join(
 	if (str_a >= buf->ptr && str_a < buf->ptr + buf->size)
 		offset_a = str_a - buf->ptr;
 
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, strlen_a, strlen_b);
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, need_sep);
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 1);
+	GITERR_CHECK_ADD(&alloc_len, strlen_a, strlen_b);
+	GITERR_CHECK_ADD(&alloc_len, alloc_len, need_sep);
+	GITERR_CHECK_ADD(&alloc_len, alloc_len, 1);
 	if (git_buf_grow(buf, alloc_len) < 0)
 		return -1;
 	assert(buf->ptr);
@@ -775,11 +775,11 @@ int git_buf_join3(
 			sep_b = (str_b[len_b - 1] != separator);
 	}
 
-	GITERR_CHECK_ALLOC_ADD(&len_total, len_a, sep_a);
-	GITERR_CHECK_ALLOC_ADD(&len_total, len_total, len_b);
-	GITERR_CHECK_ALLOC_ADD(&len_total, len_total, sep_b);
-	GITERR_CHECK_ALLOC_ADD(&len_total, len_total, len_c);
-	GITERR_CHECK_ALLOC_ADD(&len_total, len_total, 1);
+	GITERR_CHECK_ADD(&len_total, len_a, sep_a);
+	GITERR_CHECK_ADD(&len_total, len_total, len_b);
+	GITERR_CHECK_ADD(&len_total, len_total, sep_b);
+	GITERR_CHECK_ADD(&len_total, len_total, len_c);
+	GITERR_CHECK_ADD(&len_total, len_total, 1);
 	if (git_buf_grow(buf, len_total) < 0)
 		return -1;
 
@@ -843,8 +843,8 @@ int git_buf_splice(
 	/* Ported from git.git
 	 * https://github.com/git/git/blob/16eed7c/strbuf.c#L159-176
 	 */
-	GITERR_CHECK_ALLOC_ADD(&new_size, (buf->size - nb_to_remove), nb_to_insert);
-	GITERR_CHECK_ALLOC_ADD(&alloc_size, new_size, 1);
+	GITERR_CHECK_ADD(&new_size, (buf->size - nb_to_remove), nb_to_insert);
+	GITERR_CHECK_ADD(&alloc_size, new_size, 1);
 	ENSURE_SIZE(buf, alloc_size);
 
 	memmove(splice_loc + nb_to_insert,

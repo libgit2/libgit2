@@ -285,7 +285,7 @@ int git_diff_format_email(
 			goto on_error;
 		}
 
-		GITERR_CHECK_ALLOC_ADD(&allocsize, offset, 1);
+		GITERR_CHECK_ADD(&allocsize, offset, 1);
 		summary = git__calloc(allocsize, sizeof(char));
 		GITERR_CHECK_ALLOC(summary);
 

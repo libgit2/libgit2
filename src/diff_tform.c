@@ -826,7 +826,7 @@ int git_diff_find_similar(
 	if ((opts.flags & GIT_DIFF_FIND_ALL) == 0)
 		goto cleanup;
 
-	GITERR_CHECK_ALLOC_MULTIPLY(&sigcache_size, num_deltas, 2);
+	GITERR_CHECK_MULTIPLY(&sigcache_size, num_deltas, 2);
 	sigcache = git__calloc(sigcache_size, sizeof(void *));
 	GITERR_CHECK_ALLOC(sigcache);
 

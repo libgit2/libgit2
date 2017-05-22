@@ -264,7 +264,7 @@ int git_odb__hashlink(git_oid *out, const char *path)
 		int read_len;
 		size_t alloc_size;
 
-		GITERR_CHECK_ALLOC_ADD(&alloc_size, size, 1);
+		GITERR_CHECK_ADD(&alloc_size, size, 1);
 		link_data = git__malloc(alloc_size);
 		GITERR_CHECK_ALLOC(link_data);
 

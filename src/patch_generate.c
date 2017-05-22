@@ -500,9 +500,9 @@ static int patch_generated_with_delta_alloc(
 	size_t new_len = *new_path ? strlen(*new_path) : 0;
 	size_t alloc_len;
 
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, sizeof(*pd), old_len);
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, new_len);
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 2);
+	GITERR_CHECK_ADD(&alloc_len, sizeof(*pd), old_len);
+	GITERR_CHECK_ADD(&alloc_len, alloc_len, new_len);
+	GITERR_CHECK_ADD(&alloc_len, alloc_len, 2);
 
 	*out = pd = git__calloc(1, alloc_len);
 	GITERR_CHECK_ALLOC(pd);
