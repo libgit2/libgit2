@@ -36,7 +36,7 @@ int git_encode_varint(unsigned char *buf, size_t bufsize, uintmax_t value)
 	while (value >>= 7)
 		varint[--pos] = 128 | (--value & 127);
 	if (buf) {
-		if (bufsize < pos)
+		if (bufsize < (sizeof(varint) - pos))
 			return -1;
 		memcpy(buf, varint + pos, sizeof(varint) - pos);
 	}
