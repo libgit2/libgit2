@@ -2256,7 +2256,7 @@ int git_repository_is_empty(git_repository *repo)
 	return is_empty;
 }
 
-int git_repository_item_path(git_buf *out, git_repository *repo, git_repository_item_t item)
+int git_repository_item_path(git_buf *out, const git_repository *repo, git_repository_item_t item)
 {
 	const char *parent;
 
@@ -2296,13 +2296,13 @@ int git_repository_item_path(git_buf *out, git_repository *repo, git_repository_
 	return 0;
 }
 
-const char *git_repository_path(git_repository *repo)
+const char *git_repository_path(const git_repository *repo)
 {
 	assert(repo);
 	return repo->gitdir;
 }
 
-const char *git_repository_workdir(git_repository *repo)
+const char *git_repository_workdir(const git_repository *repo)
 {
 	assert(repo);
 
@@ -2312,7 +2312,7 @@ const char *git_repository_workdir(git_repository *repo)
 	return repo->workdir;
 }
 
-const char *git_repository_commondir(git_repository *repo)
+const char *git_repository_commondir(const git_repository *repo)
 {
 	assert(repo);
 	return repo->commondir;
@@ -2362,13 +2362,13 @@ int git_repository_set_workdir(
 	return error;
 }
 
-int git_repository_is_bare(git_repository *repo)
+int git_repository_is_bare(const git_repository *repo)
 {
 	assert(repo);
 	return repo->is_bare;
 }
 
-int git_repository_is_worktree(git_repository *repo)
+int git_repository_is_worktree(const git_repository *repo)
 {
 	assert(repo);
 	return repo->is_worktree;

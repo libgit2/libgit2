@@ -440,7 +440,7 @@ typedef enum {
  * @param item The repository item for which to retrieve the path
  * @return 0, GIT_ENOTFOUND if the path cannot exist or an error code
  */
-GIT_EXTERN(int) git_repository_item_path(git_buf *out, git_repository *repo, git_repository_item_t item);
+GIT_EXTERN(int) git_repository_item_path(git_buf *out, const git_repository *repo, git_repository_item_t item);
 
 /**
  * Get the path of this repository
@@ -451,7 +451,7 @@ GIT_EXTERN(int) git_repository_item_path(git_buf *out, git_repository *repo, git
  * @param repo A repository object
  * @return the path to the repository
  */
-GIT_EXTERN(const char *) git_repository_path(git_repository *repo);
+GIT_EXTERN(const char *) git_repository_path(const git_repository *repo);
 
 /**
  * Get the path of the working directory for this repository
@@ -462,7 +462,7 @@ GIT_EXTERN(const char *) git_repository_path(git_repository *repo);
  * @param repo A repository object
  * @return the path to the working dir, if it exists
  */
-GIT_EXTERN(const char *) git_repository_workdir(git_repository *repo);
+GIT_EXTERN(const char *) git_repository_workdir(const git_repository *repo);
 
 /**
  * Get the path of the shared common directory for this repository
@@ -473,7 +473,7 @@ GIT_EXTERN(const char *) git_repository_workdir(git_repository *repo);
  * @param repo A repository object
  * @return the path to the common dir
  */
-GIT_EXTERN(const char *) git_repository_commondir(git_repository *repo);
+GIT_EXTERN(const char *) git_repository_commondir(const git_repository *repo);
 
 /**
  * Set the path to the working directory for this repository
@@ -501,7 +501,7 @@ GIT_EXTERN(int) git_repository_set_workdir(
  * @param repo Repo to test
  * @return 1 if the repository is bare, 0 otherwise.
  */
-GIT_EXTERN(int) git_repository_is_bare(git_repository *repo);
+GIT_EXTERN(int) git_repository_is_bare(const git_repository *repo);
 
 /**
  * Check if a repository is a linked work tree
@@ -509,7 +509,7 @@ GIT_EXTERN(int) git_repository_is_bare(git_repository *repo);
  * @param repo Repo to test
  * @return 1 if the repository is a linked work tree, 0 otherwise.
  */
-GIT_EXTERN(int) git_repository_is_worktree(git_repository *repo);
+GIT_EXTERN(int) git_repository_is_worktree(const git_repository *repo);
 
 /**
  * Get the configuration file for this repository.
