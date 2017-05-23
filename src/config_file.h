@@ -12,9 +12,9 @@
 #include "git2/sys/config.h"
 #include "git2/config.h"
 
-GIT_INLINE(int) git_config_file_open(git_config_backend *cfg, unsigned int level)
+GIT_INLINE(int) git_config_file_open(git_config_backend *cfg, unsigned int level, const git_repository *repo)
 {
-	return cfg->open(cfg, level);
+	return cfg->open(cfg, level, repo);
 }
 
 GIT_INLINE(void) git_config_file_free(git_config_backend *cfg)

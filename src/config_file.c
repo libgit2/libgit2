@@ -105,6 +105,7 @@ typedef struct {
 	diskfile_header header;
 
 	git_config_level_t level;
+	const git_repository *repo;
 
 	bool locked;
 	git_filebuf locked_buf;
@@ -281,12 +282,13 @@ static void config_file_clear(struct config_file *file)
 	git__free(file->path);
 }
 
-static int config_open(git_config_backend *cfg, git_config_level_t level)
+static int config_open(git_config_backend *cfg, git_config_level_t level, const git_repository *repo)
 {
 	int res;
 	diskfile_backend *b = (diskfile_backend *)cfg;
 
 	b->level = level;
+	b->repo = repo;
 
 	if ((res = refcounted_strmap_alloc(&b->header.values)) < 0)
 		return res;
@@ -439,7 +441,7 @@ static int config_iterator_new(
 	if ((error = config_snapshot(&snapshot, backend)) < 0)
 		return error;
 
-	if ((error = snapshot->open(snapshot, b->level)) < 0)
+	if ((error = snapshot->open(snapshot, b->level, b->repo)) < 0)
 		return error;
 
 	it = git__calloc(1, sizeof(git_config_file_iter));
@@ -831,7 +833,7 @@ static void backend_readonly_free(git_config_backend *_backend)
 	git__free(backend);
 }
 
-static int config_readonly_open(git_config_backend *cfg, git_config_level_t level)
+static int config_readonly_open(git_config_backend *cfg, git_config_level_t level, const git_repository *repo)
 {
 	diskfile_readonly_backend *b = (diskfile_readonly_backend *) cfg;
 	diskfile_backend *src = b->snapshot_from;
@@ -842,8 +844,9 @@ static int config_readonly_open(git_config_backend *cfg, git_config_level_t leve
 	if (!src_header->parent.readonly && (error = config_refresh(&src_header->parent)) < 0)
 		return error;
 
-	/* We're just copying data, don't care about the level */
+	/* We're just copying data, don't care about the level or repo*/
 	GIT_UNUSED(level);
+	GIT_UNUSED(repo);
 
 	if ((src_map = refcounted_strmap_take(src_header)) == NULL)
 		return -1;

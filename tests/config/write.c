@@ -93,9 +93,9 @@ void test_config_write__delete_value_at_specific_level(void)
 
 	cl_git_pass(git_config_new(&cfg));
 	cl_git_pass(git_config_add_file_ondisk(cfg, "config9",
-		GIT_CONFIG_LEVEL_LOCAL, 0));
+		GIT_CONFIG_LEVEL_LOCAL, NULL, 0));
 	cl_git_pass(git_config_add_file_ondisk(cfg, "config15",
-		GIT_CONFIG_LEVEL_GLOBAL, 0));
+		GIT_CONFIG_LEVEL_GLOBAL, NULL, 0));
 
 	cl_git_pass(git_config_open_level(&cfg_specific, cfg, GIT_CONFIG_LEVEL_GLOBAL));
 
@@ -368,9 +368,9 @@ void test_config_write__add_value_at_specific_level(void)
 	// open config15 as global level config file
 	cl_git_pass(git_config_new(&cfg));
 	cl_git_pass(git_config_add_file_ondisk(cfg, "config9",
-		GIT_CONFIG_LEVEL_LOCAL, 0));
+		GIT_CONFIG_LEVEL_LOCAL, NULL, 0));
 	cl_git_pass(git_config_add_file_ondisk(cfg, "config15",
-		GIT_CONFIG_LEVEL_GLOBAL, 0));
+		GIT_CONFIG_LEVEL_GLOBAL, NULL, 0));
 
 	cl_git_pass(git_config_open_level(&cfg_specific, cfg, GIT_CONFIG_LEVEL_GLOBAL));
 
