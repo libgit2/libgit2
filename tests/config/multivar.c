@@ -94,27 +94,27 @@ void test_config_multivar__get(void)
 	check_get_multivar_foreach(cfg, 2, 1);
 
 	/* add another that has the _name entry */
-	cl_git_pass(git_config_add_file_ondisk(cfg, "config/config9", GIT_CONFIG_LEVEL_SYSTEM, 1));
+	cl_git_pass(git_config_add_file_ondisk(cfg, "config/config9", GIT_CONFIG_LEVEL_SYSTEM, NULL, 1));
 	check_get_multivar_foreach(cfg, 3, 2);
 
 	/* add another that does not have the _name entry */
-	cl_git_pass(git_config_add_file_ondisk(cfg, "config/config0", GIT_CONFIG_LEVEL_GLOBAL, 1));
+	cl_git_pass(git_config_add_file_ondisk(cfg, "config/config0", GIT_CONFIG_LEVEL_GLOBAL, NULL, 1));
 	check_get_multivar_foreach(cfg, 3, 2);
 
 	/* add another that does not have the _name entry at the end */
-	cl_git_pass(git_config_add_file_ondisk(cfg, "config/config1", GIT_CONFIG_LEVEL_APP, 1));
+	cl_git_pass(git_config_add_file_ondisk(cfg, "config/config1", GIT_CONFIG_LEVEL_APP, NULL, 1));
 	check_get_multivar_foreach(cfg, 3, 2);
 
 	/* drop original file */
-	cl_git_pass(git_config_add_file_ondisk(cfg, "config/config2", GIT_CONFIG_LEVEL_LOCAL, 1));
+	cl_git_pass(git_config_add_file_ondisk(cfg, "config/config2", GIT_CONFIG_LEVEL_LOCAL, NULL, 1));
 	check_get_multivar_foreach(cfg, 1, 1);
 
 	/* drop other file with match */
-	cl_git_pass(git_config_add_file_ondisk(cfg, "config/config3", GIT_CONFIG_LEVEL_SYSTEM, 1));
+	cl_git_pass(git_config_add_file_ondisk(cfg, "config/config3", GIT_CONFIG_LEVEL_SYSTEM, NULL, 1));
 	check_get_multivar_foreach(cfg, 0, 0);
 
 	/* reload original file (add different place in order) */
-	cl_git_pass(git_config_add_file_ondisk(cfg, "config/config11", GIT_CONFIG_LEVEL_SYSTEM, 1));
+	cl_git_pass(git_config_add_file_ondisk(cfg, "config/config11", GIT_CONFIG_LEVEL_SYSTEM, NULL, 1));
 	check_get_multivar_foreach(cfg, 2, 1);
 
 	check_get_multivar(cfg, 2);

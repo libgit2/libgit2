@@ -58,7 +58,7 @@ struct git_config_backend {
 	struct git_config *cfg;
 
 	/* Open means open the file/database and parse if necessary */
-	int (*open)(struct git_config_backend *, git_config_level_t level);
+	int (*open)(struct git_config_backend *, git_config_level_t level, const git_repository *repo);
 	int (*get)(struct git_config_backend *, const char *key, git_config_entry **entry);
 	int (*set)(struct git_config_backend *, const char *key, const char *value);
 	int (*set_multivar)(git_config_backend *cfg, const char *name, const char *regexp, const char *value);
@@ -111,6 +111,8 @@ GIT_EXTERN(int) git_config_init_backend(
  * @param cfg the configuration to add the file to
  * @param file the configuration file (backend) to add
  * @param level the priority level of the backend
+ * @param repo optional repository to allow parsing of
+ *  conditional includes
  * @param force if a config file already exists for the given
  *  priority level, replace it
  * @return 0 on success, GIT_EEXISTS when adding more than one file
@@ -120,6 +122,7 @@ GIT_EXTERN(int) git_config_add_backend(
 	git_config *cfg,
 	git_config_backend *file,
 	git_config_level_t level,
+	const git_repository *repo,
 	int force);
 
 /** @} */
