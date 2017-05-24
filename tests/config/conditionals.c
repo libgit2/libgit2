@@ -76,6 +76,19 @@ void test_config_conditionals__gitdir(void)
 	git_buf_free(&path);
 }
 
+void test_config_conditionals__gitdir_i(void)
+{
+	git_buf path = GIT_BUF_INIT;
+
+	git_buf_joinpath(&path, clar_sandbox_path(), "empty_standard_repo");
+	assert_condition_includes("gitdir/i", path.ptr, true);
+
+	git_buf_joinpath(&path, clar_sandbox_path(), "EMPTY_STANDARD_REPO");
+	assert_condition_includes("gitdir/i", path.ptr, true);
+
+	git_buf_free(&path);
+}
+
 void test_config_conditionals__invalid_conditional_fails(void)
 {
 	assert_condition_includes("foobar", ".git", false);
