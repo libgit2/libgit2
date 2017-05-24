@@ -1609,11 +1609,12 @@ static int parse_include(struct reader *reader,
 	return result;
 }
 
-static int conditional_match_gitdir(
+static int do_match_gitdir(
 	int *matches,
 	const git_repository *repo,
 	const char *cfg_file,
-	const char *value)
+	const char *value,
+	bool case_insensitive)
 {
 	git_buf path = GIT_BUF_INIT;
 	int error, fnmatch_flags;
@@ -1637,9 +1638,10 @@ static int conditional_match_gitdir(
 		git_buf_puts(&path, "**");
 
 	fnmatch_flags = FNM_PATHNAME|FNM_LEADING_DIR;
+	if (case_insensitive)
+		fnmatch_flags |= FNM_IGNORECASE;
 
 	if ((error = p_fnmatch(path.ptr, git_repository_path(repo), fnmatch_flags)) < 0)
-
 		goto out;
 
 	*matches = (error == 0);
@@ -1649,11 +1651,30 @@ out:
 	return error;
 }
 
+static int conditional_match_gitdir(
+	int *matches,
+	const git_repository *repo,
+	const char *cfg_file,
+	const char *value)
+{
+	return do_match_gitdir(matches, repo, cfg_file, value, false);
+}
+
+static int conditional_match_gitdir_i(
+	int *matches,
+	const git_repository *repo,
+	const char *cfg_file,
+	const char *value)
+{
+	return do_match_gitdir(matches, repo, cfg_file, value, true);
+}
+
 static const struct {
 	const char *prefix;
 	int (*matches)(int *matches, const git_repository *repo, const char *cfg, const char *value);
 } conditions[] = {
-	{ "gitdir:", conditional_match_gitdir }
+	{ "gitdir:", conditional_match_gitdir },
+	{ "gitdir/i:", conditional_match_gitdir_i }
 };
 
 static int parse_conditional_include(struct reader *reader,
