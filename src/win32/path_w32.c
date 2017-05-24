@@ -18,8 +18,6 @@
 
 #define PATH__ABSOLUTE_LEN     3
 
-#define path__is_dirsep(p) ((p) == '/' || (p) == '\\')
-
 #define path__is_nt_namespace(p) \
 	(((p)[0] == '\\' && (p)[1] == '\\' && (p)[2] == '?' && (p)[3] == '\\') || \
 	 ((p)[0] == '/' && (p)[1] == '/' && (p)[2] == '?' && (p)[3] == '/'))
@@ -56,7 +54,7 @@ static wchar_t *path__skip_server(wchar_t *path)
 	wchar_t *c;
 
 	for (c = path; *c; c++) {
-		if (path__is_dirsep(*c))
+		if (git_path_is_dirsep(*c))
 			return c + 1;
 	}
 
