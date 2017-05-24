@@ -1609,6 +1609,86 @@ static int parse_include(struct reader *reader,
 	return result;
 }
 
+static int conditional_match_gitdir(
+	int *matches,
+	const git_repository *repo,
+	const char *cfg_file,
+	const char *value)
+{
+	git_buf path = GIT_BUF_INIT;
+	int error, fnmatch_flags;
+
+	if (value[0] == '.' && git_path_is_dirsep(value[1])) {
+		git_buf_sets(&path, git_path_dirname(cfg_file));
+		git_buf_joinpath(&path, path.ptr, value + 2);
+	} else if (value[0] == '~' && git_path_is_dirsep(value[1]))
+		git_sysdir_expand_global_file(&path, value + 1);
+	else if (!git_path_is_absolute(value))
+		git_buf_joinpath(&path, "**", value);
+	else
+		git_buf_sets(&path, value);
+
+	if (git_buf_oom(&path)) {
+		error = -1;
+		goto out;
+	}
+
+	if (git_path_is_dirsep(value[strlen(value) - 1]))
+		git_buf_puts(&path, "**");
+
+	fnmatch_flags = FNM_PATHNAME|FNM_LEADING_DIR;
+
+	if ((error = p_fnmatch(path.ptr, git_repository_path(repo), fnmatch_flags)) < 0)
+
+		goto out;
+
+	*matches = (error == 0);
+
+out:
+	git_buf_free(&path);
+	return error;
+}
+
+static const struct {
+	const char *prefix;
+	int (*matches)(int *matches, const git_repository *repo, const char *cfg, const char *value);
+} conditions[] = {
+	{ "gitdir:", conditional_match_gitdir }
+};
+
+static int parse_conditional_include(struct reader *reader,
+	struct parse_data *parse_data, const char *section, const char *file)
+{
+	char *condition;
+	size_t i;
+	int error = 0, matches;
+
+	if (!parse_data->repo)
+		return 0;
+
+	condition = git__substrdup(section + strlen("includeIf."),
+				   strlen(section) - strlen("includeIf.") - strlen(".path"));
+
+	for (i = 0; i < ARRAY_SIZE(conditions); i++) {
+		if (git__prefixcmp(condition, conditions[i].prefix))
+			continue;
+
+		if ((error = conditions[i].matches(&matches,
+						   parse_data->repo,
+						   reader->file->path,
+						   condition + strlen(conditions[i].prefix))) < 0)
+			break;
+
+		if (matches)
+			error = parse_include(reader, parse_data, file);
+
+		break;
+	}
+
+	git__free(condition);
+	return error;
+}
+
 static int read_on_variable(
 	struct reader *reader,
 	const char *current_section,
@@ -1653,6 +1733,11 @@ static int read_on_variable(
 	/* Add or append the new config option */
 	if (!git__strcmp(var->entry->name, "include.path"))
 		result = parse_include(reader, parse_data, var->entry->value);
+	else if (!git__prefixcmp(var->entry->name, "includeif.") &&
+	         !git__suffixcmp(var->entry->name, ".path"))
+		result = parse_conditional_include(reader, parse_data,
+						   var->entry->name, var->entry->value);
+
 
 	return result;
 }
