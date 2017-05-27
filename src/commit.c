@@ -313,22 +313,6 @@ int git_commit_create_on(
 		commit_parent_from_array, &data, false);
 }
 
-int git_commit_create_on_head(
-	git_oid *id,
-	git_repository *repo,
-	const git_signature *author,
-	const git_signature *committer,
-	const char *message_encoding,
-	const char *message,
-	const git_tree *tree,
-	size_t parent_count,
-	const git_commit *parents[])
-{
-	return git_commit_create_on(id, repo, GIT_HEAD_FILE,
-				    author, committer, message_encoding, message,
-				    tree, parent_count, parents);
-}
-
 int git_commit_create(
 	git_oid *id,
 	git_repository *repo,
@@ -443,9 +427,10 @@ int gather_commit_ids(const git_oid *id, void *payload)
 	return insert_commit(data->commits, data->repo, id);
 }
 
-int git_commit_create_fromstate(
+static int commit_fromstate(
 	git_oid *id,
 	git_repository *repo,
+	const char *update_ref,
 	const git_signature *author,
 	const git_signature *committer,
 	const char *message_encoding,
@@ -486,7 +471,7 @@ int git_commit_create_fromstate(
 	if ((error = git_tree_lookup(&tree, repo, &tree_id)) < 0)
 		goto cleanup;
 
-	error = git_commit_create_on(id, repo, GIT_HEAD_FILE,
+	error = git_commit_create_on(id, repo, update_ref,
 				     author, committer, message_encoding, message,
 				     tree, commits.length, (const git_commit **) commits.contents);
 
@@ -497,6 +482,28 @@ cleanup:
 	}
 	git_vector_free(&commits);
 	return 0;
+}
+
+int git_commit_create_fromstate(
+	git_oid *id,
+	git_repository *repo,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message)
+{
+	return commit_fromstate(id, repo, NULL, author, committer, message_encoding, message);
+}
+
+int git_commit_create_fromstate_on_head(
+	git_oid *id,
+	git_repository *repo,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message)
+{
+	return commit_fromstate(id, repo, GIT_HEAD_FILE, author, committer, message_encoding, message);
 }
 
 int git_commit__parse(void *_commit, git_odb_object *odb_obj)
