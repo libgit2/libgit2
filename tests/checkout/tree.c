@@ -435,6 +435,7 @@ void test_checkout_tree__pathlist_checkout_ignores_non_matches(void)
 
 	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
 	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/master"));
+	git_object_free(g_object);
 
 	cl_assert(git_path_exists("testrepo/README"));
 	cl_assert(git_path_exists("testrepo/branch_file.txt"));
