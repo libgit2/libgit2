@@ -398,20 +398,20 @@ GIT_EXTERN(int) git_commit_create_on(
 	const git_commit *parents[]);
 
 /**
- * Create a commit and update the current branch
+ * Create a commit from the current state and update the current branch
  *
- * @see git_commit_create
+ * Like `git_commit_create_fromstate`; additionally the current branch will be
+ * updated.
+ *
+ * @see git_commit_create_fromstate
  */
-GIT_EXTERN(int) git_commit_create_on_head(
+GIT_EXTERN(int) git_commit_create_fromstate_on_head(
 	git_oid *id,
 	git_repository *repo,
 	const git_signature *author,
 	const git_signature *committer,
 	const char *message_encoding,
-	const char *message,
-	const git_tree *tree,
-	size_t parent_count,
-	const git_commit *parents[]);
+	const char *message);
 
 /**
  * Create new commit in the repository using a variable argument list.
@@ -523,9 +523,8 @@ GIT_EXTERN(int) git_commit_create_buffer(
  * variant takes the current state of the repository instead of
  * arguments.
  *
- * The current branch will be updated. The tree will be created from
- * the repository's index. The parents will be taken from HEAD and
- * MERGE_HEAD, if applicable.
+ * The tree will be created from the repository's index. The parents will be
+ * taken from HEAD and MERGE_HEAD, if applicable.
  *
  * @see git_commit_create
  */
