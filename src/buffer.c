@@ -826,6 +826,34 @@ int git_buf_cmp(const git_buf *a, const git_buf *b)
 		(a->size < b->size) ? -1 : (a->size > b->size) ? 1 : 0;
 }
 
+int git_buf_read(const git_buf *buf, const char **data_out, size_t *len)
+{
+	if (!buf)
+		return -1;
+
+	*data_out = buf->ptr;
+	*len = buf->size;
+
+	return 0;
+}
+
+size_t git_buf_len(const git_buf *buf)
+{
+	return buf->size;
+}
+
+int git_buf_copy(const git_buf* buf, char *copy_to, size_t wantlen, size_t *copiedlen_out)
+{
+	if (!buf || !copy_to)
+		return -1;
+
+	copiedlen_out = min(wantlen, buf->size);
+
+	memcpy(copy_to, buf->ptr, copiedlen_out);
+
+	return 0;
+}
+
 int git_buf_splice(
 	git_buf *buf,
 	size_t where,

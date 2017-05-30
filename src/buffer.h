@@ -11,11 +11,10 @@
 #include "git2/strarray.h"
 #include "git2/buffer.h"
 
-/* typedef struct {
- *  	char   *ptr;
- *  	size_t asize, size;
- * } git_buf;
- */
+typedef struct git_buf {
+	char   *ptr;
+	size_t asize, size;
+};
 
 extern char git_buf__initbuf[];
 extern char git_buf__oom[];
@@ -137,11 +136,6 @@ GIT_INLINE(int) git_buf_joinpath(git_buf *buf, const char *a, const char *b)
 GIT_INLINE(const char *) git_buf_cstr(const git_buf *buf)
 {
 	return buf->ptr;
-}
-
-GIT_INLINE(size_t) git_buf_len(const git_buf *buf)
-{
-	return buf->size;
 }
 
 void git_buf_copy_cstr(char *data, size_t datasize, const git_buf *buf);

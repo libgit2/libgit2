@@ -433,6 +433,26 @@ struct git_writestream {
 	void (*free)(git_writestream *stream);
 };
 
+/**
+* A data buffer for exporting data from libgit2
+*
+* Sometimes libgit2 wants to return an allocated data buffer to the
+* caller and have the caller take responsibility for freeing that memory.
+* This can be awkward if the caller does not have easy access to the same
+* allocation functions that libgit2 is using.  In those cases, libgit2
+* will fill in a `git_buf` and the caller can use `git_buf_free()` to
+* release it when they are done.
+*
+* A `git_buf` may also be used for the caller to pass in a reference to
+* a block of memory they hold.  In this case, libgit2 will not resize or
+* free the memory, but will read from it as needed.
+*
+* Some APIs may occasionally do something slightly unusual with a buffer,
+* such as setting it to a value that was passed in by the user.  In
+* those cases, the behavior will be clearly documented by the API.
+*/
+typedef struct git_buf git_buf;
+
 /** @} */
 GIT_END_DECL
 
