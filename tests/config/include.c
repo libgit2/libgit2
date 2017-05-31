@@ -146,3 +146,21 @@ void test_config_include__rewriting_include_refreshes_values(void)
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "first.other"));
 	cl_assert_equal_s(buf.ptr, "value");
 }
+
+void test_config_include__included_variables_cannot_be_deleted(void)
+{
+	cl_git_mkfile("top-level", "[include]\npath = included\n");
+	cl_git_mkfile("included", "[foo]\nbar = value");
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "top-level"));
+	cl_git_fail(git_config_delete_entry(cfg, "foo.bar"));
+}
+
+void test_config_include__included_variables_cannot_be_modified(void)
+{
+	cl_git_mkfile("top-level", "[include]\npath = included\n");
+	cl_git_mkfile("included", "[foo]\nbar = value");
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "top-level"));
+	cl_git_fail(git_config_set_string(cfg, "foo.bar", "other-value"));
+}

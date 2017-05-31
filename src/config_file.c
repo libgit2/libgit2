@@ -490,6 +490,12 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 			goto out;
 		}
 
+		if (existing->included) {
+			giterr_set(GITERR_CONFIG, "modifying included variable is not supported");
+			ret = -1;
+			goto out;
+		}
+
 		/* don't update if old and new values already match */
 		if ((!existing->entry->value && !value) ||
 			(existing->entry->value && value &&
@@ -623,6 +629,11 @@ static int config_delete(git_config_backend *cfg, const char *name)
 
 	var = git_strmap_value_at(values, pos);
 	refcounted_strmap_free(map);
+
+	if (var->included) {
+		giterr_set(GITERR_CONFIG, "cannot delete included variable");
+		return -1;
+	}
 
 	if (var->next != NULL) {
 		giterr_set(GITERR_CONFIG, "cannot delete multivar with a single delete");
