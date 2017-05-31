@@ -133,3 +133,16 @@ void test_config_include__removing_include_removes_values(void)
 	cl_git_mkfile("top-level", "");
 	cl_git_fail(git_config_get_string_buf(&buf, cfg, "foo.bar"));
 }
+
+void test_config_include__rewriting_include_refreshes_values(void)
+{
+	cl_git_mkfile("top-level", "[include]\npath = first\n[include]\npath = second");
+	cl_git_mkfile("first", "[first]\nfoo = bar");
+	cl_git_mkfile("second", "[second]\nfoo = bar");
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "top-level"));
+	cl_git_mkfile("first", "[first]\nother = value");
+	cl_git_fail(git_config_get_string_buf(&buf, cfg, "foo.bar"));
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "first.other"));
+	cl_assert_equal_s(buf.ptr, "value");
+}
