@@ -1507,10 +1507,10 @@ on_error:
 
 static int config_parse(
 	struct reader *reader,
-	int (*on_section)(struct reader **reader, const char *current_section, const char *line, size_t line_len, void *data),
-	int (*on_variable)(struct reader **reader, const char *current_section, char *var_name, char *var_value, const char *line, size_t line_len, void *data),
-	int (*on_comment)(struct reader **reader, const char *line, size_t line_len, void *data),
-	int (*on_eof)(struct reader **reader, const char *current_section, void *data),
+	int (*on_section)(struct reader *reader, const char *current_section, const char *line, size_t line_len, void *data),
+	int (*on_variable)(struct reader *reader, const char *current_section, char *var_name, char *var_value, const char *line, size_t line_len, void *data),
+	int (*on_comment)(struct reader *reader, const char *line, size_t line_len, void *data),
+	int (*on_eof)(struct reader *reader, const char *current_section, void *data),
 	void *data)
 {
 	char *current_section = NULL, *var_name, *var_value, *line_start;
@@ -1536,7 +1536,7 @@ static int config_parse(
 
 			if ((result = parse_section_header(reader, &current_section)) == 0 && on_section) {
 				line_len = reader->read_ptr - line_start;
-				result = on_section(&reader, current_section, line_start, line_len, data);
+				result = on_section(reader, current_section, line_start, line_len, data);
 			}
 			break;
 
@@ -1547,21 +1547,21 @@ static int config_parse(
 
 			if (on_comment) {
 				line_len = reader->read_ptr - line_start;
-				result = on_comment(&reader, line_start, line_len, data);
+				result = on_comment(reader, line_start, line_len, data);
 			}
 			break;
 
 		default: /* assume variable declaration */
 			if ((result = parse_variable(reader, &var_name, &var_value)) == 0 && on_variable) {
 				line_len = reader->read_ptr - line_start;
-				result = on_variable(&reader, current_section, var_name, var_value, line_start, line_len, data);
+				result = on_variable(reader, current_section, var_name, var_value, line_start, line_len, data);
 			}
 			break;
 		}
 	}
 
 	if (on_eof)
-		result = on_eof(&reader, current_section, data);
+		result = on_eof(reader, current_section, data);
 
 	git__free(current_section);
 	return result;
@@ -1575,7 +1575,7 @@ struct parse_data {
 };
 
 static int read_on_variable(
-	struct reader **reader,
+	struct reader *reader,
 	const char *current_section,
 	char *var_name,
 	char *var_value,
@@ -1622,7 +1622,7 @@ static int read_on_variable(
 		git_buf path = GIT_BUF_INIT;
 		char *dir;
 
-		if ((result = git_path_dirname_r(&path, (*reader)->file->path)) < 0)
+		if ((result = git_path_dirname_r(&path, reader->file->path)) < 0)
 			return result;
 
 		dir = git_buf_detach(&path);
@@ -1632,7 +1632,7 @@ static int read_on_variable(
 		if (result < 0)
 			return result;
 
-		include = git_array_alloc((*reader)->file->includes);
+		include = git_array_alloc(reader->file->includes);
 		memset(include, 0, sizeof(*include));
 		git_array_init(include->includes);
 		include->path = git_buf_detach(&path);
@@ -1776,7 +1776,7 @@ static int write_value(struct write_data *write_data)
 }
 
 static int write_on_section(
-	struct reader **reader,
+	struct reader *reader,
 	const char *current_section,
 	const char *line,
 	size_t line_len,
@@ -1812,7 +1812,7 @@ static int write_on_section(
 }
 
 static int write_on_variable(
-	struct reader **reader,
+	struct reader *reader,
 	const char *current_section,
 	char *var_name,
 	char *var_value,
@@ -1862,7 +1862,7 @@ static int write_on_variable(
 	return write_value(write_data);
 }
 
-static int write_on_comment(struct reader **reader, const char *line, size_t line_len, void *data)
+static int write_on_comment(struct reader *reader, const char *line, size_t line_len, void *data)
 {
 	struct write_data *write_data;
 
@@ -1873,7 +1873,7 @@ static int write_on_comment(struct reader **reader, const char *line, size_t lin
 }
 
 static int write_on_eof(
-	struct reader **reader, const char *current_section, void *data)
+	struct reader *reader, const char *current_section, void *data)
 {
 	struct write_data *write_data = (struct write_data *)data;
 	int result = 0;
