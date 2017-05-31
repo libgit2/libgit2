@@ -317,22 +317,35 @@ static int config_open(git_config_backend *cfg, git_config_level_t level)
 	return res;
 }
 
-/* The meat of the refresh, as we want to use it in different places */
-static int config__refresh(diskfile_backend *b, struct reader *reader, refcounted_strmap *values)
+static int config_is_modified(int *modified, struct config_file *file)
 {
-	int error = 0;
+	struct config_file *include;
+	git_buf buf = GIT_BUF_INIT;
+	git_oid hash;
+	uint32_t i;
+	int error;
 
-	if ((error = git_mutex_lock(&b->header.values_mutex)) < 0) {
-		giterr_set(GITERR_OS, "failed to lock config backend");
+	*modified = 0;
+
+	if ((error = git_futils_readbuffer(&buf, file->path)) < 0)
+		goto out;
+
+	if ((error = git_hash_buf(&hash, buf.ptr, buf.size)) < 0)
+		goto out;
+
+	if (!git_oid_equal(&hash, &file->checksum)) {
+		*modified = 1;
 		goto out;
 	}
 
-	if ((error = config_read(values->values, reader, b->level, 0)) < 0)
-		goto out;
-
-	git_mutex_unlock(&b->header.values_mutex);
+	git_array_foreach(file->includes, i, include) {
+		if ((error = config_is_modified(modified, include)) < 0 || *modified)
+			goto out;
+	}
 
 out:
+	git_buf_free(&buf);
+
 	return error;
 }
 
@@ -342,46 +355,43 @@ static int config_refresh(git_config_backend *cfg)
 	refcounted_strmap *values = NULL, *tmp;
 	struct config_file *include;
 	struct reader reader;
-	int error, updated;
+	int error, modified;
 	uint32_t i;
+
+	error = config_is_modified(&modified, &b->file);
+	if (error < 0 && error != GIT_ENOTFOUND)
+		goto out;
+
+	if (!modified)
+		return 0;
 
 	reader_init(&reader, &b->file);
 
 	error = git_futils_readbuffer_updated(
-		&reader.buffer, b->file.path, &b->file.checksum, &updated);
+		&reader.buffer, b->file.path, &b->file.checksum, NULL);
 
-	if (error < 0 && error != GIT_ENOTFOUND)
+	if ((error = refcounted_strmap_alloc(&values)) < 0)
 		goto out;
 
-	if (updated) {
-		if ((error = refcounted_strmap_alloc(&values)) < 0)
-			goto out;
-
-		/* Reparse the current configuration */
-		git_array_foreach(b->file.includes, i, include) {
-			config_file_clear(include);
-		}
-
-		git_array_clear(b->file.includes);
-
-		if ((error = config__refresh(b, &reader, values)) < 0)
-			goto out;
-
-		tmp = b->header.values;
-		b->header.values = values;
-		values = tmp;
-	} else {
-		/* Refresh included configuration files */
-		git_array_foreach(b->file.includes, i, include) {
-			git_buf_free(&reader.buffer);
-			reader_init(&reader, include);
-			error = git_futils_readbuffer_updated(&reader.buffer, b->file.path,
-							      &b->file.checksum, NULL);
-
-			if ((error = config__refresh(b, &reader, b->header.values)) < 0)
-				goto out;
-		}
+	/* Reparse the current configuration */
+	git_array_foreach(b->file.includes, i, include) {
+		config_file_clear(include);
 	}
+	git_array_clear(b->file.includes);
+
+	if ((error = config_read(values->values, &reader, b->level, 0)) < 0)
+		goto out;
+
+	if ((error = git_mutex_lock(&b->header.values_mutex)) < 0) {
+		giterr_set(GITERR_OS, "failed to lock config backend");
+		goto out;
+	}
+
+	tmp = b->header.values;
+	b->header.values = values;
+	values = tmp;
+
+	git_mutex_unlock(&b->header.values_mutex);
 
 out:
 	refcounted_strmap_free(values);

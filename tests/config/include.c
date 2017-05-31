@@ -123,3 +123,13 @@ void test_config_include__depth2(void)
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.bar2"));
 	cl_assert_equal_s("baz2", git_buf_cstr(&buf));
 }
+
+void test_config_include__removing_include_removes_values(void)
+{
+	cl_git_mkfile("top-level", "[include]\npath = included");
+	cl_git_mkfile("included", "[foo]\nbar = value");
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "top-level"));
+	cl_git_mkfile("top-level", "");
+	cl_git_fail(git_config_get_string_buf(&buf, cfg, "foo.bar"));
+}
