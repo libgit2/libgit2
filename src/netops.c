@@ -251,11 +251,14 @@ int gitno_extract_url_parts(
 		GITERR_CHECK_ALLOC(*host);
 	}
 
-	if (u.field_set & (1 << UF_PORT))
+	if (u.field_set & (1 << UF_PORT)) {
 		*port = git__substrdup(_port, u.field_data[UF_PORT].len);
-	else
+		GITERR_CHECK_ALLOC(*port);
+	} else if (default_port) {
 		*port = git__strdup(default_port);
-	GITERR_CHECK_ALLOC(*port);
+		GITERR_CHECK_ALLOC(*port);
+	} else
+		*port = NULL;
 
 	if (path) {
 		if (u.field_set & (1 << UF_PATH)) {
