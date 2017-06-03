@@ -875,16 +875,27 @@ static int rebase_next_inmemory(
 			goto done;
 	}
 
-	if ((error = git_commit_tree(&head_tree, rebase->last_commit)) < 0 ||
-		(error = git_merge_trees(&index, rebase->repo, parent_tree, head_tree, current_tree, &rebase->options.merge_options)) < 0)
+	if ((error = git_commit_tree(&head_tree, rebase->last_commit)) < 0)
 		goto done;
 
-	if (!rebase->index) {
-		rebase->index = index;
-		index = NULL;
-	} else {
-		if ((error = git_index_read_index(rebase->index, index)) < 0)
+	if (rebase->options.merge_options.flags & GIT_MERGE_SKIP_REUC && parent_tree
+	    && !git_oid_cmp(git_tree_id(parent_tree), git_tree_id(head_tree))) {
+		if (!rebase->index && (error = git_index_new(&rebase->index)))
 			goto done;
+
+		if ((error = git_index_read_tree(rebase->index, current_tree)))
+			goto done;
+	} else {
+		if ((error = git_merge_trees(&index, rebase->repo, parent_tree, head_tree, current_tree, &rebase->options.merge_options)) < 0)
+			goto done;
+
+		if (!rebase->index) {
+			rebase->index = index;
+			index = NULL;
+		} else {
+			if ((error = git_index_read_index(rebase->index, index)) < 0)
+				goto done;
+		}
 	}
 
 	*out = operation;
