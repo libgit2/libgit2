@@ -395,9 +395,13 @@ bool git_attr_fnmatch__match(
 	if ((match->flags & GIT_ATTR_FNMATCH_DIRECTORY) && !path->is_dir) {
 		bool samename;
 
-		/* for attribute checks or root ignore checks, fail match */
+		/*
+		 * for attribute checks or checks at the root of this match's
+		 * containing_dir (or root of the repository if no containing_dir),
+		 * do not match.
+		 */
 		if (!(match->flags & GIT_ATTR_FNMATCH_IGNORE) ||
-			path->basename == path->path)
+			path->basename == relpath)
 			return false;
 
 		flags |= FNM_LEADING_DIR;

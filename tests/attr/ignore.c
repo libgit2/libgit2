@@ -291,3 +291,15 @@ void test_attr_ignore__symlink_to_outside(void)
 	assert_is_ignored(true, "symlink");
 	assert_is_ignored(true, "lala/../symlink");
 }
+
+void test_attr_ignore__test(void)
+{
+	cl_git_rewritefile("attr/.gitignore",
+		"/*/\n"
+		"!/src\n");
+	assert_is_ignored(false, "src/foo.c");
+	assert_is_ignored(false, "src/foo/foo.c");
+	assert_is_ignored(false, "README.md");
+	assert_is_ignored(true, "dist/foo.o");
+	assert_is_ignored(true, "bin/foo");
+}
