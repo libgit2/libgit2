@@ -215,12 +215,37 @@ void test_worktree_worktree__init(void)
 	git_buf path = GIT_BUF_INIT;
 
 	cl_git_pass(git_buf_joinpath(&path, fixture.repo->workdir, "../worktree-new"));
-	cl_git_pass(git_worktree_add(&wt, fixture.repo, "worktree-new", path.ptr));
+	cl_git_pass(git_worktree_add(&wt, fixture.repo, "worktree-new", path.ptr, NULL));
 
 	/* Open and verify created repo */
 	cl_git_pass(git_repository_open(&repo, path.ptr));
 	cl_assert(git__suffixcmp(git_repository_workdir(repo), "worktree-new/") == 0);
 	cl_git_pass(git_branch_lookup(&branch, repo, "worktree-new", GIT_BRANCH_LOCAL));
+
+	git_buf_free(&path);
+	git_worktree_free(wt);
+	git_reference_free(branch);
+	git_repository_free(repo);
+}
+
+void test_worktree_worktree__add_locked(void)
+{
+	git_worktree *wt;
+	git_repository *repo;
+	git_reference *branch;
+	git_buf path = GIT_BUF_INIT;
+	git_worktree_add_options opts = GIT_WORKTREE_ADD_OPTIONS_INIT;
+
+	opts.lock = 1;
+
+	cl_git_pass(git_buf_joinpath(&path, fixture.repo->workdir, "../worktree-locked"));
+	cl_git_pass(git_worktree_add(&wt, fixture.repo, "worktree-locked", path.ptr, &opts));
+
+	/* Open and verify created repo */
+	cl_assert(git_worktree_is_locked(NULL, wt));
+	cl_git_pass(git_repository_open(&repo, path.ptr));
+	cl_assert(git__suffixcmp(git_repository_workdir(repo), "worktree-locked/") == 0);
+	cl_git_pass(git_branch_lookup(&branch, repo, "worktree-locked", GIT_BRANCH_LOCAL));
 
 	git_buf_free(&path);
 	git_worktree_free(wt);
@@ -240,7 +265,7 @@ void test_worktree_worktree__init_existing_branch(void)
 	cl_git_pass(git_branch_create(&branch, fixture.repo, "worktree-new", commit, false));
 
 	cl_git_pass(git_buf_joinpath(&path, fixture.repo->workdir, "../worktree-new"));
-	cl_git_fail(git_worktree_add(&wt, fixture.repo, "worktree-new", path.ptr));
+	cl_git_fail(git_worktree_add(&wt, fixture.repo, "worktree-new", path.ptr, NULL));
 
 	git_buf_free(&path);
 	git_commit_free(commit);
@@ -254,7 +279,7 @@ void test_worktree_worktree__init_existing_worktree(void)
 	git_buf path = GIT_BUF_INIT;
 
 	cl_git_pass(git_buf_joinpath(&path, fixture.repo->workdir, "../worktree-new"));
-	cl_git_fail(git_worktree_add(&wt, fixture.repo, "testrepo-worktree", path.ptr));
+	cl_git_fail(git_worktree_add(&wt, fixture.repo, "testrepo-worktree", path.ptr, NULL));
 
 	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
 	cl_assert_equal_s(wt->gitlink_path, fixture.worktree->gitlink);
@@ -279,7 +304,7 @@ void test_worktree_worktree__init_existing_path(void)
 	}
 
 	cl_git_pass(git_buf_joinpath(&path, fixture.repo->workdir, "../testrepo-worktree"));
-	cl_git_fail(git_worktree_add(&wt, fixture.repo, "worktree-new", path.ptr));
+	cl_git_fail(git_worktree_add(&wt, fixture.repo, "worktree-new", path.ptr, NULL));
 
 	/* Verify files have not been re-created */
 	for (i = 0; i < ARRAY_SIZE(wtfiles); i++) {
@@ -303,7 +328,7 @@ void test_worktree_worktree__init_submodule(void)
 	cl_git_pass(git_buf_joinpath(&path, repo->workdir, "sm_unchanged"));
 	cl_git_pass(git_repository_open(&sm, path.ptr));
 	cl_git_pass(git_buf_joinpath(&path, repo->workdir, "../worktree/"));
-	cl_git_pass(git_worktree_add(&worktree, sm, "repo-worktree", path.ptr));
+	cl_git_pass(git_worktree_add(&worktree, sm, "repo-worktree", path.ptr, NULL));
 	cl_git_pass(git_repository_open_from_worktree(&wt, worktree));
 
 	cl_git_pass(git_path_prettify_dir(&path, path.ptr, NULL));
@@ -429,13 +454,31 @@ void test_worktree_worktree__unlock_locked_worktree(void)
 	git_worktree_free(wt);
 }
 
-void test_worktree_worktree__prune_valid(void)
+void test_worktree_worktree__prune_without_opts_fails(void)
 {
 	git_worktree *wt;
 	git_repository *repo;
 
 	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
-	cl_git_pass(git_worktree_prune(wt, GIT_WORKTREE_PRUNE_VALID));
+	cl_git_fail(git_worktree_prune(wt, NULL));
+
+	/* Assert the repository is still valid */
+	cl_git_pass(git_repository_open_from_worktree(&repo, wt));
+
+	git_worktree_free(wt);
+	git_repository_free(repo);
+}
+
+void test_worktree_worktree__prune_valid(void)
+{
+	git_worktree_prune_options opts = GIT_WORKTREE_PRUNE_OPTIONS_INIT;
+	git_worktree *wt;
+	git_repository *repo;
+
+	opts.flags = GIT_WORKTREE_PRUNE_VALID;
+
+	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
+	cl_git_pass(git_worktree_prune(wt, &opts));
 
 	/* Assert the repository is not valid anymore */
 	cl_git_fail(git_repository_open_from_worktree(&repo, wt));
@@ -446,27 +489,33 @@ void test_worktree_worktree__prune_valid(void)
 
 void test_worktree_worktree__prune_locked(void)
 {
+	git_worktree_prune_options opts = GIT_WORKTREE_PRUNE_OPTIONS_INIT;
 	git_worktree *wt;
 	git_repository *repo;
 
 	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
 	cl_git_pass(git_worktree_lock(wt, NULL));
-	cl_git_fail(git_worktree_prune(wt, GIT_WORKTREE_PRUNE_VALID));
-	cl_git_fail(git_worktree_prune(wt, ~GIT_WORKTREE_PRUNE_LOCKED));
 
+	opts.flags = GIT_WORKTREE_PRUNE_VALID;
+	cl_git_fail(git_worktree_prune(wt, &opts));
 	/* Assert the repository is still valid */
 	cl_git_pass(git_repository_open_from_worktree(&repo, wt));
+
+	opts.flags = GIT_WORKTREE_PRUNE_VALID|GIT_WORKTREE_PRUNE_LOCKED;
+	cl_git_pass(git_worktree_prune(wt, &opts));
 
 	git_worktree_free(wt);
 	git_repository_free(repo);
 }
 
-void test_worktree_worktree__prune_gitdir(void)
+void test_worktree_worktree__prune_gitdir_only(void)
 {
+	git_worktree_prune_options opts = GIT_WORKTREE_PRUNE_OPTIONS_INIT;
 	git_worktree *wt;
 
+	opts.flags = GIT_WORKTREE_PRUNE_VALID;
 	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
-	cl_git_pass(git_worktree_prune(wt, GIT_WORKTREE_PRUNE_VALID));
+	cl_git_pass(git_worktree_prune(wt, &opts));
 
 	cl_assert(!git_path_exists(wt->gitdir_path));
 	cl_assert(git_path_exists(wt->gitlink_path));
@@ -474,12 +523,15 @@ void test_worktree_worktree__prune_gitdir(void)
 	git_worktree_free(wt);
 }
 
-void test_worktree_worktree__prune_both(void)
+void test_worktree_worktree__prune_worktree(void)
 {
+	git_worktree_prune_options opts = GIT_WORKTREE_PRUNE_OPTIONS_INIT;
 	git_worktree *wt;
 
+	opts.flags = GIT_WORKTREE_PRUNE_VALID|GIT_WORKTREE_PRUNE_WORKING_TREE;
+
 	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
-	cl_git_pass(git_worktree_prune(wt, GIT_WORKTREE_PRUNE_WORKING_TREE | GIT_WORKTREE_PRUNE_VALID));
+	cl_git_pass(git_worktree_prune(wt, &opts));
 
 	cl_assert(!git_path_exists(wt->gitdir_path));
 	cl_assert(!git_path_exists(wt->gitlink_path));

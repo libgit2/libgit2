@@ -269,14 +269,31 @@ out:
 	return err;
 }
 
-int git_worktree_add(git_worktree **out, git_repository *repo, const char *name, const char *worktree)
+int git_worktree_add_init_options(git_worktree_add_options *opts,
+	unsigned int version)
+{
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(opts, version,
+		git_worktree_add_options, GIT_WORKTREE_ADD_OPTIONS_INIT);
+	return 0;
+}
+
+int git_worktree_add(git_worktree **out, git_repository *repo,
+	const char *name, const char *worktree,
+	const git_worktree_add_options *opts)
 {
 	git_buf gitdir = GIT_BUF_INIT, wddir = GIT_BUF_INIT, buf = GIT_BUF_INIT;
 	git_reference *ref = NULL, *head = NULL;
 	git_commit *commit = NULL;
 	git_repository *wt = NULL;
 	git_checkout_options coopts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_worktree_add_options wtopts = GIT_WORKTREE_ADD_OPTIONS_INIT;
 	int err;
+
+	GITERR_CHECK_VERSION(
+		opts, GIT_WORKTREE_ADD_OPTIONS_VERSION, "git_worktree_add_options");
+
+	if (opts)
+		memcpy(&wtopts, opts, sizeof(wtopts));
 
 	assert(out && repo && name && worktree);
 
@@ -300,6 +317,21 @@ int git_worktree_add(git_worktree **out, git_repository *repo, const char *name,
 		goto out;
 	if ((err = git_path_prettify_dir(&wddir, worktree, NULL)) < 0)
 		goto out;
+
+	if (wtopts.lock) {
+		int fd;
+
+		if ((err = git_buf_joinpath(&buf, gitdir.ptr, "locked")) < 0)
+			goto out;
+
+		if ((fd = p_creat(buf.ptr, 0644)) < 0) {
+			err = fd;
+			goto out;
+		}
+
+		p_close(fd);
+		git_buf_clear(&buf);
+	}
 
 	/* Create worktree .git file */
 	if ((err = git_buf_printf(&buf, "gitdir: %s\n", gitdir.ptr)) < 0)
@@ -424,11 +456,29 @@ out:
 	return ret;
 }
 
-int git_worktree_is_prunable(git_worktree *wt, unsigned flags)
+int git_worktree_prune_init_options(
+	git_worktree_prune_options *opts,
+	unsigned int version)
+{
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(opts, version,
+		git_worktree_prune_options, GIT_WORKTREE_PRUNE_OPTIONS_INIT);
+	return 0;
+}
+
+int git_worktree_is_prunable(git_worktree *wt,
+	git_worktree_prune_options *opts)
 {
 	git_buf reason = GIT_BUF_INIT;
+	git_worktree_prune_options popts = GIT_WORKTREE_PRUNE_OPTIONS_INIT;
 
-	if ((flags & GIT_WORKTREE_PRUNE_LOCKED) == 0 &&
+	GITERR_CHECK_VERSION(
+		opts, GIT_WORKTREE_PRUNE_OPTIONS_VERSION,
+		"git_worktree_prune_options");
+
+	if (opts)
+		memcpy(&popts, opts, sizeof(popts));
+
+	if ((popts.flags & GIT_WORKTREE_PRUNE_LOCKED) == 0 &&
 		git_worktree_is_locked(&reason, wt))
 	{
 		if (!reason.size)
@@ -439,7 +489,7 @@ int git_worktree_is_prunable(git_worktree *wt, unsigned flags)
 		return 0;
 	}
 
-	if ((flags & GIT_WORKTREE_PRUNE_VALID) == 0 &&
+	if ((popts.flags & GIT_WORKTREE_PRUNE_VALID) == 0 &&
 		git_worktree_validate(wt) == 0)
 	{
 		giterr_set(GITERR_WORKTREE, "Not pruning valid working tree");
@@ -449,13 +499,22 @@ int git_worktree_is_prunable(git_worktree *wt, unsigned flags)
 	return 1;
 }
 
-int git_worktree_prune(git_worktree *wt, unsigned flags)
+int git_worktree_prune(git_worktree *wt,
+	git_worktree_prune_options *opts)
 {
+	git_worktree_prune_options popts = GIT_WORKTREE_PRUNE_OPTIONS_INIT;
 	git_buf path = GIT_BUF_INIT;
 	char *wtpath;
 	int err;
 
-	if (!git_worktree_is_prunable(wt, flags)) {
+	GITERR_CHECK_VERSION(
+		opts, GIT_WORKTREE_PRUNE_OPTIONS_VERSION,
+		"git_worktree_prune_options");
+
+	if (opts)
+		memcpy(&popts, opts, sizeof(popts));
+
+	if (!git_worktree_is_prunable(wt, &popts)) {
 		err = -1;
 		goto out;
 	}
@@ -474,7 +533,7 @@ int git_worktree_prune(git_worktree *wt, unsigned flags)
 
 	/* Skip deletion of the actual working tree if it does
 	 * not exist or deletion was not requested */
-	if ((flags & GIT_WORKTREE_PRUNE_WORKING_TREE) == 0 ||
+	if ((popts.flags & GIT_WORKTREE_PRUNE_WORKING_TREE) == 0 ||
 		!git_path_exists(wt->gitlink_path))
 	{
 		goto out;

@@ -74,6 +74,27 @@ GIT_EXTERN(void) git_worktree_free(git_worktree *wt);
  */
 GIT_EXTERN(int) git_worktree_validate(const git_worktree *wt);
 
+typedef struct git_worktree_add_options {
+	unsigned int version;
+
+	int lock; /**< lock newly created worktree */
+} git_worktree_add_options;
+
+#define GIT_WORKTREE_ADD_OPTIONS_VERSION 1
+#define GIT_WORKTREE_ADD_OPTIONS_INIT {GIT_WORKTREE_ADD_OPTIONS_VERSION,0}
+
+/**
+ * Initializes a `git_worktree_add_options` with default vaules.
+ * Equivalent to creating an instance with
+ * GIT_WORKTREE_ADD_OPTIONS_INIT.
+ *
+ * @param opts the struct to initialize
+ * @param version Verison of struct; pass `GIT_WORKTREE_ADD_OPTIONS_VERSION`
+ * @return Zero on success; -1 on failure.
+ */
+int git_worktree_add_init_options(git_worktree_add_options *opts,
+	unsigned int version);
+
 /**
  * Add a new working tree
  *
@@ -85,9 +106,12 @@ GIT_EXTERN(int) git_worktree_validate(const git_worktree *wt);
  * @param repo Repository to create working tree for
  * @param name Name of the working tree
  * @param path Path to create working tree at
+ * @param opts Options to modify default behavior. May be NULL
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_worktree_add(git_worktree **out, git_repository *repo, const char *name, const char *path);
+GIT_EXTERN(int) git_worktree_add(git_worktree **out, git_repository *repo,
+	const char *name, const char *path,
+	const git_worktree_add_options *opts);
 
 /**
  * Lock worktree if not already locked
@@ -137,23 +161,44 @@ typedef enum {
 	GIT_WORKTREE_PRUNE_WORKING_TREE = 1u << 2,
 } git_worktree_prune_t;
 
+typedef struct git_worktree_prune_options {
+	unsigned int version;
+
+	uint32_t flags;
+} git_worktree_prune_options;
+
+#define GIT_WORKTREE_PRUNE_OPTIONS_VERSION 1
+#define GIT_WORKTREE_PRUNE_OPTIONS_INIT {GIT_WORKTREE_PRUNE_OPTIONS_VERSION,0}
+
 /**
- * Is the worktree prunable with the given set of flags?
+ * Initializes a `git_worktree_prune_options` with default vaules.
+ * Equivalent to creating an instance with
+ * GIT_WORKTREE_PRUNE_OPTIONS_INIT.
+ *
+ * @param opts the struct to initialize
+ * @param version Verison of struct; pass `GIT_WORKTREE_PRUNE_OPTIONS_VERSION`
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_worktree_prune_init_options(
+	git_worktree_prune_options *opts,
+	unsigned int version);
+
+/**
+ * Is the worktree prunable with the given options?
  *
  * A worktree is not prunable in the following scenarios:
  *
  * - the worktree is linking to a valid on-disk worktree. The
- *   GIT_WORKTREE_PRUNE_VALID flag will cause this check to be
- *   ignored.
- * - the worktree is not valid but locked. The
- *   GIT_WORKRTEE_PRUNE_LOCKED flag will cause this check to be
- *   ignored.
+ *   `valid` member will cause this check to be ignored.
+ * - the worktree is locked. The `locked` flag will cause this
+ *   check to be ignored.
  *
  * If the worktree is not valid and not locked or if the above
  * flags have been passed in, this function will return a
  * positive value.
  */
-GIT_EXTERN(int) git_worktree_is_prunable(git_worktree *wt, unsigned flags);
+GIT_EXTERN(int) git_worktree_is_prunable(git_worktree *wt,
+	git_worktree_prune_options *opts);
 
 /**
  * Prune working tree
@@ -163,10 +208,12 @@ GIT_EXTERN(int) git_worktree_is_prunable(git_worktree *wt, unsigned flags);
  * `git_worktree_is_prunable` succeeds.
  *
  * @param wt Worktree to prune
- * @param flags git_worktree_prune_t flags
+ * @param opts Specifies which checks to override. See
+ *        `git_worktree_is_prunable`. May be NULL
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_worktree_prune(git_worktree *wt, unsigned flags);
+GIT_EXTERN(int) git_worktree_prune(git_worktree *wt,
+	git_worktree_prune_options *opts);
 
 /** @} */
 GIT_END_DECL
