@@ -212,7 +212,7 @@ int git_worktree_open_from_repository(git_worktree **out, git_repository *repo)
 		goto out;
 
 out:
-	free(name);
+	git__free(name);
 	git_buf_free(&parent);
 
 	return error;
