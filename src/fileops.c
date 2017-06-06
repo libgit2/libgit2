@@ -1155,9 +1155,13 @@ int git_futils_fsync_dir(const char *path)
 
 int git_futils_fsync_parent(const char *path)
 {
-	char *parent = git_path_dirname(path);
-	int error = git_futils_fsync_dir(parent);
+	char *parent;
+	int error;
 
+	if ((parent = git_path_dirname(path)) == NULL)
+		return -1;
+
+	error = git_futils_fsync_dir(parent);
 	git__free(parent);
 	return error;
 }
