@@ -706,9 +706,9 @@ IF (BUILD_CLAR)
 
 	ENABLE_TESTING()
 	IF (WINHTTP OR OPENSSL_FOUND OR SECURITY_FOUND)
-		ADD_TEST(libgit2_clar libgit2_clar -ionline)
+		ADD_TEST(libgit2_clar libgit2_clar -ionline -xclone::local::git_style_unc_paths -xclone::local::standard_unc_paths_are_written_git_style)
 	ELSE ()
-		ADD_TEST(libgit2_clar libgit2_clar -v)
+		ADD_TEST(libgit2_clar libgit2_clar -v -xclone::local::git_style_unc_paths -xclone::local::standard_unc_paths_are_written_git_style)
 	ENDIF ()
 
 	# Add a test target which runs the cred callback tests, to be
