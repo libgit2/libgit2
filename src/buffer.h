@@ -34,7 +34,7 @@ GIT_INLINE(bool) git_buf_is_allocated(const git_buf *buf)
  * For the cases where GIT_BUF_INIT cannot be used to do static
  * initialization.
  */
-extern void git_buf_init(git_buf *buf, size_t initial_size);
+extern int git_buf_init(git_buf *buf, size_t initial_size);
 
 /**
  * Resize the buffer allocation to make more space.
@@ -73,7 +73,7 @@ extern void git_buf_sanitize(git_buf *buf);
 
 extern void git_buf_swap(git_buf *buf_a, git_buf *buf_b);
 extern char *git_buf_detach(git_buf *buf);
-extern void git_buf_attach(git_buf *buf, char *ptr, size_t asize);
+extern int git_buf_attach(git_buf *buf, char *ptr, size_t asize);
 
 /* Populates a `git_buf` where the contents are not "owned" by the
  * buffer, and calls to `git_buf_free` will not free the given buf.

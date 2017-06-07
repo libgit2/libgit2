@@ -22,14 +22,15 @@ char git_buf__oom[1];
 		return -1;
 
 
-void git_buf_init(git_buf *buf, size_t initial_size)
+int git_buf_init(git_buf *buf, size_t initial_size)
 {
 	buf->asize = 0;
 	buf->size = 0;
 	buf->ptr = git_buf__initbuf;
 
-	if (initial_size)
-		git_buf_grow(buf, initial_size);
+	ENSURE_SIZE(buf, initial_size);
+
+	return 0;
 }
 
 int git_buf_try_grow(
@@ -577,7 +578,7 @@ char *git_buf_detach(git_buf *buf)
 	return data;
 }
 
-void git_buf_attach(git_buf *buf, char *ptr, size_t asize)
+int git_buf_attach(git_buf *buf, char *ptr, size_t asize)
 {
 	git_buf_free(buf);
 
@@ -588,9 +589,10 @@ void git_buf_attach(git_buf *buf, char *ptr, size_t asize)
 			buf->asize = (asize < buf->size) ? buf->size + 1 : asize;
 		else /* pass 0 to fall back on strlen + 1 */
 			buf->asize = buf->size + 1;
-	} else {
-		git_buf_grow(buf, asize);
 	}
+
+	ENSURE_SIZE(buf, asize);
+	return 0;
 }
 
 void git_buf_attach_notowned(git_buf *buf, const char *ptr, size_t size)
