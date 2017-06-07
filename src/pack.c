@@ -324,7 +324,6 @@ static int pack_index_open(struct git_pack_file *p)
 	git_buf_put(&idx_name, p->pack_name, name_len - strlen(".pack"));
 	git_buf_puts(&idx_name, ".idx");
 	if (git_buf_oom(&idx_name)) {
-		giterr_set_oom();
 		return -1;
 	}
 
