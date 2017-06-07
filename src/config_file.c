@@ -1267,7 +1267,7 @@ static const char *escaped = "\n\t\b\"\\";
 /* Escape the values to write them to the file */
 static char *escape_value(const char *ptr)
 {
-	git_buf buf = GIT_BUF_INIT;
+	git_buf buf;
 	size_t len;
 	const char *esc;
 
@@ -1277,7 +1277,8 @@ static char *escape_value(const char *ptr)
 	if (!len)
 		return git__calloc(1, sizeof(char));
 
-	git_buf_grow(&buf, len);
+	if (git_buf_init(&buf, len) < 0)
+		return NULL;
 
 	while (*ptr != '\0') {
 		if ((esc = strchr(escaped, *ptr)) != NULL) {
