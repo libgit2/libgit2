@@ -61,5 +61,4 @@ ENDIF ()
 # Add a test target which runs the cred callback tests, to be
 # called after setting the url and user
 ADD_TEST(libgit2_clar-cred_callback "${libgit2_BINARY_DIR}/libgit2_clar" -v -sonline::clone::cred_callback)
-ADD_TEST(libgit2_clar-proxy_credentials_in_url "${libgit2_BINARY_DIR}/libgit2_clar" -v -sonline::clone::proxy_credentials_in_url)
-ADD_TEST(libgit2_clar-proxy_credentials_request "${libgit2_BINARY_DIR}/libgit2_clar" -v	-sonline::clone::proxy_credentials_request)
+ADD_TEST(libgit2_clar-proxy_credentials "${libgit2_BINARY_DIR}/libgit2_clar" -v -sonline::clone::proxy_credentials_in_url -sonline::clone::proxy_credentials_request)

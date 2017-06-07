@@ -90,7 +90,10 @@ export GITTEST_REMOTE_USER=$USER
 export GITTEST_REMOTE_SSH_KEY="$HOME/.ssh/id_rsa"
 export GITTEST_REMOTE_SSH_PUBKEY="$HOME/.ssh/id_rsa.pub"
 export GITTEST_REMOTE_SSH_PASSPHRASE=""
-
+# Use the proxy we started at the beginning
+export GITTEST_REMOTE_PROXY_URL="localhost:8080"
+export GITTEST_REMOTE_PROXY_USER="foo"
+export GITTEST_REMOTE_PROXY_PASS="bar"
 
 if [ -e ./libgit2_clar ]; then
     ./libgit2_clar -sonline::push -sonline::clone::ssh_cert &&
@@ -99,14 +102,7 @@ if [ -e ./libgit2_clar ]; then
         ./libgit2_clar -sonline::clone::cred_callback || exit $?
     fi
 
-    # Use the proxy we started at the beginning
-    export GITTEST_REMOTE_PROXY_URL="http://foo:bar@localhost:8080/"
-    ./libgit2_clar -sonline::clone::proxy_credentials_in_url || exit $?
-    export GITTEST_REMOTE_PROXY_URL="http://localhost:8080/"
-    export GITTEST_REMOTE_PROXY_USER="foo"
-    export GITTEST_REMOTE_PROXY_PASS="bar"
-    ./libgit2_clar -sonline::clone::proxy_credentials_request || exit $?
-
+    ctest -V -R libgit2_clar-proxy_credentials || exit $?
 fi
 
 kill $(cat "$HOME/sshd/pid")
