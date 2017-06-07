@@ -20,7 +20,7 @@ ENDIF()
 
 ADD_CUSTOM_COMMAND(
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/clar.suite
-	COMMAND ${PYTHON_EXECUTABLE} generate.py -o "${CMAKE_CURRENT_BINARY_DIR}" -f -xonline -xstress .
+	COMMAND ${PYTHON_EXECUTABLE} generate.py -o "${CMAKE_CURRENT_BINARY_DIR}" -f -xonline -xstress -xperf .
 	DEPENDS ${SRC_TEST}
 	WORKING_DIRECTORY ${CLAR_PATH}
 )
