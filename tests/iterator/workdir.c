@@ -741,6 +741,8 @@ void test_iterator_workdir__skips_fifos_and_special_files(void)
 	cl_assert_equal_i(GIT_ITEROVER, git_iterator_advance(&e, i));
 
 	git_iterator_free(i);
+#else
+	cl_skip();
 #endif
 }
 

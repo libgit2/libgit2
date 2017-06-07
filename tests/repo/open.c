@@ -180,6 +180,8 @@ void test_repo_open__from_git_new_workdir(void)
 	cl_assert_(git__suffixcmp(git_repository_workdir(repo2), "alternate/") == 0, git_repository_workdir(repo2));
 
 	git_repository_free(repo2);
+#else
+	cl_skip();
 #endif
 }
 

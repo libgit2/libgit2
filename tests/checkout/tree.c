@@ -1096,6 +1096,8 @@ void test_checkout_tree__filemode_preserved_in_workdir(void)
 	cl_assert(!GIT_PERMS_IS_EXEC(read_filemode("a/b.txt")));
 
 	git_commit_free(commit);
+#else
+	cl_skip();
 #endif
 }
 
