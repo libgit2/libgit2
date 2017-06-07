@@ -42,9 +42,7 @@ test_script:
     $env:GITTEST_REMOTE_USER="libgit2test"
     ctest -V -R libgit2_clar-cred_callback
     Receive-Job -Job $proxyJob
-    $env:GITTEST_REMOTE_PROXY_URL = "http://foo:bar@localhost:8080"
-    ctest -V -R libgit2_clar-proxy_credentials_in_url
-    $env:GITTEST_REMOTE_PROXY_URL = "http://localhost:8080"
+    $env:GITTEST_REMOTE_PROXY_URL = "localhost:8080"
     $env:GITTEST_REMOTE_PROXY_USER = "foo"
     $env:GITTEST_REMOTE_PROXY_PASS = "bar"
-    ctest -V -R libgit2_clar-proxy_credentials_request
+    ctest -V -R libgit2_clar-proxy_credentials
