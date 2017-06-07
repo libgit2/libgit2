@@ -98,15 +98,8 @@ export GITTEST_REMOTE_PROXY_PASS="bar"
 if [ -e ./libgit2_clar ]; then
     ./libgit2_clar -sonline::push -sonline::clone::ssh_cert &&
     ./libgit2_clar -sonline::clone::ssh_with_paths || exit $?
-    if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-        ./libgit2_clar -sonline::clone::cred_callback || exit $?
-    fi
 
     ctest -V -R libgit2_clar-proxy_credentials || exit $?
 fi
 
 kill $(cat "$HOME/sshd/pid")
-
-export GITTEST_REMOTE_URL="https://github.com/libgit2/non-existent"
-export GITTEST_REMOTE_USER="libgit2test"
-ctest -V -R libgit2_clar-cred_callback
