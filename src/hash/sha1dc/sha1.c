@@ -5,31 +5,75 @@
 * https://opensource.org/licenses/MIT
 ***/
 
+#ifndef SHA1DC_NO_STANDARD_INCLUDES
 #include <string.h>
 #include <memory.h>
 #include <stdio.h>
 #include <stdlib.h>
+#endif
+
+#ifdef SHA1DC_CUSTOM_INCLUDE_SHA1_C
+#include SHA1DC_CUSTOM_INCLUDE_SHA1_C
+#endif
+
+#ifndef SHA1DC_INIT_SAFE_HASH_DEFAULT
+#define SHA1DC_INIT_SAFE_HASH_DEFAULT 1
+#endif
 
 #include "sha1.h"
 #include "ubc_check.h"
 
 
-/* 
+/*
    Because Little-Endian architectures are most common,
-   we only set BIGENDIAN if one of these conditions is met.
+   we only set SHA1DC_BIGENDIAN if one of these conditions is met.
    Note that all MSFT platforms are little endian,
    so none of these will be defined under the MSC compiler.
    If you are compiling on a big endian platform and your compiler does not define one of these,
    you will have to add whatever macros your tool chain defines to indicate Big-Endianness.
  */
-#if (defined(__BYTE_ORDER) && (__BYTE_ORDER == __BIG_ENDIAN)) || \
-    (defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __BIG_ENDIAN__)) || \
-    defined(__BIG_ENDIAN__) || defined(__ARMEB__) || defined(__THUMBEB__) ||  defined(__AARCH64EB__) || \
-    defined(_MIPSEB) || defined(__MIPSEB) || defined(__MIPSEB__)
+#ifdef SHA1DC_BIGENDIAN
+#undef SHA1DC_BIGENDIAN
+#endif
 
-#define BIGENDIAN	(1)
+#if (defined(_BYTE_ORDER) || defined(__BYTE_ORDER) || defined(__BYTE_ORDER__))
 
-#endif /*ENDIANNESS SELECTION*/
+#if ((defined(_BYTE_ORDER) && (_BYTE_ORDER == _BIG_ENDIAN)) || \
+     (defined(__BYTE_ORDER) && (__BYTE_ORDER == __BIG_ENDIAN)) || \
+     (defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __BIG_ENDIAN__)) )
+#define SHA1DC_BIGENDIAN
+#endif
+
+#else
+
+#if (defined(_BIG_ENDIAN) || defined(__BIG_ENDIAN) || defined(__BIG_ENDIAN__) || \
+     defined(__ARMEB__) || defined(__THUMBEB__) || defined(__AARCH64EB__) || \
+     defined(__MIPSEB__) || defined(__MIPSEB) || defined(_MIPSEB) || \
+     defined(__sparc))
+#define SHA1DC_BIGENDIAN
+#endif
+
+#endif
+
+#if (defined(SHA1DC_FORCE_LITTLEENDIAN) && defined(SHA1DC_BIGENDIAN))
+#undef SHA1DC_BIGENDIAN
+#endif
+#if (defined(SHA1DC_FORCE_BIGENDIAN) && !defined(SHA1DC_BIGENDIAN))
+#define SHA1DC_BIGENDIAN
+#endif
+/*ENDIANNESS SELECTION*/
+
+#if (defined SHA1DC_FORCE_UNALIGNED_ACCESS || \
+     defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64) || \
+     defined(i386) || defined(__i386) || defined(__i386__) || defined(__i486__)  || \
+     defined(__i586__) || defined(__i686__) || defined(_M_IX86) || defined(__X86__) || \
+     defined(_X86_) || defined(__THW_INTEL__) || defined(__I86__) || defined(__INTEL__) || \
+     defined(__386) || defined(_M_X64) || defined(_M_AMD64))
+
+#define SHA1DC_ALLOW_UNALIGNED_ACCESS
+
+#endif /*UNALIGNMENT DETECTION*/
+
 
 #define rotate_right(x,n) (((x)>>(n))|((x)<<(32-(n))))
 #define rotate_left(x,n)  (((x)<<(n))|((x)>>(32-(n))))
@@ -39,11 +83,11 @@
 
 #define sha1_mix(W, t)  (rotate_left(W[t - 3] ^ W[t - 8] ^ W[t - 14] ^ W[t - 16], 1))
 
-#if defined(BIGENDIAN)
+#ifdef SHA1DC_BIGENDIAN
 	#define sha1_load(m, t, temp)  { temp = m[t]; }
 #else
 	#define sha1_load(m, t, temp)  { temp = m[t]; sha1_bswap32(temp); }
-#endif /*define(BIGENDIAN)*/
+#endif
 
 #define sha1_store(W, t, x)	*(volatile uint32_t *)&W[t] = x
 
@@ -872,6 +916,11 @@ static void sha1recompress_fast_ ## t (uint32_t ihvin[5], uint32_t ihvout[5], co
 	ihvout[0] = ihvin[0] + a; ihvout[1] = ihvin[1] + b; ihvout[2] = ihvin[2] + c; ihvout[3] = ihvin[3] + d; ihvout[4] = ihvin[4] + e; \
 }
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4127)  /* Complier complains about the checks in the above macro being constant. */
+#endif
+
 #ifdef DOSTORESTATE0
 SHA1_RECOMPRESS(0)
 #endif
@@ -1190,6 +1239,10 @@ SHA1_RECOMPRESS(78)
 
 #ifdef DOSTORESTATE79
 SHA1_RECOMPRESS(79)
+#endif
+
+#ifdef _MSC_VER
+#pragma warning(pop)
 #endif
 
 static void sha1_recompression_step(uint32_t step, uint32_t ihvin[5], uint32_t ihvout[5], const uint32_t me2[80], const uint32_t state[5])
@@ -1609,7 +1662,7 @@ static void sha1_process(SHA1_CTX* ctx, const uint32_t block[16])
 	unsigned i, j;
 	uint32_t ubc_dv_mask[DVMASKSIZE] = { 0xFFFFFFFF };
 	uint32_t ihvtmp[5];
-	
+
 	ctx->ihv1[0] = ctx->ihv[0];
 	ctx->ihv1[1] = ctx->ihv[1];
 	ctx->ihv1[2] = ctx->ihv[2];
@@ -1665,7 +1718,7 @@ void SHA1DCInit(SHA1_CTX* ctx)
 	ctx->ihv[3] = 0x10325476;
 	ctx->ihv[4] = 0xC3D2E1F0;
 	ctx->found_collision = 0;
-	ctx->safe_hash = 1;
+	ctx->safe_hash = SHA1DC_INIT_SAFE_HASH_DEFAULT;
 	ctx->ubc_check = 1;
 	ctx->detect_coll = 1;
 	ctx->reduced_round_coll = 0;
@@ -1713,6 +1766,7 @@ void SHA1DCSetCallback(SHA1_CTX* ctx, collision_block_callback callback)
 void SHA1DCUpdate(SHA1_CTX* ctx, const char* buf, size_t len)
 {
 	unsigned left, fill;
+
 	if (len == 0)
 		return;
 
@@ -1731,7 +1785,13 @@ void SHA1DCUpdate(SHA1_CTX* ctx, const char* buf, size_t len)
 	while (len >= 64)
 	{
 		ctx->total += 64;
+
+#if defined(SHA1DC_ALLOW_UNALIGNED_ACCESS)
 		sha1_process(ctx, (uint32_t*)(buf));
+#else
+		memcpy(ctx->buffer, buf, 64);
+		sha1_process(ctx, (uint32_t*)(ctx->buffer));
+#endif /* defined(SHA1DC_ALLOW_UNALIGNED_ACCESS) */
 		buf += 64;
 		len -= 64;
 	}
@@ -1790,3 +1850,7 @@ int SHA1DCFinal(unsigned char output[20], SHA1_CTX *ctx)
 	output[19] = (unsigned char)(ctx->ihv[4]);
 	return ctx->found_collision;
 }
+
+#ifdef SHA1DC_CUSTOM_TRAILING_INCLUDE_SHA1_C
+#include SHA1DC_CUSTOM_TRAILING_INCLUDE_SHA1_C
+#endif
