@@ -3,15 +3,82 @@ v0.25 + 1
 
 ### Changes or improvements
 
+* Support for opening, creating and modifying worktrees.
+
+* We can now detect SHA1 collisions resulting from the SHAttered attack. These
+  checks can be enabled at build time via `-DUSE_SHA1DC`.
+
+* Fix for missing implementation of `git_merge_driver_source` getters.
+
+* Fix for installed pkg-config file being broken when the prefix contains
+  spaces.
+
+* We now detect when the hashsum of on-disk objects does not match their
+  expected hashsum.
+
+* We now support open-ended ranges (e.g. "master..", "...master") in our
+  revision range parsing code.
+
+* We now correctly compute ignores with leading "/" in subdirectories.
+
+* We now optionally call `fsync` on loose objects, packfiles and their indexes,
+  loose references and packed reference files.
+
+* We can now build against OpenSSL v1.1.
+
 * `GIT_MERGE_OPTIONS_INIT` now includes a setting to perform rename detection.
   This aligns this structure with the default by `git_merge` and
   `git_merge_trees` when `NULL` was provided for the options.
 
 ### API additions
 
+* New family of functions to handle worktrees:
+
+    * `git_worktree_list()` lets you look up worktrees for a repository.
+    * `git_worktree_lookup()` lets you get a specific worktree.
+    * `git_worktree_open_from_repository()` lets you get the associated worktree
+      of a repository.
+      a worktree.
+    * `git_worktree_add` lets you create new worktrees.
+    * `git_worktree_prune` lets you remove worktrees from disk.
+    * `git_worktree_lock()` and `git_worktree_unlock()` let you lock
+      respectively unlock a worktree.
+    * `git_repository_open_from_worktree()` lets you open a repository via
+    * `git_repository_head_for_worktree()` lets you get the current `HEAD` for a
+      linked worktree.
+    * `git_repository_head_detached_for_worktree()` lets you check whether a
+      linked worktree is in detached HEAD mode.
+
+* `git_repository_item_path()` lets you retrieve paths for various repository
+  files.
+
+* `git_repository_commondir()` lets you retrieve the common directory of a
+  repository.
+
+* `git_branch_is_checked_out()` allows you to check whether a branch is checked
+  out in a repository or any of its worktrees.
+
+* `git_repository_submodule_cache_all()` and
+  `git_repository_submodule_cache_clear()` functions allow you to prime or clear
+  the submodule cache of a repository.
+
+* You can disable strict hash verifications via the
+  `GIT_OPT_ENABLE_STRICT_HASH_VERIFICATION` option with `git_libgit2_opts()`.
+
+* You can enable us calling `fsync` for various files inside the ".git"
+  directory by setting the `GIT_OPT_ENABLE_FSYNC_GITDIR` option with
+  `git_libgit2_opts()`.
+
+* You can now enable "offset deltas" when creating packfiles and negotiating
+  packfiles with a remote server by setting `GIT_OPT_ENABLE_OFS_DELTA` option
+  with `GIT_libgit2_opts()`.
+
 * You can now set the default share mode on Windows for opening files using
   `GIT_OPT_SET_WINDOWS_SHAREMODE` option with `git_libgit2_opts()`.
   You can query the current share mode with `GIT_OPT_GET_WINDOWS_SHAREMODE`.
+
+* `git_transport_smart_proxy_options()' enables you to get the proxy options for
+  smart transports.
 
 ### API removals
 
