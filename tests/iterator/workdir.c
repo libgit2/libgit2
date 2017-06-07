@@ -662,7 +662,7 @@ void test_iterator_workdir__filesystem_gunk(void)
 	/* should only have 13 items, since we're not asking for trees to be
 	 * returned.  the goal of this test is simply to not crash.
 	 */
-	expect_iterator_items(i, 13, NULL, 13, NULL);
+	expect_iterator_items(i, 15, NULL, 15, NULL);
 	git_iterator_free(i);
 	git_buf_free(&parent);
 }
