@@ -29,6 +29,9 @@ void test_core_encoding__encode(void)
 	cl_assert(git_encode_varint(buf, 100, 65) == 1);
 	cl_assert(buf[0] == 'A');
 
+	cl_assert(git_encode_varint(buf, 1, 1) == 1);
+	cl_assert(!memcmp(buf, "\x01", 1));
+
 	cl_assert(git_encode_varint(buf, 100, 267869656) == 4);
 	cl_assert(!memcmp(buf, "\xfe\xdc\xbaX", 4));
 

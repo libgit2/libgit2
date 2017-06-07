@@ -54,10 +54,6 @@ static int index_apply_to_wd_diff(git_index *index, int action, const git_strarr
 				  unsigned int flags,
 				  git_index_matched_path_cb cb, void *payload);
 
-#define entry_size(type,len) ((offsetof(type, path) + (len) + 8) & ~7)
-#define short_entry_size(len) entry_size(struct entry_short, len)
-#define long_entry_size(len) entry_size(struct entry_long, len)
-
 #define minimal_entry_size (offsetof(struct entry_short, path))
 
 static const size_t INDEX_FOOTER_SIZE = GIT_OID_RAWSZ;
@@ -2282,12 +2278,29 @@ out_err:
 	return 0;
 }
 
+static size_t index_entry_size(size_t path_len, size_t varint_len, uint32_t flags)
+{
+	if (varint_len) {
+		if (flags & GIT_IDXENTRY_EXTENDED)
+			return offsetof(struct entry_long, path) + path_len + 1 + varint_len;
+		else
+			return offsetof(struct entry_short, path) + path_len + 1 + varint_len;
+	} else {
+#define entry_size(type,len) ((offsetof(type, path) + (len) + 8) & ~7)
+		if (flags & GIT_IDXENTRY_EXTENDED)
+			return entry_size(struct entry_long, path_len);
+		else
+			return entry_size(struct entry_short, path_len);
+#undef entry_size
+	}
+}
+
 static size_t read_entry(
 	git_index_entry **out,
 	git_index *index,
 	const void *buffer,
 	size_t buffer_size,
-	const char **last)
+	const char *last)
 {
 	size_t path_length, entry_size;
 	const char *path_ptr;
@@ -2344,34 +2357,33 @@ static size_t read_entry(
 			path_length = path_end - path_ptr;
 		}
 
-		if (entry.flags & GIT_IDXENTRY_EXTENDED)
-			entry_size = long_entry_size(path_length);
-		else
-			entry_size = short_entry_size(path_length);
-
-		if (INDEX_FOOTER_SIZE + entry_size > buffer_size)
-			return 0;
-
+		entry_size = index_entry_size(path_length, 0, entry.flags);
 		entry.path = (char *)path_ptr;
 	} else {
 		size_t varint_len;
-		size_t shared = git_decode_varint((const unsigned char *)path_ptr, 
-						  &varint_len);
-		size_t len = strlen(path_ptr + varint_len);
-		size_t last_len = strlen(*last);
-		size_t tmp_path_len;
+		size_t strip_len = git_decode_varint((const unsigned char *)path_ptr,
+						     &varint_len);
+		size_t last_len = strlen(last);
+		size_t prefix_len = last_len - strip_len;
+		size_t suffix_len = strlen(path_ptr + varint_len);
+		size_t path_len;
 
 		if (varint_len == 0)
 			return index_error_invalid("incorrect prefix length");
 
-		GITERR_CHECK_ALLOC_ADD(&tmp_path_len, shared, len + 1);
-		tmp_path = git__malloc(tmp_path_len);
+		GITERR_CHECK_ALLOC_ADD(&path_len, prefix_len, suffix_len);
+		GITERR_CHECK_ALLOC_ADD(&path_len, path_len, 1);
+		tmp_path = git__malloc(path_len);
 		GITERR_CHECK_ALLOC(tmp_path);
-		memcpy(tmp_path, last, last_len);
-		memcpy(tmp_path + last_len, path_ptr + varint_len, len);
-		entry_size = long_entry_size(shared + len);
+
+		memcpy(tmp_path, last, prefix_len);
+		memcpy(tmp_path + prefix_len, path_ptr + varint_len, suffix_len + 1);
+		entry_size = index_entry_size(suffix_len, varint_len, entry.flags);
 		entry.path = tmp_path;
 	}
+
+	if (INDEX_FOOTER_SIZE + entry_size > buffer_size)
+		return 0;
 
 	if (index_entry_dup(out, index, &entry) < 0) {
 		git__free(tmp_path);
@@ -2445,7 +2457,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	unsigned int i;
 	struct index_header header = { 0 };
 	git_oid checksum_calculated, checksum_expected;
-	const char **last = NULL;
+	const char *last = NULL;
 	const char *empty = "";
 
 #define seek_forward(_increase) { \
@@ -2469,7 +2481,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 
 	index->version = header.version;
 	if (index->version >= INDEX_VERSION_NUMBER_COMP)
-		last = &empty;
+		last = empty;
 
 	seek_forward(INDEX_HEADER_SIZE);
 
@@ -2503,6 +2515,9 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 			goto done;
 		}
 		error = 0;
+
+		if (index->version >= INDEX_VERSION_NUMBER_COMP)
+			last = entry->path;
 
 		seek_forward(entry_size);
 	}
@@ -2574,11 +2589,12 @@ static bool is_index_extended(git_index *index)
 	return (extended > 0);
 }
 
-static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const char **last)
+static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const char *last)
 {
 	void *mem = NULL;
 	struct entry_short *ondisk;
 	size_t path_len, disk_size;
+	int varint_len = 0;
 	char *path;
 	const char *path_start = entry->path;
 	size_t same_len = 0;
@@ -2586,7 +2602,7 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const cha
 	path_len = ((struct entry_internal *)entry)->pathlen;
 
 	if (last) {
-		const char *last_c = *last;
+		const char *last_c = last;
 
 		while (*path_start == *last_c) {
 			if (!*path_start || !*last_c)
@@ -2596,13 +2612,10 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const cha
 			++same_len;
 		}
 		path_len -= same_len;
-		*last = entry->path;
+		varint_len = git_encode_varint(NULL, 0, same_len);
 	}
 
-	if (entry->flags & GIT_IDXENTRY_EXTENDED)
-		disk_size = long_entry_size(path_len);
-	else
-		disk_size = short_entry_size(path_len);
+	disk_size = index_entry_size(path_len, varint_len, entry->flags);
 
 	if (git_filebuf_reserve(file, &mem, disk_size) < 0)
 		return -1;
@@ -2642,16 +2655,34 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const cha
 		ondisk_ext->flags_extended = htons(entry->flags_extended &
 			GIT_IDXENTRY_EXTENDED_FLAGS);
 		path = ondisk_ext->path;
-	}
-	else
+		disk_size -= offsetof(struct entry_long, path);
+	} else {
 		path = ondisk->path;
+		disk_size -= offsetof(struct entry_short, path);
+	}
 
 	if (last) {
-		path += git_encode_varint((unsigned char *) path,
-					  disk_size,
-					  path_len - same_len);
+		varint_len = git_encode_varint((unsigned char *) path,
+					  disk_size, same_len);
+		assert(varint_len > 0);
+		path += varint_len;
+		disk_size -= varint_len;
+
+		/*
+		 * If using path compression, we are not allowed
+		 * to have additional trailing NULs.
+		 */
+		assert(disk_size == path_len + 1);
+	} else {
+		/*
+		 * If no path compression is used, we do have
+		 * NULs as padding. As such, simply assert that
+		 * we have enough space left to write the path.
+		 */
+		assert(disk_size > path_len);
 	}
-	memcpy(path, path_start, path_len);
+
+	memcpy(path, path_start, path_len + 1);
 
 	return 0;
 }
@@ -2662,8 +2693,7 @@ static int write_entries(git_index *index, git_filebuf *file)
 	size_t i;
 	git_vector case_sorted, *entries;
 	git_index_entry *entry;
-	const char **last = NULL;
-	const char *empty = "";
+	const char *last = NULL;
 
 	/* If index->entries is sorted case-insensitively, then we need
 	 * to re-sort it case-sensitively before writing */
@@ -2676,11 +2706,14 @@ static int write_entries(git_index *index, git_filebuf *file)
 	}
 
 	if (index->version >= INDEX_VERSION_NUMBER_COMP)
-		last = &empty;
+		last = "";
 
-	git_vector_foreach(entries, i, entry)
+	git_vector_foreach(entries, i, entry) {
 		if ((error = write_disk_entry(file, entry, last)) < 0)
 			break;
+		if (index->version >= INDEX_VERSION_NUMBER_COMP)
+			last = entry->path;
+	}
 
 	if (index->ignore_case)
 		git_vector_free(&case_sorted);
