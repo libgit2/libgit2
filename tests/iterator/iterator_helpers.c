@@ -51,8 +51,7 @@ void expect_iterator_items(
 				cl_assert(entry->mode != GIT_FILEMODE_TREE);
 		}
 
-		if (++count >= expected_flat)
-			break;
+		cl_assert(++count <= expected_flat);
 	}
 
 	assert_at_end(i, v);
