@@ -724,9 +724,7 @@ int git_buf_join(
 	GITERR_CHECK_ALLOC_ADD(&alloc_len, strlen_a, strlen_b);
 	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, need_sep);
 	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 1);
-	if (git_buf_grow(buf, alloc_len) < 0)
-		return -1;
-	assert(buf->ptr);
+	ENSURE_SIZE(buf, alloc_len);
 
 	/* fix up internal pointers */
 	if (offset_a >= 0)
@@ -780,8 +778,7 @@ int git_buf_join3(
 	GITERR_CHECK_ALLOC_ADD(&len_total, len_total, sep_b);
 	GITERR_CHECK_ALLOC_ADD(&len_total, len_total, len_c);
 	GITERR_CHECK_ALLOC_ADD(&len_total, len_total, 1);
-	if (git_buf_grow(buf, len_total) < 0)
-		return -1;
+	ENSURE_SIZE(buf, len_total);
 
 	tgt = buf->ptr;
 
