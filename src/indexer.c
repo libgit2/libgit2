@@ -125,7 +125,7 @@ int git_indexer_new(
 	git_hash_ctx_init(&idx->hash_ctx);
 	git_hash_ctx_init(&idx->trailer);
 
-	if (git_object__synchronous_writing)
+	if (git_repository__fsync_gitdir)
 		idx->do_fsync = 1;
 
 	error = git_buf_joinpath(&path, prefix, suff);

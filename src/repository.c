@@ -36,6 +36,8 @@
 # include "win32/w32_util.h"
 #endif
 
+bool git_repository__fsync_gitdir = false;
+
 static const struct {
     git_repository_item_t parent;
     const char *name;

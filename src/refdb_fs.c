@@ -2032,7 +2032,7 @@ int git_refdb_backend_fs(
 		backend->direach_flags  |= GIT_PATH_DIR_PRECOMPOSE_UNICODE;
 	}
 	if ((!git_repository__cvar(&t, backend->repo, GIT_CVAR_FSYNCOBJECTFILES) && t) ||
-		git_object__synchronous_writing)
+		git_repository__fsync_gitdir)
 		backend->fsync = 1;
 
 	backend->parent.exists = &refdb_fs_backend__exists;
