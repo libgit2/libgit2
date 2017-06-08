@@ -331,6 +331,44 @@ static int checkout_queue_remove(checkout_data *data, const char *path)
 	return git_vector_insert(&data->removes, copy);
 }
 
+static int contains_unversioned(int *unversioned, git_index *index, const char *dir)
+{
+	git_vector entries = GIT_VECTOR_INIT;
+	git_buf path = GIT_BUF_INIT;
+	const char *workdir, *entry;
+	int error = 0;
+	size_t i;
+
+	if ((workdir = git_repository_workdir(index->rc.owner)) == NULL) {
+		error = -1;
+		goto out;
+	}
+
+	if ((error = git_buf_joinpath(&path, workdir, dir)) < 0)
+		goto out;
+
+	if ((error = git_path_dirload(&entries, path.ptr, strlen(workdir), 0)) < 0)
+		goto out;
+
+	*unversioned = 0;
+
+	git_vector_foreach(&entries, i, entry) {
+		const git_index_entry *ientry =
+		    git_index_get_bypath(index, entry, 0);
+
+		if (ientry == NULL) {
+			*unversioned = 1;
+			break;
+		}
+	}
+
+out:
+	git_vector_free_deep(&entries);
+	git_buf_free(&path);
+
+	return error;
+}
+
 /* note that this advances the iterator over the wd item */
 static int checkout_action_wd_only(
 	checkout_data *data,
@@ -371,6 +409,14 @@ static int checkout_action_wd_only(
 			const git_index_entry *e = git_index_get_byindex(data->index, pos);
 
 			if (e != NULL && data->diff->pfxcomp(e->path, wd->path) == 0) {
+				int unversioned;
+				if ((error = !contains_unversioned(
+						&unversioned, data->index, wd->path)) < 0)
+					return error;
+
+				if (unversioned)
+					return git_iterator_advance_into(wditem, workdir);
+
 				notify = GIT_CHECKOUT_NOTIFY_DIRTY;
 				remove = ((data->strategy & GIT_CHECKOUT_FORCE) != 0);
 			}
