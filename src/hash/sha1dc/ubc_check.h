@@ -20,14 +20,16 @@
 // thus one needs to do the recompression check for each DV that has its bit set
 */
 
-#ifndef UBC_CHECK_H
-#define UBC_CHECK_H
+#ifndef SHA1DC_UBC_CHECK_H
+#define SHA1DC_UBC_CHECK_H
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
+#ifndef SHA1DC_NO_STANDARD_INCLUDES
 #include <stdint.h>
+#endif
 
 #define DVMASKSIZE 1
 typedef struct { int dvType; int dvK; int dvB; int testt; int maski; int maskb; uint32_t dm[80]; } dv_info_t;
@@ -43,4 +45,8 @@ void ubc_check(const uint32_t W[80], uint32_t dvmask[DVMASKSIZE]);
 }
 #endif
 
-#endif /* UBC_CHECK_H */
+#ifdef SHA1DC_CUSTOM_TRAILING_INCLUDE_UBC_CHECK_H
+#include SHA1DC_CUSTOM_TRAILING_INCLUDE_UBC_CHECK_H
+#endif
+
+#endif
