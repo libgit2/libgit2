@@ -22,7 +22,7 @@ void test_refs_create__cleanup(void)
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 1));
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_SYMBOLIC_REF_CREATION, 1));
-	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONOUS_OBJECT_CREATION, 0));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_FSYNC_GITDIR, 0));
 }
 
 void test_refs_create__symbolic(void)
@@ -347,7 +347,7 @@ void test_refs_create__fsyncs_when_global_opt_set(void)
 {
 	size_t create_count, compress_count;
 
-	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONOUS_OBJECT_CREATION, 1));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_FSYNC_GITDIR, 1));
 	count_fsyncs(&create_count, &compress_count);
 
 	cl_assert_equal_i(expected_fsyncs_create, create_count);

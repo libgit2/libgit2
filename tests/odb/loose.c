@@ -63,7 +63,7 @@ void test_odb_loose__initialize(void)
 
 void test_odb_loose__cleanup(void)
 {
-	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONOUS_OBJECT_CREATION, 0));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_FSYNC_GITDIR, 0));
 	cl_fixture_cleanup("test-objects");
 }
 
@@ -181,7 +181,7 @@ void test_odb_loose__fsync_obeys_odb_option(void)
 
 void test_odb_loose__fsync_obeys_global_setting(void)
 {
-	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_SYNCHRONOUS_OBJECT_CREATION, 1));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_FSYNC_GITDIR, 1));
 	write_object_to_loose_odb(0);
 	cl_assert(p_fsync__cnt > 0);
 }

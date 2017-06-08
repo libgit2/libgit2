@@ -31,6 +31,8 @@
 /* Default DOS-compatible 8.3 "short name" for a git repository, "GIT~1" */
 #define GIT_DIR_SHORTNAME "GIT~1"
 
+extern bool git_repository__fsync_gitdir;
+
 /** Cvar cache identifiers */
 typedef enum {
 	GIT_CVAR_AUTO_CRLF = 0, /* core.autocrlf */

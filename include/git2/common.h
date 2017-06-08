@@ -179,7 +179,7 @@ typedef enum {
 	GIT_OPT_SET_SSL_CIPHERS,
 	GIT_OPT_GET_USER_AGENT,
 	GIT_OPT_ENABLE_OFS_DELTA,
-	GIT_OPT_ENABLE_SYNCHRONOUS_OBJECT_CREATION,
+	GIT_OPT_ENABLE_FSYNC_GITDIR,
 	GIT_OPT_GET_WINDOWS_SHAREMODE,
 	GIT_OPT_SET_WINDOWS_SHAREMODE,
 	GIT_OPT_ENABLE_STRICT_HASH_VERIFICATION,
@@ -331,9 +331,9 @@ typedef enum {
  *		> Packfiles containing offset deltas can still be read.
  *		> This defaults to enabled.
  *
- *	* opts(GIT_OPT_ENABLE_SYNCHRONOUS_OBJECT_CREATION, int enabled)
+ *	* opts(GIT_OPT_ENABLE_FSYNC_GITDIR, int enabled)
  *
- *		> Enable synchronized writes of new objects using `fsync`
+ *		> Enable synchronized writes of files in the gitdir using `fsync`
  *		> (or the platform equivalent) to ensure that new object data
  *		> is written to permanent storage, not simply cached.  This
  *		> defaults to disabled.
