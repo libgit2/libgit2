@@ -18,7 +18,7 @@ char git_buf__initbuf[1];
 char git_buf__oom[1];
 
 #define ENSURE_SIZE(b, d) \
-	if ((d) > buf->asize && git_buf_grow(b, (d)) < 0)\
+	if ((d) > (b)->asize && git_buf_grow((b), (d)) < 0)\
 		return -1;
 
 
