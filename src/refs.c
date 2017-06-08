@@ -622,15 +622,25 @@ typedef struct {
 static int update_wt_heads(git_repository *repo, const char *path, void *payload)
 {
 	rename_cb_data *data = (rename_cb_data *) payload;
-	git_reference *head;
+	git_reference *head = NULL;
 	char *gitdir = NULL;
-	int error = 0;
+	int error;
 
-	if (git_reference__read_head(&head, repo, path) < 0 ||
-	    git_reference_type(head) != GIT_REF_SYMBOLIC ||
-	    git__strcmp(head->target.symbolic, data->old_name) != 0 ||
-	    (gitdir = git_path_dirname(path)) == NULL)
+	if ((error = git_reference__read_head(&head, repo, path)) < 0) {
+		giterr_set(GITERR_REFERENCE, "could not read HEAD when renaming references");
 		goto out;
+	}
+
+	if ((gitdir = git_path_dirname(path)) == NULL) {
+		error = -1;
+		goto out;
+	}
+
+	if (git_reference_type(head) != GIT_REF_SYMBOLIC ||
+	    git__strcmp(head->target.symbolic, data->old_name) != 0) {
+		error = 0;
+		goto out;
+	}
 
 	/* Update HEAD it was pointing to the reference being renamed */
 	if ((error = git_repository_create_head(gitdir, data->new_name)) < 0) {

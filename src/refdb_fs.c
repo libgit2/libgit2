@@ -1140,7 +1140,7 @@ out:
 static int maybe_append_head(refdb_fs_backend *backend, const git_reference *ref, const git_signature *who, const char *message)
 {
 	int error;
-	git_oid old_id = {{0}};
+	git_oid old_id;
 	git_reference *tmp = NULL, *head = NULL, *peeled = NULL;
 	const char *name;
 
@@ -1148,7 +1148,8 @@ static int maybe_append_head(refdb_fs_backend *backend, const git_reference *ref
 		return 0;
 
 	/* if we can't resolve, we use {0}*40 as old id */
-	git_reference_name_to_id(&old_id, backend->repo, ref->name);
+	if (git_reference_name_to_id(&old_id, backend->repo, ref->name) < 0)
+		memset(&old_id, 0, sizeof(old_id));
 
 	if ((error = git_reference_lookup(&head, backend->repo, GIT_HEAD_FILE)) < 0)
 		return error;
