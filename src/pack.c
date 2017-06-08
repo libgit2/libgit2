@@ -312,7 +312,7 @@ static int pack_index_open(struct git_pack_file *p)
 {
 	int error = 0;
 	size_t name_len;
-	git_buf idx_name = GIT_BUF_INIT;
+	git_buf idx_name;
 
 	if (p->index_version > -1)
 		return 0;
@@ -320,11 +320,13 @@ static int pack_index_open(struct git_pack_file *p)
 	name_len = strlen(p->pack_name);
 	assert(name_len > strlen(".pack")); /* checked by git_pack_file alloc */
 
-	git_buf_grow(&idx_name, name_len);
+	if (git_buf_init(&idx_name, name_len) < 0)
+		return -1;
+
 	git_buf_put(&idx_name, p->pack_name, name_len - strlen(".pack"));
 	git_buf_puts(&idx_name, ".idx");
 	if (git_buf_oom(&idx_name)) {
-		giterr_set_oom();
+		git_buf_free(&idx_name);
 		return -1;
 	}
 
