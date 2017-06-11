@@ -1,5 +1,16 @@
-v0.25 + 1
--------
+v0.26 + 1
+---------
+
+### Changes or improvements
+
+### API additions
+
+### API removals
+
+### Breaking API changes
+
+v0.26
+-----
 
 ### Changes or improvements
 
@@ -84,8 +95,6 @@ v0.25 + 1
 
 * `git_transport_smart_proxy_options()' enables you to get the proxy options for
   smart transports.
-
-### API removals
 
 ### Breaking API changes
 
