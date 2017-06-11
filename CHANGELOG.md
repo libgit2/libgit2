@@ -1,5 +1,16 @@
-v0.25 + 1
--------
+v0.26 + 1
+---------
+
+### Changes or improvements
+
+### API additions
+
+### API removals
+
+### Breaking API changes
+
+v0.26
+-----
 
 ### Changes or improvements
 
@@ -24,11 +35,16 @@ v0.25 + 1
 * We now optionally call `fsync` on loose objects, packfiles and their indexes,
   loose references and packed reference files.
 
-* We can now build against OpenSSL v1.1.
+* We can now build against OpenSSL v1.1 and against LibreSSL.
 
 * `GIT_MERGE_OPTIONS_INIT` now includes a setting to perform rename detection.
   This aligns this structure with the default by `git_merge` and
   `git_merge_trees` when `NULL` was provided for the options.
+
+* Improvements for reading index v4 files.
+
+* Perform additional retries for filesystem operations on Windows when files
+  are temporarily locked by other processes.
 
 ### API additions
 
@@ -79,8 +95,6 @@ v0.25 + 1
 
 * `git_transport_smart_proxy_options()' enables you to get the proxy options for
   smart transports.
-
-### API removals
 
 ### Breaking API changes
 
