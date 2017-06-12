@@ -2266,12 +2266,12 @@ int git_repository_item_path(git_buf *out, git_repository *repo, git_repository_
 			parent = git_repository_commondir(repo);
 			break;
 		default:
-			giterr_set(GITERR_INVALID, "Invalid item directory");
+			giterr_set(GITERR_INVALID, "invalid item directory");
 			return -1;
 	}
 
 	if (parent == NULL) {
-		giterr_set(GITERR_INVALID, "Path cannot exist in repository");
+		giterr_set(GITERR_INVALID, "path cannot exist in repository");
 		return -1;
 	}
 
