@@ -2272,7 +2272,7 @@ int git_repository_item_path(git_buf *out, git_repository *repo, git_repository_
 
 	if (parent == NULL) {
 		giterr_set(GITERR_INVALID, "path cannot exist in repository");
-		return -1;
+		return GIT_ENOTFOUND;
 	}
 
 	if (git_buf_sets(out, parent) < 0)
