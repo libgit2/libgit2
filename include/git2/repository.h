@@ -433,12 +433,12 @@ typedef enum {
  * item. It will thereby honor things like the repository's
  * common directory, gitdir, etc. In case a file path cannot
  * exist for a given item (e.g. the working directory of a bare
- * repository), an error is returned.
+ * repository), GIT_ENOTFOUND is returned.
  *
  * @param out Buffer to store the path at
  * @param repo Repository to get path for
  * @param item The repository item for which to retrieve the path
- * @return 0 on success, otherwise a negative value
+ * @return 0, GIT_ENOTFOUND if the path cannot exist or an error code
  */
 GIT_EXTERN(int) git_repository_item_path(git_buf *out, git_repository *repo, git_repository_item_t item);
 
