@@ -1116,8 +1116,11 @@ static int read_prefix_1(git_odb_object **out, git_odb *db,
 		if (b->read_prefix != NULL) {
 			git_oid full_oid;
 			error = b->read_prefix(&full_oid, &raw.data, &raw.len, &raw.type, b, key, len);
-			if (error == GIT_ENOTFOUND || error == GIT_PASSTHROUGH)
+
+			if (error == GIT_ENOTFOUND || error == GIT_PASSTHROUGH) {
+				error = 0;
 				continue;
+			}
 
 			if (error)
 				goto out;
