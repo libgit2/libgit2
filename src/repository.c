@@ -943,13 +943,10 @@ static int load_config(
 	if ((error = git_config_new(&cfg)) < 0)
 		return error;
 
-	error = git_repository_item_path(&config_path, repo, GIT_REPOSITORY_ITEM_CONFIG);
-	if (error < 0)
-		goto on_error;
+	if ((error = git_repository_item_path(&config_path, repo, GIT_REPOSITORY_ITEM_CONFIG)) == 0)
+		error = git_config_add_file_ondisk(cfg, config_path.ptr, GIT_CONFIG_LEVEL_LOCAL, 0);
 
-	if ((error = git_config_add_file_ondisk(
-			cfg, config_path.ptr, GIT_CONFIG_LEVEL_LOCAL, 0)) < 0 &&
-		error != GIT_ENOTFOUND)
+	if (error && error != GIT_ENOTFOUND)
 		goto on_error;
 
 	git_buf_free(&config_path);
