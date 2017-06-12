@@ -271,7 +271,7 @@ struct git_filter {
 };
 
 #define GIT_FILTER_VERSION 1
-
+#define GIT_FILTER_INIT {GIT_FILTER_VERSION}
 /**
  * Register a filter under a given name with a given priority.
  *
