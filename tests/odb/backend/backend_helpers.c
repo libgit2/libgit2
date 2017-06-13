@@ -4,7 +4,7 @@
 
 static int search_object(const fake_object **out, fake_backend *fake, const git_oid *oid, size_t len)
 {
-	const fake_object *obj = fake->objects;
+	const fake_object *obj = fake->objects, *found = NULL;
 
 	while (obj && obj->oid) {
 		git_oid current_oid;
@@ -12,15 +12,18 @@ static int search_object(const fake_object **out, fake_backend *fake, const git_
 		git_oid_fromstr(&current_oid, obj->oid);
 
 		if (git_oid_ncmp(&current_oid, oid, len) == 0) {
-			if (out)
-				*out = obj;
-			return 0;
+			if (found)
+				return GIT_EAMBIGUOUS;
+			found = obj;
 		}
 
 		obj++;
 	}
 
-	return GIT_ENOTFOUND;
+	if (found && out)
+		*out = found;
+
+	return found ? GIT_OK : GIT_ENOTFOUND;
 }
 
 static int fake_backend__exists(git_odb_backend *backend, const git_oid *oid)
@@ -40,19 +43,20 @@ static int fake_backend__read(
 {
 	const fake_object *obj;
 	fake_backend *fake;
+	int error;
 
 	fake = (fake_backend *)backend;
 
 	fake->read_calls++;
 
-	if (search_object(&obj, fake, oid, GIT_OID_RAWSZ) == 0) {
-		*len_p = strlen(obj->content);
-		*buffer_p = git__strdup(obj->content);
-		*type_p = GIT_OBJ_BLOB;
-		return 0;
-	}
+	if ((error = search_object(&obj, fake, oid, GIT_OID_HEXSZ)) < 0)
+		return error;
 
-	return GIT_ENOTFOUND;
+	*len_p = strlen(obj->content);
+	*buffer_p = git__strdup(obj->content);
+	*type_p = GIT_OBJ_BLOB;
+
+	return 0;
 }
 
 static int fake_backend__read_header(
@@ -61,18 +65,19 @@ static int fake_backend__read_header(
 {
 	const fake_object *obj;
 	fake_backend *fake;
+	int error;
 
 	fake = (fake_backend *)backend;
 
 	fake->read_header_calls++;
 
-	if (search_object(&obj, fake, oid, GIT_OID_RAWSZ) == 0) {
-		*len_p = strlen(obj->content);
-		*type_p = GIT_OBJ_BLOB;
-		return 0;
-	}
+	if ((error = search_object(&obj, fake, oid, GIT_OID_HEXSZ)) < 0)
+		return error;
 
-	return GIT_ENOTFOUND;
+	*len_p = strlen(obj->content);
+	*type_p = GIT_OBJ_BLOB;
+
+	return 0;
 }
 
 static int fake_backend__read_prefix(
@@ -81,20 +86,21 @@ static int fake_backend__read_prefix(
 {
 	const fake_object *obj;
 	fake_backend *fake;
+	int error;
 
 	fake = (fake_backend *)backend;
 
 	fake->read_prefix_calls++;
 
-	if (search_object(&obj, fake, short_oid, len) == 0) {
-		git_oid_fromstr(out_oid, obj->oid);
-		*len_p = strlen(obj->content);
-		*buffer_p = git__strdup(obj->content);
-		*type_p = GIT_OBJ_BLOB;
-		return 0;
-	}
+	if ((error = search_object(&obj, fake, short_oid, len)) < 0)
+		return error;
 
-	return GIT_ENOTFOUND;
+	git_oid_fromstr(out_oid, obj->oid);
+	*len_p = strlen(obj->content);
+	*buffer_p = git__strdup(obj->content);
+	*type_p = GIT_OBJ_BLOB;
+
+	return 0;
 }
 
 static void fake_backend__free(git_odb_backend *_backend)
