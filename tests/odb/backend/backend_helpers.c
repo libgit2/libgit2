@@ -37,6 +37,26 @@ static int fake_backend__exists(git_odb_backend *backend, const git_oid *oid)
 	return search_object(NULL, fake, oid, GIT_OID_HEXSZ) == GIT_OK;
 }
 
+static int fake_backend__exists_prefix(
+	git_oid *out, git_odb_backend *backend, const git_oid *oid, size_t len)
+{
+	const fake_object *obj;
+	fake_backend *fake;
+	int error;
+
+	fake = (fake_backend *)backend;
+
+	fake->exists_prefix_calls++;
+
+	if ((error = search_object(&obj, fake, oid, len)) < 0)
+		return error;
+
+	if (out)
+		git_oid_fromstr(out, obj->oid);
+
+	return 0;
+}
+
 static int fake_backend__read(
 	void **buffer_p, size_t *len_p, git_otype *type_p,
 	git_odb_backend *backend, const git_oid *oid)
@@ -130,6 +150,7 @@ int build_fake_backend(
 	backend->parent.read_prefix = fake_backend__read_prefix;
 	backend->parent.read_header = fake_backend__read_header;
 	backend->parent.exists = fake_backend__exists;
+	backend->parent.exists_prefix = fake_backend__exists_prefix;
 	backend->parent.free = &fake_backend__free;
 
 	*out = (git_odb_backend *)backend;

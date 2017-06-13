@@ -9,6 +9,7 @@ typedef struct {
 	git_odb_backend parent;
 
 	int exists_calls;
+	int exists_prefix_calls;
 	int read_calls;
 	int read_header_calls;
 	int read_prefix_calls;
