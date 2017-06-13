@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include <git2/sys/config.h>
+#include <git2/sys/filter.h>
 #include <git2/sys/odb_backend.h>
 #include <git2/sys/refdb_backend.h>
 #include <git2/sys/transport.h>
@@ -95,6 +96,11 @@ void test_core_structinit__compare(void)
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_diff_find_options, GIT_DIFF_FIND_OPTIONS_VERSION, \
 		GIT_DIFF_FIND_OPTIONS_INIT, git_diff_find_init_options);
+
+	/* filter */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_filter, GIT_FILTER_VERSION, \
+		GIT_FILTER_INIT, git_filter_init);
 
 	/* merge_file_input */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
