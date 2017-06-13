@@ -34,7 +34,7 @@ static int fake_backend__exists(git_odb_backend *backend, const git_oid *oid)
 
 	fake->exists_calls++;
 
-	return search_object(NULL, fake, oid, GIT_OID_RAWSZ) == GIT_OK;
+	return search_object(NULL, fake, oid, GIT_OID_HEXSZ) == GIT_OK;
 }
 
 static int fake_backend__read(
