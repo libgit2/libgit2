@@ -271,6 +271,17 @@ struct git_filter {
 };
 
 #define GIT_FILTER_VERSION 1
+#define GIT_FILTER_INIT {GIT_FILTER_VERSION}
+
+/**
+ * Initializes a `git_filter` with default values. Equivalent to
+ * creating an instance with GIT_FILTER_INIT.
+ *
+ * @param filter the `git_filter` struct to initialize.
+ * @param version Version the struct; pass `GIT_FILTER_VERSION`
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_filter_init(git_filter *filter, unsigned int version);
 
 /**
  * Register a filter under a given name with a given priority.
