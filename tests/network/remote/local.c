@@ -2,6 +2,7 @@
 #include "buffer.h"
 #include "path.h"
 #include "posix.h"
+#include "git2/sys/repository.h"
 
 static git_repository *repo;
 static git_buf file_path_buf = GIT_BUF_INIT;

@@ -165,4 +165,9 @@ void test_core_structinit__compare(void)
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_submodule_update_options, GIT_SUBMODULE_UPDATE_OPTIONS_VERSION, \
 		GIT_SUBMODULE_UPDATE_OPTIONS_INIT, git_submodule_update_init_options);
+
+	/* submodule update */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_proxy_options, GIT_PROXY_OPTIONS_VERSION, \
+		GIT_PROXY_OPTIONS_INIT, git_proxy_init_options);
 }
