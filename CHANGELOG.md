@@ -96,6 +96,9 @@ v0.26
 * `git_transport_smart_proxy_options()' enables you to get the proxy options for
   smart transports.
 
+* The `GIT_FILTER_INIT` macro and the `git_filter_init` function are provided
+  to initialize a `git_filter` structure.
+
 ### Breaking API changes
 
 * `clone_checkout_strategy` has been removed from
