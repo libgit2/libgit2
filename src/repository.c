@@ -1784,7 +1784,13 @@ static int repo_init_structure(
 			default_template = true;
 		}
 
-		if (tdir) {
+		/*
+		 * If tdir was the empty string, treat it like tdir was a path to an
+		 * empty directory (so, don't do any copying). This is the behavior
+		 * that git(1) exhibits, although it doesn't seem to be officially
+		 * documented.
+		 */
+		if (tdir && git__strcmp(tdir, "") != 0) {
 			uint32_t cpflags = GIT_CPDIR_COPY_SYMLINKS |
 				GIT_CPDIR_SIMPLE_TO_MODE |
 				GIT_CPDIR_COPY_DOTFILES;
