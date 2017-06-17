@@ -1235,7 +1235,7 @@ static int reserved_names_add8dot3(git_repository *repo, const char *path)
 
 	name_len = strlen(name);
 
-	if ((name_len == def_len && memcmp(name, def, def_len) == 0) || 
+	if ((name_len == def_len && memcmp(name, def, def_len) == 0) ||
 		(name_len == def_dot_git_len && memcmp(name, def_dot_git, def_dot_git_len) == 0)) {
 		git__free(name);
 		return 0;
@@ -2768,7 +2768,7 @@ int git_repository__cleanup_files(
 			error = git_futils_rmdir_r(path, NULL,
 				GIT_RMDIR_REMOVE_FILES | GIT_RMDIR_REMOVE_BLOCKERS);
 		}
-			
+
 		git_buf_clear(&buf);
 	}
 
