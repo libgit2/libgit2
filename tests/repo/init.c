@@ -320,6 +320,17 @@ void test_repo_init__sets_logAllRefUpdates_according_to_type_of_repository(void)
 	assert_config_entry_on_init_bytype("core.logallrefupdates", true, false);
 }
 
+void test_repo_init__empty_template_path(void)
+{
+	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
+	opts.template_path = "";
+
+	cl_git_pass(git_futils_mkdir("foo", 0755, 0));
+	cl_git_pass(git_repository_init_ext(&_repo, "foo", &opts));
+
+	cleanup_repository("foo");
+}
+
 void test_repo_init__extended_0(void)
 {
 	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
