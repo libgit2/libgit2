@@ -32,6 +32,8 @@
 #include "commit.h"
 #include "oidarray.h"
 #include "merge_driver.h"
+#include "oidmap.h"
+#include "array.h"
 
 #include "git2/types.h"
 #include "git2/repository.h"
@@ -1005,27 +1007,6 @@ struct merge_diff_similarity {
 	size_t other_idx;
 };
 
-static int index_entry_similarity_exact(
-	git_repository *repo,
-	git_index_entry *a,
-	size_t a_idx,
-	git_index_entry *b,
-	size_t b_idx,
-	void **cache,
-	const git_merge_options *opts)
-{
-	GIT_UNUSED(repo);
-	GIT_UNUSED(a_idx);
-	GIT_UNUSED(b_idx);
-	GIT_UNUSED(cache);
-	GIT_UNUSED(opts);
-
-	if (git_oid__cmp(&a->id, &b->id) == 0)
-		return 100;
-
-	return 0;
-}
-
 static int index_entry_similarity_calc(
 	void **out,
 	git_repository *repo,
@@ -1102,12 +1083,154 @@ static int index_entry_similarity_inexact(
 	return score;
 }
 
-static int merge_diff_mark_similarity(
+/* Tracks deletes by oid for merge_diff_mark_similarity_exact().  This is a
+* non-shrinking queue where next_pos is the next position to dequeue. 
+*/
+typedef struct {
+	git_array_t(size_t) arr;
+	size_t next_pos;
+	size_t first_entry;
+} deletes_by_oid_queue;
+
+static void deletes_by_oid_free(git_oidmap *map) {
+	deletes_by_oid_queue *queue;
+
+	if (!map)
+		return;
+
+	git_oidmap_foreach_value(map, queue, {
+		git_array_clear(queue->arr);
+	});
+	git_oidmap_free(map);
+}
+
+static int deletes_by_oid_enqueue(git_oidmap *map, git_pool* pool, const git_oid *id, size_t idx) {
+	khint_t pos;
+	deletes_by_oid_queue *queue;
+	size_t *array_entry;
+	int error;
+
+	pos = git_oidmap_lookup_index(map, id);
+	if (!git_oidmap_valid_index(map, pos)) {
+		queue = git_pool_malloc(pool, sizeof(deletes_by_oid_queue));
+		GITERR_CHECK_ALLOC(queue);
+
+		git_array_init(queue->arr);
+		queue->next_pos = 0;
+		queue->first_entry = idx;
+
+		git_oidmap_insert(map, id, queue, &error);
+		if (error < 0)
+			return -1;
+	} else {
+		queue = git_oidmap_value_at(map, pos);
+		array_entry = git_array_alloc(queue->arr);
+		GITERR_CHECK_ALLOC(array_entry);
+		*array_entry = idx;
+	}
+
+	return 0;
+}
+
+static int deletes_by_oid_dequeue(size_t *idx, git_oidmap *map, const git_oid *id) {
+	khint_t pos;
+	deletes_by_oid_queue *queue;
+	size_t *array_entry;
+
+	pos = git_oidmap_lookup_index(map, id);
+
+	if (!git_oidmap_valid_index(map, pos))
+		return GIT_ENOTFOUND;
+
+	queue = git_oidmap_value_at(map, pos);
+	
+	if (queue->next_pos == 0) {
+		*idx = queue->first_entry;
+	} else {
+		array_entry = git_array_get(queue->arr, queue->next_pos - 1);
+		if (array_entry == NULL)
+			return GIT_ENOTFOUND;
+
+		*idx = *array_entry;
+	}
+
+	queue->next_pos++;
+	return 0;
+}
+
+static int merge_diff_mark_similarity_exact(
+	git_merge_diff_list *diff_list,
+	struct merge_diff_similarity *similarity_ours,
+	struct merge_diff_similarity *similarity_theirs)
+{
+	size_t i, j;
+	git_merge_diff *conflict_src, *conflict_tgt;
+	git_oidmap *ours_deletes_by_oid, *theirs_deletes_by_oid;
+	int error = 0;
+
+	if (!(ours_deletes_by_oid = git_oidmap_alloc()) ||
+		!(theirs_deletes_by_oid = git_oidmap_alloc())) {
+		error = -1;
+		goto done;
+	}
+
+	/* Build a map of object ids to conflicts */
+	git_vector_foreach(&diff_list->conflicts, i, conflict_src) {
+		/* Items can be the source of a rename iff they have an item in the
+		* ancestor slot and lack an item in the ours or theirs slot. */
+		if (!GIT_MERGE_INDEX_ENTRY_EXISTS(conflict_src->ancestor_entry))
+			continue;
+
+		if (!GIT_MERGE_INDEX_ENTRY_EXISTS(conflict_src->our_entry)) {
+			error = deletes_by_oid_enqueue(ours_deletes_by_oid, &diff_list->pool, &conflict_src->ancestor_entry.id, i);
+			if (error < 0)
+				goto done;
+		}
+
+		if (!GIT_MERGE_INDEX_ENTRY_EXISTS(conflict_src->their_entry)) {
+			error = deletes_by_oid_enqueue(theirs_deletes_by_oid, &diff_list->pool, &conflict_src->ancestor_entry.id, i);
+			if (error < 0)
+				goto done;
+		}
+	}
+
+	git_vector_foreach(&diff_list->conflicts, j, conflict_tgt) {
+		if (GIT_MERGE_INDEX_ENTRY_EXISTS(conflict_tgt->ancestor_entry))
+			continue;
+
+		if (GIT_MERGE_INDEX_ENTRY_EXISTS(conflict_tgt->our_entry)) {
+			if (deletes_by_oid_dequeue(&i, ours_deletes_by_oid, &conflict_tgt->our_entry.id) == 0) {
+				similarity_ours[i].similarity = 100;
+				similarity_ours[i].other_idx = j;
+
+				similarity_ours[j].similarity = 100;
+				similarity_ours[j].other_idx = i;
+			}
+		}
+
+		if (GIT_MERGE_INDEX_ENTRY_EXISTS(conflict_tgt->their_entry)) {
+			if (deletes_by_oid_dequeue(&i, theirs_deletes_by_oid, &conflict_tgt->their_entry.id) == 0) {
+				similarity_theirs[i].similarity = 100;
+				similarity_theirs[i].other_idx = j;
+
+				similarity_theirs[j].similarity = 100;
+				similarity_theirs[j].other_idx = i;
+			}
+		}
+	}
+
+done:
+	deletes_by_oid_free(ours_deletes_by_oid);
+	deletes_by_oid_free(theirs_deletes_by_oid);
+
+	return error;
+}
+
+static int merge_diff_mark_similarity_inexact(
 	git_repository *repo,
 	git_merge_diff_list *diff_list,
 	struct merge_diff_similarity *similarity_ours,
 	struct merge_diff_similarity *similarity_theirs,
-	int (*similarity_fn)(git_repository *, git_index_entry *, size_t, git_index_entry *, size_t, void **, const git_merge_options *),
 	void **cache,
 	const git_merge_options *opts)
 {
@@ -1132,7 +1255,7 @@ static int merge_diff_mark_similarity(
 
 			if (GIT_MERGE_INDEX_ENTRY_EXISTS(conflict_tgt->our_entry) &&
 				!GIT_MERGE_INDEX_ENTRY_EXISTS(conflict_src->our_entry)) {
-				similarity = similarity_fn(repo, &conflict_src->ancestor_entry, i, &conflict_tgt->our_entry, our_idx, cache, opts);
+				similarity = index_entry_similarity_inexact(repo, &conflict_src->ancestor_entry, i, &conflict_tgt->our_entry, our_idx, cache, opts);
 
 				if (similarity == GIT_EBUFS)
 					continue;
@@ -1158,7 +1281,7 @@ static int merge_diff_mark_similarity(
 
 			if (GIT_MERGE_INDEX_ENTRY_EXISTS(conflict_tgt->their_entry) &&
 				!GIT_MERGE_INDEX_ENTRY_EXISTS(conflict_src->their_entry)) {
-				similarity = similarity_fn(repo, &conflict_src->ancestor_entry, i, &conflict_tgt->their_entry, their_idx, cache, opts);
+				similarity = index_entry_similarity_inexact(repo, &conflict_src->ancestor_entry, i, &conflict_tgt->their_entry, their_idx, cache, opts);
 
 				if (similarity > similarity_theirs[i].similarity &&
 					similarity > similarity_theirs[j].similarity) {
@@ -1396,11 +1519,10 @@ int git_merge_diff_list__find_renames(
 	/* Calculate similarity between items that were deleted from the ancestor
 	 * and added in the other branch.
 	 */
-	if ((error = merge_diff_mark_similarity(repo, diff_list, similarity_ours,
-		similarity_theirs, index_entry_similarity_exact, NULL, opts)) < 0)
+	if ((error = merge_diff_mark_similarity_exact(diff_list, similarity_ours, similarity_theirs)) < 0)
 		goto done;
 
-	if (diff_list->conflicts.length <= opts->target_limit) {
+	if (opts->rename_threshold < 100 && diff_list->conflicts.length <= opts->target_limit) {
 		GITERR_CHECK_ALLOC_MULTIPLY(&cache_size, diff_list->conflicts.length, 3);
 		cache = git__calloc(cache_size, sizeof(void *));
 		GITERR_CHECK_ALLOC(cache);
@@ -1410,9 +1532,8 @@ int git_merge_diff_list__find_renames(
 		if (src_count > opts->target_limit || tgt_count > opts->target_limit) {
 			/* TODO: report! */
 		} else {
-			if ((error = merge_diff_mark_similarity(
-				repo, diff_list, similarity_ours, similarity_theirs,
-				index_entry_similarity_inexact, cache, opts)) < 0)
+			if ((error = merge_diff_mark_similarity_inexact(
+				repo, diff_list, similarity_ours, similarity_theirs, cache, opts)) < 0)
 				goto done;
 		}
 	}
