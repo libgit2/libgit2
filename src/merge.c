@@ -1165,7 +1165,7 @@ static int merge_diff_mark_similarity_exact(
 {
 	size_t i, j;
 	git_merge_diff *conflict_src, *conflict_tgt;
-	git_oidmap *ours_deletes_by_oid, *theirs_deletes_by_oid;
+	git_oidmap *ours_deletes_by_oid = NULL, *theirs_deletes_by_oid = NULL;
 	int error = 0;
 
 	if (!(ours_deletes_by_oid = git_oidmap_alloc()) ||
