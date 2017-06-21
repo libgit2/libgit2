@@ -206,7 +206,6 @@ FILE(STRINGS "include/git2/version.h" GIT2_HEADER_SOVERSION REGEX "^#define LIBG
 STRING(REGEX REPLACE "^.*LIBGIT2_SOVERSION ([0-9]+)$" "\\1" LIBGIT2_SOVERSION "${GIT2_HEADER_SOVERSION}")
 
 # Find required dependencies
-INCLUDE_DIRECTORIES(src include)
 
 IF (SECURITY_FOUND)
   # OS X 10.7 and older do not have some functions we use, fall back to OpenSSL there
@@ -617,6 +616,7 @@ TARGET_LINK_LIBRARIES(git2 ${SSH_LIBRARIES})
 TARGET_LINK_LIBRARIES(git2 ${GSSAPI_LIBRARIES})
 TARGET_LINK_LIBRARIES(git2 ${ICONV_LIBRARIES})
 TARGET_OS_LIBRARIES(git2)
+TARGET_INCLUDE_DIRECTORIES(git2 PRIVATE src PUBLIC include)
 
 # Workaround for Cmake bug #0011240 (see http://public.kitware.com/Bug/view.php?id=11240)
 # Win64+MSVC+static libs = linker error
