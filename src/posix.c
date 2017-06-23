@@ -40,7 +40,7 @@ int p_getaddrinfo(
 	if (ainfo->ai_servent)
 		ainfo->ai_port = ainfo->ai_servent->s_port;
 	else
-		ainfo->ai_port = atol(port);
+		ainfo->ai_port = htons(atol(port));
 
 	memcpy(&ainfo->ai_addr_in.sin_addr,
 			ainfo->ai_hostent->h_addr_list[0],
