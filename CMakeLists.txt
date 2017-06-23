@@ -252,13 +252,13 @@ IF (WIN32 AND WINHTTP)
 			MESSAGE(FATAL_ERROR "Could not find dlltool command")
 		ENDIF ()
 
-		SET(LIBWINHTTP_PATH "${CMAKE_CURRENT_BINARY_DIR}/deps/winhttp")
+		SET(LIBWINHTTP_PATH "${CMAKE_BINARY_DIR}/deps/winhttp")
 		FILE(MAKE_DIRECTORY ${LIBWINHTTP_PATH})
 
 		IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
-			set(WINHTTP_DEF "${CMAKE_CURRENT_SOURCE_DIR}/deps/winhttp/winhttp64.def")
+			set(WINHTTP_DEF "${CMAKE_SOURCE_DIR}/deps/winhttp/winhttp64.def")
 		ELSE()
-			set(WINHTTP_DEF "${CMAKE_CURRENT_SOURCE_DIR}/deps/winhttp/winhttp.def")
+			set(WINHTTP_DEF "${CMAKE_SOURCE_DIR}/deps/winhttp/winhttp.def")
 		ENDIF()
 
 		ADD_CUSTOM_COMMAND(
@@ -273,7 +273,7 @@ IF (WIN32 AND WINHTTP)
 			PROPERTIES OBJECT_DEPENDS ${LIBWINHTTP_PATH}/libwinhttp.a
 		)
 
-		INCLUDE_DIRECTORIES(deps/winhttp)
+		INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/deps/winhttp")
 		LINK_DIRECTORIES(${LIBWINHTTP_PATH})
 	ENDIF ()
 
@@ -327,8 +327,8 @@ ENDIF()
 
 # Include POSIX regex when it is required
 IF(WIN32 OR AMIGA OR CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
-	INCLUDE_DIRECTORIES(deps/regex)
-	SET(SRC_REGEX deps/regex/regex.c)
+	INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/deps/regex")
+	SET(SRC_REGEX "${CMAKE_SOURCE_DIR}/deps/regex/regex.c")
 ENDIF()
 
 # Optional external dependency: http-parser
@@ -339,8 +339,8 @@ IF (USE_EXT_HTTP_PARSER AND HTTP_PARSER_FOUND AND HTTP_PARSER_VERSION_MAJOR EQUA
 	LIST(APPEND LIBGIT2_PC_LIBS "-lhttp_parser")
 ELSE()
 	MESSAGE(STATUS "http-parser version 2 was not found or disabled; using bundled 3rd-party sources.")
-	INCLUDE_DIRECTORIES(deps/http-parser)
-	FILE(GLOB SRC_HTTP deps/http-parser/*.c deps/http-parser/*.h)
+	INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/deps/http-parser")
+	FILE(GLOB SRC_HTTP "${CMAKE_SOURCE_DIR}/deps/http-parser/*.c" "${CMAKE_SOURCE_DIR}/deps/http-parser/*.h")
 ENDIF()
 
 # Optional external dependency: zlib
@@ -355,9 +355,9 @@ IF (ZLIB_FOUND)
 	ENDIF()
 ELSE()
 	MESSAGE(STATUS "zlib was not found; using bundled 3rd-party sources." )
-	INCLUDE_DIRECTORIES(deps/zlib)
+	INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/deps/zlib")
 	ADD_DEFINITIONS(-DNO_VIZ -DSTDC -DNO_GZIP)
-	FILE(GLOB SRC_ZLIB deps/zlib/*.c deps/zlib/*.h)
+	FILE(GLOB SRC_ZLIB "${CMAKE_SOURCE_DIR}/deps/zlib/*.c" "${CMAKE_SOURCE_DIR}/deps/zlib/*.h")
 ENDIF()
 
 # Optional external dependency: libssh2
