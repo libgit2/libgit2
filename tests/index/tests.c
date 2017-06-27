@@ -856,11 +856,14 @@ void test_index_tests__change_icase_on_instance(void)
 
 void test_index_tests__can_lock_index(void)
 {
+	git_repository *repo;
 	git_index *index;
 	git_indexwriter one = GIT_INDEXWRITER_INIT,
 		two = GIT_INDEXWRITER_INIT;
 
-	cl_git_pass(git_index_open(&index, TEST_INDEX_PATH));
+	repo = cl_git_sandbox_init("testrepo.git");
+
+	cl_git_pass(git_repository_index(&index, repo));
 	cl_git_pass(git_indexwriter_init(&one, index));
 
 	cl_git_fail_with(GIT_ELOCKED, git_indexwriter_init(&two, index));
@@ -873,4 +876,5 @@ void test_index_tests__can_lock_index(void)
 	git_indexwriter_cleanup(&one);
 	git_indexwriter_cleanup(&two);
 	git_index_free(index);
+	cl_git_sandbox_cleanup();
 }
