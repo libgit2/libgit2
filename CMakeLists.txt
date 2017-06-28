@@ -466,8 +466,9 @@ IF (USE_EXT_HTTP_PARSER AND HTTP_PARSER_FOUND AND HTTP_PARSER_VERSION_MAJOR EQUA
 	LIST(APPEND LIBGIT2_PC_LIBS "-lhttp_parser")
 ELSE()
 	MESSAGE(STATUS "http-parser version 2 was not found or disabled; using bundled 3rd-party sources.")
+	ADD_SUBDIRECTORY("${CMAKE_SOURCE_DIR}/deps/http-parser" "${CMAKE_BINARY_DIR}/deps/http-parser")
 	LIST(APPEND LIBGIT2_INCLUDES "${CMAKE_SOURCE_DIR}/deps/http-parser")
-	FILE(GLOB SRC_HTTP "${CMAKE_SOURCE_DIR}/deps/http-parser/*.c" "${CMAKE_SOURCE_DIR}/deps/http-parser/*.h")
+	LIST(APPEND LIBGIT2_LIBS http-parser)
 ENDIF()
 
 # Optional external dependency: zlib
@@ -600,7 +601,7 @@ ENDIF()
 
 CONFIGURE_FILE(src/features.h.in git2/sys/features.h)
 
-SET(GIT2INTERNAL_OBJECTS ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_SSH} ${SRC_SHA1})
+SET(GIT2INTERNAL_OBJECTS ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_SSH} ${SRC_SHA1})
 
 LIST(APPEND LIBGIT2_INCLUDES ${CMAKE_CURRENT_BINARY_DIR} "${CMAKE_SOURCE_DIR}/src" "${CMAKE_SOURCE_DIR}/include")
 
