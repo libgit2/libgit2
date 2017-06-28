@@ -398,38 +398,17 @@ IF (WIN32 AND WINHTTP)
 	# Since MinGW does not come with headers or an import library for winhttp,
 	# we have to include a private header and generate our own import library
 	IF (MINGW)
-		FIND_PROGRAM(DLLTOOL dlltool CMAKE_FIND_ROOT_PATH_BOTH)
-		IF (NOT DLLTOOL)
-			MESSAGE(FATAL_ERROR "Could not find dlltool command")
-		ENDIF ()
-
-		SET(LIBWINHTTP_PATH "${CMAKE_BINARY_DIR}/deps/winhttp")
-		FILE(MAKE_DIRECTORY ${LIBWINHTTP_PATH})
-
-		IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
-			set(WINHTTP_DEF "${CMAKE_SOURCE_DIR}/deps/winhttp/winhttp64.def")
-		ELSE()
-			set(WINHTTP_DEF "${CMAKE_SOURCE_DIR}/deps/winhttp/winhttp.def")
-		ENDIF()
-
-		ADD_CUSTOM_COMMAND(
-			OUTPUT ${LIBWINHTTP_PATH}/libwinhttp.a
-			COMMAND ${DLLTOOL} -d ${WINHTTP_DEF} -k -D winhttp.dll -l libwinhttp.a
-			DEPENDS ${WINHTTP_DEF}
-			WORKING_DIRECTORY ${LIBWINHTTP_PATH}
-		)
-
-		SET_SOURCE_FILES_PROPERTIES(
-			${CMAKE_CURRENT_SOURCE_DIR}/src/transports/winhttp.c
-			PROPERTIES OBJECT_DEPENDS ${LIBWINHTTP_PATH}/libwinhttp.a
-		)
-
+		ADD_SUBDIRECTORY("${CMAKE_SOURCE_DIR}/deps/winhttp" "${CMAKE_BINARY_DIR}/deps/winhttp")
+		LIST(APPEND LIBGIT2_LIBS winhttp)
 		LIST(APPEND LIBGIT2_INCLUDES "${CMAKE_SOURCE_DIR}/deps/winhttp")
 		LIST(APPEND LIBGIT2_LIBDIRS ${LIBWINHTTP_PATH})
+	ELSE()
+		LIST(APPEND LIBGIT2_LIBS "winhttp")
+		LIST(APPEND LIBGIT2_PC_LIBS "-lwinhttp")
 	ENDIF ()
 
-	LIST(APPEND LIBGIT2_LIBS "winhttp" "rpcrt4" "crypt32" "ole32")
-	LIST(APPEND LIBGIT2_PC_LIBS "-lwinhttp" "-lrpcrt4" "-lcrypt32" "-lole32")
+	LIST(APPEND LIBGIT2_LIBS "rpcrt4" "crypt32" "ole32")
+	LIST(APPEND LIBGIT2_PC_LIBS "-lrpcrt4" "-lcrypt32" "-lole32")
 ELSE ()
 	IF (CURL)
 		PKG_CHECK_MODULES(CURL libcurl)
