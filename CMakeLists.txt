@@ -677,71 +677,8 @@ INSTALL(FILES include/git2.h DESTINATION ${INCLUDE_INSTALL_DIR} )
 
 # Tests
 IF (BUILD_CLAR)
-	FIND_PACKAGE(PythonInterp)
-
-	IF(NOT PYTHONINTERP_FOUND)
-	  MESSAGE(FATAL_ERROR "Could not find a python interpeter, which is needed to build the tests. "
-	    "Make sure python is available, or pass -DBUILD_CLAR=OFF to skip building the tests")
-	ENDIF()
-
-	SET(CLAR_FIXTURES "${CMAKE_CURRENT_SOURCE_DIR}/tests/resources/")
-	SET(CLAR_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tests")
-	ADD_DEFINITIONS(-DCLAR_FIXTURE_PATH=\"${CLAR_FIXTURES}\")
-	ADD_DEFINITIONS(-DCLAR_TMPDIR=\"libgit2_tests\")
-
-	INCLUDE_DIRECTORIES(${CLAR_PATH})
-	FILE(GLOB_RECURSE SRC_TEST ${CLAR_PATH}/*/*.c ${CLAR_PATH}/*/*.h)
-	SET(SRC_CLAR "${CLAR_PATH}/main.c" "${CLAR_PATH}/clar_libgit2.c" "${CLAR_PATH}/clar_libgit2_trace.c" "${CLAR_PATH}/clar_libgit2_timer.c" "${CLAR_PATH}/clar.c")
-
-	IF(MSVC_IDE)
-		LIST(APPEND SRC_CLAR "${CLAR_PATH}/precompiled.c")
-	ENDIF()
-
-	ADD_CUSTOM_COMMAND(
-		OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/clar.suite
-		COMMAND ${PYTHON_EXECUTABLE} generate.py -o "${CMAKE_CURRENT_BINARY_DIR}" -f -xonline -xstress .
-		DEPENDS ${SRC_TEST}
-		WORKING_DIRECTORY ${CLAR_PATH}
-	)
-	INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR})
-
-	SET_SOURCE_FILES_PROPERTIES(
-		${CLAR_PATH}/clar.c
-		PROPERTIES OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/clar.suite)
-
-	ADD_EXECUTABLE(libgit2_clar ${SRC_CLAR} ${SRC_TEST} $<TARGET_OBJECTS:git2internal>)
-
-	IF (${CMAKE_VERSION} VERSION_GREATER 2.8.11)
-		TARGET_INCLUDE_DIRECTORIES(libgit2_clar PRIVATE src PUBLIC include)
-	ENDIF()
-
-	TARGET_LINK_LIBRARIES(libgit2_clar ${COREFOUNDATION_DIRS})
-	TARGET_LINK_LIBRARIES(libgit2_clar ${SECURITY_DIRS})
-	TARGET_LINK_LIBRARIES(libgit2_clar ${SSL_LIBRARIES})
-	TARGET_LINK_LIBRARIES(libgit2_clar ${SSH_LIBRARIES})
-	TARGET_LINK_LIBRARIES(libgit2_clar ${GSSAPI_LIBRARIES})
-	TARGET_LINK_LIBRARIES(libgit2_clar ${ICONV_LIBRARIES})
-	TARGET_OS_LIBRARIES(libgit2_clar)
-	IDE_SPLIT_SOURCES(libgit2_clar)
-
-	IF (MSVC_IDE)
-		# Precompiled headers
-		SET_TARGET_PROPERTIES(libgit2_clar PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
-		SET_SOURCE_FILES_PROPERTIES("${CLAR_PATH}/tests/precompiled.c" COMPILE_FLAGS "/Ycprecompiled.h")
-	ENDIF ()
-
 	ENABLE_TESTING()
-	IF (WINHTTP OR OPENSSL_FOUND OR SECURITY_FOUND)
-		ADD_TEST(libgit2_clar libgit2_clar -ionline -xclone::local::git_style_unc_paths -xclone::local::standard_unc_paths_are_written_git_style)
-	ELSE ()
-		ADD_TEST(libgit2_clar libgit2_clar -v -xclone::local::git_style_unc_paths -xclone::local::standard_unc_paths_are_written_git_style)
-	ENDIF ()
-
-	# Add a test target which runs the cred callback tests, to be
-	# called after setting the url and user
-	ADD_TEST(libgit2_clar-cred_callback libgit2_clar -v -sonline::clone::cred_callback)
-	ADD_TEST(libgit2_clar-proxy_credentials_in_url libgit2_clar -v -sonline::clone::proxy_credentials_in_url)
-	ADD_TEST(libgit2_clar-proxy_credentials_request libgit2_clar -v	-sonline::clone::proxy_credentials_request)
+	ADD_SUBDIRECTORY(tests)
 ENDIF ()
 
 IF (TAGS)
