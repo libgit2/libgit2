@@ -484,9 +484,9 @@ IF (ZLIB_FOUND)
 	ENDIF()
 ELSE()
 	MESSAGE(STATUS "zlib was not found; using bundled 3rd-party sources." )
+	ADD_SUBDIRECTORY("${CMAKE_SOURCE_DIR}/deps/zlib" "${CMAKE_BINARY_DIR}/deps/zlib")
 	LIST(APPEND LIBGIT2_INCLUDES "${CMAKE_SOURCE_DIR}/deps/zlib")
-	ADD_DEFINITIONS(-DNO_VIZ -DSTDC -DNO_GZIP)
-	FILE(GLOB SRC_ZLIB "${CMAKE_SOURCE_DIR}/deps/zlib/*.c" "${CMAKE_SOURCE_DIR}/deps/zlib/*.h")
+	LIST(APPEND LIBGIT2_LIBS zlib)
 ENDIF()
 
 # Optional external dependency: libssh2
@@ -601,7 +601,7 @@ ENDIF()
 
 CONFIGURE_FILE(src/features.h.in git2/sys/features.h)
 
-SET(GIT2INTERNAL_OBJECTS ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_SSH} ${SRC_SHA1})
+SET(GIT2INTERNAL_OBJECTS ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_SSH} ${SRC_SHA1})
 
 LIST(APPEND LIBGIT2_INCLUDES ${CMAKE_CURRENT_BINARY_DIR} "${CMAKE_SOURCE_DIR}/src" "${CMAKE_SOURCE_DIR}/include")
 
