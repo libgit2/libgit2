@@ -693,6 +693,10 @@ IF (BUILD_CLAR)
 	FILE(GLOB_RECURSE SRC_TEST ${CLAR_PATH}/*/*.c ${CLAR_PATH}/*/*.h)
 	SET(SRC_CLAR "${CLAR_PATH}/main.c" "${CLAR_PATH}/clar_libgit2.c" "${CLAR_PATH}/clar_libgit2_trace.c" "${CLAR_PATH}/clar_libgit2_timer.c" "${CLAR_PATH}/clar.c")
 
+	IF(MSVC_IDE)
+		LIST(APPEND SRC_CLAR "${CLAR_PATH}/precompiled.c")
+	ENDIF()
+
 	ADD_CUSTOM_COMMAND(
 		OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/clar.suite
 		COMMAND ${PYTHON_EXECUTABLE} generate.py -o "${CMAKE_CURRENT_BINARY_DIR}" -f -xonline -xstress .
@@ -723,6 +727,7 @@ IF (BUILD_CLAR)
 	IF (MSVC_IDE)
 		# Precompiled headers
 		SET_TARGET_PROPERTIES(libgit2_clar PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
+		SET_SOURCE_FILES_PROPERTIES("${CLAR_PATH}/tests/precompiled.c" COMPILE_FLAGS "/Ycprecompiled.h")
 	ENDIF ()
 
 	ENABLE_TESTING()
