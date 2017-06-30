@@ -7,6 +7,8 @@
 #ifndef INCLUDE_config_file_h__
 #define INCLUDE_config_file_h__
 
+#include "common.h"
+
 #include "git2/sys/config.h"
 #include "git2/config.h"
 

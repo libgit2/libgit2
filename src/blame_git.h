@@ -7,6 +7,8 @@
 #ifndef INCLUDE_blame_git__
 #define INCLUDE_blame_git__
 
+#include "common.h"
+
 #include "blame.h"
 
 int git_blame__get_origin(

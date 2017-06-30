@@ -5,9 +5,10 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "w32_crtdbg_stacktrace.h"
+
 #if defined(GIT_MSVC_CRTDBG)
 #include "w32_stack.h"
-#include "w32_crtdbg_stacktrace.h"
 
 #define CRTDBG_STACKTRACE__UID_LEN (15)
 

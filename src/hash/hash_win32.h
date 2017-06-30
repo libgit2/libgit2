@@ -9,6 +9,7 @@
 #define INCLUDE_hash_win32_h__
 
 #include "common.h"
+
 #include "hash.h"
 
 #include <wincrypt.h>

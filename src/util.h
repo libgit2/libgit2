@@ -7,6 +7,8 @@
 #ifndef INCLUDE_util_h__
 #define INCLUDE_util_h__
 
+#include "common.h"
+
 #include "git2/buffer.h"
 #include "buffer.h"
 #include "thread-utils.h"

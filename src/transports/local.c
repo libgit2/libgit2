@@ -4,7 +4,9 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
+
 #include "common.h"
+
 #include "git2/types.h"
 #include "git2/net.h"
 #include "git2/repository.h"
@@ -16,6 +18,7 @@
 #include "git2/pack.h"
 #include "git2/commit.h"
 #include "git2/revparse.h"
+
 #include "pack-objects.h"
 #include "refs.h"
 #include "posix.h"

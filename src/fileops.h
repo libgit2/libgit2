@@ -8,6 +8,7 @@
 #define INCLUDE_fileops_h__
 
 #include "common.h"
+
 #include "map.h"
 #include "posix.h"
 #include "path.h"

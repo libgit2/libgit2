@@ -7,6 +7,8 @@
 #ifndef INCLUDE_ssh_h__
 #define INCLUDE_ssh_h__
 
+#include "common.h"
+
 int git_transport_ssh_global_init(void);
 
 #endif

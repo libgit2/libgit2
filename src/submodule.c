@@ -5,7 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
+#include "submodule.h"
+
 #include "git2/config.h"
 #include "git2/sys/config.h"
 #include "git2/types.h"
@@ -17,7 +18,6 @@
 #include "config_file.h"
 #include "config.h"
 #include "repository.h"
-#include "submodule.h"
 #include "tree.h"
 #include "iterator.h"
 #include "path.h"

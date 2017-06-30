@@ -7,6 +7,8 @@
 #ifndef INCLUDE_object_h__
 #define INCLUDE_object_h__
 
+#include "common.h"
+
 #include "repository.h"
 
 extern bool git_object__strict_input_validation;

@@ -5,8 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
 #include "vector.h"
+
 #include "integer.h"
 
 /* In elements, not bytes */

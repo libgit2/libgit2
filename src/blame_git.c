@@ -6,6 +6,7 @@
  */
 
 #include "blame_git.h"
+
 #include "commit.h"
 #include "blob.h"
 #include "xdiff/xinclude.h"

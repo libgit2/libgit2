@@ -5,7 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
+#include "attr.h"
+
 #include "repository.h"
 #include "sysdir.h"
 #include "config.h"

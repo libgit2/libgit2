@@ -7,6 +7,8 @@
 #ifndef INCLUDE_diff_xdiff_h__
 #define INCLUDE_diff_xdiff_h__
 
+#include "common.h"
+
 #include "diff.h"
 #include "xdiff/xdiff.h"
 #include "patch_generate.h"

@@ -5,10 +5,10 @@
 * a Linking Exception. For full terms see the included COPYING file.
 */
 
-#include "git2/patch.h"
-#include "diff.h"
 #include "patch.h"
 
+#include "git2/patch.h"
+#include "diff.h"
 
 int git_patch__invoke_callbacks(
 	git_patch *patch,

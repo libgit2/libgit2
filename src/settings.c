@@ -5,12 +5,13 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "common.h"
+
 #ifdef GIT_OPENSSL
 # include <openssl/err.h>
 #endif
 
 #include <git2.h>
-#include "common.h"
 #include "sysdir.h"
 #include "cache.h"
 #include "global.h"

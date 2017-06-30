@@ -7,6 +7,8 @@
 #ifndef INCLUDE_filebuf_h__
 #define INCLUDE_filebuf_h__
 
+#include "common.h"
+
 #include "fileops.h"
 #include "hash.h"
 #include <zlib.h>

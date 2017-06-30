@@ -5,10 +5,11 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "findfile.h"
+
 #include "path_w32.h"
 #include "utf-conv.h"
 #include "path.h"
-#include "findfile.h"
 
 #define REG_MSYSGIT_INSTALL_LOCAL L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Git_is1"
 

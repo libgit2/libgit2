@@ -4,12 +4,12 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#include "common.h"
+
+#include "diff_driver.h"
 
 #include "git2/attr.h"
 
 #include "diff.h"
-#include "diff_driver.h"
 #include "strmap.h"
 #include "map.h"
 #include "buf_text.h"

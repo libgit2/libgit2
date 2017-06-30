@@ -5,13 +5,13 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
+#include "odb.h"
+
 #include <zlib.h>
 #include "git2/object.h"
 #include "git2/sys/odb_backend.h"
 #include "fileops.h"
 #include "hash.h"
-#include "odb.h"
 #include "delta.h"
 #include "filter.h"
 #include "repository.h"

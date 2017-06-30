@@ -6,6 +6,7 @@
  */
 
 #include "pool.h"
+
 #include "posix.h"
 #ifndef GIT_WIN32
 #include <unistd.h>

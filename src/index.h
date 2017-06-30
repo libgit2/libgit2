@@ -7,6 +7,8 @@
 #ifndef INCLUDE_index_h__
 #define INCLUDE_index_h__
 
+#include "common.h"
+
 #include "fileops.h"
 #include "filebuf.h"
 #include "vector.h"

@@ -7,6 +7,8 @@
 #ifndef INCLUDE_buf_text_h__
 #define INCLUDE_buf_text_h__
 
+#include "common.h"
+
 #include "buffer.h"
 
 typedef enum {

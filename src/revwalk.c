@@ -5,12 +5,12 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
+#include "revwalk.h"
+
 #include "commit.h"
 #include "odb.h"
 #include "pool.h"
 
-#include "revwalk.h"
 #include "git2/revparse.h"
 #include "merge.h"
 #include "vector.h"

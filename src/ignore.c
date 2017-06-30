@@ -5,9 +5,10 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "ignore.h"
+
 #include "git2/ignore.h"
 #include "common.h"
-#include "ignore.h"
 #include "attrcache.h"
 #include "path.h"
 #include "config.h"

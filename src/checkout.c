@@ -5,9 +5,9 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include <assert.h>
-
 #include "checkout.h"
+
+#include <assert.h>
 
 #include "git2/repository.h"
 #include "git2/refs.h"

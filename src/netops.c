@@ -5,11 +5,11 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "netops.h"
+
 #include <ctype.h>
 #include "git2/errors.h"
 
-#include "common.h"
-#include "netops.h"
 #include "posix.h"
 #include "buffer.h"
 #include "http_parser.h"

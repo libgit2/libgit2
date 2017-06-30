@@ -4,12 +4,14 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
+
+#include "common.h"
+
 #include "git2/describe.h"
 #include "git2/strarray.h"
 #include "git2/diff.h"
 #include "git2/status.h"
 
-#include "common.h"
 #include "commit.h"
 #include "commit_list.h"
 #include "oidmap.h"

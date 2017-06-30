@@ -5,10 +5,10 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
+#include "attr_file.h"
+
 #include "repository.h"
 #include "filebuf.h"
-#include "attr_file.h"
 #include "attrcache.h"
 #include "git2/blob.h"
 #include "git2/tree.h"

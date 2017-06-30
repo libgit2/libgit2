@@ -8,6 +8,7 @@
 #define INCLUDE_oidarray_h__
 
 #include "common.h"
+
 #include "git2/oidarray.h"
 #include "array.h"
 

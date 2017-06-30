@@ -5,8 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
 #include "mwindow.h"
+
 #include "vector.h"
 #include "fileops.h"
 #include "map.h"

@@ -7,6 +7,8 @@
 #ifndef INCLUDE_varint_h__
 #define INCLUDE_varint_h__
 
+#include "common.h"
+
 #include <stdint.h>
 
 extern int git_encode_varint(unsigned char *, size_t, uintmax_t);

@@ -7,6 +7,8 @@
 #ifndef INCLUDE_diff_generate_h__
 #define INCLUDE_diff_generate_h__
 
+#include "common.h"
+
 #include "diff.h"
 #include "pool.h"
 #include "index.h"

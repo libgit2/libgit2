@@ -7,6 +7,8 @@
 #ifndef INCLUDE_cache_h__
 #define INCLUDE_cache_h__
 
+#include "common.h"
+
 #include "git2/common.h"
 #include "git2/oid.h"
 #include "git2/odb.h"

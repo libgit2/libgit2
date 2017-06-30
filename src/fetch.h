@@ -7,6 +7,8 @@
 #ifndef INCLUDE_fetch_h__
 #define INCLUDE_fetch_h__
 
+#include "common.h"
+
 #include "git2/remote.h"
 
 #include "netops.h"

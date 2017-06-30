@@ -5,12 +5,13 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "common.h"
+
 #include "git2/attr.h"
 #include "git2/blob.h"
 #include "git2/index.h"
 #include "git2/sys/filter.h"
 
-#include "common.h"
 #include "fileops.h"
 #include "hash.h"
 #include "filter.h"

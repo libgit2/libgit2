@@ -5,7 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
+#include "proxy.h"
+
 #include "git2/proxy.h"
 
 int git_proxy_init_options(git_proxy_options *opts, unsigned int version)

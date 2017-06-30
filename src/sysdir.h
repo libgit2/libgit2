@@ -8,6 +8,7 @@
 #define INCLUDE_sysdir_h__
 
 #include "common.h"
+
 #include "posix.h"
 #include "buffer.h"
 

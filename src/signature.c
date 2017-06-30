@@ -5,8 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
 #include "signature.h"
+
 #include "repository.h"
 #include "git2/common.h"
 #include "posix.h"

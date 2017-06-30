@@ -8,7 +8,7 @@
 #ifndef INCLUDE_win32_thread_h__
 #define INCLUDE_win32_thread_h__
 
-#include "../common.h"
+#include "common.h"
 
 #if defined (_MSC_VER)
 #	define GIT_RESTRICT __restrict

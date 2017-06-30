@@ -5,10 +5,11 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "auth_negotiate.h"
+
 #ifdef GIT_GSSAPI
 
 #include "git2.h"
-#include "common.h"
 #include "buffer.h"
 #include "auth.h"
 

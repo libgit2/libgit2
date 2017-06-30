@@ -7,6 +7,8 @@
 #ifndef INCLUDE_worktree_h__
 #define INCLUDE_worktree_h__
 
+#include "common.h"
+
 #include "git2/common.h"
 #include "git2/worktree.h"
 

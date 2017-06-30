@@ -5,10 +5,10 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "buffer.h"
-#include "common.h"
-#include "global.h"
 #include "trace.h"
+
+#include "buffer.h"
+#include "global.h"
 #include "git2/trace.h"
 
 #ifdef GIT_TRACE

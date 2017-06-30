@@ -5,9 +5,10 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "auth.h"
+
 #include "git2.h"
 #include "buffer.h"
-#include "auth.h"
 
 static int basic_next_token(
 	git_buf *out, git_http_auth_context *ctx, git_cred *c)

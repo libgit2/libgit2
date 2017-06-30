@@ -7,6 +7,8 @@
 #ifndef INCLUDE_refdb_fs_h__
 #define INCLUDE_refdb_fs_h__
 
+#include "common.h"
+
 #include "strmap.h"
 
 typedef struct {

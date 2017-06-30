@@ -7,6 +7,8 @@
 #ifndef INCLUDE_w32_crtdbg_stacktrace_h__
 #define INCLUDE_w32_crtdbg_stacktrace_h__
 
+#include "common.h"
+
 #if defined(GIT_MSVC_CRTDBG)
 
 #include <stdlib.h>

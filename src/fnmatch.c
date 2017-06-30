@@ -44,11 +44,11 @@
  * Compares a filename or pathname to a pattern.
  */
 
+#include "fnmatch.h"
+
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
-
-#include "fnmatch.h"
 
 #define EOS		'\0'
 

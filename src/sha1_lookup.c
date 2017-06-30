@@ -5,10 +5,10 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "sha1_lookup.h"
+
 #include <stdio.h>
 
-#include "sha1_lookup.h"
-#include "common.h"
 #include "oid.h"
 
 /*

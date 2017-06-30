@@ -5,6 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "apply.h"
+
 #include <assert.h>
 
 #include "git2/patch.h"
@@ -12,7 +14,6 @@
 #include "array.h"
 #include "patch.h"
 #include "fileops.h"
-#include "apply.h"
 #include "delta.h"
 #include "zstream.h"
 

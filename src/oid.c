@@ -5,7 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
+#include "oid.h"
+
 #include "git2/oid.h"
 #include "repository.h"
 #include "global.h"

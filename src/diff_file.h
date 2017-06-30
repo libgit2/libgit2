@@ -8,6 +8,7 @@
 #define INCLUDE_diff_file_h__
 
 #include "common.h"
+
 #include "diff.h"
 #include "diff_driver.h"
 #include "map.h"

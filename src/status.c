@@ -5,13 +5,13 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
+#include "status.h"
+
 #include "git2.h"
 #include "fileops.h"
 #include "hash.h"
 #include "vector.h"
 #include "tree.h"
-#include "status.h"
 #include "git2/status.h"
 #include "repository.h"
 #include "ignore.h"

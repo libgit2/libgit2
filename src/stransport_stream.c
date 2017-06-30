@@ -5,6 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "stransport_stream.h"
+
 #ifdef GIT_SECURE_TRANSPORT
 
 #include <CoreFoundation/CoreFoundation.h>

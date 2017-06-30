@@ -6,6 +6,7 @@
 */
 
 #include "common.h"
+
 #include "repository.h"
 #include "filebuf.h"
 #include "merge.h"

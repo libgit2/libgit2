@@ -5,9 +5,9 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
-#include "sysdir.h"
 #include "config.h"
+
+#include "sysdir.h"
 #include "git2/config.h"
 #include "git2/sys/config.h"
 #include "vector.h"

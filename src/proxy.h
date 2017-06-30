@@ -7,6 +7,8 @@
 #ifndef INCLUDE_proxy_h__
 #define INCLUDE_proxy_h__
 
+#include "common.h"
+
 #include "git2/proxy.h"
 
 extern int git_proxy_options_dup(git_proxy_options *tgt, const git_proxy_options *src);
