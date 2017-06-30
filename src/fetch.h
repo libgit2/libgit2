@@ -7,6 +7,8 @@
 #ifndef INCLUDE_fetch_h__
 #define INCLUDE_fetch_h__
 
+#include "git2/remote.h"
+
 #include "netops.h"
 
 int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts);

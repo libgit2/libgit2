@@ -7,6 +7,7 @@
 #ifndef INCLUDE_fetchhead_h__
 #define INCLUDE_fetchhead_h__
 
+#include "oid.h"
 #include "vector.h"
 
 typedef struct git_fetchhead_ref {

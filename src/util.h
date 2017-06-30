@@ -9,6 +9,7 @@
 
 #include "git2/buffer.h"
 #include "buffer.h"
+#include "thread-utils.h"
 
 #include "common.h"
 #include "strnlen.h"
@@ -285,8 +286,6 @@ extern int git__strncmp(const char *a, const char *b, size_t sz);
 extern int git__strncasecmp(const char *a, const char *b, size_t sz);
 
 extern int git__strcasesort_cmp(const char *a, const char *b);
-
-#include "thread-utils.h"
 
 typedef struct {
 	git_atomic refcount;
