@@ -176,7 +176,7 @@ int git_libgit2_opts(int key, ...)
 			error = git_openssl__set_cert_location(file, path);
 		}
 #else
-		giterr_set(GITERR_NET, "cannot set certificate locations: OpenSSL is not enabled");
+		giterr_set(GITERR_SSL, "TLS backend doesn't support certificate locations");
 		error = -1;
 #endif
 		break;
@@ -209,7 +209,7 @@ int git_libgit2_opts(int key, ...)
 			}
 		}
 #else
-		giterr_set(GITERR_NET, "cannot set custom ciphers: OpenSSL is not enabled");
+		giterr_set(GITERR_SSL, "TLS backend doesn't support custom ciphers");
 		error = -1;
 #endif
 		break;
