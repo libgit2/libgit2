@@ -24,6 +24,7 @@ INCLUDE(CheckSymbolExists)
 INCLUDE(CheckStructHasMember)
 INCLUDE(AddCFlagIfSupported)
 INCLUDE(FindPkgConfig)
+INCLUDE(FindThreads)
 
 # Build options
 #
