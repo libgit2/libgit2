@@ -14,6 +14,8 @@
 #cmakedefine GIT_USE_STAT_MTIM 1
 #cmakedefine GIT_USE_STAT_MTIMESPEC 1
 #cmakedefine GIT_USE_STAT_MTIME_NSEC 1
+#cmakedefine GIT_USE_FUTIMENS 1
+#cmakedefine GIT_USE_REGCOMP_L 1
 
 #cmakedefine GIT_SSH 1
 #cmakedefine GIT_SSH_MEMORY_CREDENTIALS 1
