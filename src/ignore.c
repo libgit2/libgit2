@@ -197,8 +197,14 @@ static int parse_ignore_file(
 
 			scan = git__next_line(scan);
 
-			/* if a negative match doesn't actually do anything, throw it away */
-			if (match->flags & GIT_ATTR_FNMATCH_NEGATIVE)
+			/*
+			 * If a negative match doesn't actually do anything,
+			 * throw it away. As we cannot always verify whether a
+			 * rule containing wildcards negates another rule, we
+			 * do not optimize away these rules, though.
+			 * */
+			if (match->flags & GIT_ATTR_FNMATCH_NEGATIVE
+			    && !(match->flags & GIT_ATTR_FNMATCH_HASWILD))
 				error = does_negate_rule(&valid_rule, &attrs->rules, match);
 
 			if (!error && valid_rule)
