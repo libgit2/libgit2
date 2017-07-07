@@ -1368,7 +1368,7 @@ static int refdb_fs_backend__rename(
 	const char *message)
 {
 	refdb_fs_backend *backend = (refdb_fs_backend *)_backend;
-	git_reference *old, *new;
+	git_reference *old, *old_copy, *new;
 	git_filebuf file = GIT_FILEBUF_INIT;
 	int error;
 
@@ -1377,6 +1377,9 @@ static int refdb_fs_backend__rename(
 	if ((error = reference_path_available(
 			backend, new_name, old_name, force)) < 0 ||
 		(error = refdb_fs_backend__lookup(&old, _backend, old_name)) < 0)
+		return error;
+
+	if ((error = git_reference_dup(&old_copy, old)) < 0)
 		return error;
 
 	if ((error = refdb_fs_backend__delete(_backend, old_name, NULL, NULL)) < 0) {
@@ -1391,33 +1394,38 @@ static int refdb_fs_backend__rename(
 	}
 
 	if ((error = loose_lock(&file, backend, new->name)) < 0) {
-		git_reference_free(new);
-		return error;
+		goto cleanup;
 	}
 
-	/* Try to rename the refog; it's ok if the old doesn't exist */
+	/* Try to rename the reflog; it's ok if the old doesn't exist */
 	error = refdb_reflog_fs__rename(_backend, old_name, new_name);
 	if (((error == 0) || (error == GIT_ENOTFOUND)) &&
 	    ((error = reflog_append(backend, new, git_reference_target(new), NULL, who, message)) < 0)) {
-		git_reference_free(new);
 		git_filebuf_cleanup(&file);
-		return error;
+		goto cleanup;
 	}
 
 	if (error < 0) {
-		git_reference_free(new);
 		git_filebuf_cleanup(&file);
-		return error;
+		goto cleanup;
 	}
 
+	/* Write to the HEAD reflog if the currently-active branch is being modified */
+	if ((error = maybe_append_head(backend, old_copy, who, message)) < 0) {
+		goto cleanup;
+	}
 
 	if ((error = loose_commit(&file, new)) < 0 || out == NULL) {
-		git_reference_free(new);
-		return error;
+		goto cleanup;
 	}
 
 	*out = new;
 	return 0;
+
+ cleanup:
+	git_reference_free(old_copy);
+	git_reference_free(new);
+	return error;
 }
 
 static int refdb_fs_backend__compress(git_refdb_backend *_backend)
@@ -1813,7 +1821,7 @@ static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, co
 	    !(old && new))
 		return 0;
 
-	/* From here on is_symoblic also means that it's HEAD */
+	/* From here on is_symbolic also means that it's HEAD */
 
 	if (old) {
 		git_oid_cpy(&old_id, old);
