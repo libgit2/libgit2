@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "config_file.h"
 #include "config.h"
+#include "path.h"
 
 static git_config *cfg;
 
