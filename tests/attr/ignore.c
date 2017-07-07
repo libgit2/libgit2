@@ -303,3 +303,12 @@ void test_attr_ignore__test(void)
 	assert_is_ignored(true, "dist/foo.o");
 	assert_is_ignored(true, "bin/foo");
 }
+
+void test_attr_ignore__unignore_dir_succeeds(void)
+{
+	cl_git_rewritefile("attr/.gitignore",
+		"*.c\n"
+		"!src/*.c\n");
+	assert_is_ignored(false, "src/foo.c");
+	assert_is_ignored(true, "src/foo/foo.c");
+}
