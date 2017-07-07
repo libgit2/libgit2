@@ -117,12 +117,12 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 				continue;
 		}
 
-	/*
-	 * When dealing with a directory, we add '/<star>' so
-	 * p_fnmatch() honours FNM_PATHNAME. Checking for LEADINGDIR
-	 * alone isn't enough as that's also set for nagations, so we
-	 * need to check that NEGATIVE is off.
-	 */
+		/*
+		 * When dealing with a directory, we add '/<star>' so
+		 * p_fnmatch() honours FNM_PATHNAME. Checking for LEADINGDIR
+		 * alone isn't enough as that's also set for nagations, so we
+		 * need to check that NEGATIVE is off.
+		 */
 		git_buf_clear(&buf);
 		if (rule->containing_dir) {
 			git_buf_puts(&buf, rule->containing_dir);
