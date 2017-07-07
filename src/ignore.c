@@ -43,35 +43,33 @@ static int does_negate_pattern(git_attr_fnmatch *rule, git_attr_fnmatch *neg)
 	git_attr_fnmatch *longer, *shorter;
 	char *p;
 
-	if ((rule->flags & GIT_ATTR_FNMATCH_NEGATIVE) == 0
-		&& (neg->flags & GIT_ATTR_FNMATCH_NEGATIVE) != 0) {
+	if ((rule->flags & GIT_ATTR_FNMATCH_NEGATIVE) != 0
+	    || (neg->flags & GIT_ATTR_FNMATCH_NEGATIVE) == 0)
+		return false;
 
-		/* If lengths match we need to have an exact match */
-		if (rule->length == neg->length) {
-			return strcmp(rule->pattern, neg->pattern) == 0;
-		} else if (rule->length < neg->length) {
-			shorter = rule;
-			longer = neg;
-		} else {
-			shorter = neg;
-			longer = rule;
-		}
-
-		/* Otherwise, we need to check if the shorter
-		 * rule is a basename only (that is, it contains
-		 * no path separator) and, if so, if it
-		 * matches the tail of the longer rule */
-		p = longer->pattern + longer->length - shorter->length;
-
-		if (p[-1] != '/')
-			return false;
-		if (memchr(shorter->pattern, '/', shorter->length) != NULL)
-			return false;
-
-		return memcmp(p, shorter->pattern, shorter->length) == 0;
+	/* If lengths match we need to have an exact match */
+	if (rule->length == neg->length) {
+		return strcmp(rule->pattern, neg->pattern) == 0;
+	} else if (rule->length < neg->length) {
+		shorter = rule;
+		longer = neg;
+	} else {
+		shorter = neg;
+		longer = rule;
 	}
 
-	return false;
+	/* Otherwise, we need to check if the shorter
+	 * rule is a basename only (that is, it contains
+	 * no path separator) and, if so, if it
+	 * matches the tail of the longer rule */
+	p = longer->pattern + longer->length - shorter->length;
+
+	if (p[-1] != '/')
+		return false;
+	if (memchr(shorter->pattern, '/', shorter->length) != NULL)
+		return false;
+
+	return memcmp(p, shorter->pattern, shorter->length) == 0;
 }
 
 /**
