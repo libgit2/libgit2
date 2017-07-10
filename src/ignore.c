@@ -40,6 +40,7 @@
  */
 static int does_negate_pattern(git_attr_fnmatch *rule, git_attr_fnmatch *neg)
 {
+	int (*cmp)(const char *, const char *, size_t);
 	git_attr_fnmatch *longer, *shorter;
 	char *p;
 
@@ -47,9 +48,14 @@ static int does_negate_pattern(git_attr_fnmatch *rule, git_attr_fnmatch *neg)
 	    || (neg->flags & GIT_ATTR_FNMATCH_NEGATIVE) == 0)
 		return false;
 
+	if (neg->flags & GIT_ATTR_FNMATCH_ICASE)
+		cmp = git__strncasecmp;
+	else
+		cmp = strncmp;
+
 	/* If lengths match we need to have an exact match */
 	if (rule->length == neg->length) {
-		return strcmp(rule->pattern, neg->pattern) == 0;
+		return cmp(rule->pattern, neg->pattern, rule->length) == 0;
 	} else if (rule->length < neg->length) {
 		shorter = rule;
 		longer = neg;
@@ -69,7 +75,7 @@ static int does_negate_pattern(git_attr_fnmatch *rule, git_attr_fnmatch *neg)
 	if (memchr(shorter->pattern, '/', shorter->length) != NULL)
 		return false;
 
-	return memcmp(p, shorter->pattern, shorter->length) == 0;
+	return cmp(p, shorter->pattern, shorter->length) == 0;
 }
 
 /**
@@ -87,13 +93,17 @@ static int does_negate_pattern(git_attr_fnmatch *rule, git_attr_fnmatch *neg)
  */
 static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match)
 {
-	int error = 0;
+	int error = 0, fnflags;
 	size_t i;
 	git_attr_fnmatch *rule;
 	char *path;
 	git_buf buf = GIT_BUF_INIT;
 
 	*out = 0;
+
+	fnflags = FNM_PATHNAME;
+	if (match->flags & GIT_ATTR_FNMATCH_ICASE)
+		fnflags |= FNM_IGNORECASE;
 
 	/* path of the file relative to the workdir, so we match the rules in subdirs */
 	if (match->containing_dir) {
@@ -134,7 +144,7 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 		if (error < 0)
 			goto out;
 
-		if ((error = p_fnmatch(git_buf_cstr(&buf), path, FNM_PATHNAME)) < 0) {
+		if ((error = p_fnmatch(git_buf_cstr(&buf), path, fnflags)) < 0) {
 			giterr_set(GITERR_INVALID, "error matching pattern");
 			goto out;
 		}
