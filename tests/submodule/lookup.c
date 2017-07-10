@@ -419,3 +419,29 @@ void test_submodule_lookup__cached(void)
 	git_submodule_free(sm);
 	git_submodule_free(sm2);
 }
+
+void test_submodule_lookup__lookup_in_bare_repository_fails(void)
+{
+	git_submodule *sm;
+
+	cl_git_sandbox_cleanup();
+	g_repo = cl_git_sandbox_init("submodules.git");
+
+	cl_git_fail(git_submodule_lookup(&sm, g_repo, "nonexisting"));
+}
+
+static int foreach_cb(git_submodule *sm, const char *name, void *payload)
+{
+	GIT_UNUSED(sm);
+	GIT_UNUSED(name);
+	GIT_UNUSED(payload);
+	return 0;
+}
+
+void test_submodule_lookup__foreach_in_bare_repository_fails(void)
+{
+	cl_git_sandbox_cleanup();
+	g_repo = cl_git_sandbox_init("submodules.git");
+
+	cl_git_fail(git_submodule_foreach(g_repo, foreach_cb, NULL));
+}
