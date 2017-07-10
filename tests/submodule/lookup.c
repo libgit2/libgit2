@@ -389,7 +389,8 @@ void test_submodule_lookup__renamed(void)
 	cl_assert_equal_i(8, data.count);
 }
 
-void test_submodule_lookup_cached(void) {
+void test_submodule_lookup__cached(void)
+{
 	git_submodule *sm;
 	git_submodule *sm2;
 	/* See that the simple tests still pass. */
