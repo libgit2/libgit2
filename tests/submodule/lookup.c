@@ -11,6 +11,11 @@ void test_submodule_lookup__initialize(void)
 	g_repo = setup_fixture_submod2();
 }
 
+void test_submodule_lookup__cleanup(void)
+{
+	cl_git_sandbox_cleanup();
+}
+
 void test_submodule_lookup__simple_lookup(void)
 {
 	assert_submodule_exists(g_repo, "sm_unchanged");
