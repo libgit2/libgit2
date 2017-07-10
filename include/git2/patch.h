@@ -96,7 +96,7 @@ GIT_EXTERN(int) git_patch_from_blob_and_buffer(
 	git_patch **out,
 	const git_blob *old_blob,
 	const char *old_as_path,
-	const char *buffer,
+	const void *buffer,
 	size_t buffer_len,
 	const char *buffer_as_path,
 	const git_diff_options *opts);
@@ -124,7 +124,7 @@ GIT_EXTERN(int) git_patch_from_buffers(
 	const void *old_buffer,
 	size_t old_len,
 	const char *old_as_path,
-	const char *new_buffer,
+	const void *new_buffer,
 	size_t new_len,
 	const char *new_as_path,
 	const git_diff_options *opts);
