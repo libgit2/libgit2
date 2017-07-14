@@ -48,3 +48,9 @@ int git_parse_advance_expected(
 int git_parse_advance_ws(git_parse_ctx *ctx);
 int git_parse_advance_nl(git_parse_ctx *ctx);
 int git_parse_advance_digit(int64_t *out, git_parse_ctx *ctx, int base);
+
+enum GIT_PARSE_PEEK_FLAGS {
+	GIT_PARSE_PEEK_SKIP_WHITESPACE = (1 << 0)
+};
+
+int git_parse_peek(char *out, git_parse_ctx *ctx, int flags);

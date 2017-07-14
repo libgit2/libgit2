@@ -142,6 +142,8 @@ static int parse_header_oid(
 static int parse_header_git_index(
 	git_patch_parsed *patch, git_patch_parse_ctx *ctx)
 {
+	char c;
+
 	if (parse_header_oid(&patch->base.delta->old_file.id,
 			&patch->base.delta->old_file.id_abbrev, ctx) < 0 ||
 		git_parse_advance_expected_str(&ctx->parse_ctx, "..") < 0 ||
@@ -149,7 +151,7 @@ static int parse_header_git_index(
 			&patch->base.delta->new_file.id_abbrev, ctx) < 0)
 		return -1;
 
-	if (ctx->parse_ctx.line_len > 0 && ctx->parse_ctx.line[0] == ' ') {
+	if (git_parse_peek(&c, &ctx->parse_ctx, 0) == 0 && c == ' ') {
 		uint16_t mode;
 
 		git_parse_advance_chars(&ctx->parse_ctx, 1);
@@ -458,6 +460,7 @@ static int parse_hunk_header(
 	git_patch_parse_ctx *ctx)
 {
 	const char *header_start = ctx->parse_ctx.line;
+	char c;
 
 	hunk->hunk.old_lines = 1;
 	hunk->hunk.new_lines = 1;
@@ -466,7 +469,7 @@ static int parse_hunk_header(
 		parse_int(&hunk->hunk.old_start, ctx) < 0)
 		goto fail;
 
-	if (ctx->parse_ctx.line_len > 0 && ctx->parse_ctx.line[0] == ',') {
+	if (git_parse_peek(&c, &ctx->parse_ctx, 0) == 0 && c == ',') {
 		if (git_parse_advance_expected_str(&ctx->parse_ctx, ",") < 0 ||
 			parse_int(&hunk->hunk.old_lines, ctx) < 0)
 			goto fail;
@@ -476,7 +479,7 @@ static int parse_hunk_header(
 		parse_int(&hunk->hunk.new_start, ctx) < 0)
 		goto fail;
 
-	if (ctx->parse_ctx.line_len > 0 && ctx->parse_ctx.line[0] == ',') {
+	if (git_parse_peek(&c, &ctx->parse_ctx, 0) == 0 && c == ',') {
 		if (git_parse_advance_expected_str(&ctx->parse_ctx, ",") < 0 ||
 			parse_int(&hunk->hunk.new_lines, ctx) < 0)
 			goto fail;
@@ -523,6 +526,7 @@ static int parse_hunk_body(
 		!git_parse_ctx_contains_s(&ctx->parse_ctx, "@@ -");
 		git_parse_advance_line(&ctx->parse_ctx)) {
 
+		char c;
 		int origin;
 		int prefix = 1;
 
@@ -532,7 +536,9 @@ static int parse_hunk_body(
 			goto done;
 		}
 
-		switch (ctx->parse_ctx.line[0]) {
+		git_parse_peek(&c, &ctx->parse_ctx, 0);
+
+		switch (c) {
 		case '\n':
 			prefix = 0;
 
@@ -683,8 +689,10 @@ static int parse_patch_binary_side(
 	}
 
 	while (ctx->parse_ctx.line_len) {
-		char c = ctx->parse_ctx.line[0];
+		char c;
 		size_t encoded_len, decoded_len = 0, decoded_orig = decoded.size;
+
+		git_parse_peek(&c, &ctx->parse_ctx, 0);
 
 		if (c == '\n')
 			break;

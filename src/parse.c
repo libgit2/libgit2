@@ -94,3 +94,25 @@ int git_parse_advance_digit(int64_t *out, git_parse_ctx *ctx, int base)
 	git_parse_advance_chars(ctx, (end - ctx->line));
 	return 0;
 }
+
+int git_parse_peek(char *out, git_parse_ctx *ctx, int flags)
+{
+	size_t remain = ctx->line_len;
+	const char *ptr = ctx->line;
+
+	while (remain) {
+		char c = *ptr;
+
+		if ((flags & GIT_PARSE_PEEK_SKIP_WHITESPACE) &&
+		    git__isspace(c)) {
+			remain--;
+			ptr++;
+			continue;
+		}
+
+		*out = c;
+		return 0;
+	}
+
+	return -1;
+}
