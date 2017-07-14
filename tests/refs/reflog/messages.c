@@ -29,13 +29,13 @@ void test_refs_reflog_messages__setting_head_updates_reflog(void)
 
 	cl_git_pass(git_signature_now(&sig, "me", "foo@example.com"));
 
-	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/haacked"));
+	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/haacked")); /* 4 */
 	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/unborn"));
 	cl_git_pass(git_revparse_single(&tag, g_repo, "tags/test"));
-	cl_git_pass(git_repository_set_head_detached(g_repo, git_object_id(tag)));
-	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/haacked"));
-	cl_git_pass(git_repository_set_head(g_repo, "refs/tags/test"));
-	cl_git_pass(git_repository_set_head(g_repo, "refs/remotes/test/master"));
+	cl_git_pass(git_repository_set_head_detached(g_repo, git_object_id(tag))); /* 3 */
+	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/haacked"));        /* 2 */
+	cl_git_pass(git_repository_set_head(g_repo, "refs/tags/test"));            /* 1 */
+	cl_git_pass(git_repository_set_head(g_repo, "refs/remotes/test/master"));  /* 0 */
 
 	reflog_check_entry(g_repo, GIT_HEAD_FILE, 4,
 		NULL, "refs/heads/haacked",
