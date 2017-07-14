@@ -47,3 +47,4 @@ int git_parse_advance_expected(
 
 int git_parse_advance_ws(git_parse_ctx *ctx);
 int git_parse_advance_nl(git_parse_ctx *ctx);
+int git_parse_advance_digit(int64_t *out, git_parse_ctx *ctx, int base);

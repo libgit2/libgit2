@@ -102,24 +102,17 @@ static int parse_header_git_newpath(
 
 static int parse_header_mode(uint16_t *mode, git_patch_parse_ctx *ctx)
 {
-	const char *end;
-	int32_t m;
-	int ret;
+	int64_t m;
 
-	if (ctx->parse_ctx.line_len < 1 || !git__isdigit(ctx->parse_ctx.line[0]))
+	if ((git_parse_advance_digit(&m, &ctx->parse_ctx, 8)) < 0)
 		return git_parse_err("invalid file mode at line %"PRIuZ, ctx->parse_ctx.line_num);
-
-	if ((ret = git__strntol32(&m, ctx->parse_ctx.line, ctx->parse_ctx.line_len, &end, 8)) < 0)
-		return ret;
 
 	if (m > UINT16_MAX)
 		return -1;
 
 	*mode = (uint16_t)m;
 
-	git_parse_advance_chars(&ctx->parse_ctx, (end - ctx->parse_ctx.line));
-
-	return ret;
+	return 0;
 }
 
 static int parse_header_oid(
@@ -258,19 +251,15 @@ static int parse_header_copyto(
 
 static int parse_header_percent(uint16_t *out, git_patch_parse_ctx *ctx)
 {
-	int32_t val;
-	const char *end;
+	int64_t val;
 
-	if (ctx->parse_ctx.line_len < 1 || !git__isdigit(ctx->parse_ctx.line[0]) ||
-		git__strntol32(&val, ctx->parse_ctx.line, ctx->parse_ctx.line_len, &end, 10) < 0)
+	if (git_parse_advance_digit(&val, &ctx->parse_ctx, 10) < 0)
 		return -1;
-
-	git_parse_advance_chars(&ctx->parse_ctx, (end - ctx->parse_ctx.line));
 
 	if (git_parse_advance_expected_str(&ctx->parse_ctx, "%") < 0)
 		return -1;
 
-	if (val > 100)
+	if (val < 0 || val > 100)
 		return -1;
 
 	*out = val;
@@ -457,7 +446,7 @@ static int parse_int(int *out, git_patch_parse_ctx *ctx)
 {
 	git_off_t num;
 
-	if (parse_number(&num, ctx) < 0 || !git__is_int(num))
+	if (git_parse_advance_digit(&num, &ctx->parse_ctx, 10) < 0 || !git__is_int(num))
 		return -1;
 
 	*out = (int)num;
@@ -687,7 +676,8 @@ static int parse_patch_binary_side(
 		goto done;
 	}
 
-	if (parse_number(&len, ctx) < 0 || git_parse_advance_nl(&ctx->parse_ctx) < 0 || len < 0) {
+	if (git_parse_advance_digit(&len, &ctx->parse_ctx, 10) < 0 ||
+	    git_parse_advance_nl(&ctx->parse_ctx) < 0 || len < 0) {
 		error = git_parse_err("invalid binary size at line %"PRIuZ, ctx->parse_ctx.line_num);
 		goto done;
 	}

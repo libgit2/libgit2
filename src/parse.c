@@ -79,3 +79,18 @@ int git_parse_advance_nl(git_parse_ctx *ctx)
 	git_parse_advance_line(ctx);
 	return 0;
 }
+
+int git_parse_advance_digit(int64_t *out, git_parse_ctx *ctx, int base)
+{
+	const char *end;
+	int ret;
+
+	if (ctx->line_len < 1 || !git__isdigit(ctx->line[0]))
+		return -1;
+
+	if ((ret = git__strntol64(out, ctx->line, ctx->line_len, &end, base)) < 0)
+		return -1;
+
+	git_parse_advance_chars(ctx, (end - ctx->line));
+	return 0;
+}
