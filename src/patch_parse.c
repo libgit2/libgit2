@@ -372,44 +372,8 @@ static int parse_header_dissimilarity(
 	return 0;
 }
 
-typedef struct {
-	const char *str;
-	int(*fn)(git_patch_parsed *, git_patch_parse_ctx *);
-} header_git_op;
-
-static const header_git_op header_git_ops[] = {
-	{ "diff --git ", NULL },
-	{ "@@ -", NULL },
-	{ "GIT binary patch", NULL },
-	{ "Binary files ", NULL },
-	{ "--- ", parse_header_git_oldpath },
-	{ "+++ ", parse_header_git_newpath },
-	{ "index ", parse_header_git_index },
-	{ "old mode ", parse_header_git_oldmode },
-	{ "new mode ", parse_header_git_newmode },
-	{ "deleted file mode ", parse_header_git_deletedfilemode },
-	{ "new file mode ", parse_header_git_newfilemode },
-	{ "rename from ", parse_header_renamefrom },
-	{ "rename to ", parse_header_renameto },
-	{ "rename old ", parse_header_renamefrom },
-	{ "rename new ", parse_header_renameto },
-	{ "copy from ", parse_header_copyfrom },
-	{ "copy to ", parse_header_copyto },
-	{ "similarity index ", parse_header_similarity },
-	{ "dissimilarity index ", parse_header_dissimilarity },
-};
-
-static int parse_header_git(
-	git_patch_parsed *patch,
-	git_patch_parse_ctx *ctx)
+static int parse_header_start(git_patch_parsed *patch, git_patch_parse_ctx *ctx)
 {
-	size_t i;
-	int error = 0;
-
-	/* Parse the diff --git line */
-	if (parse_advance_expected_str(ctx, "diff --git ") < 0)
-		return parse_err("corrupt git diff header at line %"PRIuZ, ctx->line_num);
-
 	if (parse_header_path(&patch->header_old_path, ctx) < 0)
 		return parse_err("corrupt old path in git diff header at line %"PRIuZ,
 			ctx->line_num);
@@ -419,30 +383,96 @@ static int parse_header_git(
 		return parse_err("corrupt new path in git diff header at line %"PRIuZ,
 			ctx->line_num);
 
-	/* Parse remaining header lines */
-	for (parse_advance_line(ctx);
-		ctx->remain_len > 0;
-		parse_advance_line(ctx)) {
+	return 0;
+}
 
+typedef enum {
+	STATE_START,
+
+	STATE_DIFF,
+	STATE_FILEMODE,
+	STATE_MODE,
+	STATE_INDEX,
+	STATE_PATH,
+
+	STATE_SIMILARITY,
+	STATE_RENAME,
+	STATE_COPY,
+
+	STATE_END,
+} parse_header_state;
+
+typedef struct {
+	const char *str;
+	parse_header_state expected_state;
+	parse_header_state next_state;
+	int(*fn)(git_patch_parsed *, git_patch_parse_ctx *);
+} parse_header_transition;
+
+static const parse_header_transition transitions[] = {
+	/* Start */
+	{ "diff --git "         , STATE_START,      STATE_DIFF,       parse_header_start },
+
+	{ "deleted file mode "  , STATE_DIFF,       STATE_FILEMODE,   parse_header_git_deletedfilemode },
+	{ "new file mode "      , STATE_DIFF,       STATE_FILEMODE,   parse_header_git_newfilemode },
+	{ "old mode "           , STATE_DIFF,       STATE_MODE,       parse_header_git_oldmode },
+	{ "new mode "           , STATE_MODE,       STATE_END,        parse_header_git_newmode },
+
+	{ "index "              , STATE_FILEMODE,   STATE_INDEX,      parse_header_git_index },
+	{ "index "              , STATE_DIFF,       STATE_INDEX,      parse_header_git_index },
+	{ "index "              , STATE_END,        STATE_INDEX,      parse_header_git_index },
+
+	{ "--- "                , STATE_INDEX,      STATE_PATH,       parse_header_git_oldpath },
+	{ "+++ "                , STATE_PATH,       STATE_END,        parse_header_git_newpath },
+	{ "GIT binary patch"    , STATE_INDEX,      STATE_END,        NULL },
+	{ "Binary files "       , STATE_INDEX,      STATE_END,        NULL },
+
+	{ "similarity index "   , STATE_DIFF,       STATE_SIMILARITY, parse_header_similarity },
+	{ "dissimilarity index ", STATE_DIFF,       STATE_SIMILARITY, parse_header_dissimilarity },
+	{ "rename from "        , STATE_SIMILARITY, STATE_RENAME,     parse_header_renamefrom },
+	{ "rename old "         , STATE_SIMILARITY, STATE_RENAME,     parse_header_renamefrom },
+	{ "copy from "          , STATE_SIMILARITY, STATE_COPY,       parse_header_copyfrom },
+	{ "rename to "          , STATE_RENAME,     STATE_END,        parse_header_renameto },
+	{ "rename new "         , STATE_RENAME,     STATE_END,        parse_header_renameto },
+	{ "copy to "            , STATE_COPY,       STATE_END,        parse_header_copyto },
+
+	/* Next patch */
+	{ "diff --git "         , STATE_END,        0,                NULL },
+	{ "@@ -"                , STATE_END,        0,                NULL },
+};
+
+static int parse_header_git(
+	git_patch_parsed *patch,
+	git_patch_parse_ctx *ctx)
+{
+	size_t i;
+	int error = 0;
+	parse_header_state state = STATE_START;
+
+	/* Parse remaining header lines */
+	for (; ctx->remain_len > 0; parse_advance_line(ctx)) {
 		bool found = false;
 
 		if (ctx->line_len == 0 || ctx->line[ctx->line_len - 1] != '\n')
 			break;
 
-		for (i = 0; i < ARRAY_SIZE(header_git_ops); i++) {
-			const header_git_op *op = &header_git_ops[i];
-			size_t op_len = strlen(op->str);
+		for (i = 0; i < ARRAY_SIZE(transitions); i++) {
+			const parse_header_transition *transition = &transitions[i];
+			size_t op_len = strlen(transition->str);
 
-			if (memcmp(ctx->line, op->str, min(op_len, ctx->line_len)) != 0)
+			if (transition->expected_state != state ||
+			    memcmp(ctx->line, transition->str, min(op_len, ctx->line_len)) != 0)
 				continue;
 
+			state = transition->next_state;
+
 			/* Do not advance if this is the patch separator */
-			if (op->fn == NULL)
+			if (transition->fn == NULL)
 				goto done;
 
 			parse_advance_chars(ctx, op_len);
 
-			if ((error = op->fn(patch, ctx)) < 0)
+			if ((error = transition->fn(patch, ctx)) < 0)
 				goto done;
 
 			parse_advance_ws(ctx);
@@ -456,12 +486,17 @@ static int parse_header_git(
 			found = true;
 			break;
 		}
-		
+
 		if (!found) {
 			error = parse_err("invalid patch header at line %"PRIuZ,
 				ctx->line_num);
 			goto done;
 		}
+	}
+
+	if (state != STATE_END) {
+		error = parse_err("unexpected header line %"PRIuZ, ctx->line_num);
+		goto done;
 	}
 
 done:
