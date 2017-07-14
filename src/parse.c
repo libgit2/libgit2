@@ -16,6 +16,9 @@ int git_parse_ctx_init(git_parse_ctx *ctx, const char *content, size_t content_l
 	ctx->content_len = content_len;
 	ctx->remain = ctx->content;
 	ctx->remain_len = ctx->content_len;
+	ctx->line = ctx->remain;
+	ctx->line_len = git__linenlen(ctx->line, ctx->remain_len);
+	ctx->line_num = 1;
 
 	return 0;
 }

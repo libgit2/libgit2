@@ -613,10 +613,7 @@ static int parse_patch_header(
 {
 	int error = 0;
 
-	for (ctx->parse_ctx.line = ctx->parse_ctx.remain;
-		ctx->parse_ctx.remain_len > 0;
-		git_parse_advance_line(&ctx->parse_ctx)) {
-
+	for (; ctx->parse_ctx.remain_len > 0; git_parse_advance_line(&ctx->parse_ctx)) {
 		/* This line is too short to be a patch header. */
 		if (ctx->parse_ctx.line_len < 6)
 			continue;
