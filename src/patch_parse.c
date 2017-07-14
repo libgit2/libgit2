@@ -36,7 +36,7 @@ typedef struct {
 static int header_path_len(git_patch_parse_ctx *ctx)
 {
 	bool inquote = 0;
-	bool quoted = (ctx->parse_ctx.line_len > 0 && ctx->parse_ctx.line[0] == '"');
+	bool quoted = git_parse_ctx_contains_s(&ctx->parse_ctx, "\"");
 	size_t len;
 
 	for (len = quoted; len < ctx->parse_ctx.line_len; len++) {
@@ -531,7 +531,7 @@ static int parse_hunk_body(
 	for (;
 		ctx->parse_ctx.remain_len > 1 &&
 		(oldlines || newlines) &&
-		(ctx->parse_ctx.remain_len <= 4 || memcmp(ctx->parse_ctx.line, "@@ -", 4) != 0);
+		!git_parse_ctx_contains_s(&ctx->parse_ctx, "@@ -");
 		git_parse_advance_line(&ctx->parse_ctx)) {
 
 		int origin;
