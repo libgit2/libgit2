@@ -162,12 +162,15 @@ GIT_INLINE(bool) last_error_retryable(void)
 
 #define do_with_retries(fn, remediation) \
 	do {                                                             \
-		int __tries, __ret;                                          \
-		for (__tries = 0; __tries < git_win32__retries; __tries++) { \
-			if (__tries && (__ret = (remediation)) != 0)             \
-				return __ret;                                        \
+		int __retry, __ret;                                          \
+		for (__retry = git_win32__retries; __retry; __retry--) {     \
 			if ((__ret = (fn)) != GIT_RETRY)                         \
 				return __ret;                                        \
+			if (__retry > 1 && (__ret = (remediation)) != 0) {       \
+				if (__ret == GIT_RETRY)                              \
+					continue;                                        \
+				return __ret;                                        \
+			}                                                        \
 			Sleep(5);                                                \
 		}                                                            \
 		return -1;                                                   \
@@ -186,7 +189,7 @@ static int ensure_writable(wchar_t *path)
 	if (!SetFileAttributesW(path, (attrs & ~FILE_ATTRIBUTE_READONLY)))
 		goto on_error;
 
-	return 0;
+	return GIT_RETRY;
 
 on_error:
 	set_errno();
@@ -243,11 +246,6 @@ GIT_INLINE(int) unlink_once(const wchar_t *path)
 	if (DeleteFileW(path))
 		return 0;
 
-	set_errno();
-
-	if (errno == EACCES && ensure_writable(path) == 0 && DeleteFileW(path))
-		return 0;
-
 	if (last_error_retryable())
 		return GIT_RETRY;
 
@@ -262,7 +260,7 @@ int p_unlink(const char *path)
 	if (git_win32_path_from_utf8(wpath, path) < 0)
 		return -1;
 
-	do_with_retries(unlink_once(wpath), 0);
+	do_with_retries(unlink_once(wpath), ensure_writable(wpath));
 }
 
 int p_fsync(int fd)
