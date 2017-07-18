@@ -3,6 +3,9 @@ v0.26 + 1
 
 ### Changes or improvements
 
+* Improved `p_unlink` in `posix_w32.c` to try and make a file writable before sleeping in
+  the retry loop to prevent unnecessary calls to sleep.
+
 ### API additions
 
 ### API removals
