@@ -253,7 +253,66 @@
 	"@@ -9,0 +10 @@ below it!\n" \
 	"+insert at end\n"
 
-/* An insertion at the beginning and end of file (and the resultant patch) */
+#define PATCH_SIMPLE_COMMIT \
+	"commit 15e119375018fba121cf58e02a9f17fe22df0df8\n" \
+	"Author: Edward Thomson <ethomson@edwardthomson.com>\n" \
+	"Date:   Wed Jun 14 13:31:20 2017 +0200\n" \
+	"\n" \
+	"    CHANGELOG: document git_filter_init and GIT_FILTER_INIT\n" \
+	"\n" \
+	"diff --git a/CHANGELOG.md b/CHANGELOG.md\n" \
+	"index 1b9e0c90a..24ecba426 100644\n" \
+	"--- a/CHANGELOG.md\n" \
+	"+++ b/CHANGELOG.md\n" \
+	"@@ -96,6 +96,9 @@ v0.26\n" \
+	" * `git_transport_smart_proxy_options()' enables you to get the proxy options for\n" \
+	"   smart transports.\n" \
+	"\n" \
+	"+* The `GIT_FILTER_INIT` macro and the `git_filter_init` function are provided\n" \
+	"+  to initialize a `git_filter` structure.\n" \
+	"+\n" \
+	" ### Breaking API changes\n" \
+	"\n" \
+	" * `clone_checkout_strategy` has been removed from\n"
+
+#define PATCH_MULTIPLE_HUNKS \
+	"diff --git a/x b/x\n" \
+	"index 0719398..fa0350c 100644\n" \
+	"--- a/x\n" \
+	"+++ b/x\n" \
+	"@@ -1,5 +1,4 @@\n" \
+	" 1\n" \
+	"-2\n" \
+	" 3\n" \
+	" 4\n" \
+	" 5\n" \
+	"@@ -7,3 +6,4 @@\n" \
+	" 7\n" \
+	" 8\n" \
+	" 9\n" \
+	"+10\n"
+
+#define PATCH_MULTIPLE_FILES \
+	"diff --git a/x b/x\n" \
+	"index 8a1218a..7059ba5 100644\n" \
+	"--- a/x\n" \
+	"+++ b/x\n" \
+	"@@ -1,5 +1,4 @@\n" \
+	" 1\n" \
+	" 2\n" \
+	"-3\n" \
+	" 4\n" \
+	" 5\n" \
+	"diff --git a/y b/y\n" \
+	"index e006065..9405325 100644\n" \
+	"--- a/y\n" \
+	"+++ b/y\n" \
+	"@@ -1,4 +1,5 @@\n" \
+	" a\n" \
+	" b\n" \
+	"+c\n" \
+	" d\n" \
+	" e\n"
 
 #define FILE_PREPEND_AND_APPEND \
 	"first and\n" \

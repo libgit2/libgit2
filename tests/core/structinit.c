@@ -176,4 +176,8 @@ void test_core_structinit__compare(void)
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_proxy_options, GIT_PROXY_OPTIONS_VERSION, \
 		GIT_PROXY_OPTIONS_INIT, git_proxy_init_options);
+
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_diff_patchid_options, GIT_DIFF_PATCHID_OPTIONS_VERSION, \
+		GIT_DIFF_PATCHID_OPTIONS_INIT, git_diff_patchid_init_options);
 }
