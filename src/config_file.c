@@ -74,9 +74,14 @@ typedef struct git_config_file_iter {
 		 (iter) && (((tmp) = CVAR_LIST_NEXT(iter) || 1));\
 		 (iter) = (tmp))
 
-struct reader {
+struct config_file {
 	git_oid checksum;
-	char *file_path;
+	char *path;
+	git_array_t(struct config_file) includes;
+};
+
+struct reader {
+	struct config_file *file;
 	git_buf buffer;
 	char *read_ptr;
 	int line_number;
@@ -100,13 +105,11 @@ typedef struct {
 
 	git_config_level_t level;
 
-	git_array_t(struct reader) readers;
-
 	bool locked;
 	git_filebuf locked_buf;
 	git_buf locked_content;
 
-	char  *file_path;
+	struct config_file file;
 } diskfile_backend;
 
 typedef struct {
@@ -115,7 +118,7 @@ typedef struct {
 	diskfile_backend *snapshot_from;
 } diskfile_readonly_backend;
 
-static int config_read(git_strmap *values, diskfile_backend *cfg_file, struct reader *reader, git_config_level_t level, int depth);
+static int config_read(git_strmap *values, struct config_file *file, git_config_level_t level, int depth);
 static int config_write(diskfile_backend *cfg, const char *key, const regex_t *preg, const char *value);
 static char *escape_value(const char *ptr);
 
@@ -125,7 +128,7 @@ static int config_snapshot(git_config_backend **out, git_config_backend *in);
 static void set_parse_error(struct reader *reader, int col, const char *error_str)
 {
 	giterr_set(GITERR_CONFIG, "failed to parse config file: %s (in %s:%d, column %d)",
-		error_str, reader->file_path, reader->line_number, col);
+		error_str, reader->file->path, reader->line_number, col);
 }
 
 static int config_error_readonly(void)
@@ -261,10 +264,25 @@ static int refcounted_strmap_alloc(refcounted_strmap **out)
 	return error;
 }
 
+static void config_file_clear(struct config_file *file)
+{
+	struct config_file *include;
+	uint32_t i;
+
+	if (file == NULL)
+		return;
+
+	git_array_foreach(file->includes, i, include) {
+		config_file_clear(include);
+	}
+	git_array_clear(file->includes);
+
+	git__free(file->path);
+}
+
 static int config_open(git_config_backend *cfg, git_config_level_t level)
 {
 	int res;
-	struct reader *reader;
 	diskfile_backend *b = (diskfile_backend *)cfg;
 
 	b->level = level;
@@ -272,51 +290,75 @@ static int config_open(git_config_backend *cfg, git_config_level_t level)
 	if ((res = refcounted_strmap_alloc(&b->header.values)) < 0)
 		return res;
 
-	git_array_init(b->readers);
-	reader = git_array_alloc(b->readers);
-	if (!reader) {
-		refcounted_strmap_free(b->header.values);
-		return -1;
-	}
-	memset(reader, 0, sizeof(struct reader));
-
-	reader->file_path = git__strdup(b->file_path);
-	GITERR_CHECK_ALLOC(reader->file_path);
-
-	git_buf_init(&reader->buffer, 0);
-	res = git_futils_readbuffer_updated(
-		&reader->buffer, b->file_path, &reader->checksum, NULL);
-
 	/* It's fine if the file doesn't exist */
-	if (res == GIT_ENOTFOUND)
+	if (!git_path_exists(b->file.path))
 		return 0;
 
-	if (res < 0 || (res = config_read(b->header.values->values, b, reader, level, 0)) < 0) {
+	if (res < 0 || (res = config_read(b->header.values->values, &b->file, level, 0)) < 0) {
 		refcounted_strmap_free(b->header.values);
 		b->header.values = NULL;
 	}
 
-	reader = git_array_get(b->readers, 0);
-	git_buf_free(&reader->buffer);
-
 	return res;
 }
 
-/* The meat of the refresh, as we want to use it in different places */
-static int config__refresh(git_config_backend *cfg)
+static int config_is_modified(int *modified, struct config_file *file)
 {
-	refcounted_strmap *values = NULL, *tmp;
+	struct config_file *include;
+	git_buf buf = GIT_BUF_INIT;
+	git_oid hash;
+	uint32_t i;
+	int error;
+
+	*modified = 0;
+
+	if ((error = git_futils_readbuffer(&buf, file->path)) < 0)
+		goto out;
+
+	if ((error = git_hash_buf(&hash, buf.ptr, buf.size)) < 0)
+		goto out;
+
+	if (!git_oid_equal(&hash, &file->checksum)) {
+		*modified = 1;
+		goto out;
+	}
+
+	git_array_foreach(file->includes, i, include) {
+		if ((error = config_is_modified(modified, include)) < 0 || *modified)
+			goto out;
+	}
+
+out:
+	git_buf_free(&buf);
+
+	return error;
+}
+
+static int config_refresh(git_config_backend *cfg)
+{
 	diskfile_backend *b = (diskfile_backend *)cfg;
-	struct reader *reader = NULL;
-	int error = 0;
+	refcounted_strmap *values = NULL, *tmp;
+	struct config_file *include;
+	int error, modified;
+	uint32_t i;
+
+	error = config_is_modified(&modified, &b->file);
+	if (error < 0 && error != GIT_ENOTFOUND)
+		goto out;
+
+	if (!modified)
+		return 0;
 
 	if ((error = refcounted_strmap_alloc(&values)) < 0)
 		goto out;
 
-	reader = git_array_get(b->readers, git_array_size(b->readers) - 1);
-	GITERR_CHECK_ALLOC(reader);
+	/* Reparse the current configuration */
+	git_array_foreach(b->file.includes, i, include) {
+		config_file_clear(include);
+	}
+	git_array_clear(b->file.includes);
 
-	if ((error = config_read(values->values, b, reader, b->level, 0)) < 0)
+	if ((error = config_read(values->values, &b->file, b->level, 0)) < 0)
 		goto out;
 
 	if ((error = git_mutex_lock(&b->header.values_mutex)) < 0) {
@@ -332,52 +374,18 @@ static int config__refresh(git_config_backend *cfg)
 
 out:
 	refcounted_strmap_free(values);
-	if (reader)
-		git_buf_free(&reader->buffer);
-	return error;
-}
 
-static int config_refresh(git_config_backend *cfg)
-{
-	int error = 0, updated = 0, any_updated = 0;
-	diskfile_backend *b = (diskfile_backend *)cfg;
-	struct reader *reader = NULL;
-	uint32_t i;
-
-	for (i = 0; i < git_array_size(b->readers); i++) {
-		reader = git_array_get(b->readers, i);
-		error = git_futils_readbuffer_updated(
-			&reader->buffer, reader->file_path,
-			&reader->checksum, &updated);
-
-		if (error < 0 && error != GIT_ENOTFOUND)
-			return error;
-
-		if (updated)
-			any_updated = 1;
-	}
-
-	if (!any_updated)
-		return (error == GIT_ENOTFOUND) ? 0 : error;
-
-	return config__refresh(cfg);
+	return (error == GIT_ENOTFOUND) ? 0 : error;
 }
 
 static void backend_free(git_config_backend *_backend)
 {
 	diskfile_backend *backend = (diskfile_backend *)_backend;
-	uint32_t i;
 
 	if (backend == NULL)
 		return;
 
-	for (i = 0; i < git_array_size(backend->readers); i++) {
-		struct reader *r = git_array_get(backend->readers, i);
-		git__free(r->file_path);
-	}
-	git_array_clear(backend->readers);
-
-	git__free(backend->file_path);
+	config_file_clear(&backend->file);
 	refcounted_strmap_free(backend->header.values);
 	git_mutex_free(&backend->header.values_mutex);
 	git__free(backend);
@@ -478,6 +486,12 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 
 		if (existing->next != NULL) {
 			giterr_set(GITERR_CONFIG, "multivar incompatible with simple set");
+			ret = -1;
+			goto out;
+		}
+
+		if (existing->included) {
+			giterr_set(GITERR_CONFIG, "modifying included variable is not supported");
 			ret = -1;
 			goto out;
 		}
@@ -616,6 +630,11 @@ static int config_delete(git_config_backend *cfg, const char *name)
 	var = git_strmap_value_at(values, pos);
 	refcounted_strmap_free(map);
 
+	if (var->included) {
+		giterr_set(GITERR_CONFIG, "cannot delete included variable");
+		return -1;
+	}
+
 	if (var->next != NULL) {
 		giterr_set(GITERR_CONFIG, "cannot delete multivar with a single delete");
 		return -1;
@@ -685,10 +704,10 @@ static int config_lock(git_config_backend *_cfg)
 	diskfile_backend *cfg = (diskfile_backend *) _cfg;
 	int error;
 
-	if ((error = git_filebuf_open(&cfg->locked_buf, cfg->file_path, 0, GIT_CONFIG_FILE_MODE)) < 0)
+	if ((error = git_filebuf_open(&cfg->locked_buf, cfg->file.path, 0, GIT_CONFIG_FILE_MODE)) < 0)
 		return error;
 
-	error = git_futils_readbuffer(&cfg->locked_content, cfg->file_path);
+	error = git_futils_readbuffer(&cfg->locked_content, cfg->file.path);
 	if (error < 0 && error != GIT_ENOTFOUND) {
 		git_filebuf_cleanup(&cfg->locked_buf);
 		return error;
@@ -726,8 +745,9 @@ int git_config_file__ondisk(git_config_backend **out, const char *path)
 	backend->header.parent.version = GIT_CONFIG_BACKEND_VERSION;
 	git_mutex_init(&backend->header.values_mutex);
 
-	backend->file_path = git__strdup(path);
-	GITERR_CHECK_ALLOC(backend->file_path);
+	backend->file.path = git__strdup(path);
+	GITERR_CHECK_ALLOC(backend->file.path);
+	git_array_init(backend->file.includes);
 
 	backend->header.parent.open = config_open;
 	backend->header.parent.get = config_get;
@@ -1486,10 +1506,10 @@ on_error:
 
 static int config_parse(
 	struct reader *reader,
-	int (*on_section)(struct reader **reader, const char *current_section, const char *line, size_t line_len, void *data),
-	int (*on_variable)(struct reader **reader, const char *current_section, char *var_name, char *var_value, const char *line, size_t line_len, void *data),
-	int (*on_comment)(struct reader **reader, const char *line, size_t line_len, void *data),
-	int (*on_eof)(struct reader **reader, const char *current_section, void *data),
+	int (*on_section)(struct reader *reader, const char *current_section, const char *line, size_t line_len, void *data),
+	int (*on_variable)(struct reader *reader, const char *current_section, char *var_name, char *var_value, const char *line, size_t line_len, void *data),
+	int (*on_comment)(struct reader *reader, const char *line, size_t line_len, void *data),
+	int (*on_eof)(struct reader *reader, const char *current_section, void *data),
 	void *data)
 {
 	char *current_section = NULL, *var_name, *var_value, *line_start;
@@ -1515,7 +1535,7 @@ static int config_parse(
 
 			if ((result = parse_section_header(reader, &current_section)) == 0 && on_section) {
 				line_len = reader->read_ptr - line_start;
-				result = on_section(&reader, current_section, line_start, line_len, data);
+				result = on_section(reader, current_section, line_start, line_len, data);
 			}
 			break;
 
@@ -1526,21 +1546,21 @@ static int config_parse(
 
 			if (on_comment) {
 				line_len = reader->read_ptr - line_start;
-				result = on_comment(&reader, line_start, line_len, data);
+				result = on_comment(reader, line_start, line_len, data);
 			}
 			break;
 
 		default: /* assume variable declaration */
 			if ((result = parse_variable(reader, &var_name, &var_value)) == 0 && on_variable) {
 				line_len = reader->read_ptr - line_start;
-				result = on_variable(&reader, current_section, var_name, var_value, line_start, line_len, data);
+				result = on_variable(reader, current_section, var_name, var_value, line_start, line_len, data);
 			}
 			break;
 		}
 	}
 
 	if (on_eof)
-		result = on_eof(&reader, current_section, data);
+		result = on_eof(reader, current_section, data);
 
 	git__free(current_section);
 	return result;
@@ -1548,14 +1568,12 @@ static int config_parse(
 
 struct parse_data {
 	git_strmap *values;
-	diskfile_backend *cfg_file;
-	uint32_t reader_idx;
 	git_config_level_t level;
 	int depth;
 };
 
 static int read_on_variable(
-	struct reader **reader,
+	struct reader *reader,
 	const char *current_section,
 	char *var_name,
 	char *var_value,
@@ -1597,21 +1615,13 @@ static int read_on_variable(
 
 	/* Add or append the new config option */
 	if (!git__strcmp(var->entry->name, "include.path")) {
-		struct reader *r;
+		struct config_file *include;
 		git_buf path = GIT_BUF_INIT;
 		char *dir;
-		uint32_t index;
 
-		r = git_array_alloc(parse_data->cfg_file->readers);
-		/* The reader may have been reallocated */
-		*reader = git_array_get(parse_data->cfg_file->readers, parse_data->reader_idx);
-		memset(r, 0, sizeof(struct reader));
-
-		if ((result = git_path_dirname_r(&path, (*reader)->file_path)) < 0)
+		if ((result = git_path_dirname_r(&path, reader->file->path)) < 0)
 			return result;
 
-		/* We need to know our index in the array, as the next config_parse call may realloc */
-		index = git_array_size(parse_data->cfg_file->readers) - 1;
 		dir = git_buf_detach(&path);
 		result = included_path(&path, dir, var->entry->value);
 		git__free(dir);
@@ -1619,51 +1629,60 @@ static int read_on_variable(
 		if (result < 0)
 			return result;
 
-		r->file_path = git_buf_detach(&path);
-		git_buf_init(&r->buffer, 0);
+		include = git_array_alloc(reader->file->includes);
+		memset(include, 0, sizeof(*include));
+		git_array_init(include->includes);
+		include->path = git_buf_detach(&path);
 
-		result = git_futils_readbuffer_updated(
-			&r->buffer, r->file_path, &r->checksum, NULL);
+		result = config_read(parse_data->values, include, parse_data->level, parse_data->depth+1);
 
-		if (result == 0) {
-			result = config_read(parse_data->values, parse_data->cfg_file, r, parse_data->level, parse_data->depth+1);
-			r = git_array_get(parse_data->cfg_file->readers, index);
-			*reader = git_array_get(parse_data->cfg_file->readers, parse_data->reader_idx);
-		} else if (result == GIT_ENOTFOUND) {
+		if (result == GIT_ENOTFOUND) {
 			giterr_clear();
 			result = 0;
 		}
-
-		git_buf_free(&r->buffer);
 	}
 
 	return result;
 }
 
-static int config_read(git_strmap *values, diskfile_backend *cfg_file, struct reader *reader, git_config_level_t level, int depth)
+static int config_read(git_strmap *values, struct config_file *file, git_config_level_t level, int depth)
 {
 	struct parse_data parse_data;
+	struct reader reader;
+	int error;
 
 	if (depth >= MAX_INCLUDE_DEPTH) {
 		giterr_set(GITERR_CONFIG, "maximum config include depth reached");
 		return -1;
 	}
 
+	git_buf_init(&reader.buffer, 0);
+
+	if ((error = git_futils_readbuffer(&reader.buffer, file->path)) < 0)
+		goto out;
+
+	if ((error = git_hash_buf(&file->checksum, reader.buffer.ptr, reader.buffer.size)) < 0)
+		goto out;
+
 	/* Initialize the reading position */
-	reader->read_ptr = reader->buffer.ptr;
-	reader->eof = 0;
+	reader.file = file;
+	reader.line_number = 0;
+	reader.read_ptr = reader.buffer.ptr;
+	reader.eof = 0;
 
 	/* If the file is empty, there's nothing for us to do */
-	if (*reader->read_ptr == '\0')
-		return 0;
+	if (*reader.read_ptr == '\0')
+		goto out;
 
 	parse_data.values = values;
-	parse_data.cfg_file = cfg_file;
-	parse_data.reader_idx = git_array_size(cfg_file->readers) - 1;
 	parse_data.level = level;
 	parse_data.depth = depth;
 
-	return config_parse(reader, NULL, read_on_variable, NULL, NULL, &parse_data);
+	error = config_parse(&reader, NULL, read_on_variable, NULL, NULL, &parse_data);
+
+out:
+	git_buf_free(&reader.buffer);
+	return error;
 }
 
 static int write_section(git_buf *fbuf, const char *key)
@@ -1760,7 +1779,7 @@ static int write_value(struct write_data *write_data)
 }
 
 static int write_on_section(
-	struct reader **reader,
+	struct reader *reader,
 	const char *current_section,
 	const char *line,
 	size_t line_len,
@@ -1796,7 +1815,7 @@ static int write_on_section(
 }
 
 static int write_on_variable(
-	struct reader **reader,
+	struct reader *reader,
 	const char *current_section,
 	char *var_name,
 	char *var_value,
@@ -1846,7 +1865,7 @@ static int write_on_variable(
 	return write_value(write_data);
 }
 
-static int write_on_comment(struct reader **reader, const char *line, size_t line_len, void *data)
+static int write_on_comment(struct reader *reader, const char *line, size_t line_len, void *data)
 {
 	struct write_data *write_data;
 
@@ -1857,7 +1876,7 @@ static int write_on_comment(struct reader **reader, const char *line, size_t lin
 }
 
 static int write_on_eof(
-	struct reader **reader, const char *current_section, void *data)
+	struct reader *reader, const char *current_section, void *data)
 {
 	struct write_data *write_data = (struct write_data *)data;
 	int result = 0;
@@ -1896,31 +1915,35 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	char *section, *name, *ldot;
 	git_filebuf file = GIT_FILEBUF_INIT;
 	git_buf buf = GIT_BUF_INIT;
-	struct reader *reader = git_array_get(cfg->readers, 0);
+	struct reader reader;
 	struct write_data write_data;
 
+	memset(&reader, 0, sizeof(reader));
+	git_buf_init(&reader.buffer, 0);
+	reader.file = &cfg->file;
+
 	if (cfg->locked) {
-		result = git_buf_puts(&reader->buffer, git_buf_cstr(&cfg->locked_content));
+		result = git_buf_puts(&reader.buffer, git_buf_cstr(&cfg->locked_content));
 	} else {
 		/* Lock the file */
 		if ((result = git_filebuf_open(
-			     &file, cfg->file_path, GIT_FILEBUF_HASH_CONTENTS, GIT_CONFIG_FILE_MODE)) < 0) {
-			git_buf_free(&reader->buffer);
+			     &file, cfg->file.path, GIT_FILEBUF_HASH_CONTENTS, GIT_CONFIG_FILE_MODE)) < 0) {
+			git_buf_free(&reader.buffer);
 			return result;
 		}
 
 		/* We need to read in our own config file */
-		result = git_futils_readbuffer(&reader->buffer, cfg->file_path);
+		result = git_futils_readbuffer(&reader.buffer, cfg->file.path);
 	}
 
 	/* Initialise the reading position */
 	if (result == GIT_ENOTFOUND) {
-		reader->read_ptr = NULL;
-		reader->eof = 1;
-		git_buf_clear(&reader->buffer);
+		reader.read_ptr = NULL;
+		reader.eof = 1;
+		git_buf_clear(&reader.buffer);
 	} else if (result == 0) {
-		reader->read_ptr = reader->buffer.ptr;
-		reader->eof = 0;
+		reader.read_ptr = reader.buffer.ptr;
+		reader.eof = 0;
 	} else {
 		git_filebuf_cleanup(&file);
 		return -1; /* OS error when reading the file */
@@ -1939,7 +1962,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	write_data.preg = preg;
 	write_data.value = value;
 
-	result = config_parse(reader, write_on_section, write_on_variable, write_on_comment, write_on_eof, &write_data);
+	result = config_parse(&reader, write_on_section, write_on_variable, write_on_comment, write_on_eof, &write_data);
 	git__free(section);
 	git_buf_free(&write_data.buffered_comment);
 
@@ -1960,6 +1983,6 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 
 done:
 	git_buf_free(&buf);
-	git_buf_free(&reader->buffer);
+	git_buf_free(&reader.buffer);
 	return result;
 }
