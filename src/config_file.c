@@ -1575,6 +1575,39 @@ struct parse_data {
 	int depth;
 };
 
+static int parse_include(struct reader *reader,
+	struct parse_data *parse_data, const char *file)
+{
+	struct config_file *include;
+	git_buf path = GIT_BUF_INIT;
+	char *dir;
+	int result;
+
+	if ((result = git_path_dirname_r(&path, reader->file->path)) < 0)
+		return result;
+
+	dir = git_buf_detach(&path);
+	result = included_path(&path, dir, file);
+	git__free(dir);
+
+	if (result < 0)
+		return result;
+
+	include = git_array_alloc(reader->file->includes);
+	memset(include, 0, sizeof(*include));
+	git_array_init(include->includes);
+	include->path = git_buf_detach(&path);
+
+	result = config_read(parse_data->values, include, parse_data->level, parse_data->depth+1);
+
+	if (result == GIT_ENOTFOUND) {
+		giterr_clear();
+		result = 0;
+	}
+
+	return result;
+}
+
 static int read_on_variable(
 	struct reader *reader,
 	const char *current_section,
@@ -1617,33 +1650,8 @@ static int read_on_variable(
 	result = 0;
 
 	/* Add or append the new config option */
-	if (!git__strcmp(var->entry->name, "include.path")) {
-		struct config_file *include;
-		git_buf path = GIT_BUF_INIT;
-		char *dir;
-
-		if ((result = git_path_dirname_r(&path, reader->file->path)) < 0)
-			return result;
-
-		dir = git_buf_detach(&path);
-		result = included_path(&path, dir, var->entry->value);
-		git__free(dir);
-
-		if (result < 0)
-			return result;
-
-		include = git_array_alloc(reader->file->includes);
-		memset(include, 0, sizeof(*include));
-		git_array_init(include->includes);
-		include->path = git_buf_detach(&path);
-
-		result = config_read(parse_data->values, include, parse_data->level, parse_data->depth+1);
-
-		if (result == GIT_ENOTFOUND) {
-			giterr_clear();
-			result = 0;
-		}
-	}
+	if (!git__strcmp(var->entry->name, "include.path"))
+		result = parse_include(reader, parse_data, var->entry->value);
 
 	return result;
 }
