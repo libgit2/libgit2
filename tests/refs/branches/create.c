@@ -116,51 +116,6 @@ void test_refs_branches_create__creating_a_branch_with_an_invalid_name_returns_E
 		git_branch_create(&branch, repo, "inv@{id", target, 0));
 }
 
-void test_refs_branches_create__default_reflog_message(void)
-{
-	git_reflog *log;
-	git_buf buf = GIT_BUF_INIT;
-	const git_reflog_entry *entry;
-	git_annotated_commit *annotated;
-	git_signature *sig;
-	git_config *cfg;
-
-	cl_git_pass(git_repository_config(&cfg, repo));
-	cl_git_pass(git_config_set_string(cfg, "user.name", "Foo Bar"));
-	cl_git_pass(git_config_set_string(cfg, "user.email", "foo@example.com"));
-	git_config_free(cfg);
-
-	cl_git_pass(git_signature_default(&sig, repo));
-
-	retrieve_known_commit(&target, repo);
-	cl_git_pass(git_branch_create(&branch, repo, NEW_BRANCH_NAME, target, false));
-	cl_git_pass(git_reflog_read(&log, repo, "refs/heads/" NEW_BRANCH_NAME));
-
-	entry = git_reflog_entry_byindex(log, 0);
-	cl_git_pass(git_buf_printf(&buf, "branch: Created from %s", git_oid_tostr_s(git_commit_id(target))));
-	cl_assert_equal_s(git_buf_cstr(&buf), git_reflog_entry_message(entry));
-	cl_assert_equal_s(sig->email, git_reflog_entry_committer(entry)->email);
-
-	cl_git_pass(git_reference_remove(repo, "refs/heads/" NEW_BRANCH_NAME));
-	git_reference_free(branch);
-	git_reflog_free(log);
-	git_buf_clear(&buf);
-
-	cl_git_pass(git_annotated_commit_from_revspec(&annotated, repo, "e90810b8df3"));
-	cl_git_pass(git_branch_create_from_annotated(&branch, repo, NEW_BRANCH_NAME, annotated, true));
-	cl_git_pass(git_reflog_read(&log, repo, "refs/heads/" NEW_BRANCH_NAME));
-
-	entry = git_reflog_entry_byindex(log, 0);
-	cl_git_pass(git_buf_printf(&buf, "branch: Created from e90810b8df3"));
-	cl_assert_equal_s(git_buf_cstr(&buf), git_reflog_entry_message(entry));
-	cl_assert_equal_s(sig->email, git_reflog_entry_committer(entry)->email);
-
-	git_annotated_commit_free(annotated);
-	git_buf_free(&buf);
-	git_reflog_free(log);
-	git_signature_free(sig);
-}
-
 static void assert_branch_matches_name(
 	const char *expected, const char *lookup_as)
 {
