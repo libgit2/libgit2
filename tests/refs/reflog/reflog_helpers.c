@@ -3,6 +3,18 @@
 #include "repository.h"
 #include "reflog.h"
 
+static int reflog_entry_tostr(git_buf *out, const git_reflog_entry *entry)
+{
+	char old_oid[GIT_OID_HEXSZ], new_oid[GIT_OID_HEXSZ];
+
+	assert(out && entry);
+
+	git_oid_tostr((char *)&old_oid, GIT_OID_HEXSZ, git_reflog_entry_id_old(entry));
+	git_oid_tostr((char *)&new_oid, GIT_OID_HEXSZ, git_reflog_entry_id_new(entry));
+
+	return git_buf_printf(out, "%s %s %s %s", old_oid, new_oid, "somesig", git_reflog_entry_message(entry));
+}
+
 size_t reflog_entrycount(git_repository *repo, const char *name)
 {
 	git_reflog *log;
@@ -84,18 +96,6 @@ void cl_reflog_check_entry_(git_repository *repo, const char *reflog, size_t idx
 
 	git_buf_free(&result);
 	git_reflog_free(log);
-}
-
-static int reflog_entry_tostr(git_buf *out, const git_reflog_entry *entry)
-{
-	char old_oid[GIT_OID_HEXSZ], new_oid[GIT_OID_HEXSZ];
-
-	assert(out && entry);
-
-	git_oid_tostr((char *)&old_oid, GIT_OID_HEXSZ, git_reflog_entry_id_old(entry));
-	git_oid_tostr((char *)&new_oid, GIT_OID_HEXSZ, git_reflog_entry_id_new(entry));
-
-	return git_buf_printf(out, "%s %s %s %s", old_oid, new_oid, "somesig", git_reflog_entry_message(entry));
 }
 
 void reflog_print(git_repository *repo, const char *reflog_name)
