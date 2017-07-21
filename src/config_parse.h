@@ -8,6 +8,7 @@
 #include "common.h"
 #include "array.h"
 #include "oid.h"
+#include "parse.h"
 
 static const char *git_config_escapes = "ntb\"\\";
 static const char *git_config_escaped = "\n\t\b\"\\";
@@ -20,10 +21,7 @@ typedef struct config_file {
 
 typedef struct {
 	struct config_file *file;
-	git_buf buffer;
-	char *read_ptr;
-	int line_number;
-	int eof;
+	git_parse_ctx ctx;
 } git_config_parser;
 
 typedef int (*git_config_parser_section_cb)(

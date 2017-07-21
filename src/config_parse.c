@@ -13,154 +13,10 @@
 
 static void set_parse_error(git_config_parser *reader, int col, const char *error_str)
 {
-	giterr_set(GITERR_CONFIG, "failed to parse config file: %s (in %s:%d, column %d)",
-		error_str, reader->file->path, reader->line_number, col);
+	giterr_set(GITERR_CONFIG, "failed to parse config file: %s (in %s:%"PRIuZ", column %d)",
+		error_str, reader->file->path, reader->ctx.line_num, col);
 }
 
-static int reader_getchar_raw(git_config_parser *reader)
-{
-	int c;
-
-	c = *reader->read_ptr++;
-
-	/*
-	Win 32 line breaks: if we find a \r\n sequence,
-	return only the \n as a newline
-	*/
-	if (c == '\r' && *reader->read_ptr == '\n') {
-		reader->read_ptr++;
-		c = '\n';
-	}
-
-	if (c == '\n')
-		reader->line_number++;
-
-	if (c == 0) {
-		reader->eof = 1;
-		c = '\0';
-	}
-
-	return c;
-}
-
-#define SKIP_WHITESPACE (1 << 1)
-#define SKIP_COMMENTS (1 << 2)
-
-static int reader_getchar(git_config_parser *reader, int flags)
-{
-	const int skip_whitespace = (flags & SKIP_WHITESPACE);
-	const int skip_comments = (flags & SKIP_COMMENTS);
-	int c;
-
-	assert(reader->read_ptr);
-
-	do {
-		c = reader_getchar_raw(reader);
-	} while (c != '\n' && c != '\0' && skip_whitespace && git__isspace(c));
-
-	if (skip_comments && (c == '#' || c == ';')) {
-		do {
-			c = reader_getchar_raw(reader);
-		} while (c != '\n' && c != '\0');
-	}
-
-	return c;
-}
-
-/*
- * Read the next char, but don't move the reading pointer.
- */
-static int reader_peek(git_config_parser *reader, int flags)
-{
-	void *old_read_ptr;
-	int old_lineno, old_eof;
-	int ret;
-
-	assert(reader->read_ptr);
-
-	old_read_ptr = reader->read_ptr;
-	old_lineno = reader->line_number;
-	old_eof = reader->eof;
-
-	ret = reader_getchar(reader, flags);
-
-	reader->read_ptr = old_read_ptr;
-	reader->line_number = old_lineno;
-	reader->eof = old_eof;
-
-	return ret;
-}
-
-/*
- * Read and consume a line, returning it in newly-allocated memory.
- */
-static char *reader_readline(git_config_parser *reader, bool skip_whitespace)
-{
-	char *line = NULL;
-	char *line_src, *line_end;
-	size_t line_len, alloc_len;
-
-	line_src = reader->read_ptr;
-
-	if (skip_whitespace) {
-		/* Skip empty empty lines */
-		while (git__isspace(*line_src))
-			++line_src;
-	}
-
-	line_end = strchr(line_src, '\n');
-
-	/* no newline at EOF */
-	if (line_end == NULL)
-		line_end = strchr(line_src, 0);
-
-	line_len = line_end - line_src;
-
-	if (GIT_ADD_SIZET_OVERFLOW(&alloc_len, line_len, 1) ||
-		(line = git__malloc(alloc_len)) == NULL) {
-		return NULL;
-	}
-
-	memcpy(line, line_src, line_len);
-
-	do line[line_len] = '\0';
-	while (line_len-- > 0 && git__isspace(line[line_len]));
-
-	if (*line_end == '\n')
-		line_end++;
-
-	if (*line_end == '\0')
-		reader->eof = 1;
-
-	reader->line_number++;
-	reader->read_ptr = line_end;
-
-	return line;
-}
-
-/*
- * Consume a line, without storing it anywhere
- */
-static void reader_consume_line(git_config_parser *reader)
-{
-	char *line_start, *line_end;
-
-	line_start = reader->read_ptr;
-	line_end = strchr(line_start, '\n');
-	/* No newline at EOF */
-	if(line_end == NULL){
-		line_end = strchr(line_start, '\0');
-	}
-
-	if (*line_end == '\n')
-		line_end++;
-
-	if (*line_end == '\0')
-		reader->eof = 1;
-
-	reader->line_number++;
-	reader->read_ptr = line_end;
-}
 
 GIT_INLINE(int) config_keychar(int c)
 {
@@ -295,7 +151,8 @@ static int parse_section_header(git_config_parser *reader, char **section_out)
 	char *line;
 	size_t line_len;
 
-	line = reader_readline(reader, true);
+	git_parse_advance_ws(&reader->ctx);
+	line = git__strndup(reader->ctx.line, reader->ctx.line_len);
 	if (line == NULL)
 		return -1;
 
@@ -356,14 +213,14 @@ fail_parse:
 	return -1;
 }
 
-static int skip_bom(git_config_parser *reader)
+static int skip_bom(git_parse_ctx *parser)
 {
+	git_buf buf = GIT_BUF_INIT_CONST(parser->content, parser->content_len);
 	git_bom_t bom;
-	int bom_offset = git_buf_text_detect_bom(&bom,
-		&reader->buffer, reader->read_ptr - reader->buffer.ptr);
+	int bom_offset = git_buf_text_detect_bom(&bom, &buf, parser->content_len);
 
 	if (bom == GIT_BOM_UTF8)
-		reader->read_ptr += bom_offset;
+		git_parse_advance_chars(parser, bom_offset);
 
 	/* TODO: reference implementation is pretty stupid with BoM */
 
@@ -463,7 +320,8 @@ static int parse_multiline_variable(git_config_parser *reader, git_buf *value, i
 	bool multiline;
 
 	/* Check that the next line exists */
-	line = reader_readline(reader, false);
+	git_parse_advance_line(&reader->ctx);
+	line = git__strndup(reader->ctx.line, reader->ctx.line_len);
 	if (line == NULL)
 		return -1;
 
@@ -550,7 +408,8 @@ static int parse_variable(git_config_parser *reader, char **var_name, char **var
 	int quote_count;
 	bool multiline;
 
-	line = reader_readline(reader, true);
+	git_parse_advance_ws(&reader->ctx);
+	line = git__strndup(reader->ctx.line, reader->ctx.line_len);
 	if (line == NULL)
 		return -1;
 
@@ -603,56 +462,58 @@ int git_config_parse(
 	git_config_parser_eof_cb on_eof,
 	void *data)
 {
-	char *current_section = NULL, *var_name, *var_value, *line_start;
-	char c;
-	size_t line_len;
+	git_parse_ctx *ctx;
+	char *current_section = NULL, *var_name, *var_value;
 	int result = 0;
 
-	skip_bom(parser);
+	ctx = &parser->ctx;
 
-	while (result == 0 && !parser->eof) {
-		line_start = parser->read_ptr;
+	skip_bom(ctx);
 
-		c = reader_peek(parser, SKIP_WHITESPACE);
+	for (; ctx->remain_len > 0; git_parse_advance_line(ctx)) {
+		const char *line_start = parser->ctx.line;
+		size_t line_len = parser->ctx.line_len;
+		char c;
+
+		if (git_parse_peek(&c, ctx, GIT_PARSE_PEEK_SKIP_WHITESPACE) < 0 &&
+		    git_parse_peek(&c, ctx, 0) < 0)
+			continue;
 
 		switch (c) {
-		case '\0': /* EOF when peeking, set EOF in the parser to exit the loop */
-			parser->eof = 1;
-			break;
-
 		case '[': /* section header, new section begins */
 			git__free(current_section);
 			current_section = NULL;
 
 			if ((result = parse_section_header(parser, &current_section)) == 0 && on_section) {
-				line_len = parser->read_ptr - line_start;
 				result = on_section(parser, current_section, line_start, line_len, data);
 			}
 			break;
 
 		case '\n': /* comment or whitespace-only */
+		case ' ':
+		case '\t':
 		case ';':
 		case '#':
-			reader_consume_line(parser);
-
 			if (on_comment) {
-				line_len = parser->read_ptr - line_start;
 				result = on_comment(parser, line_start, line_len, data);
 			}
 			break;
 
 		default: /* assume variable declaration */
 			if ((result = parse_variable(parser, &var_name, &var_value)) == 0 && on_variable) {
-				line_len = parser->read_ptr - line_start;
 				result = on_variable(parser, current_section, var_name, var_value, line_start, line_len, data);
 			}
 			break;
 		}
+
+		if (result < 0)
+			goto out;
 	}
 
 	if (on_eof)
 		result = on_eof(parser, current_section, data);
 
+out:
 	git__free(current_section);
 	return result;
 }

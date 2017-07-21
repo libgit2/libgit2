@@ -1115,6 +1115,7 @@ static int config_read(
 {
 	struct parse_data parse_data;
 	git_config_parser reader;
+	git_buf contents = GIT_BUF_INIT;
 	int error;
 
 	if (depth >= MAX_INCLUDE_DEPTH) {
@@ -1122,22 +1123,20 @@ static int config_read(
 		return -1;
 	}
 
-	git_buf_init(&reader.buffer, 0);
-
-	if ((error = git_futils_readbuffer(&reader.buffer, file->path)) < 0)
+	if ((error = git_futils_readbuffer(&contents, file->path)) < 0)
 		goto out;
 
-	if ((error = git_hash_buf(&file->checksum, reader.buffer.ptr, reader.buffer.size)) < 0)
+	git_parse_ctx_init(&reader.ctx, contents.ptr, contents.size);
+
+	if ((error = git_hash_buf(&file->checksum, contents.ptr, contents.size)) < 0)
 		goto out;
 
 	/* Initialize the reading position */
 	reader.file = file;
-	reader.line_number = 0;
-	reader.read_ptr = reader.buffer.ptr;
-	reader.eof = 0;
+	git_parse_ctx_init(&reader.ctx, contents.ptr, contents.size);
 
 	/* If the file is empty, there's nothing for us to do */
-	if (*reader.read_ptr == '\0')
+	if (!reader.ctx.content || *reader.ctx.content == '\0')
 		goto out;
 
 	parse_data.repo = repo;
@@ -1149,7 +1148,7 @@ static int config_read(
 	error = git_config_parse(&reader, NULL, read_on_variable, NULL, NULL, &parse_data);
 
 out:
-	git_buf_free(&reader.buffer);
+	git_buf_free(&contents);
 	return error;
 }
 
@@ -1384,36 +1383,30 @@ static int config_write(diskfile_backend *cfg, const char *orig_key, const char 
 	int result;
 	char *orig_section, *section, *orig_name, *name, *ldot;
 	git_filebuf file = GIT_FILEBUF_INIT;
-	git_buf buf = GIT_BUF_INIT;
+	git_buf buf = GIT_BUF_INIT, contents = GIT_BUF_INIT;
 	git_config_parser reader;
 	struct write_data write_data;
 
 	memset(&reader, 0, sizeof(reader));
-	git_buf_init(&reader.buffer, 0);
 	reader.file = &cfg->file;
 
 	if (cfg->locked) {
-		result = git_buf_puts(&reader.buffer, git_buf_cstr(&cfg->locked_content));
+		result = git_buf_puts(&contents, git_buf_cstr(&cfg->locked_content));
 	} else {
 		/* Lock the file */
 		if ((result = git_filebuf_open(
 			     &file, cfg->file.path, GIT_FILEBUF_HASH_CONTENTS, GIT_CONFIG_FILE_MODE)) < 0) {
-			git_buf_free(&reader.buffer);
+			git_buf_free(&contents);
 			return result;
 		}
 
 		/* We need to read in our own config file */
-		result = git_futils_readbuffer(&reader.buffer, cfg->file.path);
+		result = git_futils_readbuffer(&contents, cfg->file.path);
 	}
 
 	/* Initialise the reading position */
-	if (result == GIT_ENOTFOUND) {
-		reader.read_ptr = NULL;
-		reader.eof = 1;
-		git_buf_clear(&reader.buffer);
-	} else if (result == 0) {
-		reader.read_ptr = reader.buffer.ptr;
-		reader.eof = 0;
+	if (result == 0 || result == GIT_ENOTFOUND) {
+		git_parse_ctx_init(&reader.ctx, contents.ptr, contents.size);
 	} else {
 		git_filebuf_cleanup(&file);
 		return -1; /* OS error when reading the file */
@@ -1467,6 +1460,7 @@ static int config_write(diskfile_backend *cfg, const char *orig_key, const char 
 
 done:
 	git_buf_free(&buf);
-	git_buf_free(&reader.buffer);
+	git_buf_free(&contents);
+	git_parse_ctx_clear(&reader.ctx);
 	return result;
 }
