@@ -119,7 +119,7 @@ typedef struct {
 	diskfile_backend *snapshot_from;
 } diskfile_readonly_backend;
 
-static int config_read(git_strmap *values, struct config_file *file, git_config_level_t level, int depth);
+static int config_read(git_strmap *values, const git_repository *repo, struct config_file *file, git_config_level_t level, int depth);
 static int config_write(diskfile_backend *cfg, const char *key, const regex_t *preg, const char *value);
 static char *escape_value(const char *ptr);
 
@@ -296,7 +296,7 @@ static int config_open(git_config_backend *cfg, git_config_level_t level, const 
 	if (!git_path_exists(b->file.path))
 		return 0;
 
-	if (res < 0 || (res = config_read(b->header.values->values, &b->file, level, 0)) < 0) {
+	if (res < 0 || (res = config_read(b->header.values->values, repo, &b->file, level, 0)) < 0) {
 		refcounted_strmap_free(b->header.values);
 		b->header.values = NULL;
 	}
@@ -360,7 +360,7 @@ static int config_refresh(git_config_backend *cfg)
 	}
 	git_array_clear(b->file.includes);
 
-	if ((error = config_read(values->values, &b->file, b->level, 0)) < 0)
+	if ((error = config_read(values->values, b->repo, &b->file, b->level, 0)) < 0)
 		goto out;
 
 	if ((error = git_mutex_lock(&b->header.values_mutex)) < 0) {
@@ -1571,6 +1571,7 @@ static int config_parse(
 
 struct parse_data {
 	git_strmap *values;
+	const git_repository *repo;
 	git_config_level_t level;
 	int depth;
 };
@@ -1598,7 +1599,7 @@ static int parse_include(struct reader *reader,
 	git_array_init(include->includes);
 	include->path = git_buf_detach(&path);
 
-	result = config_read(parse_data->values, include, parse_data->level, parse_data->depth+1);
+	result = config_read(parse_data->values, parse_data->repo, include, parse_data->level, parse_data->depth+1);
 
 	if (result == GIT_ENOTFOUND) {
 		giterr_clear();
@@ -1656,7 +1657,7 @@ static int read_on_variable(
 	return result;
 }
 
-static int config_read(git_strmap *values, struct config_file *file, git_config_level_t level, int depth)
+static int config_read(git_strmap *values, const git_repository *repo, struct config_file *file, git_config_level_t level, int depth)
 {
 	struct parse_data parse_data;
 	struct reader reader;
@@ -1686,6 +1687,7 @@ static int config_read(git_strmap *values, struct config_file *file, git_config_
 		goto out;
 
 	parse_data.values = values;
+	parse_data.repo = repo;
 	parse_data.level = level;
 	parse_data.depth = depth;
 
