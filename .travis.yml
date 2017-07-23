@@ -37,7 +37,7 @@ addons:
     - valgrind
 
 dist: trusty
-sudo: false
+sudo: true
 osx_image: xcode8.3
 
 matrix:
@@ -64,7 +64,7 @@ matrix:
    - env: COVERITY=1
 
 install:
-  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then ./script/install-deps-${TRAVIS_OS_NAME}.sh; fi
+  - ./script/install-deps-${TRAVIS_OS_NAME}.sh
 
 # Run the Build script and tests
 script:
