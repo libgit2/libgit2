@@ -50,6 +50,7 @@ cat >~/sshd/sshd_config<<-EOF
 	ListenAddress 0.0.0.0
 	Protocol 2
 	HostKey ${HOME}/sshd/id_rsa
+	PidFile ${HOME}/sshd/pid
 	RSAAuthentication yes
 	PasswordAuthentication yes
 	PubkeyAuthentication yes
@@ -99,7 +100,7 @@ if [ -e ./libgit2_clar ]; then
 
 fi
 
-killall sshd
+kill $(cat "$HOME/sshd/pid")
 
 export GITTEST_REMOTE_URL="https://github.com/libgit2/non-existent"
 export GITTEST_REMOTE_USER="libgit2test"
