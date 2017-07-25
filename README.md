@@ -129,7 +129,7 @@ On most systems you can build the library using the following commands
 
 	$ mkdir build && cd build
 	$ cmake ..
-	$ cmake --build .
+	$ cmake --build ..
 
 Alternatively you can point the CMake GUI tool to the CMakeLists.txt file and generate platform specific build project or IDE workspace.
 
