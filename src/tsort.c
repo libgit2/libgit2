@@ -310,7 +310,6 @@ static ssize_t collapse(void **dst, struct tsort_run *stack, ssize_t stack_curr,
 #define PUSH_NEXT() do {\
 	len = count_run(dst, curr, size, store);\
 	run = minrun;\
-	if (run < minrun) run = minrun;\
 	if (run > (ssize_t)size - curr) run = size - curr;\
 	if (run > len) {\
 		bisort(&dst[curr], len, run, cmp, payload);\
