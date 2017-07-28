@@ -28,25 +28,25 @@ void test_rebase_submodule__initialize(void)
 
 	rewrite_gitmodules(git_repository_workdir(repo));
 
-	git_submodule_set_url(repo, "my-submodule", git_repository_path(repo));
+	cl_git_pass(git_submodule_set_url(repo, "my-submodule", git_repository_path(repo)));
 
 	/* We have to commit the rewritten .gitmodules file */
-	git_repository_index(&index, repo);
-	git_index_add_bypath(index, ".gitmodules");
-	git_index_write_tree(&tree_oid, index);
-	git_index_free(index);
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_index_add_bypath(index, ".gitmodules"));
+	cl_git_pass(git_index_write_tree(&tree_oid, index));
 
 	cl_git_pass(git_tree_lookup(&tree, repo, &tree_oid));
 
-	git_repository_head(&master_ref, repo);
+	cl_git_pass(git_repository_head(&master_ref, repo));
 	cl_git_pass(git_commit_lookup(&parent, repo, git_reference_target(master_ref)));
 
 	cl_git_pass(git_commit_create_v(&commit_id, repo, git_reference_name(master_ref), signature, signature, NULL, "Fixup .gitmodules", tree, 1, parent));
 
 	/* And a final reset, for good measure */
-	git_object_lookup(&obj, repo, &commit_id, GIT_OBJ_COMMIT);
+	cl_git_pass(git_object_lookup(&obj, repo, &commit_id, GIT_OBJ_COMMIT));
 	cl_git_pass(git_reset(repo, obj, GIT_RESET_HARD, &opts));
 
+	git_index_free(index);
 	git_object_free(obj);
 	git_commit_free(parent);
 	git_reference_free(master_ref);
