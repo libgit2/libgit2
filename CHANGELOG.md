@@ -8,6 +8,10 @@ v0.26 + 1
 
 ### API additions
 
+* `git_remote_create_detached()` creates a remote that is not associated
+  to any repository (and does not apply configuration like 'insteadof' rules).
+  This is mostly useful for e.g. emulating `git ls-remote` behavior.
+
 ### API removals
 
 ### Breaking API changes
