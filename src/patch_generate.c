@@ -641,7 +641,7 @@ int git_patch_from_blob_and_buffer(
 	git_patch **out,
 	const git_blob *old_blob,
 	const char *old_path,
-	const char *buf,
+	const void *buf,
 	size_t buflen,
 	const char *buf_path,
 	const git_diff_options *opts)
@@ -680,7 +680,7 @@ int git_patch_from_buffers(
 	const void *old_buf,
 	size_t old_len,
 	const char *old_path,
-	const char *new_buf,
+	const void *new_buf,
 	size_t new_len,
 	const char *new_path,
 	const git_diff_options *opts)
