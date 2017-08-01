@@ -6,6 +6,12 @@ v0.26 + 1
 * Improved `p_unlink` in `posix_w32.c` to try and make a file writable
   before sleeping in the retry loop to prevent unnecessary calls to sleep.
 
+* There is now the option to use curl's SSL functionality instead of OpenSSL
+  directly, with `-DUSE_CURL_SSL`. This is helpful for distros that don't want
+  to link libgit2 against OpenSSL for licensing reasons, but are able to link
+  against another TLS-enabled version of libcurl.
+
+
 ### API additions
 
 * `git_remote_create_detached()` creates a remote that is not associated
