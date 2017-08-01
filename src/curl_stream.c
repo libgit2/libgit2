@@ -296,7 +296,7 @@ static void curls_free(git_stream *stream)
 	git__free(s);
 }
 
-int git_curl_stream_new(git_stream **out, const char *host, const char *port)
+int git_curl_stream_new(git_stream **out, const char *host, const char *port, int encrypted)
 {
 	curl_stream *st;
 	CURL *handle;
@@ -317,7 +317,15 @@ int git_curl_stream_new(git_stream **out, const char *host, const char *port)
 		return error;
 	}
 
-	curl_easy_setopt(handle, CURLOPT_URL, host);
+	if (encrypted) {
+		git_buf buf = GIT_BUF_INIT;
+		git_buf_printf(&buf, "https://%s", host);
+		curl_easy_setopt(handle, CURLOPT_URL, buf.ptr);
+		git_buf_free(&buf);
+	} else {
+		curl_easy_setopt(handle, CURLOPT_URL, host);
+	}
+
 	curl_easy_setopt(handle, CURLOPT_ERRORBUFFER, st->curl_error);
 	curl_easy_setopt(handle, CURLOPT_PORT, iport);
 	curl_easy_setopt(handle, CURLOPT_CONNECT_ONLY, 1);
@@ -329,7 +337,7 @@ int git_curl_stream_new(git_stream **out, const char *host, const char *port)
 	/* curl_easy_setopt(handle, CURLOPT_VERBOSE, 1); */
 
 	st->parent.version = GIT_STREAM_VERSION;
-	st->parent.encrypted = 0; /* we don't encrypt ourselves */
+	st->parent.encrypted = encrypted;
 	st->parent.proxy_support = 1;
 	st->parent.connect = curls_connect;
 	st->parent.certificate = curls_certificate;

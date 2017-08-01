@@ -9,6 +9,6 @@
 
 #include "git2/sys/stream.h"
 
-extern int git_curl_stream_new(git_stream **out, const char *host, const char *port);
+extern int git_curl_stream_new(git_stream **out, const char *host, const char *port, bool encrypted);
 
 #endif

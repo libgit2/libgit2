@@ -609,7 +609,7 @@ static int http_connect(http_subtransport *t)
 		error = git_tls_stream_new(&t->io, t->connection_data.host, t->connection_data.port);
 	} else {
 #ifdef GIT_CURL
-		error = git_curl_stream_new(&t->io, t->connection_data.host, t->connection_data.port);
+		error = git_curl_stream_new(&t->io, t->connection_data.host, t->connection_data.port, false);
 #else
 		error = git_socket_stream_new(&t->io,  t->connection_data.host, t->connection_data.port);
 #endif
