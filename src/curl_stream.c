@@ -356,7 +356,7 @@ int git_curl_stream_new(git_stream **out, const char *host, const char *port, in
 
 #include "stream.h"
 
-int git_curl_stream_new(git_stream **out, const char *host, const char *port)
+int git_curl_stream_new(git_stream **out, const char *host, const char *port, int encrypted)
 {
 	GIT_UNUSED(out);
 	GIT_UNUSED(host);
