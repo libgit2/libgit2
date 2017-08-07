@@ -19,12 +19,14 @@
 #include "auth.h"
 #include "http.h"
 #include "auth_negotiate.h"
+#include "auth_ntlm.h"
 #include "streams/tls.h"
 #include "streams/socket.h"
 #include "streams/curl.h"
 
 git_http_auth_scheme auth_schemes[] = {
 	{ GIT_AUTHTYPE_NEGOTIATE, "Negotiate", GIT_CREDTYPE_DEFAULT, git_http_auth_negotiate },
+	{ GIT_AUTHTYPE_NTLM, "NTLM", GIT_CREDTYPE_USERPASS_PLAINTEXT, git_http_auth_ntlm },
 	{ GIT_AUTHTYPE_BASIC, "Basic", GIT_CREDTYPE_USERPASS_PLAINTEXT, git_http_auth_basic },
 };
 

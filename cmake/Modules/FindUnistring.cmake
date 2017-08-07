@@ -1,0 +1,24 @@
+# - Find UNISTRING
+# Find the unistring includes and library
+#
+#  UNISTRING_INCLUDE_DIR - where to find unistr.h, etc.
+#  UNISTRING_LIBRARY     - unistring library.
+#  UNISTRING_FOUND       - True if unistring found.
+
+IF (UNISTRING_INCLUDE_DIR)
+    # Already in cache, be silent
+    SET(UNISTRING_FIND_QUIETLY TRUE)
+ENDIF (UNISTRING_INCLUDE_DIR)
+
+FIND_PATH(UNISTRING_INCLUDE_DIR unistr.h)
+
+SET(UNISTRING_NAMES unistring libunistring)
+FIND_LIBRARY(UNISTRING_LIBRARY NAMES ${UNISTRING_NAMES})
+
+# handle the QUIETLY and REQUIRED arguments and set UNISTRING_FOUND to
+# TRUE if all listed variables are TRUE
+INCLUDE(FindPackageHandleStandardArgs)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(UNISTRING DEFAULT_MSG
+    UNISTRING_INCLUDE_DIR UNISTRING_LIBRARY)
+
+MARK_AS_ADVANCED(UNISTRING_LIBRARY UNISTRING_INCLUDE_DIR UNISTRING_LIBRARY)

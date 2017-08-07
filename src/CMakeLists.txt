@@ -241,6 +241,17 @@ IF(WIN32 OR AMIGA OR CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
 	LIST(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:regex>)
 ENDIF()
 
+# NTLM support requires libunistring
+IF (USE_NTLM)
+	FIND_PACKAGE(Unistring)
+ENDIF()
+IF (UNISTRING_FOUND)
+	SET(GIT_NTLM 1)
+	LIST(APPEND LIBGIT2_INCLUDES ${UNISTRING_INCLUDE_DIR})
+	LIST(APPEND LIBGIT2_LIBS ${UNISTRING_LIBRARY})
+ENDIF()
+ADD_FEATURE_INFO(NTLM GIT_NTLM "NTLM authentication support")
+
 # Optional external dependency: http-parser
 FIND_PACKAGE(HTTP_Parser)
 IF (USE_EXT_HTTP_PARSER AND HTTP_PARSER_FOUND AND HTTP_PARSER_VERSION_MAJOR EQUAL 2)
@@ -307,6 +318,7 @@ IF (USE_GSSAPI)
 ENDIF()
 IF (GSSAPI_FOUND)
 	SET(GIT_GSSAPI 1)
+	LIST(APPEND LIBGIT2_INCLUDES ${GSSAPI_INCLUDE_DIR})
 	LIST(APPEND LIBGIT2_LIBS ${GSSAPI_LIBRARIES})
 ENDIF()
 ADD_FEATURE_INFO(SPNEGO GIT_GSSAPI "SPNEGO authentication support")
@@ -373,6 +385,13 @@ FILE(GLOB SRC_GIT2 *.c *.h
 	streams/*.c streams/*.h
 	transports/*.c transports/*.h
 	xdiff/*.c xdiff/*.h)
+
+# Build NTLM sources if this feature is enabled
+IF (GIT_NTLM)
+	FILE(GLOB SRC_NTLM
+		transports/ntlm/*.c transports/ntlm/*.h)
+	SET(SRC_GIT2 ${SRC_GIT2} ${SRC_NTLM})
+ENDIF()
 
 # Determine architecture of the machine
 IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
