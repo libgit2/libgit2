@@ -55,7 +55,7 @@ IF (UNIX AND NOT APPLE)
 	OPTION( ENABLE_REPRODUCIBLE_BUILDS	"Enable reproducible builds" 			OFF )
 ENDIF()
 
-IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+IF(CMAKE_SYSTEM_NAME MATCHES "Darwin")
 	SET( USE_ICONV ON )
 	FIND_PACKAGE(Security)
 	FIND_PACKAGE(CoreFoundation REQUIRED)
@@ -91,7 +91,7 @@ IF(MSVC)
 	OPTION(MSVC_CRTDBG "Enable CRTDBG memory leak reporting" OFF)
 ENDIF()
 
-IF (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+IF (NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
 	OPTION( USE_OPENSSL                     "Link with and use openssl library"             ON )
 ENDIF()
 
