@@ -232,7 +232,7 @@ int sha1_position(const void *table,
 {
 	const unsigned char *base = table;
 
-	do {
+	while (lo < hi) {
 		unsigned mi = (lo + hi) / 2;
 		int cmp = git_oid__hashcmp(base + mi * stride, key);
 
@@ -243,7 +243,7 @@ int sha1_position(const void *table,
 			hi = mi;
 		else
 			lo = mi+1;
-	} while (lo < hi);
+	}
 
 	return -((int)lo)-1;
 }
