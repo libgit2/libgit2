@@ -21,6 +21,15 @@
 GIT_BEGIN_DECL
 
 /**
+ * Return values for the hunk callback to git_patch_apply
+ */
+enum {
+	GIT_PATCH_ABORT = -1,
+	GIT_PATCH_APPLY = 0,
+	GIT_PATCH_SKIP  = 1
+};
+
+/**
  * The diff patch is used to store all the text diffs for a delta.
  *
  * You can easily loop over the content of patches and get information about
@@ -266,6 +275,36 @@ GIT_EXTERN(int) git_patch_print(
 GIT_EXTERN(int) git_patch_to_buf(
 	git_buf *out,
 	git_patch *patch);
+
+/**
+ * Apply a patch to a buffer.
+ *
+ * Attempts to apply the changes represented by a patch to a source buffer
+ * producing a new output buffer. A hunk callback can be given to choose
+ * which hunks are applied.
+ *
+ * @param out The output buffer to be filled
+ * @param path Optional output path of the new file
+ * @param mode Optional output mode of the new file
+ * @param patch The patch to apply
+ * @param source The input source buffer
+ * @param source_len The length of the source buffer
+ * @param hunk_cb A callback function to choose which hunks are applied
+ *                Return GIT_PATCH_ABORT to stop applying hunks.
+ *                Return GIT_PATCH_SKIP or GIT_PATCH_APPLY to skip or apply.
+ *                Pass NULL to apply all hunks in the patch.
+ * @param payload The payload to pass to the hunk callback
+ * @return 0 on success, <0 on failure
+ */
+GIT_EXTERN(int) git_patch_apply(
+	git_buf *out,
+	char **path,
+	unsigned int *mode,
+	git_patch *patch,
+	const char *source,
+	size_t source_len,
+	git_diff_hunk_cb hunk_cb,
+	void *payload);
 
 GIT_END_DECL
 

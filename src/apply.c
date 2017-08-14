@@ -12,7 +12,6 @@
 #include "array.h"
 #include "patch.h"
 #include "fileops.h"
-#include "apply.h"
 #include "delta.h"
 #include "zstream.h"
 
@@ -162,7 +161,8 @@ static int update_hunk(
 static int apply_hunk(
 	patch_image *image,
 	git_patch *patch,
-	git_patch_hunk *hunk)
+	git_patch_hunk *hunk,
+	ssize_t skipped_lines)
 {
 	patch_image preimage = PATCH_IMAGE_INIT, postimage = PATCH_IMAGE_INIT;
 	size_t line_num, i;
@@ -190,11 +190,10 @@ static int apply_hunk(
 		}
 	}
 
-	line_num = hunk->hunk.new_start ? hunk->hunk.new_start - 1 : 0;
+	line_num = hunk->hunk.new_start ? hunk->hunk.new_start - skipped_lines - 1 : 0;
 
 	if (!find_hunk_linenum(&line_num, image, &preimage, line_num)) {
-		error = apply_err("hunk at line %d did not apply",
-			hunk->hunk.new_start);
+		error = apply_err("hunk at line %d did not apply", (int) line_num + 1);
 		goto done;
 	}
 
@@ -211,19 +210,35 @@ static int apply_hunks(
 	git_buf *out,
 	const char *source,
 	size_t source_len,
-	git_patch *patch)
+	git_patch *patch,
+	git_diff_hunk_cb hunk_cb,
+	void *payload)
 {
 	git_patch_hunk *hunk;
 	git_diff_line *line;
 	patch_image image;
 	size_t i;
+	ssize_t skipped_lines = 0;
 	int error = 0;
 
 	if ((error = patch_image_init_fromstr(&image, source, source_len)) < 0)
 		goto done;
 
 	git_array_foreach(patch->hunks, i, hunk) {
-		if ((error = apply_hunk(&image, patch, hunk)) < 0)
+		if (hunk_cb) {
+			/* Abort on GIT_PATCH_ABORT. */
+			if ((error = hunk_cb(patch->delta, &hunk->hunk, payload)) == GIT_PATCH_ABORT)
+				goto done;
+
+			/* Skip on GIT_PATCH_SKIP. */
+			if (error == GIT_PATCH_SKIP) {
+				skipped_lines += (hunk->hunk.new_lines - hunk->hunk.old_lines);
+				error = 0;
+				continue;
+			}
+		}
+
+		if ((error = apply_hunk(&image, patch, hunk, skipped_lines)) < 0)
 			goto done;
 	}
 
@@ -325,27 +340,31 @@ done:
 	return error;
 }
 
-int git_apply__patch(
+int git_patch_apply(
 	git_buf *contents_out,
-	char **filename_out,
+	char **path_out,
 	unsigned int *mode_out,
+	git_patch *patch,
 	const char *source,
 	size_t source_len,
-	git_patch *patch)
+	git_diff_hunk_cb hunk_cb,
+	void *payload)
 {
-	char *filename = NULL;
+	char *path = NULL;
 	unsigned int mode = 0;
 	int error = 0;
 
-	assert(contents_out && filename_out && mode_out && (source || !source_len) && patch);
+	assert(contents_out && (source || !source_len) && patch);
 
-	*filename_out = NULL;
-	*mode_out = 0;
+	if (path_out)
+		*path_out = NULL;
+	if (mode_out)
+		*mode_out = 0;
 
 	if (patch->delta->status != GIT_DELTA_DELETED) {
 		const git_diff_file *newfile = &patch->delta->new_file;
 
-		filename = git__strdup(newfile->path);
+		path = git__strdup(newfile->path);
 		mode = newfile->mode ?
 			newfile->mode : GIT_FILEMODE_BLOB;
 	}
@@ -353,7 +372,7 @@ int git_apply__patch(
 	if (patch->delta->flags & GIT_DIFF_FLAG_BINARY)
 		error = apply_binary(contents_out, source, source_len, patch);
 	else if (patch->hunks.size)
-		error = apply_hunks(contents_out, source, source_len, patch);
+		error = apply_hunks(contents_out, source, source_len, patch, hunk_cb, payload);
 	else
 		error = git_buf_put(contents_out, source, source_len);
 
@@ -366,12 +385,14 @@ int git_apply__patch(
 		goto done;
 	}
 
-	*filename_out = filename;
-	*mode_out = mode;
+	if (path_out)
+		*path_out = path;
+	if (mode_out)
+		*mode_out = mode;
 
 done:
-	if (error < 0)
-		git__free(filename);
+	if (error < 0 || !path_out)
+		git__free(path);
 
 	return error;
 }
