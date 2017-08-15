@@ -7,6 +7,10 @@
 #ifndef INCLUDE_diff_tform_h__
 #define INCLUDE_diff_tform_h__
 
+#include "common.h"
+
+#include "diff_file.h"
+
 extern int git_diff_find_similar__hashsig_for_file(
 	void **out, const git_diff_file *f, const char *path, void *p);
 

@@ -7,6 +7,8 @@
 #ifndef INCLUDE_sha1_lookup_h__
 #define INCLUDE_sha1_lookup_h__
 
+#include "common.h"
+
 #include <stdlib.h>
 
 int sha1_position(const void *table,

@@ -5,6 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "cred.h"
+
 #include "git2.h"
 #include "smart.h"
 #include "git2/cred_helpers.h"

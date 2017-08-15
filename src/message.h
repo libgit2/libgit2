@@ -7,6 +7,8 @@
 #ifndef INCLUDE_message_h__
 #define INCLUDE_message_h__
 
+#include "common.h"
+
 #include "git2/message.h"
 #include "buffer.h"
 

@@ -7,6 +7,8 @@
 #ifndef INCLUDE_tree_h__
 #define INCLUDE_tree_h__
 
+#include "common.h"
+
 #include "git2/tree.h"
 #include "repository.h"
 #include "odb.h"

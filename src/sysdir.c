@@ -5,8 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
 #include "sysdir.h"
+
 #include "global.h"
 #include "buffer.h"
 #include "path.h"

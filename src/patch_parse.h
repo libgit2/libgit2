@@ -7,6 +7,10 @@
 #ifndef INCLUDE_patch_parse_h__
 #define INCLUDE_patch_parse_h__
 
+#include "common.h"
+
+#include "patch.h"
+
 typedef struct {
 	git_refcount rc;
 

@@ -6,6 +6,7 @@
  */
 
 #include "blame.h"
+
 #include "git2/commit.h"
 #include "git2/revparse.h"
 #include "git2/revwalk.h"

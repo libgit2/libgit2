@@ -5,11 +5,11 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "index.h"
+
 #include <stddef.h>
 
-#include "common.h"
 #include "repository.h"
-#include "index.h"
 #include "tree.h"
 #include "tree-cache.h"
 #include "hash.h"

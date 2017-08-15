@@ -7,8 +7,9 @@
 #ifndef INCLUDE_idxmap_h__
 #define INCLUDE_idxmap_h__
 
-#include <ctype.h>
 #include "common.h"
+
+#include <ctype.h>
 #include "git2/index.h"
 
 #define kmalloc git__malloc

@@ -4,11 +4,12 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
+
+#include "diff_xdiff.h"
+
 #include "git2/errors.h"
-#include "common.h"
 #include "diff.h"
 #include "diff_driver.h"
-#include "diff_xdiff.h"
 #include "patch_generate.h"
 
 static int git_xdiff_scan_int(const char **str, int *value)

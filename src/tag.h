@@ -7,6 +7,8 @@
 #ifndef INCLUDE_tag_h__
 #define INCLUDE_tag_h__
 
+#include "common.h"
+
 #include "git2/tag.h"
 #include "repository.h"
 #include "odb.h"

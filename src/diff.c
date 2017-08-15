@@ -4,9 +4,10 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#include "git2/version.h"
-#include "common.h"
+
 #include "diff.h"
+
+#include "git2/version.h"
 #include "diff_generate.h"
 #include "patch.h"
 #include "commit.h"

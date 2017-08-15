@@ -5,16 +5,16 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "fetch.h"
+
 #include "git2/oid.h"
 #include "git2/refs.h"
 #include "git2/revwalk.h"
 #include "git2/transport.h"
 
-#include "common.h"
 #include "remote.h"
 #include "refspec.h"
 #include "pack.h"
-#include "fetch.h"
 #include "netops.h"
 #include "repository.h"
 #include "refs.h"

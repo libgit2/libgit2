@@ -8,6 +8,8 @@
 #ifndef INCLUDE_w32_util_h__
 #define INCLUDE_w32_util_h__
 
+#include "common.h"
+
 #include "utf-conv.h"
 #include "posix.h"
 #include "path_w32.h"

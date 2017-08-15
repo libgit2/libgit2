@@ -8,6 +8,7 @@
 #define INCLUDE_dir_h__
 
 #include "common.h"
+
 #include "w32_util.h"
 
 struct git__dirent {

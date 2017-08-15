@@ -5,10 +5,11 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "indexer.h"
+
 #include "git2/indexer.h"
 #include "git2/object.h"
 
-#include "common.h"
 #include "pack.h"
 #include "mwindow.h"
 #include "posix.h"

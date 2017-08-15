@@ -5,11 +5,11 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "fetchhead.h"
+
 #include "git2/types.h"
 #include "git2/oid.h"
 
-#include "fetchhead.h"
-#include "common.h"
 #include "buffer.h"
 #include "fileops.h"
 #include "filebuf.h"

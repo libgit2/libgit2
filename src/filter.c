@@ -5,10 +5,11 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "filter.h"
+
 #include "common.h"
 #include "fileops.h"
 #include "hash.h"
-#include "filter.h"
 #include "repository.h"
 #include "global.h"
 #include "git2/sys/filter.h"

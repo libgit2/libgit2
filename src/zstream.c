@@ -5,9 +5,10 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "zstream.h"
+
 #include <zlib.h>
 
-#include "zstream.h"
 #include "buffer.h"
 
 #define ZSTREAM_BUFFER_SIZE (1024 * 1024)

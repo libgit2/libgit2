@@ -8,6 +8,8 @@
 #ifndef INCLUDE_mwindow__
 #define INCLUDE_mwindow__
 
+#include "common.h"
+
 #include "map.h"
 #include "vector.h"
 

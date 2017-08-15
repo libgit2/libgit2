@@ -5,7 +5,6 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
 #include "hash.h"
 
 int git_hash_buf(git_oid *out, const void *data, size_t len)

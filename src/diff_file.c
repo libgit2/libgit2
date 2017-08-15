@@ -4,12 +4,13 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#include "common.h"
+
+#include "diff_file.h"
+
 #include "git2/blob.h"
 #include "git2/submodule.h"
 #include "diff.h"
 #include "diff_generate.h"
-#include "diff_file.h"
 #include "odb.h"
 #include "fileops.h"
 #include "filter.h"

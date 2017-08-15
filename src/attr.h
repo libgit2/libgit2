@@ -7,6 +7,8 @@
 #ifndef INCLUDE_attr_h__
 #define INCLUDE_attr_h__
 
+#include "common.h"
+
 #include "attr_file.h"
 #include "attrcache.h"
 

@@ -5,14 +5,14 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "blob.h"
+
 #include "git2/common.h"
 #include "git2/object.h"
 #include "git2/repository.h"
 #include "git2/odb_backend.h"
 
-#include "common.h"
 #include "filebuf.h"
-#include "blob.h"
 #include "filter.h"
 #include "buf_text.h"
 

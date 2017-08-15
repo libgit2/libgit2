@@ -5,9 +5,9 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
-#include "odb.h"
 #include "pack.h"
+
+#include "odb.h"
 #include "delta.h"
 #include "sha1_lookup.h"
 #include "mwindow.h"

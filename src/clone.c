@@ -5,6 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "clone.h"
+
 #include <assert.h>
 
 #include "git2/clone.h"
@@ -16,7 +18,6 @@
 #include "git2/commit.h"
 #include "git2/tree.h"
 
-#include "common.h"
 #include "remote.h"
 #include "fileops.h"
 #include "refs.h"

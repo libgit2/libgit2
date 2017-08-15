@@ -8,7 +8,8 @@
 #ifndef ZCONF_H
 #define ZCONF_H
 
-#include "../../src/common.h"
+#include "../../include/git2/types.h"
+#include <stdarg.h>
 
 /* Jeez, don't complain about non-prototype
  * forms, we didn't write zlib */

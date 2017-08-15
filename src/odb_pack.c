@@ -6,6 +6,7 @@
  */
 
 #include "common.h"
+
 #include <zlib.h>
 #include "git2/repository.h"
 #include "git2/indexer.h"

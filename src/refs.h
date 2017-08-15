@@ -8,6 +8,7 @@
 #define INCLUDE_refs_h__
 
 #include "common.h"
+
 #include "git2/oid.h"
 #include "git2/refs.h"
 #include "git2/refdb.h"

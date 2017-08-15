@@ -8,6 +8,7 @@
 #define INCLUDE_offmap_h__
 
 #include "common.h"
+
 #include "git2/types.h"
 
 #define kmalloc git__malloc

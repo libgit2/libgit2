@@ -5,6 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "common.h"
+
 #ifdef GIT_WINHTTP
 
 #include "git2.h"

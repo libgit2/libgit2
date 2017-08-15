@@ -6,6 +6,7 @@
  */
 
 #include "common.h"
+
 #include "commit.h"
 #include "tag.h"
 #include "merge.h"

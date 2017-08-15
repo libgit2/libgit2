@@ -7,6 +7,8 @@
 #ifndef INCLUDE_signature_h__
 #define INCLUDE_signature_h__
 
+#include "common.h"
+
 #include "git2/common.h"
 #include "git2/signature.h"
 #include "repository.h"

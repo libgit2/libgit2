@@ -5,12 +5,12 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
+#include "cache.h"
+
 #include "repository.h"
 #include "commit.h"
 #include "thread-utils.h"
 #include "util.h"
-#include "cache.h"
 #include "odb.h"
 #include "object.h"
 #include "git2/oid.h"

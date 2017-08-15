@@ -5,13 +5,14 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "commit.h"
+
 #include "git2/common.h"
 #include "git2/object.h"
 #include "git2/repository.h"
 #include "git2/signature.h"
 #include "git2/sys/commit.h"
 
-#include "common.h"
 #include "odb.h"
 #include "commit.h"
 #include "signature.h"

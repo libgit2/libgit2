@@ -5,14 +5,14 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "push.h"
+
 #include "git2.h"
 
-#include "common.h"
 #include "pack.h"
 #include "pack-objects.h"
 #include "remote.h"
 #include "vector.h"
-#include "push.h"
 #include "tree.h"
 
 static int push_spec_rref_cmp(const void *a, const void *b)

@@ -5,11 +5,11 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
+#include "merge_driver.h"
+
 #include "vector.h"
 #include "global.h"
 #include "merge.h"
-#include "merge_driver.h"
 #include "git2/merge.h"
 #include "git2/sys/merge.h"
 

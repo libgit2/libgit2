@@ -7,6 +7,8 @@
 #ifndef INCLUDE_branch_h__
 #define INCLUDE_branch_h__
 
+#include "common.h"
+
 #include "buffer.h"
 
 int git_branch_upstream__name(

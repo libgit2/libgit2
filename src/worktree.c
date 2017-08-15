@@ -5,14 +5,13 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
+#include "worktree.h"
 
 #include "git2/branch.h"
 #include "git2/commit.h"
 #include "git2/worktree.h"
 
 #include "repository.h"
-#include "worktree.h"
 
 static bool is_worktree_dir(const char *dir)
 {

@@ -5,15 +5,15 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "remote.h"
+
 #include "git2/config.h"
 #include "git2/types.h"
 #include "git2/oid.h"
 #include "git2/net.h"
 
-#include "common.h"
 #include "config.h"
 #include "repository.h"
-#include "remote.h"
 #include "fetch.h"
 #include "refs.h"
 #include "refspec.h"

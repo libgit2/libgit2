@@ -6,6 +6,7 @@
  */
 
 #include "pqueue.h"
+
 #include "util.h"
 
 #define PQUEUE_LCHILD_OF(I) (((I)<<1)+1)

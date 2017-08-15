@@ -7,6 +7,10 @@
 #ifndef INCLUDE_clone_h__
 #define INCLUDE_clone_h__
 
+#include "common.h"
+
+#include "git2/clone.h"
+
 extern int git_clone__should_clone_local(const char *url, git_clone_local_t local);
 
 #endif

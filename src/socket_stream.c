@@ -5,11 +5,11 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
+#include "socket_stream.h"
+
 #include "posix.h"
 #include "netops.h"
 #include "stream.h"
-#include "socket_stream.h"
 
 #ifndef _WIN32
 #	include <sys/types.h>

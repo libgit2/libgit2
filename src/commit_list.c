@@ -6,7 +6,7 @@
  */
 
 #include "commit_list.h"
-#include "common.h"
+
 #include "revwalk.h"
 #include "pool.h"
 #include "odb.h"

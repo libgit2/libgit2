@@ -8,11 +8,12 @@
 #ifndef INCLUDE_pack_h__
 #define INCLUDE_pack_h__
 
+#include "common.h"
+
 #include <zlib.h>
 
 #include "git2/oid.h"
 
-#include "common.h"
 #include "map.h"
 #include "mwindow.h"
 #include "odb.h"

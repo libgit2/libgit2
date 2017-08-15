@@ -5,13 +5,13 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
+#include "merge.h"
+
 #include "posix.h"
 #include "buffer.h"
 #include "repository.h"
 #include "revwalk.h"
 #include "commit_list.h"
-#include "merge.h"
 #include "path.h"
 #include "refs.h"
 #include "object.h"

@@ -5,10 +5,10 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "refspec.h"
+
 #include "git2/errors.h"
 
-#include "common.h"
-#include "refspec.h"
 #include "util.h"
 #include "posix.h"
 #include "refs.h"

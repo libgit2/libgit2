@@ -7,6 +7,8 @@
 #ifndef INCLUDE_pqueue_h__
 #define INCLUDE_pqueue_h__
 
+#include "common.h"
+
 #include "vector.h"
 
 typedef git_vector git_pqueue;

@@ -5,7 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
+#include "config_file.h"
+
 #include "config.h"
 #include "filebuf.h"
 #include "sysdir.h"

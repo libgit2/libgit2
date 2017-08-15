@@ -5,11 +5,12 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "w32_stack.h"
+
 #if defined(GIT_MSVC_CRTDBG)
 #include "Windows.h"
 #include "Dbghelp.h"
 #include "win32/posix.h"
-#include "w32_stack.h"
 #include "hash.h"
 
 /**
