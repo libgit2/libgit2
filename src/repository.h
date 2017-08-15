@@ -24,6 +24,7 @@
 #include "attrcache.h"
 #include "submodule.h"
 #include "diff_driver.h"
+#include "oidarray.h"
 
 #define DOT_GIT ".git"
 #define GIT_DIR DOT_GIT "/"
@@ -149,6 +150,9 @@ struct git_repository {
 
 	unsigned int lru_counter;
 
+	git_oid shallow_checksum;
+	git_array_oid_t shallow_oids;
+
 	git_atomic attr_session_key;
 
 	git_cvar_value cvar_cache[GIT_CVAR_CACHE_MAX];
@@ -242,5 +246,7 @@ extern size_t git_repository__reserved_names_posix_len;
  */
 bool git_repository__reserved_names(
 	git_buf **out, size_t *outlen, git_repository *repo, bool include_ntfs);
+
+int git_repository__shallow_roots(git_array_oid_t *out, git_repository *repo);
 
 #endif

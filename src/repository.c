@@ -2797,6 +2797,70 @@ int git_repository_state_cleanup(git_repository *repo)
 	return git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files));
 }
 
+int git_repository__shallow_roots(git_array_oid_t *out, git_repository *repo)
+{
+	git_buf path = GIT_BUF_INIT;
+	git_buf contents = GIT_BUF_INIT;
+	int error, updated, line_num = 1;
+	char *line;
+	char *buffer;
+
+	assert(out);
+
+	if ((error = git_buf_joinpath(&path, repo->path_repository, "shallow")) < 0)
+		return error;
+
+	error = git_futils_readbuffer_updated(&contents, git_buf_cstr(&path), &repo->shallow_checksum, &updated);
+	git_buf_free(&path);
+
+	if (error < 0)
+		return error;
+
+	if (!updated) {
+		goto unchanged;
+	}
+
+	git_array_clear(repo->shallow_oids);
+
+	buffer = contents.ptr;
+	while ((line = git__strsep(&buffer, "\n")) != NULL) {
+		git_oid *oid = git_array_alloc(repo->shallow_oids);
+
+		error = git_oid_fromstr(oid, line);
+		if (error < 0) {
+			giterr_set(GITERR_REPOSITORY, "Invalid OID at line %d", line_num);
+			git_array_clear(repo->shallow_oids);
+			return -1;
+		}
+		++line_num;
+	}
+
+	if (*buffer) {
+		giterr_set(GITERR_REPOSITORY, "No EOL at line %d", line_num);
+		git_array_clear(repo->shallow_oids);
+		return -1;
+	}
+
+unchanged:
+	*out = repo->shallow_oids;
+
+	return 0;
+}
+
+int git_repository_shallow_roots(git_oidarray *out, git_repository *repo)
+{
+	int ret;
+	git_array_oid_t array;
+
+	assert(out);
+
+	ret = git_repository__shallow_roots(&array, repo);
+
+	git_oidarray__from_array(out, &array);
+
+	return ret;
+}
+
 int git_repository_is_shallow(git_repository *repo)
 {
 	git_buf path = GIT_BUF_INIT;
@@ -2814,8 +2878,6 @@ int git_repository_is_shallow(git_repository *repo)
 		return 0;
 	}
 
-	if (error < 0)
-		return error;
 	return st.st_size == 0 ? 0 : 1;
 }
 
