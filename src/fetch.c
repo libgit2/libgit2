@@ -109,6 +109,7 @@ cleanup:
 int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 {
 	git_transport *t = remote->transport;
+	git_fetch_negotiation nego;
 
 	remote->need_pack = 0;
 
@@ -125,10 +126,11 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 	 * Now we have everything set up so we can start tell the
 	 * server what we want and what we have.
 	 */
+	nego.refs = (const git_remote_head * const *)remote->refs.contents;
+	nego.count = remote->refs.length;
 	return t->negotiate_fetch(t,
 		remote->repo,
-		(const git_remote_head * const *)remote->refs.contents,
-		remote->refs.length);
+		&nego);
 }
 
 int git_fetch_download_pack(git_remote *remote, const git_remote_callbacks *callbacks)

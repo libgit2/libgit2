@@ -32,6 +32,11 @@ typedef enum {
 	GIT_TRANSPORTFLAGS_NONE = 0,
 } git_transport_flags_t;
 
+typedef struct {
+	const git_remote_head * const *refs;
+	size_t count;
+} git_fetch_negotiation;
+
 struct git_transport {
 	unsigned int version; /**< The struct version */
 
@@ -86,8 +91,7 @@ struct git_transport {
 	int GIT_CALLBACK(negotiate_fetch)(
 		git_transport *transport,
 		git_repository *repo,
-		const git_remote_head * const *refs,
-		size_t count);
+		const git_fetch_negotiation *fetch_data);
 
 	/**
 	 * Start downloading the packfile from the remote repository.
