@@ -583,8 +583,7 @@ static int buffer_want_with_caps(const git_remote_head *head, transport_smart_ca
  */
 
 int git_pkt_buffer_wants(
-	const git_remote_head * const *refs,
-	size_t count,
+	const git_fetch_negotiation *wants,
 	transport_smart_caps *caps,
 	git_buf *buf)
 {
@@ -592,22 +591,22 @@ int git_pkt_buffer_wants(
 	const git_remote_head *head;
 
 	if (caps->common) {
-		for (; i < count; ++i) {
-			head = refs[i];
+		for (; i < wants->count; ++i) {
+			head = wants->refs[i];
 			if (!head->local)
 				break;
 		}
 
-		if (buffer_want_with_caps(refs[i], caps, buf) < 0)
+		if (buffer_want_with_caps(wants->refs[i], caps, buf) < 0)
 			return -1;
 
 		i++;
 	}
 
-	for (; i < count; ++i) {
+	for (; i < wants->count; ++i) {
 		char oid[GIT_OID_HEXSZ];
 
-		head = refs[i];
+		head = wants->refs[i];
 		if (head->local)
 			continue;
 
