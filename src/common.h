@@ -7,6 +7,7 @@
 #ifndef INCLUDE_common_h__
 #define INCLUDE_common_h__
 
+#include "git2/sys/features.h"
 #include "git2/common.h"
 #include "cc-compat.h"
 
