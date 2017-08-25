@@ -223,8 +223,16 @@ IF (MSVC)
 ELSE ()
 	SET(CMAKE_C_FLAGS "-D_GNU_SOURCE ${CMAKE_C_FLAGS}")
 
-	ADD_C_FLAG_IF_SUPPORTED(-Wall)
-	ADD_C_FLAG_IF_SUPPORTED(-Wextra)
+	MACRO(ENABLE_WARNINGS flag)
+		ADD_C_FLAG_IF_SUPPORTED(-W${flag})
+	ENDMACRO()
+
+	MACRO(DISABLE_WARNINGS flag)
+		ADD_C_FLAG_IF_SUPPORTED(-Wno-${flag})
+	ENDMACRO()
+
+	ENABLE_WARNINGS(all)
+	ENABLE_WARNINGS(extra)
 
 	IF (CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
 		SET(CMAKE_C_FLAGS "-std=c99 -D_POSIX_C_SOURCE=200112L -D__EXTENSIONS__ -D_POSIX_PTHREAD_SEMANTICS ${CMAKE_C_FLAGS}")
@@ -247,16 +255,16 @@ ELSE ()
 		ADD_DEFINITIONS(-D__USE_MINGW_ANSI_STDIO=1)
 	ENDIF ()
 
-	ADD_C_FLAG_IF_SUPPORTED(-Wdocumentation)
-	ADD_C_FLAG_IF_SUPPORTED(-Wno-missing-field-initializers)
-	ADD_C_FLAG_IF_SUPPORTED(-Wstrict-aliasing=2)
-	ADD_C_FLAG_IF_SUPPORTED(-Wstrict-prototypes)
-	ADD_C_FLAG_IF_SUPPORTED(-Wdeclaration-after-statement)
-	ADD_C_FLAG_IF_SUPPORTED(-Wno-unused-const-variable)
-	ADD_C_FLAG_IF_SUPPORTED(-Wno-unused-function)
+	ENABLE_WARNINGS(documentation)
+	DISABLE_WARNINGS(missing-field-initializers)
+	ENABLE_WARNINGS(strict-aliasing=2)
+	ENABLE_WARNINGS(strict-prototypes)
+	ENABLE_WARNINGS(declaration-after-statement)
+	DISABLE_WARNINGS(unused-const-variable)
+	DISABLE_WARNINGS(unused-function)
 
 	IF (APPLE) # Apple deprecated OpenSSL
-		ADD_C_FLAG_IF_SUPPORTED(-Wno-deprecated-declarations)
+	    DISABLE_WARNINGS(deprecated-declarations)
 	ENDIF()
 
 	IF (PROFILE)
