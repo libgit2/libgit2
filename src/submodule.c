@@ -209,6 +209,11 @@ int git_submodule_lookup(
 
 	assert(repo && name);
 
+	if (repo->is_bare) {
+		giterr_set(GITERR_SUBMODULE, "cannot get submodules without a working tree");
+		return -1;
+	}
+
 	if (repo->submodule_cache != NULL) {
 		khiter_t pos = git_strmap_lookup_index(repo->submodule_cache, name);
 		if (git_strmap_valid_index(repo->submodule_cache, pos)) {
@@ -548,6 +553,11 @@ int git_submodule_foreach(
 	git_submodule *sm;
 	int error;
 	size_t i;
+
+	if (repo->is_bare) {
+		giterr_set(GITERR_SUBMODULE, "cannot get submodules without a working tree");
+		return -1;
+	}
 
 	if ((error = git_strmap_alloc(&submodules)) < 0)
 		return error;

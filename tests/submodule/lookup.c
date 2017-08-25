@@ -11,6 +11,11 @@ void test_submodule_lookup__initialize(void)
 	g_repo = setup_fixture_submod2();
 }
 
+void test_submodule_lookup__cleanup(void)
+{
+	cl_git_sandbox_cleanup();
+}
+
 void test_submodule_lookup__simple_lookup(void)
 {
 	assert_submodule_exists(g_repo, "sm_unchanged");
@@ -389,7 +394,8 @@ void test_submodule_lookup__renamed(void)
 	cl_assert_equal_i(8, data.count);
 }
 
-void test_submodule_lookup_cached(void) {
+void test_submodule_lookup__cached(void)
+{
 	git_submodule *sm;
 	git_submodule *sm2;
 	/* See that the simple tests still pass. */
@@ -412,4 +418,30 @@ void test_submodule_lookup_cached(void) {
 	cl_assert(sm != sm2);
 	git_submodule_free(sm);
 	git_submodule_free(sm2);
+}
+
+void test_submodule_lookup__lookup_in_bare_repository_fails(void)
+{
+	git_submodule *sm;
+
+	cl_git_sandbox_cleanup();
+	g_repo = cl_git_sandbox_init("submodules.git");
+
+	cl_git_fail(git_submodule_lookup(&sm, g_repo, "nonexisting"));
+}
+
+static int foreach_cb(git_submodule *sm, const char *name, void *payload)
+{
+	GIT_UNUSED(sm);
+	GIT_UNUSED(name);
+	GIT_UNUSED(payload);
+	return 0;
+}
+
+void test_submodule_lookup__foreach_in_bare_repository_fails(void)
+{
+	cl_git_sandbox_cleanup();
+	g_repo = cl_git_sandbox_init("submodules.git");
+
+	cl_git_fail(git_submodule_foreach(g_repo, foreach_cb, NULL));
 }
