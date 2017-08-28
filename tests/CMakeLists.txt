@@ -52,7 +52,7 @@ IF (MSVC_IDE)
 	SET_SOURCE_FILES_PROPERTIES("precompiled.c" COMPILE_FLAGS "/Ycprecompiled.h")
 ENDIF ()
 
-IF (WINHTTP OR OPENSSL_FOUND OR SECURITY_FOUND)
+IF (GIT_HTTPS)
 	ADD_TEST(libgit2_clar "${libgit2_BINARY_DIR}/libgit2_clar" -ionline -xclone::local::git_style_unc_paths -xclone::local::standard_unc_paths_are_written_git_style)
 ELSE ()
 	ADD_TEST(libgit2_clar "${libgit2_BINARY_DIR}/libgit2_clar" -v -xclone::local::git_style_unc_paths -xclone::local::standard_unc_paths_are_written_git_style)

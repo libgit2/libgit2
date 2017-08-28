@@ -37,8 +37,7 @@ void test_core_stream__register_tls(void)
 	 * or when openssl support is disabled (except on OSX
 	 * with Security framework).
 	 */
-#if defined(GIT_WIN32) || \
-	(!defined(GIT_SECURE_TRANSPORT) && !defined(GIT_OPENSSL))
+#if defined(GIT_WIN32) || !defined(GIT_HTTPS)
 	cl_git_fail_with(-1, error);
 #else
 	cl_git_pass(error);
