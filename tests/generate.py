@@ -207,16 +207,18 @@ class TestSuite(object):
             return False
 
         with open(output, 'w') as data:
-            for module in self.modules.values():
+            modules = sorted(self.modules.values(), key=lambda module: module.name)
+
+            for module in modules:
                 t = Module.DeclarationTemplate(module)
                 data.write(t.render())
 
-            for module in self.modules.values():
+            for module in modules:
                 t = Module.CallbacksTemplate(module)
                 data.write(t.render())
 
             suites = "static struct clar_suite _clar_suites[] = {" + ','.join(
-                Module.InfoTemplate(module).render() for module in sorted(self.modules.values(), key=lambda module: module.name)
+                Module.InfoTemplate(module).render() for module in modules
             ) + "\n};\n"
 
             data.write(suites)
