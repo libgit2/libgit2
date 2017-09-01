@@ -439,6 +439,7 @@ static const parse_header_transition transitions[] = {
 	/* Next patch */
 	{ "diff --git "         , STATE_END,        0,                NULL },
 	{ "@@ -"                , STATE_END,        0,                NULL },
+	{ "-- "                 , STATE_END,        0,                NULL },
 };
 
 static int parse_header_git(
