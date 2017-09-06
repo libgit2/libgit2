@@ -45,6 +45,7 @@ OPTION( LIBGIT2_FILENAME	"Name of the produced binary"			OFF )
 OPTION( USE_SHA1DC			"Use SHA-1 with collision detection"	OFF )
 OPTION( USE_ICONV			"Link with and use iconv library" 		OFF )
 OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
+OPTION( USE_HTTPS			"Enable HTTPS support. Can be set to a specific backend"	ON )
 OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"   OFF )
 OPTION( VALGRIND			"Configure build for valgrind"			OFF )
 OPTION( CURL			"Use curl for HTTP if available" ON)
@@ -89,10 +90,6 @@ ENDIF()
 IF(MSVC)
 	# Enable MSVC CRTDBG memory leak reporting when in debug mode.
 	OPTION(MSVC_CRTDBG "Enable CRTDBG memory leak reporting" OFF)
-ENDIF()
-
-IF (NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
-	OPTION( USE_OPENSSL                     "Link with and use openssl library"             ON )
 ENDIF()
 
 CHECK_STRUCT_HAS_MEMBER ("struct stat" st_mtim "sys/types.h;sys/stat.h"
