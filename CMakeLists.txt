@@ -56,12 +56,6 @@ IF (UNIX AND NOT APPLE)
 	OPTION( ENABLE_REPRODUCIBLE_BUILDS	"Enable reproducible builds" 			OFF )
 ENDIF()
 
-IF(CMAKE_SYSTEM_NAME MATCHES "Darwin")
-	SET( USE_ICONV ON )
-	FIND_PACKAGE(Security)
-	FIND_PACKAGE(CoreFoundation REQUIRED)
-ENDIF()
-
 IF(MSVC)
 	# This option is only available when building with MSVC. By default, libgit2
 	# is build using the cdecl calling convention, which is useful if you're
