@@ -183,7 +183,7 @@ ENDIF()
 IF(WIN32 OR AMIGA OR CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
 	ADD_SUBDIRECTORY("${CMAKE_SOURCE_DIR}/deps/regex" "${CMAKE_BINARY_DIR}/deps/regex")
 	LIST(APPEND LIBGIT2_INCLUDES "${CMAKE_SOURCE_DIR}/deps/regex")
-	LIST(APPEND LIBGIT2_LIBS regex)
+	LIST(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:regex>)
 ENDIF()
 
 # Optional external dependency: http-parser
@@ -196,7 +196,7 @@ ELSE()
 	MESSAGE(STATUS "http-parser version 2 was not found or disabled; using bundled 3rd-party sources.")
 	ADD_SUBDIRECTORY("${CMAKE_SOURCE_DIR}/deps/http-parser" "${CMAKE_BINARY_DIR}/deps/http-parser")
 	LIST(APPEND LIBGIT2_INCLUDES "${CMAKE_SOURCE_DIR}/deps/http-parser")
-	LIST(APPEND LIBGIT2_LIBS http-parser)
+	LIST(APPEND LIBGIT2_OBJECTS "$<TARGET_OBJECTS:http-parser>")
 ENDIF()
 
 # Optional external dependency: zlib
@@ -214,7 +214,7 @@ ELSE()
 	MESSAGE(STATUS "zlib was not found; using bundled 3rd-party sources." )
 	ADD_SUBDIRECTORY("${CMAKE_SOURCE_DIR}/deps/zlib" "${CMAKE_BINARY_DIR}/deps/zlib")
 	LIST(APPEND LIBGIT2_INCLUDES "${CMAKE_SOURCE_DIR}/deps/zlib")
-	LIST(APPEND LIBGIT2_LIBS zlib)
+	LIST(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:zlib>)
 ENDIF()
 
 # Optional external dependency: libssh2
