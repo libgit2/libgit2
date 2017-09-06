@@ -47,10 +47,6 @@ matrix:
      compiler: gcc
  include:
    - compiler: gcc
-     env: PRECISE=1
-     os: linux
-     dist: precise
-   - compiler: gcc
      env: COVERITY=1
      os: linux
      dist: trusty
