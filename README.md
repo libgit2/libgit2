@@ -228,6 +228,8 @@ Here are the bindings to libgit2 that are currently available:
     * git2go <https://github.com/libgit2/git2go>
 * GObject
     * libgit2-glib <https://wiki.gnome.org/Projects/Libgit2-glib>
+* Guile
+	* Guile-Git <https://gitlab.com/guile-git/guile-git>
 * Haskell
     * hgit2 <https://github.com/jwiegley/gitlib>
 * Java
