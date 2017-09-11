@@ -178,6 +178,9 @@ int git_push_update_tips(git_push *push, const git_remote_callbacks *callbacks)
 		if (!fetch_spec)
 			continue;
 
+		/* Clear the buffer which can be dirty from previous iteration */
+		git_buf_clear(&remote_ref_name);
+
 		if ((error = git_refspec_transform(&remote_ref_name, fetch_spec, status->ref)) < 0)
 			goto on_error;
 
