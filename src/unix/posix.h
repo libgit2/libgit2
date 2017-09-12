@@ -7,7 +7,10 @@
 #ifndef INCLUDE_posix__unix_h__
 #define INCLUDE_posix__unix_h__
 
-#include "git2/sys/features.h"
+#ifndef LIBGIT2_NO_FEATURES_H
+# include "git2/sys/features.h"
+#endif
+
 #include <stdio.h>
 #include <dirent.h>
 #include <sys/param.h>
