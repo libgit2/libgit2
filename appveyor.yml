@@ -16,6 +16,12 @@ environment:
     GENERATOR: "Visual Studio 10 2010 Win64"
     ARCH: 64
   - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+    GENERATOR: "Visual Studio 14 2015"
+    ARCH: 32
+  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+    GENERATOR: "Visual Studio 14 2015 Win64"
+    ARCH: 64
+  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
     GENERATOR: "MSYS Makefiles"
     ARCH: i686 # this is for 32-bit MinGW-w64
   - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
