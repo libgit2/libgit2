@@ -517,5 +517,6 @@ int git_diff_patchid(git_oid *out, git_diff *diff, git_diff_patchid_options *opt
 	git_oid_cpy(out, &args.result);
 
 out:
+	git_hash_ctx_cleanup(&args.ctx);
 	return error;
 }
