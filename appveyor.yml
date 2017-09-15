@@ -9,13 +9,17 @@ environment:
   GITTEST_INVASIVE_FS_SIZE: 1
 
   matrix:
-  - GENERATOR: "Visual Studio 11"
+  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
+    GENERATOR: "Visual Studio 10 2010"
     ARCH: 32
-  - GENERATOR: "Visual Studio 11 Win64"
+  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
+    GENERATOR: "Visual Studio 10 2010 Win64"
     ARCH: 64
-  - GENERATOR: "MSYS Makefiles"
+  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+    GENERATOR: "MSYS Makefiles"
     ARCH: i686 # this is for 32-bit MinGW-w64
-  - GENERATOR: "MSYS Makefiles"
+  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+    GENERATOR: "MSYS Makefiles"
     ARCH: 64
 cache:
 - i686-4.9.2-release-win32-sjlj-rt_v3-rev1.7z
