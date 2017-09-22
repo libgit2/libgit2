@@ -321,6 +321,22 @@ static int parse_header_start(git_patch_parsed *patch, git_patch_parse_ctx *ctx)
 		return git_parse_err("corrupt new path in git diff header at line %"PRIuZ,
 			ctx->parse_ctx.line_num);
 
+	/*
+	 * We cannot expect to be able to always parse paths correctly at this
+	 * point. Due to the possibility of unquoted names, whitespaces in
+	 * filenames and custom prefixes we have to allow that, though, and just
+	 * proceeed here. We then hope for the "---" and "+++" lines to fix that
+	 * for us.
+	 */
+	if (!git_parse_ctx_contains(&ctx->parse_ctx, "\n", 1)) {
+		git_parse_advance_chars(&ctx->parse_ctx, ctx->parse_ctx.line_len - 1);
+
+		git__free(patch->header_old_path);
+		patch->header_old_path = NULL;
+		git__free(patch->header_new_path);
+		patch->header_new_path = NULL;
+	}
+
 	return 0;
 }
 
