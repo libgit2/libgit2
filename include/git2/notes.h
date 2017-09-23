@@ -153,6 +153,36 @@ GIT_EXTERN(int) git_note_create(
 	const char *note,
 	int force);
 
+/**
+ * Add a note for an object from a commit
+ *
+ * This function will create a notes commit for a given object,
+ * the commit is a dangling commit, no reference is created.
+ *
+ * @param notes_commit_out pointer to store the commit (optional);
+ *					NULL in case of error
+ * @param notes_blob_out a point to the id of a note blob (optional)
+ * @param repo repository where the note will live
+ * @param parent Pointer to parent note
+ *					or NULL if this shall start a new notes tree
+ * @param author signature of the notes commit author
+ * @param committer signature of the notes commit committer
+ * @param oid OID of the git object to decorate
+ * @param note Content of the note to add for object oid
+ * @param allow_note_overwrite Overwrite existing note
+ *
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_note_commit_create(
+	git_oid *notes_commit_out,
+	git_oid *notes_blob_out,
+	git_repository *repo,
+	git_commit *parent,
+	const git_signature *author,
+	const git_signature *committer,
+	const git_oid *oid,
+	const char *note,
+	int allow_note_overwrite);
 
 /**
  * Remove the note for an object
