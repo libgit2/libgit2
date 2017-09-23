@@ -268,7 +268,9 @@ static int insert_note_in_tree_enotfound_cb(git_tree **out,
 		GIT_FILEMODE_BLOB);
 }
 
-static int note_write(git_oid *out,
+static int note_write(
+	git_oid *notes_commit_out,
+	git_oid *notes_blob_out,
 	git_repository *repo,
 	const git_signature *author,
 	const git_signature *committer,
@@ -294,12 +296,16 @@ static int note_write(git_oid *out,
 		insert_note_in_tree_enotfound_cb)) < 0)
 		goto cleanup;
 
-	if (out)
-		git_oid_cpy(out, &oid);
+	if (notes_blob_out)
+		git_oid_cpy(notes_blob_out, &oid);
+
 
 	error = git_commit_create(&oid, repo, notes_ref, author, committer,
 				  NULL, GIT_NOTES_DEFAULT_MSG_ADD,
 				  tree, *parents == NULL ? 0 : 1, (const git_commit **) parents);
+
+	if (notes_commit_out)
+		git_oid_cpy(notes_commit_out, &oid);
 
 cleanup:
 	git_tree_free(tree);
@@ -480,7 +486,7 @@ int git_note_create(
 	if (error < 0 && error != GIT_ENOTFOUND)
 		goto cleanup;
 
-	error = note_write(out, repo, author, committer, notes_ref,
+	error = note_write(NULL, out, repo, author, committer, notes_ref,
 			note, tree, target, &commit, allow_note_overwrite);
 
 cleanup:
