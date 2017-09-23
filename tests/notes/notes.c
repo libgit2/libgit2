@@ -415,6 +415,31 @@ void test_notes_notes__can_read_a_note_from_a_commit(void)
 	git_note_free(note);
 }
 
+/* Test that we can read a commit with no note fails */
+void test_notes_notes__attempt_to_read_a_note_from_a_commit_with_no_note_fails(void)
+{
+	git_oid oid, notes_commit_oid;
+	git_commit *notes_commit;
+	git_note *note;
+
+	cl_git_pass(git_oid_fromstr(&oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045"));
+
+	cl_git_pass(git_note_commit_create(&notes_commit_oid, NULL, _repo, NULL, _sig, _sig, &oid, "I decorate 4a20\n", 1));
+
+	git_commit_lookup(&notes_commit, _repo, &notes_commit_oid);
+
+	cl_git_pass(git_note_commit_remove(&notes_commit_oid, _repo, notes_commit, _sig, _sig, &oid));
+	git_commit_free(notes_commit);
+
+	git_commit_lookup(&notes_commit, _repo, &notes_commit_oid);
+
+	cl_assert(notes_commit);
+
+	cl_git_fail_with(GIT_ENOTFOUND, git_note_commit_read(&note, _repo, notes_commit, &oid));
+
+	git_commit_free(notes_commit);
+}
+
 /*
  * $ git ls-tree refs/notes/fanout
  * 040000 tree 4b22b35d44b5a4f589edf3dc89196399771796ea    84
