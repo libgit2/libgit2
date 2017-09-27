@@ -195,6 +195,7 @@ static int curls_set_proxy(git_stream *stream, const git_proxy_options *proxy_op
 	CURLcode res;
 	curl_stream *s = (curl_stream *) stream;
 
+	git_proxy_options_free(&s->proxy);
 	if ((error = git_proxy_options_dup(&s->proxy, proxy_opts)) < 0)
 		return error;
 
@@ -295,6 +296,7 @@ static void curls_free(git_stream *stream)
 
 	curls_close(stream);
 	git_strarray_free(&s->cert_info_strings);
+	git_proxy_options_free(&s->proxy);
 	git__free(s);
 }
 
