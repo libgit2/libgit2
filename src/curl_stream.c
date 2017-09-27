@@ -295,6 +295,7 @@ static void curls_free(git_stream *stream)
 	curls_close(stream);
 	git_strarray_free(&s->cert_info_strings);
 	git_proxy_options_free(&s->proxy);
+	git_cred_free(s->proxy_cred);
 	git__free(s);
 }
 
