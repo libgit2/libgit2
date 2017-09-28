@@ -1,2 +1,2 @@
 INCLUDE_DIRECTORIES(".")
-ADD_LIBRARY(regex STATIC "regex.c" "regex.h")
+ADD_LIBRARY(regex OBJECT "regex.c" "regex.h")
