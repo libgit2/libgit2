@@ -386,6 +386,20 @@ typedef struct {
 typedef int (*git_push_negotiation)(const git_push_update **updates, size_t len, void *payload);
 
 /**
+ * Callback used to inform of the update status from the remote.
+ *
+ * Called for each updated reference on push. If `status` is
+ * not `NULL`, the update was rejected by the remote server
+ * and `status` contains the reason given.
+ *
+ * @param refname refname specifying to the remote ref
+ * @param status status message sent from the remote
+ * @param data data provided by the caller
+ * @return 0 on success, otherwise an error
+ */
+typedef int (*git_push_update_reference_cb)(const char *refname, const char *status, void *data);
+
+/**
  * The callback settings structure
  *
  * Set the callbacks to be called by the remote when informing the user
@@ -452,11 +466,9 @@ struct git_remote_callbacks {
 	git_push_transfer_progress push_transfer_progress;
 
 	/**
-	 * Called for each updated reference on push. If `status` is
-	 * not `NULL`, the update was rejected by the remote server
-	 * and `status` contains the reason given.
+	 * See documentation of git_push_update_reference_cb
 	 */
-	int (*push_update_reference)(const char *refname, const char *status, void *data);
+	git_push_update_reference_cb push_update_reference;
 
 	/**
 	 * Called once between the negotiation step and the upload. It
