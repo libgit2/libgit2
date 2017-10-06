@@ -1360,7 +1360,13 @@ int git_reference_peel(
 			return peel_error(error, ref, "Cannot resolve reference");
 	}
 
-	if (!git_oid_iszero(&resolved->peel)) {
+	/*
+	 * If we try to peel an object to a tag, we cannot use
+	 * the fully peeled object, as that will always resolve
+	 * to a commit. So we only want to use the peeled value
+	 * if it is not zero and the target is not a tag.
+	 */
+	if (target_type != GIT_OBJ_TAG && !git_oid_iszero(&resolved->peel)) {
 		error = git_object_lookup(&target,
 			git_reference_owner(ref), &resolved->peel, GIT_OBJ_ANY);
 	} else {
