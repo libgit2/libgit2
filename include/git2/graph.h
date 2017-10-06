@@ -40,6 +40,9 @@ GIT_EXTERN(int) git_graph_ahead_behind(size_t *ahead, size_t *behind, git_reposi
 /**
  * Determine if a commit is the descendant of another commit.
  *
+ * Note that a commit is not considered a descendant of itself, in contrast
+ * to `git merge-base --is-ancestor`.
+ *
  * @param commit a previously loaded commit.
  * @param ancestor a potential ancestor commit.
  * @return 1 if the given commit is a descendant of the potential ancestor,
