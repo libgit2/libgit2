@@ -2,7 +2,6 @@
 # see travis-ci.org for details
 
 language: c
-dist: trusty
 
 os:
   - linux
@@ -22,7 +21,23 @@ env:
   - OPTIONS="-DTHREADSAFE=OFF -DBUILD_EXAMPLES=ON -DENABLE_WERROR=ON"
 
 dist: trusty
-sudo: true
+sudo: false
+
+addons:
+ apt:
+  sources:
+   - sourceline: 'deb http://libgit2deps.edwardthomson.com trusty libgit2deps'
+     key_url: 'https://pgp.mit.edu/pks/lookup?op=get&search=0x5656187599131CD5'
+  packages:
+   cmake
+   curl
+   libcurl3
+   libcurl3-gnutls
+   libcurl4-gnutls-dev
+   libssh2-1-dev
+   openssh-client
+   openssh-server
+   valgrind
 
 matrix:
  fast_finish: true
@@ -44,7 +59,7 @@ matrix:
    - env: COVERITY=1
 
 install:
-  - ./script/install-deps-${TRAVIS_OS_NAME}.sh
+  - if [ -f ./script/install-deps-${TRAVIS_OS_NAME}.sh ]; then ./script/install-deps-${TRAVIS_OS_NAME}.sh; fi
 
 # Run the Build script and tests
 script:
