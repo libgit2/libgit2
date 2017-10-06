@@ -783,7 +783,8 @@ int git_attr_assignment__parse(
 
 		/* if there is an equals sign, find the value */
 		if (*scan == '=') {
-			for (value_start = ++scan; *scan && !git__isspace(*scan); ++scan);
+            scan++;
+			for (value_start = scan; *scan && !git__isspace(*scan); ++scan);
 
 			/* if we found a value, allocate permanent storage for it */
 			if (scan > value_start) {
