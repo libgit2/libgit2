@@ -13,6 +13,7 @@
  */
 
 #include "common.h"
+#include <ctype.h>
 
 /**
  * This example demonstrates the libgit2 rev walker APIs to roughly
@@ -52,6 +53,7 @@ struct log_options {
 	int show_diff;
 	int skip, limit;
 	int min_parents, max_parents;
+	int ignore_case;
 	git_time_t before;
 	git_time_t after;
 	const char *author;
@@ -67,8 +69,13 @@ static void print_commit(git_commit *commit);
 static int match_with_parent(git_commit *commit, int i, git_diff_options *);
 
 /** utility functions for filtering */
-static int signature_matches(const git_signature *sig, const char *filter);
-static int log_message_matches(const git_commit *commit, const char *filter);
+static int signature_matches(const git_signature *sig, const char *filter,
+				const int ignore_case);
+static int log_message_matches(const git_commit *commit, const char *filter,
+				const int ignore_case);
+char *find_str(const char *haystack, const char *needle, const int ignore_case);
+char *str_ignorecase_str(const char *haystack, const char *needle);
+char *tolowerstr(const char *str);
 
 int main(int argc, char *argv[])
 {
@@ -132,13 +139,15 @@ int main(int argc, char *argv[])
 				continue;
 		}
 
-		if (!signature_matches(git_commit_author(commit), opt.author))
+		if (!signature_matches(git_commit_author(commit), opt.author,
+					opt.ignore_case))
 			continue;
 
-		if (!signature_matches(git_commit_committer(commit), opt.committer))
+		if (!signature_matches(git_commit_committer(commit), opt.committer,
+					opt.ignore_case))
 			continue;
 
-		if (!log_message_matches(commit, opt.grep))
+		if (!log_message_matches(commit, opt.grep, opt.ignore_case))
 			continue;
 
 		if (count++ < opt.skip)
@@ -186,26 +195,28 @@ int main(int argc, char *argv[])
 }
 
 /** Determine if the given git_signature does not contain the filter text. */
-static int signature_matches(const git_signature *sig, const char *filter) {
+static int signature_matches(const git_signature *sig, const char *filter,
+				const int ignore_case) {
 	if (filter == NULL)
 		return 1;
 
 	if (sig != NULL &&
-		(strstr(sig->name, filter) != NULL ||
-		strstr(sig->email, filter) != NULL))
+		(find_str(sig->name, filter, ignore_case) != NULL ||
+		find_str(sig->email, filter, ignore_case) != NULL))
 		return 1;
 
 	return 0;
 }
 
-static int log_message_matches(const git_commit *commit, const char *filter) {
+static int log_message_matches(const git_commit *commit, const char *filter,
+				const int ignore_case) {
 	const char *message = NULL;
 
 	if (filter == NULL)
 		return 1;
 
 	if ((message = git_commit_message(commit)) != NULL &&
-		strstr(message, filter) != NULL)
+		find_str(message, filter, ignore_case) != NULL)
 		return 1;
 
 	return 0;
@@ -470,6 +481,8 @@ static int parse_options(
 			/** Found valid --min_parents. */;
 		else if (!strcmp(a, "-p") || !strcmp(a, "-u") || !strcmp(a, "--patch"))
 			opt->show_diff = 1;
+		else if (!strcmp(a, "-i") || !strcmp(a, "--regexp-ignore-case"))
+			opt->ignore_case = 1;
 		else
 			usage("Unsupported argument", a);
 	}
@@ -477,3 +490,27 @@ static int parse_options(
 	return args.pos;
 }
 
+char *find_str(const char *haystack, const char *needle, const int ignore_case) {
+	if(ignore_case)
+		return str_ignorecase_str(haystack, needle);
+	else
+		return strstr(haystack, needle);
+}
+
+char *str_ignorecase_str(const char *haystack_start, const char *needle_start) {
+	char *haystack, *needle;
+	haystack = tolowerstr(haystack_start);
+	needle = tolowerstr(needle_start);
+
+	return strstr(haystack, needle);
+}
+
+char *tolowerstr(const char *str) {
+	char *final = str;
+
+	while (*final != '\0') {
+		*final = tolower(*final);
+		final++;
+	}
+	return str;
+}
