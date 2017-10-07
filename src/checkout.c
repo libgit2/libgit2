@@ -161,7 +161,15 @@ GIT_INLINE(bool) is_workdir_base_or_new(
 
 GIT_INLINE(bool) is_file_mode_changed(git_filemode_t a, git_filemode_t b)
 {
+#ifdef GIT_WIN32
+	/*
+	 * On Win32 we do not support the executable bit; the file will
+	 * always be 0100644 on disk, don't bother doing a test.
+	 */
+	return false;
+#else
 	return (S_ISREG(a) && S_ISREG(b) && a != b);
+#endif
 }
 
 static bool checkout_is_workdir_modified(
