@@ -31,7 +31,7 @@ int git_proxy_options_dup(git_proxy_options *tgt, const git_proxy_options *src)
 	return 0;
 }
 
-void git_proxy_options_free(git_proxy_options *opts)
+void git_proxy_options_clear(git_proxy_options *opts)
 {
 	git__free((char *) opts->url);
 	opts->url = NULL;
