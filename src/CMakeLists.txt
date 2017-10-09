@@ -2,7 +2,10 @@ IF(DEBUG_POOL)
 	SET(GIT_DEBUG_POOL 1)
 ENDIF()
 
-SET(LIBGIT2_OBJECTS "")
+# Add the features.h file as a dummy. This is required for Xcode
+# to successfully build the libgit2 library when using only
+# object libraries.
+SET(LIBGIT2_OBJECTS "${CMAKE_CURRENT_BINARY_DIR}/git2/sys/features.h")
 
 # This variable will contain the libraries we need to put into
 # libgit2.pc's Requires.private. That is, what we're linking to or
