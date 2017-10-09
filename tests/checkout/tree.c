@@ -1541,6 +1541,7 @@ void test_checkout_tree__mode_change_is_force_updated(void)
 	/* update the mode on-disk */
 	cl_must_pass(p_chmod("testrepo/README", 0755));
 
+	assert_status_entrycount(g_repo, 1);
 	cl_git_pass(git_checkout_tree(g_repo, obj, &g_opts));
 	assert_status_entrycount(g_repo, 0);
 
@@ -1548,6 +1549,7 @@ void test_checkout_tree__mode_change_is_force_updated(void)
 	cl_must_pass(p_chmod("testrepo/README", 0755));
 	cl_must_pass(git_index_add_bypath(index, "README"));
 
+	assert_status_entrycount(g_repo, 1);
 	cl_git_pass(git_checkout_tree(g_repo, obj, &g_opts));
 	assert_status_entrycount(g_repo, 0);
 
