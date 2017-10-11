@@ -528,13 +528,10 @@ static int append_to_pack(git_indexer *idx, const void *data, size_t size)
 int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_transfer_progress *stats)
 {
 	int error = -1;
-	size_t processed;
 	struct git_pack_header *hdr = &idx->hdr;
 	git_mwindow_file *mwf = &idx->pack->mwf;
 
 	assert(idx && data && stats);
-
-	processed = stats->indexed_objects;
 
 	if ((error = append_to_pack(idx, data, size)) < 0)
 		return error;
@@ -578,7 +575,7 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_tran
 		stats->local_objects = 0;
 		stats->total_deltas = 0;
 		stats->indexed_deltas = 0;
-		processed = stats->indexed_objects = 0;
+		stats->indexed_objects = 0;
 		stats->total_objects = total_objects;
 
 		if ((error = do_progress_callback(idx, stats)) != 0)
@@ -590,7 +587,7 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_tran
 	/* As the file grows any windows we try to use will be out of date */
 	git_mwindow_free_all(mwf);
 
-	while (processed < idx->nr_objects) {
+	while (stats->indexed_objects < idx->nr_objects) {
 		git_packfile_stream *stream = &idx->stream;
 		git_off_t entry_start = idx->off;
 		size_t entry_size;
@@ -665,7 +662,7 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_tran
 			goto on_error;
 
 		if (!idx->have_delta) {
-			stats->indexed_objects = (unsigned int)++processed;
+			stats->indexed_objects++;
 		}
 		stats->received_objects++;
 
