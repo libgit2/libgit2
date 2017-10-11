@@ -41,6 +41,12 @@ struct pack_write_context {
 	git_transfer_progress *stats;
 };
 
+struct walk_object {
+	git_oid id;
+	unsigned int uninteresting:1,
+		seen:1;
+};
+
 #ifdef GIT_THREADS
 
 #define GIT_PACKBUILDER__MUTEX_OP(pb, mtx, op) do { \
@@ -143,7 +149,7 @@ int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
 	if (!pb->walk_objects)
 		goto on_error;
 
-	git_pool_init(&pb->object_pool, sizeof(git_walk_object));
+	git_pool_init(&pb->object_pool, sizeof(struct walk_object));
 
 	pb->repo = repo;
 	pb->nr_threads = 1; /* do not spawn any thread by default */
@@ -1513,9 +1519,9 @@ size_t git_packbuilder_written(git_packbuilder *pb)
 	return pb->nr_written;
 }
 
-int lookup_walk_object(git_walk_object **out, git_packbuilder *pb, const git_oid *id)
+static int lookup_walk_object(struct walk_object **out, git_packbuilder *pb, const git_oid *id)
 {
-	git_walk_object *obj;
+	struct walk_object *obj;
 
 	obj = git_pool_mallocz(&pb->object_pool, 1);
 	if (!obj) {
@@ -1529,11 +1535,11 @@ int lookup_walk_object(git_walk_object **out, git_packbuilder *pb, const git_oid
 	return 0;
 }
 
-static int retrieve_object(git_walk_object **out, git_packbuilder *pb, const git_oid *id)
+static int retrieve_object(struct walk_object **out, git_packbuilder *pb, const git_oid *id)
 {
 	int error;
 	khiter_t pos;
-	git_walk_object *obj;
+	struct walk_object *obj;
 
 	pos = git_oidmap_lookup_index(pb->walk_objects, id);
 	if (git_oidmap_valid_index(pb->walk_objects, pos)) {
@@ -1552,7 +1558,7 @@ static int retrieve_object(git_walk_object **out, git_packbuilder *pb, const git
 static int mark_blob_uninteresting(git_packbuilder *pb, const git_oid *id)
 {
 	int error;
-	git_walk_object *obj;
+	struct walk_object *obj;
 
 	if ((error = retrieve_object(&obj, pb, id)) < 0)
 		return error;
@@ -1564,7 +1570,7 @@ static int mark_blob_uninteresting(git_packbuilder *pb, const git_oid *id)
 
 static int mark_tree_uninteresting(git_packbuilder *pb, const git_oid *id)
 {
-	git_walk_object *obj;
+	struct walk_object *obj;
 	git_tree *tree;
 	int error;
 	size_t i;
@@ -1636,7 +1642,7 @@ int insert_tree(git_packbuilder *pb, git_tree *tree)
 	size_t i;
 	int error;
 	git_tree *subtree;
-	git_walk_object *obj;
+	struct walk_object *obj;
 	const char *name;
 
 	if ((error = retrieve_object(&obj, pb, git_tree_id(tree))) < 0)
@@ -1684,7 +1690,7 @@ int insert_tree(git_packbuilder *pb, git_tree *tree)
 	return error;
 }
 
-int insert_commit(git_packbuilder *pb, git_walk_object *obj)
+int insert_commit(git_packbuilder *pb, struct walk_object *obj)
 {
 	int error;
 	git_commit *commit = NULL;
@@ -1714,7 +1720,7 @@ int git_packbuilder_insert_walk(git_packbuilder *pb, git_revwalk *walk)
 {
 	int error;
 	git_oid id;
-	git_walk_object *obj;
+	struct walk_object *obj;
 
 	assert(pb && walk);
 
