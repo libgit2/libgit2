@@ -16,11 +16,20 @@
 
 struct git_blob {
 	git_object object;
-	git_odb_object *odb_object;
+
+	union {
+		git_odb_object *odb;
+		struct {
+			const char *data;
+			git_off_t size;
+		} raw;
+	} data;
+	unsigned int raw:1;
 };
 
 void git_blob__free(void *blob);
 int git_blob__parse(void *blob, git_odb_object *obj);
+int git_blob__parse_raw(void *blob, const char *data, size_t size);
 int git_blob__getbuf(git_buf *buffer, git_blob *blob);
 
 extern int git_blob__create_from_paths(
