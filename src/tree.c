@@ -375,18 +375,16 @@ static int parse_mode(unsigned int *modep, const char *buffer, const char **buff
 	return 0;
 }
 
-int git_tree__parse(void *_tree, git_odb_object *odb_obj)
+int git_tree__parse_raw(void *_tree, const char *data, size_t size)
 {
 	git_tree *tree = _tree;
 	const char *buffer;
 	const char *buffer_end;
 
-	if (git_odb_object_dup(&tree->odb_obj, odb_obj) < 0)
-		return -1;
+	buffer = data;
+	buffer_end = buffer + size;
 
-	buffer = git_odb_object_data(tree->odb_obj);
-	buffer_end = buffer + git_odb_object_size(tree->odb_obj);
-
+	tree->odb_obj = NULL;
 	git_array_init_to_size(tree->entries, DEFAULT_TREE_SIZE);
 	GITERR_CHECK_ARRAY(tree->entries);
 
@@ -422,6 +420,21 @@ int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 		buffer += filename_len + 1;
 		buffer += GIT_OID_RAWSZ;
 	}
+
+	return 0;
+}
+
+int git_tree__parse(void *_tree, git_odb_object *odb_obj)
+{
+	git_tree *tree = _tree;
+
+	if ((git_tree__parse_raw(tree,
+	    git_odb_object_data(odb_obj),
+	    git_odb_object_size(odb_obj))) < 0)
+		return -1;
+
+	if (git_odb_object_dup(&tree->odb_obj, odb_obj) < 0)
+		return -1;
 
 	return 0;
 }
