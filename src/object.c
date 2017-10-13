@@ -12,6 +12,7 @@
 #include "repository.h"
 
 #include "commit.h"
+#include "hash.h"
 #include "tree.h"
 #include "blob.h"
 #include "oid.h"
@@ -19,37 +20,85 @@
 
 bool git_object__strict_input_validation = true;
 
+extern int git_odb_hash(git_oid *out, const void *data, size_t len, git_otype type);
+
 typedef struct {
 	const char	*str;	/* type name string */
 	size_t		size;	/* size in bytes of the object structure */
 
 	int  (*parse)(void *self, git_odb_object *obj);
+	int  (*parse_raw)(void *self, const char *data, size_t size);
 	void (*free)(void *self);
 } git_object_def;
 
 static git_object_def git_objects_table[] = {
 	/* 0 = GIT_OBJ__EXT1 */
-	{ "", 0, NULL, NULL },
+	{ "", 0, NULL, NULL, NULL },
 
 	/* 1 = GIT_OBJ_COMMIT */
-	{ "commit", sizeof(git_commit), git_commit__parse, git_commit__free },
+	{ "commit", sizeof(git_commit), git_commit__parse, git_commit__parse_raw, git_commit__free },
 
 	/* 2 = GIT_OBJ_TREE */
-	{ "tree", sizeof(git_tree), git_tree__parse, git_tree__free },
+	{ "tree", sizeof(git_tree), git_tree__parse, git_tree__parse_raw, git_tree__free },
 
 	/* 3 = GIT_OBJ_BLOB */
-	{ "blob", sizeof(git_blob), git_blob__parse, git_blob__free },
+	{ "blob", sizeof(git_blob), git_blob__parse, git_blob__parse_raw, git_blob__free },
 
 	/* 4 = GIT_OBJ_TAG */
-	{ "tag", sizeof(git_tag), git_tag__parse, git_tag__free },
+	{ "tag", sizeof(git_tag), git_tag__parse, git_tag__parse_raw, git_tag__free },
 
 	/* 5 = GIT_OBJ__EXT2 */
-	{ "", 0, NULL, NULL },
+	{ "", 0, NULL, NULL, NULL },
 	/* 6 = GIT_OBJ_OFS_DELTA */
-	{ "OFS_DELTA", 0, NULL, NULL },
+	{ "OFS_DELTA", 0, NULL, NULL, NULL },
 	/* 7 = GIT_OBJ_REF_DELTA */
-	{ "REF_DELTA", 0, NULL, NULL },
+	{ "REF_DELTA", 0, NULL, NULL, NULL },
 };
+
+int git_object__from_raw(
+	git_object **object_out,
+	const char *data,
+	size_t size,
+	git_otype type)
+{
+	git_object_def *def;
+	git_object *object;
+	size_t object_size;
+	int error;
+
+	assert(object_out);
+	*object_out = NULL;
+
+	/* Validate type match */
+	if (type != GIT_OBJ_BLOB && type != GIT_OBJ_TREE && type != GIT_OBJ_COMMIT && type != GIT_OBJ_TAG) {
+		giterr_set(GITERR_INVALID, "the requested type is invalid");
+		return GIT_ENOTFOUND;
+	}
+
+	if ((object_size = git_object__size(type)) == 0) {
+		giterr_set(GITERR_INVALID, "the requested type is invalid");
+		return GIT_ENOTFOUND;
+	}
+
+	/* Allocate and initialize base object */
+	object = git__calloc(1, object_size);
+	GITERR_CHECK_ALLOC(object);
+	object->cached.flags = GIT_CACHE_STORE_PARSED;
+	object->cached.type = type;
+	git_odb_hash(&object->cached.oid, data, size, type);
+
+	/* Parse raw object data */
+	def = &git_objects_table[type];
+	assert(def->free && def->parse_raw);
+
+	if ((error = def->parse_raw(object, data, size)) < 0)
+		def->free(object);
+
+	git_cached_obj_incref(object);
+	*object_out = object;
+
+	return 0;
+}
 
 int git_object__from_odb_object(
 	git_object **object_out,
