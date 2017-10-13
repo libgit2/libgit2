@@ -383,11 +383,11 @@ int git_commit_amend(
 	return error;
 }
 
-int git_commit__parse(void *_commit, git_odb_object *odb_obj)
+int git_commit__parse_raw(void *_commit, const char *data, size_t size)
 {
 	git_commit *commit = _commit;
-	const char *buffer_start = git_odb_object_data(odb_obj), *buffer;
-	const char *buffer_end = buffer_start + git_odb_object_size(odb_obj);
+	const char *buffer_start = data, *buffer;
+	const char *buffer_end = buffer_start + size;
 	git_oid parent_id;
 	size_t header_len;
 	git_signature dummy_sig;
@@ -475,6 +475,13 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 bad_buffer:
 	giterr_set(GITERR_OBJECT, "failed to parse bad commit object");
 	return -1;
+}
+
+int git_commit__parse(void *_commit, git_odb_object *odb_obj)
+{
+	return git_commit__parse_raw(_commit,
+		git_odb_object_data(odb_obj),
+		git_odb_object_size(odb_obj));
 }
 
 #define GIT_COMMIT_GETTER(_rvalue, _name, _return) \
