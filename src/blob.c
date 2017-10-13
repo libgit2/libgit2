@@ -32,8 +32,8 @@ int git_blob__getbuf(git_buf *buffer, git_blob *blob)
 {
 	return git_buf_set(
 		buffer,
-		git_odb_object_data(blob->odb_object),
-		git_odb_object_size(blob->odb_object));
+		git_blob_rawcontent(blob),
+		git_blob_rawsize(blob));
 }
 
 void git_blob__free(void *blob)
@@ -372,8 +372,8 @@ int git_blob_is_binary(const git_blob *blob)
 
 	assert(blob);
 
-	git_buf_attach_notowned(&content, blob->odb_object->buffer,
-		min(blob->odb_object->cached.size,
+	git_buf_attach_notowned(&content, git_blob_rawcontent(blob),
+		min(git_blob_rawsize(blob),
 		GIT_FILTER_BYTES_TO_CHECK_NUL));
 	return git_buf_text_is_binary(&content);
 }
