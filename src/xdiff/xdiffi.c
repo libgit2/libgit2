@@ -31,7 +31,12 @@
 #define XDL_SNAKE_CNT 20
 #define XDL_K_HEUR 4
 
-
+/** Declare a function as always inlined. */
+#if defined(_MSC_VER)
+# define XDL_INLINE(type) static __inline type
+#else
+# define XDL_INLINE(type) static inline type
+#endif
 
 typedef struct s_xdpsplit {
 	long i1, i2;
@@ -735,7 +740,7 @@ static void group_init(xdfile_t *xdf, struct xdlgroup *g)
  * Move g to describe the next (possibly empty) group in xdf and return 0. If g
  * is already at the end of the file, do nothing and return -1.
  */
-static inline int group_next(xdfile_t *xdf, struct xdlgroup *g)
+XDL_INLINE(int) group_next(xdfile_t *xdf, struct xdlgroup *g)
 {
 	if (g->end == xdf->nrec)
 		return -1;
@@ -751,7 +756,7 @@ static inline int group_next(xdfile_t *xdf, struct xdlgroup *g)
  * Move g to describe the previous (possibly empty) group in xdf and return 0.
  * If g is already at the beginning of the file, do nothing and return -1.
  */
-static inline int group_previous(xdfile_t *xdf, struct xdlgroup *g)
+XDL_INLINE(int) group_previous(xdfile_t *xdf, struct xdlgroup *g)
 {
 	if (g->start == 0)
 		return -1;
