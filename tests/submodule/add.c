@@ -143,7 +143,7 @@ void test_submodule_add__path_exists_in_index(void)
 	git_buf_joinpath(&dirname, git_repository_workdir(g_repo), "/TestGitRepository");
 	git_buf_joinpath(&filename, dirname.ptr, "/test.txt");
 
-	mkdir(dirname.ptr, 0700);
+	p_mkdir(dirname.ptr, 0700);
 	fd = fopen(filename.ptr, "w");
 	fclose(fd);
 
