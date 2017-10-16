@@ -128,3 +128,69 @@ void test_submodule_add__url_relative_to_workdir(void)
 
 	assert_submodule_url("TestGitRepository", git_repository_workdir(g_repo));
 }
+
+void test_submodule_add__path_exists_in_index(void)
+{
+	git_index *index;
+	git_submodule *sm;
+	git_buf dirname = GIT_BUF_INIT;
+	git_buf filename = GIT_BUF_INIT;
+	FILE *fd;
+
+	/* In this repo, HEAD (master) has no remote tracking branc h*/
+	g_repo = cl_git_sandbox_init("testrepo");
+
+	git_buf_joinpath(&dirname, git_repository_workdir(g_repo), "/TestGitRepository");
+	git_buf_joinpath(&filename, dirname.ptr, "/test.txt");
+
+	mkdir(dirname.ptr, 0700);
+	fd = fopen(filename.ptr, "w");
+	fclose(fd);
+
+	cl_git_pass(
+		git_repository_index__weakptr(&index, g_repo)
+	);
+
+	cl_git_pass(
+		git_index_add_bypath(index, "TestGitRepository/test.txt")
+	);
+
+	cl_git_fail_with(
+		git_submodule_add_setup(&sm, g_repo, "./", "TestGitRepository", 1),
+		GIT_EEXISTS
+	);
+
+	git_buf_free(&dirname);
+	git_buf_free(&filename);
+}
+
+void test_submodule_add__file_exists_in_index(void)
+{
+	git_index *index;
+	git_submodule *sm;
+	git_buf name = GIT_BUF_INIT;
+	FILE *fd;
+
+	/* In this repo, HEAD (master) has no remote tracking branc h*/
+	g_repo = cl_git_sandbox_init("testrepo");
+
+	git_buf_joinpath(&name, git_repository_workdir(g_repo), "/TestGitRepository");
+
+	fd = fopen(name.ptr, "w");
+	fclose(fd);
+
+	cl_git_pass(
+		git_repository_index__weakptr(&index, g_repo)
+	);
+
+	cl_git_pass(
+		git_index_add_bypath(index, "TestGitRepository")
+	);
+
+	cl_git_fail_with(
+		git_submodule_add_setup(&sm, g_repo, "./", "TestGitRepository", 1),
+		GIT_EEXISTS
+	);
+
+	git_buf_free(&name);
+}

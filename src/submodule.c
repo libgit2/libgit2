@@ -660,7 +660,10 @@ int git_submodule_add_setup(
 	int use_gitlink)
 {
 	int error = 0;
+	size_t path_len;
+	const char *dir;
 	git_config_backend *mods = NULL;
+	git_index *index;
 	git_submodule *sm = NULL;
 	git_buf name = GIT_BUF_INIT, real_url = GIT_BUF_INIT;
 	git_repository *subrepo = NULL;
@@ -686,6 +689,34 @@ int git_submodule_add_setup(
 		giterr_set(GITERR_SUBMODULE, "submodule path must be a relative path");
 		error = -1;
 		goto cleanup;
+	}
+
+	/* get the index for the repo */
+
+	if ((error = git_repository_index__weakptr(&index, repo)) < 0)
+		goto cleanup;
+
+	/* see if the submodule name exists as a file on the index */
+
+	if ((error = git_index_find(NULL, index, path)) == 0) {
+		giterr_set(GITERR_SUBMODULE,
+			"'%s' already exists in the index", path);
+		return GIT_EEXISTS;
+	}
+
+	/* We need the path to end with '/' so we can check it as a directory prefix */
+
+	path_len = strlen(path);
+	dir = git__malloc(path_len + 1);
+	strcpy(dir, path);
+	git_path_string_to_dir(dir, path_len + 1);
+
+	/* see if the submodule name exists as a directory on the index */
+
+	if ((error = git_index_find_prefix(NULL, index, dir)) == 0) {
+		giterr_set(GITERR_SUBMODULE,
+			"'%s' already exists in the index", path);
+		return GIT_EEXISTS;
 	}
 
 	/* update .gitmodules */
