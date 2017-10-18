@@ -21,6 +21,14 @@
  * 
  * `git ls-files` base command shows all paths in the index at that time.
  * This includes staged and committed files, but unstaged files will not display.
+ * 
+ * This currently supports:
+ * 	- The --error-unmatch paramter with the same output as the git cli
+ *  - default ls-files behavior
+ * 
+ * This currently does not support:
+ * 	- anything else
+ * 
  */
 
 #define MAX_FILES 64
@@ -31,7 +39,9 @@ typedef struct ls_options {
 	int file_count;
 } ls_options;
 
+static void usage(const char *message, const char *arg);
 void parse_options(ls_options *opts, int argc, char *argv[]);
+int print_error_unmatch(ls_options *opts, git_index *index);
 
 int main(int argc, char *argv[]) {
 	ls_options opts;
@@ -55,16 +65,9 @@ int main(int argc, char *argv[]) {
 	if ((error = git_repository_index(&index, repo)) != 0)
 		goto cleanup;
 
+	/* if the error_unmatch flag is set, we need to print it differently */
 	if (opts.error_unmatch) {
-		for (i = 0; i < opts.file_count; i++) {
-			const char *path = opts.files[i];
-			printf("Checking first path '%s'\n", path);
-			entry = git_index_get_bypath(index, path, GIT_INDEX_STAGE_NORMAL);
-			if (!entry) {
-				printf("Could not find path '%s'\n", path);
-				return -1;
-			}
-		}
+		error = print_error_unmatch(&opts, index);
 		goto cleanup;
 	}
 
@@ -88,9 +91,19 @@ cleanup:
 	return error;
 }
 
+/* Print a usage message for the program. */
+static void usage(const char *message, const char *arg)
+{
+	if (message && arg)
+		fprintf(stderr, "%s: %s\n", message, arg);
+	else if (message)
+		fprintf(stderr, "%s\n", message);
+	fprintf(stderr, "usage: ls-files [--error-unmatch] [--] [<file>...]\n");
+	exit(1);
+}
+
 void parse_options(ls_options *opts, int argc, char *argv[]) {
 	int parsing_files = 0;
-	int file_idx = 0;
 	struct args_info args = ARGS_INFO_INIT;
 	
 	memset(opts, 0, sizeof(ls_options));
@@ -103,9 +116,9 @@ void parse_options(ls_options *opts, int argc, char *argv[]) {
 	for (args.pos = 1; args.pos < argc; ++args.pos) {
 		char *a = argv[args.pos];
 
+		/* if it doesn't start with a '-' or is after the '--' then it is a file */
 		if (a[0] != '-' || !strcmp(a, "--")) {
 			if (parsing_files) {
-				printf("%s\n", a);
 				opts->files[opts->file_count++] = a;
 			} else { 
 				parsing_files = 1;
@@ -114,13 +127,27 @@ void parse_options(ls_options *opts, int argc, char *argv[]) {
 			opts->error_unmatch = 1;
 			parsing_files = 1;
 		} else {
-			printf("Bad command\n");
+			usage("Unsupported argument", a);
 		}
 	}
+}
 
-	printf("file count: %d\n", opts->file_count);
+int print_error_unmatch(ls_options *opts, git_index *index) {
 	int i;
+	const git_index_entry *entry;
+
+	/* loop through the files found in the args and print them if they exist */
 	for (i = 0; i < opts->file_count; i++) {
-		printf("Path ids %d: %s\n", i, opts->files[i]);
+		const char *path = opts->files[i];
+
+		entry = git_index_get_bypath(index, path, GIT_INDEX_STAGE_NORMAL);
+		if (!entry) {
+			printf("error: pathspec '%s' did not match any file(s) known to git.\n", path);
+			printf("Did you forget to 'git add'?\n");
+			return -1;
+		}
+
+		printf("%s\n", path);
 	}
- }
+	return 0;
+}
