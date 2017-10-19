@@ -300,7 +300,10 @@ static int fetch_setup_walk(git_revwalk **out, git_repository *repo)
 		if (git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC)
 			continue;
 
-		if ((error = git_revwalk_push(walk, git_reference_target(ref))) < 0)
+		error = git_revwalk_push(walk, git_reference_target(ref));
+		if (error == GIT_ENONCOMMIT)
+			continue;
+		else if (error < 0)
 			goto on_error;
 	}
 
