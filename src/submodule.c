@@ -149,6 +149,41 @@ static int find_by_path(const git_config_entry *entry, void *payload)
 	return 0;
 }
 
+static int can_add_submodule(git_repository *repo, const char *path) {
+	int error;
+	git_index *index;
+	git_buf dir = GIT_BUF_INIT;
+
+	if ((error = git_buf_sets(&dir, path)) < 0)
+		return error;
+
+	if ((error = git_path_to_dir(&dir)) < 0)
+		return error;
+
+	/* get the index for the repo */
+
+	if ((error = git_repository_index__weakptr(&index, repo)) < 0)
+		return error;
+
+	/* see if the submodule name exists as a file on the index */
+
+	if ((error = git_index_find(NULL, index, path)) == 0) {
+		giterr_set(GITERR_SUBMODULE,
+			"'%s' already exists in the index", path);
+		return GIT_EEXISTS;
+	}
+
+	/* see if the submodule name exists as a directory on the index */
+
+	if ((error = git_index_find_prefix(NULL, index, dir.ptr)) == 0) {
+		giterr_set(GITERR_SUBMODULE,
+			"'%s' already exists in the index", path);
+		return GIT_EEXISTS;
+	}
+
+	return 0;
+}
+
 /**
  * Release the name map returned by 'load_submodule_names'.
  */
@@ -660,10 +695,7 @@ int git_submodule_add_setup(
 	int use_gitlink)
 {
 	int error = 0;
-	size_t path_len;
-	const char *dir;
 	git_config_backend *mods = NULL;
-	git_index *index;
 	git_submodule *sm = NULL;
 	git_buf name = GIT_BUF_INIT, real_url = GIT_BUF_INIT;
 	git_repository *subrepo = NULL;
@@ -691,33 +723,8 @@ int git_submodule_add_setup(
 		goto cleanup;
 	}
 
-	/* get the index for the repo */
-
-	if ((error = git_repository_index__weakptr(&index, repo)) < 0)
+	if ((error = can_add_submodule(repo, path)) < 0)
 		goto cleanup;
-
-	/* see if the submodule name exists as a file on the index */
-
-	if ((error = git_index_find(NULL, index, path)) == 0) {
-		giterr_set(GITERR_SUBMODULE,
-			"'%s' already exists in the index", path);
-		return GIT_EEXISTS;
-	}
-
-	/* We need the path to end with '/' so we can check it as a directory prefix */
-
-	path_len = strlen(path);
-	dir = git__malloc(path_len + 1);
-	strcpy(dir, path);
-	git_path_string_to_dir(dir, path_len + 1);
-
-	/* see if the submodule name exists as a directory on the index */
-
-	if ((error = git_index_find_prefix(NULL, index, dir)) == 0) {
-		giterr_set(GITERR_SUBMODULE,
-			"'%s' already exists in the index", path);
-		return GIT_EEXISTS;
-	}
 
 	/* update .gitmodules */
 
