@@ -19,17 +19,17 @@
  * This example demonstrates the libgit2 index APIs to roughly
  * simulate the output of `git ls-files`.
  * `git ls-files` has many options and this currently does not show them.
- * 
+ *
  * `git ls-files` base command shows all paths in the index at that time.
  * This includes staged and committed files, but unstaged files will not display.
- * 
+ *
  * This currently supports:
  * 	- The --error-unmatch paramter with the same output as the git cli
  *  - default ls-files behavior
- * 
+ *
  * This currently does not support:
  * 	- anything else
- * 
+ *
  */
 
 typedef struct {
@@ -84,7 +84,7 @@ static int parse_options(ls_options *opts, int argc, char *argv[])
 	return 0;
 }
 
-static int print_paths(ls_options *opts, git_index *index) 
+static int print_paths(ls_options *opts, git_index *index)
 {
 	int i;
 	const git_index_entry *entry;
@@ -109,8 +109,8 @@ static int print_paths(ls_options *opts, git_index *index)
 int main(int argc, char *argv[])
 {
 	ls_options opts;
-	git_repository *repo;
-	git_index *index;
+	git_repository *repo = NULL;
+	git_index *index = NULL;
 	const git_index_entry *entry;
 	size_t entry_count;
 	size_t i = 0;
@@ -121,10 +121,10 @@ int main(int argc, char *argv[])
 
 	git_libgit2_init();
 
-	if ((error = git_repository_open_ext(&repo, ".", 0, NULL)) != 0)
+	if ((error = git_repository_open_ext(&repo, ".", 0, NULL)) < 0)
 		goto cleanup;
 
-	if ((error = git_repository_index(&index, repo)) != 0)
+	if ((error = git_repository_index(&index, repo)) < 0)
 		goto cleanup;
 
 	/* if there are files explicitly listed by the user, we need to treat this command differently */
