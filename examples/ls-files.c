@@ -49,7 +49,7 @@ static void usage(const char *message, const char *arg)
 	exit(1);
 }
 
-static void parse_options(ls_options *opts, int argc, char *argv[])
+static int parse_options(ls_options *opts, int argc, char *argv[])
 {
 	int parsing_files = 0;
 	struct args_info args = ARGS_INFO_INIT;
@@ -58,7 +58,7 @@ static void parse_options(ls_options *opts, int argc, char *argv[])
 	memset(opts, 0, sizeof(ls_options));
 
 	if (argc < 2)
-		return;
+		return 0;
 
 	for (args.pos = 1; args.pos < argc; ++args.pos) {
 		char *a = argv[args.pos];
@@ -77,8 +77,11 @@ static void parse_options(ls_options *opts, int argc, char *argv[])
 			opts->error_unmatch = 1;
 		} else {
 			usage("Unsupported argument", a);
+			return -1;
 		}
 	}
+
+	return 0;
 }
 
 static int print_paths(ls_options *opts, git_index *index) 
@@ -113,7 +116,8 @@ int main(int argc, char *argv[])
 	size_t i = 0;
 	int error;
 
-	parse_options(&opts, argc, argv);
+	if ((error = parse_options(&opts, argc, argv)) < 0)
+		return error;
 
 	git_libgit2_init();
 
