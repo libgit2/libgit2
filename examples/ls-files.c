@@ -34,8 +34,7 @@
 
 typedef struct {
 	int error_unmatch;
-	char **files;
-	int file_count;
+	git_array_t(char *) files;
 } ls_options;
 
 /* Print a usage message for the program. */
@@ -53,9 +52,10 @@ static int parse_options(ls_options *opts, int argc, char *argv[])
 {
 	int parsing_files = 0;
 	struct args_info args = ARGS_INFO_INIT;
-	git_array_t(char *) files = GIT_ARRAY_INIT;
+	char **file;
 
 	memset(opts, 0, sizeof(ls_options));
+	git_array_init(opts->files);
 
 	if (argc < 2)
 		return 0;
@@ -67,10 +67,9 @@ static int parse_options(ls_options *opts, int argc, char *argv[])
 		if (a[0] != '-') {
 			parsing_files = 1;
 
-			opts->files = git_array_alloc(files);
-			GITERR_CHECK_ALLOC(opts->files);
-
-			opts->files[opts->file_count++] = a;
+			file = git_array_alloc(opts->files);
+			GITERR_CHECK_ALLOC(file);
+			*file = a;
 		} else if (!strcmp(a, "--")) {
 			parsing_files = 1;
 		} else if (!strcmp(a, "--error-unmatch") && !parsing_files) {
@@ -86,12 +85,12 @@ static int parse_options(ls_options *opts, int argc, char *argv[])
 
 static int print_paths(ls_options *opts, git_index *index)
 {
-	int i;
+	size_t i;
 	const git_index_entry *entry;
 
 	/* loop through the files found in the args and print them if they exist */
-	for (i = 0; i < opts->file_count; i++) {
-		const char *path = opts->files[i];
+	for (i = 0; i < git_array_size(opts->files); ++i) {
+		const char *path = *(char **)git_array_get(opts->files, i);
 
 		entry = git_index_get_bypath(index, path, GIT_INDEX_STAGE_NORMAL);
 		if (!entry && opts->error_unmatch) {
@@ -128,7 +127,7 @@ int main(int argc, char *argv[])
 		goto cleanup;
 
 	/* if there are files explicitly listed by the user, we need to treat this command differently */
-	if (opts.file_count > 0) {
+	if (git_array_size(opts.files) > 0) {
 		error = print_paths(&opts, index);
 		goto cleanup;
 	}
@@ -144,6 +143,7 @@ int main(int argc, char *argv[])
 
 cleanup:
 	/* free our allocated resources */
+	git_array_clear(opts.files);
 	git_index_free(index);
 	git_repository_free(repo);
 	git_libgit2_shutdown();
