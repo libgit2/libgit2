@@ -58,6 +58,7 @@ typedef enum {
 	GIT_EMISMATCH       = -33,	/**< Hashsum mismatch in object */
 	GIT_EINDEXDIRTY     = -34,	/**< Unsaved changes in the index would be overwritten */
 	GIT_EAPPLYFAIL      = -35,	/**< Patch application failed */
+	GIT_ENONCOMMIT      = -36,	/**< Object is not committish */
 } git_error_code;
 
 /**
