@@ -285,9 +285,6 @@ static int fetch_setup_walk(git_revwalk **out, git_repository *repo)
 	git_revwalk_sorting(walk, GIT_SORT_TIME);
 
 	for (i = 0; i < refs.count; ++i) {
-                const git_oid *oid;
-                git_object *obj, *oobj;
-
 		git_reference_free(ref);
 		ref = NULL;
 
@@ -301,22 +298,11 @@ static int fetch_setup_walk(git_revwalk **out, git_repository *repo)
 		if (git_reference_type(ref) == GIT_REF_SYMBOLIC)
 			continue;
 
-                /* only walk over commits */
-                oid = git_reference_target(ref);
-                if ((error = git_object_lookup(&oobj, repo, oid, GIT_OBJ_ANY)) < 0)
-                        goto on_error;
-
-                error = git_object_peel(&obj, oobj, GIT_OBJ_COMMIT);
-                git_object_free(oobj);
-                if (error == GIT_ENOTFOUND || error == GIT_EPEEL) {
-                        continue;
-                } else if (error != 0)
-                        goto on_error;
-
-                git_object_free(obj);
-
-		if ((error = git_revwalk_push(walk, oid)) < 0)
-			goto on_error;
+                error = git_revwalk_push(walk, git_reference_target(ref));
+                if (error == GIT_ENONCOMMIT)
+                    continue;
+		else if (error < 0)
+                    goto on_error;
 	}
 
 	*out = walk;
