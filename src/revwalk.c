@@ -60,7 +60,7 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting,
 			return 0;
 
 		giterr_set(GITERR_INVALID, "object is not a committish");
-		return -1;
+		return GIT_ENONCOMMIT;
 	}
 	if (error < 0)
 		return error;
