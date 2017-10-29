@@ -4,13 +4,13 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
+#ifndef INCLUDE_indexer_h__
+#define INCLUDE_indexer_h__
 
-#ifndef INCLUDE_sys_git_transport_h
-#define INCLUDE_sys_git_transport_h
+#include "common.h"
 
-#include "git2/net.h"
-#include "git2/types.h"
+#include "git2/indexer.h"
 
-GIT_BEGIN_DECL
+extern void git_indexer__set_fsync(git_indexer *idx, int do_fsync);
 
-GIT_END_DECL
+#endif

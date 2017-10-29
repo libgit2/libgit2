@@ -2,6 +2,7 @@
 #include "buffer.h"
 #include "path.h"
 #include "posix.h"
+#include "git2/sys/repository.h"
 
 static git_repository *repo;
 static git_buf file_path_buf = GIT_BUF_INIT;
@@ -464,4 +465,20 @@ void test_network_remote_local__push_delete(void)
 	git_repository_free(dst_repo);
 	cl_fixture_cleanup("target.git");
 	cl_git_sandbox_cleanup();
+}
+
+void test_network_remote_local__anonymous_remote_inmemory_repo(void)
+{
+	git_repository *inmemory;
+	git_remote *remote;
+
+	git_buf_sets(&file_path_buf, cl_git_path_url(cl_fixture("testrepo.git")));
+
+	cl_git_pass(git_repository_new(&inmemory));
+	cl_git_pass(git_remote_create_anonymous(&remote, inmemory, git_buf_cstr(&file_path_buf)));
+	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
+	cl_assert(git_remote_connected(remote));
+	git_remote_disconnect(remote);
+	git_remote_free(remote);
+	git_repository_free(inmemory);
 }

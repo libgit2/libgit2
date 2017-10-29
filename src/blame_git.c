@@ -6,6 +6,7 @@
  */
 
 #include "blame_git.h"
+
 #include "commit.h"
 #include "blob.h"
 #include "xdiff/xinclude.h"
@@ -478,14 +479,15 @@ cleanup:
  * The blobs of origin and porigin exactly match, so everything origin is
  * suspected for can be blamed on the parent.
  */
-static void pass_whole_blame(git_blame *blame,
+static int pass_whole_blame(git_blame *blame,
 		git_blame__origin *origin, git_blame__origin *porigin)
 {
 	git_blame__entry *e;
 
-	if (!porigin->blob)
-		git_object_lookup((git_object**)&porigin->blob, blame->repository,
-				git_blob_id(origin->blob), GIT_OBJ_BLOB);
+	if (!porigin->blob &&
+	    git_object_lookup((git_object**)&porigin->blob, blame->repository,
+				git_blob_id(origin->blob), GIT_OBJ_BLOB) < 0)
+		return -1;
 	for (e=blame->ent; e; e=e->next) {
 		if (!same_suspect(e->suspect, origin))
 			continue;
@@ -493,6 +495,8 @@ static void pass_whole_blame(git_blame *blame,
 		origin_decref(e->suspect);
 		e->suspect = porigin;
 	}
+
+	return 0;
 }
 
 static int pass_blame(git_blame *blame, git_blame__origin *origin, uint32_t opt)
@@ -514,11 +518,12 @@ static int pass_blame(git_blame *blame, git_blame__origin *origin, uint32_t opt)
 	if (!num_parents) {
 		git_oid_cpy(&blame->options.oldest_commit, git_commit_id(commit));
 		goto finish;
-	}
-	else if (num_parents < (int)ARRAY_SIZE(sg_buf))
+	} else if (num_parents < (int)ARRAY_SIZE(sg_buf))
 		memset(sg_buf, 0, sizeof(sg_buf));
-	else
+	else {
 		sg_origin = git__calloc(num_parents, sizeof(*sg_origin));
+		GITERR_CHECK_ALLOC(sg_origin);
+	}
 
 	for (i=0; i<num_parents; i++) {
 		git_commit *p;
@@ -543,7 +548,7 @@ static int pass_blame(git_blame *blame, git_blame__origin *origin, uint32_t opt)
 		}
 		if (porigin->blob && origin->blob &&
 		    !git_oid_cmp(git_blob_id(porigin->blob), git_blob_id(origin->blob))) {
-			pass_whole_blame(blame, origin, porigin);
+			error = pass_whole_blame(blame, origin, porigin);
 			origin_decref(porigin);
 			goto finish;
 		}

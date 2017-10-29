@@ -21,8 +21,8 @@ static void assert_is_ignored_(
 {
 	int is_ignored = 0;
 
-	cl_git_pass_(
-		git_ignore_path_is_ignored(&is_ignored, g_repo, filepath), file, line);
+	cl_git_expect(
+		git_ignore_path_is_ignored(&is_ignored, g_repo, filepath), 0, file, line);
 
 	clar__assert_equal(
 		file, line, "expected != is_ignored", 1, "%d",
@@ -290,4 +290,59 @@ void test_attr_ignore__symlink_to_outside(void)
 	cl_git_pass(p_symlink("../target", "attr/symlink"));
 	assert_is_ignored(true, "symlink");
 	assert_is_ignored(true, "lala/../symlink");
+}
+
+void test_attr_ignore__test(void)
+{
+	cl_git_rewritefile("attr/.gitignore",
+		"/*/\n"
+		"!/src\n");
+	assert_is_ignored(false, "src/foo.c");
+	assert_is_ignored(false, "src/foo/foo.c");
+	assert_is_ignored(false, "README.md");
+	assert_is_ignored(true, "dist/foo.o");
+	assert_is_ignored(true, "bin/foo");
+}
+
+void test_attr_ignore__unignore_dir_succeeds(void)
+{
+	cl_git_rewritefile("attr/.gitignore",
+		"*.c\n"
+		"!src/*.c\n");
+	assert_is_ignored(false, "src/foo.c");
+	assert_is_ignored(true, "src/foo/foo.c");
+}
+
+void test_attr_ignore__case_insensitive_unignores_previous_rule(void)
+{
+	git_config *cfg;
+
+	cl_git_rewritefile("attr/.gitignore",
+		"/case\n"
+		"!/Case/\n");
+
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_config_set_bool(cfg, "core.ignorecase", true));
+
+	cl_must_pass(p_mkdir("attr/case", 0755));
+	cl_git_mkfile("attr/case/file", "content");
+
+	assert_is_ignored(false, "case/file");
+}
+
+void test_attr_ignore__case_sensitive_unignore_does_nothing(void)
+{
+	git_config *cfg;
+
+	cl_git_rewritefile("attr/.gitignore",
+		"/case\n"
+		"!/Case/\n");
+
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_config_set_bool(cfg, "core.ignorecase", false));
+
+	cl_must_pass(p_mkdir("attr/case", 0755));
+	cl_git_mkfile("attr/case/file", "content");
+
+	assert_is_ignored(true, "case/file");
 }

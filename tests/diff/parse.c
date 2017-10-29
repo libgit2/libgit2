@@ -196,3 +196,74 @@ void test_diff_parse__get_patch_from_diff(void)
 
 	cl_git_sandbox_cleanup();
 }
+
+static int file_cb(const git_diff_delta *delta, float progress, void *payload)
+{
+    int *called = (int *) payload;
+    GIT_UNUSED(delta);
+    GIT_UNUSED(progress);
+    (*called)++;
+    return 0;
+}
+
+void test_diff_parse__foreach_works_with_parsed_patch(void)
+{
+	const char patch[] =
+	    "diff --git a/obj1 b/obj2\n"
+	    "index 1234567..7654321 10644\n"
+	    "--- a/obj1\n"
+	    "+++ b/obj2\n"
+	    "@@ -1 +1 @@\n"
+	    "-abcde\n"
+	    "+12345\n";
+	int called = 0;
+	git_diff *diff;
+
+	cl_git_pass(git_diff_from_buffer(&diff, patch, strlen(patch)));
+	cl_git_pass(git_diff_foreach(diff, file_cb, NULL, NULL, NULL, &called));
+	cl_assert_equal_i(called, 1);
+
+	git_diff_free(diff);
+}
+
+void test_diff_parse__parsing_minimal_patch_succeeds(void)
+{
+	const char patch[] =
+	    "diff --git a/obj1 b/obj2\n"
+	    "index 1234567..7654321 10644\n"
+	    "--- a/obj1\n"
+	    "+++ b/obj2\n"
+	    "@@ -1 +1 @@\n"
+	    "-a\n"
+	    "+\n";
+	git_buf buf = GIT_BUF_INIT;
+	git_diff *diff;
+
+	cl_git_pass(git_diff_from_buffer(&diff, patch, strlen(patch)));
+	cl_git_pass(git_diff_to_buf(&buf, diff, GIT_DIFF_FORMAT_PATCH));
+	cl_assert_equal_s(patch, buf.ptr);
+
+	git_diff_free(diff);
+	git_buf_free(&buf);
+}
+
+void test_diff_parse__patch_roundtrip_succeeds(void)
+{
+	const char buf1[] = "a\n", buf2[] = "b\n";
+	git_buf patchbuf = GIT_BUF_INIT, diffbuf = GIT_BUF_INIT;
+	git_patch *patch;
+	git_diff *diff;
+
+	cl_git_pass(git_patch_from_buffers(&patch, buf1, strlen(buf1), "obj1", buf2, strlen(buf2), "obj2", NULL));
+	cl_git_pass(git_patch_to_buf(&patchbuf, patch));
+
+	cl_git_pass(git_diff_from_buffer(&diff, patchbuf.ptr, patchbuf.size));
+	cl_git_pass(git_diff_to_buf(&diffbuf, diff, GIT_DIFF_FORMAT_PATCH));
+
+	cl_assert_equal_s(patchbuf.ptr, diffbuf.ptr);
+
+	git_patch_free(patch);
+	git_diff_free(diff);
+	git_buf_free(&patchbuf);
+	git_buf_free(&diffbuf);
+}

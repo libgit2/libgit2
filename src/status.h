@@ -7,6 +7,8 @@
 #ifndef INCLUDE_status_h__
 #define INCLUDE_status_h__
 
+#include "common.h"
+
 #include "diff.h"
 #include "git2/status.h"
 #include "git2/diff.h"

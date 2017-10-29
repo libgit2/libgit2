@@ -5,16 +5,20 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "common.h"
+
 #ifdef GIT_OPENSSL
 # include <openssl/err.h>
 #endif
 
 #include <git2.h>
-#include "common.h"
 #include "sysdir.h"
 #include "cache.h"
 #include "global.h"
 #include "object.h"
+#include "odb.h"
+#include "refs.h"
+#include "transports/smart.h"
 
 void git_libgit2_version(int *major, int *minor, int *rev)
 {
@@ -29,7 +33,9 @@ int git_libgit2_features(void)
 #ifdef GIT_THREADS
 		| GIT_FEATURE_THREADS
 #endif
+#ifdef GIT_HTTPS
 		| GIT_FEATURE_HTTPS
+#endif
 #if defined(GIT_SSH)
 		| GIT_FEATURE_SSH
 #endif
@@ -62,7 +68,7 @@ static int config_level_to_sysdir(int config_level)
 		break;
 	default:
 		giterr_set(
-			GITERR_INVALID, "Invalid config path selector %d", config_level);
+			GITERR_INVALID, "invalid config path selector %d", config_level);
 	}
 
 	return val;
@@ -191,6 +197,10 @@ int git_libgit2_opts(int key, ...)
 		git_object__strict_input_validation = (va_arg(ap, int) != 0);
 		break;
 
+	case GIT_OPT_ENABLE_STRICT_SYMBOLIC_REF_CREATION:
+		git_reference__enable_symbolic_ref_target_validation = (va_arg(ap, int) != 0);
+		break;
+
 	case GIT_OPT_SET_SSL_CIPHERS:
 #ifdef GIT_OPENSSL
 		{
@@ -213,6 +223,30 @@ int git_libgit2_opts(int key, ...)
 			git_buf_sanitize(out);
 			error = git_buf_sets(out, git__user_agent);
 		}
+		break;
+
+	case GIT_OPT_ENABLE_OFS_DELTA:
+		git_smart__ofs_delta_enabled = (va_arg(ap, int) != 0);
+		break;
+
+	case GIT_OPT_ENABLE_FSYNC_GITDIR:
+		git_repository__fsync_gitdir = (va_arg(ap, int) != 0);
+		break;
+
+	case GIT_OPT_GET_WINDOWS_SHAREMODE:
+#ifdef GIT_WIN32
+		*(va_arg(ap, unsigned long *)) = git_win32__createfile_sharemode;
+#endif
+		break;
+
+	case GIT_OPT_SET_WINDOWS_SHAREMODE:
+#ifdef GIT_WIN32
+		git_win32__createfile_sharemode = va_arg(ap, unsigned long);
+#endif
+		break;
+
+	case GIT_OPT_ENABLE_STRICT_HASH_VERIFICATION:
+		git_odb__strict_hash_verification = (va_arg(ap, int) != 0);
 		break;
 
 	default:

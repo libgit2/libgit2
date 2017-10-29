@@ -1,6 +1,11 @@
-#include "sortedcache.h"
+/*
+ * Copyright (C) the libgit2 contributors. All rights reserved.
+ *
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
+ */
 
-GIT__USE_STRMAP
+#include "sortedcache.h"
 
 int git_sortedcache_new(
 	git_sortedcache **out,
@@ -27,7 +32,7 @@ int git_sortedcache_new(
 		goto fail;
 
 	if (git_rwlock_init(&sc->lock)) {
-		giterr_set(GITERR_OS, "Failed to initialize lock");
+		giterr_set(GITERR_OS, "failed to initialize lock");
 		goto fail;
 	}
 
@@ -162,7 +167,7 @@ int git_sortedcache_wlock(git_sortedcache *sc)
 	GIT_UNUSED(sc); /* prevent warning when compiled w/o threads */
 
 	if (git_rwlock_wrlock(&sc->lock) < 0) {
-		giterr_set(GITERR_OS, "Unable to acquire write lock on cache");
+		giterr_set(GITERR_OS, "unable to acquire write lock on cache");
 		return -1;
 	}
 	return 0;
@@ -181,7 +186,7 @@ int git_sortedcache_rlock(git_sortedcache *sc)
 	GIT_UNUSED(sc); /* prevent warning when compiled w/o threads */
 
 	if (git_rwlock_rdlock(&sc->lock) < 0) {
-		giterr_set(GITERR_OS, "Unable to acquire read lock on cache");
+		giterr_set(GITERR_OS, "unable to acquire read lock on cache");
 		return -1;
 	}
 	return 0;
@@ -200,6 +205,7 @@ void git_sortedcache_runlock(git_sortedcache *sc)
 int git_sortedcache_lockandload(git_sortedcache *sc, git_buf *buf)
 {
 	int error, fd;
+	struct stat st;
 
 	if ((error = git_sortedcache_wlock(sc)) < 0)
 		return error;
@@ -207,19 +213,27 @@ int git_sortedcache_lockandload(git_sortedcache *sc, git_buf *buf)
 	if ((error = git_futils_filestamp_check(&sc->stamp, sc->path)) <= 0)
 		goto unlock;
 
-	if (!git__is_sizet(sc->stamp.size)) {
-		giterr_set(GITERR_INVALID, "Unable to load file larger than size_t");
-		error = -1;
-		goto unlock;
-	}
-
 	if ((fd = git_futils_open_ro(sc->path)) < 0) {
 		error = fd;
 		goto unlock;
 	}
 
+	if (p_fstat(fd, &st) < 0) {
+		giterr_set(GITERR_OS, "failed to stat file");
+		error = -1;
+		(void)p_close(fd);
+		goto unlock;
+	}
+
+	if (!git__is_sizet(st.st_size)) {
+		giterr_set(GITERR_INVALID, "unable to load file larger than size_t");
+		error = -1;
+		(void)p_close(fd);
+		goto unlock;
+	}
+
 	if (buf)
-		error = git_futils_readbuffer_fd(buf, fd, (size_t)sc->stamp.size);
+		error = git_futils_readbuffer_fd(buf, fd, (size_t)st.st_size);
 
 	(void)p_close(fd);
 
@@ -285,13 +299,13 @@ int git_sortedcache_upsert(void **out, git_sortedcache *sc, const char *key)
 	item_key = ((char *)item) + sc->item_path_offset;
 	memcpy(item_key, key, keylen);
 
-	pos = kh_put(str, sc->map, item_key, &error);
+	pos = git_strmap_put(sc->map, item_key, &error);
 	if (error < 0)
 		goto done;
 
 	if (!error)
-		kh_key(sc->map, pos) = item_key;
-	kh_val(sc->map, pos) = item;
+		git_strmap_set_key_at(sc->map, pos, item_key);
+	git_strmap_set_value_at(sc->map, pos, item);
 
 	error = git_vector_insert(&sc->items, item);
 	if (error < 0)
@@ -364,7 +378,7 @@ int git_sortedcache_remove(git_sortedcache *sc, size_t pos)
 	 */
 
 	if ((item = git_vector_get(&sc->items, pos)) == NULL) {
-		giterr_set(GITERR_INVALID, "Removing item out of range");
+		giterr_set(GITERR_INVALID, "removing item out of range");
 		return GIT_ENOTFOUND;
 	}
 

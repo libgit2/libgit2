@@ -4,12 +4,14 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
+
+#include "common.h"
+
 #include "git2/describe.h"
 #include "git2/strarray.h"
 #include "git2/diff.h"
 #include "git2/status.h"
 
-#include "common.h"
 #include "commit.h"
 #include "commit_list.h"
 #include "oidmap.h"
@@ -18,8 +20,6 @@
 #include "tag.h"
 #include "vector.h"
 #include "repository.h"
-
-GIT__USE_OIDMAP
 
 /* Ported from https://github.com/git/git/blob/89dde7882f71f846ccd0359756d27bebc31108de/builtin/describe.c */
 
@@ -127,7 +127,7 @@ static int add_to_known_names(
 		if (!found) {
 			int ret;
 
-			git_oidmap_insert(names, &e->peeled, e, ret);
+			git_oidmap_insert(names, &e->peeled, e, &ret);
 			if (ret < 0)
 				return -1;
 		}
@@ -335,14 +335,14 @@ static int display_name(git_buf *buf, git_repository *repo, struct commit_name *
 {
 	if (n->prio == 2 && !n->tag) {
 		if (git_tag_lookup(&n->tag, repo, &n->sha1) < 0) {
-			giterr_set(GITERR_TAG, "Annotated tag '%s' not available", n->path);
+			giterr_set(GITERR_TAG, "annotated tag '%s' not available", n->path);
 			return -1;
 		}
 	}
 
 	if (n->tag && !n->name_checked) {
 		if (!git_tag_name(n->tag)) {
-			giterr_set(GITERR_TAG, "Annotated tag '%s' has no embedded name", n->path);
+			giterr_set(GITERR_TAG, "annotated tag '%s' has no embedded name", n->path);
 			return -1;
 		}
 
@@ -471,7 +471,7 @@ static int describe(
 	if (!data->opts->max_candidates_tags) {
 		error = describe_not_found(
 			git_commit_id(commit),
-			"Cannot describe - no tag exactly matches '%s'");
+			"cannot describe - no tag exactly matches '%s'");
 
 		goto cleanup;
 	}
@@ -564,15 +564,15 @@ static int describe(
 		}
 		if (unannotated_cnt) {
 			error = describe_not_found(git_commit_id(commit), 
-				"Cannot describe - "
-				"No annotated tags can describe '%s'."
-			    "However, there were unannotated tags.");
+				"cannot describe - "
+				"no annotated tags can describe '%s'; "
+			    "however, there were unannotated tags.");
 			goto cleanup;
 		}
 		else {
 			error = describe_not_found(git_commit_id(commit), 
-				"Cannot describe - "
-				"No tags can describe '%s'.");
+				"cannot describe - "
+				"no tags can describe '%s'.");
 			goto cleanup;
 		}
 	}
@@ -695,8 +695,8 @@ int git_describe_commit(
 				goto cleanup;
 
 	if (git_oidmap_size(data.names) == 0 && !opts->show_commit_oid_as_fallback) {
-		giterr_set(GITERR_DESCRIBE, "Cannot describe - "
-			"No reference found, cannot describe anything.");
+		giterr_set(GITERR_DESCRIBE, "cannot describe - "
+			"no reference found, cannot describe anything.");
 		error = -1;
 		goto cleanup;
 	}
@@ -793,7 +793,7 @@ int git_describe_format(git_buf *out, const git_describe_result *result, const g
 
 
 	if (opts.always_use_long_format && opts.abbreviated_size == 0) {
-		giterr_set(GITERR_DESCRIBE, "Cannot describe - "
+		giterr_set(GITERR_DESCRIBE, "cannot describe - "
 			"'always_use_long_format' is incompatible with a zero"
 			"'abbreviated_size'");
 		return -1;

@@ -5,9 +5,9 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
-#include "sysdir.h"
 #include "config.h"
+
+#include "sysdir.h"
 #include "git2/config.h"
 #include "git2/sys/config.h"
 #include "vector.h"
@@ -109,7 +109,7 @@ int git_config_add_file_ondisk(
 
 	res = p_stat(path, &st);
 	if (res < 0 && errno != ENOENT) {
-		giterr_set(GITERR_CONFIG, "Error stat'ing config file '%s'", path);
+		giterr_set(GITERR_CONFIG, "failed to stat '%s'", path);
 		return -1;
 	}
 
@@ -203,7 +203,7 @@ static int find_internal_file_by_level(
 
 	if (pos == -1) {
 		giterr_set(GITERR_CONFIG,
-			"No config file exists for the given level '%i'", (int)level);
+			"no config file exists for the given level '%i'", (int)level);
 		return GIT_ENOTFOUND;
 	}
 
@@ -218,7 +218,7 @@ static int duplicate_level(void **old_raw, void *new_raw)
 
 	GIT_UNUSED(new_raw);
 
-	giterr_set(GITERR_CONFIG, "A file with the same level (%i) has already been added to the config", (int)(*old)->level);
+	giterr_set(GITERR_CONFIG, "a file with the same level (%i) has already been added to the config", (int)(*old)->level);
 	return GIT_EEXISTS;
 }
 
@@ -478,7 +478,7 @@ int git_config_iterator_glob_new(git_config_iterator **out, const git_config *cf
 	iter = git__calloc(1, sizeof(all_iter));
 	GITERR_CHECK_ALLOC(iter);
 
-	if ((result = regcomp(&iter->regex, regexp, REG_EXTENDED)) != 0) {
+	if ((result = p_regcomp(&iter->regex, regexp, REG_EXTENDED)) != 0) {
 		giterr_set_regex(&iter->regex, result);
 		git__free(iter);
 		return -1;
@@ -512,7 +512,7 @@ int git_config_backend_foreach_match(
 	int error = 0;
 
 	if (regexp != NULL) {
-		if ((error = regcomp(&regex, regexp, REG_EXTENDED)) != 0) {
+		if ((error = p_regcomp(&regex, regexp, REG_EXTENDED)) != 0) {
 			giterr_set_regex(&regex, error);
 			regfree(&regex);
 			return -1;
@@ -576,22 +576,50 @@ int git_config_foreach_match(
  * Setters
  **************/
 
-static int config_error_nofiles(const char *name)
+typedef enum {
+	BACKEND_USE_SET,
+	BACKEND_USE_DELETE
+} backend_use;
+
+static const char *uses[] = {
+    "set",
+    "delete"
+};
+
+static int get_backend_for_use(git_config_backend **out,
+	git_config *cfg, const char *name, backend_use use)
 {
+	size_t i;
+	file_internal *f;
+
+	*out = NULL;
+
+	if (git_vector_length(&cfg->files) == 0) {
+		giterr_set(GITERR_CONFIG,
+			"cannot %s value for '%s' when no config files exist",
+			uses[use], name);
+		return GIT_ENOTFOUND;
+	}
+
+	git_vector_foreach(&cfg->files, i, f) {
+		if (!f->file->readonly) {
+			*out = f->file;
+			return 0;
+		}
+	}
+
 	giterr_set(GITERR_CONFIG,
-		"Cannot set value for '%s' when no config files exist", name);
+		"cannot %s value for '%s' when all config files are readonly",
+		uses[use], name);
 	return GIT_ENOTFOUND;
 }
 
 int git_config_delete_entry(git_config *cfg, const char *name)
 {
 	git_config_backend *file;
-	file_internal *internal;
 
-	internal = git_vector_get(&cfg->files, 0);
-	if (!internal || !internal->file)
-		return config_error_nofiles(name);
-	file = internal->file;
+	if (get_backend_for_use(&file, cfg, name, BACKEND_USE_DELETE) < 0)
+		return GIT_ENOTFOUND;
 
 	return file->del(file, name);
 }
@@ -617,17 +645,14 @@ int git_config_set_string(git_config *cfg, const char *name, const char *value)
 {
 	int error;
 	git_config_backend *file;
-	file_internal *internal;
 
 	if (!value) {
-		giterr_set(GITERR_CONFIG, "The value to set cannot be NULL");
+		giterr_set(GITERR_CONFIG, "the value to set cannot be NULL");
 		return -1;
 	}
 
-	internal = git_vector_get(&cfg->files, 0);
-	if (!internal || !internal->file)
-		return config_error_nofiles(name);
-	file = internal->file;
+	if (get_backend_for_use(&file, cfg, name, BACKEND_USE_SET) < 0)
+		return GIT_ENOTFOUND;
 
 	error = file->set(file, name, value);
 
@@ -674,7 +699,7 @@ int git_config__update_entry(
 
 static int config_error_notfound(const char *name)
 {
-	giterr_set(GITERR_CONFIG, "Config value '%s' was not found", name);
+	giterr_set(GITERR_CONFIG, "config value '%s' was not found", name);
 	return GIT_ENOTFOUND;
 }
 
@@ -1003,7 +1028,7 @@ int git_config_multivar_iterator_new(git_config_iterator **out, const git_config
 		goto on_error;
 
 	if (regexp != NULL) {
-		error = regcomp(&iter->regex, regexp, REG_EXTENDED);
+		error = p_regcomp(&iter->regex, regexp, REG_EXTENDED);
 		if (error != 0) {
 			giterr_set_regex(&iter->regex, error);
 			error = -1;
@@ -1032,12 +1057,9 @@ on_error:
 int git_config_set_multivar(git_config *cfg, const char *name, const char *regexp, const char *value)
 {
 	git_config_backend *file;
-	file_internal *internal;
 
-	internal = git_vector_get(&cfg->files, 0);
-	if (!internal || !internal->file)
-		return config_error_nofiles(name);
-	file = internal->file;
+	if (get_backend_for_use(&file, cfg, name, BACKEND_USE_DELETE) < 0)
+		return GIT_ENOTFOUND;
 
 	return file->set_multivar(file, name, regexp, value);
 }
@@ -1045,12 +1067,9 @@ int git_config_set_multivar(git_config *cfg, const char *name, const char *regex
 int git_config_delete_multivar(git_config *cfg, const char *name, const char *regexp)
 {
 	git_config_backend *file;
-	file_internal *internal;
 
-	internal = git_vector_get(&cfg->files, 0);
-	if (!internal || !internal->file)
-		return config_error_nofiles(name);
-	file = internal->file;
+	if (get_backend_for_use(&file, cfg, name, BACKEND_USE_DELETE) < 0)
+		return GIT_ENOTFOUND;
 
 	return file->del_multivar(file, name, regexp);
 }
@@ -1236,7 +1255,7 @@ int git_config_lookup_map_value(
 	}
 
 fail_parse:
-	giterr_set(GITERR_CONFIG, "Failed to map '%s'", value);
+	giterr_set(GITERR_CONFIG, "failed to map '%s'", value);
 	return -1;
 }
 
@@ -1270,7 +1289,7 @@ int git_config_parse_bool(int *out, const char *value)
 		return 0;
 	}
 
-	giterr_set(GITERR_CONFIG, "Failed to parse '%s' as a boolean value", value);
+	giterr_set(GITERR_CONFIG, "failed to parse '%s' as a boolean value", value);
 	return -1;
 }
 
@@ -1313,7 +1332,7 @@ int git_config_parse_int64(int64_t *out, const char *value)
 	}
 
 fail_parse:
-	giterr_set(GITERR_CONFIG, "Failed to parse '%s' as an integer", value ? value : "(null)");
+	giterr_set(GITERR_CONFIG, "failed to parse '%s' as an integer", value ? value : "(null)");
 	return -1;
 }
 
@@ -1333,15 +1352,12 @@ int git_config_parse_int32(int32_t *out, const char *value)
 	return 0;
 
 fail_parse:
-	giterr_set(GITERR_CONFIG, "Failed to parse '%s' as a 32-bit integer", value ? value : "(null)");
+	giterr_set(GITERR_CONFIG, "failed to parse '%s' as a 32-bit integer", value ? value : "(null)");
 	return -1;
 }
 
 int git_config_parse_path(git_buf *out, const char *value)
 {
-	int error = 0;
-	const git_buf *home;
-
 	assert(out && value);
 
 	git_buf_sanitize(out);
@@ -1352,16 +1368,7 @@ int git_config_parse_path(git_buf *out, const char *value)
 			return -1;
 		}
 
-		if ((error = git_sysdir_get(&home, GIT_SYSDIR_GLOBAL)) < 0)
-			return error;
-
-		git_buf_sets(out, home->ptr);
-		git_buf_puts(out, value + 1);
-
-		if (git_buf_oom(out))
-			return -1;
-
-		return 0;
+		return git_sysdir_expand_global_file(out, value[1] ? &value[2] : NULL);
 	}
 
 	return git_buf_sets(out, value);
@@ -1398,7 +1405,7 @@ int git_config__normalize_name(const char *in, char **out)
 
 invalid:
 	git__free(name);
-	giterr_set(GITERR_CONFIG, "Invalid config item name '%s'", in);
+	giterr_set(GITERR_CONFIG, "invalid config item name '%s'", in);
 	return GIT_EINVALIDSPEC;
 }
 
@@ -1461,7 +1468,7 @@ int git_config_rename_section(
 			replace.ptr, strchr(replace.ptr, '.'))) < 0)
 	{
 		giterr_set(
-			GITERR_CONFIG, "Invalid config section '%s'", new_section_name);
+			GITERR_CONFIG, "invalid config section '%s'", new_section_name);
 		goto cleanup;
 	}
 

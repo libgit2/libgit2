@@ -1,18 +1,24 @@
-#include "common.h"
+/*
+ * Copyright (C) the libgit2 contributors. All rights reserved.
+ *
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
+ */
+
+#include "attrcache.h"
+
 #include "repository.h"
 #include "attr_file.h"
 #include "config.h"
 #include "sysdir.h"
 #include "ignore.h"
 
-GIT__USE_STRMAP
-
 GIT_INLINE(int) attr_cache_lock(git_attr_cache *cache)
 {
 	GIT_UNUSED(cache); /* avoid warning if threading is off */
 
 	if (git_mutex_lock(&cache->lock) < 0) {
-		giterr_set(GITERR_OS, "Unable to get attr cache lock");
+		giterr_set(GITERR_OS, "unable to get attr cache lock");
 		return -1;
 	}
 	return 0;
@@ -82,7 +88,7 @@ static int attr_cache_make_entry(
 		&entry, git_repository_workdir(repo), path, &cache->pool);
 
 	if (!error) {
-		git_strmap_insert(cache->files, entry->path, entry, error);
+		git_strmap_insert(cache->files, entry->path, entry, &error);
 		if (error > 0)
 			error = 0;
 	}
@@ -105,8 +111,11 @@ static int attr_cache_upsert(git_attr_cache *cache, git_attr_file *file)
 	GIT_REFCOUNT_OWN(file, entry);
 	GIT_REFCOUNT_INC(file);
 
-	old = git__compare_and_swap(
-		&entry->file[file->source], entry->file[file->source], file);
+	/*
+	 * Replace the existing value if another thread has
+	 * created it in the meantime.
+	 */
+	old = git__swap(entry->file[file->source], file);
 
 	if (old) {
 		GIT_REFCOUNT_OWN(old, NULL);
@@ -121,20 +130,22 @@ static int attr_cache_remove(git_attr_cache *cache, git_attr_file *file)
 {
 	int error = 0;
 	git_attr_file_entry *entry;
+	git_attr_file *old = NULL;
 
 	if (!file)
 		return 0;
+
 	if ((error = attr_cache_lock(cache)) < 0)
 		return error;
 
 	if ((entry = attr_cache_lookup_entry(cache, file->entry->path)) != NULL)
-		file = git__compare_and_swap(&entry->file[file->source], file, NULL);
+		old = git__compare_and_swap(&entry->file[file->source], file, NULL);
 
 	attr_cache_unlock(cache);
 
-	if (file) {
-		GIT_REFCOUNT_OWN(file, NULL);
-		git_attr_file__free(file);
+	if (old) {
+		GIT_REFCOUNT_OWN(old, NULL);
+		git_attr_file__free(old);
 	}
 
 	return error;
@@ -287,14 +298,16 @@ static int attr_cache__lookup_path(
 		const char *cfgval = entry->value;
 
 		/* expand leading ~/ as needed */
-		if (cfgval && cfgval[0] == '~' && cfgval[1] == '/' &&
-			!git_sysdir_find_global_file(&buf, &cfgval[2]))
-			*out = git_buf_detach(&buf);
-		else if (cfgval)
+		if (cfgval && cfgval[0] == '~' && cfgval[1] == '/') {
+			if (! (error = git_sysdir_expand_global_file(&buf, &cfgval[2])))
+				*out = git_buf_detach(&buf);
+		} else if (cfgval) {
 			*out = git__strdup(cfgval);
+		}
 	}
-	else if (!git_sysdir_find_xdg_file(&buf, fallback))
+	else if (!git_sysdir_find_xdg_file(&buf, fallback)) {
 		*out = git_buf_detach(&buf);
+	}
 
 	git_config_entry_free(entry);
 	git_buf_free(&buf);
@@ -309,7 +322,7 @@ static void attr_cache__free(git_attr_cache *cache)
 	if (!cache)
 		return;
 
-	unlock = (git_mutex_lock(&cache->lock) == 0);
+	unlock = (attr_cache_lock(cache) == 0);
 
 	if (cache->files != NULL) {
 		git_attr_file_entry *entry;
@@ -345,13 +358,13 @@ static void attr_cache__free(git_attr_cache *cache)
 	cache->cfg_excl_file = NULL;
 
 	if (unlock)
-		git_mutex_unlock(&cache->lock);
+		attr_cache_unlock(cache);
 	git_mutex_free(&cache->lock);
 
 	git__free(cache);
 }
 
-int git_attr_cache__do_init(git_repository *repo)
+int git_attr_cache__init(git_repository *repo)
 {
 	int ret = 0;
 	git_attr_cache *cache = git_repository_attr_cache(repo);
@@ -365,7 +378,7 @@ int git_attr_cache__do_init(git_repository *repo)
 
 	/* set up lock */
 	if (git_mutex_init(&cache->lock) < 0) {
-		giterr_set(GITERR_OS, "Unable to initialize lock for attr cache");
+		giterr_set(GITERR_OS, "unable to initialize lock for attr cache");
 		git__free(cache);
 		return -1;
 	}
@@ -429,11 +442,11 @@ int git_attr_cache__insert_macro(git_repository *repo, git_attr_rule *macro)
 	if (macro->assigns.length == 0)
 		return 0;
 
-	if (git_mutex_lock(&cache->lock) < 0) {
-		giterr_set(GITERR_OS, "Unable to get attr cache lock");
+	if (attr_cache_lock(cache) < 0) {
+		giterr_set(GITERR_OS, "unable to get attr cache lock");
 		error = -1;
 	} else {
-		git_strmap_insert(macros, macro->match.pattern, macro, error);
+		git_strmap_insert(macros, macro->match.pattern, macro, &error);
 		git_mutex_unlock(&cache->lock);
 	}
 

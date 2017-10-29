@@ -35,6 +35,17 @@ GIT_BEGIN_DECL
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_repository_open(git_repository **out, const char *path);
+/**
+ * Open working tree as a repository
+ *
+ * Open the working directory of the working tree as a normal
+ * repository that can then be worked on.
+ *
+ * @param out Output pointer containing opened repository
+ * @param wt Working tree to open
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_repository_open_from_worktree(git_repository **out, git_worktree *wt);
 
 /**
  * Create a "fake" repository to wrap an object database
@@ -335,6 +346,17 @@ GIT_EXTERN(int) git_repository_init_ext(
 GIT_EXTERN(int) git_repository_head(git_reference **out, git_repository *repo);
 
 /**
+ * Retrieve the referenced HEAD for the worktree
+ *
+ * @param out pointer to the reference which will be retrieved
+ * @param repo a repository object
+ * @param name name of the worktree to retrieve HEAD for
+ * @return 0 when successful, error-code otherwise
+ */
+GIT_EXTERN(int) git_repository_head_for_worktree(git_reference **out, git_repository *repo,
+	const char *name);
+
+/**
  * Check if a repository's HEAD is detached
  *
  * A repository's HEAD is detached when it points directly to a commit
@@ -345,6 +367,20 @@ GIT_EXTERN(int) git_repository_head(git_reference **out, git_repository *repo);
  * was an error.
  */
 GIT_EXTERN(int) git_repository_head_detached(git_repository *repo);
+
+/*
+ * Check if a worktree's HEAD is detached
+ *
+ * A worktree's HEAD is detached when it points directly to a
+ * commit instead of a branch.
+ *
+ * @param repo a repository object
+ * @param name name of the worktree to retrieve HEAD for
+ * @return 1 if HEAD is detached, 0 if its not; error code if
+ *  there was an error
+ */
+GIT_EXTERN(int) git_repository_head_detached_for_worktree(git_repository *repo,
+	const char *name);
 
 /**
  * Check if the current branch is unborn
@@ -371,6 +407,42 @@ GIT_EXTERN(int) git_repository_head_unborn(git_repository *repo);
 GIT_EXTERN(int) git_repository_is_empty(git_repository *repo);
 
 /**
+ * List of items which belong to the git repository layout
+ */
+typedef enum {
+	GIT_REPOSITORY_ITEM_GITDIR,
+	GIT_REPOSITORY_ITEM_WORKDIR,
+	GIT_REPOSITORY_ITEM_COMMONDIR,
+	GIT_REPOSITORY_ITEM_INDEX,
+	GIT_REPOSITORY_ITEM_OBJECTS,
+	GIT_REPOSITORY_ITEM_REFS,
+	GIT_REPOSITORY_ITEM_PACKED_REFS,
+	GIT_REPOSITORY_ITEM_REMOTES,
+	GIT_REPOSITORY_ITEM_CONFIG,
+	GIT_REPOSITORY_ITEM_INFO,
+	GIT_REPOSITORY_ITEM_HOOKS,
+	GIT_REPOSITORY_ITEM_LOGS,
+	GIT_REPOSITORY_ITEM_MODULES,
+	GIT_REPOSITORY_ITEM_WORKTREES
+} git_repository_item_t;
+
+/**
+ * Get the location of a specific repository file or directory
+ *
+ * This function will retrieve the path of a specific repository
+ * item. It will thereby honor things like the repository's
+ * common directory, gitdir, etc. In case a file path cannot
+ * exist for a given item (e.g. the working directory of a bare
+ * repository), GIT_ENOTFOUND is returned.
+ *
+ * @param out Buffer to store the path at
+ * @param repo Repository to get path for
+ * @param item The repository item for which to retrieve the path
+ * @return 0, GIT_ENOTFOUND if the path cannot exist or an error code
+ */
+GIT_EXTERN(int) git_repository_item_path(git_buf *out, git_repository *repo, git_repository_item_t item);
+
+/**
  * Get the path of this repository
  *
  * This is the path of the `.git` folder for normal repositories,
@@ -391,6 +463,17 @@ GIT_EXTERN(const char *) git_repository_path(git_repository *repo);
  * @return the path to the working dir, if it exists
  */
 GIT_EXTERN(const char *) git_repository_workdir(git_repository *repo);
+
+/**
+ * Get the path of the shared common directory for this repository
+ *
+ * If the repository is bare is not a worktree, the git directory
+ * path is returned.
+ *
+ * @param repo A repository object
+ * @return the path to the common dir
+ */
+GIT_EXTERN(const char *) git_repository_commondir(git_repository *repo);
 
 /**
  * Set the path to the working directory for this repository
@@ -419,6 +502,14 @@ GIT_EXTERN(int) git_repository_set_workdir(
  * @return 1 if the repository is bare, 0 otherwise.
  */
 GIT_EXTERN(int) git_repository_is_bare(git_repository *repo);
+
+/**
+ * Check if a repository is a linked work tree
+ *
+ * @param repo Repo to test
+ * @return 1 if the repository is a linked work tree, 0 otherwise.
+ */
+GIT_EXTERN(int) git_repository_is_worktree(git_repository *repo);
 
 /**
  * Get the configuration file for this repository.

@@ -6,6 +6,7 @@
  */
 
 #include "common.h"
+
 #include <zlib.h>
 #include "git2/repository.h"
 #include "git2/indexer.h"
@@ -428,7 +429,7 @@ static int pack_backend__read_prefix(
 			git_oid_cpy(out_oid, short_oid);
 	} else {
 		struct git_pack_entry e;
-		git_rawobj raw;
+		git_rawobj raw = {NULL};
 
 		if ((error = pack_entry_find_prefix(
 				&e, (struct pack_backend *)backend, short_oid, len)) == 0 &&

@@ -5,8 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
-#include "posix.h"
+#include "refdb.h"
 
 #include "git2/object.h"
 #include "git2/refs.h"
@@ -14,9 +13,9 @@
 #include "git2/sys/refdb_backend.h"
 
 #include "hash.h"
-#include "refdb.h"
 #include "refs.h"
 #include "reflog.h"
+#include "posix.h"
 
 int git_refdb_new(git_refdb **out, git_repository *repo)
 {
@@ -125,13 +124,15 @@ int git_refdb_lookup(git_reference **out, git_refdb *db, const char *ref_name)
 
 int git_refdb_iterator(git_reference_iterator **out, git_refdb *db, const char *glob)
 {
+	int error;
+
 	if (!db->backend || !db->backend->iterator) {
-		giterr_set(GITERR_REFERENCE, "This backend doesn't support iterators");
+		giterr_set(GITERR_REFERENCE, "this backend doesn't support iterators");
 		return -1;
 	}
 
-	if (db->backend->iterator(out, db->backend, glob) < 0)
-		return -1;
+	if ((error = db->backend->iterator(out, db->backend, glob)) < 0)
+		return error;
 
 	GIT_REFCOUNT_INC(db);
 	(*out)->db = db;

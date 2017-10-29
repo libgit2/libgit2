@@ -4,7 +4,9 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
+
 #include "common.h"
+
 #include "git2/types.h"
 #include "git2/net.h"
 #include "git2/repository.h"
@@ -16,6 +18,7 @@
 #include "git2/pack.h"
 #include "git2/commit.h"
 #include "git2/revparse.h"
+
 #include "pack-objects.h"
 #include "refs.h"
 #include "posix.h"
@@ -252,7 +255,7 @@ static int local_ls(const git_remote_head ***out, size_t *size, git_transport *t
 	transport_local *t = (transport_local *)transport;
 
 	if (!t->have_refs) {
-		giterr_set(GITERR_NET, "The transport has not yet loaded the refs");
+		giterr_set(GITERR_NET, "the transport has not yet loaded the refs");
 		return -1;
 	}
 
@@ -371,11 +374,12 @@ static int local_push(
 	   but we forbid all pushes just in case */
 	if (!remote_repo->is_bare) {
 		error = GIT_EBAREREPO;
-		giterr_set(GITERR_INVALID, "Local push doesn't (yet) support pushing to non-bare repos.");
+		giterr_set(GITERR_INVALID, "local push doesn't (yet) support pushing to non-bare repos.");
 		goto on_error;
 	}
 
-	if ((error = git_buf_joinpath(&odb_path, git_repository_path(remote_repo), "objects/pack")) < 0)
+	if ((error = git_repository_item_path(&odb_path, remote_repo, GIT_REPOSITORY_ITEM_OBJECTS)) < 0
+		|| (error = git_buf_joinpath(&odb_path, odb_path.ptr, "pack")) < 0)
 		goto on_error;
 
 	error = git_packbuilder_write(push->pb, odb_path.ptr, 0, transfer_to_push_transfer, (void *) cbs);

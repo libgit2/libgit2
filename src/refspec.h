@@ -7,6 +7,8 @@
 #ifndef INCLUDE_refspec_h__
 #define INCLUDE_refspec_h__
 
+#include "common.h"
+
 #include "git2/refspec.h"
 #include "buffer.h"
 #include "vector.h"

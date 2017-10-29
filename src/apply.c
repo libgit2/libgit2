@@ -5,6 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "apply.h"
+
 #include <assert.h>
 
 #include "git2/patch.h"
@@ -12,7 +14,6 @@
 #include "array.h"
 #include "patch.h"
 #include "fileops.h"
-#include "apply.h"
 #include "delta.h"
 #include "zstream.h"
 
@@ -173,7 +174,7 @@ static int apply_hunk(
 		git_diff_line *line = git_array_get(patch->lines, linenum);
 
 		if (!line) {
-			error = apply_err("Preimage does not contain line %d", linenum);
+			error = apply_err("preimage does not contain line %"PRIuZ, linenum);
 			goto done;
 		}
 
@@ -193,7 +194,7 @@ static int apply_hunk(
 	line_num = hunk->hunk.new_start ? hunk->hunk.new_start - 1 : 0;
 
 	if (!find_hunk_linenum(&line_num, image, &preimage, line_num)) {
-		error = apply_err("Hunk at line %d did not apply",
+		error = apply_err("hunk at line %d did not apply",
 			hunk->hunk.new_start);
 		goto done;
 	}

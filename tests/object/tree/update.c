@@ -196,6 +196,63 @@ void test_object_tree_update__add_blobs(void)
 	git_tree_free(base_tree);
 }
 
+void test_object_tree_update__add_blobs_unsorted(void)
+{
+	git_oid tree_index_id, tree_updater_id, base_id;
+	git_tree *base_tree;
+	git_index *idx;
+	git_index_entry entry = { {0} };
+	int i;
+	const char *paths[] = {
+		"some/deep/path",
+		"a/path/elsewhere",
+		"some/other/path",
+	};
+
+	git_tree_update updates[] = {
+		{ GIT_TREE_UPDATE_UPSERT, {{0}}, GIT_FILEMODE_BLOB, paths[0]},
+		{ GIT_TREE_UPDATE_UPSERT, {{0}}, GIT_FILEMODE_BLOB, paths[1]},
+		{ GIT_TREE_UPDATE_UPSERT, {{0}}, GIT_FILEMODE_BLOB, paths[2]},
+	};
+
+	cl_git_pass(git_oid_fromstr(&base_id, "c4dc1555e4d4fa0e0c9c3fc46734c7c35b3ce90b"));
+
+	entry.mode = GIT_FILEMODE_BLOB;
+	cl_git_pass(git_oid_fromstr(&entry.id, "fa49b077972391ad58037050f2a75f74e3671e92"));
+
+	for (i = 0; i < 3; i++) {
+		cl_git_pass(git_oid_fromstr(&updates[i].id, "fa49b077972391ad58037050f2a75f74e3671e92"));
+	}
+
+	for (i = 0; i < 2; i++) {
+		int j;
+
+		/* Create it with an index */
+		cl_git_pass(git_index_new(&idx));
+
+		base_tree = NULL;
+		if (i == 1) {
+			cl_git_pass(git_tree_lookup(&base_tree, g_repo, &base_id));
+			cl_git_pass(git_index_read_tree(idx, base_tree));
+		}
+
+		for (j = 0; j < 3; j++) {
+			entry.path = paths[j];
+			cl_git_pass(git_index_add(idx, &entry));
+		}
+
+		cl_git_pass(git_index_write_tree_to(&tree_index_id, idx, g_repo));
+		git_index_free(idx);
+
+		/* Perform the same operations via the tree updater */
+		cl_git_pass(git_tree_create_updated(&tree_updater_id, g_repo, base_tree, 3, updates));
+
+		cl_assert_equal_oid(&tree_index_id, &tree_updater_id);
+	}
+
+	git_tree_free(base_tree);
+}
+
 void test_object_tree_update__add_conflict(void)
 {
 	int i;

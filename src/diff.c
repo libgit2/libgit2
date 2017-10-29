@@ -4,9 +4,10 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#include "git2/version.h"
-#include "common.h"
+
 #include "diff.h"
+
+#include "git2/version.h"
 #include "diff_generate.h"
 #include "patch.h"
 #include "commit.h"
@@ -18,6 +19,12 @@
 	(((DIFF)->opts.flags & (FLAG)) == 0)
 #define DIFF_FLAG_SET(DIFF,FLAG,VAL) (DIFF)->opts.flags = \
 	(VAL) ? ((DIFF)->opts.flags | (FLAG)) : ((DIFF)->opts.flags & ~(VAL))
+
+struct patch_id_args {
+	git_hash_ctx ctx;
+	git_oid result;
+	int first_file;
+};
 
 GIT_INLINE(const char *) diff_delta__path(const git_diff_delta *delta)
 {
@@ -118,6 +125,41 @@ int git_diff_get_perfdata(git_diff_perfdata *out, const git_diff *diff)
 	out->stat_calls = diff->perf.stat_calls;
 	out->oid_calculations = diff->perf.oid_calculations;
 	return 0;
+}
+
+int git_diff_foreach(
+	git_diff *diff,
+	git_diff_file_cb file_cb,
+	git_diff_binary_cb binary_cb,
+	git_diff_hunk_cb hunk_cb,
+	git_diff_line_cb data_cb,
+	void *payload)
+{
+	int error = 0;
+	git_diff_delta *delta;
+	size_t idx;
+
+	assert(diff);
+
+	git_vector_foreach(&diff->deltas, idx, delta) {
+		git_patch *patch;
+
+		/* check flags against patch status */
+		if (git_diff_delta__should_skip(&diff->opts, delta))
+			continue;
+
+		if ((error = git_patch_from_diff(&patch, diff, idx)) != 0)
+			break;
+
+		error = git_patch__invoke_callbacks(patch, file_cb, binary_cb,
+						    hunk_cb, data_cb, payload);
+		git_patch_free(patch);
+
+		if (error)
+			break;
+	}
+
+	return error;
 }
 
 int git_diff_format_email__append_header_tobuf(
@@ -339,3 +381,142 @@ int git_diff_format_email_init_options(
 	return 0;
 }
 
+static int flush_hunk(git_oid *result, git_hash_ctx *ctx)
+{
+	git_oid hash;
+	unsigned short carry = 0;
+	int error, i;
+
+	if ((error = git_hash_final(&hash, ctx)) < 0 ||
+	    (error = git_hash_init(ctx)) < 0)
+		return error;
+
+	for (i = 0; i < GIT_OID_RAWSZ; i++) {
+		carry += result->id[i] + hash.id[i];
+		result->id[i] = carry;
+		carry >>= 8;
+	}
+
+	return 0;
+}
+
+static void strip_spaces(git_buf *buf)
+{
+	char *src = buf->ptr, *dst = buf->ptr;
+	char c;
+	size_t len = 0;
+
+	while ((c = *src++) != '\0') {
+		if (!git__isspace(c)) {
+			*dst++ = c;
+			len++;
+		}
+	}
+
+	git_buf_truncate(buf, len);
+}
+
+static int file_cb(
+	const git_diff_delta *delta,
+	float progress,
+	void *payload)
+{
+	struct patch_id_args *args = (struct patch_id_args *) payload;
+	git_buf buf = GIT_BUF_INIT;
+	int error;
+
+	GIT_UNUSED(progress);
+
+	if (!args->first_file &&
+	    (error = flush_hunk(&args->result, &args->ctx)) < 0)
+		goto out;
+	args->first_file = 0;
+
+	if ((error = git_buf_printf(&buf,
+				    "diff--gita/%sb/%s---a/%s+++b/%s",
+				    delta->old_file.path,
+				    delta->new_file.path,
+				    delta->old_file.path,
+				    delta->new_file.path)) < 0)
+		goto out;
+
+	strip_spaces(&buf);
+
+	if ((error = git_hash_update(&args->ctx, buf.ptr, buf.size)) < 0)
+		goto out;
+
+out:
+	git_buf_free(&buf);
+	return error;
+}
+
+static int line_cb(
+	const git_diff_delta *delta,
+	const git_diff_hunk *hunk,
+	const git_diff_line *line,
+	void *payload)
+{
+	struct patch_id_args *args = (struct patch_id_args *) payload;
+	git_buf buf = GIT_BUF_INIT;
+	int error;
+
+	GIT_UNUSED(delta);
+	GIT_UNUSED(hunk);
+
+	switch (line->origin) {
+	    case GIT_DIFF_LINE_ADDITION:
+		git_buf_putc(&buf, '+');
+		break;
+	    case GIT_DIFF_LINE_DELETION:
+		git_buf_putc(&buf, '-');
+		break;
+	    case GIT_DIFF_LINE_CONTEXT:
+		break;
+	    default:
+		giterr_set(GITERR_PATCH, "invalid line origin for patch");
+		return -1;
+	}
+
+	git_buf_put(&buf, line->content, line->content_len);
+	strip_spaces(&buf);
+
+	if ((error = git_hash_update(&args->ctx, buf.ptr, buf.size)) < 0)
+		goto out;
+
+out:
+	git_buf_free(&buf);
+	return error;
+}
+
+int git_diff_patchid_init_options(git_diff_patchid_options *opts, unsigned int version)
+{
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_diff_patchid_options, GIT_DIFF_PATCHID_OPTIONS_INIT);
+	return 0;
+}
+
+int git_diff_patchid(git_oid *out, git_diff *diff, git_diff_patchid_options *opts)
+{
+	struct patch_id_args args;
+	int error;
+
+	GITERR_CHECK_VERSION(
+		opts, GIT_DIFF_PATCHID_OPTIONS_VERSION, "git_diff_patchid_options");
+
+	memset(&args, 0, sizeof(args));
+	args.first_file = 1;
+	if ((error = git_hash_ctx_init(&args.ctx)) < 0)
+		goto out;
+
+	if ((error = git_diff_foreach(diff, file_cb, NULL, NULL, line_cb, &args)) < 0)
+		goto out;
+
+	if ((error = (flush_hunk(&args.result, &args.ctx))) < 0)
+		goto out;
+
+	git_oid_cpy(out, &args.result);
+
+out:
+	git_hash_ctx_cleanup(&args.ctx);
+	return error;
+}

@@ -4,7 +4,10 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#include <git2/common.h>
+
+#include "common.h"
+
+#include "git2/common.h"
 
 #if !defined(GIT_WIN32) && !defined(NO_MMAP)
 
@@ -52,7 +55,7 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 	out->data = mmap(NULL, len, mprot, mflag, fd, offset);
 
 	if (!out->data || out->data == MAP_FAILED) {
-		giterr_set(GITERR_OS, "Failed to mmap. Could not write data");
+		giterr_set(GITERR_OS, "failed to mmap. Could not write data");
 		return -1;
 	}
 

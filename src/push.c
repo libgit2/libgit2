@@ -5,14 +5,14 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "push.h"
+
 #include "git2.h"
 
-#include "common.h"
 #include "pack.h"
 #include "pack-objects.h"
 #include "remote.h"
 #include "vector.h"
-#include "push.h"
 #include "tree.h"
 
 static int push_spec_rref_cmp(const void *a, const void *b)
@@ -90,7 +90,7 @@ static void free_refspec(push_spec *spec)
 static int check_rref(char *ref)
 {
 	if (git__prefixcmp(ref, "refs/")) {
-		giterr_set(GITERR_INVALID, "Not a valid reference '%s'", ref);
+		giterr_set(GITERR_INVALID, "not a valid reference '%s'", ref);
 		return -1;
 	}
 
@@ -111,7 +111,7 @@ static int check_lref(git_push *push, char *ref)
 		giterr_set(GITERR_REFERENCE,
 			"src refspec '%s' does not match any existing object", ref);
 	else
-		giterr_set(GITERR_INVALID, "Not a valid reference '%s'", ref);
+		giterr_set(GITERR_INVALID, "not a valid reference '%s'", ref);
 	return -1;
 }
 
@@ -177,6 +177,9 @@ int git_push_update_tips(git_push *push, const git_remote_callbacks *callbacks)
 		fetch_spec = git_remote__matching_refspec(push->remote, status->ref);
 		if (!fetch_spec)
 			continue;
+
+		/* Clear the buffer which can be dirty from previous iteration */
+		git_buf_clear(&remote_ref_name);
 
 		if ((error = git_refspec_transform(&remote_ref_name, fetch_spec, status->ref)) < 0)
 			goto on_error;
@@ -321,7 +324,7 @@ static int revwalk(git_vector *commits, git_push *push)
 
 			if (!git_odb_exists(push->repo->_odb, &spec->roid)) {
 				giterr_set(GITERR_REFERENCE, 
-					"Cannot push because a reference that you are trying to update on the remote contains commits that are not present locally.");
+					"cannot push because a reference that you are trying to update on the remote contains commits that are not present locally.");
 				error = GIT_ENONFASTFORWARD;
 				goto on_error;
 			}
@@ -332,7 +335,7 @@ static int revwalk(git_vector *commits, git_push *push)
 			if (error == GIT_ENOTFOUND ||
 				(!error && !git_oid_equal(&base, &spec->roid))) {
 				giterr_set(GITERR_REFERENCE,
-					"Cannot push non-fastforwardable reference");
+					"cannot push non-fastforwardable reference");
 				error = GIT_ENONFASTFORWARD;
 				goto on_error;
 			}
@@ -553,7 +556,7 @@ static int calculate_work(git_push *push)
 			/* This is a create or update.  Local ref must exist. */
 			if (git_reference_name_to_id(
 					&spec->loid, push->repo, spec->refspec.src) < 0) {
-				giterr_set(GITERR_REFERENCE, "No such reference '%s'", spec->refspec.src);
+				giterr_set(GITERR_REFERENCE, "no such reference '%s'", spec->refspec.src);
 				return -1;
 			}
 		}
@@ -579,7 +582,7 @@ static int do_push(git_push *push, const git_remote_callbacks *callbacks)
 	git_transport *transport = push->remote->transport;
 
 	if (!transport->push) {
-		giterr_set(GITERR_NET, "Remote transport doesn't support push");
+		giterr_set(GITERR_NET, "remote transport doesn't support push");
 		error = -1;
 		goto on_error;
 	}

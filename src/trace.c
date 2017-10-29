@@ -5,10 +5,10 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "buffer.h"
-#include "common.h"
-#include "global.h"
 #include "trace.h"
+
+#include "buffer.h"
+#include "global.h"
 #include "git2/trace.h"
 
 #ifdef GIT_TRACE
@@ -32,7 +32,7 @@ int git_trace_set(git_trace_level_t level, git_trace_callback callback)
 	GIT_UNUSED(callback);
 
 	giterr_set(GITERR_INVALID,
-		"This version of libgit2 was not built with tracing.");
+		"this version of libgit2 was not built with tracing.");
 	return -1;
 #endif
 }

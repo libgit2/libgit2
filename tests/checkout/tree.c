@@ -422,6 +422,41 @@ void test_checkout_tree__can_checkout_with_pattern(void)
 	cl_assert(git_path_exists("testrepo/new.txt"));
 }
 
+void test_checkout_tree__pathlist_checkout_ignores_non_matches(void)
+{
+	char *entries[] = { "branch_file.txt", "link_to_new.txt" };
+
+	/* reset to beginning of history (i.e. just a README file) */
+
+	g_opts.checkout_strategy =
+		GIT_CHECKOUT_FORCE | GIT_CHECKOUT_REMOVE_UNTRACKED;
+
+	cl_git_pass(git_revparse_single(&g_object, g_repo, "refs/heads/master"));
+
+	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
+	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/master"));
+
+	cl_assert(git_path_exists("testrepo/README"));
+	cl_assert(git_path_exists("testrepo/branch_file.txt"));
+	cl_assert(git_path_exists("testrepo/link_to_new.txt"));
+	cl_assert(git_path_exists("testrepo/new.txt"));
+
+	git_object_free(g_object);
+	cl_git_pass(git_revparse_single(&g_object, g_repo, "8496071c1b46c854b31185ea97743be6a8774479"));
+
+	g_opts.checkout_strategy =
+		GIT_CHECKOUT_FORCE | GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH;
+	g_opts.paths.strings = entries;
+	g_opts.paths.count = 2;
+
+	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
+
+	cl_assert(git_path_exists("testrepo/README"));
+	cl_assert(!git_path_exists("testrepo/branch_file.txt"));
+	cl_assert(!git_path_exists("testrepo/link_to_new.txt"));
+	cl_assert(git_path_exists("testrepo/new.txt"));
+}
+
 void test_checkout_tree__can_disable_pattern_match(void)
 {
 	char *entries[] = { "b*.txt" };

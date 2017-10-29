@@ -8,6 +8,8 @@
 #ifndef INCLUDE_http_auth_h__
 #define INCLUDE_http_auth_h__
 
+#include "common.h"
+
 #include "git2.h"
 #include "netops.h"
 

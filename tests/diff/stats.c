@@ -114,6 +114,42 @@ void test_diff_stats__shortstat(void)
 	git_buf_free(&buf);
 }
 
+void test_diff_stats__shortstat_noinsertions(void)
+{
+	git_buf buf = GIT_BUF_INIT;
+	const char *stat =
+	" 1 file changed, 2 deletions(-)\n";
+
+	diff_stats_from_commit_oid(
+		&_stats, "06b7b69a62cbd1e53c6c4e0c3f16473dcfdb4af6", false);
+
+	cl_assert_equal_sz(1, git_diff_stats_files_changed(_stats));
+	cl_assert_equal_sz(0, git_diff_stats_insertions(_stats));
+	cl_assert_equal_sz(2, git_diff_stats_deletions(_stats));
+
+	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_SHORT, 0));
+	cl_assert_equal_s(stat, git_buf_cstr(&buf));
+	git_buf_free(&buf);
+}
+
+void test_diff_stats__shortstat_nodeletions(void)
+{
+	git_buf buf = GIT_BUF_INIT;
+	const char *stat =
+	" 1 file changed, 3 insertions(+)\n";
+
+	diff_stats_from_commit_oid(
+		&_stats, "5219b9784f9a92d7bd7cb567a6d6a21bfb86697e", false);
+
+	cl_assert_equal_sz(1, git_diff_stats_files_changed(_stats));
+	cl_assert_equal_sz(3, git_diff_stats_insertions(_stats));
+	cl_assert_equal_sz(0, git_diff_stats_deletions(_stats));
+
+	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_SHORT, 0));
+	cl_assert_equal_s(stat, git_buf_cstr(&buf));
+	git_buf_free(&buf);
+}
+
 void test_diff_stats__rename(void)
 {
 	git_buf buf = GIT_BUF_INIT;

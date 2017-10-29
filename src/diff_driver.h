@@ -8,6 +8,7 @@
 #define INCLUDE_diff_driver_h__
 
 #include "common.h"
+
 #include "buffer.h"
 
 typedef struct git_diff_driver_registry git_diff_driver_registry;

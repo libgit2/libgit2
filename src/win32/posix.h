@@ -14,6 +14,9 @@
 #include "utf-conv.h"
 #include "dir.h"
 
+extern unsigned long git_win32__createfile_sharemode;
+extern int git_win32__retries;
+
 typedef SOCKET GIT_SOCKET;
 
 #define p_lseek(f,n,w) _lseeki64(f, n, w)
@@ -56,5 +59,8 @@ extern int p_lstat_posixly(const char *filename, struct stat *buf);
 
 extern struct tm * p_localtime_r(const time_t *timer, struct tm *result);
 extern struct tm * p_gmtime_r(const time_t *timer, struct tm *result);
+
+/* Use the bundled regcomp */
+#define p_regcomp regcomp
 
 #endif

@@ -7,6 +7,8 @@
 #ifndef INCLUDE_apply_h__
 #define INCLUDE_apply_h__
 
+#include "common.h"
+
 #include "git2/patch.h"
 #include "buffer.h"
 

@@ -4,8 +4,10 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#include <git2.h>
-#include "common.h"
+
+#include "util.h"
+
+#include "git2.h"
 #include <stdio.h>
 #include <ctype.h>
 #include "posix.h"
@@ -136,7 +138,7 @@ int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const cha
 
 Return:
 	if (ndig == 0) {
-		giterr_set(GITERR_INVALID, "Failed to convert string to long. Not a number");
+		giterr_set(GITERR_INVALID, "failed to convert string to long: not a number");
 		return -1;
 	}
 
@@ -144,7 +146,7 @@ Return:
 		*endptr = p;
 
 	if (ovfl) {
-		giterr_set(GITERR_INVALID, "Failed to convert string to long. Overflow error");
+		giterr_set(GITERR_INVALID, "failed to convert string to long: overflow error");
 		return -1;
 	}
 
@@ -169,7 +171,7 @@ int git__strntol32(int32_t *result, const char *nptr, size_t nptr_len, const cha
 
 	tmp_int = tmp_long & 0xFFFFFFFF;
 	if (tmp_int != tmp_long) {
-		giterr_set(GITERR_INVALID, "Failed to convert. '%s' is too large", nptr);
+		giterr_set(GITERR_INVALID, "failed to convert: '%s' is too large", nptr);
 		return -1;
 	}
 

@@ -8,6 +8,8 @@
 #ifndef INCLUDE_w32_stack_h__
 #define INCLUDE_w32_stack_h__
 
+#include "common.h"
+
 #if defined(GIT_MSVC_CRTDBG)
 
 /**

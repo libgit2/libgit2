@@ -7,6 +7,8 @@
 #ifndef INCLUDE_attrcache_h__
 #define INCLUDE_attrcache_h__
 
+#include "common.h"
+
 #include "attr_file.h"
 #include "strmap.h"
 
@@ -22,10 +24,7 @@ typedef struct {
 	git_pool  pool;
 } git_attr_cache;
 
-extern int git_attr_cache__do_init(git_repository *repo);
-
-#define git_attr_cache__init(REPO) \
-	(git_repository_attr_cache(REPO) ? 0 : git_attr_cache__do_init(REPO))
+extern int git_attr_cache__init(git_repository *repo);
 
 /* get file - loading and reload as needed */
 extern int git_attr_cache__get(

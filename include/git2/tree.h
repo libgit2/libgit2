@@ -375,6 +375,19 @@ GIT_EXTERN(void) git_treebuilder_filter(
 GIT_EXTERN(int) git_treebuilder_write(
 	git_oid *id, git_treebuilder *bld);
 
+/**
+ * Write the contents of the tree builder as a tree object
+ * using a shared git_buf.
+ *
+ * @see git_treebuilder_write
+ *
+ * @param oid Pointer to store the OID of the newly written tree
+ * @param bld Tree builder to write
+ * @param tree Shared buffer for writing the tree. Will be grown as necessary.
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_treebuilder_write_with_buffer(
+	git_oid *oid, git_treebuilder *bld, git_buf *tree);
 
 /** Callback for the tree traversal method */
 typedef int (*git_treewalk_cb)(

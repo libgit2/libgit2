@@ -1,6 +1,14 @@
+/*
+ * Copyright (C) the libgit2 contributors. All rights reserved.
+ *
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
+ */
+
+#include "ignore.h"
+
 #include "git2/ignore.h"
 #include "common.h"
-#include "ignore.h"
 #include "attrcache.h"
 #include "path.h"
 #include "config.h"
@@ -40,38 +48,42 @@
  */
 static int does_negate_pattern(git_attr_fnmatch *rule, git_attr_fnmatch *neg)
 {
+	int (*cmp)(const char *, const char *, size_t);
 	git_attr_fnmatch *longer, *shorter;
 	char *p;
 
-	if ((rule->flags & GIT_ATTR_FNMATCH_NEGATIVE) == 0
-		&& (neg->flags & GIT_ATTR_FNMATCH_NEGATIVE) != 0) {
+	if ((rule->flags & GIT_ATTR_FNMATCH_NEGATIVE) != 0
+	    || (neg->flags & GIT_ATTR_FNMATCH_NEGATIVE) == 0)
+		return false;
 
-		/* If lengths match we need to have an exact match */
-		if (rule->length == neg->length) {
-			return strcmp(rule->pattern, neg->pattern) == 0;
-		} else if (rule->length < neg->length) {
-			shorter = rule;
-			longer = neg;
-		} else {
-			shorter = neg;
-			longer = rule;
-		}
+	if (neg->flags & GIT_ATTR_FNMATCH_ICASE)
+		cmp = git__strncasecmp;
+	else
+		cmp = strncmp;
 
-		/* Otherwise, we need to check if the shorter
-		 * rule is a basename only (that is, it contains
-		 * no path separator) and, if so, if it
-		 * matches the tail of the longer rule */
-		p = longer->pattern + longer->length - shorter->length;
-
-		if (p[-1] != '/')
-			return false;
-		if (memchr(shorter->pattern, '/', shorter->length) != NULL)
-			return false;
-
-		return memcmp(p, shorter->pattern, shorter->length) == 0;
+	/* If lengths match we need to have an exact match */
+	if (rule->length == neg->length) {
+		return cmp(rule->pattern, neg->pattern, rule->length) == 0;
+	} else if (rule->length < neg->length) {
+		shorter = rule;
+		longer = neg;
+	} else {
+		shorter = neg;
+		longer = rule;
 	}
 
-	return false;
+	/* Otherwise, we need to check if the shorter
+	 * rule is a basename only (that is, it contains
+	 * no path separator) and, if so, if it
+	 * matches the tail of the longer rule */
+	p = longer->pattern + longer->length - shorter->length;
+
+	if (p[-1] != '/')
+		return false;
+	if (memchr(shorter->pattern, '/', shorter->length) != NULL)
+		return false;
+
+	return cmp(p, shorter->pattern, shorter->length) == 0;
 }
 
 /**
@@ -89,13 +101,17 @@ static int does_negate_pattern(git_attr_fnmatch *rule, git_attr_fnmatch *neg)
  */
 static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match)
 {
-	int error = 0;
+	int error = 0, fnflags;
 	size_t i;
 	git_attr_fnmatch *rule;
 	char *path;
 	git_buf buf = GIT_BUF_INIT;
 
 	*out = 0;
+
+	fnflags = FNM_PATHNAME;
+	if (match->flags & GIT_ATTR_FNMATCH_ICASE)
+		fnflags |= FNM_IGNORECASE;
 
 	/* path of the file relative to the workdir, so we match the rules in subdirs */
 	if (match->containing_dir) {
@@ -117,12 +133,12 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 				continue;
 		}
 
-	/*
-	 * When dealing with a directory, we add '/<star>' so
-	 * p_fnmatch() honours FNM_PATHNAME. Checking for LEADINGDIR
-	 * alone isn't enough as that's also set for nagations, so we
-	 * need to check that NEGATIVE is off.
-	 */
+		/*
+		 * When dealing with a directory, we add '/<star>' so
+		 * p_fnmatch() honours FNM_PATHNAME. Checking for LEADINGDIR
+		 * alone isn't enough as that's also set for nagations, so we
+		 * need to check that NEGATIVE is off.
+		 */
 		git_buf_clear(&buf);
 		if (rule->containing_dir) {
 			git_buf_puts(&buf, rule->containing_dir);
@@ -136,7 +152,7 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 		if (error < 0)
 			goto out;
 
-		if ((error = p_fnmatch(git_buf_cstr(&buf), path, FNM_PATHNAME)) < 0) {
+		if ((error = p_fnmatch(git_buf_cstr(&buf), path, fnflags)) < 0) {
 			giterr_set(GITERR_INVALID, "error matching pattern");
 			goto out;
 		}
@@ -175,7 +191,7 @@ static int parse_ignore_file(
 		context = attrs->entry->path;
 
 	if (git_mutex_lock(&attrs->lock) < 0) {
-		giterr_set(GITERR_OS, "Failed to lock ignore file");
+		giterr_set(GITERR_OS, "failed to lock ignore file");
 		return -1;
 	}
 
@@ -199,8 +215,14 @@ static int parse_ignore_file(
 
 			scan = git__next_line(scan);
 
-			/* if a negative match doesn't actually do anything, throw it away */
-			if (match->flags & GIT_ATTR_FNMATCH_NEGATIVE)
+			/*
+			 * If a negative match doesn't actually do anything,
+			 * throw it away. As we cannot always verify whether a
+			 * rule containing wildcards negates another rule, we
+			 * do not optimize away these rules, though.
+			 * */
+			if (match->flags & GIT_ATTR_FNMATCH_NEGATIVE
+			    && !(match->flags & GIT_ATTR_FNMATCH_HASWILD))
 				error = does_negate_rule(&valid_rule, &attrs->rules, match);
 
 			if (!error && valid_rule)
@@ -277,8 +299,9 @@ int git_ignore__for_path(
 {
 	int error = 0;
 	const char *workdir = git_repository_workdir(repo);
+	git_buf infopath = GIT_BUF_INIT;
 
-	assert(ignores && path);
+	assert(repo && ignores && path);
 
 	memset(ignores, 0, sizeof(*ignores));
 	ignores->repo = repo;
@@ -322,10 +345,14 @@ int git_ignore__for_path(
 			goto cleanup;
 	}
 
+	if ((error = git_repository_item_path(&infopath,
+			repo, GIT_REPOSITORY_ITEM_INFO)) < 0)
+		goto cleanup;
+
 	/* load .git/info/exclude */
 	error = push_ignore_file(
 		ignores, &ignores->ign_global,
-		git_repository_path(repo), GIT_IGNORE_FILE_INREPO);
+		infopath.ptr, GIT_IGNORE_FILE_INREPO);
 	if (error < 0)
 		goto cleanup;
 
@@ -336,6 +363,7 @@ int git_ignore__for_path(
 			git_repository_attr_cache(repo)->cfg_excl_file);
 
 cleanup:
+	git_buf_free(&infopath);
 	if (error < 0)
 		git_ignore__free(ignores);
 
@@ -503,9 +531,9 @@ int git_ignore_path_is_ignored(
 	unsigned int i;
 	git_attr_file *file;
 
-	assert(ignored && pathname);
+	assert(repo && ignored && pathname);
 
-	workdir = repo ? git_repository_workdir(repo) : NULL;
+	workdir = git_repository_workdir(repo);
 
 	memset(&path, 0, sizeof(path));
 	memset(&ignores, 0, sizeof(ignores));

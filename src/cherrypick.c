@@ -6,6 +6,7 @@
 */
 
 #include "common.h"
+
 #include "repository.h"
 #include "filebuf.h"
 #include "merge.h"
@@ -28,7 +29,7 @@ static int write_cherrypick_head(
 	git_buf file_path = GIT_BUF_INIT;
 	int error = 0;
 
-	if ((error = git_buf_joinpath(&file_path, repo->path_repository, GIT_CHERRYPICK_HEAD_FILE)) >= 0 &&
+	if ((error = git_buf_joinpath(&file_path, repo->gitdir, GIT_CHERRYPICK_HEAD_FILE)) >= 0 &&
 		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_CHERRYPICK_FILE_MODE)) >= 0 &&
 		(error = git_filebuf_printf(&file, "%s\n", commit_oidstr)) >= 0)
 		error = git_filebuf_commit(&file);
@@ -49,7 +50,7 @@ static int write_merge_msg(
 	git_buf file_path = GIT_BUF_INIT;
 	int error = 0;
 
-	if ((error = git_buf_joinpath(&file_path, repo->path_repository, GIT_MERGE_MSG_FILE)) < 0 ||
+	if ((error = git_buf_joinpath(&file_path, repo->gitdir, GIT_MERGE_MSG_FILE)) < 0 ||
 		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_CHERRYPICK_FILE_MODE)) < 0 ||
 		(error = git_filebuf_printf(&file, "%s", commit_msg)) < 0)
 		goto cleanup;
@@ -130,13 +131,13 @@ int git_cherrypick_commit(
 	if (git_commit_parentcount(cherrypick_commit) > 1) {
 		if (!mainline)
 			return cherrypick_seterr(cherrypick_commit,
-				"Mainline branch is not specified but %s is a merge commit");
+				"mainline branch is not specified but %s is a merge commit");
 
 		parent = mainline;
 	} else {
 		if (mainline)
 			return cherrypick_seterr(cherrypick_commit,
-				"Mainline branch specified but %s is not a merge commit");
+				"mainline branch specified but %s is not a merge commit");
 
 		parent = git_commit_parentcount(cherrypick_commit);
 	}

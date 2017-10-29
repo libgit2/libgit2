@@ -7,6 +7,8 @@
 #ifndef INCLUDE_git_win32_buffer_h__
 #define INCLUDE_git_win32_buffer_h__
 
+#include "common.h"
+
 #include "../buffer.h"
 
 /**

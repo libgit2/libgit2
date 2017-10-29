@@ -44,8 +44,8 @@ typedef enum {
 typedef struct git_describe_options {
 	unsigned int version;
 
-	unsigned int max_candidates_tags; /** default: 10 */
-	unsigned int describe_strategy; /** default: GIT_DESCRIBE_DEFAULT */
+	unsigned int max_candidates_tags; /**< default: 10 */
+	unsigned int describe_strategy; /**< default: GIT_DESCRIBE_DEFAULT */
 	const char *pattern;
 	/**
 	 * When calculating the distance from the matching tag or
@@ -105,6 +105,9 @@ typedef struct {
 
 GIT_EXTERN(int) git_describe_init_format_options(git_describe_format_options *opts, unsigned int version);
 
+/**
+ * A struct that stores the result of a describe operation.
+ */
 typedef struct git_describe_result git_describe_result;
 
 /**

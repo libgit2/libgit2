@@ -204,7 +204,7 @@ void assert__submodule_exists(
 	git_submodule *sm;
 	int error = git_submodule_lookup(&sm, repo, name);
 	if (error)
-		cl_git_report_failure(error, file, line, msg);
+		cl_git_report_failure(error, 0, file, line, msg);
 	cl_assert_at_line(sm != NULL, file, line);
 	git_submodule_free(sm);
 }

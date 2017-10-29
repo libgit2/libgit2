@@ -53,7 +53,7 @@ typedef enum {
  *
  * @param reset_type Kind of reset operation to perform.
  *
- * @param checkout_opts Checkout options to be used for a HARD reset.
+ * @param checkout_opts Optional checkout options to be used for a HARD reset.
  * The checkout_strategy field will be overridden (based on reset_type).
  * This parameter can be used to propagate notify and progress callbacks.
  *
@@ -61,7 +61,7 @@ typedef enum {
  */
 GIT_EXTERN(int) git_reset(
 	git_repository *repo,
-	git_object *target,
+	const git_object *target,
 	git_reset_t reset_type,
 	const git_checkout_options *checkout_opts);
 
@@ -79,7 +79,7 @@ GIT_EXTERN(int) git_reset(
  */
 GIT_EXTERN(int) git_reset_from_annotated(
 	git_repository *repo,
-	git_annotated_commit *commit,
+	const git_annotated_commit *commit,
 	git_reset_t reset_type,
 	const git_checkout_options *checkout_opts);
 
@@ -103,8 +103,8 @@ GIT_EXTERN(int) git_reset_from_annotated(
  */
 GIT_EXTERN(int) git_reset_default(
 	git_repository *repo,
-	git_object *target,
-	git_strarray* pathspecs);
+	const git_object *target,
+	const git_strarray* pathspecs);
 
 /** @} */
 GIT_END_DECL

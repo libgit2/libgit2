@@ -7,6 +7,10 @@
 #ifndef INCLUDE_common_h__
 #define INCLUDE_common_h__
 
+#ifndef LIBGIT2_NO_FEATURES_H
+# include "git2/sys/features.h"
+#endif
+
 #include "git2/common.h"
 #include "cc-compat.h"
 
@@ -46,10 +50,6 @@
 # include "win32/version.h"
 # ifdef GIT_THREADS
 #	include "win32/thread.h"
-# endif
-# if defined(GIT_MSVC_CRTDBG)
-#   include "win32/w32_stack.h"
-#   include "win32/w32_crtdbg_stacktrace.h"
 # endif
 
 #else
@@ -103,7 +103,8 @@
 /**
  * Set the error message for this thread, formatting as needed.
  */
-void giterr_set(int error_class, const char *string, ...);
+
+void giterr_set(int error_class, const char *string, ...) GIT_FORMAT_PRINTF(2, 3);
 
 /**
  * Set the error message for a regex failure, using the internal regex
@@ -187,7 +188,7 @@ GIT_INLINE(int) giterr__check_version(const void *structure, unsigned int expect
 	if (actual > 0 && actual <= expected_max)
 		return 0;
 
-	giterr_set(GITERR_INVALID, "Invalid version %d on %s", actual, name);
+	giterr_set(GITERR_INVALID, "invalid version %d on %s", actual, name);
 	return -1;
 }
 #define GITERR_CHECK_VERSION(S,V,N) if (giterr__check_version(S,V,N) < 0) return -1

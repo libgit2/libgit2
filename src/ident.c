@@ -5,6 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "common.h"
+
 #include "git2/sys/filter.h"
 #include "filter.h"
 #include "buffer.h"

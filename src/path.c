@@ -4,8 +4,9 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#include "common.h"
+
 #include "path.h"
+
 #include "posix.h"
 #include "repository.h"
 #ifdef GIT_WIN32
@@ -111,13 +112,41 @@ Exit:
 }
 
 /*
+ * Determine if the path is a Windows prefix and, if so, returns
+ * its actual lentgh. If it is not a prefix, returns -1.
+ */
+static int win32_prefix_length(const char *path, int len)
+{
+#ifndef GIT_WIN32
+	GIT_UNUSED(path);
+	GIT_UNUSED(len);
+#else
+	/*
+	 * Mimic unix behavior where '/.git' returns '/': 'C:/.git' will return
+	 * 'C:/' here
+	 */
+	if (len == 2 && LOOKS_LIKE_DRIVE_PREFIX(path))
+		return 2;
+
+	/*
+	 * Similarly checks if we're dealing with a network computer name
+	 * '//computername/.git' will return '//computername/'
+	 */
+	if (looks_like_network_computer_name(path, len))
+		return len;
+#endif
+
+	return -1;
+}
+
+/*
  * Based on the Android implementation, BSD licensed.
  * Check http://android.git.kernel.org/
  */
 int git_path_dirname_r(git_buf *buffer, const char *path)
 {
 	const char *endp;
-	int result, len;
+	int is_prefix = 0, len;
 
 	/* Empty or NULL string gets treated as "." */
 	if (path == NULL || *path == '\0') {
@@ -130,6 +159,11 @@ int git_path_dirname_r(git_buf *buffer, const char *path)
 	endp = path + strlen(path) - 1;
 	while (endp > path && *endp == '/')
 		endp--;
+
+	if ((len = win32_prefix_length(path, endp - path + 1)) > 0) {
+		is_prefix = 1;
+		goto Exit;
+	}
 
 	/* Find the start of the dir */
 	while (endp > path && *endp != '/')
@@ -146,35 +180,23 @@ int git_path_dirname_r(git_buf *buffer, const char *path)
 		endp--;
 	} while (endp > path && *endp == '/');
 
+	if ((len = win32_prefix_length(path, endp - path + 1)) > 0) {
+		is_prefix = 1;
+		goto Exit;
+	}
+
 	/* Cast is safe because max path < max int */
 	len = (int)(endp - path + 1);
 
-#ifdef GIT_WIN32
-	/* Mimic unix behavior where '/.git' returns '/': 'C:/.git' will return
-		'C:/' here */
-
-	if (len == 2 && LOOKS_LIKE_DRIVE_PREFIX(path)) {
-		len = 3;
-		goto Exit;
-	}
-
-	/* Similarly checks if we're dealing with a network computer name
-		'//computername/.git' will return '//computername/' */
-
-	if (looks_like_network_computer_name(path, len)) {
-		len++;
-		goto Exit;
-	}
-
-#endif
-
 Exit:
-	result = len;
+	if (buffer) {
+		if (git_buf_set(buffer, path, len) < 0)
+			return -1;
+		if (is_prefix && git_buf_putc(buffer, '/') < 0)
+			return -1;
+	}
 
-	if (buffer != NULL && git_buf_set(buffer, path, len) < 0)
-		return -1;
-
-	return result;
+	return len;
 }
 
 
@@ -341,7 +363,7 @@ int git_path_prettify(git_buf *path_out, const char *path, const char *base)
 	if (p_realpath(path, buf) == NULL) {
 		/* giterr_set resets the errno when dealing with a GITERR_OS kind of error */
 		int error = (errno == ENOENT || errno == ENOTDIR) ? GIT_ENOTFOUND : -1;
-		giterr_set(GITERR_OS, "Failed to resolve path '%s'", path);
+		giterr_set(GITERR_OS, "failed to resolve path '%s'", path);
 
 		git_buf_clear(path_out);
 
@@ -632,20 +654,24 @@ int git_path_set_error(int errno_value, const char *path, const char *action)
 	switch (errno_value) {
 	case ENOENT:
 	case ENOTDIR:
-		giterr_set(GITERR_OS, "Could not find '%s' to %s", path, action);
+		giterr_set(GITERR_OS, "could not find '%s' to %s", path, action);
 		return GIT_ENOTFOUND;
 
 	case EINVAL:
 	case ENAMETOOLONG:
-		giterr_set(GITERR_OS, "Invalid path for filesystem '%s'", path);
+		giterr_set(GITERR_OS, "invalid path for filesystem '%s'", path);
 		return GIT_EINVALIDSPEC;
 
 	case EEXIST:
-		giterr_set(GITERR_OS, "Failed %s - '%s' already exists", action, path);
+		giterr_set(GITERR_OS, "failed %s - '%s' already exists", action, path);
 		return GIT_EEXISTS;
 
+	case EACCES:
+		giterr_set(GITERR_OS, "failed %s - '%s' is locked", action, path);
+		return GIT_ELOCKED;
+
 	default:
-		giterr_set(GITERR_OS, "Could not %s '%s'", action, path);
+		giterr_set(GITERR_OS, "could not %s '%s'", action, path);
 		return -1;
 	}
 }
@@ -675,7 +701,8 @@ static bool _check_dir_contents(
 		return false;
 
 	/* save excursion */
-	git_buf_joinpath(dir, dir->ptr, sub);
+	if (git_buf_joinpath(dir, dir->ptr, sub) < 0)
+		return false;
 
 	result = predicate(dir->ptr);
 
@@ -754,7 +781,7 @@ int git_path_resolve_relative(git_buf *path, size_t ceiling)
 			/* error out if trying to up one from a hard base */
 			if (to == base && ceiling != 0) {
 				giterr_set(GITERR_INVALID,
-					"Cannot strip root component off url");
+					"cannot strip root component off url");
 				return -1;
 			}
 
@@ -800,8 +827,8 @@ int git_path_resolve_relative(git_buf *path, size_t ceiling)
 
 int git_path_apply_relative(git_buf *target, const char *relpath)
 {
-	git_buf_joinpath(target, git_buf_cstr(target), relpath);
-	return git_path_resolve_relative(target, 0);
+	return git_buf_joinpath(target, git_buf_cstr(target), relpath) ||
+	    git_path_resolve_relative(target, 0);
 }
 
 int git_path_cmp(
@@ -983,7 +1010,7 @@ int git_path_iconv(git_path_iconv_t *ic, const char **in, size_t *inlen)
 	return 0;
 
 fail:
-	giterr_set(GITERR_OS, "Unable to convert unicode path data");
+	giterr_set(GITERR_OS, "unable to convert unicode path data");
 	return -1;
 }
 
@@ -1076,7 +1103,7 @@ int git_path_direach(
 	wd_len = git_buf_len(path);
 
 	if ((dir = opendir(path->ptr)) == NULL) {
-		giterr_set(GITERR_OS, "Failed to open directory '%s'", path->ptr);
+		giterr_set(GITERR_OS, "failed to open directory '%s'", path->ptr);
 		if (errno == ENOENT)
 			return GIT_ENOTFOUND;
 
@@ -1141,7 +1168,6 @@ int git_path_diriter_init(
 	unsigned int flags)
 {
 	git_win32_path path_filter;
-	git_buf hack = {0};
 
 	static int is_win7_or_later = -1;
 	if (is_win7_or_later < 0)
@@ -1158,13 +1184,13 @@ int git_path_diriter_init(
 	git_path_trim_slashes(&diriter->path_utf8);
 
 	if (diriter->path_utf8.size == 0) {
-		giterr_set(GITERR_FILESYSTEM, "Could not open directory '%s'", path);
+		giterr_set(GITERR_FILESYSTEM, "could not open directory '%s'", path);
 		return -1;
 	}
 
 	if ((diriter->parent_len = git_win32_path_from_utf8(diriter->path, diriter->path_utf8.ptr)) < 0 ||
 			!git_win32__findfirstfile_filter(path_filter, diriter->path_utf8.ptr)) {
-		giterr_set(GITERR_OS, "Could not parse the directory path '%s'", path);
+		giterr_set(GITERR_OS, "could not parse the directory path '%s'", path);
 		return -1;
 	}
 
@@ -1177,7 +1203,7 @@ int git_path_diriter_init(
 		is_win7_or_later ? FIND_FIRST_EX_LARGE_FETCH : 0);
 
 	if (diriter->handle == INVALID_HANDLE_VALUE) {
-		giterr_set(GITERR_OS, "Could not open directory '%s'", path);
+		giterr_set(GITERR_OS, "could not open directory '%s'", path);
 		return -1;
 	}
 
@@ -1307,14 +1333,14 @@ int git_path_diriter_init(
 	git_path_trim_slashes(&diriter->path);
 
 	if (diriter->path.size == 0) {
-		giterr_set(GITERR_FILESYSTEM, "Could not open directory '%s'", path);
+		giterr_set(GITERR_FILESYSTEM, "could not open directory '%s'", path);
 		return -1;
 	}
 
 	if ((diriter->dir = opendir(diriter->path.ptr)) == NULL) {
 		git_buf_free(&diriter->path);
 
-		giterr_set(GITERR_OS, "Failed to open directory '%s'", path);
+		giterr_set(GITERR_OS, "failed to open directory '%s'", path);
 		return -1;
 	}
 
@@ -1347,7 +1373,7 @@ int git_path_diriter_next(git_path_diriter *diriter)
 				return GIT_ITEROVER;
 
 			giterr_set(GITERR_OS,
-				"Could not read directory '%s'", diriter->path);
+				"could not read directory '%s'", diriter->path.ptr);
 			return -1;
 		}
 	} while (skip_dot && git_path_is_dot_or_dotdot(de->d_name));
@@ -1683,6 +1709,7 @@ GIT_INLINE(unsigned int) dotgit_flags(
 	unsigned int flags)
 {
 	int protectHFS = 0, protectNTFS = 0;
+	int error = 0;
 
 	flags |= GIT_PATH_REJECT_DOT_GIT_LITERAL;
 
@@ -1695,13 +1722,13 @@ GIT_INLINE(unsigned int) dotgit_flags(
 #endif
 
 	if (repo && !protectHFS)
-		git_repository__cvar(&protectHFS, repo, GIT_CVAR_PROTECTHFS);
-	if (protectHFS)
+		error = git_repository__cvar(&protectHFS, repo, GIT_CVAR_PROTECTHFS);
+	if (!error && protectHFS)
 		flags |= GIT_PATH_REJECT_DOT_GIT_HFS;
 
 	if (repo && !protectNTFS)
-		git_repository__cvar(&protectNTFS, repo, GIT_CVAR_PROTECTNTFS);
-	if (protectNTFS)
+		error = git_repository__cvar(&protectNTFS, repo, GIT_CVAR_PROTECTNTFS);
+	if (!error && protectNTFS)
 		flags |= GIT_PATH_REJECT_DOT_GIT_NTFS;
 
 	return flags;

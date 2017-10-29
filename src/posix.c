@@ -4,11 +4,14 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#include "common.h"
+
 #include "posix.h"
+
 #include "path.h"
 #include <stdio.h>
 #include <ctype.h>
+
+size_t p_fsync__cnt = 0;
 
 #ifndef GIT_WIN32
 
@@ -38,7 +41,7 @@ int p_getaddrinfo(
 	if (ainfo->ai_servent)
 		ainfo->ai_port = ainfo->ai_servent->s_port;
 	else
-		ainfo->ai_port = atol(port);
+		ainfo->ai_port = htons(atol(port));
 
 	memcpy(&ainfo->ai_addr_in.sin_addr,
 			ainfo->ai_hostent->h_addr_list[0],
@@ -240,7 +243,7 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 	out->len = 0;
 
 	if ((prot & GIT_PROT_WRITE) && ((flags & GIT_MAP_TYPE) == GIT_MAP_SHARED)) {
-		giterr_set(GITERR_OS, "Trying to map shared-writeable");
+		giterr_set(GITERR_OS, "trying to map shared-writeable");
 		return -1;
 	}
 

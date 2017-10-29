@@ -5,10 +5,11 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "filter.h"
+
 #include "common.h"
 #include "fileops.h"
 #include "hash.h"
-#include "filter.h"
 #include "repository.h"
 #include "global.h"
 #include "git2/sys/filter.h"
@@ -296,7 +297,7 @@ int git_filter_unregister(const char *name)
 
 	/* cannot unregister default filters */
 	if (!strcmp(GIT_FILTER_CRLF, name) || !strcmp(GIT_FILTER_IDENT, name)) {
-		giterr_set(GITERR_FILTER, "Cannot unregister filter '%s'", name);
+		giterr_set(GITERR_FILTER, "cannot unregister filter '%s'", name);
 		return -1;
 	}
 
@@ -306,7 +307,7 @@ int git_filter_unregister(const char *name)
 	}
 
 	if ((fdef = filter_registry_lookup(&pos, name)) == NULL) {
-		giterr_set(GITERR_FILTER, "Cannot find filter '%s' to unregister", name);
+		giterr_set(GITERR_FILTER, "cannot find filter '%s' to unregister", name);
 		error = GIT_ENOTFOUND;
 		goto done;
 	}
@@ -645,7 +646,7 @@ int git_filter_list_push(
 	git_rwlock_rdunlock(&filter_registry.lock);
 
 	if (fdef == NULL) {
-		giterr_set(GITERR_FILTER, "Cannot use an unregistered filter");
+		giterr_set(GITERR_FILTER, "cannot use an unregistered filter");
 		return -1;
 	}
 
@@ -758,7 +759,7 @@ static int buf_from_blob(git_buf *out, git_blob *blob)
 	git_off_t rawsize = git_blob_rawsize(blob);
 
 	if (!git__is_sizet(rawsize)) {
-		giterr_set(GITERR_OS, "Blob is too large to filter");
+		giterr_set(GITERR_OS, "blob is too large to filter");
 		return -1;
 	}
 
@@ -895,7 +896,7 @@ static int stream_list_init(
 			git_array_size(filters->filters) - 1 - i : i;
 		git_filter_entry *fe = git_array_get(filters->filters, filter_idx);
 		git_writestream *filter_stream;
-		
+
 		assert(fe->filter->stream || fe->filter->apply);
 
 		/* If necessary, create a stream that proxies the traditional
@@ -911,14 +912,19 @@ static int stream_list_init(
 				last_stream);
 
 		if (error < 0)
-			return error;
+			goto out;
 
 		git_vector_insert(streams, filter_stream);
 		last_stream = filter_stream;
 	}
 
-	*out = last_stream;
-	return 0;
+out:
+	if (error)
+		last_stream->close(last_stream);
+	else
+		*out = last_stream;
+
+	return error;
 }
 
 void stream_list_free(git_vector *streams)
@@ -943,12 +949,13 @@ int git_filter_list_stream_file(
 	git_vector filter_streams = GIT_VECTOR_INIT;
 	git_writestream *stream_start;
 	ssize_t readlen;
-	int fd = -1, error;
+	int fd = -1, error, initialized = 0;
 
 	if ((error = stream_list_init(
 			&stream_start, &filter_streams, filters, target)) < 0 ||
 		(error = git_path_join_unrooted(&abspath, path, base, NULL)) < 0)
 		goto done;
+	initialized = 1;
 
 	if ((fd = git_futils_open_ro(abspath.ptr)) < 0) {
 		error = fd;
@@ -960,13 +967,13 @@ int git_filter_list_stream_file(
 			goto done;
 	}
 
-	if (!readlen)
-		error = stream_start->close(stream_start);
-	else if (readlen < 0)
+	if (readlen < 0)
 		error = readlen;
 
-
 done:
+	if (initialized)
+		error |= stream_start->close(stream_start);
+
 	if (fd >= 0)
 		p_close(fd);
 	stream_list_free(&filter_streams);
@@ -981,20 +988,24 @@ int git_filter_list_stream_data(
 {
 	git_vector filter_streams = GIT_VECTOR_INIT;
 	git_writestream *stream_start;
-	int error = 0, close_error;
+	int error, initialized = 0;
 
 	git_buf_sanitize(data);
 
 	if ((error = stream_list_init(&stream_start, &filter_streams, filters, target)) < 0)
 		goto out;
+	initialized = 1;
 
-	error = stream_start->write(stream_start, data->ptr, data->size);
+	if ((error = stream_start->write(
+			stream_start, data->ptr, data->size)) < 0)
+		goto out;
 
 out:
-	close_error = stream_start->close(stream_start);
+	if (initialized)
+		error |= stream_start->close(stream_start);
+
 	stream_list_free(&filter_streams);
-	/* propagate the stream init or write error */
-	return error < 0 ? error : close_error;
+	return error;
 }
 
 int git_filter_list_stream_blob(
@@ -1011,4 +1022,10 @@ int git_filter_list_stream_blob(
 		git_oid_cpy(&filters->source.oid, git_blob_id(blob));
 
 	return git_filter_list_stream_data(filters, &in, target);
+}
+
+int git_filter_init(git_filter *filter, unsigned int version)
+{
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(filter, version, git_filter, GIT_FILTER_INIT);
+	return 0;
 }

@@ -14,7 +14,7 @@ GIT_BEGIN_DECL
 /**
  * Init the global state
  *
- * This function must the called before any other libgit2 function in
+ * This function must be called before any other libgit2 function in
  * order to set up global state and threading.
  *
  * This function may be called multiple times - it will return the number

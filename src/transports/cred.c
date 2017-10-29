@@ -5,6 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "cred.h"
+
 #include "git2.h"
 #include "smart.h"
 #include "git2/cred_helpers.h"
@@ -216,7 +218,7 @@ int git_cred_ssh_key_memory_new(
 	GIT_UNUSED(passphrase);
 
 	giterr_set(GITERR_INVALID,
-		"This version of libgit2 was not built with ssh memory credentials.");
+		"this version of libgit2 was not built with ssh memory credentials.");
 	return -1;
 #endif
 }

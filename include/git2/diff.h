@@ -515,12 +515,12 @@ typedef int(*git_diff_binary_cb)(
  * Structure describing a hunk of a diff.
  */
 typedef struct {
-	int    old_start;     /** Starting line number in old_file */
-	int    old_lines;     /** Number of lines in old_file */
-	int    new_start;     /** Starting line number in new_file */
-	int    new_lines;     /** Number of lines in new_file */
-	size_t header_len;    /** Number of bytes in header text */
-	char   header[GIT_DIFF_HUNK_HEADER_SIZE];   /** Header text, NUL-byte terminated */
+	int    old_start;     /**< Starting line number in old_file */
+	int    old_lines;     /**< Number of lines in old_file */
+	int    new_start;     /**< Starting line number in new_file */
+	int    new_lines;     /**< Number of lines in new_file */
+	size_t header_len;    /**< Number of bytes in header text */
+	char   header[GIT_DIFF_HUNK_HEADER_SIZE];   /**< Header text, NUL-byte terminated */
 } git_diff_hunk;
 
 /**
@@ -1399,6 +1399,51 @@ GIT_EXTERN(int) git_diff_commit_as_email(
 GIT_EXTERN(int) git_diff_format_email_init_options(
 	git_diff_format_email_options *opts,
 	unsigned int version);
+
+/**
+ * Patch ID options structure
+ *
+ * Initialize with `GIT_DIFF_PATCHID_OPTIONS_INIT` macro to
+ * correctly set the default values and version.
+ */
+typedef struct git_diff_patchid_options {
+	unsigned int version;
+} git_diff_patchid_options;
+
+#define GIT_DIFF_PATCHID_OPTIONS_VERSION 1
+#define GIT_DIFF_PATCHID_OPTIONS_INIT { GIT_DIFF_PATCHID_OPTIONS_VERSION }
+
+/**
+ * Initialize `git_diff_patchid_options` structure.
+ *
+ * Initializes the structure with default values. Equivalent to
+ * creating an instance with `GIT_DIFF_PATCHID_OPTIONS_INIT`.
+ */
+GIT_EXTERN(int) git_diff_patchid_init_options(
+	git_diff_patchid_options *opts,
+	unsigned int version);
+
+/**
+ * Calculate the patch ID for the given patch.
+ *
+ * Calculate a stable patch ID for the given patch by summing the
+ * hash of the file diffs, ignoring whitespace and line numbers.
+ * This can be used to derive whether two diffs are the same with
+ * a high probability.
+ *
+ * Currently, this function only calculates stable patch IDs, as
+ * defined in git-patch-id(1), and should in fact generate the
+ * same IDs as the upstream git project does.
+ *
+ * @param out Pointer where the calculated patch ID shoul be
+ *  stored
+ * @param diff The diff to calculate the ID for
+ * @param opts Options for how to calculate the patch ID. This is
+ *  intended for future changes, as currently no options are
+ *  available.
+ * @return 0 on success, an error code otherwise.
+ */
+GIT_EXTERN(int) git_diff_patchid(git_oid *out, git_diff *diff, git_diff_patchid_options *opts);
 
 GIT_END_DECL
 

@@ -7,6 +7,8 @@
 #ifndef INCLUDE_odb_h__
 #define INCLUDE_odb_h__
 
+#include "common.h"
+
 #include "git2/odb.h"
 #include "git2/oid.h"
 #include "git2/types.h"
@@ -19,6 +21,8 @@
 #define GIT_OBJECTS_DIR "objects/"
 #define GIT_OBJECT_DIR_MODE 0777
 #define GIT_OBJECT_FILE_MODE 0444
+
+extern bool git_odb__strict_hash_verification;
 
 /* DO NOT EXPORT */
 typedef struct {
@@ -38,7 +42,24 @@ struct git_odb {
 	git_refcount rc;
 	git_vector backends;
 	git_cache own_cache;
+	unsigned int do_fsync :1;
 };
+
+typedef enum {
+	GIT_ODB_CAP_FROM_OWNER = -1,
+} git_odb_cap_t;
+
+/*
+ * Set the capabilities for the object database.
+ */
+int git_odb__set_caps(git_odb *odb, int caps);
+
+/*
+ * Add the default loose and packed backends for a database.
+ */
+int git_odb__add_default_backends(
+	git_odb *db, const char *objects_dir,
+	bool as_alternates, int alternate_depth);
 
 /*
  * Hash a git_rawobj internally.
@@ -79,6 +100,12 @@ int git_odb__hashfd_filtered(
  */
 int git_odb__hashlink(git_oid *out, const char *path);
 
+/**
+ * Generate a GIT_EMISMATCH error for the ODB.
+ */
+int git_odb__error_mismatch(
+	const git_oid *expected, const git_oid *actual);
+
 /*
  * Generate a GIT_ENOTFOUND error for the ODB.
  */
@@ -97,6 +124,9 @@ int git_odb__error_ambiguous(const char *message);
 int git_odb__read_header_or_object(
 	git_odb_object **out, size_t *len_p, git_otype *type_p,
 	git_odb *db, const git_oid *id);
+
+/* freshen an entry in the object database */
+int git_odb__freshen(git_odb *db, const git_oid *id);
 
 /* fully free the object; internal method, DO NOT EXPORT */
 void git_odb_object__free(void *object);

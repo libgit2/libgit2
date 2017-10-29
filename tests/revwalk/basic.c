@@ -38,8 +38,9 @@ static const int commit_sorting_time_reverse[][6] = {
 	{4, 5, 2, 1, 3, 0}
 };
 
+/* This is specified unsorted, so both combinations are possible */
 static const int commit_sorting_segment[][6] = {
-	{1, 2, -1, -1, -1, -1}
+	{1, 2, -1, -1, -1, -1}, {2, 1, -1, -1, -1, -1}
 };
 
 #define commit_count 6
@@ -155,9 +156,8 @@ void test_revwalk_basic__glob_heads(void)
 
 	cl_git_pass(git_revwalk_push_glob(_walk, "heads"));
 
-	while (git_revwalk_next(&oid, _walk) == 0) {
+	while (git_revwalk_next(&oid, _walk) == 0)
 		i++;
-	}
 
 	/* git log --branches --oneline | wc -l => 14 */
 	cl_assert_equal_i(i, 14);
@@ -177,7 +177,7 @@ void test_revwalk_basic__glob_heads_with_invalid(void)
 		/* walking */;
 
 	/* git log --branches --oneline | wc -l => 16 */
-	cl_assert_equal_i(18, i);
+	cl_assert_equal_i(19, i);
 }
 
 void test_revwalk_basic__push_head(void)
@@ -331,6 +331,40 @@ void test_revwalk_basic__hide_then_push(void)
 	cl_assert_equal_i(i, 0);
 }
 
+void test_revwalk_basic__topo_crash(void)
+{
+	git_oid oid;
+	git_oid_fromstr(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644");
+
+	revwalk_basic_setup_walk(NULL);
+	git_revwalk_sorting(_walk, GIT_SORT_TOPOLOGICAL);
+
+	cl_git_pass(git_revwalk_push(_walk, &oid));
+	cl_git_pass(git_revwalk_hide(_walk, &oid));
+
+	git_revwalk_next(&oid, _walk);
+}
+
+void test_revwalk_basic__from_new_to_old(void)
+{
+	git_oid from_oid, to_oid, oid;
+	int i = 0;
+
+	revwalk_basic_setup_walk(NULL);
+	git_revwalk_sorting(_walk, GIT_SORT_TIME);
+
+	cl_git_pass(git_oid_fromstr(&to_oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644"));
+	cl_git_pass(git_oid_fromstr(&from_oid, "a4a7dce85cf63874e984719f4fdd239f5145052f"));
+
+	cl_git_pass(git_revwalk_push(_walk, &to_oid));
+	cl_git_pass(git_revwalk_hide(_walk, &from_oid));
+
+	while (git_revwalk_next(&oid, _walk) == 0)
+		i++;
+
+	cl_assert_equal_i(i, 0);
+}
+
 void test_revwalk_basic__push_range(void)
 {
 	revwalk_basic_setup_walk(NULL);
@@ -338,7 +372,7 @@ void test_revwalk_basic__push_range(void)
 	git_revwalk_reset(_walk);
 	git_revwalk_sorting(_walk, 0);
 	cl_git_pass(git_revwalk_push_range(_walk, "9fd738e~2..9fd738e"));
-	cl_git_pass(test_walk_only(_walk, commit_sorting_segment, 1));
+	cl_git_pass(test_walk_only(_walk, commit_sorting_segment, 2));
 }
 
 void test_revwalk_basic__push_mixed(void)
@@ -472,4 +506,52 @@ void test_revwalk_basic__big_timestamp(void)
 	git_reference_free(head);
 	git_signature_free(sig);
 
+}
+
+/* Ensure that we correctly hide a commit that is (timewise) older
+ * than the commits that we are showing.
+ *
+ * % git rev-list 8e73b76..bd75801
+ * bd758010071961f28336333bc41e9c64c9a64866
+ */
+void test_revwalk_basic__old_hidden_commit_one(void)
+{
+	git_oid new_id, old_id, oid;
+
+	revwalk_basic_setup_walk("testrepo.git");
+
+	cl_git_pass(git_oid_fromstr(&new_id, "bd758010071961f28336333bc41e9c64c9a64866"));
+	cl_git_pass(git_revwalk_push(_walk, &new_id));
+
+	cl_git_pass(git_oid_fromstr(&old_id, "8e73b769e97678d684b809b163bebdae2911720f"));
+	cl_git_pass(git_revwalk_hide(_walk, &old_id));
+
+	cl_git_pass(git_revwalk_next(&oid, _walk));
+	cl_assert(!git_oid_streq(&oid, "bd758010071961f28336333bc41e9c64c9a64866"));
+
+	cl_git_fail_with(GIT_ITEROVER, git_revwalk_next(&oid, _walk));
+}
+
+/* Ensure that we correctly hide a commit that is (timewise) older
+ * than the commits that we are showing.
+ *
+ * % git rev-list bd75801 ^b91e763
+ * bd758010071961f28336333bc41e9c64c9a64866
+ */
+void test_revwalk_basic__old_hidden_commit_two(void)
+{
+	git_oid new_id, old_id, oid;
+
+	revwalk_basic_setup_walk("testrepo.git");
+
+	cl_git_pass(git_oid_fromstr(&new_id, "bd758010071961f28336333bc41e9c64c9a64866"));
+	cl_git_pass(git_revwalk_push(_walk, &new_id));
+
+	cl_git_pass(git_oid_fromstr(&old_id, "b91e763008b10db366442469339f90a2b8400d0a"));
+	cl_git_pass(git_revwalk_hide(_walk, &old_id));
+
+	cl_git_pass(git_revwalk_next(&oid, _walk));
+	cl_assert(!git_oid_streq(&oid, "bd758010071961f28336333bc41e9c64c9a64866"));
+
+	cl_git_fail_with(GIT_ITEROVER, git_revwalk_next(&oid, _walk));
 }

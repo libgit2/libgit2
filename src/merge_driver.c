@@ -5,11 +5,11 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
+#include "merge_driver.h"
+
 #include "vector.h"
 #include "global.h"
 #include "merge.h"
-#include "merge_driver.h"
 #include "git2/merge.h"
 #include "git2/sys/merge.h"
 
@@ -32,6 +32,35 @@ static struct merge_driver_registry merge_driver_registry;
 
 static void git_merge_driver_global_shutdown(void);
 
+const git_repository* git_merge_driver_source_repo(const git_merge_driver_source *src)
+{
+	assert(src);
+	return src->repo;
+}
+
+const git_index_entry* git_merge_driver_source_ancestor(const git_merge_driver_source *src)
+{
+	assert(src);
+	return src->ancestor;
+}
+
+const git_index_entry* git_merge_driver_source_ours(const git_merge_driver_source *src)
+{
+	assert(src);
+	return src->ours;
+}
+
+const git_index_entry* git_merge_driver_source_theirs(const git_merge_driver_source *src)
+{
+	assert(src);
+	return src->theirs;
+}
+
+const git_merge_file_options* git_merge_driver_source_file_options(const git_merge_driver_source *src)
+{
+	assert(src);
+	return src->file_opts;
+}
 
 int git_merge_driver__builtin_apply(
 	git_merge_driver *self,

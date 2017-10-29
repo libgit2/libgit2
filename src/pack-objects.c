@@ -41,8 +41,6 @@ struct pack_write_context {
 	git_transfer_progress *stats;
 };
 
-GIT__USE_OIDMAP
-
 #ifdef GIT_THREADS
 
 #define GIT_PACKBUILDER__MUTEX_OP(pb, mtx, op) do { \
@@ -162,7 +160,7 @@ int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
 		git_mutex_init(&pb->progress_mutex) ||
 		git_cond_init(&pb->progress_cond))
 	{
-		giterr_set(GITERR_OS, "Failed to initialize packbuilder mutex");
+		giterr_set(GITERR_OS, "failed to initialize packbuilder mutex");
 		goto on_error;
 	}
 
@@ -197,10 +195,10 @@ static void rehash(git_packbuilder *pb)
 	size_t i;
 	int ret;
 
-	kh_clear(oid, pb->object_ix);
+	git_oidmap_clear(pb->object_ix);
 	for (i = 0, po = pb->object_list; i < pb->nr_objects; i++, po++) {
-		pos = kh_put(oid, pb->object_ix, &po->id, &ret);
-		kh_value(pb->object_ix, pos) = po;
+		pos = git_oidmap_put(pb->object_ix, &po->id, &ret);
+		git_oidmap_set_value_at(pb->object_ix, pos, po);
 	}
 }
 
@@ -216,8 +214,7 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 
 	/* If the object already exists in the hash table, then we don't
 	 * have any work to do */
-	pos = kh_get(oid, pb->object_ix, oid);
-	if (pos != kh_end(pb->object_ix))
+	if (git_oidmap_exists(pb->object_ix, oid))
 		return 0;
 
 	if (pb->nr_objects >= pb->nr_alloc) {
@@ -225,7 +222,7 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 		GITERR_CHECK_ALLOC_MULTIPLY(&newsize, newsize, 3 / 2);
 
 		if (!git__is_uint32(newsize)) {
-			giterr_set(GITERR_NOMEMORY, "Packfile too large to fit in memory.");
+			giterr_set(GITERR_NOMEMORY, "packfile too large to fit in memory.");
 			return -1;
 		}
 
@@ -247,13 +244,13 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 	git_oid_cpy(&po->id, oid);
 	po->hash = name_hash(name);
 
-	pos = kh_put(oid, pb->object_ix, &po->id, &ret);
+	pos = git_oidmap_put(pb->object_ix, &po->id, &ret);
 	if (ret < 0) {
 		giterr_set_oom();
 		return ret;
 	}
 	assert(ret != 0);
-	kh_value(pb->object_ix, pos) = po;
+	git_oidmap_set_value_at(pb->object_ix, pos, po);
 
 	pb->done = false;
 
@@ -298,7 +295,7 @@ static int get_delta(void **out, git_odb *odb, git_pobject *po)
 		goto on_error;
 
 	if (error == GIT_EBUFS || delta_size != po->delta_size) {
-		giterr_set(GITERR_INVALID, "Delta size changed");
+		giterr_set(GITERR_INVALID, "delta size changed");
 		goto on_error;
 	}
 
@@ -517,11 +514,11 @@ static int cb_tag_foreach(const char *name, git_oid *oid, void *data)
 
 	GIT_UNUSED(name);
 
-	pos = kh_get(oid, pb->object_ix, oid);
-	if (pos == kh_end(pb->object_ix))
+	pos = git_oidmap_lookup_index(pb->object_ix, oid);
+	if (!git_oidmap_valid_index(pb->object_ix, pos))
 		return 0;
 
-	po = kh_value(pb->object_ix, pos);
+	po = git_oidmap_value_at(pb->object_ix, pos);
 	po->tagged = 1;
 
 	/* TODO: peel objects */
@@ -808,7 +805,7 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 
 		if (sz != trg_size) {
 			giterr_set(GITERR_INVALID,
-				   "Inconsistent target object length");
+				   "inconsistent target object length");
 			return -1;
 		}
 
@@ -830,7 +827,7 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 
 		if (sz != src_size) {
 			giterr_set(GITERR_INVALID,
-				   "Inconsistent source object length");
+				   "inconsistent source object length");
 			return -1;
 		}
 
@@ -1388,12 +1385,16 @@ int git_packbuilder_write(
 	git_indexer *indexer;
 	git_transfer_progress stats;
 	struct pack_write_context ctx;
+	int t;
 
 	PREPARE_PACK;
 
 	if (git_indexer_new(
 		&indexer, path, mode, pb->odb, progress_cb, progress_cb_payload) < 0)
 		return -1;
+
+	if (!git_repository__cvar(&t, pb->repo, GIT_CVAR_FSYNCOBJECTFILES) && t)
+		git_indexer__set_fsync(indexer, 1);
 
 	ctx.indexer = indexer;
 	ctx.stats = &stats;
@@ -1541,7 +1542,7 @@ static int retrieve_object(git_walk_object **out, git_packbuilder *pb, const git
 		if ((error = lookup_walk_object(&obj, pb, id)) < 0)
 			return error;
 
-		git_oidmap_insert(pb->walk_objects, &obj->id, obj, error);
+		git_oidmap_insert(pb->walk_objects, &obj->id, obj, &error);
 	}
 
 	*out = obj;
@@ -1738,7 +1739,7 @@ int git_packbuilder_insert_walk(git_packbuilder *pb, git_revwalk *walk)
 	if (error == GIT_ITEROVER)
 		error = 0;
 
-	return 0;
+	return error;
 }
 
 int git_packbuilder_set_callbacks(git_packbuilder *pb, git_packbuilder_progress progress_cb, void *progress_cb_payload)

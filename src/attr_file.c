@@ -1,7 +1,14 @@
-#include "common.h"
+/*
+ * Copyright (C) the libgit2 contributors. All rights reserved.
+ *
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
+ */
+
+#include "attr_file.h"
+
 #include "repository.h"
 #include "filebuf.h"
-#include "attr_file.h"
 #include "attrcache.h"
 #include "git2/blob.h"
 #include "git2/tree.h"
@@ -30,7 +37,7 @@ int git_attr_file__new(
 	GITERR_CHECK_ALLOC(attrs);
 
 	if (git_mutex_init(&attrs->lock) < 0) {
-		giterr_set(GITERR_OS, "Failed to initialize lock");
+		giterr_set(GITERR_OS, "failed to initialize lock");
 		git__free(attrs);
 		return -1;
 	}
@@ -49,7 +56,7 @@ int git_attr_file__clear_rules(git_attr_file *file, bool need_lock)
 	git_attr_rule *rule;
 
 	if (need_lock && git_mutex_lock(&file->lock) < 0) {
-		giterr_set(GITERR_OS, "Failed to lock attribute file");
+		giterr_set(GITERR_OS, "failed to lock attribute file");
 		return -1;
 	}
 
@@ -140,7 +147,7 @@ int git_attr_file__load(
 		break;
 	}
 	default:
-		giterr_set(GITERR_INVALID, "Unknown file source %d", source);
+		giterr_set(GITERR_INVALID, "unknown file source %d", source);
 		return -1;
 	}
 
@@ -212,7 +219,7 @@ int git_attr_file__out_of_date(
 	}
 
 	default:
-		giterr_set(GITERR_INVALID, "Invalid file type %d", file->source);
+		giterr_set(GITERR_INVALID, "invalid file type %d", file->source);
 		return -1;
 	}
 }
@@ -238,7 +245,7 @@ int git_attr_file__parse_buffer(
 		context = attrs->entry->path;
 
 	if (git_mutex_lock(&attrs->lock) < 0) {
-		giterr_set(GITERR_OS, "Failed to lock attribute file");
+		giterr_set(GITERR_OS, "failed to lock attribute file");
 		return -1;
 	}
 
@@ -395,9 +402,13 @@ bool git_attr_fnmatch__match(
 	if ((match->flags & GIT_ATTR_FNMATCH_DIRECTORY) && !path->is_dir) {
 		bool samename;
 
-		/* for attribute checks or root ignore checks, fail match */
+		/*
+		 * for attribute checks or checks at the root of this match's
+		 * containing_dir (or root of the repository if no containing_dir),
+		 * do not match.
+		 */
 		if (!(match->flags & GIT_ATTR_FNMATCH_IGNORE) ||
-			path->basename == path->path)
+			path->basename == relpath)
 			return false;
 
 		flags |= FNM_LEADING_DIR;

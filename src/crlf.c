@@ -5,12 +5,13 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "common.h"
+
 #include "git2/attr.h"
 #include "git2/blob.h"
 #include "git2/index.h"
 #include "git2/sys/filter.h"
 
-#include "common.h"
 #include "fileops.h"
 #include "hash.h"
 #include "filter.h"
@@ -218,7 +219,7 @@ static const char *line_ending(struct crlf_attrs *ca)
 		return "\r\n";
 
 line_ending_error:
-	giterr_set(GITERR_INVALID, "Invalid input to line ending filter");
+	giterr_set(GITERR_INVALID, "invalid input to line ending filter");
 	return NULL;
 }
 

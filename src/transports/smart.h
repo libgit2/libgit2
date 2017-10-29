@@ -4,6 +4,9 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
+
+#include "common.h"
+
 #include "git2.h"
 #include "vector.h"
 #include "netops.h"
@@ -25,6 +28,8 @@
 #define GIT_CAP_REPORT_STATUS "report-status"
 #define GIT_CAP_THIN_PACK "thin-pack"
 #define GIT_CAP_SYMREF "symref"
+
+extern bool git_smart__ofs_delta_enabled;
 
 enum git_pkt_type {
 	GIT_PKT_CMD,

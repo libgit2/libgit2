@@ -6,6 +6,7 @@
  */
 
 #include "pqueue.h"
+
 #include "util.h"
 
 #define PQUEUE_LCHILD_OF(I) (((I)<<1)+1)
@@ -86,14 +87,15 @@ int git_pqueue_insert(git_pqueue *pq, void *item)
 	if ((pq->flags & GIT_PQUEUE_FIXED_SIZE) != 0 &&
 		pq->length >= pq->_alloc_size)
 	{
-		/* skip this item if below min item in heap */
-		if (pq->_cmp(item, git_vector_get(pq, 0)) <= 0)
+		/* skip this item if below min item in heap or if
+		 * we do not have a comparison function */
+		if (!pq->_cmp || pq->_cmp(item, git_vector_get(pq, 0)) <= 0)
 			return 0;
 		/* otherwise remove the min item before inserting new */
 		(void)git_pqueue_pop(pq);
 	}
 
-	if (!(error = git_vector_insert(pq, item)))
+	if (!(error = git_vector_insert(pq, item)) && pq->_cmp)
 		pqueue_up(pq, pq->length - 1);
 
 	return error;
@@ -101,9 +103,15 @@ int git_pqueue_insert(git_pqueue *pq, void *item)
 
 void *git_pqueue_pop(git_pqueue *pq)
 {
-	void *rval = git_pqueue_get(pq, 0);
+	void *rval;
 
-	if (git_pqueue_size(pq) > 1) {
+	if (!pq->_cmp) {
+		rval = git_vector_last(pq);
+	} else {
+		rval = git_pqueue_get(pq, 0);
+	}
+
+	if (git_pqueue_size(pq) > 1 && pq->_cmp) {
 		/* move last item to top of heap, shrink, and push item down */
 		pq->contents[0] = git_vector_last(pq);
 		git_vector_pop(pq);

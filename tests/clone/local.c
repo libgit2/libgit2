@@ -16,6 +16,7 @@ static int file_url(git_buf *buf, const char *host, const char *path)
 	return git_buf_printf(buf, "file://%s/%s", host, path);
 }
 
+#ifdef GIT_WIN32
 static int git_style_unc_path(git_buf *buf, const char *host, const char *path)
 {
 	git_buf_clear(buf);
@@ -49,6 +50,7 @@ static int unc_path(git_buf *buf, const char *host, const char *path)
 
 	return 0;
 }
+#endif
 
 void test_clone_local__should_clone_local(void)
 {

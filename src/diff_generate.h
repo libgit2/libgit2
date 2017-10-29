@@ -7,6 +7,12 @@
 #ifndef INCLUDE_diff_generate_h__
 #define INCLUDE_diff_generate_h__
 
+#include "common.h"
+
+#include "diff.h"
+#include "pool.h"
+#include "index.h"
+
 enum {
 	GIT_DIFFCAPS_HAS_SYMLINKS     = (1 << 0), /* symlinks on platform? */
 	GIT_DIFFCAPS_IGNORE_STAT      = (1 << 1), /* use stat? */

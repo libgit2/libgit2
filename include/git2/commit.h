@@ -255,7 +255,8 @@ GIT_EXTERN(int) git_commit_nth_gen_ancestor(
 /**
  * Get an arbitrary header field
  *
- * @param out the buffer to fill
+ * @param out the buffer to fill; existing content will be
+ * overwritten
  * @param commit the commit to look in
  * @param field the header field to return
  * @return 0 on succeess, GIT_ENOTFOUND if the field does not exist,
@@ -270,8 +271,10 @@ GIT_EXTERN(int) git_commit_header_field(git_buf *out, const git_commit *commit, 
  * `GITERR_INVALID`. If the commit does not have a signature, the
  * error class will be `GITERR_OBJECT`.
  *
- * @param signature the signature block
- * @param signed_data signed data; this is the commit contents minus the signature block
+ * @param signature the signature block; existing content will be
+ * overwritten
+ * @param signed_data signed data; this is the commit contents minus the signature block;
+ * existing content will be overwritten
  * @param repo the repository in which the commit exists
  * @param commit_id the commit from which to extract the data
  * @param field the name of the header field containing the signature

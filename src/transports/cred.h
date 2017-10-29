@@ -7,6 +7,8 @@
 #ifndef INCLUDE_git_cred_h__
 #define INCLUDE_git_cred_h__
 
+#include "common.h"
+
 #include "git2/transport.h"
 
 const char *git_cred__username(git_cred *cred);

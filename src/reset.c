@@ -6,6 +6,7 @@
  */
 
 #include "common.h"
+
 #include "commit.h"
 #include "tag.h"
 #include "merge.h"
@@ -20,8 +21,8 @@
 
 int git_reset_default(
 	git_repository *repo,
-	git_object *target,
-	git_strarray* pathspecs)
+	const git_object *target,
+	const git_strarray* pathspecs)
 {
 	git_object *commit = NULL;
 	git_tree *tree = NULL;
@@ -100,7 +101,7 @@ cleanup:
 
 static int reset(
 	git_repository *repo,
-	git_object *target,
+	const git_object *target,
 	const char *to,
 	git_reset_t reset_type,
 	const git_checkout_options *checkout_opts)
@@ -137,7 +138,7 @@ static int reset(
 		(git_repository_state(repo) == GIT_REPOSITORY_STATE_MERGE ||
 		 git_index_has_conflicts(index)))
 	{
-		giterr_set(GITERR_OBJECT, "%s (soft) in the middle of a merge.", ERROR_MSG);
+		giterr_set(GITERR_OBJECT, "%s (soft) in the middle of a merge", ERROR_MSG);
 		error = GIT_EUNMERGED;
 		goto cleanup;
 	}
@@ -182,7 +183,7 @@ cleanup:
 
 int git_reset(
 	git_repository *repo,
-	git_object *target,
+	const git_object *target,
 	git_reset_t reset_type,
 	const git_checkout_options *checkout_opts)
 {
@@ -191,7 +192,7 @@ int git_reset(
 
 int git_reset_from_annotated(
 	git_repository *repo,
-	git_annotated_commit *commit,
+	const git_annotated_commit *commit,
 	git_reset_t reset_type,
 	const git_checkout_options *checkout_opts)
 {

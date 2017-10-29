@@ -5,9 +5,10 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "common.h"
+
 #include <assert.h>
 
-#include "common.h"
 #include "buffer.h"
 #include "tree.h"
 #include "refdb.h"
@@ -46,11 +47,11 @@ static int build_regex(regex_t *regex, const char *pattern)
 	int error;
 
 	if (*pattern == '\0') {
-		giterr_set(GITERR_REGEX, "Empty pattern");
+		giterr_set(GITERR_REGEX, "empty pattern");
 		return GIT_EINVALIDSPEC;
 	}
 
-	error = regcomp(regex, pattern, REG_EXTENDED);
+	error = p_regcomp(regex, pattern, REG_EXTENDED);
 	if (!error)
 		return 0;
 
@@ -118,7 +119,7 @@ static int revparse_lookup_object(
 	if ((error = maybe_describe(object_out, repo, spec)) != GIT_ENOTFOUND)
 		return error;
 
-	giterr_set(GITERR_REFERENCE, "Revspec '%s' not found.", spec);
+	giterr_set(GITERR_REFERENCE, "revspec '%s' not found", spec);
 	return GIT_ENOTFOUND;
 }
 
@@ -245,7 +246,7 @@ static int retrieve_oid_from_reflog(git_oid *oid, git_reference *ref, size_t ide
 notfound:
 	giterr_set(
 		GITERR_REFERENCE,
-		"Reflog for '%s' has only %"PRIuZ" entries, asked for %"PRIuZ,
+		"reflog for '%s' has only %"PRIuZ" entries, asked for %"PRIuZ,
 		git_reference_name(ref), numentries, identifier);
 
 	git_reflog_free(reflog);
@@ -757,7 +758,7 @@ int revparse__ext(
 					 * TODO: support merge-stage path lookup (":2:Makefile")
 					 * and plain index blob lookup (:i-am/a/blob)
 					 */
-					giterr_set(GITERR_INVALID, "Unimplemented");
+					giterr_set(GITERR_INVALID, "unimplemented");
 					error = GIT_ERROR;
 					goto cleanup;
 				}
@@ -816,7 +817,7 @@ cleanup:
 	if (error) {
 		if (error == GIT_EINVALIDSPEC)
 			giterr_set(GITERR_INVALID,
-				"Failed to parse revision specifier - Invalid pattern '%s'", spec);
+				"failed to parse revision specifier - Invalid pattern '%s'", spec);
 
 		git_object_free(base_rev);
 		git_reference_free(reference);
@@ -892,6 +893,17 @@ int git_revparse(
 		const char *rstr;
 		revspec->flags = GIT_REVPARSE_RANGE;
 
+		/*
+		 * Following git.git, don't allow '..' because it makes command line
+		 * arguments which can be either paths or revisions ambiguous when the
+		 * path is almost certainly intended. The empty range '...' is still
+		 * allowed.
+		 */
+		if (!git__strcmp(spec, "..")) {
+			giterr_set(GITERR_INVALID, "Invalid pattern '..'");
+			return GIT_EINVALIDSPEC;
+		}
+
 		lstr = git__substrdup(spec, dotdot - spec);
 		rstr = dotdot + 2;
 		if (dotdot[2] == '.') {
@@ -899,9 +911,17 @@ int git_revparse(
 			rstr++;
 		}
 
-		error = git_revparse_single(&revspec->from, repo, lstr);
-		if (!error)
-			error = git_revparse_single(&revspec->to, repo, rstr);
+		error = git_revparse_single(
+			&revspec->from,
+			repo,
+			*lstr == '\0' ? "HEAD" : lstr);
+
+		if (!error) {
+			error = git_revparse_single(
+				&revspec->to,
+				repo,
+				*rstr == '\0' ? "HEAD" : rstr);
+		}
 
 		git__free((void*)lstr);
 	} else {

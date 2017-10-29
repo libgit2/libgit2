@@ -55,6 +55,8 @@ static int update_cb(const char *refname, const git_oid *a, const git_oid *b, vo
  */
 static int transfer_progress_cb(const git_transfer_progress *stats, void *payload)
 {
+	(void)payload;
+
 	if (stats->received_objects == stats->total_objects) {
 		printf("Resolving deltas %d/%d\r",
 		       stats->indexed_deltas, stats->total_deltas);
@@ -71,7 +73,6 @@ int fetch(git_repository *repo, int argc, char **argv)
 {
 	git_remote *remote = NULL;
 	const git_transfer_progress *stats;
-	struct dl_data data;
 	git_fetch_options fetch_opts = GIT_FETCH_OPTIONS_INIT;
 
 	if (argc < 2) {
@@ -79,14 +80,13 @@ int fetch(git_repository *repo, int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	// Figure out whether it's a named remote or a URL
+	/* Figure out whether it's a named remote or a URL */
 	printf("Fetching %s for repo %p\n", argv[1], repo);
-	if (git_remote_lookup(&remote, repo, argv[1]) < 0) {
+	if (git_remote_lookup(&remote, repo, argv[1]) < 0)
 		if (git_remote_create_anonymous(&remote, repo, argv[1]) < 0)
-			return -1;
-	}
+			goto on_error;
 
-	// Set up the callbacks (only update_tips for now)
+	/* Set up the callbacks (only update_tips for now) */
 	fetch_opts.callbacks.update_tips = &update_cb;
 	fetch_opts.callbacks.sideband_progress = &progress_cb;
 	fetch_opts.callbacks.transfer_progress = transfer_progress_cb;
@@ -98,7 +98,7 @@ int fetch(git_repository *repo, int argc, char **argv)
 	 * "fetch".
 	 */
 	if (git_remote_fetch(remote, NULL, &fetch_opts, "fetch") < 0)
-		return -1;
+		goto on_error;
 
 	/**
 	 * If there are local objects (we got a thin pack), then tell

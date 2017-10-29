@@ -6,6 +6,7 @@
  */
 
 #include "common.h"
+
 #include <zlib.h>
 #include "git2/object.h"
 #include "git2/sys/odb_backend.h"
@@ -14,6 +15,7 @@
 #include "odb.h"
 #include "delta.h"
 #include "filebuf.h"
+#include "object.h"
 
 #include "git2/odb_backend.h"
 #include "git2/types.h"
@@ -204,6 +206,11 @@ static int start_inflate(z_stream *s, git_buf *obj, void *out, size_t len)
 	return inflate(s, 0);
 }
 
+static void abort_inflate(z_stream *s)
+{
+	inflateEnd(s);
+}
+
 static int finish_inflate(z_stream *s)
 {
 	int status = Z_OK;
@@ -214,7 +221,7 @@ static int finish_inflate(z_stream *s)
 	inflateEnd(s);
 
 	if ((status != Z_STREAM_END) || (s->avail_in != 0)) {
-		giterr_set(GITERR_ZLIB, "Failed to finish ZLib inflation. Stream aborted prematurely");
+		giterr_set(GITERR_ZLIB, "failed to finish zlib inflation; stream aborted prematurely");
 		return -1;
 	}
 
@@ -243,7 +250,7 @@ static int inflate_buffer(void *in, size_t inlen, void *out, size_t outlen)
 	zs.avail_in = (uInt)inlen;
 
 	if (inflateInit(&zs) < Z_OK) {
-		giterr_set(GITERR_ZLIB, "Failed to inflate buffer");
+		giterr_set(GITERR_ZLIB, "failed to inflate buffer");
 		return -1;
 	}
 
@@ -255,7 +262,7 @@ static int inflate_buffer(void *in, size_t inlen, void *out, size_t outlen)
 	if (status != Z_STREAM_END /* || zs.avail_in != 0 */ ||
 		zs.total_out != outlen)
 	{
-		giterr_set(GITERR_ZLIB, "Failed to inflate buffer. Stream aborted prematurely");
+		giterr_set(GITERR_ZLIB, "failed to inflate buffer; stream aborted prematurely");
 		return -1;
 	}
 
@@ -319,7 +326,7 @@ static int inflate_packlike_loose_disk_obj(git_rawobj *out, git_buf *obj)
 	 */
 	if ((used = get_binary_object_header(&hdr, obj)) == 0 ||
 		!git_object_typeisloose(hdr.type)) {
-		giterr_set(GITERR_ODB, "Failed to inflate loose object.");
+		giterr_set(GITERR_ODB, "failed to inflate loose object");
 		return -1;
 	}
 
@@ -366,7 +373,8 @@ static int inflate_disk_obj(git_rawobj *out, git_buf *obj)
 		(used = get_object_header(&hdr, head)) == 0 ||
 		!git_object_typeisloose(hdr.type))
 	{
-		giterr_set(GITERR_ODB, "Failed to inflate disk object.");
+		abort_inflate(&zs);
+		giterr_set(GITERR_ODB, "failed to inflate disk object");
 		return -1;
 	}
 
@@ -455,7 +463,7 @@ static int read_header_loose(git_rawobj *out, git_buf *loc)
 		|| get_object_header(&header_obj, inflated_buffer) == 0
 		|| git_object_typeisloose(header_obj.type) == 0)
 	{
-		giterr_set(GITERR_ZLIB, "Failed to read loose object header");
+		giterr_set(GITERR_ZLIB, "failed to read loose object header");
 		error = -1;
 	} else {
 		out->len = header_obj.size;
@@ -838,6 +846,17 @@ static void loose_backend__stream_free(git_odb_stream *_stream)
 	git__free(stream);
 }
 
+static int filebuf_flags(loose_backend *backend)
+{
+	int flags = GIT_FILEBUF_TEMPORARY |
+		(backend->object_zlib_level << GIT_FILEBUF_DEFLATE_SHIFT);
+
+	if (backend->fsync_object_files || git_repository__fsync_gitdir)
+		flags |= GIT_FILEBUF_FSYNC;
+
+	return flags;
+}
+
 static int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_backend, git_off_t length, git_otype type)
 {
 	loose_backend *backend;
@@ -864,9 +883,7 @@ static int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_
 	stream->stream.mode = GIT_STREAM_WRONLY;
 
 	if (git_buf_joinpath(&tmp_path, backend->objects_dir, "tmp_object") < 0 ||
-		git_filebuf_open(&stream->fbuf, tmp_path.ptr,
-			GIT_FILEBUF_TEMPORARY |
-			(backend->object_zlib_level << GIT_FILEBUF_DEFLATE_SHIFT),
+		git_filebuf_open(&stream->fbuf, tmp_path.ptr, filebuf_flags(backend),
 			backend->object_file_mode) < 0 ||
 		stream->stream.write((git_odb_stream *)stream, hdr, hdrlen) < 0)
 	{
@@ -894,9 +911,7 @@ static int loose_backend__write(git_odb_backend *_backend, const git_oid *oid, c
 	header_len = git_odb__format_object_header(header, sizeof(header), len, type);
 
 	if (git_buf_joinpath(&final_path, backend->objects_dir, "tmp_object") < 0 ||
-		git_filebuf_open(&fbuf, final_path.ptr,
-			GIT_FILEBUF_TEMPORARY |
-			(backend->object_zlib_level << GIT_FILEBUF_DEFLATE_SHIFT),
+		git_filebuf_open(&fbuf, final_path.ptr, filebuf_flags(backend),
 			backend->object_file_mode) < 0)
 	{
 		error = -1;

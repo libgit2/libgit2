@@ -8,6 +8,8 @@
 #ifndef INCLUDE_hash_generic_h__
 #define INCLUDE_hash_generic_h__
 
+#include "common.h"
+
 #include "hash.h"
 
 struct git_hash_ctx {

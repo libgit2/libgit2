@@ -53,6 +53,8 @@ typedef enum {
 
 	GIT_PASSTHROUGH     = -30,	/**< Internal only */
 	GIT_ITEROVER        = -31,	/**< Signals end of iteration with iterator */
+	GIT_RETRY           = -32,	/**< Internal only */
+	GIT_EMISMATCH       = -33,	/**< Hashsum mismatch in object */
 } git_error_code;
 
 /**
@@ -100,6 +102,8 @@ typedef enum {
 	GITERR_REBASE,
 	GITERR_FILESYSTEM,
 	GITERR_PATCH,
+	GITERR_WORKTREE,
+	GITERR_SHA1
 } git_error_t;
 
 /**

@@ -56,8 +56,8 @@ static int GIT_FORMAT_PRINTF(2, 3) cl_setenv_printf(const char *name, const char
 static void env_pass_(const char *path, const char *file, int line)
 {
 	git_repository *repo;
-	cl_git_pass_(git_repository_open_ext(NULL, path, GIT_REPOSITORY_OPEN_FROM_ENV, NULL), file, line);
-	cl_git_pass_(git_repository_open_ext(&repo, path, GIT_REPOSITORY_OPEN_FROM_ENV, NULL), file, line);
+	cl_git_expect(git_repository_open_ext(NULL, path, GIT_REPOSITORY_OPEN_FROM_ENV, NULL), 0, file, line);
+	cl_git_expect(git_repository_open_ext(&repo, path, GIT_REPOSITORY_OPEN_FROM_ENV, NULL), 0, file, line);
 	cl_assert_at_line(git__suffixcmp(git_repository_path(repo), "attr/.git/") == 0, file, line);
 	cl_assert_at_line(git__suffixcmp(git_repository_workdir(repo), "attr/") == 0, file, line);
 	cl_assert_at_line(!git_repository_is_bare(repo), file, line);
@@ -98,24 +98,24 @@ static void env_check_objects_(bool a, bool t, bool p, const char *file, int lin
 	cl_git_pass(git_oid_fromstr(&oid_a, "45141a79a77842c59a63229403220a4e4be74e3d"));
 	cl_git_pass(git_oid_fromstr(&oid_t, "1385f264afb75a56a5bec74243be9b367ba4ca08"));
 	cl_git_pass(git_oid_fromstr(&oid_p, "0df1a5865c8abfc09f1f2182e6a31be550e99f07"));
-	cl_git_pass_(git_repository_open_ext(&repo, "attr", GIT_REPOSITORY_OPEN_FROM_ENV, NULL), file, line);
+	cl_git_expect(git_repository_open_ext(&repo, "attr", GIT_REPOSITORY_OPEN_FROM_ENV, NULL), 0, file, line);
 
 	if (a) {
-		cl_git_pass_(git_object_lookup(&object, repo, &oid_a, GIT_OBJ_BLOB), file, line);
+		cl_git_expect(git_object_lookup(&object, repo, &oid_a, GIT_OBJ_BLOB), 0, file, line);
 		git_object_free(object);
 	} else {
 		cl_git_fail_at_line(git_object_lookup(&object, repo, &oid_a, GIT_OBJ_BLOB), file, line);
 	}
 
 	if (t) {
-		cl_git_pass_(git_object_lookup(&object, repo, &oid_t, GIT_OBJ_BLOB), file, line);
+		cl_git_expect(git_object_lookup(&object, repo, &oid_t, GIT_OBJ_BLOB), 0, file, line);
 		git_object_free(object);
 	} else {
 		cl_git_fail_at_line(git_object_lookup(&object, repo, &oid_t, GIT_OBJ_BLOB), file, line);
 	}
 
 	if (p) {
-		cl_git_pass_(git_object_lookup(&object, repo, &oid_p, GIT_OBJ_COMMIT), file, line);
+		cl_git_expect(git_object_lookup(&object, repo, &oid_p, GIT_OBJ_COMMIT), 0, file, line);
 		git_object_free(object);
 	} else {
 		cl_git_fail_at_line(git_object_lookup(&object, repo, &oid_p, GIT_OBJ_COMMIT), file, line);

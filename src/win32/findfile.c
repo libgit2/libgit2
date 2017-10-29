@@ -5,10 +5,11 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "findfile.h"
+
 #include "path_w32.h"
 #include "utf-conv.h"
 #include "path.h"
-#include "findfile.h"
 
 #define REG_MSYSGIT_INSTALL_LOCAL L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Git_is1"
 
@@ -38,7 +39,7 @@ static int win32_path_to_8(git_buf *dest, const wchar_t *src)
 	git_win32_utf8_path utf8_path;
 
 	if (git_win32_path_to_utf8(utf8_path, src) < 0) {
-		giterr_set(GITERR_OS, "Unable to convert path to UTF-8");
+		giterr_set(GITERR_OS, "unable to convert path to UTF-8");
 		return -1;
 	}
 

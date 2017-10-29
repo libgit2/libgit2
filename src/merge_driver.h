@@ -7,6 +7,8 @@
 #ifndef INCLUDE_merge_driver_h__
 #define INCLUDE_merge_driver_h__
 
+#include "common.h"
+
 #include "git2/merge.h"
 #include "git2/index.h"
 #include "git2/sys/merge.h"

@@ -8,6 +8,8 @@
 #ifndef INCLUDE_git_findfile_h__
 #define INCLUDE_git_findfile_h__
 
+#include "common.h"
+
 extern int git_win32__find_system_dirs(git_buf *out, const wchar_t *subpath);
 extern int git_win32__find_global_dirs(git_buf *out);
 extern int git_win32__find_xdg_dirs(git_buf *out);

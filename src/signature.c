@@ -5,8 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
 #include "signature.h"
+
 #include "repository.h"
 #include "git2/common.h"
 #include "posix.h"
@@ -25,7 +25,7 @@ void git_signature_free(git_signature *sig)
 
 static int signature_error(const char *msg)
 {
-	giterr_set(GITERR_INVALID, "Failed to parse signature - %s", msg);
+	giterr_set(GITERR_INVALID, "failed to parse signature - %s", msg);
 	return -1;
 }
 
@@ -228,8 +228,12 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 		const char *time_start = email_end + 2;
 		const char *time_end;
 
-		if (git__strtol64(&sig->when.time, time_start, &time_end, 10) < 0)
+		if (git__strtol64(&sig->when.time, time_start, &time_end, 10) < 0) {
+			git__free(sig->name);
+			git__free(sig->email);
+			sig->name = sig->email = NULL;
 			return signature_error("invalid Unix timestamp");
+		}
 
 		/* do we have a timezone? */
 		if (time_end + 1 < buffer_end) {
@@ -251,7 +255,7 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 			 * only store timezone if it's not overflowing;
 			 * see http://www.worldtimezone.com/faq.html
 			 */
-			if (hours < 14 && mins < 59) {
+			if (hours <= 14 && mins <= 59) {
 				sig->when.offset = (hours * 60) + mins;
 				if (tz_start[0] == '-')
 					sig->when.offset = -sig->when.offset;

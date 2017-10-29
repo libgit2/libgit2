@@ -7,8 +7,9 @@
 #ifndef INCLUDE_git_utfconv_h__
 #define INCLUDE_git_utfconv_h__
 
-#include <wchar.h>
 #include "common.h"
+
+#include <wchar.h>
 
 #ifndef WC_ERR_INVALID_CHARS
 # define WC_ERR_INVALID_CHARS	0x80

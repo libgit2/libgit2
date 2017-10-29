@@ -7,6 +7,8 @@
 #ifndef INCLUDE_filebuf_h__
 #define INCLUDE_filebuf_h__
 
+#include "common.h"
+
 #include "fileops.h"
 #include "hash.h"
 #include <zlib.h>
@@ -20,7 +22,8 @@
 #define GIT_FILEBUF_FORCE				(1 << 3)
 #define GIT_FILEBUF_TEMPORARY			(1 << 4)
 #define GIT_FILEBUF_DO_NOT_BUFFER		(1 << 5)
-#define GIT_FILEBUF_DEFLATE_SHIFT		(6)
+#define GIT_FILEBUF_FSYNC				(1 << 6)
+#define GIT_FILEBUF_DEFLATE_SHIFT		(7)
 
 #define GIT_FILELOCK_EXTENSION ".lock\0"
 #define GIT_FILELOCK_EXTLENGTH 6
@@ -47,6 +50,7 @@ struct git_filebuf {
 	bool created_lock;
 	bool did_rename;
 	bool do_not_buffer;
+	bool do_fsync;
 	int last_error;
 };
 

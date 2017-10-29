@@ -8,11 +8,12 @@
 #ifndef INCLUDE_pack_h__
 #define INCLUDE_pack_h__
 
+#include "common.h"
+
 #include <zlib.h>
 
 #include "git2/oid.h"
 
-#include "common.h"
 #include "map.h"
 #include "mwindow.h"
 #include "odb.h"
@@ -149,6 +150,7 @@ git_off_t get_delta_base(struct git_pack_file *p, git_mwindow **w_curs,
 		git_off_t *curpos, git_otype type,
 		git_off_t delta_obj_offset);
 
+void git_packfile_close(struct git_pack_file *p, bool unlink_packfile);
 void git_packfile_free(struct git_pack_file *p);
 int git_packfile_alloc(struct git_pack_file **pack_out, const char *path);
 

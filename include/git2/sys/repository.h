@@ -135,6 +135,35 @@ GIT_EXTERN(void) git_repository_set_index(git_repository *repo, git_index *index
  */
 GIT_EXTERN(int) git_repository_set_bare(git_repository *repo);
 
+/**
+ * Load and cache all submodules.
+ *
+ * Because the `.gitmodules` file is unstructured, loading submodules is an
+ * O(N) operation.  Any operation (such as `git_rebase_init`) that requires
+ * accessing all submodules is O(N^2) in the number of submodules, if it
+ * has to look each one up individually.  This function loads all submodules
+ * and caches them so that subsequent calls to `git_submodule_lookup` are O(1).
+ *
+ * @param repo the repository whose submodules will be cached.
+ */
+GIT_EXTERN(int) git_repository_submodule_cache_all(
+	git_repository *repo);
+
+/**
+ * Clear the submodule cache.
+ *
+ * Clear the submodule cache populated by `git_repository_submodule_cache_all`.
+ * If there is no cache, do nothing.
+ *
+ * The cache incorporates data from the repository's configuration, as well
+ * as the state of the working tree, the index, and HEAD.  So any time any
+ * of these has changed, the cache might become invalid.
+ *
+ * @param repo the repository whose submodule cache will be cleared
+ */
+GIT_EXTERN(int) git_repository_submodule_cache_clear(
+	git_repository *repo);
+
 /** @} */
 GIT_END_DECL
 #endif

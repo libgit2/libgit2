@@ -246,6 +246,18 @@ GIT_EXTERN(int) git_branch_is_head(
 	const git_reference *branch);
 
 /**
+ * Determine if the current branch is checked out in any linked
+ * repository.
+ *
+ * @param branch Reference to the branch.
+ *
+ * @return 1 if branch is checked out, 0 if it isn't,
+ * error code otherwise.
+ */
+GIT_EXTERN(int) git_branch_is_checked_out(
+	const git_reference *branch);
+
+/**
  * Return the name of remote that the remote tracking branch belongs to.
  *
  * @param out Pointer to the user-allocated git_buf which will be filled with the name of the remote.

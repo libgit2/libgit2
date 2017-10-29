@@ -2,6 +2,7 @@
 
 extern git_filter *create_bitflip_filter(void);
 extern git_filter *create_reverse_filter(const char *attr);
+extern git_filter *create_erroneous_filter(const char *attr);
 
 extern int bitflip_filter_apply(
 	git_filter     *self,

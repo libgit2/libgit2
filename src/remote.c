@@ -5,15 +5,15 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "remote.h"
+
 #include "git2/config.h"
 #include "git2/types.h"
 #include "git2/oid.h"
 #include "git2/net.h"
 
-#include "common.h"
 #include "config.h"
 #include "repository.h"
-#include "remote.h"
 #include "fetch.h"
 #include "refs.h"
 #include "refspec.h"
@@ -192,15 +192,15 @@ static int canonicalize_url(git_buf *out, const char *in)
 static int create_internal(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
 {
 	git_remote *remote;
-	git_config *config = NULL;
+	git_config *config_ro = NULL, *config_rw;
 	git_buf canonical_url = GIT_BUF_INIT;
 	git_buf var = GIT_BUF_INIT;
 	int error = -1;
 
-	/* name is optional */
-	assert(out && repo && url);
+	/* repo, name, and fetch are optional */
+	assert(out && url);
 
-	if ((error = git_repository_config__weakptr(&config, repo)) < 0)
+	if (repo && (error = git_repository_config_snapshot(&config_ro, repo)) < 0)
 		return error;
 
 	remote = git__calloc(1, sizeof(git_remote));
@@ -212,7 +212,12 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 		(error = canonicalize_url(&canonical_url, url)) < 0)
 		goto on_error;
 
-	remote->url = apply_insteadof(repo->_config, canonical_url.ptr, GIT_DIRECTION_FETCH);
+	if (repo) {
+		remote->url = apply_insteadof(config_ro, canonical_url.ptr, GIT_DIRECTION_FETCH);
+	} else {
+		remote->url = git__strdup(canonical_url.ptr);
+	}
+	GITERR_CHECK_ALLOC(remote->url);
 
 	if (name != NULL) {
 		remote->name = git__strdup(name);
@@ -221,7 +226,9 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 		if ((error = git_buf_printf(&var, CONFIG_URL_FMT, name)) < 0)
 			goto on_error;
 
-		if ((error = git_config_set_string(config, var.ptr, canonical_url.ptr)) < 0)
+		if (repo &&
+			((error = git_repository_config__weakptr(&config_rw, repo)) < 0 ||
+			(error = git_config_set_string(config_rw, var.ptr, canonical_url.ptr)) < 0))
 			goto on_error;
 	}
 
@@ -233,10 +240,7 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 		if (name && (error = write_add_refspec(repo, name, fetch, true)) < 0)
 			goto on_error;
 
-		if ((error = git_repository_config_snapshot(&config, repo)) < 0)
-			goto on_error;
-
-		if ((error = lookup_remote_prune_config(remote, config, name)) < 0)
+		if (repo && (error = lookup_remote_prune_config(remote, config_ro, name)) < 0)
 			goto on_error;
 
 		/* Move the data over to where the matching functions can find them */
@@ -260,7 +264,7 @@ on_error:
 	if (error)
 		git_remote_free(remote);
 
-	git_config_free(config);
+	git_config_free(config_ro);
 	git_buf_free(&canonical_url);
 	git_buf_free(&var);
 	return error;
@@ -283,7 +287,7 @@ static int ensure_remote_doesnot_exist(git_repository *repo, const char *name)
 
 	giterr_set(
 		GITERR_CONFIG,
-		"Remote '%s' already exists.", name);
+		"remote '%s' already exists", name);
 
 	return GIT_EEXISTS;
 }
@@ -329,6 +333,11 @@ on_error:
 int git_remote_create_anonymous(git_remote **out, git_repository *repo, const char *url)
 {
 	return create_internal(out, repo, NULL, url, NULL);
+}
+
+int git_remote_create_detached(git_remote **out, const char *url)
+{
+	return create_internal(out, NULL, NULL, url, NULL);
 }
 
 int git_remote_dup(git_remote **dest, git_remote *source)
@@ -476,7 +485,7 @@ int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 
 	if (!optional_setting_found) {
 		error = GIT_ENOTFOUND;
-		giterr_set(GITERR_CONFIG, "Remote '%s' does not exist.", name);
+		giterr_set(GITERR_CONFIG, "remote '%s' does not exist", name);
 		goto cleanup;
 	}
 
@@ -675,7 +684,9 @@ int git_remote_connect(git_remote *remote, git_direction direction, const git_re
 	url = git_remote__urlfordirection(remote, direction);
 	if (url == NULL) {
 		giterr_set(GITERR_INVALID,
-			"Malformed remote '%s' - missing URL", remote->name);
+			"Malformed remote '%s' - missing %s URL",
+			remote->name ? remote->name : "(anonymous)",
+			direction == GIT_DIRECTION_FETCH ? "fetch" : "push");
 		return -1;
 	}
 
@@ -770,8 +781,12 @@ int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_ur
 		goto found;
 	}
 
-	/* HTTP_PROXY / HTTPS_PROXY environment variables */
-	error = git__getenv(&val, use_ssl ? "HTTPS_PROXY" : "HTTP_PROXY");
+	/* http_proxy / https_proxy environment variables */
+	error = git__getenv(&val, use_ssl ? "https_proxy" : "http_proxy");
+
+	/* try uppercase environment variables */
+	if (error == GIT_ENOTFOUND)
+		error = git__getenv(&val, use_ssl ? "HTTPS_PROXY" : "HTTP_PROXY");
 
 	if (error < 0) {
 		if (error == GIT_ENOTFOUND) {
@@ -855,6 +870,11 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs, const 
 	const git_proxy_options *proxy = NULL;
 
 	assert(remote);
+
+	if (!remote->repo) {
+		giterr_set(GITERR_INVALID, "cannot download detached remote");
+		return -1;
+	}
 
 	if (opts) {
 		GITERR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
@@ -1718,7 +1738,7 @@ int git_remote_set_autotag(git_repository *repo, const char *remote, git_remote_
 			error = 0;
 		break;
 	default:
-		giterr_set(GITERR_INVALID, "Invalid value for the tagopt setting");
+		giterr_set(GITERR_INVALID, "invalid value for the tagopt setting");
 		error = -1;
 	}
 
@@ -2341,6 +2361,11 @@ int git_remote_upload(git_remote *remote, const git_strarray *refspecs, const gi
 
 	assert(remote);
 
+	if (!remote->repo) {
+		giterr_set(GITERR_INVALID, "cannot download detached remote");
+		return -1;
+	}
+
 	if (opts) {
 		cbs = &opts->callbacks;
 		custom_headers = &opts->custom_headers;
@@ -2400,6 +2425,13 @@ int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_
 	const git_strarray *custom_headers = NULL;
 	const git_proxy_options *proxy = NULL;
 
+	assert(remote);
+
+	if (!remote->repo) {
+		giterr_set(GITERR_INVALID, "cannot download detached remote");
+		return -1;
+	}
+
 	if (opts) {
 		GITERR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
 		cbs = &opts->callbacks;
@@ -2408,7 +2440,7 @@ int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_
 		proxy = &opts->proxy_opts;
 	}
 
-	assert(remote && refspecs);
+	assert(remote);
 
 	if ((error = git_remote_connect(remote, GIT_DIRECTION_PUSH, cbs, proxy, custom_headers)) < 0)
 		return error;

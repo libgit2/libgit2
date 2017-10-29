@@ -5,9 +5,9 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
-#include "path.h"
 #include "path_w32.h"
+
+#include "path.h"
 #include "utf-conv.h"
 #include "posix.h"
 #include "reparse.h"

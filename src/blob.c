@@ -5,14 +5,14 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "blob.h"
+
 #include "git2/common.h"
 #include "git2/object.h"
 #include "git2/repository.h"
 #include "git2/odb_backend.h"
 
-#include "common.h"
 #include "filebuf.h"
-#include "blob.h"
 #include "filter.h"
 #include "buf_text.h"
 
@@ -96,7 +96,7 @@ static int write_file_stream(
 	p_close(fd);
 
 	if (written != file_size || read_len < 0) {
-		giterr_set(GITERR_OS, "Failed to read file into stream");
+		giterr_set(GITERR_OS, "failed to read file into stream");
 		error = -1;
 	}
 
@@ -142,7 +142,7 @@ static int write_symlink(
 
 	read_len = p_readlink(path, link_data, link_size);
 	if (read_len != (ssize_t)link_size) {
-		giterr_set(GITERR_OS, "Failed to create blob.  Can't read symlink '%s'", path);
+		giterr_set(GITERR_OS, "failed to create blob: cannot read symlink '%s'", path);
 		git__free(link_data);
 		return -1;
 	}
@@ -186,7 +186,7 @@ int git_blob__create_from_paths(
 		goto done;
 
 	if (S_ISDIR(st.st_mode)) {
-		giterr_set(GITERR_ODB, "cannot create blob from '%s'; it is a directory", content_path);
+		giterr_set(GITERR_ODB, "cannot create blob from '%s': it is a directory", content_path);
 		error = GIT_EDIRECTORY;
 		goto done;
 	}
@@ -326,8 +326,8 @@ int git_blob_create_fromstream(git_writestream **out, git_repository *repo, cons
 	stream->parent.close = blob_writestream_close;
 	stream->parent.free  = blob_writestream_free;
 
-	if ((error = git_buf_joinpath(&path,
-				      git_repository_path(repo), GIT_OBJECTS_DIR "streamed")) < 0)
+	if ((error = git_repository_item_path(&path, repo, GIT_REPOSITORY_ITEM_OBJECTS)) < 0
+		|| (error = git_buf_joinpath(&path, path.ptr, "streamed")) < 0)
 		goto cleanup;
 
 	if ((error = git_filebuf_open_withsize(&stream->fbuf, git_buf_cstr(&path), GIT_FILEBUF_TEMPORARY,

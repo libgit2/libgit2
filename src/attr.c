@@ -1,4 +1,12 @@
-#include "common.h"
+/*
+ * Copyright (C) the libgit2 contributors. All rights reserved.
+ *
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
+ */
+
+#include "attr.h"
+
 #include "repository.h"
 #include "sysdir.h"
 #include "config.h"
@@ -6,8 +14,6 @@
 #include "ignore.h"
 #include "git2/oid.h"
 #include <ctype.h>
-
-GIT__USE_STRMAP
 
 const char *git_attr__true  = "[internal]__TRUE__";
 const char *git_attr__false = "[internal]__FALSE__";
@@ -209,7 +215,7 @@ int git_attr_foreach(
 				if (git_strmap_exists(seen, assign->name))
 					continue;
 
-				git_strmap_insert(seen, assign->name, assign, error);
+				git_strmap_insert(seen, assign->name, assign, &error);
 				if (error < 0)
 					goto cleanup;
 
@@ -292,7 +298,7 @@ static int attr_setup(git_repository *repo, git_attr_session *attr_session)
 	int error = 0;
 	const char *workdir = git_repository_workdir(repo);
 	git_index *idx = NULL;
-	git_buf sys = GIT_BUF_INIT;
+	git_buf path = GIT_BUF_INIT;
 
 	if (attr_session && attr_session->init_setup)
 		return 0;
@@ -304,39 +310,44 @@ static int attr_setup(git_repository *repo, git_attr_session *attr_session)
 	 * definitions will be available for later file parsing
 	 */
 
-	error = system_attr_file(&sys, attr_session);
+	error = system_attr_file(&path, attr_session);
 
 	if (error == 0)
 		error = preload_attr_file(
-			repo, attr_session, GIT_ATTR_FILE__FROM_FILE, NULL, sys.ptr);
+			repo, attr_session, GIT_ATTR_FILE__FROM_FILE, NULL, path.ptr);
 
 	if (error != GIT_ENOTFOUND)
-		return error;
-
-	git_buf_free(&sys);
+		goto out;
 
 	if ((error = preload_attr_file(
 			repo, attr_session, GIT_ATTR_FILE__FROM_FILE,
 			NULL, git_repository_attr_cache(repo)->cfg_attr_file)) < 0)
-		return error;
+		goto out;
+
+	if ((error = git_repository_item_path(&path,
+			repo, GIT_REPOSITORY_ITEM_INFO)) < 0)
+		goto out;
 
 	if ((error = preload_attr_file(
 			repo, attr_session, GIT_ATTR_FILE__FROM_FILE,
-			git_repository_path(repo), GIT_ATTR_FILE_INREPO)) < 0)
-		return error;
+			path.ptr, GIT_ATTR_FILE_INREPO)) < 0)
+		goto out;
 
 	if (workdir != NULL &&
 		(error = preload_attr_file(
 			repo, attr_session, GIT_ATTR_FILE__FROM_FILE, workdir, GIT_ATTR_FILE)) < 0)
-		return error;
+		goto out;
 
 	if ((error = git_repository_index__weakptr(&idx, repo)) < 0 ||
 		(error = preload_attr_file(
 			repo, attr_session, GIT_ATTR_FILE__FROM_INDEX, NULL, GIT_ATTR_FILE)) < 0)
-		return error;
+		goto out;
 
 	if (attr_session)
 		attr_session->init_setup = 1;
+
+out:
+	git_buf_free(&path);
 
 	return error;
 }
@@ -472,7 +483,7 @@ static int collect_attr_files(
 	git_vector *files)
 {
 	int error = 0;
-	git_buf dir = GIT_BUF_INIT;
+	git_buf dir = GIT_BUF_INIT, attrfile = GIT_BUF_INIT;
 	const char *workdir = git_repository_workdir(repo);
 	attr_walk_up_info info = { NULL };
 
@@ -494,9 +505,13 @@ static int collect_attr_files(
 	 * - $GIT_PREFIX/etc/gitattributes
 	 */
 
+	error = git_repository_item_path(&attrfile, repo, GIT_REPOSITORY_ITEM_INFO);
+	if (error < 0)
+		goto cleanup;
+
 	error = push_attr_file(
 		repo, attr_session, files, GIT_ATTR_FILE__FROM_FILE,
-		git_repository_path(repo), GIT_ATTR_FILE_INREPO);
+		attrfile.ptr, GIT_ATTR_FILE_INREPO);
 	if (error < 0)
 		goto cleanup;
 
@@ -538,6 +553,7 @@ static int collect_attr_files(
  cleanup:
 	if (error < 0)
 		release_attr_files(files);
+	git_buf_free(&attrfile);
 	git_buf_free(&dir);
 
 	return error;

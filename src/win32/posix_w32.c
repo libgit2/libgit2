@@ -4,6 +4,9 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
+
+#include "common.h"
+
 #include "../posix.h"
 #include "../fileops.h"
 #include "path.h"
@@ -26,15 +29,6 @@
 #define IO_REPARSE_TAG_SYMLINK (0xA000000CL)
 #endif
 
-/* Options which we always provide to _wopen.
- *
- * _O_BINARY - Raw access; no translation of CR or LF characters
- * _O_NOINHERIT - Do not mark the created handle as inheritable by child processes.
- *    The Windows default is 'not inheritable', but the CRT's default (following
- *    POSIX convention) is 'inheritable'. We have no desire for our handles to be
- *    inheritable on Windows, so specify the flag to get default behavior back. */
-#define STANDARD_OPEN_FLAGS (_O_BINARY | _O_NOINHERIT)
-
 /* Allowable mode bits on Win32.  Using mode bits that are not supported on
  * Win32 (eg S_IRWXU) is generally ignored, but Wine warns loudly about it
  * so we simply remove them.
@@ -43,6 +37,167 @@
 
 /* GetFinalPathNameByHandleW signature */
 typedef DWORD(WINAPI *PFGetFinalPathNameByHandleW)(HANDLE, LPWSTR, DWORD, DWORD);
+
+unsigned long git_win32__createfile_sharemode =
+ FILE_SHARE_READ | FILE_SHARE_WRITE;
+int git_win32__retries = 10;
+
+GIT_INLINE(void) set_errno(void)
+{
+	switch (GetLastError()) {
+	case ERROR_FILE_NOT_FOUND:
+	case ERROR_PATH_NOT_FOUND:
+	case ERROR_INVALID_DRIVE:
+	case ERROR_NO_MORE_FILES:
+	case ERROR_BAD_NETPATH:
+	case ERROR_BAD_NET_NAME:
+	case ERROR_BAD_PATHNAME:
+	case ERROR_FILENAME_EXCED_RANGE:
+		errno = ENOENT;
+		break;
+	case ERROR_BAD_ENVIRONMENT:
+		errno = E2BIG;
+		break;
+	case ERROR_BAD_FORMAT:
+	case ERROR_INVALID_STARTING_CODESEG:
+	case ERROR_INVALID_STACKSEG:
+	case ERROR_INVALID_MODULETYPE:
+	case ERROR_INVALID_EXE_SIGNATURE:
+	case ERROR_EXE_MARKED_INVALID:
+	case ERROR_BAD_EXE_FORMAT:
+	case ERROR_ITERATED_DATA_EXCEEDS_64k:
+	case ERROR_INVALID_MINALLOCSIZE:
+	case ERROR_DYNLINK_FROM_INVALID_RING:
+	case ERROR_IOPL_NOT_ENABLED:
+	case ERROR_INVALID_SEGDPL:
+	case ERROR_AUTODATASEG_EXCEEDS_64k:
+	case ERROR_RING2SEG_MUST_BE_MOVABLE:
+	case ERROR_RELOC_CHAIN_XEEDS_SEGLIM:
+	case ERROR_INFLOOP_IN_RELOC_CHAIN:
+		errno = ENOEXEC;
+		break;
+	case ERROR_INVALID_HANDLE:
+	case ERROR_INVALID_TARGET_HANDLE:
+	case ERROR_DIRECT_ACCESS_HANDLE:
+		errno = EBADF;
+		break;
+	case ERROR_WAIT_NO_CHILDREN:
+	case ERROR_CHILD_NOT_COMPLETE:
+		errno = ECHILD;
+		break;
+	case ERROR_NO_PROC_SLOTS:
+	case ERROR_MAX_THRDS_REACHED:
+	case ERROR_NESTING_NOT_ALLOWED:
+		errno = EAGAIN;
+		break;
+	case ERROR_ARENA_TRASHED:
+	case ERROR_NOT_ENOUGH_MEMORY:
+	case ERROR_INVALID_BLOCK:
+	case ERROR_NOT_ENOUGH_QUOTA:
+		errno = ENOMEM;
+		break;
+	case ERROR_ACCESS_DENIED:
+	case ERROR_CURRENT_DIRECTORY:
+	case ERROR_WRITE_PROTECT:
+	case ERROR_BAD_UNIT:
+	case ERROR_NOT_READY:
+	case ERROR_BAD_COMMAND:
+	case ERROR_CRC:
+	case ERROR_BAD_LENGTH:
+	case ERROR_SEEK:
+	case ERROR_NOT_DOS_DISK:
+	case ERROR_SECTOR_NOT_FOUND:
+	case ERROR_OUT_OF_PAPER:
+	case ERROR_WRITE_FAULT:
+	case ERROR_READ_FAULT:
+	case ERROR_GEN_FAILURE:
+	case ERROR_SHARING_VIOLATION:
+	case ERROR_LOCK_VIOLATION:
+	case ERROR_WRONG_DISK:
+	case ERROR_SHARING_BUFFER_EXCEEDED:
+	case ERROR_NETWORK_ACCESS_DENIED:
+	case ERROR_CANNOT_MAKE:
+	case ERROR_FAIL_I24:
+	case ERROR_DRIVE_LOCKED:
+	case ERROR_SEEK_ON_DEVICE:
+	case ERROR_NOT_LOCKED:
+	case ERROR_LOCK_FAILED:
+		errno = EACCES;
+		break;
+	case ERROR_FILE_EXISTS:
+	case ERROR_ALREADY_EXISTS:
+		errno = EEXIST;
+		break;
+	case ERROR_NOT_SAME_DEVICE:
+		errno = EXDEV;
+		break;
+	case ERROR_INVALID_FUNCTION:
+	case ERROR_INVALID_ACCESS:
+	case ERROR_INVALID_DATA:
+	case ERROR_INVALID_PARAMETER:
+	case ERROR_NEGATIVE_SEEK:
+		errno = EINVAL;
+		break;
+	case ERROR_TOO_MANY_OPEN_FILES:
+		errno = EMFILE;
+		break;
+	case ERROR_DISK_FULL:
+		errno = ENOSPC;
+		break;
+	case ERROR_BROKEN_PIPE:
+		errno = EPIPE;
+		break;
+	case ERROR_DIR_NOT_EMPTY:
+		errno = ENOTEMPTY;
+		break;
+	default:
+		errno = EINVAL;
+	}
+}
+
+GIT_INLINE(bool) last_error_retryable(void)
+{
+	int os_error = GetLastError();
+
+	return (os_error == ERROR_SHARING_VIOLATION ||
+		os_error == ERROR_ACCESS_DENIED);
+}
+
+#define do_with_retries(fn, remediation) \
+	do {                                                             \
+		int __retry, __ret;                                          \
+		for (__retry = git_win32__retries; __retry; __retry--) {     \
+			if ((__ret = (fn)) != GIT_RETRY)                         \
+				return __ret;                                        \
+			if (__retry > 1 && (__ret = (remediation)) != 0) {       \
+				if (__ret == GIT_RETRY)                              \
+					continue;                                        \
+				return __ret;                                        \
+			}                                                        \
+			Sleep(5);                                                \
+		}                                                            \
+		return -1;                                                   \
+	} while (0)                                                      \
+
+static int ensure_writable(wchar_t *path)
+{
+	DWORD attrs;
+
+	if ((attrs = GetFileAttributesW(path)) == INVALID_FILE_ATTRIBUTES)
+		goto on_error;
+
+	if ((attrs & FILE_ATTRIBUTE_READONLY) == 0)
+		return 0;
+
+	if (!SetFileAttributesW(path, (attrs & ~FILE_ATTRIBUTE_READONLY)))
+		goto on_error;
+
+	return GIT_RETRY;
+
+on_error:
+	set_errno();
+	return -1;
+}
 
 /**
  * Truncate or extend file.
@@ -89,29 +244,33 @@ int p_link(const char *old, const char *new)
 	return -1;
 }
 
+GIT_INLINE(int) unlink_once(const wchar_t *path)
+{
+	if (DeleteFileW(path))
+		return 0;
+
+	if (last_error_retryable())
+		return GIT_RETRY;
+
+	set_errno();
+	return -1;
+}
+
 int p_unlink(const char *path)
 {
-	git_win32_path buf;
-	int error;
+	git_win32_path wpath;
 
-	if (git_win32_path_from_utf8(buf, path) < 0)
+	if (git_win32_path_from_utf8(wpath, path) < 0)
 		return -1;
 
-	error = _wunlink(buf);
-
-	/* If the file could not be deleted because it was
-	 * read-only, clear the bit and try again */
-	if (error == -1 && errno == EACCES) {
-		_wchmod(buf, 0666);
-		error = _wunlink(buf);
-	}
-
-	return error;
+	do_with_retries(unlink_once(wpath), ensure_writable(wpath));
 }
 
 int p_fsync(int fd)
 {
 	HANDLE fh = (HANDLE)_get_osfhandle(fd);
+
+	p_fsync__cnt++;
 
 	if (fh == INVALID_HANDLE_VALUE) {
 		errno = EBADF;
@@ -210,44 +369,6 @@ int p_lstat_posixly(const char *filename, struct stat *buf)
 	return do_lstat(filename, buf, true);
 }
 
-int p_utimes(const char *filename, const struct p_timeval times[2])
-{
-	int fd, error;
-
-	if ((fd = p_open(filename, O_RDWR)) < 0)
-		return fd;
-
-	error = p_futimes(fd, times);
-
-	close(fd);
-	return error;
-}
-
-int p_futimes(int fd, const struct p_timeval times[2])
-{
-	HANDLE handle;
-	FILETIME atime = {0}, mtime = {0};
-
-	if (times == NULL) {
-		SYSTEMTIME st;
-
-		GetSystemTime(&st);
-		SystemTimeToFileTime(&st, &atime);
-		SystemTimeToFileTime(&st, &mtime);
-	} else {
-		git_win32__timeval_to_filetime(&atime, times[0]);
-		git_win32__timeval_to_filetime(&mtime, times[1]);
-	}
-
-	if ((handle = (HANDLE)_get_osfhandle(fd)) == INVALID_HANDLE_VALUE)
-		return -1;
-
-	if (SetFileTime(handle, NULL, &atime, &mtime) == 0)
-		return -1;
-
-	return 0;
-}
-
 int p_readlink(const char *path, char *buf, size_t bufsiz)
 {
 	git_win32_path path_w, target_w;
@@ -280,12 +401,91 @@ int p_symlink(const char *old, const char *new)
 	return git_futils_fake_symlink(old, new);
 }
 
+struct open_opts {
+	DWORD access;
+	DWORD sharing;
+	SECURITY_ATTRIBUTES security;
+	DWORD creation_disposition;
+	DWORD attributes;
+	int osf_flags;
+};
+
+GIT_INLINE(void) open_opts_from_posix(struct open_opts *opts, int flags, mode_t mode)
+{
+	memset(opts, 0, sizeof(struct open_opts));
+
+	switch (flags & (O_WRONLY | O_RDWR)) {
+	case O_WRONLY:
+		opts->access = GENERIC_WRITE;
+		break;
+	case O_RDWR:
+		opts->access = GENERIC_READ | GENERIC_WRITE;
+		break;
+	default:
+		opts->access = GENERIC_READ;
+		break;
+	}
+
+	opts->sharing = (DWORD)git_win32__createfile_sharemode;
+
+	switch (flags & (O_CREAT | O_TRUNC | O_EXCL)) {
+	case O_CREAT | O_EXCL:
+	case O_CREAT | O_TRUNC | O_EXCL:
+		opts->creation_disposition = CREATE_NEW;
+		break;
+	case O_CREAT | O_TRUNC:
+		opts->creation_disposition = CREATE_ALWAYS;
+		break;
+	case O_TRUNC:
+		opts->creation_disposition = TRUNCATE_EXISTING;
+		break;
+	case O_CREAT:
+		opts->creation_disposition = OPEN_ALWAYS;
+		break;
+	default:
+		opts->creation_disposition = OPEN_EXISTING;
+		break;
+	}
+
+	opts->attributes = ((flags & O_CREAT) && !(mode & S_IWRITE)) ?
+		FILE_ATTRIBUTE_READONLY : FILE_ATTRIBUTE_NORMAL;
+	opts->osf_flags = flags & (O_RDONLY | O_APPEND);
+
+	opts->security.nLength = sizeof(SECURITY_ATTRIBUTES);
+	opts->security.lpSecurityDescriptor = NULL;
+	opts->security.bInheritHandle = 0;
+}
+
+GIT_INLINE(int) open_once(
+	const wchar_t *path,
+	struct open_opts *opts)
+{
+	int fd;
+
+	HANDLE handle = CreateFileW(path, opts->access, opts->sharing,
+		&opts->security, opts->creation_disposition, opts->attributes, 0);
+
+	if (handle == INVALID_HANDLE_VALUE) {
+		if (last_error_retryable())
+			return GIT_RETRY;
+
+		set_errno();
+		return -1;
+	}
+
+	if ((fd = _open_osfhandle((intptr_t)handle, opts->osf_flags)) < 0)
+		CloseHandle(handle);
+
+	return fd;
+}
+
 int p_open(const char *path, int flags, ...)
 {
-	git_win32_path buf;
+	git_win32_path wpath;
 	mode_t mode = 0;
+	struct open_opts opts = {0};
 
-	if (git_win32_path_from_utf8(buf, path) < 0)
+	if (git_win32_path_from_utf8(wpath, path) < 0)
 		return -1;
 
 	if (flags & O_CREAT) {
@@ -296,19 +496,83 @@ int p_open(const char *path, int flags, ...)
 		va_end(arg_list);
 	}
 
-	return _wopen(buf, flags | STANDARD_OPEN_FLAGS, mode & WIN32_MODE_MASK);
+	open_opts_from_posix(&opts, flags, mode);
+
+	do_with_retries(
+		open_once(wpath, &opts),
+		0);
 }
 
 int p_creat(const char *path, mode_t mode)
 {
-	git_win32_path buf;
+	return p_open(path, O_WRONLY | O_CREAT | O_TRUNC, mode);
+}
 
-	if (git_win32_path_from_utf8(buf, path) < 0)
+int p_utimes(const char *path, const struct p_timeval times[2])
+{
+	git_win32_path wpath;
+	int fd, error;
+	DWORD attrs_orig, attrs_new = 0;
+	struct open_opts opts = { 0 };
+
+	if (git_win32_path_from_utf8(wpath, path) < 0)
 		return -1;
 
-	return _wopen(buf,
-		_O_WRONLY | _O_CREAT | _O_TRUNC | STANDARD_OPEN_FLAGS,
-		mode & WIN32_MODE_MASK);
+	attrs_orig = GetFileAttributesW(wpath);
+
+	if (attrs_orig & FILE_ATTRIBUTE_READONLY) {
+		attrs_new = attrs_orig & ~FILE_ATTRIBUTE_READONLY;
+
+		if (!SetFileAttributesW(wpath, attrs_new)) {
+			giterr_set(GITERR_OS, "failed to set attributes");
+			return -1;
+		}
+	}
+
+	open_opts_from_posix(&opts, O_RDWR, 0);
+
+	if ((fd = open_once(wpath, &opts)) < 0) {
+		error = -1;
+		goto done;
+	}
+
+	error = p_futimes(fd, times);
+	close(fd);
+
+done:
+	if (attrs_orig != attrs_new) {
+		DWORD os_error = GetLastError();
+		SetFileAttributesW(wpath, attrs_orig);
+		SetLastError(os_error);
+	}
+
+	return error;
+}
+
+int p_futimes(int fd, const struct p_timeval times[2])
+{
+	HANDLE handle;
+	FILETIME atime = { 0 }, mtime = { 0 };
+
+	if (times == NULL) {
+		SYSTEMTIME st;
+
+		GetSystemTime(&st);
+		SystemTimeToFileTime(&st, &atime);
+		SystemTimeToFileTime(&st, &mtime);
+	}
+	else {
+		git_win32__timeval_to_filetime(&atime, times[0]);
+		git_win32__timeval_to_filetime(&mtime, times[1]);
+	}
+
+	if ((handle = (HANDLE)_get_osfhandle(fd)) == INVALID_HANDLE_VALUE)
+		return -1;
+
+	if (SetFileTime(handle, NULL, &atime, &mtime) == 0)
+		return -1;
+
+	return 0;
 }
 
 int p_getcwd(char *buffer_out, size_t size)
@@ -581,62 +845,27 @@ int p_access(const char* path, mode_t mode)
 	return _waccess(buf, mode & WIN32_MODE_MASK);
 }
 
-static int ensure_writable(wchar_t *fpath)
+GIT_INLINE(int) rename_once(const wchar_t *from, const wchar_t *to)
 {
-	DWORD attrs;
-
-	attrs = GetFileAttributesW(fpath);
-	if (attrs == INVALID_FILE_ATTRIBUTES) {
-		if (GetLastError() == ERROR_FILE_NOT_FOUND)
-			return 0;
-
-		giterr_set(GITERR_OS, "failed to get attributes");
-		return -1;
-	}
-
-	if (!(attrs & FILE_ATTRIBUTE_READONLY))
+	if (MoveFileExW(from, to, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED))
 		return 0;
 
-	attrs &= ~FILE_ATTRIBUTE_READONLY;
-	if (!SetFileAttributesW(fpath, attrs)) {
-		giterr_set(GITERR_OS, "failed to set attributes");
-		return -1;
-	}
+	if (last_error_retryable())
+		return GIT_RETRY;
 
-	return 0;
+	set_errno();
+	return -1;
 }
 
 int p_rename(const char *from, const char *to)
 {
-	git_win32_path wfrom;
-	git_win32_path wto;
-	int rename_tries;
-	int rename_succeeded;
-	int error;
+	git_win32_path wfrom, wto;
 
 	if (git_win32_path_from_utf8(wfrom, from) < 0 ||
 		git_win32_path_from_utf8(wto, to) < 0)
 		return -1;
 
-	/* wait up to 50ms if file is locked by another thread or process */
-	rename_tries = 0;
-	rename_succeeded = 0;
-	while (rename_tries < 10) {
-		if (ensure_writable(wto) == 0 &&
-		    MoveFileExW(wfrom, wto, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED) != 0) {
-			rename_succeeded = 1;
-			break;
-		}
-		
-		error = GetLastError();
-		if (error == ERROR_SHARING_VIOLATION || error == ERROR_ACCESS_DENIED) {
-			Sleep(5);
-			rename_tries++;
-		} else
-			break;
-	}
-	
-	return rename_succeeded ? 0 : -1;
+	do_with_retries(rename_once(wfrom, wto), ensure_writable(wto));
 }
 
 int p_recv(GIT_SOCKET socket, void *buffer, size_t length, int flags)

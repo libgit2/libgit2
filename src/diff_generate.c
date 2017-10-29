@@ -4,9 +4,10 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#include "common.h"
-#include "diff.h"
+
 #include "diff_generate.h"
+
+#include "diff.h"
 #include "patch_generate.h"
 #include "fileops.h"
 #include "config.h"
@@ -624,7 +625,7 @@ int git_diff__oid_for_entry(
 		error = git_odb__hashlink(out, full_path.ptr);
 		diff->base.perf.oid_calculations++;
 	} else if (!git__is_sizet(entry.file_size)) {
-		giterr_set(GITERR_OS, "File size overflow (for 32-bits) on '%s'",
+		giterr_set(GITERR_OS, "file size overflow (for 32-bits) on '%s'",
 			entry.path);
 		error = -1;
 	} else if (!(error = git_filter_list_load(&fl,
@@ -1587,7 +1588,7 @@ int git_diff__commit(
 		char commit_oidstr[GIT_OID_HEXSZ + 1];
 
 		error = -1;
-		giterr_set(GITERR_INVALID, "Commit %s is a merge commit",
+		giterr_set(GITERR_INVALID, "commit %s is a merge commit",
 			git_oid_tostr(commit_oidstr, GIT_OID_HEXSZ + 1, git_commit_id(commit)));
 		goto on_error;
 	}

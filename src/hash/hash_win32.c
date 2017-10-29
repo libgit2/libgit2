@@ -5,10 +5,10 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
+#include "hash_win32.h"
+
 #include "global.h"
 #include "hash.h"
-#include "hash/hash_win32.h"
 
 #include <wincrypt.h>
 #include <strsafe.h>

@@ -5,9 +5,9 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
-#include "odb.h"
 #include "pack.h"
+
+#include "odb.h"
 #include "delta.h"
 #include "sha1_lookup.h"
 #include "mwindow.h"
@@ -15,9 +15,6 @@
 #include "oid.h"
 
 #include <zlib.h>
-
-GIT__USE_OFFMAP
-GIT__USE_OIDMAP
 
 static int packfile_open(struct git_pack_file *p);
 static git_off_t nth_packed_object_offset(const struct git_pack_file *p, uint32_t n);
@@ -45,7 +42,7 @@ static int pack_entry_find_offset(
 
 static int packfile_error(const char *message)
 {
-	giterr_set(GITERR_ODB, "Invalid pack file - %s", message);
+	giterr_set(GITERR_ODB, "invalid pack file - %s", message);
 	return -1;
 }
 
@@ -78,13 +75,12 @@ static void free_cache_object(void *o)
 
 static void cache_free(git_pack_cache *cache)
 {
-	khiter_t k;
+	git_pack_cache_entry *entry;
 
 	if (cache->entries) {
-		for (k = kh_begin(cache->entries); k != kh_end(cache->entries); k++) {
-			if (kh_exist(cache->entries, k))
-				free_cache_object(kh_value(cache->entries, k));
-		}
+		git_offmap_foreach_value(cache->entries, entry, {
+			free_cache_object(entry);
+		});
 
 		git_offmap_free(cache->entries);
 		cache->entries = NULL;
@@ -99,7 +95,7 @@ static int cache_init(git_pack_cache *cache)
 	cache->memory_limit = GIT_PACK_CACHE_MEMORY_LIMIT;
 
 	if (git_mutex_init(&cache->lock)) {
-		giterr_set(GITERR_OS, "Failed to initialize pack cache mutex");
+		giterr_set(GITERR_OS, "failed to initialize pack cache mutex");
 
 		git__free(cache->entries);
 		cache->entries = NULL;
@@ -118,9 +114,9 @@ static git_pack_cache_entry *cache_get(git_pack_cache *cache, git_off_t offset)
 	if (git_mutex_lock(&cache->lock) < 0)
 		return NULL;
 
-	k = kh_get(off, cache->entries, offset);
-	if (k != kh_end(cache->entries)) { /* found it */
-		entry = kh_value(cache->entries, k);
+	k = git_offmap_lookup_index(cache->entries, offset);
+	if (git_offmap_valid_index(cache->entries, k)) { /* found it */
+		entry = git_offmap_value_at(cache->entries, k);
 		git_atomic_inc(&entry->refcount);
 		entry->last_usage = cache->use_ctr++;
 	}
@@ -132,21 +128,16 @@ static git_pack_cache_entry *cache_get(git_pack_cache *cache, git_off_t offset)
 /* Run with the cache lock held */
 static void free_lowest_entry(git_pack_cache *cache)
 {
+	git_off_t offset;
 	git_pack_cache_entry *entry;
-	khiter_t k;
 
-	for (k = kh_begin(cache->entries); k != kh_end(cache->entries); k++) {
-		if (!kh_exist(cache->entries, k))
-			continue;
-
-		entry = kh_value(cache->entries, k);
-
+	git_offmap_foreach(cache->entries, offset, entry, {
 		if (entry && entry->refcount.val == 0) {
 			cache->memory_used -= entry->raw.len;
-			kh_del(off, cache->entries, k);
+			git_offmap_delete(cache->entries, offset);
 			free_cache_object(entry);
 		}
-	}
+	});
 }
 
 static int cache_add(
@@ -170,14 +161,14 @@ static int cache_add(
 			return -1;
 		}
 		/* Add it to the cache if nobody else has */
-		exists = kh_get(off, cache->entries, offset) != kh_end(cache->entries);
+		exists = git_offmap_exists(cache->entries, offset);
 		if (!exists) {
 			while (cache->memory_used + base->len > cache->memory_limit)
 				free_lowest_entry(cache);
 
-			k = kh_put(off, cache->entries, offset, &error);
+			k = git_offmap_put(cache->entries, offset, &error);
 			assert(error != 0);
-			kh_value(cache->entries, k) = entry;
+			git_offmap_set_value_at(cache->entries, k, entry);
 			cache->memory_used += entry->raw.len;
 
 			*cached_out = entry;
@@ -226,7 +217,7 @@ static int pack_index_check(const char *path, struct git_pack_file *p)
 
 	if (p_fstat(fd, &st) < 0) {
 		p_close(fd);
-		giterr_set(GITERR_OS, "Unable to stat pack index '%s'", path);
+		giterr_set(GITERR_OS, "unable to stat pack index '%s'", path);
 		return -1;
 	}
 
@@ -235,7 +226,7 @@ static int pack_index_check(const char *path, struct git_pack_file *p)
 		(idx_size = (size_t)st.st_size) < 4 * 256 + 20 + 20)
 	{
 		p_close(fd);
-		giterr_set(GITERR_ODB, "Invalid pack index '%s'", path);
+		giterr_set(GITERR_ODB, "invalid pack index '%s'", path);
 		return -1;
 	}
 
@@ -321,7 +312,7 @@ static int pack_index_open(struct git_pack_file *p)
 {
 	int error = 0;
 	size_t name_len;
-	git_buf idx_name = GIT_BUF_INIT;
+	git_buf idx_name;
 
 	if (p->index_version > -1)
 		return 0;
@@ -329,11 +320,13 @@ static int pack_index_open(struct git_pack_file *p)
 	name_len = strlen(p->pack_name);
 	assert(name_len > strlen(".pack")); /* checked by git_pack_file alloc */
 
-	git_buf_grow(&idx_name, name_len);
+	if (git_buf_init(&idx_name, name_len) < 0)
+		return -1;
+
 	git_buf_put(&idx_name, p->pack_name, name_len - strlen(".pack"));
 	git_buf_puts(&idx_name, ".idx");
 	if (git_buf_oom(&idx_name)) {
-		giterr_set_oom();
+		git_buf_free(&idx_name);
 		return -1;
 	}
 
@@ -509,8 +502,10 @@ int git_packfile_resolve_header(
 		git_packfile_stream_free(&stream);
 		if (error < 0)
 			return error;
-	} else
+	} else {
 		*size_p = size;
+		base_offset = 0;
+	}
 
 	while (type == GIT_OBJ_OFS_DELTA || type == GIT_OBJ_REF_DELTA) {
 		curpos = base_offset;
@@ -757,8 +752,11 @@ int git_packfile_unpack(
 	}
 
 cleanup:
-	if (error < 0)
+	if (error < 0) {
 		git__free(obj->data);
+		if (cached)
+			git_atomic_dec(&cached->refcount);
+	}
 
 	if (elem)
 		*obj_offset = curpos;
@@ -957,10 +955,10 @@ git_off_t get_delta_base(
 			git_oid oid;
 
 			git_oid_fromraw(&oid, base_info);
-			k = kh_get(oid, p->idx_cache, &oid);
-			if (k != kh_end(p->idx_cache)) {
+			k = git_oidmap_lookup_index(p->idx_cache, &oid);
+			if (git_oidmap_valid_index(p->idx_cache, k)) {
 				*curpos += 20;
-				return ((struct git_pack_entry *)kh_value(p->idx_cache, k))->offset;
+				return ((struct git_pack_entry *)git_oidmap_value_at(p->idx_cache, k))->offset;
 			} else {
 				/* If we're building an index, don't try to find the pack
 				 * entry; we just haven't seen it yet.  We'll make
@@ -986,6 +984,18 @@ git_off_t get_delta_base(
  *
  ***********************************************************/
 
+void git_packfile_close(struct git_pack_file *p, bool unlink_packfile)
+{
+	if (p->mwf.fd >= 0) {
+		git_mwindow_free_all_locked(&p->mwf);
+		p_close(p->mwf.fd);
+		p->mwf.fd = -1;
+	}
+
+	if (unlink_packfile)
+		p_unlink(p->pack_name);
+}
+
 void git_packfile_free(struct git_pack_file *p)
 {
 	if (!p)
@@ -993,10 +1003,7 @@ void git_packfile_free(struct git_pack_file *p)
 
 	cache_free(&p->bases);
 
-	if (p->mwf.fd >= 0) {
-		git_mwindow_free_all_locked(&p->mwf);
-		p_close(p->mwf.fd);
-	}
+	git_packfile_close(p, false);
 
 	pack_index_free(p);
 
@@ -1077,7 +1084,7 @@ static int packfile_open(struct git_pack_file *p)
 	return 0;
 
 cleanup:
-	giterr_set(GITERR_OS, "Invalid packfile '%s'", p->pack_name);
+	giterr_set(GITERR_OS, "invalid packfile '%s'", p->pack_name);
 
 	if (p->mwf.fd >= 0)
 		p_close(p->mwf.fd);
@@ -1153,7 +1160,7 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 	p->index_version = -1;
 
 	if (git_mutex_init(&p->lock)) {
-		giterr_set(GITERR_OS, "Failed to initialize packfile mutex");
+		giterr_set(GITERR_OS, "failed to initialize packfile mutex");
 		git__free(p);
 		return -1;
 	}
@@ -1268,8 +1275,8 @@ static int pack_entry_find_offset(
 	const git_oid *short_oid,
 	size_t len)
 {
-	const uint32_t *level1_ofs = p->index_map.data;
-	const unsigned char *index = p->index_map.data;
+	const uint32_t *level1_ofs;
+	const unsigned char *index;
 	unsigned hi, lo, stride;
 	int pos, found = 0;
 	git_off_t offset;
@@ -1283,10 +1290,10 @@ static int pack_entry_find_offset(
 		if ((error = pack_index_open(p)) < 0)
 			return error;
 		assert(p->index_map.data);
-
-		index = p->index_map.data;
-		level1_ofs = p->index_map.data;
 	}
+
+	index = p->index_map.data;
+	level1_ofs = p->index_map.data;
 
 	if (p->index_version > 1) {
 		level1_ofs += 2;
@@ -1309,11 +1316,7 @@ static int pack_entry_find_offset(
 		short_oid->id[0], short_oid->id[1], short_oid->id[2], lo, hi, p->num_objects);
 #endif
 
-#ifdef GIT_USE_LOOKUP
-	pos = sha1_entry_pos(index, stride, 0, lo, hi, p->num_objects, short_oid->id);
-#else
 	pos = sha1_position(index, stride, lo, hi, short_oid->id);
-#endif
 
 	if (pos >= 0) {
 		/* An object matching exactly the oid was found */

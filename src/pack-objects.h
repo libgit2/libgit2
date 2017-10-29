@@ -16,6 +16,7 @@
 #include "netops.h"
 #include "zstream.h"
 #include "pool.h"
+#include "indexer.h"
 
 #include "git2/oid.h"
 #include "git2/pack.h"

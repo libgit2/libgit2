@@ -5,11 +5,11 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "index.h"
+
 #include <stddef.h>
 
-#include "common.h"
 #include "repository.h"
-#include "index.h"
 #include "tree.h"
 #include "tree-cache.h"
 #include "hash.h"
@@ -26,9 +26,6 @@
 #include "git2/blob.h"
 #include "git2/config.h"
 #include "git2/sys/index.h"
-
-GIT__USE_IDXMAP
-GIT__USE_IDXMAP_ICASE
 
 #define INSERT_IN_MAP_EX(idx, map, e, err) do {				\
 		if ((idx)->ignore_case)					\
@@ -56,10 +53,6 @@ GIT__USE_IDXMAP_ICASE
 static int index_apply_to_wd_diff(git_index *index, int action, const git_strarray *paths,
 				  unsigned int flags,
 				  git_index_matched_path_cb cb, void *payload);
-
-#define entry_size(type,len) ((offsetof(type, path) + (len) + 8) & ~7)
-#define short_entry_size(len) entry_size(struct entry_short, len)
-#define long_entry_size(len) entry_size(struct entry_long, len)
 
 #define minimal_entry_size (offsetof(struct entry_short, path))
 
@@ -552,7 +545,7 @@ int git_index_clear(git_index *index)
 
 static int create_index_error(int error, const char *msg)
 {
-	giterr_set(GITERR_INDEX, msg);
+	giterr_set_str(GITERR_INDEX, msg);
 	return error;
 }
 
@@ -570,7 +563,7 @@ int git_index_set_caps(git_index *index, int caps)
 
 		if (!repo)
 			return create_index_error(
-				-1, "Cannot access repository to set index caps");
+				-1, "cannot access repository to set index caps");
 
 		if (!git_repository__cvar(&val, repo, GIT_CVAR_IGNORECASE))
 			index->ignore_case = (val != 0);
@@ -639,7 +632,7 @@ int git_index_read(git_index *index, int force)
 
 	if (!index->index_file_path)
 		return create_index_error(-1,
-			"Failed to read index: The index is in-memory only");
+			"failed to read index: The index is in-memory only");
 
 	index->on_disk = git_path_exists(index->index_file_path);
 
@@ -653,7 +646,7 @@ int git_index_read(git_index *index, int force)
 	    ((updated = compare_checksum(index)) < 0)) {
 		giterr_set(
 			GITERR_INDEX,
-			"Failed to read index: '%s' no longer exists",
+			"failed to read index: '%s' no longer exists",
 			index->index_file_path);
 		return updated;
 	}
@@ -765,7 +758,7 @@ int git_index_set_version(git_index *index, unsigned int version)
 
 	if (version < INDEX_VERSION_NUMBER_LB ||
 	    version > INDEX_VERSION_NUMBER_UB) {
-		giterr_set(GITERR_INDEX, "Invalid version number");
+		giterr_set(GITERR_INDEX, "invalid version number");
 		return -1;
 	}
 
@@ -805,7 +798,7 @@ int git_index_write_tree(git_oid *oid, git_index *index)
 
 	if (repo == NULL)
 		return create_index_error(-1, "Failed to write tree. "
-		  "The index file is not backed up by an existing repository");
+		  "the index file is not backed up by an existing repository");
 
 	return git_tree__write_index(oid, index, repo);
 }
@@ -847,7 +840,7 @@ const git_index_entry *git_index_get_bypath(
 	if (git_idxmap_valid_index(index->entries_map, pos))
 		return git_idxmap_value_at(index->entries_map, pos);
 
-	giterr_set(GITERR_INDEX, "Index does not contain %s", path);
+	giterr_set(GITERR_INDEX, "index does not contain '%s'", path);
 	return NULL;
 }
 
@@ -934,7 +927,7 @@ static int index_entry_init(
 
 	if (INDEX_OWNER(index) == NULL)
 		return create_index_error(-1,
-			"Could not initialize index entry. "
+			"could not initialize index entry. "
 			"Index is not backed up by an existing repository.");
 
 	if (index_entry_create(&entry, INDEX_OWNER(index), rel_path, true) < 0)
@@ -1365,7 +1358,7 @@ static int index_insert(
 		error = git_vector_insert_sorted(&index->entries, entry, index_no_dups);
 
 		if (error == 0) {
-			INSERT_IN_MAP(index, entry, error);
+			INSERT_IN_MAP(index, entry, &error);
 		}
 	}
 
@@ -1423,7 +1416,7 @@ int git_index_add_frombuffer(
 
 	if (INDEX_OWNER(index) == NULL)
 		return create_index_error(-1,
-			"Could not initialize index entry. "
+			"could not initialize index entry. "
 			"Index is not backed up by an existing repository.");
 
 	if (!valid_filemode(source_entry->mode)) {
@@ -1592,7 +1585,7 @@ int git_index__fill(git_index *index, const git_vector *source_entries)
 		if ((ret = git_vector_insert(&index->entries, entry)) < 0)
 			break;
 
-		INSERT_IN_MAP(index, entry, ret);
+		INSERT_IN_MAP(index, entry, &ret);
 		if (ret < 0)
 			break;
 	}
@@ -1637,7 +1630,7 @@ int git_index_remove(git_index *index, const char *path, int stage)
 
 	if (index_find(&position, index, path, 0, stage) < 0) {
 		giterr_set(
-			GITERR_INDEX, "Index does not contain %s at stage %d", path, stage);
+			GITERR_INDEX, "index does not contain %s at stage %d", path, stage);
 		error = GIT_ENOTFOUND;
 	} else {
 		error = index_remove_entry(index, position);
@@ -1709,7 +1702,7 @@ int git_index_find(size_t *at_pos, git_index *index, const char *path)
 
 	if (git_vector_bsearch2(
 			&pos, &index->entries, index->entries_search_path, path) < 0) {
-		giterr_set(GITERR_INDEX, "Index does not contain %s", path);
+		giterr_set(GITERR_INDEX, "index does not contain %s", path);
 		return GIT_ENOTFOUND;
 	}
 
@@ -2153,7 +2146,7 @@ void git_index_reuc_clear(git_index *index)
 
 static int index_error_invalid(const char *message)
 {
-	giterr_set(GITERR_INDEX, "Invalid data in index - %s", message);
+	giterr_set(GITERR_INDEX, "invalid data in index - %s", message);
 	return -1;
 }
 
@@ -2285,12 +2278,29 @@ out_err:
 	return 0;
 }
 
+static size_t index_entry_size(size_t path_len, size_t varint_len, uint32_t flags)
+{
+	if (varint_len) {
+		if (flags & GIT_IDXENTRY_EXTENDED)
+			return offsetof(struct entry_long, path) + path_len + 1 + varint_len;
+		else
+			return offsetof(struct entry_short, path) + path_len + 1 + varint_len;
+	} else {
+#define entry_size(type,len) ((offsetof(type, path) + (len) + 8) & ~7)
+		if (flags & GIT_IDXENTRY_EXTENDED)
+			return entry_size(struct entry_long, path_len);
+		else
+			return entry_size(struct entry_short, path_len);
+#undef entry_size
+	}
+}
+
 static size_t read_entry(
 	git_index_entry **out,
 	git_index *index,
 	const void *buffer,
 	size_t buffer_size,
-	const char **last)
+	const char *last)
 {
 	size_t path_length, entry_size;
 	const char *path_ptr;
@@ -2347,34 +2357,33 @@ static size_t read_entry(
 			path_length = path_end - path_ptr;
 		}
 
-		if (entry.flags & GIT_IDXENTRY_EXTENDED)
-			entry_size = long_entry_size(path_length);
-		else
-			entry_size = short_entry_size(path_length);
-
-		if (INDEX_FOOTER_SIZE + entry_size > buffer_size)
-			return 0;
-
+		entry_size = index_entry_size(path_length, 0, entry.flags);
 		entry.path = (char *)path_ptr;
 	} else {
 		size_t varint_len;
-		size_t shared = git_decode_varint((const unsigned char *)path_ptr, 
-						  &varint_len);
-		size_t len = strlen(path_ptr + varint_len);
-		size_t last_len = strlen(*last);
-		size_t tmp_path_len;
+		size_t strip_len = git_decode_varint((const unsigned char *)path_ptr,
+						     &varint_len);
+		size_t last_len = strlen(last);
+		size_t prefix_len = last_len - strip_len;
+		size_t suffix_len = strlen(path_ptr + varint_len);
+		size_t path_len;
 
 		if (varint_len == 0)
 			return index_error_invalid("incorrect prefix length");
 
-		GITERR_CHECK_ALLOC_ADD(&tmp_path_len, shared, len + 1);
-		tmp_path = git__malloc(tmp_path_len);
+		GITERR_CHECK_ALLOC_ADD(&path_len, prefix_len, suffix_len);
+		GITERR_CHECK_ALLOC_ADD(&path_len, path_len, 1);
+		tmp_path = git__malloc(path_len);
 		GITERR_CHECK_ALLOC(tmp_path);
-		memcpy(tmp_path, last, last_len);
-		memcpy(tmp_path + last_len, path_ptr + varint_len, len);
-		entry_size = long_entry_size(shared + len);
+
+		memcpy(tmp_path, last, prefix_len);
+		memcpy(tmp_path + prefix_len, path_ptr + varint_len, suffix_len + 1);
+		entry_size = index_entry_size(suffix_len, varint_len, entry.flags);
 		entry.path = tmp_path;
 	}
+
+	if (INDEX_FOOTER_SIZE + entry_size > buffer_size)
+		return 0;
 
 	if (index_entry_dup(out, index, &entry) < 0) {
 		git__free(tmp_path);
@@ -2448,7 +2457,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	unsigned int i;
 	struct index_header header = { 0 };
 	git_oid checksum_calculated, checksum_expected;
-	const char **last = NULL;
+	const char *last = NULL;
 	const char *empty = "";
 
 #define seek_forward(_increase) { \
@@ -2472,16 +2481,16 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 
 	index->version = header.version;
 	if (index->version >= INDEX_VERSION_NUMBER_COMP)
-		last = &empty;
+		last = empty;
 
 	seek_forward(INDEX_HEADER_SIZE);
 
 	assert(!index->entries.length);
 
 	if (index->ignore_case)
-		kh_resize(idxicase, (khash_t(idxicase) *) index->entries_map, header.entry_count);
+		git_idxmap_icase_resize((khash_t(idxicase) *) index->entries_map, header.entry_count);
 	else
-		kh_resize(idx, index->entries_map, header.entry_count);
+		git_idxmap_resize(index->entries_map, header.entry_count);
 
 	/* Parse all the entries */
 	for (i = 0; i < header.entry_count && buffer_size > INDEX_FOOTER_SIZE; ++i) {
@@ -2499,13 +2508,16 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 			goto done;
 		}
 
-		INSERT_IN_MAP(index, entry, error);
+		INSERT_IN_MAP(index, entry, &error);
 
 		if (error < 0) {
 			index_entry_free(entry);
 			goto done;
 		}
 		error = 0;
+
+		if (index->version >= INDEX_VERSION_NUMBER_COMP)
+			last = entry->path;
 
 		seek_forward(entry_size);
 	}
@@ -2577,11 +2589,12 @@ static bool is_index_extended(git_index *index)
 	return (extended > 0);
 }
 
-static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const char **last)
+static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const char *last)
 {
 	void *mem = NULL;
 	struct entry_short *ondisk;
 	size_t path_len, disk_size;
+	int varint_len = 0;
 	char *path;
 	const char *path_start = entry->path;
 	size_t same_len = 0;
@@ -2589,7 +2602,7 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const cha
 	path_len = ((struct entry_internal *)entry)->pathlen;
 
 	if (last) {
-		const char *last_c = *last;
+		const char *last_c = last;
 
 		while (*path_start == *last_c) {
 			if (!*path_start || !*last_c)
@@ -2599,13 +2612,10 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const cha
 			++same_len;
 		}
 		path_len -= same_len;
-		*last = entry->path;
+		varint_len = git_encode_varint(NULL, 0, same_len);
 	}
 
-	if (entry->flags & GIT_IDXENTRY_EXTENDED)
-		disk_size = long_entry_size(path_len);
-	else
-		disk_size = short_entry_size(path_len);
+	disk_size = index_entry_size(path_len, varint_len, entry->flags);
 
 	if (git_filebuf_reserve(file, &mem, disk_size) < 0)
 		return -1;
@@ -2645,16 +2655,34 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const cha
 		ondisk_ext->flags_extended = htons(entry->flags_extended &
 			GIT_IDXENTRY_EXTENDED_FLAGS);
 		path = ondisk_ext->path;
-	}
-	else
+		disk_size -= offsetof(struct entry_long, path);
+	} else {
 		path = ondisk->path;
+		disk_size -= offsetof(struct entry_short, path);
+	}
 
 	if (last) {
-		path += git_encode_varint((unsigned char *) path,
-					  disk_size,
-					  path_len - same_len);
+		varint_len = git_encode_varint((unsigned char *) path,
+					  disk_size, same_len);
+		assert(varint_len > 0);
+		path += varint_len;
+		disk_size -= varint_len;
+
+		/*
+		 * If using path compression, we are not allowed
+		 * to have additional trailing NULs.
+		 */
+		assert(disk_size == path_len + 1);
+	} else {
+		/*
+		 * If no path compression is used, we do have
+		 * NULs as padding. As such, simply assert that
+		 * we have enough space left to write the path.
+		 */
+		assert(disk_size > path_len);
 	}
-	memcpy(path, path_start, path_len);
+
+	memcpy(path, path_start, path_len + 1);
 
 	return 0;
 }
@@ -2665,8 +2693,7 @@ static int write_entries(git_index *index, git_filebuf *file)
 	size_t i;
 	git_vector case_sorted, *entries;
 	git_index_entry *entry;
-	const char **last = NULL;
-	const char *empty = "";
+	const char *last = NULL;
 
 	/* If index->entries is sorted case-insensitively, then we need
 	 * to re-sort it case-sensitively before writing */
@@ -2679,11 +2706,14 @@ static int write_entries(git_index *index, git_filebuf *file)
 	}
 
 	if (index->version >= INDEX_VERSION_NUMBER_COMP)
-		last = &empty;
+		last = "";
 
-	git_vector_foreach(entries, i, entry)
+	git_vector_foreach(entries, i, entry) {
 		if ((error = write_disk_entry(file, entry, last)) < 0)
 			break;
+		if (index->version >= INDEX_VERSION_NUMBER_COMP)
+			last = entry->path;
+	}
 
 	if (index->ignore_case)
 		git_vector_free(&case_sorted);
@@ -2979,12 +3009,12 @@ int git_index_read_tree(git_index *index, const git_tree *tree)
 		goto cleanup;
 
 	if (index->ignore_case)
-		kh_resize(idxicase, (khash_t(idxicase) *) entries_map, entries.length);
+		git_idxmap_icase_resize((khash_t(idxicase) *) entries_map, entries.length);
 	else
-		kh_resize(idx, entries_map, entries.length);
+		git_idxmap_resize(entries_map, entries.length);
 
 	git_vector_foreach(&entries, i, e) {
-		INSERT_IN_MAP_EX(index, entries_map, e, error);
+		INSERT_IN_MAP_EX(index, entries_map, e, &error);
 
 		if (error < 0) {
 			giterr_set(GITERR_INDEX, "failed to insert entry into map");
@@ -3037,9 +3067,9 @@ static int git_index_read_iterator(
 		goto done;
 
 	if (index->ignore_case && new_length_hint)
-		kh_resize(idxicase, (khash_t(idxicase) *) new_entries_map, new_length_hint);
+		git_idxmap_icase_resize((khash_t(idxicase) *) new_entries_map, new_length_hint);
 	else if (new_length_hint)
-		kh_resize(idx, new_entries_map, new_length_hint);
+		git_idxmap_resize(new_entries_map, new_length_hint);
 
 	opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE |
 		GIT_ITERATOR_INCLUDE_CONFLICTS;
@@ -3103,7 +3133,7 @@ static int git_index_read_iterator(
 
 		if (add_entry) {
 			if ((error = git_vector_insert(&new_entries, add_entry)) == 0)
-				INSERT_IN_MAP_EX(index, new_entries_map, add_entry, error);
+				INSERT_IN_MAP_EX(index, new_entries_map, add_entry, &error);
 		}
 
 		if (remove_entry && error >= 0)
@@ -3390,7 +3420,7 @@ static int index_apply_to_all(
 				i--; /* back up foreach if we removed this */
 			break;
 		default:
-			giterr_set(GITERR_INVALID, "Unknown index action %d", action);
+			giterr_set(GITERR_INVALID, "unknown index action %d", action);
 			error = -1;
 			break;
 		}
@@ -3475,13 +3505,13 @@ int git_indexwriter_init(
 
 	if (!index->index_file_path)
 		return create_index_error(-1,
-			"Failed to write index: The index is in-memory only");
+			"failed to write index: The index is in-memory only");
 
 	if ((error = git_filebuf_open(
 		&writer->file, index->index_file_path, GIT_FILEBUF_HASH_CONTENTS, GIT_INDEX_FILE_MODE)) < 0) {
 
 		if (error == GIT_ELOCKED)
-			giterr_set(GITERR_INDEX, "The index is locked. This might be due to a concurrent or crashed process");
+			giterr_set(GITERR_INDEX, "the index is locked; this might be due to a concurrent or crashed process");
 
 		return error;
 	}
@@ -3530,7 +3560,7 @@ int git_indexwriter_commit(git_indexwriter *writer)
 
 	if ((error = git_futils_filestamp_check(
 		&writer->index->stamp, writer->index->index_file_path)) < 0) {
-		giterr_set(GITERR_OS, "Could not read index timestamp");
+		giterr_set(GITERR_OS, "could not read index timestamp");
 		return -1;
 	}
 

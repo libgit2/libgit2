@@ -5,8 +5,9 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "git2/oidarray.h"
 #include "oidarray.h"
+
+#include "git2/oidarray.h"
 #include "array.h"
 
 void git_oidarray_free(git_oidarray *arr)

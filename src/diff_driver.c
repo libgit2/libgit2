@@ -4,19 +4,17 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#include "common.h"
+
+#include "diff_driver.h"
 
 #include "git2/attr.h"
 
 #include "diff.h"
-#include "diff_driver.h"
 #include "strmap.h"
 #include "map.h"
 #include "buf_text.h"
 #include "config.h"
 #include "repository.h"
-
-GIT__USE_STRMAP
 
 typedef enum {
 	DIFF_DRIVER_AUTO = 0,
@@ -114,7 +112,7 @@ static int diff_driver_add_patterns(
 		if (error < 0)
 			break;
 
-		if ((error = regcomp(&pat->re, buf.ptr, regex_flags)) != 0) {
+		if ((error = p_regcomp(&pat->re, buf.ptr, regex_flags)) != 0) {
 			/*
 			 * TODO: issue a warning
 			 */
@@ -151,7 +149,7 @@ static git_diff_driver_registry *git_repository_driver_registry(
 	}
 
 	if (!repo->diff_drivers)
-		giterr_set(GITERR_REPOSITORY, "Unable to create diff driver registry");
+		giterr_set(GITERR_REPOSITORY, "unable to create diff driver registry");
 
 	return repo->diff_drivers;
 }
@@ -210,14 +208,14 @@ static int git_diff_driver_builtin(
 		goto done;
 
 	if (ddef->words &&
-		(error = regcomp(
+		(error = p_regcomp(
 			&drv->word_pattern, ddef->words, ddef->flags | REG_EXTENDED)))
 	{
 		error = giterr_set_regex(&drv->word_pattern, error);
 		goto done;
 	}
 
-	git_strmap_insert(reg->drivers, drv->name, drv, error);
+	git_strmap_insert(reg->drivers, drv->name, drv, &error);
 	if (error > 0)
 		error = 0;
 
@@ -314,7 +312,7 @@ static int git_diff_driver_load(
 		goto done;
 	if (!ce || !ce->value)
 		/* no diff.<driver>.wordregex, so just continue */;
-	else if (!(error = regcomp(&drv->word_pattern, ce->value, REG_EXTENDED)))
+	else if (!(error = p_regcomp(&drv->word_pattern, ce->value, REG_EXTENDED)))
 		found_driver = true;
 	else {
 		/* TODO: warn about bad regex instead of failure */
@@ -331,7 +329,7 @@ static int git_diff_driver_load(
 		goto done;
 
 	/* store driver in registry */
-	git_strmap_insert(reg->drivers, drv->name, drv, error);
+	git_strmap_insert(reg->drivers, drv->name, drv, &error);
 	if (error < 0)
 		goto done;
 	error = 0;
@@ -519,4 +517,3 @@ void git_diff_find_context_clear(git_diff_find_context_payload *payload)
 		payload->driver = NULL;
 	}
 }
-

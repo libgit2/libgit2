@@ -43,9 +43,16 @@ We ask that you not open a GitHub Issue for help, only for bug reports.
 What It Can Do
 ==============
 
-`libgit2` is already very usable and is being used in production for many
-applications including the GitHub.com site, in Plastic SCM and also powering
-Microsoft's Visual Studio tools for Git.  The library provides:
+libgit2 provides you with the ability to manage Git repositories in the
+programming language of your choice.  It's used in production to power many
+applications including GitHub.com, Plastic SCM and Visual Studio Team Services.
+
+It does not aim to replace the git tool or its user-facing commands. Some APIs
+resemble the plumbing commands as those align closely with the concepts of the
+Git system, but most commands a user would type are out of scope for this
+library to implement directly.
+
+The library provides:
 
 * SHA conversions, formatting and shortening
 * abstracted ODB backend system
@@ -59,6 +66,16 @@ Microsoft's Visual Studio tools for Git.  The library provides:
 * thread safety and reentrancy
 * descriptive and detailed error messages
 * ...and more (over 175 different API calls)
+
+As libgit2 is purely a consumer of the Git system, we have to
+adjust to changes made upstream. This has two major consequences:
+
+* Some changes may require us to change provided interfaces. While we try to
+  implement functions in a generic way so that no future changes are required,
+  we cannot promise a completely stable API.
+* As we have to keep up with changes in behavior made upstream, we may lag
+  behind in some areas. We usually to document these incompatibilities in our
+  issue tracker with the label "git change".
 
 Optional dependencies
 =====================
@@ -115,6 +132,14 @@ On most systems you can build the library using the following commands
 	$ cmake --build .
 
 Alternatively you can point the CMake GUI tool to the CMakeLists.txt file and generate platform specific build project or IDE workspace.
+
+Once built, you can run the tests from the `build` directory with the command
+
+	$ make test
+
+Alternatively you can run the test suite directly using,
+
+	$ ./libgit2_clar
 
 To install the library you can specify the install prefix by setting:
 
@@ -203,6 +228,8 @@ Here are the bindings to libgit2 that are currently available:
     * git2go <https://github.com/libgit2/git2go>
 * GObject
     * libgit2-glib <https://wiki.gnome.org/Projects/Libgit2-glib>
+* Guile
+	* Guile-Git <https://gitlab.com/guile-git/guile-git>
 * Haskell
     * hgit2 <https://github.com/jwiegley/gitlib>
 * Java
@@ -236,7 +263,7 @@ Here are the bindings to libgit2 that are currently available:
 * Rust
     * git2-rs <https://github.com/alexcrichton/git2-rs>
 * Swift
-    * Gift <https://github.com/modocache/Gift>
+    * SwiftGit2 <https://github.com/SwiftGit2/SwiftGit2>
 * Vala
     * libgit2.vapi <https://github.com/apmasell/vapis/blob/master/libgit2.vapi>
 

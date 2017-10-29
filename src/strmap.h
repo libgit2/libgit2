@@ -20,49 +20,27 @@ __KHASH_TYPE(str, const char *, void *)
 typedef khash_t(str) git_strmap;
 typedef khiter_t git_strmap_iter;
 
-#define GIT__USE_STRMAP \
-	__KHASH_IMPL(str, static kh_inline, const char *, void *, 1, kh_str_hash_func, kh_str_hash_equal)
+int git_strmap_alloc(git_strmap **map);
+void git_strmap_free(git_strmap *map);
+void git_strmap_clear(git_strmap *map);
 
-#define git_strmap_alloc(hp) \
-	((*(hp) = kh_init(str)) == NULL) ? giterr_set_oom(), -1 : 0
+size_t git_strmap_num_entries(git_strmap *map);
 
-#define git_strmap_free(h)  kh_destroy(str, h), h = NULL
-#define git_strmap_clear(h) kh_clear(str, h)
+size_t git_strmap_lookup_index(git_strmap *map, const char *key);
+int git_strmap_valid_index(git_strmap *map, size_t idx);
 
-#define git_strmap_num_entries(h) kh_size(h)
+int git_strmap_exists(git_strmap *map, const char *key);
+int git_strmap_has_data(git_strmap *map, size_t idx);
 
-#define git_strmap_lookup_index(h, k)  kh_get(str, h, k)
-#define git_strmap_valid_index(h, idx) (idx != kh_end(h))
+const char *git_strmap_key(git_strmap *map, size_t idx);
+void git_strmap_set_key_at(git_strmap *map, size_t idx, char *key);
+void *git_strmap_value_at(git_strmap *map, size_t idx);
+void git_strmap_set_value_at(git_strmap *map, size_t idx, void *value);
+void git_strmap_delete_at(git_strmap *map, size_t idx);
 
-#define git_strmap_exists(h, k) (kh_get(str, h, k) != kh_end(h))
-#define git_strmap_has_data(h, idx) kh_exist(h, idx)
-
-#define git_strmap_key(h, idx)             kh_key(h, idx)
-#define git_strmap_value_at(h, idx)        kh_val(h, idx)
-#define git_strmap_set_value_at(h, idx, v) kh_val(h, idx) = v
-#define git_strmap_delete_at(h, idx)       kh_del(str, h, idx)
-
-#define git_strmap_insert(h, key, val, rval) do { \
-	khiter_t __pos = kh_put(str, h, key, &rval); \
-	if (rval >= 0) { \
-		if (rval == 0) kh_key(h, __pos) = key; \
-		kh_val(h, __pos) = val; \
-	} } while (0)
-
-#define git_strmap_insert2(h, key, val, oldv, rval) do { \
-	khiter_t __pos = kh_put(str, h, key, &rval); \
-	if (rval >= 0) { \
-		if (rval == 0) { \
-			oldv = kh_val(h, __pos); \
-			kh_key(h, __pos) = key; \
-		} else { oldv = NULL; } \
-		kh_val(h, __pos) = val; \
-	} } while (0)
-
-#define git_strmap_delete(h, key) do { \
-	khiter_t __pos = git_strmap_lookup_index(h, key); \
-	if (git_strmap_valid_index(h, __pos)) \
-		git_strmap_delete_at(h, __pos); } while (0)
+int git_strmap_put(git_strmap *map, const char *key, int *err);
+void git_strmap_insert(git_strmap *map, const char *key, void *value, int *rval);
+void git_strmap_delete(git_strmap *map, const char *key);
 
 #define git_strmap_foreach		kh_foreach
 #define git_strmap_foreach_value	kh_foreach_value

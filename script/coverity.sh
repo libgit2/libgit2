@@ -1,23 +1,22 @@
 #!/bin/bash
 set -e
 
-# Environment check
-[ -z "$COVERITY_TOKEN" ] && echo "Need to set a coverity token" && exit 1
-
 # Only run this on our branches
-echo "Pull request: $TRAVIS_PULL_REQUEST  |  Slug: $TRAVIS_REPO_SLUG"
-if [ "$TRAVIS_PULL_REQUEST" != "false" -o "$TRAVIS_REPO_SLUG" != "libgit2/libgit2" ];
+echo "Branch: $TRAVIS_BRANCH  |  Pull request: $TRAVIS_PULL_REQUEST  |  Slug: $TRAVIS_REPO_SLUG"
+if [ "$TRAVIS_BRANCH" != "master" -o "$TRAVIS_PULL_REQUEST" != "false" -o "$TRAVIS_REPO_SLUG" != "libgit2/libgit2" ];
 then
-	echo "Only analyzing 'development' on the main repo."
+	echo "Only analyzing the 'master' brach of the main repository."
 	exit 0
 fi
 
-COV_VERSION=6.6.1
+# Environment check
+[ -z "$COVERITY_TOKEN" ] && echo "Need to set a coverity token" && exit 1
+
 case $(uname -m) in
 	i?86)				BITS=32 ;;
 	amd64|x86_64)	BITS=64 ;;
 esac
-SCAN_TOOL=https://scan.coverity.com/download/linux-${BITS}
+SCAN_TOOL=https://scan.coverity.com/download/cxx/linux${BITS}
 TOOL_BASE=$(pwd)/_coverity-scan
 
 # Install coverity tools

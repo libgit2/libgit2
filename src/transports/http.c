@@ -4,6 +4,9 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
+
+#include "common.h"
+
 #ifndef GIT_WINHTTP
 
 #include "git2.h"
@@ -208,7 +211,7 @@ static int gen_request(
 
 	git_buf_printf(buf, "%s %s%s HTTP/1.1\r\n", s->verb, path, s->service_url);
 
-	git_buf_printf(buf, "User-Agent: git/1.0 (%s)\r\n", user_agent());
+	git_buf_printf(buf, "User-Agent: git/2.0 (%s)\r\n", user_agent());
 	git_buf_printf(buf, "Host: %s\r\n", t->connection_data.host);
 
 	if (s->chunked || content_length > 0) {
@@ -403,7 +406,7 @@ static int on_headers_complete(http_parser *parser)
 	    t->location) {
 
 		if (s->redirect_count >= 7) {
-			giterr_set(GITERR_NET, "Too many redirects");
+			giterr_set(GITERR_NET, "too many redirects");
 			return t->parse_error = PARSE_ERROR_GENERIC;
 		}
 
@@ -428,14 +431,14 @@ static int on_headers_complete(http_parser *parser)
 	/* Check for a 200 HTTP status code. */
 	if (parser->status_code != 200) {
 		giterr_set(GITERR_NET,
-			"Unexpected HTTP status code: %d",
+			"unexpected HTTP status code: %d",
 			parser->status_code);
 		return t->parse_error = PARSE_ERROR_GENERIC;
 	}
 
 	/* The response must contain a Content-Type header. */
 	if (!t->content_type) {
-		giterr_set(GITERR_NET, "No Content-Type header in response");
+		giterr_set(GITERR_NET, "no Content-Type header in response");
 		return t->parse_error = PARSE_ERROR_GENERIC;
 	}
 
@@ -455,7 +458,7 @@ static int on_headers_complete(http_parser *parser)
 	if (strcmp(t->content_type, git_buf_cstr(&buf))) {
 		git_buf_free(&buf);
 		giterr_set(GITERR_NET,
-			"Invalid Content-Type: %s",
+			"invalid Content-Type: %s",
 			t->content_type);
 		return t->parse_error = PARSE_ERROR_GENERIC;
 	}
@@ -488,7 +491,7 @@ static int on_body_fill_buffer(http_parser *parser, const char *str, size_t len)
 		return 0;
 
 	if (ctx->buf_size < len) {
-		giterr_set(GITERR_NET, "Can't fit data in the buffer");
+		giterr_set(GITERR_NET, "can't fit data in the buffer");
 		return t->parse_error = PARSE_ERROR_GENERIC;
 	}
 
@@ -575,6 +578,9 @@ static int apply_proxy_config(http_subtransport *t)
 		if ((error = git_remote__get_http_proxy(t->owner->owner, !!t->connection_data.use_ssl, &url)) < 0)
 			return error;
 
+		opts.credentials = t->owner->proxy.credentials;
+		opts.certificate_check = t->owner->proxy.certificate_check;
+		opts.payload = t->owner->proxy.payload;
 		opts.type = GIT_PROXY_SPECIFIED;
 		opts.url = url;
 		error = git_stream_set_proxy(t->io, &opts);
@@ -624,13 +630,12 @@ static int http_connect(http_subtransport *t)
 	if ((!error || error == GIT_ECERTIFICATE) && t->owner->certificate_check_cb != NULL &&
 	    git_stream_is_encrypted(t->io)) {
 		git_cert *cert;
-		int is_valid;
+		int is_valid = (error == GIT_OK);
 
 		if ((error = git_stream_certificate(&cert, t->io)) < 0)
 			return error;
 
 		giterr_clear();
-		is_valid = error != GIT_ECERTIFICATE;
 		error = t->owner->certificate_check_cb(cert, is_valid, t->connection_data.host, t->owner->message_cb_payload);
 
 		if (error < 0) {
@@ -857,7 +862,7 @@ static int http_stream_write_single(
 	assert(t->connected);
 
 	if (s->sent_request) {
-		giterr_set(GITERR_NET, "Subtransport configured for only one write");
+		giterr_set(GITERR_NET, "subtransport configured for only one write");
 		return -1;
 	}
 

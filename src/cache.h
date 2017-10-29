@@ -7,6 +7,8 @@
 #ifndef INCLUDE_cache_h__
 #define INCLUDE_cache_h__
 
+#include "common.h"
+
 #include "git2/common.h"
 #include "git2/oid.h"
 #include "git2/odb.h"
@@ -53,7 +55,7 @@ void *git_cache_get_any(git_cache *cache, const git_oid *oid);
 
 GIT_INLINE(size_t) git_cache_size(git_cache *cache)
 {
-	return (size_t)kh_size(cache->map);
+	return (size_t)git_oidmap_size(cache->map);
 }
 
 GIT_INLINE(void) git_cached_obj_incref(void *_obj)

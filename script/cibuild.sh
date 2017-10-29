@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -x
+
 if [ -n "$COVERITY" ];
 then
 	./script/coverity.sh;
@@ -18,7 +20,7 @@ java -jar poxyproxy.jar -d --port 8080 --credentials foo:bar &
 mkdir _build
 cd _build
 # shellcheck disable=SC2086
-cmake .. -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS || exit $?
+cmake .. -DBUILD_EXAMPLES=ON -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS || exit $?
 make -j2 install || exit $?
 
 # If this platform doesn't support test execution, bail out now
@@ -41,18 +43,40 @@ ctest -V -R libgit2_clar || exit $?
 
 killall git-daemon
 
-if [ "$TRAVIS_OS_NAME" = "osx" ]; then
-    echo 'PasswordAuthentication yes' | sudo tee -a /etc/sshd_config
-fi
+# Set up sshd
+mkdir ~/sshd/
+cat >~/sshd/sshd_config<<-EOF
+	Port 2222
+	ListenAddress 0.0.0.0
+	Protocol 2
+	HostKey ${HOME}/sshd/id_rsa
+	PidFile ${HOME}/sshd/pid
+	RSAAuthentication yes
+	PasswordAuthentication yes
+	PubkeyAuthentication yes
+	ChallengeResponseAuthentication no
+	# Required here as sshd will simply close connection otherwise
+	UsePAM no
+EOF
+ssh-keygen -t rsa -f ~/sshd/id_rsa -N "" -q
+/usr/sbin/sshd -f ~/sshd/sshd_config
 
+# Set up keys
 ssh-keygen -t rsa -f ~/.ssh/id_rsa -N "" -q
 cat ~/.ssh/id_rsa.pub >>~/.ssh/authorized_keys
-ssh-keyscan -t rsa localhost >>~/.ssh/known_hosts
+while read algorithm key comment; do
+    echo "[localhost]:2222 $algorithm $key" >>~/.ssh/known_hosts
+done <~/sshd/id_rsa.pub
 
-# Get the fingerprint for localhost and remove the colons so we can parse it as a hex number
-export GITTEST_REMOTE_SSH_FINGERPRINT=$(ssh-keygen -F localhost -l | tail -n 1 | cut -d ' ' -f 2 | tr -d ':')
+# Get the fingerprint for localhost and remove the colons so we can parse it as
+# a hex number. The Mac version is newer so it has a different output format.
+if [ "$TRAVIS_OS_NAME" = "osx" ]; then
+    export GITTEST_REMOTE_SSH_FINGERPRINT=$(ssh-keygen -E md5 -F '[localhost]:2222' -l | tail -n 1 | cut -d ' ' -f 3 | cut -d : -f2- | tr -d :)
+else
+    export GITTEST_REMOTE_SSH_FINGERPRINT=$(ssh-keygen -F '[localhost]:2222' -l | tail -n 1 | cut -d ' ' -f 2 | tr -d ':')
+fi
 
-export GITTEST_REMOTE_URL="ssh://localhost/$HOME/_temp/test.git"
+export GITTEST_REMOTE_URL="ssh://localhost:2222/$HOME/_temp/test.git"
 export GITTEST_REMOTE_USER=$USER
 export GITTEST_REMOTE_SSH_KEY="$HOME/.ssh/id_rsa"
 export GITTEST_REMOTE_SSH_PUBKEY="$HOME/.ssh/id_rsa.pub"
@@ -75,6 +99,8 @@ if [ -e ./libgit2_clar ]; then
     ./libgit2_clar -sonline::clone::proxy_credentials_request || exit $?
 
 fi
+
+kill $(cat "$HOME/sshd/pid")
 
 export GITTEST_REMOTE_URL="https://github.com/libgit2/non-existent"
 export GITTEST_REMOTE_USER="libgit2test"

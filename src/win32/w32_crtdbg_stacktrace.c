@@ -5,9 +5,10 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "w32_crtdbg_stacktrace.h"
+
 #if defined(GIT_MSVC_CRTDBG)
 #include "w32_stack.h"
-#include "w32_crtdbg_stacktrace.h"
 
 #define CRTDBG_STACKTRACE__UID_LEN (15)
 
@@ -253,11 +254,11 @@ int git_win32__crtdbg_stacktrace__dump(
 	bool b_quiet            = IS_BIT_SET(opt, GIT_WIN32__CRTDBG_STACKTRACE__QUIET);
 
 	if (b_leaks_since_mark && b_leaks_total) {
-		giterr_set(GITERR_INVALID, "Cannot combine LEAKS_SINCE_MARK and LEAKS_TOTAL.");
+		giterr_set(GITERR_INVALID, "cannot combine LEAKS_SINCE_MARK and LEAKS_TOTAL.");
 		return GIT_ERROR;
 	}
 	if (!b_set_mark && !b_leaks_since_mark && !b_leaks_total) {
-		giterr_set(GITERR_INVALID, "Nothing to do.");
+		giterr_set(GITERR_INVALID, "nothing to do.");
 		return GIT_ERROR;
 	}
 

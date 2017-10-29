@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include <git2/sys/config.h>
+#include <git2/sys/filter.h>
 #include <git2/sys/odb_backend.h>
 #include <git2/sys/refdb_backend.h>
 #include <git2/sys/transport.h>
@@ -96,6 +97,11 @@ void test_core_structinit__compare(void)
 		git_diff_find_options, GIT_DIFF_FIND_OPTIONS_VERSION, \
 		GIT_DIFF_FIND_OPTIONS_INIT, git_diff_find_init_options);
 
+	/* filter */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_filter, GIT_FILTER_VERSION, \
+		GIT_FILTER_INIT, git_filter_init);
+
 	/* merge_file_input */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_merge_file_input, GIT_MERGE_FILE_INPUT_VERSION, \
@@ -165,4 +171,13 @@ void test_core_structinit__compare(void)
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_submodule_update_options, GIT_SUBMODULE_UPDATE_OPTIONS_VERSION, \
 		GIT_SUBMODULE_UPDATE_OPTIONS_INIT, git_submodule_update_init_options);
+
+	/* submodule update */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_proxy_options, GIT_PROXY_OPTIONS_VERSION, \
+		GIT_PROXY_OPTIONS_INIT, git_proxy_init_options);
+
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_diff_patchid_options, GIT_DIFF_PATCHID_OPTIONS_VERSION, \
+		GIT_DIFF_PATCHID_OPTIONS_INIT, git_diff_patchid_init_options);
 }

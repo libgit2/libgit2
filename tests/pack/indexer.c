@@ -85,7 +85,7 @@ void test_pack_indexer__fix_thin(void)
 	cl_assert_equal_i(stats.indexed_objects, 2);
 	cl_assert_equal_i(stats.local_objects, 1);
 
-	git_oid_fromstr(&should_id, "11f0f69b334728fdd8bc86b80499f22f29d85b15");
+	git_oid_fromstr(&should_id, "fefdb2d740a3a6b6c03a0c7d6ce431c6d5810e13");
 	cl_assert_equal_oid(&should_id, git_indexer_hash(idx));
 
 	git_indexer_free(idx);
@@ -102,7 +102,7 @@ void test_pack_indexer__fix_thin(void)
 		int fd;
 		ssize_t read;
 		struct stat st;
-		const char *name = "pack-11f0f69b334728fdd8bc86b80499f22f29d85b15.pack";
+		const char *name = "pack-fefdb2d740a3a6b6c03a0c7d6ce431c6d5810e13.pack";
 
 		fd = p_open(name, O_RDONLY);
 		cl_assert(fd != -1);
@@ -124,4 +124,45 @@ void test_pack_indexer__fix_thin(void)
 
 		git_indexer_free(idx);
 	}
+}
+
+static int find_tmp_file_recurs(void *opaque, git_buf *path)
+{
+	int error = 0;
+	git_buf *first_tmp_file = opaque;
+	struct stat st;
+
+	if ((error = p_lstat_posixly(path->ptr, &st)) < 0)
+		return error;
+
+	if (S_ISDIR(st.st_mode))
+		return git_path_direach(path, 0, find_tmp_file_recurs, opaque);
+
+	/* This is the template that's used in git_futils_mktmp. */
+	if (strstr(git_buf_cstr(path), "_git2_") != NULL)
+		return git_buf_sets(first_tmp_file, git_buf_cstr(path));
+
+	return 0;
+}
+
+void test_pack_indexer__no_tmp_files(void)
+{
+	git_indexer *idx = NULL;
+	git_buf path = GIT_BUF_INIT;
+	git_buf first_tmp_file = GIT_BUF_INIT;
+
+	/* Precondition: there are no temporary files. */
+	cl_git_pass(git_buf_sets(&path, clar_sandbox_path()));
+	cl_git_pass(find_tmp_file_recurs(&first_tmp_file, &path));
+	git_buf_free(&path);
+	cl_assert(git_buf_len(&first_tmp_file) == 0);
+
+	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL, NULL));
+	git_indexer_free(idx);
+
+	cl_git_pass(git_buf_sets(&path, clar_sandbox_path()));
+	cl_git_pass(find_tmp_file_recurs(&first_tmp_file, &path));
+	git_buf_free(&path);
+	cl_assert(git_buf_len(&first_tmp_file) == 0);
+	git_buf_free(&first_tmp_file);
 }

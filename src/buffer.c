@@ -18,18 +18,19 @@ char git_buf__initbuf[1];
 char git_buf__oom[1];
 
 #define ENSURE_SIZE(b, d) \
-	if ((d) > buf->asize && git_buf_grow(b, (d)) < 0)\
+	if ((d) > (b)->asize && git_buf_grow((b), (d)) < 0)\
 		return -1;
 
 
-void git_buf_init(git_buf *buf, size_t initial_size)
+int git_buf_init(git_buf *buf, size_t initial_size)
 {
 	buf->asize = 0;
 	buf->size = 0;
 	buf->ptr = git_buf__initbuf;
 
-	if (initial_size)
-		git_buf_grow(buf, initial_size);
+	ENSURE_SIZE(buf, initial_size);
+
+	return 0;
 }
 
 int git_buf_try_grow(
@@ -577,7 +578,7 @@ char *git_buf_detach(git_buf *buf)
 	return data;
 }
 
-void git_buf_attach(git_buf *buf, char *ptr, size_t asize)
+int git_buf_attach(git_buf *buf, char *ptr, size_t asize)
 {
 	git_buf_free(buf);
 
@@ -588,9 +589,10 @@ void git_buf_attach(git_buf *buf, char *ptr, size_t asize)
 			buf->asize = (asize < buf->size) ? buf->size + 1 : asize;
 		else /* pass 0 to fall back on strlen + 1 */
 			buf->asize = buf->size + 1;
-	} else {
-		git_buf_grow(buf, asize);
 	}
+
+	ENSURE_SIZE(buf, asize);
+	return 0;
 }
 
 void git_buf_attach_notowned(git_buf *buf, const char *ptr, size_t size)
@@ -724,9 +726,7 @@ int git_buf_join(
 	GITERR_CHECK_ALLOC_ADD(&alloc_len, strlen_a, strlen_b);
 	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, need_sep);
 	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 1);
-	if (git_buf_grow(buf, alloc_len) < 0)
-		return -1;
-	assert(buf->ptr);
+	ENSURE_SIZE(buf, alloc_len);
 
 	/* fix up internal pointers */
 	if (offset_a >= 0)
@@ -780,8 +780,7 @@ int git_buf_join3(
 	GITERR_CHECK_ALLOC_ADD(&len_total, len_total, sep_b);
 	GITERR_CHECK_ALLOC_ADD(&len_total, len_total, len_c);
 	GITERR_CHECK_ALLOC_ADD(&len_total, len_total, 1);
-	if (git_buf_grow(buf, len_total) < 0)
-		return -1;
+	ENSURE_SIZE(buf, len_total);
 
 	tgt = buf->ptr;
 
@@ -962,14 +961,14 @@ int git_buf_unquote(git_buf *buf)
 			case '0': case '1': case '2': case '3':
 				if (j == buf->size-3) {
 					giterr_set(GITERR_INVALID,
-						"Truncated quoted character \\%c", ch);
+						"truncated quoted character \\%c", ch);
 					return -1;
 				}
 
 				if (buf->ptr[j+1] < '0' || buf->ptr[j+1] > '7' ||
 					buf->ptr[j+2] < '0' || buf->ptr[j+2] > '7') {
 					giterr_set(GITERR_INVALID,
-						"Truncated quoted character \\%c%c%c",
+						"truncated quoted character \\%c%c%c",
 						buf->ptr[j], buf->ptr[j+1], buf->ptr[j+2]);
 					return -1;
 				}
@@ -981,7 +980,7 @@ int git_buf_unquote(git_buf *buf)
 				break;
 
 			default:
-				giterr_set(GITERR_INVALID, "Invalid quoted character \\%c", ch);
+				giterr_set(GITERR_INVALID, "invalid quoted character \\%c", ch);
 				return -1;
 			}
 		}
@@ -995,6 +994,6 @@ int git_buf_unquote(git_buf *buf)
 	return 0;
 
 invalid:
-	giterr_set(GITERR_INVALID, "Invalid quoted line");
+	giterr_set(GITERR_INVALID, "invalid quoted line");
 	return -1;
 }

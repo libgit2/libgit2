@@ -8,6 +8,7 @@
 #define INCLUDE_fileops_h__
 
 #include "common.h"
+
 #include "map.h"
 #include "posix.h"
 #include "path.h"
@@ -24,6 +25,13 @@ extern int git_futils_readbuffer(git_buf *obj, const char *path);
 extern int git_futils_readbuffer_updated(
 	git_buf *obj, const char *path, git_oid *checksum, int *updated);
 extern int git_futils_readbuffer_fd(git_buf *obj, git_file fd, size_t len);
+
+/* Additional constants for `git_futils_writebuffer`'s `open_flags`.  We
+ * support these internally and they will be removed before the `open` call.
+ */
+#ifndef O_FSYNC
+# define O_FSYNC (1 << 31)
+#endif
 
 extern int git_futils_writebuffer(
 	const git_buf *buf, const char *path, int open_flags, mode_t mode);
@@ -45,12 +53,12 @@ extern int git_futils_writebuffer(
 extern int git_futils_creat_withpath(const char *path, const mode_t dirmode, const mode_t mode);
 
 /**
- * Create an open a process-locked file
+ * Create and open a process-locked file
  */
 extern int git_futils_creat_locked(const char *path, const mode_t mode);
 
 /**
- * Create an open a process-locked file, while
+ * Create and open a process-locked file, while
  * also creating all the folders in its path
  */
 extern int git_futils_creat_locked_withpath(const char *path, const mode_t dirmode, const mode_t mode);
@@ -355,5 +363,23 @@ extern void git_futils_filestamp_set(
  */
 extern void git_futils_filestamp_set_from_stat(
 	git_futils_filestamp *stamp, struct stat *st);
+
+/**
+ * `fsync` the parent directory of the given path, if `fsync` is
+ * supported for directories on this platform.
+ *
+ * @param path Path of the directory to sync.
+ * @return 0 on success, -1 on error
+ */
+extern int git_futils_fsync_dir(const char *path);
+
+/**
+ * `fsync` the parent directory of the given path, if `fsync` is
+ * supported for directories on this platform.
+ *
+ * @param path Path of the file whose parent directory should be synced.
+ * @return 0 on success, -1 on error
+ */
+extern int git_futils_fsync_parent(const char *path);
 
 #endif /* INCLUDE_fileops_h__ */

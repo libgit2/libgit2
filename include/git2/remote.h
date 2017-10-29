@@ -26,8 +26,6 @@
  */
 GIT_BEGIN_DECL
 
-typedef int (*git_remote_rename_problem_cb)(const char *problematic_refspec, void *payload);
-
 /**
  * Add a remote with the default fetch refspec to the repository's configuration.
  *
@@ -75,6 +73,24 @@ GIT_EXTERN(int) git_remote_create_with_fetchspec(
 GIT_EXTERN(int) git_remote_create_anonymous(
 		git_remote **out,
 		git_repository *repo,
+		const char *url);
+
+/**
+ * Create a remote without a connected local repo
+ *
+ * Create a remote with the given url in-memory. You can use this when
+ * you have a URL instead of a remote's name.
+ *
+ * Contrasted with git_remote_create_anonymous, a detached remote
+ * will not consider any repo configuration values (such as insteadof url
+ * substitutions).
+ *
+ * @param out pointer to the new remote objects
+ * @param url the remote repository's URL
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_remote_create_detached(
+		git_remote **out,
 		const char *url);
 
 /**
@@ -360,6 +376,8 @@ typedef struct {
 } git_push_update;
 
 /**
+ * Callback used to inform of upcoming updates.
+ *
  * @param updates an array containing the updates which will be sent
  * as commands to the destination.
  * @param len number of elements in `updates`
@@ -403,7 +421,7 @@ struct git_remote_callbacks {
 	 * connection to proceed. Returns 1 to allow the connection, 0
 	 * to disallow it or a negative value to indicate an error.
 	 */
-        git_transport_certificate_check_cb certificate_check;
+	git_transport_certificate_check_cb certificate_check;
 
 	/**
 	 * During the download of new data, this will be regularly
@@ -569,7 +587,7 @@ typedef struct {
  * Initializes a `git_fetch_options` with default values. Equivalent to
  * creating an instance with GIT_FETCH_OPTIONS_INIT.
  *
- * @param opts the `git_push_options` instance to initialize.
+ * @param opts the `git_fetch_options` instance to initialize.
  * @param version the version of the struct; you should pass
  *        `GIT_FETCH_OPTIONS_VERSION` here.
  * @return Zero on success; -1 on failure.
@@ -715,8 +733,8 @@ GIT_EXTERN(int) git_remote_prune(git_remote *remote, const git_remote_callbacks 
  * Peform all the steps from a push.
  *
  * @param remote the remote to push to
- * @param refspecs the refspecs to use for pushing. If none are
- * passed, the configured refspecs will be used
+ * @param refspecs the refspecs to use for pushing. If NULL or an empty
+ *                 array, the configured refspecs will be used
  * @param opts options to use for this push
  */
 GIT_EXTERN(int) git_remote_push(git_remote *remote,
@@ -796,7 +814,7 @@ GIT_EXTERN(int) git_remote_is_valid_name(const char *remote_name);
 * for the remote will be removed.
 *
 * @param repo the repository in which to act
-* @param name the name of the remove to delete
+* @param name the name of the remote to delete
 * @return 0 on success, or an error code.
 */
 GIT_EXTERN(int) git_remote_delete(git_repository *repo, const char *name);

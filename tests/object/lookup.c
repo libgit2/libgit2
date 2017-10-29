@@ -6,13 +6,12 @@ static git_repository *g_repo;
 
 void test_object_lookup__initialize(void)
 {
-   cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo.git")));
+	g_repo = cl_git_sandbox_init("testrepo.git");
 }
 
 void test_object_lookup__cleanup(void)
 {
-	git_repository_free(g_repo);
-	g_repo = NULL;
+	cl_git_sandbox_cleanup();
 }
 
 void test_object_lookup__lookup_wrong_type_returns_enotfound(void)
@@ -63,3 +62,61 @@ void test_object_lookup__lookup_wrong_type_eventually_returns_enotfound(void)
 		GIT_ENOTFOUND, git_object_lookup(&object, g_repo, &oid, GIT_OBJ_TAG));
 }
 
+void test_object_lookup__lookup_corrupt_object_returns_error(void)
+{
+	const char *commit = "8e73b769e97678d684b809b163bebdae2911720f",
+	      *file = "objects/8e/73b769e97678d684b809b163bebdae2911720f";
+	git_buf path = GIT_BUF_INIT, contents = GIT_BUF_INIT;
+	git_oid oid;
+	git_object *object;
+	size_t i;
+
+	cl_git_pass(git_oid_fromstr(&oid, commit));
+	cl_git_pass(git_buf_joinpath(&path, git_repository_path(g_repo), file));
+	cl_git_pass(git_futils_readbuffer(&contents, path.ptr));
+
+	/* Corrupt and try to read the object */
+	for (i = 0; i < contents.size; i++) {
+		contents.ptr[i] ^= 0x1;
+		cl_git_pass(git_futils_writebuffer(&contents, path.ptr, O_RDWR, 0644));
+		cl_git_fail(git_object_lookup(&object, g_repo, &oid, GIT_OBJ_COMMIT));
+		contents.ptr[i] ^= 0x1;
+	}
+
+	/* Restore original content and assert we can read the object */
+	cl_git_pass(git_futils_writebuffer(&contents, path.ptr, O_RDWR, 0644));
+	cl_git_pass(git_object_lookup(&object, g_repo, &oid, GIT_OBJ_COMMIT));
+
+	git_object_free(object);
+	git_buf_free(&path);
+	git_buf_free(&contents);
+}
+
+void test_object_lookup__lookup_object_with_wrong_hash_returns_error(void)
+{
+	const char *oldloose = "objects/8e/73b769e97678d684b809b163bebdae2911720f",
+	      *newloose = "objects/8e/73b769e97678d684b809b163bebdae2911720e",
+	      *commit = "8e73b769e97678d684b809b163bebdae2911720e";
+	git_buf oldpath = GIT_BUF_INIT, newpath = GIT_BUF_INIT;
+	git_object *object;
+	git_oid oid;
+
+	cl_git_pass(git_oid_fromstr(&oid, commit));
+
+	/* Copy object to another location with wrong hash */
+	cl_git_pass(git_buf_joinpath(&oldpath, git_repository_path(g_repo), oldloose));
+	cl_git_pass(git_buf_joinpath(&newpath, git_repository_path(g_repo), newloose));
+	cl_git_pass(git_futils_cp(oldpath.ptr, newpath.ptr, 0644));
+
+	/* Verify that lookup fails due to a hashsum mismatch */
+	cl_git_fail_with(GIT_EMISMATCH, git_object_lookup(&object, g_repo, &oid, GIT_OBJ_COMMIT));
+
+	/* Disable verification and try again */
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_HASH_VERIFICATION, 0));
+	cl_git_pass(git_object_lookup(&object, g_repo, &oid, GIT_OBJ_COMMIT));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_HASH_VERIFICATION, 1));
+
+	git_object_free(object);
+	git_buf_free(&oldpath);
+	git_buf_free(&newpath);
+}

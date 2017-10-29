@@ -12,19 +12,22 @@ static git_repository *g_repo;
 
 void test_refs_create__initialize(void)
 {
-   g_repo = cl_git_sandbox_init("testrepo");
+	g_repo = cl_git_sandbox_init("testrepo");
+	p_fsync__cnt = 0;
 }
 
 void test_refs_create__cleanup(void)
 {
-   cl_git_sandbox_cleanup();
+	cl_git_sandbox_cleanup();
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 1));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_SYMBOLIC_REF_CREATION, 1));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_FSYNC_GITDIR, 0));
 }
 
 void test_refs_create__symbolic(void)
 {
-   // create a new symbolic reference
+	/* create a new symbolic reference */
 	git_reference *new_reference, *looked_up_ref, *resolved_ref;
 	git_repository *repo2;
 	git_oid id;
@@ -65,9 +68,57 @@ void test_refs_create__symbolic(void)
 	git_reference_free(resolved_ref);
 }
 
+void test_refs_create__symbolic_with_arbitrary_content(void)
+{
+	git_reference *new_reference, *looked_up_ref;
+	git_repository *repo2;
+	git_oid id;
+
+	const char *new_head_tracker = "ANOTHER_HEAD_TRACKER";
+	const char *arbitrary_target = "ARBITRARY DATA";
+
+	git_oid_fromstr(&id, current_master_tip);
+
+	/* Attempt to create symbolic ref with arbitrary data in target
+	 * fails by default
+	 */
+	cl_git_fail(git_reference_symbolic_create(&new_reference, g_repo, new_head_tracker, arbitrary_target, 0, NULL));
+
+	git_libgit2_opts(GIT_OPT_ENABLE_STRICT_SYMBOLIC_REF_CREATION, 0);
+
+	/* With strict target validation disabled, ref creation succeeds */
+	cl_git_pass(git_reference_symbolic_create(&new_reference, g_repo, new_head_tracker, arbitrary_target, 0, NULL));
+
+	/* Ensure the reference can be looked-up... */
+	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, new_head_tracker));
+	cl_assert(git_reference_type(looked_up_ref) & GIT_REF_SYMBOLIC);
+	cl_assert(reference_is_packed(looked_up_ref) == 0);
+	cl_assert_equal_s(looked_up_ref->name, new_head_tracker);
+	git_reference_free(looked_up_ref);
+
+	/* Ensure the target is what we expect it to be */
+	cl_assert_equal_s(git_reference_symbolic_target(new_reference), arbitrary_target);
+
+	/* Similar test with a fresh new repository object */
+	cl_git_pass(git_repository_open(&repo2, "testrepo"));
+
+	/* Ensure the reference can be looked-up... */
+	cl_git_pass(git_reference_lookup(&looked_up_ref, repo2, new_head_tracker));
+	cl_assert(git_reference_type(looked_up_ref) & GIT_REF_SYMBOLIC);
+	cl_assert(reference_is_packed(looked_up_ref) == 0);
+	cl_assert_equal_s(looked_up_ref->name, new_head_tracker);
+
+	/* Ensure the target is what we expect it to be */
+	cl_assert_equal_s(git_reference_symbolic_target(new_reference), arbitrary_target);
+
+	git_repository_free(repo2);
+	git_reference_free(new_reference);
+	git_reference_free(looked_up_ref);
+}
+
 void test_refs_create__deep_symbolic(void)
 {
-   // create a deep symbolic reference
+	/* create a deep symbolic reference */
 	git_reference *new_reference, *looked_up_ref, *resolved_ref;
 	git_oid id;
 
@@ -87,7 +138,7 @@ void test_refs_create__deep_symbolic(void)
 
 void test_refs_create__oid(void)
 {
-   // create a new OID reference
+	/* create a new OID reference */
 	git_reference *new_reference, *looked_up_ref;
 	git_repository *repo2;
 	git_oid id;
@@ -247,4 +298,70 @@ void test_refs_create__creating_a_loose_ref_with_invalid_windows_name(void)
 	test_win32_name("refs/heads/aux.foo/bar");
 
 	test_win32_name("refs/heads/com1");
+}
+
+/* Creating a loose ref involves fsync'ing the reference, the
+ * reflog and (on non-Windows) the containing directories.
+ * Creating a packed ref involves fsync'ing the packed ref file
+ * and (on non-Windows) the containing directory.
+ */
+#ifdef GIT_WIN32
+static int expected_fsyncs_create = 2, expected_fsyncs_compress = 1;
+#else
+static int expected_fsyncs_create = 4, expected_fsyncs_compress = 2;
+#endif
+
+static void count_fsyncs(size_t *create_count, size_t *compress_count)
+{
+	git_reference *ref = NULL;
+	git_refdb *refdb;
+	git_oid id;
+
+	p_fsync__cnt = 0;
+
+	git_oid_fromstr(&id, current_master_tip);
+	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/fsync_test", &id, 0, "log message"));
+	git_reference_free(ref);
+
+	*create_count = p_fsync__cnt;
+	p_fsync__cnt = 0;
+
+	cl_git_pass(git_repository_refdb(&refdb, g_repo));
+	cl_git_pass(git_refdb_compress(refdb));
+	git_refdb_free(refdb);
+
+	*compress_count = p_fsync__cnt;
+	p_fsync__cnt = 0;
+}
+
+void test_refs_create__does_not_fsync_by_default(void)
+{
+	size_t create_count, compress_count;
+	count_fsyncs(&create_count, &compress_count);
+
+	cl_assert_equal_i(0, create_count);
+	cl_assert_equal_i(0, compress_count);
+}
+
+void test_refs_create__fsyncs_when_global_opt_set(void)
+{
+	size_t create_count, compress_count;
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_FSYNC_GITDIR, 1));
+	count_fsyncs(&create_count, &compress_count);
+
+	cl_assert_equal_i(expected_fsyncs_create, create_count);
+	cl_assert_equal_i(expected_fsyncs_compress, compress_count);
+}
+
+void test_refs_create__fsyncs_when_repo_config_set(void)
+{
+	size_t create_count, compress_count;
+
+	cl_repo_set_bool(g_repo, "core.fsyncObjectFiles", true);
+
+	count_fsyncs(&create_count, &compress_count);
+
+	cl_assert_equal_i(expected_fsyncs_create, create_count);
+	cl_assert_equal_i(expected_fsyncs_compress, compress_count);
 }

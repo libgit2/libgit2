@@ -1,8 +1,6 @@
 #include "clar_libgit2.h"
 #include "oidmap.h"
 
-GIT__USE_OIDMAP
-
 typedef struct {
 	git_oid oid;
 	size_t extra;
@@ -33,23 +31,23 @@ void test_core_oidmap__basic(void)
 		khiter_t pos;
 		int ret;
 
-		pos = kh_get(oid, map, &items[i].oid);
-		cl_assert(pos == kh_end(map));
+		pos = git_oidmap_lookup_index(map, &items[i].oid);
+		cl_assert(!git_oidmap_valid_index(map, pos));
 
-		pos = kh_put(oid, map, &items[i].oid, &ret);
+		pos = git_oidmap_put(map, &items[i].oid, &ret);
 		cl_assert(ret != 0);
 
-		kh_val(map, pos) = &items[i];
+		git_oidmap_set_value_at(map, pos, &items[i]);
 	}
 
 
 	for (i = 0; i < NITEMS; ++i) {
 		khiter_t pos;
 
-		pos = kh_get(oid, map, &items[i].oid);
-		cl_assert(pos != kh_end(map));
+		pos = git_oidmap_lookup_index(map, &items[i].oid);
+		cl_assert(git_oidmap_valid_index(map, pos));
 
-		cl_assert_equal_p(kh_val(map, pos), &items[i]);
+		cl_assert_equal_p(git_oidmap_value_at(map, pos), &items[i]);
 	}
 
 	git_oidmap_free(map);
@@ -87,23 +85,23 @@ void test_core_oidmap__hash_collision(void)
 		khiter_t pos;
 		int ret;
 
-		pos = kh_get(oid, map, &items[i].oid);
-		cl_assert(pos == kh_end(map));
+		pos = git_oidmap_lookup_index(map, &items[i].oid);
+		cl_assert(!git_oidmap_valid_index(map, pos));
 
-		pos = kh_put(oid, map, &items[i].oid, &ret);
+		pos = git_oidmap_put(map, &items[i].oid, &ret);
 		cl_assert(ret != 0);
 
-		kh_val(map, pos) = &items[i];
+		git_oidmap_set_value_at(map, pos, &items[i]);
 	}
 
 
 	for (i = 0; i < NITEMS; ++i) {
 		khiter_t pos;
 
-		pos = kh_get(oid, map, &items[i].oid);
-		cl_assert(pos != kh_end(map));
+		pos = git_oidmap_lookup_index(map, &items[i].oid);
+		cl_assert(git_oidmap_valid_index(map, pos));
 
-		cl_assert_equal_p(kh_val(map, pos), &items[i]);
+		cl_assert_equal_p(git_oidmap_value_at(map, pos), &items[i]);
 	}
 
 	git_oidmap_free(map);

@@ -104,6 +104,9 @@ typedef struct git_refdb_backend git_refdb_backend;
  */
 typedef struct git_repository git_repository;
 
+/** Representation of a working tree */
+typedef struct git_worktree git_worktree;
+
 /** Representation of a generic object in a repository */
 typedef struct git_object git_object;
 

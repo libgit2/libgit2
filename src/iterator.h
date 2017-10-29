@@ -8,6 +8,7 @@
 #define INCLUDE_iterator_h__
 
 #include "common.h"
+
 #include "git2/index.h"
 #include "vector.h"
 #include "buffer.h"

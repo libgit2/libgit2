@@ -6,17 +6,22 @@
  */
 
 #include "commit_list.h"
-#include "common.h"
+
 #include "revwalk.h"
 #include "pool.h"
 #include "odb.h"
 
 int git_commit_list_time_cmp(const void *a, const void *b)
 {
-	const git_commit_list_node *commit_a = a;
-	const git_commit_list_node *commit_b = b;
+	int64_t time_a = ((git_commit_list_node *) a)->time;
+	int64_t time_b = ((git_commit_list_node *) b)->time;
 
-	return (commit_a->time < commit_b->time);
+	if (time_a < time_b)
+		return 1;
+	if (time_a > time_b)
+		return -1;
+
+	return 0;
 }
 
 git_commit_list *git_commit_list_insert(git_commit_list_node *item, git_commit_list **list_p)
@@ -56,7 +61,7 @@ static int commit_error(git_commit_list_node *commit, const char *msg)
 	git_oid_fmt(commit_oid, &commit->oid);
 	commit_oid[GIT_OID_HEXSZ] = '\0';
 
-	giterr_set(GITERR_ODB, "Failed to parse commit %s - %s", commit_oid, msg);
+	giterr_set(GITERR_ODB, "failed to parse commit %s - %s", commit_oid, msg);
 
 	return -1;
 }
@@ -186,7 +191,7 @@ int git_commit_list_parse(git_revwalk *walk, git_commit_list_node *commit)
 		return error;
 
 	if (obj->cached.type != GIT_OBJ_COMMIT) {
-		giterr_set(GITERR_INVALID, "Object is no commit object");
+		giterr_set(GITERR_INVALID, "object is no commit object");
 		error = -1;
 	} else
 		error = commit_quick_parse(

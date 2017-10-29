@@ -5,8 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
 #include "w32_buffer.h"
+
 #include "../buffer.h"
 #include "utf-conv.h"
 

@@ -6,7 +6,7 @@ void test_refs_crashes__double_free(void)
 	git_reference *ref, *ref2;
 	const char *REFNAME = "refs/heads/xxx";
 
-	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
+	repo = cl_git_sandbox_init("testrepo.git");
 	cl_git_pass(git_reference_symbolic_create(&ref, repo, REFNAME, "refs/heads/master", 0, NULL));
 	cl_git_pass(git_reference_lookup(&ref2, repo, REFNAME));
 	cl_git_pass(git_reference_delete(ref));
@@ -16,5 +16,5 @@ void test_refs_crashes__double_free(void)
 	/* reference is gone from disk, so reloading it will fail */
 	cl_git_fail(git_reference_lookup(&ref2, repo, REFNAME));
 
-	git_repository_free(repo);
+	cl_git_sandbox_cleanup();
 }

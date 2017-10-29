@@ -5,16 +5,14 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
 #include "mwindow.h"
+
 #include "vector.h"
 #include "fileops.h"
 #include "map.h"
 #include "global.h"
 #include "strmap.h"
 #include "pack.h"
-
-GIT__USE_STRMAP
 
 #define DEFAULT_WINDOW_SIZE \
 	(sizeof(void*) >= 8 \
@@ -84,7 +82,7 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 
 	git_atomic_inc(&pack->refcount);
 
-	git_strmap_insert(git__pack_cache, pack->pack_name, pack, error);
+	git_strmap_insert(git__pack_cache, pack->pack_name, pack, &error);
 	git_mutex_unlock(&git__mwindow_mutex);
 
 	if (error < 0) {
@@ -231,7 +229,7 @@ static int git_mwindow_close_lru(git_mwindow_file *mwf)
 	}
 
 	if (!lru_w) {
-		giterr_set(GITERR_OS, "Failed to close memory window. Couldn't find LRU");
+		giterr_set(GITERR_OS, "failed to close memory window; couldn't find LRU");
 		return -1;
 	}
 

@@ -5,9 +5,10 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "zstream.h"
+
 #include <zlib.h>
 
-#include "zstream.h"
 #include "buffer.h"
 
 #define ZSTREAM_BUFFER_SIZE (1024 * 1024)
@@ -21,9 +22,9 @@ static int zstream_seterr(git_zstream *zs)
 	if (zs->zerr == Z_MEM_ERROR)
 		giterr_set_oom();
 	else if (zs->z.msg)
-		giterr_set(GITERR_ZLIB, zs->z.msg);
+		giterr_set_str(GITERR_ZLIB, zs->z.msg);
 	else
-		giterr_set(GITERR_ZLIB, "Unknown compression error");
+		giterr_set(GITERR_ZLIB, "unknown compression error");
 
 	return -1;
 }

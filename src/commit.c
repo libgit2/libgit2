@@ -5,13 +5,14 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "commit.h"
+
 #include "git2/common.h"
 #include "git2/object.h"
 #include "git2/repository.h"
 #include "git2/signature.h"
 #include "git2/sys/commit.h"
 
-#include "common.h"
 #include "odb.h"
 #include "commit.h"
 #include "signature.h"
@@ -157,6 +158,9 @@ static int git_commit__create_internal(
 		goto cleanup;
 
 	if (git_repository_odb__weakptr(&odb, repo) < 0)
+		goto cleanup;
+
+	if (git_odb__freshen(odb, tree) < 0)
 		goto cleanup;
 
 	if (git_odb_write(id, odb, buf.ptr, buf.size, GIT_OBJ_COMMIT) < 0)
@@ -459,15 +463,16 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 	buffer = buffer_start + header_len + 1;
 
 	/* extract commit message */
-	if (buffer <= buffer_end) {
+	if (buffer <= buffer_end)
 		commit->raw_message = git__strndup(buffer, buffer_end - buffer);
-		GITERR_CHECK_ALLOC(commit->raw_message);
-	}
+	else
+		commit->raw_message = git__strdup("");
+	GITERR_CHECK_ALLOC(commit->raw_message);
 
 	return 0;
 
 bad_buffer:
-	giterr_set(GITERR_OBJECT, "Failed to parse bad commit object");
+	giterr_set(GITERR_OBJECT, "failed to parse bad commit object");
 	return -1;
 }
 
@@ -597,7 +602,7 @@ int git_commit_parent(
 
 	parent_id = git_commit_parent_id(commit, n);
 	if (parent_id == NULL) {
-		giterr_set(GITERR_INVALID, "Parent %u does not exist", n);
+		giterr_set(GITERR_INVALID, "parent %u does not exist", n);
 		return GIT_ENOTFOUND;
 	}
 
@@ -641,7 +646,7 @@ int git_commit_header_field(git_buf *out, const git_commit *commit, const char *
 {
 	const char *eol, *buf = commit->raw_header;
 
-	git_buf_sanitize(out);
+	git_buf_clear(out);
 
 	while ((eol = strchr(buf, '\n'))) {
 		/* We can skip continuations here */
@@ -705,8 +710,8 @@ int git_commit_extract_signature(git_buf *signature, git_buf *signed_data, git_r
 	const char *h, *eol;
 	int error;
 
-	git_buf_sanitize(signature);
-	git_buf_sanitize(signed_data);
+	git_buf_clear(signature);
+	git_buf_clear(signed_data);
 
 	if (!field)
 		field = "gpgsig";
@@ -765,8 +770,9 @@ int git_commit_extract_signature(git_buf *signature, git_buf *signed_data, git_r
 		if (git_buf_oom(signature))
 			goto oom;
 
+		error = git_buf_puts(signed_data, eol+1);
 		git_odb_object_free(obj);
-		return git_buf_puts(signed_data, eol+1);
+		return error;
 	}
 
 	giterr_set(GITERR_OBJECT, "this commit is not signed");

@@ -5,8 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
 #include "annotated_commit.h"
+
 #include "refs.h"
 #include "cache.h"
 

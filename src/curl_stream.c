@@ -5,6 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#include "curl_stream.h"
+
 #ifdef GIT_CURL
 
 #include <curl/curl.h>
@@ -14,6 +16,16 @@
 #include "buffer.h"
 #include "vector.h"
 #include "proxy.h"
+
+/* This is for backwards compatibility with curl<7.45.0. */
+#ifndef CURLINFO_ACTIVESOCKET
+# define CURLINFO_ACTIVESOCKET CURLINFO_LASTSOCKET
+# define GIT_CURL_BADSOCKET -1
+# define git_activesocket_t long
+#else
+# define GIT_CURL_BADSOCKET CURL_SOCKET_BAD
+# define git_activesocket_t curl_socket_t
+#endif
 
 typedef struct {
 	git_stream parent;
@@ -87,7 +99,8 @@ static int ask_and_apply_proxy_creds(curl_stream *s)
 static int curls_connect(git_stream *stream)
 {
 	curl_stream *s = (curl_stream *) stream;
-	long sockextr, connect_last = 0;
+	git_activesocket_t sockextr;
+	long connect_last = 0;
 	int failed_cert = 0, error;
 	bool retry_connect;
 	CURLcode res;
@@ -117,8 +130,13 @@ static int curls_connect(git_stream *stream)
 	if (res == CURLE_PEER_FAILED_VERIFICATION)
 		failed_cert = 1;
 
-	if ((res = curl_easy_getinfo(s->handle, CURLINFO_LASTSOCKET, &sockextr)) != CURLE_OK) {
+	if ((res = curl_easy_getinfo(s->handle, CURLINFO_ACTIVESOCKET, &sockextr)) != CURLE_OK) {
 		return seterr_curl(s);
+	}
+
+	if (sockextr == GIT_CURL_BADSOCKET) {
+		giterr_set(GITERR_NET, "curl socket is no longer valid");
+		return -1;
 	}
 
 	s->socket = sockextr;
@@ -198,6 +216,7 @@ static int wait_for(curl_socket_t fd, bool reading)
 	FD_ZERO(&outfd);
 	FD_ZERO(&errfd);
 
+	assert(fd >= 0);
 	FD_SET(fd, &errfd);
 	if (reading)
 		FD_SET(fd, &infd);

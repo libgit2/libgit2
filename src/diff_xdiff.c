@@ -4,11 +4,12 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
+
+#include "diff_xdiff.h"
+
 #include "git2/errors.h"
-#include "common.h"
 #include "diff.h"
 #include "diff_driver.h"
-#include "diff_xdiff.h"
 #include "patch_generate.h"
 
 static int git_xdiff_scan_int(const char **str, int *value)
@@ -50,7 +51,7 @@ static int git_xdiff_parse_hunk(git_diff_hunk *hunk, const char *header)
 	return 0;
 
 fail:
-	giterr_set(GITERR_INVALID, "Malformed hunk header from xdiff");
+	giterr_set(GITERR_INVALID, "malformed hunk header from xdiff");
 	return -1;
 }
 
@@ -99,7 +100,7 @@ static int diff_update_lines(
 		info->new_lineno += (int)line->num_lines;
 		break;
 	default:
-		giterr_set(GITERR_INVALID, "Unknown diff line origin %02x",
+		giterr_set(GITERR_INVALID, "unknown diff line origin %02x",
 			(unsigned int)line->origin);
 		return -1;
 	}

@@ -7,6 +7,8 @@
 #ifndef INCLUDE_attr_file_h__
 #define INCLUDE_attr_file_h__
 
+#include "common.h"
+
 #include "git2/oid.h"
 #include "git2/attr.h"
 #include "vector.h"
@@ -15,7 +17,7 @@
 #include "fileops.h"
 
 #define GIT_ATTR_FILE			".gitattributes"
-#define GIT_ATTR_FILE_INREPO	"info/attributes"
+#define GIT_ATTR_FILE_INREPO	"attributes"
 #define GIT_ATTR_FILE_SYSTEM	"gitattributes"
 #define GIT_ATTR_FILE_XDG		"attributes"
 

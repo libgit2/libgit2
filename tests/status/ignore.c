@@ -20,8 +20,8 @@ static void assert_ignored_(
 	bool expected, const char *filepath, const char *file, int line)
 {
 	int is_ignored = 0;
-	cl_git_pass_(
-		git_status_should_ignore(&is_ignored, g_repo, filepath), file, line);
+	cl_git_expect(
+		git_status_should_ignore(&is_ignored, g_repo, filepath), 0, file, line);
 	clar__assert(
 		(expected != 0) == (is_ignored != 0),
 		file, line, "expected != is_ignored", filepath, 1);
@@ -1075,5 +1075,110 @@ void test_status_ignore__negate_starstar(void)
     cl_git_mkfile("empty_standard_repo/code/projects/foo/bar/packages/repositories.config", "");
 
     cl_git_pass(git_ignore_path_is_ignored(&ignored, g_repo, "code/projects/foo/bar/packages/repositories.config"));
+    cl_assert_equal_i(0, ignored);
+}
+
+void test_status_ignore__ignore_all_toplevel_dirs_include_files(void)
+{
+	static const char *test_files[] = {
+		"empty_standard_repo/README.md",
+		"empty_standard_repo/src/main.c",
+		"empty_standard_repo/src/foo/foo.c",
+		"empty_standard_repo/dist/foo.o",
+		"empty_standard_repo/dist/main.o",
+		NULL
+	};
+
+	make_test_data("empty_standard_repo", test_files);
+	cl_git_mkfile(
+		"empty_standard_repo/.gitignore",
+		"/*/\n"
+		"!/src\n");
+
+	assert_is_ignored("dist/foo.o");
+	assert_is_ignored("dist/main.o");
+
+	refute_is_ignored("README.md");
+	refute_is_ignored("src/foo.c");
+	refute_is_ignored("src/foo/foo.c");
+}
+
+void test_status_ignore__subdir_ignore_all_toplevel_dirs_include_files(void)
+{
+	static const char *test_files[] = {
+		"empty_standard_repo/project/README.md",
+		"empty_standard_repo/project/src/main.c",
+		"empty_standard_repo/project/src/foo/foo.c",
+		"empty_standard_repo/project/dist/foo.o",
+		"empty_standard_repo/project/dist/main.o",
+		NULL
+	};
+
+	make_test_data("empty_standard_repo", test_files);
+	cl_git_mkfile(
+		"empty_standard_repo/project/.gitignore",
+		"/*/\n"
+		"!/src\n");
+
+	assert_is_ignored("project/dist/foo.o");
+	assert_is_ignored("project/dist/main.o");
+
+	refute_is_ignored("project/src/foo.c");
+	refute_is_ignored("project/src/foo/foo.c");
+	refute_is_ignored("project/README.md");
+}
+
+void test_status_ignore__subdir_ignore_everything_except_certain_files(void)
+{
+	static const char *test_files[] = {
+		"empty_standard_repo/project/README.md",
+		"empty_standard_repo/project/some_file",
+		"empty_standard_repo/project/src/main.c",
+		"empty_standard_repo/project/src/foo/foo.c",
+		"empty_standard_repo/project/dist/foo.o",
+		"empty_standard_repo/project/dist/main.o",
+		NULL
+	};
+
+	make_test_data("empty_standard_repo", test_files);
+	cl_git_mkfile(
+		"empty_standard_repo/project/.gitignore",
+		"/*\n"
+		"!/src\n"
+		"!README.md\n");
+
+	assert_is_ignored("project/some_file");
+	assert_is_ignored("project/dist/foo.o");
+	assert_is_ignored("project/dist/main.o");
+
+	refute_is_ignored("project/README.md");
+	refute_is_ignored("project/src/foo.c");
+	refute_is_ignored("project/src/foo/foo.c");
+}
+
+void test_status_ignore__deeper(void)
+{
+   int ignored;
+
+    g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+    cl_git_mkfile("empty_standard_repo/.gitignore",
+          "*.data\n"
+          "!dont_ignore/*.data\n");
+
+    cl_git_pass(p_mkdir("empty_standard_repo/dont_ignore", 0777));
+    cl_git_mkfile("empty_standard_repo/foo.data", "");
+    cl_git_mkfile("empty_standard_repo/bar.data", "");
+    cl_git_mkfile("empty_standard_repo/dont_ignore/foo.data", "");
+    cl_git_mkfile("empty_standard_repo/dont_ignore/bar.data", "");
+
+    cl_git_pass(git_ignore_path_is_ignored(&ignored, g_repo, "foo.data"));
+    cl_assert_equal_i(1, ignored);
+    cl_git_pass(git_ignore_path_is_ignored(&ignored, g_repo, "bar.data"));
+    cl_assert_equal_i(1, ignored);
+
+    cl_git_pass(git_ignore_path_is_ignored(&ignored, g_repo, "dont_ignore/foo.data"));
+    cl_assert_equal_i(0, ignored);
+    cl_git_pass(git_ignore_path_is_ignored(&ignored, g_repo, "dont_ignore/bar.data"));
     cl_assert_equal_i(0, ignored);
 }

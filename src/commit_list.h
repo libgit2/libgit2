@@ -7,6 +7,8 @@
 #ifndef INCLUDE_commit_list_h__
 #define INCLUDE_commit_list_h__
 
+#include "common.h"
+
 #include "git2/oid.h"
 
 #define PARENT1  (1 << 0)
@@ -28,6 +30,7 @@ typedef struct git_commit_list_node {
 			 uninteresting:1,
 			 topo_delay:1,
 			 parsed:1,
+			 added:1,
 			 flags : FLAG_BITS;
 
 	unsigned short in_degree;
