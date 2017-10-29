@@ -51,6 +51,16 @@ void test_attr_ignore__allow_root(void)
 	assert_is_ignored(false, "NewFolder/NewFolder/File.txt");
 }
 
+void test_attr_ignore__ignore_space(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "/\n\n/NewFolder \n/NewFolder/NewFolder");
+
+	assert_is_ignored(false, "File.txt");
+	assert_is_ignored(true, "NewFolder");
+	assert_is_ignored(true, "NewFolder/NewFolder");
+	assert_is_ignored(true, "NewFolder/NewFolder/File.txt");
+}
+
 void test_attr_ignore__ignore_root(void)
 {
 	cl_git_rewritefile("attr/.gitignore", "/\n\n/NewFolder\n/NewFolder/NewFolder");
