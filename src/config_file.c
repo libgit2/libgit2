@@ -1955,10 +1955,12 @@ static int config_write(diskfile_backend *cfg, const char *orig_key, const char 
 	ldot = strrchr(key, '.');
 	name = ldot + 1;
 	section = git__strndup(key, ldot - key);
+	GITERR_CHECK_ALLOC(section);
 
 	ldot = strrchr(orig_key, '.');
 	orig_name = ldot + 1;
 	orig_section = git__strndup(orig_key, ldot - orig_key);
+	GITERR_CHECK_ALLOC(orig_section);
 
 	write_data.buf = &buf;
 	git_buf_init(&write_data.buffered_comment, 0);
