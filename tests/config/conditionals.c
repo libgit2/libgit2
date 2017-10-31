@@ -50,6 +50,7 @@ static void assert_condition_includes(const char *keyword, const char *path, boo
 void test_config_conditionals__gitdir(void)
 {
 	git_buf path = GIT_BUF_INIT;
+	char *sandbox_path;
 
 	assert_condition_includes("gitdir", ROOT_PREFIX "/", true);
 	assert_condition_includes("gitdir", "empty_standard_repo", true);
@@ -61,31 +62,38 @@ void test_config_conditionals__gitdir(void)
 	assert_condition_includes("gitdir", "empty_stand", false);
 	assert_condition_includes("gitdir", "~/empty_standard_repo", false);
 
-	git_buf_joinpath(&path, clar_sandbox_path(), "/");
+	sandbox_path = p_realpath(clar_sandbox_path(), NULL);
+
+	git_buf_joinpath(&path, sandbox_path, "/");
 	assert_condition_includes("gitdir", path.ptr, true);
 
-	git_buf_joinpath(&path, clar_sandbox_path(), "/*");
+	git_buf_joinpath(&path, sandbox_path, "/*");
 	assert_condition_includes("gitdir", path.ptr, true);
 
-	git_buf_joinpath(&path, clar_sandbox_path(), "empty_standard_repo");
+	git_buf_joinpath(&path, sandbox_path, "empty_standard_repo");
 	assert_condition_includes("gitdir", path.ptr, true);
 
-	git_buf_joinpath(&path, clar_sandbox_path(), "Empty_Standard_Repo");
+	git_buf_joinpath(&path, sandbox_path, "Empty_Standard_Repo");
 	assert_condition_includes("gitdir", path.ptr, false);
 
+	git__free(sandbox_path);
 	git_buf_free(&path);
 }
 
 void test_config_conditionals__gitdir_i(void)
 {
 	git_buf path = GIT_BUF_INIT;
+	char *sandbox_path;
 
-	git_buf_joinpath(&path, clar_sandbox_path(), "empty_standard_repo");
+	sandbox_path = p_realpath(clar_sandbox_path(), NULL);
+
+	git_buf_joinpath(&path, sandbox_path, "empty_standard_repo");
 	assert_condition_includes("gitdir/i", path.ptr, true);
 
-	git_buf_joinpath(&path, clar_sandbox_path(), "EMPTY_STANDARD_REPO");
+	git_buf_joinpath(&path, sandbox_path, "EMPTY_STANDARD_REPO");
 	assert_condition_includes("gitdir/i", path.ptr, true);
 
+	git__free(sandbox_path);
 	git_buf_free(&path);
 }
 
