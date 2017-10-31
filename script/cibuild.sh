@@ -15,8 +15,8 @@ if [ "$TRAVIS_OS_NAME" = "osx" ]; then
 	export CLAR_TMP="$HOME"/_clar_tmp
 	mkdir -p $CLAR_TMP
 
-	# 2M sectors aka ~1GB of space
-	device=$(hdiutil attach -nomount ram://$((2 * 1024 * 1024)))
+	# 5*2M sectors aka ~5GB of space
+	device=$(hdiutil attach -nomount ram://$((5 * 2 * 1024 * 1024)))
 	newfs_hfs $device
 	mount -t hfs $device $CLAR_TMP
 fi
