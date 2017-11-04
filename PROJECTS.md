@@ -36,10 +36,6 @@ These are good small projects to get started with libgit2.
       trick to this one will be doing it in a manner that is clean and
       simple, but still handles the various cases correctly (e.g. `-B/70%`
       is apparently a legal setting).
-    * Implement the `--log-size` option for `examples/log.c`. I think all
-      the data is available, you would just need to add the code into the
-      `print_commit()` routine (along with a way of passing the option
-      into that function).
     * As an extension to the matching idea for `examples/log.c`, add the
       `-i` option to use `strcasestr()` for matches.
     * For `examples/log.c`, implement the `--first-parent` option now that

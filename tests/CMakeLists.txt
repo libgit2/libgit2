@@ -10,7 +10,7 @@ SET(CLAR_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 ADD_DEFINITIONS(-DCLAR_FIXTURE_PATH=\"${CLAR_FIXTURES}\")
 ADD_DEFINITIONS(-DCLAR_TMPDIR=\"libgit2_tests\")
 
-INCLUDE_DIRECTORIES(${CLAR_PATH} ${CMAKE_BINARY_DIR}/src)
+INCLUDE_DIRECTORIES(${CLAR_PATH} ${libgit2_BINARY_DIR}/src)
 FILE(GLOB_RECURSE SRC_TEST ${CLAR_PATH}/*/*.c ${CLAR_PATH}/*/*.h)
 SET(SRC_CLAR "main.c" "clar_libgit2.c" "clar_libgit2_trace.c" "clar_libgit2_timer.c" "clar.c")
 
@@ -35,7 +35,7 @@ INCLUDE_DIRECTORIES(${LIBGIT2_INCLUDES})
 
 ADD_EXECUTABLE(libgit2_clar ${SRC_CLAR} ${SRC_TEST} ${LIBGIT2_OBJECTS})
 
-SET_TARGET_PROPERTIES(libgit2_clar PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+SET_TARGET_PROPERTIES(libgit2_clar PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${libgit2_BINARY_DIR})
 
 IF (${CMAKE_VERSION} VERSION_LESS 2.8.12)
 	# Already handled by a global INCLUDE_DIRECTORY()
@@ -53,13 +53,13 @@ IF (MSVC_IDE)
 ENDIF ()
 
 IF (WINHTTP OR OPENSSL_FOUND OR SECURITY_FOUND)
-	ADD_TEST(libgit2_clar "${CMAKE_BINARY_DIR}/libgit2_clar" -ionline -xclone::local::git_style_unc_paths -xclone::local::standard_unc_paths_are_written_git_style)
+	ADD_TEST(libgit2_clar "${libgit2_BINARY_DIR}/libgit2_clar" -ionline -xclone::local::git_style_unc_paths -xclone::local::standard_unc_paths_are_written_git_style)
 ELSE ()
-	ADD_TEST(libgit2_clar "${CMAKE_BINARY_DIR}/libgit2_clar" -v -xclone::local::git_style_unc_paths -xclone::local::standard_unc_paths_are_written_git_style)
+	ADD_TEST(libgit2_clar "${libgit2_BINARY_DIR}/libgit2_clar" -v -xclone::local::git_style_unc_paths -xclone::local::standard_unc_paths_are_written_git_style)
 ENDIF ()
 
 # Add a test target which runs the cred callback tests, to be
 # called after setting the url and user
-ADD_TEST(libgit2_clar-cred_callback "${CMAKE_BINARY_DIR}/libgit2_clar" -v -sonline::clone::cred_callback)
-ADD_TEST(libgit2_clar-proxy_credentials_in_url "${CMAKE_BINARY_DIR}/libgit2_clar" -v -sonline::clone::proxy_credentials_in_url)
-ADD_TEST(libgit2_clar-proxy_credentials_request "${CMAKE_BINARY_DIR}/libgit2_clar" -v	-sonline::clone::proxy_credentials_request)
+ADD_TEST(libgit2_clar-cred_callback "${libgit2_BINARY_DIR}/libgit2_clar" -v -sonline::clone::cred_callback)
+ADD_TEST(libgit2_clar-proxy_credentials_in_url "${libgit2_BINARY_DIR}/libgit2_clar" -v -sonline::clone::proxy_credentials_in_url)
+ADD_TEST(libgit2_clar-proxy_credentials_request "${libgit2_BINARY_DIR}/libgit2_clar" -v	-sonline::clone::proxy_credentials_request)

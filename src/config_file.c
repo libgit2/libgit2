@@ -121,7 +121,7 @@ typedef struct {
 } diskfile_readonly_backend;
 
 static int config_read(git_strmap *values, const git_repository *repo, struct config_file *file, git_config_level_t level, int depth);
-static int config_write(diskfile_backend *cfg, const char *key, const regex_t *preg, const char *value);
+static int config_write(diskfile_backend *cfg, const char *orig_key, const char *key, const regex_t *preg, const char *value);
 static char *escape_value(const char *ptr);
 
 int git_config_file__snapshot(git_config_backend **out, diskfile_backend *in);
@@ -515,7 +515,7 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 		GITERR_CHECK_ALLOC(esc_value);
 	}
 
-	if ((ret = config_write(b, key, NULL, esc_value)) < 0)
+	if ((ret = config_write(b, name, key, NULL, esc_value)) < 0)
 		goto out;
 
 	ret = config_refresh(cfg);
@@ -593,7 +593,7 @@ static int config_set_multivar(
 	}
 
 	/* If we do have it, set call config_write() and reload */
-	if ((result = config_write(b, key, &preg, value)) < 0)
+	if ((result = config_write(b, name, key, &preg, value)) < 0)
 		goto out;
 
 	result = config_refresh(cfg);
@@ -643,7 +643,7 @@ static int config_delete(git_config_backend *cfg, const char *name)
 		return -1;
 	}
 
-	if ((result = config_write(b, var->entry->name, NULL, NULL)) < 0)
+	if ((result = config_write(b, name, var->entry->name, NULL, NULL)) < 0)
 		return result;
 
 	return config_refresh(cfg);
@@ -684,7 +684,7 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 		goto out;
 	}
 
-	if ((result = config_write(b, key, &preg, NULL)) < 0)
+	if ((result = config_write(b, name, key, &preg, NULL)) < 0)
 		goto out;
 
 	result = config_refresh(cfg);
@@ -1866,7 +1866,9 @@ struct write_data {
 	git_buf buffered_comment;
 	unsigned int in_section : 1,
 		preg_replaced : 1;
+	const char *orig_section;
 	const char *section;
+	const char *orig_name;
 	const char *name;
 	const regex_t *preg;
 	const char *value;
@@ -1894,7 +1896,7 @@ static int write_value(struct write_data *write_data)
 
 	q = quotes_for_value(write_data->value);
 	result = git_buf_printf(write_data->buf,
-		"\t%s = %s%s%s\n", write_data->name, q, write_data->value, q);
+		"\t%s = %s%s%s\n", write_data->orig_name, q, write_data->value, q);
 
 	/* If we are updating a single name/value, we're done.  Setting `value`
 	 * to `NULL` will prevent us from trying to write it again later (in
@@ -2025,7 +2027,7 @@ static int write_on_eof(
 	if ((!write_data->preg || !write_data->preg_replaced) && write_data->value) {
 		/* write the section header unless we're already in it */
 		if (!current_section || strcmp(current_section, write_data->section))
-			result = write_section(write_data->buf, write_data->section);
+			result = write_section(write_data->buf, write_data->orig_section);
 
 		if (!result)
 			result = write_value(write_data);
@@ -2037,10 +2039,10 @@ static int write_on_eof(
 /*
  * This is pretty much the parsing, except we write out anything we don't have
  */
-static int config_write(diskfile_backend *cfg, const char *key, const regex_t *preg, const char* value)
+static int config_write(diskfile_backend *cfg, const char *orig_key, const char *key, const regex_t *preg, const char* value)
 {
 	int result;
-	char *section, *name, *ldot;
+	char *orig_section, *section, *orig_name, *name, *ldot;
 	git_filebuf file = GIT_FILEBUF_INIT;
 	git_buf buf = GIT_BUF_INIT;
 	struct reader reader;
@@ -2080,18 +2082,27 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	ldot = strrchr(key, '.');
 	name = ldot + 1;
 	section = git__strndup(key, ldot - key);
+	GITERR_CHECK_ALLOC(section);
+
+	ldot = strrchr(orig_key, '.');
+	orig_name = ldot + 1;
+	orig_section = git__strndup(orig_key, ldot - orig_key);
+	GITERR_CHECK_ALLOC(orig_section);
 
 	write_data.buf = &buf;
 	git_buf_init(&write_data.buffered_comment, 0);
+	write_data.orig_section = orig_section;
 	write_data.section = section;
 	write_data.in_section = 0;
 	write_data.preg_replaced = 0;
+	write_data.orig_name = orig_name;
 	write_data.name = name;
 	write_data.preg = preg;
 	write_data.value = value;
 
 	result = config_parse(&reader, write_on_section, write_on_variable, write_on_comment, write_on_eof, &write_data);
 	git__free(section);
+	git__free(orig_section);
 	git_buf_free(&write_data.buffered_comment);
 
 	if (result < 0) {
