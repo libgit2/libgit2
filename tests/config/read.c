@@ -289,9 +289,9 @@ void test_config_read__foreach(void)
 
 	cl_git_pass(git_config_new(&cfg));
 	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config9"),
-		GIT_CONFIG_LEVEL_SYSTEM, 0));
+		GIT_CONFIG_LEVEL_SYSTEM, NULL, 0));
 	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config15"),
-		GIT_CONFIG_LEVEL_GLOBAL, 0));
+		GIT_CONFIG_LEVEL_GLOBAL, NULL, 0));
 
 	count = 0;
 	cl_git_pass(git_config_foreach(cfg, count_cfg_entries_and_compare_levels, &count));
@@ -313,9 +313,9 @@ void test_config_read__iterator(void)
 
 	cl_git_pass(git_config_new(&cfg));
 	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config9"),
-		GIT_CONFIG_LEVEL_SYSTEM, 0));
+		GIT_CONFIG_LEVEL_SYSTEM, NULL, 0));
 	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config15"),
-		GIT_CONFIG_LEVEL_GLOBAL, 0));
+		GIT_CONFIG_LEVEL_GLOBAL, NULL, 0));
 
 	count = 0;
 	cl_git_pass(git_config_iterator_new(&iter, cfg));
@@ -445,7 +445,7 @@ void test_config_read__read_git_config_entry(void)
 
 	cl_git_pass(git_config_new(&cfg));
 	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config9"),
-		GIT_CONFIG_LEVEL_SYSTEM, 0));
+		GIT_CONFIG_LEVEL_SYSTEM, NULL, 0));
 
 	cl_git_pass(git_config_get_entry(&entry, cfg, "core.dummy2"));
 	cl_assert_equal_s("core.dummy2", entry->name);
@@ -469,11 +469,11 @@ void test_config_read__local_config_overrides_global_config_overrides_system_con
 
 	cl_git_pass(git_config_new(&cfg));
 	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config9"),
-		GIT_CONFIG_LEVEL_SYSTEM, 0));
+		GIT_CONFIG_LEVEL_SYSTEM, NULL, 0));
 	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config15"),
-		GIT_CONFIG_LEVEL_GLOBAL, 0));
+		GIT_CONFIG_LEVEL_GLOBAL, NULL, 0));
 	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config16"),
-		GIT_CONFIG_LEVEL_LOCAL, 0));
+		GIT_CONFIG_LEVEL_LOCAL, NULL, 0));
 
 	cl_git_pass(git_config_get_int32(&i, cfg, "core.dummy2"));
 	cl_assert_equal_i(28, i);
@@ -482,9 +482,9 @@ void test_config_read__local_config_overrides_global_config_overrides_system_con
 
 	cl_git_pass(git_config_new(&cfg));
 	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config9"),
-		GIT_CONFIG_LEVEL_SYSTEM, 0));
+		GIT_CONFIG_LEVEL_SYSTEM, NULL, 0));
 	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config15"),
-		GIT_CONFIG_LEVEL_GLOBAL, 0));
+		GIT_CONFIG_LEVEL_GLOBAL, NULL, 0));
 
 	cl_git_pass(git_config_get_int32(&i, cfg, "core.dummy2"));
 	cl_assert_equal_i(7, i);
@@ -510,11 +510,11 @@ void test_config_read__fallback_from_local_to_global_and_from_global_to_system(v
 
 	cl_git_pass(git_config_new(&cfg));
 	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config9"),
-		GIT_CONFIG_LEVEL_SYSTEM, 0));
+		GIT_CONFIG_LEVEL_SYSTEM, NULL, 0));
 	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config15"),
-		GIT_CONFIG_LEVEL_GLOBAL, 0));
+		GIT_CONFIG_LEVEL_GLOBAL, NULL, 0));
 	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config16"),
-		GIT_CONFIG_LEVEL_LOCAL, 0));
+		GIT_CONFIG_LEVEL_LOCAL, NULL, 0));
 
 	cl_git_pass(git_config_get_int32(&i, cfg, "core.global"));
 	cl_assert_equal_i(17, i);
@@ -546,9 +546,9 @@ void test_config_read__simple_read_from_specific_level(void)
 
 	cl_git_pass(git_config_new(&cfg));
 	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config18"),
-		GIT_CONFIG_LEVEL_GLOBAL, 0));
+		GIT_CONFIG_LEVEL_GLOBAL, NULL, 0));
 	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config19"),
-		GIT_CONFIG_LEVEL_SYSTEM, 0));
+		GIT_CONFIG_LEVEL_SYSTEM, NULL, 0));
 
 	cl_git_pass(git_config_open_level(&cfg_specific, cfg, GIT_CONFIG_LEVEL_GLOBAL));
 

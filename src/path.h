@@ -105,6 +105,12 @@ GIT_INLINE(int) git_path_is_dot_or_dotdotW(const wchar_t *name)
 				(name[1] == L'.' && name[2] == L'\0')));
 }
 
+#define git_path_is_absolute(p) \
+	(git__isalpha((p)[0]) && (p)[1] == ':' && ((p)[2] == '\\' || (p)[2] == '/'))
+
+#define git_path_is_dirsep(p) \
+	((p) == '/' || (p) == '\\')
+
 /**
  * Convert backslashes in path to forward slashes.
  */
@@ -119,6 +125,13 @@ GIT_INLINE(void) git_path_mkposix(char *path)
 }
 #else
 #	define git_path_mkposix(p) /* blank */
+
+#define git_path_is_absolute(p) \
+	((p)[0] == '/')
+
+#define git_path_is_dirsep(p) \
+	((p) == '/')
+
 #endif
 
 /**

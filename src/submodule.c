@@ -1960,7 +1960,7 @@ static git_config_backend *open_gitmodules(
 			if (git_config_file__ondisk(&mods, path.ptr) < 0)
 				mods = NULL;
 			/* open should only fail here if the file is malformed */
-			else if (git_config_file_open(mods, GIT_CONFIG_LEVEL_LOCAL) < 0) {
+			else if (git_config_file_open(mods, GIT_CONFIG_LEVEL_LOCAL, repo) < 0) {
 				git_config_file_free(mods);
 				mods = NULL;
 			}

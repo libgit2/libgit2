@@ -199,6 +199,8 @@ GIT_EXTERN(int) git_config_new(git_config **out);
  * @param path path to the configuration file to add
  * @param level the priority level of the backend
  * @param force replace config file at the given priority level
+ * @param repo optional repository to allow parsing of
+ *  conditional includes
  * @return 0 on success, GIT_EEXISTS when adding more than one file
  *  for a given priority level (and force_replace set to 0),
  *  GIT_ENOTFOUND when the file doesn't exist or error code
@@ -207,6 +209,7 @@ GIT_EXTERN(int) git_config_add_file_ondisk(
 	git_config *cfg,
 	const char *path,
 	git_config_level_t level,
+	const git_repository *repo,
 	int force);
 
 /**

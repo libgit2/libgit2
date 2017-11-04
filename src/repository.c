@@ -946,7 +946,7 @@ static int load_config(
 		return error;
 
 	if ((error = git_repository_item_path(&config_path, repo, GIT_REPOSITORY_ITEM_CONFIG)) == 0)
-		error = git_config_add_file_ondisk(cfg, config_path.ptr, GIT_CONFIG_LEVEL_LOCAL, 0);
+		error = git_config_add_file_ondisk(cfg, config_path.ptr, GIT_CONFIG_LEVEL_LOCAL, repo, 0);
 
 	if (error && error != GIT_ENOTFOUND)
 		goto on_error;
@@ -955,25 +955,25 @@ static int load_config(
 
 	if (global_config_path != NULL &&
 		(error = git_config_add_file_ondisk(
-			cfg, global_config_path, GIT_CONFIG_LEVEL_GLOBAL, 0)) < 0 &&
+			cfg, global_config_path, GIT_CONFIG_LEVEL_GLOBAL, repo, 0)) < 0 &&
 		error != GIT_ENOTFOUND)
 		goto on_error;
 
 	if (xdg_config_path != NULL &&
 		(error = git_config_add_file_ondisk(
-			cfg, xdg_config_path, GIT_CONFIG_LEVEL_XDG, 0)) < 0 &&
+			cfg, xdg_config_path, GIT_CONFIG_LEVEL_XDG, repo, 0)) < 0 &&
 		error != GIT_ENOTFOUND)
 		goto on_error;
 
 	if (system_config_path != NULL &&
 		(error = git_config_add_file_ondisk(
-			cfg, system_config_path, GIT_CONFIG_LEVEL_SYSTEM, 0)) < 0 &&
+			cfg, system_config_path, GIT_CONFIG_LEVEL_SYSTEM, repo, 0)) < 0 &&
 		error != GIT_ENOTFOUND)
 		goto on_error;
 
 	if (programdata_path != NULL &&
 		(error = git_config_add_file_ondisk(
-			cfg, programdata_path, GIT_CONFIG_LEVEL_PROGRAMDATA, 0)) < 0 &&
+			cfg, programdata_path, GIT_CONFIG_LEVEL_PROGRAMDATA, repo, 0)) < 0 &&
 		error != GIT_ENOTFOUND)
 		goto on_error;
 
@@ -1475,7 +1475,7 @@ static int repo_local_config(
 		giterr_clear();
 
 		if (!(error = git_config_add_file_ondisk(
-				parent, cfg_path, GIT_CONFIG_LEVEL_LOCAL, false)))
+				parent, cfg_path, GIT_CONFIG_LEVEL_LOCAL, repo, false)))
 			error = git_config_open_level(out, parent, GIT_CONFIG_LEVEL_LOCAL);
 	}
 
@@ -2256,7 +2256,7 @@ int git_repository_is_empty(git_repository *repo)
 	return is_empty;
 }
 
-int git_repository_item_path(git_buf *out, git_repository *repo, git_repository_item_t item)
+int git_repository_item_path(git_buf *out, const git_repository *repo, git_repository_item_t item)
 {
 	const char *parent;
 
@@ -2296,13 +2296,13 @@ int git_repository_item_path(git_buf *out, git_repository *repo, git_repository_
 	return 0;
 }
 
-const char *git_repository_path(git_repository *repo)
+const char *git_repository_path(const git_repository *repo)
 {
 	assert(repo);
 	return repo->gitdir;
 }
 
-const char *git_repository_workdir(git_repository *repo)
+const char *git_repository_workdir(const git_repository *repo)
 {
 	assert(repo);
 
@@ -2312,7 +2312,7 @@ const char *git_repository_workdir(git_repository *repo)
 	return repo->workdir;
 }
 
-const char *git_repository_commondir(git_repository *repo)
+const char *git_repository_commondir(const git_repository *repo)
 {
 	assert(repo);
 	return repo->commondir;
@@ -2362,13 +2362,13 @@ int git_repository_set_workdir(
 	return error;
 }
 
-int git_repository_is_bare(git_repository *repo)
+int git_repository_is_bare(const git_repository *repo)
 {
 	assert(repo);
 	return repo->is_bare;
 }
 
-int git_repository_is_worktree(git_repository *repo)
+int git_repository_is_worktree(const git_repository *repo)
 {
 	assert(repo);
 	return repo->is_worktree;
