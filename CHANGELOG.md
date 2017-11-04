@@ -10,6 +10,8 @@ v0.26 + 1
   caller for the case-insensitive portions of the key (existing sections are
   used even if they don't match).
 
+* We now support conditional includes in configuration files.
+
 ### API additions
 
 * `git_remote_create_detached()` creates a remote that is not associated
