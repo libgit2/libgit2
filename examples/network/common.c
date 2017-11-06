@@ -16,6 +16,43 @@
 # define UNUSED(x) x
 #endif
 
+static int readline(char **out)
+{
+	int c, error = 0, length = 0, allocated = 0;
+	char *line = NULL;
+
+	errno = 0;
+
+	while ((c = getchar()) != EOF) {
+		if (length == allocated) {
+			allocated += 16;
+
+			if ((line = realloc(line, allocated)) == NULL) {
+				error = -1;
+				goto error;
+			}
+		}
+
+		if (c == '\n')
+			break;
+
+		line[length++] = c;
+	}
+
+	if (errno != 0) {
+		error = -1;
+		goto error;
+	}
+
+	line[length] = '\0';
+	*out = line;
+	line = NULL;
+	error = length;
+error:
+	free(line);
+	return error;
+}
+
 int cred_acquire_cb(git_cred **out,
 		const char * UNUSED(url),
 		const char * UNUSED(username_from_url),
@@ -26,14 +63,14 @@ int cred_acquire_cb(git_cred **out,
 	int error;
 
 	printf("Username: ");
-	if (getline(&username, NULL, stdin) < 0) {
+	if (readline(&username) < 0) {
 		fprintf(stderr, "Unable to read username: %s", strerror(errno));
 		return -1;
 	}
 
 	/* Yup. Right there on your terminal. Careful where you copy/paste output. */
 	printf("Password: ");
-	if (getline(&password, NULL, stdin) < 0) {
+	if (readline(&password) < 0) {
 		fprintf(stderr, "Unable to read password: %s", strerror(errno));
 		free(username);
 		return -1;
