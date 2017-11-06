@@ -26,7 +26,7 @@ build_script:
     mkdir build
     cd build
     if ($env:GENERATOR -ne "MSYS Makefiles") {
-      cmake -D ENABLE_TRACE=ON -D BUILD_CLAR=ON -D MSVC_CRTDBG=ON .. -G"$env:GENERATOR"
+      cmake -D ENABLE_TRACE=ON -D BUILD_CLAR=ON -D BUILD_EXAMPLES=ON -D MSVC_CRTDBG=ON .. -G"$env:GENERATOR"
       cmake --build . --config Debug
     }
 - cmd: |
