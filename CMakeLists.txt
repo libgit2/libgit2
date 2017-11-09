@@ -28,6 +28,7 @@ INCLUDE(CheckStructHasMember)
 INCLUDE(AddCFlagIfSupported)
 INCLUDE(FindPkgConfig)
 INCLUDE(FindThreads)
+INCLUDE(FeatureSummary)
 
 # Build options
 #
@@ -44,6 +45,7 @@ OPTION( LIBGIT2_FILENAME	"Name of the produced binary"			OFF )
 OPTION( USE_SHA1DC			"Use SHA-1 with collision detection"	OFF )
 OPTION( USE_ICONV			"Link with and use iconv library" 		OFF )
 OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
+OPTION( USE_HTTPS			"Enable HTTPS support. Can be set to a specific backend"	ON )
 OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"   OFF )
 OPTION( VALGRIND			"Configure build for valgrind"			OFF )
 OPTION( CURL			"Use curl for HTTP if available" ON)
@@ -52,12 +54,6 @@ OPTION( DEBUG_POOL			"Enable debug pool allocator"			OFF )
 OPTION( ENABLE_WERROR			"Enable compilation with -Werror"		OFF )
 IF (UNIX AND NOT APPLE)
 	OPTION( ENABLE_REPRODUCIBLE_BUILDS	"Enable reproducible builds" 			OFF )
-ENDIF()
-
-IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-	SET( USE_ICONV ON )
-	FIND_PACKAGE(Security)
-	FIND_PACKAGE(CoreFoundation REQUIRED)
 ENDIF()
 
 IF(MSVC)
@@ -88,10 +84,6 @@ ENDIF()
 IF(MSVC)
 	# Enable MSVC CRTDBG memory leak reporting when in debug mode.
 	OPTION(MSVC_CRTDBG "Enable CRTDBG memory leak reporting" OFF)
-ENDIF()
-
-IF (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-	OPTION( USE_OPENSSL                     "Link with and use openssl library"             ON )
 ENDIF()
 
 CHECK_STRUCT_HAS_MEMBER ("struct stat" st_mtim "sys/types.h;sys/stat.h"
@@ -334,3 +326,10 @@ ENDIF ()
 IF (BUILD_EXAMPLES)
 	ADD_SUBDIRECTORY(examples)
 ENDIF ()
+
+IF(CMAKE_VERSION VERSION_GREATER 3)
+	FEATURE_SUMMARY(WHAT ENABLED_FEATURES DISABLED_FEATURES)
+ELSE()
+	PRINT_ENABLED_FEATURES()
+	PRINT_DISABLED_FEATURES()
+ENDIF()

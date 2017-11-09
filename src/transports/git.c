@@ -12,7 +12,7 @@
 #include "netops.h"
 #include "git2/sys/transport.h"
 #include "stream.h"
-#include "socket_stream.h"
+#include "streams/socket.h"
 
 #define OWNING_SUBTRANSPORT(s) ((git_subtransport *)(s)->parent.subtransport)
 

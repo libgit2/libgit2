@@ -1,6 +1,7 @@
 IF(DEBUG_POOL)
 	SET(GIT_DEBUG_POOL 1)
 ENDIF()
+ADD_FEATURE_INFO(debugpool GIT_DEBUG_POOL "debug pool allocator")
 
 # Add the features.h file as a dummy. This is required for Xcode
 # to successfully build the libgit2 library when using only
@@ -50,6 +51,7 @@ ENDIF(IS_ABSOLUTE ${INCLUDE_INSTALL_DIR})
 IF (ENABLE_TRACE STREQUAL "ON")
 	SET(GIT_TRACE 1)
 ENDIF()
+ADD_FEATURE_INFO(tracing GIT_TRACE "tracing support")
 
 CHECK_SYMBOL_EXISTS(regcomp_l "regex.h;xlocale.h" HAVE_REGCOMP_L)
 IF (HAVE_REGCOMP_L)
@@ -93,26 +95,7 @@ IF(THREADSAFE)
 	LIST(APPEND LIBGIT2_LIBS ${CMAKE_THREAD_LIBS_INIT})
 	LIST(APPEND LIBGIT2_PC_LIBS ${CMAKE_THREAD_LIBS_INIT})
 ENDIF()
-
-IF (SECURITY_FOUND)
-  # OS X 10.7 and older do not have some functions we use, fall back to OpenSSL there
-  CHECK_LIBRARY_EXISTS("${SECURITY_DIRS}" SSLCreateContext "Security/SecureTransport.h" HAVE_NEWER_SECURITY)
-  IF (HAVE_NEWER_SECURITY)
-    MESSAGE("-- Found Security ${SECURITY_DIRS}")
-    LIST(APPEND LIBGIT2_PC_LIBS "-framework Security")
-    LIST(APPEND LIBGIT2_LIBS ${SECURITY_DIRS})
-  ELSE()
-    MESSAGE("-- Security framework is too old, falling back to OpenSSL")
-    SET(SECURITY_FOUND "NO")
-    SET(USE_OPENSSL "ON")
-  ENDIF()
-ENDIF()
-
-IF (COREFOUNDATION_FOUND)
-  MESSAGE("-- Found CoreFoundation ${COREFOUNDATION_DIRS}")
-  LIST(APPEND LIBGIT2_PC_LIBS "-framework CoreFoundation")
-  LIST(APPEND LIBGIT2_LIBS ${COREFOUNDATION_DIRS})
-ENDIF()
+ADD_FEATURE_INFO(threadsafe THREADSAFE "threadsafe support")
 
 
 IF (WIN32 AND EMBED_SSH_PATH)
@@ -124,7 +107,6 @@ ENDIF()
 
 IF (WIN32 AND WINHTTP)
 	SET(GIT_WINHTTP 1)
-	SET(GIT_HTTPS 1)
 
 	# Since MinGW does not come with headers or an import library for winhttp,
 	# we have to include a private header and generate our own import library
@@ -145,8 +127,8 @@ ELSE ()
 		PKG_CHECK_MODULES(CURL libcurl)
 	ENDIF ()
 
-	IF (NOT AMIGA AND USE_OPENSSL)
-		FIND_PACKAGE(OpenSSL)
+	IF (NOT AMIGA AND (USE_HTTPS STREQUAL "OpenSSL" OR USE_HTTPS STREQUAL "ON"))
+		FIND_PACKAGE(OpenSSL QUIET)
 	ENDIF ()
 
 	IF (CURL_FOUND)
@@ -156,21 +138,88 @@ ELSE ()
 		LIST(APPEND LIBGIT2_LIBS ${CURL_LIBRARIES})
 		LIST(APPEND LIBGIT2_PC_LIBS ${CURL_LDFLAGS})
 	ENDIF()
+	ADD_FEATURE_INFO(cURL GIT_CURL "cURL for HTTP proxy support")
+ENDIF()
+
+IF (USE_HTTPS)
+	IF (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+		FIND_PACKAGE(Security)
+		FIND_PACKAGE(CoreFoundation)
+	ENDIF()
+
+	# Auto-select TLS backend
+	IF (USE_HTTPS STREQUAL ON)
+		IF (SECURITY_FOUND)
+			IF (SECURITY_HAS_SSLCREATECONTEXT)
+				SET(HTTPS_BACKEND "SecureTransport")
+			ELSE()
+				MESSAGE("-- Security framework is too old, falling back to OpenSSL")
+				SET(HTTPS_BACKEND "OpenSSL")
+			ENDIF()
+		ELSEIF (WINHTTP)
+			SET(HTTPS_BACKEND "WinHTTP")
+		ELSE()
+			SET(HTTPS_BACKEND "OpenSSL")
+		ENDIF()
+	ELSE()
+		# Backend was explicitly set
+		SET(HTTPS_BACKEND ${USE_HTTPS})
+	ENDIF()
+
+	# Check that we can find what's required for the selected backend
+	IF (HTTPS_BACKEND STREQUAL "SecureTransport")
+		IF (NOT COREFOUNDATION_FOUND)
+			MESSAGE(FATAL_ERROR "Cannot use SecureTransport backend, CoreFoundation.framework not found")
+		ENDIF()
+		IF (NOT SECURITY_FOUND)
+			MESSAGE(FATAL_ERROR "Cannot use SecureTransport backend, Security.framework not found")
+		ENDIF()
+		IF (NOT SECURITY_HAS_SSLCREATECONTEXT)
+			MESSAGE(FATAL_ERROR "Cannot use SecureTransport backend, SSLCreateContext not supported")
+		ENDIF()
+
+		SET(GIT_SECURE_TRANSPORT 1)
+		LIST(APPEND LIBGIT2_INCLUDES ${SECURITY_INCLUDE_DIR})
+		LIST(APPEND LIBGIT2_LIBS ${COREFOUNDATION_LIBRARIES} ${SECURITY_LIBRARIES})
+		LIST(APPEND LIBGIT2_PC_LIBS ${COREFOUNDATION_LDFLAGS} ${SECURITY_LDFLAGS})
+	ELSEIF (HTTPS_BACKEND STREQUAL "OpenSSL")
+		IF (NOT OPENSSL_FOUND)
+			MESSAGE(FATAL_ERROR "Asked for OpenSSL TLS backend, but it wasn't found")
+		ENDIF()
+
+		SET(GIT_OPENSSL 1)
+		LIST(APPEND LIBGIT2_INCLUDES ${OPENSSL_INCLUDE_DIR})
+		LIST(APPEND LIBGIT2_LIBS ${OPENSSL_LIBRARIES})
+		LIST(APPEND LIBGIT2_PC_LIBS ${OPENSSL_LDFLAGS})
+	ELSEIF (HTTPS_BACKEND STREQUAL "WinHTTP")
+		# WinHTTP setup was handled in the WinHTTP-specific block above
+	ELSE()
+		MESSAGE(FATAL_ERROR "Asked for backend ${HTTPS_BACKEND} but it wasn't found")
+	ENDIF()
+
+	ADD_FEATURE_INFO(HTTPS ON "using ${HTTPS_BACKEND}")
+	SET(GIT_HTTPS 1)
+ELSE()
+	ADD_FEATURE_INFO(HTTPS OFF "no support")
 ENDIF()
 
 # Specify sha1 implementation
 IF (USE_SHA1DC)
+	ADD_FEATURE_INFO(SHA ON "using SHA1DC")
 	SET(GIT_SHA1_COLLISIONDETECT 1)
 	ADD_DEFINITIONS(-DSHA1DC_NO_STANDARD_INCLUDES=1)
 	ADD_DEFINITIONS(-DSHA1DC_CUSTOM_INCLUDE_SHA1_C=\"common.h\")
 	ADD_DEFINITIONS(-DSHA1DC_CUSTOM_INCLUDE_UBC_CHECK_C=\"common.h\")
 	FILE(GLOB SRC_SHA1 hash/hash_collisiondetect.c hash/sha1dc/*)
 ELSEIF (WIN32 AND NOT MINGW)
+	ADD_FEATURE_INFO(SHA ON "using SHA1_WIN32")
 	SET(GIT_SHA1_WIN32 1)
 	FILE(GLOB SRC_SHA1 hash/hash_win32.c)
 ELSEIF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+	ADD_FEATURE_INFO(SHA ON "using CommonCrypto")
 	SET(GIT_SHA1_COMMON_CRYPTO 1)
 ELSEIF (OPENSSL_FOUND)
+	ADD_FEATURE_INFO(SHA ON "using OpenSSL")
 	SET(GIT_SHA1_OPENSSL 1)
 	IF (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
 		LIST(APPEND LIBGIT2_PC_LIBS "-lssl")
@@ -178,6 +227,7 @@ ELSEIF (OPENSSL_FOUND)
 		SET(LIBGIT2_PC_REQUIRES "${LIBGIT2_PC_REQUIRES} openssl")
 	ENDIF ()
 ELSE()
+	ADD_FEATURE_INFO(SHA ON "using generic")
 	FILE(GLOB SRC_SHA1 hash/hash_generic.c)
 ENDIF()
 
@@ -195,11 +245,13 @@ IF (USE_EXT_HTTP_PARSER AND HTTP_PARSER_FOUND AND HTTP_PARSER_VERSION_MAJOR EQUA
 	LIST(APPEND LIBGIT2_INCLUDES ${HTTP_PARSER_INCLUDE_DIRS})
 	LIST(APPEND LIBGIT2_LIBS ${HTTP_PARSER_LIBRARIES})
 	LIST(APPEND LIBGIT2_PC_LIBS "-lhttp_parser")
+	ADD_FEATURE_INFO(http-parser ON "http-parser support")
 ELSE()
 	MESSAGE(STATUS "http-parser version 2 was not found or disabled; using bundled 3rd-party sources.")
 	ADD_SUBDIRECTORY("${libgit2_SOURCE_DIR}/deps/http-parser" "${libgit2_BINARY_DIR}/deps/http-parser")
 	LIST(APPEND LIBGIT2_INCLUDES "${libgit2_SOURCE_DIR}/deps/http-parser")
 	LIST(APPEND LIBGIT2_OBJECTS "$<TARGET_OBJECTS:http-parser>")
+	ADD_FEATURE_INFO(http-parser ON "http-parser support (bundled)")
 ENDIF()
 
 # Optional external dependency: zlib
@@ -213,11 +265,13 @@ IF (ZLIB_FOUND)
 	ELSE()
 		SET(LIBGIT2_PC_REQUIRES "${LIBGIT2_PC_REQUIRES} zlib")
 	ENDIF()
+	ADD_FEATURE_INFO(zlib ON "Zlib support")
 ELSE()
 	MESSAGE(STATUS "zlib was not found; using bundled 3rd-party sources." )
 	ADD_SUBDIRECTORY("${libgit2_SOURCE_DIR}/deps/zlib" "${libgit2_BINARY_DIR}/deps/zlib")
 	LIST(APPEND LIBGIT2_INCLUDES "${libgit2_SOURCE_DIR}/deps/zlib")
 	LIST(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:zlib>)
+	ADD_FEATURE_INFO(zlib ON "Zlib support (bundled)")
 ENDIF()
 
 # Optional external dependency: libssh2
@@ -239,6 +293,7 @@ IF (LIBSSH2_FOUND)
 ELSE()
 	MESSAGE(STATUS "LIBSSH2 not found. Set CMAKE_PREFIX_PATH if it is installed outside of the default search path.")
 ENDIF()
+ADD_FEATURE_INFO(SSH GIT_SSH "SSH transport support")
 
 # Optional external dependency: libgssapi
 IF (USE_GSSAPI)
@@ -248,9 +303,10 @@ IF (GSSAPI_FOUND)
 	SET(GIT_GSSAPI 1)
 	LIST(APPEND LIBGIT2_LIBS ${GSSAPI_LIBRARIES})
 ENDIF()
+ADD_FEATURE_INFO(SPNEGO GIT_GSSAPI "SPNEGO authentication support")
 
 # Optional external dependency: iconv
-IF (USE_ICONV)
+IF (USE_ICONV OR CMAKE_SYSTEM_NAME MATCHES "Darwin")
 	FIND_PACKAGE(Iconv)
 ENDIF()
 IF (ICONV_FOUND)
@@ -259,20 +315,7 @@ IF (ICONV_FOUND)
 	LIST(APPEND LIBGIT2_LIBS ${ICONV_LIBRARIES})
 	LIST(APPEND LIBGIT2_PC_LIBS ${ICONV_LIBRARIES})
 ENDIF()
-
-IF (SECURITY_FOUND)
-	SET(GIT_SECURE_TRANSPORT 1)
-	SET(GIT_HTTPS 1)
-	LIST(APPEND LIBGIT2_INCLUDES ${SECURITY_INCLUDE_DIR})
-ENDIF ()
-
-IF (OPENSSL_FOUND)
-	SET(GIT_OPENSSL 1)
-	SET(GIT_HTTPS 1)
-	LIST(APPEND LIBGIT2_INCLUDES ${OPENSSL_INCLUDE_DIR})
-	LIST(APPEND LIBGIT2_LIBS ${OPENSSL_LIBRARIES})
-ENDIF()
-
+ADD_FEATURE_INFO(iconv GIT_USE_ICONV "iconv encoding conversion support")
 
 
 IF (THREADSAFE)
@@ -320,7 +363,10 @@ ELSE()
 	ENDIF()
 	FILE(GLOB SRC_OS unix/*.c unix/*.h)
 ENDIF()
-FILE(GLOB SRC_GIT2 *.c *.h transports/*.c transports/*.h xdiff/*.c xdiff/*.h)
+FILE(GLOB SRC_GIT2 *.c *.h
+	streams/*.c streams/*.h
+	transports/*.c transports/*.h
+	xdiff/*.c xdiff/*.h)
 
 # Determine architecture of the machine
 IF (CMAKE_SIZEOF_VOID_P EQUAL 8)

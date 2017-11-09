@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "socket_stream.h"
+#include "streams/socket.h"
 
 #include "posix.h"
 #include "netops.h"

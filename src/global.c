@@ -11,7 +11,7 @@
 #include "sysdir.h"
 #include "filter.h"
 #include "merge_driver.h"
-#include "openssl_stream.h"
+#include "streams/openssl.h"
 #include "thread-utils.h"
 #include "git2/global.h"
 #include "transports/ssh.h"
