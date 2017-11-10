@@ -23,7 +23,7 @@ GIT_BEGIN_DECL
 /**
  * Reference lookup strategy
  *
- * These behave like the --tags and --all optios to git-describe,
+ * These behave like the --tags and --all options to git-describe,
  * namely they say to look for any reference in either refs/tags/ or
  * refs/ respectively.
  */
