@@ -168,6 +168,35 @@ void test_merge_workdir_simple__automerge(void)
 	git_index_free(index);
 }
 
+void test_merge_workdir_simple__index_reload(void)
+{
+	git_repository *tmp_repo;
+	git_annotated_commit *their_heads[1];
+	git_oid their_oid;
+	git_index_entry entry = {{0}};
+	git_index *tmp_index;
+
+	cl_git_pass(git_repository_open(&tmp_repo, git_repository_workdir(repo)));
+	cl_git_pass(git_repository_index(&tmp_index, tmp_repo));
+	cl_git_pass(git_index_read(repo_index, 0));
+
+	entry.mode = GIT_FILEMODE_BLOB;
+	cl_git_pass(git_oid_fromstr(&entry.id, "11deab00b2d3a6f5a3073988ac050c2d7b6655e2"));
+	entry.path = "automergeable.txt";
+	cl_git_pass(git_index_add(repo_index, &entry));
+
+	cl_git_pass(git_index_add_bypath(tmp_index, "automergeable.txt"));
+	cl_git_pass(git_index_write(tmp_index));
+
+	cl_git_pass(git_oid_fromstr(&their_oid, THEIRS_SIMPLE_OID));
+	cl_git_pass(git_annotated_commit_lookup(&their_heads[0], repo, &their_oid));
+	cl_git_pass(git_merge(repo, (const git_annotated_commit **)their_heads, 1, NULL, NULL));
+
+	git_index_free(tmp_index);
+	git_repository_free(tmp_repo);
+	git_annotated_commit_free(their_heads[0]);
+}
+
 void test_merge_workdir_simple__automerge_crlf(void)
 {
 #ifdef GIT_WIN32
