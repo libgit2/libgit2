@@ -83,7 +83,7 @@ int git_diff_from_buffer(
 	ctx = git_patch_parse_ctx_init(content, content_len, NULL);
 	GITERR_CHECK_ALLOC(ctx);
 
-	while (ctx->remain_len) {
+	while (ctx->parse_ctx.remain_len) {
 		if ((error = git_patch_parse(&patch, ctx)) < 0)
 			break;
 

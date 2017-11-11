@@ -9,24 +9,15 @@
 
 #include "common.h"
 
+#include "parse.h"
 #include "patch.h"
 
 typedef struct {
 	git_refcount rc;
 
-	/* Original content buffer */
-	const char *content;
-	size_t content_len;
-
 	git_patch_options opts;
 
-	/* The remaining (unparsed) buffer */
-	const char *remain;
-	size_t remain_len;
-
-	const char *line;
-	size_t line_len;
-	size_t line_num;
+	git_parse_ctx parse_ctx;
 } git_patch_parse_ctx;
 
 extern git_patch_parse_ctx *git_patch_parse_ctx_init(
