@@ -3239,6 +3239,9 @@ int git_merge(
 
 	assert(repo && their_heads);
 
+	git_repository_index(&index, repo);
+	git_index_read(index, 0);
+
 	if (their_heads_len != 1) {
 		giterr_set(GITERR_MERGE, "can only merge a single branch");
 		return -1;
