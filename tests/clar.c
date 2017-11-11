@@ -86,6 +86,7 @@
 	typedef struct stat STAT_T;
 #endif
 
+#include "util.h"
 #include "clar.h"
 
 static void fs_rm(const char *_source);
@@ -124,6 +125,9 @@ static struct {
 	int exit_on_error;
 	int report_suite_names;
 
+	int verbosity;
+	double evaluation_duration;
+
 	struct clar_error *errors;
 	struct clar_error *last_error;
 
@@ -154,10 +158,10 @@ struct clar_suite {
 
 /* From clar_print_*.c */
 static void clar_print_init(int test_count, int suite_count, const char *suite_names);
-static void clar_print_shutdown(int test_count, int suite_count, int error_count);
+static void clar_print_shutdown(const double evaluation_duration, int test_count, int suite_count, int error_count, int skip_count);
 static void clar_print_error(int num, const struct clar_error *error);
 static void clar_print_ontest(const char *test_name, int test_number, enum cl_test_status failed);
-static void clar_print_onsuite(const char *suite_name, int suite_index);
+static void clar_print_onsuite(const char *suite_name, int suite_index, size_t tests_in_suite);
 static void clar_print_onabort(const char *msg, ...);
 
 /* From clar_sandbox.c */
@@ -259,7 +263,7 @@ clar_run_suite(const struct clar_suite *suite, const char *filter)
 		return;
 
 	if (!_clar.report_errors_only)
-		clar_print_onsuite(suite->name, ++_clar.suites_ran);
+		clar_print_onsuite(suite->name, ++_clar.suites_ran, suite->test_count);
 
 	_clar.active_suite = suite->name;
 	_clar.active_test = NULL;
@@ -312,6 +316,8 @@ static void
 clar_parse_args(int argc, char **argv)
 {
 	int i;
+
+	_clar.verbosity = 0;
 
 	/* Verify options before execute */
 	for (i = 1; i < argc; ++i) {
@@ -394,7 +400,7 @@ clar_parse_args(int argc, char **argv)
 		}
 
 		case 'v':
-			_clar.report_suite_names = 1;
+			_clar.verbosity += 1;
 			break;
 
 		default:
@@ -440,21 +446,26 @@ void
 clar_test_shutdown(void)
 {
 	clar_print_shutdown(
+		_clar.evaluation_duration,
 		_clar.tests_ran,
-		(int)_clar_suite_count,
-		_clar.total_errors
+		_clar.suites_ran,
+		_clar.total_errors,
+		_clar.total_skipped
 	);
 
 	clar_unsandbox();
 }
 
 int
-clar_test(int argc, char **argv)
+clar_test(int argc, char *argv[])
 {
+	(int)argc;
+	(char**)argv;
 	int errors;
+	double start = git__timer();
 
-	clar_test_init(argc, argv);
 	errors = clar_test_run();
+	_clar.evaluation_duration = git__timer() - start;
 	clar_test_shutdown();
 
 	return errors;
