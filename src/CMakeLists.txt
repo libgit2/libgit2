@@ -310,7 +310,7 @@ ENDIF()
 ADD_FEATURE_INFO(SPNEGO GIT_GSSAPI "SPNEGO authentication support")
 
 # Optional external dependency: iconv
-IF (USE_ICONV OR CMAKE_SYSTEM_NAME MATCHES "Darwin")
+IF (USE_ICONV)
 	FIND_PACKAGE(Iconv)
 ENDIF()
 IF (ICONV_FOUND)

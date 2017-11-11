@@ -43,7 +43,6 @@ OPTION( ENABLE_TRACE		"Enables tracing support"				OFF )
 OPTION( LIBGIT2_FILENAME	"Name of the produced binary"			OFF )
 
 OPTION( USE_SHA1DC			"Use SHA-1 with collision detection"	OFF )
-OPTION( USE_ICONV			"Link with and use iconv library" 		OFF )
 OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
 OPTION( USE_HTTPS			"Enable HTTPS support. Can be set to a specific backend"	ON )
 OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"   OFF )
@@ -52,10 +51,15 @@ OPTION( CURL			"Use curl for HTTP if available" ON)
 OPTION( USE_EXT_HTTP_PARSER		"Use system HTTP_Parser if available" ON)
 OPTION( DEBUG_POOL			"Enable debug pool allocator"			OFF )
 OPTION( ENABLE_WERROR			"Enable compilation with -Werror"		OFF )
+OPTION( USE_BUNDLED_ZLIB    "Use the bundled version of zlib"       OFF )
+
 IF (UNIX AND NOT APPLE)
 	OPTION( ENABLE_REPRODUCIBLE_BUILDS	"Enable reproducible builds" 			OFF )
 ENDIF()
-OPTION( USE_BUNDLED_ZLIB    "Use the bundled version of zlib"       OFF )
+
+IF (APPLE)
+	OPTION( USE_ICONV			"Link with and use iconv library"		 ON )
+ENDIF()
 
 IF(MSVC)
 	# This option is only available when building with MSVC. By default, libgit2
