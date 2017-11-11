@@ -55,6 +55,7 @@ OPTION( ENABLE_WERROR			"Enable compilation with -Werror"		OFF )
 IF (UNIX AND NOT APPLE)
 	OPTION( ENABLE_REPRODUCIBLE_BUILDS	"Enable reproducible builds" 			OFF )
 ENDIF()
+OPTION( USE_BUNDLED_ZLIB    "Use the bundled version of zlib"       OFF )
 
 IF(MSVC)
 	# This option is only available when building with MSVC. By default, libgit2
