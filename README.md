@@ -15,6 +15,30 @@ with any kind of software without having to release its source code.
 Additionally, the example code has been released to the public domain (see the
 [separate license](examples/COPYING) for more information).
 
+Quick Start
+===========
+
+**Prerequisites** for building libgit2:
+
+1. [CMake](https://cmake.org/), and is recommended to be installed into
+   your `PATH`.
+2. [Python](https://www.python.org) is used by our test framework, and
+   should be installed into your `PATH`.
+3. C compiler: libgit2 is C90 and should compile on most compilers.
+   * Windows: Visual Studio is recommended
+   * Mac: Xcode is recommended
+   * Unix: gcc or clang is recommended.
+
+**Build**
+
+1. Create a build directory beneath the libgit2 source directory, and change
+   into it: `mkdir build && cd build`
+2. Create the cmake build environment: `cmake ..`
+3. Build libgit2: `cmake --build .`
+
+Trouble with these steps?  Read `TROUBLESHOOTING.md`.  More detailed build
+guidance is available below.
+
 Getting Help
 ============
 
