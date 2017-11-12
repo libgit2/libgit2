@@ -839,17 +839,20 @@ void test_repo_init__init_with_initial_commit(void)
 
 void test_repo_init__init_with_initial_commit_with_env_author_name_only(void)
 {
-	impl_test_repo_init__init_with_initial_commit("Test User (From Environment)", NULL);
+	impl_test_repo_init__init_with_initial_commit(
+		"Test User (From Environment)", NULL);
 }
 
 void test_repo_init__init_with_initial_commit_with_env_author_email_only(void)
 {
-	impl_test_repo_init__init_with_initial_commit(NULL, "email@from.environment.com");
+	impl_test_repo_init__init_with_initial_commit(
+		NULL, "email@from.environment.com");
 }
 
 void test_repo_init__init_with_initial_commit_with_env_author_name_and_email(void)
 {
-	impl_test_repo_init__init_with_initial_commit("Test User (From Environment)", "email@from.environment.com");
+	impl_test_repo_init__init_with_initial_commit(
+		"Test User (From Environment)", "email@from.environment.com");
 }
 
 void test_repo_init__at_filesystem_root(void)
