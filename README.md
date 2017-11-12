@@ -177,16 +177,6 @@ If you want to build a universal binary for Mac OS X, CMake sets it
 all up for you if you use `-DCMAKE_OSX_ARCHITECTURES="i386;x86_64"`
 when configuring.
 
-Windows
--------
-
-You need to run the CMake commands from the Visual Studio command
-prompt, not the regular or Windows SDK one. Select the right generator
-for your version with the `-G "Visual Studio X" option.
-
-See [the website](http://libgit2.github.com/docs/guides/build-and-link/)
-for more detailed instructions.
-
 Android
 -------
 
