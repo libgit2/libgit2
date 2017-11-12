@@ -62,9 +62,9 @@ GIT_EXTERN(int) git_signature_now(git_signature **out, const char *name, const c
  */
 GIT_EXTERN(int) git_signature_default(git_signature **out, git_repository *repo);
 
-GIT_EXTERN(int) git_signature_author_env(git_signature **out);
+GIT_EXTERN(int) git_signature_author_env(git_signature **out, git_repository *repo);
 
-GIT_EXTERN(int) git_signature_committer_env(git_signature **out);
+GIT_EXTERN(int) git_signature_committer_env(git_signature **out, git_repository *repo);
 
 /**
  * Create a new signature by parsing the given buffer, which is

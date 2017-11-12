@@ -815,6 +815,7 @@ static void impl_test_repo_init__init_with_initial_commit(
 			sig_name_matches = 1;
 		if (!strcmp(sig->email, (env_author_email ? env_author_email : "t@example.com")))
 			sig_email_matches = 1;
+	        fprintf(stdout, "\n||%s\n||%s\n", sig->name, sig->email);
 
 		cl_git_pass(git_index_write_tree(&tree_id, index));
 		cl_git_pass(git_tree_lookup(&tree, _repo, &tree_id));
@@ -827,6 +828,14 @@ static void impl_test_repo_init__init_with_initial_commit(
 		git_signature_free(sig);
 		assert(sig_name_matches);
 		assert(sig_email_matches);
+	}
+
+	/* TODO: add comment here */
+	{
+		if (env_author_name)
+			cl_git_pass(cl_setenv("GIT_AUTHOR_NAME", NULL));
+		if (env_author_email)
+			cl_git_pass(cl_setenv("GIT_AUTHOR_EMAIL", NULL));
 	}
 
 	git_index_free(index);
