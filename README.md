@@ -135,7 +135,7 @@ Alternatively you can point the CMake GUI tool to the CMakeLists.txt file and ge
 
 Once built, you can run the tests from the `build` directory with the command
 
-	$ make test
+	$ ctest -V
 
 Alternatively you can run the test suite directly using,
 
