@@ -313,11 +313,18 @@ clar_parse_args(int argc, char **argv)
 {
 	int i;
 
+	/* Verify options before execute */
 	for (i = 1; i < argc; ++i) {
 		char *argument = argv[i];
 
-		if (argument[0] != '-')
+		if (argument[0] != '-' || argument[1] == '\0'
+		    || strchr("sixvqQl", argument[1]) == NULL) {
 			clar_usage(argv[0]);
+		}
+	}
+
+	for (i = 1; i < argc; ++i) {
+		char *argument = argv[i];
 
 		switch (argument[1]) {
 		case 's':
@@ -391,7 +398,7 @@ clar_parse_args(int argc, char **argv)
 			break;
 
 		default:
-			clar_usage(argv[0]);
+			assert(!"Unexpected commandline argument!");
 		}
 	}
 }
