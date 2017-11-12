@@ -192,6 +192,20 @@ int git_signature_default(git_signature **out, git_repository *repo)
 	return error;
 }
 
+int git_signature_author_env(git_signature **out, git_repository *repo)
+{
+	int error;
+	error = 42; // TODO: fill 'out' based on GIT_AUTHOR_NAME and GIT_AUTHOR_EMAIL and GIT_AUTHOR_DATE
+	return error;
+}
+
+int git_signature_commit_env(git_signature **out, git_repository *repo)
+{
+	int error;
+	error = 42; // TODO: fill 'out' based on GIT_COMMITTER_NAME and GIT_COMMITTER_EMAIL and GIT_COMMITTER_DATE
+	return error;
+}
+
 int git_signature__parse(git_signature *sig, const char **buffer_out,
 		const char *buffer_end, const char *header, char ender)
 {

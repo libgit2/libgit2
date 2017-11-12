@@ -790,6 +790,10 @@ void test_repo_init__init_with_initial_commit(void)
 		git_config_free(cfg);
 	}
 
+	{
+		fprintf(stdout, "\nHello World from %s line %d!\n", __FILE__, __LINE__);
+	}
+
 	/* Create a commit with the new contents of the index */
 	{
 		git_signature *sig;
