@@ -807,7 +807,7 @@ static void impl_test_repo_init__init_with_initial_commit(
 		git_tree *tree;
 
 		if (env_author_name || env_author_email)
-			cl_git_pass(git_signature_author_env(&sig));
+			cl_git_pass(git_signature_author_env(&sig, _repo));
 		else
 			cl_git_pass(git_signature_default(&sig, _repo));
 

@@ -208,13 +208,13 @@ static int git_signature_name_email_from_env(git_signature **out,
 	return error;
 }
 
-int git_signature_author_env(git_signature **out)
+int git_signature_author_env(git_signature **out, git_repository *repo)
 {
 	return git_signature_name_email_from_env(out,
 		"GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL");
 }
 
-int git_signature_committer_env(git_signature **out)
+int git_signature_committer_env(git_signature **out, git_repository *repo)
 {
 	return git_signature_name_email_from_env(out,
 		"GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL");
