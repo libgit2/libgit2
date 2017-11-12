@@ -525,6 +525,93 @@ static int append_to_pack(git_indexer *idx, const void *data, size_t size)
 	return write_at(idx, data, idx->pack->mwf.size, size);
 }
 
+static int read_stream_object(git_indexer *idx, git_transfer_progress *stats)
+{
+	git_packfile_stream *stream = &idx->stream;
+	git_off_t entry_start = idx->off;
+	size_t entry_size;
+	git_otype type;
+	git_mwindow *w = NULL;
+	int error;
+
+	if (idx->pack->mwf.size <= idx->off + 20)
+		return GIT_EBUFS;
+
+	if (!idx->have_stream) {
+		error = git_packfile_unpack_header(&entry_size, &type, &idx->pack->mwf, &w, &idx->off);
+		if (error == GIT_EBUFS) {
+			idx->off = entry_start;
+			return error;
+		}
+		if (error < 0)
+			return error;
+
+		git_mwindow_close(&w);
+		idx->entry_start = entry_start;
+		git_hash_init(&idx->hash_ctx);
+
+		if (type == GIT_OBJ_REF_DELTA || type == GIT_OBJ_OFS_DELTA) {
+			error = advance_delta_offset(idx, type);
+			if (error == GIT_EBUFS) {
+				idx->off = entry_start;
+				return error;
+			}
+			if (error < 0)
+				return error;
+
+			idx->have_delta = 1;
+		} else {
+			idx->have_delta = 0;
+
+			error = hash_header(&idx->hash_ctx, entry_size, type);
+			if (error < 0)
+				return error;
+		}
+
+		idx->have_stream = 1;
+
+		error = git_packfile_stream_open(stream, idx->pack, idx->off);
+		if (error < 0)
+			return error;
+	}
+
+	if (idx->have_delta) {
+		error = read_object_stream(idx, stream);
+	} else {
+		error = hash_object_stream(idx, stream);
+	}
+
+	idx->off = stream->curpos;
+	if (error == GIT_EBUFS)
+		return error;
+
+	/* We want to free the stream reasorces no matter what here */
+	idx->have_stream = 0;
+	git_packfile_stream_dispose(stream);
+
+	if (error < 0)
+		return error;
+
+	if (idx->have_delta) {
+		error = store_delta(idx);
+	} else {
+		error = store_object(idx);
+	}
+
+	if (error < 0)
+		return error;
+
+	if (!idx->have_delta) {
+		stats->indexed_objects++;
+	}
+	stats->received_objects++;
+
+	if ((error = do_progress_callback(idx, stats)) != 0)
+		return error;
+
+	return 0;
+}
+
 int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_transfer_progress *stats)
 {
 	int error = -1;
@@ -588,86 +675,12 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_tran
 	git_mwindow_free_all(mwf);
 
 	while (stats->indexed_objects < idx->nr_objects) {
-		git_packfile_stream *stream = &idx->stream;
-		git_off_t entry_start = idx->off;
-		size_t entry_size;
-		git_otype type;
-		git_mwindow *w = NULL;
-
-		if (idx->pack->mwf.size <= idx->off + 20)
-			return 0;
-
-		if (!idx->have_stream) {
-			error = git_packfile_unpack_header(&entry_size, &type, mwf, &w, &idx->off);
-			if (error == GIT_EBUFS) {
-				idx->off = entry_start;
-				return 0;
-			}
-			if (error < 0)
-				goto on_error;
-
-			git_mwindow_close(&w);
-			idx->entry_start = entry_start;
-			git_hash_init(&idx->hash_ctx);
-
-			if (type == GIT_OBJ_REF_DELTA || type == GIT_OBJ_OFS_DELTA) {
-				error = advance_delta_offset(idx, type);
-				if (error == GIT_EBUFS) {
-					idx->off = entry_start;
-					return 0;
-				}
-				if (error < 0)
-					goto on_error;
-
-				idx->have_delta = 1;
-			} else {
-				idx->have_delta = 0;
-
-				error = hash_header(&idx->hash_ctx, entry_size, type);
-				if (error < 0)
-					goto on_error;
-			}
-
-			idx->have_stream = 1;
-
-			error = git_packfile_stream_open(stream, idx->pack, idx->off);
-			if (error < 0)
+		if ((error = read_stream_object(idx, stats)) != 0) {
+			if (error == GIT_EBUFS)
+				break;
+			else
 				goto on_error;
 		}
-
-		if (idx->have_delta) {
-			error = read_object_stream(idx, stream);
-		} else {
-			error = hash_object_stream(idx, stream);
-		}
-
-		idx->off = stream->curpos;
-		if (error == GIT_EBUFS)
-			return 0;
-
-		/* We want to free the stream reasorces no matter what here */
-		idx->have_stream = 0;
-		git_packfile_stream_dispose(stream);
-
-		if (error < 0)
-			goto on_error;
-
-		if (idx->have_delta) {
-			error = store_delta(idx);
-		} else {
-			error = store_object(idx);
-		}
-
-		if (error < 0)
-			goto on_error;
-
-		if (!idx->have_delta) {
-			stats->indexed_objects++;
-		}
-		stats->received_objects++;
-
-		if ((error = do_progress_callback(idx, stats)) != 0)
-			goto on_error;
 	}
 
 	return 0;
