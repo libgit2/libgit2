@@ -1,4 +1,5 @@
 #include "clar_libgit2.h"
+#include "signature.h"
 
 static int try_build_signature(const char *name, const char *email, git_time_t time, int offset)
 {
@@ -99,3 +100,29 @@ void test_commit_signature__from_buf(void)
 	git_signature_free(sign);
 }
 
+void test_commit_signature__from_buf_with_neg_zero_offset(void)
+{
+	git_signature *sign;
+
+	cl_git_pass(git_signature_from_buffer(&sign, "Test User <test@test.tt> 1461698487 -0000"));
+	cl_assert_equal_s("Test User", sign->name);
+	cl_assert_equal_s("test@test.tt", sign->email);
+	cl_assert_equal_i(1461698487, sign->when.time);
+	cl_assert_equal_i(0, sign->when.offset);
+	cl_assert_equal_i('-', sign->when.sign);
+	git_signature_free(sign);
+}
+
+void test_commit_signature__pos_and_neg_zero_offsets_dont_match(void)
+{
+	git_signature *with_neg_zero;
+	git_signature *with_pos_zero;
+
+	cl_git_pass(git_signature_from_buffer(&with_neg_zero, "Test User <test@test.tt> 1461698487 -0000"));
+	cl_git_pass(git_signature_from_buffer(&with_pos_zero, "Test User <test@test.tt> 1461698487 +0000"));
+
+	cl_assert(!git_signature__equal(with_neg_zero, with_pos_zero));
+
+	git_signature_free((git_signature *)with_neg_zero);
+	git_signature_free((git_signature *)with_pos_zero);
+}
