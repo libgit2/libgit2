@@ -22,6 +22,9 @@ typedef struct git_indexer_options {
 	git_transfer_progress_cb progress_cb;
 	/** progress_cb_payload payload for the progress callback */
 	void *progress_cb_payload;
+
+	/** Do connectivity checks for the received pack */
+	unsigned char verify;
 } git_indexer_options;
 
 #define GIT_INDEXER_OPTIONS_VERSION 1

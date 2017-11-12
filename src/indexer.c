@@ -148,7 +148,7 @@ int git_indexer_new(
 	idx->expected_oids = git_oidmap_alloc();
 	GITERR_CHECK_ALLOC(idx->expected_oids);
 
-	idx->do_verify = !!idx->odb;
+	idx->do_verify = opts.verify;
 
 	if (git_repository__fsync_gitdir)
 		idx->do_fsync = 1;
@@ -315,7 +315,7 @@ static void add_expected_oid(git_indexer *idx, const git_oid *oid)
 	 * because we have already processed it as part of our pack file, we do
 	 * not have to expect it.
 	 */
-	if (!git_odb_exists(idx->odb, oid) &&
+	if ((!idx->odb || !git_odb_exists(idx->odb, oid)) &&
 	    !git_oidmap_exists(idx->pack->idx_cache, oid) &&
 	    !git_oidmap_exists(idx->expected_oids, oid)) {
 		    git_oid *dup = git__malloc(sizeof(*oid));
@@ -350,7 +350,7 @@ static int check_object_connectivity(git_indexer *idx, const git_rawobj *obj)
 	 * Check whether this is a known object. If so, we can just continue as
 	 * we assume that the ODB has a complete graph.
 	 */
-	if (git_odb_exists(idx->odb, &object->cached.oid))
+	if (idx->odb && git_odb_exists(idx->odb, &object->cached.oid))
 		return 0;
 
 	switch (obj->type) {
