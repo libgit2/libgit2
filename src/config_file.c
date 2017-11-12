@@ -1022,8 +1022,8 @@ static int parse_conditional_include(git_config_parser *reader,
 static int read_on_variable(
 	git_config_parser *reader,
 	const char *current_section,
-	char *var_name,
-	char *var_value,
+	const char *var_name,
+	const char *var_value,
 	const char *line,
 	size_t line_len,
 	void *data)
@@ -1031,24 +1031,26 @@ static int read_on_variable(
 	diskfile_parse_state *parse_data = (diskfile_parse_state *)data;
 	git_buf buf = GIT_BUF_INIT;
 	git_config_entry *entry;
+	const char *c;
 	int result = 0;
 
 	GIT_UNUSED(line);
 	GIT_UNUSED(line_len);
 
-	git__strtolower(var_name);
-	git_buf_printf(&buf, "%s.%s", current_section, var_name);
-	git__free(var_name);
+	git_buf_puts(&buf, current_section);
+	git_buf_putc(&buf, '.');
+	for (c = var_name; *c; c++)
+		git_buf_putc(&buf, git__tolower(*c));
 
 	if (git_buf_oom(&buf)) {
-		git__free(var_value);
+		git_buf_free(&buf);
 		return -1;
 	}
 
 	entry = git__calloc(1, sizeof(git_config_entry));
 	GITERR_CHECK_ALLOC(entry);
 	entry->name = git_buf_detach(&buf);
-	entry->value = var_value;
+	entry->value = var_value ? git__strdup(var_value) : NULL;
 	entry->level = parse_data->level;
 	entry->include_depth = parse_data->depth;
 
@@ -1064,7 +1066,6 @@ static int read_on_variable(
 	         !git__suffixcmp(entry->name, ".path"))
 		result = parse_conditional_include(reader, parse_data,
 						   entry->name, entry->value);
-
 
 	return result;
 }
@@ -1249,8 +1250,8 @@ static int write_on_section(
 static int write_on_variable(
 	git_config_parser *reader,
 	const char *current_section,
-	char *var_name,
-	char *var_value,
+	const char *var_name,
+	const char *var_value,
 	const char *line,
 	size_t line_len,
 	void *data)
@@ -1278,9 +1279,6 @@ static int write_on_variable(
 	/* If we have a regex to match the value, see if it matches */
 	if (has_matched && write_data->preg != NULL)
 		has_matched = (regexec(write_data->preg, var_value, 0, NULL, 0) == 0);
-
-	git__free(var_name);
-	git__free(var_value);
 
 	/* If this isn't the name/value we're looking for, simply dump the
 	 * existing data back out and continue on.

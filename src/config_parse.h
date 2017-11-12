@@ -36,8 +36,8 @@ typedef int (*git_config_parser_section_cb)(
 typedef int (*git_config_parser_variable_cb)(
 	git_config_parser *parser,
 	const char *current_section,
-	char *var_name,
-	char *var_value,
+	const char *var_name,
+	const char *var_value,
 	const char *line,
 	size_t line_len,
 	void *data);

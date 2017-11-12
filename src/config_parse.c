@@ -463,7 +463,7 @@ int git_config_parse(
 	void *data)
 {
 	git_parse_ctx *ctx;
-	char *current_section = NULL, *var_name, *var_value;
+	char *current_section = NULL, *var_name = NULL, *var_value = NULL;
 	int result = 0;
 
 	ctx = &parser->ctx;
@@ -508,7 +508,10 @@ int git_config_parse(
 		default: /* assume variable declaration */
 			if ((result = parse_variable(parser, &var_name, &var_value)) == 0 && on_variable) {
 				result = on_variable(parser, current_section, var_name, var_value, line_start, line_len, data);
+				git__free(var_name);
+				git__free(var_value);
 			}
+
 			break;
 		}
 
