@@ -746,7 +746,8 @@ void test_repo_init__can_reinit_an_initialized_repository(void)
 	git_repository_free(reinit);
 }
 
-void test_repo_init__init_with_initial_commit(void)
+static void impl_test_repo_init__init_with_initial_commit(
+	const char *env_author_name, const char *env_author_email)
 {
 	git_index *index;
 
@@ -790,17 +791,31 @@ void test_repo_init__init_with_initial_commit(void)
 		git_config_free(cfg);
 	}
 
+	/* Make sure we're ready to use git_signature_author_env :-) */
 	{
-		fprintf(stdout, "\nHello World from %s line %d!\n", __FILE__, __LINE__);
+		if (env_author_name)
+			cl_git_pass(cl_setenv("GIT_AUTHOR_NAME", env_author_name));
+		if (env_author_email)
+			cl_git_pass(cl_setenv("GIT_AUTHOR_EMAIL", env_author_email));
 	}
 
 	/* Create a commit with the new contents of the index */
 	{
+		int sig_name_matches = 0, sig_email_matches = 0;
 		git_signature *sig;
 		git_oid tree_id, commit_id;
 		git_tree *tree;
 
-		cl_git_pass(git_signature_default(&sig, _repo));
+		if (env_author_name || env_author_email)
+			cl_git_pass(git_signature_author_env(&sig));
+		else
+			cl_git_pass(git_signature_default(&sig, _repo));
+
+		if (!strcmp(sig->name, (env_author_name ? env_author_name : "Test User")))
+			sig_name_matches = 1;
+		if (!strcmp(sig->email, (env_author_email ? env_author_email : "t@example.com")))
+			sig_email_matches = 1;
+
 		cl_git_pass(git_index_write_tree(&tree_id, index));
 		cl_git_pass(git_tree_lookup(&tree, _repo, &tree_id));
 
@@ -810,9 +825,31 @@ void test_repo_init__init_with_initial_commit(void)
 
 		git_tree_free(tree);
 		git_signature_free(sig);
+		assert(sig_name_matches);
+		assert(sig_email_matches);
 	}
 
 	git_index_free(index);
+}
+
+void test_repo_init__init_with_initial_commit(void)
+{
+	impl_test_repo_init__init_with_initial_commit(NULL, NULL);
+}
+
+void test_repo_init__init_with_initial_commit_with_env_author_name_only(void)
+{
+	impl_test_repo_init__init_with_initial_commit("Test User (From Environment)", NULL);
+}
+
+void test_repo_init__init_with_initial_commit_with_env_author_email_only(void)
+{
+	impl_test_repo_init__init_with_initial_commit(NULL, "email@from.environment.com");
+}
+
+void test_repo_init__init_with_initial_commit_with_env_author_name_and_email(void)
+{
+	impl_test_repo_init__init_with_initial_commit("Test User (From Environment)", "email@from.environment.com");
 }
 
 void test_repo_init__at_filesystem_root(void)
