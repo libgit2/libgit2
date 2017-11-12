@@ -755,7 +755,7 @@ void test_repo_init__init_with_initial_commit(void)
 	/* Initialize the repository */
 	cl_git_pass(git_repository_init(&_repo, "committed", 0));
 
-	/* Init will be automatically created when requested for a new repo */
+	/* Index will be automatically created when requested for a new repo */
 	cl_git_pass(git_repository_index(&index, _repo));
 
 	/* Create a file so we can commit it
