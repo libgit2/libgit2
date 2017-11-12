@@ -192,30 +192,32 @@ int git_signature_default(git_signature **out, git_repository *repo)
 	return error;
 }
 
-int impl_git_signature_name_email_from_env(git_signature **out,
+static int git_signature_name_email_from_env(git_signature **out,
 		const char *name_env, const char *email_env)
 {
 	int error;
-	git_buf git_author_name = GIT_BUF_INIT;
-	git_buf git_author_email = GIT_BUF_INIT;
+	git_buf buf_name = GIT_BUF_INIT;
+	git_buf buf_email = GIT_BUF_INIT;
 
-	if (!(error = git__getenv(&git_author_name, name_env)) &&
-		!(error = git__getenv(&git_author_email, email_env)))
-		error = git_signature_now(out, git_author_name.ptr, git_author_email.ptr);
+	if (!(error = git__getenv(&buf_name, name_env)) &&
+		!(error = git__getenv(&buf_email, email_env)))
+		error = git_signature_now(out, buf_name.ptr, buf_email.ptr);
 
-	git_buf_free(&git_author_email);
-	git_buf_free(&git_author_name);
+	git_buf_free(&buf_email);
+	git_buf_free(&buf_name);
 	return error;
 }
 
 int git_signature_author_env(git_signature **out)
 {
-	return impl_git_signature_name_email_from_env(out, "GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL");
+	return git_signature_name_email_from_env(out,
+		"GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL");
 }
 
 int git_signature_commit_env(git_signature **out)
 {
-	return impl_git_signature_name_email_from_env(out, "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL");
+	return git_signature_name_email_from_env(out,
+		"GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL");
 }
 
 int git_signature__parse(git_signature *sig, const char **buffer_out,
