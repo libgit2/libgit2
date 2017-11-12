@@ -1388,6 +1388,7 @@ int git_packbuilder_write(
 	git_transfer_progress_cb progress_cb,
 	void *progress_cb_payload)
 {
+	git_indexer_options opts = GIT_INDEXER_OPTIONS_INIT;
 	git_indexer *indexer;
 	git_transfer_progress stats;
 	struct pack_write_context ctx;
@@ -1395,8 +1396,11 @@ int git_packbuilder_write(
 
 	PREPARE_PACK;
 
+	opts.progress_cb = progress_cb;
+	opts.progress_cb_payload = progress_cb_payload;
+
 	if (git_indexer_new(
-		&indexer, path, mode, pb->odb, progress_cb, progress_cb_payload) < 0)
+		&indexer, path, mode, pb->odb, &opts) < 0)
 		return -1;
 
 	if (!git_repository__cvar(&t, pb->repo, GIT_CVAR_FSYNCOBJECTFILES) && t)

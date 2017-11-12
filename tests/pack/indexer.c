@@ -82,7 +82,7 @@ void test_pack_indexer__out_of_order(void)
 	git_indexer *idx = 0;
 	git_transfer_progress stats = { 0 };
 
-	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL, NULL));
+	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL));
 	cl_git_pass(git_indexer_append(
 		idx, out_of_order_pack, out_of_order_pack_len, &stats));
 	cl_git_pass(git_indexer_commit(idx, &stats));
@@ -99,7 +99,7 @@ void test_pack_indexer__missing_trailer(void)
 	git_indexer *idx = 0;
 	git_transfer_progress stats = { 0 };
 
-	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL, NULL));
+	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL));
 	cl_git_pass(git_indexer_append(
 		idx, missing_trailer_pack, missing_trailer_pack_len, &stats));
 	cl_git_fail(git_indexer_commit(idx, &stats));
@@ -115,7 +115,7 @@ void test_pack_indexer__leaky(void)
 	git_indexer *idx = 0;
 	git_transfer_progress stats = { 0 };
 
-	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL, NULL));
+	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL));
 	cl_git_pass(git_indexer_append(
 		idx, leaky_pack, leaky_pack_len, &stats));
 	cl_git_fail(git_indexer_commit(idx, &stats));
@@ -142,7 +142,7 @@ void test_pack_indexer__fix_thin(void)
 	git_oid_fromstr(&should_id, "e68fe8129b546b101aee9510c5328e7f21ca1d18");
 	cl_assert_equal_oid(&should_id, &id);
 
-	cl_git_pass(git_indexer_new(&idx, ".", 0, odb, NULL, NULL));
+	cl_git_pass(git_indexer_new(&idx, ".", 0, odb, NULL));
 	cl_git_pass(git_indexer_append(idx, thin_pack, thin_pack_len, &stats));
 	cl_git_pass(git_indexer_commit(idx, &stats));
 
@@ -175,7 +175,7 @@ void test_pack_indexer__fix_thin(void)
 
 		cl_git_pass(p_stat(name, &st));
 
-		cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL, NULL));
+		cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL));
 		read = p_read(fd, buffer, sizeof(buffer));
 		cl_assert(read != -1);
 		p_close(fd);
@@ -208,7 +208,7 @@ void test_pack_indexer__corrupt_length(void)
 	git_oid_fromstr(&should_id, "e68fe8129b546b101aee9510c5328e7f21ca1d18");
 	cl_assert_equal_oid(&should_id, &id);
 
-	cl_git_pass(git_indexer_new(&idx, ".", 0, odb, NULL, NULL));
+	cl_git_pass(git_indexer_new(&idx, ".", 0, odb, NULL));
 	cl_git_pass(git_indexer_append(
 		idx, corrupt_thin_pack, corrupt_thin_pack_len, &stats));
 	cl_git_fail(git_indexer_commit(idx, &stats));
@@ -252,7 +252,7 @@ void test_pack_indexer__no_tmp_files(void)
 	git_buf_dispose(&path);
 	cl_assert(git_buf_len(&first_tmp_file) == 0);
 
-	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL, NULL));
+	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL));
 	git_indexer_free(idx);
 
 	cl_git_pass(git_buf_sets(&path, clar_sandbox_path()));

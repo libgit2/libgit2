@@ -113,24 +113,34 @@ static int objects_cmp(const void *a, const void *b)
 	return git_oid__cmp(&entrya->oid, &entryb->oid);
 }
 
+int git_indexer_init_options(git_indexer_options *opts, unsigned int version)
+{
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_indexer_options, GIT_INDEXER_OPTIONS_INIT);
+	return 0;
+}
+
 int git_indexer_new(
 		git_indexer **out,
 		const char *prefix,
 		unsigned int mode,
 		git_odb *odb,
-		git_transfer_progress_cb progress_cb,
-		void *progress_payload)
+		git_indexer_options *in_opts)
 {
+	git_indexer_options opts = GIT_INDEXER_OPTIONS_INIT;
 	git_indexer *idx;
 	git_buf path = GIT_BUF_INIT, tmp_path = GIT_BUF_INIT;
 	static const char suff[] = "/pack";
 	int error, fd = -1;
 
+	if (in_opts)
+		memcpy(&opts, in_opts, sizeof(opts));
+
 	idx = git__calloc(1, sizeof(git_indexer));
 	GITERR_CHECK_ALLOC(idx);
 	idx->odb = odb;
-	idx->progress_cb = progress_cb;
-	idx->progress_payload = progress_payload;
+	idx->progress_cb = opts.progress_cb;
+	idx->progress_payload = opts.progress_cb_payload;
 	idx->mode = mode ? mode : GIT_PACK_FILE_MODE;
 	git_hash_ctx_init(&idx->hash_ctx);
 	git_hash_ctx_init(&idx->trailer);
