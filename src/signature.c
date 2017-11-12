@@ -214,7 +214,7 @@ int git_signature_author_env(git_signature **out)
 		"GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL");
 }
 
-int git_signature_commit_env(git_signature **out)
+int git_signature_committer_env(git_signature **out)
 {
 	return git_signature_name_email_from_env(out,
 		"GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL");
