@@ -74,6 +74,24 @@ static const unsigned char leaky_pack[] = {
 };
 static const unsigned int leaky_pack_len = 33;
 
+/*
+ * Packfile with a three objects. The first one is a tree referencing two blobs,
+ * the second object is one of those blobs. The second blob is missing.
+ */
+unsigned char incomplete_pack[] = {
+  0x50, 0x41, 0x43, 0x4b, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02,
+  0xae, 0x03, 0x78, 0x9c, 0x33, 0x34, 0x30, 0x30, 0x33, 0x31, 0x51, 0x48,
+  0x4a, 0x2c, 0x62, 0x08, 0x17, 0x3b, 0x15, 0xd9, 0x7e, 0xfa, 0x67, 0x6d,
+  0xf6, 0x56, 0x4f, 0x85, 0x7d, 0xcb, 0xd6, 0xde, 0x53, 0xd1, 0x6d, 0x7f,
+  0x66, 0x08, 0x91, 0x4e, 0xcb, 0xcf, 0x67, 0x50, 0xad, 0x39, 0x9a, 0xa2,
+  0xb3, 0x71, 0x41, 0xc8, 0x87, 0x9e, 0x13, 0xf6, 0xba, 0x53, 0xec, 0xc2,
+  0xfe, 0xda, 0xed, 0x9b, 0x09, 0x00, 0xe8, 0xc8, 0x19, 0xab, 0x34, 0x78,
+  0x9c, 0x4b, 0x4a, 0x2c, 0xe2, 0x02, 0x00, 0x03, 0x9d, 0x01, 0x40, 0x4b,
+  0x72, 0xa2, 0x6f, 0xb6, 0x88, 0x2d, 0x6c, 0xa5, 0x07, 0xb2, 0xa5, 0x45,
+  0xe8, 0xdb, 0xe6, 0x53, 0xb3, 0x52, 0xe2
+};
+unsigned int incomplete_pack_len = 115;
+
 static const unsigned char base_obj[] = { 07, 076 };
 static const unsigned int base_obj_len = 2;
 
@@ -219,6 +237,46 @@ void test_pack_indexer__corrupt_length(void)
 	git_indexer_free(idx);
 	git_odb_free(odb);
 	git_repository_free(repo);
+}
+
+void test_pack_indexer__incomplete_pack_fails_with_strict(void)
+{
+	git_indexer_options opts = GIT_INDEXER_OPTIONS_INIT;
+	git_indexer *idx = 0;
+	git_transfer_progress stats = { 0 };
+
+	opts.verify = 1;
+
+	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, &opts));
+	cl_git_pass(git_indexer_append(
+		idx, incomplete_pack, incomplete_pack_len, &stats));
+	cl_git_fail(git_indexer_commit(idx, &stats));
+
+	cl_assert_equal_i(stats.total_objects, 2);
+	cl_assert_equal_i(stats.received_objects, 2);
+	cl_assert_equal_i(stats.indexed_objects, 2);
+
+	git_indexer_free(idx);
+}
+
+void test_pack_indexer__out_of_order_with_connectivity_checks(void)
+{
+	git_indexer_options opts = GIT_INDEXER_OPTIONS_INIT;
+	git_indexer *idx = 0;
+	git_transfer_progress stats = { 0 };
+
+	opts.verify = 1;
+
+	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, &opts));
+	cl_git_pass(git_indexer_append(
+		idx, out_of_order_pack, out_of_order_pack_len, &stats));
+	cl_git_pass(git_indexer_commit(idx, &stats));
+
+	cl_assert_equal_i(stats.total_objects, 3);
+	cl_assert_equal_i(stats.received_objects, 3);
+	cl_assert_equal_i(stats.indexed_objects, 3);
+
+	git_indexer_free(idx);
 }
 
 static int find_tmp_file_recurs(void *opaque, git_buf *path)
