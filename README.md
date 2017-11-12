@@ -142,6 +142,9 @@ and internal API/coding conventions we use.
 Building libgit2 - Using CMake
 ==============================
 
+Building
+--------
+
 `libgit2` builds cleanly on most platforms without any external dependencies.
 Under Unix-like systems, like Linux, \*BSD and Mac OS X, libgit2 expects `pthreads` to be available;
 they should be installed by default on all systems. Under Windows, libgit2 uses the native Windows API
@@ -157,6 +160,9 @@ On most systems you can build the library using the following commands
 
 Alternatively you can point the CMake GUI tool to the CMakeLists.txt file and generate platform specific build project or IDE workspace.
 
+Running Tests
+-------------
+
 Once built, you can run the tests from the `build` directory with the command
 
 	$ ctest -V
@@ -165,10 +171,27 @@ Alternatively you can run the test suite directly using,
 
 	$ ./libgit2_clar
 
+Invoking the test suite directly is useful because it allows you to execute
+individual tests, or groups of tests using the `-s` flag.  For example, to
+run the index tests:
+
+    $ ./libgit2_clar -sindex
+
+To run a single test named `index::racy::diff`, which corresponds to the test
+function (`test_index_racy__diff`)[https://github.com/libgit2/libgit2/blob/master/tests/index/racy.c#L23]:
+
+    $ ./libgit2_clar -sindex::racy::diff
+
+Installation
+------------
+
 To install the library you can specify the install prefix by setting:
 
 	$ cmake .. -DCMAKE_INSTALL_PREFIX=/install/prefix
 	$ cmake --build . --target install
+
+Advanced Usage
+--------------
 
 For more advanced use or questions about CMake please read <https://cmake.org/Wiki/CMake_FAQ>.
 
