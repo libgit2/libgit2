@@ -18,6 +18,10 @@ v0.26 + 1
   to any repository (and does not apply configuration like 'insteadof' rules).
   This is mostly useful for e.g. emulating `git ls-remote` behavior.
 
+* `git_signature_author_env()` ...
+
+* `git_signature_committer_env()` ...
+
 ### API removals
 
 ### Breaking API changes
