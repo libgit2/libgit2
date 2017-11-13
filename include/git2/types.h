@@ -159,6 +159,7 @@ typedef struct git_packbuilder git_packbuilder;
 typedef struct git_time {
 	git_time_t time; /**< time in seconds from epoch */
 	int offset; /**< timezone offset, in minutes */
+	char sign; /**< indicator for questionable '-0000' offsets in signature */
 } git_time;
 
 /** An action signature (e.g. for committers, taggers, etc) */
