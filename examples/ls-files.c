@@ -45,6 +45,7 @@ static void usage(const char *message, const char *arg)
 static int parse_options(ls_options *opts, int argc, char *argv[])
 {
 	int parsing_files = 0;
+	int i;
 	char **file;
 
 	memset(opts, 0, sizeof(ls_options));
@@ -53,7 +54,6 @@ static int parse_options(ls_options *opts, int argc, char *argv[])
 	if (argc < 2)
 		return 0;
 
-	int i;
 	for (i = 1; i < argc; ++i) {
 		char *a = argv[i];
 
