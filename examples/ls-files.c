@@ -23,13 +23,7 @@
  * `git ls-files` base command shows all paths in the index at that time.
  * This includes staged and committed files, but unstaged files will not display.
  *
- * This currently supports:
- * 	- The --error-unmatch paramter with the same output as the git cli
- *  - default ls-files behavior
- *
- * This currently does not support:
- * 	- anything else
- *
+ * This currently supports the default behavior and the `--error-unmatch` option.
  */
 
 typedef struct {
@@ -51,7 +45,6 @@ static void usage(const char *message, const char *arg)
 static int parse_options(ls_options *opts, int argc, char *argv[])
 {
 	int parsing_files = 0;
-	struct args_info args = ARGS_INFO_INIT;
 	char **file;
 
 	memset(opts, 0, sizeof(ls_options));
@@ -60,11 +53,12 @@ static int parse_options(ls_options *opts, int argc, char *argv[])
 	if (argc < 2)
 		return 0;
 
-	for (args.pos = 1; args.pos < argc; ++args.pos) {
-		char *a = argv[args.pos];
+	int i;
+	for (i = 1; i < argc; ++i) {
+		char *a = argv[i];
 
 		/* if it doesn't start with a '-' or is after the '--' then it is a file */
-		if (a[0] != '-') {
+		if (a[0] != '-' || parsing_files) {
 			parsing_files = 1;
 
 			file = git_array_alloc(opts->files);
@@ -72,7 +66,7 @@ static int parse_options(ls_options *opts, int argc, char *argv[])
 			*file = a;
 		} else if (!strcmp(a, "--")) {
 			parsing_files = 1;
-		} else if (!strcmp(a, "--error-unmatch") && !parsing_files) {
+		} else if (!strcmp(a, "--error-unmatch")) {
 			opts->error_unmatch = 1;
 		} else {
 			usage("Unsupported argument", a);
@@ -94,8 +88,8 @@ static int print_paths(ls_options *opts, git_index *index)
 
 		entry = git_index_get_bypath(index, path, GIT_INDEX_STAGE_NORMAL);
 		if (!entry && opts->error_unmatch) {
-			printf("error: pathspec '%s' did not match any file(s) known to git.\n", path);
-			printf("Did you forget to 'git add'?\n");
+			fprintf(stderr, "error: pathspec '%s' did not match any file(s) known to git.\n", path);
+			fprintf(stderr, "Did you forget to 'git add'?\n");
 			return -1;
 		}
 
@@ -129,20 +123,16 @@ int main(int argc, char *argv[])
 	/* if there are files explicitly listed by the user, we need to treat this command differently */
 	if (git_array_size(opts.files) > 0) {
 		error = print_paths(&opts, index);
-		goto cleanup;
-	}
+	} else {
+		entry_count = git_index_entrycount(index);
 
-	/* we need to know how many entries exist in the index */
-	entry_count = git_index_entrycount(index);
-
-	/* loop through the entries by index and display their pathes */
-	for (i = 0; i < entry_count; i++) {
-		entry = git_index_get_byindex(index, i);
-		printf("%s\n", entry->path);
+		for (i = 0; i < entry_count; i++) {
+			entry = git_index_get_byindex(index, i);
+			printf("%s\n", entry->path);
+		}
 	}
 
 cleanup:
-	/* free our allocated resources */
 	git_array_clear(opts.files);
 	git_index_free(index);
 	git_repository_free(repo);
