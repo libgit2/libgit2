@@ -182,6 +182,16 @@ function (`test_index_racy__diff`)[https://github.com/libgit2/libgit2/blob/maste
 
     $ ./libgit2_clar -sindex::racy::diff
 
+The test suite will print a `.` for every passing test, and an `F` for any
+failing test.  An `S` indicates that a test was skipped because it is not
+applicable to your platform or is particularly expensive.
+
+**Note:** There should be _no_ failing tests when you build an unmodified
+source tree from a [release](https://github.com/libgit2/libgit2/releases),
+or from the [master branch](https://github.com/libgit2/libgit2/tree/master).
+Please contact us or [open an issue](https://github.com/libgit2/libgit2/issues)
+if you see test failures.
+
 Installation
 ------------
 
