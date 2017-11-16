@@ -201,10 +201,10 @@ static const char* get_val_from_env_or_cfg(
 	const char *cfg_key, const git_config *cfg_obj,
 	const char *alt_env_key)
 {
+	const char *val;
+
 	if (!(*error = git__getenv(&env_buf, env_key)))
 		return env_buf.ptr;
-
-	const char *val;
 
 	if ((GIT_ENOTFOUND == *error) &&
 		!(*error = git_config_get_string(&val, cfg_obj, cfg_key)))
@@ -218,6 +218,28 @@ static const char* get_val_from_env_or_cfg(
 	return NULL;
 }
 
+static int git_signature_name_email_from_env_or_cfg(git_signature **out, git_config *cfg,
+		const char *name_env, const char *email_env)
+{
+	int error;
+
+	git_buf buf_name = GIT_BUF_INIT;
+	git_buf buf_email = GIT_BUF_INIT;
+
+	const char *user_name = get_val_from_env_or_cfg(&error,
+		name_env, buf_name, "user.name", cfg, NULL);
+	const char *user_email = get_val_from_env_or_cfg(&error,
+		email_env, buf_email, "user.email", cfg, "EMAIL");
+
+	if (user_name && user_email)
+		error = git_signature_now(out, user_name, user_email);
+
+	git_buf_free(&buf_email);
+	git_buf_free(&buf_name);
+
+	return error;
+}
+
 static int git_signature_name_email_from_env(git_signature **out, git_repository *repo,
 		const char *name_env, const char *email_env)
 {
@@ -226,20 +248,9 @@ static int git_signature_name_email_from_env(git_signature **out, git_repository
 
 	if ((error = git_repository_config_snapshot(&cfg, repo)) < 0)
 		return error;
-
-	git_buf buf_name = GIT_BUF_INIT;
-	git_buf buf_email = GIT_BUF_INIT;
-
-	const char *user_name = (error ? NULL : get_val_from_env_or_cfg(&error,
-		name_env, buf_name, "user.name", cfg, NULL));
-	const char *user_email = (error ? NULL : get_val_from_env_or_cfg(&error,
-		email_env, buf_email, "user.email", cfg, "EMAIL"));
-
-	if (user_name && user_email)
-		error = git_signature_now(out, user_name, user_email);
-
-	git_buf_free(&buf_email);
-	git_buf_free(&buf_name);
+	else
+		error = git_signature_name_email_from_env_or_cfg(out,
+			cfg, name_env, email_env);
 
 	git_config_free(cfg);
 	return error;
