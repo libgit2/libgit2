@@ -193,7 +193,7 @@ static const double __ac_HASH_UPPER = 0.77;
 		khint_t n_buckets, size, n_occupied, upper_bound; \
 		khint_t keysize, valsize; \
 		khint32_t *flags; \
-		khkey_t *keys; \
+		void *keys; \
 		void *vals; \
 	} kh_##name##_t;
 
@@ -507,7 +507,7 @@ static kh_inline khint_t __ac_Wang_hash(khint_t key)
   @param  x     Iterator to the bucket [khint_t]
   @return       Key [type of keys]
  */
-#define kh_key(h, x) ((h)->keys[x])
+#define kh_key(h, x) (((void **) ((h)->keys + ((x) * (h)->keysize)))[0])
 
 /*! @function
   @abstract     Get value given an iterator
