@@ -233,7 +233,7 @@ static const double __ac_HASH_UPPER = 0.77;
 		if (h->n_buckets) {												\
 			khint_t k, i, last, mask, step = 0; \
 			mask = h->n_buckets - 1;									\
-			k = __hash_func(key); i = k & mask;							\
+			k = __hash_func(&key); i = k & mask;							\
 			last = i; \
 			while (!__ac_isempty(h->flags, i) && (__ac_isdel(h->flags, i) || !__hash_equal(&kh_key(h, i), &key))) { \
 				i = (i + (++step)) & mask; \
@@ -278,7 +278,7 @@ static const double __ac_HASH_UPPER = 0.77;
 					__ac_set_isdel_true(h->flags, j);					\
 					while (1) { /* kick-out process; sort of like in Cuckoo hashing */ \
 						khint_t k, i, step = 0; \
-						k = __hash_func(key);							\
+						k = __hash_func(&key);							\
 						i = k & new_mask;								\
 						while (!__ac_isempty(new_flags, i)) i = (i + (++step)) & new_mask; \
 						__ac_set_isempty_false(new_flags, i);			\
@@ -320,7 +320,7 @@ static const double __ac_HASH_UPPER = 0.77;
 		} /* TODO: to implement automatically shrinking; resize() already support shrinking */ \
 		{																\
 			khint_t k, i, site, last, mask = h->n_buckets - 1, step = 0; \
-			x = site = h->n_buckets; k = __hash_func(key); i = k & mask; \
+			x = site = h->n_buckets; k = __hash_func(&key); i = k & mask; \
 			if (__ac_isempty(h->flags, i)) x = i; /* for speed up */	\
 			else {														\
 				last = i; \
@@ -374,7 +374,7 @@ static const double __ac_HASH_UPPER = 0.77;
   @param  key   The integer [khint32_t]
   @return       The hash value [khint_t]
  */
-#define kh_int_hash_func(key) (khint32_t)(key)
+#define kh_int_hash_func(key) (khint32_t)(*(khint_64_t *) key)
 /*! @function
   @abstract     Integer comparison function
  */
@@ -384,7 +384,7 @@ static const double __ac_HASH_UPPER = 0.77;
   @param  key   The integer [khint64_t]
   @return       The hash value [khint_t]
  */
-#define kh_int64_hash_func(key) (khint32_t)((key)>>33^(key)^(key)<<11)
+#define kh_int64_hash_func(key) (khint32_t)((*(khint64_t *) key)>>33^(*(khint64_t *) key)^(*(khint64_t *) key)<<11)
 /*! @function
   @abstract     64-bit integer comparison function
  */
@@ -394,8 +394,9 @@ static const double __ac_HASH_UPPER = 0.77;
   @param  s     Pointer to a null terminated string
   @return       The hash value
  */
-static kh_inline khint_t __ac_X31_hash_string(const char *s)
+static kh_inline khint_t __ac_X31_hash_string(const void *ptr)
 {
+	const char *s = *(const char **) ptr;
 	khint_t h = (khint_t)*s;
 	if (h) for (++s ; *s; ++s) h = (h << 5) - h + (khint_t)*s;
 	return h;

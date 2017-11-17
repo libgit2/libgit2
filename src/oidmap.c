@@ -7,8 +7,9 @@
 
 #include "oidmap.h"
 
-GIT_INLINE(khint_t) git_oidmap_hash(const git_oid *oid)
+GIT_INLINE(khint_t) git_oidmap_hash(const void *ptr)
 {
+	const git_oid *oid = *(const git_oid **) ptr;
 	khint_t h;
 	memcpy(&h, oid, sizeof(khint_t));
 	return h;

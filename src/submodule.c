@@ -60,8 +60,9 @@ enum {
 	GITMODULES_CREATE = 1,
 };
 
-static kh_inline khint_t str_hash_no_trailing_slash(const char *s)
+static kh_inline khint_t str_hash_no_trailing_slash(const void *ptr)
 {
+	const char *s = *(const void **) ptr;
 	khint_t h;
 
 	for (h = 0; *s; ++s)

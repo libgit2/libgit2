@@ -8,8 +8,9 @@
 #include "idxmap.h"
 
 /* This is __ac_X31_hash_string but with tolower and it takes the entry's stage into account */
-static kh_inline khint_t idxentry_hash(const git_index_entry *e)
+static kh_inline khint_t idxentry_hash(const void *ptr)
 {
+	const git_index_entry *e = *(const git_index_entry **) ptr;
 	const char *s = e->path;
 	khint_t h = (khint_t)git__tolower(*s);
 	if (h) for (++s ; *s; ++s) h = (h << 5) - h + (khint_t)git__tolower(*s);
