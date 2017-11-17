@@ -217,9 +217,9 @@ typedef struct khash {
 	extern khash *kh_init_##name(void);							\
 	extern void kh_destroy_##name(khash *h);					\
 	extern void kh_clear_##name(khash *h);						\
-	extern khint_t kh_get_##name(const khash *h, khkey_t key); 	\
+	extern khint_t kh_get_##name(const khash *h, const void *key); 	\
 	extern int kh_resize_##name(khash *h, khint_t new_n_buckets); \
-	extern khint_t kh_put_##name(khash *h, khkey_t key, int *ret); \
+	extern khint_t kh_put_##name(khash *h, const void *key, int *ret); \
 	extern void kh_del_##name(khash *h, khint_t x);
 
 #define __KHASH_IMPL(name, SCOPE, khkey_t, khval_t, kh_is_map, __hash_func, __hash_equal) \
@@ -246,14 +246,14 @@ typedef struct khash {
 			h->size = h->n_occupied = 0;								\
 		}																\
 	}																	\
-	SCOPE khint_t kh_get_##name(const khash *h, khkey_t key) 	\
+	SCOPE khint_t kh_get_##name(const khash *h, const void *key) 	\
 	{																	\
 		if (h->n_buckets) {												\
 			khint_t k, i, last, mask, step = 0; \
 			mask = h->n_buckets - 1;									\
-			k = h->hash(&key); i = k & mask;							\
+			k = h->hash(key); i = k & mask;							\
 			last = i; \
-			while (!__ac_isempty(h->flags, i) && (__ac_isdel(h->flags, i) || !h->hash_equal(&kh_key(h, i), &key))) { \
+			while (!__ac_isempty(h->flags, i) && (__ac_isdel(h->flags, i) || !h->hash_equal(&kh_key(h, i), key))) { \
 				i = (i + (++step)) & mask; \
 				if (i == last) return h->n_buckets;						\
 			}															\
@@ -273,7 +273,7 @@ typedef struct khash {
 				if (!new_flags) return -1;								\
 				memset(new_flags, 0xaa, __ac_fsize(new_n_buckets) * sizeof(khint32_t)); \
 				if (h->n_buckets < new_n_buckets) {	/* expand */		\
-					khkey_t *new_keys = (khkey_t*)kreallocarray((void *)h->keys, new_n_buckets, sizeof(khkey_t)); \
+					void *new_keys = kreallocarray((void *)h->keys, new_n_buckets, h->keysize); \
 					if (!new_keys) { kfree(new_flags); return -1; }		\
 					h->keys = new_keys;									\
 					if (kh_is_map) {									\
@@ -309,7 +309,7 @@ typedef struct khash {
 				}														\
 			}															\
 			if (h->n_buckets > new_n_buckets) { /* shrink the hash table */ \
-				h->keys = (khkey_t*)kreallocarray((void *)h->keys, new_n_buckets, sizeof(khkey_t)); \
+				h->keys = kreallocarray((void *)h->keys, new_n_buckets, h->keysize); \
 				if (kh_is_map) h->vals = kreallocarray(h->vals, new_n_buckets, h->valsize); \
 			}															\
 			kfree(h->flags); /* free the working space */				\
@@ -320,7 +320,7 @@ typedef struct khash {
 		}																\
 		return 0;														\
 	}																	\
-	SCOPE khint_t kh_put_##name(khash *h, khkey_t key, int *ret) \
+	SCOPE khint_t kh_put_##name(khash *h, const void *key, int *ret) \
 	{																	\
 		khint_t x;														\
 		if (h->n_occupied >= h->upper_bound) { /* update the hash table */ \
@@ -334,11 +334,11 @@ typedef struct khash {
 		} /* TODO: to implement automatically shrinking; resize() already support shrinking */ \
 		{																\
 			khint_t k, i, site, last, mask = h->n_buckets - 1, step = 0; \
-			x = site = h->n_buckets; k = h->hash(&key); i = k & mask; \
+			x = site = h->n_buckets; k = h->hash(key); i = k & mask; \
 			if (__ac_isempty(h->flags, i)) x = i; /* for speed up */	\
 			else {														\
 				last = i; \
-				while (!__ac_isempty(h->flags, i) && (__ac_isdel(h->flags, i) || !h->hash_equal(&kh_key(h, i), &key))) { \
+				while (!__ac_isempty(h->flags, i) && (__ac_isdel(h->flags, i) || !h->hash_equal(&kh_key(h, i), key))) { \
 					if (__ac_isdel(h->flags, i)) site = i;				\
 					i = (i + (++step)) & mask; \
 					if (i == last) { x = site; break; }					\
@@ -350,12 +350,12 @@ typedef struct khash {
 			}															\
 		}																\
 		if (__ac_isempty(h->flags, x)) { /* not present at all */		\
-			memcpy(&kh_key(h, x), &key, h->keysize);											\
+			memcpy(&kh_key(h, x), key, h->keysize);											\
 			__ac_set_isboth_false(h->flags, x);							\
 			++h->size; ++h->n_occupied;									\
 			*ret = 1;													\
 		} else if (__ac_isdel(h->flags, x)) { /* deleted */				\
-			memcpy(&kh_key(h, x), &key, h->keysize);											\
+			memcpy(&kh_key(h, x), key, h->keysize);											\
 			__ac_set_isboth_false(h->flags, x);							\
 			++h->size;													\
 			*ret = 2;													\

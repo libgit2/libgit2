@@ -51,7 +51,7 @@ void git_idxmap_set_ignore_case(git_idxmap *map, bool ignore_case)
 
 void git_idxmap_insert(git_idxmap *map, const git_index_entry *key, void *value, int *rval)
 {
-	khiter_t idx = kh_put(idx, map, key, rval);
+	khiter_t idx = kh_put(idx, map, &key, rval);
 
 	if ((*rval) >= 0) {
 		if ((*rval) == 0)
@@ -62,7 +62,7 @@ void git_idxmap_insert(git_idxmap *map, const git_index_entry *key, void *value,
 
 size_t git_idxmap_lookup_index(git_idxmap *map, const git_index_entry *key)
 {
-	return kh_get(idx, map, key);
+	return kh_get(idx, map, &key);
 }
 
 void *git_idxmap_value_at(git_idxmap *map, size_t idx)

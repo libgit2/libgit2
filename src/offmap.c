@@ -31,7 +31,7 @@ size_t git_offmap_num_entries(git_offmap *map)
 
 size_t git_offmap_lookup_index(git_offmap *map, const git_off_t key)
 {
-	return kh_get(off, map, key);
+	return kh_get(off, map, &key);
 }
 
 int git_offmap_valid_index(git_offmap *map, size_t idx)
@@ -41,7 +41,7 @@ int git_offmap_valid_index(git_offmap *map, size_t idx)
 
 int git_offmap_exists(git_offmap *map, const git_off_t key)
 {
-	return kh_get(off, map, key) != kh_end(map);
+	return kh_get(off, map, &key) != kh_end(map);
 }
 
 void *git_offmap_value_at(git_offmap *map, size_t idx)
@@ -61,12 +61,12 @@ void git_offmap_delete_at(git_offmap *map, size_t idx)
 
 int git_offmap_put(git_offmap *map, const git_off_t key, int *err)
 {
-	return kh_put(off, map, key, err);
+	return kh_put(off, map, &key, err);
 }
 
 void git_offmap_insert(git_offmap *map, const git_off_t key, void *value, int *rval)
 {
-	khiter_t idx = kh_put(off, map, key, rval);
+	khiter_t idx = kh_put(off, map, &key, rval);
 
 	if ((*rval) >= 0) {
 		if ((*rval) == 0)

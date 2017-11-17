@@ -36,7 +36,7 @@ size_t git_strmap_num_entries(git_strmap *map)
 
 size_t git_strmap_lookup_index(git_strmap *map, const char *key)
 {
-	return kh_get(str, map, key);
+	return kh_get(str, map, &key);
 }
 
 int git_strmap_valid_index(git_strmap *map, size_t idx)
@@ -46,7 +46,7 @@ int git_strmap_valid_index(git_strmap *map, size_t idx)
 
 int git_strmap_exists(git_strmap *map, const char *key)
 {
-	return kh_get(str, map, key) != kh_end(map);
+	return kh_get(str, map, &key) != kh_end(map);
 }
 
 int git_strmap_has_data(git_strmap *map, size_t idx)
@@ -81,12 +81,12 @@ void git_strmap_delete_at(git_strmap *map, size_t idx)
 
 int git_strmap_put(git_strmap *map, const char *key, int *err)
 {
-	return kh_put(str, map, key, err);
+	return kh_put(str, map, &key, err);
 }
 
 void git_strmap_insert(git_strmap *map, const char *key, void *value, int *rval)
 {
-	khiter_t idx = kh_put(str, map, key, rval);
+	khiter_t idx = kh_put(str, map, &key, rval);
 
 	if ((*rval) >= 0) {
 		if ((*rval) == 0)
