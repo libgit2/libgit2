@@ -816,8 +816,8 @@ static void impl_test_repo_init__init_with_initial_commit(
 
 		git_tree_free(tree);
 		git_signature_free(sig);
-		assert(sig_name_matches);
-		assert(sig_email_matches);
+		cl_assert(sig_name_matches);
+		cl_assert(sig_email_matches);
 	}
 
 	git_index_free(index);
