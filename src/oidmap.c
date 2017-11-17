@@ -24,7 +24,7 @@ __KHASH_IMPL(oid, static kh_inline, const git_oid *, void *, 1, git_oidmap_hash,
 
 git_oidmap *git_oidmap_alloc()
 {
-	return kh_init(oid);
+	return kh_init(oid, sizeof(const git_oid *), sizeof(void *), git_oidmap_hash, git_oidmap_equal, true);
 }
 
 void git_oidmap_free(git_oidmap *map)

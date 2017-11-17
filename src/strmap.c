@@ -11,7 +11,7 @@ __KHASH_IMPL(str, static kh_inline, const char *, void *, 1, kh_str_hash_func, k
 
 int git_strmap_alloc(git_strmap **map)
 {
-	if ((*map = kh_init(str)) == NULL) {
+	if ((*map = kh_init(str, sizeof(const char *), sizeof(void *), kh_str_hash_func, kh_str_hash_equal, true)) == NULL) {
 		giterr_set_oom();
 		return -1;
 	}

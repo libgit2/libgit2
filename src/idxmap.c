@@ -33,7 +33,7 @@ __KHASH_IMPL(idx, static kh_inline, const git_index_entry *, git_index_entry *, 
 
 int git_idxmap_alloc(git_idxmap **map, bool ignore_case)
 {
-	if ((*map = kh_init(idx)) == NULL) {
+	if ((*map = kh_init(idx, sizeof(const git_index_entry *), sizeof(git_index_entry *), idxentry_hash, idxentry_equal, true)) == NULL) {
 		giterr_set_oom();
 		return -1;
 	}

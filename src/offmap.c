@@ -11,7 +11,7 @@ __KHASH_IMPL(off, static kh_inline, git_off_t, void *, 1, kh_int64_hash_func, kh
 
 git_offmap *git_offmap_alloc(void)
 {
-	return kh_init(off);
+	return kh_init(off, sizeof(git_off_t), sizeof(void *), kh_int64_hash_func, kh_int64_hash_equal, true);
 }
 
 void git_offmap_free(git_offmap *map)

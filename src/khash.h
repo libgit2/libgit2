@@ -215,7 +215,7 @@ typedef struct khash {
 } khash;
 
 #define __KHASH_PROTOTYPES(name, khkey_t, khval_t)	 					\
-	extern khash *kh_init_##name(void);							\
+	extern khash *kh_init_##name(khint_t keysize, khint_t valsize, khash_hash_fn hash, khash_hash_equal_fn hash_equal, bool is_map); \
 	extern void kh_destroy_##name(khash *h);					\
 	extern void kh_clear_##name(khash *h);						\
 	extern khint_t kh_get_##name(const khash *h, const void *key); 	\
@@ -224,13 +224,13 @@ typedef struct khash {
 	extern void kh_del_##name(khash *h, khint_t x);
 
 #define __KHASH_IMPL(name, SCOPE, khkey_t, khval_t, kh_is_map, __hash_func, __hash_equal) \
-	SCOPE khash *kh_init_##name(void) {							\
+	SCOPE khash *kh_init_##name(khint_t keysize, khint_t valsize, khash_hash_fn hash, khash_hash_equal_fn hash_equal, bool is_map) { \
 		khash *h = (khash*)kcalloc(1, sizeof(khash));		\
-		h->keysize = sizeof(khkey_t);							\
-		h->valsize = sizeof(khval_t);							\
-		h->hash = __hash_func;								\
-		h->hash_equal = __hash_equal;							\
-		h->is_map = kh_is_map;								\
+		h->keysize = keysize;							\
+		h->valsize = valsize;							\
+		h->hash = hash;								\
+		h->hash_equal = hash_equal;							\
+		h->is_map = is_map;								\
 		return h;									\
 	}																	\
 	SCOPE void kh_destroy_##name(khash *h)						\
@@ -468,7 +468,7 @@ static kh_inline khint_t __ac_Wang_hash(khint_t key)
   @param  name  Name of the hash table [symbol]
   @return       Pointer to the hash table [khash_t(name)*]
  */
-#define kh_init(name) kh_init_##name()
+#define kh_init(name, keysize, valsize, hash_fn, hash_equal_fn, is_map) kh_init_##name(keysize, valsize, hash_fn, hash_equal_fn, is_map)
 
 /*! @function
   @abstract     Destroy a hash table.
