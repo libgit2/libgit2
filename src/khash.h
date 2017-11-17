@@ -235,7 +235,7 @@ static const double __ac_HASH_UPPER = 0.77;
 			mask = h->n_buckets - 1;									\
 			k = __hash_func(key); i = k & mask;							\
 			last = i; \
-			while (!__ac_isempty(h->flags, i) && (__ac_isdel(h->flags, i) || !__hash_equal(kh_key(h, i), key))) { \
+			while (!__ac_isempty(h->flags, i) && (__ac_isdel(h->flags, i) || !__hash_equal(&kh_key(h, i), &key))) { \
 				i = (i + (++step)) & mask; \
 				if (i == last) return h->n_buckets;						\
 			}															\
@@ -324,7 +324,7 @@ static const double __ac_HASH_UPPER = 0.77;
 			if (__ac_isempty(h->flags, i)) x = i; /* for speed up */	\
 			else {														\
 				last = i; \
-				while (!__ac_isempty(h->flags, i) && (__ac_isdel(h->flags, i) || !__hash_equal(kh_key(h, i), key))) { \
+				while (!__ac_isempty(h->flags, i) && (__ac_isdel(h->flags, i) || !__hash_equal(&kh_key(h, i), &key))) { \
 					if (__ac_isdel(h->flags, i)) site = i;				\
 					i = (i + (++step)) & mask; \
 					if (i == last) { x = site; break; }					\
@@ -378,7 +378,7 @@ static const double __ac_HASH_UPPER = 0.77;
 /*! @function
   @abstract     Integer comparison function
  */
-#define kh_int_hash_equal(a, b) ((a) == (b))
+#define kh_int_hash_equal(a, b) (*(khint32_t *) (a) == *(khint32_t *) (b))
 /*! @function
   @abstract     64-bit integer hash function
   @param  key   The integer [khint64_t]
@@ -388,7 +388,7 @@ static const double __ac_HASH_UPPER = 0.77;
 /*! @function
   @abstract     64-bit integer comparison function
  */
-#define kh_int64_hash_equal(a, b) ((a) == (b))
+#define kh_int64_hash_equal(a, b) (*(khint64_t *) (a) == *(khint64_t *) (b))
 /*! @function
   @abstract     const char* hash function
   @param  s     Pointer to a null terminated string
@@ -409,7 +409,7 @@ static kh_inline khint_t __ac_X31_hash_string(const char *s)
 /*! @function
   @abstract     Const char* comparison function
  */
-#define kh_str_hash_equal(a, b) (strcmp(a, b) == 0)
+#define kh_str_hash_equal(a, b) (strcmp(*(const char **) a, *(const char **) b) == 0)
 
 static kh_inline khint_t __ac_Wang_hash(khint_t key)
 {

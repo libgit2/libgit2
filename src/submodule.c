@@ -71,8 +71,9 @@ static kh_inline khint_t str_hash_no_trailing_slash(const char *s)
 	return h;
 }
 
-static kh_inline int str_equal_no_trailing_slash(const char *a, const char *b)
+static kh_inline int str_equal_no_trailing_slash(const void *aptr, const void *bptr)
 {
+	const char *a = *(const char **) aptr, *b = *(const char **) bptr;
 	size_t alen = a ? strlen(a) : 0;
 	size_t blen = b ? strlen(b) : 0;
 

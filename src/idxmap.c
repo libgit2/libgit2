@@ -18,13 +18,13 @@ static kh_inline khint_t idxentry_hash(const git_index_entry *e)
 
 static kh_inline int idxentry_equal(const void *aptr, const void *bptr)
 {
-    const git_index_entry *a = (const git_index_entry *) aptr, *b = (const git_index_entry *) bptr;
+    const git_index_entry *a = *(const git_index_entry **) aptr, *b = *(const git_index_entry **) bptr;
     return (GIT_IDXENTRY_STAGE(a) == GIT_IDXENTRY_STAGE(b) && strcmp(a->path, b->path) == 0);
 }
 
 static kh_inline int idxentry_icase_equal(const void *aptr, const void *bptr)
 {
-    const git_index_entry *a = (const git_index_entry *) aptr, *b = (const git_index_entry *) bptr;
+    const git_index_entry *a = *(const git_index_entry **) aptr, *b = *(const git_index_entry **) bptr;
     return (GIT_IDXENTRY_STAGE(a) == GIT_IDXENTRY_STAGE(b) && strcasecmp(a->path, b->path) == 0);
 }
 

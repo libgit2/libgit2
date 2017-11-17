@@ -14,7 +14,12 @@ GIT_INLINE(khint_t) git_oidmap_hash(const git_oid *oid)
 	return h;
 }
 
-__KHASH_IMPL(oid, static kh_inline, const git_oid *, void *, 1, git_oidmap_hash, git_oid_equal)
+GIT_INLINE(int) git_oidmap_equal(const void *aptr, const void *bptr)
+{
+	return git_oid_equal(*(git_oid **) aptr, *(git_oid **) bptr);
+}
+
+__KHASH_IMPL(oid, static kh_inline, const git_oid *, void *, 1, git_oidmap_hash, git_oidmap_equal)
 
 git_oidmap *git_oidmap_alloc()
 {
