@@ -231,7 +231,7 @@ static const double __ac_HASH_UPPER = 0.77;
 			mask = h->n_buckets - 1;									\
 			k = __hash_func(key); i = k & mask;							\
 			last = i; \
-			while (!__ac_isempty(h->flags, i) && (__ac_isdel(h->flags, i) || !__hash_equal(h->keys[i], key))) { \
+			while (!__ac_isempty(h->flags, i) && (__ac_isdel(h->flags, i) || !__hash_equal(kh_key(h, i), key))) { \
 				i = (i + (++step)) & mask; \
 				if (i == last) return h->n_buckets;						\
 			}															\
@@ -265,11 +265,11 @@ static const double __ac_HASH_UPPER = 0.77;
 		if (j) { /* rehashing is needed */								\
 			for (j = 0; j != h->n_buckets; ++j) {						\
 				if (__ac_iseither(h->flags, j) == 0) {					\
-					khkey_t key = h->keys[j];							\
+					khkey_t key = kh_key(h, j);							\
 					khval_t val;										\
 					khint_t new_mask;									\
 					new_mask = new_n_buckets - 1; 						\
-					if (kh_is_map) val = h->vals[j];					\
+					if (kh_is_map) val = kh_val(h, j);					\
 					__ac_set_isdel_true(h->flags, j);					\
 					while (1) { /* kick-out process; sort of like in Cuckoo hashing */ \
 						khint_t k, i, step = 0; \
@@ -278,12 +278,12 @@ static const double __ac_HASH_UPPER = 0.77;
 						while (!__ac_isempty(new_flags, i)) i = (i + (++step)) & new_mask; \
 						__ac_set_isempty_false(new_flags, i);			\
 						if (i < h->n_buckets && __ac_iseither(h->flags, i) == 0) { /* kick out the existing element */ \
-							{ khkey_t tmp = h->keys[i]; h->keys[i] = key; key = tmp; } \
-							if (kh_is_map) { khval_t tmp = h->vals[i]; h->vals[i] = val; val = tmp; } \
+							{ khkey_t tmp = kh_key(h, i); kh_key(h, i) = key; key = tmp; } \
+							if (kh_is_map) { khval_t tmp = kh_val(h, i); kh_val(h, i) = val; val = tmp; } \
 							__ac_set_isdel_true(h->flags, i); /* mark it as deleted in the old hash table */ \
 						} else { /* write the element and jump out of the loop */ \
-							h->keys[i] = key;							\
-							if (kh_is_map) h->vals[i] = val;			\
+							kh_key(h, i) = key;							\
+							if (kh_is_map) kh_val(h, i) = val;			\
 							break;										\
 						}												\
 					}													\
@@ -319,7 +319,7 @@ static const double __ac_HASH_UPPER = 0.77;
 			if (__ac_isempty(h->flags, i)) x = i; /* for speed up */	\
 			else {														\
 				last = i; \
-				while (!__ac_isempty(h->flags, i) && (__ac_isdel(h->flags, i) || !__hash_equal(h->keys[i], key))) { \
+				while (!__ac_isempty(h->flags, i) && (__ac_isdel(h->flags, i) || !__hash_equal(kh_key(h, i), key))) { \
 					if (__ac_isdel(h->flags, i)) site = i;				\
 					i = (i + (++step)) & mask; \
 					if (i == last) { x = site; break; }					\
@@ -331,12 +331,12 @@ static const double __ac_HASH_UPPER = 0.77;
 			}															\
 		}																\
 		if (__ac_isempty(h->flags, x)) { /* not present at all */		\
-			h->keys[x] = key;											\
+			kh_key(h, x) = key;											\
 			__ac_set_isboth_false(h->flags, x);							\
 			++h->size; ++h->n_occupied;									\
 			*ret = 1;													\
 		} else if (__ac_isdel(h->flags, x)) { /* deleted */				\
-			h->keys[x] = key;											\
+			kh_key(h, x) = key;											\
 			__ac_set_isboth_false(h->flags, x);							\
 			++h->size;													\
 			*ret = 2;													\
