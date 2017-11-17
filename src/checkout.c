@@ -2412,7 +2412,7 @@ static int checkout_data_init(
 		 * and those should not be overwritten.)
 		 */
 		if (data->index != git_iterator_index(target)) {
-			if ((error = git_index_read(data->index, true)) < 0)
+			if ((error = git_index_read_safely(data->index)) < 0)
 				goto cleanup;
 
 			/* cannot checkout if unresolved conflicts exist */

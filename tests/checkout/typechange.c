@@ -259,6 +259,7 @@ static int make_submodule_dirty(git_submodule *sm, const char *name, void *paylo
 void test_checkout_typechange__checkout_with_conflicts(void)
 {
 	int i;
+	git_index *index;
 	git_object *obj;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	notify_counts cts = {0};
@@ -288,6 +289,10 @@ void test_checkout_typechange__checkout_with_conflicts(void)
 		cl_assert_equal_i(cts.dirty, 0);
 		cl_assert_equal_i(cts.updates, 0);
 		cl_assert_equal_i(cts.ignored, 0);
+
+		cl_git_pass(git_repository_index(&index, g_repo));
+		cl_git_pass(git_index_read(index, 1));
+		git_index_free(index);
 
 		opts.checkout_strategy =
 			GIT_CHECKOUT_FORCE | GIT_CHECKOUT_REMOVE_UNTRACKED;

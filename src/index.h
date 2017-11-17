@@ -149,6 +149,8 @@ GIT_INLINE(int) git_index_is_dirty(git_index *index)
 	return index->dirty;
 }
 
+extern int git_index_read_safely(git_index *index);
+
 typedef struct {
 	git_index *index;
 	git_filebuf file;

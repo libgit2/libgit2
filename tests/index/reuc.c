@@ -56,6 +56,8 @@ void test_index_reuc__add(void)
 	cl_assert_equal_oid(&reuc->oid[0], &ancestor_oid);
 	cl_assert_equal_oid(&reuc->oid[1], &our_oid);
 	cl_assert_equal_oid(&reuc->oid[2], &their_oid);
+
+	cl_git_pass(git_index_write(repo_index));
 }
 
 void test_index_reuc__add_no_ancestor(void)
@@ -81,6 +83,8 @@ void test_index_reuc__add_no_ancestor(void)
 	cl_assert_equal_oid(&reuc->oid[0], &ancestor_oid);
 	cl_assert_equal_oid(&reuc->oid[1], &our_oid);
 	cl_assert_equal_oid(&reuc->oid[2], &their_oid);
+
+	cl_git_pass(git_index_write(repo_index));
 }
 
 void test_index_reuc__read_bypath(void)

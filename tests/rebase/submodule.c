@@ -33,8 +33,9 @@ void test_rebase_submodule__initialize(void)
 	/* We have to commit the rewritten .gitmodules file */
 	cl_git_pass(git_repository_index(&index, repo));
 	cl_git_pass(git_index_add_bypath(index, ".gitmodules"));
-	cl_git_pass(git_index_write_tree(&tree_oid, index));
+	cl_git_pass(git_index_write(index));
 
+	cl_git_pass(git_index_write_tree(&tree_oid, index));
 	cl_git_pass(git_tree_lookup(&tree, repo, &tree_oid));
 
 	cl_git_pass(git_repository_head(&master_ref, repo));
