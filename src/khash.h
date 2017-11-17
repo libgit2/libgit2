@@ -188,6 +188,18 @@ typedef khint_t khiter_t;
 
 static const double __ac_HASH_UPPER = 0.77;
 
+static void memxchange(void *aptr, void *bptr, size_t len)
+{
+	char *a = (char *) aptr, *b = (char *) bptr;
+	while (len--) {
+		*a = *a ^ *b;
+		*b = *a ^ *b;
+		*a = *a ^ *b;
+		a++;
+		b++;
+	}
+}
+
 typedef khint32_t (*khash_hash_fn)(const void *);
 typedef int (*khash_hash_equal_fn)(const void *, const void *);
 
@@ -275,26 +287,22 @@ typedef struct khash {
 		if (j) { /* rehashing is needed */								\
 			for (j = 0; j != h->n_buckets; ++j) {						\
 				if (__ac_iseither(h->flags, j) == 0) {					\
-					khkey_t key;							\
-					khval_t val;										\
 					khint_t new_mask;									\
-					memcpy(&key, &kh_key(h, j), h->keysize);					\
 					new_mask = new_n_buckets - 1; 						\
-					if (kh_is_map) memcpy(&val, &kh_val(h, j), h->valsize);					\
 					__ac_set_isdel_true(h->flags, j);					\
 					while (1) { /* kick-out process; sort of like in Cuckoo hashing */ \
 						khint_t k, i, step = 0; \
-						k = h->hash(&key);							\
+						k = h->hash(&kh_key(h, j));							\
 						i = k & new_mask;								\
 						while (!__ac_isempty(new_flags, i)) i = (i + (++step)) & new_mask; \
 						__ac_set_isempty_false(new_flags, i);			\
 						if (i < h->n_buckets && __ac_iseither(h->flags, i) == 0) { /* kick out the existing element */ \
-							{ khkey_t tmp; memcpy(&tmp, &kh_key(h, i), h->keysize); memcpy(&kh_key(h, i), &key, h->keysize); memcpy(&key, &tmp, h->keysize); } \
-							if (kh_is_map) { khval_t tmp; memcpy(&tmp, &kh_val(h, i), h->valsize); memcpy(&kh_val(h, i), &val, h->valsize); memcpy(&val, &tmp, h->valsize); } \
+							memxchange(&kh_key(h, i), &kh_key(h, j), h->keysize); \
+							if (kh_is_map) memxchange(&kh_val(h, i), &kh_val(h, j), h->valsize); \
 							__ac_set_isdel_true(h->flags, i); /* mark it as deleted in the old hash table */ \
 						} else { /* write the element and jump out of the loop */ \
-							memcpy(&kh_key(h, i), &key, h->keysize);							\
-							if (kh_is_map) memcpy(&kh_val(h, i), &val, h->valsize);			\
+							memcpy(&kh_key(h, i), &kh_key(h, j), h->keysize);							\
+							if (kh_is_map) memcpy(&kh_val(h, i), &kh_val(h, j), h->valsize);			\
 							break;										\
 						}												\
 					}													\
