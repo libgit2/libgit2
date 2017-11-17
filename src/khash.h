@@ -371,43 +371,58 @@ typedef struct khash {
   @param  key   The integer [khint32_t]
   @return       The hash value [khint_t]
  */
-#define kh_int_hash_func(key) (khint32_t)(*(khint_64_t *) key)
+static kh_inline khint_t kh_int_hash_func(const void *key)
+{
+	return *(khint32_t *) key;
+}
+
 /*! @function
   @abstract     Integer comparison function
  */
-#define kh_int_hash_equal(a, b) (*(khint32_t *) (a) == *(khint32_t *) (b))
+static kh_inline int kh_int_hash_equal(const void *a, const void *b)
+{
+	return *(khint32_t *) a == *(khint32_t *) b;
+}
+
 /*! @function
   @abstract     64-bit integer hash function
   @param  key   The integer [khint64_t]
   @return       The hash value [khint_t]
  */
-#define kh_int64_hash_func(key) (khint32_t)((*(khint64_t *) key)>>33^(*(khint64_t *) key)^(*(khint64_t *) key)<<11)
+static kh_inline khint_t kh_int64_hash_func(const void *keyptr)
+{
+	khint64_t key = *(khint64_t *) keyptr;
+	return key>>33^key^key<<11;
+}
+
 /*! @function
   @abstract     64-bit integer comparison function
  */
-#define kh_int64_hash_equal(a, b) (*(khint64_t *) (a) == *(khint64_t *) (b))
+static kh_inline int kh_int64_hash_equal(const void *a, const void *b)
+{
+	return *(khint64_t *) a == *(khint64_t *) b;
+}
+
 /*! @function
-  @abstract     const char* hash function
-  @param  s     Pointer to a null terminated string
-  @return       The hash value
+  @abstract     Another interface to const char* hash function
+  @param  key   Pointer to a null terminated string [const char*]
+  @return       The hash value [khint_t]
  */
-static kh_inline khint_t __ac_X31_hash_string(const void *ptr)
+static kh_inline khint32_t kh_str_hash_func(const void *ptr)
 {
 	const char *s = *(const char **) ptr;
 	khint_t h = (khint_t)*s;
 	if (h) for (++s ; *s; ++s) h = (h << 5) - h + (khint_t)*s;
 	return h;
 }
-/*! @function
-  @abstract     Another interface to const char* hash function
-  @param  key   Pointer to a null terminated string [const char*]
-  @return       The hash value [khint_t]
- */
-#define kh_str_hash_func(key) __ac_X31_hash_string(key)
+
 /*! @function
   @abstract     Const char* comparison function
  */
-#define kh_str_hash_equal(a, b) (strcmp(*(const char **) a, *(const char **) b) == 0)
+static kh_inline int kh_str_hash_equal(const void *a, const void *b)
+{
+	return strcmp(*(const char **) a, *(const char **) b) == 0;
+}
 
 static kh_inline khint_t __ac_Wang_hash(khint_t key)
 {
