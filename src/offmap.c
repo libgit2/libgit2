@@ -7,21 +7,19 @@
 
 #include "offmap.h"
 
-__KHASH_IMPL(off, static kh_inline, git_off_t, void *, 1, kh_int64_hash_func, kh_int64_hash_equal)
-
 git_offmap *git_offmap_alloc(void)
 {
-	return kh_init(off, sizeof(git_off_t), sizeof(void *), kh_int64_hash_func, kh_int64_hash_equal, true);
+	return kh_init(sizeof(git_off_t), sizeof(void *), kh_int64_hash_func, kh_int64_hash_equal, true);
 }
 
 void git_offmap_free(git_offmap *map)
 {
-	kh_destroy(off, map);
+	kh_destroy(map);
 }
 
 void git_offmap_clear(git_offmap *map)
 {
-	kh_clear(off, map);
+	kh_clear(map);
 }
 
 size_t git_offmap_num_entries(git_offmap *map)
@@ -31,7 +29,7 @@ size_t git_offmap_num_entries(git_offmap *map)
 
 size_t git_offmap_lookup_index(git_offmap *map, const git_off_t key)
 {
-	return kh_get(off, map, &key);
+	return kh_get(map, &key);
 }
 
 int git_offmap_valid_index(git_offmap *map, size_t idx)
@@ -41,7 +39,7 @@ int git_offmap_valid_index(git_offmap *map, size_t idx)
 
 int git_offmap_exists(git_offmap *map, const git_off_t key)
 {
-	return kh_get(off, map, &key) != kh_end(map);
+	return kh_get(map, &key) != kh_end(map);
 }
 
 void *git_offmap_value_at(git_offmap *map, size_t idx)
@@ -56,17 +54,17 @@ void git_offmap_set_value_at(git_offmap *map, size_t idx, void *value)
 
 void git_offmap_delete_at(git_offmap *map, size_t idx)
 {
-	kh_del(off, map, idx);
+	kh_del(map, idx);
 }
 
 int git_offmap_put(git_offmap *map, const git_off_t key, int *err)
 {
-	return kh_put(off, map, &key, err);
+	return kh_put(map, &key, err);
 }
 
 void git_offmap_insert(git_offmap *map, const git_off_t key, void *value, int *rval)
 {
-	khiter_t idx = kh_put(off, map, &key, rval);
+	khiter_t idx = kh_put(map, &key, rval);
 
 	if ((*rval) >= 0) {
 		if ((*rval) == 0)
