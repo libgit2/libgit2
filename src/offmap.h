@@ -18,8 +18,7 @@
 #define kfree git__free
 #include "khash.h"
 
-__KHASH_TYPE(off, git_off_t, void *)
-typedef khash_t(off) git_offmap;
+typedef khash git_offmap;
 
 git_offmap *git_offmap_alloc(void);
 void git_offmap_free(git_offmap *map);

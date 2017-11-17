@@ -19,11 +19,8 @@
 #define kfree git__free
 #include "khash.h"
 
-__KHASH_TYPE(idx, const git_index_entry *, git_index_entry *)
-__KHASH_TYPE(idxicase, const git_index_entry *, git_index_entry *)
-
-typedef khash_t(idx) git_idxmap;
-typedef khash_t(idxicase) git_idxmap_icase;
+typedef khash git_idxmap;
+typedef khash git_idxmap_icase;
 
 typedef khiter_t git_idxmap_iter;
 

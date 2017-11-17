@@ -188,32 +188,31 @@ typedef khint_t khiter_t;
 
 static const double __ac_HASH_UPPER = 0.77;
 
-#define __KHASH_TYPE(name, khkey_t, khval_t) \
-	typedef struct kh_##name##_s { \
-		khint_t n_buckets, size, n_occupied, upper_bound; \
-		khint_t keysize, valsize; \
-		khint32_t *flags; \
-		void *keys; \
-		void *vals; \
-	} kh_##name##_t;
+typedef struct khash {
+	khint_t n_buckets, size, n_occupied, upper_bound;
+	size_t keysize, valsize;
+	khint32_t *flags;
+	void *keys;
+	void *vals;
+} khash;
 
 #define __KHASH_PROTOTYPES(name, khkey_t, khval_t)	 					\
-	extern kh_##name##_t *kh_init_##name(void);							\
-	extern void kh_destroy_##name(kh_##name##_t *h);					\
-	extern void kh_clear_##name(kh_##name##_t *h);						\
-	extern khint_t kh_get_##name(const kh_##name##_t *h, khkey_t key); 	\
-	extern int kh_resize_##name(kh_##name##_t *h, khint_t new_n_buckets); \
-	extern khint_t kh_put_##name(kh_##name##_t *h, khkey_t key, int *ret); \
-	extern void kh_del_##name(kh_##name##_t *h, khint_t x);
+	extern khash *kh_init_##name(void);							\
+	extern void kh_destroy_##name(khash *h);					\
+	extern void kh_clear_##name(khash *h);						\
+	extern khint_t kh_get_##name(const khash *h, khkey_t key); 	\
+	extern int kh_resize_##name(khash *h, khint_t new_n_buckets); \
+	extern khint_t kh_put_##name(khash *h, khkey_t key, int *ret); \
+	extern void kh_del_##name(khash *h, khint_t x);
 
 #define __KHASH_IMPL(name, SCOPE, khkey_t, khval_t, kh_is_map, __hash_func, __hash_equal) \
-	SCOPE kh_##name##_t *kh_init_##name(void) {							\
-		kh_##name##_t *h = (kh_##name##_t*)kcalloc(1, sizeof(kh_##name##_t));		\
+	SCOPE khash *kh_init_##name(void) {							\
+		khash *h = (khash*)kcalloc(1, sizeof(khash));		\
 		h->keysize = sizeof(khkey_t);							\
 		h->valsize = sizeof(khval_t);							\
 		return h;									\
 	}																	\
-	SCOPE void kh_destroy_##name(kh_##name##_t *h)						\
+	SCOPE void kh_destroy_##name(khash *h)						\
 	{																	\
 		if (h) {														\
 			kfree((void *)h->keys); kfree(h->flags);					\
@@ -221,14 +220,14 @@ static const double __ac_HASH_UPPER = 0.77;
 			kfree(h);													\
 		}																\
 	}																	\
-	SCOPE void kh_clear_##name(kh_##name##_t *h)						\
+	SCOPE void kh_clear_##name(khash *h)						\
 	{																	\
 		if (h && h->flags) {											\
 			memset(h->flags, 0xaa, __ac_fsize(h->n_buckets) * sizeof(khint32_t)); \
 			h->size = h->n_occupied = 0;								\
 		}																\
 	}																	\
-	SCOPE khint_t kh_get_##name(const kh_##name##_t *h, khkey_t key) 	\
+	SCOPE khint_t kh_get_##name(const khash *h, khkey_t key) 	\
 	{																	\
 		if (h->n_buckets) {												\
 			khint_t k, i, last, mask, step = 0; \
@@ -242,7 +241,7 @@ static const double __ac_HASH_UPPER = 0.77;
 			return __ac_iseither(h->flags, i)? h->n_buckets : i;		\
 		} else return 0;												\
 	}																	\
-	SCOPE int kh_resize_##name(kh_##name##_t *h, khint_t new_n_buckets) \
+	SCOPE int kh_resize_##name(khash *h, khint_t new_n_buckets) \
 	{ /* This function uses 0.25*n_buckets bytes of working space instead of [sizeof(key_t+val_t)+.25]*n_buckets. */ \
 		khint32_t *new_flags = 0;										\
 		khint_t j = 1;													\
@@ -306,7 +305,7 @@ static const double __ac_HASH_UPPER = 0.77;
 		}																\
 		return 0;														\
 	}																	\
-	SCOPE khint_t kh_put_##name(kh_##name##_t *h, khkey_t key, int *ret) \
+	SCOPE khint_t kh_put_##name(khash *h, khkey_t key, int *ret) \
 	{																	\
 		khint_t x;														\
 		if (h->n_occupied >= h->upper_bound) { /* update the hash table */ \
@@ -348,7 +347,7 @@ static const double __ac_HASH_UPPER = 0.77;
 		} else *ret = 0; /* Don't touch h->keys[x] if present and not deleted */ \
 		return x;														\
 	}																	\
-	SCOPE void kh_del_##name(kh_##name##_t *h, khint_t x)				\
+	SCOPE void kh_del_##name(khash *h, khint_t x)				\
 	{																	\
 		if (x != h->n_buckets && !__ac_iseither(h->flags, x)) {			\
 			__ac_set_isdel_true(h->flags, x);							\
@@ -357,11 +356,9 @@ static const double __ac_HASH_UPPER = 0.77;
 	}
 
 #define KHASH_DECLARE(name, khkey_t, khval_t)		 					\
-	__KHASH_TYPE(name, khkey_t, khval_t) 								\
 	__KHASH_PROTOTYPES(name, khkey_t, khval_t)
 
 #define KHASH_INIT2(name, SCOPE, khkey_t, khval_t, kh_is_map, __hash_func, __hash_equal) \
-	__KHASH_TYPE(name, khkey_t, khval_t) 								\
 	__KHASH_IMPL(name, SCOPE, khkey_t, khval_t, kh_is_map, __hash_func, __hash_equal)
 
 #define KHASH_INIT(name, khkey_t, khval_t, kh_is_map, __hash_func, __hash_equal) \
@@ -432,7 +429,7 @@ static kh_inline khint_t __ac_Wang_hash(khint_t key)
   @abstract Type of the hash table.
   @param  name  Name of the hash table [symbol]
  */
-#define khash_t(name) kh_##name##_t
+#define khash_t(name) khash
 
 /*! @function
   @abstract     Initiate a hash table.
