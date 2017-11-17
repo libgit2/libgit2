@@ -194,7 +194,7 @@ static const double __ac_HASH_UPPER = 0.77;
 		khint_t keysize, valsize; \
 		khint32_t *flags; \
 		khkey_t *keys; \
-		khval_t *vals; \
+		void *vals; \
 	} kh_##name##_t;
 
 #define __KHASH_PROTOTYPES(name, khkey_t, khval_t)	 					\
@@ -259,7 +259,7 @@ static const double __ac_HASH_UPPER = 0.77;
 					if (!new_keys) { kfree(new_flags); return -1; }		\
 					h->keys = new_keys;									\
 					if (kh_is_map) {									\
-						khval_t *new_vals = (khval_t*)kreallocarray((void *)h->vals, new_n_buckets, sizeof(khval_t)); \
+						void *new_vals = kreallocarray(h->vals, new_n_buckets, h->valsize); \
 						if (!new_vals) { kfree(new_flags); return -1; }	\
 						h->vals = new_vals;								\
 					}													\
@@ -296,7 +296,7 @@ static const double __ac_HASH_UPPER = 0.77;
 			}															\
 			if (h->n_buckets > new_n_buckets) { /* shrink the hash table */ \
 				h->keys = (khkey_t*)kreallocarray((void *)h->keys, new_n_buckets, sizeof(khkey_t)); \
-				if (kh_is_map) h->vals = (khval_t*)kreallocarray((void *)h->vals, new_n_buckets, sizeof(khval_t)); \
+				if (kh_is_map) h->vals = kreallocarray(h->vals, new_n_buckets, h->valsize); \
 			}															\
 			kfree(h->flags); /* free the working space */				\
 			h->flags = new_flags;										\
@@ -515,12 +515,12 @@ static kh_inline khint_t __ac_Wang_hash(khint_t key)
   @return       Value [type of values]
   @discussion   For hash sets, calling this results in segfault.
  */
-#define kh_val(h, x) ((h)->vals[x])
+#define kh_val(h, x) (((void **) ((h)->vals + ((x) * (h)->valsize)))[0])
 
 /*! @function
   @abstract     Alias of kh_val()
  */
-#define kh_value(h, x) ((h)->vals[x])
+#define kh_value(h, x) (((void **) ((h)->vals + ((x) * (h)->valsize)))[0])
 
 /*! @function
   @abstract     Get the start iterator
