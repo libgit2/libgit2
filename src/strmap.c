@@ -61,7 +61,7 @@ const char *git_strmap_key(git_strmap *map, size_t idx)
 
 void git_strmap_set_key_at(git_strmap *map, size_t idx, char *key)
 {
-	kh_val(map, idx) = key;
+	kh_key(map, idx) = key;
 }
 
 void *git_strmap_value_at(git_strmap *map, size_t idx)
