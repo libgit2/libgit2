@@ -191,6 +191,7 @@ static const double __ac_HASH_UPPER = 0.77;
 #define __KHASH_TYPE(name, khkey_t, khval_t) \
 	typedef struct kh_##name##_s { \
 		khint_t n_buckets, size, n_occupied, upper_bound; \
+		khint_t keysize, valsize; \
 		khint32_t *flags; \
 		khkey_t *keys; \
 		khval_t *vals; \
@@ -207,7 +208,10 @@ static const double __ac_HASH_UPPER = 0.77;
 
 #define __KHASH_IMPL(name, SCOPE, khkey_t, khval_t, kh_is_map, __hash_func, __hash_equal) \
 	SCOPE kh_##name##_t *kh_init_##name(void) {							\
-		return (kh_##name##_t*)kcalloc(1, sizeof(kh_##name##_t));		\
+		kh_##name##_t *h = (kh_##name##_t*)kcalloc(1, sizeof(kh_##name##_t));		\
+		h->keysize = sizeof(khkey_t);							\
+		h->valsize = sizeof(khval_t);							\
+		return h;									\
 	}																	\
 	SCOPE void kh_destroy_##name(kh_##name##_t *h)						\
 	{																	\
@@ -265,11 +269,12 @@ static const double __ac_HASH_UPPER = 0.77;
 		if (j) { /* rehashing is needed */								\
 			for (j = 0; j != h->n_buckets; ++j) {						\
 				if (__ac_iseither(h->flags, j) == 0) {					\
-					khkey_t key = kh_key(h, j);							\
+					khkey_t key;							\
 					khval_t val;										\
 					khint_t new_mask;									\
+					memcpy(&key, &kh_key(h, j), h->keysize);					\
 					new_mask = new_n_buckets - 1; 						\
-					if (kh_is_map) val = kh_val(h, j);					\
+					if (kh_is_map) memcpy(&val, &kh_val(h, j), h->valsize);					\
 					__ac_set_isdel_true(h->flags, j);					\
 					while (1) { /* kick-out process; sort of like in Cuckoo hashing */ \
 						khint_t k, i, step = 0; \
@@ -278,12 +283,12 @@ static const double __ac_HASH_UPPER = 0.77;
 						while (!__ac_isempty(new_flags, i)) i = (i + (++step)) & new_mask; \
 						__ac_set_isempty_false(new_flags, i);			\
 						if (i < h->n_buckets && __ac_iseither(h->flags, i) == 0) { /* kick out the existing element */ \
-							{ khkey_t tmp = kh_key(h, i); kh_key(h, i) = key; key = tmp; } \
-							if (kh_is_map) { khval_t tmp = kh_val(h, i); kh_val(h, i) = val; val = tmp; } \
+							{ khkey_t tmp; memcpy(&tmp, &kh_key(h, i), h->keysize); memcpy(&kh_key(h, i), &key, h->keysize); memcpy(&key, &tmp, h->keysize); } \
+							if (kh_is_map) { khval_t tmp; memcpy(&tmp, &kh_val(h, i), h->valsize); memcpy(&kh_val(h, i), &val, h->valsize); memcpy(&val, &tmp, h->valsize); } \
 							__ac_set_isdel_true(h->flags, i); /* mark it as deleted in the old hash table */ \
 						} else { /* write the element and jump out of the loop */ \
-							kh_key(h, i) = key;							\
-							if (kh_is_map) kh_val(h, i) = val;			\
+							memcpy(&kh_key(h, i), &key, h->keysize);							\
+							if (kh_is_map) memcpy(&kh_val(h, i), &val, h->valsize);			\
 							break;										\
 						}												\
 					}													\
@@ -331,12 +336,12 @@ static const double __ac_HASH_UPPER = 0.77;
 			}															\
 		}																\
 		if (__ac_isempty(h->flags, x)) { /* not present at all */		\
-			kh_key(h, x) = key;											\
+			memcpy(&kh_key(h, x), &key, h->keysize);											\
 			__ac_set_isboth_false(h->flags, x);							\
 			++h->size; ++h->n_occupied;									\
 			*ret = 1;													\
 		} else if (__ac_isdel(h->flags, x)) { /* deleted */				\
-			kh_key(h, x) = key;											\
+			memcpy(&kh_key(h, x), &key, h->keysize);											\
 			__ac_set_isboth_false(h->flags, x);							\
 			++h->size;													\
 			*ret = 2;													\
@@ -555,8 +560,8 @@ static kh_inline khint_t __ac_Wang_hash(khint_t key)
 #define kh_foreach(h, kvar, vvar, code) { khint_t __i;		\
 	for (__i = kh_begin(h); __i != kh_end(h); ++__i) {		\
 		if (!kh_exist(h,__i)) continue;						\
-		(kvar) = kh_key(h,__i);								\
-		(vvar) = kh_val(h,__i);								\
+		memcpy(&(kvar), &kh_key(h,__i), (h)->keysize);								\
+		memcpy(&(vvar), &kh_val(h,__i), (h)->valsize);								\
 		code;												\
 	} }
 
@@ -569,7 +574,7 @@ static kh_inline khint_t __ac_Wang_hash(khint_t key)
 #define kh_foreach_value(h, vvar, code) { khint_t __i;		\
 	for (__i = kh_begin(h); __i != kh_end(h); ++__i) {		\
 		if (!kh_exist(h,__i)) continue;						\
-		(vvar) = kh_val(h,__i);								\
+		memcpy(&(vvar), &kh_val(h,__i), h->valsize);								\
 		code;												\
 	} }
 
