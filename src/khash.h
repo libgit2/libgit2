@@ -188,10 +188,15 @@ typedef khint_t khiter_t;
 
 static const double __ac_HASH_UPPER = 0.77;
 
+typedef khint32_t (*khash_hash_fn)(const void *);
+typedef int (*khash_hash_equal_fn)(const void *, const void *);
+
 typedef struct khash {
 	khint_t n_buckets, size, n_occupied, upper_bound;
 	size_t keysize, valsize;
 	khint32_t *flags;
+	khash_hash_fn hash;
+	khash_hash_equal_fn hash_equal;
 	void *keys;
 	void *vals;
 } khash;
@@ -210,6 +215,8 @@ typedef struct khash {
 		khash *h = (khash*)kcalloc(1, sizeof(khash));		\
 		h->keysize = sizeof(khkey_t);							\
 		h->valsize = sizeof(khval_t);							\
+		h->hash = __hash_func;								\
+		h->hash_equal = __hash_equal;							\
 		return h;									\
 	}																	\
 	SCOPE void kh_destroy_##name(khash *h)						\
@@ -232,9 +239,9 @@ typedef struct khash {
 		if (h->n_buckets) {												\
 			khint_t k, i, last, mask, step = 0; \
 			mask = h->n_buckets - 1;									\
-			k = __hash_func(&key); i = k & mask;							\
+			k = h->hash(&key); i = k & mask;							\
 			last = i; \
-			while (!__ac_isempty(h->flags, i) && (__ac_isdel(h->flags, i) || !__hash_equal(&kh_key(h, i), &key))) { \
+			while (!__ac_isempty(h->flags, i) && (__ac_isdel(h->flags, i) || !h->hash_equal(&kh_key(h, i), &key))) { \
 				i = (i + (++step)) & mask; \
 				if (i == last) return h->n_buckets;						\
 			}															\
@@ -277,7 +284,7 @@ typedef struct khash {
 					__ac_set_isdel_true(h->flags, j);					\
 					while (1) { /* kick-out process; sort of like in Cuckoo hashing */ \
 						khint_t k, i, step = 0; \
-						k = __hash_func(&key);							\
+						k = h->hash(&key);							\
 						i = k & new_mask;								\
 						while (!__ac_isempty(new_flags, i)) i = (i + (++step)) & new_mask; \
 						__ac_set_isempty_false(new_flags, i);			\
@@ -319,11 +326,11 @@ typedef struct khash {
 		} /* TODO: to implement automatically shrinking; resize() already support shrinking */ \
 		{																\
 			khint_t k, i, site, last, mask = h->n_buckets - 1, step = 0; \
-			x = site = h->n_buckets; k = __hash_func(&key); i = k & mask; \
+			x = site = h->n_buckets; k = h->hash(&key); i = k & mask; \
 			if (__ac_isempty(h->flags, i)) x = i; /* for speed up */	\
 			else {														\
 				last = i; \
-				while (!__ac_isempty(h->flags, i) && (__ac_isdel(h->flags, i) || !__hash_equal(&kh_key(h, i), &key))) { \
+				while (!__ac_isempty(h->flags, i) && (__ac_isdel(h->flags, i) || !h->hash_equal(&kh_key(h, i), &key))) { \
 					if (__ac_isdel(h->flags, i)) site = i;				\
 					i = (i + (++step)) & mask; \
 					if (i == last) { x = site; break; }					\
