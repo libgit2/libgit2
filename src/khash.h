@@ -209,6 +209,7 @@ typedef struct khash {
 	khint32_t *flags;
 	khash_hash_fn hash;
 	khash_hash_equal_fn hash_equal;
+	bool is_map;
 	void *keys;
 	void *vals;
 } khash;
@@ -229,6 +230,7 @@ typedef struct khash {
 		h->valsize = sizeof(khval_t);							\
 		h->hash = __hash_func;								\
 		h->hash_equal = __hash_equal;							\
+		h->is_map = kh_is_map;								\
 		return h;									\
 	}																	\
 	SCOPE void kh_destroy_##name(khash *h)						\
@@ -276,7 +278,7 @@ typedef struct khash {
 					void *new_keys = kreallocarray((void *)h->keys, new_n_buckets, h->keysize); \
 					if (!new_keys) { kfree(new_flags); return -1; }		\
 					h->keys = new_keys;									\
-					if (kh_is_map) {									\
+					if (h->is_map) {									\
 						void *new_vals = kreallocarray(h->vals, new_n_buckets, h->valsize); \
 						if (!new_vals) { kfree(new_flags); return -1; }	\
 						h->vals = new_vals;								\
@@ -298,11 +300,11 @@ typedef struct khash {
 						__ac_set_isempty_false(new_flags, i);			\
 						if (i < h->n_buckets && __ac_iseither(h->flags, i) == 0) { /* kick out the existing element */ \
 							memxchange(&kh_key(h, i), &kh_key(h, j), h->keysize); \
-							if (kh_is_map) memxchange(&kh_val(h, i), &kh_val(h, j), h->valsize); \
+							if (h->is_map) memxchange(&kh_val(h, i), &kh_val(h, j), h->valsize); \
 							__ac_set_isdel_true(h->flags, i); /* mark it as deleted in the old hash table */ \
 						} else { /* write the element and jump out of the loop */ \
 							memcpy(&kh_key(h, i), &kh_key(h, j), h->keysize);							\
-							if (kh_is_map) memcpy(&kh_val(h, i), &kh_val(h, j), h->valsize);			\
+							if (h->is_map) memcpy(&kh_val(h, i), &kh_val(h, j), h->valsize);			\
 							break;										\
 						}												\
 					}													\
@@ -310,7 +312,7 @@ typedef struct khash {
 			}															\
 			if (h->n_buckets > new_n_buckets) { /* shrink the hash table */ \
 				h->keys = kreallocarray((void *)h->keys, new_n_buckets, h->keysize); \
-				if (kh_is_map) h->vals = kreallocarray(h->vals, new_n_buckets, h->valsize); \
+				if (h->is_map) h->vals = kreallocarray(h->vals, new_n_buckets, h->valsize); \
 			}															\
 			kfree(h->flags); /* free the working space */				\
 			h->flags = new_flags;										\
