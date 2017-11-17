@@ -30,26 +30,23 @@ static kh_inline int idxentry_icase_equal(const void *aptr, const void *bptr)
 }
 
 __KHASH_IMPL(idx, static kh_inline, const git_index_entry *, git_index_entry *, 1, idxentry_hash, idxentry_equal)
-__KHASH_IMPL(idxicase, static kh_inline, const git_index_entry *, git_index_entry *, 1, idxentry_hash, idxentry_icase_equal)
 
-int git_idxmap_alloc(git_idxmap **map)
+int git_idxmap_alloc(git_idxmap **map, bool ignore_case)
 {
 	if ((*map = kh_init(idx)) == NULL) {
 		giterr_set_oom();
 		return -1;
 	}
 
+	git_idxmap_set_ignore_case(*map, ignore_case);
+
 	return 0;
 }
 
-int git_idxmap_icase_alloc(git_idxmap_icase **map)
+void git_idxmap_set_ignore_case(git_idxmap *map, bool ignore_case)
 {
-	if ((*map = kh_init(idxicase)) == NULL) {
-		giterr_set_oom();
-		return -1;
-	}
-
-	return 0;
+	map->hash_equal = ignore_case ?
+		idxentry_icase_equal : idxentry_equal;
 }
 
 void git_idxmap_insert(git_idxmap *map, const git_index_entry *key, void *value, int *rval)
@@ -63,25 +60,9 @@ void git_idxmap_insert(git_idxmap *map, const git_index_entry *key, void *value,
 	}
 }
 
-void git_idxmap_icase_insert(git_idxmap_icase *map, const git_index_entry *key, void *value, int *rval)
-{
-	khiter_t idx = kh_put(idxicase, map, key, rval);
-
-	if ((*rval) >= 0) {
-		if ((*rval) == 0)
-			memcpy(&kh_key(map, idx), &key, map->keysize);
-		memcpy(&kh_val(map, idx), &value, map->valsize);
-	}
-}
-
 size_t git_idxmap_lookup_index(git_idxmap *map, const git_index_entry *key)
 {
 	return kh_get(idx, map, key);
-}
-
-size_t git_idxmap_icase_lookup_index(git_idxmap_icase *map, const git_index_entry *key)
-{
-	return kh_get(idxicase, map, key);
 }
 
 void *git_idxmap_value_at(git_idxmap *map, size_t idx)
@@ -104,11 +85,6 @@ void git_idxmap_resize(git_idxmap *map, size_t size)
 	kh_resize(idx, map, size);
 }
 
-void git_idxmap_icase_resize(git_idxmap_icase *map, size_t size)
-{
-	kh_resize(idxicase, map, size);
-}
-
 void git_idxmap_free(git_idxmap *map)
 {
 	kh_destroy(idx, map);
@@ -124,20 +100,9 @@ void git_idxmap_delete_at(git_idxmap *map, size_t idx)
 	kh_del(idx, map, idx);
 }
 
-void git_idxmap_icase_delete_at(git_idxmap_icase *map, size_t idx)
-{
-	kh_del(idxicase, map, idx);
-}
-
 void git_idxmap_delete(git_idxmap *map, const git_index_entry *key)
 {
 	khiter_t idx = git_idxmap_lookup_index(map, key);
 	if (git_idxmap_valid_index(map, idx))
 		git_idxmap_delete_at(map, idx);
-}
-void git_idxmap_icase_delete(git_idxmap_icase *map, const git_index_entry *key)
-{
-	khiter_t idx = git_idxmap_icase_lookup_index(map, key);
-	if (git_idxmap_valid_index((git_idxmap *)map, idx))
-		git_idxmap_icase_delete_at(map, idx);
 }
