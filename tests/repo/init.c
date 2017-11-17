@@ -797,17 +797,15 @@ static void impl_test_repo_init__init_with_initial_commit(
 
 	/* Create a commit with the new contents of the index */
 	{
-		int sig_name_matches = 0, sig_email_matches = 0;
+		int sig_name_matches, sig_email_matches;
 		git_signature *sig;
 		git_oid tree_id, commit_id;
 		git_tree *tree;
 
 		cl_git_pass(git_signature_func(&sig, _repo));
 
-		if (!strcmp(sig->name, (env_author_name ? env_author_name : cfg_user_name)))
-			sig_name_matches = 1;
-		if (!strcmp(sig->email, (env_author_email ? env_author_email : cfg_user_email)))
-			sig_email_matches = 1;
+		sig_name_matches = !strcmp(sig->name, (env_author_name ? env_author_name : cfg_user_name));
+		sig_email_matches = !strcmp(sig->email, (env_author_email ? env_author_email : cfg_user_email));
 
 		cl_git_pass(git_index_write_tree(&tree_id, index));
 		cl_git_pass(git_tree_lookup(&tree, _repo, &tree_id));
