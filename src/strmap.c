@@ -61,7 +61,7 @@ const char *git_strmap_key(git_strmap *map, size_t idx)
 
 void git_strmap_set_key_at(git_strmap *map, size_t idx, char *key)
 {
-	kh_key(map, idx) = key;
+	memcpy(&kh_key(map, idx), &key, map->keysize);
 }
 
 void *git_strmap_value_at(git_strmap *map, size_t idx)
@@ -71,7 +71,7 @@ void *git_strmap_value_at(git_strmap *map, size_t idx)
 
 void git_strmap_set_value_at(git_strmap *map, size_t idx, void *value)
 {
-	kh_val(map, idx) = value;
+	memcpy(&kh_val(map, idx), &value, map->valsize);
 }
 
 void git_strmap_delete_at(git_strmap *map, size_t idx)
@@ -90,8 +90,8 @@ void git_strmap_insert(git_strmap *map, const char *key, void *value, int *rval)
 
 	if ((*rval) >= 0) {
 		if ((*rval) == 0)
-			kh_key(map, idx) = key;
-		kh_val(map, idx) = value;
+			memcpy(&kh_key(map, idx), &key, map->keysize);
+		memcpy(&kh_val(map, idx), &value, map->valsize);
 	}
 }
 

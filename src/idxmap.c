@@ -57,8 +57,8 @@ void git_idxmap_insert(git_idxmap *map, const git_index_entry *key, void *value,
 
 	if ((*rval) >= 0) {
 		if ((*rval) == 0)
-			kh_key(map, idx) = key;
-		kh_val(map, idx) = value;
+			memcpy(&kh_key(map, idx), &key, map->keysize);
+		memcpy(&kh_val(map, idx), &value, map->valsize);
 	}
 }
 
@@ -68,8 +68,8 @@ void git_idxmap_icase_insert(git_idxmap_icase *map, const git_index_entry *key, 
 
 	if ((*rval) >= 0) {
 		if ((*rval) == 0)
-			kh_key(map, idx) = key;
-		kh_val(map, idx) = value;
+			memcpy(&kh_key(map, idx), &key, map->keysize);
+		memcpy(&kh_val(map, idx), &value, map->valsize);
 	}
 }
 

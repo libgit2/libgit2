@@ -51,7 +51,7 @@ void *git_offmap_value_at(git_offmap *map, size_t idx)
 
 void git_offmap_set_value_at(git_offmap *map, size_t idx, void *value)
 {
-	kh_val(map, idx) = value;
+	memcpy(&kh_val(map, idx), &value, map->valsize);
 }
 
 void git_offmap_delete_at(git_offmap *map, size_t idx)
@@ -70,8 +70,8 @@ void git_offmap_insert(git_offmap *map, const git_off_t key, void *value, int *r
 
 	if ((*rval) >= 0) {
 		if ((*rval) == 0)
-			kh_key(map, idx) = key;
-		kh_val(map, idx) = value;
+			memcpy(&kh_key(map, idx), &key, map->keysize);
+		memcpy(&kh_val(map, idx), &value, map->valsize);
 	}
 }
 

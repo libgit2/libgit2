@@ -63,7 +63,7 @@ const git_oid *git_oidmap_key(git_oidmap *map, size_t idx)
 
 void git_oidmap_set_key_at(git_oidmap *map, size_t idx, git_oid *key)
 {
-	kh_key(map, idx) = key;
+	memcpy(&kh_key(map, idx), &key, map->keysize);
 }
 
 void *git_oidmap_value_at(git_oidmap *map, size_t idx)
@@ -73,7 +73,7 @@ void *git_oidmap_value_at(git_oidmap *map, size_t idx)
 
 void git_oidmap_set_value_at(git_oidmap *map, size_t idx, void *value)
 {
-	kh_val(map, idx) = value;
+	memcpy(&kh_val(map, idx), &value, map->valsize);
 }
 
 void git_oidmap_delete_at(git_oidmap *map, size_t idx)
@@ -92,8 +92,8 @@ void git_oidmap_insert(git_oidmap *map, const git_oid *key, void *value, int *rv
 
 	if ((*rval) >= 0) {
 		if ((*rval) == 0)
-			kh_key(map, idx) = key;
-		kh_val(map, idx) = value;
+			memcpy(&kh_key(map, idx), &key, map->keysize);
+		memcpy(&kh_val(map, idx), &value, map->valsize);
 	}
 }
 
