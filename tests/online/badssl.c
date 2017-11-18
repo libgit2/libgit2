@@ -67,9 +67,6 @@ void test_online_badssl__old_cipher(void)
 	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
 	opts.fetch_opts.callbacks.certificate_check = cert_check_assert_invalid;
 
-	/* FIXME: we don't actually reject RC4 anywhere, figure out what to tweak */
-	cl_skip();
-
 	if (!g_has_ssl)
 		cl_skip();
 
