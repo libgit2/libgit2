@@ -1084,7 +1084,7 @@ int git_patch_parse(
 	patch->base.diff_opts.new_prefix = patch->new_prefix;
 	patch->base.diff_opts.flags |= GIT_DIFF_SHOW_BINARY;
 
-	GIT_REFCOUNT_INC(patch);
+	GIT_REFCOUNT_INC(&patch->base);
 	*out = &patch->base;
 
 done:

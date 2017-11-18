@@ -36,7 +36,7 @@ static git_diff_parsed *diff_parsed_alloc(void)
 	if ((diff = git__calloc(1, sizeof(git_diff_parsed))) == NULL)
 		return NULL;
 
-	GIT_REFCOUNT_INC(diff);
+	GIT_REFCOUNT_INC(&diff->base);
 	diff->base.type = GIT_DIFF_TYPE_PARSED;
 	diff->base.strcomp = git__strcmp;
 	diff->base.strncomp = git__strncmp;
