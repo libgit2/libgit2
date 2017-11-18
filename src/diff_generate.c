@@ -411,7 +411,7 @@ static git_diff_generated *diff_generated_alloc(
 	if ((diff = git__calloc(1, sizeof(git_diff_generated))) == NULL)
 		return NULL;
 
-	GIT_REFCOUNT_INC(diff);
+	GIT_REFCOUNT_INC(&diff->base);
 	diff->base.type = GIT_DIFF_TYPE_GENERATED;
 	diff->base.repo = repo;
 	diff->base.old_src = old_iter->type;

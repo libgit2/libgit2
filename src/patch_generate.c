@@ -139,7 +139,7 @@ static int patch_generated_alloc_from_diff(
 
 	if (!(error = patch_generated_init(patch, diff, delta_index))) {
 		patch->flags |= GIT_PATCH_GENERATED_ALLOCATED;
-		GIT_REFCOUNT_INC(patch);
+		GIT_REFCOUNT_INC(&patch->base);
 	} else {
 		git__free(patch);
 		patch = NULL;

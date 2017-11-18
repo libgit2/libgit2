@@ -10,7 +10,6 @@
 #include <ctype.h>
 
 #include "git2/object.h"
-#include "git2/refdb.h"
 #include "git2/sys/repository.h"
 
 #include "common.h"
@@ -25,6 +24,7 @@
 #include "refs.h"
 #include "filter.h"
 #include "odb.h"
+#include "refdb.h"
 #include "remote.h"
 #include "merge.h"
 #include "diff_driver.h"
