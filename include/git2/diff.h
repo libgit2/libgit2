@@ -206,6 +206,12 @@ typedef enum {
 	 *  can apply given diff information to binary files.
 	 */
 	GIT_DIFF_SHOW_BINARY = (1 << 30),
+
+	/** Use a heuristic that takes indentation and whitespace into account
+	 * which generally can produce better diffs when dealing with ambiguous
+	 * diff hunks.
+	 */
+	GIT_DIFF_INDENT_HEURISTIC = (1 << 31),
 } git_diff_option_t;
 
 /**
