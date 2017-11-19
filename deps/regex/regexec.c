@@ -369,6 +369,7 @@ re_search_2_stub (struct re_pattern_buffer *bufp,
 
   /* Concatenate the strings.  */
   if (length2 > 0)
+    {
     if (length1 > 0)
       {
 	char *s = re_malloc (char, len);
@@ -382,6 +383,7 @@ re_search_2_stub (struct re_pattern_buffer *bufp,
       }
     else
       str = string2;
+    }
   else
     str = string1;
 
