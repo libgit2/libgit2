@@ -149,39 +149,44 @@ static int find_by_path(const git_config_entry *entry, void *payload)
 	return 0;
 }
 
-static int can_add_submodule(git_repository *repo, const char *path) {
-	int error;
+/*
+ * Checks to see if the submodule shares its name with a file or directory that
+ * already exists on the index. If so, the submodule cannot be added.
+ */
+static int can_add_submodule(git_repository *repo, const char *path)
+{
+	int error = 0;
 	git_index *index;
 	git_buf dir = GIT_BUF_INIT;
 
-	if ((error = git_buf_sets(&dir, path)) < 0)
-		return error;
-
-	if ((error = git_path_to_dir(&dir)) < 0)
-		return error;
-
-	/* get the index for the repo */
-
 	if ((error = git_repository_index__weakptr(&index, repo)) < 0)
-		return error;
-
-	/* see if the submodule name exists as a file on the index */
+		goto out;
 
 	if ((error = git_index_find(NULL, index, path)) == 0) {
 		giterr_set(GITERR_SUBMODULE,
-			"'%s' already exists in the index", path);
-		return GIT_EEXISTS;
+			"File '%s' already exists in the index", path);
+		error = GIT_EEXISTS;
+		goto out;
 	}
+	error = 0;
 
-	/* see if the submodule name exists as a directory on the index */
+	if ((error = git_buf_sets(&dir, path)) < 0)
+		goto out;
+
+	if ((error = git_path_to_dir(&dir)) < 0)
+		goto out;
 
 	if ((error = git_index_find_prefix(NULL, index, dir.ptr)) == 0) {
 		giterr_set(GITERR_SUBMODULE,
-			"'%s' already exists in the index", path);
-		return GIT_EEXISTS;
+			"Directory '%s' already exists in the index", path);
+		error = GIT_EEXISTS;
+		goto out;
 	}
+	error = 0;
 
-	return 0;
+out:
+	git_buf_free(&dir);
+	return error;
 }
 
 /**
