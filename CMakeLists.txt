@@ -709,10 +709,9 @@ IF (BUILD_CLAR)
 		ADD_TEST(libgit2_clar libgit2_clar -v -xclone::local::git_style_unc_paths -xclone::local::standard_unc_paths_are_written_git_style)
 	ENDIF ()
 
-	# Add a test target which runs the cred callback tests, to be
-	# called after setting the url and user
+	# Add additional test targets that require special setup
 	ADD_TEST(libgit2_clar-proxy_credentials libgit2_clar -v -sonline::clone::proxy_credentials_in_url -sonline::clone::proxy_credentials_request)
-
+	ADD_TEST(libgit2_clar-ssh libgit2_clar -v -sonline::push -sonline::clone::ssh_cert -sonline::clone::ssh_with_paths)
 ENDIF ()
 
 IF (TAGS)

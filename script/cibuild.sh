@@ -85,21 +85,18 @@ else
     export GITTEST_REMOTE_SSH_FINGERPRINT=$(ssh-keygen -F '[localhost]:2222' -l | tail -n 1 | cut -d ' ' -f 2 | tr -d ':')
 fi
 
+# Use the SSH server
 export GITTEST_REMOTE_URL="ssh://localhost:2222/$HOME/_temp/test.git"
 export GITTEST_REMOTE_USER=$USER
 export GITTEST_REMOTE_SSH_KEY="$HOME/.ssh/id_rsa"
 export GITTEST_REMOTE_SSH_PUBKEY="$HOME/.ssh/id_rsa.pub"
 export GITTEST_REMOTE_SSH_PASSPHRASE=""
+ctest -V -R libgit2_clar-ssh || exit $?
+
 # Use the proxy we started at the beginning
 export GITTEST_REMOTE_PROXY_URL="localhost:8080"
 export GITTEST_REMOTE_PROXY_USER="foo"
 export GITTEST_REMOTE_PROXY_PASS="bar"
-
-if [ -e ./libgit2_clar ]; then
-    ./libgit2_clar -sonline::push -sonline::clone::ssh_cert &&
-    ./libgit2_clar -sonline::clone::ssh_with_paths || exit $?
-
-    ctest -V -R libgit2_clar-proxy_credentials || exit $?
-fi
+ctest -V -R libgit2_clar-proxy_credentials || exit $?
 
 kill $(cat "$HOME/sshd/pid")
