@@ -211,6 +211,12 @@ int git_attr_cache__get(
 	git_attr_file_entry *entry = NULL;
 	git_attr_file *file = NULL, *updated = NULL;
 
+	if (cache == NULL) {
+		printf("the cache is NULL, repo probably freed\n");
+		printf("config 0x%p\n", repo->_config);
+		error = *((int *)0xdeadbeefdeafbeef);
+	}
+
 	if ((error = attr_cache_lookup(
 			&file, &entry, repo, attr_session, source, base, filename)) < 0)
 		return error;
