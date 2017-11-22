@@ -156,7 +156,6 @@ void test_refs_reflog_messages__branch_birth(void)
 
 	cl_git_pass(git_repository_head(&ref, g_repo));
 	cl_git_pass(git_reference_peel((git_object **) &tree, ref, GIT_OBJ_TREE));
-	git_reference_free(ref);
 
 	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/orphan"));
 
@@ -167,8 +166,6 @@ void test_refs_reflog_messages__branch_birth(void)
 	msg = "message 2";
 	cl_git_pass(git_commit_create(&id, g_repo, "HEAD", sig, sig, NULL, msg, tree, 0, NULL));
 
-	git_tree_free(tree);
-
 	cl_assert_equal_i(1, reflog_entrycount(g_repo, "refs/heads/orphan"));
 
 	nentries_after = reflog_entrycount(g_repo, GIT_HEAD_FILE);
@@ -176,6 +173,8 @@ void test_refs_reflog_messages__branch_birth(void)
 	cl_assert_equal_i(nentries + 1, nentries_after);
 
 	git_signature_free(sig);
+	git_tree_free(tree);
+	git_reference_free(ref);
 }
 
 void test_refs_reflog_messages__commit_on_symbolic_ref_updates_head_reflog(void)
@@ -183,7 +182,7 @@ void test_refs_reflog_messages__commit_on_symbolic_ref_updates_head_reflog(void)
 	git_signature *sig;
 	git_oid id;
 	git_tree *tree;
-	git_reference *ref;
+	git_reference *ref1, *ref2;
 	const char *msg;
 	size_t nentries_head, nentries_master;
 
@@ -191,15 +190,13 @@ void test_refs_reflog_messages__commit_on_symbolic_ref_updates_head_reflog(void)
 
 	cl_git_pass(git_signature_now(&sig, "me", "foo@example.com"));
 
-	cl_git_pass(git_repository_head(&ref, g_repo));
-	cl_git_pass(git_reference_peel((git_object **) &tree, ref, GIT_OBJ_TREE));
-	git_reference_free(ref);
+	cl_git_pass(git_repository_head(&ref1, g_repo));
+	cl_git_pass(git_reference_peel((git_object **) &tree, ref1, GIT_OBJ_TREE));
 
 	nentries_master = reflog_entrycount(g_repo, "refs/heads/master");
 
 	msg = "message 1";
-	cl_git_pass(git_reference_symbolic_create(&ref, g_repo, "refs/heads/master", "refs/heads/foo", 1, msg));
-	git_reference_free(ref);
+	cl_git_pass(git_reference_symbolic_create(&ref2, g_repo, "refs/heads/master", "refs/heads/foo", 1, msg));
 
 	cl_assert_equal_i(0, reflog_entrycount(g_repo, "refs/heads/foo"));
 	cl_assert_equal_i(nentries_head, reflog_entrycount(g_repo, GIT_HEAD_FILE));
@@ -207,13 +204,15 @@ void test_refs_reflog_messages__commit_on_symbolic_ref_updates_head_reflog(void)
 
 	msg = "message 2";
 	cl_git_pass(git_commit_create(&id, g_repo, "HEAD", sig, sig, NULL, msg, tree, 0, NULL));
-	git_tree_free(tree);
 
 	cl_assert_equal_i(1, reflog_entrycount(g_repo, "refs/heads/foo"));
 	cl_assert_equal_i(nentries_head + 1, reflog_entrycount(g_repo, GIT_HEAD_FILE));
 	cl_assert_equal_i(nentries_master, reflog_entrycount(g_repo, "refs/heads/master"));
 
 	git_signature_free(sig);
+	git_reference_free(ref1);
+	git_reference_free(ref2);
+	git_tree_free(tree);
 }
 
 void test_refs_reflog_messages__show_merge_for_merge_commits(void)
@@ -331,13 +330,13 @@ void test_refs_reflog_messages__creating_branches_default_messages(void)
 	git_annotated_commit *annotated;
 	git_object *obj;
 	git_commit *target;
-	git_reference *branch;
+	git_reference *branch1, *branch2;
 
 	cl_git_pass(git_revparse_single(&obj, g_repo, "e90810b8df3"));
 	cl_git_pass(git_commit_lookup(&target, g_repo, git_object_id(obj)));
 	git_object_free(obj);
 
-	cl_git_pass(git_branch_create(&branch, g_repo, NEW_BRANCH_NAME, target, false));
+	cl_git_pass(git_branch_create(&branch1, g_repo, NEW_BRANCH_NAME, target, false));
 
 	cl_git_pass(git_buf_printf(&buf, "branch: Created from %s", git_oid_tostr_s(git_commit_id(target))));
 	cl_reflog_check_entry(g_repo, "refs/heads/" NEW_BRANCH_NAME, 0,
@@ -346,11 +345,9 @@ void test_refs_reflog_messages__creating_branches_default_messages(void)
 		g_email, git_buf_cstr(&buf));
 
 	cl_git_pass(git_reference_remove(g_repo, "refs/heads/" NEW_BRANCH_NAME));
-	git_reference_free(branch);
-	git_buf_clear(&buf);
 
 	cl_git_pass(git_annotated_commit_from_revspec(&annotated, g_repo, "e90810b8df3"));
-	cl_git_pass(git_branch_create_from_annotated(&branch, g_repo, NEW_BRANCH_NAME, annotated, true));
+	cl_git_pass(git_branch_create_from_annotated(&branch2, g_repo, NEW_BRANCH_NAME, annotated, true));
 
 	cl_reflog_check_entry(g_repo, "refs/heads/" NEW_BRANCH_NAME, 0,
 		GIT_OID_HEX_ZERO,
@@ -359,6 +356,9 @@ void test_refs_reflog_messages__creating_branches_default_messages(void)
 
 	git_annotated_commit_free(annotated);
 	git_buf_free(&buf);
+	git_commit_free(target);
+	git_reference_free(branch1);
+	git_reference_free(branch2);
 }
 
 void test_refs_reflog_messages__moving_branch_default_message(void)
@@ -397,7 +397,6 @@ void test_refs_reflog_messages__detaching_head_default_message(void)
 	/* take the repo back to its original state */
 	cl_git_pass(git_reference_symbolic_create(&ref, g_repo, "HEAD", "refs/heads/master",
 											  true, "REATTACH"));
-	git_reference_free(ref);
 
 	cl_reflog_check_entry(g_repo, GIT_HEAD_FILE, 0,
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
@@ -405,4 +404,6 @@ void test_refs_reflog_messages__detaching_head_default_message(void)
 		NULL, "REATTACH");
 
 	cl_assert_equal_i(false, git_repository_head_detached(g_repo));
+
+	git_reference_free(ref);
 }
