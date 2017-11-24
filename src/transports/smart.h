@@ -30,6 +30,7 @@
 #define GIT_CAP_REPORT_STATUS "report-status"
 #define GIT_CAP_THIN_PACK "thin-pack"
 #define GIT_CAP_SYMREF "symref"
+#define GIT_CAP_SHALLOW "shallow"
 
 extern bool git_smart__ofs_delta_enabled;
 
@@ -47,6 +48,8 @@ typedef enum {
 	GIT_PKT_OK,
 	GIT_PKT_NG,
 	GIT_PKT_UNPACK,
+	GIT_PKT_SHALLOW,
+	GIT_PKT_UNSHALLOW,
 } git_pkt_type;
 
 /* Used for multi_ack and multi_ack_detailed */
@@ -118,6 +121,11 @@ typedef struct {
 	int unpack_ok;
 } git_pkt_unpack;
 
+typedef struct {
+	git_pkt_type type;
+	git_oid oid;
+} git_pkt_shallow;
+
 typedef struct transport_smart_caps {
 	int common:1,
 		ofs_delta:1,
@@ -128,7 +136,8 @@ typedef struct transport_smart_caps {
 		include_tag:1,
 		delete_refs:1,
 		report_status:1,
-		thin_pack:1;
+		thin_pack:1,
+		shallow:1;
 } transport_smart_caps;
 
 typedef int (*packetsize_cb)(size_t received, void *payload);

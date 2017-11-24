@@ -363,6 +363,50 @@ static int unpack_pkt(git_pkt **out, const char *line, size_t len)
 	return 0;
 }
 
+static int shallow_pkt(git_pkt **out, const char *line, size_t len)
+{
+	git_pkt_shallow *pkt;
+
+	pkt = git__calloc(1, sizeof(git_pkt_shallow));
+	GIT_ERROR_CHECK_ALLOC(pkt);
+
+	pkt->type = GIT_PKT_SHALLOW;
+	line += 7;
+	len -= 7;
+
+	if (len >= GIT_OID_HEXSZ) {
+		git_oid_fromstr(&pkt->oid, line + 1);
+		line += GIT_OID_HEXSZ + 1;
+		len -= GIT_OID_HEXSZ + 1;
+	}
+
+	*out = (git_pkt *) pkt;
+
+	return 0;
+}
+
+static int unshallow_pkt(git_pkt **out, const char *line, size_t len)
+{
+	git_pkt_shallow *pkt;
+
+	pkt = git__calloc(1, sizeof(git_pkt_shallow));
+	GIT_ERROR_CHECK_ALLOC(pkt);
+
+	pkt->type = GIT_PKT_UNSHALLOW;
+	line += 9;
+	len -= 9;
+
+	if (len >= GIT_OID_HEXSZ) {
+		git_oid_fromstr(&pkt->oid, line + 1);
+		line += GIT_OID_HEXSZ + 1;
+		len -= GIT_OID_HEXSZ + 1;
+	}
+
+	*out = (git_pkt *) pkt;
+
+	return 0;
+}
+
 static int parse_len(size_t *out, const char *line, size_t linelen)
 {
 	char num[PKT_LEN_SIZE + 1];
@@ -489,6 +533,10 @@ int git_pkt_parse_line(
 		error = ng_pkt(pkt, line, len);
 	else if (!git__prefixncmp(line, len, "unpack"))
 		error = unpack_pkt(pkt, line, len);
+	else if (!git__prefixcmp(line, "shallow"))
+		error = shallow_pkt(pkt, line, len);
+	else if (!git__prefixcmp(line, "unshallow"))
+		error = unshallow_pkt(pkt, line, len);
 	else
 		error = ref_pkt(pkt, line, len);
 
@@ -553,6 +601,9 @@ static int buffer_want_with_caps(const git_remote_head *head, transport_smart_ca
 
 	if (caps->ofs_delta)
 		git_buf_puts(&str, GIT_CAP_OFS_DELTA " ");
+
+	if (caps->shallow)
+		git_buf_puts(&str, GIT_CAP_SHALLOW " ");
 
 	if (git_buf_oom(&str))
 		return -1;
