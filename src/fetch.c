@@ -18,6 +18,7 @@
 #include "netops.h"
 #include "repository.h"
 #include "refs.h"
+#include "transports/smart.h"
 
 static int maybe_want(git_remote *remote, git_remote_head *head, git_odb *odb, git_refspec *tagspec, git_remote_autotag_option_t tagopt)
 {
@@ -128,6 +129,13 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 	 */
 	nego.refs = (const git_remote_head * const *)remote->refs.contents;
 	nego.count = remote->refs.length;
+	nego.depth = opts->depth;
+	nego.shallow_roots = git__malloc(sizeof(nego.shallow_roots));
+
+	git_array_init(nego.shallow_roots->array);
+
+	git_repository__shallow_roots(&nego.shallow_roots->array, remote->repo);
+
 	return t->negotiate_fetch(t,
 		remote->repo,
 		&nego);

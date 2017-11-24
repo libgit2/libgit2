@@ -32,9 +32,13 @@ typedef enum {
 	GIT_TRANSPORTFLAGS_NONE = 0,
 } git_transport_flags_t;
 
+typedef struct git_shallowarray git_shallowarray;
+
 typedef struct {
 	const git_remote_head * const *refs;
 	size_t count;
+	git_shallowarray *shallow_roots;
+	int depth;
 } git_fetch_negotiation;
 
 struct git_transport {
@@ -437,6 +441,11 @@ GIT_EXTERN(int) git_smart_subtransport_ssh(
 	git_smart_subtransport **out,
 	git_transport *owner,
 	void *param);
+
+GIT_EXTERN(size_t) git_shallowarray_count(git_shallowarray *array);
+GIT_EXTERN(const git_oid *) git_shallowarray_get(git_shallowarray *array, size_t idx);
+GIT_EXTERN(int) git_shallowarray_add(git_shallowarray *array, git_oid *oid);
+GIT_EXTERN(int) git_shallowarray_remove(git_shallowarray *array, git_oid *oid);
 
 /** @} */
 GIT_END_DECL

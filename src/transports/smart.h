@@ -14,6 +14,7 @@
 #include "netops.h"
 #include "buffer.h"
 #include "push.h"
+#include "oidarray.h"
 #include "git2/sys/transport.h"
 
 #define GIT_SIDE_BAND_DATA     1
@@ -203,5 +204,9 @@ int git_pkt_buffer_done(git_buf *buf);
 int git_pkt_buffer_wants(const git_fetch_negotiation *wants, transport_smart_caps *caps, git_buf *buf);
 int git_pkt_buffer_have(git_oid *oid, git_buf *buf);
 void git_pkt_free(git_pkt *pkt);
+
+struct git_shallowarray {
+	git_array_oid_t array;
+};
 
 #endif

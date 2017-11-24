@@ -350,6 +350,25 @@ static int wait_while_ack(gitno_buffer *buf)
 	return 0;
 }
 
+static int cap_not_sup_err(const char *cap_name)
+{
+	git_error_set(GIT_ERROR_NET, "server doesn't support %s", cap_name);
+	return GIT_EINVALID;
+}
+
+/* Disables server capabilities we're not interested in */
+static int setup_caps(transport_smart_caps *caps, const git_fetch_negotiation *wants)
+{
+	if (wants->depth) {
+		if (!caps->shallow)
+			return cap_not_sup_err(GIT_CAP_SHALLOW);
+	} else {
+		caps->shallow = 0;
+	}
+
+	return 0;
+}
+
 int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, const git_fetch_negotiation *wants)
 {
 	transport_smart *t = (transport_smart *)transport;
@@ -361,12 +380,42 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 	unsigned int i;
 	git_oid oid;
 
+	if ((error = setup_caps(&t->caps, wants)) < 0)
+		return error;
+
 	if ((error = git_pkt_buffer_wants(wants, &t->caps, &data)) < 0)
 		return error;
 
 	if ((error = fetch_setup_walk(&walk, repo)) < 0)
 		goto on_error;
 
+	if (wants->depth > 0) {
+		git_pkt_shallow *pkt;
+
+		if ((error = git_smart__negotiation_step(&t->parent, data.ptr, data.size)) < 0)
+			goto on_error;
+
+		while ((error = recv_pkt((git_pkt **)&pkt, NULL, buf)) == 0) {
+
+			if (pkt->type == GIT_PKT_SHALLOW) {
+				printf("shallow %s\n", git_oid_tostr_s(&pkt->oid));
+				git_shallowarray_add(wants->shallow_roots, &pkt->oid);
+			} else if (pkt->type == GIT_PKT_UNSHALLOW) {
+				printf("unshallow %s\n", git_oid_tostr_s(&pkt->oid));
+				git_shallowarray_remove(wants->shallow_roots, &pkt->oid);
+			} else if (pkt->type == GIT_PKT_FLUSH) {
+				/* Server is done, stop processing shallow oids */
+				break;
+			} else {
+				git_error_set(GIT_ERROR_NET, "Unexpected pkt type");
+				goto on_error;
+			}
+		}
+
+		if (error < 0) {
+			goto on_error;
+		}
+	}
 	/*
 	 * Our support for ACK extensions is simply to parse them. On
 	 * the first ACK we will accept that as enough common
