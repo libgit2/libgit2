@@ -6,14 +6,50 @@ libgit2 - the Git linkable library
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/639/badge.svg)](https://scan.coverity.com/projects/639)
 
 `libgit2` is a portable, pure C implementation of the Git core methods
-provided as a re-entrant linkable library with a solid API, allowing you to
-write native speed custom Git applications in any language with bindings.
+provided as a linkable library with a solid API, allowing to build Git
+functionality into your application.  Language bindings like
+[Rugged](https://github.com/libgit2/rugged) (Ruby),
+[LibGit2Sharp](https://github.com/libgit2/libgit2sharp) (.NET),
+[pygit2](http://www.pygit2.org/) (Python) and
+[NodeGit](http://nodegit.org) (Node) allow you to build Git tooling
+in your favorite language.
+
+`libgit2` is used to power Git GUI clients like
+[GitKraken](https://gitkraken.com/) and [gmaster](https://gmaster.io/)
+and on Git hosting providers like [GitHub](https://github.com/),
+[GitLab](https://gitlab.com/) and
+[Visual Studio Team Services](https://visualstudio.com/team-services/).
+We perform the merge every time you click "merge pull request".
 
 `libgit2` is licensed under a **very permissive license** (GPLv2 with a special
 Linking Exception).  This basically means that you can link it (unmodified)
 with any kind of software without having to release its source code.
 Additionally, the example code has been released to the public domain (see the
 [separate license](examples/COPYING) for more information).
+
+Quick Start
+===========
+
+**Prerequisites** for building libgit2:
+
+1. [CMake](https://cmake.org/), and is recommended to be installed into
+   your `PATH`.
+2. [Python](https://www.python.org) is used by our test framework, and
+   should be installed into your `PATH`.
+3. C compiler: libgit2 is C90 and should compile on most compilers.
+   * Windows: Visual Studio is recommended
+   * Mac: Xcode is recommended
+   * Unix: gcc or clang is recommended.
+
+**Build**
+
+1. Create a build directory beneath the libgit2 source directory, and change
+   into it: `mkdir build && cd build`
+2. Create the cmake build environment: `cmake ..`
+3. Build libgit2: `cmake --build .`
+
+Trouble with these steps?  Read `TROUBLESHOOTING.md`.  More detailed build
+guidance is available below.
 
 Getting Help
 ============
@@ -118,6 +154,9 @@ and internal API/coding conventions we use.
 Building libgit2 - Using CMake
 ==============================
 
+Building
+--------
+
 `libgit2` builds cleanly on most platforms without any external dependencies.
 Under Unix-like systems, like Linux, \*BSD and Mac OS X, libgit2 expects `pthreads` to be available;
 they should be installed by default on all systems. Under Windows, libgit2 uses the native Windows API
@@ -133,18 +172,48 @@ On most systems you can build the library using the following commands
 
 Alternatively you can point the CMake GUI tool to the CMakeLists.txt file and generate platform specific build project or IDE workspace.
 
+Running Tests
+-------------
+
 Once built, you can run the tests from the `build` directory with the command
 
-	$ make test
+	$ ctest -V
 
 Alternatively you can run the test suite directly using,
 
 	$ ./libgit2_clar
 
+Invoking the test suite directly is useful because it allows you to execute
+individual tests, or groups of tests using the `-s` flag.  For example, to
+run the index tests:
+
+    $ ./libgit2_clar -sindex
+
+To run a single test named `index::racy::diff`, which corresponds to the test
+function (`test_index_racy__diff`)[https://github.com/libgit2/libgit2/blob/master/tests/index/racy.c#L23]:
+
+    $ ./libgit2_clar -sindex::racy::diff
+
+The test suite will print a `.` for every passing test, and an `F` for any
+failing test.  An `S` indicates that a test was skipped because it is not
+applicable to your platform or is particularly expensive.
+
+**Note:** There should be _no_ failing tests when you build an unmodified
+source tree from a [release](https://github.com/libgit2/libgit2/releases),
+or from the [master branch](https://github.com/libgit2/libgit2/tree/master).
+Please contact us or [open an issue](https://github.com/libgit2/libgit2/issues)
+if you see test failures.
+
+Installation
+------------
+
 To install the library you can specify the install prefix by setting:
 
 	$ cmake .. -DCMAKE_INSTALL_PREFIX=/install/prefix
 	$ cmake --build . --target install
+
+Advanced Usage
+--------------
 
 For more advanced use or questions about CMake please read <https://cmake.org/Wiki/CMake_FAQ>.
 
@@ -176,16 +245,6 @@ MacOS X
 If you want to build a universal binary for Mac OS X, CMake sets it
 all up for you if you use `-DCMAKE_OSX_ARCHITECTURES="i386;x86_64"`
 when configuring.
-
-Windows
--------
-
-You need to run the CMake commands from the Visual Studio command
-prompt, not the regular or Windows SDK one. Select the right generator
-for your version with the `-G "Visual Studio X" option.
-
-See [the website](http://libgit2.github.com/docs/guides/build-and-link/)
-for more detailed instructions.
 
 Android
 -------
