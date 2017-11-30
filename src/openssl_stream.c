@@ -149,10 +149,19 @@ int git_openssl_stream_global_init(void)
 	return 0;
 }
 
+#if defined(GIT_THREADS)
+static void threadid_cb(CRYPTO_THREADID *threadid)
+{
+    CRYPTO_THREADID_set_numeric(threadid, git_thread_currentid());
+}
+#endif
+
 int git_openssl_set_locking(void)
 {
 #if defined(GIT_THREADS) && OPENSSL_VERSION_NUMBER < 0x10100000L
 	int num_locks, i;
+
+	CRYPTO_THREADID_set_callback(threadid_cb);
 
 	num_locks = CRYPTO_num_locks();
 	openssl_locks = git__calloc(num_locks, sizeof(git_mutex));
