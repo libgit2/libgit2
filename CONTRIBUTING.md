@@ -71,6 +71,22 @@ if we have to read the whole diff to figure out why you're contributing
 in the first place, you're less likely to get feedback and have your change
 merged in.
 
+In addition to outlining your thought process in the PR's description, please
+also try to document it in your commits. We welcome it if every commit has a
+description of why you have been doing your changes alongside with your
+reasoning why this is a good idea. The messages shall be written in
+present-tense and in an imperative style (e.g. "Add feature foobar", not "Added
+feature foobar" or "Adding feature foobar"). Lines should be wrapped at 80
+characters so people with small screens are able to read the commit messages in
+their terminal without any problem.
+
+To make it easier to attribute commits to certain parts of our code base, we
+also prefer to have the commit subject be prefixed with a "scope". E.g. if you
+are changing code in our merging subsystem, make sure to prefix the subject with
+"merge:". The first word following the colon shall start with an lowercase
+letter. The maximum line length for the subject is 70 characters, preferably
+shorter.
+
 If you are starting to work on a particular area, feel free to submit a PR
 that highlights your work in progress (and note in the PR title that it's
 not ready to merge). These early PRs are welcome and will help in getting
