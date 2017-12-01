@@ -173,12 +173,16 @@ typedef enum {
  * The `pathspec` is an array of path patterns to match (using
  * fnmatch-style matching), or just an array of paths to match exactly if
  * `GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH` is specified in the flags.
+ *
+ * The `baseline` is the tree to be used for comparison to the working directory
+ * and index; defaults to HEAD.
  */
 typedef struct {
 	unsigned int      version;
 	git_status_show_t show;
 	unsigned int      flags;
 	git_strarray      pathspec;
+	git_tree          *baseline;
 } git_status_options;
 
 #define GIT_STATUS_OPTIONS_VERSION 1

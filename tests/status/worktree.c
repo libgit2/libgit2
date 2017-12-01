@@ -1280,3 +1280,34 @@ void test_status_worktree__with_directory_in_pathlist(void)
 	git_status_list_free(statuslist);
 }
 
+void test_status_worktree__at_head_parent(void)
+{
+	git_repository *repo = cl_git_sandbox_init("empty_standard_repo");
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	git_status_list *statuslist;
+	git_tree *parent_tree;
+	const git_status_entry *status;
+
+	cl_git_mkfile("empty_standard_repo/file1", "ping");
+	stage_and_commit(repo, "file1");
+
+	cl_git_pass(git_repository_head_tree(&parent_tree, repo));
+
+	cl_git_mkfile("empty_standard_repo/file2", "pong");
+	stage_and_commit(repo, "file2");
+
+	cl_git_rewritefile("empty_standard_repo/file2", "pyng");
+
+	opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
+	opts.baseline = parent_tree;
+	cl_git_pass(git_status_list_new(&statuslist, repo, &opts));
+
+	cl_assert_equal_sz(1, git_status_list_entrycount(statuslist));
+	status = git_status_byindex(statuslist, 0);
+	cl_assert(status != NULL);
+	cl_assert_equal_s("file2", status->index_to_workdir->old_file.path);
+	cl_assert_equal_i(GIT_STATUS_WT_MODIFIED | GIT_STATUS_INDEX_NEW, status->status);
+
+	git_tree_free(parent_tree);
+	git_status_list_free(statuslist);
+}
