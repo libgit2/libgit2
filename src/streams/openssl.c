@@ -332,7 +332,7 @@ static int check_host_name(const char *name, const char *host)
 
 static int verify_server_cert(SSL *ssl, const char *host)
 {
-	X509 *cert;
+	X509 *cert = NULL;
 	X509_NAME *peer_name;
 	ASN1_STRING *str;
 	unsigned char *peer_cn = NULL;
@@ -458,6 +458,7 @@ on_error:
 	goto cleanup;
 
 cleanup:
+	X509_free(cert);
 	OPENSSL_free(peer_cn);
 	return error;
 }
