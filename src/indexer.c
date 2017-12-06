@@ -951,6 +951,10 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 		giterr_set(GITERR_INDEXER, "unexpected data at the end of the pack");
 		return -1;
 	}
+	if (idx->off + 20 > idx->pack->mwf.size) {
+		giterr_set(GITERR_INDEXER, "missing trailer at the end of the pack");
+		return -1;
+	}
 
 	packfile_trailer = git_mwindow_open(&idx->pack->mwf, &w, idx->pack->mwf.size - GIT_OID_RAWSZ, GIT_OID_RAWSZ, &left);
 	if (packfile_trailer == NULL) {
