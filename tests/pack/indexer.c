@@ -87,6 +87,23 @@ void test_pack_indexer__leaky(void)
 	git_indexer_free(idx);
 }
 
+void test_pack_indexer__missing_trailer(void)
+{
+	git_indexer *idx = 0;
+	git_transfer_progress stats = { 0 };
+
+	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL, NULL));
+	/* Truncate a valid packfile */
+	cl_git_pass(git_indexer_append(
+		idx, out_of_order_pack, out_of_order_pack_len - 20, &stats));
+	cl_git_fail(git_indexer_commit(idx, &stats));
+
+	cl_assert(giterr_last() != NULL);
+	cl_assert_equal_i(giterr_last()->klass, GITERR_INDEXER);
+
+	git_indexer_free(idx);
+}
+
 void test_pack_indexer__fix_thin(void)
 {
 	git_indexer *idx = NULL;
