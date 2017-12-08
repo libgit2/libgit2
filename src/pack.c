@@ -939,7 +939,7 @@ git_off_t get_delta_base(
 			if (left <= used)
 				return GIT_EBUFS;
 			base_offset += 1;
-			if (!base_offset || MSB(base_offset, 7))
+			if (!base_offset || MSB(base_offset, 8))
 				return 0; /* overflow */
 			c = base_info[used++];
 			base_offset = (base_offset << 7) + (c & 127);
