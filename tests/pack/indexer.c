@@ -40,6 +40,17 @@ static const unsigned char thin_pack[] = {
 };
 static const unsigned int thin_pack_len = 78;
 
+/*
+ * Packfile that causes the packfile stream to open in a way in which it leaks
+ * the stream reader.
+ */
+static const unsigned char leaky_pack[] = {
+	0x50, 0x41, 0x43, 0x4b, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x03,
+	0xf4, 0xbd, 0x51, 0x51, 0x51, 0x51, 0x51, 0x72, 0x65, 0x41, 0x4b, 0x63,
+	0x5f, 0x64, 0x65, 0x70, 0x74, 0x68, 0xbd, 0x41, 0x4b
+};
+static const unsigned int leaky_pack_len = 33;
+
 static const unsigned char base_obj[] = { 07, 076 };
 static const unsigned int base_obj_len = 2;
 
@@ -56,6 +67,22 @@ void test_pack_indexer__out_of_order(void)
 	cl_assert_equal_i(stats.total_objects, 3);
 	cl_assert_equal_i(stats.received_objects, 3);
 	cl_assert_equal_i(stats.indexed_objects, 3);
+
+	git_indexer_free(idx);
+}
+
+void test_pack_indexer__leaky(void)
+{
+	git_indexer *idx = 0;
+	git_transfer_progress stats = { 0 };
+
+	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL, NULL));
+	cl_git_pass(git_indexer_append(
+		idx, leaky_pack, leaky_pack_len, &stats));
+	cl_git_fail(git_indexer_commit(idx, &stats));
+
+	cl_assert(giterr_last() != NULL);
+	cl_assert_equal_i(giterr_last()->klass, GITERR_INDEXER);
 
 	git_indexer_free(idx);
 }

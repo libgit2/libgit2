@@ -1119,6 +1119,9 @@ void git_indexer_free(git_indexer *idx)
 	if (idx == NULL)
 		return;
 
+	if (idx->have_stream)
+		git_packfile_stream_free(&idx->stream);
+
 	git_vector_free_deep(&idx->objects);
 
 	if (idx->pack->idx_cache) {
