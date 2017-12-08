@@ -499,7 +499,7 @@ int git_packfile_resolve_header(
 		if ((error = git_packfile_stream_open(&stream, p, curpos)) < 0)
 			return error;
 		error = git_delta_read_header_fromstream(&base_size, size_p, &stream);
-		git_packfile_stream_free(&stream);
+		git_packfile_stream_dispose(&stream);
 		if (error < 0)
 			return error;
 	} else {
@@ -840,7 +840,7 @@ ssize_t git_packfile_stream_read(git_packfile_stream *obj, void *buffer, size_t 
 
 }
 
-void git_packfile_stream_free(git_packfile_stream *obj)
+void git_packfile_stream_dispose(git_packfile_stream *obj)
 {
 	inflateEnd(&obj->zstream);
 }

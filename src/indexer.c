@@ -650,7 +650,7 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_tran
 
 		/* We want to free the stream reasorces no matter what here */
 		idx->have_stream = 0;
-		git_packfile_stream_free(stream);
+		git_packfile_stream_dispose(stream);
 
 		if (error < 0)
 			goto on_error;
@@ -1137,7 +1137,7 @@ void git_indexer_free(git_indexer *idx)
 		return;
 
 	if (idx->have_stream)
-		git_packfile_stream_free(&idx->stream);
+		git_packfile_stream_dispose(&idx->stream);
 
 	git_vector_free_deep(&idx->objects);
 
