@@ -291,7 +291,7 @@ static int config_is_modified(int *modified, struct config_file *file)
 {
 	git_config_file *include;
 	git_buf buf = GIT_BUF_INIT;
-	git_oid hash = {};
+	git_oid hash = {0};
 	uint32_t i;
 	int error = 0;
 
