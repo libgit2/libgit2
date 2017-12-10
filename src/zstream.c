@@ -103,8 +103,9 @@ int git_zstream_get_output(void *out, size_t *out_len, git_zstream *zstream)
 		/* set up in data */
 		zstream->z.next_in  = (Bytef *)zstream->in;
 		zstream->z.avail_in = (uInt)zstream->in_len;
+
 		if ((size_t)zstream->z.avail_in != zstream->in_len) {
-			zstream->z.avail_in = INT_MAX;
+			zstream->z.avail_in = UINT_MAX;
 			zflush = Z_NO_FLUSH;
 		} else {
 			zflush = Z_FINISH;
@@ -115,7 +116,7 @@ int git_zstream_get_output(void *out, size_t *out_len, git_zstream *zstream)
 		zstream->z.next_out = out;
 		zstream->z.avail_out = (uInt)out_remain;
 		if ((size_t)zstream->z.avail_out != out_remain)
-			zstream->z.avail_out = INT_MAX;
+			zstream->z.avail_out = UINT_MAX;
 		out_queued = (size_t)zstream->z.avail_out;
 
 		/* compress next chunk */
