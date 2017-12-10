@@ -156,6 +156,11 @@ static int parse_header(
 		size < 0)
 		goto on_error;
 
+	if ((uint64_t)size > SIZE_MAX) {
+		giterr_set(GITERR_OBJECT, "object is larger than available memory");
+		return -1;
+	}
+
 	out->size = size;
 
 	if (GIT_ADD_SIZET_OVERFLOW(out_len, i, 1))
