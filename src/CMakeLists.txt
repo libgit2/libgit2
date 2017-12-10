@@ -3,11 +3,6 @@ IF(DEBUG_POOL)
 ENDIF()
 ADD_FEATURE_INFO(debugpool GIT_DEBUG_POOL "debug pool allocator")
 
-# Add the features.h file as a dummy. This is required for Xcode
-# to successfully build the libgit2 library when using only
-# object libraries.
-SET(LIBGIT2_OBJECTS "${CMAKE_CURRENT_BINARY_DIR}/git2/sys/features.h")
-
 # This variable will contain the libraries we need to put into
 # libgit2.pc's Requires.private. That is, what we're linking to or
 # what someone who's statically linking us needs to link to.
@@ -403,6 +398,13 @@ SET(LIBGIT2_OBJECTS ${LIBGIT2_OBJECTS} PARENT_SCOPE)
 SET(LIBGIT2_INCLUDES ${LIBGIT2_INCLUDES} PARENT_SCOPE)
 SET(LIBGIT2_LIBS ${LIBGIT2_LIBS} PARENT_SCOPE)
 SET(LIBGIT2_LIBDIRS ${LIBGIT2_LIBDIRS} PARENT_SCOPE)
+
+IF(XCODE_VERSION)
+	# This is required for Xcode to actually link the libgit2 library
+	# when using only object libraries.
+	FILE(WRITE ${CMAKE_CURRENT_BINARY_DIR}/dummy.c "")
+	LIST(APPEND LIBGIT2_OBJECTS ${CMAKE_CURRENT_BINARY_DIR}/dummy.c)
+ENDIF()
 
 # Compile and link libgit2
 LINK_DIRECTORIES(${LIBGIT2_LIBDIRS})
