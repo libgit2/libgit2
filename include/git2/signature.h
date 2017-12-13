@@ -62,8 +62,40 @@ GIT_EXTERN(int) git_signature_now(git_signature **out, const char *name, const c
  */
 GIT_EXTERN(int) git_signature_default(git_signature **out, git_repository *repo);
 
+/**
+ * Create a new action signature with author information from the environment
+ * and now timestamp.
+ *
+ * This looks up the GIT_AUTHOR_NAME and GIT_AUTHOR_EMAIL environment variables
+ * and uses the current time as the timestamp, and creates a new signature
+ * based on that information.  If the GIT_AUTHOR_NAME or GIT_AUTHOR_EMAIL
+ * environment variables are unset then user.name and user.email respectively
+ * will be looked up in the configuration.  If user.email configuration
+ * is unavailable then the EMAIL environment variable will be looked up.
+ * GIT_ENOTFOUND will be returned if author or email information was not found.
+ *
+ * @param out new signature
+ * @param repo repository pointer
+ * @return 0 on success, GIT_ENOTFOUND if config is missing, or error code
+ */
 GIT_EXTERN(int) git_signature_author_env(git_signature **out, git_repository *repo);
 
+/**
+ * Create a new action signature with committer information from the environment
+ * and now timestamp.
+ *
+ * This looks up the GIT_COMMITTER_NAME and GIT_COMMITTER_EMAIL environment variables
+ * and uses the current time as the timestamp, and creates a new signature
+ * based on that information.  If the GIT_COMMITTER_NAME or GIT_COMMITTER_EMAIL
+ * environment variables are unset then user.name and user.email respectively
+ * will be looked up in the configuration.  If user.email configuration
+ * is unavailable then the EMAIL environment variable will be looked up.
+ * GIT_ENOTFOUND will be returned if author or email information was not found.
+ *
+ * @param out new signature
+ * @param repo repository pointer
+ * @return 0 on success, GIT_ENOTFOUND if config is missing, or error code
+ */
 GIT_EXTERN(int) git_signature_committer_env(git_signature **out, git_repository *repo);
 
 /**
