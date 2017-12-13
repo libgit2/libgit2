@@ -18,9 +18,11 @@ v0.26 + 1
   to any repository (and does not apply configuration like 'insteadof' rules).
   This is mostly useful for e.g. emulating `git ls-remote` behavior.
 
-* `git_signature_author_env()` ...
+* `git_signature_author_env()` lets you create a signature from the
+   `GIT_AUTHOR_NAME` and `GIT_AUTHOR_EMAIL` environment variables.
 
-* `git_signature_committer_env()` ...
+* `git_signature_committer_env()` lets you create a signature from the
+  `GIT_COMMITTER_NAME` and `GIT_COMMITTER_EMAIL` environment variables.
 
 ### API removals
 
