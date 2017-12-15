@@ -944,11 +944,9 @@ git_off_t get_delta_base(
 			c = base_info[used++];
 			unsigned_base_offset = (unsigned_base_offset << 7) + (c & 127);
 		}
-		if ((size_t)delta_obj_offset <= unsigned_base_offset)
+		if (unsigned_base_offset == 0 || (size_t)delta_obj_offset <= unsigned_base_offset)
 			return 0; /* out of bound */
 		base_offset = delta_obj_offset - unsigned_base_offset;
-		if (base_offset >= delta_obj_offset)
-			return 0; /* out of bound */
 		*curpos += used;
 	} else if (type == GIT_OBJ_REF_DELTA) {
 		/* If we have the cooperative cache, search in it first */
