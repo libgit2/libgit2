@@ -103,8 +103,10 @@ static int commit_quick_parse(
 	int error;
 	size_t i;
 	git_oid *parent_oid;
-	git_commit *commit = git__calloc(1, git_object__size(obj->cached.type));
-	commit->object.repo = walk->repo;
+	git_commit *commit = NULL;
+
+	if ((error = git_object__init_from_odb_object((git_object **)&commit, walk->repo, obj, GIT_OBJECT_COMMIT)) < 0)
+		return error;
 
 	if ((error = git_commit__parse_ext(commit, obj, GIT_COMMIT_PARSE_QUICK)) < 0)
 		return error;
