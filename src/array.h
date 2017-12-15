@@ -85,12 +85,14 @@ on_oom:
 #define git_array_foreach(a, i, element) \
 	for ((i) = 0; (i) < (a).size && ((element) = &(a).ptr[(i)]); (i)++)
 
+typedef int (*git_array_compare_cb)(const void *, const void *);
+
 GIT_INLINE(int) git_array__search(
 	size_t *out,
 	void *array_ptr,
 	size_t item_size,
 	size_t array_len,
-	int (*compare)(const void *, const void *),
+	git_array_compare_cb compare,
 	const void *key)
 {
 	size_t lim;
