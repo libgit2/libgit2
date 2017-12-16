@@ -812,7 +812,7 @@ static int loose_backend__foreach(git_odb_backend *_backend, git_odb_foreach_cb 
 	return error;
 }
 
-static int loose_backend__stream_fwrite(git_odb_stream *_stream, const git_oid *oid)
+static int loose_backend__writestream_finalize(git_odb_stream *_stream, const git_oid *oid)
 {
 	loose_writestream *stream = (loose_writestream *)_stream;
 	loose_backend *backend = (loose_backend *)_stream->backend;
@@ -831,13 +831,13 @@ static int loose_backend__stream_fwrite(git_odb_stream *_stream, const git_oid *
 	return error;
 }
 
-static int loose_backend__stream_write(git_odb_stream *_stream, const char *data, size_t len)
+static int loose_backend__writestream_write(git_odb_stream *_stream, const char *data, size_t len)
 {
 	loose_writestream *stream = (loose_writestream *)_stream;
 	return git_filebuf_write(&stream->fbuf, data, len);
 }
 
-static void loose_backend__stream_free(git_odb_stream *_stream)
+static void loose_backend__writestream_free(git_odb_stream *_stream)
 {
 	loose_writestream *stream = (loose_writestream *)_stream;
 
@@ -856,7 +856,7 @@ static int filebuf_flags(loose_backend *backend)
 	return flags;
 }
 
-static int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_backend, git_off_t length, git_otype type)
+static int loose_backend__writestream(git_odb_stream **stream_out, git_odb_backend *_backend, git_off_t length, git_otype type)
 {
 	loose_backend *backend;
 	loose_writestream *stream = NULL;
@@ -876,9 +876,9 @@ static int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_
 
 	stream->stream.backend = _backend;
 	stream->stream.read = NULL; /* read only */
-	stream->stream.write = &loose_backend__stream_write;
-	stream->stream.finalize_write = &loose_backend__stream_fwrite;
-	stream->stream.free = &loose_backend__stream_free;
+	stream->stream.write = &loose_backend__writestream_write;
+	stream->stream.finalize_write = &loose_backend__writestream_finalize;
+	stream->stream.free = &loose_backend__writestream_free;
 	stream->stream.mode = GIT_STREAM_WRONLY;
 
 	if (git_buf_joinpath(&tmp_path, backend->objects_dir, "tmp_object") < 0 ||
@@ -1002,7 +1002,7 @@ int git_odb_backend_loose(
 	backend->parent.write = &loose_backend__write;
 	backend->parent.read_prefix = &loose_backend__read_prefix;
 	backend->parent.read_header = &loose_backend__read_header;
-	backend->parent.writestream = &loose_backend__stream;
+	backend->parent.writestream = &loose_backend__writestream;
 	backend->parent.exists = &loose_backend__exists;
 	backend->parent.exists_prefix = &loose_backend__exists_prefix;
 	backend->parent.foreach = &loose_backend__foreach;
