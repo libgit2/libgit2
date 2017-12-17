@@ -55,6 +55,44 @@ static void test_read_object(object_data *data)
 	git_odb_free(odb);
 }
 
+static void test_readstream_object(object_data *data, size_t blocksize)
+{
+	git_oid id;
+	git_odb *odb;
+	git_odb_stream *stream;
+	git_rawobj tmp;
+	char buf[2048], *ptr = buf;
+	size_t remain;
+	int ret;
+
+	write_object_files(data);
+
+	cl_git_pass(git_odb_open(&odb, "test-objects"));
+	cl_git_pass(git_oid_fromstr(&id, data->id));
+	cl_git_pass(git_odb_open_rstream(&stream, &tmp.len, &tmp.type, odb, &id));
+
+	remain = tmp.len;
+
+	while (remain) {
+		cl_assert((ret = git_odb_stream_read(stream, ptr, blocksize)) >= 0);
+		if (ret == 0)
+			break;
+
+		cl_assert(remain >= (size_t)ret);
+		remain -= ret;
+		ptr += ret;
+	}
+
+	cl_assert(remain == 0);
+
+	tmp.data = buf;
+
+	cmp_objects(&tmp, data);
+
+	git_odb_stream_free(stream);
+	git_odb_free(odb);
+}
+
 void test_odb_loose__initialize(void)
 {
 	p_fsync__cnt = 0;
@@ -101,6 +139,22 @@ void test_odb_loose__simple_reads(void)
 	test_read_object(&one);
 	test_read_object(&two);
 	test_read_object(&some);
+}
+
+void test_odb_loose__streaming_reads(void)
+{
+	size_t blocksizes[] = { 1, 2, 4, 16, 99, 1024, 123456789 };
+	size_t i;
+
+	for (i = 0; i < ARRAY_SIZE(blocksizes); i++) {
+		test_readstream_object(&commit, blocksizes[i]);
+		test_readstream_object(&tree, blocksizes[i]);
+		test_readstream_object(&tag, blocksizes[i]);
+		test_readstream_object(&zero, blocksizes[i]);
+		test_readstream_object(&one, blocksizes[i]);
+		test_readstream_object(&two, blocksizes[i]);
+		test_readstream_object(&some, blocksizes[i]);
+	}
 }
 
 void test_write_object_permission(
