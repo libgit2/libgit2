@@ -1,5 +1,9 @@
 #include "clar_libgit2.h"
 #include "git2/odb_backend.h"
+#include "hash.h"
+#include "odb.h"
+
+#define LARGEFILE_SIZE 5368709122
 
 static git_repository *repo;
 static git_odb *odb;
@@ -25,7 +29,7 @@ static void writefile(git_oid *oid)
 	for (i = 0; i < 3041; i++)
 		cl_git_pass(git_buf_puts(&buf, "Hello, world.\n"));
 
-	cl_git_pass(git_odb_open_wstream(&stream, odb, 5368709122, GIT_OBJ_BLOB));
+	cl_git_pass(git_odb_open_wstream(&stream, odb, LARGEFILE_SIZE, GIT_OBJ_BLOB));
 	for (i = 0; i < 126103; i++)
 		cl_git_pass(git_odb_stream_write(stream, buf.ptr, buf.size));
 
@@ -71,6 +75,48 @@ void test_odb_largefiles__streamwrite(void)
 	writefile(&oid);
 
 	cl_assert_equal_oid(&expected, &oid);
+}
+
+void test_odb_largefiles__streamread(void)
+{
+	git_oid oid, read_oid;
+	git_odb_stream *stream;
+	char buf[10240];
+	char hdr[64];
+	size_t len, total = 0;
+	git_hash_ctx hash;
+	git_otype type;
+	int hdr_len, ret;
+
+	if (!cl_is_env_set("GITTEST_INVASIVE_FS_SIZE") ||
+		!cl_is_env_set("GITTEST_SLOW"))
+		cl_skip();
+
+	writefile(&oid);
+
+	cl_git_pass(git_odb_open_rstream(&stream, &len, &type, odb, &oid));
+
+	cl_assert_equal_sz(LARGEFILE_SIZE, len);
+	cl_assert_equal_i(GIT_OBJ_BLOB, type);
+
+	cl_git_pass(git_hash_ctx_init(&hash));
+	hdr_len = git_odb__format_object_header(hdr, sizeof(hdr), len, type);
+
+	cl_git_pass(git_hash_update(&hash, hdr, hdr_len));
+
+	while ((ret = git_odb_stream_read(stream, buf, 10240)) > 0) {
+		cl_git_pass(git_hash_update(&hash, buf, ret));
+		total += ret;
+	}
+
+	cl_assert_equal_sz(LARGEFILE_SIZE, total);
+
+	git_hash_final(&read_oid, &hash);
+
+	cl_assert_equal_oid(&oid, &read_oid);
+
+	git_hash_ctx_cleanup(&hash);
+	git_odb_stream_free(stream);
 }
 
 void test_odb_largefiles__read_into_memory(void)
