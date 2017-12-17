@@ -357,11 +357,18 @@ GIT_EXTERN(void) git_odb_stream_free(git_odb_stream *stream);
  * @see git_odb_stream
  *
  * @param out pointer where to store the stream
+ * @param len pointer where to store the length of the object
+ * @param type pointer where to store the type of the object
  * @param db object database where the stream will read from
  * @param oid oid of the object the stream will read from
  * @return 0 if the stream was created; error code otherwise
  */
-GIT_EXTERN(int) git_odb_open_rstream(git_odb_stream **out, git_odb *db, const git_oid *oid);
+GIT_EXTERN(int) git_odb_open_rstream(
+	git_odb_stream **out,
+	size_t *len,
+	git_otype *type,
+	git_odb *db,
+	const git_oid *oid);
 
 /**
  * Open a stream for writing a pack file to the ODB.

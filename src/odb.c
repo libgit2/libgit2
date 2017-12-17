@@ -1396,7 +1396,12 @@ void git_odb_stream_free(git_odb_stream *stream)
 	stream->free(stream);
 }
 
-int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oid)
+int git_odb_open_rstream(
+	git_odb_stream **stream,
+	size_t *len,
+	git_otype *type,
+	git_odb *db,
+	const git_oid *oid)
 {
 	size_t i, reads = 0;
 	int error = GIT_ERROR;
@@ -1409,7 +1414,7 @@ int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oi
 
 		if (b->readstream != NULL) {
 			++reads;
-			error = b->readstream(stream, b, oid);
+			error = b->readstream(stream, len, type, b, oid);
 		}
 	}
 
