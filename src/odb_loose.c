@@ -104,32 +104,39 @@ static int object_mkdir(const git_buf *name, const loose_backend *be)
 		GIT_MKDIR_PATH | GIT_MKDIR_SKIP_LAST | GIT_MKDIR_VERIFY_DIR, NULL);
 }
 
-static size_t get_binary_object_header(
-	obj_hdr *hdr, const unsigned char *data, size_t len)
+static int parse_header_packlike(
+	obj_hdr *out, size_t *out_len, const unsigned char *data, size_t len)
 {
 	unsigned long c;
 	size_t shift, size, used = 0;
 
 	if (len == 0)
-		return 0;
+		goto on_error;
 
 	c = data[used++];
-	hdr->type = (c >> 4) & 7;
+	out->type = (c >> 4) & 7;
 
 	size = c & 15;
 	shift = 4;
 	while (c & 0x80) {
 		if (len <= used)
-			return 0;
+			goto on_error;
+
 		if (sizeof(size_t) * 8 <= shift)
-			return 0;
+			goto on_error;
+
 		c = data[used++];
 		size += (c & 0x7f) << shift;
 		shift += 7;
 	}
-	hdr->size = size;
 
-	return used;
+	out->size = size;
+	*out_len = used;
+	return 0;
+
+on_error:
+	giterr_set(GITERR_OBJECT, "failed to parse loose object: invalid header");
+	return -1;
 }
 
 static int parse_header(
@@ -254,38 +261,15 @@ static int is_zlib_compressed_data(unsigned char *data)
 	return (data[0] & 0x8F) == 0x08 && !(w % 31);
 }
 
-static int inflate_buffer(void *in, size_t inlen, void *out, size_t outlen)
-{
-	z_stream zs;
-	int status = Z_OK;
+/***********************************************************
+ *
+ * ODB OBJECT READING & WRITING
+ *
+ * Backend for the public API; read headers and full objects
+ * from the ODB. Write raw data to the ODB.
+ *
+ ***********************************************************/
 
-	memset(&zs, 0x0, sizeof(zs));
-
-	zs.next_out = out;
-	zs.avail_out = (uInt)outlen;
-
-	zs.next_in = in;
-	zs.avail_in = (uInt)inlen;
-
-	if (inflateInit(&zs) < Z_OK) {
-		giterr_set(GITERR_ZLIB, "failed to inflate buffer");
-		return -1;
-	}
-
-	while (status == Z_OK)
-		status = inflate(&zs, Z_FINISH);
-
-	inflateEnd(&zs);
-
-	if (status != Z_STREAM_END /* || zs.avail_in != 0 */ ||
-		zs.total_out != outlen)
-	{
-		giterr_set(GITERR_ZLIB, "failed to inflate buffer; stream aborted prematurely");
-		return -1;
-	}
-
-	return 0;
-}
 
 /*
  * At one point, there was a loose object format that was intended to
@@ -293,55 +277,61 @@ static int inflate_buffer(void *in, size_t inlen, void *out, size_t outlen)
  * of loose object data into packs. This format is no longer used, but
  * we must still read it.
  */
-static int inflate_packlike_loose_disk_obj(git_rawobj *out, git_buf *obj)
+static int read_loose_packlike(git_rawobj *out, git_buf *obj)
 {
-	unsigned char *in, *buf;
+	git_buf body = GIT_BUF_INIT;
+	const unsigned char *obj_data;
 	obj_hdr hdr;
-	size_t len, used, alloclen;
+	size_t obj_len, head_len, alloc_size;
+	int error;
+
+	obj_data = (unsigned char *)obj->ptr;
+	obj_len = obj->size;
 
 	/*
 	 * read the object header, which is an (uncompressed)
 	 * binary encoding of the object type and size.
 	 */
-	if ((used = get_binary_object_header(&hdr, (unsigned char *)obj->ptr, obj->size)) == 0 ||
-		!git_object_typeisloose(hdr.type)) {
+	if ((error = parse_header_packlike(&hdr, &head_len, obj_data, obj_len)) < 0)
+		goto done;
+
+	if (!git_object_typeisloose(hdr.type) || head_len > obj_len) {
 		giterr_set(GITERR_ODB, "failed to inflate loose object");
-		return -1;
+		error = -1;
+		goto done;
 	}
+
+	obj_data += head_len;
+	obj_len -= head_len;
 
 	/*
 	 * allocate a buffer and inflate the data into it
 	 */
-	GITERR_CHECK_ALLOC_ADD(&alloclen, hdr.size, 1);
-	buf = git__malloc(alloclen);
-	GITERR_CHECK_ALLOC(buf);
-
-	in = ((unsigned char *)obj->ptr) + used;
-	len = obj->size - used;
-	if (inflate_buffer(in, len, buf, hdr.size) < 0) {
-		git__free(buf);
-		return -1;
+	if (GIT_ADD_SIZET_OVERFLOW(&alloc_size, hdr.size, 1) ||
+		git_buf_init(&body, alloc_size) < 0) {
+		error = -1;
+		goto done;
 	}
-	buf[hdr.size] = '\0';
 
-	out->data = buf;
+	if ((error = git_zstream_inflatebuf(&body, obj_data, obj_len)) < 0)
+		goto done;
+
 	out->len = hdr.size;
 	out->type = hdr.type;
+	out->data = git_buf_detach(&body);
 
-	return 0;
+done:
+	git_buf_free(&body);
+	return error;
 }
 
-static int inflate_disk_obj(git_rawobj *out, git_buf *obj)
+static int read_loose_standard(git_rawobj *out, git_buf *obj)
 {
 	git_zstream zstream = GIT_ZSTREAM_INIT;
 	unsigned char head[HEADER_LEN], *body = NULL;
 	size_t decompressed, head_len, body_len, alloc_size;
 	obj_hdr hdr;
 	int error;
-
-	/* check for a pack-like loose object */
-	if (!is_zlib_compressed_data((unsigned char *)obj->ptr))
-		return inflate_packlike_loose_disk_obj(out, obj);
 
 	if ((error = git_zstream_init(&zstream, GIT_ZSTREAM_INFLATE)) < 0 ||
 		(error = git_zstream_set_input(&zstream, git_buf_cstr(obj), git_buf_len(obj))) < 0)
@@ -404,20 +394,6 @@ done:
 	return error;
 }
 
-
-
-
-
-
-/***********************************************************
- *
- * ODB OBJECT READING & WRITING
- *
- * Backend for the public API; read headers and full objects
- * from the ODB. Write raw data to the ODB.
- *
- ***********************************************************/
-
 static int read_loose(git_rawobj *out, git_buf *loc)
 {
 	int error;
@@ -432,11 +408,16 @@ static int read_loose(git_rawobj *out, git_buf *loc)
 	out->len = 0;
 	out->type = GIT_OBJ_BAD;
 
-	if (!(error = git_futils_readbuffer(&obj, loc->ptr)))
-		error = inflate_disk_obj(out, &obj);
+	if ((error = git_futils_readbuffer(&obj, loc->ptr)) < 0)
+		goto done;
 
+	if (!is_zlib_compressed_data((unsigned char *)obj.ptr))
+		error = read_loose_packlike(out, &obj);
+	else
+		error = read_loose_standard(out, &obj);
+
+done:
 	git_buf_free(&obj);
-
 	return error;
 }
 
@@ -958,25 +939,27 @@ static int loose_backend__readstream_packlike(
 	obj_hdr *hdr,
 	loose_readstream *stream)
 {
-	size_t head_len;
+	const unsigned char *data;
+	size_t data_len, head_len;
 	int error;
+
+	data = stream->map.data;
+	data_len = stream->map.len;
 
 	/*
 	 * read the object header, which is an (uncompressed)
 	 * binary encoding of the object type and size.
 	 */
-	if ((head_len = get_binary_object_header(hdr,
-			stream->map.data, stream->map.len)) == 0 ||
-		!git_object_typeisloose(hdr->type)) {
+	if ((error = parse_header_packlike(hdr, &head_len, data, data_len)) < 0)
+		return error;
+
+	if (!git_object_typeisloose(hdr->type)) {
 		giterr_set(GITERR_ODB, "failed to inflate loose object");
 		return -1;
 	}
 
-	if ((error = git_zstream_set_input(&stream->zstream,
-			stream->map.data + head_len, stream->map.len - head_len)) < 0)
-		return error;
-
-	return 0;
+	return git_zstream_set_input(&stream->zstream,
+		data + head_len, data_len - head_len);
 }
 
 static int loose_backend__readstream_standard(
