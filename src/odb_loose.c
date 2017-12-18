@@ -363,12 +363,48 @@ done:
 	return error;
 }
 
-static int read_header_loose(git_rawobj *out, git_buf *loc)
+static int read_header_loose_packlike(
+	git_rawobj *out, const unsigned char *data, size_t len)
+{
+	obj_hdr hdr;
+	size_t header_len;
+	int error;
+
+	if ((error = parse_header_packlike(&hdr, &header_len, data, len)) < 0)
+		return error;
+
+	out->len = hdr.size;
+	out->type = hdr.type;
+
+	return error;
+}
+
+static int read_header_loose_standard(
+	git_rawobj *out, const unsigned char *data, size_t len)
 {
 	git_zstream zs = GIT_ZSTREAM_INIT;
-	unsigned char obj[1024], inflated[HEADER_LEN];
-	size_t inflated_len, header_len;
 	obj_hdr hdr;
+	unsigned char inflated[HEADER_LEN];
+	size_t header_len, inflated_len = sizeof(inflated);
+	int error;
+
+	if ((error = git_zstream_init(&zs, GIT_ZSTREAM_INFLATE)) < 0 ||
+		(error = git_zstream_set_input(&zs, data, len)) < 0 ||
+		(error = git_zstream_get_output_chunk(inflated, &inflated_len, &zs)) < 0 ||
+		(error = parse_header(&hdr, &header_len, inflated, inflated_len)) < 0)
+		goto done;
+
+	out->len = hdr.size;
+	out->type = hdr.type;
+
+done:
+	git_zstream_free(&zs);
+	return error;
+}
+
+static int read_header_loose(git_rawobj *out, git_buf *loc)
+{
+	unsigned char obj[1024];
 	int fd, obj_len, error;
 
 	assert(out && loc);
@@ -378,33 +414,23 @@ static int read_header_loose(git_rawobj *out, git_buf *loc)
 
 	out->data = NULL;
 
-	if ((fd = git_futils_open_ro(loc->ptr)) < 0)
-		return fd;
-
-	if ((error = obj_len = p_read(fd, obj, sizeof(obj))) < 0)
+	if ((error = fd = git_futils_open_ro(loc->ptr)) < 0 ||
+		(error = obj_len = p_read(fd, obj, sizeof(obj))) < 0)
 		goto done;
 
-	inflated_len = sizeof(inflated);
+	if (!is_zlib_compressed_data(obj))
+		error = read_header_loose_packlike(out, obj, (size_t)obj_len);
+	else
+		error = read_header_loose_standard(out, obj, (size_t)obj_len);
 
-	if ((error = git_zstream_init(&zs, GIT_ZSTREAM_INFLATE)) < 0 ||
-		(error = git_zstream_set_input(&zs, obj, obj_len)) < 0 ||
-		(error = git_zstream_get_output_chunk(inflated, &inflated_len, &zs)) < 0 ||
-		(error = parse_header(&hdr, &header_len, inflated, inflated_len)) < 0)
-		goto done;
-
-	if (!git_object_typeisloose(hdr.type)) {
+	if (!error && !git_object_typeisloose(out->type)) {
 		giterr_set(GITERR_ZLIB, "failed to read loose object header");
 		error = -1;
 		goto done;
 	}
 
-	out->len = hdr.size;
-	out->type = hdr.type;
-
 done:
-	git_zstream_free(&zs);
 	p_close(fd);
-
 	return error;
 }
 
