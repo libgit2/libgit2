@@ -55,6 +55,25 @@ static void test_read_object(object_data *data)
 	git_odb_free(odb);
 }
 
+static void test_read_header(object_data *data)
+{
+	git_oid id;
+	git_odb *odb;
+	size_t len;
+	git_otype type;
+
+	write_object_files(data);
+
+	cl_git_pass(git_odb_open(&odb, "test-objects"));
+	cl_git_pass(git_oid_fromstr(&id, data->id));
+	cl_git_pass(git_odb_read_header(&len, &type, odb, &id));
+
+	cl_assert_equal_sz(data->dlen, len);
+	cl_assert_equal_i(git_object_string2type(data->type), type);
+
+	git_odb_free(odb);
+}
+
 static void test_readstream_object(object_data *data, size_t blocksize)
 {
 	git_oid id;
@@ -155,6 +174,17 @@ void test_odb_loose__streaming_reads(void)
 		test_readstream_object(&two, blocksizes[i]);
 		test_readstream_object(&some, blocksizes[i]);
 	}
+}
+
+void test_odb_loose__read_header(void)
+{
+	test_read_header(&commit);
+	test_read_header(&tree);
+	test_read_header(&tag);
+	test_read_header(&zero);
+	test_read_header(&one);
+	test_read_header(&two);
+	test_read_header(&some);
 }
 
 void test_write_object_permission(
