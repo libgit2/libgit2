@@ -158,3 +158,19 @@ void test_odb_largefiles__read_into_memory_rejected_on_32bit(void)
 
 	git_odb_object_free(obj);
 }
+
+void test_odb_largefiles__read_header(void)
+{
+	git_oid oid;
+	size_t len;
+	git_otype type;
+
+	if (!cl_is_env_set("GITTEST_INVASIVE_FS_SIZE"))
+		cl_skip();
+
+	writefile(&oid);
+	cl_git_pass(git_odb_read_header(&len, &type, odb, &oid));
+
+	cl_assert_equal_sz(LARGEFILE_SIZE, len);
+	cl_assert_equal_i(GIT_OBJ_BLOB, type);
+}
