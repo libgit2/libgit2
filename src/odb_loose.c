@@ -131,7 +131,10 @@ static int parse_header_packlike(
 	}
 
 	out->size = size;
-	*out_len = used;
+
+	if (out_len)
+		*out_len = used;
+
 	return 0;
 
 on_error:
@@ -190,67 +193,6 @@ static int parse_header(
 on_error:
 	giterr_set(GITERR_OBJECT, "failed to parse loose object: invalid header");
 	return -1;
-}
-
-/***********************************************************
- *
- * ZLIB RELATED FUNCTIONS
- *
- ***********************************************************/
-
-static void init_stream(z_stream *s, void *out, size_t len)
-{
-	memset(s, 0, sizeof(*s));
-	s->next_out = out;
-	s->avail_out = (uInt)len;
-}
-
-static void set_stream_input(z_stream *s, void *in, size_t len)
-{
-	s->next_in = in;
-	s->avail_in = (uInt)len;
-}
-
-static void set_stream_output(z_stream *s, void *out, size_t len)
-{
-	s->next_out = out;
-	s->avail_out = (uInt)len;
-}
-
-
-static int start_inflate(z_stream *s, git_buf *obj, void *out, size_t len)
-{
-	int status;
-
-	init_stream(s, out, len);
-	set_stream_input(s, obj->ptr, git_buf_len(obj));
-
-	if ((status = inflateInit(s)) < Z_OK)
-		return status;
-
-	return inflate(s, 0);
-}
-
-static void abort_inflate(z_stream *s)
-{
-	inflateEnd(s);
-}
-
-static int finish_inflate(z_stream *s)
-{
-	int status = Z_OK;
-
-	while (status == Z_OK)
-		status = inflate(s, Z_FINISH);
-
-	inflateEnd(s);
-
-	if ((status != Z_STREAM_END) || (s->avail_in != 0)) {
-		giterr_set(GITERR_ZLIB, "failed to finish zlib inflation; stream aborted prematurely");
-		return -1;
-	}
-
-	return 0;
 }
 
 static int is_zlib_compressed_data(unsigned char *data)
@@ -423,12 +365,11 @@ done:
 
 static int read_header_loose(git_rawobj *out, git_buf *loc)
 {
-	int error = 0, z_return = Z_ERRNO, read_bytes;
-	git_file fd;
-	z_stream zs;
-	obj_hdr header_obj;
-	size_t header_len;
-	unsigned char raw_buffer[16], inflated_buffer[HEADER_LEN];
+	git_zstream zs = GIT_ZSTREAM_INIT;
+	unsigned char obj[1024], inflated[HEADER_LEN];
+	size_t inflated_len, header_len;
+	obj_hdr hdr;
+	int fd, obj_len, error;
 
 	assert(out && loc);
 
@@ -440,30 +381,28 @@ static int read_header_loose(git_rawobj *out, git_buf *loc)
 	if ((fd = git_futils_open_ro(loc->ptr)) < 0)
 		return fd;
 
-	init_stream(&zs, inflated_buffer, sizeof(inflated_buffer));
+	if ((error = obj_len = p_read(fd, obj, sizeof(obj))) < 0)
+		goto done;
 
-	z_return = inflateInit(&zs);
+	inflated_len = sizeof(inflated);
 
-	while (z_return == Z_OK) {
-		if ((read_bytes = p_read(fd, raw_buffer, sizeof(raw_buffer))) > 0) {
-			set_stream_input(&zs, raw_buffer, read_bytes);
-			z_return = inflate(&zs, 0);
-		} else
-			z_return = Z_STREAM_END;
-	}
+	if ((error = git_zstream_init(&zs, GIT_ZSTREAM_INFLATE)) < 0 ||
+		(error = git_zstream_set_input(&zs, obj, obj_len)) < 0 ||
+		(error = git_zstream_get_output_chunk(inflated, &inflated_len, &zs)) < 0 ||
+		(error = parse_header(&hdr, &header_len, inflated, inflated_len)) < 0)
+		goto done;
 
-	if ((z_return != Z_STREAM_END && z_return != Z_BUF_ERROR)
-		|| parse_header(&header_obj, &header_len, inflated_buffer, sizeof(inflated_buffer)) < 0
-		|| git_object_typeisloose(header_obj.type) == 0)
-	{
+	if (!git_object_typeisloose(hdr.type)) {
 		giterr_set(GITERR_ZLIB, "failed to read loose object header");
 		error = -1;
-	} else {
-		out->len = header_obj.size;
-		out->type = header_obj.type;
+		goto done;
 	}
 
-	finish_inflate(&zs);
+	out->len = hdr.size;
+	out->type = hdr.type;
+
+done:
+	git_zstream_free(&zs);
 	p_close(fd);
 
 	return error;
