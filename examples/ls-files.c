@@ -28,7 +28,8 @@
 
 typedef struct {
 	int error_unmatch;
-	git_array_t(char *) files;
+	char * files[1024];
+	int file_count;
 } ls_options;
 
 /* Print a usage message for the program. */
@@ -46,10 +47,8 @@ static int parse_options(ls_options *opts, int argc, char *argv[])
 {
 	int parsing_files = 0;
 	int i;
-	char **file;
 
 	memset(opts, 0, sizeof(ls_options));
-	git_array_init(opts->files);
 
 	if (argc < 2)
 		return 0;
@@ -61,9 +60,12 @@ static int parse_options(ls_options *opts, int argc, char *argv[])
 		if (a[0] != '-' || parsing_files) {
 			parsing_files = 1;
 
-			file = git_array_alloc(opts->files);
-			GITERR_CHECK_ALLOC(file);
-			*file = a;
+			// watch for overflows (just in case)
+			if (opts->file_count == 1024) {
+				break;
+			}
+
+			opts->files[opts->file_count++] = a;
 		} else if (!strcmp(a, "--")) {
 			parsing_files = 1;
 		} else if (!strcmp(a, "--error-unmatch")) {
@@ -79,12 +81,12 @@ static int parse_options(ls_options *opts, int argc, char *argv[])
 
 static int print_paths(ls_options *opts, git_index *index)
 {
-	size_t i;
+	int i;
 	const git_index_entry *entry;
 
 	/* loop through the files found in the args and print them if they exist */
-	for (i = 0; i < git_array_size(opts->files); ++i) {
-		const char *path = *(char **)git_array_get(opts->files, i);
+	for (i = 0; i < opts->file_count; ++i) {
+		const char *path = opts->files[i];
 
 		entry = git_index_get_bypath(index, path, GIT_INDEX_STAGE_NORMAL);
 		if (!entry && opts->error_unmatch) {
@@ -121,7 +123,7 @@ int main(int argc, char *argv[])
 		goto cleanup;
 
 	/* if there are files explicitly listed by the user, we need to treat this command differently */
-	if (git_array_size(opts.files) > 0) {
+	if (opts.file_count > 0) {
 		error = print_paths(&opts, index);
 	} else {
 		entry_count = git_index_entrycount(index);
@@ -133,7 +135,6 @@ int main(int argc, char *argv[])
 	}
 
 cleanup:
-	git_array_clear(opts.files);
 	git_index_free(index);
 	git_repository_free(repo);
 	git_libgit2_shutdown();
