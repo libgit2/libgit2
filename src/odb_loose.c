@@ -195,9 +195,12 @@ on_error:
 	return -1;
 }
 
-static int is_zlib_compressed_data(unsigned char *data)
+static int is_zlib_compressed_data(unsigned char *data, size_t data_len)
 {
 	unsigned int w;
+
+	if (data_len < 2)
+		return 0;
 
 	w = ((unsigned int)(data[0]) << 8) + data[1];
 	return (data[0] & 0x8F) == 0x08 && !(w % 31);
@@ -353,7 +356,7 @@ static int read_loose(git_rawobj *out, git_buf *loc)
 	if ((error = git_futils_readbuffer(&obj, loc->ptr)) < 0)
 		goto done;
 
-	if (!is_zlib_compressed_data((unsigned char *)obj.ptr))
+	if (!is_zlib_compressed_data((unsigned char *)obj.ptr, obj.size))
 		error = read_loose_packlike(out, &obj);
 	else
 		error = read_loose_standard(out, &obj);
@@ -418,7 +421,7 @@ static int read_header_loose(git_rawobj *out, git_buf *loc)
 		(error = obj_len = p_read(fd, obj, sizeof(obj))) < 0)
 		goto done;
 
-	if (!is_zlib_compressed_data(obj))
+	if (!is_zlib_compressed_data(obj, (size_t)obj_len))
 		error = read_header_loose_packlike(out, obj, (size_t)obj_len);
 	else
 		error = read_header_loose_standard(out, obj, (size_t)obj_len);
@@ -1002,7 +1005,7 @@ static int loose_backend__readstream(
 		goto done;
 
 	/* check for a packlike loose object */
-	if (!is_zlib_compressed_data(stream->map.data))
+	if (!is_zlib_compressed_data(stream->map.data, stream->map.len))
 		error = loose_backend__readstream_packlike(&hdr, stream);
 	else
 		error = loose_backend__readstream_standard(&hdr, stream);
