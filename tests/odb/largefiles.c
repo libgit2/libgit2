@@ -45,10 +45,9 @@ void test_odb_largefiles__write_from_memory(void)
 	cl_skip();
 #endif
 
-	if (!cl_is_env_set("GITTEST_INVASIVE_FS_SIZE"))
-		cl_skip();
-
-	if (!cl_is_env_set("GITTEST_INVASIVE_MEMORY"))
+	if (!cl_is_env_set("GITTEST_INVASIVE_FS_SIZE") ||
+		!cl_is_env_set("GITTEST_INVASIVE_MEMORY") ||
+		!cl_is_env_set("GITTEST_SLOW"))
 		cl_skip();
 
 	for (i = 0; i < (3041*126103); i++)
@@ -64,7 +63,8 @@ void test_odb_largefiles__streamwrite(void)
 {
 	git_oid expected, oid;
 
-	if (!cl_is_env_set("GITTEST_INVASIVE_FS_SIZE"))
+	if (!cl_is_env_set("GITTEST_INVASIVE_FS_SIZE") ||
+		!cl_is_env_set("GITTEST_SLOW"))
 		cl_skip();
 
 	git_oid_fromstr(&expected, "3fb56989cca483b21ba7cb0a6edb229d10e1c26c");
@@ -82,10 +82,9 @@ void test_odb_largefiles__read_into_memory(void)
 	cl_skip();
 #endif
 
-	if (!cl_is_env_set("GITTEST_INVASIVE_FS_SIZE"))
-		cl_skip();
-
-	if (!cl_is_env_set("GITTEST_INVASIVE_MEMORY"))
+	if (!cl_is_env_set("GITTEST_INVASIVE_FS_SIZE") ||
+		!cl_is_env_set("GITTEST_INVASIVE_MEMORY") ||
+		!cl_is_env_set("GITTEST_SLOW"))
 		cl_skip();
 
 	writefile(&oid);
@@ -103,10 +102,9 @@ void test_odb_largefiles__read_into_memory_rejected_on_32bit(void)
 	cl_skip();
 #endif
 
-	if (!cl_is_env_set("GITTEST_INVASIVE_FS_SIZE"))
-		cl_skip();
-
-	if (!cl_is_env_set("GITTEST_INVASIVE_MEMORY"))
+	if (!cl_is_env_set("GITTEST_INVASIVE_FS_SIZE") ||
+		!cl_is_env_set("GITTEST_INVASIVE_MEMORY") ||
+		!cl_is_env_set("GITTEST_SLOW"))
 		cl_skip();
 
 	writefile(&oid);
