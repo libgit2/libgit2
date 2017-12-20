@@ -65,18 +65,6 @@ static int last_line(const char *buf, size_t len)
 	return 0;
 }
 
-static bool starts_with(const char *str, const char *prefix)
-{
-	size_t str_len = strlen(str);
-	size_t prefix_len = strlen(prefix);
-
-	if (prefix_len > str_len) {
-		return false;
-	}
-
-	return memcmp(str, prefix, prefix_len) == 0;
-}
-
 /*
  * If the given line is of the form
  * "<token><optional whitespace><separator>..." or "<separator>...", return the
@@ -136,7 +124,7 @@ static int ignore_non_trailer(const char *buf, size_t len)
 			if (!boc)
 				boc = bol;
 			/* otherwise, it is just continuing */
-		} else if (starts_with(buf + bol, "Conflicts:\n")) {
+		} else if (git__prefixcmp(buf + bol, "Conflicts:\n") == 0) {
 			in_old_conflicts_block = 1;
 			if (!boc)
 				boc = bol;
@@ -161,7 +149,7 @@ static int find_patch_start(const char *str)
 	const char *s;
 
 	for (s = str; *s; s = next_line(s)) {
-		if (starts_with(s, "---"))
+		if (git__prefixcmp(s, "---") == 0)
 			return s - str;
 	}
 
@@ -227,7 +215,7 @@ static int find_trailer_start(const char *buf, size_t len)
 		only_spaces = 0;
 
 		for (p = git_generated_prefixes; *p; p++) {
-			if (starts_with(bol, *p)) {
+			if (git__prefixcmp(bol, *p) == 0) {
 				trailer_lines++;
 				possible_continuation_lines = 0;
 				recognized_prefix = 1;
