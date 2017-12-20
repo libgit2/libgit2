@@ -21,7 +21,7 @@ static const char *const git_generated_prefixes[] = {
 
 static const char *const separators = ":";
 
-static inline int is_blank_line(const char *str)
+static int is_blank_line(const char *str)
 {
 	const char *s = str;
 	while (*s && *s != '\n' && isspace(*s))
