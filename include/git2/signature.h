@@ -72,7 +72,7 @@ GIT_EXTERN(int) git_signature_default(git_signature **out, git_repository *repo)
  * environment variables are unset then user.name and user.email respectively
  * will be looked up in the configuration.  If user.email configuration
  * is unavailable then the EMAIL environment variable will be looked up.
- * GIT_ENOTFOUND will be returned if author or email information was not found.
+ * GIT_ENOTFOUND will be returned if name or email information was not found.
  *
  * @param out new signature
  * @param repo repository pointer
@@ -90,7 +90,7 @@ GIT_EXTERN(int) git_signature_author_env(git_signature **out, git_repository *re
  * environment variables are unset then user.name and user.email respectively
  * will be looked up in the configuration.  If user.email configuration
  * is unavailable then the EMAIL environment variable will be looked up.
- * GIT_ENOTFOUND will be returned if author or email information was not found.
+ * GIT_ENOTFOUND will be returned if name or email information was not found.
  *
  * @param out new signature
  * @param repo repository pointer
