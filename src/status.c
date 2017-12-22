@@ -280,12 +280,16 @@ int git_status_list_new(
 	if ((error = git_repository__ensure_not_bare(repo, "status")) < 0 ||
 		(error = git_repository_index(&index, repo)) < 0)
 		return error;
-
-	/* if there is no HEAD, that's okay - we'll make an empty iterator */
-	if ((error = git_repository_head_tree(&head, repo)) < 0) {
-		if (error != GIT_ENOTFOUND && error != GIT_EUNBORNBRANCH)
-			goto done;
-		giterr_clear();
+	
+	if (opts != NULL && opts->baseline != NULL) {
+		head = opts->baseline;
+	} else {
+		/* if there is no HEAD, that's okay - we'll make an empty iterator */
+		if ((error = git_repository_head_tree(&head, repo)) < 0) {
+			if (error != GIT_ENOTFOUND && error != GIT_EUNBORNBRANCH)
+				goto done;
+			giterr_clear();
+		}
 	}
 
 	/* refresh index from disk unless prevented */
@@ -377,7 +381,8 @@ done:
 
 	*out = status;
 
-	git_tree_free(head);
+	if (opts == NULL || opts->baseline != head)
+		git_tree_free(head);
 	git_index_free(index);
 
 	return error;

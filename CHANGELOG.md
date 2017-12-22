@@ -12,6 +12,10 @@ v0.26 + 1
 
 * We now support conditional includes in configuration files.
 
+* There is a new diff option, `GIT_DIFF_INDENT_HEURISTIC` which activates a
+  heuristic which takes into account whitespace and indentation in order to
+  produce better diffs when dealing with ambiguous diff hunks.
+
 ### API additions
 
 * `git_remote_create_detached()` creates a remote that is not associated

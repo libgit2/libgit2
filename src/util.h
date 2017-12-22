@@ -297,22 +297,22 @@ typedef struct {
 typedef void (*git_refcount_freeptr)(void *r);
 
 #define GIT_REFCOUNT_INC(r) { \
-	git_atomic_inc(&((git_refcount *)(r))->refcount);	\
+	git_atomic_inc(&(r)->rc.refcount);	\
 }
 
 #define GIT_REFCOUNT_DEC(_r, do_free) { \
-	git_refcount *r = (git_refcount *)(_r); \
+	git_refcount *r = &(_r)->rc; \
 	int val = git_atomic_dec(&r->refcount); \
 	if (val <= 0 && r->owner == NULL) { do_free(_r); } \
 }
 
 #define GIT_REFCOUNT_OWN(r, o) { \
-	((git_refcount *)(r))->owner = o; \
+	(r)->rc.owner = o; \
 }
 
-#define GIT_REFCOUNT_OWNER(r) (((git_refcount *)(r))->owner)
+#define GIT_REFCOUNT_OWNER(r) ((r)->rc.owner)
 
-#define GIT_REFCOUNT_VAL(r) git_atomic_get(&((git_refcount *)(r))->refcount)
+#define GIT_REFCOUNT_VAL(r) git_atomic_get((r)->rc.refcount)
 
 
 static signed char from_hex[] = {
