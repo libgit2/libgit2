@@ -2022,8 +2022,11 @@ static int checkout_write_entry(
 		(error = checkout_safe_for_update_only(data, fullpath->ptr, side->mode)) <= 0)
 		return error;
 
-	return checkout_write_content(data,
-		&side->id, fullpath->ptr, hint_path, side->mode, &st);
+	if (!S_ISGITLINK(side->mode))
+		return checkout_write_content(data,
+					      &side->id, fullpath->ptr, hint_path, side->mode, &st);
+
+	return 0;
 }
 
 static int checkout_write_entries(
