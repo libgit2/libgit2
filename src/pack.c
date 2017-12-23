@@ -716,8 +716,11 @@ int git_packfile_unpack(
 		error = packfile_unpack_compressed(&delta, p, &w_curs, &curpos, elem->size, elem->type);
 		git_mwindow_close(&w_curs);
 
-		if (error < 0)
+		if (error < 0) {
+			/* We have transferred ownership of the data to the cache. */
+			obj->data = NULL;
 			break;
+		}
 
 		/* the current object becomes the new base, on which we apply the delta */
 		base = *obj;
