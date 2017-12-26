@@ -407,20 +407,28 @@ void test_fetchhead_nonetwork__create_when_refpecs_given(void)
 	git_buf_free(&path);
 }
 
-static int nrefs_found;
 static bool count_refs_called;
+struct prefix_count {
+	const char *prefix;
+	int count;
+	int expected;
+};
 
 int count_refs(const char *ref_name, const char *remote_url, const git_oid *oid, unsigned int is_merge, void *payload)
 {
-	const char *pfix = (const char *) payload;
+	int i;
+	struct prefix_count *prefix_counts = (struct prefix_count *) payload;
 
 	GIT_UNUSED(remote_url);
 	GIT_UNUSED(oid);
 	GIT_UNUSED(is_merge);
 
 	count_refs_called = true;
-	if (!git__prefixcmp(ref_name, pfix))
-		nrefs_found++;
+
+	for (i = 0; prefix_counts[i].prefix; i++) {
+		if (!git__prefixcmp(ref_name, prefix_counts[i].prefix))
+			prefix_counts[i].count++;
+	}
 
 	return 0;
 }
@@ -444,23 +452,20 @@ void test_fetchhead_nonetwork__create_with_multiple_refspecs(void)
 	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
 	cl_assert(git_path_exists(path.ptr));
 
-	count_refs_called = 0;
-	nrefs_found = 0;
-	cl_git_pass(git_repository_fetchhead_foreach(g_repo, count_refs, "refs/notes/"));
-	cl_assert(count_refs_called);
-	cl_assert_equal_i(1, nrefs_found);
+	{
+		int i;
+		struct prefix_count prefix_counts[] = {
+			{"refs/notes/", 0, 1},
+			{"refs/heads/", 0, 12},
+			{"refs/tags/", 0, 7},
+			{NULL, 0, 0},
+		};
 
-	count_refs_called = 0;
-	nrefs_found = 0;
-	cl_git_pass(git_repository_fetchhead_foreach(g_repo, count_refs, "refs/heads/"));
-	cl_assert(count_refs_called);
-	cl_assert_equal_i(12, nrefs_found);
-
-	count_refs_called = 0;
-	nrefs_found = 0;
-	cl_git_pass(git_repository_fetchhead_foreach(g_repo, count_refs, "refs/tags/"));
-	cl_assert(count_refs_called);
-	cl_assert_equal_i(7, nrefs_found);
+		cl_git_pass(git_repository_fetchhead_foreach(g_repo, count_refs, &prefix_counts));
+		cl_assert(count_refs_called);
+		for (i = 0; prefix_counts[i].prefix; i++)
+			cl_assert_equal_i(prefix_counts[i].expected, prefix_counts[i].count);
+	}
 
 	git_remote_free(remote);
 	git_buf_free(&path);
