@@ -23,6 +23,7 @@
 #define iterator__has_been_accessed(I) iterator__flag(I,FIRST_ACCESS)
 #define iterator__honor_ignores(I)     iterator__flag(I,HONOR_IGNORES)
 #define iterator__ignore_dot_git(I)    iterator__flag(I,IGNORE_DOT_GIT)
+#define iterator__symlinksdir(I)       iterator__flag(I,INCLUDE_SYMLINK_REFSDIR)
 
 
 static void iterator_set_ignore_case(git_iterator *iter, bool ignore_case)
@@ -1491,6 +1492,25 @@ static int filesystem_iterator_current(
 	return 0;
 }
 
+static int is_directory(
+	const filesystem_iterator *iter, const filesystem_iterator_entry *entry)
+{
+	int isdir = 0;
+	struct stat st;
+	git_buf fullpath;
+
+	if (S_ISDIR(entry->st.st_mode))
+		return 1;
+	if (!iterator__symlinksdir(iter) || !S_ISLNK(entry->st.st_mode))
+		return 0;
+
+	git_buf_init(&fullpath, 0);
+	git_buf_joinpath(&fullpath, iter->root, entry->path);
+	isdir = !p_stat(fullpath.ptr, &st) && S_ISDIR(st.st_mode);
+	git_buf_free(&fullpath);
+	return isdir;
+}
+
 static int filesystem_iterator_advance(
 	const git_index_entry **out, git_iterator *i)
 {
@@ -1519,7 +1539,7 @@ static int filesystem_iterator_advance(
 		entry = frame->entries.contents[frame->next_idx];
 		frame->next_idx++;
 
-		if (S_ISDIR(entry->st.st_mode)) {
+		if (is_directory(iter, entry)) {
 			if (iterator__do_autoexpand(iter)) {
 				error = filesystem_iterator_frame_push(iter, entry);
 

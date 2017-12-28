@@ -39,6 +39,8 @@ typedef enum {
 	GIT_ITERATOR_DONT_PRECOMPOSE_UNICODE = (1u << 5),
 	/** include conflicts */
 	GIT_ITERATOR_INCLUDE_CONFLICTS = (1u << 6),
+	/** descend into symlinked directories when looking for references */
+	GIT_ITERATOR_INCLUDE_SYMLINK_REFSDIR = (1u << 7),
 } git_iterator_flag_t;
 
 typedef enum {
