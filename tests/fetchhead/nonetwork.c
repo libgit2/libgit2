@@ -353,19 +353,24 @@ void test_fetchhead_nonetwork__quote_in_branch_name(void)
 }
 
 static bool found_master;
-static bool find_master_called;
+static bool found_haacked;
+static bool find_master_haacked_called;
 
-int find_master(const char *ref_name, const char *remote_url, const git_oid *oid, unsigned int is_merge, void *payload)
+int find_master_haacked(const char *ref_name, const char *remote_url, const git_oid *oid, unsigned int is_merge, void *payload)
 {
 	GIT_UNUSED(remote_url);
 	GIT_UNUSED(oid);
 	GIT_UNUSED(payload);
 
-	find_master_called = true;
+	find_master_haacked_called = true;
 
 	if (!strcmp("refs/heads/master", ref_name)) {
 		cl_assert(is_merge);
 		found_master = true;
+	}
+	if (!strcmp("refs/heads/haacked", ref_name)) {
+		cl_assert(is_merge);
+		found_haacked = true;
 	}
 
 	return 0;
@@ -375,10 +380,12 @@ void test_fetchhead_nonetwork__create_when_refpecs_given(void)
 {
 	git_remote *remote;
 	git_buf path = GIT_BUF_INIT;
-	char *refspec = "refs/heads/master";
+	char *refspec1 = "refs/heads/master";
+	char *refspec2 = "refs/heads/haacked";
+	char *refspecs[] = { refspec1, refspec2 };
 	git_strarray specs = {
-		&refspec,
-		1,
+		refspecs,
+		2,
 	};
 
 	cl_set_cleanup(&cleanup_repository, "./test1");
@@ -391,9 +398,74 @@ void test_fetchhead_nonetwork__create_when_refpecs_given(void)
 	cl_git_pass(git_remote_fetch(remote, &specs, NULL, NULL));
 	cl_assert(git_path_exists(path.ptr));
 
-	cl_git_pass(git_repository_fetchhead_foreach(g_repo, find_master, NULL));
-	cl_assert(find_master_called);
+	cl_git_pass(git_repository_fetchhead_foreach(g_repo, find_master_haacked, NULL));
+	cl_assert(find_master_haacked_called);
 	cl_assert(found_master);
+	cl_assert(found_haacked);
+
+	git_remote_free(remote);
+	git_buf_free(&path);
+}
+
+static bool count_refs_called;
+struct prefix_count {
+	const char *prefix;
+	int count;
+	int expected;
+};
+
+int count_refs(const char *ref_name, const char *remote_url, const git_oid *oid, unsigned int is_merge, void *payload)
+{
+	int i;
+	struct prefix_count *prefix_counts = (struct prefix_count *) payload;
+
+	GIT_UNUSED(remote_url);
+	GIT_UNUSED(oid);
+	GIT_UNUSED(is_merge);
+
+	count_refs_called = true;
+
+	for (i = 0; prefix_counts[i].prefix; i++) {
+		if (!git__prefixcmp(ref_name, prefix_counts[i].prefix))
+			prefix_counts[i].count++;
+	}
+
+	return 0;
+}
+
+void test_fetchhead_nonetwork__create_with_multiple_refspecs(void)
+{
+	git_remote *remote;
+	git_buf path = GIT_BUF_INIT;
+
+	cl_set_cleanup(&cleanup_repository, "./test1");
+	cl_git_pass(git_repository_init(&g_repo, "./test1", 0));
+
+	cl_git_pass(git_remote_create(&remote, g_repo, "origin", cl_fixture("testrepo.git")));
+	git_remote_free(remote);
+	cl_git_pass(git_remote_add_fetch(g_repo, "origin", "+refs/notes/*:refs/origin/notes/*"));
+	/* Pick up the new refspec */
+	cl_git_pass(git_remote_lookup(&remote, g_repo, "origin"));
+
+	cl_git_pass(git_buf_joinpath(&path, git_repository_path(g_repo), "FETCH_HEAD"));
+	cl_assert(!git_path_exists(path.ptr));
+	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
+	cl_assert(git_path_exists(path.ptr));
+
+	{
+		int i;
+		struct prefix_count prefix_counts[] = {
+			{"refs/notes/", 0, 1},
+			{"refs/heads/", 0, 12},
+			{"refs/tags/", 0, 7},
+			{NULL, 0, 0},
+		};
+
+		cl_git_pass(git_repository_fetchhead_foreach(g_repo, count_refs, &prefix_counts));
+		cl_assert(count_refs_called);
+		for (i = 0; prefix_counts[i].prefix; i++)
+			cl_assert_equal_i(prefix_counts[i].expected, prefix_counts[i].count);
+	}
 
 	git_remote_free(remote);
 	git_buf_free(&path);
