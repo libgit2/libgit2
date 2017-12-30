@@ -259,7 +259,7 @@ static int git_textconv_check_attributes(
     error = git_attr_get(out, repo, 0, path, GIT_TEXTCONV_ATTR);
     
     /* if no values were found there is no textconv, return passthrough */
-    if (error == GIT_ENOTFOUND) {
+    if (error == GIT_ENOTFOUND || *out == NULL) {
         return GIT_PASSTHROUGH;
     }
     return error;

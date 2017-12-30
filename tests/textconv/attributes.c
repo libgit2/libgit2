@@ -37,7 +37,7 @@ void test_textconv_attributes__check(void)
     cl_assert_equal_p(yaml_filter,tc);
     cl_check_pass(git_textconv_load(&tc, g_repo, "test.dat"));
     cl_assert_equal_p(yaml_filter,tc);
-    cl_check_pass(git_textconv_load(&tc, g_repo, "abc.txt"));
+    cl_assert_equal_i(GIT_PASSTHROUGH, git_textconv_load(&tc, g_repo, "abc.txt"));
     cl_assert_equal_p(NULL,tc);
 }
 
