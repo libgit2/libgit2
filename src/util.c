@@ -252,35 +252,47 @@ void git__strtolower(char *str)
 	git__strntolower(str, strlen(str));
 }
 
-int git__prefixcmp(const char *str, const char *prefix)
-{
-	for (;;) {
-		unsigned char p = *(prefix++), s;
-		if (!p)
-			return 0;
-		if ((s = *(str++)) != p)
-			return s - p;
-	}
-}
-
-int git__prefixcmp_icase(const char *str, const char *prefix)
-{
-	return strncasecmp(str, prefix, strlen(prefix));
-}
-
-int git__prefixncmp_icase(const char *str, size_t str_n, const char *prefix)
+GIT_INLINE(int) prefixcmp(const char *str, size_t str_n, const char *prefix, bool icase)
 {
 	int s, p;
 
-	while(str_n--) {
-		s = (unsigned char)git__tolower(*str++);
-		p = (unsigned char)git__tolower(*prefix++);
+	while (str_n--) {
+		s = (unsigned char)*str++;
+		p = (unsigned char)*prefix++;
+
+		if (icase) {
+			s = git__tolower(s);
+			p = git__tolower(p);
+		}
+
+		if (!p)
+			return 0;
 
 		if (s != p)
 			return s - p;
 	}
 
 	return (0 - *prefix);
+}
+
+int git__prefixcmp(const char *str, const char *prefix)
+{
+	return prefixcmp(str, SIZE_MAX, prefix, false);
+}
+
+int git__prefixncmp(const char *str, size_t str_n, const char *prefix)
+{
+	return prefixcmp(str, str_n, prefix, false);
+}
+
+int git__prefixcmp_icase(const char *str, const char *prefix)
+{
+	return prefixcmp(str, SIZE_MAX, prefix, true);
+}
+
+int git__prefixncmp_icase(const char *str, size_t str_n, const char *prefix)
+{
+	return prefixcmp(str, str_n, prefix, true);
 }
 
 int git__suffixcmp(const char *str, const char *suffix)
