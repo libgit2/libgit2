@@ -9,6 +9,7 @@
 #include "csvtoyaml.h"
 
 enum stream_state {
+    INIT,
     ESCAPED,
     QUOTED,
     ESCAPED_QUOTED,
@@ -33,6 +34,11 @@ static int yaml_stream_write(git_writestream *s, const char *buffer, size_t len)
     for (i = 0; err == 0 && i < len; i++) {
         char c = buffer[i];
         switch (stream->state) {
+            case INIT:
+                stream->next->write(stream->next, "-", 1);
+                stream->linebuf[stream->pos++] = c;
+                stream->state = NORMAL;
+                break;
             case ESCAPED:
                 stream->linebuf[stream->pos++] = c;
                 stream->state = NORMAL;
@@ -63,15 +69,14 @@ static int yaml_stream_write(git_writestream *s, const char *buffer, size_t len)
                         stream->state = ESCAPED;
                         break;
                     case ',':
-                        err = stream->next->write(stream->next, "  -", 3);
+                        err = stream->next->write(stream->next, "\n  - ", 5);
                         err = err || stream->next->write(stream->next, stream->linebuf, stream->pos);
                         stream->pos = 0;
                         break;
                     case '\n':
-                        stream->linebuf[stream->pos++] = c;
-                        err = stream->next->write(stream->next, "  -", 3);
+                        err = stream->next->write(stream->next, "\n  - ", 5);
                         err = err || stream->next->write(stream->next, stream->linebuf, stream->pos);
-                        err = err || stream->next->write(stream->next, "-\n", 2);
+                        err = err || stream->next->write(stream->next, "\n-", 2);
                         stream->pos = 0;
                         break;
                     case '\r':
@@ -115,6 +120,8 @@ static int yaml_stream_init(
     stream->parent.close = yaml_stream_close;
     stream->parent.free = yaml_stream_free;
     stream->next = next;
+    stream->state = INIT;
+    stream->pos = 0;
     
     *out = (git_writestream *)stream;
     return 0;

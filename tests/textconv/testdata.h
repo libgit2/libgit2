@@ -9,5 +9,6 @@
 #define testdata_h
 
 extern const char* getTestCSV(void);
+extern const char* getTestYAML(void);
 
 #endif /* testdata_h */
