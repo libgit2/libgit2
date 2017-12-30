@@ -73,6 +73,128 @@ static int note_list_cb(
 	return 0;
 }
 
+struct note_create_payload {
+	const char *note_oid;
+	const char *object_oid;
+	unsigned seen;
+};
+
+static int note_list_create_cb(
+	const git_oid *blob_oid, const git_oid *annotated_obj_id, void *payload)
+{
+	git_oid expected_note_oid, expected_target_oid;
+	struct note_create_payload *notes = payload;
+	size_t i;
+
+	for (i = 0; notes[i].note_oid != NULL; i++) {
+		cl_git_pass(git_oid_fromstr(&expected_note_oid, notes[i].note_oid));
+
+		if (git_oid_cmp(&expected_note_oid, blob_oid) != 0)
+			continue;
+
+		cl_git_pass(git_oid_fromstr(&expected_target_oid, notes[i].object_oid));
+
+		if (git_oid_cmp(&expected_target_oid, annotated_obj_id) != 0)
+			continue;
+
+		notes[i].seen = 1;
+		return 0;
+	}
+
+	cl_fail("Did not see expected note");
+	return 0;
+}
+
+void assert_notes_seen(struct note_create_payload payload[], size_t n)
+{
+	size_t seen = 0, i;
+
+	for (i = 0; payload[i].note_oid != NULL; i++) {
+		if (payload[i].seen)
+			seen++;
+	}
+
+	cl_assert_equal_i(seen, n);
+}
+
+void test_notes_notes__can_create_a_note(void)
+{
+	git_oid note_oid;
+	static struct note_create_payload can_create_a_note[] = {
+		{ "1c9b1bc36730582a42d56eeee0dc58673d7ae869", "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", 0 },
+		{ NULL, NULL, 0 }
+	};
+
+	create_note(&note_oid, "refs/notes/i-can-see-dead-notes", can_create_a_note[0].object_oid, "I decorate 4a20\n");
+
+	cl_git_pass(git_note_foreach(_repo, "refs/notes/i-can-see-dead-notes", note_list_create_cb, &can_create_a_note));
+
+	assert_notes_seen(can_create_a_note, 1);
+}
+
+void test_notes_notes__can_create_a_note_from_commit(void)
+{
+	git_oid oid;
+	git_oid notes_commit_out;
+	git_reference *ref;
+	static struct note_create_payload can_create_a_note_from_commit[] = {
+		{ "1c9b1bc36730582a42d56eeee0dc58673d7ae869", "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", 0 },
+		{ NULL, NULL, 0 }
+	};
+
+	cl_git_pass(git_oid_fromstr(&oid, can_create_a_note_from_commit[0].object_oid));
+
+	cl_git_pass(git_note_commit_create(&notes_commit_out, NULL, _repo, NULL, _sig, _sig, &oid, "I decorate 4a20\n", 1));
+
+	/* create_from_commit will not update any ref,
+	 * so we must manually create the ref, that points to the commit */
+	cl_git_pass(git_reference_create(&ref, _repo, "refs/notes/i-can-see-dead-notes", &notes_commit_out, 0, NULL));
+
+	cl_git_pass(git_note_foreach(_repo, "refs/notes/i-can-see-dead-notes", note_list_create_cb, &can_create_a_note_from_commit));
+
+	assert_notes_seen(can_create_a_note_from_commit, 1);
+
+	git_reference_free(ref);
+}
+
+
+/* Test that we can create a note from a commit, given an existing commit */
+void test_notes_notes__can_create_a_note_from_commit_given_an_existing_commit(void)
+{
+	git_oid oid;
+	git_oid notes_commit_out;
+	git_commit *existing_notes_commit = NULL;
+	git_reference *ref;
+	static struct note_create_payload can_create_a_note_from_commit_given_an_existing_commit[] = {
+		{ "1c9b1bc36730582a42d56eeee0dc58673d7ae869", "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", 0 },
+		{ "1aaf94147c21f981e0a20bf57b89137c5a6aae52", "9fd738e8f7967c078dceed8190330fc8648ee56a", 0 },
+		{ NULL, NULL, 0 }
+	};
+
+	cl_git_pass(git_oid_fromstr(&oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045"));
+
+	cl_git_pass(git_note_commit_create(&notes_commit_out, NULL, _repo, NULL, _sig, _sig, &oid, "I decorate 4a20\n", 0));
+
+	cl_git_pass(git_oid_fromstr(&oid, "9fd738e8f7967c078dceed8190330fc8648ee56a"));
+
+	git_commit_lookup(&existing_notes_commit, _repo, &notes_commit_out);
+
+	cl_assert(existing_notes_commit);
+
+	cl_git_pass(git_note_commit_create(&notes_commit_out, NULL, _repo, existing_notes_commit, _sig, _sig, &oid, "I decorate 9fd7\n", 0));
+
+	/* create_from_commit will not update any ref,
+	 * so we must manually create the ref, that points to the commit */
+	cl_git_pass(git_reference_create(&ref, _repo, "refs/notes/i-can-see-dead-notes", &notes_commit_out, 0, NULL));
+
+	cl_git_pass(git_note_foreach(_repo, "refs/notes/i-can-see-dead-notes", note_list_create_cb, &can_create_a_note_from_commit_given_an_existing_commit));
+
+	assert_notes_seen(can_create_a_note_from_commit_given_an_existing_commit, 2);
+
+	git_commit_free(existing_notes_commit);
+	git_reference_free(ref);
+}
+
 /*
  * $ git notes --ref i-can-see-dead-notes add -m "I decorate a65f" a65fedf39aefe402d3bb6e24df4d4f5fe4547750
  * $ git notes --ref i-can-see-dead-notes add -m "I decorate c478" c47800c7266a2be04c571c04d5a6614691ea99bd
@@ -253,6 +375,71 @@ static char *messages[] = {
 
 #define MESSAGES_COUNT (sizeof(messages)/sizeof(messages[0])) - 1
 
+/* Test that we can read a note */
+void test_notes_notes__can_read_a_note(void)
+{
+	git_oid note_oid, target_oid;
+	git_note *note;
+
+	create_note(&note_oid, "refs/notes/i-can-see-dead-notes", "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", "I decorate 4a20\n");
+
+	cl_git_pass(git_oid_fromstr(&target_oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045"));
+
+	cl_git_pass(git_note_read(&note, _repo, "refs/notes/i-can-see-dead-notes", &target_oid));
+
+	cl_assert_equal_s(git_note_message(note), "I decorate 4a20\n");
+
+	git_note_free(note);
+}
+
+/* Test that we can read a note with from commit api */
+void test_notes_notes__can_read_a_note_from_a_commit(void)
+{
+	git_oid oid, notes_commit_oid;
+	git_commit *notes_commit;
+	git_note *note;
+
+	cl_git_pass(git_oid_fromstr(&oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045"));
+
+	cl_git_pass(git_note_commit_create(&notes_commit_oid, NULL, _repo, NULL, _sig, _sig, &oid, "I decorate 4a20\n", 1));
+
+	git_commit_lookup(&notes_commit, _repo, &notes_commit_oid);
+
+	cl_assert(notes_commit);
+
+	cl_git_pass(git_note_commit_read(&note, _repo, notes_commit, &oid));
+
+	cl_assert_equal_s(git_note_message(note), "I decorate 4a20\n");
+
+	git_commit_free(notes_commit);
+	git_note_free(note);
+}
+
+/* Test that we can read a commit with no note fails */
+void test_notes_notes__attempt_to_read_a_note_from_a_commit_with_no_note_fails(void)
+{
+	git_oid oid, notes_commit_oid;
+	git_commit *notes_commit;
+	git_note *note;
+
+	cl_git_pass(git_oid_fromstr(&oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045"));
+
+	cl_git_pass(git_note_commit_create(&notes_commit_oid, NULL, _repo, NULL, _sig, _sig, &oid, "I decorate 4a20\n", 1));
+
+	git_commit_lookup(&notes_commit, _repo, &notes_commit_oid);
+
+	cl_git_pass(git_note_commit_remove(&notes_commit_oid, _repo, notes_commit, _sig, _sig, &oid));
+	git_commit_free(notes_commit);
+
+	git_commit_lookup(&notes_commit, _repo, &notes_commit_oid);
+
+	cl_assert(notes_commit);
+
+	cl_git_fail_with(GIT_ENOTFOUND, git_note_commit_read(&note, _repo, notes_commit, &oid));
+
+	git_commit_free(notes_commit);
+}
+
 /*
  * $ git ls-tree refs/notes/fanout
  * 040000 tree 4b22b35d44b5a4f589edf3dc89196399771796ea    84
@@ -297,6 +484,50 @@ void test_notes_notes__can_read_a_note_in_an_existing_fanout(void)
 
 	git_note_free(note);
 }
+
+/* Can remove a note */
+void test_notes_notes__can_remove_a_note(void)
+{
+	git_oid note_oid, target_oid;
+	git_note *note;
+
+	create_note(&note_oid, "refs/notes/i-can-see-dead-notes", "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", "I decorate 4a20\n");
+
+	cl_git_pass(git_oid_fromstr(&target_oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045"));
+	cl_git_pass(git_note_remove(_repo, "refs/notes/i-can-see-dead-notes", _sig, _sig, &target_oid));
+
+	cl_git_fail(git_note_read(&note, _repo, "refs/notes/i-can-see-dead-notes", &target_oid));
+}
+
+/* Can remove a note from a commit */
+void test_notes_notes__can_remove_a_note_from_commit(void)
+{
+	git_oid oid, notes_commit_oid;
+	git_note *note = NULL;
+	git_commit *existing_notes_commit;
+	git_reference *ref;
+
+	cl_git_pass(git_oid_fromstr(&oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045"));
+
+	cl_git_pass(git_note_commit_create(&notes_commit_oid, NULL, _repo, NULL, _sig, _sig, &oid, "I decorate 4a20\n", 0));
+
+	git_commit_lookup(&existing_notes_commit, _repo, &notes_commit_oid);
+
+	cl_assert(existing_notes_commit);
+
+	cl_git_pass(git_note_commit_remove(&notes_commit_oid, _repo, existing_notes_commit, _sig, _sig, &oid));
+
+	/* remove_from_commit will not update any ref,
+	 * so we must manually create the ref, that points to the commit */
+	cl_git_pass(git_reference_create(&ref, _repo, "refs/notes/i-can-see-dead-notes", &notes_commit_oid, 0, NULL));
+
+	cl_git_fail(git_note_read(&note, _repo, "refs/notes/i-can-see-dead-notes", &oid));
+
+	git_commit_free(existing_notes_commit);
+	git_reference_free(ref);
+	git_note_free(note);
+}
+
 
 void test_notes_notes__can_remove_a_note_in_an_existing_fanout(void)
 {
@@ -387,4 +618,47 @@ void test_notes_notes__empty_iterate(void)
 	git_note_iterator *iter;
 
 	cl_git_fail(git_note_iterator_new(&iter, _repo, "refs/notes/commits"));
+}
+
+void test_notes_notes__iterate_from_commit(void)
+{
+	git_note_iterator *iter;
+	git_note *note;
+	git_oid note_id, annotated_id;
+	git_oid oids[2];
+	git_oid notes_commit_oids[2];
+	git_commit *notes_commits[2];
+	const char* note_message[] = {
+		"I decorate a65f\n",
+		"I decorate c478\n"
+	};
+	int i, err;
+
+	cl_git_pass(git_oid_fromstr(&(oids[0]), "a65fedf39aefe402d3bb6e24df4d4f5fe4547750"));
+	cl_git_pass(git_oid_fromstr(&(oids[1]), "c47800c7266a2be04c571c04d5a6614691ea99bd"));
+
+	cl_git_pass(git_note_commit_create(&notes_commit_oids[0], NULL, _repo, NULL, _sig, _sig, &(oids[0]), note_message[0], 0));
+
+	git_commit_lookup(&notes_commits[0], _repo, &notes_commit_oids[0]);
+	cl_assert(notes_commits[0]);
+
+	cl_git_pass(git_note_commit_create(&notes_commit_oids[1], NULL, _repo, notes_commits[0], _sig, _sig, &(oids[1]), note_message[1], 0));
+
+	git_commit_lookup(&notes_commits[1], _repo, &notes_commit_oids[1]);
+	cl_assert(notes_commits[1]);
+
+	cl_git_pass(git_note_commit_iterator_new(&iter, notes_commits[1]));
+
+	for (i = 0; (err = git_note_next(&note_id, &annotated_id, iter)) >= 0; ++i) {
+		cl_git_pass(git_note_commit_read(&note, _repo, notes_commits[1], &annotated_id));
+		cl_assert_equal_s(git_note_message(note), note_message[i]);
+		git_note_free(note);
+	}
+
+	cl_assert_equal_i(GIT_ITEROVER, err);
+	cl_assert_equal_i(2, i);
+
+	git_note_iterator_free(iter);
+	git_commit_free(notes_commits[0]);
+	git_commit_free(notes_commits[1]);
 }
