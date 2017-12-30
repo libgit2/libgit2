@@ -23,7 +23,7 @@
 #define iterator__has_been_accessed(I) iterator__flag(I,FIRST_ACCESS)
 #define iterator__honor_ignores(I)     iterator__flag(I,HONOR_IGNORES)
 #define iterator__ignore_dot_git(I)    iterator__flag(I,IGNORE_DOT_GIT)
-#define iterator__symlinksdir(I)       iterator__flag(I,INCLUDE_SYMLINK_REFSDIR)
+#define iterator__descend_symlinks(I)  iterator__flag(I,DESCEND_SYMLINKS)
 
 
 static void iterator_set_ignore_case(git_iterator *iter, bool ignore_case)
@@ -1492,29 +1492,41 @@ static int filesystem_iterator_current(
 	return 0;
 }
 
-static int is_directory(
-	const filesystem_iterator *iter, const filesystem_iterator_entry *entry)
+static int filesystem_iterator_is_dir(
+	bool *is_dir,
+	const filesystem_iterator *iter,
+	const filesystem_iterator_entry *entry)
 {
-	int isdir = 0;
 	struct stat st;
-	git_buf fullpath;
+	git_buf fullpath = GIT_BUF_INIT;
+	int error = 0;
 
-	if (S_ISDIR(entry->st.st_mode))
-		return 1;
-	if (!iterator__symlinksdir(iter) || !S_ISLNK(entry->st.st_mode))
-		return 0;
+	if (S_ISDIR(entry->st.st_mode)) {
+		*is_dir = 1;
+		goto done;
+	}
 
-	git_buf_init(&fullpath, 0);
-	git_buf_joinpath(&fullpath, iter->root, entry->path);
-	isdir = !p_stat(fullpath.ptr, &st) && S_ISDIR(st.st_mode);
+	if (!iterator__descend_symlinks(iter) || !S_ISLNK(entry->st.st_mode)) {
+		*is_dir = 0;
+		goto done;
+	}
+
+	if ((error = git_buf_joinpath(&fullpath, iter->root, entry->path)) < 0 ||
+		(error = p_stat(fullpath.ptr, &st)) < 0)
+		goto done;
+
+	*is_dir = S_ISDIR(st.st_mode);
+
+done:
 	git_buf_free(&fullpath);
-	return isdir;
+	return error;
 }
 
 static int filesystem_iterator_advance(
 	const git_index_entry **out, git_iterator *i)
 {
 	filesystem_iterator *iter = (filesystem_iterator *)i;
+	bool is_dir;
 	int error = 0;
 
 	iter->base.flags |= GIT_ITERATOR_FIRST_ACCESS;
@@ -1539,7 +1551,10 @@ static int filesystem_iterator_advance(
 		entry = frame->entries.contents[frame->next_idx];
 		frame->next_idx++;
 
-		if (is_directory(iter, entry)) {
+		if ((error = filesystem_iterator_is_dir(&is_dir, iter, entry)) < 0)
+			break;
+
+		if (is_dir) {
 			if (iterator__do_autoexpand(iter)) {
 				error = filesystem_iterator_frame_push(iter, entry);
 
