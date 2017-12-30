@@ -507,6 +507,21 @@ static int local_counting(int stage, unsigned int current, unsigned int total, v
 	return error;
 }
 
+static int foreach_reference_cb(git_reference *reference, void *payload)
+{
+	git_revwalk *walk = (git_revwalk *)payload;
+
+	int error = git_revwalk_hide(walk, git_reference_target(reference));
+	/* The reference is in the local repository, so the target may not
+	 * exist on the remote.  It also may not be a commit. */
+	if (error == GIT_ENOTFOUND || error == GITERR_INVALID) {
+		giterr_clear();
+		error = 0;
+	}
+
+	return error;
+}
+
 static int local_download_pack(
 		git_transport *transport,
 		git_repository *repo,
@@ -546,11 +561,6 @@ static int local_download_pack(
 		if (git_object_type(obj) == GIT_OBJ_COMMIT) {
 			/* Revwalker includes only wanted commits */
 			error = git_revwalk_push(walk, &rhead->oid);
-			if (!error && !git_oid_iszero(&rhead->loid)) {
-				error = git_revwalk_hide(walk, &rhead->loid);
-				if (error == GIT_ENOTFOUND)
-					error = 0;
-			}
 		} else {
 			/* Tag or some other wanted object. Add it on its own */
 			error = git_packbuilder_insert_recur(pack, &rhead->oid, rhead->name);
@@ -559,6 +569,9 @@ static int local_download_pack(
 		if (error < 0)
 			goto cleanup;
 	}
+
+	if ((error = git_reference_foreach(repo, foreach_reference_cb, walk)))
+		goto cleanup;
 
 	if ((error = git_packbuilder_insert_walk(pack, walk)))
 		goto cleanup;
