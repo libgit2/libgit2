@@ -716,8 +716,11 @@ int git_packfile_unpack(
 		error = packfile_unpack_compressed(&delta, p, &w_curs, &curpos, elem->size, elem->type);
 		git_mwindow_close(&w_curs);
 
-		if (error < 0)
+		if (error < 0) {
+			/* We have transferred ownership of the data to the cache. */
+			obj->data = NULL;
 			break;
+		}
 
 		/* the current object becomes the new base, on which we apply the delta */
 		base = *obj;
@@ -934,19 +937,19 @@ git_off_t get_delta_base(
 	if (type == GIT_OBJ_OFS_DELTA) {
 		unsigned used = 0;
 		unsigned char c = base_info[used++];
-		base_offset = c & 127;
+		size_t unsigned_base_offset = c & 127;
 		while (c & 128) {
 			if (left <= used)
 				return GIT_EBUFS;
-			base_offset += 1;
-			if (!base_offset || MSB(base_offset, 7))
+			unsigned_base_offset += 1;
+			if (!unsigned_base_offset || MSB(unsigned_base_offset, 7))
 				return 0; /* overflow */
 			c = base_info[used++];
-			base_offset = (base_offset << 7) + (c & 127);
+			unsigned_base_offset = (unsigned_base_offset << 7) + (c & 127);
 		}
-		base_offset = delta_obj_offset - base_offset;
-		if (base_offset <= 0 || base_offset >= delta_obj_offset)
+		if (unsigned_base_offset == 0 || (size_t)delta_obj_offset <= unsigned_base_offset)
 			return 0; /* out of bound */
+		base_offset = delta_obj_offset - unsigned_base_offset;
 		*curpos += used;
 	} else if (type == GIT_OBJ_REF_DELTA) {
 		/* If we have the cooperative cache, search in it first */

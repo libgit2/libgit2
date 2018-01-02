@@ -575,6 +575,16 @@
 	"+added line with no nl\n" \
 	"\\ No newline at end of file\n"
 
+#define PATCH_NAME_WHITESPACE \
+	"diff --git a/file with spaces.txt b/file with spaces.txt\n" \
+	"index 9432026..83759c0 100644\n" \
+	"--- a/file with spaces.txt\n" \
+	"+++ b/file with spaces.txt\n" \
+	"@@ -0,3 +0,2 @@\n" \
+	" and this\n" \
+	"-is additional context\n" \
+	" below it!\n" \
+
 #define PATCH_CORRUPT_GIT_HEADER \
 	"diff --git a/file.txt\n" \
 	"index 9432026..0f39b9a 100644\n" \

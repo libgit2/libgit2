@@ -1541,6 +1541,20 @@ cleanup:
 	return error;
 }
 
+static int truncate_fetch_head(const char *gitdir)
+{
+	git_buf path = GIT_BUF_INIT;
+	int error;
+
+	if ((error = git_buf_joinpath(&path, gitdir, GIT_FETCH_HEAD_FILE)) < 0)
+		return error;
+
+	error = git_futils_truncate(path.ptr, GIT_REFS_FILE_MODE);
+	git_buf_free(&path);
+
+	return error;
+}
+
 int git_remote_update_tips(
 		git_remote *remote,
 		const git_remote_callbacks *callbacks,
@@ -1570,6 +1584,9 @@ int git_remote_update_tips(
 		tagopt = remote->download_tags;
 	else
 		tagopt = download_tags;
+
+	if ((error = truncate_fetch_head(git_repository_path(remote->repo))) < 0)
+		goto out;
 
 	if (tagopt == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
 		if ((error = update_tips_for_spec(remote, callbacks, update_fetchhead, tagopt, &tagspec, &refs, reflog_message)) < 0)

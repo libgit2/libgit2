@@ -16,6 +16,7 @@
 #include "delta.h"
 #include "filebuf.h"
 #include "object.h"
+#include "zstream.h"
 
 #include "git2/odb_backend.h"
 #include "git2/types.h"
@@ -119,53 +120,58 @@ static size_t get_binary_object_header(obj_hdr *hdr, git_buf *obj)
 	return used;
 }
 
-static size_t get_object_header(obj_hdr *hdr, unsigned char *data)
+static int parse_header(
+	obj_hdr *out,
+       	size_t *out_len,
+	const unsigned char *_data,
+	size_t data_len)
 {
-	char c, typename[10];
-	size_t size, used = 0;
+	const char *data = (char *)_data;
+	size_t i, typename_len, size_idx, size_len;
+	int64_t size;
 
-	/*
-	 * type name string followed by space.
-	 */
-	while ((c = data[used]) != ' ') {
-		typename[used++] = c;
-		if (used >= sizeof(typename))
-			return 0;
+	*out_len = 0;
+
+	/* find the object type name */
+	for (i = 0, typename_len = 0; i < data_len; i++, typename_len++) {
+		if (data[i] == ' ')
+			break;
 	}
-	typename[used] = 0;
-	if (used == 0)
-		return 0;
-	hdr->type = git_object_string2type(typename);
-	used++; /* consume the space */
 
-	/*
-	 * length follows immediately in decimal (without
-	 * leading zeros).
-	 */
-	size = data[used++] - '0';
-	if (size > 9)
-		return 0;
-	if (size) {
-		while ((c = data[used]) != '\0') {
-			size_t d = c - '0';
-			if (d > 9)
-				break;
-			used++;
-			size = size * 10 + d;
-		}
+	if (typename_len == data_len)
+		goto on_error;
+
+	out->type = git_object_stringn2type(data, typename_len);
+
+	size_idx = typename_len + 1;
+	for (i = size_idx, size_len = 0; i < data_len; i++, size_len++) {
+		if (data[i] == '\0')
+			break;
 	}
-	hdr->size = size;
 
-	/*
-	 * the length must be followed by a zero byte
-	 */
-	if (data[used++] != '\0')
-		return 0;
+	if (i == data_len)
+		goto on_error;
 
-	return used;
+	if (git__strntol64(&size, &data[size_idx], size_len, NULL, 10) < 0 ||
+		size < 0)
+		goto on_error;
+
+	if ((uint64_t)size > SIZE_MAX) {
+		giterr_set(GITERR_OBJECT, "object is larger than available memory");
+		return -1;
+	}
+
+	out->size = size;
+
+	if (GIT_ADD_SIZET_OVERFLOW(out_len, i, 1))
+		goto on_error;
+
+	return 0;
+
+on_error:
+	giterr_set(GITERR_OBJECT, "failed to parse loose object: invalid header");
+	return -1;
 }
-
-
 
 /***********************************************************
  *
@@ -269,45 +275,6 @@ static int inflate_buffer(void *in, size_t inlen, void *out, size_t outlen)
 	return 0;
 }
 
-static void *inflate_tail(z_stream *s, void *hb, size_t used, obj_hdr *hdr)
-{
-	unsigned char *buf, *head = hb;
-	size_t tail, alloc_size;
-
-	/*
-	 * allocate a buffer to hold the inflated data and copy the
-	 * initial sequence of inflated data from the tail of the
-	 * head buffer, if any.
-	 */
-	if (GIT_ADD_SIZET_OVERFLOW(&alloc_size, hdr->size, 1) ||
-		(buf = git__malloc(alloc_size)) == NULL) {
-		inflateEnd(s);
-		return NULL;
-	}
-	tail = s->total_out - used;
-	if (used > 0 && tail > 0) {
-		if (tail > hdr->size)
-			tail = hdr->size;
-		memcpy(buf, head + used, tail);
-	}
-	used = tail;
-
-	/*
-	 * inflate the remainder of the object data, if any
-	 */
-	if (hdr->size < used)
-		inflateEnd(s);
-	else {
-		set_stream_output(s, buf + used, hdr->size - used);
-		if (finish_inflate(s)) {
-			git__free(buf);
-			return NULL;
-		}
-	}
-
-	return buf;
-}
-
 /*
  * At one point, there was a loose object format that was intended to
  * mimic the format used in pack-files. This was to allow easy copying
@@ -354,43 +321,74 @@ static int inflate_packlike_loose_disk_obj(git_rawobj *out, git_buf *obj)
 
 static int inflate_disk_obj(git_rawobj *out, git_buf *obj)
 {
-	unsigned char head[64], *buf;
-	z_stream zs;
+	git_zstream zstream = GIT_ZSTREAM_INIT;
+	unsigned char head[64], *body = NULL;
+	size_t decompressed, head_len, body_len, alloc_size;
 	obj_hdr hdr;
-	size_t used;
+	int error;
 
-	/*
-	 * check for a pack-like loose object
-	 */
+	/* check for a pack-like loose object */
 	if (!is_zlib_compressed_data((unsigned char *)obj->ptr))
 		return inflate_packlike_loose_disk_obj(out, obj);
 
+	if ((error = git_zstream_init(&zstream, GIT_ZSTREAM_INFLATE)) < 0 ||
+		(error = git_zstream_set_input(&zstream, git_buf_cstr(obj), git_buf_len(obj))) < 0)
+		goto done;
+
+	decompressed = sizeof(head);
+
 	/*
-	 * inflate the initial part of the io buffer in order
-	 * to parse the object header (type and size).
-	 */
-	if (start_inflate(&zs, obj, head, sizeof(head)) < Z_OK ||
-		(used = get_object_header(&hdr, head)) == 0 ||
-		!git_object_typeisloose(hdr.type))
-	{
-		abort_inflate(&zs);
+	* inflate the initial part of the compressed buffer in order to parse the
+	* header; read the largest header possible, then push back the remainder.
+	*/
+	if ((error = git_zstream_get_output(head, &decompressed, &zstream)) < 0 ||
+		(error = parse_header(&hdr, &head_len, head, decompressed)) < 0)
+		goto done;
+
+	if (!git_object_typeisloose(hdr.type)) {
 		giterr_set(GITERR_ODB, "failed to inflate disk object");
-		return -1;
+		error = -1;
+		goto done;
 	}
 
 	/*
 	 * allocate a buffer and inflate the object data into it
 	 * (including the initial sequence in the head buffer).
 	 */
-	if ((buf = inflate_tail(&zs, head, used, &hdr)) == NULL)
-		return -1;
-	buf[hdr.size] = '\0';
+	if (GIT_ADD_SIZET_OVERFLOW(&alloc_size, hdr.size, 1) ||
+		(body = git__malloc(alloc_size)) == NULL) {
+		error = -1;
+		goto done;
+	}
 
-	out->data = buf;
+	assert(decompressed >= head_len);
+	body_len = decompressed - head_len;
+
+	if (body_len)
+		memcpy(body, head + head_len, body_len);
+
+	decompressed = hdr.size - body_len;
+	if ((error = git_zstream_get_output(body + body_len, &decompressed, &zstream)) < 0)
+		goto done;
+
+	if (!git_zstream_done(&zstream)) {
+		giterr_set(GITERR_ZLIB, "failed to finish zlib inflation: stream aborted prematurely");
+		error = -1;
+		goto done;
+	}
+
+	body[hdr.size] = '\0';
+
+	out->data = body;
 	out->len = hdr.size;
 	out->type = hdr.type;
 
-	return 0;
+done:
+	if (error < 0)
+		git__free(body);
+
+	git_zstream_free(&zstream);
+	return error;
 }
 
 
@@ -435,6 +433,7 @@ static int read_header_loose(git_rawobj *out, git_buf *loc)
 	git_file fd;
 	z_stream zs;
 	obj_hdr header_obj;
+	size_t header_len;
 	unsigned char raw_buffer[16], inflated_buffer[64];
 
 	assert(out && loc);
@@ -460,7 +459,7 @@ static int read_header_loose(git_rawobj *out, git_buf *loc)
 	}
 
 	if ((z_return != Z_STREAM_END && z_return != Z_BUF_ERROR)
-		|| get_object_header(&header_obj, inflated_buffer) == 0
+		|| parse_header(&header_obj, &header_len, inflated_buffer, sizeof(inflated_buffer)) < 0
 		|| git_object_typeisloose(header_obj.type) == 0)
 	{
 		giterr_set(GITERR_ZLIB, "failed to read loose object header");

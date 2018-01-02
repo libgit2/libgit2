@@ -83,8 +83,10 @@ static int stransport_connect(git_stream *stream)
 	}
 
 	if (sec_res == kSecTrustResultDeny || sec_res == kSecTrustResultRecoverableTrustFailure ||
-	    sec_res == kSecTrustResultFatalTrustFailure)
+	    sec_res == kSecTrustResultFatalTrustFailure) {
+		giterr_set(GITERR_SSL, "untrusted connection error");
 		return GIT_ECERTIFICATE;
+	}
 
 	return 0;
 
