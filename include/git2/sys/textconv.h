@@ -7,7 +7,7 @@
 #ifndef INCLUDE_sys_git_textconv_h__
 #define INCLUDE_sys_git_textconv_h__
 
-#include "git2/textconv.h"
+typedef struct git_textconv git_textconv;
 
 /**
  * @file git2/sys/textconv.h

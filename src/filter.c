@@ -17,28 +17,8 @@
 #include "blob.h"
 #include "attr_file.h"
 #include "array.h"
+#include "git2/filter_textconv.h"
 
-struct git_filter_source {
-	git_repository *repo;
-	const char     *path;
-	git_oid         oid;  /* zero if unknown (which is likely) */
-	uint16_t        filemode; /* zero if unknown */
-	git_filter_mode_t mode;
-	uint32_t        flags;
-};
-
-typedef struct {
-	const char *filter_name;
-	git_filter *filter;
-	void *payload;
-} git_filter_entry;
-
-struct git_filter_list {
-	git_array_t(git_filter_entry) filters;
-	git_filter_source source;
-	git_buf *temp_buf;
-	char path[GIT_FLEX_ARRAY];
-};
 
 typedef struct {
 	char *filter_name;
@@ -666,73 +646,11 @@ size_t git_filter_list_length(const git_filter_list *fl)
 	return fl ? git_array_size(fl->filters) : 0;
 }
 
-struct buf_stream {
-	git_writestream parent;
-	git_buf *target;
-	bool complete;
-};
-
-static int buf_stream_write(
-	git_writestream *s, const char *buffer, size_t len)
-{
-	struct buf_stream *buf_stream = (struct buf_stream *)s;
-	assert(buf_stream);
-
-	assert(buf_stream->complete == 0);
-
-	return git_buf_put(buf_stream->target, buffer, len);
-}
-
-static int buf_stream_close(git_writestream *s)
-{
-	struct buf_stream *buf_stream = (struct buf_stream *)s;
-	assert(buf_stream);
-
-	assert(buf_stream->complete == 0);
-	buf_stream->complete = 1;
-
-	return 0;
-}
-
-static void buf_stream_free(git_writestream *s)
-{
-	GIT_UNUSED(s);
-}
-
-static void buf_stream_init(struct buf_stream *writer, git_buf *target)
-{
-	memset(writer, 0, sizeof(struct buf_stream));
-
-	writer->parent.write = buf_stream_write;
-	writer->parent.close = buf_stream_close;
-	writer->parent.free = buf_stream_free;
-	writer->target = target;
-
-	git_buf_clear(target);
-}
 
 int git_filter_list_apply_to_data(
 	git_buf *tgt, git_filter_list *filters, git_buf *src)
 {
-	struct buf_stream writer;
-	int error;
-
-	git_buf_sanitize(tgt);
-	git_buf_sanitize(src);
-
-	if (!filters) {
-		git_buf_attach_notowned(tgt, src->ptr, src->size);
-		return 0;
-	}
-
-	buf_stream_init(&writer, tgt);
-
-	if ((error = git_filter_list_stream_data(filters, src,
-		&writer.parent)) < 0)
-			return error;
-
-	assert(writer.complete);
-	return error;
+    return git_filter_textconv_apply_to_data(tgt,filters,NULL,src);
 }
 
 int git_filter_list_apply_to_file(
@@ -741,48 +659,16 @@ int git_filter_list_apply_to_file(
 	git_repository *repo,
 	const char *path)
 {
-	struct buf_stream writer;
-	int error;
-
-	buf_stream_init(&writer, out);
-
-	if ((error = git_filter_list_stream_file(
-		filters, repo, path, &writer.parent)) < 0)
-			return error;
-
-	assert(writer.complete);
-	return error;
+    return git_filter_textconv_apply_to_file(out,filters,NULL,repo,path);
 }
 
-static int buf_from_blob(git_buf *out, git_blob *blob)
-{
-	git_off_t rawsize = git_blob_rawsize(blob);
-
-	if (!git__is_sizet(rawsize)) {
-		giterr_set(GITERR_OS, "blob is too large to filter");
-		return -1;
-	}
-
-	git_buf_attach_notowned(out, git_blob_rawcontent(blob), (size_t)rawsize);
-	return 0;
-}
 
 int git_filter_list_apply_to_blob(
 	git_buf *out,
 	git_filter_list *filters,
 	git_blob *blob)
 {
-	struct buf_stream writer;
-	int error;
-
-	buf_stream_init(&writer, out);
-
-	if ((error = git_filter_list_stream_blob(
-		filters, blob, &writer.parent)) < 0)
-			return error;
-
-	assert(writer.complete);
-	return error;
+    return git_filter_textconv_apply_to_blob(out,filters,NULL,blob);
 }
 
 struct proxy_stream {
@@ -873,7 +759,7 @@ static int proxy_stream_init(
 	return 0;
 }
 
-static int stream_list_init(
+int git_filter_list_stream_init(
 	git_writestream **out,
 	git_vector *streams,
 	git_filter_list *filters,
@@ -943,42 +829,7 @@ int git_filter_list_stream_file(
 	const char *path,
 	git_writestream *target)
 {
-	char buf[FILTERIO_BUFSIZE];
-	git_buf abspath = GIT_BUF_INIT;
-	const char *base = repo ? git_repository_workdir(repo) : NULL;
-	git_vector filter_streams = GIT_VECTOR_INIT;
-	git_writestream *stream_start;
-	ssize_t readlen;
-	int fd = -1, error, initialized = 0;
-
-	if ((error = stream_list_init(
-			&stream_start, &filter_streams, filters, target)) < 0 ||
-		(error = git_path_join_unrooted(&abspath, path, base, NULL)) < 0)
-		goto done;
-	initialized = 1;
-
-	if ((fd = git_futils_open_ro(abspath.ptr)) < 0) {
-		error = fd;
-		goto done;
-	}
-
-	while ((readlen = p_read(fd, buf, sizeof(buf))) > 0) {
-		if ((error = stream_start->write(stream_start, buf, readlen)) < 0)
-			goto done;
-	}
-
-	if (readlen < 0)
-		error = readlen;
-
-done:
-	if (initialized)
-		error |= stream_start->close(stream_start);
-
-	if (fd >= 0)
-		p_close(fd);
-	stream_list_free(&filter_streams);
-	git_buf_free(&abspath);
-	return error;
+    return git_filter_textconv_stream_file(filters,NULL,repo,path,target);
 }
 
 int git_filter_list_stream_data(
@@ -986,26 +837,7 @@ int git_filter_list_stream_data(
 	git_buf *data,
 	git_writestream *target)
 {
-	git_vector filter_streams = GIT_VECTOR_INIT;
-	git_writestream *stream_start;
-	int error, initialized = 0;
-
-	git_buf_sanitize(data);
-
-	if ((error = stream_list_init(&stream_start, &filter_streams, filters, target)) < 0)
-		goto out;
-	initialized = 1;
-
-	if ((error = stream_start->write(
-			stream_start, data->ptr, data->size)) < 0)
-		goto out;
-
-out:
-	if (initialized)
-		error |= stream_start->close(stream_start);
-
-	stream_list_free(&filter_streams);
-	return error;
+    return git_filter_textconv_stream_data(filters,NULL,data,target);
 }
 
 int git_filter_list_stream_blob(
@@ -1013,15 +845,7 @@ int git_filter_list_stream_blob(
 	git_blob *blob,
 	git_writestream *target)
 {
-	git_buf in = GIT_BUF_INIT;
-
-	if (buf_from_blob(&in, blob) < 0)
-		return -1;
-
-	if (filters)
-		git_oid_cpy(&filters->source.oid, git_blob_id(blob));
-
-	return git_filter_list_stream_data(filters, &in, target);
+    return git_filter_textconv_stream_blob(filters,NULL,blob,target);
 }
 
 int git_filter_init(git_filter *filter, unsigned int version)

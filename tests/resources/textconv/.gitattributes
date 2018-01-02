@@ -1,0 +1,3 @@
+*.dat binary diff=csv2yaml
+*.csv diff=csv2yaml
+

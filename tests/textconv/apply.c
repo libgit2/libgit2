@@ -30,10 +30,10 @@ void test_textconv_apply__cleanup(void)
 void test_textconv_apply__blob(void)
 {
     git_blob *blob;
-    git_buf out = { 0 };
+    git_buf out = GIT_BUF_INIT;
 
     cl_git_pass(git_blob_lookup(&blob, g_repo, &id_csv));
-    cl_git_pass(git_textconv_apply_to_blob(&out, yaml_filter, blob));
+    cl_git_pass(git_filter_textconv_apply_to_blob(&out, NULL, yaml_filter, blob));
     
     cl_assert_equal_s(getTestYAML(), out.ptr);
     
@@ -41,3 +41,13 @@ void test_textconv_apply__blob(void)
     git_buf_free(&out);
 }
 
+void test_textconv_apply__file(void)
+{
+    git_buf out = GIT_BUF_INIT;
+    
+    cl_git_pass(git_filter_textconv_apply_to_file(&out, NULL, yaml_filter, g_repo, "test.csv"));
+    
+    cl_assert_equal_s(getTestYAML(), out.ptr);
+    
+    git_buf_free(&out);
+}

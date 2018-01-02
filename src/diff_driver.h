@@ -8,7 +8,6 @@
 #define INCLUDE_diff_driver_h__
 
 #include "common.h"
-
 #include "buffer.h"
 
 typedef struct git_diff_driver_registry git_diff_driver_registry;
@@ -20,6 +19,8 @@ typedef struct git_diff_driver git_diff_driver;
 
 int git_diff_driver_lookup(git_diff_driver **, git_repository *, const char *);
 void git_diff_driver_free(git_diff_driver *);
+
+const char* git_diff_driver_textconv(git_diff_driver *);
 
 /* diff option flags to force off and on for this driver */
 void git_diff_driver_update_options(uint32_t *option_flags, git_diff_driver *);
