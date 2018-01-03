@@ -354,27 +354,30 @@ done:
 }
 
 int git_diff_driver_lookup(
-	git_diff_driver **out, git_repository *repo, const char *path)
+	git_diff_driver **out, git_repository *repo,
+	git_attr_session *attrsession, const char *path)
 {
 	int error = 0;
-	const char *value;
+	const char *values[1], *attrs[] = { "diff" };
 
 	assert(out);
 	*out = NULL;
 
 	if (!repo || !path || !strlen(path))
 		/* just use the auto value */;
-	else if ((error = git_attr_get(&value, repo, 0, path, "diff")) < 0)
+	else if ((error = git_attr_get_many_with_session(values, repo,
+			attrsession, 0, path, 1, attrs)) < 0)
 		/* return error below */;
-	else if (GIT_ATTR_UNSPECIFIED(value))
+
+	else if (GIT_ATTR_UNSPECIFIED(values[0]))
 		/* just use the auto value */;
-	else if (GIT_ATTR_FALSE(value))
+	else if (GIT_ATTR_FALSE(values[0]))
 		*out = &global_drivers[DIFF_DRIVER_BINARY];
-	else if (GIT_ATTR_TRUE(value))
+	else if (GIT_ATTR_TRUE(values[0]))
 		*out = &global_drivers[DIFF_DRIVER_TEXT];
 
 	/* otherwise look for driver information in config and build driver */
-	else if ((error = git_diff_driver_load(out, repo, value)) < 0) {
+	else if ((error = git_diff_driver_load(out, repo, values[0])) < 0) {
 		if (error == GIT_ENOTFOUND) {
 			error = 0;
 			giterr_clear();

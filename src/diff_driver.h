@@ -9,6 +9,7 @@
 
 #include "common.h"
 
+#include "attr_file.h"
 #include "buffer.h"
 
 typedef struct git_diff_driver_registry git_diff_driver_registry;
@@ -18,7 +19,8 @@ void git_diff_driver_registry_free(git_diff_driver_registry *);
 
 typedef struct git_diff_driver git_diff_driver;
 
-int git_diff_driver_lookup(git_diff_driver **, git_repository *, const char *);
+int git_diff_driver_lookup(git_diff_driver **, git_repository *,
+	git_attr_session *attrsession, const char *);
 void git_diff_driver_free(git_diff_driver *);
 
 /* diff option flags to force off and on for this driver */
