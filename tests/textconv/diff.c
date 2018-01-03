@@ -30,14 +30,12 @@ void test_textconv_diff__versions_default(void)
     git_diff* diff;
     git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
     diff_expects results;
-    memset(&results, 0, sizeof(results));
-    results.debug = true;
-    
     const char *a_commit = "4bcc371555";
     const char *b_commit = "f7299e9f74";
-
     git_tree *a, *b;
-    
+
+    memset(&results, 0, sizeof(results));
+
     cl_assert((a = resolve_commit_oid_to_tree(g_repo, a_commit)) != NULL);
     cl_assert((b = resolve_commit_oid_to_tree(g_repo, b_commit)) != NULL);
     
@@ -73,13 +71,11 @@ void test_textconv_diff__tree_to_workdir_default(void)
     git_diff* diff;
     git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
     diff_expects results;
-    memset(&results, 0, sizeof(results));
-    results.debug = true;
-    
     const char *b_commit = "f7299e9f74";
-    
     git_tree *b;
-    
+
+    memset(&results, 0, sizeof(results));
+
     cl_assert((b = resolve_commit_oid_to_tree(g_repo, b_commit)) != NULL);
     
     opts.context_lines = 1;
@@ -114,13 +110,12 @@ void test_textconv_diff__versions_textconv_on(void)
     git_diff* diff;
     git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
     diff_expects results;
-    memset(&results, 0, sizeof(results));
-    results.debug = true;
-    
     const char *a_commit = "4bcc371555";
     const char *b_commit = "f7299e9f74";
     git_tree *a, *b;
     
+    memset(&results, 0, sizeof(results));
+
     cl_assert((a = resolve_commit_oid_to_tree(g_repo, a_commit)) != NULL);
     cl_assert((b = resolve_commit_oid_to_tree(g_repo, b_commit)) != NULL);
     
@@ -157,12 +152,10 @@ void test_textconv_diff__tree_to_workdir_textconv_on(void)
     git_diff* diff;
     git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
     diff_expects results;
-    memset(&results, 0, sizeof(results));
-    results.debug = true;
-    
     const char *b_commit = "f7299e9f74";
-    
     git_tree *b;
+
+    memset(&results, 0, sizeof(results));
     
     cl_assert((b = resolve_commit_oid_to_tree(g_repo, b_commit)) != NULL);
     

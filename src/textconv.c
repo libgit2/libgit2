@@ -370,15 +370,13 @@ int git_textconv_init_stream(
                             git_writestream *target)
 {
     int error = 0;
-    
+    git_writestream *textconv_stream = NULL;
     *out = NULL;
     
     if (!textconv) {
         *out = target;
         return 0;
     }
-    
-    git_writestream *textconv_stream;
         
     assert(textconv->stream || textconv->apply);
         
