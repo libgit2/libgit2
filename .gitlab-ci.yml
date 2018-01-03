@@ -1,4 +1,6 @@
-image: 148956472318.dkr.ecr.us-east-1.amazonaws.com/softwareplumbers/libgit2-dev-centos:latest
+image: 
+  name: 148956472318.dkr.ecr.us-east-1.amazonaws.com/softwareplumbers/libgit2-dev-centos:latest
+  entrypoint: ["/bin/bash", "-l", "-c"]
 
 stages:
  - build
