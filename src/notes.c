@@ -268,7 +268,9 @@ static int insert_note_in_tree_enotfound_cb(git_tree **out,
 		GIT_FILEMODE_BLOB);
 }
 
-static int note_write(git_oid *out,
+static int note_write(
+	git_oid *notes_commit_out,
+	git_oid *notes_blob_out,
 	git_repository *repo,
 	const git_signature *author,
 	const git_signature *committer,
@@ -294,12 +296,16 @@ static int note_write(git_oid *out,
 		insert_note_in_tree_enotfound_cb)) < 0)
 		goto cleanup;
 
-	if (out)
-		git_oid_cpy(out, &oid);
+	if (notes_blob_out)
+		git_oid_cpy(notes_blob_out, &oid);
+
 
 	error = git_commit_create(&oid, repo, notes_ref, author, committer,
 				  NULL, GIT_NOTES_DEFAULT_MSG_ADD,
 				  tree, *parents == NULL ? 0 : 1, (const git_commit **) parents);
+
+	if (notes_commit_out)
+		git_oid_cpy(notes_commit_out, &oid);
 
 cleanup:
 	git_tree_free(tree);
@@ -363,7 +369,9 @@ cleanup:
 	return error;
 }
 
-static int note_remove(git_repository *repo,
+static int note_remove(
+		git_oid *notes_commit_out,
+		git_repository *repo,
 		const git_signature *author, const git_signature *committer,
 		const char *notes_ref, git_tree *tree,
 		const char *target, git_commit **parents)
@@ -382,6 +390,12 @@ static int note_remove(git_repository *repo,
 	  tree_after_removal,
 	  *parents == NULL ? 0 : 1,
 	  (const git_commit **) parents);
+
+	if (error < 0)
+		goto cleanup;
+
+	if (notes_commit_out)
+		git_oid_cpy(notes_commit_out, &oid);
 
 cleanup:
 	git_tree_free(tree_after_removal);
@@ -410,8 +424,7 @@ static int normalize_namespace(char **out, git_repository *repo, const char *not
 	return note_get_default_ref(out, repo);
 }
 
-static int retrieve_note_tree_and_commit(
-	git_tree **tree_out,
+static int retrieve_note_commit(
 	git_commit **commit_out,
 	char **notes_ref_out,
 	git_repository *repo,
@@ -429,31 +442,79 @@ static int retrieve_note_tree_and_commit(
 	if (git_commit_lookup(commit_out, repo, &oid) < 0)
 		return error;
 
-	if ((error = git_commit_tree(tree_out, *commit_out)) < 0)
-		return error;
-
 	return 0;
+}
+
+int git_note_commit_read(
+	git_note **out,
+	git_repository *repo,
+	git_commit *notes_commit,
+	const git_oid *oid)
+{
+	int error;
+	git_tree *tree = NULL;
+	char target[GIT_OID_HEXSZ + 1];
+
+	git_oid_tostr(target, sizeof(target), oid);
+
+	if ((error = git_commit_tree(&tree, notes_commit)) < 0)
+		goto cleanup;
+
+	error = note_lookup(out, repo, notes_commit, tree, target);
+
+cleanup:
+	git_tree_free(tree);
+	return error;
 }
 
 int git_note_read(git_note **out, git_repository *repo,
 		  const char *notes_ref_in, const git_oid *oid)
 {
 	int error;
-	char *target = NULL, *notes_ref = NULL;
-	git_tree *tree = NULL;
+	char *notes_ref = NULL;
 	git_commit *commit = NULL;
 
-	target = git_oid_allocfmt(oid);
-	GITERR_CHECK_ALLOC(target);
+	error = retrieve_note_commit(&commit, &notes_ref, repo, notes_ref_in);
 
-	if (!(error = retrieve_note_tree_and_commit(
-		      &tree, &commit, &notes_ref, repo, notes_ref_in)))
-		error = note_lookup(out, repo, commit, tree, target);
+	if (error < 0)
+		goto cleanup;
 
+	error = git_note_commit_read(out, repo, commit, oid);
+
+cleanup:
 	git__free(notes_ref);
-	git__free(target);
-	git_tree_free(tree);
 	git_commit_free(commit);
+	return error;
+}
+
+int git_note_commit_create(
+	git_oid *notes_commit_out,
+	git_oid *notes_blob_out,
+	git_repository *repo,
+	git_commit *parent,
+	const git_signature *author,
+	const git_signature *committer,
+	const git_oid *oid,
+	const char *note,
+	int allow_note_overwrite)
+{
+	int error;
+	git_tree *tree = NULL;
+	char target[GIT_OID_HEXSZ + 1];
+
+	git_oid_tostr(target, sizeof(target), oid);
+
+	if (parent != NULL && (error = git_commit_tree(&tree, parent)) < 0)
+		goto cleanup;
+
+	error = note_write(notes_commit_out, notes_blob_out, repo, author,
+			committer, NULL, note, tree, target, &parent, allow_note_overwrite);
+
+	if (error < 0)
+		goto cleanup;
+
+cleanup:
+	git_tree_free(tree);
 	return error;
 }
 
@@ -468,25 +529,59 @@ int git_note_create(
 	int allow_note_overwrite)
 {
 	int error;
-	char *target = NULL, *notes_ref = NULL;
-	git_commit *commit = NULL;
-	git_tree *tree = NULL;
+	char *notes_ref = NULL;
+	git_commit *existing_notes_commit = NULL;
+	git_reference *ref = NULL;
+	git_oid notes_blob_oid, notes_commit_oid;
 
-	target = git_oid_allocfmt(oid);
-	GITERR_CHECK_ALLOC(target);
-
-	error = retrieve_note_tree_and_commit(&tree, &commit, &notes_ref, repo, notes_ref_in);
+	error = retrieve_note_commit(&existing_notes_commit, &notes_ref,
+			repo, notes_ref_in);
 
 	if (error < 0 && error != GIT_ENOTFOUND)
 		goto cleanup;
 
-	error = note_write(out, repo, author, committer, notes_ref,
-			note, tree, target, &commit, allow_note_overwrite);
+	error = git_note_commit_create(&notes_commit_oid,
+			&notes_blob_oid,
+			repo, existing_notes_commit, author,
+			committer, oid, note,
+			allow_note_overwrite);
+	if (error < 0)
+		goto cleanup;
+
+	error = git_reference_create(&ref, repo, notes_ref,
+				&notes_commit_oid, 1, NULL);
+
+	if (out != NULL)
+		git_oid_cpy(out, &notes_blob_oid);
 
 cleanup:
 	git__free(notes_ref);
-	git__free(target);
-	git_commit_free(commit);
+	git_commit_free(existing_notes_commit);
+	git_reference_free(ref);
+	return error;
+}
+
+int git_note_commit_remove(
+		git_oid *notes_commit_out,
+		git_repository *repo,
+		git_commit *notes_commit,
+		const git_signature *author,
+		const git_signature *committer,
+		const git_oid *oid)
+{
+	int error;
+	git_tree *tree = NULL;
+	char target[GIT_OID_HEXSZ + 1];
+
+	git_oid_tostr(target, sizeof(target), oid);
+
+	if ((error = git_commit_tree(&tree, notes_commit)) < 0)
+		goto cleanup;
+
+	error = note_remove(notes_commit_out,
+		repo, author, committer, NULL, tree, target, &notes_commit);
+
+cleanup:
 	git_tree_free(tree);
 	return error;
 }
@@ -496,22 +591,29 @@ int git_note_remove(git_repository *repo, const char *notes_ref_in,
 		const git_oid *oid)
 {
 	int error;
-	char *target = NULL, *notes_ref;
-	git_commit *commit = NULL;
-	git_tree *tree = NULL;
+	char *notes_ref_target = NULL;
+	git_commit *existing_notes_commit = NULL;
+	git_oid new_notes_commit;
+	git_reference *notes_ref = NULL;
 
-	target = git_oid_allocfmt(oid);
-	GITERR_CHECK_ALLOC(target);
+	error = retrieve_note_commit(&existing_notes_commit, &notes_ref_target,
+			repo, notes_ref_in);
 
-	if (!(error = retrieve_note_tree_and_commit(
-		      &tree, &commit, &notes_ref, repo, notes_ref_in)))
-		error = note_remove(
-			repo, author, committer, notes_ref, tree, target, &commit);
+	if (error < 0)
+		goto cleanup;
 
-	git__free(notes_ref);
-	git__free(target);
-	git_commit_free(commit);
-	git_tree_free(tree);
+	error = git_note_commit_remove(&new_notes_commit, repo,
+			existing_notes_commit, author, committer, oid);
+	if (error < 0)
+		goto cleanup;
+
+	error = git_reference_create(&notes_ref, repo, notes_ref_target,
+			&new_notes_commit, 1, NULL);
+
+cleanup:
+	git__free(notes_ref_target);
+	git_reference_free(notes_ref);
+	git_commit_free(existing_notes_commit);
 	return error;
 }
 
@@ -639,7 +741,6 @@ int git_note_foreach(
 	return error;
 }
 
-
 void git_note_iterator_free(git_note_iterator *it)
 {
 	if (it == NULL)
@@ -648,6 +749,24 @@ void git_note_iterator_free(git_note_iterator *it)
 	git_iterator_free(it);
 }
 
+int git_note_commit_iterator_new(
+	git_note_iterator **it,
+	git_commit *notes_commit)
+{
+	int error;
+	git_tree *tree;
+
+	if ((error = git_commit_tree(&tree, notes_commit)) < 0)
+		goto cleanup;
+
+	if ((error = git_iterator_for_tree(it, tree, NULL)) < 0)
+		git_iterator_free(*it);
+
+cleanup:
+	git_tree_free(tree);
+
+	return error;
+}
 
 int git_note_iterator_new(
 	git_note_iterator **it,
@@ -656,19 +775,16 @@ int git_note_iterator_new(
 {
 	int error;
 	git_commit *commit = NULL;
-	git_tree *tree = NULL;
 	char *notes_ref;
 
-	error = retrieve_note_tree_and_commit(&tree, &commit, &notes_ref, repo, notes_ref_in);
+	error = retrieve_note_commit(&commit, &notes_ref, repo, notes_ref_in);
 	if (error < 0)
 		goto cleanup;
 
-	if ((error = git_iterator_for_tree(it, tree, NULL)) < 0)
-		git_iterator_free(*it);
+	error = git_note_commit_iterator_new(it, commit);
 
 cleanup:
 	git__free(notes_ref);
-	git_tree_free(tree);
 	git_commit_free(commit);
 
 	return error;

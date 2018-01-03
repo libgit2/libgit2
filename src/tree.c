@@ -440,16 +440,16 @@ int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 		unsigned int attr;
 
 		if (parse_mode(&attr, buffer, &buffer) < 0 || !buffer)
-			return tree_error("Failed to parse tree. Can't parse filemode", NULL);
+			return tree_error("failed to parse tree: can't parse filemode", NULL);
 
 		if ((nul = memchr(buffer, 0, buffer_end - buffer)) == NULL)
-			return tree_error("Failed to parse tree. Object is corrupted", NULL);
+			return tree_error("failed to parse tree: object is corrupted", NULL);
 
 		if ((filename_len = nul - buffer) == 0)
-			return tree_error("Failed to parse tree. Can't parse filename", NULL);
+			return tree_error("failed to parse tree: can't parse filename", NULL);
 
 		if ((buffer_end - (nul + 1)) < GIT_OID_RAWSZ)
-			return tree_error("Failed to parse tree. Can't parse OID", NULL);
+			return tree_error("failed to parse tree: can't parse OID", NULL);
 
 		/* Allocate the entry */
 		{
@@ -496,7 +496,7 @@ static int append_entry(
 	int error = 0;
 
 	if (!valid_entry_name(bld->repo, filename))
-		return tree_error("Failed to insert entry. Invalid name for a tree entry", filename);
+		return tree_error("failed to insert entry: invalid name for a tree entry", filename);
 
 	entry = alloc_entry(filename, strlen(filename), id);
 	GITERR_CHECK_ALLOC(entry);
@@ -735,14 +735,14 @@ int git_treebuilder_insert(
 	assert(bld && id && filename);
 
 	if (!valid_filemode(filemode))
-		return tree_error("Failed to insert entry. Invalid filemode for file", filename);
+		return tree_error("failed to insert entry: invalid filemode for file", filename);
 
 	if (!valid_entry_name(bld->repo, filename))
-		return tree_error("Failed to insert entry. Invalid name for a tree entry", filename);
+		return tree_error("failed to insert entry: invalid name for a tree entry", filename);
 
 	if (filemode != GIT_FILEMODE_COMMIT &&
 	    !git_object__is_valid(bld->repo, id, otype_from_mode(filemode)))
-		return tree_error("Failed to insert entry; invalid object specified", filename);
+		return tree_error("failed to insert entry: invalid object specified", filename);
 
 	pos = git_strmap_lookup_index(bld->map, filename);
 	if (git_strmap_valid_index(bld->map, pos)) {
@@ -793,7 +793,7 @@ int git_treebuilder_remove(git_treebuilder *bld, const char *filename)
 	git_tree_entry *entry = treebuilder_get(bld, filename);
 
 	if (entry == NULL)
-		return tree_error("Failed to remove entry. File isn't in the tree", filename);
+		return tree_error("failed to remove entry: file isn't in the tree", filename);
 
 	git_strmap_delete(bld->map, filename);
 	git_tree_entry_free(entry);
@@ -946,7 +946,7 @@ int git_tree_entry_bypath(
 			return GIT_ENOTFOUND;
 		}
 
-		/* If there's only a slash left in the path, we 
+		/* If there's only a slash left in the path, we
 		 * return the current entry; otherwise, we keep
 		 * walking down the path */
 		if (path[filename_len + 1] != '\0')

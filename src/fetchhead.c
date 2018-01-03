@@ -118,7 +118,7 @@ int git_fetchhead_write(git_repository *repo, git_vector *fetchhead_refs)
 	if (git_buf_joinpath(&path, repo->gitdir, GIT_FETCH_HEAD_FILE) < 0)
 		return -1;
 
-	if (git_filebuf_open(&file, path.ptr, GIT_FILEBUF_FORCE, GIT_REFS_FILE_MODE) < 0) {
+	if (git_filebuf_open(&file, path.ptr, GIT_FILEBUF_APPEND, GIT_REFS_FILE_MODE) < 0) {
 		git_buf_free(&path);
 		return -1;
 	}

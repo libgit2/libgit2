@@ -172,14 +172,23 @@ static int apply_default_credentials(HINTERNET request, int mechanisms)
 	 * is "medium" which applies to the intranet and sounds like it would correspond
 	 * to Internet Explorer security zones, but in fact does not. */
 	DWORD data = WINHTTP_AUTOLOGON_SECURITY_LEVEL_LOW;
+	DWORD native_scheme = 0;
 
-	if ((mechanisms & GIT_WINHTTP_AUTH_NTLM) == 0 &&
-		(mechanisms & GIT_WINHTTP_AUTH_NEGOTIATE) == 0) {
+	if ((mechanisms & GIT_WINHTTP_AUTH_NTLM) != 0)
+		native_scheme |= WINHTTP_AUTH_SCHEME_NTLM;
+
+	if ((mechanisms & GIT_WINHTTP_AUTH_NEGOTIATE) != 0)
+		native_scheme |= WINHTTP_AUTH_SCHEME_NEGOTIATE;
+
+	if (!native_scheme) {
 		giterr_set(GITERR_NET, "invalid authentication scheme");
 		return -1;
 	}
 
 	if (!WinHttpSetOption(request, WINHTTP_OPTION_AUTOLOGON_POLICY, &data, sizeof(DWORD)))
+		return -1;
+
+	if (!WinHttpSetCredentials(request, WINHTTP_AUTH_TARGET_SERVER, native_scheme, NULL, NULL, NULL))
 		return -1;
 
 	return 0;
@@ -606,12 +615,12 @@ static int parse_unauthorized_response(
 	if (WINHTTP_AUTH_SCHEME_NTLM & supported) {
 		*allowed_types |= GIT_CREDTYPE_USERPASS_PLAINTEXT;
 		*allowed_types |= GIT_CREDTYPE_DEFAULT;
-		*allowed_mechanisms = GIT_WINHTTP_AUTH_NEGOTIATE;
+		*allowed_mechanisms |= GIT_WINHTTP_AUTH_NTLM;
 	}
 
 	if (WINHTTP_AUTH_SCHEME_NEGOTIATE & supported) {
 		*allowed_types |= GIT_CREDTYPE_DEFAULT;
-		*allowed_mechanisms = GIT_WINHTTP_AUTH_NEGOTIATE;
+		*allowed_mechanisms |= GIT_WINHTTP_AUTH_NEGOTIATE;
 	}
 
 	if (WINHTTP_AUTH_SCHEME_BASIC & supported) {

@@ -2035,6 +2035,7 @@ int git_refdb_backend_fs(
 	if ((!git_repository__cvar(&t, backend->repo, GIT_CVAR_FSYNCOBJECTFILES) && t) ||
 		git_repository__fsync_gitdir)
 		backend->fsync = 1;
+	backend->iterator_flags |= GIT_ITERATOR_DESCEND_SYMLINKS;
 
 	backend->parent.exists = &refdb_fs_backend__exists;
 	backend->parent.lookup = &refdb_fs_backend__lookup;

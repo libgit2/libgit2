@@ -16,6 +16,8 @@ struct git_hash_ctx {
 	CC_SHA1_CTX c;
 };
 
+#define CC_LONG_MAX ((CC_LONG)-1)
+
 #define git_hash_global_init() 0
 #define git_hash_ctx_init(ctx) git_hash_init(ctx)
 #define git_hash_ctx_cleanup(ctx)
@@ -27,10 +29,21 @@ GIT_INLINE(int) git_hash_init(git_hash_ctx *ctx)
 	return 0;
 }
 
-GIT_INLINE(int) git_hash_update(git_hash_ctx *ctx, const void *data, size_t len)
+GIT_INLINE(int) git_hash_update(git_hash_ctx *ctx, const void *_data, size_t len)
 {
+	const unsigned char *data = _data;
+
 	assert(ctx);
-	CC_SHA1_Update(&ctx->c, data, len);
+
+	while (len > 0) {
+		CC_LONG chunk = (len > CC_LONG_MAX) ? CC_LONG_MAX : (CC_LONG)len;
+
+		CC_SHA1_Update(&ctx->c, data, chunk);
+
+		data += chunk;
+		len -= chunk;
+	}
+
 	return 0;
 }
 
