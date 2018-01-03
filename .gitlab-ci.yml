@@ -1,0 +1,19 @@
+image: softwareplumbers/libgit2-dev-centos:latest
+
+stages:
+ - build
+ - test
+
+build:
+  stage: build
+  script:
+   - mkdir build
+   - cd build
+   - cmake ..
+   - make
+
+test:
+  stage: test
+  script:
+   - cd build
+   - libgit2_clar 
