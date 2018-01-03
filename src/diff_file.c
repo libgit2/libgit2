@@ -260,6 +260,7 @@ static int diff_file_content_load_blob(
     
     if (!error && (opts->flags & GIT_DIFF_ENABLE_TEXTCONV) != 0) {
         error = git_textconv_load(&tc, fc->driver);
+        if (error == GIT_PASSTHROUGH) error = 0;
     }
 
 	if (!error) {
@@ -268,7 +269,7 @@ static int diff_file_content_load_blob(
             fc->map.data = (void *)git_blob_rawcontent(fc->blob);
             fc->map.len  = (size_t)git_blob_rawsize(fc->blob);
         } else {
-            git_buf out;
+            git_buf out = GIT_BUF_INIT;
             git_filter_textconv_apply_to_blob(&out, NULL, tc, (git_blob*)fc->blob);
             fc->map.len  = out.size;
             fc->map.data = out.ptr;

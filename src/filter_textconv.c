@@ -82,7 +82,7 @@ int git_filter_textconv_apply_to_data(
     git_buf_sanitize(tgt);
     git_buf_sanitize(src);
     
-    if (!filters) {
+    if (!filters && !textconv) {
         git_buf_attach_notowned(tgt, src->ptr, src->size);
         return 0;
     }
