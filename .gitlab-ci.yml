@@ -8,6 +8,12 @@ stages:
 
 build:
   stage: build
+  artifacts:
+    paths:
+     - build/libgit2.so
+     - build/libgit2.so.26
+     - build/libgit2.so.0.26.0
+     - build/libgit2_clar
   script:
    - echo 'hello'
    - mkdir build
