@@ -25,4 +25,4 @@ test:
   stage: test
   script:
    - cd build
-   - libgit2_clar 
+   - ./libgit2_clar 
