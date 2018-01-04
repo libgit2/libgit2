@@ -49,14 +49,11 @@ typedef int(*git_message_trailer_cb)(const char *key, const char *value, void *p
  * including any patches or conflicts that may be present.
  *
  * @param message The message to be parsed
- *
  * @param cb The callback to call for each trailer found in the message. The
  *     key and value arguments are pointers to NUL-terminated C strings. These
  *     pointers are only guaranteed to be valid until the callback returns.
  *     User code must make a copy of this data should it need to be retained
- *
  * @param payload Pointer to callback data (optional)
- *
  * @return 0 on success, or non-zero callback return value.
  */
 GIT_EXTERN(int) git_message_trailers(const char *message, git_message_trailer_cb cb, void *payload);
