@@ -172,6 +172,14 @@ On most systems you can build the library using the following commands
 
 Alternatively you can point the CMake GUI tool to the CMakeLists.txt file and generate platform specific build project or IDE workspace.
 
+On Windows You can use vcpkg build libgit2:
+
+```
+vcpkg install libgit2:x64-windows libgit2:x86-windows
+```
+
+libgit2 port: [https://github.com/Microsoft/vcpkg/tree/master/ports/libgit2](https://github.com/Microsoft/vcpkg/tree/master/ports/libgit2)
+
 Running Tests
 -------------
 
