@@ -36,11 +36,8 @@ extern int git_textconv_global_init(void);
  *         needed for the requested file), <0 on error
  */
 extern int git_textconv_load(
-                                  git_textconv **textconv,
-                                  git_diff_driver* driver);
-
-
-
+	git_textconv **textconv,
+	git_diff_driver* driver);
 
 /**
  * Free a git_textconv_list
@@ -58,10 +55,10 @@ extern void git_textconv_free(git_textconv *textconv);
  * @param target the stream into which the data will be written
  */
 extern int git_textconv_init_stream(
-                                         git_writestream** out,
-                                         git_textconv *textconv,
-                                         git_buf* temp_buf,
-                                         git_writestream *target);
+	git_writestream** out,
+	git_textconv *textconv,
+	git_buf* temp_buf,
+	git_writestream *target);
 
 #endif
 

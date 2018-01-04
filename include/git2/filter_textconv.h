@@ -37,10 +37,10 @@
  * @return 0 on success, an error code otherwise
  */
 GIT_EXTERN(int) git_filter_textconv_apply_to_data(
-                                              git_buf *out,
-                                              git_filter_list *filters,
-                                              git_textconv *textconv,
-                                              git_buf *in);
+	git_buf *out,
+	git_filter_list *filters,
+	git_textconv *textconv,
+	git_buf *in);
 
 /**
  * Apply a filter list and textconv to the contents of a file on disk
@@ -53,11 +53,11 @@ GIT_EXTERN(int) git_filter_textconv_apply_to_data(
  * taken as relative to the workdir
  */
 GIT_EXTERN(int) git_filter_textconv_apply_to_file(
-                                              git_buf *out,
-                                              git_filter_list *filters,
-                                              git_textconv *textconv,
-                                              git_repository *repo,
-                                              const char *path);
+	git_buf *out,
+	git_filter_list *filters,
+	git_textconv *textconv,
+	git_repository *repo,
+	const char *path);
 
 /**
  * Apply a filter list to the contents of a blob
@@ -68,10 +68,10 @@ GIT_EXTERN(int) git_filter_textconv_apply_to_file(
  * @param blob the blob to filter
  */
 GIT_EXTERN(int) git_filter_textconv_apply_to_blob(
-                                              git_buf *out,
-                                              git_filter_list *filters,
-                                              git_textconv *textconv,
-                                              git_blob *blob);
+	git_buf *out,
+	git_filter_list *filters,
+	git_textconv *textconv,
+	git_blob *blob);
 
 /**
  * Apply a filter list to an arbitrary buffer as a stream
@@ -82,10 +82,10 @@ GIT_EXTERN(int) git_filter_textconv_apply_to_blob(
  * @param target the stream into which the data will be written
  */
 GIT_EXTERN(int) git_filter_textconv_stream_data(
-                                            git_filter_list *filters,
-                                            git_textconv *textconv,
-                                            git_buf *data,
-                                            git_writestream *target);
+	git_filter_list *filters,
+	git_textconv *textconv,
+	git_buf *data,
+	git_writestream *target);
 
 /**
  * Apply a filter list to a file as a stream
@@ -98,11 +98,11 @@ GIT_EXTERN(int) git_filter_textconv_stream_data(
  * @param target the stream into which the data will be written
  */
 GIT_EXTERN(int) git_filter_textconv_stream_file(
-                                            git_filter_list *filters,
-                                            git_textconv *textconv,
-                                            git_repository *repo,
-                                            const char *path,
-                                            git_writestream *target);
+	git_filter_list *filters,
+	git_textconv *textconv,
+	git_repository *repo,
+	const char *path,
+	git_writestream *target);
 
 /**
  * Apply a filter list to a blob as a stream
@@ -113,10 +113,10 @@ GIT_EXTERN(int) git_filter_textconv_stream_file(
  * @param target the stream into which the data will be written
  */
 GIT_EXTERN(int) git_filter_textconv_stream_blob(
-                                            git_filter_list *filters,
-                                            git_textconv *textconv,
-                                            git_blob *blob,
-                                            git_writestream *target);
+	git_filter_list *filters,
+	git_textconv *textconv,
+	git_blob *blob,
+	git_writestream *target);
 
 #endif /* INCLUDE_git_filter_h__ */
 
