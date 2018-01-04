@@ -36,14 +36,11 @@ static void assert_trailers(const char *message, struct trailer *trailers)
 
 void test_message_trailer__simple(void)
 {
-	struct trailer trailers[3];
-
-	trailers[0].key   = "Signed-off-by";
-	trailers[0].value = "foo@bar.com";
-	trailers[1].key   = "Signed-off-by";
-	trailers[1].value = "someone@else.com";
-	trailers[2].key   = NULL;
-	trailers[2].value = NULL;
+	struct trailer trailers[] = {
+		{"Signed-off-by", "foo@bar.com"},
+		{"Signed-off-by", "someone@else.com"},
+		{NULL, NULL},
+	};
 
 	assert_trailers(
 		"Message\n"
@@ -55,12 +52,10 @@ void test_message_trailer__simple(void)
 
 void test_message_trailer__no_whitespace(void)
 {
-	struct trailer trailers[2];
-
-	trailers[0].key   = "Key";
-	trailers[0].value = "value";
-	trailers[1].key   = NULL;
-	trailers[1].value = NULL;
+	struct trailer trailers[] = {
+		{"Key", "value"},
+		{NULL, NULL},
+	};
 
 	assert_trailers(
 		"Message\n"
@@ -71,12 +66,10 @@ void test_message_trailer__no_whitespace(void)
 
 void test_message_trailer__extra_whitespace(void)
 {
-	struct trailer trailers[2];
-
-	trailers[0].key   = "Key";
-	trailers[0].value = "value";
-	trailers[1].key   = NULL;
-	trailers[1].value = NULL;
+	struct trailer trailers[] = {
+		{"Key", "value"},
+		{NULL, NULL},
+	};
 
 	assert_trailers(
 		"Message\n"
@@ -87,12 +80,10 @@ void test_message_trailer__extra_whitespace(void)
 
 void test_message_trailer__no_newline(void)
 {
-	struct trailer trailers[2];
-
-	trailers[0].key   = "Key";
-	trailers[0].value = "value";
-	trailers[1].key   = NULL;
-	trailers[1].value = NULL;
+	struct trailer trailers[] = {
+		{"Key", "value"},
+		{NULL, NULL},
+	};
 
 	assert_trailers(
 		"Message\n"
@@ -103,10 +94,9 @@ void test_message_trailer__no_newline(void)
 
 void test_message_trailer__not_last_paragraph(void)
 {
-	struct trailer trailers;
-
-	trailers.key   = NULL;
-	trailers.value = NULL;
+	struct trailer trailers[] = {
+		{NULL, NULL},
+	};
 
 	assert_trailers(
 		"Message\n"
@@ -114,17 +104,15 @@ void test_message_trailer__not_last_paragraph(void)
 		"Key: value\n"
 		"\n"
 		"More stuff\n"
-	, &trailers);
+	, trailers);
 }
 
 void test_message_trailer__conflicts(void)
 {
-	struct trailer trailers[2];
-
-	trailers[0].key   = "Key";
-	trailers[0].value = "value";
-	trailers[1].key   = NULL;
-	trailers[1].value = NULL;
+	struct trailer trailers[] = {
+		{"Key", "value"},
+		{NULL, NULL},
+	};
 
 	assert_trailers(
 		"Message\n"
@@ -138,12 +126,10 @@ void test_message_trailer__conflicts(void)
 
 void test_message_trailer__patch(void)
 {
-	struct trailer trailers[2];
-
-	trailers[0].key   = "Key";
-	trailers[0].value = "value";
-	trailers[1].key   = NULL;
-	trailers[1].value = NULL;
+	struct trailer trailers[] = {
+		{"Key", "value"},
+		{NULL, NULL},
+	};
 
 	assert_trailers(
 		"Message\n"
@@ -157,16 +143,12 @@ void test_message_trailer__patch(void)
 
 void test_message_trailer__continuation(void)
 {
-	struct trailer trailers[4];
-
-	trailers[0].key   = "A";
-	trailers[0].value = "b\n c";
-	trailers[1].key   = "D";
-	trailers[1].value = "e\n f: g h";
-	trailers[2].key   = "I";
-	trailers[2].value = "j";
-	trailers[3].key   = NULL;
-	trailers[3].value = NULL;
+	struct trailer trailers[] = {
+		{"A", "b\n c"},
+		{"D", "e\n f: g h"},
+		{"I", "j"},
+		{NULL, NULL},
+	};
 
 	assert_trailers(
 		"Message\n"
@@ -181,14 +163,11 @@ void test_message_trailer__continuation(void)
 
 void test_message_trailer__invalid(void)
 {
-	struct trailer trailers[3];
-
-	trailers[0].key   = "Signed-off-by";
-	trailers[0].value = "some@one.com";
-	trailers[1].key   = "Another";
-	trailers[1].value = "trailer";
-	trailers[2].key   = NULL;
-	trailers[2].value = NULL;
+	struct trailer trailers[] = {
+		{"Signed-off-by", "some@one.com"},
+		{"Another", "trailer"},
+		{NULL, NULL},
+	};
 
 	assert_trailers(
 		"Message\n"
