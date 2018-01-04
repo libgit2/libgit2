@@ -31,3 +31,5 @@ msvc/Release/
 .*.swp
 tags
 mkmf.log
+*.profdata
+*.profraw

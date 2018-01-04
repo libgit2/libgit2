@@ -184,6 +184,18 @@ if [ -z "$SKIP_SSH_TESTS" ]; then
 	unset GITTEST_REMOTE_SSH_FINGERPRINT
 fi
 
+if [ -z "$SKIP_FUZZERS" ]; then
+	echo ""
+	echo "##############################################################################"
+	echo "## Running fuzzers"
+	echo "##############################################################################"
+
+	for fuzzer in $(find ./fuzz/ -type f -executable); do
+		fuzzer_name=$(basename "${fuzzer}")
+		"${fuzzer}" "../fuzz/corpora/${fuzzer_name}" || die $?
+	done
+fi
+
 echo "Success."
 cleanup
 exit 0

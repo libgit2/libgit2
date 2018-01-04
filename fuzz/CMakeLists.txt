@@ -1,0 +1,13 @@
+LINK_DIRECTORIES(${LIBGIT2_LIBDIRS})
+INCLUDE_DIRECTORIES(${LIBGIT2_INCLUDES})
+
+FILE(GLOB SRC_FUZZ RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} fuzz_*.c)
+FOREACH(fuzz_target_src ${SRC_FUZZ})
+	STRING(REPLACE ".c" "" fuzz_target_name ${fuzz_target_src})
+	SET(${fuzz_target_name}_SOURCES ${fuzz_target_src} ${LIBGIT2_OBJECTS})
+	IF(USE_STANDALONE_FUZZERS)
+		LIST(APPEND ${fuzz_target_name}_SOURCES "standalone_driver.c")
+	ENDIF()
+	ADD_EXECUTABLE(${fuzz_target_name} ${${fuzz_target_name}_SOURCES})
+	TARGET_LINK_LIBRARIES(${fuzz_target_name} ${LIBGIT2_LIBS})
+ENDFOREACH()

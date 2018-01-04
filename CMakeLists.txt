@@ -43,6 +43,7 @@ OPTION( BUILD_SHARED_LIBS	"Build Shared Library (OFF for Static)"	ON  )
 OPTION( THREADSAFE			"Build libgit2 as threadsafe"			ON )
 OPTION( BUILD_CLAR			"Build Tests using the Clar suite"		ON  )
 OPTION( BUILD_EXAMPLES		"Build library usage example apps"		OFF )
+OPTION( BUILD_FUZZERS			"Build the fuzz targets"	OFF)
 OPTION( TAGS				"Generate tags"							OFF )
 OPTION( PROFILE				"Generate profiling information"		OFF )
 OPTION( ENABLE_TRACE		"Enables tracing support"				OFF )
@@ -52,6 +53,9 @@ SET(SHA1_BACKEND "CollisionDetection" CACHE STRING "Backend to use for SHA1. One
 OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
 OPTION( USE_HTTPS			"Enable HTTPS support. Can be set to a specific backend"	ON )
 OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"   OFF )
+OPTION( USE_SANITIZER			"Enable one of the Sanitizers (requires clang)"   OFF )
+OPTION( USE_COVERAGE			"Enable clang's coverage report (requires clang)"   OFF )
+OPTION( USE_STANDALONE_FUZZERS			"Enable standalone fuzzers (compatible with gcc)"   OFF )
 OPTION( VALGRIND			"Configure build for valgrind"			OFF )
 OPTION( CURL			"Use curl for HTTP if available" ON)
 OPTION( USE_EXT_HTTP_PARSER		"Use system HTTP_Parser if available" ON)
@@ -245,6 +249,23 @@ ELSE()
 	# that uses CMAKE_CONFIGURATION_TYPES and not CMAKE_BUILD_TYPE
 ENDIF()
 
+IF(NOT USE_SANITIZER STREQUAL "OFF")
+	SET(CMAKE_C_FLAGS "-fsanitize=${USE_SANITIZER} ${CMAKE_C_FLAGS}")
+	SET(CMAKE_C_FLAGS "-fno-omit-frame-pointer ${CMAKE_C_FLAGS}")
+	SET(CMAKE_C_FLAGS "-fno-optimize-sibling-calls ${CMAKE_C_FLAGS}")
+ENDIF()
+
+IF(USE_COVERAGE)
+	SET(CMAKE_C_FLAGS "-fcoverage-mapping ${CMAKE_C_FLAGS}")
+	SET(CMAKE_C_FLAGS "-fprofile-instr-generate ${CMAKE_C_FLAGS}")
+ENDIF()
+
+IF(BUILD_FUZZERS AND NOT USE_STANDALONE_FUZZERS)
+	# The actual sanitizer link target will be added when linking the fuzz
+	# targets.
+	SET(CMAKE_C_FLAGS "-fsanitize=fuzzer-no-link ${CMAKE_C_FLAGS}")
+ENDIF ()
+
 ADD_SUBDIRECTORY(src)
 
 # Tests
@@ -281,6 +302,18 @@ ENDIF ()
 IF (BUILD_EXAMPLES)
 	ADD_SUBDIRECTORY(examples)
 ENDIF ()
+
+IF(BUILD_FUZZERS)
+	IF(NOT USE_STANDALONE_FUZZERS)
+		IF(BUILD_EXAMPLES)
+			MESSAGE(FATAL_ERROR "Cannot build the fuzzer targets and the examples together")
+		ENDIF()
+		IF(BUILD_CLAR)
+			MESSAGE(FATAL_ERROR "Cannot build the fuzzer targets and the tests together")
+		ENDIF()
+	ENDIF()
+	ADD_SUBDIRECTORY(fuzz)
+ENDIF()
 
 IF(CMAKE_VERSION VERSION_GREATER 3)
 	FEATURE_SUMMARY(WHAT ENABLED_FEATURES DESCRIPTION "Enabled features:")
