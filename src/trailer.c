@@ -12,14 +12,13 @@
 #include <ctype.h>
 
 #define COMMENT_LINE_CHAR '#'
+#define TRAILER_SEPARATORS ":"
 
 static const char *const git_generated_prefixes[] = {
 	"Signed-off-by: ",
 	"(cherry picked from commit ",
 	NULL
 };
-
-static const char *const separators = ":";
 
 static int is_blank_line(const char *str)
 {
@@ -223,7 +222,7 @@ static int find_trailer_start(const char *buf, size_t len)
 			}
 		}
 
-		separator_pos = find_separator(bol, separators);
+		separator_pos = find_separator(bol, TRAILER_SEPARATORS);
 		if (separator_pos >= 1 && !isspace(bol[0])) {
 			trailer_lines++;
 			possible_continuation_lines = 0;
@@ -317,7 +316,7 @@ int git_message_trailers(const char *message, git_message_trailer_cb cb, void *p
 					NEXT(S_KEY_WS);
 				}
 
-				if (strchr(separators, *ptr)) {
+				if (strchr(TRAILER_SEPARATORS, *ptr)) {
 					*ptr = 0;
 					NEXT(S_SEP_WS);
 				}
@@ -334,7 +333,7 @@ int git_message_trailers(const char *message, git_message_trailer_cb cb, void *p
 					NEXT(S_KEY_WS);
 				}
 
-				if (strchr(separators, *ptr)) {
+				if (strchr(TRAILER_SEPARATORS, *ptr)) {
 					NEXT(S_SEP_WS);
 				}
 
