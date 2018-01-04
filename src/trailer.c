@@ -11,7 +11,7 @@
 #include <string.h>
 #include <ctype.h>
 
-static const char comment_line_char = '#';
+#define COMMENT_LINE_CHAR '#'
 
 static const char *const git_generated_prefixes[] = {
 	"Signed-off-by: ",
@@ -119,7 +119,7 @@ static int ignore_non_trailer(const char *buf, size_t len)
 		else
 			next_line++;
 
-		if (buf[bol] == comment_line_char || buf[bol] == '\n') {
+		if (buf[bol] == COMMENT_LINE_CHAR || buf[bol] == '\n') {
 			/* is this the first of the run of comments? */
 			if (!boc)
 				boc = bol;
@@ -176,7 +176,7 @@ static int find_trailer_start(const char *buf, size_t len)
 
 	/* The first paragraph is the title and cannot be trailers */
 	for (s = buf; s < buf + len; s = next_line(s)) {
-		if (s[0] == comment_line_char)
+		if (s[0] == COMMENT_LINE_CHAR)
 			continue;
 		if (is_blank_line(s))
 			break;
@@ -196,7 +196,7 @@ static int find_trailer_start(const char *buf, size_t len)
 		const char *const *p;
 		int separator_pos;
 
-		if (bol[0] == comment_line_char) {
+		if (bol[0] == COMMENT_LINE_CHAR) {
 			non_trailer_lines += possible_continuation_lines;
 			possible_continuation_lines = 0;
 			continue;
