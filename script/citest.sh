@@ -27,6 +27,12 @@ export GITTEST_REMOTE_URL="git://localhost/test.git"
 # Run the test suite
 ctest -V -R libgit2_clar || exit $?
 
+# Run the standalone fuzz targets
+for fuzz_target in $(find ./fuzz/* -type f -executable); do
+	fuzz_target_name=$(basename "${fuzz_target}")
+	"${fuzz_target}" "../fuzz/corpora/${fuzz_target_name}" || exit $?
+done
+
 # Now that we've tested the raw git protocol, let's set up ssh to we
 # can do the push tests over it
 
