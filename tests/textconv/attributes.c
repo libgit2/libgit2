@@ -30,15 +30,18 @@ void test_textconv_attributes__check(void)
 {
 	git_diff_driver* driver;
 	git_textconv* tc;
-
-	cl_check_pass(git_diff_driver_lookup(&driver, g_repo, "test.csv"));
+	git_attr_session attr_session = { 0 };
+	
+	git_attr_session__init(&attr_session, g_repo);
+	cl_check_pass(git_diff_driver_lookup(&driver, g_repo, &attr_session, "test.csv"));
 	cl_check_pass(git_textconv_load(&tc, driver));
 	cl_assert_equal_p(yaml_filter,tc);
-	cl_check_pass(git_diff_driver_lookup(&driver, g_repo, "test.dat"));
+	cl_check_pass(git_diff_driver_lookup(&driver, g_repo, &attr_session, "test.dat"));
 	cl_check_pass(git_textconv_load(&tc, driver));
 	cl_assert_equal_p(yaml_filter,tc);
-	cl_check_pass(git_diff_driver_lookup(&driver, g_repo, "abc.txt"));
+	cl_check_pass(git_diff_driver_lookup(&driver, g_repo, &attr_session, "abc.txt"));
 	cl_assert_equal_i(GIT_PASSTHROUGH, git_textconv_load(&tc, driver));
 	cl_assert_equal_p(NULL,tc);
+	git_attr_session__free(&attr_session);
 }
 
