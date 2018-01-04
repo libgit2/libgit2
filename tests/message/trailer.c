@@ -36,79 +36,96 @@ static void assert_trailers(const char *message, struct trailer *trailers)
 
 void test_message_trailer__simple(void)
 {
+	struct trailer trailers[3];
+
+	trailers[0].key   = "Signed-off-by";
+	trailers[0].value = "foo@bar.com";
+	trailers[1].key   = "Signed-off-by";
+	trailers[1].value = "someone@else.com";
+	trailers[2].key   = NULL;
+	trailers[2].value = NULL;
+
 	assert_trailers(
 		"Message\n"
 		"\n"
 		"Signed-off-by: foo@bar.com\n"
 		"Signed-off-by: someone@else.com\n"
-	,
-		(struct trailer[]){
-			{ "Signed-off-by", "foo@bar.com" },
-			{ "Signed-off-by", "someone@else.com" },
-			{ NULL, NULL },
-		}
-	);
+	, trailers);
 }
 
 void test_message_trailer__no_whitespace(void)
 {
+	struct trailer trailers[2];
+
+	trailers[0].key   = "Key";
+	trailers[0].value = "value";
+	trailers[1].key   = NULL;
+	trailers[1].value = NULL;
+
 	assert_trailers(
 		"Message\n"
 		"\n"
 		"Key:value\n"
-	,
-		(struct trailer[]){
-			{ "Key", "value" },
-			{ NULL, NULL },
-		}
-	);
+	, trailers);
 }
 
 void test_message_trailer__extra_whitespace(void)
 {
+	struct trailer trailers[2];
+
+	trailers[0].key   = "Key";
+	trailers[0].value = "value";
+	trailers[1].key   = NULL;
+	trailers[1].value = NULL;
+
 	assert_trailers(
 		"Message\n"
 		"\n"
 		"Key   :   value\n"
-	,
-		(struct trailer[]){
-			{ "Key", "value" },
-			{ NULL, NULL },
-		}
-	);
+	, trailers);
 }
 
 void test_message_trailer__no_newline(void)
 {
+	struct trailer trailers[2];
+
+	trailers[0].key   = "Key";
+	trailers[0].value = "value";
+	trailers[1].key   = NULL;
+	trailers[1].value = NULL;
+
 	assert_trailers(
 		"Message\n"
 		"\n"
 		"Key: value"
-	,
-		(struct trailer[]){
-			{ "Key", "value" },
-			{ NULL, NULL },
-		}
-	);
+	, trailers);
 }
 
 void test_message_trailer__not_last_paragraph(void)
 {
+	struct trailer trailers;
+
+	trailers.key   = NULL;
+	trailers.value = NULL;
+
 	assert_trailers(
 		"Message\n"
 		"\n"
 		"Key: value\n"
 		"\n"
 		"More stuff\n"
-	,
-		(struct trailer[]){
-			{ NULL, NULL },
-		}
-	);
+	, &trailers);
 }
 
 void test_message_trailer__conflicts(void)
 {
+	struct trailer trailers[2];
+
+	trailers[0].key   = "Key";
+	trailers[0].value = "value";
+	trailers[1].key   = NULL;
+	trailers[1].value = NULL;
+
 	assert_trailers(
 		"Message\n"
 		"\n"
@@ -116,16 +133,18 @@ void test_message_trailer__conflicts(void)
 		"\n"
 		"Conflicts:\n"
 		"\tfoo.c\n"
-	,
-		(struct trailer[]){
-			{ "Key", "value" },
-			{ NULL, NULL },
-		}
-	);
+	, trailers);
 }
 
 void test_message_trailer__patch(void)
 {
+	struct trailer trailers[2];
+
+	trailers[0].key   = "Key";
+	trailers[0].value = "value";
+	trailers[1].key   = NULL;
+	trailers[1].value = NULL;
+
 	assert_trailers(
 		"Message\n"
 		"\n"
@@ -133,16 +152,22 @@ void test_message_trailer__patch(void)
 		"\n"
 		"---\n"
 		"More: stuff\n"
-	,
-		(struct trailer[]){
-			{ "Key", "value" },
-			{ NULL, NULL },
-		}
-	);
+	, trailers);
 }
 
 void test_message_trailer__continuation(void)
 {
+	struct trailer trailers[4];
+
+	trailers[0].key   = "A";
+	trailers[0].value = "b\n c";
+	trailers[1].key   = "D";
+	trailers[1].value = "e\n f: g h";
+	trailers[2].key   = "I";
+	trailers[2].value = "j";
+	trailers[3].key   = NULL;
+	trailers[3].value = NULL;
+
 	assert_trailers(
 		"Message\n"
 		"\n"
@@ -151,29 +176,25 @@ void test_message_trailer__continuation(void)
 		"D: e\n"
 		" f: g h\n"
 		"I: j\n"
-	,
-		(struct trailer[]){
-			{ "A", "b\n c" },
-			{ "D", "e\n f: g h" },
-			{ "I", "j" },
-			{ NULL, NULL },
-		}
-	);
+	, trailers);
 }
 
 void test_message_trailer__invalid(void)
 {
+	struct trailer trailers[3];
+
+	trailers[0].key   = "Signed-off-by";
+	trailers[0].value = "some@one.com";
+	trailers[1].key   = "Another";
+	trailers[1].value = "trailer";
+	trailers[2].key   = NULL;
+	trailers[2].value = NULL;
+
 	assert_trailers(
 		"Message\n"
 		"\n"
 		"Signed-off-by: some@one.com\n"
 		"Not a trailer\n"
 		"Another: trailer\n"
-	,
-		(struct trailer[]){
-			{ "Signed-off-by", "some@one.com" },
-			{ "Another", "trailer" },
-			{ NULL, NULL },
-		}
-	);
+	, trailers);
 }
