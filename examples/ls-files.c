@@ -29,10 +29,9 @@
 typedef struct {
 	int error_unmatch;
 	char * files[1024];
-	int file_count;
+	size_t file_count;
 } ls_options;
 
-/* Print a usage message for the program. */
 static void usage(const char *message, const char *arg)
 {
 	if (message && arg)
@@ -60,9 +59,10 @@ static int parse_options(ls_options *opts, int argc, char *argv[])
 		if (a[0] != '-' || parsing_files) {
 			parsing_files = 1;
 
-			// watch for overflows (just in case)
+			/* watch for overflows (just in case) */
 			if (opts->file_count == 1024) {
-				break;
+				fprintf(stderr, "ls-files can only support 1024 files at this time.\n");
+				return -1;
 			}
 
 			opts->files[opts->file_count++] = a;
@@ -81,8 +81,19 @@ static int parse_options(ls_options *opts, int argc, char *argv[])
 
 static int print_paths(ls_options *opts, git_index *index)
 {
-	int i;
+	size_t i;
 	const git_index_entry *entry;
+	
+	/* if there are not files explicitly listed by the user print all entries in the index */
+	if (opts->file_count == 0) {
+		size_t entry_count = git_index_entrycount(index);
+
+		for (i = 0; i < entry_count; i++) {
+			entry = git_index_get_byindex(index, i);
+			printf("%s\n", entry->path);
+		}
+		return 0;
+	}
 
 	/* loop through the files found in the args and print them if they exist */
 	for (i = 0; i < opts->file_count; ++i) {
@@ -106,9 +117,6 @@ int main(int argc, char *argv[])
 	ls_options opts;
 	git_repository *repo = NULL;
 	git_index *index = NULL;
-	const git_index_entry *entry;
-	size_t entry_count;
-	size_t i = 0;
 	int error;
 
 	if ((error = parse_options(&opts, argc, argv)) < 0)
@@ -122,17 +130,7 @@ int main(int argc, char *argv[])
 	if ((error = git_repository_index(&index, repo)) < 0)
 		goto cleanup;
 
-	/* if there are files explicitly listed by the user, we need to treat this command differently */
-	if (opts.file_count > 0) {
-		error = print_paths(&opts, index);
-	} else {
-		entry_count = git_index_entrycount(index);
-
-		for (i = 0; i < entry_count; i++) {
-			entry = git_index_get_byindex(index, i);
-			printf("%s\n", entry->path);
-		}
-	}
+	error = print_paths(&opts, index);
 
 cleanup:
 	git_index_free(index);
