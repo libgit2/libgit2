@@ -153,11 +153,12 @@ static int find_by_path(const git_config_entry *entry, void *payload)
  * Checks to see if the submodule shares its name with a file or directory that
  * already exists on the index. If so, the submodule cannot be added.
  */
-static int can_add_submodule(git_repository *repo, const char *path)
+static int is_path_occupied(bool *occupied, git_repository *repo, const char *path)
 {
 	int error = 0;
 	git_index *index;
 	git_buf dir = GIT_BUF_INIT;
+	*occupied = false;
 
 	if ((error = git_repository_index__weakptr(&index, repo)) < 0)
 		goto out;
@@ -165,10 +166,9 @@ static int can_add_submodule(git_repository *repo, const char *path)
 	if ((error = git_index_find(NULL, index, path)) == 0) {
 		giterr_set(GITERR_SUBMODULE,
 			"File '%s' already exists in the index", path);
-		error = GIT_EEXISTS;
+		*occupied = true;
 		goto out;
 	}
-	error = 0;
 
 	if ((error = git_buf_sets(&dir, path)) < 0)
 		goto out;
@@ -179,8 +179,7 @@ static int can_add_submodule(git_repository *repo, const char *path)
 	if ((error = git_index_find_prefix(NULL, index, dir.ptr)) == 0) {
 		giterr_set(GITERR_SUBMODULE,
 			"Directory '%s' already exists in the index", path);
-		error = GIT_EEXISTS;
-		goto out;
+		*occupied = true;
 	}
 	error = 0;
 
@@ -704,6 +703,7 @@ int git_submodule_add_setup(
 	git_submodule *sm = NULL;
 	git_buf name = GIT_BUF_INIT, real_url = GIT_BUF_INIT;
 	git_repository *subrepo = NULL;
+	bool path_occupied;
 
 	assert(repo && url && path);
 
@@ -728,8 +728,13 @@ int git_submodule_add_setup(
 		goto cleanup;
 	}
 
-	if ((error = can_add_submodule(repo, path)) < 0)
+	if ((error = is_path_occupied(&path_occupied, repo, path)) < 0)
 		goto cleanup;
+
+	if (path_occupied) {
+		error = GIT_EEXISTS;
+		goto cleanup;
+	}
 
 	/* update .gitmodules */
 
