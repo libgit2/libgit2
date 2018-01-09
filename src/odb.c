@@ -1040,10 +1040,8 @@ static int odb_read_1(git_odb_object **out, git_odb *db, const git_oid *id,
 	}
 
 	giterr_clear();
-	if ((object = odb_object__alloc(id, &raw)) == NULL) {
-		giterr_set(GITERR_ODB, "object could not be allocated");
-		return -1;
-	}
+	object = odb_object__alloc(id, &raw);
+	GITERR_CHECK_ALLOC(object);
 
 	*out = git_cache_store_raw(odb_cache(db), object);
 
