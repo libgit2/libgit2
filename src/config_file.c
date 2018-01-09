@@ -876,10 +876,8 @@ static char *escape_value(const char *ptr)
 		ptr++;
 	}
 
-	if (git_buf_oom(&buf)) {
-		git_buf_dispose(&buf);
+	if (git_buf_oom(&buf))
 		return NULL;
-	}
 
 	return git_buf_detach(&buf);
 }
@@ -1042,10 +1040,8 @@ static int read_on_variable(
 	for (c = var_name; *c; c++)
 		git_buf_putc(&buf, git__tolower(*c));
 
-	if (git_buf_oom(&buf)) {
-		git_buf_free(&buf);
+	if (git_buf_oom(&buf))
 		return -1;
-	}
 
 	entry = git__calloc(1, sizeof(git_config_entry));
 	GITERR_CHECK_ALLOC(entry);
