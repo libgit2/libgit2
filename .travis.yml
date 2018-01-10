@@ -26,8 +26,8 @@ sudo: false
 addons:
  apt:
   sources:
-   - sourceline: 'deb http://libgit2deps.edwardthomson.com trusty libgit2deps'
-     key_url: 'https://www.edwardthomson.com/keys/ethomson@libgit2.org'
+   - sourceline: 'deb https://dl.bintray.com/libgit2/ci-dependencies trusty libgit2deps'
+     key_url: 'https://bintray.com/user/downloadSubjectPublicKey?username=bintray'
   packages:
    cmake
    curl
