@@ -27,8 +27,8 @@ sudo: false
 addons:
  apt:
   sources:
-   - sourceline: 'deb http://libgit2deps.edwardthomson.com trusty libgit2deps'
-     key_url: 'https://pgp.mit.edu/pks/lookup?op=get&search=0x5656187599131CD5'
+   - sourceline: 'deb https://dl.bintray.com/libgit2/ci-dependencies trusty libgit2deps'
+     key_url: 'https://www.edwardthomson.com/keys/ethomson@libgit2.org'
   packages:
    cmake
    curl
