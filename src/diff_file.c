@@ -54,7 +54,8 @@ static int diff_file_content_init_common(
 		fc->src = GIT_ITERATOR_TYPE_TREE;
 
 	if (!fc->driver &&
-		git_diff_driver_lookup(&fc->driver, fc->repo, fc->file->path) < 0)
+		git_diff_driver_lookup(&fc->driver, fc->repo,
+		    NULL, fc->file->path) < 0)
 		return -1;
 
 	/* give driver a chance to modify options */
@@ -101,7 +102,8 @@ int git_diff_file_content__init_from_diff(
 	fc->file = use_old ? &delta->old_file : &delta->new_file;
 	fc->src  = use_old ? diff->old_src : diff->new_src;
 
-	if (git_diff_driver_lookup(&fc->driver, fc->repo, fc->file->path) < 0)
+	if (git_diff_driver_lookup(&fc->driver, fc->repo,
+		    &diff->attrsession, fc->file->path) < 0)
 		return -1;
 
 	switch (delta->status) {

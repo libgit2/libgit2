@@ -25,20 +25,7 @@
 #define ID_BRANCH_A "d853fb9f24e0fe63b3dce9fbc04fd9cfe17a030b"
 #define ID_BRANCH_B "1ce9ea3ba9b4fa666602d52a5281d41a482cc58b"
 
-
-void test_perf_merge__initialize(void)
-{
-}
-
-void test_perf_merge__cleanup(void)
-{
-}
-
 void test_perf_merge__m1(void)
 {
-#if 1
-	cl_skip();
-#else
 	perf__do_merge(SRC_REPO, "m1", ID_BRANCH_A, ID_BRANCH_B);
-#endif
 }
