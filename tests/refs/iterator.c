@@ -213,6 +213,7 @@ void test_refs_iterator__foreach_name(void)
 	git_vector_foreach(&output, i, name) {
 		cl_assert(refnames[i] != NULL);
 		cl_assert_equal_s(refnames[i], name);
+		git__free(name);
 	}
 
 	git_vector_free(&output);
