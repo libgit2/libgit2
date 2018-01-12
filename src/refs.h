@@ -30,7 +30,7 @@ extern bool git_reference__enable_symbolic_ref_target_validation;
 
 #define GIT_SYMREF "ref: "
 #define GIT_PACKEDREFS_FILE "packed-refs"
-#define GIT_PACKEDREFS_HEADER "# pack-refs with: peeled fully-peeled "
+#define GIT_PACKEDREFS_HEADER "# pack-refs with: peeled fully-peeled sorted "
 #define GIT_PACKEDREFS_FILE_MODE 0666
 
 #define GIT_HEAD_FILE "HEAD"
