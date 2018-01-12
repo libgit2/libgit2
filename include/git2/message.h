@@ -58,6 +58,19 @@ typedef int(*git_message_trailer_cb)(const char *key, const char *value, void *p
  */
 GIT_EXTERN(int) git_message_trailers(const char *message, git_message_trailer_cb cb, void *payload);
 
+typedef struct git_message_trailer_iterator git_message_trailer_iterator;
+
+GIT_EXTERN(int) git_message_trailer_iterator_new(
+	git_message_trailer_iterator **out,
+	const char *message);
+
+GIT_EXTERN(int) git_message_trailer_iterator_next(
+	const char **key_out,
+	const char **value_out,
+	git_message_trailer_iterator *iter);
+
+GIT_EXTERN(void) git_message_trailer_iterator_free(git_message_trailer_iterator *iter);
+
 /** @} */
 GIT_END_DECL
 

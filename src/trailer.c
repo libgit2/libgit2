@@ -248,7 +248,7 @@ static int find_trailer_end(const char *buf, size_t len)
 	return len - ignore_non_trailer(buf, len);
 }
 
-static char *find_trailer(const char *message, size_t* len)
+static char *extract_trailer_block(const char *message, size_t* len)
 {
 	size_t patch_start = find_patch_start(message);
 	size_t trailer_end = find_trailer_end(message, patch_start);
@@ -276,48 +276,84 @@ enum trailer_state {
 	S_IGNORE = 7,
 };
 
-#define NEXT(st) { state = (st); ptr++; continue; }
+typedef struct {
+	char *trailer_block;
+	size_t block_len;
+	char *ptr;
+} trailer_iterator;
+
+int git_message_trailer_iterator_new(
+	git_message_trailer_iterator **out,
+	const char *message)
+{
+	trailer_iterator *iter;
+
+	iter = git__calloc(1, sizeof(trailer_iterator));
+	GITERR_CHECK_ALLOC(iter);
+
+	iter->trailer_block = extract_trailer_block(message, &iter->block_len);
+	iter->ptr = iter->trailer_block;
+
+	*out = (git_message_trailer_iterator *) iter;
+
+	return 0;
+}
+
+void git_message_trailer_iterator_free(git_message_trailer_iterator *_iter)
+{
+	trailer_iterator *iter = (trailer_iterator *) _iter;
+
+	if (iter == NULL)
+		return;
+
+	git__free(iter->trailer_block);
+	git__free(iter);
+}
+
+#define NEXT(st) { state = (st); iter->ptr++; continue; }
 #define GOTO(st) { state = (st); continue; }
 
-int git_message_trailers(const char *message, git_message_trailer_cb cb, void *payload)
+int git_message_trailer_iterator_next(
+	const char **key_out,
+	const char **value_out,
+	git_message_trailer_iterator *_iter)
 {
+	trailer_iterator *iter = (trailer_iterator *) _iter;
 	enum trailer_state state = S_START;
 	int rc = 0;
-	char *ptr;
-	char *key = NULL;
-	char *value = NULL;
 
-	size_t trailer_len;
-	char *trailer = find_trailer(message, &trailer_len);
+	if (*iter->ptr == 0) {
+		return GIT_ITEROVER;
+	}
 
-	for (ptr = trailer;;) {
+	while (iter->ptr != 0) {
 		switch (state) {
 			case S_START: {
-				if (*ptr == 0) {
+				if (*iter->ptr == 0) {
 					goto ret;
 				}
 
-				key = ptr;
+				*key_out = iter->ptr;
 				GOTO(S_KEY);
 			}
 			case S_KEY: {
-				if (*ptr == 0) {
+				if (*iter->ptr == 0) {
 					goto ret;
 				}
 
-				if (isalnum(*ptr) || *ptr == '-') {
+				if (isalnum(*iter->ptr) || *iter->ptr == '-') {
 					// legal key character
 					NEXT(S_KEY);
 				}
 
-				if (*ptr == ' ' || *ptr == '\t') {
+				if (*iter->ptr == ' ' || *iter->ptr == '\t') {
 					// optional whitespace before separator
-					*ptr = 0;
+					*iter->ptr = 0;
 					NEXT(S_KEY_WS);
 				}
 
-				if (strchr(TRAILER_SEPARATORS, *ptr)) {
-					*ptr = 0;
+				if (strchr(TRAILER_SEPARATORS, *iter->ptr)) {
+					*iter->ptr = 0;
 					NEXT(S_SEP_WS);
 				}
 
@@ -325,15 +361,15 @@ int git_message_trailers(const char *message, git_message_trailer_cb cb, void *p
 				GOTO(S_IGNORE);
 			}
 			case S_KEY_WS: {
-				if (*ptr == 0) {
+				if (*iter->ptr == 0) {
 					goto ret;
 				}
 
-				if (*ptr == ' ' || *ptr == '\t') {
+				if (*iter->ptr == ' ' || *iter->ptr == '\t') {
 					NEXT(S_KEY_WS);
 				}
 
-				if (strchr(TRAILER_SEPARATORS, *ptr)) {
+				if (strchr(TRAILER_SEPARATORS, *iter->ptr)) {
 					NEXT(S_SEP_WS);
 				}
 
@@ -341,53 +377,46 @@ int git_message_trailers(const char *message, git_message_trailer_cb cb, void *p
 				GOTO(S_IGNORE);
 			}
 			case S_SEP_WS: {
-				if (*ptr == 0) {
+				if (*iter->ptr == 0) {
 					goto ret;
 				}
 
-				if (*ptr == ' ' || *ptr == '\t') {
+				if (*iter->ptr == ' ' || *iter->ptr == '\t') {
 					NEXT(S_SEP_WS);
 				}
 
-				value = ptr;
+				*value_out = iter->ptr;
 				NEXT(S_VALUE);
 			}
 			case S_VALUE: {
-				if (*ptr == 0) {
+				if (*iter->ptr == 0) {
 					GOTO(S_VALUE_END);
 				}
 
-				if (*ptr == '\n') {
+				if (*iter->ptr == '\n') {
 					NEXT(S_VALUE_NL);
 				}
 
 				NEXT(S_VALUE);
 			}
 			case S_VALUE_NL: {
-				if (*ptr == ' ') {
+				if (*iter->ptr == ' ') {
 					// continuation;
 					NEXT(S_VALUE);
 				}
 
-				ptr[-1] = 0;
+				iter->ptr[-1] = 0;
 				GOTO(S_VALUE_END);
 			}
 			case S_VALUE_END: {
-				if ((rc = cb(key, value, payload))) {
-					goto ret;
-				}
-
-				key = NULL;
-				value = NULL;
-
-				GOTO(S_START);
+				goto ret;
 			}
 			case S_IGNORE: {
-				if (*ptr == 0) {
+				if (*iter->ptr == 0) {
 					goto ret;
 				}
 
-				if (*ptr == '\n') {
+				if (*iter->ptr == '\n') {
 					NEXT(S_START);
 				}
 
@@ -397,6 +426,32 @@ int git_message_trailers(const char *message, git_message_trailer_cb cb, void *p
 	}
 
 ret:
-	git__free(trailer);
 	return rc;
+}
+
+int git_message_trailers(const char *message, git_message_trailer_cb cb, void *payload)
+{
+	git_message_trailer_iterator *iterator;
+	int rc;
+
+	if ((rc = git_message_trailer_iterator_new(&iterator, message))) {
+		return rc;
+	}
+
+	while (rc != GIT_ITEROVER) {
+		const char *key;
+		const char *value;
+
+		if ((rc = git_message_trailer_iterator_next(&key, &value, iterator))) {
+			goto ret;
+		}
+
+		if ((rc = cb(key, value, payload))) {
+			goto ret;
+		}
+	}
+
+ret:
+	git_message_trailer_iterator_free(iterator);
+	return 0;
 }
