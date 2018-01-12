@@ -519,6 +519,8 @@ static int foreach_reference_cb(git_reference *reference, void *payload)
 		error = 0;
 	}
 
+	git_reference_free(reference);
+
 	return error;
 }
 
