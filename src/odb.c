@@ -53,6 +53,7 @@ static git_cache *odb_cache(git_odb *odb)
 
 static int odb_otype_fast(git_otype *type_p, git_odb *db, const git_oid *id);
 static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_depth);
+static int error_null_oid(int error, const char *message);
 
 static git_otype odb_hardcoded_type(const git_oid *id)
 {
@@ -735,6 +736,9 @@ int git_odb_exists(git_odb *db, const git_oid *id)
 
 	assert(db && id);
 
+	if (git_oid_iszero(id))
+		return 0;
+
 	if ((object = git_cache_get_raw(odb_cache(db), id)) != NULL) {
 		git_odb_object_free(object);
 		return 1;
@@ -958,6 +962,11 @@ int git_odb__read_header_or_object(
 
 	assert(db && id && out && len_p && type_p);
 
+	*out = NULL;
+
+	if (git_oid_iszero(id))
+		return error_null_oid(GIT_ENOTFOUND, "cannot read object");
+
 	if ((object = git_cache_get_raw(odb_cache(db), id)) != NULL) {
 		*len_p = object->cached.size;
 		*type_p = object->cached.type;
@@ -965,7 +974,6 @@ int git_odb__read_header_or_object(
 		return 0;
 	}
 
-	*out = NULL;
 	error = odb_read_header_1(len_p, type_p, db, id, false);
 
 	if (error == GIT_ENOTFOUND && !git_odb_refresh(db))
@@ -1057,6 +1065,9 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 
 	assert(out && db && id);
 
+	if (git_oid_iszero(id))
+		return error_null_oid(GIT_ENOTFOUND, "cannot read object");
+
 	*out = git_cache_get_raw(odb_cache(db), id);
 	if (*out != NULL)
 		return 0;
@@ -1077,6 +1088,9 @@ static int odb_otype_fast(git_otype *type_p, git_odb *db, const git_oid *id)
 	git_odb_object *object;
 	size_t _unused;
 	int error;
+
+	if (git_oid_iszero(id))
+		return error_null_oid(GIT_ENOTFOUND, "cannot get object type");
 
 	if ((object = git_cache_get_raw(odb_cache(db), id)) != NULL) {
 		*type_p = object->cached.type;
@@ -1231,6 +1245,10 @@ int git_odb_write(
 	assert(oid && db);
 
 	git_odb_hash(oid, data, len, type);
+
+	if (git_oid_iszero(oid))
+		return error_null_oid(GIT_EINVALID, "cannot write object");
+
 	if (git_odb__freshen(db, oid))
 		return 0;
 
@@ -1482,6 +1500,12 @@ int git_odb__error_notfound(
 		giterr_set(GITERR_ODB, "object not found - %s", message);
 
 	return GIT_ENOTFOUND;
+}
+
+static int error_null_oid(int error, const char *message)
+{
+	giterr_set(GITERR_ODB, "odb: %s: null OID cannot exist", message);
+	return error;
 }
 
 int git_odb__error_ambiguous(const char *message)
