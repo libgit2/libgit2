@@ -136,12 +136,21 @@ GIT_INLINE(int) hash_cryptoapi_init(git_hash_ctx *ctx)
 	return 0;
 }
 
-GIT_INLINE(int) hash_cryptoapi_update(git_hash_ctx *ctx, const void *data, size_t len)
+GIT_INLINE(int) hash_cryptoapi_update(git_hash_ctx *ctx, const void *_data, size_t len)
 {
+	const BYTE *data = (BYTE *)_data;
+
 	assert(ctx->ctx.cryptoapi.valid);
 
-	if (!CryptHashData(ctx->ctx.cryptoapi.hash_handle, (const BYTE *)data, (DWORD)len, 0))
-		return -1;
+	while (len > 0) {
+		DWORD chunk = (len > MAXDWORD) ? MAXDWORD : (DWORD)len;
+
+		if (!CryptHashData(ctx->ctx.cryptoapi.hash_handle, data, chunk, 0))
+			return -1;
+
+		data += chunk;
+		len -= chunk;
+	}
 
 	return 0;
 }
@@ -202,10 +211,19 @@ GIT_INLINE(int) hash_cng_init(git_hash_ctx *ctx)
 	return 0;
 }
 
-GIT_INLINE(int) hash_cng_update(git_hash_ctx *ctx, const void *data, size_t len)
+GIT_INLINE(int) hash_cng_update(git_hash_ctx *ctx, const void *_data, size_t len)
 {
-	if (ctx->prov->prov.cng.hash_data(ctx->ctx.cng.hash_handle, (PBYTE)data, (ULONG)len, 0) < 0)
-		return -1;
+	PBYTE data = (PBYTE)_data;
+
+	while (len > 0) {
+		ULONG chunk = (len > ULONG_MAX) ? ULONG_MAX : (ULONG)len;
+
+		if (ctx->prov->prov.cng.hash_data(ctx->ctx.cng.hash_handle, data, chunk, 0) < 0)
+			return -1;
+
+		data += chunk;
+		len -= chunk;
+	}
 
 	return 0;
 }

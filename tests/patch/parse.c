@@ -102,3 +102,9 @@ void test_patch_parse__invalid_patches_fails(void)
 		strlen(PATCH_CORRUPT_MISSING_HUNK_HEADER), NULL));
 }
 
+void test_patch_parse__files_with_whitespaces_succeeds(void)
+{
+	git_patch *patch;
+	cl_git_pass(git_patch_from_buffer(&patch, PATCH_NAME_WHITESPACE, strlen(PATCH_NAME_WHITESPACE), NULL));
+	git_patch_free(patch);
+}

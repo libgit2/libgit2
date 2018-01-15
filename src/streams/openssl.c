@@ -282,8 +282,9 @@ static int ssl_set_error(SSL *ssl, int error)
 	case SSL_ERROR_SYSCALL:
 		e = ERR_get_error();
 		if (e > 0) {
-			giterr_set(GITERR_NET, "SSL error: %s",
-					ERR_error_string(e, NULL));
+			char errmsg[256];
+			ERR_error_string_n(e, errmsg, sizeof(errmsg));
+			giterr_set(GITERR_NET, "SSL error: %s", errmsg);
 			break;
 		} else if (error < 0) {
 			giterr_set(GITERR_OS, "SSL error: syscall failure");
@@ -293,10 +294,13 @@ static int ssl_set_error(SSL *ssl, int error)
 		return GIT_EEOF;
 		break;
 	case SSL_ERROR_SSL:
+	{
+		char errmsg[256];
 		e = ERR_get_error();
-		giterr_set(GITERR_NET, "SSL error: %s",
-				ERR_error_string(e, NULL));
+		ERR_error_string_n(e, errmsg, sizeof(errmsg));
+		giterr_set(GITERR_NET, "SSL error: %s", errmsg);
 		break;
+	}
 	case SSL_ERROR_NONE:
 	case SSL_ERROR_ZERO_RETURN:
 	default:
@@ -332,7 +336,7 @@ static int check_host_name(const char *name, const char *host)
 
 static int verify_server_cert(SSL *ssl, const char *host)
 {
-	X509 *cert;
+	X509 *cert = NULL;
 	X509_NAME *peer_name;
 	ASN1_STRING *str;
 	unsigned char *peer_cn = NULL;
@@ -341,7 +345,7 @@ static int verify_server_cert(SSL *ssl, const char *host)
 	struct in6_addr addr6;
 	struct in_addr addr4;
 	void *addr;
-	int i = -1,j;
+	int i = -1, j, error = 0;
 
 	if (SSL_get_verify_result(ssl) != X509_V_OK) {
 		giterr_set(GITERR_SSL, "the SSL certificate is invalid");
@@ -362,8 +366,9 @@ static int verify_server_cert(SSL *ssl, const char *host)
 
 	cert = SSL_get_peer_certificate(ssl);
 	if (!cert) {
+		error = -1;
 		giterr_set(GITERR_SSL, "the server did not provide a certificate");
-		return -1;
+		goto cleanup;
 	}
 
 	/* Check the alternative names */
@@ -401,8 +406,9 @@ static int verify_server_cert(SSL *ssl, const char *host)
 	if (matched == 0)
 		goto cert_fail_name;
 
-	if (matched == 1)
-		return 0;
+	if (matched == 1) {
+		goto cleanup;
+	}
 
 	/* If no alternative names are available, check the common name */
 	peer_name = X509_get_subject_name(cert);
@@ -444,18 +450,21 @@ static int verify_server_cert(SSL *ssl, const char *host)
 	if (check_host_name((char *)peer_cn, host) < 0)
 		goto cert_fail_name;
 
-	OPENSSL_free(peer_cn);
-
-	return 0;
-
-on_error:
-	OPENSSL_free(peer_cn);
-	return ssl_set_error(ssl, 0);
+	goto cleanup;
 
 cert_fail_name:
-	OPENSSL_free(peer_cn);
+	error = GIT_ECERTIFICATE;
 	giterr_set(GITERR_SSL, "hostname does not match certificate");
-	return GIT_ECERTIFICATE;
+	goto cleanup;
+
+on_error:
+	error = ssl_set_error(ssl, 0);
+	goto cleanup;
+
+cleanup:
+	X509_free(cert);
+	OPENSSL_free(peer_cn);
+	return error;
 }
 
 typedef struct {
@@ -640,8 +649,12 @@ out_err:
 int git_openssl__set_cert_location(const char *file, const char *path)
 {
 	if (SSL_CTX_load_verify_locations(git__ssl_ctx, file, path) == 0) {
+		char errmsg[256];
+
+		ERR_error_string_n(ERR_get_error(), errmsg, sizeof(errmsg));
 		giterr_set(GITERR_SSL, "OpenSSL error: failed to load certificates: %s",
-				   ERR_error_string(ERR_get_error(), NULL));
+			errmsg);
+
 		return -1;
 	}
 	return 0;

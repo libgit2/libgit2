@@ -1072,6 +1072,8 @@ void test_status_worktree__unreadable(void)
 	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
 	cl_assert_equal_i(0, counts.wrong_status_flags_count);
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
+#else
+	cl_skip();
 #endif
 }
 
@@ -1106,6 +1108,8 @@ void test_status_worktree__unreadable_not_included(void)
 	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
 	cl_assert_equal_i(0, counts.wrong_status_flags_count);
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
+#else
+	cl_skip();
 #endif
 }
 

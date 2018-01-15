@@ -307,9 +307,10 @@ GIT_EXTERN(const git_tree_entry *) git_treebuilder_get(
  * pointer may not be valid past the next operation in this
  * builder. Duplicate the entry if you want to keep it.
  *
- * No attempt is being made to ensure that the provided oid points
- * to an existing git object in the object database, nor that the
- * attributes make sense regarding the type of the pointed at object.
+ * By default the entry that you are inserting will be checked for
+ * validity; that it exists in the object database and is of the
+ * correct type.  If you do not want this behavior, set the
+ * `GIT_OPT_ENABLE_STRICT_OBJECT_CREATION` library option to false.
  *
  * @param out Pointer to store the entry (optional)
  * @param bld Tree builder

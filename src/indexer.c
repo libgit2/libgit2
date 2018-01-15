@@ -844,6 +844,7 @@ static int fix_thin_pack(git_indexer *idx, git_transfer_progress *stats)
 static int resolve_deltas(git_indexer *idx, git_transfer_progress *stats)
 {
 	unsigned int i;
+	int error;
 	struct delta_info *delta;
 	int progressed = 0, non_null = 0, progress_cb_result;
 
@@ -858,8 +859,13 @@ static int resolve_deltas(git_indexer *idx, git_transfer_progress *stats)
 
 			non_null = 1;
 			idx->off = delta->delta_off;
-			if (git_packfile_unpack(&obj, idx->pack, &idx->off) < 0)
-				continue;
+			if ((error = git_packfile_unpack(&obj, idx->pack, &idx->off)) < 0) {
+				if (error == GIT_PASSTHROUGH) {
+					/* We have not seen the base object, we'll try again later. */
+					continue;
+				}
+				return -1;
+			}
 
 			if (hash_and_save(idx, &obj, delta->delta_off) < 0)
 				continue;

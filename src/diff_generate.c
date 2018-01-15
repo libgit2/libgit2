@@ -389,6 +389,7 @@ static void diff_generated_free(git_diff *d)
 {
 	git_diff_generated *diff = (git_diff_generated *)d;
 
+	git_attr_session__free(&diff->base.attrsession);
 	git_vector_free_deep(&diff->base.deltas);
 
 	git_pathspec__vfree(&diff->pathspec);
@@ -418,6 +419,7 @@ static git_diff_generated *diff_generated_alloc(
 	diff->base.new_src = new_iter->type;
 	diff->base.patch_fn = git_patch_generated_from_diff;
 	diff->base.free_fn = diff_generated_free;
+	git_attr_session__init(&diff->base.attrsession, repo);
 	memcpy(&diff->base.opts, &dflt, sizeof(git_diff_options));
 
 	git_pool_init(&diff->base.pool, 1);

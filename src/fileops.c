@@ -102,6 +102,16 @@ int git_futils_open_ro(const char *path)
 	return fd;
 }
 
+int git_futils_truncate(const char *path, int mode)
+{
+	int fd = p_open(path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, mode);
+	if (fd < 0)
+		return git_path_set_error(errno, path, "open");
+
+	close(fd);
+	return 0;
+}
+
 git_off_t git_futils_filesize(git_file fd)
 {
 	struct stat sb;

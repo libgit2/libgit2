@@ -53,11 +53,9 @@ static int header_path_len(git_patch_parse_ctx *ctx)
 	return len;
 }
 
-static int parse_header_path_buf(git_buf *path, git_patch_parse_ctx *ctx)
+static int parse_header_path_buf(git_buf *path, git_patch_parse_ctx *ctx, size_t path_len)
 {
-	int path_len, error = 0;
-
-	path_len = header_path_len(ctx);
+	int error;
 
 	if ((error = git_buf_put(path, ctx->parse_ctx.line, path_len)) < 0)
 		goto done;
@@ -81,7 +79,7 @@ done:
 static int parse_header_path(char **out, git_patch_parse_ctx *ctx)
 {
 	git_buf path = GIT_BUF_INIT;
-	int error = parse_header_path_buf(&path, ctx);
+	int error = parse_header_path_buf(&path, ctx, header_path_len(ctx));
 
 	*out = git_buf_detach(&path);
 
@@ -91,13 +89,33 @@ static int parse_header_path(char **out, git_patch_parse_ctx *ctx)
 static int parse_header_git_oldpath(
 	git_patch_parsed *patch, git_patch_parse_ctx *ctx)
 {
-	return parse_header_path(&patch->old_path, ctx);
+	git_buf old_path = GIT_BUF_INIT;
+	int error;
+
+	if ((error = parse_header_path_buf(&old_path, ctx, ctx->parse_ctx.line_len - 1)) <  0)
+		goto out;
+
+	patch->old_path = git_buf_detach(&old_path);
+
+out:
+	git_buf_free(&old_path);
+	return error;
 }
 
 static int parse_header_git_newpath(
 	git_patch_parsed *patch, git_patch_parse_ctx *ctx)
 {
-	return parse_header_path(&patch->new_path, ctx);
+	git_buf new_path = GIT_BUF_INIT;
+	int error;
+
+	if ((error = parse_header_path_buf(&new_path, ctx, ctx->parse_ctx.line_len - 1)) <  0)
+		goto out;
+
+	patch->new_path = git_buf_detach(&new_path);
+
+out:
+	git_buf_free(&new_path);
+	return error;
 }
 
 static int parse_header_mode(uint16_t *mode, git_patch_parse_ctx *ctx)
@@ -213,7 +231,7 @@ static int parse_header_rename(
 {
 	git_buf path = GIT_BUF_INIT;
 
-	if (parse_header_path_buf(&path, ctx) < 0)
+	if (parse_header_path_buf(&path, ctx, header_path_len(ctx)) < 0)
 		return -1;
 
 	/* Note: the `rename from` and `rename to` lines include the literal
@@ -302,6 +320,22 @@ static int parse_header_start(git_patch_parsed *patch, git_patch_parse_ctx *ctx)
 		parse_header_path(&patch->header_new_path, ctx) < 0)
 		return git_parse_err("corrupt new path in git diff header at line %"PRIuZ,
 			ctx->parse_ctx.line_num);
+
+	/*
+	 * We cannot expect to be able to always parse paths correctly at this
+	 * point. Due to the possibility of unquoted names, whitespaces in
+	 * filenames and custom prefixes we have to allow that, though, and just
+	 * proceeed here. We then hope for the "---" and "+++" lines to fix that
+	 * for us.
+	 */
+	if (!git_parse_ctx_contains(&ctx->parse_ctx, "\n", 1)) {
+		git_parse_advance_chars(&ctx->parse_ctx, ctx->parse_ctx.line_len - 1);
+
+		git__free(patch->header_old_path);
+		patch->header_old_path = NULL;
+		git__free(patch->header_new_path);
+		patch->header_new_path = NULL;
+	}
 
 	return 0;
 }
