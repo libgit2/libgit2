@@ -4,6 +4,7 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
+#include "array.h"
 #include "common.h"
 #include "git2/message.h"
 
@@ -279,13 +280,16 @@ enum trailer_state {
 #define NEXT(st) { state = (st); ptr++; continue; }
 #define GOTO(st) { state = (st); continue; }
 
-int git_message_trailers(const char *message, git_message_trailer_cb cb, void *payload)
+typedef git_array_t(git_message_trailer) git_array_trailer_t;
+
+int git_message_trailers(git_message_trailer_array *trailer_arr, const char *message)
 {
 	enum trailer_state state = S_START;
 	int rc = 0;
 	char *ptr;
 	char *key = NULL;
 	char *value = NULL;
+	git_array_trailer_t arr = GIT_ARRAY_INIT;
 
 	size_t trailer_len;
 	char *trailer = find_trailer(message, &trailer_len);
@@ -373,9 +377,10 @@ int git_message_trailers(const char *message, git_message_trailer_cb cb, void *p
 				GOTO(S_VALUE_END);
 			}
 			case S_VALUE_END: {
-				if ((rc = cb(key, value, payload))) {
-					goto ret;
-				}
+				git_message_trailer *t = git_array_alloc(arr);
+
+				t->key = key;
+				t->value = value;
 
 				key = NULL;
 				value = NULL;
@@ -397,6 +402,15 @@ int git_message_trailers(const char *message, git_message_trailer_cb cb, void *p
 	}
 
 ret:
-	git__free(trailer);
+	trailer_arr->_trailer_block = trailer;
+	trailer_arr->trailers = arr.ptr;
+	trailer_arr->count = arr.size;
+
 	return rc;
+}
+
+void git_message_trailer_array_free(git_message_trailer_array *arr)
+{
+	git__free(arr->_trailer_block);
+	git__free(arr->trailers);
 }
