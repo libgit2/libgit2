@@ -433,6 +433,9 @@ typedef int (*git_reference_foreach_name_cb)(const char *name, void *payload);
  * passed to this method.  Returning a non-zero value from the callback
  * will terminate the iteration.
  *
+ * Note that the callback function is responsible to call `git_reference_free`
+ * on each reference passed to it.
+ *
  * @param repo Repository where to find the refs
  * @param callback Function which will be called for every listed ref
  * @param payload Additional data to pass to the callback
