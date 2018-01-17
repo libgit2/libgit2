@@ -204,7 +204,6 @@ static int perform_fastforward(git_repository *repo, const git_oid *target_oid, 
 
 static void output_conflicts(git_index *index)
 {
-	/* Handle conflicts */
 	git_index_conflict_iterator *conflicts;
 	const git_index_entry *ancestor;
 	const git_index_entry *our;
@@ -215,7 +214,9 @@ static void output_conflicts(git_index *index)
 
 	while ((err = git_index_conflict_next(&ancestor, &our, &their, conflicts)) == 0) {
 		fprintf(stderr, "conflict: a:%s o:%s t:%s\n",
-				ancestor ? ancestor->path : "", our->path, their->path);
+		        ancestor ? ancestor->path : "NULL",
+		        our->path ? our->path : "NULL",
+		        their->path ? their->path : "NULL");
 	}
 
 	if (err != GIT_ITEROVER) {
@@ -376,6 +377,7 @@ int main(int argc, char **argv)
 	check_lg2(git_repository_index(&index, repo), "failed to get repository index", NULL);
 
 	if (git_index_has_conflicts(index)) {
+		/* Handle conflicts */
 		output_conflicts(index);
 	} else if (!opts.no_commit) {
 		create_merge_commit(repo, index, &opts);
