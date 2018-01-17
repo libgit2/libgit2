@@ -9,12 +9,13 @@ struct trailer {
 static void assert_trailers(const char *message, struct trailer *trailers)
 {
 	git_message_trailer_array arr;
+	size_t i;
 
 	int rc = git_message_trailers(&arr, message);
 
 	cl_assert_equal_i(0, rc);
 
-	for(size_t i=0; i<arr.count; i++) {
+	for(i=0; i<arr.count; i++) {
 		cl_assert_equal_s(arr.trailers[i].key, trailers[i].key);
 		cl_assert_equal_s(arr.trailers[i].value, trailers[i].value);
 	}
