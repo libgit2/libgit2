@@ -79,6 +79,7 @@ static void parse_options(const char **repo_path, merge_options *opts, int argc,
 		} else if (!strcmp(curr, "--no-commit")) {
 			opts->no_commit = 1;
 		} else if (match_str_arg(repo_path, &args, "--git-dir")) {
+			continue;
 		} else {
 			print_usage();
 		}
@@ -108,22 +109,23 @@ static int resolve_refish(git_annotated_commit **commit, git_repository *repo, c
 	return err;
 }
 
-static int resolve_heads(git_repository *repo, merge_options *opts) {
+static int resolve_heads(git_repository *repo, merge_options *opts)
+{
 	git_annotated_commit **annotated = calloc(opts->heads_count, sizeof(git_annotated_commit *));
 	size_t annotated_count = 0, i;
 	int err = 0;
 
 	for (i = 0; i < opts->heads_count; i++) {
-		err = resolve_refish((git_annotated_commit **)&annotated[annotated_count++], repo, opts->heads[i]);
+		err = resolve_refish(&annotated[annotated_count++], repo, opts->heads[i]);
 		if (err != 0) {
-			fprintf(stderr, "failed to resolve refish %s (%d)\n", opts->heads[i], err);
+			fprintf(stderr, "failed to resolve refish %s: %s\n", opts->heads[i], giterr_last()->message);
 			annotated_count--;
 			continue;
 		}
 	}
 
-	if (annotated_count <= 0) {
-		fprintf(stderr, "unable to parse any refish\n");
+	if (annotated_count != opts->heads_count) {
+		fprintf(stderr, "unable to parse some refish\n");
 		free(annotated);
 		return -1;
 	}
@@ -155,8 +157,8 @@ static int perform_fastforward(git_repository *repo, const git_oid *target_oid, 
 		/* Grab the reference HEAD should be pointing to */
 		symbolic_ref = git_reference_symbolic_target(head_ref);
 
-		/* Force-create that reference on the target OID */
-		err = git_reference_create(&target_ref, repo, symbolic_ref, target_oid, 1, NULL);
+		/* Create our master reference on the target OID */
+		err = git_reference_create(&target_ref, repo, symbolic_ref, target_oid, 0, NULL);
 		if (err != 0) {
 			fprintf(stderr, "failed to create master reference\n");
 			return -1;
@@ -179,8 +181,8 @@ static int perform_fastforward(git_repository *repo, const git_oid *target_oid, 
 		return -1;
 	}
 
-	/* Force-checkout the result so the workdir is in the expected state */
-	ff_checkout_options.checkout_strategy = GIT_CHECKOUT_FORCE;
+	/* Checkout the result so the workdir is in the expected state */
+	ff_checkout_options.checkout_strategy = GIT_CHECKOUT_SAFE;
 	err = git_checkout_tree(repo, target, &ff_checkout_options);
 	if (err != 0) {
 		fprintf(stderr, "failed to checkout HEAD reference\n");
@@ -209,7 +211,7 @@ static int analyze_merge(git_repository *repo, merge_options *opts)
 	git_merge_preference_t preference;
 	int err = 0;
 
-	merge_opts.flags = 0; // GIT_MERGE_FIND_RENAMES;
+	merge_opts.flags = 0;
 	merge_opts.file_flags = GIT_MERGE_FILE_STYLE_DIFF3;
 
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE|GIT_CHECKOUT_ALLOW_CONFLICTS;
