@@ -1,12 +1,7 @@
 #include "clar_libgit2.h"
 #include "message.h"
 
-struct trailer {
-	const char *key;
-	const char *value;
-};
-
-static void assert_trailers(const char *message, struct trailer *trailers)
+static void assert_trailers(const char *message, git_message_trailer *trailers)
 {
 	git_message_trailer_array arr;
 	size_t i;
@@ -27,7 +22,7 @@ static void assert_trailers(const char *message, struct trailer *trailers)
 
 void test_message_trailer__simple(void)
 {
-	struct trailer trailers[] = {
+	git_message_trailer trailers[] = {
 		{"Signed-off-by", "foo@bar.com"},
 		{"Signed-off-by", "someone@else.com"},
 		{NULL, NULL},
@@ -43,7 +38,7 @@ void test_message_trailer__simple(void)
 
 void test_message_trailer__no_whitespace(void)
 {
-	struct trailer trailers[] = {
+	git_message_trailer trailers[] = {
 		{"Key", "value"},
 		{NULL, NULL},
 	};
@@ -57,7 +52,7 @@ void test_message_trailer__no_whitespace(void)
 
 void test_message_trailer__extra_whitespace(void)
 {
-	struct trailer trailers[] = {
+	git_message_trailer trailers[] = {
 		{"Key", "value"},
 		{NULL, NULL},
 	};
@@ -71,7 +66,7 @@ void test_message_trailer__extra_whitespace(void)
 
 void test_message_trailer__no_newline(void)
 {
-	struct trailer trailers[] = {
+	git_message_trailer trailers[] = {
 		{"Key", "value"},
 		{NULL, NULL},
 	};
@@ -85,7 +80,7 @@ void test_message_trailer__no_newline(void)
 
 void test_message_trailer__not_last_paragraph(void)
 {
-	struct trailer trailers[] = {
+	git_message_trailer trailers[] = {
 		{NULL, NULL},
 	};
 
@@ -100,7 +95,7 @@ void test_message_trailer__not_last_paragraph(void)
 
 void test_message_trailer__conflicts(void)
 {
-	struct trailer trailers[] = {
+	git_message_trailer trailers[] = {
 		{"Key", "value"},
 		{NULL, NULL},
 	};
@@ -117,7 +112,7 @@ void test_message_trailer__conflicts(void)
 
 void test_message_trailer__patch(void)
 {
-	struct trailer trailers[] = {
+	git_message_trailer trailers[] = {
 		{"Key", "value"},
 		{NULL, NULL},
 	};
@@ -134,7 +129,7 @@ void test_message_trailer__patch(void)
 
 void test_message_trailer__continuation(void)
 {
-	struct trailer trailers[] = {
+	git_message_trailer trailers[] = {
 		{"A", "b\n c"},
 		{"D", "e\n f: g h"},
 		{"I", "j"},
@@ -154,7 +149,7 @@ void test_message_trailer__continuation(void)
 
 void test_message_trailer__invalid(void)
 {
-	struct trailer trailers[] = {
+	git_message_trailer trailers[] = {
 		{"Signed-off-by", "some@one.com"},
 		{"Another", "trailer"},
 		{NULL, NULL},
