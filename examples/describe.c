@@ -47,16 +47,6 @@ typedef struct {
 
 typedef struct args_info args_info;
 
-static void *xrealloc(void *oldp, size_t newsz)
-{
-	void *p = realloc(oldp, newsz);
-	if (p == NULL) {
-		fprintf(stderr, "Cannot allocate memory, exiting.\n");
-		exit(1);
-	}
-	return p;
-}
-
 static void opts_add_commit(describe_options *opts, const char *commit)
 {
 	size_t sz;

@@ -103,3 +103,8 @@ extern int diff_output(
  */
 extern void treeish_to_tree(
 	git_tree **out, git_repository *repo, const char *treeish);
+
+/**
+ * A realloc that exits on failure
+ */
+extern void *xrealloc(void *oldp, size_t newsz);
