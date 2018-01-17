@@ -36,7 +36,6 @@ typedef struct {
 	size_t annotated_count;
 
 	int no_commit : 1;
-	int did_merge : 1;
 } merge_options;
 
 static void print_usage(void)
@@ -203,69 +202,14 @@ static int perform_fastforward(git_repository *repo, const git_oid *target_oid, 
 	return 0;
 }
 
-static int analyze_merge(git_repository *repo, merge_options *opts)
-{
-	git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
-	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
-	git_merge_analysis_t analysis;
-	git_merge_preference_t preference;
-	int err = 0;
-
-	merge_opts.flags = 0;
-	merge_opts.file_flags = GIT_MERGE_FILE_STYLE_DIFF3;
-
-	checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE|GIT_CHECKOUT_ALLOW_CONFLICTS;
-
-	err = git_merge_analysis(&analysis, &preference,
-	                         repo,
-	                         (const git_annotated_commit **)opts->annotated,
-	                         opts->annotated_count);
-	check_lg2(err, "merge analysis failed", NULL);
-
-	if (analysis & GIT_MERGE_ANALYSIS_UP_TO_DATE) {
-		printf("Already up-to-date\n");
-		return 0;
-	} else if (analysis & GIT_MERGE_ANALYSIS_UNBORN ||
-	          (analysis & GIT_MERGE_ANALYSIS_FASTFORWARD &&
-	          !(preference & GIT_MERGE_PREFERENCE_NO_FASTFORWARD))) {
-		const git_oid *target_oid;
-		if (analysis & GIT_MERGE_ANALYSIS_UNBORN) {
-			printf("Unborn\n");
-		} else {
-			printf("Fast-forward\n");
-		}
-
-		/* Since this is a fast-forward, there can be only one merge head */
-		target_oid = git_annotated_commit_id(opts->annotated[0]);
-
-		return perform_fastforward(repo, target_oid, (analysis & GIT_MERGE_ANALYSIS_UNBORN));
-	} else if (analysis & GIT_MERGE_ANALYSIS_NORMAL) {
-		if (preference & GIT_MERGE_PREFERENCE_FASTFORWARD_ONLY) {
-			printf("Fast-forward is preferred, but only a merge is possible\n");
-			return -1;
-		}
-
-		err = git_merge(repo,
-		                (const git_annotated_commit **)opts->annotated, opts->annotated_count,
-		                &merge_opts, &checkout_opts);
-		if (err != 0)
-			return -1;
-
-		/* Inform that a merge was done */
-		opts->did_merge = 1;
-
-		return 0;
-	}
-
-	return -1;
-}
-
 int main(int argc, char **argv)
 {
 	git_repository *repo = NULL;
 	merge_options opts;
 	git_index *index;
 	git_repository_state_t state;
+	git_merge_analysis_t analysis;
+	git_merge_preference_t preference;
 	const char *path = ".";
 	int err = 0;
 
@@ -287,16 +231,51 @@ int main(int argc, char **argv)
 	if (err != 0)
 		goto cleanup;
 
-	err = analyze_merge(repo, &opts);
-	if (err != 0) {
-		fprintf(stderr, "merge failed\n");
-		goto cleanup;
+	err = git_merge_analysis(&analysis, &preference,
+	                         repo,
+	                         (const git_annotated_commit **)opts.annotated,
+	                         opts.annotated_count);
+	check_lg2(err, "merge analysis failed", NULL);
+
+	if (analysis & GIT_MERGE_ANALYSIS_UP_TO_DATE) {
+		printf("Already up-to-date\n");
+		return 0;
+	} else if (analysis & GIT_MERGE_ANALYSIS_UNBORN ||
+	          (analysis & GIT_MERGE_ANALYSIS_FASTFORWARD &&
+	          !(preference & GIT_MERGE_PREFERENCE_NO_FASTFORWARD))) {
+		const git_oid *target_oid;
+		if (analysis & GIT_MERGE_ANALYSIS_UNBORN) {
+			printf("Unborn\n");
+		} else {
+			printf("Fast-forward\n");
+		}
+
+		/* Since this is a fast-forward, there can be only one merge head */
+		target_oid = git_annotated_commit_id(opts.annotated[0]);
+		assert(opts.annotated_count == 1);
+
+		return perform_fastforward(repo, target_oid, (analysis & GIT_MERGE_ANALYSIS_UNBORN));
+	} else if (analysis & GIT_MERGE_ANALYSIS_NORMAL) {
+		git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
+		git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+
+		merge_opts.flags = 0;
+		merge_opts.file_flags = GIT_MERGE_FILE_STYLE_DIFF3;
+
+		checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE|GIT_CHECKOUT_ALLOW_CONFLICTS;
+
+		if (preference & GIT_MERGE_PREFERENCE_FASTFORWARD_ONLY) {
+			printf("Fast-forward is preferred, but only a merge is possible\n");
+			return -1;
+		}
+
+		err = git_merge(repo,
+		                (const git_annotated_commit **)opts.annotated, opts.annotated_count,
+		                &merge_opts, &checkout_opts);
+		check_lg2(err, "merge failed", NULL);
 	}
 
-	if (!opts.did_merge) {
-		/* Was either up-to-date, unborn, or a fast-forward, nothing left to do */
-		goto cleanup;
-	}
+	/* If we get here, we actually performed the merge above */
 
 	check_lg2(git_repository_index(&index, repo), "failed to get repository index", NULL);
 
@@ -382,6 +361,8 @@ int main(int argc, char **argv)
 
 		/* We're done merging, cleanup the repository state */
 		git_repository_state_cleanup(repo);
+
+		printf("Merge made\n");
 	}
 cleanup:
 	free(opts.heads);
