@@ -249,7 +249,7 @@ static int find_trailer_end(const char *buf, size_t len)
 	return len - ignore_non_trailer(buf, len);
 }
 
-static char *find_trailer(const char *message, size_t* len)
+static char *extract_trailer_block(const char *message, size_t* len)
 {
 	size_t patch_start = find_patch_start(message);
 	size_t trailer_end = find_trailer_end(message, patch_start);
@@ -292,7 +292,7 @@ int git_message_trailers(git_message_trailer_array *trailer_arr, const char *mes
 	git_array_trailer_t arr = GIT_ARRAY_INIT;
 
 	size_t trailer_len;
-	char *trailer = find_trailer(message, &trailer_len);
+	char *trailer = extract_trailer_block(message, &trailer_len);
 
 	for (ptr = trailer;;) {
 		switch (state) {
