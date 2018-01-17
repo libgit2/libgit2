@@ -202,6 +202,100 @@ static int perform_fastforward(git_repository *repo, const git_oid *target_oid, 
 	return 0;
 }
 
+static void output_conflicts(git_index *index)
+{
+	/* Handle conflicts */
+	git_index_conflict_iterator *conflicts;
+	const git_index_entry *ancestor;
+	const git_index_entry *our;
+	const git_index_entry *their;
+	int err = 0;
+
+	check_lg2(git_index_conflict_iterator_new(&conflicts, index), "failed to create conflict iterator", NULL);
+
+	while ((err = git_index_conflict_next(&ancestor, &our, &their, conflicts)) == 0) {
+		fprintf(stderr, "conflict: a:%s o:%s t:%s\n",
+				ancestor ? ancestor->path : "", our->path, their->path);
+	}
+
+	if (err != GIT_ITEROVER) {
+		fprintf(stderr, "error iterating conflicts\n");
+	}
+
+	git_index_conflict_iterator_free(conflicts);
+}
+
+static int create_merge_commit(git_repository *repo, git_index *index, merge_options *opts)
+{
+	git_oid tree_oid, commit_oid;
+	git_tree *tree;
+	git_signature *sign;
+	git_reference *merge_ref = NULL;
+	git_annotated_commit *merge_commit;
+	git_reference *head_ref;
+	git_commit **parents = calloc(opts->annotated_count + 1, sizeof(git_commit *));
+	const char *msg_target = NULL;
+	size_t msglen = 0;
+	char *msg;
+	size_t i;
+	int err;
+
+	/* Grab our needed references */
+	check_lg2(git_repository_head(&head_ref, repo), "failed to get repo HEAD", NULL);
+	if (resolve_refish(&merge_commit, repo, opts->heads[0])) {
+		fprintf(stderr, "failed to resolve refish %s", opts->heads[0]);
+	}
+
+	/* Maybe that's a ref, so DWIM it */
+	err = git_reference_dwim(&merge_ref, repo, opts->heads[0]);
+	check_lg2(err, "failed to DWIM reference", giterr_last()->message);
+
+	/* Grab a signature */
+	check_lg2(git_signature_now(&sign, "Me", "me@example.com"), "failed to create signature", NULL);
+
+#define MERGE_COMMIT_MSG "Merge %s '%s'"
+	/* Prepare a standard merge commit message */
+	if (merge_ref != NULL) {
+		check_lg2(git_branch_name(&msg_target, merge_ref), "failed to get branch name of merged ref", NULL);
+	} else {
+		msg_target = git_oid_tostr_s(git_annotated_commit_id(merge_commit));
+	}
+
+	msglen = snprintf(NULL, 0, MERGE_COMMIT_MSG, (merge_ref ? "branch" : "commit"), msg_target);
+	if (msglen > 0) msglen++;
+	msg = malloc(msglen);
+	err = snprintf(msg, msglen, MERGE_COMMIT_MSG, (merge_ref ? "branch" : "commit"), msg_target);
+
+	/* This is only to silence the compiler */
+	if (err < 0) goto cleanup;
+
+	/* Setup our parent commits */
+	err = git_reference_peel((git_object **)&parents[0], head_ref, GIT_OBJ_COMMIT);
+	check_lg2(err, "failed to peel head reference", NULL);
+	for (i = 0; i < opts->annotated_count; i++) {
+		git_commit_lookup(&parents[i + 1], repo, git_annotated_commit_id(opts->annotated[i]));
+	}
+
+	/* Prepare our commit tree */
+	check_lg2(git_index_write_tree(&tree_oid, index), "failed to write merged tree", NULL);
+	check_lg2(git_tree_lookup(&tree, repo, &tree_oid), "failed to lookup tree", NULL);
+
+	/* Commit time ! */
+	err = git_commit_create(&commit_oid,
+	                        repo, git_reference_name(head_ref),
+	                        sign, sign,
+	                        NULL, msg,
+	                        tree,
+	                        opts->annotated_count + 1, (const git_commit **)parents);
+	check_lg2(err, "failed to create commit", NULL);
+
+	/* We're done merging, cleanup the repository state */
+	git_repository_state_cleanup(repo);
+
+cleanup:
+	return err;
+}
+
 int main(int argc, char **argv)
 {
 	git_repository *repo = NULL;
@@ -280,90 +374,12 @@ int main(int argc, char **argv)
 	check_lg2(git_repository_index(&index, repo), "failed to get repository index", NULL);
 
 	if (git_index_has_conflicts(index)) {
-		/* Handle conflicts */
-		git_index_conflict_iterator *conflicts;
-		const git_index_entry *ancestor;
-		const git_index_entry *our;
-		const git_index_entry *their;
-
-		check_lg2(git_index_conflict_iterator_new(&conflicts, index), "failed to create conflict iterator", NULL);
-
-		while ((err = git_index_conflict_next(&ancestor, &our, &their, conflicts)) == 0) {
-			fprintf(stderr, "conflict: a:%s o:%s t:%s\n",
-			        ancestor ? ancestor->path : "", our->path, their->path);
-		}
-
-		if (err != GIT_ITEROVER) {
-			fprintf(stderr, "error iterating conflicts\n");
-		}
-
-		git_index_conflict_iterator_free(conflicts);
+		output_conflicts(index);
 	} else if (!opts.no_commit) {
-		git_oid tree_oid, commit_oid;
-		git_tree *tree;
-		git_signature *sign;
-		git_reference *merge_ref = NULL;
-		git_annotated_commit *merge_commit;
-		git_reference *head_ref;
-		git_commit **parents = calloc(opts.annotated_count + 1, sizeof(git_commit *));
-		const char *msg_target = NULL;
-		size_t msglen = 0;
-		char *msg;
-		size_t i;
-		int err;
-
-		/* Grab our needed references */
-		check_lg2(git_repository_head(&head_ref, repo), "failed to get repo HEAD", NULL);
-		if (resolve_refish(&merge_commit, repo, opts.heads[0])) {
-			fprintf(stderr, "failed to resolve refish %s", opts.heads[0]);
-		}
-
-		/* Maybe that's a ref, so DWIM it */
-		git_reference_dwim(&merge_ref, repo, opts.heads[0]);
-
-		/* Grab a signature */
-		check_lg2(git_signature_now(&sign, "Me", "me@example.com"), "failed to create signature", NULL);
-
-#define MERGE_COMMIT_MSG "Merge %s '%s'\n"
-		/* Prepare a standard merge commit message */
-		if (merge_ref != NULL) {
-			check_lg2(git_branch_name(&msg_target, merge_ref), "failed to get branch name of merged ref", NULL);
-		} else {
-			msg_target = git_oid_tostr_s(git_annotated_commit_id(merge_commit));
-		}
-
-		msglen = snprintf(NULL, 0, MERGE_COMMIT_MSG, (merge_ref ? "branch" : "commit"), msg_target);
-		if (msglen > 0) msglen++;
-		msg = malloc(msglen);
-		err = snprintf(msg, msglen, MERGE_COMMIT_MSG, (merge_ref ? "branch" : "commit"), msg_target);
-
-		/* This is only to silence the compiler */
-		if (err < 0) goto cleanup;
-
-		/* Setup our parent commits */
-		check_lg2(git_reference_peel((git_object **)&parents[0], head_ref, GIT_OBJ_COMMIT), "failed to peel head reference", NULL);
-		for (i = 0; i < opts.annotated_count; i++) {
-			git_commit_lookup(&parents[i + 1], repo, git_annotated_commit_id(opts.annotated[i]));
-		}
-
-		/* Prepare our commit tree */
-		check_lg2(git_index_write_tree(&tree_oid, index), "failed to write merged tree", NULL);
-		check_lg2(git_tree_lookup(&tree, repo, &tree_oid), "failed to lookup tree", NULL);
-
-		/* Commit time ! */
-		err = git_commit_create(&commit_oid,
-		                        repo, git_reference_name(head_ref),
-		                        sign, sign,
-		                        NULL, msg,
-		                        tree,
-		                        opts.annotated_count + 1, (const git_commit **)parents);
-		check_lg2(err, "failed to create commit", NULL);
-
-		/* We're done merging, cleanup the repository state */
-		git_repository_state_cleanup(repo);
-
+		create_merge_commit(repo, index, &opts);
 		printf("Merge made\n");
 	}
+
 cleanup:
 	free(opts.heads);
 	free(opts.annotated);
