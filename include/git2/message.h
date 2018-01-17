@@ -38,11 +38,20 @@ GIT_BEGIN_DECL
  */
 GIT_EXTERN(int) git_message_prettify(git_buf *out, const char *message, int strip_comments, char comment_char);
 
+/**
+ * Represents a single git message trailer.
+ */
 typedef struct {
   const char *key;
   const char *value;
 } git_message_trailer;
 
+/**
+ * Represents an array of git message trailers.
+ *
+ * Struct members under the private comment are private, subject to change
+ * and should not be used by callers.
+ */
 typedef struct {
   git_message_trailer *trailers;
   size_t count;
@@ -52,9 +61,7 @@ typedef struct {
 } git_message_trailer_array;
 
 /**
- * Parse trailers out of a message, calling a callback once for each trailer.
- *
- * Return non-zero from the callback to stop processing.
+ * Parse trailers out of a message, filling the array pointed to by +arr+.
  *
  * Trailers are key/value pairs in the last paragraph of a message, not
  * including any patches or conflicts that may be present.
@@ -62,10 +69,14 @@ typedef struct {
  * @param arr A pre-allocated git_message_trailer_array struct to be filled in
  *            with any trailers found during parsing.
  * @param message The message to be parsed
- * @return 0 on success, or non-zero callback return value.
+ * @return 0 on success, or non-zero on error.
  */
 GIT_EXTERN(int) git_message_trailers(git_message_trailer_array *arr, const char *message);
 
+/**
+ * Clean's up any allocated memory in the git_message_trailer_array filled by
+ * a call to git_message_trailers.
+ */
 GIT_EXTERN(void) git_message_trailer_array_free(git_message_trailer_array *arr);
 
 /** @} */
