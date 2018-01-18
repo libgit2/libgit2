@@ -708,4 +708,6 @@ void test_online_clone__proxy_credentials_in_url(void)
 	called_proxy_creds = 0;
 	cl_git_pass(git_clone(&g_repo, "http://github.com/libgit2/TestGitRepository", "./foo", &g_options));
 	cl_assert(called_proxy_creds == 0);
+
+	git_buf_free(&url);
 }
