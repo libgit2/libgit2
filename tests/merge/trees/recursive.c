@@ -408,3 +408,29 @@ void test_merge_trees_recursive__recursionlimit(void)
 	git_index_free(index);
 }
 
+/* There are multiple levels of criss-cross merges. When one level of
+ recursion produces a virtual commit, that virtual commit should be used
+ to find the merge base in the next round of recursion (as opposed to
+ using the real commits the virtual commit came from).
+ If this works like git.exe, there will be a conflict in version.txt but not in
+ targetfile.txt.
+ If virtual commit heads are passed incorrectly, targetfile.txt will also be conflicted.
+ */
+void test_merge_trees_recursive__merge_base_for_virtual_commit(void)
+{
+	git_index *index;
+	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
+
+	struct merge_index_entry merge_index_entries[] = {
+		{ 0100644, "1bde1883de4977ea3e664b315da951d1f614c3b1", 0, "targetfile.txt" },
+		{ 0100644, "c7f3257db72e885d6612080c003e0f2ef480e0c4", 1, "version.txt" },
+		{ 0100644, "358efd6f589384fa8baf92234db9c7899a53916e", 2, "version.txt" },
+		{ 0100644, "a664873b1c0b9a1ed300f8644dde536fdaa3a34f", 3, "version.txt" },
+	};
+
+	cl_git_pass(merge_commits_from_branches(&index, repo, "branchJ-1", "branchJ-2", &opts));
+
+	cl_assert(merge_test_index(index, merge_index_entries, 4));
+
+	git_index_free(index);
+}
