@@ -2075,6 +2075,7 @@ int git_merge__iterators(
 		file_opts.our_label = "Temporary merge branch 1";
 		file_opts.their_label = "Temporary merge branch 2";
 		file_opts.flags |= GIT_MERGE_FILE_FAVOR__CONFLICTED;
+		file_opts.marker_size = GIT_MERGE_CONFLICT_MARKER_SIZE + 2;
 	}
 
 	diff_list = git_merge_diff_list__alloc(repo);
