@@ -70,6 +70,12 @@ static int create_branch(
 	assert(branch_name && commit && ref_out);
 	assert(git_object_owner((const git_object *)commit) == repository);
 
+	if (!git__strcmp(branch_name, "HEAD")) {
+		giterr_set(GITERR_REFERENCE, "'HEAD' is not a valid branch name");
+		error = -1;
+		goto cleanup;
+	}
+
 	if (force && !bare && git_branch_lookup(&branch, repository, branch_name, GIT_BRANCH_LOCAL) == 0) {
 		error = git_branch_is_head(branch);
 		git_reference_free(branch);
