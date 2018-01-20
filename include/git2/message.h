@@ -19,10 +19,9 @@
 GIT_BEGIN_DECL
 
 /**
- * Clean up message from excess whitespace and make sure that the last line
- * ends with a '\n'.
+ * Clean up excess whitespace and make sure there is a trailing newline in the message.
  *
- * Optionally, can remove lines starting with a "#".
+ * Optionally, it can remove lines which start with the comment character.
  *
  * @param out The user-allocated git_buf which will be filled with the
  *     cleaned up message.
