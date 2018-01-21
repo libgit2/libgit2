@@ -2141,7 +2141,7 @@ static int compute_base(
 	git_oidarray bases = {0};
 	git_annotated_commit *base = NULL, *other = NULL, *new_base = NULL;
 	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
-	size_t i;
+	size_t i, base_count;
 	int error;
 
 	*out = NULL;
@@ -2150,16 +2150,20 @@ static int compute_base(
 		memcpy(&opts, given_opts, sizeof(git_merge_options));
 
 	if ((error = insert_head_ids(&head_ids, one)) < 0 ||
-		(error = insert_head_ids(&head_ids, two)) < 0)
+		(error = insert_head_ids(&head_ids, two)) < 0 ||
+		(error = git_merge_bases_many(&bases, repo,
+			head_ids.size, head_ids.ptr)) < 0)
 		goto done;
 
-	if ((error = git_merge_bases_many(&bases, repo,
-			head_ids.size, head_ids.ptr)) < 0 ||
-		(error = git_annotated_commit_lookup(&base, repo, &bases.ids[0])) < 0 ||
-		(opts.flags & GIT_MERGE_NO_RECURSIVE))
+	base_count = (opts.flags & GIT_MERGE_NO_RECURSIVE) ? 0 : bases.count;
+
+	if (base_count)
+		git_oidarray__reverse(&bases);
+
+	if ((error = git_annotated_commit_lookup(&base, repo, &bases.ids[0])) < 0)
 		goto done;
 
-	for (i = 1; i < bases.count; i++) {
+	for (i = 1; i < base_count; i++) {
 		recursion_level++;
 
 		if (opts.recursion_limit && recursion_level > opts.recursion_limit)
