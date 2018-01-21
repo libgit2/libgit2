@@ -26,6 +26,12 @@ v0.26 + 1
 
 ### Breaking API changes
 
+* The `git_merge_file_options` structure now contains a new setting,
+  `marker_size`.  This allows users to set the size of markers that
+  delineate the sides of merged files in the output conflict file.
+  By default this is 7 (`GIT_MERGE_CONFLICT_MARKER_SIZE`), which
+  produces output markers like `<<<<<<<` and `>>>>>>>`.
+
 v0.26
 -----
 
