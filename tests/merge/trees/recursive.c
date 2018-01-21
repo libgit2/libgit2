@@ -408,3 +408,28 @@ void test_merge_trees_recursive__recursionlimit(void)
 	git_index_free(index);
 }
 
+/* There are multiple levels of criss-cross merges.  This ensures
+ * that the virtual merge base parents are compared in the same
+ * order as git.  If the base parents are created in the order as
+ * git does, then the file `targetfile.txt` is automerged.  If not,
+ * `targetfile.txt` will be in conflict due to the virtual merge
+ * base.
+ */
+void test_merge_trees_recursive__merge_base_for_virtual_commit(void)
+{
+	git_index *index;
+	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
+
+	struct merge_index_entry merge_index_entries[] = {
+		{ 0100644, "1bde1883de4977ea3e664b315da951d1f614c3b1", 0, "targetfile.txt" },
+		{ 0100644, "b7de2b52ba055688061355fad1599a5d214ce8f8", 1, "version.txt" },
+		{ 0100644, "358efd6f589384fa8baf92234db9c7899a53916e", 2, "version.txt" },
+		{ 0100644, "a664873b1c0b9a1ed300f8644dde536fdaa3a34f", 3, "version.txt" },
+	};
+
+	cl_git_pass(merge_commits_from_branches(&index, repo, "branchJ-1", "branchJ-2", &opts));
+
+	cl_assert(merge_test_index(index, merge_index_entries, 4));
+
+	git_index_free(index);
+}
