@@ -15,6 +15,7 @@
 #include "thread-utils.h"
 #include "git2/global.h"
 #include "transports/ssh.h"
+#include "atexit.h"
 
 #if defined(GIT_MSVC_CRTDBG)
 #include "win32/w32_stack.h"
@@ -63,7 +64,8 @@ static int init_common(void)
 		(ret = git_filter_global_init()) == 0 &&
 		(ret = git_merge_driver_global_init()) == 0 &&
 		(ret = git_transport_ssh_global_init()) == 0 &&
-		(ret = git_openssl_stream_global_init()) == 0)
+		(ret = git_openssl_stream_global_init()) == 0 &&
+		(ret = git_atexit_global_init() == 0))
 		ret = git_mwindow_global_init();
 
 	GIT_MEMORY_BARRIER;
