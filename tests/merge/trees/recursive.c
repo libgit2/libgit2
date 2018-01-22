@@ -433,3 +433,26 @@ void test_merge_trees_recursive__merge_base_for_virtual_commit(void)
 
 	git_index_free(index);
 }
+
+/* This test is the same as test_merge_trees_recursive__merge_base_for_virtual_commit but
+ * the graph is constructed such that the 1st-recursion merge bases of the two heads are
+ * in a different order.
+*/
+void test_merge_trees_recursive__merge_base_for_virtual_commit_2(void)
+{
+	git_index *index;
+	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
+
+	struct merge_index_entry merge_index_entries[] = {
+		{ 0100644, "1bde1883de4977ea3e664b315da951d1f614c3b1", 0, "targetfile.txt" },
+		{ 0100644, "b6bd0f9952f396e757d3f91e08c59a7e91707201", 1, "version.txt" },
+		{ 0100644, "f0856993e005c0d8ed2dc7cdc222cc1d89fb3c77", 2, "version.txt" },
+		{ 0100644, "2cba583804a4a6fad1baf97c959be447238d1489", 3, "version.txt" },
+	};
+
+	cl_git_pass(merge_commits_from_branches(&index, repo, "branchK-1", "branchK-2", &opts));
+
+	cl_assert(merge_test_index(index, merge_index_entries, 4));
+
+	git_index_free(index);
+}
