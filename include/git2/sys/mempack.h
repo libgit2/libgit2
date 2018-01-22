@@ -11,6 +11,7 @@
 #include "git2/types.h"
 #include "git2/oid.h"
 #include "git2/odb.h"
+#include "git2/buffer.h"
 
 /**
  * @file git2/sys/mempack.h
@@ -38,10 +39,10 @@ GIT_BEGIN_DECL
  *	Subsequent reads will also be served from the in-memory store
  *	to ensure consistency, until the memory store is dumped.
  *
- *	@param out Poiter where to store the ODB backend
+ *	@param out Pointer where to store the ODB backend
  *	@return 0 on success; error code otherwise
  */
-int git_mempack_new(git_odb_backend **out);
+GIT_EXTERN(int) git_mempack_new(git_odb_backend **out);
 
 /**
  *	Dump all the queued in-memory writes to a packfile.
@@ -64,7 +65,7 @@ int git_mempack_new(git_odb_backend **out);
  *	@param backend The mempack backend
  *	@return 0 on success; error code otherwise
  */
-int git_mempack_dump(git_buf *pack, git_repository *repo, git_odb_backend *backend);
+GIT_EXTERN(int) git_mempack_dump(git_buf *pack, git_repository *repo, git_odb_backend *backend);
 
 /**
  *	Reset the memory packer by clearing all the queued objects.
@@ -78,7 +79,7 @@ int git_mempack_dump(git_buf *pack, git_repository *repo, git_odb_backend *backe
  *
  *	@param backend The mempack backend
  */
-void git_mempack_reset(git_odb_backend *backend);
+GIT_EXTERN(void) git_mempack_reset(git_odb_backend *backend);
 
 GIT_END_DECL
 
