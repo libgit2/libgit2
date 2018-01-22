@@ -9,6 +9,7 @@
 
 #include "git2/object.h"
 #include "git2/sys/odb_backend.h"
+#include "git2/sys/mempack.h"
 #include "fileops.h"
 #include "hash.h"
 #include "odb.h"
