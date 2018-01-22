@@ -2271,8 +2271,14 @@ static int compute_base(
 	if (given_opts)
 		memcpy(&opts, given_opts, sizeof(git_merge_options));
 
-	if ((error = insert_head_ids(&head_ids, one)) < 0 ||
-		(error = insert_head_ids(&head_ids, two)) < 0 ||
+	/* With more than two commits, merge_bases_many finds the base of
+	 * the first commit and a hypothetical merge of the others. Since
+	 * "one" may itself be a virtual commit, which insert_head_ids
+	 * substitutes multiple ancestors for, it needs to be added
+	 * after "two" which is always a single real commit.
+	 */
+	if ((error = insert_head_ids(&head_ids, two)) < 0 ||
+		(error = insert_head_ids(&head_ids, one)) < 0 ||
 		(error = git_merge_bases_many(&bases, repo,
 			head_ids.size, head_ids.ptr)) < 0)
 		goto done;
