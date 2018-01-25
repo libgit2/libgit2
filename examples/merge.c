@@ -46,6 +46,8 @@ static void print_usage(void)
 
 static void merge_options_init(merge_options *opts)
 {
+	memset(opts, 0, sizeof(*opts));
+
 	opts->heads = NULL;
 	opts->heads_count = 0;
 	opts->annotated = NULL;
