@@ -23,6 +23,15 @@
 		cl_git_report_failure(_lg2_error, expected, file, line, "Function call failed: " #expr); \
 	} while (0)
 
+#define cl_git_broken(expr, expected) do { \
+	int _lg2_error; \
+	giterr_clear(); \
+	if ((_lg2_error = (expr)) == expected) \
+		cl_git_report_unbroken(_lg2_error, expected, __FILE__, __LINE__, "Function call unbroken: " #expr); \
+	else \
+		cl_git_report_broken(_lg2_error, expected, __FILE__, __LINE__, "Function call broken: " #expr); \
+	} while (0)
+
 /**
  * Wrapper for `clar_must_fail` -- this one is
  * just for consistency. Use with `git_` library
@@ -91,6 +100,8 @@ GIT_INLINE(void) cl_git_thread_check(void *data)
 }
 
 void cl_git_report_failure(int, int, const char *, int, const char *);
+void cl_git_report_broken(int, int, const char *, int, const char *);
+void cl_git_report_unbroken(int, int, const char *, int, const char *);
 
 #define cl_assert_at_line(expr,file,line) \
 	clar__assert((expr) != 0, file, line, "Expression is not true: " #expr, NULL, 1)

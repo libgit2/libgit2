@@ -3,22 +3,44 @@
 #include "path.h"
 #include "git2/sys/repository.h"
 
+static char *failure_message(char *msg, size_t msglen, int error, int expected)
+{
+	const git_error *last = giterr_last();
+
+	if (expected)
+		p_snprintf(msg, msglen, "error %d (expected %d) - %s",
+			error, expected, last ? last->message : "<no message>");
+	else if (error || last)
+		p_snprintf(msg, msglen, "error %d - %s",
+			error, last ? last->message : "<no message>");
+	else
+		p_snprintf(msg, msglen, "no error, expected non-zero return");
+
+	return msg;
+}
+
 void cl_git_report_failure(
 	int error, int expected, const char *file, int line, const char *fncall)
 {
 	char msg[4096];
-	const git_error *last = giterr_last();
-
-	if (expected)
-		p_snprintf(msg, 4096, "error %d (expected %d) - %s",
-			error, expected, last ? last->message : "<no message>");
-	else if (error || last)
-		p_snprintf(msg, 4096, "error %d - %s",
-			error, last ? last->message : "<no message>");
-	else
-		p_snprintf(msg, 4096, "no error, expected non-zero return");
-
+	failure_message(msg, sizeof(msg), error, expected);
 	clar__assert(0, file, line, fncall, msg, 1);
+}
+
+void cl_git_report_broken(
+	int error, int expected, const char *file, int line, const char *fncall)
+{
+	char msg[4096];
+	failure_message(msg, sizeof(msg), error, expected);
+	clar__broken(1, file, line, fncall, msg, 1);
+}
+
+void cl_git_report_unbroken(
+	int error, int expected, const char *file, int line, const char *fncall)
+{
+	char msg[4096];
+	failure_message(msg, sizeof(msg), error, expected);
+	clar__broken(0, file, line, fncall, msg, 1);
 }
 
 void cl_git_mkfile(const char *filename, const char *content)
