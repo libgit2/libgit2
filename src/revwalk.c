@@ -232,6 +232,9 @@ static int revwalk_next_timesort(git_commit_list_node **object_out, git_revwalk 
 	git_commit_list_node *next;
 
 	while ((next = git_pqueue_pop(&walk->iterator_time)) != NULL) {
+		if (walk->filter_cb && walk->filter_cb(&next->oid, walk->filter_cb_payload))
+			continue;
+
 		/* Some commits might become uninteresting after being added to the list */
 		if (!next->uninteresting) {
 			*object_out = next;
@@ -248,6 +251,9 @@ static int revwalk_next_unsorted(git_commit_list_node **object_out, git_revwalk 
 	git_commit_list_node *next;
 
 	while ((next = git_commit_list_pop(&walk->iterator_rand)) != NULL) {
+		if (walk->filter_cb && walk->filter_cb(&next->oid, walk->filter_cb_payload))
+			continue;
+
 		/* Some commits might become uninteresting after being added to the list */
 		if (!next->uninteresting) {
 			*object_out = next;
@@ -524,6 +530,9 @@ static int sort_in_topological_order(git_commit_list **out, git_revwalk *walk, g
 		/* All the children of 'item' have been emitted (since we got to it via the priority queue) */
 		next->in_degree = 0;
 
+		if (walk->filter_cb && walk->filter_cb(&next->oid, walk->filter_cb_payload))
+			continue;
+
 		pptr = &git_commit_list_insert(next, pptr)->next;
 	}
 
@@ -744,3 +753,24 @@ int git_revwalk_add_hide_cb(
 	return 0;
 }
 
+int git_revwalk_add_filter_cb(
+	git_revwalk *walk,
+	git_revwalk_filter_cb filter_cb,
+	void *payload)
+{
+	assert(walk);
+
+	if (walk->walking)
+		git_revwalk_reset(walk);
+
+	if (walk->filter_cb) {
+		/* There is already a callback added */
+		giterr_set(GITERR_INVALID, "there is already a callback added to filter commits in revwalk");
+		return -1;
+	}
+
+	walk->filter_cb = filter_cb;
+	walk->filter_cb_payload = payload;
+
+	return 0;
+}

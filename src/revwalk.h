@@ -45,6 +45,10 @@ struct git_revwalk {
 	/* hide callback */
 	git_revwalk_hide_cb hide_cb;
 	void *hide_cb_payload;
+
+	/* filter callback */
+	git_revwalk_filter_cb filter_cb;
+	void *filter_cb_payload;
 };
 
 git_commit_list_node *git_revwalk__commit_lookup(git_revwalk *walk, const git_oid *oid);
