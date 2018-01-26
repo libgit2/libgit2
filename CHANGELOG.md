@@ -6,21 +6,75 @@ v0.26 + 1
 * Improved `p_unlink` in `posix_w32.c` to try and make a file writable
   before sleeping in the retry loop to prevent unnecessary calls to sleep.
 
+* The CMake build infrastructure has been improved to speed up building time.
+
+* A new CMake option "-DUSE_HTTPS=<backend>" makes it possible to explicitly
+  choose an HTTP backend.
+
+* A new CMake option "-DSHA1_BACKEND=<backend>" makes it possible to explicitly
+  choose an SHA1 backend. The collision-detecting backend is now the default.
+
+* A new CMake option "-DUSE_BUNDLED_ZLIB" makes it possible to explicitly use
+  the bundled zlib library.
+
+* A new CMake option "-DENABLE_REPRODUCIBLE_BUILDS" makes it possible to
+  generate a reproducible static archive. This requires support from your
+  toolchain.
+
+* The minimum required CMake version has been bumped to 2.8.11.
+
 * Writing to a configuration file now preserves the case of the key given by the
   caller for the case-insensitive portions of the key (existing sections are
   used even if they don't match).
 
 * We now support conditional includes in configuration files.
 
+* Fix for handling re-reading of configuration files with includes.
+
+* Fix for reading patches which contain exact renames only.
+
+* Fix for reading patches with whitespace in the compared files' paths.
+
+* We will now fill `FETCH_HEAD` from all passed refspecs instead of overwriting
+  with the last one.
+
 * There is a new diff option, `GIT_DIFF_INDENT_HEURISTIC` which activates a
   heuristic which takes into account whitespace and indentation in order to
   produce better diffs when dealing with ambiguous diff hunks.
+
+* Fix for pattern-based ignore rules where files ignored by a rule cannot be
+  un-ignored by another rule.
+
+* Sockets opened by libgit2 are now being closed on exec(3) if the platform
+  supports it.
+
+* Fix for peeling annotated tags from packed-refs files.
+
+* Fix reading huge loose objects from the object database.
+
+* Fix files not being treated as modified when only the file mode has changed.
+
+* Fix for WinHTTP not properly handling NTLM and Negotiate challenges.
+
+* When using SSH-based transports, we now repeatedly ask for the passphrase to
+  decrypt the private key in case a wrong passphrase is being provided.
 
 ### API additions
 
 * `git_remote_create_detached()` creates a remote that is not associated
   to any repository (and does not apply configuration like 'insteadof' rules).
   This is mostly useful for e.g. emulating `git ls-remote` behavior.
+
+* `git_diff_patchid()` lets you generate patch IDs for diffs.
+
+* `git_status_options` now has an additional field `baseline` to allow creating
+  status lists against different trees.
+
+* New family of functions to allow creating notes for a specific notes commit
+  instead of for a notes reference.
+
+* New family of functions to allow parsing message trailers. This API is still
+  experimental and may change in future releases.
 
 ### API removals
 
@@ -31,6 +85,15 @@ v0.26 + 1
   delineate the sides of merged files in the output conflict file.
   By default this is 7 (`GIT_MERGE_CONFLICT_MARKER_SIZE`), which
   produces output markers like `<<<<<<<` and `>>>>>>>`.
+
+* Signatures now distinguish between +0000 and -0000 UTC offsets.
+
+* The certificate check callback in the WinHTTP transport will now receive the
+  `message_cb_payload` instead of the `cred_acquire_payload`.
+
+* We are now reading symlinked directories under .git/refs.
+
+* We now refuse creating branches named "HEAD".
 
 v0.26
 -----
