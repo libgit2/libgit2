@@ -10,7 +10,7 @@ We aim to release once every six months. We start the process by opening an issu
     
     Let's release v0.X, codenamed: <something witty>
     
-	- [ ] Bump the versions in the headers
+    - [ ] Bump the versions in the headers
     - [ ] Make a release candidate
     - [ ] Plug any final leaks
     - [ ] Fix any last-minute issues
@@ -21,7 +21,7 @@ We aim to release once every six months. We start the process by opening an issu
     - [ ] Create maint/v0.X
     - [ ] Update any bindings the core team works with
 
-We tag at least one release candidate. This RC must carry the new version in the headers. If there are no significant issues found, we can go straight to the release after a single RC. This is up to the discretion of the release manager.
+We tag at least one release candidate. This RC must carry the new version in the headers, including the SOVERSION. If there are no significant issues found, we can go straight to the release after a single RC. This is up to the discretion of the release manager. There is no set time to have the candidate out, but we should we should give downstream projects at least a week to give feedback.
 
 The tagging happens via GitHub's "releases" tab which lets us attach release notes to a particular tag. In the description we include the changes in `CHANGELOG.md` between the last full release. Use the following as a base for the release notes
 
@@ -35,9 +35,9 @@ Create a branch `maint/v0.X` at the current state of `master` after you've creat
 
 ## Maintenance release
 
-Every once in a while, when we feel we've accumulated backportable fixes in the mainline branch, we produce a maintenance release in order to provide updates for those who track the releases and so our users and integrators don't have to upgrade immediately.
+Every once in a while, when we feel we've accumulated a significant amount of backportable fixes in the mainline branch, we produce a maintenance release in order to provide fixes or improvements for those who track the releases. This also lets our users and integrators receive updates without having to upgrade to the next full release.
 
-As a rule of thumb, it's a good idea to produce a maintenance release when we're getting ready for a full release. This gives a last round of fixes without having to upgrade (which with us potentially means adjusting to API changes).
+As a rule of thumb, it's a good idea to produce a maintenance release for the current series when we're getting ready for a full release. This gives the (still) current series a last round of fixes without having to upgrade (which with us potentially means adjusting to API changes).
 
 Start by opening an issue. Use the following as a base.
 
@@ -49,7 +49,7 @@ Start by opening an issue. Use the following as a base.
     - [ ] Update maint/v0.X
     - [ ] Tag
 
-The list of changes to backport does not need to be comprehensive and we might not backport something if the code in mainline has diverged significantly.
+The list of changes to backport does not need to be comprehensive and we might not backport something if the code in mainline has diverged significantly. These fixes do not include those which require API or ABI changes as we release under the same SOVERSION.
 
 Do not merge into the `maint/v0.X` until we are getting ready to produce a new release. There is always the possibility that we will need to produce a security release and those must only include the relevant security fixes and not arbitrary fixes we were planning on releasing at some point.
 
@@ -60,3 +60,15 @@ Here we do not use release candidates as the changes are supposed to be small an
 This is the same as a maintenance release, except that the fix itself will most likely be developed in a private repository and will only be visible to a select group of people until the release.
 
 Everything else remains the same. Occasionally we might opt to backport a security fix to the previous series, based on how recently we started the new series and how serious the issue is.
+
+## Updating documentation
+
+We use docurium to generate our documentation. It is a tool written in ruby which leverages libclang's documentation parser. Install docurium
+
+    gem install docurium
+
+and run it against our description file with the tip of master checked out.
+
+    cm doc api.docurium
+
+It will start up a few proceses and write out the results as a new commit onto the `gh-pages` branch. That can be pushed to GitHub to update what will show up on our documentation reference site.
