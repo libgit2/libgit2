@@ -11,6 +11,8 @@
 
 #include "git2/patch.h"
 #include "git2/filter.h"
+#include "git2/blob.h"
+#include "git2/index.h"
 #include "array.h"
 #include "patch.h"
 #include "fileops.h"
@@ -376,3 +378,101 @@ done:
 
 	return error;
 }
+
+static int apply_one(
+	git_repository *repo,
+	git_tree *preimage,
+	git_index *postimage,
+	git_diff *diff,
+	size_t i)
+{
+	git_patch *patch = NULL;
+	git_tree_entry *tree_entry = NULL;
+	git_blob *blob = NULL;
+	git_buf contents = GIT_BUF_INIT;
+	const git_diff_delta *delta;
+	char *filename = NULL;
+	unsigned int mode;
+	git_oid blob_id;
+	git_index_entry index_entry;
+	int error;
+
+	if ((error = git_patch_from_diff(&patch, diff, i)) < 0)
+		goto done;
+
+	delta = git_patch_get_delta(patch);
+
+	if ((error = git_tree_entry_bypath(&tree_entry, preimage,
+			delta->old_file.path)) < 0 ||
+		(error = git_blob_lookup(&blob, repo,
+			git_tree_entry_id(tree_entry))) < 0 ||
+		(error = git_apply__patch(&contents, &filename, &mode,
+			git_blob_rawcontent(blob), git_blob_rawsize(blob), patch)) < 0 ||
+		(error = git_blob_create_frombuffer(&blob_id, repo,
+			contents.ptr, contents.size)) < 0)
+		goto done;
+
+	memset(&index_entry, 0, sizeof(git_index_entry));
+	index_entry.path = filename;
+	index_entry.mode = mode;
+	git_oid_cpy(&index_entry.id, &blob_id);
+
+	if ((error = git_index_add(postimage, &index_entry)) < 0)
+		goto done;
+
+done:
+	git_buf_free(&contents);
+	git__free(filename);
+	git_blob_free(blob);
+	git_tree_entry_free(tree_entry);
+	git_patch_free(patch);
+
+	return error;
+}
+
+int git_apply_to_tree(
+	git_index **out,
+	git_repository *repo,
+	git_tree *preimage,
+	git_diff *diff)
+{
+	git_index *postimage = NULL;
+	const git_diff_delta *delta;
+	size_t i;
+	int error = 0;
+
+	assert(out && repo && preimage && diff);
+
+	*out = NULL;
+
+	if ((error = git_index_new(&postimage)) < 0 ||
+		(error = git_index_read_tree(postimage, preimage)) < 0)
+		goto done;
+
+	/*
+	 * Remove the old paths from the index before applying diffs -
+	 * we need to do a full pass to remove them before adding deltas,
+	 * in order to handle rename situations.
+	 */
+	for (i = 0; i < git_diff_num_deltas(diff); i++) {
+		delta = git_diff_get_delta(diff, i);
+
+		if ((error = git_index_remove(postimage,
+				delta->old_file.path, 0)) < 0)
+			goto done;
+	}
+
+	for (i = 0; i < git_diff_num_deltas(diff); i++) {
+		if ((error = apply_one(repo, preimage, postimage, diff, i)) < 0)
+			goto done;
+	}
+
+	*out = postimage;
+
+done:
+	if (error < 0)
+		git_index_free(postimage);
+
+	return error;
+}
+
