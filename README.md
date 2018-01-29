@@ -30,6 +30,33 @@ Additionally, the example code has been released to the public domain (see the
 Quick Start
 ===========
 
+### Windows
+
+You can use vcpkg install libgit2:
+
+```
+vcpkg install libgit2:x64-windows libgit2:x86-windows
+```
+
+### Ubuntu/Debian
+
+You can use apt/apt-get install libgit2
+
+```
+sudo apt install libgit2-dev
+```
+Unfortunately, the libgit2 installed in this way is not necessarily the latest version
+
+### Mac
+
+You can use brew install libgit2:
+
+```
+brew install libgit2
+```
+
+### Building from source
+
 **Prerequisites** for building libgit2:
 
 1. [CMake](https://cmake.org/), and is recommended to be installed into
@@ -51,6 +78,33 @@ Quick Start
 Trouble with these steps?  Read `TROUBLESHOOTING.md`.  More detailed build
 guidance is available below.
 
+**Submodule**
+
+If your project build tool is CMake, you can add libgit2 as a dependency on your project using `Git submodule`
+
+```
+cd /path/your/repo
+git submodule add https://github.com/libgit2/libgit2.git vendor/libgit2
+cd vendor/libgit2
+git checkout LATEST_RELEASE
+cd ../..
+```
+Modify the contents of the CMakeLists.txt file:
+
+```cmake
+# suggest use set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+include_directories(
+    ./include
+    ./vendor/libgit2/include
+)
+add_subdirectory(vendor/libgit2)
+
+## Your traget link add library
+target_link_libraries(${YOUR_TARGET}
+  git2
+)
+```
+
 Getting Help
 ============
 
@@ -64,7 +118,7 @@ slack channel once you've registered.
 
 If you have questions about the library, please be sure to check out the
 [API documentation](http://libgit2.github.com/libgit2/).  If you still have
-questions, reach out to us on Slack or post a question on 
+questions, reach out to us on Slack or post a question on
 [StackOverflow](http://stackoverflow.com/questions/tagged/libgit2) (with the `libgit2` tag).
 
 **Reporting Bugs**
