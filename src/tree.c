@@ -498,6 +498,9 @@ static int append_entry(
 	if (!valid_entry_name(bld->repo, filename))
 		return tree_error("failed to insert entry: invalid name for a tree entry", filename);
 
+	if (git_oid_iszero(id))
+		return tree_error("failed to insert entry: invalid null OID for a tree entry", filename);
+
 	entry = alloc_entry(filename, strlen(filename), id);
 	GITERR_CHECK_ALLOC(entry);
 
@@ -739,6 +742,9 @@ int git_treebuilder_insert(
 
 	if (!valid_entry_name(bld->repo, filename))
 		return tree_error("failed to insert entry: invalid name for a tree entry", filename);
+
+	if (git_oid_iszero(id))
+		return tree_error("failed to insert entry: invalid null OID", filename);
 
 	if (filemode != GIT_FILEMODE_COMMIT &&
 	    !git_object__is_valid(bld->repo, id, otype_from_mode(filemode)))
