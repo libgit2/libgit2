@@ -76,6 +76,12 @@ on a specific repository, please provide a link to it if possible.
 
 We ask that you not open a GitHub Issue for help, only for bug reports.
 
+**Reporting Security Issues**
+
+In case you think to have found a security issue with libgit2, please do not
+open a public issue.  Instead, you can report the issue to the private mailing
+list [security@libgit2.com](mailto:security@libgit2.com).
+
 What It Can Do
 ==============
 
