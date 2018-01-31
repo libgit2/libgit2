@@ -66,15 +66,21 @@ static git_otype odb_hardcoded_type(const git_oid *id)
 	return GIT_OBJ_BAD;
 }
 
-static int odb_read_hardcoded(git_rawobj *raw, const git_oid *id)
+static int odb_read_hardcoded(bool *found, git_rawobj *raw, const git_oid *id)
 {
-	git_otype type = odb_hardcoded_type(id);
-	if (type == GIT_OBJ_BAD)
-		return -1;
+	git_otype type;
+
+	*found = false;
+
+	if ((type = odb_hardcoded_type(id)) == GIT_OBJ_BAD)
+		return 0;
 
 	raw->type = type;
 	raw->len = 0;
 	raw->data = git__calloc(1, sizeof(uint8_t));
+	GITERR_CHECK_ALLOC(raw->data);
+
+	*found = true;
 	return 0;
 }
 
@@ -1012,8 +1018,10 @@ static int odb_read_1(git_odb_object **out, git_odb *db, const git_oid *id,
 	bool found = false;
 	int error = 0;
 
-	if (!only_refreshed && odb_read_hardcoded(&raw, id) == 0)
-		found = true;
+	if (!only_refreshed) {
+		if ((error = odb_read_hardcoded(&found, &raw, id)) < 0)
+			return error;
+	}
 
 	for (i = 0; i < db->backends.length && !found; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
