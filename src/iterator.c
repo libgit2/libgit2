@@ -1463,6 +1463,9 @@ static void filesystem_iterator_set_current(
 #if defined(GIT_USE_NSEC)	
 	iter->entry.ctime.nanoseconds = entry->st.st_ctime_nsec;
 	iter->entry.mtime.nanoseconds = entry->st.st_mtime_nsec;
+#else
+	iter->entry.ctime.nanoseconds = 0;
+	iter->entry.mtime.nanoseconds = 0;
 #endif
 
 	iter->entry.dev = entry->st.st_dev;
