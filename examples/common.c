@@ -12,6 +12,8 @@
  * <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 
+#include <assert.h>
+
 #include "common.h"
 
 void check_lg2(int error, const char *message, const char *extra)
@@ -245,3 +247,25 @@ void *xrealloc(void *oldp, size_t newsz)
 	return p;
 }
 
+int resolve_refish(git_annotated_commit **commit, git_repository *repo, const char *refish)
+{
+	git_reference *ref;
+	int err = 0;
+	git_oid oid;
+
+	assert(commit != NULL);
+
+	err = git_reference_dwim(&ref, repo, refish);
+	if (err == GIT_OK) {
+		git_annotated_commit_from_ref(commit, repo, ref);
+		git_reference_free(ref);
+		return 0;
+	}
+
+	err = git_oid_fromstr(&oid, refish);
+	if (err == GIT_OK) {
+		err = git_annotated_commit_lookup(commit, repo, &oid);
+	}
+
+	return err;
+}

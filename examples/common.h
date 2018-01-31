@@ -108,3 +108,8 @@ extern void treeish_to_tree(
  * A realloc that exits on failure
  */
 extern void *xrealloc(void *oldp, size_t newsz);
+
+/**
+ * Convert a refish to an annotated commit.
+ */
+extern int resolve_refish(git_annotated_commit **commit, git_repository *repo, const char *refish);
