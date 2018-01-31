@@ -1048,8 +1048,10 @@ static int odb_read_1(git_odb_object **out, git_odb *db, const git_oid *id,
 	}
 
 	giterr_clear();
-	if ((object = odb_object__alloc(id, &raw)) == NULL)
+	if ((object = odb_object__alloc(id, &raw)) == NULL) {
+		error = -1;
 		goto out;
+	}
 
 	*out = git_cache_store_raw(odb_cache(db), object);
 
@@ -1175,8 +1177,10 @@ static int read_prefix_1(git_odb_object **out, git_odb *db,
 		}
 	}
 
-	if ((object = odb_object__alloc(&found_full_oid, &raw)) == NULL)
+	if ((object = odb_object__alloc(&found_full_oid, &raw)) == NULL) {
+		error = -1;
 		goto out;
+	}
 
 	*out = git_cache_store_raw(odb_cache(db), object);
 
