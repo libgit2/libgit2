@@ -16,7 +16,7 @@
 #define GIT_PROT_WRITE 0x2
 #define GIT_PROT_EXEC 0x4
 
-/* git__mmmap() flags values */
+/* p_mmap() flags values */
 #define GIT_MAP_FILE	0
 #define GIT_MAP_SHARED 1
 #define GIT_MAP_PRIVATE 2
