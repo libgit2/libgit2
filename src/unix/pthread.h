@@ -53,4 +53,4 @@ typedef struct {
 #define git_rwlock_free(a)	pthread_rwlock_destroy(a)
 #define GIT_RWLOCK_STATIC_INIT	PTHREAD_RWLOCK_INITIALIZER
 
-#endif /* INCLUDE_unix_pthread_h__ */
+#endif

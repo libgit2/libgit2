@@ -539,4 +539,4 @@ GIT_INLINE(double) git__timer(void)
 
 extern int git__getenv(git_buf *out, const char *name);
 
-#endif /* INCLUDE_util_h__ */
+#endif

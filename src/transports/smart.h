@@ -4,6 +4,8 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
+#ifndef INCLUDE_transports_smart_h__
+#define INCLUDE_transports_smart_h__
 
 #include "common.h"
 
@@ -194,3 +196,5 @@ int git_pkt_buffer_done(git_buf *buf);
 int git_pkt_buffer_wants(const git_remote_head * const *refs, size_t count, transport_smart_caps *caps, git_buf *buf);
 int git_pkt_buffer_have(git_oid *oid, git_buf *buf);
 void git_pkt_free(git_pkt *pkt);
+
+#endif

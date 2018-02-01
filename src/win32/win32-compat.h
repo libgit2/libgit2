@@ -4,8 +4,8 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#ifndef INCLUDE_win32_compat__
-#define INCLUDE_win32_compat__
+#ifndef INCLUDE_win32_win32_compat_h__
+#define INCLUDE_win32_win32_compat_h__
 
 #include <stdint.h>
 #include <time.h>
@@ -49,4 +49,4 @@ struct p_stat {
 
 #define stat p_stat
 
-#endif /* INCLUDE_win32_compat__ */
+#endif

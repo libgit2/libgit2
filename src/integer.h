@@ -93,4 +93,4 @@ GIT_INLINE(bool) git__multiply_sizet_overflow(size_t *out, size_t one, size_t tw
 
 #endif
 
-#endif /* INCLUDE_integer_h__ */
+#endif

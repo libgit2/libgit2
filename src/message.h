@@ -14,4 +14,4 @@
 
 int git_message__prettify(git_buf *message_out, const char *message, int strip_comments);
 
-#endif /* INCLUDE_message_h__ */
+#endif

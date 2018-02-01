@@ -5,8 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifndef INCLUDE_hash_common_crypto_h__
-#define INCLUDE_hash_common_crypto_h__
+#ifndef INCLUDE_hash_hash_common_crypto_h__
+#define INCLUDE_hash_hash_common_crypto_h__
 
 #include "hash.h"
 
@@ -54,4 +54,4 @@ GIT_INLINE(int) git_hash_final(git_oid *out, git_hash_ctx *ctx)
 	return 0;
 }
 
-#endif /* INCLUDE_hash_common_crypto_h__ */
+#endif

@@ -387,4 +387,4 @@ extern int git_futils_fsync_dir(const char *path);
  */
 extern int git_futils_fsync_parent(const char *path);
 
-#endif /* INCLUDE_fileops_h__ */
+#endif

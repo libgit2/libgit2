@@ -243,4 +243,4 @@ extern int git_online_cpus(void);
 # define GIT_MEMORY_BARRIER /* noop */
 #endif
 
-#endif /* INCLUDE_thread_utils_h__ */
+#endif

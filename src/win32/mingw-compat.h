@@ -4,8 +4,8 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#ifndef INCLUDE_mingw_compat__
-#define INCLUDE_mingw_compat__
+#ifndef INCLUDE_win32_mingw_compat_h__
+#define INCLUDE_win32_mingw_compat_h__
 
 #if defined(__MINGW32__)
 
@@ -20,4 +20,4 @@ void __mingworg_MemoryBarrier(void);
 
 #endif
 
-#endif /* INCLUDE_mingw_compat__ */
+#endif

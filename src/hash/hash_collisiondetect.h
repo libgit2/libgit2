@@ -5,8 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifndef INCLUDE_hash_collisiondetect_h__
-#define INCLUDE_hash_collisiondetect_h__
+#ifndef INCLUDE_hash_hash_collisiondetect_h__
+#define INCLUDE_hash_hash_collisiondetect_h__
 
 #include "hash.h"
 #include "sha1dc/sha1.h"
@@ -44,4 +44,4 @@ GIT_INLINE(int) git_hash_final(git_oid *out, git_hash_ctx *ctx)
 	return 0;
 }
 
-#endif /* INCLUDE_hash_collisiondetect_h__ */
+#endif

@@ -5,8 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifndef INCLUDE_hash_win32_h__
-#define INCLUDE_hash_win32_h__
+#ifndef INCLUDE_hash_hash_win32_h__
+#define INCLUDE_hash_hash_win32_h__
 
 #include "common.h"
 
@@ -138,4 +138,4 @@ struct git_hash_ctx {
 	} ctx;
 };
 
-#endif /* INCLUDE_hash_openssl_h__ */
+#endif

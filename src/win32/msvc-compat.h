@@ -4,8 +4,8 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#ifndef INCLUDE_msvc_compat__
-#define INCLUDE_msvc_compat__
+#ifndef INCLUDE_win32_msvc_compat_h__
+#define INCLUDE_win32_msvc_compat_h__
 
 #if defined(_MSC_VER)
 
@@ -19,4 +19,4 @@ typedef SSIZE_T ssize_t;
 
 #define GIT_STDLIB_CALL __cdecl
 
-#endif /* INCLUDE_msvc_compat__ */
+#endif

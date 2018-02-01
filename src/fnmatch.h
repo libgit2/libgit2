@@ -25,8 +25,8 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-#ifndef INCLUDE_fnmatch__compat_h__
-#define INCLUDE_fnmatch__compat_h__
+#ifndef INCLUDE_fnmatch_h__
+#define INCLUDE_fnmatch_h__
 
 #include "common.h"
 
@@ -45,5 +45,4 @@
 
 extern int p_fnmatch(const char *pattern, const char *string, int flags);
 
-#endif /* _FNMATCH_H */
-
+#endif
