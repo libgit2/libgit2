@@ -118,7 +118,8 @@ extern int p_rename(const char *from, const char *to);
 extern int git__page_size(size_t *page_size);
 extern int git__mmap_alignment(size_t *page_size);
 
-/* The number of times `p_fsync` has been called.  Note that this is for
+/*
+ * The number of times `p_fsync` has been called.  Note that this is for
  * test code only; it it not necessarily thread-safe and should not be
  * relied upon in production.
  */

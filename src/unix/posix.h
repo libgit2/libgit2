@@ -46,6 +46,13 @@ typedef int GIT_SOCKET;
 #define p_mkdir(p,m) mkdir(p, m)
 extern char *p_realpath(const char *, char *);
 
+/*
+ * The number of times `p_fsync` has been called.  Note that this is for
+ * test code only; it it not necessarily thread-safe and should not be
+ * relied upon in production.
+ */
+extern size_t p_fsync__cnt;
+
 GIT_INLINE(int) p_fsync(int fd)
 {
 	p_fsync__cnt++;
