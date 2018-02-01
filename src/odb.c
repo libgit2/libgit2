@@ -194,7 +194,7 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type)
 	}
 
 	if ((error = git_hash_ctx_init(&ctx)) < 0)
-		return -1;
+		return error;
 
 	hdr_len = git_odb__format_object_header(hdr, sizeof(hdr), size, type);
 
