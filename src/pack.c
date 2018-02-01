@@ -1049,19 +1049,6 @@ static int packfile_open(struct git_pack_file *p)
 	} else if (p->mwf.size != st.st_size)
 		goto cleanup;
 
-#if 0
-	/* We leave these file descriptors open with sliding mmap;
-	 * there is no point keeping them open across exec(), though.
-	 */
-	fd_flag = fcntl(p->mwf.fd, F_GETFD, 0);
-	if (fd_flag < 0)
-		goto cleanup;
-
-	fd_flag |= FD_CLOEXEC;
-	if (fcntl(p->pack_fd, F_SETFD, fd_flag) == -1)
-		goto cleanup;
-#endif
-
 	/* Verify we recognize this pack file format. */
 	if (p_read(p->mwf.fd, &hdr, sizeof(hdr)) < 0 ||
 		hdr.hdr_signature != htonl(PACK_SIGNATURE) ||
