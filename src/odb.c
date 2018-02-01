@@ -84,19 +84,34 @@ static int odb_read_hardcoded(bool *found, git_rawobj *raw, const git_oid *id)
 	return 0;
 }
 
-int git_odb__format_object_header(char *hdr, size_t n, git_off_t obj_len, git_otype obj_type)
+int git_odb__format_object_header(
+	size_t *written,
+	char *hdr,
+	size_t hdr_size,
+	git_off_t obj_len,
+	git_otype obj_type)
 {
 	const char *type_str = git_object_type2string(obj_type);
-	int len = p_snprintf(hdr, n, "%s %lld", type_str, (long long)obj_len);
-	assert(len > 0 && len <= (int)n);
-	return len+1;
+	int hdr_max = (hdr_size > INT_MAX-2) ? (INT_MAX-2) : (int)hdr_size;
+	int len;
+
+	len = p_snprintf(hdr, hdr_max, "%s %lld", type_str, (long long)obj_len);
+
+	if (len < 0 || len >= hdr_max) {
+		giterr_set(GITERR_OS, "object header creation failed");
+		return -1;
+	}
+
+	*written = (size_t)(len + 1);
+	return 0;
 }
 
 int git_odb__hashobj(git_oid *id, git_rawobj *obj)
 {
 	git_buf_vec vec[2];
 	char header[64];
-	int hdrlen;
+	size_t hdrlen;
+	int error;
 
 	assert(id && obj);
 
@@ -110,16 +125,16 @@ int git_odb__hashobj(git_oid *id, git_rawobj *obj)
 		return -1;
 	}
 
-	hdrlen = git_odb__format_object_header(header, sizeof(header), obj->len, obj->type);
+	if ((error = git_odb__format_object_header(&hdrlen,
+		header, sizeof(header), obj->len, obj->type)) < 0)
+		return error;
 
 	vec[0].data = header;
 	vec[0].len = hdrlen;
 	vec[1].data = obj->data;
 	vec[1].len = obj->len;
 
-	git_hash_vec(id, vec, 2);
-
-	return 0;
+	return git_hash_vec(id, vec, 2);
 }
 
 
@@ -182,7 +197,7 @@ void git_odb_object_free(git_odb_object *object)
 
 int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type)
 {
-	int hdr_len;
+	size_t hdr_len;
 	char hdr[64], buffer[FILEIO_BUFSIZE];
 	git_hash_ctx ctx;
 	ssize_t read_len = 0;
@@ -196,7 +211,9 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type)
 	if ((error = git_hash_ctx_init(&ctx)) < 0)
 		return error;
 
-	hdr_len = git_odb__format_object_header(hdr, sizeof(hdr), size, type);
+	if ((error = git_odb__format_object_header(&hdr_len, hdr,
+		sizeof(hdr), size, type)) < 0)
+		goto done;
 
 	if ((error = git_hash_update(&ctx, hdr, hdr_len)) < 0)
 		goto done;
@@ -1296,13 +1313,17 @@ int git_odb_write(
 	return error;
 }
 
-static void hash_header(git_hash_ctx *ctx, git_off_t size, git_otype type)
+static int hash_header(git_hash_ctx *ctx, git_off_t size, git_otype type)
 {
 	char header[64];
-	int hdrlen;
+	size_t hdrlen;
+	int error;
 
-	hdrlen = git_odb__format_object_header(header, sizeof(header), size, type);
-	git_hash_update(ctx, header, hdrlen);
+	 if ((error = git_odb__format_object_header(&hdrlen,
+		header, sizeof(header), size, type)) < 0)
+		return error;
+
+	return git_hash_update(ctx, header, hdrlen);
 }
 
 int git_odb_open_wstream(
@@ -1343,12 +1364,11 @@ int git_odb_open_wstream(
 	ctx = git__malloc(sizeof(git_hash_ctx));
 	GITERR_CHECK_ALLOC(ctx);
 
-	if ((error = git_hash_ctx_init(ctx)) < 0)
+	if ((error = git_hash_ctx_init(ctx)) < 0 ||
+		(error = hash_header(ctx, size, type)) < 0)
 		goto done;
 
-	hash_header(ctx, size, type);
 	(*stream)->hash_ctx = ctx;
-
 	(*stream)->declared_size = size;
 	(*stream)->received_bytes = 0;
 
