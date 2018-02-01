@@ -100,11 +100,15 @@ int git_odb__hashobj(git_oid *id, git_rawobj *obj)
 
 	assert(id && obj);
 
-	if (!git_object_typeisloose(obj->type))
+	if (!git_object_typeisloose(obj->type)) {
+		giterr_set(GITERR_INVALID, "invalid object type");
 		return -1;
+	}
 
-	if (!obj->data && obj->len != 0)
+	if (!obj->data && obj->len != 0) {
+		giterr_set(GITERR_INVALID, "invalid object");
 		return -1;
+	}
 
 	hdrlen = git_odb__format_object_header(header, sizeof(header), obj->len, obj->type);
 
@@ -806,7 +810,7 @@ int git_odb_exists_prefix(
 	git_oid *out, git_odb *db, const git_oid *short_id, size_t len)
 {
 	int error;
-	git_oid key = {{0}}; 
+	git_oid key = {{0}};
 
 	assert(db && short_id);
 
@@ -1106,7 +1110,7 @@ static int odb_otype_fast(git_otype *type_p, git_odb *db, const git_oid *id)
 		*type_p = object->cached.type;
 		return 0;
 	}
-	
+
 	error = odb_read_header_1(&_unused, type_p, db, id, false);
 
 	if (error == GIT_PASSTHROUGH) {
