@@ -303,7 +303,7 @@ int git_futils_mv_withpath(const char *from, const char *to, const mode_t dirmod
 
 int git_futils_mmap_ro(git_map *out, git_file fd, git_off_t begin, size_t len)
 {
-	return p_mmap(out, len, GIT_PROT_READ, GIT_MAP_SHARED, fd, begin);
+	return p_mmap(out, len, GIT_PROT_READ, GIT_MAP_PRIVATE, fd, begin);
 }
 
 int git_futils_mmap_ro_file(git_map *out, const char *path)
