@@ -88,11 +88,11 @@ static int parse_header(struct git_pack_header *hdr, struct git_pack_file *pack)
 	int error;
 	git_map map;
 
-	if ((error = p_mmap(&map, sizeof(*hdr), GIT_PROT_READ, GIT_MAP_SHARED, pack->mwf.fd, 0)) < 0)
+	if ((error = git_futils_mmap_ro(&map, pack->mwf.fd, 0, sizeof(*hdr))) < 0)
 		return error;
 
 	memcpy(hdr, map.data, sizeof(*hdr));
-	p_munmap(&map);
+	git_futils_mmap_free(&map);
 
 	/* Verify we recognize this pack file format. */
 	if (hdr->hdr_signature != ntohl(PACK_SIGNATURE)) {
