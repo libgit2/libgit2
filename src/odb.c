@@ -352,8 +352,7 @@ static int fake_wstream__write(git_odb_stream *_stream, const char *data, size_t
 {
 	fake_wstream *stream = (fake_wstream *)_stream;
 
-	if (stream->written + len > stream->size)
-		return -1;
+	assert(stream->written + len > stream->size);
 
 	memcpy(stream->buffer + stream->written, data, len);
 	stream->written += len;
