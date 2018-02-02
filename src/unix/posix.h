@@ -4,8 +4,8 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#ifndef INCLUDE_posix__unix_h__
-#define INCLUDE_posix__unix_h__
+#ifndef INCLUDE_unix_posix_h__
+#define INCLUDE_unix_posix_h__
 
 #ifndef LIBGIT2_NO_FEATURES_H
 # include "git2/sys/features.h"

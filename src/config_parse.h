@@ -4,6 +4,8 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
+#ifndef INCLUDE_config_parse_h__
+#define INCLUDE_config_parse_h__
 
 #include "common.h"
 #include "array.h"
@@ -58,3 +60,5 @@ int git_config_parse(
 	git_config_parser_comment_cb on_comment,
 	git_config_parser_eof_cb on_eof,
 	void *data);
+
+#endif

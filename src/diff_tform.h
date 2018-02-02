@@ -23,4 +23,3 @@ extern int git_diff_find_similar__calc_similarity(
 	int *score, void *siga, void *sigb, void *payload);
 
 #endif
-

@@ -61,4 +61,4 @@ int git_rwlock_wrlock(git_rwlock *);
 int git_rwlock_wrunlock(git_rwlock *);
 int git_rwlock_free(git_rwlock *);
 
-#endif /* INCLUDE_win32_thread_h__ */
+#endif

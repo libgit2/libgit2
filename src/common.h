@@ -238,4 +238,4 @@ GIT_INLINE(void) git__init_structure(void *structure, size_t len, unsigned int v
 
 #include "util.h"
 
-#endif /* INCLUDE_common_h__ */
+#endif

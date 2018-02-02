@@ -44,4 +44,4 @@ void git_zstream_reset(git_zstream *zstream);
 int git_zstream_deflatebuf(git_buf *out, const void *in, size_t in_len);
 int git_zstream_inflatebuf(git_buf *out, const void *in, size_t in_len);
 
-#endif /* INCLUDE_zstream_h__ */
+#endif

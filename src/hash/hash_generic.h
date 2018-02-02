@@ -5,8 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifndef INCLUDE_hash_generic_h__
-#define INCLUDE_hash_generic_h__
+#ifndef INCLUDE_hash_hash_generic_h__
+#define INCLUDE_hash_hash_generic_h__
 
 #include "common.h"
 
@@ -22,4 +22,4 @@ struct git_hash_ctx {
 #define git_hash_ctx_init(ctx) git_hash_init(ctx)
 #define git_hash_ctx_cleanup(ctx)
 
-#endif /* INCLUDE_hash_generic_h__ */
+#endif

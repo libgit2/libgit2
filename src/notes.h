@@ -29,4 +29,4 @@ struct git_note {
 	char *message;
 };
 
-#endif /* INCLUDE_notes_h__ */
+#endif
