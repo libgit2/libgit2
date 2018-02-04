@@ -13,8 +13,8 @@
  *  Lesser General Public License for more details.
  *
  *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *  License along with this library; if not, see
+ *  <http://www.gnu.org/licenses/>.
  *
  *  Davide Libenzi <davidel@xmailserver.org>
  *
@@ -62,14 +62,14 @@ int xdl_emit_diffrec(char const *rec, long size, char const *pre, long psize,
 
 void *xdl_mmfile_first(mmfile_t *mmf, long *size)
 {
-	*size = (long)mmf->size;
+	*size = mmf->size;
 	return mmf->ptr;
 }
 
 
 long xdl_mmfile_size(mmfile_t *mmf)
 {
-	return (long)mmf->size;
+	return mmf->size;
 }
 
 
@@ -154,6 +154,24 @@ int xdl_blankline(const char *line, long size, long flags)
 	return (i == size);
 }
 
+/*
+ * Have we eaten everything on the line, except for an optional
+ * CR at the very end?
+ */
+static int ends_with_optional_cr(const char *l, long s, long i)
+{
+	int complete = s && l[s-1] == '\n';
+
+	if (complete)
+		s--;
+	if (s == i)
+		return 1;
+	/* do not ignore CR at the end of an incomplete line */
+	if (complete && s == i + 1 && l[i] == '\r')
+		return 1;
+	return 0;
+}
+
 int xdl_recmatch(const char *l1, long s1, const char *l2, long s2, long flags)
 {
 	int i1, i2;
@@ -168,7 +186,8 @@ int xdl_recmatch(const char *l1, long s1, const char *l2, long s2, long flags)
 
 	/*
 	 * -w matches everything that matches with -b, and -b in turn
-	 * matches everything that matches with --ignore-space-at-eol.
+	 * matches everything that matches with --ignore-space-at-eol,
+	 * which in turn matches everything that matches with --ignore-cr-at-eol.
 	 *
 	 * Each flavor of ignoring needs different logic to skip whitespaces
 	 * while we have both sides to compare.
@@ -198,8 +217,18 @@ int xdl_recmatch(const char *l1, long s1, const char *l2, long s2, long flags)
 				return 0;
 		}
 	} else if (flags & XDF_IGNORE_WHITESPACE_AT_EOL) {
-		while (i1 < s1 && i2 < s2 && l1[i1++] == l2[i2++])
-			; /* keep going */
+		while (i1 < s1 && i2 < s2 && l1[i1] == l2[i2]) {
+			i1++;
+			i2++;
+		}
+	} else if (flags & XDF_IGNORE_CR_AT_EOL) {
+		/* Find the first difference and see how the line ends */
+		while (i1 < s1 && i2 < s2 && l1[i1] == l2[i2]) {
+			i1++;
+			i2++;
+		}
+		return (ends_with_optional_cr(l1, s1, i1) &&
+			ends_with_optional_cr(l2, s2, i2));
 	}
 
 	/*
@@ -226,9 +255,16 @@ static unsigned long xdl_hash_record_with_whitespace(char const **data,
 		char const *top, long flags) {
 	unsigned long ha = 5381;
 	char const *ptr = *data;
+	int cr_at_eol_only = (flags & XDF_WHITESPACE_FLAGS) == XDF_IGNORE_CR_AT_EOL;
 
 	for (; ptr < top && *ptr != '\n'; ptr++) {
-		if (XDL_ISSPACE(*ptr)) {
+		if (cr_at_eol_only) {
+			/* do not ignore CR at the end of an incomplete line */
+			if (*ptr == '\r' &&
+			    (ptr + 1 < top && ptr[1] == '\n'))
+				continue;
+		}
+		else if (XDL_ISSPACE(*ptr)) {
 			const char *ptr2 = ptr;
 			int at_eol;
 			while (ptr + 1 < top && XDL_ISSPACE(ptr[1])
@@ -260,7 +296,6 @@ static unsigned long xdl_hash_record_with_whitespace(char const **data,
 	return ha;
 }
 
-
 unsigned long xdl_hash_record(char const **data, char const *top, long flags) {
 	unsigned long ha = 5381;
 	char const *ptr = *data;
@@ -276,7 +311,6 @@ unsigned long xdl_hash_record(char const **data, char const *top, long flags) {
 
 	return ha;
 }
-
 
 unsigned int xdl_hashbits(unsigned int size) {
 	unsigned int val = 1, bits = 0;
@@ -305,22 +339,8 @@ int xdl_num_out(char *out, long val) {
 		*str++ = '0';
 	*str = '\0';
 
-	return (int)(str - out);
+	return str - out;
 }
-
-
-long xdl_atol(char const *str, char const **next) {
-	long val, base;
-	char const *top;
-
-	for (top = str; XDL_ISDIGIT(*top); top++);
-	if (next)
-		*next = top;
-	for (val = 0, base = 1, top--; top >= str; top--, base *= 10)
-		val += base * (long)(*top - '0');
-	return val;
-}
-
 
 int xdl_emit_hunk_hdr(long s1, long c1, long s2, long c2,
 		      const char *func, long funclen, xdemitcb_t *ecb) {
@@ -356,8 +376,8 @@ int xdl_emit_hunk_hdr(long s1, long c1, long s2, long c2,
 	nb += 3;
 	if (func && funclen) {
 		buf[nb++] = ' ';
-		if (funclen > (long)sizeof(buf) - nb - 1)
-			funclen = (long)sizeof(buf) - nb - 1;
+		if (funclen > (long)(sizeof(buf) - nb - 1))
+			funclen = sizeof(buf) - nb - 1;
 		memcpy(buf + nb, func, funclen);
 		nb += funclen;
 	}
