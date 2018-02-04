@@ -539,4 +539,30 @@ GIT_INLINE(double) git__timer(void)
 
 extern int git__getenv(git_buf *out, const char *name);
 
+GIT_INLINE(bool) git__is_filemode_equal(int strict, git_filemode_t a, git_filemode_t b)
+{
+#ifdef GIT_WIN32
+	/*
+	 * On Win32 we do not support the executable bit; the file will
+	 * always be 0100644 on disk, don't bother doing a test.
+	 */
+	return false;
+#else
+	/* build some masks for clarity */
+	int rw = S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH;
+	int x = S_IXUSR|S_IXGRP|S_IXOTH;
+
+	/* both are not files, compare file mode */
+	if (!S_ISREG(a) || !S_ISREG(b))
+		return a == b;
+
+	/* when strict, we care about rw <=> non-rw or x <=> non-x changes */
+	if (strict)
+		return (!!(a & rw) == !!(b & rw)) && (!!(a & x) == !!(b & x));
+
+	/* we only care about rw differences */
+	return (!!(a & rw) == !!(b & rw));
+#endif
+}
+
 #endif

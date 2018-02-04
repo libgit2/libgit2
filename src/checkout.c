@@ -160,20 +160,6 @@ GIT_INLINE(bool) is_workdir_base_or_new(
 		git_oid__cmp(&newitem->id, workdir_id) == 0);
 }
 
-GIT_INLINE(bool) is_file_mode_changed(int respect_filemode, git_filemode_t a, git_filemode_t b)
-{
-#ifdef GIT_WIN32
-	/*
-	 * On Win32 we do not support the executable bit; the file will
-	 * always be 0100644 on disk, don't bother doing a test.
-	 */
-	return false;
-#else
-	int mask = respect_filemode ? 0 : S_IXUSR|S_IXGRP|S_IXOTH;
-	return (S_ISREG(a) && S_ISREG(b) && (a & mask) != (b & mask));
-#endif
-}
-
 static bool checkout_is_workdir_modified(
 	checkout_data *data,
 	const git_diff_file *baseitem,
@@ -216,7 +202,7 @@ static bool checkout_is_workdir_modified(
 	if ((ie = git_index_get_bypath(data->index, wditem->path, 0)) != NULL) {
 		if (git_index_time_eq(&wditem->mtime, &ie->mtime) &&
 			wditem->file_size == ie->file_size &&
-			!is_file_mode_changed(data->respect_filemode, wditem->mode, ie->mode))
+			git__is_filemode_equal(data->respect_filemode, wditem->mode, ie->mode))
 			return !is_workdir_base_or_new(&ie->id, baseitem, newitem);
 	}
 
@@ -230,7 +216,7 @@ static bool checkout_is_workdir_modified(
 	if (S_ISDIR(wditem->mode))
 		return false;
 
-	if (is_file_mode_changed(data->respect_filemode, baseitem->mode, wditem->mode))
+	if (!git__is_filemode_equal(data->respect_filemode, baseitem->mode, wditem->mode))
 		return true;
 
 	if (git_diff__oid_for_entry(&oid, data->diff, wditem, wditem->mode, NULL) < 0)
