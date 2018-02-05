@@ -34,6 +34,7 @@ INCLUDE(FindThreads)
 INCLUDE(FindStatNsec)
 INCLUDE(IdeSplitSources)
 INCLUDE(FeatureSummary)
+INCLUDE(EnableWarnings)
 
 # Build options
 #
@@ -190,21 +191,6 @@ ELSE ()
 	ENDIF()
 
 	SET(CMAKE_C_FLAGS "-D_GNU_SOURCE ${CMAKE_C_FLAGS}")
-
-	MACRO(ENABLE_WARNINGS flag)
-		IF(ENABLE_WERROR)
-			ADD_C_FLAG_IF_SUPPORTED(-Werror=${flag})
-		ELSE()
-			ADD_C_FLAG_IF_SUPPORTED(-W${flag})
-		ENDIF()
-	ENDMACRO()
-
-	MACRO(DISABLE_WARNINGS flag)
-		ADD_C_FLAG_IF_SUPPORTED(-Wno-${flag})
-		IF(ENABLE_WERROR)
-			ADD_C_FLAG_IF_SUPPORTED(-Wno-error=${flag})
-		ENDIF()
-	ENDMACRO()
 
 	ENABLE_WARNINGS(all)
 	ENABLE_WARNINGS(extra)
