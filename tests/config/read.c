@@ -703,3 +703,17 @@ void test_config_read__path(void)
 	git_buf_free(&expected_path);
 	git_config_free(cfg);
 }
+
+void test_config_read__read_utf8_bom(void) {
+	git_config *cfg;
+	git_buf path = GIT_BUF_INIT;
+
+	cl_git_mkfile("./config-utf8bom", "\uFEFF[test]\n path = file.txt\n");
+	cl_git_pass(git_config_open_ondisk(&cfg, "./config-utf8bom"));
+
+	cl_git_pass(git_config_get_path(&path, cfg, "test.path"));
+	cl_assert_equal_s("file.txt", path.ptr);
+
+	git_buf_free(&path);
+	git_config_free(cfg);
+}
