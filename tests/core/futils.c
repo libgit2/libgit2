@@ -110,7 +110,12 @@ void test_core_futils__mode_compare(void)
 				cl_assert_at_line(!result_a, __FILE__, lineno + testno);
 				break;
 			case mode_cmp_false_if_strict:
+#ifdef GIT_WIN32
+				/* Windows has no concept of exec, hence strict mode is irrelevant */
+				cl_assert_at_line(result_a, __FILE__, lineno + testno);
+#else
 				cl_assert_at_line(result_a == !strict, __FILE__, lineno + testno);
+#endif
 				break;
 		}
 	}
