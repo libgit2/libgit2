@@ -1966,34 +1966,120 @@ static int conflict_entry_name(
 	return 0;
 }
 
-static int checkout_path_suffixed(git_buf *path, const char *suffix)
+static int find_checkout_path(
+	git_buf *path,
+	size_t basename_offset,
+	size_t basename_len,
+	const char *suffix,
+	size_t suffix_len,
+	int sequence)
 {
-	size_t path_len;
-	int i = 0, error = 0;
+	/* See note in checkout_path_suffixed about 2/3-1/3 allocation */
+	size_t basename_max = (NAME_MAX * 2) / 3;
+	size_t suffix_max = (NAME_MAX - basename_max) - 1;
+	size_t sequence_len;
 
-	if ((error = git_buf_putc(path, '~')) < 0 || (error = git_buf_puts(path, suffix)) < 0)
-		return -1;
+	/*
+	 * Figure out the length of the suffix inclusive of the
+	 * sequence number.
+	 */
+	if (sequence != -1) {
+		sequence_len = 1 + p_snprintf(NULL, 0, "%d", sequence);
+		suffix_len += sequence_len;
+	}
 
-	path_len = git_buf_len(path);
+	if (basename_len + suffix_len + 1 > NAME_MAX) {
+		if (basename_len > basename_max) {
+			if (suffix_len > suffix_max) {
+				/* Both basename and suffix are too big, so
+				 * we allocate according to the (2/3, 1/3)
+				 * allocation.
+				 */
+				suffix_len = suffix_max;
+				basename_len = basename_max;
+			} else {
+				/* Just the basename is too long, so we can
+				 * steal a litle from the suffix's allocation.
+				 */
+				basename_len = NAME_MAX - suffix_len - 1;
+			}
+		} else {
+			/* Must be the suffix that's blowing the budget. */
+			suffix_len = NAME_MAX - basename_len - 1;
+		}
+	}
 
-	while (git_path_exists(git_buf_cstr(path)) && i < INT_MAX) {
-		git_buf_truncate(path, path_len);
+	git_buf_truncate(path, basename_offset + basename_len);
+	if (sequence == -1) {
+		return git_buf_printf(path, "~%.*s", (int)suffix_len, suffix);
+	}
+	return git_buf_printf(path, "~%.*s_%d",
+			      (int)(suffix_len - sequence_len),
+			      suffix,
+			      sequence);
+}
 
-		if ((error = git_buf_putc(path, '_')) < 0 ||
-			(error = git_buf_printf(path, "%d", i)) < 0)
-			return error;
+static int checkout_path_suffixed(checkout_data *data, git_buf *path, const char *suffix)
+{
+	int i = 0, error = 0, ret = 0;
+	size_t basename_len;
+	size_t suffix_len;
+	size_t basename_offset;
+	git_buf saved_path = GIT_BUF_INIT;
+	int max_retries = 64;
+	git_config *cfg;
 
-		i++;
+	if ((error = git_buf_put(&saved_path, git_buf_cstr(path), git_buf_len(path))))
+		return error;
+
+	/* We need to ensure that the last component of the path (the
+	 * filename) is less than NAME_MAX, which is typically 255.
+	 * We're about to append a suffix (which might include some
+	 * digits)
+	 *
+	 * If our filename is already too long, we need to truncate
+	 * it.  We'll arbitrarily divide the available space as
+	 * follows: filename: 2/3; suffix and digits: 1/3 - 1 (for the
+	 * '~').  But if either filename or suffix doesn't completely
+	 * fill its allotted space, we allow the other to take up the
+	 * slack.
+	*/
+
+	basename_offset = git_path_basename_offset(path);
+	basename_len = git_buf_len(path) - basename_offset;
+	suffix_len = strlen(suffix);
+
+	if ((error = find_checkout_path(path, basename_offset, basename_len,
+					      suffix, suffix_len, -1)) < 0) {
+		ret = error;
+		goto out;
+	}
+
+	if ((error = git_repository_config(&cfg, data->repo)) < 0) {
+		ret = error;
+		goto out;
+	}
+	git_config_get_int32(&max_retries, cfg, "checkout.conflictrenameretries");
+
+	while (git_path_exists(git_buf_cstr(path)) && i < max_retries) {
+		if ((error = find_checkout_path(path, basename_offset,
+						      basename_len, suffix,
+						      suffix_len, i++)) < 0) {
+			ret = error;
+			goto out;
+		}
 	}
 
 	if (i == INT_MAX) {
-		git_buf_truncate(path, path_len);
-
-		giterr_set(GITERR_CHECKOUT, "could not write '%s': working directory file exists", path->ptr);
-		return GIT_EEXISTS;
+		giterr_set(GITERR_CHECKOUT,
+			   "could not write '%s': working directory file exists",
+			   saved_path.ptr);
+		ret = GIT_EEXISTS;
 	}
 
-	return 0;
+out:
+	git_buf_free(&saved_path);
+	return ret;
 }
 
 static int checkout_write_entry(
@@ -2022,7 +2108,7 @@ static int checkout_write_entry(
 			suffix = data->opts.their_label ? data->opts.their_label :
 				"theirs";
 
-		if (checkout_path_suffixed(fullpath, suffix) < 0)
+		if (checkout_path_suffixed(data, fullpath, suffix) < 0)
 			return -1;
 
 		hint_path = side->path;
@@ -2072,7 +2158,7 @@ static int checkout_merge_path(
 	their_label_raw = data->opts.their_label ? data->opts.their_label : "theirs";
 	suffix = strcmp(result->path, conflict->ours->path) == 0 ? our_label_raw : their_label_raw;
 
-	if ((error = checkout_path_suffixed(out, suffix)) < 0)
+	if ((error = checkout_path_suffixed(data, out, suffix)) < 0)
 		return error;
 
 	return 0;

@@ -49,4 +49,8 @@ struct p_stat {
 
 #define stat p_stat
 
+#ifndef NAME_MAX
+#define NAME_MAX 255
+#endif
+
 #endif

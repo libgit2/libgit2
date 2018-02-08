@@ -8,13 +8,13 @@ struct merge_index_entry {
 	uint16_t mode;
 	char oid_str[GIT_OID_HEXSZ+1];
 	int stage;
-	char path[128];
+	char path[256];
 };
 
 struct merge_name_entry {
-	char ancestor_path[128];
-	char our_path[128];
-	char their_path[128];
+	char ancestor_path[256];
+	char our_path[256];
+	char their_path[256];
 };
 
 struct merge_index_with_status {
@@ -23,7 +23,7 @@ struct merge_index_with_status {
 };
 
 struct merge_reuc_entry {
-	char path[128];
+	char path[256];
 	unsigned int ancestor_mode;
 	unsigned int our_mode;
 	unsigned int their_mode;

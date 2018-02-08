@@ -14,6 +14,12 @@ static git_repository *repo;
 #define BRANCH_RENAME_OURS					"rename_conflict_ours"
 #define BRANCH_RENAME_THEIRS				"rename_conflict_theirs"
 
+
+#define BRANCH_RENAME_OURS_LONG					"rename_conflict_long"
+#define BRANCH_RENAME_THEIRS_LONG "rename_conflict_theirs-this-is-more-than-eighty-four-characters-which-means-that-it-will-spill-into-the-filename-space"
+
+#define BRANCH_RENAME_THEIRS_LONG_TRUNCATED "rename_conflict_theirs-this-is-more-than-eighty-four-characters-which-means-that-it-"
+
 // Fixture setup and teardown
 void test_merge_workdir_renames__initialize(void)
 {
@@ -154,3 +160,31 @@ void test_merge_workdir_renames__similar(void)
 	cl_assert(merge_test_workdir(repo, merge_index_entries, 24));
 }
 
+void test_merge_workdir_renames__long(void)
+{
+#ifndef _WIN32
+/* TODO (https://github.com/libgit2/libgit2/issues/3053) We can't run
+ * this test on win32 because win32 has a hard limit on total path
+ * length (rather than component length).  This means that checkouts
+ * which generate mangled paths will have arbitrary limits that are
+ * hard to test and that our checkout code won't correctly handle.
+ * The correct fix is to fix #3035 instead of contorting the checkout
+ * code to handle Windows.
+*/	
+	git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
+
+	struct merge_index_entry merge_index_entries[] = {
+		{ 0100644, "b5c4e64ec5589b31af47072405f5af92246dc39c", 0, "0a-short-rename-in-ours-added-in-theirs~HEAD" },
+		{ 0100644, "919a4813bcf5d2a99f1b503a23a033e7ef99b2aa", 0, "0a-short-rename-in-ours-added-in-theirs~"BRANCH_RENAME_THEIRS_LONG },
+		{ 0100644, "9fbd8211cc3493a1ebd5915ddd171e5654bd38f0", 0, "1a-long-rename-in-ours-added-in-theirs-this-is-longer-than-one-hundred-seventy-characters-which-is-two-thirds-of-name-max-so-it-spills-into-the-branch-name-space-and-both-are-truncated~HEAD" },
+		{ 0100644, "c4847283deb552e4d0cfdb8ca763b7997aefd637", 0, "1a-long-rename-in-ours-added-in-theirs-this-is-longer-than-one-hundred-seventy-characters-which-is-two-thirds-of-name-max-so-it-spills-into-the-branch-name-space-and-both~" BRANCH_RENAME_THEIRS_LONG_TRUNCATED },
+
+	};
+
+	merge_opts.flags |= GIT_MERGE_FIND_RENAMES;
+	merge_opts.rename_threshold = 50;
+
+	cl_git_pass(merge_branches(repo, GIT_REFS_HEADS_DIR BRANCH_RENAME_OURS_LONG, GIT_REFS_HEADS_DIR BRANCH_RENAME_THEIRS_LONG, &merge_opts, NULL));
+	cl_assert(merge_test_workdir(repo, merge_index_entries, 4));
+#endif
+}
