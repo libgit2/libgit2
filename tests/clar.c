@@ -136,6 +136,8 @@ static struct {
 	cl_trace_cb *pfn_trace_cb;
 	void *trace_payload;
 
+	int (*global_init)(void);
+	int (*global_cleanup)(void);
 } _clar;
 
 struct clar_func {
@@ -261,6 +263,13 @@ clar_run_suite(const struct clar_suite *suite, const char *filter)
 	if (!_clar.report_errors_only)
 		clar_print_onsuite(suite->name, ++_clar.suites_ran);
 
+
+	if (_clar.global_init) {
+		int ret = _clar.global_init();
+		if (ret != 0)
+			exit(-1);
+	}
+
 	_clar.active_suite = suite->name;
 	_clar.active_test = NULL;
 	CL_TRACE(CL_TRACE__SUITE_BEGIN);
@@ -291,6 +300,9 @@ clar_run_suite(const struct clar_suite *suite, const char *filter)
 
 	_clar.active_test = NULL;
 	CL_TRACE(CL_TRACE__SUITE_END);
+
+	if (_clar.global_cleanup)
+		_clar.global_cleanup();
 }
 
 static void
@@ -419,6 +431,13 @@ clar_test_init(int argc, char **argv)
 
 	_clar.argc = argc;
 	_clar.argv = argv;
+}
+
+void
+clar_register_global_fn(int (*init)(void), int (*cleanup)(void))
+{
+	_clar.global_init = init;
+	_clar.global_cleanup = cleanup;
 }
 
 int

@@ -15,6 +15,8 @@ enum cl_test_status {
 	CL_TEST_SKIP
 };
 
+void clar_register_global_fn(int (*init)(void), int (*cleanup)(void));
+
 void clar_test_init(int argc, char *argv[]);
 int clar_test_run(void);
 void clar_test_shutdown(void);
