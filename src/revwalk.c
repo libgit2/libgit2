@@ -763,12 +763,6 @@ int git_revwalk_add_filter_cb(
 	if (walk->walking)
 		git_revwalk_reset(walk);
 
-	if (walk->filter_cb) {
-		/* There is already a callback added */
-		giterr_set(GITERR_INVALID, "there is already a callback added to filter commits in revwalk");
-		return -1;
-	}
-
 	walk->filter_cb = filter_cb;
 	walk->filter_cb_payload = payload;
 
