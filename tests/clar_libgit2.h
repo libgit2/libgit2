@@ -216,4 +216,7 @@ void cl_sandbox_set_search_path_defaults(void);
 bool cl_sandbox_supports_8dot3(void);
 #endif
 
+int cl_git_global_init(void);
+int cl_git_global_cleanup(void);
+
 #endif

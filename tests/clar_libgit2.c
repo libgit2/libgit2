@@ -590,3 +590,21 @@ bool cl_sandbox_supports_8dot3(void)
 }
 #endif
 
+int cl_git_global_init(void)
+{
+	int res = 0;
+	res = git_libgit2_init();
+	if (res < 0) {
+		fprintf(stderr, "failed to init libgit2: %d", res);
+		return -1;
+	}
+
+	cl_sandbox_set_search_path_defaults();
+	return 0;
+}
+
+int cl_git_global_cleanup(void)
+{
+	git_libgit2_shutdown();
+	return 0;
+}
