@@ -445,3 +445,19 @@ void test_submodule_lookup__foreach_in_bare_repository_fails(void)
 
 	cl_git_fail(git_submodule_foreach(g_repo, foreach_cb, NULL));
 }
+
+void test_submodule_lookup__fail_invalid_gitmodules(void)
+{
+	git_submodule *sm;
+	sm_lookup_data data;
+	memset(&data, 0, sizeof(data));
+
+	cl_git_rewritefile("submod2/.gitmodules",
+			   "[submodule \"Test_App\"\n"
+			   "    path = Test_App\n"
+			   "    url = ../Test_App\n");
+
+	cl_git_fail(git_submodule_lookup(&sm, g_repo, "Test_App"));
+
+	cl_git_fail(git_submodule_foreach(g_repo, sm_lookup_cb, &data));
+}
