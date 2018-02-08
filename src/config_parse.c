@@ -475,6 +475,11 @@ int git_config_parse(
 		size_t line_len = parser->ctx.line_len;
 		char c;
 
+		/*
+		 * Get either first non-whitespace character or, if that does
+		 * not exist, the first whitespace character. This is required
+		 * to preserve whitespaces when writing back the file.
+		 */
 		if (git_parse_peek(&c, ctx, GIT_PARSE_PEEK_SKIP_WHITESPACE) < 0 &&
 		    git_parse_peek(&c, ctx, 0) < 0)
 			continue;
