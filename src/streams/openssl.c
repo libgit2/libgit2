@@ -202,7 +202,6 @@ static void shutdown_ssl(void)
 
 int git_openssl_stream_global_init(void)
 {
-#ifdef GIT_OPENSSL
 	long ssl_opts = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
 	const char *ciphers = git_libgit2__ssl_ciphers();
 
@@ -244,8 +243,6 @@ int git_openssl_stream_global_init(void)
 		git__ssl_ctx = NULL;
 		return -1;
 	}
-
-#endif
 
 	git__on_shutdown(shutdown_ssl);
 
