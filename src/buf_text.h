@@ -99,11 +99,9 @@ extern bool git_buf_text_contains_nul(const git_buf *buf);
  *
  * @param bom Set to the type of BOM detected or GIT_BOM_NONE
  * @param buf Buffer in which to check the first bytes for a BOM
- * @param offset Offset into buffer to look for BOM
  * @return Number of bytes of BOM data (or 0 if no BOM found)
  */
-extern int git_buf_text_detect_bom(
-	git_bom_t *bom, const git_buf *buf, size_t offset);
+extern int git_buf_text_detect_bom(git_bom_t *bom, const git_buf *buf);
 
 /**
  * Gather stats for a piece of text
