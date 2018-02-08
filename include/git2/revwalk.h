@@ -291,14 +291,15 @@ GIT_EXTERN(int) git_revwalk_add_hide_cb(
 	void *payload);
 
 /**
- * This is a callback function that user can provide to filter a
- * commit from iteration. If the callback function returns non-zero value,
- * then this commit will be skipped during the revwalk and thus won't be
- * returned by git_revwalk_next.
+ * This callback function is used to instruct the libgit2 revwalk API internals
+ * if a commit should be considered for iteration, or skipped. If the callback
+ * function returns non-zero value, then this commit will be skipped during the
+ * revwalk and thus won't be returned by git_revwalk_next.
  *
  * @param commit_id oid of the Commit in question
  * @param payload User-specified pointer to data to be passed as data payload
- * @return a boolean value of 1 or 0 if the commit should be filtered
+ * @return a boolean value of 1 or 0 if the commit should be filtered. Any
+ * negative value is considered an error and will halt iteration.
  */
 typedef int(*git_revwalk_filter_cb)(
 	const git_oid *commit_id,
