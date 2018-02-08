@@ -48,6 +48,17 @@ typedef size_t size_t;
 # define GIT_EXTERN(type) extern type
 #endif
 
+/** Declare a function as deprecated. */
+#if defined(__GNUC__)
+# define GIT_DEPRECATED(func) \
+			 __attribute__((deprecated)) \
+			 func
+#elif defined(_MSC_VER)
+# define GIT_DEPRECATED(func) __declspec(deprecated) func
+#else
+# define GIT_DEPRECATED(func) func
+#endif
+
 /** Declare a function's takes printf style arguments. */
 #ifdef __GNUC__
 # define GIT_FORMAT_PRINTF(a,b) __attribute__((format (printf, a, b)))
