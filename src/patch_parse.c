@@ -98,7 +98,7 @@ static int parse_header_git_oldpath(
 	patch->old_path = git_buf_detach(&old_path);
 
 out:
-	git_buf_free(&old_path);
+	git_buf_dispose(&old_path);
 	return error;
 }
 
@@ -114,7 +114,7 @@ static int parse_header_git_newpath(
 	patch->new_path = git_buf_detach(&new_path);
 
 out:
-	git_buf_free(&new_path);
+	git_buf_dispose(&new_path);
 	return error;
 }
 
@@ -770,8 +770,8 @@ static int parse_patch_binary_side(
 	binary->data = git_buf_detach(&decoded);
 
 done:
-	git_buf_free(&base85);
-	git_buf_free(&decoded);
+	git_buf_dispose(&base85);
+	git_buf_dispose(&decoded);
 	return error;
 }
 

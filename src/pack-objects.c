@@ -1095,7 +1095,7 @@ on_error:
 		git__free(array[i].data);
 	}
 	git__free(array);
-	git_buf_free(&zbuf);
+	git_buf_dispose(&zbuf);
 
 	return error;
 }
@@ -1463,7 +1463,7 @@ int git_packbuilder_insert_tree(git_packbuilder *pb, const git_oid *oid)
 		error = git_tree_walk(tree, GIT_TREEWALK_PRE, cb_tree_walk, &context);
 
 	git_tree_free(tree);
-	git_buf_free(&context.buf);
+	git_buf_dispose(&context.buf);
 	return error;
 }
 

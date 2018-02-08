@@ -346,7 +346,7 @@ static int pack_backend__refresh(git_odb_backend *backend_)
 	/* reload all packs */
 	error = git_path_direach(&path, 0, packfile_load__cb, backend);
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 	git_vector_sort(&backend->packs);
 
 	return error;
@@ -635,7 +635,7 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 
 	*backend_out = (git_odb_backend *)backend;
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 
 	return error;
 }

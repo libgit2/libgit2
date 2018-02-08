@@ -399,7 +399,7 @@ void test_object_tree_write__cruel_paths(void)
 			cl_git_pass(git_tree_entry_bypath(&te, tree, b.ptr));
 			cl_assert_equal_s(the_paths[j], git_tree_entry_name(te));
 			git_tree_entry_free(te);
-			git_buf_free(&b);
+			git_buf_dispose(&b);
 		}
 	}
 

@@ -40,7 +40,7 @@ static int retrieve_branch_reference(
 
 	*branch_reference_out = branch; /* will be NULL on error */
 
-	git_buf_free(&ref_name);
+	git_buf_dispose(&ref_name);
 	return error;
 }
 
@@ -108,8 +108,8 @@ static int create_branch(
 		*ref_out = branch;
 
 cleanup:
-	git_buf_free(&canonical_branch_name);
-	git_buf_free(&log_message);
+	git_buf_dispose(&canonical_branch_name);
+	git_buf_dispose(&log_message);
 	return error;
 }
 
@@ -199,7 +199,7 @@ int git_branch_delete(git_reference *branch)
 	error = git_reference_delete(branch);
 
 on_error:
-	git_buf_free(&config_section);
+	git_buf_dispose(&config_section);
 	return error;
 }
 
@@ -310,10 +310,10 @@ int git_branch_move(
 		git_buf_cstr(&new_config_section));
 
 done:
-	git_buf_free(&new_reference_name);
-	git_buf_free(&old_config_section);
-	git_buf_free(&new_config_section);
-	git_buf_free(&log_message);
+	git_buf_dispose(&new_reference_name);
+	git_buf_dispose(&old_config_section);
+	git_buf_dispose(&new_config_section);
+	git_buf_dispose(&log_message);
 
 	return error;
 }
@@ -366,7 +366,7 @@ static int retrieve_upstream_configuration(
 			return -1;
 
 	error = git_config_get_string_buf(out, config, git_buf_cstr(&buf));
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	return error;
 }
 
@@ -429,9 +429,9 @@ int git_branch_upstream_name(
 cleanup:
 	git_config_free(config);
 	git_remote_free(remote);
-	git_buf_free(&remote_name);
-	git_buf_free(&merge_name);
-	git_buf_free(&buf);
+	git_buf_dispose(&remote_name);
+	git_buf_dispose(&merge_name);
+	git_buf_dispose(&buf);
 	return error;
 }
 
@@ -522,7 +522,7 @@ int git_branch_remote_name(git_buf *buf, git_repository *repo, const char *refna
 
 cleanup:
 	if (error < 0)
-		git_buf_free(buf);
+		git_buf_dispose(buf);
 
 	git_strarray_free(&remote_list);
 	return error;
@@ -544,7 +544,7 @@ int git_branch_upstream(
 		git_reference_owner(branch),
 		git_buf_cstr(&tracking_name));
 
-	git_buf_free(&tracking_name);
+	git_buf_dispose(&tracking_name);
 	return error;
 }
 
@@ -565,11 +565,11 @@ static int unset_upstream(git_config *config, const char *shortname)
 	if (git_config_delete_entry(config, git_buf_cstr(&buf)) < 0)
 		goto on_error;
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	return 0;
 
 on_error:
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	return -1;
 }
 
@@ -655,15 +655,15 @@ int git_branch_set_upstream(git_reference *branch, const char *upstream_name)
 		goto on_error;
 
 	git_reference_free(upstream);
-	git_buf_free(&key);
-	git_buf_free(&value);
+	git_buf_dispose(&key);
+	git_buf_dispose(&value);
 
 	return 0;
 
 on_error:
 	git_reference_free(upstream);
-	git_buf_free(&key);
-	git_buf_free(&value);
+	git_buf_dispose(&key);
+	git_buf_dispose(&value);
 	git_remote_free(remote);
 
 	return -1;

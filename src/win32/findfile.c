@@ -158,7 +158,7 @@ static int win32_find_existing_dirs(
 		}
 	}
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	return (git_buf_oom(out) ? -1 : 0);
 }
@@ -185,7 +185,7 @@ int git_win32__find_system_dirs(git_buf *out, const wchar_t *subdir)
 			&buf, HKEY_LOCAL_MACHINE, REG_MSYSGIT_INSTALL, subdir) && buf.size)
 		git_buf_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	return (git_buf_oom(out) ? -1 : 0);
 }

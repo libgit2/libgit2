@@ -126,7 +126,7 @@ static int write_file_filtered(
 		error = git_odb_write(id, odb, tgt.ptr, tgt.size, GIT_OBJ_BLOB);
 	}
 
-	git_buf_free(&tgt);
+	git_buf_dispose(&tgt);
 	return error;
 }
 
@@ -238,7 +238,7 @@ int git_blob__create_from_paths(
 
 done:
 	git_odb_free(odb);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 
 	return error;
 }
@@ -257,7 +257,7 @@ int git_blob_create_fromdisk(
 	const char *workdir, *hintpath;
 
 	if ((error = git_path_prettify(&full_path, path, NULL)) < 0) {
-		git_buf_free(&full_path);
+		git_buf_dispose(&full_path);
 		return error;
 	}
 
@@ -270,7 +270,7 @@ int git_blob_create_fromdisk(
 	error = git_blob__create_from_paths(
 		id, NULL, repo, git_buf_cstr(&full_path), hintpath, 0, true);
 
-	git_buf_free(&full_path);
+	git_buf_dispose(&full_path);
 	return error;
 }
 
@@ -340,7 +340,7 @@ cleanup:
 	if (error < 0)
 		blob_writestream_free((git_writestream *) stream);
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 	return error;
 }
 

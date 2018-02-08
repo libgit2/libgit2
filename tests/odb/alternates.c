@@ -13,8 +13,8 @@ void test_odb_alternates__cleanup(void)
 {
 	size_t i;
 
-	git_buf_free(&destpath);
-	git_buf_free(&filepath);
+	git_buf_dispose(&destpath);
+	git_buf_dispose(&filepath);
 
 	for (i = 0; i < ARRAY_SIZE(paths); i++)
 		cl_fixture_cleanup(paths[i]);

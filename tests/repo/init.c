@@ -33,11 +33,11 @@ void test_repo_init__cleanup(void)
 {
 	git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL,
 		_global_path.ptr);
-	git_buf_free(&_global_path);
+	git_buf_dispose(&_global_path);
 
 	if (_tmp_path.size > 0 && git_path_isdir(_tmp_path.ptr))
 		git_futils_rmdir_r(_tmp_path.ptr, NULL, GIT_RMDIR_REMOVE_FILES);
-	git_buf_free(&_tmp_path);
+	git_buf_dispose(&_tmp_path);
 }
 
 static void cleanup_repository(void *path)
@@ -131,8 +131,8 @@ void test_repo_init__bare_repo_escaping_current_workdir(void)
 
 	cl_git_pass(chdir(git_buf_cstr(&path_current_workdir)));
 
-	git_buf_free(&path_current_workdir);
-	git_buf_free(&path_repository);
+	git_buf_dispose(&path_current_workdir);
+	git_buf_dispose(&path_repository);
 
 	cleanup_repository("a");
 }
@@ -193,7 +193,7 @@ void test_repo_init__additional_templates(void)
 	cl_assert(git_path_isdir(git_buf_cstr(&path)));
 	/* won't confirm specific contents of hooks dir since it may vary */
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 static void assert_config_entry_on_init_bytype(
@@ -423,7 +423,7 @@ void test_repo_init__relative_gitdir(void)
 	cl_git_pass(git_futils_readbuffer(&dot_git_content, "root/b/c_wd/.git"));
 	cl_assert_equal_s("gitdir: ../my_repository/", dot_git_content.ptr);
 
-	git_buf_free(&dot_git_content);
+	git_buf_dispose(&dot_git_content);
 	cleanup_repository("root");
 }
 
@@ -444,7 +444,7 @@ void test_repo_init__relative_gitdir_2(void)
 
 	/* make the directory first, then it should succeed */
 	cl_git_pass(git_repository_init_ext(&_repo, "root/b/my_repository", &opts));
-	git_buf_free(&full_path);
+	git_buf_dispose(&full_path);
 
 	cl_assert(!git__suffixcmp(git_repository_workdir(_repo), "root/b/c_wd/"));
 	cl_assert(!git__suffixcmp(git_repository_path(_repo), "root/b/my_repository/"));
@@ -460,7 +460,7 @@ void test_repo_init__relative_gitdir_2(void)
 	cl_git_pass(git_futils_readbuffer(&dot_git_content, "root/b/c_wd/.git"));
 	cl_assert_equal_s("gitdir: ../my_repository/", dot_git_content.ptr);
 
-	git_buf_free(&dot_git_content);
+	git_buf_dispose(&dot_git_content);
 	cleanup_repository("root");
 }
 
@@ -497,8 +497,8 @@ static void assert_hooks_match(
 		cl_assert_equal_i_fmt(expected_mode, st.st_mode, "%07o");
 	}
 
-	git_buf_free(&expected);
-	git_buf_free(&actual);
+	git_buf_dispose(&expected);
+	git_buf_dispose(&actual);
 }
 
 static void assert_mode_seems_okay(
@@ -510,7 +510,7 @@ static void assert_mode_seems_okay(
 
 	cl_git_pass(git_buf_joinpath(&full, base, path));
 	cl_git_pass(git_path_lstat(full.ptr, &st));
-	git_buf_free(&full);
+	git_buf_dispose(&full);
 
 	if (!core_filemode) {
 		CLEAR_FOR_CORE_FILEMODE(expect_mode);
@@ -552,11 +552,11 @@ static const char *template_sandbox(const char *name)
 	/* create a file starting with a dot */
 	cl_git_pass(git_buf_joinpath(&dotfile_path, hooks_path.ptr, ".dotfile"));
 	cl_git_mkfile(dotfile_path.ptr, "something\n");
-	git_buf_free(&dotfile_path);
+	git_buf_dispose(&dotfile_path);
 
-	git_buf_free(&dotfile_path);
-	git_buf_free(&link_path);
-	git_buf_free(&hooks_path);
+	git_buf_dispose(&dotfile_path);
+	git_buf_dispose(&link_path);
+	git_buf_dispose(&hooks_path);
 
 	return path;
 }
@@ -581,8 +581,8 @@ static void configure_templatedir(const char *template_path)
 
 	cl_git_mkfile(config_path.ptr, config_data.ptr);
 
-	git_buf_free(&config_path);
-	git_buf_free(&config_data);
+	git_buf_dispose(&config_path);
+	git_buf_dispose(&config_data);
 }
 
 static void validate_templates(git_repository *repo, const char *template_path)
@@ -617,10 +617,10 @@ static void validate_templates(git_repository *repo, const char *template_path)
 		template_path, git_repository_path(repo),
 		"hooks/.dotfile", filemode);
 
-	git_buf_free(&expected);
-	git_buf_free(&actual);
-	git_buf_free(&repo_description);
-	git_buf_free(&template_description);
+	git_buf_dispose(&expected);
+	git_buf_dispose(&actual);
+	git_buf_dispose(&repo_description);
+	git_buf_dispose(&template_description);
 }
 
 void test_repo_init__external_templates_specified_in_options(void)
@@ -666,7 +666,7 @@ void test_repo_init__external_templates_specified_in_config(void)
 	validate_templates(_repo, "template");
 	cl_fixture_cleanup("template");
 
-	git_buf_free(&template_path);
+	git_buf_dispose(&template_path);
 }
 
 void test_repo_init__external_templates_with_leading_dot(void)
@@ -693,7 +693,7 @@ void test_repo_init__external_templates_with_leading_dot(void)
 	validate_templates(_repo, ".template_with_leading_dot");
 	cl_fixture_cleanup(".template_with_leading_dot");
 
-	git_buf_free(&template_path);
+	git_buf_dispose(&template_path);
 }
 
 void test_repo_init__extended_with_template_and_shared_mode(void)
@@ -833,6 +833,6 @@ void test_repo_init__at_filesystem_root(void)
 	cl_assert(git_path_isdir(root.ptr));
 	cl_git_pass(git_futils_rmdir_r(root.ptr, NULL, GIT_RMDIR_REMOVE_FILES));
 
-	git_buf_free(&root);
+	git_buf_dispose(&root);
 	git_repository_free(repo);
 }

@@ -355,7 +355,7 @@ void test_refs_reflog_messages__creating_branches_default_messages(void)
 		g_email, "branch: Created from e90810b8df3");
 
 	git_annotated_commit_free(annotated);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	git_commit_free(target);
 	git_reference_free(branch1);
 	git_reference_free(branch2);

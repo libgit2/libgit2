@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
 
 	check_lg2(git_repository_open(&repo, buf.ptr),
 		"Could not open repository", NULL);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	switch (opt.cmd)
 	{

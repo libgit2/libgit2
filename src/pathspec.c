@@ -36,7 +36,7 @@ char *git_pathspec_prefix(const git_strarray *pathspec)
 	git_buf_truncate(&prefix, scan - prefix.ptr);
 
 	if (prefix.size <= 0) {
-		git_buf_free(&prefix);
+		git_buf_dispose(&prefix);
 		return NULL;
 	}
 

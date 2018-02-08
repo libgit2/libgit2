@@ -108,7 +108,7 @@ void test_stress_diff__rename_big_files(void)
 		cl_git_pass(git_index_add_bypath(index, tmp + strlen("renames/")));
 	}
 
-	git_buf_free(&b);
+	git_buf_dispose(&b);
 	git_index_free(index);
 
 	test_with_many(100);
@@ -133,7 +133,7 @@ void test_stress_diff__rename_many_files(void)
 		b.ptr[8] = '\n';
 		cl_git_mkfile(tmp, b.ptr);
 	}
-	git_buf_free(&b);
+	git_buf_dispose(&b);
 
 	for (i = 0; i < 2500; i += 1) {
 		p_snprintf(tmp, sizeof(tmp), "renames/newfile%03d", i);

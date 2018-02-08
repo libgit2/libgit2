@@ -29,7 +29,7 @@ static void assert_default_branch(const char *should)
 	cl_git_pass(git_remote_connect(g_remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
 	cl_git_pass(git_remote_default_branch(&name, g_remote));
 	cl_assert_equal_s(should, name.ptr);
-	git_buf_free(&name);
+	git_buf_dispose(&name);
 }
 
 void test_network_remote_defaultbranch__master(void)

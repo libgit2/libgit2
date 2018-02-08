@@ -67,7 +67,7 @@ static int download_tags_value(git_remote *remote, git_config *cfg)
 		return -1;
 
 	error = git_config__lookup_entry(&ce, cfg, git_buf_cstr(&buf), false);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	if (!error && ce && ce->value) {
 		if (!strcmp(ce->value, "--no-tags"))
@@ -132,7 +132,7 @@ static int write_add_refspec(git_repository *repo, const char *name, const char 
 	}
 
 cleanup:
-	git_buf_free(&var);
+	git_buf_dispose(&var);
 	return 0;
 }
 
@@ -255,7 +255,7 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 		remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_AUTO;
 
 
-	git_buf_free(&var);
+	git_buf_dispose(&var);
 
 	*out = remote;
 	error = 0;
@@ -265,8 +265,8 @@ on_error:
 		git_remote_free(remote);
 
 	git_config_free(config_ro);
-	git_buf_free(&canonical_url);
-	git_buf_free(&var);
+	git_buf_dispose(&canonical_url);
+	git_buf_dispose(&var);
 	return error;
 }
 
@@ -302,7 +302,7 @@ int git_remote_create(git_remote **out, git_repository *repo, const char *name, 
 		return -1;
 
 	error = git_remote_create_with_fetchspec(out, repo, name, url, git_buf_cstr(&buf));
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	return error;
 }
@@ -524,7 +524,7 @@ int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 
 cleanup:
 	git_config_free(config);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	if (error < 0)
 		git_remote_free(remote);
@@ -552,7 +552,7 @@ static int lookup_remote_prune_config(git_remote *remote, git_config *config, co
 		}
 	}
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	return error;
 }
 
@@ -601,8 +601,8 @@ static int set_url(git_repository *repo, const char *remote, const char *pattern
 	}
 
 cleanup:
-	git_buf_free(&canonical_url);
-	git_buf_free(&buf);
+	git_buf_dispose(&canonical_url);
+	git_buf_dispose(&buf);
 
 	return error;
 }
@@ -761,7 +761,7 @@ int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_ur
 			return error;
 
 		error = git_config__lookup_entry(&ce, cfg, git_buf_cstr(&buf), false);
-		git_buf_free(&buf);
+		git_buf_dispose(&buf);
 
 		if (error < 0)
 			return error;
@@ -985,7 +985,7 @@ int git_remote_fetch(
 
 	/* Create "remote/foo" branches for all remote branches */
 	error = git_remote_update_tips(remote, cbs, update_fetchhead, tagopt, git_buf_cstr(&reflog_msg_buf));
-	git_buf_free(&reflog_msg_buf);
+	git_buf_dispose(&reflog_msg_buf);
 	if (error < 0)
 		return error;
 
@@ -1050,8 +1050,8 @@ static int ref_to_update(int *update, git_buf *remote_name, git_remote *remote, 
 		*update = 1;
 	}
 
-	git_buf_free(&upstream_remote);
-	git_buf_free(&upstream_name);
+	git_buf_dispose(&upstream_remote);
+	git_buf_dispose(&upstream_name);
 	return error;
 }
 
@@ -1084,7 +1084,7 @@ static int remote_head_for_ref(git_remote_head **out, git_remote *remote, git_re
 		error = remote_head_for_fetchspec_src(out, update_heads, git_buf_cstr(&remote_name));
 
 cleanup:
-	git_buf_free(&remote_name);
+	git_buf_dispose(&remote_name);
 	git_reference_free(resolved_ref);
 	git_config_free(config);
 	return error;
@@ -1235,7 +1235,7 @@ int git_remote_prune(git_remote *remote, const git_remote_callbacks *callbacks)
 
 			key.name = (char *) git_buf_cstr(&buf);
 			error = git_vector_search(&pos, &remote_refs, &key);
-			git_buf_free(&buf);
+			git_buf_dispose(&buf);
 
 			if (error < 0 && error != GIT_ENOTFOUND)
 				goto cleanup;
@@ -1417,13 +1417,13 @@ static int update_tips_for_spec(
 
 	git_vector_free(&update_heads);
 	git_refspec__free(&tagspec);
-	git_buf_free(&refname);
+	git_buf_dispose(&refname);
 	return 0;
 
 on_error:
 	git_vector_free(&update_heads);
 	git_refspec__free(&tagspec);
-	git_buf_free(&refname);
+	git_buf_dispose(&refname);
 	return -1;
 
 }
@@ -1537,7 +1537,7 @@ static int opportunistic_updates(const git_remote *remote, const git_remote_call
 		error = 0;
 
 cleanup:
-	git_buf_free(&refname);
+	git_buf_dispose(&refname);
 	return error;
 }
 
@@ -1550,7 +1550,7 @@ static int truncate_fetch_head(const char *gitdir)
 		return error;
 
 	error = git_futils_truncate(path.ptr, GIT_REFS_FILE_MODE);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 
 	return error;
 }
@@ -1759,7 +1759,7 @@ int git_remote_set_autotag(git_repository *repo, const char *remote, git_remote_
 		error = -1;
 	}
 
-	git_buf_free(&var);
+	git_buf_dispose(&var);
 	return error;
 }
 
@@ -1790,8 +1790,8 @@ static int rename_remote_config_section(
 		new_name ? git_buf_cstr(&new_section_name) : NULL);
 
 cleanup:
-	git_buf_free(&old_section_name);
-	git_buf_free(&new_section_name);
+	git_buf_dispose(&old_section_name);
+	git_buf_dispose(&new_section_name);
 
 	return error;
 }
@@ -1887,10 +1887,10 @@ static int rename_one_remote_reference(
 cleanup:
 	git_reference_free(reference_in);
 	git_reference_free(ref);
-	git_buf_free(&namespace);
-	git_buf_free(&old_namespace);
-	git_buf_free(&new_name);
-	git_buf_free(&log_message);
+	git_buf_dispose(&namespace);
+	git_buf_dispose(&old_namespace);
+	git_buf_dispose(&new_name);
+	git_buf_dispose(&log_message);
 	return error;
 }
 
@@ -1908,7 +1908,7 @@ static int rename_remote_references(
 		return error;
 
 	error = git_reference_iterator_glob_new(&iter, repo, git_buf_cstr(&buf));
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	if (error < 0)
 		return error;
@@ -1976,9 +1976,9 @@ static int rename_fetch_refspecs(git_vector *problems, git_remote *remote, const
 			break;
 	}
 
-	git_buf_free(&base);
-	git_buf_free(&var);
-	git_buf_free(&val);
+	git_buf_dispose(&base);
+	git_buf_dispose(&var);
+	git_buf_dispose(&val);
 
 	if (error < 0) {
 		char *str;
@@ -2044,7 +2044,7 @@ int git_remote_is_valid_name(
 	git_buf_printf(&buf, "refs/heads/test:refs/remotes/%s/test", remote_name);
 	error = git_refspec__parse(&refspec, git_buf_cstr(&buf), true);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	git_refspec__free(&refspec);
 
 	giterr_clear();
@@ -2219,7 +2219,7 @@ static int remove_branch_config_related_entries(
 	if (error == GIT_ITEROVER)
 		error = 0;
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	git_config_iterator_free(iter);
 	return error;
 }

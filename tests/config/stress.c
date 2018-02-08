@@ -22,7 +22,7 @@ void test_config_stress__initialize(void)
 
 void test_config_stress__cleanup(void)
 {
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	p_unlink(TEST_CONFIG);
 }
 

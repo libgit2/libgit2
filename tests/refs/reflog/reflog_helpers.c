@@ -94,7 +94,7 @@ void cl_reflog_check_entry_(git_repository *repo, const char *reflog, size_t idx
 	if (git_buf_len(&result) != 0)
 		clar__fail(file, line, "Reflog entry mismatch", git_buf_cstr(&result), 1);
 
-	git_buf_free(&result);
+	git_buf_dispose(&result);
 	git_reflog_free(log);
 }
 
@@ -113,6 +113,6 @@ void reflog_print(git_repository *repo, const char *reflog_name)
 	}
 
 	fprintf(stderr, "%s", git_buf_cstr(&out));
-	git_buf_free(&out);
+	git_buf_dispose(&out);
 	git_reflog_free(reflog);
 }

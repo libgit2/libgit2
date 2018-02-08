@@ -84,7 +84,7 @@ size_t git_patch_size(
 		else
 			out += git_buf_len(&file_header);
 
-		git_buf_free(&file_header);
+		git_buf_dispose(&file_header);
 	}
 
 	return out;

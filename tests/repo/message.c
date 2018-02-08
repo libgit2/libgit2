@@ -31,9 +31,9 @@ void test_repo_message__message(void)
 
 	cl_git_pass(git_repository_message(&actual, _repo));
 	cl_assert_equal_s(expected, git_buf_cstr(&actual));
-	git_buf_free(&actual);
+	git_buf_dispose(&actual);
 
 	cl_git_pass(p_unlink(git_buf_cstr(&path)));
 	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_message(&actual, _repo));
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }

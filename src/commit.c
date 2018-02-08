@@ -74,7 +74,7 @@ static int git_commit__create_buffer_internal(
 	return 0;
 
 on_error:
-	git_buf_free(out);
+	git_buf_dispose(out);
 	return -1;
 }
 
@@ -176,7 +176,7 @@ static int git_commit__create_internal(
 cleanup:
 	git_array_clear(parents);
 	git_reference_free(ref);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	return error;
 }
 
@@ -886,6 +886,6 @@ int git_commit_create_with_signature(
 		goto cleanup;
 
 cleanup:
-	git_buf_free(&commit);
+	git_buf_dispose(&commit);
 	return error;
 }

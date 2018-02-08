@@ -55,7 +55,7 @@ void test_worktree_submodule__open_discovered_submodule_worktree(void)
 	cl_assert_equal_s(git_repository_workdir(child.worktree),
 		git_repository_workdir(repo));
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 	git_repository_free(repo);
 }
 
@@ -86,7 +86,7 @@ void test_worktree_submodule__resolve_relative_url(void)
 
 	git_worktree_free(wt);
 	git_repository_free(repo);
-	git_buf_free(&wt_path);
-	git_buf_free(&sm_relative_path);
-	git_buf_free(&wt_relative_path);
+	git_buf_dispose(&wt_path);
+	git_buf_dispose(&sm_relative_path);
+	git_buf_dispose(&wt_relative_path);
 }

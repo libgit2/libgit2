@@ -48,8 +48,8 @@ static void assert_sm_valid(git_repository *parent, git_repository *child, const
 	cl_git_pass(git_path_prettify_dir(&actual, actual.ptr, NULL));
 	cl_assert_equal_s(expected.ptr, actual.ptr);
 
-	git_buf_free(&expected);
-	git_buf_free(&actual);
+	git_buf_dispose(&expected);
+	git_buf_dispose(&actual);
 }
 
 void test_submodule_open__opening_via_lookup_succeeds(void)
@@ -67,7 +67,7 @@ void test_submodule_open__direct_open_succeeds(void)
 	cl_git_pass(git_repository_open(&g_child, path.ptr));
 	assert_sm_valid(g_parent, g_child, "sm_unchanged");
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 void test_submodule_open__direct_open_succeeds_for_broken_sm_with_gitdir(void)
@@ -86,5 +86,5 @@ void test_submodule_open__direct_open_succeeds_for_broken_sm_with_gitdir(void)
 	cl_git_pass(git_repository_open(&g_child, path.ptr));
 	assert_sm_valid(g_parent, g_child, "sm_unchanged");
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }

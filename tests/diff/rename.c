@@ -603,8 +603,8 @@ void test_diff_rename__working_directory_changes(void)
 	git_diff_free(diff);
 
 	git_tree_free(tree);
-	git_buf_free(&content);
-	git_buf_free(&old_content);
+	git_buf_dispose(&content);
+	git_buf_dispose(&old_content);
 }
 
 void test_diff_rename__patch(void)
@@ -645,7 +645,7 @@ void test_diff_rename__patch(void)
 
 	cl_git_pass(git_patch_to_buf(&buf, patch));
 	cl_assert_equal_s(expected, buf.ptr);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	git_patch_free(patch);
 
@@ -707,8 +707,8 @@ void test_diff_rename__file_exchange(void)
 	git_tree_free(tree);
 	git_index_free(index);
 
-	git_buf_free(&c1);
-	git_buf_free(&c2);
+	git_buf_dispose(&c1);
+	git_buf_dispose(&c2);
 }
 
 void test_diff_rename__file_exchange_three(void)
@@ -759,9 +759,9 @@ void test_diff_rename__file_exchange_three(void)
 	git_tree_free(tree);
 	git_index_free(index);
 
-	git_buf_free(&c1);
-	git_buf_free(&c2);
-	git_buf_free(&c3);
+	git_buf_dispose(&c1);
+	git_buf_dispose(&c2);
+	git_buf_dispose(&c3);
 }
 
 void test_diff_rename__file_partial_exchange(void)
@@ -812,8 +812,8 @@ void test_diff_rename__file_partial_exchange(void)
 	git_tree_free(tree);
 	git_index_free(index);
 
-	git_buf_free(&c1);
-	git_buf_free(&c2);
+	git_buf_dispose(&c1);
+	git_buf_dispose(&c2);
 }
 
 void test_diff_rename__rename_and_copy_from_same_source(void)
@@ -869,8 +869,8 @@ void test_diff_rename__rename_and_copy_from_same_source(void)
 	git_tree_free(tree);
 	git_index_free(index);
 
-	git_buf_free(&c1);
-	git_buf_free(&c2);
+	git_buf_dispose(&c1);
+	git_buf_dispose(&c2);
 }
 
 void test_diff_rename__from_deleted_to_split(void)
@@ -923,7 +923,7 @@ void test_diff_rename__from_deleted_to_split(void)
 	git_tree_free(tree);
 	git_index_free(index);
 
-	git_buf_free(&c1);
+	git_buf_dispose(&c1);
 }
 
 struct rename_expected
@@ -1023,8 +1023,8 @@ void test_diff_rename__rejected_match_can_match_others(void)
 	git_index_free(index);
 	git_reference_free(head);
 	git_reference_free(selfsimilar);
-	git_buf_free(&one);
-	git_buf_free(&two);
+	git_buf_dispose(&one);
+	git_buf_dispose(&two);
 }
 
 static void write_similarity_file_two(const char *filename, size_t b_lines)
@@ -1041,7 +1041,7 @@ static void write_similarity_file_two(const char *filename, size_t b_lines)
 	cl_git_pass(
 		git_futils_writebuffer(&contents, filename, O_RDWR|O_CREAT, 0777));
 
-	git_buf_free(&contents);
+	git_buf_dispose(&contents);
 }
 
 void test_diff_rename__rejected_match_can_match_others_two(void)
@@ -1389,7 +1389,7 @@ void test_diff_rename__can_find_copy_to_split(void)
 	git_tree_free(tree);
 	git_index_free(index);
 
-	git_buf_free(&c1);
+	git_buf_dispose(&c1);
 }
 
 void test_diff_rename__can_delete_unmodified_deltas(void)
@@ -1437,7 +1437,7 @@ void test_diff_rename__can_delete_unmodified_deltas(void)
 	git_tree_free(tree);
 	git_index_free(index);
 
-	git_buf_free(&c1);
+	git_buf_dispose(&c1);
 }
 
 void test_diff_rename__matches_config_behavior(void)
@@ -1759,7 +1759,7 @@ void test_diff_rename__identical(void)
 
 	cl_assert_equal_s(expected, diff_buf.ptr);
 
-	git_buf_free(&diff_buf);
+	git_buf_dispose(&diff_buf);
 	git_diff_free(diff);
 	git_tree_free(old_tree);
 	git_tree_free(new_tree);
@@ -1910,7 +1910,7 @@ void test_diff_rename__rewrite_and_delete(void)
 
 	cl_assert_equal_s(expected, diff_buf.ptr);
 
-	git_buf_free(&diff_buf);
+	git_buf_dispose(&diff_buf);
 	git_diff_free(diff);
 	git_tree_free(old_tree);
 	git_tree_free(new_tree);
@@ -1973,7 +1973,7 @@ void test_diff_rename__delete_and_rename(void)
 
 	cl_assert_equal_s(expected, diff_buf.ptr);
 
-	git_buf_free(&diff_buf);
+	git_buf_dispose(&diff_buf);
 	git_diff_free(diff);
 	git_tree_free(old_tree);
 	git_tree_free(new_tree);

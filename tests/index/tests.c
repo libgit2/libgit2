@@ -40,7 +40,7 @@ static void copy_file(const char *src, const char *dst)
 	cl_git_pass(p_write(dst_fd, source_buf.ptr, source_buf.size));
 
 cleanup:
-	git_buf_free(&source_buf);
+	git_buf_dispose(&source_buf);
 	p_close(dst_fd);
 }
 
@@ -54,14 +54,14 @@ static void files_are_equal(const char *a, const char *b)
 		cl_assert(0);
 
 	if (git_futils_readbuffer(&buf_b, b) < 0) {
-		git_buf_free(&buf_a);
+		git_buf_dispose(&buf_a);
 		cl_assert(0);
 	}
 
 	pass = (buf_a.size == buf_b.size && !memcmp(buf_a.ptr, buf_b.ptr, buf_a.size));
 
-	git_buf_free(&buf_a);
-	git_buf_free(&buf_b);
+	git_buf_dispose(&buf_a);
+	git_buf_dispose(&buf_b);
 
 	cl_assert(pass);
 }
@@ -468,7 +468,7 @@ static void add_invalid_filename(git_repository *repo, const char *fn)
 
 	cl_assert(git_index_entrycount(index) == 0);
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 	git_index_free(index);
 }
 
@@ -545,7 +545,7 @@ static void write_invalid_filename(git_repository *repo, const char *fn_orig)
 	p_unlink(path.ptr);
 
 	cl_git_pass(git_index_remove_all(index, NULL, NULL, NULL));
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 	git_index_free(index);
 	git__free(fn);
 }

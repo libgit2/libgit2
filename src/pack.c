@@ -326,19 +326,19 @@ static int pack_index_open(struct git_pack_file *p)
 	git_buf_put(&idx_name, p->pack_name, name_len - strlen(".pack"));
 	git_buf_puts(&idx_name, ".idx");
 	if (git_buf_oom(&idx_name)) {
-		git_buf_free(&idx_name);
+		git_buf_dispose(&idx_name);
 		return -1;
 	}
 
 	if ((error = git_mutex_lock(&p->lock)) < 0) {
-		git_buf_free(&idx_name);
+		git_buf_dispose(&idx_name);
 		return error;
 	}
 
 	if (p->index_version == -1)
 		error = pack_index_check(idx_name.ptr, p);
 
-	git_buf_free(&idx_name);
+	git_buf_dispose(&idx_name);
 
 	git_mutex_unlock(&p->lock);
 

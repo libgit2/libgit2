@@ -45,7 +45,7 @@ void test_refs_read__loose_tag(void)
 	/* Ensure the name of the tag matches the name of the reference */
 	cl_git_pass(git_buf_joinpath(&ref_name_from_tag_name, GIT_REFS_TAGS_DIR, git_tag_name((git_tag *)object)));
 	cl_assert_equal_s(ref_name_from_tag_name.ptr, loose_tag_ref_name);
-	git_buf_free(&ref_name_from_tag_name);
+	git_buf_dispose(&ref_name_from_tag_name);
 
 	git_object_free(object);
 

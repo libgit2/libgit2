@@ -195,7 +195,7 @@ void test_submodule_lookup__backslashes(void)
 
 	cl_git_pass(git_submodule_resolve_url(&buf, g_repo, backslashed_path));
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	git_submodule_free(sm);
 	git_repository_free(subrepo);
 }
@@ -227,7 +227,7 @@ static void add_submodule_with_commit(const char *name)
 
 	cl_git_pass(git_buf_joinpath(&p, git_repository_workdir(smrepo), "file"));
 	cl_git_mkfile(p.ptr, "new file");
-	git_buf_free(&p);
+	git_buf_dispose(&p);
 
 	cl_git_pass(git_index_add_bypath(idx, "file"));
 	cl_git_pass(git_index_write(idx));
@@ -293,7 +293,7 @@ void test_submodule_lookup__just_added(void)
 	baseline_tests();
 
 	cl_git_rewritefile("submod2/.gitmodules", snap2.ptr);
-	git_buf_free(&snap2);
+	git_buf_dispose(&snap2);
 
 	refute_submodule_exists(g_repo, "mismatch_name", GIT_ENOTFOUND);
 	refute_submodule_exists(g_repo, "mismatch_path", GIT_ENOTFOUND);
@@ -304,7 +304,7 @@ void test_submodule_lookup__just_added(void)
 	baseline_tests();
 
 	cl_git_rewritefile("submod2/.gitmodules", snap1.ptr);
-	git_buf_free(&snap1);
+	git_buf_dispose(&snap1);
 
 	refute_submodule_exists(g_repo, "mismatch_name", GIT_ENOTFOUND);
 	refute_submodule_exists(g_repo, "mismatch_path", GIT_ENOTFOUND);

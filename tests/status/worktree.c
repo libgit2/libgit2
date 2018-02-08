@@ -127,7 +127,7 @@ void test_status_worktree__purged_worktree(void)
 	/* first purge the contents of the worktree */
 	cl_git_pass(git_buf_sets(&workdir, git_repository_workdir(repo)));
 	cl_git_pass(git_path_direach(&workdir, 0, remove_file_cb, NULL));
-	git_buf_free(&workdir);
+	git_buf_dispose(&workdir);
 
 	/* now get status */
 	memset(&counts, 0x0, sizeof(status_entry_counts));
@@ -378,7 +378,7 @@ void test_status_worktree__issue_592(void)
 
 	cl_git_pass(git_status_foreach(repo, cb_status__check_592, "l.txt"));
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 void test_status_worktree__issue_592_2(void)
@@ -393,7 +393,7 @@ void test_status_worktree__issue_592_2(void)
 
 	cl_git_pass(git_status_foreach(repo, cb_status__check_592, "c/a.txt"));
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 void test_status_worktree__issue_592_3(void)
@@ -409,7 +409,7 @@ void test_status_worktree__issue_592_3(void)
 
 	cl_git_pass(git_status_foreach(repo, cb_status__check_592, "c/a.txt"));
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 void test_status_worktree__issue_592_4(void)
@@ -424,7 +424,7 @@ void test_status_worktree__issue_592_4(void)
 
 	cl_git_pass(git_status_foreach(repo, cb_status__check_592, "t/b.txt"));
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 void test_status_worktree__issue_592_5(void)
@@ -440,7 +440,7 @@ void test_status_worktree__issue_592_5(void)
 
 	cl_git_pass(git_status_foreach(repo, cb_status__check_592, NULL));
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 void test_status_worktree__issue_592_ignores_0(void)
@@ -782,8 +782,8 @@ static void assert_ignore_case(
 	cl_assert_equal_i(expected_camel_cased_file_status, status);
 
 	git_repository_free(repo2);
-	git_buf_free(&lower_case_path);
-	git_buf_free(&camel_case_path);
+	git_buf_dispose(&lower_case_path);
+	git_buf_dispose(&camel_case_path);
 }
 
 void test_status_worktree__file_status_honors_core_ignorecase_true(void)

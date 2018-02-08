@@ -20,7 +20,7 @@ void patch_print_from_patchfile(const char *data, size_t len)
 	cl_assert_equal_s(data, buf.ptr);
 
 	git_patch_free(patch);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_patch_print__change_middle(void)

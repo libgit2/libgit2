@@ -310,8 +310,8 @@ const char* cl_git_path_url(const char *path)
 	cl_assert(url_buf.size < 4096);
 
 	strncpy(url, git_buf_cstr(&url_buf), 4096);
-	git_buf_free(&url_buf);
-	git_buf_free(&path_buf);
+	git_buf_dispose(&url_buf);
+	git_buf_dispose(&path_buf);
 	return url;
 }
 
@@ -359,7 +359,7 @@ int cl_git_remove_placeholders(const char *directory_path, const char *filename)
 
 	error = remove_placeholders_recurs(&data, &buffer);
 
-	git_buf_free(&buffer);
+	git_buf_dispose(&buffer);
 
 	return error;
 }
@@ -544,7 +544,7 @@ void cl_fake_home(void)
 	cl_git_pass(git_path_prettify(&path, "home", NULL));
 	cl_git_pass(git_libgit2_opts(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, path.ptr));
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 void cl_sandbox_set_search_path_defaults(void)
@@ -565,7 +565,7 @@ void cl_sandbox_set_search_path_defaults(void)
 	git_libgit2_opts(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_PROGRAMDATA, path.ptr);
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 #ifdef GIT_WIN32
@@ -584,7 +584,7 @@ bool cl_sandbox_supports_8dot3(void)
 	supported = (shortname != NULL);
 
 	git__free(shortname);
-	git_buf_free(&longpath);
+	git_buf_dispose(&longpath);
 
 	return supported;
 }

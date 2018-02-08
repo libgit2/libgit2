@@ -48,7 +48,7 @@ static int create_branch(
 		return error;
 
 	error = git_reference_create(&branch_ref, repo, git_buf_cstr(&refname), target, 0, log_message);
-	git_buf_free(&refname);
+	git_buf_dispose(&refname);
 	git_commit_free(head_obj);
 
 	if (!error)
@@ -87,8 +87,8 @@ static int setup_tracking_config(
 	error = 0;
 
 cleanup:
-	git_buf_free(&remote_key);
-	git_buf_free(&merge_key);
+	git_buf_dispose(&remote_key);
+	git_buf_dispose(&merge_key);
 	return error;
 }
 
@@ -195,8 +195,8 @@ static int update_head_to_remote(
 		reflog_message);
 
 cleanup:
-	git_buf_free(&remote_master_name);
-	git_buf_free(&branch);
+	git_buf_dispose(&remote_master_name);
+	git_buf_dispose(&branch);
 
 	return error;
 }
@@ -225,7 +225,7 @@ static int update_head_to_branch(
 
 cleanup:
 	git_reference_free(remote_ref);
-	git_buf_free(&remote_branch_name);
+	git_buf_dispose(&remote_branch_name);
 	return retcode;
 }
 
@@ -351,7 +351,7 @@ static int clone_into(git_repository *repo, git_remote *_remote, const git_fetch
 
 cleanup:
 	git_remote_free(remote);
-	git_buf_free(&reflog_message);
+	git_buf_dispose(&reflog_message);
 
 	return error;
 }
@@ -378,7 +378,7 @@ int git_clone__should_clone_local(const char *url_or_path, git_clone_local_t loc
 		git_path_isdir(path);
 
 done:
-	git_buf_free(&fromurl);
+	git_buf_dispose(&fromurl);
 	return is_local;
 }
 
@@ -510,7 +510,7 @@ static int clone_local_into(git_repository *repo, git_remote *remote, const git_
 
 	/* Copy .git/objects/ from the source to the target */
 	if ((error = git_repository_open(&src, git_buf_cstr(&src_path))) < 0) {
-		git_buf_free(&src_path);
+		git_buf_dispose(&src_path);
 		return error;
 	}
 
@@ -549,10 +549,10 @@ static int clone_local_into(git_repository *repo, git_remote *remote, const git_
 	error = checkout_branch(repo, remote, co_opts, branch, git_buf_cstr(&reflog_message));
 
 cleanup:
-	git_buf_free(&reflog_message);
-	git_buf_free(&src_path);
-	git_buf_free(&src_odb);
-	git_buf_free(&dst_odb);
+	git_buf_dispose(&reflog_message);
+	git_buf_dispose(&src_path);
+	git_buf_dispose(&src_odb);
+	git_buf_dispose(&dst_odb);
 	git_repository_free(src);
 	return error;
 }

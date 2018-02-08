@@ -332,6 +332,6 @@ static void diff_print_stats(git_diff *diff, struct opts *o)
 
 	fputs(b.ptr, stdout);
 
-	git_buf_free(&b);
+	git_buf_dispose(&b);
 	git_diff_stats_free(stats);
 }

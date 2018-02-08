@@ -529,7 +529,7 @@ static void similarity_unload(similarity_info *info)
 	if (info->blob)
 		git_blob_free(info->blob);
 	else
-		git_buf_free(&info->data);
+		git_buf_dispose(&info->data);
 }
 
 #define FLAG_SET(opts,flag_name) (((opts)->flags & flag_name) != 0)

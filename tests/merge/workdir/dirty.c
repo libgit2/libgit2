@@ -123,8 +123,8 @@ static void write_files(char *files[])
 		cl_git_mkfile(path.ptr, content.ptr);
 	}
 
-	git_buf_free(&path);
-	git_buf_free(&content);
+	git_buf_dispose(&path);
+	git_buf_dispose(&content);
 }
 
 static void hack_index(char *files[])
@@ -178,7 +178,7 @@ static void hack_index(char *files[])
 		entry->file_size = (uint32_t)statbuf.st_size;
 	}
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 static void stage_random_files(char *files[])
@@ -218,7 +218,7 @@ static void stage_content(char *content[])
 
 	git_object_free(head_object);
 	git_reference_free(head);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 static int merge_dirty_files(char *dirty_files[])

@@ -210,8 +210,8 @@ void test_core_filebuf__symlink_follow_absolute_paths(void)
 	cl_assert_equal_i(true, git_path_exists("linkdir/target"));
 
 	git_filebuf_cleanup(&file);
-	git_buf_free(&source);
-	git_buf_free(&target);
+	git_buf_dispose(&source);
+	git_buf_dispose(&target);
 
 	cl_git_pass(git_futils_rmdir_r("linkdir", NULL, GIT_RMDIR_REMOVE_FILES));
 }

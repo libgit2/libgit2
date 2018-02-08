@@ -551,7 +551,7 @@ static int buffer_want_with_caps(const git_remote_head *head, transport_smart_ca
 	git_oid_fmt(oid, &head->oid);
 	git_buf_printf(buf,
 		"%04xwant %s %s\n", (unsigned int)len, oid, git_buf_cstr(&str));
-	git_buf_free(&str);
+	git_buf_dispose(&str);
 
 	GITERR_CHECK_ALLOC_BUF(buf);
 

@@ -46,7 +46,7 @@ void test_index_racy__diff(void)
 
 	git_index_free(index);
 	git_diff_free(diff);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 void test_index_racy__write_index_just_after_file(void)
@@ -95,7 +95,7 @@ void test_index_racy__write_index_just_after_file(void)
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, index, NULL));
 	cl_assert_equal_i(1, git_diff_num_deltas(diff));
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 	git_diff_free(diff);
 	git_index_free(index);
 }
@@ -129,7 +129,7 @@ static void setup_race(void)
 	entry->mtime.seconds = st.st_mtime;
 	entry->mtime.nanoseconds = st.st_mtime_nsec;
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 void test_index_racy__smudges_index_entry_on_save(void)
@@ -196,7 +196,7 @@ static void setup_uptodate_files(void)
 	cl_git_pass(git_index_add_frombuffer(index, &new_entry, "hello!\n", 7));
 
 	git_index_free(index);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 void test_index_racy__adding_to_index_is_uptodate(void)

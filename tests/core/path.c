@@ -9,7 +9,7 @@ check_dirname(const char *A, const char *B)
 
 	cl_assert(git_path_dirname_r(&dir, A) >= 0);
 	cl_assert_equal_s(B, dir.ptr);
-	git_buf_free(&dir);
+	git_buf_dispose(&dir);
 
 	cl_assert((dir2 = git_path_dirname(A)) != NULL);
 	cl_assert_equal_s(B, dir2);
@@ -24,7 +24,7 @@ check_basename(const char *A, const char *B)
 
 	cl_assert(git_path_basename_r(&base, A) >= 0);
 	cl_assert_equal_s(B, base.ptr);
-	git_buf_free(&base);
+	git_buf_dispose(&base);
 
 	cl_assert((base2 = git_path_basename(A)) != NULL);
 	cl_assert_equal_s(B, base2);
@@ -48,7 +48,7 @@ check_joinpath(const char *path_a, const char *path_b, const char *expected_path
 	cl_git_pass(git_buf_joinpath(&joined_path, path_a, path_b));
 	cl_assert_equal_s(expected_path, joined_path.ptr);
 
-	git_buf_free(&joined_path);
+	git_buf_dispose(&joined_path);
 }
 
 static void
@@ -65,7 +65,7 @@ check_joinpath_n(
 							   path_a, path_b, path_c, path_d));
 	cl_assert_equal_s(expected_path, joined_path.ptr);
 
-	git_buf_free(&joined_path);
+	git_buf_dispose(&joined_path);
 }
 
 
@@ -204,7 +204,7 @@ check_path_to_dir(
 	cl_git_pass(git_path_to_dir(&tgt));
 	cl_assert_equal_s(expected, tgt.ptr);
 
-	git_buf_free(&tgt);
+	git_buf_dispose(&tgt);
 }
 
 static void
@@ -275,7 +275,7 @@ void test_core_path__08_self_join(void)
 	cl_assert_equal_s(path.ptr, "/foo/this is a new string/grow the buffer, grow the buffer, grow the buffer");
 	cl_assert(asize < path.asize);
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 	cl_git_pass(git_buf_sets(&path, "/foo/bar"));
 
 	cl_git_pass(git_buf_joinpath(&path, path.ptr + 4, "baz"));
@@ -286,7 +286,7 @@ void test_core_path__08_self_join(void)
 	cl_assert_equal_s(path.ptr, "/baz/somethinglongenoughtorealloc");
 	cl_assert(asize < path.asize);
 	
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 static void check_percent_decoding(const char *expected_result, const char *input)
@@ -296,7 +296,7 @@ static void check_percent_decoding(const char *expected_result, const char *inpu
 	cl_git_pass(git__percent_decode(&buf, input));
 	cl_assert_equal_s(expected_result, git_buf_cstr(&buf));
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_core_path__09_percent_decode(void)
@@ -325,7 +325,7 @@ static void check_fromurl(const char *expected_result, const char *input, int sh
 	} else
 		cl_git_fail(git_path_fromurl(&buf, input));
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 #ifdef GIT_WIN32
@@ -436,7 +436,7 @@ void test_core_path__11_walkup(void)
 		i = info.expect_idx;
 	}
 
-	git_buf_free(&p);
+	git_buf_dispose(&p);
 }
 
 void test_core_path__11a_walkup_cancel(void)
@@ -472,7 +472,7 @@ void test_core_path__11a_walkup_cancel(void)
 		while (expect[i] != NULL) i++;
 	}
 
-	git_buf_free(&p);
+	git_buf_dispose(&p);
 }
 
 void test_core_path__12_offset_to_path_root(void)
@@ -500,7 +500,7 @@ void test_core_path__13_cannot_prettify_a_non_existing_file(void)
 	cl_assert_equal_i(GIT_ENOTFOUND, git_path_prettify(&p, NON_EXISTING_FILEPATH, NULL));
 	cl_assert_equal_i(GIT_ENOTFOUND, git_path_prettify(&p, NON_EXISTING_FILEPATH "/so-do-i", NULL));
 
-	git_buf_free(&p);
+	git_buf_dispose(&p);
 }
 
 void test_core_path__14_apply_relative(void)
@@ -561,7 +561,7 @@ void test_core_path__14_apply_relative(void)
 
 	cl_git_pass(git_path_apply_relative(&p, "../there"));
 	cl_assert_equal_s("../../there", p.ptr);
-	git_buf_free(&p);
+	git_buf_dispose(&p);
 }
 
 static void assert_resolve_relative(
@@ -654,7 +654,7 @@ void test_core_path__15_resolve_relative(void)
 	assert_resolve_relative(&buf, "/", "//a/b/../..");
 #endif
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 #define assert_common_dirlen(i, p, q) \

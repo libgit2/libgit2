@@ -36,7 +36,7 @@ static void writefile(git_oid *oid)
 	cl_git_pass(git_odb_stream_finalize_write(oid, stream));
 
 	git_odb_stream_free(stream);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_odb_largefiles__write_from_memory(void)

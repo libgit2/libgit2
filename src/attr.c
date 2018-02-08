@@ -298,7 +298,7 @@ static int system_attr_file(
 
 	/* We can safely provide a git_buf with no allocation (asize == 0) to
 	 * a consumer. This allows them to treat this as a regular `git_buf`,
-	 * but their call to `git_buf_free` will not attempt to free it.
+	 * but their call to `git_buf_dispose` will not attempt to free it.
 	 */
 	git_buf_attach_notowned(
 		out, attr_session->sysdir.ptr, attr_session->sysdir.size);
@@ -359,7 +359,7 @@ static int attr_setup(git_repository *repo, git_attr_session *attr_session)
 		attr_session->init_setup = 1;
 
 out:
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 
 	return error;
 }
@@ -565,8 +565,8 @@ static int collect_attr_files(
  cleanup:
 	if (error < 0)
 		release_attr_files(files);
-	git_buf_free(&attrfile);
-	git_buf_free(&dir);
+	git_buf_dispose(&attrfile);
+	git_buf_dispose(&dir);
 
 	return error;
 }

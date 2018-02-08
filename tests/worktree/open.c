@@ -32,7 +32,7 @@ static void assert_worktree_valid(git_repository *wt, const char *parentdir, con
 	cl_git_pass(git_path_to_dir(&path));
 	cl_assert_equal_s(wt->gitdir, path.ptr);
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 void test_worktree_open__initialize(void)
@@ -82,7 +82,7 @@ void test_worktree_open__repository_through_gitdir(void)
 	cl_git_pass(git_repository_open(&wt, gitdir_path.ptr));
 	assert_worktree_valid(wt, COMMON_REPO, WORKTREE_REPO);
 
-	git_buf_free(&gitdir_path);
+	git_buf_dispose(&gitdir_path);
 	git_repository_free(wt);
 }
 
@@ -97,7 +97,7 @@ void test_worktree_open__open_discovered_worktree(void)
 	cl_assert_equal_s(git_repository_workdir(fixture.worktree),
 		git_repository_workdir(repo));
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 	git_repository_free(repo);
 }
 

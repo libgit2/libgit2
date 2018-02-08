@@ -126,8 +126,8 @@ void test_revert_workdir__conflicts(void)
 	git_commit_free(commit);
 	git_commit_free(head);
 	git_reference_free(head_ref);
-	git_buf_free(&mergemsg_buf);
-	git_buf_free(&conflicting_buf);
+	git_buf_dispose(&mergemsg_buf);
+	git_buf_dispose(&conflicting_buf);
 }
 
 /* git reset --hard 39467716290f6df775a91cdb9a4eb39295018145
@@ -350,7 +350,7 @@ void test_revert_workdir__again_after_edit_two(void)
 	git_commit_free(revert_commit);
 	git_commit_free(head_commit);
 	git_config_free(config);
-	git_buf_free(&diff_buf);
+	git_buf_dispose(&diff_buf);
 }
 
 /* git reset --hard 72333f47d4e83616630ff3b0ffe4c0faebcc3c45

@@ -21,7 +21,7 @@ void test_config_global__initialize(void)
 	cl_git_pass(git_libgit2_opts(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, path.ptr));
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 void test_config_global__cleanup(void)
@@ -60,7 +60,7 @@ void test_config_global__open_xdg(void)
 	cl_git_pass(git_config_get_string_buf(&buf, selected, key));
 	cl_assert_equal_s(str, buf.ptr);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	git_config_free(selected);
 	git_config_free(xdg);
 	git_config_free(cfg);
@@ -87,7 +87,7 @@ void test_config_global__open_programdata(void)
 	cl_git_pass(git_config_open_ondisk(&cfg, config_path.ptr));
 	cl_git_pass(git_config_set_string(cfg, "programdata.var", "even higher level"));
 
-	git_buf_free(&config_path);
+	git_buf_dispose(&config_path);
 	git_config_free(cfg);
 
 	git_config_open_default(&cfg);
@@ -95,7 +95,7 @@ void test_config_global__open_programdata(void)
 	cl_assert_equal_s("even higher level", var_contents.ptr);
 
 	git_config_free(cfg);
-	git_buf_free(&var_contents);
+	git_buf_dispose(&var_contents);
 
 	cl_git_pass(git_repository_init(&repo, "./foo.git", true));
 	cl_git_pass(git_repository_config(&cfg, repo));
@@ -103,7 +103,7 @@ void test_config_global__open_programdata(void)
 	cl_assert_equal_s("even higher level", var_contents.ptr);
 
 	git_config_free(cfg);
-	git_buf_free(&var_contents);
+	git_buf_dispose(&var_contents);
 	git_repository_free(repo);
 	cl_fixture_cleanup("./foo.git");
 }

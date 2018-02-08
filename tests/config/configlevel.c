@@ -33,7 +33,7 @@ void test_config_configlevel__can_replace_a_config_file_at_an_existing_level(voi
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "core.stringglobal"));
 	cl_assert_equal_s("don't find me!", buf.ptr);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	git_config_free(cfg);
 }
 
@@ -56,7 +56,7 @@ void test_config_configlevel__can_read_from_a_single_level_focused_file_after_pa
 	cl_git_pass(git_config_get_string_buf(&buf, single_level_cfg, "core.stringglobal"));
 	cl_assert_equal_s("don't find me!", buf.ptr);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	git_config_free(single_level_cfg);
 }
 

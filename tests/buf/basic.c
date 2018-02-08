@@ -12,7 +12,7 @@ void test_buf_basic__resize(void)
 
 	git_buf_puts(&buf1, test_string);
 	cl_assert(strlen(git_buf_cstr(&buf1)) == strlen(test_string) * 2);
-	git_buf_free(&buf1);
+	git_buf_dispose(&buf1);
 }
 
 void test_buf_basic__resize_incremental(void)
@@ -34,7 +34,7 @@ void test_buf_basic__resize_incremental(void)
 	cl_assert_equal_i(5, buf1.size);
 	cl_assert(buf1.asize > 8);
 
-	git_buf_free(&buf1);
+	git_buf_dispose(&buf1);
 }
 
 void test_buf_basic__printf(void)
@@ -47,5 +47,5 @@ void test_buf_basic__printf(void)
 	git_buf_printf(&buf2, "%s %d", "woop", 42);
 	cl_assert(git_buf_oom(&buf2) == 0);
 	cl_assert_equal_s(git_buf_cstr(&buf2), "shoop da 23 woop 42");
-	git_buf_free(&buf2);
+	git_buf_dispose(&buf2);
 }

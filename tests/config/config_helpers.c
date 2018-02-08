@@ -36,7 +36,7 @@ void assert_config_entry_value(
 	cl_git_pass(git_config_get_string_buf(&buf, config, name));
 
 	cl_assert_equal_s(expected_value, git_buf_cstr(&buf));
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 static int count_config_entries_cb(

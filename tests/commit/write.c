@@ -130,7 +130,7 @@ This is a root commit\n\
    This is a root commit and should be the only one in this branch\n\
 ");
 
-	git_buf_free(&commit);
+	git_buf_dispose(&commit);
 	git_tree_free(tree);
 	git_commit_free(parent);
 	git_signature_free(author);

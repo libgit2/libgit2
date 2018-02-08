@@ -136,7 +136,7 @@ static int git_sysdir_guess_xdg_dirs(git_buf *out)
 		error = 0;
 	}
 
-	git_buf_free(&env);
+	git_buf_dispose(&env);
 	return error;
 #endif
 }
@@ -168,7 +168,7 @@ static void git_sysdir_global_shutdown(void)
 	size_t i;
 
 	for (i = 0; i < ARRAY_SIZE(git_sysdir__dirs); ++i)
-		git_buf_free(&git_sysdir__dirs[i].buf);
+		git_buf_dispose(&git_sysdir__dirs[i].buf);
 }
 
 int git_sysdir_global_init(void)
@@ -262,7 +262,7 @@ int git_sysdir_set(git_sysdir_t which, const char *search_path)
 		git_buf_join(&merge, GIT_PATH_LIST_SEPARATOR, merge.ptr, expand_path);
 
 	git_buf_swap(&git_sysdir__dirs[which].buf, &merge);
-	git_buf_free(&merge);
+	git_buf_dispose(&merge);
 
 done:
 	if (git_buf_oom(&git_sysdir__dirs[which].buf))
@@ -307,7 +307,7 @@ static int git_sysdir_find_in_dirlist(
 	}
 
 done:
-	git_buf_free(path);
+	git_buf_dispose(path);
 	giterr_set(GITERR_OS, "the %s file '%s' doesn't exist", label, name);
 	return GIT_ENOTFOUND;
 }

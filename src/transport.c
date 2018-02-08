@@ -174,7 +174,7 @@ int git_transport_register(
 	return 0;
 
 on_error:
-	git_buf_free(&prefix);
+	git_buf_dispose(&prefix);
 	git__free(definition);
 	return error;
 }
@@ -210,7 +210,7 @@ int git_transport_unregister(const char *scheme)
 	error = GIT_ENOTFOUND;
 
 done:
-	git_buf_free(&prefix);
+	git_buf_dispose(&prefix);
 	return error;
 }
 

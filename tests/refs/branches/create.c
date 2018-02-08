@@ -132,7 +132,7 @@ static void assert_branch_matches_name(
 		git_oid_cmp(git_reference_target(ref), git_commit_id(target)));
 
 	git_reference_free(ref);
-	git_buf_free(&b);
+	git_buf_dispose(&b);
 }
 
 void test_refs_branches_create__can_create_branch_with_unicode(void)

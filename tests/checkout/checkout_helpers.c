@@ -16,7 +16,7 @@ void assert_on_branch(git_repository *repo, const char *branch)
 	cl_assert_equal_s(bname.ptr, git_reference_symbolic_target(head));
 
 	git_reference_free(head);
-	git_buf_free(&bname);
+	git_buf_dispose(&bname);
 }
 
 void reset_index_to_treeish(git_object *treeish)

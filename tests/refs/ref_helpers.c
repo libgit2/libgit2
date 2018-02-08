@@ -19,7 +19,7 @@ int reference_is_packed(git_reference *ref)
 
 	packed = !git_path_isfile(ref_path.ptr);
 
-	git_buf_free(&ref_path);
+	git_buf_dispose(&ref_path);
 
 	return packed;
 }

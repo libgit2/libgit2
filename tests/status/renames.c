@@ -35,8 +35,8 @@ static void _rename_helper(
 	if (extra)
 		cl_git_append2file(newpath.ptr, extra);
 
-	git_buf_free(&oldpath);
-	git_buf_free(&newpath);
+	git_buf_dispose(&oldpath);
+	git_buf_dispose(&newpath);
 }
 
 #define rename_file(R,O,N) _rename_helper((R), (O), (N), NULL)

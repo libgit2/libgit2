@@ -190,7 +190,7 @@ static int is_path_occupied(bool *occupied, git_repository *repo, const char *pa
 	error = 0;
 
 out:
-	git_buf_free(&dir);
+	git_buf_dispose(&dir);
 	return error;
 }
 
@@ -271,7 +271,7 @@ static int load_submodule_names(git_strmap **out, git_repository *repo, git_conf
 
 out:
 	free_submodule_names(names);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	git_config_iterator_free(iter);
 	return error;
 }
@@ -338,7 +338,7 @@ int git_submodule_lookup(
 
 		if (error < 0) {
 			git_submodule_free(sm);
-			git_buf_free(&path);
+			git_buf_dispose(&path);
 			return error;
 		}
 
@@ -354,7 +354,7 @@ int git_submodule_lookup(
 			}
 		}
 
-		git_buf_free(&path);
+		git_buf_dispose(&path);
 	}
 
 	if ((error = git_submodule_location(&location, sm)) < 0) {
@@ -377,7 +377,7 @@ int git_submodule_lookup(
 			if (git_path_exists(path.ptr))
 				error = GIT_EEXISTS;
 
-			git_buf_free(&path);
+			git_buf_dispose(&path);
 		}
 
 		submodule_set_lookup_error(error, name);
@@ -409,7 +409,7 @@ int git_submodule_name_is_valid(git_repository *repo, const char *name, int flag
 	}
 
 	isvalid =  git_path_isvalid(repo, buf.ptr, 0, flags);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	return isvalid;
 }
@@ -624,7 +624,7 @@ cleanup:
 	/* TODO: if we got an error, mark submodule config as invalid? */
 	git_index_free(idx);
 	git_tree_free(head);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 	return error;
 }
 
@@ -729,8 +729,8 @@ static int submodule_repo_init(
 		error = git_repository_init_ext(&subrepo, workdir.ptr, &initopt);
 
 cleanup:
-	git_buf_free(&workdir);
-	git_buf_free(&repodir);
+	git_buf_dispose(&workdir);
+	git_buf_dispose(&repodir);
 
 	*out = subrepo;
 
@@ -835,8 +835,8 @@ cleanup:
 
 	git_config_file_free(mods);
 	git_repository_free(subrepo);
-	git_buf_free(&real_url);
-	git_buf_free(&name);
+	git_buf_dispose(&real_url);
+	git_buf_dispose(&name);
 
 	return error;
 }
@@ -865,7 +865,7 @@ int git_submodule_repo_init(
 
 done:
 	git_config_free(cfg);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	return error;
 }
 
@@ -949,7 +949,7 @@ int git_submodule_add_to_index(git_submodule *sm, int write_index)
 
 cleanup:
 	git_repository_free(sm_repo);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 	return error;
 }
 
@@ -1014,7 +1014,7 @@ int git_submodule_resolve_url(git_buf *out, git_repository *repo, const char *ur
 		error = -1;
 	}
 
-	git_buf_free(&normalized);
+	git_buf_dispose(&normalized);
 	return error;
 }
 
@@ -1036,7 +1036,7 @@ static int write_var(git_repository *repo, const char *name, const char *var, co
 	else
 		error = git_config_file_delete(mods, key.ptr);
 
-	git_buf_free(&key);
+	git_buf_dispose(&key);
 
 cleanup:
 	git_config_file_free(mods);
@@ -1201,8 +1201,8 @@ static int submodule_repo_create(
 	error = git_repository_init_ext(&subrepo, repodir.ptr, &initopt);
 
 cleanup:
-	git_buf_free(&workdir);
-	git_buf_free(&repodir);
+	git_buf_dispose(&workdir);
+	git_buf_dispose(&repodir);
 
 	*out = subrepo;
 
@@ -1355,7 +1355,7 @@ int git_submodule_update(git_submodule *sm, int init, git_submodule_update_optio
 	}
 
 done:
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	git_config_free(config);
 	git_object_free(target_commit);
 	git_remote_free(remote);
@@ -1402,8 +1402,8 @@ int git_submodule_init(git_submodule *sm, int overwrite)
 
 cleanup:
 	git_config_free(cfg);
-	git_buf_free(&key);
-	git_buf_free(&effective_submodule_url);
+	git_buf_dispose(&key);
+	git_buf_dispose(&effective_submodule_url);
 
 	return error;
 }
@@ -1443,7 +1443,7 @@ int git_submodule_sync(git_submodule *sm)
 		} else {
 			error = git_buf_join3(
 				&key, '.', "remote", remote_name.ptr, "url");
-			git_buf_free(&remote_name);
+			git_buf_dispose(&remote_name);
 		}
 
 		if (!error)
@@ -1452,7 +1452,7 @@ int git_submodule_sync(git_submodule *sm)
 		git_repository_free(smrepo);
 	}
 
-	git_buf_free(&key);
+	git_buf_dispose(&key);
 
 	return error;
 }
@@ -1506,7 +1506,7 @@ static int git_submodule__open(
 			sm->flags |= GIT_SUBMODULE_STATUS__WD_SCANNED;
 	}
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 
 	return error;
 }
@@ -1938,7 +1938,7 @@ static int submodule_read_config(git_submodule *sm, git_config *cfg)
 	error = 0;
 
 cleanup:
-	git_buf_free(&key);
+	git_buf_dispose(&key);
 	return error;
 }
 
@@ -2000,7 +2000,7 @@ static int submodule_load_each(const git_config_entry *entry, void *payload)
 	error = 0;
 
 done:
-	git_buf_free(&name);
+	git_buf_dispose(&name);
 	return error;
 }
 
@@ -2017,7 +2017,7 @@ static int submodule_load_from_wd_lite(git_submodule *sm)
 	if (git_path_contains(&path, DOT_GIT))
 		sm->flags |= GIT_SUBMODULE_STATUS_IN_WD;
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 	return 0;
 }
 
@@ -2041,6 +2041,7 @@ static int gitmodules_snapshot(git_config **snap, git_repository *repo)
 
 	if ((error = git_config_open_ondisk(&mods, path.ptr)) < 0)
 		goto cleanup;
+	git_buf_dispose(&path);
 
 	if ((error = git_config_snapshot(snap, mods)) < 0)
 		goto cleanup;
@@ -2050,7 +2051,7 @@ static int gitmodules_snapshot(git_config **snap, git_repository *repo)
 cleanup:
 	if (mods)
 		git_config_free(mods);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 
 	return error;
 }
@@ -2079,7 +2080,7 @@ static git_config_backend *open_gitmodules(
 		}
 	}
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 
 	return mods;
 }
@@ -2119,7 +2120,7 @@ static int lookup_head_remote_key(git_buf *remote_name, git_repository *repo)
 		goto done;
 
 done:
-	git_buf_free(&upstream_name);
+	git_buf_dispose(&upstream_name);
 	git_reference_free(head);
 
 	return error;
@@ -2135,7 +2136,7 @@ static int lookup_head_remote(git_remote **remote, git_repository *repo)
 	if (!(error = lookup_head_remote_key(&remote_name, repo)))
 		error = git_remote_lookup(remote, repo, remote_name.ptr);
 
-	git_buf_free(&remote_name);
+	git_buf_dispose(&remote_name);
 
 	return error;
 }

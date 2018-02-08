@@ -260,12 +260,12 @@ int git_odb__hashfd_filtered(
 
 		error = git_filter_list_apply_to_data(&post, fl, &raw);
 
-		git_buf_free(&raw);
+		git_buf_dispose(&raw);
 
 		if (!error)
 			error = git_odb_hash(out, post.ptr, post.size, type);
 
-		git_buf_free(&post);
+		git_buf_dispose(&post);
 	}
 
 	return error;
@@ -588,12 +588,12 @@ static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_
 		return -1;
 
 	if (git_path_exists(alternates_path.ptr) == false) {
-		git_buf_free(&alternates_path);
+		git_buf_dispose(&alternates_path);
 		return 0;
 	}
 
 	if (git_futils_readbuffer(&alternates_buf, alternates_path.ptr) < 0) {
-		git_buf_free(&alternates_path);
+		git_buf_dispose(&alternates_path);
 		return -1;
 	}
 
@@ -619,8 +619,8 @@ static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_
 			break;
 	}
 
-	git_buf_free(&alternates_path);
-	git_buf_free(&alternates_buf);
+	git_buf_dispose(&alternates_path);
+	git_buf_dispose(&alternates_buf);
 
 	return result;
 }
@@ -1181,7 +1181,7 @@ static int read_prefix_1(git_odb_object **out, git_odb *db,
 					git_oid_tostr_s(&found_full_oid));
 
 				error = git_odb__error_ambiguous(buf.ptr);
-				git_buf_free(&buf);
+				git_buf_dispose(&buf);
 				goto out;
 			}
 

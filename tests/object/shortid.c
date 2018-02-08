@@ -47,5 +47,5 @@ void test_object_shortid__select(void)
 	cl_assert_equal_s("dea509d0b", shorty.ptr);
 	git_object_free(obj);
 
-	git_buf_free(&shorty);
+	git_buf_dispose(&shorty);
 }

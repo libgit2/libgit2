@@ -171,7 +171,7 @@ void test_diff_patch__to_string(void)
 	cl_assert_equal_sz(31 + 16, git_patch_size(patch, 1, 1, 0));
 	cl_assert_equal_sz(strlen(expected), git_patch_size(patch, 1, 1, 1));
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	git_patch_free(patch);
 	git_diff_free(diff);
 	git_tree_free(another);
@@ -252,7 +252,7 @@ void test_diff_patch__config_options(void)
 	git_patch_free(patch);
 	git_diff_free(diff);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	git_tree_free(one);
 	git_config_free(cfg);
 }
@@ -440,8 +440,8 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	git_patch_free(patch);
 	git_diff_free(diff);
 
-	git_buf_free(&actual);
-	git_buf_free(&old_content);
+	git_buf_dispose(&actual);
+	git_buf_dispose(&old_content);
 	git_tree_free(head);
 }
 
@@ -476,7 +476,7 @@ static void check_single_patch_stats(
 		git_buf buf = GIT_BUF_INIT;
 		cl_git_pass(git_patch_to_buf(&buf, patch));
 		cl_assert_equal_s(expected, buf.ptr);
-		git_buf_free(&buf);
+		git_buf_dispose(&buf);
 
 		cl_assert_equal_sz(
 			strlen(expected), git_patch_size(patch, 1, 1, 1));
@@ -614,7 +614,7 @@ void test_diff_patch__line_counts_with_eofnl(void)
 	check_single_patch_stats(
 		g_repo, 1, 1, 1, 6, expected_sizes, expected);
 
-	git_buf_free(&content);
+	git_buf_dispose(&content);
 }
 
 void test_diff_patch__can_strip_bad_utf8(void)
@@ -700,5 +700,5 @@ void test_diff_patch__can_strip_bad_utf8(void)
 	cl_assert_equal_s(expected, buf.ptr);
 
 	git_patch_free(patch);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }

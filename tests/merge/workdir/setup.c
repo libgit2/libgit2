@@ -54,8 +54,8 @@ static bool test_file_contents(const char *filename, const char *expected)
 	cl_git_pass(git_futils_readbuffer(&file_buf, file_path_buf.ptr));
 	equals = (strcmp(file_buf.ptr, expected) == 0);
 
-	git_buf_free(&file_path_buf);
-	git_buf_free(&file_buf);
+	git_buf_dispose(&file_path_buf);
+	git_buf_dispose(&file_buf);
 	
 	return equals;
 }
@@ -68,7 +68,7 @@ static void write_file_contents(const char *filename, const char *output)
 		filename);
 	cl_git_rewritefile(file_path_buf.ptr, output);
 
-	git_buf_free(&file_path_buf);
+	git_buf_dispose(&file_path_buf);
 }
 
 /* git merge --no-ff octo1 */
@@ -495,10 +495,10 @@ static int create_remote_tracking_branch(const char *branch_name, const char *oi
 	cl_git_rewritefile(git_buf_cstr(&filename), git_buf_cstr(&data));
 
 done:
-	git_buf_free(&remotes_path);
-	git_buf_free(&origin_path);
-	git_buf_free(&filename);
-	git_buf_free(&data);
+	git_buf_dispose(&remotes_path);
+	git_buf_dispose(&origin_path);
+	git_buf_dispose(&filename);
+	git_buf_dispose(&data);
 
 	return error;
 }

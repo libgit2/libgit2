@@ -76,7 +76,7 @@ void test_worktree_merge__merge_setup(void)
 		cl_assert(git_path_exists(path.ptr));
 	}
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 	git_reference_free(ours_ref);
 	git_reference_free(theirs_ref);
 	git_annotated_commit_free(ours);
@@ -115,7 +115,7 @@ void test_worktree_merge__merge_conflict(void)
 	cl_git_pass(git_futils_readbuffer(&buf, path.ptr));
 	cl_assert_equal_s(buf.ptr, CONFLICT_BRANCH_FILE_TXT);
 
-	git_buf_free(&path);
-	git_buf_free(&buf);
+	git_buf_dispose(&path);
+	git_buf_dispose(&buf);
 }
 

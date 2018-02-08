@@ -1164,7 +1164,7 @@ int git_config_open_default(git_config **out)
 		error = git_config_add_file_ondisk(cfg, buf.ptr,
 			GIT_CONFIG_LEVEL_PROGRAMDATA, NULL, 0);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	if (error) {
 		git_config_free(cfg);
@@ -1478,8 +1478,8 @@ int git_config_rename_section(
 		config, git_buf_cstr(&pattern), rename_config_entries_cb, &data);
 
 cleanup:
-	git_buf_free(&pattern);
-	git_buf_free(&replace);
+	git_buf_dispose(&pattern);
+	git_buf_dispose(&replace);
 
 	return error;
 }

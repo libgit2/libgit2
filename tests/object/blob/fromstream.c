@@ -56,7 +56,7 @@ static void write_attributes(git_repository *repo)
 	cl_git_pass(git_futils_mkpath2file(git_buf_cstr(&buf), 0777));
 	cl_git_rewritefile(git_buf_cstr(&buf), GITATTR);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 static void assert_named_chunked_blob(const char *expected_sha, const char *fake_name)

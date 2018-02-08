@@ -152,7 +152,7 @@ static int push_glob(git_revwalk *walk, const char *glob, int hide)
 	if (error == GIT_ITEROVER)
 		error = 0;
 out:
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	return error;
 }
 

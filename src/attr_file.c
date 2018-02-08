@@ -178,7 +178,7 @@ int git_attr_file__load(
 
 cleanup:
 	git_blob_free(blob);
-	git_buf_free(&content);
+	git_buf_dispose(&content);
 
 	return error;
 }
@@ -348,7 +348,7 @@ int git_attr_file__load_standalone(git_attr_file **out, const char *path)
 
 	if (!(error = git_futils_readbuffer(&content, path))) {
 		error = git_attr_file__parse_buffer(NULL, file, content.ptr);
-		git_buf_free(&content);
+		git_buf_dispose(&content);
 	}
 
 	if (error < 0)
@@ -518,7 +518,7 @@ int git_attr_path__init(
 
 void git_attr_path__free(git_attr_path *info)
 {
-	git_buf_free(&info->full);
+	git_buf_dispose(&info->full);
 	info->path = NULL;
 	info->basename = NULL;
 }
@@ -875,8 +875,8 @@ void git_attr_session__free(git_attr_session *session)
 	if (!session)
 		return;
 
-	git_buf_free(&session->sysdir);
-	git_buf_free(&session->tmp);
+	git_buf_dispose(&session->sysdir);
+	git_buf_dispose(&session->tmp);
 
 	memset(session, 0, sizeof(git_attr_session));
 }

@@ -49,7 +49,7 @@ void test_core_mkdir__absolute(void)
 	cl_git_fail(git_futils_mkdir(path.ptr, 0755, 0));
 	cl_assert(!git_path_isdir(path.ptr));
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 void test_core_mkdir__basic(void)
@@ -256,7 +256,7 @@ void test_core_mkdir__keeps_parent_symlinks(void)
 	cl_assert(git_path_isdir("d2/other/dir"));
 	cl_assert(git_path_isdir("d0/other/dir"));
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 #endif
 }
 

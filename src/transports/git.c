@@ -87,7 +87,7 @@ static int send_command(git_proto_stream *s)
 		s->sent_command = 1;
 
 cleanup:
-	git_buf_free(&request);
+	git_buf_dispose(&request);
 	return error;
 }
 

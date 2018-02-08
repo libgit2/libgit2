@@ -718,7 +718,7 @@ void test_checkout_index__writes_conflict_file(void)
 		"=======\n"
 		"this file is changed in branch and master\n"
 		">>>>>>> theirs\n") == 0);
-	git_buf_free(&conflicting_buf);
+	git_buf_dispose(&conflicting_buf);
 
 	git_index_free(index);
 }
@@ -768,7 +768,7 @@ void test_checkout_index__conflicts_honor_coreautocrlf(void)
 		"=======\r\n"
 		"this file is changed in branch and master\r\n"
 		">>>>>>> theirs\r\n") == 0);
-	git_buf_free(&conflicting_buf);
+	git_buf_dispose(&conflicting_buf);
 
 	git_index_free(index);
 #endif

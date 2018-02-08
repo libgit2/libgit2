@@ -64,5 +64,5 @@ void test_notes_notesref__config_corenotesref(void)
 	cl_git_pass(git_note_default_ref(&default_ref, _repo));
 	cl_assert_equal_s(GIT_NOTES_DEFAULT_REF, default_ref.ptr);
 
-	git_buf_free(&default_ref);
+	git_buf_dispose(&default_ref);
 }

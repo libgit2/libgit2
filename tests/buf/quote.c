@@ -11,7 +11,7 @@ static void expect_quote_pass(const char *expected, const char *str)
 	cl_assert_equal_s(expected, git_buf_cstr(&buf));
 	cl_assert_equal_i(strlen(expected), git_buf_len(&buf));
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_buf_quote__quote_succeeds(void)
@@ -38,7 +38,7 @@ static void expect_unquote_pass(const char *expected, const char *quoted)
 	cl_assert_equal_s(expected, git_buf_cstr(&buf));
 	cl_assert_equal_i(strlen(expected), git_buf_len(&buf));
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 static void expect_unquote_fail(const char *quoted)
@@ -48,7 +48,7 @@ static void expect_unquote_fail(const char *quoted)
 	cl_git_pass(git_buf_puts(&buf, quoted));
 	cl_git_fail(git_buf_unquote(&buf));
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_buf_quote__unquote_succeeds(void)

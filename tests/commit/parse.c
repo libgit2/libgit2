@@ -464,7 +464,7 @@ cpxtDQQMGYFpXK/71stq\n\
 	cl_git_pass(git_commit_header_field(&buf, commit, "committer"));
 	cl_assert_equal_s("Vicent Marti <tanoku@gmail.com> 1273848544 +0200", buf.ptr);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	git_commit__free(commit);
 }
 
@@ -547,7 +547,7 @@ corrupt signature\n";
 	cl_assert_equal_s(oneline_data, signed_data.ptr);
 
 
-	git_buf_free(&signature);
-	git_buf_free(&signed_data);
+	git_buf_dispose(&signature);
+	git_buf_dispose(&signed_data);
 
 }

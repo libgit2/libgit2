@@ -41,7 +41,7 @@ void test_filter_crlf__to_worktree(void)
 	cl_assert_equal_s("Some text\r\nRight here\r\n", out.ptr);
 
 	git_filter_list_free(fl);
-	git_buf_free(&out);
+	git_buf_dispose(&out);
 }
 
 void test_filter_crlf__to_odb(void)
@@ -66,7 +66,7 @@ void test_filter_crlf__to_odb(void)
 	cl_assert_equal_s("Some text\nRight here\n", out.ptr);
 
 	git_filter_list_free(fl);
-	git_buf_free(&out);
+	git_buf_dispose(&out);
 }
 
 void test_filter_crlf__with_safecrlf(void)
@@ -107,7 +107,7 @@ void test_filter_crlf__with_safecrlf(void)
 	cl_assert_equal_s(in.ptr, out.ptr);
 
 	git_filter_list_free(fl);
-	git_buf_free(&out);
+	git_buf_dispose(&out);
 }
 
 void test_filter_crlf__with_safecrlf_and_unsafe_allowed(void)
@@ -150,7 +150,7 @@ void test_filter_crlf__with_safecrlf_and_unsafe_allowed(void)
 	cl_assert_equal_s("Normal\nLF\nonly\nline-endings.\n", out.ptr);
 
 	git_filter_list_free(fl);
-	git_buf_free(&out);
+	git_buf_dispose(&out);
 }
 
 void test_filter_crlf__no_safecrlf(void)
@@ -189,7 +189,7 @@ void test_filter_crlf__no_safecrlf(void)
 	cl_assert_equal_s("Normal\nLF\nonly\nline-endings.\n", out.ptr);
 
 	git_filter_list_free(fl);
-	git_buf_free(&out);
+	git_buf_dispose(&out);
 }
 
 void test_filter_crlf__safecrlf_warn(void)
@@ -231,5 +231,5 @@ void test_filter_crlf__safecrlf_warn(void)
 	cl_assert_equal_s(in.ptr, out.ptr);
 
 	git_filter_list_free(fl);
-	git_buf_free(&out);
+	git_buf_dispose(&out);
 }

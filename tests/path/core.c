@@ -11,7 +11,7 @@ static void test_make_relative(
 	git_buf_puts(&buf, path);
 	cl_assert_equal_i(expected_status, git_path_make_relative(&buf, parent));
 	cl_assert_equal_s(expected_path, buf.ptr);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_path_core__make_relative(void)
@@ -319,7 +319,7 @@ static void test_join_unrooted(
 	cl_assert_equal_s(expected_result, result.ptr);
 	cl_assert_equal_i(expected_rootlen, root_at);
 
-	git_buf_free(&result);
+	git_buf_dispose(&result);
 }
 
 void test_path_core__join_unrooted(void)
@@ -350,5 +350,5 @@ void test_path_core__join_unrooted(void)
 	/* Trailing slash in the base is ignored */
 	test_join_unrooted("c:/foo/bar/foobar", 6, "c:/foo/bar/foobar", "c:/foo/");
 
-	git_buf_free(&out);
+	git_buf_dispose(&out);
 }

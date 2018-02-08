@@ -701,7 +701,7 @@ static void tree_iterator_frame_pop(tree_iterator *iter)
 
 	do {
 		buf = git_array_pop(frame->similar_paths);
-		git_buf_free(buf);
+		git_buf_dispose(buf);
 	} while (buf != NULL);
 
 	git_array_clear(frame->similar_paths);
@@ -711,7 +711,7 @@ static void tree_iterator_frame_pop(tree_iterator *iter)
 
 	git_vector_free(&frame->similar_trees);
 
-	git_buf_free(&frame->path);
+	git_buf_dispose(&frame->path);
 }
 
 static int tree_iterator_current(
@@ -929,7 +929,7 @@ static void tree_iterator_free(git_iterator *i)
 	tree_iterator_clear(iter);
 
 	git_tree_free(iter->root);
-	git_buf_free(&iter->entry_path);
+	git_buf_dispose(&iter->entry_path);
 }
 
 int git_iterator_for_tree(
@@ -1435,7 +1435,7 @@ done:
 	if (error < 0)
 		git_array_pop(iter->frames);
 
-	git_buf_free(&root);
+	git_buf_dispose(&root);
 	git_path_diriter_free(&diriter);
 	return error;
 }
@@ -1523,7 +1523,7 @@ static int filesystem_iterator_is_dir(
 	*is_dir = S_ISDIR(st.st_mode);
 
 done:
-	git_buf_free(&fullpath);
+	git_buf_dispose(&fullpath);
 	return error;
 }
 
@@ -1804,7 +1804,7 @@ static void filesystem_iterator_clear(filesystem_iterator *iter)
 	git_array_clear(iter->frames);
 	git_ignore__free(&iter->ignores);
 
-	git_buf_free(&iter->tmp_buf);
+	git_buf_dispose(&iter->tmp_buf);
 
 	iterator_clear(&iter->base);
 }
@@ -1838,7 +1838,7 @@ static void filesystem_iterator_free(git_iterator *i)
 {
 	filesystem_iterator *iter = (filesystem_iterator *)i;
 	git__free(iter->root);
-	git_buf_free(&iter->current_path);
+	git_buf_dispose(&iter->current_path);
 	git_tree_free(iter->tree);
 	if (iter->index)
 		git_index_snapshot_release(&iter->index_snapshot, iter->index);
@@ -2176,7 +2176,7 @@ static void index_iterator_free(git_iterator *i)
 	index_iterator *iter = (index_iterator *)i;
 
 	git_index_snapshot_release(&iter->entries, iter->base.index);
-	git_buf_free(&iter->tree_buf);
+	git_buf_dispose(&iter->tree_buf);
 }
 
 int git_iterator_for_index(

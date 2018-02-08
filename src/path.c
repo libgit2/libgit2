@@ -207,7 +207,7 @@ char *git_path_dirname(const char *path)
 
 	git_path_dirname_r(&buf, path);
 	dirname = git_buf_detach(&buf);
-	git_buf_free(&buf); /* avoid memleak if error occurs */
+	git_buf_dispose(&buf); /* avoid memleak if error occurs */
 
 	return dirname;
 }
@@ -219,7 +219,7 @@ char *git_path_basename(const char *path)
 
 	git_path_basename_r(&buf, path);
 	basename = git_buf_detach(&buf);
-	git_buf_free(&buf); /* avoid memleak if error occurs */
+	git_buf_dispose(&buf); /* avoid memleak if error occurs */
 
 	return basename;
 }
@@ -642,7 +642,7 @@ bool git_path_is_empty_dir(const char *path)
 	else
 		error = git_path_direach(&dir, 0, path_found_entry, NULL);
 
-	git_buf_free(&dir);
+	git_buf_dispose(&dir);
 
 	return !error;
 }
@@ -956,7 +956,7 @@ void git_path_iconv_clear(git_path_iconv_t *ic)
 	if (ic) {
 		if (ic->map != (iconv_t)-1)
 			iconv_close(ic->map);
-		git_buf_free(&ic->buf);
+		git_buf_dispose(&ic->buf);
 	}
 }
 
@@ -1060,7 +1060,7 @@ bool git_path_does_fs_decompose_unicode(const char *root)
 	(void)p_unlink(path.ptr);
 
 done:
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 	return found_decomposed;
 }
 
@@ -1308,7 +1308,7 @@ void git_path_diriter_free(git_path_diriter *diriter)
 	if (diriter == NULL)
 		return;
 
-	git_buf_free(&diriter->path_utf8);
+	git_buf_dispose(&diriter->path_utf8);
 
 	if (diriter->handle != INVALID_HANDLE_VALUE) {
 		FindClose(diriter->handle);
@@ -1338,7 +1338,7 @@ int git_path_diriter_init(
 	}
 
 	if ((diriter->dir = opendir(diriter->path.ptr)) == NULL) {
-		git_buf_free(&diriter->path);
+		git_buf_dispose(&diriter->path);
 
 		giterr_set(GITERR_OS, "failed to open directory '%s'", path);
 		return -1;
@@ -1448,7 +1448,7 @@ void git_path_diriter_free(git_path_diriter *diriter)
 	git_path_iconv_clear(&diriter->ic);
 #endif
 
-	git_buf_free(&diriter->path);
+	git_buf_dispose(&diriter->path);
 }
 
 #endif

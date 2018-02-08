@@ -37,8 +37,8 @@ static void ensure_repository_discover(const char *start_path,
 
 	cl_assert_equal_s(found_path.ptr, resolved.ptr);
 
-	git_buf_free(&resolved);
-	git_buf_free(&found_path);
+	git_buf_dispose(&resolved);
+	git_buf_dispose(&found_path);
 }
 
 static void write_file(const char *path, const char *content)
@@ -71,7 +71,7 @@ static void append_ceiling_dir(git_buf *ceiling_dirs, const char *path)
 
 	git_buf_puts(ceiling_dirs, pretty_path.ptr);
 
-	git_buf_free(&pretty_path);
+	git_buf_dispose(&pretty_path);
 	cl_assert(git_buf_oom(ceiling_dirs) == 0);
 }
 
@@ -114,8 +114,8 @@ void test_repo_discover__initialize(void)
 
 void test_repo_discover__cleanup(void)
 {
-	git_buf_free(&discovered);
-	git_buf_free(&ceiling_dirs);
+	git_buf_dispose(&discovered);
+	git_buf_dispose(&ceiling_dirs);
 	cl_git_pass(git_futils_rmdir_r(TEMP_REPO_FOLDER, NULL, GIT_RMDIR_REMOVE_FILES));
 }
 

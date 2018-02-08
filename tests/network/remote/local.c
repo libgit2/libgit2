@@ -25,7 +25,7 @@ void test_network_remote_local__initialize(void)
 
 void test_network_remote_local__cleanup(void)
 {
-	git_buf_free(&file_path_buf);
+	git_buf_dispose(&file_path_buf);
 
 	git_remote_free(remote);
 	remote = NULL;

@@ -300,7 +300,7 @@ static int config_is_modified(int *modified, struct config_file *file)
 	}
 
 out:
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	return error;
 }
@@ -688,7 +688,7 @@ static int config_unlock(git_config_backend *_cfg, int success)
 	}
 
 	git_filebuf_cleanup(&cfg->locked_buf);
-	git_buf_free(&cfg->locked_content);
+	git_buf_dispose(&cfg->locked_content);
 	cfg->locked = false;
 
 	return error;
@@ -877,7 +877,7 @@ static char *escape_value(const char *ptr)
 	}
 
 	if (git_buf_oom(&buf)) {
-		git_buf_free(&buf);
+		git_buf_dispose(&buf);
 		return NULL;
 	}
 
@@ -956,7 +956,7 @@ static int do_match_gitdir(
 	*matches = (error == 0);
 
 out:
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 	return error;
 }
 
@@ -1111,7 +1111,7 @@ static int config_read(
 	error = git_config_parse(&reader, NULL, read_on_variable, NULL, NULL, &parse_data);
 
 out:
-	git_buf_free(&contents);
+	git_buf_dispose(&contents);
 	return error;
 }
 
@@ -1140,7 +1140,7 @@ static int write_section(git_buf *fbuf, const char *key)
 		return -1;
 
 	result = git_buf_put(fbuf, git_buf_cstr(&buf), buf.size);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	return result;
 }
@@ -1359,7 +1359,7 @@ static int config_write(diskfile_backend *cfg, const char *orig_key, const char 
 		/* Lock the file */
 		if ((result = git_filebuf_open(
 			     &file, cfg->file.path, GIT_FILEBUF_HASH_CONTENTS, GIT_CONFIG_FILE_MODE)) < 0) {
-			git_buf_free(&contents);
+			git_buf_dispose(&contents);
 			return result;
 		}
 
@@ -1404,7 +1404,7 @@ static int config_write(diskfile_backend *cfg, const char *orig_key, const char 
 		&write_data);
 	git__free(section);
 	git__free(orig_section);
-	git_buf_free(&write_data.buffered_comment);
+	git_buf_dispose(&write_data.buffered_comment);
 
 	if (result < 0) {
 		git_filebuf_cleanup(&file);
@@ -1414,7 +1414,7 @@ static int config_write(diskfile_backend *cfg, const char *orig_key, const char 
 	if (cfg->locked) {
 		size_t len = buf.asize;
 		/* Update our copy with the modified contents */
-		git_buf_free(&cfg->locked_content);
+		git_buf_dispose(&cfg->locked_content);
 		git_buf_attach(&cfg->locked_content, git_buf_detach(&buf), len);
 	} else {
 		git_filebuf_write(&file, git_buf_cstr(&buf), git_buf_len(&buf));
@@ -1422,8 +1422,8 @@ static int config_write(diskfile_backend *cfg, const char *orig_key, const char 
 	}
 
 done:
-	git_buf_free(&buf);
-	git_buf_free(&contents);
+	git_buf_dispose(&buf);
+	git_buf_dispose(&contents);
 	git_parse_ctx_clear(&reader.ctx);
 	return result;
 }

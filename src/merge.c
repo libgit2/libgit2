@@ -599,8 +599,8 @@ int git_repository_mergehead_foreach(
 	}
 
 cleanup:
-	git_buf_free(&merge_head_path);
-	git_buf_free(&merge_head_file);
+	git_buf_dispose(&merge_head_path);
+	git_buf_dispose(&merge_head_file);
 
 	return error;
 }
@@ -875,7 +875,7 @@ static int merge_conflict_invoke_driver(
 	*out = result;
 
 done:
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	git_odb_free(odb);
 
 	return error;
@@ -2444,7 +2444,7 @@ cleanup:
 	if (error < 0)
 		git_filebuf_cleanup(&file);
 
-	git_buf_free(&file_path);
+	git_buf_dispose(&file_path);
 
 	return error;
 }
@@ -2470,7 +2470,7 @@ cleanup:
 	if (error < 0)
 		git_filebuf_cleanup(&file);
 
-	git_buf_free(&file_path);
+	git_buf_dispose(&file_path);
 
 	return error;
 }
@@ -2770,7 +2770,7 @@ cleanup:
 	if (error < 0)
 		git_filebuf_cleanup(&file);
 
-	git_buf_free(&file_path);
+	git_buf_dispose(&file_path);
 
 	git_vector_free(&matching);
 	git__free(entries);
@@ -3090,7 +3090,7 @@ cleanup:
 	if (error < 0)
 		git_filebuf_cleanup(&file);
 
-	git_buf_free(&file_path);
+	git_buf_dispose(&file_path);
 
 	return error;
 }

@@ -26,7 +26,7 @@ void test_refs_branches_remote__can_get_remote_for_branch(void)
 	cl_git_pass(git_branch_remote_name(&remotename, g_repo, remote_tracking_branch_name));
 
 	cl_assert_equal_s("test", remotename.ptr);
-	git_buf_free(&remotename);
+	git_buf_dispose(&remotename);
 }
 
 void test_refs_branches_remote__no_matching_remote_returns_error(void)

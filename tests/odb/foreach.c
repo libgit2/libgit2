@@ -114,7 +114,7 @@ void test_odb_foreach__files_in_objects_dir(void)
 
 	cl_git_pass(git_buf_printf(&buf, "%s/objects/somefile", git_repository_path(repo)));
 	cl_git_mkfile(buf.ptr, "");
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	cl_git_pass(git_repository_odb(&odb, repo));
 	cl_git_pass(git_odb_foreach(odb, foreach_cb, &nobj));

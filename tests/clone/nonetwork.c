@@ -154,7 +154,7 @@ void test_clone_nonetwork__can_prevent_the_checkout_of_a_standard_repo(void)
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "master.txt"));
 	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&path)));
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 void test_clone_nonetwork__can_checkout_given_branch(void)
@@ -309,7 +309,7 @@ static void assert_correct_reflog(const char *name)
 
 	git_reflog_free(log);
 
-	git_buf_free(&expected_message);
+	git_buf_dispose(&expected_message);
 }
 
 void test_clone_nonetwork__clone_updates_reflog_properly(void)

@@ -18,8 +18,8 @@ static void expect_decode_pass(const char *expected, const char *encoded)
 	cl_assert_equal_s(expected, git_buf_cstr(&out));
 	cl_assert_equal_i(strlen(expected), git_buf_len(&out));
 
-	git_buf_free(&in);
-	git_buf_free(&out);
+	git_buf_dispose(&in);
+	git_buf_dispose(&out);
 }
 
 void test_buf_percent__decode_succeeds(void)

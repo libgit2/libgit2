@@ -147,7 +147,7 @@ static void do_junction(const char *old, const char *new)
 	CloseHandle(handle);
 	LocalFree(reparse_buf);
 
-	git_buf_free(&unparsed_buf);
+	git_buf_dispose(&unparsed_buf);
 }
 
 static void do_custom_reparse(const char *path)
@@ -322,7 +322,7 @@ void test_core_link__lstat_symlink(void)
 	cl_assert(S_ISLNK(st.st_mode));
 	cl_assert_equal_i(git_buf_len(&target_path), st.st_size);
 
-	git_buf_free(&target_path);
+	git_buf_dispose(&target_path);
 }
 
 void test_core_link__lstat_symlink_directory(void)
@@ -345,7 +345,7 @@ void test_core_link__lstat_symlink_directory(void)
 	cl_assert(S_ISLNK(st.st_mode));
 	cl_assert_equal_i(git_buf_len(&target_path), st.st_size);
 
-	git_buf_free(&target_path);
+	git_buf_dispose(&target_path);
 }
 
 void test_core_link__lstat_dangling_symlink(void)
@@ -397,7 +397,7 @@ void test_core_link__stat_junction(void)
 	cl_must_pass(p_stat("stat_junction", &st));
 	cl_assert(S_ISDIR(st.st_mode));
 
-	git_buf_free(&target_path);
+	git_buf_dispose(&target_path);
 #endif
 }
 
@@ -417,7 +417,7 @@ void test_core_link__stat_dangling_junction(void)
 	cl_must_fail(p_stat("stat_nonexistent_junctarget", &st));
 	cl_must_fail(p_stat("stat_dangling_junction", &st));
 
-	git_buf_free(&target_path);
+	git_buf_dispose(&target_path);
 #endif
 }
 
@@ -438,7 +438,7 @@ void test_core_link__lstat_junction(void)
 	cl_must_pass(p_lstat("lstat_junction", &st));
 	cl_assert(S_ISLNK(st.st_mode));
 
-	git_buf_free(&target_path);
+	git_buf_dispose(&target_path);
 #endif
 }
 
@@ -461,7 +461,7 @@ void test_core_link__lstat_dangling_junction(void)
 	cl_assert(S_ISLNK(st.st_mode));
 	cl_assert_equal_i(git_buf_len(&target_path), st.st_size);
 
-	git_buf_free(&target_path);
+	git_buf_dispose(&target_path);
 #endif
 }
 
@@ -573,7 +573,7 @@ void test_core_link__readlink_symlink(void)
 
 	cl_assert_equal_s(git_buf_cstr(&target_path), buf);
 
-	git_buf_free(&target_path);
+	git_buf_dispose(&target_path);
 }
 
 void test_core_link__readlink_dangling(void)
@@ -596,7 +596,7 @@ void test_core_link__readlink_dangling(void)
 
 	cl_assert_equal_s(git_buf_cstr(&target_path), buf);
 
-	git_buf_free(&target_path);
+	git_buf_dispose(&target_path);
 }
 
 void test_core_link__readlink_multiple(void)
@@ -625,8 +625,8 @@ void test_core_link__readlink_multiple(void)
 
 	cl_assert_equal_s(git_buf_cstr(&path2), buf);
 
-	git_buf_free(&path1);
-	git_buf_free(&path2);
-	git_buf_free(&path3);
-	git_buf_free(&target_path);
+	git_buf_dispose(&path1);
+	git_buf_dispose(&path2);
+	git_buf_dispose(&path3);
+	git_buf_dispose(&target_path);
 }

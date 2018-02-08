@@ -13,7 +13,7 @@ void test_refs_branches_upstreamname__initialize(void)
 
 void test_refs_branches_upstreamname__cleanup(void)
 {
-	git_buf_free(&upstream_name);
+	git_buf_dispose(&upstream_name);
 
 	git_repository_free(repo);
 	repo = NULL;

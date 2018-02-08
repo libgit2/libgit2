@@ -29,7 +29,7 @@ void test_checkout_crlf__cleanup(void)
 
 	if (expected_fixture.size) {
 		cl_fixture_cleanup(expected_fixture.ptr);
-		git_buf_free(&expected_fixture);
+		git_buf_dispose(&expected_fixture);
 	}
 }
 
@@ -84,13 +84,13 @@ done:
 			git_path_basename(actual_path->ptr), systype, cd->autocrlf, cd->attrs);
 		clar__fail(__FILE__, __LINE__,
 			"checked out contents did not match expected", details.ptr, 0);
-		git_buf_free(&details);
+		git_buf_dispose(&details);
 	}
 
 	git__free(basename);
-	git_buf_free(&expected_contents);
-	git_buf_free(&actual_contents);
-	git_buf_free(&expected_path);
+	git_buf_dispose(&expected_contents);
+	git_buf_dispose(&actual_contents);
+	git_buf_dispose(&expected_path);
 
 	return 0;
 }
@@ -139,13 +139,13 @@ static void test_checkout(const char *autocrlf, const char *attrs)
 	cl_git_pass(git_path_direach(&reponame, 0, compare_file, &compare_data));
 
 	cl_fixture_cleanup(expected_fixture.ptr);
-	git_buf_free(&expected_fixture);
+	git_buf_dispose(&expected_fixture);
 
-	git_buf_free(&attrbuf);
-	git_buf_free(&expected_fixture);
-	git_buf_free(&expected_dirname);
-	git_buf_free(&sandboxname);
-	git_buf_free(&reponame);
+	git_buf_dispose(&attrbuf);
+	git_buf_dispose(&expected_fixture);
+	git_buf_dispose(&expected_dirname);
+	git_buf_dispose(&sandboxname);
+	git_buf_dispose(&reponame);
 }
 
 static void empty_workdir(const char *name)

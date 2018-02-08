@@ -176,7 +176,7 @@ cleanup:
 	git_object_free(commit);
 	git_index_free(index);
 	git_tree_free(tree);
-	git_buf_free(&log_message);
+	git_buf_dispose(&log_message);
 
 	return error;
 }

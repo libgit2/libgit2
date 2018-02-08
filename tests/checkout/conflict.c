@@ -109,7 +109,7 @@ static void create_index(struct checkout_index_entry *entries, size_t entries_le
 		cl_git_pass(git_index_add(g_index, &entry));
 	}
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 static void create_index_names(struct checkout_name_entry *entries, size_t entries_len)
@@ -146,8 +146,8 @@ static void ensure_workdir_contents(const char *path, const char *contents)
 	cl_git_pass(git_futils_readbuffer(&data_buf, git_buf_cstr(&fullpath)));
 	cl_assert(strcmp(git_buf_cstr(&data_buf), contents) == 0);
 
-	git_buf_free(&fullpath);
-	git_buf_free(&data_buf);
+	git_buf_dispose(&fullpath);
+	git_buf_dispose(&data_buf);
 }
 
 static void ensure_workdir_oid(const char *path, const char *oid_str)
@@ -174,7 +174,7 @@ static void ensure_workdir_mode(const char *path, int mode)
 	cl_git_pass(p_stat(git_buf_cstr(&fullpath), &st));
 	cl_assert_equal_i((mode & S_IRWXU), (st.st_mode & S_IRWXU));
 
-	git_buf_free(&fullpath);
+	git_buf_dispose(&fullpath);
 #endif
 }
 
@@ -204,7 +204,7 @@ static void ensure_workdir_link(const char *path, const char *target)
 	actual[len] = '\0';
 	cl_assert(strcmp(actual, target) == 0);
 
-	git_buf_free(&fullpath);
+	git_buf_dispose(&fullpath);
 #endif
 }
 

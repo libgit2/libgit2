@@ -228,8 +228,8 @@ void test_cherrypick_workdir__conflicts(void)
 
 	git_commit_free(commit);
 	git_commit_free(head);
-	git_buf_free(&mergemsg_buf);
-	git_buf_free(&conflicting_buf);
+	git_buf_dispose(&mergemsg_buf);
+	git_buf_dispose(&conflicting_buf);
 }
 
 /* git reset --hard bafbf6912c09505ac60575cd43d3f2aba3bd84d8
@@ -358,7 +358,7 @@ void test_cherrypick_workdir__both_renamed(void)
 		"\tfile3.txt.renamed\n" \
 		"\tfile3.txt.renamed_on_branch\n") == 0);
 
-	git_buf_free(&mergemsg_buf);
+	git_buf_dispose(&mergemsg_buf);
 	git_commit_free(commit);
 	git_commit_free(head);
 }

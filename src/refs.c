@@ -282,7 +282,7 @@ int git_reference__read_head(
 
 out:
 	git__free(name);
-	git_buf_free(&reference);
+	git_buf_dispose(&reference);
 
 	return error;
 }
@@ -346,8 +346,8 @@ cleanup:
 	if (error == GIT_ENOTFOUND)
 		giterr_set(GITERR_REFERENCE, "no reference found for shorthand '%s'", refname);
 
-	git_buf_free(&name);
-	git_buf_free(&refnamebuf);
+	git_buf_dispose(&name);
+	git_buf_dispose(&refnamebuf);
 	return error;
 }
 
@@ -1076,7 +1076,7 @@ cleanup:
 			"the given reference name '%s' is not valid", name);
 
 	if (error && normalize)
-		git_buf_free(buf);
+		git_buf_dispose(buf);
 
 #ifdef GIT_USE_ICONV
 	git_path_iconv_clear(&ic);
@@ -1110,7 +1110,7 @@ int git_reference_normalize_name(
 	error = 0;
 
 cleanup:
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	return error;
 }
 
@@ -1262,7 +1262,7 @@ int git_reference__update_for_commit(
 
 done:
 	git_reference_free(ref_new);
-	git_buf_free(&reflog_msg);
+	git_buf_dispose(&reflog_msg);
 	git_commit_free(commit);
 	return error;
 }

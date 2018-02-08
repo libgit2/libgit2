@@ -103,7 +103,7 @@ void test_object_blob_filter__stats(void)
 		git_blob_free(blob);
 	}
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_object_blob_filter__to_odb(void)
@@ -139,12 +139,12 @@ void test_object_blob_filter__to_odb(void)
 		cl_assert_equal_sz(g_crlf_filtered[i].size, zeroed.size);
 		cl_assert_equal_i(
 			0, memcmp(zeroed.ptr, g_crlf_filtered[i].ptr, zeroed.size));
-		git_buf_free(&zeroed);
+		git_buf_dispose(&zeroed);
 
 		git_blob_free(blob);
 	}
 
 	git_filter_list_free(fl);
-	git_buf_free(&out);
+	git_buf_dispose(&out);
 	git_config_free(cfg);
 }

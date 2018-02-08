@@ -63,8 +63,8 @@ static int apply_gitbuf(
 	}
 
 	git__free(filename);
-	git_buf_free(&result);
-	git_buf_free(&patchbuf);
+	git_buf_dispose(&result);
+	git_buf_dispose(&patchbuf);
 	git_patch_free(patch);
 
 	return error;

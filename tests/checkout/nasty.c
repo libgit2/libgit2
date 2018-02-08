@@ -42,7 +42,7 @@ static void test_checkout_passes(const char *refname, const char *filename)
 	cl_assert(!git_path_exists(path.ptr));
 
 	git_commit_free(commit);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 static void test_checkout_fails(const char *refname, const char *filename)
@@ -63,7 +63,7 @@ static void test_checkout_fails(const char *refname, const char *filename)
 	cl_assert(!git_path_exists(path.ptr));
 
 	git_commit_free(commit);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 /* A tree that contains ".git" as a tree, with a blob inside

@@ -73,7 +73,7 @@ void test_reset_mixed__reflog_is_correct(void)
 	cl_git_pass(git_reset(repo, target, GIT_RESET_MIXED, NULL));
 	reflog_check(repo, "HEAD", 10, NULL, git_buf_cstr(&buf));
 	reflog_check(repo, "refs/heads/master", 10, NULL, git_buf_cstr(&buf));
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	/* Moved branch, expect revspec in message */
 	exp_msg = "reset: moving to HEAD~^{commit}";
