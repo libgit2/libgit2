@@ -495,6 +495,7 @@ int git_config_parse(
 			break;
 
 		case '\n': /* comment or whitespace-only */
+		case '\r':
 		case ' ':
 		case '\t':
 		case ';':
