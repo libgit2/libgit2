@@ -217,7 +217,7 @@ static int skip_bom(git_parse_ctx *parser)
 {
 	git_buf buf = GIT_BUF_INIT_CONST(parser->content, parser->content_len);
 	git_bom_t bom;
-	int bom_offset = git_buf_text_detect_bom(&bom, &buf, parser->content_len);
+	int bom_offset = git_buf_text_detect_bom(&bom, &buf, 0);
 
 	if (bom == GIT_BOM_UTF8)
 		git_parse_advance_chars(parser, bom_offset);

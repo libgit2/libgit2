@@ -733,3 +733,18 @@ void test_config_read__trailing_crlf(void)
 	git_config_free(cfg);
 	git_buf_free(&buf);
 }
+
+void test_config_read__bom(void)
+{
+	git_buf buf = GIT_BUF_INIT;
+	git_config *cfg;
+
+	cl_set_cleanup(&clean_test_config, NULL);
+	cl_git_mkfile("./testconfig", "\xEF\xBB\xBF[some]\n var = value\n");
+	cl_git_pass(git_config_open_ondisk(&cfg, "./testconfig"));
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "some.var"));
+	cl_assert_equal_s(buf.ptr, "value");
+
+	git_config_free(cfg);
+	git_buf_free(&buf);
+}
