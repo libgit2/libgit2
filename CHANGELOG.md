@@ -59,7 +59,16 @@ v0.26 + 1
 * When using SSH-based transports, we now repeatedly ask for the passphrase to
   decrypt the private key in case a wrong passphrase is being provided.
 
+* When generating conflict markers, they will now use the same line endings as
+  the rest of the file.
+
 ### API additions
+
+* The `git_merge_file_options` structure now contains a new setting,
+  `marker_size`.  This allows users to set the size of markers that
+  delineate the sides of merged files in the output conflict file.
+  By default this is 7 (`GIT_MERGE_CONFLICT_MARKER_SIZE`), which
+  produces output markers like `<<<<<<<` and `>>>>>>>`.
 
 * `git_remote_create_detached()` creates a remote that is not associated
   to any repository (and does not apply configuration like 'insteadof' rules).
@@ -80,12 +89,6 @@ v0.26 + 1
 
 ### Breaking API changes
 
-* The `git_merge_file_options` structure now contains a new setting,
-  `marker_size`.  This allows users to set the size of markers that
-  delineate the sides of merged files in the output conflict file.
-  By default this is 7 (`GIT_MERGE_CONFLICT_MARKER_SIZE`), which
-  produces output markers like `<<<<<<<` and `>>>>>>>`.
-
 * Signatures now distinguish between +0000 and -0000 UTC offsets.
 
 * The certificate check callback in the WinHTTP transport will now receive the
@@ -94,6 +97,12 @@ v0.26 + 1
 * We are now reading symlinked directories under .git/refs.
 
 * We now refuse creating branches named "HEAD".
+
+* We now refuse reading and writing all-zero object IDs into the
+  object database.
+
+* We now read the effective user's configuration file instead of the real user's
+  configuration in case libgit2 runs as part of a setuid binary.
 
 v0.26
 -----
