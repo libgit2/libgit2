@@ -118,15 +118,20 @@ int git_config_file_normalize_section(char *start, char *end)
 }
 
 /* Add or append the new config option */
-static int append_entry(git_strmap *values, cvar_t *var)
+static int append_entry(git_strmap *values, git_config_entry *entry, bool included)
 {
 	git_strmap_iter pos;
-	cvar_t *existing;
+	cvar_t *existing, *var;
 	int error = 0;
 
-	pos = git_strmap_lookup_index(values, var->entry->name);
+	var = git__calloc(1, sizeof(cvar_t));
+	GITERR_CHECK_ALLOC(var);
+	var->entry = entry;
+	var->included = included;
+
+	pos = git_strmap_lookup_index(values, entry->name);
 	if (!git_strmap_valid_index(values, pos)) {
-		git_strmap_insert(values, var->entry->name, var, &error);
+		git_strmap_insert(values, entry->name, var, &error);
 	} else {
 		existing = git_strmap_value_at(values, pos);
 		while (existing->next != NULL) {
@@ -1028,7 +1033,7 @@ static int read_on_variable(
 {
 	struct parse_data *parse_data = (struct parse_data *)data;
 	git_buf buf = GIT_BUF_INIT;
-	cvar_t *var;
+	git_config_entry *entry;
 	int result = 0;
 
 	GIT_UNUSED(line);
@@ -1043,28 +1048,24 @@ static int read_on_variable(
 		return -1;
 	}
 
-	var = git__calloc(1, sizeof(cvar_t));
-	GITERR_CHECK_ALLOC(var);
-	var->entry = git__calloc(1, sizeof(git_config_entry));
-	GITERR_CHECK_ALLOC(var->entry);
+	entry = git__calloc(1, sizeof(git_config_entry));
+	GITERR_CHECK_ALLOC(entry);
+	entry->name = git_buf_detach(&buf);
+	entry->value = var_value;
+	entry->level = parse_data->level;
 
-	var->entry->name = git_buf_detach(&buf);
-	var->entry->value = var_value;
-	var->entry->level = parse_data->level;
-	var->included = !!parse_data->depth;
-
-	if ((result = append_entry(parse_data->values, var)) < 0)
+	if ((result = append_entry(parse_data->values, entry, !!parse_data->depth)) < 0)
 		return result;
 
 	result = 0;
 
 	/* Add or append the new config option */
-	if (!git__strcmp(var->entry->name, "include.path"))
-		result = parse_include(reader, parse_data, var->entry->value);
-	else if (!git__prefixcmp(var->entry->name, "includeif.") &&
-	         !git__suffixcmp(var->entry->name, ".path"))
+	if (!git__strcmp(entry->name, "include.path"))
+		result = parse_include(reader, parse_data, entry->value);
+	else if (!git__prefixcmp(entry->name, "includeif.") &&
+	         !git__suffixcmp(entry->name, ".path"))
 		result = parse_conditional_include(reader, parse_data,
-						   var->entry->name, var->entry->value);
+						   entry->name, entry->value);
 
 
 	return result;
