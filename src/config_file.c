@@ -82,15 +82,20 @@ static int config_error_readonly(void)
 	return -1;
 }
 
-static void cvar_free(config_entry_list *var)
+static void config_entry_list_free(config_entry_list *list)
 {
-	if (var == NULL)
-		return;
+	config_entry_list *next;
 
-	git__free((char*)var->entry->name);
-	git__free((char *)var->entry->value);
-	git__free(var->entry);
-	git__free(var);
+	while (list != NULL) {
+		next = list->next;
+
+		git__free((char*) list->entry->name);
+		git__free((char *) list->entry->value);
+		git__free(list->entry);
+		git__free(list);
+
+		list = next;
+	};
 }
 
 int git_config_file_normalize_section(char *start, char *end)
@@ -144,32 +149,18 @@ static int append_entry(git_strmap *values, git_config_entry *entry)
 	return error;
 }
 
-static void free_vars(git_strmap *values)
-{
-	config_entry_list *var = NULL;
-
-	if (values == NULL)
-		return;
-
-	git_strmap_foreach_value(values, var,
-		while (var != NULL) {
-			config_entry_list *next = var->next;
-			cvar_free(var);
-			var = next;
-		});
-
-	git_strmap_free(values);
-}
-
 static void refcounted_strmap_free(refcounted_strmap *map)
 {
+	config_entry_list *list = NULL;
+
 	if (!map)
 		return;
 
 	if (git_atomic_dec(&map->refcount) != 0)
 		return;
 
-	free_vars(map->values);
+	git_strmap_foreach_value(map->values, list, config_entry_list_free(list));
+	git_strmap_free(map->values);
 	git__free(map);
 }
 
