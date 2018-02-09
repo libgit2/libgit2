@@ -40,6 +40,7 @@ typedef struct git_config_file_iter {
 typedef struct {
 	git_atomic refcount;
 	git_strmap *map;
+	config_entry_list *list;
 } diskfile_entries;
 
 typedef struct {
@@ -129,6 +130,19 @@ int git_config_file_normalize_section(char *start, char *end)
 	return 0;
 }
 
+static void config_entry_list_append(config_entry_list **list, config_entry_list *entry)
+{
+	config_entry_list *head = *list;
+
+	if (head) {
+		while (head->next != NULL)
+			head = head->next;
+		head->next = entry;
+	} else {
+		*list = entry;
+	}
+}
+
 /* Add or append the new config option */
 static int diskfile_entries_append(diskfile_entries *entries, git_config_entry *entry)
 {
@@ -143,23 +157,25 @@ static int diskfile_entries_append(diskfile_entries *entries, git_config_entry *
 	pos = git_strmap_lookup_index(entries->map, entry->name);
 	if (!git_strmap_valid_index(entries->map, pos)) {
 		git_strmap_insert(entries->map, entry->name, var, &error);
+
+		if (error > 0)
+			error = 0;
 	} else {
 		existing = git_strmap_value_at(entries->map, pos);
-		while (existing->next != NULL) {
-			existing = existing->next;
-		}
-		existing->next = var;
+		config_entry_list_append(&existing, var);
 	}
 
-	if (error > 0)
-		error = 0;
+	var = git__calloc(1, sizeof(config_entry_list));
+	GITERR_CHECK_ALLOC(var);
+	var->entry = entry;
+	config_entry_list_append(&entries->list, var);
 
 	return error;
 }
 
 static void diskfile_entries_free(diskfile_entries *entries)
 {
-	config_entry_list *list = NULL;
+	config_entry_list *list = NULL, *next;
 
 	if (!entries)
 		return;
@@ -169,6 +185,14 @@ static void diskfile_entries_free(diskfile_entries *entries)
 
 	git_strmap_foreach_value(entries->map, list, config_entry_list_free(list));
 	git_strmap_free(entries->map);
+
+	list = entries->list;
+	while (list != NULL) {
+		next = list->next;
+		git__free(list);
+		list = next;
+	}
+
 	git__free(entries);
 }
 
