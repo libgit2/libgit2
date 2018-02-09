@@ -1373,6 +1373,8 @@ int git_odb_open_wstream(
 	(*stream)->received_bytes = 0;
 
 done:
+	if (error)
+		git__free(ctx);
 	return error;
 }
 

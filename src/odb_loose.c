@@ -433,7 +433,8 @@ static int read_header_loose(git_rawobj *out, git_buf *loc)
 	}
 
 done:
-	p_close(fd);
+	if (fd >= 0)
+		p_close(fd);
 	return error;
 }
 
@@ -1030,6 +1031,7 @@ done:
 		git_futils_mmap_free(&stream->map);
 		git_zstream_free(&stream->zstream);
 		git_hash_ctx_cleanup(hash_ctx);
+		git__free(hash_ctx);
 		git__free(stream);
 	}
 

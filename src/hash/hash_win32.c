@@ -57,7 +57,7 @@ GIT_INLINE(int) hash_cng_prov_init(void)
 	if (hash_prov.prov.cng.open_algorithm_provider(&hash_prov.prov.cng.handle, GIT_HASH_CNG_HASH_TYPE, NULL, GIT_HASH_CNG_HASH_REUSABLE) < 0) {
 		FreeLibrary(hash_prov.prov.cng.dll);
 
-		giterr_set(GITERR_OS "algorithm provider could not be initialized");
+		giterr_set(GITERR_OS, "algorithm provider could not be initialized");
 		return -1;
 	}
 
