@@ -1477,7 +1477,7 @@ static int winhttp_receivepack(
 
 	/* WinHTTP only supports Transfer-Encoding: chunked
 	 * on Windows Vista (NT 6.0) and higher. */
-	s->chunked = git_has_win32_version(6, 0, 0);
+	s->chunked = 1;
 
 	if (s->chunked)
 		s->parent.write = winhttp_stream_write_chunked;

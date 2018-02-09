@@ -13,7 +13,6 @@
 #include "win32/posix.h"
 #include "win32/w32_buffer.h"
 #include "win32/w32_util.h"
-#include "win32/version.h"
 #else
 #include <dirent.h>
 #endif
@@ -1169,10 +1168,6 @@ int git_path_diriter_init(
 {
 	git_win32_path path_filter;
 
-	static int is_win7_or_later = -1;
-	if (is_win7_or_later < 0)
-		is_win7_or_later = git_has_win32_version(6, 1, 0);
-
 	assert(diriter && path);
 
 	memset(diriter, 0, sizeof(git_path_diriter));
@@ -1196,11 +1191,11 @@ int git_path_diriter_init(
 
 	diriter->handle = FindFirstFileExW(
 		path_filter,
-		is_win7_or_later ? FindExInfoBasic : FindExInfoStandard,
+		FindExInfoBasic,
 		&diriter->current,
 		FindExSearchNameMatch,
 		NULL,
-		is_win7_or_later ? FIND_FIRST_EX_LARGE_FETCH : 0);
+		FIND_FIRST_EX_LARGE_FETCH);
 
 	if (diriter->handle == INVALID_HANDLE_VALUE) {
 		giterr_set(GITERR_OS, "could not open directory '%s'", path);

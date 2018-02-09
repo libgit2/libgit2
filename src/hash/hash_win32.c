@@ -23,10 +23,6 @@ GIT_INLINE(int) hash_cng_prov_init(void)
 	char dll_path[MAX_PATH];
 	DWORD dll_path_len, size_len;
 
-	/* Only use CNG on Windows 2008 / Vista SP1  or better (Windows 6.0 SP1) */
-	if (!git_has_win32_version(6, 0, 1))
-		return -1;
-
 	/* Load bcrypt.dll explicitly from the system directory */
 	if ((dll_path_len = GetSystemDirectory(dll_path, MAX_PATH)) == 0 ||
 		dll_path_len > MAX_PATH ||
