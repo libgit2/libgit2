@@ -87,10 +87,10 @@ void test_odb_largefiles__streamread(void)
 	git_odb_stream *stream;
 	char buf[10240];
 	char hdr[64];
-	size_t len, total = 0;
+	size_t len, hdr_len, total = 0;
 	git_hash_ctx hash;
 	git_otype type;
-	int hdr_len, ret;
+	int ret;
 
 #ifndef GIT_ARCH_64
 	cl_skip();
@@ -108,7 +108,7 @@ void test_odb_largefiles__streamread(void)
 	cl_assert_equal_i(GIT_OBJ_BLOB, type);
 
 	cl_git_pass(git_hash_ctx_init(&hash));
-	hdr_len = git_odb__format_object_header(hdr, sizeof(hdr), len, type);
+	cl_git_pass(git_odb__format_object_header(&hdr_len, hdr, sizeof(hdr), len, type));
 
 	cl_git_pass(git_hash_update(&hash, hdr, hdr_len));
 
