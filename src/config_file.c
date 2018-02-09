@@ -69,6 +69,14 @@ typedef struct {
 	diskfile_backend *snapshot_from;
 } diskfile_readonly_backend;
 
+typedef struct {
+	const git_repository *repo;
+	const char *file_path;
+	git_strmap *values;
+	git_config_level_t level;
+	unsigned int depth;
+} diskfile_parse_state;
+
 static int config_read(git_strmap *values, const git_repository *repo, git_config_file *file, git_config_level_t level, int depth);
 static int config_write(diskfile_backend *cfg, const char *orig_key, const char *key, const regex_t *preg, const char *value);
 static char *escape_value(const char *ptr);
@@ -869,16 +877,8 @@ static char *escape_value(const char *ptr)
 	return git_buf_detach(&buf);
 }
 
-struct parse_data {
-	const git_repository *repo;
-	const char *file_path;
-	git_strmap *values;
-	git_config_level_t level;
-	unsigned int depth;
-};
-
 static int parse_include(git_config_parser *reader,
-	struct parse_data *parse_data, const char *file)
+	diskfile_parse_state *parse_data, const char *file)
 {
 	struct config_file *include;
 	git_buf path = GIT_BUF_INIT;
@@ -980,7 +980,7 @@ static const struct {
 };
 
 static int parse_conditional_include(git_config_parser *reader,
-	struct parse_data *parse_data, const char *section, const char *file)
+	diskfile_parse_state *parse_data, const char *section, const char *file)
 {
 	char *condition;
 	size_t i;
@@ -1021,7 +1021,7 @@ static int read_on_variable(
 	size_t line_len,
 	void *data)
 {
-	struct parse_data *parse_data = (struct parse_data *)data;
+	diskfile_parse_state *parse_data = (diskfile_parse_state *)data;
 	git_buf buf = GIT_BUF_INIT;
 	git_config_entry *entry;
 	int result = 0;
@@ -1069,7 +1069,7 @@ static int config_read(
 	git_config_level_t level,
 	int depth)
 {
-	struct parse_data parse_data;
+	diskfile_parse_state parse_data;
 	git_config_parser reader;
 	git_buf contents = GIT_BUF_INIT;
 	int error;
