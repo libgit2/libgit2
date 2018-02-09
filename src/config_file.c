@@ -26,7 +26,6 @@
 typedef struct cvar_t {
 	struct cvar_t *next;
 	git_config_entry *entry;
-	bool included; /* whether this is part of [include] */
 } cvar_t;
 
 typedef struct git_config_file_iter {
@@ -118,7 +117,7 @@ int git_config_file_normalize_section(char *start, char *end)
 }
 
 /* Add or append the new config option */
-static int append_entry(git_strmap *values, git_config_entry *entry, bool included)
+static int append_entry(git_strmap *values, git_config_entry *entry)
 {
 	git_strmap_iter pos;
 	cvar_t *existing, *var;
@@ -127,7 +126,6 @@ static int append_entry(git_strmap *values, git_config_entry *entry, bool includ
 	var = git__calloc(1, sizeof(cvar_t));
 	GITERR_CHECK_ALLOC(var);
 	var->entry = entry;
-	var->included = included;
 
 	pos = git_strmap_lookup_index(values, entry->name);
 	if (!git_strmap_valid_index(values, pos)) {
@@ -444,7 +442,7 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 			goto out;
 		}
 
-		if (existing->included) {
+		if (existing->entry->include_depth) {
 			giterr_set(GITERR_CONFIG, "modifying included variable is not supported");
 			ret = -1;
 			goto out;
@@ -584,7 +582,7 @@ static int config_delete(git_config_backend *cfg, const char *name)
 	var = git_strmap_value_at(values, pos);
 	refcounted_strmap_free(map);
 
-	if (var->included) {
+	if (var->entry->include_depth) {
 		giterr_set(GITERR_CONFIG, "cannot delete included variable");
 		return -1;
 	}
@@ -884,7 +882,7 @@ struct parse_data {
 	const char *file_path;
 	git_strmap *values;
 	git_config_level_t level;
-	int depth;
+	unsigned int depth;
 };
 
 static int parse_include(git_config_parser *reader,
@@ -1053,8 +1051,9 @@ static int read_on_variable(
 	entry->name = git_buf_detach(&buf);
 	entry->value = var_value;
 	entry->level = parse_data->level;
+	entry->include_depth = parse_data->depth;
 
-	if ((result = append_entry(parse_data->values, entry, !!parse_data->depth)) < 0)
+	if ((result = append_entry(parse_data->values, entry)) < 0)
 		return result;
 
 	result = 0;
