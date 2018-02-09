@@ -30,8 +30,7 @@ typedef struct config_entry_list {
 
 typedef struct git_config_file_iter {
 	git_config_iterator parent;
-	git_strmap_iter iter;
-	config_entry_list* next_var;
+	config_entry_list *head;
 } git_config_file_iter;
 
 /* Max depth for [include] directives */
@@ -378,24 +377,12 @@ static int config_iterator_next(
 	git_config_iterator *iter)
 {
 	git_config_file_iter *it = (git_config_file_iter *) iter;
-	diskfile_header *h = (diskfile_header *) it->parent.backend;
-	git_strmap *entry_map = h->entries->map;
-	int err = 0;
-	config_entry_list * var;
 
-	if (it->next_var == NULL) {
-		err = git_strmap_next((void**) &var, &(it->iter), entry_map);
-	} else {
-		var = it->next_var;
-	}
+	if (!it->head)
+		return GIT_ITEROVER;
 
-	if (err < 0) {
-		it->next_var = NULL;
-		return err;
-	}
-
-	*entry = var->entry;
-	it->next_var = var->next;
+	*entry = it->head->entry;
+	it->head = it->head->next;
 
 	return 0;
 }
@@ -421,15 +408,11 @@ static int config_iterator_new(
 
 	h = (diskfile_header *)snapshot;
 
-	/* strmap_begin() is currently a macro returning 0 */
-	GIT_UNUSED(h);
-
 	it->parent.backend = snapshot;
-	it->iter = git_strmap_begin(h->values);
-	it->next_var = NULL;
-
+	it->head = h->entries->list;
 	it->parent.next = config_iterator_next;
 	it->parent.free = config_iterator_free;
+
 	*iter = (git_config_iterator *) it;
 
 	return 0;
