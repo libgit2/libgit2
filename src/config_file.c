@@ -549,7 +549,8 @@ static int config_delete(git_config_backend *cfg, const char *name)
 {
 	config_entry_list *var;
 	diskfile_backend *b = (diskfile_backend *)cfg;
-	refcounted_strmap *map;	git_strmap *values;
+	refcounted_strmap *map;
+	git_strmap *values;
 	char *key;
 	int result;
 	khiter_t pos;
