@@ -433,7 +433,8 @@ static int read_header_loose(git_rawobj *out, git_buf *loc)
 	}
 
 done:
-	p_close(fd);
+	if (fd >= 0)
+		p_close(fd);
 	return error;
 }
 
