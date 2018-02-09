@@ -23,15 +23,15 @@
 #include <sys/types.h>
 #include <regex.h>
 
-typedef struct cvar_t {
-	struct cvar_t *next;
+typedef struct config_entry_list {
+	struct config_entry_list *next;
 	git_config_entry *entry;
-} cvar_t;
+} config_entry_list;
 
 typedef struct git_config_file_iter {
 	git_config_iterator parent;
 	git_strmap_iter iter;
-	cvar_t* next_var;
+	config_entry_list* next_var;
 } git_config_file_iter;
 
 /* Max depth for [include] directives */
@@ -82,7 +82,7 @@ static int config_error_readonly(void)
 	return -1;
 }
 
-static void cvar_free(cvar_t *var)
+static void cvar_free(config_entry_list *var)
 {
 	if (var == NULL)
 		return;
@@ -120,10 +120,10 @@ int git_config_file_normalize_section(char *start, char *end)
 static int append_entry(git_strmap *values, git_config_entry *entry)
 {
 	git_strmap_iter pos;
-	cvar_t *existing, *var;
+	config_entry_list *existing, *var;
 	int error = 0;
 
-	var = git__calloc(1, sizeof(cvar_t));
+	var = git__calloc(1, sizeof(config_entry_list));
 	GITERR_CHECK_ALLOC(var);
 	var->entry = entry;
 
@@ -146,14 +146,14 @@ static int append_entry(git_strmap *values, git_config_entry *entry)
 
 static void free_vars(git_strmap *values)
 {
-	cvar_t *var = NULL;
+	config_entry_list *var = NULL;
 
 	if (values == NULL)
 		return;
 
 	git_strmap_foreach_value(values, var,
 		while (var != NULL) {
-			cvar_t *next = var->next;
+			config_entry_list *next = var->next;
 			cvar_free(var);
 			var = next;
 		});
@@ -358,7 +358,7 @@ static int config_iterator_next(
 	diskfile_header *h = (diskfile_header *) it->parent.backend;
 	git_strmap *values = h->values->values;
 	int err = 0;
-	cvar_t * var;
+	config_entry_list * var;
 
 	if (it->next_var == NULL) {
 		err = git_strmap_next((void**) &var, &(it->iter), values);
@@ -434,7 +434,7 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 	 */
 	pos = git_strmap_lookup_index(values, key);
 	if (git_strmap_valid_index(values, pos)) {
-		cvar_t *existing = git_strmap_value_at(values, pos);
+		config_entry_list *existing = git_strmap_value_at(values, pos);
 
 		if (existing->next != NULL) {
 			giterr_set(GITERR_CONFIG, "multivar incompatible with simple set");
@@ -492,7 +492,7 @@ static int config_get(git_config_backend *cfg, const char *key, git_config_entry
 	refcounted_strmap *map;
 	git_strmap *values;
 	khiter_t pos;
-	cvar_t *var;
+	config_entry_list *var;
 	int error = 0;
 
 	if (!h->parent.readonly && ((error = config_refresh(cfg)) < 0))
@@ -556,7 +556,7 @@ out:
 
 static int config_delete(git_config_backend *cfg, const char *name)
 {
-	cvar_t *var;
+	config_entry_list *var;
 	diskfile_backend *b = (diskfile_backend *)cfg;
 	refcounted_strmap *map;	git_strmap *values;
 	char *key;
