@@ -1030,6 +1030,7 @@ done:
 		git_futils_mmap_free(&stream->map);
 		git_zstream_free(&stream->zstream);
 		git_hash_ctx_cleanup(hash_ctx);
+		git__free(hash_ctx);
 		git__free(stream);
 	}
 
