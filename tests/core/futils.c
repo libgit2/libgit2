@@ -66,3 +66,57 @@ void test_core_futils__write_hidden_file(void)
 #endif
 }
 
+typedef enum {
+	mode_cmp_true = 0,
+	mode_cmp_false,
+	mode_cmp_false_if_strict,
+} mode_cmp_expected;
+
+struct mode_cmp {
+	git_filemode_t a;
+	git_filemode_t b;
+	mode_cmp_expected expected;
+};
+
+void test_core_futils__mode_compare(void)
+{
+	int lineno = __LINE__ + 2;
+	struct mode_cmp cmps[] = {
+		{GIT_FILEMODE_BLOB, GIT_FILEMODE_BLOB, mode_cmp_true},
+		{GIT_FILEMODE_BLOB, GIT_FILEMODE_TREE, mode_cmp_false},
+		{GIT_FILEMODE_TREE, GIT_FILEMODE_TREE, mode_cmp_true},
+		{GIT_FILEMODE_BLOB_EXECUTABLE, GIT_FILEMODE_BLOB_EXECUTABLE, mode_cmp_true},
+		{GIT_FILEMODE_BLOB_EXECUTABLE, GIT_FILEMODE_BLOB, mode_cmp_false_if_strict},
+		{0100755, 0100766, mode_cmp_true},
+		{0100777, 0100666, mode_cmp_false_if_strict},
+	};
+	size_t i;
+
+	for (i = 0; i < 2 * ARRAY_SIZE(cmps); i++) {
+		int testno = i / 2;
+		struct mode_cmp cmp = cmps[testno];
+		bool strict = (i % 2 == 0 ? true : false);
+
+		bool result_a = git__is_filemode_equal(strict, cmp.a, cmp.b);
+		bool result_b = git__is_filemode_equal(strict, cmp.b, cmp.a);
+
+		cl_assert_equal_b(result_a, result_b);
+
+		switch (cmp.expected) {
+			case mode_cmp_true:
+				cl_assert_at_line(result_a, __FILE__, lineno + testno);
+				break;
+			case mode_cmp_false:
+				cl_assert_at_line(!result_a, __FILE__, lineno + testno);
+				break;
+			case mode_cmp_false_if_strict:
+#ifdef GIT_WIN32
+				/* Windows has no concept of exec, hence strict mode is irrelevant */
+				cl_assert_at_line(result_a, __FILE__, lineno + testno);
+#else
+				cl_assert_at_line(result_a == !strict, __FILE__, lineno + testno);
+#endif
+				break;
+		}
+	}
+}

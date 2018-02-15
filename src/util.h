@@ -13,7 +13,6 @@
 #include "buffer.h"
 #include "thread-utils.h"
 
-#include "common.h"
 #include "strnlen.h"
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
@@ -538,5 +537,40 @@ GIT_INLINE(double) git__timer(void)
 #endif
 
 extern int git__getenv(git_buf *out, const char *name);
+
+#ifdef WIN32
+#define S_ISREG(m) (((m) & _S_IFMT) == _S_IFREG)
+#endif
+
+GIT_INLINE(bool) git__is_filemode_equal(int strict, git_filemode_t a, git_filemode_t b)
+{
+#ifdef WIN32
+	int rw = S_IREAD|S_IWRITE;
+#else
+	/* build some masks for clarity */
+	int rw = S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH;
+	int x = S_IXUSR|S_IXGRP|S_IXOTH;
+#endif
+
+	/* both are not files, compare file mode */
+	if (!S_ISREG(a) || !S_ISREG(b))
+		return a == b;
+
+#ifndef WIN32
+	/* when strict, we care about rw <=> non-rw or x <=> non-x changes */
+	if (strict)
+		return (!!(a & rw) == !!(b & rw)) && (!!(a & x) == !!(b & x));
+#else
+    GIT_UNUSED(strict);
+    return true;
+#endif
+
+	/* we only care about rw differences */
+	return (!!(a & rw) == !!(b & rw));
+}
+
+#ifdef WIN32
+#undef S_ISREG
+#endif
 
 #endif
