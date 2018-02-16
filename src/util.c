@@ -7,10 +7,7 @@
 
 #include "util.h"
 
-#include "git2.h"
-#include <stdio.h>
-#include <ctype.h>
-#include "posix.h"
+#include "common.h"
 
 #ifdef GIT_WIN32
 # include "win32/w32_buffer.h"
