@@ -957,7 +957,7 @@ int git_tree_entry_bypath(
 		 * walking down the path */
 		if (path[filename_len + 1] != '\0')
 			break;
-
+		/* fall through */
 	case '\0':
 		/* If there are no more components in the path, return
 		 * this entry */
