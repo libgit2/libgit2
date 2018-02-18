@@ -218,7 +218,7 @@ ELSE ()
 
 	ENABLE_WARNINGS(documentation)
 	DISABLE_WARNINGS(missing-field-initializers)
-	ENABLE_WARNINGS(strict-aliasing=2)
+	ENABLE_WARNINGS(strict-aliasing)
 	ENABLE_WARNINGS(strict-prototypes)
 	ENABLE_WARNINGS(declaration-after-statement)
 	DISABLE_WARNINGS(unused-const-variable)

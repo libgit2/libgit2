@@ -9,12 +9,16 @@
 
 #include "common.h"
 
-#include "git2/buffer.h"
-#include "buffer.h"
-#include "thread-utils.h"
+#ifndef GIT_WIN32
+# include <ctype.h>
+#endif
 
+#include "git2/buffer.h"
+
+#include "buffer.h"
 #include "common.h"
 #include "strnlen.h"
+#include "thread-utils.h"
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 #define bitsizeof(x) (CHAR_BIT * sizeof(x))

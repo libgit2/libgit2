@@ -2494,7 +2494,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 
 	/* Parse all the entries */
 	for (i = 0; i < header.entry_count && buffer_size > INDEX_FOOTER_SIZE; ++i) {
-		git_index_entry *entry;
+		git_index_entry *entry = NULL;
 		size_t entry_size = read_entry(&entry, index, buffer, buffer_size, last);
 
 		/* 0 bytes read means an object corruption */
