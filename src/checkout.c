@@ -205,17 +205,23 @@ static bool checkout_is_workdir_modified(
 		return rval;
 	}
 
-	/* Look at the cache to decide if the workdir is modified.  If not,
-	 * we can simply compare the oid in the cache to the baseitem instead
-	 * of hashing the file.  If so, we allow the checkout to proceed if the
-	 * oid is identical (ie, the staged item is what we're trying to check
-	 * out.)
+	/*
+	 * Look at the cache to decide if the workdir is modified: if the
+	 * cache contents match the workdir contents, then we do not need
+	 * to examine the working directory directly, instead we can
+	 * examine the cache to see if _it_ has been modified.  This allows
+	 * us to avoid touching the disk.
 	 */
-	if ((ie = git_index_get_bypath(data->index, wditem->path, 0)) != NULL) {
-		if (git_index_time_eq(&wditem->mtime, &ie->mtime) &&
-			wditem->file_size == ie->file_size &&
-			!is_file_mode_changed(wditem->mode, ie->mode))
-			return !is_workdir_base_or_new(&ie->id, baseitem, newitem);
+	ie = git_index_get_bypath(data->index, wditem->path, 0);
+
+	if (ie != NULL &&
+		git_index_time_eq(&wditem->mtime, &ie->mtime) &&
+		wditem->file_size == ie->file_size &&
+		!is_file_mode_changed(wditem->mode, ie->mode)) {
+
+		/* The workdir is modified iff the index entry is modified */
+		return !is_workdir_base_or_new(&ie->id, baseitem, newitem) ||
+			is_file_mode_changed(baseitem->mode, ie->mode);
 	}
 
 	/* depending on where base is coming from, we may or may not know
