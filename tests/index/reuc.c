@@ -338,12 +338,12 @@ void test_index_reuc__cleaned_on_checkout_tree(void)
 	git_object *obj;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_UPDATE_ONLY;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	test_index_reuc__add();
-	git_reference_name_to_id(&oid, repo, "refs/heads/master");
-	git_object_lookup(&obj, repo, &oid, GIT_OBJ_ANY);
-	git_checkout_tree(repo, obj, &opts);
+	cl_git_pass(git_reference_name_to_id(&oid, repo, "refs/heads/master"));
+	cl_git_pass(git_object_lookup(&obj, repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_checkout_tree(repo, obj, &opts));
 	cl_assert(reuc_entry_exists() == false);
 
 	git_object_free(obj);
@@ -353,10 +353,10 @@ void test_index_reuc__cleaned_on_checkout_head(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_UPDATE_ONLY;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	test_index_reuc__add();
-	git_checkout_head(repo, &opts);
+	cl_git_pass(git_checkout_head(repo, &opts));
 	cl_assert(reuc_entry_exists() == false);
 }
 
@@ -364,9 +364,9 @@ void test_index_reuc__retained_on_checkout_index(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_UPDATE_ONLY;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	test_index_reuc__add();
-	git_checkout_index(repo, repo_index, &opts);
+	cl_git_pass(git_checkout_index(repo, repo_index, &opts));
 	cl_assert(reuc_entry_exists() == true);
 }
