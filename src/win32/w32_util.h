@@ -5,8 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifndef INCLUDE_w32_util_h__
-#define INCLUDE_w32_util_h__
+#ifndef INCLUDE_win32_w32_util_h__
+#define INCLUDE_win32_w32_util_h__
 
 #include "common.h"
 

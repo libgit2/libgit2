@@ -13,15 +13,14 @@
  *  Lesser General Public License for more details.
  *
  *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *  License along with this library; if not, see
+ *  <http://www.gnu.org/licenses/>.
  *
  *  Davide Libenzi <davidel@xmailserver.org>
  *
  */
 
 #include "xinclude.h"
-#include "common.h"
 
 typedef struct s_xdmerge {
 	struct s_xdmerge *next;
@@ -110,7 +109,7 @@ static int xdl_merge_cmp_lines(xdfenv_t *xe1, int i1, xdfenv_t *xe2, int i2,
 	return 0;
 }
 
-static int xdl_recs_copy_0(size_t *out, int use_orig, xdfenv_t *xe, int i, int count, int add_nl, char *dest)
+static int xdl_recs_copy_0(size_t *out, int use_orig, xdfenv_t *xe, int i, int count, int needs_cr, int add_nl, char *dest)
 {
 	xrecord_t **recs;
 	size_t size = 0;
@@ -132,6 +131,12 @@ static int xdl_recs_copy_0(size_t *out, int use_orig, xdfenv_t *xe, int i, int c
 	if (add_nl) {
 		i = recs[count - 1]->size;
 		if (i == 0 || recs[count - 1]->ptr[i - 1] != '\n') {
+			if (needs_cr) {
+				if (dest)
+					dest[size] = '\r';
+				GITERR_CHECK_ALLOC_ADD(&size, size, 1);
+			}
+
 			if (dest)
 				dest[size] = '\n';
 
@@ -143,14 +148,58 @@ static int xdl_recs_copy_0(size_t *out, int use_orig, xdfenv_t *xe, int i, int c
 	return 0;
 }
 
-static int xdl_recs_copy(size_t *out, xdfenv_t *xe, int i, int count, int add_nl, char *dest)
+static int xdl_recs_copy(size_t *out, xdfenv_t *xe, int i, int count, int needs_cr, int add_nl, char *dest)
 {
-	return xdl_recs_copy_0(out, 0, xe, i, count, add_nl, dest);
+	return xdl_recs_copy_0(out, 0, xe, i, count, needs_cr, add_nl, dest);
 }
 
-static int xdl_orig_copy(size_t *out, xdfenv_t *xe, int i, int count, int add_nl, char *dest)
+static int xdl_orig_copy(size_t *out, xdfenv_t *xe, int i, int count, int needs_cr, int add_nl, char *dest)
 {
-	return xdl_recs_copy_0(out, 1, xe, i, count, add_nl, dest);
+	return xdl_recs_copy_0(out, 1, xe, i, count, needs_cr, add_nl, dest);
+}
+
+/*
+ * Returns 1 if the i'th line ends in CR/LF (if it is the last line and
+ * has no eol, the preceding line, if any), 0 if it ends in LF-only, and
+ * -1 if the line ending cannot be determined.
+ */
+static int is_eol_crlf(xdfile_t *file, int i)
+{
+	long size;
+
+	if (i < file->nrec - 1)
+		/* All lines before the last *must* end in LF */
+		return (size = file->recs[i]->size) > 1 &&
+			file->recs[i]->ptr[size - 2] == '\r';
+	if (!file->nrec)
+		/* Cannot determine eol style from empty file */
+		return -1;
+	if ((size = file->recs[i]->size) &&
+			file->recs[i]->ptr[size - 1] == '\n')
+		/* Last line; ends in LF; Is it CR/LF? */
+		return size > 1 &&
+			file->recs[i]->ptr[size - 2] == '\r';
+	if (!i)
+		/* The only line has no eol */
+		return -1;
+	/* Determine eol from second-to-last line */
+	return (size = file->recs[i - 1]->size) > 1 &&
+		file->recs[i - 1]->ptr[size - 2] == '\r';
+}
+
+static int is_cr_needed(xdfenv_t *xe1, xdfenv_t *xe2, xdmerge_t *m)
+{
+	int needs_cr;
+
+	/* Match post-images' preceding, or first, lines' end-of-line style */
+	needs_cr = is_eol_crlf(&xe1->xdf2, m->i1 ? m->i1 - 1 : 0);
+	if (needs_cr)
+		needs_cr = is_eol_crlf(&xe2->xdf2, m->i2 ? m->i2 - 1 : 0);
+	/* Look at pre-image's first line, unless we already settled on LF */
+	if (needs_cr)
+		needs_cr = is_eol_crlf(&xe1->xdf1, 0);
+	/* If still undecided, use LF-only */
+	return needs_cr < 0 ? 0 : needs_cr;
 }
 
 static int fill_conflict_hunk(size_t *out, xdfenv_t *xe1, const char *name1,
@@ -162,6 +211,7 @@ static int fill_conflict_hunk(size_t *out, xdfenv_t *xe1, const char *name1,
 	int marker1_size = (name1 ? (int)strlen(name1) + 1 : 0);
 	int marker2_size = (name2 ? (int)strlen(name2) + 1 : 0);
 	int marker3_size = (name3 ? (int)strlen(name3) + 1 : 0);
+	int needs_cr = is_cr_needed(xe1, xe2, m);
 	size_t copied;
 
 	*out = 0;
@@ -170,14 +220,14 @@ static int fill_conflict_hunk(size_t *out, xdfenv_t *xe1, const char *name1,
 		marker_size = DEFAULT_CONFLICT_MARKER_SIZE;
 
 	/* Before conflicting part */
-	if (xdl_recs_copy(&copied, xe1, i, m->i1 - i, 0,
+	if (xdl_recs_copy(&copied, xe1, i, m->i1 - i, 0, 0,
 			      dest ? dest + size : NULL) < 0)
 		return -1;
 
 	GITERR_CHECK_ALLOC_ADD(&size, size, copied);
 
 	if (!dest) {
-		GITERR_CHECK_ALLOC_ADD4(&size, size, marker_size, 1, marker1_size);
+		GITERR_CHECK_ALLOC_ADD5(&size, size, marker_size, 1, needs_cr,  marker1_size);
 	} else {
 		memset(dest + size, '<', marker_size);
 		size += marker_size;
@@ -186,11 +236,13 @@ static int fill_conflict_hunk(size_t *out, xdfenv_t *xe1, const char *name1,
 			memcpy(dest + size + 1, name1, marker1_size - 1);
 			size += marker1_size;
 		}
+		if (needs_cr)
+			dest[size++] = '\r';
 		dest[size++] = '\n';
 	}
 
 	/* Postimage from side #1 */
-	if (xdl_recs_copy(&copied, xe1, m->i1, m->chg1, 1,
+	if (xdl_recs_copy(&copied, xe1, m->i1, m->chg1, needs_cr, 1,
 			      dest ? dest + size : NULL) < 0)
 		return -1;
 
@@ -199,7 +251,7 @@ static int fill_conflict_hunk(size_t *out, xdfenv_t *xe1, const char *name1,
 	if (style == XDL_MERGE_DIFF3) {
 		/* Shared preimage */
 		if (!dest) {
-			GITERR_CHECK_ALLOC_ADD4(&size, size, marker_size, 1, marker3_size);
+			GITERR_CHECK_ALLOC_ADD5(&size, size, marker_size, 1, needs_cr, marker3_size);
 		} else {
 			memset(dest + size, '|', marker_size);
 			size += marker_size;
@@ -208,32 +260,36 @@ static int fill_conflict_hunk(size_t *out, xdfenv_t *xe1, const char *name1,
 				memcpy(dest + size + 1, name3, marker3_size - 1);
 				size += marker3_size;
 			}
+			if (needs_cr)
+				dest[size++] = '\r';
 			dest[size++] = '\n';
 		}
 
-		if (xdl_orig_copy(&copied, xe1, m->i0, m->chg0, 1,
+		if (xdl_orig_copy(&copied, xe1, m->i0, m->chg0, needs_cr, 1,
 				      dest ? dest + size : NULL) < 0)
 			return -1;
 		GITERR_CHECK_ALLOC_ADD(&size, size, copied);
 	}
 
 	if (!dest) {
-		GITERR_CHECK_ALLOC_ADD3(&size, size, marker_size, 1);
+		GITERR_CHECK_ALLOC_ADD4(&size, size, marker_size, 1, needs_cr);
 	} else {
 		memset(dest + size, '=', marker_size);
 		size += marker_size;
+		if (needs_cr)
+			dest[size++] = '\r';
 		dest[size++] = '\n';
 	}
 
 	/* Postimage from side #2 */
 
-	if (xdl_recs_copy(&copied, xe2, m->i2, m->chg2, 1,
+	if (xdl_recs_copy(&copied, xe2, m->i2, m->chg2, needs_cr, 1,
 			      dest ? dest + size : NULL) < 0)
 		return -1;
 	GITERR_CHECK_ALLOC_ADD(&size, size, copied);
 
 	if (!dest) {
-		GITERR_CHECK_ALLOC_ADD4(&size, size, marker_size, 1, marker2_size);
+		GITERR_CHECK_ALLOC_ADD5(&size, size, marker_size, 1, needs_cr, marker2_size);
 	} else {
 		memset(dest + size, '>', marker_size);
 		size += marker_size;
@@ -242,6 +298,8 @@ static int fill_conflict_hunk(size_t *out, xdfenv_t *xe1, const char *name1,
 			memcpy(dest + size + 1, name2, marker2_size - 1);
 			size += marker2_size;
 		}
+		if (needs_cr)
+			dest[size++] = '\r';
 		dest[size++] = '\n';
 	}
 
@@ -275,14 +333,16 @@ static int xdl_fill_merge_buffer(size_t *out,
 		}
 		else if (m->mode & 3) {
 			/* Before conflicting part */
-			if (xdl_recs_copy(&copied, xe1, i, m->i1 - i, 0,
+			if (xdl_recs_copy(&copied, xe1, i, m->i1 - i, 0, 0,
 					      dest ? dest + size : NULL) < 0)
 				return -1;
 			GITERR_CHECK_ALLOC_ADD(&size, size, copied);
 
 			/* Postimage from side #1 */
 			if (m->mode & 1) {
-				if (xdl_recs_copy(&copied, xe1, m->i1, m->chg1, (m->mode & 2),
+				int needs_cr = is_cr_needed(xe1, xe2, m);
+
+				if (xdl_recs_copy(&copied, xe1, m->i1, m->chg1, needs_cr, (m->mode & 2),
 						      dest ? dest + size : NULL) < 0)
 					return -1;
 				GITERR_CHECK_ALLOC_ADD(&size, size, copied);
@@ -290,7 +350,7 @@ static int xdl_fill_merge_buffer(size_t *out,
 
 			/* Postimage from side #2 */
 			if (m->mode & 2) {
-				if (xdl_recs_copy(&copied, xe2, m->i2, m->chg2, 0,
+				if (xdl_recs_copy(&copied, xe2, m->i2, m->chg2, 0, 0,
 						      dest ? dest + size : NULL) < 0)
 					return -1;
 				GITERR_CHECK_ALLOC_ADD(&size, size, copied);
@@ -300,7 +360,7 @@ static int xdl_fill_merge_buffer(size_t *out,
 		i = m->i1 + m->chg1;
 	}
 
-	if (xdl_recs_copy(&copied, xe1, i, xe1->xdf2.nrec - i, 0,
+	if (xdl_recs_copy(&copied, xe1, i, xe1->xdf2.nrec - i, 0, 0,
 			      dest ? dest + size : NULL) < 0)
 		return -1;
 	GITERR_CHECK_ALLOC_ADD(&size, size, copied);

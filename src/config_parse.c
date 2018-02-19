@@ -217,7 +217,7 @@ static int skip_bom(git_parse_ctx *parser)
 {
 	git_buf buf = GIT_BUF_INIT_CONST(parser->content, parser->content_len);
 	git_bom_t bom;
-	int bom_offset = git_buf_text_detect_bom(&bom, &buf, parser->content_len);
+	int bom_offset = git_buf_text_detect_bom(&bom, &buf);
 
 	if (bom == GIT_BOM_UTF8)
 		git_parse_advance_chars(parser, bom_offset);
@@ -475,6 +475,11 @@ int git_config_parse(
 		size_t line_len = parser->ctx.line_len;
 		char c;
 
+		/*
+		 * Get either first non-whitespace character or, if that does
+		 * not exist, the first whitespace character. This is required
+		 * to preserve whitespaces when writing back the file.
+		 */
 		if (git_parse_peek(&c, ctx, GIT_PARSE_PEEK_SKIP_WHITESPACE) < 0 &&
 		    git_parse_peek(&c, ctx, 0) < 0)
 			continue;
@@ -490,6 +495,7 @@ int git_config_parse(
 			break;
 
 		case '\n': /* comment or whitespace-only */
+		case '\r':
 		case ' ':
 		case '\t':
 		case ';':

@@ -1396,12 +1396,16 @@ static int index_conflict_to_reuc(git_index *index, const char *path)
 	return ret;
 }
 
-static bool valid_filemode(const int filemode)
+GIT_INLINE(bool) is_file_or_link(const int filemode)
 {
 	return (filemode == GIT_FILEMODE_BLOB ||
 		filemode == GIT_FILEMODE_BLOB_EXECUTABLE ||
-		filemode == GIT_FILEMODE_LINK ||
-		filemode == GIT_FILEMODE_COMMIT);
+		filemode == GIT_FILEMODE_LINK);
+}
+
+GIT_INLINE(bool) valid_filemode(const int filemode)
+{
+	return (is_file_or_link(filemode) || filemode == GIT_FILEMODE_COMMIT);
 }
 
 int git_index_add_frombuffer(
@@ -1419,7 +1423,7 @@ int git_index_add_frombuffer(
 			"could not initialize index entry. "
 			"Index is not backed up by an existing repository.");
 
-	if (!valid_filemode(source_entry->mode)) {
+	if (!is_file_or_link(source_entry->mode)) {
 		giterr_set(GITERR_INDEX, "invalid filemode");
 		return -1;
 	}
@@ -1605,7 +1609,7 @@ int git_index_add(git_index *index, const git_index_entry *source_entry)
 	assert(index && source_entry && source_entry->path);
 
 	if (!valid_filemode(source_entry->mode)) {
-		giterr_set(GITERR_INDEX, "invalid filemode");
+		giterr_set(GITERR_INDEX, "invalid entry mode");
 		return -1;
 	}
 
@@ -2494,7 +2498,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 
 	/* Parse all the entries */
 	for (i = 0; i < header.entry_count && buffer_size > INDEX_FOOTER_SIZE; ++i) {
-		git_index_entry *entry;
+		git_index_entry *entry = NULL;
 		size_t entry_size = read_entry(&entry, index, buffer, buffer_size, last);
 
 		/* 0 bytes read means an object corruption */

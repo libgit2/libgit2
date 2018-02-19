@@ -14,8 +14,11 @@
 PROJECT(libgit2 C)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.11)
 CMAKE_POLICY(SET CMP0015 NEW)
-IF (NOT CMAKE_VERSION VERSION_LESS 3.1)
+IF (POLICY CMP0051)
 	CMAKE_POLICY(SET CMP0051 NEW)
+ENDIF()
+IF (POLICY CMP0042)
+	CMAKE_POLICY(SET CMP0042 NEW)
 ENDIF()
 
 # Add find modules to the path
@@ -28,7 +31,10 @@ INCLUDE(CheckStructHasMember)
 INCLUDE(AddCFlagIfSupported)
 INCLUDE(FindPkgConfig)
 INCLUDE(FindThreads)
+INCLUDE(FindStatNsec)
+INCLUDE(IdeSplitSources)
 INCLUDE(FeatureSummary)
+INCLUDE(EnableWarnings)
 
 # Build options
 #
@@ -90,50 +96,6 @@ IF(MSVC)
 	# Enable MSVC CRTDBG memory leak reporting when in debug mode.
 	OPTION(MSVC_CRTDBG "Enable CRTDBG memory leak reporting" OFF)
 ENDIF()
-
-CHECK_STRUCT_HAS_MEMBER ("struct stat" st_mtim "sys/types.h;sys/stat.h"
-	HAVE_STRUCT_STAT_ST_MTIM LANGUAGE C)
-CHECK_STRUCT_HAS_MEMBER ("struct stat" st_mtimespec "sys/types.h;sys/stat.h"
-	HAVE_STRUCT_STAT_ST_MTIMESPEC LANGUAGE C)
-CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtime_nsec sys/stat.h
-	HAVE_STRUCT_STAT_MTIME_NSEC LANGUAGE C)
-
-IF (HAVE_STRUCT_STAT_ST_MTIM)
-	CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtim.tv_nsec sys/stat.h
-		HAVE_STRUCT_STAT_NSEC LANGUAGE C)
-ELSEIF (HAVE_STRUCT_STAT_ST_MTIMESPEC)
-	CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtimespec.tv_nsec sys/stat.h
-		HAVE_STRUCT_STAT_NSEC LANGUAGE C)
-ELSE ()
-	SET( HAVE_STRUCT_STAT_NSEC ON )
-ENDIF()
-
-IF (HAVE_STRUCT_STAT_NSEC OR WIN32)
-	OPTION( USE_NSEC		"Care about sub-second file mtimes and ctimes"	ON  )
-ENDIF()
-
-# This function splits the sources files up into their appropriate
-# subdirectories.  This is especially useful for IDEs like Xcode and
-# Visual Studio, so that you can navigate into the libgit2_clar project,
-# and see the folders within the tests folder (instead of just seeing all
-# source and tests in a single folder.)
-FUNCTION(IDE_SPLIT_SOURCES target)
-	IF(MSVC_IDE OR CMAKE_GENERATOR STREQUAL Xcode)
-		GET_TARGET_PROPERTY(sources ${target} SOURCES)
-		FOREACH(source ${sources})
-			IF(source MATCHES ".*/")
-				STRING(REPLACE ${libgit2_SOURCE_DIR}/ "" rel ${source})
-				IF(rel)
-					STRING(REGEX REPLACE "/([^/]*)$" "" rel ${rel})
-					IF(rel)
-						STRING(REPLACE "/" "\\\\" rel ${rel})
-						SOURCE_GROUP(${rel} FILES ${source})
-					ENDIF()
-				ENDIF()
-			ENDIF()
-		ENDFOREACH()
-	ENDIF()
-ENDFUNCTION()
 
 FILE(STRINGS "${libgit2_SOURCE_DIR}/include/git2/version.h" GIT2_HEADER REGEX "^#define LIBGIT2_VERSION \"[^\"]*\"$")
 
@@ -230,21 +192,6 @@ ELSE ()
 
 	SET(CMAKE_C_FLAGS "-D_GNU_SOURCE ${CMAKE_C_FLAGS}")
 
-	MACRO(ENABLE_WARNINGS flag)
-		IF(ENABLE_WERROR)
-			ADD_C_FLAG_IF_SUPPORTED(-Werror=${flag})
-		ELSE()
-			ADD_C_FLAG_IF_SUPPORTED(-W${flag})
-		ENDIF()
-	ENDMACRO()
-
-	MACRO(DISABLE_WARNINGS flag)
-		ADD_C_FLAG_IF_SUPPORTED(-Wno-${flag})
-		IF(ENABLE_WERROR)
-			ADD_C_FLAG_IF_SUPPORTED(-Wno-error=${flag})
-		ENDIF()
-	ENDMACRO()
-
 	ENABLE_WARNINGS(all)
 	ENABLE_WARNINGS(extra)
 
@@ -271,7 +218,7 @@ ELSE ()
 
 	ENABLE_WARNINGS(documentation)
 	DISABLE_WARNINGS(missing-field-initializers)
-	ENABLE_WARNINGS(strict-aliasing=2)
+	ENABLE_WARNINGS(strict-aliasing)
 	ENABLE_WARNINGS(strict-prototypes)
 	ENABLE_WARNINGS(declaration-after-statement)
 	DISABLE_WARNINGS(unused-const-variable)

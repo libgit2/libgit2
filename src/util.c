@@ -7,10 +7,7 @@
 
 #include "util.h"
 
-#include "git2.h"
-#include <stdio.h>
-#include <ctype.h>
-#include "posix.h"
+#include "common.h"
 
 #ifdef GIT_WIN32
 # include "win32/w32_buffer.h"
@@ -478,9 +475,11 @@ uint32_t git__hash(const void *key, int len, uint32_t seed)
 
 	switch(len & 3) {
 	case 3: k1 ^= tail[2] << 16;
+		/* fall through */
 	case 2: k1 ^= tail[1] << 8;
+		/* fall through */
 	case 1: k1 ^= tail[0];
-			MURMUR_BLOCK();
+		MURMUR_BLOCK();
 	}
 
 	h1 ^= len;

@@ -590,6 +590,12 @@ static char *nfc = "\xC3\x85\x73\x74\x72\xC3\xB6\x6D";
 static char *nfd = "\x41\xCC\x8A\x73\x74\x72\x6F\xCC\x88\x6D";
 #endif
 
+/*
+ * Create a file in NFD (canonically decomposed) format.  Ensure
+ * that when core.precomposeunicode is false that we return paths
+ * in NFD, but when core.precomposeunicode is true, then we
+ * return paths precomposed (in NFC).
+ */
 void test_status_renames__precomposed_unicode_rename(void)
 {
 #ifdef GIT_USE_ICONV
@@ -610,7 +616,7 @@ void test_status_renames__precomposed_unicode_rename(void)
 		{ GIT_STATUS_WT_RENAMED, "sixserving.txt", nfc },
 	};
 
-	rename_file(g_repo, "sixserving.txt", nfc);
+	rename_file(g_repo, "sixserving.txt", nfd);
 
 	opts.flags |= GIT_STATUS_OPT_INCLUDE_UNTRACKED;
 

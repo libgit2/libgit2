@@ -230,3 +230,21 @@ void test_odb_backend_simple__exists_with_highly_ambiguous_prefix(void)
 	cl_git_pass(git_odb_exists_prefix(&found, _odb, &_oid, 40));
 	cl_assert(git_oid_equal(&found, &_oid));
 }
+
+void test_odb_backend_simple__null_oid_is_ignored(void)
+{
+	const fake_object objs[] = {
+		{ "0000000000000000000000000000000000000000", "null oid content" },
+		{ NULL, NULL }
+	};
+	git_oid null_oid = {{0}};
+	git_odb_object *obj;
+
+	setup_backend(objs);
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_HASH_VERIFICATION, 0));
+	cl_assert(!git_odb_exists(_odb, &null_oid));
+
+	cl_git_fail_with(GIT_ENOTFOUND, git_odb_read(&obj, _odb, &null_oid));
+	cl_assert(giterr_last() && strstr(giterr_last()->message, "null OID"));
+}

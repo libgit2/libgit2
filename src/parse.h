@@ -4,6 +4,9 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
+#ifndef INCLUDE_parse_h__
+#define INCLUDE_parse_h__
+
 #include "common.h"
 
 typedef struct {
@@ -54,3 +57,5 @@ enum GIT_PARSE_PEEK_FLAGS {
 };
 
 int git_parse_peek(char *out, git_parse_ctx *ctx, int flags);
+
+#endif

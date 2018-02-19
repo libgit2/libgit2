@@ -230,6 +230,12 @@ GIT_INLINE(void) git__init_structure(void *structure, size_t len, unsigned int v
 		GIT_ADD_SIZET_OVERFLOW(out, *(out), three) || \
 		GIT_ADD_SIZET_OVERFLOW(out, *(out), four)) { return -1; }
 
+#define GITERR_CHECK_ALLOC_ADD5(out, one, two, three, four, five) \
+	if (GIT_ADD_SIZET_OVERFLOW(out, one, two) || \
+		GIT_ADD_SIZET_OVERFLOW(out, *(out), three) || \
+		GIT_ADD_SIZET_OVERFLOW(out, *(out), four) || \
+		GIT_ADD_SIZET_OVERFLOW(out, *(out), five)) { return -1; }
+
 /** Check for multiplicative overflow, failing if it would occur. */
 #define GITERR_CHECK_ALLOC_MULTIPLY(out, nelem, elsize) \
 	if (GIT_MULTIPLY_SIZET_OVERFLOW(out, nelem, elsize)) { return -1; }
@@ -238,4 +244,4 @@ GIT_INLINE(void) git__init_structure(void *structure, size_t len, unsigned int v
 
 #include "util.h"
 
-#endif /* INCLUDE_common_h__ */
+#endif

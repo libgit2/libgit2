@@ -162,6 +162,8 @@ typedef enum {
 	GIT_MERGE_FILE_DIFF_MINIMAL = (1 << 7),
 } git_merge_file_flag_t;
 
+#define GIT_MERGE_CONFLICT_MARKER_SIZE	7
+
 /**
  * Options for merging a file
  */
@@ -191,6 +193,10 @@ typedef struct {
 
 	/** see `git_merge_file_flag_t` above */
 	git_merge_file_flag_t flags;
+
+	/** The size of conflict markers (eg, "<<<<<<<").  Default is
+	 * GIT_MERGE_CONFLICT_MARKER_SIZE. */
+	unsigned short marker_size;
 } git_merge_file_options;
 
 #define GIT_MERGE_FILE_OPTIONS_VERSION 1

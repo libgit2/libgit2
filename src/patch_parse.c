@@ -575,6 +575,7 @@ static int parse_hunk_body(
 		switch (c) {
 		case '\n':
 			prefix = 0;
+			/* fall through */
 
 		case ' ':
 			origin = GIT_DIFF_LINE_CONTEXT;

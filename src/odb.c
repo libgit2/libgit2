@@ -53,6 +53,7 @@ static git_cache *odb_cache(git_odb *odb)
 
 static int odb_otype_fast(git_otype *type_p, git_odb *db, const git_oid *id);
 static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_depth);
+static int error_null_oid(int error, const char *message);
 
 static git_otype odb_hardcoded_type(const git_oid *id)
 {
@@ -65,50 +66,75 @@ static git_otype odb_hardcoded_type(const git_oid *id)
 	return GIT_OBJ_BAD;
 }
 
-static int odb_read_hardcoded(git_rawobj *raw, const git_oid *id)
+static int odb_read_hardcoded(bool *found, git_rawobj *raw, const git_oid *id)
 {
-	git_otype type = odb_hardcoded_type(id);
-	if (type == GIT_OBJ_BAD)
-		return -1;
+	git_otype type;
+
+	*found = false;
+
+	if ((type = odb_hardcoded_type(id)) == GIT_OBJ_BAD)
+		return 0;
 
 	raw->type = type;
 	raw->len = 0;
 	raw->data = git__calloc(1, sizeof(uint8_t));
+	GITERR_CHECK_ALLOC(raw->data);
+
+	*found = true;
 	return 0;
 }
 
-int git_odb__format_object_header(char *hdr, size_t n, git_off_t obj_len, git_otype obj_type)
+int git_odb__format_object_header(
+	size_t *written,
+	char *hdr,
+	size_t hdr_size,
+	git_off_t obj_len,
+	git_otype obj_type)
 {
 	const char *type_str = git_object_type2string(obj_type);
-	int len = p_snprintf(hdr, n, "%s %lld", type_str, (long long)obj_len);
-	assert(len > 0 && len <= (int)n);
-	return len+1;
+	int hdr_max = (hdr_size > INT_MAX-2) ? (INT_MAX-2) : (int)hdr_size;
+	int len;
+
+	len = p_snprintf(hdr, hdr_max, "%s %lld", type_str, (long long)obj_len);
+
+	if (len < 0 || len >= hdr_max) {
+		giterr_set(GITERR_OS, "object header creation failed");
+		return -1;
+	}
+
+	*written = (size_t)(len + 1);
+	return 0;
 }
 
 int git_odb__hashobj(git_oid *id, git_rawobj *obj)
 {
 	git_buf_vec vec[2];
 	char header[64];
-	int hdrlen;
+	size_t hdrlen;
+	int error;
 
 	assert(id && obj);
 
-	if (!git_object_typeisloose(obj->type))
+	if (!git_object_typeisloose(obj->type)) {
+		giterr_set(GITERR_INVALID, "invalid object type");
 		return -1;
+	}
 
-	if (!obj->data && obj->len != 0)
+	if (!obj->data && obj->len != 0) {
+		giterr_set(GITERR_INVALID, "invalid object");
 		return -1;
+	}
 
-	hdrlen = git_odb__format_object_header(header, sizeof(header), obj->len, obj->type);
+	if ((error = git_odb__format_object_header(&hdrlen,
+		header, sizeof(header), obj->len, obj->type)) < 0)
+		return error;
 
 	vec[0].data = header;
 	vec[0].len = hdrlen;
 	vec[1].data = obj->data;
 	vec[1].len = obj->len;
 
-	git_hash_vec(id, vec, 2);
-
-	return 0;
+	return git_hash_vec(id, vec, 2);
 }
 
 
@@ -171,7 +197,7 @@ void git_odb_object_free(git_odb_object *object)
 
 int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type)
 {
-	int hdr_len;
+	size_t hdr_len;
 	char hdr[64], buffer[FILEIO_BUFSIZE];
 	git_hash_ctx ctx;
 	ssize_t read_len = 0;
@@ -183,9 +209,11 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type)
 	}
 
 	if ((error = git_hash_ctx_init(&ctx)) < 0)
-		return -1;
+		return error;
 
-	hdr_len = git_odb__format_object_header(hdr, sizeof(hdr), size, type);
+	if ((error = git_odb__format_object_header(&hdr_len, hdr,
+		sizeof(hdr), size, type)) < 0)
+		goto done;
 
 	if ((error = git_hash_update(&ctx, hdr, hdr_len)) < 0)
 		goto done;
@@ -341,8 +369,7 @@ static int fake_wstream__write(git_odb_stream *_stream, const char *data, size_t
 {
 	fake_wstream *stream = (fake_wstream *)_stream;
 
-	if (stream->written + len > stream->size)
-		return -1;
+	assert(stream->written + len > stream->size);
 
 	memcpy(stream->buffer + stream->written, data, len);
 	stream->written += len;
@@ -735,6 +762,9 @@ int git_odb_exists(git_odb *db, const git_oid *id)
 
 	assert(db && id);
 
+	if (git_oid_iszero(id))
+		return 0;
+
 	if ((object = git_cache_get_raw(odb_cache(db), id)) != NULL) {
 		git_odb_object_free(object);
 		return 1;
@@ -796,7 +826,7 @@ int git_odb_exists_prefix(
 	git_oid *out, git_odb *db, const git_oid *short_id, size_t len)
 {
 	int error;
-	git_oid key = {{0}}; 
+	git_oid key = {{0}};
 
 	assert(db && short_id);
 
@@ -958,6 +988,11 @@ int git_odb__read_header_or_object(
 
 	assert(db && id && out && len_p && type_p);
 
+	*out = NULL;
+
+	if (git_oid_iszero(id))
+		return error_null_oid(GIT_ENOTFOUND, "cannot read object");
+
 	if ((object = git_cache_get_raw(odb_cache(db), id)) != NULL) {
 		*len_p = object->cached.size;
 		*type_p = object->cached.type;
@@ -965,7 +1000,6 @@ int git_odb__read_header_or_object(
 		return 0;
 	}
 
-	*out = NULL;
 	error = odb_read_header_1(len_p, type_p, db, id, false);
 
 	if (error == GIT_ENOTFOUND && !git_odb_refresh(db))
@@ -1004,8 +1038,10 @@ static int odb_read_1(git_odb_object **out, git_odb *db, const git_oid *id,
 	bool found = false;
 	int error = 0;
 
-	if (!only_refreshed && odb_read_hardcoded(&raw, id) == 0)
-		found = true;
+	if (!only_refreshed) {
+		if ((error = odb_read_hardcoded(&found, &raw, id)) < 0)
+			return error;
+	}
 
 	for (i = 0; i < db->backends.length && !found; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
@@ -1040,8 +1076,10 @@ static int odb_read_1(git_odb_object **out, git_odb *db, const git_oid *id,
 	}
 
 	giterr_clear();
-	if ((object = odb_object__alloc(id, &raw)) == NULL)
+	if ((object = odb_object__alloc(id, &raw)) == NULL) {
+		error = -1;
 		goto out;
+	}
 
 	*out = git_cache_store_raw(odb_cache(db), object);
 
@@ -1056,6 +1094,9 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 	int error;
 
 	assert(out && db && id);
+
+	if (git_oid_iszero(id))
+		return error_null_oid(GIT_ENOTFOUND, "cannot read object");
 
 	*out = git_cache_get_raw(odb_cache(db), id);
 	if (*out != NULL)
@@ -1078,11 +1119,14 @@ static int odb_otype_fast(git_otype *type_p, git_odb *db, const git_oid *id)
 	size_t _unused;
 	int error;
 
+	if (git_oid_iszero(id))
+		return error_null_oid(GIT_ENOTFOUND, "cannot get object type");
+
 	if ((object = git_cache_get_raw(odb_cache(db), id)) != NULL) {
 		*type_p = object->cached.type;
 		return 0;
 	}
-	
+
 	error = odb_read_header_1(&_unused, type_p, db, id, false);
 
 	if (error == GIT_PASSTHROUGH) {
@@ -1161,8 +1205,10 @@ static int read_prefix_1(git_odb_object **out, git_odb *db,
 		}
 	}
 
-	if ((object = odb_object__alloc(&found_full_oid, &raw)) == NULL)
+	if ((object = odb_object__alloc(&found_full_oid, &raw)) == NULL) {
+		error = -1;
 		goto out;
+	}
 
 	*out = git_cache_store_raw(odb_cache(db), object);
 
@@ -1231,6 +1277,10 @@ int git_odb_write(
 	assert(oid && db);
 
 	git_odb_hash(oid, data, len, type);
+
+	if (git_oid_iszero(oid))
+		return error_null_oid(GIT_EINVALID, "cannot write object");
+
 	if (git_odb__freshen(db, oid))
 		return 0;
 
@@ -1263,13 +1313,17 @@ int git_odb_write(
 	return error;
 }
 
-static void hash_header(git_hash_ctx *ctx, git_off_t size, git_otype type)
+static int hash_header(git_hash_ctx *ctx, git_off_t size, git_otype type)
 {
 	char header[64];
-	int hdrlen;
+	size_t hdrlen;
+	int error;
 
-	hdrlen = git_odb__format_object_header(header, sizeof(header), size, type);
-	git_hash_update(ctx, header, hdrlen);
+	 if ((error = git_odb__format_object_header(&hdrlen,
+		header, sizeof(header), size, type)) < 0)
+		return error;
+
+	return git_hash_update(ctx, header, hdrlen);
 }
 
 int git_odb_open_wstream(
@@ -1310,16 +1364,17 @@ int git_odb_open_wstream(
 	ctx = git__malloc(sizeof(git_hash_ctx));
 	GITERR_CHECK_ALLOC(ctx);
 
-	if ((error = git_hash_ctx_init(ctx)) < 0)
+	if ((error = git_hash_ctx_init(ctx)) < 0 ||
+		(error = hash_header(ctx, size, type)) < 0)
 		goto done;
 
-	hash_header(ctx, size, type);
 	(*stream)->hash_ctx = ctx;
-
 	(*stream)->declared_size = size;
 	(*stream)->received_bytes = 0;
 
 done:
+	if (error)
+		git__free(ctx);
 	return error;
 }
 
@@ -1378,7 +1433,12 @@ void git_odb_stream_free(git_odb_stream *stream)
 	stream->free(stream);
 }
 
-int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oid)
+int git_odb_open_rstream(
+	git_odb_stream **stream,
+	size_t *len,
+	git_otype *type,
+	git_odb *db,
+	const git_oid *oid)
 {
 	size_t i, reads = 0;
 	int error = GIT_ERROR;
@@ -1391,7 +1451,7 @@ int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oi
 
 		if (b->readstream != NULL) {
 			++reads;
-			error = b->readstream(stream, b, oid);
+			error = b->readstream(stream, len, type, b, oid);
 		}
 	}
 
@@ -1482,6 +1542,12 @@ int git_odb__error_notfound(
 		giterr_set(GITERR_ODB, "object not found - %s", message);
 
 	return GIT_ENOTFOUND;
+}
+
+static int error_null_oid(int error, const char *message)
+{
+	giterr_set(GITERR_ODB, "odb: %s: null OID cannot exist", message);
+	return error;
 }
 
 int git_odb__error_ambiguous(const char *message)

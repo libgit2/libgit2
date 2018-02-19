@@ -66,4 +66,3 @@ extern int git_diff__entry_cmp(const void *a, const void *b);
 extern int git_diff__entry_icmp(const void *a, const void *b);
 
 #endif
-

@@ -256,3 +256,65 @@ void test_index_filemodes__invalid(void)
 
 	git_index_free(index);
 }
+
+void test_index_filemodes__frombuffer_requires_files(void)
+{
+	git_index *index;
+	git_index_entry new_entry;
+	const git_index_entry *ret_entry;
+	const char *content = "hey there\n";
+
+	memset(&new_entry, 0, sizeof(new_entry));
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	/* regular blob */
+	new_entry.path = "dummy-file.txt";
+	new_entry.mode = GIT_FILEMODE_BLOB;
+
+	cl_git_pass(git_index_add_frombuffer(index,
+		&new_entry, content, strlen(content)));
+
+	cl_assert((ret_entry = git_index_get_bypath(index, "dummy-file.txt", 0)));
+	cl_assert_equal_s("dummy-file.txt", ret_entry->path);
+	cl_assert_equal_i(GIT_FILEMODE_BLOB, ret_entry->mode);
+
+	/* executable blob */
+	new_entry.path = "dummy-file.txt";
+	new_entry.mode = GIT_FILEMODE_BLOB_EXECUTABLE;
+
+	cl_git_pass(git_index_add_frombuffer(index,
+		&new_entry, content, strlen(content)));
+
+	cl_assert((ret_entry = git_index_get_bypath(index, "dummy-file.txt", 0)));
+	cl_assert_equal_s("dummy-file.txt", ret_entry->path);
+	cl_assert_equal_i(GIT_FILEMODE_BLOB_EXECUTABLE, ret_entry->mode);
+
+	/* links are also acceptable */
+	new_entry.path = "dummy-link.txt";
+	new_entry.mode = GIT_FILEMODE_LINK;
+
+	cl_git_pass(git_index_add_frombuffer(index,
+		&new_entry, content, strlen(content)));
+
+	cl_assert((ret_entry = git_index_get_bypath(index, "dummy-link.txt", 0)));
+	cl_assert_equal_s("dummy-link.txt", ret_entry->path);
+	cl_assert_equal_i(GIT_FILEMODE_LINK, ret_entry->mode);
+
+	/* trees are rejected */
+	new_entry.path = "invalid_mode.txt";
+	new_entry.mode = GIT_FILEMODE_TREE;
+
+	cl_git_fail(git_index_add_frombuffer(index,
+		&new_entry, content, strlen(content)));
+	cl_assert_equal_p(NULL, git_index_get_bypath(index, "invalid_mode.txt", 0));
+
+	/* submodules are rejected */
+	new_entry.path = "invalid_mode.txt";
+	new_entry.mode = GIT_FILEMODE_COMMIT;
+
+	cl_git_fail(git_index_add_frombuffer(index,
+		&new_entry, content, strlen(content)));
+	cl_assert_equal_p(NULL, git_index_get_bypath(index, "invalid_mode.txt", 0));
+
+	git_index_free(index);
+}

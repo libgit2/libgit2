@@ -4,8 +4,8 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#ifndef INCLUDE_dir_h__
-#define INCLUDE_dir_h__
+#ifndef INCLUDE_win32_dir_h__
+#define INCLUDE_win32_dir_h__
 
 #include "common.h"
 
@@ -41,4 +41,4 @@ extern int git__closedir(git__DIR *);
 #	define closedir git__closedir
 # endif
 
-#endif /* INCLUDE_dir_h__ */
+#endif

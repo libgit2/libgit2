@@ -70,22 +70,22 @@
 	"This is a mighty fine recipe!\n" \
 	">>>>>>> branchF-2\n"
 
-#define CONFLICTING_RECURSIVE_H1_TO_H2_WITH_DIFF3 \
+#define CONFLICTING_RECURSIVE_H2_TO_H1_WITH_DIFF3 \
 	"VEAL SOUP.\n" \
 	"\n" \
 	"<<<<<<< HEAD\n" \
-	"put into a pot three quarts of water, three onions cut small, one\n" \
-	"||||||| merged common ancestors\n" \
-	"<<<<<<< Temporary merge branch 1\n" \
-	"Put into a pot three quarts of water, THREE ONIONS CUT SMALL, one\n" \
-	"||||||| merged common ancestors\n" \
-	"Put into a pot three quarts of water, three onions cut small, one\n" \
-	"=======\n" \
-	"PUT INTO A POT three quarts of water, three onions cut small, one\n" \
-	">>>>>>> Temporary merge branch 2\n" \
-	"=======\n" \
 	"Put Into A Pot Three Quarts of Water, Three Onions Cut Small, One\n" \
-	">>>>>>> branchH-2\n" \
+	"||||||| merged common ancestors\n" \
+	"<<<<<<<<< Temporary merge branch 1\n" \
+	"PUT INTO A POT three quarts of water, three onions cut small, one\n" \
+	"||||||||| merged common ancestors\n" \
+	"Put into a pot three quarts of water, three onions cut small, one\n" \
+	"=========\n" \
+	"Put into a pot three quarts of water, THREE ONIONS CUT SMALL, one\n" \
+	">>>>>>>>> Temporary merge branch 2\n" \
+	"=======\n" \
+	"put into a pot three quarts of water, three onions cut small, one\n" \
+	">>>>>>> branchH-1\n" \
 	"spoonful of black pepper pounded, and two of salt, with two or three\n" \
 	"slices of lean ham; let it boil steadily two hours; skim it\n" \
 	"occasionally, then put into it a shin of veal, let it boil two hours\n" \

@@ -1458,10 +1458,15 @@ static void filesystem_iterator_set_current(
 	filesystem_iterator_entry *entry)
 {
 	iter->entry.ctime.seconds = entry->st.st_ctime;
-	iter->entry.ctime.nanoseconds = entry->st.st_ctime_nsec;
-
 	iter->entry.mtime.seconds = entry->st.st_mtime;
+
+#if defined(GIT_USE_NSEC)	
+	iter->entry.ctime.nanoseconds = entry->st.st_ctime_nsec;
 	iter->entry.mtime.nanoseconds = entry->st.st_mtime_nsec;
+#else
+	iter->entry.ctime.nanoseconds = 0;
+	iter->entry.mtime.nanoseconds = 0;
+#endif
 
 	iter->entry.dev = entry->st.st_dev;
 	iter->entry.ino = entry->st.st_ino;

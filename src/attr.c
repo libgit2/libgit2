@@ -56,12 +56,16 @@ int git_attr_get(
 	git_attr_file *file;
 	git_attr_name attr;
 	git_attr_rule *rule;
+	git_dir_flag dir_flag = GIT_DIR_FLAG_UNKNOWN;
 
 	assert(value && repo && name);
 
 	*value = NULL;
 
-	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo), GIT_DIR_FLAG_UNKNOWN) < 0)
+	if (git_repository_is_bare(repo))
+		dir_flag = GIT_DIR_FLAG_FALSE;
+
+	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo), dir_flag) < 0)
 		return -1;
 
 	if ((error = collect_attr_files(repo, NULL, flags, pathname, &files)) < 0)
@@ -114,13 +118,17 @@ int git_attr_get_many_with_session(
 	git_attr_rule *rule;
 	attr_get_many_info *info = NULL;
 	size_t num_found = 0;
+	git_dir_flag dir_flag = GIT_DIR_FLAG_UNKNOWN;
 
 	if (!num_attr)
 		return 0;
 
 	assert(values && repo && names);
 
-	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo), GIT_DIR_FLAG_UNKNOWN) < 0)
+	if (git_repository_is_bare(repo))
+		dir_flag = GIT_DIR_FLAG_FALSE;
+
+	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo), dir_flag) < 0)
 		return -1;
 
 	if ((error = collect_attr_files(repo, attr_session, flags, pathname, &files)) < 0)
@@ -196,10 +204,14 @@ int git_attr_foreach(
 	git_attr_rule *rule;
 	git_attr_assignment *assign;
 	git_strmap *seen = NULL;
+	git_dir_flag dir_flag = GIT_DIR_FLAG_UNKNOWN;
 
 	assert(repo && callback);
 
-	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo), GIT_DIR_FLAG_UNKNOWN) < 0)
+	if (git_repository_is_bare(repo))
+		dir_flag = GIT_DIR_FLAG_FALSE;
+
+	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo), dir_flag) < 0)
 		return -1;
 
 	if ((error = collect_attr_files(repo, NULL, flags, pathname, &files)) < 0 ||

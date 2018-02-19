@@ -4,8 +4,8 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#ifndef INCLUDE_compat_h__
-#define INCLUDE_compat_h__
+#ifndef INCLUDE_cc_compat_h__
+#define INCLUDE_cc_compat_h__
 
 #include <stdarg.h>
 
@@ -84,4 +84,4 @@
 #	endif
 #endif
 
-#endif /* INCLUDE_compat_h__ */
+#endif

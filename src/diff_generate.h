@@ -126,4 +126,3 @@ GIT_INLINE(int) git_diff_file__resolve_zero_size(
 }
 
 #endif
-

@@ -13,6 +13,9 @@
 #include <ctype.h>
 #if GIT_WIN32
 #include "win32/findfile.h"
+#else
+#include <unistd.h>
+#include <pwd.h>
 #endif
 
 static int git_sysdir_guess_programdata_dirs(git_buf *out)
@@ -34,12 +37,63 @@ static int git_sysdir_guess_system_dirs(git_buf *out)
 #endif
 }
 
+#ifndef GIT_WIN32
+static int get_passwd_home(git_buf *out, uid_t uid)
+{
+	struct passwd pwd, *pwdptr;
+	char *buf = NULL;
+	long buflen;
+	int error;
+
+	assert(out);
+
+	if ((buflen = sysconf(_SC_GETPW_R_SIZE_MAX)) == -1)
+		buflen = 1024;
+
+	do {
+		buf = git__realloc(buf, buflen);
+		error = getpwuid_r(uid, &pwd, buf, buflen, &pwdptr);
+		buflen *= 2;
+	} while (error == ERANGE && buflen <= 8192);
+
+	if (error) {
+		giterr_set(GITERR_OS, "failed to get passwd entry");
+		goto out;
+	}
+
+	if (!pwdptr) {
+		giterr_set(GITERR_OS, "no passwd entry found for user");
+		goto out;
+	}
+
+	if ((error = git_buf_puts(out, pwdptr->pw_dir)) < 0)
+		goto out;
+
+out:
+	git__free(buf);
+	return error;
+}
+#endif
+
 static int git_sysdir_guess_global_dirs(git_buf *out)
 {
 #ifdef GIT_WIN32
 	return git_win32__find_global_dirs(out);
 #else
-	int error = git__getenv(out, "HOME");
+	int error;
+	uid_t uid, euid;
+
+	uid = getuid();
+	euid = geteuid();
+
+	/*
+	 * In case we are running setuid, use the configuration
+	 * of the effective user.
+	 */
+	if (uid == euid)
+	    error = git__getenv(out, "HOME");
+	else
+	    error = get_passwd_home(out, euid);
 
 	if (error == GIT_ENOTFOUND) {
 		giterr_clear();
@@ -57,12 +111,25 @@ static int git_sysdir_guess_xdg_dirs(git_buf *out)
 #else
 	git_buf env = GIT_BUF_INIT;
 	int error;
+	uid_t uid, euid;
 
-	if ((error = git__getenv(&env, "XDG_CONFIG_HOME")) == 0)
-		error = git_buf_joinpath(out, env.ptr, "git");
+	uid = getuid();
+	euid = geteuid();
 
-	if (error == GIT_ENOTFOUND && (error = git__getenv(&env, "HOME")) == 0)
-		error = git_buf_joinpath(out, env.ptr, ".config/git");
+	/*
+	 * In case we are running setuid, only look up passwd
+	 * directory of the effective user.
+	 */
+	if (uid == euid) {
+		if ((error = git__getenv(&env, "XDG_CONFIG_HOME")) == 0)
+			error = git_buf_joinpath(out, env.ptr, "git");
+
+		if (error == GIT_ENOTFOUND && (error = git__getenv(&env, "HOME")) == 0)
+			error = git_buf_joinpath(out, env.ptr, ".config/git");
+	} else {
+		if ((error = get_passwd_home(&env, euid)) == 0)
+			error = git_buf_joinpath(out, env.ptr, ".config/git");
+	}
 
 	if (error == GIT_ENOTFOUND) {
 		giterr_clear();

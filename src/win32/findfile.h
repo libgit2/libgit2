@@ -5,8 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifndef INCLUDE_git_findfile_h__
-#define INCLUDE_git_findfile_h__
+#ifndef INCLUDE_win32_findfile_h__
+#define INCLUDE_win32_findfile_h__
 
 #include "common.h"
 

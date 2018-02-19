@@ -187,13 +187,17 @@ static int store_delta(git_indexer *idx)
 	return 0;
 }
 
-static void hash_header(git_hash_ctx *ctx, git_off_t len, git_otype type)
+static int hash_header(git_hash_ctx *ctx, git_off_t len, git_otype type)
 {
 	char buffer[64];
 	size_t hdrlen;
+	int error;
 
-	hdrlen = git_odb__format_object_header(buffer, sizeof(buffer), (size_t)len, type);
-	git_hash_update(ctx, buffer, hdrlen);
+	if ((error = git_odb__format_object_header(&hdrlen,
+		buffer, sizeof(buffer), (size_t)len, type)) < 0)
+		return error;
+
+	return git_hash_update(ctx, buffer, hdrlen);
 }
 
 static int hash_object_stream(git_indexer*idx, git_packfile_stream *stream)
@@ -621,7 +625,10 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_tran
 				idx->have_delta = 1;
 			} else {
 				idx->have_delta = 0;
-				hash_header(&idx->hash_ctx, entry_size, type);
+
+				error = hash_header(&idx->hash_ctx, entry_size, type);
+				if (error < 0)
+					goto on_error;
 			}
 
 			idx->have_stream = 1;

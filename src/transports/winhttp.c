@@ -18,6 +18,7 @@
 #include "remote.h"
 #include "repository.h"
 #include "global.h"
+#include "http.h"
 
 #include <wincrypt.h>
 #include <winhttp.h>
@@ -701,21 +702,6 @@ static int winhttp_close_connection(winhttp_subtransport *t)
 	return ret;
 }
 
-static int user_agent(git_buf *ua)
-{
-	const char *custom = git_libgit2__user_agent();
-
-	git_buf_clear(ua);
-	git_buf_PUTS(ua, "git/1.0 (");
-
-	if (custom)
-		git_buf_puts(ua, custom);
-	else
-		git_buf_PUTS(ua, "libgit2 " LIBGIT2_VERSION);
-
-	return git_buf_putc(ua, ')');
-}
-
 static void CALLBACK winhttp_status(
 	HINTERNET connection,
 	DWORD_PTR ctx,
@@ -772,7 +758,8 @@ static int winhttp_connect(
 		return -1;
 	}
 
-	if ((error = user_agent(&ua)) < 0) {
+
+	if ((error = git_http__user_agent(&ua)) < 0) {
 		git__free(wide_host);
 		return error;
 	}
