@@ -264,6 +264,7 @@ void test_index_filemodes__frombuffer_requires_files(void)
 	const git_index_entry *ret_entry;
 	const char *content = "hey there\n";
 
+	memset(&new_entry, 0, sizeof(new_entry));
 	cl_git_pass(git_repository_index(&index, g_repo));
 
 	/* regular blob */
