@@ -686,8 +686,10 @@ static bool is_rename_target(
 			break;
 		}
 		if (FLAG_SET(opts, GIT_DIFF_FIND_RENAMES_FROM_REWRITES) &&
-			delta->similarity < opts->rename_from_rewrite_threshold)
+			delta->similarity < opts->rename_from_rewrite_threshold) {
+			delta->flags |= GIT_DIFF_FLAG__TO_SPLIT;
 			break;
+		}
 
 		return false;
 
