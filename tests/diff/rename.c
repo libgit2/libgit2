@@ -20,6 +20,8 @@ void test_diff_rename__cleanup(void)
 #define COPY_RENAME_COMMIT "2bc7f351d20b53f1c72c16c4b036e491c478c49a"
 #define REWRITE_COPY_COMMIT "1c068dee5790ef1580cfc4cd670915b48d790084"
 #define RENAME_MODIFICATION_COMMIT "19dd32dfb1520a64e5bbaae8dce6ef423dfa2f13"
+#define REWRITE_DELETE_COMMIT "84d8efa38af7ace2b302de0adbda16b1f1cd2e1b"
+#define DELETE_RENAME_COMMIT "be053a189b0bbde545e0a3f59ce00b46ad29ce0d"
 
 /*
  * Renames repo has:
@@ -41,6 +43,16 @@ void test_diff_rename__cleanup(void)
  *   ikeepsix.txt    -> ikeepsix.txt    (reorder sections in file)
  *   sixserving.txt  -> sixserving.txt  (whitespace change - not just indent)
  *   sevencities.txt -> songof7cities.txt (rename, small text changes)
+ * commit 84d8efa38af7ace2b302de0adbda16b1f1cd2e1b
+ *   songof7cities.txt -> songof7citie.txt (major rewrite, <20% match)
+ *   ikeepsix.txt      ->                  (deleted)
+ *   untimely.txt                          (no change)
+ *   sixserving.txt                        (no change)
+ * commit be053a189b0bbde545e0a3f59ce00b46ad29ce0d
+ *   ikeepsix.txt      ->              (deleted)
+ *   songof7cities.txt -> ikeepsix.txt (rename, 100% match)
+ *   untimely.txt                      (no change)
+ *   sixserving.txt                    (no change)
  */
 
 void test_diff_rename__match_oid(void)
