@@ -23,6 +23,13 @@ We aim to release once every six months. We start the process by opening an issu
 
 We tag at least one release candidate. This RC must carry the new version in the headers, including the SOVERSION. If there are no significant issues found, we can go straight to the release after a single RC. This is up to the discretion of the release manager. There is no set time to have the candidate out, but we should we should give downstream projects at least a week to give feedback.
 
+Preparing the first release candidate includes updating the version number of libgit2 to the new version number. To do so, a pull request shall be submitted that adjusts the version number in the following places:
+
+- CHANGELOG.md
+- include/git2/version.h
+
+As soon as the pull request is merged, the merge commit shall be tagged with a lightweight tag.
+
 The tagging happens via GitHub's "releases" tab which lets us attach release notes to a particular tag. In the description we include the changes in `CHANGELOG.md` between the last full release. Use the following as a base for the release notes
 
     This is the first release of the v0.X series, <codename>. The changelog follows.
