@@ -54,6 +54,12 @@ v0.26 + 1
 
 * Fix files not being treated as modified when only the file mode has changed.
 
+* We now explicitly reject adding submodules to the index via
+  `git_index_add_frombuffer`.
+
+* Fix handling of `GIT_DIFF_FIND_RENAMES_FROM_REWRITES` raising `SIGABRT` when
+  one file has been deleted and another file has been rewritten.
+
 * Fix for WinHTTP not properly handling NTLM and Negotiate challenges.
 
 * When using SSH-based transports, we now repeatedly ask for the passphrase to
