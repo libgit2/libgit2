@@ -16,6 +16,11 @@ void test_diff_rename__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
+#define INITIAL_COMMIT "31e47d8c1fa36d7f8d537b96158e3f024de0a9f2"
+#define COPY_RENAME_COMMIT "2bc7f351d20b53f1c72c16c4b036e491c478c49a"
+#define REWRITE_COPY_COMMIT "1c068dee5790ef1580cfc4cd670915b48d790084"
+#define RENAME_MODIFICATION_COMMIT "19dd32dfb1520a64e5bbaae8dce6ef423dfa2f13"
+
 /*
  * Renames repo has:
  *
@@ -40,8 +45,8 @@ void test_diff_rename__cleanup(void)
 
 void test_diff_rename__match_oid(void)
 {
-	const char *old_sha = "31e47d8c1fa36d7f8d537b96158e3f024de0a9f2";
-	const char *new_sha = "2bc7f351d20b53f1c72c16c4b036e491c478c49a";
+	const char *old_sha = INITIAL_COMMIT;
+	const char *new_sha = COPY_RENAME_COMMIT;
 	git_tree *old_tree, *new_tree;
 	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
@@ -139,8 +144,8 @@ void test_diff_rename__match_oid(void)
 
 void test_diff_rename__checks_options_version(void)
 {
-	const char *old_sha = "31e47d8c1fa36d7f8d537b96158e3f024de0a9f2";
-	const char *new_sha = "2bc7f351d20b53f1c72c16c4b036e491c478c49a";
+	const char *old_sha = INITIAL_COMMIT;
+	const char *new_sha = COPY_RENAME_COMMIT;
 	git_tree *old_tree, *new_tree;
 	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
@@ -171,9 +176,9 @@ void test_diff_rename__checks_options_version(void)
 
 void test_diff_rename__not_exact_match(void)
 {
-	const char *sha0 = "2bc7f351d20b53f1c72c16c4b036e491c478c49a";
-	const char *sha1 = "1c068dee5790ef1580cfc4cd670915b48d790084";
-	const char *sha2 = "19dd32dfb1520a64e5bbaae8dce6ef423dfa2f13";
+	const char *sha0 = COPY_RENAME_COMMIT;
+	const char *sha1 = REWRITE_COPY_COMMIT;
+	const char *sha2 = RENAME_MODIFICATION_COMMIT;
 	git_tree *old_tree, *new_tree;
 	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
@@ -433,7 +438,7 @@ void test_diff_rename__test_small_files(void)
 
 void test_diff_rename__working_directory_changes(void)
 {
-	const char *sha0 = "2bc7f351d20b53f1c72c16c4b036e491c478c49a";
+	const char *sha0 = COPY_RENAME_COMMIT;
 	const char *blobsha = "66311f5cfbe7836c27510a3ba2f43e282e2c8bba";
 	git_oid id;
 	git_tree *tree;
@@ -592,8 +597,8 @@ void test_diff_rename__working_directory_changes(void)
 
 void test_diff_rename__patch(void)
 {
-	const char *sha0 = "2bc7f351d20b53f1c72c16c4b036e491c478c49a";
-	const char *sha1 = "1c068dee5790ef1580cfc4cd670915b48d790084";
+	const char *sha0 = COPY_RENAME_COMMIT;
+	const char *sha1 = REWRITE_COPY_COMMIT;
 	git_tree *old_tree, *new_tree;
 	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
@@ -1425,9 +1430,9 @@ void test_diff_rename__can_delete_unmodified_deltas(void)
 
 void test_diff_rename__matches_config_behavior(void)
 {
-	const char *sha0 = "31e47d8c1fa36d7f8d537b96158e3f024de0a9f2";
-	const char *sha1 = "2bc7f351d20b53f1c72c16c4b036e491c478c49a";
-	const char *sha2 = "1c068dee5790ef1580cfc4cd670915b48d790084";
+	const char *sha0 = INITIAL_COMMIT;
+	const char *sha1 = COPY_RENAME_COMMIT;
+	const char *sha2 = REWRITE_COPY_COMMIT;
 
 	git_tree *tree0, *tree1, *tree2;
 	git_config *cfg;
@@ -1508,8 +1513,8 @@ void test_diff_rename__matches_config_behavior(void)
 
 void test_diff_rename__can_override_thresholds_when_obeying_config(void)
 {
-	const char *sha1 = "2bc7f351d20b53f1c72c16c4b036e491c478c49a";
-	const char *sha2 = "1c068dee5790ef1580cfc4cd670915b48d790084";
+	const char *sha1 = COPY_RENAME_COMMIT;
+	const char *sha2 = REWRITE_COPY_COMMIT;
 
 	git_tree *tree1, *tree2;
 	git_config *cfg;
@@ -1563,8 +1568,8 @@ void test_diff_rename__can_override_thresholds_when_obeying_config(void)
 
 void test_diff_rename__by_config_doesnt_mess_with_whitespace_settings(void)
 {
-	const char *sha1 = "1c068dee5790ef1580cfc4cd670915b48d790084";
-	const char *sha2 = "19dd32dfb1520a64e5bbaae8dce6ef423dfa2f13";
+	const char *sha1 = REWRITE_COPY_COMMIT;
+	const char *sha2 = RENAME_MODIFICATION_COMMIT;
 
 	git_tree *tree1, *tree2;
 	git_config *cfg;
@@ -1710,8 +1715,8 @@ void test_diff_rename__blank_files_not_renamed_when_not_ignoring_whitespace(void
  */
 void test_diff_rename__identical(void)
 {
-	const char *old_sha = "31e47d8c1fa36d7f8d537b96158e3f024de0a9f2";
-	const char *new_sha = "2bc7f351d20b53f1c72c16c4b036e491c478c49a";
+	const char *old_sha = INITIAL_COMMIT;
+	const char *new_sha = COPY_RENAME_COMMIT;
 	git_tree *old_tree, *new_tree;
     git_diff *diff;
 	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
