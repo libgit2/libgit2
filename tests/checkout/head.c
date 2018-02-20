@@ -136,3 +136,48 @@ void test_checkout_head__do_remove_tracked_subdir(void)
 	cl_assert(!git_path_isfile("testrepo/subdir/tracked-file"));
 	cl_assert(git_path_isfile("testrepo/subdir/untracked-file"));
 }
+
+void test_checkout_head__typechange_workdir(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_object *target;
+	struct stat st;
+
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_git_pass(git_revparse_single(&target, g_repo, "HEAD"));
+	cl_git_pass(git_reset(g_repo, target, GIT_RESET_HARD, NULL));
+
+	cl_must_pass(p_chmod("testrepo/new.txt", 0755));
+	cl_git_pass(git_checkout_head(g_repo, &opts));
+
+	cl_git_pass(p_stat("testrepo/new.txt", &st));
+	cl_assert(!GIT_PERMS_IS_EXEC(st.st_mode));
+
+	git_object_free(target);
+}
+
+void test_checkout_head__typechange_index_and_workdir(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_object *target;
+	git_index *index;
+	struct stat st;
+
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_git_pass(git_revparse_single(&target, g_repo, "HEAD"));
+	cl_git_pass(git_reset(g_repo, target, GIT_RESET_HARD, NULL));
+
+	cl_must_pass(p_chmod("testrepo/new.txt", 0755));
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_add_bypath(index, "new.txt"));
+	cl_git_pass(git_index_write(index));
+	cl_git_pass(git_checkout_head(g_repo, &opts));
+
+	cl_git_pass(p_stat("testrepo/new.txt", &st));
+	cl_assert(!GIT_PERMS_IS_EXEC(st.st_mode));
+
+	git_object_free(target);
+	git_index_free(index);
+}
