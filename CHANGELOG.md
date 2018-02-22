@@ -121,6 +121,10 @@ v0.27
 * We now read the effective user's configuration file instead of the real user's
   configuration in case libgit2 runs as part of a setuid binary.
 
+* The `git_odb_open_rstream` function and its `readstream` callback in the
+  `git_odb_backend` interface have changed their signatures to allow providing
+  the object's size and type to the caller.
+
 v0.26
 -----
 
