@@ -25,6 +25,12 @@ void test_diff_patch__cleanup(void)
 
 #define EXPECTED_HUNK "@@ -1,2 +0,0 @@\n"
 
+#define UTF8_HUNK_HEADER "\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\n"
+
+#define UTF8_TRUNCATED_A_HUNK_HEADER "\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\n"
+
+#define UTF8_TRUNCATED_L_HUNK_HEADER "\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE6\x97\xA5\n"
+
 static int check_removal_cb(
 	const git_diff_delta *delta,
 	const git_diff_hunk *hunk,
@@ -609,4 +615,90 @@ void test_diff_patch__line_counts_with_eofnl(void)
 		g_repo, 1, 1, 1, 6, expected_sizes, expected);
 
 	git_buf_free(&content);
+}
+
+void test_diff_patch__can_strip_bad_utf8(void)
+{
+	const char *a = "A " UTF8_HUNK_HEADER
+		"  B\n"
+		"  C\n"
+		"  D\n"
+		"  E\n"
+		"  F\n"
+		"  G\n"
+		"  H\n"
+		"  I\n"
+		"  J\n"
+		"  K\n"
+		"L  " UTF8_HUNK_HEADER
+		"  M\n"
+		"  N\n"
+		"  O\n"
+		"  P\n"
+		"  Q\n"
+		"  R\n"
+		"  S\n"
+		"  T\n"
+		"  U\n"
+		"  V\n";
+
+	const char *b = "A " UTF8_HUNK_HEADER
+		"  B\n"
+		"  C\n"
+		"  D\n"
+		"  E modified\n"
+		"  F\n"
+		"  G\n"
+		"  H\n"
+		"  I\n"
+		"  J\n"
+		"  K\n"
+		"L  " UTF8_HUNK_HEADER
+		"  M\n"
+		"  N\n"
+		"  O\n"
+		"  P modified\n"
+		"  Q\n"
+		"  R\n"
+		"  S\n"
+		"  T\n"
+		"  U\n"
+		"  V\n";
+
+	const char *expected = "diff --git a/file b/file\n"
+		"index d0647c4..7827ce5 100644\n"
+		"--- a/file\n"
+		"+++ b/file\n"
+		"@@ -2,7 +2,7 @@ A " UTF8_TRUNCATED_A_HUNK_HEADER
+		"   B\n"
+		"   C\n"
+		"   D\n"
+		"-  E\n"
+		"+  E modified\n"
+		"   F\n"
+		"   G\n"
+		"   H\n"
+		"@@ -13,7 +13,7 @@ L  " UTF8_TRUNCATED_L_HUNK_HEADER
+		"   M\n"
+		"   N\n"
+		"   O\n"
+		"-  P\n"
+		"+  P modified\n"
+		"   Q\n"
+		"   R\n"
+		"   S\n";
+
+	git_diff_options opts;
+	git_patch *patch;
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_pass(git_diff_init_options(&opts, GIT_DIFF_OPTIONS_VERSION));
+
+	cl_git_pass(git_patch_from_buffers(&patch, a, strlen(a), NULL, b, strlen(b), NULL, &opts));
+	cl_git_pass(git_patch_to_buf(&buf, patch));
+
+	cl_assert_equal_s(expected, buf.ptr);
+
+	git_patch_free(patch);
+	git_buf_free(&buf);
 }

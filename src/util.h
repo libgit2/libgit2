@@ -454,6 +454,16 @@ extern size_t git__unescape(char *str);
 extern int git__utf8_iterate(const uint8_t *str, int str_len, int32_t *dst);
 
 /*
+ * Iterate through an UTF-8 string and stops after finding any invalid UTF-8
+ * codepoints.
+ *
+ * @param str string to scan
+ * @param str_len size of the string
+ * @return length in bytes of the string that contains valid data
+ */
+extern size_t git__utf8_valid_buf_length(const uint8_t *str, size_t str_len);
+
+/*
  * Safely zero-out memory, making sure that the compiler
  * doesn't optimize away the operation.
  */
