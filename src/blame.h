@@ -13,10 +13,10 @@
  * One blob in a commit that is being suspected
  */
 typedef struct git_blame__origin {
-	int refcnt;
 	struct git_blame__origin *previous;
 	git_commit *commit;
 	git_blob *blob;
+	int refcnt;
 	char path[GIT_FLEX_ARRAY];
 } git_blame__origin;
 
@@ -29,16 +29,26 @@ typedef struct git_blame__entry {
 	struct git_blame__entry *prev;
 	struct git_blame__entry *next;
 
+	/* the commit that introduced this group into the final image */
+	git_blame__origin *suspect;
+
 	/* the first line of this group in the final image;
 	 * internally all line numbers are 0 based.
 	 */
 	size_t lno;
 
+	/* the line number of the first line of this group in the
+	 * suspect's file; internally all line numbers are 0 based.
+	 */
+	size_t s_lno;
+
 	/* how many lines this group has */
 	size_t num_lines;
 
-	/* the commit that introduced this group into the final image */
-	git_blame__origin *suspect;
+	/* how significant this entry is -- cached to avoid
+	 * scanning the lines over and over.
+	 */
+	unsigned score;
 
 	/* true if the suspect is truly guilty; false while we have not
 	 * checked if the group came from one of its parents.
@@ -48,16 +58,6 @@ typedef struct git_blame__entry {
 	/* true if the entry has been scanned for copies in the current parent
 	 */
 	bool scanned;
-
-	/* the line number of the first line of this group in the
-	 * suspect's file; internally all line numbers are 0 based.
-	 */
-	size_t s_lno;
-
-	/* how significant this entry is -- cached to avoid
-	 * scanning the lines over and over.
-	 */
-	unsigned score;
 
 	/* Whether this entry has been tracked to a boundary commit.
 	 */

@@ -28,23 +28,22 @@
 #define GIT_PACK_BIG_FILE_THRESHOLD (512 * 1024 * 1024)
 
 typedef struct git_pobject {
-	git_oid id;
-	git_otype type;
-	git_off_t offset;
-
-	size_t size;
-
-	unsigned int hash; /* name hint hash */
-
 	struct git_pobject *delta; /* delta base object */
 	struct git_pobject *delta_child; /* deltified objects who bases me */
 	struct git_pobject *delta_sibling; /* other deltified objects
 					    * who uses the same base as
 					    * me */
-
 	void *delta_data;
+
+	git_off_t offset;
+	size_t size;
 	size_t delta_size;
 	size_t z_delta_size;
+
+	unsigned int hash; /* name hint hash */
+
+	git_oid id;
+	git_otype type;
 
 	int written:1,
 	    recursing:1,
