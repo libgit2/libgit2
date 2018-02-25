@@ -38,6 +38,7 @@ addons:
    openssh-client
    openssh-server
    valgrind
+   openssl
 
 matrix:
  fast_finish: true
