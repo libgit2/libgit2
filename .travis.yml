@@ -34,7 +34,7 @@ addons:
    libcurl3
    libcurl3-gnutls
    libcurl4-gnutls-dev
-   libssh2-1
+   libssh2-1-dev
    openssh-client
    openssh-server
    valgrind
