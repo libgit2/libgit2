@@ -209,7 +209,7 @@ int git_smart__detect_caps(git_pkt_ref *pkt, transport_smart_caps *caps, git_vec
 	return 0;
 }
 
-static int recv_pkt(git_pkt **out, git_pkt_type *pkt_type, gitno_buffer *buf)
+static int recv_pkt(git_pkt **out_pkt, git_pkt_type *out_type, gitno_buffer *buf)
 {
 	const char *ptr = buf->data, *line_end = ptr;
 	git_pkt *pkt = NULL;
@@ -236,10 +236,10 @@ static int recv_pkt(git_pkt **out, git_pkt_type *pkt_type, gitno_buffer *buf)
 	} while (error);
 
 	gitno_consume(buf, line_end);
-	if (pkt_type)
-		*pkt_type = pkt->type;
-	if (out != NULL)
-		*out = pkt;
+	if (out_type != NULL)
+		*out_type = pkt->type;
+	if (out_pkt != NULL)
+		*out_pkt = pkt;
 	else
 		git__free(pkt);
 
