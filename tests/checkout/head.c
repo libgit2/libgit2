@@ -181,3 +181,86 @@ void test_checkout_head__typechange_index_and_workdir(void)
 	git_object_free(target);
 	git_index_free(index);
 }
+
+void test_checkout_head__workdir_filemode_is_simplified(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_object *target, *branch;
+
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_git_pass(git_revparse_single(&target, g_repo, "a38d028f71eaa590febb7d716b1ca32350cf70da"));
+	cl_git_pass(git_reset(g_repo, target, GIT_RESET_HARD, NULL));
+
+	cl_must_pass(p_chmod("testrepo/branch_file.txt", 0666));
+
+	/*
+	 * Checkout should not fail with a conflict; though the file mode
+	 * on disk is literally different to the base (0666 vs 0644), Git
+	 * ignores the actual mode and simply treats both as non-executable.
+	 */
+	cl_git_pass(git_revparse_single(&branch, g_repo, "099fabac3a9ea935598528c27f866e34089c2eff"));
+
+	opts.checkout_strategy &= ~GIT_CHECKOUT_FORCE;
+	opts.checkout_strategy |=  GIT_CHECKOUT_SAFE;
+	cl_git_pass(git_checkout_tree(g_repo, branch, NULL));
+
+	git_object_free(branch);
+	git_object_free(target);
+}
+
+void test_checkout_head__obeys_filemode_true(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_object *target, *branch;
+
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	/* In this commit, `README` is executable */
+	cl_git_pass(git_revparse_single(&target, g_repo, "f9ed4af42472941da45a3c"));
+	cl_git_pass(git_reset(g_repo, target, GIT_RESET_HARD, NULL));
+
+	cl_repo_set_bool(g_repo, "core.filemode", true);
+	cl_must_pass(p_chmod("testrepo/README", 0644));
+
+	/*
+	 * Checkout will fail with a conflict; the file mode is updated in
+	 * the checkout target, but the contents have changed in our branch.
+	 */
+	cl_git_pass(git_revparse_single(&branch, g_repo, "099fabac3a9ea935598528c27f866e34089c2eff"));
+
+	opts.checkout_strategy &= ~GIT_CHECKOUT_FORCE;
+	opts.checkout_strategy |=  GIT_CHECKOUT_SAFE;
+	cl_git_fail_with(GIT_ECONFLICT, git_checkout_tree(g_repo, branch, NULL));
+
+	git_object_free(branch);
+	git_object_free(target);
+}
+
+void test_checkout_head__obeys_filemode_false(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_object *target, *branch;
+
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	/* In this commit, `README` is executable */
+	cl_git_pass(git_revparse_single(&target, g_repo, "f9ed4af42472941da45a3c"));
+	cl_git_pass(git_reset(g_repo, target, GIT_RESET_HARD, NULL));
+
+	cl_repo_set_bool(g_repo, "core.filemode", false);
+	cl_must_pass(p_chmod("testrepo/README", 0644));
+
+	/*
+	 * Checkout will fail with a conflict; the file contents are updated
+	 * in the checkout target, but the filemode has changed in our branch.
+	 */
+	cl_git_pass(git_revparse_single(&branch, g_repo, "099fabac3a9ea935598528c27f866e34089c2eff"));
+
+	opts.checkout_strategy &= ~GIT_CHECKOUT_FORCE;
+	opts.checkout_strategy |=  GIT_CHECKOUT_SAFE;
+	cl_git_pass(git_checkout_tree(g_repo, branch, NULL));
+
+	git_object_free(branch);
+	git_object_free(target);
+}

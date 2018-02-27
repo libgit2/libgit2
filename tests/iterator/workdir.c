@@ -610,6 +610,7 @@ void test_iterator_workdir__filesystem2(void)
 	static const char *expect_base[] = {
 		"heads/br2",
 		"heads/dir",
+		"heads/executable",
 		"heads/ident",
 		"heads/long-file-name",
 		"heads/master",
@@ -630,7 +631,7 @@ void test_iterator_workdir__filesystem2(void)
 
 	cl_git_pass(git_iterator_for_filesystem(
 		&i, "testrepo/.git/refs", NULL));
-	expect_iterator_items(i, 15, expect_base, 15, expect_base);
+	expect_iterator_items(i, 16, expect_base, 16, expect_base);
 	git_iterator_free(i);
 }
 
