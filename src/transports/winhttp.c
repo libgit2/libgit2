@@ -37,6 +37,14 @@
 #define WINHTTP_IGNORE_REQUEST_TOTAL_LENGTH 0
 #endif
 
+#ifndef WINHTTP_FLAG_SECURE_PROTOCOL_TLS_1_1
+# define WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_1 0x00000200
+#endif
+
+#ifndef WINHTTP_FLAG_SECURE_PROTOCOL_TLS_1_2
+# define WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2 0x00000800
+#endif
+
 static const char *prefix_https = "https://";
 static const char *upload_pack_service = "upload-pack";
 static const char *upload_pack_ls_service_url = "/info/refs?service=git-upload-pack";
@@ -51,11 +59,6 @@ static const wchar_t *transfer_encoding = L"Transfer-Encoding: chunked";
 static const int no_check_cert_flags = SECURITY_FLAG_IGNORE_CERT_CN_INVALID |
 	SECURITY_FLAG_IGNORE_CERT_DATE_INVALID |
 	SECURITY_FLAG_IGNORE_UNKNOWN_CA;
-
-#if defined(__MINGW64_VERSION_MAJOR)
-# define WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_1 0x00000200
-# define WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2 0x00000800
-#endif
 
 #if defined(__MINGW32__)
 static const CLSID CLSID_InternetSecurityManager_mingw =
