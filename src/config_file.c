@@ -87,12 +87,11 @@ typedef struct {
 	git_mutex values_mutex;
 	refcounted_strmap *values;
 	const git_repository *repo;
+	git_config_level_t level;
 } diskfile_header;
 
 typedef struct {
 	diskfile_header header;
-
-	git_config_level_t level;
 
 	git_array_t(git_config_parser) readers;
 
@@ -270,7 +269,7 @@ static int config_open(git_config_backend *cfg, git_config_level_t level, const 
 	int res;
 	diskfile_backend *b = (diskfile_backend *)cfg;
 
-	b->level = level;
+	b->header.level = level;
 	b->header.repo = repo;
 
 	if ((res = refcounted_strmap_alloc(&b->header.values)) < 0)
@@ -343,7 +342,7 @@ static int config_refresh(git_config_backend *cfg)
 	}
 	git_array_clear(b->file.includes);
 
-	if ((error = config_read(values->values, b->header.repo, &b->file, b->level, 0)) < 0)
+	if ((error = config_read(values->values, b->header.repo, &b->file, b->header.level, 0)) < 0)
 		goto out;
 
 	if ((error = git_mutex_lock(&b->header.values_mutex)) < 0) {
@@ -423,7 +422,7 @@ static int config_iterator_new(
 	if ((error = config_snapshot(&snapshot, backend)) < 0)
 		return error;
 
-	if ((error = snapshot->open(snapshot, b->level, b->header.repo)) < 0)
+	if ((error = snapshot->open(snapshot, b->header.level, b->header.repo)) < 0)
 		return error;
 
 	it = git__calloc(1, sizeof(git_config_file_iter));
