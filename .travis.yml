@@ -65,10 +65,7 @@ install:
 script:
  - script/cibuild.sh
  - script/citest.sh
-
-# Run Tests
-after_success:
- - if [ "$TRAVIS_OS_NAME" = "linux" -a -n "$VALGRIND" ]; then valgrind --leak-check=full --show-reachable=yes --suppressions=./libgit2_clar.supp _build/libgit2_clar -ionline; fi
+ - script/cileaks.sh
 
 # Only watch the development and master branches
 branches:
