@@ -45,6 +45,8 @@ void test_transport_register__custom_transport_ssh(void)
 		"ssh+git://somehost:somepath",
 		"git+ssh://somehost:somepath",
 		"git@somehost:somepath",
+		"ssh://somehost:somepath%20with%20%spaces",
+		"ssh://somehost:somepath with spaces"
 	};
 	git_transport *transport;
 	unsigned i;
