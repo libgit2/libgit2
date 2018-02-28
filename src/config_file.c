@@ -327,7 +327,7 @@ static int config_refresh(git_config_backend *cfg)
 	uint32_t i;
 
 	if (b->header.parent.readonly)
-		return 0;
+		return config_error_readonly();
 
 	error = config_is_modified(&modified, &b->file);
 	if (error < 0 && error != GIT_ENOTFOUND)
