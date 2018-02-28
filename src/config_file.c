@@ -326,6 +326,9 @@ static int config_refresh(git_config_backend *cfg)
 	int error, modified;
 	uint32_t i;
 
+	if (b->header.parent.readonly)
+		return 0;
+
 	error = config_is_modified(&modified, &b->file);
 	if (error < 0 && error != GIT_ENOTFOUND)
 		goto out;
@@ -416,13 +419,13 @@ static int config_iterator_new(
 	diskfile_header *h;
 	git_config_file_iter *it;
 	git_config_backend *snapshot;
-	diskfile_backend *b = (diskfile_backend *) backend;
+	diskfile_header *bh = (diskfile_header *) backend;
 	int error;
 
 	if ((error = config_snapshot(&snapshot, backend)) < 0)
 		return error;
 
-	if ((error = snapshot->open(snapshot, b->header.level, b->header.repo)) < 0)
+	if ((error = snapshot->open(snapshot, bh->level, bh->repo)) < 0)
 		return error;
 
 	it = git__calloc(1, sizeof(git_config_file_iter));
