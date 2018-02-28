@@ -64,6 +64,7 @@ install:
 # Run the Build script and tests
 script:
  - script/cibuild.sh
+ - script/citest.sh
 
 # Run Tests
 after_success:
