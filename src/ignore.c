@@ -59,7 +59,7 @@ static int does_negate_pattern(git_attr_fnmatch *rule, git_attr_fnmatch *neg)
 	if (neg->flags & GIT_ATTR_FNMATCH_ICASE)
 		cmp = git__strncasecmp;
 	else
-		cmp = strncmp;
+		cmp = git__strncmp;
 
 	/* If lengths match we need to have an exact match */
 	if (rule->length == neg->length) {
