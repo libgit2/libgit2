@@ -14,6 +14,7 @@
 #include "stream.h"
 #include "git2/transport.h"
 #include "buffer.h"
+#include "global.h"
 #include "vector.h"
 #include "proxy.h"
 
@@ -37,6 +38,18 @@ typedef struct {
 	git_proxy_options proxy;
 	git_cred *proxy_cred;
 } curl_stream;
+
+int git_curl_stream_global_init(void)
+{
+	if (curl_global_init(CURL_GLOBAL_ALL) != 0) {
+		giterr_set(GITERR_NET, "could not initialize curl");
+		return -1;
+	}
+
+	/* `curl_global_cleanup` is provided by libcurl */
+	git__on_shutdown(curl_global_cleanup);
+	return 0;
+}
 
 static int seterr_curl(curl_stream *s)
 {
@@ -352,6 +365,11 @@ int git_curl_stream_new(git_stream **out, const char *host, const char *port)
 #else
 
 #include "stream.h"
+
+int git_curl_stream_global_init(void)
+{
+	return 0;
+}
 
 int git_curl_stream_new(git_stream **out, const char *host, const char *port)
 {
