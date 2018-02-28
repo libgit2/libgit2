@@ -89,15 +89,19 @@ done:
 		return -1;
 	}
 
+	repo = gitno_unescape(git__strdup(repo));
+
 	len = strlen(cmd) + 1 /* Space */ + 1 /* Quote */ + strlen(repo) + 1 /* Quote */ + 1;
 
 	git_buf_grow(request, len);
 	git_buf_printf(request, "%s '%s'", cmd, repo);
 	git_buf_putc(request, '\0');
 
+	git__free(repo);
+
 	if (git_buf_oom(request))
 		return -1;
-
+	
 	return 0;
 }
 
