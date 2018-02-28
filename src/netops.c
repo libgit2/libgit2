@@ -207,7 +207,7 @@ void gitno_connection_data_free_ptrs(gitno_connection_data *d)
 }
 
 #define hex2c(c) ((c | 32) % 39 - 9)
-static char* unescape(char *str)
+char* gitno_unescape(char *str)
 {
 	int x, y;
 	int len = (int)strlen(str);
@@ -274,8 +274,8 @@ int gitno_extract_url_parts(
 	if (u.field_set & (1 << UF_USERINFO)) {
 		const char *colon = memchr(_userinfo, ':', u.field_data[UF_USERINFO].len);
 		if (colon) {
-			*username = unescape(git__substrdup(_userinfo, colon - _userinfo));
-			*password = unescape(git__substrdup(colon+1, u.field_data[UF_USERINFO].len - (colon+1-_userinfo)));
+			*username = gitno_unescape(git__substrdup(_userinfo, colon - _userinfo));
+			*password = gitno_unescape(git__substrdup(colon+1, u.field_data[UF_USERINFO].len - (colon+1-_userinfo)));
 			GITERR_CHECK_ALLOC(*password);
 		} else {
 			*username = git__substrdup(_userinfo, u.field_data[UF_USERINFO].len);
