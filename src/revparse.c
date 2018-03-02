@@ -73,7 +73,7 @@ static int maybe_describe(git_object**out, git_repository *repo, const char *spe
 	if (substr == NULL)
 		return GIT_ENOTFOUND;
 
-	if (build_regex(&regex, ".+-[0-9]+-g[0-9a-fA-F]+") < 0)
+	if (build_regex(&regex, ".+-[[:digit:]]+-g[[:xdigit:]]+") < 0)
 		return -1;
 
 	error = regexec(&regex, spec, 0, NULL, 0);
