@@ -169,7 +169,7 @@ void test_core_posix__p_regcomp_ignores_global_locale_ctype(void)
 		cl_fail("Expected locale to be switched to multibyte");
 	}
 
-	p_regcomp(&preg, "[\xc0-\xff][\x80-\xbf]", P_REG_EXTENDED);
+	error = p_regcomp(&preg, "[\xc0-\xff][\x80-\xbf]", P_REG_EXTENDED);
 	p_regfree(&preg);
 
 	setlocale(LC_CTYPE, oldlocale);
