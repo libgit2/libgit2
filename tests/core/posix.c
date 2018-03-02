@@ -15,8 +15,12 @@
 #include "posix.h"
 #include "userdiff.h"
 
+static const char *old_locales[LC_ALL];
+
 void test_core_posix__initialize(void)
 {
+	memset(&old_locales, 0, sizeof(old_locales));
+
 #ifdef GIT_WIN32
 	/* on win32, the WSA context needs to be initialized
 	 * before any socket calls can be performed */
@@ -26,6 +30,17 @@ void test_core_posix__initialize(void)
 	cl_assert(LOBYTE(wsd.wVersion) == 2 && HIBYTE(wsd.wVersion) == 2);
 #endif
 }
+
+void test_core_posix__cleanup(void)
+{
+	int i;
+
+	for (i = 0; i < LC_ALL; i++) {
+		if (old_locales[i])
+		    setlocale(LC_COLLATE, old_locales[i]);
+	}
+}
+
 
 static bool supports_ipv6(void)
 {
@@ -147,55 +162,39 @@ void test_core_posix__utimes(void)
 	p_unlink("foo");
 }
 
+static void try_set_locale(int category)
+{
+	old_locales[category] = setlocale(category, NULL);
+
+	if (!setlocale(category, "UTF-8") &&
+	    !setlocale(category, "c.utf8") &&
+	    !setlocale(category, "en_US.UTF-8"))
+		cl_skip();
+
+	if (MB_CUR_MAX == 1)
+		cl_fail("Expected locale to be switched to multibyte");
+}
+
 void test_core_posix__p_regcomp_ignores_global_locale_ctype(void)
 {
 	regex_t preg;
-	int error = 0;
 
-	const char* oldlocale = setlocale(LC_CTYPE, NULL);
+	try_set_locale(LC_CTYPE);
 
-	if (!setlocale(LC_CTYPE, "UTF-8") &&
-	    !setlocale(LC_CTYPE, "c.utf8") &&
-			!setlocale(LC_CTYPE, "en_US.UTF-8"))
-		cl_skip();
+	cl_must_pass(p_regcomp(&preg, "[\xc0-\xff][\x80-\xbf]", REG_EXTENDED));
 
-	if (MB_CUR_MAX == 1) {
-		setlocale(LC_CTYPE, oldlocale);
-		cl_fail("Expected locale to be switched to multibyte");
-	}
-
-	error = p_regcomp(&preg, "[\xc0-\xff][\x80-\xbf]", REG_EXTENDED);
 	regfree(&preg);
-
-	setlocale(LC_CTYPE, oldlocale);
-
-	cl_must_pass(error);
 }
 
 void test_core_posix__p_regcomp_ignores_global_locale_collate(void)
 {
 #ifdef GIT_USE_REGCOMP_L
 	regex_t preg;
-	int error = 0;
 
-	const char* oldlocale = setlocale(LC_COLLATE, NULL);
+	try_set_locale(LC_COLLATE);
+	cl_must_pass(p_regcomp(&preg, "[\xc0-\xff][\x80-\xbf]", REG_EXTENDED));
 
-	if (!setlocale(LC_COLLATE, "UTF-8") &&
-	    !setlocale(LC_COLLATE, "c.utf8") &&
-			!setlocale(LC_COLLATE, "en_US.UTF-8"))
-		cl_skip();
-
-	if (MB_CUR_MAX == 1) {
-		setlocale(LC_COLLATE, oldlocale);
-		cl_fail("Expected locale to be switched to multibyte");
-	}
-
-	error = p_regcomp(&preg, "[\xc0-\xff][\x80-\xbf]", REG_EXTENDED);
 	regfree(&preg);
-
-	setlocale(LC_COLLATE, oldlocale);
-
-	cl_must_pass(error);
 #else
 	cl_skip();
 #endif
