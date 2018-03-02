@@ -20,7 +20,7 @@ typedef struct {
 	int flags;
 } git_diff_driver_definition;
 
-#define WORD_DEFAULT "|[^[:space:]]|[\xc0-\xff][\x80-\xbf]+"
+#define WORD_DEFAULT "|[^[:space:]]"
 
 /*
  * These builtin driver definition macros have same signature as in core
@@ -50,22 +50,22 @@ IPATTERN("ada",
 	 "^[ \t]*((procedure|function)[ \t]+.*)$\n"
 	 "^[ \t]*((package|protected|task)[ \t]+.*)$",
 	 /* -- */
-	 "[a-zA-Z][a-zA-Z0-9_]*"
-	 "|[-+]?[0-9][0-9#_.aAbBcCdDeEfF]*([eE][+-]?[0-9_]+)?"
+	 "[[:alpha:]][[:alnum:]_]*"
+	 "|[-+]?[[:digit:]][[:xdigit:]#_.]*([eE][+-]?[[:digit:]_]+)?"
 	 "|=>|\\.\\.|\\*\\*|:=|/=|>=|<=|<<|>>|<>"),
 
 IPATTERN("fortran",
 	 "!^([C*]|[ \t]*!)\n"
 	 "!^[ \t]*MODULE[ \t]+PROCEDURE[ \t]\n"
 	 "^[ \t]*((END[ \t]+)?(PROGRAM|MODULE|BLOCK[ \t]+DATA"
-		"|([^'\" \t]+[ \t]+)*(SUBROUTINE|FUNCTION))[ \t]+[A-Z].*)$",
+		"|([^'\" \t]+[ \t]+)*(SUBROUTINE|FUNCTION))[ \t]+[[:upper:]].*)$",
 	 /* -- */
-	 "[a-zA-Z][a-zA-Z0-9_]*"
+	 "[[:alpha:]][[:alnum:]_]*"
 	 "|\\.([Ee][Qq]|[Nn][Ee]|[Gg][TtEe]|[Ll][TtEe]|[Tt][Rr][Uu][Ee]|[Ff][Aa][Ll][Ss][Ee]|[Aa][Nn][Dd]|[Oo][Rr]|[Nn]?[Ee][Qq][Vv]|[Nn][Oo][Tt])\\."
 	 /* numbers and format statements like 2E14.4, or ES12.6, 9X.
 	  * Don't worry about format statements without leading digits since
 	  * they would have been matched above as a variable anyway. */
-	 "|[-+]?[0-9.]+([AaIiDdEeFfLlTtXx][Ss]?[-+]?[0-9.]*)?(_[a-zA-Z0-9][a-zA-Z0-9_]*)?"
+	 "|[-+]?[[:digit:].]+([AaIiDdEeFfLlTtXx][Ss]?[-+]?[[:digit:].]*)?(_[[:alnum:]][[:alnum:]_]*)?"
 	 "|//|\\*\\*|::|[/<>=]="),
 
 PATTERNS("html", "^[ \t]*(<[Hh][1-6][ \t].*>.*)$",
@@ -73,29 +73,29 @@ PATTERNS("html", "^[ \t]*(<[Hh][1-6][ \t].*>.*)$",
 
 PATTERNS("java",
 	 "!^[ \t]*(catch|do|for|if|instanceof|new|return|switch|throw|while)\n"
-	 "^[ \t]*(([A-Za-z_][A-Za-z_0-9]*[ \t]+)+[A-Za-z_][A-Za-z_0-9]*[ \t]*\\([^;]*)$",
+	 "^[ \t]*(([[:alpha:]_][[:alnum:]_]*[ \t]+)+[[:alpha:]_][[:alnum:]_]*[ \t]*\\([^;]*)$",
 	 /* -- */
-	 "[a-zA-Z_][a-zA-Z0-9_]*"
-	 "|[-+0-9.e]+[fFlL]?|0[xXbB]?[0-9a-fA-F]+[lL]?"
+	 "[[:alpha:]_][[:alnum:]_]*"
+	 "|[-+[:digit:].e]+[fFlL]?|0[xXbB]?[[:xdigit:]]+[lL]?"
 	 "|[-+*/<>%&^|=!]="
 	 "|--|\\+\\+|<<=?|>>>?=?|&&|\\|\\|"),
 
 PATTERNS("matlab",
 	 "^[[:space:]]*((classdef|function)[[:space:]].*)$|^%%[[:space:]].*$",
-	 "[a-zA-Z_][a-zA-Z0-9_]*|[-+0-9.e]+|[=~<>]=|\\.[*/\\^']|\\|\\||&&"),
+	 "[[:alpha:]_][[:alnum:]_]*|[-+[[:digit:]].e]+|[=~<>]=|\\.[*/\\^']|\\|\\||&&"),
 
 PATTERNS("objc",
 	 /* Negate C statements that can look like functions */
 	 "!^[ \t]*(do|for|if|else|return|switch|while)\n"
 	 /* Objective-C methods */
-	 "^[ \t]*([-+][ \t]*\\([ \t]*[A-Za-z_][A-Za-z_0-9* \t]*\\)[ \t]*[A-Za-z_].*)$\n"
+	 "^[ \t]*([-+][ \t]*\\([ \t]*[[:alpha:]_][[:alnum:]_* \t]*\\)[ \t]*[[:alpha:]z_].*)$\n"
 	 /* C functions */
-	 "^[ \t]*(([A-Za-z_][A-Za-z_0-9]*[ \t]+)+[A-Za-z_][A-Za-z_0-9]*[ \t]*\\([^;]*)$\n"
+	 "^[ \t]*(([[:alpha:]_][[:alnum]_]*[ \t]+)+[[:alpha]_][[:alnum:]_]*[ \t]*\\([^;]*)$\n"
 	 /* Objective-C class/protocol definitions */
 	 "^(@(implementation|interface|protocol)[ \t].*)$",
 	 /* -- */
-	 "[a-zA-Z_][a-zA-Z0-9_]*"
-	 "|[-+0-9.e]+[fFlL]?|0[xXbB]?[0-9a-fA-F]+[lL]?"
+	 "[[:alpha:]_][[:alnum:]_]*"
+	 "|[-+[[:digit:]].e]+[fFlL]?|0[xXbB]?[[:xdigit:]]+[lL]?"
 	 "|[-+*/<>%&^|=!]=|--|\\+\\+|<<=?|>>=?|&&|\\|\\||::|->"),
 
 PATTERNS("pascal",
@@ -104,8 +104,8 @@ PATTERNS("pascal",
 	 "\n"
 	 "^(.*=[ \t]*(class|record).*)$",
 	 /* -- */
-	 "[a-zA-Z_][a-zA-Z0-9_]*"
-	 "|[-+0-9.e]+|0[xXbB]?[0-9a-fA-F]+"
+	 "[[:alpha:]_][[:alpha:]_]*"
+	 "|[-+[[:digit:]].e]+|0[xXbB]?[[:xdigit:]]+"
 	 "|<>|<=|>=|:=|\\.\\."),
 
 PATTERNS("perl",
@@ -126,12 +126,12 @@ PATTERNS("perl",
 	 "^(BEGIN|END|INIT|CHECK|UNITCHECK|AUTOLOAD|DESTROY)[ \t]*"
 		"(\\{[ \t]*)?" /* brace can come here or on the next line */
 		"(#.*)?$\n"
-	 "^=head[0-9] .*",	/* POD */
+	 "^=head[[:digit:]] .*",	/* POD */
 	 /* -- */
 	 "[[:alpha:]_'][[:alnum:]_']*"
-	 "|0[xb]?[0-9a-fA-F_]*"
+	 "|0[xb]?[[:xdigit:]_]*"
 	 /* taking care not to interpret 3..5 as (3.)(.5) */
-	 "|[0-9a-fA-F_]+(\\.[0-9a-fA-F_]+)?([eE][-+]?[0-9_]+)?"
+	 "|[[:xdigit:]_]+(\\.[[:xdigit:]_]+)?([eE][-+]?[[:digit:]_]+)?"
 	 "|=>|-[rwxoRWXOezsfdlpSugkbctTBMAC>]|~~|::"
 	 "|&&=|\\|\\|=|//=|\\*\\*="
 	 "|&&|\\|\\||//|\\+\\+|--|\\*\\*|\\.\\.\\.?"
@@ -141,30 +141,30 @@ PATTERNS("perl",
 
 PATTERNS("python", "^[ \t]*((class|def)[ \t].*)$",
 	 /* -- */
-	 "[a-zA-Z_][a-zA-Z0-9_]*"
-	 "|[-+0-9.e]+[jJlL]?|0[xX]?[0-9a-fA-F]+[lL]?"
+	 "[[:alpha:]_][[:alnum:]_]*"
+	 "|[-+[[:digit:]].e]+[jJlL]?|0[xX]?[[:xdigit:]]+[lL]?"
 	 "|[-+*/<>%&^|=!]=|//=?|<<=?|>>=?|\\*\\*=?"),
 
 PATTERNS("ruby", "^[ \t]*((class|module|def)[ \t].*)$",
 	 /* -- */
-	 "(@|@@|\\$)?[a-zA-Z_][a-zA-Z0-9_]*"
-	 "|[-+0-9.e]+|0[xXbB]?[0-9a-fA-F]+|\\?(\\\\C-)?(\\\\M-)?."
+	 "(@|@@|\\$)?[[:alpha:]_][[:alnum:]_]*"
+	 "|[-+[[:digit:]].e]+|0[xXbB]?[[:xdigit:]]+|\\?(\\\\C-)?(\\\\M-)?."
 	 "|//=?|[-+*/<>%&^|=!]=|<<=?|>>=?|===|\\.{1,3}|::|[!=]~"),
 
-PATTERNS("bibtex", "(@[a-zA-Z]{1,}[ \t]*\\{{0,1}[ \t]*[^ \t\"@',\\#}{~%]*).*$",
+PATTERNS("bibtex", "(@[[:alpha:]]{1,}[ \t]*\\{{0,1}[ \t]*[^ \t\"@',\\#}{~%]*).*$",
 	 "[={}\"]|[^={}\" \t]+"),
 
 PATTERNS("tex", "^(\\\\((sub)*section|chapter|part)\\*{0,1}\\{.*)$",
-	 "\\\\[a-zA-Z@]+|\\\\.|[a-zA-Z0-9\x80-\xff]+"),
+	 "\\\\[[:alpha:]@]+|\\\\.|[[:alnum:]\x80-\xff]+"),
 
 PATTERNS("cpp",
 	 /* Jump targets or access declarations */
-	 "!^[ \t]*[A-Za-z_][A-Za-z_0-9]*:[[:space:]]*($|/[/*])\n"
+	 "!^[ \t]*[[:alpha:]_][[:alnum:]_]*:[[:space:]]*($|/[/*])\n"
 	 /* functions/methods, variables, and compounds at top level */
-	 "^((::[[:space:]]*)?[A-Za-z_].*)$",
+	 "^((::[[:space:]]*)?[[:alpha:]_].*)$",
 	 /* -- */
-	 "[a-zA-Z_][a-zA-Z0-9_]*"
-	 "|[-+0-9.e]+[fFlL]?|0[xXbB]?[0-9a-fA-F]+[lLuU]*"
+	 "[[:alpha:]_][[:alnum:]_]*"
+	 "|[-+[[:digit:]].e]+[fFlL]?|0[xXbB]?[[:xdigit:]]+[lLuU]*"
 	 "|[-+*/<>%&^|=!]=|--|\\+\\+|<<=?|>>=?|&&|\\|\\||::|->\\*?|\\.\\*"),
 
 PATTERNS("csharp",
@@ -179,24 +179,24 @@ PATTERNS("csharp",
 	 /* Namespace */
 	 "^[ \t]*(namespace[ \t]+.*)$",
 	 /* -- */
-	 "[a-zA-Z_][a-zA-Z0-9_]*"
-	 "|[-+0-9.e]+[fFlL]?|0[xXbB]?[0-9a-fA-F]+[lL]?"
+	 "[[:alpha:]_][[:alnum:]_]*"
+	 "|[-+[[:digit:]].e]+[fFlL]?|0[xXbB]?[[:xdigit:]]+[lL]?"
 	 "|[-+*/<>%&^|=!]=|--|\\+\\+|<<=?|>>=?|&&|\\|\\||::|->"),
 
 PATTERNS("php",
 	 "^[ \t]*(((public|private|protected|static|final)[ \t]+)*((class|function)[ \t].*))$",
 	 /* -- */
-	 "[a-zA-Z_][a-zA-Z0-9_]*"
-	 "|[-+0-9.e]+[fFlL]?|0[xX]?[0-9a-fA-F]+[lL]?"
+	 "[[:alpha:]_][[:alnum:]_]*"
+	 "|[-+[[:digit:]].e]+[fFlL]?|0[xX]?[[:xdigit:]]+[lL]?"
 	 "|[-+*/<>%&^|=!]=|--|\\+\\+|<<=?|>>=?|&&|\\|\\||::|->"),
 
 PATTERNS("javascript",
-	 "([a-zA-Z_$][a-zA-Z0-9_$]*(\\.[a-zA-Z0-9_$]+)*[ \t]*=[ \t]*function([ \t][a-zA-Z_$][a-zA-Z0-9_$]*)?[^\\{]*)\n"
-	 "([a-zA-Z_$][a-zA-Z0-9_$]*[ \t]*:[ \t]*function([ \t][a-zA-Z_$][a-zA-Z0-9_$]*)?[^\\{]*)\n"
-	 "[^a-zA-Z0-9_\\$](function([ \t][a-zA-Z_$][a-zA-Z0-9_$]*)?[^\\{]*)",
+	 "([[:alpha:]_$][[:alnum:]_$]*(\\.[[:alnum:]_$]+)*[ \t]*=[ \t]*function([ \t][[:alpha:]_$][[:alnum:]_$]*)?[^\\{]*)\n"
+	 "([[:alpha:]_$][[:alnum:]_$]*[ \t]*:[ \t]*function([ \t][[:alpha:]_$][[:alnum:]_$]*)?[^\\{]*)\n"
+	 "[^[:alnum:]_\\$](function([ \t][[:alpha:]_$][[:alnum:]_$]*)?[^\\{]*)",
 	 /* -- */
-	 "[a-zA-Z_][a-zA-Z0-9_]*"
-	 "|[-+0-9.e]+[fFlL]?|0[xX]?[0-9a-fA-F]+[lL]?"
+	 "[[:alpha:]_][[:alnum:]_]*"
+	 "|[-+[[:digit:]].e]+[fFlL]?|0[xX]?[[:xdigit:]]+[lL]?"
 	 "|[-+*/<>%&^|=!]=|--|\\+\\+|<<=?|>>=?|&&|\\|\\||::|->"),
 };
 
