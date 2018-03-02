@@ -38,43 +38,7 @@ typedef struct git_config_file_iter {
 /* Max depth for [include] directives */
 #define MAX_INCLUDE_DEPTH 10
 
-#define CVAR_LIST_HEAD(list) ((list)->head)
-
-#define CVAR_LIST_TAIL(list) ((list)->tail)
-
 #define CVAR_LIST_NEXT(var) ((var)->next)
-
-#define CVAR_LIST_EMPTY(list) ((list)->head == NULL)
-
-#define CVAR_LIST_APPEND(list, var) do {\
-	if (CVAR_LIST_EMPTY(list)) {\
-		CVAR_LIST_HEAD(list) = CVAR_LIST_TAIL(list) = var;\
-	} else {\
-		CVAR_LIST_NEXT(CVAR_LIST_TAIL(list)) = var;\
-		CVAR_LIST_TAIL(list) = var;\
-	}\
-} while(0)
-
-#define CVAR_LIST_REMOVE_HEAD(list) do {\
-	CVAR_LIST_HEAD(list) = CVAR_LIST_NEXT(CVAR_LIST_HEAD(list));\
-} while(0)
-
-#define CVAR_LIST_REMOVE_AFTER(var) do {\
-	CVAR_LIST_NEXT(var) = CVAR_LIST_NEXT(CVAR_LIST_NEXT(var));\
-} while(0)
-
-#define CVAR_LIST_FOREACH(list, iter)\
-	for ((iter) = CVAR_LIST_HEAD(list);\
-		 (iter) != NULL;\
-		 (iter) = CVAR_LIST_NEXT(iter))
-
-/*
- * Inspired by the FreeBSD functions
- */
-#define CVAR_LIST_FOREACH_SAFE(start, iter, tmp)\
-	for ((iter) = CVAR_LIST_HEAD(vars);\
-		 (iter) && (((tmp) = CVAR_LIST_NEXT(iter) || 1));\
-		 (iter) = (tmp))
 
 typedef struct {
 	git_atomic refcount;
