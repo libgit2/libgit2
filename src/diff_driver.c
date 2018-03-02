@@ -283,7 +283,9 @@ static int git_diff_driver_load(
 	/* TODO: warn if diff.<name>.command or diff.<name>.textconv are set */
 
 	git_buf_truncate(&name, namelen + strlen("diff.."));
-	git_buf_put(&name, "xfuncname", strlen("xfuncname"));
+	if ((error = git_buf_PUTS(&name, "xfuncname")) < 0)
+		goto done;
+
 	if ((error = git_config_get_multivar_foreach(
 			cfg, name.ptr, NULL, diff_driver_xfuncname, drv)) < 0) {
 		if (error != GIT_ENOTFOUND)
@@ -292,7 +294,9 @@ static int git_diff_driver_load(
 	}
 
 	git_buf_truncate(&name, namelen + strlen("diff.."));
-	git_buf_put(&name, "funcname", strlen("funcname"));
+	if ((error = git_buf_PUTS(&name, "funcname")) < 0)
+		goto done;
+
 	if ((error = git_config_get_multivar_foreach(
 			cfg, name.ptr, NULL, diff_driver_funcname, drv)) < 0) {
 		if (error != GIT_ENOTFOUND)
@@ -307,7 +311,9 @@ static int git_diff_driver_load(
 	}
 
 	git_buf_truncate(&name, namelen + strlen("diff.."));
-	git_buf_put(&name, "wordregex", strlen("wordregex"));
+	if ((error = git_buf_PUTS(&name, "wordregex")) < 0)
+		goto done;
+
 	if ((error = git_config__lookup_entry(&ce, cfg, name.ptr, false)) < 0)
 		goto done;
 	if (!ce || !ce->value)
