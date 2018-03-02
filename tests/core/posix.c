@@ -197,6 +197,48 @@ void test_core_posix__p_regcomp_ignores_global_locale_collate(void)
 	p_regfree(&preg);
 }
 
+void test_core_posix__p_regcomp_matches_digits_with_locale(void)
+{
+	p_regex_t preg;
+	char c, str[2];
+
+	try_set_locale(LC_COLLATE);
+	try_set_locale(LC_CTYPE);
+
+	cl_must_pass(p_regcomp(&preg, "[:digit:]", P_REG_EXTENDED));
+
+	str[1] = '\0';
+	for (c = '0'; c <= '9'; c++) {
+	    str[0] = c;
+	    cl_must_pass(p_regexec(&preg, str, 0, NULL, 0));
+	}
+
+	p_regfree(&preg);
+}
+
+void test_core_posix__p_regcomp_matches_alphabet_with_locale(void)
+{
+	p_regex_t preg;
+	char c, str[2];
+
+	try_set_locale(LC_COLLATE);
+	try_set_locale(LC_CTYPE);
+
+	cl_must_pass(p_regcomp(&preg, "[:alpha:]", REG_EXTENDED));
+
+	str[1] = '\0';
+	for (c = 'a'; c <= 'z'; c++) {
+	    str[0] = c;
+	    cl_must_pass(p_regexec(&preg, str, 0, NULL, 0));
+	}
+	for (c = 'A'; c <= 'Z'; c++) {
+	    str[0] = c;
+	    cl_must_pass(p_regexec(&preg, str, 0, NULL, 0));
+	}
+
+	p_regfree(&preg);
+}
+
 void test_core_posix__p_regcomp_compile_userdiff_regexps(void)
 {
 	size_t idx;
