@@ -383,7 +383,7 @@ out:
 	return err;
 }
 
-int git_worktree_lock(git_worktree *wt, char *creason)
+int git_worktree_lock(git_worktree *wt, const char *creason)
 {
 	git_buf buf = GIT_BUF_INIT, path = GIT_BUF_INIT;
 	int err;
