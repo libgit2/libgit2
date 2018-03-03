@@ -238,7 +238,7 @@ int gitno_extract_url_parts(
 	if (has_host) {
 		const char *url_host = url + u.field_data[UF_HOST].off;
 		size_t url_host_len = u.field_data[UF_HOST].len;
-		git_buf_put(&host, url_host, url_host_len);
+		git_buf_decode_percent(&host, url_host, url_host_len);
 	}
 
 	if (has_port) {
