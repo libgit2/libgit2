@@ -278,7 +278,7 @@ int gitno_extract_url_parts(
 			*password = gitno_unescape(git__substrdup(colon+1, u.field_data[UF_USERINFO].len - (colon+1-_userinfo)));
 			GITERR_CHECK_ALLOC(*password);
 		} else {
-			*username = git__substrdup(_userinfo, u.field_data[UF_USERINFO].len);
+			*username = gitno_unescape(git__substrdup(_userinfo, u.field_data[UF_USERINFO].len));
 		}
 		GITERR_CHECK_ALLOC(*username);
 
