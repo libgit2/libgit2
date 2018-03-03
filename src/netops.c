@@ -206,24 +206,6 @@ void gitno_connection_data_free_ptrs(gitno_connection_data *d)
 	git__free(d->pass); d->pass = NULL;
 }
 
-#define hex2c(c) ((c | 32) % 39 - 9)
-char* gitno_unescape(char *str)
-{
-	int x, y;
-	int len = (int)strlen(str);
-
-	for (x=y=0; str[y]; ++x, ++y) {
-		if ((str[x] = str[y]) == '%') {
-			if (y < len-2 && isxdigit(str[y+1]) && isxdigit(str[y+2])) {
-				str[x] = (hex2c(str[y+1]) << 4) + hex2c(str[y+2]);
-				y += 2;
-			}
-		}
-	}
-	str[x] = '\0';
-	return str;
-}
-
 int gitno_extract_url_parts(
 	char **host_out,
 	char **port_out,
