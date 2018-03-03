@@ -212,7 +212,7 @@ int git_buf_put(git_buf *buf, const char *data, size_t len)
 		size_t new_size;
 
 		assert(data);
-		
+
 		GITERR_CHECK_ALLOC_ADD(&new_size, buf->size, len);
 		GITERR_CHECK_ALLOC_ADD(&new_size, new_size, 1);
 		ENSURE_SIZE(buf, new_size);
@@ -453,6 +453,36 @@ on_error:
 
 	giterr_set(GITERR_INVALID, "invalid base85 input");
 	return -1;
+}
+
+#define HEX_DECODE(c) ((c | 32) % 39 - 9)
+
+int git_buf_decode_percent(
+	git_buf *buf,
+	const char *str,
+	size_t str_len)
+{
+	size_t str_pos, new_size;
+
+	GITERR_CHECK_ALLOC_ADD(&new_size, buf->size, str_len);
+	GITERR_CHECK_ALLOC_ADD(&new_size, new_size, 1);
+	ENSURE_SIZE(buf, new_size);
+
+	for (str_pos = 0; str_pos < str_len; buf->size++, str_pos++) {
+		if (str[str_pos] == '%' &&
+			str_len > str_pos + 2 &&
+			isxdigit(str[str_pos + 1]) &&
+			isxdigit(str[str_pos + 2])) {
+			buf->ptr[buf->size] = (HEX_DECODE(str[str_pos + 1]) << 4) +
+				HEX_DECODE(str[str_pos + 2]);
+			str_pos += 2;
+		} else {
+			buf->ptr[buf->size] = str[str_pos];
+		}
+	}
+
+	buf->ptr[buf->size] = '\0';
+	return 0;
 }
 
 int git_buf_vprintf(git_buf *buf, const char *format, va_list ap)

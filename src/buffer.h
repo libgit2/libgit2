@@ -190,6 +190,9 @@ int git_buf_encode_base85(git_buf *buf, const char *data, size_t len);
 /* Decode the given "base85" and write the result to the buffer */
 int git_buf_decode_base85(git_buf *buf, const char *base64, size_t len, size_t output_len);
 
+/* Decode the given percent-encoded string and write the result to the buffer */
+int git_buf_decode_percent(git_buf *buf, const char *str, size_t len);
+
 /*
  * Insert, remove or replace a portion of the buffer.
  *
