@@ -123,7 +123,7 @@ GIT_EXTERN(int) git_worktree_add(git_worktree **out, git_repository *repo,
  * @param reason Reason why the working tree is being locked
  * @return 0 on success, non-zero otherwise
  */
-GIT_EXTERN(int) git_worktree_lock(git_worktree *wt, char *reason);
+GIT_EXTERN(int) git_worktree_lock(git_worktree *wt, const char *reason);
 
 /**
  * Unlock a locked worktree
