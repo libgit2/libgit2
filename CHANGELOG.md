@@ -1,13 +1,16 @@
-v0.26 + 1
+v0.26.1
 ---------
 
-### Changes or improvements
+This is a security release fixing the following CVEs in the bundled zlib
+library:
 
-### API additions
+* CVE-2016-9843
+* CVE-2016-9841
+* CVE-2016-9842
+* CVE-2016-9840
 
-### API removals
-
-### Breaking API changes
+All users compiling libgit2 with the bundled zlib instead of using the
+system-provided zlib must upgrade.
 
 v0.26
 -----
