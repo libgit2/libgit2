@@ -2361,16 +2361,17 @@ static int read_entry(
 		entry_size = index_entry_size(path_length, 0, entry.flags);
 		entry.path = (char *)path_ptr;
 	} else {
-		size_t varint_len;
-		size_t strip_len = git_decode_varint((const unsigned char *)path_ptr,
-						     &varint_len);
-		size_t last_len = strlen(last);
-		size_t prefix_len = last_len - strip_len;
-		size_t suffix_len = strlen(path_ptr + varint_len);
-		size_t path_len;
+		size_t varint_len, last_len, prefix_len, suffix_len, path_len;
+		uintmax_t strip_len;
 
-		if (varint_len == 0)
+		strip_len = git_decode_varint((const unsigned char *)path_ptr, &varint_len);
+		last_len = strlen(last);
+
+		if (varint_len == 0 || last_len < strip_len)
 			return index_error_invalid("incorrect prefix length");
+
+		prefix_len = last_len - strip_len;
+		suffix_len = strlen(path_ptr + varint_len);
 
 		GITERR_CHECK_ALLOC_ADD(&path_len, prefix_len, suffix_len);
 		GITERR_CHECK_ALLOC_ADD(&path_len, path_len, 1);
