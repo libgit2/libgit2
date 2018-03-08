@@ -221,6 +221,7 @@ ELSE ()
 	ENABLE_WARNINGS(strict-aliasing)
 	ENABLE_WARNINGS(strict-prototypes)
 	ENABLE_WARNINGS(declaration-after-statement)
+	ENABLE_WARNINGS(shift-count-overflow)
 	DISABLE_WARNINGS(unused-const-variable)
 	DISABLE_WARNINGS(unused-function)
 
