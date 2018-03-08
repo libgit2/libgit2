@@ -2375,6 +2375,10 @@ static int read_entry(
 
 		GITERR_CHECK_ALLOC_ADD(&path_len, prefix_len, suffix_len);
 		GITERR_CHECK_ALLOC_ADD(&path_len, path_len, 1);
+
+		if (path_len > GIT_PATH_MAX)
+			return index_error_invalid("unreasonable path length");
+
 		tmp_path = git__malloc(path_len);
 		GITERR_CHECK_ALLOC(tmp_path);
 
