@@ -200,18 +200,18 @@ typedef enum {
 	/** Use the "patience diff" algorithm */
 	GIT_DIFF_PATIENCE = (1u << 28),
 	/** Take extra time to find minimal diff */
-	GIT_DIFF_MINIMAL = (1 << 29),
+	GIT_DIFF_MINIMAL = (1u << 29),
 
 	/** Include the necessary deflate / delta information so that `git-apply`
 	 *  can apply given diff information to binary files.
 	 */
-	GIT_DIFF_SHOW_BINARY = (1 << 30),
+	GIT_DIFF_SHOW_BINARY = (1u << 30),
 
 	/** Use a heuristic that takes indentation and whitespace into account
 	 * which generally can produce better diffs when dealing with ambiguous
 	 * diff hunks.
 	 */
-	GIT_DIFF_INDENT_HEURISTIC = (1 << 31),
+	GIT_DIFF_INDENT_HEURISTIC = (1u << 31),
 } git_diff_option_t;
 
 /**
