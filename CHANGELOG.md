@@ -1,3 +1,13 @@
+v0.26.2
+-------
+
+This is a security release fixing memory handling issues when reading crafted
+repository index files. The issues allow for possible denial of service due to
+allocation of large memory and out-of-bound reads.
+
+As the index is never transferred via the network, exploitation requires an
+attacker to have access to the local repository.
+
 v0.26.1
 ---------
 
