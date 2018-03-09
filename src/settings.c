@@ -246,6 +246,14 @@ int git_libgit2_opts(int key, ...)
 		git_odb__strict_hash_verification = (va_arg(ap, int) != 0);
 		break;
 
+	case GIT_OPT_SET_ALLOC:
+		git__malloc_func = va_arg(ap, void* (*)(size_t size));
+		git__calloc_func = va_arg(ap, void* (*)(size_t nitems, size_t size));
+		git__strdup_func = va_arg(ap, char* (*)(const char *str1));
+		git__realloc_func = va_arg(ap, void* (*)(void *ptr, size_t size));
+		git__free_func = va_arg(ap, void* (*)(void *ptr));
+		break;
+
 	default:
 		giterr_set(GITERR_INVALID, "invalid option key");
 		error = -1;
