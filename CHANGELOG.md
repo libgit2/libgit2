@@ -1,3 +1,28 @@
+v0.26.3
+-------
+
+This is a bugfix release. It includes the following non-exclusive list of
+improvements, which have been backported from the master branch:
+
+* Fix cloning of the libgit2 project with `git clone --recursive` by removing an
+  invalid submodule from our testing data.
+
+* Fix endianness of the port in `p_getaddrinfo()`.
+
+* Fix handling of negative gitignore rules with wildcards.
+
+* Fix handling of case-insensitive negative gitignore rules.
+
+* Fix resolving references to a tag if the reference is stored with its fully
+  resolved OID in the packed-refs file.
+
+* Fix checkout not treating worktree files as modified when only their mode has
+  changed.
+
+* Fix rename detection with `GIT_DIFF_FIND_RENAMES_FROM_REWRITES`.
+
+* Enable Windows 7 and earlier to use TLS 1.2.
+
 v0.26.2
 -------
 
