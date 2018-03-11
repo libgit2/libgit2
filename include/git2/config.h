@@ -399,7 +399,8 @@ GIT_EXTERN(int) git_config_get_string_buf(git_buf *out, const git_config *cfg, c
  * The callback will be called on each variable found
  *
  * The regular expression is applied case-sensitively on the normalized form of
- * the variable name: the case-insensitive parts are lower-case.
+ * the variable name: the section and variable parts are lower-cased. The
+ * subsection is left unchanged.
  *
  * @param cfg where to look for the variable
  * @param name the variable's name
@@ -414,7 +415,8 @@ GIT_EXTERN(int) git_config_get_multivar_foreach(const git_config *cfg, const cha
  * Get each value of a multivar
  *
  * The regular expression is applied case-sensitively on the normalized form of
- * the variable name: the case-insensitive parts are lower-case.
+ * the variable name: the section and variable parts are lower-cased. The
+ * subsection is left unchanged.
  *
  * @param out pointer to store the iterator
  * @param cfg where to look for the variable
@@ -563,7 +565,8 @@ GIT_EXTERN(int) git_config_iterator_new(git_config_iterator **out, const git_con
  * `git_config_iterator_free` when done.
  *
  * The regular expression is applied case-sensitively on the normalized form of
- * the variable name: the case-insensitive parts are lower-case.
+ * the variable name: the section and variable parts are lower-cased. The
+ * subsection is left unchanged.
  *
  * @param out pointer to store the iterator
  * @param cfg where to ge the variables from
@@ -578,8 +581,9 @@ GIT_EXTERN(int) git_config_iterator_glob_new(git_config_iterator **out, const gi
  * regular expression that filters which config keys are passed to the
  * callback.
  *
- * The pointers passed to the callback are only valid as long as the
- * iteration is ongoing.
+ * The regular expression is applied case-sensitively on the normalized form of
+ * the variable name: the section and variable parts are lower-cased. The
+ * subsection is left unchanged.
  *
  * The regular expression is applied case-sensitively on the normalized form of
  * the variable name: the case-insensitive parts are lower-case.
@@ -710,7 +714,8 @@ GIT_EXTERN(int) git_config_parse_path(git_buf *out, const char *value);
  * entries it just enumerates through the given backend entry.
  *
  * The regular expression is applied case-sensitively on the normalized form of
- * the variable name: the case-insensitive parts are lower-case.
+ * the variable name: the section and variable parts are lower-cased. The
+ * subsection is left unchanged.
  *
  * @param backend where to get the variables from
  * @param regexp regular expression to match against config names (can be NULL)
