@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>git2.c</title>
+  <link rel="stylesheet" href="../../css.css">
+  <style type="text/css">
+    a.fnlink {text-decoration: none}
+    a.fnlink:hover {text-decoration: underline}
+  </style>
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div id="jump_to">
+    Jump To &hellip;
+    <div id="jump_wrapper">
+      <div id="jump_page">
+        <a class="source" href="../../#v0.26.2">API Docs</a>
+          <a class="source" href="../add.html">add.c</a>
+          <a class="source" href="../blame.html">blame.c</a>
+          <a class="source" href="../cat-file.html">cat-file.c</a>
+          <a class="source" href="../common.html">common.c</a>
+          <a class="source" href="../describe.html">describe.c</a>
+          <a class="source" href="../diff.html">diff.c</a>
+          <a class="source" href="../for-each-ref.html">for-each-ref.c</a>
+          <a class="source" href="../general.html">general.c</a>
+          <a class="source" href="../init.html">init.c</a>
+          <a class="source" href="../log.html">log.c</a>
+          <a class="source" href="clone.html">clone.c</a>
+          <a class="source" href="common.html">common.c</a>
+          <a class="source" href="fetch.html">fetch.c</a>
+          <a class="source" href="git2.html">git2.c</a>
+          <a class="source" href="index-pack.html">index-pack.c</a>
+          <a class="source" href="ls-remote.html">ls-remote.c</a>
+          <a class="source" href="../remote.html">remote.c</a>
+          <a class="source" href="../rev-list.html">rev-list.c</a>
+          <a class="source" href="../rev-parse.html">rev-parse.c</a>
+          <a class="source" href="../showindex.html">showindex.c</a>
+          <a class="source" href="../status.html">status.c</a>
+          <a class="source" href="../tag.html">tag.c</a>
+      </div>
+    </div>
+  </div>
+  <table cellspacing=0 cellpadding=0>
+  <thead>
+    <tr>
+      <th class=docs><h1>git2.c</h1></th>
+      <th class=code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr id='section-1'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-1">&#182;</a>
+        </div>
+        
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="cp">#include &lt;stdlib.h&gt;</span>
+<span class="cp">#include &lt;stdio.h&gt;</span>
+<span class="cp">#include &lt;string.h&gt;</span>
+
+<span class="cp">#include &quot;common.h&quot;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-2'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-2">&#182;</a>
+        </div>
+        <p>This part is not strictly libgit2-dependent, but you can use this
+as a starting point for a git-like tool</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">struct</span> <span class="p">{</span>
+  <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">;</span>
+  <span class="n">git_cb</span> <span class="n">fn</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">commands</span><span class="p">[]</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="p">{</span><span class="s">&quot;ls-remote&quot;</span><span class="p">,</span> <span class="n">ls_remote</span><span class="p">},</span>
+  <span class="p">{</span><span class="s">&quot;fetch&quot;</span><span class="p">,</span> <span class="n">fetch</span><span class="p">},</span>
+  <span class="p">{</span><span class="s">&quot;clone&quot;</span><span class="p">,</span> <span class="n">do_clone</span><span class="p">},</span>
+  <span class="p">{</span><span class="s">&quot;index-pack&quot;</span><span class="p">,</span> <span class="n">index_pack</span><span class="p">},</span>
+  <span class="p">{</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">}</span>
+<span class="p">};</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">run_command</span><span class="p">(</span><span class="n">git_cb</span> <span class="n">fn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">int</span> <span class="n">error</span><span class="p">;</span>
+  <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-3'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-3">&#182;</a>
+        </div>
+        <p>Before running the actual command, create an instance of the local
+repository and pass it to the function.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_repository_open-5" class="fnlink" href="../../#v0.26.2/group/repository/git_repository_open">git_repository_open</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="s">&quot;.git&quot;</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">repo</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-4'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-4">&#182;</a>
+        </div>
+        <p>Run the command. If something goes wrong, print the error message to stderr</p>
+
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n">fn</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n"><a name="giterr_last-1" class="fnlink" href="../../#v0.26.2/group/giterr/giterr_last">giterr_last</a></span><span class="p">()</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span>
+      <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;Error without message&quot;</span><span class="p">);</span>
+    <span class="k">else</span>
+      <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;Bad news:</span><span class="se">\n</span><span class="s"> %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="giterr_last-2" class="fnlink" href="../../#v0.26.2/group/giterr/giterr_last">giterr_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="k">if</span><span class="p">(</span><span class="n">repo</span><span class="p">)</span>
+    <span class="n"><a name="git_repository_free-6" class="fnlink" href="../../#v0.26.2/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="o">!!</span><span class="n">error</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">return_code</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">argc</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;usage: %s &lt;cmd&gt; [repo]</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
+    <span class="n">exit</span><span class="p">(</span><span class="n">EXIT_FAILURE</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="n"><a name="git_libgit2_init-3" class="fnlink" href="../../#v0.26.2/group/libgit2/git_libgit2_init">git_libgit2_init</a></span><span class="p">();</span>
+
+  <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">commands</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">name</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">commands</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">name</span><span class="p">))</span> <span class="p">{</span>
+      <span class="n">return_code</span> <span class="o">=</span> <span class="n">run_command</span><span class="p">(</span><span class="n">commands</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">fn</span><span class="p">,</span> <span class="o">--</span><span class="n">argc</span><span class="p">,</span> <span class="o">++</span><span class="n">argv</span><span class="p">);</span>
+      <span class="k">goto</span> <span class="n">shutdown</span><span class="p">;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+  <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;Command not found: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+
+<span class="nl">shutdown:</span>
+  <span class="n"><a name="git_libgit2_shutdown-4" class="fnlink" href="../../#v0.26.2/group/libgit2/git_libgit2_shutdown">git_libgit2_shutdown</a></span><span class="p">();</span>
+
+  <span class="k">return</span> <span class="n">return_code</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>

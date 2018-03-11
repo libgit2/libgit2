@@ -27,6 +27,7 @@
           <a class="source" href="general.html">general.c</a>
           <a class="source" href="init.html">init.c</a>
           <a class="source" href="log.html">log.c</a>
+          <a class="source" href="merge.html">merge.c</a>
           <a class="source" href="network/clone.html">clone.c</a>
           <a class="source" href="network/common.html">common.c</a>
           <a class="source" href="network/fetch.html">fetch.c</a>
@@ -123,16 +124,6 @@ all of the use cases.</p>
 <span class="p">}</span> <span class="n">describe_options</span><span class="p">;</span>
 
 <span class="k">typedef</span> <span class="k">struct</span> <span class="n">args_info</span> <span class="n">args_info</span><span class="p">;</span>
-
-<span class="k">static</span> <span class="kt">void</span> <span class="o">*</span><span class="nf">xrealloc</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">oldp</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">newsz</span><span class="p">)</span>
-<span class="p">{</span>
-  <span class="kt">void</span> <span class="o">*</span><span class="n">p</span> <span class="o">=</span> <span class="n">realloc</span><span class="p">(</span><span class="n">oldp</span><span class="p">,</span> <span class="n">newsz</span><span class="p">);</span>
-  <span class="k">if</span> <span class="p">(</span><span class="n">p</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;Cannot allocate memory, exiting.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
-    <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
-  <span class="p">}</span>
-  <span class="k">return</span> <span class="n">p</span><span class="p">;</span>
-<span class="p">}</span>
 
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">opts_add_commit</span><span class="p">(</span><span class="n">describe_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">commit</span><span class="p">)</span>
 <span class="p">{</span>

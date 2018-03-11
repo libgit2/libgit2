@@ -27,6 +27,7 @@
           <a class="source" href="../general.html">general.c</a>
           <a class="source" href="../init.html">init.c</a>
           <a class="source" href="../log.html">log.c</a>
+          <a class="source" href="../merge.html">merge.c</a>
           <a class="source" href="clone.html">clone.c</a>
           <a class="source" href="common.html">common.c</a>
           <a class="source" href="fetch.html">fetch.c</a>
@@ -67,13 +68,6 @@
 <span class="cp"># include &lt;pthread.h&gt;</span>
 <span class="cp"># include &lt;unistd.h&gt;</span>
 <span class="cp">#endif</span>
-
-<span class="k">struct</span> <span class="n">dl_data</span> <span class="p">{</span>
-  <span class="n">git_remote</span> <span class="o">*</span><span class="n">remote</span><span class="p">;</span>
-  <span class="n">git_fetch_options</span> <span class="o">*</span><span class="n">fetch_opts</span><span class="p">;</span>
-  <span class="kt">int</span> <span class="n">ret</span><span class="p">;</span>
-  <span class="kt">int</span> <span class="n">finished</span><span class="p">;</span>
-<span class="p">};</span>
 
 <span class="k">static</span> <span class="kt">int</span> <span class="nf">progress_cb</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">str</span><span class="p">,</span> <span class="kt">int</span> <span class="n">len</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">data</span><span class="p">)</span>
 <span class="p">{</span>
