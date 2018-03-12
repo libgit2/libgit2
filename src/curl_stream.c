@@ -12,6 +12,7 @@
 #include "stream.h"
 #include "git2/transport.h"
 #include "buffer.h"
+#include "global.h"
 #include "vector.h"
 #include "proxy.h"
 
@@ -35,6 +36,18 @@ typedef struct {
 	git_proxy_options proxy;
 	git_cred *proxy_cred;
 } curl_stream;
+
+int git_curl_stream_global_init(void)
+{
+	if (curl_global_init(CURL_GLOBAL_ALL) != 0) {
+		giterr_set(GITERR_NET, "could not initialize curl");
+		return -1;
+	}
+
+	/* `curl_global_cleanup` is provided by libcurl */
+	git__on_shutdown(curl_global_cleanup);
+	return 0;
+}
 
 static int seterr_curl(curl_stream *s)
 {
@@ -193,6 +206,7 @@ static int curls_set_proxy(git_stream *stream, const git_proxy_options *proxy_op
 	CURLcode res;
 	curl_stream *s = (curl_stream *) stream;
 
+	git_proxy_options_clear(&s->proxy);
 	if ((error = git_proxy_options_dup(&s->proxy, proxy_opts)) < 0)
 		return error;
 
@@ -293,6 +307,8 @@ static void curls_free(git_stream *stream)
 
 	curls_close(stream);
 	git_strarray_free(&s->cert_info_strings);
+	git_proxy_options_clear(&s->proxy);
+	git_cred_free(s->proxy_cred);
 	git__free(s);
 }
 
@@ -347,6 +363,11 @@ int git_curl_stream_new(git_stream **out, const char *host, const char *port)
 #else
 
 #include "stream.h"
+
+int git_curl_stream_global_init(void)
+{
+	return 0;
+}
 
 int git_curl_stream_new(git_stream **out, const char *host, const char *port)
 {

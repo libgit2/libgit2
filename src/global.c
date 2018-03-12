@@ -10,6 +10,7 @@
 #include "sysdir.h"
 #include "filter.h"
 #include "merge_driver.h"
+#include "curl_stream.h"
 #include "openssl_stream.h"
 #include "thread-utils.h"
 #include "git2/global.h"
@@ -22,7 +23,7 @@
 
 git_mutex git__mwindow_mutex;
 
-#define MAX_SHUTDOWN_CB 9
+#define MAX_SHUTDOWN_CB 10
 
 static git_global_shutdown_fn git__shutdown_callbacks[MAX_SHUTDOWN_CB];
 static git_atomic git__n_shutdown_callbacks;
@@ -62,7 +63,8 @@ static int init_common(void)
 		(ret = git_filter_global_init()) == 0 &&
 		(ret = git_merge_driver_global_init()) == 0 &&
 		(ret = git_transport_ssh_global_init()) == 0 &&
-		(ret = git_openssl_stream_global_init()) == 0)
+		(ret = git_openssl_stream_global_init()) == 0 &&
+		(ret = git_curl_stream_global_init()) == 0)
 		ret = git_mwindow_global_init();
 
 	GIT_MEMORY_BARRIER;

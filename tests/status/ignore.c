@@ -1155,3 +1155,30 @@ void test_status_ignore__subdir_ignore_everything_except_certain_files(void)
 	refute_is_ignored("project/src/foo.c");
 	refute_is_ignored("project/src/foo/foo.c");
 }
+
+void test_status_ignore__deeper(void)
+{
+   int ignored;
+
+    g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+    cl_git_mkfile("empty_standard_repo/.gitignore",
+          "*.data\n"
+          "!dont_ignore/*.data\n");
+
+    cl_git_pass(p_mkdir("empty_standard_repo/dont_ignore", 0777));
+    cl_git_mkfile("empty_standard_repo/foo.data", "");
+    cl_git_mkfile("empty_standard_repo/bar.data", "");
+    cl_git_mkfile("empty_standard_repo/dont_ignore/foo.data", "");
+    cl_git_mkfile("empty_standard_repo/dont_ignore/bar.data", "");
+
+    cl_git_pass(git_ignore_path_is_ignored(&ignored, g_repo, "foo.data"));
+    cl_assert_equal_i(1, ignored);
+    cl_git_pass(git_ignore_path_is_ignored(&ignored, g_repo, "bar.data"));
+    cl_assert_equal_i(1, ignored);
+
+    cl_git_pass(git_ignore_path_is_ignored(&ignored, g_repo, "dont_ignore/foo.data"));
+    cl_assert_equal_i(0, ignored);
+    cl_git_pass(git_ignore_path_is_ignored(&ignored, g_repo, "dont_ignore/bar.data"));
+    cl_assert_equal_i(0, ignored);
+}

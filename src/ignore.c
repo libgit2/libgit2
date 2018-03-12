@@ -40,38 +40,42 @@
  */
 static int does_negate_pattern(git_attr_fnmatch *rule, git_attr_fnmatch *neg)
 {
+	int (*cmp)(const char *, const char *, size_t);
 	git_attr_fnmatch *longer, *shorter;
 	char *p;
 
-	if ((rule->flags & GIT_ATTR_FNMATCH_NEGATIVE) == 0
-		&& (neg->flags & GIT_ATTR_FNMATCH_NEGATIVE) != 0) {
+	if ((rule->flags & GIT_ATTR_FNMATCH_NEGATIVE) != 0
+	    || (neg->flags & GIT_ATTR_FNMATCH_NEGATIVE) == 0)
+		return false;
 
-		/* If lengths match we need to have an exact match */
-		if (rule->length == neg->length) {
-			return strcmp(rule->pattern, neg->pattern) == 0;
-		} else if (rule->length < neg->length) {
-			shorter = rule;
-			longer = neg;
-		} else {
-			shorter = neg;
-			longer = rule;
-		}
+	if (neg->flags & GIT_ATTR_FNMATCH_ICASE)
+		cmp = git__strncasecmp;
+	else
+		cmp = git__strncmp;
 
-		/* Otherwise, we need to check if the shorter
-		 * rule is a basename only (that is, it contains
-		 * no path separator) and, if so, if it
-		 * matches the tail of the longer rule */
-		p = longer->pattern + longer->length - shorter->length;
-
-		if (p[-1] != '/')
-			return false;
-		if (memchr(shorter->pattern, '/', shorter->length) != NULL)
-			return false;
-
-		return memcmp(p, shorter->pattern, shorter->length) == 0;
+	/* If lengths match we need to have an exact match */
+	if (rule->length == neg->length) {
+		return cmp(rule->pattern, neg->pattern, rule->length) == 0;
+	} else if (rule->length < neg->length) {
+		shorter = rule;
+		longer = neg;
+	} else {
+		shorter = neg;
+		longer = rule;
 	}
 
-	return false;
+	/* Otherwise, we need to check if the shorter
+	 * rule is a basename only (that is, it contains
+	 * no path separator) and, if so, if it
+	 * matches the tail of the longer rule */
+	p = longer->pattern + longer->length - shorter->length;
+
+	if (p[-1] != '/')
+		return false;
+	if (memchr(shorter->pattern, '/', shorter->length) != NULL)
+		return false;
+
+	return cmp(p, shorter->pattern, shorter->length) == 0;
 }
 
 /**
@@ -89,13 +93,17 @@ static int does_negate_pattern(git_attr_fnmatch *rule, git_attr_fnmatch *neg)
  */
 static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match)
 {
-	int error = 0;
+	int error = 0, fnflags;
 	size_t i;
 	git_attr_fnmatch *rule;
 	char *path;
 	git_buf buf = GIT_BUF_INIT;
 
 	*out = 0;
+
+	fnflags = FNM_PATHNAME;
+	if (match->flags & GIT_ATTR_FNMATCH_ICASE)
+		fnflags |= FNM_IGNORECASE;
 
 	/* path of the file relative to the workdir, so we match the rules in subdirs */
 	if (match->containing_dir) {
@@ -117,12 +125,12 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 				continue;
 		}
 
-	/*
-	 * When dealing with a directory, we add '/<star>' so
-	 * p_fnmatch() honours FNM_PATHNAME. Checking for LEADINGDIR
-	 * alone isn't enough as that's also set for nagations, so we
-	 * need to check that NEGATIVE is off.
-	 */
+		/*
+		 * When dealing with a directory, we add '/<star>' so
+		 * p_fnmatch() honours FNM_PATHNAME. Checking for LEADINGDIR
+		 * alone isn't enough as that's also set for nagations, so we
+		 * need to check that NEGATIVE is off.
+		 */
 		git_buf_clear(&buf);
 		if (rule->containing_dir) {
 			git_buf_puts(&buf, rule->containing_dir);
@@ -136,7 +144,7 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 		if (error < 0)
 			goto out;
 
-		if ((error = p_fnmatch(git_buf_cstr(&buf), path, FNM_PATHNAME)) < 0) {
+		if ((error = p_fnmatch(git_buf_cstr(&buf), path, fnflags)) < 0) {
 			giterr_set(GITERR_INVALID, "error matching pattern");
 			goto out;
 		}
@@ -197,10 +205,26 @@ static int parse_ignore_file(
 			if (ignore_case)
 				match->flags |= GIT_ATTR_FNMATCH_ICASE;
 
+			while (match->length > 0) {
+				if (match->pattern[match->length - 1] == ' ' ||
+				    match->pattern[match->length - 1] == '\t') {
+					match->pattern[match->length - 1] = 0;
+					match->length --;
+				} else {
+					break;
+				}
+			}
+
 			scan = git__next_line(scan);
 
-			/* if a negative match doesn't actually do anything, throw it away */
-			if (match->flags & GIT_ATTR_FNMATCH_NEGATIVE)
+			/*
+			 * If a negative match doesn't actually do anything,
+			 * throw it away. As we cannot always verify whether a
+			 * rule containing wildcards negates another rule, we
+			 * do not optimize away these rules, though.
+			 * */
+			if (match->flags & GIT_ATTR_FNMATCH_NEGATIVE
+			    && !(match->flags & GIT_ATTR_FNMATCH_HASWILD))
 				error = does_negate_rule(&valid_rule, &attrs->rules, match);
 
 			if (!error && valid_rule)

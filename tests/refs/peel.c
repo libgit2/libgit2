@@ -117,3 +117,15 @@ void test_refs_peel__can_peel_fully_peeled_packed_refs(void)
 			    "0df1a5865c8abfc09f1f2182e6a31be550e99f07",
 			    GIT_OBJ_COMMIT);
 }
+
+void test_refs_peel__can_peel_fully_peeled_tag_to_tag(void)
+{
+	assert_peel_generic(g_peel_repo,
+			    "refs/tags/tag-inside-tags", GIT_OBJ_TAG,
+			    "c2596aa0151888587ec5c0187f261e63412d9e11",
+			    GIT_OBJ_TAG);
+	assert_peel_generic(g_peel_repo,
+			    "refs/foo/tag-outside-tags", GIT_OBJ_TAG,
+			    "c2596aa0151888587ec5c0187f261e63412d9e11",
+			    GIT_OBJ_TAG);
+}

@@ -149,10 +149,19 @@ int git_openssl_stream_global_init(void)
 	return 0;
 }
 
+#if defined(GIT_THREADS)
+static void threadid_cb(CRYPTO_THREADID *threadid)
+{
+    CRYPTO_THREADID_set_numeric(threadid, git_thread_currentid());
+}
+#endif
+
 int git_openssl_set_locking(void)
 {
 #if defined(GIT_THREADS) && OPENSSL_VERSION_NUMBER < 0x10100000L
 	int num_locks, i;
+
+	CRYPTO_THREADID_set_callback(threadid_cb);
 
 	num_locks = CRYPTO_num_locks();
 	openssl_locks = git__calloc(num_locks, sizeof(git_mutex));
@@ -272,8 +281,9 @@ static int ssl_set_error(SSL *ssl, int error)
 	case SSL_ERROR_SYSCALL:
 		e = ERR_get_error();
 		if (e > 0) {
-			giterr_set(GITERR_NET, "SSL error: %s",
-					ERR_error_string(e, NULL));
+			char errmsg[256];
+			ERR_error_string_n(e, errmsg, sizeof(errmsg));
+			giterr_set(GITERR_NET, "SSL error: %s", errmsg);
 			break;
 		} else if (error < 0) {
 			giterr_set(GITERR_OS, "SSL error: syscall failure");
@@ -283,10 +293,13 @@ static int ssl_set_error(SSL *ssl, int error)
 		return GIT_EEOF;
 		break;
 	case SSL_ERROR_SSL:
+	{
+		char errmsg[256];
 		e = ERR_get_error();
-		giterr_set(GITERR_NET, "SSL error: %s",
-				ERR_error_string(e, NULL));
+		ERR_error_string_n(e, errmsg, sizeof(errmsg));
+		giterr_set(GITERR_NET, "SSL error: %s", errmsg);
 		break;
+	}
 	case SSL_ERROR_NONE:
 	case SSL_ERROR_ZERO_RETURN:
 	default:

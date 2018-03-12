@@ -495,6 +495,7 @@ static void test_inserting_submodule(void)
 	git_treebuilder *bld;
 	git_oid sm_id;
 
+	cl_git_pass(git_oid_fromstr(&sm_id, "da39a3ee5e6b4b0d3255bfef95601890afd80709"));
 	cl_git_pass(git_treebuilder_new(&bld, g_repo, NULL));
 	cl_git_pass(git_treebuilder_insert(NULL, bld, "sm", &sm_id, GIT_FILEMODE_COMMIT));
 	git_treebuilder_free(bld);

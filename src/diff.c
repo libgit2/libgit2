@@ -12,13 +12,6 @@
 #include "commit.h"
 #include "index.h"
 
-#define DIFF_FLAG_IS_SET(DIFF,FLAG) \
-	(((DIFF)->opts.flags & (FLAG)) != 0)
-#define DIFF_FLAG_ISNT_SET(DIFF,FLAG) \
-	(((DIFF)->opts.flags & (FLAG)) == 0)
-#define DIFF_FLAG_SET(DIFF,FLAG,VAL) (DIFF)->opts.flags = \
-	(VAL) ? ((DIFF)->opts.flags | (FLAG)) : ((DIFF)->opts.flags & ~(VAL))
-
 GIT_INLINE(const char *) diff_delta__path(const git_diff_delta *delta)
 {
 	const char *str = delta->old_file.path;
