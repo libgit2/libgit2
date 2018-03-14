@@ -79,6 +79,7 @@
 #define git__realloc(ptr, size)               git__crtdbg__realloc(ptr, size, __FILE__, __LINE__)
 #define git__reallocarray(ptr, nelem, elsize) git__crtdbg__reallocarray(ptr, nelem, elsize, __FILE__, __LINE__)
 #define git__mallocarray(nelem, elsize)       git__crtdbg__mallocarray(nelem, elsize, __FILE__, __LINE__)
+#define git__free                             git__crtdbg__free
 
 #else
 
@@ -169,12 +170,12 @@ GIT_INLINE(void *) git__mallocarray(size_t nelem, size_t elsize)
 	return git__reallocarray(NULL, nelem, elsize);
 }
 
-#endif /* !MSVC_CTRDBG */
-
 GIT_INLINE(void) git__free(void *ptr)
 {
 	free(ptr);
 }
+
+#endif /* !MSVC_CTRDBG */
 
 #define STRCMP_CASESELECT(IGNORE_CASE, STR1, STR2) \
 	((IGNORE_CASE) ? strcasecmp((STR1), (STR2)) : strcmp((STR1), (STR2)))

@@ -105,6 +105,7 @@ char *git__crtdbg__substrdup(const char *start, size_t n, const char *file, int 
 void *git__crtdbg__realloc(void *ptr, size_t size, const char *file, int line);
 void *git__crtdbg__reallocarray(void *ptr, size_t nelem, size_t elsize, const char *file, int line);
 void *git__crtdbg__mallocarray(size_t nelem, size_t elsize, const char *file, int line);
+void *git__crtdbg__free(void *ptr);
 
 #endif
 #endif

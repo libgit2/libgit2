@@ -145,6 +145,11 @@ void *git__crtdbg__mallocarray(size_t nelem, size_t elsize, const char *file, in
 	return git__crtdbg__reallocarray(NULL, nelem, elsize, file, line);
 }
 
+void git__crtdbg__free(void *ptr)
+{
+	free(ptr);
+}
+
 /**
  * Compare function for bsearch on g_cs_index table.
  */
@@ -415,4 +420,5 @@ const char *git_win32__crtdbg_stacktrace(int skip, const char *file)
 
 	return result;
 }
+
 #endif
