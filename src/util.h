@@ -83,97 +83,17 @@
 
 #else
 
-/*
- * Custom memory allocation wrappers
- * that set error code and error message
- * on allocation failure
- */
-GIT_INLINE(void *) git__malloc(size_t len)
-{
-	void *ptr = malloc(len);
-	if (!ptr) giterr_set_oom();
-	return ptr;
-}
+#include "stdalloc.h"
 
-GIT_INLINE(void *) git__calloc(size_t nelem, size_t elsize)
-{
-	void *ptr = calloc(nelem, elsize);
-	if (!ptr) giterr_set_oom();
-	return ptr;
-}
-
-GIT_INLINE(char *) git__strdup(const char *str)
-{
-	char *ptr = strdup(str);
-	if (!ptr) giterr_set_oom();
-	return ptr;
-}
-
-GIT_INLINE(char *) git__strndup(const char *str, size_t n)
-{
-	size_t length = 0, alloclength;
-	char *ptr;
-
-	length = p_strnlen(str, n);
-
-	if (GIT_ADD_SIZET_OVERFLOW(&alloclength, length, 1) ||
-		!(ptr = git__malloc(alloclength)))
-		return NULL;
-
-	if (length)
-		memcpy(ptr, str, length);
-
-	ptr[length] = '\0';
-
-	return ptr;
-}
-
-/* NOTE: This doesn't do null or '\0' checking.  Watch those boundaries! */
-GIT_INLINE(char *) git__substrdup(const char *start, size_t n)
-{
-	char *ptr;
-	size_t alloclen;
-
-	if (GIT_ADD_SIZET_OVERFLOW(&alloclen, n, 1) ||
-		!(ptr = git__malloc(alloclen)))
-		return NULL;
-
-	memcpy(ptr, start, n);
-	ptr[n] = '\0';
-	return ptr;
-}
-
-GIT_INLINE(void *) git__realloc(void *ptr, size_t size)
-{
-	void *new_ptr = realloc(ptr, size);
-	if (!new_ptr) giterr_set_oom();
-	return new_ptr;
-}
-
-/**
- * Similar to `git__realloc`, except that it is suitable for reallocing an
- * array to a new number of elements of `nelem`, each of size `elsize`.
- * The total size calculation is checked for overflow.
- */
-GIT_INLINE(void *) git__reallocarray(void *ptr, size_t nelem, size_t elsize)
-{
-	size_t newsize;
-	return GIT_MULTIPLY_SIZET_OVERFLOW(&newsize, nelem, elsize) ?
-		NULL : realloc(ptr, newsize);
-}
-
-/**
- * Similar to `git__calloc`, except that it does not zero memory.
- */
-GIT_INLINE(void *) git__mallocarray(size_t nelem, size_t elsize)
-{
-	return git__reallocarray(NULL, nelem, elsize);
-}
-
-GIT_INLINE(void) git__free(void *ptr)
-{
-	free(ptr);
-}
+#define git__malloc(len)                      git__stdalloc__malloc(len)
+#define git__calloc(nelem, elsize)            git__stdalloc__calloc(nelem, elsize)
+#define git__strdup(str)                      git__stdalloc__strdup(str)
+#define git__strndup(str, n)                  git__stdalloc__strndup(str, n)
+#define git__substrdup(str, n)                git__stdalloc__substrdup(str, n)
+#define git__realloc(ptr, size)               git__stdalloc__realloc(ptr, size)
+#define git__reallocarray(ptr, nelem, elsize) git__stdalloc__reallocarray(ptr, nelem, elsize)
+#define git__mallocarray(nelem, elsize)       git__stdalloc__mallocarray(nelem, elsize)
+#define git__free                             git__stdalloc__free
 
 #endif /* !MSVC_CTRDBG */
 
