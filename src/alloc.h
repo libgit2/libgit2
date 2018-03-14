@@ -54,14 +54,14 @@
 
 #include "stdalloc.h"
 
-#define git__malloc(len)                      git__stdalloc__malloc(len)
-#define git__calloc(nelem, elsize)            git__stdalloc__calloc(nelem, elsize)
-#define git__strdup(str)                      git__stdalloc__strdup(str)
-#define git__strndup(str, n)                  git__stdalloc__strndup(str, n)
-#define git__substrdup(str, n)                git__stdalloc__substrdup(str, n)
-#define git__realloc(ptr, size)               git__stdalloc__realloc(ptr, size)
-#define git__reallocarray(ptr, nelem, elsize) git__stdalloc__reallocarray(ptr, nelem, elsize)
-#define git__mallocarray(nelem, elsize)       git__stdalloc__mallocarray(nelem, elsize)
+#define git__malloc(len)                      git__stdalloc__malloc(len, __FILE__, __LINE__)
+#define git__calloc(nelem, elsize)            git__stdalloc__calloc(nelem, elsize, __FILE__, __LINE__)
+#define git__strdup(str)                      git__stdalloc__strdup(str, __FILE__, __LINE__)
+#define git__strndup(str, n)                  git__stdalloc__strndup(str, n, __FILE__, __LINE__)
+#define git__substrdup(str, n)                git__stdalloc__substrdup(str, n, __FILE__, __LINE__)
+#define git__realloc(ptr, size)               git__stdalloc__realloc(ptr, size, __FILE__, __LINE__)
+#define git__reallocarray(ptr, nelem, elsize) git__stdalloc__reallocarray(ptr, nelem, elsize, __FILE__, __LINE__)
+#define git__mallocarray(nelem, elsize)       git__stdalloc__mallocarray(nelem, elsize, __FILE__, __LINE__)
 #define git__free                             git__stdalloc__free
 
 #endif /* !MSVC_CTRDBG */
