@@ -1327,13 +1327,14 @@ static int hash_header(git_hash_ctx *ctx, git_off_t size, git_otype type)
 }
 
 int git_odb_open_wstream(
-	git_odb_stream **stream, git_odb *db, git_off_t size, git_otype type)
+	git_odb_stream **stream_out, git_odb *db, git_off_t size, git_otype type)
 {
 	size_t i, writes = 0;
 	int error = GIT_ERROR;
 	git_hash_ctx *ctx = NULL;
+	git_odb_stream *stream = NULL;
 
-	assert(stream && db);
+	assert(stream_out && db);
 
 	for (i = 0; i < db->backends.length && error < 0; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
@@ -1345,10 +1346,10 @@ int git_odb_open_wstream(
 
 		if (b->writestream != NULL) {
 			++writes;
-			error = b->writestream(stream, b, size, type);
+			error = b->writestream(&stream, b, size, type);
 		} else if (b->write != NULL) {
 			++writes;
-			error = init_fake_wstream(stream, b, size, type);
+			error = init_fake_wstream(&stream, b, size, type);
 		}
 	}
 
@@ -1368,13 +1369,17 @@ int git_odb_open_wstream(
 		(error = hash_header(ctx, size, type)) < 0)
 		goto done;
 
-	(*stream)->hash_ctx = ctx;
-	(*stream)->declared_size = size;
-	(*stream)->received_bytes = 0;
+	stream->hash_ctx = ctx;
+	stream->declared_size = size;
+	stream->received_bytes = 0;
+
+	*stream_out = stream;
 
 done:
-	if (error)
+	if (error) {
 		git__free(ctx);
+		git_odb_stream_free(stream);
+	}
 	return error;
 }
 
