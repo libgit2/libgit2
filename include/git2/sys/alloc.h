@@ -72,6 +72,30 @@ typedef struct {
 	void (*gfree)(void *ptr);
 } git_allocator;
 
+/**
+ * Initialize the allocator structure to use the `stdalloc` pointer.
+ *
+ * Set up the structure so that all of its members are using the standard
+ * "stdalloc" allocator functions. The structure can then be used with
+ * `git_allocator_setup`.
+ *
+ * @param allocator The allocator that is to be initialized.
+ * @return An error code or 0.
+ */
+int git_stdalloc_init_allocator(git_allocator *allocator);
+
+/**
+ * Initialize the allocator structure to use the `crtdbg` pointer.
+ *
+ * Set up the structure so that all of its members are using the "crtdbg"
+ * allocator functions. Note that this allocator is only available on Windows
+ * platforms and only if libgit2 is being compiled with "-DMSVC_CRTDBG".
+ *
+ * @param allocator The allocator that is to be initialized.
+ * @return An error code or 0.
+ */
+int git_win32_crtdbg_init_allocator(git_allocator *allocator);
+
 GIT_END_DECL
 
 #endif

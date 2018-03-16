@@ -16,6 +16,7 @@
 #endif
 
 #include <git2.h>
+#include "alloc.h"
 #include "sysdir.h"
 #include "cache.h"
 #include "global.h"
@@ -258,6 +259,10 @@ int git_libgit2_opts(int key, ...)
 
 	case GIT_OPT_ENABLE_STRICT_HASH_VERIFICATION:
 		git_odb__strict_hash_verification = (va_arg(ap, int) != 0);
+		break;
+
+	case GIT_OPT_SET_ALLOCATOR:
+		error = git_allocator_setup(va_arg(ap, git_allocator *));
 		break;
 
 	default:

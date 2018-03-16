@@ -183,6 +183,7 @@ typedef enum {
 	GIT_OPT_GET_WINDOWS_SHAREMODE,
 	GIT_OPT_SET_WINDOWS_SHAREMODE,
 	GIT_OPT_ENABLE_STRICT_HASH_VERIFICATION,
+	GIT_OPT_SET_ALLOCATOR
 } git_libgit2_opt_t;
 
 /**
@@ -344,6 +345,12 @@ typedef enum {
  *		> objects from disk. This may impact performance due to an
  *		> additional checksum calculation on each object. This defaults
  *		> to enabled.
+ *
+ *	 opts(GIT_OPT_SET_ALLOCATOR, git_allocator *allocator)
+ *
+ *		> Set the memory allocator to a different memory allocator. This
+ *		> allocator will then be used to make all memory allocations for
+ *		> libgit2 operations.
  *
  * @param option Option key
  * @param ... value to set the option
