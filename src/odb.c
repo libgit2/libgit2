@@ -1340,17 +1340,27 @@ int git_odb_open_wstream(
 		backend_internal *internal = git_vector_get(&db->backends, i);
 		git_odb_backend *b = internal->backend;
 
-		/* we don't write in alternates! */
-		if (internal->is_alternate)
+		if (internal->is_alternate || b->writestream == NULL)
 			continue;
 
-		if (b->writestream != NULL) {
-			++writes;
-			error = b->writestream(&stream, b, size, type);
-		} else if (b->write != NULL) {
-			++writes;
-			error = init_fake_wstream(&stream, b, size, type);
-		}
+		++writes;
+		error = b->writestream(&stream, b, size, type);
+	}
+
+	/*
+	 * In case no backend supports write streams, try to open a fake wstream
+	 * based on the write function. Note this only enters the loop in case
+	 * `error == -1`. Otherwise, we assume a stream has been opened already.
+	 */
+	for (i = 0; i < db->backends.length && error < 0; ++i) {
+		backend_internal *internal = git_vector_get(&db->backends, i);
+		git_odb_backend *b = internal->backend;
+
+		if (internal->is_alternate || b->write == NULL)
+			continue;
+
+		++writes;
+		error = init_fake_wstream(&stream, b, size, type);
 	}
 
 	if (!writes) {
