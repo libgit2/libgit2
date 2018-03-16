@@ -1353,12 +1353,14 @@ int git_odb_open_wstream(
 		}
 	}
 
+	if (!writes) {
+		error = git_odb__error_unsupported_in_backend("write object");
+		goto done;
+	}
+
 	if (error < 0) {
 		if (error == GIT_PASSTHROUGH)
 			error = 0;
-		else if (!writes)
-			error = git_odb__error_unsupported_in_backend("write object");
-
 		goto done;
 	}
 
