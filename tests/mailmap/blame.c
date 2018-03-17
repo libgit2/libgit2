@@ -6,7 +6,6 @@
 
 static git_repository *g_repo;
 static git_blame *g_blame;
-static git_mailmap *g_mailmap;
 
 void test_mailmap_blame__initialize(void)
 {

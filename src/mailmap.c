@@ -215,7 +215,7 @@ int git_mailmap_parse(
 
 cleanup:
 	git__free(entry);
-	if (error < 0)
+	if (error < 0) {
 		git_mailmap_free(*mailmap);
 		*mailmap = NULL;
 	}
@@ -317,7 +317,7 @@ static int git_mailmap_from_bare_repo(
 
 	error = git_object_lookup_bypath(
 		(git_object **) &blob,
-		treeish,
+		tree,
 		".mailmap",
 		GIT_OBJ_BLOB);
 	if (error < 0)

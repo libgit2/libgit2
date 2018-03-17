@@ -22,14 +22,14 @@ GIT_BEGIN_DECL
 /**
  * A single entry parsed from a mailmap.
  */
-struct git_mailmap_entry {
+typedef struct git_mailmap_entry {
 	unsigned int version;
 
 	const char *real_name; /**< the real name (may be NULL) */
 	const char *real_email; /**< the real email (may be NULL) */
 	const char *replace_name; /**< the name to replace (may be NULL) */
 	const char *replace_email; /**< the email to replace */
-};
+} git_mailmap_entry;
 
 #define GIT_MAILMAP_ENTRY_VERSION 1
 #define GIT_MAILMAP_ENTRY_INIT {GIT_MAILMAP_ENTRY_VERSION}

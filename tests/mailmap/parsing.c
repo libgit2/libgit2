@@ -24,7 +24,7 @@ void test_mailmap_parsing__cleanup(void)
 static void check_mailmap_entries(
 	const git_mailmap *mailmap, const mailmap_entry *entries, size_t entries_size)
 {
-	const mailmap_entry *parsed = NULL;
+	const git_mailmap_entry *parsed = NULL;
 	size_t idx = 0;
 
 	/* Check that the parsed entries match */

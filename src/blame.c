@@ -14,6 +14,7 @@
 #include "git2/diff.h"
 #include "git2/blob.h"
 #include "git2/signature.h"
+#include "git2/mailmap.h"
 #include "util.h"
 #include "repository.h"
 #include "blame_git.h"
