@@ -14,195 +14,312 @@
 #include "git2/revparse.h"
 #include "git2/sys/commit.h"
 
-struct mailmap_entry {
-	char* to_name;
-	char* to_email;
-	char* from_name;
-	char* from_email;
-};
+/**
+ * Helper type and methods for the mailmap parser
+ */
+typedef struct char_range {
+	const char *p;
+	size_t len;
+} char_range;
+
+static const char_range NULL_RANGE = {0};
+
+/* Split a range at the first instance of 'c'. Returns whether 'c' was found */
+static bool range_split(
+	char_range range,
+	char c,
+	char_range *before,
+	char_range *after)
+{
+	const char *off;
+
+	*before = *after = NULL_RANGE;
+	before->p = range.p;
+	off = memchr(range.p, c, range.len);
+	if (!off) {
+		before->len = range.len;
+		return false;
+	}
+
+	before->len = off - range.p;
+	after->p = off + 1;
+	after->len = (range.p + range.len) - after->p;
+	return true;
+}
+
+/* Trim whitespace from the beginning and end of the range */
+static void range_trim(char_range *range) {
+	while (range->len > 0 && git__isspace(range->p[0])) {
+		++range->p;
+		--range->len;
+	}
+	while (range->len > 0 && git__isspace(range->p[range->len - 1]))
+		--range->len;
+}
+
+/**
+ * If `buf` is not NULL, copies range into it with a '\0', and bumps buf.
+ * If `size` is not NULL, adds the number of bytes to be written to it.
+ * returns a pointer to the copied string, or NULL.
+ */
+static const char *range_copyz(char **buf, size_t *size, char_range src)
+{
+	char *s = NULL;
+	if (src.p == NULL)
+		return NULL;
+
+	if (size)
+		*size += src.len + 1;
+
+	if (buf) {
+		s = *buf;
+		memcpy(s, src.p, src.len);
+		s[src.len] = '\0';
+		*buf += src.len + 1;
+	}
+	return s;
+}
 
 struct git_mailmap {
-	git_vector lines;
+	git_vector entries;
 };
 
-// Returns -1 on failure, length of the string scanned successfully on success,
-// guaranteed to be less that `length`.
-ssize_t parse_name_and_email(
-	const char *line,
-	size_t length,
-	const char** name,
-	size_t* name_len,
-	const char** email,
-	size_t* email_len,
-	bool allow_empty_email)
+/**
+ * Parse a single entry out of a mailmap file.
+ * Advances the `file` range past the parsed entry.
+ */
+static int git_mailmap_parse_single(
+	char_range *file,
+	bool *found,
+	char_range *real_name,
+	char_range *real_email,
+	char_range *replace_name,
+	char_range *replace_email)
 {
-	const char* email_start;
-	const char* email_end;
-	const char* name_start;
-	const char* name_end;
+	char_range line, comment, name_a, email_a, name_b, email_b;
+	bool two_emails = false;
 
-	email_start = memchr(line, '<', length);
-	if (!email_start)
-		return -1;
-	email_end = memchr(email_start, '>', length - (email_start - line));
-	if (!email_end)
-		return -1;
-	assert(email_end > email_start);
+	*found = false;
+	*real_name = NULL_RANGE;
+	*real_email = NULL_RANGE;
+	*replace_name = NULL_RANGE;
+	*replace_email = NULL_RANGE;
 
-	*email_len = email_end - email_start - 1;
-	*email = email_start + 1;
-	if (*email == email_end && !allow_empty_email)
-		return -1;
+	while (file->len) {
+		/* Get the line, and remove any comments */
+		range_split(*file, '\n', &line, file);
+		range_split(line, '#', &line, &comment);
 
-	// Now look for the name.
-	name_start = line;
-	while (name_start < email_start && isspace(*name_start))
-		++name_start;
-
-	*name = name_start;
-
-	name_end = email_start;
-	while (name_end > name_start && isspace(*(name_end - 1)))
-		name_end--;
-
-	assert(name_end >= name_start);
-	*name_len = name_end - name_start;
-
-	return email_end - line;
-}
-
-static void git_mailmap_parse_line(
-	git_mailmap* mailmap,
-	const char* contents,
-	size_t size)
-{
-	struct mailmap_entry* entry;
-
-	const char* to_name;
-	size_t to_name_length;
-
-	const char* to_email;
-	size_t to_email_length;
-
-	const char* from_name;
-	size_t from_name_length;
-
-	const char* from_email;
-	size_t from_email_length;
-
-	ssize_t ret;
-
-	if (!size)
-		return;
-	if (contents[0] == '#')
-		return;
-
-	ret = parse_name_and_email(
-		contents,
-		size,
-		&to_name,
-		&to_name_length,
-		&to_email,
-		&to_email_length,
-		false);
-	if (ret < 0)
-		return;
-
-	ret = parse_name_and_email(
-		contents + ret + 1,
-		size - ret - 1,
-		&from_name,
-		&from_name_length,
-		&from_email,
-		&from_email_length,
-		true);
-	if (ret < 0)
-		return;
-
-	entry = git__malloc(sizeof(struct mailmap_entry));
-
-	entry->to_name = git__strndup(to_name, to_name_length);
-	entry->to_email = git__strndup(to_email, to_email_length);
-	entry->from_name = git__strndup(from_name, from_name_length);
-	entry->from_email = git__strndup(from_email, from_email_length);
-
-	printf("%s <%s> \"%s\" <%s>\n",
-		entry->to_name,
-		entry->to_email,
-		entry->from_name,
-		entry->from_email);
-
-	git_vector_insert(&mailmap->lines, entry);
-}
-
-static void git_mailmap_parse(
-	git_mailmap* mailmap,
-	const char* contents,
-	size_t size)
-{
-	size_t start = 0;
-	size_t i;
-	for (i = 0; i < size; ++i) {
-		if (contents[i] != '\n')
+		/* Skip blank lines */
+		range_trim(&line);
+		if (line.len == 0)
 			continue;
-		git_mailmap_parse_line(mailmap, contents + start, i - start);
-		start = i + 1;
+
+		/* Get the first name and email */
+		if (!range_split(line, '<', &name_a, &line))
+			return -1; /* garbage in line */
+		if (!range_split(line, '>', &email_a, &line))
+			return -1; /* unfinished <> pair */
+
+		/* Get an optional second name and/or email */
+		two_emails = range_split(line, '<', &name_b, &line);
+		if (two_emails && !range_split(line, '>', &email_b, &line))
+			return -1; /* unfinished <> pair */
+
+		if (line.len > 0)
+			return -1; /* junk at end of line */
+
+		/* Trim whitespace from around names */
+		range_trim(&name_a);
+		range_trim(&name_b);
+
+		*found = true;
+		if (name_a.len > 0)
+			*real_name = name_a;
+
+		if (two_emails) {
+			*real_email = email_a;
+			*replace_email = email_b;
+
+			if (name_b.len > 0)
+				*replace_name = name_b;
+		} else {
+			*replace_email = email_a;
+		}
+		break;
 	}
-}
-
-int git_mailmap_create(git_mailmap** mailmap, git_repository* repo)
-{
-	git_commit* head = NULL;
-	git_blob* mailmap_blob = NULL;
-	git_off_t size = 0;
-	const char* contents = NULL;
-	int ret;
-
-	*mailmap = git__malloc(sizeof(struct git_mailmap));
-	git_vector_init(&(*mailmap)->lines, 0, NULL);
-
-	ret = git_revparse_single((git_object **)&head, repo, "HEAD");
-	if (ret)
-		goto error;
-
-	ret = git_object_lookup_bypath(
-			(git_object**) &mailmap_blob,
-			(const git_object*) head,
-			".mailmap",
-			GIT_OBJ_BLOB);
-	if (ret)
-		goto error;
-
-	contents = git_blob_rawcontent(mailmap_blob);
-	size = git_blob_rawsize(mailmap_blob);
-
-	git_mailmap_parse(*mailmap, contents, size);
 
 	return 0;
-
-error:
-	assert(ret);
-
-	if (mailmap_blob)
-		git_blob_free(mailmap_blob);
-	if (head)
-		git_commit_free(head);
-	git_mailmap_free(*mailmap);
-	return ret;
 }
 
-void git_mailmap_free(struct git_mailmap* mailmap)
+int git_mailmap_parse(
+	git_mailmap **mailmap,
+	const char *data,
+	size_t size)
 {
-	size_t i;
-	struct mailmap_entry* line;
-	git_vector_foreach(&mailmap->lines, i, line) {
-		git__free((char*)line->to_name);
-		git__free((char*)line->to_email);
-		git__free((char*)line->from_name);
-		git__free((char*)line->from_email);
-		git__free(line);
+	char_range file = { data, size };
+	git_mailmap_entry* entry = NULL;
+	int error = 0;
+
+	*mailmap = git__calloc(1, sizeof(git_mailmap));
+	if (!*mailmap)
+		return -1;
+
+	/* XXX: Is it worth it to precompute the size? */
+	error = git_vector_init(&(*mailmap)->entries, 0, NULL);
+	if (error < 0)
+		goto cleanup;
+
+	while (file.len > 0) {
+		bool found = false;
+		char_range real_name, real_email, replace_name, replace_email;
+		size_t size = 0;
+		char *buf = NULL;
+
+		error = git_mailmap_parse_single(
+			&file, &found,
+			&real_name, &real_email,
+			&replace_name, &replace_email);
+		if (error < 0)
+			goto cleanup;
+		if (!found)
+			break;
+
+		/* Compute how much space we'll need to store our entry */
+		size = sizeof(git_mailmap_entry);
+		range_copyz(NULL, &size, real_name);
+		range_copyz(NULL, &size, real_email);
+		range_copyz(NULL, &size, replace_name);
+		range_copyz(NULL, &size, replace_email);
+
+		entry = git__malloc(size);
+		if (!entry) {
+			error = -1;
+			goto cleanup;
+		}
+
+		buf = (char*)(entry + 1);
+		entry->real_name = range_copyz(&buf, NULL, real_name);
+		entry->real_email = range_copyz(&buf, NULL, real_email);
+		entry->replace_name = range_copyz(&buf, NULL, replace_name);
+		entry->replace_email = range_copyz(&buf, NULL, replace_email);
+		assert(buf == ((char*)entry) + size);
+
+		error = git_vector_insert(&(*mailmap)->entries, entry);
+		if (error < 0)
+			goto cleanup;
+		entry = NULL;
 	}
 
-	git_vector_clear(&mailmap->lines);
+cleanup:
+	if (entry)
+		git__free(entry);
+	if (error < 0 && *mailmap)
+		git_mailmap_free(*mailmap);
+	return error;
+}
+
+void git_mailmap_free(git_mailmap *mailmap)
+{
+	git_vector_free_deep(&mailmap->entries);
 	git__free(mailmap);
+}
+
+void git_mailmap_resolve(
+	const char **name_out,
+	const char **email_out,
+	git_mailmap *mailmap,
+	const char *name,
+	const char *email)
+{
+	git_mailmap_entry *entry = NULL;
+
+	*name_out = name;
+	*email_out = email;
+
+	entry = git_mailmap_entry_lookup(mailmap, name, email);
+	if (entry) {
+		if (entry->real_name)
+			*name_out = entry->real_name;
+		if (entry->real_email)
+			*email_out = entry->real_email;
+	}
+}
+
+git_mailmap_entry* git_mailmap_entry_lookup(
+	git_mailmap *mailmap,
+	const char *name,
+	const char *email)
+{
+	size_t i;
+	git_mailmap_entry *entry;
+	assert(mailmap && name && email);
+
+	git_vector_foreach(&mailmap->entries, i, entry) {
+		if (!git__strcmp(email, entry->replace_email) &&
+		    (!entry->replace_name || !git__strcmp(name, entry->replace_name))) {
+			return entry;
+		}
+	}
+
+	return NULL;
+}
+
+git_mailmap_entry* git_mailmap_entry_byindex(git_mailmap *mailmap, size_t idx)
+{
+	return git_vector_get(&mailmap->entries, idx);
+}
+
+size_t git_mailmap_entry_count(git_mailmap *mailmap)
+{
+	return git_vector_length(&mailmap->entries);
+}
+
+int git_mailmap_from_tree(
+	git_mailmap **mailmap,
+	const git_object *treeish)
+{
+	git_blob *blob = NULL;
+	const char *content = NULL;
+	git_off_t size = 0;
+	int error;
+
+	*mailmap = NULL;
+
+	error = git_object_lookup_bypath(
+		(git_object **) &blob,
+		treeish,
+		".mailmap",
+		GIT_OBJ_BLOB);
+	if (error < 0)
+		goto cleanup;
+
+	content = git_blob_rawcontent(blob);
+	size = git_blob_rawsize(blob);
+
+	error = git_mailmap_parse(mailmap, content, size);
+
+cleanup:
+	if (blob != NULL)
+		git_blob_free(blob);
+	return error;
+}
+
+int git_mailmap_from_repo(git_mailmap **mailmap, git_repository *repo)
+{
+	git_object *head = NULL;
+	int error;
+
+	*mailmap = NULL;
+
+	error = git_revparse_single(&head, repo, "HEAD");
+	if (error < 0)
+		goto cleanup;
+
+	error = git_mailmap_from_tree(mailmap, head);
+
+cleanup:
+	if (head)
+		git_object_free(head);
+	return error;
 }
