@@ -105,7 +105,7 @@ static int git_mailmap_parse_single(
 	*replace_name = NULL_RANGE;
 	*replace_email = NULL_RANGE;
 
-	while (file->len) {
+	while (file->len > 0) {
 		/* Get the line, and remove any comments */
 		range_split(*file, '\n', &line, file);
 		range_split(line, '#', &line, &comment);
