@@ -180,10 +180,10 @@ int git_mailmap_parse(
 			&file, &found,
 			&real_name, &real_email,
 			&replace_name, &replace_email);
-		if (error < 0)
-			goto cleanup;
-		if (!found)
-			break;
+		if (error < 0 || !found) {
+			error = 0;
+			continue;
+		}
 
 		/* Compute how much space we'll need to store our entry */
 		size = sizeof(git_mailmap_entry);
