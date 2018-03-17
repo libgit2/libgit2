@@ -246,7 +246,7 @@ void git_mailmap_resolve(
 	}
 }
 
-git_mailmap_entry* git_mailmap_entry_lookup(
+git_mailmap_entry *git_mailmap_entry_lookup(
 	git_mailmap *mailmap,
 	const char *name,
 	const char *email)
@@ -265,9 +265,12 @@ git_mailmap_entry* git_mailmap_entry_lookup(
 	return NULL;
 }
 
-git_mailmap_entry* git_mailmap_entry_byindex(git_mailmap *mailmap, size_t idx)
+git_mailmap_entry *git_mailmap_entry_byindex(git_mailmap *mailmap, size_t idx)
 {
-	return git_vector_get(&mailmap->entries, idx);
+	if (idx < git_vector_length(&mailmap->entries))
+		return git_vector_get(&mailmap->entries, idx);
+
+	return NULL;
 }
 
 size_t git_mailmap_entry_count(git_mailmap *mailmap)
