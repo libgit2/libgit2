@@ -267,10 +267,7 @@ git_mailmap_entry *git_mailmap_entry_lookup(
 
 git_mailmap_entry *git_mailmap_entry_byindex(git_mailmap *mailmap, size_t idx)
 {
-	if (idx < git_vector_length(&mailmap->entries))
-		return git_vector_get(&mailmap->entries, idx);
-
-	return NULL;
+	return git_vector_get(&mailmap->entries, idx);
 }
 
 size_t git_mailmap_entry_count(git_mailmap *mailmap)
