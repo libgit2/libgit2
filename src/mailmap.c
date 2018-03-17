@@ -214,8 +214,10 @@ int git_mailmap_parse(
 cleanup:
 	if (entry)
 		git__free(entry);
-	if (error < 0 && *mailmap)
+	if (error < 0 && *mailmap) {
 		git_mailmap_free(*mailmap);
+		*mailmap = NULL;
+	}
 	return error;
 }
 
