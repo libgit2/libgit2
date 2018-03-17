@@ -76,6 +76,19 @@ GIT_EXTERN(int) git_signature_default(git_signature **out, git_repository *repo)
 GIT_EXTERN(int) git_signature_from_buffer(git_signature **out, const char *buf);
 
 /**
+ * Create a signature with names updated respecting the mailmap.
+ *
+ * Call `git_signature_free()` to free the data.
+ *
+ * @param out new signature
+ * @param sig signature to resolve
+ * @param mailmap mailmap to resolve with
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_signature_with_mailmap(
+  git_signature **out, const git_signature *sig, const git_mailmap *mailmap);
+
+/**
  * Create a copy of an existing signature.  All internal strings are also
  * duplicated.
  *

@@ -434,6 +434,9 @@ struct git_writestream {
 	void (*free)(git_writestream *stream);
 };
 
+/** A parsed representation of a .mailmap file. */
+typedef struct git_mailmap git_mailmap;
+
 /** @} */
 GIT_END_DECL
 

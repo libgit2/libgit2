@@ -889,3 +889,15 @@ cleanup:
 	git_buf_dispose(&commit);
 	return error;
 }
+
+int git_commit_committer_with_mailmap(
+	git_signature **out, const git_commit *commit, const git_mailmap *mailmap)
+{
+	return git_signature_with_mailmap(out, commit->committer, mailmap);
+}
+
+int git_commit_author_with_mailmap(
+	git_signature **out, const git_commit *commit, const git_mailmap *mailmap)
+{
+	return git_signature_with_mailmap(out, commit->author, mailmap);
+}

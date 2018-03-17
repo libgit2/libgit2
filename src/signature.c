@@ -9,6 +9,7 @@
 
 #include "repository.h"
 #include "git2/common.h"
+#include "git2/mailmap.h"
 #include "posix.h"
 
 void git_signature_free(git_signature *sig)
@@ -119,6 +120,44 @@ int git_signature_dup(git_signature **dest, const git_signature *source)
 	*dest = signature;
 
 	return 0;
+}
+
+int git_signature_with_mailmap(
+	git_signature **dest,
+	const git_signature *source,
+	const git_mailmap *mailmap)
+{
+	git_signature *signature = NULL;
+	const char *name = NULL;
+	const char *email = NULL;
+
+	if (source == NULL)
+		goto on_error;
+
+	git_mailmap_resolve(&name, &email, mailmap, source->name, source->email);
+
+	signature = git__calloc(1, sizeof(git_signature));
+	if (!signature)
+		goto on_error;
+
+	signature->name = git__strdup(name);
+	if (!signature->name)
+		goto on_error;
+
+	signature->email = git__strdup(email);
+	if (!signature->email)
+		goto on_error;
+
+	signature->when.time = source->when.time;
+	signature->when.offset = source->when.offset;
+	signature->when.sign = source->when.sign;
+
+	*dest = signature;
+	return 0;
+
+on_error:
+	git_signature_free(signature);
+	return -1;
 }
 
 int git_signature__pdup(git_signature **dest, const git_signature *source, git_pool *pool)

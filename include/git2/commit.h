@@ -173,6 +173,34 @@ GIT_EXTERN(const git_signature *) git_commit_committer(const git_commit *commit)
 GIT_EXTERN(const git_signature *) git_commit_author(const git_commit *commit);
 
 /**
+ * Get the committer of a commit, using the mailmap to map names and email
+ * addresses to canonical real names and email addresses.
+ *
+ * Call `git_signature_free` to free the signature.
+ *
+ * @param out a pointer to store the resolved signature.
+ * @param commit a previously loaded commit.
+ * @param mailmap the mailmap to resolve with. (may be NULL)
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_commit_committer_with_mailmap(
+	git_signature **out, const git_commit *commit, const git_mailmap *mailmap);
+
+/**
+ * Get the author of a commit, using the mailmap to map names and email
+ * addresses to canonical real names and email addresses.
+ *
+ * Call `git_signature_free` to free the signature.
+ *
+ * @param out a pointer to store the resolved signature.
+ * @param commit a previously loaded commit.
+ * @param mailmap the mailmap to resolve with. (may be NULL)
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_commit_author_with_mailmap(
+	git_signature **out, const git_commit *commit, const git_mailmap *mailmap);
+
+/**
  * Get the full raw text of the commit header.
  *
  * @param commit a previously loaded commit

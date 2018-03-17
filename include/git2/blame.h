@@ -43,6 +43,10 @@ typedef enum {
 	/** Restrict the search of commits to those reachable following only the
 	 * first parents. */
 	GIT_BLAME_FIRST_PARENT = (1<<4),
+	/** Use mailmap file to map author and committer names and email addresses
+	 * to canonical real names and email addresses. The mailmap will be read
+	 * from the working directory, or HEAD in a bare repository. */
+	GIT_BLAME_USE_MAILMAP = (1<<5),
 } git_blame_flag_t;
 
 /**
@@ -108,6 +112,9 @@ GIT_EXTERN(int) git_blame_init_options(
  *   changed.
  * - `final_start_line_number` is the 1-based line number where this hunk
  *   begins, in the final version of the file
+ * - `final_signature` is the author of `final_commit_id`. If
+ *   `GIT_BLAME_USE_MAILMAP` has been specified, it will contain the canonical
+ *    real name and email address.
  * - `orig_commit_id` is the OID of the commit where this hunk was found.  This
  *   will usually be the same as `final_commit_id`, except when
  *   `GIT_BLAME_TRACK_COPIES_ANY_COMMIT_COPIES` has been specified.
@@ -116,6 +123,9 @@ GIT_EXTERN(int) git_blame_init_options(
  * - `orig_start_line_number` is the 1-based line number where this hunk begins
  *   in the file named by `orig_path` in the commit specified by
  *   `orig_commit_id`.
+ * - `orig_signature` is the author of `orig_commit_id`. If
+ *   `GIT_BLAME_USE_MAILMAP` has been specified, it will contain the canonical
+ *    real name and email address.
  * - `boundary` is 1 iff the hunk has been tracked to a boundary commit (the
  *   root, or the commit specified in git_blame_options.oldest_commit)
  */
