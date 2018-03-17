@@ -135,7 +135,8 @@ static int git_mailmap_parse_single(
 			*real_name = name_a;
 
 		if (two_emails) {
-			*real_email = email_a;
+			if (email_a.len > 0)
+				*real_email = email_a;
 			*replace_email = email_b;
 
 			if (name_b.len > 0)
@@ -157,6 +158,9 @@ int git_mailmap_parse(
 	char_range file = { data, size };
 	git_mailmap_entry* entry = NULL;
 	int error = 0;
+
+	if (memchr(data, '\0', size) != NULL)
+		return -1; /* data may not contain '\0's */
 
 	*mailmap = git__calloc(1, sizeof(git_mailmap));
 	if (!*mailmap)
@@ -194,6 +198,7 @@ int git_mailmap_parse(
 			error = -1;
 			goto cleanup;
 		}
+		entry->version = GIT_MAILMAP_ENTRY_VERSION;
 
 		buf = (char*)(entry + 1);
 		entry->real_name = range_copyz(&buf, NULL, real_name);
@@ -209,9 +214,8 @@ int git_mailmap_parse(
 	}
 
 cleanup:
-	if (entry)
-		git__free(entry);
-	if (error < 0 && *mailmap) {
+	git__free(entry);
+	if (error < 0)
 		git_mailmap_free(*mailmap);
 		*mailmap = NULL;
 	}
@@ -220,6 +224,9 @@ cleanup:
 
 void git_mailmap_free(git_mailmap *mailmap)
 {
+	if (!mailmap)
+		return;
+
 	git_vector_free_deep(&mailmap->entries);
 	git__free(mailmap);
 }
@@ -227,14 +234,18 @@ void git_mailmap_free(git_mailmap *mailmap)
 void git_mailmap_resolve(
 	const char **name_out,
 	const char **email_out,
-	git_mailmap *mailmap,
+	const git_mailmap *mailmap,
 	const char *name,
 	const char *email)
 {
-	git_mailmap_entry *entry = NULL;
+	const git_mailmap_entry *entry = NULL;
+	assert(name && email);
 
 	*name_out = name;
 	*email_out = email;
+
+	if (!mailmap)
+		return;
 
 	entry = git_mailmap_entry_lookup(mailmap, name, email);
 	if (entry) {
@@ -245,14 +256,17 @@ void git_mailmap_resolve(
 	}
 }
 
-git_mailmap_entry *git_mailmap_entry_lookup(
-	git_mailmap *mailmap,
+const git_mailmap_entry *git_mailmap_entry_lookup(
+	const git_mailmap *mailmap,
 	const char *name,
 	const char *email)
 {
 	size_t i;
 	git_mailmap_entry *entry;
-	assert(mailmap && name && email);
+	assert(name && email);
+
+	if (!mailmap)
+		return NULL;
 
 	git_vector_foreach(&mailmap->entries, i, entry) {
 		if (!git__strcmp(email, entry->replace_email) &&
@@ -264,26 +278,42 @@ git_mailmap_entry *git_mailmap_entry_lookup(
 	return NULL;
 }
 
-git_mailmap_entry *git_mailmap_entry_byindex(git_mailmap *mailmap, size_t idx)
+const git_mailmap_entry *git_mailmap_entry_byindex(
+	const git_mailmap *mailmap, size_t idx)
 {
-	return git_vector_get(&mailmap->entries, idx);
+	if (mailmap)
+		return git_vector_get(&mailmap->entries, idx);
+	return NULL;
 }
 
-size_t git_mailmap_entry_count(git_mailmap *mailmap)
+size_t git_mailmap_entry_count(const git_mailmap *mailmap)
 {
-	return git_vector_length(&mailmap->entries);
+	if (mailmap)
+		return git_vector_length(&mailmap->entries);
+	return 0;
 }
 
-int git_mailmap_from_tree(
+static int git_mailmap_from_bare_repo(
 	git_mailmap **mailmap,
-	const git_object *treeish)
+	git_repository *repo)
 {
+	git_reference *head = NULL;
+	git_object *tree = NULL;
 	git_blob *blob = NULL;
 	const char *content = NULL;
 	git_off_t size = 0;
 	int error;
 
-	*mailmap = NULL;
+	assert(git_repository_is_bare(repo));
+
+	/* In bare repositories, fall back to reading from HEAD's tree */
+	error = git_repository_head(&head, repo);
+	if (error < 0)
+		goto cleanup;
+
+	error = git_reference_peel(&tree, head, GIT_OBJ_TREE);
+	if (error < 0)
+		goto cleanup;
 
 	error = git_object_lookup_bypath(
 		(git_object **) &blob,
@@ -297,28 +327,55 @@ int git_mailmap_from_tree(
 	size = git_blob_rawsize(blob);
 
 	error = git_mailmap_parse(mailmap, content, size);
+	if (error < 0)
+		goto cleanup;
 
 cleanup:
-	if (blob != NULL)
-		git_blob_free(blob);
+	git_reference_free(head);
+	git_object_free(tree);
+	git_blob_free(blob);
+
+	return error;
+}
+
+static int git_mailmap_from_workdir_repo(
+	git_mailmap **mailmap,
+	git_repository *repo)
+{
+	git_buf path = GIT_BUF_INIT;
+	git_buf data = GIT_BUF_INIT;
+	int error;
+
+	assert(!git_repository_is_bare(repo));
+
+	/* In non-bare repositories, .mailmap should be read from the workdir */
+	error = git_buf_joinpath(&path, git_repository_workdir(repo), ".mailmap");
+	if (error < 0)
+		goto cleanup;
+
+	error = git_futils_readbuffer(&data, git_buf_cstr(&path));
+	if (error < 0)
+		goto cleanup;
+
+	error = git_mailmap_parse(mailmap, data.ptr, data.size);
+	if (error < 0)
+		goto cleanup;
+
+cleanup:
+	git_buf_free(&path);
+	git_buf_free(&data);
+
 	return error;
 }
 
 int git_mailmap_from_repo(git_mailmap **mailmap, git_repository *repo)
 {
-	git_object *head = NULL;
-	int error;
+	assert(mailmap && repo);
 
 	*mailmap = NULL;
 
-	error = git_revparse_single(&head, repo, "HEAD");
-	if (error < 0)
-		goto cleanup;
-
-	error = git_mailmap_from_tree(mailmap, head);
-
-cleanup:
-	if (head)
-		git_object_free(head);
-	return error;
+	if (git_repository_is_bare(repo))
+		return git_mailmap_from_bare_repo(mailmap, repo);
+	else
+		return git_mailmap_from_workdir_repo(mailmap, repo);
 }
