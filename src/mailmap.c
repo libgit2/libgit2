@@ -126,9 +126,6 @@ static int git_mailmap_parse_single(
 		if (two_emails && !range_split(line, '>', &email_b, &line))
 			return -1; /* unfinished <> pair */
 
-		if (line.len > 0)
-			return -1; /* junk at end of line */
-
 		/* Trim whitespace from around names */
 		range_trim(&name_a);
 		range_trim(&name_b);
