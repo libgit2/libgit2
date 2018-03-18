@@ -85,8 +85,7 @@ GIT_EXTERN(int) git_signature_from_buffer(git_signature **out, const char *buf);
  * @param mailmap mailmap to resolve with
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_signature_with_mailmap(
-  git_signature **out, const git_signature *sig, const git_mailmap *mailmap);
+GIT_EXTERN(int) git_signature_with_mailmap(git_signature **out, const git_signature *sig, const git_mailmap *mailmap);
 
 /**
  * Create a copy of an existing signature.  All internal strings are also

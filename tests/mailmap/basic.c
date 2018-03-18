@@ -28,7 +28,7 @@ void test_mailmap_basic__cleanup(void)
 
 void test_mailmap_basic__entry(void)
 {
-	const git_mailmap_entry* entry;
+	const git_mailmap_entry *entry;
 
 	cl_assert(git_mailmap_entry_count(mailmap) == 4);
 
@@ -43,7 +43,7 @@ void test_mailmap_basic__entry(void)
 
 void test_mailmap_basic__lookup_not_found(void)
 {
-	const git_mailmap_entry* entry = git_mailmap_entry_lookup(
+	const git_mailmap_entry *entry = git_mailmap_entry_lookup(
 		mailmap,
 		"Whoever",
 		"doesnotexist@fo.com");
@@ -52,7 +52,7 @@ void test_mailmap_basic__lookup_not_found(void)
 
 void test_mailmap_basic__lookup(void)
 {
-	const git_mailmap_entry* entry = git_mailmap_entry_lookup(
+	const git_mailmap_entry *entry = git_mailmap_entry_lookup(
 		mailmap,
 		"Typoed the name once",
 		"foo@baz.com");
@@ -62,8 +62,8 @@ void test_mailmap_basic__lookup(void)
 
 void test_mailmap_basic__empty_email_query(void)
 {
-	const char* name;
-	const char* email;
+	const char *name;
+	const char *email;
 	git_mailmap_resolve(
 		&name,
 		&email,
@@ -76,8 +76,8 @@ void test_mailmap_basic__empty_email_query(void)
 
 void test_mailmap_basic__name_matching(void)
 {
-	const char* name;
-	const char* email;
+	const char *name;
+	const char *email;
 	git_mailmap_resolve(
 		&name,
 		&email,
