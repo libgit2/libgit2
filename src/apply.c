@@ -18,6 +18,7 @@
 #include "fileops.h"
 #include "delta.h"
 #include "zstream.h"
+#include "reader.h"
 
 #define apply_err(...) \
 	( giterr_set(GITERR_PATCH, __VA_ARGS__), -1 )
@@ -381,15 +382,13 @@ done:
 
 static int apply_one(
 	git_repository *repo,
-	git_tree *preimage,
+	git_reader *preimage_reader,
 	git_index *postimage,
 	git_diff *diff,
 	size_t i)
 {
 	git_patch *patch = NULL;
-	git_tree_entry *tree_entry = NULL;
-	git_blob *blob = NULL;
-	git_buf contents = GIT_BUF_INIT;
+	git_buf pre_contents = GIT_BUF_INIT, post_contents = GIT_BUF_INIT;
 	const git_diff_delta *delta;
 	char *filename = NULL;
 	unsigned int mode;
@@ -402,14 +401,12 @@ static int apply_one(
 
 	delta = git_patch_get_delta(patch);
 
-	if ((error = git_tree_entry_bypath(&tree_entry, preimage,
-			delta->old_file.path)) < 0 ||
-		(error = git_blob_lookup(&blob, repo,
-			git_tree_entry_id(tree_entry))) < 0 ||
-		(error = git_apply__patch(&contents, &filename, &mode,
-			git_blob_rawcontent(blob), git_blob_rawsize(blob), patch)) < 0 ||
+	if ((error = git_reader_read(&pre_contents,
+			preimage_reader, delta->old_file.path)) < 0 ||
+		(error = git_apply__patch(&post_contents, &filename, &mode,
+			pre_contents.ptr, pre_contents.size, patch)) < 0 ||
 		(error = git_blob_create_frombuffer(&blob_id, repo,
-			contents.ptr, contents.size)) < 0)
+			post_contents.ptr, post_contents.size)) < 0)
 		goto done;
 
 	memset(&index_entry, 0, sizeof(git_index_entry));
@@ -421,10 +418,9 @@ static int apply_one(
 		goto done;
 
 done:
-	git_buf_free(&contents);
+	git_buf_dispose(&pre_contents);
+	git_buf_dispose(&post_contents);
 	git__free(filename);
-	git_blob_free(blob);
-	git_tree_entry_free(tree_entry);
 	git_patch_free(patch);
 
 	return error;
@@ -437,6 +433,7 @@ int git_apply_to_tree(
 	git_diff *diff)
 {
 	git_index *postimage = NULL;
+	git_reader *pre_reader = NULL;
 	const git_diff_delta *delta;
 	size_t i;
 	int error = 0;
@@ -445,6 +442,13 @@ int git_apply_to_tree(
 
 	*out = NULL;
 
+	if ((error = git_reader_for_tree(&pre_reader, preimage)) < 0)
+		goto done;
+
+	/*
+	 * put the current tree into the postimage as-is - the diff will
+	 * replace any entries contained therein
+	 */
 	if ((error = git_index_new(&postimage)) < 0 ||
 		(error = git_index_read_tree(postimage, preimage)) < 0)
 		goto done;
@@ -463,7 +467,7 @@ int git_apply_to_tree(
 	}
 
 	for (i = 0; i < git_diff_num_deltas(diff); i++) {
-		if ((error = apply_one(repo, preimage, postimage, diff, i)) < 0)
+		if ((error = apply_one(repo, pre_reader, postimage, diff, i)) < 0)
 			goto done;
 	}
 
@@ -473,6 +477,7 @@ done:
 	if (error < 0)
 		git_index_free(postimage);
 
+	git_reader_free(pre_reader);
+
 	return error;
 }
-
