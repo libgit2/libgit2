@@ -9,10 +9,13 @@
 
 #include <assert.h>
 
+#include "git2/apply.h"
 #include "git2/patch.h"
 #include "git2/filter.h"
 #include "git2/blob.h"
 #include "git2/index.h"
+#include "git2/checkout.h"
+#include "git2/repository.h"
 #include "array.h"
 #include "patch.h"
 #include "fileops.h"
@@ -478,6 +481,113 @@ done:
 		git_index_free(postimage);
 
 	git_reader_free(pre_reader);
+
+	return error;
+}
+
+/* normal: apply to workdir: ignore index
+ * --cached: apply to index: ignore workdir
+ * --index: apply to both: validate index == workdir
+ */
+
+int git_apply(
+	git_repository *repo,
+	git_diff *diff,
+	git_apply_options *given_opts)
+{
+	git_index *contents = NULL, *repo_index = NULL;
+	git_reader *pre_reader = NULL;
+	const git_diff_delta *delta;
+	git_vector paths = GIT_VECTOR_INIT;
+	git_apply_options opts = GIT_APPLY_OPTIONS_INIT;
+	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+	bool do_checkout;
+	size_t i;
+	int error;
+
+	assert(repo && diff);
+
+	GITERR_CHECK_VERSION(
+		given_opts, GIT_APPLY_OPTIONS_VERSION, "git_apply_options");
+
+	if (given_opts)
+		memcpy(&opts, given_opts, sizeof(git_apply_options));
+
+	do_checkout = (opts.location != GIT_APPLY_LOCATION_INDEX);
+
+	/*
+	 * by default, we apply a patch directly to the working directory;
+	 * in `--cached` or `--index` mode, we apply to the contents already
+	 * in the index.
+	 */
+	if (opts.location == GIT_APPLY_LOCATION_WORKDIR)
+		error = git_reader_for_workdir(&pre_reader, repo);
+	else
+		error = git_reader_for_index(&pre_reader, repo, NULL);
+
+	if (error < 0)
+		goto done;
+
+	/* if we're not checking out, we're writing to the repo's index */
+	if (do_checkout)
+		error = git_vector_init(&paths, git_diff_num_deltas(diff), NULL);
+	else
+		error = git_repository_index(&repo_index, repo);
+
+	if (error < 0)
+		goto done;
+
+	/*
+	 * note: this is not the full postimage, this only contains the
+	 * new files created during the diffing process.  we will limit
+	 * checkout to only write the files affected by this diff.
+	 */
+	if ((error = git_index_new(&contents)) < 0)
+		goto done;
+
+	for (i = 0; i < git_diff_num_deltas(diff); i++) {
+		delta = git_diff_get_delta(diff, i);
+
+		if ((error = apply_one(repo, pre_reader, contents, diff, i)) < 0)
+			goto done;
+
+		if (do_checkout) {
+			git_vector_insert(&paths, (void *)delta->old_file.path);
+
+			if (strcmp(delta->old_file.path, delta->new_file.path))
+				git_vector_insert(&paths, (void *)delta->new_file.path);
+		}
+	}
+
+	if (do_checkout) {
+		checkout_opts.checkout_strategy |= GIT_CHECKOUT_SAFE;
+		checkout_opts.checkout_strategy |= GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH;
+
+		if (opts.location == GIT_APPLY_LOCATION_WORKDIR)
+			checkout_opts.checkout_strategy |= GIT_CHECKOUT_DONT_UPDATE_INDEX;
+
+		checkout_opts.paths.strings = (char **)paths.contents;
+		checkout_opts.paths.count = paths.length;
+
+		error = git_checkout_index(repo, contents, &checkout_opts);
+	} else {
+		const git_index_entry *entry;
+
+		for (i = 0; i < git_index_entrycount(contents); i++) {
+			entry = git_index_get_byindex(contents, i);
+
+			if ((error = git_index_add(repo_index, entry)) < 0)
+				goto done;
+		}
+
+		error = git_index_write(repo_index);
+	}
+
+done:
+	git_vector_free(&paths);
+	git_index_free(contents);
+	git_reader_free(pre_reader);
+	git_index_free(repo_index);
 
 	return error;
 }
