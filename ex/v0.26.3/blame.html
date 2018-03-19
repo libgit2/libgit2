@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>blame.c</title>
+  <link rel="stylesheet" href="../css.css">
+  <style type="text/css">
+    a.fnlink {text-decoration: none}
+    a.fnlink:hover {text-decoration: underline}
+  </style>
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div id="jump_to">
+    Jump To &hellip;
+    <div id="jump_wrapper">
+      <div id="jump_page">
+        <a class="source" href="../../#v0.26.3">API Docs</a>
+          <a class="source" href="add.html">add.c</a>
+          <a class="source" href="blame.html">blame.c</a>
+          <a class="source" href="cat-file.html">cat-file.c</a>
+          <a class="source" href="common.html">common.c</a>
+          <a class="source" href="describe.html">describe.c</a>
+          <a class="source" href="diff.html">diff.c</a>
+          <a class="source" href="for-each-ref.html">for-each-ref.c</a>
+          <a class="source" href="general.html">general.c</a>
+          <a class="source" href="init.html">init.c</a>
+          <a class="source" href="log.html">log.c</a>
+          <a class="source" href="network/clone.html">clone.c</a>
+          <a class="source" href="network/common.html">common.c</a>
+          <a class="source" href="network/fetch.html">fetch.c</a>
+          <a class="source" href="network/git2.html">git2.c</a>
+          <a class="source" href="network/index-pack.html">index-pack.c</a>
+          <a class="source" href="network/ls-remote.html">ls-remote.c</a>
+          <a class="source" href="remote.html">remote.c</a>
+          <a class="source" href="rev-list.html">rev-list.c</a>
+          <a class="source" href="rev-parse.html">rev-parse.c</a>
+          <a class="source" href="showindex.html">showindex.c</a>
+          <a class="source" href="status.html">status.c</a>
+          <a class="source" href="tag.html">tag.c</a>
+      </div>
+    </div>
+  </div>
+  <table cellspacing=0 cellpadding=0>
+  <thead>
+    <tr>
+      <th class=docs><h1>blame.c</h1></th>
+      <th class=code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr id='section-1'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-1">&#182;</a>
+        </div>
+        
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="cm">/*</span>
+<span class="cm"> * libgit2 &quot;blame&quot; example - shows how to use the blame API</span>
+<span class="cm"> *</span>
+<span class="cm"> * Written by the libgit2 contributors</span>
+<span class="cm"> *</span>
+<span class="cm"> * To the extent possible under law, the author(s) have dedicated all copyright</span>
+<span class="cm"> * and related and neighboring rights to this software to the public domain</span>
+<span class="cm"> * worldwide. This software is distributed without any warranty.</span>
+<span class="cm"> *</span>
+<span class="cm"> * You should have received a copy of the CC0 Public Domain Dedication along</span>
+<span class="cm"> * with this software. If not, see</span>
+<span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
+<span class="cm"> */</span>
+
+<span class="cp">#include &quot;common.h&quot;</span>
+
+<span class="cp">#ifdef _MSC_VER</span>
+<span class="cp">#define snprintf sprintf_s</span>
+<span class="cp">#define strcasecmp strcmpi</span>
+<span class="cp">#endif</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-2'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-2">&#182;</a>
+        </div>
+        <p>This example demonstrates how to invoke the libgit2 blame API to roughly
+simulate the output of <code>git blame</code> and a few of its command line arguments.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">struct</span> <span class="n">opts</span> <span class="p">{</span>
+  <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">;</span>
+  <span class="kt">char</span> <span class="o">*</span><span class="n">commitspec</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">C</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">M</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">start_line</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">end_line</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">F</span><span class="p">;</span>
+<span class="p">};</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[]);</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
+<span class="p">{</span>
+  <span class="kt">int</span> <span class="n">line</span><span class="p">,</span> <span class="n">break_on_null_hunk</span><span class="p">;</span>
+  <span class="kt">size_t</span> <span class="n">i</span><span class="p">,</span> <span class="n">rawsize</span><span class="p">;</span>
+  <span class="kt">char</span> <span class="n">spec</span><span class="p">[</span><span class="mi">1024</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+  <span class="k">struct</span> <span class="n">opts</span> <span class="n">o</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">rawdata</span><span class="p">;</span>
+  <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="n">git_revspec</span> <span class="n">revspec</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+  <span class="n">git_blame_options</span> <span class="n">blameopts</span> <span class="o">=</span> <span class="n">GIT_BLAME_OPTIONS_INIT</span><span class="p">;</span>
+  <span class="n">git_blame</span> <span class="o">*</span><span class="n">blame</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="n">git_blob</span> <span class="o">*</span><span class="n">blob</span><span class="p">;</span>
+  <span class="n">git_object</span> <span class="o">*</span><span class="n">obj</span><span class="p">;</span>
+
+  <span class="n"><a name="git_libgit2_init-8" class="fnlink" href="../../#v0.26.3/group/libgit2/git_libgit2_init">git_libgit2_init</a></span><span class="p">();</span>
+
+  <span class="n">parse_opts</span><span class="p">(</span><span class="o">&amp;</span><span class="n">o</span><span class="p">,</span> <span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">M</span><span class="p">)</span> <span class="n">blameopts</span><span class="p">.</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">GIT_BLAME_TRACK_COPIES_SAME_COMMIT_MOVES</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">C</span><span class="p">)</span> <span class="n">blameopts</span><span class="p">.</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">GIT_BLAME_TRACK_COPIES_SAME_COMMIT_COPIES</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">F</span><span class="p">)</span> <span class="n">blameopts</span><span class="p">.</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">GIT_BLAME_FIRST_PARENT</span><span class="p">;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-3'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-3">&#182;</a>
+        </div>
+        <p>Open the repository.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_open_ext-24" class="fnlink" href="../../#v0.26.3/group/repository/git_repository_open_ext">git_repository_open_ext</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="s">&quot;.&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span> <span class="s">&quot;Couldn&#39;t open repository&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-4'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-4">&#182;</a>
+        </div>
+        <p>The commit range comes in &quot;commitish&quot; form. Use the rev-parse API to
+nail down the end points.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">commitspec</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse-27" class="fnlink" href="../../#v0.26.3/group/revparse/git_revparse">git_revparse</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">revspec</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">commitspec</span><span class="p">),</span> <span class="s">&quot;Couldn&#39;t parse commit spec&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">revspec</span><span class="p">.</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">GIT_REVPARSE_SINGLE</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n"><a name="git_oid_cpy-20" class="fnlink" href="../../#v0.26.3/group/oid/git_oid_cpy">git_oid_cpy</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blameopts</span><span class="p">.</span><span class="n">newest_commit</span><span class="p">,</span> <span class="n"><a name="git_object_id-10" class="fnlink" href="../../#v0.26.3/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">revspec</span><span class="p">.</span><span class="n">from</span><span class="p">));</span>
+      <span class="n"><a name="git_object_free-14" class="fnlink" href="../../#v0.26.3/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">revspec</span><span class="p">.</span><span class="n">from</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+      <span class="n"><a name="git_oid_cpy-21" class="fnlink" href="../../#v0.26.3/group/oid/git_oid_cpy">git_oid_cpy</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blameopts</span><span class="p">.</span><span class="n">oldest_commit</span><span class="p">,</span> <span class="n"><a name="git_object_id-11" class="fnlink" href="../../#v0.26.3/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">revspec</span><span class="p">.</span><span class="n">from</span><span class="p">));</span>
+      <span class="n"><a name="git_oid_cpy-22" class="fnlink" href="../../#v0.26.3/group/oid/git_oid_cpy">git_oid_cpy</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blameopts</span><span class="p">.</span><span class="n">newest_commit</span><span class="p">,</span> <span class="n"><a name="git_object_id-12" class="fnlink" href="../../#v0.26.3/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">revspec</span><span class="p">.</span><span class="n">to</span><span class="p">));</span>
+      <span class="n"><a name="git_object_free-15" class="fnlink" href="../../#v0.26.3/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">revspec</span><span class="p">.</span><span class="n">from</span><span class="p">);</span>
+      <span class="n"><a name="git_object_free-16" class="fnlink" href="../../#v0.26.3/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">revspec</span><span class="p">.</span><span class="n">to</span><span class="p">);</span>
+    <span class="p">}</span>
+  <span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-5'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-5">&#182;</a>
+        </div>
+        <p>Run the blame.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_blame_file-2" class="fnlink" href="../../#v0.26.3/group/blame/git_blame_file">git_blame_file</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blame</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">path</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">blameopts</span><span class="p">),</span> <span class="s">&quot;Blame error&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-6'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-6">&#182;</a>
+        </div>
+        <p>Get the raw data inside the blob for output. We use the
+<code>commitish:path/to/file.txt</code> format to find it.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_oid_iszero-23" class="fnlink" href="../../#v0.26.3/group/oid/git_oid_iszero">git_oid_iszero</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blameopts</span><span class="p">.</span><span class="n">newest_commit</span><span class="p">))</span>
+    <span class="n">strcpy</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="s">&quot;HEAD&quot;</span><span class="p">);</span>
+  <span class="k">else</span>
+    <span class="n"><a name="git_oid_tostr-18" class="fnlink" href="../../#v0.26.3/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">spec</span><span class="p">),</span> <span class="o">&amp;</span><span class="n">blameopts</span><span class="p">.</span><span class="n">newest_commit</span><span class="p">);</span>
+  <span class="n">strcat</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="s">&quot;:&quot;</span><span class="p">);</span>
+  <span class="n">strcat</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">path</span><span class="p">);</span>
+
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse_single-26" class="fnlink" href="../../#v0.26.3/group/revparse/git_revparse_single">git_revparse_single</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">obj</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">spec</span><span class="p">),</span> <span class="s">&quot;Object lookup error&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_blob_lookup-4" class="fnlink" href="../../#v0.26.3/group/blob/git_blob_lookup">git_blob_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blob</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n"><a name="git_object_id-13" class="fnlink" href="../../#v0.26.3/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">obj</span><span class="p">)),</span> <span class="s">&quot;Blob lookup error&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="n"><a name="git_object_free-17" class="fnlink" href="../../#v0.26.3/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">obj</span><span class="p">);</span>
+
+  <span class="n">rawdata</span> <span class="o">=</span> <span class="n"><a name="git_blob_rawcontent-6" class="fnlink" href="../../#v0.26.3/group/blob/git_blob_rawcontent">git_blob_rawcontent</a></span><span class="p">(</span><span class="n">blob</span><span class="p">);</span>
+  <span class="n">rawsize</span> <span class="o">=</span> <span class="n"><a name="git_blob_rawsize-7" class="fnlink" href="../../#v0.26.3/group/blob/git_blob_rawsize">git_blob_rawsize</a></span><span class="p">(</span><span class="n">blob</span><span class="p">);</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-7'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-7">&#182;</a>
+        </div>
+        <p>Produce the output.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n">line</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="n">break_on_null_hunk</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="k">while</span> <span class="p">(</span><span class="n">i</span> <span class="o">&lt;</span> <span class="n">rawsize</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">eol</span> <span class="o">=</span> <span class="n">memchr</span><span class="p">(</span><span class="n">rawdata</span> <span class="o">+</span> <span class="n">i</span><span class="p">,</span> <span class="sc">&#39;\n&#39;</span><span class="p">,</span> <span class="n">rawsize</span> <span class="o">-</span> <span class="n">i</span><span class="p">);</span>
+    <span class="kt">char</span> <span class="n">oid</span><span class="p">[</span><span class="mi">10</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+    <span class="k">const</span> <span class="n">git_blame_hunk</span> <span class="o">*</span><span class="n">hunk</span> <span class="o">=</span> <span class="n"><a name="git_blame_get_hunk_byline-1" class="fnlink" href="../../#v0.26.3/group/blame/git_blame_get_hunk_byline">git_blame_get_hunk_byline</a></span><span class="p">(</span><span class="n">blame</span><span class="p">,</span> <span class="n">line</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">break_on_null_hunk</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">hunk</span><span class="p">)</span>
+      <span class="k">break</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">hunk</span><span class="p">)</span> <span class="p">{</span>
+      <span class="kt">char</span> <span class="n">sig</span><span class="p">[</span><span class="mi">128</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+      <span class="n">break_on_null_hunk</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+      
+      <span class="n"><a name="git_oid_tostr-19" class="fnlink" href="../../#v0.26.3/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">oid</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">hunk</span><span class="o">-&gt;</span><span class="n">final_commit_id</span><span class="p">);</span>
+      <span class="n">snprintf</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="s">&quot;%s &lt;%s&gt;&quot;</span><span class="p">,</span> <span class="n">hunk</span><span class="o">-&gt;</span><span class="n">final_signature</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">,</span> <span class="n">hunk</span><span class="o">-&gt;</span><span class="n">final_signature</span><span class="o">-&gt;</span><span class="n">email</span><span class="p">);</span>
+
+      <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s ( %-30s %3d) %.*s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+          <span class="n">oid</span><span class="p">,</span>
+          <span class="n">sig</span><span class="p">,</span>
+          <span class="n">line</span><span class="p">,</span>
+          <span class="p">(</span><span class="kt">int</span><span class="p">)(</span><span class="n">eol</span> <span class="o">-</span> <span class="n">rawdata</span> <span class="o">-</span> <span class="n">i</span><span class="p">),</span>
+          <span class="n">rawdata</span> <span class="o">+</span> <span class="n">i</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="n">i</span> <span class="o">=</span> <span class="p">(</span><span class="kt">int</span><span class="p">)(</span><span class="n">eol</span> <span class="o">-</span> <span class="n">rawdata</span> <span class="o">+</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="n">line</span><span class="o">++</span><span class="p">;</span>
+  <span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-8'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-8">&#182;</a>
+        </div>
+        <p>Cleanup.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n"><a name="git_blob_free-5" class="fnlink" href="../../#v0.26.3/group/blob/git_blob_free">git_blob_free</a></span><span class="p">(</span><span class="n">blob</span><span class="p">);</span>
+  <span class="n"><a name="git_blame_free-3" class="fnlink" href="../../#v0.26.3/group/blame/git_blame_free">git_blame_free</a></span><span class="p">(</span><span class="n">blame</span><span class="p">);</span>
+  <span class="n"><a name="git_repository_free-25" class="fnlink" href="../../#v0.26.3/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+
+  <span class="n"><a name="git_libgit2_shutdown-9" class="fnlink" href="../../#v0.26.3/group/libgit2/git_libgit2_shutdown">git_libgit2_shutdown</a></span><span class="p">();</span>
+
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-9'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-9">&#182;</a>
+        </div>
+        <p>Tell the user how to make this thing work.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">usage</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">msg</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">msg</span> <span class="o">&amp;&amp;</span> <span class="n">arg</span><span class="p">)</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;%s: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">arg</span><span class="p">);</span>
+  <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">msg</span><span class="p">);</span>
+  <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;usage: blame [options] [&lt;commit range&gt;] &lt;path&gt;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;   &lt;commit range&gt;      example: `HEAD~10..HEAD`, or `1234abcd`</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;   -L &lt;n,m&gt;            process only line range n-m, counting from 1</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;   -M                  find line moves within and across files</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;   -C                  find line copies within and across files</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;   -F                  follow only the first parent commits</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-10'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-10">&#182;</a>
+        </div>
+        <p>Parse the arguments.</p>
+
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
+<span class="p">{</span>
+  <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
+  <span class="kt">char</span> <span class="o">*</span><span class="n">bare_args</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">argc</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">)</span> <span class="n">usage</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="n">argc</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">a</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="sc">&#39;-&#39;</span><span class="p">)</span> <span class="p">{</span>
+      <span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span>
+      <span class="k">while</span> <span class="p">(</span><span class="n">bare_args</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&amp;&amp;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">)</span> <span class="o">++</span><span class="n">i</span><span class="p">;</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">usage</span><span class="p">(</span><span class="s">&quot;Invalid argument set&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+      <span class="n">bare_args</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--&quot;</span><span class="p">))</span>
+      <span class="k">continue</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcasecmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;-M&quot;</span><span class="p">))</span>
+      <span class="n">o</span><span class="o">-&gt;</span><span class="n">M</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcasecmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;-C&quot;</span><span class="p">))</span>
+      <span class="n">o</span><span class="o">-&gt;</span><span class="n">C</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcasecmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;-F&quot;</span><span class="p">))</span>
+      <span class="n">o</span><span class="o">-&gt;</span><span class="n">F</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcasecmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;-L&quot;</span><span class="p">))</span> <span class="p">{</span>
+      <span class="n">i</span><span class="o">++</span><span class="p">;</span> <span class="n">a</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">&gt;=</span> <span class="n">argc</span><span class="p">)</span> <span class="n">fatal</span><span class="p">(</span><span class="s">&quot;Not enough arguments to -L&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+      <span class="n">check_lg2</span><span class="p">(</span><span class="n">sscanf</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;%d,%d&quot;</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">start_line</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">end_line</span><span class="p">)</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="s">&quot;-L format error&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="p">{</span>
+      <span class="cm">/* commit range */</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">commitspec</span><span class="p">)</span> <span class="n">fatal</span><span class="p">(</span><span class="s">&quot;Only one commit spec allowed&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+      <span class="n">o</span><span class="o">-&gt;</span><span class="n">commitspec</span> <span class="o">=</span> <span class="n">a</span><span class="p">;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+  <span class="cm">/* Handle the bare arguments */</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">bare_args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="n">usage</span><span class="p">(</span><span class="s">&quot;Please specify a path&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="n">o</span><span class="o">-&gt;</span><span class="n">path</span> <span class="o">=</span> <span class="n">bare_args</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">bare_args</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="p">{</span>
+    <span class="cm">/* &lt;commitspec&gt; &lt;path&gt; */</span>
+    <span class="n">o</span><span class="o">-&gt;</span><span class="n">path</span> <span class="o">=</span> <span class="n">bare_args</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
+    <span class="n">o</span><span class="o">-&gt;</span><span class="n">commitspec</span> <span class="o">=</span> <span class="n">bare_args</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+  <span class="p">}</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">bare_args</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="p">{</span>
+    <span class="cm">/* &lt;oldcommit&gt; &lt;newcommit&gt; &lt;path&gt; */</span>
+    <span class="kt">char</span> <span class="n">spec</span><span class="p">[</span><span class="mi">128</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+    <span class="n">o</span><span class="o">-&gt;</span><span class="n">path</span> <span class="o">=</span> <span class="n">bare_args</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span>
+    <span class="n">sprintf</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="s">&quot;%s..%s&quot;</span><span class="p">,</span> <span class="n">bare_args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bare_args</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+    <span class="n">o</span><span class="o">-&gt;</span><span class="n">commitspec</span> <span class="o">=</span> <span class="n">spec</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
