@@ -1015,6 +1015,7 @@ typedef struct {
 	struct stat st;
 	size_t path_len;
 	iterator_pathlist_search_t match;
+	git_oid id;
 	char path[GIT_FLEX_ARRAY];
 } filesystem_iterator_entry;
 
@@ -1265,7 +1266,32 @@ GIT_INLINE(bool) filesystem_iterator_is_dot_git(
 	return (len == 4 || path[len - 5] == '/');
 }
 
-static filesystem_iterator_entry *filesystem_iterator_entry_init(
+static int filesystem_iterator_entry_hash(
+	filesystem_iterator *iter,
+	filesystem_iterator_entry *entry)
+{
+	git_buf fullpath = GIT_BUF_INIT;
+	int error;
+
+	if (S_ISDIR(entry->st.st_mode)) {
+		memset(&entry->id, 0, GIT_OID_RAWSZ);
+		return 0;
+	}
+
+	if (iter->base.type == GIT_ITERATOR_TYPE_WORKDIR)
+		return git_repository_hashfile(&entry->id,
+			iter->base.repo, entry->path, GIT_OBJ_BLOB, NULL);
+
+	if (!(error = git_buf_joinpath(&fullpath, iter->root, entry->path)))
+		error = git_odb_hashfile(&entry->id, fullpath.ptr, GIT_OBJ_BLOB);
+
+	git_buf_dispose(&fullpath);
+	return error;
+}
+
+static int filesystem_iterator_entry_init(
+	filesystem_iterator_entry **out,
+	filesystem_iterator *iter,
 	filesystem_iterator_frame *frame,
 	const char *path,
 	size_t path_len,
@@ -1274,15 +1300,19 @@ static filesystem_iterator_entry *filesystem_iterator_entry_init(
 {
 	filesystem_iterator_entry *entry;
 	size_t entry_size;
+	int error = 0;
+
+	*out = NULL;
 
 	/* Make sure to append two bytes, one for the path's null
 	 * termination, one for a possible trailing '/' for folders.
 	 */
-	if (GIT_ADD_SIZET_OVERFLOW(&entry_size,
-			sizeof(filesystem_iterator_entry), path_len) ||
-		GIT_ADD_SIZET_OVERFLOW(&entry_size, entry_size, 2) ||
-		(entry = git_pool_malloc(&frame->entry_pool, entry_size)) == NULL)
-		return NULL;
+	GITERR_CHECK_ALLOC_ADD(&entry_size,
+		sizeof(filesystem_iterator_entry), path_len);
+	GITERR_CHECK_ALLOC_ADD(&entry_size, entry_size, 2);
+
+	entry = git_pool_malloc(&frame->entry_pool, entry_size);
+	GITERR_CHECK_ALLOC(entry);
 
 	entry->path_len = path_len;
 	entry->match = pathlist_match;
@@ -1295,7 +1325,13 @@ static filesystem_iterator_entry *filesystem_iterator_entry_init(
 
 	entry->path[entry->path_len] = '\0';
 
-	return entry;
+	if (iter->base.flags & GIT_ITERATOR_INCLUDE_HASH)
+		error = filesystem_iterator_entry_hash(iter, entry);
+
+	if (!error)
+		*out = entry;
+
+	return error;
 }
 
 static int filesystem_iterator_frame_push(
@@ -1418,9 +1454,9 @@ static int filesystem_iterator_frame_push(
 		else if (dir_expected)
 			continue;
 
-		entry = filesystem_iterator_entry_init(new_frame,
-			path, path_len, &statbuf, pathlist_match);
-		GITERR_CHECK_ALLOC(entry);
+		if ((error = filesystem_iterator_entry_init(&entry,
+			iter, new_frame, path, path_len, &statbuf, pathlist_match)) < 0)
+			goto done;
 
 		git_vector_insert(&new_frame->entries, entry);
 	}
@@ -1460,7 +1496,7 @@ static void filesystem_iterator_set_current(
 	iter->entry.ctime.seconds = entry->st.st_ctime;
 	iter->entry.mtime.seconds = entry->st.st_mtime;
 
-#if defined(GIT_USE_NSEC)	
+#if defined(GIT_USE_NSEC)
 	iter->entry.ctime.nanoseconds = entry->st.st_ctime_nsec;
 	iter->entry.mtime.nanoseconds = entry->st.st_mtime_nsec;
 #else
@@ -1474,6 +1510,9 @@ static void filesystem_iterator_set_current(
 	iter->entry.uid = entry->st.st_uid;
 	iter->entry.gid = entry->st.st_gid;
 	iter->entry.file_size = entry->st.st_size;
+
+	if (iter->base.flags & GIT_ITERATOR_INCLUDE_HASH)
+		git_oid_cpy(&iter->entry.id, &entry->id);
 
 	iter->entry.path = entry->path;
 
