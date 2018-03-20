@@ -7,6 +7,7 @@
 
 #include "global.h"
 
+#include "alloc.h"
 #include "hash.h"
 #include "sysdir.h"
 #include "filter.h"
@@ -60,7 +61,8 @@ static int init_common(void)
 #endif
 
 	/* Initialize any other subsystems that have global state */
-	if ((ret = git_hash_global_init()) == 0 &&
+	if ((ret = git_allocator_global_init()) == 0 &&
+		(ret = git_hash_global_init()) == 0 &&
 		(ret = git_sysdir_global_init()) == 0 &&
 		(ret = git_filter_global_init()) == 0 &&
 		(ret = git_merge_driver_global_init()) == 0 &&

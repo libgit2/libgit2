@@ -7,7 +7,7 @@
 
 #include "stdalloc.h"
 
-void *git__stdalloc__malloc(size_t len, const char *file, int line)
+static void *stdalloc__malloc(size_t len, const char *file, int line)
 {
 	void *ptr = malloc(len);
 
@@ -18,7 +18,7 @@ void *git__stdalloc__malloc(size_t len, const char *file, int line)
 	return ptr;
 }
 
-void *git__stdalloc__calloc(size_t nelem, size_t elsize, const char *file, int line)
+static void *stdalloc__calloc(size_t nelem, size_t elsize, const char *file, int line)
 {
 	void *ptr = calloc(nelem, elsize);
 
@@ -29,7 +29,7 @@ void *git__stdalloc__calloc(size_t nelem, size_t elsize, const char *file, int l
 	return ptr;
 }
 
-char *git__stdalloc__strdup(const char *str, const char *file, int line)
+static char *stdalloc__strdup(const char *str, const char *file, int line)
 {
 	char *ptr = strdup(str);
 
@@ -40,7 +40,7 @@ char *git__stdalloc__strdup(const char *str, const char *file, int line)
 	return ptr;
 }
 
-char *git__stdalloc__strndup(const char *str, size_t n, const char *file, int line)
+static char *stdalloc__strndup(const char *str, size_t n, const char *file, int line)
 {
 	size_t length = 0, alloclength;
 	char *ptr;
@@ -48,7 +48,7 @@ char *git__stdalloc__strndup(const char *str, size_t n, const char *file, int li
 	length = p_strnlen(str, n);
 
 	if (GIT_ADD_SIZET_OVERFLOW(&alloclength, length, 1) ||
-		!(ptr = git__stdalloc__malloc(alloclength, file, line)))
+		!(ptr = stdalloc__malloc(alloclength, file, line)))
 		return NULL;
 
 	if (length)
@@ -59,13 +59,13 @@ char *git__stdalloc__strndup(const char *str, size_t n, const char *file, int li
 	return ptr;
 }
 
-char *git__stdalloc__substrdup(const char *start, size_t n, const char *file, int line)
+static char *stdalloc__substrdup(const char *start, size_t n, const char *file, int line)
 {
 	char *ptr;
 	size_t alloclen;
 
 	if (GIT_ADD_SIZET_OVERFLOW(&alloclen, n, 1) ||
-		!(ptr = git__stdalloc__malloc(alloclen, file, line)))
+		!(ptr = stdalloc__malloc(alloclen, file, line)))
 		return NULL;
 
 	memcpy(ptr, start, n);
@@ -73,7 +73,7 @@ char *git__stdalloc__substrdup(const char *start, size_t n, const char *file, in
 	return ptr;
 }
 
-void *git__stdalloc__realloc(void *ptr, size_t size, const char *file, int line)
+static void *stdalloc__realloc(void *ptr, size_t size, const char *file, int line)
 {
 	void *new_ptr = realloc(ptr, size);
 
@@ -84,7 +84,7 @@ void *git__stdalloc__realloc(void *ptr, size_t size, const char *file, int line)
 	return new_ptr;
 }
 
-void *git__stdalloc__reallocarray(void *ptr, size_t nelem, size_t elsize, const char *file, int line)
+static void *stdalloc__reallocarray(void *ptr, size_t nelem, size_t elsize, const char *file, int line)
 {
 	size_t newsize;
 
@@ -95,12 +95,26 @@ void *git__stdalloc__reallocarray(void *ptr, size_t nelem, size_t elsize, const 
 		NULL : realloc(ptr, newsize);
 }
 
-void *git__stdalloc__mallocarray(size_t nelem, size_t elsize, const char *file, int line)
+static void *stdalloc__mallocarray(size_t nelem, size_t elsize, const char *file, int line)
 {
-	return git__stdalloc__reallocarray(NULL, nelem, elsize, file, line);
+	return stdalloc__reallocarray(NULL, nelem, elsize, file, line);
 }
 
-void git__stdalloc__free(void *ptr)
+static void stdalloc__free(void *ptr)
 {
 	free(ptr);
+}
+
+int git_stdalloc_init_allocator(git_allocator *allocator)
+{
+	allocator->gmalloc = stdalloc__malloc;
+	allocator->gcalloc = stdalloc__calloc;
+	allocator->gstrdup = stdalloc__strdup;
+	allocator->gstrndup = stdalloc__strndup;
+	allocator->gsubstrdup = stdalloc__substrdup;
+	allocator->grealloc = stdalloc__realloc;
+	allocator->greallocarray = stdalloc__reallocarray;
+	allocator->gmallocarray = stdalloc__mallocarray;
+	allocator->gfree = stdalloc__free;
+	return 0;
 }

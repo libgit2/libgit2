@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "win32/w32_stack.h"
+#include "win32/w32_crtdbg_stacktrace.h"
 
 #if defined(GIT_MSVC_CRTDBG)
 static void a(void)
