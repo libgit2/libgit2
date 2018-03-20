@@ -64,7 +64,7 @@ static void ssh_error(LIBSSH2_SESSION *session, const char *errmsg)
  */
 static int gen_proto(git_buf *request, const char *cmd, const char *url)
 {
-	char *repo;
+	const char *repo;
 	int len;
 	size_t i;
 
@@ -92,8 +92,10 @@ done:
 	len = strlen(cmd) + 1 /* Space */ + 1 /* Quote */ + strlen(repo) + 1 /* Quote */ + 1;
 
 	git_buf_grow(request, len);
-	git_buf_printf(request, "%s '%s'", cmd, repo);
-	git_buf_putc(request, '\0');
+	git_buf_puts(request, cmd);
+	git_buf_puts(request, " '");
+	git_buf_decode_percent(request, repo, strlen(repo));
+	git_buf_puts(request, "'");
 
 	if (git_buf_oom(request))
 		return -1;

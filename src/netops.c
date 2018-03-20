@@ -206,83 +206,96 @@ void gitno_connection_data_free_ptrs(gitno_connection_data *d)
 	git__free(d->pass); d->pass = NULL;
 }
 
-#define hex2c(c) ((c | 32) % 39 - 9)
-static char* unescape(char *str)
-{
-	int x, y;
-	int len = (int)strlen(str);
-
-	for (x=y=0; str[y]; ++x, ++y) {
-		if ((str[x] = str[y]) == '%') {
-			if (y < len-2 && isxdigit(str[y+1]) && isxdigit(str[y+2])) {
-				str[x] = (hex2c(str[y+1]) << 4) + hex2c(str[y+2]);
-				y += 2;
-			}
-		}
-	}
-	str[x] = '\0';
-	return str;
-}
-
 int gitno_extract_url_parts(
-		char **host,
-		char **port,
-		char **path,
-		char **username,
-		char **password,
-		const char *url,
-		const char *default_port)
+	char **host_out,
+	char **port_out,
+	char **path_out,
+	char **username_out,
+	char **password_out,
+	const char *url,
+	const char *default_port)
 {
 	struct http_parser_url u = {0};
-	const char *_host, *_port, *_path, *_userinfo;
+	bool has_host, has_port, has_path, has_userinfo;
+	git_buf host = GIT_BUF_INIT,
+		port = GIT_BUF_INIT,
+		path = GIT_BUF_INIT,
+		username = GIT_BUF_INIT,
+		password = GIT_BUF_INIT;
+	int error = 0;
 
 	if (http_parser_parse_url(url, strlen(url), false, &u)) {
 		giterr_set(GITERR_NET, "malformed URL '%s'", url);
-		return GIT_EINVALIDSPEC;
+		error = GIT_EINVALIDSPEC;
+		goto done;
 	}
 
-	_host = url+u.field_data[UF_HOST].off;
-	_port = url+u.field_data[UF_PORT].off;
-	_path = url+u.field_data[UF_PATH].off;
-	_userinfo = url+u.field_data[UF_USERINFO].off;
+	has_host = !!(u.field_set & (1 << UF_HOST));
+	has_port = !!(u.field_set & (1 << UF_PORT));
+	has_path = !!(u.field_set & (1 << UF_PATH));
+	has_userinfo = !!(u.field_set & (1 << UF_USERINFO));
 
-	if (u.field_set & (1 << UF_HOST)) {
-		*host = git__substrdup(_host, u.field_data[UF_HOST].len);
-		GITERR_CHECK_ALLOC(*host);
+	if (has_host) {
+		const char *url_host = url + u.field_data[UF_HOST].off;
+		size_t url_host_len = u.field_data[UF_HOST].len;
+		git_buf_decode_percent(&host, url_host, url_host_len);
 	}
 
-	if (u.field_set & (1 << UF_PORT))
-		*port = git__substrdup(_port, u.field_data[UF_PORT].len);
-	else
-		*port = git__strdup(default_port);
-	GITERR_CHECK_ALLOC(*port);
-
-	if (path) {
-		if (u.field_set & (1 << UF_PATH)) {
-			*path = git__substrdup(_path, u.field_data[UF_PATH].len);
-			GITERR_CHECK_ALLOC(*path);
-		} else {
-			git__free(*port);
-			*port = NULL;
-			git__free(*host);
-			*host = NULL;
-			giterr_set(GITERR_NET, "invalid url, missing path");
-			return GIT_EINVALIDSPEC;
-		}
+	if (has_port) {
+		const char *url_port = url + u.field_data[UF_PORT].off;
+		size_t url_port_len = u.field_data[UF_PORT].len;
+		git_buf_put(&port, url_port, url_port_len);
+	} else {
+		git_buf_puts(&port, default_port);
 	}
 
-	if (u.field_set & (1 << UF_USERINFO)) {
-		const char *colon = memchr(_userinfo, ':', u.field_data[UF_USERINFO].len);
+	if (has_path && path_out) {
+		const char *url_path = url + u.field_data[UF_PATH].off;
+		size_t url_path_len = u.field_data[UF_PATH].len;
+		git_buf_decode_percent(&path, url_path, url_path_len);
+	} else if (path_out) {
+		giterr_set(GITERR_NET, "invalid url, missing path");
+		error = GIT_EINVALIDSPEC;
+		goto done;
+	}
+
+	if (has_userinfo) {
+		const char *url_userinfo = url + u.field_data[UF_USERINFO].off;
+		size_t url_userinfo_len = u.field_data[UF_USERINFO].len;
+		const char *colon = memchr(url_userinfo, ':', url_userinfo_len);
+
 		if (colon) {
-			*username = unescape(git__substrdup(_userinfo, colon - _userinfo));
-			*password = unescape(git__substrdup(colon+1, u.field_data[UF_USERINFO].len - (colon+1-_userinfo)));
-			GITERR_CHECK_ALLOC(*password);
-		} else {
-			*username = git__substrdup(_userinfo, u.field_data[UF_USERINFO].len);
-		}
-		GITERR_CHECK_ALLOC(*username);
+			const char *url_username = url_userinfo;
+			size_t url_username_len = colon - url_userinfo;
+			const char *url_password = colon + 1;
+			size_t url_password_len = url_userinfo_len - (url_username_len + 1);
 
+			git_buf_decode_percent(&username, url_username, url_username_len);
+			git_buf_decode_percent(&password, url_password, url_password_len);
+		} else {
+			git_buf_decode_percent(&username, url_userinfo, url_userinfo_len);
+		}
 	}
 
-	return 0;
+	if (git_buf_oom(&host) ||
+		git_buf_oom(&port) ||
+		git_buf_oom(&path) ||
+		git_buf_oom(&username) ||
+		git_buf_oom(&password))
+		return -1;
+
+	*host_out = git_buf_detach(&host);
+	*port_out = git_buf_detach(&port);
+	if (path_out)
+		*path_out = git_buf_detach(&path);
+	*username_out = git_buf_detach(&username);
+	*password_out = git_buf_detach(&password);
+
+done:
+	git_buf_free(&host);
+	git_buf_free(&port);
+	git_buf_free(&path);
+	git_buf_free(&username);
+	git_buf_free(&password);
+	return error;
 }
