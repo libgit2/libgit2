@@ -348,7 +348,7 @@ void test_online_clone__credentials(void)
 void test_online_clone__bitbucket_style(void)
 {
 	git_cred_userpass_payload user_pass = {
-		"libgit2", "libgit2"
+		"libgit3", "libgit3"
 	};
 
 	g_options.fetch_opts.callbacks.credentials = git_cred_userpass;
