@@ -30,6 +30,36 @@ Additionally, the example code has been released to the public domain (see the
 Quick Start
 ===========
 
+### Windows
+
+You can use vcpkg to install libgit2:
+
+```
+vcpkg install libgit2:x64-windows libgit2:x86-windows
+```
+When you successfully build libgit2 using vcpkg, you can use libgit2 in Visual Studio based projects or cmake based projects.
+See more information: [vcpkg: using-package](https://github.com/Microsoft/vcpkg/blob/master/docs/examples/using-sqlite.md#step-2-use)
+
+### Ubuntu/Debian
+
+You can use `apt/apt-get` to install libgit2:
+
+```
+sudo apt install libgit2-dev
+```
+
+The version of libgit2 installed depends on the distribution. As such, it is not guaranteed that you will get the latest version.
+
+### Mac
+
+You can use Homebrew to install libgit2::
+
+```
+brew install libgit2
+```
+
+### Building from source
+
 **Prerequisites** for building libgit2:
 
 1. [CMake](https://cmake.org/), and is recommended to be installed into
@@ -51,6 +81,31 @@ Quick Start
 Trouble with these steps?  Read `TROUBLESHOOTING.md`.  More detailed build
 guidance is available below.
 
+**Submodule**
+
+If your project is using CMake as its build tool, you can add libgit2 as a dependency by embedding it as a Git
+submodule and then include it as a subdirectory in your build instructions.
+
+Add libgit2 as a `git submodule`:
+
+```shell
+cd /path/your/repo
+git submodule add https://github.com/libgit2/libgit2.git vendor/libgit2
+cd vendor/libgit2
+git checkout LATEST_RELEASE
+cd ../..
+```
+Modify the contents of the CMakeLists.txt file:
+
+```cmake
+# Add the libgit2 library
+ADD_SUBDIRECTORY(vendor/libgit2)
+# Add libgit2 headers to your executable's include directory
+TARGET_INCLUDE_DIRECTORIES(${YOUR_TARGET} ${LIBGIT2_INCLUDES})
+# Link your executable against libgit2
+TARGET_LINK_LIBRARIES(${YOUR_TARGET} git2)
+```
+
 Getting Help
 ============
 
@@ -64,7 +119,7 @@ slack channel once you've registered.
 
 If you have questions about the library, please be sure to check out the
 [API documentation](http://libgit2.github.com/libgit2/).  If you still have
-questions, reach out to us on Slack or post a question on 
+questions, reach out to us on Slack or post a question on
 [StackOverflow](http://stackoverflow.com/questions/tagged/libgit2) (with the `libgit2` tag).
 
 **Reporting Bugs**
