@@ -81,6 +81,7 @@ typedef enum {
 	GIT_STASH_APPLY_REINSTATE_INDEX = (1 << 0),
 } git_stash_apply_flags;
 
+/** Stash apply progression states */
 typedef enum {
 	GIT_STASH_APPLY_PROGRESS_NONE = 0,
 
