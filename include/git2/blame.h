@@ -128,7 +128,7 @@ typedef struct git_blame_hunk {
 } git_blame_hunk;
 
 
-/* Opaque structure to hold blame results */
+/** Opaque structure to hold blame results */
 typedef struct git_blame git_blame;
 
 /**

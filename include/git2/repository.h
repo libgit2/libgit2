@@ -368,7 +368,7 @@ GIT_EXTERN(int) git_repository_head_for_worktree(git_reference **out, git_reposi
  */
 GIT_EXTERN(int) git_repository_head_detached(git_repository *repo);
 
-/*
+/**
  * Check if a worktree's HEAD is detached
  *
  * A worktree's HEAD is detached when it points directly to a

@@ -215,7 +215,7 @@ typedef enum {
 	GIT_FILEMODE_COMMIT              = 0160000,
 } git_filemode_t;
 
-/*
+/**
  * A refspec specifies the mapping between remote and local reference
  * names when fetch or pushing.
  */
