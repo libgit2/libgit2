@@ -1,7 +1,7 @@
 {
  "name":   "libgit2",
  "github": "libgit2/libgit2",
- "input":  "include/git2",
+ "input":  "include",
  "prefix": "git_",
  "output": "docs",
  "branch": "gh-pages",
