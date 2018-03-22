@@ -425,9 +425,9 @@ typedef enum {
 	GIT_SUBMODULE_RECURSE_ONDEMAND = 2,
 } git_submodule_recurse_t;
 
-/** A type to write in a streaming fashion, for example, for filters. */
 typedef struct git_writestream git_writestream;
 
+/** A type to write in a streaming fashion, for example, for filters. */
 struct git_writestream {
 	int (*write)(git_writestream *stream, const char *buffer, size_t len);
 	int (*close)(git_writestream *stream);
