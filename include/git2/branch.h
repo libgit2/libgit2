@@ -278,7 +278,7 @@ GIT_EXTERN(int) git_branch_remote_name(
 
 
 /**
- * Retrieve the name fo the upstream remote of a local branch
+ * Retrieve the name of the upstream remote of a local branch
  *
  * @param buf the buffer into which to write the name
  * @param repo the repository in which to look
