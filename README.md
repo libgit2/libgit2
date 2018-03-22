@@ -254,6 +254,15 @@ The following CMake variables are declared:
 - `THREADSAFE`: Build libgit2 with threading support (defaults to ON)
 - `STDCALL`: Build libgit2 as `stdcall`. Turn off for `cdecl` (Windows; defaults to ON)
 
+To list all build options and their current value, you can do the
+following:
+
+	# Create and set up a build directory
+	$ mkdir build
+	$ cmake ..
+	# List all build options and their values
+	$ cmake -L
+
 Compiler and linker options
 ---------------------------
 
