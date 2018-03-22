@@ -160,11 +160,13 @@ typedef struct git_submodule_update_options {
 	GIT_FETCH_OPTIONS_INIT, 1 }
 
 /**
- * Initializes a `git_submodule_update_options` with default values.
- * Equivalent to creating an instance with GIT_SUBMODULE_UPDATE_OPTIONS_INIT.
+ * Initialize git_submodule_update_options structure
  *
- * @param opts The `git_submodule_update_options` instance to initialize.
- * @param version Version of struct; pass `GIT_SUBMODULE_UPDATE_OPTIONS_VERSION`
+ * Initializes a `git_submodule_update_options` with default values. Equivalent to
+ * creating an instance with `GIT_SUBMODULE_UPDATE_OPTIONS_INIT`.
+ *
+ * @param opts The `git_submodule_update_options` struct to initialize.
+ * @param version The struct version; pass `GIT_SUBMODULE_UPDATE_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_submodule_update_init_options(

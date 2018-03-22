@@ -298,13 +298,15 @@ typedef struct git_checkout_options {
 #define GIT_CHECKOUT_OPTIONS_INIT {GIT_CHECKOUT_OPTIONS_VERSION, GIT_CHECKOUT_SAFE}
 
 /**
-* Initializes a `git_checkout_options` with default values. Equivalent to
-* creating an instance with GIT_CHECKOUT_OPTIONS_INIT.
-*
-* @param opts the `git_checkout_options` struct to initialize.
-* @param version Version of struct; pass `GIT_CHECKOUT_OPTIONS_VERSION`
-* @return Zero on success; -1 on failure.
-*/
+ * Initialize git_checkout_options structure
+ *
+ * Initializes a `git_checkout_options` with default values. Equivalent to creating
+ * an instance with GIT_CHECKOUT_OPTIONS_INIT.
+ *
+ * @param opts The `git_checkout_options` struct to initialize.
+ * @param version The struct version; pass `GIT_CHECKOUT_OPTIONS_VERSION`.
+ * @return Zero on success; -1 on failure.
+ */
 GIT_EXTERN(int) git_checkout_init_options(
 	git_checkout_options *opts,
 	unsigned int version);

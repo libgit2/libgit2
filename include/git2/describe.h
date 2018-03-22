@@ -70,6 +70,16 @@ typedef struct git_describe_options {
 	GIT_DESCRIBE_DEFAULT_MAX_CANDIDATES_TAGS, \
 }
 
+/**
+ * Initialize git_describe_options structure
+ *
+ * Initializes a `git_describe_options` with default values. Equivalent to creating
+ * an instance with GIT_DESCRIBE_OPTIONS_INIT.
+ *
+ * @param opts The `git_describe_options` struct to initialize.
+ * @param version The struct version; pass `GIT_DESCRIBE_OPTIONS_VERSION`.
+ * @return Zero on success; -1 on failure.
+ */
 GIT_EXTERN(int) git_describe_init_options(git_describe_options *opts, unsigned int version);
 
 /**
@@ -103,6 +113,16 @@ typedef struct {
 		GIT_DESCRIBE_DEFAULT_ABBREVIATED_SIZE, \
  }
 
+/**
+ * Initialize git_describe_format_options structure
+ *
+ * Initializes a `git_describe_format_options` with default values. Equivalent to creating
+ * an instance with GIT_DESCRIBE_FORMAT_OPTIONS_INIT.
+ *
+ * @param opts The `git_describe_format_options` struct to initialize.
+ * @param version The struct version; pass `GIT_DESCRIBE_FORMAT_OPTIONS_VERSION`.
+ * @return Zero on success; -1 on failure.
+ */
 GIT_EXTERN(int) git_describe_init_format_options(git_describe_format_options *opts, unsigned int version);
 
 /**

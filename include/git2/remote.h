@@ -596,12 +596,13 @@ typedef struct {
 				 GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED, GIT_PROXY_OPTIONS_INIT }
 
 /**
- * Initializes a `git_fetch_options` with default values. Equivalent to
- * creating an instance with GIT_FETCH_OPTIONS_INIT.
+ * Initialize git_fetch_options structure
  *
- * @param opts the `git_fetch_options` instance to initialize.
- * @param version the version of the struct; you should pass
- *        `GIT_FETCH_OPTIONS_VERSION` here.
+ * Initializes a `git_fetch_options` with default values. Equivalent to
+ * creating an instance with `GIT_FETCH_OPTIONS_INIT`.
+ *
+ * @param opts The `git_fetch_options` struct to initialize.
+ * @param version The struct version; pass `GIT_FETCH_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_fetch_init_options(
@@ -645,12 +646,13 @@ typedef struct {
 #define GIT_PUSH_OPTIONS_INIT { GIT_PUSH_OPTIONS_VERSION, 0, GIT_REMOTE_CALLBACKS_INIT, GIT_PROXY_OPTIONS_INIT }
 
 /**
- * Initializes a `git_push_options` with default values. Equivalent to
- * creating an instance with GIT_PUSH_OPTIONS_INIT.
+ * Initialize git_push_options structure
  *
- * @param opts the `git_push_options` instance to initialize.
- * @param version the version of the struct; you should pass
- *        `GIT_PUSH_OPTIONS_VERSION` here.
+ * Initializes a `git_push_options` with default values. Equivalent to
+ * creating an instance with `GIT_PUSH_OPTIONS_INIT`.
+ *
+ * @param opts The `git_push_options` struct to initialize.
+ * @param version The struct version; pass `GIT_PUSH_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_push_init_options(
