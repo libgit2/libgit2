@@ -27,6 +27,27 @@ with any kind of software without having to release its source code.
 Additionally, the example code has been released to the public domain (see the
 [separate license](examples/COPYING) for more information).
 
+Table of Contents
+=================
+
+* [Quick Start](#quick-start)
+* [Getting Help](#getting-help)
+* [What It Can Do](#what-it-can-do)
+* [Optional dependencies](#optional-dependencies)
+* [Initialization](#initialization)
+* [Threading](#threading)
+* [Conventions](#conventions)
+* [Building libgit2 - Using CMake](#building-libgit2---using-cmake)
+    * [Building](#building)
+    * [Installation](#installation)
+    * [Advanced Usage](#advanced-usage)
+    * [Compiler and linker options](#compiler-and-linker-options)
+    * [MacOS X](#macos-x)
+    * [Android](#android)
+* [Language Bindings](#language-bindings)
+* [How Can I Contribute?](#how-can-i-contribute)
+* [License](#license)
+
 Quick Start
 ===========
 
