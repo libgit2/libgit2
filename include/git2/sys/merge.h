@@ -15,7 +15,7 @@
 /**
  * @file git2/sys/merge.h
  * @brief Git merge driver backend and plugin routines
- * @defgroup git_backend Git custom backend APIs
+ * @defgroup git_merge Git merge driver APIs
  * @ingroup Git
  * @{
  */
