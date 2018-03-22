@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "types.h"
+#include "checkout.h"
 
 /**
  * @file git2/stash.h

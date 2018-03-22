@@ -63,6 +63,9 @@ typedef int64_t git_time_t;
 
 #endif
 
+#include "buffer.h"
+#include "oid.h"
+
 /** Basic type (loose or packed) of any Git object. */
 typedef enum {
 	GIT_OBJ_ANY = -2,		/**< Object can be any of the following */
