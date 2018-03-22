@@ -11,6 +11,8 @@
 #include "types.h"
 #include "oid.h"
 #include "annotated_commit.h"
+#include "merge.h"
+#include "checkout.h"
 
 /**
  * @file git2/rebase.h

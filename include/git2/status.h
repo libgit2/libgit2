@@ -9,6 +9,8 @@
 
 #include "common.h"
 #include "types.h"
+#include "strarray.h"
+#include "diff.h"
 
 /**
  * @file git2/status.h
