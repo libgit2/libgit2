@@ -52,29 +52,32 @@ typedef enum {
  * `GIT_BLAME_OPTIONS_INIT` macro:
  *     git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
  *
- * - `flags` is a combination of the `git_blame_flag_t` values above.
- * - `min_match_characters` is the lower bound on the number of alphanumeric
- *   characters that must be detected as moving/copying within a file for it to
- *   associate those lines with the parent commit. The default value is 20.
- *   This value only takes effect if any of the `GIT_BLAME_TRACK_COPIES_*`
- *   flags are specified.
- * - `newest_commit` is the id of the newest commit to consider.  The default
- *                   is HEAD.
- * - `oldest_commit` is the id of the oldest commit to consider.  The default
- *                   is the first commit encountered with a NULL parent.
- *	- `min_line` is the first line in the file to blame.  The default is 1 (line
- *	             numbers start with 1).
- *	- `max_line` is the last line in the file to blame.  The default is the last
- *	             line of the file.
  */
 typedef struct git_blame_options {
 	unsigned int version;
 
+	/** A combination of `git_blame_flag_t` */
 	uint32_t flags;
+	/** The lower bound on the number of alphanumeric
+	 *   characters that must be detected as moving/copying within a file for it to
+	 *   associate those lines with the parent commit. The default value is 20.
+	 *   This value only takes effect if any of the `GIT_BLAME_TRACK_COPIES_*`
+	 *   flags are specified.
+	 */
 	uint16_t min_match_characters;
+	/** The id of the newest commit to consider. The default is HEAD. */
 	git_oid newest_commit;
+	/** The id of the oldest commit to consider.
+	 * The default is the first commit encountered with a NULL parent.
+	 */
 	git_oid oldest_commit;
+	/** The first line in the file to blame.
+	 * The default is 1 (line numbers start with 1).
+	 */
 	size_t min_line;
+	/** The last line in the file to blame.
+	 * The default is the last line of the file.
+	 */
 	size_t max_line;
 } git_blame_options;
 
