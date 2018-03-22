@@ -69,8 +69,8 @@ Quick Start
 2. Create the cmake build environment: `cmake ..`
 3. Build libgit2: `cmake --build .`
 
-Trouble with these steps?  Read `TROUBLESHOOTING.md`.  More detailed build
-guidance is available below.
+Trouble with these steps?  Read our (troubleshooting guide)[docs/troubleshooting.md].
+More detailed build guidance is available below.
 
 Getting Help
 ============
@@ -170,12 +170,12 @@ require assistance coordinating this, simply have the worker threads call
 Threading
 =========
 
-See [THREADING](THREADING.md) for information
+See [threading](docs/threading.md) for information
 
 Conventions
 ===========
 
-See [CONVENTIONS](CONVENTIONS.md) for an overview of the external
+See [conventions](docs/conventions.md) for an overview of the external
 and internal API/coding conventions we use.
 
 Building libgit2 - Using CMake
@@ -364,10 +364,10 @@ We welcome new contributors!  We have a number of issues marked as
 and
 ["easy fix"](https://github.com/libgit2/libgit2/issues?utf8=✓&q=is%3Aissue+is%3Aopen+label%3A%22easy+fix%22)
 that are good places to jump in and get started.  There's much more detailed
-information in our list of [outstanding projects](PROJECTS.md).
+information in our list of [outstanding projects](docs/projects.md).
 
-Please be sure to check the [contribution guidelines](CONTRIBUTING.md) to
-understand our workflow, and the libgit2 [coding conventions](CONVENTIONS.md).
+Please be sure to check the [contribution guidelines](docs/contributing.md) to
+understand our workflow, and the libgit2 [coding conventions](docs/conventions.md).
 
 License
 ==================================

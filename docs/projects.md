@@ -10,8 +10,8 @@ ideas that no one is actively working on.
 
 ## Before You Start
 
-Please start by reading the [README.md](README.md),
-[CONTRIBUTING.md](CONTRIBUTING.md), and [CONVENTIONS.md](CONVENTIONS.md)
+Please start by reading the [README.md](../README.md),
+[contributing.md](contributing.md), and [conventions.md](conventions.md)
 files before diving into one of these projects.  Those explain our work
 flow and coding conventions to help ensure that your work will be easily
 integrated into libgit2.
