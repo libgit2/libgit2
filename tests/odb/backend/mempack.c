@@ -50,3 +50,11 @@ void test_odb_backend_mempack__exists_with_existing_objects_succeeds(void)
 	cl_git_pass(git_odb_write(&_oid, _odb, data, strlen(data) + 1, GIT_OBJ_BLOB));
 	cl_assert(git_odb_exists(_odb, &_oid) == 1);
 }
+
+void test_odb_backend_mempack__blob_create_frombuffer_succeeds(void)
+{
+	const char *data = "data";
+
+	cl_git_pass(git_blob_create_frombuffer(&_oid, _repo, data, strlen(data) + 1));
+	cl_assert(git_odb_exists(_odb, &_oid) == 1);
+}
