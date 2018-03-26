@@ -29,7 +29,7 @@ BEGIN
     BEGIN
       VALUE "FileDescription",	"libgit2 - the Git linkable library\0"
       VALUE "FileVersion",	LIBGIT2_VERSION "\0"
-      VALUE "InternalName",	LIBGIT2_FILENAME ".dll\0"
+      VALUE "InternalName",	LIBGIT2_FILENAME "\0"
       VALUE "LegalCopyright",	"Copyright (C) the libgit2 contributors. All rights reserved.\0"
       VALUE "OriginalFilename",	LIBGIT2_FILENAME ".dll\0"
       VALUE "ProductName",	"libgit2\0"
