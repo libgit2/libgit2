@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "types.h"
+#include "buffer.h"
 
 /**
  * @file git2/mailmap.h
@@ -35,22 +36,20 @@ typedef struct git_mailmap_entry {
 #define GIT_MAILMAP_ENTRY_INIT {GIT_MAILMAP_ENTRY_VERSION}
 
 /**
- * Create a mailmap object by parsing a mailmap file.
+ * Create a mailmap object by parsing a mailmap file. Malformed entries in the
+ * mailmap are ignored.
  *
  * The mailmap must be freed with 'git_mailmap_free'.
  *
  * @param out pointer to store the mailmap
- * @param data raw data buffer to parse
- * @param size size of the raw data buffer
- * @return 0 on success
+ * @param buffer buffer to parse the mailmap from
+ * @return 0 on success, otherwise an error code
  */
-GIT_EXTERN(int) git_mailmap_parse(
-	git_mailmap **out,
-	const char *data,
-	size_t size);
+GIT_EXTERN(int) git_mailmap_from_buffer(git_mailmap **out, git_buf *buffer);
 
 /**
- * Create a mailmap object from the given repository.
+ * Create a mailmap object from the given repository. Malformed entries in the
+ * mailmap are ignored.
  *
  * If the repository is not bare, the repository's working directory root will
  * be checked for the '.mailmap' file to be parsed.
@@ -62,19 +61,22 @@ GIT_EXTERN(int) git_mailmap_parse(
  *
  * @param out pointer to store the mailmap
  * @param repo repository to find the .mailmap in
- * @return 0 on success; GIT_ENOTFOUND if .mailmap could not be found.
+ * @return 0 on success; GIT_ENOTFOUND if .mailmap could not be found,
+ *         otherwise an error code.
  */
-GIT_EXTERN(int) git_mailmap_from_repo(
-	git_mailmap **out,
-	git_repository *repo);
+GIT_EXTERN(int) git_mailmap_from_repo(git_mailmap **out, git_repository *repo);
 
 /**
- * Free a mailmap created by 'git_mailmap_parse' or 'git_mailmap_from_repo'.
+ * Free a mailmap created by 'git_mailmap_from_buffer' or
+ * 'git_mailmap_from_repo'.
  */
 GIT_EXTERN(void) git_mailmap_free(git_mailmap *mailmap);
 
 /**
  * Resolve a name and email to the corresponding real name and email.
+ *
+ * The lifetime of the string results is tied to the `mailmap`, `name`, and
+ * `email` parameters.
  *
  * @param name_out either 'name', or the real name to use.
  *             You should NOT free this value.
@@ -85,11 +87,8 @@ GIT_EXTERN(void) git_mailmap_free(git_mailmap *mailmap);
  * @param email the email to resolve.
  */
 GIT_EXTERN(void) git_mailmap_resolve(
-	const char **name_out,
-	const char **email_out,
-	const git_mailmap *mailmap,
-	const char *name,
-	const char *email);
+	const char **name_out, const char **email_out,
+	const git_mailmap *mailmap, const char *name, const char *email);
 
 /**
  * Get the number of mailmap entries in this mailmap.
@@ -104,8 +103,7 @@ GIT_EXTERN(size_t) git_mailmap_entry_count(const git_mailmap *mailmap);
  * @return the mailmap entry at index, or NULL if it cannot be found.
  */
 GIT_EXTERN(const git_mailmap_entry *) git_mailmap_entry_byindex(
-	const git_mailmap *mailmap,
-	size_t idx);
+	const git_mailmap *mailmap, size_t idx);
 
 /**
  * Lookup a mailmap entry by name/email pair.
@@ -118,9 +116,7 @@ GIT_EXTERN(const git_mailmap_entry *) git_mailmap_entry_byindex(
  * @return the corresponding mailmap entry, or NULL if it cannot be found.
  */
 GIT_EXTERN(const git_mailmap_entry *) git_mailmap_entry_lookup(
-	const git_mailmap *mailmap,
-	const char *name,
-	const char *email);
+	const git_mailmap *mailmap, const char *name, const char *email);
 
 /** @} */
 GIT_END_DECL

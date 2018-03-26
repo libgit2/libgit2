@@ -14,18 +14,15 @@ void test_mailmap_parsing__initialize(void)
 
 void test_mailmap_parsing__cleanup(void)
 {
-	cl_git_sandbox_cleanup();
-	g_repo = NULL;
-
 	git_mailmap_free(g_mailmap);
-	g_mailmap = NULL;
+	cl_git_sandbox_cleanup();
 }
 
 static void check_mailmap_entries(
 	const git_mailmap *mailmap, const mailmap_entry *entries, size_t entries_size)
 {
 	const git_mailmap_entry *parsed = NULL;
-	size_t idx = 0;
+	size_t idx;
 
 	/* Check that the parsed entries match */
 	cl_assert_equal_sz(entries_size, git_mailmap_entry_count(mailmap));
@@ -43,7 +40,7 @@ static void check_mailmap_resolve(
 {
 	const char *resolved_name = NULL;
 	const char *resolved_email = NULL;
-	size_t idx = 0;
+	size_t idx;
 
 	/* Check that the resolver behaves correctly */
 	for (idx = 0; idx < resolved_size; ++idx) {
@@ -60,23 +57,17 @@ static void check_mailmap_resolve(
 
 void test_mailmap_parsing__string(void)
 {
-	cl_check_pass(git_mailmap_parse(
-		&g_mailmap,
-		string_mailmap,
-		strlen(string_mailmap)));
+	git_buf buf = GIT_BUF_INIT;
+	git_buf_attach_notowned(&buf, string_mailmap, strlen(string_mailmap));
+	cl_git_pass(git_mailmap_from_buffer(&g_mailmap, &buf));
 
 	/* We should have parsed all of the entries */
-	check_mailmap_entries(
-		g_mailmap,
-		entries, ARRAY_SIZE(entries));
+	check_mailmap_entries(g_mailmap, entries, ARRAY_SIZE(entries));
 
 	/* Check that resolving the entries works */
+	check_mailmap_resolve(g_mailmap, resolved, ARRAY_SIZE(resolved));
 	check_mailmap_resolve(
-		g_mailmap,
-		resolved, ARRAY_SIZE(resolved));
-	check_mailmap_resolve(
-		g_mailmap,
-		resolved_untracked, ARRAY_SIZE(resolved_untracked));
+		g_mailmap, resolved_untracked, ARRAY_SIZE(resolved_untracked));
 }
 
 void test_mailmap_parsing__fromrepo(void)
@@ -84,40 +75,30 @@ void test_mailmap_parsing__fromrepo(void)
 	g_repo = cl_git_sandbox_init("mailmap");
 	cl_check(!git_repository_is_bare(g_repo));
 
-	cl_check_pass(git_mailmap_from_repo(&g_mailmap, g_repo));
+	cl_git_pass(git_mailmap_from_repo(&g_mailmap, g_repo));
 
 	/* We should have parsed all of the entries */
-	check_mailmap_entries(
-		g_mailmap,
-		entries, ARRAY_SIZE(entries));
+	check_mailmap_entries(g_mailmap, entries, ARRAY_SIZE(entries));
 
 	/* Check that resolving the entries works */
+	check_mailmap_resolve(g_mailmap, resolved, ARRAY_SIZE(resolved));
 	check_mailmap_resolve(
-		g_mailmap,
-		resolved, ARRAY_SIZE(resolved));
-	check_mailmap_resolve(
-		g_mailmap,
-		resolved_untracked, ARRAY_SIZE(resolved_untracked));
+		g_mailmap, resolved_untracked, ARRAY_SIZE(resolved_untracked));
 }
 
 void test_mailmap_parsing__frombare(void)
 {
 	g_repo = cl_git_sandbox_init("mailmap/.gitted");
-	cl_check_pass(git_repository_set_bare(g_repo));
+	cl_git_pass(git_repository_set_bare(g_repo));
 	cl_check(git_repository_is_bare(g_repo));
 
-	cl_check_pass(git_mailmap_from_repo(&g_mailmap, g_repo));
+	cl_git_pass(git_mailmap_from_repo(&g_mailmap, g_repo));
 
 	/* We should have parsed all of the entries, except for the untracked one */
-	check_mailmap_entries(
-		g_mailmap,
-		entries, ARRAY_SIZE(entries) - 1);
+	check_mailmap_entries(g_mailmap, entries, ARRAY_SIZE(entries) - 1);
 
 	/* Check that resolving the entries works */
+	check_mailmap_resolve(g_mailmap, resolved, ARRAY_SIZE(resolved));
 	check_mailmap_resolve(
-		g_mailmap,
-		resolved, ARRAY_SIZE(resolved));
-	check_mailmap_resolve(
-		g_mailmap,
-		resolved_bare, ARRAY_SIZE(resolved_bare));
+		g_mailmap, resolved_bare, ARRAY_SIZE(resolved_bare));
 }

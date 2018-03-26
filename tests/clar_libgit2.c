@@ -227,8 +227,7 @@ git_repository *cl_git_sandbox_reopen(void)
 		_cl_repo = NULL;
 
 		cl_git_pass(git_repository_open(
-			&_cl_repo,
-			cl_fixture_basename(_cl_sandbox)));
+			&_cl_repo, cl_fixture_basename(_cl_sandbox)));
 	}
 
 	return _cl_repo;

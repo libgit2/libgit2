@@ -15,11 +15,8 @@ void test_mailmap_blame__initialize(void)
 
 void test_mailmap_blame__cleanup(void)
 {
-	cl_git_sandbox_cleanup();
-	g_repo = NULL;
-
 	git_blame_free(g_blame);
-	g_blame = NULL;
+	cl_git_sandbox_cleanup();
 }
 
 void test_mailmap_blame__hunks(void)
@@ -32,7 +29,7 @@ void test_mailmap_blame__hunks(void)
 
 	opts.flags |= GIT_BLAME_USE_MAILMAP;
 
-	cl_check_pass(git_blame_file(&g_blame, g_repo, "file.txt", &opts));
+	cl_git_pass(git_blame_file(&g_blame, g_repo, "file.txt", &opts));
 	if (!g_blame)
 		return;
 
@@ -54,7 +51,7 @@ void test_mailmap_blame__hunks_no_mailmap(void)
 
 	g_repo = cl_git_sandbox_init("mailmap");
 
-	cl_check_pass(git_blame_file(&g_blame, g_repo, "file.txt", &opts));
+	cl_git_pass(git_blame_file(&g_blame, g_repo, "file.txt", &opts));
 	if (!g_blame)
 		return;
 

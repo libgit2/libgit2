@@ -67,6 +67,7 @@ typedef struct git_blame__entry {
 struct git_blame {
 	char *path;
 	git_repository *repository;
+	git_mailmap *mailmap;
 	git_blame_options options;
 
 	git_vector hunks;
@@ -84,8 +85,6 @@ struct git_blame {
 	int num_lines;
 	const char *final_buf;
 	git_off_t final_buf_size;
-
-	git_mailmap *mailmap;
 };
 
 git_blame *git_blame__alloc(

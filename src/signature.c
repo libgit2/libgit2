@@ -99,27 +99,8 @@ int git_signature_new(git_signature **sig_out, const char *name, const char *ema
 
 int git_signature_dup(git_signature **dest, const git_signature *source)
 {
-	git_signature *signature;
-
-	if (source == NULL)
-		return 0;
-
-	signature = git__calloc(1, sizeof(git_signature));
-	GITERR_CHECK_ALLOC(signature);
-
-	signature->name = git__strdup(source->name);
-	GITERR_CHECK_ALLOC(signature->name);
-
-	signature->email = git__strdup(source->email);
-	GITERR_CHECK_ALLOC(signature->email);
-
-	signature->when.time = source->when.time;
-	signature->when.offset = source->when.offset;
-	signature->when.sign = source->when.sign;
-
-	*dest = signature;
-
-	return 0;
+	/* If mailmap is NULL, this method just copies the signature */
+	return git_signature_with_mailmap(dest, source, NULL);
 }
 
 int git_signature_with_mailmap(
@@ -132,32 +113,26 @@ int git_signature_with_mailmap(
 	const char *email = NULL;
 
 	if (source == NULL)
-		goto on_error;
+		return 0;
 
 	git_mailmap_resolve(&name, &email, mailmap, source->name, source->email);
 
 	signature = git__calloc(1, sizeof(git_signature));
-	if (!signature)
-		goto on_error;
+	GITERR_CHECK_ALLOC(signature);
 
 	signature->name = git__strdup(name);
-	if (!signature->name)
-		goto on_error;
+	GITERR_CHECK_ALLOC(signature->name);
 
 	signature->email = git__strdup(email);
-	if (!signature->email)
-		goto on_error;
+	GITERR_CHECK_ALLOC(signature->email);
 
 	signature->when.time = source->when.time;
 	signature->when.offset = source->when.offset;
 	signature->when.sign = source->when.sign;
 
 	*dest = signature;
-	return 0;
 
-on_error:
-	git_signature_free(signature);
-	return -1;
+	return 0;
 }
 
 int git_signature__pdup(git_signature **dest, const git_signature *source, git_pool *pool)

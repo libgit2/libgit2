@@ -9,216 +9,180 @@
 
 #include "blob.h"
 #include "commit.h"
+#include "parse.h"
 #include "git2/common.h"
 #include "git2/repository.h"
 #include "git2/revparse.h"
 #include "git2/sys/commit.h"
 
-/**
- * Helper type and methods for the mailmap parser
- */
-typedef struct char_range {
-	const char *p;
-	size_t len;
-} char_range;
-
-static const char_range NULL_RANGE = {0};
-
-/* Split a range at the first instance of 'c'. Returns whether 'c' was found */
-static bool range_split(
-	char_range range,
-	char c,
-	char_range *before,
-	char_range *after)
-{
-	const char *off;
-
-	*before = *after = NULL_RANGE;
-	before->p = range.p;
-	off = memchr(range.p, c, range.len);
-	if (!off) {
-		before->len = range.len;
-		return false;
-	}
-
-	before->len = off - range.p;
-	after->p = off + 1;
-	after->len = (range.p + range.len) - after->p;
-	return true;
-}
-
-/* Trim whitespace from the beginning and end of the range */
-static void range_trim(char_range *range) {
-	while (range->len > 0 && git__isspace(range->p[0])) {
-		++range->p;
-		--range->len;
-	}
-	while (range->len > 0 && git__isspace(range->p[range->len - 1]))
-		--range->len;
-}
-
-/**
- * If `buf` is not NULL, copies range into it with a '\0', and bumps buf.
- * If `size` is not NULL, adds the number of bytes to be written to it.
- * returns a pointer to the copied string, or NULL.
- */
-static const char *range_copyz(char **buf, size_t *size, char_range src)
-{
-	char *s = NULL;
-	if (src.p == NULL)
-		return NULL;
-
-	if (size)
-		*size += src.len + 1;
-
-	if (buf) {
-		s = *buf;
-		memcpy(s, src.p, src.len);
-		s[src.len] = '\0';
-		*buf += src.len + 1;
-	}
-	return s;
-}
+#define MAILMAP_FILE ".mailmap"
 
 struct git_mailmap {
 	git_vector entries;
 };
 
-/**
- * Parse a single entry out of a mailmap file.
- * Advances the `file` range past the parsed entry.
- */
-static int git_mailmap_parse_single(
-	char_range *file,
-	bool *found,
-	char_range *real_name,
-	char_range *real_email,
-	char_range *replace_name,
-	char_range *replace_email)
+/* Check if we're at the end of line, w/ comments */
+static bool is_eol(git_parse_ctx *ctx)
 {
-	char_range line, comment, name_a, email_a, name_b, email_b;
-	bool two_emails = false;
+	char c;
+	return git_parse_peek(&c, ctx, GIT_PARSE_PEEK_SKIP_WHITESPACE) < 0 || c == '#';
+}
 
-	*found = false;
-	*real_name = NULL_RANGE;
-	*real_email = NULL_RANGE;
-	*replace_name = NULL_RANGE;
-	*replace_email = NULL_RANGE;
+static int advance_until(
+	const char **start, size_t *len, git_parse_ctx *ctx, char needle)
+{
+	*start = ctx->line;
+	while (ctx->line_len > 0 && *ctx->line != '#' && *ctx->line != needle)
+		git_parse_advance_chars(ctx, 1);
 
-	while (file->len > 0) {
-		/* Get the line, and remove any comments */
-		range_split(*file, '\n', &line, file);
-		range_split(line, '#', &line, &comment);
+	if (ctx->line_len == 0 || *ctx->line == '#')
+		return -1; /* end of line */
 
-		/* Skip blank lines */
-		range_trim(&line);
-		if (line.len == 0)
-			continue;
+	*len = ctx->line - *start;
+	git_parse_advance_chars(ctx, 1); /* advance past needle */
+	return 0;
+}
 
-		/* Get the first name and email */
-		if (!range_split(line, '<', &name_a, &line))
-			return -1; /* garbage in line */
-		if (!range_split(line, '>', &email_a, &line))
-			return -1; /* unfinished <> pair */
+/* Parse a single entry from a mailmap file.
+ *
+ * The output git_bufs will be non-owning, and should be copied before being
+ * persisted.
+ */
+static int parse_mailmap_entry(
+	git_buf *real_name, git_buf *real_email,
+	git_buf *replace_name, git_buf *replace_email,
+	git_parse_ctx *ctx)
+{
+	const char *start;
+	size_t len;
 
-		/* Get an optional second name and/or email */
-		two_emails = range_split(line, '<', &name_b, &line);
-		if (two_emails && !range_split(line, '>', &email_b, &line))
-			return -1; /* unfinished <> pair */
+	git_buf_clear(real_name);
+	git_buf_clear(real_email);
+	git_buf_clear(replace_name);
+	git_buf_clear(replace_email);
 
-		/* Trim whitespace from around names */
-		range_trim(&name_a);
-		range_trim(&name_b);
+	/* Parse the real name */
+	git_parse_advance_ws(ctx);
+	if (advance_until(&start, &len, ctx, '<') < 0)
+		return -1;
 
-		*found = true;
-		if (name_a.len > 0)
-			*real_name = name_a;
+	git_buf_attach_notowned(real_name, start, len);
+	git_buf_rtrim(real_name);
 
-		if (two_emails) {
-			if (email_a.len > 0)
-				*real_email = email_a;
-			*replace_email = email_b;
+	/* If this is the last email in the line, this is the email to replace,
+	 * otherwise, it's the real email. */
+	if (advance_until(&start, &len, ctx, '>') < 0)
+		return -1;
 
-			if (name_b.len > 0)
-				*replace_name = name_b;
-		} else {
-			*replace_email = email_a;
-		}
-		break;
+	/* If we aren't at the end of the line, parse a second name and email */
+	if (!is_eol(ctx)) {
+		git_buf_attach_notowned(real_email, start, len);
+
+		git_parse_advance_ws(ctx);
+		if (advance_until(&start, &len, ctx, '<') < 0)
+			return -1;
+		git_buf_attach_notowned(replace_name, start, len);
+		git_buf_rtrim(replace_name);
+
+		if (advance_until(&start, &len, ctx, '>') < 0)
+			return -1;
 	}
+
+	git_buf_attach_notowned(replace_email, start, len);
+
+	if (!is_eol(ctx))
+		return -1;
 
 	return 0;
 }
 
-int git_mailmap_parse(
-	git_mailmap **mailmap,
-	const char *data,
-	size_t size)
+int git_mailmap_from_buffer(git_mailmap **out, git_buf *buf)
 {
-	char_range file = { data, size };
-	git_mailmap_entry* entry = NULL;
-	int error = 0;
+	int error;
+	git_mailmap *mm;
+	size_t entry_size;
+	char *entry_data;
+	git_mailmap_entry *entry = NULL;
+	git_parse_ctx ctx;
 
-	if (memchr(data, '\0', size) != NULL)
-		return -1; /* data may not contain '\0's */
+	/* Scratch buffers containing the real parsed names & emails */
+	git_buf real_name = GIT_BUF_INIT;
+	git_buf real_email = GIT_BUF_INIT;
+	git_buf replace_name = GIT_BUF_INIT;
+	git_buf replace_email = GIT_BUF_INIT;
 
-	*mailmap = git__calloc(1, sizeof(git_mailmap));
-	if (!*mailmap)
+	if (git_buf_contains_nul(buf))
 		return -1;
 
-	/* XXX: Is it worth it to precompute the size? */
-	error = git_vector_init(&(*mailmap)->entries, 0, NULL);
+	git_parse_ctx_init(&ctx, buf->ptr, buf->size);
+
+	/* Create our mailmap object */
+	mm = git__calloc(1, sizeof(git_mailmap));
+	GITERR_CHECK_ALLOC(mm);
+
+	error = git_vector_init(&mm->entries, 0, NULL);
 	if (error < 0)
 		goto cleanup;
 
-	while (file.len > 0) {
-		bool found = false;
-		char_range real_name, real_email, replace_name, replace_email;
-		size_t size = 0;
-		char *buf = NULL;
-
-		error = git_mailmap_parse_single(
-			&file, &found,
-			&real_name, &real_email,
-			&replace_name, &replace_email);
-		if (error < 0 || !found) {
-			error = 0;
+	/* Run the parser */
+	while (ctx.remain_len > 0) {
+		error = parse_mailmap_entry(
+			&real_name, &real_email, &replace_name, &replace_email, &ctx);
+		if (error < 0) {
+			error = 0; /* Skip lines which don't contain a valid entry */
+			git_parse_advance_line(&ctx);
 			continue;
 		}
 
-		/* Compute how much space we'll need to store our entry */
-		size = sizeof(git_mailmap_entry);
-		range_copyz(NULL, &size, real_name);
-		range_copyz(NULL, &size, real_email);
-		range_copyz(NULL, &size, replace_name);
-		range_copyz(NULL, &size, replace_email);
+		GITERR_CHECK_ALLOC_ADD5(
+			&entry_size, sizeof(git_mailmap_entry) + 4 /* 4x'\0' */,
+			real_name.size, real_email.size,
+			replace_name.size, replace_email.size);
+		entry = git__calloc(1, entry_size);
+		GITERR_CHECK_ALLOC(entry);
 
-		entry = git__malloc(size);
-		if (!entry) {
-			error = -1;
-			goto cleanup;
-		}
 		entry->version = GIT_MAILMAP_ENTRY_VERSION;
 
-		buf = (char*)(entry + 1);
-		entry->real_name = range_copyz(&buf, NULL, real_name);
-		entry->real_email = range_copyz(&buf, NULL, real_email);
-		entry->replace_name = range_copyz(&buf, NULL, replace_name);
-		entry->replace_email = range_copyz(&buf, NULL, replace_email);
-		assert(buf == ((char*)entry) + size);
+		/* Copy strings into the buffer following entry */
+		entry_data = (char *)(entry + 1);
+		if (real_name.size > 0) {
+			memcpy(entry_data, real_name.ptr, real_name.size);
+			entry->real_name = entry_data;
+			entry_data += real_name.size + 1; /* advance past null from calloc */
+		}
+		if (real_email.size > 0) {
+			memcpy(entry_data, real_email.ptr, real_email.size);
+			entry->real_email = entry_data;
+			entry_data += real_email.size + 1;
+		}
+		if (replace_name.size > 0) {
+			memcpy(entry_data, replace_name.ptr, replace_name.size);
+			entry->replace_name = entry_data;
+			entry_data += replace_name.size + 1;
+		}
+		/* replace_email is always non-null */
+		memcpy(entry_data, replace_email.ptr, replace_email.size);
+		entry->replace_email = entry_data;
 
-		error = git_vector_insert(&(*mailmap)->entries, entry);
+		error = git_vector_insert(&mm->entries, entry);
 		if (error < 0)
 			goto cleanup;
 		entry = NULL;
 	}
 
+	/* fill in *out, and make sure we don't free our mailmap */
+	*out = mm;
+	mm = NULL;
+
 cleanup:
 	git__free(entry);
-	if (error < 0) {
-		git_mailmap_free(*mailmap);
-		*mailmap = NULL;
-	}
+	git_mailmap_free(mm);
+
+	/* We never allocate data in these buffers, but better safe than sorry */
+	git_buf_free(&real_name);
+	git_buf_free(&real_email);
+	git_buf_free(&replace_name);
+	git_buf_free(&replace_email);
 	return error;
 }
 
@@ -232,11 +196,9 @@ void git_mailmap_free(git_mailmap *mailmap)
 }
 
 void git_mailmap_resolve(
-	const char **name_out,
-	const char **email_out,
+	const char **name_out, const char **email_out,
 	const git_mailmap *mailmap,
-	const char *name,
-	const char *email)
+	const char *name, const char *email)
 {
 	const git_mailmap_entry *entry = NULL;
 	assert(name && email);
@@ -257,9 +219,7 @@ void git_mailmap_resolve(
 }
 
 const git_mailmap_entry *git_mailmap_entry_lookup(
-	const git_mailmap *mailmap,
-	const char *name,
-	const char *email)
+	const git_mailmap *mailmap, const char *name, const char *email)
 {
 	size_t i;
 	git_mailmap_entry *entry;
@@ -293,15 +253,12 @@ size_t git_mailmap_entry_count(const git_mailmap *mailmap)
 	return 0;
 }
 
-static int git_mailmap_from_bare_repo(
-	git_mailmap **mailmap,
-	git_repository *repo)
+static int mailmap_from_bare_repo(git_mailmap **mailmap, git_repository *repo)
 {
 	git_reference *head = NULL;
 	git_object *tree = NULL;
 	git_blob *blob = NULL;
-	const char *content = NULL;
-	git_off_t size = 0;
+	git_buf content = GIT_BUF_INIT;
 	int error;
 
 	assert(git_repository_is_bare(repo));
@@ -316,31 +273,28 @@ static int git_mailmap_from_bare_repo(
 		goto cleanup;
 
 	error = git_object_lookup_bypath(
-		(git_object **) &blob,
-		tree,
-		".mailmap",
-		GIT_OBJ_BLOB);
+		(git_object **) &blob, tree, MAILMAP_FILE, GIT_OBJ_BLOB);
 	if (error < 0)
 		goto cleanup;
 
-	content = git_blob_rawcontent(blob);
-	size = git_blob_rawsize(blob);
+	error = git_blob_filtered_content(&content, blob, MAILMAP_FILE, false);
+	if (error < 0)
+		goto cleanup;
 
-	error = git_mailmap_parse(mailmap, content, size);
+	error = git_mailmap_from_buffer(mailmap, &content);
 	if (error < 0)
 		goto cleanup;
 
 cleanup:
-	git_reference_free(head);
-	git_object_free(tree);
+	git_buf_free(&content);
 	git_blob_free(blob);
+	git_object_free(tree);
+	git_reference_free(head);
 
 	return error;
 }
 
-static int git_mailmap_from_workdir_repo(
-	git_mailmap **mailmap,
-	git_repository *repo)
+static int mailmap_from_workdir_repo(git_mailmap **mailmap, git_repository *repo)
 {
 	git_buf path = GIT_BUF_INIT;
 	git_buf data = GIT_BUF_INIT;
@@ -349,7 +303,7 @@ static int git_mailmap_from_workdir_repo(
 	assert(!git_repository_is_bare(repo));
 
 	/* In non-bare repositories, .mailmap should be read from the workdir */
-	error = git_buf_joinpath(&path, git_repository_workdir(repo), ".mailmap");
+	error = git_buf_joinpath(&path, git_repository_workdir(repo), MAILMAP_FILE);
 	if (error < 0)
 		goto cleanup;
 
@@ -357,7 +311,7 @@ static int git_mailmap_from_workdir_repo(
 	if (error < 0)
 		goto cleanup;
 
-	error = git_mailmap_parse(mailmap, data.ptr, data.size);
+	error = git_mailmap_from_buffer(mailmap, &data);
 	if (error < 0)
 		goto cleanup;
 
@@ -375,7 +329,7 @@ int git_mailmap_from_repo(git_mailmap **mailmap, git_repository *repo)
 	*mailmap = NULL;
 
 	if (git_repository_is_bare(repo))
-		return git_mailmap_from_bare_repo(mailmap, repo);
+		return mailmap_from_bare_repo(mailmap, repo);
 	else
-		return git_mailmap_from_workdir_repo(mailmap, repo);
+		return mailmap_from_workdir_repo(mailmap, repo);
 }
