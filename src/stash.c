@@ -738,9 +738,6 @@ static void normalize_apply_options(
 		memcpy(opts, &default_apply_opts, sizeof(git_stash_apply_options));
 	}
 
-	if ((opts->checkout_options.checkout_strategy & (GIT_CHECKOUT_SAFE | GIT_CHECKOUT_FORCE)) == 0)
-		opts->checkout_options.checkout_strategy = GIT_CHECKOUT_SAFE;
-
 	if (!opts->checkout_options.our_label)
 		opts->checkout_options.our_label = "Updated upstream";
 
