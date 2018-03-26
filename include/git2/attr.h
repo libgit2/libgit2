@@ -196,7 +196,7 @@ GIT_EXTERN(int) git_attr_get_many(
  * @see git_attr_foreach.
  *
  * @param name The attribute name.
- * @param value The attribute value. May be NULL is the attribute is explicitly
+ * @param value The attribute value. May be NULL if the attribute is explicitly
  *              set to UNSPECIFIED using the '!' sign.
  * @param payload A user-specified pointer.
  * @return 0 to continue looping, non-zero to stop. This value will be returned
