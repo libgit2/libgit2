@@ -21,9 +21,7 @@ int main(int argc, char *argv[])
 	cl_sandbox_set_search_path_defaults();
 
 	/* Run the test suite */
-	res = clar_test_run();
-
-	clar_test_shutdown();
+	res = clar_test(argc, argv);
 
 	cl_global_trace_disable();
 	git_libgit2_shutdown();
