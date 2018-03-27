@@ -83,7 +83,7 @@ static int print_paths(ls_options *opts, git_index *index)
 {
 	size_t i;
 	const git_index_entry *entry;
-	
+
 	/* if there are not files explicitly listed by the user print all entries in the index */
 	if (opts->file_count == 0) {
 		size_t entry_count = git_index_entrycount(index);
@@ -99,14 +99,13 @@ static int print_paths(ls_options *opts, git_index *index)
 	for (i = 0; i < opts->file_count; ++i) {
 		const char *path = opts->files[i];
 
-		entry = git_index_get_bypath(index, path, GIT_INDEX_STAGE_NORMAL);
-		if (!entry && opts->error_unmatch) {
+		if ((entry = git_index_get_bypath(index, path, GIT_INDEX_STAGE_NORMAL)) != NULL) {
+			printf("%s\n", path);
+		} else if (opts->error_unmatch) {
 			fprintf(stderr, "error: pathspec '%s' did not match any file(s) known to git.\n", path);
 			fprintf(stderr, "Did you forget to 'git add'?\n");
 			return -1;
 		}
-
-		printf("%s\n", path);
 	}
 
 	return 0;
