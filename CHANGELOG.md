@@ -9,6 +9,8 @@ v0.27 + 1
 
 ### Breaking API changes
 
+* The default checkout strategy changed from `DRY_RUN` to `SAFE` (#4531).
+
 v0.27
 ---------
 

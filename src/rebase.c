@@ -275,9 +275,6 @@ static int rebase_alloc(git_rebase **out, const git_rebase_options *rebase_opts)
 		GITERR_CHECK_ALLOC(rebase->options.rewrite_notes_ref);
 	}
 
-	if ((rebase->options.checkout_options.checkout_strategy & (GIT_CHECKOUT_SAFE | GIT_CHECKOUT_FORCE)) == 0)
-		rebase->options.checkout_options.checkout_strategy = GIT_CHECKOUT_SAFE;
-
 	*out = rebase;
 
 	return 0;

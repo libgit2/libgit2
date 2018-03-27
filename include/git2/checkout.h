@@ -251,7 +251,7 @@ typedef void (*git_checkout_perfdata_cb)(
 typedef struct git_checkout_options {
 	unsigned int version;
 
-	unsigned int checkout_strategy; /**< default will be a dry run */
+	unsigned int checkout_strategy; /**< default will be a safe checkout */
 
 	int disable_filters;    /**< don't apply filters like CRLF conversion */
 	unsigned int dir_mode;  /**< default is 0755 */
@@ -295,7 +295,7 @@ typedef struct git_checkout_options {
 } git_checkout_options;
 
 #define GIT_CHECKOUT_OPTIONS_VERSION 1
-#define GIT_CHECKOUT_OPTIONS_INIT {GIT_CHECKOUT_OPTIONS_VERSION}
+#define GIT_CHECKOUT_OPTIONS_INIT {GIT_CHECKOUT_OPTIONS_VERSION, GIT_CHECKOUT_SAFE}
 
 /**
 * Initializes a `git_checkout_options` with default values. Equivalent to
