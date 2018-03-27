@@ -490,7 +490,7 @@ static int _git_ssh_session_create(
 	}
 
 	do {
-		rc = libssh2_session_startup(s, socket->s);
+		rc = libssh2_session_handshake(s, socket->s);
 	} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
 
 	if (rc != LIBSSH2_ERROR_NONE) {
