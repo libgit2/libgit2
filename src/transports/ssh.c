@@ -212,6 +212,7 @@ static void ssh_stream_free(git_smart_subtransport_stream *stream)
 	}
 
 	if (s->session) {
+		libssh2_session_disconnect(s->session, "closing transport");
 		libssh2_session_free(s->session);
 		s->session = NULL;
 	}
