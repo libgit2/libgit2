@@ -163,10 +163,12 @@ static int is_path_occupied(bool *occupied, git_repository *repo, const char *pa
 	if ((error = git_repository_index__weakptr(&index, repo)) < 0)
 		goto out;
 
-	if ((error = git_index_find(NULL, index, path)) == 0) {
-		giterr_set(GITERR_SUBMODULE,
-			"File '%s' already exists in the index", path);
-		*occupied = true;
+	if ((error = git_index_find(NULL, index, path)) != GIT_ENOTFOUND) {
+		if (!error) {
+			giterr_set(GITERR_SUBMODULE,
+				"File '%s' already exists in the index", path);
+			*occupied = true;
+		}
 		goto out;
 	}
 
@@ -176,14 +178,15 @@ static int is_path_occupied(bool *occupied, git_repository *repo, const char *pa
 	if ((error = git_path_to_dir(&dir)) < 0)
 		goto out;
 
-	if ((error = git_index_find_prefix(NULL, index, dir.ptr)) < 0 && error != GIT_ENOTFOUND)
-    goto out;
-
-	if (!error) {
-		giterr_set(GITERR_SUBMODULE,
-			"Directory '%s' already exists in the index", path);
-		*occupied = true;
+	if ((error = git_index_find_prefix(NULL, index, dir.ptr)) != GIT_ENOTFOUND) {
+		if (!error) {
+			giterr_set(GITERR_SUBMODULE,
+				"Directory '%s' already exists in the index", path);
+			*occupied = true;
+		}
+		goto out;
 	}
+
 	error = 0;
 
 out:

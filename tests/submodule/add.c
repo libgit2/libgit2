@@ -156,7 +156,7 @@ void test_submodule_add__path_exists_in_index(void)
 
 	cl_git_pass(git_buf_joinpath(&filename, "subdirectory", "test.txt"));
 
-	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_repository_index__weakptr(&index, g_repo));
 
 	test_add_entry(index, valid_blob_id, filename.ptr, GIT_FILEMODE_BLOB);
 
@@ -174,7 +174,7 @@ void test_submodule_add__file_exists_in_index(void)
 
 	g_repo = cl_git_sandbox_init("testrepo");
 
-	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_repository_index__weakptr(&index, g_repo));
 
 	test_add_entry(index, valid_blob_id, "subdirectory", GIT_FILEMODE_BLOB);
 
