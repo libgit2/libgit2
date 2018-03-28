@@ -57,3 +57,42 @@ leaks:trusty_debug:
     - script/cileaks.sh
   dependencies:
     - build:trusty_debug
+
+
+build:trusty_clang_release:
+  image: libgit2/ci:ubuntu-14.04
+  stage: build
+  variables:
+    OPTIONS: ${RELEASE_OPTIONS}
+  script:
+    - script/cibuild.sh
+  artifacts:
+    untracked: true
+
+test:trusty_clang_release:
+  image: libgit2/ci:ubuntu-14.04
+  stage: test
+  script:
+    - script/citest.sh
+  dependencies:
+    - build:trusty_release
+
+
+build:trusty_clang_debug:
+  image: libgit2/ci:ubuntu-14.04
+  stage: build
+  variables:
+    OPTIONS: ${DEBUG_OPTIONS}
+    CC: clang
+  script:
+    - script/cibuild.sh
+  artifacts:
+    untracked: true
+
+test:trusty_clang_debug:
+  image: libgit2/ci:ubuntu-14.04
+  stage: test
+  script:
+    - script/citest.sh
+  dependencies:
+    - build:trusty_clang_debug
