@@ -1,0 +1,59 @@
+variables:
+  RELEASE_OPTIONS: -DTHREADSAFE=ON -DENABLE_TRACE=ON -DCMAKE_BUILD_TYPE=Release -DENABLE_WERROR=ON -DCMAKE_INSTALL_PREFIX=../install
+  DEBUG_OPTIONS: -DTHREADSAFE=OFF -DBUILD_EXAMPLES=ON -DENABLE_WERROR=ON -DCMAKE_INSTALL_PREFIX=../install
+
+stages:
+  - build
+  - test
+  - leaks
+
+build:trusty_release:
+  image: libgit2/ci:ubuntu-14.04
+  stage: build
+  variables:
+    OPTIONS: ${RELEASE_OPTIONS}
+  script:
+    - script/cibuild.sh
+  artifacts:
+    untracked: true
+
+test:trusty_release:
+  image: libgit2/ci:ubuntu-14.04
+  stage: test
+  script:
+    - script/citest.sh
+  dependencies:
+    - build:trusty_release
+
+leaks:trusty_release:
+  image: libgit2/ci:ubuntu-14.04
+  stage: leaks
+  script:
+    - script/cileaks.sh
+  dependencies:
+    - build:trusty_release
+
+
+build:trusty_debug:
+  image: libgit2/ci:ubuntu-14.04
+  stage: build
+  variables:
+    OPTIONS: ${DEBUG_OPTIONS}
+  script:
+    - script/cibuild.sh
+
+test:trusty_debug:
+  image: libgit2/ci:ubuntu-14.04
+  stage: test
+  script:
+    - script/citest.sh
+  dependencies:
+    - build:trusty_debug
+
+leaks:trusty_debug:
+  image: libgit2/ci:ubuntu-14.04
+  stage: leaks
+  script:
+    - script/cileaks.sh
+  dependencies:
+    - build:trusty_debug
