@@ -21,6 +21,18 @@ struct git_mailmap {
 	git_vector entries;
 };
 
+static void mailmap_entry_free(git_mailmap_entry *entry)
+{
+	if (!entry)
+		return;
+
+	git__free(entry->real_name);
+	git__free(entry->real_email);
+	git__free(entry->replace_name);
+	git__free(entry->replace_email);
+	git__free(entry);
+}
+
 /* Check if we're at the end of line, w/ comments */
 static bool is_eol(git_parse_ctx *ctx)
 {
@@ -43,7 +55,8 @@ static int advance_until(
 	return 0;
 }
 
-/* Parse a single entry from a mailmap file.
+/*
+ * Parse a single entry from a mailmap file.
  *
  * The output git_bufs will be non-owning, and should be copied before being
  * persisted.
@@ -61,16 +74,21 @@ static int parse_mailmap_entry(
 	git_buf_clear(replace_name);
 	git_buf_clear(replace_email);
 
-	/* Parse the real name */
 	git_parse_advance_ws(ctx);
+	if (is_eol(ctx))
+		return -1; /* blank line */
+
+	/* Parse the real name */
 	if (advance_until(&start, &len, ctx, '<') < 0)
 		return -1;
 
 	git_buf_attach_notowned(real_name, start, len);
 	git_buf_rtrim(real_name);
 
-	/* If this is the last email in the line, this is the email to replace,
-	 * otherwise, it's the real email. */
+	/*
+	 * If this is the last email in the line, this is the email to replace,
+	 * otherwise, it's the real email.
+	 */
 	if (advance_until(&start, &len, ctx, '>') < 0)
 		return -1;
 
@@ -131,38 +149,27 @@ int git_mailmap_from_buffer(git_mailmap **out, git_buf *buf)
 		if (error < 0) {
 			error = 0; /* Skip lines which don't contain a valid entry */
 			git_parse_advance_line(&ctx);
-			continue;
+			continue; /* TODO: warn */
 		}
 
-		GITERR_CHECK_ALLOC_ADD5(
-			&entry_size, sizeof(git_mailmap_entry) + 4 /* 4x'\0' */,
-			real_name.size, real_email.size,
-			replace_name.size, replace_email.size);
-		entry = git__calloc(1, entry_size);
+		entry = git__calloc(1, sizeof(git_mailmap_entry));
 		GITERR_CHECK_ALLOC(entry);
-
 		entry->version = GIT_MAILMAP_ENTRY_VERSION;
 
-		/* Copy strings into the buffer following entry */
-		entry_data = (char *)(entry + 1);
 		if (real_name.size > 0) {
-			memcpy(entry_data, real_name.ptr, real_name.size);
-			entry->real_name = entry_data;
-			entry_data += real_name.size + 1; /* advance past null from calloc */
+			entry->real_name = git__substrdup(real_name.ptr, real_name.size);
+			GITERR_CHECK_ALLOC(entry->real_name);
 		}
 		if (real_email.size > 0) {
-			memcpy(entry_data, real_email.ptr, real_email.size);
-			entry->real_email = entry_data;
-			entry_data += real_email.size + 1;
+			entry->real_email = git__substrdup(real_email.ptr, real_email.size);
+			GITERR_CHECK_ALLOC(entry->real_email);
 		}
 		if (replace_name.size > 0) {
-			memcpy(entry_data, replace_name.ptr, replace_name.size);
-			entry->replace_name = entry_data;
-			entry_data += replace_name.size + 1;
+			entry->replace_name = git__substrdup(replace_name.ptr, replace_name.size);
+			GITERR_CHECK_ALLOC(entry->replace_name);
 		}
-		/* replace_email is always non-null */
-		memcpy(entry_data, replace_email.ptr, replace_email.size);
-		entry->replace_email = entry_data;
+		entry->replace_email = git__substrdup(replace_email.ptr, replace_email.size);
+		GITERR_CHECK_ALLOC(entry->replace_email);
 
 		error = git_vector_insert(&mm->entries, entry);
 		if (error < 0)
@@ -175,7 +182,7 @@ int git_mailmap_from_buffer(git_mailmap **out, git_buf *buf)
 	mm = NULL;
 
 cleanup:
-	git__free(entry);
+	mailmap_entry_free(entry);
 	git_mailmap_free(mm);
 
 	/* We never allocate data in these buffers, but better safe than sorry */
@@ -191,11 +198,15 @@ void git_mailmap_free(git_mailmap *mailmap)
 	if (!mailmap)
 		return;
 
-	git_vector_free_deep(&mailmap->entries);
+	git_vector_foreach(&mailmap->entries, i, entry) {
+		mailmap_entry_free(entry);
+	}
+	git_vector_free(&mailmap->entries);
+
 	git__free(mailmap);
 }
 
-void git_mailmap_resolve(
+int git_mailmap_resolve(
 	const char **name_out, const char **email_out,
 	const git_mailmap *mailmap,
 	const char *name, const char *email)
@@ -207,7 +218,7 @@ void git_mailmap_resolve(
 	*email_out = email;
 
 	if (!mailmap)
-		return;
+		return 0;
 
 	entry = git_mailmap_entry_lookup(mailmap, name, email);
 	if (entry) {
@@ -216,6 +227,7 @@ void git_mailmap_resolve(
 		if (entry->real_email)
 			*email_out = entry->real_email;
 	}
+	return 0;
 }
 
 const git_mailmap_entry *git_mailmap_entry_lookup(
@@ -229,10 +241,12 @@ const git_mailmap_entry *git_mailmap_entry_lookup(
 		return NULL;
 
 	git_vector_foreach(&mailmap->entries, i, entry) {
-		if (!git__strcmp(email, entry->replace_email) &&
-		    (!entry->replace_name || !git__strcmp(name, entry->replace_name))) {
-			return entry;
-		}
+		if (git__strcmp(email, entry->replace_email))
+			continue;
+		if (entry->replace_name && git__strcmp(name, entry->replace_name))
+			continue;
+
+		return entry;
 	}
 
 	return NULL;

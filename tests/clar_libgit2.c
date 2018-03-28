@@ -171,8 +171,7 @@ static git_repository *_cl_repo = NULL;
 
 git_repository *cl_git_sandbox_init(const char *sandbox)
 {
-	/* Get the name of the sandbox folder which will be created
-	 */
+	/* Get the name of the sandbox folder which will be created */
 	const char *basename = cl_fixture_basename(sandbox);
 
 	/* Copy the whole sandbox folder from our fixtures to our test sandbox

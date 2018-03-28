@@ -85,8 +85,9 @@ GIT_EXTERN(void) git_mailmap_free(git_mailmap *mailmap);
  * @param mailmap the mailmap to perform the lookup in. (may be NULL)
  * @param name the name to resolve.
  * @param email the email to resolve.
+ * @return 0 on success, otherwise an error code.
  */
-GIT_EXTERN(void) git_mailmap_resolve(
+GIT_EXTERN(int) git_mailmap_resolve(
 	const char **name_out, const char **email_out,
 	const git_mailmap *mailmap, const char *name, const char *email);
 

@@ -44,12 +44,9 @@ static void check_mailmap_resolve(
 
 	/* Check that the resolver behaves correctly */
 	for (idx = 0; idx < resolved_size; ++idx) {
-		git_mailmap_resolve(
-			&resolved_name,
-			&resolved_email,
-			mailmap,
-			resolved[idx].replace_name,
-			resolved[idx].replace_email);
+		cl_git_pass(git_mailmap_resolve(
+			&resolved_name, &resolved_email, mailmap,
+			resolved[idx].replace_name, resolved[idx].replace_email));
 		cl_assert_equal_s(resolved_name, resolved[idx].real_name);
 		cl_assert_equal_s(resolved_email, resolved[idx].real_email);
 	}
@@ -60,6 +57,27 @@ void test_mailmap_parsing__string(void)
 	git_buf buf = GIT_BUF_INIT;
 	git_buf_attach_notowned(&buf, string_mailmap, strlen(string_mailmap));
 	cl_git_pass(git_mailmap_from_buffer(&g_mailmap, &buf));
+
+	/* We should have parsed all of the entries */
+	check_mailmap_entries(g_mailmap, entries, ARRAY_SIZE(entries));
+
+	/* Check that resolving the entries works */
+	check_mailmap_resolve(g_mailmap, resolved, ARRAY_SIZE(resolved));
+	check_mailmap_resolve(
+		g_mailmap, resolved_untracked, ARRAY_SIZE(resolved_untracked));
+}
+
+void test_mailmap_parsing__windows_string(void)
+{
+	git_buf unixbuf = GIT_BUF_INIT;
+	git_buf winbuf = GIT_BUF_INIT;
+
+	/* Parse with windows-style line endings */
+	git_buf_attach_notowned(&unixbuf, string_mailmap, strlen(string_mailmap));
+	git_buf_text_lf_to_crlf(&winbuf, &unixbuf);
+
+	cl_git_pass(git_mailmap_from_buffer(&g_mailmap, &winbuf));
+	git_buf_free(winbuf);
 
 	/* We should have parsed all of the entries */
 	check_mailmap_entries(g_mailmap, entries, ARRAY_SIZE(entries));

@@ -111,11 +111,14 @@ int git_signature_with_mailmap(
 	git_signature *signature = NULL;
 	const char *name = NULL;
 	const char *email = NULL;
+	int error;
 
 	if (source == NULL)
 		return 0;
 
-	git_mailmap_resolve(&name, &email, mailmap, source->name, source->email);
+	error = git_mailmap_resolve(&name, &email, mailmap, source->name, source->email);
+	if (error < 0)
+		return error;
 
 	signature = git__calloc(1, sizeof(git_signature));
 	GITERR_CHECK_ALLOC(signature);
