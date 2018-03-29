@@ -21,10 +21,99 @@
 # include "streams/curl.h"
 #endif
 
+#include <mbedtls/config.h>
 #include <mbedtls/ssl.h>
-#include <mbedtls/x509.h>
-#include <mbedtls/x509_crt.h>
-#include <mbedtls/error.h>
+#include <mbedtls/entropy.h>
+#include <mbedtls/ctr_drbg.h>
+
+#define CRT_LOC "/etc/ssl/certs"
+
+mbedtls_ssl_config *git__ssl_conf;
+mbedtls_entropy_context *mbedtls_entropy;
+
+/**
+ * This function aims to clean-up the SSL context which
+ * we allocated.
+ */
+static void shutdown_ssl(void)
+{
+	if (git__ssl_conf) {
+		mbedtls_x509_crt_free(git__ssl_conf->ca_chain);
+		git__free(git__ssl_conf->ca_chain);
+		mbedtls_ctr_drbg_free(git__ssl_conf->p_rng);
+		git__free(git__ssl_conf->p_rng);
+		mbedtls_ssl_config_free(git__ssl_conf);
+		git__free(git__ssl_conf);
+		git__ssl_conf = NULL;
+	}
+	if (mbedtls_entropy) {
+		mbedtls_entropy_free(mbedtls_entropy);
+		git__free(mbedtls_entropy);
+		mbedtls_entropy = NULL;
+	}
+}
+
+int git_mbedtls_stream_global_init(void)
+{
+	int ret;
+	mbedtls_ctr_drbg_context *ctr_drbg = NULL;
+	mbedtls_x509_crt *cacert = NULL;
+
+	git__ssl_conf = git__malloc(sizeof(mbedtls_ssl_config));
+	mbedtls_ssl_config_init(git__ssl_conf);
+	if (mbedtls_ssl_config_defaults(git__ssl_conf,
+		                            MBEDTLS_SSL_IS_CLIENT,
+		                            MBEDTLS_SSL_TRANSPORT_STREAM,
+		                            MBEDTLS_SSL_PRESET_DEFAULT) != 0) {
+		giterr_set(GITERR_SSL, "failed to initialize mbedTLS");
+		goto cleanup;
+	}
+
+	/* configure TLSv1 */
+	mbedtls_ssl_conf_min_version(git__ssl_conf, MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_0);
+	mbedtls_ssl_conf_authmode(git__ssl_conf, MBEDTLS_SSL_VERIFY_REQUIRED);
+
+	/* Seeding the random number generator */
+	mbedtls_entropy = git__malloc(sizeof(mbedtls_entropy_context));
+	mbedtls_entropy_init(mbedtls_entropy);
+
+	ctr_drbg = git__malloc(sizeof(mbedtls_ctr_drbg_context));
+	mbedtls_ctr_drbg_init(ctr_drbg);
+	if (mbedtls_ctr_drbg_seed(ctr_drbg,
+		                      mbedtls_entropy_func,
+		                      mbedtls_entropy, NULL, 0) != 0) {
+		giterr_set(GITERR_SSL, "failed to initialize mbedTLS entropy pool");
+		goto cleanup;
+	}
+
+	mbedtls_ssl_conf_rng(git__ssl_conf, mbedtls_ctr_drbg_random, ctr_drbg);
+
+	// set root certificates
+	cacert = git__malloc(sizeof(mbedtls_x509_crt));
+	mbedtls_x509_crt_init(cacert);
+	ret = mbedtls_x509_crt_parse_path(cacert, CRT_LOC);
+	if (ret) {
+		giterr_set(GITERR_SSL, "failed to load CA certificates: %d", ret);
+		goto cleanup;
+	}
+
+	mbedtls_ssl_conf_ca_chain(git__ssl_conf, cacert, NULL);
+
+	git__on_shutdown(shutdown_ssl);
+
+	return 0;
+
+cleanup:
+	mbedtls_x509_crt_free(cacert);
+	git__free(cacert);
+	mbedtls_ctr_drbg_free(ctr_drbg);
+	git__free(ctr_drbg);
+	mbedtls_ssl_config_free(git__ssl_conf);
+	git__free(git__ssl_conf);
+	git__ssl_conf = NULL;
+
+	return -1;
+}
 
 mbedtls_ssl_config *git__ssl_conf;
 
@@ -345,6 +434,11 @@ int git_mbedtls__set_cert_location(const char *file, const char *path)
 #else
 
 #include "stream.h"
+
+int git_mbedtls_stream_global_init(void)
+{
+	return 0;
+}
 
 int git_mbedtls_stream_new(git_stream **out, const char *host, const char *port)
 {
