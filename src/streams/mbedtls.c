@@ -16,6 +16,7 @@
 #include "streams/socket.h"
 #include "netops.h"
 #include "git2/transport.h"
+#include "util.h"
 
 #ifdef GIT_CURL
 # include "streams/curl.h"
@@ -30,6 +31,9 @@
 
 mbedtls_ssl_config *git__ssl_conf;
 mbedtls_entropy_context *mbedtls_entropy;
+
+#define GIT_SSL_DEFAULT_CIPHERS "TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256:TLS-ECDHE-RSA-WITH-AES-128-GCM-SHA256:TLS-ECDHE-ECDSA-WITH-AES-256-GCM-SHA384:TLS-ECDHE-RSA-WITH-AES-256-GCM-SHA384:TLS-DHE-RSA-WITH-AES-128-GCM-SHA256:TLS-DHE-DSS-WITH-AES-128-GCM-SHA256:TLS-DHE-RSA-WITH-AES-256-GCM-SHA384:TLS-DHE-DSS-WITH-AES-256-GCM-SHA384:TLS-ECDHE-ECDSA-WITH-AES-128-CBC-SHA256:TLS-ECDHE-RSA-WITH-AES-128-CBC-SHA256:TLS-ECDHE-ECDSA-WITH-AES-128-CBC-SHA:TLS-ECDHE-RSA-WITH-AES-128-CBC-SHA:TLS-ECDHE-ECDSA-WITH-AES-256-CBC-SHA384:TLS-ECDHE-RSA-WITH-AES-256-CBC-SHA384:TLS-ECDHE-ECDSA-WITH-AES-256-CBC-SHA:TLS-ECDHE-RSA-WITH-AES-256-CBC-SHA:TLS-DHE-RSA-WITH-AES-128-CBC-SHA256:TLS-DHE-RSA-WITH-AES-256-CBC-SHA256:TLS-DHE-RSA-WITH-AES-128-CBC-SHA:TLS-DHE-RSA-WITH-AES-256-CBC-SHA:TLS-DHE-DSS-WITH-AES-128-CBC-SHA256:TLS-DHE-DSS-WITH-AES-256-CBC-SHA256:TLS-DHE-DSS-WITH-AES-128-CBC-SHA:TLS-DHE-DSS-WITH-AES-256-CBC-SHA:TLS-RSA-WITH-AES-128-GCM-SHA256:TLS-RSA-WITH-AES-256-GCM-SHA384:TLS-RSA-WITH-AES-128-CBC-SHA256:TLS-RSA-WITH-AES-256-CBC-SHA256:TLS-RSA-WITH-AES-128-CBC-SHA:TLS-RSA-WITH-AES-256-CBC-SHA"
+#define GIT_SSL_DEFAULT_CIPHERS_COUNT 30
 
 /**
  * This function aims to clean-up the SSL context which
@@ -57,6 +61,13 @@ int git_mbedtls_stream_global_init(void)
 {
 	int ret;
 	mbedtls_ctr_drbg_context *ctr_drbg = NULL;
+
+	int *ciphers_list = NULL;
+	int ciphers_known = 0;
+	char *cipher_name = NULL;
+	char *cipher_string = NULL;
+	char *cipher_string_tmp = NULL;
+
 	mbedtls_x509_crt *cacert = NULL;
 
 	git__ssl_conf = git__malloc(sizeof(mbedtls_ssl_config));
@@ -72,6 +83,24 @@ int git_mbedtls_stream_global_init(void)
 	/* configure TLSv1 */
 	mbedtls_ssl_conf_min_version(git__ssl_conf, MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_0);
 	mbedtls_ssl_conf_authmode(git__ssl_conf, MBEDTLS_SSL_VERIFY_REQUIRED);
+
+	/* set the list of allowed ciphersuites */
+	ciphers_list = calloc(GIT_SSL_DEFAULT_CIPHERS_COUNT, sizeof(int));
+	ciphers_known = 0;
+	cipher_string = cipher_string_tmp = git__strdup(GIT_SSL_DEFAULT_CIPHERS);
+	while ((cipher_name = git__strtok(&cipher_string_tmp, ":")) != NULL) {
+		int cipherid = mbedtls_ssl_get_ciphersuite_id(cipher_name);
+		if (cipherid == 0) continue;
+
+		ciphers_list[ciphers_known++] = cipherid;
+	}
+	git__free(cipher_string);
+
+	if (!ciphers_known) {
+		giterr_set(GITERR_SSL, "no cipher could be enabled");
+		goto cleanup;
+	}
+	mbedtls_ssl_conf_ciphersuites(git__ssl_conf, ciphers_list);
 
 	/* Seeding the random number generator */
 	mbedtls_entropy = git__malloc(sizeof(mbedtls_entropy_context));

@@ -210,7 +210,7 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	case GIT_OPT_SET_SSL_CIPHERS:
-#ifdef GIT_OPENSSL
+#if (GIT_OPENSSL || GIT_MBEDTLS)
 		{
 			git__free(git__ssl_ciphers);
 			git__ssl_ciphers = git__strdup(va_arg(ap, const char *));
