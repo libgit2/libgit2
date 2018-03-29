@@ -82,7 +82,11 @@ int git_mbedtls_stream_global_init(void)
 
 	/* configure TLSv1 */
 	mbedtls_ssl_conf_min_version(git__ssl_conf, MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_0);
-	mbedtls_ssl_conf_authmode(git__ssl_conf, MBEDTLS_SSL_VERIFY_REQUIRED);
+
+	/* verify_server_cert is responsible for making the check.
+	 * OPTIONAL because REQUIRED drops the certificate as soon as the check
+	 * is made, so we can never see the certificate and override it. */
+	mbedtls_ssl_conf_authmode(git__ssl_conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
 
 	/* set the list of allowed ciphersuites */
 	ciphers_list = calloc(GIT_SSL_DEFAULT_CIPHERS_COUNT, sizeof(int));
