@@ -48,7 +48,7 @@ OPTION( PROFILE				"Generate profiling information"		OFF )
 OPTION( ENABLE_TRACE		"Enables tracing support"				OFF )
 OPTION( LIBGIT2_FILENAME	"Name of the produced binary"			OFF )
 
-SET(SHA1_BACKEND "CollisionDetection" CACHE STRING "Backend to use for SHA1. One of Generic, OpenSSL, Win32, CommonCrypto, CollisionDetection. ")
+SET(SHA1_BACKEND "CollisionDetection" CACHE STRING "Backend to use for SHA1. One of Generic, OpenSSL, Win32, CommonCrypto, mbedTLS, CollisionDetection. ")
 OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
 OPTION( USE_HTTPS			"Enable HTTPS support. Can be set to a specific backend"	ON )
 OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"   OFF )
