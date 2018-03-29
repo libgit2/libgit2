@@ -193,6 +193,43 @@ IF (USE_HTTPS)
 			MESSAGE(FATAL_ERROR "Asked for mbedTLS backend, but it wasn't found")
 		ENDIF()
 
+		IF(NOT CERT_LOCATION)
+			MESSAGE("Auto-detecting default certificates location")
+			IF(CMAKE_SYSTEM_NAME MATCHES Darwin)
+				# Check for an Homebrew installation
+				SET(OPENSSL_CMD "/usr/local/opt/openssl/bin/openssl")
+			ELSE()
+				SET(OPENSSL_CMD "openssl")
+			ENDIF()
+			EXECUTE_PROCESS(COMMAND ${OPENSSL_CMD} version -d OUTPUT_VARIABLE OPENSSL_DIR OUTPUT_STRIP_TRAILING_WHITESPACE)
+			IF(OPENSSL_DIR)
+				STRING(REGEX REPLACE "^OPENSSLDIR: \"(.*)\"$" "\\1/" OPENSSL_DIR ${OPENSSL_DIR})
+
+				SET(OPENSSL_CA_LOCATIONS
+					"ca-bundle.pem"             # OpenSUSE Leap 42.1
+					"cert.pem"                  # Ubuntu 14.04, FreeBSD
+					"certs/ca-certificates.crt" # Ubuntu 16.04
+					"certs/ca.pem"              # Debian 7
+				)
+				FOREACH(SUFFIX IN LISTS OPENSSL_CA_LOCATIONS)
+					SET(LOC "${OPENSSL_DIR}${SUFFIX}")
+					IF(NOT CERT_LOCATION AND EXISTS "${OPENSSL_DIR}${SUFFIX}")
+						SET(CERT_LOCATION ${LOC})
+					ENDIF()
+				ENDFOREACH()
+			ELSE()
+				MESSAGE("Unable to find OpenSSL executable. Please provide default certificate location via CERT_LOCATION")
+			ENDIF()
+		ENDIF()
+
+		IF(CERT_LOCATION)
+			IF(NOT EXISTS ${CERT_LOCATION})
+				MESSAGE(FATAL_ERROR "Cannot use CERT_LOCATION=${CERT_LOCATION} as it doesn't exist")
+			ENDIF()
+			ADD_FEATURE_INFO(CERT_LOCATION ON "using certificates from ${CERT_LOCATION}")
+			ADD_DEFINITIONS(-DGIT_DEFAULT_CERT_LOCATION="${CERT_LOCATION}")
+		ENDIF()
+
 		SET(GIT_MBEDTLS 1)
 		LIST(APPEND LIBGIT2_INCLUDES ${MBEDTLS_INCLUDE_DIR})
 		LIST(APPEND LIBGIT2_LIBS ${MBEDTLS_LIBRARIES})
