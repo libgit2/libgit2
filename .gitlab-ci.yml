@@ -41,6 +41,8 @@ build:trusty_debug:
     OPTIONS: ${DEBUG_OPTIONS}
   script:
     - script/cibuild.sh
+  artifacts:
+    untracked: true
 
 test:trusty_debug:
   image: libgit2/ci:ubuntu-14.04
