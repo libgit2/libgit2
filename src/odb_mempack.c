@@ -157,6 +157,7 @@ static void impl__free(git_odb_backend *_backend)
 {
 	struct memory_packer_db *db = (struct memory_packer_db *)_backend;
 
+	git_mempack_reset(_backend);
 	git_oidmap_free(db->objects);
 	git__free(db);
 }
