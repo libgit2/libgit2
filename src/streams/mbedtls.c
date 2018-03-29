@@ -345,16 +345,20 @@ static int mbedtls_set_proxy(git_stream *stream, const git_proxy_options *proxy_
 
 ssize_t mbedtls_stream_write(git_stream *stream, const char *data, size_t len, int flags)
 {
+	size_t read = 0;
 	mbedtls_stream *st = (mbedtls_stream *) stream;
-	int ret;
 
 	GIT_UNUSED(flags);
 
-	if ((ret = mbedtls_ssl_write(st->ssl, (const unsigned char *)data, len)) <= 0) {
-		return ssl_set_error(st->ssl, ret);
-	}
+	do {
+		int error = mbedtls_ssl_write(st->ssl, (const unsigned char *)data + read, len - read);
+		if (error <= 0) {
+			return ssl_set_error(st->ssl, error);
+		}
+		read += error;
+	} while (read < len);
 
-	return ret;
+	return read;
 }
 
 ssize_t mbedtls_stream_read(git_stream *stream, void *data, size_t len)
