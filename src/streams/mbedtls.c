@@ -80,29 +80,31 @@ static int ssl_teardown(mbedtls_ssl_context *ssl)
 	return ret;
 }
 
+static int check_host_name(const char *name, const char *host)
+{
+	if (!strcasecmp(name, host))
+		return 0;
+
+	if (gitno__match_host(name, host) < 0)
+		return -1;
+
+	return 0;
+}
+
 static int verify_server_cert(mbedtls_ssl_context *ssl, const char *host)
 {
 	const mbedtls_x509_crt *cert;
-	int flags;
-	struct in6_addr addr6;
-	struct in_addr addr4;
-	void *addr;
+	const mbedtls_x509_sequence *alts;
+	int ret, matched = -1;
+	size_t sn_size = 512;
+	char subject_name[sn_size], alt_name[sn_size];
 
-	if( ( flags = mbedtls_ssl_get_verify_result(ssl) ) != 0 )
-	{
+
+	if ((ret = mbedtls_ssl_get_verify_result(ssl)) != 0) {
 		char vrfy_buf[512];
-		mbedtls_x509_crt_verify_info( vrfy_buf, sizeof( vrfy_buf ), "  ! ", flags );
+		mbedtls_x509_crt_verify_info( vrfy_buf, sizeof( vrfy_buf ), "  ! ", ret );
 		giterr_set(GITERR_SSL, "The SSL certificate is invalid: %s", vrfy_buf);
 		return GIT_ECERTIFICATE;
-	}
-
-	/* Try to parse the host as an IP address to see if it is */
-	if (p_inet_pton(AF_INET, host, &addr4)) {
-		addr = &addr4;
-	} else {
-		if(p_inet_pton(AF_INET6, host, &addr6)) {
-			addr = &addr6;
-		}
 	}
 
 	cert = mbedtls_ssl_get_peer_cert(ssl);
@@ -112,14 +114,39 @@ static int verify_server_cert(mbedtls_ssl_context *ssl, const char *host)
 	}
 
 	/* Check the alternative names */
-	//TODO: cert->subject_alt_names
+	alts = &cert->subject_alt_names;
+	while (alts != NULL && matched != 1) {
+		// Buffer is too small
+		if( alts->buf.len >= sn_size )
+			goto on_error;
+
+		memcpy(alt_name, alts->buf.p, alts->buf.len);
+		alt_name[alts->buf.len] = '\0';
+
+		if (!memchr(alt_name, '\0', alts->buf.len)) {
+			if (check_host_name(alt_name, host) < 0)
+				matched = 0;
+			else
+				matched = 1;
+		}
+
+		alts = alts->next;
+	}
+	if (matched == 0)
+		goto cert_fail_name;
+
+	if (matched == 1)
+		return 0;
 
 	/* If no alternative names are available, check the common name */
-	/*TODO
-	mbedtls_x509_name peer_name = cert->subject;
-	if (peer_name == NULL)
+	ret = mbedtls_x509_dn_gets(subject_name, sn_size, &cert->subject);
+	if (ret == 0)
 		goto on_error;
-	*/
+	if (memchr(subject_name, '\0', ret))
+		goto cert_fail_name;
+
+	if (check_host_name(subject_name, host) < 0)
+		goto cert_fail_name;
 
 	return 0;
 
@@ -151,12 +178,9 @@ int mbedtls_connect(git_stream *stream)
 
 	st->connected = true;
 
-	mbedtls_ssl_set_bio(st->ssl, st->io, bio_write, bio_read, NULL);
-
-	/* specify the host in case SNI is needed */
-#ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
 	mbedtls_ssl_set_hostname(st->ssl, st->host);
-#endif
+
+	mbedtls_ssl_set_bio(st->ssl, st->io, bio_write, bio_read, NULL);
 
 	if ((ret = mbedtls_ssl_handshake(st->ssl)) != 0)
 		return ssl_set_error(st->ssl, ret);
