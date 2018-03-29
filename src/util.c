@@ -10,7 +10,12 @@
 #include "common.h"
 
 #ifdef GIT_WIN32
+# include "win32/utf-conv.h"
 # include "win32/w32_buffer.h"
+
+# ifdef HAVE_QSORT_S
+#  include <search.h>
+# endif
 #endif
 
 #ifdef _MSC_VER
