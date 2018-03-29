@@ -181,12 +181,12 @@ static int ssl_set_error(mbedtls_ssl_context *ssl, int error)
 		break;
 
 	case MBEDTLS_ERR_X509_CERT_VERIFY_FAILED:
-		giterr_set(GITERR_SSL, "SSL error: %x[%x] - %s", error, ssl->session_negotiate->verify_result, errbuf);
+		giterr_set(GITERR_SSL, "SSL error: %#04x [%x] - %s", error, ssl->session_negotiate->verify_result, errbuf);
 		ret = GIT_ECERTIFICATE;
 		break;
 
 	default:
-		giterr_set(GITERR_SSL, "SSL error: %x - %s", error, errbuf);
+		giterr_set(GITERR_SSL, "SSL error: %#04x - %s", error, errbuf);
 	}
 
 	return ret;
@@ -212,7 +212,7 @@ static int verify_server_cert(mbedtls_ssl_context *ssl)
 		char vrfy_buf[512];
 		int len = mbedtls_x509_crt_verify_info(vrfy_buf, sizeof(vrfy_buf), "", ret);
 		if (len >= 1) vrfy_buf[len - 1] = '\0'; /* Remove trailing \n */
-		giterr_set(GITERR_SSL, "the SSL certificate is invalid: %x - %s", ret, vrfy_buf);
+		giterr_set(GITERR_SSL, "the SSL certificate is invalid: %#04x - %s", ret, vrfy_buf);
 		return GIT_ECERTIFICATE;
 	}
 
@@ -410,7 +410,7 @@ int git_mbedtls__set_cert_location(const char *path, int is_dir)
 		mbedtls_x509_crt_free(cacert);
 		git__free(cacert);
 		mbedtls_strerror( ret, errbuf, 512 );
-		giterr_set(GITERR_SSL, "failed to load CA certificates : %s (%d)", errbuf, ret);
+		giterr_set(GITERR_SSL, "failed to load CA certificates: %#04x - %s", ret, errbuf);
 		return -1;
 	}
 
