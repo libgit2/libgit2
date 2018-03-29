@@ -202,82 +202,19 @@ static int ssl_teardown(mbedtls_ssl_context *ssl)
 	return ret;
 }
 
-static int check_host_name(const char *name, const char *host)
+static int verify_server_cert(mbedtls_ssl_context *ssl)
 {
-	if (!strcasecmp(name, host))
-		return 0;
-
-	if (gitno__match_host(name, host) < 0)
-		return -1;
-
-	return 0;
-}
-
-static int verify_server_cert(mbedtls_ssl_context *ssl, const char *host)
-{
-	const mbedtls_x509_crt *cert;
-	const mbedtls_x509_sequence *alts;
-	int ret, matched = -1;
-	size_t sn_size = 512;
-	char subject_name[sn_size], alt_name[sn_size];
-
+	int ret = -1;
 
 	if ((ret = mbedtls_ssl_get_verify_result(ssl)) != 0) {
 		char vrfy_buf[512];
-		mbedtls_x509_crt_verify_info( vrfy_buf, sizeof( vrfy_buf ), "  ! ", ret );
-		giterr_set(GITERR_SSL, "The SSL certificate is invalid: %s", vrfy_buf);
+		int len = mbedtls_x509_crt_verify_info(vrfy_buf, sizeof(vrfy_buf), "", ret);
+		if (len >= 1) vrfy_buf[len - 1] = '\0'; /* Remove trailing \n */
+		giterr_set(GITERR_SSL, "the SSL certificate is invalid: %x - %s", ret, vrfy_buf);
 		return GIT_ECERTIFICATE;
 	}
 
-	cert = mbedtls_ssl_get_peer_cert(ssl);
-	if (!cert) {
-		giterr_set(GITERR_SSL, "the server did not provide a certificate");
-		return -1;
-	}
-
-	/* Check the alternative names */
-	alts = &cert->subject_alt_names;
-	while (alts != NULL && matched != 1) {
-		// Buffer is too small
-		if( alts->buf.len >= sn_size )
-			goto on_error;
-
-		memcpy(alt_name, alts->buf.p, alts->buf.len);
-		alt_name[alts->buf.len] = '\0';
-
-		if (!memchr(alt_name, '\0', alts->buf.len)) {
-			if (check_host_name(alt_name, host) < 0)
-				matched = 0;
-			else
-				matched = 1;
-		}
-
-		alts = alts->next;
-	}
-	if (matched == 0)
-		goto cert_fail_name;
-
-	if (matched == 1)
-		return 0;
-
-	/* If no alternative names are available, check the common name */
-	ret = mbedtls_x509_dn_gets(subject_name, sn_size, &cert->subject);
-	if (ret == 0)
-		goto on_error;
-	if (memchr(subject_name, '\0', ret))
-		goto cert_fail_name;
-
-	if (check_host_name(subject_name, host) < 0)
-		goto cert_fail_name;
-
 	return 0;
-
-on_error:
-	return ssl_set_error(ssl, 0);
-
-cert_fail_name:
-	giterr_set(GITERR_SSL, "hostname does not match certificate");
-	return GIT_ECERTIFICATE;
 }
 
 typedef struct {
@@ -307,7 +244,7 @@ int mbedtls_connect(git_stream *stream)
 	if ((ret = mbedtls_ssl_handshake(st->ssl)) != 0)
 		return ssl_set_error(st->ssl, ret);
 
-	return verify_server_cert(st->ssl, st->host);
+	return verify_server_cert(st->ssl);
 }
 
 int mbedtls_certificate(git_cert **out, git_stream *stream)
