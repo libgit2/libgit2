@@ -7,6 +7,7 @@
 #include "repository.h"
 
 static git_repository *g_repo = NULL;
+static const char *valid_blob_id = "fa49b077972391ad58037050f2a75f74e3671e92";
 
 void test_submodule_add__cleanup(void)
 {
@@ -127,4 +128,58 @@ void test_submodule_add__url_relative_to_workdir(void)
 	git_submodule_free(sm);
 
 	assert_submodule_url("TestGitRepository", git_repository_workdir(g_repo));
+}
+
+static void test_add_entry(
+	git_index *index,
+	const char *idstr,
+	const char *path,
+	git_filemode_t mode)
+{
+	git_index_entry entry = {{0}};
+
+	cl_git_pass(git_oid_fromstr(&entry.id, idstr));
+
+	entry.path = path;
+	entry.mode = mode;
+
+	cl_git_pass(git_index_add(index, &entry));
+}
+
+void test_submodule_add__path_exists_in_index(void)
+{
+	git_index *index;
+	git_submodule *sm;
+	git_buf filename = GIT_BUF_INIT;
+
+	g_repo = cl_git_sandbox_init("testrepo");
+
+	cl_git_pass(git_buf_joinpath(&filename, "subdirectory", "test.txt"));
+
+	cl_git_pass(git_repository_index__weakptr(&index, g_repo));
+
+	test_add_entry(index, valid_blob_id, filename.ptr, GIT_FILEMODE_BLOB);
+
+	cl_git_fail_with(git_submodule_add_setup(&sm, g_repo, "./", "subdirectory", 1), GIT_EEXISTS);
+
+	git_submodule_free(sm);
+	git_buf_free(&filename);
+}
+
+void test_submodule_add__file_exists_in_index(void)
+{
+	git_index *index;
+	git_submodule *sm;
+	git_buf name = GIT_BUF_INIT;
+
+	g_repo = cl_git_sandbox_init("testrepo");
+
+	cl_git_pass(git_repository_index__weakptr(&index, g_repo));
+
+	test_add_entry(index, valid_blob_id, "subdirectory", GIT_FILEMODE_BLOB);
+
+	cl_git_fail_with(git_submodule_add_setup(&sm, g_repo, "./", "subdirectory", 1), GIT_EEXISTS);
+
+	git_submodule_free(sm);
+	git_buf_free(&name);
 }

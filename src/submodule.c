@@ -149,6 +149,51 @@ static int find_by_path(const git_config_entry *entry, void *payload)
 	return 0;
 }
 
+/*
+ * Checks to see if the submodule shares its name with a file or directory that
+ * already exists on the index. If so, the submodule cannot be added.
+ */
+static int is_path_occupied(bool *occupied, git_repository *repo, const char *path)
+{
+	int error = 0;
+	git_index *index;
+	git_buf dir = GIT_BUF_INIT;
+	*occupied = false;
+
+	if ((error = git_repository_index__weakptr(&index, repo)) < 0)
+		goto out;
+
+	if ((error = git_index_find(NULL, index, path)) != GIT_ENOTFOUND) {
+		if (!error) {
+			giterr_set(GITERR_SUBMODULE,
+				"File '%s' already exists in the index", path);
+			*occupied = true;
+		}
+		goto out;
+	}
+
+	if ((error = git_buf_sets(&dir, path)) < 0)
+		goto out;
+
+	if ((error = git_path_to_dir(&dir)) < 0)
+		goto out;
+
+	if ((error = git_index_find_prefix(NULL, index, dir.ptr)) != GIT_ENOTFOUND) {
+		if (!error) {
+			giterr_set(GITERR_SUBMODULE,
+				"Directory '%s' already exists in the index", path);
+			*occupied = true;
+		}
+		goto out;
+	}
+
+	error = 0;
+
+out:
+	git_buf_free(&dir);
+	return error;
+}
+
 /**
  * Release the name map returned by 'load_submodule_names'.
  */
@@ -664,6 +709,7 @@ int git_submodule_add_setup(
 	git_submodule *sm = NULL;
 	git_buf name = GIT_BUF_INIT, real_url = GIT_BUF_INIT;
 	git_repository *subrepo = NULL;
+	bool path_occupied;
 
 	assert(repo && url && path);
 
@@ -685,6 +731,14 @@ int git_submodule_add_setup(
 	if (git_path_root(path) >= 0) {
 		giterr_set(GITERR_SUBMODULE, "submodule path must be a relative path");
 		error = -1;
+		goto cleanup;
+	}
+
+	if ((error = is_path_occupied(&path_occupied, repo, path)) < 0)
+		goto cleanup;
+
+	if (path_occupied) {
+		error = GIT_EEXISTS;
 		goto cleanup;
 	}
 
