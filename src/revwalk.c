@@ -15,6 +15,8 @@
 #include "merge.h"
 #include "vector.h"
 
+static int get_revision(git_commit_list_node **out, git_revwalk *walk, git_commit_list **list);
+
 git_commit_list_node *git_revwalk__commit_lookup(
 	git_revwalk *walk, const git_oid *oid)
 {
@@ -76,10 +78,12 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting,
 	if (commit->uninteresting)
 		return 0;
 
-	if (uninteresting)
+	if (uninteresting) {
+		walk->limited = 1;
 		walk->did_hide = 1;
-	else
+	} else {
 		walk->did_push = 1;
+	}
 
 	commit->uninteresting = uninteresting;
 	list = walk->user_input;
@@ -245,9 +249,10 @@ static int revwalk_next_timesort(git_commit_list_node **object_out, git_revwalk 
 
 static int revwalk_next_unsorted(git_commit_list_node **object_out, git_revwalk *walk)
 {
+	int error;
 	git_commit_list_node *next;
 
-	while ((next = git_commit_list_pop(&walk->iterator_rand)) != NULL) {
+	while (!(error = get_revision(&next, walk, &walk->iterator_rand))) {
 		/* Some commits might become uninteresting after being added to the list */
 		if (!next->uninteresting) {
 			*object_out = next;
@@ -255,15 +260,15 @@ static int revwalk_next_unsorted(git_commit_list_node **object_out, git_revwalk 
 		}
 	}
 
-	giterr_clear();
-	return GIT_ITEROVER;
+	return error;
 }
 
 static int revwalk_next_toposort(git_commit_list_node **object_out, git_revwalk *walk)
 {
+	int error;
 	git_commit_list_node *next;
 
-	while ((next = git_commit_list_pop(&walk->iterator_topo)) != NULL) {
+	while (!(error = get_revision(&next, walk, &walk->iterator_topo))) {
 		/* Some commits might become uninteresting after being added to the list */
 		if (!next->uninteresting) {
 			*object_out = next;
@@ -271,8 +276,7 @@ static int revwalk_next_toposort(git_commit_list_node **object_out, git_revwalk 
 		}
 	}
 
-	giterr_clear();
-	return GIT_ITEROVER;
+	return error;
 }
 
 static int revwalk_next_reverse(git_commit_list_node **object_out, git_revwalk *walk)
@@ -449,6 +453,45 @@ static int limit_list(git_commit_list **out, git_revwalk *walk, git_commit_list 
 	return 0;
 }
 
+static int get_one_revision(git_commit_list_node **out, git_revwalk *walk, git_commit_list **list)
+{
+	int error;
+	git_commit_list_node *commit;
+
+	while(true) {
+		commit = git_commit_list_pop(list);
+		if (!commit) {
+			giterr_clear();
+			return GIT_ITEROVER;
+		}
+
+		/*
+		 * If we did not run limit_list and we must add parents to the
+		 * list ourselves.
+		 */
+		if (!walk->limited) {
+			if ((error = add_parents_to_list(walk, commit, list)) < 0)
+				return error;
+		}
+
+		*out = commit;
+		return 0;
+	}
+}
+
+static int get_revision(git_commit_list_node **out, git_revwalk *walk, git_commit_list **list)
+{
+	int error;
+	git_commit_list_node *commit;
+
+	if ((error = get_one_revision(&commit, walk, list)) < 0)
+		return error;
+
+	/* Here is where we would handle boundary commits if we implement that */
+	*out = commit;
+	return 0;
+}
+
 static int sort_in_topological_order(git_commit_list **out, git_revwalk *walk, git_commit_list *list)
 {
 	git_commit_list *ll = NULL, *newlist, **pptr;
@@ -561,7 +604,7 @@ static int prepare_walk(git_revwalk *walk)
 		}
 	}
 
-	if ((error = limit_list(&commits, walk, commits)) < 0)
+	if (walk->limited && (error = limit_list(&commits, walk, commits)) < 0)
 		return error;
 
 	if (walk->sorting & GIT_SORT_TOPOLOGICAL) {
@@ -664,6 +707,9 @@ void git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode)
 		walk->get_next = &revwalk_next_unsorted;
 		walk->enqueue = &revwalk_enqueue_unsorted;
 	}
+
+	if (sort_mode != GIT_SORT_NONE)
+		walk->limited = 1;
 }
 
 void git_revwalk_simplify_first_parent(git_revwalk *walk)
@@ -719,6 +765,7 @@ void git_revwalk_reset(git_revwalk *walk)
 	git_commit_list_free(&walk->user_input);
 	walk->first_parent = 0;
 	walk->walking = 0;
+	walk->limited = 0;
 	walk->did_push = walk->did_hide = 0;
 }
 
@@ -740,6 +787,7 @@ int git_revwalk_add_hide_cb(
 
 	walk->hide_cb = hide_cb;
 	walk->hide_cb_payload = payload;
+	walk->limited = 1;
 
 	return 0;
 }
