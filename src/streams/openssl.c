@@ -38,15 +38,18 @@ SSL_CTX *git__ssl_ctx;
 
 #define GIT_SSL_DEFAULT_CIPHERS "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-DSS-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:DHE-DSS-AES128-SHA256:DHE-DSS-AES256-SHA256:DHE-DSS-AES128-SHA:DHE-DSS-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA"
 
+#if (defined(OPENSSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER < 0x10100000L) || \
+     (defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x20700000L)
+# define OPENSSL_LEGACY_API
+#endif
+
 /*
  * OpenSSL 1.1 made BIO opaque so we have to use functions to interact with it
  * which do not exist in previous versions. We define these inline functions so
  * we can program against the interface instead of littering the implementation
  * with ifdefs.
  */
-#if OPENSSL_VERSION_NUMBER < 0x10100000L || \
-     (defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x20700000L)
-
+#if defined(OPENSSL_LEGACY_API)
 static BIO_METHOD* BIO_meth_new(int type, const char *name)
 {
 	BIO_METHOD *meth = git__calloc(1, sizeof(BIO_METHOD));
@@ -134,10 +137,7 @@ static const unsigned char *ASN1_STRING_get0_data(const ASN1_STRING *x)
 	return ASN1_STRING_data((ASN1_STRING *)x);
 }
 
-#endif
-
-#if defined(GIT_THREADS) && OPENSSL_VERSION_NUMBER < 0x10100000L
-
+# if defined(GIT_THREADS)
 static git_mutex *openssl_locks;
 
 static void openssl_locking_function(
@@ -168,8 +168,8 @@ static void shutdown_ssl_locking(void)
 		git_mutex_free(&openssl_locks[i]);
 	git__free(openssl_locks);
 }
-
-#endif /* GIT_THREADS && OPENSSL_VERSION_NUMBER < 0x10100000L */
+# endif /* GIT_THREADS */
+#endif /* OPENSSL_LEGACY_API */
 
 static BIO_METHOD *git_stream_bio_method;
 static int init_bio_method(void);
@@ -202,8 +202,7 @@ int git_openssl_stream_global_init(void)
 	ssl_opts |= SSL_OP_NO_COMPRESSION;
 #endif
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L || \
-    (defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x20700000L)
+#if defined(OPENSSL_LEGACY_API)
 	SSL_load_error_strings();
 	OpenSSL_add_ssl_algorithms();
 #else
@@ -258,7 +257,7 @@ static void threadid_cb(CRYPTO_THREADID *threadid)
 
 int git_openssl_set_locking(void)
 {
-#if defined(GIT_THREADS) && OPENSSL_VERSION_NUMBER < 0x10100000L
+#if defined(GIT_THREADS) && defined(OPENSSL_LEGACY_API)
 	int num_locks, i;
 
 	CRYPTO_THREADID_set_callback(threadid_cb);
@@ -277,7 +276,7 @@ int git_openssl_set_locking(void)
 	CRYPTO_set_locking_callback(openssl_locking_function);
 	git__on_shutdown(shutdown_ssl_locking);
 	return 0;
-#elif OPENSSL_VERSION_NUMBER >= 0x10100000L
+#elif !defined(OPENSSL_LEGACY_API)
 	return 0;
 #else
 	giterr_set(GITERR_THREAD, "libgit2 was not built with threads");
