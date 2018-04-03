@@ -1327,37 +1327,50 @@ static int hash_header(git_hash_ctx *ctx, git_off_t size, git_otype type)
 }
 
 int git_odb_open_wstream(
-	git_odb_stream **stream, git_odb *db, git_off_t size, git_otype type)
+	git_odb_stream **stream_out, git_odb *db, git_off_t size, git_otype type)
 {
 	size_t i, writes = 0;
 	int error = GIT_ERROR;
 	git_hash_ctx *ctx = NULL;
+	git_odb_stream *stream = NULL;
 
-	assert(stream && db);
+	assert(stream_out && db);
 
 	for (i = 0; i < db->backends.length && error < 0; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
 		git_odb_backend *b = internal->backend;
 
-		/* we don't write in alternates! */
-		if (internal->is_alternate)
+		if (internal->is_alternate || b->writestream == NULL)
 			continue;
 
-		if (b->writestream != NULL) {
-			++writes;
-			error = b->writestream(stream, b, size, type);
-		} else if (b->write != NULL) {
-			++writes;
-			error = init_fake_wstream(stream, b, size, type);
-		}
+		++writes;
+		error = b->writestream(&stream, b, size, type);
+	}
+
+	/*
+	 * In case no backend supports write streams, try to open a fake wstream
+	 * based on the write function. Note this only enters the loop in case
+	 * `error == -1`. Otherwise, we assume a stream has been opened already.
+	 */
+	for (i = 0; i < db->backends.length && error < 0; ++i) {
+		backend_internal *internal = git_vector_get(&db->backends, i);
+		git_odb_backend *b = internal->backend;
+
+		if (internal->is_alternate || b->write == NULL)
+			continue;
+
+		++writes;
+		error = init_fake_wstream(&stream, b, size, type);
+	}
+
+	if (!writes) {
+		error = git_odb__error_unsupported_in_backend("write object");
+		goto done;
 	}
 
 	if (error < 0) {
 		if (error == GIT_PASSTHROUGH)
 			error = 0;
-		else if (!writes)
-			error = git_odb__error_unsupported_in_backend("write object");
-
 		goto done;
 	}
 
@@ -1368,13 +1381,17 @@ int git_odb_open_wstream(
 		(error = hash_header(ctx, size, type)) < 0)
 		goto done;
 
-	(*stream)->hash_ctx = ctx;
-	(*stream)->declared_size = size;
-	(*stream)->received_bytes = 0;
+	stream->hash_ctx = ctx;
+	stream->declared_size = size;
+	stream->received_bytes = 0;
+
+	*stream_out = stream;
 
 done:
-	if (error)
+	if (error) {
 		git__free(ctx);
+		git_odb_stream_free(stream);
+	}
 	return error;
 }
 
