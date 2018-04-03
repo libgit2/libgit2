@@ -47,9 +47,18 @@ SSL_CTX *git__ssl_ctx;
  * OpenSSL 1.1 made BIO opaque so we have to use functions to interact with it
  * which do not exist in previous versions. We define these inline functions so
  * we can program against the interface instead of littering the implementation
- * with ifdefs.
+ * with ifdefs. We do the same for OPENSSL_init_ssl.
  */
 #if defined(OPENSSL_LEGACY_API)
+static int OPENSSL_init_ssl(int opts, void *settings)
+{
+	GIT_UNUSED(opts);
+	GIT_UNUSED(settings);
+	SSL_load_error_strings();
+	OpenSSL_add_ssl_algorithms();
+	return 0;
+}
+
 static BIO_METHOD* BIO_meth_new(int type, const char *name)
 {
 	BIO_METHOD *meth = git__calloc(1, sizeof(BIO_METHOD));
@@ -202,12 +211,7 @@ int git_openssl_stream_global_init(void)
 	ssl_opts |= SSL_OP_NO_COMPRESSION;
 #endif
 
-#if defined(OPENSSL_LEGACY_API)
-	SSL_load_error_strings();
-	OpenSSL_add_ssl_algorithms();
-#else
 	OPENSSL_init_ssl(0, NULL);
-#endif
 
 	/*
 	 * Load SSLv{2,3} and TLSv1 so that we can talk with servers
