@@ -1,4 +1,5 @@
 #include "clar_libgit2.h"
+#include "diff_generate.h"
 #include "git2/checkout.h"
 #include "path.h"
 #include "posix.h"
@@ -306,4 +307,29 @@ void test_checkout_typechange__checkout_with_conflicts(void)
 
 		git_object_free(obj);
 	}
+}
+
+void test_checkout_typechange__status_char(void)
+{
+	size_t i;
+	git_oid oid;
+	git_commit *commit;
+	git_diff *diff;
+	const git_diff_delta *delta;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	char expected[8] = {'M', 'M', 'R', 'T', 'D', 'R', 'A', 'R'};
+
+	git_oid_fromstr(&oid, "9b19edf33a03a0c59cdfc113bfa5c06179bf9b1a");
+	cl_git_pass(git_commit_lookup(&commit, g_repo, &oid));
+	diffopts.flags |= GIT_DIFF_INCLUDE_TYPECHANGE;
+	cl_git_pass(git_diff__commit(&diff, g_repo, commit, &diffopts));
+	cl_git_pass(git_diff_find_similar(diff, NULL));
+
+	for (i = 0; i < git_diff_num_deltas(diff); i++) {
+		delta = git_diff_get_delta(diff, i);
+		cl_assert_equal_i(expected[i], git_diff_status_char(delta->status));
+	}
+
+	git_diff_free(diff);
+	git_commit_free(commit);
 }

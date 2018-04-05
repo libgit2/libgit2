@@ -130,6 +130,7 @@ char git_diff_status_char(git_delta_t status)
 	case GIT_DELTA_COPIED:     code = 'C'; break;
 	case GIT_DELTA_IGNORED:    code = 'I'; break;
 	case GIT_DELTA_UNTRACKED:  code = '?'; break;
+	case GIT_DELTA_TYPECHANGE: code = 'T'; break;
 	case GIT_DELTA_UNREADABLE: code = 'X'; break;
 	default:                   code = ' '; break;
 	}
