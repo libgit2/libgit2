@@ -254,7 +254,7 @@ void test_diff_stats__rename_nochanges_no_find(void)
 	git_buf_free(&buf);
 }
 
-void test_diff_stats__rename_and_modifiy_no_find(void)
+void test_diff_stats__rename_and_modify_no_find(void)
 {
 	git_buf buf = GIT_BUF_INIT;
 	const char *stat =
