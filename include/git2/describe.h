@@ -118,7 +118,7 @@ typedef struct git_describe_result git_describe_result;
  * @param result pointer to store the result. You must free this once
  * you're done with it.
  * @param committish a committish to describe
- * @param opts the lookup options
+ * @param opts the lookup options (or NULL for defaults)
  */
 GIT_EXTERN(int) git_describe_commit(
 	git_describe_result **result,
@@ -135,7 +135,7 @@ GIT_EXTERN(int) git_describe_commit(
  * @param out pointer to store the result. You must free this once
  * you're done with it.
  * @param repo the repository in which to perform the describe
- * @param opts the lookup options
+ * @param opts the lookup options (or NULL for defaults)
  */
 GIT_EXTERN(int) git_describe_workdir(
 	git_describe_result **out,
@@ -148,7 +148,7 @@ GIT_EXTERN(int) git_describe_workdir(
  * @param out The buffer to store the result
  * @param result the result from `git_describe_commit()` or
  * `git_describe_workdir()`.
- * @param opts the formatting options
+ * @param opts the formatting options (or NULL for defaults)
  */
 GIT_EXTERN(int) git_describe_format(
 	git_buf *out,
