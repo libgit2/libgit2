@@ -70,8 +70,15 @@ void test_online_badssl__old_cipher(void)
 	if (!g_has_ssl)
 		cl_skip();
 
+#ifdef GIT_WIN32
+	cl_git_fail_with(GIT_ECERTIFICATE,
+			 git_clone(&g_repo, "https://rc4.badssl.com/fake.git", "./fake", NULL));
+	cl_git_fail_with(GIT_ECERTIFICATE,
+			 git_clone(&g_repo, "https://rc4.badssl.com/fake.git", "./fake", &opts));
+#else
 	cl_git_broken(GIT_ECERTIFICATE,
 			 git_clone(&g_repo, "https://rc4.badssl.com/fake.git", "./fake", NULL));
 	cl_git_broken(GIT_ECERTIFICATE,
 			 git_clone(&g_repo, "https://rc4.badssl.com/fake.git", "./fake", &opts));
+#endif
 }
