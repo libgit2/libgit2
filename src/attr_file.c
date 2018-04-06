@@ -633,6 +633,11 @@ int git_attr_fnmatch__parse(
 		if (--spec->length == 0)
 			return GIT_ENOTFOUND;
 
+	/* Remove trailing spaces. */
+	while (pattern[spec->length - 1] == ' ' || pattern[spec->length - 1] == '\t')
+		if (--spec->length == 0)
+			return GIT_ENOTFOUND;
+
 	if (pattern[spec->length - 1] == '/') {
 		spec->length--;
 		spec->flags = spec->flags | GIT_ATTR_FNMATCH_DIRECTORY;

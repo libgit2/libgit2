@@ -61,6 +61,22 @@ void test_attr_ignore__ignore_space(void)
 	assert_is_ignored(true, "NewFolder/NewFolder/File.txt");
 }
 
+void test_attr_ignore__ignore_dir(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "dir/\n");
+
+	assert_is_ignored(true, "dir");
+	assert_is_ignored(true, "dir/file");
+}
+
+void test_attr_ignore__ignore_dir_with_trailing_space(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "dir/ \n");
+
+	assert_is_ignored(true, "dir");
+	assert_is_ignored(true, "dir/file");
+}
+
 void test_attr_ignore__ignore_root(void)
 {
 	cl_git_rewritefile("attr/.gitignore", "/\n\n/NewFolder\n/NewFolder/NewFolder");
