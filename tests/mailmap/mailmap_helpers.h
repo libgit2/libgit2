@@ -1,4 +1,4 @@
-#include "git2/mailmap.h"
+#include "mailmap.h"
 
 typedef struct mailmap_entry {
 	const char *real_name;
@@ -41,12 +41,4 @@ static const mailmap_entry resolved[] = {
 	{ "Joseph", "joseph@company.xx", "Joseph", "bugs@company.xx" },
 	{ "Santa Claus", "santa.claus@northpole.xx", "Clause", "me@company.xx" },
 	{ "Charles", "charles@charles.xx", "Charles", "charles@charles.xx" }
-};
-
-static const mailmap_entry resolved_bare[] = {
-	{ "xx", "untracked@company.xx", "xx", "untracked@company.xx" }
-};
-
-static const mailmap_entry resolved_untracked[] = {
-	{ "Untracked", "untracked@company.xx", "xx", "untracked@company.xx" }
 };

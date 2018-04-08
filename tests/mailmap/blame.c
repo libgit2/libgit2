@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "git2/repository.h"
 #include "git2/blame.h"
-#include "git2/mailmap.h"
+#include "mailmap.h"
 #include "mailmap_helpers.h"
 
 static git_repository *g_repo;

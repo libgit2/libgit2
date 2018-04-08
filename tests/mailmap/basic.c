@@ -2,7 +2,7 @@
 #include "clar_libgit2.h"
 
 #include "common.h"
-#include "git2/mailmap.h"
+#include "mailmap.h"
 
 static git_mailmap *mailmap = NULL;
 
@@ -41,25 +41,23 @@ void test_mailmap_basic__cleanup(void)
 
 void test_mailmap_basic__entry(void)
 {
+	size_t idx;
 	const git_mailmap_entry *entry;
 
-	cl_assert_equal_sz(ARRAY_SIZE(expected), git_mailmap_entry_count(mailmap));
+	/* Check that we have the expected # of entries */
+	cl_assert_equal_sz(ARRAY_SIZE(expected), git_vector_length(&mailmap->entries));
 
-	for (size_t i = 0; i < ARRAY_SIZE(expected); ++i) {
-		entry = git_mailmap_entry_byindex(mailmap, i);
+	for (idx = 0; idx < ARRAY_SIZE(expected); ++idx) {
+		/* Try to look up each entry and make sure they match */
+		entry = git_mailmap_entry_lookup(
+			mailmap, expected[idx].replace_name, expected[idx].replace_email);
+
 		cl_assert(entry);
-		cl_assert_equal_s(entry->real_name, expected[i].real_name);
-		cl_assert_equal_s(entry->real_email, expected[i].real_email);
-		cl_assert_equal_s(entry->replace_name, expected[i].replace_name);
-		cl_assert_equal_s(entry->replace_email, expected[i].replace_email);
+		cl_assert_equal_s(entry->real_name, expected[idx].real_name);
+		cl_assert_equal_s(entry->real_email, expected[idx].real_email);
+		cl_assert_equal_s(entry->replace_name, expected[idx].replace_name);
+		cl_assert_equal_s(entry->replace_email, expected[idx].replace_email);
 	}
-}
-
-void test_mailmap_basic__entry_large_index(void)
-{
-	const git_mailmap_entry *entry =
-		git_mailmap_entry_byindex(mailmap, 10000);
-	cl_assert(!entry);
 }
 
 void test_mailmap_basic__lookup_not_found(void)
