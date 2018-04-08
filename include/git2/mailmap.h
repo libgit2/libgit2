@@ -21,103 +21,93 @@
 GIT_BEGIN_DECL
 
 /**
- * A single entry parsed from a mailmap.
+ * Allocate a new mailmap object.
+ *
+ * This object is empty, so you'll have to add a mailmap file before you can do
+ * anything with it. The mailmap must be freed with 'git_mailmap_free'.
+ *
+ * @param out pointer to store the new mailmap
+ * @return 0 on success, or an error code
  */
-typedef struct git_mailmap_entry {
-	unsigned int version;
-
-	const char *real_name; /**< the real name (may be NULL) */
-	const char *real_email; /**< the real email (may be NULL) */
-	const char *replace_name; /**< the name to replace (may be NULL) */
-	const char *replace_email; /**< the email to replace */
-} git_mailmap_entry;
-
-#define GIT_MAILMAP_ENTRY_VERSION 1
-#define GIT_MAILMAP_ENTRY_INIT {GIT_MAILMAP_ENTRY_VERSION}
+GIT_EXTERN(int) git_mailmap_new(git_mailmap **out);
 
 /**
- * Create a mailmap object by parsing a mailmap file. Malformed entries in the
- * mailmap are ignored.
+ * Free the mailmap and its associated memory.
  *
- * The mailmap must be freed with 'git_mailmap_free'.
- *
- * @param out pointer to store the mailmap
- * @param buffer buffer to parse the mailmap from
- * @return 0 on success, otherwise an error code
+ * @param mm the mailmap to free
  */
-GIT_EXTERN(int) git_mailmap_from_buffer(git_mailmap **out, git_buf *buffer);
+GIT_EXTERN(void) git_mailmap_free(git_mailmap *mm);
 
 /**
- * Create a mailmap object from the given repository. Malformed entries in the
- * mailmap are ignored.
+ * Add a single entry to the given mailmap object. If the entry already exists,
+ * it will be replaced with the new entry.
  *
- * If the repository is not bare, the repository's working directory root will
- * be checked for the '.mailmap' file to be parsed.
- *
- * If the repository is bare, the repository's HEAD commit's tree root will be
- * searched for the '.mailmap' file to be parsed.
- *
- * The mailmap must be freed with 'git_mailmap_free'.
- *
- * @param out pointer to store the mailmap
- * @param repo repository to find the .mailmap in
- * @return 0 on success; GIT_ENOTFOUND if .mailmap could not be found,
- *         otherwise an error code.
+ * @param mm mailmap to add the entry to
+ * @param real_name the real name to use, or NULL
+ * @param real_email the real email to use, or NULL
+ * @param replace_name the name to replace, or NULL
+ * @param replace_email the email to replace
+ * @return 0 if it was added, EEXISTS if it replaced an entry, or an error code
  */
-GIT_EXTERN(int) git_mailmap_from_repo(git_mailmap **out, git_repository *repo);
+GIT_EXTERN(int) git_mailmap_add_entry(
+	git_mailmap *mm, const char *real_name, const char *real_email,
+	const char *replace_name, const char *replace_email);
 
 /**
- * Free a mailmap created by 'git_mailmap_from_buffer' or
- * 'git_mailmap_from_repo'.
+ * Parse mailmap entries from a buffer.
+ *
+ * @param mm mailmap to add the entries to
+ * @param buf the buffer to read the mailmap file from
+ * @return 0 on success, or an error code
  */
-GIT_EXTERN(void) git_mailmap_free(git_mailmap *mailmap);
+GIT_EXTERN(int) git_mailmap_add_buffer(git_mailmap *mm, const git_buf *buf);
+
+/**
+ * Create a new mailmap instance containing a single mailmap file
+ *
+ * This method is a simple utility wrapper for the following sequence
+ * of calls:
+ *  - git_mailmap_new
+ *  - git_mailmap_add_buffer
+ *
+ * @param out pointer to store the new mailmap
+ * @param buf buffer to parse the mailmap from
+ * @return 0 on success, or an error code
+ */
+GIT_EXTERN(int) git_mailmap_from_buffer(git_mailmap **out, const git_buf *buf);
+
+/**
+ * Create a new mailmap instance from a repository, loading mailmap files based
+ * on the repository's configuration.
+ *
+ * Mailmaps are loaded in the following order:
+ *  1. '.mailmap' in the root of the repository's working directory, if present.
+ *  2. The blob object identified by the 'mailmap.blob' config entry, if set.
+ * 	   [NOTE: 'mailmap.blob' defaults to 'HEAD:.mailmap' in bare repositories]
+ *  3. The path in the 'mailmap.file' config entry, if set.
+ *
+ * @param out pointer to store the new mailmap
+ * @param repo repository to load mailmap information from
+ * @return 0 on success, or an error code
+ */
+GIT_EXTERN(int) git_mailmap_from_repository(
+	git_mailmap **out, git_repository *repo);
 
 /**
  * Resolve a name and email to the corresponding real name and email.
  *
- * The lifetime of the string results is tied to the `mailmap`, `name`, and
- * `email` parameters.
+ * The lifetime of the strings are tied to `mm`, `name`, and `email` parameters.
  *
- * @param name_out either 'name', or the real name to use.
- *             You should NOT free this value.
- * @param email_out either 'email' or the real email to use,
- *             You should NOT free this value.
- * @param mailmap the mailmap to perform the lookup in. (may be NULL)
- * @param name the name to resolve.
- * @param email the email to resolve.
- * @return 0 on success, otherwise an error code.
+ * @param real_name pointer to store the real name
+ * @param real_email pointer to store the real email
+ * @param mm the mailmap to perform a lookup with (may be NULL)
+ * @param name the name to look up
+ * @param email the email to look up
+ * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_mailmap_resolve(
-	const char **name_out, const char **email_out,
-	const git_mailmap *mailmap, const char *name, const char *email);
-
-/**
- * Get the number of mailmap entries in this mailmap.
- */
-GIT_EXTERN(size_t) git_mailmap_entry_count(const git_mailmap *mailmap);
-
-/**
- * Lookup a mailmap entry by index.
- *
- * Do not free the mailmap entry, it is owned by the mailmap.
- *
- * @return the mailmap entry at index, or NULL if it cannot be found.
- */
-GIT_EXTERN(const git_mailmap_entry *) git_mailmap_entry_byindex(
-	const git_mailmap *mailmap, size_t idx);
-
-/**
- * Lookup a mailmap entry by name/email pair.
- *
- * Do not free the mailmap entry, it is owned by the mailmap.
- *
- * @param mailmap the mailmap to perform the lookup in. (may be NULL)
- * @param name the name to perform the lookup with.
- * @param email the email to perform the lookup with.
- * @return the corresponding mailmap entry, or NULL if it cannot be found.
- */
-GIT_EXTERN(const git_mailmap_entry *) git_mailmap_entry_lookup(
-	const git_mailmap *mailmap, const char *name, const char *email);
+	const char **real_name, const char **real_email,
+	const git_mailmap *mm, const char *name, const char *email);
 
 /** @} */
 GIT_END_DECL

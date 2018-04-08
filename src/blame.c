@@ -134,7 +134,7 @@ git_blame* git_blame__alloc(
 	}
 
 	if (opts.flags & GIT_BLAME_USE_MAILMAP)
-		git_mailmap_from_repo(&gbr->mailmap, repo);
+		git_mailmap_from_repository(&gbr->mailmap, repo);
 
 	return gbr;
 }

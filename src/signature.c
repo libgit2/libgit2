@@ -116,7 +116,8 @@ int git_signature_with_mailmap(
 	if (source == NULL)
 		return 0;
 
-	error = git_mailmap_resolve(&name, &email, mailmap, source->name, source->email);
+	error = git_mailmap_resolve(
+		&name, &email, mailmap, source->name, source->email);
 	if (error < 0)
 		return error;
 
