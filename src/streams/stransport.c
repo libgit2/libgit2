@@ -62,7 +62,7 @@ static int stransport_connect(git_stream *stream)
 
 	ret = SSLHandshake(st->ctx);
 	if (ret != errSSLServerAuthCompleted) {
-		giterr_set(GITERR_SSL, "unexpected return value from ssl handshake %d", ret);
+		giterr_set(GITERR_SSL, "unexpected return value from ssl handshake %d", (int)ret);
 		return -1;
 	}
 
