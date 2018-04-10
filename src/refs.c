@@ -115,6 +115,9 @@ int git_reference_dup(git_reference **dest, git_reference *source)
 
 	GITERR_CHECK_ALLOC(*dest);
 
+	(*dest)->db = source->db;
+	GIT_REFCOUNT_INC((*dest)->db);
+
 	return 0;
 }
 

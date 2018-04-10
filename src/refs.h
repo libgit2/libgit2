@@ -116,6 +116,10 @@ int git_reference_lookup_resolved(
  * with the given name pointing to the reference pointed to by
  * the file. If it is not a symbolic reference, it will return
  * the resolved reference.
+ *
+ * Note that because the refdb is not involved for symbolic references, they
+ * won't be owned, hence you should either not make the returned reference
+ * 'externally visible', or perform the lookup before returning it to the user.
  */
 int git_reference__read_head(
 	git_reference **out,
