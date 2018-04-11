@@ -67,15 +67,18 @@ typedef struct git_blame_options {
 	uint16_t min_match_characters;
 	/** The id of the newest commit to consider. The default is HEAD. */
 	git_oid newest_commit;
-	/** The id of the oldest commit to consider.
+	/**
+	 * The id of the oldest commit to consider.
 	 * The default is the first commit encountered with a NULL parent.
 	 */
 	git_oid oldest_commit;
-	/** The first line in the file to blame.
+	/**
+	 * The first line in the file to blame.
 	 * The default is 1 (line numbers start with 1).
 	 */
 	size_t min_line;
-	/** The last line in the file to blame.
+	/**
+	 * The last line in the file to blame.
 	 * The default is the last line of the file.
 	 */
 	size_t max_line;
