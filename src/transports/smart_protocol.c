@@ -397,10 +397,10 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 				if ((error = store_common(t)) < 0)
 					goto on_error;
 			} else {
-				error = recv_pkt(NULL, &pkt_type, buf);
-				if (error < 0) {
+				if ((error = recv_pkt(NULL, &pkt_type, buf)) < 0)
 					goto on_error;
-				} else if (pkt_type == GIT_PKT_ACK) {
+
+				if (pkt_type == GIT_PKT_ACK) {
 					break;
 				} else if (pkt_type == GIT_PKT_NAK) {
 					continue;
@@ -469,11 +469,10 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 
 	/* Now let's eat up whatever the server gives us */
 	if (!t->caps.multi_ack && !t->caps.multi_ack_detailed) {
-		error = recv_pkt(NULL, &pkt_type, buf);
-
-		if (error < 0) {
+		if ((error = recv_pkt(NULL, &pkt_type, buf)) < 0)
 			return error;
-		} else if (pkt_type != GIT_PKT_ACK && pkt_type != GIT_PKT_NAK) {
+
+		if (pkt_type != GIT_PKT_ACK && pkt_type != GIT_PKT_NAK) {
 			giterr_set(GITERR_NET, "Unexpected pkt type");
 			return -1;
 		}
