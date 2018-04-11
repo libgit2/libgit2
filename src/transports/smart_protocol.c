@@ -256,14 +256,15 @@ static int store_common(transport_smart *t)
 		if ((error = recv_pkt(&pkt, NULL, buf)) < 0)
 			return error;
 
-		if (pkt->type == GIT_PKT_ACK) {
-			if (git_vector_insert(&t->common, pkt) < 0)
-				return -1;
-		} else {
+		if (pkt->type != GIT_PKT_ACK) {
 			git__free(pkt);
 			return 0;
 		}
 
+		if (git_vector_insert(&t->common, pkt) < 0) {
+			git__free(pkt);
+			return -1;
+		}
 	} while (1);
 
 	return 0;
