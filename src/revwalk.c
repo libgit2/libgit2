@@ -453,43 +453,28 @@ static int limit_list(git_commit_list **out, git_revwalk *walk, git_commit_list 
 	return 0;
 }
 
-static int get_one_revision(git_commit_list_node **out, git_revwalk *walk, git_commit_list **list)
-{
-	int error;
-	git_commit_list_node *commit;
-
-	while(true) {
-		commit = git_commit_list_pop(list);
-		if (!commit) {
-			giterr_clear();
-			return GIT_ITEROVER;
-		}
-
-		/*
-		 * If we did not run limit_list and we must add parents to the
-		 * list ourselves.
-		 */
-		if (!walk->limited) {
-			if ((error = add_parents_to_list(walk, commit, list)) < 0)
-				return error;
-		}
-
-		*out = commit;
-		return 0;
-	}
-}
-
 static int get_revision(git_commit_list_node **out, git_revwalk *walk, git_commit_list **list)
 {
 	int error;
 	git_commit_list_node *commit;
 
-	if ((error = get_one_revision(&commit, walk, list)) < 0)
-		return error;
+  commit = git_commit_list_pop(list);
+  if (!commit) {
+    giterr_clear();
+    return GIT_ITEROVER;
+  }
 
-	/* Here is where we would handle boundary commits if we implement that */
-	*out = commit;
-	return 0;
+  /*
+   * If we did not run limit_list and we must add parents to the
+   * list ourselves.
+   */
+  if (!walk->limited) {
+    if ((error = add_parents_to_list(walk, commit, list)) < 0)
+      return error;
+  }
+
+  *out = commit;
+  return 0;
 }
 
 static int sort_in_topological_order(git_commit_list **out, git_revwalk *walk, git_commit_list *list)
