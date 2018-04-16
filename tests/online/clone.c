@@ -28,6 +28,9 @@ static char *_remote_proxy_url = NULL;
 static char *_remote_proxy_user = NULL;
 static char *_remote_proxy_pass = NULL;
 
+static int _orig_proxies_need_reset = 0;
+static char *_orig_http_proxy = NULL;
+static char *_orig_https_proxy = NULL;
 
 void test_online_clone__initialize(void)
 {
@@ -52,6 +55,8 @@ void test_online_clone__initialize(void)
 	_remote_proxy_url = cl_getenv("GITTEST_REMOTE_PROXY_URL");
 	_remote_proxy_user = cl_getenv("GITTEST_REMOTE_PROXY_USER");
 	_remote_proxy_pass = cl_getenv("GITTEST_REMOTE_PROXY_PASS");
+
+	_orig_proxies_need_reset = 0;
 }
 
 void test_online_clone__cleanup(void)
@@ -72,6 +77,14 @@ void test_online_clone__cleanup(void)
 	git__free(_remote_proxy_url);
 	git__free(_remote_proxy_user);
 	git__free(_remote_proxy_pass);
+
+	if (_orig_proxies_need_reset) {
+		cl_setenv("HTTP_PROXY", _orig_http_proxy);
+		cl_setenv("HTTPS_PROXY", _orig_https_proxy);
+
+		git__free(_orig_http_proxy);
+		git__free(_orig_https_proxy);
+	}
 }
 
 void test_online_clone__network_full(void)
@@ -738,6 +751,29 @@ void test_online_clone__proxy_credentials_in_url(void)
 	called_proxy_creds = 0;
 	cl_git_pass(git_clone(&g_repo, "http://github.com/libgit2/TestGitRepository", "./foo", &g_options));
 	cl_assert(called_proxy_creds == 0);
+
+	git_buf_free(&url);
+}
+
+void test_online_clone__proxy_credentials_in_environment(void)
+{
+	git_buf url = GIT_BUF_INIT;
+
+	if (!_remote_proxy_url || !_remote_proxy_user || !_remote_proxy_pass)
+		cl_skip();
+
+	_orig_http_proxy = cl_getenv("HTTP_PROXY");
+	_orig_https_proxy = cl_getenv("HTTPS_PROXY");
+	_orig_proxies_need_reset = 1;
+
+	g_options.fetch_opts.proxy_opts.type = GIT_PROXY_AUTO;
+
+	cl_git_pass(git_buf_printf(&url, "http://%s:%s@%s/", _remote_proxy_user, _remote_proxy_pass, _remote_proxy_url));
+
+	cl_setenv("HTTP_PROXY", url.ptr);
+	cl_setenv("HTTPS_PROXY", url.ptr);
+
+	cl_git_pass(git_clone(&g_repo, "http://github.com/libgit2/TestGitRepository", "./foo", &g_options));
 
 	git_buf_free(&url);
 }
