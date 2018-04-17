@@ -273,6 +273,36 @@ void test_worktree_worktree__init_existing_branch(void)
 	git_reference_free(branch);
 }
 
+void test_worktree_worktree__add_with_explicit_branch(void)
+{
+	git_reference *head, *branch, *wthead;
+	git_commit *commit;
+	git_worktree *wt;
+	git_repository *wtrepo;
+	git_buf path = GIT_BUF_INIT;
+	git_worktree_add_options opts = GIT_WORKTREE_ADD_OPTIONS_INIT;
+
+	cl_git_pass(git_repository_head(&head, fixture.repo));
+	cl_git_pass(git_commit_lookup(&commit, fixture.repo, &head->target.oid));
+	cl_git_pass(git_branch_create(&branch, fixture.repo, "worktree-with-ref", commit, false));
+
+	opts.ref = branch;
+
+	cl_git_pass(git_buf_joinpath(&path, fixture.repo->workdir, "../worktree-with-different-name"));
+	cl_git_pass(git_worktree_add(&wt, fixture.repo, "worktree-with-different-name", path.ptr, &opts));
+	cl_git_pass(git_repository_open_from_worktree(&wtrepo, wt));
+	cl_git_pass(git_repository_head(&wthead, wtrepo));
+	cl_assert_equal_s(git_reference_name(wthead), "refs/heads/worktree-with-ref");
+
+	git_buf_free(&path);
+	git_commit_free(commit);
+	git_reference_free(head);
+	git_reference_free(branch);
+	git_reference_free(wthead);
+	git_repository_free(wtrepo);
+}
+
+
 void test_worktree_worktree__init_existing_worktree(void)
 {
 	git_worktree *wt;
