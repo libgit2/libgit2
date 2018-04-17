@@ -3,7 +3,8 @@ v0.27 + 1
 
 ### Changes or improvements
 
-* Update CrLf checkout code to vanilla Git >= 2.9 logic
+* The line-ending filtering logic - when checking out files - has been
+  updated to match newer git (>= git 2.9) for proper interoperability.
 
 ### API additions
 
