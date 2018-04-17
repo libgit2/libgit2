@@ -122,6 +122,45 @@ static int has_cr_in_index(const git_filter_source *src)
 	return found_cr;
 }
 
+static int is_crlf_reasonable(const struct crlf_attrs *ca) {
+	switch (ca->crlf_action) {
+	case GIT_CRLF_INPUT:
+		return 1;
+	case GIT_CRLF_GUESS:
+		return ca->eol == GIT_EOL_LF || ca->auto_crlf == GIT_AUTO_CRLF_INPUT;
+	case GIT_CRLF_AUTO: /* FALL-THROUGH */
+	case GIT_CRLF_TEXT:
+		switch (ca->eol) {
+		case GIT_EOL_LF:
+			return 1;
+		case GIT_EOL_UNSET:
+			return ca->auto_crlf == GIT_AUTO_CRLF_INPUT || (GIT_EOL_NATIVE == GIT_EOL_LF && ca->auto_crlf == GIT_AUTO_CRLF_FALSE);
+		}
+	}
+
+	return 0;
+}
+
+static int is_lf_reasonable(const struct crlf_attrs *ca) {
+	switch (ca->crlf_action) {
+	case GIT_CRLF_CRLF:
+		return 1;
+	case GIT_CRLF_GUESS:
+		return ca->eol == GIT_EOL_CRLF || ca->auto_crlf == GIT_AUTO_CRLF_TRUE;
+	case GIT_CRLF_AUTO: /* FALL-THROUGH */
+	case GIT_CRLF_TEXT:
+		switch (ca->eol) {
+		case GIT_EOL_LF: /* FALL-THROUGH */
+		case GIT_EOL_CRLF:
+			return 1;
+		case GIT_EOL_UNSET:
+			return ca->auto_crlf != GIT_AUTO_CRLF_FALSE || GIT_EOL_NATIVE == GIT_EOL_CRLF;
+		}
+	}
+
+	return 0;
+}
+
 static int crlf_apply_to_odb(
 	struct crlf_attrs *ca,
 	git_buf *to,
@@ -164,11 +203,7 @@ static int crlf_apply_to_odb(
 	}
 
 	/* If safecrlf is enabled, sanity-check the result. */
-	if (ca->crlf_action == GIT_CRLF_INPUT ||
-		(ca->crlf_action == GIT_CRLF_GUESS || ca->crlf_action == GIT_CRLF_AUTO || ca->crlf_action == GIT_CRLF_TEXT) && ca->eol == GIT_EOL_LF ||
-		(ca->auto_crlf == GIT_AUTO_CRLF_INPUT && (ca->crlf_action == GIT_CRLF_GUESS)) ||
-		(ca->auto_crlf == GIT_AUTO_CRLF_INPUT && (ca->crlf_action == GIT_CRLF_AUTO || ca->crlf_action == GIT_CRLF_TEXT) && ca->eol == GIT_EOL_UNSET) ||
-		(GIT_EOL_NATIVE != GIT_EOL_CRLF && ca->auto_crlf == GIT_AUTO_CRLF_FALSE && (ca->crlf_action == GIT_CRLF_AUTO || ca->crlf_action == GIT_CRLF_TEXT) && ca->eol == GIT_EOL_UNSET)) {
+	if (is_crlf_reasonable(ca)) {
 		if (stats.crlf) {
 			switch (ca->safe_crlf) {
 			case GIT_SAFE_CRLF_FAIL:
@@ -183,11 +218,7 @@ static int crlf_apply_to_odb(
 				break;
 			}
 		}
-	} else if ((ca->crlf_action == GIT_CRLF_CRLF ||
-		((ca->crlf_action == GIT_CRLF_GUESS || ca->crlf_action == GIT_CRLF_AUTO || ca->crlf_action == GIT_CRLF_TEXT) && ca->eol == GIT_EOL_CRLF) ||
-		(ca->auto_crlf == GIT_AUTO_CRLF_TRUE && (ca->crlf_action == GIT_CRLF_GUESS)) ||
-		(ca->crlf_action == GIT_CRLF_AUTO || ca->crlf_action == GIT_CRLF_TEXT)) &&
-		!(GIT_EOL_NATIVE != GIT_EOL_CRLF && ca->auto_crlf == GIT_AUTO_CRLF_FALSE && (ca->crlf_action == GIT_CRLF_AUTO || ca->crlf_action == GIT_CRLF_TEXT) && ca->eol == GIT_EOL_UNSET)) {
+	} else if (is_lf_reasonable(ca)) {
 		if (stats.lf != stats.crlf) {
 			switch (ca->safe_crlf) {
 			case GIT_SAFE_CRLF_FAIL:
