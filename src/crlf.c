@@ -306,7 +306,8 @@ static int crlf_check(
 		return GIT_PASSTHROUGH;
 
 	if (ca.crlf_action == GIT_CRLF_GUESS ||
-		((ca.crlf_action == GIT_CRLF_AUTO || ca.crlf_action == GIT_CRLF_TEXT) &&
+		((ca.crlf_action == GIT_CRLF_AUTO ||
+		ca.crlf_action == GIT_CRLF_TEXT) &&
 		git_filter_source_mode(src) == GIT_FILTER_SMUDGE)) {
 
 		error = git_repository__cvar(
@@ -318,7 +319,8 @@ static int crlf_check(
 			ca.auto_crlf == GIT_AUTO_CRLF_FALSE)
 			return GIT_PASSTHROUGH;
 
-		if (ca.auto_crlf == GIT_AUTO_CRLF_INPUT && ca.eol != GIT_EOL_CRLF &&
+		if (ca.auto_crlf == GIT_AUTO_CRLF_INPUT &&
+			ca.eol != GIT_EOL_CRLF &&
 			git_filter_source_mode(src) == GIT_FILTER_SMUDGE)
 			return GIT_PASSTHROUGH;
 	}
