@@ -21,6 +21,7 @@ void test_refs_dup__direct(void)
 	cl_git_pass(git_reference_dup(&b, a));
 
 	cl_assert(git_reference_cmp(a, b) == 0);
+	cl_assert(git_reference_owner(b) == g_repo);
 
 	git_reference_free(b);
 	git_reference_free(a);
@@ -34,6 +35,7 @@ void test_refs_dup__symbolic(void)
 	cl_git_pass(git_reference_dup(&b, a));
 
 	cl_assert(git_reference_cmp(a, b) == 0);
+	cl_assert(git_reference_owner(b) == g_repo);
 
 	git_reference_free(b);
 	git_reference_free(a);

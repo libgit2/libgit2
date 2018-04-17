@@ -27,6 +27,7 @@ void test_worktree_repository__head(void)
 	cl_git_pass(git_reference_lookup(&ref, fixture.repo, "refs/heads/testrepo-worktree"));
 	cl_git_pass(git_repository_head_for_worktree(&head, fixture.repo, "testrepo-worktree"));
 	cl_assert(git_reference_cmp(ref, head) == 0);
+	cl_assert(git_reference_owner(ref) == fixture.repo);
 
 	git_reference_free(ref);
 	git_reference_free(head);
