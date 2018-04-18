@@ -513,6 +513,30 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 
 	fsit_opts.flags = backend->iterator_flags;
 
+	if (iter->glob) {
+		const char *last_sep = NULL;
+		const char *pos;
+		for (pos = iter->glob; *pos; ++pos) {
+			switch (*pos) {
+			case '?':
+			case '*':
+			case '[':
+			case '\\':
+				break;
+			case '/':
+				last_sep = pos;
+				/* FALLTHROUGH */
+			default:
+				continue;
+			}
+			break;
+		}
+		if (last_sep) {
+			ref_prefix = iter->glob;
+			ref_prefix_len = (last_sep - ref_prefix) + 1;
+		}
+	}
+
 	if ((error = git_buf_printf(&path, "%s/", backend->commonpath)) < 0 ||
 		(error = git_buf_put(&path, ref_prefix, ref_prefix_len)) < 0 ||
 		(error = git_iterator_for_filesystem(&fsit, path.ptr, &fsit_opts)) < 0) {
