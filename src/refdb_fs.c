@@ -505,26 +505,29 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 	git_iterator *fsit = NULL;
 	git_iterator_options fsit_opts = GIT_ITERATOR_OPTIONS_INIT;
 	const git_index_entry *entry = NULL;
+	const char *ref_prefix = GIT_REFS_DIR;
+	size_t ref_prefix_len = strlen(ref_prefix);
 
 	if (!backend->commonpath) /* do nothing if no commonpath for loose refs */
 		return 0;
 
 	fsit_opts.flags = backend->iterator_flags;
 
-	if ((error = git_buf_printf(&path, "%s/refs", backend->commonpath)) < 0 ||
+	if ((error = git_buf_printf(&path, "%s/", backend->commonpath)) < 0 ||
+		(error = git_buf_put(&path, ref_prefix, ref_prefix_len)) < 0 ||
 		(error = git_iterator_for_filesystem(&fsit, path.ptr, &fsit_opts)) < 0) {
 		git_buf_free(&path);
 		return error;
 	}
 
-	error = git_buf_sets(&path, GIT_REFS_DIR);
+	error = git_buf_sets(&path, ref_prefix);
 
 	while (!error && !git_iterator_advance(&entry, fsit)) {
 		const char *ref_name;
 		struct packref *ref;
 		char *ref_dup;
 
-		git_buf_truncate(&path, strlen(GIT_REFS_DIR));
+		git_buf_truncate(&path, ref_prefix_len);
 		git_buf_puts(&path, entry->path);
 		ref_name = git_buf_cstr(&path);
 
