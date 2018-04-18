@@ -61,3 +61,25 @@ void test_worktree_repository__head_detached_fails_for_invalid_worktree(void)
 	cl_git_fail(git_repository_head_detached_for_worktree(fixture.repo, "invalid"));
 	cl_assert(head == NULL);
 }
+
+void test_worktree_repository__ensure_not_bare(void)
+{
+	git_worktree *wt;
+	git_repository *repo, *wtrepo;
+	git_buf path = GIT_BUF_INIT;
+
+	repo = cl_git_sandbox_init("testrepo.git");
+
+	cl_git_fail(git_repository__ensure_not_bare(repo, "something"));
+
+	cl_git_pass(git_buf_joinpath(&path, repo->gitdir, "../worktree-new"));
+	cl_git_pass(git_worktree_add(&wt, repo, "worktree-new", path.ptr, NULL));
+
+	cl_git_pass(git_repository_open(&wtrepo, path.ptr));
+	cl_git_pass(git_repository__ensure_not_bare(wtrepo, "something"));
+
+	git_buf_free(&path);
+	git_worktree_free(wt);
+	git_repository_free(repo);
+	git_repository_free(wtrepo);
+}
