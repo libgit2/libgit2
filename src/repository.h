@@ -208,7 +208,7 @@ GIT_INLINE(int) git_repository__ensure_not_bare(
 	git_repository *repo,
 	const char *operation_name)
 {
-	if (!git_repository_is_bare(repo))
+	if (!git_repository_is_bare(repo) || git_repository_is_worktree(repo))
 		return 0;
 
 	giterr_set(
