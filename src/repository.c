@@ -268,11 +268,15 @@ static int load_config_data(git_repository *repo, const git_config *config)
 {
 	int is_bare;
 
+	int err = git_config_get_bool(&is_bare, config, "core.bare");
+	if (err < 0 && err != GIT_ENOTFOUND)
+		return err;
+
 	/* Try to figure out if it's bare, default to non-bare if it's not set */
-	if (git_config_get_bool(&is_bare, config, "core.bare") < 0)
-		repo->is_bare = 0;
+	if (err != GIT_ENOTFOUND)
+		repo->is_bare = is_bare && !repo->is_worktree;
 	else
-		repo->is_bare = is_bare;
+		repo->is_bare = 0;
 
 	return 0;
 }
