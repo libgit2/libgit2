@@ -300,6 +300,7 @@ void test_worktree_worktree__add_with_explicit_branch(void)
 	git_reference_free(branch);
 	git_reference_free(wthead);
 	git_repository_free(wtrepo);
+	git_worktree_free(wt);
 }
 
 
