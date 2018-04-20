@@ -557,6 +557,7 @@ post_extract:
 	if (t->owner->certificate_check_cb != NULL) {
 		git_cert_hostkey cert = {{ 0 }}, *cert_ptr;
 		const char *key;
+		int cberror = 0;
 
 		cert.parent.cert_type = GIT_CERT_HOSTKEY_LIBSSH2;
 
@@ -583,13 +584,19 @@ post_extract:
 
 		cert_ptr = &cert;
 
-		error = t->owner->certificate_check_cb((git_cert *) cert_ptr, 0, host, t->owner->message_cb_payload);
-		if (error < 0) {
-			if (!giterr_last())
-				giterr_set(GITERR_NET, "user cancelled hostkey check");
+		cberror = t->owner->certificate_check_cb((git_cert *) cert_ptr, 0, host, t->owner->message_cb_payload);
 
-			goto done;
+		if (cberror == GIT_PASSTHROUGH) {
+			/* Nothing could have failed previously, return success */
+			error = 0;
+		} else {
+			error = cberror;
+			if (error < 0 && !giterr_last())
+				giterr_set(GITERR_NET, "user cancelled hostkey check");
 		}
+
+		if (error < 0)
+			goto done;
 	}
 
 	/* we need the username to ask for auth methods */

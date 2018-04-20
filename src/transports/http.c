@@ -624,19 +624,24 @@ static int http_connect(http_subtransport *t)
 	    git_stream_is_encrypted(t->io)) {
 		git_cert *cert;
 		int is_valid = (error == GIT_OK);
+		int cberror;
+		int cert_error;
+		git_error_state error_state = {0};
 
-		if ((error = git_stream_certificate(&cert, t->io)) < 0)
-			return error;
+		if ((cert_error = git_stream_certificate(&cert, t->io)) < 0)
+			return cert_error;
 
-		giterr_clear();
-		error = t->owner->certificate_check_cb(cert, is_valid, t->connection_data.host, t->owner->message_cb_payload);
+		giterr_state_capture(&error_state, error);
+		cberror = t->owner->certificate_check_cb(cert, is_valid, t->connection_data.host, t->owner->message_cb_payload);
 
-		if (error < 0) {
-			if (!giterr_last())
+		if (cberror == GIT_PASSTHROUGH) {
+			error = giterr_state_restore(&error_state);
+		} else {
+			error = cberror;
+			if (error < 0 && !giterr_last())
 				giterr_set(GITERR_NET, "user cancelled certificate check");
-
-			return error;
 		}
+		giterr_state_free(&error_state);
 	}
 
 	if (error < 0)
