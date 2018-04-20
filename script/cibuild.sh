@@ -23,5 +23,5 @@ fi
 mkdir _build
 cd _build
 # shellcheck disable=SC2086
-cmake .. -DBUILD_EXAMPLES=ON -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS || exit $?
+cmake .. -DBUILD_EXAMPLES=ON -DENABLE_WERROR=ON -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS || exit $?
 cmake --build . --target install || exit $?
