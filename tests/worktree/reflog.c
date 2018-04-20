@@ -22,6 +22,32 @@ void test_worktree_reflog__cleanup(void)
 	cleanup_fixture_worktree(&fixture);
 }
 
+void test_worktree_reflog__read_worktree_HEAD(void)
+{
+	git_reflog *reflog;
+	const git_reflog_entry *entry;
+
+	cl_git_pass(git_reflog_read(&reflog, fixture.worktree, "HEAD"));
+	cl_assert_equal_i(1, git_reflog_entrycount(reflog));
+
+	entry = git_reflog_entry_byindex(reflog, 0);
+	cl_assert(entry != NULL);
+	cl_assert_equal_s("checkout: moving from 099fabac3a9ea935598528c27f866e34089c2eff to testrepo-worktree", git_reflog_entry_message(entry));
+
+	git_reflog_free(reflog);
+}
+
+void test_worktree_reflog__read_parent_HEAD(void)
+{
+	git_reflog *reflog;
+
+	cl_git_pass(git_reflog_read(&reflog, fixture.repo, "HEAD"));
+	/* there is no logs/HEAD in the parent repo */
+	cl_assert_equal_i(0, git_reflog_entrycount(reflog));
+
+	git_reflog_free(reflog);
+}
+
 void test_worktree_reflog__read(void)
 {
 	git_reflog *reflog;
