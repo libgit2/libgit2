@@ -3,9 +3,8 @@
 set -x
 
 # If this platform doesn't support test execution, bail out now
-if [ -n "$SKIP_TESTS" ];
-then
-	exit $?;
+if [ -n "$SKIP_TESTS" ]; then
+	exit $?
 fi
 
 if [ ! -d _build ]; then

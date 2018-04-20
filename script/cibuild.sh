@@ -2,10 +2,9 @@
 
 set -x
 
-if [ -n "$COVERITY" ];
-then
-	./script/coverity.sh;
-	exit $?;
+if [ -n "$COVERITY" ]; then
+	./script/coverity.sh
+	exit $?
 fi
 
 if [ "$TRAVIS_OS_NAME" = "osx" ]; then
