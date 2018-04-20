@@ -9,5 +9,5 @@ then
 fi
 
 if [ -n "$VALGRIND" -a -e "$(which valgrind)" ]; then
-	valgrind --leak-check=full --show-reachable=yes --error-exitcode=125 --suppressions=./libgit2_clar.supp _build/libgit2_clar $@ -ionline -xbuf::oom
+	valgrind --leak-check=full --show-reachable=yes --error-exitcode=125 --num-callers=50 --suppressions=./libgit2_clar.supp _build/libgit2_clar $@ -ionline -xbuf::oom
 fi
