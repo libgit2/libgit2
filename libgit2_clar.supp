@@ -47,3 +47,10 @@
 	...
 	fun:__check_pf
 }
+
+{
+	ignore-curl-global-init
+	Memcheck:Leak
+	...
+	fun:curl_global_init
+}
