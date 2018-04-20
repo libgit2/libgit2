@@ -54,3 +54,11 @@
 	...
 	fun:curl_global_init
 }
+
+{
+	ignore-libssh2-gcrypt-leak
+	Memcheck:Leak
+	...
+	fun:gcry_control
+	obj:*libssh2.so*
+}
