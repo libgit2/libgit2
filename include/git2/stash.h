@@ -116,12 +116,12 @@ typedef int (*git_stash_apply_progress_cb)(
 	git_stash_apply_progress_t progress,
 	void *payload);
 
-/** Stash application options structure.
+/**
+ * Stash application options structure
  *
- * Initialize with the `GIT_STASH_APPLY_OPTIONS_INIT` macro to set
- * sensible defaults; for example:
+ * Initialize with `GIT_STASH_APPLY_OPTIONS_INIT`. Alternatively, you can
+ * use `git_stash_apply_init_options`.
  *
- *		git_stash_apply_options opts = GIT_STASH_APPLY_OPTIONS_INIT;
  */
 typedef struct git_stash_apply_options {
 	unsigned int version;

@@ -1414,8 +1414,9 @@ GIT_EXTERN(int) git_diff_format_email_init_options(
 /**
  * Patch ID options structure
  *
- * Initialize with `GIT_DIFF_PATCHID_OPTIONS_INIT` macro to
- * correctly set the default values and version.
+ * Initialize with `GIT_PATCHID_OPTIONS_INIT`. Alternatively, you can
+ * use `git_patchid_init_options`.
+ *
  */
 typedef struct git_diff_patchid_options {
 	unsigned int version;

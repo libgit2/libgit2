@@ -48,9 +48,8 @@ typedef enum {
 /**
  * Blame options structure
  *
- * Use zeros to indicate default settings.  It's easiest to use the
- * `GIT_BLAME_OPTIONS_INIT` macro:
- *     git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
+ * Initialize with `GIT_BLAME_OPTIONS_INIT`. Alternatively, you can
+ * use `git_blame_init_options`.
  *
  */
 typedef struct git_blame_options {

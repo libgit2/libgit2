@@ -77,10 +77,9 @@ GIT_EXTERN(int) git_worktree_validate(const git_worktree *wt);
 /**
  * Worktree add options structure
  *
- * Zero out for defaults.  Initialize with `GIT_WORKTREE_ADD_OPTIONS_INIT`
- * macro to correctly set the `version` field.  E.g.
+ * Initialize with `GIT_WORKTREE_ADD_OPTIONS_INIT`. Alternatively, you can
+ * use `git_worktree_add_init_options`.
  *
- *		git_worktree_add_options opts = GIT_WORKTREE_ADD_OPTIONS_INIT;
  */
 typedef struct git_worktree_add_options {
 	unsigned int version;
@@ -192,10 +191,9 @@ typedef enum {
 /**
  * Worktree prune options structure
  *
- * Zero out for defaults.  Initialize with `GIT_WORKTREE_PRUNE_OPTIONS_INIT`
- * macro to correctly set the `version` field.  E.g.
+ * Initialize with `GIT_WORKTREE_PRUNE_OPTIONS_INIT`. Alternatively, you can
+ * use `git_worktree_prune_init_options`.
  *
- *		git_worktree_prune_options opts = GIT_WORKTREE_PRUNE_OPTIONS_INIT;
  */
 typedef struct git_worktree_prune_options {
 	unsigned int version;

@@ -121,10 +121,9 @@ typedef int (*git_submodule_cb)(
 /**
  * Submodule update options structure
  *
- * Use the GIT_SUBMODULE_UPDATE_OPTIONS_INIT to get the default settings,
- * like this:
+ * Initialize with `GIT_SUBMODULE_UPDATE_OPTIONS_INIT`. Alternatively, you can
+ * use `git_submodule_update_init_options`.
  *
- * git_submodule_update_options opts = GIT_SUBMODULE_UPDATE_OPTIONS_INIT;
  */
 typedef struct git_submodule_update_options {
 	unsigned int version;

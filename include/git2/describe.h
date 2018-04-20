@@ -36,10 +36,9 @@ typedef enum {
 /**
  * Describe options structure
  *
- * Initialize with `GIT_DESCRIBE_OPTIONS_INIT` macro to correctly set
- * the `version` field.  E.g.
+ * Initialize with `GIT_DESCRIBE_OPTIONS_INIT`. Alternatively, you can
+ * use `git_describe_init_options`.
  *
- *		git_describe_options opts = GIT_DESCRIBE_OPTIONS_INIT;
  */
 typedef struct git_describe_options {
 	unsigned int version;
@@ -83,7 +82,11 @@ typedef struct git_describe_options {
 GIT_EXTERN(int) git_describe_init_options(git_describe_options *opts, unsigned int version);
 
 /**
- * Options for formatting the describe string
+ * Describe format options structure
+ *
+ * Initialize with `GIT_DESCRIBE_FORMAT_OPTIONS_INIT`. Alternatively, you can
+ * use `git_describe_format_init_options`.
+ *
  */
 typedef struct {
 	unsigned int version;

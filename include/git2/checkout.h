@@ -243,10 +243,9 @@ typedef void (*git_checkout_perfdata_cb)(
 /**
  * Checkout options structure
  *
- * Zero out for defaults.  Initialize with `GIT_CHECKOUT_OPTIONS_INIT` macro to
- * correctly set the `version` field.  E.g.
+ * Initialize with `GIT_CHECKOUT_OPTIONS_INIT`. Alternatively, you can
+ * use `git_checkout_init_options`.
  *
- *		git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
  */
 typedef struct git_checkout_options {
 	unsigned int version;
