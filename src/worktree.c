@@ -131,7 +131,7 @@ static int open_worktree_dir(git_worktree **out, const char *parent, const char 
 		goto out;
 	}
 
-	if ((wt = git__calloc(1, sizeof(struct git_repository))) == NULL) {
+	if ((wt = git__calloc(1, sizeof(*wt))) == NULL) {
 		error = -1;
 		goto out;
 	}

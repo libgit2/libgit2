@@ -237,7 +237,7 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 			goto on_error;
 
 		/* only write for non-anonymous remotes */
-		if (name && (error = write_add_refspec(repo, name, fetch, true)) < 0)
+		if (repo && name && (error = write_add_refspec(repo, name, fetch, true)) < 0)
 			goto on_error;
 
 		if (repo && (error = lookup_remote_prune_config(remote, config_ro, name)) < 0)
