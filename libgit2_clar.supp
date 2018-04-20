@@ -62,3 +62,13 @@
 	fun:gcry_control
 	obj:*libssh2.so*
 }
+
+{
+	ignore-noai6ai_cached-double-free
+	Memcheck:Free
+	fun:free
+	fun:__libc_freeres
+	...
+	fun:exit
+	...
+}
