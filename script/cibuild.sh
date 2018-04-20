@@ -25,4 +25,4 @@ mkdir _build
 cd _build
 # shellcheck disable=SC2086
 cmake .. -DBUILD_EXAMPLES=ON -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS || exit $?
-make -j2 install || exit $?
+cmake --build . --target install || exit $?
