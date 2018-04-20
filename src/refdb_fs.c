@@ -1319,7 +1319,7 @@ static int refdb_fs_backend__delete_tail(
 	}
 
 	/* If a loose reference exists, remove it from the filesystem */
-	if (git_buf_joinpath(&loose_path, backend->gitpath, ref_name) < 0)
+	if (git_buf_joinpath(&loose_path, backend->commonpath, ref_name) < 0)
 		return -1;
 
 
