@@ -18,7 +18,7 @@ env:
   - GITTEST_INVASIVE_FS_SIZE=1
  matrix:
   - OPTIONS="-DTHREADSAFE=ON -DENABLE_TRACE=ON -DCMAKE_BUILD_TYPE=Release -DENABLE_WERROR=ON"
-  - OPTIONS="-DTHREADSAFE=OFF -DBUILD_EXAMPLES=ON -DENABLE_WERROR=ON"
+  - OPTIONS="-DTHREADSAFE=OFF -DENABLE_WERROR=ON"
 
 dist: trusty
 sudo: false
@@ -48,13 +48,11 @@ matrix:
    - compiler: gcc
      env: COVERITY=1
      os: linux
-     dist: trusty
    - compiler: gcc
      env:
        - VALGRIND=1
          OPTIONS="-DBUILD_CLAR=ON -DBUILD_EXAMPLES=OFF -DDEBUG_POOL=ON -DCMAKE_BUILD_TYPE=Debug"
      os: linux
-     dist: trusty
  allow_failures:
    - env: COVERITY=1
 
@@ -64,10 +62,8 @@ install:
 # Run the Build script and tests
 script:
  - script/cibuild.sh
-
-# Run Tests
-after_success:
- - if [ "$TRAVIS_OS_NAME" = "linux" -a -n "$VALGRIND" ]; then valgrind --leak-check=full --show-reachable=yes --suppressions=./libgit2_clar.supp _build/libgit2_clar -ionline; fi
+ - script/citest.sh
+ - script/cileaks.sh
 
 # Only watch the development and master branches
 branches:
