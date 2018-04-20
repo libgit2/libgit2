@@ -139,7 +139,7 @@ static int open_worktree_dir(git_worktree **out, const char *parent, const char 
 	if ((wt->name = git__strdup(name)) == NULL
 	    || (wt->commondir_path = git_worktree__read_link(dir, "commondir")) == NULL
 	    || (wt->gitlink_path = git_worktree__read_link(dir, "gitdir")) == NULL
-	    || (wt->parent_path = git__strdup(parent)) == NULL
+	    || (parent && (wt->parent_path = git__strdup(parent)) == NULL)
 	    || (wt->worktree_path = git_path_dirname(wt->gitlink_path)) == NULL) {
 		error = -1;
 		goto out;
