@@ -557,7 +557,6 @@ post_extract:
 	if (t->owner->certificate_check_cb != NULL) {
 		git_cert_hostkey cert = {{ 0 }}, *cert_ptr;
 		const char *key;
-		int cberror = 0;
 
 		cert.parent.cert_type = GIT_CERT_HOSTKEY_LIBSSH2;
 
@@ -581,20 +580,11 @@ post_extract:
 
 		/* We don't currently trust any hostkeys */
 		giterr_clear();
+		error = GIT_ECERTIFICATE;
 
 		cert_ptr = &cert;
 
-		cberror = t->owner->certificate_check_cb((git_cert *) cert_ptr, 0, host, t->owner->message_cb_payload);
-
-		if (cberror == GIT_PASSTHROUGH) {
-			/* Nothing could have failed previously, return success */
-			error = 0;
-		} else {
-			error = cberror;
-			if (error < 0 && !giterr_last())
-				giterr_set(GITERR_NET, "user cancelled hostkey check");
-		}
-
+		error = git_transport_smart_certificate_check(&t->owner->parent, (git_cert *)cert_ptr, error, host);
 		if (error < 0)
 			goto done;
 	}

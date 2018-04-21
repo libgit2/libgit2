@@ -266,7 +266,6 @@ static int certificate_check(winhttp_stream *s, int valid)
 	PCERT_CONTEXT cert_ctx;
 	DWORD cert_ctx_size = sizeof(cert_ctx);
 	git_cert_x509 cert;
-	git_error_state error_state = {0};
 
 	/* If there is no override, we should fail if WinHTTP doesn't think it's fine */
 	if (t->owner->certificate_check_cb == NULL && !valid) {
@@ -284,20 +283,13 @@ static int certificate_check(winhttp_stream *s, int valid)
 		return -1;
 	}
 
-	giterr_state_capture(&error_state, GIT_ERROR);
 	cert.parent.cert_type = GIT_CERT_X509;
 	cert.data = cert_ctx->pbCertEncoded;
 	cert.len = cert_ctx->cbCertEncoded;
-	error = t->owner->certificate_check_cb((git_cert *) &cert, valid, t->connection_data.host, t->owner->message_cb_payload);
+	/* We have to reconstruct the error here */
+	error = (valid ? GIT_OK : GIT_ECERTIFICATE);
+	error = git_transport_smart_certificate_check(&t->owner->parent, (git_cert *) &cert, error, t->connection_data.host);
 	CertFreeCertificateContext(cert_ctx);
-
-	if (error == GIT_PASSTHROUGH) {
-		/* Nothing could have failed previously, return success */
-		error = giterr_state_restore(&error_state);
-	} else if (error < 0 && !giterr_last()) {
-		giterr_set(GITERR_NET, "user cancelled certificate check");
-	}
-	giterr_state_free(&error_state);
 
 	return error;
 }

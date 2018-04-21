@@ -460,11 +460,28 @@ static int ref_name_cmp(const void *a, const void *b)
 	return strcmp(ref_a->head.name, ref_b->head.name);
 }
 
-int git_transport_smart_certificate_check(git_transport *transport, git_cert *cert, int valid, const char *hostname)
+int git_transport_smart_certificate_check(git_transport *transport, git_cert *cert, int cert_error, const char *hostname)
 {
 	transport_smart *t = (transport_smart *)transport;
+	git_error_state state = {0};
+	int cberror, error;
+	int is_valid = (cert_error == GIT_OK);
 
-	return t->certificate_check_cb(cert, valid, hostname, t->message_cb_payload);
+	if (t->certificate_check_cb == NULL)
+		return cert_error;
+
+	giterr_state_capture(&state, cert_error);
+	cberror = t->certificate_check_cb(cert, is_valid, hostname, t->message_cb_payload);
+	if (cberror == GIT_PASSTHROUGH) {
+		error = giterr_state_restore(&state);
+	} else {
+		error = cberror;
+		if (error < 0 && !giterr_last())
+			giterr_set(GITERR_NET, "user cancelled certificate check");
+	}
+	giterr_state_free(&state);
+
+	return error;
 }
 
 int git_transport_smart_credentials(git_cred **out, git_transport *transport, const char *user, int methods)
