@@ -623,6 +623,8 @@ static void coalesce(git_blame *blame)
 
 int git_blame__like_git(git_blame *blame, uint32_t opt)
 {
+	int error = 0;
+
 	while (true) {
 		git_blame__entry *ent;
 		git_blame__origin *suspect = NULL;
@@ -632,13 +634,13 @@ int git_blame__like_git(git_blame *blame, uint32_t opt)
 			if (!ent->guilty)
 				suspect = ent->suspect;
 		if (!suspect)
-			return 0; /* all done */
+			break;
 
 		/* We'll use this suspect later in the loop, so hold on to it for now. */
 		origin_incref(suspect);
 
-		if (pass_blame(blame, suspect, opt) < 0)
-			return -1;
+		if ((error = pass_blame(blame, suspect, opt)) < 0)
+			break;
 
 		/* Take responsibility for the remaining entries */
 		for (ent = blame->ent; ent; ent = ent->next) {
@@ -652,9 +654,10 @@ int git_blame__like_git(git_blame *blame, uint32_t opt)
 		origin_decref(suspect);
 	}
 
-	coalesce(blame);
+	if (!error)
+		coalesce(blame);
 
-	return 0;
+	return error;
 }
 
 void git_blame__free_entry(git_blame__entry *ent)
