@@ -9,6 +9,7 @@
 
 #include "git2/errors.h"
 
+#include "streams/mbedtls.h"
 #include "streams/openssl.h"
 #include "streams/stransport.h"
 
@@ -31,6 +32,8 @@ int git_tls_stream_new(git_stream **out, const char *host, const char *port)
 	return git_stransport_stream_new(out, host, port);
 #elif defined(GIT_OPENSSL)
 	return git_openssl_stream_new(out, host, port);
+#elif defined(GIT_MBEDTLS)
+	return git_mbedtls_stream_new(out, host, port);
 #else
 	GIT_UNUSED(out);
 	GIT_UNUSED(host);

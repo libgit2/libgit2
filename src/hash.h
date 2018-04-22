@@ -26,6 +26,8 @@ void git_hash_ctx_cleanup(git_hash_ctx *ctx);
 # include "hash/hash_openssl.h"
 #elif defined(GIT_SHA1_WIN32)
 # include "hash/hash_win32.h"
+#elif defined(GIT_SHA1_MBEDTLS)
+# include "hash/hash_mbedtls.h"
 #else
 # include "hash/hash_generic.h"
 #endif

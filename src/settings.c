@@ -11,6 +11,10 @@
 # include <openssl/err.h>
 #endif
 
+#ifdef GIT_MBEDTLS
+# include <mbedtls/error.h>
+#endif
+
 #include <git2.h>
 #include "sysdir.h"
 #include "cache.h"
@@ -20,6 +24,7 @@
 #include "refs.h"
 #include "transports/smart.h"
 #include "streams/openssl.h"
+#include "streams/mbedtls.h"
 
 void git_libgit2_version(int *major, int *minor, int *rev)
 {
@@ -175,6 +180,15 @@ int git_libgit2_opts(int key, ...)
 			const char *path = va_arg(ap, const char *);
 			error = git_openssl__set_cert_location(file, path);
 		}
+#elif defined(GIT_MBEDTLS)
+		{
+			const char *file = va_arg(ap, const char *);
+			const char *path = va_arg(ap, const char *);
+			if (file)
+				error = git_mbedtls__set_cert_location(file, 0);
+			if (error && path)
+				error = git_mbedtls__set_cert_location(path, 1);
+		}
 #else
 		giterr_set(GITERR_SSL, "TLS backend doesn't support certificate locations");
 		error = -1;
@@ -199,7 +213,7 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	case GIT_OPT_SET_SSL_CIPHERS:
-#ifdef GIT_OPENSSL
+#if (GIT_OPENSSL || GIT_MBEDTLS)
 		{
 			git__free(git__ssl_ciphers);
 			git__ssl_ciphers = git__strdup(va_arg(ap, const char *));

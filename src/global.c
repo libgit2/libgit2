@@ -12,6 +12,7 @@
 #include "filter.h"
 #include "merge_driver.h"
 #include "streams/curl.h"
+#include "streams/mbedtls.h"
 #include "streams/openssl.h"
 #include "thread-utils.h"
 #include "git2/global.h"
@@ -65,7 +66,8 @@ static int init_common(void)
 		(ret = git_merge_driver_global_init()) == 0 &&
 		(ret = git_transport_ssh_global_init()) == 0 &&
 		(ret = git_openssl_stream_global_init()) == 0 &&
-		(ret = git_curl_stream_global_init()) == 0)
+		(ret = git_curl_stream_global_init()) == 0 &&
+		(ret = git_mbedtls_stream_global_init()) == 0)
 		ret = git_mwindow_global_init();
 
 	GIT_MEMORY_BARRIER;
