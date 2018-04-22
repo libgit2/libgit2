@@ -23,69 +23,30 @@
 #include <sys/types.h>
 #include <regex.h>
 
-typedef struct cvar_t {
-	struct cvar_t *next;
+typedef struct config_entry_list {
+	struct config_entry_list *next;
 	git_config_entry *entry;
-	bool included; /* whether this is part of [include] */
-} cvar_t;
+} config_entry_list;
 
 typedef struct git_config_file_iter {
 	git_config_iterator parent;
-	git_strmap_iter iter;
-	cvar_t* next_var;
+	config_entry_list *head;
 } git_config_file_iter;
 
 /* Max depth for [include] directives */
 #define MAX_INCLUDE_DEPTH 10
 
-#define CVAR_LIST_HEAD(list) ((list)->head)
-
-#define CVAR_LIST_TAIL(list) ((list)->tail)
-
-#define CVAR_LIST_NEXT(var) ((var)->next)
-
-#define CVAR_LIST_EMPTY(list) ((list)->head == NULL)
-
-#define CVAR_LIST_APPEND(list, var) do {\
-	if (CVAR_LIST_EMPTY(list)) {\
-		CVAR_LIST_HEAD(list) = CVAR_LIST_TAIL(list) = var;\
-	} else {\
-		CVAR_LIST_NEXT(CVAR_LIST_TAIL(list)) = var;\
-		CVAR_LIST_TAIL(list) = var;\
-	}\
-} while(0)
-
-#define CVAR_LIST_REMOVE_HEAD(list) do {\
-	CVAR_LIST_HEAD(list) = CVAR_LIST_NEXT(CVAR_LIST_HEAD(list));\
-} while(0)
-
-#define CVAR_LIST_REMOVE_AFTER(var) do {\
-	CVAR_LIST_NEXT(var) = CVAR_LIST_NEXT(CVAR_LIST_NEXT(var));\
-} while(0)
-
-#define CVAR_LIST_FOREACH(list, iter)\
-	for ((iter) = CVAR_LIST_HEAD(list);\
-		 (iter) != NULL;\
-		 (iter) = CVAR_LIST_NEXT(iter))
-
-/*
- * Inspired by the FreeBSD functions
- */
-#define CVAR_LIST_FOREACH_SAFE(start, iter, tmp)\
-	for ((iter) = CVAR_LIST_HEAD(vars);\
-		 (iter) && (((tmp) = CVAR_LIST_NEXT(iter) || 1));\
-		 (iter) = (tmp))
-
 typedef struct {
 	git_atomic refcount;
-	git_strmap *values;
-} refcounted_strmap;
+	git_strmap *map;
+	config_entry_list *list;
+} diskfile_entries;
 
 typedef struct {
 	git_config_backend parent;
 	/* mutex to coordinate accessing the values */
 	git_mutex values_mutex;
-	refcounted_strmap *values;
+	diskfile_entries *entries;
 	const git_repository *repo;
 	git_config_level_t level;
 } diskfile_header;
@@ -108,7 +69,15 @@ typedef struct {
 	diskfile_backend *snapshot_from;
 } diskfile_readonly_backend;
 
-static int config_read(git_strmap *values, const git_repository *repo, git_config_file *file, git_config_level_t level, int depth);
+typedef struct {
+	const git_repository *repo;
+	const char *file_path;
+	diskfile_entries *entries;
+	git_config_level_t level;
+	unsigned int depth;
+} diskfile_parse_state;
+
+static int config_read(diskfile_entries *entries, const git_repository *repo, git_config_file *file, git_config_level_t level, int depth);
 static int config_write(diskfile_backend *cfg, const char *orig_key, const char *key, const regex_t *preg, const char *value);
 static char *escape_value(const char *ptr);
 
@@ -121,15 +90,20 @@ static int config_error_readonly(void)
 	return -1;
 }
 
-static void cvar_free(cvar_t *var)
+static void config_entry_list_free(config_entry_list *list)
 {
-	if (var == NULL)
-		return;
+	config_entry_list *next;
 
-	git__free((char*)var->entry->name);
-	git__free((char *)var->entry->value);
-	git__free(var->entry);
-	git__free(var);
+	while (list != NULL) {
+		next = list->next;
+
+		git__free((char*) list->entry->name);
+		git__free((char *) list->entry->value);
+		git__free(list->entry);
+		git__free(list);
+
+		list = next;
+	};
 }
 
 int git_config_file_normalize_section(char *start, char *end)
@@ -155,57 +129,70 @@ int git_config_file_normalize_section(char *start, char *end)
 	return 0;
 }
 
+static void config_entry_list_append(config_entry_list **list, config_entry_list *entry)
+{
+	config_entry_list *head = *list;
+
+	if (head) {
+		while (head->next != NULL)
+			head = head->next;
+		head->next = entry;
+	} else {
+		*list = entry;
+	}
+}
+
 /* Add or append the new config option */
-static int append_entry(git_strmap *values, cvar_t *var)
+static int diskfile_entries_append(diskfile_entries *entries, git_config_entry *entry)
 {
 	git_strmap_iter pos;
-	cvar_t *existing;
+	config_entry_list *existing, *var;
 	int error = 0;
 
-	pos = git_strmap_lookup_index(values, var->entry->name);
-	if (!git_strmap_valid_index(values, pos)) {
-		git_strmap_insert(values, var->entry->name, var, &error);
+	var = git__calloc(1, sizeof(config_entry_list));
+	GITERR_CHECK_ALLOC(var);
+	var->entry = entry;
+
+	pos = git_strmap_lookup_index(entries->map, entry->name);
+	if (!git_strmap_valid_index(entries->map, pos)) {
+		git_strmap_insert(entries->map, entry->name, var, &error);
+
+		if (error > 0)
+			error = 0;
 	} else {
-		existing = git_strmap_value_at(values, pos);
-		while (existing->next != NULL) {
-			existing = existing->next;
-		}
-		existing->next = var;
+		existing = git_strmap_value_at(entries->map, pos);
+		config_entry_list_append(&existing, var);
 	}
 
-	if (error > 0)
-		error = 0;
+	var = git__calloc(1, sizeof(config_entry_list));
+	GITERR_CHECK_ALLOC(var);
+	var->entry = entry;
+	config_entry_list_append(&entries->list, var);
 
 	return error;
 }
 
-static void free_vars(git_strmap *values)
+static void diskfile_entries_free(diskfile_entries *entries)
 {
-	cvar_t *var = NULL;
+	config_entry_list *list = NULL, *next;
 
-	if (values == NULL)
+	if (!entries)
 		return;
 
-	git_strmap_foreach_value(values, var,
-		while (var != NULL) {
-			cvar_t *next = CVAR_LIST_NEXT(var);
-			cvar_free(var);
-			var = next;
-		});
-
-	git_strmap_free(values);
-}
-
-static void refcounted_strmap_free(refcounted_strmap *map)
-{
-	if (!map)
+	if (git_atomic_dec(&entries->refcount) != 0)
 		return;
 
-	if (git_atomic_dec(&map->refcount) != 0)
-		return;
+	git_strmap_foreach_value(entries->map, list, config_entry_list_free(list));
+	git_strmap_free(entries->map);
 
-	free_vars(map->values);
-	git__free(map);
+	list = entries->list;
+	while (list != NULL) {
+		next = list->next;
+		git__free(list);
+		list = next;
+	}
+
+	git__free(entries);
 }
 
 /**
@@ -213,37 +200,37 @@ static void refcounted_strmap_free(refcounted_strmap *map)
  * refcount. This is its own function to make sure we use the mutex to
  * avoid the map pointer from changing under us.
  */
-static refcounted_strmap *refcounted_strmap_take(diskfile_header *h)
+static diskfile_entries *diskfile_entries_take(diskfile_header *h)
 {
-	refcounted_strmap *map;
+	diskfile_entries *entries;
 
 	if (git_mutex_lock(&h->values_mutex) < 0) {
 	    giterr_set(GITERR_OS, "failed to lock config backend");
 	    return NULL;
 	}
 
-	map = h->values;
-	git_atomic_inc(&map->refcount);
+	entries = h->entries;
+	git_atomic_inc(&entries->refcount);
 
 	git_mutex_unlock(&h->values_mutex);
 
-	return map;
+	return entries;
 }
 
-static int refcounted_strmap_alloc(refcounted_strmap **out)
+static int diskfile_entries_alloc(diskfile_entries **out)
 {
-	refcounted_strmap *map;
+	diskfile_entries *entries;
 	int error;
 
-	map = git__calloc(1, sizeof(refcounted_strmap));
-	GITERR_CHECK_ALLOC(map);
+	entries = git__calloc(1, sizeof(diskfile_entries));
+	GITERR_CHECK_ALLOC(entries);
 
-	git_atomic_set(&map->refcount, 1);
+	git_atomic_set(&entries->refcount, 1);
 
-	if ((error = git_strmap_alloc(&map->values)) < 0)
-		git__free(map);
+	if ((error = git_strmap_alloc(&entries->map)) < 0)
+		git__free(entries);
 	else
-		*out = map;
+		*out = entries;
 
 	return error;
 }
@@ -272,15 +259,15 @@ static int config_open(git_config_backend *cfg, git_config_level_t level, const 
 	b->header.level = level;
 	b->header.repo = repo;
 
-	if ((res = refcounted_strmap_alloc(&b->header.values)) < 0)
+	if ((res = diskfile_entries_alloc(&b->header.entries)) < 0)
 		return res;
 
 	if (!git_path_exists(b->file.path))
 		return 0;
 
-	if (res < 0 || (res = config_read(b->header.values->values, repo, &b->file, level, 0)) < 0) {
-		refcounted_strmap_free(b->header.values);
-		b->header.values = NULL;
+	if (res < 0 || (res = config_read(b->header.entries, repo, &b->file, level, 0)) < 0) {
+		diskfile_entries_free(b->header.entries);
+		b->header.entries = NULL;
 	}
 
 	return res;
@@ -321,7 +308,7 @@ out:
 static int config_refresh(git_config_backend *cfg)
 {
 	diskfile_backend *b = (diskfile_backend *)cfg;
-	refcounted_strmap *values = NULL, *tmp;
+	diskfile_entries *entries = NULL, *tmp;
 	git_config_file *include;
 	int error, modified;
 	uint32_t i;
@@ -336,7 +323,7 @@ static int config_refresh(git_config_backend *cfg)
 	if (!modified)
 		return 0;
 
-	if ((error = refcounted_strmap_alloc(&values)) < 0)
+	if ((error = diskfile_entries_alloc(&entries)) < 0)
 		goto out;
 
 	/* Reparse the current configuration */
@@ -345,7 +332,7 @@ static int config_refresh(git_config_backend *cfg)
 	}
 	git_array_clear(b->file.includes);
 
-	if ((error = config_read(values->values, b->header.repo, &b->file, b->header.level, 0)) < 0)
+	if ((error = config_read(entries, b->header.repo, &b->file, b->header.level, 0)) < 0)
 		goto out;
 
 	if ((error = git_mutex_lock(&b->header.values_mutex)) < 0) {
@@ -353,14 +340,14 @@ static int config_refresh(git_config_backend *cfg)
 		goto out;
 	}
 
-	tmp = b->header.values;
-	b->header.values = values;
-	values = tmp;
+	tmp = b->header.entries;
+	b->header.entries = entries;
+	entries = tmp;
 
 	git_mutex_unlock(&b->header.values_mutex);
 
 out:
-	refcounted_strmap_free(values);
+	diskfile_entries_free(entries);
 
 	return (error == GIT_ENOTFOUND) ? 0 : error;
 }
@@ -373,7 +360,7 @@ static void backend_free(git_config_backend *_backend)
 		return;
 
 	config_file_clear(&backend->file);
-	refcounted_strmap_free(backend->header.values);
+	diskfile_entries_free(backend->header.entries);
 	git_mutex_free(&backend->header.values_mutex);
 	git__free(backend);
 }
@@ -390,24 +377,12 @@ static int config_iterator_next(
 	git_config_iterator *iter)
 {
 	git_config_file_iter *it = (git_config_file_iter *) iter;
-	diskfile_header *h = (diskfile_header *) it->parent.backend;
-	git_strmap *values = h->values->values;
-	int err = 0;
-	cvar_t * var;
 
-	if (it->next_var == NULL) {
-		err = git_strmap_next((void**) &var, &(it->iter), values);
-	} else {
-		var = it->next_var;
-	}
+	if (!it->head)
+		return GIT_ITEROVER;
 
-	if (err < 0) {
-		it->next_var = NULL;
-		return err;
-	}
-
-	*entry = var->entry;
-	it->next_var = CVAR_LIST_NEXT(var);
+	*entry = it->head->entry;
+	it->head = it->head->next;
 
 	return 0;
 }
@@ -433,15 +408,11 @@ static int config_iterator_new(
 
 	h = (diskfile_header *)snapshot;
 
-	/* strmap_begin() is currently a macro returning 0 */
-	GIT_UNUSED(h);
-
 	it->parent.backend = snapshot;
-	it->iter = git_strmap_begin(h->values);
-	it->next_var = NULL;
-
+	it->head = h->entries->list;
 	it->parent.next = config_iterator_next;
 	it->parent.free = config_iterator_free;
+
 	*iter = (git_config_iterator *) it;
 
 	return 0;
@@ -450,8 +421,8 @@ static int config_iterator_new(
 static int config_set(git_config_backend *cfg, const char *name, const char *value)
 {
 	diskfile_backend *b = (diskfile_backend *)cfg;
-	refcounted_strmap *map;
-	git_strmap *values;
+	diskfile_entries *entries;
+	git_strmap *entry_map;
 	char *key, *esc_value = NULL;
 	khiter_t pos;
 	int rval, ret;
@@ -459,17 +430,17 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 	if ((rval = git_config__normalize_name(name, &key)) < 0)
 		return rval;
 
-	if ((map = refcounted_strmap_take(&b->header)) == NULL)
+	if ((entries = diskfile_entries_take(&b->header)) == NULL)
 		return -1;
-	values = map->values;
+	entry_map = entries->map;
 
 	/*
 	 * Try to find it in the existing values and update it if it
 	 * only has one value.
 	 */
-	pos = git_strmap_lookup_index(values, key);
-	if (git_strmap_valid_index(values, pos)) {
-		cvar_t *existing = git_strmap_value_at(values, pos);
+	pos = git_strmap_lookup_index(entry_map, key);
+	if (git_strmap_valid_index(entry_map, pos)) {
+		config_entry_list *existing = git_strmap_value_at(entry_map, pos);
 
 		if (existing->next != NULL) {
 			giterr_set(GITERR_CONFIG, "multivar incompatible with simple set");
@@ -477,7 +448,7 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 			goto out;
 		}
 
-		if (existing->included) {
+		if (existing->entry->include_depth) {
 			giterr_set(GITERR_CONFIG, "modifying included variable is not supported");
 			ret = -1;
 			goto out;
@@ -505,17 +476,17 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 	ret = config_refresh(cfg);
 
 out:
-	refcounted_strmap_free(map);
+	diskfile_entries_free(entries);
 	git__free(esc_value);
 	git__free(key);
 	return ret;
 }
 
 /* release the map containing the entry as an equivalent to freeing it */
-static void release_map(git_config_entry *entry)
+static void free_diskfile_entry(git_config_entry *entry)
 {
-	refcounted_strmap *map = (refcounted_strmap *) entry->payload;
-	refcounted_strmap_free(map);
+	diskfile_entries *map = (diskfile_entries *) entry->payload;
+	diskfile_entries_free(map);
 }
 
 /*
@@ -524,34 +495,34 @@ static void release_map(git_config_entry *entry)
 static int config_get(git_config_backend *cfg, const char *key, git_config_entry **out)
 {
 	diskfile_header *h = (diskfile_header *)cfg;
-	refcounted_strmap *map;
-	git_strmap *values;
+	diskfile_entries *entries;
+	git_strmap *entry_map;
 	khiter_t pos;
-	cvar_t *var;
+	config_entry_list *var;
 	int error = 0;
 
 	if (!h->parent.readonly && ((error = config_refresh(cfg)) < 0))
 		return error;
 
-	if ((map = refcounted_strmap_take(h)) == NULL)
+	if ((entries = diskfile_entries_take(h)) == NULL)
 		return -1;
-	values = map->values;
+	entry_map = entries->map;
 
-	pos = git_strmap_lookup_index(values, key);
+	pos = git_strmap_lookup_index(entry_map, key);
 
 	/* no error message; the config system will write one */
-	if (!git_strmap_valid_index(values, pos)) {
-		refcounted_strmap_free(map);
+	if (!git_strmap_valid_index(entry_map, pos)) {
+		diskfile_entries_free(entries);
 		return GIT_ENOTFOUND;
 	}
 
-	var = git_strmap_value_at(values, pos);
+	var = git_strmap_value_at(entry_map, pos);
 	while (var->next)
 		var = var->next;
 
 	*out = var->entry;
-	(*out)->free = release_map;
-	(*out)->payload = map;
+	(*out)->free = free_diskfile_entry;
+	(*out)->payload = entries;
 
 	return error;
 }
@@ -591,9 +562,10 @@ out:
 
 static int config_delete(git_config_backend *cfg, const char *name)
 {
-	cvar_t *var;
+	config_entry_list *var;
 	diskfile_backend *b = (diskfile_backend *)cfg;
-	refcounted_strmap *map;	git_strmap *values;
+	diskfile_entries *map;
+	git_strmap *entry_map;
 	char *key;
 	int result;
 	khiter_t pos;
@@ -601,23 +573,23 @@ static int config_delete(git_config_backend *cfg, const char *name)
 	if ((result = git_config__normalize_name(name, &key)) < 0)
 		return result;
 
-	if ((map = refcounted_strmap_take(&b->header)) == NULL)
+	if ((map = diskfile_entries_take(&b->header)) == NULL)
 		return -1;
-	values = b->header.values->values;
+	entry_map = b->header.entries->map;
 
-	pos = git_strmap_lookup_index(values, key);
+	pos = git_strmap_lookup_index(entry_map, key);
 	git__free(key);
 
-	if (!git_strmap_valid_index(values, pos)) {
-		refcounted_strmap_free(map);
+	if (!git_strmap_valid_index(entry_map, pos)) {
+		diskfile_entries_free(map);
 		giterr_set(GITERR_CONFIG, "could not find key '%s' to delete", name);
 		return GIT_ENOTFOUND;
 	}
 
-	var = git_strmap_value_at(values, pos);
-	refcounted_strmap_free(map);
+	var = git_strmap_value_at(entry_map, pos);
+	diskfile_entries_free(map);
 
-	if (var->included) {
+	if (var->entry->include_depth) {
 		giterr_set(GITERR_CONFIG, "cannot delete included variable");
 		return -1;
 	}
@@ -636,8 +608,8 @@ static int config_delete(git_config_backend *cfg, const char *name)
 static int config_delete_multivar(git_config_backend *cfg, const char *name, const char *regexp)
 {
 	diskfile_backend *b = (diskfile_backend *)cfg;
-	refcounted_strmap *map;
-	git_strmap *values;
+	diskfile_entries *map;
+	git_strmap *entry_map;
 	char *key;
 	regex_t preg;
 	int result;
@@ -646,20 +618,20 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 	if ((result = git_config__normalize_name(name, &key)) < 0)
 		return result;
 
-	if ((map = refcounted_strmap_take(&b->header)) == NULL)
+	if ((map = diskfile_entries_take(&b->header)) == NULL)
 		return -1;
-	values = b->header.values->values;
+	entry_map = b->header.entries->map;
 
-	pos = git_strmap_lookup_index(values, key);
+	pos = git_strmap_lookup_index(entry_map, key);
 
-	if (!git_strmap_valid_index(values, pos)) {
-		refcounted_strmap_free(map);
+	if (!git_strmap_valid_index(entry_map, pos)) {
+		diskfile_entries_free(map);
 		git__free(key);
 		giterr_set(GITERR_CONFIG, "could not find key '%s' to delete", name);
 		return GIT_ENOTFOUND;
 	}
 
-	refcounted_strmap_free(map);
+	diskfile_entries_free(map);
 
 	result = p_regcomp(&preg, regexp, REG_EXTENDED);
 	if (result != 0) {
@@ -812,7 +784,7 @@ static void backend_readonly_free(git_config_backend *_backend)
 	if (backend == NULL)
 		return;
 
-	refcounted_strmap_free(backend->header.values);
+	diskfile_entries_free(backend->header.entries);
 	git_mutex_free(&backend->header.values_mutex);
 	git__free(backend);
 }
@@ -822,7 +794,7 @@ static int config_readonly_open(git_config_backend *cfg, git_config_level_t leve
 	diskfile_readonly_backend *b = (diskfile_readonly_backend *) cfg;
 	diskfile_backend *src = b->snapshot_from;
 	diskfile_header *src_header = &src->header;
-	refcounted_strmap *src_map;
+	diskfile_entries *entries;
 	int error;
 
 	if (!src_header->parent.readonly && (error = config_refresh(&src_header->parent)) < 0)
@@ -832,9 +804,9 @@ static int config_readonly_open(git_config_backend *cfg, git_config_level_t leve
 	GIT_UNUSED(level);
 	GIT_UNUSED(repo);
 
-	if ((src_map = refcounted_strmap_take(src_header)) == NULL)
+	if ((entries = diskfile_entries_take(src_header)) == NULL)
 		return -1;
-	b->header.values = src_map;
+	b->header.entries = entries;
 
 	return 0;
 }
@@ -912,16 +884,8 @@ static char *escape_value(const char *ptr)
 	return git_buf_detach(&buf);
 }
 
-struct parse_data {
-	const git_repository *repo;
-	const char *file_path;
-	git_strmap *values;
-	git_config_level_t level;
-	int depth;
-};
-
 static int parse_include(git_config_parser *reader,
-	struct parse_data *parse_data, const char *file)
+	diskfile_parse_state *parse_data, const char *file)
 {
 	struct config_file *include;
 	git_buf path = GIT_BUF_INIT;
@@ -943,7 +907,7 @@ static int parse_include(git_config_parser *reader,
 	git_array_init(include->includes);
 	include->path = git_buf_detach(&path);
 
-	result = config_read(parse_data->values, parse_data->repo,
+	result = config_read(parse_data->entries, parse_data->repo,
 		include, parse_data->level, parse_data->depth+1);
 
 	if (result == GIT_ENOTFOUND) {
@@ -1023,7 +987,7 @@ static const struct {
 };
 
 static int parse_conditional_include(git_config_parser *reader,
-	struct parse_data *parse_data, const char *section, const char *file)
+	diskfile_parse_state *parse_data, const char *section, const char *file)
 {
 	char *condition;
 	size_t i;
@@ -1064,9 +1028,9 @@ static int read_on_variable(
 	size_t line_len,
 	void *data)
 {
-	struct parse_data *parse_data = (struct parse_data *)data;
+	diskfile_parse_state *parse_data = (diskfile_parse_state *)data;
 	git_buf buf = GIT_BUF_INIT;
-	cvar_t *var;
+	git_config_entry *entry;
 	int result = 0;
 
 	GIT_UNUSED(line);
@@ -1081,41 +1045,38 @@ static int read_on_variable(
 		return -1;
 	}
 
-	var = git__calloc(1, sizeof(cvar_t));
-	GITERR_CHECK_ALLOC(var);
-	var->entry = git__calloc(1, sizeof(git_config_entry));
-	GITERR_CHECK_ALLOC(var->entry);
+	entry = git__calloc(1, sizeof(git_config_entry));
+	GITERR_CHECK_ALLOC(entry);
+	entry->name = git_buf_detach(&buf);
+	entry->value = var_value;
+	entry->level = parse_data->level;
+	entry->include_depth = parse_data->depth;
 
-	var->entry->name = git_buf_detach(&buf);
-	var->entry->value = var_value;
-	var->entry->level = parse_data->level;
-	var->included = !!parse_data->depth;
-
-	if ((result = append_entry(parse_data->values, var)) < 0)
+	if ((result = diskfile_entries_append(parse_data->entries, entry)) < 0)
 		return result;
 
 	result = 0;
 
 	/* Add or append the new config option */
-	if (!git__strcmp(var->entry->name, "include.path"))
-		result = parse_include(reader, parse_data, var->entry->value);
-	else if (!git__prefixcmp(var->entry->name, "includeif.") &&
-	         !git__suffixcmp(var->entry->name, ".path"))
+	if (!git__strcmp(entry->name, "include.path"))
+		result = parse_include(reader, parse_data, entry->value);
+	else if (!git__prefixcmp(entry->name, "includeif.") &&
+	         !git__suffixcmp(entry->name, ".path"))
 		result = parse_conditional_include(reader, parse_data,
-						   var->entry->name, var->entry->value);
+						   entry->name, entry->value);
 
 
 	return result;
 }
 
 static int config_read(
-	git_strmap *values,
+	diskfile_entries *entries,
 	const git_repository *repo,
 	git_config_file *file,
 	git_config_level_t level,
 	int depth)
 {
-	struct parse_data parse_data;
+	diskfile_parse_state parse_data;
 	git_config_parser reader;
 	git_buf contents = GIT_BUF_INIT;
 	int error;
@@ -1143,7 +1104,7 @@ static int config_read(
 
 	parse_data.repo = repo;
 	parse_data.file_path = file->path;
-	parse_data.values = values;
+	parse_data.entries = entries;
 	parse_data.level = level;
 	parse_data.depth = depth;
 

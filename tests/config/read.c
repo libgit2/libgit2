@@ -306,6 +306,15 @@ void test_config_read__foreach(void)
 
 void test_config_read__iterator(void)
 {
+	const char *keys[] = {
+		"core.dummy2",
+		"core.verylong",
+		"core.dummy",
+		"remote.ab.url",
+		"remote.abba.url",
+		"core.dummy2",
+		"core.global"
+	};
 	git_config *cfg;
 	git_config_iterator *iter;
 	git_config_entry *entry;
@@ -321,6 +330,7 @@ void test_config_read__iterator(void)
 	cl_git_pass(git_config_iterator_new(&iter, cfg));
 
 	while ((ret = git_config_next(&entry, iter)) == 0) {
+		cl_assert_equal_s(entry->name, keys[count]);
 		count++;
 	}
 
