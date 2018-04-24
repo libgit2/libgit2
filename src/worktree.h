@@ -18,6 +18,8 @@ struct git_worktree {
 	 * directory. */
 	char *name;
 
+	/* Path to the where the worktree lives in the filesystem */
+	char *worktree_path;
 	/* Path to the .git file in the working tree's repository */
 	char *gitlink_path;
 	/* Path to the .git directory inside the parent's

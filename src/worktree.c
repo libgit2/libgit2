@@ -122,7 +122,7 @@ out:
 
 static int open_worktree_dir(git_worktree **out, const char *parent, const char *dir, const char *name)
 {
-	git_buf gitdir = GIT_BUF_INIT;
+	git_buf buf = GIT_BUF_INIT;
 	git_worktree *wt = NULL;
 	int error = 0;
 
@@ -143,10 +143,14 @@ static int open_worktree_dir(git_worktree **out, const char *parent, const char 
 		error = -1;
 		goto out;
 	}
-
-	if ((error = git_path_prettify_dir(&gitdir, dir, NULL)) < 0)
+	
+	if ((error = git_path_dirname_r(&buf, wt->gitlink_path)) < 0)
 		goto out;
-	wt->gitdir_path = git_buf_detach(&gitdir);
+	wt->worktree_path = git_buf_detach(&buf);
+	
+	if ((error = git_path_prettify_dir(&buf, dir, NULL)) < 0)
+		goto out;
+	wt->gitdir_path = git_buf_detach(&buf);
 
 	wt->locked = !!git_worktree_is_locked(NULL, wt);
 
@@ -155,7 +159,7 @@ static int open_worktree_dir(git_worktree **out, const char *parent, const char 
 out:
 	if (error)
 		git_worktree_free(wt);
-	git_buf_free(&gitdir);
+	git_buf_free(&buf);
 
 	return error;
 }
@@ -223,6 +227,7 @@ void git_worktree_free(git_worktree *wt)
 		return;
 
 	git__free(wt->commondir_path);
+	git__free(wt->worktree_path);
 	git__free(wt->gitlink_path);
 	git__free(wt->gitdir_path);
 	git__free(wt->parent_path);
@@ -470,6 +475,18 @@ out:
 	git_buf_free(&path);
 
 	return ret;
+}
+
+const char * git_worktree_name(const git_worktree *wt)
+{
+	assert(wt);
+	return wt->name;
+}
+
+const char * git_worktree_path(const git_worktree *wt)
+{
+	assert(wt);
+	return wt->worktree_path;
 }
 
 int git_worktree_prune_init_options(
