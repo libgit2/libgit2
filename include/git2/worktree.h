@@ -148,6 +148,25 @@ GIT_EXTERN(int) git_worktree_unlock(git_worktree *wt);
  */
 GIT_EXTERN(int) git_worktree_is_locked(git_buf *reason, const git_worktree *wt);
 
+
+/**
+ * Retrieve the name of the worktree
+ *
+ * @param wt Worktree to get the name for
+ * @param name Buffer to store the name in. If NULL an error will be returned
+ * @return 0 when the name was stored in the buffer, error-code otherwise
+ */
+GIT_EXTERN(int) git_worktree_name(const git_worktree *wt, git_buf *name);
+
+/**
+ * Retrieve the filesystem path for the worktree
+ *
+ * @param wt Worktree to get the path for
+ * @param path Buffer to store the name in. If NULL an error will be returned
+ * @return 0 when the path was stored in the buffer, error-code otherwise
+ */
+GIT_EXTERN(int) git_worktree_path(const git_worktree *wt, git_buf *path);
+ 
 /**
  * Flags which can be passed to git_worktree_prune to alter its
  * behavior.

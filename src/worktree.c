@@ -455,6 +455,26 @@ out:
 	return ret;
 }
 
+int git_worktree_name(const git_worktree *wt, git_buf *name)
+{
+	if (!name || !wt)
+		return -1;
+	
+	git_buf_clear(name);
+	return git_buf_puts(name, wt->name);	
+}
+
+int git_worktree_path(const git_worktree *wt, git_buf *path)
+{
+	if (!path || !wt)
+		return -1;
+	
+	git_buf_clear(path);
+	if ( git_path_dirname_r(path, wt->gitlink_path) > 0 )
+		return 0;
+	return -1;
+}
+
 int git_worktree_prune_init_options(
 	git_worktree_prune_options *opts,
 	unsigned int version)
