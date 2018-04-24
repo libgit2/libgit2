@@ -358,27 +358,21 @@ void test_worktree_worktree__validate(void)
 void test_worktree_worktree__name(void)
 {
 	git_worktree *wt;
-	git_buf name = GIT_BUF_INIT;
+	const char * name;
 
 	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
-	cl_git_pass(git_worktree_name(wt, &name));
-	cl_assert_equal_s(name.ptr, "testrepo-worktree");
-	
-	git_buf_free(&name);
+	cl_assert_equal_s(git_worktree_name(wt), "testrepo-worktree");
 }
 
 void test_worktree_worktree__path(void)
 {
 	git_worktree *wt;
-	git_buf actual_path = GIT_BUF_INIT;
 	git_buf expected_path = GIT_BUF_INIT;
 
 	cl_git_pass(git_buf_joinpath(&expected_path, clar_sandbox_path(), "testrepo-worktree"));
 	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
-	cl_git_pass(git_worktree_path(wt, &actual_path));
-	cl_assert_equal_s(actual_path.ptr, expected_path.ptr);
+	cl_assert_equal_s(git_worktree_path(wt), expected_path.ptr);
 	
-	git_buf_free(&actual_path);
 	git_buf_free(&expected_path);
 }
 
