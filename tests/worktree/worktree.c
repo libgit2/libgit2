@@ -358,7 +358,6 @@ void test_worktree_worktree__validate(void)
 void test_worktree_worktree__name(void)
 {
 	git_worktree *wt;
-	const char * name;
 
 	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
 	cl_assert_equal_s(git_worktree_name(wt), "testrepo-worktree");

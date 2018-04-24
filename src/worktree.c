@@ -144,7 +144,7 @@ static int open_worktree_dir(git_worktree **out, const char *parent, const char 
 		goto out;
 	}
 	
-	if ((error == git_path_dirname_r(&buf, wt->gitlink_path)) < 0)
+	if ((error = git_path_dirname_r(&buf, wt->gitlink_path)) < 0)
 		goto out;
 	wt->worktree_path = git_buf_detach(&buf);
 	
