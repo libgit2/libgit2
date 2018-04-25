@@ -1,3 +1,7 @@
+#ifdef __APPLE__
+#include <sys/syslimits.h>
+#endif
+
 static char _clar_path[4096];
 
 static int
@@ -31,6 +35,10 @@ find_tmp_path(char *buffer, size_t length)
 			continue;
 
 		if (is_valid_tmp_path(env)) {
+#ifdef __APPLE__
+			if (length >= PATH_MAX && realpath(env, buffer) != NULL)
+				return 0;
+#endif
 			strncpy(buffer, env, length);
 			return 0;
 		}
@@ -38,6 +46,10 @@ find_tmp_path(char *buffer, size_t length)
 
 	/* If the environment doesn't say anything, try to use /tmp */
 	if (is_valid_tmp_path("/tmp")) {
+#ifdef __APPLE__
+		if (length >= PATH_MAX && realpath("/tmp", buffer) != NULL)
+			return 0;
+#endif
 		strncpy(buffer, "/tmp", length);
 		return 0;
 	}
