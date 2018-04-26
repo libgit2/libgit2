@@ -134,6 +134,28 @@ void test_worktree_refs__delete_succeeds_after_pruning_worktree(void)
 	git_reference_free(branch);
 }
 
+void test_worktree_refs__delete_unrelated_branch_on_worktree(void)
+{
+	git_reference *branch;
+
+	cl_git_pass(git_branch_lookup(&branch, fixture.worktree,
+		    "merge-conflict", GIT_BRANCH_LOCAL));
+	cl_git_pass(git_branch_delete(branch));
+
+	git_reference_free(branch);
+}
+
+void test_worktree_refs__delete_unrelated_branch_on_parent(void)
+{
+	git_reference *branch;
+
+	cl_git_pass(git_branch_lookup(&branch, fixture.repo,
+		    "merge-conflict", GIT_BRANCH_LOCAL));
+	cl_git_pass(git_branch_delete(branch));
+
+	git_reference_free(branch);
+}
+
 void test_worktree_refs__renaming_reference_updates_worktree_heads(void)
 {
 	git_reference *head, *branch, *renamed;
