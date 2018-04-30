@@ -139,7 +139,8 @@ static int open_worktree_dir(git_worktree **out, const char *parent, const char 
 	if ((wt->name = git__strdup(name)) == NULL
 	    || (wt->commondir_path = git_worktree__read_link(dir, "commondir")) == NULL
 	    || (wt->gitlink_path = git_worktree__read_link(dir, "gitdir")) == NULL
-	    || (wt->parent_path = git__strdup(parent)) == NULL) {
+	    || (wt->parent_path = git__strdup(parent)) == NULL
+	    || (wt->worktree_path = git_path_dirname(wt->gitlink_path)) == NULL) {
 		error = -1;
 		goto out;
 	}
@@ -223,6 +224,7 @@ void git_worktree_free(git_worktree *wt)
 		return;
 
 	git__free(wt->commondir_path);
+	git__free(wt->worktree_path);
 	git__free(wt->gitlink_path);
 	git__free(wt->gitdir_path);
 	git__free(wt->parent_path);
@@ -470,6 +472,18 @@ out:
 	git_buf_free(&path);
 
 	return ret;
+}
+
+const char *git_worktree_name(const git_worktree *wt)
+{
+	assert(wt);
+	return wt->name;
+}
+
+const char *git_worktree_path(const git_worktree *wt)
+{
+	assert(wt);
+	return wt->worktree_path;
 }
 
 int git_worktree_prune_init_options(

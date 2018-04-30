@@ -386,6 +386,29 @@ void test_worktree_worktree__validate(void)
 	git_worktree_free(wt);
 }
 
+void test_worktree_worktree__name(void)
+{
+	git_worktree *wt;
+
+	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
+	cl_assert_equal_s(git_worktree_name(wt), "testrepo-worktree");
+	
+	git_worktree_free(wt);
+}
+
+void test_worktree_worktree__path(void)
+{
+	git_worktree *wt;
+	git_buf expected_path = GIT_BUF_INIT;
+
+	cl_git_pass(git_buf_joinpath(&expected_path, clar_sandbox_path(), "testrepo-worktree"));
+	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
+	cl_assert_equal_s(git_worktree_path(wt), expected_path.ptr);
+	
+	git_buf_free(&expected_path);
+	git_worktree_free(wt);
+}
+
 void test_worktree_worktree__validate_invalid_commondir(void)
 {
 	git_worktree *wt;
