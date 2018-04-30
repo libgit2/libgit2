@@ -214,7 +214,7 @@ static void free_submodule_names(git_strmap *names)
  * TODO: for some use-cases, this might need case-folding on a
  * case-insensitive filesystem
  */
-static int load_submodule_names(git_strmap *out, git_config *cfg)
+static int load_submodule_names(git_strmap *out, git_repository *repo, git_config *cfg)
 {
 	const char *key = "submodule\\..*\\.path";
 	git_config_iterator *iter;
@@ -232,6 +232,9 @@ static int load_submodule_names(git_strmap *out, git_config *cfg)
 		ldot = strrchr(entry->name, '.');
 
 		git_buf_put(&buf, fdot + 1, ldot - fdot - 1);
+		if (!git_submodule_name_is_valid(repo, buf.ptr, 0))
+			continue;
+
 		git_strmap_insert(out, entry->value, git_buf_detach(&buf), &rval);
 		if (rval < 0) {
 			giterr_set(GITERR_NOMEMORY, "error inserting submodule into hash table");
@@ -359,6 +362,15 @@ int git_submodule_lookup(
 	return 0;
 }
 
+int git_submodule_name_is_valid(const git_repository *repo, const char *name, int flags)
+{
+	if (flags == 0)
+		flags = GIT_PATH_REJECT_FILESYSTEM_DEFAULTS;
+
+	/* FIXME: Un-consting it to reduce the amount of diff */
+	return git_path_isvalid((git_repository *)repo, name, flags);
+}
+
 static void submodule_free_dup(void *sm)
 {
 	git_submodule_free(sm);
@@ -404,7 +416,7 @@ static int submodules_from_index(git_strmap *map, git_index *idx, git_config *cf
 	git_strmap *names = 0;
 
 	git_strmap_alloc(&names);
-	if ((error = load_submodule_names(names, cfg)))
+	if ((error = load_submodule_names(names, git_index_owner(idx), cfg)))
 		goto done;
 
 	if ((error = git_iterator_for_index(&i, git_index_owner(idx), idx, NULL)) < 0)
@@ -456,7 +468,7 @@ static int submodules_from_head(git_strmap *map, git_tree *head, git_config *cfg
 	const git_index_entry *entry;
 	git_strmap *names = 0;
 	git_strmap_alloc(&names);
-	if ((error = load_submodule_names(names, cfg)))
+	if ((error = load_submodule_names(names, git_tree_owner(head), cfg)))
 		goto done;
 
 	if ((error = git_iterator_for_tree(&i, head, NULL)) < 0)
@@ -1566,6 +1578,11 @@ int git_submodule_reload(git_submodule *sm, int force)
 
 	assert(sm);
 
+	if (!git_submodule_name_is_valid(sm->repo, sm->name, 0)) {
+		/* This should come with a warning, but we've no API for that */
+		return 0;
+	}
+
 	if (!git_repository_is_bare(sm->repo)) {
 		/* refresh config data */
 		if ((error = gitmodules_snapshot(&mods, sm->repo)) < 0 && error != GIT_ENOTFOUND)
@@ -1922,6 +1939,11 @@ static int submodule_load_each(const git_config_entry *entry, void *payload)
 
 	if ((error = git_buf_set(&name, namestart, property - namestart -1)) < 0)
 		return error;
+
+	if (!git_path_isvalid(data->repo, name.ptr, GIT_PATH_REJECT_TRAVERSAL)) {
+		error = 0;
+		goto done;
+	}
 
 	/*
 	 * Now that we have the submodule's name, we can use that to
