@@ -32,29 +32,34 @@ void test_submodule_escape__from_gitdir(void)
 	git_config *cfg;
 	git_submodule *sm;
 	git_buf buf = GIT_BUF_INIT;
+	unsigned int sm_location;
 
 	g_repo = setup_fixture_submodule_simple();
 
 	cl_git_pass(git_buf_joinpath(&buf, git_repository_workdir(g_repo), ".gitmodules"));
-	cl_git_pass(git_config_open_ondisk(&cfg, git_buf_cstr(&buf)));
-
-	/* We don't have a function to rename a subsection so we do it manually */
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "testrepo"));
-	cl_git_pass(git_config_set_string(cfg, "submodule." EVIL_SM_NAME ".path", git_submodule_path(sm)));
-	cl_git_pass(git_config_set_string(cfg, "submodule." EVIL_SM_NAME ".url", git_submodule_url(sm)));
-	cl_git_pass(git_config_delete_entry(cfg, "submodule.testrepo.path"));
-	cl_git_pass(git_config_delete_entry(cfg, "submodule.testrepo.url"));
-	git_config_free(cfg);
+	cl_git_rewritefile(buf.ptr,
+			   "[submodule \"" EVIL_SM_NAME "\"]\n"
+			   "    path = testrepo\n"
+			   "    url = ../testrepo.git\n");
 
 	/* We also need to update the value in the config */
 	cl_git_pass(git_repository_config__weakptr(&cfg, g_repo));
-	cl_git_pass(git_config_set_string(cfg, "submodule." EVIL_SM_NAME ".url", git_submodule_url(sm)));
 	cfg = NULL;
 
 	/* Find it all the different ways we know about it */
-	cl_git_fail_with(GIT_ENOTFOUND, git_submodule_lookup(&sm, g_repo, EVIL_SM_NAME));
-	cl_git_fail_with(GIT_ENOTFOUND, git_submodule_lookup(&sm, g_repo, "testrepo"));
 	foundit = 0;
 	cl_git_pass(git_submodule_foreach(g_repo, find_evil, &foundit));
 	cl_assert_equal_i(0, foundit);
+	cl_git_fail_with(GIT_ENOTFOUND, git_submodule_lookup(&sm, g_repo, EVIL_SM_NAME));
+	/*
+	 * We do know about this as it's in the index and HEAD, but the data is
+	 * incomplete as there is no configured data for it (we pretend it
+	 * doesn't exist). This leaves us with an odd situation but it's
+	 * consistent with what we would do if we did add a submodule with no
+	 * configuration.
+	 */
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "testrepo"));
+	cl_git_pass(git_submodule_location(&sm_location, sm));
+	cl_assert_equal_i(GIT_SUBMODULE_STATUS_IN_INDEX | GIT_SUBMODULE_STATUS_IN_HEAD, sm_location);
+	git_submodule_free(sm);
 }
