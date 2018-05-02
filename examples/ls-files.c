@@ -28,7 +28,7 @@
 
 typedef struct {
 	int error_unmatch;
-	char * files[1024];
+	char *files[1024];
 	size_t file_count;
 } ls_options;
 
@@ -84,13 +84,13 @@ static int print_paths(ls_options *opts, git_index *index)
 	size_t i;
 	const git_index_entry *entry;
 
-	/* if there are not files explicitly listed by the user print all entries in the index */
+	/* if there are no files explicitly listed by the user print all entries in the index */
 	if (opts->file_count == 0) {
 		size_t entry_count = git_index_entrycount(index);
 
 		for (i = 0; i < entry_count; i++) {
 			entry = git_index_get_byindex(index, i);
-			printf("%s\n", entry->path);
+			puts(entry->path);
 		}
 		return 0;
 	}
@@ -100,7 +100,7 @@ static int print_paths(ls_options *opts, git_index *index)
 		const char *path = opts->files[i];
 
 		if ((entry = git_index_get_bypath(index, path, GIT_INDEX_STAGE_NORMAL)) != NULL) {
-			printf("%s\n", path);
+			puts(path);
 		} else if (opts->error_unmatch) {
 			fprintf(stderr, "error: pathspec '%s' did not match any file(s) known to git.\n", path);
 			fprintf(stderr, "Did you forget to 'git add'?\n");
