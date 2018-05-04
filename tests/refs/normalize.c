@@ -193,10 +193,7 @@ void test_refs_normalize__jgit_suite(void)
 		char c;
 		char buffer[GIT_REFNAME_MAX];
 		for (c = '\1'; c < ' '; c++) {
-			strncpy(buffer, "refs/heads/mast", 15);
-			strncpy(buffer + 15, (const char *)&c, 1);
-			strncpy(buffer + 16, "er", 2);
-			buffer[18 - 1] = '\0';
+			p_snprintf(buffer, sizeof(buffer), "refs/heads/mast%cer", c);
 			ensure_refname_invalid(GIT_REF_FORMAT_ALLOW_ONELEVEL, buffer);
 		}
 	}
