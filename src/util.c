@@ -806,6 +806,22 @@ double git_time_monotonic(void)
 	return git__timer();
 }
 
+size_t git__utf8_valid_buf_length(const uint8_t *str, size_t str_len)
+{
+	size_t offset = 0;
+
+	while (offset < str_len) {
+		int length = git__utf8_charlen(str + offset, str_len - offset);
+
+		if (length < 0)
+			break;
+
+		offset += length;
+	}
+
+	return offset;
+}
+
 #ifdef GIT_WIN32
 int git__getenv(git_buf *out, const char *name)
 {

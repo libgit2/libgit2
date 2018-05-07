@@ -6,6 +6,7 @@
  */
 
 #include "diff_xdiff.h"
+#include "util.h"
 
 #include "git2/errors.h"
 #include "diff.h"
@@ -115,6 +116,7 @@ static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 	const git_diff_delta *delta = patch->base.delta;
 	git_patch_generated_output *output = &info->xo->output;
 	git_diff_line line;
+	size_t buffer_len;
 
 	if (len == 1) {
 		output->error = git_xdiff_parse_hunk(&info->hunk, bufs[0].ptr);
@@ -124,6 +126,16 @@ static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 		info->hunk.header_len = bufs[0].size;
 		if (info->hunk.header_len >= sizeof(info->hunk.header))
 			info->hunk.header_len = sizeof(info->hunk.header) - 1;
+
+		/* Sanitize the hunk header in case there is invalid Unicode */
+		buffer_len = git__utf8_valid_buf_length((const uint8_t *) bufs[0].ptr, info->hunk.header_len);
+		/* Sanitizing the hunk header may delete the newline, so add it back again if there is room */
+		if (buffer_len < info->hunk.header_len) {
+			bufs[0].ptr[buffer_len] = '\n';
+			buffer_len += 1;
+			info->hunk.header_len = buffer_len;
+		}
+
 		memcpy(info->hunk.header, bufs[0].ptr, info->hunk.header_len);
 		info->hunk.header[info->hunk.header_len] = '\0';
 
