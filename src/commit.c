@@ -11,6 +11,7 @@
 #include "git2/object.h"
 #include "git2/repository.h"
 #include "git2/signature.h"
+#include "git2/mailmap.h"
 #include "git2/sys/commit.h"
 
 #include "odb.h"
@@ -893,11 +894,11 @@ cleanup:
 int git_commit_committer_with_mailmap(
 	git_signature **out, const git_commit *commit, const git_mailmap *mailmap)
 {
-	return git_signature_with_mailmap(out, commit->committer, mailmap);
+	return git_mailmap_resolve_signature(out, mailmap, commit->committer);
 }
 
 int git_commit_author_with_mailmap(
 	git_signature **out, const git_commit *commit, const git_mailmap *mailmap)
 {
-	return git_signature_with_mailmap(out, commit->author, mailmap);
+	return git_mailmap_resolve_signature(out, mailmap, commit->author);
 }

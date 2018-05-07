@@ -2,7 +2,7 @@
 #include "git2/repository.h"
 #include "git2/blame.h"
 #include "mailmap.h"
-#include "mailmap_helpers.h"
+#include "mailmap_testdata.h"
 
 static git_repository *g_repo;
 static git_blame *g_blame;
@@ -30,8 +30,7 @@ void test_mailmap_blame__hunks(void)
 	opts.flags |= GIT_BLAME_USE_MAILMAP;
 
 	cl_git_pass(git_blame_file(&g_blame, g_repo, "file.txt", &opts));
-	if (!g_blame)
-		return;
+	cl_assert(g_blame);
 
 	for (idx = 0; idx < ARRAY_SIZE(resolved); ++idx) {
 		hunk = git_blame_get_hunk_byline(g_blame, idx + 1);
@@ -52,8 +51,7 @@ void test_mailmap_blame__hunks_no_mailmap(void)
 	g_repo = cl_git_sandbox_init("mailmap");
 
 	cl_git_pass(git_blame_file(&g_blame, g_repo, "file.txt", &opts));
-	if (!g_blame)
-		return;
+	cl_assert(g_blame);
 
 	for (idx = 0; idx < ARRAY_SIZE(resolved); ++idx) {
 		hunk = git_blame_get_hunk_byline(g_blame, idx + 1);

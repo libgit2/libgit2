@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "repository.h"
 #include "git2/sys/repository.h"
-#include "mailmap_helpers.h"
+#include "mailmap_testdata.h"
 #include "buf_text.h"
 
 static git_repository *g_repo;
@@ -67,9 +67,7 @@ static const mailmap_entry resolved_untracked[] = {
 
 void test_mailmap_parsing__string(void)
 {
-	git_buf buf = GIT_BUF_INIT;
-	git_buf_attach_notowned(&buf, string_mailmap, strlen(string_mailmap));
-	cl_git_pass(git_mailmap_from_buffer(&g_mailmap, &buf));
+	cl_git_pass(git_mailmap_from_buffer(&g_mailmap, string_mailmap, 0));
 
 	/* We should have parsed all of the entries */
 	check_mailmap_entries(g_mailmap, entries, ARRAY_SIZE(entries));
@@ -89,7 +87,7 @@ void test_mailmap_parsing__windows_string(void)
 	git_buf_attach_notowned(&unixbuf, string_mailmap, strlen(string_mailmap));
 	git_buf_text_lf_to_crlf(&winbuf, &unixbuf);
 
-	cl_git_pass(git_mailmap_from_buffer(&g_mailmap, &winbuf));
+	cl_git_pass(git_mailmap_from_buffer(&g_mailmap, winbuf.ptr, winbuf.size));
 	git_buf_free(&winbuf);
 
 	/* We should have parsed all of the entries */

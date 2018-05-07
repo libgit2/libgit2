@@ -58,9 +58,11 @@ GIT_EXTERN(int) git_mailmap_add_entry(
  *
  * @param mm mailmap to add the entries to
  * @param buf the buffer to read the mailmap file from
+ * @param len the length of the input buffer [optional: 0 defaults to 'strlen']
  * @return 0 on success, or an error code
  */
-GIT_EXTERN(int) git_mailmap_add_buffer(git_mailmap *mm, const git_buf *buf);
+GIT_EXTERN(int) git_mailmap_add_buffer(
+	git_mailmap *mm, const char *buf, size_t len);
 
 /**
  * Create a new mailmap instance containing a single mailmap file
@@ -72,9 +74,11 @@ GIT_EXTERN(int) git_mailmap_add_buffer(git_mailmap *mm, const git_buf *buf);
  *
  * @param out pointer to store the new mailmap
  * @param buf buffer to parse the mailmap from
+ * @param len the length of the input buffer [optional: 0 defaults to 'strlen']
  * @return 0 on success, or an error code
  */
-GIT_EXTERN(int) git_mailmap_from_buffer(git_mailmap **out, const git_buf *buf);
+GIT_EXTERN(int) git_mailmap_from_buffer(
+	git_mailmap **out, const char *buf, size_t len);
 
 /**
  * Create a new mailmap instance from a repository, loading mailmap files based
@@ -108,6 +112,19 @@ GIT_EXTERN(int) git_mailmap_from_repository(
 GIT_EXTERN(int) git_mailmap_resolve(
 	const char **real_name, const char **real_email,
 	const git_mailmap *mm, const char *name, const char *email);
+
+/**
+ * Resolve a signature to use real names and emails with a mailmap.
+ *
+ * Call `git_signature_free()` to free the data.
+ *
+ * @param out new signature
+ * @param mm mailmap to resolve with
+ * @param sig signature to resolve
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_mailmap_resolve_signature(
+	git_signature **out, const git_mailmap *mm, const git_signature *sig);
 
 /** @} */
 GIT_END_DECL

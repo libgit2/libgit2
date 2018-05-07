@@ -10,6 +10,7 @@
 #include "common.h"
 #include "path.h"
 #include "repository.h"
+#include "signature.h"
 #include "git2/config.h"
 #include "git2/revparse.h"
 #include "blob.h"
@@ -171,9 +172,12 @@ void git_mailmap_free(git_mailmap *mm)
 	git__free(mm);
 }
 
-int git_mailmap_add_entry(
-	git_mailmap *mm, const char *real_name, const char *real_email,
-	const char *replace_name, const char *replace_email)
+static int mailmap_add_entry_unterminated(
+	git_mailmap *mm,
+	const char *real_name, size_t real_name_size,
+	const char *real_email, size_t real_email_size,
+	const char *replace_name, size_t replace_name_size,
+	const char *replace_email, size_t replace_email_size)
 {
 	int error;
 	git_mailmap_entry *entry = git__calloc(1, sizeof(git_mailmap_entry));
@@ -181,19 +185,19 @@ int git_mailmap_add_entry(
 
 	assert(mm && replace_email && *replace_email);
 
-	if (real_name && *real_name) {
-		entry->real_name = git__strdup(real_name);
+	if (real_name_size > 0) {
+		entry->real_name = git__substrdup(real_name, real_name_size);
 		GITERR_CHECK_ALLOC(entry->real_name);
 	}
-	if (real_email && *real_email) {
-		entry->real_email = git__strdup(real_email);
+	if (real_email_size > 0) {
+		entry->real_email = git__substrdup(real_email, real_email_size);
 		GITERR_CHECK_ALLOC(entry->real_email);
 	}
-	if (replace_name && *replace_name) {
-		entry->replace_name = git__strdup(replace_name);
+	if (replace_name_size > 0) {
+		entry->replace_name = git__substrdup(replace_name, replace_name_size);
 		GITERR_CHECK_ALLOC(entry->replace_name);
 	}
-	entry->replace_email = git__strdup(replace_email);
+	entry->replace_email = git__substrdup(replace_email, replace_email_size);
 	GITERR_CHECK_ALLOC(entry->replace_email);
 
 	error = git_vector_insert_sorted(&mm->entries, entry, mailmap_entry_replace);
@@ -203,10 +207,21 @@ int git_mailmap_add_entry(
 	return error;
 }
 
-int git_mailmap_add_buffer(git_mailmap *mm, const git_buf *buf)
+int git_mailmap_add_entry(
+	git_mailmap *mm, const char *real_name, const char *real_email,
+	const char *replace_name, const char *replace_email)
+{
+	return mailmap_add_entry_unterminated(
+		mm,
+		real_name, real_name ? strlen(real_name) : 0,
+		real_email, real_email ? strlen(real_email) : 0,
+		replace_name, replace_name ? strlen(replace_name) : 0,
+		replace_email, strlen(replace_email));
+}
+
+int git_mailmap_add_buffer(git_mailmap *mm, const char *buf, size_t len)
 {
 	int error;
-	git_mailmap_entry *entry = NULL;
 	git_parse_ctx ctx;
 
 	/* Scratch buffers containing the real parsed names & emails */
@@ -215,10 +230,15 @@ int git_mailmap_add_buffer(git_mailmap *mm, const git_buf *buf)
 	git_buf replace_name = GIT_BUF_INIT;
 	git_buf replace_email = GIT_BUF_INIT;
 
-	if (git_buf_contains_nul(buf))
+	/* If `len` is passed as 0, use strlen to get the real length */
+	if (buf && len == 0)
+		len = strlen(buf);
+
+	/* Buffers may not contain '\0's. */
+	if (memchr(buf, '\0', len) != NULL)
 		return -1;
 
-	git_parse_ctx_init(&ctx, buf->ptr, buf->size);
+	git_parse_ctx_init(&ctx, buf, len);
 
 	/* Run the parser */
 	while (ctx.remain_len > 0) {
@@ -230,37 +250,17 @@ int git_mailmap_add_buffer(git_mailmap *mm, const git_buf *buf)
 			continue; /* TODO: warn */
 		}
 
-		entry = git__calloc(1, sizeof(git_mailmap_entry));
-		GITERR_CHECK_ALLOC(entry);
-
-		if (real_name.size > 0) {
-			entry->real_name = git__substrdup(real_name.ptr, real_name.size);
-			GITERR_CHECK_ALLOC(entry->real_name);
-		}
-		if (real_email.size > 0) {
-			entry->real_email = git__substrdup(real_email.ptr, real_email.size);
-			GITERR_CHECK_ALLOC(entry->real_email);
-		}
-		if (replace_name.size > 0) {
-			entry->replace_name = git__substrdup(replace_name.ptr, replace_name.size);
-			GITERR_CHECK_ALLOC(entry->replace_name);
-		}
-		entry->replace_email = git__substrdup(replace_email.ptr, replace_email.size);
-		GITERR_CHECK_ALLOC(entry->replace_email);
-
-		error = git_vector_insert_sorted(
-			&mm->entries, entry, mailmap_entry_replace);
+		/* NOTE: Can't use add_entry(...) as our buffers aren't terminated */
+		error = mailmap_add_entry_unterminated(
+			mm, real_name.ptr, real_name.size, real_email.ptr, real_email.size,
+			replace_name.ptr, replace_name.size, replace_email.ptr, replace_email.size);
 		if (error < 0 && error != GIT_EEXISTS)
 			goto cleanup;
 
-		entry = NULL;
 		error = 0;
 	}
 
 cleanup:
-	mailmap_entry_free(entry);
-
-	/* We never allocate data in these buffers, but better safe than sorry */
 	git_buf_free(&real_name);
 	git_buf_free(&real_email);
 	git_buf_free(&replace_name);
@@ -268,13 +268,13 @@ cleanup:
 	return error;
 }
 
-int git_mailmap_from_buffer(git_mailmap **out, const git_buf *buffer)
+int git_mailmap_from_buffer(git_mailmap **out, const char *data, size_t len)
 {
 	int error = git_mailmap_new(out);
 	if (error < 0)
 		return error;
 
-	error = git_mailmap_add_buffer(*out, buffer);
+	error = git_mailmap_add_buffer(*out, data, len);
 	if (error < 0) {
 		git_mailmap_free(*out);
 		*out = NULL;
@@ -283,7 +283,7 @@ int git_mailmap_from_buffer(git_mailmap **out, const git_buf *buffer)
 }
 
 static int mailmap_add_blob(
-	git_mailmap *mm, git_repository *repo, const char *spec)
+	git_mailmap *mm, git_repository *repo, const char *rev)
 {
 	git_object *object = NULL;
 	git_blob *blob = NULL;
@@ -292,7 +292,7 @@ static int mailmap_add_blob(
 
 	assert(mm && repo);
 
-	error = git_revparse_single(&object, repo, spec);
+	error = git_revparse_single(&object, repo, rev);
 	if (error < 0)
 		goto cleanup;
 
@@ -304,7 +304,7 @@ static int mailmap_add_blob(
 	if (error < 0)
 		goto cleanup;
 
-	error = git_mailmap_add_buffer(mm, &content);
+	error = git_mailmap_add_buffer(mm, content.ptr, content.size);
 	if (error < 0)
 		goto cleanup;
 
@@ -331,7 +331,7 @@ static int mailmap_add_file_ondisk(
 	if (error < 0)
 		goto cleanup;
 
-	error = git_mailmap_add_buffer(mm, &content);
+	error = git_mailmap_add_buffer(mm, content.ptr, content.size);
 	if (error < 0)
 		goto cleanup;
 
@@ -345,21 +345,21 @@ cleanup:
 static void mailmap_add_from_repository(git_mailmap *mm, git_repository *repo)
 {
 	git_config *config = NULL;
-	git_buf spec_buf = GIT_BUF_INIT;
+	git_buf rev_buf = GIT_BUF_INIT;
 	git_buf path_buf = GIT_BUF_INIT;
-	const char *spec = NULL;
+	const char *rev = NULL;
 	const char *path = NULL;
 
 	assert(mm && repo);
 
 	/* If we're in a bare repo, default blob to 'HEAD:.mailmap' */
 	if (repo->is_bare)
-		spec = MM_BLOB_DEFAULT;
+		rev = MM_BLOB_DEFAULT;
 
 	/* Try to load 'mailmap.file' and 'mailmap.blob' cfgs from the repo */
 	if (git_repository_config(&config, repo) == 0) {
-		if (git_config_get_string_buf(&spec_buf, config, MM_BLOB_CONFIG) == 0)
-			spec = spec_buf.ptr;
+		if (git_config_get_string_buf(&rev_buf, config, MM_BLOB_CONFIG) == 0)
+			rev = rev_buf.ptr;
 		if (git_config_get_path(&path_buf, config, MM_FILE_CONFIG) == 0)
 			path = path_buf.ptr;
 	}
@@ -377,12 +377,12 @@ static void mailmap_add_from_repository(git_mailmap *mm, git_repository *repo)
 	 */
 	if (!repo->is_bare)
 		mailmap_add_file_ondisk(mm, MM_FILE, repo);
-	if (spec != NULL)
-		mailmap_add_blob(mm, repo, spec);
+	if (rev != NULL)
+		mailmap_add_blob(mm, repo, rev);
 	if (path != NULL)
 		mailmap_add_file_ondisk(mm, path, repo);
 
-	git_buf_free(&spec_buf);
+	git_buf_free(&rev_buf);
 	git_buf_free(&path_buf);
 	git_config_free(config);
 }
@@ -403,7 +403,10 @@ const git_mailmap_entry *git_mailmap_entry_lookup(
 	ssize_t fallback = -1;
 	size_t idx;
 	git_mailmap_entry *entry;
-	git_mailmap_entry needle = { NULL, NULL, NULL, (char *)email };
+
+	/* The lookup needle we want to use only sets the replace_email. */
+	git_mailmap_entry needle = { NULL };
+	needle.replace_email = (char *)email;
 
 	assert(email);
 
@@ -455,5 +458,28 @@ int git_mailmap_resolve(
 		if (entry->real_email)
 			*real_email = entry->real_email;
 	}
+	return 0;
+}
+
+int git_mailmap_resolve_signature(
+	git_signature **out, const git_mailmap *mailmap, const git_signature *sig)
+{
+	const char *name = NULL;
+	const char *email = NULL;
+	int error;
+
+	if (!sig)
+		return 0;
+
+	error = git_mailmap_resolve(&name, &email, mailmap, sig->name, sig->email);
+	if (error < 0)
+		return error;
+
+	error = git_signature_new(out, name, email, sig->when.time, sig->when.offset);
+	if (error < 0)
+		return error;
+
+	/* Copy over the sign, as git_signature_new doesn't let you pass it. */
+	(*out)->when.sign = sig->when.sign;
 	return 0;
 }

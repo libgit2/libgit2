@@ -27,10 +27,7 @@ struct {
 
 void test_mailmap_basic__initialize(void)
 {
-	git_buf buf = GIT_BUF_INIT;
-	git_buf_attach_notowned(&buf, TEST_MAILMAP, strlen(TEST_MAILMAP));
-
-	cl_git_pass(git_mailmap_from_buffer(&mailmap, &buf));
+	cl_git_pass(git_mailmap_from_buffer(&mailmap, TEST_MAILMAP, 0));
 }
 
 void test_mailmap_basic__cleanup(void)
