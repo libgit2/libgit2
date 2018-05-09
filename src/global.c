@@ -276,10 +276,10 @@ int git_libgit2_init(void)
 {
 	int ret, err;
 
-	ret = git_atomic_inc(&git__n_inits);
-
 	if ((err = pthread_mutex_lock(&_init_mutex)) != 0)
 		return err;
+
+	ret = git_atomic_inc(&git__n_inits);
 	err = pthread_once(&_once_init, init_once);
 	err |= pthread_mutex_unlock(&_init_mutex);
 
@@ -293,13 +293,13 @@ int git_libgit2_shutdown(void)
 {
 	void *ptr = NULL;
 	pthread_once_t new_once = PTHREAD_ONCE_INIT;
-	int ret;
+	int error, ret;
+
+	if ((error = pthread_mutex_lock(&_init_mutex)) != 0)
+		return error;
 
 	if ((ret = git_atomic_dec(&git__n_inits)) != 0)
-		return ret;
-
-	if ((ret = pthread_mutex_lock(&_init_mutex)) != 0)
-		return ret;
+		goto out;
 
 	/* Shut down any subsystems that have global state */
 	shutdown_common();
@@ -314,10 +314,11 @@ int git_libgit2_shutdown(void)
 	git_mutex_free(&git__mwindow_mutex);
 	_once_init = new_once;
 
-	if ((ret = pthread_mutex_unlock(&_init_mutex)) != 0)
-		return ret;
+out:
+	if ((error = pthread_mutex_unlock(&_init_mutex)) != 0)
+		return error;
 
-	return 0;
+	return ret;
 }
 
 git_global_st *git__global_state(void)
