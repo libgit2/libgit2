@@ -252,7 +252,8 @@ int git_openssl_stream_global_init(void)
 #if defined(GIT_THREADS)
 static void threadid_cb(CRYPTO_THREADID *threadid)
 {
-    CRYPTO_THREADID_set_numeric(threadid, git_thread_currentid());
+	GIT_UNUSED(threadid);
+	CRYPTO_THREADID_set_numeric(threadid, git_thread_currentid());
 }
 #endif
 

@@ -460,7 +460,7 @@ void test_iterator_workdir__icase_starts_and_ends(void)
 static void build_workdir_tree(const char *root, int dirs, int subs)
 {
 	int i, j;
-	char buf[64], sub[64];
+	char buf[64], sub[80];
 
 	for (i = 0; i < dirs; ++i) {
 		if (i % 2 == 0) {
