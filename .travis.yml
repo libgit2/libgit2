@@ -77,7 +77,7 @@ script:
 
 # Run Tests
 after_success:
- - if [ "$TRAVIS_OS_NAME" = "linux" -a -n "$VALGRIND" ]; then valgrind --leak-check=full --show-reachable=yes --suppressions=./libgit2_clar.supp _build/libgit2_clar -ionline; fi
+ - if [ "$TRAVIS_OS_NAME" = "linux" -a -n "$VALGRIND" ]; then valgrind --leak-check=full --show-reachable=yes --error-exitcode=125 --suppressions=./libgit2_clar.supp _build/libgit2_clar -ionline; fi
 
 # Only watch the development and master branches
 branches:
