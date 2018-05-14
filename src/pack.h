@@ -85,7 +85,7 @@ typedef struct {
 
 struct git_pack_file {
 	git_mwindow_file mwf;
-	git_map index_map;
+	git_mem index_mem;
 	git_mutex lock; /* protect updates to mwf and index_map */
 	git_atomic refcount;
 
