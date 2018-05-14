@@ -17,6 +17,7 @@
 #include "filebuf.h"
 #include "object.h"
 #include "zstream.h"
+#include "mem.h"
 
 #include "git2/odb_backend.h"
 #include "git2/types.h"
@@ -36,7 +37,7 @@ typedef struct {
 
 typedef struct {
 	git_odb_stream stream;
-	git_map map;
+	git_mem mem;
 	char start[MAX_HEADER_LEN];
 	size_t start_len;
 	size_t start_read;
@@ -909,7 +910,7 @@ static void loose_backend__readstream_free(git_odb_stream *_stream)
 {
 	loose_readstream *stream = (loose_readstream *)_stream;
 
-	git_futils_mmap_free(&stream->map);
+	git_mem_dispose(&stream->mem);
 	git_zstream_free(&stream->zstream);
 	git__free(stream);
 }
@@ -922,8 +923,8 @@ static int loose_backend__readstream_packlike(
 	size_t data_len, head_len;
 	int error;
 
-	data = stream->map.data;
-	data_len = stream->map.len;
+	data = stream->mem.data;
+	data_len = stream->mem.len;
 
 	/*
 	 * read the object header, which is an (uncompressed)
@@ -950,7 +951,7 @@ static int loose_backend__readstream_standard(
 	int error;
 
 	if ((error = git_zstream_set_input(&stream->zstream,
-			stream->map.data, stream->map.len)) < 0)
+			stream->mem.data, stream->mem.len)) < 0)
 		return error;
 
 	init = sizeof(head);
@@ -1011,12 +1012,12 @@ static int loose_backend__readstream(
 	GIT_ERROR_CHECK_ALLOC(hash_ctx);
 
 	if ((error = git_hash_ctx_init(hash_ctx)) < 0 ||
-		(error = git_futils_mmap_ro_file(&stream->map, object_path.ptr)) < 0 ||
+		(error = git_mem_from_path(&stream->mem, object_path.ptr)) < 0 ||
 		(error = git_zstream_init(&stream->zstream, GIT_ZSTREAM_INFLATE)) < 0)
 		goto done;
 
 	/* check for a packlike loose object */
-	if (!is_zlib_compressed_data(stream->map.data, stream->map.len))
+	if (!is_zlib_compressed_data(stream->mem.data, stream->mem.len))
 		error = loose_backend__readstream_packlike(&hdr, stream);
 	else
 		error = loose_backend__readstream_standard(&hdr, stream);
@@ -1036,7 +1037,7 @@ static int loose_backend__readstream(
 done:
 	if (error < 0) {
 		if (stream) {
-			git_futils_mmap_free(&stream->map);
+			git_mem_dispose(&stream->mem);
 			git_zstream_free(&stream->zstream);
 			git__free(stream);
 		}
