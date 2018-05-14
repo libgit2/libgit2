@@ -57,7 +57,25 @@ int git_mem_from_path(git_mem *out, const char *path)
 		goto out;
 	}
 
-	error = git_mem_from_fd(out, fd, 0, (size_t)len);
+	if (len < 32 * 1024) {
+		char *data;
+
+		if ((data = git__malloc((size_t) len)) == NULL) {
+			error = -1;
+			goto out;
+		}
+
+		if (p_read(fd, data, (size_t) len) != (ssize_t) len) {
+			git__free(data);
+			error = -1;
+			goto out;
+		}
+
+		error = git_mem_from_data(out, data, (size_t) len);
+	} else {
+		error = git_mem_from_fd(out, fd, 0, (size_t)len);
+	}
+
 out:
 	p_close(fd);
 	return error;
