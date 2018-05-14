@@ -271,48 +271,6 @@ extern git_off_t git_futils_filesize(git_file fd);
  */
 extern mode_t git_futils_canonical_mode(mode_t raw_mode);
 
-
-/**
- * Read-only map all or part of a file into memory.
- * When possible this function should favor a virtual memory
- * style mapping over some form of malloc()+read(), as the
- * data access will be random and is not likely to touch the
- * majority of the region requested.
- *
- * @param out buffer to populate with the mapping information.
- * @param fd open descriptor to configure the mapping from.
- * @param begin first byte to map, this should be page aligned.
- * @param len number of bytes to map.
- * @return
- * - 0 on success;
- * - -1 on error.
- */
-extern int git_futils_mmap_ro(
-	git_map *out,
-	git_file fd,
-	git_off_t begin,
-	size_t len);
-
-/**
- * Read-only map an entire file.
- *
- * @param out buffer to populate with the mapping information.
- * @param path path to file to be opened.
- * @return
- * - 0 on success;
- * - GIT_ENOTFOUND if not found;
- * - -1 on an unspecified OS related error.
- */
-extern int git_futils_mmap_ro_file(
-	git_map *out,
-	const char *path);
-
-/**
- * Release the memory associated with a previous memory mapping.
- * @param map the mapping description previously configured.
- */
-extern void git_futils_mmap_free(git_map *map);
-
 /**
  * Create a "fake" symlink (text file containing the target path).
  *

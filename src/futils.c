@@ -301,42 +301,6 @@ int git_futils_mv_withpath(const char *from, const char *to, const mode_t dirmod
 	return 0;
 }
 
-int git_futils_mmap_ro(git_map *out, git_file fd, git_off_t begin, size_t len)
-{
-	return p_mmap(out, len, GIT_PROT_READ, GIT_MAP_PRIVATE, fd, begin);
-}
-
-int git_futils_mmap_ro_file(git_map *out, const char *path)
-{
-	git_file fd = git_futils_open_ro(path);
-	git_off_t len;
-	int result;
-
-	if (fd < 0)
-		return fd;
-
-	if ((len = git_futils_filesize(fd)) < 0) {
-		result = -1;
-		goto out;
-	}
-
-	if (!git__is_sizet(len)) {
-		git_error_set(GIT_ERROR_OS, "file `%s` too large to mmap", path);
-		result = -1;
-		goto out;
-	}
-
-	result = git_futils_mmap_ro(out, fd, 0, (size_t)len);
-out:
-	p_close(fd);
-	return result;
-}
-
-void git_futils_mmap_free(git_map *out)
-{
-	p_munmap(out);
-}
-
 GIT_INLINE(int) mkdir_validate_dir(
 	const char *path,
 	struct stat *st,
