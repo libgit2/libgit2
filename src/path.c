@@ -1840,3 +1840,16 @@ int git_path_normalize_slashes(git_buf *out, const char *path)
 
 	return 0;
 }
+
+static int verify_dotgit_generic(const char *name, const char *dotgit_name, const char *shortname_pfix)
+{
+	if (!verify_dotgit_ntfs_generic(name, dotgit_name, shortname_pfix))
+		return false;
+
+	return verify_dotgit_hfs_generic(name, strlen(name), dotgit_name, strlen(dotgit_name));
+}
+
+int git_path_is_dotgit_modules(const char *name)
+{
+	return !verify_dotgit_generic(name, "gitmodules", "gi7eba");
+}
