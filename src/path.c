@@ -1853,3 +1853,13 @@ int git_path_is_dotgit_modules(const char *name)
 {
 	return !verify_dotgit_generic(name, "gitmodules", "gi7eba");
 }
+
+int git_path_is_dotgit_ignore(const char *name)
+{
+	return !verify_dotgit_generic(name, "gitignore", "gi250a");
+}
+
+int git_path_is_dotgit_attributes(const char *name)
+{
+	return !verify_dotgit_generic(name, "gitattributes", "gi7d29");
+}
