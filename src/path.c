@@ -1561,16 +1561,29 @@ static int32_t next_hfs_char(const char **in, size_t *len)
 	return 0; /* NULL byte -- end of string */
 }
 
-static bool verify_dotgit_hfs(const char *path, size_t len)
+static bool verify_dotgit_hfs_generic(const char *path, size_t len, const char *needle, size_t needle_len)
 {
-	if (next_hfs_char(&path, &len) != '.' ||
-		next_hfs_char(&path, &len) != 'g' ||
-		next_hfs_char(&path, &len) != 'i' ||
-		next_hfs_char(&path, &len) != 't' ||
-		next_hfs_char(&path, &len) != 0)
+	size_t i;
+	char c;
+
+	if (next_hfs_char(&path, &len) != '.')
+		return true;
+
+	for (i = 0; i < needle_len; i++) {
+		c = next_hfs_char(&path, &len);
+		if (c != needle[i])
+			return true;
+	}
+
+	if (next_hfs_char(&path, &len) != '\0')
 		return true;
 
 	return false;
+}
+
+static bool verify_dotgit_hfs(const char *path, size_t len)
+{
+	return verify_dotgit_hfs_generic(path, len, "git", CONST_STRLEN("git"));
 }
 
 GIT_INLINE(bool) verify_dotgit_ntfs(git_repository *repo, const char *path, size_t len)
