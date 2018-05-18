@@ -630,4 +630,25 @@ extern bool git_path_isvalid(
  */
 int git_path_normalize_slashes(git_buf *out, const char *path);
 
+/**
+ * Check whether a path component corresponds to a .gitmodules file
+ *
+ * @param name the path component to check
+ */
+extern int git_path_is_dotgit_modules(const char *name);
+
+/**
+ * Check whether a path component corresponds to a .gitignore file
+ *
+ * @param name the path component to check
+ */
+extern int git_path_is_dotgit_ignore(const char *name);
+
+/**
+ * Check whether a path component corresponds to a .gitignore file
+ *
+ * @param name the path component to check
+ */
+extern int git_path_is_dotgit_attributes(const char *name);
+
 #endif

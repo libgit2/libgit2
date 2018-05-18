@@ -1,8 +1,6 @@
 #include "clar_libgit2.h"
 #include "path.h"
 
-#include "git2/sys/path.h"
-
 static char *gitmodules_altnames[] = {
 	".gitmodules",
 
