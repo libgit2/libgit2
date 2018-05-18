@@ -13,6 +13,9 @@ v0.27 + 1
 
 ### API additions
 
+* You can now swap out memory allocators via the
+  `GIT_OPT_SET_ALLOCATOR` option with `git_libgit2_opts()`.
+
 ### API removals
 
 ### Breaking API changes
