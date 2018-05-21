@@ -18,3 +18,10 @@ The same difference exists when listing worktrees:
 git worktree list -> /home/user/projects/libgit2
 git_repository_workdir(repo) -> /home/user/projects/libgit2/
 ```
+
+Windows Junction Points
+-----------------------
+
+In libgit2, junction points are treated like symbolic links. They're handled specially in `git_win32__file_attribute_to_stat` in `src/win/w32_util.h`. This means that libgit2 tracks the directory itself as a link.
+
+In Git for Windows, junction points are treated like regular directories. This means that Git for Windows tracks the contents of the directory.
