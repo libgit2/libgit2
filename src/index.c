@@ -884,11 +884,14 @@ static int index_entry_create(
 	git_index_entry **out,
 	git_repository *repo,
 	const char *path,
+	struct stat *st,
 	bool from_workdir)
 {
 	size_t pathlen = strlen(path), alloclen;
 	struct entry_internal *entry;
 	unsigned int path_valid_flags = GIT_PATH_REJECT_INDEX_DEFAULTS;
+
+	GIT_UNUSED(st);
 
 	/* always reject placing `.git` in the index and directory traversal.
 	 * when requested, disallow platform-specific filenames and upgrade to
@@ -922,15 +925,35 @@ static int index_entry_init(
 {
 	int error = 0;
 	git_index_entry *entry = NULL;
+	git_buf path;
 	struct stat st;
 	git_oid oid;
+	git_repository *repo;
 
 	if (INDEX_OWNER(index) == NULL)
 		return create_index_error(-1,
 			"could not initialize index entry. "
 			"Index is not backed up by an existing repository.");
 
-	if (index_entry_create(&entry, INDEX_OWNER(index), rel_path, true) < 0)
+	/*
+	 * FIXME: this is duplicated with the work in
+	 * git_blob__create_from_paths. It should accept an optional stat
+	 * structure so we can pass in the one we have to do here.
+	 */
+	repo = INDEX_OWNER(index);
+	if (git_repository__ensure_not_bare(repo, "create blob from file") < 0)
+		return GIT_EBAREREPO;
+
+	if (git_buf_joinpath(&path, git_repository_workdir(repo), rel_path) < 0)
+		return -1;
+
+	error = git_path_lstat(path.ptr, &st);
+	git_buf_free(&path);
+
+	if (error < 0)
+		return error;
+
+	if (index_entry_create(&entry, INDEX_OWNER(index), rel_path, &st, true) < 0)
 		return -1;
 
 	/* write the blob to disk and get the oid and stat info */
@@ -1016,7 +1039,7 @@ static int index_entry_dup(
 	git_index *index,
 	const git_index_entry *src)
 {
-	if (index_entry_create(out, INDEX_OWNER(index), src->path, false) < 0)
+	if (index_entry_create(out, INDEX_OWNER(index), src->path, NULL, false) < 0)
 		return -1;
 
 	index_entry_cpy(*out, src);
@@ -1038,7 +1061,7 @@ static int index_entry_dup_nocache(
 	git_index *index,
 	const git_index_entry *src)
 {
-	if (index_entry_create(out, INDEX_OWNER(index), src->path, false) < 0)
+	if (index_entry_create(out, INDEX_OWNER(index), src->path, NULL, false) < 0)
 		return -1;
 
 	index_entry_cpy_nocache(*out, src);
@@ -1461,9 +1484,6 @@ static int add_repo_as_submodule(git_index_entry **out, git_index *index, const 
 	struct stat st;
 	int error;
 
-	if (index_entry_create(&entry, INDEX_OWNER(index), path, true) < 0)
-		return -1;
-
 	if ((error = git_buf_joinpath(&abspath, git_repository_workdir(repo), path)) < 0)
 		return error;
 
@@ -1471,6 +1491,9 @@ static int add_repo_as_submodule(git_index_entry **out, git_index *index, const 
 		giterr_set(GITERR_OS, "failed to stat repository dir");
 		return -1;
 	}
+
+	if (index_entry_create(&entry, INDEX_OWNER(index), path, &st, true) < 0)
+		return -1;
 
 	git_index_entry__init_from_stat(entry, &st, !index->distrust_filemode);
 
@@ -2965,7 +2988,7 @@ static int read_tree_cb(
 	if (git_buf_joinpath(&path, root, tentry->filename) < 0)
 		return -1;
 
-	if (index_entry_create(&entry, INDEX_OWNER(data->index), path.ptr, false) < 0)
+	if (index_entry_create(&entry, INDEX_OWNER(data->index), path.ptr, NULL, false) < 0)
 		return -1;
 
 	entry->mode = tentry->attr;
