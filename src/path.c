@@ -1634,10 +1634,8 @@ GIT_INLINE(bool) only_spaces_and_dots(const char *path)
 	return true;
 }
 
-GIT_INLINE(bool) verify_dotgit_ntfs_generic(const char *name, const char *dotgit_name, const char *shortname_pfix)
+GIT_INLINE(bool) verify_dotgit_ntfs_generic(const char *name, size_t len, const char *dotgit_name, size_t dotgit_len, const char *shortname_pfix)
 {
-	size_t len = strlen(name);
-	size_t dotgit_len = strlen(dotgit_name);
 	int i, saw_tilde;
 
 	if (name[0] == '.' && len >= dotgit_len &&
@@ -1841,64 +1839,64 @@ int git_path_normalize_slashes(git_buf *out, const char *path)
 	return 0;
 }
 
-static int verify_dotgit_generic(const char *name, const char *dotgit_name, const char *shortname_pfix)
+static int verify_dotgit_generic(const char *name, size_t len, const char *dotgit_name, size_t dotgit_len, const char *shortname_pfix)
 {
-	if (!verify_dotgit_ntfs_generic(name, dotgit_name, shortname_pfix))
+	if (!verify_dotgit_ntfs_generic(name, len, dotgit_name, dotgit_len, shortname_pfix))
 		return false;
 
-	return verify_dotgit_hfs_generic(name, strlen(name), dotgit_name, strlen(dotgit_name));
+	return verify_dotgit_hfs_generic(name, len, dotgit_name, dotgit_len);
 }
 
-int git_path_is_ntfs_dotgit_modules(const char *name)
+int git_path_is_ntfs_dotgit_modules(const char *name, size_t len)
 {
-	return !verify_dotgit_ntfs_generic(name, "gitmodules", "gi7eba");
+	return !verify_dotgit_ntfs_generic(name, len, "gitmodules", CONST_STRLEN("gitmodules"), "gi7eba");
 }
 
-int git_path_is_hfs_dotgit_modules(const char *name)
+int git_path_is_hfs_dotgit_modules(const char *name, size_t len)
 {
-	return !verify_dotgit_hfs_generic(name, strlen(name), "gitmodules", CONST_STRLEN("gitmodules"));
+	return !verify_dotgit_hfs_generic(name, len, "gitmodules", CONST_STRLEN("gitmodules"));
 }
 
-int git_path_is_dotgit_modules(const char *name)
+int git_path_is_dotgit_modules(const char *name, size_t len)
 {
-	if (git_path_is_hfs_dotgit_modules(name))
+	if (git_path_is_hfs_dotgit_modules(name, len))
 		return 1;
 
-	return git_path_is_ntfs_dotgit_modules(name);
+	return git_path_is_ntfs_dotgit_modules(name, len);
 }
 
-int git_path_is_ntfs_dotgit_ignore(const char *name)
+int git_path_is_ntfs_dotgit_ignore(const char *name, size_t len)
 {
-	return !verify_dotgit_ntfs_generic(name, "gitignore", "gi250a");
+	return !verify_dotgit_ntfs_generic(name, len, "gitignore", CONST_STRLEN("gitignore"), "gi250a");
 }
 
-int git_path_is_hfs_dotgit_ignore(const char *name)
+int git_path_is_hfs_dotgit_ignore(const char *name, size_t len)
 {
-	return !verify_dotgit_hfs_generic(name, strlen(name), "gitignore", CONST_STRLEN("gitignore"));
+	return !verify_dotgit_hfs_generic(name, len, "gitignore", CONST_STRLEN("gitignore"));
 }
 
-int git_path_is_dotgit_ignore(const char *name)
+int git_path_is_dotgit_ignore(const char *name, size_t len)
 {
-	if (git_path_is_hfs_dotgit_ignore(name))
+	if (git_path_is_hfs_dotgit_ignore(name, len))
 		return 1;
 
-	return git_path_is_ntfs_dotgit_ignore(name);
+	return git_path_is_ntfs_dotgit_ignore(name, len);
 }
 
-int git_path_is_hfs_dotgit_attributes(const char *name)
+int git_path_is_hfs_dotgit_attributes(const char *name, size_t len)
 {
-	return !verify_dotgit_hfs_generic(name, strlen(name), "gitattributes", CONST_STRLEN("gitattributes"));
+	return !verify_dotgit_hfs_generic(name, len, "gitattributes", CONST_STRLEN("gitattributes"));
 }
 
-int git_path_is_ntfs_dotgit_attributes(const char *name)
+int git_path_is_ntfs_dotgit_attributes(const char *name, size_t len)
 {
-	return !verify_dotgit_ntfs_generic(name, "gitattributes", "gi7d29");
+	return !verify_dotgit_ntfs_generic(name, len, "gitattributes", CONST_STRLEN("gitattributes"), "gi7d29");
 }
 
-int git_path_is_dotgit_attributes(const char *name)
+int git_path_is_dotgit_attributes(const char *name, size_t len)
 {
-	if (git_path_is_hfs_dotgit_attributes(name))
+	if (git_path_is_hfs_dotgit_attributes(name, len))
 		return 1;
 
-	return git_path_is_ntfs_dotgit_attributes(name);
+	return git_path_is_ntfs_dotgit_attributes(name, len);
 }
