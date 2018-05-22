@@ -90,18 +90,18 @@ static char *gitmodules_not_altnames[] = {
 void test_path_dotgit__dotgit_modules(void)
 {
 	size_t i;
-	cl_assert_equal_i(1, git_path_is_dotgit_modules(".gitmodules"));
-	cl_assert_equal_i(1, git_path_is_dotgit_modules(".git\xe2\x80\x8cmodules"));
+	cl_assert_equal_i(1, git_path_is_dotgit_modules(".gitmodules", strlen(".gitmodules")));
+	cl_assert_equal_i(1, git_path_is_dotgit_modules(".git\xe2\x80\x8cmodules", strlen(".git\xe2\x80\x8cmodules")));
 
 	for (i = 0; i < ARRAY_SIZE(gitmodules_altnames); i++) {
 		const char *name = gitmodules_altnames[i];
-		if (!git_path_is_dotgit_modules(name))
+		if (!git_path_is_dotgit_modules(name, strlen(name)))
 			cl_fail(name);
 	}
 
 	for (i = 0; i < ARRAY_SIZE(gitmodules_not_altnames); i++) {
 		const char *name = gitmodules_not_altnames[i];
-		if (git_path_is_dotgit_modules(name))
+		if (git_path_is_dotgit_modules(name, strlen(name)))
 			cl_fail(name);
 	}
 
