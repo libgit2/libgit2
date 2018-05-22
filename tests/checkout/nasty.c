@@ -364,3 +364,10 @@ void test_checkout_nasty__symlink3(void)
 	test_checkout_passes("refs/heads/symlink3", ".git/foobar");
 }
 
+void test_checkout_nasty__gitmodules_symlink(void)
+{
+	cl_repo_set_bool(repo, "core.protectHFS", true);
+	cl_repo_set_bool(repo, "core.protectNTFS", true);
+
+	test_checkout_passes("refs/heads/gitmodules-symlink", ".gitmodules");
+}
