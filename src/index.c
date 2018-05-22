@@ -890,8 +890,7 @@ static int index_entry_create(
 	size_t pathlen = strlen(path), alloclen;
 	struct entry_internal *entry;
 	unsigned int path_valid_flags = GIT_PATH_REJECT_INDEX_DEFAULTS;
-
-	GIT_UNUSED(st);
+	uint16_t mode = 0;
 
 	/* always reject placing `.git` in the index and directory traversal.
 	 * when requested, disallow platform-specific filenames and upgrade to
@@ -899,8 +898,10 @@ static int index_entry_create(
 	 */
 	if (from_workdir)
 		path_valid_flags |= GIT_PATH_REJECT_WORKDIR_DEFAULTS;
+	if (st)
+		mode = st->st_mode;
 
-	if (!git_path_isvalid(repo, path, path_valid_flags)) {
+	if (!git_path_isvalid(repo, path, mode, path_valid_flags)) {
 		giterr_set(GITERR_INDEX, "invalid path: '%s'", path);
 		return -1;
 	}
@@ -925,7 +926,7 @@ static int index_entry_init(
 {
 	int error = 0;
 	git_index_entry *entry = NULL;
-	git_buf path;
+	git_buf path = GIT_BUF_INIT;
 	struct stat st;
 	git_oid oid;
 	git_repository *repo;
