@@ -382,7 +382,7 @@ int git_submodule_name_is_valid(const git_repository *repo, const char *name, in
 	}
 
 	/* FIXME: Un-consting it to reduce the amount of diff */
-	isvalid =  git_path_isvalid((git_repository *)repo, buf.ptr, flags);
+	isvalid =  git_path_isvalid((git_repository *)repo, buf.ptr, 0, flags);
 	git_buf_free(&buf);
 
 	return isvalid;

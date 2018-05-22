@@ -1712,6 +1712,7 @@ static bool verify_component(
 	git_repository *repo,
 	const char *component,
 	size_t len,
+	uint16_t mode,
 	unsigned int flags)
 {
 	if (len == 0)
@@ -1744,13 +1745,19 @@ static bool verify_component(
 			return false;
 	}
 
-	if (flags & GIT_PATH_REJECT_DOT_GIT_HFS &&
-		!verify_dotgit_hfs(component, len))
-		return false;
+	if (flags & GIT_PATH_REJECT_DOT_GIT_HFS) {
+		if (!verify_dotgit_hfs(component, len))
+			return false;
+		if (S_ISLNK(mode) && git_path_is_hfs_dotgit_modules(component, len))
+			return false;
+	}
 
-	if (flags & GIT_PATH_REJECT_DOT_GIT_NTFS &&
-		!verify_dotgit_ntfs(repo, component, len))
-		return false;
+	if (flags & GIT_PATH_REJECT_DOT_GIT_NTFS) {
+		if (!verify_dotgit_ntfs(repo, component, len))
+			return false;
+		if (S_ISLNK(mode) && git_path_is_ntfs_dotgit_modules(component, len))
+			return false;
+	}
 
 	/* don't bother rerunning the `.git` test if we ran the HFS or NTFS
 	 * specific tests, they would have already rejected `.git`.
@@ -1801,6 +1808,7 @@ GIT_INLINE(unsigned int) dotgit_flags(
 bool git_path_isvalid(
 	git_repository *repo,
 	const char *path,
+	uint16_t mode,
 	unsigned int flags)
 {
 	const char *start, *c;
@@ -1814,14 +1822,14 @@ bool git_path_isvalid(
 			return false;
 
 		if (*c == '/') {
-			if (!verify_component(repo, start, (c - start), flags))
+			if (!verify_component(repo, start, (c - start), mode, flags))
 				return false;
 
 			start = c+1;
 		}
 	}
 
-	return verify_component(repo, start, (c - start), flags);
+	return verify_component(repo, start, (c - start), mode, flags);
 }
 
 int git_path_normalize_slashes(git_buf *out, const char *path)
