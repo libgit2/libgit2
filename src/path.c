@@ -1700,6 +1700,24 @@ GIT_INLINE(bool) verify_char(unsigned char c, unsigned int flags)
 }
 
 /*
+ * Return the length of the common prefix between str and prefix, comparing them
+ * case-insensitively (must be ASCII to match).
+ */
+GIT_INLINE(size_t) common_prefix_icase(const char *str, size_t len, const char *prefix)
+{
+	size_t count = 0;
+
+	while (len >0 && tolower(*str) == tolower(*prefix)) {
+		count++;
+		str++;
+		prefix++;
+		len--;
+	}
+
+	return count;
+}
+
+/*
  * We fundamentally don't like some paths when dealing with user-inputted
  * strings (in checkout or ref names): we don't want dot or dot-dot
  * anywhere, we want to avoid writing weird paths on Windows that can't
@@ -1763,14 +1781,20 @@ static bool verify_component(
 	 * specific tests, they would have already rejected `.git`.
 	 */
 	if ((flags & GIT_PATH_REJECT_DOT_GIT_HFS) == 0 &&
-		(flags & GIT_PATH_REJECT_DOT_GIT_NTFS) == 0 &&
-		(flags & GIT_PATH_REJECT_DOT_GIT_LITERAL) &&
-		len == 4 &&
-		component[0] == '.' &&
-		(component[1] == 'g' || component[1] == 'G') &&
-		(component[2] == 'i' || component[2] == 'I') &&
-		(component[3] == 't' || component[3] == 'T'))
-		return false;
+	    (flags & GIT_PATH_REJECT_DOT_GIT_NTFS) == 0 &&
+	    (flags & GIT_PATH_REJECT_DOT_GIT_LITERAL)) {
+		if (len >= 4 &&
+		    component[0] == '.' &&
+		    (component[1] == 'g' || component[1] == 'G') &&
+		    (component[2] == 'i' || component[2] == 'I') &&
+		    (component[3] == 't' || component[3] == 'T')) {
+			if (len == 4)
+				return false;
+
+			if (S_ISLNK(mode) && common_prefix_icase(component, len, ".gitmodules") == len)
+				return false;
+		}
+	    }
 
 	return true;
 }
