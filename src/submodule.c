@@ -186,10 +186,13 @@ static int load_submodule_names(git_strmap *out, git_repository *repo, git_confi
 		fdot = strchr(entry->name, '.');
 		ldot = strrchr(entry->name, '.');
 
+		git_buf_clear(&buf);
 		git_buf_put(&buf, fdot + 1, ldot - fdot - 1);
 		isvalid = git_submodule_name_is_valid(repo, buf.ptr, 0);
-		if (isvalid < 0)
-			return isvalid;
+		if (isvalid < 0) {
+			error = isvalid;
+			goto out;
+		}
 		if (!isvalid)
 			continue;
 
@@ -199,9 +202,13 @@ static int load_submodule_names(git_strmap *out, git_repository *repo, git_confi
 			return -1;
 		}
 	}
+	if (error == GIT_ITEROVER)
+		error = 0;
 
+out:
+	git_buf_free(&buf);
 	git_config_iterator_free(iter);
-	return 0;
+	return error;
 }
 
 int git_submodule_lookup(
