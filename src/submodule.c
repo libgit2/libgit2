@@ -324,7 +324,7 @@ int git_submodule_name_is_valid(git_repository *repo, const char *name, int flag
 		flags = GIT_PATH_REJECT_FILESYSTEM_DEFAULTS;
 
 	/* Avoid allocating a new string if we can avoid it */
-	if (index(name, '\\')) {
+	if (strchr(name, '\\') != NULL) {
 		if ((error = git_path_normalize_slashes(&buf, name)) < 0)
 			return error;
 	} else {
