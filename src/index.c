@@ -2629,7 +2629,7 @@ static bool is_index_extended(git_index *index)
 static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const char *last)
 {
 	void *mem = NULL;
-	struct entry_short *ondisk;
+	struct entry_short ondisk;
 	size_t path_len, disk_size;
 	int varint_len = 0;
 	char *path;
@@ -2657,9 +2657,7 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const cha
 	if (git_filebuf_reserve(file, &mem, disk_size) < 0)
 		return -1;
 
-	ondisk = (struct entry_short *)mem;
-
-	memset(ondisk, 0x0, disk_size);
+	memset(mem, 0x0, disk_size);
 
 	/**
 	 * Yes, we have to truncate.
@@ -2671,30 +2669,32 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry, const cha
 	 *
 	 * In 2038 I will be either too dead or too rich to care about this
 	 */
-	ondisk->ctime.seconds = htonl((uint32_t)entry->ctime.seconds);
-	ondisk->mtime.seconds = htonl((uint32_t)entry->mtime.seconds);
-	ondisk->ctime.nanoseconds = htonl(entry->ctime.nanoseconds);
-	ondisk->mtime.nanoseconds = htonl(entry->mtime.nanoseconds);
-	ondisk->dev = htonl(entry->dev);
-	ondisk->ino = htonl(entry->ino);
-	ondisk->mode = htonl(entry->mode);
-	ondisk->uid = htonl(entry->uid);
-	ondisk->gid = htonl(entry->gid);
-	ondisk->file_size = htonl((uint32_t)entry->file_size);
+	ondisk.ctime.seconds = htonl((uint32_t)entry->ctime.seconds);
+	ondisk.mtime.seconds = htonl((uint32_t)entry->mtime.seconds);
+	ondisk.ctime.nanoseconds = htonl(entry->ctime.nanoseconds);
+	ondisk.mtime.nanoseconds = htonl(entry->mtime.nanoseconds);
+	ondisk.dev = htonl(entry->dev);
+	ondisk.ino = htonl(entry->ino);
+	ondisk.mode = htonl(entry->mode);
+	ondisk.uid = htonl(entry->uid);
+	ondisk.gid = htonl(entry->gid);
+	ondisk.file_size = htonl((uint32_t)entry->file_size);
 
-	git_oid_cpy(&ondisk->oid, &entry->id);
+	git_oid_cpy(&ondisk.oid, &entry->id);
 
-	ondisk->flags = htons(entry->flags);
+	ondisk.flags = htons(entry->flags);
 
 	if (entry->flags & GIT_IDXENTRY_EXTENDED) {
-		struct entry_long *ondisk_ext;
-		ondisk_ext = (struct entry_long *)ondisk;
-		ondisk_ext->flags_extended = htons(entry->flags_extended &
+		struct entry_long ondisk_ext;
+		memcpy(&ondisk_ext, &ondisk, sizeof(struct entry_short));
+		ondisk_ext.flags_extended = htons(entry->flags_extended &
 			GIT_IDXENTRY_EXTENDED_FLAGS);
-		path = ondisk_ext->path;
+		memcpy(mem, &ondisk_ext, offsetof(struct entry_long, path));
+		path = ((struct entry_long*)mem)->path;
 		disk_size -= offsetof(struct entry_long, path);
 	} else {
-		path = ondisk->path;
+		memcpy(mem, &ondisk, offsetof(struct entry_short, path));
+		path = ((struct entry_short*)mem)->path;
 		disk_size -= offsetof(struct entry_short, path);
 	}
 
