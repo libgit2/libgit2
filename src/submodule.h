@@ -157,6 +157,6 @@ extern int git_submodule__map(
  * @param name the name to check
  * @param flags the `GIT_PATH` flags to use for the check (0 to use filesystem defaults)
  */
-extern int git_submodule_name_is_valid(const git_repository *repo, const char *name, int flags);
+extern int git_submodule_name_is_valid(git_repository *repo, const char *name, int flags);
 
 #endif
