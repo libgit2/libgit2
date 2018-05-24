@@ -320,7 +320,7 @@ int git_submodule_lookup(
 	return 0;
 }
 
-int git_submodule_name_is_valid(const git_repository *repo, const char *name, int flags)
+int git_submodule_name_is_valid(git_repository *repo, const char *name, int flags)
 {
 	git_buf buf = GIT_BUF_INIT;
 	int error, isvalid;
@@ -336,8 +336,7 @@ int git_submodule_name_is_valid(const git_repository *repo, const char *name, in
 		git_buf_attach_notowned(&buf, name, strlen(name));
 	}
 
-	/* FIXME: Un-consting it to reduce the amount of diff */
-	isvalid =  git_path_isvalid((git_repository *)repo, buf.ptr, 0, flags);
+	isvalid =  git_path_isvalid(repo, buf.ptr, 0, flags);
 	git_buf_free(&buf);
 
 	return isvalid;
