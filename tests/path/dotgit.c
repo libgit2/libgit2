@@ -4,7 +4,11 @@
 static char *gitmodules_altnames[] = {
 	".gitmodules",
 
-	".git\u200cmodules",
+	/*
+	 * Equivalent to the ".git\u200cmodules" string from git but hard-coded
+	 * as a UTF-8 sequence
+	 */
+	".git\xe2\x80\x8cmodules",
 
 	".Gitmodules",
 	".gitmoduleS",
