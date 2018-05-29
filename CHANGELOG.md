@@ -6,6 +6,11 @@ v0.27 + 1
 * The line-ending filtering logic - when checking out files - has been
   updated to match newer git (>= git 2.9) for proper interoperability.
 
+* Submodules with names which attempt to perform path traversal now have their
+  configuration ignored. Such names were blindly appended to the
+  `$GIT_DIR/modules` and a malicious name could lead to an attacker writing to
+  an arbitrary location. This matches git's handling of CVE-2018-11235.
+
 ### API additions
 
 ### API removals
@@ -13,6 +18,10 @@ v0.27 + 1
 ### Breaking API changes
 
 * The default checkout strategy changed from `DRY_RUN` to `SAFE` (#4531).
+
+* Adding a symlink as .gitmodules into the index from the workdir or checking
+  out such files is not allowed as this can make a Git implementation write
+  outside of the repository and bypass the fsck checks for CVE-2018-11235.
 
 v0.27
 ---------

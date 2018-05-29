@@ -1561,16 +1561,29 @@ static int32_t next_hfs_char(const char **in, size_t *len)
 	return 0; /* NULL byte -- end of string */
 }
 
-static bool verify_dotgit_hfs(const char *path, size_t len)
+static bool verify_dotgit_hfs_generic(const char *path, size_t len, const char *needle, size_t needle_len)
 {
-	if (next_hfs_char(&path, &len) != '.' ||
-		next_hfs_char(&path, &len) != 'g' ||
-		next_hfs_char(&path, &len) != 'i' ||
-		next_hfs_char(&path, &len) != 't' ||
-		next_hfs_char(&path, &len) != 0)
+	size_t i;
+	char c;
+
+	if (next_hfs_char(&path, &len) != '.')
+		return true;
+
+	for (i = 0; i < needle_len; i++) {
+		c = next_hfs_char(&path, &len);
+		if (c != needle[i])
+			return true;
+	}
+
+	if (next_hfs_char(&path, &len) != '\0')
 		return true;
 
 	return false;
+}
+
+static bool verify_dotgit_hfs(const char *path, size_t len)
+{
+	return verify_dotgit_hfs_generic(path, len, "git", CONST_STRLEN("git"));
 }
 
 GIT_INLINE(bool) verify_dotgit_ntfs(git_repository *repo, const char *path, size_t len)
@@ -1608,6 +1621,57 @@ GIT_INLINE(bool) verify_dotgit_ntfs(git_repository *repo, const char *path, size
 	return false;
 }
 
+GIT_INLINE(bool) only_spaces_and_dots(const char *path)
+{
+	const char *c = path;
+
+	for (;; c++) {
+		if (*c == '\0')
+			return true;
+		if (*c != ' ' && *c != '.')
+			return false;
+	}
+
+	return true;
+}
+
+GIT_INLINE(bool) verify_dotgit_ntfs_generic(const char *name, size_t len, const char *dotgit_name, size_t dotgit_len, const char *shortname_pfix)
+{
+	int i, saw_tilde;
+
+	if (name[0] == '.' && len >= dotgit_len &&
+	    !strncasecmp(name + 1, dotgit_name, dotgit_len)) {
+		return !only_spaces_and_dots(name + dotgit_len + 1);
+	}
+
+	/* Detect the basic NTFS shortname with the first six chars */
+	if (!strncasecmp(name, dotgit_name, 6) && name[6] == '~' &&
+	    name[7] >= '1' && name[7] <= '4')
+		return !only_spaces_and_dots(name + 8);
+
+	/* Catch fallback names */
+	for (i = 0, saw_tilde = 0; i < 8; i++) {
+		if (name[i] == '\0') {
+			return true;
+		} else if (saw_tilde) {
+			if (name[i] < '0' || name[i] > '9')
+				return true;
+		} else if (name[i] == '~') {
+			if (name[i+1] < '1' || name[i+1]  > '9')
+				return true;
+			saw_tilde = 1;
+		} else if (i >= 6) {
+			return true;
+		} else if (name[i] < 0) {
+			return true;
+		} else if (git__tolower(name[i]) != shortname_pfix[i]) {
+			return true;
+		}
+	}
+
+	return !only_spaces_and_dots(name + i);
+}
+
 GIT_INLINE(bool) verify_char(unsigned char c, unsigned int flags)
 {
 	if ((flags & GIT_PATH_REJECT_BACKSLASH) && c == '\\')
@@ -1636,6 +1700,24 @@ GIT_INLINE(bool) verify_char(unsigned char c, unsigned int flags)
 }
 
 /*
+ * Return the length of the common prefix between str and prefix, comparing them
+ * case-insensitively (must be ASCII to match).
+ */
+GIT_INLINE(size_t) common_prefix_icase(const char *str, size_t len, const char *prefix)
+{
+	size_t count = 0;
+
+	while (len >0 && tolower(*str) == tolower(*prefix)) {
+		count++;
+		str++;
+		prefix++;
+		len--;
+	}
+
+	return count;
+}
+
+/*
  * We fundamentally don't like some paths when dealing with user-inputted
  * strings (in checkout or ref names): we don't want dot or dot-dot
  * anywhere, we want to avoid writing weird paths on Windows that can't
@@ -1648,6 +1730,7 @@ static bool verify_component(
 	git_repository *repo,
 	const char *component,
 	size_t len,
+	uint16_t mode,
 	unsigned int flags)
 {
 	if (len == 0)
@@ -1680,26 +1763,38 @@ static bool verify_component(
 			return false;
 	}
 
-	if (flags & GIT_PATH_REJECT_DOT_GIT_HFS &&
-		!verify_dotgit_hfs(component, len))
-		return false;
+	if (flags & GIT_PATH_REJECT_DOT_GIT_HFS) {
+		if (!verify_dotgit_hfs(component, len))
+			return false;
+		if (S_ISLNK(mode) && git_path_is_hfs_dotgit_modules(component, len))
+			return false;
+	}
 
-	if (flags & GIT_PATH_REJECT_DOT_GIT_NTFS &&
-		!verify_dotgit_ntfs(repo, component, len))
-		return false;
+	if (flags & GIT_PATH_REJECT_DOT_GIT_NTFS) {
+		if (!verify_dotgit_ntfs(repo, component, len))
+			return false;
+		if (S_ISLNK(mode) && git_path_is_ntfs_dotgit_modules(component, len))
+			return false;
+	}
 
 	/* don't bother rerunning the `.git` test if we ran the HFS or NTFS
 	 * specific tests, they would have already rejected `.git`.
 	 */
 	if ((flags & GIT_PATH_REJECT_DOT_GIT_HFS) == 0 &&
-		(flags & GIT_PATH_REJECT_DOT_GIT_NTFS) == 0 &&
-		(flags & GIT_PATH_REJECT_DOT_GIT_LITERAL) &&
-		len == 4 &&
-		component[0] == '.' &&
-		(component[1] == 'g' || component[1] == 'G') &&
-		(component[2] == 'i' || component[2] == 'I') &&
-		(component[3] == 't' || component[3] == 'T'))
-		return false;
+	    (flags & GIT_PATH_REJECT_DOT_GIT_NTFS) == 0 &&
+	    (flags & GIT_PATH_REJECT_DOT_GIT_LITERAL)) {
+		if (len >= 4 &&
+		    component[0] == '.' &&
+		    (component[1] == 'g' || component[1] == 'G') &&
+		    (component[2] == 'i' || component[2] == 'I') &&
+		    (component[3] == 't' || component[3] == 'T')) {
+			if (len == 4)
+				return false;
+
+			if (S_ISLNK(mode) && common_prefix_icase(component, len, ".gitmodules") == len)
+				return false;
+		}
+	    }
 
 	return true;
 }
@@ -1737,6 +1832,7 @@ GIT_INLINE(unsigned int) dotgit_flags(
 bool git_path_isvalid(
 	git_repository *repo,
 	const char *path,
+	uint16_t mode,
 	unsigned int flags)
 {
 	const char *start, *c;
@@ -1750,14 +1846,14 @@ bool git_path_isvalid(
 			return false;
 
 		if (*c == '/') {
-			if (!verify_component(repo, start, (c - start), flags))
+			if (!verify_component(repo, start, (c - start), mode, flags))
 				return false;
 
 			start = c+1;
 		}
 	}
 
-	return verify_component(repo, start, (c - start), flags);
+	return verify_component(repo, start, (c - start), mode, flags);
 }
 
 int git_path_normalize_slashes(git_buf *out, const char *path)
@@ -1774,4 +1870,66 @@ int git_path_normalize_slashes(git_buf *out, const char *path)
 	}
 
 	return 0;
+}
+
+static int verify_dotgit_generic(const char *name, size_t len, const char *dotgit_name, size_t dotgit_len, const char *shortname_pfix)
+{
+	if (!verify_dotgit_ntfs_generic(name, len, dotgit_name, dotgit_len, shortname_pfix))
+		return false;
+
+	return verify_dotgit_hfs_generic(name, len, dotgit_name, dotgit_len);
+}
+
+int git_path_is_ntfs_dotgit_modules(const char *name, size_t len)
+{
+	return !verify_dotgit_ntfs_generic(name, len, "gitmodules", CONST_STRLEN("gitmodules"), "gi7eba");
+}
+
+int git_path_is_hfs_dotgit_modules(const char *name, size_t len)
+{
+	return !verify_dotgit_hfs_generic(name, len, "gitmodules", CONST_STRLEN("gitmodules"));
+}
+
+int git_path_is_dotgit_modules(const char *name, size_t len)
+{
+	if (git_path_is_hfs_dotgit_modules(name, len))
+		return 1;
+
+	return git_path_is_ntfs_dotgit_modules(name, len);
+}
+
+int git_path_is_ntfs_dotgit_ignore(const char *name, size_t len)
+{
+	return !verify_dotgit_ntfs_generic(name, len, "gitignore", CONST_STRLEN("gitignore"), "gi250a");
+}
+
+int git_path_is_hfs_dotgit_ignore(const char *name, size_t len)
+{
+	return !verify_dotgit_hfs_generic(name, len, "gitignore", CONST_STRLEN("gitignore"));
+}
+
+int git_path_is_dotgit_ignore(const char *name, size_t len)
+{
+	if (git_path_is_hfs_dotgit_ignore(name, len))
+		return 1;
+
+	return git_path_is_ntfs_dotgit_ignore(name, len);
+}
+
+int git_path_is_hfs_dotgit_attributes(const char *name, size_t len)
+{
+	return !verify_dotgit_hfs_generic(name, len, "gitattributes", CONST_STRLEN("gitattributes"));
+}
+
+int git_path_is_ntfs_dotgit_attributes(const char *name, size_t len)
+{
+	return !verify_dotgit_ntfs_generic(name, len, "gitattributes", CONST_STRLEN("gitattributes"), "gi7d29");
+}
+
+int git_path_is_dotgit_attributes(const char *name, size_t len)
+{
+	if (git_path_is_hfs_dotgit_attributes(name, len))
+		return 1;
+
+	return git_path_is_ntfs_dotgit_attributes(name, len);
 }
