@@ -54,256 +54,256 @@ void test_path_core__make_relative(void)
 
 void test_path_core__isvalid_standard(void)
 {
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/bar", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/bar/file.txt", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/bar/.file", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/bar", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/bar/file.txt", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/bar/.file", 0, 0));
 }
 
 void test_path_core__isvalid_empty_dir_component(void)
 {
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo//bar", 0));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo//bar", 0, 0));
 
 	/* leading slash */
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "/", 0));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "/foo", 0));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "/foo/bar", 0));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "/", 0, 0));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "/foo", 0, 0));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "/foo/bar", 0, 0));
 
 	/* trailing slash */
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/", 0));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/bar/", 0));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/", 0, 0));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/bar/", 0, 0));
 }
 
 void test_path_core__isvalid_dot_and_dotdot(void)
 {
-	cl_assert_equal_b(true, git_path_isvalid(NULL, ".", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "./foo", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/.", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "./foo", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "./foo", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/.", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "./foo", 0, 0));
 
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "..", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "../foo", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/..", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "../foo", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "..", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "../foo", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/..", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "../foo", 0, 0));
 
-	cl_assert_equal_b(false, git_path_isvalid(NULL, ".", GIT_PATH_REJECT_TRAVERSAL));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "./foo", GIT_PATH_REJECT_TRAVERSAL));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/.", GIT_PATH_REJECT_TRAVERSAL));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "./foo", GIT_PATH_REJECT_TRAVERSAL));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, ".", 0, GIT_PATH_REJECT_TRAVERSAL));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "./foo", 0, GIT_PATH_REJECT_TRAVERSAL));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/.", 0, GIT_PATH_REJECT_TRAVERSAL));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "./foo", 0, GIT_PATH_REJECT_TRAVERSAL));
 
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "..", GIT_PATH_REJECT_TRAVERSAL));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "../foo", GIT_PATH_REJECT_TRAVERSAL));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/..", GIT_PATH_REJECT_TRAVERSAL));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "../foo", GIT_PATH_REJECT_TRAVERSAL));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "..", 0, GIT_PATH_REJECT_TRAVERSAL));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "../foo", 0, GIT_PATH_REJECT_TRAVERSAL));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/..", 0, GIT_PATH_REJECT_TRAVERSAL));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "../foo", 0, GIT_PATH_REJECT_TRAVERSAL));
 }
 
 void test_path_core__isvalid_dot_git(void)
 {
-	cl_assert_equal_b(true, git_path_isvalid(NULL, ".git", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, ".git/foo", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/.git", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/.git/bar", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/.GIT/bar", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/bar/.Git", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".git", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".git/foo", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/.git", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/.git/bar", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/.GIT/bar", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/bar/.Git", 0, 0));
 
-	cl_assert_equal_b(false, git_path_isvalid(NULL, ".git", GIT_PATH_REJECT_DOT_GIT_LITERAL));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, ".git/foo", GIT_PATH_REJECT_DOT_GIT_LITERAL));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/.git", GIT_PATH_REJECT_DOT_GIT_LITERAL));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/.git/bar", GIT_PATH_REJECT_DOT_GIT_LITERAL));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/.GIT/bar", GIT_PATH_REJECT_DOT_GIT_LITERAL));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/bar/.Git", GIT_PATH_REJECT_DOT_GIT_LITERAL));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, ".git", 0, GIT_PATH_REJECT_DOT_GIT_LITERAL));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, ".git/foo", 0, GIT_PATH_REJECT_DOT_GIT_LITERAL));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/.git", 0, GIT_PATH_REJECT_DOT_GIT_LITERAL));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/.git/bar", 0, GIT_PATH_REJECT_DOT_GIT_LITERAL));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/.GIT/bar", 0, GIT_PATH_REJECT_DOT_GIT_LITERAL));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/bar/.Git", 0, GIT_PATH_REJECT_DOT_GIT_LITERAL));
 
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "!git", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/!git", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "!git/bar", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, ".tig", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/.tig", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, ".tig/bar", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "!git", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/!git", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "!git/bar", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".tig", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/.tig", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".tig/bar", 0, 0));
 }
 
 void test_path_core__isvalid_backslash(void)
 {
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo\\file.txt", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/bar\\file.txt", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/bar\\", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo\\file.txt", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/bar\\file.txt", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/bar\\", 0, 0));
 
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo\\file.txt", GIT_PATH_REJECT_BACKSLASH));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/bar\\file.txt", GIT_PATH_REJECT_BACKSLASH));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/bar\\", GIT_PATH_REJECT_BACKSLASH));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo\\file.txt", 0, GIT_PATH_REJECT_BACKSLASH));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/bar\\file.txt", 0, GIT_PATH_REJECT_BACKSLASH));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/bar\\", 0, GIT_PATH_REJECT_BACKSLASH));
 }
 
 void test_path_core__isvalid_trailing_dot(void)
 {
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo.", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo...", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/bar.", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo./bar", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo.", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo...", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/bar.", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo./bar", 0, 0));
 
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo.", GIT_PATH_REJECT_TRAILING_DOT));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo...", GIT_PATH_REJECT_TRAILING_DOT));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/bar.", GIT_PATH_REJECT_TRAILING_DOT));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo./bar", GIT_PATH_REJECT_TRAILING_DOT));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo.", 0, GIT_PATH_REJECT_TRAILING_DOT));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo...", 0, GIT_PATH_REJECT_TRAILING_DOT));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/bar.", 0, GIT_PATH_REJECT_TRAILING_DOT));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo./bar", 0, GIT_PATH_REJECT_TRAILING_DOT));
 }
 
 void test_path_core__isvalid_trailing_space(void)
 {
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo ", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo   ", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/bar ", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, " ", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo /bar", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo ", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo   ", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/bar ", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, " ", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo /bar", 0, 0));
 
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo ", GIT_PATH_REJECT_TRAILING_SPACE));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo   ", GIT_PATH_REJECT_TRAILING_SPACE));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/bar ", GIT_PATH_REJECT_TRAILING_SPACE));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, " ", GIT_PATH_REJECT_TRAILING_SPACE));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo /bar", GIT_PATH_REJECT_TRAILING_SPACE));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo ", 0, GIT_PATH_REJECT_TRAILING_SPACE));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo   ", 0, GIT_PATH_REJECT_TRAILING_SPACE));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/bar ", 0, GIT_PATH_REJECT_TRAILING_SPACE));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, " ", 0, GIT_PATH_REJECT_TRAILING_SPACE));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo /bar", 0, GIT_PATH_REJECT_TRAILING_SPACE));
 }
 
 void test_path_core__isvalid_trailing_colon(void)
 {
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo:", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/bar:", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, ":", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo:/bar", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo:", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo/bar:", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ":", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "foo:/bar", 0, 0));
 
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo:", GIT_PATH_REJECT_TRAILING_COLON));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/bar:", GIT_PATH_REJECT_TRAILING_COLON));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, ":", GIT_PATH_REJECT_TRAILING_COLON));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo:/bar", GIT_PATH_REJECT_TRAILING_COLON));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo:", 0, GIT_PATH_REJECT_TRAILING_COLON));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo/bar:", 0, GIT_PATH_REJECT_TRAILING_COLON));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, ":", 0, GIT_PATH_REJECT_TRAILING_COLON));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo:/bar", 0, GIT_PATH_REJECT_TRAILING_COLON));
 }
 
 void test_path_core__isvalid_dotgit_ntfs(void)
 {
-	cl_assert_equal_b(true, git_path_isvalid(NULL, ".git", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, ".git ", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, ".git.", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, ".git.. .", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".git", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".git ", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".git.", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".git.. .", 0, 0));
 
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "git~1", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "git~1 ", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "git~1.", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "git~1.. .", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "git~1", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "git~1 ", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "git~1.", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "git~1.. .", 0, 0));
 
-	cl_assert_equal_b(false, git_path_isvalid(NULL, ".git", GIT_PATH_REJECT_DOT_GIT_NTFS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, ".git ", GIT_PATH_REJECT_DOT_GIT_NTFS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, ".git.", GIT_PATH_REJECT_DOT_GIT_NTFS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, ".git.. .", GIT_PATH_REJECT_DOT_GIT_NTFS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, ".git", 0, GIT_PATH_REJECT_DOT_GIT_NTFS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, ".git ", 0, GIT_PATH_REJECT_DOT_GIT_NTFS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, ".git.", 0, GIT_PATH_REJECT_DOT_GIT_NTFS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, ".git.. .", 0, GIT_PATH_REJECT_DOT_GIT_NTFS));
 
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "git~1", GIT_PATH_REJECT_DOT_GIT_NTFS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "git~1 ", GIT_PATH_REJECT_DOT_GIT_NTFS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "git~1.", GIT_PATH_REJECT_DOT_GIT_NTFS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "git~1.. .", GIT_PATH_REJECT_DOT_GIT_NTFS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "git~1", 0, GIT_PATH_REJECT_DOT_GIT_NTFS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "git~1 ", 0, GIT_PATH_REJECT_DOT_GIT_NTFS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "git~1.", 0, GIT_PATH_REJECT_DOT_GIT_NTFS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "git~1.. .", 0, GIT_PATH_REJECT_DOT_GIT_NTFS));
 }
 
 void test_path_core__isvalid_dos_paths(void)
 {
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "aux", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "aux.", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "aux:", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "aux.asdf", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "aux.asdf\\zippy", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "aux:asdf\\foobar", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "con", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "prn", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "nul", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "aux", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "aux.", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "aux:", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "aux.asdf", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "aux.asdf\\zippy", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "aux:asdf\\foobar", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "con", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "prn", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "nul", 0, 0));
 
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "aux", GIT_PATH_REJECT_DOS_PATHS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "aux.", GIT_PATH_REJECT_DOS_PATHS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "aux:", GIT_PATH_REJECT_DOS_PATHS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "aux.asdf", GIT_PATH_REJECT_DOS_PATHS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "aux.asdf\\zippy", GIT_PATH_REJECT_DOS_PATHS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "aux:asdf\\foobar", GIT_PATH_REJECT_DOS_PATHS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "con", GIT_PATH_REJECT_DOS_PATHS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "prn", GIT_PATH_REJECT_DOS_PATHS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "nul", GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "aux", 0, GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "aux.", 0, GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "aux:", 0, GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "aux.asdf", 0, GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "aux.asdf\\zippy", 0, GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "aux:asdf\\foobar", 0, GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "con", 0, GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "prn", 0, GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "nul", 0, GIT_PATH_REJECT_DOS_PATHS));
 
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "aux1", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "aux1", GIT_PATH_REJECT_DOS_PATHS));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "auxn", GIT_PATH_REJECT_DOS_PATHS));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "aux\\foo", GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "aux1", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "aux1", 0, GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "auxn", 0, GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "aux\\foo", 0, GIT_PATH_REJECT_DOS_PATHS));
 }
 
 void test_path_core__isvalid_dos_paths_withnum(void)
 {
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "com1", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "com1.", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "com1:", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "com1.asdf", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "com1.asdf\\zippy", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "com1:asdf\\foobar", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "com1\\foo", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "lpt1", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "com1", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "com1.", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "com1:", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "com1.asdf", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "com1.asdf\\zippy", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "com1:asdf\\foobar", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "com1\\foo", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "lpt1", 0, 0));
 
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "com1", GIT_PATH_REJECT_DOS_PATHS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "com1.", GIT_PATH_REJECT_DOS_PATHS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "com1:", GIT_PATH_REJECT_DOS_PATHS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "com1.asdf", GIT_PATH_REJECT_DOS_PATHS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "com1.asdf\\zippy", GIT_PATH_REJECT_DOS_PATHS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "com1:asdf\\foobar", GIT_PATH_REJECT_DOS_PATHS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "com1/foo", GIT_PATH_REJECT_DOS_PATHS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "lpt1", GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "com1", 0, GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "com1.", 0, GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "com1:", 0, GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "com1.asdf", 0, GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "com1.asdf\\zippy", 0, GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "com1:asdf\\foobar", 0, GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "com1/foo", 0, GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "lpt1", 0, GIT_PATH_REJECT_DOS_PATHS));
 
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "com0", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "com0", GIT_PATH_REJECT_DOS_PATHS));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "com10", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "com10", GIT_PATH_REJECT_DOS_PATHS));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "comn", GIT_PATH_REJECT_DOS_PATHS));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "com1\\foo", GIT_PATH_REJECT_DOS_PATHS));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "lpt0", GIT_PATH_REJECT_DOS_PATHS));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "lpt10", GIT_PATH_REJECT_DOS_PATHS));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "lptn", GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "com0", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "com0", 0, GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "com10", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "com10", 0, GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "comn", 0, GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "com1\\foo", 0, GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "lpt0", 0, GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "lpt10", 0, GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "lptn", 0, GIT_PATH_REJECT_DOS_PATHS));
 }
 
 void test_path_core__isvalid_nt_chars(void)
 {
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "asdf\001foo", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "asdf\037bar", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "asdf<bar", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "asdf>foo", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "asdf:foo", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "asdf\"bar", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "asdf|foo", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "asdf?bar", 0));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "asdf*bar", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "asdf\001foo", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "asdf\037bar", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "asdf<bar", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "asdf>foo", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "asdf:foo", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "asdf\"bar", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "asdf|foo", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "asdf?bar", 0, 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "asdf*bar", 0, 0));
 
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "asdf\001foo", GIT_PATH_REJECT_NT_CHARS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "asdf\037bar", GIT_PATH_REJECT_NT_CHARS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "asdf<bar", GIT_PATH_REJECT_NT_CHARS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "asdf>foo", GIT_PATH_REJECT_NT_CHARS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "asdf:foo", GIT_PATH_REJECT_NT_CHARS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "asdf\"bar", GIT_PATH_REJECT_NT_CHARS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "asdf|foo", GIT_PATH_REJECT_NT_CHARS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "asdf?bar", GIT_PATH_REJECT_NT_CHARS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "asdf*bar", GIT_PATH_REJECT_NT_CHARS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "asdf\001foo", 0, GIT_PATH_REJECT_NT_CHARS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "asdf\037bar", 0, GIT_PATH_REJECT_NT_CHARS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "asdf<bar", 0, GIT_PATH_REJECT_NT_CHARS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "asdf>foo", 0, GIT_PATH_REJECT_NT_CHARS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "asdf:foo", 0, GIT_PATH_REJECT_NT_CHARS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "asdf\"bar", 0, GIT_PATH_REJECT_NT_CHARS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "asdf|foo", 0, GIT_PATH_REJECT_NT_CHARS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "asdf?bar", 0, GIT_PATH_REJECT_NT_CHARS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "asdf*bar", 0, GIT_PATH_REJECT_NT_CHARS));
 }
 
 void test_path_core__isvalid_dotgit_with_hfs_ignorables(void)
 {
-	cl_assert_equal_b(false, git_path_isvalid(NULL, ".git", GIT_PATH_REJECT_DOT_GIT_HFS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, ".git\xe2\x80\x8c", GIT_PATH_REJECT_DOT_GIT_HFS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, ".gi\xe2\x80\x8dT", GIT_PATH_REJECT_DOT_GIT_HFS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, ".g\xe2\x80\x8eIt", GIT_PATH_REJECT_DOT_GIT_HFS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, ".\xe2\x80\x8fgIt", GIT_PATH_REJECT_DOT_GIT_HFS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "\xe2\x80\xaa.gIt", GIT_PATH_REJECT_DOT_GIT_HFS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, ".git", 0, GIT_PATH_REJECT_DOT_GIT_HFS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, ".git\xe2\x80\x8c", 0, GIT_PATH_REJECT_DOT_GIT_HFS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, ".gi\xe2\x80\x8dT", 0, GIT_PATH_REJECT_DOT_GIT_HFS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, ".g\xe2\x80\x8eIt", 0, GIT_PATH_REJECT_DOT_GIT_HFS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, ".\xe2\x80\x8fgIt", 0, GIT_PATH_REJECT_DOT_GIT_HFS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "\xe2\x80\xaa.gIt", 0, GIT_PATH_REJECT_DOT_GIT_HFS));
 
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "\xe2\x80\xab.\xe2\x80\xacG\xe2\x80\xadI\xe2\x80\xaet", GIT_PATH_REJECT_DOT_GIT_HFS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "\xe2\x81\xab.\xe2\x80\xaaG\xe2\x81\xabI\xe2\x80\xact", GIT_PATH_REJECT_DOT_GIT_HFS));
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "\xe2\x81\xad.\xe2\x80\xaeG\xef\xbb\xbfIT", GIT_PATH_REJECT_DOT_GIT_HFS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "\xe2\x80\xab.\xe2\x80\xacG\xe2\x80\xadI\xe2\x80\xaet", 0, GIT_PATH_REJECT_DOT_GIT_HFS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "\xe2\x81\xab.\xe2\x80\xaaG\xe2\x81\xabI\xe2\x80\xact", 0, GIT_PATH_REJECT_DOT_GIT_HFS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "\xe2\x81\xad.\xe2\x80\xaeG\xef\xbb\xbfIT", 0, GIT_PATH_REJECT_DOT_GIT_HFS));
 
-	cl_assert_equal_b(true, git_path_isvalid(NULL, ".", GIT_PATH_REJECT_DOT_GIT_HFS));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, ".g", GIT_PATH_REJECT_DOT_GIT_HFS));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, ".gi", GIT_PATH_REJECT_DOT_GIT_HFS));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, " .git", GIT_PATH_REJECT_DOT_GIT_HFS));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "..git\xe2\x80\x8c", GIT_PATH_REJECT_DOT_GIT_HFS));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, ".gi\xe2\x80\x8dT.", GIT_PATH_REJECT_DOT_GIT_HFS));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, ".g\xe2\x80It", GIT_PATH_REJECT_DOT_GIT_HFS));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, ".\xe2gIt", GIT_PATH_REJECT_DOT_GIT_HFS));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "\xe2\x80\xaa.gi", GIT_PATH_REJECT_DOT_GIT_HFS));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, ".gi\x80\x8dT", GIT_PATH_REJECT_DOT_GIT_HFS));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, ".gi\x8dT", GIT_PATH_REJECT_DOT_GIT_HFS));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, ".g\xe2i\x80T\x8e", GIT_PATH_REJECT_DOT_GIT_HFS));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, ".git\xe2\x80\xbf", GIT_PATH_REJECT_DOT_GIT_HFS));
-	cl_assert_equal_b(true, git_path_isvalid(NULL, ".git\xe2\xab\x81", GIT_PATH_REJECT_DOT_GIT_HFS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".", 0, GIT_PATH_REJECT_DOT_GIT_HFS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".g", 0, GIT_PATH_REJECT_DOT_GIT_HFS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".gi", 0, GIT_PATH_REJECT_DOT_GIT_HFS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, " .git", 0, GIT_PATH_REJECT_DOT_GIT_HFS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "..git\xe2\x80\x8c", 0, GIT_PATH_REJECT_DOT_GIT_HFS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".gi\xe2\x80\x8dT.", 0, GIT_PATH_REJECT_DOT_GIT_HFS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".g\xe2\x80It", 0, GIT_PATH_REJECT_DOT_GIT_HFS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".\xe2gIt", 0, GIT_PATH_REJECT_DOT_GIT_HFS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "\xe2\x80\xaa.gi", 0, GIT_PATH_REJECT_DOT_GIT_HFS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".gi\x80\x8dT", 0, GIT_PATH_REJECT_DOT_GIT_HFS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".gi\x8dT", 0, GIT_PATH_REJECT_DOT_GIT_HFS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".g\xe2i\x80T\x8e", 0, GIT_PATH_REJECT_DOT_GIT_HFS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".git\xe2\x80\xbf", 0, GIT_PATH_REJECT_DOT_GIT_HFS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".git\xe2\xab\x81", 0, GIT_PATH_REJECT_DOT_GIT_HFS));
 }
 
 static void test_join_unrooted(

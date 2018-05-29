@@ -148,4 +148,17 @@ extern int git_submodule_parse_update(
 extern int git_submodule__map(
 	git_repository *repo,
 	git_strmap *map);
+
+/**
+ * Check whether a submodule's name is valid.
+ *
+ * Check the path against the path validity rules, either the filesystem
+ * defaults (like checkout does) or whichever you want to compare against.
+ *
+ * @param repo the repository which contains the submodule
+ * @param name the name to check
+ * @param flags the `GIT_PATH` flags to use for the check (0 to use filesystem defaults)
+ */
+extern int git_submodule_name_is_valid(git_repository *repo, const char *name, int flags);
+
 #endif
