@@ -1,13 +1,17 @@
-v0.27 + 1
+v0.27.1
 ---------
 
-### Changes or improvements
+This is a security release fixing insufficient validation of submodule names
+(CVE-2018-11235, reported by Etienne Stalmans).
 
-### API additions
+While submodule names come from the untrusted ".gitmodules" file, we blindly
+append the name to "$GIT_DIR/modules" to construct the final path of the
+submodule repository. In case the name contains e.g. "../", an adversary would
+be able to escape your repository and write data at arbitrary paths. In
+accordance with git, we now enforce some rules for submodule names which will
+cause libgit2 to ignore these melicious names.
 
-### API removals
-
-### Breaking API changes
+libgit2 is not susceptible to CVE-2018-11233.
 
 v0.27
 ---------
