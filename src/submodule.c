@@ -572,7 +572,6 @@ int git_submodule__map(git_repository *repo, git_strmap *map)
 	git_buf path = GIT_BUF_INIT;
 	git_submodule *sm;
 	git_config *mods = NULL;
-	uint32_t mask;
 
 	assert(repo && map);
 
@@ -585,22 +584,6 @@ int git_submodule__map(git_repository *repo, git_strmap *map)
 	wd = git_repository_workdir(repo);
 	if (wd && (error = git_buf_joinpath(&path, wd, GIT_MODULES_FILE)) < 0)
 		goto cleanup;
-
-	/* clear submodule flags that are to be refreshed */
-	mask = 0;
-	mask |= GIT_SUBMODULE_STATUS_IN_INDEX |
-		GIT_SUBMODULE_STATUS__INDEX_FLAGS |
-		GIT_SUBMODULE_STATUS__INDEX_OID_VALID |
-		GIT_SUBMODULE_STATUS__INDEX_MULTIPLE_ENTRIES;
-
-	mask |= GIT_SUBMODULE_STATUS_IN_HEAD |
-		GIT_SUBMODULE_STATUS__HEAD_OID_VALID;
-	mask |= GIT_SUBMODULE_STATUS_IN_CONFIG;
-	if (mask != 0)
-		mask |= GIT_SUBMODULE_STATUS_IN_WD |
-			GIT_SUBMODULE_STATUS__WD_SCANNED |
-			GIT_SUBMODULE_STATUS__WD_FLAGS |
-			GIT_SUBMODULE_STATUS__WD_OID_VALID;
 
 	/* add submodule information from .gitmodules */
 	if (wd) {
@@ -630,7 +613,7 @@ int git_submodule__map(git_repository *repo, git_strmap *map)
 			goto cleanup;
 	}
 	/* shallow scan submodules in work tree as needed */
-	if (wd && mask != 0) {
+	if (wd) {
 		git_strmap_foreach_value(map, sm, {
 				submodule_load_from_wd_lite(sm);
 			});
