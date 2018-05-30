@@ -249,7 +249,7 @@ int git_openssl_stream_global_init(void)
 	return 0;
 }
 
-#if defined(GIT_THREADS)
+#if defined(GIT_THREADS) && defined(OPENSSL_LEGACY_API)
 static void threadid_cb(CRYPTO_THREADID *threadid)
 {
 	GIT_UNUSED(threadid);
