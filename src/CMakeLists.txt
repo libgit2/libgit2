@@ -232,8 +232,10 @@ IF (USE_HTTPS)
 		SET(GIT_MBEDTLS 1)
 		LIST(APPEND LIBGIT2_INCLUDES ${MBEDTLS_INCLUDE_DIR})
 		LIST(APPEND LIBGIT2_LIBS ${MBEDTLS_LIBRARIES})
-		LIST(APPEND LIBGIT2_PC_LIBS ${MBEDTLS_LDFLAGS})
-		LIST(APPEND LIBGIT2_PC_REQUIRES "mbedtls")
+		# mbedTLS has no pkgconfig file, hence we can't require it
+		# https://github.com/ARMmbed/mbedtls/issues/228
+		# For now, pass its link flags as our own
+		LIST(APPEND LIBGIT2_PC_LIBS ${MBEDTLS_LIBRARIES})
 	ELSEIF (HTTPS_BACKEND STREQUAL "WinHTTP")
 		# WinHTTP setup was handled in the WinHTTP-specific block above
 	ELSE()
