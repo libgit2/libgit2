@@ -76,6 +76,47 @@ void test_attr_repo__get_one(void)
 		g_repo, GIT_ATTR_FILE__FROM_FILE, "sub/.gitattributes"));
 }
 
+void test_attr_repo__get_one_by_tree(void)
+{
+	git_tree *tree, *empty_tree;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	int i;
+
+	git_oid tree_oid, empty_tree_oid = { {
+		0x4b, 0x82, 0x5d, 0xc6, 0x42, 0xcb, 0x6e, 0xb9, 0xa0, 0x60,
+		0xe5, 0x4b, 0xf8, 0xd6, 0x92, 0x88, 0xfb, 0xee, 0x49, 0x04
+	} };
+
+	git_tree_lookup(&empty_tree, g_repo, &empty_tree_oid);
+
+	git_tree_update updates[] = {
+		{ GIT_TREE_UPDATE_UPSERT, {{0}}, GIT_FILEMODE_BLOB, ".gitattributes" },
+		{ GIT_TREE_UPDATE_UPSERT, {{0}}, GIT_FILEMODE_BLOB, "sub/.gitattributes" },
+		{ GIT_TREE_UPDATE_UPSERT, {{0}}, GIT_FILEMODE_BLOB, "sub/sub/.gitattributes" },
+	};
+
+	git_blob_create_fromworkdir(&updates[0].id, g_repo, ".gitattributes");
+	git_blob_create_fromworkdir(&updates[1].id, g_repo, "sub/.gitattributes");
+	git_blob_create_fromworkdir(&updates[2].id, g_repo, "sub/sub/.gitattributes");
+
+	git_tree_create_updated(&tree_oid, g_repo, empty_tree, 3, updates);
+
+	git_tree_lookup(&tree, g_repo, &tree_oid);
+
+	for (i = 0; i < (int)ARRAY_SIZE(get_one_test_cases); ++i) {
+		struct attr_expected *scan = &get_one_test_cases[i];
+		const char *value;
+
+		cl_git_pass(
+			git_attr_get_by_tree(&value, g_repo, 0, scan->path, scan->attr, tree));
+		attr_check_expected(
+			scan->expected, scan->expected_str, scan->attr, value);
+	}
+
+	git_tree_free(empty_tree);
+	git_tree_free(tree);
+}
+
 void test_attr_repo__get_one_start_deep(void)
 {
 	int i;

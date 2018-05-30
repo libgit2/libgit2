@@ -102,7 +102,8 @@ int git_attr_file__load(
 	git_attr_session *attr_session,
 	git_attr_file_entry *entry,
 	git_attr_file_source source,
-	git_attr_file_parser parser)
+	git_attr_file_parser parser,
+	const git_tree *lookup_tree)
 {
 	int error = 0;
 	git_blob *blob = NULL;
@@ -144,6 +145,22 @@ int git_attr_file__load(
 		if (fd >= 0)
 			p_close(fd);
 
+		break;
+	}
+	case GIT_ATTR_FILE__FROM_TREE: {
+		git_tree_entry *entry_out;
+
+		error = git_tree_entry_bypath(&entry_out, lookup_tree, entry->path);
+		if (error < 0)
+			goto cleanup;
+
+		error = git_blob_lookup(&blob, repo, git_tree_entry_id(entry_out));
+		if (error < 0)
+			goto cleanup;
+
+		/* Do not assume that data straight from the ODB is NULL-terminated;
+		 * copy the contents of a file to a buffer to work on */
+		git_buf_put(&content, git_blob_rawcontent(blob), git_blob_rawsize(blob));
 		break;
 	}
 	default:
@@ -201,6 +218,7 @@ int git_attr_file__out_of_date(
 
 	switch (file->source) {
 	case GIT_ATTR_FILE__IN_MEMORY:
+	case GIT_ATTR_FILE__FROM_TREE:
 		return 0;
 
 	case GIT_ATTR_FILE__FROM_FILE:

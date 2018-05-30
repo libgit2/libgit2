@@ -38,7 +38,8 @@ static int collect_attr_files(
 	git_attr_session *attr_session,
 	uint32_t flags,
 	const char *path,
-	git_vector *files);
+	git_vector *files,
+	const git_tree *tree);
 
 static void release_attr_files(git_vector *files);
 
@@ -68,7 +69,7 @@ int git_attr_get(
 	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo), dir_flag) < 0)
 		return -1;
 
-	if ((error = collect_attr_files(repo, NULL, flags, pathname, &files)) < 0)
+	if ((error = collect_attr_files(repo, NULL, flags, pathname, &files, NULL)) < 0)
 		goto cleanup;
 
 	memset(&attr, 0, sizeof(attr));
@@ -95,6 +96,55 @@ cleanup:
 	return error;
 }
 
+int git_attr_get_by_tree(
+	const char **value,
+	git_repository *repo,
+	uint32_t flags,
+	const char *pathname,
+	const char *name,
+	const git_tree *lookup_tree)
+{
+	int error;
+	git_attr_path path;
+	git_vector files = GIT_VECTOR_INIT;
+	size_t i, j;
+	git_attr_file *file;
+	git_attr_name attr;
+	git_attr_rule *rule;
+
+	assert(value && repo && name);
+
+	*value = NULL;
+
+	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo), GIT_DIR_FLAG_UNKNOWN) < 0)
+		return -1;
+
+	if ((error = collect_attr_files(repo, NULL, flags, pathname, &files, lookup_tree)) < 0)
+		goto cleanup;
+
+	memset(&attr, 0, sizeof(attr));
+	attr.name = name;
+	attr.name_hash = git_attr_file__name_hash(name);
+
+	git_vector_foreach(&files, i, file) {
+
+		git_attr_file__foreach_matching_rule(file, &path, j, rule) {
+			size_t pos;
+
+			if (!git_vector_bsearch(&pos, &rule->assigns, &attr)) {
+				*value = ((git_attr_assignment *)git_vector_get(
+							  &rule->assigns, pos))->value;
+				goto cleanup;
+			}
+		}
+	}
+
+cleanup:
+	release_attr_files(&files);
+	git_attr_path__free(&path);
+
+	return error;
+}
 
 typedef struct {
 	git_attr_name name;
@@ -108,7 +158,8 @@ int git_attr_get_many_with_session(
 	uint32_t flags,
 	const char *pathname,
 	size_t num_attr,
-	const char **names)
+	const char **names,
+	const git_tree *lookup_tree)
 {
 	int error;
 	git_attr_path path;
@@ -131,7 +182,7 @@ int git_attr_get_many_with_session(
 	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo), dir_flag) < 0)
 		return -1;
 
-	if ((error = collect_attr_files(repo, attr_session, flags, pathname, &files)) < 0)
+	if ((error = collect_attr_files(repo, attr_session, flags, pathname, &files, lookup_tree)) < 0)
 		goto cleanup;
 
 	info = git__calloc(num_attr, sizeof(attr_get_many_info));
@@ -186,7 +237,20 @@ int git_attr_get_many(
 	const char **names)
 {
 	return git_attr_get_many_with_session(
-		values, repo, NULL, flags, pathname, num_attr, names);
+		values, repo, NULL, flags, pathname, num_attr, names, NULL);
+}
+
+int git_attr_get_many_by_tree(
+	const char **values,
+	git_repository *repo,
+	uint32_t flags,
+	const char *pathname,
+	size_t num_attr,
+	const char **names,
+	const git_tree *lookup_tree)
+{
+	return git_attr_get_many_with_session(
+		values, repo, NULL, flags, pathname, num_attr, names, lookup_tree);
 }
 
 int git_attr_foreach(
@@ -214,7 +278,63 @@ int git_attr_foreach(
 	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo), dir_flag) < 0)
 		return -1;
 
-	if ((error = collect_attr_files(repo, NULL, flags, pathname, &files)) < 0 ||
+	if ((error = collect_attr_files(repo, NULL, flags, pathname, &files, NULL)) < 0 ||
+		(error = git_strmap_alloc(&seen)) < 0)
+		goto cleanup;
+
+	git_vector_foreach(&files, i, file) {
+
+		git_attr_file__foreach_matching_rule(file, &path, j, rule) {
+
+			git_vector_foreach(&rule->assigns, k, assign) {
+				/* skip if higher priority assignment was already seen */
+				if (git_strmap_exists(seen, assign->name))
+					continue;
+
+				git_strmap_insert(seen, assign->name, assign, &error);
+				if (error < 0)
+					goto cleanup;
+
+				error = callback(assign->name, assign->value, payload);
+				if (error) {
+					giterr_set_after_callback(error);
+					goto cleanup;
+				}
+			}
+		}
+	}
+
+cleanup:
+	git_strmap_free(seen);
+	release_attr_files(&files);
+	git_attr_path__free(&path);
+
+	return error;
+}
+
+int git_attr_foreach_by_tree(
+	git_repository *repo,
+	uint32_t flags,
+	const char *pathname,
+	int (*callback)(const char *name, const char *value, void *payload),
+	void *payload,
+	const git_tree *lookup_tree)
+{
+	int error;
+	git_attr_path path;
+	git_vector files = GIT_VECTOR_INIT;
+	size_t i, j, k;
+	git_attr_file *file;
+	git_attr_rule *rule;
+	git_attr_assignment *assign;
+	git_strmap *seen = NULL;
+
+	assert(repo && callback);
+
+	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo), GIT_DIR_FLAG_UNKNOWN) < 0)
+		return -1;
+
+	if ((error = collect_attr_files(repo, NULL, flags, pathname, &files, lookup_tree)) < 0 ||
 		(error = git_strmap_alloc(&seen)) < 0)
 		goto cleanup;
 
@@ -261,7 +381,7 @@ static int preload_attr_file(
 	if (!file)
 		return 0;
 	if (!(error = git_attr_cache__get(
-			&preload, repo, attr_session, source, base, file, git_attr_file__parse_buffer)))
+			&preload, repo, attr_session, source, base, file, git_attr_file__parse_buffer, NULL)))
 		git_attr_file__free(preload);
 
 	return error;
@@ -405,6 +525,7 @@ typedef struct {
 	const char *workdir;
 	git_index *index;
 	git_vector *files;
+	const git_tree *lookup_tree;
 } attr_walk_up_info;
 
 static int attr_decide_sources(
@@ -440,13 +561,14 @@ static int push_attr_file(
 	git_vector *list,
 	git_attr_file_source source,
 	const char *base,
-	const char *filename)
+	const char *filename,
+	const git_tree *lookup_tree)
 {
 	int error = 0;
 	git_attr_file *file = NULL;
 
 	error = git_attr_cache__get(&file, repo, attr_session,
-		source, base, filename, git_attr_file__parse_buffer);
+		source, base, filename, git_attr_file__parse_buffer, lookup_tree);
 
 	if (error < 0)
 		return error;
@@ -470,7 +592,7 @@ static int push_one_attr(void *ref, const char *path)
 
 	for (i = 0; !error && i < n_src; ++i)
 		error = push_attr_file(info->repo, info->attr_session,
-			info->files, src[i], path, GIT_ATTR_FILE);
+			info->files, src[i], path, GIT_ATTR_FILE, NULL);
 
 	return error;
 }
@@ -492,7 +614,8 @@ static int collect_attr_files(
 	git_attr_session *attr_session,
 	uint32_t flags,
 	const char *path,
-	git_vector *files)
+	git_vector *files,
+	const git_tree *lookup_tree)
 {
 	int error = 0;
 	git_buf dir = GIT_BUF_INIT, attrfile = GIT_BUF_INIT;
@@ -523,7 +646,7 @@ static int collect_attr_files(
 
 	error = push_attr_file(
 		repo, attr_session, files, GIT_ATTR_FILE__FROM_FILE,
-		attrfile.ptr, GIT_ATTR_FILE_INREPO);
+		attrfile.ptr, GIT_ATTR_FILE_INREPO, NULL);
 	if (error < 0)
 		goto cleanup;
 
@@ -531,14 +654,45 @@ static int collect_attr_files(
 	info.attr_session = attr_session;
 	info.flags = flags;
 	info.workdir = workdir;
-	if (git_repository_index__weakptr(&info.index, repo) < 0)
+	if (!repo->is_bare && git_repository_index__weakptr(&info.index, repo) < 0)
 		giterr_clear(); /* no error even if there is no index */
 	info.files = files;
 
-	if (!strcmp(dir.ptr, "."))
+	if (!strcmp(dir.ptr, ".")) {
 		error = push_one_attr(&info, "");
-	else
-		error = git_path_walk_up(&dir, workdir, push_one_attr, &info);
+	} else {
+		if (lookup_tree != NULL) {
+			info.lookup_tree = lookup_tree;
+
+			// Push the root .gitattributes file first
+			error = push_attr_file(info.repo, info.attr_session,
+				info.files, GIT_ATTR_FILE__FROM_TREE, NULL, GIT_ATTR_FILE, info.lookup_tree);
+
+			if (!error) {
+				int length = strlen(path);
+				char *attr_file_parent_path = malloc((length + 1) * sizeof(char));
+				int i;
+
+				// Then push potential gitattribute files along the path components
+				// of the full file path.
+				for (i = 0; i < length; i++) {
+					if (path[i] == '/') {
+						strncpy(attr_file_parent_path, path, i);
+
+						error = push_attr_file(info.repo, info.attr_session,
+							info.files, GIT_ATTR_FILE__FROM_TREE, attr_file_parent_path, GIT_ATTR_FILE, info.lookup_tree);
+						if (error && error != GIT_ENOTFOUND)
+							break;
+					}
+				}
+
+				free(attr_file_parent_path);
+			}
+		} else {
+			/* walk the checkout on disk */
+			error = git_path_walk_up(&dir, workdir, push_one_attr, &info);
+		}
+	}
 
 	if (error < 0)
 		goto cleanup;
@@ -546,7 +700,7 @@ static int collect_attr_files(
 	if (git_repository_attr_cache(repo)->cfg_attr_file != NULL) {
 		error = push_attr_file(
 			repo, attr_session, files, GIT_ATTR_FILE__FROM_FILE,
-			NULL, git_repository_attr_cache(repo)->cfg_attr_file);
+			NULL, git_repository_attr_cache(repo)->cfg_attr_file, NULL);
 		if (error < 0)
 			goto cleanup;
 	}
@@ -557,7 +711,7 @@ static int collect_attr_files(
 		if (!error)
 			error = push_attr_file(
 				repo, attr_session, files, GIT_ATTR_FILE__FROM_FILE,
-				NULL, dir.ptr);
+				NULL, dir.ptr, NULL);
 		else if (error == GIT_ENOTFOUND)
 			error = 0;
 	}
