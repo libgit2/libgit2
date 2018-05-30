@@ -199,13 +199,16 @@ out:
  */
 static void free_submodule_names(git_strmap *names)
 {
-	git_buf *name = 0;
+	git_buf *name;
+
 	if (names == NULL)
 		return;
+
 	git_strmap_foreach_value(names, name, {
 		git__free(name);
 	});
 	git_strmap_free(names);
+
 	return;
 }
 
@@ -214,24 +217,30 @@ static void free_submodule_names(git_strmap *names)
  * TODO: for some use-cases, this might need case-folding on a
  * case-insensitive filesystem
  */
-static int load_submodule_names(git_strmap *out, git_repository *repo, git_config *cfg)
+static int load_submodule_names(git_strmap **out, git_repository *repo, git_config *cfg)
 {
 	const char *key = "submodule\\..*\\.path";
-	git_config_iterator *iter;
+	git_config_iterator *iter = NULL;
 	git_config_entry *entry;
 	git_buf buf = GIT_BUF_INIT;
+	git_strmap *names;
 	int rval, isvalid;
 	int error = 0;
 
+	*out = NULL;
+
+	if ((error = git_strmap_alloc(&names)) < 0)
+		goto out;
+
 	if ((error = git_config_iterator_glob_new(&iter, cfg, key)) < 0)
-		return error;
+		goto out;
 
 	while (git_config_next(&entry, iter) == 0) {
 		const char *fdot, *ldot;
 		fdot = strchr(entry->name, '.');
 		ldot = strrchr(entry->name, '.');
 
-		if (git_strmap_exists(out, entry->value)) {
+		if (git_strmap_exists(names, entry->value)) {
 			giterr_set(GITERR_SUBMODULE,
 				   "duplicated submodule path '%s'", entry->value);
 			error = -1;
@@ -248,7 +257,7 @@ static int load_submodule_names(git_strmap *out, git_repository *repo, git_confi
 		if (!isvalid)
 			continue;
 
-		git_strmap_insert(out, entry->value, git_buf_detach(&buf), &rval);
+		git_strmap_insert(names, entry->value, git_buf_detach(&buf), &rval);
 		if (rval < 0) {
 			giterr_set(GITERR_NOMEMORY, "error inserting submodule into hash table");
 			return -1;
@@ -257,7 +266,11 @@ static int load_submodule_names(git_strmap *out, git_repository *repo, git_confi
 	if (error == GIT_ITEROVER)
 		error = 0;
 
+	*out = names;
+	names = NULL;
+
 out:
+	free_submodule_names(names);
 	git_buf_free(&buf);
 	git_config_iterator_free(iter);
 	return error;
@@ -443,10 +456,9 @@ static int submodules_from_index(git_strmap *map, git_index *idx, git_config *cf
 	int error;
 	git_iterator *i = NULL;
 	const git_index_entry *entry;
-	git_strmap *names = 0;
+	git_strmap *names;
 
-	git_strmap_alloc(&names);
-	if ((error = load_submodule_names(names, git_index_owner(idx), cfg)))
+	if ((error = load_submodule_names(&names, git_index_owner(idx), cfg)))
 		goto done;
 
 	if ((error = git_iterator_for_index(&i, git_index_owner(idx), idx, NULL)) < 0)
@@ -496,9 +508,9 @@ static int submodules_from_head(git_strmap *map, git_tree *head, git_config *cfg
 	int error;
 	git_iterator *i = NULL;
 	const git_index_entry *entry;
-	git_strmap *names = 0;
-	git_strmap_alloc(&names);
-	if ((error = load_submodule_names(names, git_tree_owner(head), cfg)))
+	git_strmap *names;
+
+	if ((error = load_submodule_names(&names, git_tree_owner(head), cfg)))
 		goto done;
 
 	if ((error = git_iterator_for_tree(&i, head, NULL)) < 0)
