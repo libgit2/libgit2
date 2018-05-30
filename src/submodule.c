@@ -186,6 +186,13 @@ static int load_submodule_names(git_strmap *out, git_repository *repo, git_confi
 		fdot = strchr(entry->name, '.');
 		ldot = strrchr(entry->name, '.');
 
+		if (git_strmap_exists(out, entry->value)) {
+			giterr_set(GITERR_SUBMODULE,
+				   "duplicated submodule path '%s'", entry->value);
+			error = -1;
+			goto out;
+		}
+
 		git_buf_clear(&buf);
 		git_buf_put(&buf, fdot + 1, ldot - fdot - 1);
 		isvalid = git_submodule_name_is_valid(repo, buf.ptr, 0);
