@@ -37,11 +37,13 @@ typedef struct {
 #define GIT_CHERRYPICK_OPTIONS_INIT {GIT_CHERRYPICK_OPTIONS_VERSION, 0, GIT_MERGE_OPTIONS_INIT, GIT_CHECKOUT_OPTIONS_INIT}
 
 /**
- * Initializes a `git_cherrypick_options` with default values. Equivalent to
- * creating an instance with GIT_CHERRYPICK_OPTIONS_INIT.
+ * Initialize git_cherrypick_options structure
  *
- * @param opts the `git_cherrypick_options` struct to initialize
- * @param version Version of struct; pass `GIT_CHERRYPICK_OPTIONS_VERSION`
+ * Initializes a `git_cherrypick_options` with default values. Equivalent to creating
+ * an instance with GIT_CHERRYPICK_OPTIONS_INIT.
+ *
+ * @param opts The `git_cherrypick_options` struct to initialize.
+ * @param version The struct version; pass `GIT_CHERRYPICK_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_cherrypick_init_options(

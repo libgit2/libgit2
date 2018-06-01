@@ -9,6 +9,8 @@
 
 #include "common.h"
 #include "types.h"
+#include "strarray.h"
+#include "diff.h"
 
 /**
  * @file git2/status.h
@@ -189,11 +191,13 @@ typedef struct {
 #define GIT_STATUS_OPTIONS_INIT {GIT_STATUS_OPTIONS_VERSION}
 
 /**
- * Initializes a `git_status_options` with default values. Equivalent to
- * creating an instance with GIT_STATUS_OPTIONS_INIT.
+ * Initialize git_status_options structure
  *
- * @param opts The `git_status_options` instance to initialize.
- * @param version Version of struct; pass `GIT_STATUS_OPTIONS_VERSION`
+ * Initializes a `git_status_options` with default values. Equivalent to
+ * creating an instance with `GIT_STATUS_OPTIONS_INIT`.
+ *
+ * @param opts The `git_status_options` struct to initialize.
+ * @param version The struct version; pass `GIT_STATUS_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_status_init_options(

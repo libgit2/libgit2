@@ -48,33 +48,38 @@ typedef enum {
 /**
  * Blame options structure
  *
- * Use zeros to indicate default settings.  It's easiest to use the
- * `GIT_BLAME_OPTIONS_INIT` macro:
- *     git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
+ * Initialize with `GIT_BLAME_OPTIONS_INIT`. Alternatively, you can
+ * use `git_blame_init_options`.
  *
- * - `flags` is a combination of the `git_blame_flag_t` values above.
- * - `min_match_characters` is the lower bound on the number of alphanumeric
- *   characters that must be detected as moving/copying within a file for it to
- *   associate those lines with the parent commit. The default value is 20.
- *   This value only takes effect if any of the `GIT_BLAME_TRACK_COPIES_*`
- *   flags are specified.
- * - `newest_commit` is the id of the newest commit to consider.  The default
- *                   is HEAD.
- * - `oldest_commit` is the id of the oldest commit to consider.  The default
- *                   is the first commit encountered with a NULL parent.
- *	- `min_line` is the first line in the file to blame.  The default is 1 (line
- *	             numbers start with 1).
- *	- `max_line` is the last line in the file to blame.  The default is the last
- *	             line of the file.
  */
 typedef struct git_blame_options {
 	unsigned int version;
 
+	/** A combination of `git_blame_flag_t` */
 	uint32_t flags;
+	/** The lower bound on the number of alphanumeric
+	 *   characters that must be detected as moving/copying within a file for it to
+	 *   associate those lines with the parent commit. The default value is 20.
+	 *   This value only takes effect if any of the `GIT_BLAME_TRACK_COPIES_*`
+	 *   flags are specified.
+	 */
 	uint16_t min_match_characters;
+	/** The id of the newest commit to consider. The default is HEAD. */
 	git_oid newest_commit;
+	/**
+	 * The id of the oldest commit to consider.
+	 * The default is the first commit encountered with a NULL parent.
+	 */
 	git_oid oldest_commit;
+	/**
+	 * The first line in the file to blame.
+	 * The default is 1 (line numbers start with 1).
+	 */
 	size_t min_line;
+	/**
+	 * The last line in the file to blame.
+	 * The default is the last line of the file.
+	 */
 	size_t max_line;
 } git_blame_options;
 
@@ -82,11 +87,13 @@ typedef struct git_blame_options {
 #define GIT_BLAME_OPTIONS_INIT {GIT_BLAME_OPTIONS_VERSION}
 
 /**
- * Initializes a `git_blame_options` with default values. Equivalent to
- * creating an instance with GIT_BLAME_OPTIONS_INIT.
+ * Initialize git_blame_options structure
  *
- * @param opts The `git_blame_options` struct to initialize
- * @param version Version of struct; pass `GIT_BLAME_OPTIONS_VERSION`
+ * Initializes a `git_blame_options` with default values. Equivalent to creating
+ * an instance with GIT_BLAME_OPTIONS_INIT.
+ *
+ * @param opts The `git_blame_options` struct to initialize.
+ * @param version The struct version; pass `GIT_BLAME_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_blame_init_options(
@@ -128,7 +135,7 @@ typedef struct git_blame_hunk {
 } git_blame_hunk;
 
 
-/* Opaque structure to hold blame results */
+/** Opaque structure to hold blame results */
 typedef struct git_blame git_blame;
 
 /**

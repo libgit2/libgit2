@@ -37,11 +37,13 @@ typedef struct {
 #define GIT_REVERT_OPTIONS_INIT {GIT_REVERT_OPTIONS_VERSION, 0, GIT_MERGE_OPTIONS_INIT, GIT_CHECKOUT_OPTIONS_INIT}
 
 /**
- * Initializes a `git_revert_options` with default values. Equivalent to
- * creating an instance with GIT_REVERT_OPTIONS_INIT.
+ * Initialize git_revert_options structure
  *
- * @param opts the `git_revert_options` struct to initialize
- * @param version Version of struct; pass `GIT_REVERT_OPTIONS_VERSION`
+ * Initializes a `git_revert_options` with default values. Equivalent to
+ * creating an instance with `GIT_REVERT_OPTIONS_INIT`.
+ *
+ * @param opts The `git_revert_options` struct to initialize.
+ * @param version The struct version; pass `GIT_REVERT_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_revert_init_options(

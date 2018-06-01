@@ -186,6 +186,22 @@ GIT_EXTERN(int) git_attr_get_many(
 	size_t num_attr,
 	const char **names);
 
+/**
+ * The callback used with git_attr_foreach.
+ *
+ * This callback will be invoked only once per attribute name, even if there
+ * are multiple rules for a given file. The highest priority rule will be
+ * used.
+ *
+ * @see git_attr_foreach.
+ *
+ * @param name The attribute name.
+ * @param value The attribute value. May be NULL if the attribute is explicitly
+ *              set to UNSPECIFIED using the '!' sign.
+ * @param payload A user-specified pointer.
+ * @return 0 to continue looping, non-zero to stop. This value will be returned
+ *         from git_attr_foreach.
+ */
 typedef int (*git_attr_foreach_cb)(const char *name, const char *value, void *payload);
 
 /**
@@ -196,13 +212,8 @@ typedef int (*git_attr_foreach_cb)(const char *name, const char *value, void *pa
  * @param path Path inside the repo to check attributes.  This does not have
  *             to exist, but if it does not, then it will be treated as a
  *             plain file (i.e. not a directory).
- * @param callback Function to invoke on each attribute name and value.  The
- *             value may be NULL is the attribute is explicitly set to
- *             UNSPECIFIED using the '!' sign.  Callback will be invoked
- *             only once per attribute name, even if there are multiple
- *             rules for a given file.  The highest priority rule will be
- *             used.  Return a non-zero value from this to stop looping.
- *             The value will be returned from `git_attr_foreach`.
+ * @param callback Function to invoke on each attribute name and value.
+ *                 See git_attr_foreach_cb.
  * @param payload Passed on as extra parameter to callback function.
  * @return 0 on success, non-zero callback return value, or error code
  */

@@ -74,6 +74,13 @@ GIT_EXTERN(void) git_worktree_free(git_worktree *wt);
  */
 GIT_EXTERN(int) git_worktree_validate(const git_worktree *wt);
 
+/**
+ * Worktree add options structure
+ *
+ * Initialize with `GIT_WORKTREE_ADD_OPTIONS_INIT`. Alternatively, you can
+ * use `git_worktree_add_init_options`.
+ *
+ */
 typedef struct git_worktree_add_options {
 	unsigned int version;
 
@@ -85,12 +92,13 @@ typedef struct git_worktree_add_options {
 #define GIT_WORKTREE_ADD_OPTIONS_INIT {GIT_WORKTREE_ADD_OPTIONS_VERSION,0,NULL}
 
 /**
- * Initializes a `git_worktree_add_options` with default vaules.
- * Equivalent to creating an instance with
- * GIT_WORKTREE_ADD_OPTIONS_INIT.
+ * Initialize git_worktree_add_options structure
  *
- * @param opts the struct to initialize
- * @param version Verison of struct; pass `GIT_WORKTREE_ADD_OPTIONS_VERSION`
+ * Initializes a `git_worktree_add_options` with default values. Equivalent to
+ * creating an instance with `GIT_WORKTREE_ADD_OPTIONS_INIT`.
+ *
+ * @param opts The `git_worktree_add_options` struct to initialize.
+ * @param version The struct version; pass `GIT_WORKTREE_ADD_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
 int git_worktree_add_init_options(git_worktree_add_options *opts,
@@ -180,6 +188,13 @@ typedef enum {
 	GIT_WORKTREE_PRUNE_WORKING_TREE = 1u << 2,
 } git_worktree_prune_t;
 
+/**
+ * Worktree prune options structure
+ *
+ * Initialize with `GIT_WORKTREE_PRUNE_OPTIONS_INIT`. Alternatively, you can
+ * use `git_worktree_prune_init_options`.
+ *
+ */
 typedef struct git_worktree_prune_options {
 	unsigned int version;
 
@@ -190,12 +205,13 @@ typedef struct git_worktree_prune_options {
 #define GIT_WORKTREE_PRUNE_OPTIONS_INIT {GIT_WORKTREE_PRUNE_OPTIONS_VERSION,0}
 
 /**
- * Initializes a `git_worktree_prune_options` with default vaules.
- * Equivalent to creating an instance with
- * GIT_WORKTREE_PRUNE_OPTIONS_INIT.
+ * Initialize git_worktree_prune_options structure
  *
- * @param opts the struct to initialize
- * @param version Verison of struct; pass `GIT_WORKTREE_PRUNE_OPTIONS_VERSION`
+ * Initializes a `git_worktree_prune_options` with default values. Equivalent to
+ * creating an instance with `GIT_WORKTREE_PRUNE_OPTIONS_INIT`.
+ *
+ * @param opts The `git_worktree_prune_options` struct to initialize.
+ * @param version The struct version; pass `GIT_WORKTREE_PRUNE_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_worktree_prune_init_options(

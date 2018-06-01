@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "types.h"
+#include "checkout.h"
 
 /**
  * @file git2/stash.h
@@ -80,6 +81,7 @@ typedef enum {
 	GIT_STASH_APPLY_REINSTATE_INDEX = (1 << 0),
 } git_stash_apply_flags;
 
+/** Stash apply progression states */
 typedef enum {
 	GIT_STASH_APPLY_PROGRESS_NONE = 0,
 
@@ -114,12 +116,12 @@ typedef int (*git_stash_apply_progress_cb)(
 	git_stash_apply_progress_t progress,
 	void *payload);
 
-/** Stash application options structure.
+/**
+ * Stash application options structure
  *
- * Initialize with the `GIT_STASH_APPLY_OPTIONS_INIT` macro to set
- * sensible defaults; for example:
+ * Initialize with `GIT_STASH_APPLY_OPTIONS_INIT`. Alternatively, you can
+ * use `git_stash_apply_init_options`.
  *
- *		git_stash_apply_options opts = GIT_STASH_APPLY_OPTIONS_INIT;
  */
 typedef struct git_stash_apply_options {
 	unsigned int version;
@@ -142,12 +144,13 @@ typedef struct git_stash_apply_options {
 	GIT_CHECKOUT_OPTIONS_INIT }
 
 /**
- * Initializes a `git_stash_apply_options` with default values. Equivalent to
- * creating an instance with GIT_STASH_APPLY_OPTIONS_INIT.
+ * Initialize git_stash_apply_options structure
  *
- * @param opts the `git_stash_apply_options` instance to initialize.
- * @param version the version of the struct; you should pass
- *        `GIT_STASH_APPLY_OPTIONS_INIT` here.
+ * Initializes a `git_stash_apply_options` with default values. Equivalent to
+ * creating an instance with `GIT_STASH_APPLY_OPTIONS_INIT`.
+ *
+ * @param opts The `git_stash_apply_options` struct to initialize.
+ * @param version The struct version; pass `GIT_STASH_APPLY_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_stash_apply_init_options(
