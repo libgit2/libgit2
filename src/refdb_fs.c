@@ -538,10 +538,14 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 	}
 
 	if ((error = git_buf_printf(&path, "%s/", backend->commonpath)) < 0 ||
-		(error = git_buf_put(&path, ref_prefix, ref_prefix_len)) < 0 ||
-		(error = git_iterator_for_filesystem(&fsit, path.ptr, &fsit_opts)) < 0) {
+		(error = git_buf_put(&path, ref_prefix, ref_prefix_len)) < 0) {
 		git_buf_free(&path);
 		return error;
+	}
+
+	if ((error = git_iterator_for_filesystem(&fsit, path.ptr, &fsit_opts)) < 0) {
+		git_buf_free(&path);
+		return (iter->glob && error == GIT_ENOTFOUND)? 0 : error;
 	}
 
 	error = git_buf_sets(&path, ref_prefix);
