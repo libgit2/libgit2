@@ -54,7 +54,7 @@ GIT_INLINE(git_filemode_t) normalize_filemode(git_filemode_t filemode)
 static int valid_entry_name(git_repository *repo, const char *filename)
 {
 	return *filename != '\0' &&
-		git_path_isvalid(repo, filename,
+		git_path_isvalid(repo, filename, 0,
 		GIT_PATH_REJECT_TRAVERSAL | GIT_PATH_REJECT_DOT_GIT | GIT_PATH_REJECT_SLASH);
 }
 
