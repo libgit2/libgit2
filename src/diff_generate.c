@@ -273,7 +273,8 @@ static git_diff_delta *diff_delta__last_for_item(
 		break;
 	case GIT_DELTA_MODIFIED:
 		if (git_oid__cmp(&delta->old_file.id, &item->id) == 0 ||
-			git_oid__cmp(&delta->new_file.id, &item->id) == 0)
+		    (delta->new_file.mode == item->mode &&
+			git_oid__cmp(&delta->new_file.id, &item->id) == 0))
 			return delta;
 		break;
 	default:
