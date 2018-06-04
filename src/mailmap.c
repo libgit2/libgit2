@@ -169,6 +169,8 @@ void git_mailmap_free(git_mailmap *mm)
 
 	git_vector_foreach(&mm->entries, idx, entry)
 		mailmap_entry_free(entry);
+
+	git_vector_free(&mm->entries);
 	git__free(mm);
 }
 
