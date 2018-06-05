@@ -1177,3 +1177,39 @@ void test_status_ignore__deeper(void)
 	refute_is_ignored("dont_ignore/foo.data");
 	refute_is_ignored("dont_ignore/bar.data");
 }
+
+void test_status_ignore__unignored_dir_with_ignored_contents(void)
+{
+	static const char *test_files[] = {
+		"empty_standard_repo/dir/a.test",
+		"empty_standard_repo/dir/subdir/a.test",
+		NULL
+	};
+
+	make_test_data("empty_standard_repo", test_files);
+	cl_git_mkfile(
+		"empty_standard_repo/.gitignore",
+		"*.test\n"
+		"!dir/*\n");
+
+	refute_is_ignored("dir/a.test");
+	assert_is_ignored("dir/subdir/a.test");
+}
+
+void test_status_ignore__unignored_subdirs(void)
+{
+	static const char *test_files[] = {
+		"empty_standard_repo/dir/a.test",
+		"empty_standard_repo/dir/subdir/a.test",
+		NULL
+	};
+
+	make_test_data("empty_standard_repo", test_files);
+	cl_git_mkfile(
+		"empty_standard_repo/.gitignore",
+		"dir/*\n"
+		"!dir/*/\n");
+
+	assert_is_ignored("dir/a.test");
+	refute_is_ignored("dir/subdir/a.test");
+}

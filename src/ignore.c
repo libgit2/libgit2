@@ -203,7 +203,10 @@ static int parse_ignore_file(
 			break;
 		}
 
-		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE | GIT_ATTR_FNMATCH_ALLOWNEG;
+		match->flags =
+		    GIT_ATTR_FNMATCH_ALLOWSPACE |
+		    GIT_ATTR_FNMATCH_ALLOWNEG |
+		    GIT_ATTR_FNMATCH_NOLEADINGDIR;
 
 		if (!(error = git_attr_fnmatch__parse(
 			match, &attrs->pool, context, &scan)))
@@ -445,6 +448,9 @@ static bool ignore_lookup_in_rules(
 	git_attr_fnmatch *match;
 
 	git_vector_rforeach(&file->rules, j, match) {
+		if (match->flags & GIT_ATTR_FNMATCH_DIRECTORY &&
+		    path->is_dir == GIT_DIR_FLAG_FALSE)
+			continue;
 		if (git_attr_fnmatch__match(match, path)) {
 			*ignored = ((match->flags & GIT_ATTR_FNMATCH_NEGATIVE) == 0) ?
 				GIT_IGNORE_TRUE : GIT_IGNORE_FALSE;
