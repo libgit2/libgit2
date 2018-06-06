@@ -62,6 +62,11 @@ void test_refs_foreachglob__retrieve_local_branches(void)
 	assert_retrieval("refs/heads/*", 12);
 }
 
+void test_refs_foreachglob__retrieve_nonexistant(void)
+{
+	assert_retrieval("refs/nonexistent/*", 0);
+}
+
 void test_refs_foreachglob__retrieve_partially_named_references(void)
 {
 	/*
