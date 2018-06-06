@@ -199,13 +199,16 @@ out:
  */
 static void free_submodule_names(git_strmap *names)
 {
-	git_buf *name = 0;
+	git_buf *name;
+
 	if (names == NULL)
 		return;
+
 	git_strmap_foreach_value(names, name, {
 		git__free(name);
 	});
 	git_strmap_free(names);
+
 	return;
 }
 
@@ -214,22 +217,35 @@ static void free_submodule_names(git_strmap *names)
  * TODO: for some use-cases, this might need case-folding on a
  * case-insensitive filesystem
  */
-static int load_submodule_names(git_strmap *out, git_repository *repo, git_config *cfg)
+static int load_submodule_names(git_strmap **out, git_repository *repo, git_config *cfg)
 {
 	const char *key = "submodule\\..*\\.path";
-	git_config_iterator *iter;
+	git_config_iterator *iter = NULL;
 	git_config_entry *entry;
 	git_buf buf = GIT_BUF_INIT;
+	git_strmap *names;
 	int rval, isvalid;
 	int error = 0;
 
+	*out = NULL;
+
+	if ((error = git_strmap_alloc(&names)) < 0)
+		goto out;
+
 	if ((error = git_config_iterator_glob_new(&iter, cfg, key)) < 0)
-		return error;
+		goto out;
 
 	while (git_config_next(&entry, iter) == 0) {
 		const char *fdot, *ldot;
 		fdot = strchr(entry->name, '.');
 		ldot = strrchr(entry->name, '.');
+
+		if (git_strmap_exists(names, entry->value)) {
+			giterr_set(GITERR_SUBMODULE,
+				   "duplicated submodule path '%s'", entry->value);
+			error = -1;
+			goto out;
+		}
 
 		git_buf_clear(&buf);
 		git_buf_put(&buf, fdot + 1, ldot - fdot - 1);
@@ -241,7 +257,7 @@ static int load_submodule_names(git_strmap *out, git_repository *repo, git_confi
 		if (!isvalid)
 			continue;
 
-		git_strmap_insert(out, entry->value, git_buf_detach(&buf), &rval);
+		git_strmap_insert(names, entry->value, git_buf_detach(&buf), &rval);
 		if (rval < 0) {
 			giterr_set(GITERR_NOMEMORY, "error inserting submodule into hash table");
 			return -1;
@@ -250,7 +266,11 @@ static int load_submodule_names(git_strmap *out, git_repository *repo, git_confi
 	if (error == GIT_ITEROVER)
 		error = 0;
 
+	*out = names;
+	names = NULL;
+
 out:
+	free_submodule_names(names);
 	git_buf_free(&buf);
 	git_config_iterator_free(iter);
 	return error;
@@ -436,10 +456,9 @@ static int submodules_from_index(git_strmap *map, git_index *idx, git_config *cf
 	int error;
 	git_iterator *i = NULL;
 	const git_index_entry *entry;
-	git_strmap *names = 0;
+	git_strmap *names;
 
-	git_strmap_alloc(&names);
-	if ((error = load_submodule_names(names, git_index_owner(idx), cfg)))
+	if ((error = load_submodule_names(&names, git_index_owner(idx), cfg)))
 		goto done;
 
 	if ((error = git_iterator_for_index(&i, git_index_owner(idx), idx, NULL)) < 0)
@@ -489,9 +508,9 @@ static int submodules_from_head(git_strmap *map, git_tree *head, git_config *cfg
 	int error;
 	git_iterator *i = NULL;
 	const git_index_entry *entry;
-	git_strmap *names = 0;
-	git_strmap_alloc(&names);
-	if ((error = load_submodule_names(names, git_tree_owner(head), cfg)))
+	git_strmap *names;
+
+	if ((error = load_submodule_names(&names, git_tree_owner(head), cfg)))
 		goto done;
 
 	if ((error = git_iterator_for_tree(&i, head, NULL)) < 0)
@@ -553,7 +572,6 @@ int git_submodule__map(git_repository *repo, git_strmap *map)
 	git_buf path = GIT_BUF_INIT;
 	git_submodule *sm;
 	git_config *mods = NULL;
-	uint32_t mask;
 
 	assert(repo && map);
 
@@ -566,22 +584,6 @@ int git_submodule__map(git_repository *repo, git_strmap *map)
 	wd = git_repository_workdir(repo);
 	if (wd && (error = git_buf_joinpath(&path, wd, GIT_MODULES_FILE)) < 0)
 		goto cleanup;
-
-	/* clear submodule flags that are to be refreshed */
-	mask = 0;
-	mask |= GIT_SUBMODULE_STATUS_IN_INDEX |
-		GIT_SUBMODULE_STATUS__INDEX_FLAGS |
-		GIT_SUBMODULE_STATUS__INDEX_OID_VALID |
-		GIT_SUBMODULE_STATUS__INDEX_MULTIPLE_ENTRIES;
-
-	mask |= GIT_SUBMODULE_STATUS_IN_HEAD |
-		GIT_SUBMODULE_STATUS__HEAD_OID_VALID;
-	mask |= GIT_SUBMODULE_STATUS_IN_CONFIG;
-	if (mask != 0)
-		mask |= GIT_SUBMODULE_STATUS_IN_WD |
-			GIT_SUBMODULE_STATUS__WD_SCANNED |
-			GIT_SUBMODULE_STATUS__WD_FLAGS |
-			GIT_SUBMODULE_STATUS__WD_OID_VALID;
 
 	/* add submodule information from .gitmodules */
 	if (wd) {
@@ -611,7 +613,7 @@ int git_submodule__map(git_repository *repo, git_strmap *map)
 			goto cleanup;
 	}
 	/* shallow scan submodules in work tree as needed */
-	if (wd && mask != 0) {
+	if (wd) {
 		git_strmap_foreach_value(map, sm, {
 				submodule_load_from_wd_lite(sm);
 			});

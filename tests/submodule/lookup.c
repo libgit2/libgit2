@@ -132,6 +132,32 @@ void test_submodule_lookup__foreach(void)
 	cl_assert_equal_i(8, data.count);
 }
 
+static int sm_dummy_cb(git_submodule *sm, const char *name, void *payload)
+{
+	GIT_UNUSED(sm);
+	GIT_UNUSED(name);
+	GIT_UNUSED(payload);
+	return 0;
+}
+
+void test_submodule_lookup__duplicated_path(void)
+{
+	/*
+	 * Manually invoke cleanup methods to remove leftovers
+	 * from `setup_fixture_submod2`
+	 */
+	cl_git_sandbox_cleanup();
+	cl_fixture_cleanup("submod2_target");
+
+	g_repo = setup_fixture_submodules();
+
+	/*
+	 * This should fail, as the submodules repo has an
+	 * invalid gitmodules file with duplicated paths.
+	 */
+	cl_git_fail(git_submodule_foreach(g_repo, sm_dummy_cb, NULL));
+}
+
 void test_submodule_lookup__lookup_even_with_unborn_head(void)
 {
 	git_reference *head;
