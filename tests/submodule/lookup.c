@@ -132,7 +132,7 @@ void test_submodule_lookup__foreach(void)
 	cl_assert_equal_i(8, data.count);
 }
 
-static int sm_dummy_cb(git_submodule *sm, const char *name, void *payload)
+static int foreach_cb(git_submodule *sm, const char *name, void *payload)
 {
 	GIT_UNUSED(sm);
 	GIT_UNUSED(name);
@@ -142,20 +142,15 @@ static int sm_dummy_cb(git_submodule *sm, const char *name, void *payload)
 
 void test_submodule_lookup__duplicated_path(void)
 {
-	/*
-	 * Manually invoke cleanup methods to remove leftovers
-	 * from `setup_fixture_submod2`
-	 */
-	cl_git_sandbox_cleanup();
-	cl_fixture_cleanup("submod2_target");
+	cl_git_rewritefile("submod2/.gitmodules",
+			   "[submodule \"sm1\"]\n"
+			   "    path = duplicated-path\n"
+			   "    url = sm1\n"
+			   "[submodule \"sm2\"]\n"
+			   "    path = duplicated-path\n"
+			   "    url = sm2\n");
 
-	g_repo = setup_fixture_submodules();
-
-	/*
-	 * This should fail, as the submodules repo has an
-	 * invalid gitmodules file with duplicated paths.
-	 */
-	cl_git_fail(git_submodule_foreach(g_repo, sm_dummy_cb, NULL));
+	cl_git_fail(git_submodule_foreach(g_repo, foreach_cb, NULL));
 }
 
 void test_submodule_lookup__lookup_even_with_unborn_head(void)
@@ -454,14 +449,6 @@ void test_submodule_lookup__lookup_in_bare_repository_fails(void)
 	g_repo = cl_git_sandbox_init("submodules.git");
 
 	cl_git_fail(git_submodule_lookup(&sm, g_repo, "nonexisting"));
-}
-
-static int foreach_cb(git_submodule *sm, const char *name, void *payload)
-{
-	GIT_UNUSED(sm);
-	GIT_UNUSED(name);
-	GIT_UNUSED(payload);
-	return 0;
 }
 
 void test_submodule_lookup__foreach_in_bare_repository_fails(void)
