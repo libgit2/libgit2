@@ -285,12 +285,12 @@ static int create_merge_commit(git_repository *repo, git_index *index, merge_opt
 	check_lg2(git_tree_lookup(&tree, repo, &tree_oid), "failed to lookup tree", NULL);
 
 	/* Commit time ! */
-	err = git_commit_create(&commit_oid,
-	                        repo, git_reference_name(head_ref),
-	                        sign, sign,
-	                        NULL, msg,
-	                        tree,
-	                        opts->annotated_count + 1, (const git_commit **)parents);
+	err = git_commit_create_on(&commit_oid,
+	                           repo, git_reference_name(head_ref),
+	                           sign, sign,
+	                           NULL, msg,
+	                           tree,
+	                           opts->annotated_count + 1, (const git_commit **)parents);
 	check_lg2(err, "failed to create commit", NULL);
 
 	/* We're done merging, cleanup the repository state */

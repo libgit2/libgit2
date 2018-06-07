@@ -164,7 +164,7 @@ void test_refs_reflog_messages__branch_birth(void)
 	cl_assert_equal_i(nentries, nentries_after);
 
 	msg = "message 2";
-	cl_git_pass(git_commit_create(&id, g_repo, "HEAD", sig, sig, NULL, msg, tree, 0, NULL));
+	cl_git_pass(git_commit_create_on(&id, g_repo, "HEAD", sig, sig, NULL, msg, tree, 0, NULL));
 
 	cl_assert_equal_i(1, reflog_entrycount(g_repo, "refs/heads/orphan"));
 
@@ -203,7 +203,7 @@ void test_refs_reflog_messages__commit_on_symbolic_ref_updates_head_reflog(void)
 	cl_assert_equal_i(nentries_master, reflog_entrycount(g_repo, "refs/heads/master"));
 
 	msg = "message 2";
-	cl_git_pass(git_commit_create(&id, g_repo, "HEAD", sig, sig, NULL, msg, tree, 0, NULL));
+	cl_git_pass(git_commit_create_on(&id, g_repo, "HEAD", sig, sig, NULL, msg, tree, 0, NULL));
 
 	cl_assert_equal_i(1, reflog_entrycount(g_repo, "refs/heads/foo"));
 	cl_assert_equal_i(nentries_head + 1, reflog_entrycount(g_repo, GIT_HEAD_FILE));
@@ -239,7 +239,7 @@ void test_refs_reflog_messages__show_merge_for_merge_commits(void)
 
 	cl_git_pass(git_commit_tree(&tree, b1_commit));
 
-	cl_git_pass(git_commit_create(&merge_commit_oid,
+	cl_git_pass(git_commit_create_on(&merge_commit_oid,
 		g_repo, "HEAD", s, s, NULL,
 		"Merge commit", tree,
 		2, (const struct git_commit **) parent_commits));

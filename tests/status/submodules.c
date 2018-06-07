@@ -502,7 +502,7 @@ void test_status_submodules__entry_but_dir_tracked(void)
 		cl_git_pass(git_index_write_tree(&tree_id, index));
 		cl_git_pass(git_signature_now(&sig, "Sloppy Submoduler", "sloppy@example.com"));
 		cl_git_pass(git_tree_lookup(&tree, repo, &tree_id));
-		cl_git_pass(git_commit_create(&commit_id, repo, NULL, sig, sig, NULL, "message", tree, 0, NULL));
+		cl_git_pass(git_commit_create(&commit_id, repo, sig, sig, NULL, "message", tree, 0, NULL));
 		cl_git_pass(git_reference_create(&ref, repo, "refs/heads/master", &commit_id, 1, "commit: foo"));
 		git_reference_free(ref);
 		git_signature_free(sig);

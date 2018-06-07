@@ -135,7 +135,6 @@ static int commit_index(
 	if ((error = git_commit_create(
 		&i_commit_oid,
 		git_index_owner(index),
-		NULL,
 		stasher,
 		stasher,
 		NULL,
@@ -277,7 +276,6 @@ static int commit_untracked(
 	if ((error = git_commit_create(
 		&u_commit_oid,
 		git_index_owner(index),
-		NULL,
 		stasher,
 		stasher,
 		NULL,
@@ -380,7 +378,6 @@ static int commit_worktree(
 	error = git_commit_create(
 		w_commit_oid,
 		git_index_owner(index),
-		NULL,
 		stasher,
 		stasher,
 		NULL,

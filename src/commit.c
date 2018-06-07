@@ -11,6 +11,7 @@
 #include "git2/object.h"
 #include "git2/repository.h"
 #include "git2/signature.h"
+#include "git2/index.h"
 #include "git2/sys/commit.h"
 
 #include "odb.h"
@@ -290,7 +291,7 @@ static const git_oid *commit_parent_from_array(size_t curr, void *payload)
 	return git_commit_id(commit);
 }
 
-int git_commit_create(
+int git_commit_create_on(
 	git_oid *id,
 	git_repository *repo,
 	const char *update_ref,
@@ -310,6 +311,22 @@ int git_commit_create(
 		id, repo, update_ref, author, committer,
 		message_encoding, message, git_tree_id(tree),
 		commit_parent_from_array, &data, false);
+}
+
+int git_commit_create(
+	git_oid *id,
+	git_repository *repo,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message,
+	const git_tree *tree,
+	size_t parent_count,
+	const git_commit *parents[])
+{
+	return git_commit_create_on(id, repo, NULL,
+				    author, committer, message_encoding, message,
+				    tree, parent_count, parents);
 }
 
 static const git_oid *commit_parent_for_amend(size_t curr, void *payload)
@@ -380,6 +397,113 @@ int git_commit_amend(
 	}
 
 	return error;
+}
+
+static int insert_commit(git_vector *v, git_repository *repo, const git_oid *id)
+{
+	int error;
+	git_commit *commit;
+
+	if ((error = git_commit_lookup(&commit, repo, id)) < 0)
+		return error;
+
+	if ((error = git_vector_insert(v, commit)) < 0) {
+		git_commit_free(commit);
+		return error;
+	}
+
+	return 0;
+}
+
+struct mergehead_data {
+	git_repository *repo;
+	git_vector *commits;
+};
+
+int gather_commit_ids(const git_oid *id, void *payload)
+{
+	struct mergehead_data *data = (struct mergehead_data *) payload;
+
+	return insert_commit(data->commits, data->repo, id);
+}
+
+static int commit_fromstate(
+	git_oid *id,
+	git_repository *repo,
+	const char *update_ref,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message)
+{
+	int error;
+	size_t i;
+	git_tree *tree = NULL;
+	git_index *index = NULL;
+	git_oid current_id, tree_id;
+	git_commit *commit;
+	git_vector commits = GIT_VECTOR_INIT;
+	git_repository_state_t state;
+
+	state = git_repository_state(repo);
+
+	if ((error = git_reference_name_to_id(&current_id, repo, GIT_HEAD_FILE)) < 0)
+		return error;
+
+	if ((error = insert_commit(&commits, repo, &current_id)) < 0)
+		goto cleanup;
+
+	if (state == GIT_REPOSITORY_STATE_MERGE) {
+		struct mergehead_data mergehead_data = { repo, &commits };
+
+		if ((error = git_repository_mergehead_foreach(repo, gather_commit_ids, &mergehead_data)) < 0)
+			goto cleanup;
+	}
+
+	if ((error = git_repository_index(&index, repo)) < 0)
+		goto cleanup;
+
+	error = git_index_write_tree(&tree_id, index);
+	git_index_free(index);
+	if (error < 0)
+		goto cleanup;
+
+	if ((error = git_tree_lookup(&tree, repo, &tree_id)) < 0)
+		goto cleanup;
+
+	error = git_commit_create_on(id, repo, update_ref,
+				     author, committer, message_encoding, message,
+				     tree, commits.length, (const git_commit **) commits.contents);
+
+cleanup:
+	git_tree_free(tree);
+	git_vector_foreach(&commits, i, commit) {
+		git_commit_free(commit);
+	}
+	git_vector_free(&commits);
+	return 0;
+}
+
+int git_commit_create_fromstate(
+	git_oid *id,
+	git_repository *repo,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message)
+{
+	return commit_fromstate(id, repo, NULL, author, committer, message_encoding, message);
+}
+
+int git_commit_create_fromstate_on_head(
+	git_oid *id,
+	git_repository *repo,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message)
+{
+	return commit_fromstate(id, repo, GIT_HEAD_FILE, author, committer, message_encoding, message);
 }
 
 int git_commit__parse(void *_commit, git_odb_object *odb_obj)

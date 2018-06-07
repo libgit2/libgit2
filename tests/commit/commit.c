@@ -35,12 +35,12 @@ void test_commit_commit__create_unexisting_update_ref(void)
 	cl_git_pass(git_signature_now(&s, "alice", "alice@example.com"));
 
 	cl_git_fail(git_reference_lookup(&ref, _repo, "refs/heads/foo/bar"));
-	cl_git_pass(git_commit_create(&oid, _repo, "refs/heads/foo/bar", s, s,
-				      NULL, "some msg", tree, 1, (const git_commit **) &commit));
+	cl_git_pass(git_commit_create_on(&oid, _repo, "refs/heads/foo/bar", s, s,
+					 NULL, "some msg", tree, 1, (const git_commit **) &commit));
 
 	/* fail because the parent isn't the tip of the branch anymore */
-	cl_git_fail(git_commit_create(&oid, _repo, "refs/heads/foo/bar", s, s,
-				      NULL, "some msg", tree, 1, (const git_commit **) &commit));
+	cl_git_fail(git_commit_create_on(&oid, _repo, "refs/heads/foo/bar", s, s,
+					 NULL, "some msg", tree, 1, (const git_commit **) &commit));
 
 	cl_git_pass(git_reference_lookup(&ref, _repo, "refs/heads/foo/bar"));
 	cl_assert_equal_oid(&oid, git_reference_target(ref));
@@ -68,7 +68,7 @@ void test_commit_commit__create_initial_commit(void)
 	cl_git_pass(git_signature_now(&s, "alice", "alice@example.com"));
 
 	cl_git_fail(git_reference_lookup(&ref, _repo, "refs/heads/foo/bar"));
-	cl_git_pass(git_commit_create(&oid, _repo, "refs/heads/foo/bar", s, s,
+	cl_git_pass(git_commit_create_on(&oid, _repo, "refs/heads/foo/bar", s, s,
 				      NULL, "initial commit", tree, 0, NULL));
 
 	cl_git_pass(git_reference_lookup(&ref, _repo, "refs/heads/foo/bar"));
@@ -99,7 +99,7 @@ void test_commit_commit__create_initial_commit_parent_not_current(void)
 
 	cl_git_pass(git_reference_name_to_id(&original_oid, _repo, "HEAD"));
 
-	cl_git_fail(git_commit_create(&oid, _repo, "HEAD", s, s,
+	cl_git_fail(git_commit_create_on(&oid, _repo, "HEAD", s, s,
 				      NULL, "initial commit", tree, 0, NULL));
 
 	cl_git_pass(git_reference_name_to_id(&oid, _repo, "HEAD"));
