@@ -82,6 +82,12 @@
 
 #else
 
+void* (*git__malloc_func)(size_t size) = malloc;
+void* (*git__calloc_func)(size_t nitems, size_t size) = calloc;
+char* (*git__strdup_func)(const char *str1) = strdup;
+void* (*git__realloc_func)(void *ptr, size_t size) = realloc;
+void* (*git__free_func)(void *ptr) = free;
+
 /*
  * Custom memory allocation wrappers
  * that set error code and error message
@@ -89,21 +95,21 @@
  */
 GIT_INLINE(void *) git__malloc(size_t len)
 {
-	void *ptr = malloc(len);
+	void *ptr = git__malloc_func(len);
 	if (!ptr) giterr_set_oom();
 	return ptr;
 }
 
 GIT_INLINE(void *) git__calloc(size_t nelem, size_t elsize)
 {
-	void *ptr = calloc(nelem, elsize);
+	void *ptr = git__calloc_func(nelem, elsize);
 	if (!ptr) giterr_set_oom();
 	return ptr;
 }
 
 GIT_INLINE(char *) git__strdup(const char *str)
 {
-	char *ptr = strdup(str);
+	char *ptr = git__strdup_func(str);
 	if (!ptr) giterr_set_oom();
 	return ptr;
 }
@@ -173,7 +179,7 @@ GIT_INLINE(void *) git__mallocarray(size_t nelem, size_t elsize)
 
 GIT_INLINE(void) git__free(void *ptr)
 {
-	free(ptr);
+	git__free_func(ptr);
 }
 
 #define STRCMP_CASESELECT(IGNORE_CASE, STR1, STR2) \
