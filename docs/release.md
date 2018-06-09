@@ -10,7 +10,8 @@ We aim to release once every six months. We start the process by opening an issu
     
     Let's release v0.X, codenamed: <something witty>
     
-    - [ ] Bump the versions in the headers
+    - [ ] Bump the versions in the headers (`include/git2/version.h`)
+    - [ ] Bump the versions in the clib manifest (`package.json`)
     - [ ] Make a release candidate
     - [ ] Plug any final leaks
     - [ ] Fix any last-minute issues
@@ -27,6 +28,7 @@ Preparing the first release candidate includes updating the version number of li
 
 - CHANGELOG.md
 - include/git2/version.h
+- package.json
 
 As soon as the pull request is merged, the merge commit shall be tagged with a lightweight tag.
 
