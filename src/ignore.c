@@ -133,23 +133,12 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 				continue;
 		}
 
-		/*
-		 * When dealing with a directory, we add '/<star>' so
-		 * p_fnmatch() honours FNM_PATHNAME. Checking for LEADINGDIR
-		 * alone isn't enough as that's also set for nagations, so we
-		 * need to check that NEGATIVE is off.
-		 */
 		git_buf_clear(&buf);
-		if (rule->containing_dir) {
+		if (rule->containing_dir)
 			git_buf_puts(&buf, rule->containing_dir);
-		}
+		git_buf_puts(&buf, rule->pattern);
 
-		error = git_buf_puts(&buf, rule->pattern);
-
-		if ((rule->flags & (GIT_ATTR_FNMATCH_LEADINGDIR | GIT_ATTR_FNMATCH_NEGATIVE)) == GIT_ATTR_FNMATCH_LEADINGDIR)
-			error = git_buf_PUTS(&buf, "/*");
-
-		if (error < 0)
+		if (git_buf_oom(&buf))
 			goto out;
 
 		if ((error = p_fnmatch(git_buf_cstr(&buf), path, fnflags)) < 0) {
@@ -203,7 +192,10 @@ static int parse_ignore_file(
 			break;
 		}
 
-		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE | GIT_ATTR_FNMATCH_ALLOWNEG;
+		match->flags =
+		    GIT_ATTR_FNMATCH_ALLOWSPACE |
+		    GIT_ATTR_FNMATCH_ALLOWNEG |
+		    GIT_ATTR_FNMATCH_NOLEADINGDIR;
 
 		if (!(error = git_attr_fnmatch__parse(
 			match, &attrs->pool, context, &scan)))
@@ -445,6 +437,9 @@ static bool ignore_lookup_in_rules(
 	git_attr_fnmatch *match;
 
 	git_vector_rforeach(&file->rules, j, match) {
+		if (match->flags & GIT_ATTR_FNMATCH_DIRECTORY &&
+		    path->is_dir == GIT_DIR_FLAG_FALSE)
+			continue;
 		if (git_attr_fnmatch__match(match, path)) {
 			*ignored = ((match->flags & GIT_ATTR_FNMATCH_NEGATIVE) == 0) ?
 				GIT_IGNORE_TRUE : GIT_IGNORE_FALSE;
