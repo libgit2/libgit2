@@ -27,6 +27,27 @@ with any kind of software without having to release its source code.
 Additionally, the example code has been released to the public domain (see the
 [separate license](examples/COPYING) for more information).
 
+Table of Contents
+=================
+
+* [Quick Start](#quick-start)
+* [Getting Help](#getting-help)
+* [What It Can Do](#what-it-can-do)
+* [Optional dependencies](#optional-dependencies)
+* [Initialization](#initialization)
+* [Threading](#threading)
+* [Conventions](#conventions)
+* [Building libgit2 - Using CMake](#building-libgit2---using-cmake)
+    * [Building](#building)
+    * [Installation](#installation)
+    * [Advanced Usage](#advanced-usage)
+    * [Compiler and linker options](#compiler-and-linker-options)
+    * [MacOS X](#macos-x)
+    * [Android](#android)
+* [Language Bindings](#language-bindings)
+* [How Can I Contribute?](#how-can-i-contribute)
+* [License](#license)
+
 Quick Start
 ===========
 
@@ -48,8 +69,8 @@ Quick Start
 2. Create the cmake build environment: `cmake ..`
 3. Build libgit2: `cmake --build .`
 
-Trouble with these steps?  Read `TROUBLESHOOTING.md`.  More detailed build
-guidance is available below.
+Trouble with these steps?  Read our (troubleshooting guide)[docs/troubleshooting.md].
+More detailed build guidance is available below.
 
 Getting Help
 ============
@@ -149,12 +170,12 @@ require assistance coordinating this, simply have the worker threads call
 Threading
 =========
 
-See [THREADING](THREADING.md) for information
+See [threading](docs/threading.md) for information
 
 Conventions
 ===========
 
-See [CONVENTIONS](CONVENTIONS.md) for an overview of the external
+See [conventions](docs/conventions.md) for an overview of the external
 and internal API/coding conventions we use.
 
 Building libgit2 - Using CMake
@@ -196,7 +217,7 @@ run the index tests:
     $ ./libgit2_clar -sindex
 
 To run a single test named `index::racy::diff`, which corresponds to the test
-function (`test_index_racy__diff`)[https://github.com/libgit2/libgit2/blob/master/tests/index/racy.c#L23]:
+function [`test_index_racy__diff`](https://github.com/libgit2/libgit2/blob/master/tests/index/racy.c#L23):
 
     $ ./libgit2_clar -sindex::racy::diff
 
@@ -232,6 +253,15 @@ The following CMake variables are declared:
 - `BUILD_CLAR`: Build [Clar](https://github.com/vmg/clar)-based test suite (defaults to ON)
 - `THREADSAFE`: Build libgit2 with threading support (defaults to ON)
 - `STDCALL`: Build libgit2 as `stdcall`. Turn off for `cdecl` (Windows; defaults to ON)
+
+To list all build options and their current value, you can do the
+following:
+
+	# Create and set up a build directory
+	$ mkdir build
+	$ cmake ..
+	# List all build options and their values
+	$ cmake -L
 
 Compiler and linker options
 ---------------------------
@@ -343,10 +373,10 @@ We welcome new contributors!  We have a number of issues marked as
 and
 ["easy fix"](https://github.com/libgit2/libgit2/issues?utf8=✓&q=is%3Aissue+is%3Aopen+label%3A%22easy+fix%22)
 that are good places to jump in and get started.  There's much more detailed
-information in our list of [outstanding projects](PROJECTS.md).
+information in our list of [outstanding projects](docs/projects.md).
 
-Please be sure to check the [contribution guidelines](CONTRIBUTING.md) to
-understand our workflow, and the libgit2 [coding conventions](CONVENTIONS.md).
+Please be sure to check the [contribution guidelines](docs/contributing.md) to
+understand our workflow, and the libgit2 [coding conventions](docs/conventions.md).
 
 License
 ==================================

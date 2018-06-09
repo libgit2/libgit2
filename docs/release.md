@@ -15,8 +15,8 @@ We aim to release once every six months. We start the process by opening an issu
     - [ ] Make a release candidate
     - [ ] Plug any final leaks
     - [ ] Fix any last-minute issues
-    - [ ] Make sure CHANGELOG reflects everything worth discussing
-    - [ ] Update the version in CHANGELOG and the header
+    - [ ] Make sure changelog.md reflects everything worth discussing
+    - [ ] Update the version in changelog.md and the header
     - [ ] Produce a release candidate
     - [ ] Tag
     - [ ] Create maint/v0.X
@@ -26,13 +26,13 @@ We tag at least one release candidate. This RC must carry the new version in the
 
 Preparing the first release candidate includes updating the version number of libgit2 to the new version number. To do so, a pull request shall be submitted that adjusts the version number in the following places:
 
-- CHANGELOG.md
+- docs/changelog.md
 - include/git2/version.h
 - package.json
 
 As soon as the pull request is merged, the merge commit shall be tagged with a lightweight tag.
 
-The tagging happens via GitHub's "releases" tab which lets us attach release notes to a particular tag. In the description we include the changes in `CHANGELOG.md` between the last full release. Use the following as a base for the release notes
+The tagging happens via GitHub's "releases" tab which lets us attach release notes to a particular tag. In the description we include the changes in `docs/changelog.md` between the last full release. Use the following as a base for the release notes
 
     This is the first release of the v0.X series, <codename>. The changelog follows.
 

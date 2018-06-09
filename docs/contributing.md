@@ -97,7 +97,7 @@ Before wrapping up a PR, you should be sure to:
 
 * Write tests to cover any functional changes
 * Update documentation for any changed public APIs
-* Add to the [`CHANGELOG.md`](CHANGELOG.md) file describing any major changes
+* Add to the [`changelog.md`](changelog.md) file describing any major changes
 
 ## Unit Tests
 
@@ -168,10 +168,8 @@ function and type naming, code formatting, and testing.
 
 We like to keep the source code consistent and easy to read.  Maintaining
 this takes some discipline, but it's been more than worth it.  Take a look
-at the [conventions
-file](https://github.com/libgit2/libgit2/blob/development/CONVENTIONS.md).
+at the [conventions file](conventions.md).
 
 ## Starter Projects
 
-See our [projects
-list](https://github.com/libgit2/libgit2/blob/development/PROJECTS.md).
+See our [projects list](projects.md).
