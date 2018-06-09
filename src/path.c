@@ -1766,14 +1766,14 @@ static bool verify_component(
 	if (flags & GIT_PATH_REJECT_DOT_GIT_HFS) {
 		if (!verify_dotgit_hfs(component, len))
 			return false;
-		if (S_ISLNK(mode) && git_path_is_hfs_dotgit_modules(component, len))
+		if (S_ISLNK(mode) && git_path_is_gitfile(component, len, GIT_PATH_GITFILE_GITMODULES, GIT_PATH_FS_HFS))
 			return false;
 	}
 
 	if (flags & GIT_PATH_REJECT_DOT_GIT_NTFS) {
 		if (!verify_dotgit_ntfs(repo, component, len))
 			return false;
-		if (S_ISLNK(mode) && git_path_is_ntfs_dotgit_modules(component, len))
+		if (S_ISLNK(mode) && git_path_is_gitfile(component, len, GIT_PATH_GITFILE_GITMODULES, GIT_PATH_FS_NTFS))
 			return false;
 	}
 
@@ -1872,64 +1872,40 @@ int git_path_normalize_slashes(git_buf *out, const char *path)
 	return 0;
 }
 
-static int verify_dotgit_generic(const char *name, size_t len, const char *dotgit_name, size_t dotgit_len, const char *shortname_pfix)
+static const struct {
+	const char *file;
+	const char *hash;
+	size_t filelen;
+} gitfiles[] = {
+	{ "gitignore", "gi250a", CONST_STRLEN("gitignore") },
+	{ "gitmodules", "gi7eba", CONST_STRLEN("gitmodules") },
+	{ "gitattributes", "gi7d29", CONST_STRLEN("gitattributes") }
+};
+
+extern int git_path_is_gitfile(const char *path, size_t pathlen, git_path_gitfile gitfile, git_path_fs fs)
 {
-	if (!verify_dotgit_ntfs_generic(name, len, dotgit_name, dotgit_len, shortname_pfix))
-		return false;
+	const char *file, *hash;
+	size_t filelen;
 
-	return verify_dotgit_hfs_generic(name, len, dotgit_name, dotgit_len);
-}
+	if (gitfile < 0 && gitfile >= ARRAY_SIZE(gitfiles)) {
+		giterr_set(GITERR_OS, "invalid gitfile for path validation");
+		return -1;
+	}
 
-int git_path_is_ntfs_dotgit_modules(const char *name, size_t len)
-{
-	return !verify_dotgit_ntfs_generic(name, len, "gitmodules", CONST_STRLEN("gitmodules"), "gi7eba");
-}
+	file = gitfiles[gitfile].file;
+	filelen = gitfiles[gitfile].filelen;
+	hash = gitfiles[gitfile].hash;
 
-int git_path_is_hfs_dotgit_modules(const char *name, size_t len)
-{
-	return !verify_dotgit_hfs_generic(name, len, "gitmodules", CONST_STRLEN("gitmodules"));
-}
-
-int git_path_is_dotgit_modules(const char *name, size_t len)
-{
-	if (git_path_is_hfs_dotgit_modules(name, len))
-		return 1;
-
-	return git_path_is_ntfs_dotgit_modules(name, len);
-}
-
-int git_path_is_ntfs_dotgit_ignore(const char *name, size_t len)
-{
-	return !verify_dotgit_ntfs_generic(name, len, "gitignore", CONST_STRLEN("gitignore"), "gi250a");
-}
-
-int git_path_is_hfs_dotgit_ignore(const char *name, size_t len)
-{
-	return !verify_dotgit_hfs_generic(name, len, "gitignore", CONST_STRLEN("gitignore"));
-}
-
-int git_path_is_dotgit_ignore(const char *name, size_t len)
-{
-	if (git_path_is_hfs_dotgit_ignore(name, len))
-		return 1;
-
-	return git_path_is_ntfs_dotgit_ignore(name, len);
-}
-
-int git_path_is_hfs_dotgit_attributes(const char *name, size_t len)
-{
-	return !verify_dotgit_hfs_generic(name, len, "gitattributes", CONST_STRLEN("gitattributes"));
-}
-
-int git_path_is_ntfs_dotgit_attributes(const char *name, size_t len)
-{
-	return !verify_dotgit_ntfs_generic(name, len, "gitattributes", CONST_STRLEN("gitattributes"), "gi7d29");
-}
-
-int git_path_is_dotgit_attributes(const char *name, size_t len)
-{
-	if (git_path_is_hfs_dotgit_attributes(name, len))
-		return 1;
-
-	return git_path_is_ntfs_dotgit_attributes(name, len);
+	switch (fs) {
+	case GIT_PATH_FS_GENERIC:
+		return !verify_dotgit_ntfs_generic(path, pathlen, file, filelen, hash) ||
+		       !verify_dotgit_hfs_generic(path, pathlen, file, filelen);
+	case GIT_PATH_FS_NTFS:
+		return !verify_dotgit_ntfs_generic(path, pathlen, file, filelen, hash);
+	case GIT_PATH_FS_HFS:
+		return !verify_dotgit_hfs_generic(path, pathlen, file, filelen);
+	default:
+		giterr_set(GITERR_OS, "invalid filesystem for path validation");
+		return -1;
+	}
 }

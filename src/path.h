@@ -645,76 +645,42 @@ extern bool git_path_isvalid(
  */
 int git_path_normalize_slashes(git_buf *out, const char *path);
 
-/**
- * Check whether a path component corresponds to a .gitmodules file
- *
- * @param name the path component to check
- * @param len the length of `name`
+/*
+ * The order needs to stay the same to not break the `gitfiles`
+ * array in path.c
  */
-extern int git_path_is_dotgit_modules(const char *name, size_t len);
+typedef enum {
+	GIT_PATH_GITFILE_GITIGNORE,
+	GIT_PATH_GITFILE_GITMODULES,
+	GIT_PATH_GITFILE_GITATTRIBUTES
+} git_path_gitfile;
+
+typedef enum {
+	/* Do both NTFS- and HFS-specific checks */
+	GIT_PATH_FS_GENERIC,
+	/* Do NTFS-specific checks only */
+	GIT_PATH_FS_NTFS,
+	/* Do HFS-specific checks only */
+	GIT_PATH_FS_HFS
+} git_path_fs;
 
 /**
- * Check whether a path component corresponds to a .gitmodules file in NTFS
+ * Check whether a path component corresponds to a .git$SUFFIX
+ * file.
  *
- * @param name the path component to check
- * @param len the length of `name`
- */
-extern int git_path_is_ntfs_dotgit_modules(const char *name, size_t len);
-
-/**
- * Check whether a path component corresponds to a .gitmodules file in HFS+
+ * As some filesystems do special things to filenames when
+ * writing files to disk, you cannot always do a plain string
+ * comparison to verify whether a file name matches an expected
+ * path or not. This function can do the comparison for you,
+ * depending on the filesystem you're on.
  *
- * @param name the path component to check
- * @param len the length of `name`
+ * @param path the path component to check
+ * @param pathlen the length of `path` that is to be checked
+ * @param gitfile which file to check against
+ * @param fs which filesystem-specific checks to use
+ * @return 0 in case the file does not match, a positive value if
+ *         it does; -1 in case of an error
  */
-extern int git_path_is_hfs_dotgit_modules(const char *name, size_t len);
-
-/**
- * Check whether a path component corresponds to a .gitignore file
- *
- * @param name the path component to check
- * @param len the length of `name`
- */
-extern int git_path_is_dotgit_ignore(const char *name, size_t len);
-
-/**
- * Check whether a path component corresponds to a .gitignore file in NTFS
- *
- * @param name the path component to check
- * @param len the length of `name`
- */
-extern int git_path_is_ntfs_dotgit_ignore(const char *name, size_t len);
-
-/**
- * Check whether a path component corresponds to a .gitignore file in HFS+
- *
- * @param name the path component to check
- * @param len the length of `name`
- */
-extern int git_path_is_hfs_dotgit_ignore(const char *name, size_t len);
-
-/**
- * Check whether a path component corresponds to a .gitignore file
- *
- * @param name the path component to check
- * @param len the length of `name`
- */
-extern int git_path_is_dotgit_attributes(const char *name, size_t len);
-
-/**
- * Check whether a path component corresponds to a .gitattributes file in NTFS
- *
- * @param name the path component to check
- * @param len the length of `name`
- */
-extern int git_path_is_ntfs_dotgit_attributes(const char *name, size_t len);
-
-/**
- * Check whether a path component corresponds to a .gitattributes file in HFS+
- *
- * @param name the path component to check
- * @param len the length of `name`
- */
-extern int git_path_is_hfs_dotgit_attributes(const char *name, size_t len);
+extern int git_path_is_gitfile(const char *path, size_t pathlen, git_path_gitfile gitfile, git_path_fs fs);
 
 #endif
