@@ -188,6 +188,46 @@ void test_stash_save__can_include_untracked_and_ignored_files(void)
 	cl_assert(!git_path_exists("stash/just.ignore"));
 }
 
+/*
+ * Note: this test was flaky prior to fixing #4101 -- run it several
+ * times to get a failure.  The issues is that whether the fast
+ * (stat-only) codepath is used inside stash's diff operation depends
+ * on whether files are "racily clean", and there doesn't seem to be
+ * an easy way to force the exact required state.
+ */
+void test_stash_save__untracked_regression(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	const char *paths[] = {"what", "where", "how", "why"};
+	git_reference *head;
+	git_commit *head_commit;
+	git_buf untracked_dir;
+
+	const char* workdir = git_repository_workdir(repo);
+
+	git_buf_init(&untracked_dir, 0);
+	git_buf_printf(&untracked_dir, "%sz", workdir);
+
+	cl_assert(!p_mkdir(untracked_dir.ptr, 0777));
+
+	cl_git_pass(git_repository_head(&head, repo));
+
+	cl_git_pass(git_reference_peel((git_object **)&head_commit, head, GIT_OBJ_COMMIT));
+
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	opts.paths.strings = (char **)paths;
+	opts.paths.count = 4;
+
+	cl_git_pass(git_checkout_tree(repo, (git_object*)head_commit, &opts));
+
+	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_DEFAULT));
+
+	assert_commit_message_contains("refs/stash", "WIP on master");
+
+	git_buf_free(&untracked_dir);
+}
+
 #define MESSAGE "Look Ma! I'm on TV!"
 void test_stash_save__can_accept_a_message(void)
 {
