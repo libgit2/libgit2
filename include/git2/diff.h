@@ -170,7 +170,8 @@ typedef enum {
 	/*
 	 * Options controlling how output will be generated
 	 */
-
+    
+    GIT_DIFF_ENABLE_TEXTCONV = (1u << 18),
 	/** Treat all files as text, disabling binary attributes & detection */
 	GIT_DIFF_FORCE_TEXT = (1u << 20),
 	/** Treat all files as binary, disabling text diffs */

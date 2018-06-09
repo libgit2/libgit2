@@ -14,6 +14,7 @@
 #include "odb.h"
 #include "fileops.h"
 #include "filter.h"
+#include "git2/filter_textconv.h"
 
 #define DIFF_MAX_FILESIZE 0x20000000
 
@@ -231,6 +232,7 @@ static int diff_file_content_load_blob(
 {
 	int error = 0;
 	git_odb_object *odb_obj = NULL;
+    git_textconv* tc = NULL;
 
 	if (git_oid_iszero(&fc->file->id))
 		return 0;
@@ -257,11 +259,25 @@ static int diff_file_content_load_blob(
 		error = git_blob_lookup(
 			(git_blob **)&fc->blob, fc->repo, &fc->file->id);
 	}
+    
+    if (!error && (opts->flags & GIT_DIFF_ENABLE_TEXTCONV) != 0) {
+        error = git_textconv_load(&tc, fc->driver);
+        if (error == GIT_PASSTHROUGH) error = 0;
+    }
 
 	if (!error) {
-		fc->flags |= GIT_DIFF_FLAG__FREE_BLOB;
-		fc->map.data = (void *)git_blob_rawcontent(fc->blob);
-		fc->map.len  = (size_t)git_blob_rawsize(fc->blob);
+        if (tc == NULL) {
+            fc->flags |= GIT_DIFF_FLAG__FREE_BLOB;
+            fc->map.data = (void *)git_blob_rawcontent(fc->blob);
+            fc->map.len  = (size_t)git_blob_rawsize(fc->blob);
+        } else {
+            git_buf out = GIT_BUF_INIT;
+            git_filter_textconv_apply_to_blob(&out, NULL, tc, (git_blob*)fc->blob);
+            fc->map.len  = out.size;
+            fc->map.data = out.ptr;
+            fc->flags |= GIT_DIFF_FLAG__FREE_BLOB;
+            fc->flags |= GIT_DIFF_FLAG__FREE_DATA;
+        }
 	}
 
 	return error;
@@ -324,6 +340,7 @@ static int diff_file_content_load_workdir_file(
 {
 	int error = 0;
 	git_filter_list *fl = NULL;
+    git_textconv *tc = NULL;
 	git_file fd = git_futils_open_ro(git_buf_cstr(path));
 	git_buf raw = GIT_BUF_INIT;
 
@@ -342,9 +359,13 @@ static int diff_file_content_load_workdir_file(
 			&fl, fc->repo, NULL, fc->file->path,
 			GIT_FILTER_TO_ODB, GIT_FILTER_ALLOW_UNSAFE)) < 0)
 		goto cleanup;
+    
+    if ((diff_opts->flags & GIT_DIFF_ENABLE_TEXTCONV) != 0 &&
+        (error = git_textconv_load(&tc, fc->driver)) < 0)
+        goto cleanup;
 
-	/* if there are no filters, try to mmap the file */
-	if (fl == NULL) {
+	/* if there are no filters and no textconv, try to mmap the file */
+	if (fl == NULL && tc == NULL) {
 		if (!(error = git_futils_mmap_ro(
 				&fc->map, fd, 0, (size_t)fc->file->size))) {
 			fc->flags |= GIT_DIFF_FLAG__UNMAP_DATA;
@@ -358,10 +379,11 @@ static int diff_file_content_load_workdir_file(
 	if (!(error = git_futils_readbuffer_fd(&raw, fd, (size_t)fc->file->size))) {
 		git_buf out = GIT_BUF_INIT;
 
-		error = git_filter_list_apply_to_data(&out, fl, &raw);
+		error = git_filter_textconv_apply_to_data(&out, fl, tc, &raw);
 
 		if (out.ptr != raw.ptr)
 			git_buf_free(&raw);
+        
 
 		if (!error) {
 			fc->map.len  = out.size;

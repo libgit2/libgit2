@@ -8,7 +8,7 @@
 #define INCLUDE_filter_h__
 
 #include "common.h"
-
+#include "array.h"
 #include "attr_file.h"
 #include "git2/filter.h"
 
@@ -33,6 +33,29 @@ typedef struct {
 
 #define GIT_FILTER_OPTIONS_INIT {0}
 
+
+typedef struct git_filter_source {
+    git_repository *repo;
+    const char     *path;
+    git_oid         oid;  /* zero if unknown (which is likely) */
+    uint16_t        filemode; /* zero if unknown */
+    git_filter_mode_t mode;
+    uint32_t        flags;
+} git_filter_source;
+
+typedef struct git_filter_entry {
+    const char *filter_name;
+    git_filter *filter;
+    void *payload;
+} git_filter_entry;
+
+struct git_filter_list {
+    git_array_t(git_filter_entry) filters;
+    git_filter_source source;
+    git_buf *temp_buf;
+    char path[GIT_FLEX_ARRAY];
+};
+
 extern int git_filter_global_init(void);
 
 extern void git_filter_free(git_filter *filter);
@@ -44,6 +67,14 @@ extern int git_filter_list__load_ext(
 	const char *path,
 	git_filter_mode_t mode,
 	git_filter_options *filter_opts);
+
+extern int git_filter_list_stream_init(
+                                git_writestream **out,
+                                git_vector *streams,
+                                git_filter_list *filters,
+                                git_writestream *target);
+
+extern void stream_list_free(git_vector *streams);
 
 /*
  * Available filters

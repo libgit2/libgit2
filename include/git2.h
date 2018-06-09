@@ -24,6 +24,7 @@
 #include "git2/diff.h"
 #include "git2/errors.h"
 #include "git2/filter.h"
+#include "git2/filter_textconv.h"
 #include "git2/global.h"
 #include "git2/graph.h"
 #include "git2/ignore.h"

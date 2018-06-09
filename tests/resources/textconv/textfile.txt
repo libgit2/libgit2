@@ -1,0 +1,3 @@
+This is a text file
+this line is version 2 
+this line is unchanged

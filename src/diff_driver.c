@@ -39,6 +39,7 @@ struct git_diff_driver {
 	uint32_t other_flags;
 	git_array_t(git_diff_driver_pattern) fn_patterns;
 	regex_t  word_pattern;
+    char* textconv;
 	char name[GIT_FLEX_ARRAY];
 };
 
@@ -169,6 +170,8 @@ static int diff_driver_alloc(
 	GITERR_CHECK_ALLOC(driver);
 
 	memcpy(driver->name, name, namelen);
+    
+    driver->textconv = NULL;
 
 	*out = driver;
 
@@ -280,7 +283,7 @@ static int git_diff_driver_load(
 		break;
 	}
 
-	/* TODO: warn if diff.<name>.command or diff.<name>.textconv are set */
+	/* TODO: warn if diff.<name>.command is set */
 
 	git_buf_truncate(&name, namelen + strlen("diff.."));
 	git_buf_put(&name, "xfuncname", strlen("xfuncname"));
@@ -306,6 +309,17 @@ static int git_diff_driver_load(
 		found_driver = true;
 	}
 
+    git_buf_truncate(&name, namelen + strlen("diff.."));
+    git_buf_put(&name, "textconv", strlen("textconv"));
+    if ((error = git_config__lookup_entry(&ce, cfg, name.ptr, false)) < 0)
+        goto done;
+    if (!ce || !ce->value)
+    /* no diff.<driver>.textconv, so just continue */;
+    else {
+        found_driver = true;
+        drv->textconv = git__strdup(ce->value);
+    }
+    
 	git_buf_truncate(&name, namelen + strlen("diff.."));
 	git_buf_put(&name, "wordregex", strlen("wordregex"));
 	if ((error = git_config__lookup_entry(&ce, cfg, name.ptr, false)) < 0)
@@ -402,6 +416,8 @@ void git_diff_driver_free(git_diff_driver *driver)
 	git_array_clear(driver->fn_patterns);
 
 	regfree(&driver->word_pattern);
+    
+    if (driver->textconv) git__free(driver->textconv);
 
 	git__free(driver);
 }
@@ -519,4 +535,8 @@ void git_diff_find_context_clear(git_diff_find_context_payload *payload)
 		git_buf_free(&payload->line);
 		payload->driver = NULL;
 	}
+}
+
+const char* git_diff_driver_textconv(git_diff_driver * driver) {
+    return driver->textconv;
 }
