@@ -510,8 +510,14 @@ static int local_counting(int stage, unsigned int current, unsigned int total, v
 static int foreach_reference_cb(git_reference *reference, void *payload)
 {
 	git_revwalk *walk = (git_revwalk *)payload;
+	int error;
 
-	int error = git_revwalk_hide(walk, git_reference_target(reference));
+	if (git_reference_type(reference) != GIT_REF_OID) {
+		git_reference_free(reference);
+		return 0;
+	}
+
+	error = git_revwalk_hide(walk, git_reference_target(reference));
 	/* The reference is in the local repository, so the target may not
 	 * exist on the remote.  It also may not be a commit. */
 	if (error == GIT_ENOTFOUND || error == GITERR_INVALID) {

@@ -1,3 +1,31 @@
+v0.27.2
+---------
+
+### Changes or improvements
+
+* Fix builds with LibreSSL 2.7.
+
+* Fix for `git_diff_status_char()` not returning the correct mapping for
+  `GIT_DELTA_TYPECHANGE`.
+
+* Fix for the submodules API not reporting errors when parsing the ".gitmodules"
+  file.
+
+* Fix for accepting a ".gitmodules" file where two submodules have the same
+  path.
+
+* Fix for hiding references in a graph walk not always limiting the graph
+  correctly.
+
+* Fix for directory patterns with trailing spaces in attribute files not being
+  handled correctly.
+
+* Fix SSH transports not properly disconnecting from the server.
+
+* Fix reading HEAD reflog in worktrees.
+
+* Update our copy of SHA1DC to fix errors with endianess on some platforms.
+
 v0.27.1
 ---------
 

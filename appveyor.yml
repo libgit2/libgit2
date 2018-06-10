@@ -43,6 +43,11 @@ build_script:
     if "%GENERATOR%"=="MSYS Makefiles" (C:\MinGW\msys\1.0\bin\sh --login /c/projects/libgit2/script/appveyor-mingw.sh)
 test_script:
 - ps: |
+    # Disable DHE key exchange to fix intermittent build failures ("A buffer
+    # provided was too small") due to SChannel bug. See e.g.
+    # - https://github.com/aws/aws-sdk-cpp/issues/671
+    # - https://github.com/dotnet/corefx/issues/7812
+    New-Item HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\KeyExchangeAlgorithms\Diffie-Hellman -Force | New-ItemProperty -Name Enabled -Value 0 -Force
     $ErrorActionPreference="Stop"
     Start-FileDownload https://github.com/ethomson/poxyproxy/releases/download/v0.1.0/poxyproxy-0.1.0.jar -FileName poxyproxy.jar
     # Run this early so we know it's ready by the time we need it

@@ -343,6 +343,29 @@ void test_fetchhead_nonetwork__unborn_with_upstream(void)
 	cl_fixture_cleanup("./repowithunborn");
 }
 
+void test_fetchhead_nonetwork__fetch_into_repo_with_symrefs(void)
+{
+	git_repository *repo;
+	git_remote *remote;
+	git_reference *symref;
+
+	repo = cl_git_sandbox_init("empty_standard_repo");
+
+	/*
+	 * Testing for a specific constellation where the repository has at
+	 * least one symbolic reference in its refdb.
+	 */
+	cl_git_pass(git_reference_symbolic_create(&symref, repo, "refs/heads/symref", "refs/heads/master", 0, NULL));
+
+	cl_git_pass(git_remote_set_url(repo, "origin", cl_fixture("testrepo.git")));
+	cl_git_pass(git_remote_lookup(&remote, repo, "origin"));
+	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
+
+	git_remote_free(remote);
+	git_reference_free(symref);
+	cl_git_sandbox_cleanup();
+}
+
 void test_fetchhead_nonetwork__quote_in_branch_name(void)
 {
 	cl_set_cleanup(&cleanup_repository, "./test1");

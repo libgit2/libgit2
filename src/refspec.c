@@ -304,6 +304,7 @@ int git_refspec__dwim_one(git_vector *out, git_refspec *spec, git_vector *refs)
 	git_buf buf = GIT_BUF_INIT;
 	size_t j, pos;
 	git_remote_head key;
+	git_refspec *cur;
 
 	const char* formatters[] = {
 		GIT_REFS_DIR "%s",
@@ -312,7 +313,9 @@ int git_refspec__dwim_one(git_vector *out, git_refspec *spec, git_vector *refs)
 		NULL
 	};
 
-	git_refspec *cur = git__calloc(1, sizeof(git_refspec));
+	assert(out && spec && refs);
+
+	cur = git__calloc(1, sizeof(git_refspec));
 	GITERR_CHECK_ALLOC(cur);
 
 	cur->force = spec->force;

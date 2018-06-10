@@ -213,16 +213,6 @@ static int parse_ignore_file(
 			if (ignore_case)
 				match->flags |= GIT_ATTR_FNMATCH_ICASE;
 
-			while (match->length > 0) {
-				if (match->pattern[match->length - 1] == ' ' ||
-				    match->pattern[match->length - 1] == '\t') {
-					match->pattern[match->length - 1] = 0;
-					match->length --;
-				} else {
-					break;
-				}
-			}
-
 			scan = git__next_line(scan);
 
 			/*
