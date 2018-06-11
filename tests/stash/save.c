@@ -226,6 +226,7 @@ void test_stash_save__untracked_regression(void)
 	assert_commit_message_contains("refs/stash", "WIP on master");
 
 	git_reference_free(head);
+	git_commit_free(head_commit);
 	git_buf_free(&untracked_dir);
 }
 
