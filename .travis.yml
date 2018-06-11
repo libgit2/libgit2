@@ -58,12 +58,12 @@ matrix:
    - compiler: gcc
      env:
          MBEDTLS=1
-         OPTIONS="-DTHREADSAFE=ON -DCMAKE_BUILD_TYPE=Release -DUSE_HTTPS=mbedTLS -DMBEDTLS_ROOT_DIR=../deps/mbedtls"
+         OPTIONS="-DTHREADSAFE=ON -DCMAKE_BUILD_TYPE=Release -DUSE_HTTPS=mbedTLS -DSHA1_BACKEND=mbedTLS -DMBEDTLS_ROOT_DIR=../deps/mbedtls"
      os: linux
    - compiler: gcc
      env:
          MBEDTLS=1
-         OPTIONS="-DTHREADSAFE=OFF -DBUILD_EXAMPLES=ON -DUSE_HTTPS=mbedTLS -DMBEDTLS_ROOT_DIR=../deps/mbedtls"
+         OPTIONS="-DTHREADSAFE=OFF -DBUILD_EXAMPLES=ON -DUSE_HTTPS=mbedTLS -DSHA1_BACKEND=mbedTLS -DMBEDTLS_ROOT_DIR=../deps/mbedtls"
      os: linux
  allow_failures:
    - env: COVERITY=1
