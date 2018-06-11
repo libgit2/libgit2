@@ -43,7 +43,7 @@ static void assert_condition_includes(const char *keyword, const char *path, boo
 				 git_config_get_string_buf(&buf, cfg, "foo.bar"));
 	}
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	git_config_free(cfg);
 }
 
@@ -77,7 +77,7 @@ void test_config_conditionals__gitdir(void)
 	assert_condition_includes("gitdir", path.ptr, false);
 
 	git__free(sandbox_path);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 void test_config_conditionals__gitdir_i(void)
@@ -94,7 +94,7 @@ void test_config_conditionals__gitdir_i(void)
 	assert_condition_includes("gitdir/i", path.ptr, true);
 
 	git__free(sandbox_path);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 void test_config_conditionals__invalid_conditional_fails(void)

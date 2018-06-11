@@ -129,7 +129,7 @@ static void set_gitattributes_to(const char *driver)
 	cl_assert(!git_buf_oom(&line));
 
 	cl_git_mkfile(TEST_REPO_PATH "/.gitattributes", line.ptr);
-	git_buf_free(&line);
+	git_buf_dispose(&line);
 }
 
 static void merge_branch(void)

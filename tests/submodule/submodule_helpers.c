@@ -79,9 +79,9 @@ void rewrite_gitmodules(const char *workdir)
 
 	cl_must_pass(p_unlink(in_f.ptr));
 
-	git_buf_free(&in_f);
-	git_buf_free(&out_f);
-	git_buf_free(&path);
+	git_buf_dispose(&in_f);
+	git_buf_dispose(&out_f);
+	git_buf_dispose(&path);
 }
 
 static void cleanup_fixture_submodules(void *payload)

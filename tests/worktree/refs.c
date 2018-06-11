@@ -191,5 +191,5 @@ void test_worktree_refs__creating_refs_uses_commondir(void)
 	   git_reference_free(branch);
 	   git_reference_free(head);
 	   git_commit_free(commit);
-	   git_buf_free(&refpath);
+	   git_buf_dispose(&refpath);
 }

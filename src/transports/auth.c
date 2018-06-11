@@ -40,7 +40,7 @@ on_error:
 	if (raw.size)
 		git__memzero(raw.ptr, raw.size);
 
-	git_buf_free(&raw);
+	git_buf_dispose(&raw);
 	return error;
 }
 

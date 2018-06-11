@@ -85,7 +85,7 @@ void test_stash_apply__with_default(void)
 	cl_git_pass(git_futils_readbuffer(&where, "stash/where"));
 	cl_assert_equal_s("....\n", where.ptr);
 
-	git_buf_free(&where);
+	git_buf_dispose(&where);
 }
 
 void test_stash_apply__with_existing_file(void)
@@ -132,7 +132,7 @@ void test_stash_apply__with_reinstate_index(void)
 	cl_git_pass(git_futils_readbuffer(&where, "stash/where"));
 	cl_assert_equal_s("....\n", where.ptr);
 
-	git_buf_free(&where);
+	git_buf_dispose(&where);
 }
 
 void test_stash_apply__conflict_index_with_default(void)

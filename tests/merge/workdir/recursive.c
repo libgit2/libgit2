@@ -46,7 +46,7 @@ void test_merge_workdir_recursive__writes_conflict_with_virtual_base(void)
 	cl_assert_equal_s(CONFLICTING_RECURSIVE_F1_TO_F2, conflicting_buf.ptr);
 
 	git_index_free(index);
-	git_buf_free(&conflicting_buf);
+	git_buf_dispose(&conflicting_buf);
 }
 
 void test_merge_workdir_recursive__conflicting_merge_base_with_diff3(void)
@@ -80,5 +80,5 @@ void test_merge_workdir_recursive__conflicting_merge_base_with_diff3(void)
 	cl_assert_equal_s(CONFLICTING_RECURSIVE_H2_TO_H1_WITH_DIFF3, conflicting_buf.ptr);
 
 	git_index_free(index);
-	git_buf_free(&conflicting_buf);
+	git_buf_dispose(&conflicting_buf);
 }

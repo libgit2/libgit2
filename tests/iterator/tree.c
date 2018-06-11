@@ -653,7 +653,7 @@ static void build_test_tree(
 	cl_git_pass(git_treebuilder_write(out, builder));
 
 	git_treebuilder_free(builder);
-	git_buf_free(&name);
+	git_buf_dispose(&name);
 }
 
 void test_iterator_tree__case_conflicts_0(void)

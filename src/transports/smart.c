@@ -171,7 +171,7 @@ int git_smart__update_heads(transport_smart *t, git_vector *symrefs)
 					ref->head.symref_target = git_buf_detach(&buf);
 			}
 
-			git_buf_free(&buf);
+			git_buf_dispose(&buf);
 
 			if (error < 0)
 				return error;

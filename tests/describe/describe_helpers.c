@@ -20,7 +20,7 @@ void assert_describe(
 
 	git_describe_result_free(result);
 	git_object_free(object);
-	git_buf_free(&label);
+	git_buf_dispose(&label);
 }
 
 void assert_describe_workdir(
@@ -38,5 +38,5 @@ void assert_describe_workdir(
 	cl_must_pass(p_fnmatch(expected_output, git_buf_cstr(&label), 0));
 
 	git_describe_result_free(result);
-	git_buf_free(&label);
+	git_buf_dispose(&label);
 }

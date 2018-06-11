@@ -373,8 +373,8 @@ int diff_delta_format_similarity_header(
 		error = -1;
 
 done:
-	git_buf_free(&old_path);
-	git_buf_free(&new_path);
+	git_buf_dispose(&old_path);
+	git_buf_dispose(&new_path);
 
 	return error;
 }
@@ -446,8 +446,8 @@ int git_diff_delta__format_file_header(
 		error = -1;
 
 done:
-	git_buf_free(&old_path);
-	git_buf_free(&new_path);
+	git_buf_dispose(&old_path);
+	git_buf_dispose(&new_path);
 
 	return error;
 }
@@ -509,8 +509,8 @@ static int diff_print_patch_file_binary_noshow(
 		old_path.ptr, new_path.ptr);
 
 done:
-	git_buf_free(&old_path);
-	git_buf_free(&new_path);
+	git_buf_dispose(&old_path);
+	git_buf_dispose(&new_path);
 
 	return error;
 }
@@ -696,7 +696,7 @@ int git_diff_print(
 			giterr_set_after_callback_function(error, "git_diff_print");
 	}
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	return error;
 }
@@ -776,7 +776,7 @@ int git_patch_print(
 			giterr_set_after_callback_function(error, "git_patch_print");
 	}
 
-	git_buf_free(&temp);
+	git_buf_dispose(&temp);
 
 	return error;
 }

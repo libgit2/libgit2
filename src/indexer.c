@@ -134,12 +134,12 @@ int git_indexer_new(
 		goto cleanup;
 
 	fd = git_futils_mktmp(&tmp_path, git_buf_cstr(&path), idx->mode);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 	if (fd < 0)
 		goto cleanup;
 
 	error = git_packfile_alloc(&idx->pack, git_buf_cstr(&tmp_path));
-	git_buf_free(&tmp_path);
+	git_buf_dispose(&tmp_path);
 
 	if (error < 0)
 		goto cleanup;
@@ -161,8 +161,8 @@ cleanup:
 	if (idx->pack != NULL)
 		p_unlink(idx->pack->pack_name);
 
-	git_buf_free(&path);
-	git_buf_free(&tmp_path);
+	git_buf_dispose(&path);
+	git_buf_dispose(&tmp_path);
 	git__free(idx);
 	return -1;
 }
@@ -650,7 +650,7 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_tran
 
 		/* We want to free the stream reasorces no matter what here */
 		idx->have_stream = 0;
-		git_packfile_stream_free(stream);
+		git_packfile_stream_dispose(stream);
 
 		if (error < 0)
 			goto on_error;
@@ -758,7 +758,7 @@ static int inject_object(git_indexer *idx, git_oid *id)
 
 	idx->pack->mwf.size += buf.size;
 	entry->crc = htonl(crc32(entry->crc, (unsigned char *)buf.ptr, (uInt)buf.size));
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	/* Write a fake trailer so the pack functions play ball */
 
@@ -1121,13 +1121,13 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 
 	idx->pack_committed = 1;
 
-	git_buf_free(&filename);
+	git_buf_dispose(&filename);
 	return 0;
 
 on_error:
 	git_mwindow_free_all(&idx->pack->mwf);
 	git_filebuf_cleanup(&index_file);
-	git_buf_free(&filename);
+	git_buf_dispose(&filename);
 	return -1;
 }
 
@@ -1137,7 +1137,7 @@ void git_indexer_free(git_indexer *idx)
 		return;
 
 	if (idx->have_stream)
-		git_packfile_stream_free(&idx->stream);
+		git_packfile_stream_dispose(&idx->stream);
 
 	git_vector_free_deep(&idx->objects);
 

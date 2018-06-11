@@ -162,8 +162,8 @@ void test_core_env__0(void)
 		(void)p_rmdir(*val);
 	}
 
-	git_buf_free(&path);
-	git_buf_free(&found);
+	git_buf_dispose(&path);
+	git_buf_dispose(&found);
 }
 
 
@@ -206,7 +206,7 @@ void test_core_env__1(void)
 		GIT_ENOTFOUND, git_sysdir_find_system_file(&path, "nonexistentfile"));
 #endif
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 static void check_global_searchpath(
@@ -245,7 +245,7 @@ static void check_global_searchpath(
 	cl_assert_equal_i(
 		GIT_ENOTFOUND, git_sysdir_find_global_file(temp, file));
 
-	git_buf_free(&out);
+	git_buf_dispose(&out);
 }
 
 void test_core_env__2(void)
@@ -295,8 +295,8 @@ void test_core_env__2(void)
 		(void)p_rmdir(*val);
 	}
 
-	git_buf_free(&path);
-	git_buf_free(&found);
+	git_buf_dispose(&path);
+	git_buf_dispose(&found);
 }
 
 void test_core_env__substitution(void)
@@ -316,6 +316,6 @@ void test_core_env__substitution(void)
   cl_git_pass(git_buf_join(&expected, GIT_PATH_LIST_SEPARATOR, "/tmp/a", "/tmp/b"));
   cl_assert_equal_s(expected.ptr, buf.ptr);
 
-  git_buf_free(&expected);
-  git_buf_free(&buf);
+  git_buf_dispose(&expected);
+  git_buf_dispose(&buf);
 }

@@ -197,7 +197,7 @@ static int retrieve_previously_checked_out_branch_or_revision(git_object **out, 
 
 cleanup:
 	git_reference_free(ref);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	regfree(&preg);
 	git_reflog_free(reflog);
 	return error;
@@ -350,7 +350,7 @@ static int handle_at_syntax(git_object **out, git_reference **ref, const char *s
 	error = retrieve_revobject_from_reflog(out, ref, repo, git_buf_cstr(&identifier), (size_t)timestamp);
 
 cleanup:
-	git_buf_free(&identifier);
+	git_buf_dispose(&identifier);
 	return error;
 }
 
@@ -624,7 +624,7 @@ static int ensure_base_rev_loaded(git_object **object, git_reference **reference
 		return -1;
 
 	error = revparse_lookup_object(object, reference, repo, git_buf_cstr(&identifier));
-	git_buf_free(&identifier);
+	git_buf_dispose(&identifier);
 
 	return error;
 }
@@ -820,7 +820,7 @@ cleanup:
 		git_reference_free(reference);
 	}
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	return error;
 }
 

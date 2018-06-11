@@ -668,7 +668,7 @@ int git_index_read(git_index *index, int force)
 	if (!error)
 		git_futils_filestamp_set(&index->stamp, &stamp);
 
-	git_buf_free(&buffer);
+	git_buf_dispose(&buffer);
 	return error;
 }
 
@@ -949,7 +949,7 @@ static int index_entry_init(
 		return -1;
 
 	error = git_path_lstat(path.ptr, &st);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 
 	if (error < 0)
 		return error;
@@ -1509,7 +1509,7 @@ static int add_repo_as_submodule(git_index_entry **out, git_index *index, const 
 
 	git_reference_free(head);
 	git_repository_free(sub);
-	git_buf_free(&abspath);
+	git_buf_dispose(&abspath);
 
 	*out = entry;
 	return 0;
@@ -1693,7 +1693,7 @@ int git_index_remove_directory(git_index *index, const char *dir, int stage)
 		/* removed entry at 'pos' so we don't need to increment */
 	}
 
-	git_buf_free(&pfx);
+	git_buf_dispose(&pfx);
 
 	return error;
 }
@@ -2819,7 +2819,7 @@ static int write_name_extension(git_index *index, git_filebuf *file)
 
 	error = write_extension(file, &extension, &name_buf);
 
-	git_buf_free(&name_buf);
+	git_buf_dispose(&name_buf);
 
 done:
 	return error;
@@ -2867,7 +2867,7 @@ static int write_reuc_extension(git_index *index, git_filebuf *file)
 
 	error = write_extension(file, &extension, &reuc_buf);
 
-	git_buf_free(&reuc_buf);
+	git_buf_dispose(&reuc_buf);
 
 done:
 	return error;
@@ -2891,7 +2891,7 @@ static int write_tree_extension(git_index *index, git_filebuf *file)
 
 	error = write_extension(file, &extension, &buf);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	return error;
 }
@@ -3008,7 +3008,7 @@ static int read_tree_cb(
 	}
 
 	index_entry_adjust_namemask(entry, path.size);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 
 	if (git_vector_insert(data->new_entries, entry) < 0) {
 		index_entry_free(entry);
@@ -3463,7 +3463,7 @@ static int index_apply_to_all(
 		}
 	}
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 	git_pathspec__clear(&ps);
 
 	return error;

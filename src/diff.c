@@ -439,7 +439,7 @@ static int file_cb(
 		goto out;
 
 out:
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	return error;
 }
 
@@ -477,7 +477,7 @@ static int line_cb(
 		goto out;
 
 out:
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	return error;
 }
 

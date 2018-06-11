@@ -53,7 +53,7 @@ static void analysis_from_branch(
 
 	cl_git_pass(git_merge_analysis(merge_analysis, merge_pref, repo, (const git_annotated_commit **)&their_head, 1));
 
-	git_buf_free(&refname);
+	git_buf_dispose(&refname);
 	git_annotated_commit_free(their_head);
 	git_reference_free(their_ref);
 }
@@ -108,7 +108,7 @@ void test_merge_workdir_analysis__unborn(void)
 	cl_assert_equal_i(GIT_MERGE_ANALYSIS_FASTFORWARD, (merge_analysis & GIT_MERGE_ANALYSIS_FASTFORWARD));
 	cl_assert_equal_i(GIT_MERGE_ANALYSIS_UNBORN, (merge_analysis & GIT_MERGE_ANALYSIS_UNBORN));
 
-	git_buf_free(&master);
+	git_buf_dispose(&master);
 }
 
 void test_merge_workdir_analysis__fastforward_with_config_noff(void)

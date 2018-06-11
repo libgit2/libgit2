@@ -15,7 +15,7 @@ void test_repo_state__initialize(void)
 void test_repo_state__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
-	git_buf_free(&_path);
+	git_buf_dispose(&_path);
 }
 
 static void setup_simple_state(const char *filename)

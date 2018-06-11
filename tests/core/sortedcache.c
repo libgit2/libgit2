@@ -266,7 +266,7 @@ static void sortedcache_test_reload(git_sortedcache *sc)
 
 	git_sortedcache_wunlock(sc);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_core_sortedcache__on_disk(void)

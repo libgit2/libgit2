@@ -841,8 +841,8 @@ static void proxy_stream_free(git_writestream *s)
 	struct proxy_stream *proxy_stream = (struct proxy_stream *)s;
 	assert(proxy_stream);
 
-	git_buf_free(&proxy_stream->input);
-	git_buf_free(&proxy_stream->temp_buf);
+	git_buf_dispose(&proxy_stream->input);
+	git_buf_dispose(&proxy_stream->temp_buf);
 	git__free(proxy_stream);
 }
 
@@ -977,7 +977,7 @@ done:
 	if (fd >= 0)
 		p_close(fd);
 	stream_list_free(&filter_streams);
-	git_buf_free(&abspath);
+	git_buf_dispose(&abspath);
 	return error;
 }
 

@@ -13,5 +13,5 @@ void test_core_useragent__get(void)
 	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_USER_AGENT, &buf));
 	cl_assert_equal_s(custom_name, buf.ptr);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }

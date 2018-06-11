@@ -280,7 +280,7 @@ static int diff_file_content_load_workdir_symlink_fake(
 	fc->map.data = git_buf_detach(&target);
 	fc->flags |= GIT_DIFF_FLAG__FREE_DATA;
 
-	git_buf_free(&target);
+	git_buf_dispose(&target);
 	return error;
 }
 
@@ -361,7 +361,7 @@ static int diff_file_content_load_workdir_file(
 		error = git_filter_list_apply_to_data(&out, fl, &raw);
 
 		if (out.ptr != raw.ptr)
-			git_buf_free(&raw);
+			git_buf_dispose(&raw);
 
 		if (!error) {
 			fc->map.len  = out.size;
@@ -406,7 +406,7 @@ static int diff_file_content_load_workdir(
 		fc->file->flags |= GIT_DIFF_FLAG_VALID_ID;
 	}
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 	return error;
 }
 

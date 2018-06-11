@@ -47,8 +47,8 @@ static void replace_file_with_mode(
 		path.ptr, content.ptr, content.size,
 		O_WRONLY|O_CREAT|O_TRUNC, create_mode);
 
-	git_buf_free(&path);
-	git_buf_free(&content);
+	git_buf_dispose(&path);
+	git_buf_dispose(&content);
 }
 
 #define add_and_check_mode(I,F,X) add_and_check_mode_(I,F,X,__FILE__,__LINE__)

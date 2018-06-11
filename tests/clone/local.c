@@ -91,7 +91,7 @@ void test_clone_local__should_clone_local(void)
 	cl_assert_equal_i(1,  git_clone__should_clone_local(path, GIT_CLONE_LOCAL_NO_LINKS));
 	cl_assert_equal_i(0, git_clone__should_clone_local(path, GIT_CLONE_NO_LOCAL));
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_clone_local__hardlinks(void)
@@ -149,7 +149,7 @@ void test_clone_local__hardlinks(void)
 	cl_assert_equal_i(3, st.st_nlink);
 #endif
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	git_repository_free(repo);
 
 	cl_git_pass(git_futils_rmdir_r("./clone.git", NULL, GIT_RMDIR_REMOVE_FILES));
@@ -179,8 +179,8 @@ void test_clone_local__standard_unc_paths_are_written_git_style(void)
 
 	git_remote_free(remote);
 	git_repository_free(repo);
-	git_buf_free(&unc);
-	git_buf_free(&git_unc);
+	git_buf_dispose(&unc);
+	git_buf_dispose(&git_unc);
 
 	cl_git_pass(git_futils_rmdir_r("./clone.git", NULL, GIT_RMDIR_REMOVE_FILES));
 #endif
@@ -206,7 +206,7 @@ void test_clone_local__git_style_unc_paths(void)
 
 	git_remote_free(remote);
 	git_repository_free(repo);
-	git_buf_free(&git_unc);
+	git_buf_dispose(&git_unc);
 
 	cl_git_pass(git_futils_rmdir_r("./clone.git", NULL, GIT_RMDIR_REMOVE_FILES));
 #endif

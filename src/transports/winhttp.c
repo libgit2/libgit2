@@ -455,7 +455,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 
 		/* Convert URL to wide characters */
 		error = git__utf8_to_16_alloc(&proxy_wide, processed_url.ptr);
-		git_buf_free(&processed_url);
+		git_buf_dispose(&processed_url);
 		if (error < 0)
 			goto on_error;
 
@@ -599,7 +599,7 @@ on_error:
 		winhttp_stream_close(s);
 
 	git__free(proxy_url);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	return error;
 }
 
@@ -659,12 +659,12 @@ static int write_chunk(HINTERNET request, const char *buffer, size_t len)
 	if (!WinHttpWriteData(request,
 		git_buf_cstr(&buf),	(DWORD)git_buf_len(&buf),
 		&bytes_written)) {
-		git_buf_free(&buf);
+		git_buf_dispose(&buf);
 		giterr_set(GITERR_OS, "failed to write chunk header");
 		return -1;
 	}
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	/* Chunk body */
 	if (!WinHttpWriteData(request,
@@ -779,11 +779,11 @@ static int winhttp_connect(
 	if (git__utf8_to_16_alloc(&wide_ua, git_buf_cstr(&ua)) < 0) {
 		giterr_set(GITERR_OS, "unable to convert host to wide characters");
 		git__free(wide_host);
-		git_buf_free(&ua);
+		git_buf_dispose(&ua);
 		return -1;
 	}
 
-	git_buf_free(&ua);
+	git_buf_dispose(&ua);
 
 	/* Establish session */
 	t->session = WinHttpOpen(

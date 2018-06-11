@@ -287,7 +287,7 @@ void test_notes_notes__inserting_a_note_without_passing_a_namespace_uses_the_def
 	assert_note_equal(note, "hello world\n", &note_oid);
 	assert_note_equal(default_namespace_note, "hello world\n", &note_oid);
 
-	git_buf_free(&default_ref);
+	git_buf_dispose(&default_ref);
 	git_note_free(note);
 	git_note_free(default_namespace_note);
 }

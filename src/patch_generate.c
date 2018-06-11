@@ -314,8 +314,8 @@ static int create_binary(
 	}
 
 done:
-	git_buf_free(&deflate);
-	git_buf_free(&delta);
+	git_buf_dispose(&deflate);
+	git_buf_dispose(&delta);
 
 	return error;
 }

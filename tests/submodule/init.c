@@ -39,7 +39,7 @@ void test_submodule_init__absolute_url(void)
 	cl_git_pass(git_config_get_string(&config_url, cfg, "submodule.testrepo.url"));
 	cl_assert_equal_s(absolute_url.ptr, config_url);
 
-	git_buf_free(&absolute_url);
+	git_buf_dispose(&absolute_url);
 	git_config_free(cfg);
 	git_submodule_free(sm);
 }
@@ -69,7 +69,7 @@ void test_submodule_init__relative_url(void)
 	cl_git_pass(git_config_get_string(&config_url, cfg, "submodule.testrepo.url"));
 	cl_assert_equal_s(absolute_url.ptr, config_url);
 
-	git_buf_free(&absolute_url);
+	git_buf_dispose(&absolute_url);
 	git_config_free(cfg);
 	git_submodule_free(sm);
 }
@@ -107,7 +107,7 @@ void test_submodule_init__relative_url_detached_head(void)
 	cl_git_pass(git_config_get_string(&config_url, cfg, "submodule.testrepo.url"));
 	cl_assert_equal_s(absolute_url.ptr, config_url);
 
-	git_buf_free(&absolute_url);
+	git_buf_dispose(&absolute_url);
 	git_config_free(cfg);
 	git_object_free(head_commit);
 	git_reference_free(head_ref);

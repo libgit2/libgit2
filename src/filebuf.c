@@ -256,7 +256,7 @@ static int resolve_symlink(git_buf *out, const char *path)
 				goto cleanup;
 
 			git_buf_swap(&curpath, &dir);
-			git_buf_free(&dir);
+			git_buf_dispose(&dir);
 
 			if ((error = git_path_apply_relative(&curpath, target.ptr)) < 0)
 				goto cleanup;
@@ -267,8 +267,8 @@ static int resolve_symlink(git_buf *out, const char *path)
 	error = -1;
 
 cleanup:
-	git_buf_free(&curpath);
-	git_buf_free(&target);
+	git_buf_dispose(&curpath);
+	git_buf_dispose(&target);
 	return error;
 }
 
@@ -343,7 +343,7 @@ int git_filebuf_open_withsize(git_filebuf *file, const char *path, int flags, mo
 		file->fd = git_futils_mktmp(&tmp_path, path, mode);
 
 		if (file->fd < 0) {
-			git_buf_free(&tmp_path);
+			git_buf_dispose(&tmp_path);
 			goto cleanup;
 		}
 		file->fd_is_open = true;

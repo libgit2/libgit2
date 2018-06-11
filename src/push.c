@@ -228,7 +228,7 @@ int git_push_update_tips(git_push *push, const git_remote_callbacks *callbacks)
 	error = 0;
 
 on_error:
-	git_buf_free(&remote_ref_name);
+	git_buf_dispose(&remote_ref_name);
 	return error;
 }
 

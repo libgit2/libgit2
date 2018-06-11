@@ -53,13 +53,13 @@ void test_clone_empty__can_clone_an_empty_local_repo_barely(void)
 	cl_git_pass(git_branch_upstream_name(&buf, g_repo_cloned, local_name));
 
 	cl_assert_equal_s(expected_tracked_branch_name, buf.ptr);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	/* ...and the name of the remote... */
 	cl_git_pass(git_branch_remote_name(&buf, g_repo_cloned, expected_tracked_branch_name));
 
 	cl_assert_equal_s(expected_remote_name, buf.ptr);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	/* ...even when the remote HEAD is unborn as well */
 	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&ref, g_repo_cloned,

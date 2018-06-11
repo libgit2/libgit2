@@ -54,7 +54,7 @@ static void test_parse_invalid_diff(const char *invalid_diff)
 	cl_git_fail_with(GIT_ERROR,
 		git_diff_from_buffer(&diff, buf.ptr, buf.size));
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_diff_parse__exact_rename(void)
@@ -125,7 +125,7 @@ static void test_tree_to_tree_computed_to_parsed(
 	git_diff_free(computed);
 	git_diff_free(parsed);
 
-	git_buf_free(&computed_buf);
+	git_buf_dispose(&computed_buf);
 
 	cl_git_sandbox_cleanup();
 }
@@ -213,7 +213,7 @@ void test_diff_parse__get_patch_from_diff(void)
 	git_diff_free(computed);
 	git_diff_free(parsed);
 
-	git_buf_free(&computed_buf);
+	git_buf_dispose(&computed_buf);
 
 	cl_git_sandbox_cleanup();
 }
@@ -265,7 +265,7 @@ void test_diff_parse__parsing_minimal_patch_succeeds(void)
 	cl_assert_equal_s(patch, buf.ptr);
 
 	git_diff_free(diff);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_diff_parse__patch_roundtrip_succeeds(void)
@@ -285,6 +285,6 @@ void test_diff_parse__patch_roundtrip_succeeds(void)
 
 	git_patch_free(patch);
 	git_diff_free(diff);
-	git_buf_free(&patchbuf);
-	git_buf_free(&diffbuf);
+	git_buf_dispose(&patchbuf);
+	git_buf_dispose(&diffbuf);
 }

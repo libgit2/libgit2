@@ -601,7 +601,7 @@ void test_status_ignore__filenames_with_special_prefixes_do_not_interfere_with_s
 		cl_assert(st.status == GIT_STATUS_WT_NEW);
 
 		cl_git_sandbox_cleanup();
-		git_buf_free(&file);
+		git_buf_dispose(&file);
 	}
 }
 

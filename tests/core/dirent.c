@@ -55,7 +55,7 @@ static void dirent_cleanup__cb(void *_d)
 
 	cl_must_pass(p_rmdir(top_dir));
 
-	git_buf_free(&d->path);
+	git_buf_dispose(&d->path);
 }
 
 static void check_counts(walk_data *d)

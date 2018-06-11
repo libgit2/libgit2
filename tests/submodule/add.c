@@ -22,7 +22,7 @@ static void assert_submodule_url(const char* name, const char *url)
 	cl_git_pass(git_buf_printf(&key, "submodule.%s.url", name));
 	assert_config_entry_value(g_repo, git_buf_cstr(&key), url);
 
-	git_buf_free(&key);
+	git_buf_dispose(&key);
 }
 
 void test_submodule_add__url_absolute(void)
@@ -62,7 +62,7 @@ void test_submodule_add__url_absolute(void)
 	cl_assert_equal_s("gitdir: ../.git/modules/sm_libgit2/", dot_git_content.ptr);
 
 	git_repository_free(repo);
-	git_buf_free(&dot_git_content);
+	git_buf_dispose(&dot_git_content);
 
 	/* add a submodule not using a gitlink */
 
@@ -163,7 +163,7 @@ void test_submodule_add__path_exists_in_index(void)
 	cl_git_fail_with(git_submodule_add_setup(&sm, g_repo, "./", "subdirectory", 1), GIT_EEXISTS);
 
 	git_submodule_free(sm);
-	git_buf_free(&filename);
+	git_buf_dispose(&filename);
 }
 
 void test_submodule_add__file_exists_in_index(void)
@@ -181,5 +181,5 @@ void test_submodule_add__file_exists_in_index(void)
 	cl_git_fail_with(git_submodule_add_setup(&sm, g_repo, "./", "subdirectory", 1), GIT_EEXISTS);
 
 	git_submodule_free(sm);
-	git_buf_free(&name);
+	git_buf_dispose(&name);
 }

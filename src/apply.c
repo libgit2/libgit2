@@ -255,7 +255,7 @@ static int apply_binary_delta(
 
 	if (!error && inflated.size != binary_file->inflatedlen) {
 		error = apply_err("inflated delta does not match expected length");
-		git_buf_free(out);
+		git_buf_dispose(out);
 	}
 
 	if (error < 0)
@@ -281,7 +281,7 @@ static int apply_binary_delta(
 	}
 
 done:
-	git_buf_free(&inflated);
+	git_buf_dispose(&inflated);
 	return error;
 }
 
@@ -320,9 +320,9 @@ static int apply_binary(
 
 done:
 	if (error < 0)
-		git_buf_free(out);
+		git_buf_dispose(out);
 
-	git_buf_free(&reverse);
+	git_buf_dispose(&reverse);
 	return error;
 }
 

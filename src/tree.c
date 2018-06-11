@@ -650,7 +650,7 @@ int git_tree__write_index(
 	}
 
 	ret = write_tree(oid, repo, index, "", 0, &shared_buf);
-	git_buf_free(&shared_buf);
+	git_buf_dispose(&shared_buf);
 
 	if (old_ignore_case)
 		git_index__set_ignore_case(index, true);
@@ -814,7 +814,7 @@ int git_treebuilder_write(git_oid *oid, git_treebuilder *bld)
 
 	error = git_treebuilder_write_with_buffer(oid, bld, &buffer);
 
-	git_buf_free(&buffer);
+	git_buf_dispose(&buffer);
 	return error;
 }
 
@@ -1055,7 +1055,7 @@ int git_tree_walk(
 	error = tree_walk(
 		tree, callback, &root_path, payload, (mode == GIT_TREEWALK_PRE));
 
-	git_buf_free(&root_path);
+	git_buf_dispose(&root_path);
 
 	return error;
 }
@@ -1320,7 +1320,7 @@ cleanup:
 		}
 	}
 
-	git_buf_free(&component);
+	git_buf_dispose(&component);
 	git_array_clear(stack);
 	git_vector_free(&entries);
 	return error;

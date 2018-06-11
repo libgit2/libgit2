@@ -359,7 +359,7 @@ int git_refspec__dwim_one(git_vector *out, git_refspec *spec, git_vector *refs)
 		cur->dst = git_buf_detach(&buf);
 	}
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	if (cur->dst == NULL && spec->dst != NULL) {
 		cur->dst = git__strdup(spec->dst);

@@ -157,7 +157,7 @@ static void writefile(const char *filename, size_t numchunks)
 	}
 	p_close(fd);
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 static void test_stream(size_t numchunks)

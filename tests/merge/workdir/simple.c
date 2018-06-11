@@ -155,7 +155,7 @@ void test_merge_workdir_simple__automerge(void)
 	cl_git_pass(git_futils_readbuffer(&automergeable_buf,
 		TEST_REPO_PATH "/automergeable.txt"));
 	cl_assert(strcmp(automergeable_buf.ptr, AUTOMERGEABLE_MERGED_FILE) == 0);
-	git_buf_free(&automergeable_buf);
+	git_buf_dispose(&automergeable_buf);
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 8));
 	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 3));
@@ -201,7 +201,7 @@ void test_merge_workdir_simple__automerge_crlf(void)
 	cl_git_pass(git_futils_readbuffer(&automergeable_buf,
 		TEST_REPO_PATH "/automergeable.txt"));
 	cl_assert(strcmp(automergeable_buf.ptr, AUTOMERGEABLE_MERGED_FILE_CRLF) == 0);
-	git_buf_free(&automergeable_buf);
+	git_buf_dispose(&automergeable_buf);
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 8));
 	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 3));
@@ -252,8 +252,8 @@ void test_merge_workdir_simple__mergefile(void)
 		"\n" \
 		"Conflicts:\n" \
 		"\tconflicting.txt\n") == 0);
-	git_buf_free(&conflicting_buf);
-	git_buf_free(&mergemsg_buf);
+	git_buf_dispose(&conflicting_buf);
+	git_buf_dispose(&mergemsg_buf);
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 8));
 	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 3));
@@ -289,7 +289,7 @@ void test_merge_workdir_simple__diff3(void)
 	cl_git_pass(git_futils_readbuffer(&conflicting_buf,
 		TEST_REPO_PATH "/conflicting.txt"));
 	cl_assert(strcmp(conflicting_buf.ptr, CONFLICTING_DIFF3_FILE) == 0);
-	git_buf_free(&conflicting_buf);
+	git_buf_dispose(&conflicting_buf);
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 8));
 	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 3));
@@ -324,7 +324,7 @@ void test_merge_workdir_simple__union(void)
 	cl_git_pass(git_futils_readbuffer(&conflicting_buf,
 		TEST_REPO_PATH "/conflicting.txt"));
 	cl_assert(strcmp(conflicting_buf.ptr, CONFLICTING_UNION_FILE) == 0);
-	git_buf_free(&conflicting_buf);
+	git_buf_dispose(&conflicting_buf);
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 6));
 	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 4));
@@ -360,7 +360,7 @@ void test_merge_workdir_simple__gitattributes_union(void)
 	cl_git_pass(git_futils_readbuffer(&conflicting_buf,
 		TEST_REPO_PATH "/conflicting.txt"));
 	cl_assert(strcmp(conflicting_buf.ptr, CONFLICTING_UNION_FILE) == 0);
-	git_buf_free(&conflicting_buf);
+	git_buf_dispose(&conflicting_buf);
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 6));
 	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 4));
@@ -400,7 +400,7 @@ void test_merge_workdir_simple__diff3_from_config(void)
 	cl_git_pass(git_futils_readbuffer(&conflicting_buf,
 		TEST_REPO_PATH "/conflicting.txt"));
 	cl_assert(strcmp(conflicting_buf.ptr, CONFLICTING_DIFF3_FILE) == 0);
-	git_buf_free(&conflicting_buf);
+	git_buf_dispose(&conflicting_buf);
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 8));
 	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 3));
@@ -442,7 +442,7 @@ void test_merge_workdir_simple__merge_overrides_config(void)
 	cl_git_pass(git_futils_readbuffer(&conflicting_buf,
 		TEST_REPO_PATH "/conflicting.txt"));
 	cl_assert(strcmp(conflicting_buf.ptr, CONFLICTING_MERGE_FILE) == 0);
-	git_buf_free(&conflicting_buf);
+	git_buf_dispose(&conflicting_buf);
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 8));
 	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 3));

@@ -601,7 +601,7 @@ int git_diff__oid_for_entry(
 
 		if (p_stat(full_path.ptr, &st) < 0) {
 			error = git_path_set_error(errno, entry.path, "stat");
-			git_buf_free(&full_path);
+			git_buf_dispose(&full_path);
 			return error;
 		}
 
@@ -664,7 +664,7 @@ int git_diff__oid_for_entry(
 		}
  	}
 
-	git_buf_free(&full_path);
+	git_buf_dispose(&full_path);
 	return error;
 }
 

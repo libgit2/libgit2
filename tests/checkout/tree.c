@@ -550,7 +550,7 @@ void assert_conflict(
 	/* Create a conflicting file */
 	cl_git_pass(git_buf_joinpath(&file_path, "./testrepo", entry_path));
 	cl_git_mkfile(git_buf_cstr(&file_path), new_content);
-	git_buf_free(&file_path);
+	git_buf_dispose(&file_path);
 
 	/* Trying to checkout the original commit */
 	cl_git_pass(git_revparse_single(&g_object, g_repo, commit_sha));
@@ -1044,7 +1044,7 @@ mode_t read_filemode(const char *path)
 	result = GIT_PERMS_IS_EXEC(st.st_mode) ?
 		GIT_FILEMODE_BLOB_EXECUTABLE : GIT_FILEMODE_BLOB;
 
-	git_buf_free(&fullpath);
+	git_buf_dispose(&fullpath);
 
 	return result;
 }
@@ -1343,8 +1343,8 @@ void test_checkout_tree__caches_attributes_during_checkout(void)
 	cl_assert_equal_strn(ident1.ptr, "# $Id: ", 7);
 	cl_assert_equal_strn(ident2.ptr, "# $Id: ", 7);
 
-	git_buf_free(&ident1);
-	git_buf_free(&ident2);
+	git_buf_dispose(&ident1);
+	git_buf_dispose(&ident2);
 	git_object_free(obj);
 }
 

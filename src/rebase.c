@@ -116,7 +116,7 @@ done:
 	if (type != GIT_REBASE_TYPE_NONE && path_out)
 		*path_out = git_buf_detach(&path);
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 
 	return 0;
 }
@@ -251,9 +251,9 @@ static int rebase_open_merge(git_rebase *rebase)
 	rebase->onto_name = git_buf_detach(&buf);
 
 done:
-	git_buf_free(&cmt);
-	git_buf_free(&state_path);
-	git_buf_free(&buf);
+	git_buf_dispose(&cmt);
+	git_buf_dispose(&state_path);
+	git_buf_dispose(&buf);
 
 	return error;
 }
@@ -390,10 +390,10 @@ done:
 	else
 		git_rebase_free(rebase);
 
-	git_buf_free(&path);
-	git_buf_free(&orig_head_name);
-	git_buf_free(&orig_head_id);
-	git_buf_free(&onto_id);
+	git_buf_dispose(&path);
+	git_buf_dispose(&orig_head_name);
+	git_buf_dispose(&orig_head_id);
+	git_buf_dispose(&onto_id);
 	return error;
 }
 
@@ -421,8 +421,8 @@ static int rebase_setupfile(git_rebase *rebase, const char *filename, int flags,
 	if ((error = git_buf_joinpath(&path, rebase->state_path, filename)) == 0)
 		error = git_futils_writebuffer(&contents, path.ptr, flags, REBASE_FILE_MODE);
 
-	git_buf_free(&path);
-	git_buf_free(&contents);
+	git_buf_dispose(&path);
+	git_buf_dispose(&contents);
 
 	return error;
 }
@@ -463,7 +463,7 @@ static int rebase_setupfiles_merge(git_rebase *rebase)
 	}
 
 done:
-	git_buf_free(&commit_filename);
+	git_buf_dispose(&commit_filename);
 	return error;
 }
 
@@ -659,8 +659,8 @@ static int rebase_init_merge(
 done:
 	git_reference_free(head_ref);
 	git_commit_free(onto_commit);
-	git_buf_free(&reflog);
-	git_buf_free(&state_path);
+	git_buf_dispose(&reflog);
+	git_buf_dispose(&state_path);
 
 	return error;
 }
@@ -839,7 +839,7 @@ done:
 	git_tree_free(parent_tree);
 	git_commit_free(parent_commit);
 	git_commit_free(current_commit);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 
 	return error;
 }
@@ -1263,9 +1263,9 @@ on_error:
 	error = -1;
 
 done:
-	git_buf_free(&rewritten);
-	git_buf_free(&path);
-	git_buf_free(&notes_ref);
+	git_buf_dispose(&rewritten);
+	git_buf_dispose(&path);
+	git_buf_dispose(&notes_ref);
 
 	return error;
 }
@@ -1297,8 +1297,8 @@ static int return_to_orig_head(git_rebase *rebase)
 			rebase->repo, GIT_HEAD_FILE, rebase->orig_head_name, 1,
 			head_msg.ptr);
 
-	git_buf_free(&head_msg);
-	git_buf_free(&branch_msg);
+	git_buf_dispose(&head_msg);
+	git_buf_dispose(&branch_msg);
 	git_commit_free(terminal_commit);
 	git_reference_free(head_ref);
 	git_reference_free(branch_ref);

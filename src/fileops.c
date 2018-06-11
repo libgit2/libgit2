@@ -159,7 +159,7 @@ int git_futils_readbuffer_fd(git_buf *buf, git_file fd, size_t len)
 
 	if (read_size != (ssize_t)len) {
 		giterr_set(GITERR_OS, "failed to read descriptor");
-		git_buf_free(buf);
+		git_buf_dispose(buf);
 		return -1;
 	}
 
@@ -209,7 +209,7 @@ int git_futils_readbuffer_updated(
 
 	if (checksum) {
 		if ((error = git_hash_buf(&checksum_new, buf.ptr, buf.size)) < 0) {
-			git_buf_free(&buf);
+			git_buf_dispose(&buf);
 			return error;
 		}
 
@@ -217,7 +217,7 @@ int git_futils_readbuffer_updated(
 		 * If we were given a checksum, we only want to use it if it's different
 		 */
 		if (!git_oid__cmp(checksum, &checksum_new)) {
-			git_buf_free(&buf);
+			git_buf_dispose(&buf);
 			if (updated)
 				*updated = 0;
 
@@ -234,7 +234,7 @@ int git_futils_readbuffer_updated(
 		*updated = 1;
 
 	git_buf_swap(out, &buf);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	return 0;
 }
@@ -526,8 +526,8 @@ int git_futils_mkdir(
 		parent_path.size ? parent_path.ptr : NULL, mode, flags, &opts);
 
 done:
-	git_buf_free(&make_path);
-	git_buf_free(&parent_path);
+	git_buf_dispose(&make_path);
+	git_buf_dispose(&parent_path);
 	return error;
 }
 
@@ -661,7 +661,7 @@ retry_lstat:
 	}
 
 done:
-	git_buf_free(&make_path);
+	git_buf_dispose(&make_path);
 	return error;
 }
 
@@ -822,7 +822,7 @@ int git_futils_rmdir_r(
 		error = 0;
 	}
 
-	git_buf_free(&fullpath);
+	git_buf_dispose(&fullpath);
 
 	return error;
 }
@@ -1081,8 +1081,8 @@ int git_futils_cp_r(
 
 	error = _cp_r_callback(&info, &path);
 
-	git_buf_free(&path);
-	git_buf_free(&info.to);
+	git_buf_dispose(&path);
+	git_buf_dispose(&info.to);
 
 	return error;
 }

@@ -127,7 +127,7 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 
 	cl_assert(git_oid_cmp(&expected_commit_oid, &commit_oid) == 0);
 
-	git_buf_free(&buffer);
+	git_buf_dispose(&buffer);
 	git_signature_free(signature);
 	git_tree_free(tree);
 	git_index_free(index);

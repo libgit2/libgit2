@@ -284,7 +284,7 @@ void test_iterator_index__case_folding(void)
 
 	cl_git_pass(git_buf_joinpath(&path, cl_fixture("icase"), ".gitted/CoNfIg"));
 	fs_is_ci = git_path_exists(path.ptr);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 
 	index_iterator_test(
 		"icase", NULL, NULL, 0, ARRAY_SIZE(expected_index_cs),
@@ -1007,7 +1007,7 @@ static void create_paths(git_index *index, const char *root, int depth)
 		}
 	}
 
-	git_buf_free(&fullpath);
+	git_buf_dispose(&fullpath);
 }
 
 void test_iterator_index__pathlist_for_deeply_nested_item(void)

@@ -71,7 +71,7 @@ void test_refs_rename__loose(void)
 
 	git_reference_free(new_ref);
 	git_reference_free(another_looked_up_ref);
-	git_buf_free(&temp_path);
+	git_buf_dispose(&temp_path);
 }
 
 void test_refs_rename__packed(void)
@@ -113,7 +113,7 @@ void test_refs_rename__packed(void)
 
 	git_reference_free(new_ref);
 	git_reference_free(another_looked_up_ref);
-	git_buf_free(&temp_path);
+	git_buf_dispose(&temp_path);
 }
 
 void test_refs_rename__packed_doesnt_pack_others(void)
@@ -155,7 +155,7 @@ void test_refs_rename__packed_doesnt_pack_others(void)
 
 	git_reference_free(renamed_ref);
 	git_reference_free(another_looked_up_ref);
-	git_buf_free(&temp_path);
+	git_buf_dispose(&temp_path);
 }
 
 void test_refs_rename__name_collision(void)

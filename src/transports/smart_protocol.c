@@ -106,7 +106,7 @@ static int append_symref(const char **out, git_vector *symrefs, const char *ptr)
 	GITERR_CHECK_ALLOC(mapping);
 
 	error = git_refspec__parse(mapping, git_buf_cstr(&buf), true);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	/* if the error isn't OOM, then it's a parse error; let's use a nicer message */
 	if (error < 0) {
@@ -465,7 +465,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 	if ((error = git_smart__negotiation_step(&t->parent, data.ptr, data.size)) < 0)
 		goto on_error;
 
-	git_buf_free(&data);
+	git_buf_dispose(&data);
 	git_revwalk_free(walk);
 
 	/* Now let's eat up whatever the server gives us */
@@ -485,7 +485,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 
 on_error:
 	git_revwalk_free(walk);
-	git_buf_free(&data);
+	git_buf_dispose(&data);
 	return error;
 }
 
@@ -862,7 +862,7 @@ static int parse_report(transport_smart *transport, git_push *push)
 		}
 	}
 done:
-	git_buf_free(&data_pkt_buf);
+	git_buf_dispose(&data_pkt_buf);
 	return error;
 }
 
@@ -1085,6 +1085,6 @@ int git_smart__push(git_transport *transport, git_push *push, const git_remote_c
 	}
 
 done:
-	git_buf_free(&pktline);
+	git_buf_dispose(&pktline);
 	return error;
 }

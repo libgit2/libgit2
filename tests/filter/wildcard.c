@@ -137,8 +137,8 @@ void test_filter_wildcard__reverse(void)
 		0, memcmp(reversed, out.ptr, out.size));
 
 	git_filter_list_free(fl);
-	git_buf_free(&out);
-	git_buf_free(&in);
+	git_buf_dispose(&out);
+	git_buf_dispose(&in);
 }
 
 void test_filter_wildcard__flip(void)
@@ -158,8 +158,8 @@ void test_filter_wildcard__flip(void)
 		0, memcmp(flipped, out.ptr, out.size));
 
 	git_filter_list_free(fl);
-	git_buf_free(&out);
-	git_buf_free(&in);
+	git_buf_dispose(&out);
+	git_buf_dispose(&in);
 }
 
 void test_filter_wildcard__none(void)
@@ -179,6 +179,6 @@ void test_filter_wildcard__none(void)
 		0, memcmp(input, out.ptr, out.size));
 
 	git_filter_list_free(fl);
-	git_buf_free(&out);
-	git_buf_free(&in);
+	git_buf_dispose(&out);
+	git_buf_dispose(&in);
 }

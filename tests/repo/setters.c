@@ -56,13 +56,13 @@ void test_repo_setters__setting_a_workdir_creates_a_gitlink(void)
 	cl_git_pass(git_futils_readbuffer(&content, "./new_workdir/.git"));
 	cl_assert(git__prefixcmp(git_buf_cstr(&content), "gitdir: ") == 0);
 	cl_assert(git__suffixcmp(git_buf_cstr(&content), "testrepo.git/") == 0);
-	git_buf_free(&content);
+	git_buf_dispose(&content);
 
 	cl_git_pass(git_repository_config(&cfg, repo));
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "core.worktree"));
 	cl_assert(git__suffixcmp(git_buf_cstr(&buf), "new_workdir/") == 0);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	git_config_free(cfg);
 }
 

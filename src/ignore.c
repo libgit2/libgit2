@@ -158,7 +158,7 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 
 out:
 	git__free(path);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	return error;
 }
 
@@ -315,7 +315,7 @@ int git_ignore__for_path(
 		    (error = git_path_to_dir(&local)) < 0 ||
 		    (error = git_buf_joinpath(&ignores->dir, workdir, local.ptr)) < 0)
 		{;} /* Nothing, we just want to stop on the first error */
-		git_buf_free(&local);
+		git_buf_dispose(&local);
 	} else {
 		error = git_buf_joinpath(&ignores->dir, path, "");
 	}
@@ -355,7 +355,7 @@ int git_ignore__for_path(
 			git_repository_attr_cache(repo)->cfg_excl_file);
 
 cleanup:
-	git_buf_free(&infopath);
+	git_buf_dispose(&infopath);
 	if (error < 0)
 		git_ignore__free(ignores);
 
@@ -427,7 +427,7 @@ void git_ignore__free(git_ignores *ignores)
 	}
 	git_vector_free(&ignores->ign_global);
 
-	git_buf_free(&ignores->dir);
+	git_buf_dispose(&ignores->dir);
 }
 
 static bool ignore_lookup_in_rules(
@@ -632,7 +632,7 @@ int git_ignore__check_pathspec_for_exact_ignores(
 	}
 
 	git_index_free(idx);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 
 	return error;
 }

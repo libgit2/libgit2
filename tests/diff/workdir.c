@@ -1677,7 +1677,7 @@ void test_diff_workdir__patience_diff(void)
 	cl_assert_equal_s(expected_patience, buf.ptr);
 	git_buf_clear(&buf);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	git_patch_free(patch);
 	git_diff_free(diff);
 }
@@ -1807,7 +1807,7 @@ void test_diff_workdir__can_update_index(void)
 		git_buf path = GIT_BUF_INIT;
 		cl_git_pass(git_buf_sets(&path, "status"));
 		cl_git_pass(git_path_direach(&path, 0, touch_file, NULL));
-		git_buf_free(&path);
+		git_buf_dispose(&path);
 	}
 
 	opts.flags |= GIT_DIFF_INCLUDE_IGNORED | GIT_DIFF_INCLUDE_UNTRACKED;
@@ -1959,7 +1959,7 @@ void test_diff_workdir__binary_detection(void)
 	git_diff_free(diff);
 
 	git_index_free(idx);
-	git_buf_free(&b);
+	git_buf_dispose(&b);
 }
 
 void test_diff_workdir__to_index_conflicted(void) {
@@ -2050,7 +2050,7 @@ void test_diff_workdir__only_writes_index_when_necessary(void)
 	git_oid_cpy(&second, git_index_checksum(index));
 	cl_assert(!git_oid_equal(&first, &second));
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 	git_object_free(head_object);
 	git_reference_free(head);
 	git_index_free(index);

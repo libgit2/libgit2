@@ -130,7 +130,7 @@ end_parse:
 
 	if (line[rpos] != '"' || line[rpos + 1] != ']') {
 		set_parse_error(reader, rpos, "Unexpected text after closing quotes");
-		git_buf_free(&buf);
+		git_buf_dispose(&buf);
 		return -1;
 	}
 
@@ -138,7 +138,7 @@ end_parse:
 	return 0;
 
 end_error:
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	return -1;
 }
@@ -437,7 +437,7 @@ static int parse_variable(git_config_parser *reader, char **var_name, char **var
 
 			if (parse_multiline_variable(reader, &multi_value, quote_count) < 0 ||
 				git_buf_oom(&multi_value)) {
-				git_buf_free(&multi_value);
+				git_buf_dispose(&multi_value);
 				goto on_error;
 			}
 

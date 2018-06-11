@@ -35,7 +35,7 @@ void test_repo_hashfile__simple(void)
 	cl_git_fail(git_odb_hashfile(&a, full.ptr, GIT_OBJ_ANY));
 	cl_git_fail(git_repository_hashfile(&b, _repo, full.ptr, GIT_OBJ_OFS_DELTA, NULL));
 
-	git_buf_free(&full);
+	git_buf_dispose(&full);
 }
 
 void test_repo_hashfile__filtered(void)

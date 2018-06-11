@@ -95,7 +95,7 @@ static void make_gitlink_dir(const char *dir, const char *linktext)
 	cl_git_pass(git_futils_mkdir(dir, 0777, GIT_MKDIR_VERIFY_DIR));
 	cl_git_pass(git_buf_joinpath(&path, dir, ".git"));
 	cl_git_rewritefile(path.ptr, linktext);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 void test_repo_open__gitlinked(void)
@@ -166,9 +166,9 @@ void test_repo_open__from_git_new_workdir(void)
 		}
 	}
 
-	git_buf_free(&link_tgt);
-	git_buf_free(&link);
-	git_buf_free(&body);
+	git_buf_dispose(&link_tgt);
+	git_buf_dispose(&link);
+	git_buf_dispose(&body);
 
 
 	cl_git_pass(git_repository_open(&repo2, "alternate"));
@@ -215,7 +215,7 @@ void test_repo_open__failures(void)
 		GIT_REPOSITORY_OPEN_NO_SEARCH | GIT_REPOSITORY_OPEN_NO_DOTGIT,
 		NULL));
 
-	git_buf_free(&ceiling);
+	git_buf_dispose(&ceiling);
 }
 
 void test_repo_open__bad_gitlinks(void)
@@ -308,7 +308,7 @@ void test_repo_open__win32_path(void)
 	cl_assert(git__suffixcmp(git_repository_workdir(repo2), repo_wd) == 0);
 	git_repository_free(repo2);
 
-	git_buf_free(&winpath);
+	git_buf_dispose(&winpath);
 #endif
 }
 
@@ -342,7 +342,7 @@ void test_repo_open__no_config(void)
 	cl_git_pass(git_libgit2_opts(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, path.ptr));
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 
 	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
 	cl_git_pass(git_repository_config(&config, repo));

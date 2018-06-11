@@ -50,8 +50,8 @@ static int apply_patchfile(
 	}
 
 	git__free(filename);
-	git_buf_free(&result);
-	git_buf_free(&patchbuf);
+	git_buf_dispose(&result);
+	git_buf_dispose(&patchbuf);
 	git_patch_free(patch);
 
 	return error;
@@ -81,7 +81,7 @@ static int validate_and_apply_patchfile(
 
 	error = apply_patchfile(old, old_len, new, new_len, patchfile, filename_expected, mode_expected);
 
-	git_buf_free(&validated);
+	git_buf_dispose(&validated);
 	git_patch_free(patch_fromdiff);
 
 	return error;

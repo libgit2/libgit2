@@ -56,7 +56,7 @@ static bool should_expect_nsecs(void)
 
 	p_unlink(nsec_path.ptr);
 
-	git_buf_free(&nsec_path);
+	git_buf_dispose(&nsec_path);
 
 	return expect;
 }

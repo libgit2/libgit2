@@ -139,7 +139,7 @@ static void assert_workdir_matches_tree(
 	}
 
 	git_tree_free(tree);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 void test_checkout_typechange__checkout_typechanges_safe(void)
@@ -249,8 +249,8 @@ static int make_submodule_dirty(git_submodule *sm, const char *name, void *paylo
 		git_buf_joinpath(&dirtypath, git_repository_workdir(submodule_repo), "dirty"));
 	force_create_file(git_buf_cstr(&dirtypath));
 
-	git_buf_free(&dirtypath);
-	git_buf_free(&submodulepath);
+	git_buf_dispose(&dirtypath);
+	git_buf_dispose(&submodulepath);
 	git_repository_free(submodule_repo);
 
 	return 0;

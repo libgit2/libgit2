@@ -50,6 +50,6 @@ void test_describe_describe__describe_a_repo_with_no_refs(void)
 
 	git_describe_result_free(result);
 	git_object_free(object);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	cl_git_sandbox_cleanup();
 }

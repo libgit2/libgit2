@@ -43,7 +43,7 @@ void test_submodule_escape__from_gitdir(void)
 			   "[submodule \"" EVIL_SM_NAME "\"]\n"
 			   "    path = testrepo\n"
 			   "    url = ../testrepo.git\n");
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	/* Find it all the different ways we know about it */
 	foundit = 0;
@@ -77,7 +77,7 @@ void test_submodule_escape__from_gitdir_windows(void)
 			   "[submodule \"" EVIL_SM_NAME_WINDOWS "\"]\n"
 			   "    path = testrepo\n"
 			   "    url = ../testrepo.git\n");
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	/* Find it all the different ways we know about it */
 	foundit = 0;

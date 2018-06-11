@@ -27,7 +27,7 @@ void test_buf_oom__grow(void)
 	cl_assert(git_buf_grow(&buf, TOOBIG) == -1);
 	cl_assert(git_buf_oom(&buf));
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_buf_oom__grow_by(void)

@@ -204,7 +204,7 @@ cleanup:
 	*out_file  = file;
 	*out_entry = entry;
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 	return error;
 }
 
@@ -310,7 +310,7 @@ static int attr_cache__lookup_path(
 	}
 
 	git_config_entry_free(entry);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	return error;
 }

@@ -183,7 +183,7 @@ static int packed_reload(refdb_fs_backend *backend)
 	}
 
 	git_sortedcache_wunlock(backend->refcache);
-	git_buf_free(&packedrefs);
+	git_buf_dispose(&packedrefs);
 
 	return 0;
 
@@ -192,7 +192,7 @@ parse_failed:
 
 	git_sortedcache_clear(backend->refcache, false);
 	git_sortedcache_wunlock(backend->refcache);
-	git_buf_free(&packedrefs);
+	git_buf_dispose(&packedrefs);
 
 	return -1;
 }
@@ -226,7 +226,7 @@ static int loose_readbuffer(git_buf *buf, const char *base, const char *path)
 	/* build full path to file */
 	if ((error = git_buf_joinpath(buf, base, path)) < 0 ||
 		(error = git_futils_readbuffer(buf, buf->ptr)) < 0)
-		git_buf_free(buf);
+		git_buf_dispose(buf);
 
 	return error;
 }
@@ -266,7 +266,7 @@ static int loose_lookup_to_packfile(refdb_fs_backend *backend, const char *name)
 	git_sortedcache_wunlock(backend->refcache);
 
 done:
-	git_buf_free(&ref_file);
+	git_buf_dispose(&ref_file);
 	return error;
 }
 
@@ -317,7 +317,7 @@ static int packed_loadloose(refdb_fs_backend *backend)
 	error = git_path_direach(
 		&refs_path, backend->direach_flags, _dirent_loose_load, backend);
 
-	git_buf_free(&refs_path);
+	git_buf_dispose(&refs_path);
 
 	return error;
 }
@@ -340,7 +340,7 @@ static int refdb_fs_backend__exists(
 	*exists = git_path_isfile(ref_path.ptr) ||
 		(git_sortedcache_lookup(backend->refcache, ref_name) != NULL);
 
-	git_buf_free(&ref_path);
+	git_buf_dispose(&ref_path);
 	return 0;
 }
 
@@ -414,7 +414,7 @@ static int loose_lookup(
 			*out = git_reference__alloc(ref_name, &oid, NULL);
 	}
 
-	git_buf_free(&ref_file);
+	git_buf_dispose(&ref_file);
 	return error;
 }
 
@@ -539,12 +539,12 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 
 	if ((error = git_buf_printf(&path, "%s/", backend->commonpath)) < 0 ||
 		(error = git_buf_put(&path, ref_prefix, ref_prefix_len)) < 0) {
-		git_buf_free(&path);
+		git_buf_dispose(&path);
 		return error;
 	}
 
 	if ((error = git_iterator_for_filesystem(&fsit, path.ptr, &fsit_opts)) < 0) {
-		git_buf_free(&path);
+		git_buf_dispose(&path);
 		return (iter->glob && error == GIT_ENOTFOUND)? 0 : error;
 	}
 
@@ -577,7 +577,7 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 	}
 
 	git_iterator_free(fsit);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 
 	return error;
 }
@@ -803,7 +803,7 @@ static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *
 	if (error == GIT_EDIRECTORY)
 		giterr_set(GITERR_REFERENCE, "cannot lock ref '%s', there are refs beneath that folder", name);
 
-	git_buf_free(&ref_path);
+	git_buf_dispose(&ref_path);
 	return error;
 }
 
@@ -990,7 +990,7 @@ static int packed_remove_loose(refdb_fs_backend *backend)
 			continue;
 
 		if (error < 0) {
-			git_buf_free(&ref_content);
+			git_buf_dispose(&ref_content);
 			giterr_set(GITERR_REFERENCE, "failed to lock loose reference '%s'", ref->name);
 			return error;
 		}
@@ -1021,7 +1021,7 @@ static int packed_remove_loose(refdb_fs_backend *backend)
 		p_unlink(lock.path_original);
 	}
 
-	git_buf_free(&ref_content);
+	git_buf_dispose(&ref_content);
 	git_filebuf_cleanup(&lock);
 	return 0;
 }
@@ -1383,7 +1383,7 @@ static int refdb_fs_backend__delete_tail(
 	error = packed_write(backend);
 
 cleanup:
-	git_buf_free(&loose_path);
+	git_buf_dispose(&loose_path);
 	git_filebuf_cleanup(file);
 
 	return error;
@@ -1522,7 +1522,7 @@ static char *setup_namespace(git_repository *repo, const char *in)
 	out = git_buf_detach(&path);
 
 done:
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 	return out;
 }
 
@@ -1655,7 +1655,7 @@ static int refdb_reflog_fs__ensure_log(git_refdb_backend *_backend, const char *
 		return error;
 
 	error = create_new_reflog_file(git_buf_cstr(&path));
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 
 	return error;
 }
@@ -1671,7 +1671,7 @@ static int has_reflog(git_repository *repo, const char *name)
 	ret = git_path_isfile(git_buf_cstr(&path));
 
 cleanup:
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 	return ret;
 }
 
@@ -1725,8 +1725,8 @@ cleanup:
 	git_reflog_free(log);
 
 success:
-	git_buf_free(&log_file);
-	git_buf_free(&log_path);
+	git_buf_dispose(&log_file);
+	git_buf_dispose(&log_path);
 
 	return error;
 }
@@ -1791,7 +1791,7 @@ static int lock_reflog(git_filebuf *file, refdb_fs_backend *backend, const char 
 	error = git_filebuf_open(file, git_buf_cstr(&log_path), 0, GIT_REFLOG_FILE_MODE);
 
 cleanup:
-	git_buf_free(&log_path);
+	git_buf_dispose(&log_path);
 
 	return error;
 }
@@ -1827,7 +1827,7 @@ cleanup:
 	git_filebuf_cleanup(&fbuf);
 
 success:
-	git_buf_free(&log);
+	git_buf_dispose(&log);
 
 	return error;
 }
@@ -1911,8 +1911,8 @@ static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, co
 	error = git_futils_writebuffer(&buf, git_buf_cstr(&path), open_flags, GIT_REFLOG_FILE_MODE);
 
 cleanup:
-	git_buf_free(&buf);
-	git_buf_free(&path);
+	git_buf_dispose(&buf);
+	git_buf_dispose(&path);
 
 	return error;
 }
@@ -1990,10 +1990,10 @@ static int refdb_reflog_fs__rename(git_refdb_backend *_backend, const char *old_
 	}
 
 cleanup:
-	git_buf_free(&temp_path);
-	git_buf_free(&old_path);
-	git_buf_free(&new_path);
-	git_buf_free(&normalized);
+	git_buf_dispose(&temp_path);
+	git_buf_dispose(&old_path);
+	git_buf_dispose(&new_path);
+	git_buf_dispose(&normalized);
 
 	return error;
 }
@@ -2016,7 +2016,7 @@ static int refdb_reflog_fs__delete(git_refdb_backend *_backend, const char *name
 	if (!error && git_path_exists(path.ptr))
 		error = p_unlink(path.ptr);
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 
 	return error;
 
@@ -2055,7 +2055,7 @@ int git_refdb_backend_fs(
 			NULL, NULL, packref_cmp, git_buf_cstr(&gitpath)) < 0)
 		goto fail;
 
-	git_buf_free(&gitpath);
+	git_buf_dispose(&gitpath);
 
 	if (!git_repository__cvar(&t, backend->repo, GIT_CVAR_IGNORECASE) && t) {
 		backend->iterator_flags |= GIT_ITERATOR_IGNORE_CASE;
@@ -2091,7 +2091,7 @@ int git_refdb_backend_fs(
 	return 0;
 
 fail:
-	git_buf_free(&gitpath);
+	git_buf_dispose(&gitpath);
 	git__free(backend->gitpath);
 	git__free(backend->commonpath);
 	git__free(backend);

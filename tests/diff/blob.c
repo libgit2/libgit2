@@ -101,7 +101,7 @@ void test_diff_blob__patch_with_freed_blobs(void)
 	cl_assert_equal_s(buf.ptr, BLOB_DIFF);
 
 	git_patch_free(p);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_diff_blob__can_compare_text_blobs(void)
@@ -1016,7 +1016,7 @@ void test_diff_blob__using_path_and_attributes(void)
 	git_buf_clear(&buf);
 	git_patch_free(p);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	git_blob_free(nonbin);
 	git_blob_free(bin);
 }

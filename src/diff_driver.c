@@ -121,7 +121,7 @@ static int diff_driver_add_patterns(
 
 	if (error && pat != NULL)
 		(void)git_array_pop(drv->fn_patterns); /* release last item */
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	/* We want to ignore bad patterns, so return success regardless */
 	return 0;
@@ -338,7 +338,7 @@ static int git_diff_driver_load(
 
 done:
 	git_config_entry_free(ce);
-	git_buf_free(&name);
+	git_buf_dispose(&name);
 	git_config_free(cfg);
 
 	if (!*out) {
@@ -516,7 +516,7 @@ void git_diff_find_context_init(
 void git_diff_find_context_clear(git_diff_find_context_payload *payload)
 {
 	if (payload) {
-		git_buf_free(&payload->line);
+		git_buf_dispose(&payload->line);
 		payload->driver = NULL;
 	}
 }

@@ -128,5 +128,5 @@ void test_repo_reservedname__submodule_pointer_during_create(void)
 	cl_git_pass(git_submodule_update(sm, 1, &update_options));
 
 	git_submodule_free(sm);
-	git_buf_free(&url);
+	git_buf_dispose(&url);
 }

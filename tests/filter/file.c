@@ -47,7 +47,7 @@ void test_filter_file__apply(void)
 	cl_git_pass(git_filter_list_apply_to_file(&buf, fl, g_repo, "all-crlf"));
 	cl_assert_equal_s("crlf\ncrlf\ncrlf\ncrlf\n", buf.ptr);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	git_filter_list_free(fl);
 }
 
@@ -71,7 +71,7 @@ int buf_writestream_close(git_writestream *s)
 void buf_writestream_free(git_writestream *s)
 {
 	struct buf_writestream *stream = (struct buf_writestream *)s;
-	git_buf_free(&stream->buf);
+	git_buf_dispose(&stream->buf);
 }
 
 void test_filter_file__apply_stream(void)

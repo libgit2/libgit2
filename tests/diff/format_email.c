@@ -49,7 +49,7 @@ static void assert_email_match(
 
 	git_diff_free(diff);
 	git_commit_free(commit);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_diff_format_email__simple(void)
@@ -255,7 +255,7 @@ void test_diff_format_email__multiple(void)
 
 	git_diff_free(diff);
 	git_commit_free(commit);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_diff_format_email__exclude_marker(void)
@@ -331,7 +331,7 @@ void test_diff_format_email__invalid_no(void)
 
 	git_diff_free(diff);
 	git_commit_free(commit);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_diff_format_email__mode_change(void)

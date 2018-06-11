@@ -303,7 +303,7 @@ static void add_to_workdir(const char *filename, const char *content)
 	cl_git_pass(git_buf_joinpath(&buf, "attr", filename));
 	cl_git_rewritefile(git_buf_cstr(&buf), content);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 static void assert_proper_normalization(git_index *index, const char *filename, const char *expected_sha)

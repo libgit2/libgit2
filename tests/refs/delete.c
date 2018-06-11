@@ -52,7 +52,7 @@ void test_refs_delete__packed_loose(void)
 	cl_assert(!git_path_exists(temp_path.ptr));
 
 	git_reference_free(another_looked_up_ref);
-	git_buf_free(&temp_path);
+	git_buf_dispose(&temp_path);
 }
 
 void test_refs_delete__packed_only(void)

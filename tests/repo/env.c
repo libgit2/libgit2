@@ -45,7 +45,7 @@ static int GIT_FORMAT_PRINTF(2, 3) cl_setenv_printf(const char *name, const char
 	va_end(args);
 
 	ret = cl_setenv(name, git_buf_cstr(&buf));
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	return ret;
 }
 
@@ -85,7 +85,7 @@ static void env_cd_(
 	cl_must_pass(p_chdir(path));
 	passfail_(NULL, file, line);
 	cl_must_pass(p_chdir(git_buf_cstr(&cwd_buf)));
-	git_buf_free(&cwd_buf);
+	git_buf_dispose(&cwd_buf);
 }
 #define env_cd_pass(path) env_cd_((path), env_pass_, __FILE__, __LINE__)
 #define env_cd_fail(path) env_cd_((path), env_fail_, __FILE__, __LINE__)
@@ -271,7 +271,7 @@ void test_repo_env__open(void)
 	cl_fixture_cleanup("testrepo.git");
 	cl_fixture_cleanup("attr");
 
-	git_buf_free(&repo_dir_buf);
+	git_buf_dispose(&repo_dir_buf);
 
 	clear_git_env();
 }

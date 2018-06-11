@@ -48,7 +48,7 @@ void test_object_blob_write__can_create_a_blob_in_a_standard_repo_from_a_absolut
 
 	assert_blob_creation(ELSEWHERE "/test.txt", git_buf_cstr(&full_path), &git_blob_create_fromdisk);
 
-	git_buf_free(&full_path);
+	git_buf_dispose(&full_path);
 	cl_must_pass(git_futils_rmdir_r(ELSEWHERE, NULL, GIT_RMDIR_REMOVE_FILES));
 }
 
@@ -64,6 +64,6 @@ void test_object_blob_write__can_create_a_blob_in_a_bare_repo_from_a_absolute_fi
 
 	assert_blob_creation(ELSEWHERE "/test.txt", git_buf_cstr(&full_path), &git_blob_create_fromdisk);
 
-	git_buf_free(&full_path);
+	git_buf_dispose(&full_path);
 	cl_must_pass(git_futils_rmdir_r(ELSEWHERE, NULL, GIT_RMDIR_REMOVE_FILES));
 }

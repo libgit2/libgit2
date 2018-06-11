@@ -149,7 +149,7 @@ static int commit_index(
 
 cleanup:
 	git_tree_free(i_tree);
-	git_buf_free(&msg);
+	git_buf_dispose(&msg);
 	return error;
 }
 
@@ -291,7 +291,7 @@ static int commit_untracked(
 
 cleanup:
 	git_tree_free(u_tree);
-	git_buf_free(&msg);
+	git_buf_dispose(&msg);
 	return error;
 }
 
@@ -423,7 +423,7 @@ static int prepare_worktree_commit_message(
 	error = (git_buf_oom(msg) || git_buf_oom(&buf)) ? -1 : 0;
 
 cleanup:
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	return error;
 }
@@ -565,7 +565,7 @@ int git_stash_save(
 
 cleanup:
 
-	git_buf_free(&msg);
+	git_buf_dispose(&msg);
 	git_commit_free(i_commit);
 	git_commit_free(b_commit);
 	git_commit_free(u_commit);

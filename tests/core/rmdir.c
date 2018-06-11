@@ -24,7 +24,7 @@ void test_core_rmdir__initialize(void)
 	cl_git_pass(git_buf_joinpath(&path, empty_tmp_dir, "/two"));
 	cl_must_pass(p_mkdir(path.ptr, 0777));
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 /* make sure empty dir can be deleted recusively */
@@ -47,7 +47,7 @@ void test_core_rmdir__fail_to_delete_non_empty_dir(void)
 	cl_must_pass(p_unlink(file.ptr));
 	cl_git_pass(git_futils_rmdir_r(empty_tmp_dir, NULL, GIT_RMDIR_EMPTY_HIERARCHY));
 
-	git_buf_free(&file);
+	git_buf_dispose(&file);
 }
 
 void test_core_rmdir__can_skip_non_empty_dir(void)
@@ -64,7 +64,7 @@ void test_core_rmdir__can_skip_non_empty_dir(void)
 	cl_git_pass(git_futils_rmdir_r(empty_tmp_dir, NULL, GIT_RMDIR_REMOVE_FILES));
 	cl_assert(git_path_exists(empty_tmp_dir) == false);
 
-	git_buf_free(&file);
+	git_buf_dispose(&file);
 }
 
 void test_core_rmdir__can_remove_empty_parents(void)
@@ -92,7 +92,7 @@ void test_core_rmdir__can_remove_empty_parents(void)
 
 	cl_assert(git_path_exists(empty_tmp_dir) == true);
 
-	git_buf_free(&file);
+	git_buf_dispose(&file);
 
 	cl_git_pass(git_futils_rmdir_r(empty_tmp_dir, NULL, GIT_RMDIR_EMPTY_HIERARCHY));
 }

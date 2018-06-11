@@ -228,14 +228,14 @@ static int local_connect(
 
 	/* 'url' may be a url or path; convert to a path */
 	if ((error = git_path_from_url_or_path(&buf, url)) < 0) {
-		git_buf_free(&buf);
+		git_buf_dispose(&buf);
 		return error;
 	}
 	path = git_buf_cstr(&buf);
 
 	error = git_repository_open(&repo, path);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	if (error < 0)
 		return -1;
@@ -354,14 +354,14 @@ static int local_push(
 
 	/* 'push->remote->url' may be a url or path; convert to a path */
 	if ((error = git_path_from_url_or_path(&buf, push->remote->url)) < 0) {
-		git_buf_free(&buf);
+		git_buf_dispose(&buf);
 		return error;
 	}
 	path = git_buf_cstr(&buf);
 
 	error = git_repository_open(&remote_repo, path);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	if (error < 0)
 		return error;
@@ -383,7 +383,7 @@ static int local_push(
 		goto on_error;
 
 	error = git_packbuilder_write(push->pb, odb_path.ptr, 0, transfer_to_push_transfer, (void *) cbs);
-	git_buf_free(&odb_path);
+	git_buf_dispose(&odb_path);
 
 	if (error < 0)
 		goto on_error;
@@ -502,7 +502,7 @@ static int local_counting(int stage, unsigned int current, unsigned int total, v
 		return -1;
 
 	error = t->progress_cb(git_buf_cstr(&progress_info), git_buf_len(&progress_info), t->message_cb_payload);
-	git_buf_free(&progress_info);
+	git_buf_dispose(&progress_info);
 
 	return error;
 }
@@ -627,7 +627,7 @@ static int local_download_pack(
 
 cleanup:
 	if (writepack) writepack->free(writepack);
-	git_buf_free(&progress_info);
+	git_buf_dispose(&progress_info);
 	git_packbuilder_free(pack);
 	git_revwalk_free(walk);
 	return error;

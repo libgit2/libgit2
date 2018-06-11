@@ -68,7 +68,7 @@ void test_refs_branches_upstream__upstream_remote(void)
 
 	cl_git_pass(git_branch_upstream_remote(&buf, repo, "refs/heads/master"));
 	cl_assert_equal_s("test", buf.ptr);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_refs_branches_upstream__upstream_remote_empty_value(void)

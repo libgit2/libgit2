@@ -6,7 +6,7 @@ static git_buf buf = GIT_BUF_INIT;
 
 void test_config_read__cleanup(void)
 {
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_config_read__simple_read(void)
@@ -688,29 +688,29 @@ void test_config_read__path(void)
 	cl_git_pass(git_config_open_ondisk(&cfg, "./testconfig"));
 	cl_git_pass(git_config_get_path(&path, cfg, "some.path"));
 	cl_assert_equal_s(expected_path.ptr, path.ptr);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 
 	cl_git_mkfile("./testconfig", "[some]\n path = ~/");
 	cl_git_pass(git_path_join_unrooted(&expected_path, "", home_path.ptr, NULL));
 
 	cl_git_pass(git_config_get_path(&path, cfg, "some.path"));
 	cl_assert_equal_s(expected_path.ptr, path.ptr);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 
 	cl_git_mkfile("./testconfig", "[some]\n path = ~");
 	cl_git_pass(git_buf_sets(&expected_path, home_path.ptr));
 
 	cl_git_pass(git_config_get_path(&path, cfg, "some.path"));
 	cl_assert_equal_s(expected_path.ptr, path.ptr);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 
 	cl_git_mkfile("./testconfig", "[some]\n path = ~user/foo");
 	cl_git_fail(git_config_get_path(&path, cfg, "some.path"));
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, old_path.ptr));
-	git_buf_free(&old_path);
-	git_buf_free(&home_path);
-	git_buf_free(&expected_path);
+	git_buf_dispose(&old_path);
+	git_buf_dispose(&home_path);
+	git_buf_dispose(&expected_path);
 	git_config_free(cfg);
 }
 
@@ -726,7 +726,7 @@ void test_config_read__crlf_style_line_endings(void)
 	cl_assert_equal_s(buf.ptr, "value");
 
 	git_config_free(cfg);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_config_read__trailing_crlf(void)
@@ -741,7 +741,7 @@ void test_config_read__trailing_crlf(void)
 	cl_assert_equal_s(buf.ptr, "value");
 
 	git_config_free(cfg);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_config_read__bom(void)
@@ -756,5 +756,5 @@ void test_config_read__bom(void)
 	cl_assert_equal_s(buf.ptr, "value");
 
 	git_config_free(cfg);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }

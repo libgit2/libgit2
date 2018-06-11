@@ -73,8 +73,8 @@ void test_core_zstream__fails_on_trailing_garbage(void)
 
 	cl_git_fail(git_zstream_inflatebuf(&inflated, deflated.ptr, deflated.size));
 
-	git_buf_free(&deflated);
-	git_buf_free(&inflated);
+	git_buf_dispose(&deflated);
+	git_buf_dispose(&inflated);
 }
 
 void test_core_zstream__buffer(void)
@@ -82,7 +82,7 @@ void test_core_zstream__buffer(void)
 	git_buf out = GIT_BUF_INIT;
 	cl_git_pass(git_zstream_deflatebuf(&out, data, strlen(data) + 1));
 	assert_zlib_equal(data, strlen(data) + 1, out.ptr, out.size);
-	git_buf_free(&out);
+	git_buf_dispose(&out);
 }
 
 #define BIG_STRING_PART "Big Data IS Big - Long Data IS Long - We need a buffer larger than 1024 x 1024 to make sure we trigger chunked compression - Big Big Data IS Bigger than Big - Long Long Data IS Longer than Long"
@@ -129,15 +129,15 @@ static void compress_and_decompress_input_various_ways(git_buf *input)
 		cl_assert_equal_sz(out1.size, out2.size);
 		cl_assert(!memcmp(out1.ptr, out2.ptr, out1.size));
 
-		git_buf_free(&out2);
+		git_buf_dispose(&out2);
 	}
 
 	cl_git_pass(git_zstream_inflatebuf(&inflated, out1.ptr, out1.size));
 	cl_assert_equal_i(input->size, inflated.size);
 	cl_assert(memcmp(input->ptr, inflated.ptr, inflated.size) == 0);
 
-	git_buf_free(&out1);
-	git_buf_free(&inflated);
+	git_buf_dispose(&out1);
+	git_buf_dispose(&inflated);
 	git__free(fixed);
 }
 
@@ -164,5 +164,5 @@ void test_core_zstream__big_data(void)
 		compress_and_decompress_input_various_ways(&in);
 	}
 
-	git_buf_free(&in);
+	git_buf_dispose(&in);
 }

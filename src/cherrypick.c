@@ -37,7 +37,7 @@ static int write_cherrypick_head(
 	if (error < 0)
 		git_filebuf_cleanup(&file);
 
-	git_buf_free(&file_path);
+	git_buf_dispose(&file_path);
 
 	return error;
 }
@@ -61,7 +61,7 @@ cleanup:
 	if (error < 0)
 		git_filebuf_cleanup(&file);
 
-	git_buf_free(&file_path);
+	git_buf_dispose(&file_path);
 
 	return error;
 }
@@ -216,7 +216,7 @@ done:
 	git_index_free(index);
 	git_commit_free(our_commit);
 	git_reference_free(our_ref);
-	git_buf_free(&their_label);
+	git_buf_dispose(&their_label);
 
 	return error;
 }

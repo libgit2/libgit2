@@ -165,7 +165,7 @@ static int negotiate_next_token(
 done:
 	gss_release_name(&status_minor, &server);
 	gss_release_buffer(&status_minor, (gss_buffer_t) &output_token);
-	git_buf_free(&input_buf);
+	git_buf_dispose(&input_buf);
 	return error;
 }
 
@@ -180,7 +180,7 @@ static void negotiate_context_free(git_http_auth_context *c)
 		ctx->gss_context = GSS_C_NO_CONTEXT;
 	}
 
-	git_buf_free(&ctx->target);
+	git_buf_dispose(&ctx->target);
 
 	git__free(ctx->challenge);
 

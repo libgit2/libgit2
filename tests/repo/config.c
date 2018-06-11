@@ -21,7 +21,7 @@ void test_repo_config__cleanup(void)
 {
 	cl_sandbox_set_search_path_defaults();
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 
 	cl_git_pass(
 		git_futils_rmdir_r("alternate", NULL, GIT_RMDIR_REMOVE_FILES));
@@ -70,7 +70,7 @@ void test_repo_config__can_open_missing_global_with_separators(void)
 	cl_git_pass(git_libgit2_opts(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, path.ptr));
 
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 
 	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
 	cl_git_pass(git_repository_config(&config, repo));

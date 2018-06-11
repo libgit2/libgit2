@@ -8,7 +8,7 @@ void test_buf_splice__initialize(void) {
 }
 
 void test_buf_splice__cleanup(void) {
-   git_buf_free(&_buf);
+   git_buf_dispose(&_buf);
 }
 
 void test_buf_splice__preprend(void)

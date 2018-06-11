@@ -137,5 +137,5 @@ failed:
 
 	cl_fail(git_buf_cstr(&msg));
 
-	git_buf_free(&msg);
+	git_buf_dispose(&msg);
 }

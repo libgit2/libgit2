@@ -65,7 +65,7 @@ void test_diff_drivers__patterns(void)
 	cl_git_pass(git_patch_to_buf(&actual, patch));
 	cl_assert_equal_s(expected0, actual.ptr);
 
-	git_buf_free(&actual);
+	git_buf_dispose(&actual);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -80,7 +80,7 @@ void test_diff_drivers__patterns(void)
 	cl_git_pass(git_patch_to_buf(&actual, patch));
 	cl_assert_equal_s(expected1, actual.ptr);
 
-	git_buf_free(&actual);
+	git_buf_dispose(&actual);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -95,7 +95,7 @@ void test_diff_drivers__patterns(void)
 	cl_git_pass(git_patch_to_buf(&actual, patch));
 	cl_assert_equal_s(expected0, actual.ptr);
 
-	git_buf_free(&actual);
+	git_buf_dispose(&actual);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -112,7 +112,7 @@ void test_diff_drivers__patterns(void)
 	cl_git_pass(git_patch_to_buf(&actual, patch));
 	cl_assert_equal_s(expected1, actual.ptr);
 
-	git_buf_free(&actual);
+	git_buf_dispose(&actual);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -133,7 +133,7 @@ void test_diff_drivers__patterns(void)
 	cl_git_pass(git_patch_to_buf(&actual, patch));
 	cl_assert_equal_s(expected2, actual.ptr);
 
-	git_buf_free(&actual);
+	git_buf_dispose(&actual);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -169,7 +169,7 @@ void test_diff_drivers__long_lines(void)
 
 	cl_assert_equal_s(expected, actual.ptr);
 
-	git_buf_free(&actual);
+	git_buf_dispose(&actual);
 	git_patch_free(patch);
 	git_diff_free(diff);
 }
@@ -245,9 +245,9 @@ void test_diff_drivers__builtins(void)
 		git__free(path);
 	}
 
-	git_buf_free(&file);
-	git_buf_free(&actual);
-	git_buf_free(&expected);
+	git_buf_dispose(&file);
+	git_buf_dispose(&actual);
+	git_buf_dispose(&expected);
 	git_vector_free(&files);
 }
 

@@ -94,7 +94,7 @@ void test_fetchhead_nonetwork__write(void)
 
 	equals = (strcmp(fetchhead_buf.ptr, FETCH_HEAD_WILDCARD_DATA_LOCAL) == 0);
 
-	git_buf_free(&fetchhead_buf);
+	git_buf_dispose(&fetchhead_buf);
 
 	git_vector_foreach(&fetchhead_vector, i, fetchhead_ref) {
 		git_fetchhead_ref_free(fetchhead_ref);
@@ -427,7 +427,7 @@ void test_fetchhead_nonetwork__create_when_refpecs_given(void)
 	cl_assert(found_haacked);
 
 	git_remote_free(remote);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 static bool count_refs_called;
@@ -491,5 +491,5 @@ void test_fetchhead_nonetwork__create_with_multiple_refspecs(void)
 	}
 
 	git_remote_free(remote);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }

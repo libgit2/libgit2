@@ -338,7 +338,7 @@ static void create_fake_stash_reference_and_reflog(git_repository *repo)
 
 	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&log_path)));
 
-	git_buf_free(&log_path);
+	git_buf_dispose(&log_path);
 	git_reference_free(new_master);
 }
 

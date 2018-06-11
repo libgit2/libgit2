@@ -266,7 +266,7 @@ static int read_loose_packlike(git_rawobj *out, git_buf *obj)
 	out->data = git_buf_detach(&body);
 
 done:
-	git_buf_free(&body);
+	git_buf_dispose(&body);
 	return error;
 }
 
@@ -362,7 +362,7 @@ static int read_loose(git_rawobj *out, git_buf *loc)
 		error = read_loose_standard(out, &obj);
 
 done:
-	git_buf_free(&obj);
+	git_buf_dispose(&obj);
 	return error;
 }
 
@@ -593,7 +593,7 @@ static int loose_backend__read_header(size_t *len_p, git_otype *type_p, git_odb_
 		*type_p = raw.type;
 	}
 
-	git_buf_free(&object_path);
+	git_buf_dispose(&object_path);
 
 	return error;
 }
@@ -615,7 +615,7 @@ static int loose_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p
 		*type_p = raw.type;
 	}
 
-	git_buf_free(&object_path);
+	git_buf_dispose(&object_path);
 
 	return error;
 }
@@ -653,7 +653,7 @@ static int loose_backend__read_prefix(
 			*type_p = raw.type;
 		}
 
-		git_buf_free(&object_path);
+		git_buf_dispose(&object_path);
 	}
 
 	return error;
@@ -668,7 +668,7 @@ static int loose_backend__exists(git_odb_backend *backend, const git_oid *oid)
 
 	error = locate_object(&object_path, (loose_backend *)backend, oid);
 
-	git_buf_free(&object_path);
+	git_buf_dispose(&object_path);
 
 	return !error;
 }
@@ -684,7 +684,7 @@ static int loose_backend__exists_prefix(
 	error = locate_object_short_oid(
 		&object_path, out, (loose_backend *)backend, short_id, len);
 
-	git_buf_free(&object_path);
+	git_buf_dispose(&object_path);
 
 	return error;
 }
@@ -770,7 +770,7 @@ static int loose_backend__foreach(git_odb_backend *_backend, git_odb_foreach_cb 
 
 	error = git_path_direach(&buf, 0, foreach_cb, &state);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	return error;
 }
@@ -789,7 +789,7 @@ static int loose_backend__writestream_finalize(git_odb_stream *_stream, const gi
 		error = git_filebuf_commit_at(
 			&stream->fbuf, final_path.ptr);
 
-	git_buf_free(&final_path);
+	git_buf_dispose(&final_path);
 
 	return error;
 }
@@ -856,7 +856,7 @@ static int loose_backend__writestream(git_odb_stream **stream_out, git_odb_backe
 		git__free(stream);
 		stream = NULL;
 	}
-	git_buf_free(&tmp_path);
+	git_buf_dispose(&tmp_path);
 	*stream_out = (git_odb_stream *)stream;
 
 	return !stream ? -1 : 0;
@@ -1035,7 +1035,7 @@ done:
 		git__free(stream);
 	}
 
-	git_buf_free(&object_path);
+	git_buf_dispose(&object_path);
 	return error;
 }
 
@@ -1074,7 +1074,7 @@ static int loose_backend__write(git_odb_backend *_backend, const git_oid *oid, c
 cleanup:
 	if (error < 0)
 		git_filebuf_cleanup(&fbuf);
-	git_buf_free(&final_path);
+	git_buf_dispose(&final_path);
 	return error;
 }
 
@@ -1090,7 +1090,7 @@ static int loose_backend__freshen(
 		return -1;
 
 	error = git_futils_touch(path.ptr, NULL);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 
 	return error;
 }

@@ -81,7 +81,7 @@ void test_rebase_submodule__init_untracked(void)
 	fp = fopen(git_buf_cstr(&untracked_path), "w");
 	fprintf(fp, "An untracked file in a submodule should not block a rebase\n");
 	fclose(fp);
-	git_buf_free(&untracked_path);
+	git_buf_dispose(&untracked_path);
 
 	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
 

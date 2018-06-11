@@ -710,7 +710,7 @@ static int process_entry_path(
 	error = git_oid_fromstr(annotated_object_id, buf.ptr);
 
 cleanup:
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	return error;
 }
 

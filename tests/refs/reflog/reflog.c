@@ -120,8 +120,8 @@ void test_refs_reflog_reflog__renaming_the_reference_moves_the_reflog(void)
 	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&moved_log_path)));
 
 	git_reference_free(new_master);
-	git_buf_free(&moved_log_path);
-	git_buf_free(&master_log_path);
+	git_buf_dispose(&moved_log_path);
+	git_buf_dispose(&master_log_path);
 }
 
 void test_refs_reflog_reflog__deleting_the_reference_deletes_the_reflog(void)
@@ -139,7 +139,7 @@ void test_refs_reflog_reflog__deleting_the_reference_deletes_the_reflog(void)
 	git_reference_free(master);
 
 	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&master_log_path)));
-	git_buf_free(&master_log_path);
+	git_buf_dispose(&master_log_path);
 }
 
 void test_refs_reflog_reflog__removes_empty_reflog_dir(void)
@@ -165,7 +165,7 @@ void test_refs_reflog_reflog__removes_empty_reflog_dir(void)
 	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/new-dir", &id, 0, NULL));
 	git_reference_free(ref);
 
-	git_buf_free(&log_path);
+	git_buf_dispose(&log_path);
 }
 
 void test_refs_reflog_reflog__fails_gracefully_on_nonempty_reflog_dir(void)
@@ -192,7 +192,7 @@ void test_refs_reflog_reflog__fails_gracefully_on_nonempty_reflog_dir(void)
 	cl_git_fail_with(GIT_EDIRECTORY, git_reference_create(&ref, g_repo, "refs/heads/new-dir", &id, 0, NULL));
 	git_reference_free(ref);
 
-	git_buf_free(&log_path);
+	git_buf_dispose(&log_path);
 }
 
 static void assert_has_reflog(bool expected_result, const char *name)
@@ -221,7 +221,7 @@ void test_refs_reflog_reflog__reading_the_reflog_from_a_reference_with_no_log_re
 	cl_assert_equal_i(0, (int)git_reflog_entrycount(reflog));
 
 	git_reflog_free(reflog);
-	git_buf_free(&subtrees_log_path);
+	git_buf_dispose(&subtrees_log_path);
 }
 
 void test_refs_reflog_reflog__reading_a_reflog_with_invalid_format_returns_error(void)
@@ -263,8 +263,8 @@ void test_refs_reflog_reflog__reading_a_reflog_with_invalid_format_returns_error
 	cl_assert_equal_s("unable to parse OID - contains invalid characters", error->message);
 
 	git_reference_free(ref);
-	git_buf_free(&logpath);
-	git_buf_free(&logcontents);
+	git_buf_dispose(&logpath);
+	git_buf_dispose(&logcontents);
 }
 
 void test_refs_reflog_reflog__cannot_write_a_moved_reflog(void)
@@ -285,8 +285,8 @@ void test_refs_reflog_reflog__cannot_write_a_moved_reflog(void)
 
 	git_reflog_free(reflog);
 	git_reference_free(new_master);
-	git_buf_free(&moved_log_path);
-	git_buf_free(&master_log_path);
+	git_buf_dispose(&moved_log_path);
+	git_buf_dispose(&master_log_path);
 }
 
 void test_refs_reflog_reflog__renaming_with_an_invalid_name_returns_EINVALIDSPEC(void)

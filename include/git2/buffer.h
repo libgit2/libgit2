@@ -69,7 +69,19 @@ typedef struct {
  *
  * @param buffer The buffer to deallocate
  */
-GIT_EXTERN(void) git_buf_free(git_buf *buffer);
+GIT_EXTERN(void) git_buf_dispose(git_buf *buffer);
+
+/**
+ * Alias of `git_buf_dispose`.
+ *
+ * This function is directly calls `git_buf_dispose` now and is deprecated.
+ * Going forward, we refer to functions freeing the internal state of a
+ * structure a `dispose` function, while functions freeing the structure
+ * themselves will be called a `free` function.
+ *
+ * This function is going to be removed in v0.30.0.
+ */
+GIT_EXTERN(void) GIT_DEPRECATED(git_buf_free)(git_buf *buffer);
 
 /**
  * Resize the buffer allocation to make more space.

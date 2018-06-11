@@ -31,7 +31,7 @@ static void set_time_wayback(struct stat *out, const char *fn)
 
 	cl_must_pass(p_utimes(git_buf_cstr(&fullpath), old));
 	cl_must_pass(p_lstat(git_buf_cstr(&fullpath), out));
-	git_buf_free(&fullpath);
+	git_buf_dispose(&fullpath);
 }
 
 #define LOOSE_STR     "my new file\n"

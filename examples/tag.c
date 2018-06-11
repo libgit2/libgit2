@@ -184,7 +184,7 @@ static void action_delete_tag(tag_state *state)
 
 	printf("Deleted tag '%s' (was %s)\n", opts->tag_name, abbrev_oid.ptr);
 
-	git_buf_free(&abbrev_oid);
+	git_buf_dispose(&abbrev_oid);
 	git_object_free(obj);
 }
 

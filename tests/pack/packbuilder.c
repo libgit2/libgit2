@@ -128,8 +128,8 @@ void test_pack_packbuilder__create_pack(void)
 	cl_git_pass(git_hash_final(&hash, &ctx));
 	git_hash_ctx_cleanup(&ctx);
 
-	git_buf_free(&path);
-	git_buf_free(&buf);
+	git_buf_dispose(&path);
+	git_buf_dispose(&buf);
 
 	git_oid_fmt(hex, &hash);
 

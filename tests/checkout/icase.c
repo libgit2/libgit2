@@ -89,7 +89,7 @@ static char *get_filename(const char *in)
 
 	git__free(search_dirname);
 	git__free(search_filename);
-	git_buf_free(&out);
+	git_buf_dispose(&out);
 
 	return filename;
 #endif

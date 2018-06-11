@@ -449,14 +449,14 @@ static int on_headers_complete(http_parser *parser)
 		return t->parse_error = PARSE_ERROR_GENERIC;
 
 	if (strcmp(t->content_type, git_buf_cstr(&buf))) {
-		git_buf_free(&buf);
+		git_buf_dispose(&buf);
 		giterr_set(GITERR_NET,
 			"invalid Content-Type: %s",
 			t->content_type);
 		return t->parse_error = PARSE_ERROR_GENERIC;
 	}
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	return 0;
 }
@@ -508,10 +508,10 @@ static void clear_parser_state(http_subtransport *t)
 	t->parse_error = 0;
 	t->parse_finished = 0;
 
-	git_buf_free(&t->parse_header_name);
+	git_buf_dispose(&t->parse_header_name);
 	git_buf_init(&t->parse_header_name, 0);
 
-	git_buf_free(&t->parse_header_value);
+	git_buf_dispose(&t->parse_header_value);
 	git_buf_init(&t->parse_header_value, 0);
 
 	git__free(t->content_type);
@@ -534,11 +534,11 @@ static int write_chunk(git_stream *io, const char *buffer, size_t len)
 		return -1;
 
 	if (git_stream_write(io, buf.ptr, buf.size, 0) < 0) {
-		git_buf_free(&buf);
+		git_buf_dispose(&buf);
 		return -1;
 	}
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	/* Chunk body */
 	if (len > 0 && git_stream_write(io, buffer, len, 0) < 0)
@@ -671,11 +671,11 @@ replay:
 			return -1;
 
 		if (git_stream_write(t->io, request.ptr, request.size, 0) < 0) {
-			git_buf_free(&request);
+			git_buf_dispose(&request);
 			return -1;
 		}
 
-		git_buf_free(&request);
+		git_buf_dispose(&request);
 
 		s->sent_request = 1;
 	}
@@ -792,11 +792,11 @@ static int http_stream_write_chunked(
 			return -1;
 
 		if (git_stream_write(t->io, request.ptr, request.size, 0) < 0) {
-			git_buf_free(&request);
+			git_buf_dispose(&request);
 			return -1;
 		}
 
-		git_buf_free(&request);
+		git_buf_dispose(&request);
 
 		s->sent_request = 1;
 	}
@@ -870,13 +870,13 @@ static int http_stream_write_single(
 	if (len && git_stream_write(t->io, buffer, len, 0) < 0)
 		goto on_error;
 
-	git_buf_free(&request);
+	git_buf_dispose(&request);
 	s->sent_request = 1;
 
 	return 0;
 
 on_error:
-	git_buf_free(&request);
+	git_buf_dispose(&request);
 	return -1;
 }
 

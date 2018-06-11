@@ -149,7 +149,7 @@ static void do_verify_push_status(record_callbacks_data *data, const push_status
 
 		cl_fail(git_buf_cstr(&msg));
 
-		git_buf_free(&msg);
+		git_buf_dispose(&msg);
 	}
 
 	git_vector_foreach(actual, i, iter)
@@ -263,8 +263,8 @@ failed:
 		git__free(actual_ref);
 
 	git_vector_free(&actual_refs);
-	git_buf_free(&msg);
-	git_buf_free(&ref_name);
+	git_buf_dispose(&msg);
+	git_buf_dispose(&ref_name);
 }
 
 static void verify_update_tips_callback(git_remote *remote, expected_ref expected_refs[], size_t expected_refs_len)
@@ -309,8 +309,8 @@ failed:
 	if (failed)
 		cl_fail(git_buf_cstr(&msg));
 
-	git_buf_free(&ref_name);
-	git_buf_free(&msg);
+	git_buf_dispose(&ref_name);
+	git_buf_dispose(&msg);
 }
 
 void test_online_push__initialize(void)

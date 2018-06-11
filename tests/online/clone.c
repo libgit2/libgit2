@@ -170,7 +170,7 @@ void test_online_clone__can_checkout_a_cloned_repo(void)
 	cl_assert_equal_i(true, fetch_progress_cb_was_called);
 
 	git_reference_free(head);
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 static int remote_mirror_cb(git_remote **out, git_repository *repo,
@@ -734,7 +734,7 @@ void test_online_clone__proxy_credentials_request(void)
 	cl_git_pass(git_clone(&g_repo, "http://github.com/libgit2/TestGitRepository", "./foo", &g_options));
 	cl_assert(called_proxy_creds);
 
-	git_buf_free(&url);
+	git_buf_dispose(&url);
 }
 
 void test_online_clone__proxy_credentials_in_url(void)
@@ -752,7 +752,7 @@ void test_online_clone__proxy_credentials_in_url(void)
 	cl_git_pass(git_clone(&g_repo, "http://github.com/libgit2/TestGitRepository", "./foo", &g_options));
 	cl_assert(called_proxy_creds == 0);
 
-	git_buf_free(&url);
+	git_buf_dispose(&url);
 }
 
 void test_online_clone__proxy_credentials_in_environment(void)
@@ -775,5 +775,5 @@ void test_online_clone__proxy_credentials_in_environment(void)
 
 	cl_git_pass(git_clone(&g_repo, "http://github.com/libgit2/TestGitRepository", "./foo", &g_options));
 
-	git_buf_free(&url);
+	git_buf_dispose(&url);
 }

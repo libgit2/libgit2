@@ -50,7 +50,7 @@ static void check_diff_patches_at_line(
 		clar__assert_equal(
 			file, line, "expected diff did not match actual diff", 1,
 			"%s", expected[d], get_buf_ptr(&buf));
-		git_buf_free(&buf);
+		git_buf_dispose(&buf);
 	}
 
 	cl_assert_at_line(expected[d] && !strcmp(expected[d], "<END>"), file, line);

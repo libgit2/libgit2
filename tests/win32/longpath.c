@@ -28,7 +28,7 @@ void test_win32_longpath__initialize(void)
 
 void test_win32_longpath__cleanup(void)
 {
-	git_buf_free(&path);
+	git_buf_dispose(&path);
 }
 
 #ifdef GIT_WIN32

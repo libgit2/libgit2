@@ -85,7 +85,7 @@ void test_submodule_nosubs__add_and_delete(void)
 	cl_git_pass(git_futils_readbuffer(&buf, "status/.gitmodules"));
 	cl_assert(strstr(buf.ptr, "[submodule \"submodules/libgit2\"]") != NULL);
 	cl_assert(strstr(buf.ptr, "path = submodules/libgit2") != NULL);
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	/* lookup */
 

@@ -97,7 +97,7 @@ static void assert_valid_transform(const char *refspec, const char *name, const 
 	cl_git_pass(git_refspec_transform(&buf, &spec, name));
 	cl_assert_equal_s(result, buf.ptr);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	git_refspec__free(&spec);
 }
 
@@ -119,7 +119,7 @@ static void assert_invalid_transform(const char *refspec, const char *name)
 	git_refspec__parse(&spec, refspec, true);
 	cl_git_fail(git_refspec_transform(&buf, &spec, name));
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	git_refspec__free(&spec);
 }
 
@@ -137,7 +137,7 @@ static void assert_invalid_rtransform(const char *refspec, const char *name)
 	git_refspec__parse(&spec, refspec, true);
 	cl_git_fail(git_refspec_rtransform(&buf, &spec, name));
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	git_refspec__free(&spec);
 }
 

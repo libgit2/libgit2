@@ -326,19 +326,19 @@ static int pack_index_open(struct git_pack_file *p)
 	git_buf_put(&idx_name, p->pack_name, name_len - strlen(".pack"));
 	git_buf_puts(&idx_name, ".idx");
 	if (git_buf_oom(&idx_name)) {
-		git_buf_free(&idx_name);
+		git_buf_dispose(&idx_name);
 		return -1;
 	}
 
 	if ((error = git_mutex_lock(&p->lock)) < 0) {
-		git_buf_free(&idx_name);
+		git_buf_dispose(&idx_name);
 		return error;
 	}
 
 	if (p->index_version == -1)
 		error = pack_index_check(idx_name.ptr, p);
 
-	git_buf_free(&idx_name);
+	git_buf_dispose(&idx_name);
 
 	git_mutex_unlock(&p->lock);
 
@@ -499,7 +499,7 @@ int git_packfile_resolve_header(
 		if ((error = git_packfile_stream_open(&stream, p, curpos)) < 0)
 			return error;
 		error = git_delta_read_header_fromstream(&base_size, size_p, &stream);
-		git_packfile_stream_free(&stream);
+		git_packfile_stream_dispose(&stream);
 		if (error < 0)
 			return error;
 	} else {
@@ -840,7 +840,7 @@ ssize_t git_packfile_stream_read(git_packfile_stream *obj, void *buffer, size_t 
 
 }
 
-void git_packfile_stream_free(git_packfile_stream *obj)
+void git_packfile_stream_dispose(git_packfile_stream *obj)
 {
 	inflateEnd(&obj->zstream);
 }

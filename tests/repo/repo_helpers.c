@@ -18,5 +18,5 @@ void delete_head(git_repository* repo)
 	cl_git_pass(git_buf_joinpath(&head_path, git_repository_path(repo), GIT_HEAD_FILE));
 	cl_git_pass(p_unlink(git_buf_cstr(&head_path)));
 
-	git_buf_free(&head_path);
+	git_buf_dispose(&head_path);
 }

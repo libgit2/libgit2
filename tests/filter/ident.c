@@ -31,7 +31,7 @@ static void add_blob_and_filter(
 	cl_assert_equal_s(expected, out.ptr);
 
 	git_blob_free(blob);
-	git_buf_free(&out);
+	git_buf_dispose(&out);
 }
 
 void test_filter_ident__to_worktree(void)

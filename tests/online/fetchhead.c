@@ -72,7 +72,7 @@ static void fetchhead_test_fetch(const char *fetchspec, const char *expected_fet
 
 	equals = (strcmp(fetchhead_buf.ptr, expected_fetchhead) == 0);
 
-	git_buf_free(&fetchhead_buf);
+	git_buf_dispose(&fetchhead_buf);
 
 	cl_assert(equals);
 }

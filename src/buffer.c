@@ -116,7 +116,7 @@ int git_buf_grow_by(git_buf *buffer, size_t additional_size)
 	return git_buf_try_grow(buffer, newsize, true);
 }
 
-void git_buf_free(git_buf *buf)
+void git_buf_dispose(git_buf *buf)
 {
 	if (!buf) return;
 
@@ -124,6 +124,11 @@ void git_buf_free(git_buf *buf)
 		git__free(buf->ptr);
 
 	git_buf_init(buf, 0);
+}
+
+void git_buf_free(git_buf *buf)
+{
+	git_buf_dispose(buf);
 }
 
 void git_buf_sanitize(git_buf *buf)
@@ -610,7 +615,7 @@ char *git_buf_detach(git_buf *buf)
 
 int git_buf_attach(git_buf *buf, char *ptr, size_t asize)
 {
-	git_buf_free(buf);
+	git_buf_dispose(buf);
 
 	if (ptr) {
 		buf->ptr = ptr;
@@ -628,7 +633,7 @@ int git_buf_attach(git_buf *buf, char *ptr, size_t asize)
 void git_buf_attach_notowned(git_buf *buf, const char *ptr, size_t size)
 {
 	if (git_buf_is_allocated(buf))
-		git_buf_free(buf);
+		git_buf_dispose(buf);
 
 	if (!size) {
 		git_buf_init(buf, 0);
@@ -949,7 +954,7 @@ int git_buf_quote(git_buf *buf)
 	git_buf_swap(&quoted, buf);
 
 done:
-	git_buf_free(&quoted);
+	git_buf_dispose(&quoted);
 	return error;
 }
 

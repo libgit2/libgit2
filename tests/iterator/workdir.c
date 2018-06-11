@@ -665,7 +665,7 @@ void test_iterator_workdir__filesystem_gunk(void)
 	 */
 	expect_iterator_items(i, 15, NULL, 15, NULL);
 	git_iterator_free(i);
-	git_buf_free(&parent);
+	git_buf_dispose(&parent);
 }
 
 void test_iterator_workdir__skips_unreadable_dirs(void)
@@ -1041,7 +1041,7 @@ static void create_paths(const char *root, int depth)
 		}
 	}
 
-	git_buf_free(&fullpath);
+	git_buf_dispose(&fullpath);
 }
 
 void test_iterator_workdir__pathlist_for_deeply_nested_item(void)

@@ -292,10 +292,10 @@ int gitno_extract_url_parts(
 	*password_out = git_buf_detach(&password);
 
 done:
-	git_buf_free(&host);
-	git_buf_free(&port);
-	git_buf_free(&path);
-	git_buf_free(&username);
-	git_buf_free(&password);
+	git_buf_dispose(&host);
+	git_buf_dispose(&port);
+	git_buf_dispose(&path);
+	git_buf_dispose(&username);
+	git_buf_dispose(&password);
 	return error;
 }

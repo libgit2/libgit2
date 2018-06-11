@@ -28,7 +28,7 @@ void test_core_buffer__0(void)
 	cl_assert(git_buf_oom(&buf) == 0);
 	cl_assert_equal_s(test_string_x2, git_buf_cstr(&buf));
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 /* test git_buf_printf */
@@ -44,7 +44,7 @@ void test_core_buffer__1(void)
 	cl_assert(git_buf_oom(&buf) == 0);
 	cl_assert_equal_s("shoop da 23 woop 42", git_buf_cstr(&buf));
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 /* more thorough test of concatenation options */
@@ -57,7 +57,7 @@ void test_core_buffer__2(void)
 	cl_assert(buf.size == 0);
 
 	/* this must be safe to do */
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	cl_assert(buf.size == 0);
 	cl_assert(buf.asize == 0);
 
@@ -67,7 +67,7 @@ void test_core_buffer__2(void)
 	/* cl_assert(buf.asize == 0); -- should not assume what git_buf does */
 
 	/* free should set us back to the beginning */
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	cl_assert(buf.size == 0);
 	cl_assert(buf.asize == 0);
 
@@ -88,7 +88,7 @@ void test_core_buffer__2(void)
 	}
 	cl_assert_equal_s("++++++++++++++++++", git_buf_cstr(&buf));
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	/* add data */
 	git_buf_put(&buf, "xo", 2);
@@ -108,7 +108,7 @@ void test_core_buffer__2(void)
 	cl_assert_equal_s("xoxoxoxoxoxoxoxoxoxoxoxoxoxoxoxoxoxo",
 					   git_buf_cstr(&buf));
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	/* set to string */
 	git_buf_sets(&buf, test_string);
@@ -129,7 +129,7 @@ void test_core_buffer__2(void)
 	git_buf_clear(&buf);
 	cl_assert_equal_s("", git_buf_cstr(&buf));
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	/* test extracting data into buffer */
 	git_buf_puts(&buf, REP4("0123456789"));
@@ -153,7 +153,7 @@ void test_core_buffer__2(void)
 	cl_assert_equal_s(REP4(REP16("x")) REP16("x") REP16("x")
 					   REP16("x") "xxxxxxxxxxxxxxx", data);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	git_buf_copy_cstr(data, sizeof(data), &buf);
 	cl_assert_equal_s("", data);
@@ -179,7 +179,7 @@ void test_core_buffer__3(void)
 	cl_assert(git_buf_oom(&buf) == 0);
 	cl_assert_equal_s(test_4096, git_buf_cstr(&buf));
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 /* let's try some producer/consumer tests */
@@ -212,7 +212,7 @@ void test_core_buffer__4(void)
 	git_buf_consume(&buf, buf.ptr + buf.size);
 	cl_assert_equal_s("", git_buf_cstr(&buf));
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 
@@ -235,7 +235,7 @@ check_buf_append(
 	if (expected_asize > 0)
 		cl_assert(tgt.asize == expected_asize);
 
-	git_buf_free(&tgt);
+	git_buf_dispose(&tgt);
 }
 
 static void
@@ -275,7 +275,7 @@ check_buf_append_abc(
 	cl_assert(git_buf_oom(&buf) == 0);
 	cl_assert_equal_s(expected_abcabc, git_buf_cstr(&buf));
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 /* more variations on append tests */
@@ -340,8 +340,8 @@ void test_core_buffer__6(void)
 	cl_assert_equal_s("bar", git_buf_cstr(&a));
 	cl_assert_equal_s("foo", git_buf_cstr(&b));
 
-	git_buf_free(&a);
-	git_buf_free(&b);
+	git_buf_dispose(&a);
+	git_buf_dispose(&b);
 }
 
 
@@ -367,7 +367,7 @@ void test_core_buffer__7(void)
 	cl_assert_equal_s(NULL, b);
 	cl_assert_equal_s("", a.ptr);
 
-	git_buf_free(&a);
+	git_buf_dispose(&a);
 
 	b = git__strdup(fun);
 	git_buf_attach(&a, b, 0);
@@ -376,7 +376,7 @@ void test_core_buffer__7(void)
 	cl_assert(a.size == strlen(fun));
 	cl_assert(a.asize == strlen(fun) + 1);
 
-	git_buf_free(&a);
+	git_buf_dispose(&a);
 
 	b = git__strdup(fun);
 	git_buf_attach(&a, b, strlen(fun) + 1);
@@ -385,7 +385,7 @@ void test_core_buffer__7(void)
 	cl_assert(a.size == strlen(fun));
 	cl_assert(a.asize == strlen(fun) + 1);
 
-	git_buf_free(&a);
+	git_buf_dispose(&a);
 }
 
 
@@ -401,7 +401,7 @@ check_joinbuf_2(
 	git_buf_join(&buf, sep, a, b);
 	cl_assert(git_buf_oom(&buf) == 0);
 	cl_assert_equal_s(expected, git_buf_cstr(&buf));
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 static void
@@ -418,7 +418,7 @@ check_joinbuf_overlapped(
 	git_buf_join(&buf, sep, buf.ptr + ofs_a, b);
 	cl_assert(git_buf_oom(&buf) == 0);
 	cl_assert_equal_s(expected, git_buf_cstr(&buf));
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 static void
@@ -437,7 +437,7 @@ check_joinbuf_n_2(
 	cl_assert(git_buf_oom(&buf) == 0);
 	cl_assert_equal_s(expected, git_buf_cstr(&buf));
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 static void
@@ -453,7 +453,7 @@ check_joinbuf_n_4(
 	git_buf_join_n(&buf, sep, 4, a, b, c, d);
 	cl_assert(git_buf_oom(&buf) == 0);
 	cl_assert_equal_s(expected, git_buf_cstr(&buf));
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 /* test join */
@@ -473,7 +473,7 @@ void test_core_buffer__8(void)
 	cl_assert(git_buf_oom(&a) == 0);
 	cl_assert_equal_s("foo/bar/baz", git_buf_cstr(&a));
 
-	git_buf_free(&a);
+	git_buf_dispose(&a);
 
 	check_joinbuf_2(NULL, "", "");
 	check_joinbuf_2(NULL, "a", "a");
@@ -578,7 +578,7 @@ void test_core_buffer__9(void)
 		}
 	}
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_core_buffer__10(void)
@@ -595,7 +595,7 @@ void test_core_buffer__10(void)
 	cl_git_pass(git_buf_join_n(&a, '/', 2, a.ptr, "more"));
 	cl_assert_equal_s(a.ptr, "test/string/join/test/string/join/more");
 
-	git_buf_free(&a);
+	git_buf_dispose(&a);
 }
 
 void test_core_buffer__join3(void)
@@ -627,7 +627,7 @@ void test_core_buffer__join3(void)
 	cl_git_pass(git_buf_join3(&a, '/', "string/", "", "/join"));
 	cl_assert_equal_s("string/join", a.ptr);
 
-	git_buf_free(&a);
+	git_buf_dispose(&a);
 }
 
 void test_core_buffer__11(void)
@@ -677,7 +677,7 @@ void test_core_buffer__11(void)
 	cl_git_pass(git_buf_text_common_prefix(&a, &t));
 	cl_assert_equal_s(a.ptr, "");
 
-	git_buf_free(&a);
+	git_buf_dispose(&a);
 }
 
 void test_core_buffer__rfind_variants(void)
@@ -701,7 +701,7 @@ void test_core_buffer__rfind_variants(void)
 	cl_assert(git_buf_rfind(&a, 'q') == -1);
 	cl_assert(git_buf_rfind_next(&a, 'q') == -1);
 
-	git_buf_free(&a);
+	git_buf_dispose(&a);
 }
 
 void test_core_buffer__puts_escaped(void)
@@ -724,7 +724,7 @@ void test_core_buffer__puts_escaped(void)
 	cl_git_pass(git_buf_text_puts_escape_regex(&a, "^match\\s*[A-Z]+.*"));
 	cl_assert_equal_s("\\^match\\\\s\\*\\[A-Z\\]\\+\\.\\*", a.ptr);
 
-	git_buf_free(&a);
+	git_buf_dispose(&a);
 }
 
 static void assert_unescape(char *expected, char *to_unescape) {
@@ -735,7 +735,7 @@ static void assert_unescape(char *expected, char *to_unescape) {
 	cl_assert_equal_s(expected, buf.ptr);
 	cl_assert_equal_sz(strlen(expected), buf.size);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_core_buffer__unescape(void)
@@ -769,7 +769,7 @@ void test_core_buffer__encode_base64(void)
 	cl_git_pass(git_buf_encode_base64(&buf, "this!\n", 6));
 	cl_assert_equal_s("dGhpcyEK", buf.ptr);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_core_buffer__decode_base64(void)
@@ -790,7 +790,7 @@ void test_core_buffer__decode_base64(void)
 	cl_git_fail(git_buf_decode_base64(&buf, "This is not a valid base64 string!!!", 36));
 	cl_assert_equal_s("this!\n", buf.ptr);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_core_buffer__encode_base85(void)
@@ -810,7 +810,7 @@ void test_core_buffer__encode_base85(void)
 	cl_assert_equal_s("bZBXFAZc?TVqtS-AUHK3Wo~0{WMyOk", buf.ptr);
 	git_buf_clear(&buf);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_core_buffer__decode_base85(void)
@@ -832,7 +832,7 @@ void test_core_buffer__decode_base85(void)
 	cl_assert_equal_s("this is base 85 encoded", buf.ptr);
 	git_buf_clear(&buf);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_core_buffer__decode_base85_fails_gracefully(void)
@@ -848,7 +848,7 @@ void test_core_buffer__decode_base85_fails_gracefully(void)
 	cl_assert_equal_sz(6, buf.size);
 	cl_assert_equal_s("foobar", buf.ptr);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 void test_core_buffer__classify_with_utf8(void)
@@ -977,7 +977,7 @@ void test_core_buffer__similarity_metric(void)
 	git_hashsig_free(a);
 	git_hashsig_free(b);
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 	git_futils_rmdir_r("scratch", NULL, GIT_RMDIR_REMOVE_FILES);
 }
 
@@ -1057,7 +1057,7 @@ void test_core_buffer__similarity_metric_whitespace(void)
 		}
 	}
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 }
 
 #include "../filter/crlf.h"
@@ -1150,8 +1150,8 @@ void test_core_buffer__lf_and_crlf_conversions(void)
 	cl_git_pass(git_buf_text_crlf_to_lf(&tgt, &src));
 	check_buf("\rcr\r", tgt);
 
-	git_buf_free(&src);
-	git_buf_free(&tgt);
+	git_buf_dispose(&src);
+	git_buf_dispose(&tgt);
 
 	/* blob correspondence tests */
 
@@ -1161,8 +1161,8 @@ void test_core_buffer__lf_and_crlf_conversions(void)
 	git_buf_sets(&src, ALL_CRLF_TEXT_RAW);
 	cl_git_pass(git_buf_text_crlf_to_lf(&tgt, &src));
 	check_buf(ALL_CRLF_TEXT_AS_LF, tgt);
-	git_buf_free(&src);
-	git_buf_free(&tgt);
+	git_buf_dispose(&src);
+	git_buf_dispose(&tgt);
 
 	git_buf_sets(&src, ALL_LF_TEXT_RAW);
 	cl_git_pass(git_buf_text_lf_to_crlf(&tgt, &src));
@@ -1170,8 +1170,8 @@ void test_core_buffer__lf_and_crlf_conversions(void)
 	git_buf_sets(&src, ALL_LF_TEXT_RAW);
 	cl_git_pass(git_buf_text_crlf_to_lf(&tgt, &src));
 	check_buf(ALL_LF_TEXT_AS_LF, tgt);
-	git_buf_free(&src);
-	git_buf_free(&tgt);
+	git_buf_dispose(&src);
+	git_buf_dispose(&tgt);
 
 	git_buf_sets(&src, MORE_CRLF_TEXT_RAW);
 	cl_git_pass(git_buf_text_lf_to_crlf(&tgt, &src));
@@ -1179,8 +1179,8 @@ void test_core_buffer__lf_and_crlf_conversions(void)
 	git_buf_sets(&src, MORE_CRLF_TEXT_RAW);
 	cl_git_pass(git_buf_text_crlf_to_lf(&tgt, &src));
 	check_buf(MORE_CRLF_TEXT_AS_LF, tgt);
-	git_buf_free(&src);
-	git_buf_free(&tgt);
+	git_buf_dispose(&src);
+	git_buf_dispose(&tgt);
 
 	git_buf_sets(&src, MORE_LF_TEXT_RAW);
 	cl_git_pass(git_buf_text_lf_to_crlf(&tgt, &src));
@@ -1188,8 +1188,8 @@ void test_core_buffer__lf_and_crlf_conversions(void)
 	git_buf_sets(&src, MORE_LF_TEXT_RAW);
 	cl_git_pass(git_buf_text_crlf_to_lf(&tgt, &src));
 	check_buf(MORE_LF_TEXT_AS_LF, tgt);
-	git_buf_free(&src);
-	git_buf_free(&tgt);
+	git_buf_dispose(&src);
+	git_buf_dispose(&tgt);
 }
 
 void test_core_buffer__dont_grow_borrowed(void)

@@ -83,8 +83,8 @@ void test_reset_hard__resetting_reverts_modified_files(void)
 		}
 	}
 
-	git_buf_free(&content);
-	git_buf_free(&path);
+	git_buf_dispose(&content);
+	git_buf_dispose(&path);
 }
 
 void test_reset_hard__cannot_reset_in_a_bare_repository(void)
@@ -192,10 +192,10 @@ void test_reset_hard__cleans_up_merge(void)
 	cl_assert(git_path_exists(git_buf_cstr(&orig_head_path)));
 	cl_git_pass(p_unlink(git_buf_cstr(&orig_head_path)));
 
-	git_buf_free(&merge_head_path);
-	git_buf_free(&merge_msg_path);
-	git_buf_free(&merge_mode_path);
-	git_buf_free(&orig_head_path);
+	git_buf_dispose(&merge_head_path);
+	git_buf_dispose(&merge_msg_path);
+	git_buf_dispose(&merge_mode_path);
+	git_buf_dispose(&orig_head_path);
 }
 
 void test_reset_hard__reflog_is_correct(void)
@@ -223,7 +223,7 @@ void test_reset_hard__reflog_is_correct(void)
 	reflog_check(repo, "HEAD", 4, NULL, git_buf_cstr(&buf));
 	reflog_check(repo, "refs/heads/master", 4, NULL, git_buf_cstr(&buf));
 
-	git_buf_free(&buf);
+	git_buf_dispose(&buf);
 
 	/* Moved branch, expect revspec in message */
 	exp_msg = "reset: moving to HEAD~^{commit}";
