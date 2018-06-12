@@ -199,7 +199,7 @@ GIT_EXTERN(int) git_foo_id(
 	int b);
 ```
 
-Indent with tabs; set your editor's tab width to 4 for best effect.
+Indent with tabs; set your editor's tab width to eight for best effect.
 
 Avoid trailing whitespace and only commit Unix-style newlines (i.e. no CRLF
 in the repository - just set `core.autocrlf` to true if you are writing code
