@@ -171,6 +171,12 @@ typedef enum {
 	 * Options controlling how output will be generated
 	 */
 
+	/** Use a heuristic that takes indentation and whitespace into account
+	 * which generally can produce better diffs when dealing with ambiguous
+	 * diff hunks.
+	 */
+	GIT_DIFF_INDENT_HEURISTIC = (1u << 18),
+
 	/** Treat all files as text, disabling binary attributes & detection */
 	GIT_DIFF_FORCE_TEXT = (1u << 20),
 	/** Treat all files as binary, disabling text diffs */
@@ -206,12 +212,6 @@ typedef enum {
 	 *  can apply given diff information to binary files.
 	 */
 	GIT_DIFF_SHOW_BINARY = (1u << 30),
-
-	/** Use a heuristic that takes indentation and whitespace into account
-	 * which generally can produce better diffs when dealing with ambiguous
-	 * diff hunks.
-	 */
-	GIT_DIFF_INDENT_HEURISTIC = (1u << 31),
 } git_diff_option_t;
 
 /**
