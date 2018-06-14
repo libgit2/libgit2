@@ -11,7 +11,7 @@
 #include "strmap.h"
 #include <ctype.h>
 #if GIT_WIN32
-#include "win32/findfile.h"
+# include "win32/findfile.h"
 #endif
 
 int git_futils_mkpath2file(const char *file_path, const mode_t mode)
@@ -73,6 +73,7 @@ int git_futils_creat_locked(const char *path, const mode_t mode)
 	if (fd < 0) {
 		int error = errno;
 		giterr_set(GITERR_OS, "failed to create locked file '%s'", path);
+
 		switch (error) {
 		case EEXIST:
 			return GIT_ELOCKED;
@@ -245,7 +246,7 @@ int git_futils_readbuffer(git_buf *buf, const char *path)
 }
 
 int git_futils_writebuffer(
-	const git_buf *buf,	const char *path, int flags, mode_t mode)
+	const git_buf *buf,     const char *path, int flags, mode_t mode)
 {
 	int fd, do_fsync = 0, error = 0;
 
@@ -352,7 +353,7 @@ GIT_INLINE(int) mkdir_validate_dir(
 	}
 
 	if ((S_ISREG(st->st_mode) && (flags & GIT_MKDIR_REMOVE_FILES)) ||
-		(S_ISLNK(st->st_mode) && (flags & GIT_MKDIR_REMOVE_SYMLINKS))) {
+	    (S_ISLNK(st->st_mode) && (flags & GIT_MKDIR_REMOVE_SYMLINKS))) {
 		if (p_unlink(path) < 0) {
 			giterr_set(GITERR_OS, "failed to remove %s '%s'",
 				S_ISLNK(st->st_mode) ? "symlink" : "file", path);
@@ -395,7 +396,7 @@ GIT_INLINE(int) mkdir_validate_mode(
 	struct git_futils_mkdir_options *opts)
 {
 	if (((terminal_path && (flags & GIT_MKDIR_CHMOD) != 0) ||
-		(flags & GIT_MKDIR_CHMOD_PATH) != 0) && st->st_mode != mode) {
+	     (flags & GIT_MKDIR_CHMOD_PATH) != 0) && st->st_mode != mode) {
 
 		opts->perfdata.chmod_calls++;
 
@@ -453,15 +454,17 @@ int git_futils_mkdir(
 {
 	git_buf make_path = GIT_BUF_INIT, parent_path = GIT_BUF_INIT;
 	const char *relative;
-	struct git_futils_mkdir_options opts = { 0 };
+	struct git_futils_mkdir_options opts = {
+		0
+	};
 	struct stat st;
 	size_t depth = 0;
 	int len = 0, root_len, error;
 
 	if ((error = git_buf_puts(&make_path, path)) < 0 ||
-		(error = mkdir_canonicalize(&make_path, flags)) < 0 ||
-		(error = git_buf_puts(&parent_path, make_path.ptr)) < 0 ||
-		make_path.size == 0)
+	    (error = mkdir_canonicalize(&make_path, flags)) < 0 ||
+	    (error = git_buf_puts(&parent_path, make_path.ptr)) < 0 ||
+	    make_path.size == 0)
 		goto done;
 
 	root_len = git_path_root(make_path.ptr);
@@ -469,7 +472,7 @@ int git_futils_mkdir(
 	/* find the first parent directory that exists.  this will be used
 	 * as the base to dirname_relative.
 	 */
-	for (relative = make_path.ptr; parent_path.size; ) {
+	for (relative = make_path.ptr; parent_path.size;) {
 		error = p_lstat(parent_path.ptr, &st);
 
 		if (error == 0) {
@@ -547,7 +550,9 @@ int git_futils_mkdir_relative(
 	ssize_t root = 0, min_root_len;
 	char lastch = '/', *tail;
 	struct stat st;
-	struct git_futils_mkdir_options empty_opts = {0};
+	struct git_futils_mkdir_options empty_opts = {
+		0
+	};
 	int error;
 
 	if (!opts)
@@ -558,7 +563,7 @@ int git_futils_mkdir_relative(
 		return -1;
 
 	if ((error = mkdir_canonicalize(&make_path, flags)) < 0 ||
-		make_path.size == 0)
+	    make_path.size == 0)
 		goto done;
 
 	/* if we are not supposed to make the whole path, reset root */
@@ -574,7 +579,7 @@ int git_futils_mkdir_relative(
 
 	/* clip root to make_path length */
 	if (root > (ssize_t)make_path.size)
-		root = (ssize_t)make_path.size; /* i.e. NUL byte of string */
+		root = (ssize_t)make_path.size;	/* i.e. NUL byte of string */
 	if (root < 0)
 		root = 0;
 
@@ -650,7 +655,7 @@ retry_lstat:
 
 	/* check that full path really is a directory if requested & needed */
 	if ((flags & GIT_MKDIR_VERIFY_DIR) != 0 &&
-		lastch != '\0') {
+	    lastch != '\0') {
 		opts->perfdata.stat_calls++;
 
 		if (p_stat(make_path.ptr, &st) < 0 || !S_ISDIR(st.st_mode)) {
@@ -678,7 +683,7 @@ static int futils__error_cannot_rmdir(const char *path, const char *filemsg)
 {
 	if (filemsg)
 		giterr_set(GITERR_OS, "could not remove directory '%s': %s",
-				   path, filemsg);
+			           path, filemsg);
 	else
 		giterr_set(GITERR_OS, "could not remove directory '%s'", path);
 
@@ -699,7 +704,7 @@ static int futils__rm_first_parent(git_buf *path, const char *ceiling)
 			if (S_ISREG(st.st_mode) || S_ISLNK(st.st_mode))
 				error = p_unlink(path->ptr);
 			else if (!S_ISDIR(st.st_mode))
-				error = -1; /* fail to remove non-regular file */
+				error = -1;	/* fail to remove non-regular file */
 		} else if (errno != ENOTDIR)
 			error = -1;
 	}
@@ -750,7 +755,7 @@ static int futils__rmdir_recurs_foreach(void *opaque, git_buf *path)
 
 		if ((error = p_rmdir(path->ptr)) < 0) {
 			if ((data->flags & GIT_RMDIR_SKIP_NONEMPTY) != 0 &&
-				(errno == ENOTEMPTY || errno == EEXIST || errno == EBUSY))
+			    (errno == ENOTEMPTY || errno == EEXIST || errno == EBUSY))
 				error = 0;
 			else
 				error = git_path_set_error(errno, path->ptr, "rmdir");
@@ -782,7 +787,7 @@ static int futils__rmdir_empty_parent(void *opaque, const char *path)
 		if (en == ENOENT || en == ENOTDIR) {
 			/* do nothing */
 		} else if ((data->flags & GIT_RMDIR_SKIP_NONEMPTY) == 0 &&
-			en == EBUSY) {
+		           en == EBUSY) {
 			error = git_path_set_error(errno, path, "rmdir");
 		} else if (en == ENOTEMPTY || en == EEXIST || en == EBUSY) {
 			error = GIT_ITEROVER;
@@ -965,11 +970,11 @@ static int _cp_r_callback(void *ref, git_buf *from)
 	bool exists = false;
 
 	if ((info->flags & GIT_CPDIR_COPY_DOTFILES) == 0 &&
-		from->ptr[git_path_basename_offset(from)] == '.')
+	    from->ptr[git_path_basename_offset(from)] == '.')
 		return 0;
 
 	if ((error = git_buf_joinpath(
-			&info->to, info->to_root, from->ptr + info->from_prefix)) < 0)
+		        &info->to, info->to_root, from->ptr + info->from_prefix)) < 0)
 		return error;
 
 	if (!(error = git_path_lstat(info->to.ptr, &to_st)))
@@ -1018,13 +1023,13 @@ static int _cp_r_callback(void *ref, git_buf *from)
 
 	/* Done if this isn't a regular file or a symlink */
 	if (!S_ISREG(from_st.st_mode) &&
-		(!S_ISLNK(from_st.st_mode) ||
-		 (info->flags & GIT_CPDIR_COPY_SYMLINKS) == 0))
+	    (!S_ISLNK(from_st.st_mode) ||
+	     (info->flags & GIT_CPDIR_COPY_SYMLINKS) == 0))
 		return 0;
 
 	/* Make container directory on demand if needed */
 	if ((info->flags & GIT_CPDIR_CREATE_EMPTY_DIRS) == 0 &&
-		(error = _cp_r_mkdir(info, from)) < 0)
+	    (error = _cp_r_mkdir(info, from)) < 0)
 		return error;
 
 	/* make symlink or regular file */
@@ -1055,7 +1060,7 @@ int git_futils_cp_r(
 	git_buf path = GIT_BUF_INIT;
 	cp_r_info info;
 
-	if (git_buf_joinpath(&path, from, "") < 0) /* ensure trailing slash */
+	if (git_buf_joinpath(&path, from, "") < 0)	/* ensure trailing slash */
 		return -1;
 
 	memset(&info, 0, sizeof(info));
@@ -1101,10 +1106,10 @@ int git_futils_filestamp_check(
 
 	if (stamp->mtime.tv_sec == st.st_mtime &&
 #if defined(GIT_USE_NSEC)
-		stamp->mtime.tv_nsec == st.st_mtime_nsec &&
+	    stamp->mtime.tv_nsec == st.st_mtime_nsec &&
 #endif
-		stamp->size  == (git_off_t)st.st_size   &&
-		stamp->ino   == (unsigned int)st.st_ino)
+	    stamp->size  == (git_off_t)st.st_size   &&
+	    stamp->ino   == (unsigned int)st.st_ino)
 		return 0;
 
 	stamp->mtime.tv_sec = st.st_mtime;

@@ -18,7 +18,7 @@
 #include "git2/commit.h"
 #include "git2/sys/commit.h"
 
-#define GIT_REVERT_FILE_MODE		0666
+#define GIT_REVERT_FILE_MODE            0666
 
 static int write_revert_head(
 	git_repository *repo,
@@ -29,8 +29,8 @@ static int write_revert_head(
 	int error = 0;
 
 	if ((error = git_buf_joinpath(&file_path, repo->gitdir, GIT_REVERT_HEAD_FILE)) >= 0 &&
-		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_REVERT_FILE_MODE)) >= 0 &&
-		(error = git_filebuf_printf(&file, "%s\n", commit_oidstr)) >= 0)
+	    (error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_REVERT_FILE_MODE)) >= 0 &&
+	    (error = git_filebuf_printf(&file, "%s\n", commit_oidstr)) >= 0)
 		error = git_filebuf_commit(&file);
 
 	if (error < 0)
@@ -51,8 +51,8 @@ static int write_merge_msg(
 	int error = 0;
 
 	if ((error = git_buf_joinpath(&file_path, repo->gitdir, GIT_MERGE_MSG_FILE)) < 0 ||
-		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_REVERT_FILE_MODE)) < 0 ||
-		(error = git_filebuf_printf(&file, "Revert \"%s\"\n\nThis reverts commit %s.\n",
+	    (error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_REVERT_FILE_MODE)) < 0 ||
+	    (error = git_filebuf_printf(&file, "Revert \"%s\"\n\nThis reverts commit %s.\n",
 		commit_msgline, commit_oidstr)) < 0)
 		goto cleanup;
 
@@ -75,7 +75,7 @@ static int revert_normalize_opts(
 {
 	int error = 0;
 	unsigned int default_checkout_strategy = GIT_CHECKOUT_SAFE |
-		GIT_CHECKOUT_ALLOW_CONFLICTS;
+	        GIT_CHECKOUT_ALLOW_CONFLICTS;
 
 	GIT_UNUSED(repo);
 
@@ -100,7 +100,9 @@ static int revert_normalize_opts(
 
 static int revert_state_cleanup(git_repository *repo)
 {
-	const char *state_files[] = { GIT_REVERT_HEAD_FILE, GIT_MERGE_MSG_FILE };
+	const char *state_files[] = {
+		GIT_REVERT_HEAD_FILE, GIT_MERGE_MSG_FILE
+	};
 
 	return git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files));
 }
@@ -146,12 +148,12 @@ int git_revert_commit(
 	}
 
 	if (parent &&
-		((error = git_commit_parent(&parent_commit, revert_commit, (parent - 1))) < 0 ||
-		(error = git_commit_tree(&parent_tree, parent_commit)) < 0))
+	    ((error = git_commit_parent(&parent_commit, revert_commit, (parent - 1))) < 0 ||
+	     (error = git_commit_tree(&parent_tree, parent_commit)) < 0))
 		goto done;
 
 	if ((error = git_commit_tree(&revert_tree, revert_commit)) < 0 ||
-		(error = git_commit_tree(&our_tree, our_commit)) < 0)
+	    (error = git_commit_tree(&our_tree, our_commit)) < 0)
 		goto done;
 
 	error = git_merge_trees(out, repo, revert_tree, our_tree, parent_tree, merge_opts);
@@ -196,17 +198,17 @@ int git_revert(
 	}
 
 	if ((error = git_buf_printf(&their_label, "parent of %.7s... %s", commit_oidstr, commit_msg)) < 0 ||
-		(error = revert_normalize_opts(repo, &opts, given_opts, git_buf_cstr(&their_label))) < 0 ||
-		(error = git_indexwriter_init_for_operation(&indexwriter, repo, &opts.checkout_opts.checkout_strategy)) < 0 ||
-		(error = write_revert_head(repo, commit_oidstr)) < 0 ||
-		(error = write_merge_msg(repo, commit_oidstr, commit_msg)) < 0 ||
-		(error = git_repository_head(&our_ref, repo)) < 0 ||
-		(error = git_reference_peel((git_object **)&our_commit, our_ref, GIT_OBJ_COMMIT)) < 0 ||
-		(error = git_revert_commit(&index, repo, commit, our_commit, opts.mainline, &opts.merge_opts)) < 0 ||
-		(error = git_merge__check_result(repo, index)) < 0 ||
-		(error = git_merge__append_conflicts_to_merge_msg(repo, index)) < 0 ||
-		(error = git_checkout_index(repo, index, &opts.checkout_opts)) < 0 ||
-		(error = git_indexwriter_commit(&indexwriter)) < 0)
+	    (error = revert_normalize_opts(repo, &opts, given_opts, git_buf_cstr(&their_label))) < 0 ||
+	    (error = git_indexwriter_init_for_operation(&indexwriter, repo, &opts.checkout_opts.checkout_strategy)) < 0 ||
+	    (error = write_revert_head(repo, commit_oidstr)) < 0 ||
+	    (error = write_merge_msg(repo, commit_oidstr, commit_msg)) < 0 ||
+	    (error = git_repository_head(&our_ref, repo)) < 0 ||
+	    (error = git_reference_peel((git_object * *)&our_commit, our_ref, GIT_OBJ_COMMIT)) < 0 ||
+	    (error = git_revert_commit(&index, repo, commit, our_commit, opts.mainline, &opts.merge_opts)) < 0 ||
+	    (error = git_merge__check_result(repo, index)) < 0 ||
+	    (error = git_merge__append_conflicts_to_merge_msg(repo, index)) < 0 ||
+	    (error = git_checkout_index(repo, index, &opts.checkout_opts)) < 0 ||
+	    (error = git_indexwriter_commit(&indexwriter)) < 0)
 		goto on_error;
 
 	goto done;

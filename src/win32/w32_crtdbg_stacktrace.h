@@ -11,11 +11,11 @@
 
 #if defined(GIT_MSVC_CRTDBG)
 
-#include <stdlib.h>
-#include <crtdbg.h>
+# include <stdlib.h>
+# include <crtdbg.h>
 
-#include "git2/errors.h"
-#include "strnlen.h"
+# include "git2/errors.h"
+# include "strnlen.h"
 
 /* MSVC CRTDBG memory leak reporting.
  *
@@ -100,7 +100,6 @@ typedef enum git_win32__crtdbg_stacktrace_options {
 	 * Just return leak count.
 	 */
 	GIT_WIN32__CRTDBG_STACKTRACE__QUIET            = (1 << 3),
-
 } git_win32__crtdbg_stacktrace_options;
 
 /**

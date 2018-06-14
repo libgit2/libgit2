@@ -86,7 +86,7 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 	page_start = (offset / alignment) * alignment;
 	page_offset = offset - page_start;
 
-	if (page_offset != 0) { /* offset must be multiple of the allocation granularity */
+	if (page_offset != 0) {	/* offset must be multiple of the allocation granularity */
 		errno = EINVAL;
 		giterr_set(GITERR_OS, "failed to mmap. Offset must be multiple of allocation granularity");
 		return -1;

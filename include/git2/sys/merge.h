@@ -122,10 +122,10 @@ typedef int (*git_merge_driver_apply_fn)(
  */
 struct git_merge_driver {
 	/** The `version` should be set to `GIT_MERGE_DRIVER_VERSION`. */
-	unsigned int                 version;
+	unsigned int version;
 
 	/** Called when the merge driver is first used for any file. */
-	git_merge_driver_init_fn     initialize;
+	git_merge_driver_init_fn initialize;
 
 	/** Called when the merge driver is unregistered from the system. */
 	git_merge_driver_shutdown_fn shutdown;
@@ -136,7 +136,7 @@ struct git_merge_driver {
 	 * will instead be invoked.  If this function returns
 	 * `GIT_EMERGECONFLICT` then the file will remain conflicted.
 	 */
-	git_merge_driver_apply_fn    apply;
+	git_merge_driver_apply_fn apply;
 };
 
 #define GIT_MERGE_DRIVER_VERSION 1
@@ -153,7 +153,7 @@ struct git_merge_driver {
  * shutdown).
  *
  * @param name The name of this driver to match an attribute.  Attempting
- * 			to register with an in-use name will return GIT_EEXISTS.
+ *                      to register with an in-use name will return GIT_EEXISTS.
  * @param driver The merge driver definition.  This pointer will be stored
  *			as is by libgit2 so it must be a durable allocation (either
  *			static or on the heap).

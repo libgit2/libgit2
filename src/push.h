@@ -126,8 +126,8 @@ int git_push_finish(git_push *push, const git_remote_callbacks *callbacks);
  * @return 0 on success, non-zero callback return value, or error code
  */
 int git_push_status_foreach(git_push *push,
-			int (*cb)(const char *ref, const char *msg, void *data),
-			void *data);
+	int (*cb)(const char *ref, const char *msg, void *data),
+	void *data);
 
 /**
  * Free the given push object

@@ -12,8 +12,8 @@
 #include "git2/buffer.h"
 
 /* typedef struct {
- *  	char   *ptr;
- *  	size_t asize, size;
+ *      char   *ptr;
+ *      size_t asize, size;
  * } git_buf;
  */
 
@@ -151,15 +151,18 @@ void git_buf_copy_cstr(char *data, size_t datasize, const git_buf *buf);
 GIT_INLINE(ssize_t) git_buf_rfind_next(const git_buf *buf, char ch)
 {
 	ssize_t idx = (ssize_t)buf->size - 1;
-	while (idx >= 0 && buf->ptr[idx] == ch) idx--;
-	while (idx >= 0 && buf->ptr[idx] != ch) idx--;
+	while (idx >= 0 && buf->ptr[idx] == ch)
+		idx--;
+	while (idx >= 0 && buf->ptr[idx] != ch)
+		idx--;
 	return idx;
 }
 
 GIT_INLINE(ssize_t) git_buf_rfind(const git_buf *buf, char ch)
 {
 	ssize_t idx = (ssize_t)buf->size - 1;
-	while (idx >= 0 && buf->ptr[idx] != ch) idx--;
+	while (idx >= 0 && buf->ptr[idx] != ch)
+		idx--;
 	return idx;
 }
 

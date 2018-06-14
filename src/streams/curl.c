@@ -9,24 +9,24 @@
 
 #ifdef GIT_CURL
 
-#include <curl/curl.h>
+# include <curl/curl.h>
 
-#include "stream.h"
-#include "git2/transport.h"
-#include "buffer.h"
-#include "global.h"
-#include "vector.h"
-#include "proxy.h"
+# include "stream.h"
+# include "git2/transport.h"
+# include "buffer.h"
+# include "global.h"
+# include "vector.h"
+# include "proxy.h"
 
 /* This is for backwards compatibility with curl<7.45.0. */
-#ifndef CURLINFO_ACTIVESOCKET
-# define CURLINFO_ACTIVESOCKET CURLINFO_LASTSOCKET
-# define GIT_CURL_BADSOCKET -1
-# define git_activesocket_t long
-#else
-# define GIT_CURL_BADSOCKET CURL_SOCKET_BAD
-# define git_activesocket_t curl_socket_t
-#endif
+# ifndef CURLINFO_ACTIVESOCKET
+#  define CURLINFO_ACTIVESOCKET CURLINFO_LASTSOCKET
+#  define GIT_CURL_BADSOCKET -1
+#  define git_activesocket_t long
+# else
+#  define GIT_CURL_BADSOCKET CURL_SOCKET_BAD
+#  define git_activesocket_t curl_socket_t
+# endif
 
 typedef struct {
 	git_stream parent;
@@ -190,7 +190,7 @@ static int curls_certificate(git_cert **out, git_stream *stream)
 	}
 
 	/* Copy the contents of the vector into a strarray so we can expose them */
-	s->cert_info_strings.strings = (char **) strings.contents;
+	s->cert_info_strings.strings = (char * *) strings.contents;
 	s->cert_info_strings.count   = strings.length;
 
 	s->cert_info.parent.cert_type = GIT_CERT_STRARRAY;
@@ -347,7 +347,7 @@ int git_curl_stream_new(git_stream **out, const char *host, const char *port)
 	/* curl_easy_setopt(handle, CURLOPT_VERBOSE, 1); */
 
 	st->parent.version = GIT_STREAM_VERSION;
-	st->parent.encrypted = 0; /* we don't encrypt ourselves */
+	st->parent.encrypted = 0;	/* we don't encrypt ourselves */
 	st->parent.proxy_support = 1;
 	st->parent.connect = curls_connect;
 	st->parent.certificate = curls_certificate;
@@ -364,7 +364,7 @@ int git_curl_stream_new(git_stream **out, const char *host, const char *port)
 
 #else
 
-#include "stream.h"
+# include "stream.h"
 
 int git_curl_stream_global_init(void)
 {

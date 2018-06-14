@@ -83,7 +83,7 @@ struct git_submodule {
 
 	/* information from config */
 	char *name;
-	char *path; /* important: may just point to "name" string */
+	char *path;	/* important: may just point to "name" string */
 	char *url;
 	char *branch;
 	git_submodule_update_t update;
@@ -120,7 +120,7 @@ enum {
 };
 
 #define GIT_SUBMODULE_STATUS__CLEAR_INTERNAL(S) \
-	((S) & ~(0xFFFFFFFFu << 20))
+	((S) &~(0xFFFFFFFFu << 20))
 
 /* Internal lookup does not attempt to refresh cached data */
 extern int git_submodule__lookup(

@@ -9,39 +9,39 @@
 
 #ifdef GIT_OPENSSL
 
-#include <ctype.h>
+# include <ctype.h>
 
-#include "global.h"
-#include "posix.h"
-#include "stream.h"
-#include "streams/socket.h"
-#include "netops.h"
-#include "git2/transport.h"
-#include "git2/sys/openssl.h"
+# include "global.h"
+# include "posix.h"
+# include "stream.h"
+# include "streams/socket.h"
+# include "netops.h"
+# include "git2/transport.h"
+# include "git2/sys/openssl.h"
 
-#ifdef GIT_CURL
-# include "streams/curl.h"
-#endif
+# ifdef GIT_CURL
+#  include "streams/curl.h"
+# endif
 
-#ifndef GIT_WIN32
-# include <sys/types.h>
-# include <sys/socket.h>
-# include <netinet/in.h>
-#endif
+# ifndef GIT_WIN32
+#  include <sys/types.h>
+#  include <sys/socket.h>
+#  include <netinet/in.h>
+# endif
 
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/x509v3.h>
-#include <openssl/bio.h>
+# include <openssl/ssl.h>
+# include <openssl/err.h>
+# include <openssl/x509v3.h>
+# include <openssl/bio.h>
 
 SSL_CTX *git__ssl_ctx;
 
-#define GIT_SSL_DEFAULT_CIPHERS "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-DSS-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:DHE-DSS-AES128-SHA256:DHE-DSS-AES256-SHA256:DHE-DSS-AES128-SHA:DHE-DSS-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA"
+# define GIT_SSL_DEFAULT_CIPHERS "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-DSS-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:DHE-DSS-AES128-SHA256:DHE-DSS-AES256-SHA256:DHE-DSS-AES128-SHA:DHE-DSS-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA"
 
-#if (defined(OPENSSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER < 0x10100000L) || \
-     (defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x20700000L)
-# define OPENSSL_LEGACY_API
-#endif
+# if (defined(OPENSSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER < 0x10100000L) || \
+        (defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x20700000L)
+#  define OPENSSL_LEGACY_API
+# endif
 
 /*
  * OpenSSL 1.1 made BIO opaque so we have to use functions to interact with it
@@ -49,7 +49,7 @@ SSL_CTX *git__ssl_ctx;
  * we can program against the interface instead of littering the implementation
  * with ifdefs. We do the same for OPENSSL_init_ssl.
  */
-#if defined(OPENSSL_LEGACY_API)
+# if defined(OPENSSL_LEGACY_API)
 static int OPENSSL_init_ssl(int opts, void *settings)
 {
 	GIT_UNUSED(opts);
@@ -59,7 +59,7 @@ static int OPENSSL_init_ssl(int opts, void *settings)
 	return 0;
 }
 
-static BIO_METHOD* BIO_meth_new(int type, const char *name)
+static BIO_METHOD *BIO_meth_new(int type, const char *name)
 {
 	BIO_METHOD *meth = git__calloc(1, sizeof(BIO_METHOD));
 	if (!meth) {
@@ -77,44 +77,44 @@ static void BIO_meth_free(BIO_METHOD *biom)
 	git__free(biom);
 }
 
-static int BIO_meth_set_write(BIO_METHOD *biom, int (*write) (BIO *, const char *, int))
+static int BIO_meth_set_write(BIO_METHOD *biom, int (*write)(BIO *, const char *, int))
 {
 	biom->bwrite = write;
 	return 1;
 }
 
-static int BIO_meth_set_read(BIO_METHOD *biom, int (*read) (BIO *, char *, int))
+static int BIO_meth_set_read(BIO_METHOD *biom, int (*read)(BIO *, char *, int))
 {
 	biom->bread = read;
 	return 1;
 }
 
-static int BIO_meth_set_puts(BIO_METHOD *biom, int (*puts) (BIO *, const char *))
+static int BIO_meth_set_puts(BIO_METHOD *biom, int (*puts)(BIO *, const char *))
 {
 	biom->bputs = puts;
 	return 1;
 }
 
-static int BIO_meth_set_gets(BIO_METHOD *biom, int (*gets) (BIO *, char *, int))
+static int BIO_meth_set_gets(BIO_METHOD *biom, int (*gets)(BIO *, char *, int))
 
 {
 	biom->bgets = gets;
 	return 1;
 }
 
-static int BIO_meth_set_ctrl(BIO_METHOD *biom, long (*ctrl) (BIO *, int, long, void *))
+static int BIO_meth_set_ctrl(BIO_METHOD *biom, long (*ctrl)(BIO *, int, long, void *))
 {
 	biom->ctrl = ctrl;
 	return 1;
 }
 
-static int BIO_meth_set_create(BIO_METHOD *biom, int (*create) (BIO *))
+static int BIO_meth_set_create(BIO_METHOD *biom, int (*create)(BIO *))
 {
 	biom->create = create;
 	return 1;
 }
 
-static int BIO_meth_set_destroy(BIO_METHOD *biom, int (*destroy) (BIO *))
+static int BIO_meth_set_destroy(BIO_METHOD *biom, int (*destroy)(BIO *))
 {
 	biom->destroy = destroy;
 	return 1;
@@ -146,7 +146,7 @@ static const unsigned char *ASN1_STRING_get0_data(const ASN1_STRING *x)
 	return ASN1_STRING_data((ASN1_STRING *)x);
 }
 
-# if defined(GIT_THREADS)
+#  if defined(GIT_THREADS)
 static git_mutex *openssl_locks;
 
 static void openssl_locking_function(
@@ -177,8 +177,8 @@ static void shutdown_ssl_locking(void)
 		git_mutex_free(&openssl_locks[i]);
 	git__free(openssl_locks);
 }
-# endif /* GIT_THREADS */
-#endif /* OPENSSL_LEGACY_API */
+#  endif/* GIT_THREADS */
+# endif	/* OPENSSL_LEGACY_API */
 
 static BIO_METHOD *git_stream_bio_method;
 static int init_bio_method(void);
@@ -206,9 +206,9 @@ int git_openssl_stream_global_init(void)
 	const char *ciphers = git_libgit2__ssl_ciphers();
 
 	/* Older OpenSSL and MacOS OpenSSL doesn't have this */
-#ifdef SSL_OP_NO_COMPRESSION
+# ifdef SSL_OP_NO_COMPRESSION
 	ssl_opts |= SSL_OP_NO_COMPRESSION;
-#endif
+# endif
 
 	OPENSSL_init_ssl(0, NULL);
 
@@ -232,7 +232,7 @@ int git_openssl_stream_global_init(void)
 		ciphers = GIT_SSL_DEFAULT_CIPHERS;
 	}
 
-	if(!SSL_CTX_set_cipher_list(git__ssl_ctx, ciphers)) {
+	if (!SSL_CTX_set_cipher_list(git__ssl_ctx, ciphers)) {
 		SSL_CTX_free(git__ssl_ctx);
 		git__ssl_ctx = NULL;
 		return -1;
@@ -249,17 +249,17 @@ int git_openssl_stream_global_init(void)
 	return 0;
 }
 
-#if defined(GIT_THREADS) && defined(OPENSSL_LEGACY_API)
+# if defined(GIT_THREADS) && defined(OPENSSL_LEGACY_API)
 static void threadid_cb(CRYPTO_THREADID *threadid)
 {
 	GIT_UNUSED(threadid);
 	CRYPTO_THREADID_set_numeric(threadid, git_thread_currentid());
 }
-#endif
+# endif
 
 int git_openssl_set_locking(void)
 {
-#if defined(GIT_THREADS) && defined(OPENSSL_LEGACY_API)
+# if defined(GIT_THREADS) && defined(OPENSSL_LEGACY_API)
 	int num_locks, i;
 
 	CRYPTO_THREADID_set_callback(threadid_cb);
@@ -268,22 +268,21 @@ int git_openssl_set_locking(void)
 	openssl_locks = git__calloc(num_locks, sizeof(git_mutex));
 	GITERR_CHECK_ALLOC(openssl_locks);
 
-	for (i = 0; i < num_locks; i++) {
+	for (i = 0; i < num_locks; i++)
 		if (git_mutex_init(&openssl_locks[i]) != 0) {
 			giterr_set(GITERR_SSL, "failed to initialize openssl locks");
 			return -1;
 		}
-	}
 
 	CRYPTO_set_locking_callback(openssl_locking_function);
 	git__on_shutdown(shutdown_ssl_locking);
 	return 0;
-#elif !defined(OPENSSL_LEGACY_API)
+# elif !defined(OPENSSL_LEGACY_API)
 	return 0;
-#else
+# else
 	giterr_set(GITERR_THREAD, "libgit2 was not built with threads");
 	return -1;
-#endif
+# endif
 }
 
 
@@ -596,9 +595,9 @@ int openssl_connect(git_stream *stream)
 	SSL_set_bio(st->ssl, bio, bio);
 
 	/* specify the host in case SNI is needed */
-#ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
+# ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
 	SSL_set_tlsext_host_name(st->ssl, st->host);
-#endif
+# endif
 
 	if ((ret = SSL_connect(st->ssl)) <= 0)
 		return ssl_set_error(st->ssl, ret);
@@ -706,11 +705,11 @@ int git_openssl_stream_new(git_stream **out, const char *host, const char *port)
 	GITERR_CHECK_ALLOC(st);
 
 	st->io = NULL;
-#ifdef GIT_CURL
+# ifdef GIT_CURL
 	error = git_curl_stream_new(&st->io, host, port);
-#else
+# else
 	error = git_socket_stream_new(&st->io, host, port);
-#endif
+# endif
 
 	if (error < 0)
 		goto out_err;
@@ -762,8 +761,8 @@ int git_openssl__set_cert_location(const char *file, const char *path)
 
 #else
 
-#include "stream.h"
-#include "git2/sys/openssl.h"
+# include "stream.h"
+# include "git2/sys/openssl.h"
 
 int git_openssl_stream_global_init(void)
 {

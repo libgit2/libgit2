@@ -70,54 +70,54 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 	refspec->pattern = is_glob;
 	refspec->src = git__strndup(lhs, llen);
 	flags = GIT_REF_FORMAT_ALLOW_ONELEVEL | GIT_REF_FORMAT_REFSPEC_SHORTHAND
-		| (is_glob ? GIT_REF_FORMAT_REFSPEC_PATTERN : 0);
+	        | (is_glob ? GIT_REF_FORMAT_REFSPEC_PATTERN : 0);
 
 	if (is_fetch) {
 		/*
-			* LHS
-			* - empty is allowed; it means HEAD.
-			* - otherwise it must be a valid looking ref.
-			*/
+		        * LHS
+		        * - empty is allowed; it means HEAD.
+		        * - otherwise it must be a valid looking ref.
+		        */
 		if (!*refspec->src)
-			; /* empty is ok */
+			;/* empty is ok */
 		else if (!git_reference__is_valid_name(refspec->src, flags))
 			goto invalid;
 		/*
-			* RHS
-			* - missing is ok, and is same as empty.
-			* - empty is ok; it means not to store.
-			* - otherwise it must be a valid looking ref.
-			*/
+		        * RHS
+		        * - missing is ok, and is same as empty.
+		        * - empty is ok; it means not to store.
+		        * - otherwise it must be a valid looking ref.
+		        */
 		if (!refspec->dst)
-			; /* ok */
+			;/* ok */
 		else if (!*refspec->dst)
-			; /* ok */
+			;/* ok */
 		else if (!git_reference__is_valid_name(refspec->dst, flags))
 			goto invalid;
 	} else {
 		/*
-			* LHS
-			* - empty is allowed; it means delete.
-			* - when wildcarded, it must be a valid looking ref.
-			* - otherwise, it must be an extended SHA-1, but
-			*   there is no existing way to validate this.
-			*/
+		        * LHS
+		        * - empty is allowed; it means delete.
+		        * - when wildcarded, it must be a valid looking ref.
+		        * - otherwise, it must be an extended SHA-1, but
+		        *   there is no existing way to validate this.
+		        */
 		if (!*refspec->src)
-			; /* empty is ok */
+			;/* empty is ok */
 		else if (is_glob) {
 			if (!git_reference__is_valid_name(refspec->src, flags))
 				goto invalid;
 		}
 		else {
-			; /* anything goes, for now */
+			;	/* anything goes, for now */
 		}
 		/*
-			* RHS
-			* - missing is allowed, but LHS then must be a
-			*   valid looking ref.
-			* - empty is not allowed.
-			* - otherwise it must be a valid looking ref.
-			*/
+		        * RHS
+		        * - missing is allowed, but LHS then must be a
+		        *   valid looking ref.
+		        * - empty is not allowed.
+		        * - otherwise it must be a valid looking ref.
+		        */
 		if (!refspec->dst) {
 			if (!git_reference__is_valid_name(refspec->src, flags))
 				goto invalid;
@@ -140,11 +140,11 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 
 	return 0;
 
- invalid:
-        giterr_set(
-                GITERR_INVALID,
-                "'%s' is not a valid refspec.", input);
-        git_refspec__free(refspec);
+invalid:
+	giterr_set(
+		GITERR_INVALID,
+		"'%s' is not a valid refspec.", input);
+	git_refspec__free(refspec);
 	return -1;
 }
 
@@ -306,7 +306,7 @@ int git_refspec__dwim_one(git_vector *out, git_refspec *spec, git_vector *refs)
 	git_remote_head key;
 	git_refspec *cur;
 
-	const char* formatters[] = {
+	const char*formatters[] = {
 		GIT_REFS_DIR "%s",
 		GIT_REFS_TAGS_DIR "%s",
 		GIT_REFS_HEADS_DIR "%s",

@@ -12,7 +12,7 @@
 #include <wchar.h>
 
 #ifndef WC_ERR_INVALID_CHARS
-# define WC_ERR_INVALID_CHARS	0x80
+# define WC_ERR_INVALID_CHARS   0x80
 #endif
 
 /**

@@ -139,9 +139,9 @@ typedef struct git_stash_apply_options {
 
 #define GIT_STASH_APPLY_OPTIONS_VERSION 1
 #define GIT_STASH_APPLY_OPTIONS_INIT { \
-	GIT_STASH_APPLY_OPTIONS_VERSION, \
-	GIT_STASH_APPLY_DEFAULT, \
-	GIT_CHECKOUT_OPTIONS_INIT }
+		GIT_STASH_APPLY_OPTIONS_VERSION, \
+		GIT_STASH_APPLY_DEFAULT, \
+		GIT_CHECKOUT_OPTIONS_INIT }
 
 /**
  * Initialize git_stash_apply_options structure
@@ -200,7 +200,7 @@ GIT_EXTERN(int) git_stash_apply(
  */
 typedef int (*git_stash_cb)(
 	size_t index,
-	const char* message,
+	const char*message,
 	const git_oid *stash_id,
 	void *payload);
 

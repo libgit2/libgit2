@@ -40,8 +40,8 @@ typedef struct {
 	const char *message;
 	git_signature *sig;
 
-	unsigned int committed :1,
-		remove :1;
+	unsigned int committed : 1,
+	             remove : 1;
 } transaction_node;
 
 struct git_transaction {
@@ -120,7 +120,7 @@ int git_transaction_lock_ref(git_transaction *tx, const char *refname)
 		return error;
 
 	git_strmap_insert(tx->locks, node->name, node, &error);
-	if (error < 0) 
+	if (error < 0)
 		goto cleanup;
 
 	return 0;
@@ -223,7 +223,7 @@ int git_transaction_remove(git_transaction *tx, const char *refname)
 		return error;
 
 	node->remove = true;
-	node->ref_type = GIT_REF_OID; /* the id will be ignored */
+	node->ref_type = GIT_REF_OID;	/* the id will be ignored */
 
 	return 0;
 }
@@ -335,12 +335,12 @@ int git_transaction_commit(git_transaction *tx)
 
 	git_strmap_foreach_value(tx->locks, node, {
 		if (node->reflog) {
-			if ((error = tx->db->backend->reflog_write(tx->db->backend, node->reflog)) < 0)
+		        if ((error = tx->db->backend->reflog_write(tx->db->backend, node->reflog)) < 0)
 				return error;
 		}
 
 		if (node->ref_type != GIT_REF_INVALID) {
-			if ((error = update_target(tx->db, node)) < 0)
+		        if ((error = update_target(tx->db, node)) < 0)
 				return error;
 		}
 	});

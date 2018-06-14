@@ -67,7 +67,7 @@ typedef struct {
 	 * connection to proceed. Returns 0 to allow the connection
 	 * or a negative value to indicate an error.
 	 */
-        git_transport_certificate_check_cb certificate_check;
+	git_transport_certificate_check_cb certificate_check;
 
 	/**
 	 * Payload to be provided to the credentials and certificate

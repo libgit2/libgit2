@@ -66,11 +66,11 @@ typedef struct {
 #define GIT_ITERATOR_OPTIONS_INIT {0}
 
 typedef struct {
-	int (*current)(const git_index_entry **, git_iterator *);
-	int (*advance)(const git_index_entry **, git_iterator *);
-	int (*advance_into)(const git_index_entry **, git_iterator *);
+	int (*current)(const git_index_entry * *, git_iterator *);
+	int (*advance)(const git_index_entry * *, git_iterator *);
+	int (*advance_into)(const git_index_entry * *, git_iterator *);
 	int (*advance_over)(
-		const git_index_entry **, git_iterator_status_t *, git_iterator *);
+		const git_index_entry * *, git_iterator_status_t *, git_iterator *);
 	int (*reset)(git_iterator *);
 	void (*free)(git_iterator *);
 } git_iterator_callbacks;

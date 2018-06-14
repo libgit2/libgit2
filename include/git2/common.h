@@ -12,18 +12,18 @@
 
 #ifdef __cplusplus
 # define GIT_BEGIN_DECL extern "C" {
-# define GIT_END_DECL	}
+# define GIT_END_DECL   }
 #else
- /** Start declarations in C mode */
-# define GIT_BEGIN_DECL /* empty */
- /** End declarations in C mode */
+/** Start declarations in C mode */
+# define GIT_BEGIN_DECL	/* empty */
+/** End declarations in C mode */
 # define GIT_END_DECL	/* empty */
 #endif
 
 #if defined(_MSC_VER) && _MSC_VER < 1800
- GIT_BEGIN_DECL
+GIT_BEGIN_DECL
 # include "inttypes.h"
- GIT_END_DECL
+GIT_END_DECL
 /** This check is needed for importing this file in an iOS/OS X framework throws an error in Xcode otherwise.*/
 #elif !defined(__CLANG_INTTYPES_H)
 # include <inttypes.h>
@@ -40,8 +40,8 @@ typedef size_t size_t;
 /** Declare a public function exported for application use. */
 #if __GNUC__ >= 4
 # define GIT_EXTERN(type) extern \
-			 __attribute__((visibility("default"))) \
-			 type
+	__attribute__((visibility("default"))) \
+	type
 #elif defined(_MSC_VER)
 # define GIT_EXTERN(type) __declspec(dllexport) type
 #else
@@ -51,8 +51,8 @@ typedef size_t size_t;
 /** Declare a function as deprecated. */
 #if defined(__GNUC__)
 # define GIT_DEPRECATED(func) \
-			 __attribute__((deprecated)) \
-			 func
+	__attribute__((deprecated)) \
+	func
 #elif defined(_MSC_VER)
 # define GIT_DEPRECATED(func) __declspec(deprecated) func
 #else
@@ -63,15 +63,15 @@ typedef size_t size_t;
 #ifdef __GNUC__
 # define GIT_FORMAT_PRINTF(a,b) __attribute__((format (printf, a, b)))
 #else
-# define GIT_FORMAT_PRINTF(a,b) /* empty */
+# define GIT_FORMAT_PRINTF(a,b)	/* empty */
 #endif
 
 #if (defined(_WIN32)) && !defined(__CYGWIN__)
-#define GIT_WIN32 1
+# define GIT_WIN32 1
 #endif
 
 #ifdef __amigaos4__
-#include <netinet/in.h>
+# include <netinet/in.h>
 #endif
 
 /**
@@ -90,9 +90,9 @@ GIT_BEGIN_DECL
  * a colon ":" for all other systems.
  */
 #ifdef GIT_WIN32
-#define GIT_PATH_LIST_SEPARATOR ';'
+# define GIT_PATH_LIST_SEPARATOR ';'
 #else
-#define GIT_PATH_LIST_SEPARATOR ':'
+# define GIT_PATH_LIST_SEPARATOR ':'
 #endif
 
 /**
@@ -120,28 +120,28 @@ GIT_EXTERN(void) git_libgit2_version(int *major, int *minor, int *rev);
  * was compiled
  */
 typedef enum {
-  /**
-   * If set, libgit2 was built thread-aware and can be safely used from multiple
-   * threads.
-   */
-	GIT_FEATURE_THREADS	= (1 << 0),
-  /**
-   * If set, libgit2 was built with and linked against a TLS implementation.
-   * Custom TLS streams may still be added by the user to support HTTPS
-   * regardless of this.
-   */
-	GIT_FEATURE_HTTPS	= (1 << 1),
-  /**
-   * If set, libgit2 was built with and linked against libssh2. A custom
-   * transport may still be added by the user to support libssh2 regardless of
-   * this.
-   */
-	GIT_FEATURE_SSH		= (1 << 2),
-  /**
-   * If set, libgit2 was built with support for sub-second resolution in file
-   * modification times.
-   */
-	GIT_FEATURE_NSEC	= (1 << 3),
+	/**
+	 * If set, libgit2 was built thread-aware and can be safely used from multiple
+	 * threads.
+	 */
+	GIT_FEATURE_THREADS     = (1 << 0),
+	/**
+	 * If set, libgit2 was built with and linked against a TLS implementation.
+	 * Custom TLS streams may still be added by the user to support HTTPS
+	 * regardless of this.
+	 */
+	GIT_FEATURE_HTTPS       = (1 << 1),
+	/**
+	 * If set, libgit2 was built with and linked against libssh2. A custom
+	 * transport may still be added by the user to support libssh2 regardless of
+	 * this.
+	 */
+	GIT_FEATURE_SSH         = (1 << 2),
+	/**
+	 * If set, libgit2 was built with support for sub-second resolution in file
+	 * modification times.
+	 */
+	GIT_FEATURE_NSEC        = (1 << 3),
 } git_feature_t;
 
 /**
@@ -289,7 +289,7 @@ typedef enum {
  *		> - `path` is the location of a directory holding several
  *		>   certificates, one per file.
  *		>
- * 		> Either parameter may be `NULL`, but not both.
+ *              > Either parameter may be `NULL`, but not both.
  *
  *	* opts(GIT_OPT_SET_USER_AGENT, const char *user_agent)
  *

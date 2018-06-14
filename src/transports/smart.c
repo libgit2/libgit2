@@ -46,7 +46,7 @@ GIT_INLINE(int) git_smart__reset_stream(transport_smart *t, bool close_subtransp
 	}
 
 	if (close_subtransport &&
-		t->wrapped->close(t->wrapped) < 0)
+	    t->wrapped->close(t->wrapped) < 0)
 		return -1;
 
 	return 0;
@@ -277,7 +277,7 @@ static int git_smart__connect(
 
 	/* If the only ref in the list is capabilities^{} with OID_ZERO, remove it */
 	if (1 == t->refs.length && !strcmp(first->head.name, "capabilities^{}") &&
-		git_oid_iszero(&first->head.oid)) {
+	    git_oid_iszero(&first->head.oid)) {
 		git_vector_clear(&t->refs);
 		git_pkt_free((git_pkt *)first);
 	}
@@ -305,7 +305,7 @@ static int git_smart__ls(const git_remote_head ***out, size_t *size, git_transpo
 		return -1;
 	}
 
-	*out = (const git_remote_head **) t->heads.contents;
+	*out = (const git_remote_head * *) t->heads.contents;
 	*size = t->heads.length;
 
 	return 0;
@@ -414,7 +414,7 @@ static int git_smart__close(git_transport *transport)
 	ret = git_smart__reset_stream(t, true);
 
 	git_vector_foreach(common, i, p)
-		git_pkt_free(p);
+	git_pkt_free(p);
 
 	git_vector_free(common);
 
@@ -443,7 +443,7 @@ static void git_smart__free(git_transport *transport)
 
 	git_vector_free(&t->heads);
 	git_vector_foreach(refs, i, p)
-		git_pkt_free(p);
+	git_pkt_free(p);
 
 	git_vector_free(refs);
 	git__free((char *)t->proxy.url);

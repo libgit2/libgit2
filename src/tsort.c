@@ -16,11 +16,11 @@
  */
 
 #ifndef MAX
-#	define MAX(x,y) (((x) > (y) ? (x) : (y)))
+# define MAX(x,y) (((x) > (y) ? (x) : (y)))
 #endif
 
 #ifndef MIN
-#	define MIN(x,y) (((x) < (y) ? (x) : (y)))
+# define MIN(x,y) (((x) < (y) ? (x) : (y)))
 #endif
 
 static int binsearch(
@@ -52,16 +52,19 @@ static int binsearch(
 	while (1) {
 		const int val = cmp(x, cx, payload);
 		if (val < 0) {
-			if (c - l <= 1) return c;
+			if (c - l <= 1)
+				return c;
 			r = c;
 		} else if (val > 0) {
-			if (r - c <= 1) return c + 1;
+			if (r - c <= 1)
+				return c + 1;
 			l = c;
 			lx = cx;
 		} else {
 			do {
 				cx = dst[++c];
 			} while (cmp(x, cx, payload) == 0);
+
 			return c;
 		}
 		c = l + ((r - l) >> 1);
@@ -86,9 +89,8 @@ static void bisort(
 		/* Else we need to find the right place, shift everything over, and squeeze in */
 		x = dst[i];
 		location = binsearch(dst, x, i, cmp, payload);
-		for (j = (int)i - 1; j >= location; j--) {
+		for (j = (int)i - 1; j >= location; j--)
 			dst[j + 1] = dst[j];
-		}
 		dst[location] = x;
 	}
 }
@@ -139,13 +141,13 @@ static ssize_t count_run(
 
 	if (store->cmp(dst[start], dst[start + 1], store->payload) <= 0) {
 		while (curr < size - 1 &&
-				store->cmp(dst[curr - 1], dst[curr], store->payload) <= 0)
+		       store->cmp(dst[curr - 1], dst[curr], store->payload) <= 0)
 			curr++;
 
 		return curr - start;
 	} else {
 		while (curr < size - 1 &&
-				store->cmp(dst[curr - 1], dst[curr], store->payload) > 0)
+		       store->cmp(dst[curr - 1], dst[curr], store->payload) > 0)
 			curr++;
 
 		/* reverse in-place */
@@ -307,32 +309,33 @@ static ssize_t collapse(void **dst, struct tsort_run *stack, ssize_t stack_curr,
 	return stack_curr;
 }
 
-#define PUSH_NEXT() do {\
-	len = count_run(dst, curr, size, store);\
-	run = minrun;\
-	if (run > (ssize_t)size - curr) run = size - curr;\
-	if (run > len) {\
-		bisort(&dst[curr], len, run, cmp, payload);\
-		len = run;\
-	}\
-	run_stack[stack_curr].start = curr;\
-	run_stack[stack_curr++].length = len;\
-	curr += len;\
-	if (curr == (ssize_t)size) {\
-		/* finish up */ \
-		while (stack_curr > 1) { \
-			merge(dst, run_stack, stack_curr, store); \
-			run_stack[stack_curr - 2].length += run_stack[stack_curr - 1].length; \
-			stack_curr--; \
+#define PUSH_NEXT() do { \
+		len = count_run(dst, curr, size, store); \
+		run = minrun; \
+		if (run > (ssize_t)size - curr) \
+			run = size - curr; \
+		if (run > len) { \
+			bisort(&dst[curr], len, run, cmp, payload); \
+			len = run; \
 		} \
-		if (store->storage != NULL) {\
-			git__free(store->storage);\
-			store->storage = NULL;\
-		}\
-		return;\
-	}\
-}\
-while (0)
+		run_stack[stack_curr].start = curr; \
+		run_stack[stack_curr++].length = len; \
+		curr += len; \
+		if (curr == (ssize_t)size) { \
+			/* finish up */ \
+			while (stack_curr > 1) { \
+				merge(dst, run_stack, stack_curr, store); \
+				run_stack[stack_curr - 2].length += run_stack[stack_curr - 1].length; \
+				stack_curr--; \
+			} \
+			if (store->storage != NULL) { \
+				git__free(store->storage); \
+				store->storage = NULL; \
+			} \
+			return; \
+		} \
+} \
+	while (0)
 
 void git__tsort_r(
 	void **dst, size_t size, git__sort_r_cmp cmp, void *payload)

@@ -85,7 +85,7 @@ GIT_INLINE(int) git_delta(
 }
 
 /* the smallest possible delta size is 4 bytes */
-#define GIT_DELTA_SIZE_MIN	4
+#define GIT_DELTA_SIZE_MIN      4
 
 /**
 * Apply a git binary delta to recover the original content.

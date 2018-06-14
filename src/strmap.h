@@ -17,7 +17,7 @@
 #include "khash.h"
 
 __KHASH_TYPE(str, const char *, void *)
-typedef khash_t(str) git_strmap;
+typedef khash_t (str) git_strmap;
 typedef khiter_t git_strmap_iter;
 
 int git_strmap_alloc(git_strmap **map);
@@ -42,15 +42,15 @@ int git_strmap_put(git_strmap *map, const char *key, int *err);
 void git_strmap_insert(git_strmap *map, const char *key, void *value, int *rval);
 void git_strmap_delete(git_strmap *map, const char *key);
 
-#define git_strmap_foreach		kh_foreach
-#define git_strmap_foreach_value	kh_foreach_value
+#define git_strmap_foreach              kh_foreach
+#define git_strmap_foreach_value        kh_foreach_value
 
-#define git_strmap_begin		kh_begin
-#define git_strmap_end		kh_end
+#define git_strmap_begin                kh_begin
+#define git_strmap_end          kh_end
 
 int git_strmap_next(
 	void **data,
-	git_strmap_iter* iter,
+	git_strmap_iter*iter,
 	git_strmap *map);
 
 #endif

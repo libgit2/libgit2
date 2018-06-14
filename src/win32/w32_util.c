@@ -29,7 +29,7 @@ bool git_win32__findfirstfile_filter(git_win32_path dest, const char *src)
 	 * helper, because we want to remove the backslash even for
 	 * drive letter paths, in this case. */
 	if (len > 0 &&
-		(dest[len - 1] == L'/' || dest[len - 1] == L'\\')) {
+	    (dest[len - 1] == L'/' || dest[len - 1] == L'\\')) {
 		dest[len - 1] = L'\0';
 		len--;
 	}
@@ -136,20 +136,20 @@ size_t git_win32__canonicalize_path(wchar_t *str, size_t len)
 
 	/* "\??\" -- DOS Devices prefix */
 	if (len >= CONST_STRLEN(dosdevices_prefix) &&
-		!wcsncmp(str, dosdevices_prefix, CONST_STRLEN(dosdevices_prefix))) {
+	    !wcsncmp(str, dosdevices_prefix, CONST_STRLEN(dosdevices_prefix))) {
 		to_advance += CONST_STRLEN(dosdevices_prefix);
 		len -= CONST_STRLEN(dosdevices_prefix);
 	}
 	/* "\\?\" -- NT namespace prefix */
 	else if (len >= CONST_STRLEN(nt_prefix) &&
-		!wcsncmp(str, nt_prefix, CONST_STRLEN(nt_prefix))) {
+	         !wcsncmp(str, nt_prefix, CONST_STRLEN(nt_prefix))) {
 		to_advance += CONST_STRLEN(nt_prefix);
 		len -= CONST_STRLEN(nt_prefix);
 	}
 
 	/* "\??\UNC\", "\\?\UNC\" -- UNC prefix */
 	if (to_advance && len >= CONST_STRLEN(unc_prefix) &&
-		!wcsncmp(str + to_advance, unc_prefix, CONST_STRLEN(unc_prefix))) {
+	    !wcsncmp(str + to_advance, unc_prefix, CONST_STRLEN(unc_prefix))) {
 		to_advance += CONST_STRLEN(unc_prefix);
 		len -= CONST_STRLEN(unc_prefix);
 	}

@@ -125,7 +125,7 @@ char *git_oid_tostr(char *out, size_t n, const git_oid *oid)
 	if (n > GIT_OID_HEXSZ + 1)
 		n = GIT_OID_HEXSZ + 1;
 
-	git_oid_nfmt(out, n - 1, oid); /* allow room for terminating NUL */
+	git_oid_nfmt(out, n - 1, oid);	/* allow room for terminating NUL */
 	out[n - 1] = '\0';
 
 	return out;
@@ -201,7 +201,8 @@ int git_oid_ncmp(const git_oid *oid_a, const git_oid *oid_b, size_t len)
 		a++;
 		b++;
 		len -= 2;
-	};
+	}
+	;
 
 	if (len)
 		if ((*a ^ *b) & 0xf0)
@@ -287,8 +288,8 @@ static trie_node *push_leaf(git_oid_shorten *os, node_index idx, int push_at, co
 
 	if (os->node_count == SHRT_MAX) {
 		os->full = 1;
-        return NULL;
-    }
+		return NULL;
+	}
 
 	node = &os->nodes[idx];
 	node->children[push_at] = -idx_leaf;

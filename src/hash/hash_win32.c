@@ -13,7 +13,9 @@
 #include <wincrypt.h>
 #include <strsafe.h>
 
-static struct git_hash_prov hash_prov = {0};
+static struct git_hash_prov hash_prov = {
+	0
+};
 
 /* Hash initialization */
 
@@ -31,22 +33,22 @@ GIT_INLINE(int) hash_cng_prov_init(void)
 
 	/* Load bcrypt.dll explicitly from the system directory */
 	if ((dll_path_len = GetSystemDirectory(dll_path, MAX_PATH)) == 0 ||
-		dll_path_len > MAX_PATH ||
-		StringCchCat(dll_path, MAX_PATH, "\\") < 0 ||
-		StringCchCat(dll_path, MAX_PATH, GIT_HASH_CNG_DLL_NAME) < 0 ||
-		(hash_prov.prov.cng.dll = LoadLibrary(dll_path)) == NULL) {
+	    dll_path_len > MAX_PATH ||
+	    StringCchCat(dll_path, MAX_PATH, "\\") < 0 ||
+	    StringCchCat(dll_path, MAX_PATH, GIT_HASH_CNG_DLL_NAME) < 0 ||
+	    (hash_prov.prov.cng.dll = LoadLibrary(dll_path)) == NULL) {
 		giterr_set(GITERR_SHA1, "CryptoNG library could not be loaded");
 		return -1;
 	}
 
 	/* Load the function addresses */
 	if ((hash_prov.prov.cng.open_algorithm_provider = (hash_win32_cng_open_algorithm_provider_fn)GetProcAddress(hash_prov.prov.cng.dll, "BCryptOpenAlgorithmProvider")) == NULL ||
-		(hash_prov.prov.cng.get_property = (hash_win32_cng_get_property_fn)GetProcAddress(hash_prov.prov.cng.dll, "BCryptGetProperty")) == NULL ||
-		(hash_prov.prov.cng.create_hash = (hash_win32_cng_create_hash_fn)GetProcAddress(hash_prov.prov.cng.dll, "BCryptCreateHash")) == NULL ||
-		(hash_prov.prov.cng.finish_hash = (hash_win32_cng_finish_hash_fn)GetProcAddress(hash_prov.prov.cng.dll, "BCryptFinishHash")) == NULL ||
-		(hash_prov.prov.cng.hash_data = (hash_win32_cng_hash_data_fn)GetProcAddress(hash_prov.prov.cng.dll, "BCryptHashData")) == NULL ||
-		(hash_prov.prov.cng.destroy_hash = (hash_win32_cng_destroy_hash_fn)GetProcAddress(hash_prov.prov.cng.dll, "BCryptDestroyHash")) == NULL ||
-		(hash_prov.prov.cng.close_algorithm_provider = (hash_win32_cng_close_algorithm_provider_fn)GetProcAddress(hash_prov.prov.cng.dll, "BCryptCloseAlgorithmProvider")) == NULL) {
+	    (hash_prov.prov.cng.get_property = (hash_win32_cng_get_property_fn)GetProcAddress(hash_prov.prov.cng.dll, "BCryptGetProperty")) == NULL ||
+	    (hash_prov.prov.cng.create_hash = (hash_win32_cng_create_hash_fn)GetProcAddress(hash_prov.prov.cng.dll, "BCryptCreateHash")) == NULL ||
+	    (hash_prov.prov.cng.finish_hash = (hash_win32_cng_finish_hash_fn)GetProcAddress(hash_prov.prov.cng.dll, "BCryptFinishHash")) == NULL ||
+	    (hash_prov.prov.cng.hash_data = (hash_win32_cng_hash_data_fn)GetProcAddress(hash_prov.prov.cng.dll, "BCryptHashData")) == NULL ||
+	    (hash_prov.prov.cng.destroy_hash = (hash_win32_cng_destroy_hash_fn)GetProcAddress(hash_prov.prov.cng.dll, "BCryptDestroyHash")) == NULL ||
+	    (hash_prov.prov.cng.close_algorithm_provider = (hash_win32_cng_close_algorithm_provider_fn)GetProcAddress(hash_prov.prov.cng.dll, "BCryptCloseAlgorithmProvider")) == NULL) {
 		FreeLibrary(hash_prov.prov.cng.dll);
 
 		giterr_set(GITERR_OS, "CryptoNG functions could not be loaded");
@@ -105,7 +107,7 @@ static void git_hash_global_shutdown(void)
 {
 	if (hash_prov.type == CNG)
 		hash_cng_prov_shutdown();
-	else if(hash_prov.type == CRYPTOAPI)
+	else if (hash_prov.type == CRYPTOAPI)
 		hash_cryptoapi_prov_shutdown();
 }
 
@@ -314,6 +316,6 @@ void git_hash_ctx_cleanup(git_hash_ctx *ctx)
 
 	if (ctx->type == CNG)
 		hash_ctx_cng_cleanup(ctx);
-	else if(ctx->type == CRYPTOAPI)
+	else if (ctx->type == CRYPTOAPI)
 		hash_ctx_cryptoapi_cleanup(ctx);
 }

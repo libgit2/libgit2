@@ -19,7 +19,7 @@
 #include "khash.h"
 
 __KHASH_TYPE(oid, const git_oid *, void *)
-typedef khash_t(oid) git_oidmap;
+typedef khash_t (oid) git_oidmap;
 
 git_oidmap *git_oidmap_alloc(void);
 void git_oidmap_free(git_oidmap *map);
@@ -45,7 +45,7 @@ void git_oidmap_delete(git_oidmap *map, const git_oid *key);
 
 #define git_oidmap_foreach_value kh_foreach_value
 
-#define git_oidmap_begin	kh_begin
-#define git_oidmap_end		kh_end
+#define git_oidmap_begin        kh_begin
+#define git_oidmap_end          kh_end
 
 #endif

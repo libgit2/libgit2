@@ -47,7 +47,7 @@ static int lock_file(git_filebuf *file, int flags, mode_t mode)
 		if (flags & GIT_FILEBUF_FORCE)
 			p_unlink(file->path_lock);
 		else {
-			giterr_clear(); /* actual OS error code just confuses */
+			giterr_clear();	/* actual OS error code just confuses */
 			giterr_set(GITERR_OS,
 				"failed to lock file '%s' for writing", file->path_lock);
 			return GIT_ELOCKED;
@@ -185,7 +185,6 @@ static int write_deflate(git_filebuf *file, void *source, size_t len)
 				file->last_error = BUFERR_WRITE;
 				return -1;
 			}
-
 		} while (zs->avail_out == 0);
 
 		assert(zs->avail_in == 0);
@@ -547,11 +546,10 @@ int git_filebuf_printf(git_filebuf *file, const char *format, ...)
 			return -1;
 
 		space_left = file->buf_size - file->buf_pos;
-
 	} while (len + 1 <= space_left);
 
 	if (GIT_ADD_SIZET_OVERFLOW(&alloclen, len, 1) ||
-		!(tmp_buffer = git__malloc(alloclen))) {
+	    !(tmp_buffer = git__malloc(alloclen))) {
 		file->last_error = BUFERR_MEM;
 		return -1;
 	}

@@ -8,19 +8,19 @@
 #include "w32_stack.h"
 
 #if defined(GIT_MSVC_CRTDBG)
-#include "Windows.h"
-#include "Dbghelp.h"
-#include "win32/posix.h"
-#include "hash.h"
+# include "Windows.h"
+# include "Dbghelp.h"
+# include "win32/posix.h"
+# include "hash.h"
 
 /**
  * This is supposedly defined in WinBase.h (from Windows.h) but there were linker issues.
  */
-USHORT WINAPI RtlCaptureStackBackTrace(ULONG, ULONG, PVOID*, PULONG);
+USHORT WINAPI RtlCaptureStackBackTrace(ULONG, ULONG, PVOID *, PULONG);
 
-static bool   g_win32_stack_initialized = false;
+static bool g_win32_stack_initialized = false;
 static HANDLE g_win32_stack_process = INVALID_HANDLE_VALUE;
-static git_win32__stack__aux_cb_alloc  g_aux_cb_alloc  = NULL;
+static git_win32__stack__aux_cb_alloc g_aux_cb_alloc  = NULL;
 static git_win32__stack__aux_cb_lookup g_aux_cb_lookup = NULL;
 
 int git_win32__stack__set_aux_cb(
@@ -85,7 +85,7 @@ int git_win32__stack_format(
 	const git_win32__stack__raw_data *pdata,
 	const char *prefix, const char *suffix)
 {
-#define MY_MAX_FILENAME 255
+# define MY_MAX_FILENAME 255
 
 	/* SYMBOL_INFO has char FileName[1] at the end.  The docs say to
 	 * to malloc it with extra space for your desired max filename.
@@ -98,7 +98,7 @@ int git_win32__stack_format(
 	IMAGEHLP_LINE64 line;
 	int buf_used = 0;
 	unsigned int k;
-	char detail[MY_MAX_FILENAME * 2]; /* filename plus space for function name and formatting */
+	char detail[MY_MAX_FILENAME * 2];	/* filename plus space for function name and formatting */
 	int detail_len;
 
 	if (!g_win32_stack_initialized) {
@@ -120,19 +120,19 @@ int git_win32__stack_format(
 	memset(&line, 0, sizeof(line));
 	line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
 
-	for (k=0; k < pdata->nr_frames; k++) {
+	for (k = 0; k < pdata->nr_frames; k++) {
 		DWORD64 frame_k = (DWORD64)pdata->frames[k];
 		DWORD dwUnused;
 
 		if (SymFromAddr(g_win32_stack_process, frame_k, 0, &s.symbol) &&
-			SymGetLineFromAddr64(g_win32_stack_process, frame_k, &dwUnused, &line)) {
+		    SymGetLineFromAddr64(g_win32_stack_process, frame_k, &dwUnused, &line)) {
 			const char *pslash;
 			const char *pfile;
 
 			pslash = strrchr(line.FileName, '\\');
 			pfile = ((pslash) ? (pslash+1) : line.FileName);
 			p_snprintf(detail, sizeof(detail), "%s%s:%d> %s%s",
-					   prefix, pfile, line.LineNumber, s.symbol.Name, suffix);
+				           prefix, pfile, line.LineNumber, s.symbol.Name, suffix);
 		} else {
 			/* This happens when we cross into another module.
 			 * For example, in CLAR tests, this is typically
@@ -157,7 +157,7 @@ int git_win32__stack_format(
 	 */
 	if (pdata->aux_id > 0) {
 		p_snprintf(detail, sizeof(detail), "%saux_id: %d%s",
-				   prefix, pdata->aux_id, suffix);
+			           prefix, pdata->aux_id, suffix);
 		detail_len = strlen(detail);
 		if ((buf_used + detail_len + 1) < buf_len) {
 			memcpy(&pbuf[buf_used], detail, detail_len);
@@ -176,7 +176,7 @@ int git_win32__stack_format(
 }
 
 int git_win32__stack(
-	char * pbuf, int buf_len,
+	char *pbuf, int buf_len,
 	int skip,
 	const char *prefix, const char *suffix)
 {

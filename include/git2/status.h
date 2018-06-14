@@ -157,8 +157,8 @@ typedef enum {
 
 #define GIT_STATUS_OPT_DEFAULTS \
 	(GIT_STATUS_OPT_INCLUDE_IGNORED | \
-	GIT_STATUS_OPT_INCLUDE_UNTRACKED | \
-	GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS)
+	 GIT_STATUS_OPT_INCLUDE_UNTRACKED | \
+	 GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS)
 
 /**
  * Options to control how `git_status_foreach_ext()` will issue callbacks.
@@ -180,10 +180,10 @@ typedef enum {
  * and index; defaults to HEAD.
  */
 typedef struct {
-	unsigned int      version;
+	unsigned int version;
 	git_status_show_t show;
-	unsigned int      flags;
-	git_strarray      pathspec;
+	unsigned int flags;
+	git_strarray pathspec;
 	git_tree          *baseline;
 } git_status_options;
 

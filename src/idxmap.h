@@ -22,8 +22,8 @@
 __KHASH_TYPE(idx, const git_index_entry *, git_index_entry *)
 __KHASH_TYPE(idxicase, const git_index_entry *, git_index_entry *)
 
-typedef khash_t(idx) git_idxmap;
-typedef khash_t(idxicase) git_idxmap_icase;
+typedef khash_t (idx) git_idxmap;
+typedef khash_t (idxicase) git_idxmap_icase;
 
 typedef khiter_t git_idxmap_iter;
 
@@ -49,7 +49,7 @@ void git_idxmap_icase_delete_at(git_idxmap_icase *map, size_t idx);
 void git_idxmap_delete(git_idxmap *map, const git_index_entry *key);
 void git_idxmap_icase_delete(git_idxmap_icase *map, const git_index_entry *key);
 
-#define git_idxmap_begin		kh_begin
-#define git_idxmap_end		kh_end
+#define git_idxmap_begin                kh_begin
+#define git_idxmap_end          kh_end
 
 #endif

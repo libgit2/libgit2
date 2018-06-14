@@ -60,7 +60,7 @@ int git_blob_create_frombuffer(
 	assert(id && repo);
 
 	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||
-		(error = git_odb_open_wstream(&stream, odb, len, GIT_OBJ_BLOB)) < 0)
+	    (error = git_odb_open_wstream(&stream, odb, len, GIT_OBJ_BLOB)) < 0)
 		return error;
 
 	if ((error = git_odb_stream_write(stream, buffer, len)) == 0)
@@ -80,7 +80,7 @@ static int write_file_stream(
 	git_off_t written = 0;
 
 	if ((error = git_odb_open_wstream(
-			&stream, odb, file_size, GIT_OBJ_BLOB)) < 0)
+		        &stream, odb, file_size, GIT_OBJ_BLOB)) < 0)
 		return error;
 
 	if ((fd = git_futils_open_ro(path)) < 0) {
@@ -175,14 +175,14 @@ int git_blob__create_from_paths(
 			return GIT_EBAREREPO;
 
 		if (git_buf_joinpath(
-				&path, git_repository_workdir(repo), hint_path) < 0)
+			        &path, git_repository_workdir(repo), hint_path) < 0)
 			return -1;
 
 		content_path = path.ptr;
 	}
 
 	if ((error = git_path_lstat(content_path, &st)) < 0 ||
-		(error = git_repository_odb(&odb, repo)) < 0)
+	    (error = git_repository_odb(&odb, repo)) < 0)
 		goto done;
 
 	if (S_ISDIR(st.st_mode)) {
@@ -327,11 +327,11 @@ int git_blob_create_fromstream(git_writestream **out, git_repository *repo, cons
 	stream->parent.free  = blob_writestream_free;
 
 	if ((error = git_repository_item_path(&path, repo, GIT_REPOSITORY_ITEM_OBJECTS)) < 0
-		|| (error = git_buf_joinpath(&path, path.ptr, "streamed")) < 0)
+	    || (error = git_buf_joinpath(&path, path.ptr, "streamed")) < 0)
 		goto cleanup;
 
 	if ((error = git_filebuf_open_withsize(&stream->fbuf, git_buf_cstr(&path), GIT_FILEBUF_TEMPORARY,
-					       0666, 2 * 1024 * 1024)) < 0)
+		                               0666, 2 * 1024 * 1024)) < 0)
 		goto cleanup;
 
 	*out = (git_writestream *) stream;
@@ -358,12 +358,11 @@ int git_blob_create_fromstream_commit(git_oid *out, git_writestream *_stream)
 		goto cleanup;
 
 	error = git_blob__create_from_paths(out, NULL, stream->repo, stream->fbuf.path_lock,
-					    stream->hintpath, 0, !!stream->hintpath);
+		                            stream->hintpath, 0, !!stream->hintpath);
 
 cleanup:
 	blob_writestream_free(_stream);
 	return error;
-
 }
 
 int git_blob_is_binary(const git_blob *blob)
@@ -395,8 +394,8 @@ int git_blob_filtered_content(
 		return 0;
 
 	if (!(error = git_filter_list_load(
-			&fl, git_blob_owner(blob), blob, path,
-			GIT_FILTER_TO_WORKTREE, GIT_FILTER_DEFAULT))) {
+		        &fl, git_blob_owner(blob), blob, path,
+		        GIT_FILTER_TO_WORKTREE, GIT_FILTER_DEFAULT))) {
 
 		error = git_filter_list_apply_to_blob(out, fl, blob);
 

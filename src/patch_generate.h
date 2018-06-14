@@ -27,7 +27,7 @@ enum {
 struct git_patch_generated {
 	struct git_patch base;
 
-	git_diff *diff; /* for refcount purposes, maybe NULL for blob diffs */
+	git_diff *diff;	/* for refcount purposes, maybe NULL for blob diffs */
 	size_t delta_index;
 	git_diff_file_content ofile;
 	git_diff_file_content nfile;
@@ -40,11 +40,11 @@ typedef struct git_patch_generated git_patch_generated;
 extern git_diff_driver *git_patch_generated_driver(git_patch_generated *);
 
 extern void git_patch_generated_old_data(
-	char **, size_t *, git_patch_generated *);
+	char * *, size_t *, git_patch_generated *);
 extern void git_patch_generated_new_data(
-	char **, size_t *, git_patch_generated *);
+	char * *, size_t *, git_patch_generated *);
 extern int git_patch_generated_from_diff(
-	git_patch **, git_diff *, size_t);
+	git_patch * *, git_diff *, size_t);
 
 typedef struct git_patch_generated_output git_patch_generated_output;
 

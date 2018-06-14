@@ -31,12 +31,12 @@ typedef struct git_pool_page git_pool_page;
  * For examples of how to set up a `git_pool` see `git_pool_init`.
  */
 typedef struct {
-	git_pool_page *pages; /* allocated pages */
-	uint32_t item_size;  /* size of single alloc unit in bytes */
-	uint32_t page_size;  /* size of page in bytes */
+	git_pool_page *pages;	/* allocated pages */
+	uint32_t item_size;	/* size of single alloc unit in bytes */
+	uint32_t page_size;	/* size of page in bytes */
 } git_pool;
 
-#define GIT_POOL_INIT { NULL, 0, 0 }
+# define GIT_POOL_INIT { NULL, 0, 0 }
 
 #else
 
@@ -61,7 +61,7 @@ typedef struct {
 	uint32_t page_size;
 } git_pool;
 
-#define GIT_POOL_INIT { GIT_VECTOR_INIT, 0, 0 }
+# define GIT_POOL_INIT { GIT_VECTOR_INIT, 0, 0 }
 
 #endif
 

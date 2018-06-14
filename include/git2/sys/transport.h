@@ -67,7 +67,7 @@ struct git_transport {
 		git_transport *transport);
 
 	/* Executes the push whose context is in the git_push object. */
-	int(*push)(git_transport *transport, git_push *push, const git_remote_callbacks *callbacks);
+	int (*push)(git_transport *transport, git_push *push, const git_remote_callbacks *callbacks);
 
 	/* This function may be called after a successful call to connect(), when
 	 * the direction is FETCH. The function performs a negotiation to calculate
@@ -75,7 +75,7 @@ struct git_transport {
 	int (*negotiate_fetch)(
 		git_transport *transport,
 		git_repository *repo,
-		const git_remote_head * const *refs,
+		const git_remote_head *const *refs,
 		size_t count);
 
 	/* This function may be called after a successful call to negotiate_fetch(),
@@ -304,11 +304,11 @@ struct git_smart_subtransport_stream {
 /* An implementation of a subtransport which carries data for the
  * smart transport */
 struct git_smart_subtransport {
-	int (* action)(
-			git_smart_subtransport_stream **out,
-			git_smart_subtransport *transport,
-			const char *url,
-			git_smart_service_t action);
+	int (*action)(
+		git_smart_subtransport_stream **out,
+		git_smart_subtransport *transport,
+		const char *url,
+		git_smart_service_t action);
 
 	/* Subtransports are guaranteed a call to close() between
 	 * calls to action(), except for the following two "natural" progressions
@@ -324,8 +324,8 @@ struct git_smart_subtransport {
 /* A function which creates a new subtransport for the smart transport */
 typedef int (*git_smart_subtransport_cb)(
 	git_smart_subtransport **out,
-	git_transport* owner,
-	void* param);
+	git_transport*owner,
+	void*param);
 
 /**
  * Definition for a "subtransport"
@@ -345,7 +345,7 @@ typedef struct git_smart_subtransport_definition {
 
 	/** Param of the callback
 	 */
-	void* param;
+	void*param;
 } git_smart_subtransport_definition;
 
 /* Smart transport subtransports that come with libgit2 */

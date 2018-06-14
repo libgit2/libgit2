@@ -14,26 +14,26 @@
 #include "index.h"
 
 enum {
-	GIT_DIFFCAPS_HAS_SYMLINKS     = (1 << 0), /* symlinks on platform? */
-	GIT_DIFFCAPS_IGNORE_STAT      = (1 << 1), /* use stat? */
-	GIT_DIFFCAPS_TRUST_MODE_BITS  = (1 << 2), /* use st_mode? */
-	GIT_DIFFCAPS_TRUST_CTIME      = (1 << 3), /* use st_ctime? */
-	GIT_DIFFCAPS_USE_DEV          = (1 << 4), /* use st_dev? */
+	GIT_DIFFCAPS_HAS_SYMLINKS     = (1 << 0),	/* symlinks on platform? */
+	GIT_DIFFCAPS_IGNORE_STAT      = (1 << 1),	/* use stat? */
+	GIT_DIFFCAPS_TRUST_MODE_BITS  = (1 << 2),	/* use st_mode? */
+	GIT_DIFFCAPS_TRUST_CTIME      = (1 << 3),	/* use st_ctime? */
+	GIT_DIFFCAPS_USE_DEV          = (1 << 4),	/* use st_dev? */
 };
 
 #define DIFF_FLAGS_KNOWN_BINARY (GIT_DIFF_FLAG_BINARY|GIT_DIFF_FLAG_NOT_BINARY)
 #define DIFF_FLAGS_NOT_BINARY   (GIT_DIFF_FLAG_NOT_BINARY|GIT_DIFF_FLAG__NO_DATA)
 
 enum {
-	GIT_DIFF_FLAG__FREE_PATH  = (1 << 7),  /* `path` is allocated memory */
-	GIT_DIFF_FLAG__FREE_DATA  = (1 << 8),  /* internal file data is allocated */
-	GIT_DIFF_FLAG__UNMAP_DATA = (1 << 9),  /* internal file data is mmap'ed */
-	GIT_DIFF_FLAG__NO_DATA    = (1 << 10), /* file data should not be loaded */
-	GIT_DIFF_FLAG__FREE_BLOB  = (1 << 11), /* release the blob when done */
-	GIT_DIFF_FLAG__LOADED     = (1 << 12), /* file data has been loaded */
+	GIT_DIFF_FLAG__FREE_PATH  = (1 << 7),	/* `path` is allocated memory */
+	GIT_DIFF_FLAG__FREE_DATA  = (1 << 8),	/* internal file data is allocated */
+	GIT_DIFF_FLAG__UNMAP_DATA = (1 << 9),	/* internal file data is mmap'ed */
+	GIT_DIFF_FLAG__NO_DATA    = (1 << 10),	/* file data should not be loaded */
+	GIT_DIFF_FLAG__FREE_BLOB  = (1 << 11),	/* release the blob when done */
+	GIT_DIFF_FLAG__LOADED     = (1 << 12),	/* file data has been loaded */
 
-	GIT_DIFF_FLAG__TO_DELETE  = (1 << 16), /* delete entry during rename det. */
-	GIT_DIFF_FLAG__TO_SPLIT   = (1 << 17), /* split entry during rename det. */
+	GIT_DIFF_FLAG__TO_DELETE  = (1 << 16),	/* delete entry during rename det. */
+	GIT_DIFF_FLAG__TO_SPLIT   = (1 << 17),	/* split entry during rename det. */
 	GIT_DIFF_FLAG__IS_RENAME_TARGET = (1 << 18),
 	GIT_DIFF_FLAG__IS_RENAME_SOURCE = (1 << 19),
 	GIT_DIFF_FLAG__HAS_SELF_SIMILARITY = (1 << 20),

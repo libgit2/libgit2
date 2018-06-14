@@ -17,7 +17,7 @@ typedef uint64_t hashsig_state;
 #define HASHSIG_SCALE 100
 
 #define HASHSIG_MAX_RUN 80
-#define HASHSIG_HASH_START	0x012345678ABCDEF0LL
+#define HASHSIG_HASH_START      0x012345678ABCDEF0LL
 #define HASHSIG_HASH_SHIFT  5
 
 #define HASHSIG_HASH_MIX(S,CH) \
@@ -125,7 +125,6 @@ static void hashsig_heap_insert(hashsig_heap *h, hashsig_t val)
 		h->values[0] = h->values[h->size];
 		hashsig_heap_down(h, 0);
 	}
-
 }
 
 typedef struct {
@@ -169,14 +168,14 @@ static int hashsig_add_hashes(
 	while (scan < end) {
 		state = HASHSIG_HASH_START;
 
-		for (len = 0; scan < end && len < HASHSIG_MAX_RUN; ) {
+		for (len = 0; scan < end && len < HASHSIG_MAX_RUN;) {
 			ch = *scan;
 
 			if (use_ignores)
 				for (; scan < end && git__isspace_nonlf(ch); ch = *scan)
 					++scan;
 			else if (sig->opt &
-					 (GIT_HASHSIG_IGNORE_WHITESPACE | GIT_HASHSIG_SMART_WHITESPACE))
+			         (GIT_HASHSIG_IGNORE_WHITESPACE | GIT_HASHSIG_SMART_WHITESPACE))
 				for (; scan < end && ch == '\r'; ch = *scan)
 					++scan;
 
@@ -215,7 +214,7 @@ static int hashsig_add_hashes(
 static int hashsig_finalize_hashes(git_hashsig *sig)
 {
 	if (sig->mins.size < HASHSIG_HEAP_MIN_SIZE &&
-		!(sig->opt & GIT_HASHSIG_ALLOW_SMALL_FILES)) {
+	    !(sig->opt & GIT_HASHSIG_ALLOW_SMALL_FILES)) {
 		giterr_set(GITERR_INVALID,
 			"file too small for similarity signature calculation");
 		return GIT_EBUFS;
@@ -322,7 +321,7 @@ static int hashsig_heap_compare(const hashsig_heap *a, const hashsig_heap *b)
 
 	/* hash heaps are sorted - just look for overlap vs total */
 
-	for (i = 0, j = 0; i < a->size && j < b->size; ) {
+	for (i = 0, j = 0; i < a->size && j < b->size;) {
 		cmp = a->cmp(&a->values[i], &b->values[j], NULL);
 
 		if (cmp < 0)
@@ -330,7 +329,7 @@ static int hashsig_heap_compare(const hashsig_heap *a, const hashsig_heap *b)
 		else if (cmp > 0)
 			++j;
 		else {
-			++i; ++j; ++matches;
+			++i;++j;++matches;
 		}
 	}
 
@@ -345,7 +344,7 @@ int git_hashsig_compare(const git_hashsig *a, const git_hashsig *b)
 	 */
 	if (a->mins.size == 0 && b->mins.size == 0) {
 		if ((!a->lines && !b->lines) ||
-			(a->opt & GIT_HASHSIG_IGNORE_WHITESPACE))
+		    (a->opt & GIT_HASHSIG_IGNORE_WHITESPACE))
 			return HASHSIG_SCALE;
 		else
 			return 0;
@@ -358,5 +357,5 @@ int git_hashsig_compare(const git_hashsig *a, const git_hashsig *b)
 		return hashsig_heap_compare(&a->mins, &b->mins);
 	else
 		return (hashsig_heap_compare(&a->mins, &b->mins) +
-				hashsig_heap_compare(&a->maxs, &b->maxs)) / 2;
+		        hashsig_heap_compare(&a->maxs, &b->maxs)) / 2;
 }

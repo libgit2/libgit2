@@ -62,12 +62,12 @@ typedef enum {
  * An entry in a configuration file
  */
 typedef struct git_config_entry {
-	const char *name; /**< Name of the entry (normalised) */
-	const char *value; /**< String value of the entry */
-	unsigned int include_depth; /**< Depth of includes where this variable was found */
-	git_config_level_t level; /**< Which config file this was found in */
-	void (*free)(struct git_config_entry *entry); /**< Free function for this entry */
-	void *payload; /**< Opaque value for the free function. Do not read or write */
+	const char *name;	/**< Name of the entry (normalised) */
+	const char *value;	/**< String value of the entry */
+	unsigned int include_depth;	/**< Depth of includes where this variable was found */
+	git_config_level_t level;	/**< Which config file this was found in */
+	void (*free)(struct git_config_entry *entry);	/**< Free function for this entry */
+	void *payload;	/**< Opaque value for the free function. Do not read or write */
 } git_config_entry;
 
 /**
@@ -75,7 +75,7 @@ typedef struct git_config_entry {
  */
 GIT_EXTERN(void) git_config_entry_free(git_config_entry *);
 
-typedef int  (*git_config_foreach_cb)(const git_config_entry *, void *);
+typedef int (*git_config_foreach_cb)(const git_config_entry *, void *);
 typedef struct git_config_iterator git_config_iterator;
 
 /**

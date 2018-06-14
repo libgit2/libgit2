@@ -104,7 +104,7 @@ void git_strmap_delete(git_strmap *map, const char *key)
 
 int git_strmap_next(
 	void **data,
-	git_strmap_iter* iter,
+	git_strmap_iter*iter,
 	git_strmap *map)
 {
 	if (!map)

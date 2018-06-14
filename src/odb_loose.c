@@ -24,9 +24,9 @@
 /* maximum possible header length */
 #define MAX_HEADER_LEN 64
 
-typedef struct { /* object header data */
-	git_otype type; /* object type */
-	size_t	size; /* object size */
+typedef struct {/* object header data */
+	git_otype type;	/* object type */
+	size_t size;	/* object size */
 } obj_hdr;
 
 typedef struct {
@@ -46,8 +46,8 @@ typedef struct {
 typedef struct loose_backend {
 	git_odb_backend parent;
 
-	int object_zlib_level; /** loose object zlib compression level. */
-	int fsync_object_files; /** loose object file fsync flag. */
+	int object_zlib_level;	/** loose object zlib compression level. */
+	int fsync_object_files;	/** loose object file fsync flag. */
 	mode_t object_file_mode;
 	mode_t object_dir_mode;
 
@@ -60,7 +60,7 @@ typedef struct loose_backend {
  */
 typedef struct {
 	size_t dir_len;
-	unsigned char short_oid[GIT_OID_HEXSZ]; /* hex formatted oid to match */
+	unsigned char short_oid[GIT_OID_HEXSZ];	/* hex formatted oid to match */
 	size_t short_oid_len;
 	int found;				/* number of matching
 						 * objects already found */
@@ -144,7 +144,7 @@ on_error:
 
 static int parse_header(
 	obj_hdr *out,
-       	size_t *out_len,
+	size_t *out_len,
 	const unsigned char *_data,
 	size_t data_len)
 {
@@ -155,10 +155,9 @@ static int parse_header(
 	*out_len = 0;
 
 	/* find the object type name */
-	for (i = 0, typename_len = 0; i < data_len; i++, typename_len++) {
+	for (i = 0, typename_len = 0; i < data_len; i++, typename_len++)
 		if (data[i] == ' ')
 			break;
-	}
 
 	if (typename_len == data_len)
 		goto on_error;
@@ -166,16 +165,15 @@ static int parse_header(
 	out->type = git_object_stringn2type(data, typename_len);
 
 	size_idx = typename_len + 1;
-	for (i = size_idx, size_len = 0; i < data_len; i++, size_len++) {
+	for (i = size_idx, size_len = 0; i < data_len; i++, size_len++)
 		if (data[i] == '\0')
 			break;
-	}
 
 	if (i == data_len)
 		goto on_error;
 
 	if (git__strntol64(&size, &data[size_idx], size_len, NULL, 10) < 0 ||
-		size < 0)
+	    size < 0)
 		goto on_error;
 
 	if ((uint64_t)size > SIZE_MAX) {
@@ -253,7 +251,7 @@ static int read_loose_packlike(git_rawobj *out, git_buf *obj)
 	 * allocate a buffer and inflate the data into it
 	 */
 	if (GIT_ADD_SIZET_OVERFLOW(&alloc_size, hdr.size, 1) ||
-		git_buf_init(&body, alloc_size) < 0) {
+	    git_buf_init(&body, alloc_size) < 0) {
 		error = -1;
 		goto done;
 	}
@@ -279,7 +277,7 @@ static int read_loose_standard(git_rawobj *out, git_buf *obj)
 	int error;
 
 	if ((error = git_zstream_init(&zstream, GIT_ZSTREAM_INFLATE)) < 0 ||
-		(error = git_zstream_set_input(&zstream, git_buf_cstr(obj), git_buf_len(obj))) < 0)
+	    (error = git_zstream_set_input(&zstream, git_buf_cstr(obj), git_buf_len(obj))) < 0)
 		goto done;
 
 	decompressed = sizeof(head);
@@ -290,7 +288,7 @@ static int read_loose_standard(git_rawobj *out, git_buf *obj)
 	 * remainder into the body buffer.
 	 */
 	if ((error = git_zstream_get_output(head, &decompressed, &zstream)) < 0 ||
-		(error = parse_header(&hdr, &head_len, head, decompressed)) < 0)
+	    (error = parse_header(&hdr, &head_len, head, decompressed)) < 0)
 		goto done;
 
 	if (!git_object_typeisloose(hdr.type)) {
@@ -304,7 +302,7 @@ static int read_loose_standard(git_rawobj *out, git_buf *obj)
 	 * (including the initial sequence in the head buffer).
 	 */
 	if (GIT_ADD_SIZET_OVERFLOW(&alloc_size, hdr.size, 1) ||
-		(body = git__malloc(alloc_size)) == NULL) {
+	    (body = git__malloc(alloc_size)) == NULL) {
 		error = -1;
 		goto done;
 	}
@@ -392,9 +390,9 @@ static int read_header_loose_standard(
 	int error;
 
 	if ((error = git_zstream_init(&zs, GIT_ZSTREAM_INFLATE)) < 0 ||
-		(error = git_zstream_set_input(&zs, data, len)) < 0 ||
-		(error = git_zstream_get_output_chunk(inflated, &inflated_len, &zs)) < 0 ||
-		(error = parse_header(&hdr, &header_len, inflated, inflated_len)) < 0)
+	    (error = git_zstream_set_input(&zs, data, len)) < 0 ||
+	    (error = git_zstream_get_output_chunk(inflated, &inflated_len, &zs)) < 0 ||
+	    (error = parse_header(&hdr, &header_len, inflated, inflated_len)) < 0)
 		goto done;
 
 	out->len = hdr.size;
@@ -418,7 +416,7 @@ static int read_header_loose(git_rawobj *out, git_buf *loc)
 	out->data = NULL;
 
 	if ((error = fd = git_futils_open_ro(loc->ptr)) < 0 ||
-		(error = obj_len = p_read(fd, obj, sizeof(obj))) < 0)
+	    (error = obj_len = p_read(fd, obj, sizeof(obj))) < 0)
 		goto done;
 
 	if (!is_zlib_compressed_data(obj, (size_t)obj_len))
@@ -645,8 +643,8 @@ static int loose_backend__read_prefix(
 		assert(backend && short_oid);
 
 		if ((error = locate_object_short_oid(&object_path, out_oid,
-				(loose_backend *)backend, short_oid, len)) == 0 &&
-			(error = read_loose(&raw, &object_path)) == 0)
+			(loose_backend *)backend, short_oid, len)) == 0 &&
+		    (error = read_loose(&raw, &object_path)) == 0)
 		{
 			*buffer_p = raw.data;
 			*len_p = raw.len;
@@ -783,7 +781,7 @@ static int loose_backend__writestream_finalize(git_odb_stream *_stream, const gi
 	int error = 0;
 
 	if (object_file_name(&final_path, backend, oid) < 0 ||
-		object_mkdir(&final_path, backend) < 0)
+	    object_mkdir(&final_path, backend) < 0)
 		error = -1;
 	else
 		error = git_filebuf_commit_at(
@@ -811,7 +809,7 @@ static void loose_backend__writestream_free(git_odb_stream *_stream)
 static int filebuf_flags(loose_backend *backend)
 {
 	int flags = GIT_FILEBUF_TEMPORARY |
-		(backend->object_zlib_level << GIT_FILEBUF_DEFLATE_SHIFT);
+	        (backend->object_zlib_level << GIT_FILEBUF_DEFLATE_SHIFT);
 
 	if (backend->fsync_object_files || git_repository__fsync_gitdir)
 		flags |= GIT_FILEBUF_FSYNC;
@@ -841,16 +839,16 @@ static int loose_backend__writestream(git_odb_stream **stream_out, git_odb_backe
 	GITERR_CHECK_ALLOC(stream);
 
 	stream->stream.backend = _backend;
-	stream->stream.read = NULL; /* read only */
+	stream->stream.read = NULL;	/* read only */
 	stream->stream.write = &loose_backend__writestream_write;
 	stream->stream.finalize_write = &loose_backend__writestream_finalize;
 	stream->stream.free = &loose_backend__writestream_free;
 	stream->stream.mode = GIT_STREAM_WRONLY;
 
 	if (git_buf_joinpath(&tmp_path, backend->objects_dir, "tmp_object") < 0 ||
-		git_filebuf_open(&stream->fbuf, tmp_path.ptr, filebuf_flags(backend),
-			backend->object_file_mode) < 0 ||
-		stream->stream.write((git_odb_stream *)stream, hdr, hdrlen) < 0)
+	    git_filebuf_open(&stream->fbuf, tmp_path.ptr, filebuf_flags(backend),
+		        backend->object_file_mode) < 0 ||
+	    stream->stream.write((git_odb_stream *)stream, hdr, hdrlen) < 0)
 	{
 		git_filebuf_cleanup(&stream->fbuf);
 		git__free(stream);
@@ -943,7 +941,7 @@ static int loose_backend__readstream_standard(
 	int error;
 
 	if ((error = git_zstream_set_input(&stream->zstream,
-			stream->map.data, stream->map.len)) < 0)
+		        stream->map.data, stream->map.len)) < 0)
 		return error;
 
 	init = sizeof(head);
@@ -954,7 +952,7 @@ static int loose_backend__readstream_standard(
 	 * it in the `start` field of the stream object.
 	 */
 	if ((error = git_zstream_get_output(head, &init, &stream->zstream)) < 0 ||
-		(error = parse_header(hdr, &head_len, head, init)) < 0)
+	    (error = parse_header(hdr, &head_len, head, init)) < 0)
 		return error;
 
 	if (!git_object_typeisloose(hdr->type)) {
@@ -1004,8 +1002,8 @@ static int loose_backend__readstream(
 	GITERR_CHECK_ALLOC(hash_ctx);
 
 	if ((error = git_hash_ctx_init(hash_ctx)) < 0 ||
-		(error = git_futils_mmap_ro_file(&stream->map, object_path.ptr)) < 0 ||
-		(error = git_zstream_init(&stream->zstream, GIT_ZSTREAM_INFLATE)) < 0)
+	    (error = git_futils_mmap_ro_file(&stream->map, object_path.ptr)) < 0 ||
+	    (error = git_zstream_init(&stream->zstream, GIT_ZSTREAM_INFLATE)) < 0)
 		goto done;
 
 	/* check for a packlike loose object */
@@ -1056,8 +1054,8 @@ static int loose_backend__write(git_odb_backend *_backend, const git_oid *oid, c
 		goto cleanup;
 
 	if (git_buf_joinpath(&final_path, backend->objects_dir, "tmp_object") < 0 ||
-		git_filebuf_open(&fbuf, final_path.ptr, filebuf_flags(backend),
-			backend->object_file_mode) < 0)
+	    git_filebuf_open(&fbuf, final_path.ptr, filebuf_flags(backend),
+		        backend->object_file_mode) < 0)
 	{
 		error = -1;
 		goto cleanup;
@@ -1067,8 +1065,8 @@ static int loose_backend__write(git_odb_backend *_backend, const git_oid *oid, c
 	git_filebuf_write(&fbuf, data, len);
 
 	if (object_file_name(&final_path, backend, oid) < 0 ||
-		object_mkdir(&final_path, backend) < 0 ||
-		git_filebuf_commit_at(&fbuf, final_path.ptr) < 0)
+	    object_mkdir(&final_path, backend) < 0 ||
+	    git_filebuf_commit_at(&fbuf, final_path.ptr) < 0)
 		error = -1;
 
 cleanup:

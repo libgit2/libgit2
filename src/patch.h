@@ -22,7 +22,7 @@ typedef struct git_patch_hunk {
 struct git_patch {
 	git_refcount rc;
 
-	git_repository *repo; /* may be null */
+	git_repository *repo;	/* may be null */
 
 	git_diff_options diff_opts;
 

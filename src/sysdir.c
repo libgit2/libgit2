@@ -12,10 +12,10 @@
 #include "path.h"
 #include <ctype.h>
 #if GIT_WIN32
-#include "win32/findfile.h"
+# include "win32/findfile.h"
 #else
-#include <unistd.h>
-#include <pwd.h>
+# include <unistd.h>
+# include <pwd.h>
 #endif
 
 static int git_sysdir_guess_programdata_dirs(git_buf *out)
@@ -91,9 +91,9 @@ static int git_sysdir_guess_global_dirs(git_buf *out)
 	 * of the effective user.
 	 */
 	if (uid == euid)
-	    error = git__getenv(out, "HOME");
+		error = git__getenv(out, "HOME");
 	else
-	    error = get_passwd_home(out, euid);
+		error = get_passwd_home(out, euid);
 
 	if (error == GIT_ENOTFOUND) {
 		giterr_clear();
@@ -287,11 +287,10 @@ static int git_sysdir_find_in_dirlist(
 
 	for (scan = git_buf_cstr(syspath); scan; scan = next) {
 		/* find unescaped separator or end of string */
-		for (next = scan; *next; ++next) {
+		for (next = scan; *next; ++next)
 			if (*next == GIT_PATH_LIST_SEPARATOR &&
-				(next <= scan || next[-1] != '\\'))
+			    (next <= scan || next[-1] != '\\'))
 				break;
-		}
 
 		len = (size_t)(next - scan);
 		next = (*next ? next + 1 : NULL);

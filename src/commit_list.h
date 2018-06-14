@@ -17,7 +17,7 @@
 #define STALE    (1 << 3)
 #define ALL_FLAGS (PARENT1 | PARENT2 | STALE | RESULT)
 
-#define PARENTS_PER_COMMIT	2
+#define PARENTS_PER_COMMIT      2
 #define COMMIT_ALLOC \
 	(sizeof(git_commit_list_node) + PARENTS_PER_COMMIT * sizeof(git_commit_list_node *))
 
@@ -26,12 +26,12 @@
 typedef struct git_commit_list_node {
 	git_oid oid;
 	int64_t time;
-	unsigned int seen:1,
-			 uninteresting:1,
-			 topo_delay:1,
-			 parsed:1,
-			 added:1,
-			 flags : FLAG_BITS;
+	unsigned int seen : 1,
+	             uninteresting : 1,
+	             topo_delay : 1,
+	             parsed : 1,
+	             added : 1,
+	             flags : FLAG_BITS;
 
 	unsigned short in_degree;
 	unsigned short out_degree;

@@ -37,20 +37,20 @@ extern bool git_repository__fsync_gitdir;
 
 /** Cvar cache identifiers */
 typedef enum {
-	GIT_CVAR_AUTO_CRLF = 0, /* core.autocrlf */
-	GIT_CVAR_EOL,           /* core.eol */
-	GIT_CVAR_SYMLINKS,      /* core.symlinks */
-	GIT_CVAR_IGNORECASE,    /* core.ignorecase */
-	GIT_CVAR_FILEMODE,      /* core.filemode */
-	GIT_CVAR_IGNORESTAT,    /* core.ignorestat */
-	GIT_CVAR_TRUSTCTIME,    /* core.trustctime */
-	GIT_CVAR_ABBREV,        /* core.abbrev */
-	GIT_CVAR_PRECOMPOSE,    /* core.precomposeunicode */
+	GIT_CVAR_AUTO_CRLF = 0,	/* core.autocrlf */
+	GIT_CVAR_EOL,		/* core.eol */
+	GIT_CVAR_SYMLINKS,	/* core.symlinks */
+	GIT_CVAR_IGNORECASE,	/* core.ignorecase */
+	GIT_CVAR_FILEMODE,	/* core.filemode */
+	GIT_CVAR_IGNORESTAT,	/* core.ignorestat */
+	GIT_CVAR_TRUSTCTIME,	/* core.trustctime */
+	GIT_CVAR_ABBREV,	/* core.abbrev */
+	GIT_CVAR_PRECOMPOSE,	/* core.precomposeunicode */
 	GIT_CVAR_SAFE_CRLF,		/* core.safecrlf */
-	GIT_CVAR_LOGALLREFUPDATES, /* core.logallrefupdates */
-	GIT_CVAR_PROTECTHFS,    /* core.protectHFS */
-	GIT_CVAR_PROTECTNTFS,   /* core.protectNTFS */
-	GIT_CVAR_FSYNCOBJECTFILES, /* core.fsyncObjectFiles */
+	GIT_CVAR_LOGALLREFUPDATES,	/* core.logallrefupdates */
+	GIT_CVAR_PROTECTHFS,	/* core.protectHFS */
+	GIT_CVAR_PROTECTNTFS,	/* core.protectNTFS */
+	GIT_CVAR_FSYNCOBJECTFILES,	/* core.fsyncObjectFiles */
 	GIT_CVAR_CACHE_MAX
 } git_cvar_cached;
 
@@ -144,8 +144,8 @@ struct git_repository {
 
 	git_array_t(git_buf) reserved_names;
 
-	unsigned is_bare:1;
-	unsigned is_worktree:1;
+	unsigned is_bare : 1;
+	unsigned is_worktree : 1;
 
 	unsigned int lru_counter;
 

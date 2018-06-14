@@ -28,7 +28,7 @@ enum {
 	PATHSPEC_DATATYPE_DIFF = 1,
 };
 
-typedef git_array_t(char *) git_pathspec_string_array_t;
+typedef git_array_t (char *) git_pathspec_string_array_t;
 
 /* public interface to pathspec matching */
 struct git_pathspec_match_list {

@@ -11,10 +11,12 @@
 
 GIT_INLINE(int) git_has_win32_version(int major, int minor, int service_pack)
 {
-	OSVERSIONINFOEX version_test = {0};
+	OSVERSIONINFOEX version_test = {
+		0
+					 };
 	DWORD version_test_mask;
 	DWORDLONG version_condition_mask = 0;
-	
+
 	version_test.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
 	version_test.dwMajorVersion = major;
 	version_test.dwMinorVersion = minor;

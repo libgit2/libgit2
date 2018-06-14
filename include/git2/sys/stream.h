@@ -32,7 +32,7 @@ typedef struct git_stream {
 	int encrypted;
 	int proxy_support;
 	int (*connect)(struct git_stream *);
-	int (*certificate)(git_cert **, struct git_stream *);
+	int (*certificate)(git_cert * *, struct git_stream *);
 	int (*set_proxy)(struct git_stream *, const git_proxy_options *proxy_opts);
 	ssize_t (*read)(struct git_stream *, void *, size_t);
 	ssize_t (*write)(struct git_stream *, const char *, size_t, int);

@@ -32,11 +32,11 @@ struct entry {
 };
 
 struct git_indexer {
-	unsigned int parsed_header :1,
-		pack_committed :1,
-		have_stream :1,
-		have_delta :1,
-		do_fsync :1;
+	unsigned int parsed_header : 1,
+	             pack_committed : 1,
+	             have_stream : 1,
+	             have_delta : 1,
+	             do_fsync : 1;
 	struct git_pack_header hdr;
 	struct git_pack_file *pack;
 	unsigned int mode;
@@ -105,12 +105,12 @@ static int objects_cmp(const void *a, const void *b)
 }
 
 int git_indexer_new(
-		git_indexer **out,
-		const char *prefix,
-		unsigned int mode,
-		git_odb *odb,
-		git_transfer_progress_cb progress_cb,
-		void *progress_payload)
+	git_indexer **out,
+	const char *prefix,
+	unsigned int mode,
+	git_odb *odb,
+	git_transfer_progress_cb progress_cb,
+	void *progress_payload)
 {
 	git_indexer *idx;
 	git_buf path = GIT_BUF_INIT, tmp_path = GIT_BUF_INIT;
@@ -332,9 +332,8 @@ static int store_object(git_indexer *idx)
 	if (git_vector_insert(&idx->objects, entry) < 0)
 		goto on_error;
 
-	for (i = oid.id[0]; i < 256; ++i) {
+	for (i = oid.id[0]; i < 256; ++i)
 		idx->fanout[i]++;
-	}
 
 	return 0;
 
@@ -375,9 +374,8 @@ static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_ent
 	if (git_vector_insert(&idx->objects, entry) < 0)
 		return -1;
 
-	for (i = entry->oid.id[0]; i < 256; ++i) {
+	for (i = entry->oid.id[0]; i < 256; ++i)
 		idx->fanout[i]++;
-	}
 
 	return 0;
 }
@@ -690,7 +688,7 @@ static int index_path(git_buf *path, git_indexer *idx, const char *suffix)
 		slash--;
 
 	if (git_buf_grow(path, slash + 1 + strlen(prefix) +
-					 GIT_OID_HEXSZ + strlen(suffix) + 1) < 0)
+		                         GIT_OID_HEXSZ + strlen(suffix) + 1) < 0)
 		return -1;
 
 	git_buf_truncate(path, slash);
@@ -859,7 +857,9 @@ static int resolve_deltas(git_indexer *idx, git_transfer_progress *stats)
 		progressed = 0;
 		non_null = 0;
 		git_vector_foreach(&idx->deltas, i, delta) {
-			git_rawobj obj = {NULL};
+			git_rawobj obj = {
+				NULL
+					      };
 
 			if (!delta)
 				continue;
@@ -951,7 +951,9 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 	git_buf filename = GIT_BUF_INIT;
 	struct entry *entry;
 	git_oid trailer_hash, file_hash;
-	git_filebuf index_file = {0};
+	git_filebuf index_file = {
+		0
+	};
 	void *packfile_trailer;
 
 	if (!idx->parsed_header) {
@@ -1116,7 +1118,7 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 
 	/* And fsync the parent directory if we're asked to. */
 	if (idx->do_fsync &&
-		git_futils_fsync_parent(git_buf_cstr(&filename)) < 0)
+	    git_futils_fsync_parent(git_buf_cstr(&filename)) < 0)
 		goto on_error;
 
 	idx->pack_committed = 1;

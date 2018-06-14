@@ -90,7 +90,7 @@ extern int git_config__cvar(
  * and map it to the string or bool value on the config.
  */
 int git_config_lookup_map_enum(git_cvar_t *type_out, const char **str_out,
-			       const git_cvar_map *maps, size_t map_n, int enum_val);
+	const git_cvar_map *maps, size_t map_n, int enum_val);
 
 /**
  * Unlock the backend with the highest priority

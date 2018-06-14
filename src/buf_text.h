@@ -21,9 +21,9 @@ typedef enum {
 } git_bom_t;
 
 typedef struct {
-	git_bom_t bom; /* BOM found at head of text */
-	unsigned int nul, cr, lf, crlf; /* NUL, CR, LF and CRLF counts */
-	unsigned int printable, nonprintable; /* These are just approximations! */
+	git_bom_t bom;	/* BOM found at head of text */
+	unsigned int nul, cr, lf, crlf;	/* NUL, CR, LF and CRLF counts */
+	unsigned int printable, nonprintable;	/* These are just approximations! */
 } git_buf_text_stats;
 
 /**

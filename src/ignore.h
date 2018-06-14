@@ -13,9 +13,9 @@
 #include "vector.h"
 #include "attr_file.h"
 
-#define GIT_IGNORE_FILE			".gitignore"
-#define GIT_IGNORE_FILE_INREPO	"exclude"
-#define GIT_IGNORE_FILE_XDG		"ignore"
+#define GIT_IGNORE_FILE                 ".gitignore"
+#define GIT_IGNORE_FILE_INREPO  "exclude"
+#define GIT_IGNORE_FILE_XDG             "ignore"
 
 /* The git_ignores structure maintains three sets of ignores:
  * - internal ignores
@@ -26,11 +26,11 @@
  */
 typedef struct {
 	git_repository *repo;
-	git_buf dir; /* current directory reflected in ign_path */
+	git_buf dir;	/* current directory reflected in ign_path */
 	git_attr_file *ign_internal;
 	git_vector ign_path;
 	git_vector ign_global;
-	size_t dir_root; /* offset in dir to repo root */
+	size_t dir_root;/* offset in dir to repo root */
 	int ignore_case;
 	int depth;
 } git_ignores;

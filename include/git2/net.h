@@ -38,7 +38,7 @@ typedef enum {
  * on `ls` calls.
  */
 struct git_remote_head {
-	int local; /* available locally */
+	int local;	/* available locally */
 	git_oid oid;
 	git_oid loid;
 	char *name;

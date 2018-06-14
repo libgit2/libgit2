@@ -13,7 +13,7 @@
 
 static void set_parse_error(git_config_parser *reader, int col, const char *error_str)
 {
-	giterr_set(GITERR_CONFIG, "failed to parse config file: %s (in %s:%"PRIuZ", column %d)",
+	giterr_set(GITERR_CONFIG, "failed to parse config file: %s (in %s:%" PRIuZ ", column %d)",
 		error_str, reader->file->path, reader->ctx.line_num, col);
 }
 
@@ -33,8 +33,8 @@ static int strip_comments(char *line, int in_quotes)
 			quote_count++;
 
 		if ((ptr[0] == ';' || ptr[0] == '#') &&
-			(quote_count % 2) == 0 &&
-			(backslash_count % 2) == 0) {
+		    (quote_count % 2) == 0 &&
+		    (backslash_count % 2) == 0) {
 			ptr[0] = '\0';
 			break;
 		}
@@ -178,7 +178,7 @@ static int parse_section_header(git_config_parser *reader, char **section_out)
 	c = line[pos++];
 
 	do {
-		if (git__isspace(c)){
+		if (git__isspace(c)) {
 			name[name_length] = '\0';
 			result = parse_section_header_ext(reader, line, name, section_out);
 			git__free(line);
@@ -192,7 +192,6 @@ static int parse_section_header(git_config_parser *reader, char **section_out)
 		}
 
 		name[name_length++] = (char)git__tolower(c);
-
 	} while ((c = line[pos++]) != ']');
 
 	if (line[pos - 1] != ']') {
@@ -228,42 +227,42 @@ static int skip_bom(git_parse_ctx *parser)
 }
 
 /*
-	(* basic types *)
-	digit = "0".."9"
-	integer = digit { digit }
-	alphabet = "a".."z" + "A" .. "Z"
+        (* basic types *)
+        digit = "0".."9"
+        integer = digit { digit }
+        alphabet = "a".."z" + "A" .. "Z"
 
-	section_char = alphabet | "." | "-"
-	extension_char = (* any character except newline *)
-	any_char = (* any character *)
-	variable_char = "alphabet" | "-"
+        section_char = alphabet | "." | "-"
+        extension_char = (* any character except newline *)
+        any_char = (* any character *)
+        variable_char = "alphabet" | "-"
 
 
-	(* actual grammar *)
-	config = { section }
+        (* actual grammar *)
+        config = { section }
 
-	section = header { definition }
+        section = header { definition }
 
-	header = "[" section [subsection | subsection_ext] "]"
+        header = "[" section [subsection | subsection_ext] "]"
 
-	subsection = "." section
-	subsection_ext = "\"" extension "\""
+        subsection = "." section
+        subsection_ext = "\"" extension "\""
 
-	section = section_char { section_char }
-	extension = extension_char { extension_char }
+        section = section_char { section_char }
+        extension = extension_char { extension_char }
 
-	definition = variable_name ["=" variable_value] "\n"
+        definition = variable_name ["=" variable_value] "\n"
 
-	variable_name = variable_char { variable_char }
-	variable_value = string | boolean | integer
+        variable_name = variable_char { variable_char }
+        variable_value = string | boolean | integer
 
-	string = quoted_string | plain_string
-	quoted_string = "\"" plain_string "\""
-	plain_string = { any_char }
+        string = quoted_string | plain_string
+        quoted_string = "\"" plain_string "\""
+        plain_string = { any_char }
 
-	boolean = boolean_true | boolean_false
-	boolean_true = "yes" | "1" | "true" | "on"
-	boolean_false = "no" | "0" | "false" | "off"
+        boolean = boolean_true | boolean_false
+        boolean_true = "yes" | "1" | "true" | "on"
+        boolean_false = "no" | "0" | "false" | "off"
 */
 
 /* '\"' -> '"' etc */
@@ -276,7 +275,7 @@ static int unescape_line(
 	*is_multi = false;
 
 	if (GIT_ADD_SIZET_OVERFLOW(&alloc_len, ptr_len, 1) ||
-		(str = git__malloc(alloc_len)) == NULL) {
+	    (str = git__malloc(alloc_len)) == NULL) {
 		return -1;
 	}
 
@@ -436,7 +435,7 @@ static int parse_variable(git_config_parser *reader, char **var_name, char **var
 			git_buf_attach(&multi_value, *var_value, 0);
 
 			if (parse_multiline_variable(reader, &multi_value, quote_count) < 0 ||
-				git_buf_oom(&multi_value)) {
+			    git_buf_oom(&multi_value)) {
 				git_buf_dispose(&multi_value);
 				goto on_error;
 			}
@@ -485,7 +484,7 @@ int git_config_parse(
 			continue;
 
 		switch (c) {
-		case '[': /* section header, new section begins */
+		case '[':	/* section header, new section begins */
 			git__free(current_section);
 			current_section = NULL;
 
@@ -494,7 +493,7 @@ int git_config_parse(
 			}
 			break;
 
-		case '\n': /* comment or whitespace-only */
+		case '\n':	/* comment or whitespace-only */
 		case '\r':
 		case ' ':
 		case '\t':
@@ -505,7 +504,7 @@ int git_config_parse(
 			}
 			break;
 
-		default: /* assume variable declaration */
+		default:/* assume variable declaration */
 			if ((result = parse_variable(parser, &var_name, &var_value)) == 0 && on_variable) {
 				result = on_variable(parser, current_section, var_name, var_value, line_start, line_len, data);
 			}

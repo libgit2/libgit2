@@ -32,12 +32,12 @@ typedef enum {
 } git_diff_origin_t;
 
 struct git_diff {
-	git_refcount     rc;
+	git_refcount rc;
 	git_repository   *repo;
 	git_attr_session attrsession;
 	git_diff_origin_t type;
 	git_diff_options opts;
-	git_vector       deltas;    /* vector of git_diff_delta */
+	git_vector deltas;	/* vector of git_diff_delta */
 	git_pool pool;
 	git_iterator_type_t old_src;
 	git_iterator_type_t new_src;

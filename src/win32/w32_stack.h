@@ -58,7 +58,7 @@ GIT_EXTERN(int) git_win32__stack__set_aux_cb(
  * Maximum number of stackframes to record for a
  * single stacktrace.
  */
-#define GIT_WIN32__STACK__MAX_FRAMES 30
+# define GIT_WIN32__STACK__MAX_FRAMES 30
 
 /**
  * Wrapper containing the raw unprocessed stackframe
@@ -132,9 +132,9 @@ int git_win32__stack_format(
  * @param suffix String written after each frame; defaults to "\n".
  */
 int git_win32__stack(
-	char * pbuf, int buf_len,
+	char *pbuf, int buf_len,
 	int skip,
 	const char *prefix, const char *suffix);
 
-#endif /* GIT_MSVC_CRTDBG */
+#endif	/* GIT_MSVC_CRTDBG */
 #endif

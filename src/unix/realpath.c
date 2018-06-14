@@ -11,10 +11,10 @@
 
 #ifndef GIT_WIN32
 
-#include <limits.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <unistd.h>
+# include <limits.h>
+# include <stdlib.h>
+# include <fcntl.h>
+# include <unistd.h>
 
 char *p_realpath(const char *pathname, char *resolved)
 {
@@ -22,12 +22,12 @@ char *p_realpath(const char *pathname, char *resolved)
 	if ((ret = realpath(pathname, resolved)) == NULL)
 		return NULL;
 
-#ifdef __OpenBSD__
+# ifdef __OpenBSD__
 	/* The OpenBSD realpath function behaves differently,
 	 * figure out if the file exists */
 	if (access(ret, F_OK) < 0)
 		ret = NULL;
-#endif
+# endif
 	return ret;
 }
 

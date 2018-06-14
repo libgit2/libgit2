@@ -84,8 +84,8 @@ GIT_EXTERN(int) git_worktree_validate(const git_worktree *wt);
 typedef struct git_worktree_add_options {
 	unsigned int version;
 
-	int lock; /**< lock newly created worktree */
-	git_reference *ref; /**< reference to use for the new worktree HEAD */
+	int lock;	/**< lock newly created worktree */
+	git_reference *ref;	/**< reference to use for the new worktree HEAD */
 } git_worktree_add_options;
 
 #define GIT_WORKTREE_ADD_OPTIONS_VERSION 1
@@ -174,7 +174,7 @@ GIT_EXTERN(const char *) git_worktree_name(const git_worktree *wt);
  *  is valid for the lifetime of the git_worktree.
  */
 GIT_EXTERN(const char *) git_worktree_path(const git_worktree *wt);
- 
+
 /**
  * Flags which can be passed to git_worktree_prune to alter its
  * behavior.

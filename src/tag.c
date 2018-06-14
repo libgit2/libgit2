@@ -138,7 +138,7 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 	tag->message = NULL;
 	if (buffer < buffer_end) {
 		/* If we're not at the end of the header, search for it */
-		if( *buffer != '\n' ) {
+		if (*buffer != '\n') {
 			search = strstr(buffer, "\n\n");
 			if (search)
 				buffer = search + 1;
@@ -184,7 +184,7 @@ static int retrieve_tag_reference(
 
 	error = git_reference_lookup(&tag_ref, repo, ref_name_out->ptr);
 	if (error < 0)
-		return error; /* Be it not foundo or corrupted */
+		return error;	/* Be it not foundo or corrupted */
 
 	*tag_reference_out = tag_ref;
 
@@ -204,12 +204,12 @@ static int retrieve_tag_reference_oid(
 }
 
 static int write_tag_annotation(
-		git_oid *oid,
-		git_repository *repo,
-		const char *tag_name,
-		const git_object *target,
-		const git_signature *tagger,
-		const char *message)
+	git_oid *oid,
+	git_repository *repo,
+	const char *tag_name,
+	const git_object *target,
+	const git_signature *tagger,
+	const char *message)
 {
 	git_buf tag = GIT_BUF_INIT;
 	git_odb *odb;
@@ -239,14 +239,14 @@ on_error:
 }
 
 static int git_tag_create__internal(
-		git_oid *oid,
-		git_repository *repo,
-		const char *tag_name,
-		const git_object *target,
-		const git_signature *tagger,
-		const char *message,
-		int allow_ref_overwrite,
-		int create_tag_annotation)
+	git_oid *oid,
+	git_repository *repo,
+	const char *tag_name,
+	const git_object *target,
+	const git_signature *tagger,
+	const char *message,
+	int allow_ref_overwrite,
+	int create_tag_annotation)
 {
 	git_reference *new_ref = NULL;
 	git_buf ref_name = GIT_BUF_INIT;
@@ -372,7 +372,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 
 	/* write the buffer */
 	if ((error = git_odb_open_wstream(
-			&stream, odb, strlen(buffer), GIT_OBJ_TAG)) < 0)
+		        &stream, odb, strlen(buffer), GIT_OBJ_TAG)) < 0)
 		return error;
 
 	if (!(error = git_odb_stream_write(stream, buffer, strlen(buffer))))
@@ -434,7 +434,7 @@ static int tags_cb(const char *ref, void *data)
 	tag_cb_data *d = (tag_cb_data *)data;
 
 	if (git__prefixcmp(ref, GIT_REFS_TAGS_DIR) != 0)
-		return 0; /* no tag */
+		return 0;/* no tag */
 
 	if (!(error = git_reference_name_to_id(&oid, d->repo, ref))) {
 		if ((error = d->cb(ref, &oid, d->cb_data)) != 0)
@@ -470,7 +470,7 @@ static int tag_list_cb(const char *tag_name, git_oid *oid, void *data)
 	GIT_UNUSED(oid);
 
 	if (!*filter->pattern ||
-		p_fnmatch(filter->pattern, tag_name + GIT_REFS_TAGS_DIR_LEN, 0) == 0)
+	    p_fnmatch(filter->pattern, tag_name + GIT_REFS_TAGS_DIR_LEN, 0) == 0)
 	{
 		char *matched = git__strdup(tag_name + GIT_REFS_TAGS_DIR_LEN);
 		GITERR_CHECK_ALLOC(matched);
@@ -501,7 +501,7 @@ int git_tag_list_match(git_strarray *tag_names, const char *pattern, git_reposit
 		git_vector_free(&taglist);
 
 	tag_names->strings =
-		(char **)git_vector_detach(&tag_names->count, NULL, &taglist);
+		(char * *)git_vector_detach(&tag_names->count, NULL, &taglist);
 
 	return 0;
 }

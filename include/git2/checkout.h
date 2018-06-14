@@ -104,7 +104,7 @@ GIT_BEGIN_DECL
  *   and write through existing symbolic links.
  */
 typedef enum {
-	GIT_CHECKOUT_NONE = 0, /**< default is a dry run, no actual updates */
+	GIT_CHECKOUT_NONE = 0,	/**< default is a dry run, no actual updates */
 
 	/** Allow safe updates that cannot overwrite uncommitted data */
 	GIT_CHECKOUT_SAFE = (1u << 0),
@@ -173,7 +173,6 @@ typedef enum {
 	GIT_CHECKOUT_UPDATE_SUBMODULES = (1u << 16),
 	/** Recursively checkout submodules if HEAD moved in super repo (NOT IMPLEMENTED) */
 	GIT_CHECKOUT_UPDATE_SUBMODULES_IF_CHANGED = (1u << 17),
-
 } git_checkout_strategy_t;
 
 /**
@@ -250,14 +249,14 @@ typedef void (*git_checkout_perfdata_cb)(
 typedef struct git_checkout_options {
 	unsigned int version;
 
-	unsigned int checkout_strategy; /**< default will be a safe checkout */
+	unsigned int checkout_strategy;	/**< default will be a safe checkout */
 
-	int disable_filters;    /**< don't apply filters like CRLF conversion */
-	unsigned int dir_mode;  /**< default is 0755 */
-	unsigned int file_mode; /**< default is 0644 or 0755 as dictated by blob */
-	int file_open_flags;    /**< default is O_CREAT | O_TRUNC | O_WRONLY */
+	int disable_filters;	/**< don't apply filters like CRLF conversion */
+	unsigned int dir_mode;	/**< default is 0755 */
+	unsigned int file_mode;	/**< default is 0644 or 0755 as dictated by blob */
+	int file_open_flags;	/**< default is O_CREAT | O_TRUNC | O_WRONLY */
 
-	unsigned int notify_flags; /**< see `git_checkout_notify_t` above */
+	unsigned int notify_flags;	/**< see `git_checkout_notify_t` above */
 	git_checkout_notify_cb notify_cb;
 	void *notify_payload;
 
@@ -280,13 +279,13 @@ typedef struct git_checkout_options {
 	/** Like `baseline` above, though expressed as an index.  This
 	 *  option overrides `baseline`.
 	 */
-	git_index *baseline_index; /**< expected content of workdir, expressed as an index. */
+	git_index *baseline_index;	/**< expected content of workdir, expressed as an index. */
 
-	const char *target_directory; /**< alternative checkout path to workdir */
+	const char *target_directory;	/**< alternative checkout path to workdir */
 
-	const char *ancestor_label; /**< the name of the common ancestor side of conflicts */
-	const char *our_label; /**< the name of the "our" side of conflicts */
-	const char *their_label; /**< the name of the "their" side of conflicts */
+	const char *ancestor_label;	/**< the name of the common ancestor side of conflicts */
+	const char *our_label;	/**< the name of the "our" side of conflicts */
+	const char *their_label;/**< the name of the "their" side of conflicts */
 
 	/** Optional callback to notify the consumer of performance data. */
 	git_checkout_perfdata_cb perfdata_cb;

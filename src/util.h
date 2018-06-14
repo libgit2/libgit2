@@ -68,10 +68,10 @@ extern void git__hexdump(const char *buffer, size_t n);
 extern uint32_t git__hash(const void *key, int len, uint32_t seed);
 
 /* 32-bit cross-platform rotl */
-#ifdef _MSC_VER /* use built-in method in MSVC */
-#	define git__rotl(v, s) (uint32_t)_rotl(v, s)
-#else /* use bitops in GCC; with o2 this gets optimized to a rotl instruction */
-#	define git__rotl(v, s) (uint32_t)(((uint32_t)(v) << (s)) | ((uint32_t)(v) >> (32 - (s))))
+#ifdef _MSC_VER	/* use built-in method in MSVC */
+# define git__rotl(v, s) (uint32_t)_rotl(v, s)
+#else	/* use bitops in GCC; with o2 this gets optimized to a rotl instruction */
+# define git__rotl(v, s) (uint32_t)(((uint32_t)(v) << (s)) | ((uint32_t)(v) >> (32 - (s))))
 #endif
 
 extern char *git__strtok(char **end, const char *sep);
@@ -93,8 +93,10 @@ extern size_t git__linenlen(const char *buffer, size_t buffer_len);
 
 GIT_INLINE(const char *) git__next_line(const char *s)
 {
-	while (*s && *s != '\n') s++;
-	while (*s == '\n' || *s == '\r') s++;
+	while (*s && *s != '\n')
+		s++;
+	while (*s == '\n' || *s == '\r')
+		s++;
 	return s;
 }
 
@@ -104,6 +106,7 @@ GIT_INLINE(const void *) git__memrchr(const void *s, int c, size_t n)
 
 	if (n != 0) {
 		cp = (unsigned char *)s + n;
+
 		do {
 			if (*(--cp) == (unsigned char)c)
 				return cp;
@@ -131,7 +134,7 @@ extern void git__insertsort_r(
 
 /**
  * @param position If non-NULL, this will be set to the position where the
- * 		element is or would be inserted if not found.
+ *              element is or would be inserted if not found.
  * @return 0 if found; GIT_ENOTFOUND if not found
  */
 extern int git__bsearch(
@@ -167,17 +170,17 @@ typedef struct {
 typedef void (*git_refcount_freeptr)(void *r);
 
 #define GIT_REFCOUNT_INC(r) { \
-	git_atomic_inc(&(r)->rc.refcount);	\
+		git_atomic_inc(&(r)->rc.refcount); \
 }
 
 #define GIT_REFCOUNT_DEC(_r, do_free) { \
-	git_refcount *r = &(_r)->rc; \
-	int val = git_atomic_dec(&r->refcount); \
-	if (val <= 0 && r->owner == NULL) { do_free(_r); } \
+		git_refcount *r = &(_r)->rc; \
+		int val = git_atomic_dec(&r->refcount); \
+		if (val <= 0 && r->owner == NULL) { do_free(_r); } \
 }
 
 #define GIT_REFCOUNT_OWN(r, o) { \
-	(r)->rc.owner = o; \
+		(r)->rc.owner = o; \
 }
 
 #define GIT_REFCOUNT_OWNER(r) ((r)->rc.owner)
@@ -186,22 +189,22 @@ typedef void (*git_refcount_freeptr)(void *r);
 
 
 static signed char from_hex[] = {
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 00 */
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 10 */
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 20 */
- 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1, -1, -1, -1, -1, -1, /* 30 */
--1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 40 */
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 50 */
--1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 60 */
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 70 */
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 80 */
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 90 */
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* a0 */
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* b0 */
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* c0 */
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* d0 */
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* e0 */
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* f0 */
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	/* 00 */
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	/* 10 */
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	/* 20 */
+	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1, -1, -1, -1, -1, -1,	/* 30 */
+	-1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,	/* 40 */
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	/* 50 */
+	-1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,	/* 60 */
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	/* 70 */
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	/* 80 */
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	/* 90 */
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	/* a0 */
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	/* b0 */
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	/* c0 */
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	/* d0 */
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	/* e0 */
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,	/* f0 */
 };
 
 GIT_INLINE(int) git__fromhex(char h)
@@ -212,7 +215,7 @@ GIT_INLINE(int) git__fromhex(char h)
 GIT_INLINE(int) git__ishex(const char *str)
 {
 	unsigned i;
-	for (i=0; str[i] != '\0'; i++)
+	for (i = 0; str[i] != '\0'; i++)
 		if (git__fromhex(str[i]) < 0)
 			return 0;
 	return 1;
@@ -356,7 +359,7 @@ GIT_INLINE(double) git__timer(void)
 	 * elapsed since the system was started. */
 	DWORD count = GetTickCount();
 
-	if(initial_tick_count == 0) {
+	if (initial_tick_count == 0) {
 		initial_tick_count = count;
 	} else if (count < initial_tick_count) {
 		/* The tick count has rolled over - adjust for it. */
@@ -368,7 +371,7 @@ GIT_INLINE(double) git__timer(void)
 
 #elif __APPLE__
 
-#include <mach/mach_time.h>
+# include <mach/mach_time.h>
 
 GIT_INLINE(double) git__timer(void)
 {
@@ -376,17 +379,17 @@ GIT_INLINE(double) git__timer(void)
    static double scaling_factor = 0;
 
    if (scaling_factor == 0) {
-       mach_timebase_info_data_t info;
-       (void)mach_timebase_info(&info);
-       scaling_factor = (double)info.numer / (double)info.denom;
+		mach_timebase_info_data_t info;
+		(void)mach_timebase_info(&info);
+		scaling_factor = (double)info.numer / (double)info.denom;
    }
 
-   return (double)time * scaling_factor / 1.0E9;
+	return (double)time * scaling_factor / 1.0E9;
 }
 
 #elif defined(AMIGA)
 
-#include <proto/timer.h>
+# include <proto/timer.h>
 
 GIT_INLINE(double) git__timer(void)
 {
@@ -397,7 +400,7 @@ GIT_INLINE(double) git__timer(void)
 
 #else
 
-#include <sys/time.h>
+# include <sys/time.h>
 
 GIT_INLINE(double) git__timer(void)
 {

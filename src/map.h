@@ -17,28 +17,28 @@
 #define GIT_PROT_EXEC 0x4
 
 /* git__mmmap() flags values */
-#define GIT_MAP_FILE	0
+#define GIT_MAP_FILE    0
 #define GIT_MAP_SHARED 1
 #define GIT_MAP_PRIVATE 2
-#define GIT_MAP_TYPE	0xf
-#define GIT_MAP_FIXED	0x10
+#define GIT_MAP_TYPE    0xf
+#define GIT_MAP_FIXED   0x10
 
 #ifdef __amigaos4__
-#define MAP_FAILED 0
+# define MAP_FAILED 0
 #endif
 
-typedef struct { /* memory mapped buffer	*/
-	void *data; /* data bytes			*/
-	size_t len; /* data length			*/
+typedef struct {/* memory mapped buffer	*/
+	void *data;	/* data bytes			*/
+	size_t len;	/* data length			*/
 #ifdef GIT_WIN32
-	HANDLE fmh; /* file mapping handle */
+	HANDLE fmh;	/* file mapping handle */
 #endif
 } git_map;
 
 #define GIT_MMAP_VALIDATE(out, len, prot, flags) do { \
-	assert(out != NULL && len > 0); \
-	assert((prot & GIT_PROT_WRITE) || (prot & GIT_PROT_READ)); \
-	assert((flags & GIT_MAP_FIXED) == 0); } while (0)
+		assert(out != NULL && len > 0); \
+		assert((prot & GIT_PROT_WRITE) || (prot & GIT_PROT_READ)); \
+		assert((flags & GIT_MAP_FIXED) == 0); } while (0)
 
 extern int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset);
 extern int p_munmap(git_map *map);

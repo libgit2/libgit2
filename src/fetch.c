@@ -87,13 +87,12 @@ static int filter_wants(git_remote *remote, const git_fetch_options *opts)
 	if (git_repository_odb__weakptr(&odb, remote->repo) < 0)
 		goto cleanup;
 
-	if (git_remote_ls((const git_remote_head ***)&heads, &heads_len, remote) < 0)
+	if (git_remote_ls((const git_remote_head * * *)&heads, &heads_len, remote) < 0)
 		goto cleanup;
 
-	for (i = 0; i < heads_len; i++) {
+	for (i = 0; i < heads_len; i++)
 		if ((error = maybe_want(remote, heads[i], odb, &tagspec, tagopt)) < 0)
 			break;
-	}
 
 cleanup:
 	git_refspec__free(&tagspec);
@@ -127,7 +126,7 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 	 */
 	return t->negotiate_fetch(t,
 		remote->repo,
-		(const git_remote_head * const *)remote->refs.contents,
+		(const git_remote_head *const *)remote->refs.contents,
 		remote->refs.length);
 }
 

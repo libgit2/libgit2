@@ -10,12 +10,12 @@
 #include "posix.h"
 #include "repository.h"
 #ifdef GIT_WIN32
-#include "win32/posix.h"
-#include "win32/w32_buffer.h"
-#include "win32/w32_util.h"
-#include "win32/version.h"
+# include "win32/posix.h"
+# include "win32/w32_buffer.h"
+# include "win32/w32_util.h"
+# include "win32/version.h"
 #else
-#include <dirent.h>
+# include <dirent.h>
 #endif
 #include <stdio.h>
 #include <ctype.h>
@@ -78,7 +78,7 @@ int git_path_basename_r(git_buf *buffer, const char *path)
 	/* Empty or NULL string gets treated as "." */
 	if (path == NULL || *path == '\0') {
 		startp = ".";
-		len		= 1;
+		len             = 1;
 		goto Exit;
 	}
 
@@ -90,7 +90,7 @@ int git_path_basename_r(git_buf *buffer, const char *path)
 	/* All slashes becomes "/" */
 	if (endp == path && *endp == '/') {
 		startp = "/";
-		len	= 1;
+		len     = 1;
 		goto Exit;
 	}
 
@@ -207,7 +207,7 @@ char *git_path_dirname(const char *path)
 
 	git_path_dirname_r(&buf, path);
 	dirname = git_buf_detach(&buf);
-	git_buf_dispose(&buf); /* avoid memleak if error occurs */
+	git_buf_dispose(&buf);	/* avoid memleak if error occurs */
 
 	return dirname;
 }
@@ -219,7 +219,7 @@ char *git_path_basename(const char *path)
 
 	git_path_basename_r(&buf, path);
 	basename = git_buf_detach(&buf);
-	git_buf_dispose(&buf); /* avoid memleak if error occurs */
+	git_buf_dispose(&buf);	/* avoid memleak if error occurs */
 
 	return basename;
 }
@@ -268,7 +268,7 @@ int git_path_root(const char *path)
 #ifdef GIT_WIN32
 	/* Are we dealing with a windows network path? */
 	else if ((path[0] == '/' && path[1] == '/' && path[2] != '/') ||
-		(path[0] == '\\' && path[1] == '\\' && path[2] != '\\'))
+	         (path[0] == '\\' && path[1] == '\\' && path[2] != '\\'))
 	{
 		offset += 2;
 
@@ -382,14 +382,14 @@ int git_path_prettify_dir(git_buf *path_out, const char *path, const char *base)
 int git_path_to_dir(git_buf *path)
 {
 	if (path->asize > 0 &&
-		git_buf_len(path) > 0 &&
-		path->ptr[git_buf_len(path) - 1] != '/')
+	    git_buf_len(path) > 0 &&
+	    path->ptr[git_buf_len(path) - 1] != '/')
 		git_buf_putc(path, '/');
 
 	return git_buf_oom(path) ? -1 : 0;
 }
 
-void git_path_string_to_dir(char* path, size_t size)
+void git_path_string_to_dir(char*path, size_t size)
 {
 	size_t end = strlen(path);
 
@@ -407,8 +407,7 @@ int git__percent_decode(git_buf *decoded_out, const char *input)
 	len = (int)strlen(input);
 	git_buf_clear(decoded_out);
 
-	for(i = 0; i < len; i++)
-	{
+	for (i = 0; i < len; i++) {
 		char c = input[i];
 
 		if (c != '%')
@@ -466,7 +465,7 @@ int git_path_fromurl(git_buf *local_path_out, const char *file_url)
 	assert(local_path_out && file_url);
 
 	if ((offset = local_file_url_prefixlen(file_url)) < 0 ||
-		file_url[offset] == '\0' || file_url[offset] == '/')
+	    file_url[offset] == '\0' || file_url[offset] == '/')
 		return error_invalid_local_file_uri(file_url);
 
 #ifndef GIT_WIN32
@@ -696,8 +695,8 @@ static bool _check_dir_contents(
 
 	/* leave base valid even if we could not make space for subdir */
 	if (GIT_ADD_SIZET_OVERFLOW(&alloc_size, dir_size, sub_size) ||
-		GIT_ADD_SIZET_OVERFLOW(&alloc_size, alloc_size, 2) ||
-		git_buf_try_grow(dir, alloc_size, false) < 0)
+	    GIT_ADD_SIZET_OVERFLOW(&alloc_size, alloc_size, 2) ||
+	    git_buf_try_grow(dir, alloc_size, false) < 0)
 		return false;
 
 	/* save excursion */
@@ -737,7 +736,7 @@ int git_path_find_dir(git_buf *dir, const char *path, const char *base)
 	}
 
 	/* call dirname if this is not a directory */
-	if (!error) /* && git_path_isdir(dir->ptr) == false) */
+	if (!error)	/* && git_path_isdir(dir->ptr) == false) */
 		error = (git_path_dirname_r(dir, dir->ptr) < 0) ? -1 : 0;
 
 	if (!error)
@@ -762,7 +761,8 @@ int git_path_resolve_relative(git_buf *path, size_t ceiling)
 
 	/* recognize URL prefixes that should not be backed over */
 	if (ceiling == 0) {
-		for (next = path->ptr; *next && git__isalpha(*next); ++next);
+		for (next = path->ptr; *next && git__isalpha(*next); ++next)
+			;
 		if (next[0] == ':' && next[1] == '/' && next[2] == '/')
 			ceiling = (next + 3) - path->ptr;
 	}
@@ -770,7 +770,8 @@ int git_path_resolve_relative(git_buf *path, size_t ceiling)
 	base = to = from = path->ptr + ceiling;
 
 	while (*from) {
-		for (next = from; *next && *next != '/'; ++next);
+		for (next = from; *next && *next != '/'; ++next)
+			;
 
 		len = next - from;
 
@@ -800,8 +801,10 @@ int git_path_resolve_relative(git_buf *path, size_t ceiling)
 				base = to;
 			} else {
 				/* back up a path segment */
-				while (to > base && to[-1] == '/') to--;
-				while (to > base && to[-1] != '/') to--;
+				while (to > base && to[-1] == '/')
+					to--;
+				while (to > base && to[-1] != '/')
+					to--;
 			}
 		} else {
 			if (*next == '/' && *from != '/')
@@ -815,7 +818,8 @@ int git_path_resolve_relative(git_buf *path, size_t ceiling)
 
 		from += len;
 
-		while (*from == '/') from++;
+		while (*from == '/')
+			from++;
 	}
 
 	*to = '\0';
@@ -828,7 +832,7 @@ int git_path_resolve_relative(git_buf *path, size_t ceiling)
 int git_path_apply_relative(git_buf *target, const char *relpath)
 {
 	return git_buf_joinpath(target, git_buf_cstr(target), relpath) ||
-	    git_path_resolve_relative(target, 0);
+	       git_path_resolve_relative(target, 0);
 }
 
 int git_path_cmp(
@@ -886,7 +890,7 @@ int git_path_make_relative(git_buf *path, const char *parent)
 
 	/* need at least 1 common path segment */
 	if ((p_dirsep == path->ptr || q_dirsep == parent) &&
-		(*p_dirsep != '/' || *q_dirsep != '/')) {
+	    (*p_dirsep != '/' || *q_dirsep != '/')) {
 		giterr_set(GITERR_INVALID,
 			"%s is not a parent of %s", parent, path->ptr);
 		return GIT_ENOTFOUND;
@@ -962,12 +966,12 @@ void git_path_iconv_clear(git_path_iconv_t *ic)
 
 int git_path_iconv(git_path_iconv_t *ic, const char **in, size_t *inlen)
 {
-	char *nfd = (char*)*in, *nfc;
+	char *nfd = (char *)*in, *nfc;
 	size_t nfdlen = *inlen, nfclen, wantlen = nfdlen, alloclen, rv;
 	int retry = 1;
 
 	if (!ic || ic->map == (iconv_t)-1 ||
-		!git_path_has_non_ascii(*in, *inlen))
+	    !git_path_has_non_ascii(*in, *inlen))
 		return 0;
 
 	git_buf_clear(&ic->buf);
@@ -1038,7 +1042,7 @@ bool git_path_does_fs_decompose_unicode(const char *root)
 	 * that we should precompose unicode for this repository.
 	 */
 	if (git_buf_joinpath(&path, root, nfc_file) < 0 ||
-		(fd = p_mkstemp(path.ptr)) < 0)
+	    (fd = p_mkstemp(path.ptr)) < 0)
 		goto done;
 	p_close(fd);
 
@@ -1133,7 +1137,7 @@ int git_path_direach(
 		giterr_clear();
 		error = fn(arg, path);
 
-		git_buf_truncate(path, wd_len); /* restore path */
+		git_buf_truncate(path, wd_len);	/* restore path */
 
 		/* Only set our own error if the callback did not set one already */
 		if (error != 0) {
@@ -1158,9 +1162,9 @@ int git_path_direach(
 /* Using _FIND_FIRST_EX_LARGE_FETCH may increase performance in Windows 7
  * and better.
  */
-#ifndef FIND_FIRST_EX_LARGE_FETCH
-# define FIND_FIRST_EX_LARGE_FETCH 2
-#endif
+# ifndef FIND_FIRST_EX_LARGE_FETCH
+#  define FIND_FIRST_EX_LARGE_FETCH 2
+# endif
 
 int git_path_diriter_init(
 	git_path_diriter *diriter,
@@ -1189,7 +1193,7 @@ int git_path_diriter_init(
 	}
 
 	if ((diriter->parent_len = git_win32_path_from_utf8(diriter->path, diriter->path_utf8.ptr)) < 0 ||
-			!git_win32__findfirstfile_filter(path_filter, diriter->path_utf8.ptr)) {
+	    !git_win32__findfirstfile_filter(path_filter, diriter->path_utf8.ptr)) {
 		giterr_set(GITERR_OS, "could not parse the directory path '%s'", path);
 		return -1;
 	}
@@ -1219,7 +1223,7 @@ static int diriter_update_paths(git_path_diriter *diriter)
 	filename_len = wcslen(diriter->current.cFileName);
 
 	if (GIT_ADD_SIZET_OVERFLOW(&path_len, diriter->parent_len, filename_len) ||
-		GIT_ADD_SIZET_OVERFLOW(&path_len, path_len, 2))
+	    GIT_ADD_SIZET_OVERFLOW(&path_len, path_len, 2))
 		return -1;
 
 	if (path_len > GIT_WIN_PATH_UTF16) {
@@ -1237,7 +1241,7 @@ static int diriter_update_paths(git_path_diriter *diriter)
 	git_buf_truncate(&diriter->path_utf8, diriter->parent_utf8_len);
 
 	if (diriter->parent_utf8_len > 0 &&
-		diriter->path_utf8.ptr[diriter->parent_utf8_len-1] != '/')
+	    diriter->path_utf8.ptr[diriter->parent_utf8_len-1] != '/')
 		git_buf_putc(&diriter->path_utf8, '/');
 
 	git_buf_put_w(&diriter->path_utf8, diriter->current.cFileName, filename_len);
@@ -1344,10 +1348,10 @@ int git_path_diriter_init(
 		return -1;
 	}
 
-#ifdef GIT_USE_ICONV
+# ifdef GIT_USE_ICONV
 	if ((flags & GIT_PATH_DIR_PRECOMPOSE_UNICODE) != 0)
 		(void)git_path_iconv_init_precompose(&diriter->ic);
-#endif
+# endif
 
 	diriter->parent_len = diriter->path.size;
 	diriter->flags = flags;
@@ -1381,16 +1385,16 @@ int git_path_diriter_next(git_path_diriter *diriter)
 	filename = de->d_name;
 	filename_len = strlen(filename);
 
-#ifdef GIT_USE_ICONV
+# ifdef GIT_USE_ICONV
 	if ((diriter->flags & GIT_PATH_DIR_PRECOMPOSE_UNICODE) != 0 &&
-		(error = git_path_iconv(&diriter->ic, &filename, &filename_len)) < 0)
+	    (error = git_path_iconv(&diriter->ic, &filename, &filename_len)) < 0)
 		return error;
-#endif
+# endif
 
 	git_buf_truncate(&diriter->path, diriter->parent_len);
 
 	if (diriter->parent_len > 0 &&
-		diriter->path.ptr[diriter->parent_len-1] != '/')
+	    diriter->path.ptr[diriter->parent_len-1] != '/')
 		git_buf_putc(&diriter->path, '/');
 
 	git_buf_put(&diriter->path, filename, filename_len);
@@ -1444,9 +1448,9 @@ void git_path_diriter_free(git_path_diriter *diriter)
 		diriter->dir = NULL;
 	}
 
-#ifdef GIT_USE_ICONV
+# ifdef GIT_USE_ICONV
 	git_path_iconv_clear(&diriter->ic);
-#endif
+# endif
 
 	git_buf_dispose(&diriter->path);
 }
@@ -1516,8 +1520,8 @@ GIT_INLINE(bool) verify_dospath(
 		return true;
 
 	return (len > last &&
-		component[last] != '.' &&
-		component[last] != ':');
+	        component[last] != '.' &&
+	        component[last] != ':');
 }
 
 static int32_t next_hfs_char(const char **in, size_t *len)
@@ -1533,22 +1537,22 @@ static int32_t next_hfs_char(const char **in, size_t *len)
 
 		/* these code points are ignored completely */
 		switch (codepoint) {
-		case 0x200c: /* ZERO WIDTH NON-JOINER */
-		case 0x200d: /* ZERO WIDTH JOINER */
-		case 0x200e: /* LEFT-TO-RIGHT MARK */
-		case 0x200f: /* RIGHT-TO-LEFT MARK */
-		case 0x202a: /* LEFT-TO-RIGHT EMBEDDING */
-		case 0x202b: /* RIGHT-TO-LEFT EMBEDDING */
-		case 0x202c: /* POP DIRECTIONAL FORMATTING */
-		case 0x202d: /* LEFT-TO-RIGHT OVERRIDE */
-		case 0x202e: /* RIGHT-TO-LEFT OVERRIDE */
-		case 0x206a: /* INHIBIT SYMMETRIC SWAPPING */
-		case 0x206b: /* ACTIVATE SYMMETRIC SWAPPING */
-		case 0x206c: /* INHIBIT ARABIC FORM SHAPING */
-		case 0x206d: /* ACTIVATE ARABIC FORM SHAPING */
-		case 0x206e: /* NATIONAL DIGIT SHAPES */
-		case 0x206f: /* NOMINAL DIGIT SHAPES */
-		case 0xfeff: /* ZERO WIDTH NO-BREAK SPACE */
+		case 0x200c:	/* ZERO WIDTH NON-JOINER */
+		case 0x200d:	/* ZERO WIDTH JOINER */
+		case 0x200e:	/* LEFT-TO-RIGHT MARK */
+		case 0x200f:	/* RIGHT-TO-LEFT MARK */
+		case 0x202a:	/* LEFT-TO-RIGHT EMBEDDING */
+		case 0x202b:	/* RIGHT-TO-LEFT EMBEDDING */
+		case 0x202c:	/* POP DIRECTIONAL FORMATTING */
+		case 0x202d:	/* LEFT-TO-RIGHT OVERRIDE */
+		case 0x202e:	/* RIGHT-TO-LEFT OVERRIDE */
+		case 0x206a:	/* INHIBIT SYMMETRIC SWAPPING */
+		case 0x206b:	/* ACTIVATE SYMMETRIC SWAPPING */
+		case 0x206c:	/* INHIBIT ARABIC FORM SHAPING */
+		case 0x206d:	/* ACTIVATE ARABIC FORM SHAPING */
+		case 0x206e:	/* NATIONAL DIGIT SHAPES */
+		case 0x206f:	/* NOMINAL DIGIT SHAPES */
+		case 0xfeff:	/* ZERO WIDTH NO-BREAK SPACE */
 			continue;
 		}
 
@@ -1558,7 +1562,7 @@ static int32_t next_hfs_char(const char **in, size_t *len)
 		 */
 		return git__tolower(codepoint);
 	}
-	return 0; /* NULL byte -- end of string */
+	return 0;	/* NULL byte -- end of string */
 }
 
 static bool verify_dotgit_hfs_generic(const char *path, size_t len, const char *needle, size_t needle_len)
@@ -1599,7 +1603,7 @@ GIT_INLINE(bool) verify_dotgit_ntfs(git_repository *repo, const char *path, size
 		git_buf *r = &reserved[i];
 
 		if (len >= r->size &&
-			strncasecmp(path, r->ptr, r->size) == 0) {
+		    strncasecmp(path, r->ptr, r->size) == 0) {
 			start = r->size;
 			break;
 		}
@@ -1613,10 +1617,9 @@ GIT_INLINE(bool) verify_dotgit_ntfs(git_repository *repo, const char *path, size
 		return false;
 
 	/* Reject paths like '.git ' or '.git.' */
-	for (i = start; i < len; i++) {
+	for (i = start; i < len; i++)
 		if (path[i] != ' ' && path[i] != '.')
 			return true;
-	}
 
 	return false;
 }
@@ -1707,7 +1710,7 @@ GIT_INLINE(size_t) common_prefix_icase(const char *str, size_t len, const char *
 {
 	size_t count = 0;
 
-	while (len >0 && tolower(*str) == tolower(*prefix)) {
+	while (len > 0 && tolower(*str) == tolower(*prefix)) {
 		count++;
 		str++;
 		prefix++;
@@ -1737,11 +1740,11 @@ static bool verify_component(
 		return false;
 
 	if ((flags & GIT_PATH_REJECT_TRAVERSAL) &&
-		len == 1 && component[0] == '.')
+	    len == 1 && component[0] == '.')
 		return false;
 
 	if ((flags & GIT_PATH_REJECT_TRAVERSAL) &&
-		len == 2 && component[0] == '.' && component[1] == '.')
+	    len == 2 && component[0] == '.' && component[1] == '.')
 		return false;
 
 	if ((flags & GIT_PATH_REJECT_TRAILING_DOT) && component[len-1] == '.')
@@ -1755,11 +1758,11 @@ static bool verify_component(
 
 	if (flags & GIT_PATH_REJECT_DOS_PATHS) {
 		if (!verify_dospath(component, len, "CON", false) ||
-			!verify_dospath(component, len, "PRN", false) ||
-			!verify_dospath(component, len, "AUX", false) ||
-			!verify_dospath(component, len, "NUL", false) ||
-			!verify_dospath(component, len, "COM", true)  ||
-			!verify_dospath(component, len, "LPT", true))
+		    !verify_dospath(component, len, "PRN", false) ||
+		    !verify_dospath(component, len, "AUX", false) ||
+		    !verify_dospath(component, len, "NUL", false) ||
+		    !verify_dospath(component, len, "COM", true)  ||
+		    !verify_dospath(component, len, "LPT", true))
 			return false;
 	}
 
@@ -1794,7 +1797,7 @@ static bool verify_component(
 			if (S_ISLNK(mode) && common_prefix_icase(component, len, ".gitmodules") == len)
 				return false;
 		}
-	    }
+	}
 
 	return true;
 }
@@ -1864,10 +1867,9 @@ int git_path_normalize_slashes(git_buf *out, const char *path)
 	if ((error = git_buf_puts(out, path)) < 0)
 		return error;
 
-	for (p = out->ptr; *p; p++) {
+	for (p = out->ptr; *p; p++)
 		if (*p == '\\')
 			*p = '/';
-	}
 
 	return 0;
 }

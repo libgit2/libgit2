@@ -28,13 +28,13 @@ typedef struct git_vector {
 
 int git_vector_init(git_vector *v, size_t initial_size, git_vector_cmp cmp);
 void git_vector_free(git_vector *v);
-void git_vector_free_deep(git_vector *v); /* free each entry and self */
+void git_vector_free_deep(git_vector *v);	/* free each entry and self */
 void git_vector_clear(git_vector *v);
 int git_vector_dup(git_vector *v, const git_vector *src, git_vector_cmp cmp);
 void git_vector_swap(git_vector *a, git_vector *b);
 int git_vector_size_hint(git_vector *v, size_t size_hint);
 
-void **git_vector_detach(size_t *size, size_t *asize, git_vector *v);
+void * *git_vector_detach(size_t *size, size_t *asize, git_vector *v);
 
 void git_vector_sort(git_vector *v);
 
@@ -74,18 +74,18 @@ GIT_INLINE(void *) git_vector_last(const git_vector *v)
 	return (v->length > 0) ? git_vector_get(v, v->length - 1) : NULL;
 }
 
-#define git_vector_foreach(v, iter, elem)	\
-	for ((iter) = 0; (iter) < (v)->length && ((elem) = (v)->contents[(iter)], 1); (iter)++ )
+#define git_vector_foreach(v, iter, elem) \
+	for ((iter) = 0; (iter) < (v)->length && ((elem) = (v)->contents[(iter)], 1); (iter)++)
 
-#define git_vector_rforeach(v, iter, elem)	\
-	for ((iter) = (v)->length - 1; (iter) < SIZE_MAX && ((elem) = (v)->contents[(iter)], 1); (iter)-- )
+#define git_vector_rforeach(v, iter, elem) \
+	for ((iter) = (v)->length - 1; (iter) < SIZE_MAX && ((elem) = (v)->contents[(iter)], 1); (iter)--)
 
 int git_vector_insert(git_vector *v, void *element);
 int git_vector_insert_sorted(git_vector *v, void *element,
 	int (*on_dup)(void **old, void *new));
 int git_vector_remove(git_vector *v, size_t idx);
 void git_vector_pop(git_vector *v);
-void git_vector_uniq(git_vector *v, void  (*git_free_cb)(void *));
+void git_vector_uniq(git_vector *v, void (*git_free_cb)(void *));
 
 void git_vector_remove_matching(
 	git_vector *v,
@@ -103,8 +103,8 @@ int git_vector_set(void **old, git_vector *v, size_t position, void *value);
 
 /** Directly set sorted state of vector */
 #define git_vector_set_sorted(V,S) do { \
-	(V)->flags = (S) ? ((V)->flags | GIT_VECTOR_SORTED) : \
-		((V)->flags & ~GIT_VECTOR_SORTED); } while (0)
+		(V)->flags = (S) ? ((V)->flags | GIT_VECTOR_SORTED) : \
+		        ((V)->flags & ~GIT_VECTOR_SORTED); } while (0)
 
 /** Set the comparison function used for sorting the vector */
 GIT_INLINE(void) git_vector_set_cmp(git_vector *v, git_vector_cmp cmp)

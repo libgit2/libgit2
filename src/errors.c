@@ -70,7 +70,7 @@ void giterr_set(int error_class, const char *string, ...)
 
 	if (error_class == GITERR_OS) {
 #ifdef GIT_WIN32
-		char * win32_error = git_win32_get_error_message(win32_error_code);
+		char *win32_error = git_win32_get_error_message(win32_error_code);
 		if (win32_error) {
 			git_buf_puts(buf, win32_error);
 			git__free(win32_error);

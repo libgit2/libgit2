@@ -9,14 +9,14 @@
 
 #if defined(__MINGW32__)
 
-#undef stat
+# undef stat
 
-#if _WIN32_WINNT < 0x0600 && !defined(__MINGW64_VERSION_MAJOR)
-#undef MemoryBarrier
+# if _WIN32_WINNT < 0x0600 && !defined(__MINGW64_VERSION_MAJOR)
+#  undef MemoryBarrier
 void __mingworg_MemoryBarrier(void);
-#define MemoryBarrier __mingworg_MemoryBarrier
-#define VOLUME_NAME_DOS 0x0
-#endif
+#  define MemoryBarrier __mingworg_MemoryBarrier
+#  define VOLUME_NAME_DOS 0x0
+# endif
 
 #endif
 

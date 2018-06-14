@@ -22,8 +22,8 @@ git__DIR *git__opendir(const char *dir)
 	dirlen = strlen(dir);
 
 	if (GIT_ADD_SIZET_OVERFLOW(&alloclen, sizeof(*new), dirlen) ||
-		GIT_ADD_SIZET_OVERFLOW(&alloclen, alloclen, 1) ||
-		!(new = git__calloc(1, alloclen)))
+	    GIT_ADD_SIZET_OVERFLOW(&alloclen, alloclen, 1) ||
+	    !(new = git__calloc(1, alloclen)))
 		return NULL;
 
 	memcpy(new->dir, dir, dirlen);

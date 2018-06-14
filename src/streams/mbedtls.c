@@ -9,34 +9,34 @@
 
 #ifdef GIT_MBEDTLS
 
-#include <ctype.h>
+# include <ctype.h>
 
-#include "global.h"
-#include "stream.h"
-#include "streams/socket.h"
-#include "netops.h"
-#include "git2/transport.h"
-#include "util.h"
+# include "global.h"
+# include "stream.h"
+# include "streams/socket.h"
+# include "netops.h"
+# include "git2/transport.h"
+# include "util.h"
 
-#ifdef GIT_CURL
-# include "streams/curl.h"
-#endif
+# ifdef GIT_CURL
+#  include "streams/curl.h"
+# endif
 
-#ifndef GIT_DEFAULT_CERT_LOCATION
-#define GIT_DEFAULT_CERT_LOCATION NULL
-#endif
+# ifndef GIT_DEFAULT_CERT_LOCATION
+#  define GIT_DEFAULT_CERT_LOCATION NULL
+# endif
 
-#include <mbedtls/config.h>
-#include <mbedtls/ssl.h>
-#include <mbedtls/error.h>
-#include <mbedtls/entropy.h>
-#include <mbedtls/ctr_drbg.h>
+# include <mbedtls/config.h>
+# include <mbedtls/ssl.h>
+# include <mbedtls/error.h>
+# include <mbedtls/entropy.h>
+# include <mbedtls/ctr_drbg.h>
 
 mbedtls_ssl_config *git__ssl_conf;
 mbedtls_entropy_context *mbedtls_entropy;
 
-#define GIT_SSL_DEFAULT_CIPHERS "TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256:TLS-ECDHE-RSA-WITH-AES-128-GCM-SHA256:TLS-ECDHE-ECDSA-WITH-AES-256-GCM-SHA384:TLS-ECDHE-RSA-WITH-AES-256-GCM-SHA384:TLS-DHE-RSA-WITH-AES-128-GCM-SHA256:TLS-DHE-DSS-WITH-AES-128-GCM-SHA256:TLS-DHE-RSA-WITH-AES-256-GCM-SHA384:TLS-DHE-DSS-WITH-AES-256-GCM-SHA384:TLS-ECDHE-ECDSA-WITH-AES-128-CBC-SHA256:TLS-ECDHE-RSA-WITH-AES-128-CBC-SHA256:TLS-ECDHE-ECDSA-WITH-AES-128-CBC-SHA:TLS-ECDHE-RSA-WITH-AES-128-CBC-SHA:TLS-ECDHE-ECDSA-WITH-AES-256-CBC-SHA384:TLS-ECDHE-RSA-WITH-AES-256-CBC-SHA384:TLS-ECDHE-ECDSA-WITH-AES-256-CBC-SHA:TLS-ECDHE-RSA-WITH-AES-256-CBC-SHA:TLS-DHE-RSA-WITH-AES-128-CBC-SHA256:TLS-DHE-RSA-WITH-AES-256-CBC-SHA256:TLS-DHE-RSA-WITH-AES-128-CBC-SHA:TLS-DHE-RSA-WITH-AES-256-CBC-SHA:TLS-DHE-DSS-WITH-AES-128-CBC-SHA256:TLS-DHE-DSS-WITH-AES-256-CBC-SHA256:TLS-DHE-DSS-WITH-AES-128-CBC-SHA:TLS-DHE-DSS-WITH-AES-256-CBC-SHA:TLS-RSA-WITH-AES-128-GCM-SHA256:TLS-RSA-WITH-AES-256-GCM-SHA384:TLS-RSA-WITH-AES-128-CBC-SHA256:TLS-RSA-WITH-AES-256-CBC-SHA256:TLS-RSA-WITH-AES-128-CBC-SHA:TLS-RSA-WITH-AES-256-CBC-SHA"
-#define GIT_SSL_DEFAULT_CIPHERS_COUNT 30
+# define GIT_SSL_DEFAULT_CIPHERS "TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256:TLS-ECDHE-RSA-WITH-AES-128-GCM-SHA256:TLS-ECDHE-ECDSA-WITH-AES-256-GCM-SHA384:TLS-ECDHE-RSA-WITH-AES-256-GCM-SHA384:TLS-DHE-RSA-WITH-AES-128-GCM-SHA256:TLS-DHE-DSS-WITH-AES-128-GCM-SHA256:TLS-DHE-RSA-WITH-AES-256-GCM-SHA384:TLS-DHE-DSS-WITH-AES-256-GCM-SHA384:TLS-ECDHE-ECDSA-WITH-AES-128-CBC-SHA256:TLS-ECDHE-RSA-WITH-AES-128-CBC-SHA256:TLS-ECDHE-ECDSA-WITH-AES-128-CBC-SHA:TLS-ECDHE-RSA-WITH-AES-128-CBC-SHA:TLS-ECDHE-ECDSA-WITH-AES-256-CBC-SHA384:TLS-ECDHE-RSA-WITH-AES-256-CBC-SHA384:TLS-ECDHE-ECDSA-WITH-AES-256-CBC-SHA:TLS-ECDHE-RSA-WITH-AES-256-CBC-SHA:TLS-DHE-RSA-WITH-AES-128-CBC-SHA256:TLS-DHE-RSA-WITH-AES-256-CBC-SHA256:TLS-DHE-RSA-WITH-AES-128-CBC-SHA:TLS-DHE-RSA-WITH-AES-256-CBC-SHA:TLS-DHE-DSS-WITH-AES-128-CBC-SHA256:TLS-DHE-DSS-WITH-AES-256-CBC-SHA256:TLS-DHE-DSS-WITH-AES-128-CBC-SHA:TLS-DHE-DSS-WITH-AES-256-CBC-SHA:TLS-RSA-WITH-AES-128-GCM-SHA256:TLS-RSA-WITH-AES-256-GCM-SHA384:TLS-RSA-WITH-AES-128-CBC-SHA256:TLS-RSA-WITH-AES-256-CBC-SHA256:TLS-RSA-WITH-AES-128-CBC-SHA:TLS-RSA-WITH-AES-256-CBC-SHA"
+# define GIT_SSL_DEFAULT_CIPHERS_COUNT 30
 
 /**
  * This function aims to clean-up the SSL context which
@@ -101,7 +101,8 @@ int git_mbedtls_stream_global_init(void)
 	cipher_string = cipher_string_tmp = git__strdup(GIT_SSL_DEFAULT_CIPHERS);
 	while ((cipher_name = git__strtok(&cipher_string_tmp, ":")) != NULL) {
 		int cipherid = mbedtls_ssl_get_ciphersuite_id(cipher_name);
-		if (cipherid == 0) continue;
+		if (cipherid == 0)
+			continue;
 
 		ciphers_list[ciphers_known++] = cipherid;
 	}
@@ -175,8 +176,8 @@ static int ssl_set_error(mbedtls_ssl_context *ssl, int error)
 	if (error != 0)
 		mbedtls_strerror( error, errbuf, 512 );
 
-	switch(error) {
-		case 0:
+	switch (error) {
+	case 0:
 		giterr_set(GITERR_SSL, "SSL error: unknown error");
 		break;
 
@@ -211,7 +212,8 @@ static int verify_server_cert(mbedtls_ssl_context *ssl)
 	if ((ret = mbedtls_ssl_get_verify_result(ssl)) != 0) {
 		char vrfy_buf[512];
 		int len = mbedtls_x509_crt_verify_info(vrfy_buf, sizeof(vrfy_buf), "", ret);
-		if (len >= 1) vrfy_buf[len - 1] = '\0'; /* Remove trailing \n */
+		if (len >= 1)
+			vrfy_buf[len - 1] = '\0';	/* Remove trailing \n */
 		giterr_set(GITERR_SSL, "the SSL certificate is invalid: %#04x - %s", ret, vrfy_buf);
 		return GIT_ECERTIFICATE;
 	}
@@ -347,11 +349,11 @@ int git_mbedtls_stream_new(git_stream **out, const char *host, const char *port)
 	st = git__calloc(1, sizeof(mbedtls_stream));
 	GITERR_CHECK_ALLOC(st);
 
-#ifdef GIT_CURL
+# ifdef GIT_CURL
 	error = git_curl_stream_new(&st->io, host, port);
-#else
+# else
 	error = git_socket_stream_new(&st->io, host, port);
-#endif
+# endif
 
 	if (error < 0)
 		goto out_err;
@@ -423,7 +425,7 @@ int git_mbedtls__set_cert_location(const char *path, int is_dir)
 
 #else
 
-#include "stream.h"
+# include "stream.h"
 
 int git_mbedtls_stream_global_init(void)
 {

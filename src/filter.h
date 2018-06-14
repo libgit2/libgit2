@@ -40,7 +40,7 @@ extern void git_filter_free(git_filter *filter);
 extern int git_filter_list__load_ext(
 	git_filter_list **filters,
 	git_repository *repo,
-	git_blob *blob, /* can be NULL */
+	git_blob *blob,	/* can be NULL */
 	const char *path,
 	git_filter_mode_t mode,
 	git_filter_options *filter_opts);

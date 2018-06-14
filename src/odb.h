@@ -42,7 +42,7 @@ struct git_odb {
 	git_refcount rc;
 	git_vector backends;
 	git_cache own_cache;
-	unsigned int do_fsync :1;
+	unsigned int do_fsync : 1;
 };
 
 typedef enum {
