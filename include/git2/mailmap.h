@@ -47,7 +47,7 @@ GIT_EXTERN(void) git_mailmap_free(git_mailmap *mm);
  * @param real_email the real email to use, or NULL
  * @param replace_name the name to replace, or NULL
  * @param replace_email the email to replace
- * @return 0 if it was added, EEXISTS if it replaced an entry, or an error code
+ * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_mailmap_add_entry(
 	git_mailmap *mm, const char *real_name, const char *real_email,

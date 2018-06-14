@@ -203,7 +203,9 @@ static int mailmap_add_entry_unterminated(
 	GITERR_CHECK_ALLOC(entry->replace_email);
 
 	error = git_vector_insert_sorted(&mm->entries, entry, mailmap_entry_replace);
-	if (error < 0 && error != GIT_EEXISTS)
+	if (error == GIT_EEXISTS)
+		error = GIT_OK;
+	else if (error < 0)
 		mailmap_entry_free(entry);
 
 	return error;
@@ -256,7 +258,7 @@ int git_mailmap_add_buffer(git_mailmap *mm, const char *buf, size_t len)
 		error = mailmap_add_entry_unterminated(
 			mm, real_name.ptr, real_name.size, real_email.ptr, real_email.size,
 			replace_name.ptr, replace_name.size, replace_email.ptr, replace_email.size);
-		if (error < 0 && error != GIT_EEXISTS)
+		if (error < 0)
 			goto cleanup;
 
 		error = 0;
