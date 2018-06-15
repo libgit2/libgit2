@@ -265,10 +265,10 @@ int git_mailmap_add_buffer(git_mailmap *mm, const char *buf, size_t len)
 	}
 
 cleanup:
-	git_buf_free(&real_name);
-	git_buf_free(&real_email);
-	git_buf_free(&replace_name);
-	git_buf_free(&replace_email);
+	git_buf_dispose(&real_name);
+	git_buf_dispose(&real_email);
+	git_buf_dispose(&replace_name);
+	git_buf_dispose(&replace_email);
 	return error;
 }
 
@@ -313,7 +313,7 @@ static int mailmap_add_blob(
 		goto cleanup;
 
 cleanup:
-	git_buf_free(&content);
+	git_buf_dispose(&content);
 	git_blob_free(blob);
 	git_object_free(object);
 	return error;
@@ -340,8 +340,8 @@ static int mailmap_add_file_ondisk(
 		goto cleanup;
 
 cleanup:
-	git_buf_free(&fullpath);
-	git_buf_free(&content);
+	git_buf_dispose(&fullpath);
+	git_buf_dispose(&content);
 	return error;
 }
 
@@ -386,8 +386,8 @@ static void mailmap_add_from_repository(git_mailmap *mm, git_repository *repo)
 	if (path != NULL)
 		mailmap_add_file_ondisk(mm, path, repo);
 
-	git_buf_free(&rev_buf);
-	git_buf_free(&path_buf);
+	git_buf_dispose(&rev_buf);
+	git_buf_dispose(&path_buf);
 	git_config_free(config);
 }
 

@@ -88,7 +88,7 @@ void test_mailmap_parsing__windows_string(void)
 	git_buf_text_lf_to_crlf(&winbuf, &unixbuf);
 
 	cl_git_pass(git_mailmap_from_buffer(&g_mailmap, winbuf.ptr, winbuf.size));
-	git_buf_free(&winbuf);
+	git_buf_dispose(&winbuf);
 
 	/* We should have parsed all of the entries */
 	check_mailmap_entries(g_mailmap, entries, ARRAY_SIZE(entries));
