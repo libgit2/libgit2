@@ -74,14 +74,6 @@ int git_tree_entry_cmp(const git_tree_entry *e1, const git_tree_entry *e2)
 	return entry_sort_cmp(e1, e2);
 }
 
-int git_tree_entry_icmp(const git_tree_entry *e1, const git_tree_entry *e2)
-{
-	return git_path_cmp(
-		e1->filename, e1->filename_len, git_tree_entry__is_tree(e1),
-		e2->filename, e2->filename_len, git_tree_entry__is_tree(e2),
-		git__strncasecmp);
-}
-
 /**
  * Allocate a new self-contained entry, with enough space after it to
  * store the filename and the id.
