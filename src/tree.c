@@ -334,41 +334,6 @@ const git_tree_entry *git_tree_entry_byid(
 	return NULL;
 }
 
-int git_tree__prefix_position(const git_tree *tree, const char *path)
-{
-	struct tree_key_search ksearch;
-	size_t at_pos, path_len;
-
-	if (!path)
-		return 0;
-
-	path_len = strlen(path);
-	TREE_ENTRY_CHECK_NAMELEN(path_len);
-
-	ksearch.filename = path;
-	ksearch.filename_len = (uint16_t)path_len;
-
-	/* Find tree entry with appropriate prefix */
-	git_array_search(
-		&at_pos, tree->entries, &homing_search_cmp, &ksearch);
-
-	for (; at_pos < tree->entries.size; ++at_pos) {
-		const git_tree_entry *entry = git_array_get(tree->entries, at_pos);
-		if (homing_search_cmp(&ksearch, entry) < 0)
-			break;
-	}
-
-	for (; at_pos > 0; --at_pos) {
-		const git_tree_entry *entry =
-			git_array_get(tree->entries, at_pos - 1);
-
-		if (homing_search_cmp(&ksearch, entry) > 0)
-			break;
-	}
-
-	return (int)at_pos;
-}
-
 size_t git_tree_entrycount(const git_tree *tree)
 {
 	assert(tree);
