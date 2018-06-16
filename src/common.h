@@ -49,7 +49,7 @@
 # include "win32/error.h"
 # include "win32/version.h"
 # ifdef GIT_THREADS
-#	include "win32/thread.h"
+#  include "win32/thread.h"
 # endif
 
 #else
@@ -57,16 +57,16 @@
 # include <unistd.h>
 # include <strings.h>
 # ifdef GIT_THREADS
-#	include <pthread.h>
-#	include <sched.h>
+#  include <pthread.h>
+#  include <sched.h>
 # endif
-#define GIT_STDLIB_CALL
+# define GIT_STDLIB_CALL
 
-#ifdef GIT_USE_STAT_ATIMESPEC
-# define st_atim st_atimespec
-# define st_ctim st_ctimespec
-# define st_mtim st_mtimespec
-#endif
+# ifdef GIT_USE_STAT_ATIMESPEC
+#  define st_atim st_atimespec
+#  define st_ctim st_ctimespec
+#  define st_mtim st_mtimespec
+# endif
 
 # include <arpa/inet.h>
 
@@ -98,7 +98,8 @@
  * Check a return value and propagate result if non-zero.
  */
 #define GITERR_CHECK_ERROR(code) \
-	do { int _err = (code); if (_err) return _err; } while (0)
+	do { int _err = (code);if (_err) \
+		     return _err;} while (0)
 
 /**
  * Set the error message for this thread, formatting as needed.
@@ -133,10 +134,10 @@ GIT_INLINE(int) giterr_set_after_callback_function(
 }
 
 #ifdef GIT_WIN32
-#define giterr_set_after_callback(code) \
+# define giterr_set_after_callback(code) \
 	giterr_set_after_callback_function((code), __FUNCTION__)
 #else
-#define giterr_set_after_callback(code) \
+# define giterr_set_after_callback(code) \
 	giterr_set_after_callback_function((code), __func__)
 #endif
 
@@ -184,14 +185,15 @@ GIT_INLINE(int) giterr__check_version(const void *structure, unsigned int expect
 	if (!structure)
 		return 0;
 
-	actual = *(const unsigned int*)structure;
+	actual = *(const unsigned int *)structure;
 	if (actual > 0 && actual <= expected_max)
 		return 0;
 
 	giterr_set(GITERR_INVALID, "invalid version %d on %s", actual, name);
 	return -1;
 }
-#define GITERR_CHECK_VERSION(S,V,N) if (giterr__check_version(S,V,N) < 0) return -1
+#define GITERR_CHECK_VERSION(S,V,N) if (giterr__check_version(S,V,N) < 0) \
+		return -1
 
 /**
  * Initialize a structure with a version.
@@ -199,14 +201,14 @@ GIT_INLINE(int) giterr__check_version(const void *structure, unsigned int expect
 GIT_INLINE(void) git__init_structure(void *structure, size_t len, unsigned int version)
 {
 	memset(structure, 0, len);
-	*((int*)structure) = version;
+	*((int *)structure) = version;
 }
 #define GIT_INIT_STRUCTURE(S,V) git__init_structure(S, sizeof(*S), V)
 
 #define GIT_INIT_STRUCTURE_FROM_TEMPLATE(PTR,VERSION,TYPE,TPL) do { \
-	TYPE _tmpl = TPL; \
-	GITERR_CHECK_VERSION(&(VERSION), _tmpl.version, #TYPE);	\
-	memcpy((PTR), &_tmpl, sizeof(_tmpl)); } while (0)
+		TYPE _tmpl = TPL; \
+		GITERR_CHECK_VERSION(&(VERSION), _tmpl.version, #TYPE); \
+		memcpy((PTR), &_tmpl, sizeof(_tmpl)); } while (0)
 
 
 /** Check for additive overflow, setting an error if would occur. */
@@ -223,18 +225,18 @@ GIT_INLINE(void) git__init_structure(void *structure, size_t len, unsigned int v
 
 #define GITERR_CHECK_ALLOC_ADD3(out, one, two, three) \
 	if (GIT_ADD_SIZET_OVERFLOW(out, one, two) || \
-		GIT_ADD_SIZET_OVERFLOW(out, *(out), three)) { return -1; }
+	    GIT_ADD_SIZET_OVERFLOW(out, *(out), three)) { return -1; }
 
 #define GITERR_CHECK_ALLOC_ADD4(out, one, two, three, four) \
 	if (GIT_ADD_SIZET_OVERFLOW(out, one, two) || \
-		GIT_ADD_SIZET_OVERFLOW(out, *(out), three) || \
-		GIT_ADD_SIZET_OVERFLOW(out, *(out), four)) { return -1; }
+	    GIT_ADD_SIZET_OVERFLOW(out, *(out), three) || \
+	    GIT_ADD_SIZET_OVERFLOW(out, *(out), four)) { return -1; }
 
 #define GITERR_CHECK_ALLOC_ADD5(out, one, two, three, four, five) \
 	if (GIT_ADD_SIZET_OVERFLOW(out, one, two) || \
-		GIT_ADD_SIZET_OVERFLOW(out, *(out), three) || \
-		GIT_ADD_SIZET_OVERFLOW(out, *(out), four) || \
-		GIT_ADD_SIZET_OVERFLOW(out, *(out), five)) { return -1; }
+	    GIT_ADD_SIZET_OVERFLOW(out, *(out), three) || \
+	    GIT_ADD_SIZET_OVERFLOW(out, *(out), four) || \
+	    GIT_ADD_SIZET_OVERFLOW(out, *(out), five)) { return -1; }
 
 /** Check for multiplicative overflow, failing if it would occur. */
 #define GITERR_CHECK_ALLOC_MULTIPLY(out, nelem, elsize) \

@@ -30,13 +30,13 @@ struct git_revwalk {
 	git_commit_list *iterator_reverse;
 	git_pqueue iterator_time;
 
-	int (*get_next)(git_commit_list_node **, git_revwalk *);
+	int (*get_next)(git_commit_list_node * *, git_revwalk *);
 	int (*enqueue)(git_revwalk *, git_commit_list_node *);
 
-	unsigned walking:1,
-		first_parent: 1,
-		did_hide: 1,
-		did_push: 1;
+	unsigned walking : 1,
+	         first_parent : 1,
+	         did_hide : 1,
+	         did_push : 1;
 	unsigned int sorting;
 
 	/* the pushes and hides */

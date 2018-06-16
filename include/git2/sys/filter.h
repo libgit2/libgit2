@@ -174,7 +174,7 @@ typedef void (*git_filter_shutdown_fn)(git_filter *self);
  */
 typedef int (*git_filter_check_fn)(
 	git_filter  *self,
-	void       **payload, /* points to NULL ptr on entry, may be set */
+	void       **payload,	/* points to NULL ptr on entry, may be set */
 	const git_filter_source *src,
 	const char **attr_values);
 
@@ -192,7 +192,7 @@ typedef int (*git_filter_check_fn)(
  */
 typedef int (*git_filter_apply_fn)(
 	git_filter    *self,
-	void         **payload, /* may be read and/or set */
+	void         **payload,	/* may be read and/or set */
 	git_buf       *to,
 	const git_buf *from,
 	const git_filter_source *src);
@@ -225,9 +225,9 @@ typedef void (*git_filter_cleanup_fn)(
  */
 struct git_filter {
 	/** The `version` field should be set to `GIT_FILTER_VERSION`. */
-	unsigned int           version;
+	unsigned int version;
 
- 	/**
+	/**
 	 * A whitespace-separated list of attribute names to check for this
 	 * filter (e.g. "eol crlf text").  If the attribute name is bare, it
 	 * will be simply loaded and passed to the `check` callback.  If it
@@ -240,7 +240,7 @@ struct git_filter {
 	const char            *attributes;
 
 	/** Called when the filter is first used for any file. */
-	git_filter_init_fn     initialize;
+	git_filter_init_fn initialize;
 
 	/** Called when the filter is removed or unregistered from the system. */
 	git_filter_shutdown_fn shutdown;
@@ -251,23 +251,23 @@ struct git_filter {
 	 * `apply` function will not be invoked and the contents will be passed
 	 * through unmodified.
 	 */
-	git_filter_check_fn    check;
+	git_filter_check_fn check;
 
 	/**
 	 * Called to actually apply the filter to file contents.  If this
 	 * function returns `GIT_PASSTHROUGH` then the contents will be passed
 	 * through unmodified.
 	 */
-	git_filter_apply_fn    apply;
+	git_filter_apply_fn apply;
 
 	/**
 	 * Called to apply the filter in a streaming manner.  If this is not
 	 * specified then the system will call `apply` with the whole buffer.
 	 */
-	git_filter_stream_fn   stream;
+	git_filter_stream_fn stream;
 
 	/** Called when the system is done filtering for a file. */
-	git_filter_cleanup_fn  cleanup;
+	git_filter_cleanup_fn cleanup;
 };
 
 #define GIT_FILTER_VERSION 1
@@ -302,10 +302,10 @@ GIT_EXTERN(int) git_filter_init(git_filter *filter, unsigned int version);
  * the filters (i.e. during application setup or shutdown).
  *
  * @param name A name by which the filter can be referenced.  Attempting
- * 			to register with an in-use name will return GIT_EEXISTS.
+ *                      to register with an in-use name will return GIT_EEXISTS.
  * @param filter The filter definition.  This pointer will be stored as is
- * 			by libgit2 so it must be a durable allocation (either static
- * 			or on the heap).
+ *                      by libgit2 so it must be a durable allocation (either static
+ *                      or on the heap).
  * @param priority The priority for filter application
  * @return 0 on successful registry, error code <0 on failure
  */

@@ -70,7 +70,7 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting,
 
 	commit = git_revwalk__commit_lookup(walk, &commit_id);
 	if (commit == NULL)
-		return -1; /* error already reported by failed lookup */
+		return -1;	/* error already reported by failed lookup */
 
 	/* A previous hide already told us we don't want this commit  */
 	if (commit->uninteresting)
@@ -384,7 +384,7 @@ static int still_interesting(git_commit_list *list, int64_t time, int slop)
 	if (!list)
 		return 0;
 
-	for (; list; list = list->next) {
+	for (; list; list = list->next)
 		/*
 		 * If the destination list has commits with an earlier date than
 		 * our source or if it still contains interesting commits we
@@ -392,7 +392,6 @@ static int still_interesting(git_commit_list *list, int64_t time, int slop)
 		 */
 		if (!list->item->uninteresting || list->item->time > time)
 			return SLOP;
-	}
 
 	/* Everything's uninteresting, reduce the count */
 	return slop - 1;
@@ -423,7 +422,7 @@ static int limit_list(git_commit_list **out, git_revwalk *walk, git_commit_list 
 		}
 
 		if (!commit->uninteresting && walk->hide_cb && walk->hide_cb(&commit->oid, walk->hide_cb_payload))
-				continue;
+			continue;
 
 		time = commit->time;
 		p = &git_commit_list_insert(commit, p)->next;
@@ -455,33 +454,30 @@ static int sort_in_topological_order(git_commit_list **out, git_revwalk *walk, g
 	 * store it in the commit list as we extract it from the lower
 	 * machinery.
 	 */
-	for (ll = list; ll; ll = ll->next) {
+	for (ll = list; ll; ll = ll->next)
 		ll->item->in_degree = 1;
-	}
 
 	/*
 	 * Count up how many children each commit has. We limit
 	 * ourselves to those commits in the original list (in-degree
 	 * of 1) avoiding setting it for any parent that was hidden.
 	 */
-	for(ll = list; ll; ll = ll->next) {
+	for (ll = list; ll; ll = ll->next)
 		for (i = 0; i < ll->item->out_degree; ++i) {
 			git_commit_list_node *parent = ll->item->parents[i];
 			if (parent->in_degree)
 				parent->in_degree++;
 		}
-	}
 
 	/*
 	 * Now we find the tips i.e. those not reachable from any other node
 	 * i.e. those which still have an in-degree of 1.
 	 */
-	for(ll = list; ll; ll = ll->next) {
+	for (ll = list; ll; ll = ll->next)
 		if (ll->item->in_degree == 1) {
 			if ((error = git_pqueue_insert(&queue, ll->item)))
 				goto cleanup;
 		}
-	}
 
 	/*
 	 * We need to output the tips in the order that they came out of the

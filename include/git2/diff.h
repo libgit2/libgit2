@@ -163,7 +163,7 @@ typedef enum {
 
 	/** Include unreadable files in the diff */
 	GIT_DIFF_INCLUDE_UNREADABLE = (1u << 16),
-	
+
 	/** Include unreadable files in the diff */
 	GIT_DIFF_INCLUDE_UNREADABLE_AS_UNTRACKED = (1u << 17),
 
@@ -233,10 +233,10 @@ typedef struct git_diff git_diff;
  * considered reserved for internal or future use.
  */
 typedef enum {
-	GIT_DIFF_FLAG_BINARY     = (1u << 0), /**< file(s) treated as binary data */
-	GIT_DIFF_FLAG_NOT_BINARY = (1u << 1), /**< file(s) treated as text data */
-	GIT_DIFF_FLAG_VALID_ID   = (1u << 2), /**< `id` value is known correct */
-	GIT_DIFF_FLAG_EXISTS     = (1u << 3), /**< file exists at this side of the delta */
+	GIT_DIFF_FLAG_BINARY     = (1u << 0),	/**< file(s) treated as binary data */
+	GIT_DIFF_FLAG_NOT_BINARY = (1u << 1),	/**< file(s) treated as text data */
+	GIT_DIFF_FLAG_VALID_ID   = (1u << 2),	/**< `id` value is known correct */
+	GIT_DIFF_FLAG_EXISTS     = (1u << 3),	/**< file exists at this side of the delta */
 } git_diff_flag_t;
 
 /**
@@ -250,17 +250,17 @@ typedef enum {
  * DELETED pairs).
  */
 typedef enum {
-	GIT_DELTA_UNMODIFIED = 0,  /**< no changes */
-	GIT_DELTA_ADDED = 1,	   /**< entry does not exist in old version */
-	GIT_DELTA_DELETED = 2,	   /**< entry does not exist in new version */
-	GIT_DELTA_MODIFIED = 3,    /**< entry content changed between old and new */
-	GIT_DELTA_RENAMED = 4,     /**< entry was renamed between old and new */
-	GIT_DELTA_COPIED = 5,      /**< entry was copied from another old entry */
-	GIT_DELTA_IGNORED = 6,     /**< entry is ignored item in workdir */
-	GIT_DELTA_UNTRACKED = 7,   /**< entry is untracked item in workdir */
-	GIT_DELTA_TYPECHANGE = 8,  /**< type of entry changed between old and new */
-	GIT_DELTA_UNREADABLE = 9,  /**< entry is unreadable */
-	GIT_DELTA_CONFLICTED = 10, /**< entry in the index is conflicted */
+	GIT_DELTA_UNMODIFIED = 0,	/**< no changes */
+	GIT_DELTA_ADDED = 1,		/**< entry does not exist in old version */
+	GIT_DELTA_DELETED = 2,		/**< entry does not exist in new version */
+	GIT_DELTA_MODIFIED = 3,		/**< entry content changed between old and new */
+	GIT_DELTA_RENAMED = 4,		/**< entry was renamed between old and new */
+	GIT_DELTA_COPIED = 5,		/**< entry was copied from another old entry */
+	GIT_DELTA_IGNORED = 6,		/**< entry is ignored item in workdir */
+	GIT_DELTA_UNTRACKED = 7,	/**< entry is untracked item in workdir */
+	GIT_DELTA_TYPECHANGE = 8,	/**< type of entry changed between old and new */
+	GIT_DELTA_UNREADABLE = 9,	/**< entry is unreadable */
+	GIT_DELTA_CONFLICTED = 10,	/**< entry in the index is conflicted */
 } git_delta_t;
 
 /**
@@ -290,12 +290,12 @@ typedef enum {
  * abbreviated to something reasonable, like 7 characters.
  */
 typedef struct {
-	git_oid     id;
+	git_oid id;
 	const char *path;
-	git_off_t   size;
-	uint32_t    flags;
-	uint16_t    mode;
-	uint16_t    id_abbrev;
+	git_off_t size;
+	uint32_t flags;
+	uint16_t mode;
+	uint16_t id_abbrev;
 } git_diff_file;
 
 /**
@@ -335,10 +335,10 @@ typedef struct {
  * the score (a la `printf("M%03d", 100 - delta->similarity)`).
  */
 typedef struct {
-	git_delta_t   status;
-	uint32_t      flags;	   /**< git_diff_flag_t values */
-	uint16_t      similarity;  /**< for RENAMED and COPIED, value 0-100 */
-	uint16_t      nfiles;	   /**< number of files in this delta */
+	git_delta_t status;
+	uint32_t flags;		/**< git_diff_flag_t values */
+	uint16_t similarity;	/**< for RENAMED and COPIED, value 0-100 */
+	uint16_t nfiles;	/**< number of files in this delta */
 	git_diff_file old_file;
 	git_diff_file new_file;
 } git_diff_delta;
@@ -406,25 +406,25 @@ typedef int (*git_diff_progress_cb)(
  *   submodules in the diff.
  */
 typedef struct {
-	unsigned int version;      /**< version for the struct */
-	uint32_t flags;            /**< defaults to GIT_DIFF_NORMAL */
+	unsigned int version;		/**< version for the struct */
+	uint32_t flags;			/**< defaults to GIT_DIFF_NORMAL */
 
 	/* options controlling which files are in the diff */
 
-	git_submodule_ignore_t ignore_submodules; /**< submodule ignore rule */
-	git_strarray       pathspec;     /**< defaults to include all paths */
-	git_diff_notify_cb   notify_cb;
+	git_submodule_ignore_t ignore_submodules;	/**< submodule ignore rule */
+	git_strarray pathspec;		/**< defaults to include all paths */
+	git_diff_notify_cb notify_cb;
 	git_diff_progress_cb progress_cb;
 	void                *payload;
 
 	/* options controlling how to diff text is generated */
 
-	uint32_t    context_lines;    /**< defaults to 3 */
-	uint32_t    interhunk_lines;  /**< defaults to 0 */
-	uint16_t    id_abbrev;       /**< default 'core.abbrev' or 7 if unset */
-	git_off_t   max_size;         /**< defaults to 512MB */
-	const char *old_prefix;       /**< defaults to "a" */
-	const char *new_prefix;       /**< defaults to "b" */
+	uint32_t context_lines;		/**< defaults to 3 */
+	uint32_t interhunk_lines;	/**< defaults to 0 */
+	uint16_t id_abbrev;		/**< default 'core.abbrev' or 7 if unset */
+	git_off_t max_size;		/**< defaults to 512MB */
+	const char *old_prefix;		/**< defaults to "a" */
+	const char *new_prefix;		/**< defaults to "b" */
 } git_diff_options;
 
 /* The current version of the diff options structure */
@@ -462,7 +462,7 @@ typedef int (*git_diff_file_cb)(
 	float progress,
 	void *payload);
 
-#define GIT_DIFF_HUNK_HEADER_SIZE	128
+#define GIT_DIFF_HUNK_HEADER_SIZE       128
 
 /**
  * When producing a binary diff, the binary data returned will be
@@ -506,15 +506,15 @@ typedef struct {
 	 * that said `Binary files a/file.txt and b/file.txt differ`.
 	 */
 	unsigned int contains_data;
-	git_diff_binary_file old_file; /**< The contents of the old file. */
-	git_diff_binary_file new_file; /**< The contents of the new file. */
+	git_diff_binary_file old_file;	/**< The contents of the old file. */
+	git_diff_binary_file new_file;	/**< The contents of the new file. */
 } git_diff_binary;
 
 /**
 * When iterating over a diff, callback that will be made for
 * binary content within the diff.
 */
-typedef int(*git_diff_binary_cb)(
+typedef int (*git_diff_binary_cb)(
 	const git_diff_delta *delta,
 	const git_diff_binary *binary,
 	void *payload);
@@ -523,12 +523,12 @@ typedef int(*git_diff_binary_cb)(
  * Structure describing a hunk of a diff.
  */
 typedef struct {
-	int    old_start;     /**< Starting line number in old_file */
-	int    old_lines;     /**< Number of lines in old_file */
-	int    new_start;     /**< Starting line number in new_file */
-	int    new_lines;     /**< Number of lines in new_file */
-	size_t header_len;    /**< Number of bytes in header text */
-	char   header[GIT_DIFF_HUNK_HEADER_SIZE];   /**< Header text, NUL-byte terminated */
+	int old_start;		/**< Starting line number in old_file */
+	int old_lines;		/**< Number of lines in old_file */
+	int new_start;		/**< Starting line number in new_file */
+	int new_lines;		/**< Number of lines in new_file */
+	size_t header_len;	/**< Number of bytes in header text */
+	char header[GIT_DIFF_HUNK_HEADER_SIZE];		/**< Header text, NUL-byte terminated */
 } git_diff_hunk;
 
 /**
@@ -554,29 +554,29 @@ typedef enum {
 	GIT_DIFF_LINE_ADDITION  = '+',
 	GIT_DIFF_LINE_DELETION  = '-',
 
-	GIT_DIFF_LINE_CONTEXT_EOFNL = '=', /**< Both files have no LF at end */
-	GIT_DIFF_LINE_ADD_EOFNL = '>',     /**< Old has no LF at end, new does */
-	GIT_DIFF_LINE_DEL_EOFNL = '<',     /**< Old has LF at end, new does not */
+	GIT_DIFF_LINE_CONTEXT_EOFNL = '=',	/**< Both files have no LF at end */
+	GIT_DIFF_LINE_ADD_EOFNL = '>',		/**< Old has no LF at end, new does */
+	GIT_DIFF_LINE_DEL_EOFNL = '<',		/**< Old has LF at end, new does not */
 
 	/* The following values will only be sent to a `git_diff_line_cb` when
 	 * the content of a diff is being formatted through `git_diff_print`.
 	 */
 	GIT_DIFF_LINE_FILE_HDR  = 'F',
 	GIT_DIFF_LINE_HUNK_HDR  = 'H',
-	GIT_DIFF_LINE_BINARY    = 'B' /**< For "Binary files x and y differ" */
+	GIT_DIFF_LINE_BINARY    = 'B'	/**< For "Binary files x and y differ" */
 } git_diff_line_t;
 
 /**
  * Structure describing a line (or data span) of a diff.
  */
 typedef struct {
-	char   origin;       /**< A git_diff_line_t value */
-	int    old_lineno;   /**< Line number in old file or -1 for added line */
-	int    new_lineno;   /**< Line number in new file or -1 for deleted line */
-	int    num_lines;    /**< Number of newline characters in content */
-	size_t content_len;  /**< Number of bytes of data */
-	git_off_t content_offset; /**< Offset in the original file to the content */
-	const char *content; /**< Pointer to diff text, not NUL-byte terminated */
+	char origin;		/**< A git_diff_line_t value */
+	int old_lineno;		/**< Line number in old file or -1 for added line */
+	int new_lineno;		/**< Line number in new file or -1 for deleted line */
+	int num_lines;		/**< Number of newline characters in content */
+	size_t content_len;	/**< Number of bytes of data */
+	git_off_t content_offset;	/**< Offset in the original file to the content */
+	const char *content;	/**< Pointer to diff text, not NUL-byte terminated */
 } git_diff_line;
 
 /**
@@ -588,10 +588,10 @@ typedef struct {
  * of lines of file and hunk headers.
  */
 typedef int (*git_diff_line_cb)(
-	const git_diff_delta *delta, /**< delta that contains this data */
-	const git_diff_hunk *hunk,   /**< hunk containing this data */
-	const git_diff_line *line,   /**< line data */
-	void *payload);              /**< user reference data */
+	const git_diff_delta *delta,	/**< delta that contains this data */
+	const git_diff_hunk *hunk,	/**< hunk containing this data */
+	const git_diff_line *line,	/**< line data */
+	void *payload);			/**< user reference data */
 
 /**
  * Flags to control the behavior of diff rename/copy detection.
@@ -782,7 +782,7 @@ GIT_EXTERN(int) git_diff_tree_to_tree(
 	git_repository *repo,
 	git_tree *old_tree,
 	git_tree *new_tree,
-	const git_diff_options *opts); /**< can be NULL for defaults */
+	const git_diff_options *opts);	/**< can be NULL for defaults */
 
 /**
  * Create a diff between a tree and repository index.
@@ -808,7 +808,7 @@ GIT_EXTERN(int) git_diff_tree_to_index(
 	git_repository *repo,
 	git_tree *old_tree,
 	git_index *index,
-	const git_diff_options *opts); /**< can be NULL for defaults */
+	const git_diff_options *opts);	/**< can be NULL for defaults */
 
 /**
  * Create a diff between the repository index and the workdir directory.
@@ -834,7 +834,7 @@ GIT_EXTERN(int) git_diff_index_to_workdir(
 	git_diff **diff,
 	git_repository *repo,
 	git_index *index,
-	const git_diff_options *opts); /**< can be NULL for defaults */
+	const git_diff_options *opts);	/**< can be NULL for defaults */
 
 /**
  * Create a diff between a tree and the working directory.
@@ -863,7 +863,7 @@ GIT_EXTERN(int) git_diff_tree_to_workdir(
 	git_diff **diff,
 	git_repository *repo,
 	git_tree *old_tree,
-	const git_diff_options *opts); /**< can be NULL for defaults */
+	const git_diff_options *opts);	/**< can be NULL for defaults */
 
 /**
  * Create a diff between a tree and the working directory using index data
@@ -882,7 +882,7 @@ GIT_EXTERN(int) git_diff_tree_to_workdir_with_index(
 	git_diff **diff,
 	git_repository *repo,
 	git_tree *old_tree,
-	const git_diff_options *opts); /**< can be NULL for defaults */
+	const git_diff_options *opts);	/**< can be NULL for defaults */
 
 /**
  * Create a diff with the difference between two index objects.
@@ -901,7 +901,7 @@ GIT_EXTERN(int) git_diff_index_to_index(
 	git_repository *repo,
 	git_index *old_index,
 	git_index *new_index,
-	const git_diff_options *opts); /**< can be NULL for defaults */
+	const git_diff_options *opts);	/**< can be NULL for defaults */
 
 /**
  * Merge one diff into another.
@@ -1047,11 +1047,11 @@ GIT_EXTERN(char) git_diff_status_char(git_delta_t status);
  * Possible output formats for diff data
  */
 typedef enum {
-	GIT_DIFF_FORMAT_PATCH        = 1u, /**< full git diff */
-	GIT_DIFF_FORMAT_PATCH_HEADER = 2u, /**< just the file headers of patch */
-	GIT_DIFF_FORMAT_RAW          = 3u, /**< like git diff --raw */
-	GIT_DIFF_FORMAT_NAME_ONLY    = 4u, /**< like git diff --name-only */
-	GIT_DIFF_FORMAT_NAME_STATUS  = 5u, /**< like git diff --name-status */
+	GIT_DIFF_FORMAT_PATCH        = 1u,	/**< full git diff */
+	GIT_DIFF_FORMAT_PATCH_HEADER = 2u,	/**< just the file headers of patch */
+	GIT_DIFF_FORMAT_RAW          = 3u,	/**< like git diff --raw */
+	GIT_DIFF_FORMAT_NAME_ONLY    = 4u,	/**< like git diff --name-only */
+	GIT_DIFF_FORMAT_NAME_STATUS  = 5u,	/**< like git diff --name-status */
 } git_diff_format_t;
 
 /**
@@ -1328,7 +1328,6 @@ typedef enum {
 
 	/** Don't insert "[PATCH]" in the subject header*/
 	GIT_DIFF_FORMAT_EMAIL_EXCLUDE_SUBJECT_PATCH_MARKER = (1 << 0),
-
 } git_diff_format_email_flags_t;
 
 /**

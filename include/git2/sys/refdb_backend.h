@@ -93,9 +93,9 @@ struct git_refdb_backend {
 	 * must provide this function.
 	 */
 	int (*write)(git_refdb_backend *backend,
-		     const git_reference *ref, int force,
-		     const git_signature *who, const char *message,
-		     const git_oid *old, const char *old_target);
+		const git_reference *ref, int force,
+		const git_signature *who, const char *message,
+		const git_oid *old, const char *old_target);
 
 	int (*rename)(
 		git_reference **out, git_refdb_backend *backend,
@@ -166,7 +166,7 @@ struct git_refdb_backend {
 	 * reference or discard the lock (if it's false)
 	 */
 	int (*unlock)(git_refdb_backend *backend, void *payload, int success, int update_reflog,
-		      const git_reference *ref, const git_signature *sig, const char *message);
+		const git_reference *ref, const git_signature *sig, const char *message);
 };
 
 #define GIT_REFDB_BACKEND_VERSION 1

@@ -7,7 +7,7 @@
 #include "common.h"
 
 #ifndef GIT_WIN32
-#include <sys/time.h>
+# include <sys/time.h>
 #endif
 
 #include "util.h"
@@ -33,22 +33,22 @@ typedef enum {
 static git_time_t tm_to_time_t(const struct tm *tm)
 {
 	static const int mdays[] = {
-	    0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334
+		0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334
 	};
 	int year = tm->tm_year - 70;
 	int month = tm->tm_mon;
 	int day = tm->tm_mday;
 
-	if (year < 0 || year > 129) /* algo only works for 1970-2099 */
+	if (year < 0 || year > 129)	/* algo only works for 1970-2099 */
 		return -1;
-	if (month < 0 || month > 11) /* array bounds */
+	if (month < 0 || month > 11)	/* array bounds */
 		return -1;
 	if (month < 2 || (year + 2) % 4)
 		day--;
 	if (tm->tm_hour < 0 || tm->tm_min < 0 || tm->tm_sec < 0)
 		return -1;
 	return (year * 365 + (year + 1) / 4 + mdays[month] + day) * 24*60*60UL +
-		tm->tm_hour * 60*60 + tm->tm_min * 60 + tm->tm_sec;
+	       tm->tm_hour * 60*60 + tm->tm_min * 60 + tm->tm_sec;
 }
 
 static const char *month_names[] = {
@@ -94,7 +94,7 @@ static const struct {
 
 	{ "GMT",    0, 0, },	/* Greenwich Mean */
 	{ "UTC",    0, 0, },	/* Universal (Coordinated) */
-	{ "Z",      0, 0, },    /* Zulu, alias for UTC */
+	{ "Z",      0, 0, },	/* Zulu, alias for UTC */
 
 	{ "WET",    0, 0, },	/* Western European */
 	{ "BST",    0, 1, },	/* British Summer */
@@ -140,9 +140,11 @@ static size_t match_string(const char *date, const char *str)
 static int skip_alpha(const char *date)
 {
 	int i = 0;
+
 	do {
 		i++;
 	} while (isalpha(date[i]));
+
 	return i;
 }
 
@@ -309,11 +311,11 @@ static size_t match_multi_number(unsigned long num, char c, const char *date, ch
 static int nodate(struct tm *tm)
 {
 	return (tm->tm_year &
-		tm->tm_mon &
-		tm->tm_mday &
-		tm->tm_hour &
-		tm->tm_min &
-		tm->tm_sec) < 0;
+	        tm->tm_mon &
+	        tm->tm_mday &
+	        tm->tm_hour &
+	        tm->tm_min &
+	        tm->tm_sec) < 0;
 }
 
 /*
@@ -361,6 +363,7 @@ static size_t match_digit(const char *date, struct tm *tm, int *offset, int *tm_
 	 * to make a more educated guess..
 	 */
 	n = 0;
+
 	do {
 		n++;
 	} while (isdigit(date[n]));
@@ -425,13 +428,13 @@ static size_t match_tz(const char *date, int *offp)
 		min = hour % 100;
 		hour = hour / 100;
 	} else if (n != 2) {
-		min = 99; /* random stuff */
+		min = 99;	/* random stuff */
 	} else if (*end == ':') {
 		/* hh:mm? */
 		min = strtoul(end + 1, &end, 10);
 		if (end - (date + 1) != 5)
-			min = 99; /* random stuff */
-	} /* otherwise we parsed "hh" */
+			min = 99;/* random stuff */
+	}	/* otherwise we parsed "hh" */
 
 	/*
 	 * Don't accept any random stuff. Even though some places have
@@ -504,7 +507,7 @@ static int parse_date_basic(const char *date, git_time_t *timestamp, int *offset
 
 	if (*date == '@' &&
 	    !match_object_header_date(date + 1, timestamp, offset))
-		return 0; /* success */
+		return 0;/* success */
 	for (;;) {
 		size_t match = 0;
 		unsigned char c = *date;
@@ -538,7 +541,7 @@ static int parse_date_basic(const char *date, git_time_t *timestamp, int *offset
 
 	if (!tm_gmt)
 		*timestamp -= *offset * 60;
-	return 0; /* success */
+	return 0;	/* success */
 }
 
 
@@ -567,13 +570,13 @@ static git_time_t update_tm(struct tm *tm, struct tm *now, unsigned long sec)
 
 static void date_now(struct tm *tm, struct tm *now, int *num)
 {
-   GIT_UNUSED(num);
+	GIT_UNUSED(num);
 	update_tm(tm, now, 0);
 }
 
 static void date_yesterday(struct tm *tm, struct tm *now, int *num)
 {
-   GIT_UNUSED(num);
+	GIT_UNUSED(num);
 	update_tm(tm, now, 24*60*60);
 }
 
@@ -588,19 +591,19 @@ static void date_time(struct tm *tm, struct tm *now, int hour)
 
 static void date_midnight(struct tm *tm, struct tm *now, int *num)
 {
-   GIT_UNUSED(num);
+	GIT_UNUSED(num);
 	date_time(tm, now, 0);
 }
 
 static void date_noon(struct tm *tm, struct tm *now, int *num)
 {
-   GIT_UNUSED(num);
+	GIT_UNUSED(num);
 	date_time(tm, now, 12);
 }
 
 static void date_tea(struct tm *tm, struct tm *now, int *num)
 {
-   GIT_UNUSED(num);
+	GIT_UNUSED(num);
 	date_time(tm, now, 17);
 }
 
@@ -608,7 +611,7 @@ static void date_pm(struct tm *tm, struct tm *now, int *num)
 {
 	int hour, n = *num;
 	*num = 0;
-   GIT_UNUSED(now);
+	GIT_UNUSED(now);
 
 	hour = tm->tm_hour;
 	if (n) {
@@ -623,7 +626,7 @@ static void date_am(struct tm *tm, struct tm *now, int *num)
 {
 	int hour, n = *num;
 	*num = 0;
-   GIT_UNUSED(now);
+	GIT_UNUSED(now);
 
 	hour = tm->tm_hour;
 	if (n) {
@@ -637,8 +640,8 @@ static void date_am(struct tm *tm, struct tm *now, int *num)
 static void date_never(struct tm *tm, struct tm *now, int *num)
 {
 	time_t n = 0;
-   GIT_UNUSED(now);
-   GIT_UNUSED(num);
+	GIT_UNUSED(now);
+	GIT_UNUSED(num);
 	p_localtime_r(&n, tm);
 }
 
@@ -749,7 +752,7 @@ static const char *approxidate_alpha(const char *date, struct tm *tm, struct tm 
 
 	if (match_string(date, "months") >= 5) {
 		int n;
-		update_tm(tm, now, 0); /* fill in date fields if needed */
+		update_tm(tm, now, 0);	/* fill in date fields if needed */
 		n = tm->tm_mon - *num;
 		*num = 0;
 		while (n < 0) {
@@ -762,7 +765,7 @@ static const char *approxidate_alpha(const char *date, struct tm *tm, struct tm 
 	}
 
 	if (match_string(date, "years") >= 4) {
-		update_tm(tm, now, 0); /* fill in date fields if needed */
+		update_tm(tm, now, 0);	/* fill in date fields if needed */
 		tm->tm_year -= *num;
 		*num = 0;
 		*touched = 1;
@@ -828,7 +831,9 @@ static git_time_t approxidate_str(const char *date,
 {
 	int number = 0;
 	int touched = 0;
-	struct tm tm = {0}, now;
+	struct tm tm = {
+		0
+	}, now;
 
 	p_localtime_r(&time_sec, &tm);
 	now = tm;
@@ -861,7 +866,7 @@ int git__date_parse(git_time_t *out, const char *date)
 {
 	time_t time_sec;
 	git_time_t timestamp;
-	int offset, error_ret=0;
+	int offset, error_ret = 0;
 
 	if (!parse_date_basic(date, &timestamp, &offset)) {
 		*out = timestamp;
@@ -872,7 +877,7 @@ int git__date_parse(git_time_t *out, const char *date)
 		return -1;
 
 	*out = approxidate_str(date, time_sec, &error_ret);
-   return error_ret;
+	return error_ret;
 }
 
 int git__date_rfc2822_fmt(char *out, size_t len, const git_time *date)

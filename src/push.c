@@ -204,8 +204,8 @@ int git_push_update_tips(git_push *push, const git_remote_callbacks *callbacks)
 			}
 		} else {
 			error = git_reference_create(NULL, push->remote->repo,
-						git_buf_cstr(&remote_ref_name), &push_spec->loid, 1,
-						"update by push");
+				                git_buf_cstr(&remote_ref_name), &push_spec->loid, 1,
+				                "update by push");
 		}
 
 		if (error < 0) {
@@ -218,7 +218,7 @@ int git_push_update_tips(git_push *push, const git_remote_callbacks *callbacks)
 
 		if (fire_callback && callbacks && callbacks->update_tips) {
 			error = callbacks->update_tips(git_buf_cstr(&remote_ref_name),
-						&push_spec->roid, &push_spec->loid, callbacks->payload);
+				                &push_spec->roid, &push_spec->loid, callbacks->payload);
 
 			if (error < 0)
 				goto on_error;
@@ -288,7 +288,7 @@ static int queue_objects(git_push *push)
 			continue;
 
 		if (git_oid_equal(&spec->loid, &spec->roid))
-			continue; /* up-to-date */
+			continue;/* up-to-date */
 
 		if (git_odb_read_header(&size, &type, push->repo->_odb, &spec->loid) < 0)
 			goto on_error;
@@ -322,17 +322,17 @@ static int queue_objects(git_push *push)
 				continue;
 
 			if (!git_odb_exists(push->repo->_odb, &spec->roid)) {
-				giterr_set(GITERR_REFERENCE, 
+				giterr_set(GITERR_REFERENCE,
 					"cannot push because a reference that you are trying to update on the remote contains commits that are not present locally.");
 				error = GIT_ENONFASTFORWARD;
 				goto on_error;
 			}
 
 			error = git_merge_base(&base, push->repo,
-					       &spec->loid, &spec->roid);
+				               &spec->loid, &spec->roid);
 
 			if (error == GIT_ENOTFOUND ||
-				(!error && !git_oid_equal(&base, &spec->roid))) {
+			    (!error && !git_oid_equal(&base, &spec->roid))) {
 				giterr_set(GITERR_REFERENCE,
 					"cannot push non-fastforwardable reference");
 				error = GIT_ENONFASTFORWARD;
@@ -385,10 +385,10 @@ static int calculate_work(git_push *push)
 	/* Update local and remote oids*/
 
 	git_vector_foreach(&push->specs, i, spec) {
-		if (spec->refspec.src && spec->refspec.src[0]!= '\0') {
+		if (spec->refspec.src && spec->refspec.src[0] != '\0') {
 			/* This is a create or update.  Local ref must exist. */
 			if (git_reference_name_to_id(
-					&spec->loid, push->repo, spec->refspec.src) < 0) {
+				        &spec->loid, push->repo, spec->refspec.src) < 0) {
 				giterr_set(GITERR_REFERENCE, "no such reference '%s'", spec->refspec.src);
 				return -1;
 			}
@@ -439,9 +439,9 @@ static int do_push(git_push *push, const git_remote_callbacks *callbacks)
 		goto on_error;
 
 	if (callbacks && callbacks->push_negotiation &&
-	    (error = callbacks->push_negotiation((const git_push_update **) push->updates.contents,
-					  push->updates.length, callbacks->payload)) < 0)
-	    goto on_error;
+	    (error = callbacks->push_negotiation((const git_push_update * *) push->updates.contents,
+		                          push->updates.length, callbacks->payload)) < 0)
+		goto on_error;
 
 	if ((error = queue_objects(push)) < 0 ||
 	    (error = transport->push(transport, push, callbacks)) < 0)
@@ -462,10 +462,9 @@ static int filter_refs(git_remote *remote)
 	if (git_remote_ls(&heads, &heads_len, remote) < 0)
 		return -1;
 
-	for (i = 0; i < heads_len; i++) {
+	for (i = 0; i < heads_len; i++)
 		if (git_vector_insert(&remote->refs, (void *)heads[i]) < 0)
 			return -1;
-	}
 
 	return 0;
 }
@@ -491,8 +490,8 @@ int git_push_finish(git_push *push, const git_remote_callbacks *callbacks)
 }
 
 int git_push_status_foreach(git_push *push,
-		int (*cb)(const char *ref, const char *msg, void *data),
-		void *data)
+	int (*cb)(const char *ref, const char *msg, void *data),
+	void *data)
 {
 	push_status *status;
 	unsigned int i;

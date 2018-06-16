@@ -124,7 +124,7 @@ static int update_head_to_new_branch(
 		name += strlen(GIT_REFS_HEADS_DIR);
 
 	error = create_tracking_branch(&tracking_branch, repo, target, name,
-			reflog_message);
+		        reflog_message);
 
 	if (!error)
 		error = git_repository_set_head(
@@ -140,9 +140,9 @@ static int update_head_to_new_branch(
 }
 
 static int update_head_to_remote(
-		git_repository *repo,
-		git_remote *remote,
-		const char *reflog_message)
+	git_repository *repo,
+	git_remote *remote,
+	const char *reflog_message)
 {
 	int error = 0;
 	size_t refs_len;
@@ -202,26 +202,26 @@ cleanup:
 }
 
 static int update_head_to_branch(
-		git_repository *repo,
-		const char *remote_name,
-		const char *branch,
-		const char *reflog_message)
+	git_repository *repo,
+	const char *remote_name,
+	const char *branch,
+	const char *reflog_message)
 {
 	int retcode;
 	git_buf remote_branch_name = GIT_BUF_INIT;
-	git_reference* remote_ref = NULL;
+	git_reference*remote_ref = NULL;
 
 	assert(remote_name && branch);
 
 	if ((retcode = git_buf_printf(&remote_branch_name, GIT_REFS_REMOTES_DIR "%s/%s",
-		remote_name, branch)) < 0 )
+		remote_name, branch)) < 0)
 		goto cleanup;
 
 	if ((retcode = git_reference_lookup(&remote_ref, repo, git_buf_cstr(&remote_branch_name))) < 0)
 		goto cleanup;
 
 	retcode = update_head_to_new_branch(repo, git_reference_target(remote_ref), branch,
-			reflog_message);
+		        reflog_message);
 
 cleanup:
 	git_reference_free(remote_ref);
@@ -237,11 +237,11 @@ static int default_repository_create(git_repository **out, const char *path, int
 }
 
 static int default_remote_create(
-		git_remote **out,
-		git_repository *repo,
-		const char *name,
-		const char *url,
-		void *payload)
+	git_remote **out,
+	git_repository *repo,
+	const char *name,
+	const char *url,
+	void *payload)
 {
 	GIT_UNUSED(payload);
 
@@ -253,10 +253,10 @@ static int default_remote_create(
  */
 
 static int create_and_configure_origin(
-		git_remote **out,
-		git_repository *repo,
-		const char *url,
-		const git_clone_options *options)
+	git_remote **out,
+	git_repository *repo,
+	const char *url,
+	const git_clone_options *options)
 {
 	int error;
 	git_remote *origin = NULL;
@@ -311,7 +311,7 @@ static int checkout_branch(git_repository *repo, git_remote *remote, const git_c
 
 	if (branch)
 		error = update_head_to_branch(repo, git_remote_name(remote), branch,
-				reflog_message);
+			        reflog_message);
 	/* Point HEAD to the same ref as the remote's head */
 	else
 		error = update_head_to_remote(repo, remote, reflog_message);
@@ -375,7 +375,7 @@ int git_clone__should_clone_local(const char *url_or_path, git_clone_local_t loc
 	}
 
 	is_local = (!is_url || local != GIT_CLONE_LOCAL_AUTO) &&
-		git_path_isdir(path);
+	        git_path_isdir(path);
 
 done:
 	git_buf_dispose(&fromurl);
@@ -440,7 +440,9 @@ int git_clone(
 	}
 
 	if (error != 0) {
-		git_error_state last_error = {0};
+		git_error_state last_error = {
+			0
+		};
 		giterr_state_capture(&last_error, error);
 
 		git_repository_free(repo);
@@ -515,7 +517,7 @@ static int clone_local_into(git_repository *repo, git_remote *remote, const git_
 	}
 
 	if (git_repository_item_path(&src_odb, src, GIT_REPOSITORY_ITEM_OBJECTS) < 0
-		|| git_repository_item_path(&dst_odb, repo, GIT_REPOSITORY_ITEM_OBJECTS) < 0) {
+	    || git_repository_item_path(&dst_odb, repo, GIT_REPOSITORY_ITEM_OBJECTS) < 0) {
 		error = -1;
 		goto cleanup;
 	}
@@ -525,7 +527,7 @@ static int clone_local_into(git_repository *repo, git_remote *remote, const git_
 		flags |= GIT_CPDIR_LINK_FILES;
 
 	error = git_futils_cp_r(git_buf_cstr(&src_odb), git_buf_cstr(&dst_odb),
-				flags, GIT_OBJECT_DIR_MODE);
+		                flags, GIT_OBJECT_DIR_MODE);
 
 	/*
 	 * can_link() doesn't catch all variations, so if we hit an
@@ -535,7 +537,7 @@ static int clone_local_into(git_repository *repo, git_remote *remote, const git_
 	if (error < 0 && link) {
 		flags &= ~GIT_CPDIR_LINK_FILES;
 		error = git_futils_cp_r(git_buf_cstr(&src_odb), git_buf_cstr(&dst_odb),
-					flags, GIT_OBJECT_DIR_MODE);
+			                flags, GIT_OBJECT_DIR_MODE);
 	}
 
 	if (error < 0)

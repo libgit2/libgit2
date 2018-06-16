@@ -15,79 +15,79 @@
 
 /* stat: file mode type testing macros */
 #ifndef S_IFGITLINK
-#define S_IFGITLINK 0160000
-#define S_ISGITLINK(m) (((m) & S_IFMT) == S_IFGITLINK)
+# define S_IFGITLINK 0160000
+# define S_ISGITLINK(m) (((m) & S_IFMT) == S_IFGITLINK)
 #endif
 
 #ifndef S_IFLNK
-#define S_IFLNK 0120000
-#undef _S_IFLNK
-#define _S_IFLNK S_IFLNK
+# define S_IFLNK 0120000
+# undef _S_IFLNK
+# define _S_IFLNK S_IFLNK
 #endif
 
 #ifndef S_IWUSR
-#define S_IWUSR 00200
+# define S_IWUSR 00200
 #endif
 
 #ifndef S_IXUSR
-#define S_IXUSR 00100
+# define S_IXUSR 00100
 #endif
 
 #ifndef S_ISLNK
-#define S_ISLNK(m) (((m) & _S_IFMT) == _S_IFLNK)
+# define S_ISLNK(m) (((m) & _S_IFMT) == _S_IFLNK)
 #endif
 
 #ifndef S_ISDIR
-#define S_ISDIR(m) (((m) & _S_IFMT) == _S_IFDIR)
+# define S_ISDIR(m) (((m) & _S_IFMT) == _S_IFDIR)
 #endif
 
 #ifndef S_ISREG
-#define S_ISREG(m) (((m) & _S_IFMT) == _S_IFREG)
+# define S_ISREG(m) (((m) & _S_IFMT) == _S_IFREG)
 #endif
 
 #ifndef S_ISFIFO
-#define S_ISFIFO(m) (((m) & _S_IFMT) == _S_IFIFO)
+# define S_ISFIFO(m) (((m) & _S_IFMT) == _S_IFIFO)
 #endif
 
 /* if S_ISGID is not defined, then don't try to set it */
 #ifndef S_ISGID
-#define S_ISGID 0
+# define S_ISGID 0
 #endif
 
 #ifndef O_BINARY
-#define O_BINARY 0
+# define O_BINARY 0
 #endif
 #ifndef O_CLOEXEC
-#define O_CLOEXEC 0
+# define O_CLOEXEC 0
 #endif
 #ifndef SOCK_CLOEXEC
-#define SOCK_CLOEXEC 0
+# define SOCK_CLOEXEC 0
 #endif
 
 /* access() mode parameter #defines	*/
 #ifndef F_OK
-#define F_OK 0 /* existence check */
+# define F_OK 0	/* existence check */
 #endif
 #ifndef W_OK
-#define W_OK 2 /* write mode check */
+# define W_OK 2	/* write mode check */
 #endif
 #ifndef R_OK
-#define R_OK 4 /* read mode check */
+# define R_OK 4	/* read mode check */
 #endif
 
 /* Determine whether an errno value indicates that a read or write failed
  * because the descriptor is blocked.
  */
 #if defined(EWOULDBLOCK)
-#define GIT_ISBLOCKED(e) ((e) == EAGAIN || (e) == EWOULDBLOCK)
+# define GIT_ISBLOCKED(e) ((e) == EAGAIN || (e) == EWOULDBLOCK)
 #else
-#define GIT_ISBLOCKED(e) ((e) == EAGAIN)
+# define GIT_ISBLOCKED(e) ((e) == EAGAIN)
 #endif
 
 /* define some standard errnos that the runtime may be missing.  for example,
  * mingw lacks EAFNOSUPPORT. */
 #ifndef EAFNOSUPPORT
-#define EAFNOSUPPORT (INT_MAX-1)
+# define EAFNOSUPPORT (INT_MAX-1)
 #endif
 
 typedef int git_file;
@@ -129,9 +129,9 @@ extern size_t p_fsync__cnt;
  * Platform-dependent methods
  */
 #ifdef GIT_WIN32
-#	include "win32/posix.h"
+# include "win32/posix.h"
 #else
-#	include "unix/posix.h"
+# include "unix/posix.h"
 #endif
 
 #include "strnlen.h"
@@ -143,12 +143,12 @@ GIT_INLINE(int) p_readdir_r(DIR *dirp, struct dirent *entry, struct dirent **res
 	*result = readdir(dirp);
 	return 0;
 }
-#else /* NO_READDIR_R */
-#	define p_readdir_r(d,e,r) readdir_r(d,e,r)
+#else	/* NO_READDIR_R */
+# define p_readdir_r(d,e,r) readdir_r(d,e,r)
 #endif
 
 #ifdef NO_ADDRINFO
-#	include <netdb.h>
+# include <netdb.h>
 struct addrinfo {
 	struct hostent *ai_hostent;
 	struct servent *ai_servent;
@@ -167,9 +167,9 @@ extern int p_getaddrinfo(const char *host, const char *port,
 extern void p_freeaddrinfo(struct addrinfo *info);
 extern const char *p_gai_strerror(int ret);
 #else
-#	define p_getaddrinfo(a, b, c, d) getaddrinfo(a, b, c, d)
-#	define p_freeaddrinfo(a) freeaddrinfo(a)
-#	define p_gai_strerror(c) gai_strerror(c)
-#endif /* NO_ADDRINFO */
+# define p_getaddrinfo(a, b, c, d) getaddrinfo(a, b, c, d)
+# define p_freeaddrinfo(a) freeaddrinfo(a)
+# define p_gai_strerror(c) gai_strerror(c)
+#endif	/* NO_ADDRINFO */
 
 #endif

@@ -63,8 +63,8 @@ int git_parse_advance_ws(git_parse_ctx *ctx)
 	int ret = -1;
 
 	while (ctx->line_len > 0 &&
-		ctx->line[0] != '\n' &&
-		git__isspace(ctx->line[0])) {
+	       ctx->line[0] != '\n' &&
+	       git__isspace(ctx->line[0])) {
 		ctx->line++;
 		ctx->line_len--;
 		ctx->remain_len--;

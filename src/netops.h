@@ -80,20 +80,20 @@ typedef struct gitno_connection_data {
  */
 
 int gitno_connection_data_from_url(
-		gitno_connection_data *data,
-		const char *url,
-		const char *service_suffix);
+	gitno_connection_data *data,
+	const char *url,
+	const char *service_suffix);
 
 /* This frees all the pointers IN the struct, but not the struct itself. */
 void gitno_connection_data_free_ptrs(gitno_connection_data *data);
 
 int gitno_extract_url_parts(
-		char **host,
-		char **port,
-		char **path,
-		char **username,
-		char **password,
-		const char *url,
-		const char *default_port);
+	char **host,
+	char **port,
+	char **path,
+	char **username,
+	char **password,
+	const char *url,
+	const char *default_port);
 
 #endif

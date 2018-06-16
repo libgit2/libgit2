@@ -20,13 +20,21 @@ typedef struct transport_definition {
 	void *param;
 } transport_definition;
 
-static git_smart_subtransport_definition http_subtransport_definition = { git_smart_subtransport_http, 1, NULL };
-static git_smart_subtransport_definition git_subtransport_definition = { git_smart_subtransport_git, 0, NULL };
+static git_smart_subtransport_definition http_subtransport_definition = {
+	git_smart_subtransport_http, 1, NULL
+};
+static git_smart_subtransport_definition git_subtransport_definition = {
+	git_smart_subtransport_git, 0, NULL
+};
 #ifdef GIT_SSH
-static git_smart_subtransport_definition ssh_subtransport_definition = { git_smart_subtransport_ssh, 0, NULL };
+static git_smart_subtransport_definition ssh_subtransport_definition = {
+	git_smart_subtransport_ssh, 0, NULL
+};
 #endif
 
-static transport_definition local_transport_definition = { "file://", git_transport_local, NULL };
+static transport_definition local_transport_definition = {
+	"file://", git_transport_local, NULL
+};
 
 static transport_definition transports[] = {
 	{ "git://",   git_transport_smart, &git_subtransport_definition },
@@ -45,7 +53,7 @@ static git_vector custom_transports = GIT_VECTOR_INIT;
 
 #define GIT_TRANSPORT_COUNT (sizeof(transports)/sizeof(transports[0])) - 1
 
-static transport_definition * transport_find_by_url(const char *url)
+static transport_definition *transport_find_by_url(const char *url)
 {
 	size_t i = 0;
 	transport_definition *d;

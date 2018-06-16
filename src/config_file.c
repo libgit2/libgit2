@@ -97,13 +97,14 @@ static void config_entry_list_free(config_entry_list *list)
 	while (list != NULL) {
 		next = list->next;
 
-		git__free((char*) list->entry->name);
+		git__free((char *) list->entry->name);
 		git__free((char *) list->entry->value);
 		git__free(list->entry);
 		git__free(list);
 
 		list = next;
-	};
+	}
+	;
 }
 
 int git_config_file_normalize_section(char *start, char *end)
@@ -205,8 +206,8 @@ static diskfile_entries *diskfile_entries_take(diskfile_header *h)
 	diskfile_entries *entries;
 
 	if (git_mutex_lock(&h->values_mutex) < 0) {
-	    giterr_set(GITERR_OS, "failed to lock config backend");
-	    return NULL;
+		giterr_set(GITERR_OS, "failed to lock config backend");
+		return NULL;
 	}
 
 	entries = h->entries;
@@ -365,8 +366,7 @@ static void backend_free(git_config_backend *_backend)
 	git__free(backend);
 }
 
-static void config_iterator_free(
-	git_config_iterator* iter)
+static void config_iterator_free(git_config_iterator*iter)
 {
 	iter->backend->free(iter->backend);
 	git__free(iter);
@@ -389,7 +389,7 @@ static int config_iterator_next(
 
 static int config_iterator_new(
 	git_config_iterator **iter,
-	struct git_config_backend* backend)
+	struct git_config_backend*backend)
 {
 	diskfile_header *h;
 	git_config_file_iter *it;
@@ -456,8 +456,8 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 
 		/* don't update if old and new values already match */
 		if ((!existing->entry->value && !value) ||
-			(existing->entry->value && value &&
-			 !strcmp(existing->entry->value, value))) {
+		    (existing->entry->value && value &&
+		     !strcmp(existing->entry->value, value))) {
 			ret = 0;
 			goto out;
 		}
@@ -674,7 +674,6 @@ static int config_lock(git_config_backend *_cfg)
 
 	cfg->locked = true;
 	return 0;
-
 }
 
 static int config_unlock(git_config_backend *_cfg, int success)
@@ -997,16 +996,16 @@ static int parse_conditional_include(git_config_parser *reader,
 		return 0;
 
 	condition = git__substrdup(section + strlen("includeIf."),
-				   strlen(section) - strlen("includeIf.") - strlen(".path"));
+		                   strlen(section) - strlen("includeIf.") - strlen(".path"));
 
 	for (i = 0; i < ARRAY_SIZE(conditions); i++) {
 		if (git__prefixcmp(condition, conditions[i].prefix))
 			continue;
 
 		if ((error = conditions[i].matches(&matches,
-						   parse_data->repo,
-						   parse_data->file_path,
-						   condition + strlen(conditions[i].prefix))) < 0)
+			                           parse_data->repo,
+			                           parse_data->file_path,
+			                           condition + strlen(conditions[i].prefix))) < 0)
 			break;
 
 		if (matches)
@@ -1063,7 +1062,7 @@ static int read_on_variable(
 	else if (!git__prefixcmp(entry->name, "includeif.") &&
 	         !git__suffixcmp(entry->name, ".path"))
 		result = parse_conditional_include(reader, parse_data,
-						   entry->name, entry->value);
+			                           entry->name, entry->value);
 
 
 	return result;
@@ -1152,10 +1151,9 @@ static const char *quotes_for_value(const char *value)
 	if (value[0] == ' ' || value[0] == '\0')
 		return "\"";
 
-	for (ptr = value; *ptr; ++ptr) {
+	for (ptr = value; *ptr; ++ptr)
 		if (*ptr == ';' || *ptr == '#')
 			return "\"";
-	}
 
 	if (ptr[-1] == ' ')
 		return "\"";
@@ -1167,7 +1165,7 @@ struct write_data {
 	git_buf *buf;
 	git_buf buffered_comment;
 	unsigned int in_section : 1,
-		preg_replaced : 1;
+	             preg_replaced : 1;
 	const char *orig_section;
 	const char *section;
 	const char *orig_name;
@@ -1272,7 +1270,7 @@ static int write_on_variable(
 
 	/* See if we are to update this name/value pair; first examine name */
 	if (write_data->in_section &&
-		strcasecmp(write_data->name, var_name) == 0)
+	    strcasecmp(write_data->name, var_name) == 0)
 		has_matched = true;
 
 	/* If we have a regex to match the value, see if it matches */
@@ -1341,7 +1339,7 @@ static int write_on_eof(
 /*
  * This is pretty much the parsing, except we write out anything we don't have
  */
-static int config_write(diskfile_backend *cfg, const char *orig_key, const char *key, const regex_t *preg, const char* value)
+static int config_write(diskfile_backend *cfg, const char *orig_key, const char *key, const regex_t *preg, const char*value)
 {
 	int result;
 	char *orig_section, *section, *orig_name, *name, *ldot;
@@ -1372,7 +1370,7 @@ static int config_write(diskfile_backend *cfg, const char *orig_key, const char 
 		git_parse_ctx_init(&reader.ctx, contents.ptr, contents.size);
 	} else {
 		git_filebuf_cleanup(&file);
-		return -1; /* OS error when reading the file */
+		return -1;	/* OS error when reading the file */
 	}
 
 	ldot = strrchr(key, '.');

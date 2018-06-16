@@ -14,9 +14,9 @@
 #define REG_MSYSGIT_INSTALL_LOCAL L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Git_is1"
 
 #ifndef _WIN64
-#define REG_MSYSGIT_INSTALL REG_MSYSGIT_INSTALL_LOCAL
+# define REG_MSYSGIT_INSTALL REG_MSYSGIT_INSTALL_LOCAL
 #else
-#define REG_MSYSGIT_INSTALL L"SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Git_is1"
+# define REG_MSYSGIT_INSTALL L"SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Git_is1"
 #endif
 
 typedef struct {
@@ -49,7 +49,7 @@ static int win32_path_to_8(git_buf *dest, const wchar_t *src)
 	return git_buf_sets(dest, utf8_path);
 }
 
-static wchar_t* win32_walkpath(wchar_t *path, wchar_t *buf, size_t buflen)
+static wchar_t *win32_walkpath(wchar_t *path, wchar_t *buf, size_t buflen)
 {
 	wchar_t term, *base = path;
 
@@ -60,7 +60,7 @@ static wchar_t* win32_walkpath(wchar_t *path, wchar_t *buf, size_t buflen)
 	for (buflen--; *path && *path != term && buflen; buflen--)
 		*buf++ = *path++;
 
-	*buf = L'\0'; /* reserved a byte via initial subtract */
+	*buf = L'\0';	/* reserved a byte via initial subtract */
 
 	while (*path == term || *path == L';')
 		path++;
@@ -121,7 +121,7 @@ static int win32_find_git_in_registry(
 
 		/* InstallLocation points to the root of the git directory */
 		if (!RegQueryValueExW(hKey, L"InstallLocation", NULL, &dwType, (LPBYTE)path, &cbData) &&
-			dwType == REG_SZ) {
+		    dwType == REG_SZ) {
 
 			/* Append the suffix */
 			wcscat(path, subdir);
@@ -146,17 +146,16 @@ static int win32_find_existing_dirs(
 
 	git_buf_clear(out);
 
-	for (; *tmpl != NULL; tmpl++) {
+	for (; *tmpl != NULL; tmpl++)
 		if (!git_win32__expand_path(&path16, *tmpl) &&
-			path16.path[0] != L'%' &&
-			!_waccess(path16.path, F_OK))
+		    path16.path[0] != L'%' &&
+		    !_waccess(path16.path, F_OK))
 		{
 			win32_path_to_8(&buf, path16.path);
 
 			if (buf.size)
 				git_buf_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
 		}
-	}
 
 	git_buf_dispose(&buf);
 
@@ -178,11 +177,11 @@ int git_win32__find_system_dirs(git_buf *out, const wchar_t *subdir)
 
 	/* directories where git is installed according to registry */
 	if (!win32_find_git_in_registry(
-			&buf, HKEY_CURRENT_USER, REG_MSYSGIT_INSTALL_LOCAL, subdir) && buf.size)
+		        &buf, HKEY_CURRENT_USER, REG_MSYSGIT_INSTALL_LOCAL, subdir) && buf.size)
 		git_buf_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
 
 	if (!win32_find_git_in_registry(
-			&buf, HKEY_LOCAL_MACHINE, REG_MSYSGIT_INSTALL, subdir) && buf.size)
+		        &buf, HKEY_LOCAL_MACHINE, REG_MSYSGIT_INSTALL, subdir) && buf.size)
 		git_buf_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
 
 	git_buf_dispose(&buf);

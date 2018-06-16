@@ -28,7 +28,7 @@ int git_sortedcache_new(
 	git_pool_init(&sc->pool, 1);
 
 	if (git_vector_init(&sc->items, 4, item_cmp) < 0 ||
-		git_strmap_alloc(&sc->map) < 0)
+	    git_strmap_alloc(&sc->map) < 0)
 		goto fail;
 
 	if (git_rwlock_init(&sc->lock)) {
@@ -133,9 +133,9 @@ int git_sortedcache_copy(
 	}
 
 	if ((error = git_sortedcache_new(
-			&tgt, src->item_path_offset,
-			src->free_item, src->free_item_payload,
-			src->items._cmp, src->path)) < 0)
+		        &tgt, src->item_path_offset,
+		        src->free_item, src->free_item_payload,
+		        src->items._cmp, src->path)) < 0)
 		return error;
 
 	if (lock && git_sortedcache_rlock(src) < 0) {
@@ -147,7 +147,7 @@ int git_sortedcache_copy(
 		char *path = ((char *)src_item) + src->item_path_offset;
 
 		if ((error = git_sortedcache_upsert(&tgt_item, tgt, path)) < 0 ||
-			(error = copy_item(payload, tgt_item, src_item)) < 0)
+		    (error = copy_item(payload, tgt_item, src_item)) < 0)
 			break;
 	}
 
@@ -164,7 +164,7 @@ int git_sortedcache_copy(
 /* lock sortedcache while making modifications */
 int git_sortedcache_wlock(git_sortedcache *sc)
 {
-	GIT_UNUSED(sc); /* prevent warning when compiled w/o threads */
+	GIT_UNUSED(sc);	/* prevent warning when compiled w/o threads */
 
 	if (git_rwlock_wrlock(&sc->lock) < 0) {
 		giterr_set(GITERR_OS, "unable to acquire write lock on cache");
@@ -183,7 +183,7 @@ void git_sortedcache_wunlock(git_sortedcache *sc)
 /* lock sortedcache for read */
 int git_sortedcache_rlock(git_sortedcache *sc)
 {
-	GIT_UNUSED(sc); /* prevent warning when compiled w/o threads */
+	GIT_UNUSED(sc);	/* prevent warning when compiled w/o threads */
 
 	if (git_rwlock_rdlock(&sc->lock) < 0) {
 		giterr_set(GITERR_OS, "unable to acquire read lock on cache");
@@ -195,7 +195,7 @@ int git_sortedcache_rlock(git_sortedcache *sc)
 /* unlock sorted cache when done reading */
 void git_sortedcache_runlock(git_sortedcache *sc)
 {
-	GIT_UNUSED(sc); /* prevent warning when compiled w/o threads */
+	GIT_UNUSED(sc);	/* prevent warning when compiled w/o threads */
 	git_rwlock_rdunlock(&sc->lock);
 }
 
@@ -240,7 +240,7 @@ int git_sortedcache_lockandload(git_sortedcache *sc, git_buf *buf)
 	if (error < 0)
 		goto unlock;
 
-	return 1; /* return 1 -> file needs reload and was successfully loaded */
+	return 1;	/* return 1 -> file needs reload and was successfully loaded */
 
 unlock:
 	git_sortedcache_wunlock(sc);

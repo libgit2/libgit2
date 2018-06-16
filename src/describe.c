@@ -25,8 +25,8 @@
 
 struct commit_name {
 	git_tag *tag;
-	unsigned prio:2; /* annotated tag = 2, tag = 1, head = 0 */
-	unsigned name_checked:1;
+	unsigned prio : 2;	/* annotated tag = 2, tag = 1, head = 0 */
+	unsigned name_checked : 1;
 	git_oid sha1;
 	char *path;
 
@@ -158,9 +158,9 @@ static int retrieve_peeled_tag_or_object_oid(
 	git_oid_cpy(peeled_out, git_object_id(peeled));
 
 	if (git_oid_cmp(ref_target_out, peeled_out) != 0)
-		error = 1; /* The reference was pointing to a annotated tag */
+		error = 1;	/* The reference was pointing to a annotated tag */
 	else
-		error = 0; /* Any other object */
+		error = 0;	/* Any other object */
 
 cleanup:
 	git_reference_free(ref);
@@ -226,7 +226,7 @@ static int get_name(const char *refname, void *payload)
 	/* Accept only tags that match the pattern, if given */
 	if (data->opts->pattern && (!is_tag || p_fnmatch(data->opts->pattern,
 		refname + strlen(GIT_REFS_TAGS_DIR), 0)))
-				return 0;
+		return 0;
 
 	/* Is it annotated? */
 	if ((error = retrieve_peeled_tag_or_object_oid(
@@ -348,7 +348,7 @@ static int display_name(git_buf *buf, git_repository *repo, struct commit_name *
 
 		/* TODO: Cope with warnings
 		if (strcmp(n->tag->tag, all ? n->path + 5 : n->path))
-			warning(_("tag '%s' is really '%s' here"), n->tag->tag, n->path);
+		        warning(_("tag '%s' is really '%s' here"), n->tag->tag, n->path);
 		*/
 
 		n->name_checked = 1;
@@ -392,7 +392,7 @@ static int find_unique_abbrev_size(
 
 	/* If we didn't find any shorter prefix, we have to do the whole thing */
 	*out = GIT_OID_HEXSZ;
-	
+
 	return 0;
 }
 
@@ -400,7 +400,7 @@ static int show_suffix(
 	git_buf *buf,
 	int depth,
 	git_repository *repo,
-	const git_oid* id,
+	const git_oid*id,
 	size_t abbrev_size)
 {
 	int error, size = 0;
@@ -490,8 +490,7 @@ static int describe(
 	if ((error = git_pqueue_insert(&list, cmit)) < 0)
 		goto cleanup;
 
-	while (git_pqueue_size(&list) > 0)
-	{
+	while (git_pqueue_size(&list) > 0) {
 		int i;
 
 		git_commit_list_node *c = (git_commit_list_node *)git_pqueue_pop(&list);
@@ -533,10 +532,10 @@ static int describe(
 		if (annotated_cnt && (git_pqueue_size(&list) == 0)) {
 			/*
 			if (debug) {
-				char oid_str[GIT_OID_HEXSZ + 1];
-				git_oid_tostr(oid_str, sizeof(oid_str), &c->oid);
+			        char oid_str[GIT_OID_HEXSZ + 1];
+			        git_oid_tostr(oid_str, sizeof(oid_str), &c->oid);
 
-				fprintf(stderr, "finished search at %s\n", oid_str);
+			        fprintf(stderr, "finished search at %s\n", oid_str);
 			}
 			*/
 			break;
@@ -563,14 +562,14 @@ static int describe(
 			goto cleanup;
 		}
 		if (unannotated_cnt) {
-			error = describe_not_found(git_commit_id(commit), 
+			error = describe_not_found(git_commit_id(commit),
 				"cannot describe - "
 				"no annotated tags can describe '%s'; "
 			    "however, there were unannotated tags.");
 			goto cleanup;
 		}
 		else {
-			error = describe_not_found(git_commit_id(commit), 
+			error = describe_not_found(git_commit_id(commit),
 				"cannot describe - "
 				"no tags can describe '%s'.");
 			goto cleanup;
@@ -596,29 +595,29 @@ static int describe(
 
 	/*
 	{
-		static const char *prio_names[] = {
-			"head", "lightweight", "annotated",
-		};
+	        static const char *prio_names[] = {
+	                "head", "lightweight", "annotated",
+	        };
 
-		char oid_str[GIT_OID_HEXSZ + 1];
+	        char oid_str[GIT_OID_HEXSZ + 1];
 
-		if (debug) {
-			for (cur_match = 0; cur_match < match_cnt; cur_match++) {
-				struct possible_tag *t = (struct possible_tag *)git_vector_get(&all_matches, cur_match);
-				fprintf(stderr, " %-11s %8d %s\n",
-					prio_names[t->name->prio],
-					t->depth, t->name->path);
-			}
-			fprintf(stderr, "traversed %lu commits\n", seen_commits);
-			if (gave_up_on) {
-				git_oid_tostr(oid_str, sizeof(oid_str), &gave_up_on->oid);
-				fprintf(stderr,
-					"more than %i tags found; listed %i most recent\n"
-					"gave up search at %s\n",
-					data->opts->max_candidates_tags, data->opts->max_candidates_tags,
-					oid_str);
-			}
-		}
+	        if (debug) {
+	                for (cur_match = 0; cur_match < match_cnt; cur_match++) {
+	                        struct possible_tag *t = (struct possible_tag *)git_vector_get(&all_matches, cur_match);
+	                        fprintf(stderr, " %-11s %8d %s\n",
+	                                prio_names[t->name->prio],
+	                                t->depth, t->name->path);
+	                }
+	                fprintf(stderr, "traversed %lu commits\n", seen_commits);
+	                if (gave_up_on) {
+	                        git_oid_tostr(oid_str, sizeof(oid_str), &gave_up_on->oid);
+	                        fprintf(stderr,
+	                                "more than %i tags found; listed %i most recent\n"
+	                                "gave up search at %s\n",
+	                                data->opts->max_candidates_tags, data->opts->max_candidates_tags,
+	                                oid_str);
+	                }
+	        }
 	}
 	*/
 
@@ -643,7 +642,8 @@ static int normalize_options(
 	const git_describe_options *src)
 {
 	git_describe_options default_options = GIT_DESCRIBE_OPTIONS_INIT;
-	if (!src) src = &default_options;
+	if (!src)
+		src = &default_options;
 
 	*dst = *src;
 
@@ -686,13 +686,13 @@ int git_describe_commit(
 
 	/** TODO: contains to be implemented */
 
-	if ((error = git_object_peel((git_object **)(&commit), committish, GIT_OBJ_COMMIT)) < 0)
+	if ((error = git_object_peel((git_object * *)(&commit), committish, GIT_OBJ_COMMIT)) < 0)
 		goto cleanup;
 
 	if ((error = git_reference_foreach_name(
-			git_object_owner(committish),
-			get_name, &data)) < 0)
-				goto cleanup;
+		        git_object_owner(committish),
+		        get_name, &data)) < 0)
+		goto cleanup;
 
 	if (git_oidmap_size(data.names) == 0 && !opts->show_commit_oid_as_fallback) {
 		giterr_set(GITERR_DESCRIBE, "cannot describe - "
@@ -822,7 +822,9 @@ int git_describe_format(git_buf *out, const git_describe_result *result, const g
 
 	/* If we didn't find *any* tags, we fall back to the commit's id */
 	if (result->fallback_to_id) {
-		char hex_oid[GIT_OID_HEXSZ + 1] = {0};
+		char hex_oid[GIT_OID_HEXSZ + 1] = {
+			0
+		};
 		int size = 0;
 
 		if ((error = find_unique_abbrev_size(

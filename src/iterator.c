@@ -142,8 +142,8 @@ static int iterator_init_common(
 
 	/* try to look up precompose and set flag if appropriate */
 	if (repo &&
-		(iter->flags & GIT_ITERATOR_PRECOMPOSE_UNICODE) == 0 &&
-		(iter->flags & GIT_ITERATOR_DONT_PRECOMPOSE_UNICODE) == 0) {
+	    (iter->flags & GIT_ITERATOR_PRECOMPOSE_UNICODE) == 0 &&
+	    (iter->flags & GIT_ITERATOR_DONT_PRECOMPOSE_UNICODE) == 0) {
 
 		if (git_repository__cvar(&precompose, repo, GIT_CVAR_PRECOMPOSE) < 0)
 			giterr_clear();
@@ -155,7 +155,7 @@ static int iterator_init_common(
 		iter->flags |= GIT_ITERATOR_INCLUDE_TREES;
 
 	if ((error = iterator_range_init(iter, options->start, options->end)) < 0 ||
-		(error = iterator_pathlist_init(iter, &options->pathlist)) < 0)
+	    (error = iterator_pathlist_init(iter, &options->pathlist)) < 0)
 		return error;
 
 	iterator_set_ignore_case(iter, ignore_case);
@@ -194,7 +194,7 @@ GIT_INLINE(bool) iterator_has_started(
 	 * with a start path of `submod/`.
 	 */
 	if (is_submodule && iter->start_len && path_len == iter->start_len - 1 &&
-		iter->start[iter->start_len-1] == '/')
+	    iter->start[iter->start_len-1] == '/')
 		return true;
 
 	/* if, however, our current path is a directory, and our starting path
@@ -202,7 +202,7 @@ GIT_INLINE(bool) iterator_has_started(
 	 * though we have not yet "started")
 	 */
 	if (path_len > 0 && path[path_len-1] == '/' &&
-		iter->strncomp(path, iter->start, path_len) == 0)
+	    iter->strncomp(path, iter->start, path_len) == 0)
 		return true;
 
 	return false;
@@ -261,7 +261,7 @@ static bool iterator_pathlist_next_is(git_iterator *iter, const char *path)
 			 * "foo/something")
 			 */
 			if (p[cmp_len] == '\0' &&
-				(path[cmp_len] == '\0' || path[cmp_len] == '/'))
+			    (path[cmp_len] == '\0' || path[cmp_len] == '/'))
 				return true;
 
 			/* if this pathlist entry _is_ suffixed with a '/' then
@@ -335,8 +335,8 @@ static iterator_pathlist_search_t iterator_pathlist_search(
 		/* is this a literal directory entry (eg `foo/`) or a file beneath */
 		if (p[path_len] == '/') {
 			return (p[path_len+1] == '\0') ?
-				ITERATOR_PATHLIST_IS_DIR :
-				ITERATOR_PATHLIST_IS_PARENT;
+			       ITERATOR_PATHLIST_IS_DIR :
+			       ITERATOR_PATHLIST_IS_PARENT;
 		}
 
 		if (p[path_len] > '/')
@@ -460,7 +460,7 @@ GIT_INLINE(tree_iterator_frame *) tree_iterator_parent_frame(
 	tree_iterator *iter)
 {
 	return iter->frames.size > 1 ?
-		&iter->frames.ptr[iter->frames.size-2] : NULL;
+	       &iter->frames.ptr[iter->frames.size-2] : NULL;
 }
 
 GIT_INLINE(tree_iterator_frame *) tree_iterator_current_frame(
@@ -560,11 +560,11 @@ static int tree_iterator_frame_init(
 	new_frame->tree = dup;
 
 	if (frame_entry &&
-		(error = tree_iterator_compute_path(&new_frame->path, frame_entry)) < 0)
+	    (error = tree_iterator_compute_path(&new_frame->path, frame_entry)) < 0)
 		goto done;
 
 	cmp = iterator__ignore_case(&iter->base) ?
-		tree_iterator_entry_sort_icase : NULL;
+	        tree_iterator_entry_sort_icase : NULL;
 
 	if ((error = git_vector_init(
 		&new_frame->entries, dup->entries.size, cmp)) < 0)
@@ -665,8 +665,8 @@ GIT_INLINE(int) tree_iterator_frame_push(
 	int error;
 
 	if ((error = git_tree_lookup(&tree,
-			iter->base.repo, entry->tree_entry->oid)) < 0 ||
-		(error = tree_iterator_frame_init(iter, tree, entry)) < 0)
+		        iter->base.repo, entry->tree_entry->oid)) < 0 ||
+	    (error = tree_iterator_frame_init(iter, tree, entry)) < 0)
 		goto done;
 
 	parent_frame = tree_iterator_parent_frame(iter);
@@ -707,7 +707,7 @@ static void tree_iterator_frame_pop(tree_iterator *iter)
 	git_array_clear(frame->similar_paths);
 
 	git_vector_foreach(&frame->similar_trees, i, tree)
-		git_tree_free(tree);
+	git_tree_free(tree);
 
 	git_vector_free(&frame->similar_trees);
 
@@ -786,8 +786,8 @@ static int tree_iterator_advance(const git_index_entry **out, git_iterator *i)
 		 * 'A/a' and 'a/A').  squash this one if it's already been seen.
 		 */
 		if (iterator__ignore_case(&iter->base) &&
-			prev_entry &&
-			tree_iterator_entry_cmp_icase(prev_entry, entry) == 0)
+		    prev_entry &&
+		    tree_iterator_entry_cmp_icase(prev_entry, entry) == 0)
 			continue;
 
 		if ((error = tree_iterator_compute_path(&iter->entry_path, entry)) < 0)
@@ -845,7 +845,7 @@ static int tree_iterator_advance_into(
 	const git_index_entry **out, git_iterator *i)
 {
 	tree_iterator *iter = (tree_iterator *)i;
-    tree_iterator_frame *frame;
+	tree_iterator_frame *frame;
 	tree_iterator_entry *prev_entry;
 	int error;
 
@@ -961,9 +961,9 @@ int git_iterator_for_tree(
 	iter->base.cb = &callbacks;
 
 	if ((error = iterator_init_common(&iter->base,
-			git_tree_owner(tree), NULL, options)) < 0 ||
-		(error = git_tree_dup(&iter->root, tree)) < 0 ||
-		(error = tree_iterator_init(iter)) < 0)
+		        git_tree_owner(tree), NULL, options)) < 0 ||
+	    (error = git_tree_dup(&iter->root, tree)) < 0 ||
+	    (error = tree_iterator_init(iter)) < 0)
 		goto on_error;
 
 	*out = &iter->base;
@@ -1055,7 +1055,7 @@ GIT_INLINE(filesystem_iterator_frame *) filesystem_iterator_parent_frame(
 	filesystem_iterator *iter)
 {
 	return iter->frames.size > 1 ?
-		&iter->frames.ptr[iter->frames.size-2] : NULL;
+	       &iter->frames.ptr[iter->frames.size-2] : NULL;
 }
 
 GIT_INLINE(filesystem_iterator_frame *) filesystem_iterator_current_frame(
@@ -1068,7 +1068,7 @@ GIT_INLINE(filesystem_iterator_entry *) filesystem_iterator_current_entry(
 	filesystem_iterator_frame *frame)
 {
 	return frame->next_idx == 0 ?
-		NULL : frame->entries.contents[frame->next_idx-1];
+	       NULL : frame->entries.contents[frame->next_idx-1];
 }
 
 static int filesystem_iterator_entry_cmp(const void *_a, const void *_b)
@@ -1149,7 +1149,7 @@ static void filesystem_iterator_frame_push_ignores(
 		return;
 
 	if (git_ignore__lookup(&new_frame->is_ignored,
-			&iter->ignores, path, GIT_DIR_FLAG_TRUE) < 0) {
+		        &iter->ignores, path, GIT_DIR_FLAG_TRUE) < 0) {
 		giterr_clear();
 		new_frame->is_ignored = GIT_IGNORE_NOTFOUND;
 	}
@@ -1171,8 +1171,7 @@ static void filesystem_iterator_frame_push_ignores(
 	}
 }
 
-static void filesystem_iterator_frame_pop_ignores(
-	filesystem_iterator *iter)
+static void filesystem_iterator_frame_pop_ignores(filesystem_iterator *iter)
 {
 	if (iterator__honor_ignores(&iter->base))
 		git_ignore__pop_dir(&iter->ignores);
@@ -1233,7 +1232,7 @@ GIT_INLINE(bool) filesystem_iterator_examine_path(
 
 		/* Ensure that the pathlist entry lines up with what we expected */
 		if (match == ITERATOR_PATHLIST_IS_DIR ||
-			match == ITERATOR_PATHLIST_IS_PARENT)
+		    match == ITERATOR_PATHLIST_IS_PARENT)
 			is_dir = true;
 	}
 
@@ -1257,9 +1256,9 @@ GIT_INLINE(bool) filesystem_iterator_is_dot_git(
 		len--;
 
 	if (git__tolower(path[len - 1]) != 't' ||
-		git__tolower(path[len - 2]) != 'i' ||
-		git__tolower(path[len - 3]) != 'g' ||
-		git__tolower(path[len - 4]) != '.')
+	    git__tolower(path[len - 2]) != 'i' ||
+	    git__tolower(path[len - 3]) != 'g' ||
+	    git__tolower(path[len - 4]) != '.')
 		return false;
 
 	return (len == 4 || path[len - 5] == '/');
@@ -1279,9 +1278,9 @@ static filesystem_iterator_entry *filesystem_iterator_entry_init(
 	 * termination, one for a possible trailing '/' for folders.
 	 */
 	if (GIT_ADD_SIZET_OVERFLOW(&entry_size,
-			sizeof(filesystem_iterator_entry), path_len) ||
-		GIT_ADD_SIZET_OVERFLOW(&entry_size, entry_size, 2) ||
-		(entry = git_pool_malloc(&frame->entry_pool, entry_size)) == NULL)
+		        sizeof(filesystem_iterator_entry), path_len) ||
+	    GIT_ADD_SIZET_OVERFLOW(&entry_size, entry_size, 2) ||
+	    (entry = git_pool_malloc(&frame->entry_pool, entry_size)) == NULL)
 		return NULL;
 
 	entry->path_len = path_len;
@@ -1313,7 +1312,7 @@ static int filesystem_iterator_frame_push(
 
 	if (iter->frames.size == FILESYSTEM_MAX_DEPTH) {
 		giterr_set(GITERR_REPOSITORY,
-			"directory nesting too deep (%"PRIuZ")", iter->frames.size);
+			"directory nesting too deep (%" PRIuZ ")", iter->frames.size);
 		return -1;
 	}
 
@@ -1336,15 +1335,15 @@ static int filesystem_iterator_frame_push(
 
 	/* Any error here is equivalent to the dir not existing, skip over it */
 	if ((error = git_path_diriter_init(
-			&diriter, root.ptr, iter->dirload_flags)) < 0) {
+		        &diriter, root.ptr, iter->dirload_flags)) < 0) {
 		error = GIT_ENOTFOUND;
 		goto done;
 	}
 
 	if ((error = git_vector_init(&new_frame->entries, 64,
-			iterator__ignore_case(&iter->base) ?
-			filesystem_iterator_entry_cmp_icase :
-			filesystem_iterator_entry_cmp)) < 0)
+		        iterator__ignore_case(&iter->base) ?
+		        filesystem_iterator_entry_cmp_icase :
+		        filesystem_iterator_entry_cmp)) < 0)
 		goto done;
 
 	git_pool_init(&new_frame->entry_pool, 1);
@@ -1394,9 +1393,9 @@ static int filesystem_iterator_frame_push(
 
 		/* Ignore wacky things in the filesystem */
 		if (!S_ISDIR(statbuf.st_mode) &&
-			!S_ISREG(statbuf.st_mode) &&
-			!S_ISLNK(statbuf.st_mode) &&
-			statbuf.st_mode != GIT_FILEMODE_UNREADABLE)
+		    !S_ISREG(statbuf.st_mode) &&
+		    !S_ISLNK(statbuf.st_mode) &&
+		    statbuf.st_mode != GIT_FILEMODE_UNREADABLE)
 			continue;
 
 		if (filesystem_iterator_is_dot_git(iter, path, path_len))
@@ -1407,7 +1406,7 @@ static int filesystem_iterator_frame_push(
 			bool submodule = false;
 
 			if ((error = filesystem_iterator_is_submodule(&submodule,
-					iter, path, path_len)) < 0)
+				        iter, path, path_len)) < 0)
 				goto done;
 
 			if (submodule)
@@ -1460,7 +1459,7 @@ static void filesystem_iterator_set_current(
 	iter->entry.ctime.seconds = entry->st.st_ctime;
 	iter->entry.mtime.seconds = entry->st.st_mtime;
 
-#if defined(GIT_USE_NSEC)	
+#if defined(GIT_USE_NSEC)
 	iter->entry.ctime.nanoseconds = entry->st.st_ctime_nsec;
 	iter->entry.mtime.nanoseconds = entry->st.st_mtime_nsec;
 #else
@@ -1517,7 +1516,7 @@ static int filesystem_iterator_is_dir(
 	}
 
 	if ((error = git_buf_joinpath(&fullpath, iter->root, entry->path)) < 0 ||
-		(error = p_stat(fullpath.ptr, &st)) < 0)
+	    (error = p_stat(fullpath.ptr, &st)) < 0)
 		goto done;
 
 	*is_dir = S_ISDIR(st.st_mode);
@@ -1611,7 +1610,7 @@ static int filesystem_iterator_advance_into(
 
 	if (prev_entry) {
 		if (prev_entry->st.st_mode != GIT_FILEMODE_COMMIT &&
-			!S_ISDIR(prev_entry->st.st_mode))
+		    !S_ISDIR(prev_entry->st.st_mode))
 			return 0;
 
 		if ((error = filesystem_iterator_frame_push(iter, prev_entry)) < 0)
@@ -1630,7 +1629,7 @@ int git_iterator_current_workdir_path(git_buf **out, git_iterator *i)
 	const git_index_entry *entry;
 
 	if (i->type != GIT_ITERATOR_TYPE_FS &&
-		i->type != GIT_ITERATOR_TYPE_WORKDIR) {
+	    i->type != GIT_ITERATOR_TYPE_WORKDIR) {
 		*out = NULL;
 		return 0;
 	}
@@ -1638,7 +1637,7 @@ int git_iterator_current_workdir_path(git_buf **out, git_iterator *i)
 	git_buf_truncate(&iter->current_path, iter->root_len);
 
 	if (git_iterator_current(&entry, i) < 0 ||
-		git_buf_puts(&iter->current_path, entry->path) < 0)
+	    git_buf_puts(&iter->current_path, entry->path) < 0)
 		return -1;
 
 	*out = &iter->current_path;
@@ -1649,8 +1648,8 @@ GIT_INLINE(git_dir_flag) entry_dir_flag(git_index_entry *entry)
 {
 #if defined(GIT_WIN32) && !defined(__MINGW32__)
 	return (entry && entry->mode) ?
-		(S_ISDIR(entry->mode) ? GIT_DIR_FLAG_TRUE : GIT_DIR_FLAG_FALSE) :
-		GIT_DIR_FLAG_UNKNOWN;
+	       (S_ISDIR(entry->mode) ? GIT_DIR_FLAG_TRUE : GIT_DIR_FLAG_FALSE) :
+	       GIT_DIR_FLAG_UNKNOWN;
 #else
 	GIT_UNUSED(entry);
 	return GIT_DIR_FLAG_UNKNOWN;
@@ -1663,7 +1662,7 @@ static void filesystem_iterator_update_ignored(filesystem_iterator *iter)
 	git_dir_flag dir_flag = entry_dir_flag(&iter->entry);
 
 	if (git_ignore__lookup(&iter->current_is_ignored,
-			&iter->ignores, iter->entry.path, dir_flag) < 0) {
+		        &iter->ignores, iter->entry.path, dir_flag) < 0) {
 		giterr_clear();
 		iter->current_is_ignored = GIT_IGNORE_NOTFOUND;
 	}
@@ -1753,7 +1752,7 @@ static int filesystem_iterator_advance_over(
 	 * about.
 	 */
 	*status = current_entry->match == ITERATOR_PATHLIST_IS_PARENT ?
-		GIT_ITERATOR_STATUS_FILTERED : GIT_ITERATOR_STATUS_EMPTY;
+	        GIT_ITERATOR_STATUS_FILTERED : GIT_ITERATOR_STATUS_EMPTY;
 
 	while (entry && !iter->base.prefixcomp(entry->path, base)) {
 		if (filesystem_iterator_current_is_ignored(iter)) {
@@ -1814,8 +1813,8 @@ static int filesystem_iterator_init(filesystem_iterator *iter)
 	int error;
 
 	if (iterator__honor_ignores(&iter->base) &&
-		(error = git_ignore__for_path(iter->base.repo,
-			".gitignore", &iter->ignores)) < 0)
+	    (error = git_ignore__for_path(iter->base.repo,
+		        ".gitignore", &iter->ignores)) < 0)
 		return error;
 
 	if ((error = filesystem_iterator_frame_push(iter, NULL)) < 0)
@@ -1902,14 +1901,14 @@ static int iterator_for_filesystem(
 		goto on_error;
 
 	if (index &&
-		(error = git_index_snapshot_new(&iter->index_snapshot, index)) < 0)
+	    (error = git_index_snapshot_new(&iter->index_snapshot, index)) < 0)
 		goto on_error;
 
 	iter->index = index;
 	iter->dirload_flags =
 		(iterator__ignore_case(&iter->base) ? GIT_PATH_DIR_IGNORE_CASE : 0) |
 		(iterator__flag(&iter->base, PRECOMPOSE_UNICODE) ?
-			 GIT_PATH_DIR_PRECOMPOSE_UNICODE : 0);
+		 GIT_PATH_DIR_PRECOMPOSE_UNICODE : 0);
 
 	if ((error = filesystem_iterator_init(iter)) < 0)
 		goto on_error;
@@ -1953,7 +1952,7 @@ int git_iterator_for_workdir_ext(
 		memcpy(&options, given_opts, sizeof(git_iterator_options));
 
 	options.flags |= GIT_ITERATOR_HONOR_IGNORES |
-		GIT_ITERATOR_IGNORE_DOT_GIT;
+	        GIT_ITERATOR_IGNORE_DOT_GIT;
 
 	return iterator_for_filesystem(out,
 		repo, repo_workdir, index, tree, GIT_ITERATOR_TYPE_WORKDIR, &options);
@@ -2085,7 +2084,7 @@ static int index_iterator_advance(
 
 		/* if this is a conflict, skip it unless we're including conflicts */
 		if (git_index_entry_is_conflict(entry) &&
-			!iterator__include_conflicts(&iter->base)) {
+		    !iterator__include_conflicts(&iter->base)) {
 			iter->next_idx++;
 			continue;
 		}
@@ -2096,7 +2095,7 @@ static int index_iterator_advance(
 		 * though, we still need to return it on the next `advance`.
 		 */
 		if (iterator__include_trees(&iter->base) &&
-			index_iterator_create_pseudotree(&entry, iter, entry->path)) {
+		    index_iterator_create_pseudotree(&entry, iter, entry->path)) {
 
 			/* Note whether this pseudo tree should be expanded or not */
 			iter->skip_tree = iterator__dont_autoexpand(&iter->base);
@@ -2120,7 +2119,7 @@ static int index_iterator_advance_into(
 {
 	index_iterator *iter = (index_iterator *)i;
 
-	if (! S_ISDIR(iter->tree_entry.mode)) {
+	if (!S_ISDIR(iter->tree_entry.mode)) {
 		if (out)
 			*out = NULL;
 
@@ -2209,8 +2208,8 @@ int git_iterator_for_index(
 	iter->base.cb = &callbacks;
 
 	if ((error = iterator_init_common(&iter->base, repo, index, options)) < 0 ||
-		(error = git_index_snapshot_new(&iter->entries, index)) < 0 ||
-		(error = index_iterator_init(iter)) < 0)
+	    (error = git_index_snapshot_new(&iter->entries, index)) < 0 ||
+	    (error = index_iterator_init(iter)) < 0)
 		goto on_error;
 
 	git_vector_set_cmp(&iter->entries, iterator__ignore_case(&iter->base) ?
@@ -2337,8 +2336,8 @@ int git_iterator_walk(
 	}
 
 done:
-	git__free((git_index_entry **)iterator_item);
-	git__free((git_index_entry **)cur_items);
+	git__free((git_index_entry * *)iterator_item);
+	git__free((git_index_entry * *)cur_items);
 
 	if (error == GIT_ITEROVER)
 		error = 0;

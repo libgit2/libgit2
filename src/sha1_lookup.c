@@ -12,9 +12,9 @@
 #include "oid.h"
 
 int sha1_position(const void *table,
-			size_t stride,
-			unsigned lo, unsigned hi,
-			const unsigned char *key)
+	size_t stride,
+	unsigned lo, unsigned hi,
+	const unsigned char *key)
 {
 	const unsigned char *base = table;
 

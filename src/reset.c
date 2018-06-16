@@ -22,7 +22,7 @@
 int git_reset_default(
 	git_repository *repo,
 	const git_object *target,
-	const git_strarray* pathspecs)
+	const git_strarray*pathspecs)
 {
 	git_object *commit = NULL;
 	git_tree *tree = NULL;
@@ -48,7 +48,7 @@ int git_reset_default(
 		}
 
 		if ((error = git_object_peel(&commit, target, GIT_OBJ_COMMIT)) < 0 ||
-			(error = git_commit_tree(&tree, (git_commit *)commit)) < 0)
+		    (error = git_commit_tree(&tree, (git_commit *)commit)) < 0)
 			goto cleanup;
 	}
 
@@ -57,7 +57,7 @@ int git_reset_default(
 
 	if ((error = git_diff_tree_to_index(
 		&diff, repo, tree, index, &opts)) < 0)
-			goto cleanup;
+		goto cleanup;
 
 	for (i = 0, max_i = git_diff_num_deltas(diff); i < max_i; ++i) {
 		const git_diff_delta *delta = git_diff_get_delta(diff, i);
@@ -125,18 +125,18 @@ static int reset(
 	}
 
 	if (reset_type != GIT_RESET_SOFT &&
-		(error = git_repository__ensure_not_bare(repo,
-			reset_type == GIT_RESET_MIXED ? "reset mixed" : "reset hard")) < 0)
+	    (error = git_repository__ensure_not_bare(repo,
+		        reset_type == GIT_RESET_MIXED ? "reset mixed" : "reset hard")) < 0)
 		return error;
 
 	if ((error = git_object_peel(&commit, target, GIT_OBJ_COMMIT)) < 0 ||
-		(error = git_repository_index(&index, repo)) < 0 ||
-		(error = git_commit_tree(&tree, (git_commit *)commit)) < 0)
+	    (error = git_repository_index(&index, repo)) < 0 ||
+	    (error = git_commit_tree(&tree, (git_commit *)commit)) < 0)
 		goto cleanup;
 
 	if (reset_type == GIT_RESET_SOFT &&
-		(git_repository_state(repo) == GIT_REPOSITORY_STATE_MERGE ||
-		 git_index_has_conflicts(index)))
+	    (git_repository_state(repo) == GIT_REPOSITORY_STATE_MERGE ||
+	     git_index_has_conflicts(index)))
 	{
 		giterr_set(GITERR_OBJECT, "%s (soft) in the middle of a merge", ERROR_MSG);
 		error = GIT_EUNMERGED;
@@ -163,7 +163,7 @@ static int reset(
 		/* reset index to the target content */
 
 		if ((error = git_index_read_tree(index, tree)) < 0 ||
-			(error = git_index_write(index)) < 0)
+		    (error = git_index_write(index)) < 0)
 			goto cleanup;
 
 		if ((error = git_repository_state_cleanup(repo)) < 0) {

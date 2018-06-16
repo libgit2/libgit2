@@ -150,9 +150,9 @@ GIT_EXTERN(uint32_t) git_blame_get_hunk_count(git_blame *blame);
  * @param index index of the hunk to retrieve
  * @return the hunk at the given index, or NULL on error
  */
-GIT_EXTERN(const git_blame_hunk*) git_blame_get_hunk_byindex(
-		git_blame *blame,
-		uint32_t index);
+GIT_EXTERN(const git_blame_hunk *) git_blame_get_hunk_byindex(
+	        git_blame *blame,
+	        uint32_t index);
 
 /**
  * Gets the hunk that relates to the given line number in the newest commit.
@@ -161,9 +161,9 @@ GIT_EXTERN(const git_blame_hunk*) git_blame_get_hunk_byindex(
  * @param lineno the (1-based) line number to find a hunk for
  * @return the hunk that contains the given line, or NULL on error
  */
-GIT_EXTERN(const git_blame_hunk*) git_blame_get_hunk_byline(
-		git_blame *blame,
-		size_t lineno);
+GIT_EXTERN(const git_blame_hunk *) git_blame_get_hunk_byline(
+	        git_blame *blame,
+	        size_t lineno);
 
 /**
  * Get the blame for a single file.
@@ -177,10 +177,10 @@ GIT_EXTERN(const git_blame_hunk*) git_blame_get_hunk_byline(
  *         about the error.)
  */
 GIT_EXTERN(int) git_blame_file(
-		git_blame **out,
-		git_repository *repo,
-		const char *path,
-		git_blame_options *options);
+	        git_blame **out,
+	        git_repository *repo,
+	        const char *path,
+	        git_blame_options *options);
 
 
 /**
@@ -201,10 +201,10 @@ GIT_EXTERN(int) git_blame_file(
  *         about the error)
  */
 GIT_EXTERN(int) git_blame_buffer(
-		git_blame **out,
-		git_blame *reference,
-		const char *buffer,
-		size_t buffer_len);
+	        git_blame **out,
+	        git_blame *reference,
+	        const char *buffer,
+	        size_t buffer_len);
 
 /**
  * Free memory allocated by git_blame_file or git_blame_buffer.

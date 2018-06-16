@@ -132,7 +132,7 @@ int git_annotated_commit_from_ref(
 
 	if ((error = git_reference_resolve(&resolved, ref)) < 0)
 		return error;
-	
+
 	error = annotated_commit_init_from_id(out,
 		repo,
 		git_reference_target(resolved),
@@ -158,7 +158,7 @@ int git_annotated_commit_from_head(
 
 	*out = NULL;
 
-    if ((error = git_reference_lookup(&head, repo, GIT_HEAD_FILE)) < 0)
+	if ((error = git_reference_lookup(&head, repo, GIT_HEAD_FILE)) < 0)
 		return -1;
 
 	error = git_annotated_commit_from_ref(out, repo, head);
@@ -189,8 +189,7 @@ int git_annotated_commit_from_fetchhead(
 }
 
 
-const git_oid *git_annotated_commit_id(
-	const git_annotated_commit *annotated_commit)
+const git_oid *git_annotated_commit_id(const git_annotated_commit *annotated_commit)
 {
 	assert(annotated_commit);
 	return git_commit_id(annotated_commit->commit);
@@ -202,19 +201,19 @@ void git_annotated_commit_free(git_annotated_commit *annotated_commit)
 		return;
 
 	switch (annotated_commit->type) {
-		case GIT_ANNOTATED_COMMIT_REAL:
-			git_commit_free(annotated_commit->commit);
-			git_tree_free(annotated_commit->tree);
-			git__free((char *)annotated_commit->description);
-			git__free((char *)annotated_commit->ref_name);
-			git__free((char *)annotated_commit->remote_url);
-			break;
-		case GIT_ANNOTATED_COMMIT_VIRTUAL:
-			git_index_free(annotated_commit->index);
-			git_array_clear(annotated_commit->parents);
-			break;
-		default:
-			abort();
+	case GIT_ANNOTATED_COMMIT_REAL:
+		git_commit_free(annotated_commit->commit);
+		git_tree_free(annotated_commit->tree);
+		git__free((char *)annotated_commit->description);
+		git__free((char *)annotated_commit->ref_name);
+		git__free((char *)annotated_commit->remote_url);
+		break;
+	case GIT_ANNOTATED_COMMIT_VIRTUAL:
+		git_index_free(annotated_commit->index);
+		git_array_clear(annotated_commit->parents);
+		break;
+	default:
+		abort();
 	}
 
 	git__free(annotated_commit);

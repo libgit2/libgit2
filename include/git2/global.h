@@ -32,7 +32,7 @@ GIT_EXTERN(int) git_libgit2_init(void);
  * many times as `git_libgit2_init()` was called - it will return the
  * number of remainining initializations that have not been shutdown
  * (after this one).
- * 
+ *
  * @return the number of remaining initializations of the library, or an
  * error code.
  */

@@ -85,7 +85,7 @@ extern int git_path_to_dir(git_buf *path);
 /**
  * Ensure string has a trailing '/' if there is space for it.
  */
-extern void git_path_string_to_dir(char* path, size_t size);
+extern void git_path_string_to_dir(char*path, size_t size);
 
 /**
  * Taken from git.git; returns nonzero if the given path is "." or "..".
@@ -93,22 +93,22 @@ extern void git_path_string_to_dir(char* path, size_t size);
 GIT_INLINE(int) git_path_is_dot_or_dotdot(const char *name)
 {
 	return (name[0] == '.' &&
-			  (name[1] == '\0' ||
-				(name[1] == '.' && name[2] == '\0')));
+	        (name[1] == '\0' ||
+	         (name[1] == '.' && name[2] == '\0')));
 }
 
 #ifdef GIT_WIN32
 GIT_INLINE(int) git_path_is_dot_or_dotdotW(const wchar_t *name)
 {
 	return (name[0] == L'.' &&
-			  (name[1] == L'\0' ||
-				(name[1] == L'.' && name[2] == L'\0')));
+	        (name[1] == L'\0' ||
+	         (name[1] == L'.' && name[2] == L'\0')));
 }
 
-#define git_path_is_absolute(p) \
+# define git_path_is_absolute(p) \
 	(git__isalpha((p)[0]) && (p)[1] == ':' && ((p)[2] == '\\' || (p)[2] == '/'))
 
-#define git_path_is_dirsep(p) \
+# define git_path_is_dirsep(p) \
 	((p) == '/' || (p) == '\\')
 
 /**
@@ -124,12 +124,12 @@ GIT_INLINE(void) git_path_mkposix(char *path)
 	}
 }
 #else
-#	define git_path_mkposix(p) /* blank */
+# define git_path_mkposix(p)		/* blank */
 
-#define git_path_is_absolute(p) \
+# define git_path_is_absolute(p) \
 	((p)[0] == '/')
 
-#define git_path_is_dirsep(p) \
+# define git_path_is_dirsep(p) \
 	((p) == '/')
 
 #endif
@@ -318,7 +318,7 @@ enum {
  * Walk each directory entry, except '.' and '..', calling fn(state).
  *
  * @param pathbuf Buffer the function reads the initial directory
- * 		path from, and updates with each successive entry's name.
+ *              path from, and updates with each successive entry's name.
  * @param flags Combination of GIT_PATH_DIR flags.
  * @param callback Callback for each entry. Passed the `payload` and each
  *		successive path inside the directory as a full path.  This may
@@ -366,7 +366,9 @@ extern int git_path_walk_up(
 	void *payload);
 
 
-enum { GIT_PATH_NOTEQUAL = 0, GIT_PATH_EQUAL = 1, GIT_PATH_PREFIX = 2 };
+enum {
+	GIT_PATH_NOTEQUAL = 0, GIT_PATH_EQUAL = 1, GIT_PATH_PREFIX = 2
+};
 
 /*
  * Determines if a path is equal to or potentially a child of another.
@@ -418,21 +420,21 @@ extern bool git_path_has_non_ascii(const char *path, size_t pathlen);
 #define GIT_PATH_REPO_ENCODING "UTF-8"
 
 #ifdef __APPLE__
-#define GIT_PATH_NATIVE_ENCODING "UTF-8-MAC"
+# define GIT_PATH_NATIVE_ENCODING "UTF-8-MAC"
 #else
-#define GIT_PATH_NATIVE_ENCODING "UTF-8"
+# define GIT_PATH_NATIVE_ENCODING "UTF-8"
 #endif
 
 #ifdef GIT_USE_ICONV
 
-#include <iconv.h>
+# include <iconv.h>
 
 typedef struct {
 	iconv_t map;
 	git_buf buf;
 } git_path_iconv_t;
 
-#define GIT_PATH_ICONV_INIT { (iconv_t)-1, GIT_BUF_INIT }
+# define GIT_PATH_ICONV_INIT { (iconv_t)-1, GIT_BUF_INIT }
 
 /* Init iconv data for converting decomposed UTF-8 to precomposed */
 extern int git_path_iconv_init_precompose(git_path_iconv_t *ic);
@@ -447,7 +449,7 @@ extern void git_path_iconv_clear(git_path_iconv_t *ic);
  */
 extern int git_path_iconv(git_path_iconv_t *ic, const char **in, size_t *inlen);
 
-#endif /* GIT_USE_ICONV */
+#endif	/* GIT_USE_ICONV */
 
 extern bool git_path_does_fs_decompose_unicode(const char *root);
 
@@ -472,7 +474,7 @@ struct git_path_diriter
 	unsigned int needs_next;
 };
 
-#define GIT_PATH_DIRITER_INIT { {0}, 0, GIT_BUF_INIT, 0, INVALID_HANDLE_VALUE }
+# define GIT_PATH_DIRITER_INIT { {0}, 0, GIT_BUF_INIT, 0, INVALID_HANDLE_VALUE }
 
 #else
 
@@ -485,12 +487,12 @@ struct git_path_diriter
 
 	DIR *dir;
 
-#ifdef GIT_USE_ICONV
+# ifdef GIT_USE_ICONV
 	git_path_iconv_t ic;
-#endif
+# endif
 };
 
-#define GIT_PATH_DIRITER_INIT { GIT_BUF_INIT }
+# define GIT_PATH_DIRITER_INIT { GIT_BUF_INIT }
 
 #endif
 
@@ -571,8 +573,8 @@ extern void git_path_diriter_free(git_path_diriter *diriter);
  * @param contents Vector to fill with directory entry names.
  * @param path The directory to read from.
  * @param prefix_len When inserting entries, the trailing part of path
- * 		will be prefixed after this length.  I.e. given path "/a/b" and
- * 		prefix_len 3, the entries will look like "b/e1", "b/e2", etc.
+ *              will be prefixed after this length.  I.e. given path "/a/b" and
+ *              prefix_len 3, the entries will look like "b/e1", "b/e2", etc.
  * @param flags Combination of GIT_PATH_DIR flags.
  */
 extern int git_path_dirload(
@@ -618,7 +620,7 @@ extern int git_path_from_url_or_path(git_buf *local_path_out, const char *url_or
 	GIT_PATH_REJECT_TRAVERSAL
 #endif
 
- /* Paths that should never be written into the working directory. */
+/* Paths that should never be written into the working directory. */
 #define GIT_PATH_REJECT_WORKDIR_DEFAULTS \
 	GIT_PATH_REJECT_FILESYSTEM_DEFAULTS | GIT_PATH_REJECT_DOT_GIT
 

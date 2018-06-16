@@ -37,11 +37,11 @@ void git_tree_cache_invalidate_path(git_tree_cache *tree, const char *path)
 	while (ptr != NULL) {
 		end = strchr(ptr, '/');
 
-		if (end == NULL) /* End of path */
+		if (end == NULL)/* End of path */
 			break;
 
 		tree = find_child(tree, ptr, end);
-		if (tree == NULL) /* We don't have that tree */
+		if (tree == NULL)	/* We don't have that tree */
 			return;
 
 		tree->entry_count = -1;
@@ -61,7 +61,7 @@ const git_tree_cache *git_tree_cache_get(const git_tree_cache *tree, const char 
 		end = strchr(ptr, '/');
 
 		tree = find_child(tree, ptr, end);
-		if (tree == NULL) /* Can't find it */
+		if (tree == NULL)	/* Can't find it */
 			return NULL;
 
 		if (end == NULL || *end + 1 == '\0')
@@ -72,8 +72,8 @@ const git_tree_cache *git_tree_cache_get(const git_tree_cache *tree, const char 
 }
 
 static int read_tree_internal(git_tree_cache **out,
-			      const char **buffer_in, const char *buffer_end,
-			      git_pool *pool)
+	const char **buffer_in, const char *buffer_end,
+	git_pool *pool)
 {
 	git_tree_cache *tree = NULL;
 	const char *name_start, *buffer;
@@ -99,7 +99,7 @@ static int read_tree_internal(git_tree_cache **out,
 	if (*buffer != ' ' || ++buffer >= buffer_end)
 		goto corrupted;
 
-	 /* Number of children of the tree, newline-terminated */
+	/* Number of children of the tree, newline-terminated */
 	if (git__strtol32(&count, buffer, &buffer, 10) < 0 || count < 0)
 		goto corrupted;
 
@@ -127,17 +127,16 @@ static int read_tree_internal(git_tree_cache **out,
 
 		memset(tree->children, 0x0, tree->children_count * sizeof(git_tree_cache *));
 
-		for (i = 0; i < tree->children_count; ++i) {
+		for (i = 0; i < tree->children_count; ++i)
 			if (read_tree_internal(&tree->children[i], &buffer, buffer_end, pool) < 0)
 				goto corrupted;
-		}
 	}
 
 	*buffer_in = buffer;
 	*out = tree;
 	return 0;
 
- corrupted:
+corrupted:
 	giterr_set(GITERR_INDEX, "corrupted TREE extension in index");
 	return -1;
 }
@@ -253,7 +252,7 @@ static void write_tree(git_buf *out, git_tree_cache *tree)
 {
 	size_t i;
 
-	git_buf_printf(out, "%s%c%"PRIdZ" %"PRIuZ"\n", tree->name, 0, tree->entry_count, tree->children_count);
+	git_buf_printf(out, "%s%c%" PRIdZ " %" PRIuZ "\n", tree->name, 0, tree->entry_count, tree->children_count);
 
 	if (tree->entry_count != -1)
 		git_buf_put(out, (const char *) &tree->oid, GIT_OID_RAWSZ);

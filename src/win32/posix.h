@@ -23,7 +23,7 @@ typedef SOCKET GIT_SOCKET;
 
 extern int p_fstat(int fd, struct stat *buf);
 extern int p_lstat(const char *file_name, struct stat *buf);
-extern int p_stat(const char* path, struct stat *buf);
+extern int p_stat(const char*path, struct stat *buf);
 
 extern int p_utimes(const char *filename, const struct p_timeval times[2]);
 extern int p_futimes(int fd, const struct p_timeval times[2]);
@@ -38,15 +38,15 @@ extern char *p_realpath(const char *orig_path, char *buffer);
 
 extern int p_recv(GIT_SOCKET socket, void *buffer, size_t length, int flags);
 extern int p_send(GIT_SOCKET socket, const void *buffer, size_t length, int flags);
-extern int p_inet_pton(int af, const char* src, void* dst);
+extern int p_inet_pton(int af, const char*src, void*dst);
 
 extern int p_vsnprintf(char *buffer, size_t count, const char *format, va_list argptr);
 extern int p_snprintf(char *buffer, size_t count, const char *format, ...) GIT_FORMAT_PRINTF(3, 4);
 extern int p_mkstemp(char *tmp_path);
-extern int p_chdir(const char* path);
-extern int p_chmod(const char* path, mode_t mode);
-extern int p_rmdir(const char* path);
-extern int p_access(const char* path, mode_t mode);
+extern int p_chdir(const char*path);
+extern int p_chmod(const char*path, mode_t mode);
+extern int p_rmdir(const char*path);
+extern int p_access(const char*path, mode_t mode);
 extern int p_ftruncate(int fd, git_off_t size);
 
 /* p_lstat is almost but not quite POSIX correct.  Specifically, the use of
@@ -57,8 +57,8 @@ extern int p_ftruncate(int fd, git_off_t size);
  */
 extern int p_lstat_posixly(const char *filename, struct stat *buf);
 
-extern struct tm * p_localtime_r(const time_t *timer, struct tm *result);
-extern struct tm * p_gmtime_r(const time_t *timer, struct tm *result);
+extern struct tm *p_localtime_r(const time_t *timer, struct tm *result);
+extern struct tm *p_gmtime_r(const time_t *timer, struct tm *result);
 
 /* Use the bundled regcomp */
 #define p_regcomp regcomp

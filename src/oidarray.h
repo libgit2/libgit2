@@ -12,7 +12,7 @@
 #include "git2/oidarray.h"
 #include "array.h"
 
-typedef git_array_t(git_oid) git_array_oid_t;
+typedef git_array_t (git_oid) git_array_oid_t;
 
 extern void git_oidarray__reverse(git_oidarray *arr);
 extern void git_oidarray__from_array(git_oidarray *arr, git_array_oid_t *array);

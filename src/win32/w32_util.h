@@ -88,7 +88,7 @@ GIT_INLINE(void) git_win32__filetime_to_timespec(
 	struct timespec *ts)
 {
 	long long winTime = ((long long)ft->dwHighDateTime << 32) + ft->dwLowDateTime;
-	winTime -= 116444736000000000LL; /* Windows to Unix Epoch conversion */
+	winTime -= 116444736000000000LL;/* Windows to Unix Epoch conversion */
 	ts->tv_sec = (time_t)(winTime / 10000000);
 #ifdef GIT_USE_NSEC
 	ts->tv_nsec = (winTime % 10000000) * 100;
@@ -101,7 +101,7 @@ GIT_INLINE(void) git_win32__timeval_to_filetime(
 	FILETIME *ft, const struct p_timeval tv)
 {
 	long long ticks = (tv.tv_sec * 10000000LL) +
-		(tv.tv_usec * 10LL) + 116444736000000000LL;
+	        (tv.tv_usec * 10LL) + 116444736000000000LL;
 
 	ft->dwHighDateTime = ((ticks >> 32) & 0xffffffffLL);
 	ft->dwLowDateTime = (ticks & 0xffffffffLL);

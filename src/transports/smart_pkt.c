@@ -268,7 +268,7 @@ static int ok_pkt(git_pkt **out, const char *line, size_t len)
 
 	pkt->type = GIT_PKT_OK;
 
-	line += 3; /* skip "ok " */
+	line += 3;	/* skip "ok " */
 	if (!(ptr = strchr(line, '\n'))) {
 		giterr_set(GITERR_NET, "invalid packet line");
 		git__free(pkt);
@@ -299,7 +299,7 @@ static int ng_pkt(git_pkt **out, const char *line, size_t len)
 	pkt->ref = NULL;
 	pkt->type = GIT_PKT_NG;
 
-	line += 3; /* skip "ng " */
+	line += 3;	/* skip "ng " */
 	if (!(ptr = strchr(line, ' ')))
 		goto out_err;
 	len = ptr - line;
@@ -362,19 +362,17 @@ static int32_t parse_len(const char *line)
 	memcpy(num, line, PKT_LEN_SIZE);
 	num[PKT_LEN_SIZE] = '\0';
 
-	for (i = 0; i < PKT_LEN_SIZE; ++i) {
+	for (i = 0; i < PKT_LEN_SIZE; ++i)
 		if (!isxdigit(num[i])) {
 			/* Make sure there are no special characters before passing to error message */
-			for (k = 0; k < PKT_LEN_SIZE; ++k) {
-				if(!isprint(num[k])) {
+			for (k = 0; k < PKT_LEN_SIZE; ++k)
+				if (!isprint(num[k])) {
 					num[k] = '.';
 				}
-			}
-			
+
 			giterr_set(GITERR_NET, "invalid hex digit in length: '%s'", num);
 			return -1;
 		}
-	}
 
 	if ((error = git__strtol32(&len, num, &num_end, 16)) < 0)
 		return error;
@@ -446,12 +444,12 @@ int git_pkt_parse_line(
 		return GIT_ERROR;
 	}
 
-	if (len == 0) { /* Flush pkt */
+	if (len == 0) {	/* Flush pkt */
 		*out = line;
 		return flush_pkt(head);
 	}
 
-	len -= PKT_LEN_SIZE; /* the encoded length includes its own size */
+	len -= PKT_LEN_SIZE;	/* the encoded length includes its own size */
 
 	if (*line == GIT_SIDE_BAND_DATA)
 		ret = data_pkt(head, line, len);
@@ -511,7 +509,9 @@ int git_pkt_buffer_flush(git_buf *buf)
 static int buffer_want_with_caps(const git_remote_head *head, transport_smart_caps *caps, git_buf *buf)
 {
 	git_buf str = GIT_BUF_INIT;
-	char oid[GIT_OID_HEXSZ +1] = {0};
+	char oid[GIT_OID_HEXSZ +1] = {
+		0
+	};
 	size_t len;
 
 	/* Prefer multi_ack_detailed */
@@ -539,7 +539,7 @@ static int buffer_want_with_caps(const git_remote_head *head, transport_smart_ca
 		return -1;
 
 	len = strlen("XXXXwant ") + GIT_OID_HEXSZ + 1 /* NUL */ +
-		 git_buf_len(&str) + 1 /* LF */;
+	        git_buf_len(&str) + 1 /* LF */;
 
 	if (len > 0xffff) {
 		giterr_set(GITERR_NET,
@@ -564,7 +564,7 @@ static int buffer_want_with_caps(const git_remote_head *head, transport_smart_ca
  */
 
 int git_pkt_buffer_wants(
-	const git_remote_head * const *refs,
+	const git_remote_head *const *refs,
 	size_t count,
 	transport_smart_caps *caps,
 	git_buf *buf)

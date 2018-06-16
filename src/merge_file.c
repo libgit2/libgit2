@@ -26,7 +26,7 @@
  */
 #define GIT_MERGE_FILE_BINARY_SIZE 8000
 
-#define GIT_MERGE_FILE_SIDE_EXISTS(X)	((X)->mode != 0)
+#define GIT_MERGE_FILE_SIDE_EXISTS(X)   ((X)->mode != 0)
 
 int git_merge_file__input_from_index(
 	git_merge_file_input *input_out,
@@ -70,7 +70,13 @@ static int merge_file__xdiff(
 	const git_merge_file_options *given_opts)
 {
 	xmparam_t xmparam;
-	mmfile_t ancestor_mmfile = {0}, our_mmfile = {0}, their_mmfile = {0};
+	mmfile_t ancestor_mmfile = {
+		0
+	}, our_mmfile = {
+		0
+	}, their_mmfile = {
+		0
+	};
 	mmbuffer_t mmbuffer;
 	git_merge_file_options options = GIT_MERGE_FILE_OPTIONS_INIT;
 	const char *path;
@@ -85,18 +91,18 @@ static int merge_file__xdiff(
 
 	if (ancestor) {
 		xmparam.ancestor = (options.ancestor_label) ?
-			options.ancestor_label : ancestor->path;
+		        options.ancestor_label : ancestor->path;
 		ancestor_mmfile.ptr = (char *)ancestor->ptr;
 		ancestor_mmfile.size = ancestor->size;
 	}
 
 	xmparam.file1 = (options.our_label) ?
-		options.our_label : ours->path;
+	        options.our_label : ours->path;
 	our_mmfile.ptr = (char *)ours->ptr;
 	our_mmfile.size = ours->size;
 
 	xmparam.file2 = (options.their_label) ?
-		options.their_label : theirs->path;
+	        options.their_label : theirs->path;
 	their_mmfile.ptr = (char *)theirs->ptr;
 	their_mmfile.size = theirs->size;
 
@@ -108,7 +114,7 @@ static int merge_file__xdiff(
 		xmparam.favor = XDL_MERGE_FAVOR_UNION;
 
 	xmparam.level = (options.flags & GIT_MERGE_FILE_SIMPLIFY_ALNUM) ?
-		XDL_MERGE_ZEALOUS_ALNUM : XDL_MERGE_ZEALOUS;
+	        XDL_MERGE_ZEALOUS_ALNUM : XDL_MERGE_ZEALOUS;
 
 	if (options.flags & GIT_MERGE_FILE_STYLE_DIFF3)
 		xmparam.style = XDL_MERGE_DIFF3;
@@ -190,7 +196,7 @@ static int merge_file__binary(
 		goto done;
 
 	if ((out->path = git__strdup(favored->path)) == NULL ||
-		(out->ptr = git__malloc(favored->size)) == NULL)
+	    (out->ptr = git__malloc(favored->size)) == NULL)
 		goto done;
 
 	memcpy((char *)out->ptr, favored->ptr, favored->size);
@@ -210,8 +216,8 @@ static int merge_file__from_inputs(
 	const git_merge_file_options *given_opts)
 {
 	if (merge_file__is_binary(ancestor) ||
-		merge_file__is_binary(ours) ||
-		merge_file__is_binary(theirs))
+	    merge_file__is_binary(ours) ||
+	    merge_file__is_binary(theirs))
 		return merge_file__binary(out, ours, theirs, given_opts);
 
 	return merge_file__xdiff(out, ancestor, ours, theirs, given_opts);
@@ -263,9 +269,17 @@ int git_merge_file_from_index(
 	const git_merge_file_options *options)
 {
 	git_merge_file_input *ancestor_ptr = NULL,
-		ancestor_input = {0}, our_input = {0}, their_input = {0};
+	                     ancestor_input = {
+		0
+	}, our_input = {
+		0
+	}, their_input = {
+		0
+	};
 	git_odb *odb = NULL;
-	git_odb_object *odb_object[3] = { 0 };
+	git_odb_object *odb_object[3] = {
+		0
+	};
 	int error = 0;
 
 	assert(out && repo && ours && theirs);
@@ -284,9 +298,9 @@ int git_merge_file_from_index(
 	}
 
 	if ((error = git_merge_file__input_from_index(
-			&our_input, &odb_object[1], odb, ours)) < 0 ||
-		(error = git_merge_file__input_from_index(
-			&their_input, &odb_object[2], odb, theirs)) < 0)
+		        &our_input, &odb_object[1], odb, ours)) < 0 ||
+	    (error = git_merge_file__input_from_index(
+		        &their_input, &odb_object[2], odb, theirs)) < 0)
 		goto done;
 
 	error = merge_file__from_inputs(out,

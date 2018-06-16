@@ -13,7 +13,9 @@
 
 #ifdef GIT_TRACE
 
-struct git_trace_data git_trace__data = {0};
+struct git_trace_data git_trace__data = {
+	0
+};
 
 #endif
 

@@ -53,10 +53,9 @@ static wchar_t *path__skip_server(wchar_t *path)
 {
 	wchar_t *c;
 
-	for (c = path; *c; c++) {
+	for (c = path; *c; c++)
 		if (git_path_is_dirsep(*c))
 			return c + 1;
-	}
 
 	return c;
 }
@@ -87,10 +86,9 @@ int git_win32_path_canonicalize(git_win32_path path)
 	base = to = path__skip_prefix(path);
 
 	/* Unposixify if the prefix */
-	for (from = path; from < to; from++) {
+	for (from = path; from < to; from++)
 		if (*from == L'/')
 			*from = L'\\';
-	}
 
 	while (*from) {
 		for (next = from; *next; ++next) {
@@ -117,8 +115,10 @@ int git_win32_path_canonicalize(git_win32_path path)
 				base = to;
 			} else {
 				/* back up a path segment */
-				while (to > base && to[-1] == L'\\') to--;
-				while (to > base && to[-1] != L'\\') to--;
+				while (to > base && to[-1] == L'\\')
+					to--;
+				while (to > base && to[-1] != L'\\')
+					to--;
 			}
 		} else {
 			if (*next == L'\\' && *from != L'\\')
@@ -132,11 +132,13 @@ int git_win32_path_canonicalize(git_win32_path path)
 
 		from += len;
 
-		while (*from == L'\\') from++;
+		while (*from == L'\\')
+			from++;
 	}
 
 	/* Strip trailing backslashes */
-	while (to > base && to[-1] == L'\\') to--;
+	while (to > base && to[-1] == L'\\')
+		to--;
 
 	*to = L'\0';
 
@@ -220,7 +222,7 @@ int git_win32_path_from_utf8(git_win32_path out, const char *src)
 			goto on_error;
 		}
 
-		/* Skip the drive letter specification ("C:") */	
+		/* Skip the drive letter specification ("C:") */
 		if (git__utf8_to_16(dest + 2, MAX_PATH - 2, src) < 0)
 			goto on_error;
 	}
@@ -292,8 +294,8 @@ char *git_win32_path_8dot3_name(const char *path)
 		return NULL;
 
 	for (start = shortpath + (len - 1);
-		start > shortpath && *(start-1) != '/' && *(start-1) != '\\';
-		start--)
+	     start > shortpath && *(start-1) != '/' && *(start-1) != '\\';
+	     start--)
 		namelen++;
 
 	/* We may not have actually been given a short name.  But if we have,
@@ -345,14 +347,14 @@ int git_win32_path_readlink_w(git_win32_path dest, const git_win32_path path)
 	switch (reparse_buf->ReparseTag) {
 	case IO_REPARSE_TAG_SYMLINK:
 		target = reparse_buf->SymbolicLinkReparseBuffer.PathBuffer +
-			(reparse_buf->SymbolicLinkReparseBuffer.SubstituteNameOffset / sizeof(WCHAR));
+		        (reparse_buf->SymbolicLinkReparseBuffer.SubstituteNameOffset / sizeof(WCHAR));
 		target_len = reparse_buf->SymbolicLinkReparseBuffer.SubstituteNameLength / sizeof(WCHAR);
-	break;
+		break;
 	case IO_REPARSE_TAG_MOUNT_POINT:
 		target = reparse_buf->MountPointReparseBuffer.PathBuffer +
-			(reparse_buf->MountPointReparseBuffer.SubstituteNameOffset / sizeof(WCHAR));
+		        (reparse_buf->MountPointReparseBuffer.SubstituteNameOffset / sizeof(WCHAR));
 		target_len = reparse_buf->MountPointReparseBuffer.SubstituteNameLength / sizeof(WCHAR);
-	break;
+		break;
 	default:
 		errno = EINVAL;
 		goto on_error;

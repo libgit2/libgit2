@@ -38,13 +38,13 @@ GIT_INLINE(void) git_trace__write_fmt(
 	git_buf_dispose(&message);
 }
 
-#define git_trace_level()		(git_trace__data.level)
-#define git_trace(l, ...)		{ \
-									if (git_trace__data.level >= l && \
-										git_trace__data.callback != NULL) { \
-										git_trace__write_fmt(l, __VA_ARGS__); \
-									} \
-								}
+# define git_trace_level()               (git_trace__data.level)
+# define git_trace(l, ...)               { \
+		if (git_trace__data.level >= l && \
+		    git_trace__data.callback != NULL) { \
+			git_trace__write_fmt(l, __VA_ARGS__); \
+		} \
+}
 
 #else
 
@@ -56,8 +56,8 @@ GIT_INLINE(void) git_trace__null(
 	GIT_UNUSED(fmt);
 }
 
-#define git_trace_level()		((void)0)
-#define git_trace			git_trace__null
+# define git_trace_level()               ((void)0)
+# define git_trace                       git_trace__null
 
 #endif
 

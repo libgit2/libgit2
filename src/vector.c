@@ -10,7 +10,7 @@
 #include "integer.h"
 
 /* In elements, not bytes */
-#define MIN_ALLOCSIZE	8
+#define MIN_ALLOCSIZE   8
 
 GIT_INLINE(size_t) compute_new_size(git_vector *v)
 {
@@ -108,7 +108,7 @@ int git_vector_init(git_vector *v, size_t initial_size, git_vector_cmp cmp)
 	return resize_vector(v, max(initial_size, MIN_ALLOCSIZE));
 }
 
-void **git_vector_detach(size_t *size, size_t *asize, git_vector *v)
+void * *git_vector_detach(size_t *size, size_t *asize, git_vector *v)
 {
 	void **data = v->contents;
 
@@ -129,7 +129,7 @@ int git_vector_insert(git_vector *v, void *element)
 	assert(v);
 
 	if (v->length >= v->_alloc_size &&
-		resize_vector(v, compute_new_size(v)) < 0)
+	    resize_vector(v, compute_new_size(v)) < 0)
 		return -1;
 
 	v->contents[v->length++] = element;
@@ -151,7 +151,7 @@ int git_vector_insert_sorted(
 		git_vector_sort(v);
 
 	if (v->length >= v->_alloc_size &&
-		resize_vector(v, compute_new_size(v)) < 0)
+	    resize_vector(v, compute_new_size(v)) < 0)
 		return -1;
 
 	/* If we find the element and have a duplicate handler callback,
@@ -159,13 +159,13 @@ int git_vector_insert_sorted(
 	 * proceed with normal insert.
 	 */
 	if (!git__bsearch(v->contents, v->length, element, v->_cmp, &pos) &&
-		on_dup && (result = on_dup(&v->contents[pos], element)) < 0)
+	    on_dup && (result = on_dup(&v->contents[pos], element)) < 0)
 		return result;
 
 	/* shift elements to the right */
 	if (pos < v->length)
 		memmove(v->contents + pos + 1, v->contents + pos,
-		        (v->length - pos) * sizeof(void *));
+			(v->length - pos) * sizeof(void *));
 
 	v->contents[pos] = element;
 	v->length++;
@@ -209,14 +209,13 @@ int git_vector_search2(
 
 	assert(v && key && key_lookup);
 
-	for (i = 0; i < v->length; ++i) {
+	for (i = 0; i < v->length; ++i)
 		if (key_lookup(key, v->contents[i]) == 0) {
 			if (at_pos)
 				*at_pos = i;
 
 			return 0;
 		}
-	}
 
 	return GIT_ENOTFOUND;
 }
@@ -256,7 +255,7 @@ void git_vector_pop(git_vector *v)
 		v->length--;
 }
 
-void git_vector_uniq(git_vector *v, void  (*git_free_cb)(void *))
+void git_vector_uniq(git_vector *v, void (*git_free_cb)(void *))
 {
 	git_vector_cmp cmp;
 	size_t i, j;
@@ -267,7 +266,7 @@ void git_vector_uniq(git_vector *v, void  (*git_free_cb)(void *))
 	git_vector_sort(v);
 	cmp = v->_cmp ? v->_cmp : strict_comparison;
 
-	for (i = 0, j = 1 ; j < v->length; ++j)
+	for (i = 0, j = 1; j < v->length; ++j)
 		if (!cmp(v->contents[i], v->contents[j])) {
 			if (git_free_cb)
 				git_free_cb(v->contents[i]);
@@ -319,7 +318,7 @@ void git_vector_swap(git_vector *a, git_vector *b)
 int git_vector_resize_to(git_vector *v, size_t new_length)
 {
 	if (new_length > v->_alloc_size &&
-		resize_vector(v, new_length) < 0)
+	    resize_vector(v, new_length) < 0)
 		return -1;
 
 	if (new_length > v->length)
@@ -354,7 +353,7 @@ int git_vector_remove_range(git_vector *v, size_t idx, size_t remove_len)
 {
 	size_t new_length = v->length - remove_len;
 	size_t end_idx = 0;
-	
+
 	assert(remove_len > 0);
 
 	if (git__add_sizet_overflow(&end_idx, idx, remove_len))
@@ -394,10 +393,9 @@ int git_vector_verify_sorted(const git_vector *v)
 	if (!git_vector_is_sorted(v))
 		return -1;
 
-	for (i = 1; i < v->length; ++i) {
+	for (i = 1; i < v->length; ++i)
 		if (v->_cmp(v->contents[i - 1], v->contents[i]) > 0)
 			return -1;
-	}
 
 	return 0;
 }

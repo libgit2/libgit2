@@ -19,7 +19,7 @@
  * "\\?\UNC\server\share".  So we replace the first two characters with
  * 8 characters, a net gain of 6, so the maximum length is MAX_PATH+6.
  */
-#define GIT_WIN_PATH_UTF16		MAX_PATH+6
+#define GIT_WIN_PATH_UTF16              MAX_PATH+6
 
 /* Maximum size of a UTF-8 Win32 path.  We remove the "\\?\" or "\\?\UNC\"
  * prefixes for presentation, bringing us back to 259 (non-NULL)
@@ -28,7 +28,7 @@
  * Two characters in the range U+0800 -> U+FFFF take up more space in UTF-8
  * (6 bytes) than one surrogate pair (4 bytes).
  */
-#define GIT_WIN_PATH_UTF8		(259 * 3 + 1)
+#define GIT_WIN_PATH_UTF8               (259 * 3 + 1)
 
 /*
  * The length of a Windows "shortname", for 8.3 compatibility.

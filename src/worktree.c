@@ -22,8 +22,8 @@ static bool is_worktree_dir(const char *dir)
 		return -1;
 
 	error = git_path_contains_file(&buf, "commondir")
-		&& git_path_contains_file(&buf, "gitdir")
-		&& git_path_contains_file(&buf, "HEAD");
+	        && git_path_contains_file(&buf, "gitdir")
+	        && git_path_contains_file(&buf, "HEAD");
 
 	git_buf_dispose(&buf);
 	return error;
@@ -61,7 +61,7 @@ int git_worktree_list(git_strarray *wts, git_repository *repo)
 		}
 	}
 
-	wts->strings = (char **)git_vector_detach(&wts->count, NULL, &worktrees);
+	wts->strings = (char * *)git_vector_detach(&wts->count, NULL, &worktrees);
 
 exit:
 	git_buf_dispose(&path);
@@ -509,7 +509,7 @@ int git_worktree_is_prunable(git_worktree *wt,
 		memcpy(&popts, opts, sizeof(popts));
 
 	if ((popts.flags & GIT_WORKTREE_PRUNE_LOCKED) == 0 &&
-		git_worktree_is_locked(&reason, wt))
+	    git_worktree_is_locked(&reason, wt))
 	{
 		if (!reason.size)
 			git_buf_attach_notowned(&reason, "no reason given", 15);
@@ -520,7 +520,7 @@ int git_worktree_is_prunable(git_worktree *wt,
 	}
 
 	if ((popts.flags & GIT_WORKTREE_PRUNE_VALID) == 0 &&
-		git_worktree_validate(wt) == 0)
+	    git_worktree_validate(wt) == 0)
 	{
 		giterr_set(GITERR_WORKTREE, "Not pruning valid working tree");
 		return 0;
@@ -564,7 +564,7 @@ int git_worktree_prune(git_worktree *wt,
 	/* Skip deletion of the actual working tree if it does
 	 * not exist or deletion was not requested */
 	if ((popts.flags & GIT_WORKTREE_PRUNE_WORKING_TREE) == 0 ||
-		!git_path_exists(wt->gitlink_path))
+	    !git_path_exists(wt->gitlink_path))
 	{
 		goto out;
 	}

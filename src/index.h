@@ -25,18 +25,18 @@ struct git_index {
 
 	char *index_file_path;
 	git_futils_filestamp stamp;
-	git_oid checksum;   /* checksum at the end of the file */
+	git_oid checksum;	/* checksum at the end of the file */
 
 	git_vector entries;
 	git_idxmap *entries_map;
 
-	git_vector deleted; /* deleted entries if readers > 0 */
-	git_atomic readers; /* number of active iterators */
+	git_vector deleted;	/* deleted entries if readers > 0 */
+	git_atomic readers;	/* number of active iterators */
 
-	unsigned int on_disk:1;
-	unsigned int ignore_case:1;
-	unsigned int distrust_filemode:1;
-	unsigned int no_symlinks:1;
+	unsigned int on_disk : 1;
+	unsigned int ignore_case : 1;
+	unsigned int distrust_filemode : 1;
+	unsigned int no_symlinks : 1;
 
 	git_tree_cache *tree;
 	git_pool tree_pool;
@@ -124,7 +124,7 @@ extern unsigned int git_index__create_mode(unsigned int mode);
 
 GIT_INLINE(const git_futils_filestamp *) git_index__filestamp(git_index *index)
 {
-   return &index->stamp;
+	return &index->stamp;
 }
 
 extern int git_index__changed_relative_to(git_index *index, const git_oid *checksum);
@@ -146,7 +146,7 @@ int git_index_read_index(git_index *index, const git_index *new_index);
 typedef struct {
 	git_index *index;
 	git_filebuf file;
-	unsigned int should_write:1;
+	unsigned int should_write : 1;
 } git_indexwriter;
 
 #define GIT_INDEXWRITER_INIT { NULL, GIT_FILEBUF_INIT }

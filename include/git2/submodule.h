@@ -88,24 +88,24 @@ typedef enum {
 	GIT_SUBMODULE_STATUS_WD_UNTRACKED      = (1u << 13),
 } git_submodule_status_t;
 
-#define GIT_SUBMODULE_STATUS__IN_FLAGS		0x000Fu
-#define GIT_SUBMODULE_STATUS__INDEX_FLAGS	0x0070u
-#define GIT_SUBMODULE_STATUS__WD_FLAGS		0x3F80u
+#define GIT_SUBMODULE_STATUS__IN_FLAGS          0x000Fu
+#define GIT_SUBMODULE_STATUS__INDEX_FLAGS       0x0070u
+#define GIT_SUBMODULE_STATUS__WD_FLAGS          0x3F80u
 
 #define GIT_SUBMODULE_STATUS_IS_UNMODIFIED(S) \
-	(((S) & ~GIT_SUBMODULE_STATUS__IN_FLAGS) == 0)
+	(((S) &~GIT_SUBMODULE_STATUS__IN_FLAGS) == 0)
 
 #define GIT_SUBMODULE_STATUS_IS_INDEX_UNMODIFIED(S) \
-	(((S) & GIT_SUBMODULE_STATUS__INDEX_FLAGS) == 0)
+	(((S) &GIT_SUBMODULE_STATUS__INDEX_FLAGS) == 0)
 
 #define GIT_SUBMODULE_STATUS_IS_WD_UNMODIFIED(S) \
-	(((S) & (GIT_SUBMODULE_STATUS__WD_FLAGS & \
-	~GIT_SUBMODULE_STATUS_WD_UNINITIALIZED)) == 0)
+	(((S) &(GIT_SUBMODULE_STATUS__WD_FLAGS & \
+	        ~GIT_SUBMODULE_STATUS_WD_UNINITIALIZED)) == 0)
 
 #define GIT_SUBMODULE_STATUS_IS_WD_DIRTY(S) \
-	(((S) & (GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED | \
-	GIT_SUBMODULE_STATUS_WD_WD_MODIFIED | \
-	GIT_SUBMODULE_STATUS_WD_UNTRACKED)) != 0)
+	(((S) &(GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED | \
+	        GIT_SUBMODULE_STATUS_WD_WD_MODIFIED | \
+	        GIT_SUBMODULE_STATUS_WD_UNTRACKED)) != 0)
 
 /**
  * Function pointer to receive each submodule
@@ -133,7 +133,7 @@ typedef struct git_submodule_update_options {
 	 * checkout, set the `checkout_strategy` to
 	 * `GIT_CHECKOUT_NONE`. Generally you will want the use
 	 * GIT_CHECKOUT_SAFE to update files in the working
-	 * directory. 
+	 * directory.
 	 */
 	git_checkout_options checkout_opts;
 
@@ -155,8 +155,8 @@ typedef struct git_submodule_update_options {
 #define GIT_SUBMODULE_UPDATE_OPTIONS_VERSION 1
 #define GIT_SUBMODULE_UPDATE_OPTIONS_INIT \
 	{ GIT_SUBMODULE_UPDATE_OPTIONS_VERSION, \
-		{ GIT_CHECKOUT_OPTIONS_VERSION, GIT_CHECKOUT_SAFE }, \
-	GIT_FETCH_OPTIONS_INIT, 1 }
+	  { GIT_CHECKOUT_OPTIONS_VERSION, GIT_CHECKOUT_SAFE }, \
+	  GIT_FETCH_OPTIONS_INIT, 1 }
 
 /**
  * Initialize git_submodule_update_options structure

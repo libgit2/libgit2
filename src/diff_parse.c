@@ -18,7 +18,7 @@ static void diff_parsed_free(git_diff *d)
 	size_t i;
 
 	git_vector_foreach(&diff->patches, i, patch)
-		git_patch_free(patch);
+	git_patch_free(patch);
 
 	git_vector_free(&diff->patches);
 
@@ -55,7 +55,7 @@ static git_diff_parsed *diff_parsed_alloc(void)
 	git_pool_init(&diff->base.pool, 1);
 
 	if (git_vector_init(&diff->patches, 0, NULL) < 0 ||
-		git_vector_init(&diff->base.deltas, 0, git_diff_delta__cmp) < 0) {
+	    git_vector_init(&diff->base.deltas, 0, git_diff_delta__cmp) < 0) {
 		git_diff_free(&diff->base);
 		return NULL;
 	}

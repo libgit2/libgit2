@@ -36,7 +36,7 @@ struct memory_packer_db {
 static int impl__write(git_odb_backend *_backend, const git_oid *oid, const void *data, size_t len, git_otype type)
 {
 	struct memory_packer_db *db = (struct memory_packer_db *)_backend;
-	struct memobject *obj = NULL; 
+	struct memobject *obj = NULL;
 	khiter_t pos;
 	size_t alloc_len;
 	int rval;

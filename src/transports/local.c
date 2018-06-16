@@ -43,7 +43,7 @@ typedef struct {
 	void *message_cb_payload;
 	git_vector refs;
 	unsigned connected : 1,
-		have_refs : 1;
+	         have_refs : 1;
 } transport_local;
 
 static void free_head(git_remote_head *head)
@@ -59,7 +59,7 @@ static void free_heads(git_vector *heads)
 	size_t i;
 
 	git_vector_foreach(heads, i, head)
-		free_head(head);
+	free_head(head);
 
 	git_vector_free(heads);
 }
@@ -123,7 +123,7 @@ static int add_ref(transport_local *t, const char *name)
 	/* If it's not an annotated tag, or if we're mocking
 	 * git-receive-pack, just get out */
 	if (git_object_type(obj) != GIT_OBJ_TAG ||
-		t->direction != GIT_DIRECTION_FETCH) {
+	    t->direction != GIT_DIRECTION_FETCH) {
 		git_object_free(obj);
 		return 0;
 	}
@@ -156,7 +156,9 @@ static int store_refs(transport_local *t)
 {
 	size_t i;
 	git_remote_head *head;
-	git_strarray ref_names = {0};
+	git_strarray ref_names = {
+		0
+	};
 
 	assert(t);
 
@@ -173,16 +175,15 @@ static int store_refs(transport_local *t)
 	git_vector_clear(&t->refs);
 
 	/* Sort the references first */
-	git__tsort((void **)ref_names.strings, ref_names.count, &git__strcmp_cb);
+	git__tsort((void * *)ref_names.strings, ref_names.count, &git__strcmp_cb);
 
 	/* Add HEAD iff direction is fetch */
 	if (t->direction == GIT_DIRECTION_FETCH && add_ref(t, GIT_HEAD_FILE) < 0)
 		goto on_error;
 
-	for (i = 0; i < ref_names.count; ++i) {
+	for (i = 0; i < ref_names.count; ++i)
 		if (add_ref(t, ref_names.strings[i]) < 0)
 			goto on_error;
-	}
 
 	t->have_refs = 1;
 	git_strarray_free(&ref_names);
@@ -259,7 +260,7 @@ static int local_ls(const git_remote_head ***out, size_t *size, git_transport *t
 		return -1;
 	}
 
-	*out = (const git_remote_head **)t->refs.contents;
+	*out = (const git_remote_head * *)t->refs.contents;
 	*size = t->refs.length;
 
 	return 0;
@@ -268,10 +269,10 @@ static int local_ls(const git_remote_head ***out, size_t *size, git_transport *t
 static int local_negotiate_fetch(
 	git_transport *transport,
 	git_repository *repo,
-	const git_remote_head * const *refs,
+	const git_remote_head *const *refs,
 	size_t count)
 {
-	transport_local *t = (transport_local*)transport;
+	transport_local *t = (transport_local *)transport;
 	git_remote_head *rhead;
 	unsigned int i;
 
@@ -309,7 +310,7 @@ static int local_push_update_remote_ref(
 	if (lref[0] != '\0') {
 		/* Create or update a ref */
 		error = git_reference_create(NULL, remote_repo, rref, loid,
-					     !git_oid_iszero(roid), NULL);
+			                     !git_oid_iszero(roid), NULL);
 	} else {
 		/* Delete a ref */
 		if ((error = git_reference_lookup(&remote_ref, remote_repo, rref)) < 0) {
@@ -333,7 +334,7 @@ static int transfer_to_push_transfer(const git_transfer_progress *stats, void *p
 		return 0;
 
 	return cbs->push_transfer_progress(stats->received_objects, stats->total_objects, stats->received_bytes,
-					   cbs->payload);
+		                           cbs->payload);
 }
 
 static int local_push(
@@ -379,7 +380,7 @@ static int local_push(
 	}
 
 	if ((error = git_repository_item_path(&odb_path, remote_repo, GIT_REPOSITORY_ITEM_OBJECTS)) < 0
-		|| (error = git_buf_joinpath(&odb_path, odb_path.ptr, "pack")) < 0)
+	    || (error = git_buf_joinpath(&odb_path, odb_path.ptr, "pack")) < 0)
 		goto on_error;
 
 	error = git_packbuilder_write(push->pb, odb_path.ptr, 0, transfer_to_push_transfer, (void *) cbs);
@@ -409,22 +410,22 @@ static int local_push(
 			&spec->loid, &spec->roid);
 
 		switch (error) {
-			case GIT_OK:
-				break;
-			case GIT_EINVALIDSPEC:
-				status->msg = git__strdup("funny refname");
-				break;
-			case GIT_ENOTFOUND:
-				status->msg = git__strdup("Remote branch not found to delete");
-				break;
-			default:
-				last = giterr_last();
+		case GIT_OK:
+			break;
+		case GIT_EINVALIDSPEC:
+			status->msg = git__strdup("funny refname");
+			break;
+		case GIT_ENOTFOUND:
+			status->msg = git__strdup("Remote branch not found to delete");
+			break;
+		default:
+			last = giterr_last();
 
-				if (last && last->message)
-					status->msg = git__strdup(last->message);
-				else
-					status->msg = git__strdup("Unspecified error encountered");
-				break;
+			if (last && last->message)
+				status->msg = git__strdup(last->message);
+			else
+				status->msg = git__strdup("Unspecified error encountered");
+			break;
 		}
 
 		/* failed to allocate memory for a status message */
@@ -445,7 +446,7 @@ static int local_push(
 		url = git__strdup(t->url);
 
 		if (!url || t->parent.close(&t->parent) < 0 ||
-			t->parent.connect(&t->parent, url,
+		    t->parent.connect(&t->parent, url,
 			NULL, NULL, NULL, GIT_DIRECTION_PUSH, flags))
 			goto on_error;
 	}
@@ -468,7 +469,7 @@ typedef struct foreach_data {
 
 static int foreach_cb(void *buf, size_t len, void *payload)
 {
-	foreach_data *data = (foreach_data*)payload;
+	foreach_data *data = (foreach_data *)payload;
 
 	data->stats->received_bytes += len;
 	return data->writepack->append(data->writepack, buf, len, data->stats);
@@ -495,7 +496,6 @@ static int local_counting(int stage, unsigned int current, unsigned int total, v
 			git_buf_printf(&progress_info, ", done\n");
 		else
 			git_buf_putc(&progress_info, '\r');
-
 	}
 
 	if (git_buf_oom(&progress_info))
@@ -531,13 +531,13 @@ static int foreach_reference_cb(git_reference *reference, void *payload)
 }
 
 static int local_download_pack(
-		git_transport *transport,
-		git_repository *repo,
-		git_transfer_progress *stats,
-		git_transfer_progress_cb progress_cb,
-		void *progress_payload)
+	git_transport *transport,
+	git_repository *repo,
+	git_transfer_progress *stats,
+	git_transfer_progress_cb progress_cb,
+	void *progress_payload)
 {
-	transport_local *t = (transport_local*)transport;
+	transport_local *t = (transport_local *)transport;
 	git_revwalk *walk = NULL;
 	git_remote_head *rhead;
 	unsigned int i;
@@ -610,7 +610,9 @@ static int local_download_pack(
 
 	/* Write the data to the ODB */
 	{
-		foreach_data data = {0};
+		foreach_data data = {
+			0
+		};
 		data.stats = stats;
 		data.progress_cb = progress_cb;
 		data.progress_payload = progress_payload;
@@ -626,7 +628,8 @@ static int local_download_pack(
 	error = writepack->commit(writepack, stats);
 
 cleanup:
-	if (writepack) writepack->free(writepack);
+	if (writepack)
+		writepack->free(writepack);
 	git_buf_dispose(&progress_info);
 	git_packbuilder_free(pack);
 	git_revwalk_free(walk);

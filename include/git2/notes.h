@@ -255,12 +255,12 @@ GIT_EXTERN(int) git_note_remove(
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_note_commit_remove(
-		git_oid *notes_commit_out,
-		git_repository *repo,
-		git_commit *notes_commit,
-		const git_signature *author,
-		const git_signature *committer,
-		const git_oid *oid);
+	        git_oid *notes_commit_out,
+	        git_repository *repo,
+	        git_commit *notes_commit,
+	        const git_signature *author,
+	        const git_signature *committer,
+	        const git_oid *oid);
 
 /**
  * Free a git_note object

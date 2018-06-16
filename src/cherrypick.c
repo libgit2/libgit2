@@ -19,7 +19,7 @@
 #include "git2/commit.h"
 #include "git2/sys/commit.h"
 
-#define GIT_CHERRYPICK_FILE_MODE		0666
+#define GIT_CHERRYPICK_FILE_MODE                0666
 
 static int write_cherrypick_head(
 	git_repository *repo,
@@ -30,8 +30,8 @@ static int write_cherrypick_head(
 	int error = 0;
 
 	if ((error = git_buf_joinpath(&file_path, repo->gitdir, GIT_CHERRYPICK_HEAD_FILE)) >= 0 &&
-		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_CHERRYPICK_FILE_MODE)) >= 0 &&
-		(error = git_filebuf_printf(&file, "%s\n", commit_oidstr)) >= 0)
+	    (error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_CHERRYPICK_FILE_MODE)) >= 0 &&
+	    (error = git_filebuf_printf(&file, "%s\n", commit_oidstr)) >= 0)
 		error = git_filebuf_commit(&file);
 
 	if (error < 0)
@@ -51,8 +51,8 @@ static int write_merge_msg(
 	int error = 0;
 
 	if ((error = git_buf_joinpath(&file_path, repo->gitdir, GIT_MERGE_MSG_FILE)) < 0 ||
-		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_CHERRYPICK_FILE_MODE)) < 0 ||
-		(error = git_filebuf_printf(&file, "%s", commit_msg)) < 0)
+	    (error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_CHERRYPICK_FILE_MODE)) < 0 ||
+	    (error = git_filebuf_printf(&file, "%s", commit_msg)) < 0)
 		goto cleanup;
 
 	error = git_filebuf_commit(&file);
@@ -74,7 +74,7 @@ static int cherrypick_normalize_opts(
 {
 	int error = 0;
 	unsigned int default_checkout_strategy = GIT_CHECKOUT_SAFE |
-		GIT_CHECKOUT_ALLOW_CONFLICTS;
+	        GIT_CHECKOUT_ALLOW_CONFLICTS;
 
 	GIT_UNUSED(repo);
 
@@ -99,7 +99,9 @@ static int cherrypick_normalize_opts(
 
 static int cherrypick_state_cleanup(git_repository *repo)
 {
-	const char *state_files[] = { GIT_CHERRYPICK_HEAD_FILE, GIT_MERGE_MSG_FILE };
+	const char *state_files[] = {
+		GIT_CHERRYPICK_HEAD_FILE, GIT_MERGE_MSG_FILE
+	};
 
 	return git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files));
 }
@@ -143,12 +145,12 @@ int git_cherrypick_commit(
 	}
 
 	if (parent &&
-		((error = git_commit_parent(&parent_commit, cherrypick_commit, (parent - 1))) < 0 ||
-		(error = git_commit_tree(&parent_tree, parent_commit)) < 0))
+	    ((error = git_commit_parent(&parent_commit, cherrypick_commit, (parent - 1))) < 0 ||
+	     (error = git_commit_tree(&parent_tree, parent_commit)) < 0))
 		goto done;
 
 	if ((error = git_commit_tree(&cherrypick_tree, cherrypick_commit)) < 0 ||
-		(error = git_commit_tree(&our_tree, our_commit)) < 0)
+	    (error = git_commit_tree(&our_tree, our_commit)) < 0)
 		goto done;
 
 	error = git_merge_trees(out, repo, parent_tree, our_tree, cherrypick_tree, merge_opts);
@@ -185,7 +187,7 @@ int git_cherrypick(
 		return error;
 
 	if ((commit_msg = git_commit_message(commit)) == NULL ||
-		(commit_summary = git_commit_summary(commit)) == NULL) {
+	    (commit_summary = git_commit_summary(commit)) == NULL) {
 		error = -1;
 		goto on_error;
 	}
@@ -193,17 +195,17 @@ int git_cherrypick(
 	git_oid_nfmt(commit_oidstr, sizeof(commit_oidstr), git_commit_id(commit));
 
 	if ((error = write_merge_msg(repo, commit_msg)) < 0 ||
-		(error = git_buf_printf(&their_label, "%.7s... %s", commit_oidstr, commit_summary)) < 0 ||
-		(error = cherrypick_normalize_opts(repo, &opts, given_opts, git_buf_cstr(&their_label))) < 0 ||
-		(error = git_indexwriter_init_for_operation(&indexwriter, repo, &opts.checkout_opts.checkout_strategy)) < 0 ||
-		(error = write_cherrypick_head(repo, commit_oidstr)) < 0 ||
-		(error = git_repository_head(&our_ref, repo)) < 0 ||
-		(error = git_reference_peel((git_object **)&our_commit, our_ref, GIT_OBJ_COMMIT)) < 0 ||
-		(error = git_cherrypick_commit(&index, repo, commit, our_commit, opts.mainline, &opts.merge_opts)) < 0 ||
-		(error = git_merge__check_result(repo, index)) < 0 ||
-		(error = git_merge__append_conflicts_to_merge_msg(repo, index)) < 0 ||
-		(error = git_checkout_index(repo, index, &opts.checkout_opts)) < 0 ||
-		(error = git_indexwriter_commit(&indexwriter)) < 0)
+	    (error = git_buf_printf(&their_label, "%.7s... %s", commit_oidstr, commit_summary)) < 0 ||
+	    (error = cherrypick_normalize_opts(repo, &opts, given_opts, git_buf_cstr(&their_label))) < 0 ||
+	    (error = git_indexwriter_init_for_operation(&indexwriter, repo, &opts.checkout_opts.checkout_strategy)) < 0 ||
+	    (error = write_cherrypick_head(repo, commit_oidstr)) < 0 ||
+	    (error = git_repository_head(&our_ref, repo)) < 0 ||
+	    (error = git_reference_peel((git_object * *)&our_commit, our_ref, GIT_OBJ_COMMIT)) < 0 ||
+	    (error = git_cherrypick_commit(&index, repo, commit, our_commit, opts.mainline, &opts.merge_opts)) < 0 ||
+	    (error = git_merge__check_result(repo, index)) < 0 ||
+	    (error = git_merge__append_conflicts_to_merge_msg(repo, index)) < 0 ||
+	    (error = git_checkout_index(repo, index, &opts.checkout_opts)) < 0 ||
+	    (error = git_indexwriter_commit(&indexwriter)) < 0)
 		goto on_error;
 
 	goto done;

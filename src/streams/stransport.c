@@ -9,14 +9,14 @@
 
 #ifdef GIT_SECURE_TRANSPORT
 
-#include <CoreFoundation/CoreFoundation.h>
-#include <Security/SecureTransport.h>
-#include <Security/SecCertificate.h>
+# include <CoreFoundation/CoreFoundation.h>
+# include <Security/SecureTransport.h>
+# include <Security/SecCertificate.h>
 
-#include "git2/transport.h"
+# include "git2/transport.h"
 
-#include "streams/socket.h"
-#include "streams/curl.h"
+# include "streams/socket.h"
+# include "streams/curl.h"
 
 static int stransport_error(OSStatus ret)
 {
@@ -27,16 +27,16 @@ static int stransport_error(OSStatus ret)
 		return 0;
 	}
 
-#if !TARGET_OS_IPHONE
+# if !TARGET_OS_IPHONE
 	message = SecCopyErrorMessageString(ret, NULL);
 	GITERR_CHECK_ALLOC(message);
 
 	giterr_set(GITERR_NET, "SecureTransport error: %s", CFStringGetCStringPtr(message, kCFStringEncodingUTF8));
 	CFRelease(message);
-#else
-    giterr_set(GITERR_NET, "SecureTransport error: OSStatus %d", (unsigned int)ret);
-    GIT_UNUSED(message);
-#endif
+# else
+	giterr_set(GITERR_NET, "SecureTransport error: OSStatus %d", (unsigned int)ret);
+	GIT_UNUSED(message);
+# endif
 
 	return -1;
 }
@@ -150,7 +150,7 @@ static OSStatus write_cb(SSLConnectionRef conn, const void *data, size_t *len)
 	git_stream *io = (git_stream *) conn;
 
 	if (git_stream_write(io, data, *len, 0) < 0) {
-		return -36; /* "ioErr" from MacErrors.h which is not available on iOS */
+		return -36;	/* "ioErr" from MacErrors.h which is not available on iOS */
 	}
 
 	return noErr;
@@ -190,7 +190,7 @@ static OSStatus read_cb(SSLConnectionRef conn, void *data, size_t *len)
 	do {
 		ret = git_stream_read(io, data + off, *len - off);
 		if (ret < 0) {
-			error = -36; /* "ioErr" from MacErrors.h which is not available on iOS */
+			error = -36;	/* "ioErr" from MacErrors.h which is not available on iOS */
 			break;
 		}
 		if (ret == 0) {
@@ -251,13 +251,13 @@ int git_stransport_stream_new(git_stream **out, const char *host, const char *po
 	st = git__calloc(1, sizeof(stransport_stream));
 	GITERR_CHECK_ALLOC(st);
 
-#ifdef GIT_CURL
+# ifdef GIT_CURL
 	error = git_curl_stream_new(&st->io, host, port);
-#else
+# else
 	error = git_socket_stream_new(&st->io, host, port);
-#endif
+# endif
 
-	if (error < 0){
+	if (error < 0) {
 		git__free(st);
 		return error;
 	}

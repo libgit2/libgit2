@@ -62,7 +62,7 @@ GIT_EXTERN(int) git_refspec_force(const git_refspec *refspec);
 GIT_EXTERN(git_direction) git_refspec_direction(const git_refspec *spec);
 
 /**
- * Check if a refspec's source descriptor matches a reference 
+ * Check if a refspec's source descriptor matches a reference
  *
  * @param refspec the refspec
  * @param refname the name of the reference to check

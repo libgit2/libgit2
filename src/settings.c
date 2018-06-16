@@ -38,16 +38,16 @@ int git_libgit2_features(void)
 {
 	return 0
 #ifdef GIT_THREADS
-		| GIT_FEATURE_THREADS
+	       | GIT_FEATURE_THREADS
 #endif
 #ifdef GIT_HTTPS
-		| GIT_FEATURE_HTTPS
+	       | GIT_FEATURE_HTTPS
 #endif
 #if defined(GIT_SSH)
-		| GIT_FEATURE_SSH
+	       | GIT_FEATURE_SSH
 #endif
 #if defined(GIT_USE_NSEC)
-		| GIT_FEATURE_NSEC
+	       | GIT_FEATURE_NSEC
 #endif
 	;
 }
@@ -137,12 +137,12 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	case GIT_OPT_SET_CACHE_OBJECT_LIMIT:
-		{
-			git_otype type = (git_otype)va_arg(ap, int);
-			size_t size = va_arg(ap, size_t);
-			error = git_cache_set_max_object_size(type, size);
-			break;
-		}
+	{
+		git_otype type = (git_otype)va_arg(ap, int);
+		size_t size = va_arg(ap, size_t);
+		error = git_cache_set_max_object_size(type, size);
+		break;
+	}
 
 	case GIT_OPT_SET_CACHE_MAX_SIZE:
 		git_cache__max_storage = va_arg(ap, ssize_t);
@@ -158,17 +158,17 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	case GIT_OPT_GET_TEMPLATE_PATH:
-		{
-			git_buf *out = va_arg(ap, git_buf *);
-			const git_buf *tmp;
+	{
+		git_buf *out = va_arg(ap, git_buf *);
+		const git_buf *tmp;
 
-			git_buf_sanitize(out);
-			if ((error = git_sysdir_get(&tmp, GIT_SYSDIR_TEMPLATE)) < 0)
-				break;
+		git_buf_sanitize(out);
+		if ((error = git_sysdir_get(&tmp, GIT_SYSDIR_TEMPLATE)) < 0)
+			break;
 
-			error = git_buf_sets(out, tmp->ptr);
-		}
-		break;
+		error = git_buf_sets(out, tmp->ptr);
+	}
+	break;
 
 	case GIT_OPT_SET_TEMPLATE_PATH:
 		error = git_sysdir_set(GIT_SYSDIR_TEMPLATE, va_arg(ap, const char *));
@@ -230,12 +230,12 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	case GIT_OPT_GET_USER_AGENT:
-		{
-			git_buf *out = va_arg(ap, git_buf *);
-			git_buf_sanitize(out);
-			error = git_buf_sets(out, git__user_agent);
-		}
-		break;
+	{
+		git_buf *out = va_arg(ap, git_buf *);
+		git_buf_sanitize(out);
+		error = git_buf_sets(out, git__user_agent);
+	}
+	break;
 
 	case GIT_OPT_ENABLE_OFS_DELTA:
 		git_smart__ofs_delta_enabled = (va_arg(ap, int) != 0);

@@ -18,7 +18,7 @@ uintmax_t git_decode_varint(const unsigned char *bufp, size_t *varint_len)
 			/* This is not a valid varint_len, so it signals
 			   the error */
 			*varint_len = 0;
-			return 0; /* overflow */
+			return 0;	/* overflow */
 		}
 		c = *buf++;
 		val = (val << 7) + (c & 127);

@@ -124,11 +124,11 @@ int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const cha
 	for (; nptr_len > 0; p++,ndig++,nptr_len--) {
 		c = *p;
 		v = base;
-		if ('0'<=c && c<='9')
+		if ('0' <= c && c <= '9')
 			v = c - '0';
-		else if ('a'<=c && c<='z')
+		else if ('a' <= c && c <= 'z')
 			v = c - 'a' + 10;
-		else if ('A'<=c && c<='Z')
+		else if ('A' <= c && c <= 'Z')
 			v = c - 'A' + 10;
 		if (v >= base)
 			break;
@@ -244,9 +244,8 @@ void git__strntolower(char *str, size_t len)
 {
 	size_t i;
 
-	for (i = 0; i < len; ++i) {
+	for (i = 0; i < len; ++i)
 		str[i] = (char)git__tolower(str[i]);
-	}
 }
 
 void git__strtolower(char *str)
@@ -409,7 +408,7 @@ uint32_t git__hash(const void *key, int len, unsigned int seed)
 
 	const unsigned char *data = (const unsigned char *)key;
 
-	while(len >= 4) {
+	while (len >= 4) {
 		uint32_t k = *(uint32_t *)data;
 
 		k *= m;
@@ -423,12 +422,13 @@ uint32_t git__hash(const void *key, int len, unsigned int seed)
 		len -= 4;
 	}
 
-	switch(len) {
+	switch (len) {
 	case 3: h ^= data[2] << 16;
 	case 2: h ^= data[1] << 8;
 	case 1: h ^= data[0];
-			h *= m;
-	};
+		h *= m;
+	}
+	;
 
 	h ^= h >> 13;
 	h *= m;
@@ -438,26 +438,26 @@ uint32_t git__hash(const void *key, int len, unsigned int seed)
 }
 #else
 /*
-	Cross-platform version of Murmurhash3
-	http://code.google.com/p/smhasher/wiki/MurmurHash3
-	by Austin Appleby (aappleby@gmail.com)
+        Cross-platform version of Murmurhash3
+        http://code.google.com/p/smhasher/wiki/MurmurHash3
+        by Austin Appleby (aappleby@gmail.com)
 
-	This code is on the public domain.
+        This code is on the public domain.
 */
 uint32_t git__hash(const void *key, int len, uint32_t seed)
 {
 
-#define MURMUR_BLOCK() {\
-	k1 *= c1; \
-	k1 = git__rotl(k1,11);\
-	k1 *= c2;\
-	h1 ^= k1;\
-	h1 = h1*3 + 0x52dce729;\
-	c1 = c1*5 + 0x7b7d159c;\
-	c2 = c2*5 + 0x6bce6396;\
+# define MURMUR_BLOCK() { \
+		k1 *= c1; \
+		k1 = git__rotl(k1,11); \
+		k1 *= c2; \
+		h1 ^= k1; \
+		h1 = h1*3 + 0x52dce729; \
+		c1 = c1*5 + 0x7b7d159c; \
+		c2 = c2*5 + 0x6bce6396; \
 }
 
-	const uint8_t *data = (const uint8_t*)key;
+	const uint8_t *data = (const uint8_t *)key;
 	const int nblocks = len / 4;
 
 	const uint32_t *blocks = (const uint32_t *)(data + nblocks * 4);
@@ -478,11 +478,11 @@ uint32_t git__hash(const void *key, int len, uint32_t seed)
 
 	k1 = 0;
 
-	switch(len & 3) {
+	switch (len & 3) {
 	case 3: k1 ^= tail[2] << 16;
-		/* fall through */
+	/* fall through */
 	case 2: k1 ^= tail[1] << 8;
-		/* fall through */
+	/* fall through */
 	case 1: k1 ^= tail[0];
 		MURMUR_BLOCK();
 	}
@@ -546,10 +546,10 @@ int git__bsearch(
 			base = part;
 			break;
 		}
-		if (cmp > 0) { /* key > p; take right partition */
+		if (cmp > 0) {	/* key > p; take right partition */
 			base = part + 1;
 			lim--;
-		} /* else take left partition */
+		}	/* else take left partition */
 	}
 
 	if (position)
@@ -577,10 +577,10 @@ int git__bsearch_r(
 			base = part;
 			break;
 		}
-		if (cmp > 0) { /* key > p; take right partition */
+		if (cmp > 0) {	/* key > p; take right partition */
 			base = part + 1;
 			lim--;
-		} /* else take left partition */
+		}	/* else take left partition */
 	}
 
 	if (position)
@@ -609,16 +609,16 @@ int git__parse_bool(int *out, const char *value)
 {
 	/* A missing value means true */
 	if (value == NULL ||
-		!strcasecmp(value, "true") ||
-		!strcasecmp(value, "yes") ||
-		!strcasecmp(value, "on")) {
+	    !strcasecmp(value, "true") ||
+	    !strcasecmp(value, "yes") ||
+	    !strcasecmp(value, "on")) {
 		*out = 1;
 		return 0;
 	}
 	if (!strcasecmp(value, "false") ||
-		!strcasecmp(value, "no") ||
-		!strcasecmp(value, "off") ||
-		value[0] == '\0') {
+	    !strcasecmp(value, "no") ||
+	    !strcasecmp(value, "off") ||
+	    value[0] == '\0') {
 		*out = 0;
 		return 0;
 	}
@@ -635,7 +635,7 @@ size_t git__unescape(char *str)
 
 	for (scan = str; *scan; pos++, scan++) {
 		if (*scan == '\\' && *(scan + 1) != '\0')
-			scan++; /* skip '\' but include next char */
+			scan++;	/* skip '\' but include next char */
 		if (pos != scan)
 			*pos = *scan;
 	}
@@ -665,12 +665,16 @@ void git__qsort_r(
 	void *els, size_t nel, size_t elsize, git__sort_r_cmp cmp, void *payload)
 {
 #if defined(HAVE_QSORT_R) && defined(BSD)
-	git__qsort_r_glue glue = { cmp, payload };
+	git__qsort_r_glue glue = {
+		cmp, payload
+	};
 	qsort_r(els, nel, elsize, &glue, git__qsort_r_glue_cmp);
 #elif defined(HAVE_QSORT_R) && defined(__GLIBC__)
 	qsort_r(els, nel, elsize, cmp, payload);
 #elif defined(HAVE_QSORT_S)
-	git__qsort_r_glue glue = { cmp, payload };
+	git__qsort_r_glue glue = {
+		cmp, payload
+	};
 	qsort_s(els, nel, elsize, git__qsort_r_glue_cmp, &glue);
 #else
 	git__insertsort_r(els, nel, elsize, NULL, cmp, payload);
@@ -755,10 +759,9 @@ int git__utf8_charlen(const uint8_t *str, int str_len)
 	if (str_len >= 0 && length > str_len)
 		return -str_len;
 
-	for (i = 1; i < length; i++) {
+	for (i = 1; i < length; i++)
 		if ((str[i] & 0xC0) != 0x80)
 			return -i;
-	}
 
 	return length;
 }
@@ -774,24 +777,27 @@ int git__utf8_iterate(const uint8_t *str, int str_len, int32_t *dst)
 		return -1;
 
 	switch (length) {
-		case 1:
-			uc = str[0];
-			break;
-		case 2:
-			uc = ((str[0] & 0x1F) <<  6) + (str[1] & 0x3F);
-			if (uc < 0x80) uc = -1;
-			break;
-		case 3:
-			uc = ((str[0] & 0x0F) << 12) + ((str[1] & 0x3F) <<  6)
-				+ (str[2] & 0x3F);
-			if (uc < 0x800 || (uc >= 0xD800 && uc < 0xE000) ||
-					(uc >= 0xFDD0 && uc < 0xFDF0)) uc = -1;
-			break;
-		case 4:
-			uc = ((str[0] & 0x07) << 18) + ((str[1] & 0x3F) << 12)
-				+ ((str[2] & 0x3F) <<  6) + (str[3] & 0x3F);
-			if (uc < 0x10000 || uc >= 0x110000) uc = -1;
-			break;
+	case 1:
+		uc = str[0];
+		break;
+	case 2:
+		uc = ((str[0] & 0x1F) <<  6) + (str[1] & 0x3F);
+		if (uc < 0x80)
+			uc = -1;
+		break;
+	case 3:
+		uc = ((str[0] & 0x0F) << 12) + ((str[1] & 0x3F) <<  6)
+		        + (str[2] & 0x3F);
+		if (uc < 0x800 || (uc >= 0xD800 && uc < 0xE000) ||
+		    (uc >= 0xFDD0 && uc < 0xFDF0))
+			uc = -1;
+		break;
+	case 4:
+		uc = ((str[0] & 0x07) << 18) + ((str[1] & 0x3F) << 12)
+		        + ((str[2] & 0x3F) <<  6) + (str[3] & 0x3F);
+		if (uc < 0x10000 || uc >= 0x110000)
+			uc = -1;
+		break;
 	}
 
 	if (uc < 0 || ((uc & 0xFFFF) >= 0xFFFE))

@@ -59,7 +59,7 @@ struct pack_writepack {
  *	 | we run a `dirent` callback through every file in the pack folder
  *	 | to find our packfiles. The packfiles are then sorted according
  *	 | to a sorting callback.
- * 	 |
+ *       |
  *	 |-# packfile_load__cb
  *	 | | This callback is called from `dirent` with every single file
  *	 | | inside the pack folder. We find the packs by actually locating
@@ -203,7 +203,7 @@ static int packfile_load__cb(void *data, git_buf *path)
 	int error;
 
 	if (cmp_len <= strlen(".idx") || git__suffixcmp(path_str, ".idx") != 0)
-		return 0; /* not an index */
+		return 0;/* not an index */
 
 	cmp_len -= strlen(".idx");
 
@@ -226,7 +226,6 @@ static int packfile_load__cb(void *data, git_buf *path)
 		error = git_vector_insert(&backend->packs, pack);
 
 	return error;
-
 }
 
 static int pack_entry_find_inner(
@@ -238,7 +237,7 @@ static int pack_entry_find_inner(
 	size_t i;
 
 	if (last_found &&
-		git_pack_entry_find(e, last_found, oid, GIT_OID_HEXSZ) == 0)
+	    git_pack_entry_find(e, last_found, oid, GIT_OID_HEXSZ) == 0)
 		return 0;
 
 	for (i = 0; i < backend->packs.length; ++i) {
@@ -262,7 +261,7 @@ static int pack_entry_find(struct git_pack_entry *e, struct pack_backend *backen
 	struct git_pack_file *last_found = backend->last_found;
 
 	if (backend->last_found &&
-		git_pack_entry_find(e, backend->last_found, oid, GIT_OID_HEXSZ) == 0)
+	    git_pack_entry_find(e, backend->last_found, oid, GIT_OID_HEXSZ) == 0)
 		return 0;
 
 	if (!pack_entry_find_inner(e, backend, oid, last_found))
@@ -394,11 +393,13 @@ static int pack_backend__read(
 	git_odb_backend *backend, const git_oid *oid)
 {
 	struct git_pack_entry e;
-	git_rawobj raw = {NULL};
+	git_rawobj raw = {
+		NULL
+	};
 	int error;
 
 	if ((error = pack_entry_find(&e, (struct pack_backend *)backend, oid)) < 0 ||
-		(error = git_packfile_unpack(&raw, e.p, &e.offset)) < 0)
+	    (error = git_packfile_unpack(&raw, e.p, &e.offset)) < 0)
 		return error;
 
 	*buffer_p = raw.data;
@@ -429,11 +430,13 @@ static int pack_backend__read_prefix(
 			git_oid_cpy(out_oid, short_oid);
 	} else {
 		struct git_pack_entry e;
-		git_rawobj raw = {NULL};
+		git_rawobj raw = {
+			NULL
+		};
 
 		if ((error = pack_entry_find_prefix(
-				&e, (struct pack_backend *)backend, short_oid, len)) == 0 &&
-			(error = git_packfile_unpack(&raw, e.p, &e.offset)) == 0)
+			        &e, (struct pack_backend *)backend, short_oid, len)) == 0 &&
+		    (error = git_packfile_unpack(&raw, e.p, &e.offset)) == 0)
 		{
 			*buffer_p = raw.data;
 			*len_p = raw.len;
@@ -456,7 +459,9 @@ static int pack_backend__exists_prefix(
 {
 	int error;
 	struct pack_backend *pb = (struct pack_backend *)backend;
-	struct git_pack_entry e = {0};
+	struct git_pack_entry e = {
+		0
+	};
 
 	error = pack_entry_find_prefix(&e, pb, short_id, len);
 	git_oid_cpy(out, &e.sha1);
@@ -515,7 +520,7 @@ static void pack_backend__writepack_free(struct git_odb_writepack *_writepack)
 
 static int pack_backend__writepack(struct git_odb_writepack **out,
 	git_odb_backend *_backend,
-        git_odb *odb,
+	git_odb *odb,
 	git_transfer_progress_cb progress_cb,
 	void *progress_payload)
 {
@@ -602,7 +607,7 @@ int git_odb_backend_one_pack(git_odb_backend **backend_out, const char *idx)
 		return -1;
 
 	if (git_mwindow_get_pack(&packfile, idx) < 0 ||
-		git_vector_insert(&backend->packs, packfile) < 0)
+	    git_vector_insert(&backend->packs, packfile) < 0)
 	{
 		pack_backend__free((git_odb_backend *)backend);
 		return -1;
@@ -622,7 +627,7 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 		return -1;
 
 	if (!(error = git_buf_joinpath(&path, objects_dir, "pack")) &&
-		git_path_isdir(git_buf_cstr(&path)))
+	    git_path_isdir(git_buf_cstr(&path)))
 	{
 		backend->pack_folder = git_buf_detach(&path);
 		error = pack_backend__refresh((git_odb_backend *)backend);

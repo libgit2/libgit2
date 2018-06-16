@@ -100,10 +100,10 @@ static int has_cr_in_index(const git_filter_source *src)
 	}
 
 	if (!(entry = git_index_get_bypath(index, path, 0)) &&
-		!(entry = git_index_get_bypath(index, path, 1)))
+	    !(entry = git_index_get_bypath(index, path, 1)))
 		return false;
 
-	if (!S_ISREG(entry->mode)) /* don't crlf filter non-blobs */
+	if (!S_ISREG(entry->mode))	/* don't crlf filter non-blobs */
 		return true;
 
 	if (git_blob_lookup(&blob, repo, &entry->id) < 0)
@@ -115,8 +115,8 @@ static int has_cr_in_index(const git_filter_source *src)
 		blobsize = (size_t)-1;
 
 	found_cr = (blobcontent != NULL &&
-		blobsize > 0 &&
-		memchr(blobcontent, '\r', (size_t)blobsize) != NULL);
+	            blobsize > 0 &&
+	            memchr(blobcontent, '\r', (size_t)blobsize) != NULL);
 
 	git_blob_free(blob);
 	return found_cr;
@@ -255,7 +255,7 @@ static int crlf_apply_to_workdir(
 		return GIT_PASSTHROUGH;
 
 	if (ca->crlf_action == GIT_CRLF_AUTO ||
-		ca->crlf_action == GIT_CRLF_GUESS) {
+	    ca->crlf_action == GIT_CRLF_GUESS) {
 
 		/* If we have any existing CR or CRLF line endings, do nothing */
 		if (stats.cr > 0 && stats.crlf > 0)
@@ -275,7 +275,7 @@ static int crlf_apply_to_workdir(
 
 static int crlf_check(
 	git_filter        *self,
-	void              **payload, /* points to NULL ptr on entry, may be set */
+	void              **payload,	/* points to NULL ptr on entry, may be set */
 	const git_filter_source *src,
 	const char **attr_values)
 {
@@ -288,10 +288,10 @@ static int crlf_check(
 		ca.crlf_action = GIT_CRLF_GUESS;
 		ca.eol = GIT_EOL_UNSET;
 	} else {
-		ca.crlf_action = check_crlf(attr_values[2]); /* text */
+		ca.crlf_action = check_crlf(attr_values[2]);	/* text */
 		if (ca.crlf_action == GIT_CRLF_GUESS)
-			ca.crlf_action = check_crlf(attr_values[0]); /* clrf */
-		ca.eol = check_eol(attr_values[1]); /* eol */
+			ca.crlf_action = check_crlf(attr_values[0]);	/* clrf */
+		ca.eol = check_eol(attr_values[1]);	/* eol */
 	}
 	ca.auto_crlf = GIT_AUTO_CRLF_DEFAULT;
 	ca.safe_crlf = GIT_SAFE_CRLF_DEFAULT;
@@ -306,9 +306,9 @@ static int crlf_check(
 		return GIT_PASSTHROUGH;
 
 	if (ca.crlf_action == GIT_CRLF_GUESS ||
-		((ca.crlf_action == GIT_CRLF_AUTO ||
-		ca.crlf_action == GIT_CRLF_TEXT) &&
-		git_filter_source_mode(src) == GIT_FILTER_SMUDGE)) {
+	    ((ca.crlf_action == GIT_CRLF_AUTO ||
+	      ca.crlf_action == GIT_CRLF_TEXT) &&
+	     git_filter_source_mode(src) == GIT_FILTER_SMUDGE)) {
 
 		error = git_repository__cvar(
 			&ca.auto_crlf, git_filter_source_repo(src), GIT_CVAR_AUTO_CRLF);
@@ -316,12 +316,12 @@ static int crlf_check(
 			return error;
 
 		if (ca.crlf_action == GIT_CRLF_GUESS &&
-			ca.auto_crlf == GIT_AUTO_CRLF_FALSE)
+		    ca.auto_crlf == GIT_AUTO_CRLF_FALSE)
 			return GIT_PASSTHROUGH;
 
 		if (ca.auto_crlf == GIT_AUTO_CRLF_INPUT &&
-			ca.eol != GIT_EOL_CRLF &&
-			git_filter_source_mode(src) == GIT_FILTER_SMUDGE)
+		    ca.eol != GIT_EOL_CRLF &&
+		    git_filter_source_mode(src) == GIT_FILTER_SMUDGE)
 			return GIT_PASSTHROUGH;
 	}
 
@@ -333,7 +333,7 @@ static int crlf_check(
 
 		/* downgrade FAIL to WARN if ALLOW_UNSAFE option is used */
 		if ((git_filter_source_flags(src) & GIT_FILTER_ALLOW_UNSAFE) &&
-			ca.safe_crlf == GIT_SAFE_CRLF_FAIL)
+		    ca.safe_crlf == GIT_SAFE_CRLF_FAIL)
 			ca.safe_crlf = GIT_SAFE_CRLF_WARN;
 	}
 
@@ -346,7 +346,7 @@ static int crlf_check(
 
 static int crlf_apply(
 	git_filter    *self,
-	void         **payload, /* may be read and/or set */
+	void         **payload,	/* may be read and/or set */
 	git_buf       *to,
 	const git_buf *from,
 	const git_filter_source *src)

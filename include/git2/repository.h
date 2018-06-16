@@ -87,10 +87,10 @@ GIT_EXTERN(int) git_repository_wrap_odb(git_repository **out, git_odb *odb);
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_repository_discover(
-		git_buf *out,
-		const char *start_path,
-		int across_fs,
-		const char *ceiling_dirs);
+	        git_buf *out,
+	        const char *start_path,
+	        int across_fs,
+	        const char *ceiling_dirs);
 
 /**
  * Option flags for `git_repository_open_ext`.
@@ -288,8 +288,8 @@ typedef enum {
  */
 typedef struct {
 	unsigned int version;
-	uint32_t    flags;
-	uint32_t    mode;
+	uint32_t flags;
+	uint32_t mode;
 	const char *workdir_path;
 	const char *description;
 	const char *template_path;
@@ -719,7 +719,7 @@ GIT_EXTERN(int) git_repository_hashfile(
  */
 GIT_EXTERN(int) git_repository_set_head(
 	git_repository* repo,
-	const char* refname);
+	const char*refname);
 
 /**
  * Make the repository HEAD directly point to the Commit.

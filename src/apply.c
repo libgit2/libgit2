@@ -18,7 +18,7 @@
 #include "zstream.h"
 
 #define apply_err(...) \
-	( giterr_set(GITERR_PATCH, __VA_ARGS__), -1 )
+	(giterr_set(GITERR_PATCH, __VA_ARGS__), -1)
 
 typedef struct {
 	/* The lines that we allocate ourself are allocated out of the pool.
@@ -91,7 +91,7 @@ static bool match_hunk(
 
 	/* Ensure this hunk is within the image boundaries. */
 	if (git_vector_length(&preimage->lines) + linenum >
-		git_vector_length(&image->lines))
+	    git_vector_length(&image->lines))
 		return 0;
 
 	match = 1;
@@ -102,7 +102,7 @@ static bool match_hunk(
 		git_diff_line *image_line = git_vector_get(&image->lines, linenum + i);
 
 		if (preimage_line->content_len != image_line->content_len ||
-			memcmp(preimage_line->content, image_line->content, image_line->content_len) != 0) {
+		    memcmp(preimage_line->content, image_line->content, image_line->content_len) != 0) {
 			match = 0;
 			break;
 		}
@@ -152,10 +152,9 @@ static int update_hunk(
 		return -1;
 	}
 
-	for (i = 0; i < git_vector_length(&postimage->lines); i++) {
+	for (i = 0; i < git_vector_length(&postimage->lines); i++)
 		image->lines.contents[linenum + i] =
 			git_vector_get(&postimage->lines, i);
-	}
 
 	return 0;
 }
@@ -174,18 +173,18 @@ static int apply_hunk(
 		git_diff_line *line = git_array_get(patch->lines, linenum);
 
 		if (!line) {
-			error = apply_err("preimage does not contain line %"PRIuZ, linenum);
+			error = apply_err("preimage does not contain line %" PRIuZ, linenum);
 			goto done;
 		}
 
 		if (line->origin == GIT_DIFF_LINE_CONTEXT ||
-			line->origin == GIT_DIFF_LINE_DELETION) {
+		    line->origin == GIT_DIFF_LINE_DELETION) {
 			if ((error = git_vector_insert(&preimage.lines, line)) < 0)
 				goto done;
 		}
 
 		if (line->origin == GIT_DIFF_LINE_CONTEXT ||
-			line->origin == GIT_DIFF_LINE_ADDITION) {
+		    line->origin == GIT_DIFF_LINE_ADDITION) {
 			if ((error = git_vector_insert(&postimage.lines, line)) < 0)
 				goto done;
 		}
@@ -229,7 +228,7 @@ static int apply_hunks(
 	}
 
 	git_vector_foreach(&image.lines, i, line)
-		git_buf_put(out, line->content, line->content_len);
+	git_buf_put(out, line->content, line->content_len);
 
 done:
 	patch_image_free(&image);
@@ -304,16 +303,16 @@ static int apply_binary(
 
 	/* first, apply the new_file delta to the given source */
 	if ((error = apply_binary_delta(out, source, source_len,
-			&patch->binary.new_file)) < 0)
+		        &patch->binary.new_file)) < 0)
 		goto done;
 
 	/* second, apply the old_file delta to sanity check the result */
 	if ((error = apply_binary_delta(&reverse, out->ptr, out->size,
-			&patch->binary.old_file)) < 0)
+		        &patch->binary.old_file)) < 0)
 		goto done;
 
 	if (source_len != reverse.size ||
-		memcmp(source, reverse.ptr, source_len) != 0) {
+	    memcmp(source, reverse.ptr, source_len) != 0) {
 		error = apply_err("binary patch did not apply cleanly");
 		goto done;
 	}
@@ -348,7 +347,7 @@ int git_apply__patch(
 
 		filename = git__strdup(newfile->path);
 		mode = newfile->mode ?
-			newfile->mode : GIT_FILEMODE_BLOB;
+		        newfile->mode : GIT_FILEMODE_BLOB;
 	}
 
 	if (patch->delta->flags & GIT_DIFF_FLAG_BINARY)
@@ -362,7 +361,7 @@ int git_apply__patch(
 		goto done;
 
 	if (patch->delta->status == GIT_DELTA_DELETED &&
-		git_buf_len(contents_out) > 0) {
+	    git_buf_len(contents_out) > 0) {
 		error = apply_err("removal patch leaves file contents");
 		goto done;
 	}

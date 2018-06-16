@@ -90,7 +90,7 @@ typedef struct git_filter_list git_filter_list;
 GIT_EXTERN(int) git_filter_list_load(
 	git_filter_list **filters,
 	git_repository *repo,
-	git_blob *blob, /* can be NULL */
+	git_blob *blob,	/* can be NULL */
 	const char *path,
 	git_filter_mode_t mode,
 	uint32_t flags);

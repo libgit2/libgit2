@@ -28,12 +28,12 @@ typedef struct git_indexer git_indexer;
  * @param progress_cb_payload payload for the progress callback
  */
 GIT_EXTERN(int) git_indexer_new(
-		git_indexer **out,
-		const char *path,
-		unsigned int mode,
-		git_odb *odb,
-		git_transfer_progress_cb progress_cb,
-		void *progress_cb_payload);
+	        git_indexer **out,
+	        const char *path,
+	        unsigned int mode,
+	        git_odb *odb,
+	        git_transfer_progress_cb progress_cb,
+	        void *progress_cb_payload);
 
 /**
  * Add data to the indexer

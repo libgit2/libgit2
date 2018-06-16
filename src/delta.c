@@ -169,7 +169,8 @@ int git_delta_index_init(
 		entries = 0xfffffffeU / RABIN_WINDOW;
 	}
 	hsize = entries / 4;
-	for (i = 4; i < 31 && (1u << i) < hsize; i++);
+	for (i = 4; i < 31 && (1u << i) < hsize; i++)
+		;
 	hsize = 1 << i;
 	hmask = hsize - 1;
 
@@ -234,12 +235,15 @@ int git_delta_index_init(
 			continue;
 
 		entry = hash[i];
+
 		do {
 			struct index_entry *keep = entry;
 			int skip = hash_count[i] / HASH_LIMIT / 2;
+
 			do {
 				entry = entry->next;
-			} while(--skip && entry);
+			} while (--skip && entry);
+
 			keep->next = entry;
 		} while (entry);
 	}
@@ -265,7 +269,7 @@ size_t git_delta_index_size(git_delta_index *index)
  * The maximum size for any opcode sequence, including the initial header
  * plus rabin window plus biggest copy.
  */
-#define MAX_OP_SIZE	(5 + 5 + 1 + RABIN_WINDOW + 7)
+#define MAX_OP_SIZE     (5 + 5 + 1 + RABIN_WINDOW + 7)
 
 int git_delta_create_from_index(
 	void **out,
@@ -346,7 +350,7 @@ int git_delta_create_from_index(
 					/* this is our best match so far */
 					msize = (unsigned int)(ref - entry->ptr);
 					moff = (unsigned int)(entry->ptr - ref_data);
-					if (msize >= 4096) /* good enough */
+					if (msize >= 4096)	/* good enough */
 						break;
 				}
 			}
@@ -375,8 +379,8 @@ int git_delta_create_from_index(
 					bufpos--;
 					if (--inscnt)
 						continue;
-					bufpos--;  /* remove count slot */
-					inscnt--;  /* make it -1 */
+					bufpos--;	/* remove count slot */
+					inscnt--;	/* make it -1 */
 					break;
 				}
 				buf[bufpos - inscnt - 1] = inscnt;
@@ -415,7 +419,7 @@ int git_delta_create_from_index(
 				val = 0;
 				for (j = -RABIN_WINDOW; j < 0; j++)
 					val = ((val << 8) | data[j])
-					      ^ T[val >> RABIN_SHIFT];
+					        ^ T[val >> RABIN_SHIFT];
 			}
 		}
 
@@ -474,6 +478,7 @@ static int hdr_sz(
 		r |= (c & 0x7f) << shift;
 		shift += 7;
 	} while (c & 0x80);
+
 	*delta = d;
 	*size = r;
 	return 0;
@@ -487,7 +492,7 @@ int git_delta_read_header(
 {
 	const unsigned char *delta_end = delta + delta_len;
 	if ((hdr_sz(base_out, &delta, delta_end) < 0) ||
-		(hdr_sz(result_out, &delta, delta_end) < 0))
+	    (hdr_sz(result_out, &delta, delta_end) < 0))
 		return -1;
 	return 0;
 }
@@ -518,7 +523,7 @@ int git_delta_read_header_fromstream(
 	delta = buffer;
 	delta_end = delta + len;
 	if ((hdr_sz(base_sz, &delta, delta_end) < 0) ||
-		(hdr_sz(res_sz, &delta, delta_end) < 0))
+	    (hdr_sz(res_sz, &delta, delta_end) < 0))
 		return -1;
 
 	return 0;
@@ -568,22 +573,29 @@ int git_delta_apply(
 			*/
 			size_t off = 0, len = 0;
 
-			if (cmd & 0x01) off = *delta++;
-			if (cmd & 0x02) off |= *delta++ << 8UL;
-			if (cmd & 0x04) off |= *delta++ << 16UL;
-			if (cmd & 0x08) off |= *delta++ << 24UL;
+			if (cmd & 0x01)
+				off = *delta++;
+			if (cmd & 0x02)
+				off |= *delta++ << 8UL;
+			if (cmd & 0x04)
+				off |= *delta++ << 16UL;
+			if (cmd & 0x08)
+				off |= *delta++ << 24UL;
 
-			if (cmd & 0x10) len = *delta++;
-			if (cmd & 0x20) len |= *delta++ << 8UL;
-			if (cmd & 0x40) len |= *delta++ << 16UL;
-			if (!len)		len = 0x10000;
+			if (cmd & 0x10)
+				len = *delta++;
+			if (cmd & 0x20)
+				len |= *delta++ << 8UL;
+			if (cmd & 0x40)
+				len |= *delta++ << 16UL;
+			if (!len)
+				len = 0x10000;
 
 			if (base_len < off + len || res_sz < len)
 				goto fail;
 			memcpy(res_dp, base + off, len);
 			res_dp += len;
 			res_sz -= len;
-
 		}
 		else if (cmd) {
 			/* cmd is a literal insert instruction; copy from
@@ -595,7 +607,6 @@ int git_delta_apply(
 			delta += cmd;
 			res_dp += cmd;
 			res_sz -= cmd;
-
 		}
 		else {
 			/* cmd == 0 is reserved for future encodings.

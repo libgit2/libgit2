@@ -106,9 +106,9 @@ int git_patch_line_stats(
 			continue;
 
 		switch (line->origin) {
-		case GIT_DIFF_LINE_CONTEXT:  totals[0]++; break;
-		case GIT_DIFF_LINE_ADDITION: totals[1]++; break;
-		case GIT_DIFF_LINE_DELETION: totals[2]++; break;
+		case GIT_DIFF_LINE_CONTEXT:  totals[0]++;break;
+		case GIT_DIFF_LINE_ADDITION: totals[1]++;break;
+		case GIT_DIFF_LINE_DELETION: totals[2]++;break;
 		default:
 			/* diff --stat and --numstat don't count EOFNL marks because
 			* they will always be paired with a ADDITION or DELETION line.
@@ -157,13 +157,17 @@ int git_patch_get_hunk(
 	hunk = git_array_get(patch->hunks, hunk_idx);
 
 	if (!hunk) {
-		if (out) *out = NULL;
-		if (lines_in_hunk) *lines_in_hunk = 0;
+		if (out)
+			*out = NULL;
+		if (lines_in_hunk)
+			*lines_in_hunk = 0;
 		return patch_error_outofrange("hunk");
 	}
 
-	if (out) *out = &hunk->hunk;
-	if (lines_in_hunk) *lines_in_hunk = hunk->line_count;
+	if (out)
+		*out = &hunk->hunk;
+	if (lines_in_hunk)
+		*lines_in_hunk = hunk->line_count;
 	return 0;
 }
 
@@ -189,18 +193,21 @@ int git_patch_get_line_in_hunk(
 	assert(patch);
 
 	if (!(hunk = git_array_get(patch->hunks, hunk_idx))) {
-		if (out) *out = NULL;
+		if (out)
+			*out = NULL;
 		return patch_error_outofrange("hunk");
 	}
 
 	if (line_of_hunk >= hunk->line_count ||
-		!(line = git_array_get(
-			patch->lines, hunk->line_start + line_of_hunk))) {
-		if (out) *out = NULL;
+	    !(line = git_array_get(
+		        patch->lines, hunk->line_start + line_of_hunk))) {
+		if (out)
+			*out = NULL;
 		return patch_error_outofrange("line");
 	}
 
-	if (out) *out = line;
+	if (out)
+		*out = line;
 	return 0;
 }
 

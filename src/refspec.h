@@ -17,10 +17,10 @@ struct git_refspec {
 	char *string;
 	char *src;
 	char *dst;
-	unsigned int force :1,
-		push : 1,
-		pattern :1,
-		matching :1;
+	unsigned int force : 1,
+	             push : 1,
+	             pattern : 1,
+	             matching : 1;
 };
 
 #define GIT_REFSPEC_TAGS "refs/tags/*:refs/tags/*"

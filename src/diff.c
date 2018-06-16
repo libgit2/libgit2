@@ -24,9 +24,9 @@ GIT_INLINE(const char *) diff_delta__path(const git_diff_delta *delta)
 	const char *str = delta->old_file.path;
 
 	if (!str ||
-		delta->status == GIT_DELTA_ADDED ||
-		delta->status == GIT_DELTA_RENAMED ||
-		delta->status == GIT_DELTA_COPIED)
+	    delta->status == GIT_DELTA_ADDED ||
+	    delta->status == GIT_DELTA_RENAMED ||
+	    delta->status == GIT_DELTA_COPIED)
 		str = delta->new_file.path;
 
 	return str;
@@ -145,7 +145,7 @@ int git_diff_foreach(
 			break;
 
 		error = git_patch__invoke_callbacks(patch, file_cb, binary_cb,
-						    hunk_cb, data_cb, payload);
+			                            hunk_cb, data_cb, payload);
 		git_patch_free(patch);
 
 		if (error)
@@ -177,13 +177,13 @@ int git_diff_format_email__append_header_tobuf(
 		return error;
 
 	error = git_buf_printf(out,
-				"From %s Mon Sep 17 00:00:00 2001\n" \
-				"From: %s <%s>\n" \
-				"Date: %s\n" \
-				"Subject: ",
-				idstr,
-				author->name, author->email,
-				date_str);
+		                "From %s Mon Sep 17 00:00:00 2001\n" \
+		                "From: %s <%s>\n" \
+		                "Date: %s\n" \
+		                "Subject: ",
+		                idstr,
+		                author->name, author->email,
+		                date_str);
 
 	if (error < 0)
 		return error;
@@ -192,7 +192,7 @@ int git_diff_format_email__append_header_tobuf(
 		if (total_patches == 1) {
 			error = git_buf_puts(out, "[PATCH] ");
 		} else {
-			error = git_buf_printf(out, "[PATCH %"PRIuZ"/%"PRIuZ"] ",
+			error = git_buf_printf(out, "[PATCH %" PRIuZ "/%" PRIuZ "] ",
 				patch_no, total_patches);
 		}
 
@@ -256,19 +256,19 @@ int git_diff_format_email(
 		"git_format_email_options");
 
 	ignore_marker = (opts->flags &
-		GIT_DIFF_FORMAT_EMAIL_EXCLUDE_SUBJECT_PATCH_MARKER) != 0;
+	                 GIT_DIFF_FORMAT_EMAIL_EXCLUDE_SUBJECT_PATCH_MARKER) != 0;
 
 	if (!ignore_marker) {
 		if (opts->patch_no > opts->total_patches) {
 			giterr_set(GITERR_INVALID,
-				"patch %"PRIuZ" out of range. max %"PRIuZ,
+				"patch %" PRIuZ " out of range. max %" PRIuZ,
 				opts->patch_no, opts->total_patches);
 			return -1;
 		}
 
 		if (opts->patch_no == 0) {
 			giterr_set(GITERR_INVALID,
-				"invalid patch no %"PRIuZ". should be >0", opts->patch_no);
+				"invalid patch no %" PRIuZ ". should be >0", opts->patch_no);
 			return -1;
 		}
 	}
@@ -302,11 +302,11 @@ int git_diff_format_email(
 	format_flags = GIT_DIFF_STATS_FULL | GIT_DIFF_STATS_INCLUDE_SUMMARY;
 
 	if ((error = git_buf_puts(out, "---\n")) < 0 ||
-		(error = git_diff_get_stats(&stats, diff)) < 0 ||
-		(error = git_diff_stats_to_buf(out, stats, format_flags, 0)) < 0 ||
-		(error = git_buf_putc(out, '\n')) < 0 ||
-		(error = git_diff_format_email__append_patches_tobuf(out, diff)) < 0)
-			goto on_error;
+	    (error = git_diff_get_stats(&stats, diff)) < 0 ||
+	    (error = git_diff_stats_to_buf(out, stats, format_flags, 0)) < 0 ||
+	    (error = git_buf_putc(out, '\n')) < 0 ||
+	    (error = git_diff_format_email__append_patches_tobuf(out, diff)) < 0)
+		goto on_error;
 
 	error = git_buf_puts(out, "--\nlibgit2 " LIBGIT2_VERSION "\n\n");
 
@@ -426,11 +426,11 @@ static int file_cb(
 	args->first_file = 0;
 
 	if ((error = git_buf_printf(&buf,
-				    "diff--gita/%sb/%s---a/%s+++b/%s",
-				    delta->old_file.path,
-				    delta->new_file.path,
-				    delta->old_file.path,
-				    delta->new_file.path)) < 0)
+		                    "diff--gita/%sb/%s---a/%s+++b/%s",
+		                    delta->old_file.path,
+		                    delta->new_file.path,
+		                    delta->old_file.path,
+		                    delta->new_file.path)) < 0)
 		goto out;
 
 	strip_spaces(&buf);
@@ -457,15 +457,15 @@ static int line_cb(
 	GIT_UNUSED(hunk);
 
 	switch (line->origin) {
-	    case GIT_DIFF_LINE_ADDITION:
+	case GIT_DIFF_LINE_ADDITION:
 		git_buf_putc(&buf, '+');
 		break;
-	    case GIT_DIFF_LINE_DELETION:
+	case GIT_DIFF_LINE_DELETION:
 		git_buf_putc(&buf, '-');
 		break;
-	    case GIT_DIFF_LINE_CONTEXT:
+	case GIT_DIFF_LINE_CONTEXT:
 		break;
-	    default:
+	default:
 		giterr_set(GITERR_PATCH, "invalid line origin for patch");
 		return -1;
 	}

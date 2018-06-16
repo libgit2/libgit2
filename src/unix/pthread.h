@@ -22,18 +22,18 @@ typedef struct {
 
 /* Git Mutex */
 #define git_mutex pthread_mutex_t
-#define git_mutex_init(a)	pthread_mutex_init(a, NULL)
-#define git_mutex_lock(a)	pthread_mutex_lock(a)
+#define git_mutex_init(a)       pthread_mutex_init(a, NULL)
+#define git_mutex_lock(a)       pthread_mutex_lock(a)
 #define git_mutex_unlock(a)     pthread_mutex_unlock(a)
-#define git_mutex_free(a)	pthread_mutex_destroy(a)
+#define git_mutex_free(a)       pthread_mutex_destroy(a)
 
 /* Git condition vars */
 #define git_cond pthread_cond_t
-#define git_cond_init(c)	pthread_cond_init(c, NULL)
-#define git_cond_free(c) 	pthread_cond_destroy(c)
-#define git_cond_wait(c, l)	pthread_cond_wait(c, l)
-#define git_cond_signal(c)	pthread_cond_signal(c)
-#define git_cond_broadcast(c)	pthread_cond_broadcast(c)
+#define git_cond_init(c)        pthread_cond_init(c, NULL)
+#define git_cond_free(c)        pthread_cond_destroy(c)
+#define git_cond_wait(c, l)     pthread_cond_wait(c, l)
+#define git_cond_signal(c)      pthread_cond_signal(c)
+#define git_cond_broadcast(c)   pthread_cond_broadcast(c)
 
 /* Pthread (-ish) rwlock
  *
@@ -45,12 +45,12 @@ typedef struct {
  *    Windows implementation doesn't support it
  */
 #define git_rwlock              pthread_rwlock_t
-#define git_rwlock_init(a)	pthread_rwlock_init(a, NULL)
-#define git_rwlock_rdlock(a)	pthread_rwlock_rdlock(a)
-#define git_rwlock_rdunlock(a)	pthread_rwlock_unlock(a)
-#define git_rwlock_wrlock(a)	pthread_rwlock_wrlock(a)
-#define git_rwlock_wrunlock(a)	pthread_rwlock_unlock(a)
-#define git_rwlock_free(a)	pthread_rwlock_destroy(a)
-#define GIT_RWLOCK_STATIC_INIT	PTHREAD_RWLOCK_INITIALIZER
+#define git_rwlock_init(a)      pthread_rwlock_init(a, NULL)
+#define git_rwlock_rdlock(a)    pthread_rwlock_rdlock(a)
+#define git_rwlock_rdunlock(a)  pthread_rwlock_unlock(a)
+#define git_rwlock_wrlock(a)    pthread_rwlock_wrlock(a)
+#define git_rwlock_wrunlock(a)  pthread_rwlock_unlock(a)
+#define git_rwlock_free(a)      pthread_rwlock_destroy(a)
+#define GIT_RWLOCK_STATIC_INIT  PTHREAD_RWLOCK_INITIALIZER
 
 #endif

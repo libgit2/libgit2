@@ -58,10 +58,9 @@ static int last_line(const char *buf, size_t len)
 	 */
 	i = len - 2;
 
-	for (; i >= 0; i--) {
+	for (; i >= 0; i--)
 		if (buf[i] == '\n')
 			return i + 1;
-	}
 	return 0;
 }
 
@@ -129,7 +128,7 @@ static int ignore_non_trailer(const char *buf, size_t len)
 			if (!boc)
 				boc = bol;
 		} else if (in_old_conflicts_block && buf[bol] == '\t') {
-			; /* a pathname in the conflicts block */
+			;	/* a pathname in the conflicts block */
 		} else if (boc) {
 			/* the previous was not trailing comment */
 			boc = 0;
@@ -148,10 +147,9 @@ static int find_patch_start(const char *str)
 {
 	const char *s;
 
-	for (s = str; *s; s = next_line(s)) {
+	for (s = str; *s; s = next_line(s))
 		if (git__prefixcmp(s, "---") == 0)
 			return s - str;
-	}
 
 	return s - str;
 }
@@ -214,14 +212,13 @@ static int find_trailer_start(const char *buf, size_t len)
 		}
 		only_spaces = 0;
 
-		for (p = git_generated_prefixes; *p; p++) {
+		for (p = git_generated_prefixes; *p; p++)
 			if (git__prefixcmp(bol, *p) == 0) {
 				trailer_lines++;
 				possible_continuation_lines = 0;
 				recognized_prefix = 1;
 				goto continue_outer_loop;
 			}
-		}
 
 		separator_pos = find_separator(bol, TRAILER_SEPARATORS);
 		if (separator_pos >= 1 && !isspace(bol[0])) {
@@ -249,7 +246,7 @@ static int find_trailer_end(const char *buf, size_t len)
 	return len - ignore_non_trailer(buf, len);
 }
 
-static char *extract_trailer_block(const char *message, size_t* len)
+static char *extract_trailer_block(const char *message, size_t*len)
 {
 	size_t patch_start = find_patch_start(message);
 	size_t trailer_end = find_trailer_end(message, patch_start);
@@ -277,10 +274,10 @@ enum trailer_state {
 	S_IGNORE = 7,
 };
 
-#define NEXT(st) { state = (st); ptr++; continue; }
-#define GOTO(st) { state = (st); continue; }
+#define NEXT(st) { state = (st);ptr++;continue; }
+#define GOTO(st) { state = (st);continue; }
 
-typedef git_array_t(git_message_trailer) git_array_trailer_t;
+typedef git_array_t (git_message_trailer) git_array_trailer_t;
 
 int git_message_trailers(git_message_trailer_array *trailer_arr, const char *message)
 {
@@ -294,112 +291,104 @@ int git_message_trailers(git_message_trailer_array *trailer_arr, const char *mes
 	size_t trailer_len;
 	char *trailer = extract_trailer_block(message, &trailer_len);
 
-	for (ptr = trailer;;) {
+	for (ptr = trailer;;)
 		switch (state) {
-			case S_START: {
-				if (*ptr == 0) {
-					goto ret;
-				}
-
-				key = ptr;
-				GOTO(S_KEY);
+		case S_START:
+			if (*ptr == 0) {
+				goto ret;
 			}
-			case S_KEY: {
-				if (*ptr == 0) {
-					goto ret;
-				}
 
-				if (isalnum(*ptr) || *ptr == '-') {
-					// legal key character
-					NEXT(S_KEY);
-				}
-
-				if (*ptr == ' ' || *ptr == '\t') {
-					// optional whitespace before separator
-					*ptr = 0;
-					NEXT(S_KEY_WS);
-				}
-
-				if (strchr(TRAILER_SEPARATORS, *ptr)) {
-					*ptr = 0;
-					NEXT(S_SEP_WS);
-				}
-
-				// illegal character
-				GOTO(S_IGNORE);
+			key = ptr;
+			GOTO(S_KEY);
+		case S_KEY:
+			if (*ptr == 0) {
+				goto ret;
 			}
-			case S_KEY_WS: {
-				if (*ptr == 0) {
-					goto ret;
-				}
 
-				if (*ptr == ' ' || *ptr == '\t') {
-					NEXT(S_KEY_WS);
-				}
-
-				if (strchr(TRAILER_SEPARATORS, *ptr)) {
-					NEXT(S_SEP_WS);
-				}
-
-				// illegal character
-				GOTO(S_IGNORE);
+			if (isalnum(*ptr) || *ptr == '-') {
+				// legal key character
+				NEXT(S_KEY);
 			}
-			case S_SEP_WS: {
-				if (*ptr == 0) {
-					goto ret;
-				}
 
-				if (*ptr == ' ' || *ptr == '\t') {
-					NEXT(S_SEP_WS);
-				}
-
-				value = ptr;
-				NEXT(S_VALUE);
+			if (*ptr == ' ' || *ptr == '\t') {
+				// optional whitespace before separator
+				*ptr = 0;
+				NEXT(S_KEY_WS);
 			}
-			case S_VALUE: {
-				if (*ptr == 0) {
-					GOTO(S_VALUE_END);
-				}
 
-				if (*ptr == '\n') {
-					NEXT(S_VALUE_NL);
-				}
-
-				NEXT(S_VALUE);
+			if (strchr(TRAILER_SEPARATORS, *ptr)) {
+				*ptr = 0;
+				NEXT(S_SEP_WS);
 			}
-			case S_VALUE_NL: {
-				if (*ptr == ' ') {
-					// continuation;
-					NEXT(S_VALUE);
-				}
 
-				ptr[-1] = 0;
+			// illegal character
+			GOTO(S_IGNORE);
+		case S_KEY_WS:
+			if (*ptr == 0) {
+				goto ret;
+			}
+
+			if (*ptr == ' ' || *ptr == '\t') {
+				NEXT(S_KEY_WS);
+			}
+
+			if (strchr(TRAILER_SEPARATORS, *ptr)) {
+				NEXT(S_SEP_WS);
+			}
+
+			// illegal character
+			GOTO(S_IGNORE);
+		case S_SEP_WS:
+			if (*ptr == 0) {
+				goto ret;
+			}
+
+			if (*ptr == ' ' || *ptr == '\t') {
+				NEXT(S_SEP_WS);
+			}
+
+			value = ptr;
+			NEXT(S_VALUE);
+		case S_VALUE:
+			if (*ptr == 0) {
 				GOTO(S_VALUE_END);
 			}
-			case S_VALUE_END: {
-				git_message_trailer *t = git_array_alloc(arr);
 
-				t->key = key;
-				t->value = value;
-
-				key = NULL;
-				value = NULL;
-
-				GOTO(S_START);
+			if (*ptr == '\n') {
+				NEXT(S_VALUE_NL);
 			}
-			case S_IGNORE: {
-				if (*ptr == 0) {
-					goto ret;
-				}
 
-				if (*ptr == '\n') {
-					NEXT(S_START);
-				}
-
-				NEXT(S_IGNORE);
+			NEXT(S_VALUE);
+		case S_VALUE_NL:
+			if (*ptr == ' ') {
+				// continuation;
+				NEXT(S_VALUE);
 			}
+
+			ptr[-1] = 0;
+			GOTO(S_VALUE_END);
+		case S_VALUE_END: {
+			git_message_trailer *t = git_array_alloc(arr);
+
+			t->key = key;
+			t->value = value;
+
+			key = NULL;
+			value = NULL;
+
+			GOTO(S_START);
 		}
-	}
+		case S_IGNORE:
+			if (*ptr == 0) {
+				goto ret;
+			}
+
+			if (*ptr == '\n') {
+				NEXT(S_START);
+			}
+
+			NEXT(S_IGNORE);
+		}
 
 ret:
 	trailer_arr->_trailer_block = trailer;

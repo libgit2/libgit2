@@ -9,7 +9,7 @@
 
 #include "posix.h"
 #ifndef GIT_WIN32
-#include <unistd.h>
+# include <unistd.h>
 #endif
 
 struct git_pool_page {
@@ -66,7 +66,7 @@ static void *pool_alloc_page(git_pool *pool, uint32_t size)
 	size_t alloc_size;
 
 	if (GIT_ADD_SIZET_OVERFLOW(&alloc_size, new_page_size, sizeof(git_pool_page)) ||
-		!(page = git__malloc(alloc_size)))
+	    !(page = git__malloc(alloc_size)))
 		return NULL;
 
 	page->size = new_page_size;
@@ -96,7 +96,8 @@ uint32_t git_pool__open_pages(git_pool *pool)
 {
 	uint32_t ct = 0;
 	git_pool_page *scan;
-	for (scan = pool->pages; scan != NULL; scan = scan->next) ct++;
+	for (scan = pool->pages; scan != NULL; scan = scan->next)
+		ct++;
 	return ct;
 }
 
@@ -105,19 +106,19 @@ bool git_pool__ptr_in_pool(git_pool *pool, void *ptr)
 	git_pool_page *scan;
 	for (scan = pool->pages; scan != NULL; scan = scan->next)
 		if ((void *)scan->data <= ptr &&
-			(void *)(((char *)scan->data) + scan->size) > ptr)
+		    (void *)(((char *)scan->data) + scan->size) > ptr)
 			return true;
 	return false;
 }
 
 #else
 
-static int git_pool__ptr_cmp(const void * a, const void * b)
+static int git_pool__ptr_cmp(const void *a, const void *b)
 {
-	if(a > b) {
+	if (a > b) {
 		return 1;
 	}
-	if(a < b) {
+	if (a < b) {
 		return -1;
 	}
 	else {
@@ -143,7 +144,7 @@ void git_pool_clear(git_pool *pool)
 
 static void *pool_alloc(git_pool *pool, uint32_t size) {
 	void *ptr = NULL;
-	if((ptr = git__malloc(size)) == NULL) {
+	if ((ptr = git__malloc(size)) == NULL) {
 		return NULL;
 	}
 	git_vector_insert_sorted(&pool->allocations, ptr, NULL);

@@ -36,22 +36,22 @@ static bool contains_angle_brackets(const char *input)
 
 static bool is_crud(unsigned char c)
 {
-	return  c <= 32  ||
-		c == '.' ||
-		c == ',' ||
-		c == ':' ||
-		c == ';' ||
-		c == '<' ||
-		c == '>' ||
-		c == '"' ||
-		c == '\\' ||
-		c == '\'';
+	return c <= 32  ||
+	       c == '.' ||
+	       c == ',' ||
+	       c == ':' ||
+	       c == ';' ||
+	       c == '<' ||
+	       c == '>' ||
+	       c == '"' ||
+	       c == '\\' ||
+	       c == '\'';
 }
 
 static char *extract_trimmed(const char *ptr, size_t len)
 {
 	while (len && is_crud((unsigned char)ptr[0])) {
-		ptr++; len--;
+		ptr++;len--;
 	}
 
 	while (len && is_crud((unsigned char)ptr[len - 1])) {
@@ -70,7 +70,7 @@ int git_signature_new(git_signature **sig_out, const char *name, const char *ema
 	*sig_out = NULL;
 
 	if (contains_angle_brackets(name) ||
-		contains_angle_brackets(email)) {
+	    contains_angle_brackets(email)) {
 		return signature_error(
 			"Neither `name` nor `email` should contain angle brackets chars.");
 	}
@@ -188,7 +188,7 @@ int git_signature_default(git_signature **out, git_repository *repo)
 		return error;
 
 	if (!(error = git_config_get_string(&user_name, cfg, "user.name")) &&
-		!(error = git_config_get_string(&user_email, cfg, "user.email")))
+	    !(error = git_config_get_string(&user_email, cfg, "user.email")))
 		error = git_signature_now(out, user_name, user_email);
 
 	git_config_free(cfg);
@@ -196,7 +196,7 @@ int git_signature_default(git_signature **out, git_repository *repo)
 }
 
 int git_signature__parse(git_signature *sig, const char **buffer_out,
-		const char *buffer_end, const char *header, char ender)
+	const char *buffer_end, const char *header, char ender)
 {
 	const char *buffer = *buffer_out;
 	const char *email_start, *email_end;
@@ -204,7 +204,7 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 	memset(sig, 0, sizeof(git_signature));
 
 	if (ender &&
-		(buffer_end = memchr(buffer, ender, buffer_end - buffer)) == NULL)
+	    (buffer_end = memchr(buffer, ender, buffer_end - buffer)) == NULL)
 		return signature_error("no newline given");
 
 	if (header) {
@@ -246,7 +246,7 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 			tz_start = time_end + 1;
 
 			if ((tz_start[0] != '-' && tz_start[0] != '+') ||
-				git__strtol32(&offset, tz_start + 1, &tz_end, 10) < 0) {
+			    git__strtol32(&offset, tz_start + 1, &tz_end, 10) < 0) {
 				//malformed timezone, just assume it's zero
 				offset = 0;
 			}
@@ -312,19 +312,18 @@ void git_signature__writebuf(git_buf *buf, const char *header, const git_signatu
 	mins = offset % 60;
 
 	git_buf_printf(buf, "%s%s <%s> %u %c%02d%02d\n",
-			header ? header : "", sig->name, sig->email,
-			(unsigned)sig->when.time, sign, hours, mins);
+		        header ? header : "", sig->name, sig->email,
+		(unsigned)sig->when.time, sign, hours, mins);
 }
 
 bool git_signature__equal(const git_signature *one, const git_signature *two)
 {
 	assert(one && two);
 
-	return
-		git__strcmp(one->name, two->name) == 0 &&
-		git__strcmp(one->email, two->email) == 0 &&
-		one->when.time == two->when.time &&
-		one->when.offset == two->when.offset &&
-		one->when.sign == two->when.sign;
+	return git__strcmp(one->name, two->name) == 0 &&
+	       git__strcmp(one->email, two->email) == 0 &&
+	       one->when.time == two->when.time &&
+	       one->when.offset == two->when.offset &&
+	       one->when.sign == two->when.sign;
 }
 
