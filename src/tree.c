@@ -74,14 +74,6 @@ int git_tree_entry_cmp(const git_tree_entry *e1, const git_tree_entry *e2)
 	return entry_sort_cmp(e1, e2);
 }
 
-int git_tree_entry_icmp(const git_tree_entry *e1, const git_tree_entry *e2)
-{
-	return git_path_cmp(
-		e1->filename, e1->filename_len, git_tree_entry__is_tree(e1),
-		e2->filename, e2->filename_len, git_tree_entry__is_tree(e2),
-		git__strncasecmp);
-}
-
 /**
  * Allocate a new self-contained entry, with enough space after it to
  * store the filename and the id.
@@ -340,41 +332,6 @@ const git_tree_entry *git_tree_entry_byid(
 	}
 
 	return NULL;
-}
-
-int git_tree__prefix_position(const git_tree *tree, const char *path)
-{
-	struct tree_key_search ksearch;
-	size_t at_pos, path_len;
-
-	if (!path)
-		return 0;
-
-	path_len = strlen(path);
-	TREE_ENTRY_CHECK_NAMELEN(path_len);
-
-	ksearch.filename = path;
-	ksearch.filename_len = (uint16_t)path_len;
-
-	/* Find tree entry with appropriate prefix */
-	git_array_search(
-		&at_pos, tree->entries, &homing_search_cmp, &ksearch);
-
-	for (; at_pos < tree->entries.size; ++at_pos) {
-		const git_tree_entry *entry = git_array_get(tree->entries, at_pos);
-		if (homing_search_cmp(&ksearch, entry) < 0)
-			break;
-	}
-
-	for (; at_pos > 0; --at_pos) {
-		const git_tree_entry *entry =
-			git_array_get(tree->entries, at_pos - 1);
-
-		if (homing_search_cmp(&ksearch, entry) > 0)
-			break;
-	}
-
-	return (int)at_pos;
 }
 
 size_t git_tree_entrycount(const git_tree *tree)
