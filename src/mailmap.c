@@ -223,7 +223,7 @@ int git_mailmap_add_entry(
 		replace_email, strlen(replace_email));
 }
 
-int git_mailmap_add_buffer(git_mailmap *mm, const char *buf, size_t len)
+static int mailmap_add_buffer(git_mailmap *mm, const char *buf, size_t len)
 {
 	int error;
 	git_parse_ctx ctx;
@@ -233,10 +233,6 @@ int git_mailmap_add_buffer(git_mailmap *mm, const char *buf, size_t len)
 	git_buf real_email = GIT_BUF_INIT;
 	git_buf replace_name = GIT_BUF_INIT;
 	git_buf replace_email = GIT_BUF_INIT;
-
-	/* If `len` is passed as 0, use strlen to get the real length */
-	if (buf && len == 0)
-		len = strlen(buf);
 
 	/* Buffers may not contain '\0's. */
 	if (memchr(buf, '\0', len) != NULL)
@@ -278,7 +274,7 @@ int git_mailmap_from_buffer(git_mailmap **out, const char *data, size_t len)
 	if (error < 0)
 		return error;
 
-	error = git_mailmap_add_buffer(*out, data, len);
+	error = mailmap_add_buffer(*out, data, len);
 	if (error < 0) {
 		git_mailmap_free(*out);
 		*out = NULL;
@@ -308,7 +304,7 @@ static int mailmap_add_blob(
 	if (error < 0)
 		goto cleanup;
 
-	error = git_mailmap_add_buffer(mm, content.ptr, content.size);
+	error = mailmap_add_buffer(mm, content.ptr, content.size);
 	if (error < 0)
 		goto cleanup;
 
@@ -335,7 +331,7 @@ static int mailmap_add_file_ondisk(
 	if (error < 0)
 		goto cleanup;
 
-	error = git_mailmap_add_buffer(mm, content.ptr, content.size);
+	error = mailmap_add_buffer(mm, content.ptr, content.size);
 	if (error < 0)
 		goto cleanup;
 

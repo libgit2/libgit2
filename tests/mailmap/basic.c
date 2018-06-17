@@ -27,7 +27,8 @@ struct {
 
 void test_mailmap_basic__initialize(void)
 {
-	cl_git_pass(git_mailmap_from_buffer(&mailmap, TEST_MAILMAP, 0));
+	cl_git_pass(git_mailmap_from_buffer(
+		&mailmap, TEST_MAILMAP, strlen(TEST_MAILMAP)));
 }
 
 void test_mailmap_basic__cleanup(void)

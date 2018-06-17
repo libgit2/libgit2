@@ -54,27 +54,11 @@ GIT_EXTERN(int) git_mailmap_add_entry(
 	const char *replace_name, const char *replace_email);
 
 /**
- * Parse mailmap entries from a buffer.
- *
- * @param mm mailmap to add the entries to
- * @param buf the buffer to read the mailmap file from
- * @param len the length of the input buffer [optional: 0 defaults to 'strlen']
- * @return 0 on success, or an error code
- */
-GIT_EXTERN(int) git_mailmap_add_buffer(
-	git_mailmap *mm, const char *buf, size_t len);
-
-/**
  * Create a new mailmap instance containing a single mailmap file
- *
- * This method is a simple utility wrapper for the following sequence
- * of calls:
- *  - git_mailmap_new
- *  - git_mailmap_add_buffer
  *
  * @param out pointer to store the new mailmap
  * @param buf buffer to parse the mailmap from
- * @param len the length of the input buffer [optional: 0 defaults to 'strlen']
+ * @param len the length of the input buffer
  * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_mailmap_from_buffer(

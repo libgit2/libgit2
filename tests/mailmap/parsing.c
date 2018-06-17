@@ -67,7 +67,8 @@ static const mailmap_entry resolved_untracked[] = {
 
 void test_mailmap_parsing__string(void)
 {
-	cl_git_pass(git_mailmap_from_buffer(&g_mailmap, string_mailmap, 0));
+	cl_git_pass(git_mailmap_from_buffer(
+		&g_mailmap, string_mailmap, strlen(string_mailmap)));
 
 	/* We should have parsed all of the entries */
 	check_mailmap_entries(g_mailmap, entries, ARRAY_SIZE(entries));
