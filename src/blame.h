@@ -67,6 +67,7 @@ typedef struct git_blame__entry {
 struct git_blame {
 	char *path;
 	git_repository *repository;
+	git_mailmap *mailmap;
 	git_blame_options options;
 
 	git_vector hunks;

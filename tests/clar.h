@@ -72,6 +72,7 @@ void cl_trace_register(cl_trace_cb *cb, void *payload);
 const char *cl_fixture(const char *fixture_name);
 void cl_fixture_sandbox(const char *fixture_name);
 void cl_fixture_cleanup(const char *fixture_name);
+const char *cl_fixture_basename(const char *fixture_name);
 #endif
 
 /**

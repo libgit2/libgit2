@@ -14,6 +14,7 @@
 #include "git2/diff.h"
 #include "git2/blob.h"
 #include "git2/signature.h"
+#include "git2/mailmap.h"
 #include "util.h"
 #include "repository.h"
 #include "blame_git.h"
@@ -132,6 +133,9 @@ git_blame* git_blame__alloc(
 		return NULL;
 	}
 
+	if (opts.flags & GIT_BLAME_USE_MAILMAP)
+		git_mailmap_from_repository(&gbr->mailmap, repo);
+
 	return gbr;
 }
 
@@ -149,6 +153,8 @@ void git_blame_free(git_blame *blame)
 	git_vector_free_deep(&blame->paths);
 
 	git_array_clear(blame->line_index);
+
+	git_mailmap_free(blame->mailmap);
 
 	git__free(blame->path);
 	git_blob_free(blame->final_blob);
@@ -279,7 +285,7 @@ static int index_blob_lines(git_blame *blame)
     return blame->num_lines;
 }
 
-static git_blame_hunk* hunk_from_entry(git_blame__entry *e)
+static git_blame_hunk* hunk_from_entry(git_blame__entry *e, git_blame *blame)
 {
 	git_blame_hunk *h = new_hunk(
 			e->lno+1, e->num_lines, e->s_lno+1, e->suspect->path);
@@ -289,8 +295,9 @@ static git_blame_hunk* hunk_from_entry(git_blame__entry *e)
 
 	git_oid_cpy(&h->final_commit_id, git_commit_id(e->suspect->commit));
 	git_oid_cpy(&h->orig_commit_id, git_commit_id(e->suspect->commit));
-	git_signature_dup(&h->final_signature, git_commit_author(e->suspect->commit));
-	git_signature_dup(&h->orig_signature, git_commit_author(e->suspect->commit));
+	git_commit_author_with_mailmap(
+		&h->final_signature, e->suspect->commit, blame->mailmap);
+	git_signature_dup(&h->orig_signature, h->final_signature);
 	h->boundary = e->is_boundary ? 1 : 0;
 	return h;
 }
@@ -341,7 +348,7 @@ static int blame_internal(git_blame *blame)
 cleanup:
 	for (ent = blame->ent; ent; ) {
 		git_blame__entry *e = ent->next;
-		git_blame_hunk *h = hunk_from_entry(ent);
+		git_blame_hunk *h = hunk_from_entry(ent, blame);
 
 		git_vector_insert(&blame->hunks, h);
 

@@ -171,13 +171,16 @@ static git_repository *_cl_repo = NULL;
 
 git_repository *cl_git_sandbox_init(const char *sandbox)
 {
+	/* Get the name of the sandbox folder which will be created */
+	const char *basename = cl_fixture_basename(sandbox);
+
 	/* Copy the whole sandbox folder from our fixtures to our test sandbox
 	 * area.  After this it can be accessed with `./sandbox`
 	 */
 	cl_fixture_sandbox(sandbox);
 	_cl_sandbox = sandbox;
 
-	cl_git_pass(p_chdir(sandbox));
+	cl_git_pass(p_chdir(basename));
 
 	/* If this is not a bare repo, then rename `sandbox/.gitted` to
 	 * `sandbox/.git` which must be done since we cannot store a folder
@@ -200,7 +203,7 @@ git_repository *cl_git_sandbox_init(const char *sandbox)
 	cl_git_pass(p_chdir(".."));
 
 	/* Now open the sandbox repository and make it available for tests */
-	cl_git_pass(git_repository_open(&_cl_repo, sandbox));
+	cl_git_pass(git_repository_open(&_cl_repo, basename));
 
 	/* Adjust configs after copying to new filesystem */
 	cl_git_pass(git_repository_reinit_filesystem(_cl_repo, 0));
@@ -222,7 +225,8 @@ git_repository *cl_git_sandbox_reopen(void)
 		git_repository_free(_cl_repo);
 		_cl_repo = NULL;
 
-		cl_git_pass(git_repository_open(&_cl_repo, _cl_sandbox));
+		cl_git_pass(git_repository_open(
+			&_cl_repo, cl_fixture_basename(_cl_sandbox)));
 	}
 
 	return _cl_repo;
