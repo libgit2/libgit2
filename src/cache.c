@@ -188,7 +188,7 @@ static void *cache_store(git_cache *cache, git_cached_obj *entry)
 		return entry;
 
 	/* soften the load on the cache */
-	if (git_cache__current_storage.val > git_cache__max_storage)
+	if (git_atomic_get(&git_cache__current_storage) > git_cache__max_storage)
 		cache_evict_entries(cache);
 
 	pos = git_oidmap_lookup_index(cache->map, &entry->oid);
