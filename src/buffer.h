@@ -76,7 +76,7 @@ extern char *git_buf_detach(git_buf *buf);
 extern int git_buf_attach(git_buf *buf, char *ptr, size_t asize);
 
 /* Populates a `git_buf` where the contents are not "owned" by the
- * buffer, and calls to `git_buf_free` will not free the given buf.
+ * buffer, and calls to `git_buf_dispose` will not free the given buf.
  */
 extern void git_buf_attach_notowned(
 	git_buf *buf, const char *ptr, size_t size);

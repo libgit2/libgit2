@@ -105,7 +105,7 @@ GIT_EXTERN(git_off_t) git_blob_rawsize(const git_blob *blob);
  * attributes set for the blob and the content detected in it.
  *
  * The output is written into a `git_buf` which the caller must free
- * when done (via `git_buf_free`).
+ * when done (via `git_buf_dispose`).
  *
  * If no filters need to be applied, then the `out` buffer will just
  * be populated with a pointer to the raw content of the blob.  In
