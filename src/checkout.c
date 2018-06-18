@@ -2412,16 +2412,25 @@ static int checkout_data_init(
 		 * and those should not be overwritten.)
 		 */
 		if (data->index != git_iterator_index(target)) {
-			if ((error = git_index_read_safely(data->index)) < 0)
-				goto cleanup;
+			if (data->opts.checkout_strategy & GIT_CHECKOUT_FORCE) {
+				/* When forcing, we can blindly re-read the index */
+				if ((error = git_index_read(data->index, false)) < 0)
+					goto cleanup;
+			} else {
+				/*
+				 * When not being forced, we need to check for unresolved
+				 * conflicts and unsaved changes in the index before
+				 * proceeding.
+				 */
+				if (git_index_has_conflicts(data->index)) {
+					error = GIT_ECONFLICT;
+					giterr_set(GITERR_CHECKOUT,
+						"unresolved conflicts exist in the index");
+					goto cleanup;
+				}
 
-			/* cannot checkout if unresolved conflicts exist */
-			if ((data->opts.checkout_strategy & GIT_CHECKOUT_FORCE) == 0 &&
-				git_index_has_conflicts(data->index)) {
-				error = GIT_ECONFLICT;
-				giterr_set(GITERR_CHECKOUT,
-					"unresolved conflicts exist in the index");
-				goto cleanup;
+				if ((error = git_index_read_safely(data->index)) < 0)
+					goto cleanup;
 			}
 
 			/* clean conflict data in the current index */

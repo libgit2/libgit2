@@ -672,11 +672,8 @@ void test_checkout_tree__can_cancel_checkout_from_notify(void)
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid oid;
 	git_object *obj = NULL;
-	git_index *index = NULL;
 
 	assert_on_branch(g_repo, "master");
-
-	cl_git_pass(git_repository_index(&index, g_repo));
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/dir"));
 	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
@@ -704,8 +701,6 @@ void test_checkout_tree__can_cancel_checkout_from_notify(void)
 	else
 		cl_assert_equal_i(4, ca.count);
 
-	cl_git_pass(git_index_read(index, 1));
-
 	/* and again with a different stopping point and return code */
 	ca.filename = "README";
 	ca.error = 123;
@@ -721,7 +716,6 @@ void test_checkout_tree__can_cancel_checkout_from_notify(void)
 		cl_assert_equal_i(1, ca.count);
 
 	git_object_free(obj);
-	git_index_free(index);
 }
 
 void test_checkout_tree__can_checkout_with_last_workdir_item_missing(void)
@@ -1502,11 +1496,9 @@ void test_checkout_tree__baseline_is_empty_when_no_index(void)
 	git_reference *head;
 	git_object *obj;
 	size_t conflicts = 0;
-	git_index *index;
 
 	assert_on_branch(g_repo, "master");
 
-	cl_git_pass(git_repository_index(&index, g_repo));
 	cl_git_pass(git_repository_head(&head, g_repo));
 	cl_git_pass(git_reference_peel(&obj, head, GIT_OBJ_COMMIT));
 
@@ -1525,8 +1517,6 @@ void test_checkout_tree__baseline_is_empty_when_no_index(void)
 	cl_git_fail_with(GIT_ECONFLICT, git_checkout_tree(g_repo, obj, &opts));
 	cl_assert_equal_i(4, conflicts);
 
-	cl_git_pass(git_index_read(index, 1));
-
 	/* but force should succeed and update the index */
 	opts.checkout_strategy |= GIT_CHECKOUT_FORCE;
 	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
@@ -1535,7 +1525,6 @@ void test_checkout_tree__baseline_is_empty_when_no_index(void)
 
 	git_object_free(obj);
 	git_reference_free(head);
-	git_index_free(index);
 }
 
 void test_checkout_tree__mode_change_is_force_updated(void)
