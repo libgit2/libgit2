@@ -458,23 +458,23 @@ static int get_revision(git_commit_list_node **out, git_revwalk *walk, git_commi
 	int error;
 	git_commit_list_node *commit;
 
-  commit = git_commit_list_pop(list);
-  if (!commit) {
-    giterr_clear();
-    return GIT_ITEROVER;
-  }
+	commit = git_commit_list_pop(list);
+	if (!commit) {
+		giterr_clear();
+		return GIT_ITEROVER;
+	}
 
-  /*
-   * If we did not run limit_list and we must add parents to the
-   * list ourselves.
-   */
-  if (!walk->limited) {
-    if ((error = add_parents_to_list(walk, commit, list)) < 0)
-      return error;
-  }
+	/*
+	 * If we did not run limit_list and we must add parents to the
+	 * list ourselves.
+	 */
+	if (!walk->limited) {
+		if ((error = add_parents_to_list(walk, commit, list)) < 0)
+		return error;
+	}
 
-  *out = commit;
-  return 0;
+	*out = commit;
+	return 0;
 }
 
 static int sort_in_topological_order(git_commit_list **out, git_revwalk *walk, git_commit_list *list)
