@@ -227,7 +227,7 @@ void test_stash_save__untracked_regression(void)
 
 	git_reference_free(head);
 	git_commit_free(head_commit);
-	git_buf_free(&untracked_dir);
+	git_buf_dispose(&untracked_dir);
 }
 
 #define MESSAGE "Look Ma! I'm on TV!"

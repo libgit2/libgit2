@@ -25,7 +25,7 @@ GIT_BEGIN_DECL
  * caller and have the caller take responsibility for freeing that memory.
  * This can be awkward if the caller does not have easy access to the same
  * allocation functions that libgit2 is using.  In those cases, libgit2
- * will fill in a `git_buf` and the caller can use `git_buf_free()` to
+ * will fill in a `git_buf` and the caller can use `git_buf_dispose()` to
  * release it when they are done.
  *
  * A `git_buf` may also be used for the caller to pass in a reference to
