@@ -1564,3 +1564,67 @@ void test_checkout_tree__nullopts(void)
 {
 	cl_git_pass(git_checkout_tree(g_repo, NULL, NULL));
 }
+
+static void modify_index_ondisk(void)
+{
+	git_repository *other_repo;
+	git_index *other_index;
+	git_index_entry entry = {{0}};
+
+	cl_git_pass(git_repository_open(&other_repo, git_repository_workdir(g_repo)));
+	cl_git_pass(git_repository_index(&other_index, other_repo));
+
+	cl_git_pass(git_oid_fromstr(&entry.id, "1385f264afb75a56a5bec74243be9b367ba4ca08"));
+	entry.mode = 0100644;
+	entry.path = "README";
+
+	cl_git_pass(git_index_add(other_index, &entry));
+	cl_git_pass(git_index_write(other_index));
+
+	git_index_free(other_index);
+	git_repository_free(other_repo);
+}
+
+static void modify_index_and_checkout_tree(git_checkout_options *opts)
+{
+	git_index *index;
+	git_reference *head;
+	git_object *obj;
+
+	/* External changes to the index are maintained by default */
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_repository_head(&head, g_repo));
+	cl_git_pass(git_reference_peel(&obj, head, GIT_OBJ_COMMIT));
+
+	cl_git_pass(git_reset(g_repo, obj, GIT_RESET_HARD, NULL));
+	assert_status_entrycount(g_repo, 0);
+
+	modify_index_ondisk();
+
+	/* The file in the index remains modified */
+	cl_git_pass(git_checkout_tree(g_repo, obj, opts));
+
+	git_object_free(obj);
+	git_reference_free(head);
+	git_index_free(index);
+}
+
+void test_checkout_tree__retains_external_index_changes(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+
+	opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+
+	modify_index_and_checkout_tree(&opts);
+	assert_status_entrycount(g_repo, 1);
+}
+
+void test_checkout_tree__no_index_refresh(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+
+	opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_NO_REFRESH;
+
+	modify_index_and_checkout_tree(&opts);
+	assert_status_entrycount(g_repo, 0);
+}
