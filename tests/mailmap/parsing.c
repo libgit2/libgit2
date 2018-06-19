@@ -86,7 +86,7 @@ void test_mailmap_parsing__windows_string(void)
 
 	/* Parse with windows-style line endings */
 	git_buf_attach_notowned(&unixbuf, string_mailmap, strlen(string_mailmap));
-	git_buf_text_lf_to_crlf(&winbuf, &unixbuf);
+	cl_git_pass(git_buf_text_lf_to_crlf(&winbuf, &unixbuf));
 
 	cl_git_pass(git_mailmap_from_buffer(&g_mailmap, winbuf.ptr, winbuf.size));
 	git_buf_dispose(&winbuf);
