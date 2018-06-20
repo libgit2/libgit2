@@ -102,3 +102,26 @@ void test_remote_create__with_fetchspec(void)
 	git_strarray_free(&array);
 	git_remote_free(remote);
 }
+
+void test_remote_create__with_empty_fetchspec(void)
+{
+	git_remote *remote;
+	git_strarray array;
+
+	cl_git_pass(git_remote_create_with_fetchspec(&remote, _repo, "test-new", "git://github.com/libgit2/libgit2", NULL));
+	cl_git_pass(git_remote_get_fetch_refspecs(&array, remote));
+	cl_assert_equal_i(0, array.count);
+
+	git_strarray_free(&array);
+	git_remote_free(remote);
+}
+
+void test_remote_create__with_fetchspec_invalid_name(void)
+{
+	cl_git_assert_cannot_create_remote(GIT_EINVALIDSPEC, git_remote_create_with_fetchspec(&r, _repo, NULL, TEST_URL, NULL));
+}
+
+void test_remote_create__with_fetchspec_invalid_url(void)
+{
+	cl_git_assert_cannot_create_remote(GIT_EINVALIDSPEC, git_remote_create_with_fetchspec(&r, _repo, NULL, "", NULL));
+}
