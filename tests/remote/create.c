@@ -311,6 +311,23 @@ void test_remote_create__with_opts_detached(void)
 	git_remote_free(remote);
 }
 
+
+void test_remote_create__with_opts_insteadof_disabled(void)
+{
+	git_remote *remote;
+	git_remote_create_options opts = GIT_REMOTE_CREATE_OPTIONS_INIT;
+
+	opts.repository = _repo;
+	opts.flags = GIT_REMOTE_CREATE_SKIP_INSTEADOF;
+
+	cl_git_pass(git_remote_create_with_opts(&remote, "http://example.com/libgit2/libgit2", &opts));
+
+	cl_assert_equal_s(git_remote_url(remote), "http://example.com/libgit2/libgit2");
+	cl_assert_equal_p(git_remote_pushurl(remote), NULL);
+
+	git_remote_free(remote);
+}
+
 static int create_with_name(git_remote **remote, git_repository *repo, const char *name, const char *url)
 {
 	git_remote_create_options opts = GIT_REMOTE_CREATE_OPTIONS_INIT;

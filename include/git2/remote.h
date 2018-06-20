@@ -42,6 +42,14 @@ GIT_EXTERN(int) git_remote_create(
 		const char *url);
 
 /**
+ * Remote creation options flags
+ */
+typedef enum {
+	/** Ignore the repository apply.insteadOf configuration */
+	GIT_REMOTE_CREATE_SKIP_INSTEADOF = (1 << 0),
+} git_remote_create_flags;
+
+/**
  * Remote creation options structure
  *
  * Initialize with `GIT_REMOTE_CREATE_OPTIONS_INIT`. Alternatively, you can
@@ -65,6 +73,9 @@ typedef struct git_remote_create_options {
 
 	/** The fetchspec the remote should use. */
 	const char *fetchspec;
+
+	/** Additional flags for the remote. See git_remote_create_flags. */
+	unsigned int flags;
 } git_remote_create_options;
 
 #define GIT_REMOTE_CREATE_OPTIONS_VERSION 1

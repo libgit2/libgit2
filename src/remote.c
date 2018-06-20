@@ -264,7 +264,7 @@ static int create_internal(git_remote **out, const char *url, const git_remote_c
 		(error = canonicalize_url(&canonical_url, url)) < 0)
 		goto on_error;
 
-	if (opts->repository) {
+	if (opts->repository && !(opts->flags & GIT_REMOTE_CREATE_SKIP_INSTEADOF)) {
 		remote->url = apply_insteadof(config_ro, canonical_url.ptr, GIT_DIRECTION_FETCH);
 	} else {
 		remote->url = git__strdup(canonical_url.ptr);
