@@ -1,4 +1,5 @@
 #include "clar_libgit2.h"
+#include "config/config_helpers.h"
 
 static git_repository *_repo;
 static git_config *_config;
@@ -12,25 +13,6 @@ static git_config *_config;
 		cl_git_fail_with(expected, res);			\
 		cl_assert_equal_p(r, NULL);				\
 	} while (0);
-
-static int cl_git_config_section_count__foreach(const git_config_entry *entry, void *payload)
-{
-	size_t *count = payload;
-
-	GIT_UNUSED(entry);
-	(*count)++;
-
-	return 0;
-}
-
-static size_t cl_git_config_sections_count(git_config *cfg, const char *regex)
-{
-	size_t count = 0;
-
-	cl_git_pass(git_config_foreach_match(cfg, regex, cl_git_config_section_count__foreach, &count));
-
-	return count;
-}
 
 void test_remote_create__initialize(void)
 {
@@ -70,7 +52,7 @@ void test_remote_create__named(void)
 	git_config *cfg;
 	const char *cfg_val;
 
-	size_t section_count = cl_git_config_sections_count(_config, "remote.");
+	size_t section_count = count_config_entries_match(_repo, "remote\\.");
 
 	cl_git_pass(git_remote_create(&remote, _repo, "valid-name", TEST_URL));
 
@@ -86,7 +68,7 @@ void test_remote_create__named(void)
 	cl_git_pass(git_config_get_string(&cfg_val, cfg, "remote.valid-name.url"));
 	cl_assert_equal_s(cfg_val, TEST_URL);
 
-	cl_assert_equal_i(section_count + 2, cl_git_config_sections_count(_config, "remote."));
+	cl_assert_equal_i(section_count + 2, count_config_entries_match(_repo, "remote\\."));
 
 	git_config_free(cfg);
 	git_remote_free(remote);
@@ -117,7 +99,7 @@ void test_remote_create__with_fetchspec(void)
 {
 	git_remote *remote;
 	git_strarray array;
-	size_t section_count = cl_git_config_sections_count(_config, "remote.");
+	size_t section_count = count_config_entries_match(_repo, "remote\\.");
 
 	cl_git_pass(git_remote_create_with_fetchspec(&remote, _repo, "test-new", "git://github.com/libgit2/libgit2", "+refs/*:refs/*"));
 	cl_assert_equal_s(git_remote_name(remote), "test-new");
@@ -127,7 +109,7 @@ void test_remote_create__with_fetchspec(void)
 	cl_git_pass(git_remote_get_fetch_refspecs(&array, remote));
 	cl_assert_equal_s("+refs/*:refs/*", array.strings[0]);
 	cl_assert_equal_i(1, array.count);
-	cl_assert_equal_i(section_count + 2, cl_git_config_sections_count(_config, "remote."));
+	cl_assert_equal_i(section_count + 2, count_config_entries_match(_repo, "remote\\."));
 
 	git_strarray_free(&array);
 	git_remote_free(remote);
@@ -137,12 +119,12 @@ void test_remote_create__with_empty_fetchspec(void)
 {
 	git_remote *remote;
 	git_strarray array;
-	size_t section_count = cl_git_config_sections_count(_config, "remote.");
+	size_t section_count = count_config_entries_match(_repo, "remote\\.");
 
 	cl_git_pass(git_remote_create_with_fetchspec(&remote, _repo, "test-new", "git://github.com/libgit2/libgit2", NULL));
 	cl_git_pass(git_remote_get_fetch_refspecs(&array, remote));
 	cl_assert_equal_i(0, array.count);
-	cl_assert_equal_i(section_count + 1, cl_git_config_sections_count(_config, "remote."));
+	cl_assert_equal_i(section_count + 1, count_config_entries_match(_repo, "remote\\."));
 
 	git_strarray_free(&array);
 	git_remote_free(remote);
@@ -162,7 +144,7 @@ void test_remote_create__anonymous(void)
 {
 	git_remote *remote;
 	git_strarray array;
-	size_t section_count = cl_git_config_sections_count(_config, "remote.");
+	size_t section_count = count_config_entries_match(_repo, "remote\\.");
 
 	cl_git_pass(git_remote_create_anonymous(&remote, _repo, TEST_URL));
 	cl_assert_equal_s(git_remote_name(remote), NULL);
@@ -171,7 +153,7 @@ void test_remote_create__anonymous(void)
 
 	cl_git_pass(git_remote_get_fetch_refspecs(&array, remote));
 	cl_assert_equal_i(0, array.count);
-	cl_assert_equal_i(section_count, cl_git_config_sections_count(_config, "remote."));
+	cl_assert_equal_i(section_count, count_config_entries_match(_repo, "remote\\."));
 
 	git_strarray_free(&array);
 	git_remote_free(remote);
@@ -186,7 +168,8 @@ void test_remote_create__detached(void)
 {
 	git_remote *remote;
 	git_strarray array;
-	size_t section_count = cl_git_config_sections_count(_config, "remote.");
+
+	size_t section_count = count_config_entries_match(_repo, "remote\\.");
 
 	cl_git_pass(git_remote_create_detached(&remote, TEST_URL));
 	cl_assert_equal_s(git_remote_name(remote), NULL);
@@ -195,7 +178,7 @@ void test_remote_create__detached(void)
 
 	cl_git_pass(git_remote_get_fetch_refspecs(&array, remote));
 	cl_assert_equal_i(0, array.count);
-	cl_assert_equal_i(section_count, cl_git_config_sections_count(_config, "remote."));
+	cl_assert_equal_i(section_count, count_config_entries_match(_repo, "remote\\."));
 
 	git_strarray_free(&array);
 	git_remote_free(remote);
