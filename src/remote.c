@@ -189,6 +189,14 @@ static int canonicalize_url(git_buf *out, const char *in)
 	return git_buf_puts(out, in);
 }
 
+static int default_fetchspec_for_name(git_buf *buf, const char *name)
+{
+	if (git_buf_printf(buf, "+refs/heads/*:refs/remotes/%s/*", name) < 0)
+		return -1;
+
+	return 0;
+}
+
 static int ensure_remote_doesnot_exist(git_repository *repo, const char *name)
 {
 	int error;
@@ -295,7 +303,7 @@ int git_remote_create(git_remote **out, git_repository *repo, const char *name, 
 	git_buf buf = GIT_BUF_INIT;
 	int error;
 
-	if (git_buf_printf(&buf, "+refs/heads/*:refs/remotes/%s/*", name) < 0)
+	if (default_fetchspec_for_name(&buf, name) < 0)
 		return -1;
 
 	error = git_remote_create_with_fetchspec(out, repo, name, url, git_buf_cstr(&buf));
@@ -1943,8 +1951,7 @@ static int rename_fetch_refspecs(git_vector *problems, git_remote *remote, const
 	if ((error = git_vector_init(problems, 1, NULL)) < 0)
 		return error;
 
-	if ((error = git_buf_printf(
-			&base, "+refs/heads/*:refs/remotes/%s/*", remote->name)) < 0)
+	if ((error = default_fetchspec_for_name(&base, remote->name)) < 0)
 		return error;
 
 	git_vector_foreach(&remote->refspecs, i, spec) {
@@ -1969,8 +1976,7 @@ static int rename_fetch_refspecs(git_vector *problems, git_remote *remote, const
 		git_buf_clear(&val);
 		git_buf_clear(&var);
 
-		if (git_buf_printf(
-				&val, "+refs/heads/*:refs/remotes/%s/*", new_name) < 0 ||
+		if (default_fetchspec_for_name(&val, new_name) < 0 ||
 			git_buf_printf(&var, "remote.%s.fetch", new_name) < 0)
 		{
 			error = -1;
