@@ -312,30 +312,6 @@ void test_network_remote_remotes__add(void)
 	cl_assert_equal_s(git_remote_url(_remote), "http://github.com/libgit2/libgit2");
 }
 
-void test_network_remote_remotes__cannot_add_a_nameless_remote(void)
-{
-	git_remote *remote;
-
-	cl_assert_equal_i(
-		GIT_EINVALIDSPEC,
-		git_remote_create(&remote, _repo, NULL, "git://github.com/libgit2/libgit2"));
-}
-
-void test_network_remote_remotes__cannot_add_a_remote_with_an_invalid_name(void)
-{
-	git_remote *remote = NULL;
-
-	cl_assert_equal_i(
-		GIT_EINVALIDSPEC,
-		git_remote_create(&remote, _repo, "Inv@{id", "git://github.com/libgit2/libgit2"));
-	cl_assert_equal_p(remote, NULL);
-
-	cl_assert_equal_i(
-		GIT_EINVALIDSPEC,
-		git_remote_create(&remote, _repo, "", "git://github.com/libgit2/libgit2"));
-	cl_assert_equal_p(remote, NULL);
-}
-
 void test_network_remote_remotes__tagopt(void)
 {
 	const char *name = git_remote_name(_remote);
@@ -387,41 +363,6 @@ void test_network_remote_remotes__returns_ENOTFOUND_when_neither_url_nor_pushurl
 
 	cl_git_fail_with(
 		git_remote_lookup(&remote, _repo, "no-remote-url"), GIT_ENOTFOUND);
-}
-
-void assert_cannot_create_remote(const char *name, int expected_error)
-{
-	git_remote *remote = NULL;
-
-	cl_git_fail_with(
-		git_remote_create(&remote, _repo, name, "git://github.com/libgit2/libgit2"),
-		expected_error);
-
-	cl_assert_equal_p(remote, NULL);
-}
-
-void test_network_remote_remotes__cannot_create_a_remote_which_name_conflicts_with_an_existing_remote(void)
-{
-	assert_cannot_create_remote("test", GIT_EEXISTS);
-}
-
-void test_network_remote_remotes__cannot_create_a_remote_which_name_is_invalid(void)
-{
-	assert_cannot_create_remote("/", GIT_EINVALIDSPEC);
-	assert_cannot_create_remote("//", GIT_EINVALIDSPEC);
-	assert_cannot_create_remote(".lock", GIT_EINVALIDSPEC);
-	assert_cannot_create_remote("a.lock", GIT_EINVALIDSPEC);
-}
-
-void test_network_remote_remote__git_remote_create_with_fetchspec(void)
-{
-	git_remote *remote;
-	git_strarray array;
-
-	cl_git_pass(git_remote_create_with_fetchspec(&remote, _repo, "test-new", "git://github.com/libgit2/libgit2", "+refs/*:refs/*"));
-	git_remote_get_fetch_refspecs(&array, remote);
-	cl_assert_equal_s("+refs/*:refs/*", array.strings[0]);
-	git_remote_free(remote);
 }
 
 static const char *fetch_refspecs[] = {
