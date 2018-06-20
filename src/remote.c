@@ -217,57 +217,79 @@ static int ensure_remote_doesnot_exist(git_repository *repo, const char *name)
 	return GIT_EEXISTS;
 }
 
-static int create_internal(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
+int git_remote_create_init_options(git_remote_create_options *opts, unsigned int version)
 {
-	git_remote *remote;
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_remote_create_options, GIT_REMOTE_CREATE_OPTIONS_INIT);
+	return 0;
+}
+
+static int create_internal(git_remote **out, const char *url, const git_remote_create_options *opts)
+{
+	git_remote *remote = NULL;
 	git_config *config_ro = NULL, *config_rw;
 	git_buf canonical_url = GIT_BUF_INIT;
 	git_buf var = GIT_BUF_INIT;
+	const git_remote_create_options dummy_opts = GIT_REMOTE_CREATE_OPTIONS_INIT;
 	int error = -1;
 
-	/* repo, name, and fetch are optional */
 	assert(out && url);
 
-	if (repo && (error = git_repository_config_snapshot(&config_ro, repo)) < 0)
-		return error;
+	if (!opts) {
+		opts = &dummy_opts;
+	}
+
+	GITERR_CHECK_VERSION(opts, GIT_REMOTE_CREATE_OPTIONS_VERSION, "git_remote_create_options");
+
+	if (opts->name != NULL) {
+		if ((error = ensure_remote_name_is_valid(opts->name)) < 0)
+			return error;
+
+		if (opts->repository &&
+		    (error = ensure_remote_doesnot_exist(opts->repository, opts->name)) < 0)
+			return error;
+	}
+
+	if (opts->repository) {
+		if ((error = git_repository_config_snapshot(&config_ro, opts->repository)) < 0)
+			goto on_error;
+	}
 
 	remote = git__calloc(1, sizeof(git_remote));
 	GITERR_CHECK_ALLOC(remote);
 
-	remote->repo = repo;
+	remote->repo = opts->repository;
 
 	if ((error = git_vector_init(&remote->refs, 32, NULL)) < 0 ||
 		(error = canonicalize_url(&canonical_url, url)) < 0)
 		goto on_error;
 
-	if (repo) {
+	if (opts->repository) {
 		remote->url = apply_insteadof(config_ro, canonical_url.ptr, GIT_DIRECTION_FETCH);
 	} else {
 		remote->url = git__strdup(canonical_url.ptr);
 	}
 	GITERR_CHECK_ALLOC(remote->url);
 
-	if (name != NULL) {
-		remote->name = git__strdup(name);
+	if (opts->name != NULL) {
+		remote->name = git__strdup(opts->name);
 		GITERR_CHECK_ALLOC(remote->name);
 
-		if ((error = git_buf_printf(&var, CONFIG_URL_FMT, name)) < 0)
-			goto on_error;
-
-		if (repo &&
-			((error = git_repository_config__weakptr(&config_rw, repo)) < 0 ||
-			(error = git_config_set_string(config_rw, var.ptr, canonical_url.ptr)) < 0))
+		if (opts->repository &&
+		    ((error = git_buf_printf(&var, CONFIG_URL_FMT, opts->name)) < 0 ||
+		    (error = git_repository_config__weakptr(&config_rw, opts->repository)) < 0 ||
+		    (error = git_config_set_string(config_rw, var.ptr, canonical_url.ptr)) < 0))
 			goto on_error;
 	}
 
-	if (fetch != NULL) {
-		if ((error = add_refspec(remote, fetch, true)) < 0)
+	if (opts->fetchspec != NULL) {
+		if ((error = add_refspec(remote, opts->fetchspec, true)) < 0)
 			goto on_error;
 
 		/* only write for named remotes with a repository */
-		if (repo && name &&
-		    ((error = write_add_refspec(repo, name, fetch, true)) < 0 ||
-		    (error = lookup_remote_prune_config(remote, config_ro, name)) < 0))
+		if (opts->repository && opts->name &&
+		    ((error = write_add_refspec(opts->repository, opts->name, opts->fetchspec, true)) < 0 ||
+		    (error = lookup_remote_prune_config(remote, config_ro, opts->name)) < 0))
 			goto on_error;
 
 		/* Move the data over to where the matching functions can find them */
@@ -276,7 +298,7 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 	}
 
 	/* A remote without a name doesn't download tags */
-	if (!name)
+	if (!opts->name)
 		remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_NONE;
 	else
 		remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_AUTO;
@@ -301,47 +323,60 @@ int git_remote_create(git_remote **out, git_repository *repo, const char *name, 
 {
 	git_buf buf = GIT_BUF_INIT;
 	int error;
+	git_remote_create_options opts = GIT_REMOTE_CREATE_OPTIONS_INIT;
 
-	if (default_fetchspec_for_name(&buf, name) < 0)
-		return -1;
+	/* Those 2 tests are duplicated here because of backward-compatibility */
+	if ((error = ensure_remote_name_is_valid(name)) < 0)
+		return error;
 
-	error = git_remote_create_with_fetchspec(out, repo, name, url, git_buf_cstr(&buf));
+	if (canonicalize_url(&buf, url) < 0)
+		return GIT_ERROR;
+
+	git_buf_clear(&buf);
+
+	opts.repository = repo;
+	opts.name = name;
+	opts.fetchspec = git_buf_cstr(&buf);
+
+	error = create_internal(out, url, &opts);
+
 	git_buf_dispose(&buf);
 
 	return error;
 }
 
+int git_remote_create_with_opts(git_remote **out, const char *url, const git_remote_create_options *opts)
+{
+	return create_internal(out, url, opts);
+}
+
 int git_remote_create_with_fetchspec(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
 {
-	git_remote *remote = NULL;
 	int error;
+	git_remote_create_options opts = GIT_REMOTE_CREATE_OPTIONS_INIT;
 
 	if ((error = ensure_remote_name_is_valid(name)) < 0)
 		return error;
 
-	if ((error = ensure_remote_doesnot_exist(repo, name)) < 0)
-		return error;
+	opts.repository = repo;
+	opts.name = name;
+	opts.fetchspec = fetch;
 
-	if (create_internal(&remote, repo, name, url, fetch) < 0)
-		goto on_error;
-
-	*out = remote;
-
-	return 0;
-
-on_error:
-	git_remote_free(remote);
-	return -1;
+	return create_internal(out, url, &opts);
 }
 
 int git_remote_create_anonymous(git_remote **out, git_repository *repo, const char *url)
 {
-	return create_internal(out, repo, NULL, url, NULL);
+	git_remote_create_options opts = GIT_REMOTE_CREATE_OPTIONS_INIT;
+
+	opts.repository = repo;
+
+	return create_internal(out, url, &opts);
 }
 
 int git_remote_create_detached(git_remote **out, const char *url)
 {
-	return create_internal(out, NULL, NULL, url, NULL);
+	return create_internal(out, url, NULL);
 }
 
 int git_remote_dup(git_remote **dest, git_remote *source)
