@@ -230,6 +230,7 @@ static int create_internal(git_remote **out, const char *url, const git_remote_c
 	git_config *config_ro = NULL, *config_rw;
 	git_buf canonical_url = GIT_BUF_INIT;
 	git_buf var = GIT_BUF_INIT;
+	git_buf specbuf = GIT_BUF_INIT;
 	const git_remote_create_options dummy_opts = GIT_REMOTE_CREATE_OPTIONS_INIT;
 	int error = -1;
 
@@ -282,13 +283,24 @@ static int create_internal(git_remote **out, const char *url, const git_remote_c
 			goto on_error;
 	}
 
-	if (opts->fetchspec != NULL) {
-		if ((error = add_refspec(remote, opts->fetchspec, true)) < 0)
+	if (opts->fetchspec != NULL ||
+	    (opts->name && !(opts->flags & GIT_REMOTE_CREATE_SKIP_DEFAULT_FETCHSPEC))) {
+		const char *fetch = NULL;
+		if (opts->fetchspec) {
+			fetch = opts->fetchspec;
+		} else {
+			if ((error = default_fetchspec_for_name(&specbuf, opts->name)) < 0)
+				goto on_error;
+
+			fetch = git_buf_cstr(&specbuf);
+		}
+
+		if ((error = add_refspec(remote, fetch, true)) < 0)
 			goto on_error;
 
 		/* only write for named remotes with a repository */
 		if (opts->repository && opts->name &&
-		    ((error = write_add_refspec(opts->repository, opts->name, opts->fetchspec, true)) < 0 ||
+		    ((error = write_add_refspec(opts->repository, opts->name, fetch, true)) < 0 ||
 		    (error = lookup_remote_prune_config(remote, config_ro, opts->name)) < 0))
 			goto on_error;
 
@@ -314,6 +326,7 @@ on_error:
 		git_remote_free(remote);
 
 	git_config_free(config_ro);
+	git_buf_dispose(&specbuf);
 	git_buf_dispose(&canonical_url);
 	git_buf_dispose(&var);
 	return error;
@@ -336,7 +349,6 @@ int git_remote_create(git_remote **out, git_repository *repo, const char *name, 
 
 	opts.repository = repo;
 	opts.name = name;
-	opts.fetchspec = git_buf_cstr(&buf);
 
 	error = create_internal(out, url, &opts);
 
@@ -361,6 +373,7 @@ int git_remote_create_with_fetchspec(git_remote **out, git_repository *repo, con
 	opts.repository = repo;
 	opts.name = name;
 	opts.fetchspec = fetch;
+	opts.flags = GIT_REMOTE_CREATE_SKIP_DEFAULT_FETCHSPEC;
 
 	return create_internal(out, url, &opts);
 }

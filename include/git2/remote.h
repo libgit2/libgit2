@@ -47,6 +47,9 @@ GIT_EXTERN(int) git_remote_create(
 typedef enum {
 	/** Ignore the repository apply.insteadOf configuration */
 	GIT_REMOTE_CREATE_SKIP_INSTEADOF = (1 << 0),
+
+	/** Don't build a fetchspec from the name if none is set */
+	GIT_REMOTE_CREATE_SKIP_DEFAULT_FETCHSPEC = (1 << 1),
 } git_remote_create_flags;
 
 /**

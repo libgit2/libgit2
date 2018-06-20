@@ -52,8 +52,6 @@ void test_remote_create__named(void)
 	git_config *cfg;
 	const char *cfg_val;
 
-	cl_skip(); // Later
-
 	size_t section_count = count_config_entries_match(_repo, "remote\\.");
 
 	cl_git_pass(git_remote_create(&remote, _repo, "valid-name", TEST_URL));
@@ -200,8 +198,6 @@ void test_remote_create__with_opts_named(void)
 	opts.name = "test-new";
 	opts.repository = _repo;
 
-	cl_skip(); // Later
-
 	cl_git_pass(git_remote_create_with_opts(&remote, TEST_URL, &opts));
 	cl_assert_equal_s(git_remote_name(remote), "test-new");
 	cl_assert_equal_s(git_remote_url(remote), TEST_URL);
@@ -246,7 +242,7 @@ void test_remote_create__with_opts_named_no_fetchspec(void)
 
 	opts.name = "test-new";
 	opts.repository = _repo;
-//	opts.flags = GIT_REMOTE_CREATE_SKIP_DEFAULT_FETCHSPEC; // Later
+	opts.flags = GIT_REMOTE_CREATE_SKIP_DEFAULT_FETCHSPEC;
 
 	cl_git_pass(git_remote_create_with_opts(&remote, TEST_URL, &opts));
 	cl_assert_equal_s(git_remote_name(remote), "test-new");
