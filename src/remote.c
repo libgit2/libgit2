@@ -189,6 +189,26 @@ static int canonicalize_url(git_buf *out, const char *in)
 	return git_buf_puts(out, in);
 }
 
+static int ensure_remote_doesnot_exist(git_repository *repo, const char *name)
+{
+	int error;
+	git_remote *remote;
+
+	error = git_remote_lookup(&remote, repo, name);
+
+	if (error == GIT_ENOTFOUND)
+		return 0;
+
+	if (error < 0)
+		return error;
+
+	git_remote_free(remote);
+
+	giterr_set(GITERR_CONFIG, "remote '%s' already exists", name);
+
+	return GIT_EEXISTS;
+}
+
 static int create_internal(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
 {
 	git_remote *remote;
@@ -269,29 +289,6 @@ on_error:
 	git_buf_dispose(&var);
 	return error;
 }
-
-static int ensure_remote_doesnot_exist(git_repository *repo, const char *name)
-{
-	int error;
-	git_remote *remote;
-
-	error = git_remote_lookup(&remote, repo, name);
-
-	if (error == GIT_ENOTFOUND)
-		return 0;
-
-	if (error < 0)
-		return error;
-
-	git_remote_free(remote);
-
-	giterr_set(
-		GITERR_CONFIG,
-		"remote '%s' already exists", name);
-
-	return GIT_EEXISTS;
-}
-
 
 int git_remote_create(git_remote **out, git_repository *repo, const char *name, const char *url)
 {
