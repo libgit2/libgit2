@@ -122,3 +122,52 @@ void test_apply_workdir__generated_diff(void)
 	git_commit_free(a_commit);
 	git_commit_free(b_commit);
 }
+
+void test_apply_workdir__parsed_diff(void)
+{
+	git_oid oid;
+	git_commit *commit;
+	git_diff *diff;
+
+	const char *diff_file =
+		"diff --git a/asparagus.txt b/asparagus.txt\n"
+		"index f516580..ffb36e5 100644\n"
+		"--- a/asparagus.txt\n"
+		"+++ b/asparagus.txt\n"
+		"@@ -1 +1 @@\n"
+		"-ASPARAGUS SOUP!\n"
+		"+ASPARAGUS SOUP.\n"
+		"diff --git a/veal.txt b/veal.txt\n"
+		"index 94d2c01..a7b0665 100644\n"
+		"--- a/veal.txt\n"
+		"+++ b/veal.txt\n"
+		"@@ -1 +1 @@\n"
+		"-VEAL SOUP!\n"
+		"+VEAL SOUP.\n"
+		"@@ -7 +7 @@ occasionally, then put into it a shin of veal, let it boil two hours\n"
+		"-longer. take out the slices of ham, and skim off the grease if any\n"
+		"+longer; take out the slices of ham, and skim off the grease if any\n";
+
+	struct merge_index_entry expected[] = {
+		{ 0100644, "ffb36e513f5fdf8a6ba850a20142676a2ac4807d", 0, "asparagus.txt" },
+		{ 0100644, "68f6182f4c85d39e1309d97c7e456156dc9c0096", 0, "beef.txt" },
+		{ 0100644, "4b7c5650008b2e747fe1809eeb5a1dde0e80850a", 0, "bouilli.txt" },
+		{ 0100644, "c4e6cca3ec6ae0148ed231f97257df8c311e015f", 0, "gravy.txt" },
+		{ 0100644, "68af1fc7407fd9addf1701a87eb1c95c7494c598", 0, "oyster.txt" },
+		{ 0100644, "a7b066537e6be7109abfe4ff97b675d4e077da20", 0, "veal.txt" },
+	};
+	size_t expected_cnt = sizeof(expected) / sizeof(struct merge_index_entry);
+
+	git_oid_fromstr(&oid, "539bd011c4822c560c1d17cab095006b7a10f707");
+	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
+
+	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
+
+	cl_git_pass(git_reset(repo, (git_object *)commit, GIT_RESET_HARD, NULL));
+	cl_git_pass(git_apply(repo, diff, NULL));
+
+	validate_apply_workdir(repo, expected, expected_cnt);
+
+	git_diff_free(diff);
+	git_commit_free(commit);
+}
