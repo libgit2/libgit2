@@ -1000,7 +1000,7 @@ static int resolve_deltas(git_indexer *idx, git_transfer_progress *stats)
 		progressed = 0;
 		non_null = 0;
 		git_vector_foreach(&idx->deltas, i, delta) {
-			git_rawobj obj = {NULL};
+			git_rawobj obj = {0};
 
 			if (!delta)
 				continue;
