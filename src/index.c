@@ -685,7 +685,7 @@ int git_index_read_safely(git_index *index)
 	if (index->dirty) {
 		giterr_set(GITERR_INDEX,
 			"the index has unsaved changes that would be overwritten by this operation");
-		return -1;
+		return GIT_EINDEXDIRTY;
 	}
 
 	return git_index_read(index, false);

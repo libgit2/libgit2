@@ -384,6 +384,28 @@ void test_index_tests__dirty_and_clean(void)
 	git_repository_free(repo);
 }
 
+void test_index_tests__dirty_fails_with_error(void)
+{
+	git_repository *repo;
+	git_index *index;
+	git_index_entry entry = {{0}};
+
+	/* Index is not dirty after opening */
+	repo = cl_git_sandbox_init("testrepo");
+	cl_git_pass(git_repository_index(&index, repo));
+
+	/* Index is dirty after adding an entry */
+	entry.mode = GIT_FILEMODE_BLOB;
+	entry.path = "test.txt";
+	cl_git_pass(git_index_add_frombuffer(index, &entry, "Hi.\n", 4));
+	cl_assert(git_index_is_dirty(index));
+
+	cl_git_fail_with(GIT_EINDEXDIRTY, git_checkout_head(repo, NULL));
+
+	git_index_free(index);
+	cl_git_sandbox_cleanup();
+}
+
 void test_index_tests__add_frombuffer_reset_entry(void)
 {
 	git_index *index;
