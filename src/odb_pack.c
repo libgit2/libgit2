@@ -519,7 +519,7 @@ static int pack_backend__writepack(struct git_odb_writepack **out,
 	git_transfer_progress_cb progress_cb,
 	void *progress_payload)
 {
-	git_indexer_options opts;
+	git_indexer_options opts = GIT_INDEXER_OPTIONS_INIT;
 	struct pack_backend *backend;
 	struct pack_writepack *writepack;
 
