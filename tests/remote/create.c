@@ -6,14 +6,6 @@ static git_config *_config;
 
 #define TEST_URL "http://github.com/libgit2/libgit2.git"
 
-#define cl_git_assert_cannot_create_remote(expected, creation_expr)	\
-	do {								\
-		git_remote *r = NULL;					\
-		int res = ((creation_expr));				\
-		cl_git_fail_with(expected, res);			\
-		cl_assert_equal_p(r, NULL);				\
-	} while (0);
-
 void test_remote_create__initialize(void)
 {
 	cl_fixture_sandbox("testrepo.git");
@@ -76,23 +68,38 @@ void test_remote_create__named(void)
 
 void test_remote_create__named_fail_on_invalid_name(void)
 {
-	cl_git_assert_cannot_create_remote(GIT_EINVALIDSPEC, git_remote_create(&r, _repo, NULL, TEST_URL));
-	cl_git_assert_cannot_create_remote(GIT_EINVALIDSPEC, git_remote_create(&r, _repo, "Inv@{id", TEST_URL));
-	cl_git_assert_cannot_create_remote(GIT_EINVALIDSPEC, git_remote_create(&r, _repo, "", TEST_URL));
-	cl_git_assert_cannot_create_remote(GIT_EINVALIDSPEC, git_remote_create(&r, _repo, "/", TEST_URL));
-	cl_git_assert_cannot_create_remote(GIT_EINVALIDSPEC, git_remote_create(&r, _repo, "//", TEST_URL));
-	cl_git_assert_cannot_create_remote(GIT_EINVALIDSPEC, git_remote_create(&r, _repo, ".lock", TEST_URL));
-	cl_git_assert_cannot_create_remote(GIT_EINVALIDSPEC, git_remote_create(&r, _repo, "a.lock", TEST_URL));
+	const char *names[] = {
+		NULL,
+		"Inv@{id",
+		"",
+		"/",
+		"//",
+		".lock",
+		"a.lock",
+	};
+	size_t i;
+
+	for (i = 0; i < ARRAY_SIZE(names); i++) {
+		git_remote *remote = NULL;
+		cl_git_fail_with(GIT_EINVALIDSPEC, git_remote_create(&remote, _repo, names[i], TEST_URL));
+		cl_assert_equal_p(remote, NULL);
+	}
 }
 
 void test_remote_create__named_fail_on_invalid_url(void)
 {
-	cl_git_assert_cannot_create_remote(GIT_ERROR, git_remote_create(&r, _repo, "bad-url", ""));
+	git_remote *remote = NULL;
+
+	cl_git_fail_with(GIT_ERROR, git_remote_create(&remote, _repo, "bad-url", ""));
+	cl_assert_equal_p(remote, NULL);
 }
 
 void test_remote_create__named_fail_on_conflicting_name(void)
 {
-	cl_git_assert_cannot_create_remote(GIT_EEXISTS, git_remote_create(&r, _repo, "test", TEST_URL));
+	git_remote *remote = NULL;
+
+	cl_git_fail_with(GIT_EEXISTS, git_remote_create(&remote, _repo, "test", TEST_URL));
+	cl_assert_equal_p(remote, NULL);
 }
 
 void test_remote_create__with_fetchspec(void)
@@ -132,12 +139,18 @@ void test_remote_create__with_empty_fetchspec(void)
 
 void test_remote_create__with_fetchspec_invalid_name(void)
 {
-	cl_git_assert_cannot_create_remote(GIT_EINVALIDSPEC, git_remote_create_with_fetchspec(&r, _repo, NULL, TEST_URL, NULL));
+	git_remote *remote = NULL;
+
+	cl_git_fail_with(GIT_EINVALIDSPEC, git_remote_create_with_fetchspec(&remote, _repo, NULL, TEST_URL, NULL));
+	cl_assert_equal_p(remote, NULL);
 }
 
 void test_remote_create__with_fetchspec_invalid_url(void)
 {
-	cl_git_assert_cannot_create_remote(GIT_EINVALIDSPEC, git_remote_create_with_fetchspec(&r, _repo, NULL, "", NULL));
+	git_remote *remote = NULL;
+
+	cl_git_fail_with(GIT_EINVALIDSPEC, git_remote_create_with_fetchspec(&remote, _repo, NULL, "", NULL));
+	cl_assert_equal_p(remote, NULL);
 }
 
 void test_remote_create__anonymous(void)
@@ -161,7 +174,10 @@ void test_remote_create__anonymous(void)
 
 void test_remote_create__anonymous_invalid_url(void)
 {
-	cl_git_assert_cannot_create_remote(GIT_EINVALIDSPEC, git_remote_create_anonymous(&r, _repo, ""));
+	git_remote *remote = NULL;
+
+	cl_git_fail_with(GIT_EINVALIDSPEC, git_remote_create_anonymous(&remote, _repo, ""));
+	cl_assert_equal_p(remote, NULL);
 }
 
 void test_remote_create__detached(void)
@@ -186,7 +202,10 @@ void test_remote_create__detached(void)
 
 void test_remote_create__detached_invalid_url(void)
 {
-	cl_git_assert_cannot_create_remote(GIT_EINVALIDSPEC, git_remote_create_detached(&r, ""));
+	git_remote *remote = NULL;
+
+	cl_git_fail_with(GIT_EINVALIDSPEC, git_remote_create_detached(&remote, ""));
+	cl_assert_equal_p(remote, NULL);
 }
 
 void test_remote_create__with_opts_named(void)
@@ -336,20 +355,35 @@ static int create_with_name(git_remote **remote, git_repository *repo, const cha
 
 void test_remote_create__with_opts_invalid_name(void)
 {
-	cl_git_assert_cannot_create_remote(GIT_EINVALIDSPEC, create_with_name(&r, _repo, "Inv@{id", TEST_URL));
-	cl_git_assert_cannot_create_remote(GIT_EINVALIDSPEC, create_with_name(&r, _repo, "", TEST_URL));
-	cl_git_assert_cannot_create_remote(GIT_EINVALIDSPEC, create_with_name(&r, _repo, "/", TEST_URL));
-	cl_git_assert_cannot_create_remote(GIT_EINVALIDSPEC, create_with_name(&r, _repo, "//", TEST_URL));
-	cl_git_assert_cannot_create_remote(GIT_EINVALIDSPEC, create_with_name(&r, _repo, ".lock", TEST_URL));
-	cl_git_assert_cannot_create_remote(GIT_EINVALIDSPEC, create_with_name(&r, _repo, "a.lock", TEST_URL));
+	const char *names[] = {
+		"Inv@{id",
+		"",
+		"/",
+		"//",
+		".lock",
+		"a.lock",
+	};
+	size_t i;
+
+	for (i = 0; i < ARRAY_SIZE(names); i++) {
+		git_remote *remote = NULL;
+		cl_git_fail_with(GIT_EINVALIDSPEC, create_with_name(&remote, _repo, names[i], TEST_URL));
+		cl_assert_equal_p(remote, NULL);
+	}
 }
 
 void test_remote_create__with_opts_conflicting_name(void)
 {
-	cl_git_assert_cannot_create_remote(GIT_EEXISTS, create_with_name(&r, _repo, "test", TEST_URL));
+	git_remote *remote = NULL;
+
+	cl_git_fail_with(GIT_EEXISTS, create_with_name(&remote, _repo, "test", TEST_URL));
+	cl_assert_equal_p(remote, NULL);
 }
 
 void test_remote_create__with_opts_invalid_url(void)
 {
-	cl_git_assert_cannot_create_remote(GIT_EINVALIDSPEC, create_with_name(&r, _repo, "test-new", ""));
+	git_remote *remote = NULL;
+
+	cl_git_fail_with(GIT_EINVALIDSPEC, create_with_name(&remote, _repo, "test-new", ""));
+	cl_assert_equal_p(remote, NULL);
 }
