@@ -135,6 +135,8 @@ struct reuc_entry_internal {
 	char path[GIT_FLEX_ARRAY];
 };
 
+bool git_index__enforce_unsaved_safety = false;
+
 /* local declarations */
 static size_t read_extension(git_index *index, const char *buffer, size_t buffer_size);
 static int read_header(struct index_header *dest, const void *buffer);
@@ -682,7 +684,7 @@ int git_index_read(git_index *index, int force)
 
 int git_index_read_safely(git_index *index)
 {
-	if (index->dirty) {
+	if (git_index__enforce_unsaved_safety && index->dirty) {
 		giterr_set(GITERR_INDEX,
 			"the index has unsaved changes that would be overwritten by this operation");
 		return GIT_EINDEXDIRTY;

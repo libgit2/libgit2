@@ -72,6 +72,11 @@ void test_index_tests__initialize(void)
 {
 }
 
+void test_index_tests__cleanup(void)
+{
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_UNSAVED_INDEX_SAFETY, 0));
+}
+
 void test_index_tests__empty_index(void)
 {
    git_index *index;
@@ -384,7 +389,7 @@ void test_index_tests__dirty_and_clean(void)
 	git_repository_free(repo);
 }
 
-void test_index_tests__dirty_fails_with_error(void)
+void test_index_tests__dirty_fails_optionally(void)
 {
 	git_repository *repo;
 	git_index *index;
@@ -400,6 +405,15 @@ void test_index_tests__dirty_fails_with_error(void)
 	cl_git_pass(git_index_add_frombuffer(index, &entry, "Hi.\n", 4));
 	cl_assert(git_index_is_dirty(index));
 
+	cl_git_pass(git_checkout_head(repo, NULL));
+
+	/* Index is dirty (again) after adding an entry */
+	entry.mode = GIT_FILEMODE_BLOB;
+	entry.path = "test.txt";
+	cl_git_pass(git_index_add_frombuffer(index, &entry, "Hi.\n", 4));
+	cl_assert(git_index_is_dirty(index));
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_UNSAVED_INDEX_SAFETY, 1));
 	cl_git_fail_with(GIT_EINDEXDIRTY, git_checkout_head(repo, NULL));
 
 	git_index_free(index);

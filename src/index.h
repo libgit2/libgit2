@@ -20,6 +20,8 @@
 #define GIT_INDEX_FILE "index"
 #define GIT_INDEX_FILE_MODE 0666
 
+extern bool git_index__enforce_unsaved_safety;
+
 struct git_index {
 	git_refcount rc;
 
