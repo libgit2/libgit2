@@ -196,6 +196,13 @@ const git_oid *git_annotated_commit_id(
 	return git_commit_id(annotated_commit->commit);
 }
 
+const char *git_annotated_commit_ref(
+	const git_annotated_commit *annotated_commit)
+{
+	assert(annotated_commit);
+	return annotated_commit->ref_name;
+}
+
 void git_annotated_commit_free(git_annotated_commit *annotated_commit)
 {
 	if (annotated_commit == NULL)
