@@ -91,6 +91,15 @@ extern int match_int_arg(
 	int *out, struct args_info *args, const char *opt, int allow_negative);
 
 /**
+ * Check current `args` entry against a "bool" `opt` (ie. --[no-]progress).
+ * If `opt` matches positively, out will be set to 1, or if `opt` matches
+ * negatively, out will be set to 0, and in both cases 1 will be returned.
+ * If neither the positive or the negative form of opt matched, out will be -1,
+ * and 0 will be returned.
+ */
+extern int match_bool_arg(int *out, struct args_info *args, const char *opt);
+
+/**
  * Basic output function for plain text diff output
  * Pass `FILE*` such as `stdout` or `stderr` as payload (or NULL == `stdout`)
  */

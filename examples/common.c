@@ -184,6 +184,25 @@ static int match_int_internal(
 	return 1;
 }
 
+int match_bool_arg(int *out, struct args_info *args, const char *opt)
+{
+	const char *found = args->argv[args->pos];
+
+	if (!strcmp(found, opt)) {
+		*out = 1;
+		return 1;
+	}
+
+	if (!strncmp(found, "--no-", strlen("--no-")) &&
+	    !strcmp(found + strlen("--no-"), opt + 2)) {
+		*out = 0;
+		return 1;
+	}
+
+	*out = -1;
+	return 0;
+}
+
 int is_integer(int *out, const char *str, int allow_negative)
 {
 	return match_int_internal(out, str, allow_negative, NULL);
