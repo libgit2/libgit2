@@ -250,8 +250,8 @@ void *xrealloc(void *oldp, size_t newsz)
 int resolve_refish(git_annotated_commit **commit, git_repository *repo, const char *refish)
 {
 	git_reference *ref;
+	git_object *obj;
 	int err = 0;
-	git_oid oid;
 
 	assert(commit != NULL);
 
@@ -262,9 +262,10 @@ int resolve_refish(git_annotated_commit **commit, git_repository *repo, const ch
 		return 0;
 	}
 
-	err = git_oid_fromstr(&oid, refish);
+	err = git_revparse_single(&obj, repo, refish);
 	if (err == GIT_OK) {
-		err = git_annotated_commit_lookup(commit, repo, &oid);
+		err = git_annotated_commit_lookup(commit, repo, git_object_id(obj));
+		git_object_free(obj);
 	}
 
 	return err;
