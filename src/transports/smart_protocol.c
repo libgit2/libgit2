@@ -317,27 +317,34 @@ on_error:
 static int wait_while_ack(gitno_buffer *buf)
 {
 	int error;
-	git_pkt_ack *pkt = NULL;
+	git_pkt *pkt = NULL;
+	git_pkt_ack *ack = NULL;
 
 	while (1) {
-		git__free(pkt);
+		if (pkt) {
+			git_pkt_free(pkt);
+		}
 
-		if ((error = recv_pkt((git_pkt **)&pkt, NULL, buf)) < 0)
+		if ((error = recv_pkt(&pkt, NULL, buf)) < 0)
 			return error;
 
 		if (pkt->type == GIT_PKT_NAK)
 			break;
+		if (pkt->type != GIT_PKT_ACK)
+			continue;
 
-		if (pkt->type == GIT_PKT_ACK &&
-		    (pkt->status != GIT_ACK_CONTINUE &&
-		     pkt->status != GIT_ACK_COMMON &&
-		     pkt->status != GIT_ACK_READY)) {
-			git__free(pkt);
-			return 0;
+		ack = (git_pkt_ack*)pkt;
+
+		if (ack->status != GIT_ACK_CONTINUE &&
+		    ack->status != GIT_ACK_COMMON &&
+		    ack->status != GIT_ACK_READY) {
+			break;
 		}
 	}
 
-	git__free(pkt);
+	if (pkt) {
+		git_pkt_free(pkt);
+	}
 	return 0;
 }
 
