@@ -563,6 +563,11 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_tran
 			total_objects = (unsigned int)idx->nr_objects;
 		else
 			total_objects = UINT_MAX;
+#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+		if (total_objects > 4096) {
+			total_objects = 4096;
+		}
+#endif
 
 		idx->pack->idx_cache = git_oidmap_alloc();
 		GITERR_CHECK_ALLOC(idx->pack->idx_cache);
