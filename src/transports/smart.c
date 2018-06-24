@@ -274,8 +274,10 @@ static int git_smart__connect(
 		return error;
 
 	/* Detect capabilities */
-	if (git_smart__detect_caps(first, &t->caps, &symrefs) < 0)
+	if (git_smart__detect_caps(first, &t->caps, &symrefs) < 0) {
+		free_symrefs(&symrefs);
 		return -1;
+	}
 
 	/* If the only ref in the list is capabilities^{} with OID_ZERO, remove it */
 	if (1 == t->refs.length && !strcmp(first->head.name, "capabilities^{}") &&
