@@ -622,7 +622,9 @@ int git_smart__download_pack(
 			}
 		}
 
-		git__free(pkt);
+		if (pkt) {
+			git_pkt_free(pkt);
+		}
 		if (error < 0)
 			goto done;
 
