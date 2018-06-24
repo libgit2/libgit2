@@ -167,8 +167,10 @@ int git_smart__update_heads(transport_smart *t, git_vector *symrefs)
 			git_vector_foreach(symrefs, j, spec) {
 				git_buf_clear(&buf);
 				if (git_refspec_src_matches(spec, ref->head.name) &&
-				    !(error = git_refspec_transform(&buf, spec, ref->head.name)))
+				    !(error = git_refspec_transform(&buf, spec, ref->head.name))) {
+					git__free(ref->head.symref_target);
 					ref->head.symref_target = git_buf_detach(&buf);
+				}
 			}
 
 			git_buf_dispose(&buf);
