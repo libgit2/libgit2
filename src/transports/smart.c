@@ -266,7 +266,12 @@ static int git_smart__connect(
 	/* We now have loaded the refs. */
 	t->have_refs = 1;
 
-	first = (git_pkt_ref *)git_vector_get(&t->refs, 0);
+	pkt = (git_pkt *)git_vector_get(&t->refs, 0);
+	if (pkt && GIT_PKT_REF != pkt->type) {
+		giterr_set(GITERR_NET, "invalid response");
+		return -1;
+	}
+	first = (git_pkt_ref *)pkt;
 
 	if ((error = git_vector_init(&symrefs, 1, NULL)) < 0)
 		return error;
