@@ -219,6 +219,10 @@ int git_openssl_stream_global_init(void)
 	 * to speak TLSv1 to perform the encryption itself.
 	 */
 	git__ssl_ctx = SSL_CTX_new(SSLv23_method());
+	if (!git__ssl_ctx) {
+		return -1;
+	}
+
 	SSL_CTX_set_options(git__ssl_ctx, ssl_opts);
 	SSL_CTX_set_mode(git__ssl_ctx, SSL_MODE_AUTO_RETRY);
 	SSL_CTX_set_verify(git__ssl_ctx, SSL_VERIFY_NONE, NULL);
