@@ -321,9 +321,7 @@ static int wait_while_ack(gitno_buffer *buf)
 	git_pkt_ack *ack = NULL;
 
 	while (1) {
-		if (pkt) {
-			git_pkt_free(pkt);
-		}
+		git_pkt_free(pkt);
 
 		if ((error = recv_pkt(&pkt, NULL, buf)) < 0)
 			return error;
@@ -342,9 +340,7 @@ static int wait_while_ack(gitno_buffer *buf)
 		}
 	}
 
-	if (pkt) {
-		git_pkt_free(pkt);
-	}
+	git_pkt_free(pkt);
 	return 0;
 }
 
@@ -622,9 +618,8 @@ int git_smart__download_pack(
 			}
 		}
 
-		if (pkt) {
-			git_pkt_free(pkt);
-		}
+		git_pkt_free(pkt);
+
 		if (error < 0)
 			goto done;
 

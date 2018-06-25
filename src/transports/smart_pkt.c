@@ -370,7 +370,7 @@ static int32_t parse_len(const char *line)
 					num[k] = '.';
 				}
 			}
-			
+
 			giterr_set(GITERR_NET, "invalid hex digit in length: '%s'", num);
 			return -1;
 		}
@@ -483,6 +483,9 @@ int git_pkt_parse_line(
 
 void git_pkt_free(git_pkt *pkt)
 {
+	if (pkt == NULL) {
+		return;
+	}
 	if (pkt->type == GIT_PKT_REF) {
 		git_pkt_ref *p = (git_pkt_ref *) pkt;
 		git__free(p->head.name);
