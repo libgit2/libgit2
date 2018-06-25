@@ -29,10 +29,14 @@ static int iterator_compare(const git_index_entry **entries, void *_data)
 	git_oid expected_id;
 	struct iterator_compare_data *data = (struct iterator_compare_data *)_data;
 
-	cl_assert_equal_i(GIT_IDXENTRY_STAGE(head_entry), GIT_IDXENTRY_STAGE(index_entry));
-	cl_assert_equal_oid(&head_entry->id, &index_entry->id);
-	cl_assert_equal_i(head_entry->mode, index_entry->mode);
-	cl_assert_equal_s(head_entry->path, index_entry->path);
+	if (!head_entry || !index_entry) {
+		cl_assert_equal_p(head_entry, index_entry);
+	} else {
+		cl_assert_equal_i(GIT_IDXENTRY_STAGE(head_entry), GIT_IDXENTRY_STAGE(index_entry));
+		cl_assert_equal_oid(&head_entry->id, &index_entry->id);
+		cl_assert_equal_i(head_entry->mode, index_entry->mode);
+		cl_assert_equal_s(head_entry->path, index_entry->path);
+	}
 
 	if (!workdir_entry)
 		return 0;
@@ -202,6 +206,47 @@ void test_apply_workdir__removes_file(void)
 		{ 0100644, "f51658077d85f2264fa179b4d0848268cb3475c3", 0, "asparagus.txt" },
 		{ 0100644, "68f6182f4c85d39e1309d97c7e456156dc9c0096", 0, "beef.txt" },
 		{ 0100644, "4b7c5650008b2e747fe1809eeb5a1dde0e80850a", 0, "bouilli.txt" },
+		{ 0100644, "68af1fc7407fd9addf1701a87eb1c95c7494c598", 0, "oyster.txt" },
+		{ 0100644, "94d2c01087f48213bd157222d54edfefd77c9bba", 0, "veal.txt" },
+	};
+	size_t expected_cnt = sizeof(expected) / sizeof(struct merge_index_entry);
+
+	git_oid_fromstr(&oid, "539bd011c4822c560c1d17cab095006b7a10f707");
+	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
+
+	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
+
+	cl_git_pass(git_reset(repo, (git_object *)commit, GIT_RESET_HARD, NULL));
+	cl_git_pass(git_apply(repo, diff, NULL));
+
+	validate_apply_workdir(repo, expected, expected_cnt);
+
+	git_diff_free(diff);
+	git_commit_free(commit);
+}
+
+void test_apply_workdir__adds_file(void)
+{
+	git_oid oid;
+	git_commit *commit;
+	git_diff *diff;
+
+	const char *diff_file =
+		"diff --git a/newfile.txt b/newfile.txt\n"
+		"new file mode 100644\n"
+		"index 0000000..6370543\n"
+		"--- /dev/null\n"
+		"+++ b/newfile.txt\n"
+		"@@ -0,0 +1,2 @@\n"
+		"+This is a new file!\n"
+		"+Added by a patch.\n";
+
+	struct merge_index_entry expected[] = {
+		{ 0100644, "f51658077d85f2264fa179b4d0848268cb3475c3", 0, "asparagus.txt" },
+		{ 0100644, "68f6182f4c85d39e1309d97c7e456156dc9c0096", 0, "beef.txt" },
+		{ 0100644, "4b7c5650008b2e747fe1809eeb5a1dde0e80850a", 0, "bouilli.txt" },
+		{ 0100644, "c4e6cca3ec6ae0148ed231f97257df8c311e015f", 0, "gravy.txt" },
+		{ 0100644, "6370543fcfedb3e6516ec53b06158f3687dc1447", 0, "newfile.txt" },
 		{ 0100644, "68af1fc7407fd9addf1701a87eb1c95c7494c598", 0, "oyster.txt" },
 		{ 0100644, "94d2c01087f48213bd157222d54edfefd77c9bba", 0, "veal.txt" },
 	};

@@ -407,9 +407,13 @@ static int apply_one(
 	if (delta->status == GIT_DELTA_DELETED)
 		goto done;
 
-	if ((error = git_reader_read(&pre_contents,
-			preimage_reader, delta->old_file.path)) < 0 ||
-		(error = git_apply__patch(&post_contents, &filename, &mode,
+	if (delta->status != GIT_DELTA_ADDED) {
+		if ((error = git_reader_read(&pre_contents,
+		    preimage_reader, delta->old_file.path)) < 0)
+			goto done;
+	}
+
+	if ((error = git_apply__patch(&post_contents, &filename, &mode,
 			pre_contents.ptr, pre_contents.size, patch)) < 0 ||
 		(error = git_blob_create_frombuffer(&blob_id, repo,
 			post_contents.ptr, post_contents.size)) < 0)
