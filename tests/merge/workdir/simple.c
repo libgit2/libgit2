@@ -73,7 +73,7 @@ static git_index *repo_index;
 	  "5c3b68a71fc4fa5d362fd3875e53137c6a5ab7a5" }
 
 
-// Fixture setup and teardown
+/* Fixture setup and teardown */
 void test_merge_workdir_simple__initialize(void)
 {
 	git_config *cfg;

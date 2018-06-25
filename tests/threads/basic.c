@@ -19,7 +19,7 @@ void test_threads_basic__cleanup(void)
 
 void test_threads_basic__cache(void)
 {
-	// run several threads polling the cache at the same time
+	/* run several threads polling the cache at the same time */
 	cl_assert(1 == 1);
 }
 

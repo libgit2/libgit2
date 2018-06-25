@@ -8,7 +8,7 @@ static git_index *repo_index;
 #define TEST_REPO_PATH "mergedrepo"
 #define TEST_INDEX_PATH TEST_REPO_PATH "/.git/index"
 
-// Fixture setup and teardown
+/* Fixture setup and teardown */
 void test_index_stage__initialize(void)
 {
 	repo = cl_git_sandbox_init("mergedrepo");

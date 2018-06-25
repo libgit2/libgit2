@@ -18,7 +18,7 @@ static git_index *repo_index;
 #define TWO_OUR_OID "8f3c06cff9a83757cec40c80bc9bf31a2582bde9"
 #define TWO_THEIR_OID "887b153b165d32409c70163e0f734c090f12f673"
 
-// Fixture setup and teardown
+/* Fixture setup and teardown */
 void test_index_reuc__initialize(void)
 {
 	repo = cl_git_sandbox_init("mergedrepo");

@@ -48,7 +48,7 @@ static void print_progress(const progress_data *pd)
 
 static int sideband_progress(const char *str, int len, void *payload)
 {
-	(void)payload; // unused
+	(void)payload; /* unused */
 
 	printf("remote: %.*s", len, str);
 	fflush(stdout);
@@ -82,15 +82,15 @@ int do_clone(git_repository *repo, int argc, char **argv)
 	const char *path = argv[2];
 	int error;
 
-	(void)repo; // unused
+	(void)repo; /* unused */
 
-	// Validate args
+	/* Validate args */
 	if (argc < 3) {
 		printf ("USAGE: %s <url> <path>\n", argv[0]);
 		return -1;
 	}
 
-	// Set up options
+	/* Set up options */
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 	checkout_opts.progress_cb = checkout_progress;
 	checkout_opts.progress_payload = &pd;
@@ -100,7 +100,7 @@ int do_clone(git_repository *repo, int argc, char **argv)
 	clone_opts.fetch_opts.callbacks.credentials = cred_acquire_cb;
 	clone_opts.fetch_opts.callbacks.payload = &pd;
 
-	// Do the clone
+	/* Do the clone */
 	error = git_clone(&cloned_repo, url, path, &clone_opts);
 	printf("\n");
 	if (error != 0) {

@@ -16,7 +16,7 @@ void test_body(object_data *d, git_rawobj *o);
 
 
 
-// Helpers
+/* Helpers */
 static void remove_object_files(object_data *d)
 {
    cl_git_pass(p_unlink(d->file));
@@ -57,7 +57,7 @@ static void make_odb_dir(void)
 }
 
 
-// Standard test form
+/* Standard test form */
 void test_body(object_data *d, git_rawobj *o) 
 {
    git_odb *db;

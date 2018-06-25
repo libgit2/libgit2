@@ -82,7 +82,7 @@ static bool is_malformed_http_header(const char *http_header)
 	const char *c;
 	int name_len;
 
-	// Disallow \r and \n
+	/* Disallow \r and \n */
 	c = strchr(http_header, '\r');
 	if (c)
 		return true;
@@ -90,7 +90,7 @@ static bool is_malformed_http_header(const char *http_header)
 	if (c)
 		return true;
 
-	// Require a header name followed by :
+	/* Require a header name followed by : */
 	name_len = http_header_name_length(http_header);
 	if (name_len < 1)
 		return true;
@@ -112,7 +112,7 @@ static bool is_forbidden_custom_header(const char *custom_header)
 	unsigned long i;
 	int name_len = http_header_name_length(custom_header);
 
-	// Disallow headers that we set
+	/* Disallow headers that we set */
 	for (i = 0; i < ARRAY_SIZE(forbidden_custom_headers); i++)
 		if (strncmp(forbidden_custom_headers[i], custom_header, name_len) == 0)
 			return true;

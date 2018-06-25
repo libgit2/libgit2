@@ -59,7 +59,7 @@ void test_commit_signature__angle_brackets_in_email_are_not_supported(void)
 
 void test_commit_signature__create_empties(void)
 {
-   // can not create a signature with empty name or email
+	/* can not create a signature with empty name or email */
 	cl_git_pass(try_build_signature("nulltoken", "emeric.fermas@gmail.com", 1234567890, 60));
 
 	cl_git_fail(try_build_signature("", "emeric.fermas@gmail.com", 1234567890, 60));
@@ -70,19 +70,19 @@ void test_commit_signature__create_empties(void)
 
 void test_commit_signature__create_one_char(void)
 {
-   // creating a one character signature
+	/* creating a one character signature */
 	assert_name_and_email("x", "foo@bar.baz", "x", "foo@bar.baz");
 }
 
 void test_commit_signature__create_two_char(void)
 {
-   // creating a two character signature
+	/* creating a two character signature */
 	assert_name_and_email("xx", "foo@bar.baz", "xx", "foo@bar.baz");
 }
 
 void test_commit_signature__create_zero_char(void)
 {
-   // creating a zero character signature
+	/* creating a zero character signature */
 	git_signature *sign;
 	cl_git_fail(git_signature_new(&sign, "", "x@y.z", 1234567890, 60));
 	cl_assert(sign == NULL);

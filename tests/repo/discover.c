@@ -58,7 +58,7 @@ static void write_file(const char *path, const char *content)
 	cl_git_pass(error);
 }
 
-//no check is performed on ceiling_dirs length, so be sure it's long enough
+/*no check is performed on ceiling_dirs length, so be sure it's long enough */
 static void append_ceiling_dir(git_buf *ceiling_dirs, const char *path)
 {
 	git_buf pretty_path = GIT_BUF_INIT;

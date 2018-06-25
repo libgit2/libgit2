@@ -365,7 +365,7 @@ void test_config_write__add_value_at_specific_level(void)
 	int64_t l, expected = +9223372036854775803;
 	git_buf buf = GIT_BUF_INIT;
 
-	// open config15 as global level config file
+	/* open config15 as global level config file */
 	cl_git_pass(git_config_new(&cfg));
 	cl_git_pass(git_config_add_file_ondisk(cfg, "config9",
 		GIT_CONFIG_LEVEL_LOCAL, NULL, 0));
@@ -381,7 +381,7 @@ void test_config_write__add_value_at_specific_level(void)
 	git_config_free(cfg_specific);
 	git_config_free(cfg);
 
-	// open config15 as local level config file
+	/* open config15 as local level config file */
 	cl_git_pass(git_config_open_ondisk(&cfg, "config15"));
 
 	cl_git_pass(git_config_get_int32(&i, cfg, "core.int32global"));

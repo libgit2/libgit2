@@ -247,7 +247,7 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 
 			if ((tz_start[0] != '-' && tz_start[0] != '+') ||
 				git__strtol32(&offset, tz_start + 1, &tz_end, 10) < 0) {
-				//malformed timezone, just assume it's zero
+				/* malformed timezone, just assume it's zero */
 				offset = 0;
 			}
 

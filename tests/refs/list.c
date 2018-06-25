@@ -22,7 +22,7 @@ void test_refs_list__cleanup(void)
 
 void test_refs_list__all(void)
 {
-   // try to list all the references in our test repo
+	/* try to list all the references in our test repo */
 	git_strarray ref_list;
 
 	cl_git_pass(git_reference_list(&ref_list, g_repo));

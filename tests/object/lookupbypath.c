@@ -42,7 +42,7 @@ void test_object_lookupbypath__errors(void)
 {
 	cl_assert_equal_i(GIT_EINVALIDSPEC,
 			git_object_lookup_bypath(&g_actualobject, (git_object*)g_root_tree,
-				"subdir/subdir_test2.txt", GIT_OBJ_TREE)); // It's not a tree
+				"subdir/subdir_test2.txt", GIT_OBJ_TREE)); /* It's not a tree */
 	cl_assert_equal_i(GIT_ENOTFOUND,
 			git_object_lookup_bypath(&g_actualobject, (git_object*)g_root_tree,
 				"file/doesnt/exist", GIT_OBJ_ANY));

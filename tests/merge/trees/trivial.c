@@ -13,7 +13,7 @@ static git_repository *repo;
 #define TEST_INDEX_PATH TEST_REPO_PATH "/.git/index"
 
 
-// Fixture setup and teardown
+/* Fixture setup and teardown */
 void test_merge_trees_trivial__initialize(void)
 {
 	repo = cl_git_sandbox_init(TEST_REPO_PATH);

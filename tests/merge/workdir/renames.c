@@ -14,7 +14,7 @@ static git_repository *repo;
 #define BRANCH_RENAME_OURS					"rename_conflict_ours"
 #define BRANCH_RENAME_THEIRS				"rename_conflict_theirs"
 
-// Fixture setup and teardown
+/* Fixture setup and teardown */
 void test_merge_workdir_renames__initialize(void)
 {
 	git_config *cfg;

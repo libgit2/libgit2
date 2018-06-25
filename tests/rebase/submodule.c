@@ -10,7 +10,7 @@
 static git_repository *repo;
 static git_signature *signature;
 
-// Fixture setup and teardown
+/* Fixture setup and teardown */
 void test_rebase_submodule__initialize(void)
 {
 	git_index *index;

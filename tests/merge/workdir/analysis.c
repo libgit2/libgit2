@@ -24,7 +24,7 @@ static git_index *repo_index;
 #define NOFASTFORWARD_ID		"7cb63eed597130ba4abb87b3e544b85021905520"
 
 
-// Fixture setup and teardown
+/* Fixture setup and teardown */
 void test_merge_workdir_analysis__initialize(void)
 {
 	repo = cl_git_sandbox_init(TEST_REPO_PATH);

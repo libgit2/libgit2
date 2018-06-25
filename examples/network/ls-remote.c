@@ -12,7 +12,7 @@ static int use_remote(git_repository *repo, char *name)
 	size_t refs_len, i;
 	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
 
-	// Find the remote by name
+	/* Find the remote by name */
 	error = git_remote_lookup(&remote, repo, name);
 	if (error < 0) {
 		error = git_remote_create_anonymous(&remote, repo, name);
