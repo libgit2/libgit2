@@ -289,51 +289,44 @@ void test_apply_workdir__adds_file(void)
 	git_diff_free(diff);
 }
 
-void test_apply_workdir__leaves_index_unchanged(void)
+void test_apply_workdir__modified_index_with_unmodified_workdir_is_ok(void)
 {
 	git_index *index;
+	git_index_entry idx_entry = {{0}};
 	git_diff *diff;
 
-	const char *diff_file =
-		DIFF_MODIFY_TWO_FILES
-		DIFF_DELETE_FILE
-		DIFF_ADD_FILE;
+	const char *diff_file = DIFF_MODIFY_TWO_FILES;
 
 	struct merge_index_entry index_expected[] = {
-		{ 0100644, "f51658077d85f2264fa179b4d0848268cb3475c3", 0, "asparagus.txt" },
+		{ 0100644, "68f6182f4c85d39e1309d97c7e456156dc9c0096", 0, "beef.txt" },
 		{ 0100644, "4b7c5650008b2e747fe1809eeb5a1dde0e80850a", 0, "bouilli.txt" },
 		{ 0100644, "c4e6cca3ec6ae0148ed231f97257df8c311e015f", 0, "gravy.txt" },
-		{ 0100644, "750aa35f6336925a627f1366d2b6b533100c38a0", 0, "new_in_index.txt" },
-		{ 0100644, "b558b69bdceadc9b50a6a785e4800172d74ab863", 0, "oyster.txt" },
-		{ 0100644, "94d2c01087f48213bd157222d54edfefd77c9bba", 0, "veal.txt" }
+		{ 0100644, "68af1fc7407fd9addf1701a87eb1c95c7494c598", 0, "oyster.txt" },
+		{ 0100644, "ffb36e513f5fdf8a6ba850a20142676a2ac4807d", 0, "veal.txt" }
 	};
 	size_t index_expected_cnt = sizeof(index_expected) /
 		sizeof(struct merge_index_entry);
 
 	struct merge_index_entry workdir_expected[] = {
 		{ 0100644, "ffb36e513f5fdf8a6ba850a20142676a2ac4807d", 0, "asparagus.txt" },
+		{ 0100644, "68f6182f4c85d39e1309d97c7e456156dc9c0096", 0, "beef.txt" },
 		{ 0100644, "4b7c5650008b2e747fe1809eeb5a1dde0e80850a", 0, "bouilli.txt" },
-		{ 0100644, "750aa35f6336925a627f1366d2b6b533100c38a0", 0, "new_in_index.txt" },
-		{ 0100644, "6370543fcfedb3e6516ec53b06158f3687dc1447", 0, "newfile.txt" },
-		{ 0100644, "b558b69bdceadc9b50a6a785e4800172d74ab863", 0, "oyster.txt" },
+		{ 0100644, "c4e6cca3ec6ae0148ed231f97257df8c311e015f", 0, "gravy.txt" },
+		{ 0100644, "68af1fc7407fd9addf1701a87eb1c95c7494c598", 0, "oyster.txt" },
 		{ 0100644, "a7b066537e6be7109abfe4ff97b675d4e077da20", 0, "veal.txt" },
 	};
 	size_t workdir_expected_cnt = sizeof(workdir_expected) /
 		sizeof(struct merge_index_entry);
 
-	/* mutate the index and workdir */
+	/* mutate the index and leave the workdir matching HEAD */
 	git_repository_index(&index, repo);
 
-	cl_git_rmfile("merge-recursive/beef.txt");
-	cl_git_pass(git_index_remove_bypath(index, "beef.txt"));
+	idx_entry.mode = 0100644;
+	idx_entry.path = "veal.txt";
+	cl_git_pass(git_oid_fromstr(&idx_entry.id, "ffb36e513f5fdf8a6ba850a20142676a2ac4807d"));
 
-	cl_git_mkfile("merge-recursive/new_in_index.txt",
-	    "Hello; this is new in the index.\n");
-	cl_git_pass(git_index_add_bypath(index, "new_in_index.txt"));
-
-	cl_git_rewritefile("merge-recursive/oyster.txt",
-	    "Hello; this is now changed in the index.\n");
-	cl_git_pass(git_index_add_bypath(index, "oyster.txt"));
+	cl_git_pass(git_index_add(index, &idx_entry));
+	cl_git_pass(git_index_remove(index, "asparagus.txt", 0));
 	cl_git_pass(git_index_write(index));
 
 	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
