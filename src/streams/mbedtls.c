@@ -26,11 +26,22 @@
 #define GIT_DEFAULT_CERT_LOCATION NULL
 #endif
 
+/* Work around C90-conformance issues */
+#if defined(_MSC_VER)
+# define inline __inline
+#elif defined(__GNUC__)
+# define inline __inline__
+#else
+# define inline
+#endif
+
 #include <mbedtls/config.h>
 #include <mbedtls/ssl.h>
 #include <mbedtls/error.h>
 #include <mbedtls/entropy.h>
 #include <mbedtls/ctr_drbg.h>
+
+#undef inline
 
 mbedtls_ssl_config *git__ssl_conf;
 mbedtls_entropy_context *mbedtls_entropy;
