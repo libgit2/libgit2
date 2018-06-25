@@ -5,9 +5,62 @@ static git_repository *repo;
 
 #define TEST_REPO_PATH "merge-recursive"
 
+#define DIFF_MODIFY_TWO_FILES \
+	"diff --git a/asparagus.txt b/asparagus.txt\n" \
+	"index f516580..ffb36e5 100644\n" \
+	"--- a/asparagus.txt\n" \
+	"+++ b/asparagus.txt\n" \
+	"@@ -1 +1 @@\n" \
+	"-ASPARAGUS SOUP!\n" \
+	"+ASPARAGUS SOUP.\n" \
+	"diff --git a/veal.txt b/veal.txt\n" \
+	"index 94d2c01..a7b0665 100644\n" \
+	"--- a/veal.txt\n" \
+	"+++ b/veal.txt\n" \
+	"@@ -1 +1 @@\n" \
+	"-VEAL SOUP!\n" \
+	"+VEAL SOUP.\n" \
+	"@@ -7 +7 @@ occasionally, then put into it a shin of veal, let it boil two hours\n" \
+	"-longer. take out the slices of ham, and skim off the grease if any\n" \
+	"+longer; take out the slices of ham, and skim off the grease if any\n"
+
+#define DIFF_DELETE_FILE \
+	"diff --git a/gravy.txt b/gravy.txt\n" \
+	"deleted file mode 100644\n" \
+	"index c4e6cca..0000000\n" \
+	"--- a/gravy.txt\n" \
+	"+++ /dev/null\n" \
+	"@@ -1,8 +0,0 @@\n" \
+	"-GRAVY SOUP.\n" \
+	"-\n" \
+	"-Get eight pounds of coarse lean beef--wash it clean and lay it in your\n" \
+	"-pot, put in the same ingredients as for the shin soup, with the same\n" \
+	"-quantity of water, and follow the process directed for that. Strain the\n" \
+	"-soup through a sieve, and serve it up clear, with nothing more than\n" \
+	"-toasted bread in it; two table-spoonsful of mushroom catsup will add a\n" \
+	"-fine flavour to the soup.\n"
+
+#define DIFF_ADD_FILE \
+	"diff --git a/newfile.txt b/newfile.txt\n" \
+	"new file mode 100644\n" \
+	"index 0000000..6370543\n" \
+	"--- /dev/null\n" \
+	"+++ b/newfile.txt\n" \
+	"@@ -0,0 +1,2 @@\n" \
+	"+This is a new file!\n" \
+	"+Added by a patch.\n"
+
 void test_apply_workdir__initialize(void)
 {
+	git_oid oid;
+	git_commit *commit;
+
 	repo = cl_git_sandbox_init(TEST_REPO_PATH);
+
+	git_oid_fromstr(&oid, "539bd011c4822c560c1d17cab095006b7a10f707");
+	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
+	cl_git_pass(git_reset(repo, (git_object *)commit, GIT_RESET_HARD, NULL));
+	git_commit_free(commit);
 }
 
 void test_apply_workdir__cleanup(void)
@@ -130,7 +183,6 @@ void test_apply_workdir__generated_diff(void)
 
 	cl_git_pass(git_diff_tree_to_tree(&diff, repo, a_tree, b_tree, &opts));
 
-    cl_git_pass(git_reset(repo, (git_object *)a_commit, GIT_RESET_HARD, NULL));
 	cl_git_pass(git_apply(repo, diff, NULL));
 
 	validate_index_unchanged(repo);
@@ -145,28 +197,7 @@ void test_apply_workdir__generated_diff(void)
 
 void test_apply_workdir__parsed_diff(void)
 {
-	git_oid oid;
-	git_commit *commit;
 	git_diff *diff;
-
-	const char *diff_file =
-		"diff --git a/asparagus.txt b/asparagus.txt\n"
-		"index f516580..ffb36e5 100644\n"
-		"--- a/asparagus.txt\n"
-		"+++ b/asparagus.txt\n"
-		"@@ -1 +1 @@\n"
-		"-ASPARAGUS SOUP!\n"
-		"+ASPARAGUS SOUP.\n"
-		"diff --git a/veal.txt b/veal.txt\n"
-		"index 94d2c01..a7b0665 100644\n"
-		"--- a/veal.txt\n"
-		"+++ b/veal.txt\n"
-		"@@ -1 +1 @@\n"
-		"-VEAL SOUP!\n"
-		"+VEAL SOUP.\n"
-		"@@ -7 +7 @@ occasionally, then put into it a shin of veal, let it boil two hours\n"
-		"-longer. take out the slices of ham, and skim off the grease if any\n"
-		"+longer; take out the slices of ham, and skim off the grease if any\n";
 
 	struct merge_index_entry workdir_expected[] = {
 		{ 0100644, "ffb36e513f5fdf8a6ba850a20142676a2ac4807d", 0, "asparagus.txt" },
@@ -179,42 +210,19 @@ void test_apply_workdir__parsed_diff(void)
 	size_t workdir_expected_cnt = sizeof(workdir_expected) /
 	    sizeof(struct merge_index_entry);
 
-	git_oid_fromstr(&oid, "539bd011c4822c560c1d17cab095006b7a10f707");
-	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
-
-	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
-
-	cl_git_pass(git_reset(repo, (git_object *)commit, GIT_RESET_HARD, NULL));
+	cl_git_pass(git_diff_from_buffer(&diff,
+		DIFF_MODIFY_TWO_FILES, strlen(DIFF_MODIFY_TWO_FILES)));
 	cl_git_pass(git_apply(repo, diff, NULL));
 
 	validate_index_unchanged(repo);
 	validate_apply_workdir(repo, workdir_expected, workdir_expected_cnt);
 
 	git_diff_free(diff);
-	git_commit_free(commit);
 }
 
 void test_apply_workdir__removes_file(void)
 {
-	git_oid oid;
-	git_commit *commit;
 	git_diff *diff;
-
-	const char *diff_file =
-		"diff --git a/gravy.txt b/gravy.txt\n"
-		"deleted file mode 100644\n"
-		"index c4e6cca..0000000\n"
-		"--- a/gravy.txt\n"
-		"+++ /dev/null\n"
-		"@@ -1,8 +0,0 @@\n"
-		"-GRAVY SOUP.\n"
-		"-\n"
-		"-Get eight pounds of coarse lean beef--wash it clean and lay it in your\n"
-		"-pot, put in the same ingredients as for the shin soup, with the same\n"
-		"-quantity of water, and follow the process directed for that. Strain the\n"
-		"-soup through a sieve, and serve it up clear, with nothing more than\n"
-		"-toasted bread in it; two table-spoonsful of mushroom catsup will add a\n"
-		"-fine flavour to the soup.\n";
 
 	struct merge_index_entry workdir_expected[] = {
 		{ 0100644, "f51658077d85f2264fa179b4d0848268cb3475c3", 0, "asparagus.txt" },
@@ -226,36 +234,19 @@ void test_apply_workdir__removes_file(void)
 	size_t workdir_expected_cnt = sizeof(workdir_expected) /
 	    sizeof(struct merge_index_entry);
 
-	git_oid_fromstr(&oid, "539bd011c4822c560c1d17cab095006b7a10f707");
-	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
-
-	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
-
-	cl_git_pass(git_reset(repo, (git_object *)commit, GIT_RESET_HARD, NULL));
+	cl_git_pass(git_diff_from_buffer(&diff, DIFF_DELETE_FILE,
+		strlen(DIFF_DELETE_FILE)));
 	cl_git_pass(git_apply(repo, diff, NULL));
 
 	validate_index_unchanged(repo);
 	validate_apply_workdir(repo, workdir_expected, workdir_expected_cnt);
 
 	git_diff_free(diff);
-	git_commit_free(commit);
 }
 
 void test_apply_workdir__adds_file(void)
 {
-	git_oid oid;
-	git_commit *commit;
 	git_diff *diff;
-
-	const char *diff_file =
-		"diff --git a/newfile.txt b/newfile.txt\n"
-		"new file mode 100644\n"
-		"index 0000000..6370543\n"
-		"--- /dev/null\n"
-		"+++ b/newfile.txt\n"
-		"@@ -0,0 +1,2 @@\n"
-		"+This is a new file!\n"
-		"+Added by a patch.\n";
 
 	struct merge_index_entry workdir_expected[] = {
 		{ 0100644, "f51658077d85f2264fa179b4d0848268cb3475c3", 0, "asparagus.txt" },
@@ -269,17 +260,12 @@ void test_apply_workdir__adds_file(void)
 	size_t workdir_expected_cnt = sizeof(workdir_expected) /
 	    sizeof(struct merge_index_entry);
 
-	git_oid_fromstr(&oid, "539bd011c4822c560c1d17cab095006b7a10f707");
-	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
-
-	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
-
-	cl_git_pass(git_reset(repo, (git_object *)commit, GIT_RESET_HARD, NULL));
+	cl_git_pass(git_diff_from_buffer(&diff,
+		DIFF_ADD_FILE, strlen(DIFF_ADD_FILE)));
 	cl_git_pass(git_apply(repo, diff, NULL));
 
 	validate_index_unchanged(repo);
 	validate_apply_workdir(repo, workdir_expected, workdir_expected_cnt);
 
 	git_diff_free(diff);
-	git_commit_free(commit);
 }
