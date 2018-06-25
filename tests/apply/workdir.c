@@ -34,6 +34,9 @@ static int iterator_compare(const git_index_entry **entries, void *_data)
 	cl_assert_equal_i(head_entry->mode, index_entry->mode);
 	cl_assert_equal_s(head_entry->path, index_entry->path);
 
+	if (!workdir_entry)
+		return 0;
+
 	cl_assert_equal_i(GIT_IDXENTRY_STAGE(workdir_entry), data->expected[data->idx].stage);
 	cl_git_pass(git_oid_fromstr(&expected_id, data->expected[data->idx].oid_str));
 	cl_assert_equal_oid(&workdir_entry->id, &expected_id);
@@ -44,6 +47,7 @@ static int iterator_compare(const git_index_entry **entries, void *_data)
 		return -1;
 
 	data->idx++;
+
 	return 0;
 }
 
@@ -155,6 +159,51 @@ void test_apply_workdir__parsed_diff(void)
 		{ 0100644, "c4e6cca3ec6ae0148ed231f97257df8c311e015f", 0, "gravy.txt" },
 		{ 0100644, "68af1fc7407fd9addf1701a87eb1c95c7494c598", 0, "oyster.txt" },
 		{ 0100644, "a7b066537e6be7109abfe4ff97b675d4e077da20", 0, "veal.txt" },
+	};
+	size_t expected_cnt = sizeof(expected) / sizeof(struct merge_index_entry);
+
+	git_oid_fromstr(&oid, "539bd011c4822c560c1d17cab095006b7a10f707");
+	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
+
+	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
+
+	cl_git_pass(git_reset(repo, (git_object *)commit, GIT_RESET_HARD, NULL));
+	cl_git_pass(git_apply(repo, diff, NULL));
+
+	validate_apply_workdir(repo, expected, expected_cnt);
+
+	git_diff_free(diff);
+	git_commit_free(commit);
+}
+
+void test_apply_workdir__removes_file(void)
+{
+	git_oid oid;
+	git_commit *commit;
+	git_diff *diff;
+
+	const char *diff_file =
+		"diff --git a/gravy.txt b/gravy.txt\n"
+		"deleted file mode 100644\n"
+		"index c4e6cca..0000000\n"
+		"--- a/gravy.txt\n"
+		"+++ /dev/null\n"
+		"@@ -1,8 +0,0 @@\n"
+		"-GRAVY SOUP.\n"
+		"-\n"
+		"-Get eight pounds of coarse lean beef--wash it clean and lay it in your\n"
+		"-pot, put in the same ingredients as for the shin soup, with the same\n"
+		"-quantity of water, and follow the process directed for that. Strain the\n"
+		"-soup through a sieve, and serve it up clear, with nothing more than\n"
+		"-toasted bread in it; two table-spoonsful of mushroom catsup will add a\n"
+		"-fine flavour to the soup.\n";
+
+	struct merge_index_entry expected[] = {
+		{ 0100644, "f51658077d85f2264fa179b4d0848268cb3475c3", 0, "asparagus.txt" },
+		{ 0100644, "68f6182f4c85d39e1309d97c7e456156dc9c0096", 0, "beef.txt" },
+		{ 0100644, "4b7c5650008b2e747fe1809eeb5a1dde0e80850a", 0, "bouilli.txt" },
+		{ 0100644, "68af1fc7407fd9addf1701a87eb1c95c7494c598", 0, "oyster.txt" },
+		{ 0100644, "94d2c01087f48213bd157222d54edfefd77c9bba", 0, "veal.txt" },
 	};
 	size_t expected_cnt = sizeof(expected) / sizeof(struct merge_index_entry);
 
