@@ -24,7 +24,7 @@
 #include "reader.h"
 
 #define apply_err(...) \
-	( giterr_set(GITERR_PATCH, __VA_ARGS__), -1 )
+	( giterr_set(GITERR_PATCH, __VA_ARGS__), GIT_EAPPLYFAIL )
 
 typedef struct {
 	/* The lines that we allocate ourself are allocated out of the pool.
