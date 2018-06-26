@@ -71,7 +71,7 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 		}
 
 		if (pkt->type == GIT_PKT_PACK) {
-			giterr_set(GITERR_NET, "Unexpected packfile");
+			giterr_set(GITERR_NET, "unexpected packfile");
 			git__free(pkt);
 			return -1;
 		}
