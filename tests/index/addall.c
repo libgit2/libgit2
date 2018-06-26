@@ -173,6 +173,7 @@ void test_index_addall__repo_lifecycle(void)
 	paths.count   = 1;
 
 	cl_git_pass(git_index_add_all(index, &paths, 0, NULL, NULL));
+	cl_git_pass(git_index_write(index));
 	check_stat_data(index, TEST_DIR "/file.bar", true);
 	check_status(g_repo, 1, 0, 0, 1, 0, 0, 1, 0);
 
@@ -190,6 +191,7 @@ void test_index_addall__repo_lifecycle(void)
 	check_status(g_repo, 1, 0, 0, 4, 0, 0, 1, 0);
 
 	cl_git_pass(git_index_add_all(index, &paths, 0, NULL, NULL));
+	cl_git_pass(git_index_write(index));
 	check_stat_data(index, TEST_DIR "/file.zzz", true);
 	check_status(g_repo, 2, 0, 0, 3, 0, 0, 1, 0);
 
@@ -212,17 +214,20 @@ void test_index_addall__repo_lifecycle(void)
 	/* attempt to add an ignored file - does nothing */
 	strs[0] = "file.foo";
 	cl_git_pass(git_index_add_all(index, &paths, 0, NULL, NULL));
+	cl_git_pass(git_index_write(index));
 	check_status(g_repo, 0, 0, 0, 3, 0, 0, 1, 0);
 
 	/* add with check - should generate error */
 	error = git_index_add_all(
 		index, &paths, GIT_INDEX_ADD_CHECK_PATHSPEC, NULL, NULL);
 	cl_assert_equal_i(GIT_EINVALIDSPEC, error);
+	cl_git_pass(git_index_write(index));
 	check_status(g_repo, 0, 0, 0, 3, 0, 0, 1, 0);
 
 	/* add with force - should allow */
 	cl_git_pass(git_index_add_all(
 		index, &paths, GIT_INDEX_ADD_FORCE, NULL, NULL));
+	cl_git_pass(git_index_write(index));
 	check_stat_data(index, TEST_DIR "/file.foo", true);
 	check_status(g_repo, 1, 0, 0, 3, 0, 0, 0, 0);
 
@@ -232,6 +237,7 @@ void test_index_addall__repo_lifecycle(void)
 	check_status(g_repo, 1, 0, 0, 3, 0, 1, 0, 0);
 
 	cl_git_pass(git_index_add_all(index, &paths, 0, NULL, NULL));
+	cl_git_pass(git_index_write(index));
 	check_stat_data(index, TEST_DIR "/file.foo", true);
 	check_status(g_repo, 1, 0, 0, 3, 0, 0, 0, 0);
 
@@ -265,6 +271,7 @@ void test_index_addall__repo_lifecycle(void)
 
 	strs[0] = "*";
 	cl_git_pass(git_index_add_all(index, &paths, 0, NULL, NULL));
+	cl_git_pass(git_index_write(index));
 	check_status(g_repo, 3, 1, 0, 0, 0, 0, 0, 0);
 
 	/* must be able to remove at any position while still updating other files */
@@ -294,6 +301,7 @@ void test_index_addall__files_in_folders(void)
 	cl_git_pass(git_repository_index(&index, g_repo));
 
 	cl_git_pass(git_index_add_all(index, NULL, 0, NULL, NULL));
+	cl_git_pass(git_index_write(index));
 	check_stat_data(index, TEST_DIR "/file.bar", true);
 	check_status(g_repo, 2, 0, 0, 0, 0, 0, 1, 0);
 
@@ -302,6 +310,7 @@ void test_index_addall__files_in_folders(void)
 	check_status(g_repo, 2, 0, 0, 1, 0, 0, 1, 0);
 
 	cl_git_pass(git_index_add_all(index, NULL, 0, NULL, NULL));
+	cl_git_pass(git_index_write(index));
 	check_status(g_repo, 3, 0, 0, 0, 0, 0, 1, 0);
 
 	git_index_free(index);
@@ -319,6 +328,7 @@ void test_index_addall__hidden_files(void)
 	cl_git_pass(git_repository_index(&index, g_repo));
 
 	cl_git_pass(git_index_add_all(index, NULL, 0, NULL, NULL));
+	cl_git_pass(git_index_write(index));
 	check_stat_data(index, TEST_DIR "/file.bar", true);
 	check_status(g_repo, 2, 0, 0, 0, 0, 0, 1, 0);
 
@@ -335,6 +345,7 @@ void test_index_addall__hidden_files(void)
 	check_status(g_repo, 2, 0, 0, 3, 0, 0, 1, 0);
 
 	cl_git_pass(git_index_add_all(index, NULL, 0, NULL, NULL));
+	cl_git_pass(git_index_write(index));
 	check_stat_data(index, TEST_DIR "/file.bar", true);
 	check_status(g_repo, 5, 0, 0, 0, 0, 0, 1, 0);
 
@@ -373,6 +384,7 @@ void test_index_addall__callback_filtering(void)
 
 	cl_git_pass(
 		git_index_add_all(index, NULL, 0, addall_match_prefix, "file."));
+	cl_git_pass(git_index_write(index));
 	check_stat_data(index, TEST_DIR "/file.bar", true);
 	check_status(g_repo, 1, 0, 0, 1, 0, 0, 1, 0);
 
@@ -386,11 +398,13 @@ void test_index_addall__callback_filtering(void)
 
 	cl_git_pass(
 		git_index_add_all(index, NULL, 0, addall_match_prefix, "other"));
+	cl_git_pass(git_index_write(index));
 	check_stat_data(index, TEST_DIR "/other.zzz", true);
 	check_status(g_repo, 2, 0, 0, 3, 0, 0, 1, 0);
 
 	cl_git_pass(
 		git_index_add_all(index, NULL, 0, addall_match_suffix, ".zzz"));
+	cl_git_pass(git_index_write(index));
 	check_status(g_repo, 4, 0, 0, 1, 0, 0, 1, 0);
 
 	cl_git_pass(
@@ -407,6 +421,7 @@ void test_index_addall__callback_filtering(void)
 
 	cl_git_pass(
 		git_index_add_all(index, NULL, 0, addall_match_suffix, ".zzz"));
+	cl_git_pass(git_index_write(index));
 	check_status(g_repo, 5, 0, 0, 0, 0, 0, 1, 0);
 
 	cl_must_pass(p_unlink(TEST_DIR "/file.zzz"));
@@ -446,6 +461,7 @@ void test_index_addall__adds_conflicts(void)
 	check_status(g_repo, 0, 1, 2, 0, 0, 0, 0, 1);
 
 	cl_git_pass(git_index_add_all(index, NULL, 0, NULL, NULL));
+	cl_git_pass(git_index_write(index));
 	check_status(g_repo, 0, 1, 3, 0, 0, 0, 0, 0);
 
 	git_annotated_commit_free(annotated);
@@ -473,6 +489,7 @@ void test_index_addall__removes_deleted_conflicted_files(void)
 	cl_git_rmfile("merge-resolve/conflicting.txt");
 
 	cl_git_pass(git_index_add_all(index, NULL, 0, NULL, NULL));
+	cl_git_pass(git_index_write(index));
 	check_status(g_repo, 0, 2, 2, 0, 0, 0, 0, 0);
 
 	git_annotated_commit_free(annotated);
