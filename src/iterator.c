@@ -2298,6 +2298,35 @@ void git_iterator_free(git_iterator *iter)
 	git__free(iter);
 }
 
+int git_iterator_foreach(
+	git_iterator *iterator,
+	git_iterator_foreach_cb cb,
+	void *data)
+{
+	const git_index_entry *iterator_item;
+	int error = 0;
+
+	if ((error = git_iterator_current(&iterator_item, iterator)) < 0)
+		goto done;
+
+	if ((error = cb(iterator_item, data)) != 0)
+		goto done;
+
+	while (true) {
+		if ((error = git_iterator_advance(&iterator_item, iterator)) < 0)
+			goto done;
+
+		if ((error = cb(iterator_item, data)) != 0)
+			goto done;
+	}
+
+done:
+	if (error == GIT_ITEROVER)
+		error = 0;
+
+	return error;
+}
+
 int git_iterator_walk(
 	git_iterator **iterators,
 	size_t cnt,

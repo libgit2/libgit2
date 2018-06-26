@@ -291,6 +291,19 @@ extern int git_iterator_current_workdir_path(
  */
 extern git_index *git_iterator_index(git_iterator *iter);
 
+typedef int (*git_iterator_foreach_cb)(
+	const git_index_entry *entry,
+	void *data);
+
+/**
+ * Walk the given iterator and invoke the callback for each path
+ * contained in the iterator.
+ */
+extern int git_iterator_foreach(
+	git_iterator *iterator,
+	git_iterator_foreach_cb cb,
+	void *data);
+
 typedef int (*git_iterator_walk_cb)(
 	const git_index_entry **entries,
 	void *data);
