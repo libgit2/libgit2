@@ -197,6 +197,31 @@ void test_revwalk_basic__push_head(void)
 	cl_assert_equal_i(i, 7);
 }
 
+void test_revwalk_basic__sorted_after_reset(void)
+{
+	int i = 0;
+	git_oid oid;
+
+	revwalk_basic_setup_walk(NULL);
+
+	git_oid_fromstr(&oid, commit_head);
+
+	/* push, sort, and test the walk */
+	cl_git_pass(git_revwalk_push(_walk, &oid));
+	git_revwalk_sorting(_walk, GIT_SORT_TIME);
+
+	cl_git_pass(test_walk_only(_walk, commit_sorting_time, 2));
+
+	/* reset, push, and test again - we should see all entries */
+	git_revwalk_reset(_walk);
+	cl_git_pass(git_revwalk_push(_walk, &oid));
+
+	while (git_revwalk_next(&oid, _walk) == 0)
+		i++;
+
+	cl_assert_equal_i(i, commit_count);
+}
+
 void test_revwalk_basic__push_head_hide_ref(void)
 {
 	int i = 0;
