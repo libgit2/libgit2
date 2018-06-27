@@ -167,8 +167,10 @@ int git_smart__update_heads(transport_smart *t, git_vector *symrefs)
 			git_vector_foreach(symrefs, j, spec) {
 				git_buf_clear(&buf);
 				if (git_refspec_src_matches(spec, ref->head.name) &&
-				    !(error = git_refspec_transform(&buf, spec, ref->head.name)))
+				    !(error = git_refspec_transform(&buf, spec, ref->head.name))) {
+					git__free(ref->head.symref_target);
 					ref->head.symref_target = git_buf_detach(&buf);
+				}
 			}
 
 			git_buf_dispose(&buf);
@@ -277,8 +279,10 @@ static int git_smart__connect(
 		return error;
 
 	/* Detect capabilities */
-	if (git_smart__detect_caps(first, &t->caps, &symrefs) < 0)
+	if (git_smart__detect_caps(first, &t->caps, &symrefs) < 0) {
+		free_symrefs(&symrefs);
 		return -1;
+	}
 
 	/* If the only ref in the list is capabilities^{} with OID_ZERO, remove it */
 	if (1 == t->refs.length && !strcmp(first->head.name, "capabilities^{}") &&
