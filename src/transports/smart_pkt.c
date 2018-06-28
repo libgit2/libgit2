@@ -402,7 +402,17 @@ int git_pkt_parse_line(
 
 	len = parse_len(line);
 	if (len < 0) {
-		return GIT_ERROR;
+		/*
+		 * If we fail to parse the length, it might be because the
+		 * server is trying to send us the packfile already.
+		 */
+		if (bufflen >= 4 && !git__prefixcmp(line, "PACK")) {
+			giterr_set(GITERR_NET, "unexpected pack file");
+		} else {
+			giterr_set(GITERR_NET, "bad packet length");
+		}
+
+		return -1;
 	}
 
 	/*
