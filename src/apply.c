@@ -558,11 +558,22 @@ int git_apply(
 		if ((error = apply_one(repo, pre_reader, contents, diff, i)) < 0)
 			goto done;
 
+		/*
+		 * If we're checking out, then we need to keep track of all
+		 * affected paths (removes and adds) so that we can give them
+		 * to checkout to let it handle things.  If we're only modifying
+		 * the index, we only care about _removed_ paths:  we'll simply
+		 * overwrite the new paths.
+		 */
 		if (do_checkout) {
 			git_vector_insert(&paths, (void *)delta->old_file.path);
 
 			if (strcmp(delta->old_file.path, delta->new_file.path))
 				git_vector_insert(&paths, (void *)delta->new_file.path);
+		} else {
+			if (delta->status == GIT_DELTA_DELETED ||
+			    delta->status == GIT_DELTA_RENAMED)
+				git_vector_insert(&paths, (void *)delta->old_file.path);
 		}
 	}
 
@@ -579,7 +590,15 @@ int git_apply(
 		error = git_checkout_index(repo, contents, &checkout_opts);
 	} else {
 		const git_index_entry *entry;
+		const char *path;
 
+		/* Remove all the deleted paths from the index.  */
+		git_vector_foreach(&paths, i, path) {
+			if ((error = git_index_remove(repo_index, path, 0)) < 0)
+				goto done;
+		}
+
+		/* Then add the changes back to the index. */
 		for (i = 0; i < git_index_entrycount(contents); i++) {
 			entry = git_index_get_byindex(contents, i);
 
