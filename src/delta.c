@@ -568,15 +568,17 @@ int git_delta_apply(
 			/* cmd is a copy instruction; copy from the base. */
 			size_t off = 0, len = 0;
 
-			if (cmd & 0x01) off = *delta++;
-			if (cmd & 0x02) off |= *delta++ << 8UL;
-			if (cmd & 0x04) off |= *delta++ << 16UL;
-			if (cmd & 0x08) off |= ((unsigned) *delta++ << 24UL);
+#define ADD_DELTA(o, shift) { if (delta < delta_end) (o) |= ((unsigned) *delta++ << shift); else goto fail; }
+			if (cmd & 0x01) ADD_DELTA(off, 0UL);
+			if (cmd & 0x02) ADD_DELTA(off, 8UL);
+			if (cmd & 0x04) ADD_DELTA(off, 16UL);
+			if (cmd & 0x08) ADD_DELTA(off, 24UL);
 
-			if (cmd & 0x10) len = *delta++;
-			if (cmd & 0x20) len |= *delta++ << 8UL;
-			if (cmd & 0x40) len |= *delta++ << 16UL;
+			if (cmd & 0x10) ADD_DELTA(len, 0UL);
+			if (cmd & 0x20) ADD_DELTA(len, 8UL);
+			if (cmd & 0x40) ADD_DELTA(len, 16UL);
 			if (!len)       len = 0x10000;
+#undef ADD_DELTA
 
 			if (base_len < off + len || res_sz < len)
 				goto fail;
