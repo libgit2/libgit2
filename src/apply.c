@@ -409,8 +409,14 @@ static int apply_one(
 
 	if (delta->status != GIT_DELTA_ADDED) {
 		if ((error = git_reader_read(&pre_contents,
-		    preimage_reader, delta->old_file.path)) < 0)
+		    preimage_reader, delta->old_file.path)) < 0) {
+
+			/* ENOTFOUND is really an application error */
+			if (error == GIT_ENOTFOUND)
+				error = GIT_EAPPLYFAIL;
+
 			goto done;
+		}
 	}
 
 	if ((error = git_apply__patch(&post_contents, &filename, &mode,
