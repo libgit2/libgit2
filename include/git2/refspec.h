@@ -22,6 +22,23 @@
 GIT_BEGIN_DECL
 
 /**
+ * Parse a given refspec string
+ *
+ * @param refspec a pointer to hold the refspec handle
+ * @param input the refspec string
+ * @param is_fetch is this a refspec for a fetch
+ * @return 0 if the refspec string could be parsed, -1 otherwise
+ */
+GIT_EXTERN(int) git_refspec_parse(git_refspec **refspec, const char *input, int is_fetch);
+
+/**
+ * Free a refspec object which has been created by git_refspec_parse
+ *
+ * @param refspec the refspec object
+ */
+GIT_EXTERN(void) git_refspec_free(git_refspec *refspec);
+
+/**
  * Get the source specifier
  *
  * @param refspec the refspec

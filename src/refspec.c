@@ -160,6 +160,31 @@ void git_refspec__free(git_refspec *refspec)
 	memset(refspec, 0x0, sizeof(git_refspec));
 }
 
+int git_refspec_parse(git_refspec **out_refspec, const char *input, int is_fetch)
+{
+	git_refspec *refspec;
+	assert(out_refspec && input);
+
+	*out_refspec = NULL;
+
+	refspec = git__malloc(sizeof(git_refspec));
+	GITERR_CHECK_ALLOC(refspec);
+
+	if (git_refspec__parse(refspec, input, !!is_fetch) != 0) {
+		git__free(refspec);
+		return -1;
+	}
+
+	*out_refspec = refspec;
+	return 0;
+}
+
+void git_refspec_free(git_refspec *refspec)
+{
+	git_refspec__free(refspec);
+	git__free(refspec);
+}
+
 const char *git_refspec_src(const git_refspec *refspec)
 {
 	return refspec == NULL ? NULL : refspec->src;

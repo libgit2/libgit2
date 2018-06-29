@@ -158,3 +158,15 @@ void test_network_refspecs__matching(void)
 
 	git_refspec__free(&spec);
 }
+
+void test_network_refspecs__parse_free(void)
+{
+	git_refspec *spec = NULL;
+
+	cl_git_fail(git_refspec_parse(&spec, "", 0));
+	cl_git_fail(git_refspec_parse(&spec, ":::", 0));
+	cl_git_pass(git_refspec_parse(&spec, "HEAD:", 1));
+
+	cl_assert(spec != NULL);
+	git_refspec_free(spec);
+}
