@@ -203,6 +203,11 @@ static int ref_pkt(git_pkt **out, const char *line, size_t len)
 	git_pkt_ref *pkt;
 	size_t alloclen;
 
+	if (len < GIT_OID_HEXSZ + 1) {
+		giterr_set(GITERR_NET, "error parsing pkt-line");
+		return -1;
+	}
+
 	pkt = git__malloc(sizeof(git_pkt_ref));
 	GITERR_CHECK_ALLOC(pkt);
 
@@ -470,6 +475,9 @@ int git_pkt_parse_line(
 
 void git_pkt_free(git_pkt *pkt)
 {
+	if (pkt == NULL) {
+		return;
+	}
 	if (pkt->type == GIT_PKT_REF) {
 		git_pkt_ref *p = (git_pkt_ref *) pkt;
 		git__free(p->head.name);

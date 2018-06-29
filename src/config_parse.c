@@ -404,22 +404,21 @@ static int parse_name(
 static int parse_variable(git_config_parser *reader, char **var_name, char **var_value)
 {
 	const char *value_start = NULL;
-	char *line;
-	int quote_count;
+	char *line = NULL, *name = NULL, *value = NULL;
+	int quote_count, error;
 	bool multiline;
+
+	*var_name = NULL;
+	*var_value = NULL;
 
 	git_parse_advance_ws(&reader->ctx);
 	line = git__strndup(reader->ctx.line, reader->ctx.line_len);
-	if (line == NULL)
-		return -1;
+	GITERR_CHECK_ALLOC(line);
 
 	quote_count = strip_comments(line, 0);
 
-	/* If there is no value, boolean true is assumed */
-	*var_value = NULL;
-
-	if (parse_name(var_name, &value_start, reader, line) < 0)
-		goto on_error;
+	if ((error = parse_name(&name, &value_start, reader, line)) < 0)
+		goto out;
 
 	/*
 	 * Now, let's try to parse the value
@@ -428,30 +427,34 @@ static int parse_variable(git_config_parser *reader, char **var_name, char **var
 		while (git__isspace(value_start[0]))
 			value_start++;
 
-		if (unescape_line(var_value, &multiline, value_start, 0) < 0)
-			goto on_error;
+		if ((error = unescape_line(&value, &multiline, value_start, 0)) < 0)
+			goto out;
 
 		if (multiline) {
 			git_buf multi_value = GIT_BUF_INIT;
-			git_buf_attach(&multi_value, *var_value, 0);
+			git_buf_attach(&multi_value, value, 0);
 
 			if (parse_multiline_variable(reader, &multi_value, quote_count) < 0 ||
-				git_buf_oom(&multi_value)) {
+			    git_buf_oom(&multi_value)) {
+				error = -1;
 				git_buf_dispose(&multi_value);
-				goto on_error;
+				goto out;
 			}
 
-			*var_value = git_buf_detach(&multi_value);
+			value = git_buf_detach(&multi_value);
 		}
 	}
 
-	git__free(line);
-	return 0;
+	*var_name = name;
+	*var_value = value;
+	name = NULL;
+	value = NULL;
 
-on_error:
-	git__free(*var_name);
+out:
+	git__free(name);
+	git__free(value);
 	git__free(line);
-	return -1;
+	return error;
 }
 
 int git_config_parse(
@@ -463,7 +466,7 @@ int git_config_parse(
 	void *data)
 {
 	git_parse_ctx *ctx;
-	char *current_section = NULL, *var_name, *var_value;
+	char *current_section = NULL, *var_name = NULL, *var_value = NULL;
 	int result = 0;
 
 	ctx = &parser->ctx;
@@ -508,7 +511,10 @@ int git_config_parse(
 		default: /* assume variable declaration */
 			if ((result = parse_variable(parser, &var_name, &var_value)) == 0 && on_variable) {
 				result = on_variable(parser, current_section, var_name, var_value, line_start, line_len, data);
+				git__free(var_name);
+				git__free(var_value);
 			}
+
 			break;
 		}
 

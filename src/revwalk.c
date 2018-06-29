@@ -455,7 +455,7 @@ static int get_revision(git_commit_list_node **out, git_revwalk *walk, git_commi
 	 */
 	if (!walk->limited) {
 		if ((error = add_parents_to_list(walk, commit, list)) < 0)
-		return error;
+			return error;
 	}
 
 	*out = commit;
@@ -678,7 +678,7 @@ void git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode)
 		walk->enqueue = &revwalk_enqueue_unsorted;
 	}
 
-	if (sort_mode != GIT_SORT_NONE)
+	if (walk->sorting != GIT_SORT_NONE)
 		walk->limited = 1;
 }
 
@@ -737,6 +737,7 @@ void git_revwalk_reset(git_revwalk *walk)
 	walk->walking = 0;
 	walk->limited = 0;
 	walk->did_push = walk->did_hide = 0;
+	walk->sorting = GIT_SORT_NONE;
 }
 
 int git_revwalk_add_hide_cb(
