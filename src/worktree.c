@@ -234,13 +234,11 @@ void git_worktree_free(git_worktree *wt)
 
 int git_worktree_validate(const git_worktree *wt)
 {
-	git_buf buf = GIT_BUF_INIT;
 	int err = 0;
 
 	assert(wt);
 
-	git_buf_puts(&buf, wt->gitdir_path);
-	if (!is_worktree_dir(buf.ptr)) {
+	if (!is_worktree_dir(wt->gitdir_path)) {
 		giterr_set(GITERR_WORKTREE,
 			"Worktree gitdir ('%s') is not valid",
 			wt->gitlink_path);
@@ -265,7 +263,6 @@ int git_worktree_validate(const git_worktree *wt)
 	}
 
 out:
-	git_buf_dispose(&buf);
 
 	return err;
 }
