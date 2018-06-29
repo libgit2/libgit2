@@ -492,9 +492,109 @@ done:
 	return error;
 }
 
-/* normal: apply to workdir: ignore index
- * --cached: apply to index: ignore workdir
- * --index: apply to both: validate index == workdir
+static int git_apply__to_workdir(
+	git_repository *repo,
+	git_diff *diff,
+	git_index *postimage,
+	git_apply_options *opts)
+{
+	git_vector paths = GIT_VECTOR_INIT;
+	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+	const git_diff_delta *delta;
+	size_t i;
+	int error;
+
+	/*
+	 * Limit checkout to the paths affected by the diff; this ensures
+	 * that other modifications in the working directory are unaffected.
+	 */
+	if ((error = git_vector_init(&paths, git_diff_num_deltas(diff), NULL)) < 0)
+		goto done;
+
+	for (i = 0; i < git_diff_num_deltas(diff); i++) {
+		delta = git_diff_get_delta(diff, i);
+
+		if ((error = git_vector_insert(&paths, (void *)delta->old_file.path)) < 0)
+			goto done;
+
+		if (strcmp(delta->old_file.path, delta->new_file.path) &&
+		    (error = git_vector_insert(&paths, (void *)delta->new_file.path)) < 0)
+			goto done;
+	}
+
+	checkout_opts.checkout_strategy |= GIT_CHECKOUT_SAFE;
+	checkout_opts.checkout_strategy |= GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH;
+
+	if (opts->location == GIT_APPLY_LOCATION_WORKDIR)
+		checkout_opts.checkout_strategy |= GIT_CHECKOUT_DONT_UPDATE_INDEX;
+
+	checkout_opts.paths.strings = (char **)paths.contents;
+	checkout_opts.paths.count = paths.length;
+
+	error = git_checkout_index(repo, postimage, &checkout_opts);
+
+done:
+	git_vector_free(&paths);
+	return error;
+}
+
+static int git_apply__to_index(
+	git_repository *repo,
+	git_diff *diff,
+	git_index *postimage,
+	git_apply_options *opts)
+{
+	git_index *index = NULL;
+	const git_diff_delta *delta;
+	const git_index_entry *entry;
+	size_t i;
+	int error;
+
+	GIT_UNUSED(opts);
+
+	if ((error = git_repository_index(&index, repo)) < 0)
+		goto done;
+
+	/* Remove deleted (or renamed) paths from the index. */
+	for (i = 0; i < git_diff_num_deltas(diff); i++) {
+		delta = git_diff_get_delta(diff, i);
+
+		if (delta->status == GIT_DELTA_DELETED ||
+		    delta->status == GIT_DELTA_RENAMED) {
+			if ((error = git_index_remove(index, delta->old_file.path, 0)) < 0)
+				goto done;
+		}
+	}
+
+	/* Then add the changes back to the index. */
+	for (i = 0; i < git_index_entrycount(postimage); i++) {
+		entry = git_index_get_byindex(postimage, i);
+
+		if ((error = git_index_add(index, entry)) < 0)
+			goto done;
+	}
+
+	error = git_index_write(index);
+
+done:
+	git_index_free(index);
+	return error;
+}
+
+/*
+ * Handle the three application options ("locations"):
+ *
+ * GIT_APPLY_LOCATION_WORKDIR: the default, emulates `git apply`.
+ * Applies the diff only to the workdir items and ignores the index
+ * entirely.
+ *
+ * GIT_APPLY_LOCATION_INDEX: emulates `git apply --cached`.
+ * Applies the diff only to the index items and ignores the workdir
+ * completely.
+ *
+ * GIT_APPLY_LOCATION_BOTH: emulates `git apply --index`.
+ * Applies the diff to both the index items and the working directory
+ * items.
  */
 
 int git_apply(
@@ -502,13 +602,9 @@ int git_apply(
 	git_diff *diff,
 	git_apply_options *given_opts)
 {
-	git_index *contents = NULL, *repo_index = NULL;
+	git_index *postimage = NULL;
 	git_reader *pre_reader = NULL;
-	const git_diff_delta *delta;
-	git_vector paths = GIT_VECTOR_INIT;
 	git_apply_options opts = GIT_APPLY_OPTIONS_INIT;
-	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
-	bool do_checkout;
 	size_t i;
 	int error;
 
@@ -519,8 +615,6 @@ int git_apply(
 
 	if (given_opts)
 		memcpy(&opts, given_opts, sizeof(git_apply_options));
-
-	do_checkout = (opts.location != GIT_APPLY_LOCATION_INDEX);
 
 	/*
 	 * by default, we apply a patch directly to the working directory;
@@ -535,85 +629,40 @@ int git_apply(
 	if (error < 0)
 		goto done;
 
-	/* if we're not checking out, we're writing to the repo's index */
-	if (do_checkout)
-		error = git_vector_init(&paths, git_diff_num_deltas(diff), NULL);
-	else
-		error = git_repository_index(&repo_index, repo);
+	/*
+	 * Build the postimage differences.  Note that this is not the
+	 * complete postimage, it only contains the new files created
+	 * during the application.  We will limit checkout to only write
+	 * the files affected by this diff.
+	 */
+	if ((error = git_index_new(&postimage)) < 0)
+		goto done;
+
+	for (i = 0; i < git_diff_num_deltas(diff); i++) {
+		if ((error = apply_one(repo, pre_reader, postimage, diff, i)) < 0)
+			goto done;
+	}
+
+	switch (opts.location) {
+	case GIT_APPLY_LOCATION_BOTH:
+		error = git_apply__to_workdir(repo, diff, postimage, &opts);
+		break;
+	case GIT_APPLY_LOCATION_INDEX:
+		error = git_apply__to_index(repo, diff, postimage, &opts);
+		break;
+	case GIT_APPLY_LOCATION_WORKDIR:
+		error = git_apply__to_workdir(repo, diff, postimage, &opts);
+		break;
+	default:
+		assert(false);
+	}
 
 	if (error < 0)
 		goto done;
 
-	/*
-	 * note: this is not the full postimage, this only contains the
-	 * new files created during the diffing process.  we will limit
-	 * checkout to only write the files affected by this diff.
-	 */
-	if ((error = git_index_new(&contents)) < 0)
-		goto done;
-
-	for (i = 0; i < git_diff_num_deltas(diff); i++) {
-		delta = git_diff_get_delta(diff, i);
-
-		if ((error = apply_one(repo, pre_reader, contents, diff, i)) < 0)
-			goto done;
-
-		/*
-		 * If we're checking out, then we need to keep track of all
-		 * affected paths (removes and adds) so that we can give them
-		 * to checkout to let it handle things.  If we're only modifying
-		 * the index, we only care about _removed_ paths:  we'll simply
-		 * overwrite the new paths.
-		 */
-		if (do_checkout) {
-			git_vector_insert(&paths, (void *)delta->old_file.path);
-
-			if (strcmp(delta->old_file.path, delta->new_file.path))
-				git_vector_insert(&paths, (void *)delta->new_file.path);
-		} else {
-			if (delta->status == GIT_DELTA_DELETED ||
-			    delta->status == GIT_DELTA_RENAMED)
-				git_vector_insert(&paths, (void *)delta->old_file.path);
-		}
-	}
-
-	if (do_checkout) {
-		checkout_opts.checkout_strategy |= GIT_CHECKOUT_SAFE;
-		checkout_opts.checkout_strategy |= GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH;
-
-		if (opts.location == GIT_APPLY_LOCATION_WORKDIR)
-			checkout_opts.checkout_strategy |= GIT_CHECKOUT_DONT_UPDATE_INDEX;
-
-		checkout_opts.paths.strings = (char **)paths.contents;
-		checkout_opts.paths.count = paths.length;
-
-		error = git_checkout_index(repo, contents, &checkout_opts);
-	} else {
-		const git_index_entry *entry;
-		const char *path;
-
-		/* Remove all the deleted paths from the index.  */
-		git_vector_foreach(&paths, i, path) {
-			if ((error = git_index_remove(repo_index, path, 0)) < 0)
-				goto done;
-		}
-
-		/* Then add the changes back to the index. */
-		for (i = 0; i < git_index_entrycount(contents); i++) {
-			entry = git_index_get_byindex(contents, i);
-
-			if ((error = git_index_add(repo_index, entry)) < 0)
-				goto done;
-		}
-
-		error = git_index_write(repo_index);
-	}
-
 done:
-	git_vector_free(&paths);
-	git_index_free(contents);
+	git_index_free(postimage);
 	git_reader_free(pre_reader);
-	git_index_free(repo_index);
 
 	return error;
 }
