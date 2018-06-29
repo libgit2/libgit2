@@ -42,6 +42,8 @@ void test_worktree_bare__add(void)
 	cl_git_pass(git_worktree_list(&wts, g_repo));
 	cl_assert_equal_i(wts.count, 1);
 
+	cl_git_pass(git_worktree_validate(wt));
+
 	cl_git_pass(git_repository_open(&wtrepo, WORKTREE_REPO));
 	cl_assert_equal_i(0, git_repository_is_bare(wtrepo));
 	cl_assert_equal_i(1, git_repository_is_worktree(wtrepo));

@@ -248,7 +248,7 @@ int git_worktree_validate(const git_worktree *wt)
 		goto out;
 	}
 
-	if (!git_path_exists(wt->parent_path)) {
+	if (wt->parent_path && !git_path_exists(wt->parent_path)) {
 		giterr_set(GITERR_WORKTREE,
 			"Worktree parent directory ('%s') does not exist ",
 			wt->parent_path);
