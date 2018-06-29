@@ -78,7 +78,7 @@ static int filter_wants(git_remote *remote, const git_fetch_options *opts)
 			goto cleanup;
 
 		error = git_refspec__dwim_one(&remote->active_refspecs, &head, &remote->refs);
-		git_refspec__free(&head);
+		git_refspec__dispose(&head);
 
 		if (error < 0)
 			goto cleanup;
@@ -96,7 +96,7 @@ static int filter_wants(git_remote *remote, const git_fetch_options *opts)
 	}
 
 cleanup:
-	git_refspec__free(&tagspec);
+	git_refspec__dispose(&tagspec);
 
 	return error;
 }

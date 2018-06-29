@@ -131,7 +131,7 @@ static int append_symref(const char **out, git_vector *symrefs, const char *ptr)
 
 on_invalid:
 	giterr_set(GITERR_NET, "remote sent invalid symref");
-	git_refspec__free(mapping);
+	git_refspec__dispose(mapping);
 	git__free(mapping);
 	return -1;
 }

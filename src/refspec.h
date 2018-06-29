@@ -30,7 +30,7 @@ int git_refspec__parse(
 	const char *str,
 	bool is_fetch);
 
-void git_refspec__free(git_refspec *refspec);
+void git_refspec__dispose(git_refspec *refspec);
 
 int git_refspec__serialize(git_buf *out, const git_refspec *refspec);
 

@@ -83,7 +83,7 @@ static void free_refspec(push_spec *spec)
 	if (spec == NULL)
 		return;
 
-	git_refspec__free(&spec->refspec);
+	git_refspec__dispose(&spec->refspec);
 	git__free(spec);
 }
 
