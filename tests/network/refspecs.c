@@ -8,7 +8,7 @@ static void assert_refspec(unsigned int direction, const char *input, bool is_ex
 	int error;
 
 	error = git_refspec__parse(&refspec, input, direction == GIT_DIRECTION_FETCH);
-	git_refspec__free(&refspec);
+	git_refspec__dispose(&refspec);
 
 	if (is_expected_to_be_valid)
 		cl_assert_equal_i(0, error);
@@ -98,7 +98,7 @@ static void assert_valid_transform(const char *refspec, const char *name, const 
 	cl_assert_equal_s(result, buf.ptr);
 
 	git_buf_dispose(&buf);
-	git_refspec__free(&spec);
+	git_refspec__dispose(&spec);
 }
 
 void test_network_refspecs__transform_mid_star(void)
@@ -120,7 +120,7 @@ static void assert_invalid_transform(const char *refspec, const char *name)
 	cl_git_fail(git_refspec_transform(&buf, &spec, name));
 
 	git_buf_dispose(&buf);
-	git_refspec__free(&spec);
+	git_refspec__dispose(&spec);
 }
 
 void test_network_refspecs__invalid(void)
@@ -138,7 +138,7 @@ static void assert_invalid_rtransform(const char *refspec, const char *name)
 	cl_git_fail(git_refspec_rtransform(&buf, &spec, name));
 
 	git_buf_dispose(&buf);
-	git_refspec__free(&spec);
+	git_refspec__dispose(&spec);
 }
 
 void test_network_refspecs__invalid_reverse(void)
@@ -156,7 +156,7 @@ void test_network_refspecs__matching(void)
 	cl_assert_equal_s("", spec.src);
 	cl_assert_equal_s("", spec.dst);
 
-	git_refspec__free(&spec);
+	git_refspec__dispose(&spec);
 }
 
 void test_network_refspecs__parse_free(void)

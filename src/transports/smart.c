@@ -192,7 +192,7 @@ static void free_symrefs(git_vector *symrefs)
 	size_t i;
 
 	git_vector_foreach(symrefs, i, spec) {
-		git_refspec__free(spec);
+		git_refspec__dispose(spec);
 		git__free(spec);
 	}
 

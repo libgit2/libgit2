@@ -44,7 +44,7 @@ static int add_refspec_to(git_vector *vector, const char *string, bool is_fetch)
 
 	spec->push = !is_fetch;
 	if (git_vector_insert(vector, spec) < 0) {
-		git_refspec__free(spec);
+		git_refspec__dispose(spec);
 		git__free(spec);
 		return -1;
 	}
@@ -117,7 +117,7 @@ static int write_add_refspec(git_repository *repo, const char *name, const char 
 		return error;
 	}
 
-	git_refspec__free(&spec);
+	git_refspec__dispose(&spec);
 
 	if ((error = git_buf_printf(&var, fmt, name)) < 0)
 		return error;
@@ -826,7 +826,7 @@ static void free_refspecs(git_vector *vec)
 	git_refspec *spec;
 
 	git_vector_foreach(vec, i, spec) {
-		git_refspec__free(spec);
+		git_refspec__dispose(spec);
 		git__free(spec);
 	}
 
@@ -1416,13 +1416,13 @@ static int update_tips_for_spec(
 		goto on_error;
 
 	git_vector_free(&update_heads);
-	git_refspec__free(&tagspec);
+	git_refspec__dispose(&tagspec);
 	git_buf_dispose(&refname);
 	return 0;
 
 on_error:
 	git_vector_free(&update_heads);
-	git_refspec__free(&tagspec);
+	git_refspec__dispose(&tagspec);
 	git_buf_dispose(&refname);
 	return -1;
 
@@ -1607,7 +1607,7 @@ int git_remote_update_tips(
 
 out:
 	git_vector_free(&refs);
-	git_refspec__free(&tagspec);
+	git_refspec__dispose(&tagspec);
 	return error;
 }
 
@@ -2045,7 +2045,7 @@ int git_remote_is_valid_name(
 	error = git_refspec__parse(&refspec, git_buf_cstr(&buf), true);
 
 	git_buf_dispose(&buf);
-	git_refspec__free(&refspec);
+	git_refspec__dispose(&refspec);
 
 	giterr_clear();
 	return error == 0;
