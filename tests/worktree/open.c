@@ -11,28 +11,11 @@ static worktree_fixture fixture =
 
 static void assert_worktree_valid(git_repository *wt, const char *parentdir, const char *wtdir)
 {
-	git_buf path = GIT_BUF_INIT;
-
 	cl_assert(wt->is_worktree);
 
-	cl_git_pass(git_buf_joinpath(&path, clar_sandbox_path(), wtdir));
-	cl_git_pass(git_path_prettify(&path, path.ptr, NULL));
-	cl_git_pass(git_path_to_dir(&path));
-	cl_assert_equal_s(wt->workdir, path.ptr);
-
-	cl_git_pass(git_buf_joinpath(&path, path.ptr, ".git"));
-	cl_git_pass(git_path_prettify(&path, path.ptr, NULL));
-	cl_assert_equal_s(wt->gitlink, path.ptr);
-
-	cl_git_pass(git_buf_joinpath(&path, clar_sandbox_path(), parentdir));
-	cl_git_pass(git_buf_joinpath(&path, path.ptr, ".git"));
-	cl_git_pass(git_buf_joinpath(&path, path.ptr, "worktrees"));
-	cl_git_pass(git_buf_joinpath(&path, path.ptr, wtdir));
-	cl_git_pass(git_path_prettify(&path, path.ptr, NULL));
-	cl_git_pass(git_path_to_dir(&path));
-	cl_assert_equal_s(wt->gitdir, path.ptr);
-
-	git_buf_dispose(&path);
+	cl_assert_equal_s(wt->workdir, cl_git_sandbox_path(1, wtdir, NULL));
+	cl_assert_equal_s(wt->gitlink, cl_git_sandbox_path(0, wtdir, ".git", NULL));
+	cl_assert_equal_s(wt->gitdir, cl_git_sandbox_path(1, parentdir, ".git", "worktrees", wtdir, NULL));
 }
 
 void test_worktree_open__initialize(void)
