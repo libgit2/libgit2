@@ -3,6 +3,7 @@
 #include "git2/sys/diff.h"
 
 #include "buffer.h"
+#include "delta.h"
 #include "filebuf.h"
 #include "repository.h"
 
