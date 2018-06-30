@@ -72,6 +72,11 @@ void test_index_tests__initialize(void)
 {
 }
 
+void test_index_tests__cleanup(void)
+{
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_UNSAVED_INDEX_SAFETY, 0));
+}
+
 void test_index_tests__empty_index(void)
 {
    git_index *index;
@@ -329,6 +334,90 @@ void test_index_tests__add_frombuffer(void)
 
 	git_index_free(index);
 	git_repository_free(repo);
+}
+
+void test_index_tests__dirty_and_clean(void)
+{
+	git_repository *repo;
+	git_index *index;
+	git_index_entry entry = {{0}};
+
+	/* Index is not dirty after opening */
+	cl_git_pass(git_repository_init(&repo, "./myrepo", 0));
+	cl_git_pass(git_repository_index(&index, repo));
+
+	cl_assert(git_index_entrycount(index) == 0);
+	cl_assert(!git_index_is_dirty(index));
+
+	/* Index is dirty after adding an entry */
+	entry.mode = GIT_FILEMODE_BLOB;
+	entry.path = "test.txt";
+	cl_git_pass(git_index_add_frombuffer(index, &entry, "Hi.\n", 4));
+	cl_assert(git_index_entrycount(index) == 1);
+	cl_assert(git_index_is_dirty(index));
+
+	/* Index is not dirty after write */
+	cl_git_pass(git_index_write(index));
+	cl_assert(!git_index_is_dirty(index));
+
+	/* Index is dirty after removing an entry */
+	cl_git_pass(git_index_remove_bypath(index, "test.txt"));
+	cl_assert(git_index_entrycount(index) == 0);
+	cl_assert(git_index_is_dirty(index));
+
+	/* Index is not dirty after write */
+	cl_git_pass(git_index_write(index));
+	cl_assert(!git_index_is_dirty(index));
+
+	/* Index remains not dirty after read */
+	cl_git_pass(git_index_read(index, 0));
+	cl_assert(!git_index_is_dirty(index));
+
+	/* Index is dirty when we do an unforced read with dirty content */
+	cl_git_pass(git_index_add_frombuffer(index, &entry, "Hi.\n", 4));
+	cl_assert(git_index_entrycount(index) == 1);
+	cl_assert(git_index_is_dirty(index));
+
+	cl_git_pass(git_index_read(index, 0));
+	cl_assert(git_index_is_dirty(index));
+
+	/* Index is clean when we force a read with dirty content */
+	cl_git_pass(git_index_read(index, 1));
+	cl_assert(!git_index_is_dirty(index));
+
+	git_index_free(index);
+	git_repository_free(repo);
+}
+
+void test_index_tests__dirty_fails_optionally(void)
+{
+	git_repository *repo;
+	git_index *index;
+	git_index_entry entry = {{0}};
+
+	/* Index is not dirty after opening */
+	repo = cl_git_sandbox_init("testrepo");
+	cl_git_pass(git_repository_index(&index, repo));
+
+	/* Index is dirty after adding an entry */
+	entry.mode = GIT_FILEMODE_BLOB;
+	entry.path = "test.txt";
+	cl_git_pass(git_index_add_frombuffer(index, &entry, "Hi.\n", 4));
+	cl_assert(git_index_is_dirty(index));
+
+	cl_git_pass(git_checkout_head(repo, NULL));
+
+	/* Index is dirty (again) after adding an entry */
+	entry.mode = GIT_FILEMODE_BLOB;
+	entry.path = "test.txt";
+	cl_git_pass(git_index_add_frombuffer(index, &entry, "Hi.\n", 4));
+	cl_assert(git_index_is_dirty(index));
+
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_UNSAVED_INDEX_SAFETY, 1));
+	cl_git_fail_with(GIT_EINDEXDIRTY, git_checkout_head(repo, NULL));
+
+	git_index_free(index);
+	cl_git_sandbox_cleanup();
 }
 
 void test_index_tests__add_frombuffer_reset_entry(void)

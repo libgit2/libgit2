@@ -194,7 +194,8 @@ typedef enum {
 	GIT_OPT_GET_WINDOWS_SHAREMODE,
 	GIT_OPT_SET_WINDOWS_SHAREMODE,
 	GIT_OPT_ENABLE_STRICT_HASH_VERIFICATION,
-	GIT_OPT_SET_ALLOCATOR
+	GIT_OPT_SET_ALLOCATOR,
+	GIT_OPT_ENABLE_UNSAVED_INDEX_SAFETY
 } git_libgit2_opt_t;
 
 /**
@@ -362,6 +363,14 @@ typedef enum {
  *		> Set the memory allocator to a different memory allocator. This
  *		> allocator will then be used to make all memory allocations for
  *		> libgit2 operations.
+ *
+ *	 opts(GIT_OPT_ENABLE_UNSAVED_INDEX_SAFETY, int enabled)
+ *
+ *		> Ensure that there are no unsaved changes in the index before
+ *		> beginning any operation that reloads the index from disk (eg,
+ *		> checkout).  If there are unsaved changes, the instruction will
+ *		> fail.  (Using the FORCE flag to checkout will still overwrite
+ *		> these changes.)
  *
  * @param option Option key
  * @param ... value to set the option

@@ -23,6 +23,7 @@
 #include "object.h"
 #include "odb.h"
 #include "refs.h"
+#include "index.h"
 #include "transports/smart.h"
 #include "streams/openssl.h"
 #include "streams/mbedtls.h"
@@ -263,6 +264,10 @@ int git_libgit2_opts(int key, ...)
 
 	case GIT_OPT_SET_ALLOCATOR:
 		error = git_allocator_setup(va_arg(ap, git_allocator *));
+		break;
+
+	case GIT_OPT_ENABLE_UNSAVED_INDEX_SAFETY:
+		git_index__enforce_unsaved_safety = (va_arg(ap, int) != 0);
 		break;
 
 	default:

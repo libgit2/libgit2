@@ -16,6 +16,18 @@ v0.27 + 1
 * You can now swap out memory allocators via the
   `GIT_OPT_SET_ALLOCATOR` option with `git_libgit2_opts()`.
 
+* You can now ensure that functions do not discard unwritten changes to the
+  index via the `GIT_OPT_ENABLE_UNSAVED_INDEX_SAFETY` option to
+  `git_libgit2_opts()`.  This will cause functions that implicitly re-read
+  the index (eg, `git_checkout`) to fail if you have staged changes to the
+  index but you have not written the index to disk.  (Unless the checkout
+  has the FORCE flag specified.)
+
+  At present, this defaults to off, but we intend to enable this more
+  broadly in the future, as a warning or error.  We encourage you to
+  examine your code to ensure that you are not relying on the current
+  behavior that implicitly removes staged changes.
+
 ### API removals
 
 ### Breaking API changes

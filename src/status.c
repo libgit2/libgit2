@@ -294,7 +294,7 @@ int git_status_list_new(
 
 	/* refresh index from disk unless prevented */
 	if ((flags & GIT_STATUS_OPT_NO_REFRESH) == 0 &&
-		git_index_read(index, false) < 0)
+		git_index_read_safely(index) < 0)
 		giterr_clear();
 
 	status = git_status_list_alloc(index);

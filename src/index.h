@@ -20,6 +20,8 @@
 #define GIT_INDEX_FILE "index"
 #define GIT_INDEX_FILE_MODE 0666
 
+extern bool git_index__enforce_unsaved_safety;
+
 struct git_index {
 	git_refcount rc;
 
@@ -37,6 +39,7 @@ struct git_index {
 	unsigned int ignore_case:1;
 	unsigned int distrust_filemode:1;
 	unsigned int no_symlinks:1;
+	unsigned int dirty:1;	/* whether we have unsaved changes */
 
 	git_tree_cache *tree;
 	git_pool tree_pool;
@@ -142,6 +145,13 @@ extern int git_index_snapshot_find(
 
 /* Replace an index with a new index */
 int git_index_read_index(git_index *index, const git_index *new_index);
+
+GIT_INLINE(int) git_index_is_dirty(git_index *index)
+{
+	return index->dirty;
+}
+
+extern int git_index_read_safely(git_index *index);
 
 typedef struct {
 	git_index *index;

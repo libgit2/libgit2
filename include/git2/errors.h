@@ -55,6 +55,7 @@ typedef enum {
 	GIT_ITEROVER        = -31,	/**< Signals end of iteration with iterator */
 	GIT_RETRY           = -32,	/**< Internal only */
 	GIT_EMISMATCH       = -33,	/**< Hashsum mismatch in object */
+	GIT_EINDEXDIRTY     = -34,	/**< Unsaved changes in the index would be overwritten */
 } git_error_code;
 
 /**

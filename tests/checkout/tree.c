@@ -543,6 +543,7 @@ void assert_conflict(
 	 */
 	cl_git_pass(git_object_peel(&hack_tree, g_object, GIT_OBJ_TREE));
 	cl_git_pass(git_index_read_tree(index, (git_tree *)hack_tree));
+	cl_git_pass(git_index_write(index));
 	git_object_free(hack_tree);
 	git_object_free(g_object);
 	g_object = NULL;
@@ -739,7 +740,9 @@ void test_checkout_tree__can_checkout_with_last_workdir_item_missing(void)
 	cl_git_mkfile("./testrepo/this-is-dir/contained_file", "content\n");
 
 	cl_git_pass(git_index_add_bypath(index, "this-is-dir/contained_file"));
-	git_index_write_tree(&tree_id, index);
+	cl_git_pass(git_index_write(index));
+
+	cl_git_pass(git_index_write_tree(&tree_id, index));
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
 
 	cl_git_pass(p_unlink("./testrepo/this-is-dir/contained_file"));
@@ -1107,7 +1110,7 @@ void test_checkout_tree__removes_conflicts(void)
 	git_commit *commit;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_index *index;
-	
+
 	cl_git_pass(git_oid_fromstr(&commit_id, "afe4393b2b2a965f06acf2ca9658eaa01e0cd6b6"));
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &commit_id));
 
@@ -1150,7 +1153,7 @@ void test_checkout_tree__removes_conflicts_only_by_pathscope(void)
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_index *index;
 	const char *path = "executable.txt";
-	
+
 	cl_git_pass(git_oid_fromstr(&commit_id, "afe4393b2b2a965f06acf2ca9658eaa01e0cd6b6"));
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &commit_id));
 
@@ -1248,7 +1251,7 @@ void test_checkout_tree__case_changing_rename(void)
 
 	cl_git_pass(git_checkout_tree(g_repo, (git_object *)master_commit, &opts));
 	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/master"));
-	
+
 	assert_on_branch(g_repo, "master");
 
 	cl_assert(git_path_isfile("testrepo/README"));
@@ -1495,6 +1498,7 @@ void test_checkout_tree__baseline_is_empty_when_no_index(void)
 	size_t conflicts = 0;
 
 	assert_on_branch(g_repo, "master");
+
 	cl_git_pass(git_repository_head(&head, g_repo));
 	cl_git_pass(git_reference_peel(&obj, head, GIT_OBJ_COMMIT));
 
@@ -1551,8 +1555,12 @@ void test_checkout_tree__mode_change_is_force_updated(void)
 	cl_must_pass(p_chmod("testrepo/README", 0755));
 	cl_must_pass(git_index_add_bypath(index, "README"));
 
+	cl_git_pass(git_index_write(index));
 	assert_status_entrycount(g_repo, 1);
+
 	cl_git_pass(git_checkout_tree(g_repo, obj, &g_opts));
+	cl_git_pass(git_index_write(index));
+
 	assert_status_entrycount(g_repo, 0);
 
 	git_object_free(obj);
@@ -1563,4 +1571,68 @@ void test_checkout_tree__mode_change_is_force_updated(void)
 void test_checkout_tree__nullopts(void)
 {
 	cl_git_pass(git_checkout_tree(g_repo, NULL, NULL));
+}
+
+static void modify_index_ondisk(void)
+{
+	git_repository *other_repo;
+	git_index *other_index;
+	git_index_entry entry = {{0}};
+
+	cl_git_pass(git_repository_open(&other_repo, git_repository_workdir(g_repo)));
+	cl_git_pass(git_repository_index(&other_index, other_repo));
+
+	cl_git_pass(git_oid_fromstr(&entry.id, "1385f264afb75a56a5bec74243be9b367ba4ca08"));
+	entry.mode = 0100644;
+	entry.path = "README";
+
+	cl_git_pass(git_index_add(other_index, &entry));
+	cl_git_pass(git_index_write(other_index));
+
+	git_index_free(other_index);
+	git_repository_free(other_repo);
+}
+
+static void modify_index_and_checkout_tree(git_checkout_options *opts)
+{
+	git_index *index;
+	git_reference *head;
+	git_object *obj;
+
+	/* External changes to the index are maintained by default */
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_repository_head(&head, g_repo));
+	cl_git_pass(git_reference_peel(&obj, head, GIT_OBJ_COMMIT));
+
+	cl_git_pass(git_reset(g_repo, obj, GIT_RESET_HARD, NULL));
+	assert_status_entrycount(g_repo, 0);
+
+	modify_index_ondisk();
+
+	/* The file in the index remains modified */
+	cl_git_pass(git_checkout_tree(g_repo, obj, opts));
+
+	git_object_free(obj);
+	git_reference_free(head);
+	git_index_free(index);
+}
+
+void test_checkout_tree__retains_external_index_changes(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+
+	opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+
+	modify_index_and_checkout_tree(&opts);
+	assert_status_entrycount(g_repo, 1);
+}
+
+void test_checkout_tree__no_index_refresh(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+
+	opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_NO_REFRESH;
+
+	modify_index_and_checkout_tree(&opts);
+	assert_status_entrycount(g_repo, 0);
 }
