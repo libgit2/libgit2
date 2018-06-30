@@ -539,6 +539,13 @@ static int git_apply__to_workdir(
 
 	error = git_checkout_index(repo, postimage, &checkout_opts);
 
+	/*
+	 * When there's a checkout conflict, the file in the working directory
+	 * has been modified.  Upgrade this error to an application error.
+	 */
+	if (error == GIT_ECONFLICT)
+		error = GIT_EAPPLYFAIL;
+
 done:
 	git_vector_free(&paths);
 	return error;
