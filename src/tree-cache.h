@@ -19,8 +19,8 @@ typedef struct git_tree_cache {
 	size_t children_count;
 
 	ssize_t entry_count;
-	git_oid oid;
 	size_t namelen;
+	git_oid oid;
 	char name[GIT_FLEX_ARRAY];
 } git_tree_cache;
 
