@@ -85,6 +85,7 @@ static int workdir_reader_read(
 {
 	workdir_reader *reader = (workdir_reader *)_reader;
 	git_buf path = GIT_BUF_INIT;
+	git_filter_list *filters = NULL;
 	const git_index_entry *idx_entry;
 	git_oid id;
 	int error;
@@ -93,8 +94,17 @@ static int workdir_reader_read(
 		git_repository_workdir(reader->repo), filename)) < 0)
 		goto done;
 
-	/* TODO: should we read the filtered data? */
-	if ((error = git_futils_readbuffer(out, path.ptr)) < 0)
+	/*
+	 * Patch application - for example - uses the filtered version of
+	 * the working directory data to match git.  So we will run the
+	 * workdir -> ODB filter on the contents in this workdir reader.
+	 */
+	if ((error = git_filter_list_load(&filters, reader->repo, NULL, filename,
+		GIT_FILTER_TO_ODB, GIT_FILTER_DEFAULT)) < 0)
+		goto done;
+
+	if ((error = git_filter_list_apply_to_file(out,
+	    filters, reader->repo, path.ptr)) < 0)
 		goto done;
 
 	if (out_id || reader->index) {
@@ -114,6 +124,7 @@ static int workdir_reader_read(
 		git_oid_cpy(out_id, &id);
 
 done:
+	git_filter_list_free(filters);
 	git_buf_dispose(&path);
 	return error;
 }
