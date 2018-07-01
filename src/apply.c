@@ -22,6 +22,7 @@
 #include "delta.h"
 #include "zstream.h"
 #include "reader.h"
+#include "index.h"
 
 #define apply_err(...) \
 	( giterr_set(GITERR_PATCH, __VA_ARGS__), GIT_EAPPLYFAIL )
@@ -556,6 +557,7 @@ static int git_apply__to_workdir(
 
 	checkout_opts.checkout_strategy |= GIT_CHECKOUT_SAFE;
 	checkout_opts.checkout_strategy |= GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH;
+	checkout_opts.checkout_strategy |= GIT_CHECKOUT_DONT_WRITE_INDEX;
 
 	if (opts->location == GIT_APPLY_LOCATION_WORKDIR)
 		checkout_opts.checkout_strategy |= GIT_CHECKOUT_DONT_UPDATE_INDEX;
@@ -610,8 +612,6 @@ static int git_apply__to_index(
 			goto done;
 	}
 
-	error = git_index_write(index);
-
 done:
 	git_index_free(index);
 	return error;
@@ -638,7 +638,8 @@ int git_apply(
 	git_diff *diff,
 	git_apply_options *given_opts)
 {
-	git_index *preimage = NULL, *postimage = NULL;
+	git_indexwriter indexwriter = GIT_INDEXWRITER_INIT;
+	git_index *index = NULL, *preimage = NULL, *postimage = NULL;
 	git_reader *pre_reader = NULL;
 	git_apply_options opts = GIT_APPLY_OPTIONS_INIT;
 	size_t i;
@@ -685,6 +686,10 @@ int git_apply(
 	    (error = git_index_new(&postimage)) < 0)
 		goto done;
 
+	if ((error = git_repository_index(&index, repo)) < 0 ||
+	    (error = git_indexwriter_init(&indexwriter, index)) < 0)
+		goto done;
+
 	for (i = 0; i < git_diff_num_deltas(diff); i++) {
 		if ((error = apply_one(repo, pre_reader, preimage, postimage, diff, i)) < 0)
 			goto done;
@@ -707,9 +712,16 @@ int git_apply(
 	if (error < 0)
 		goto done;
 
+	if (error < 0)
+		goto done;
+
+	error = git_indexwriter_commit(&indexwriter);
+
 done:
+	git_indexwriter_cleanup(&indexwriter);
 	git_index_free(postimage);
 	git_index_free(preimage);
+	git_index_free(index);
 	git_reader_free(pre_reader);
 
 	return error;
