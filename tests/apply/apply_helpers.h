@@ -47,6 +47,11 @@
 	"+This is a new file!\n" \
 	"+Added by a patch.\n"
 
+#define DIFF_EXECUTABLE_FILE \
+	"diff --git a/beef.txt b/beef.txt\n" \
+	"old mode 100644\n" \
+	"new mode 100755\n"
+
 struct iterator_compare_data {
 	struct merge_index_entry *expected;
 	size_t cnt;
