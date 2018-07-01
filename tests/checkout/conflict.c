@@ -93,7 +93,7 @@ static void create_index(struct checkout_index_entry *entries, size_t entries_le
 		if (entries[i].stage == 3 && (i == 0 || strcmp(entries[i-1].path, entries[i].path) != 0 || entries[i-1].stage != 2))
 			p_unlink(git_buf_cstr(&path));
 
-		git_index_remove_bypath(g_index, entries[i].path);
+		cl_git_pass(git_index_remove_bypath(g_index, entries[i].path));
 	}
 
 	for (i = 0; i < entries_len; i++) {
@@ -133,7 +133,7 @@ static void create_conflicting_index(void)
 	};
 
 	create_index(checkout_index_entries, 3);
-	git_index_write(g_index);
+	cl_git_pass(git_index_write(g_index));
 }
 
 static void ensure_workdir_contents(const char *path, const char *contents)
@@ -271,7 +271,7 @@ void test_checkout_conflict__automerge(void)
 	};
 
 	create_index(checkout_index_entries, 3);
-	git_index_write(g_index);
+	cl_git_pass(git_index_write(g_index));
 
 	cl_git_pass(git_checkout_index(g_repo, g_index, &opts));
 
@@ -303,7 +303,7 @@ void test_checkout_conflict__directory_file(void)
 	opts.checkout_strategy |= GIT_CHECKOUT_SAFE;
 
 	create_index(checkout_index_entries, 12);
-	git_index_write(g_index);
+	cl_git_pass(git_index_write(g_index));
 
 	cl_git_pass(git_checkout_index(g_repo, g_index, &opts));
 
@@ -344,7 +344,7 @@ void test_checkout_conflict__directory_file_with_custom_labels(void)
 	opts.their_label = "branch";
 
 	create_index(checkout_index_entries, 12);
-	git_index_write(g_index);
+	cl_git_pass(git_index_write(g_index));
 
 	cl_git_pass(git_checkout_index(g_repo, g_index, &opts));
 
@@ -383,7 +383,7 @@ void test_checkout_conflict__link_file(void)
 	opts.checkout_strategy |= GIT_CHECKOUT_SAFE;
 
 	create_index(checkout_index_entries, 12);
-	git_index_write(g_index);
+	cl_git_pass(git_index_write(g_index));
 
 	cl_git_pass(git_checkout_index(g_repo, g_index, &opts));
 
@@ -410,7 +410,7 @@ void test_checkout_conflict__links(void)
 	opts.checkout_strategy |= GIT_CHECKOUT_SAFE;
 
 	create_index(checkout_index_entries, 5);
-	git_index_write(g_index);
+	cl_git_pass(git_index_write(g_index));
 
 	cl_git_pass(git_checkout_index(g_repo, g_index, &opts));
 
@@ -431,7 +431,7 @@ void test_checkout_conflict__add_add(void)
 	opts.checkout_strategy |= GIT_CHECKOUT_SAFE;
 
 	create_index(checkout_index_entries, 2);
-	git_index_write(g_index);
+	cl_git_pass(git_index_write(g_index));
 
 	cl_git_pass(git_checkout_index(g_repo, g_index, &opts));
 
@@ -472,7 +472,7 @@ void test_checkout_conflict__mode_change(void)
 	opts.checkout_strategy |= GIT_CHECKOUT_SAFE;
 
 	create_index(checkout_index_entries, 18);
-	git_index_write(g_index);
+	cl_git_pass(git_index_write(g_index));
 
 	cl_git_pass(git_checkout_index(g_repo, g_index, &opts));
 
@@ -604,7 +604,7 @@ void test_checkout_conflict__renames(void)
 
 	create_index(checkout_index_entries, 41);
 	create_index_names(checkout_name_entries, 9);
-	git_index_write(g_index);
+	cl_git_pass(git_index_write(g_index));
 
 	cl_git_pass(git_checkout_index(g_repo, g_index, &opts));
 
@@ -789,7 +789,7 @@ void test_checkout_conflict__rename_keep_ours(void)
 	
 	create_index(checkout_index_entries, 41);
 	create_index_names(checkout_name_entries, 9);
-	git_index_write(g_index);
+	cl_git_pass(git_index_write(g_index));
 	
 	cl_git_pass(git_checkout_index(g_repo, g_index, &opts));
 		
@@ -922,7 +922,7 @@ void test_checkout_conflict__name_mangled_file_exists_in_workdir(void)
 
 	create_index(checkout_index_entries, 24);
 	create_index_names(checkout_name_entries, 6);
-	git_index_write(g_index);
+	cl_git_pass(git_index_write(g_index));
 
 	/* Add some files on disk that conflict with the names that would be chosen
 	 * for the files written for each side. */
@@ -1012,7 +1012,7 @@ void test_checkout_conflict__update_only(void)
 	opts.checkout_strategy |= GIT_CHECKOUT_UPDATE_ONLY;
 
 	create_index(checkout_index_entries, 3);
-	git_index_write(g_index);
+	cl_git_pass(git_index_write(g_index));
 
 	cl_git_pass(p_mkdir("merge-resolve/directory_file-two", 0777));
 	cl_git_rewritefile("merge-resolve/directory_file-two/file", CONFLICTING_OURS_FILE);
@@ -1063,7 +1063,7 @@ void test_checkout_conflict__path_filters(void)
 	opts.paths = patharray;
 
 	create_index(checkout_index_entries, 12);
-	git_index_write(g_index);
+	cl_git_pass(git_index_write(g_index));
 
 	cl_git_pass(git_checkout_index(g_repo, g_index, &opts));
 
@@ -1120,7 +1120,7 @@ void test_checkout_conflict__report_progress(void)
 
 
 	create_index(checkout_index_entries, 12);
-	git_index_write(g_index);
+	cl_git_pass(git_index_write(g_index));
 
 	cl_git_pass(git_checkout_index(g_repo, g_index, &opts));
 

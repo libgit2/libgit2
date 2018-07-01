@@ -34,7 +34,7 @@ void test_stash_apply__initialize(void)
 	cl_git_pass(git_index_add_bypath(repo_index, "who"));
 	cl_git_pass(git_index_add_bypath(repo_index, "why"));
 	cl_git_pass(git_index_add_bypath(repo_index, "where"));
-	git_index_write(repo_index);
+	cl_git_pass(git_index_write(repo_index));
 
 	cl_git_rewritefile("stash/where", "....\n");
 
