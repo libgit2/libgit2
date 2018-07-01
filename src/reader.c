@@ -74,6 +74,7 @@ int git_reader_for_tree(git_reader **out, git_tree *tree)
 typedef struct {
 	git_reader reader;
 	git_repository *repo;
+	git_index *index;
 } workdir_reader;
 
 static int workdir_reader_read(
@@ -84,6 +85,8 @@ static int workdir_reader_read(
 {
 	workdir_reader *reader = (workdir_reader *)_reader;
 	git_buf path = GIT_BUF_INIT;
+	const git_index_entry *idx_entry;
+	git_oid id;
 	int error;
 
 	if ((error = git_buf_joinpath(&path,
@@ -94,8 +97,21 @@ static int workdir_reader_read(
 	if ((error = git_futils_readbuffer(out, path.ptr)) < 0)
 		goto done;
 
+	if (out_id || reader->index) {
+		if ((error = git_odb_hash(&id, out->ptr, out->size, GIT_OBJ_BLOB)) < 0)
+			goto done;
+	}
+
+	if (reader->index) {
+		if (!(idx_entry = git_index_get_bypath(reader->index, filename, 0)) ||
+		    !git_oid_equal(&id, &idx_entry->id)) {
+			error = GIT_READER_MISMATCH;
+			goto done;
+		}
+	}
+
 	if (out_id)
-		error = git_odb_hash(out_id, out->ptr, out->size, GIT_OBJ_BLOB);
+		git_oid_cpy(out_id, &id);
 
 done:
 	git_buf_dispose(&path);
@@ -107,9 +123,13 @@ static void workdir_reader_free(git_reader *_reader)
 	GIT_UNUSED(_reader);
 }
 
-int git_reader_for_workdir(git_reader **out, git_repository *repo)
+int git_reader_for_workdir(
+	git_reader **out,
+	git_repository *repo,
+	bool validate_index)
 {
 	workdir_reader *reader;
+	int error;
 
 	assert(out && repo);
 
@@ -119,6 +139,12 @@ int git_reader_for_workdir(git_reader **out, git_repository *repo)
 	reader->reader.read = workdir_reader_read;
 	reader->reader.free = workdir_reader_free;
 	reader->repo = repo;
+
+	if (validate_index &&
+	    (error = git_repository_index__weakptr(&reader->index, repo)) < 0) {
+		git__free(reader);
+		return error;
+	}
 
 	*out = (git_reader *)reader;
 	return 0;
@@ -183,13 +209,9 @@ int git_reader_for_index(
 
 	if (index) {
 		reader->index = index;
-	} else {
-		error = git_repository_index__weakptr(&reader->index, repo);
-
-		if (error < 0) {
-			git__free(reader);
-			return error;
-		}
+	} else if ((error = git_repository_index__weakptr(&reader->index, repo)) < 0) {
+		git__free(reader);
+		return error;
 	}
 
 	*out = (git_reader *)reader;

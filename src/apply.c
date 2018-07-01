@@ -661,7 +661,7 @@ int git_apply(
 	 * in the index.
 	 */
 	if (opts.location == GIT_APPLY_LOCATION_WORKDIR)
-		error = git_reader_for_workdir(&pre_reader, repo);
+		error = git_reader_for_workdir(&pre_reader, repo, false);
 	else
 		error = git_reader_for_index(&pre_reader, repo, NULL);
 

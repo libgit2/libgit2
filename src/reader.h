@@ -9,6 +9,9 @@
 
 #include "common.h"
 
+/* Returned when the workdir does not match the index */
+#define GIT_READER_MISMATCH	1
+
 typedef struct git_reader git_reader;
 
 /*
@@ -76,7 +79,8 @@ extern int git_reader_for_index(
  */
 extern int git_reader_for_workdir(
 	git_reader **out,
-	git_repository *repo);
+	git_repository *repo,
+	bool validate_index);
 
 /**
  * Read the given filename from the reader and populate the given buffer
