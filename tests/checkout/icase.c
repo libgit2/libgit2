@@ -44,29 +44,6 @@ void test_checkout_icase__cleanup(void)
 
 static char *get_filename(const char *in)
 {
-#ifdef GIT_WIN32
-	HANDLE fh;
-	HMODULE kerneldll;
-	char *filename;
-
-	typedef DWORD (__stdcall *getfinalpathname)(HANDLE, LPSTR, DWORD, DWORD);
-	getfinalpathname getfinalpathfn;
-
-	cl_assert(filename = malloc(MAX_PATH));
-	cl_assert(kerneldll = LoadLibrary("kernel32.dll"));
-	cl_assert(getfinalpathfn = (getfinalpathname)GetProcAddress(kerneldll, "GetFinalPathNameByHandleA"));
-
-	cl_assert(fh = CreateFileA(in, FILE_READ_ATTRIBUTES | STANDARD_RIGHTS_READ, FILE_SHARE_READ,
-		NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL));
-
-	cl_win32_pass(getfinalpathfn(fh, filename, MAX_PATH, VOLUME_NAME_DOS));
-
-	CloseHandle(fh);
-
-	git_path_mkposix(filename);
-
-	return filename;
-#else
 	char *search_dirname, *search_filename, *filename = NULL;
 	git_buf out = GIT_BUF_INIT;
 	DIR *dir;
@@ -92,7 +69,6 @@ static char *get_filename(const char *in)
 	git_buf_dispose(&out);
 
 	return filename;
-#endif
 }
 
 static void assert_name_is(const char *expected)
