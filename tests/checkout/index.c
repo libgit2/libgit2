@@ -136,6 +136,25 @@ void test_checkout_index__honor_coreautocrlf_setting_set_to_true(void)
 #endif
 }
 
+static bool supports_symlinks(const char *dir)
+{
+	git_buf path = GIT_BUF_INIT;
+	struct stat st;
+	bool supports_symlinks = 1;
+
+	cl_git_pass(git_buf_joinpath(&path, dir, "test"));
+
+	/* see if symlinks are supported in the "symlink" directory */
+	if (p_symlink("target", path.ptr) < 0 ||
+	    p_lstat(path.ptr, &st) < 0 ||
+	    ! (S_ISLNK(st.st_mode)))
+		supports_symlinks = 0;
+
+	git_buf_dispose(&path);
+
+	return supports_symlinks;
+}
+
 void test_checkout_index__honor_coresymlinks_default(void)
 {
 	git_repository *repo;
@@ -162,10 +181,9 @@ void test_checkout_index__honor_coresymlinks_default(void)
 	git_object_free(target);
 	git_repository_free(repo);
 
-#ifdef GIT_WIN32
-	check_file_contents("./symlink/link_to_new.txt", "new.txt");
-#else
-	{
+	if (!supports_symlinks("symlink")) {
+		check_file_contents("./symlink/link_to_new.txt", "new.txt");
+	} else {
 		char link_data[1024];
 		size_t link_size = 1024;
 
@@ -175,14 +193,33 @@ void test_checkout_index__honor_coresymlinks_default(void)
 		cl_assert_equal_s(link_data, "new.txt");
 		check_file_contents("./symlink/link_to_new.txt", "my new file\n");
 	}
-#endif
 
 	cl_fixture_cleanup("symlink");
+}
+
+void test_checkout_index__coresymlinks_set_to_true_fails_when_unsupported(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+
+	if (supports_symlinks("testrepo")) {
+		cl_skip();
+	}
+
+	cl_repo_set_bool(g_repo, "core.symlinks", true);
+
+	opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_RECREATE_MISSING;
+	cl_git_fail(git_checkout_index(g_repo, NULL, &opts));
 }
 
 void test_checkout_index__honor_coresymlinks_setting_set_to_true(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	char link_data[GIT_PATH_MAX];
+	size_t link_size = GIT_PATH_MAX;
+
+	if (!supports_symlinks("testrepo")) {
+		cl_skip();
+	}
 
 	cl_repo_set_bool(g_repo, "core.symlinks", true);
 
@@ -190,20 +227,11 @@ void test_checkout_index__honor_coresymlinks_setting_set_to_true(void)
 
 	cl_git_pass(git_checkout_index(g_repo, NULL, &opts));
 
-#ifdef GIT_WIN32
-	check_file_contents("./testrepo/link_to_new.txt", "new.txt");
-#else
-	{
-		char link_data[1024];
-		size_t link_size = 1024;
-
-		link_size = p_readlink("./testrepo/link_to_new.txt", link_data, link_size);
-		link_data[link_size] = '\0';
-		cl_assert_equal_i(link_size, strlen("new.txt"));
-		cl_assert_equal_s(link_data, "new.txt");
-		check_file_contents("./testrepo/link_to_new.txt", "my new file\n");
-	}
-#endif
+	link_size = p_readlink("./testrepo/link_to_new.txt", link_data, link_size);
+	link_data[link_size] = '\0';
+	cl_assert_equal_i(link_size, strlen("new.txt"));
+	cl_assert_equal_s(link_data, "new.txt");
+	check_file_contents("./testrepo/link_to_new.txt", "my new file\n");
 }
 
 void test_checkout_index__honor_coresymlinks_setting_set_to_false(void)
@@ -474,7 +502,7 @@ void test_checkout_index__can_overcome_name_clashes(void)
 	cl_assert(git_path_isfile("./testrepo/path0/file0"));
 
 	opts.checkout_strategy =
-		GIT_CHECKOUT_SAFE | 
+		GIT_CHECKOUT_SAFE |
 		GIT_CHECKOUT_RECREATE_MISSING |
 		GIT_CHECKOUT_ALLOW_CONFLICTS;
 	cl_git_pass(git_checkout_index(g_repo, index, &opts));

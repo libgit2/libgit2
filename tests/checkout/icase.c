@@ -3,6 +3,7 @@
 #include "git2/checkout.h"
 #include "refs.h"
 #include "path.h"
+#include "repository.h"
 
 #ifdef GIT_WIN32
 # include <windows.h>
@@ -91,6 +92,18 @@ static void assert_name_is(const char *expected)
 	free(actual);
 }
 
+static int symlink_or_fake(git_repository *repo, const char *a, const char *b)
+{
+	int symlinks;
+
+	cl_git_pass(git_repository__cvar(&symlinks, repo, GIT_CVAR_SYMLINKS));
+
+	if (symlinks)
+		return p_symlink(a, b);
+	else
+		return git_futils_fake_symlink(a, b);
+}
+
 void test_checkout_icase__refuses_to_overwrite_files_for_files(void)
 {
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE|GIT_CHECKOUT_RECREATE_MISSING;
@@ -117,7 +130,7 @@ void test_checkout_icase__refuses_to_overwrite_links_for_files(void)
 {
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE|GIT_CHECKOUT_RECREATE_MISSING;
 
-	cl_must_pass(p_symlink("../tmp", "testrepo/BRANCH_FILE.txt"));
+	cl_must_pass(symlink_or_fake(repo, "../tmp", "testrepo/BRANCH_FILE.txt"));
 
 	cl_git_fail(git_checkout_tree(repo, obj, &checkout_opts));
 
@@ -129,7 +142,7 @@ void test_checkout_icase__overwrites_links_for_files_when_forced(void)
 {
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
-	cl_must_pass(p_symlink("../tmp", "testrepo/NEW.txt"));
+	cl_must_pass(symlink_or_fake(repo, "../tmp", "testrepo/NEW.txt"));
 
 	cl_git_pass(git_checkout_tree(repo, obj, &checkout_opts));
 
@@ -205,7 +218,7 @@ void test_checkout_icase__refuses_to_overwrite_links_for_folders(void)
 {
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE|GIT_CHECKOUT_RECREATE_MISSING;
 
-	cl_must_pass(p_symlink("..", "testrepo/A"));
+	cl_must_pass(symlink_or_fake(repo, "..", "testrepo/A"));
 
 	cl_git_fail(git_checkout_tree(repo, obj, &checkout_opts));
 
@@ -217,7 +230,7 @@ void test_checkout_icase__overwrites_links_for_folders_when_forced(void)
 {
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
-	cl_must_pass(p_symlink("..", "testrepo/A"));
+	cl_must_pass(symlink_or_fake(repo, "..", "testrepo/A"));
 
 	cl_git_pass(git_checkout_tree(repo, obj, &checkout_opts));
 
