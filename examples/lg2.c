@@ -33,6 +33,7 @@ struct {
 	{ "show-index",   lg2_show_index,   0 },
 	{ "stash",        lg2_stash,        1 },
 	{ "status",       lg2_status,       1 },
+	{ "submodule",    lg2_submodule,    1 },
 	{ "tag",          lg2_tag,          1 },
 };
 
