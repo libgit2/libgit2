@@ -1606,30 +1606,23 @@ static int submodule_update_head(git_submodule *submodule)
 
 int git_submodule_reload(git_submodule *sm, int force)
 {
-	int error = 0, isvalid;
-	git_config *mods;
+	git_config *mods = NULL;
+	int error;
 
 	GIT_UNUSED(force);
 
 	assert(sm);
 
-	isvalid = git_submodule_name_is_valid(sm->repo, sm->name, 0);
-	if (isvalid <= 0) {
+	if ((error = git_submodule_name_is_valid(sm->repo, sm->name, 0)) <= 0)
 		/* This should come with a warning, but we've no API for that */
-		return isvalid;
-	}
+		goto out;
 
 	if (!git_repository_is_bare(sm->repo)) {
-		/* refresh config data */
+		/* refresh gitmodules data */
 		if ((error = gitmodules_snapshot(&mods, sm->repo)) < 0 && error != GIT_ENOTFOUND)
-			return error;
-		if (mods != NULL) {
-			error = submodule_read_config(sm, mods);
-			git_config_free(mods);
-
-			if (error < 0)
-				return error;
-		}
+			goto out;
+		if (mods != NULL && (error = submodule_read_config(sm, mods)) < 0)
+			goto out;
 
 		/* refresh wd data */
 		sm->flags &=
@@ -1637,12 +1630,17 @@ int git_submodule_reload(git_submodule *sm, int force)
 			  GIT_SUBMODULE_STATUS__WD_OID_VALID |
 			  GIT_SUBMODULE_STATUS__WD_FLAGS);
 
-		error = submodule_load_from_wd_lite(sm);
+		if ((error = submodule_load_from_wd_lite(sm)) < 0)
+			goto out;
 	}
 
-	if (error == 0 && (error = submodule_update_index(sm)) == 0)
-		error = submodule_update_head(sm);
+	if ((error = submodule_update_index(sm)) < 0)
+		goto out;
+	if ((error = submodule_update_head(sm)) < 0)
+		goto out;
 
+out:
+	git_config_free(mods);
 	return error;
 }
 
