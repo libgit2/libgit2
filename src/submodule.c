@@ -1613,8 +1613,19 @@ int git_submodule_reload(git_submodule *sm, int force)
 
 	assert(sm);
 
+	/*
+	 * Check if the submodule name is valid. Note that it is
+	 * intended that we return `GIT_NOERROR` in case the
+	 * submodule name is invalid. As stated in 6b15ceac0
+	 * (submodule: ignore submodules which include path
+	 * traversal in their name, 2018-04-30):
+	 *
+	 *    This leaves us with a half-configured submodule when looking it up by path, but
+	 *    it's the same result as if the configuration really were missing.
+	 *
+	 * This should come with a warning, but we've no API for that yet.
+	 */
 	if ((error = git_submodule_name_is_valid(sm->repo, sm->name, 0)) <= 0)
-		/* This should come with a warning, but we've no API for that */
 		goto out;
 
 	if (!git_repository_is_bare(sm->repo)) {
