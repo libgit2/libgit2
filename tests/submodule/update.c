@@ -118,6 +118,7 @@ void test_submodule_update__update_submodule(void)
 	cl_assert_equal_i(submodule_status, GIT_SUBMODULE_STATUS_IN_HEAD |
 		GIT_SUBMODULE_STATUS_IN_INDEX |
 		GIT_SUBMODULE_STATUS_IN_CONFIG |
+		GIT_SUBMODULE_STATUS_IN_GITCONFIG |
 		GIT_SUBMODULE_STATUS_IN_WD);
 
 	cl_assert(git_oid_streq(git_submodule_head_id(sm), "be3563ae3f795b2b4353bcce3a527ad0a4f7f644") == 0);
@@ -165,6 +166,7 @@ void test_submodule_update__update_submodule_with_path(void)
 	cl_assert_equal_i(submodule_status, GIT_SUBMODULE_STATUS_IN_HEAD |
 		GIT_SUBMODULE_STATUS_IN_INDEX |
 		GIT_SUBMODULE_STATUS_IN_CONFIG |
+		GIT_SUBMODULE_STATUS_IN_GITCONFIG |
 		GIT_SUBMODULE_STATUS_IN_WD);
 
 	cl_assert(git_oid_streq(git_submodule_head_id(sm), "a65fedf39aefe402d3bb6e24df4d4f5fe4547750") == 0);
@@ -258,6 +260,7 @@ void test_submodule_update__update_already_checked_out_submodule(void)
 	cl_assert_equal_i(submodule_status, GIT_SUBMODULE_STATUS_IN_HEAD |
 		GIT_SUBMODULE_STATUS_IN_INDEX |
 		GIT_SUBMODULE_STATUS_IN_CONFIG |
+		GIT_SUBMODULE_STATUS_IN_GITCONFIG |
 		GIT_SUBMODULE_STATUS_IN_WD |
 		GIT_SUBMODULE_STATUS_WD_MODIFIED);
 
@@ -336,6 +339,7 @@ void test_submodule_update__update_blocks_on_dirty_wd(void)
 	cl_assert_equal_i(submodule_status, GIT_SUBMODULE_STATUS_IN_HEAD |
 		GIT_SUBMODULE_STATUS_IN_INDEX |
 		GIT_SUBMODULE_STATUS_IN_CONFIG |
+		GIT_SUBMODULE_STATUS_IN_GITCONFIG |
 		GIT_SUBMODULE_STATUS_IN_WD |
 		GIT_SUBMODULE_STATUS_WD_MODIFIED);
 
@@ -412,6 +416,7 @@ void test_submodule_update__can_force_update(void)
 	cl_assert_equal_i(submodule_status, GIT_SUBMODULE_STATUS_IN_HEAD |
 		GIT_SUBMODULE_STATUS_IN_INDEX |
 		GIT_SUBMODULE_STATUS_IN_CONFIG |
+		GIT_SUBMODULE_STATUS_IN_GITCONFIG |
 		GIT_SUBMODULE_STATUS_IN_WD |
 		GIT_SUBMODULE_STATUS_WD_MODIFIED);
 

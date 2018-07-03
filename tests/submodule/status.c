@@ -23,6 +23,7 @@ void test_submodule_status__unchanged(void)
 		GIT_SUBMODULE_STATUS_IN_HEAD |
 		GIT_SUBMODULE_STATUS_IN_INDEX |
 		GIT_SUBMODULE_STATUS_IN_CONFIG |
+		GIT_SUBMODULE_STATUS_IN_GITCONFIG |
 		GIT_SUBMODULE_STATUS_IN_WD;
 
 	cl_assert(GIT_SUBMODULE_STATUS_IS_UNMODIFIED(status));
@@ -349,6 +350,7 @@ void test_submodule_status__untracked_dirs_containing_ignored_files(void)
 	expected = GIT_SUBMODULE_STATUS_IN_HEAD |
 		GIT_SUBMODULE_STATUS_IN_INDEX |
 		GIT_SUBMODULE_STATUS_IN_CONFIG |
+		GIT_SUBMODULE_STATUS_IN_GITCONFIG |
 		GIT_SUBMODULE_STATUS_IN_WD;
 	cl_assert(status == expected);
 }

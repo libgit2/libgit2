@@ -65,6 +65,7 @@ static int submodule_alloc(git_submodule **out, git_repository *repo, const char
 static git_config_backend *open_gitmodules(git_repository *repo, int gitmod);
 static int gitmodules_snapshot(git_config **snap, git_repository *repo);
 static int get_url_base(git_buf *url, git_repository *repo);
+static int get_value(const char **out, git_config *cfg, git_buf *buf, const char *name, const char *field);
 static int lookup_head_remote_key(git_buf *remote_key, git_repository *repo);
 static int lookup_default_remote(git_remote **remote, git_repository *repo);
 static int submodule_load_each(const git_config_entry *entry, void *payload);
@@ -289,7 +290,7 @@ int git_submodule_lookup(
 	}
 
 	/* If it's not configured or we're looking by path  */
-	if (location == 0 || location == GIT_SUBMODULE_STATUS_IN_WD) {
+	if (location == 0 || (location & ~GIT_SUBMODULE_STATUS_IN_GITCONFIG) == GIT_SUBMODULE_STATUS_IN_WD) {
 		git_config_backend *mods;
 		const char *pattern = "submodule\\..*\\.path";
 		git_buf path = GIT_BUF_INIT;
@@ -335,7 +336,7 @@ int git_submodule_lookup(
 	}
 
 	/* If we still haven't found it, do the WD check */
-	if (location == 0 || location == GIT_SUBMODULE_STATUS_IN_WD) {
+	if (location == 0 || (location & ~GIT_SUBMODULE_STATUS_IN_GITCONFIG) == GIT_SUBMODULE_STATUS_IN_WD) {
 		git_submodule_free(sm);
 		error = GIT_ENOTFOUND;
 
@@ -1604,6 +1605,34 @@ static int submodule_update_head(git_submodule *submodule)
 	return 0;
 }
 
+int submodule_update_gitconfig(git_submodule *sm)
+{
+	git_buf buf = GIT_BUF_INIT;
+	git_config *cfg = NULL;
+	const char *value;
+	int error;
+
+	sm->flags &= ~GIT_SUBMODULE_STATUS_IN_GITCONFIG;
+
+	if ((error = git_repository_config_snapshot(&cfg, sm->repo)) < 0)
+		goto out;
+
+	if ((error = get_value(&value, cfg, &buf, sm->name, "url")) < 0) {
+		if (error == GIT_ENOTFOUND) {
+			git_error_clear();
+			error = 0;
+		}
+		goto out;
+	}
+
+	sm->flags |= GIT_SUBMODULE_STATUS_IN_GITCONFIG;
+
+out:
+	git_config_free(cfg);
+	git_buf_dispose(&buf);
+	return error;
+}
+
 int git_submodule_reload(git_submodule *sm, int force)
 {
 	git_config *mods = NULL;
@@ -1645,6 +1674,8 @@ int git_submodule_reload(git_submodule *sm, int force)
 			goto out;
 	}
 
+	if ((error = submodule_update_gitconfig(sm)) < 0)
+		goto out;
 	if ((error = submodule_update_index(sm)) < 0)
 		goto out;
 	if ((error = submodule_update_head(sm)) < 0)
