@@ -247,6 +247,19 @@ void test_repo_init__detect_ignorecase(void)
 		"core.ignorecase", found_without_match ? true : GIT_ENOTFOUND);
 }
 
+void test_repo_init__detect_symlinks(void)
+{
+	struct stat st;
+	bool no_symlinks;
+
+	no_symlinks = (p_symlink("target", "link") < 0 ||
+	    p_lstat("link", &st) < 0 ||
+	    ! (S_ISLNK(st.st_mode)));
+
+	assert_config_entry_on_init(
+	    "core.symlinks", no_symlinks ? false : GIT_ENOTFOUND);
+}
+
 void test_repo_init__detect_precompose_unicode_required(void)
 {
 #ifdef GIT_USE_ICONV
