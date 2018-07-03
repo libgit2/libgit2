@@ -29,6 +29,10 @@
 #define IO_REPARSE_TAG_SYMLINK (0xA000000CL)
 #endif
 
+#ifndef SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE
+# define SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE 0x02
+#endif
+
 /* Allowable mode bits on Win32.  Using mode bits that are not supported on
  * Win32 (eg S_IRWXU) is generally ignored, but Wine warns loudly about it
  * so we simply remove them.
@@ -390,12 +394,20 @@ int p_readlink(const char *path, char *buf, size_t bufsiz)
 	return (int)bufsiz;
 }
 
-int p_symlink(const char *old, const char *new)
+int p_symlink(const char *target, const char *path)
 {
-	/* Real symlinks on NTFS require admin privileges. Until this changes,
-	 * libgit2 just creates a text file with the link target in the contents.
-	 */
-	return git_futils_fake_symlink(old, new);
+	git_win32_path target_w, path_w;
+	wchar_t *target_p;
+
+	if (git_win32_path_from_utf8(path_w, path) < 0 ||
+		git__utf8_to_16(target_w, MAX_PATH, target) < 0)
+		return -1;
+
+	if (!CreateSymbolicLinkW(path_w, target_w,
+	    SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE))
+		return -1;
+
+	return 0;
 }
 
 struct open_opts {
