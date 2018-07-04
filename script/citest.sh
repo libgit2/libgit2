@@ -25,7 +25,9 @@ git daemon --listen=localhost --export-all --enable=receive-pack --base-path="$H
 export GITTEST_REMOTE_URL="git://localhost/test.git"
 
 # Run the test suite
-ctest -V -R libgit2_clar || exit $?
+ctest -V -R offline || exit $?
+ctest -V -R online || exit $?
+ctest -V -R gitdaemon || exit $?
 
 # Now that we've tested the raw git protocol, let's set up ssh to we
 # can do the push tests over it
@@ -71,12 +73,12 @@ export GITTEST_REMOTE_USER=$USER
 export GITTEST_REMOTE_SSH_KEY="$HOME/.ssh/id_rsa"
 export GITTEST_REMOTE_SSH_PUBKEY="$HOME/.ssh/id_rsa.pub"
 export GITTEST_REMOTE_SSH_PASSPHRASE=""
-ctest -V -R libgit2_clar-ssh || exit $?
+ctest -V -R ssh || exit $?
 
 # Use the proxy we started at the beginning
 export GITTEST_REMOTE_PROXY_URL="localhost:8080"
 export GITTEST_REMOTE_PROXY_USER="foo"
 export GITTEST_REMOTE_PROXY_PASS="bar"
-ctest -V -R libgit2_clar-proxy_credentials || exit $?
+ctest -V -R proxy || exit $?
 
 kill $(cat "$HOME/sshd/pid")
