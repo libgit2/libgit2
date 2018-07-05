@@ -566,7 +566,7 @@ int git_delta_apply(
 		unsigned char cmd = *delta++;
 		if (cmd & 0x80) {
 			/* cmd is a copy instruction; copy from the base. */
-			size_t off = 0, len = 0;
+			size_t off = 0, len = 0, end;
 
 #define ADD_DELTA(o, shift) { if (delta < delta_end) (o) |= ((unsigned) *delta++ << shift); else goto fail; }
 			if (cmd & 0x01) ADD_DELTA(off, 0UL);
@@ -580,8 +580,10 @@ int git_delta_apply(
 			if (!len)       len = 0x10000;
 #undef ADD_DELTA
 
-			if (base_len < off + len || res_sz < len)
+			if (GIT_ADD_SIZET_OVERFLOW(&end, off, len) ||
+			    base_len < end || res_sz < len)
 				goto fail;
+
 			memcpy(res_dp, base + off, len);
 			res_dp += len;
 			res_sz -= len;
