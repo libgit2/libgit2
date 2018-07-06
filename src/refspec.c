@@ -277,7 +277,7 @@ int git_refspec_transform(git_buf *out, const git_refspec *spec, const char *nam
 	}
 
 	if (!spec->pattern)
-		return git_buf_puts(out, spec->dst);
+		return git_buf_puts(out, spec->dst ? spec->dst : "");
 
 	return refspec_transform(out, spec->src, spec->dst, name);
 }

@@ -111,6 +111,11 @@ void test_network_refspecs__transform_mid_star(void)
 	assert_valid_transform("refs/*:refs/*", "refs/heads/master", "refs/heads/master");
 }
 
+void test_network_refspecs__no_dst(void)
+{
+	assert_valid_transform("refs/heads/master:", "refs/heads/master", "");
+}
+
 static void assert_invalid_transform(const char *refspec, const char *name)
 {
 	git_refspec spec;
