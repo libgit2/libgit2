@@ -142,7 +142,7 @@ int git_smart__detect_caps(git_pkt_ref *pkt, transport_smart_caps *caps, git_vec
 
 	/* No refs or capabilites, odd but not a problem */
 	if (pkt == NULL || pkt->capabilities == NULL)
-		return 0;
+		return GIT_ENOTFOUND;
 
 	ptr = pkt->capabilities;
 	while (ptr != NULL && *ptr != '\0') {
