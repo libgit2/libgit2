@@ -261,7 +261,7 @@ static int create_internal(git_remote **out, const char *url, const git_remote_c
 
 	remote->repo = opts->repository;
 
-	if ((error = git_vector_init(&remote->refs, 32, NULL)) < 0 ||
+	if ((error = git_vector_init(&remote->refs, 8, NULL)) < 0 ||
 		(error = canonicalize_url(&canonical_url, url)) < 0)
 		goto on_error;
 
