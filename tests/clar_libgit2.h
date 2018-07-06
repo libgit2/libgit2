@@ -181,6 +181,13 @@ git_repository *cl_git_sandbox_init_new(const char *name);
 void cl_git_sandbox_cleanup(void);
 git_repository *cl_git_sandbox_reopen(void);
 
+/*
+ * build a sandbox-relative from path segments
+ * is_dir will add a trailing slash
+ * vararg must be a NULL-terminated char * list
+ */
+const char *cl_git_sandbox_path(int is_dir, ...);
+
 /* Local-repo url helpers */
 const char* cl_git_fixture_url(const char *fixturename);
 const char* cl_git_path_url(const char *path);
