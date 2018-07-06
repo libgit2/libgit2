@@ -104,7 +104,7 @@ static void commit_and_tag(
 
 	cl_git_append2file("describe/file", "\n");
 	
-	cl_git_pass(git_index_add_bypath(index, "describe/file"));
+	cl_git_pass(git_index_add_bypath(index, "file"));
 	cl_git_pass(git_index_write(index));
 
 	*time += 10;
