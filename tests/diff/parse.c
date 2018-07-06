@@ -288,3 +288,74 @@ void test_diff_parse__patch_roundtrip_succeeds(void)
 	git_buf_dispose(&patchbuf);
 	git_buf_dispose(&diffbuf);
 }
+
+#define cl_assert_equal_i_src(i1,i2,file,line) clar__assert_equal(file,line,#i1 " != " #i2, 1, "%d", (int)(i1), (int)(i2))
+
+static void cl_git_assert_lineinfo_(int old_lineno, int new_lineno, int num_lines, git_patch *patch, size_t hunk_idx, size_t line_idx, const char *file, int lineno)
+{
+	const git_diff_line *line;
+
+	cl_git_expect(git_patch_get_line_in_hunk(&line, patch, hunk_idx, line_idx), 0, file, lineno);
+	cl_assert_equal_i_src(old_lineno, line->old_lineno, file, lineno);
+	cl_assert_equal_i_src(new_lineno, line->new_lineno, file, lineno);
+	cl_assert_equal_i_src(num_lines, line->num_lines, file, lineno);
+}
+
+#define cl_git_assert_lineinfo(old, new, num, p, h, l) \
+	cl_git_assert_lineinfo_(old,new,num,p,h,l,__FILE__,__LINE__)
+
+
+void test_diff_parse__issue4672(void)
+{
+	const char *text = "diff --git a/a b/a\n"
+	"index 7f129fd..af431f2 100644\n"
+	"--- a/a\n"
+	"+++ b/a\n"
+	"@@ -3 +3 @@\n"
+	"-a contents 2\n"
+	"+a contents\n";
+
+	git_diff *diff;
+	git_patch *patch;
+	const git_diff_hunk *hunk;
+	size_t n, l = 0;
+
+	cl_git_pass(git_diff_from_buffer(&diff, text, strlen(text)));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
+	cl_git_pass(git_patch_get_hunk(&hunk, &n, patch, 0));
+
+	cl_git_assert_lineinfo(3, -1, 1, patch, 0, l++);
+	cl_git_assert_lineinfo(-1, 3, 1, patch, 0, l++);
+
+	cl_assert_equal_i(n, l);
+
+	git_patch_free(patch);
+	git_diff_free(diff);
+}
+
+void test_diff_parse__lineinfo(void)
+{
+	const char *text = PATCH_ORIGINAL_TO_CHANGE_MIDDLE;
+	git_diff *diff;
+	git_patch *patch;
+	const git_diff_hunk *hunk;
+	size_t n, l = 0;
+
+	cl_git_pass(git_diff_from_buffer(&diff, text, strlen(text)));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
+	cl_git_pass(git_patch_get_hunk(&hunk, &n, patch, 0));
+
+	cl_git_assert_lineinfo(3, 3, 1, patch, 0, l++);
+	cl_git_assert_lineinfo(4, 4, 1, patch, 0, l++);
+	cl_git_assert_lineinfo(5, 5, 1, patch, 0, l++);
+	cl_git_assert_lineinfo(6, -1, 1, patch, 0, l++);
+	cl_git_assert_lineinfo(-1, 6, 1, patch, 0, l++);
+	cl_git_assert_lineinfo(7, 7, 1, patch, 0, l++);
+	cl_git_assert_lineinfo(8, 8, 1, patch, 0, l++);
+	cl_git_assert_lineinfo(9, 9, 1, patch, 0, l++);
+
+	cl_assert_equal_i(n, l);
+
+	git_patch_free(patch);
+	git_diff_free(diff);
+}
