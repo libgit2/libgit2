@@ -218,39 +218,34 @@ int git_openssl_stream_global_init(void)
 	 * compatibility. We then disable SSL so we only allow OpenSSL
 	 * to speak TLSv1 to perform the encryption itself.
 	 */
-	git__ssl_ctx = SSL_CTX_new(SSLv23_method());
-	if (!git__ssl_ctx) {
-		return -1;
-	}
+	if (!(git__ssl_ctx = SSL_CTX_new(SSLv23_method())))
+		goto error;
 
 	SSL_CTX_set_options(git__ssl_ctx, ssl_opts);
 	SSL_CTX_set_mode(git__ssl_ctx, SSL_MODE_AUTO_RETRY);
 	SSL_CTX_set_verify(git__ssl_ctx, SSL_VERIFY_NONE, NULL);
-	if (!SSL_CTX_set_default_verify_paths(git__ssl_ctx)) {
-		SSL_CTX_free(git__ssl_ctx);
-		git__ssl_ctx = NULL;
-		return -1;
-	}
+	if (!SSL_CTX_set_default_verify_paths(git__ssl_ctx))
+		goto error;
 
-	if (!ciphers) {
+	if (!ciphers)
 		ciphers = GIT_SSL_DEFAULT_CIPHERS;
-	}
 
-	if(!SSL_CTX_set_cipher_list(git__ssl_ctx, ciphers)) {
-		SSL_CTX_free(git__ssl_ctx);
-		git__ssl_ctx = NULL;
-		return -1;
-	}
+	if(!SSL_CTX_set_cipher_list(git__ssl_ctx, ciphers))
+		goto error;
 
-	if (init_bio_method() < 0) {
-		SSL_CTX_free(git__ssl_ctx);
-		git__ssl_ctx = NULL;
-		return -1;
-	}
+	if (init_bio_method() < 0)
+		goto error;
 
 	git__on_shutdown(shutdown_ssl);
 
 	return 0;
+
+error:
+	giterr_set(GITERR_NET, "could not initialize openssl: %s",
+		ERR_error_string(ERR_get_error(), NULL));
+	SSL_CTX_free(git__ssl_ctx);
+	git__ssl_ctx = NULL;
+	return -1;
 }
 
 #if defined(GIT_THREADS) && defined(OPENSSL_LEGACY_API)
