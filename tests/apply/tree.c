@@ -45,7 +45,7 @@ void test_apply_tree__one(void)
 
 	cl_git_pass(git_diff_tree_to_tree(&diff, repo, a_tree, b_tree, &opts));
 
-	cl_git_pass(git_apply_to_tree(&index, repo, a_tree, diff));
+	cl_git_pass(git_apply_to_tree(&index, repo, a_tree, diff, NULL));
 	merge_test_index(index, expected, 6);
 
 	git_index_free(index);

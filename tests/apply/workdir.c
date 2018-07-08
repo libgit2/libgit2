@@ -50,8 +50,7 @@ void test_apply_workdir__generated_diff(void)
 	cl_git_pass(git_commit_tree(&b_tree, b_commit));
 
 	cl_git_pass(git_diff_tree_to_tree(&diff, repo, a_tree, b_tree, &opts));
-
-	cl_git_pass(git_apply(repo, diff, NULL));
+	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_WORKDIR, NULL));
 
 	validate_index_unchanged(repo);
 	validate_apply_workdir(repo, workdir_expected, workdir_expected_cnt);
@@ -80,7 +79,7 @@ void test_apply_workdir__parsed_diff(void)
 
 	cl_git_pass(git_diff_from_buffer(&diff,
 		DIFF_MODIFY_TWO_FILES, strlen(DIFF_MODIFY_TWO_FILES)));
-	cl_git_pass(git_apply(repo, diff, NULL));
+	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_WORKDIR, NULL));
 
 	validate_index_unchanged(repo);
 	validate_apply_workdir(repo, workdir_expected, workdir_expected_cnt);
@@ -104,7 +103,7 @@ void test_apply_workdir__removes_file(void)
 
 	cl_git_pass(git_diff_from_buffer(&diff, DIFF_DELETE_FILE,
 		strlen(DIFF_DELETE_FILE)));
-	cl_git_pass(git_apply(repo, diff, NULL));
+	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_WORKDIR, NULL));
 
 	validate_index_unchanged(repo);
 	validate_apply_workdir(repo, workdir_expected, workdir_expected_cnt);
@@ -130,7 +129,7 @@ void test_apply_workdir__adds_file(void)
 
 	cl_git_pass(git_diff_from_buffer(&diff,
 		DIFF_ADD_FILE, strlen(DIFF_ADD_FILE)));
-	cl_git_pass(git_apply(repo, diff, NULL));
+	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_WORKDIR, NULL));
 
 	validate_index_unchanged(repo);
 	validate_apply_workdir(repo, workdir_expected, workdir_expected_cnt);
@@ -179,7 +178,7 @@ void test_apply_workdir__modified_index_with_unmodified_workdir_is_ok(void)
 	cl_git_pass(git_index_write(index));
 
 	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
-	cl_git_pass(git_apply(repo, diff, NULL));
+	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_WORKDIR, NULL));
 
 	validate_apply_index(repo, index_expected, index_expected_cnt);
 	validate_apply_workdir(repo, workdir_expected, workdir_expected_cnt);
@@ -210,7 +209,7 @@ void test_apply_workdir__application_failure_leaves_workdir_unmodified(void)
 	    "This is a modification.\n");
 
 	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
-	cl_git_fail_with(GIT_EAPPLYFAIL, git_apply(repo, diff, NULL));
+	cl_git_fail_with(GIT_EAPPLYFAIL, git_apply(repo, diff, GIT_APPLY_LOCATION_WORKDIR, NULL));
 
 	validate_apply_workdir(repo, workdir_expected, workdir_expected_cnt);
 
@@ -236,7 +235,7 @@ void test_apply_workdir__keeps_nonconflicting_changes(void)
 
 	cl_git_pass(git_diff_from_buffer(&diff,
 		DIFF_MODIFY_TWO_FILES, strlen(DIFF_MODIFY_TWO_FILES)));
-	cl_git_pass(git_apply(repo, diff, NULL));
+	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_WORKDIR, NULL));
 
 	validate_index_unchanged(repo);
 	validate_apply_workdir(repo, workdir_expected, workdir_expected_cnt);
@@ -270,7 +269,7 @@ void test_apply_workdir__can_apply_nonconflicting_file_changes(void)
 	    "This line is added in the workdir.\n");
 
 	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
-	cl_git_pass(git_apply(repo, diff, NULL));
+	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_WORKDIR, NULL));
 
 	validate_index_unchanged(repo);
 	validate_apply_workdir(repo, workdir_expected, workdir_expected_cnt);
@@ -297,7 +296,7 @@ void test_apply_workdir__change_mode(void)
 		sizeof(struct merge_index_entry);
 
 	cl_git_pass(git_diff_from_buffer(&diff, diff_file, strlen(diff_file)));
-	cl_git_pass(git_apply(repo, diff, NULL));
+	cl_git_pass(git_apply(repo, diff, GIT_APPLY_LOCATION_WORKDIR, NULL));
 
 	validate_index_unchanged(repo);
 	validate_apply_workdir(repo, workdir_expected, workdir_expected_cnt);
