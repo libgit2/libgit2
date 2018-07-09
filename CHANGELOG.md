@@ -1,3 +1,26 @@
+v0.26.5
+-------
+
+This is a security release fixing out-of-bounds reads when
+reading objects from a packfile. This corresponds to
+CVE-2018-10887 and CVE-2018-10888, which were both reported by
+Riccardo Schirone.
+
+When packing objects into a single so-called packfile, objects
+may not get stored as complete copies but instead as deltas
+against another object "base". A specially crafted delta object
+could trigger an integer overflow and thus bypass our input
+validation, which may result in copying memory before or after
+the base object into the final deflated object. This may lead to
+objects containing copies of system memory being written into the
+object database. As the hash of those objects cannot be easily
+controlled by the attacker, it is unlikely that any of those
+objects will be valid and referenced by the commit graph.
+
+Note that the error could also be triggered by the function
+`git_apply__patch`. But as this function is not in use outside of
+our test suite, it is not a possible attack vector.
+
 v0.26.4
 -------
 
