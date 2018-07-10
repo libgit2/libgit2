@@ -50,13 +50,13 @@ struct checkout_index_entry {
 	uint16_t mode;
 	char oid_str[GIT_OID_HEXSZ+1];
 	int stage;
-	char path[128];
+	char path[NAME_MAX + 1];
 };
 
 struct checkout_name_entry {
-	char ancestor[64];
-	char ours[64];
-	char theirs[64];
+	char ancestor[NAME_MAX + 1];
+	char ours[NAME_MAX + 1];
+	char theirs[NAME_MAX + 1];
 };
 
 void test_checkout_conflict__initialize(void)
@@ -679,6 +679,74 @@ void test_checkout_conflict__renames(void)
 
 	ensure_workdir("7-both-renamed.txt~theirs",
 		0100644, "b69fe837e4cecfd4c9a40cdca7c138468687df07");
+}
+
+#define LONG_NAME "4a-this-filename-is-greater-than-one-hundred-and-seventy-characters-which-is-about-two-thirds-of-two-hundred-and-fifty-five-characters-which-is-the-typical-value-for-the-NAME_MAX-env-var.txt"
+
+#define VERY_LONG_NAME "4b-this-filename-is-a-bit-greater-than-two-hundred-and-fifty-characters-which-means-that-it-plus-the-suffix-will-be-over-two-hundred-and-fifty-five-characters-which-is-the-typical-value-for-the-NAME_MAX-env-var-which-means-that-it-will-be-truncated.txt"
+
+#define VERY_LONG_NAME "4b-this-filename-is-a-bit-greater-than-two-hundred-and-fifty-characters-which-means-that-it-plus-the-suffix-will-be-over-two-hundred-and-fifty-five-characters-which-is-the-typical-value-for-the-NAME_MAX-env-var-which-means-that-it-will-be-truncated.txt"
+
+#define VERY_LONG_NAME_TRUNCATED_OURS "4b-this-filename-is-a-bit-greater-than-two-hundred-and-fifty-characters-which-means-that-it-plus-the-suffix-will-be-over-two-hundred-and-fifty-five-characters-which-is-the-typical-value-for-the-NAME_MAX-env-var-which-means-that-it-will-be-truncated.t~ours"
+
+#define VERY_LONG_NAME_TRUNCATED_THEIRS "4b-this-filename-is-a-bit-greater-than-two-hundred-and-fifty-characters-which-means-that-it-plus-the-suffix-will-be-over-two-hundred-and-fifty-five-characters-which-is-the-typical-value-for-the-NAME_MAX-env-var-which-means-that-it-will-be-truncated~theirs"
+
+void test_checkout_conflict__renames_long(void)
+{
+#ifndef _WIN32
+/* TODO (https://github.com/libgit2/libgit2/issues/3053) We can't run
+ * this test on win32 because win32 has a hard limit on total path
+ * length (rather than component length).  This means that checkouts
+ * which generate mangled paths will have arbitrary limits that are
+ * hard to test and that our checkout code won't correctly handle.
+ * The correct fix is to fix #3053 instead of contorting the checkout
+ * code to handle Windows.
+*/
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+
+	struct checkout_index_entry checkout_index_entries[] = {
+		{ 0100644, "227792b52aaa0b238bea00ec7e509b02623f168c", 2, LONG_NAME },
+		{ 0100644, "8b5b53cb2aa9ceb1139f5312fcfa3cc3c5a47c9a", 3, LONG_NAME },
+		{ 0100644, "227792b52aaa0b238bea00ec7e509b02623f168c", 1, "4a-renamed-in-ours-added-in-theirs.txt" },
+		{ 0100644, "de872ee3618b894992e9d1e18ba2ebe256a112f9", 2, VERY_LONG_NAME },
+		{ 0100644, "98d52d07c0b0bbf2b46548f6aa521295c2cb55db", 3, VERY_LONG_NAME },
+		{ 0100644, "98d52d07c0b0bbf2b46548f6aa521295c2cb55db", 1, "4b-renamed-in-theirs-added-in-ours.txt" },
+	};
+
+	struct checkout_name_entry checkout_name_entries[] = {
+		{
+			"4a-renamed-in-ours-added-in-theirs.txt",
+			LONG_NAME,
+			""
+		},
+
+		{
+			"4b-renamed-in-theirs-added-in-ours.txt",
+			"",
+			VERY_LONG_NAME
+		},
+	};
+
+	opts.checkout_strategy |= GIT_CHECKOUT_SAFE;
+
+	create_index(checkout_index_entries, 6);
+	create_index_names(checkout_name_entries, 2);
+	git_index_write(g_index);
+
+	cl_git_pass(git_checkout_index(g_repo, g_index, &opts));
+
+	ensure_workdir(LONG_NAME "~ours",
+		0100644, "227792b52aaa0b238bea00ec7e509b02623f168c");
+
+	ensure_workdir(LONG_NAME "~theirs",
+		0100644, "8b5b53cb2aa9ceb1139f5312fcfa3cc3c5a47c9a");
+
+	ensure_workdir(VERY_LONG_NAME_TRUNCATED_OURS,
+		0100644, "de872ee3618b894992e9d1e18ba2ebe256a112f9");
+
+	ensure_workdir(VERY_LONG_NAME_TRUNCATED_THEIRS,
+		0100644, "98d52d07c0b0bbf2b46548f6aa521295c2cb55db");
+#endif
 }
 
 void test_checkout_conflict__rename_keep_ours(void)
