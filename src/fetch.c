@@ -26,7 +26,7 @@ static int maybe_want(git_remote *remote, git_remote_head *head, git_odb *odb, g
 	if (!git_reference_is_valid_name(head->name))
 		return 0;
 
-	if (tagopt == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
+	if (tagopt != GIT_REMOTE_DOWNLOAD_TAGS_NONE) {
 		/*
 		 * If tagopt is --tags, always request tags
 		 * in addition to the remote's refspecs
