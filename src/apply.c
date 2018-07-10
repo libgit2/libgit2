@@ -390,7 +390,8 @@ static int apply_one(
 	git_index *preimage,
 	git_index *postimage,
 	git_diff *diff,
-	size_t i)
+	size_t i,
+	const git_apply_options *opts)
 {
 	git_patch *patch = NULL;
 	git_buf pre_contents = GIT_BUF_INIT, post_contents = GIT_BUF_INIT;
@@ -405,6 +406,17 @@ static int apply_one(
 		goto done;
 
 	delta = git_patch_get_delta(patch);
+
+	if (opts->delta_cb) {
+		error = opts->delta_cb(delta, opts->payload);
+
+		if (error) {
+			if (error > 0)
+				error = 0;
+
+			goto done;
+		}
+	}
 
 	if (delta->status != GIT_DELTA_ADDED) {
 		error = git_reader_read(&pre_contents, &pre_id,
@@ -514,7 +526,7 @@ int git_apply_to_tree(
 	}
 
 	for (i = 0; i < git_diff_num_deltas(diff); i++) {
-		if ((error = apply_one(repo, pre_reader, NULL, postimage, diff, i)) < 0)
+		if ((error = apply_one(repo, pre_reader, NULL, postimage, diff, i, &opts)) < 0)
 			goto done;
 	}
 
@@ -700,7 +712,7 @@ int git_apply(
 		goto done;
 
 	for (i = 0; i < git_diff_num_deltas(diff); i++) {
-		if ((error = apply_one(repo, pre_reader, preimage, postimage, diff, i)) < 0)
+		if ((error = apply_one(repo, pre_reader, preimage, postimage, diff, i, &opts)) < 0)
 			goto done;
 	}
 
