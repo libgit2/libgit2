@@ -6,7 +6,7 @@ static const char *tree_oid = "1810dff58d8a660512d4832e740f692884338ccd";
 
 static git_repository *g_repo;
 
-// Fixture setup and teardown
+/* Fixture setup and teardown */
 void test_object_tree_read__initialize(void)
 {
    g_repo = cl_git_sandbox_init("testrepo");
@@ -21,7 +21,7 @@ void test_object_tree_read__cleanup(void)
 
 void test_object_tree_read__loaded(void)
 {
-   // acces randomly the entries on a loaded tree
+	/* acces randomly the entries on a loaded tree */
 	git_oid id;
 	git_tree *tree;
 
@@ -42,7 +42,7 @@ void test_object_tree_read__loaded(void)
 
 void test_object_tree_read__two(void)
 {
-   // read a tree from the repository
+	/* read a tree from the repository */
 	git_oid id;
 	git_tree *tree;
 	const git_tree_entry *entry;

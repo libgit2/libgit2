@@ -15,7 +15,7 @@ static char *head_old;
 static git_reference *head, *branch;
 static git_commit *commit;
 
-// Fixture setup
+/* Fixture setup */
 static git_repository *g_repo;
 void test_commit_write__initialize(void)
 {
@@ -42,7 +42,7 @@ void test_commit_write__cleanup(void)
 }
 
 
-// write a new commit object from memory to disk
+/* write a new commit object from memory to disk */
 void test_commit_write__from_memory(void)
 {
    git_oid tree_id, parent_id, commit_id;
@@ -137,7 +137,7 @@ This is a root commit\n\
 	git_signature_free(committer);
 }
 
-// create a root commit
+/* create a root commit */
 void test_commit_write__root(void)
 {
 	git_oid tree_id, commit_id;

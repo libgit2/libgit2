@@ -18,13 +18,13 @@ void test_core_vector__0(void)
 void test_core_vector__1(void)
 {
 	git_vector x;
-	// make initial capacity exact for our insertions.
+	/* make initial capacity exact for our insertions. */
 	git_vector_init(&x, 3, NULL);
 	git_vector_insert(&x, (void*) 0xabc);
 	git_vector_insert(&x, (void*) 0xdef);
 	git_vector_insert(&x, (void*) 0x123);
 
-	git_vector_remove(&x, 0); // used to read past array bounds.
+	git_vector_remove(&x, 0); /* used to read past array bounds. */
 	git_vector_free(&x);
 }
 

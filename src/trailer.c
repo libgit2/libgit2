@@ -36,7 +36,7 @@ static const char *next_line(const char *str)
 	if (nl) {
 		return nl + 1;
 	} else {
-		// return pointer to the NUL terminator:
+		/* return pointer to the NUL terminator: */
 		return str + strlen(str);
 	}
 }
@@ -310,12 +310,12 @@ int git_message_trailers(git_message_trailer_array *trailer_arr, const char *mes
 				}
 
 				if (isalnum(*ptr) || *ptr == '-') {
-					// legal key character
+					/* legal key character */
 					NEXT(S_KEY);
 				}
 
 				if (*ptr == ' ' || *ptr == '\t') {
-					// optional whitespace before separator
+					/* optional whitespace before separator */
 					*ptr = 0;
 					NEXT(S_KEY_WS);
 				}
@@ -325,7 +325,7 @@ int git_message_trailers(git_message_trailer_array *trailer_arr, const char *mes
 					NEXT(S_SEP_WS);
 				}
 
-				// illegal character
+				/* illegal character */
 				GOTO(S_IGNORE);
 			}
 			case S_KEY_WS: {
@@ -341,7 +341,7 @@ int git_message_trailers(git_message_trailer_array *trailer_arr, const char *mes
 					NEXT(S_SEP_WS);
 				}
 
-				// illegal character
+				/* illegal character */
 				GOTO(S_IGNORE);
 			}
 			case S_SEP_WS: {
@@ -369,7 +369,7 @@ int git_message_trailers(git_message_trailer_array *trailer_arr, const char *mes
 			}
 			case S_VALUE_NL: {
 				if (*ptr == ' ') {
-					// continuation;
+					/* continuation; */
 					NEXT(S_VALUE);
 				}
 

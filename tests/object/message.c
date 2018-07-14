@@ -14,8 +14,8 @@ static void assert_message_prettifying(char *expected_output, char *input, int s
 
 #define t40 "A quick brown fox jumps over the lazy do"
 #define s40 "                                        "
-#define sss s40 s40 s40 s40 s40 s40 s40 s40 s40 s40 // # 400
-#define ttt t40 t40 t40 t40 t40 t40 t40 t40 t40 t40 // # 400
+#define sss s40 s40 s40 s40 s40 s40 s40 s40 s40 s40 /* # 400 */
+#define ttt t40 t40 t40 t40 t40 t40 t40 t40 t40 t40 /* # 400 */
 
 /* Ported from git.git */
 /* see https://github.com/git/git/blob/master/t/t0030-stripspace.sh */

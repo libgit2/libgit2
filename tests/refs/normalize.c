@@ -4,7 +4,7 @@
 #include "git2/reflog.h"
 #include "reflog.h"
 
-// Helpers
+/* Helpers */
 static void ensure_refname_normalized(
 	unsigned int flags,
 	const char *input_refname,
@@ -149,7 +149,7 @@ void test_refs_normalize__symbolic(void)
  
 void test_refs_normalize__jgit_suite(void)
 {
-	// tests borrowed from JGit
+	/* tests borrowed from JGit */
 
 /* EmptyString */
 	ensure_refname_invalid(
@@ -316,9 +316,10 @@ void test_refs_normalize__jgit_suite(void)
 	ensure_refname_normalized(
 		GIT_REF_FORMAT_ALLOW_ONELEVEL, "refs/heads/}", "refs/heads/}");
 
-	// This is valid on UNIX, but not on Windows
-	// hence we make in invalid due to non-portability
-	//
+	/*
+	 * This is valid on UNIX, but not on Windows
+	 * hence we make in invalid due to non-portability
+	 */
 	ensure_refname_invalid(
 		GIT_REF_FORMAT_ALLOW_ONELEVEL, "refs/heads/\\");
 

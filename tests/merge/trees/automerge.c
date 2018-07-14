@@ -55,7 +55,7 @@ static git_repository *repo;
 	  "", \
 	  "5c3b68a71fc4fa5d362fd3875e53137c6a5ab7a5" }
 
-// Fixture setup and teardown
+/* Fixture setup and teardown */
 void test_merge_trees_automerge__initialize(void)
 {
 	repo = cl_git_sandbox_init(TEST_REPO_PATH);

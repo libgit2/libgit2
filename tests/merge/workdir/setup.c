@@ -31,7 +31,7 @@ static git_index *repo_index;
 #define OCTO5_BRANCH		"octo5"
 #define OCTO5_OID			"e4f618a2c3ed0669308735727df5ebf2447f022f"
 
-// Fixture setup and teardown
+/* Fixture setup and teardown */
 void test_merge_workdir_setup__initialize(void)
 {
 	repo = cl_git_sandbox_init(TEST_REPO_PATH);

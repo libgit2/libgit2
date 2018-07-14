@@ -23,7 +23,7 @@ void test_refs_overwrite__cleanup(void)
 
 void test_refs_overwrite__symbolic(void)
 {
-   // Overwrite an existing symbolic reference
+	/* Overwrite an existing symbolic reference */
 	git_reference *ref, *branch_ref;
 
 	/* The target needds to exist and we need to check the name has changed */
@@ -53,7 +53,7 @@ void test_refs_overwrite__symbolic(void)
 
 void test_refs_overwrite__object_id(void)
 {
-   // Overwrite an existing object id reference
+	/* Overwrite an existing object id reference */
 	git_reference *ref;
 	git_oid id;
 
@@ -85,7 +85,7 @@ void test_refs_overwrite__object_id(void)
 
 void test_refs_overwrite__object_id_with_symbolic(void)
 {
-   // Overwrite an existing object id reference with a symbolic one
+	/* Overwrite an existing object id reference with a symbolic one */
 	git_reference *ref;
 	git_oid id;
 
@@ -110,7 +110,7 @@ void test_refs_overwrite__object_id_with_symbolic(void)
 
 void test_refs_overwrite__symbolic_with_object_id(void)
 {
-   // Overwrite an existing symbolic reference with an object id one
+	/* Overwrite an existing symbolic reference with an object id one */
 	git_reference *ref;
 	git_oid id;
 

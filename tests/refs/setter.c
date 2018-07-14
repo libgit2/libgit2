@@ -65,7 +65,7 @@ void test_refs_setter__update_symbolic(void)
 
 void test_refs_setter__cant_update_direct_with_symbolic(void)
 {
-	// Overwrite an existing object id reference with a symbolic one
+	/* Overwrite an existing object id reference with a symbolic one */
 	git_reference *ref, *new;
 	git_oid id;
 
@@ -80,7 +80,7 @@ void test_refs_setter__cant_update_direct_with_symbolic(void)
 
 void test_refs_setter__cant_update_symbolic_with_direct(void)
 {
-	// Overwrite an existing symbolic reference with an object id one
+	/* Overwrite an existing symbolic reference with an object id one */
 	git_reference *ref, *new;
 	git_oid id;
 

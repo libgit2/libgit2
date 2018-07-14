@@ -145,11 +145,13 @@ static void oid_parsing(git_oid *oid)
 	 */
 	git_oid_fromstr(oid, hex);
 
-	// Once we've converted the string into the oid value, we can get the raw
-	// value of the SHA by accessing `oid.id`
-
-	// Next we will convert the 20 byte raw SHA1 value to a human readable 40
-	// char hex value.
+	/*
+	 * Once we've converted the string into the oid value, we can get the raw
+	 * value of the SHA by accessing `oid.id`
+	 *
+	 * Next we will convert the 20 byte raw SHA1 value to a human readable 40
+	 * char hex value.
+	 */
 	printf("\n*Raw to Hex*\n");
 	out[GIT_OID_HEXSZ] = '\0';
 

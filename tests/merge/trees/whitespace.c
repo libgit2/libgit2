@@ -16,7 +16,7 @@ static git_repository *repo;
 #define BRANCH_A_CHANGE  "branch_a_change"
 #define BRANCH_B_CHANGE  "branch_b_change"
 
-// Fixture setup and teardown
+/* Fixture setup and teardown */
 void test_merge_trees_whitespace__initialize(void)
 {
 	repo = cl_git_sandbox_init(TEST_REPO_PATH);

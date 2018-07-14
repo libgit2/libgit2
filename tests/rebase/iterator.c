@@ -8,7 +8,7 @@ static git_repository *repo;
 static git_index *_index;
 static git_signature *signature;
 
-// Fixture setup and teardown
+/* Fixture setup and teardown */
 void test_rebase_iterator__initialize(void)
 {
 	repo = cl_git_sandbox_init("rebase");

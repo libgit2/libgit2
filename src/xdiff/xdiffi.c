@@ -33,8 +33,10 @@
 /** Declare a function as always inlined. */
 #if defined(_MSC_VER)
 # define XDL_INLINE(type) static __inline type
+#elif defined(__GNUC__)
+# define XDL_INLINE(type) static __inline__ type
 #else
-# define XDL_INLINE(type) static inline type
+#define XDG_INLINE(type) static type
 #endif
 
 typedef struct s_xdpsplit {

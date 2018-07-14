@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "fileops.h"
 
-// Fixture setup and teardown
+/* Fixture setup and teardown */
 void test_core_futils__initialize(void)
 {
 	cl_must_pass(p_mkdir("futils", 0777));

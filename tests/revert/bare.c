@@ -11,7 +11,7 @@
 
 static git_repository *repo;
 
-// Fixture setup and teardown
+/* Fixture setup and teardown */
 void test_revert_bare__initialize(void)
 {
 	repo = cl_git_sandbox_init(TEST_REPO_PATH);

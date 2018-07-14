@@ -146,7 +146,7 @@ void test_checkout_index__honor_coresymlinks_default(void)
 	const char *url = git_repository_path(g_repo);
 
 	cl_assert(getcwd(cwd, sizeof(cwd)) != NULL);
-	cl_assert_equal_i(0, p_mkdir("readonly", 0555)); // Read-only directory
+	cl_assert_equal_i(0, p_mkdir("readonly", 0555)); /* Read-only directory */
 	cl_assert_equal_i(0, chdir("readonly"));
 	cl_git_pass(git_repository_init(&repo, "../symlink.git", true));
 	cl_assert_equal_i(0, chdir(cwd));

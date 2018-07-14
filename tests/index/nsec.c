@@ -9,7 +9,7 @@ static git_index *repo_index;
 
 #define TEST_REPO_PATH "nsecs"
 
-// Fixture setup and teardown
+/* Fixture setup and teardown */
 void test_index_nsec__initialize(void)
 {
 	repo = cl_git_sandbox_init("nsecs");

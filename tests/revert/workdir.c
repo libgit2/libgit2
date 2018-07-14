@@ -12,7 +12,7 @@
 static git_repository *repo;
 static git_index *repo_index;
 
-// Fixture setup and teardown
+/* Fixture setup and teardown */
 void test_revert_workdir__initialize(void)
 {
 	git_config *cfg;

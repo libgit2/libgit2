@@ -260,7 +260,7 @@ void test_status_worktree__within_subdir(void)
 	pathsArray.strings = paths;
 	opts.pathspec = pathsArray;
 
-	// We committed zzz_new_dir/new_file above. It shouldn't be reported.
+	/* We committed zzz_new_dir/new_file above. It shouldn't be reported. */
 	cl_git_pass(
 		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts)
 	);
@@ -957,7 +957,7 @@ void test_status_worktree__long_filenames(void)
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 	status_entry_counts counts = {0};
 
-	// Create directory with amazingly long filename
+	/* Create directory with amazingly long filename */
 	sprintf(path, "empty_standard_repo/%s", longname);
 	cl_git_pass(git_futils_mkdir_r(path, 0777));
 	sprintf(path, "empty_standard_repo/%s/foo", longname);

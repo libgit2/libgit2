@@ -2,7 +2,7 @@
 #include "describe_helpers.h"
 #include "repository.h"
 
-// Ported from https://github.com/git/git/blob/adfc1857bdb090786fd9d22c1acec39371c76048/t/t6120-describe.sh
+/* Ported from https://github.com/git/git/blob/adfc1857bdb090786fd9d22c1acec39371c76048/t/t6120-describe.sh */
 
 static git_repository *repo;
 

@@ -8,7 +8,7 @@ void test_core_filebuf__0(void)
 	int fd;
 	char test[] = "test", testlock[] = "test.lock";
 
-	fd = p_creat(testlock, 0744); //-V536
+	fd = p_creat(testlock, 0744); /* -V536 */
 
 	cl_must_pass(fd);
 	cl_must_pass(p_close(fd));

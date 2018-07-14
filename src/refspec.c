@@ -16,7 +16,7 @@
 
 int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 {
-	// Ported from https://github.com/git/git/blob/f06d47e7e0d9db709ee204ed13a8a7486149f494/remote.c#L518-636
+	/* Ported from https://github.com/git/git/blob/f06d47e7e0d9db709ee204ed13a8a7486149f494/remote.c#L518-636 */
 
 	size_t llen;
 	int is_glob = 0;

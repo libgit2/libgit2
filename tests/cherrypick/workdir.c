@@ -12,7 +12,7 @@
 static git_repository *repo;
 static git_index *repo_index;
 
-// Fixture setup and teardown
+/* Fixture setup and teardown */
 void test_cherrypick_workdir__initialize(void)
 {
 	repo = cl_git_sandbox_init(TEST_REPO_PATH);

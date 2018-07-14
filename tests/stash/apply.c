@@ -422,7 +422,7 @@ void test_stash_apply__uses_reflog_like_indices_1(void)
 	cl_git_pass(git_stash_save(&oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED));
 	assert_status(repo, "untracked", GIT_ENOTFOUND);
 
-	// stash@{1} is the oldest (first) stash we made
+	/* stash@{1} is the oldest (first) stash we made */
 	cl_git_pass(git_stash_apply(repo, 1, NULL));
 	cl_assert_equal_i(git_index_has_conflicts(repo_index), 0);
 	assert_status(repo, "what", GIT_STATUS_WT_MODIFIED);
@@ -441,7 +441,7 @@ void test_stash_apply__uses_reflog_like_indices_2(void)
 	cl_git_pass(git_stash_save(&oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED));
 	assert_status(repo, "untracked", GIT_ENOTFOUND);
 
-	// stash@{0} is the newest stash we made immediately above
+	/* stash@{0} is the newest stash we made immediately above */
 	cl_git_pass(git_stash_apply(repo, 0, NULL));
 
 	cl_assert_equal_i(git_index_has_conflicts(repo_index), 0);

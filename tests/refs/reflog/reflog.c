@@ -11,7 +11,7 @@ static const char *current_master_tip = "a65fedf39aefe402d3bb6e24df4d4f5fe454775
 static git_repository *g_repo;
 
 
-// helpers
+/* helpers */
 static void assert_signature(const git_signature *expected, const git_signature *actual)
 {
 	cl_assert(actual);
@@ -22,15 +22,15 @@ static void assert_signature(const git_signature *expected, const git_signature 
 }
 
 
-// Fixture setup and teardown
+/* Fixture setup and teardown */
 void test_refs_reflog_reflog__initialize(void)
 {
-   g_repo = cl_git_sandbox_init("testrepo.git");
+	g_repo = cl_git_sandbox_init("testrepo.git");
 }
 
 void test_refs_reflog_reflog__cleanup(void)
 {
-   cl_git_sandbox_cleanup();
+	cl_git_sandbox_cleanup();
 }
 
 static void assert_appends(const git_signature *committer, const git_oid *oid)

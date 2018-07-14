@@ -146,8 +146,10 @@ typedef unsigned long long khint64_t;
 #ifndef kh_inline
 #ifdef _MSC_VER
 #define kh_inline __inline
+#elif defined(__GNUC__)
+#define kh_inline __inline__
 #else
-#define kh_inline inline
+#define kh_inline
 #endif
 #endif /* kh_inline */
 

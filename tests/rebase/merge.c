@@ -19,7 +19,7 @@ static void set_core_autocrlf_to(git_repository *repo, bool value)
 	git_config_free(cfg);
 }
 
-// Fixture setup and teardown
+/* Fixture setup and teardown */
 void test_rebase_merge__initialize(void)
 {
 	repo = cl_git_sandbox_init("rebase");

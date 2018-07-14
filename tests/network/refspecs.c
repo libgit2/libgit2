@@ -18,7 +18,7 @@ static void assert_refspec(unsigned int direction, const char *input, bool is_ex
 
 void test_network_refspecs__parsing(void)
 {
-	// Ported from https://github.com/git/git/blob/abd2bde78bd994166900290434a2048e660dabed/t/t5511-refspec.sh
+	/* Ported from https://github.com/git/git/blob/abd2bde78bd994166900290434a2048e660dabed/t/t5511-refspec.sh */
 
 	assert_refspec(GIT_DIRECTION_PUSH, "", false);
 	assert_refspec(GIT_DIRECTION_PUSH, ":", true);
@@ -40,8 +40,8 @@ void test_network_refspecs__parsing(void)
 	 * code.  They will be caught downstream anyway, but we may want to
 	 * have tighter check later...
 	 */
-	//assert_refspec(GIT_DIRECTION_PUSH, "refs/heads/master::refs/remotes/frotz/xyzzy", false);
-	//assert_refspec(GIT_DIRECTION_PUSH, "refs/heads/maste :refs/remotes/frotz/xyzzy", false);
+	/*assert_refspec(GIT_DIRECTION_PUSH, "refs/heads/master::refs/remotes/frotz/xyzzy", false); */
+	/*assert_refspec(GIT_DIRECTION_PUSH, "refs/heads/maste :refs/remotes/frotz/xyzzy", false); */
 
 	assert_refspec(GIT_DIRECTION_FETCH, "refs/heads/*:refs/remotes/frotz/*", true);
 	assert_refspec(GIT_DIRECTION_FETCH, "refs/heads/*:refs/remotes/frotz", false);

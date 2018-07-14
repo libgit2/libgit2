@@ -31,7 +31,7 @@ void test_date_rfc2822__format_rfc2822_negative_offset(void)
 
 void test_date_rfc2822__format_rfc2822_buffer_too_small(void)
 {
-	// "Wed, 10 Apr 2014 08:21:03 +0000"
+	/* "Wed, 10 Apr 2014 08:21:03 +0000" */
 	git_time t = {1397031663 + 86400, 0};
 	char buf[GIT_DATE_RFC2822_SZ-1];
 

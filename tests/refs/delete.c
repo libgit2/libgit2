@@ -27,7 +27,7 @@ void test_refs_delete__cleanup(void)
 
 void test_refs_delete__packed_loose(void)
 {
-   // deleting a ref which is both packed and loose should remove both tracks in the filesystem
+	/* deleting a ref which is both packed and loose should remove both tracks in the filesystem */
 	git_reference *looked_up_ref, *another_looked_up_ref;
 	git_buf temp_path = GIT_BUF_INIT;
 
@@ -57,7 +57,7 @@ void test_refs_delete__packed_loose(void)
 
 void test_refs_delete__packed_only(void)
 {
-   // can delete a just packed reference
+	/* can delete a just packed reference */
 	git_reference *ref;
 	git_refdb *refdb;
 	git_oid id;

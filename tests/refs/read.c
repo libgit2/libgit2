@@ -28,7 +28,7 @@ void test_refs_read__cleanup(void)
 
 void test_refs_read__loose_tag(void)
 {
-   // lookup a loose tag reference
+	/* lookup a loose tag reference */
 	git_reference *reference;
 	git_object *object;
 	git_buf ref_name_from_tag_name = GIT_BUF_INIT;
@@ -54,7 +54,7 @@ void test_refs_read__loose_tag(void)
 
 void test_refs_read__nonexisting_tag(void)
 {
-   // lookup a loose tag reference that doesn't exist
+	/* lookup a loose tag reference that doesn't exist */
 	git_reference *reference;
 
 	cl_git_fail(git_reference_lookup(&reference, g_repo, non_existing_tag_ref_name));
@@ -65,7 +65,7 @@ void test_refs_read__nonexisting_tag(void)
 
 void test_refs_read__symbolic(void)
 {
-   // lookup a symbolic reference
+	/* lookup a symbolic reference */
 	git_reference *reference, *resolved_ref;
 	git_object *object;
 	git_oid id;
@@ -93,7 +93,7 @@ void test_refs_read__symbolic(void)
 
 void test_refs_read__nested_symbolic(void)
 {
-   // lookup a nested symbolic reference
+	/* lookup a nested symbolic reference */
 	git_reference *reference, *resolved_ref;
 	git_object *object;
 	git_oid id;
@@ -121,7 +121,7 @@ void test_refs_read__nested_symbolic(void)
 
 void test_refs_read__head_then_master(void)
 {
-   // lookup the HEAD and resolve the master branch
+	/* lookup the HEAD and resolve the master branch */
 	git_reference *reference, *resolved_ref, *comp_base_ref;
 
 	cl_git_pass(git_reference_lookup(&reference, g_repo, head_tracker_sym_ref_name));
@@ -145,7 +145,7 @@ void test_refs_read__head_then_master(void)
 
 void test_refs_read__master_then_head(void)
 {
-   // lookup the master branch and then the HEAD
+	/* lookup the master branch and then the HEAD */
 	git_reference *reference, *master_ref, *resolved_ref;
 
 	cl_git_pass(git_reference_lookup(&master_ref, g_repo, current_head_target));
@@ -162,7 +162,7 @@ void test_refs_read__master_then_head(void)
 
 void test_refs_read__packed(void)
 {
-   // lookup a packed reference
+	/* lookup a packed reference */
 	git_reference *reference;
 	git_object *object;
 
@@ -182,7 +182,7 @@ void test_refs_read__packed(void)
 
 void test_refs_read__loose_first(void)
 {
-   // assure that a loose reference is looked up before a packed reference
+	/* assure that a loose reference is looked up before a packed reference */
 	git_reference *reference;
 
 	cl_git_pass(git_reference_lookup(&reference, g_repo, packed_head_name));
