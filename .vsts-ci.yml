@@ -1,0 +1,105 @@
+resources:
+- repo: self
+
+phases:
+- phase: linux_trusty_openssl
+  displayName: 'Linux (Trusty; OpenSSL)'
+  queue:
+    name: 'Hosted Linux Preview'
+  steps:
+  - task: Docker@0
+    displayName: Build
+    inputs:
+      action: 'Run an image'
+      imageName: 'ethomson/libgit2-trusty-openssl:latest'
+      volumes: |
+       $(Build.SourcesDirectory):/src
+       $(Build.BinariesDirectory):/build
+      workDir: '/build'
+      containerCommand: '/src/ci/build.sh'
+      detached: false
+  - task: Docker@0
+    displayName: Test
+    inputs:
+      action: 'Run an image'
+      imageName: 'ethomson/libgit2-trusty-openssl:latest'
+      volumes: |
+       $(Build.SourcesDirectory):/src
+       $(Build.BinariesDirectory):/build
+      workDir: '/build'
+      containerCommand: '/src/ci/test.sh'
+      detached: false
+
+- phase: macos
+  displayName: 'macOS'
+  queue:
+    name: 'Hosted macOS Preview'
+  steps:
+  - bash: . '$(Build.SourcesDirectory)/ci/setup-macos.sh'
+    displayName: Setup
+  - bash: . '$(Build.SourcesDirectory)/ci/build.sh'
+    displayName: Build
+    env:
+      PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
+  - bash: . '$(Build.SourcesDirectory)/ci/test.sh'
+    displayName: Test
+    env:
+      TMPDIR: $(Agent.TempDirectory)
+
+- phase: windows_vs_amd64
+  displayName: 'Windows (Visual Studio; amd64)'
+  queue:
+    name: Hosted
+  steps:
+  - powershell: . '$(Build.SourcesDirectory)\ci\build.ps1'
+    displayName: Build
+    env:
+      CMAKE_OPTIONS: -G"Visual Studio 12 2013 Win64"
+  - powershell: . '$(Build.SourcesDirectory)\ci\test.ps1'
+    displayName: Test
+
+- phase: windows_vs_x86
+  displayName: 'Windows (Visual Studio; x86)'
+  queue:
+    name: Hosted
+  steps:
+  - powershell: . '$(Build.SourcesDirectory)\ci\build.ps1'
+    displayName: Build
+    env:
+      CMAKE_OPTIONS: -G"Visual Studio 12 2013"
+  - powershell: . '$(Build.SourcesDirectory)\ci\test.ps1'
+    displayName: Test
+
+- phase: windows_mingw_amd64
+  displayName: 'Windows (MinGW; amd64)'
+  queue:
+    name: Hosted
+  steps:
+  - powershell: . '$(Build.SourcesDirectory)\ci\setup-mingw-amd64.ps1'
+    displayName: Setup
+    env:
+      TEMP: $(Agent.TempDirectory)
+  - powershell: . '$(Build.SourcesDirectory)\ci\build.ps1'
+    displayName: Build
+    env:
+      CMAKE_OPTIONS: -G"MinGW Makefiles"
+      PATH: $(Agent.TempDirectory)\mingw64\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
+  - powershell: . '$(Build.SourcesDirectory)\ci\test.ps1'
+    displayName: Test
+
+- phase: windows_mingw_x86
+  displayName: 'Windows (MinGW; x86)'
+  queue:
+    name: Hosted
+  steps:
+  - powershell: . '$(Build.SourcesDirectory)\ci\setup-mingw-x86.ps1'
+    displayName: Setup
+    env:
+      TEMP: $(Agent.TempDirectory)
+  - powershell: . '$(Build.SourcesDirectory)\ci\build.ps1'
+    displayName: Build
+    env:
+      CMAKE_OPTIONS: -G"MinGW Makefiles"
+      PATH: $(Agent.TempDirectory)\mingw32\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
+  - powershell: . '$(Build.SourcesDirectory)\ci\test.ps1'
+    displayName: Test
