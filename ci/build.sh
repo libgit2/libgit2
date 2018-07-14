@@ -27,6 +27,7 @@ echo "##########################################################################
 echo "## Configuring build environment"
 echo "##############################################################################"
 
+echo cmake ${SOURCE_DIR} -DBUILD_EXAMPLES=ON ${CMAKE_OPTIONS}
 cmake ${SOURCE_DIR} -DBUILD_EXAMPLES=ON ${CMAKE_OPTIONS}
 
 echo ""
