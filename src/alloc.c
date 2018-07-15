@@ -17,6 +17,13 @@ git_allocator git__allocator;
 
 int git_allocator_global_init(void)
 {
+	/*
+	 * We don't want to overwrite any allocator which has been set before
+	 * the init function is called.
+	 */
+	if (git__allocator.gmalloc != NULL)
+		return 0;
+
 #if defined(GIT_MSVC_CRTDBG)
 	return git_win32_crtdbg_init_allocator(&git__allocator);
 #else
