@@ -185,9 +185,11 @@ void test_checkout_index__honor_coresymlinks_default(void)
 		check_file_contents("./symlink/link_to_new.txt", "new.txt");
 	} else {
 		char link_data[1024];
-		size_t link_size = 1024;
+		int link_size = 1024;
 
 		link_size = p_readlink("./symlink/link_to_new.txt", link_data, link_size);
+		cl_assert(link_size >= 0);
+
 		link_data[link_size] = '\0';
 		cl_assert_equal_i(link_size, strlen("new.txt"));
 		cl_assert_equal_s(link_data, "new.txt");
