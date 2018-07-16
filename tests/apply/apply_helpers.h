@@ -52,6 +52,66 @@
 	"old mode 100644\n" \
 	"new mode 100755\n"
 
+#define DIFF_MANY_CHANGES_ONE \
+	"diff --git a/veal.txt b/veal.txt\n" \
+	"index 94d2c01..c9d7d5d 100644\n" \
+	"--- a/veal.txt\n" \
+	"+++ b/veal.txt\n" \
+	"@@ -1,2 +1,2 @@\n" \
+	"-VEAL SOUP!\n" \
+	"+VEAL SOUP\n" \
+	" \n" \
+	"@@ -4,3 +4,2 @@\n" \
+	" spoonful of black pepper pounded, and two of salt, with two or three\n" \
+	"-slices of lean ham; let it boil steadily two hours; skim it\n" \
+	" occasionally, then put into it a shin of veal, let it boil two hours\n" \
+	"@@ -8,3 +7,3 @@\n" \
+	" should rise, take a gill of good cream, mix with it two table-spoonsful\n" \
+	"-of flour very nicely, and the yelks of two eggs beaten well, strain this\n" \
+	"+OF FLOUR very nicely, and the yelks of two eggs beaten well, strain this\n" \
+	" mixture, and add some chopped parsley; pour some soup on by degrees,\n" \
+	"@@ -12,2 +11,3 @@\n" \
+	" boiled two or three minutes to take off the raw taste of the eggs. If\n" \
+	"+Inserted line.\n" \
+	" the cream be not perfectly sweet, and the eggs quite new, the thickening\n" \
+	"@@ -15,3 +15,3 @@\n" \
+	" in, first taking off their skins, by letting them stand a few minutes in\n" \
+	"-hot water, when they may be easily peeled. When made in this way you\n" \
+	"+Changed line.\n" \
+	" must thicken it with the flour only. Any part of the veal may be used,\n"
+
+#define DIFF_MANY_CHANGES_TWO \
+	"diff --git a/veal.txt b/veal.txt\n" \
+	"index 94d2c01..6b943d6 100644\n" \
+	"--- a/veal.txt\n" \
+	"+++ b/veal.txt\n" \
+	"@@ -1,2 +1,2 @@\n" \
+	"-VEAL SOUP!\n" \
+	"+VEAL SOUP!!!\n" \
+	" \n" \
+	"@@ -4,3 +4,2 @@\n" \
+	" spoonful of black pepper pounded, and two of salt, with two or three\n" \
+	"-slices of lean ham; let it boil steadily two hours; skim it\n" \
+	" occasionally, then put into it a shin of veal, let it boil two hours\n" \
+	"@@ -8,3 +7,3 @@\n" \
+	" should rise, take a gill of good cream, mix with it two table-spoonsful\n" \
+	"-of flour very nicely, and the yelks of two eggs beaten well, strain this\n" \
+	"+of flour very nicely, AND the yelks of two eggs beaten well, strain this\n" \
+	" mixture, and add some chopped parsley; pour some soup on by degrees,\n" \
+	"@@ -12,2 +11,3 @@\n" \
+	" boiled two or three minutes to take off the raw taste of the eggs. If\n" \
+	"+New line.\n" \
+	" the cream be not perfectly sweet, and the eggs quite new, the thickening\n" \
+	"@@ -15,4 +15,5 @@\n" \
+	" in, first taking off their skins, by letting them stand a few minutes in\n" \
+	"-hot water, when they may be easily peeled. When made in this way you\n" \
+	"-must thicken it with the flour only. Any part of the veal may be used,\n" \
+	"-but the shin or knuckle is the nicest.\n" \
+	"+HOT water, when they may be easily peeled. When made in this way you\n" \
+	"+must THICKEN it with the flour only. Any part of the veal may be used,\n" \
+	"+but the shin OR knuckle is the nicest.\n" \
+	"+Another new line.\n" \
+
 struct iterator_compare_data {
 	struct merge_index_entry *expected;
 	size_t cnt;
