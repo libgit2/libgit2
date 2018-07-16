@@ -196,8 +196,8 @@ typedef enum {
 	GIT_OPT_ENABLE_STRICT_HASH_VERIFICATION,
 	GIT_OPT_SET_ALLOCATOR,
 	GIT_OPT_ENABLE_UNSAVED_INDEX_SAFETY,
-	GIT_OPT_GET_INDEXER_MAX_OBJECTS,
-	GIT_OPT_SET_INDEXER_MAX_OBJECTS
+	GIT_OPT_GET_PACK_MAX_OBJECTS,
+	GIT_OPT_SET_PACK_MAX_OBJECTS
 } git_libgit2_opt_t;
 
 /**
@@ -374,14 +374,14 @@ typedef enum {
  *		> fail.  (Using the FORCE flag to checkout will still overwrite
  *		> these changes.)
  *
- *	 opts(GIT_OPT_GET_INDEXER_MAX_OBJECTS, size_t *out)
+ *	 opts(GIT_OPT_GET_PACK_MAX_OBJECTS, size_t *out)
  *
  *		> Get the maximum number of objects libgit2 will allow in a pack
  *		> file when downloading a pack file from a remote. This can be
  *		> used to limit maximum memory usage when fetching from an untrusted
  *		> remote.
  *
- *	 opts(GIT_OPT_SET_INDEXER_MAX_OBJECTS, size_t objects)
+ *	 opts(GIT_OPT_SET_PACK_MAX_OBJECTS, size_t objects)
  *
  *		> Set the maximum number of objects libgit2 will allow in a pack
  *		> file when downloading a pack file from a remote.
