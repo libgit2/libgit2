@@ -28,8 +28,10 @@ cmake .. -DCMAKE_INSTALL_PREFIX="$WORK" \
 make -j$(nproc)
 make install
 
+cd ..
+
 $CXX $CXXFLAGS -std=c++11 -I"$WORK/include" \
-    /src/download_refs_fuzzer.cc -o $OUT/download_refs_fuzzer \
+    fuzz/download_refs_fuzzer.cc -o $OUT/download_refs_fuzzer \
     -lFuzzingEngine "$WORK/lib/libgit2.a"
 
-zip -j "$OUT/download_refs_fuzzer_seed_corpus.zip" $SRC/corpora/download_refs/*
+zip -j "$OUT/download_refs_fuzzer_seed_corpus.zip" fuzz/corpora/download_refs/*
