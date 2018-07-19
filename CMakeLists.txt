@@ -250,20 +250,25 @@ ELSE()
 ENDIF()
 
 IF(NOT USE_SANITIZER STREQUAL "OFF")
-	SET(CMAKE_C_FLAGS "-fsanitize=${USE_SANITIZER} ${CMAKE_C_FLAGS}")
-	SET(CMAKE_C_FLAGS "-fno-omit-frame-pointer ${CMAKE_C_FLAGS}")
-	SET(CMAKE_C_FLAGS "-fno-optimize-sibling-calls ${CMAKE_C_FLAGS}")
+	# Workaround to force linking against -lasan
+	SET(CMAKE_REQUIRED_FLAGS "-fsanitize=${USE_SANITIZER}")
+	ADD_C_FLAG(-fsanitize=${USE_SANITIZER})
+	UNSET(CMAKE_REQUIRED_FLAGS)
+	ADD_C_FLAG(-fno-omit-frame-pointer)
+	ADD_C_FLAG(-fno-optimize-sibling-calls)
 ENDIF()
 
 IF(USE_COVERAGE)
-	SET(CMAKE_C_FLAGS "-fcoverage-mapping ${CMAKE_C_FLAGS}")
-	SET(CMAKE_C_FLAGS "-fprofile-instr-generate ${CMAKE_C_FLAGS}")
+	ADD_C_FLAG(-fcoverage-mapping)
+	ADD_C_FLAG(-fprofile-instr-generate)
 ENDIF()
 
 IF(BUILD_FUZZERS AND NOT USE_STANDALONE_FUZZERS)
 	# The actual sanitizer link target will be added when linking the fuzz
 	# targets.
-	SET(CMAKE_C_FLAGS "-fsanitize=fuzzer-no-link ${CMAKE_C_FLAGS}")
+	SET(CMAKE_REQUIRED_FLAGS "-fsanitize=fuzzer-no-link")
+	ADD_C_FLAG(-fsanitize=fuzzer-no-link)
+	UNSET(CMAKE_REQUIRED_FLAGS)
 ENDIF ()
 
 ADD_SUBDIRECTORY(src)
