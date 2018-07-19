@@ -312,7 +312,7 @@ IF(BUILD_FUZZERS)
 			MESSAGE(FATAL_ERROR "Cannot build the fuzzer targets and the tests together")
 		ENDIF()
 	ENDIF()
-	ADD_SUBDIRECTORY(fuzz)
+	ADD_SUBDIRECTORY(fuzzers)
 ENDIF()
 
 IF(CMAKE_VERSION VERSION_GREATER 3)

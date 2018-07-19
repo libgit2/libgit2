@@ -1,5 +1,5 @@
 /*
- * libgit2 raw packfile fuzz target.
+ * libgit2 packfile fuzzer target.
  *
  * Copyright (C) the libgit2 contributors. All rights reserved.
  *

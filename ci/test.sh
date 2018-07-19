@@ -190,9 +190,8 @@ if [ -z "$SKIP_FUZZERS" ]; then
 	echo "## Running fuzzers"
 	echo "##############################################################################"
 
-	for fuzzer in $(find ./fuzz/ -type f -executable); do
-		fuzzer_name=$(basename "${fuzzer}")
-		"${fuzzer}" "../fuzz/corpora/${fuzzer_name}" || die $?
+	for fuzzer in fuzzers/*_fuzzer; do
+		"${fuzzer}" "../fuzzers/corpora/$(basename "${fuzzer%_fuzzer}")" || die $?
 	done
 fi
 
