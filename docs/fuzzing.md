@@ -19,8 +19,7 @@ automated fuzz testing. libFuzzer only works with clang.
    and [`leak`/`address,leak`](https://clang.llvm.org/docs/LeakSanitizer.html).
 3. Create the cmake build environment and configure the build with the
    sanitizer chosen: `CC=/usr/bin/clang-6.0 cmake
-   -DBUILD_CLAR=OFF -DBUILD_FUZZERS=ON -DUSE_SANIZER=address
-   -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=fuzzer"
+   -DBUILD_CLAR=OFF -DBUILD_FUZZERS=ON -DUSE_SANITIZER=address
    -DCMAKE_BUILD_TYPE=RelWithDebInfo ..`. Note that building the fuzzer targets
    is incompatible with the tests and examples.
 4. Build libgit2: `cmake --build .`
@@ -58,10 +57,9 @@ variable).
 ## Standalone mode
 
 In order to ensure that there are no regresions, each fuzzer target can be run
-in a standalone mode. This can be done by passing `-DUSE_STANDALONE_FUZZERS=ON`
-to `cmake` without setting `-DCMAKE_EXE_LINKER_FLAGS`. This makes it compatible
-with gcc. This does not use the fuzzing engine, but just invokes every file in
-the chosen corpus.
+in a standalone mode. This can be done by passing `-DUSE_STANDALONE_FUZZERS=ON`.
+This makes it compatible with gcc. This does not use the fuzzing engine, but
+just invokes every file in the chosen corpus.
 
 In order to get full coverage, though, you might want to also enable one of the
 sanitizers. You might need a recent version of clang to get full support.
