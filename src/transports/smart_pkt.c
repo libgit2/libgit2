@@ -86,19 +86,6 @@ static int nak_pkt(git_pkt **out)
 	return 0;
 }
 
-static int pack_pkt(git_pkt **out)
-{
-	git_pkt *pkt;
-
-	pkt = git__malloc(sizeof(git_pkt));
-	GITERR_CHECK_ALLOC(pkt);
-
-	pkt->type = GIT_PKT_PACK;
-	*out = pkt;
-
-	return 0;
-}
-
 static int comment_pkt(git_pkt **out, const char *line, size_t len)
 {
 	git_pkt_comment *pkt;
@@ -417,12 +404,12 @@ int git_pkt_parse_line(
 		 * server is trying to send us the packfile already.
 		 */
 		if (bufflen >= 4 && !git__prefixcmp(line, "PACK")) {
-			giterr_clear();
-			*out = line;
-			return pack_pkt(head);
+			giterr_set(GITERR_NET, "unexpected pack file");
+		} else {
+			giterr_set(GITERR_NET, "bad packet length");
 		}
 
-		return (int)len;
+		return -1;
 	}
 
 	/*
