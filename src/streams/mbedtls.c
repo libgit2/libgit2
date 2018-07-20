@@ -129,6 +129,7 @@ int git_mbedtls_stream_global_init(void)
 		goto cleanup;
 	}
 	mbedtls_ssl_conf_ciphersuites(git__ssl_conf, ciphers_list);
+	git__free(ciphers_list);
 
 	/* Seeding the random number generator */
 	mbedtls_entropy = git__malloc(sizeof(mbedtls_entropy_context));
@@ -166,6 +167,7 @@ cleanup:
 	mbedtls_ctr_drbg_free(ctr_drbg);
 	git__free(ctr_drbg);
 	mbedtls_ssl_config_free(git__ssl_conf);
+	git__free(ciphers_list);
 	git__free(git__ssl_conf);
 	git__ssl_conf = NULL;
 
