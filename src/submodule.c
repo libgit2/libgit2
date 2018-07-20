@@ -260,7 +260,8 @@ static int load_submodule_names(git_strmap **out, git_repository *repo, git_conf
 		git_strmap_insert(names, entry->value, git_buf_detach(&buf), &rval);
 		if (rval < 0) {
 			giterr_set(GITERR_NOMEMORY, "error inserting submodule into hash table");
-			return -1;
+			error = -1;
+			goto out;
 		}
 	}
 	if (error == GIT_ITEROVER)

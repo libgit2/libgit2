@@ -279,30 +279,34 @@ static int git_smart__connect(
 		return error;
 
 	/* Detect capabilities */
-	if (git_smart__detect_caps(first, &t->caps, &symrefs) < 0) {
-		free_symrefs(&symrefs);
-		return -1;
+	if ((error = git_smart__detect_caps(first, &t->caps, &symrefs)) == 0) {
+		/* If the only ref in the list is capabilities^{} with OID_ZERO, remove it */
+		if (1 == t->refs.length && !strcmp(first->head.name, "capabilities^{}") &&
+			git_oid_iszero(&first->head.oid)) {
+			git_vector_clear(&t->refs);
+			git_pkt_free((git_pkt *)first);
+		}
+
+		/* Keep a list of heads for _ls */
+		git_smart__update_heads(t, &symrefs);
+	} else if (error == GIT_ENOTFOUND) {
+		/* There was no ref packet received, or the cap list was empty */
+		error = 0;
+	} else {
+		giterr_set(GITERR_NET, "invalid response");
+		goto cleanup;
 	}
 
-	/* If the only ref in the list is capabilities^{} with OID_ZERO, remove it */
-	if (1 == t->refs.length && !strcmp(first->head.name, "capabilities^{}") &&
-		git_oid_iszero(&first->head.oid)) {
-		git_vector_clear(&t->refs);
-		git_pkt_free((git_pkt *)first);
-	}
-
-	/* Keep a list of heads for _ls */
-	git_smart__update_heads(t, &symrefs);
-
-	free_symrefs(&symrefs);
-
-	if (t->rpc && git_smart__reset_stream(t, false) < 0)
-		return -1;
+	if (t->rpc && (error = git_smart__reset_stream(t, false)) < 0)
+		goto cleanup;
 
 	/* We're now logically connected. */
 	t->connected = 1;
 
-	return 0;
+cleanup:
+	free_symrefs(&symrefs);
+
+	return error;
 }
 
 static int git_smart__ls(const git_remote_head ***out, size_t *size, git_transport *transport)

@@ -954,7 +954,7 @@ static void create_conflict(const char *path)
 	git_oid_fromstr(&entry.id, "2bd0a343aeef7a2cf0d158478966a6e587ff3863");
 	cl_git_pass(git_index_add(index, &entry));
 
-	git_index_write(index);
+	cl_git_pass(git_index_write(index));
 	git_index_free(index);
 }
 
@@ -1127,7 +1127,7 @@ void test_checkout_tree__removes_conflicts(void)
 	create_conflict("other.txt");
 	cl_git_mkfile("testrepo/other.txt", "This is another conflict file.\n");
 
-	git_index_write(index);
+	cl_git_pass(git_index_write(index));
 
 	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
 
@@ -1172,7 +1172,7 @@ void test_checkout_tree__removes_conflicts_only_by_pathscope(void)
 	create_conflict("other.txt");
 	cl_git_mkfile("testrepo/other.txt", "This is another conflict file.\n");
 
-	git_index_write(index);
+	cl_git_pass(git_index_write(index));
 
 	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
 

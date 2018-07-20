@@ -337,7 +337,7 @@ void test_merge_workdir_dirty__identical_staged_files_allowed(void)
 	for (i = 0, content = result_contents[i]; content[0]; content = result_contents[++i]) {
 		stage_content(content);
 
-		git_index_write(repo_index);
+		cl_git_pass(git_index_write(repo_index));
 		cl_git_pass(merge_branch());
 	}
 }

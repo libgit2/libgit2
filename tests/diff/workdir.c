@@ -1910,7 +1910,7 @@ void test_diff_workdir__binary_detection(void)
 		cl_git_write2file(
 			b.ptr, data[i].ptr, data[i].size, O_WRONLY|O_TRUNC, 0664);
 	}
-	git_index_write(idx);
+	cl_git_pass(git_index_write(idx));
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, NULL));
 
@@ -1938,7 +1938,7 @@ void test_diff_workdir__binary_detection(void)
 
 		cl_git_write2file(b.ptr, "baseline\n", 9, O_WRONLY|O_TRUNC, 0664);
 	}
-	git_index_write(idx);
+	cl_git_pass(git_index_write(idx));
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, NULL));
 
