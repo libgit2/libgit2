@@ -397,7 +397,7 @@ void test_online_push__initialize(void)
 	}
 
 	git_remote_disconnect(_remote);
-	git_vector_free(&delete_specs);
+	git_vector_free_deep(&delete_specs);
 
 	/* Now that we've deleted everything, fetch from the remote */
 	memcpy(&fetch_opts.callbacks, &_record_cbs, sizeof(git_remote_callbacks));
