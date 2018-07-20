@@ -22,7 +22,7 @@
 
 extern git_mutex git__mwindow_mutex;
 
-size_t git_indexer__max_objects = (size_t)-1;
+size_t git_indexer__max_objects = UINT32_MAX;
 
 #define UINT31_MAX (0x7FFFFFFF)
 
