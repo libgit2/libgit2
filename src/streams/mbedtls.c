@@ -89,6 +89,8 @@ int git_mbedtls_stream_global_init(void)
 	mbedtls_x509_crt *cacert = NULL;
 
 	git__ssl_conf = git__malloc(sizeof(mbedtls_ssl_config));
+	GITERR_CHECK_ALLOC(git__ssl_conf);
+
 	mbedtls_ssl_config_init(git__ssl_conf);
 	if (mbedtls_ssl_config_defaults(git__ssl_conf,
 		                            MBEDTLS_SSL_IS_CLIENT,
@@ -107,9 +109,13 @@ int git_mbedtls_stream_global_init(void)
 	mbedtls_ssl_conf_authmode(git__ssl_conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
 
 	/* set the list of allowed ciphersuites */
-	ciphers_list = calloc(GIT_SSL_DEFAULT_CIPHERS_COUNT, sizeof(int));
+	ciphers_list = git__calloc(GIT_SSL_DEFAULT_CIPHERS_COUNT, sizeof(int));
+	GITERR_CHECK_ALLOC(ciphers_list);
+
 	ciphers_known = 0;
 	cipher_string = cipher_string_tmp = git__strdup(GIT_SSL_DEFAULT_CIPHERS);
+	GITERR_CHECK_ALLOC(cipher_string);
+
 	while ((cipher_name = git__strtok(&cipher_string_tmp, ":")) != NULL) {
 		int cipherid = mbedtls_ssl_get_ciphersuite_id(cipher_name);
 		if (cipherid == 0) continue;
@@ -126,10 +132,15 @@ int git_mbedtls_stream_global_init(void)
 
 	/* Seeding the random number generator */
 	mbedtls_entropy = git__malloc(sizeof(mbedtls_entropy_context));
+	GITERR_CHECK_ALLOC(mbedtls_entropy);
+
 	mbedtls_entropy_init(mbedtls_entropy);
 
 	ctr_drbg = git__malloc(sizeof(mbedtls_ctr_drbg_context));
+	GITERR_CHECK_ALLOC(ctr_drbg);
+
 	mbedtls_ctr_drbg_init(ctr_drbg);
+
 	if (mbedtls_ctr_drbg_seed(ctr_drbg,
 		                      mbedtls_entropy_func,
 		                      mbedtls_entropy, NULL, 0) != 0) {
@@ -410,6 +421,8 @@ int git_mbedtls__set_cert_location(const char *path, int is_dir)
 	assert(path != NULL);
 
 	cacert = git__malloc(sizeof(mbedtls_x509_crt));
+	GITERR_CHECK_ALLOC(cacert);
+
 	mbedtls_x509_crt_init(cacert);
 	if (is_dir) {
 		ret = mbedtls_x509_crt_parse_path(cacert, path);
