@@ -18,10 +18,10 @@ automated fuzz testing. libFuzzer only works with clang.
    [`undefined`](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html),
    and [`leak`/`address,leak`](https://clang.llvm.org/docs/LeakSanitizer.html).
 3. Create the cmake build environment and configure the build with the
-   sanitizer chosen: `CC=/usr/bin/clang-6.0 cmake
-   -DBUILD_CLAR=OFF -DBUILD_FUZZERS=ON -DUSE_SANITIZER=address
-   -DCMAKE_BUILD_TYPE=RelWithDebInfo ..`. Note that building the fuzzer targets
-   is incompatible with the tests and examples.
+   sanitizer chosen: `CC=/usr/bin/clang-6.0 CFLAGS="-fsanitize=address" cmake
+   -DBUILD_CLAR=OFF -DBUILD_FUZZERS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo ..`.
+   Note that building the fuzzer targets is incompatible with the
+   tests and examples.
 4. Build libgit2: `cmake --build .`
 5. Exit the cmake build environment: `cd ..`
 
@@ -38,8 +38,8 @@ will write the coverage report.
 
 ## Get coverage
 
-In order to get coverage information, you also need to add the
-`-DUSE_COVERAGE=ON` flag to `cmake`, and then run the fuzz target with
+In order to get coverage information, you need to add the "-fcoverage-mapping"
+and "-fprofile-instr-generate CFLAGS, and then run the fuzz target with
 `-runs=0`. That will produce a file called `default.profraw` (this behavior can
 be overridden by setting the `LLVM_PROFILE_FILE="yourfile.profraw"` environment
 variable).

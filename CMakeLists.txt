@@ -54,8 +54,6 @@ OPTION(LIBGIT2_FILENAME			"Name of the produced binary"				OFF)
 OPTION(USE_SSH				"Link with libssh to enable SSH support"		 ON)
 OPTION(USE_HTTPS			"Enable HTTPS support. Can be set to a specific backend" ON)
 OPTION(USE_GSSAPI			"Link with libgssapi for SPNEGO auth"			OFF)
-OPTION(USE_SANITIZER			"Enable one of the Sanitizers (requires clang)"		OFF)
-OPTION(USE_COVERAGE			"Enable clang's coverage report (requires clang)"	OFF)
 OPTION(USE_STANDALONE_FUZZERS		"Enable standalone fuzzers (compatible with gcc)"	OFF)
 OPTION(VALGRIND				"Configure build for valgrind"				OFF)
 OPTION(CURL				"Use curl for HTTP if available"			 ON)
@@ -248,20 +246,6 @@ IF( NOT CMAKE_CONFIGURATION_TYPES )
 ELSE()
 	# Using a multi-configuration generator eg MSVC or Xcode
 	# that uses CMAKE_CONFIGURATION_TYPES and not CMAKE_BUILD_TYPE
-ENDIF()
-
-IF(NOT USE_SANITIZER STREQUAL "OFF")
-	# Workaround to force linking against -lasan
-	SET(CMAKE_REQUIRED_FLAGS "-fsanitize=${USE_SANITIZER}")
-	ADD_C_FLAG(-fsanitize=${USE_SANITIZER})
-	UNSET(CMAKE_REQUIRED_FLAGS)
-	ADD_C_FLAG(-fno-omit-frame-pointer)
-	ADD_C_FLAG(-fno-optimize-sibling-calls)
-ENDIF()
-
-IF(USE_COVERAGE)
-	ADD_C_FLAG(-fcoverage-mapping)
-	ADD_C_FLAG(-fprofile-instr-generate)
 ENDIF()
 
 IF(BUILD_FUZZERS AND NOT USE_STANDALONE_FUZZERS)
