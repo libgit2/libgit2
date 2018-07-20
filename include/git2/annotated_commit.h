@@ -104,6 +104,15 @@ GIT_EXTERN(const git_oid *) git_annotated_commit_id(
 	const git_annotated_commit *commit);
 
 /**
+ * Get the refname that the given `git_annotated_commit` refers to.
+ *
+ * @param commit the given annotated commit
+ * @return ref name.
+ */
+GIT_EXTERN(const char *) git_annotated_commit_ref(
+	const git_annotated_commit *commit);
+
+/**
  * Frees a `git_annotated_commit`.
  *
  * @param commit annotated commit to free
