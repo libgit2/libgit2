@@ -847,23 +847,27 @@ on_error:
 
 static int do_send_request(winhttp_stream *s, size_t len, int ignore_length)
 {
-	if (ignore_length) {
-		if (!WinHttpSendRequest(s->request,
-			WINHTTP_NO_ADDITIONAL_HEADERS, 0,
-			WINHTTP_NO_REQUEST_DATA, 0,
-			WINHTTP_IGNORE_REQUEST_TOTAL_LENGTH, 0)) {
-			return -1;
+	int attempts;
+	bool success;
+
+	for (attempts = 0; attempts < 5; attempts++) {
+		if (ignore_length) {
+			success = WinHttpSendRequest(s->request,
+				WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+				WINHTTP_NO_REQUEST_DATA, 0,
+				WINHTTP_IGNORE_REQUEST_TOTAL_LENGTH, 0);
+		} else {
+			success = WinHttpSendRequest(s->request,
+				WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+				WINHTTP_NO_REQUEST_DATA, 0,
+				len, 0);
 		}
-	} else {
-		if (!WinHttpSendRequest(s->request,
-			WINHTTP_NO_ADDITIONAL_HEADERS, 0,
-			WINHTTP_NO_REQUEST_DATA, 0,
-			len, 0)) {
-			return -1;
-		}
+
+		if (success || GetLastError() != SEC_E_BUFFER_TOO_SMALL)
+			break;
 	}
 
-	return 0;
+	return success ? 0 : -1;
 }
 
 static int send_request(winhttp_stream *s, size_t len, int ignore_length)
