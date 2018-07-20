@@ -10,11 +10,13 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <limits.h>
+#include <unistd.h>
 
-#include "fileops.h"
-#include "hash.h"
 #include "git2.h"
 #include "git2/sys/mempack.h"
+
+#define UNUSED(x) (void)(x)
 
 static git_odb *odb = NULL;
 static git_odb_backend *mempack = NULL;
@@ -25,8 +27,8 @@ static const unsigned int base_obj_len = 2;
 
 int LLVMFuzzerInitialize(int *argc, char ***argv)
 {
-	GIT_UNUSED(argc);
-	GIT_UNUSED(argv);
+	UNUSED(argc);
+	UNUSED(argv);
 	if (git_libgit2_init() < 0) {
 		fprintf(stderr, "Failed to initialize libgit2\n");
 		abort();
@@ -87,7 +89,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 		goto cleanup;
 	if (append_hash) {
 		git_oid oid;
-		if (git_hash_buf(&oid, data, size) < 0) {
+		if (git_odb_hash(&oid, data, size, GIT_OBJ_BLOB) < 0) {
 			fprintf(stderr, "Failed to compute the SHA1 hash\n");
 			abort();
 		}
