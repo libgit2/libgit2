@@ -26,6 +26,7 @@ phases:
       volumes: |
        $(Build.SourcesDirectory):/src
        $(Build.BinariesDirectory):/build
+      envVars: 'LEAK_CHECK=valgrind'
       workDir: '/build'
       containerCommand: '/src/ci/test.sh'
       detached: false
@@ -55,6 +56,7 @@ phases:
       volumes: |
        $(Build.SourcesDirectory):/src
        $(Build.BinariesDirectory):/build
+      envVars: 'LEAK_CHECK=valgrind'
       workDir: '/build'
       containerCommand: '/src/ci/test.sh'
       detached: false

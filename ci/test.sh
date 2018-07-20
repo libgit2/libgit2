@@ -6,6 +6,13 @@ if [ -n "$SKIP_TESTS" ]; then
 	exit 0
 fi
 
+SOURCE_DIR=${SOURCE_DIR:-$( cd "$( dirname "${BASH_SOURCE[0]}" )" && dirname $( pwd ) )}
+BUILD_DIR=$(pwd)
+TMPDIR=${TMPDIR:-/tmp}
+USER=${USER:-$(whoami)}
+
+VALGRIND="valgrind --leak-check=full --show-reachable=yes --error-exitcode=125 --num-callers=50 --suppressions=\"$SOURCE_DIR/libgit2_clar.supp\""
+
 cleanup() {
 	echo "Cleaning up..."
 
@@ -23,8 +30,26 @@ die() {
 	exit $1
 }
 
-TMPDIR=${TMPDIR:-/tmp}
-USER=${USER:-$(whoami)}
+# Ask ctest what it would run if we were to invoke it directly.  This lets us manage the
+# test configuration in a single place (tests/CMakeLists.txt) instead of running clar
+# here as well.  But it allows us to wrap our test harness with a leak checker like valgrind.
+run_test() {
+	if [ "$LEAK_CHECK" = "valgrind" ]; then
+		RUNNER="$VALGRIND $1"
+	else
+		RUNNER="$1"
+	fi
+
+	eval $RUNNER || die $?
+}
+
+run_ctest() {
+	run_test $(ctest -N -V -R $1 | sed -n 's/^[0-9]*: Test command: //p')
+}
+
+run_clar_test() {
+	run_test "./libgit2_clar $1"
+}
 
 # Configure the test environment; run them early so that we're certain
 # that they're started by the time we need them.
@@ -100,7 +125,7 @@ echo "## Running (offline) tests"
 echo "##############################################################################"
 
 export GITTEST_REMOTE_URL="git://localhost/test.git"
-ctest -V -R libgit2_clar || die $?
+run_ctest libgit2_clar
 unset GITTEST_REMOTE_URL
 
 # Run the various online tests.  The "online" test suite only includes the
@@ -112,12 +137,12 @@ echo "Running proxy tests"
 echo ""
 
 export GITTEST_REMOTE_PROXY_URL="http://foo:bar@localhost:8080/"
-./libgit2_clar -sonline::clone::proxy_credentials_in_url || die $?
+run_clar_test -sonline::clone::proxy_credentials_in_url
 
 export GITTEST_REMOTE_PROXY_URL="http://localhost:8080/"
 export GITTEST_REMOTE_PROXY_USER="foo"
 export GITTEST_REMOTE_PROXY_PASS="bar"
-./libgit2_clar -sonline::clone::proxy_credentials_request || die $?
+run_clar_test -sonline::clone::proxy_credentials_request
 
 echo ""
 echo "Running ssh tests"
@@ -128,11 +153,11 @@ export GITTEST_REMOTE_USER=$USER
 export GITTEST_REMOTE_SSH_KEY="$HOME/.ssh/id_rsa"
 export GITTEST_REMOTE_SSH_PUBKEY="$HOME/.ssh/id_rsa.pub"
 export GITTEST_REMOTE_SSH_PASSPHRASE=""
-./libgit2_clar -sonline::push -sonline::clone::ssh_cert || die $?
-./libgit2_clar -sonline::clone::ssh_with_paths || die $?
+run_clar_test -sonline::push online::clone::ssh_cert
+run_clar_test -sonline::clone::ssh_with_paths
 
 if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-	./libgit2_clar -sonline::clone::cred_callback || die $?
+	run_clar_test -sonline::clone::cred_callback
 fi
 
 echo ""
@@ -141,6 +166,6 @@ echo ""
 
 export GITTEST_REMOTE_URL="https://github.com/libgit2/non-existent"
 export GITTEST_REMOTE_USER="libgit2test"
-ctest -V -R libgit2_clar-cred_callback || die $?
+run_ctest libgit2_clar-cred_callback
 
 cleanup
