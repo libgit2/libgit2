@@ -55,7 +55,7 @@ phases:
   - powershell: . '$(Build.SourcesDirectory)\ci\build.ps1'
     displayName: Build
     env:
-      CMAKE_OPTIONS: -G"Visual Studio 12 2013 Win64"
+      CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013 Win64"
   - powershell: . '$(Build.SourcesDirectory)\ci\test.ps1'
     displayName: Test
 
@@ -67,7 +67,7 @@ phases:
   - powershell: . '$(Build.SourcesDirectory)\ci\build.ps1'
     displayName: Build
     env:
-      CMAKE_OPTIONS: -G"Visual Studio 12 2013"
+      CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013"
   - powershell: . '$(Build.SourcesDirectory)\ci\test.ps1'
     displayName: Test
 
