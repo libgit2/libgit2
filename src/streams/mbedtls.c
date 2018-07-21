@@ -359,6 +359,7 @@ void mbedtls_stream_free(git_stream *stream)
 	git__free(st->host);
 	git__free(st->cert_info.data);
 	git_stream_free(st->io);
+	mbedtls_ssl_free(st->ssl);
 	git__free(st->ssl);
 	git__free(st);
 }
