@@ -76,6 +76,7 @@ phases:
     displayName: Test
     env:
       TMPDIR: $(Agent.TempDirectory)
+      LEAK_CHECK: leaks
 
 - phase: windows_vs_amd64
   displayName: 'Windows (Visual Studio; amd64)'
