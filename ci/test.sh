@@ -18,15 +18,21 @@ cleanup() {
 	echo "Cleaning up..."
 
 	if [ ! -z "$GITDAEMON_DIR" -a -f "${GITDAEMON_DIR}/pid" ]; then
+		echo "Stopping git daemon..."
 		kill $(cat "${GITDAEMON_DIR}/pid")
 	fi
 
 	if [ ! -z "$SSHD_DIR" -a -f "${SSHD_DIR}/pid" ]; then
+		echo "Stopping SSH..."
 		kill $(cat "${SSHD_DIR}/pid")
 	fi
+
+	echo "Done."
 }
 
 die() {
+	echo "Test exited with code: $1"
+
 	cleanup
 	exit $1
 }
@@ -179,4 +185,6 @@ if [ -z "$SKIP_SSH_TESTS" ]; then
 	unset GITTEST_REMOTE_SSH_FINGERPRINT
 fi
 
+echo "Success."
 cleanup
+exit 0
