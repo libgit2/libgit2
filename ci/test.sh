@@ -18,15 +18,21 @@ cleanup() {
 	echo "Cleaning up..."
 
 	if [ ! -z "$GITDAEMON_DIR" -a -f "${GITDAEMON_DIR}/pid" ]; then
+		echo "Stopping git daemon..."
 		kill $(cat "${GITDAEMON_DIR}/pid")
 	fi
 
 	if [ ! -z "$SSHD_DIR" -a -f "${SSHD_DIR}/pid" ]; then
+		echo "Stopping SSH..."
 		kill $(cat "${SSHD_DIR}/pid")
 	fi
+
+	echo "Done."
 }
 
 die() {
+	echo "Test exited with code: $1"
+
 	cleanup
 	exit $1
 }
@@ -164,12 +170,7 @@ if [ "$TRAVIS_OS_NAME" = "linux" ]; then
 	run_clar_test -sonline::clone::cred_callback
 fi
 
-echo ""
-echo "Running credential callback tests"
-echo ""
-
-export GITTEST_REMOTE_URL="https://github.com/libgit2/non-existent"
-export GITTEST_REMOTE_USER="libgit2test"
-run_ctest libgit2_clar-cred_callback
+echo "Success."
 
 cleanup
+exit 0
