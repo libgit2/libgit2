@@ -1035,6 +1035,10 @@ static int read_on_variable(
 	GIT_UNUSED(line);
 	GIT_UNUSED(line_len);
 
+	if (!current_section) {
+		giterr_set(GITERR_CONFIG, "no section for key: %s", var_name);
+		return -1;
+	}
 	git_buf_puts(&buf, current_section);
 	git_buf_putc(&buf, '.');
 	for (c = var_name; *c; c++)
