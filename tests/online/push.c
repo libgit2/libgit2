@@ -152,8 +152,12 @@ static void do_verify_push_status(record_callbacks_data *data, const push_status
 		git_buf_dispose(&msg);
 	}
 
-	git_vector_foreach(actual, i, iter)
-		git__free(iter);
+	git_vector_foreach(actual, i, iter) {
+		push_status *s = (push_status *)iter;
+		git__free(s->ref);
+		git__free(s->msg);
+		git__free(s);
+	}
 
 	git_vector_free(actual);
 }
@@ -393,7 +397,7 @@ void test_online_push__initialize(void)
 	}
 
 	git_remote_disconnect(_remote);
-	git_vector_free(&delete_specs);
+	git_vector_free_deep(&delete_specs);
 
 	/* Now that we've deleted everything, fetch from the remote */
 	memcpy(&fetch_opts.callbacks, &_record_cbs, sizeof(git_remote_callbacks));
