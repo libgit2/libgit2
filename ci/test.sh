@@ -12,7 +12,7 @@ TMPDIR=${TMPDIR:-/tmp}
 USER=${USER:-$(whoami)}
 
 VALGRIND="valgrind --leak-check=full --show-reachable=yes --error-exitcode=125 --num-callers=50 --suppressions=\"$SOURCE_DIR/libgit2_clar.supp\""
-LEAKS="MallocStackLogging=1 MallocScribble=1 leaks -quiet -atExit --"
+LEAKS="MallocStackLogging=1 MallocScribble=1 leaks -quiet -atExit -- nohup"
 
 cleanup() {
 	echo "Cleaning up..."
@@ -47,7 +47,6 @@ run_test() {
 		RUNNER="$VALGRIND $TEST_CMD"
 	elif [ "$LEAK_CHECK" = "leaks" ]; then
 		RUNNER="$LEAKS $TEST_CMD"
-		echo $RUNNER
 	else
 		RUNNER="$TEST_CMD"
 	fi
