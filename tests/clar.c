@@ -250,7 +250,7 @@ static void
 clar_run_suite(const struct clar_suite *suite, const char *filter)
 {
 	const struct clar_func *test = suite->tests;
-	size_t i, matchlen;
+	size_t i, matchlen = 0;
 
 	if (!suite->enabled)
 		return;
