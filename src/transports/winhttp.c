@@ -184,10 +184,10 @@ static int apply_default_credentials(HINTERNET request, int mechanisms)
 	DWORD native_scheme = 0;
 
 	if ((mechanisms & GIT_WINHTTP_AUTH_NTLM) != 0)
-		native_scheme |= WINHTTP_AUTH_SCHEME_NTLM;
+		native_scheme = WINHTTP_AUTH_SCHEME_NTLM;
 
 	if ((mechanisms & GIT_WINHTTP_AUTH_NEGOTIATE) != 0)
-		native_scheme |= WINHTTP_AUTH_SCHEME_NEGOTIATE;
+		native_scheme = WINHTTP_AUTH_SCHEME_NEGOTIATE;
 
 	if (!native_scheme) {
 		giterr_set(GITERR_NET, "invalid authentication scheme");
