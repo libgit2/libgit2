@@ -174,6 +174,9 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
 	if (git_libgit2_init() < 0)
 		abort();
 
+	if (git_libgit2_opts(GIT_OPT_SET_PACK_MAX_OBJECTS, 10000000) < 0)
+		abort();
+
 	if (mkdtemp(tmp) != tmp)
 		abort();
 

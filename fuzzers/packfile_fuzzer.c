@@ -33,6 +33,10 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
 		fprintf(stderr, "Failed to initialize libgit2\n");
 		abort();
 	}
+	if (git_libgit2_opts(GIT_OPT_SET_PACK_MAX_OBJECTS, 10000000) < 0) {
+		fprintf(stderr, "Failed to limit maximum pack object count\n");
+		abort();
+	}
 	if (git_odb_new(&odb) < 0) {
 		fprintf(stderr, "Failed to create the odb\n");
 		abort();
