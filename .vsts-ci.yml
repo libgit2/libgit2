@@ -176,10 +176,11 @@ phases:
   queue:
     name: Hosted
   steps:
-  - powershell: . '$(Build.SourcesDirectory)\ci\setup-mingw-amd64.ps1'
+  - powershell: . '$(Build.SourcesDirectory)\ci\setup-mingw.ps1'
     displayName: Setup
     env:
       TEMP: $(Agent.TempDirectory)
+      ARCH: amd64
   - powershell: . '$(Build.SourcesDirectory)\ci\build.ps1'
     displayName: Build
     env:
@@ -193,10 +194,11 @@ phases:
   queue:
     name: Hosted
   steps:
-  - powershell: . '$(Build.SourcesDirectory)\ci\setup-mingw-x86.ps1'
+  - powershell: . '$(Build.SourcesDirectory)\ci\setup-mingw.ps1'
     displayName: Setup
     env:
       TEMP: $(Agent.TempDirectory)
+      ARCH: x86
   - powershell: . '$(Build.SourcesDirectory)\ci\build.ps1'
     displayName: Build
     env:
