@@ -86,8 +86,6 @@ int git_mbedtls_stream_global_init(void)
 	char *cipher_string = NULL;
 	char *cipher_string_tmp = NULL;
 
-	mbedtls_x509_crt *cacert = NULL;
-
 	git__ssl_conf = git__malloc(sizeof(mbedtls_ssl_config));
 	GITERR_CHECK_ALLOC(git__ssl_conf);
 
@@ -163,8 +161,6 @@ int git_mbedtls_stream_global_init(void)
 	return 0;
 
 cleanup:
-	mbedtls_x509_crt_free(cacert);
-	git__free(cacert);
 	mbedtls_ctr_drbg_free(ctr_drbg);
 	git__free(ctr_drbg);
 	mbedtls_ssl_config_free(git__ssl_conf);
