@@ -219,6 +219,7 @@ static int fallback_cred_acquire_cb(
 	 * as an authentication mechanism */
 	if (GIT_CREDTYPE_DEFAULT & allowed_types) {
 		wchar_t *wide_url;
+		HRESULT hCoInitResult;
 
 		/* Convert URL to wide characters */
 		if (git__utf8_to_16_alloc(&wide_url, url) < 0) {
@@ -226,7 +227,9 @@ static int fallback_cred_acquire_cb(
 			return -1;
 		}
 
-		if (SUCCEEDED(CoInitializeEx(NULL, COINIT_MULTITHREADED))) {
+		hCoInitResult = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+			
+		if (SUCCEEDED(hCoInitResult) || hCoInitResult == RPC_E_CHANGED_MODE) {
 			IInternetSecurityManager* pISM;
 
 			/* And if the target URI is in the My Computer, Intranet, or Trusted zones */
