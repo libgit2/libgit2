@@ -11,7 +11,7 @@ phases:
     displayName: Build
     inputs:
       action: 'Run an image'
-      imageName: 'ethomson/libgit2-trusty-openssl:latest'
+      imageName: 'libgit2/trusty-openssl:latest'
       volumes: |
        $(Build.SourcesDirectory):/src
        $(Build.BinariesDirectory):/build
@@ -22,7 +22,7 @@ phases:
     displayName: Test
     inputs:
       action: 'Run an image'
-      imageName: 'ethomson/libgit2-trusty-openssl:latest'
+      imageName: 'libgit2/trusty-openssl:latest'
       volumes: |
        $(Build.SourcesDirectory):/src
        $(Build.BinariesDirectory):/build
@@ -42,7 +42,7 @@ phases:
     displayName: Build
     inputs:
       action: 'Run an image'
-      imageName: 'ethomson/libgit2-trusty-openssl:latest'
+      imageName: 'libgit2/trusty-openssl:latest'
       volumes: |
        $(Build.SourcesDirectory):/src
        $(Build.BinariesDirectory):/build
@@ -53,7 +53,7 @@ phases:
     displayName: Test
     inputs:
       action: 'Run an image'
-      imageName: 'ethomson/libgit2-trusty-openssl:latest'
+      imageName: 'libgit2/trusty-openssl:latest'
       volumes: |
        $(Build.SourcesDirectory):/src
        $(Build.BinariesDirectory):/build
