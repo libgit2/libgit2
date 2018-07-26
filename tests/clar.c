@@ -95,9 +95,6 @@ static const char *
 fixture_path(const char *base, const char *fixture_name);
 
 struct clar_error {
-	const char *test;
-	int test_number;
-	const char *suite;
 	const char *file;
 	int line_number;
 	const char *error_msg;
@@ -113,8 +110,22 @@ struct clar_explicit {
 	struct clar_explicit *next;
 };
 
+struct clar_report {
+	const char *test;
+	int test_number;
+	const char *suite;
+
+	enum cl_test_status status;
+
+	struct clar_error *errors;
+	struct clar_error *last_error;
+
+	struct clar_report *next;
+};
+
 static struct {
 	enum cl_test_status test_status;
+
 	const char *active_test;
 	const char *active_suite;
 
@@ -131,8 +142,8 @@ static struct {
 	struct clar_explicit *explicit;
 	struct clar_explicit *last_explicit;
 
-	struct clar_error *errors;
-	struct clar_error *last_error;
+	struct clar_report *reports;
+	struct clar_report *last_report;
 
 	void (*local_cleanup)(void *);
 	void *local_cleanup_payload;
@@ -162,7 +173,7 @@ struct clar_suite {
 /* From clar_print_*.c */
 static void clar_print_init(int test_count, int suite_count, const char *suite_names);
 static void clar_print_shutdown(int test_count, int suite_count, int error_count);
-static void clar_print_error(int num, const struct clar_error *error);
+static void clar_print_error(int num, const struct clar_report *report, const struct clar_error *error);
 static void clar_print_ontest(const char *test_name, int test_number, enum cl_test_status failed);
 static void clar_print_onsuite(const char *suite_name, int suite_index);
 static void clar_print_onabort(const char *msg, ...);
@@ -193,21 +204,33 @@ void cl_trace_register(cl_trace_cb *cb, void *payload)
 
 /* Core test functions */
 static void
-clar_report_errors(void)
+clar_report(int *i, struct clar_error *error)
+{
+	while (error != NULL) {
+		clar_print_error((*i)++, _clar.last_report, error);
+		error = error->next;
+	}
+}
+
+static void
+clar_report_errors(struct clar_error *error)
 {
 	int i = 1;
-	struct clar_error *error, *next;
+	clar_report(&i, error);
+}
 
-	error = _clar.errors;
-	while (error != NULL) {
-		next = error->next;
-		clar_print_error(i++, error);
-		free(error->description);
-		free(error);
-		error = next;
+static void
+clar_report_all(void)
+{
+	int i = 1;
+	struct clar_report *report;
+
+	report = _clar.reports;
+	while (report != NULL) {
+		if (report->status == CL_TEST_FAILURE)
+			clar_report(&i, report->errors);
+		report = report->next;
 	}
-
-	_clar.errors = _clar.last_error = NULL;
 }
 
 static void
@@ -216,7 +239,6 @@ clar_run_test(
 	const struct clar_func *initialize,
 	const struct clar_func *cleanup)
 {
-	_clar.test_status = CL_TEST_OK;
 	_clar.trampoline_enabled = 1;
 
 	CL_TRACE(CL_TRACE__TEST__BEGIN);
@@ -231,6 +253,9 @@ clar_run_test(
 	}
 
 	_clar.trampoline_enabled = 0;
+
+	if (_clar.last_report->status == CL_TEST_NOTRUN)
+		_clar.last_report->status = CL_TEST_OK;
 
 	if (_clar.local_cleanup != NULL)
 		_clar.local_cleanup(_clar.local_cleanup_payload);
@@ -247,9 +272,9 @@ clar_run_test(
 	_clar.local_cleanup_payload = NULL;
 
 	if (_clar.report_errors_only) {
-		clar_report_errors();
+		clar_report_errors(_clar.last_report->errors);
 	} else {
-		clar_print_ontest(test->name, _clar.tests_ran, _clar.test_status);
+		clar_print_ontest(test->name, _clar.tests_ran, _clar.last_report->status);
 	}
 }
 
@@ -258,6 +283,7 @@ clar_run_suite(const struct clar_suite *suite, const char *filter)
 {
 	const struct clar_func *test = suite->tests;
 	size_t i, matchlen;
+	struct clar_report *report;
 
 	if (!suite->enabled)
 		return;
@@ -290,6 +316,21 @@ clar_run_suite(const struct clar_suite *suite, const char *filter)
 			continue;
 
 		_clar.active_test = test[i].name;
+
+		report = calloc(1, sizeof(struct clar_report));
+		report->suite = _clar.active_suite;
+		report->test = _clar.active_test;
+		report->test_number = _clar.tests_ran;
+		report->status = CL_TEST_NOTRUN;
+
+		if (_clar.reports == NULL)
+			_clar.reports = report;
+
+		if (_clar.last_report != NULL)
+			_clar.last_report->next = report;
+
+		_clar.last_report = report;
+
 		clar_run_test(&test[i], &suite->initialize, &suite->cleanup);
 
 		if (_clar.exit_on_error && _clar.total_errors)
@@ -466,6 +507,7 @@ void
 clar_test_shutdown(void)
 {
 	struct clar_explicit *explicit, *explicit_next;
+	struct clar_report *report, *report_next;
 
 	clar_print_shutdown(
 		_clar.tests_ran,
@@ -478,6 +520,11 @@ clar_test_shutdown(void)
 	for (explicit = _clar.explicit; explicit; explicit = explicit_next) {
 		explicit_next = explicit->next;
 		free(explicit);
+	}
+
+	for (report = _clar.reports; report; report = report_next) {
+		report_next = report->next;
+		free(report);
 	}
 }
 
@@ -498,7 +545,7 @@ static void abort_test(void)
 	if (!_clar.trampoline_enabled) {
 		clar_print_onabort(
 				"Fatal error: a cleanup method raised an exception.");
-		clar_report_errors();
+		clar_report_errors(_clar.last_report->errors);
 		exit(-1);
 	}
 
@@ -508,7 +555,7 @@ static void abort_test(void)
 
 void clar__skip(void)
 {
-	_clar.test_status = CL_TEST_SKIP;
+	_clar.last_report->status = CL_TEST_SKIP;
 	_clar.total_skipped++;
 	abort_test();
 }
@@ -522,17 +569,14 @@ void clar__fail(
 {
 	struct clar_error *error = calloc(1, sizeof(struct clar_error));
 
-	if (_clar.errors == NULL)
-		_clar.errors = error;
+	if (_clar.last_report->errors == NULL)
+		_clar.last_report->errors = error;
 
-	if (_clar.last_error != NULL)
-		_clar.last_error->next = error;
+	if (_clar.last_report->last_error != NULL)
+		_clar.last_report->last_error->next = error;
 
-	_clar.last_error = error;
+	_clar.last_report->last_error = error;
 
-	error->test = _clar.active_test;
-	error->test_number = _clar.tests_ran;
-	error->suite = _clar.active_suite;
 	error->file = file;
 	error->line_number = line;
 	error->error_msg = error_msg;
@@ -541,7 +585,7 @@ void clar__fail(
 		error->description = strdup(description);
 
 	_clar.total_errors++;
-	_clar.test_status = CL_TEST_FAILURE;
+	_clar.last_report->status = CL_TEST_FAILURE;
 
 	if (should_abort)
 		abort_test();

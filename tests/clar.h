@@ -12,7 +12,8 @@
 enum cl_test_status {
 	CL_TEST_OK,
 	CL_TEST_FAILURE,
-	CL_TEST_SKIP
+	CL_TEST_SKIP,
+	CL_TEST_NOTRUN,
 };
 
 void clar_test_init(int argc, char *argv[]);
