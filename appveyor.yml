@@ -9,42 +9,36 @@ environment:
   GITTEST_INVASIVE_FS_SIZE: 1
 
   matrix:
-  - GENERATOR: "Visual Studio 11"
-    ARCH: 32
-  - GENERATOR: "Visual Studio 11 Win64"
-    ARCH: 64
-  - GENERATOR: "MSYS Makefiles"
-    ARCH: i686 # this is for 32-bit MinGW-w64
-  - GENERATOR: "MSYS Makefiles"
-    ARCH: 64
-cache:
-- i686-4.9.2-release-win32-sjlj-rt_v3-rev1.7z
-- x86_64-4.9.2-release-win32-seh-rt_v3-rev1.7z
+  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
+    CMAKE_OPTIONS: -G"Visual Studio 10 2010"
+    ARCH: x86
+  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
+    CMAKE_OPTIONS: -G"Visual Studio 10 2010 Win64"
+    ARCH: amd64
+  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+    CMAKE_OPTIONS: -G"Visual Studio 14 2015"
+    ARCH: x86
+  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+    CMAKE_OPTIONS: -G"Visual Studio 14 2015 Win64"
+    ARCH: amd64
+  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+    CMAKE_OPTIONS: -G"MinGW Makefiles"
+    ARCH: x86
+  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+    CMAKE_OPTIONS: -G"MinGW Makefiles"
+    ARCH: amd64
 
-build_script:
+install:
+- set PATH=%TEMP%\mingw64\bin;%TEMP%\mingw32\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
 - ps: |
     mkdir build
     cd build
-    if ($env:GENERATOR -ne "MSYS Makefiles") {
-      cmake -D ENABLE_TRACE=ON -D BUILD_CLAR=ON -D MSVC_CRTDBG=ON .. -G"$env:GENERATOR"
-      cmake --build . --config Debug
+    if ($env:CMAKE_OPTIONS -eq '-G"MinGW Makefiles"') {
+      ../ci/setup-mingw.ps1
     }
-- cmd: |
-    if "%GENERATOR%"=="MSYS Makefiles" (C:\MinGW\msys\1.0\bin\sh --login /c/projects/libgit2/script/appveyor-mingw.sh)
+
+build_script:
+- cmd: powershell ../ci/build.ps1
+
 test_script:
-- ps: |
-    $ErrorActionPreference="Stop"
-    Start-FileDownload https://github.com/ethomson/poxyproxy/releases/download/v0.1.0/poxyproxy-0.1.0.jar -FileName poxyproxy.jar
-    # Run this early so we know it's ready by the time we need it
-    $proxyJob = Start-Job { java -jar $Env:APPVEYOR_BUILD_FOLDER\build\poxyproxy.jar -d --port 8080 --credentials foo:bar }
-    ctest -V -R libgit2_clar
-    $env:GITTEST_REMOTE_URL="https://github.com/libgit2/non-existent"
-    $env:GITTEST_REMOTE_USER="libgit2test"
-    ctest -V -R libgit2_clar-cred_callback
-    Receive-Job -Job $proxyJob
-    $env:GITTEST_REMOTE_PROXY_URL = "http://foo:bar@localhost:8080"
-    ctest -V -R libgit2_clar-proxy_credentials_in_url
-    $env:GITTEST_REMOTE_PROXY_URL = "http://localhost:8080"
-    $env:GITTEST_REMOTE_PROXY_USER = "foo"
-    $env:GITTEST_REMOTE_PROXY_PASS = "bar"
-    ctest -V -R libgit2_clar-proxy_credentials_request
+- cmd: powershell ../ci/test.ps1
