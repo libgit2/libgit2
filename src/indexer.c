@@ -22,6 +22,8 @@
 
 extern git_mutex git__mwindow_mutex;
 
+size_t git_indexer__max_objects = UINT32_MAX;
+
 #define UINT31_MAX (0x7FFFFFFF)
 
 struct entry {
@@ -557,12 +559,12 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_tran
 		idx->nr_objects = ntohl(hdr->hdr_entries);
 		idx->off = sizeof(struct git_pack_header);
 
-		/* for now, limit to 2^32 objects */
-		assert(idx->nr_objects == (size_t)((unsigned int)idx->nr_objects));
-		if (idx->nr_objects == (size_t)((unsigned int)idx->nr_objects))
+		if (idx->nr_objects <= git_indexer__max_objects) {
 			total_objects = (unsigned int)idx->nr_objects;
-		else
-			total_objects = UINT_MAX;
+		} else {
+			giterr_set(GITERR_INDEXER, "too many objects");
+			return -1;
+		}
 
 		idx->pack->idx_cache = git_oidmap_alloc();
 		GITERR_CHECK_ALLOC(idx->pack->idx_cache);
