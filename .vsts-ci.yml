@@ -135,7 +135,7 @@ phases:
   queue:
     name: 'Hosted macOS Preview'
   steps:
-  - bash: . '$(Build.SourcesDirectory)/ci/setup-macos.sh'
+  - bash: . '$(Build.SourcesDirectory)/ci/setup-osx.sh'
     displayName: Setup
   - bash: . '$(Build.SourcesDirectory)/ci/build.sh'
     displayName: Build
