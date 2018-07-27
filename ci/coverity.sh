@@ -32,14 +32,11 @@ if [ ! -d "$TOOL_BASE" ]; then
 	ln -s "$TOOL_DIR" "$TOOL_BASE"/cov-analysis
 fi
 
-cp script/user_nodefs.h "$TOOL_BASE"/cov-analysis/config/user_nodefs.h
+cp ../script/user_nodefs.h "$TOOL_BASE"/cov-analysis/config/user_nodefs.h
 
 COV_BUILD="$TOOL_BASE/cov-analysis/bin/cov-build"
 
 # Configure and build
-rm -rf _build
-mkdir _build
-cd _build
 cmake .. -DTHREADSAFE=ON
 COVERITY_UNSUPPORTED=1 \
 	$COV_BUILD --dir cov-int \
