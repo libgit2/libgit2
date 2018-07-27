@@ -138,6 +138,7 @@ static struct {
 	int report_errors_only;
 	int exit_on_error;
 	int report_suite_names;
+	int write_summary;
 
 	struct clar_explicit *explicit;
 	struct clar_explicit *last_explicit;
@@ -353,6 +354,7 @@ clar_usage(const char *arg)
 	printf("  -q    \tOnly report tests that had an error\n");
 	printf("  -Q    \tQuit as soon as a test fails\n");
 	printf("  -l    \tPrint suite names\n");
+	printf("  -r    \tWrite summary file\n");
 	exit(-1);
 }
 
@@ -366,7 +368,7 @@ clar_parse_args(int argc, char **argv)
 		char *argument = argv[i];
 
 		if (argument[0] != '-' || argument[1] == '\0'
-		    || strchr("sixvqQl", argument[1]) == NULL) {
+		    || strchr("sixvqQlr", argument[1]) == NULL) {
 			clar_usage(argv[0]);
 		}
 	}
@@ -462,6 +464,10 @@ clar_parse_args(int argc, char **argv)
 			_clar.report_suite_names = 1;
 			break;
 
+		case 'r':
+			_clar.write_summary = 1;
+			break;
+
 		default:
 			assert(!"Unexpected commandline argument!");
 		}
@@ -503,6 +509,8 @@ clar_test_run(void)
 	return _clar.total_errors;
 }
 
+static void clar_summary_write(void);
+
 void
 clar_test_shutdown(void)
 {
@@ -516,6 +524,9 @@ clar_test_shutdown(void)
 	);
 
 	clar_unsandbox();
+
+	if (_clar.write_summary)
+		clar_summary_write();
 
 	for (explicit = _clar.explicit; explicit; explicit = explicit_next) {
 		explicit_next = explicit->next;
@@ -730,3 +741,4 @@ void cl_set_cleanup(void (*cleanup)(void *), void *opaque)
 #include "clar/fixtures.h"
 #include "clar/fs.h"
 #include "clar/print.h"
+#include "clar/summary.h"
