@@ -16,9 +16,10 @@ env:
  global:
   - secure: "YnhS+8n6B+uoyaYfaJ3Lei7cSJqHDPiKJCKFIF2c87YDfmCvAJke8QtE7IzjYDs7UFkTCM4ox+ph2bERUrxZbSCyEkHdjIZpKuMJfYWja/jgMqTMxdyOH9y8JLFbZsSXDIXDwqBlC6vVyl1fP90M35wuWcNTs6tctfVWVofEFbs="
   - GITTEST_INVASIVE_FS_SIZE=1
+  - SKIP_APT=1
  matrix:
-  - OPTIONS="-DTHREADSAFE=ON -DENABLE_TRACE=ON -DCMAKE_BUILD_TYPE=Release"
-  - OPTIONS="-DTHREADSAFE=OFF -DBUILD_EXAMPLES=ON"
+  - CMAKE_OPTIONS="-DTHREADSAFE=ON -DENABLE_TRACE=ON -DCMAKE_BUILD_TYPE=Release"
+  - CMAKE_OPTIONS="-DTHREADSAFE=OFF -DBUILD_EXAMPLES=ON"
 
 dist: trusty
 osx_image: xcode8.3
@@ -52,21 +53,22 @@ matrix:
      dist: trusty
    - compiler: gcc
      env:
-       - VALGRIND=1
-         OPTIONS="-DBUILD_CLAR=ON -DBUILD_EXAMPLES=OFF -DDEBUG_POOL=ON -DCMAKE_BUILD_TYPE=Debug"
+       - LEAK_CHECK=valgrind
+         CMAKE_OPTIONS="-DBUILD_CLAR=ON -DBUILD_EXAMPLES=OFF -DDEBUG_POOL=ON -DCMAKE_BUILD_TYPE=Debug"
      os: linux
      dist: trusty
  allow_failures:
    - env: COVERITY=1
 
 install:
-  - if [ -f ./script/install-deps-${TRAVIS_OS_NAME}.sh ]; then ./script/install-deps-${TRAVIS_OS_NAME}.sh; fi
+  - if [ -f ./ci/setup-${TRAVIS_OS_NAME}.sh ]; then ./ci/setup-${TRAVIS_OS_NAME}.sh; fi
 
 # Run the Build script and tests
 script:
- - script/cibuild.sh
- - script/citest.sh
- - script/cileaks.sh
+ - mkdir build
+ - cd build
+ - if [ "$COVERITY" ]; then ../ci/coverity.sh; fi
+ - if [ -z "$COVERITY" ]; then ../ci/build.sh && ../ci/test.sh; fi
 
 # Only watch the development and master branches
 branches:
