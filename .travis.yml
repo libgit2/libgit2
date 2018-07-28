@@ -48,10 +48,6 @@ matrix:
      compiler: gcc
  include:
    - compiler: gcc
-     env: COVERITY=1
-     os: linux
-     dist: trusty
-   - compiler: gcc
      env:
        - LEAK_CHECK=valgrind
          CMAKE_OPTIONS="-DBUILD_CLAR=ON -DBUILD_EXAMPLES=OFF -DDEBUG_POOL=ON -DCMAKE_BUILD_TYPE=Debug"
@@ -67,8 +63,8 @@ install:
 script:
  - mkdir build
  - cd build
- - if [ "$COVERITY" ]; then ../ci/coverity.sh; fi
- - if [ -z "$COVERITY" ]; then ../ci/build.sh && ../ci/test.sh; fi
+ - if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then ../ci/coverity.sh; fi
+ - if [ "$TRAVIS_EVENT_TYPE" != "cron" ]; then ../ci/build.sh && ../ci/test.sh; fi
 
 # Only watch the development and master branches
 branches:
