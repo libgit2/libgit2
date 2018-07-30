@@ -426,8 +426,8 @@ static int limit_list(git_commit_list **out, git_revwalk *walk, git_commit_list 
 			break;
 		}
 
-		if (!commit->uninteresting && walk->hide_cb && walk->hide_cb(&commit->oid, walk->hide_cb_payload))
-				continue;
+		if (walk->hide_cb && walk->hide_cb(&commit->oid, walk->hide_cb_payload))
+			continue;
 
 		time = commit->time;
 		p = &git_commit_list_insert(commit, p)->next;
