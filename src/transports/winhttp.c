@@ -253,7 +253,9 @@ static int fallback_cred_acquire_cb(
 				pISM->lpVtbl->Release(pISM);
 			}
 
-			CoUninitialize();
+            if (SUCCEEDED(hCoInitResult))
+                /* Only unitialize if the call to CoInitializeEx was successful. */
+                CoUninitialize();
 		}
 
 		git__free(wide_url);
