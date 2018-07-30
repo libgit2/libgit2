@@ -351,7 +351,13 @@ char *git__strsep(char **end, const char *sep)
 
 size_t git__linenlen(const char *buffer, size_t buffer_len)
 {
-	char *nl = memchr(buffer, '\n', buffer_len);
+	char *nl;
+
+	assert(buffer || buffer_len == 0);
+	if (!buffer)
+		return 0;
+
+	nl = memchr(buffer, '\n', buffer_len);
 	return nl ? (size_t)(nl - buffer) + 1 : buffer_len;
 }
 
