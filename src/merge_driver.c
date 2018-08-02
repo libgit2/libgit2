@@ -367,6 +367,12 @@ static int merge_driver_name_for_path(
 
 	*out = NULL;
 
+	if (git_repository_is_bare(repo))
+	{
+		*out = merge_driver_name__text;
+		return 0;
+	}
+
 	if ((error = git_attr_get(&value, repo, 0, path, "merge")) < 0)
 		return error;
 
