@@ -641,6 +641,27 @@ cleanup:
 	return error;
 }
 
+static int load_shallow(git_repository *repo)
+{
+	int error = 0;
+	git_array_oid_t roots = GIT_ARRAY_INIT;
+	git_array_oid_t parents = GIT_ARRAY_INIT;
+	size_t i;
+	git_oid *graft_oid;
+
+	/* Graft shallow roots */
+	if ((error = git_repository__shallow_roots(&roots, repo)) < 0) {
+		return error;
+	}
+
+	git_array_foreach(roots, i, graft_oid) {
+		if ((error = git__graft_register(repo->grafts, graft_oid, parents)) < 0) {
+			return error;
+		}
+	}
+	return 0;
+}
+
 int git_repository_open_bare(
 	git_repository **repo_ptr,
 	const char *bare_path)
@@ -925,6 +946,9 @@ int git_repository_open_ext(
 		goto cleanup;
 
 	if ((error = load_grafts(repo)) < 0)
+		goto cleanup;
+
+	if ((error = load_shallow(repo)) < 0)
 		goto cleanup;
 
 	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0)
