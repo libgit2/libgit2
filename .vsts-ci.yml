@@ -1,6 +1,10 @@
 resources:
 - repo: self
 
+trigger:
+- master
+- maint/*
+
 phases:
 - phase: linux_trusty_gcc_openssl
   displayName: 'Linux (Trusty; GCC; OpenSSL)'
