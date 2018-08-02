@@ -412,10 +412,6 @@ static int git_commit__parse_internal(git_commit *commit, const char *data, size
 		buffer += tree_len;
 	}
 
-	/*
-	 * TODO: commit grafts!
-	 */
-
 	while (git_oid__parse(&parent_id, &buffer, buffer_end, "parent ") == 0) {
 		git_oid *new_id = git_array_alloc(commit->parent_ids);
 		GIT_ERROR_CHECK_ALLOC(new_id);
@@ -499,10 +495,30 @@ int git_commit__parse_raw(void *commit, const char *data, size_t size)
 
 int git_commit__parse_ext(git_commit *commit, git_odb_object *odb_obj, git_commit__parse_flags flags)
 {
-	return git_commit__parse_internal(commit,
-		git_odb_object_data(odb_obj),
-		git_odb_object_size(odb_obj),
-		flags);
+	git_commit_graft *graft;
+	git_repository *repo = git_object_owner((git_object *)commit);
+	int error;
+
+	if ((error = git_commit__parse_internal(commit,
+	    git_odb_object_data(odb_obj),
+	    git_odb_object_size(odb_obj),
+	    flags)) < 0)
+		return error;
+
+	/* Perform necessary grafts */
+	if (git__graft_for_oid(&graft, repo->grafts, git_odb_object_id(odb_obj)) != GIT_ENOTFOUND) {
+		size_t idx;
+		git_oid *oid;
+		git_array_clear(commit->parent_ids);
+		git_array_init_to_size(commit->parent_ids, git_array_size(graft->parents));
+		git_array_foreach(graft->parents, idx, oid) {
+			git_oid *id = git_array_alloc(commit->parent_ids);
+			GIT_ERROR_CHECK_ALLOC(id);
+
+			git_oid_cpy(id, oid);
+		}
+	}
+	return 0;
 }
 
 int git_commit__parse(void *_commit, git_odb_object *odb_obj)
