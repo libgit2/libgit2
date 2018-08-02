@@ -22,6 +22,7 @@
 #include "object.h"
 #include "array.h"
 #include "oidarray.h"
+#include "graft.h"
 
 void git_commit__free(void *_commit)
 {

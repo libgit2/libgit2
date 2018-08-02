@@ -24,6 +24,7 @@
 #include "attrcache.h"
 #include "submodule.h"
 #include "diff_driver.h"
+#include "graft.h"
 
 #define DOT_GIT ".git"
 #define GIT_DIR DOT_GIT "/"
@@ -151,6 +152,9 @@ struct git_repository {
 	unsigned is_worktree:1;
 
 	unsigned int lru_counter;
+
+	git_graftmap *grafts;
+	git_oid graft_checksum;
 
 	git_atomic attr_session_key;
 

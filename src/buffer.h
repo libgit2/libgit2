@@ -219,4 +219,9 @@ int git_buf_splice(
 	const char *data,
 	size_t nb_to_insert);
 
+/* warning: this will wreck your buf contents */
+#define git_buf_foreach_line(line_start, line_end, line_num, buf) \
+	while (((line_start) = git__strsep(&(buf)->ptr, "\n")) != NULL && \
+	((line_end) = (line_start) + strlen((line_start))) != NULL && ++(line_num))
+
 #endif
