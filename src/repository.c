@@ -145,6 +145,9 @@ void git_repository__cleanup(git_repository *repo)
 	git_cache_clear(&repo->objects);
 	git_attr_cache_flush(repo);
 
+	git__graft_clear(repo->grafts);
+	git_oidmap_free(repo->grafts);
+
 	set_config(repo, NULL);
 	set_index(repo, NULL);
 	set_odb(repo, NULL);
@@ -240,6 +243,8 @@ static git_repository *repository_alloc(void)
 
 	/* set all the entries in the cvar cache to `unset` */
 	git_repository__cvar_cache_clear(repo);
+
+	repo->grafts = git_oidmap_alloc();
 
 	return repo;
 
@@ -562,6 +567,78 @@ static int find_repo(
 	return error;
 }
 
+static int load_grafts(git_repository *repo)
+{
+	git_buf graft_path = GIT_BUF_INIT;
+	git_buf contents = GIT_BUF_INIT;
+	git_buf dup_contents;
+	const char *line_start;
+	const char *line_end;
+	int line_num = 0;
+	int error, updated;
+	git_array_oid_t parents = GIT_ARRAY_INIT;
+
+	if ((error = git_repository_item_path(&graft_path, repo, GIT_REPOSITORY_ITEM_INFO)) < 0)
+		return error;
+
+	if (git_buf_joinpath(&graft_path, graft_path.ptr, "grafts")) {
+		git_buf_dispose(&graft_path);
+		return error;
+	}
+
+	error = git_futils_readbuffer_updated(&contents, git_buf_cstr(&graft_path), &repo->graft_checksum, &updated);
+	git_buf_dispose(&graft_path);
+
+	if (error == GIT_ENOTFOUND || !updated)
+		return 0;
+
+	if (error < 0)
+		goto cleanup;
+
+	if (updated) {
+		git__graft_clear(repo->grafts);
+	}
+
+	dup_contents.ptr = contents.ptr;
+	git_buf_foreach_line(line_start, line_end, line_num, &dup_contents) {
+		git_oid graft_oid, parent_oid;
+
+		error = git_oid_fromstrn(&graft_oid, line_start, GIT_OID_HEXSZ);
+		if (error < 0) {
+			git_error_set(GIT_ERROR_REPOSITORY, "Invalid OID at line %d", line_num);
+			error = -1;
+		}
+		line_start += GIT_OID_HEXSZ;
+
+		if (*(line_start++) == ' ') {
+			while (git_oid_fromstrn(&parent_oid, line_start, GIT_OID_HEXSZ) == 0) {
+				git_oid *id = git_array_alloc(parents);
+
+				git_oid_cpy(id, &parent_oid);
+				line_start += GIT_OID_HEXSZ;
+				if (line_start >= line_end) {
+					break;
+				}
+				line_start += 1;
+			}
+		}
+
+		if (git__graft_register(repo->grafts, &graft_oid, parents) < 0) {
+			git_error_set(GIT_ERROR_REPOSITORY, "Invalid graft at line %d", line_num);
+			error = -1;
+			goto cleanup;
+		}
+		git_array_clear(parents);
+		line_num++;
+	}
+
+cleanup:
+	git_array_clear(parents);
+	git_buf_dispose(&contents);
+
+	return error;
+}
+
 int git_repository_open_bare(
 	git_repository **repo_ptr,
 	const char *bare_path)
@@ -843,6 +920,9 @@ int git_repository_open_ext(
 		goto cleanup;
 
 	if (config && (error = check_repositoryformatversion(config)) < 0)
+		goto cleanup;
+
+	if ((error = load_grafts(repo)) < 0)
 		goto cleanup;
 
 	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0)
