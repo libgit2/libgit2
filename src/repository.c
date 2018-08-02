@@ -148,6 +148,8 @@ void git_repository__cleanup(git_repository *repo)
 	git__graft_clear(repo->grafts);
 	git_oidmap_free(repo->grafts);
 
+	git_array_clear(repo->shallow_oids);
+
 	set_config(repo, NULL);
 	set_index(repo, NULL);
 	set_odb(repo, NULL);
@@ -2919,6 +2921,79 @@ int git_repository_state_cleanup(git_repository *repo)
 	assert(repo);
 
 	return git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files));
+}
+
+int git_repository__shallow_roots(git_array_oid_t *out, git_repository *repo)
+{
+	git_buf path = GIT_BUF_INIT;
+	git_buf contents = GIT_BUF_INIT;
+	int error, updated, line_num = 1;
+	char *line;
+	char *buffer;
+
+    assert(out && repo);
+
+	if ((error = git_buf_joinpath(&path, repo->gitdir, "shallow")) < 0)
+		return error;
+
+	error = git_futils_readbuffer_updated(&contents, git_buf_cstr(&path), &repo->shallow_checksum, &updated);
+	git_buf_dispose(&path);
+
+	if (error < 0 && error != GIT_ENOTFOUND)
+		return error;
+
+	/* cancel out GIT_ENOTFOUND */
+	git_error_clear();
+	error = 0;
+
+	if (!updated) {
+		*out = repo->shallow_oids;
+		goto cleanup;
+	}
+
+	git_array_clear(repo->shallow_oids);
+
+	buffer = contents.ptr;
+	while ((line = git__strsep(&buffer, "\n")) != NULL) {
+		git_oid *oid = git_array_alloc(repo->shallow_oids);
+
+		error = git_oid_fromstr(oid, line);
+		if (error < 0) {
+			git_error_set(GIT_ERROR_REPOSITORY, "Invalid OID at line %d", line_num);
+			git_array_clear(repo->shallow_oids);
+			error = -1;
+			goto cleanup;
+		}
+		++line_num;
+	}
+
+	if (*buffer) {
+		git_error_set(GIT_ERROR_REPOSITORY, "No EOL at line %d", line_num);
+		git_array_clear(repo->shallow_oids);
+		error = -1;
+		goto cleanup;
+	}
+
+	*out = repo->shallow_oids;
+
+cleanup:
+	git_buf_dispose(&contents);
+
+	return error;
+}
+
+int git_repository_shallow_roots(git_oidarray *out, git_repository *repo)
+{
+	int ret;
+	git_array_oid_t array = GIT_ARRAY_INIT;
+
+	assert(out);
+
+	ret = git_repository__shallow_roots(&array, repo);
+
+	git_oidarray__from_array(out, &array);
+
+	return ret;
 }
 
 int git_repository_is_shallow(git_repository *repo)
