@@ -1,10 +1,22 @@
 #include "clar_libgit2.h"
 #include "buffer.h"
 
-#if defined(GIT_ARCH_64)
-#define TOOBIG 0xffffffffffffff00
+/*
+ * We want to use some ridiculous size that `malloc` will fail with
+ * but that does not otherwise interfere with testing.  On Linux, choose
+ * a number that is large enough to fail immediately but small enough
+ * that valgrind doesn't believe it to erroneously be a negative number.
+ * On macOS, choose a number that is large enough to fail immediately
+ * without having libc print warnings to stderr.
+ */
+#if defined(GIT_ARCH_64) && defined(__linux__)
+# define TOOBIG 0x0fffffffffffffff
+#elif defined(__linux__)
+# define TOOBIG 0x0fffffff
+#elif defined(GIT_ARCH_64)
+# define TOOBIG 0xffffffffffffff00
 #else
-#define TOOBIG 0xffffff00
+# define TOOBIG 0xffffff00
 #endif
 
 /**
