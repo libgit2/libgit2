@@ -90,3 +90,23 @@ void test_repo_shallow__errors_on_borked(void)
 
 	cl_git_fail_with(-1, git_repository_shallow_roots(&oids, g_repo));
 }
+
+void test_repo_shallow__revwalk_behavior(void)
+{
+	git_revwalk *w;
+	git_oid oid_1, oid_2, oid_3;
+
+	g_repo = cl_git_sandbox_init("shallow.git");
+
+	cl_git_pass(git_revwalk_new(&w, g_repo));
+	cl_git_pass(git_revwalk_push_head(w));
+
+	cl_git_pass(git_revwalk_next(&oid_1, w)); // a65fedf39aefe402d3bb6e24df4d4f5fe4547750
+	cl_git_pass(git_revwalk_next(&oid_2, w)); // be3563ae3f795b2b4353bcce3a527ad0a4f7f644
+	cl_git_fail_with(GIT_ITEROVER, git_revwalk_next(&oid_3, w));
+
+	cl_assert_equal_s(git_oid_tostr_s(&oid_1), "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+	cl_assert_equal_s(git_oid_tostr_s(&oid_2), "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+
+	git_revwalk_free(w);
+}
