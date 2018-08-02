@@ -110,3 +110,16 @@ void test_repo_shallow__revwalk_behavior(void)
 
 	git_revwalk_free(w);
 }
+
+void test_repo_shallow__grafted_object(void)
+{
+	git_commit *commit;
+
+	g_repo = cl_git_sandbox_init("shallow.git");
+
+	cl_git_pass(git_commit_lookup(&commit, g_repo, &g_shallow_oid));
+
+	cl_assert_equal_i(0, git_commit_parentcount(commit));
+
+	git_commit_free(commit);
+}
