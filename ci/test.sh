@@ -184,6 +184,17 @@ if [ -z "$SKIP_SSH_TESTS" ]; then
 	unset GITTEST_REMOTE_SSH_FINGERPRINT
 fi
 
+if [ -z "$SKIP_FUZZERS" ]; then
+	echo ""
+	echo "##############################################################################"
+	echo "## Running fuzzers"
+	echo "##############################################################################"
+
+	for fuzzer in fuzzers/*_fuzzer; do
+		"${fuzzer}" "${SOURCE_DIR}/fuzzers/corpora/$(basename "${fuzzer%_fuzzer}")" || die $?
+	done
+fi
+
 echo "Success."
 cleanup
 exit 0

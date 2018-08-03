@@ -38,33 +38,36 @@ INCLUDE(EnableWarnings)
 
 # Build options
 #
-OPTION( SONAME				"Set the (SO)VERSION of the target"		ON  )
-OPTION( BUILD_SHARED_LIBS	"Build Shared Library (OFF for Static)"	ON  )
-OPTION( THREADSAFE			"Build libgit2 as threadsafe"			ON )
-OPTION( BUILD_CLAR			"Build Tests using the Clar suite"		ON  )
-OPTION( BUILD_EXAMPLES		"Build library usage example apps"		OFF )
-OPTION( TAGS				"Generate tags"							OFF )
-OPTION( PROFILE				"Generate profiling information"		OFF )
-OPTION( ENABLE_TRACE		"Enables tracing support"				OFF )
-OPTION( LIBGIT2_FILENAME	"Name of the produced binary"			OFF )
+OPTION(SONAME				"Set the (SO)VERSION of the target"			 ON)
+OPTION(BUILD_SHARED_LIBS		"Build Shared Library (OFF for Static)"			 ON)
+OPTION(THREADSAFE			"Build libgit2 as threadsafe"				 ON)
+OPTION(BUILD_CLAR			"Build Tests using the Clar suite"			 ON)
+OPTION(BUILD_EXAMPLES			"Build library usage example apps"			OFF)
+OPTION(BUILD_FUZZERS			"Build the fuzz targets"				OFF)
+OPTION(TAGS				"Generate tags"						OFF)
+OPTION(PROFILE				"Generate profiling information"			OFF)
+OPTION(ENABLE_TRACE			"Enables tracing support"				OFF)
+OPTION(LIBGIT2_FILENAME			"Name of the produced binary"				OFF)
 
-SET(SHA1_BACKEND "CollisionDetection" CACHE STRING "Backend to use for SHA1. One of Generic, OpenSSL, Win32, CommonCrypto, mbedTLS, CollisionDetection. ")
-OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
-OPTION( USE_HTTPS			"Enable HTTPS support. Can be set to a specific backend"	ON )
-OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"   OFF )
-OPTION( VALGRIND			"Configure build for valgrind"			OFF )
-OPTION( CURL			"Use curl for HTTP if available" ON)
-OPTION( USE_EXT_HTTP_PARSER		"Use system HTTP_Parser if available" ON)
-OPTION( DEBUG_POOL			"Enable debug pool allocator"			OFF )
-OPTION( ENABLE_WERROR			"Enable compilation with -Werror"		OFF )
-OPTION( USE_BUNDLED_ZLIB    "Use the bundled version of zlib"       OFF )
+   SET(SHA1_BACKEND 			"CollisionDetection"			       CACHE STRING
+       "Backend to use for SHA1. One of Generic, OpenSSL, Win32, CommonCrypto, mbedTLS, CollisionDetection.")
+OPTION(USE_SSH				"Link with libssh to enable SSH support"		 ON)
+OPTION(USE_HTTPS			"Enable HTTPS support. Can be set to a specific backend" ON)
+OPTION(USE_GSSAPI			"Link with libgssapi for SPNEGO auth"			OFF)
+OPTION(USE_STANDALONE_FUZZERS		"Enable standalone fuzzers (compatible with gcc)"	OFF)
+OPTION(VALGRIND				"Configure build for valgrind"				OFF)
+OPTION(CURL				"Use curl for HTTP if available"			 ON)
+OPTION(USE_EXT_HTTP_PARSER		"Use system HTTP_Parser if available"			 ON)
+OPTION(DEBUG_POOL			"Enable debug pool allocator"				OFF)
+OPTION(ENABLE_WERROR			"Enable compilation with -Werror"			OFF)
+OPTION(USE_BUNDLED_ZLIB    		"Use the bundled version of zlib"			OFF)
 
 IF (UNIX AND NOT APPLE)
-	OPTION( ENABLE_REPRODUCIBLE_BUILDS	"Enable reproducible builds" 			OFF )
+	OPTION(ENABLE_REPRODUCIBLE_BUILDS "Enable reproducible builds"				OFF)
 ENDIF()
 
 IF (APPLE)
-	OPTION( USE_ICONV			"Link with and use iconv library"		 ON )
+	OPTION(USE_ICONV		"Link with and use iconv library"			 ON)
 ENDIF()
 
 IF(MSVC)
@@ -74,27 +77,27 @@ IF(MSVC)
 	#
 	# If you are writing a CLR program and want to link to libgit2, you'll want
 	# to turn this on by invoking CMake with the "-DSTDCALL=ON" argument.
-	OPTION( STDCALL			"Build libgit2 with the __stdcall convention"	OFF  )
+	OPTION(STDCALL			"Build libgit2 with the __stdcall convention"		OFF)
 
 	# This option must match the settings used in your program, in particular if you
 	# are linking statically
-	OPTION( STATIC_CRT		"Link the static CRT libraries"	ON  )
+	OPTION(STATIC_CRT		"Link the static CRT libraries"		 		 ON)
 
 	# If you want to embed a copy of libssh2 into libgit2, pass a
 	# path to libssh2
-	OPTION( EMBED_SSH_PATH		"Path to libssh2 to embed (Windows)" OFF )
+	OPTION(EMBED_SSH_PATH		"Path to libssh2 to embed (Windows)"			OFF)
 ENDIF()
 
 
 IF(WIN32)
 	# By default, libgit2 is built with WinHTTP.  To use the built-in
 	# HTTP transport, invoke CMake with the "-DWINHTTP=OFF" argument.
-	OPTION(	WINHTTP			"Use Win32 WinHTTP routines"	ON	)
+	OPTION(WINHTTP			"Use Win32 WinHTTP routines"				 ON)
 ENDIF()
 
 IF(MSVC)
 	# Enable MSVC CRTDBG memory leak reporting when in debug mode.
-	OPTION(MSVC_CRTDBG "Enable CRTDBG memory leak reporting" OFF)
+	OPTION(MSVC_CRTDBG 		"Enable CRTDBG memory leak reporting"			OFF)
 ENDIF()
 
 FILE(STRINGS "${libgit2_SOURCE_DIR}/include/git2/version.h" GIT2_HEADER REGEX "^#define LIBGIT2_VERSION \"[^\"]*\"$")
@@ -245,6 +248,14 @@ ELSE()
 	# that uses CMAKE_CONFIGURATION_TYPES and not CMAKE_BUILD_TYPE
 ENDIF()
 
+IF(BUILD_FUZZERS AND NOT USE_STANDALONE_FUZZERS)
+	# The actual sanitizer link target will be added when linking the fuzz
+	# targets.
+	SET(CMAKE_REQUIRED_FLAGS "-fsanitize=fuzzer-no-link")
+	ADD_C_FLAG(-fsanitize=fuzzer-no-link)
+	UNSET(CMAKE_REQUIRED_FLAGS)
+ENDIF ()
+
 ADD_SUBDIRECTORY(src)
 
 # Tests
@@ -281,6 +292,18 @@ ENDIF ()
 IF (BUILD_EXAMPLES)
 	ADD_SUBDIRECTORY(examples)
 ENDIF ()
+
+IF(BUILD_FUZZERS)
+	IF(NOT USE_STANDALONE_FUZZERS)
+		IF(BUILD_EXAMPLES)
+			MESSAGE(FATAL_ERROR "Cannot build the fuzzer targets and the examples together")
+		ENDIF()
+		IF(BUILD_CLAR)
+			MESSAGE(FATAL_ERROR "Cannot build the fuzzer targets and the tests together")
+		ENDIF()
+	ENDIF()
+	ADD_SUBDIRECTORY(fuzzers)
+ENDIF()
 
 IF(CMAKE_VERSION VERSION_GREATER 3)
 	FEATURE_SUMMARY(WHAT ENABLED_FEATURES DESCRIPTION "Enabled features:")
