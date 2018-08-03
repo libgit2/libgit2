@@ -1,3 +1,18 @@
+v0.26.6
+-------
+
+This is a security release fixing out-of-bounds reads when
+processing smart-protocol "ng" packets.
+
+When parsing an "ng" packet, we keep track of both the current position
+as well as the remaining length of the packet itself. But instead of
+taking care not to exceed the length, we pass the current pointer's
+position to `strchr`, which will search for a certain character until
+hitting NUL. It is thus possible to create a crafted packet which
+doesn't contain a NUL byte to trigger an out-of-bounds read.
+
+The issue was discovered by the oss-fuzz project, issue 9406.
+
 v0.26.5
 -------
 
