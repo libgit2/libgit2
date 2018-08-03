@@ -191,7 +191,7 @@ if [ -z "$SKIP_FUZZERS" ]; then
 	echo "##############################################################################"
 
 	for fuzzer in fuzzers/*_fuzzer; do
-		"${fuzzer}" "../fuzzers/corpora/$(basename "${fuzzer%_fuzzer}")" || die $?
+		"${fuzzer}" "${SOURCE_DIR}/fuzzers/corpora/$(basename "${fuzzer%_fuzzer}")" || die $?
 	done
 fi
 
