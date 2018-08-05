@@ -1075,12 +1075,12 @@ static int read_on_variable(
 	GIT_UNUSED(line);
 	GIT_UNUSED(line_len);
 
-	if (!current_section) {
-		giterr_set(GITERR_CONFIG, "no section for key: %s", var_name);
-		return -1;
+	if (current_section) {
+		git_buf_puts(&buf, current_section);
+		git_buf_putc(&buf, '.');
 	}
 	git__strtolower(var_name);
-	git_buf_printf(&buf, "%s.%s", current_section, var_name);
+	git_buf_puts(&buf, var_name);
 	git__free(var_name);
 
 	if (git_buf_oom(&buf)) {
