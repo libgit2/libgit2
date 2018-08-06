@@ -37,6 +37,7 @@ addons:
     - valgrind
 
 sudo: false
+osx_image: xcode8.3
 
 matrix:
  fast_finish: true
