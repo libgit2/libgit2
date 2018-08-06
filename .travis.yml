@@ -21,6 +21,7 @@ env:
   - OPTIONS="-DTHREADSAFE=OFF -DBUILD_EXAMPLES=ON -DENABLE_WERROR=ON"
 
 dist: trusty
+osx_image: xcode8.3
 sudo: false
 
 addons:
