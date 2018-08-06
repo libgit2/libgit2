@@ -29,7 +29,7 @@ echo "## Configuring build environment"
 echo "##############################################################################"
 
 echo cmake ${SOURCE_DIR} -DBUILD_EXAMPLES=ON ${CMAKE_OPTIONS}
-cmake ${SOURCE_DIR} -DBUILD_EXAMPLES=ON -DBUILD_FUZZERS=ON -DUSE_STANDALONE_FUZZERS=ON ${CMAKE_OPTIONS}
+cmake ${SOURCE_DIR} -DENABLE_WERROR=ON -DBUILD_EXAMPLES=ON -DBUILD_FUZZERS=ON -DUSE_STANDALONE_FUZZERS=ON ${CMAKE_OPTIONS}
 
 echo ""
 echo "##############################################################################"
