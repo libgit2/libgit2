@@ -54,8 +54,12 @@ matrix:
          CMAKE_OPTIONS="-DBUILD_CLAR=ON -DBUILD_EXAMPLES=OFF -DDEBUG_POOL=ON -DCMAKE_BUILD_TYPE=Debug"
      os: linux
      dist: trusty
- allow_failures:
-   - env: COVERITY=1
+   - compiler: gcc
+     if: type = cron
+     env:
+       - CMAKE_OPTIONS="-DBUILD_CLAR=ON -DCMAKE_BUILD_TYPE=Debug"
+         COVERITY=1
+     os: linux
 
 install:
   - if [ -f ./ci/setup-${TRAVIS_OS_NAME}.sh ]; then ./ci/setup-${TRAVIS_OS_NAME}.sh; fi
@@ -64,8 +68,8 @@ install:
 script:
  - mkdir build
  - cd build
- - if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then ../ci/coverity.sh; fi
- - if [ "$TRAVIS_EVENT_TYPE" != "cron" ]; then ../ci/build.sh && ../ci/test.sh; fi
+ - if [ -n "$COVERITY" ]; then ../ci/coverity.sh; fi
+ - if [ -z "$COVERITY" ]; then ../ci/build.sh && ../ci/test.sh; fi
 
 # Only watch the development and master branches
 branches:
