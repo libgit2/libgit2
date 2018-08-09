@@ -184,7 +184,7 @@ int git_smart__get_push_stream(transport_smart *t, git_smart_subtransport_stream
 int git_smart__update_heads(transport_smart *t, git_vector *symrefs);
 
 /* smart_pkt.c */
-int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_t len);
+int git_pkt_parse_line(git_pkt **head, const char **endptr, const char *line, size_t linelen);
 int git_pkt_buffer_flush(git_buf *buf);
 int git_pkt_send_flush(GIT_SOCKET s);
 int git_pkt_buffer_done(git_buf *buf);
