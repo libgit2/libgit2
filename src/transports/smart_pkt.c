@@ -306,9 +306,9 @@ static int ng_pkt(git_pkt **out, const char *line, size_t len)
 
 	eol = line + len;
 
-	if (len < 3)
+	if (git__prefixncmp(line, len, "ng "))
 		goto out_err;
-	line += 3; /* skip "ng " */
+	line += 3;
 
 	if (!(ptr = memchr(line, ' ', eol - line)))
 		goto out_err;
