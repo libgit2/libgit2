@@ -459,19 +459,19 @@ int git_pkt_parse_line(
 		ret = sideband_progress_pkt(head, line, len);
 	else if (*line == GIT_SIDE_BAND_ERROR)
 		ret = sideband_error_pkt(head, line, len);
-	else if (!git__prefixcmp(line, "ACK"))
+	else if (!git__prefixncmp(line, len, "ACK"))
 		ret = ack_pkt(head, line, len);
-	else if (!git__prefixcmp(line, "NAK"))
+	else if (!git__prefixncmp(line, len, "NAK"))
 		ret = nak_pkt(head);
-	else if (!git__prefixcmp(line, "ERR "))
+	else if (!git__prefixncmp(line, len, "ERR "))
 		ret = err_pkt(head, line, len);
 	else if (*line == '#')
 		ret = comment_pkt(head, line, len);
-	else if (!git__prefixcmp(line, "ok"))
+	else if (!git__prefixncmp(line, len, "ok"))
 		ret = ok_pkt(head, line, len);
-	else if (!git__prefixcmp(line, "ng"))
+	else if (!git__prefixncmp(line, len, "ng"))
 		ret = ng_pkt(head, line, len);
-	else if (!git__prefixcmp(line, "unpack"))
+	else if (!git__prefixncmp(line, len, "unpack"))
 		ret = unpack_pkt(head, line, len);
 	else
 		ret = ref_pkt(head, line, len);
