@@ -407,13 +407,13 @@ static int32_t parse_len(const char *line)
  */
 
 int git_pkt_parse_line(
-	git_pkt **head, const char *line, const char **out, size_t bufflen)
+	git_pkt **pkt, const char **endptr, const char *line, size_t linelen)
 {
 	int ret;
 	int32_t len;
 
 	/* Not even enough for the length */
-	if (bufflen > 0 && bufflen < PKT_LEN_SIZE)
+	if (linelen > 0 && linelen < PKT_LEN_SIZE)
 		return GIT_EBUFS;
 
 	len = parse_len(line);
@@ -422,7 +422,7 @@ int git_pkt_parse_line(
 		 * If we fail to parse the length, it might be because the
 		 * server is trying to send us the packfile already.
 		 */
-		if (bufflen >= 4 && !git__prefixcmp(line, "PACK")) {
+		if (linelen >= 4 && !git__prefixcmp(line, "PACK")) {
 			giterr_set(GITERR_NET, "unexpected pack file");
 		} else {
 			giterr_set(GITERR_NET, "bad packet length");
@@ -435,7 +435,7 @@ int git_pkt_parse_line(
 	 * If we were given a buffer length, then make sure there is
 	 * enough in the buffer to satisfy this line
 	 */
-	if (bufflen > 0 && bufflen < (size_t)len)
+	if (linelen > 0 && linelen < (size_t)len)
 		return GIT_EBUFS;
 
 	/*
@@ -458,36 +458,36 @@ int git_pkt_parse_line(
 	}
 
 	if (len == 0) { /* Flush pkt */
-		*out = line;
-		return flush_pkt(head);
+		*endptr = line;
+		return flush_pkt(pkt);
 	}
 
 	len -= PKT_LEN_SIZE; /* the encoded length includes its own size */
 
 	if (*line == GIT_SIDE_BAND_DATA)
-		ret = data_pkt(head, line, len);
+		ret = data_pkt(pkt, line, len);
 	else if (*line == GIT_SIDE_BAND_PROGRESS)
-		ret = sideband_progress_pkt(head, line, len);
+		ret = sideband_progress_pkt(pkt, line, len);
 	else if (*line == GIT_SIDE_BAND_ERROR)
-		ret = sideband_error_pkt(head, line, len);
+		ret = sideband_error_pkt(pkt, line, len);
 	else if (!git__prefixncmp(line, len, "ACK"))
-		ret = ack_pkt(head, line, len);
+		ret = ack_pkt(pkt, line, len);
 	else if (!git__prefixncmp(line, len, "NAK"))
-		ret = nak_pkt(head);
+		ret = nak_pkt(pkt);
 	else if (!git__prefixncmp(line, len, "ERR"))
-		ret = err_pkt(head, line, len);
+		ret = err_pkt(pkt, line, len);
 	else if (*line == '#')
-		ret = comment_pkt(head, line, len);
+		ret = comment_pkt(pkt, line, len);
 	else if (!git__prefixncmp(line, len, "ok"))
-		ret = ok_pkt(head, line, len);
+		ret = ok_pkt(pkt, line, len);
 	else if (!git__prefixncmp(line, len, "ng"))
-		ret = ng_pkt(head, line, len);
+		ret = ng_pkt(pkt, line, len);
 	else if (!git__prefixncmp(line, len, "unpack"))
-		ret = unpack_pkt(head, line, len);
+		ret = unpack_pkt(pkt, line, len);
 	else
-		ret = ref_pkt(head, line, len);
+		ret = ref_pkt(pkt, line, len);
 
-	*out = line + len;
+	*endptr = line + len;
 
 	return ret;
 }

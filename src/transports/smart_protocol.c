@@ -44,7 +44,7 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 
 	do {
 		if (buf->offset > 0)
-			error = git_pkt_parse_line(&pkt, buf->data, &line_end, buf->offset);
+			error = git_pkt_parse_line(&pkt, &line_end, buf->data, buf->offset);
 		else
 			error = GIT_EBUFS;
 
@@ -217,7 +217,7 @@ static int recv_pkt(git_pkt **out_pkt, git_pkt_type *out_type, gitno_buffer *buf
 
 	do {
 		if (buf->offset > 0)
-			error = git_pkt_parse_line(&pkt, ptr, &line_end, buf->offset);
+			error = git_pkt_parse_line(&pkt, &line_end, ptr, buf->offset);
 		else
 			error = GIT_EBUFS;
 
@@ -755,7 +755,7 @@ static int add_push_report_sideband_pkt(git_push *push, git_pkt_data *data_pkt, 
 	}
 
 	while (line_len > 0) {
-		error = git_pkt_parse_line(&pkt, line, &line_end, line_len);
+		error = git_pkt_parse_line(&pkt, &line_end, line, line_len);
 
 		if (error == GIT_EBUFS) {
 			/* Buffer the data when the inner packet is split
@@ -798,8 +798,8 @@ static int parse_report(transport_smart *transport, git_push *push)
 
 	for (;;) {
 		if (buf->offset > 0)
-			error = git_pkt_parse_line(&pkt, buf->data,
-						   &line_end, buf->offset);
+			error = git_pkt_parse_line(&pkt, &line_end,
+						   buf->data, buf->offset);
 		else
 			error = GIT_EBUFS;
 
