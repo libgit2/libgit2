@@ -107,10 +107,12 @@ static int comment_pkt(git_pkt **out, const char *line, size_t len)
 
 static int err_pkt(git_pkt **out, const char *line, size_t len)
 {
-	git_pkt_err *pkt;
+	git_pkt_err *pkt = NULL;
 	size_t alloclen;
 
 	/* Remove "ERR " from the line */
+	if (git__prefixncmp(line, len, "ERR "))
+		goto out_err;
 	line += 4;
 	len -= 4;
 
@@ -127,6 +129,11 @@ static int err_pkt(git_pkt **out, const char *line, size_t len)
 	*out = (git_pkt *) pkt;
 
 	return 0;
+
+out_err:
+	giterr_set(GITERR_NET, "error parsing ERR pkt-line");
+	git__free(pkt);
+	return -1;
 }
 
 static int data_pkt(git_pkt **out, const char *line, size_t len)
@@ -463,7 +470,7 @@ int git_pkt_parse_line(
 		ret = ack_pkt(head, line, len);
 	else if (!git__prefixncmp(line, len, "NAK"))
 		ret = nak_pkt(head);
-	else if (!git__prefixncmp(line, len, "ERR "))
+	else if (!git__prefixncmp(line, len, "ERR"))
 		ret = err_pkt(head, line, len);
 	else if (*line == '#')
 		ret = comment_pkt(head, line, len);
