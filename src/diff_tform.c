@@ -822,7 +822,7 @@ int git_diff_find_similar(
 	num_deltas = diff->deltas.length;
 
 	/* TODO: maybe abort if deltas.length > rename_limit ??? */
-	if (!git__is_uint32(num_deltas))
+	if (!num_deltas || !git__is_uint32(num_deltas))
 		goto cleanup;
 
 	/* No flags set; nothing to do */
