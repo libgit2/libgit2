@@ -118,9 +118,9 @@ static int err_pkt(git_pkt **out, const char *line, size_t len)
 	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
 	pkt = git__malloc(alloclen);
 	GITERR_CHECK_ALLOC(pkt);
-
 	pkt->type = GIT_PKT_ERR;
-	pkt->len = (int)len;
+	pkt->len = len;
+
 	memcpy(pkt->error, line, len);
 	pkt->error[len] = '\0';
 
@@ -142,7 +142,7 @@ static int data_pkt(git_pkt **out, const char *line, size_t len)
 	GITERR_CHECK_ALLOC(pkt);
 
 	pkt->type = GIT_PKT_DATA;
-	pkt->len = (int) len;
+	pkt->len = len;
 	memcpy(pkt->data, line, len);
 
 	*out = (git_pkt *) pkt;
@@ -163,7 +163,7 @@ static int sideband_progress_pkt(git_pkt **out, const char *line, size_t len)
 	GITERR_CHECK_ALLOC(pkt);
 
 	pkt->type = GIT_PKT_PROGRESS;
-	pkt->len = (int) len;
+	pkt->len = len;
 	memcpy(pkt->data, line, len);
 
 	*out = (git_pkt *) pkt;
