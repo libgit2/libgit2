@@ -280,18 +280,15 @@ void test_transports_smart_packet__comment_pkt(void)
 
 void test_transports_smart_packet__ok_pkt(void)
 {
-	/*
-	 * TODO: the trailing slash is currently mandatory. Check
-	 * if we should really enforce this. As this test is part
-	 * of a security release, I feel uneasy to change
-	 * behaviour right now and leave it for a later point.
-	 */
 	assert_pkt_fails("0007ok\n");
+	assert_ok_parses("0007ok ", "");
 	assert_ok_parses("0008ok \n", "");
+	assert_ok_parses("0008ok x", "x");
 	assert_ok_parses("0009ok x\n", "x");
+	assert_pkt_fails("001OK ref/foo/bar");
+	assert_ok_parses("0012ok ref/foo/bar", "ref/foo/bar");
 	assert_pkt_fails("0013OK ref/foo/bar\n");
 	assert_ok_parses("0013ok ref/foo/bar\n", "ref/foo/bar");
-	assert_ok_parses("0012ok ref/foo/bar\n", "ref/foo/bar");
 }
 
 void test_transports_smart_packet__ng_pkt(void)
