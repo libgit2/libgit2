@@ -206,33 +206,25 @@ static int sideband_error_pkt(git_pkt **out, const char *line, size_t len)
  */
 static int ref_pkt(git_pkt **out, const char *line, size_t len)
 {
-	int error;
 	git_pkt_ref *pkt;
 	size_t alloclen;
 
-	if (len < GIT_OID_HEXSZ + 1) {
-		giterr_set(GITERR_NET, "error parsing pkt-line");
-		return -1;
-	}
-
-	pkt = git__malloc(sizeof(git_pkt_ref));
+	pkt = git__calloc(1, sizeof(git_pkt_ref));
 	GITERR_CHECK_ALLOC(pkt);
-
-	memset(pkt, 0x0, sizeof(git_pkt_ref));
 	pkt->type = GIT_PKT_REF;
-	if ((error = git_oid_fromstr(&pkt->head.oid, line)) < 0)
-		goto error_out;
 
-	/* Check for a bit of consistency */
-	if (line[GIT_OID_HEXSZ] != ' ') {
-		giterr_set(GITERR_NET, "error parsing pkt-line");
-		error = -1;
-		goto error_out;
-	}
+	if (len < GIT_OID_HEXSZ || git_oid_fromstr(&pkt->head.oid, line) < 0)
+		goto out_err;
+	line += GIT_OID_HEXSZ;
+	len -= GIT_OID_HEXSZ;
 
-	/* Jump from the name */
-	line += GIT_OID_HEXSZ + 1;
-	len -= (GIT_OID_HEXSZ + 1);
+	if (git__prefixncmp(line, len, " "))
+		goto out_err;
+	line++;
+	len--;
+
+	if (!len)
+		goto out_err;
 
 	if (line[len - 1] == '\n')
 		--len;
@@ -244,16 +236,18 @@ static int ref_pkt(git_pkt **out, const char *line, size_t len)
 	memcpy(pkt->head.name, line, len);
 	pkt->head.name[len] = '\0';
 
-	if (strlen(pkt->head.name) < len) {
+	if (strlen(pkt->head.name) < len)
 		pkt->capabilities = strchr(pkt->head.name, '\0') + 1;
-	}
 
 	*out = (git_pkt *)pkt;
 	return 0;
 
-error_out:
+out_err:
+	giterr_set(GITERR_NET, "error parsing REF pkt-line");
+	if (pkt)
+		git__free(pkt->head.name);
 	git__free(pkt);
-	return error;
+	return -1;
 }
 
 static int ok_pkt(git_pkt **out, const char *line, size_t len)
