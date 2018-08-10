@@ -44,8 +44,7 @@ int git_config_entries_new(git_config_entries **out)
 
 	entries = git__calloc(1, sizeof(git_config_entries));
 	GITERR_CHECK_ALLOC(entries);
-
-	git_atomic_set(&entries->refcount, 1);
+	GIT_REFCOUNT_INC(entries);
 
 	if ((error = git_strmap_alloc(&entries->map)) < 0)
 		git__free(entries);
@@ -55,15 +54,14 @@ int git_config_entries_new(git_config_entries **out)
 	return error;
 }
 
-void git_config_entries_free(git_config_entries *entries)
+void git_config_entries_incref(git_config_entries *entries)
+{
+	GIT_REFCOUNT_INC(entries);
+}
+
+static void config_entries_free(git_config_entries *entries)
 {
 	config_entry_list *list = NULL, *next;
-
-	if (!entries)
-		return;
-
-	if (git_atomic_dec(&entries->refcount) != 0)
-		return;
 
 	git_strmap_foreach_value(entries->map, list, config_entry_list_free(list));
 	git_strmap_free(entries->map);
@@ -76,6 +74,12 @@ void git_config_entries_free(git_config_entries *entries)
 	}
 
 	git__free(entries);
+}
+
+void git_config_entries_free(git_config_entries *entries)
+{
+	if (entries)
+		GIT_REFCOUNT_DEC(entries, config_entries_free);
 }
 
 int git_config_entries_append(git_config_entries *entries, git_config_entry *entry)

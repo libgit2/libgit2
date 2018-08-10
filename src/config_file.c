@@ -88,7 +88,7 @@ static git_config_entries *diskfile_entries_take(diskfile_header *h)
 	}
 
 	entries = h->entries;
-	git_atomic_inc(&entries->refcount);
+	git_config_entries_incref(entries);
 
 	git_mutex_unlock(&h->values_mutex);
 

@@ -17,12 +17,13 @@ typedef struct config_entry_list {
 } config_entry_list;
 
 typedef struct {
-	git_atomic refcount;
+	git_refcount rc;
 	git_strmap *map;
 	config_entry_list *list;
 } git_config_entries;
 
 int git_config_entries_new(git_config_entries **out);
+void git_config_entries_incref(git_config_entries *entries);
 void git_config_entries_free(git_config_entries *entries);
 /* Add or append the new config option */
 int git_config_entries_append(git_config_entries *entries, git_config_entry *entry);
