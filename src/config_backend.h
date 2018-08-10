@@ -12,36 +12,49 @@
 #include "git2/sys/config.h"
 #include "git2/config.h"
 
-GIT_INLINE(int) git_config_file_open(git_config_backend *cfg, unsigned int level, const git_repository *repo)
+/**
+ * Create a configuration file backend for ondisk files
+ *
+ * These are the normal `.gitconfig` files that Core Git
+ * processes. Note that you first have to add this file to a
+ * configuration object before you can query it for configuration
+ * variables.
+ *
+ * @param out the new backend
+ * @param path where the config file is located
+ */
+extern int git_config_backend_from_file(git_config_backend **out, const char *path);
+
+GIT_INLINE(int) git_config_backend_open(git_config_backend *cfg, unsigned int level, const git_repository *repo)
 {
 	return cfg->open(cfg, level, repo);
 }
 
-GIT_INLINE(void) git_config_file_free(git_config_backend *cfg)
+GIT_INLINE(void) git_config_backend_free(git_config_backend *cfg)
 {
 	if (cfg)
 		cfg->free(cfg);
 }
 
-GIT_INLINE(int) git_config_file_get_string(
+GIT_INLINE(int) git_config_backend_get_string(
 	git_config_entry **out, git_config_backend *cfg, const char *name)
 {
 	return cfg->get(cfg, name, out);
 }
 
-GIT_INLINE(int) git_config_file_set_string(
+GIT_INLINE(int) git_config_backend_set_string(
 	git_config_backend *cfg, const char *name, const char *value)
 {
 	return cfg->set(cfg, name, value);
 }
 
-GIT_INLINE(int) git_config_file_delete(
+GIT_INLINE(int) git_config_backend_delete(
 	git_config_backend *cfg, const char *name)
 {
 	return cfg->del(cfg, name);
 }
 
-GIT_INLINE(int) git_config_file_foreach(
+GIT_INLINE(int) git_config_backend_foreach(
 	git_config_backend *cfg,
 	int (*fn)(const git_config_entry *entry, void *data),
 	void *data)
@@ -49,21 +62,12 @@ GIT_INLINE(int) git_config_file_foreach(
 	return git_config_backend_foreach_match(cfg, NULL, fn, data);
 }
 
-GIT_INLINE(int) git_config_file_foreach_match(
-	git_config_backend *cfg,
-	const char *regexp,
-	int (*fn)(const git_config_entry *entry, void *data),
-	void *data)
-{
-	return git_config_backend_foreach_match(cfg, regexp, fn, data);
-}
-
-GIT_INLINE(int) git_config_file_lock(git_config_backend *cfg)
+GIT_INLINE(int) git_config_backend_lock(git_config_backend *cfg)
 {
 	return cfg->lock(cfg);
 }
 
-GIT_INLINE(int) git_config_file_unlock(git_config_backend *cfg, int success)
+GIT_INLINE(int) git_config_backend_unlock(git_config_backend *cfg, int success)
 {
 	return cfg->unlock(cfg, success);
 }

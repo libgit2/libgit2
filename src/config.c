@@ -12,7 +12,7 @@
 #include "git2/sys/config.h"
 #include "vector.h"
 #include "buf_text.h"
-#include "config_file.h"
+#include "config_backend.h"
 #include "transaction.h"
 #if GIT_WIN32
 # include <windows.h>
@@ -114,7 +114,7 @@ int git_config_add_file_ondisk(
 		return -1;
 	}
 
-	if (git_config_file__ondisk(&file, path) < 0)
+	if (git_config_backend_from_file(&file, path) < 0)
 		return -1;
 
 	if ((res = git_config_add_backend(cfg, file, level, repo, force)) < 0) {

@@ -5,9 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "config_file.h"
-
 #include "config.h"
+
 #include "filebuf.h"
 #include "sysdir.h"
 #include "buffer.h"
@@ -676,7 +675,7 @@ static int config_unlock(git_config_backend *_cfg, int success)
 	return error;
 }
 
-int git_config_file__ondisk(git_config_backend **out, const char *path)
+int git_config_backend_from_file(git_config_backend **out, const char *path)
 {
 	diskfile_backend *backend;
 

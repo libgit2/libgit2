@@ -2,7 +2,6 @@
 #include "buffer.h"
 #include "fileops.h"
 #include "git2/sys/config.h"
-#include "config_file.h"
 #include "config.h"
 
 void test_config_write__initialize(void)
