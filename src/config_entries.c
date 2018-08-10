@@ -7,6 +7,11 @@
 
 #include "config_entries.h"
 
+typedef struct config_entries_iterator {
+	git_config_iterator parent;
+	config_entry_list *head;
+} config_entries_iterator;
+
 static void config_entry_list_free(config_entry_list *list)
 {
 	config_entry_list *next;
@@ -174,13 +179,29 @@ int config_iterator_next(
 	git_config_entry **entry,
 	git_config_iterator *iter)
 {
-	git_config_file_iter *it = (git_config_file_iter *) iter;
+	config_entries_iterator *it = (config_entries_iterator *) iter;
 
 	if (!it->head)
 		return GIT_ITEROVER;
 
 	*entry = it->head->entry;
 	it->head = it->head->next;
+
+	return 0;
+}
+
+int git_config_entries_iterator_new(git_config_iterator **out, git_config_backend *backend, git_config_entries *entries)
+{
+	config_entries_iterator *it;
+
+	it = git__calloc(1, sizeof(config_entries_iterator));
+	GITERR_CHECK_ALLOC(it);
+	it->parent.backend = backend;
+	it->head = entries->list;
+	it->parent.next = config_iterator_next;
+	it->parent.free = config_iterator_free;
+
+	*out = &it->parent;
 
 	return 0;
 }

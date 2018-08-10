@@ -229,8 +229,6 @@ static int config_iterator_new(
 	git_config_iterator **iter,
 	struct git_config_backend* backend)
 {
-	diskfile_header *h;
-	git_config_file_iter *it;
 	git_config_backend *snapshot;
 	diskfile_header *bh = (diskfile_header *) backend;
 	int error;
@@ -241,19 +239,7 @@ static int config_iterator_new(
 	if ((error = snapshot->open(snapshot, bh->level, bh->repo)) < 0)
 		return error;
 
-	it = git__calloc(1, sizeof(git_config_file_iter));
-	GITERR_CHECK_ALLOC(it);
-
-	h = (diskfile_header *)snapshot;
-
-	it->parent.backend = snapshot;
-	it->head = h->entries->list;
-	it->parent.next = config_iterator_next;
-	it->parent.free = config_iterator_free;
-
-	*iter = (git_config_iterator *) it;
-
-	return 0;
+	return git_config_entries_iterator_new(iter, snapshot, bh->entries);
 }
 
 static int config_set(git_config_backend *cfg, const char *name, const char *value)
