@@ -7,10 +7,22 @@
 
 #include "config_entries.h"
 
+typedef struct config_entry_list {
+	struct config_entry_list *next;
+	struct config_entry_list *last;
+	git_config_entry *entry;
+} config_entry_list;
+
 typedef struct config_entries_iterator {
 	git_config_iterator parent;
 	config_entry_list *head;
 } config_entries_iterator;
+
+struct git_config_entries {
+	git_refcount rc;
+	git_strmap *map;
+	config_entry_list *list;
+};
 
 static void config_entry_list_free(config_entry_list *list)
 {

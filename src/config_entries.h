@@ -10,17 +10,7 @@
 #include "git2/sys/config.h"
 #include "config.h"
 
-typedef struct config_entry_list {
-	struct config_entry_list *next;
-	struct config_entry_list *last;
-	git_config_entry *entry;
-} config_entry_list;
-
-typedef struct {
-	git_refcount rc;
-	git_strmap *map;
-	config_entry_list *list;
-} git_config_entries;
+typedef struct git_config_entries git_config_entries;
 
 int git_config_entries_new(git_config_entries **out);
 void git_config_entries_incref(git_config_entries *entries);
