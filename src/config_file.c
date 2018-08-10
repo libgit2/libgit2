@@ -107,29 +107,6 @@ static void config_entry_list_free(config_entry_list *list)
 	};
 }
 
-int git_config_file_normalize_section(char *start, char *end)
-{
-	char *scan;
-
-	if (start == end)
-		return GIT_EINVALIDSPEC;
-
-	/* Validate and downcase range */
-	for (scan = start; *scan; ++scan) {
-		if (end && scan >= end)
-			break;
-		if (isalnum(*scan))
-			*scan = (char)git__tolower(*scan);
-		else if (*scan != '-' || scan == start)
-			return GIT_EINVALIDSPEC;
-	}
-
-	if (scan == start)
-		return GIT_EINVALIDSPEC;
-
-	return 0;
-}
-
 static void config_entry_list_append(config_entry_list **list, config_entry_list *entry)
 {
 	if (*list)

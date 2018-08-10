@@ -1376,6 +1376,30 @@ int git_config_parse_path(git_buf *out, const char *value)
 	return git_buf_sets(out, value);
 }
 
+static int normalize_section(char *start, char *end)
+{
+	char *scan;
+
+	if (start == end)
+		return GIT_EINVALIDSPEC;
+
+	/* Validate and downcase range */
+	for (scan = start; *scan; ++scan) {
+		if (end && scan >= end)
+			break;
+		if (isalnum(*scan))
+			*scan = (char)git__tolower(*scan);
+		else if (*scan != '-' || scan == start)
+			return GIT_EINVALIDSPEC;
+	}
+
+	if (scan == start)
+		return GIT_EINVALIDSPEC;
+
+	return 0;
+}
+
+
 /* Take something the user gave us and make it nice for our hash function */
 int git_config__normalize_name(const char *in, char **out)
 {
@@ -1393,8 +1417,8 @@ int git_config__normalize_name(const char *in, char **out)
 		goto invalid;
 
 	/* Validate and downcase up to first dot and after last dot */
-	if (git_config_file_normalize_section(name, fdot) < 0 ||
-		git_config_file_normalize_section(ldot + 1, NULL) < 0)
+	if (normalize_section(name, fdot) < 0 ||
+	    normalize_section(ldot + 1, NULL) < 0)
 		goto invalid;
 
 	/* If there is a middle range, make sure it doesn't have newlines */
@@ -1466,8 +1490,7 @@ int git_config_rename_section(
 		goto cleanup;
 
 	if (new_section_name != NULL &&
-		(error = git_config_file_normalize_section(
-			replace.ptr, strchr(replace.ptr, '.'))) < 0)
+	    (error = normalize_section(replace.ptr, strchr(replace.ptr, '.'))) < 0)
 	{
 		giterr_set(
 			GITERR_CONFIG, "invalid config section '%s'", new_section_name);

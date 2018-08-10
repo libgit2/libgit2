@@ -68,6 +68,4 @@ GIT_INLINE(int) git_config_file_unlock(git_config_backend *cfg, int success)
 	return cfg->unlock(cfg, success);
 }
 
-extern int git_config_file_normalize_section(char *start, char *end);
-
 #endif
