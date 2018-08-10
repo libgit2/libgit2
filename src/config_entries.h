@@ -20,17 +20,17 @@ typedef struct {
 	git_atomic refcount;
 	git_strmap *map;
 	config_entry_list *list;
-} diskfile_entries;
+} git_config_entries;
 
 typedef struct git_config_file_iter {
 	git_config_iterator parent;
 	config_entry_list *head;
 } git_config_file_iter;
 
-int diskfile_entries_alloc(diskfile_entries **out);
-void diskfile_entries_free(diskfile_entries *entries);
+int git_config_entries_new(git_config_entries **out);
+void git_config_entries_free(git_config_entries *entries);
 /* Add or append the new config option */
-int diskfile_entries_append(diskfile_entries *entries, git_config_entry *entry);
+int git_config_entries_append(git_config_entries *entries, git_config_entry *entry);
 
 void config_iterator_free(git_config_iterator* iter);
 int config_iterator_next(git_config_entry **entry,

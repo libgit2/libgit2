@@ -30,7 +30,7 @@ typedef struct {
 	git_config_backend parent;
 	/* mutex to coordinate accessing the values */
 	git_mutex values_mutex;
-	diskfile_entries *entries;
+	git_config_entries *entries;
 	const git_repository *repo;
 	git_config_level_t level;
 } diskfile_header;
@@ -56,12 +56,12 @@ typedef struct {
 typedef struct {
 	const git_repository *repo;
 	const char *file_path;
-	diskfile_entries *entries;
+	git_config_entries *entries;
 	git_config_level_t level;
 	unsigned int depth;
 } diskfile_parse_state;
 
-static int config_read(diskfile_entries *entries, const git_repository *repo, git_config_file *file, git_config_level_t level, int depth);
+static int config_read(git_config_entries *entries, const git_repository *repo, git_config_file *file, git_config_level_t level, int depth);
 static int config_write(diskfile_backend *cfg, const char *orig_key, const char *key, const regex_t *preg, const char *value);
 static char *escape_value(const char *ptr);
 
@@ -78,9 +78,9 @@ static int config_error_readonly(void)
  * refcount. This is its own function to make sure we use the mutex to
  * avoid the map pointer from changing under us.
  */
-static diskfile_entries *diskfile_entries_take(diskfile_header *h)
+static git_config_entries *diskfile_entries_take(diskfile_header *h)
 {
-	diskfile_entries *entries;
+	git_config_entries *entries;
 
 	if (git_mutex_lock(&h->values_mutex) < 0) {
 	    giterr_set(GITERR_OS, "failed to lock config backend");
@@ -119,14 +119,14 @@ static int config_open(git_config_backend *cfg, git_config_level_t level, const 
 	b->header.level = level;
 	b->header.repo = repo;
 
-	if ((res = diskfile_entries_alloc(&b->header.entries)) < 0)
+	if ((res = git_config_entries_new(&b->header.entries)) < 0)
 		return res;
 
 	if (!git_path_exists(b->file.path))
 		return 0;
 
 	if (res < 0 || (res = config_read(b->header.entries, repo, &b->file, level, 0)) < 0) {
-		diskfile_entries_free(b->header.entries);
+		git_config_entries_free(b->header.entries);
 		b->header.entries = NULL;
 	}
 
@@ -168,7 +168,7 @@ out:
 static int config_refresh(git_config_backend *cfg)
 {
 	diskfile_backend *b = (diskfile_backend *)cfg;
-	diskfile_entries *entries = NULL, *tmp;
+	git_config_entries *entries = NULL, *tmp;
 	git_config_file *include;
 	int error, modified;
 	uint32_t i;
@@ -183,7 +183,7 @@ static int config_refresh(git_config_backend *cfg)
 	if (!modified)
 		return 0;
 
-	if ((error = diskfile_entries_alloc(&entries)) < 0)
+	if ((error = git_config_entries_new(&entries)) < 0)
 		goto out;
 
 	/* Reparse the current configuration */
@@ -207,7 +207,7 @@ static int config_refresh(git_config_backend *cfg)
 	git_mutex_unlock(&b->header.values_mutex);
 
 out:
-	diskfile_entries_free(entries);
+	git_config_entries_free(entries);
 
 	return (error == GIT_ENOTFOUND) ? 0 : error;
 }
@@ -220,7 +220,7 @@ static void backend_free(git_config_backend *_backend)
 		return;
 
 	config_file_clear(&backend->file);
-	diskfile_entries_free(backend->header.entries);
+	git_config_entries_free(backend->header.entries);
 	git_mutex_free(&backend->header.values_mutex);
 	git__free(backend);
 }
@@ -259,7 +259,7 @@ static int config_iterator_new(
 static int config_set(git_config_backend *cfg, const char *name, const char *value)
 {
 	diskfile_backend *b = (diskfile_backend *)cfg;
-	diskfile_entries *entries;
+	git_config_entries *entries;
 	git_strmap *entry_map;
 	char *key, *esc_value = NULL;
 	khiter_t pos;
@@ -314,7 +314,7 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 	ret = config_refresh(cfg);
 
 out:
-	diskfile_entries_free(entries);
+	git_config_entries_free(entries);
 	git__free(esc_value);
 	git__free(key);
 	return ret;
@@ -323,8 +323,8 @@ out:
 /* release the map containing the entry as an equivalent to freeing it */
 static void free_diskfile_entry(git_config_entry *entry)
 {
-	diskfile_entries *map = (diskfile_entries *) entry->payload;
-	diskfile_entries_free(map);
+	git_config_entries *entries = (git_config_entries *) entry->payload;
+	git_config_entries_free(entries);
 }
 
 /*
@@ -333,7 +333,7 @@ static void free_diskfile_entry(git_config_entry *entry)
 static int config_get(git_config_backend *cfg, const char *key, git_config_entry **out)
 {
 	diskfile_header *h = (diskfile_header *)cfg;
-	diskfile_entries *entries;
+	git_config_entries *entries;
 	git_strmap *entry_map;
 	khiter_t pos;
 	config_entry_list *var;
@@ -350,7 +350,7 @@ static int config_get(git_config_backend *cfg, const char *key, git_config_entry
 
 	/* no error message; the config system will write one */
 	if (!git_strmap_valid_index(entry_map, pos)) {
-		diskfile_entries_free(entries);
+		git_config_entries_free(entries);
 		return GIT_ENOTFOUND;
 	}
 
@@ -399,7 +399,7 @@ static int config_delete(git_config_backend *cfg, const char *name)
 {
 	config_entry_list *var;
 	diskfile_backend *b = (diskfile_backend *)cfg;
-	diskfile_entries *map;
+	git_config_entries *entries;
 	git_strmap *entry_map;
 	char *key;
 	int result;
@@ -408,7 +408,7 @@ static int config_delete(git_config_backend *cfg, const char *name)
 	if ((result = git_config__normalize_name(name, &key)) < 0)
 		return result;
 
-	if ((map = diskfile_entries_take(&b->header)) == NULL)
+	if ((entries = diskfile_entries_take(&b->header)) == NULL)
 		return -1;
 	entry_map = b->header.entries->map;
 
@@ -416,13 +416,13 @@ static int config_delete(git_config_backend *cfg, const char *name)
 	git__free(key);
 
 	if (!git_strmap_valid_index(entry_map, pos)) {
-		diskfile_entries_free(map);
+		git_config_entries_free(entries);
 		giterr_set(GITERR_CONFIG, "could not find key '%s' to delete", name);
 		return GIT_ENOTFOUND;
 	}
 
 	var = git_strmap_value_at(entry_map, pos);
-	diskfile_entries_free(map);
+	git_config_entries_free(entries);
 
 	if (var->entry->include_depth) {
 		giterr_set(GITERR_CONFIG, "cannot delete included variable");
@@ -443,7 +443,7 @@ static int config_delete(git_config_backend *cfg, const char *name)
 static int config_delete_multivar(git_config_backend *cfg, const char *name, const char *regexp)
 {
 	diskfile_backend *b = (diskfile_backend *)cfg;
-	diskfile_entries *map;
+	git_config_entries *entries;
 	git_strmap *entry_map;
 	char *key;
 	regex_t preg;
@@ -453,20 +453,20 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 	if ((result = git_config__normalize_name(name, &key)) < 0)
 		return result;
 
-	if ((map = diskfile_entries_take(&b->header)) == NULL)
+	if ((entries = diskfile_entries_take(&b->header)) == NULL)
 		return -1;
 	entry_map = b->header.entries->map;
 
 	pos = git_strmap_lookup_index(entry_map, key);
 
 	if (!git_strmap_valid_index(entry_map, pos)) {
-		diskfile_entries_free(map);
+		git_config_entries_free(entries);
 		git__free(key);
 		giterr_set(GITERR_CONFIG, "could not find key '%s' to delete", name);
 		return GIT_ENOTFOUND;
 	}
 
-	diskfile_entries_free(map);
+	git_config_entries_free(entries);
 
 	result = p_regcomp(&preg, regexp, REG_EXTENDED);
 	if (result != 0) {
@@ -612,7 +612,7 @@ static void backend_readonly_free(git_config_backend *_backend)
 	if (backend == NULL)
 		return;
 
-	diskfile_entries_free(backend->header.entries);
+	git_config_entries_free(backend->header.entries);
 	git_mutex_free(&backend->header.values_mutex);
 	git__free(backend);
 }
@@ -622,7 +622,7 @@ static int config_readonly_open(git_config_backend *cfg, git_config_level_t leve
 	diskfile_readonly_backend *b = (diskfile_readonly_backend *) cfg;
 	diskfile_backend *src = b->snapshot_from;
 	diskfile_header *src_header = &src->header;
-	diskfile_entries *entries;
+	git_config_entries *entries;
 	int error;
 
 	if (!src_header->parent.readonly && (error = config_refresh(&src_header->parent)) < 0)
@@ -885,7 +885,7 @@ static int read_on_variable(
 	entry->level = parse_data->level;
 	entry->include_depth = parse_data->depth;
 
-	if ((result = diskfile_entries_append(parse_data->entries, entry)) < 0)
+	if ((result = git_config_entries_append(parse_data->entries, entry)) < 0)
 		return result;
 
 	result = 0;
@@ -902,7 +902,7 @@ static int read_on_variable(
 }
 
 static int config_read(
-	diskfile_entries *entries,
+	git_config_entries *entries,
 	const git_repository *repo,
 	git_config_file *file,
 	git_config_level_t level,

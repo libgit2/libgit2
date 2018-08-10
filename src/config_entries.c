@@ -32,12 +32,12 @@ static void config_entry_list_append(config_entry_list **list, config_entry_list
 	(*list)->last = entry;
 }
 
-int diskfile_entries_alloc(diskfile_entries **out)
+int git_config_entries_new(git_config_entries **out)
 {
-	diskfile_entries *entries;
+	git_config_entries *entries;
 	int error;
 
-	entries = git__calloc(1, sizeof(diskfile_entries));
+	entries = git__calloc(1, sizeof(git_config_entries));
 	GITERR_CHECK_ALLOC(entries);
 
 	git_atomic_set(&entries->refcount, 1);
@@ -50,7 +50,7 @@ int diskfile_entries_alloc(diskfile_entries **out)
 	return error;
 }
 
-void diskfile_entries_free(diskfile_entries *entries)
+void git_config_entries_free(git_config_entries *entries)
 {
 	config_entry_list *list = NULL, *next;
 
@@ -73,7 +73,7 @@ void diskfile_entries_free(diskfile_entries *entries)
 	git__free(entries);
 }
 
-int diskfile_entries_append(diskfile_entries *entries, git_config_entry *entry)
+int git_config_entries_append(git_config_entries *entries, git_config_entry *entry)
 {
 	git_strmap_iter pos;
 	config_entry_list *existing, *var;
