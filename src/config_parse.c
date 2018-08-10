@@ -16,8 +16,9 @@ const char *git_config_escaped = "\n\t\b\"\\";
 
 static void set_parse_error(git_config_parser *reader, int col, const char *error_str)
 {
+	const char *file = reader->file ? reader->file->path : "in-memory";
 	giterr_set(GITERR_CONFIG, "failed to parse config file: %s (in %s:%"PRIuZ", column %d)",
-		error_str, reader->file->path, reader->ctx.line_num, col);
+		error_str, file, reader->ctx.line_num, col);
 }
 
 

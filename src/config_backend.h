@@ -25,6 +25,14 @@
  */
 extern int git_config_backend_from_file(git_config_backend **out, const char *path);
 
+/**
+ * Create an in-memory configuration file backend
+ *
+ * @param out the new backend
+ * @param cfg the configuration that is to be parsed
+ */
+extern int git_config_backend_from_string(git_config_backend **out, const char *cfg);
+
 GIT_INLINE(int) git_config_backend_open(git_config_backend *cfg, unsigned int level, const git_repository *repo)
 {
 	return cfg->open(cfg, level, repo);
