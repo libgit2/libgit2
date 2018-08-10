@@ -49,12 +49,12 @@ static void config_free(git_config *cfg)
 	size_t i;
 	file_internal *internal;
 
-	for (i = 0; i < cfg->files.length; ++i) {
-		internal = git_vector_get(&cfg->files, i);
+	for (i = 0; i < cfg->backends.length; ++i) {
+		internal = git_vector_get(&cfg->backends, i);
 		GIT_REFCOUNT_DEC(internal, file_internal_free);
 	}
 
-	git_vector_free(&cfg->files);
+	git_vector_free(&cfg->backends);
 
 	git__memzero(cfg, sizeof(*cfg));
 	git__free(cfg);
@@ -85,7 +85,7 @@ int git_config_new(git_config **out)
 
 	memset(cfg, 0x0, sizeof(git_config));
 
-	if (git_vector_init(&cfg->files, 3, config_backend_cmp) < 0) {
+	if (git_vector_init(&cfg->backends, 3, config_backend_cmp) < 0) {
 		git__free(cfg);
 		return -1;
 	}
@@ -159,7 +159,7 @@ int git_config_snapshot(git_config **out, git_config *in)
 	if (git_config_new(&config) < 0)
 		return -1;
 
-	git_vector_foreach(&in->files, i, internal) {
+	git_vector_foreach(&in->backends, i, internal) {
 		git_config_backend *b;
 
 		if ((error = internal->file->snapshot(&b, internal->file)) < 0)
@@ -188,15 +188,15 @@ static int find_internal_file_by_level(
 	file_internal *internal;
 	size_t i;
 
-	/* when passing GIT_CONFIG_HIGHEST_LEVEL, the idea is to get the config file
-	 * which has the highest level. As config files are stored in a vector
+	/* when passing GIT_CONFIG_HIGHEST_LEVEL, the idea is to get the config backend
+	 * which has the highest level. As config backends are stored in a vector
 	 * sorted by decreasing order of level, getting the file at position 0
 	 * will do the job.
 	 */
 	if (level == GIT_CONFIG_HIGHEST_LEVEL) {
 		pos = 0;
 	} else {
-		git_vector_foreach(&cfg->files, i, internal) {
+		git_vector_foreach(&cfg->backends, i, internal) {
 			if (internal->level == level)
 				pos = (int)i;
 		}
@@ -208,7 +208,7 @@ static int find_internal_file_by_level(
 		return GIT_ENOTFOUND;
 	}
 
-	*internal_out = git_vector_get(&cfg->files, pos);
+	*internal_out = git_vector_get(&cfg->backends, pos);
 
 	return 0;
 }
@@ -231,7 +231,7 @@ static void try_remove_existing_file_internal(
 	file_internal *internal;
 	size_t i;
 
-	git_vector_foreach(&cfg->files, i, internal) {
+	git_vector_foreach(&cfg->backends, i, internal) {
 		if (internal->level == level)
 			pos = (int)i;
 	}
@@ -239,9 +239,9 @@ static void try_remove_existing_file_internal(
 	if (pos == -1)
 		return;
 
-	internal = git_vector_get(&cfg->files, pos);
+	internal = git_vector_get(&cfg->backends, pos);
 
-	if (git_vector_remove(&cfg->files, pos) < 0)
+	if (git_vector_remove(&cfg->backends, pos) < 0)
 		return;
 
 	GIT_REFCOUNT_DEC(internal, file_internal_free);
@@ -259,11 +259,11 @@ static int git_config__add_internal(
 	if (force)
 		try_remove_existing_file_internal(cfg, level);
 
-	if ((result = git_vector_insert_sorted(&cfg->files,
+	if ((result = git_vector_insert_sorted(&cfg->backends,
 			internal, &duplicate_level)) < 0)
 		return result;
 
-	git_vector_sort(&cfg->files);
+	git_vector_sort(&cfg->backends);
 	internal->file->cfg = cfg;
 
 	GIT_REFCOUNT_INC(internal);
@@ -354,7 +354,7 @@ static int find_next_backend(size_t *out, const git_config *cfg, size_t i)
 	file_internal *internal;
 
 	for (; i > 0; --i) {
-		internal = git_vector_get(&cfg->files, i - 1);
+		internal = git_vector_get(&cfg->backends, i - 1);
 		if (!internal || !internal->file)
 			continue;
 
@@ -385,7 +385,7 @@ static int all_iter_next(git_config_entry **entry, git_config_iterator *_iter)
 		if (find_next_backend(&i, iter->cfg, iter->i) < 0)
 			return GIT_ITEROVER;
 
-		internal = git_vector_get(&iter->cfg->files, i - 1);
+		internal = git_vector_get(&iter->cfg->backends, i - 1);
 		backend = internal->file;
 		iter->i = i - 1;
 
@@ -461,7 +461,7 @@ int git_config_iterator_new(git_config_iterator **out, const git_config *cfg)
 	iter->parent.free = all_iter_free;
 	iter->parent.next = all_iter_next;
 
-	iter->i = cfg->files.length;
+	iter->i = cfg->backends.length;
 	iter->cfg = cfg;
 
 	*out = (git_config_iterator *) iter;
@@ -488,7 +488,7 @@ int git_config_iterator_glob_new(git_config_iterator **out, const git_config *cf
 
 	iter->parent.next = all_iter_glob_next;
 	iter->parent.free = all_iter_glob_free;
-	iter->i = cfg->files.length;
+	iter->i = cfg->backends.length;
 	iter->cfg = cfg;
 
 	*out = (git_config_iterator *) iter;
@@ -596,14 +596,14 @@ static int get_backend_for_use(git_config_backend **out,
 
 	*out = NULL;
 
-	if (git_vector_length(&cfg->files) == 0) {
+	if (git_vector_length(&cfg->backends) == 0) {
 		giterr_set(GITERR_CONFIG,
-			"cannot %s value for '%s' when no config files exist",
+			"cannot %s value for '%s' when no config backends exist",
 			uses[use], name);
 		return GIT_ENOTFOUND;
 	}
 
-	git_vector_foreach(&cfg->files, i, f) {
+	git_vector_foreach(&cfg->backends, i, f) {
 		if (!f->file->readonly) {
 			*out = f->file;
 			return 0;
@@ -611,7 +611,7 @@ static int get_backend_for_use(git_config_backend **out,
 	}
 
 	giterr_set(GITERR_CONFIG,
-		"cannot %s value for '%s' when all config files are readonly",
+		"cannot %s value for '%s' when all config backends are readonly",
 		uses[use], name);
 	return GIT_ENOTFOUND;
 }
@@ -733,7 +733,7 @@ static int get_entry(
 	}
 
 	res = GIT_ENOTFOUND;
-	git_vector_foreach(&cfg->files, i, internal) {
+	git_vector_foreach(&cfg->backends, i, internal) {
 		if (!internal || !internal->file)
 			continue;
 
@@ -837,7 +837,7 @@ static int is_readonly(const git_config *cfg)
 	size_t i;
 	file_internal *internal;
 
-	git_vector_foreach(&cfg->files, i, internal) {
+	git_vector_foreach(&cfg->backends, i, internal) {
 		if (!internal || !internal->file)
 			continue;
 
@@ -1182,9 +1182,9 @@ int git_config_lock(git_transaction **out, git_config *cfg)
 	git_config_backend *file;
 	file_internal *internal;
 
-	internal = git_vector_get(&cfg->files, 0);
+	internal = git_vector_get(&cfg->backends, 0);
 	if (!internal || !internal->file) {
-		giterr_set(GITERR_CONFIG, "cannot lock; the config has no backends/files");
+		giterr_set(GITERR_CONFIG, "cannot lock; the config has no backends");
 		return -1;
 	}
 	file = internal->file;
@@ -1200,9 +1200,9 @@ int git_config_unlock(git_config *cfg, int commit)
 	git_config_backend *file;
 	file_internal *internal;
 
-	internal = git_vector_get(&cfg->files, 0);
+	internal = git_vector_get(&cfg->backends, 0);
 	if (!internal || !internal->file) {
-		giterr_set(GITERR_CONFIG, "cannot lock; the config has no backends/files");
+		giterr_set(GITERR_CONFIG, "cannot lock; the config has no backends");
 		return -1;
 	}
 

@@ -24,7 +24,7 @@
 
 struct git_config {
 	git_refcount rc;
-	git_vector files;
+	git_vector backends;
 };
 
 extern int git_config__global_location(git_buf *buf);
