@@ -31,6 +31,8 @@ int git_config_entries_new(git_config_entries **out);
 void git_config_entries_free(git_config_entries *entries);
 /* Add or append the new config option */
 int git_config_entries_append(git_config_entries *entries, git_config_entry *entry);
+int git_config_entries_get(git_config_entry **out, git_config_entries *entries, const char *key);
+int git_config_entries_get_unique(git_config_entry **out, git_config_entries *entries, const char *key);
 
 void config_iterator_free(git_config_iterator* iter);
 int config_iterator_next(git_config_entry **entry,

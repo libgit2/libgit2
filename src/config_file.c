@@ -260,64 +260,44 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 {
 	diskfile_backend *b = (diskfile_backend *)cfg;
 	git_config_entries *entries;
-	git_strmap *entry_map;
+	git_config_entry *existing;
 	char *key, *esc_value = NULL;
-	khiter_t pos;
-	int rval, ret;
+	int error;
 
-	if ((rval = git_config__normalize_name(name, &key)) < 0)
-		return rval;
+	if ((error = git_config__normalize_name(name, &key)) < 0)
+		return error;
 
 	if ((entries = diskfile_entries_take(&b->header)) == NULL)
 		return -1;
-	entry_map = entries->map;
 
-	/*
-	 * Try to find it in the existing values and update it if it
-	 * only has one value.
-	 */
-	pos = git_strmap_lookup_index(entry_map, key);
-	if (git_strmap_valid_index(entry_map, pos)) {
-		config_entry_list *existing = git_strmap_value_at(entry_map, pos);
-
-		if (existing->next != NULL) {
-			giterr_set(GITERR_CONFIG, "multivar incompatible with simple set");
-			ret = -1;
+	/* Check whether we'd be modifying an included or multivar key */
+	if ((error = git_config_entries_get_unique(&existing, entries, key)) < 0) {
+		if (error != GIT_ENOTFOUND)
 			goto out;
-		}
-
-		if (existing->entry->include_depth) {
-			giterr_set(GITERR_CONFIG, "modifying included variable is not supported");
-			ret = -1;
-			goto out;
-		}
-
+		error = 0;
+	} else if ((!existing->value && !value) ||
+		   (existing->value && value && !strcmp(existing->value, value))) {
 		/* don't update if old and new values already match */
-		if ((!existing->entry->value && !value) ||
-			(existing->entry->value && value &&
-			 !strcmp(existing->entry->value, value))) {
-			ret = 0;
-			goto out;
-		}
+		error = 0;
+		goto out;
 	}
 
 	/* No early returns due to sanity checks, let's write it out and refresh */
-
 	if (value) {
 		esc_value = escape_value(value);
 		GITERR_CHECK_ALLOC(esc_value);
 	}
 
-	if ((ret = config_write(b, name, key, NULL, esc_value)) < 0)
+	if ((error = config_write(b, name, key, NULL, esc_value)) < 0)
 		goto out;
 
-	ret = config_refresh(cfg);
+	error = config_refresh(cfg);
 
 out:
 	git_config_entries_free(entries);
 	git__free(esc_value);
 	git__free(key);
-	return ret;
+	return error;
 }
 
 /* release the map containing the entry as an equivalent to freeing it */
@@ -333,10 +313,8 @@ static void free_diskfile_entry(git_config_entry *entry)
 static int config_get(git_config_backend *cfg, const char *key, git_config_entry **out)
 {
 	diskfile_header *h = (diskfile_header *)cfg;
-	git_config_entries *entries;
-	git_strmap *entry_map;
-	khiter_t pos;
-	config_entry_list *var;
+	git_config_entries *entries = NULL;
+	git_config_entry *entry;
 	int error = 0;
 
 	if (!h->parent.readonly && ((error = config_refresh(cfg)) < 0))
@@ -344,22 +322,17 @@ static int config_get(git_config_backend *cfg, const char *key, git_config_entry
 
 	if ((entries = diskfile_entries_take(h)) == NULL)
 		return -1;
-	entry_map = entries->map;
 
-	pos = git_strmap_lookup_index(entry_map, key);
-
-	/* no error message; the config system will write one */
-	if (!git_strmap_valid_index(entry_map, pos)) {
+	if ((error = (git_config_entries_get(&entry, entries, key))) < 0) {
 		git_config_entries_free(entries);
-		return GIT_ENOTFOUND;
+		return error;
 	}
 
-	var = git_strmap_value_at(entry_map, pos);
-	*out = var->last->entry;
-	(*out)->free = free_diskfile_entry;
-	(*out)->payload = entries;
+	entry->free = free_diskfile_entry;
+	entry->payload = entries;
+	*out = entry;
 
-	return error;
+	return 0;
 }
 
 static int config_set_multivar(
@@ -397,79 +370,61 @@ out:
 
 static int config_delete(git_config_backend *cfg, const char *name)
 {
-	config_entry_list *var;
 	diskfile_backend *b = (diskfile_backend *)cfg;
-	git_config_entries *entries;
-	git_strmap *entry_map;
-	char *key;
-	int result;
-	khiter_t pos;
+	git_config_entries *entries = NULL;
+	git_config_entry *entry;
+	char *key = NULL;
+	int error;
 
-	if ((result = git_config__normalize_name(name, &key)) < 0)
-		return result;
+	if ((error = git_config__normalize_name(name, &key)) < 0)
+		goto out;
 
 	if ((entries = diskfile_entries_take(&b->header)) == NULL)
-		return -1;
-	entry_map = b->header.entries->map;
+		goto out;
 
-	pos = git_strmap_lookup_index(entry_map, key);
-	git__free(key);
-
-	if (!git_strmap_valid_index(entry_map, pos)) {
-		git_config_entries_free(entries);
-		giterr_set(GITERR_CONFIG, "could not find key '%s' to delete", name);
-		return GIT_ENOTFOUND;
+	/* Check whether we'd be modifying an included or multivar key */
+	if ((error = git_config_entries_get_unique(&entry, entries, key)) < 0) {
+		if (error == GIT_ENOTFOUND)
+			giterr_set(GITERR_CONFIG, "could not find key '%s' to delete", name);
+		goto out;
 	}
 
-	var = git_strmap_value_at(entry_map, pos);
+	if ((error = config_write(b, name, entry->name, NULL, NULL)) < 0)
+		goto out;
+
+	if ((error =  config_refresh(cfg)) < 0)
+		goto out;
+
+out:
 	git_config_entries_free(entries);
-
-	if (var->entry->include_depth) {
-		giterr_set(GITERR_CONFIG, "cannot delete included variable");
-		return -1;
-	}
-
-	if (var->next != NULL) {
-		giterr_set(GITERR_CONFIG, "cannot delete multivar with a single delete");
-		return -1;
-	}
-
-	if ((result = config_write(b, name, var->entry->name, NULL, NULL)) < 0)
-		return result;
-
-	return config_refresh(cfg);
+	git__free(key);
+	return error;
 }
 
 static int config_delete_multivar(git_config_backend *cfg, const char *name, const char *regexp)
 {
 	diskfile_backend *b = (diskfile_backend *)cfg;
-	git_config_entries *entries;
-	git_strmap *entry_map;
-	char *key;
-	regex_t preg;
+	git_config_entries *entries = NULL;
+	git_config_entry *entry = NULL;
+	regex_t preg = { 0 };
+	char *key = NULL;
 	int result;
-	khiter_t pos;
 
 	if ((result = git_config__normalize_name(name, &key)) < 0)
-		return result;
+		goto out;
 
-	if ((entries = diskfile_entries_take(&b->header)) == NULL)
-		return -1;
-	entry_map = b->header.entries->map;
-
-	pos = git_strmap_lookup_index(entry_map, key);
-
-	if (!git_strmap_valid_index(entry_map, pos)) {
-		git_config_entries_free(entries);
-		git__free(key);
-		giterr_set(GITERR_CONFIG, "could not find key '%s' to delete", name);
-		return GIT_ENOTFOUND;
+	if ((entries = diskfile_entries_take(&b->header)) == NULL) {
+		result = -1;
+		goto out;
 	}
 
-	git_config_entries_free(entries);
+	if ((result = git_config_entries_get(&entry, entries, key)) < 0) {
+		if (result == GIT_ENOTFOUND)
+			giterr_set(GITERR_CONFIG, "could not find key '%s' to delete", name);
+		goto out;
+	}
 
-	result = p_regcomp(&preg, regexp, REG_EXTENDED);
-	if (result != 0) {
+	if ((result = p_regcomp(&preg, regexp, REG_EXTENDED)) != 0) {
 		giterr_set_regex(&preg, result);
 		result = -1;
 		goto out;
@@ -478,9 +433,11 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 	if ((result = config_write(b, name, key, &preg, NULL)) < 0)
 		goto out;
 
-	result = config_refresh(cfg);
+	if ((result = config_refresh(cfg)) < 0)
+		goto out;
 
 out:
+	git_config_entries_free(entries);
 	git__free(key);
 	regfree(&preg);
 	return result;

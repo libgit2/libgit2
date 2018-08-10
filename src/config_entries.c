@@ -113,6 +113,56 @@ int git_config_entries_append(git_config_entries *entries, git_config_entry *ent
 	return error;
 }
 
+int config_entry_get(config_entry_list **out, git_config_entries *entries, const char *key)
+{
+	khiter_t pos;
+
+	pos = git_strmap_lookup_index(entries->map, key);
+
+	/* no error message; the config system will write one */
+	if (!git_strmap_valid_index(entries->map, pos))
+		return GIT_ENOTFOUND;
+
+	*out = git_strmap_value_at(entries->map, pos);
+
+	return 0;
+}
+
+int git_config_entries_get(git_config_entry **out, git_config_entries *entries, const char *key)
+{
+	config_entry_list *entry;
+	int error;
+
+	if ((error = config_entry_get(&entry, entries, key)) < 0)
+		return error;
+	*out = entry->last->entry;
+
+	return 0;
+}
+
+int git_config_entries_get_unique(git_config_entry **out, git_config_entries *entries, const char *key)
+{
+	config_entry_list *entry;
+	int error;
+
+	if ((error = config_entry_get(&entry, entries, key)) < 0)
+		return error;
+
+	if (entry->next != NULL) {
+		giterr_set(GITERR_CONFIG, "entry is not unique due to being a multivar");
+		return -1;
+	}
+
+	if (entry->entry->include_depth) {
+		giterr_set(GITERR_CONFIG, "entry is not unique due to being included");
+		return -1;
+	}
+
+	*out = entry->entry;
+
+	return 0;
+}
+
 void config_iterator_free(
 	git_config_iterator* iter)
 {
