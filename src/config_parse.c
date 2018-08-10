@@ -11,6 +11,9 @@
 
 #include <ctype.h>
 
+const char *git_config_escapes = "ntb\"\\";
+const char *git_config_escaped = "\n\t\b\"\\";
+
 static void set_parse_error(git_config_parser *reader, int col, const char *error_str)
 {
 	giterr_set(GITERR_CONFIG, "failed to parse config file: %s (in %s:%"PRIuZ", column %d)",
