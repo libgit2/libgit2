@@ -81,7 +81,6 @@ static int config_read(diskfile_entries *entries, const git_repository *repo, gi
 static int config_write(diskfile_backend *cfg, const char *orig_key, const char *key, const regex_t *preg, const char *value);
 static char *escape_value(const char *ptr);
 
-int git_config_file__snapshot(git_config_backend **out, diskfile_backend *in);
 static int config_snapshot(git_config_backend **out, git_config_backend *in);
 
 static int config_error_readonly(void)
@@ -632,13 +631,6 @@ out:
 	return result;
 }
 
-static int config_snapshot(git_config_backend **out, git_config_backend *in)
-{
-	diskfile_backend *b = (diskfile_backend *) in;
-
-	return git_config_file__snapshot(out, b);
-}
-
 static int config_lock(git_config_backend *_cfg)
 {
 	diskfile_backend *cfg = (diskfile_backend *) _cfg;
@@ -792,7 +784,7 @@ static int config_readonly_open(git_config_backend *cfg, git_config_level_t leve
 	return 0;
 }
 
-int git_config_file__snapshot(git_config_backend **out, diskfile_backend *in)
+static int config_snapshot(git_config_backend **out, git_config_backend *in)
 {
 	diskfile_readonly_backend *backend;
 
@@ -802,7 +794,7 @@ int git_config_file__snapshot(git_config_backend **out, diskfile_backend *in)
 	backend->header.parent.version = GIT_CONFIG_BACKEND_VERSION;
 	git_mutex_init(&backend->header.values_mutex);
 
-	backend->snapshot_from = in;
+	backend->snapshot_from = (diskfile_backend *) in;
 
 	backend->header.parent.readonly = 1;
 	backend->header.parent.version = GIT_CONFIG_BACKEND_VERSION;
