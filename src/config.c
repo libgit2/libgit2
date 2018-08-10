@@ -31,15 +31,15 @@ void git_config_entry_free(git_config_entry *entry)
 typedef struct {
 	git_refcount rc;
 
-	git_config_backend *file;
+	git_config_backend *backend;
 	git_config_level_t level;
-} file_internal;
+} backend_internal;
 
-static void file_internal_free(file_internal *internal)
+static void backend_internal_free(backend_internal *internal)
 {
 	git_config_backend *file;
 
-	file = internal->file;
+	file = internal->backend;
 	file->free(file);
 	git__free(internal);
 }
@@ -47,11 +47,11 @@ static void file_internal_free(file_internal *internal)
 static void config_free(git_config *cfg)
 {
 	size_t i;
-	file_internal *internal;
+	backend_internal *internal;
 
 	for (i = 0; i < cfg->backends.length; ++i) {
 		internal = git_vector_get(&cfg->backends, i);
-		GIT_REFCOUNT_DEC(internal, file_internal_free);
+		GIT_REFCOUNT_DEC(internal, backend_internal_free);
 	}
 
 	git_vector_free(&cfg->backends);
@@ -70,8 +70,8 @@ void git_config_free(git_config *cfg)
 
 static int config_backend_cmp(const void *a, const void *b)
 {
-	const file_internal *bk_a = (const file_internal *)(a);
-	const file_internal *bk_b = (const file_internal *)(b);
+	const backend_internal *bk_a = (const backend_internal *)(a);
+	const backend_internal *bk_b = (const backend_internal *)(b);
 
 	return bk_b->level - bk_a->level;
 }
@@ -151,7 +151,7 @@ int git_config_snapshot(git_config **out, git_config *in)
 {
 	int error = 0;
 	size_t i;
-	file_internal *internal;
+	backend_internal *internal;
 	git_config *config;
 
 	*out = NULL;
@@ -162,7 +162,7 @@ int git_config_snapshot(git_config **out, git_config *in)
 	git_vector_foreach(&in->backends, i, internal) {
 		git_config_backend *b;
 
-		if ((error = internal->file->snapshot(&b, internal->file)) < 0)
+		if ((error = internal->backend->snapshot(&b, internal->backend)) < 0)
 			break;
 
 		if ((error = git_config_add_backend(config, b, internal->level, NULL, 0)) < 0) {
@@ -180,12 +180,12 @@ int git_config_snapshot(git_config **out, git_config *in)
 }
 
 static int find_internal_file_by_level(
-	file_internal **internal_out,
+	backend_internal **internal_out,
 	const git_config *cfg,
 	git_config_level_t level)
 {
 	int pos = -1;
-	file_internal *internal;
+	backend_internal *internal;
 	size_t i;
 
 	/* when passing GIT_CONFIG_HIGHEST_LEVEL, the idea is to get the config backend
@@ -215,7 +215,7 @@ static int find_internal_file_by_level(
 
 static int duplicate_level(void **old_raw, void *new_raw)
 {
-	file_internal **old = (file_internal **)old_raw;
+	backend_internal **old = (backend_internal **)old_raw;
 
 	GIT_UNUSED(new_raw);
 
@@ -228,7 +228,7 @@ static void try_remove_existing_file_internal(
 	git_config_level_t level)
 {
 	int pos = -1;
-	file_internal *internal;
+	backend_internal *internal;
 	size_t i;
 
 	git_vector_foreach(&cfg->backends, i, internal) {
@@ -244,12 +244,12 @@ static void try_remove_existing_file_internal(
 	if (git_vector_remove(&cfg->backends, pos) < 0)
 		return;
 
-	GIT_REFCOUNT_DEC(internal, file_internal_free);
+	GIT_REFCOUNT_DEC(internal, backend_internal_free);
 }
 
 static int git_config__add_internal(
 	git_config *cfg,
-	file_internal *internal,
+	backend_internal *internal,
 	git_config_level_t level,
 	int force)
 {
@@ -264,7 +264,7 @@ static int git_config__add_internal(
 		return result;
 
 	git_vector_sort(&cfg->backends);
-	internal->file->cfg = cfg;
+	internal->backend->cfg = cfg;
 
 	GIT_REFCOUNT_INC(internal);
 
@@ -285,7 +285,7 @@ int git_config_open_level(
 	git_config_level_t level)
 {
 	git_config *cfg;
-	file_internal *internal;
+	backend_internal *internal;
 	int res;
 
 	if ((res = find_internal_file_by_level(&internal, cfg_parent, level)) < 0)
@@ -311,7 +311,7 @@ int git_config_add_backend(
 	const git_repository *repo,
 	int force)
 {
-	file_internal *internal;
+	backend_internal *internal;
 	int result;
 
 	assert(cfg && file);
@@ -321,12 +321,12 @@ int git_config_add_backend(
 	if ((result = file->open(file, level, repo)) < 0)
 		return result;
 
-	internal = git__malloc(sizeof(file_internal));
+	internal = git__malloc(sizeof(backend_internal));
 	GITERR_CHECK_ALLOC(internal);
 
-	memset(internal, 0x0, sizeof(file_internal));
+	memset(internal, 0x0, sizeof(backend_internal));
 
-	internal->file = file;
+	internal->backend = file;
 	internal->level = level;
 
 	if ((result = git_config__add_internal(cfg, internal, level, force)) < 0) {
@@ -351,11 +351,11 @@ typedef struct {
 
 static int find_next_backend(size_t *out, const git_config *cfg, size_t i)
 {
-	file_internal *internal;
+	backend_internal *internal;
 
 	for (; i > 0; --i) {
 		internal = git_vector_get(&cfg->backends, i - 1);
-		if (!internal || !internal->file)
+		if (!internal || !internal->backend)
 			continue;
 
 		*out = i;
@@ -368,7 +368,7 @@ static int find_next_backend(size_t *out, const git_config *cfg, size_t i)
 static int all_iter_next(git_config_entry **entry, git_config_iterator *_iter)
 {
 	all_iter *iter = (all_iter *) _iter;
-	file_internal *internal;
+	backend_internal *internal;
 	git_config_backend *backend;
 	size_t i;
 	int error = 0;
@@ -386,7 +386,7 @@ static int all_iter_next(git_config_entry **entry, git_config_iterator *_iter)
 			return GIT_ITEROVER;
 
 		internal = git_vector_get(&iter->cfg->backends, i - 1);
-		backend = internal->file;
+		backend = internal->backend;
 		iter->i = i - 1;
 
 		if (iter->current)
@@ -592,7 +592,7 @@ static int get_backend_for_use(git_config_backend **out,
 	git_config *cfg, const char *name, backend_use use)
 {
 	size_t i;
-	file_internal *f;
+	backend_internal *backend;
 
 	*out = NULL;
 
@@ -603,9 +603,9 @@ static int get_backend_for_use(git_config_backend **out,
 		return GIT_ENOTFOUND;
 	}
 
-	git_vector_foreach(&cfg->backends, i, f) {
-		if (!f->file->readonly) {
-			*out = f->file;
+	git_vector_foreach(&cfg->backends, i, backend) {
+		if (!backend->backend->readonly) {
+			*out = backend->backend;
 			return 0;
 		}
 	}
@@ -722,7 +722,7 @@ static int get_entry(
 	const char *key = name;
 	char *normalized = NULL;
 	size_t i;
-	file_internal *internal;
+	backend_internal *internal;
 
 	*out = NULL;
 
@@ -734,10 +734,10 @@ static int get_entry(
 
 	res = GIT_ENOTFOUND;
 	git_vector_foreach(&cfg->backends, i, internal) {
-		if (!internal || !internal->file)
+		if (!internal || !internal->backend)
 			continue;
 
-		res = internal->file->get(internal->file, key, out);
+		res = internal->backend->get(internal->backend, key, out);
 		if (res != GIT_ENOTFOUND)
 			break;
 	}
@@ -835,13 +835,13 @@ int git_config_get_bool(int *out, const git_config *cfg, const char *name)
 static int is_readonly(const git_config *cfg)
 {
 	size_t i;
-	file_internal *internal;
+	backend_internal *internal;
 
 	git_vector_foreach(&cfg->backends, i, internal) {
-		if (!internal || !internal->file)
+		if (!internal || !internal->backend)
 			continue;
 
-		if (!internal->file->readonly)
+		if (!internal->backend->readonly)
 			return 0;
 	}
 
@@ -1180,14 +1180,14 @@ int git_config_lock(git_transaction **out, git_config *cfg)
 {
 	int error;
 	git_config_backend *file;
-	file_internal *internal;
+	backend_internal *internal;
 
 	internal = git_vector_get(&cfg->backends, 0);
-	if (!internal || !internal->file) {
+	if (!internal || !internal->backend) {
 		giterr_set(GITERR_CONFIG, "cannot lock; the config has no backends");
 		return -1;
 	}
-	file = internal->file;
+	file = internal->backend;
 
 	if ((error = file->lock(file)) < 0)
 		return error;
@@ -1198,15 +1198,15 @@ int git_config_lock(git_transaction **out, git_config *cfg)
 int git_config_unlock(git_config *cfg, int commit)
 {
 	git_config_backend *file;
-	file_internal *internal;
+	backend_internal *internal;
 
 	internal = git_vector_get(&cfg->backends, 0);
-	if (!internal || !internal->file) {
+	if (!internal || !internal->backend) {
 		giterr_set(GITERR_CONFIG, "cannot lock; the config has no backends");
 		return -1;
 	}
 
-	file = internal->file;
+	file = internal->backend;
 
 	return file->unlock(file, commit);
 }
