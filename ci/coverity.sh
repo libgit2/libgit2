@@ -59,7 +59,7 @@ STATUS_CODE="$(echo "$HTML" | tail -n1)"
 
 echo "${BODY}"
 
-if [ "${STATUS_CODE}" != "200" -o "${STATUS_CODE}" != "201" ]; then
+if [ "${STATUS_CODE}" != "200" -a "${STATUS_CODE}" != "201" ]; then
 	echo "Received error code ${STATUS_CODE} from Coverity"
 	exit 1
 fi
