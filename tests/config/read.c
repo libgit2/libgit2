@@ -749,16 +749,34 @@ void test_config_read__bom(void)
 	git_buf_free(&buf);
 }
 
+static int read_nosection_cb(const git_config_entry *entry, void *payload) {
+	int *seen = (int*)payload;
+	if (strcmp(entry->name, "key") == 0) {
+		(*seen)++;
+	}
+	return 0;
+}
+
 /* This would ideally issue a warning, if we had a way to do so. */
 void test_config_read__nosection(void)
 {
 	git_config *cfg;
 	git_buf buf = GIT_BUF_INIT;
+	int seen = 0;
 
 	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config-nosection")));
 
-	cl_git_pass(git_config_get_string_buf(&buf, cfg, "key"));
-	cl_assert_equal_s(buf.ptr, "value");
+	/*
+	 * Given a key with no section, we do not allow reading it,
+	 * but we do include it in an iteration over the config
+	 * store. This appears to match how git's own APIs (and
+	 * git-config(1)) behave.
+	 */
+
+	cl_git_fail_with(git_config_get_string_buf(&buf, cfg, "key"), GIT_EINVALIDSPEC);
+
+	cl_git_pass(git_config_foreach(cfg, read_nosection_cb, &seen));
+	cl_assert_equal_i(seen, 1);
 
 	git_buf_free(&buf);
 	git_config_free(cfg);
