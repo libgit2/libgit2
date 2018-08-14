@@ -748,3 +748,18 @@ void test_config_read__bom(void)
 	git_config_free(cfg);
 	git_buf_free(&buf);
 }
+
+/* This would ideally issue a warning, if we had a way to do so. */
+void test_config_read__nosection(void)
+{
+	git_config *cfg;
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config-nosection")));
+
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "key"));
+	cl_assert_equal_s(buf.ptr, "value");
+
+	git_buf_free(&buf);
+	git_config_free(cfg);
+}
