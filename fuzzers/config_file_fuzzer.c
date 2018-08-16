@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <limits.h>
+#include <errno.h>
 
 #define UNUSED(x) (void)(x)
 
@@ -46,6 +47,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
 	git_config *cfg = NULL;
 	int err = 0;
+	size_t total = 0;
 
 	if (ftruncate(fd, 0) !=0 ) {
 		abort();
@@ -53,8 +55,14 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	if (lseek(fd, 0, SEEK_SET) != 0) {
 		abort();
 	}
-	if ((size_t)write(fd, data, size) != size) {
-		abort();
+
+	while (total < size) {
+		ssize_t written = write(fd, data, size);
+		if (written < 0 && errno != EINTR)
+			abort();
+		if (written < 0)
+			continue;
+		total += written;
 	}
 
 	err = git_config_open_ondisk(&cfg, path);
