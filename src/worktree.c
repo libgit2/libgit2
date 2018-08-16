@@ -426,7 +426,7 @@ int git_worktree_unlock(git_worktree *wt)
 	assert(wt);
 
 	if (!git_worktree_is_locked(NULL, wt))
-		return 0;
+		return 1;
 
 	if (git_buf_joinpath(&path, wt->gitdir_path, "locked") < 0)
 		return -1;
