@@ -8,12 +8,14 @@
 
 int git_parse_ctx_init(git_parse_ctx *ctx, const char *content, size_t content_len)
 {
-	if (content_len)
+	if (content && content_len) {
 		ctx->content = content;
-	else
-		ctx->content = NULL;
+		ctx->content_len = content_len;
+	} else {
+		ctx->content = "";
+		ctx->content_len = 0;
+	}
 
-	ctx->content_len = content_len;
 	ctx->remain = ctx->content;
 	ctx->remain_len = ctx->content_len;
 	ctx->line = ctx->remain;
@@ -26,6 +28,7 @@ int git_parse_ctx_init(git_parse_ctx *ctx, const char *content, size_t content_l
 void git_parse_ctx_clear(git_parse_ctx *ctx)
 {
 	memset(ctx, 0, sizeof(*ctx));
+	ctx->content = "";
 }
 
 void git_parse_advance_line(git_parse_ctx *ctx)
