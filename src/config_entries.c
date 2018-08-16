@@ -15,6 +15,7 @@ typedef struct config_entry_list {
 
 typedef struct config_entries_iterator {
 	git_config_iterator parent;
+	git_config_entries *entries;
 	config_entry_list *head;
 } config_entries_iterator;
 
@@ -63,6 +64,40 @@ int git_config_entries_new(git_config_entries **out)
 	else
 		*out = entries;
 
+	return error;
+}
+
+int git_config_entries_dup(git_config_entries **out, git_config_entries *entries)
+{
+	git_config_entries *result = NULL;
+	config_entry_list *head;
+	int error;
+
+	if ((error = git_config_entries_new(&result)) < 0)
+		goto out;
+
+	for (head = entries->list; head; head = head->next) {
+		git_config_entry *dup;
+
+		dup = git__calloc(1, sizeof(git_config_entry));
+		dup->name = git__strdup(head->entry->name);
+		GITERR_CHECK_ALLOC(dup->name);
+		if (head->entry->value) {
+			dup->value = git__strdup(head->entry->value);
+			GITERR_CHECK_ALLOC(dup->value);
+		}
+		dup->level = head->entry->level;
+		dup->include_depth = head->entry->include_depth;
+
+		if ((error = git_config_entries_append(result, dup)) < 0)
+			goto out;
+	}
+
+	*out = result;
+	result = NULL;
+
+out:
+	git_config_entries_free(result);
 	return error;
 }
 
@@ -184,11 +219,11 @@ int git_config_entries_get_unique(git_config_entry **out, git_config_entries *en
 	return 0;
 }
 
-void config_iterator_free(
-	git_config_iterator* iter)
+void config_iterator_free(git_config_iterator *iter)
 {
-	iter->backend->free(iter->backend);
-	git__free(iter);
+	config_entries_iterator *it = (config_entries_iterator *) iter;
+	git_config_entries_free(it->entries);
+	git__free(it);
 }
 
 int config_iterator_next(
@@ -206,17 +241,18 @@ int config_iterator_next(
 	return 0;
 }
 
-int git_config_entries_iterator_new(git_config_iterator **out, git_config_backend *backend, git_config_entries *entries)
+int git_config_entries_iterator_new(git_config_iterator **out, git_config_entries *entries)
 {
 	config_entries_iterator *it;
 
 	it = git__calloc(1, sizeof(config_entries_iterator));
 	GITERR_CHECK_ALLOC(it);
-	it->parent.backend = backend;
-	it->head = entries->list;
 	it->parent.next = config_iterator_next;
 	it->parent.free = config_iterator_free;
+	it->head = entries->list;
+	it->entries = entries;
 
+	git_config_entries_incref(entries);
 	*out = &it->parent;
 
 	return 0;

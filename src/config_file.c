@@ -229,17 +229,20 @@ static int config_iterator_new(
 	git_config_iterator **iter,
 	struct git_config_backend* backend)
 {
-	git_config_backend *snapshot;
 	diskfile_header *bh = (diskfile_header *) backend;
+	git_config_entries *entries;
 	int error;
 
-	if ((error = config_snapshot(&snapshot, backend)) < 0)
+	if ((error = git_config_entries_dup(&entries, bh->entries)) < 0)
 		return error;
 
-	if ((error = snapshot->open(snapshot, bh->level, bh->repo)) < 0)
-		return error;
+	if ((error = git_config_entries_iterator_new(iter, entries)) < 0)
+		goto out;
 
-	return git_config_entries_iterator_new(iter, snapshot, bh->entries);
+out:
+	/* Let iterator delete duplicated entries when it's done */
+	git_config_entries_free(entries);
+	return error;
 }
 
 static int config_set(git_config_backend *cfg, const char *name, const char *value)

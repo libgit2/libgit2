@@ -13,10 +13,11 @@
 typedef struct git_config_entries git_config_entries;
 
 int git_config_entries_new(git_config_entries **out);
+int git_config_entries_dup(git_config_entries **out, git_config_entries *entries);
 void git_config_entries_incref(git_config_entries *entries);
 void git_config_entries_free(git_config_entries *entries);
 /* Add or append the new config option */
 int git_config_entries_append(git_config_entries *entries, git_config_entry *entry);
 int git_config_entries_get(git_config_entry **out, git_config_entries *entries, const char *key);
 int git_config_entries_get_unique(git_config_entry **out, git_config_entries *entries, const char *key);
-int git_config_entries_iterator_new(git_config_iterator **out, git_config_backend *backend, git_config_entries *entries);
+int git_config_entries_iterator_new(git_config_iterator **out, git_config_entries *entries);
