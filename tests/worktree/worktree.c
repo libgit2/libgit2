@@ -455,7 +455,7 @@ void test_worktree_worktree__unlock_unlocked_worktree(void)
 
 	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
 	cl_assert(!git_worktree_is_locked(NULL, wt));
-	cl_assert(git_worktree_unlock(wt) == 0);
+	cl_assert_equal_i(1, git_worktree_unlock(wt));
 	cl_assert(!wt->locked);
 
 	git_worktree_free(wt);
@@ -468,7 +468,7 @@ void test_worktree_worktree__unlock_locked_worktree(void)
 	cl_git_pass(git_worktree_lookup(&wt, fixture.repo, "testrepo-worktree"));
 	cl_git_pass(git_worktree_lock(wt, NULL));
 	cl_assert(git_worktree_is_locked(NULL, wt));
-	cl_git_pass(git_worktree_unlock(wt));
+	cl_assert_equal_i(0, git_worktree_unlock(wt));
 	cl_assert(!wt->locked);
 
 	git_worktree_free(wt);
