@@ -1035,8 +1035,15 @@ static int read_on_variable(
 	GIT_UNUSED(line);
 	GIT_UNUSED(line_len);
 
-	git_buf_puts(&buf, current_section);
-	git_buf_putc(&buf, '.');
+	if (current_section) {
+		/* TODO: Once warnings lang, we should likely warn
+		 * here. Git appears to warn in most cases if it sees
+		 * un-namespaced config options.
+		 */
+		git_buf_puts(&buf, current_section);
+		git_buf_putc(&buf, '.');
+	}
+
 	for (c = var_name; *c; c++)
 		git_buf_putc(&buf, git__tolower(*c));
 
