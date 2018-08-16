@@ -199,13 +199,15 @@ out:
  */
 static void free_submodule_names(git_strmap *names)
 {
-	git_buf *name;
+	const char *key;
+	char *value;
 
 	if (names == NULL)
 		return;
 
-	git_strmap_foreach_value(names, name, {
-		git__free(name);
+	git_strmap_foreach(names, key, value, {
+		git__free((char *) key);
+		git__free(value);
 	});
 	git_strmap_free(names);
 
@@ -257,7 +259,7 @@ static int load_submodule_names(git_strmap **out, git_repository *repo, git_conf
 		if (!isvalid)
 			continue;
 
-		git_strmap_insert(names, entry->value, git_buf_detach(&buf), &rval);
+		git_strmap_insert(names, git__strdup(entry->value), git_buf_detach(&buf), &rval);
 		if (rval < 0) {
 			giterr_set(GITERR_NOMEMORY, "error inserting submodule into hash table");
 			error = -1;
