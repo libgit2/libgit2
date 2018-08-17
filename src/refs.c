@@ -1430,3 +1430,28 @@ const char *git_reference_shorthand(const git_reference *ref)
 {
 	return git_reference__shorthand(ref->name);
 }
+
+int git_reference__resolve_unborn(git_reference **out_ref, git_repository *repo, const git_reference *ref)
+{
+	git_reference *tmp_ref = NULL;
+	int error;
+
+	if (ref->type == GIT_REF_OID) {
+		giterr_set(GITERR_REFERENCE, "direct references cannot be unborn");
+		return GIT_EINVALID;
+	}
+
+	if (out_ref == NULL) {
+		out_ref = &tmp_ref;
+	}
+
+	error = git_reference_lookup_resolved(out_ref, repo, git_reference_symbolic_target(ref), -1);
+
+	if (error == GIT_ENOTFOUND) {
+		error = GIT_EUNBORNBRANCH;
+	}
+
+	git_reference_free(tmp_ref);
+
+	return error;
+}

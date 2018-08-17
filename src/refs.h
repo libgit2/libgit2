@@ -136,4 +136,16 @@ int git_reference__update_for_commit(
 	const git_oid *id,
 	const char *operation);
 
+/**
+ * Lookup a reference, with unborn error semantics.
+ *
+ * @param out_ref Pointer to the resolved reference. Can be null.
+ * @param repo The repository to use for resolution.
+ * @param ref The reference to resolve.
+ * @return 0 on success and out_ref (if provided) will be populated.
+ *         Otherwise, returns GIT_EINVALID if the reference is not symbolic,
+ *         GIT_EUNBORNBRANCH if the reference is unborn, or another error code.
+ */
+int git_reference__resolve_unborn(git_reference **out_ref, git_repository *repo, const git_reference *ref);
+
 #endif
