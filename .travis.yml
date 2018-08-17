@@ -65,12 +65,6 @@ matrix:
        - MBEDTLS=1
          CMAKE_OPTIONS="-DTHREADSAFE=OFF -DBUILD_EXAMPLES=ON -DUSE_HTTPS=mbedTLS -DSHA1_BACKEND=mbedTLS -DMBEDTLS_ROOT_DIR=/tmp/mbedtls"
      os: linux
-   - compiler: gcc
-     if: type = cron
-     env:
-       - CMAKE_OPTIONS="-DBUILD_CLAR=ON -DCMAKE_BUILD_TYPE=Debug"
-         COVERITY=1
-     os: linux
 
 install:
   - if [ -f ./ci/setup-${TRAVIS_OS_NAME}.sh ]; then ./ci/setup-${TRAVIS_OS_NAME}.sh; fi
@@ -79,8 +73,7 @@ install:
 script:
  - mkdir build
  - cd build
- - if [ -n "$COVERITY" ]; then ../ci/coverity.sh; fi
- - if [ -z "$COVERITY" ]; then ../ci/build.sh && ../ci/test.sh; fi
+ - ../ci/build.sh && ../ci/test.sh
 
 # Only watch the development and master branches
 branches:
