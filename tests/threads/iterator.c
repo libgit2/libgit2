@@ -12,14 +12,16 @@ void test_threads_iterator__cleanup(void)
 static void *run_workdir_iterator(void *arg)
 {
 	int error = 0;
+	git_repository *repo;
 	git_iterator *iter;
 	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 	const git_index_entry *entry = NULL;
 
 	iter_opts.flags = GIT_ITERATOR_DONT_AUTOEXPAND;
 
+	cl_git_pass(git_repository_open(&repo, git_repository_path(_repo)));
 	cl_git_pass(git_iterator_for_workdir(
-		&iter, _repo, NULL, NULL, &iter_opts));
+		&iter, repo, NULL, NULL, &iter_opts));
 
 	while (!error) {
 		if (entry && entry->mode == GIT_FILEMODE_TREE) {
@@ -38,6 +40,7 @@ static void *run_workdir_iterator(void *arg)
 	cl_assert_equal_i(GIT_ITEROVER, error);
 
 	git_iterator_free(iter);
+	git_repository_free(repo);
 	giterr_clear();
 	return arg;
 }

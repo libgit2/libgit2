@@ -76,26 +76,29 @@ static void free_trees(void)
 static void *run_index_diffs(void *arg)
 {
 	int thread = *(int *)arg;
+	git_repository *repo;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff *diff = NULL;
 	size_t i;
 	int exp[4] = { 0, 0, 0, 0 };
 
+	cl_git_pass(git_repository_open(&repo, git_repository_path(_repo)));
+
 	switch (thread & 0x03) {
 	case 0: /* diff index to workdir */;
-		cl_git_pass(git_diff_index_to_workdir(&diff, _repo, NULL, &opts));
+		cl_git_pass(git_diff_index_to_workdir(&diff, repo, NULL, &opts));
 		break;
 	case 1: /* diff tree 'a' to index */;
-		cl_git_pass(git_diff_tree_to_index(&diff, _repo, _a, NULL, &opts));
+		cl_git_pass(git_diff_tree_to_index(&diff, repo, _a, NULL, &opts));
 		break;
 	case 2: /* diff tree 'b' to index */;
-		cl_git_pass(git_diff_tree_to_index(&diff, _repo, _b, NULL, &opts));
+		cl_git_pass(git_diff_tree_to_index(&diff, repo, _b, NULL, &opts));
 		break;
 	case 3: /* diff index to workdir (explicit index) */;
 		{
 			git_index *idx;
-			cl_git_pass(git_repository_index(&idx, _repo));
-			cl_git_pass(git_diff_index_to_workdir(&diff, _repo, idx, &opts));
+			cl_git_pass(git_repository_index(&idx, repo));
+			cl_git_pass(git_diff_index_to_workdir(&diff, repo, idx, &opts));
 			git_index_free(idx);
 			break;
 		}
@@ -132,6 +135,7 @@ static void *run_index_diffs(void *arg)
 	}
 
 	git_diff_free(diff);
+	git_repository_free(repo);
 	giterr_clear();
 
 	return arg;
@@ -152,8 +156,10 @@ static void *run_index_diffs_with_modifier(void *arg)
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff *diff = NULL;
 	git_index *idx = NULL;
+	git_repository *repo;
 
-	cl_git_pass(git_repository_index(&idx, _repo));
+	cl_git_pass(git_repository_open(&repo, git_repository_path(_repo)));
+	cl_git_pass(git_repository_index(&idx, repo));
 
 	/* have first thread altering the index as we go */
 	if (thread == 0) {
@@ -176,17 +182,17 @@ static void *run_index_diffs_with_modifier(void *arg)
 
 	switch (thread & 0x03) {
 	case 0: /* diff index to workdir */;
-		cl_git_pass(git_diff_index_to_workdir(&diff, _repo, idx, &opts));
+		cl_git_pass(git_diff_index_to_workdir(&diff, repo, idx, &opts));
 		break;
 	case 1: /* diff tree 'a' to index */;
-		cl_git_pass(git_diff_tree_to_index(&diff, _repo, _a, idx, &opts));
+		cl_git_pass(git_diff_tree_to_index(&diff, repo, _a, idx, &opts));
 		break;
 	case 2: /* diff tree 'b' to index */;
-		cl_git_pass(git_diff_tree_to_index(&diff, _repo, _b, idx, &opts));
+		cl_git_pass(git_diff_tree_to_index(&diff, repo, _b, idx, &opts));
 		break;
 	case 3: /* diff index to workdir reversed */;
 		opts.flags |= GIT_DIFF_REVERSE;
-		cl_git_pass(git_diff_index_to_workdir(&diff, _repo, idx, &opts));
+		cl_git_pass(git_diff_index_to_workdir(&diff, repo, idx, &opts));
 		break;
 	}
 
@@ -196,6 +202,7 @@ static void *run_index_diffs_with_modifier(void *arg)
 
 done:
 	git_index_free(idx);
+	git_repository_free(repo);
 	giterr_clear();
 
 	return arg;
