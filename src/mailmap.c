@@ -225,7 +225,7 @@ int git_mailmap_add_entry(
 
 static int mailmap_add_buffer(git_mailmap *mm, const char *buf, size_t len)
 {
-	int error;
+	int error = 0;
 	git_parse_ctx ctx;
 
 	/* Scratch buffers containing the real parsed names & emails */
