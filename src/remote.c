@@ -428,7 +428,7 @@ static int get_optional_config(
 
 int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 {
-	git_remote *remote;
+	git_remote *remote = NULL;
 	git_buf buf = GIT_BUF_INIT;
 	const char *val;
 	int error = 0;
@@ -510,7 +510,7 @@ int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 	if ((error = get_optional_config(NULL, config, &buf, refspec_cb, &data)) < 0)
 		goto cleanup;
 
-	if (download_tags_value(remote, config) < 0)
+	if ((error = download_tags_value(remote, config)) < 0)
 		goto cleanup;
 
 	if ((error = lookup_remote_prune_config(remote, config, name)) < 0)
