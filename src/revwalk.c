@@ -522,7 +522,7 @@ cleanup:
 
 static int prepare_walk(git_revwalk *walk)
 {
-	int error;
+	int error = 0;
 	git_commit_list *list, *commits = NULL;
 	git_commit_list_node *next;
 
