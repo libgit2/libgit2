@@ -142,7 +142,7 @@ static int auth_context_match(
 	}
 
 	if (!scheme)
-		return 0;
+		return -1;
 
 	/* See if authentication has already started for this scheme */
 	git_vector_foreach(&t->auth_contexts, i, c) {
