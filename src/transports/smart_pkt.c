@@ -282,7 +282,7 @@ static int ok_pkt(git_pkt **out, const char *line, size_t len)
 static int ng_pkt(git_pkt **out, const char *line, size_t len)
 {
 	git_pkt_ng *pkt;
-	const char *ptr;
+	const char *ptr, *eol;
 	size_t alloclen;
 
 	pkt = git__malloc(sizeof(*pkt));
@@ -291,11 +291,13 @@ static int ng_pkt(git_pkt **out, const char *line, size_t len)
 	pkt->ref = NULL;
 	pkt->type = GIT_PKT_NG;
 
+	eol = line + len;
+
 	if (len < 3)
 		goto out_err;
 	line += 3; /* skip "ng " */
-	len -= 3;
-	if (!(ptr = memchr(line, ' ', len)))
+
+	if (!(ptr = memchr(line, ' ', eol - line)))
 		goto out_err;
 	len = ptr - line;
 
@@ -306,11 +308,11 @@ static int ng_pkt(git_pkt **out, const char *line, size_t len)
 	memcpy(pkt->ref, line, len);
 	pkt->ref[len] = '\0';
 
-	if (len < 1)
-		goto out_err;
 	line = ptr + 1;
-	len -= 1;
-	if (!(ptr = memchr(line, '\n', len)))
+	if (line >= eol)
+		goto out_err;
+
+	if (!(ptr = memchr(line, '\n', eol - line)))
 		goto out_err;
 	len = ptr - line;
 
