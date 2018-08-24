@@ -23,15 +23,24 @@ static void *pool_alloc_page(git_pool *pool, uint32_t size);
 
 uint32_t git_pool__system_page_size(void)
 {
+#ifndef GIT_THREADS
 	static uint32_t size = 0;
 
 	if (!size) {
+#else
+    uint32_t size = 0;
+    do {
+#endif
 		size_t page_size;
 		if (git__page_size(&page_size) < 0)
 			page_size = 4096;
 		/* allow space for malloc overhead */
 		size = page_size - (2 * sizeof(void *)) - sizeof(git_pool_page);
+#ifndef GIT_THREADS
 	}
+#else
+    } while (0);
+#endif
 
 	return size;
 }
