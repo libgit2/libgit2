@@ -12,13 +12,16 @@
 enum cl_test_status {
 	CL_TEST_OK,
 	CL_TEST_FAILURE,
-	CL_TEST_SKIP
+	CL_TEST_SKIP,
+	CL_TEST_NOTRUN,
 };
 
+/** Setup clar environment */
 void clar_test_init(int argc, char *argv[]);
 int clar_test_run(void);
 void clar_test_shutdown(void);
 
+/** One shot setup & run */
 int clar_test(int argc, char *argv[]);
 
 const char *clar_sandbox_path(void);
