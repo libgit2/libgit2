@@ -91,6 +91,48 @@ void test_index_conflicts__add_fixes_incorrect_stage(void)
 	cl_assert(git_index_entry_stage(conflict_entry[2]) == 3);
 }
 
+void test_index_conflicts__add_detects_invalid_filemode(void)
+{
+	git_index_entry ancestor_entry, our_entry, their_entry;
+	git_index_entry *conflict_entry[3];
+	int i;
+
+	cl_assert(git_index_entrycount(repo_index) == 8);
+
+	memset(&ancestor_entry, 0x0, sizeof(git_index_entry));
+	memset(&our_entry, 0x0, sizeof(git_index_entry));
+	memset(&their_entry, 0x0, sizeof(git_index_entry));
+
+	conflict_entry[0] = &ancestor_entry;
+	conflict_entry[1] = &our_entry;
+	conflict_entry[2] = &their_entry;
+
+	for (i = 0; i < 3; i++) {
+		ancestor_entry.path = "test-one.txt";
+		ancestor_entry.mode = 0100644;
+		GIT_IDXENTRY_STAGE_SET(&ancestor_entry, 3);
+		git_oid_fromstr(&ancestor_entry.id, CONFLICTS_ONE_ANCESTOR_OID);
+
+		our_entry.path = "test-one.txt";
+		our_entry.mode = 0100644;
+		GIT_IDXENTRY_STAGE_SET(&our_entry, 1);
+		git_oid_fromstr(&our_entry.id, CONFLICTS_ONE_OUR_OID);
+
+		their_entry.path = "test-one.txt";
+		their_entry.mode = 0100644;
+		GIT_IDXENTRY_STAGE_SET(&their_entry, 2);
+		git_oid_fromstr(&their_entry.id, CONFLICTS_ONE_THEIR_OID);
+
+		/* Corrupt the conflict entry's mode */
+		conflict_entry[i]->mode = 027431745;
+
+		cl_git_fail(git_index_conflict_add(repo_index, &ancestor_entry, &our_entry, &their_entry));
+	}
+
+	cl_assert(git_index_entrycount(repo_index) == 8);
+}
+
+
 void test_index_conflicts__add_removes_stage_zero(void)
 {
 	git_index_entry ancestor_entry, our_entry, their_entry;
