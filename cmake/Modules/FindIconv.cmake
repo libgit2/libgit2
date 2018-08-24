@@ -12,14 +12,19 @@ IF(ICONV_INCLUDE_DIR AND ICONV_LIBRARIES)
 ENDIF()
 
 FIND_PATH(ICONV_INCLUDE_DIR iconv.h)
+CHECK_FUNCTION_EXISTS(iconv_open libc_has_iconv)
 FIND_LIBRARY(iconv_lib NAMES iconv libiconv libiconv-2 c)
 
-IF(ICONV_INCLUDE_DIR AND iconv_lib)
-	 SET(ICONV_FOUND TRUE)
-ENDIF()
-
-IF(ICONV_FOUND)
-	# split iconv into -L and -l linker options, so we can set them for pkg-config
+IF(ICONV_INCLUDE_DIR AND libc_has_iconv)
+	SET(ICONV_FOUND TRUE)
+	SET(ICONV_LIBRARIES "")
+	IF(NOT ICONV_FIND_QUIETLY)
+		MESSAGE(STATUS "Found Iconv: provided by libc")
+	ENDIF(NOT ICONV_FIND_QUIETLY)
+ELSEIF(ICONV_INCLUDE_DIR AND iconv_lib)
+	SET(ICONV_FOUND TRUE)
+	# split iconv into -L and -l linker options, so we can
+	# set them for pkg-config
 	GET_FILENAME_COMPONENT(iconv_path ${iconv_lib} PATH)
 	GET_FILENAME_COMPONENT(iconv_name ${iconv_lib} NAME_WE)
 	STRING(REGEX REPLACE "^lib" "" iconv_name ${iconv_name})
