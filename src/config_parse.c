@@ -317,48 +317,43 @@ static int parse_multiline_variable(git_config_parser *reader, git_buf *value, i
 {
 	char *line = NULL, *proc_line = NULL;
 	int quote_count;
-	bool multiline;
+	bool multiline = true;
 
-	/* Check that the next line exists */
-	git_parse_advance_line(&reader->ctx);
-	line = git__strndup(reader->ctx.line, reader->ctx.line_len);
-	if (line == NULL)
-		return -1;
+	while (multiline) {
+		/* Check that the next line exists */
+		git_parse_advance_line(&reader->ctx);
+		line = git__strndup(reader->ctx.line, reader->ctx.line_len);
+		if (line == NULL)
+			return -1;
 
-	/* We've reached the end of the file, there is no continuation.
-	 * (this is not an error).
-	 */
-	if (line[0] == '\0') {
+		/* We've reached the end of the file, there is no continuation.
+		 * (this is not an error).
+		 */
+		if (line[0] == '\0') {
+			git__free(line);
+			return 0;
+		}
+
+		quote_count = strip_comments(line, !!in_quotes);
+
+		/* If it was just a comment, pretend it didn't exist */
+		if (line[0] == '\0') {
+			in_quotes = quote_count;
+			continue;
+		}
+
+		if (unescape_line(&proc_line, &multiline, line, in_quotes) < 0) {
+			git__free(line);
+			return -1;
+		}
+		/* add this line to the multiline var */
+
+		git_buf_puts(value, proc_line);
 		git__free(line);
-		return 0;
+		git__free(proc_line);
+
+		in_quotes = quote_count;
 	}
-
-	quote_count = strip_comments(line, !!in_quotes);
-
-	/* If it was just a comment, pretend it didn't exist */
-	if (line[0] == '\0') {
-		git__free(line);
-		return parse_multiline_variable(reader, value, quote_count);
-		/* TODO: unbounded recursion. This **could** be exploitable */
-	}
-
-	if (unescape_line(&proc_line, &multiline, line, in_quotes) < 0) {
-		git__free(line);
-		return -1;
-	}
-	/* add this line to the multiline var */
-
-	git_buf_puts(value, proc_line);
-	git__free(line);
-	git__free(proc_line);
-
-	/*
-	 * If we need to continue reading the next line, let's just
-	 * keep putting stuff in the buffer
-	 */
-	if (multiline)
-		return parse_multiline_variable(reader, value, quote_count);
-
 	return 0;
 }
 
