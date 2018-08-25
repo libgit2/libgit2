@@ -162,7 +162,7 @@ int git_reference_remove(git_repository *repo, const char *name)
 int git_reference_lookup(git_reference **ref_out,
 	git_repository *repo, const char *name)
 {
-	return git_reference_lookup_resolved(ref_out, repo, name, 0);
+	return git_reference_lookup_resolved(ref_out, repo, name, 0, 0);
 }
 
 int git_reference_name_to_id(
@@ -171,7 +171,7 @@ int git_reference_name_to_id(
 	int error;
 	git_reference *ref;
 
-	if ((error = git_reference_lookup_resolved(&ref, repo, name, -1)) < 0)
+	if ((error = git_reference_lookup_resolved(&ref, repo, name, -1, 0)) < 0)
 		return error;
 
 	git_oid_cpy(out, git_reference_target(ref));
@@ -202,7 +202,8 @@ int git_reference_lookup_resolved(
 	git_reference **ref_out,
 	git_repository *repo,
 	const char *name,
-	int max_nesting)
+	int max_nesting,
+	unsigned int lookup_options)
 {
 	git_refname_t scan_name;
 	git_ref_t scan_type;
@@ -236,8 +237,13 @@ int git_reference_lookup_resolved(
 			git_reference_free(ref);
 		}
 
-		if ((error = git_refdb_lookup(&ref, refdb, scan_name)) < 0)
+		if ((error = git_refdb_lookup(&ref, refdb, scan_name)) < 0) {
+			int allow_unborn = (lookup_options & GIT_REF_LOOKUP_ALLOW_UNBORN);
+
+			if (allow_unborn && error == GIT_ENOTFOUND)
+				return GIT_EUNBORNBRANCH;
 			return error;
+		}
 
 		scan_type = ref->type;
 	}
@@ -324,7 +330,7 @@ int git_reference_dwim(git_reference **out, git_repository *repo, const char *re
 		}
 		foundvalid = true;
 
-		error = git_reference_lookup_resolved(&ref, repo, git_buf_cstr(&refnamebuf), -1);
+		error = git_reference_lookup_resolved(&ref, repo, git_buf_cstr(&refnamebuf), -1, 0);
 
 		if (!error) {
 			*out = ref;
@@ -725,7 +731,7 @@ int git_reference_resolve(git_reference **ref_out, const git_reference *ref)
 		return git_reference_lookup(ref_out, ref->db->repo, ref->name);
 
 	case GIT_REF_SYMBOLIC:
-		return git_reference_lookup_resolved(ref_out, ref->db->repo, ref->target.symbolic, -1);
+		return git_reference_lookup_resolved(ref_out, ref->db->repo, ref->target.symbolic, -1, 0);
 
 	default:
 		giterr_set(GITERR_REFERENCE, "invalid reference");
@@ -1429,29 +1435,4 @@ const char *git_reference__shorthand(const char *name)
 const char *git_reference_shorthand(const git_reference *ref)
 {
 	return git_reference__shorthand(ref->name);
-}
-
-int git_reference__resolve_unborn(git_reference **out_ref, git_repository *repo, const git_reference *ref)
-{
-	git_reference *tmp_ref = NULL;
-	int error;
-
-	if (ref->type == GIT_REF_OID) {
-		giterr_set(GITERR_REFERENCE, "direct references cannot be unborn");
-		return GIT_EINVALID;
-	}
-
-	if (out_ref == NULL) {
-		out_ref = &tmp_ref;
-	}
-
-	error = git_reference_lookup_resolved(out_ref, repo, git_reference_symbolic_target(ref), -1);
-
-	if (error == GIT_ENOTFOUND) {
-		error = GIT_EUNBORNBRANCH;
-	}
-
-	git_reference_free(tmp_ref);
-
-	return error;
 }

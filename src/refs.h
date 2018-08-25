@@ -85,6 +85,10 @@ int git_reference__is_remote(const char *ref_name);
 int git_reference__is_tag(const char *ref_name);
 const char *git_reference__shorthand(const char *name);
 
+typedef enum {
+	GIT_REF_LOOKUP_DEFAULT = 0,
+	GIT_REF_LOOKUP_ALLOW_UNBORN = 1,
+} git_reference_lookup_options;
 /**
  * Lookup a reference by name and try to resolve to an OID.
  *
@@ -93,7 +97,7 @@ const char *git_reference__shorthand(const char *name);
  * default.  If you pass 0 for `max_deref`, this will not attempt to resolve
  * the reference.  For any value of `max_deref` other than 0, not
  * successfully resolving the reference will be reported as an error.
-
+ *
  * The generated reference must be freed by the user.
  *
  * @param reference_out Pointer to the looked-up reference
@@ -106,7 +110,8 @@ int git_reference_lookup_resolved(
 	git_reference **reference_out,
 	git_repository *repo,
 	const char *name,
-	int max_deref);
+	int max_deref,
+	unsigned int lookup_options);
 
 /**
  * Read reference from a file.
@@ -135,17 +140,5 @@ int git_reference__update_for_commit(
 	const char *ref_name,
 	const git_oid *id,
 	const char *operation);
-
-/**
- * Lookup a reference, with unborn error semantics.
- *
- * @param out_ref Pointer to the resolved reference. Can be null.
- * @param repo The repository to use for resolution.
- * @param ref The reference to resolve.
- * @return 0 on success and out_ref (if provided) will be populated.
- *         Otherwise, returns GIT_EINVALID if the reference is not symbolic,
- *         GIT_EUNBORNBRANCH if the reference is unborn, or another error code.
- */
-int git_reference__resolve_unborn(git_reference **out_ref, git_repository *repo, const git_reference *ref);
 
 #endif

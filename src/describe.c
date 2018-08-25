@@ -148,7 +148,7 @@ static int retrieve_peeled_tag_or_object_oid(
 	git_object *peeled = NULL;
 	int error;
 
-	if ((error = git_reference_lookup_resolved(&ref, repo, refname, -1)) < 0)
+	if ((error = git_reference_lookup_resolved(&ref, repo, refname, -1, 0)) < 0)
 		return error;
 
 	if ((error = git_reference_peel(&peeled, ref, GIT_OBJ_ANY)) < 0)

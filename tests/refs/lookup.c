@@ -21,11 +21,11 @@ void test_refs_lookup__with_resolve(void)
 	cl_git_pass(git_reference_resolve(&a, temp));
 	git_reference_free(temp);
 
-	cl_git_pass(git_reference_lookup_resolved(&b, g_repo, "HEAD", 5));
+	cl_git_pass(git_reference_lookup_resolved(&b, g_repo, "HEAD", 5, 0));
 	cl_assert(git_reference_cmp(a, b) == 0);
 	git_reference_free(b);
 
-	cl_git_pass(git_reference_lookup_resolved(&b, g_repo, "HEAD_TRACKER", 5));
+	cl_git_pass(git_reference_lookup_resolved(&b, g_repo, "HEAD_TRACKER", 5, 0));
 	cl_assert(git_reference_cmp(a, b) == 0);
 	git_reference_free(b);
 

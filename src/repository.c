@@ -2131,7 +2131,7 @@ int git_repository_head(git_reference **head_out, git_repository *repo)
 		return 0;
 	}
 
-	error = git_reference__resolve_unborn(head_out, repo, head);
+	error = git_reference_lookup_resolved(head_out, repo, git_reference_symbolic_target(head), -1, GIT_REF_LOOKUP_ALLOW_UNBORN);
 	git_reference_free(head);
 
 	return error;
@@ -2153,8 +2153,7 @@ int git_repository_head_for_worktree(git_reference **out, git_repository *repo, 
 
 	if (git_reference_type(head) != GIT_REF_OID) {
 		git_reference *resolved;
-
-		error = git_reference__resolve_unborn(&resolved, repo, head);
+		error = git_reference_lookup_resolved(&resolved, repo, git_reference_symbolic_target(head), -1, GIT_REF_LOOKUP_ALLOW_UNBORN);
 		git_reference_free(head);
 		head = resolved;
 	}
