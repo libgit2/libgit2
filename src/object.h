@@ -22,6 +22,17 @@ struct git_object {
 /* fully free the object; internal method, DO NOT EXPORT */
 void git_object__free(void *object);
 
+/*
+ * Parse object from raw data. Note that the resulting object is
+ * tied to the lifetime of the data, as some objects simply point
+ * into it.
+ */
+int git_object__from_raw(
+	git_object **object_out,
+	const char *data,
+	size_t size,
+	git_otype type);
+
 int git_object__from_odb_object(
 	git_object **object_out,
 	git_repository *repo,

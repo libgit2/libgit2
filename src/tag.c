@@ -159,6 +159,11 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 	return 0;
 }
 
+int git_tag__parse_raw(void *_tag, const char *data, size_t size)
+{
+	return tag_parse(_tag, data, data + size);
+}
+
 int git_tag__parse(void *_tag, git_odb_object *odb_obj)
 {
 	git_tag *tag = _tag;

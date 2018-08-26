@@ -519,6 +519,7 @@ static int pack_backend__writepack(struct git_odb_writepack **out,
 	git_transfer_progress_cb progress_cb,
 	void *progress_payload)
 {
+	git_indexer_options opts = GIT_INDEXER_OPTIONS_INIT;
 	struct pack_backend *backend;
 	struct pack_writepack *writepack;
 
@@ -526,13 +527,16 @@ static int pack_backend__writepack(struct git_odb_writepack **out,
 
 	*out = NULL;
 
+	opts.progress_cb = progress_cb;
+	opts.progress_cb_payload = progress_payload;
+
 	backend = (struct pack_backend *)_backend;
 
 	writepack = git__calloc(1, sizeof(struct pack_writepack));
 	GITERR_CHECK_ALLOC(writepack);
 
 	if (git_indexer_new(&writepack->indexer,
-		backend->pack_folder, 0, odb, progress_cb, progress_payload) < 0) {
+		backend->pack_folder, 0, odb, &opts) < 0) {
 		git__free(writepack);
 		return -1;
 	}

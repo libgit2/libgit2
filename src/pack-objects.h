@@ -52,12 +52,6 @@ typedef struct git_pobject {
 	    filled:1;
 } git_pobject;
 
-typedef struct {
-	git_oid id;
-	unsigned int uninteresting:1,
-		seen:1;
-} git_walk_object;
-
 struct git_packbuilder {
 	git_repository *repo; /* associated repository */
 	git_odb *odb; /* associated object database */

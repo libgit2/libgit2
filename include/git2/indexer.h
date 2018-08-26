@@ -15,6 +15,33 @@ GIT_BEGIN_DECL
 
 typedef struct git_indexer git_indexer;
 
+typedef struct git_indexer_options {
+	unsigned int version;
+
+	/** progress_cb function to call with progress information */
+	git_transfer_progress_cb progress_cb;
+	/** progress_cb_payload payload for the progress callback */
+	void *progress_cb_payload;
+
+	/** Do connectivity checks for the received pack */
+	unsigned char verify;
+} git_indexer_options;
+
+#define GIT_INDEXER_OPTIONS_VERSION 1
+#define GIT_INDEXER_OPTIONS_INIT { GIT_INDEXER_OPTIONS_VERSION }
+
+/**
+ * Initializes a `git_indexer_options` with default values. Equivalent to
+ * creating an instance with GIT_INDEXER_OPTIONS_INIT.
+ *
+ * @param opts the `git_indexer_options` struct to initialize.
+ * @param version Version of struct; pass `GIT_INDEXER_OPTIONS_VERSION`
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_indexer_init_options(
+	git_indexer_options *opts,
+	unsigned int version);
+
 /**
  * Create a new indexer instance
  *
@@ -24,16 +51,15 @@ typedef struct git_indexer git_indexer;
  * @param odb object database from which to read base objects when
  * fixing thin packs. Pass NULL if no thin pack is expected (an error
  * will be returned if there are bases missing)
- * @param progress_cb function to call with progress information
- * @param progress_cb_payload payload for the progress callback
+ * @param opts Optional structure containing additional options. See
+ * `git_indexer_options` above.
  */
 GIT_EXTERN(int) git_indexer_new(
 		git_indexer **out,
 		const char *path,
 		unsigned int mode,
 		git_odb *odb,
-		git_transfer_progress_cb progress_cb,
-		void *progress_cb_payload);
+		git_indexer_options *opts);
 
 /**
  * Add data to the indexer

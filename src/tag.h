@@ -26,5 +26,6 @@ struct git_tag {
 
 void git_tag__free(void *tag);
 int git_tag__parse(void *tag, git_odb_object *obj);
+int git_tag__parse_raw(void *tag, const char *data, size_t size);
 
 #endif
