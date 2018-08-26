@@ -139,6 +139,7 @@ static struct {
 	int exit_on_error;
 	int report_suite_names;
 	int write_summary;
+	const char *summary_file;
 
 	struct clar_explicit *explicit;
 	struct clar_explicit *last_explicit;
@@ -182,6 +183,10 @@ static void clar_print_onabort(const char *msg, ...);
 /* From clar_sandbox.c */
 static void clar_unsandbox(void);
 static int clar_sandbox(void);
+
+/* From summary.h */
+static int clar_summary_init(const char *filename);
+static void clar_summary_shutdown(void);
 
 /* Load the declarations for the test suite */
 #include "clar.suite"
@@ -466,6 +471,8 @@ clar_parse_args(int argc, char **argv)
 
 		case 'r':
 			_clar.write_summary = 1;
+			_clar.summary_file = *(argument + 2) ? (argument + 2) :
+			    "summary.xml";
 			break;
 
 		default:
@@ -485,6 +492,11 @@ clar_test_init(int argc, char **argv)
 
 	if (argc > 1)
 		clar_parse_args(argc, argv);
+
+	if (_clar.write_summary && !clar_summary_init(_clar.summary_file)) {
+		clar_print_onabort("Failed to open the summary file: %s\n");
+		exit(-1);
+	}
 
 	if (clar_sandbox() < 0) {
 		clar_print_onabort("Failed to sandbox the test runner.\n");
@@ -509,8 +521,6 @@ clar_test_run(void)
 	return _clar.total_errors;
 }
 
-static void clar_summary_write(void);
-
 void
 clar_test_shutdown(void)
 {
@@ -526,7 +536,7 @@ clar_test_shutdown(void)
 	clar_unsandbox();
 
 	if (_clar.write_summary)
-		clar_summary_write();
+		clar_summary_shutdown();
 
 	for (explicit = _clar.explicit; explicit; explicit = explicit_next) {
 		explicit_next = explicit->next;
