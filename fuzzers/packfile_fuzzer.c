@@ -75,7 +75,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 		abort();
 	}
 
-	if (git_indexer_new(&indexer, ".", 0, odb, NULL, NULL) < 0) {
+	if (git_indexer_new(&indexer, ".", 0, odb, NULL) < 0) {
 		fprintf(stderr, "Failed to create the indexer: %s\n",
 			giterr_last()->message);
 		abort();
