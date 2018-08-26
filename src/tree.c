@@ -962,6 +962,7 @@ static int tree_walk(
 
 	git_array_foreach(tree->entries, i, entry) {
 		if (preorder) {
+			giterr_clear();
 			error = callback(path->ptr, entry, payload);
 			if (error < 0) { /* negative value stops iteration */
 				giterr_set_after_callback_function(error, "git_tree_walk");
@@ -998,6 +999,7 @@ static int tree_walk(
 		}
 
 		if (!preorder) {
+			giterr_clear();
 			error = callback(path->ptr, entry, payload);
 			if (error < 0) { /* negative value stops iteration */
 				giterr_set_after_callback_function(error, "git_tree_walk");
