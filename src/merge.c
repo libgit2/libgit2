@@ -3191,7 +3191,7 @@ int git_merge_analysis_for_ref(
 	int error = 0;
 	bool unborn;
 
-	assert(analysis_out && preference_out && repo && their_heads);
+	assert(analysis_out && preference_out && repo && their_heads && their_heads_len > 0);
 
 	if (their_heads_len != 1) {
 		giterr_set(GITERR_MERGE, "can only merge a single branch");
@@ -3273,7 +3273,7 @@ int git_merge(
 	unsigned int checkout_strategy;
 	int error = 0;
 
-	assert(repo && their_heads);
+	assert(repo && their_heads && their_heads_len > 0);
 
 	if (their_heads_len != 1) {
 		giterr_set(GITERR_MERGE, "can only merge a single branch");
