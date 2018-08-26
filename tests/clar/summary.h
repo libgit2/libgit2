@@ -20,7 +20,7 @@ int clar_summary_testsuites(void)
 	return fprintf(summary, "<testsuites>\n");
 }
 
-int clar_summary_testsuite(int idn, const char *name, const char *pkg, time_t timestamp, double time, int test_count, int fail_count, int error_count)
+int clar_summary_testsuite(int idn, const char *name, const char *pkg, time_t timestamp, double elapsed, int test_count, int fail_count, int error_count)
 {
 	struct tm *tm = localtime(&timestamp);
 	char iso_dt[20];
@@ -38,12 +38,12 @@ int clar_summary_testsuite(int idn, const char *name, const char *pkg, time_t ti
 		       " tests=\"%d\""
 		       " failures=\"%d\""
 		       " errors=\"%d\">\n",
-		       idn, name, pkg, iso_dt, time, test_count, fail_count, error_count);
+		       idn, name, pkg, iso_dt, elapsed, test_count, fail_count, error_count);
 }
 
-int clar_summary_testcase(const char *name, const char *classname, double time)
+int clar_summary_testcase(const char *name, const char *classname, double elapsed)
 {
-	return fprintf(summary, "\t\t<testcase name=\"%s\" classname=\"%s\" time=\"%.2f\">\n", name, classname, time);
+	return fprintf(summary, "\t\t<testcase name=\"%s\" classname=\"%s\" time=\"%.2f\">\n", name, classname, elapsed);
 }
 
 int clar_summary_failure(const char *type, const char *message, const char *desc)
