@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <time.h>
 
+static const char *filename;
 static FILE *summary;
 
 int clar_summary_close_tag(const char *tag, int indent)
@@ -51,17 +52,19 @@ int clar_summary_failure(const char *type, const char *message, const char *desc
 	return fprintf(summary, "\t\t\t<failure type=\"%s\"><![CDATA[%s\n%s]]></failure>\n", type, message, desc);
 }
 
-void clar_summary_write(void)
+int clar_summary_init(const char *fn)
+{
+	filename = fn;
+
+	summary = fopen(filename, "w");
+
+	return !!summary;
+}
+
+void clar_summary_shutdown(void)
 {
 	struct clar_report *report;
 	const char *last_suite = NULL;
-	char wd[1024];
-
-	summary = fopen("summary.xml", "w");
-	if (!summary) {
-		printf("failed to open summary.xml for writing\n");
-		return;
-	}
 
 	clar_summary_testsuites();
 
@@ -94,5 +97,5 @@ void clar_summary_write(void)
 
 	fclose(summary);
 
-	printf("written summary file to %s\n", getcwd((char *)&wd, sizeof(wd)));
+	printf("written summary file to %s\n", filename);
 }
