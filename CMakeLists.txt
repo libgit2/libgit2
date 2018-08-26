@@ -28,6 +28,7 @@ INCLUDE(CheckLibraryExists)
 INCLUDE(CheckFunctionExists)
 INCLUDE(CheckSymbolExists)
 INCLUDE(CheckStructHasMember)
+INCLUDE(CheckPrototypeDefinition) # Added in CMake 3.0
 INCLUDE(AddCFlagIfSupported)
 INCLUDE(FindPkgLibraries)
 INCLUDE(FindThreads)

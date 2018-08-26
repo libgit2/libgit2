@@ -647,7 +647,7 @@ size_t git__unescape(char *str)
 	return (pos - str);
 }
 
-#if defined(HAVE_QSORT_S) || (defined(HAVE_QSORT_R) && defined(BSD))
+#if defined(HAVE_QSORT_S) || defined(HAVE_QSORT_R_BSD)
 typedef struct {
 	git__sort_r_cmp cmp;
 	void *payload;
@@ -664,10 +664,10 @@ static int GIT_STDLIB_CALL git__qsort_r_glue_cmp(
 void git__qsort_r(
 	void *els, size_t nel, size_t elsize, git__sort_r_cmp cmp, void *payload)
 {
-#if defined(HAVE_QSORT_R) && defined(BSD)
+#if defined(HAVE_QSORT_R_BSD)
 	git__qsort_r_glue glue = { cmp, payload };
 	qsort_r(els, nel, elsize, &glue, git__qsort_r_glue_cmp);
-#elif defined(HAVE_QSORT_R) && defined(__GLIBC__)
+#elif defined(HAVE_QSORT_R_GNU)
 	qsort_r(els, nel, elsize, cmp, payload);
 #elif defined(HAVE_QSORT_S)
 	git__qsort_r_glue glue = { cmp, payload };

@@ -58,10 +58,19 @@ IF (HAVE_FUTIMENS)
 	SET(GIT_USE_FUTIMENS 1)
 ENDIF ()
 
-CHECK_FUNCTION_EXISTS(qsort_r HAVE_QSORT_R)
-IF (HAVE_QSORT_R)
-	ADD_DEFINITIONS(-DHAVE_QSORT_R)
-ENDIF ()
+CHECK_PROTOTYPE_DEFINITION(qsort_r
+	"void qsort_r(void *base, size_t nmemb, size_t size, void *thunk, int (*compar)(void *, const void *, const void *))"
+	"" "stdlib.h" HAVE_QSORT_R_BSD)
+IF (HAVE_QSORT_R_BSD)
+	ADD_DEFINITIONS(-DHAVE_QSORT_R_BSD)
+ENDIF()
+
+CHECK_PROTOTYPE_DEFINITION(qsort_r
+	"void qsort_r(void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *, void *), void *arg)"
+	"" "stdlib.h" HAVE_QSORT_R_GNU)
+IF (HAVE_QSORT_R_GNU)
+	ADD_DEFINITIONS(-DHAVE_QSORT_R_GNU)
+ENDIF()
 
 CHECK_FUNCTION_EXISTS(qsort_s HAVE_QSORT_S)
 IF (HAVE_QSORT_S)
