@@ -75,12 +75,15 @@ phases:
   steps:
   - bash: . '$(Build.SourcesDirectory)/ci/setup-osx.sh'
     displayName: Setup
+    workingDirectory: '$(Build.BinariesDirectory)'
   - bash: . '$(Build.SourcesDirectory)/ci/build.sh'
     displayName: Build
+    workingDirectory: '$(Build.BinariesDirectory)'
     env:
       PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
   - bash: . '$(Build.SourcesDirectory)/ci/test.sh'
     displayName: Test
+    workingDirectory: '$(Build.BinariesDirectory)'
     env:
       TMPDIR: $(Agent.TempDirectory)
       LEAK_CHECK: leaks
@@ -92,10 +95,12 @@ phases:
   steps:
   - powershell: . '$(Build.SourcesDirectory)\ci\build.ps1'
     displayName: Build
+    workingDirectory: '$(Build.BinariesDirectory)'
     env:
       CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013 Win64"
   - powershell: . '$(Build.SourcesDirectory)\ci\test.ps1'
     displayName: Test
+    workingDirectory: '$(Build.BinariesDirectory)'
 
 - phase: windows_vs_x86
   displayName: 'Windows (Visual Studio; x86)'
@@ -104,10 +109,12 @@ phases:
   steps:
   - powershell: . '$(Build.SourcesDirectory)\ci\build.ps1'
     displayName: Build
+    workingDirectory: '$(Build.BinariesDirectory)'
     env:
       CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013"
   - powershell: . '$(Build.SourcesDirectory)\ci\test.ps1'
     displayName: Test
+    workingDirectory: '$(Build.BinariesDirectory)'
 
 - phase: windows_mingw_amd64
   displayName: 'Windows (MinGW; amd64)'
@@ -116,16 +123,19 @@ phases:
   steps:
   - powershell: . '$(Build.SourcesDirectory)\ci\setup-mingw.ps1'
     displayName: Setup
+    workingDirectory: '$(Build.BinariesDirectory)'
     env:
       TEMP: $(Agent.TempDirectory)
       ARCH: amd64
   - powershell: . '$(Build.SourcesDirectory)\ci\build.ps1'
     displayName: Build
+    workingDirectory: '$(Build.BinariesDirectory)'
     env:
       CMAKE_OPTIONS: -G"MinGW Makefiles"
       PATH: $(Agent.TempDirectory)\mingw64\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
   - powershell: . '$(Build.SourcesDirectory)\ci\test.ps1'
     displayName: Test
+    workingDirectory: '$(Build.BinariesDirectory)'
 
 - phase: windows_mingw_x86
   displayName: 'Windows (MinGW; x86)'
@@ -134,13 +144,16 @@ phases:
   steps:
   - powershell: . '$(Build.SourcesDirectory)\ci\setup-mingw.ps1'
     displayName: Setup
+    workingDirectory: '$(Build.BinariesDirectory)'
     env:
       TEMP: $(Agent.TempDirectory)
       ARCH: x86
   - powershell: . '$(Build.SourcesDirectory)\ci\build.ps1'
     displayName: Build
+    workingDirectory: '$(Build.BinariesDirectory)'
     env:
       CMAKE_OPTIONS: -G"MinGW Makefiles"
       PATH: $(Agent.TempDirectory)\mingw32\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
   - powershell: . '$(Build.SourcesDirectory)\ci\test.ps1'
     displayName: Test
+    workingDirectory: '$(Build.BinariesDirectory)'
