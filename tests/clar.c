@@ -106,10 +106,14 @@ struct clar_error {
 	struct clar_error *next;
 };
 
-static struct {
-	int argc;
-	char **argv;
+struct clar_explicit {
+	size_t suite_idx;
+	const char *filter;
 
+	struct clar_explicit *next;
+};
+
+static struct {
 	enum cl_test_status test_status;
 	const char *active_test;
 	const char *active_suite;
@@ -123,6 +127,9 @@ static struct {
 	int report_errors_only;
 	int exit_on_error;
 	int report_suite_names;
+
+	struct clar_explicit *explicit;
+	struct clar_explicit *last_explicit;
 
 	struct clar_error *errors;
 	struct clar_error *last_error;
@@ -359,7 +366,24 @@ clar_parse_args(int argc, char **argv)
 						_clar.report_suite_names = 1;
 
 					switch (action) {
-					case 's': _clar_suites[j].enabled = 1; clar_run_suite(&_clar_suites[j], argument); break;
+					case 's': {
+						struct clar_explicit *explicit =
+							calloc(1, sizeof(struct clar_explicit));
+						assert(explicit);
+
+						explicit->suite_idx = j;
+						explicit->filter = argument;
+
+						if (_clar.explicit == NULL)
+							_clar.explicit = explicit;
+
+						if (_clar.last_explicit != NULL)
+							_clar.last_explicit->next = explicit;
+
+						_clar_suites[j].enabled = 1;
+						_clar.last_explicit = explicit;
+						break;
+					}
 					case 'i': _clar_suites[j].enabled = 1; break;
 					case 'x': _clar_suites[j].enabled = 0; break;
 					}
@@ -412,23 +436,25 @@ clar_test_init(int argc, char **argv)
 		""
 	);
 
+	if (argc > 1)
+		clar_parse_args(argc, argv);
+
 	if (clar_sandbox() < 0) {
 		clar_print_onabort("Failed to sandbox the test runner.\n");
 		exit(-1);
 	}
-
-	_clar.argc = argc;
-	_clar.argv = argv;
 }
 
 int
 clar_test_run(void)
 {
-	if (_clar.argc > 1)
-		clar_parse_args(_clar.argc, _clar.argv);
+	size_t i;
+	struct clar_explicit *explicit;
 
-	if (!_clar.suites_ran) {
-		size_t i;
+	if (_clar.explicit) {
+		for (explicit = _clar.explicit; explicit; explicit = explicit->next)
+			clar_run_suite(&_clar_suites[explicit->suite_idx], explicit->filter);
+	} else {
 		for (i = 0; i < _clar_suite_count; ++i)
 			clar_run_suite(&_clar_suites[i], NULL);
 	}
@@ -439,6 +465,8 @@ clar_test_run(void)
 void
 clar_test_shutdown(void)
 {
+	struct clar_explicit *explicit, *explicit_next;
+
 	clar_print_shutdown(
 		_clar.tests_ran,
 		(int)_clar_suite_count,
@@ -446,6 +474,11 @@ clar_test_shutdown(void)
 	);
 
 	clar_unsandbox();
+
+	for (explicit = _clar.explicit; explicit; explicit = explicit_next) {
+		explicit_next = explicit->next;
+		free(explicit);
+	}
 }
 
 int
