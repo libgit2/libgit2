@@ -284,3 +284,19 @@ void test_object_tree_update__add_conflict2(void)
 
 	cl_git_fail(git_tree_create_updated(&tree_updater_id, g_repo, NULL, 2, updates));
 }
+
+void test_object_tree_update__remove_invalid_submodule(void)
+{
+	git_tree *baseline;
+	git_oid updated_tree_id, baseline_id;
+	git_tree_update updates[] = {
+		{GIT_TREE_UPDATE_REMOVE, {{0}}, GIT_FILEMODE_BLOB, "submodule"},
+	};
+
+	/* This tree contains a submodule with an all-zero commit for a submodule named 'submodule' */
+	cl_git_pass(git_oid_fromstr(&baseline_id, "396c7f1adb7925f51ba13a75f48252f44c5a14a2"));
+	cl_git_pass(git_tree_lookup(&baseline, g_repo, &baseline_id));
+	cl_git_pass(git_tree_create_updated(&updated_tree_id, g_repo, baseline, 1, updates));
+
+	git_tree_free(baseline);
+}
