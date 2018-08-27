@@ -113,7 +113,7 @@ typedef enum {
  *
  * The default behaviour of this function is to return NULL if no previous error has occurred.
  * However, libgit2's error strings are not cleared aggressively, so a prior
- * (unrelated) error may be returned. This can avoided by only calling
+ * (unrelated) error may be returned. This can be avoided by only calling
  * this function if the prior call to a libgit2 API returned an error.
  *
  * @return A git_error object.
