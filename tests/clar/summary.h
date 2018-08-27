@@ -26,7 +26,7 @@ int clar_summary_testsuite(struct clar_summary *summary,
 	struct tm *tm = localtime(&timestamp);
 	char iso_dt[20];
 
-	if (strftime(iso_dt, sizeof(iso_dt), "%FT%T", tm) == 0)
+	if (strftime(iso_dt, sizeof(iso_dt), "%Y-%m-%dT%H:%M:%S", tm) == 0)
 		return -1;
 
 	return fprintf(summary->fp, "\t<testsuite "
