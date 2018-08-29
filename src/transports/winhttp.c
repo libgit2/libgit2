@@ -404,6 +404,14 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		goto on_error;
 	}
 
+	/* Currently there is no method for providing client certificates, so disable
+	   the option instead, to allow connecting to servers that ask for a certificate
+	   but don't require one. */
+	if (!WinHttpSetOption(s->request, WINHTTP_OPTION_CLIENT_CERT_CONTEXT, WINHTTP_NO_CLIENT_CERT_CONTEXT, 0)) {
+		giterr_set(GITERR_OS, "failed to disable TLS client certificates");
+		goto on_error;		
+	}	
+
 	proxy_opts = &t->owner->proxy;
 	if (proxy_opts->type == GIT_PROXY_AUTO) {
 		/* Set proxy if necessary */
