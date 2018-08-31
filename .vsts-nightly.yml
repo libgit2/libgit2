@@ -1,11 +1,11 @@
 resources:
 - repo: self
 
-phases:
-- phase: coverity
+jobs:
+- job: coverity
   displayName: 'Coverity'
-  queue:
-    name: 'Hosted Linux Preview'
+  pool:
+    vmImage: 'Ubuntu 16.04'
   steps:
   - task: Docker@0
     displayName: Build
