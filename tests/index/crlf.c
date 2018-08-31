@@ -54,18 +54,16 @@ static int add_and_check_file(void *payload, git_buf *actual_path)
 	git_buf expected_contents = GIT_BUF_INIT;
 	struct compare_data *cd = payload;
 	bool failed = true;
-	int cmp_git, cmp_gitattributes;
 	char *basename;
 	int add_bypath_ret;
 	const git_index_entry *entry;
 	git_oid oid;
 	git_error_state error = { 0 };
 
+	cl_assert(!git_buf_oom(actual_path));
 	basename = git_path_basename(actual_path->ptr);
-	cmp_git = strcmp(basename, ".git");
-	cmp_gitattributes = strcmp(basename, ".gitattributes");
-
-	if (cmp_git == 0 || cmp_gitattributes == 0) {
+	cl_assert(basename);
+	if (strcmp(basename, ".git") == 0 || strcmp(basename, ".gitattributes") == 0) {
 		failed = false;
 		goto done;
 	}
@@ -80,8 +78,8 @@ static int add_and_check_file(void *payload, git_buf *actual_path)
 
 	cl_git_pass(git_buf_joinpath(&expected_path_oid, cd->dirname, basename));
 	cl_git_pass(git_buf_joinpath(&expected_path_fail, cd->dirname, basename));
-	git_buf_puts(&expected_path_oid, ".obj");
-	git_buf_puts(&expected_path_fail, ".fail");
+	cl_git_pass(git_buf_puts(&expected_path_oid, ".obj"));
+	cl_git_pass(git_buf_puts(&expected_path_fail, ".fail"));
 
 	if (git_path_isfile(expected_path_oid.ptr)) {
 		if (add_bypath_ret)
@@ -114,8 +112,8 @@ static int add_and_check_file(void *payload, git_buf *actual_path)
 done:
 	if (failed) {
 		git_buf details = GIT_BUF_INIT;
-		git_buf_printf(&details, "filename=%s, system=%s, safecrlf=%s, autocrlf=%s, attrs={%s}",
-			git_path_basename(actual_path->ptr), systype, cd->safecrlf, cd->autocrlf, cd->attrs);
+		cl_git_pass(git_buf_printf(&details, "filename=%s, system=%s, safecrlf=%s, autocrlf=%s, attrs={%s}",
+			git_path_basename(actual_path->ptr), systype, cd->safecrlf, cd->autocrlf, cd->attrs));
 		clar__fail(__FILE__, __LINE__,
 			"adding file did not work as expected", details.ptr, 0);
 		git_buf_free(&details);
@@ -139,27 +137,27 @@ static void test_add_index(const char *safecrlf, const char *autocrlf, const cha
 	struct compare_data compare_data = { NULL, safecrlf, autocrlf, attrs };
 	const char *c;
 
-	git_buf_puts(&reponame, "crlf");
+	cl_git_pass(git_buf_puts(&reponame, "crlf"));
 
-	git_buf_puts(&sandboxname, "safecrlf_");
-	git_buf_puts(&sandboxname, safecrlf);
+	cl_git_pass(git_buf_puts(&sandboxname, "safecrlf_"));
+	cl_git_pass(git_buf_puts(&sandboxname, safecrlf));
 
-	git_buf_puts(&sandboxname, ",autocrlf_");
-	git_buf_puts(&sandboxname, autocrlf);
+	cl_git_pass(git_buf_puts(&sandboxname, ",autocrlf_"));
+	cl_git_pass(git_buf_puts(&sandboxname, autocrlf));
 
 	if (*attrs) {
-		git_buf_puts(&sandboxname, ",");
+		cl_git_pass(git_buf_puts(&sandboxname, ","));
 
 		for (c = attrs; *c; c++) {
 			if (*c == ' ')
-				git_buf_putc(&sandboxname, ',');
+				cl_git_pass(git_buf_putc(&sandboxname, ','));
 			else if (*c == '=')
-				git_buf_putc(&sandboxname, '_');
+				cl_git_pass(git_buf_putc(&sandboxname, '_'));
 			else
-				git_buf_putc(&sandboxname, *c);
+				cl_git_pass(git_buf_putc(&sandboxname, *c));
 		}
 
-		git_buf_printf(&attrbuf, "* %s\n", attrs);
+		cl_git_pass(git_buf_printf(&attrbuf, "* %s\n", attrs));
 		cl_git_mkfile("crlf/.gitattributes", attrbuf.ptr);
 	}
 
@@ -168,9 +166,9 @@ static void test_add_index(const char *safecrlf, const char *autocrlf, const cha
 
 	cl_git_pass(git_index_clear(g_index));
 
-	git_buf_joinpath(&expected_dirname, "crlf_data", "checkin_results");
-	git_buf_joinpath(&expected_dirname, expected_dirname.ptr, systype);
-	git_buf_joinpath(&expected_fixture, expected_dirname.ptr, sandboxname.ptr);
+	cl_git_pass(git_buf_joinpath(&expected_dirname, "crlf_data", "checkin_results"));
+	cl_git_pass(git_buf_joinpath(&expected_dirname, expected_dirname.ptr, systype));
+	cl_git_pass(git_buf_joinpath(&expected_fixture, expected_dirname.ptr, sandboxname.ptr));
 	cl_fixture_sandbox(expected_fixture.ptr);
 
 	compare_data.dirname = sandboxname.ptr;
@@ -210,7 +208,7 @@ static void set_up_workingdir(const char *name)
 	git_vector_foreach(&contents, i, fn) {
 		char *basename = git_path_basename(fn);
 		git_buf dest_filename = GIT_BUF_INIT;
-		git_buf_joinpath(&dest_filename, name, basename);
+		cl_git_pass(git_buf_joinpath(&dest_filename, name, basename));
 		git__free(basename);
 		cl_git_pass(git_futils_cp(fn, dest_filename.ptr, 0644));
 		git_buf_free(&dest_filename);

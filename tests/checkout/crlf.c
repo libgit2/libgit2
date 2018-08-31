@@ -47,14 +47,12 @@ static int compare_file(void *payload, git_buf *actual_path)
 	git_buf expected_contents = GIT_BUF_INIT;
 	struct compare_data *cd = payload;
 	bool failed = true;
-	int cmp_git, cmp_gitattributes;
 	char *basename;
 
+	cl_assert(!git_buf_oom(actual_path));
 	basename = git_path_basename(actual_path->ptr);
-	cmp_git = strcmp(basename, ".git");
-	cmp_gitattributes = strcmp(basename, ".gitattributes");
-
-	if (cmp_git == 0 || cmp_gitattributes == 0) {
+	cl_assert(basename);
+	if (strcmp(basename, ".git") == 0 || strcmp(basename, ".gitattributes") == 0) {
 		failed = false;
 		goto done;
 	}
@@ -80,8 +78,8 @@ static int compare_file(void *payload, git_buf *actual_path)
 done:
 	if (failed) {
 		git_buf details = GIT_BUF_INIT;
-		git_buf_printf(&details, "filename=%s, system=%s, autocrlf=%s, attrs={%s}",
-			git_path_basename(actual_path->ptr), systype, cd->autocrlf, cd->attrs);
+		cl_git_pass(git_buf_printf(&details, "filename=%s, system=%s, autocrlf=%s, attrs={%s}",
+			git_path_basename(actual_path->ptr), systype, cd->autocrlf, cd->attrs));
 		clar__fail(__FILE__, __LINE__,
 			"checked out contents did not match expected", details.ptr, 0);
 		git_buf_dispose(&details);
@@ -105,31 +103,31 @@ static void test_checkout(const char *autocrlf, const char *attrs)
 	struct compare_data compare_data = { NULL, autocrlf, attrs };
 	const char *c;
 
-	git_buf_puts(&reponame, "crlf");
+	cl_git_pass(git_buf_puts(&reponame, "crlf"));
 
-	git_buf_puts(&sandboxname, "autocrlf_");
-	git_buf_puts(&sandboxname, autocrlf);
+	cl_git_pass(git_buf_puts(&sandboxname, "autocrlf_"));
+	cl_git_pass(git_buf_puts(&sandboxname, autocrlf));
 
 	if (*attrs) {
-		git_buf_puts(&sandboxname, ",");
+		cl_git_pass(git_buf_puts(&sandboxname, ","));
 
 		for (c = attrs; *c; c++) {
 			if (*c == ' ')
-				git_buf_putc(&sandboxname, ',');
+				cl_git_pass(git_buf_putc(&sandboxname, ','));
 			else if (*c == '=')
-				git_buf_putc(&sandboxname, '_');
+				cl_git_pass(git_buf_putc(&sandboxname, '_'));
 			else
-				git_buf_putc(&sandboxname, *c);
+				cl_git_pass(git_buf_putc(&sandboxname, *c));
 		}
 
-		git_buf_printf(&attrbuf, "* %s\n", attrs);
+		cl_git_pass(git_buf_printf(&attrbuf, "* %s\n", attrs));
 		cl_git_mkfile("crlf/.gitattributes", attrbuf.ptr);
 	}
 
 	cl_repo_set_string(g_repo, "core.autocrlf", autocrlf);
 
-	git_buf_joinpath(&expected_dirname, systype, sandboxname.ptr);
-	git_buf_joinpath(&expected_fixture, "crlf_data", expected_dirname.ptr);
+	cl_git_pass(git_buf_joinpath(&expected_dirname, systype, sandboxname.ptr));
+	cl_git_pass(git_buf_joinpath(&expected_fixture, "crlf_data", expected_dirname.ptr));
 	cl_fixture_sandbox(expected_fixture.ptr);
 
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
