@@ -1369,6 +1369,7 @@ static int parse_multiline_variable(struct reader *reader, git_buf *value, int i
 
 		/* If it was just a comment, pretend it didn't exist */
 		if (line[0] == '\0') {
+			git__free(line);
 			in_quotes = quote_count;
 			continue;
 		}
