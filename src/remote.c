@@ -1234,7 +1234,7 @@ int git_remote_prune(git_remote *remote, const git_remote_callbacks *callbacks)
 				goto cleanup;
 
 			key.name = (char *) git_buf_cstr(&buf);
-			error = git_vector_search(&pos, &remote_refs, &key);
+			error = git_vector_bsearch(&pos, &remote_refs, &key);
 			git_buf_dispose(&buf);
 
 			if (error < 0 && error != GIT_ENOTFOUND)
