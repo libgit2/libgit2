@@ -1347,44 +1347,49 @@ done:
 
 static int parse_multiline_variable(struct reader *reader, git_buf *value, int in_quotes)
 {
-	char *line = NULL, *proc_line = NULL;
 	int quote_count;
 	bool multiline = true;
 
 	while (multiline) {
+		char *line = NULL, *proc_line = NULL;
+		int error;
+
 		/* Check that the next line exists */
 		line = reader_readline(reader, false);
-		if (line == NULL)
-			return -1;
+		GITERR_CHECK_ALLOC(line);
 
-		/* We've reached the end of the file, there is no continuation.
+		/*
+		 * We've reached the end of the file, there is no continuation.
 		 * (this is not an error).
 		 */
 		if (line[0] == '\0') {
-			git__free(line);
-			return 0;
+			error = 0;
+			goto out;
 		}
-
-		quote_count = strip_comments(line, !!in_quotes);
 
 		/* If it was just a comment, pretend it didn't exist */
-		if (line[0] == '\0') {
-			git__free(line);
-			in_quotes = quote_count;
-			continue;
-		}
+		quote_count = strip_comments(line, !!in_quotes);
+		if (line[0] == '\0')
+			goto next;
 
-		if (unescape_line(&proc_line, &multiline, line, in_quotes) < 0) {
-			git__free(line);
-			return -1;
-		}
-		/* add this line to the multiline var */
+		if ((error = unescape_line(&proc_line, &multiline,
+					   line, in_quotes)) < 0)
+			goto out;
 
-		git_buf_puts(value, proc_line);
+		/* Add this line to the multiline var */
+		if ((error = git_buf_puts(value, proc_line)) < 0)
+			goto out;
+
+next:
 		git__free(line);
 		git__free(proc_line);
-
 		in_quotes = quote_count;
+		continue;
+
+out:
+		git__free(line);
+		git__free(proc_line);
+		return error;
 	}
 
 	return 0;
