@@ -2,10 +2,8 @@
 #include <stdio.h>
 #include <time.h>
 
-static const char *filename;
-static FILE *summary;
-
-int clar_summary_close_tag(const char *tag, int indent)
+int clar_summary_close_tag(
+    struct clar_summary *summary, const char *tag, int indent)
 {
 	const char *indt;
 
@@ -13,15 +11,17 @@ int clar_summary_close_tag(const char *tag, int indent)
 	else if (indent == 1) indt = "\t";
 	else indt = "\t\t";
 
-	return fprintf(summary, "%s</%s>\n", indt, tag);
+	return fprintf(summary->fp, "%s</%s>\n", indt, tag);
 }
 
-int clar_summary_testsuites(void)
+int clar_summary_testsuites(struct clar_summary *summary)
 {
-	return fprintf(summary, "<testsuites>\n");
+	return fprintf(summary->fp, "<testsuites>\n");
 }
 
-int clar_summary_testsuite(int idn, const char *name, const char *pkg, time_t timestamp, double elapsed, int test_count, int fail_count, int error_count)
+int clar_summary_testsuite(struct clar_summary *summary,
+    int idn, const char *name, const char *pkg, time_t timestamp,
+    double elapsed, int test_count, int fail_count, int error_count)
 {
 	struct tm *tm = localtime(&timestamp);
 	char iso_dt[20];
@@ -29,7 +29,7 @@ int clar_summary_testsuite(int idn, const char *name, const char *pkg, time_t ti
 	if (strftime(iso_dt, sizeof(iso_dt), "%FT%T", tm) == 0)
 		return -1;
 
-	return fprintf(summary, "\t<testsuite "
+	return fprintf(summary->fp, "\t<testsuite "
 		       " id=\"%d\""
 		       " name=\"%s\""
 		       " package=\"%s\""
@@ -42,60 +42,93 @@ int clar_summary_testsuite(int idn, const char *name, const char *pkg, time_t ti
 		       idn, name, pkg, iso_dt, elapsed, test_count, fail_count, error_count);
 }
 
-int clar_summary_testcase(const char *name, const char *classname, double elapsed)
+int clar_summary_testcase(struct clar_summary *summary,
+    const char *name, const char *classname, double elapsed)
 {
-	return fprintf(summary, "\t\t<testcase name=\"%s\" classname=\"%s\" time=\"%.2f\">\n", name, classname, elapsed);
+	return fprintf(summary->fp,
+	    "\t\t<testcase name=\"%s\" classname=\"%s\" time=\"%.2f\">\n",
+		name, classname, elapsed);
 }
 
-int clar_summary_failure(const char *type, const char *message, const char *desc)
+int clar_summary_failure(struct clar_summary *summary,
+    const char *type, const char *message, const char *desc)
 {
-	return fprintf(summary, "\t\t\t<failure type=\"%s\"><![CDATA[%s\n%s]]></failure>\n", type, message, desc);
+	return fprintf(summary->fp,
+	    "\t\t\t<failure type=\"%s\"><![CDATA[%s\n%s]]></failure>\n",
+	    type, message, desc);
 }
 
-int clar_summary_init(const char *fn)
+struct clar_summary *clar_summary_init(const char *filename)
 {
-	filename = fn;
+	struct clar_summary *summary;
+	FILE *fp;
 
-	summary = fopen(filename, "w");
+	if ((fp = fopen(filename, "w")) == NULL)
+		return NULL;
 
-	return !!summary;
+	if ((summary = malloc(sizeof(struct clar_summary))) == NULL) {
+		fclose(fp);
+		return NULL;
+	}
+
+	summary->filename = filename;
+	summary->fp = fp;
+
+	return summary;
 }
 
-void clar_summary_shutdown(void)
+int clar_summary_shutdown(struct clar_summary *summary)
 {
 	struct clar_report *report;
 	const char *last_suite = NULL;
 
-	clar_summary_testsuites();
+	if (clar_summary_testsuites(summary) < 0)
+		goto on_error;
 
 	report = _clar.reports;
 	while (report != NULL) {
 		struct clar_error *error = report->errors;
 
 		if (last_suite == NULL || strcmp(last_suite, report->suite) != 0) {
-			clar_summary_testsuite(0, report->suite, "", time(NULL), 0, _clar.tests_ran, _clar.total_errors, 0);
+			if (clar_summary_testsuite(summary, 0, report->suite, "",
+			    time(NULL), 0, _clar.tests_ran, _clar.total_errors, 0) < 0)
+				goto on_error;
 		}
 
 		last_suite = report->suite;
 
-		clar_summary_testcase(report->test, "what", 0);
+		clar_summary_testcase(summary, report->test, "what", 0);
 
 		while (error != NULL) {
-			clar_summary_failure("assert", error->error_msg, error->description);
+			if (clar_summary_failure(summary, "assert",
+			    error->error_msg, error->description) < 0)
+				goto on_error;
+
 			error = error->next;
 		}
 
-		clar_summary_close_tag("testcase", 2);
+		if (clar_summary_close_tag(summary, "testcase", 2) < 0)
+			goto on_error;
 
 		report = report->next;
 
-		if (!report || strcmp(last_suite, report->suite) != 0)
-			clar_summary_close_tag("testsuite", 1);
+		if (!report || strcmp(last_suite, report->suite) != 0) {
+			if (clar_summary_close_tag(summary, "testsuite", 1) < 0)
+				goto on_error;
+		}
 	}
 
-	clar_summary_close_tag("testsuites", 0);
+	if (clar_summary_close_tag(summary, "testsuites", 0) < 0 ||
+	    fclose(summary->fp) != 0)
+		goto on_error;
 
-	fclose(summary);
+	printf("written summary file to %s\n", summary->filename);
 
-	printf("written summary file to %s\n", filename);
+	free(summary);
+	return 0;
+
+on_error:
+	fclose(summary->fp);
+	free(summary);
+	return -1;
 }
