@@ -123,6 +123,11 @@ struct clar_report {
 	struct clar_report *next;
 };
 
+struct clar_summary {
+	const char *filename;
+	FILE *fp;
+};
+
 static struct {
 	enum cl_test_status test_status;
 
@@ -138,8 +143,10 @@ static struct {
 	int report_errors_only;
 	int exit_on_error;
 	int report_suite_names;
+
 	int write_summary;
-	const char *summary_file;
+	const char *summary_filename;
+	struct clar_summary *summary;
 
 	struct clar_explicit *explicit;
 	struct clar_explicit *last_explicit;
@@ -185,8 +192,8 @@ static void clar_unsandbox(void);
 static int clar_sandbox(void);
 
 /* From summary.h */
-static int clar_summary_init(const char *filename);
-static void clar_summary_shutdown(void);
+static struct clar_summary *clar_summary_init(const char *filename);
+static int clar_summary_shutdown(struct clar_summary *fp);
 
 /* Load the declarations for the test suite */
 #include "clar.suite"
@@ -352,14 +359,14 @@ clar_usage(const char *arg)
 {
 	printf("Usage: %s [options]\n\n", arg);
 	printf("Options:\n");
-	printf("  -sname\tRun only the suite with `name` (can go to individual test name)\n");
-	printf("  -iname\tInclude the suite with `name`\n");
-	printf("  -xname\tExclude the suite with `name`\n");
-	printf("  -v    \tIncrease verbosity (show suite names)\n");
-	printf("  -q    \tOnly report tests that had an error\n");
-	printf("  -Q    \tQuit as soon as a test fails\n");
-	printf("  -l    \tPrint suite names\n");
-	printf("  -r    \tWrite summary file\n");
+	printf("  -sname        Run only the suite with `name` (can go to individual test name)\n");
+	printf("  -iname        Include the suite with `name`\n");
+	printf("  -xname        Exclude the suite with `name`\n");
+	printf("  -v            Increase verbosity (show suite names)\n");
+	printf("  -q            Only report tests that had an error\n");
+	printf("  -Q            Quit as soon as a test fails\n");
+	printf("  -l            Print suite names\n");
+	printf("  -r[filename]  Write summary file (to the optional filename)\n");
 	exit(-1);
 }
 
@@ -471,7 +478,7 @@ clar_parse_args(int argc, char **argv)
 
 		case 'r':
 			_clar.write_summary = 1;
-			_clar.summary_file = *(argument + 2) ? (argument + 2) :
+			_clar.summary_filename = *(argument + 2) ? (argument + 2) :
 			    "summary.xml";
 			break;
 
@@ -493,8 +500,9 @@ clar_test_init(int argc, char **argv)
 	if (argc > 1)
 		clar_parse_args(argc, argv);
 
-	if (_clar.write_summary && !clar_summary_init(_clar.summary_file)) {
-		clar_print_onabort("Failed to open the summary file: %s\n");
+	if (_clar.write_summary &&
+	    !(_clar.summary = clar_summary_init(_clar.summary_filename))) {
+		clar_print_onabort("Failed to open the summary file\n");
 		exit(-1);
 	}
 
@@ -535,8 +543,10 @@ clar_test_shutdown(void)
 
 	clar_unsandbox();
 
-	if (_clar.write_summary)
-		clar_summary_shutdown();
+	if (_clar.write_summary && clar_summary_shutdown(_clar.summary) < 0) {
+		clar_print_onabort("Failed to write the summary file\n");
+		exit(-1);
+	}
 
 	for (explicit = _clar.explicit; explicit; explicit = explicit_next) {
 		explicit_next = explicit->next;
