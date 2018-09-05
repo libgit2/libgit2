@@ -209,7 +209,7 @@ static int packfile_load__cb(void *data, git_buf *path)
 	for (i = 0; i < backend->packs.length; ++i) {
 		struct git_pack_file *p = git_vector_get(&backend->packs, i);
 
-		if (memcmp(p->pack_name, path_str, cmp_len) == 0)
+		if (strncmp(p->pack_name, path_str, cmp_len) == 0)
 			return 0;
 	}
 
