@@ -6,12 +6,21 @@ your help.
 ## Licensing
 
 By contributing to libgit2, you agree to release your contribution under
-the terms of the license.  Except for the `examples` directory, all code
-is released under the [GPL v2 with linking exception](COPYING).
+the terms of the license.  Except for the `examples` and the
+`deps` directories, all code is released under the [GPL v2 with
+linking exception](../COPYING).
 
 The `examples` code is governed by the
-[CC0 Public Domain Dedication](examples/COPYING), so that you may copy
+[CC0 Public Domain Dedication](../examples/COPYING), so that you may copy
 from them into your own application.
+
+The bundled dependencies in the `deps` directories are governed
+by the following licenses:
+
+- http-parser is licensed under [MIT license](../deps/http-parser/COPYING)
+- regex is governed by [LGPL v2.1+ license](../deps/regex/COPYING)
+- winhttp is governed by [LGPL v2.1+](../deps/winhttp/COPYING.LGPL) and [GPL v2 with linking exception](../deps/winhttp/COPYING.GPL)
+- zlib is governed by [zlib license](../deps/zlib/COPYING)
 
 ## Discussion & Chat
 
