@@ -25,6 +25,7 @@
 
 typedef struct config_entry_list {
 	struct config_entry_list *next;
+	struct config_entry_list *last;
 	git_config_entry *entry;
 } config_entry_list;
 
@@ -131,15 +132,11 @@ int git_config_file_normalize_section(char *start, char *end)
 
 static void config_entry_list_append(config_entry_list **list, config_entry_list *entry)
 {
-	config_entry_list *head = *list;
-
-	if (head) {
-		while (head->next != NULL)
-			head = head->next;
-		head->next = entry;
-	} else {
+	if (*list)
+		(*list)->last->next = entry;
+	else
 		*list = entry;
-	}
+	(*list)->last = entry;
 }
 
 /* Add or append the new config option */
@@ -155,6 +152,17 @@ static int diskfile_entries_append(diskfile_entries *entries, git_config_entry *
 
 	pos = git_strmap_lookup_index(entries->map, entry->name);
 	if (!git_strmap_valid_index(entries->map, pos)) {
+		/*
+		 * We only ever inspect `last` from the first config
+		 * entry in a multivar. In case where this new entry is
+		 * the first one in the entry map, it will also be the
+		 * last one at the time of adding it, which is
+		 * why we set `last` here to itself. Otherwise we
+		 * do not have to set `last` and leave it set to
+		 * `NULL`.
+		 */
+		var->last = var;
+
 		git_strmap_insert(entries->map, entry->name, var, &error);
 
 		if (error > 0)
@@ -517,10 +525,7 @@ static int config_get(git_config_backend *cfg, const char *key, git_config_entry
 	}
 
 	var = git_strmap_value_at(entry_map, pos);
-	while (var->next)
-		var = var->next;
-
-	*out = var->entry;
+	*out = var->last->entry;
 	(*out)->free = free_diskfile_entry;
 	(*out)->payload = entries;
 
