@@ -100,6 +100,7 @@ struct clar_error {
 	const char *suite;
 	const char *file;
 	int line_number;
+	enum cl_test_status status;
 	const char *error_msg;
 	char *description;
 
@@ -116,6 +117,7 @@ static struct {
 
 	int total_skipped;
 	int total_errors;
+	int total_broken;
 
 	int tests_ran;
 	int suites_ran;
@@ -201,6 +203,39 @@ clar_report_errors(void)
 	}
 
 	_clar.errors = _clar.last_error = NULL;
+}
+
+static void
+clar_set_error(
+	const char *file,
+	int line,
+	const char *error_msg,
+	const char *description,
+	enum cl_test_status status)
+{
+	struct clar_error *error = calloc(1, sizeof(struct clar_error));
+
+	if (_clar.errors == NULL)
+		_clar.errors = error;
+
+	if (_clar.last_error != NULL)
+		_clar.last_error->next = error;
+
+	_clar.last_error = error;
+
+	error->test = _clar.active_test;
+	error->test_number = _clar.tests_ran;
+	error->suite = _clar.active_suite;
+	error->file = file;
+	error->line_number = line;
+	error->status = status;
+	error->error_msg = error_msg;
+
+	if (description != NULL)
+		error->description = strdup(description);
+
+	_clar.total_errors++;
+	_clar.test_status = status;
 }
 
 static void
@@ -480,6 +515,25 @@ void clar__skip(void)
 	abort_test();
 }
 
+void clar__broken(
+	int condition,
+	const char *file,
+	int line,
+	const char *error,
+	const char *description,
+	int should_abort)
+{
+	if (condition) {
+		_clar.test_status = CL_TEST_BROKEN;
+		_clar.total_broken++;
+	} else {
+		clar_set_error(file, line, error, description, CL_TEST_UNBROKEN);
+	}
+
+	if (should_abort)
+		abort_test();
+}
+
 void clar__fail(
 	const char *file,
 	int line,
@@ -487,28 +541,7 @@ void clar__fail(
 	const char *description,
 	int should_abort)
 {
-	struct clar_error *error = calloc(1, sizeof(struct clar_error));
-
-	if (_clar.errors == NULL)
-		_clar.errors = error;
-
-	if (_clar.last_error != NULL)
-		_clar.last_error->next = error;
-
-	_clar.last_error = error;
-
-	error->test = _clar.active_test;
-	error->test_number = _clar.tests_ran;
-	error->suite = _clar.active_suite;
-	error->file = file;
-	error->line_number = line;
-	error->error_msg = error_msg;
-
-	if (description != NULL)
-		error->description = strdup(description);
-
-	_clar.total_errors++;
-	_clar.test_status = CL_TEST_FAILURE;
+	clar_set_error(file, line, error_msg, description, CL_TEST_FAILURE);
 
 	if (should_abort)
 		abort_test();
