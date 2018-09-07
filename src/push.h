@@ -11,6 +11,7 @@
 
 #include "git2.h"
 #include "refspec.h"
+#include "remote.h"
 
 typedef struct push_spec {
 	struct git_refspec refspec;
@@ -40,7 +41,7 @@ struct git_push {
 
 	/* options */
 	unsigned pb_parallelism;
-	const git_strarray *custom_headers;
+	git_remote_connection_opts connection;
 };
 
 /**

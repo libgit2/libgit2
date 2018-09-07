@@ -73,7 +73,8 @@ int git_push_set_options(git_push *push, const git_push_options *opts)
 	GITERR_CHECK_VERSION(opts, GIT_PUSH_OPTIONS_VERSION, "git_push_options");
 
 	push->pb_parallelism = opts->pb_parallelism;
-	push->custom_headers = &opts->custom_headers;
+	push->connection.custom_headers = &opts->custom_headers;
+	push->connection.proxy = &opts->proxy_opts;
 
 	return 0;
 }
@@ -475,7 +476,7 @@ int git_push_finish(git_push *push, const git_remote_callbacks *callbacks)
 	int error;
 
 	if (!git_remote_connected(push->remote) &&
-	    (error = git_remote_connect(push->remote, GIT_DIRECTION_PUSH, callbacks, NULL, push->custom_headers)) < 0)
+	    (error = git_remote__connect(push->remote, GIT_DIRECTION_PUSH, callbacks, &push->connection)) < 0)
 		return error;
 
 	if ((error = filter_refs(push->remote)) < 0 ||
