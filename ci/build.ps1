@@ -29,14 +29,3 @@ Write-Host "####################################################################
 
 cmake --build .
 if ($LastExitCode -ne 0) { [Environment]::Exit($LastExitCode) }
-
-if ($Env:SKIP_TESTS) { exit }
-
-Write-Host ""
-Write-Host "#######################################################################"
-Write-Host "## Running default tests"
-Write-Host "#######################################################################"
-
-ctest -V -R libgit2_clar
-if ($LastExitCode -ne 0) { [Environment]::Exit($LastExitCode) }
-
