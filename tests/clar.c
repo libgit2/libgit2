@@ -217,32 +217,28 @@ void cl_trace_register(cl_trace_cb *cb, void *payload)
 
 /* Core test functions */
 static void
-clar_report(int *i, struct clar_error *error)
+clar_report_errors(struct clar_report *report)
 {
-	while (error != NULL) {
-		clar_print_error((*i)++, _clar.last_report, error);
-		error = error->next;
-	}
-}
-
-static void
-clar_report_errors(struct clar_error *error)
-{
+	struct clar_error *error;
 	int i = 1;
-	clar_report(&i, error);
+
+	for (error = report->errors; error; error = error->next)
+		clar_print_error(i++, _clar.last_report, error);
 }
 
 static void
 clar_report_all(void)
 {
-	int i = 1;
 	struct clar_report *report;
+	struct clar_error *error;
+	int i = 1;
 
-	report = _clar.reports;
-	while (report != NULL) {
-		if (report->status == CL_TEST_FAILURE)
-			clar_report(&i, report->errors);
-		report = report->next;
+	for (report = _clar.reports; report; report = report->next) {
+		if (report->status != CL_TEST_FAILURE)
+			continue;
+
+		for (error = report->errors; error; error = error->next)
+			clar_print_error(i++, report, error);
 	}
 }
 
@@ -285,7 +281,7 @@ clar_run_test(
 	_clar.local_cleanup_payload = NULL;
 
 	if (_clar.report_errors_only) {
-		clar_report_errors(_clar.last_report->errors);
+		clar_report_errors(_clar.last_report);
 	} else {
 		clar_print_ontest(test->name, _clar.tests_ran, _clar.last_report->status);
 	}
@@ -576,7 +572,7 @@ static void abort_test(void)
 	if (!_clar.trampoline_enabled) {
 		clar_print_onabort(
 				"Fatal error: a cleanup method raised an exception.");
-		clar_report_errors(_clar.last_report->errors);
+		clar_report_errors(_clar.last_report);
 		exit(-1);
 	}
 
