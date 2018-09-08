@@ -26,8 +26,12 @@ if ($LastExitCode -ne 0) { [Environment]::Exit($LastExitCode) }
 
 Write-Host ""
 Write-Host "##############################################################################"
-Write-Host "## Running proxy tests"
+Write-Host "## Running online tests"
 Write-Host "##############################################################################"
+
+Write-Host ""
+Write-Host "Running proxy tests"
+Write-Host ""
 
 $Env:GITTEST_REMOTE_PROXY_URL="localhost:8080"
 $Env:GITTEST_REMOTE_PROXY_USER="foo"
