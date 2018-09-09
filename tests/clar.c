@@ -126,6 +126,8 @@ struct clar_report {
 struct clar_summary {
 	const char *filename;
 	FILE *fp;
+	int append;
+	const char *error_msg;
 };
 
 static struct {
@@ -145,8 +147,9 @@ static struct {
 	int report_suite_names;
 
 	int write_summary;
+	int summary_append;
 	const char *summary_filename;
-	struct clar_summary *summary;
+	struct clar_summary summary;
 
 	struct clar_explicit *explicit;
 	struct clar_explicit *last_explicit;
@@ -192,8 +195,8 @@ static void clar_unsandbox(void);
 static int clar_sandbox(void);
 
 /* From summary.h */
-static struct clar_summary *clar_summary_init(const char *filename);
-static int clar_summary_shutdown(struct clar_summary *fp);
+static int clar_summary_init(struct clar_summary *summary, const char *filename, int append);
+static int clar_summary_shutdown(struct clar_summary *summary);
 
 /* Load the declarations for the test suite */
 #include "clar.suite"
@@ -363,6 +366,7 @@ clar_usage(const char *arg)
 	printf("  -Q            Quit as soon as a test fails\n");
 	printf("  -l            Print suite names\n");
 	printf("  -r[filename]  Write summary file (to the optional filename)\n");
+	printf("  -R[filename]  Append summary to a file (to the optional filename)\n");
 	exit(-1);
 }
 
@@ -376,7 +380,7 @@ clar_parse_args(int argc, char **argv)
 		char *argument = argv[i];
 
 		if (argument[0] != '-' || argument[1] == '\0'
-		    || strchr("sixvqQlr", argument[1]) == NULL) {
+		    || strchr("sixvqQlrR", argument[1]) == NULL) {
 			clar_usage(argv[0]);
 		}
 	}
@@ -472,6 +476,9 @@ clar_parse_args(int argc, char **argv)
 			_clar.report_suite_names = 1;
 			break;
 
+		case 'R':
+			_clar.summary_append = 1;
+			/* fallthrough */
 		case 'r':
 			_clar.write_summary = 1;
 			_clar.summary_filename = *(argument + 2) ? (argument + 2) :
@@ -497,8 +504,9 @@ clar_test_init(int argc, char **argv)
 		clar_parse_args(argc, argv);
 
 	if (_clar.write_summary &&
-	    !(_clar.summary = clar_summary_init(_clar.summary_filename))) {
-		clar_print_onabort("Failed to open the summary file\n");
+	    clar_summary_init(&_clar.summary,
+		    _clar.summary_filename, _clar.summary_append) < 0) {
+		clar_print_onabort("%s\n", _clar.summary.error_msg);
 		exit(-1);
 	}
 
@@ -539,7 +547,7 @@ clar_test_shutdown(void)
 
 	clar_unsandbox();
 
-	if (_clar.write_summary && clar_summary_shutdown(_clar.summary) < 0) {
+	if (_clar.write_summary && clar_summary_shutdown(&_clar.summary) < 0) {
 		clar_print_onabort("Failed to write the summary file\n");
 		exit(-1);
 	}

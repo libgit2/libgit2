@@ -1,4 +1,5 @@
 
+#include <fcntl.h>
 #include <stdio.h>
 #include <time.h>
 
@@ -16,6 +17,9 @@ int clar_summary_close_tag(
 
 int clar_summary_testsuites(struct clar_summary *summary)
 {
+	if (summary->append)
+		return 0;
+
 	return fprintf(summary->fp, "<testsuites>\n");
 }
 
@@ -58,23 +62,71 @@ int clar_summary_failure(struct clar_summary *summary,
 	    type, message, desc);
 }
 
-struct clar_summary *clar_summary_init(const char *filename)
+int clar_summary_init(
+    struct clar_summary *summary,
+    const char *filename,
+	int append)
 {
-	struct clar_summary *summary;
-	FILE *fp;
+	int trunc = append ? 0 : O_TRUNC;
+	const char *mode = append ? "w+" : "w";
+	char closing[14];
+	int fd;
+	FILE *fp = NULL;
 
-	if ((fp = fopen(filename, "w")) == NULL)
-		return NULL;
+	memset(summary, 0, sizeof(struct clar_summary));
 
-	if ((summary = malloc(sizeof(struct clar_summary))) == NULL) {
-		fclose(fp);
-		return NULL;
+	/* open an fd so we can avoid truncation in the append case */
+	if ((fd = open(filename, O_RDWR|O_CREAT|trunc, 0644)) < 0 ||
+		(fp = fdopen(fd, mode)) == NULL) {
+		summary->error_msg = "Failed to open summary file";
+		goto on_error;
+	}
+
+	/*
+	 * in append-mode, see if there's a closing root node
+	 * ("</testsuites>\n") in the file already.  if so, remove it by
+	 * positioning us to write there.
+	 */
+	if (append) {
+		if (fseek(fp, 0, SEEK_END) < 0) {
+			summary->error_msg = strerror(errno);
+			goto on_error;
+		}
+	}
+
+	if (append && ftell(fp) > 0) {
+		if (fseek(fp, -14, SEEK_END) < 0) {
+			summary->error_msg = "Failed to open summary file: file exists but is not JUnit XML";
+			return -1;
+		}
+
+		if (fread(closing, 14, 1, fp) != 1) {
+			summary->error_msg = strerror(errno);
+			return -1;
+		}
+
+		if (memcmp(closing, "</testsuites>\n", 14) != 0) {
+			summary->error_msg = "Failed to open summary file: file exists but is not JUnit XML";
+			return -1;
+		}
+
+		if (fseek(fp, -14, SEEK_END) < 0) {
+			summary->error_msg = "Failed to set position in summary file";
+			return -1;
+		}
+
+		summary->append = 1;
 	}
 
 	summary->filename = filename;
 	summary->fp = fp;
+	return 0;
 
-	return summary;
+on_error:
+	if (fp)
+		fclose(fp);
+
+	return -1;
 }
 
 int clar_summary_shutdown(struct clar_summary *summary)
@@ -123,12 +175,9 @@ int clar_summary_shutdown(struct clar_summary *summary)
 		goto on_error;
 
 	printf("written summary file to %s\n", summary->filename);
-
-	free(summary);
 	return 0;
 
 on_error:
 	fclose(summary->fp);
-	free(summary);
 	return -1;
 }
