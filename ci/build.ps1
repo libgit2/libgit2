@@ -18,7 +18,9 @@ Write-Host "####################################################################
 Write-Host "## Configuring build environment"
 Write-Host "##############################################################################"
 
-Invoke-Expression "cmake ${SourceDirectory} -DBUILD_EXAMPLES=ON ${Env:CMAKE_OPTIONS}"
+$TestOutputDirectory = $BuildDirectory -replace "\\", "/"
+
+Invoke-Expression "cmake ${SourceDirectory} -DBUILD_EXAMPLES=ON -DCLAR_XML=${TestOutputDirectory} ${Env:CMAKE_OPTIONS}"
 if ($LastExitCode -ne 0) { [Environment]::Exit($LastExitCode) }
 
 Write-Host ""

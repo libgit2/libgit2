@@ -11,128 +11,50 @@ jobs:
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
-  - task: Docker@0
-    displayName: Build
-    inputs:
-      action: 'Run an image'
+  - template: ci/vsts-docker.yml
+    parameters:
       imageName: 'libgit2/trusty-openssl:latest'
-      volumes: |
-       $(Build.SourcesDirectory):/src
-       $(Build.BinariesDirectory):/build
-      workDir: '/build'
-      containerCommand: '/src/ci/build.sh'
-      detached: false
-  - task: Docker@0
-    displayName: Test
-    inputs:
-      action: 'Run an image'
-      imageName: 'libgit2/trusty-openssl:latest'
-      volumes: |
-       $(Build.SourcesDirectory):/src
-       $(Build.BinariesDirectory):/build
-      envVars: |
+      environmentVariables: |
        CC=gcc
        LEAK_CHECK=valgrind
-      workDir: '/build'
-      containerCommand: '/src/ci/test.sh'
-      detached: false
 
 - job: linux_trusty_gcc_mbedtls
   displayName: 'Linux (Trusty; GCC; mbedTLS)'
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
-  - task: Docker@0
-    displayName: Build
-    inputs:
-      action: 'Run an image'
+  - template: ci/vsts-docker.yml
+    parameters:
       imageName: 'libgit2/trusty-mbedtls:latest'
-      volumes: |
-       $(Build.SourcesDirectory):/src
-       $(Build.BinariesDirectory):/build
-      envVars: |
+      environmentVariables: |
        CC=gcc
        CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DSHA1_BACKEND=mbedTLS
        LEAK_CHECK=valgrind
-      workDir: '/build'
-      containerCommand: '/src/ci/build.sh'
-      detached: false
-  - task: Docker@0
-    displayName: Test
-    inputs:
-      action: 'Run an image'
-      imageName: 'libgit2/trusty-mbedtls:latest'
-      volumes: |
-       $(Build.SourcesDirectory):/src
-       $(Build.BinariesDirectory):/build
-      envVars: 'LEAK_CHECK=valgrind'
-      workDir: '/build'
-      containerCommand: '/src/ci/test.sh'
-      detached: false
 
 - job: linux_trusty_clang_openssl
   displayName: 'Linux (Trusty; Clang; OpenSSL)'
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
-  - task: Docker@0
-    displayName: Build
-    inputs:
-      action: 'Run an image'
+  - template: ci/vsts-docker.yml
+    parameters:
       imageName: 'libgit2/trusty-openssl:latest'
-      volumes: |
-       $(Build.SourcesDirectory):/src
-       $(Build.BinariesDirectory):/build
-      workDir: '/build'
-      containerCommand: '/src/ci/build.sh'
-      detached: false
-  - task: Docker@0
-    displayName: Test
-    inputs:
-      action: 'Run an image'
-      imageName: 'libgit2/trusty-openssl:latest'
-      volumes: |
-       $(Build.SourcesDirectory):/src
-       $(Build.BinariesDirectory):/build
-      envVars: |
+      environmentVariables: |
        CC=clang
        LEAK_CHECK=valgrind
-      workDir: '/build'
-      containerCommand: '/src/ci/test.sh'
-      detached: false
 
 - job: linux_trusty_clang_mbedtls
   displayName: 'Linux (Trusty; Clang; mbedTLS)'
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
-  - task: Docker@0
-    displayName: Build
-    inputs:
-      action: 'Run an image'
+  - template: ci/vsts-docker.yml
+    parameters:
       imageName: 'libgit2/trusty-mbedtls:latest'
-      volumes: |
-       $(Build.SourcesDirectory):/src
-       $(Build.BinariesDirectory):/build
-      envVars: |
+      environmentVariables: |
        CC=clang
        CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DSHA1_BACKEND=mbedTLS
        LEAK_CHECK=valgrind
-      workDir: '/build'
-      containerCommand: '/src/ci/build.sh'
-      detached: false
-  - task: Docker@0
-    displayName: Test
-    inputs:
-      action: 'Run an image'
-      imageName: 'libgit2/trusty-mbedtls:latest'
-      volumes: |
-       $(Build.SourcesDirectory):/src
-       $(Build.BinariesDirectory):/build
-      envVars: 'LEAK_CHECK=valgrind'
-      workDir: '/build'
-      containerCommand: '/src/ci/test.sh'
-      detached: false
 
 - job: macos
   displayName: 'macOS'
@@ -141,37 +63,30 @@ jobs:
   steps:
   - bash: . '$(Build.SourcesDirectory)/ci/setup-osx.sh'
     displayName: Setup
-  - bash: . '$(Build.SourcesDirectory)/ci/build.sh'
-    displayName: Build
-    env:
-      PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
-  - bash: . '$(Build.SourcesDirectory)/ci/test.sh'
-    displayName: Test
-    env:
-      TMPDIR: $(Agent.TempDirectory)
-      LEAK_CHECK: leaks
+  - template: ci/vsts-bash.yml
+    parameters:
+      environmentVariables:
+        TMPDIR: $(Agent.TempDirectory)
+        PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
+        LEAK_CHECK: leaks
 
 - job: windows_vs_amd64
   displayName: 'Windows (Visual Studio; amd64)'
   pool: Hosted
   steps:
-  - powershell: . '$(Build.SourcesDirectory)\ci\build.ps1'
-    displayName: Build
-    env:
-      CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013 Win64"
-  - powershell: . '$(Build.SourcesDirectory)\ci\test.ps1'
-    displayName: Test
+  - template: ci/vsts-powershell.yml
+    parameters:
+      environmentVariables:
+        CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013 Win64"
 
 - job: windows_vs_x86
   displayName: 'Windows (Visual Studio; x86)'
   pool: Hosted
   steps:
-  - powershell: . '$(Build.SourcesDirectory)\ci\build.ps1'
-    displayName: Build
-    env:
-      CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013"
-  - powershell: . '$(Build.SourcesDirectory)\ci\test.ps1'
-    displayName: Test
+  - template: ci/vsts-powershell.yml
+    parameters:
+      environmentVariables:
+        CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013"
 
 - job: windows_mingw_amd64
   displayName: 'Windows (MinGW; amd64)'
@@ -182,13 +97,11 @@ jobs:
     env:
       TEMP: $(Agent.TempDirectory)
       ARCH: amd64
-  - powershell: . '$(Build.SourcesDirectory)\ci\build.ps1'
-    displayName: Build
-    env:
-      CMAKE_OPTIONS: -G"MinGW Makefiles"
-      PATH: $(Agent.TempDirectory)\mingw64\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
-  - powershell: . '$(Build.SourcesDirectory)\ci\test.ps1'
-    displayName: Test
+  - template: ci/vsts-powershell.yml
+    parameters:
+      environmentVariables:
+        CMAKE_OPTIONS: -G"MinGW Makefiles"
+        PATH: $(Agent.TempDirectory)\mingw64\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
 
 - job: windows_mingw_x86
   displayName: 'Windows (MinGW; x86)'
@@ -196,13 +109,12 @@ jobs:
   steps:
   - powershell: . '$(Build.SourcesDirectory)\ci\setup-mingw.ps1'
     displayName: Setup
+    workingDirectory: '$(Build.BinariesDirectory)'
     env:
       TEMP: $(Agent.TempDirectory)
       ARCH: x86
-  - powershell: . '$(Build.SourcesDirectory)\ci\build.ps1'
-    displayName: Build
-    env:
-      CMAKE_OPTIONS: -G"MinGW Makefiles"
-      PATH: $(Agent.TempDirectory)\mingw32\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
-  - powershell: . '$(Build.SourcesDirectory)\ci\test.ps1'
-    displayName: Test
+  - template: ci/vsts-powershell.yml
+    parameters:
+      environmentVariables:
+        CMAKE_OPTIONS: -G"MinGW Makefiles"
+        PATH: $(Agent.TempDirectory)\mingw32\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin

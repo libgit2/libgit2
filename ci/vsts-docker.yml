@@ -1,0 +1,33 @@
+# These are the steps used in a container-based build in VSTS.
+steps:
+- task: docker@0
+  displayName: Build
+  inputs:
+    action: 'Run an image'
+    imageName: ${{ parameters.imageName }}
+    volumes: |
+     $(Build.SourcesDirectory):/src
+     $(Build.BinariesDirectory):/build
+    envVars: ${{ parameters.environmentVariables }}
+    workDir: '/build'
+    containerCommand: '/src/ci/build.sh'
+    detached: false
+- task: docker@0
+  displayName: Test
+  inputs:
+    action: 'Run an image'
+    imageName: ${{ parameters.imageName }}
+    volumes: |
+     $(Build.SourcesDirectory):/src
+     $(Build.BinariesDirectory):/build
+    envVars: ${{ parameters.environmentVariables }}
+    workDir: '/build'
+    containerCommand: '/src/ci/test.sh'
+    detached: false
+- task: publishtestresults@2
+  displayName: Publish Test Results
+  condition: succeededOrFailed()
+  inputs:
+    testResultsFiles: 'results_*.xml'
+    searchFolder: '$(Build.BinariesDirectory)'
+    mergeTestResults: true
