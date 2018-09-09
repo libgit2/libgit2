@@ -12,6 +12,6 @@ steps:
   displayName: Publish Test Results
   condition: succeededOrFailed()
   inputs:
-    testResultsFiles: 'results_*.xml'
+    testResultsFiles: 'results*.xml'
     searchFolder: '$(Build.BinariesDirectory)'
     mergeTestResults: true
