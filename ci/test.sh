@@ -41,17 +41,23 @@ die() {
 # test configuration in a single place (tests/CMakeLists.txt) instead of running clar
 # here as well.  But it allows us to wrap our test harness with a leak checker like valgrind.
 run_test() {
-	TEST_CMD=$(ctest -N -V -R $1 | sed -n 's/^[0-9]*: Test command: //p')
+	ctest -N -V -R $1
 
-	if [ "$LEAK_CHECK" = "valgrind" ]; then
-		RUNNER="$VALGRIND $TEST_CMD"
-	elif [ "$LEAK_CHECK" = "leaks" ]; then
-		RUNNER="$LEAKS $TEST_CMD"
-	else
-		RUNNER="$TEST_CMD"
-	fi
+	IFS=$'\n'
+	TEST_CMDS=($(ctest -N -V -R $1 | sed -n 's/^[0-9]*: Test command: //p'))
+	unset IFS
 
-	eval $RUNNER || die $?
+	for TEST_CMD in "${TEST_CMDS[@]}"; do
+		if [ "$LEAK_CHECK" = "valgrind" ]; then
+			RUNNER="$VALGRIND $TEST_CMD"
+		elif [ "$LEAK_CHECK" = "leaks" ]; then
+			RUNNER="$LEAKS $TEST_CMD"
+		else
+			RUNNER="$TEST_CMD"
+		fi
+
+		eval $RUNNER || die $?
+	done
 }
 
 # Configure the test environment; run them early so that we're certain
