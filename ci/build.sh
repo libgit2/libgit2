@@ -28,8 +28,8 @@ echo "##########################################################################
 echo "## Configuring build environment"
 echo "##############################################################################"
 
-echo cmake ${SOURCE_DIR} -DENABLE_WERROR=ON -DBUILD_EXAMPLES=ON -DCLAR_XML=\"${BUILD_DIR}\" ${CMAKE_OPTIONS}
-cmake ${SOURCE_DIR} -DENABLE_WERROR=ON -DBUILD_EXAMPLES=ON -DCLAR_XML="${BUILD_DIR}" ${CMAKE_OPTIONS}
+echo cmake ${SOURCE_DIR} -DENABLE_WERROR=ON -DBUILD_EXAMPLES=ON ${CMAKE_OPTIONS}
+cmake ${SOURCE_DIR} -DENABLE_WERROR=ON -DBUILD_EXAMPLES=ON ${CMAKE_OPTIONS}
 
 echo ""
 echo "##############################################################################"
