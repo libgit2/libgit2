@@ -37,11 +37,14 @@ die() {
 	exit $1
 }
 
-# Ask ctest what it would run if we were to invoke it directly.  This lets us manage the
-# test configuration in a single place (tests/CMakeLists.txt) instead of running clar
-# here as well.  But it allows us to wrap our test harness with a leak checker like valgrind.
+# Ask ctest what it would run if we were to invoke it directly.  This lets
+# us manage the test configuration in a single place (tests/CMakeLists.txt)
+# instead of running clar here as well.  But it allows us to wrap our test
+# harness with a leak checker like valgrind.  Append the option to write
+# JUnit-style XML files.
 run_test() {
 	TEST_CMD=$(ctest -N -V -R "^${1}$" | sed -n 's/^[0-9]*: Test command: //p')
+	TEST_CMD="${TEST_CMD} -r${BUILD_DIR}/results_${1}.xml"
 
 	if [ "$LEAK_CHECK" = "valgrind" ]; then
 		RUNNER="$VALGRIND $TEST_CMD"
