@@ -54,7 +54,7 @@ run_test() {
 }
 
 run_ctest() {
-	run_test $(ctest -N -V -R $1 | sed -n 's/^[0-9]*: Test command: //p')
+	run_test $(ctest -N -V -R "^${1}$" | sed -n 's/^[0-9]*: Test command: //p')
 }
 
 run_clar_test() {
