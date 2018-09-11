@@ -11,10 +11,12 @@ Write-Host "####################################################################
 Write-Host "## Configuring test environment"
 Write-Host "##############################################################################"
 
-Write-Host ""
-Write-Host "Starting HTTP proxy..."
-Invoke-WebRequest -Method GET -Uri https://github.com/ethomson/poxyproxy/releases/download/v0.1.0/poxyproxy-0.1.0.jar -OutFile poxyproxy.jar
-javaw -jar poxyproxy.jar -d --port 8080 --credentials foo:bar
+if (-not $Env:SKIP_PROXY_TESTS) {
+	Write-Host ""
+	Write-Host "Starting HTTP proxy..."
+	Invoke-WebRequest -Method GET -Uri https://github.com/ethomson/poxyproxy/releases/download/v0.1.0/poxyproxy-0.1.0.jar -OutFile poxyproxy.jar
+	javaw -jar poxyproxy.jar -d --port 8080 --credentials foo:bar
+}
 
 Write-Host ""
 Write-Host "##############################################################################"
@@ -24,22 +26,27 @@ Write-Host "####################################################################
 ctest -V -R offline
 if ($LastExitCode -ne 0) { [Environment]::Exit($LastExitCode) }
 
-Write-Host ""
-Write-Host "##############################################################################"
-Write-Host "## Running (online) tests"
-Write-Host "##############################################################################"
+if (-not $Env:SKIP_ONLINE_TESTS) {
+	Write-Host ""
+	Write-Host "##############################################################################"
+	Write-Host "## Running (online) tests"
+	Write-Host "##############################################################################"
 
-ctest -V -R online
-if ($LastExitCode -ne 0) { [Environment]::Exit($LastExitCode) }
+	ctest -V -R online
+	if ($LastExitCode -ne 0) { [Environment]::Exit($LastExitCode) }
+}
 
-Write-Host ""
-Write-Host "Running proxy tests"
-Write-Host ""
+if (-not $Env:SKIP_PROXY_TESTS) {
+	Write-Host ""
+	Write-Host "Running proxy tests"
+	Write-Host ""
 
-$Env:GITTEST_REMOTE_PROXY_URL="localhost:8080"
-$Env:GITTEST_REMOTE_PROXY_USER="foo"
-$Env:GITTEST_REMOTE_PROXY_PASS="bar"
-ctest -V -R proxy
-if ($LastExitCode -ne 0) { [Environment]::Exit($LastExitCode) }
+	$Env:GITTEST_REMOTE_PROXY_URL="localhost:8080"
+	$Env:GITTEST_REMOTE_PROXY_USER="foo"
+	$Env:GITTEST_REMOTE_PROXY_PASS="bar"
+	ctest -V -R proxy
+	if ($LastExitCode -ne 0) { [Environment]::Exit($LastExitCode) }
 
-taskkill /F /IM javaw.exe
+	taskkill /F /IM javaw.exe
+}
+
