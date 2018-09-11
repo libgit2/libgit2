@@ -3510,7 +3510,7 @@ int git_index_snapshot_new(git_vector *snap, git_index *index)
 	error = git_vector_dup(snap, &index->entries, index->entries._cmp);
 
 	if (error < 0)
-		git_index_free(index);
+		git_index_snapshot_release(snap, index);
 
 	return error;
 }
