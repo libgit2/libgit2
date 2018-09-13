@@ -56,10 +56,50 @@
 }
 
 {
-	ignore-libssh2-gcrypt-leak
+	ignore-libssh2-gcrypt-control-leak
 	Memcheck:Leak
 	...
 	fun:gcry_control
+	obj:*libssh2.so*
+}
+
+{
+	ignore-libssh2-gcrypt-mpinew-leak
+	Memcheck:Leak
+	...
+	fun:gcry_mpi_new
+	obj:*libssh2.so*
+}
+
+{
+	ignore-libssh2-gcrypt-mpiscan-leak
+	Memcheck:Leak
+	...
+	fun:gcry_mpi_scan
+	obj:*libssh2.so*
+}
+
+{
+	ignore-libssh2-gcrypt-randomize-leak
+	Memcheck:Leak
+	...
+	fun:gcry_randomize
+	obj:*libssh2.so*
+}
+
+{
+	ignore-libssh2-gcrypt-sexpfindtoken-leak
+	Memcheck:Leak
+	...
+	fun:gcry_sexp_find_token
+	obj:*libssh2.so*
+}
+
+{
+	ignore-libssh2-gcrypt-pksign-leak
+	Memcheck:Leak
+	...
+	fun:gcry_pk_sign
 	obj:*libssh2.so*
 }
 
