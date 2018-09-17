@@ -388,10 +388,16 @@ static int still_interesting(git_commit_list *list, int64_t time, int slop)
 	if (!list)
 		return 0;
 
+	/*
+	 * If the destination list has commits with an earlier date than our
+	 * source, we want to reset the slop counter as we're not done.
+	 */
+	if (time <= list->item->time)
+		return SLOP;
+
 	for (; list; list = list->next) {
 		/*
-		 * If the destination list has commits with an earlier date than
-		 * our source or if it still contains interesting commits we
+		 * If the destination list still contains interesting commits we
 		 * want to continue looking.
 		 */
 		if (!list->item->uninteresting || list->item->time > time)
