@@ -230,6 +230,8 @@ ELSE ()
 	ENABLE_WARNINGS(shift-count-overflow)
 	DISABLE_WARNINGS(unused-const-variable)
 	DISABLE_WARNINGS(unused-function)
+	ENABLE_WARNINGS(format)
+	ENABLE_WARNINGS(format-security)
 
 	IF (APPLE) # Apple deprecated OpenSSL
 	    DISABLE_WARNINGS(deprecated-declarations)
