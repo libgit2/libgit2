@@ -44,7 +44,7 @@ What It Can Do
 
 libgit2 provides you with the ability to manage Git repositories in the
 programming language of your choice.  It's used in production to power many
-applications including GitHub.com, Plastic SCM and Visual Studio Team Services.
+applications including GitHub.com, Plastic SCM and Azure DevOps.
 
 It does not aim to replace the git tool or its user-facing commands. Some APIs
 resemble the plumbing commands as those align closely with the concepts of the
