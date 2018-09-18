@@ -1,7 +1,7 @@
 libgit2 - the Git linkable library
 ==================================
 
-[![VSTS Build Status](https://libgit2.visualstudio.com/libgit2/_apis/build/status/libgit2)](https://libgit2.visualstudio.com/libgit2/_build/latest?definitionId=7)
+[![Azure Pipelines Build Status](https://dev.azure.com/libgit2/libgit2/_apis/build/status/libgit2)](https://dev.azure.com/libgit2/libgit2/_build/latest?definitionId=7)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/639/badge.svg)](https://scan.coverity.com/projects/639)
 
 `libgit2` is a portable, pure C implementation of the Git core methods
