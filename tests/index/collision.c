@@ -26,6 +26,7 @@ void test_index_collision__cleanup(void)
 void test_index_collision__add(void)
 {
 	git_index_entry entry;
+	git_tree_entry *tentry;
 	git_oid tree_id;
 	git_tree *tree;
 
@@ -39,12 +40,21 @@ void test_index_collision__add(void)
 	entry.path = "a/b";
 	cl_git_pass(git_index_add(g_index, &entry));
 
+	/* Check a/b exists here */
+	cl_git_pass(git_index_write_tree(&tree_id, g_index));
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
+	cl_git_pass(git_tree_entry_bypath(&tentry, tree, "a/b"));
+	git_tree_entry_free(tentry);
+
 	/* create a tree/blob collision */
 	entry.path = "a/b/c";
 	cl_git_fail(git_index_add(g_index, &entry));
 
+	/* a/b should still exist here */
 	cl_git_pass(git_index_write_tree(&tree_id, g_index));
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
+	cl_git_pass(git_tree_entry_bypath(&tentry, tree, "a/b"));
+	git_tree_entry_free(tentry);
 
 	git_tree_free(tree);
 }
