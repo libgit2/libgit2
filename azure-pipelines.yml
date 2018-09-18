@@ -11,7 +11,7 @@ phases:
   queue:
     name: 'Hosted Linux Preview'
   steps:
-  - template: ci/vsts-docker.yml
+  - template: ci/docker.yml
     parameters:
       imageName: 'libgit2/trusty-openssl:latest'
       environmentVariables: |
@@ -23,7 +23,7 @@ phases:
   queue:
     name: 'Hosted Linux Preview'
   steps:
-  - template: ci/vsts-docker.yml
+  - template: ci/docker.yml
     parameters:
       imageName: 'libgit2/trusty-openssl:latest'
       environmentVariables: |
@@ -40,7 +40,7 @@ phases:
   steps:
   - bash: . '$(Build.SourcesDirectory)/ci/setup-osx.sh'
     displayName: Setup
-  - template: ci/vsts-bash.yml
+  - template: ci/bash.yml
     parameters:
       environmentVariables:
         TMPDIR: $(Agent.TempDirectory)
@@ -52,7 +52,7 @@ phases:
   queue:
     name: Hosted
   steps:
-  - template: ci/vsts-powershell.yml
+  - template: ci/powershell.yml
     parameters:
       environmentVariables:
         CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013 Win64"
@@ -62,7 +62,7 @@ phases:
   queue:
     name: Hosted
   steps:
-  - template: ci/vsts-powershell.yml
+  - template: ci/powershell.yml
     parameters:
       environmentVariables:
         CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013"
@@ -77,7 +77,7 @@ phases:
     env:
       TEMP: $(Agent.TempDirectory)
       ARCH: amd64
-  - template: ci/vsts-powershell.yml
+  - template: ci/powershell.yml
     parameters:
       environmentVariables:
         CMAKE_OPTIONS: -G"MinGW Makefiles"
@@ -94,7 +94,7 @@ phases:
     env:
       TEMP: $(Agent.TempDirectory)
       ARCH: x86
-  - template: ci/vsts-powershell.yml
+  - template: ci/powershell.yml
     parameters:
       environmentVariables:
         CMAKE_OPTIONS: -G"MinGW Makefiles"
