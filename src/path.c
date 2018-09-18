@@ -1887,7 +1887,7 @@ extern int git_path_is_gitfile(const char *path, size_t pathlen, git_path_gitfil
 	const char *file, *hash;
 	size_t filelen;
 
-	if (gitfile < 0 && gitfile >= ARRAY_SIZE(gitfiles)) {
+	if (!(gitfile >= GIT_PATH_GITFILE_GITIGNORE && gitfile < ARRAY_SIZE(gitfiles))) {
 		giterr_set(GITERR_OS, "invalid gitfile for path validation");
 		return -1;
 	}
