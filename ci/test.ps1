@@ -5,7 +5,27 @@ $PSDefaultParameterValues['*:ErrorAction'] = 'Stop'
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
+$SourceDir = Split-Path (Split-Path (Get-Variable MyInvocation).Value.MyCommand.Path)
+$BuildDir = Get-Location
+
 if ($Env:SKIP_TESTS) { exit }
+
+# Ask ctest what it would run if we were to invoke it directly.  This lets
+# us manage the test configuration in a single place (tests/CMakeLists.txt)
+# instead of running clar here as well.  But it allows us to wrap our test
+# harness with a leak checker like valgrind.  Append the option to write
+# JUnit-style XML files.
+function run_test {
+	$TestName = $args[0]
+
+	$TestCommand = (ctest -N -V -R "^$TestName$") -join "`n" -replace "(?ms).*\n^[0-9]*: Test command: ","" -replace "\n.*",""
+	$TestCommand += " -r${BuildDir}\results_${TestName}.xml"
+
+	Write-Host $TestCommand
+	Invoke-Expression $TestCommand
+
+	if ($LastExitCode -ne 0) { [Environment]::Exit($LastExitCode) }
+}
 
 Write-Host "##############################################################################"
 Write-Host "## Configuring test environment"
@@ -23,8 +43,7 @@ Write-Host "####################################################################
 Write-Host "## Running (offline) tests"
 Write-Host "##############################################################################"
 
-ctest -V -R offline
-if ($LastExitCode -ne 0) { [Environment]::Exit($LastExitCode) }
+run_test offline
 
 if (-not $Env:SKIP_ONLINE_TESTS) {
 	Write-Host ""
@@ -32,8 +51,7 @@ if (-not $Env:SKIP_ONLINE_TESTS) {
 	Write-Host "## Running (online) tests"
 	Write-Host "##############################################################################"
 
-	ctest -V -R online
-	if ($LastExitCode -ne 0) { [Environment]::Exit($LastExitCode) }
+	run_test online
 }
 
 if (-not $Env:SKIP_PROXY_TESTS) {
@@ -44,9 +62,8 @@ if (-not $Env:SKIP_PROXY_TESTS) {
 	$Env:GITTEST_REMOTE_PROXY_URL="localhost:8080"
 	$Env:GITTEST_REMOTE_PROXY_USER="foo"
 	$Env:GITTEST_REMOTE_PROXY_PASS="bar"
-	ctest -V -R proxy
-	if ($LastExitCode -ne 0) { [Environment]::Exit($LastExitCode) }
+
+	run_test proxy
 
 	taskkill /F /IM javaw.exe
 }
-
