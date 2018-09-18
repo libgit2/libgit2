@@ -1662,7 +1662,7 @@ GIT_INLINE(bool) verify_dotgit_ntfs_generic(const char *name, size_t len, const 
 			saw_tilde = 1;
 		} else if (i >= 6) {
 			return true;
-		} else if (name[i] < 0) {
+		} else if ((unsigned char)name[i] > 127) {
 			return true;
 		} else if (git__tolower(name[i]) != shortname_pfix[i]) {
 			return true;
