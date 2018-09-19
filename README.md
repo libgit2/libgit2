@@ -1,7 +1,7 @@
 libgit2 - the Git linkable library
 ==================================
 
-[![VSTS Build Status](https://libgit2.visualstudio.com/libgit2/_apis/build/status/libgit2)](https://libgit2.visualstudio.com/libgit2/_build/latest?definitionId=7)
+[![Azure Pipelines Build Status](https://dev.azure.com/libgit2/libgit2/_apis/build/status/libgit2)](https://dev.azure.com/libgit2/libgit2/_build/latest?definitionId=7)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/639/badge.svg)](https://scan.coverity.com/projects/639)
 
 `libgit2` is a portable, pure C implementation of the Git core methods
@@ -17,7 +17,7 @@ in your favorite language.
 [GitKraken](https://gitkraken.com/) and [gmaster](https://gmaster.io/)
 and on Git hosting providers like [GitHub](https://github.com/),
 [GitLab](https://gitlab.com/) and
-[Visual Studio Team Services](https://visualstudio.com/team-services/).
+[Azure DevOps](https://azure.com/devops).
 We perform the merge every time you click "merge pull request".
 
 `libgit2` is licensed under a **very permissive license** (GPLv2 with a special
@@ -107,7 +107,7 @@ What It Can Do
 
 libgit2 provides you with the ability to manage Git repositories in the
 programming language of your choice.  It's used in production to power many
-applications including GitHub.com, Plastic SCM and Visual Studio Team Services.
+applications including GitHub.com, Plastic SCM and Azure DevOps.
 
 It does not aim to replace the git tool or its user-facing commands. Some APIs
 resemble the plumbing commands as those align closely with the concepts of the
