@@ -263,8 +263,11 @@ static int cred_failure_cb(
 
 void test_online_clone__cred_callback_failure_return_code_is_tunnelled(void)
 {
-	if (!_remote_url || !_remote_user)
-		clar__skip();
+	git__free(_remote_url);
+	git__free(_remote_user);
+
+	_remote_url = git__strdup("https://github.com/libgit2/non-existent");
+	_remote_user = git__strdup("libgit2test");
 
 	g_options.fetch_opts.callbacks.credentials = cred_failure_cb;
 
@@ -293,8 +296,11 @@ void test_online_clone__cred_callback_called_again_on_auth_failure(void)
 {
 	size_t counter = 0;
 
-	if (!_remote_url || !_remote_user)
-		clar__skip();
+	git__free(_remote_url);
+	git__free(_remote_user);
+
+	_remote_url = git__strdup("https://github.com/libgit2/non-existent");
+	_remote_user = git__strdup("libgit2test");
 
 	g_options.fetch_opts.callbacks.credentials = cred_count_calls_cb;
 	g_options.fetch_opts.callbacks.payload = &counter;
