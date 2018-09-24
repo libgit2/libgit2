@@ -276,6 +276,9 @@ static int cred_failure_cb(
 
 void test_online_clone__cred_callback_failure_return_code_is_tunnelled(void)
 {
+	git__free(_remote_url);
+	git__free(_remote_user);
+
 	_remote_url = git__strdup("https://github.com/libgit2/non-existent");
 	_remote_user = git__strdup("libgit2test");
 
@@ -305,6 +308,9 @@ static int cred_count_calls_cb(git_cred **cred, const char *url, const char *use
 void test_online_clone__cred_callback_called_again_on_auth_failure(void)
 {
 	size_t counter = 0;
+
+	git__free(_remote_url);
+	git__free(_remote_user);
 
 	_remote_url = git__strdup("https://github.com/libgit2/non-existent");
 	_remote_user = git__strdup("libgit2test");
