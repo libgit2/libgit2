@@ -262,7 +262,7 @@ GIT_EXTERN(int) git_config_open_level(
  * Open the global/XDG configuration file according to git's rules
  *
  * Git allows you to store your global configuration at
- * `$HOME/.config` or `$XDG_CONFIG_HOME/git/config`. For backwards
+ * `$HOME/.gitconfig` or `$XDG_CONFIG_HOME/git/config`. For backwards
  * compatability, the XDG file shouldn't be used unless the use has
  * created it explicitly. With this function you'll open the correct
  * one to write to.
