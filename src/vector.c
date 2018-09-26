@@ -32,6 +32,9 @@ GIT_INLINE(int) resize_vector(git_vector *v, size_t new_size)
 {
 	void *new_contents;
 
+	if (new_size == 0)
+		return 0;
+
 	new_contents = git__reallocarray(v->contents, new_size, sizeof(void *));
 	GITERR_CHECK_ALLOC(new_contents);
 
