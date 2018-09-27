@@ -1666,7 +1666,7 @@ int insert_tree(git_packbuilder *pb, git_tree *tree)
 
 			break;
 		case GIT_OBJ_BLOB:
-			if ((error = retrieve_object(&obj, pb, git_tree_id(tree))) < 0)
+			if ((error = retrieve_object(&obj, pb, entry_id)) < 0)
 				return error;
 			if (obj->uninteresting)
 				continue;
