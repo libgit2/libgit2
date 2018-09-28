@@ -63,6 +63,7 @@ static int parse_section_header_ext(git_config_parser *reader, const char *line,
 {
 	int c, rpos;
 	char *first_quote, *last_quote;
+	const char *line_start = line;
 	git_buf buf = GIT_BUF_INIT;
 	size_t quoted_len, alloc_len, base_name_len = strlen(base_name);
 
@@ -139,7 +140,7 @@ end_parse:
 	}
 
 	*section_name = git_buf_detach(&buf);
-	return 0;
+	return &line[rpos + 2] - line_start; /* rpos is at the closing quote */
 
 end_error:
 	git_buf_dispose(&buf);
@@ -209,7 +210,7 @@ static int parse_section_header(git_config_parser *reader, char **section_out)
 	name[name_length] = 0;
 	*section_out = name;
 
-	return 0;
+	return pos;
 
 fail_parse:
 	git__free(line);
@@ -481,9 +482,13 @@ int git_config_parse(
 	skip_bom(ctx);
 
 	for (; ctx->remain_len > 0; git_parse_advance_line(ctx)) {
-		const char *line_start = parser->ctx.line;
-		size_t line_len = parser->ctx.line_len;
+		const char *line_start;
+		size_t line_len;
 		char c;
+
+	restart:
+		line_start = ctx->line;
+		line_len = ctx->line_len;
 
 		/*
 		 * Get either first non-whitespace character or, if that does
@@ -499,9 +504,24 @@ int git_config_parse(
 			git__free(current_section);
 			current_section = NULL;
 
-			if ((result = parse_section_header(parser, &current_section)) == 0 && on_section) {
+			result = parse_section_header(parser, &current_section);
+			if (result < 0)
+				break;
+
+			git_parse_advance_chars(ctx, result);
+
+			if (on_section)
 				result = on_section(parser, current_section, line_start, line_len, data);
-			}
+			/*
+			 * After we've parsed the section header we may not be
+			 * done with the line. If there's still data in there,
+			 * run the next loop with the rest of the current line
+			 * instead of moving forward.
+			 */
+
+			if (!git_parse_peek(&c, ctx, GIT_PARSE_PEEK_SKIP_WHITESPACE))
+				goto restart;
+
 			break;
 
 		case '\n': /* comment or whitespace-only */
