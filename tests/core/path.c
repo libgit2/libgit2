@@ -676,3 +676,12 @@ void test_core_path__16_resolve_relative(void)
 	assert_common_dirlen(6, "a/b/c/foo.txt", "a/b/c/d/e/bar.txt");
 	assert_common_dirlen(7, "/a/b/c/foo.txt", "/a/b/c/d/e/bar.txt");
 }
+
+void test_core_path__git_path_is_file(void)
+{
+	cl_git_fail(git_path_is_gitfile("blob", 4, -1, GIT_PATH_FS_HFS));
+	cl_git_pass(git_path_is_gitfile("blob", 4, GIT_PATH_GITFILE_GITIGNORE, GIT_PATH_FS_HFS));
+	cl_git_pass(git_path_is_gitfile("blob", 4, GIT_PATH_GITFILE_GITMODULES, GIT_PATH_FS_HFS));
+	cl_git_pass(git_path_is_gitfile("blob", 4, GIT_PATH_GITFILE_GITATTRIBUTES, GIT_PATH_FS_HFS));
+	cl_git_fail(git_path_is_gitfile("blob", 4, 3, GIT_PATH_FS_HFS));
+}
