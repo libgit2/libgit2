@@ -12,8 +12,8 @@
 #include "oid.h"
 #include "parse.h"
 
-static const char *git_config_escapes = "ntb\"\\";
-static const char *git_config_escaped = "\n\t\b\"\\";
+extern const char *git_config_escapes;
+extern const char *git_config_escaped;
 
 typedef struct config_file {
 	git_oid checksum;
