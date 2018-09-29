@@ -11,6 +11,8 @@ BUILD_DIR=$(pwd)
 TMPDIR=${TMPDIR:-/tmp}
 USER=${USER:-$(whoami)}
 
+SUCCESS=1
+
 VALGRIND="valgrind --leak-check=full --show-reachable=yes --error-exitcode=125 --num-callers=50 --suppressions=\"$SOURCE_DIR/libgit2_clar.supp\""
 LEAKS="MallocStackLogging=1 MallocScribble=1 leaks -quiet -atExit -- nohup"
 
@@ -30,18 +32,19 @@ cleanup() {
 	echo "Done."
 }
 
-die() {
+failure() {
 	echo "Test exited with code: $1"
-
-	cleanup
-	exit $1
+	SUCCESS=0
 }
 
-# Ask ctest what it would run if we were to invoke it directly.  This lets us manage the
-# test configuration in a single place (tests/CMakeLists.txt) instead of running clar
-# here as well.  But it allows us to wrap our test harness with a leak checker like valgrind.
+# Ask ctest what it would run if we were to invoke it directly.  This lets
+# us manage the test configuration in a single place (tests/CMakeLists.txt)
+# instead of running clar here as well.  But it allows us to wrap our test
+# harness with a leak checker like valgrind.  Append the option to write
+# JUnit-style XML files.
 run_test() {
-	TEST_CMD=$(ctest -N -V -R $1 | sed -n 's/^[0-9]*: Test command: //p')
+	TEST_CMD=$(ctest -N -V -R "^${1}$" | sed -n 's/^[0-9]*: Test command: //p')
+	TEST_CMD="${TEST_CMD} -r${BUILD_DIR}/results_${1}.xml"
 
 	if [ "$LEAK_CHECK" = "valgrind" ]; then
 		RUNNER="$VALGRIND $TEST_CMD"
@@ -51,7 +54,7 @@ run_test() {
 		RUNNER="$TEST_CMD"
 	fi
 
-	eval $RUNNER || die $?
+	eval $RUNNER || failure
 }
 
 # Configure the test environment; run them early so that we're certain
@@ -191,10 +194,16 @@ if [ -z "$SKIP_FUZZERS" ]; then
 	echo "##############################################################################"
 
 	for fuzzer in fuzzers/*_fuzzer; do
-		"${fuzzer}" "${SOURCE_DIR}/fuzzers/corpora/$(basename "${fuzzer%_fuzzer}")" || die $?
+		"${fuzzer}" "${SOURCE_DIR}/fuzzers/corpora/$(basename "${fuzzer%_fuzzer}")" || failure
 	done
 fi
 
-echo "Success."
 cleanup
+
+if [ "$SUCCESS" -ne "1" ]; then
+	echo "Some tests failed."
+	exit 1
+fi
+
+echo "Success."
 exit 0
