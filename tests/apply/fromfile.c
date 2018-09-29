@@ -39,7 +39,7 @@ static int apply_patchfile(
 
 	cl_git_pass(git_patch_from_buffer(&patch, patchfile, strlen(patchfile), NULL));
 
-	error = git_apply__patch(&result, &filename, &mode, old, old_len, patch);
+	error = git_apply__patch(&result, &filename, &mode, old, old_len, patch, NULL);
 
 	if (error == 0) {
 		cl_assert_equal_i(new_len, result.size);

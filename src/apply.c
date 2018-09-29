@@ -167,14 +167,35 @@ static int update_hunk(
 	return 0;
 }
 
+typedef struct {
+	git_apply_options opts;
+	size_t skipped_new_lines;
+	size_t skipped_old_lines;
+} apply_hunks_ctx;
+
 static int apply_hunk(
 	patch_image *image,
 	git_patch *patch,
-	git_patch_hunk *hunk)
+	git_patch_hunk *hunk,
+	apply_hunks_ctx *ctx)
 {
 	patch_image preimage = PATCH_IMAGE_INIT, postimage = PATCH_IMAGE_INIT;
 	size_t line_num, i;
 	int error = 0;
+
+	if (ctx->opts.hunk_cb) {
+		error = ctx->opts.hunk_cb(&hunk->hunk, ctx->opts.payload);
+
+		if (error) {
+			if (error > 0) {
+				ctx->skipped_new_lines += hunk->hunk.new_lines;
+				ctx->skipped_old_lines += hunk->hunk.old_lines;
+				error = 0;
+			}
+
+			goto done;
+		}
+	}
 
 	for (i = 0; i < hunk->line_count; i++) {
 		size_t linenum = hunk->line_start + i;
@@ -198,7 +219,14 @@ static int apply_hunk(
 		}
 	}
 
-	line_num = hunk->hunk.new_start ? hunk->hunk.new_start - 1 : 0;
+	if (hunk->hunk.new_start) {
+		line_num = hunk->hunk.new_start -
+			ctx->skipped_new_lines +
+			ctx->skipped_old_lines -
+			1;
+	} else {
+		line_num = 0;
+	}
 
 	if (!find_hunk_linenum(&line_num, image, &preimage, line_num)) {
 		error = apply_err("hunk at line %d did not apply",
@@ -219,7 +247,8 @@ static int apply_hunks(
 	git_buf *out,
 	const char *source,
 	size_t source_len,
-	git_patch *patch)
+	git_patch *patch,
+	apply_hunks_ctx *ctx)
 {
 	git_patch_hunk *hunk;
 	git_diff_line *line;
@@ -231,7 +260,7 @@ static int apply_hunks(
 		goto done;
 
 	git_array_foreach(patch->hunks, i, hunk) {
-		if ((error = apply_hunk(&image, patch, hunk)) < 0)
+		if ((error = apply_hunk(&image, patch, hunk, ctx)) < 0)
 			goto done;
 	}
 
@@ -339,13 +368,18 @@ int git_apply__patch(
 	unsigned int *mode_out,
 	const char *source,
 	size_t source_len,
-	git_patch *patch)
+	git_patch *patch,
+	const git_apply_options *given_opts)
 {
+	apply_hunks_ctx ctx = { GIT_APPLY_OPTIONS_INIT };
 	char *filename = NULL;
 	unsigned int mode = 0;
 	int error = 0;
 
 	assert(contents_out && filename_out && mode_out && (source || !source_len) && patch);
+
+	if (given_opts)
+		memcpy(&ctx.opts, given_opts, sizeof(git_apply_options));
 
 	*filename_out = NULL;
 	*mode_out = 0;
@@ -361,7 +395,7 @@ int git_apply__patch(
 	if (patch->delta->flags & GIT_DIFF_FLAG_BINARY)
 		error = apply_binary(contents_out, source, source_len, patch);
 	else if (patch->hunks.size)
-		error = apply_hunks(contents_out, source, source_len, patch);
+		error = apply_hunks(contents_out, source, source_len, patch, &ctx);
 	else
 		error = git_buf_put(contents_out, source, source_len);
 
@@ -457,7 +491,7 @@ static int apply_one(
 
 	if (delta->status != GIT_DELTA_DELETED) {
 		if ((error = git_apply__patch(&post_contents, &filename, &mode,
-				pre_contents.ptr, pre_contents.size, patch)) < 0 ||
+				pre_contents.ptr, pre_contents.size, patch, opts)) < 0 ||
 			(error = git_blob_create_frombuffer(&post_id, repo,
 				post_contents.ptr, post_contents.size)) < 0)
 			goto done;

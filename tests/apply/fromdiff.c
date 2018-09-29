@@ -49,7 +49,7 @@ static int apply_gitbuf(
 		cl_assert_equal_s(patch_expected, patchbuf.ptr);
 	}
 
-	error = git_apply__patch(&result, &filename, &mode, old ? old->ptr : NULL, old ? old->size : 0, patch);
+	error = git_apply__patch(&result, &filename, &mode, old ? old->ptr : NULL, old ? old->size : 0, patch, NULL);
 
 	if (error == 0 && new == NULL) {
 		cl_assert_equal_i(0, result.size);

@@ -38,6 +38,22 @@ typedef int (*git_apply_delta_cb)(
 	void *payload);
 
 /**
+ * When applying a patch, callback that will be made per hunk.
+ *
+ * When the callback:
+ * - returns < 0, the apply process will be aborted.
+ * - returns > 0, the hunk will not be applied, but the apply process
+ *      continues
+ * - returns 0, the hunk is applied, and the apply process continues.
+ *
+ * @param hunk The hunk to be applied
+ * @param payload User-specified payload
+ */
+typedef int (*git_apply_hunk_cb)(
+	const git_diff_hunk *hunk,
+	void *payload);
+
+/**
  * Apply options structure
  *
  * Initialize with `GIT_APPLY_OPTIONS_INIT`. Alternatively, you can
@@ -49,6 +65,7 @@ typedef struct {
 	unsigned int version;
 
 	git_apply_delta_cb delta_cb;
+	git_apply_hunk_cb hunk_cb;
 	void *payload;
 } git_apply_options;
 
