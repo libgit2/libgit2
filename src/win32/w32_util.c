@@ -132,6 +132,8 @@ size_t git_win32__canonicalize_path(wchar_t *str, size_t len)
 	static const wchar_t dosdevices_prefix[] = L"\\\?\?\\";
 	static const wchar_t nt_prefix[] = L"\\\\?\\";
 	static const wchar_t unc_prefix[] = L"UNC\\";
+	static const wchar_t unc_canonicalized_prefix[] = L"\\\\";
+
 	size_t to_advance = 0;
 
 	/* "\??\" -- DOS Devices prefix */
@@ -150,8 +152,18 @@ size_t git_win32__canonicalize_path(wchar_t *str, size_t len)
 	/* "\??\UNC\", "\\?\UNC\" -- UNC prefix */
 	if (to_advance && len >= CONST_STRLEN(unc_prefix) &&
 		!wcsncmp(str + to_advance, unc_prefix, CONST_STRLEN(unc_prefix))) {
-		to_advance += CONST_STRLEN(unc_prefix);
-		len -= CONST_STRLEN(unc_prefix);
+		/** 
+		 * The proper Win32 path for a UNC share has "\\" at beginning of it
+		 * and looks like "\\server\share\<folderStructure>".
+		 * So, remove th UNC prefix, but leave room for a "\\"
+		 */ 
+		to_advance += (CONST_STRLEN(unc_prefix) - CONST_STRLEN(unc_canonicalized_prefix));
+		len -= (CONST_STRLEN(unc_prefix) - CONST_STRLEN(unc_canonicalized_prefix));
+		
+		/**
+		 * Place a "\\" in the string so the result is "\\server\\share\<folderStructure>"
+		 */
+		memmove(str + to_advance, unc_canonicalized_prefix, CONST_STRLEN(unc_canonicalized_prefix) * sizeof(wchar_t));
 	}
 
 	if (to_advance) {
