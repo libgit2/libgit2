@@ -67,7 +67,7 @@ GIT_BEGIN_DECL
  * To emulate `git checkout -f`, use `GIT_CHECKOUT_FORCE`.
  *
  *
- * There are some additional flags to modified the behavior of checkout:
+ * There are some additional flags to modify the behavior of checkout:
  *
  * - GIT_CHECKOUT_ALLOW_CONFLICTS makes SAFE mode apply safe file updates
  *   even if there are conflicts (instead of cancelling the checkout).
