@@ -437,10 +437,10 @@ int git_pkt_parse_line(
 	}
 
 	/*
-	 * If we were given a buffer length, then make sure there is
-	 * enough in the buffer to satisfy this line
+	 * Make sure there is enough in the buffer to satisfy
+	 * this line.
 	 */
-	if (linelen > 0 && linelen < (size_t)len)
+	if (linelen < len)
 		return GIT_EBUFS;
 
 	/*
