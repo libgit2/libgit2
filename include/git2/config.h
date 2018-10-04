@@ -75,7 +75,17 @@ typedef struct git_config_entry {
  */
 GIT_EXTERN(void) git_config_entry_free(git_config_entry *);
 
-typedef int  (*git_config_foreach_cb)(const git_config_entry *, void *);
+/**
+ * A config enumeration callback
+ *
+ * @param entry the entry currently being enumerated
+ * @param payload a user-specified pointer
+ */
+typedef int  (*git_config_foreach_cb)(const git_config_entry *entry, void *payload);
+
+/**
+ * An opaque structure for a configuration iterator
+ */
 typedef struct git_config_iterator git_config_iterator;
 
 /**
@@ -252,7 +262,7 @@ GIT_EXTERN(int) git_config_open_level(
  * Open the global/XDG configuration file according to git's rules
  *
  * Git allows you to store your global configuration at
- * `$HOME/.config` or `$XDG_CONFIG_HOME/git/config`. For backwards
+ * `$HOME/.gitconfig` or `$XDG_CONFIG_HOME/git/config`. For backwards
  * compatability, the XDG file shouldn't be used unless the use has
  * created it explicitly. With this function you'll open the correct
  * one to write to.
@@ -581,7 +591,7 @@ GIT_EXTERN(int) git_config_iterator_glob_new(git_config_iterator **out, const gi
 /**
  * Perform an operation on each config variable matching a regular expression.
  *
- * This behaviors like `git_config_foreach` with an additional filter of a
+ * This behaves like `git_config_foreach` with an additional filter of a
  * regular expression that filters which config keys are passed to the
  * callback.
  *
@@ -711,11 +721,11 @@ GIT_EXTERN(int) git_config_parse_int64(int64_t *out, const char *value);
 GIT_EXTERN(int) git_config_parse_path(git_buf *out, const char *value);
 
 /**
- * Perform an operation on each config variable in given config backend
+ * Perform an operation on each config variable in a given config backend,
  * matching a regular expression.
  *
- * This behaviors like `git_config_foreach_match` except instead of all config
- * entries it just enumerates through the given backend entry.
+ * This behaves like `git_config_foreach_match` except that only config
+ * entries from the given backend entry are enumerated.
  *
  * The regular expression is applied case-sensitively on the normalized form of
  * the variable name: the section and variable parts are lower-cased. The
