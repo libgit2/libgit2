@@ -214,7 +214,7 @@ void test_diff_stats__rename_in_subdirectory(void)
 {
 	git_buf buf = GIT_BUF_INIT;
 	const char *stat =
-	" dir/orig.txt => dir/renamed.txt | 0\n"
+	" dir/{orig.txt => renamed.txt} | 0\n"
 	" 1 file changed, 0 insertions(+), 0 deletions(-)\n";
 
 	diff_stats_from_commit_oid(
