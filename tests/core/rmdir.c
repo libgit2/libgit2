@@ -27,6 +27,12 @@ void test_core_rmdir__initialize(void)
 	git_buf_dispose(&path);
 }
 
+void test_core_rmdir__cleanup(void)
+{
+	if (git_path_exists(empty_tmp_dir))
+		cl_git_pass(git_futils_rmdir_r(empty_tmp_dir, NULL, GIT_RMDIR_REMOVE_FILES));
+}
+
 /* make sure empty dir can be deleted recusively */
 void test_core_rmdir__delete_recursive(void)
 {
