@@ -129,7 +129,7 @@ void test_path_win32__absolute_from_relative(void)
 #endif
 }
 
-void test_canonicalize(const wchar_t *in, const wchar_t *expected)
+void static test_canonicalize(const wchar_t *in, const wchar_t *expected)
 {
 #ifdef GIT_WIN32
 	git_win32_path canonical;
@@ -145,7 +145,7 @@ void test_canonicalize(const wchar_t *in, const wchar_t *expected)
 #endif
 }
 
-void test_path_git_win32__canonicalize_path(const wchar_t *in, const wchar_t *expected)
+void static test_canonicalize_path(const wchar_t *in, const wchar_t *expected)
 {
 #ifdef GIT_WIN32
 	git_win32_path canonical;
@@ -159,6 +159,11 @@ void test_path_git_win32__canonicalize_path(const wchar_t *in, const wchar_t *ex
 	GIT_UNUSED(in);
 	GIT_UNUSED(expected);
 #endif
+}
+
+void test_path_win32__canonicalize_path(void)
+{
+	test_canonicalize_path(L"\\\\?\\UNC\\server\\C$\\folder", L"\\\\server\\C$\\folder");
 }
 
 void test_path_win32__canonicalize(void)
@@ -202,8 +207,6 @@ void test_path_win32__canonicalize(void)
 	test_canonicalize(L"\\\\server\\\\share\\\\foo\\\\bar", L"\\\\server\\share\\foo\\bar");
 	test_canonicalize(L"\\\\server\\share\\..\\foo", L"\\\\server\\foo");
 	test_canonicalize(L"\\\\server\\..\\..\\share\\.\\foo", L"\\\\server\\share\\foo");
-
-	test_path_git_win32__canonicalize_path(L"\\\\?\\UNC\\server\\C$\\folder", L"\\\\server\\C$\\folder");
 #endif
 }
 
