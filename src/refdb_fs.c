@@ -1305,6 +1305,43 @@ on_error:
         return error;
 }
 
+static void refdb_fs_backend__try_delete_empty_ref_hierarchie(
+	refdb_fs_backend *backend,
+	const char *ref_name,
+	bool reflog)
+{
+	git_buf relative_path = GIT_BUF_INIT;
+	git_buf base_path = GIT_BUF_INIT;
+	size_t commonlen;
+
+	assert(backend && ref_name);
+
+	if (git_buf_sets(&relative_path, ref_name) < 0)
+		goto cleanup;
+
+	git_path_squash_slashes(&relative_path);
+	if ((commonlen = git_path_common_dirlen("refs/heads/", git_buf_cstr(&relative_path))) == strlen("refs/heads/") ||
+		(commonlen = git_path_common_dirlen("refs/tags/", git_buf_cstr(&relative_path))) == strlen("refs/tags/") ||
+		(commonlen = git_path_common_dirlen("refs/remotes/", git_buf_cstr(&relative_path))) == strlen("refs/remotes/")) {
+
+		git_buf_truncate(&relative_path, commonlen);
+
+		if (reflog) {
+			if (git_buf_join3(&base_path, '/', backend->commonpath, GIT_REFLOG_DIR, git_buf_cstr(&relative_path)) < 0)
+				goto cleanup;
+		} else {
+			if (git_buf_joinpath(&base_path, backend->commonpath, git_buf_cstr(&relative_path)) < 0)
+				goto cleanup;
+		}
+
+		git_futils_rmdir_r(ref_name + commonlen, git_buf_cstr(&base_path), GIT_RMDIR_EMPTY_PARENTS | GIT_RMDIR_SKIP_ROOT);
+	}
+
+cleanup:
+	git_buf_dispose(&relative_path);
+	git_buf_dispose(&base_path);
+}
+
 static int refdb_fs_backend__delete(
 	git_refdb_backend *_backend,
 	const char *ref_name,
@@ -1385,7 +1422,8 @@ static int refdb_fs_backend__delete_tail(
 cleanup:
 	git_buf_dispose(&loose_path);
 	git_filebuf_cleanup(file);
-
+	if (loose_deleted)
+		refdb_fs_backend__try_delete_empty_ref_hierarchie(backend, ref_name, false);
 	return error;
 }
 
@@ -2013,8 +2051,10 @@ static int refdb_reflog_fs__delete(git_refdb_backend *_backend, const char *name
 
 	error = retrieve_reflog_path(&path, repo, name);
 
-	if (!error && git_path_exists(path.ptr))
+	if (!error && git_path_exists(path.ptr)) {
 		error = p_unlink(path.ptr);
+		refdb_fs_backend__try_delete_empty_ref_hierarchie(backend, name, true);
+	}
 
 	git_buf_dispose(&path);
 
