@@ -664,6 +664,9 @@ static int parse_include(git_config_parser *reader,
 	char *dir;
 	int result;
 
+	if (!file)
+		return 0;
+
 	if ((result = git_path_dirname_r(&path, reader->file->path)) < 0)
 		return result;
 
@@ -765,7 +768,7 @@ static int parse_conditional_include(git_config_parser *reader,
 	size_t i;
 	int error = 0, matches;
 
-	if (!parse_data->repo)
+	if (!parse_data->repo || !file)
 		return 0;
 
 	condition = git__substrdup(section + strlen("includeIf."),

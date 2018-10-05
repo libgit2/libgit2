@@ -35,6 +35,8 @@ void test_config_include__absolute(void)
 
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.bar.baz"));
 	cl_assert_equal_s("huzzah", git_buf_cstr(&buf));
+
+	cl_git_pass(p_unlink("config-include-absolute"));
 }
 
 void test_config_include__homedir(void)
@@ -48,6 +50,8 @@ void test_config_include__homedir(void)
 	cl_assert_equal_s("huzzah", git_buf_cstr(&buf));
 
 	cl_sandbox_set_search_path_defaults();
+
+	cl_git_pass(p_unlink("config-include-homedir"));
 }
 
 /* We need to pretend that the variables were defined where the file was included */
@@ -66,6 +70,9 @@ void test_config_include__ordering(void)
 	git_buf_clear(&buf);
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.bar.baz"));
 	cl_assert_equal_s("huzzah", git_buf_cstr(&buf));
+
+	cl_git_pass(p_unlink("included"));
+	cl_git_pass(p_unlink("including"));
 }
 
 /* We need to pretend that the variables were defined where the file was included */
@@ -76,8 +83,18 @@ void test_config_include__depth(void)
 
 	cl_git_fail(git_config_open_ondisk(&cfg, "a"));
 
-	p_unlink("a");
-	p_unlink("b");
+	cl_git_pass(p_unlink("a"));
+	cl_git_pass(p_unlink("b"));
+}
+
+void test_config_include__empty_path_sanely_handled(void)
+{
+	cl_git_mkfile("a", "[include]\npath");
+	cl_git_pass(git_config_open_ondisk(&cfg, "a"));
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "include.path"));
+	cl_assert_equal_s("", git_buf_cstr(&buf));
+
+	cl_git_pass(p_unlink("a"));
 }
 
 void test_config_include__missing(void)
@@ -89,6 +106,8 @@ void test_config_include__missing(void)
 	cl_assert(giterr_last() == NULL);
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.bar"));
 	cl_assert_equal_s("baz", git_buf_cstr(&buf));
+
+	cl_git_pass(p_unlink("including"));
 }
 
 void test_config_include__missing_homedir(void)
@@ -103,6 +122,7 @@ void test_config_include__missing_homedir(void)
 	cl_assert_equal_s("baz", git_buf_cstr(&buf));
 
 	cl_sandbox_set_search_path_defaults();
+	cl_git_pass(p_unlink("including"));
 }
 
 #define replicate10(s) s s s s s s s s s s
@@ -122,6 +142,10 @@ void test_config_include__depth2(void)
 	git_buf_clear(&buf);
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.bar2"));
 	cl_assert_equal_s("baz2", git_buf_cstr(&buf));
+
+	cl_git_pass(p_unlink("top-level"));
+	cl_git_pass(p_unlink("middle"));
+	cl_git_pass(p_unlink("bottom"));
 }
 
 void test_config_include__removing_include_removes_values(void)
@@ -132,6 +156,9 @@ void test_config_include__removing_include_removes_values(void)
 	cl_git_pass(git_config_open_ondisk(&cfg, "top-level"));
 	cl_git_mkfile("top-level", "");
 	cl_git_fail(git_config_get_string_buf(&buf, cfg, "foo.bar"));
+
+	cl_git_pass(p_unlink("top-level"));
+	cl_git_pass(p_unlink("included"));
 }
 
 void test_config_include__rewriting_include_refreshes_values(void)
@@ -145,6 +172,10 @@ void test_config_include__rewriting_include_refreshes_values(void)
 	cl_git_fail(git_config_get_string_buf(&buf, cfg, "foo.bar"));
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "first.other"));
 	cl_assert_equal_s(buf.ptr, "value");
+
+	cl_git_pass(p_unlink("top-level"));
+	cl_git_pass(p_unlink("first"));
+	cl_git_pass(p_unlink("second"));
 }
 
 void test_config_include__included_variables_cannot_be_deleted(void)
@@ -154,13 +185,20 @@ void test_config_include__included_variables_cannot_be_deleted(void)
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "top-level"));
 	cl_git_fail(git_config_delete_entry(cfg, "foo.bar"));
+
+	cl_git_pass(p_unlink("top-level"));
+	cl_git_pass(p_unlink("included"));
 }
 
 void test_config_include__included_variables_cannot_be_modified(void)
 {
 	cl_git_mkfile("top-level", "[include]\npath = included\n");
+
 	cl_git_mkfile("included", "[foo]\nbar = value");
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "top-level"));
 	cl_git_fail(git_config_set_string(cfg, "foo.bar", "other-value"));
+
+	cl_git_pass(p_unlink("top-level"));
+	cl_git_pass(p_unlink("included"));
 }
