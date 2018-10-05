@@ -28,14 +28,14 @@
 
 extern bool git_smart__ofs_delta_enabled;
 
-enum git_pkt_type {
+typedef enum {
 	GIT_PKT_CMD,
 	GIT_PKT_FLUSH,
 	GIT_PKT_REF,
 	GIT_PKT_HAVE,
 	GIT_PKT_ACK,
 	GIT_PKT_NAK,
-	GIT_PKT_PACK,
+	GIT_PKT_PACK__UNUSED,
 	GIT_PKT_COMMENT,
 	GIT_PKT_ERR,
 	GIT_PKT_DATA,
@@ -43,7 +43,7 @@ enum git_pkt_type {
 	GIT_PKT_OK,
 	GIT_PKT_NG,
 	GIT_PKT_UNPACK,
-};
+} git_pkt_type;
 
 /* Used for multi_ack and mutli_ack_detailed */
 enum git_ack_status {
@@ -55,11 +55,11 @@ enum git_ack_status {
 
 /* This would be a flush pkt */
 typedef struct {
-	enum git_pkt_type type;
+	git_pkt_type type;
 } git_pkt;
 
 struct git_pkt_cmd {
-	enum git_pkt_type type;
+	git_pkt_type type;
 	char *cmd;
 	char *path;
 	char *host;
@@ -67,50 +67,50 @@ struct git_pkt_cmd {
 
 /* This is a pkt-line with some info in it */
 typedef struct {
-	enum git_pkt_type type;
+	git_pkt_type type;
 	git_remote_head head;
 	char *capabilities;
 } git_pkt_ref;
 
 /* Useful later */
 typedef struct {
-	enum git_pkt_type type;
+	git_pkt_type type;
 	git_oid oid;
 	enum git_ack_status status;
 } git_pkt_ack;
 
 typedef struct {
-	enum git_pkt_type type;
+	git_pkt_type type;
 	char comment[GIT_FLEX_ARRAY];
 } git_pkt_comment;
 
 typedef struct {
-	enum git_pkt_type type;
-	int len;
+	git_pkt_type type;
+	size_t len;
 	char data[GIT_FLEX_ARRAY];
 } git_pkt_data;
 
 typedef git_pkt_data git_pkt_progress;
 
 typedef struct {
-	enum git_pkt_type type;
-	int len;
+	git_pkt_type type;
+	size_t len;
 	char error[GIT_FLEX_ARRAY];
 } git_pkt_err;
 
 typedef struct {
-	enum git_pkt_type type;
+	git_pkt_type type;
 	char *ref;
 } git_pkt_ok;
 
 typedef struct {
-	enum git_pkt_type type;
+	git_pkt_type type;
 	char *ref;
 	char *msg;
 } git_pkt_ng;
 
 typedef struct {
-	enum git_pkt_type type;
+	git_pkt_type type;
 	int unpack_ok;
 } git_pkt_unpack;
 
@@ -184,7 +184,7 @@ int git_smart__get_push_stream(transport_smart *t, git_smart_subtransport_stream
 int git_smart__update_heads(transport_smart *t, git_vector *symrefs);
 
 /* smart_pkt.c */
-int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_t len);
+int git_pkt_parse_line(git_pkt **head, const char **endptr, const char *line, size_t linelen);
 int git_pkt_buffer_flush(git_buf *buf);
 int git_pkt_send_flush(GIT_SOCKET s);
 int git_pkt_buffer_done(git_buf *buf);
