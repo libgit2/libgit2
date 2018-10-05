@@ -1792,6 +1792,14 @@ static int get_value(const char **out, git_config *cfg, git_buf *buf, const char
 	return error;
 }
 
+static bool looks_like_command_line_option(const char *s)
+{
+	if (s && s[0] == '-')
+		return true;
+
+	return false;
+}
+
 static int submodule_read_config(git_submodule *sm, git_config *cfg)
 {
 	git_buf key = GIT_BUF_INIT;
@@ -1805,24 +1813,31 @@ static int submodule_read_config(git_submodule *sm, git_config *cfg)
 
 	if ((error = get_value(&value, cfg, &key, sm->name, "path")) == 0) {
 		in_config = 1;
+		/* We would warn here if we had that API */
+		if (!looks_like_command_line_option(value)) {
 	/*
 	 * TODO: if case insensitive filesystem, then the following strcmp
 	 * should be strcasecmp
 	 */
-		if (strcmp(sm->name, value) != 0) {
-			if (sm->path != sm->name)
-				git__free(sm->path);
-			sm->path = git__strdup(value);
-			GITERR_CHECK_ALLOC(sm->path);
+			if (strcmp(sm->name, value) != 0) {
+				if (sm->path != sm->name)
+					git__free(sm->path);
+				sm->path = git__strdup(value);
+				GITERR_CHECK_ALLOC(sm->path);
+			}
+
 		}
 	} else if (error != GIT_ENOTFOUND) {
 		goto cleanup;
 	}
 
 	if ((error = get_value(&value, cfg, &key, sm->name, "url")) == 0) {
-		in_config = 1;
-		sm->url = git__strdup(value);
-		GITERR_CHECK_ALLOC(sm->url);
+		/* We would warn here if we had that API */
+		if (!looks_like_command_line_option(value)) {
+			in_config = 1;
+			sm->url = git__strdup(value);
+			GITERR_CHECK_ALLOC(sm->url);
+		}
 	} else if (error != GIT_ENOTFOUND) {
 		goto cleanup;
 	}
