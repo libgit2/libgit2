@@ -1598,7 +1598,7 @@ static int read_on_variable(
 	result = 0;
 
 	/* Add or append the new config option */
-	if (!git__strcmp(var->entry->name, "include.path")) {
+	if (!git__strcmp(var->entry->name, "include.path") && var->entry->value) {
 		struct reader *r;
 		git_buf path = GIT_BUF_INIT;
 		char *dir;

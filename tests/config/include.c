@@ -96,6 +96,21 @@ void test_config_include__depth(void)
 	cl_git_pass(p_unlink("b"));
 }
 
+void test_config_include__empty_path_sanely_handled(void)
+{
+	git_config *cfg;
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_mkfile("a", "[include]\npath");
+	cl_git_pass(git_config_open_ondisk(&cfg, "a"));
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "include.path"));
+	cl_assert_equal_s("", git_buf_cstr(&buf));
+
+	git_buf_free(&buf);
+	git_config_free(cfg);
+	cl_git_pass(p_unlink("a"));
+}
+
 void test_config_include__missing(void)
 {
 	git_config *cfg;
