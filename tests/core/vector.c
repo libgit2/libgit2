@@ -412,7 +412,7 @@ void test_core_vector__dup_empty_vector(void)
 {
 	git_vector v = GIT_VECTOR_INIT;
 	git_vector dup = GIT_VECTOR_INIT;
-	void *dummy = 0xDEAFBEEB;
+	int dummy;
 
 	cl_assert_equal_i(0, v.length);
 
@@ -420,7 +420,7 @@ void test_core_vector__dup_empty_vector(void)
 	cl_assert_equal_i(0, dup._alloc_size);
 	cl_assert_equal_i(0, dup.length);
 
-	cl_git_pass(git_vector_insert(&dup, dummy));
+	cl_git_pass(git_vector_insert(&dup, &dummy));
 	cl_assert_equal_i(8, dup._alloc_size);
 	cl_assert_equal_i(1, dup.length);
 
