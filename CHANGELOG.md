@@ -1,3 +1,50 @@
+v0.27.5
+-------
+
+This is a security release fixing the following list of issues:
+
+- Submodule URLs and paths with a leading "-" are now ignored.
+  This is due to the recently discovered CVE-2018-17456, which
+  can lead to arbitrary code execution in upstream git. While
+  libgit2 itself is not vulnerable, it can be used to inject
+  options in an implementation which performs a recursive clone
+  by executing an external command.
+
+- When running repack while doing repo writes,
+  `packfile_load__cb()` could see some temporary files in the
+  directory that were bigger than the usual, and makes `memcmp`
+  overflow on the `p->pack_name` string. This issue was reported
+  and fixed by bisho.
+
+- The configuration file parser used unbounded recursion to parse
+  multiline variables, which could lead to a stack overflow. The
+  issue was reported by the oss-fuzz project, issue 10048 and
+  fixed by Nelson Elhage.
+
+- The fix to the unbounded recursion introduced a memory leak in
+  the config parser. While this leak was never in a public
+  release, the oss-fuzz project reported this as issue 10127. The
+  fix was implemented by Nelson Elhage and Patrick Steinhardt.
+
+- When parsing "ok" packets received via the smart protocol, our
+  parsing code did not correctly verify the bounds of the
+  packets, which could result in a heap-buffer overflow. The
+  issue was reported by the oss-fuzz project, issue 9749 and
+  fixed by Patrick Steinhardt.
+
+- The parsing code for the smart protocol has been tightened in
+  general, fixing heap-buffer overflows when parsing the packet
+  type as well as for "ACK" and "unpack" packets. The issue was
+  discovered and fixed by Patrick Steinhardt.
+
+- Fixed potential integer overflows on platforms with 16 bit
+  integers when parsing packets for the smart protocol. The issue
+  was discovered and fixed by Patrick Steinhardt.
+
+- Fixed potential NULL pointer dereference when parsing
+  configuration files which have "include.path" or
+  "includeIf..path" statements without a value.
+
 v0.27.4
 -------
 
