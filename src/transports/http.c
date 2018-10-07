@@ -142,7 +142,7 @@ static int auth_context_match(
 	}
 
 	if (!scheme)
-		return -1;
+		return 0;
 
 	/* See if authentication has already started for this scheme */
 	git_vector_foreach(&t->auth_contexts, i, c) {
@@ -187,6 +187,9 @@ static int apply_credentials(git_buf *buf, http_subtransport *t)
 	/* Get or create a context for the best scheme for this cred type */
 	if (auth_context_match(&context, t, credtype_match, &cred->credtype) < 0)
 		return -1;
+
+	if (!context)
+		return 0;
 
 	return context->next_token(buf, context, cred);
 }
