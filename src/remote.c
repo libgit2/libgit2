@@ -224,7 +224,7 @@ int git_remote_create_init_options(git_remote_create_options *opts, unsigned int
 	return 0;
 }
 
-static int create_internal(git_remote **out, const char *url, const git_remote_create_options *opts)
+int git_remote_create_with_opts(git_remote **out, const char *url, const git_remote_create_options *opts)
 {
 	git_remote *remote = NULL;
 	git_config *config_ro = NULL, *config_rw;
@@ -350,16 +350,11 @@ int git_remote_create(git_remote **out, git_repository *repo, const char *name, 
 	opts.repository = repo;
 	opts.name = name;
 
-	error = create_internal(out, url, &opts);
+	error = git_remote_create_with_opts(out, url, &opts);
 
 	git_buf_dispose(&buf);
 
 	return error;
-}
-
-int git_remote_create_with_opts(git_remote **out, const char *url, const git_remote_create_options *opts)
-{
-	return create_internal(out, url, opts);
 }
 
 int git_remote_create_with_fetchspec(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
@@ -375,7 +370,7 @@ int git_remote_create_with_fetchspec(git_remote **out, git_repository *repo, con
 	opts.fetchspec = fetch;
 	opts.flags = GIT_REMOTE_CREATE_SKIP_DEFAULT_FETCHSPEC;
 
-	return create_internal(out, url, &opts);
+	return git_remote_create_with_opts(out, url, &opts);
 }
 
 int git_remote_create_anonymous(git_remote **out, git_repository *repo, const char *url)
@@ -384,12 +379,12 @@ int git_remote_create_anonymous(git_remote **out, git_repository *repo, const ch
 
 	opts.repository = repo;
 
-	return create_internal(out, url, &opts);
+	return git_remote_create_with_opts(out, url, &opts);
 }
 
 int git_remote_create_detached(git_remote **out, const char *url)
 {
-	return create_internal(out, url, NULL);
+	return git_remote_create_with_opts(out, url, NULL);
 }
 
 int git_remote_dup(git_remote **dest, git_remote *source)
