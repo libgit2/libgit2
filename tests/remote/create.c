@@ -20,7 +20,6 @@ void test_remote_create__cleanup(void)
 	git_config_free(_config);
 
 	git_repository_free(_repo);
-	_repo = NULL;
 
 	cl_fixture_cleanup("testrepo.git");
 }
