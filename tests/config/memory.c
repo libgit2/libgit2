@@ -61,7 +61,7 @@ static void assert_config_contains_all(git_config_backend *backend,
 
 static void setup_backend(const char *cfg)
 {
-	cl_git_pass(git_config_backend_from_string(&backend, cfg));
+	cl_git_pass(git_config_backend_from_string(&backend, cfg, strlen(cfg)));
 	cl_git_pass(git_config_backend_open(backend, 0, NULL));
 }
 
@@ -85,9 +85,10 @@ void test_config_memory__simple(void)
 
 void test_config_memory__malformed_fails_to_open(void)
 {
-	cl_git_pass(git_config_backend_from_string(&backend,
+	const char *cfg =
 		"[general\n"
-		"foo=bar\n"));
+		"foo=bar\n";
+	cl_git_pass(git_config_backend_from_string(&backend, cfg, strlen(cfg)));
 	cl_git_fail(git_config_backend_open(backend, 0, NULL));
 }
 
