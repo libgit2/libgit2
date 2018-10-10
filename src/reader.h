@@ -26,7 +26,6 @@ typedef struct git_reader git_reader;
  */
 struct git_reader {
 	int (*read)(git_buf *out, git_oid *out_oid, git_reader *reader, const char *filename);
-	void (*free)(git_reader *reader);
 };
 
 /**
