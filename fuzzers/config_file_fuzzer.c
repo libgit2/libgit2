@@ -43,20 +43,17 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	git_config_backend *backend = NULL;
 	int err = 0;
 
-	err = git_config_new(&cfg);
-	if (err != 0) {
+	if ((err = git_config_new(&cfg)) != 0) {
 		goto out;
 	}
 
-	err = git_config_backend_from_string(&backend, (const char*)data, size);
-	if (err != 0) {
+	if ((err = git_config_backend_from_string(&backend, (const char*)data, size)) != 0) {
 		goto out;
 	}
-	err = git_config_add_backend(cfg, backend, 0, NULL, 0);
-	if (err != 0) {
+	if ((err = git_config_add_backend(cfg, backend, 0, NULL, 0)) != 0) {
 		goto out;
 	}
-	// Now owned by the config
+	/* Now owned by the config */
 	backend = NULL;
 
 	git_config_foreach(cfg, foreach_cb, NULL);

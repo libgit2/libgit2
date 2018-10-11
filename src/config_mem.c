@@ -198,7 +198,7 @@ int git_config_backend_from_string(git_config_backend **out, const char *cfg, si
 		return -1;
 	}
 
-	if (git_buf_put(&backend->cfg, cfg, len) < 0) {
+	if (git_buf_set(&backend->cfg, cfg, len) < 0) {
 		git_config_entries_free(backend->entries);
 		git__free(backend);
 		return -1;
