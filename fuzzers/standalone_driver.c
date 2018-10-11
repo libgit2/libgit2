@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 
+#include "git2.h"
 #include "fileops.h"
 #include "path.h"
 
@@ -41,6 +42,11 @@ int main(int argc, char **argv)
 	unsigned i = 0;
 	int error = 0;
 
+	if (git_libgit2_init() < 0) {
+		fprintf(stderr, "Failed to initialize libgit2\n");
+		abort();
+	}
+
 	if (argc != 2) {
 		fprintf(stderr, "Usage: %s <corpus directory>\n", argv[0]);
 		error = -1;
@@ -66,5 +72,6 @@ int main(int argc, char **argv)
 
 exit:
 	git_vector_free_deep(&corpus_files);
+	git_libgit2_shutdown();
 	return error;
 }
