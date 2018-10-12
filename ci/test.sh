@@ -6,6 +6,13 @@ if [ -n "$SKIP_TESTS" ]; then
 	exit 0
 fi
 
+SOURCE_DIR=${SOURCE_DIR:-$( cd "$( dirname "${BASH_SOURCE[0]}" )" && dirname $( pwd ) )}
+BUILD_DIR=$(pwd)
+TMPDIR=${TMPDIR:-/tmp}
+USER=${USER:-$(whoami)}
+
+VALGRIND="valgrind --leak-check=full --show-reachable=yes --error-exitcode=125 --num-callers=50 --suppressions=\"$SOURCE_DIR/libgit2_clar.supp\""
+
 cleanup() {
 	echo "Cleaning up..."
 
@@ -23,8 +30,20 @@ die() {
 	exit $1
 }
 
-TMPDIR=${TMPDIR:-/tmp}
-USER=${USER:-$(whoami)}
+# Ask ctest what it would run if we were to invoke it directly.  This lets us manage the
+# test configuration in a single place (tests/CMakeLists.txt) instead of running clar
+# here as well.  But it allows us to wrap our test harness with a leak checker like valgrind.
+run_test() {
+	TEST_CMD=$(ctest -N -V -R $1 | sed -n 's/^[0-9]*: Test command: //p')
+
+	if [ "$LEAK_CHECK" = "valgrind" ]; then
+		RUNNER="$VALGRIND $TEST_CMD"
+	else
+		RUNNER="$TEST_CMD"
+	fi
+
+	eval $RUNNER || die $?
+}
 
 # Configure the test environment; run them early so that we're certain
 # that they're started by the time we need them.
@@ -96,7 +115,7 @@ if [ -z "$SKIP_OFFLINE_TESTS" ]; then
 	echo "## Running (offline) tests"
 	echo "##############################################################################"
 
-	ctest -V -R offline || die $?
+	run_test offline
 fi
 
 if [ -z "$SKIP_ONLINE_TESTS" ]; then
@@ -109,7 +128,7 @@ if [ -z "$SKIP_ONLINE_TESTS" ]; then
 	echo "## Running (online) tests"
 	echo "##############################################################################"
 
-	ctest -V -R online || die $?
+	run_test online
 fi
 
 if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
@@ -118,7 +137,7 @@ if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
 	echo ""
 
 	export GITTEST_REMOTE_URL="git://localhost/test.git"
-	ctest -V -R gitdaemon || die $?
+	run_test gitdaemon
 	unset GITTEST_REMOTE_URL
 fi
 
@@ -130,7 +149,7 @@ if [ -z "$SKIP_PROXY_TESTS" ]; then
 	export GITTEST_REMOTE_PROXY_URL="localhost:8080"
 	export GITTEST_REMOTE_PROXY_USER="foo"
 	export GITTEST_REMOTE_PROXY_PASS="bar"
-	ctest -V -R proxy || die $?
+	run_test proxy
 	unset GITTEST_REMOTE_PROXY_URL
 	unset GITTEST_REMOTE_PROXY_USER
 	unset GITTEST_REMOTE_PROXY_PASS
@@ -147,7 +166,7 @@ if [ -z "$SKIP_SSH_TESTS" ]; then
 	export GITTEST_REMOTE_SSH_PUBKEY="${HOME}/.ssh/id_rsa.pub"
 	export GITTEST_REMOTE_SSH_PASSPHRASE=""
 	export GITTEST_REMOTE_SSH_FINGERPRINT="${SSH_FINGERPRINT}"
-	ctest -V -R ssh || die $?
+	run_test ssh
 	unset GITTEST_REMOTE_URL
 	unset GITTEST_REMOTE_USER
 	unset GITTEST_REMOTE_SSH_KEY
