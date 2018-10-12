@@ -36,6 +36,13 @@ jobs:
       workDir: '/build'
       containerCommand: '/src/ci/test.sh'
       detached: false
+  - task: PublishTestResults@2
+    displayName: Publish Test Results
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: 'results_*.xml'
+      searchFolder: '$(Build.BinariesDirectory)'
+      mergeTestResults: true
 
 - job: linux_trusty_clang_openssl
   displayName: 'Linux (Trusty; Clang; OpenSSL)'
@@ -67,6 +74,13 @@ jobs:
       workDir: '/build'
       containerCommand: '/src/ci/test.sh'
       detached: false
+  - task: PublishTestResults@2
+    displayName: Publish Test Results
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: 'results_*.xml'
+      searchFolder: '$(Build.BinariesDirectory)'
+      mergeTestResults: true
 
 - job: macos
   displayName: 'macOS'
@@ -84,6 +98,13 @@ jobs:
     env:
       TMPDIR: $(Agent.TempDirectory)
       LEAK_CHECK: leaks
+  - task: PublishTestResults@2
+    displayName: Publish Test Results
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: 'results_*.xml'
+      searchFolder: '$(Build.BinariesDirectory)'
+      mergeTestResults: true
 
 - job: windows_vs_amd64
   displayName: 'Windows (Visual Studio; amd64)'
@@ -95,6 +116,13 @@ jobs:
       CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013 Win64"
   - powershell: . '$(Build.SourcesDirectory)\ci\test.ps1'
     displayName: Test
+  - task: PublishTestResults@2
+    displayName: Publish Test Results
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: 'results_*.xml'
+      searchFolder: '$(Build.BinariesDirectory)'
+      mergeTestResults: true
 
 - job: windows_vs_x86
   displayName: 'Windows (Visual Studio; x86)'
@@ -106,6 +134,13 @@ jobs:
       CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013"
   - powershell: . '$(Build.SourcesDirectory)\ci\test.ps1'
     displayName: Test
+  - task: PublishTestResults@2
+    displayName: Publish Test Results
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: 'results_*.xml'
+      searchFolder: '$(Build.BinariesDirectory)'
+      mergeTestResults: true
 
 - job: windows_mingw_amd64
   displayName: 'Windows (MinGW; amd64)'
@@ -123,6 +158,13 @@ jobs:
       PATH: $(Agent.TempDirectory)\mingw64\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
   - powershell: . '$(Build.SourcesDirectory)\ci\test.ps1'
     displayName: Test
+  - task: PublishTestResults@2
+    displayName: Publish Test Results
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: 'results_*.xml'
+      searchFolder: '$(Build.BinariesDirectory)'
+      mergeTestResults: true
 
 - job: windows_mingw_x86
   displayName: 'Windows (MinGW; x86)'
@@ -140,3 +182,10 @@ jobs:
       PATH: $(Agent.TempDirectory)\mingw32\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
   - powershell: . '$(Build.SourcesDirectory)\ci\test.ps1'
     displayName: Test
+  - task: PublishTestResults@2
+    displayName: Publish Test Results
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: 'results_*.xml'
+      searchFolder: '$(Build.BinariesDirectory)'
+      mergeTestResults: true
