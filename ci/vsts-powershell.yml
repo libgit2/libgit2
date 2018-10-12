@@ -1,0 +1,17 @@
+# These are the steps used for building on machines with PowerShell.
+steps:
+- powershell: . '$(Build.SourcesDirectory)\ci\build.ps1'
+  displayName: Build
+  workingDirectory: '$(Build.BinariesDirectory)'
+  env: ${{ parameters.environmentVariables }}
+- powershell: . '$(Build.SourcesDirectory)\ci\test.ps1'
+  displayName: Test
+  workingDirectory: '$(Build.BinariesDirectory)'
+  env: ${{ parameters.environmentVariables }}
+- task: PublishTestResults@2
+  displayName: Publish Test Results
+  condition: succeededOrFailed()
+  inputs:
+    testResultsFiles: 'results_*.xml'
+    searchFolder: '$(Build.BinariesDirectory)'
+    mergeTestResults: true
