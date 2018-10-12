@@ -2,8 +2,8 @@ resources:
 - repo: self
 
 phases:
-- phase: linux_trusty_openssl
-  displayName: 'Linux (Trusty; OpenSSL)'
+- phase: linux_trusty_gcc_openssl
+  displayName: 'Linux (Trusty; GCC; OpenSSL)'
   queue:
     name: 'Hosted Linux Preview'
   steps:
@@ -26,7 +26,40 @@ phases:
       volumes: |
        $(Build.SourcesDirectory):/src
        $(Build.BinariesDirectory):/build
-      envVars: 'LEAK_CHECK=valgrind'
+      envVars: |
+       CC=gcc
+       LEAK_CHECK=valgrind
+      workDir: '/build'
+      containerCommand: '/src/ci/test.sh'
+      detached: false
+
+- phase: linux_trusty_clang_openssl
+  displayName: 'Linux (Trusty; Clang; OpenSSL)'
+  queue:
+    name: 'Hosted Linux Preview'
+  steps:
+  - task: Docker@0
+    displayName: Build
+    inputs:
+      action: 'Run an image'
+      imageName: 'ethomson/libgit2-trusty-openssl:latest'
+      volumes: |
+       $(Build.SourcesDirectory):/src
+       $(Build.BinariesDirectory):/build
+      workDir: '/build'
+      containerCommand: '/src/ci/build.sh'
+      detached: false
+  - task: Docker@0
+    displayName: Test
+    inputs:
+      action: 'Run an image'
+      imageName: 'ethomson/libgit2-trusty-openssl:latest'
+      volumes: |
+       $(Build.SourcesDirectory):/src
+       $(Build.BinariesDirectory):/build
+      envVars: |
+       CC=clang
+       LEAK_CHECK=valgrind
       workDir: '/build'
       containerCommand: '/src/ci/test.sh'
       detached: false
