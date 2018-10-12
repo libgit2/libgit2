@@ -11,7 +11,7 @@ jobs:
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
-  - template: ci/vsts-docker.yml
+  - template: ci/docker.yml
     parameters:
       imageName: 'libgit2/trusty-openssl:latest'
       environmentVariables: |
@@ -23,7 +23,7 @@ jobs:
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
-  - template: ci/vsts-docker.yml
+  - template: ci/docker.yml
     parameters:
       imageName: 'libgit2/trusty-openssl:latest'
       environmentVariables: |
@@ -37,7 +37,7 @@ jobs:
   steps:
   - bash: . '$(Build.SourcesDirectory)/ci/setup-osx.sh'
     displayName: Setup
-  - template: ci/vsts-bash.yml
+  - template: ci/bash.yml
     parameters:
       environmentVariables:
         TMPDIR: $(Agent.TempDirectory)
@@ -48,7 +48,7 @@ jobs:
   displayName: 'Windows (Visual Studio; amd64)'
   pool: Hosted
   steps:
-  - template: ci/vsts-powershell.yml
+  - template: ci/powershell.yml
     parameters:
       environmentVariables:
         CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013 Win64"
@@ -57,7 +57,7 @@ jobs:
   displayName: 'Windows (Visual Studio; x86)'
   pool: Hosted
   steps:
-  - template: ci/vsts-powershell.yml
+  - template: ci/powershell.yml
     parameters:
       environmentVariables:
         CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013"
@@ -71,7 +71,7 @@ jobs:
     env:
       TEMP: $(Agent.TempDirectory)
       ARCH: amd64
-  - template: ci/vsts-powershell.yml
+  - template: ci/powershell.yml
     parameters:
       environmentVariables:
         CMAKE_OPTIONS: -G"MinGW Makefiles"
@@ -87,7 +87,7 @@ jobs:
     env:
       TEMP: $(Agent.TempDirectory)
       ARCH: x86
-  - template: ci/vsts-powershell.yml
+  - template: ci/powershell.yml
     parameters:
       environmentVariables:
         CMAKE_OPTIONS: -G"MinGW Makefiles"
