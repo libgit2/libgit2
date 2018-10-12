@@ -9,6 +9,7 @@ set -e
 
 SOURCE_DIR=${SOURCE_DIR:-$( cd "$( dirname "${BASH_SOURCE[0]}" )" && dirname $( pwd ) )}
 BUILD_DIR=$(pwd)
+CC=${CC:-cc}
 
 indent() { sed "s/^/    /"; }
 
@@ -20,7 +21,7 @@ uname -a 2>&1 | indent
 echo "CMake version:"
 cmake --version 2>&1 | indent
 echo "Compiler version:"
-gcc --version 2>&1 | indent
+$CC --version 2>&1 | indent
 echo ""
 
 echo "##############################################################################"
