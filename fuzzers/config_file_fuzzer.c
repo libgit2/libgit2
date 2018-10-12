@@ -8,6 +8,7 @@
  */
 
 #include <git2.h>
+#include "config_backend.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -25,9 +26,6 @@ int foreach_cb(const git_config_entry *entry, void *payload)
 	return 0;
 }
 
-static char path[] = "/tmp/git.XXXXXX";
-static int fd = -1;
-
 int LLVMFuzzerInitialize(int *argc, char ***argv)
 {
 	UNUSED(argc);
@@ -35,10 +33,6 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
 
 	if (git_libgit2_init() < 0)
 		abort();
-	fd = mkstemp(path);
-	if (fd < 0) {
-		abort();
-	}
 
 	return 0;
 }
@@ -46,30 +40,26 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
 	git_config *cfg = NULL;
+	git_config_backend *backend = NULL;
 	int err = 0;
-	size_t total = 0;
 
-	if (ftruncate(fd, 0) !=0 ) {
-		abort();
-	}
-	if (lseek(fd, 0, SEEK_SET) != 0) {
-		abort();
+	if ((err = git_config_new(&cfg)) != 0) {
+		goto out;
 	}
 
-	while (total < size) {
-		ssize_t written = write(fd, data, size);
-		if (written < 0 && errno != EINTR)
-			abort();
-		if (written < 0)
-			continue;
-		total += written;
+	if ((err = git_config_backend_from_string(&backend, (const char*)data, size)) != 0) {
+		goto out;
 	}
+	if ((err = git_config_add_backend(cfg, backend, 0, NULL, 0)) != 0) {
+		goto out;
+	}
+	/* Now owned by the config */
+	backend = NULL;
 
-	err = git_config_open_ondisk(&cfg, path);
-	if (err == 0) {
-		git_config_foreach(cfg, foreach_cb, NULL);
-		git_config_free(cfg);
-	}
+	git_config_foreach(cfg, foreach_cb, NULL);
+ out:
+	git_config_backend_free(backend);
+	git_config_free(cfg);
 
 	return 0;
 }

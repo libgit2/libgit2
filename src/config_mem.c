@@ -186,7 +186,7 @@ static void config_memory_free(git_config_backend *_backend)
 	git__free(backend);
 }
 
-int git_config_backend_from_string(git_config_backend **out, const char *cfg)
+int git_config_backend_from_string(git_config_backend **out, const char *cfg, size_t len)
 {
 	config_memory_backend *backend;
 
@@ -198,7 +198,7 @@ int git_config_backend_from_string(git_config_backend **out, const char *cfg)
 		return -1;
 	}
 
-	if (git_buf_sets(&backend->cfg, cfg) < 0) {
+	if (git_buf_set(&backend->cfg, cfg, len) < 0) {
 		git_config_entries_free(backend->entries);
 		git__free(backend);
 		return -1;
