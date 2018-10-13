@@ -61,15 +61,29 @@ int git_diff_file_stats__full_to_buf(
 	old_size = delta->old_file.size;
 	new_size = delta->new_file.size;
 
-	if (git_buf_printf(out, " %s", old_path) < 0)
-		goto on_error;
-
 	if (strcmp(old_path, new_path) != 0) {
+		size_t common_dirlen;
+		int error;
+
 		padding = stats->max_name - strlen(old_path) - strlen(new_path);
 
-		if (git_buf_printf(out, DIFF_RENAME_FILE_SEPARATOR "%s", new_path) < 0)
+		if ((common_dirlen = git_path_common_dirlen(old_path, new_path)) &&
+		    common_dirlen <= INT_MAX) {
+			error = git_buf_printf(out, " %.*s{%s"DIFF_RENAME_FILE_SEPARATOR"%s}",
+					       (int) common_dirlen, old_path,
+					       old_path + common_dirlen,
+					       new_path + common_dirlen);
+		} else {
+			error = git_buf_printf(out, " %s" DIFF_RENAME_FILE_SEPARATOR "%s",
+					       old_path, new_path);
+		}
+
+		if (error < 0)
 			goto on_error;
 	} else {
+		if (git_buf_printf(out, " %s", old_path) < 0)
+			goto on_error;
+
 		padding = stats->max_name - strlen(old_path);
 
 		if (stats->renames > 0)
