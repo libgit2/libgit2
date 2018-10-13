@@ -395,7 +395,8 @@ static int on_headers_complete(http_parser *parser)
 	if ((parser->status_code == 301 ||
 	     parser->status_code == 302 ||
 	     (parser->status_code == 303 && get_verb == s->verb) ||
-	     parser->status_code == 307) &&
+	     parser->status_code == 307 ||
+	     parser->status_code == 308) &&
 	    t->location) {
 
 		if (s->redirect_count >= 7) {
