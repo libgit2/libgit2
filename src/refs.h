@@ -85,6 +85,10 @@ int git_reference__is_remote(const char *ref_name);
 int git_reference__is_tag(const char *ref_name);
 const char *git_reference__shorthand(const char *name);
 
+typedef enum {
+	GIT_REF_LOOKUP_DEFAULT = 0,
+	GIT_REF_LOOKUP_ALLOW_UNBORN = 1,
+} git_reference_lookup_options;
 /**
  * Lookup a reference by name and try to resolve to an OID.
  *
@@ -93,7 +97,7 @@ const char *git_reference__shorthand(const char *name);
  * default.  If you pass 0 for `max_deref`, this will not attempt to resolve
  * the reference.  For any value of `max_deref` other than 0, not
  * successfully resolving the reference will be reported as an error.
-
+ *
  * The generated reference must be freed by the user.
  *
  * @param reference_out Pointer to the looked-up reference
@@ -106,7 +110,8 @@ int git_reference_lookup_resolved(
 	git_reference **reference_out,
 	git_repository *repo,
 	const char *name,
-	int max_deref);
+	int max_deref,
+	unsigned int lookup_options);
 
 /**
  * Read reference from a file.

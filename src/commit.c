@@ -139,7 +139,7 @@ static int git_commit__create_internal(
 	git_array_oid_t parents = GIT_ARRAY_INIT;
 
 	if (update_ref) {
-		error = git_reference_lookup_resolved(&ref, repo, update_ref, 10);
+		error = git_reference_lookup_resolved(&ref, repo, update_ref, 10, 0);
 		if (error < 0 && error != GIT_ENOTFOUND)
 			return error;
 	}
@@ -360,7 +360,7 @@ int git_commit_amend(
 	}
 
 	if (update_ref) {
-		if ((error = git_reference_lookup_resolved(&ref, repo, update_ref, 5)) < 0)
+		if ((error = git_reference_lookup_resolved(&ref, repo, update_ref, 5, 0)) < 0)
 			return error;
 
 		if (git_oid_cmp(git_commit_id(commit_to_amend), git_reference_target(ref))) {
