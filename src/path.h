@@ -13,6 +13,8 @@
 #include "buffer.h"
 #include "vector.h"
 
+#include "git2/sys/path.h"
+
 /**
  * Path manipulation utils
  *
@@ -644,43 +646,5 @@ extern bool git_path_isvalid(
  * Convert any backslashes into slashes
  */
 int git_path_normalize_slashes(git_buf *out, const char *path);
-
-/*
- * The order needs to stay the same to not break the `gitfiles`
- * array in path.c
- */
-typedef enum {
-	GIT_PATH_GITFILE_GITIGNORE,
-	GIT_PATH_GITFILE_GITMODULES,
-	GIT_PATH_GITFILE_GITATTRIBUTES
-} git_path_gitfile;
-
-typedef enum {
-	/* Do both NTFS- and HFS-specific checks */
-	GIT_PATH_FS_GENERIC,
-	/* Do NTFS-specific checks only */
-	GIT_PATH_FS_NTFS,
-	/* Do HFS-specific checks only */
-	GIT_PATH_FS_HFS
-} git_path_fs;
-
-/**
- * Check whether a path component corresponds to a .git$SUFFIX
- * file.
- *
- * As some filesystems do special things to filenames when
- * writing files to disk, you cannot always do a plain string
- * comparison to verify whether a file name matches an expected
- * path or not. This function can do the comparison for you,
- * depending on the filesystem you're on.
- *
- * @param path the path component to check
- * @param pathlen the length of `path` that is to be checked
- * @param gitfile which file to check against
- * @param fs which filesystem-specific checks to use
- * @return 0 in case the file does not match, a positive value if
- *         it does; -1 in case of an error
- */
-extern int git_path_is_gitfile(const char *path, size_t pathlen, git_path_gitfile gitfile, git_path_fs fs);
 
 #endif
