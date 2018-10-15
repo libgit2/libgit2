@@ -91,8 +91,10 @@ int git_object__from_raw(
 	def = &git_objects_table[type];
 	assert(def->free && def->parse_raw);
 
-	if ((error = def->parse_raw(object, data, size)) < 0)
+	if ((error = def->parse_raw(object, data, size)) < 0) {
 		def->free(object);
+		return error;
+	}
 
 	git_cached_obj_incref(object);
 	*object_out = object;
