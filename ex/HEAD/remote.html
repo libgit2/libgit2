@@ -20,6 +20,7 @@
           <a class="source" href="add.html">add.c</a>
           <a class="source" href="blame.html">blame.c</a>
           <a class="source" href="cat-file.html">cat-file.c</a>
+          <a class="source" href="checkout.html">checkout.c</a>
           <a class="source" href="common.html">common.c</a>
           <a class="source" href="describe.html">describe.c</a>
           <a class="source" href="diff.html">diff.c</a>
@@ -27,6 +28,7 @@
           <a class="source" href="general.html">general.c</a>
           <a class="source" href="init.html">init.c</a>
           <a class="source" href="log.html">log.c</a>
+          <a class="source" href="ls-files.html">ls-files.c</a>
           <a class="source" href="merge.html">merge.c</a>
           <a class="source" href="network/clone.html">clone.c</a>
           <a class="source" href="network/common.html">common.c</a>
@@ -131,7 +133,7 @@ program is emulating.</p>
 
   <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_open-14" class="fnlink" href="../../#HEAD/group/repository/git_repository_open">git_repository_open</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="n">buf</span><span class="p">.</span><span class="n">ptr</span><span class="p">),</span>
     <span class="s">&quot;Could not open repository&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
-  <span class="n"><a name="git_buf_free-1" class="fnlink" href="../../#HEAD/group/buf/git_buf_free">git_buf_free</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">buf</span><span class="p">);</span>
+  <span class="n"><a name="git_buf_dispose-1" class="fnlink" href="../../#HEAD/group/buf/git_buf_dispose">git_buf_dispose</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">buf</span><span class="p">);</span>
 
   <span class="k">switch</span> <span class="p">(</span><span class="n">opt</span><span class="p">.</span><span class="n">cmd</span><span class="p">)</span>
   <span class="p">{</span>

@@ -20,6 +20,7 @@
           <a class="source" href="add.html">add.c</a>
           <a class="source" href="blame.html">blame.c</a>
           <a class="source" href="cat-file.html">cat-file.c</a>
+          <a class="source" href="checkout.html">checkout.c</a>
           <a class="source" href="common.html">common.c</a>
           <a class="source" href="describe.html">describe.c</a>
           <a class="source" href="diff.html">diff.c</a>
@@ -27,6 +28,7 @@
           <a class="source" href="general.html">general.c</a>
           <a class="source" href="init.html">init.c</a>
           <a class="source" href="log.html">log.c</a>
+          <a class="source" href="ls-files.html">ls-files.c</a>
           <a class="source" href="merge.html">merge.c</a>
           <a class="source" href="network/clone.html">clone.c</a>
           <a class="source" href="network/common.html">common.c</a>
@@ -247,7 +249,17 @@ this throughout the example for storing the value of the current SHA
 key we&#39;re working with.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n"><a name="git_oid_fromstr-48" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="n">oid</span><span class="p">,</span> <span class="n">hex</span><span class="p">);</span></pre></div>
+        <div class='highlight'><pre>  <span class="n"><a name="git_oid_fromstr-48" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="n">oid</span><span class="p">,</span> <span class="n">hex</span><span class="p">);</span>
+
+  <span class="cm">/*</span>
+<span class="cm">   * Once we&#39;ve converted the string into the oid value, we can get the raw</span>
+<span class="cm">   * value of the SHA by accessing `oid.id`</span>
+<span class="cm">   *</span>
+<span class="cm">   * Next we will convert the 20 byte raw SHA1 value to a human readable 40</span>
+<span class="cm">   * char hex value.</span>
+<span class="cm">   */</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">*Raw to Hex*</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="n">out</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;\0&#39;</span><span class="p">;</span></pre></div>
       </td>
     </tr>
     <tr id='section-10'>
@@ -255,41 +267,16 @@ key we&#39;re working with.</p>
         <div class="pilwrap">
           <a class="pilcrow" href="#section-10">&#182;</a>
         </div>
-        <p>Once we&#39;ve converted the string into the oid value, we can get the raw
-value of the SHA by accessing <code>oid.id</code></p>
-      </td>
-      <td class=code>
-        <div class='highlight'><pre></pre></div>
-      </td>
-    </tr>
-    <tr id='section-11'>
-      <td class=docs>
-        <div class="pilwrap">
-          <a class="pilcrow" href="#section-11">&#182;</a>
-        </div>
-        <p>Next we will convert the 20 byte raw SHA1 value to a human readable 40
-char hex value.</p>
-      </td>
-      <td class=code>
-        <div class='highlight'><pre>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">*Raw to Hex*</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
-  <span class="n">out</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;\0&#39;</span><span class="p">;</span></pre></div>
-      </td>
-    </tr>
-    <tr id='section-12'>
-      <td class=docs>
-        <div class="pilwrap">
-          <a class="pilcrow" href="#section-12">&#182;</a>
-        </div>
         <p>If you have a oid, you can easily get the hex value of the SHA as well.</p>
       </td>
       <td class=code>
         <div class='highlight'><pre>  <span class="n"><a name="git_oid_fmt-56" class="fnlink" href="../../#HEAD/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">oid</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-13'>
+    <tr id='section-11'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-13">&#182;</a>
+          <a class="pilcrow" href="#section-11">&#182;</a>
         </div>
         <p>If you have a oid, you can easily get the hex value of the SHA as well.</p>
       </td>
@@ -336,10 +323,10 @@ repository.</p>
         <div class='highlight'><pre>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">*Raw Object Read*</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-16'>
+    <tr id='section-14'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-16">&#182;</a>
+          <a class="pilcrow" href="#section-14">&#182;</a>
         </div>
         <p>We can read raw objects directly from the object database if we have
 the oid (SHA) of the object.  This allows us to access objects without
@@ -350,10 +337,10 @@ knowing their type and inspect the raw bytes unparsed.</p>
   <span class="n">check_error</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="s">&quot;finding object in repository&quot;</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-17'>
+    <tr id='section-15'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-17">&#182;</a>
+          <a class="pilcrow" href="#section-15">&#182;</a>
         </div>
         <p>A raw object only has three properties - the type (commit, blob, tree
 or tag), the size of the raw data and the raw, unparsed data itself.
@@ -367,10 +354,10 @@ to be hugely helpful as a raw object.</p>
   <span class="n">otype</span> <span class="o">=</span> <span class="n"><a name="git_odb_object_type-47" class="fnlink" href="../../#HEAD/group/odb/git_odb_object_type">git_odb_object_type</a></span><span class="p">(</span><span class="n">obj</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-18'>
+    <tr id='section-16'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-18">&#182;</a>
+          <a class="pilcrow" href="#section-16">&#182;</a>
         </div>
         <p>We provide methods to convert from the object type which is an enum, to
 a string representation of that value (and vice-versa).</p>
@@ -382,10 +369,10 @@ a string representation of that value (and vice-versa).</p>
       <span class="n">str_type</span><span class="p">,</span> <span class="n">data</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-19'>
+    <tr id='section-17'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-19">&#182;</a>
+          <a class="pilcrow" href="#section-17">&#182;</a>
         </div>
         <p>For proper memory management, close the object when you are done with
 it or it will leak memory.</p>
@@ -405,10 +392,10 @@ it or it will leak memory.</p>
         <div class='highlight'><pre>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">*Raw Object Write*</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-21'>
+    <tr id='section-19'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-21">&#182;</a>
+          <a class="pilcrow" href="#section-19">&#182;</a>
         </div>
         <p>You can also write raw object data to Git. This is pretty cool because
 it gives you direct access to the key/value properties of Git.  Here
@@ -419,10 +406,10 @@ Notice that we have to specify the object type as the <code>git_otype</code> enu
         <div class='highlight'><pre>  <span class="n"><a name="git_odb_write-43" class="fnlink" href="../../#HEAD/group/odb/git_odb_write">git_odb_write</a></span><span class="p">(</span><span class="n">oid</span><span class="p">,</span> <span class="n">odb</span><span class="p">,</span> <span class="s">&quot;test data&quot;</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="s">&quot;test data&quot;</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">GIT_OBJ_BLOB</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-22'>
+    <tr id='section-20'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-22">&#182;</a>
+          <a class="pilcrow" href="#section-20">&#182;</a>
         </div>
         <p>Now that we&#39;ve written the object, we can check out what SHA1 was
 generated when the object was written to our database.</p>
@@ -432,10 +419,10 @@ generated when the object was written to our database.</p>
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Written Object: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">oid_hex</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-23'>
+    <tr id='section-21'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-23">&#182;</a>
+          <a class="pilcrow" href="#section-21">&#182;</a>
         </div>
         <p>Free the object database after usage.</p>
       </td>
@@ -468,10 +455,10 @@ docs</a>.</p>
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">*Commit Writing*</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-25'>
+    <tr id='section-23'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-25">&#182;</a>
+          <a class="pilcrow" href="#section-23">&#182;</a>
         </div>
         <p>Creating signatures for an authoring identity and time is simple.  You
 will need to do this to specify who created a commit and when.  Default
@@ -486,10 +473,10 @@ example file to see how to access config values.</p>
       <span class="s">&quot;Scott A Chacon&quot;</span><span class="p">,</span> <span class="s">&quot;scott@github.com&quot;</span><span class="p">,</span> <span class="mi">987654321</span><span class="p">,</span> <span class="mi">90</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-26'>
+    <tr id='section-24'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-26">&#182;</a>
+          <a class="pilcrow" href="#section-24">&#182;</a>
         </div>
         <p>Commit objects need a tree to point to and optionally one or more
 parents.  Here we&#39;re creating oid objects to create the commit with,
@@ -502,10 +489,10 @@ but you can also use</p>
   <span class="n"><a name="git_commit_lookup-6" class="fnlink" href="../../#HEAD/group/commit/git_commit_lookup">git_commit_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">parent</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">parent_id</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-27'>
+    <tr id='section-25'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-27">&#182;</a>
+          <a class="pilcrow" href="#section-25">&#182;</a>
         </div>
         <p>Here we actually create the commit object with a single call with all
 the values we need to create the commit.  The SHA key is written to the
@@ -524,10 +511,10 @@ the values we need to create the commit.  The SHA key is written to the
       <span class="mi">1</span><span class="p">,</span> <span class="n">parent</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-28'>
+    <tr id='section-26'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-28">&#182;</a>
+          <a class="pilcrow" href="#section-26">&#182;</a>
         </div>
         <p>Now we can take a look at the commit SHA we&#39;ve generated.</p>
       </td>
@@ -536,10 +523,10 @@ the values we need to create the commit.  The SHA key is written to the
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;New Commit: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">oid_hex</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-29'>
+    <tr id='section-27'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-29">&#182;</a>
+          <a class="pilcrow" href="#section-27">&#182;</a>
         </div>
         <p>Free all objects used in the meanwhile.</p>
       </td>
@@ -597,10 +584,10 @@ data in the commit - the author (name, email, datetime), committer
   <span class="n">check_error</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="s">&quot;looking up commit&quot;</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-32'>
+    <tr id='section-30'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-32">&#182;</a>
+          <a class="pilcrow" href="#section-30">&#182;</a>
         </div>
         <p>Each of the properties of the commit object are accessible via methods,
 including commonly needed variations, such as <code><a name="git_commit_time-18" class="fnlink" href="../../#HEAD/group/commit/git_commit_time">git_commit_time</a></code> which
@@ -614,10 +601,10 @@ commit message (as a NUL-terminated string).</p>
   <span class="n">time</span>    <span class="o">=</span> <span class="n"><a name="git_commit_time-19" class="fnlink" href="../../#HEAD/group/commit/git_commit_time">git_commit_time</a></span><span class="p">(</span><span class="n">commit</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-33'>
+    <tr id='section-31'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-33">&#182;</a>
+          <a class="pilcrow" href="#section-31">&#182;</a>
         </div>
         <p>The author and committer methods return [git<em>signature] structures,
 which give you name, email and <code>when</code>, which is a `git</em>time` structure,
@@ -630,10 +617,10 @@ giving you a timestamp and timezone offset.</p>
     <span class="n">ctime</span><span class="p">(</span><span class="o">&amp;</span><span class="n">time</span><span class="p">),</span> <span class="n">message</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-34'>
+    <tr id='section-32'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-34">&#182;</a>
+          <a class="pilcrow" href="#section-32">&#182;</a>
         </div>
         <p>Commits can have zero or more parents. The first (root) commit will
 have no parents, most commits will have one (i.e. the commit it was
@@ -679,10 +666,10 @@ methods, since the objects themselves are very similar.</p>
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">*Tag Parsing*</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-36'>
+    <tr id='section-34'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-36">&#182;</a>
+          <a class="pilcrow" href="#section-34">&#182;</a>
         </div>
         <p>We create an oid for the tag object if we know the SHA and look it up
 the same way that we would a commit (or any other object).</p>
@@ -694,10 +681,10 @@ the same way that we would a commit (or any other object).</p>
   <span class="n">check_error</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="s">&quot;looking up tag&quot;</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-37'>
+    <tr id='section-35'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-37">&#182;</a>
+          <a class="pilcrow" href="#section-35">&#182;</a>
         </div>
         <p>Now that we have the tag object, we can extract the information it
 generally contains: the target (usually a commit object), the type of
@@ -713,10 +700,10 @@ git_signature - name, email, timestamp), and the tag message.</p>
     <span class="n">name</span><span class="p">,</span> <span class="n"><a name="git_object_type2string-40" class="fnlink" href="../../#HEAD/group/object/git_object_type2string">git_object_type2string</a></span><span class="p">(</span><span class="n">type</span><span class="p">),</span> <span class="n">message</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-38'>
+    <tr id='section-36'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-38">&#182;</a>
+          <a class="pilcrow" href="#section-36">&#182;</a>
         </div>
         <p>Free both the commit and tag after usage.</p>
       </td>
@@ -750,10 +737,10 @@ tree entries.</p>
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">*Tree Parsing*</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-40'>
+    <tr id='section-38'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-40">&#182;</a>
+          <a class="pilcrow" href="#section-38">&#182;</a>
         </div>
         <p>Create the oid and lookup the tree object just like the other objects.</p>
       </td>
@@ -762,10 +749,10 @@ tree entries.</p>
   <span class="n"><a name="git_tree_lookup-91" class="fnlink" href="../../#HEAD/group/tree/git_tree_lookup">git_tree_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">oid</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-41'>
+    <tr id='section-39'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-41">&#182;</a>
+          <a class="pilcrow" href="#section-39">&#182;</a>
         </div>
         <p>Getting the count of entries in the tree so you can iterate over them
 if you want to.</p>
@@ -778,10 +765,10 @@ if you want to.</p>
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Entry name: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_tree_entry_name-97" class="fnlink" href="../../#HEAD/group/tree/git_tree_entry_name">git_tree_entry_name</a></span><span class="p">(</span><span class="n">entry</span><span class="p">));</span> <span class="cm">/* &quot;README&quot; */</span></pre></div>
       </td>
     </tr>
-    <tr id='section-42'>
+    <tr id='section-40'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-42">&#182;</a>
+          <a class="pilcrow" href="#section-40">&#182;</a>
         </div>
         <p>You can also access tree entries by name if you know the name of the
 entry you&#39;re looking for.</p>
@@ -791,10 +778,10 @@ entry you&#39;re looking for.</p>
   <span class="n"><a name="git_tree_entry_name-98" class="fnlink" href="../../#HEAD/group/tree/git_tree_entry_name">git_tree_entry_name</a></span><span class="p">(</span><span class="n">entry</span><span class="p">);</span> <span class="cm">/* &quot;README&quot; */</span></pre></div>
       </td>
     </tr>
-    <tr id='section-43'>
+    <tr id='section-41'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-43">&#182;</a>
+          <a class="pilcrow" href="#section-41">&#182;</a>
         </div>
         <p>Once you have the entry object, you can access the content or subtree
 (or commit, in the case of submodules) that it points to.  You can also
@@ -804,10 +791,10 @@ get the mode if you want.</p>
         <div class='highlight'><pre>  <span class="n"><a name="git_tree_entry_to_object-99" class="fnlink" href="../../#HEAD/group/tree/git_tree_entry_to_object">git_tree_entry_to_object</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">obj</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">entry</span><span class="p">);</span> <span class="cm">/* blob */</span></pre></div>
       </td>
     </tr>
-    <tr id='section-44'>
+    <tr id='section-42'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-44">&#182;</a>
+          <a class="pilcrow" href="#section-42">&#182;</a>
         </div>
         <p>Remember to close the looked-up object and tree once you are done using it</p>
       </td>
@@ -844,10 +831,10 @@ don&#39;t have to do all those steps yourself.</p>
   <span class="n"><a name="git_blob_lookup-1" class="fnlink" href="../../#HEAD/group/blob/git_blob_lookup">git_blob_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blob</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">oid</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-46'>
+    <tr id='section-44'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-46">&#182;</a>
+          <a class="pilcrow" href="#section-44">&#182;</a>
         </div>
         <p>You can access a buffer with the raw contents of the blob directly.
 Note that this buffer may not be contain ASCII data for certain blobs
@@ -860,10 +847,10 @@ size in bytes</p>
   <span class="n"><a name="git_blob_rawcontent-3" class="fnlink" href="../../#HEAD/group/blob/git_blob_rawcontent">git_blob_rawcontent</a></span><span class="p">(</span><span class="n">blob</span><span class="p">);</span> <span class="cm">/* &quot;content&quot; */</span></pre></div>
       </td>
     </tr>
-    <tr id='section-47'>
+    <tr id='section-45'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-47">&#182;</a>
+          <a class="pilcrow" href="#section-45">&#182;</a>
         </div>
         <p>Free the blob after usage.</p>
       </td>
@@ -901,10 +888,10 @@ can allow you to create <code>git log</code> type functionality.</p>
   <span class="n"><a name="git_oid_fromstr-55" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="s">&quot;5b5b025afb0b4c913b4c338a42934a3863bf3644&quot;</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-49'>
+    <tr id='section-47'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-49">&#182;</a>
+          <a class="pilcrow" href="#section-47">&#182;</a>
         </div>
         <p>To use the revwalker, create a new walker, tell it how you want to sort
 the output and then push one or more starting points onto the walker.
@@ -921,10 +908,10 @@ of <code>branch1</code>.</p>
   <span class="n"><a name="git_revwalk_push-75" class="fnlink" href="../../#HEAD/group/revwalk/git_revwalk_push">git_revwalk_push</a></span><span class="p">(</span><span class="n">walk</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">oid</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-50'>
+    <tr id='section-48'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-50">&#182;</a>
+          <a class="pilcrow" href="#section-48">&#182;</a>
         </div>
         <p>Now that we have the starting point pushed onto the walker, we start
 asking for ancestors. It will return them in the sorting order we asked
@@ -945,10 +932,10 @@ since the raw contents of the commit object will be cached in memory</p>
   <span class="p">}</span></pre></div>
       </td>
     </tr>
-    <tr id='section-51'>
+    <tr id='section-49'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-51">&#182;</a>
+          <a class="pilcrow" href="#section-49">&#182;</a>
         </div>
         <p>Like the other objects, be sure to free the revwalker when you&#39;re done
 to prevent memory leaks.  Also, make sure that the repository being
@@ -979,10 +966,10 @@ the Git index file (sometimes thought of as the staging area).</p>
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">*Index Walking*</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-53'>
+    <tr id='section-51'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-53">&#182;</a>
+          <a class="pilcrow" href="#section-51">&#182;</a>
         </div>
         <p>You can either open the index from the standard location in an open
 repository, as we&#39;re doing here, or you can open and manipulate any
@@ -993,10 +980,10 @@ will be located and loaded from disk.</p>
         <div class='highlight'><pre>  <span class="n"><a name="git_repository_index-73" class="fnlink" href="../../#HEAD/group/repository/git_repository_index">git_repository_index</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">index</span><span class="p">,</span> <span class="n">repo</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-54'>
+    <tr id='section-52'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-54">&#182;</a>
+          <a class="pilcrow" href="#section-52">&#182;</a>
         </div>
         <p>For each entry in the index, you can get a bunch of information
 including the SHA (oid), path and mode which map to the tree objects
@@ -1039,10 +1026,10 @@ the .git/refs directory).</p>
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">*Reference Listing*</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-56'>
+    <tr id='section-54'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-56">&#182;</a>
+          <a class="pilcrow" href="#section-54">&#182;</a>
         </div>
         <p>Here we will implement something like <code>git for-each-ref</code> simply listing
 out all available references and the object SHA they resolve to.</p>
@@ -1105,10 +1092,10 @@ in any of the accessible config file locations (system, global, local).</p>
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">*Config Listing*</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-58'>
+    <tr id='section-56'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-58">&#182;</a>
+          <a class="pilcrow" href="#section-56">&#182;</a>
         </div>
         <p>Open a config object so we can read global values from it.</p>
 

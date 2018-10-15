@@ -20,6 +20,7 @@
           <a class="source" href="../add.html">add.c</a>
           <a class="source" href="../blame.html">blame.c</a>
           <a class="source" href="../cat-file.html">cat-file.c</a>
+          <a class="source" href="../checkout.html">checkout.c</a>
           <a class="source" href="../common.html">common.c</a>
           <a class="source" href="../describe.html">describe.c</a>
           <a class="source" href="../diff.html">diff.c</a>
@@ -27,6 +28,7 @@
           <a class="source" href="../general.html">general.c</a>
           <a class="source" href="../init.html">init.c</a>
           <a class="source" href="../log.html">log.c</a>
+          <a class="source" href="../ls-files.html">ls-files.c</a>
           <a class="source" href="../merge.html">merge.c</a>
           <a class="source" href="clone.html">clone.c</a>
           <a class="source" href="common.html">common.c</a>
@@ -71,18 +73,10 @@
   <span class="kt">int</span> <span class="n">error</span><span class="p">;</span>
   <span class="k">const</span> <span class="n">git_remote_head</span> <span class="o">**</span><span class="n">refs</span><span class="p">;</span>
   <span class="kt">size_t</span> <span class="n">refs_len</span><span class="p">,</span> <span class="n">i</span><span class="p">;</span>
-  <span class="n">git_remote_callbacks</span> <span class="n">callbacks</span> <span class="o">=</span> <span class="n">GIT_REMOTE_CALLBACKS_INIT</span><span class="p">;</span></pre></div>
-      </td>
-    </tr>
-    <tr id='section-2'>
-      <td class=docs>
-        <div class="pilwrap">
-          <a class="pilcrow" href="#section-2">&#182;</a>
-        </div>
-        <p>Find the remote by name</p>
-      </td>
-      <td class=code>
-        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_lookup-3" class="fnlink" href="../../#HEAD/group/remote/git_remote_lookup">git_remote_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">);</span>
+  <span class="n">git_remote_callbacks</span> <span class="n">callbacks</span> <span class="o">=</span> <span class="n">GIT_REMOTE_CALLBACKS_INIT</span><span class="p">;</span>
+
+  <span class="cm">/* Find the remote by name */</span>
+  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_lookup-3" class="fnlink" href="../../#HEAD/group/remote/git_remote_lookup">git_remote_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_create_anonymous-2" class="fnlink" href="../../#HEAD/group/remote/git_remote_create_anonymous">git_remote_create_anonymous</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">);</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
@@ -90,10 +84,10 @@
   <span class="p">}</span></pre></div>
       </td>
     </tr>
-    <tr id='section-3'>
+    <tr id='section-2'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-3">&#182;</a>
+          <a class="pilcrow" href="#section-2">&#182;</a>
         </div>
         <p>Connect to the remote and call the printing function for
 each of the remote references.</p>
@@ -106,10 +100,10 @@ each of the remote references.</p>
     <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span></pre></div>
       </td>
     </tr>
-    <tr id='section-4'>
+    <tr id='section-3'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-4">&#182;</a>
+          <a class="pilcrow" href="#section-3">&#182;</a>
         </div>
         <p>Get the list of references on the remote and print out
 their name next to what they point to.</p>
@@ -130,10 +124,10 @@ their name next to what they point to.</p>
 <span class="p">}</span></pre></div>
       </td>
     </tr>
-    <tr id='section-5'>
+    <tr id='section-4'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-5">&#182;</a>
+          <a class="pilcrow" href="#section-4">&#182;</a>
         </div>
         <p>Entry point for this command</p>
 

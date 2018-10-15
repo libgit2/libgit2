@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>index-pack.c</title>
+  <link rel="stylesheet" href="../../css.css">
+  <style type="text/css">
+    a.fnlink {text-decoration: none}
+    a.fnlink:hover {text-decoration: underline}
+  </style>
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div id="jump_to">
+    Jump To &hellip;
+    <div id="jump_wrapper">
+      <div id="jump_page">
+        <a class="source" href="../../#v0.27.1">API Docs</a>
+          <a class="source" href="../add.html">add.c</a>
+          <a class="source" href="../blame.html">blame.c</a>
+          <a class="source" href="../cat-file.html">cat-file.c</a>
+          <a class="source" href="../common.html">common.c</a>
+          <a class="source" href="../describe.html">describe.c</a>
+          <a class="source" href="../diff.html">diff.c</a>
+          <a class="source" href="../for-each-ref.html">for-each-ref.c</a>
+          <a class="source" href="../general.html">general.c</a>
+          <a class="source" href="../init.html">init.c</a>
+          <a class="source" href="../log.html">log.c</a>
+          <a class="source" href="../merge.html">merge.c</a>
+          <a class="source" href="clone.html">clone.c</a>
+          <a class="source" href="common.html">common.c</a>
+          <a class="source" href="fetch.html">fetch.c</a>
+          <a class="source" href="git2.html">git2.c</a>
+          <a class="source" href="index-pack.html">index-pack.c</a>
+          <a class="source" href="ls-remote.html">ls-remote.c</a>
+          <a class="source" href="../remote.html">remote.c</a>
+          <a class="source" href="../rev-list.html">rev-list.c</a>
+          <a class="source" href="../rev-parse.html">rev-parse.c</a>
+          <a class="source" href="../showindex.html">showindex.c</a>
+          <a class="source" href="../status.html">status.c</a>
+          <a class="source" href="../tag.html">tag.c</a>
+      </div>
+    </div>
+  </div>
+  <table cellspacing=0 cellpadding=0>
+  <thead>
+    <tr>
+      <th class=docs><h1>index-pack.c</h1></th>
+      <th class=code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr id='section-1'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-1">&#182;</a>
+        </div>
+        
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="cp">#include &lt;git2.h&gt;</span>
+<span class="cp">#include &lt;stdlib.h&gt;</span>
+<span class="cp">#include &lt;stdio.h&gt;</span>
+<span class="cp">#include &lt;string.h&gt;</span>
+<span class="cp">#include &lt;sys/types.h&gt;</span>
+<span class="cp">#include &lt;sys/stat.h&gt;</span>
+<span class="cp">#include &lt;fcntl.h&gt;</span>
+<span class="cp">#ifdef _WIN32</span>
+<span class="cp"># include &lt;io.h&gt;</span>
+<span class="cp"># include &lt;Windows.h&gt;</span>
+
+<span class="cp"># define open _open</span>
+<span class="cp"># define read _read</span>
+<span class="cp"># define close _close</span>
+
+<span class="cp">#define ssize_t unsigned int</span>
+<span class="cp">#else</span>
+<span class="cp"># include &lt;unistd.h&gt;</span>
+<span class="cp">#endif</span>
+<span class="cp">#include &quot;common.h&quot;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-2'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-2">&#182;</a>
+        </div>
+        <p>This could be run in the main loop whilst the application waits for
+the indexing to finish in a worker thread</p>
+
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">int</span> <span class="nf">index_cb</span><span class="p">(</span><span class="k">const</span> <span class="n">git_transfer_progress</span> <span class="o">*</span><span class="n">stats</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">data</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">data</span><span class="p">;</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\r</span><span class="s">Processing %d of %d&quot;</span><span class="p">,</span> <span class="n">stats</span><span class="o">-&gt;</span><span class="n">indexed_objects</span><span class="p">,</span> <span class="n">stats</span><span class="o">-&gt;</span><span class="n">total_objects</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">index_pack</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">git_indexer</span> <span class="o">*</span><span class="n">idx</span><span class="p">;</span>
+  <span class="n">git_transfer_progress</span> <span class="n">stats</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+  <span class="kt">int</span> <span class="n">error</span><span class="p">;</span>
+  <span class="kt">char</span> <span class="n">hash</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+  <span class="kt">int</span> <span class="n">fd</span><span class="p">;</span>
+  <span class="kt">ssize_t</span> <span class="n">read_bytes</span><span class="p">;</span>
+  <span class="kt">char</span> <span class="n">buf</span><span class="p">[</span><span class="mi">512</span><span class="p">];</span>
+
+  <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">repo</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">argc</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;usage: %s index-pack &lt;packfile&gt;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]);</span>
+    <span class="k">return</span> <span class="n">EXIT_FAILURE</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_indexer_new-1" class="fnlink" href="../../#v0.27.1/group/indexer/git_indexer_new">git_indexer_new</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">idx</span><span class="p">,</span> <span class="s">&quot;.&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">puts</span><span class="p">(</span><span class="s">&quot;bad idx&quot;</span><span class="p">);</span>
+    <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="k">if</span> <span class="p">((</span><span class="n">fd</span> <span class="o">=</span> <span class="n">open</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">0</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">perror</span><span class="p">(</span><span class="s">&quot;open&quot;</span><span class="p">);</span>
+    <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="k">do</span> <span class="p">{</span>
+    <span class="n">read_bytes</span> <span class="o">=</span> <span class="n">read</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">buf</span><span class="p">));</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">read_bytes</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+      <span class="k">break</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_append-2" class="fnlink" href="../../#v0.27.1/group/indexer/git_indexer_append">git_indexer_append</a></span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">read_bytes</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">stats</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+      <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
+
+    <span class="n">index_cb</span><span class="p">(</span><span class="o">&amp;</span><span class="n">stats</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="p">}</span> <span class="k">while</span> <span class="p">(</span><span class="n">read_bytes</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">);</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">read_bytes</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="n">perror</span><span class="p">(</span><span class="s">&quot;failed reading&quot;</span><span class="p">);</span>
+    <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_indexer_commit-3" class="fnlink" href="../../#v0.27.1/group/indexer/git_indexer_commit">git_indexer_commit</a></span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">stats</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
+
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\r</span><span class="s">Indexing %d of %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">stats</span><span class="p">.</span><span class="n">indexed_objects</span><span class="p">,</span> <span class="n">stats</span><span class="p">.</span><span class="n">total_objects</span><span class="p">);</span>
+
+  <span class="n"><a name="git_oid_fmt-6" class="fnlink" href="../../#v0.27.1/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">hash</span><span class="p">,</span> <span class="n"><a name="git_indexer_hash-4" class="fnlink" href="../../#v0.27.1/group/indexer/git_indexer_hash">git_indexer_hash</a></span><span class="p">(</span><span class="n">idx</span><span class="p">));</span>
+  <span class="n">puts</span><span class="p">(</span><span class="n">hash</span><span class="p">);</span>
+
+ <span class="nl">cleanup:</span>
+  <span class="n">close</span><span class="p">(</span><span class="n">fd</span><span class="p">);</span>
+  <span class="n"><a name="git_indexer_free-5" class="fnlink" href="../../#v0.27.1/group/indexer/git_indexer_free">git_indexer_free</a></span><span class="p">(</span><span class="n">idx</span><span class="p">);</span>
+  <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>

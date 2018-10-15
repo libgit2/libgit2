@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>log.c</title>
+  <link rel="stylesheet" href="../css.css">
+  <style type="text/css">
+    a.fnlink {text-decoration: none}
+    a.fnlink:hover {text-decoration: underline}
+  </style>
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div id="jump_to">
+    Jump To &hellip;
+    <div id="jump_wrapper">
+      <div id="jump_page">
+        <a class="source" href="../../#v0.27.3">API Docs</a>
+          <a class="source" href="add.html">add.c</a>
+          <a class="source" href="blame.html">blame.c</a>
+          <a class="source" href="cat-file.html">cat-file.c</a>
+          <a class="source" href="common.html">common.c</a>
+          <a class="source" href="describe.html">describe.c</a>
+          <a class="source" href="diff.html">diff.c</a>
+          <a class="source" href="for-each-ref.html">for-each-ref.c</a>
+          <a class="source" href="general.html">general.c</a>
+          <a class="source" href="init.html">init.c</a>
+          <a class="source" href="log.html">log.c</a>
+          <a class="source" href="merge.html">merge.c</a>
+          <a class="source" href="network/clone.html">clone.c</a>
+          <a class="source" href="network/common.html">common.c</a>
+          <a class="source" href="network/fetch.html">fetch.c</a>
+          <a class="source" href="network/git2.html">git2.c</a>
+          <a class="source" href="network/index-pack.html">index-pack.c</a>
+          <a class="source" href="network/ls-remote.html">ls-remote.c</a>
+          <a class="source" href="remote.html">remote.c</a>
+          <a class="source" href="rev-list.html">rev-list.c</a>
+          <a class="source" href="rev-parse.html">rev-parse.c</a>
+          <a class="source" href="showindex.html">showindex.c</a>
+          <a class="source" href="status.html">status.c</a>
+          <a class="source" href="tag.html">tag.c</a>
+      </div>
+    </div>
+  </div>
+  <table cellspacing=0 cellpadding=0>
+  <thead>
+    <tr>
+      <th class=docs><h1>log.c</h1></th>
+      <th class=code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr id='section-1'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-1">&#182;</a>
+        </div>
+        
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="cm">/*</span>
+<span class="cm"> * libgit2 &quot;log&quot; example - shows how to walk history and get commit info</span>
+<span class="cm"> *</span>
+<span class="cm"> * Written by the libgit2 contributors</span>
+<span class="cm"> *</span>
+<span class="cm"> * To the extent possible under law, the author(s) have dedicated all copyright</span>
+<span class="cm"> * and related and neighboring rights to this software to the public domain</span>
+<span class="cm"> * worldwide. This software is distributed without any warranty.</span>
+<span class="cm"> *</span>
+<span class="cm"> * You should have received a copy of the CC0 Public Domain Dedication along</span>
+<span class="cm"> * with this software. If not, see</span>
+<span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
+<span class="cm"> */</span>
+
+<span class="cp">#include &quot;common.h&quot;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-2'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-2">&#182;</a>
+        </div>
+        <p>This example demonstrates the libgit2 rev walker APIs to roughly
+simulate the output of <code>git log</code> and a few of command line arguments.
+<code>git log</code> has many many options and this only shows a few of them.</p>
+
+<p>This does not have:</p>
+
+<ul>
+<li>Robust error handling</li>
+<li>Colorized or paginated output formatting</li>
+<li>Most of the <code>git log</code> options</li>
+</ul>
+
+<p>This does have:</p>
+
+<ul>
+<li>Examples of translating command line arguments to equivalent libgit2
+revwalker configuration calls</li>
+<li>Simplified options to apply pathspec limits and to show basic diffs</li>
+</ul>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre></pre></div>
+      </td>
+    </tr>
+    <tr id='section-3'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-3">&#182;</a>
+        </div>
+        <p>log_state represents walker being configured while handling options</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">struct</span> <span class="n">log_state</span> <span class="p">{</span>
+  <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">;</span>
+  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">repodir</span><span class="p">;</span>
+  <span class="n">git_revwalk</span> <span class="o">*</span><span class="n">walker</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">hide</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">sorting</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">revisions</span><span class="p">;</span>
+<span class="p">};</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-4'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-4">&#182;</a>
+        </div>
+        <p>utility functions that are called to configure the walker</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">set_sorting</span><span class="p">(</span><span class="k">struct</span> <span class="n">log_state</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">sort_mode</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">push_rev</span><span class="p">(</span><span class="k">struct</span> <span class="n">log_state</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="n">git_object</span> <span class="o">*</span><span class="n">obj</span><span class="p">,</span> <span class="kt">int</span> <span class="n">hide</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">add_revision</span><span class="p">(</span><span class="k">struct</span> <span class="n">log_state</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">revstr</span><span class="p">);</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-5'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-5">&#182;</a>
+        </div>
+        <p>log_options holds other command line options that affect log output</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">struct</span> <span class="n">log_options</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">show_diff</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">show_log_size</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">skip</span><span class="p">,</span> <span class="n">limit</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">min_parents</span><span class="p">,</span> <span class="n">max_parents</span><span class="p">;</span>
+  <span class="kt">git_time_t</span> <span class="n">before</span><span class="p">;</span>
+  <span class="kt">git_time_t</span> <span class="n">after</span><span class="p">;</span>
+  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">author</span><span class="p">;</span>
+  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">committer</span><span class="p">;</span>
+  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">grep</span><span class="p">;</span>
+<span class="p">};</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-6'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-6">&#182;</a>
+        </div>
+        <p>utility functions that parse options and help with log output</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">int</span> <span class="nf">parse_options</span><span class="p">(</span>
+  <span class="k">struct</span> <span class="n">log_state</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="k">struct</span> <span class="n">log_options</span> <span class="o">*</span><span class="n">opt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">print_time</span><span class="p">(</span><span class="k">const</span> <span class="n">git_time</span> <span class="o">*</span><span class="n">intime</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">prefix</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">print_commit</span><span class="p">(</span><span class="n">git_commit</span> <span class="o">*</span><span class="n">commit</span><span class="p">,</span> <span class="k">struct</span> <span class="n">log_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">match_with_parent</span><span class="p">(</span><span class="n">git_commit</span> <span class="o">*</span><span class="n">commit</span><span class="p">,</span> <span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="n">git_diff_options</span> <span class="o">*</span><span class="p">);</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-7'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-7">&#182;</a>
+        </div>
+        <p>utility functions for filtering</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">int</span> <span class="nf">signature_matches</span><span class="p">(</span><span class="k">const</span> <span class="n">git_signature</span> <span class="o">*</span><span class="n">sig</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">filter</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">log_message_matches</span><span class="p">(</span><span class="k">const</span> <span class="n">git_commit</span> <span class="o">*</span><span class="n">commit</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">filter</span><span class="p">);</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
+<span class="p">{</span>
+  <span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">printed</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">parents</span><span class="p">,</span> <span class="n">last_arg</span><span class="p">;</span>
+  <span class="k">struct</span> <span class="n">log_state</span> <span class="n">s</span><span class="p">;</span>
+  <span class="k">struct</span> <span class="n">log_options</span> <span class="n">opt</span><span class="p">;</span>
+  <span class="n">git_diff_options</span> <span class="n">diffopts</span> <span class="o">=</span> <span class="n">GIT_DIFF_OPTIONS_INIT</span><span class="p">;</span>
+  <span class="n">git_oid</span> <span class="n">oid</span><span class="p">;</span>
+  <span class="n">git_commit</span> <span class="o">*</span><span class="n">commit</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="n">git_pathspec</span> <span class="o">*</span><span class="n">ps</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+
+  <span class="n"><a name="git_libgit2_init-31" class="fnlink" href="../../#v0.27.3/group/libgit2/git_libgit2_init">git_libgit2_init</a></span><span class="p">();</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-8'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-8">&#182;</a>
+        </div>
+        <p>Parse arguments and set up revwalker.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n">last_arg</span> <span class="o">=</span> <span class="n">parse_options</span><span class="p">(</span><span class="o">&amp;</span><span class="n">s</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opt</span><span class="p">,</span> <span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
+
+  <span class="n">diffopts</span><span class="p">.</span><span class="n">pathspec</span><span class="p">.</span><span class="n">strings</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">argv</span><span class="p">[</span><span class="n">last_arg</span><span class="p">];</span>
+  <span class="n">diffopts</span><span class="p">.</span><span class="n">pathspec</span><span class="p">.</span><span class="n">count</span>	  <span class="o">=</span> <span class="n">argc</span> <span class="o">-</span> <span class="n">last_arg</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">diffopts</span><span class="p">.</span><span class="n">pathspec</span><span class="p">.</span><span class="n">count</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_pathspec_new-42" class="fnlink" href="../../#v0.27.3/group/pathspec/git_pathspec_new">git_pathspec_new</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">ps</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">diffopts</span><span class="p">.</span><span class="n">pathspec</span><span class="p">),</span>
+      <span class="s">&quot;Building pathspec&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">s</span><span class="p">.</span><span class="n">revisions</span><span class="p">)</span>
+    <span class="n">add_revision</span><span class="p">(</span><span class="o">&amp;</span><span class="n">s</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-9'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-9">&#182;</a>
+        </div>
+        <p>Use the revwalker to traverse the history.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="n">printed</span> <span class="o">=</span> <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+  <span class="k">for</span> <span class="p">(;</span> <span class="o">!</span><span class="n"><a name="git_revwalk_next-55" class="fnlink" href="../../#v0.27.3/group/revwalk/git_revwalk_next">git_revwalk_next</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="n">s</span><span class="p">.</span><span class="n">walker</span><span class="p">);</span> <span class="n"><a name="git_commit_free-2" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_free">git_commit_free</a></span><span class="p">(</span><span class="n">commit</span><span class="p">))</span> <span class="p">{</span>
+    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_commit_lookup-1" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_lookup">git_commit_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">commit</span><span class="p">,</span> <span class="n">s</span><span class="p">.</span><span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">oid</span><span class="p">),</span>
+      <span class="s">&quot;Failed to look up commit&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+    <span class="n">parents</span> <span class="o">=</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n"><a name="git_commit_parentcount-20" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_parentcount">git_commit_parentcount</a></span><span class="p">(</span><span class="n">commit</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">parents</span> <span class="o">&lt;</span> <span class="n">opt</span><span class="p">.</span><span class="n">min_parents</span><span class="p">)</span>
+      <span class="k">continue</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">opt</span><span class="p">.</span><span class="n">max_parents</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">parents</span> <span class="o">&gt;</span> <span class="n">opt</span><span class="p">.</span><span class="n">max_parents</span><span class="p">)</span>
+      <span class="k">continue</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">diffopts</span><span class="p">.</span><span class="n">pathspec</span><span class="p">.</span><span class="n">count</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+      <span class="kt">int</span> <span class="n">unmatched</span> <span class="o">=</span> <span class="n">parents</span><span class="p">;</span>
+
+      <span class="k">if</span> <span class="p">(</span><span class="n">parents</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">git_tree</span> <span class="o">*</span><span class="n">tree</span><span class="p">;</span>
+        <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_commit_tree-15" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_tree">git_commit_tree</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree</span><span class="p">,</span> <span class="n">commit</span><span class="p">),</span> <span class="s">&quot;Get tree&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_pathspec_match_tree-44" class="fnlink" href="../../#v0.27.3/group/pathspec/git_pathspec_match_tree">git_pathspec_match_tree</a></span><span class="p">(</span>
+            <span class="nb">NULL</span><span class="p">,</span> <span class="n">tree</span><span class="p">,</span> <span class="n">GIT_PATHSPEC_NO_MATCH_ERROR</span><span class="p">,</span> <span class="n">ps</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+          <span class="n">unmatched</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+        <span class="n"><a name="git_tree_free-59" class="fnlink" href="../../#v0.27.3/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">tree</span><span class="p">);</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">parents</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">unmatched</span> <span class="o">=</span> <span class="n">match_with_parent</span><span class="p">(</span><span class="n">commit</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">diffopts</span><span class="p">)</span> <span class="o">?</span> <span class="mi">0</span> <span class="o">:</span> <span class="mi">1</span><span class="p">;</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">parents</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+          <span class="k">if</span> <span class="p">(</span><span class="n">match_with_parent</span><span class="p">(</span><span class="n">commit</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">diffopts</span><span class="p">))</span>
+            <span class="n">unmatched</span><span class="o">--</span><span class="p">;</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+
+      <span class="k">if</span> <span class="p">(</span><span class="n">unmatched</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">continue</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">signature_matches</span><span class="p">(</span><span class="n"><a name="git_commit_author-13" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_author">git_commit_author</a></span><span class="p">(</span><span class="n">commit</span><span class="p">),</span> <span class="n">opt</span><span class="p">.</span><span class="n">author</span><span class="p">))</span>
+      <span class="k">continue</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">signature_matches</span><span class="p">(</span><span class="n"><a name="git_commit_committer-12" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_committer">git_commit_committer</a></span><span class="p">(</span><span class="n">commit</span><span class="p">),</span> <span class="n">opt</span><span class="p">.</span><span class="n">committer</span><span class="p">))</span>
+      <span class="k">continue</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">log_message_matches</span><span class="p">(</span><span class="n">commit</span><span class="p">,</span> <span class="n">opt</span><span class="p">.</span><span class="n">grep</span><span class="p">))</span>
+      <span class="k">continue</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">count</span><span class="o">++</span> <span class="o">&lt;</span> <span class="n">opt</span><span class="p">.</span><span class="n">skip</span><span class="p">)</span>
+      <span class="k">continue</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">opt</span><span class="p">.</span><span class="n">limit</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span> <span class="o">&amp;&amp;</span> <span class="n">printed</span><span class="o">++</span> <span class="o">&gt;=</span> <span class="n">opt</span><span class="p">.</span><span class="n">limit</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n"><a name="git_commit_free-3" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_free">git_commit_free</a></span><span class="p">(</span><span class="n">commit</span><span class="p">);</span>
+      <span class="k">break</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="n">print_commit</span><span class="p">(</span><span class="n">commit</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opt</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">opt</span><span class="p">.</span><span class="n">show_diff</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">git_tree</span> <span class="o">*</span><span class="n">a</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">,</span> <span class="o">*</span><span class="n">b</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+      <span class="n">git_diff</span> <span class="o">*</span><span class="n">diff</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+
+      <span class="k">if</span> <span class="p">(</span><span class="n">parents</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">continue</span><span class="p">;</span>
+      <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_commit_tree-16" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_tree">git_commit_tree</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">b</span><span class="p">,</span> <span class="n">commit</span><span class="p">),</span> <span class="s">&quot;Get tree&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">parents</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">git_commit</span> <span class="o">*</span><span class="n">parent</span><span class="p">;</span>
+        <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_commit_parent-22" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_parent">git_commit_parent</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">parent</span><span class="p">,</span> <span class="n">commit</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s">&quot;Get parent&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+        <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_commit_tree-17" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_tree">git_commit_tree</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">a</span><span class="p">,</span> <span class="n">parent</span><span class="p">),</span> <span class="s">&quot;Tree for parent&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+        <span class="n"><a name="git_commit_free-4" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_free">git_commit_free</a></span><span class="p">(</span><span class="n">parent</span><span class="p">);</span>
+      <span class="p">}</span>
+
+      <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_diff_tree_to_tree-27" class="fnlink" href="../../#v0.27.3/group/diff/git_diff_tree_to_tree">git_diff_tree_to_tree</a></span><span class="p">(</span>
+        <span class="o">&amp;</span><span class="n">diff</span><span class="p">,</span> <span class="n"><a name="git_commit_owner-7" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_owner">git_commit_owner</a></span><span class="p">(</span><span class="n">commit</span><span class="p">),</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">diffopts</span><span class="p">),</span>
+        <span class="s">&quot;Diff commit with parent&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+      <span class="n">check_lg2</span><span class="p">(</span>
+                <span class="n"><a name="git_diff_print-30" class="fnlink" href="../../#v0.27.3/group/diff/git_diff_print">git_diff_print</a></span><span class="p">(</span><span class="n">diff</span><span class="p">,</span> <span class="n">GIT_DIFF_FORMAT_PATCH</span><span class="p">,</span> <span class="n">diff_output</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span>
+        <span class="s">&quot;Displaying diff&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+      <span class="n"><a name="git_diff_free-25" class="fnlink" href="../../#v0.27.3/group/diff/git_diff_free">git_diff_free</a></span><span class="p">(</span><span class="n">diff</span><span class="p">);</span>
+      <span class="n"><a name="git_tree_free-60" class="fnlink" href="../../#v0.27.3/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">a</span><span class="p">);</span>
+      <span class="n"><a name="git_tree_free-61" class="fnlink" href="../../#v0.27.3/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">b</span><span class="p">);</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+  <span class="n"><a name="git_pathspec_free-43" class="fnlink" href="../../#v0.27.3/group/pathspec/git_pathspec_free">git_pathspec_free</a></span><span class="p">(</span><span class="n">ps</span><span class="p">);</span>
+  <span class="n"><a name="git_revwalk_free-58" class="fnlink" href="../../#v0.27.3/group/revwalk/git_revwalk_free">git_revwalk_free</a></span><span class="p">(</span><span class="n">s</span><span class="p">.</span><span class="n">walker</span><span class="p">);</span>
+  <span class="n"><a name="git_repository_free-47" class="fnlink" href="../../#v0.27.3/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">s</span><span class="p">.</span><span class="n">repo</span><span class="p">);</span>
+  <span class="n"><a name="git_libgit2_shutdown-32" class="fnlink" href="../../#v0.27.3/group/libgit2/git_libgit2_shutdown">git_libgit2_shutdown</a></span><span class="p">();</span>
+
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-10'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-10">&#182;</a>
+        </div>
+        <p>Determine if the given git_signature does not contain the filter text.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">int</span> <span class="nf">signature_matches</span><span class="p">(</span><span class="k">const</span> <span class="n">git_signature</span> <span class="o">*</span><span class="n">sig</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">filter</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">filter</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span>
+    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">sig</span> <span class="o">!=</span> <span class="nb">NULL</span> <span class="o">&amp;&amp;</span>
+    <span class="p">(</span><span class="n">strstr</span><span class="p">(</span><span class="n">sig</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">,</span> <span class="n">filter</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">NULL</span> <span class="o">||</span>
+    <span class="n">strstr</span><span class="p">(</span><span class="n">sig</span><span class="o">-&gt;</span><span class="n">email</span><span class="p">,</span> <span class="n">filter</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">))</span>
+    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">log_message_matches</span><span class="p">(</span><span class="k">const</span> <span class="n">git_commit</span> <span class="o">*</span><span class="n">commit</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">filter</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">message</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">filter</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span>
+    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">((</span><span class="n">message</span> <span class="o">=</span> <span class="n"><a name="git_commit_message-9" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_message">git_commit_message</a></span><span class="p">(</span><span class="n">commit</span><span class="p">))</span> <span class="o">!=</span> <span class="nb">NULL</span> <span class="o">&amp;&amp;</span>
+    <span class="n">strstr</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">filter</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-11'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-11">&#182;</a>
+        </div>
+        <p>Push object (for hide or show) onto revwalker.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">push_rev</span><span class="p">(</span><span class="k">struct</span> <span class="n">log_state</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="n">git_object</span> <span class="o">*</span><span class="n">obj</span><span class="p">,</span> <span class="kt">int</span> <span class="n">hide</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">hide</span> <span class="o">=</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">hide</span> <span class="o">^</span> <span class="n">hide</span><span class="p">;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-12'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-12">&#182;</a>
+        </div>
+        <p>Create revwalker on demand if it doesn&#39;t already exist.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">walker</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revwalk_new-50" class="fnlink" href="../../#v0.27.3/group/revwalk/git_revwalk_new">git_revwalk_new</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">walker</span><span class="p">,</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">),</span>
+      <span class="s">&quot;Could not create revision walker&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="n"><a name="git_revwalk_sorting-56" class="fnlink" href="../../#v0.27.3/group/revwalk/git_revwalk_sorting">git_revwalk_sorting</a></span><span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">walker</span><span class="p">,</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">sorting</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">obj</span><span class="p">)</span>
+    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revwalk_push_head-53" class="fnlink" href="../../#v0.27.3/group/revwalk/git_revwalk_push_head">git_revwalk_push_head</a></span><span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">walker</span><span class="p">),</span>
+      <span class="s">&quot;Could not find repository HEAD&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">hide</span><span class="p">)</span>
+    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revwalk_hide-54" class="fnlink" href="../../#v0.27.3/group/revwalk/git_revwalk_hide">git_revwalk_hide</a></span><span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">walker</span><span class="p">,</span> <span class="n"><a name="git_object_id-35" class="fnlink" href="../../#v0.27.3/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">obj</span><span class="p">)),</span>
+      <span class="s">&quot;Reference does not refer to a commit&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="k">else</span>
+    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revwalk_push-52" class="fnlink" href="../../#v0.27.3/group/revwalk/git_revwalk_push">git_revwalk_push</a></span><span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">walker</span><span class="p">,</span> <span class="n"><a name="git_object_id-36" class="fnlink" href="../../#v0.27.3/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">obj</span><span class="p">)),</span>
+      <span class="s">&quot;Reference does not refer to a commit&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="n"><a name="git_object_free-39" class="fnlink" href="../../#v0.27.3/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">obj</span><span class="p">);</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-13'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-13">&#182;</a>
+        </div>
+        <p>Parse revision string and add revs to walker.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">int</span> <span class="nf">add_revision</span><span class="p">(</span><span class="k">struct</span> <span class="n">log_state</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">revstr</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">git_revspec</span> <span class="n">revs</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">hide</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-14'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-14">&#182;</a>
+        </div>
+        <p>Open repo on demand if it isn&#39;t already open.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">repodir</span><span class="p">)</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">repodir</span> <span class="o">=</span> <span class="s">&quot;.&quot;</span><span class="p">;</span>
+    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_open_ext-45" class="fnlink" href="../../#v0.27.3/group/repository/git_repository_open_ext">git_repository_open_ext</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">,</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">repodir</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span>
+      <span class="s">&quot;Could not open repository&quot;</span><span class="p">,</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">repodir</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">revstr</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">push_rev</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">hide</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="o">*</span><span class="n">revstr</span> <span class="o">==</span> <span class="sc">&#39;^&#39;</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">revs</span><span class="p">.</span><span class="n">flags</span> <span class="o">=</span> <span class="n">GIT_REVPARSE_SINGLE</span><span class="p">;</span>
+    <span class="n">hide</span> <span class="o">=</span> <span class="o">!</span><span class="n">hide</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_revparse_single-48" class="fnlink" href="../../#v0.27.3/group/revparse/git_revparse_single">git_revparse_single</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">revs</span><span class="p">.</span><span class="n">from</span><span class="p">,</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">,</span> <span class="n">revstr</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+      <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_revparse-49" class="fnlink" href="../../#v0.27.3/group/git2_revparse/git_revparse">git_revparse</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">revs</span><span class="p">,</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">,</span> <span class="n">revstr</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">((</span><span class="n">revs</span><span class="p">.</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">GIT_REVPARSE_SINGLE</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">push_rev</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">revs</span><span class="p">.</span><span class="n">from</span><span class="p">,</span> <span class="n">hide</span><span class="p">);</span>
+  <span class="k">else</span> <span class="p">{</span>
+    <span class="n">push_rev</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">revs</span><span class="p">.</span><span class="n">to</span><span class="p">,</span> <span class="n">hide</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">((</span><span class="n">revs</span><span class="p">.</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">GIT_REVPARSE_MERGE_BASE</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">git_oid</span> <span class="n">base</span><span class="p">;</span>
+      <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_merge_base-33" class="fnlink" href="../../#v0.27.3/group/merge/git_merge_base">git_merge_base</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">base</span><span class="p">,</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">,</span>
+        <span class="n"><a name="git_object_id-37" class="fnlink" href="../../#v0.27.3/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">revs</span><span class="p">.</span><span class="n">from</span><span class="p">),</span> <span class="n"><a name="git_object_id-38" class="fnlink" href="../../#v0.27.3/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">revs</span><span class="p">.</span><span class="n">to</span><span class="p">)),</span>
+        <span class="s">&quot;Could not find merge base&quot;</span><span class="p">,</span> <span class="n">revstr</span><span class="p">);</span>
+      <span class="n">check_lg2</span><span class="p">(</span>
+        <span class="n"><a name="git_object_lookup-34" class="fnlink" href="../../#v0.27.3/group/object/git_object_lookup">git_object_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">revs</span><span class="p">.</span><span class="n">to</span><span class="p">,</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">base</span><span class="p">,</span> <span class="n">GIT_OBJ_COMMIT</span><span class="p">),</span>
+        <span class="s">&quot;Could not find merge base commit&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+      <span class="n">push_rev</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">revs</span><span class="p">.</span><span class="n">to</span><span class="p">,</span> <span class="n">hide</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="n">push_rev</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">revs</span><span class="p">.</span><span class="n">from</span><span class="p">,</span> <span class="o">!</span><span class="n">hide</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-15'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-15">&#182;</a>
+        </div>
+        <p>Update revwalker with sorting mode.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">set_sorting</span><span class="p">(</span><span class="k">struct</span> <span class="n">log_state</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">sort_mode</span><span class="p">)</span>
+<span class="p">{</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-16'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-16">&#182;</a>
+        </div>
+        <p>Open repo on demand if it isn&#39;t already open.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">repodir</span><span class="p">)</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">repodir</span> <span class="o">=</span> <span class="s">&quot;.&quot;</span><span class="p">;</span>
+    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_open_ext-46" class="fnlink" href="../../#v0.27.3/group/repository/git_repository_open_ext">git_repository_open_ext</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">,</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">repodir</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span>
+      <span class="s">&quot;Could not open repository&quot;</span><span class="p">,</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">repodir</span><span class="p">);</span>
+  <span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-17'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-17">&#182;</a>
+        </div>
+        <p>Create revwalker on demand if it doesn&#39;t already exist.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">walker</span><span class="p">)</span>
+    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revwalk_new-51" class="fnlink" href="../../#v0.27.3/group/revwalk/git_revwalk_new">git_revwalk_new</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">walker</span><span class="p">,</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">),</span>
+      <span class="s">&quot;Could not create revision walker&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">sort_mode</span> <span class="o">==</span> <span class="n">GIT_SORT_REVERSE</span><span class="p">)</span>
+    <span class="n">s</span><span class="o">-&gt;</span><span class="n">sorting</span> <span class="o">=</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">sorting</span> <span class="o">^</span> <span class="n">GIT_SORT_REVERSE</span><span class="p">;</span>
+  <span class="k">else</span>
+    <span class="n">s</span><span class="o">-&gt;</span><span class="n">sorting</span> <span class="o">=</span> <span class="n">sort_mode</span> <span class="o">|</span> <span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">sorting</span> <span class="o">&amp;</span> <span class="n">GIT_SORT_REVERSE</span><span class="p">);</span>
+
+  <span class="n"><a name="git_revwalk_sorting-57" class="fnlink" href="../../#v0.27.3/group/revwalk/git_revwalk_sorting">git_revwalk_sorting</a></span><span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">walker</span><span class="p">,</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">sorting</span><span class="p">);</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-18'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-18">&#182;</a>
+        </div>
+        <p>Helper to format a git_time value like Git.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">print_time</span><span class="p">(</span><span class="k">const</span> <span class="n">git_time</span> <span class="o">*</span><span class="n">intime</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">prefix</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">char</span> <span class="n">sign</span><span class="p">,</span> <span class="n">out</span><span class="p">[</span><span class="mi">32</span><span class="p">];</span>
+  <span class="k">struct</span> <span class="n">tm</span> <span class="o">*</span><span class="n">intm</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">offset</span><span class="p">,</span> <span class="n">hours</span><span class="p">,</span> <span class="n">minutes</span><span class="p">;</span>
+  <span class="kt">time_t</span> <span class="n">t</span><span class="p">;</span>
+
+  <span class="n">offset</span> <span class="o">=</span> <span class="n">intime</span><span class="o">-&gt;</span><span class="n">offset</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">offset</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">sign</span> <span class="o">=</span> <span class="sc">&#39;-&#39;</span><span class="p">;</span>
+    <span class="n">offset</span> <span class="o">=</span> <span class="o">-</span><span class="n">offset</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="n">sign</span> <span class="o">=</span> <span class="sc">&#39;+&#39;</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="n">hours</span>   <span class="o">=</span> <span class="n">offset</span> <span class="o">/</span> <span class="mi">60</span><span class="p">;</span>
+  <span class="n">minutes</span> <span class="o">=</span> <span class="n">offset</span> <span class="o">%</span> <span class="mi">60</span><span class="p">;</span>
+
+  <span class="n">t</span> <span class="o">=</span> <span class="p">(</span><span class="kt">time_t</span><span class="p">)</span><span class="n">intime</span><span class="o">-&gt;</span><span class="n">time</span> <span class="o">+</span> <span class="p">(</span><span class="n">intime</span><span class="o">-&gt;</span><span class="n">offset</span> <span class="o">*</span> <span class="mi">60</span><span class="p">);</span>
+
+  <span class="n">intm</span> <span class="o">=</span> <span class="n">gmtime</span><span class="p">(</span><span class="o">&amp;</span><span class="n">t</span><span class="p">);</span>
+  <span class="n">strftime</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">out</span><span class="p">),</span> <span class="s">&quot;%a %b %e %T %Y&quot;</span><span class="p">,</span> <span class="n">intm</span><span class="p">);</span>
+
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s%s %c%02d%02d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">sign</span><span class="p">,</span> <span class="n">hours</span><span class="p">,</span> <span class="n">minutes</span><span class="p">);</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-19'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-19">&#182;</a>
+        </div>
+        <p>Helper to print a commit object.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">print_commit</span><span class="p">(</span><span class="n">git_commit</span> <span class="o">*</span><span class="n">commit</span><span class="p">,</span> <span class="k">struct</span> <span class="n">log_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">char</span> <span class="n">buf</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span> <span class="o">+</span> <span class="mi">1</span><span class="p">];</span>
+  <span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="n">count</span><span class="p">;</span>
+  <span class="k">const</span> <span class="n">git_signature</span> <span class="o">*</span><span class="n">sig</span><span class="p">;</span>
+  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">scan</span><span class="p">,</span> <span class="o">*</span><span class="n">eol</span><span class="p">;</span>
+
+  <span class="n"><a name="git_oid_tostr-40" class="fnlink" href="../../#v0.27.3/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">buf</span><span class="p">),</span> <span class="n"><a name="git_commit_id-6" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_id">git_commit_id</a></span><span class="p">(</span><span class="n">commit</span><span class="p">));</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;commit %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">buf</span><span class="p">);</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">show_log_size</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;log size %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">strlen</span><span class="p">(</span><span class="n"><a name="git_commit_message-10" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_message">git_commit_message</a></span><span class="p">(</span><span class="n">commit</span><span class="p">)));</span>
+  <span class="p">}</span>
+
+  <span class="k">if</span> <span class="p">((</span><span class="n">count</span> <span class="o">=</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n"><a name="git_commit_parentcount-21" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_parentcount">git_commit_parentcount</a></span><span class="p">(</span><span class="n">commit</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Merge:&quot;</span><span class="p">);</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">count</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n"><a name="git_oid_tostr-41" class="fnlink" href="../../#v0.27.3/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="n"><a name="git_commit_parent_id-24" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_parent_id">git_commit_parent_id</a></span><span class="p">(</span><span class="n">commit</span><span class="p">,</span> <span class="n">i</span><span class="p">));</span>
+      <span class="n">printf</span><span class="p">(</span><span class="s">&quot; %s&quot;</span><span class="p">,</span> <span class="n">buf</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="k">if</span> <span class="p">((</span><span class="n">sig</span> <span class="o">=</span> <span class="n"><a name="git_commit_author-14" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_author">git_commit_author</a></span><span class="p">(</span><span class="n">commit</span><span class="p">))</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Author: %s &lt;%s&gt;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">sig</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">,</span> <span class="n">sig</span><span class="o">-&gt;</span><span class="n">email</span><span class="p">);</span>
+    <span class="n">print_time</span><span class="p">(</span><span class="o">&amp;</span><span class="n">sig</span><span class="o">-&gt;</span><span class="n">when</span><span class="p">,</span> <span class="s">&quot;Date:   &quot;</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+
+  <span class="k">for</span> <span class="p">(</span><span class="n">scan</span> <span class="o">=</span> <span class="n"><a name="git_commit_message-11" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_message">git_commit_message</a></span><span class="p">(</span><span class="n">commit</span><span class="p">);</span> <span class="n">scan</span> <span class="o">&amp;&amp;</span> <span class="o">*</span><span class="n">scan</span><span class="p">;</span> <span class="p">)</span> <span class="p">{</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">eol</span> <span class="o">=</span> <span class="n">scan</span><span class="p">;</span> <span class="o">*</span><span class="n">eol</span> <span class="o">&amp;&amp;</span> <span class="o">*</span><span class="n">eol</span> <span class="o">!=</span> <span class="sc">&#39;\n&#39;</span><span class="p">;</span> <span class="o">++</span><span class="n">eol</span><span class="p">)</span> <span class="cm">/* find eol */</span><span class="p">;</span>
+
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;    %.*s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="kt">int</span><span class="p">)(</span><span class="n">eol</span> <span class="o">-</span> <span class="n">scan</span><span class="p">),</span> <span class="n">scan</span><span class="p">);</span>
+    <span class="n">scan</span> <span class="o">=</span> <span class="o">*</span><span class="n">eol</span> <span class="o">?</span> <span class="n">eol</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">:</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-20'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-20">&#182;</a>
+        </div>
+        <p>Helper to find how many files in a commit changed from its nth parent.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">int</span> <span class="nf">match_with_parent</span><span class="p">(</span><span class="n">git_commit</span> <span class="o">*</span><span class="n">commit</span><span class="p">,</span> <span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="n">git_diff_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">git_commit</span> <span class="o">*</span><span class="n">parent</span><span class="p">;</span>
+  <span class="n">git_tree</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">*</span><span class="n">b</span><span class="p">;</span>
+  <span class="n">git_diff</span> <span class="o">*</span><span class="n">diff</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">ndeltas</span><span class="p">;</span>
+
+  <span class="n">check_lg2</span><span class="p">(</span>
+    <span class="n"><a name="git_commit_parent-23" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_parent">git_commit_parent</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">parent</span><span class="p">,</span> <span class="n">commit</span><span class="p">,</span> <span class="p">(</span><span class="kt">size_t</span><span class="p">)</span><span class="n">i</span><span class="p">),</span> <span class="s">&quot;Get parent&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_commit_tree-18" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_tree">git_commit_tree</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">a</span><span class="p">,</span> <span class="n">parent</span><span class="p">),</span> <span class="s">&quot;Tree for parent&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_commit_tree-19" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_tree">git_commit_tree</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">b</span><span class="p">,</span> <span class="n">commit</span><span class="p">),</span> <span class="s">&quot;Tree for commit&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="n">check_lg2</span><span class="p">(</span>
+    <span class="n"><a name="git_diff_tree_to_tree-28" class="fnlink" href="../../#v0.27.3/group/diff/git_diff_tree_to_tree">git_diff_tree_to_tree</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">diff</span><span class="p">,</span> <span class="n"><a name="git_commit_owner-8" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_owner">git_commit_owner</a></span><span class="p">(</span><span class="n">commit</span><span class="p">),</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">opts</span><span class="p">),</span>
+    <span class="s">&quot;Checking diff between parent and commit&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="n">ndeltas</span> <span class="o">=</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n"><a name="git_diff_num_deltas-29" class="fnlink" href="../../#v0.27.3/group/diff/git_diff_num_deltas">git_diff_num_deltas</a></span><span class="p">(</span><span class="n">diff</span><span class="p">);</span>
+
+  <span class="n"><a name="git_diff_free-26" class="fnlink" href="../../#v0.27.3/group/diff/git_diff_free">git_diff_free</a></span><span class="p">(</span><span class="n">diff</span><span class="p">);</span>
+  <span class="n"><a name="git_tree_free-62" class="fnlink" href="../../#v0.27.3/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">a</span><span class="p">);</span>
+  <span class="n"><a name="git_tree_free-63" class="fnlink" href="../../#v0.27.3/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">b</span><span class="p">);</span>
+  <span class="n"><a name="git_commit_free-5" class="fnlink" href="../../#v0.27.3/group/commit/git_commit_free">git_commit_free</a></span><span class="p">(</span><span class="n">parent</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="n">ndeltas</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-21'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-21">&#182;</a>
+        </div>
+        <p>Print a usage message for the program.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">usage</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">message</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">message</span> <span class="o">&amp;&amp;</span> <span class="n">arg</span><span class="p">)</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;%s: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">arg</span><span class="p">);</span>
+  <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">message</span><span class="p">)</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">message</span><span class="p">);</span>
+  <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;usage: log [&lt;options&gt;]</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-22'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-22">&#182;</a>
+        </div>
+        <p>Parse some log command line options.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">int</span> <span class="nf">parse_options</span><span class="p">(</span>
+  <span class="k">struct</span> <span class="n">log_state</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="k">struct</span> <span class="n">log_options</span> <span class="o">*</span><span class="n">opt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">struct</span> <span class="n">args_info</span> <span class="n">args</span> <span class="o">=</span> <span class="n">ARGS_INFO_INIT</span><span class="p">;</span>
+
+  <span class="n">memset</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">s</span><span class="p">));</span>
+  <span class="n">s</span><span class="o">-&gt;</span><span class="n">sorting</span> <span class="o">=</span> <span class="n">GIT_SORT_TIME</span><span class="p">;</span>
+
+  <span class="n">memset</span><span class="p">(</span><span class="n">opt</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">opt</span><span class="p">));</span>
+  <span class="n">opt</span><span class="o">-&gt;</span><span class="n">max_parents</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+  <span class="n">opt</span><span class="o">-&gt;</span><span class="n">limit</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+
+  <span class="k">for</span> <span class="p">(</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">args</span><span class="p">.</span><span class="n">pos</span> <span class="o">&lt;</span> <span class="n">argc</span><span class="p">;</span> <span class="o">++</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">a</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">];</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="sc">&#39;-&#39;</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">add_revision</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">a</span><span class="p">))</span>
+        <span class="n">s</span><span class="o">-&gt;</span><span class="n">revisions</span><span class="o">++</span><span class="p">;</span>
+      <span class="k">else</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-23'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-23">&#182;</a>
+        </div>
+        <p>Try failed revision parse as filename.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>        <span class="k">break</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--&quot;</span><span class="p">))</span> <span class="p">{</span>
+      <span class="o">++</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">;</span>
+      <span class="k">break</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--date-order&quot;</span><span class="p">))</span>
+      <span class="n">set_sorting</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">GIT_SORT_TIME</span><span class="p">);</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--topo-order&quot;</span><span class="p">))</span>
+      <span class="n">set_sorting</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">GIT_SORT_TOPOLOGICAL</span><span class="p">);</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--reverse&quot;</span><span class="p">))</span>
+      <span class="n">set_sorting</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">GIT_SORT_REVERSE</span><span class="p">);</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">match_str_arg</span><span class="p">(</span><span class="o">&amp;</span><span class="n">opt</span><span class="o">-&gt;</span><span class="n">author</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">args</span><span class="p">,</span> <span class="s">&quot;--author&quot;</span><span class="p">))</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-24'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-24">&#182;</a>
+        </div>
+        <p>Found valid --author <em>/;
+        else if (match<em>str</em>arg(&amp;opt-&gt;committer, &amp;args, &quot;--committer&quot;))
+            /</em>* Found valid --committer <em>/;
+        else if (match<em>str</em>arg(&amp;opt-&gt;grep, &amp;args, &quot;--grep&quot;))
+            /</em>* Found valid --grep <em>/;
+        else if (match<em>str</em>arg(&amp;s-&gt;repodir, &amp;args, &quot;--git-dir&quot;))
+            /</em>* Found git-dir. <em>/;
+        else if (match<em>int</em>arg(&amp;opt-&gt;skip, &amp;args, &quot;--skip&quot;, 0))
+            /</em>* Found valid --skip. <em>/;
+        else if (match<em>int</em>arg(&amp;opt-&gt;limit, &amp;args, &quot;--max-count&quot;, 0))
+            /</em>* Found valid --max-count. <em>/;
+        else if (a[1] &gt;= &#39;0&#39; &amp;&amp; a[1] &lt;= &#39;9&#39;)
+            is<em>integer(&amp;opt-&gt;limit, a + 1, 0);
+        else if (match</em>int_arg(&amp;opt-&gt;limit, &amp;args, &quot;-n&quot;, 0))
+            /</em>* Found valid -n. <em>/;
+        else if (!strcmp(a, &quot;--merges&quot;))
+            opt-&gt;min<em>parents = 2;
+        else if (!strcmp(a, &quot;--no-merges&quot;))
+            opt-&gt;max</em>parents = 1;
+        else if (!strcmp(a, &quot;--no-min-parents&quot;))
+            opt-&gt;min<em>parents = 0;
+        else if (!strcmp(a, &quot;--no-max-parents&quot;))
+            opt-&gt;max</em>parents = -1;
+        else if (match<em>int</em>arg(&amp;opt-&gt;max_parents, &amp;args, &quot;--max-parents=&quot;, 1))
+            /</em>* Found valid --max-parents. <em>/;
+        else if (match<em>int</em>arg(&amp;opt-&gt;min_parents, &amp;args, &quot;--min-parents=&quot;, 0))
+            /</em>* Found valid --min<em>parents. */;
+        else if (!strcmp(a, &quot;-p&quot;) || !strcmp(a, &quot;-u&quot;) || !strcmp(a, &quot;--patch&quot;))
+            opt-&gt;show</em>diff = 1;
+        else if (!strcmp(a, &quot;--log-size&quot;))
+            opt-&gt;show<em>log</em>size = 1;
+        else
+            usage(&quot;Unsupported argument&quot;, a);
+    }</p>
+
+<pre><code>return args.pos;
+</code></pre>
+
+<p>}</p>
+
+      </td>
+      <td class=code>
+        <div class='highlight'><pre></pre></div>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
