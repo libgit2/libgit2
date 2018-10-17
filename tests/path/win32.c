@@ -129,7 +129,7 @@ void test_path_win32__absolute_from_relative(void)
 #endif
 }
 
-void static test_canonicalize(const wchar_t *in, const wchar_t *expected)
+static void test_canonicalize(const wchar_t *in, const wchar_t *expected)
 {
 #ifdef GIT_WIN32
 	git_win32_path canonical;
@@ -145,7 +145,7 @@ void static test_canonicalize(const wchar_t *in, const wchar_t *expected)
 #endif
 }
 
-void static test_canonicalize_path(const wchar_t *in, const wchar_t *expected)
+static void test_remove_namespace(const wchar_t *in, const wchar_t *expected)
 {
 #ifdef GIT_WIN32
 	git_win32_path canonical;
@@ -153,7 +153,7 @@ void static test_canonicalize_path(const wchar_t *in, const wchar_t *expected)
 	cl_assert(wcslen(in) < MAX_PATH);
 	wcscpy(canonical, in);
 
-	cl_must_pass(git_win32__canonicalize_path(canonical, wcslen(in)));
+	cl_must_pass(git_win32_path_remove_namespace(canonical, wcslen(in)));
 	cl_assert_equal_wcs(expected, canonical);
 #else
 	GIT_UNUSED(in);
@@ -161,9 +161,9 @@ void static test_canonicalize_path(const wchar_t *in, const wchar_t *expected)
 #endif
 }
 
-void test_path_win32__canonicalize_path(void)
+void test_path_win32__remove_namespace(void)
 {
-	test_canonicalize_path(L"\\\\?\\UNC\\server\\C$\\folder", L"\\\\server\\C$\\folder");
+	test_remove_namespace(L"\\\\?\\UNC\\server\\C$\\folder", L"\\\\server\\C$\\folder");
 }
 
 void test_path_win32__canonicalize(void)

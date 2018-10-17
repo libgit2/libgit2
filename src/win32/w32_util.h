@@ -60,24 +60,6 @@ extern int git_win32__set_hidden(const char *path, bool hidden);
 extern int git_win32__hidden(bool *hidden, const char *path);
 
 /**
- * Removes any trailing backslashes from a path, except in the case of a drive
- * letter path (C:\, D:\, etc.). This function cannot fail.
- *
- * @param path The path which should be trimmed.
- * @return The length of the modified string (<= the input length)
- */
-size_t git_win32__path_trim_end(wchar_t *str, size_t len);
-
-/**
- * Removes any of the following namespace prefixes from a path,
- * if found: "\??\", "\\?\", "\\?\UNC\". This function cannot fail.
- *
- * @param path The path which should be converted.
- * @return The length of the modified string (<= the input length)
- */
-size_t git_win32__canonicalize_path(wchar_t *str, size_t len);
-
-/**
  * Converts a FILETIME structure to a struct timespec.
  *
  * @param FILETIME A pointer to a FILETIME
