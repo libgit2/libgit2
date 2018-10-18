@@ -60,7 +60,6 @@ GIT_INLINE(int) git__signum(int val)
 
 extern int git__strtol32(int32_t *n, const char *buff, const char **end_buf, int base);
 extern int git__strntol32(int32_t *n, const char *buff, size_t buff_len, const char **end_buf, int base);
-extern int git__strtol64(int64_t *n, const char *buff, const char **end_buf, int base);
 extern int git__strntol64(int64_t *n, const char *buff, size_t buff_len, const char **end_buf, int base);
 
 
