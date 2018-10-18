@@ -418,46 +418,57 @@ size_t git_win32_path_trim_end(wchar_t *str, size_t len)
  */
 size_t git_win32_path_remove_namespace(wchar_t *str, size_t len)
 {
-	static const wchar_t dosdevices_prefix[] = L"\\\?\?\\";
-	static const wchar_t nt_prefix[] = L"\\\\?\\";
-	static const wchar_t unc_prefix[] = L"UNC\\";
-	static const wchar_t unc_canonicalized_prefix[] = L"\\\\";
+	static const wchar_t dosdevices_namespace[] = L"\\\?\?\\";
+	static const wchar_t nt_namespace[] = L"\\\\?\\";
+	static const wchar_t unc_namespace_remainder[] = L"UNC\\";
+	static const wchar_t unc_prefix[] = L"\\\\";
 
-	size_t to_advance = 0;
+	const wchar_t *prefix = NULL, *remainder = NULL;
+	size_t prefix_len = 0, remainder_len = 0;
 
 	/* "\??\" -- DOS Devices prefix */
-	if (len >= CONST_STRLEN(dosdevices_prefix) &&
-		!wcsncmp(str, dosdevices_prefix, CONST_STRLEN(dosdevices_prefix))) {
-		to_advance += CONST_STRLEN(dosdevices_prefix);
-		len -= CONST_STRLEN(dosdevices_prefix);
+	if (len >= CONST_STRLEN(dosdevices_namespace) &&
+		!wcsncmp(str, dosdevices_namespace, CONST_STRLEN(dosdevices_namespace))) {
+		remainder = str + CONST_STRLEN(dosdevices_namespace);
+		remainder_len = len - CONST_STRLEN(dosdevices_namespace);
 	}
 	/* "\\?\" -- NT namespace prefix */
-	else if (len >= CONST_STRLEN(nt_prefix) &&
-		!wcsncmp(str, nt_prefix, CONST_STRLEN(nt_prefix))) {
-		to_advance += CONST_STRLEN(nt_prefix);
-		len -= CONST_STRLEN(nt_prefix);
+	else if (len >= CONST_STRLEN(nt_namespace) &&
+		!wcsncmp(str, nt_namespace, CONST_STRLEN(nt_namespace))) {
+		remainder = str + CONST_STRLEN(nt_namespace);
+		remainder_len = len - CONST_STRLEN(nt_namespace);
 	}
 
 	/* "\??\UNC\", "\\?\UNC\" -- UNC prefix */
-	if (to_advance && len >= CONST_STRLEN(unc_prefix) &&
-		!wcsncmp(str + to_advance, unc_prefix, CONST_STRLEN(unc_prefix))) {
+	if (remainder_len >= CONST_STRLEN(unc_namespace_remainder) &&
+		!wcsncmp(remainder, unc_namespace_remainder, CONST_STRLEN(unc_namespace_remainder))) {
 
 		/*
 		 * The proper Win32 path for a UNC share has "\\" at beginning of it
-		 * and looks like "\\server\share\<folderStructure>".
-		 * So, remove the UNC prefix, but leave room for a "\\"
+		 * and looks like "\\server\share\<folderStructure>".  So remove the
+		 * UNC namespace and add a prefix of "\\" in its place.
 		 */
-		to_advance += (CONST_STRLEN(unc_prefix) - CONST_STRLEN(unc_canonicalized_prefix));
-		len -= (CONST_STRLEN(unc_prefix) - CONST_STRLEN(unc_canonicalized_prefix));
+		remainder += CONST_STRLEN(unc_namespace_remainder);
+		remainder_len -= CONST_STRLEN(unc_namespace_remainder);
 
-		/**
-		 * Place a "\\" in the string so the result is "\\server\\share\<folderStructure>"
-		 */
-		memmove(str + to_advance, unc_canonicalized_prefix, CONST_STRLEN(unc_canonicalized_prefix) * sizeof(wchar_t));
+		prefix = unc_prefix;
+		prefix_len = CONST_STRLEN(unc_prefix);
 	}
 
-	if (to_advance) {
-		memmove(str, str + to_advance, len * sizeof(wchar_t));
+	if (remainder) {
+		/*
+		 * Sanity check that the new string isn't longer than the old one.
+		 * (This could only happen due to programmer error introducing a
+		 * prefix longer than the namespace it replaces.)
+		 */
+		assert(len >= remainder_len + prefix_len);
+
+		if (prefix)
+			memmove(str, prefix, prefix_len * sizeof(wchar_t));
+
+		memmove(str + prefix_len, remainder, remainder_len * sizeof(wchar_t));
+
+		len = remainder_len + prefix_len;
 		str[len] = L'\0';
 	}
 
