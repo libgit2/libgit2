@@ -146,12 +146,6 @@ Return:
 	return 0;
 }
 
-int git__strtol32(int32_t *result, const char *nptr, const char **endptr, int base)
-{
-
-	return git__strntol32(result, nptr, (size_t)-1, endptr, base);
-}
-
 int git__strntol32(int32_t *result, const char *nptr, size_t nptr_len, const char **endptr, int base)
 {
 	int error;
