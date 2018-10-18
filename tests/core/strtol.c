@@ -75,3 +75,10 @@ void test_core_strtol__buffer_length_truncates(void)
 	cl_git_pass(git__strntol64(&i64, "11", 1, NULL, 10));
 	cl_assert_equal_i(i64, 1);
 }
+
+void test_core_strtol__error_message_cuts_off(void)
+{
+	assert_l32_fails("2147483657foobar", 10);
+	cl_assert(strstr(giterr_last()->message, "2147483657") != NULL);
+	cl_assert(strstr(giterr_last()->message, "foobar") == NULL);
+}
