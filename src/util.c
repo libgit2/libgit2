@@ -122,10 +122,20 @@ int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const cha
 			v = c - 'A' + 10;
 		if (v >= base)
 			break;
-		nn = n * base + (neg ? -v : v);
-		if ((!neg && nn < n) || (neg && nn > n))
+		v = neg ? -v : v;
+		if (n > INT64_MAX / base || n < INT64_MIN / base) {
 			ovfl = 1;
-		n = nn;
+			/* Keep on iterating until the end of this number */
+			continue;
+		}
+		nn = n * base;
+		if ((v > 0 && nn > INT64_MAX - v) ||
+		    (v < 0 && nn < INT64_MIN - v)) {
+			ovfl = 1;
+			/* Keep on iterating until the end of this number */
+			continue;
+		}
+		n = nn + v;
 	}
 
 Return:
