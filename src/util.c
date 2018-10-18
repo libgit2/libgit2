@@ -158,20 +158,24 @@ Return:
 
 int git__strntol32(int32_t *result, const char *nptr, size_t nptr_len, const char **endptr, int base)
 {
-	int error;
+	const char *tmp_endptr;
 	int32_t tmp_int;
 	int64_t tmp_long;
+	int error;
 
-	if ((error = git__strntol64(&tmp_long, nptr, nptr_len, endptr, base)) < 0)
+	if ((error = git__strntol64(&tmp_long, nptr, nptr_len, &tmp_endptr, base)) < 0)
 		return error;
 
 	tmp_int = tmp_long & 0xFFFFFFFF;
 	if (tmp_int != tmp_long) {
-		giterr_set(GITERR_INVALID, "failed to convert: '%s' is too large", nptr);
+		int len = tmp_endptr - nptr;
+		giterr_set(GITERR_INVALID, "failed to convert: '%.*s' is too large", len, nptr);
 		return -1;
 	}
 
 	*result = tmp_int;
+	if (endptr)
+		*endptr = tmp_endptr;
 
 	return error;
 }
