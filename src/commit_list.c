@@ -171,7 +171,9 @@ static int commit_quick_parse(
 			buffer--;
 	}
 
-	if ((buffer == committer_start) || (git__strtol64(&commit_time, (char *)(buffer + 1), NULL, 10) < 0))
+	if ((buffer == committer_start) ||
+	    (git__strntol64(&commit_time, (char *)(buffer + 1),
+			    buffer_end - buffer + 1, NULL, 10) < 0))
 		return commit_error(commit, "cannot parse commit time");
 
 	commit->time = commit_time;
