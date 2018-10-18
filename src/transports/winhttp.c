@@ -766,7 +766,8 @@ static int winhttp_connect(
 	t->connection = NULL;
 
 	/* Prepare port */
-	if (git__strtol32(&port, t->connection_data.port, NULL, 10) < 0)
+	if (git__strntol32(&port, t->connection_data.port,
+			   strlen(t->connection_data.port), NULL, 10) < 0)
 		return -1;
 
 	/* Prepare host */
