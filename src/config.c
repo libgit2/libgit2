@@ -1300,7 +1300,7 @@ int git_config_parse_int64(int64_t *out, const char *value)
 	const char *num_end;
 	int64_t num;
 
-	if (!value || git__strtol64(&num, value, &num_end, 0) < 0)
+	if (!value || git__strntol64(&num, value, strlen(value), &num_end, 0) < 0)
 		goto fail_parse;
 
 	switch (*num_end) {
