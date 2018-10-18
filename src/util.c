@@ -64,12 +64,6 @@ int git_strarray_copy(git_strarray *tgt, const git_strarray *src)
 	return 0;
 }
 
-int git__strtol64(int64_t *result, const char *nptr, const char **endptr, int base)
-{
-
-	return git__strntol64(result, nptr, (size_t)-1, endptr, base);
-}
-
 int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const char **endptr, int base)
 {
 	const char *p;
