@@ -759,6 +759,36 @@ void test_config_read__bom(void)
 	git_buf_dispose(&buf);
 }
 
+void test_config_read__single_line(void)
+{
+	git_buf buf = GIT_BUF_INIT;
+	git_config *cfg;
+
+	cl_set_cleanup(&clean_test_config, NULL);
+	cl_git_mkfile("./testconfig", "[some] var = value\n[some \"OtheR\"] var = value");
+	cl_git_pass(git_config_open_ondisk(&cfg, "./testconfig"));
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "some.var"));
+	cl_assert_equal_s(buf.ptr, "value");
+
+	git_buf_clear(&buf);
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "some.OtheR.var"));
+	cl_assert_equal_s(buf.ptr, "value");
+
+	git_config_free(cfg);
+	cl_git_mkfile("./testconfig", "[some] var = value\n[some \"OtheR\"]var = value");
+	cl_git_pass(git_config_open_ondisk(&cfg, "./testconfig"));
+	git_buf_clear(&buf);
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "some.var"));
+	cl_assert_equal_s(buf.ptr, "value");
+
+	git_buf_clear(&buf);
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "some.OtheR.var"));
+	cl_assert_equal_s(buf.ptr, "value");
+
+	git_config_free(cfg);
+	git_buf_dispose(&buf);
+}
+
 static int read_nosection_cb(const git_config_entry *entry, void *payload) {
 	int *seen = (int*)payload;
 	if (strcmp(entry->name, "key") == 0) {
