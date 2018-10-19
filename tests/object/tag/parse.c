@@ -198,3 +198,21 @@ void test_object_tag_parse__missing_message_fails(void)
 		"tagger taggy@taggart.com>\n";
 	assert_tag_fails(tag, 0);
 }
+
+void test_object_tag_parse__no_oob_read_when_searching_message(void)
+{
+	const char *tag =
+		"object a8d447f68076d1520f69649bb52629941be7031f\n"
+		"type tag\n"
+		"tag \n"
+		"tagger <>\n"
+		" \n\n"
+		"Message";
+	/*
+	 * The OOB read previously resulted in an OOM error. We
+	 * thus want to make sure that the resulting error is the
+	 * expected one.
+	 */
+	assert_tag_fails(tag, strlen(tag) - strlen("\n\nMessage"));
+	cl_assert(strstr(giterr_last()->message, "tag contains no message"));
+}
