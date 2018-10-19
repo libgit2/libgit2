@@ -16,6 +16,7 @@ jobs:
       imageName: 'libgit2/trusty-openssl:latest'
       environmentVariables: |
        CC=gcc
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
        LEAK_CHECK=valgrind
 
 - job: linux_trusty_gcc_mbedtls
@@ -41,6 +42,7 @@ jobs:
       imageName: 'libgit2/trusty-openssl:latest'
       environmentVariables: |
        CC=clang
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
        LEAK_CHECK=valgrind
 
 - job: linux_trusty_clang_mbedtls
