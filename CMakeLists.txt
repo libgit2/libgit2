@@ -44,8 +44,6 @@ OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"   OFF )
 OPTION( VALGRIND			"Configure build for valgrind"			OFF )
 OPTION( CURL			"Use curl for HTTP if available" ON)
 OPTION( DEBUG_POOL			"Enable debug pool allocator"			OFF )
-   SET( CLAR_XML 			"OFF"					       CACHE STRING
-       "Writes test results in XML format.  One of ON, OFF or the directory to write to; this does not affect the output executables, this only affects the behavior of the ctest command.")
 
 IF(DEBUG_POOL)
 	ADD_DEFINITIONS(-DGIT_DEBUG_POOL)
