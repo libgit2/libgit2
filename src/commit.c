@@ -444,7 +444,7 @@ int git_commit__parse_raw(void *_commit, const char *data, size_t size)
 		while (eoln < buffer_end && *eoln != '\n')
 			++eoln;
 
-		if (git__prefixcmp(buffer, "encoding ") == 0) {
+		if (git__prefixncmp(buffer, buffer_end - buffer, "encoding ") == 0) {
 			buffer += strlen("encoding ");
 
 			commit->message_encoding = git__strndup(buffer, eoln - buffer);

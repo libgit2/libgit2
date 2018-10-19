@@ -211,3 +211,22 @@ void test_object_commit_parse__parsing_commit_without_committer_fails(void)
 		"Message";
 	assert_commit_fails(commit, 0);
 }
+
+void test_object_commit_parse__parsing_encoding_will_not_cause_oob_read(void)
+{
+	const char *commit =
+		"tree 3e7ac388cadacccdf1c6c5f3445895b71d9cb0f8\n"
+		"author <>\n"
+		"committer <>\n"
+		"encoding foo\n";
+	/*
+	 * As we ignore unknown fields, the cut-off encoding field will be
+	 * parsed just fine.
+	 */
+	assert_commit_parses(commit, strlen(commit) - strlen("ncoding foo\n"),
+		"3e7ac388cadacccdf1c6c5f3445895b71d9cb0f8",
+		"<>",
+		"<>",
+		NULL,
+		"", 0);
+}
