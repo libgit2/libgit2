@@ -70,10 +70,9 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 	static const char *tag_types[] = {
 		NULL, "commit\n", "tree\n", "blob\n", "tag\n"
 	};
-
-	unsigned int i;
 	size_t text_len, alloc_len;
-	char *search;
+	const char *search;
+	unsigned int i;
 
 	if (git_oid__parse(&tag->target, &buffer, buffer_end, "object ") < 0)
 		return tag_error("object field invalid");
@@ -138,8 +137,9 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 	tag->message = NULL;
 	if (buffer < buffer_end) {
 		/* If we're not at the end of the header, search for it */
-		if( *buffer != '\n' ) {
-			search = strstr(buffer, "\n\n");
+		if(*buffer != '\n') {
+			search = git__memmem(buffer, buffer_end - buffer,
+					     "\n\n", 2);
 			if (search)
 				buffer = search + 1;
 			else
