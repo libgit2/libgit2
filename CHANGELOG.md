@@ -1,3 +1,48 @@
+v0.27.7
+-------
+
+This is a bugfix release with the following changes or improvements:
+
+- Our continuous integration environment has switched from Travis and
+  AppVeyor to Azure Pipelines CI.
+
+- Fix adding worktrees for bare repositories.
+
+- Fix parsed patches not computing the old respectively new line
+  numbers correctly.
+
+- Fix parsing configuration variables which do not have a section.
+
+- Fix a zero-byte allocation when trying to detect file renames and
+  copies of a diff without any hunks.
+
+- Fix a zero-byte allocation when trying to resize or duplicate
+  vectors.
+
+- Fix return value when trying to unlock worktrees which aren't
+  locked.
+
+- Fix returning an unitialized error code when preparing a revision
+  walk without any pushed commits.
+
+- Fix return value of `git_remote_lookup` when lookup of
+  "remote.$remote.tagopt" fails.
+
+- Fix the revision walk always labelling commits as interesting due
+  to a mishandling of the commit date.
+
+- Fix the packbuilder inserting uninteresting blobs when adding a
+  tree containing references to such blobs.
+
+- Ignore unsupported authentication schemes in HTTP transport.
+
+- Improve performane of `git_remote_prune`.
+
+- Fix detection of whether `qsort_r` has a BSD or GNU function
+  signature.
+
+- Fix detection of iconv if it is provided by libc.
+
 v0.27.6
 -------
 
