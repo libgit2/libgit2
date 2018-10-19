@@ -156,8 +156,8 @@ typedef struct git_odb git_odb;
 the library, and not within the application.  This allows the type
 to grow (or shrink) in size without rebuilding client code.
 
-To preserve ABI compatibility, include an `int version` field in all opaque
-structures, and initialize to the latest version in the construction call.
+To preserve ABI compatibility, include an `int version` field in all transparent
+structures, and initialize to the latest version in the constructor call.
 Increment the "latest" version whenever the structure changes, and try to only
 append to the end of the structure.
 
