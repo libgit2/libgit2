@@ -136,25 +136,6 @@ void test_checkout_index__honor_coreautocrlf_setting_set_to_true(void)
 #endif
 }
 
-static bool supports_symlinks(const char *dir)
-{
-	git_buf path = GIT_BUF_INIT;
-	struct stat st;
-	bool supports_symlinks = 1;
-
-	cl_git_pass(git_buf_joinpath(&path, dir, "test"));
-
-	/* see if symlinks are supported in the "symlink" directory */
-	if (p_symlink("target", path.ptr) < 0 ||
-	    p_lstat(path.ptr, &st) < 0 ||
-	    ! (S_ISLNK(st.st_mode)))
-		supports_symlinks = 0;
-
-	git_buf_dispose(&path);
-
-	return supports_symlinks;
-}
-
 void test_checkout_index__honor_coresymlinks_default(void)
 {
 	git_repository *repo;
@@ -181,7 +162,7 @@ void test_checkout_index__honor_coresymlinks_default(void)
 	git_object_free(target);
 	git_repository_free(repo);
 
-	if (!supports_symlinks("symlink")) {
+	if (!filesystem_supports_symlinks("symlink/test")) {
 		check_file_contents("./symlink/link_to_new.txt", "new.txt");
 	} else {
 		char link_data[1024];
@@ -203,7 +184,7 @@ void test_checkout_index__coresymlinks_set_to_true_fails_when_unsupported(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
-	if (supports_symlinks("testrepo")) {
+	if (filesystem_supports_symlinks("testrepo/test")) {
 		cl_skip();
 	}
 
@@ -219,7 +200,7 @@ void test_checkout_index__honor_coresymlinks_setting_set_to_true(void)
 	char link_data[GIT_PATH_MAX];
 	size_t link_size = GIT_PATH_MAX;
 
-	if (!supports_symlinks("testrepo")) {
+	if (!filesystem_supports_symlinks("testrepo/test")) {
 		cl_skip();
 	}
 

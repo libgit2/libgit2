@@ -20,3 +20,15 @@ void delete_head(git_repository* repo)
 
 	git_buf_dispose(&head_path);
 }
+
+int filesystem_supports_symlinks(const char *path)
+{
+	struct stat st;
+
+	if (p_symlink("target", path) < 0 ||
+		p_lstat(path, &st) < 0 ||
+		!(S_ISLNK(st.st_mode)))
+		return 0;
+
+	return 1;
+}
