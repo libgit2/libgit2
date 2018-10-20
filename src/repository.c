@@ -944,18 +944,20 @@ static int load_config(
 	git_buf config_path = GIT_BUF_INIT;
 	git_config *cfg = NULL;
 
-	assert(repo && out);
+	assert(out);
 
 	if ((error = git_config_new(&cfg)) < 0)
 		return error;
 
-	if ((error = git_repository_item_path(&config_path, repo, GIT_REPOSITORY_ITEM_CONFIG)) == 0)
-		error = git_config_add_file_ondisk(cfg, config_path.ptr, GIT_CONFIG_LEVEL_LOCAL, repo, 0);
+	if (repo) {
+		if ((error = git_repository_item_path(&config_path, repo, GIT_REPOSITORY_ITEM_CONFIG)) == 0)
+			error = git_config_add_file_ondisk(cfg, config_path.ptr, GIT_CONFIG_LEVEL_LOCAL, repo, 0);
 
-	if (error && error != GIT_ENOTFOUND)
-		goto on_error;
+		if (error && error != GIT_ENOTFOUND)
+			goto on_error;
 
-	git_buf_dispose(&config_path);
+		git_buf_dispose(&config_path);
+	}
 
 	if (global_config_path != NULL &&
 		(error = git_config_add_file_ondisk(
