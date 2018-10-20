@@ -16,6 +16,7 @@ jobs:
       imageName: 'libgit2/trusty-openssl:latest'
       environmentVariables: |
        CC=gcc
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
        LEAK_CHECK=valgrind
 
 - job: linux_trusty_gcc_mbedtls
@@ -41,6 +42,7 @@ jobs:
       imageName: 'libgit2/trusty-openssl:latest'
       environmentVariables: |
        CC=clang
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
        LEAK_CHECK=valgrind
 
 - job: linux_trusty_clang_mbedtls
@@ -69,6 +71,7 @@ jobs:
         TMPDIR: $(Agent.TempDirectory)
         PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
         LEAK_CHECK: leaks
+        CMAKE_OPTIONS: -G Ninja
 
 - job: windows_vs_amd64
   displayName: 'Windows (Visual Studio; amd64)'
