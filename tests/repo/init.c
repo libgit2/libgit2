@@ -48,6 +48,19 @@ static void cleanup_repository(void *path)
 	cl_fixture_cleanup((const char *)path);
 }
 
+static void configure_tmp_global_path(git_buf *out)
+{
+	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH,
+		GIT_CONFIG_LEVEL_GLOBAL, &_tmp_path));
+	cl_git_pass(git_buf_puts(&_tmp_path, ".tmp"));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH,
+		GIT_CONFIG_LEVEL_GLOBAL, _tmp_path.ptr));
+
+	cl_must_pass(p_mkdir(_tmp_path.ptr, 0777));
+
+	cl_git_pass(git_buf_joinpath(out, _tmp_path.ptr, ".gitconfig"));
+}
+
 static void ensure_repository_init(
 	const char *working_directory,
 	int is_bare,
@@ -572,15 +585,7 @@ static void configure_templatedir(const char *template_path)
 	git_buf config_path = GIT_BUF_INIT;
 	git_buf config_data = GIT_BUF_INIT;
 
-    cl_git_pass(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH,
-		GIT_CONFIG_LEVEL_GLOBAL, &_tmp_path));
-	cl_git_pass(git_buf_puts(&_tmp_path, ".tmp"));
-	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH,
-		GIT_CONFIG_LEVEL_GLOBAL, _tmp_path.ptr));
-
-	cl_must_pass(p_mkdir(_tmp_path.ptr, 0777));
-
-	cl_git_pass(git_buf_joinpath(&config_path, _tmp_path.ptr, ".gitconfig"));
+	configure_tmp_global_path(&config_path);
 
 	cl_git_pass(git_buf_printf(&config_data,
 		"[init]\n\ttemplatedir = \"%s\"\n", template_path));
