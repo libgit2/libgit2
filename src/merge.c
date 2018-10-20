@@ -3232,7 +3232,7 @@ int git_merge(
 	git_reference *our_ref = NULL;
 	git_checkout_options checkout_opts;
 	git_annotated_commit *our_head = NULL, *base = NULL;
-	git_index *index = NULL;
+	git_index *repo_index = NULL, *index = NULL;
 	git_indexwriter indexwriter = GIT_INDEXWRITER_INIT;
 	unsigned int checkout_strategy;
 	int error = 0;
@@ -3255,8 +3255,8 @@ int git_merge(
 		&checkout_strategy)) < 0)
 		goto done;
 
-	if ((error = git_repository_index(&index, repo) < 0) ||
-	    (error = git_index_read(index, 0) < 0))
+	if ((error = git_repository_index(&repo_index, repo) < 0) ||
+	    (error = git_index_read(repo_index, 0) < 0))
 		goto done;
 
 	/* Write the merge setup files to the repository. */
@@ -3292,6 +3292,7 @@ done:
 	git_annotated_commit_free(our_head);
 	git_annotated_commit_free(base);
 	git_reference_free(our_ref);
+	git_index_free(repo_index);
 
 	return error;
 }
