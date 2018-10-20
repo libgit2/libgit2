@@ -129,7 +129,7 @@ void test_path_win32__absolute_from_relative(void)
 #endif
 }
 
-void test_canonicalize(const wchar_t *in, const wchar_t *expected)
+static void test_canonicalize(const wchar_t *in, const wchar_t *expected)
 {
 #ifdef GIT_WIN32
 	git_win32_path canonical;
@@ -143,6 +143,55 @@ void test_canonicalize(const wchar_t *in, const wchar_t *expected)
 	GIT_UNUSED(in);
 	GIT_UNUSED(expected);
 #endif
+}
+
+static void test_remove_namespace(const wchar_t *in, const wchar_t *expected)
+{
+#ifdef GIT_WIN32
+	git_win32_path canonical;
+
+	cl_assert(wcslen(in) < MAX_PATH);
+	wcscpy(canonical, in);
+
+	cl_must_pass(git_win32_path_remove_namespace(canonical, wcslen(in)));
+	cl_assert_equal_wcs(expected, canonical);
+#else
+	GIT_UNUSED(in);
+	GIT_UNUSED(expected);
+#endif
+}
+
+void test_path_win32__remove_namespace(void)
+{
+	test_remove_namespace(L"\\\\?\\C:\\Temp\\Foo", L"C:\\Temp\\Foo");
+	test_remove_namespace(L"\\\\?\\C:\\", L"C:\\");
+	test_remove_namespace(L"\\\\?\\", L"");
+
+	test_remove_namespace(L"\\??\\C:\\Temp\\Foo", L"C:\\Temp\\Foo");
+	test_remove_namespace(L"\\??\\C:\\", L"C:\\");
+	test_remove_namespace(L"\\??\\", L"");
+
+	test_remove_namespace(L"\\\\?\\UNC\\server\\C$\\folder", L"\\\\server\\C$\\folder");
+	test_remove_namespace(L"\\\\?\\UNC\\server\\C$\\folder", L"\\\\server\\C$\\folder");
+	test_remove_namespace(L"\\\\?\\UNC\\server\\C$", L"\\\\server\\C$");
+	test_remove_namespace(L"\\\\?\\UNC\\server\\", L"\\\\server");
+	test_remove_namespace(L"\\\\?\\UNC\\server", L"\\\\server");
+
+	test_remove_namespace(L"\\??\\UNC\\server\\C$\\folder", L"\\\\server\\C$\\folder");
+	test_remove_namespace(L"\\??\\UNC\\server\\C$\\folder", L"\\\\server\\C$\\folder");
+	test_remove_namespace(L"\\??\\UNC\\server\\C$", L"\\\\server\\C$");
+	test_remove_namespace(L"\\??\\UNC\\server\\", L"\\\\server");
+	test_remove_namespace(L"\\??\\UNC\\server", L"\\\\server");
+
+	test_remove_namespace(L"\\\\server\\C$\\folder", L"\\\\server\\C$\\folder");
+	test_remove_namespace(L"\\\\server\\C$", L"\\\\server\\C$");
+	test_remove_namespace(L"\\\\server\\", L"\\\\server");
+	test_remove_namespace(L"\\\\server", L"\\\\server");
+
+	test_remove_namespace(L"C:\\Foo\\Bar", L"C:\\Foo\\Bar");
+	test_remove_namespace(L"C:\\", L"C:\\");
+	test_remove_namespace(L"", L"");
+
 }
 
 void test_path_win32__canonicalize(void)

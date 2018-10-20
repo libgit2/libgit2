@@ -354,7 +354,7 @@ static int do_lstat(const char *path, struct stat *buf, bool posixly_correct)
 	if ((len = git_win32_path_from_utf8(path_w, path)) < 0)
 		return -1;
 
-	git_win32__path_trim_end(path_w, len);
+	git_win32_path_trim_end(path_w, len);
 
 	return lstat_w(path_w, buf, posixly_correct);
 }
@@ -648,8 +648,8 @@ static int getfinalpath_w(
 	if (!dwChars || dwChars >= GIT_WIN_PATH_UTF16)
 		return -1;
 
-	/* The path may be delivered to us with a prefix; canonicalize */
-	return (int)git_win32__canonicalize_path(dest, dwChars);
+	/* The path may be delivered to us with a namespace prefix; remove */
+	return (int)git_win32_path_remove_namespace(dest, dwChars);
 }
 
 static int follow_and_lstat_link(git_win32_path path, struct stat* buf)

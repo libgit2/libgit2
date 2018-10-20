@@ -83,4 +83,22 @@ extern char *git_win32_path_8dot3_name(const char *path);
 
 extern int git_win32_path_readlink_w(git_win32_path dest, const git_win32_path path);
 
+/**
+ * Removes any trailing backslashes from a path, except in the case of a drive
+ * letter path (C:\, D:\, etc.). This function cannot fail.
+ *
+ * @param path The path which should be trimmed.
+ * @return The length of the modified string (<= the input length)
+ */
+size_t git_win32_path_trim_end(wchar_t *str, size_t len);
+
+/**
+ * Removes any of the following namespace prefixes from a path,
+ * if found: "\??\", "\\?\", "\\?\UNC\". This function cannot fail.
+ *
+ * @param path The path which should be converted.
+ * @return The length of the modified string (<= the input length)
+ */
+size_t git_win32_path_remove_namespace(wchar_t *str, size_t len);
+
 #endif
