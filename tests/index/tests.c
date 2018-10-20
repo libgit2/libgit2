@@ -639,6 +639,30 @@ static void write_invalid_filename(git_repository *repo, const char *fn_orig)
 	git__free(fn);
 }
 
+void test_index_tests__write_tree_invalid_unowned_index(void)
+{
+	git_index *idx;
+	git_repository *repo;
+	git_index_entry entry = {{0}};
+	git_oid tree_id;
+
+	cl_git_pass(git_index_new(&idx));
+
+	cl_git_pass(git_oid_fromstr(&entry.id, "8312e0a89a9cbab77c732b6bc39b51a783e3a318"));
+	entry.path = "foo";
+	entry.mode = GIT_FILEMODE_BLOB;
+	cl_git_pass(git_index_add(idx, &entry));
+
+	cl_git_pass(git_repository_init(&repo, "./invalid-id", 0));
+
+	cl_git_fail(git_index_write_tree_to(&tree_id, idx, repo));
+
+	git_index_free(idx);
+	git_repository_free(repo);
+
+	cl_fixture_cleanup("invalid-id");
+}
+
 /* Test that writing an invalid filename fails */
 void test_index_tests__write_invalid_filename(void)
 {
