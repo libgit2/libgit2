@@ -61,7 +61,7 @@
         
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="cm">/*</span>
+        <div class='highlight'><pre><span></span><span class="cm">/*</span>
 <span class="cm"> * libgit2 &quot;checkout&quot; example - shows how to perform checkouts</span>
 <span class="cm"> *</span>
 <span class="cm"> * Written by the libgit2 contributors</span>
@@ -75,8 +75,8 @@
 <span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
 <span class="cm"> */</span>
 
-<span class="cp">#include &quot;common.h&quot;</span>
-<span class="cp">#include &lt;assert.h&gt;</span>
+<span class="cp">#include</span> <span class="cpf">&quot;common.h&quot;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;assert.h&gt;</span><span class="cp"></span>
 
 <span class="cm">/* Define the printf format specifer to use for size_t output */</span>
 <span class="cp">#if defined(_MSC_VER) || defined(__MINGW32__)</span>
@@ -104,9 +104,9 @@
       </td>
       <td class=code>
         <div class='highlight'><pre><span class="k">typedef</span> <span class="k">struct</span> <span class="p">{</span>
-  <span class="kt">int</span> <span class="n">force</span> <span class="o">:</span> <span class="mi">1</span><span class="p">;</span>
-  <span class="kt">int</span> <span class="n">progress</span> <span class="o">:</span> <span class="mi">1</span><span class="p">;</span>
-  <span class="kt">int</span> <span class="n">perf</span> <span class="o">:</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="nl">force</span> <span class="p">:</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="nl">progress</span> <span class="p">:</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="nl">perf</span> <span class="p">:</span> <span class="mi">1</span><span class="p">;</span>
 <span class="p">}</span> <span class="n">checkout_options</span><span class="p">;</span>
 
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">print_usage</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
@@ -279,7 +279,7 @@ we might need to detach HEAD.</p>
     <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
   <span class="p">}</span>
 
-<span class="nl">cleanup:</span>
+<span class="nl">cleanup</span><span class="p">:</span>
   <span class="n"><a name="git_commit_free-7" class="fnlink" href="../../#HEAD/group/commit/git_commit_free">git_commit_free</a></span><span class="p">(</span><span class="n">target_commit</span><span class="p">);</span>
 
   <span class="k">return</span> <span class="n">err</span><span class="p">;</span>
@@ -299,7 +299,7 @@ we might need to detach HEAD.</p>
   <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
   <span class="k">struct</span> <span class="n">args_info</span> <span class="n">args</span> <span class="o">=</span> <span class="n">ARGS_INFO_INIT</span><span class="p">;</span>
   <span class="n">checkout_options</span> <span class="n">opts</span><span class="p">;</span>
-  <span class="kt">git_repository_state_t</span> <span class="n">state</span><span class="p">;</span>
+  <span class="n">git_repository_state_t</span> <span class="n">state</span><span class="p">;</span>
   <span class="n">git_annotated_commit</span> <span class="o">*</span><span class="n">checkout_target</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">err</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span> <span class="o">=</span> <span class="s">&quot;.&quot;</span><span class="p">;</span></pre></div>
@@ -393,7 +393,7 @@ we might need to detach HEAD.</p>
     <span class="n">err</span> <span class="o">=</span> <span class="n">perform_checkout_ref</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">checkout_target</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="p">);</span>
   <span class="p">}</span>
 
-<span class="nl">cleanup:</span>
+<span class="nl">cleanup</span><span class="p">:</span>
   <span class="n"><a name="git_annotated_commit_free-4" class="fnlink" href="../../#HEAD/group/annotated/git_annotated_commit_free">git_annotated_commit_free</a></span><span class="p">(</span><span class="n">checkout_target</span><span class="p">);</span>
 
   <span class="n"><a name="git_repository_free-15" class="fnlink" href="../../#HEAD/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>

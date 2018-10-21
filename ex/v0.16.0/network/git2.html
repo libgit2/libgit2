@@ -42,10 +42,10 @@
         
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="cp">#include &lt;stdlib.h&gt;</span>
-<span class="cp">#include &lt;stdio.h&gt;</span>
+        <div class='highlight'><pre><span></span><span class="cp">#include</span> <span class="cpf">&lt;stdlib.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp"></span>
 
-<span class="cp">#include &quot;common.h&quot;</span></pre></div>
+<span class="cp">#include</span> <span class="cpf">&quot;common.h&quot;</span><span class="cp"></span></pre></div>
       </td>
     </tr>
     <tr id='section-2'>
@@ -98,7 +98,7 @@ repository and pass it to the function.</p>
       <td class=code>
         <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n">fn</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="n">GIT_SUCCESS</span><span class="p">)</span>
-    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;Bad news:</span><span class="se">\n</span><span class="s"> %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_lasterror-1" class="fnlink" href="../../#v0.16.0/group/git2_errors/git_lasterror">git_lasterror</a></span><span class="p">());</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;Bad news:</span><span class="se">\n</span><span class="s"> %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_lasterror-1" class="fnlink" href="../../#v0.16.0/group/lasterror/git_lasterror">git_lasterror</a></span><span class="p">());</span>
 
   <span class="k">if</span><span class="p">(</span><span class="n">repo</span><span class="p">)</span>
     <span class="n"><a name="git_repository_free-3" class="fnlink" href="../../#v0.16.0/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>

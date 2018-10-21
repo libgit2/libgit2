@@ -58,7 +58,7 @@
         
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="cm">/*</span>
+        <div class='highlight'><pre><span></span><span class="cm">/*</span>
 <span class="cm"> * libgit2 &quot;remote&quot; example - shows how to modify remotes for a repo</span>
 <span class="cm"> *</span>
 <span class="cm"> * Written by the libgit2 contributors</span>
@@ -72,7 +72,7 @@
 <span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
 <span class="cm"> */</span>
 
-<span class="cp">#include &quot;common.h&quot;</span></pre></div>
+<span class="cp">#include</span> <span class="cpf">&quot;common.h&quot;</span><span class="cp"></span></pre></div>
       </td>
     </tr>
     <tr id='section-2'>
@@ -134,19 +134,19 @@ program is emulating.</p>
 
   <span class="k">switch</span> <span class="p">(</span><span class="n">opt</span><span class="p">.</span><span class="n">cmd</span><span class="p">)</span>
   <span class="p">{</span>
-  <span class="k">case</span> <span class="n">subcmd_add</span>:
+  <span class="k">case</span> <span class="nl">subcmd_add</span><span class="p">:</span>
     <span class="n">retval</span> <span class="o">=</span> <span class="n">cmd_add</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opt</span><span class="p">);</span>
     <span class="k">break</span><span class="p">;</span>
-  <span class="k">case</span> <span class="n">subcmd_remove</span>:
+  <span class="k">case</span> <span class="nl">subcmd_remove</span><span class="p">:</span>
     <span class="n">retval</span> <span class="o">=</span> <span class="n">cmd_remove</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opt</span><span class="p">);</span>
     <span class="k">break</span><span class="p">;</span>
-  <span class="k">case</span> <span class="n">subcmd_rename</span>:
+  <span class="k">case</span> <span class="nl">subcmd_rename</span><span class="p">:</span>
     <span class="n">retval</span> <span class="o">=</span> <span class="n">cmd_rename</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opt</span><span class="p">);</span>
     <span class="k">break</span><span class="p">;</span>
-  <span class="k">case</span> <span class="n">subcmd_seturl</span>:
+  <span class="k">case</span> <span class="nl">subcmd_seturl</span><span class="p">:</span>
     <span class="n">retval</span> <span class="o">=</span> <span class="n">cmd_seturl</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opt</span><span class="p">);</span>
     <span class="k">break</span><span class="p">;</span>
-  <span class="k">case</span> <span class="n">subcmd_show</span>:
+  <span class="k">case</span> <span class="nl">subcmd_show</span><span class="p">:</span>
     <span class="n">retval</span> <span class="o">=</span> <span class="n">cmd_show</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opt</span><span class="p">);</span>
     <span class="k">break</span><span class="p">;</span>
   <span class="p">}</span>
@@ -279,7 +279,7 @@ program is emulating.</p>
       <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s</span><span class="se">\t</span><span class="s">%s (fetch)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">fetch</span><span class="p">);</span>
     <span class="n">push</span> <span class="o">=</span> <span class="n"><a name="git_remote_pushurl-7" class="fnlink" href="../../#v0.23.4/group/remote/git_remote_pushurl">git_remote_pushurl</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
     <span class="cm">/* use fetch URL if no distinct push URL has been set */</span>
-    <span class="n">push</span> <span class="o">=</span> <span class="n">push</span> <span class="o">?</span> <span class="n">push</span> <span class="o">:</span> <span class="n">fetch</span><span class="p">;</span>
+    <span class="n">push</span> <span class="o">=</span> <span class="n">push</span> <span class="o">?</span> <span class="nl">push</span> <span class="p">:</span> <span class="n">fetch</span><span class="p">;</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">push</span><span class="p">)</span>
       <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s</span><span class="se">\t</span><span class="s">%s (push)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">push</span><span class="p">);</span>
 

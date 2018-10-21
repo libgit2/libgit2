@@ -59,7 +59,7 @@
         
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="cm">/*</span>
+        <div class='highlight'><pre><span></span><span class="cm">/*</span>
 <span class="cm"> * libgit2 &quot;log&quot; example - shows how to walk history and get commit info</span>
 <span class="cm"> *</span>
 <span class="cm"> * Written by the libgit2 contributors</span>
@@ -73,7 +73,7 @@
 <span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
 <span class="cm"> */</span>
 
-<span class="cp">#include &quot;common.h&quot;</span></pre></div>
+<span class="cp">#include</span> <span class="cpf">&quot;common.h&quot;</span><span class="cp"></span></pre></div>
       </td>
     </tr>
     <tr id='section-2'>
@@ -149,8 +149,8 @@ revwalker configuration calls</li>
   <span class="kt">int</span> <span class="n">show_log_size</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">skip</span><span class="p">,</span> <span class="n">limit</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">min_parents</span><span class="p">,</span> <span class="n">max_parents</span><span class="p">;</span>
-  <span class="kt">git_time_t</span> <span class="n">before</span><span class="p">;</span>
-  <span class="kt">git_time_t</span> <span class="n">after</span><span class="p">;</span>
+  <span class="n">git_time_t</span> <span class="n">before</span><span class="p">;</span>
+  <span class="n">git_time_t</span> <span class="n">after</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">author</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">committer</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">grep</span><span class="p">;</span>
@@ -427,7 +427,7 @@ revwalker configuration calls</li>
 
     <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_revparse_single-48" class="fnlink" href="../../#v0.27.4/group/revparse/git_revparse_single">git_revparse_single</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">revs</span><span class="p">.</span><span class="n">from</span><span class="p">,</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">,</span> <span class="n">revstr</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
       <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
-  <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_revparse-49" class="fnlink" href="../../#v0.27.4/group/git2_revparse/git_revparse">git_revparse</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">revs</span><span class="p">,</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">,</span> <span class="n">revstr</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_revparse-49" class="fnlink" href="../../#v0.27.4/group/revparse/git_revparse">git_revparse</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">revs</span><span class="p">,</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">,</span> <span class="n">revstr</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
 
   <span class="k">if</span> <span class="p">((</span><span class="n">revs</span><span class="p">.</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">GIT_REVPARSE_SINGLE</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>

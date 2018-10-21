@@ -43,16 +43,16 @@
         
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="cp">#include &quot;common.h&quot;</span>
-<span class="cp">#include &lt;git2.h&gt;</span>
-<span class="cp">#include &lt;stdio.h&gt;</span>
-<span class="cp">#include &lt;stdlib.h&gt;</span>
-<span class="cp">#include &lt;string.h&gt;</span>
-<span class="cp">#include &lt;pthread.h&gt;</span>
+        <div class='highlight'><pre><span></span><span class="cp">#include</span> <span class="cpf">&quot;common.h&quot;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;git2.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;stdlib.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;string.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;pthread.h&gt;</span><span class="cp"></span>
 
 <span class="k">struct</span> <span class="n">dl_data</span> <span class="p">{</span>
   <span class="n">git_remote</span> <span class="o">*</span><span class="n">remote</span><span class="p">;</span>
-  <span class="kt">git_off_t</span> <span class="o">*</span><span class="n">bytes</span><span class="p">;</span>
+  <span class="n">git_off_t</span> <span class="o">*</span><span class="n">bytes</span><span class="p">;</span>
   <span class="n">git_indexer_stats</span> <span class="o">*</span><span class="n">stats</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">ret</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">finished</span><span class="p">;</span>
@@ -95,7 +95,7 @@ inform the user about progress.</p>
 
   <span class="n">data</span><span class="o">-&gt;</span><span class="n">ret</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 
-<span class="nl">exit:</span>
+<span class="nl">exit</span><span class="p">:</span>
   <span class="n">data</span><span class="o">-&gt;</span><span class="n">finished</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
   <span class="n">pthread_exit</span><span class="p">(</span><span class="o">&amp;</span><span class="n">data</span><span class="o">-&gt;</span><span class="n">ret</span><span class="p">);</span>
 <span class="p">}</span>
@@ -122,9 +122,9 @@ inform the user about progress.</p>
 <span class="kt">int</span> <span class="nf">fetch</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="n">git_remote</span> <span class="o">*</span><span class="n">remote</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
-  <span class="kt">git_off_t</span> <span class="n">bytes</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="n">git_off_t</span> <span class="n">bytes</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
   <span class="n">git_indexer_stats</span> <span class="n">stats</span><span class="p">;</span>
-  <span class="kt">pthread_t</span> <span class="n">worker</span><span class="p">;</span>
+  <span class="n">pthread_t</span> <span class="n">worker</span><span class="p">;</span>
   <span class="k">struct</span> <span class="n">dl_data</span> <span class="n">data</span><span class="p">;</span></pre></div>
       </td>
     </tr>
@@ -209,7 +209,7 @@ changed but all the neede objects are available locally.</p>
 
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 
-<span class="nl">on_error:</span>
+<span class="nl">on_error</span><span class="p">:</span>
   <span class="n"><a name="git_remote_free-10" class="fnlink" href="../../#v0.17.0/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
   <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
 <span class="p">}</span></pre></div>

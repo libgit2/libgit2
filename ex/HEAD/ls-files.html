@@ -61,7 +61,7 @@
         
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="cm">/*</span>
+        <div class='highlight'><pre><span></span><span class="cm">/*</span>
 <span class="cm"> * libgit2 &quot;ls-files&quot; example - shows how to view all files currently in the index</span>
 <span class="cm"> *</span>
 <span class="cm"> * Written by the libgit2 contributors</span>
@@ -75,8 +75,8 @@
 <span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
 <span class="cm"> */</span>
 
-<span class="cp">#include &quot;common.h&quot;</span>
-<span class="cp">#include &quot;array.h&quot;</span></pre></div>
+<span class="cp">#include</span> <span class="cpf">&quot;common.h&quot;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&quot;array.h&quot;</span><span class="cp"></span></pre></div>
       </td>
     </tr>
     <tr id='section-2'>
@@ -200,7 +200,7 @@ This includes staged and committed files, but unstaged files will not display.</
 
   <span class="n">error</span> <span class="o">=</span> <span class="n">print_paths</span><span class="p">(</span><span class="o">&amp;</span><span class="n">opts</span><span class="p">,</span> <span class="n">index</span><span class="p">);</span>
 
-<span class="nl">cleanup:</span>
+<span class="nl">cleanup</span><span class="p">:</span>
   <span class="n"><a name="git_index_free-3" class="fnlink" href="../../#HEAD/group/index/git_index_free">git_index_free</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
   <span class="n"><a name="git_repository_free-8" class="fnlink" href="../../#HEAD/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
   <span class="n"><a name="git_libgit2_shutdown-2" class="fnlink" href="../../#HEAD/group/libgit2/git_libgit2_shutdown">git_libgit2_shutdown</a></span><span class="p">();</span>

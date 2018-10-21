@@ -56,11 +56,11 @@
         
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="cp">#include &lt;git2.h&gt;</span>
-<span class="cp">#include &lt;stdlib.h&gt;</span>
-<span class="cp">#include &lt;stdio.h&gt;</span>
-<span class="cp">#include &lt;string.h&gt;</span>
-<span class="cp">#include &quot;common.h&quot;</span>
+        <div class='highlight'><pre><span></span><span class="cp">#include</span> <span class="cpf">&lt;git2.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;stdlib.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;string.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&quot;common.h&quot;</span><span class="cp"></span>
 
 <span class="k">static</span> <span class="kt">int</span> <span class="nf">use_remote</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">)</span>
 <span class="p">{</span>
@@ -97,7 +97,7 @@ each of the remote references.</p>
       </td>
       <td class=code>
         <div class='highlight'><pre>  <span class="n">callbacks</span><span class="p">.</span><span class="n">credentials</span> <span class="o">=</span> <span class="n">cred_acquire_cb</span><span class="p">;</span>
-  <span class="n"><a name="git_remote_set_callbacks-6" class="fnlink" href="../../#v0.21.0/group/remote/git_remote_set_callbacks">git_remote_set_callbacks</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">callbacks</span><span class="p">);</span>
+  <span class="n"><a name="git_remote_set_callbacks-7" class="fnlink" href="../../#v0.21.0/group/remote/git_remote_set_callbacks">git_remote_set_callbacks</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">callbacks</span><span class="p">);</span>
 
   <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_connect-4" class="fnlink" href="../../#v0.21.0/group/remote/git_remote_connect">git_remote_connect</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="n">GIT_DIRECTION_FETCH</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
@@ -113,7 +113,7 @@ each of the remote references.</p>
 their name next to what they point to.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n">git_remote_ls</span><span class="p">(</span><span class="o">&amp;</span><span class="n">refs</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">refs_len</span><span class="p">,</span> <span class="n">remote</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_remote_ls-5" class="fnlink" href="../../#v0.21.0/group/remote/git_remote_ls">git_remote_ls</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">refs</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">refs_len</span><span class="p">,</span> <span class="n">remote</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
 
   <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">refs_len</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
@@ -122,8 +122,8 @@ their name next to what they point to.</p>
     <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s</span><span class="se">\t</span><span class="s">%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">oid</span><span class="p">,</span> <span class="n">refs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">);</span>
   <span class="p">}</span>
 
-<span class="nl">cleanup:</span>
-  <span class="n"><a name="git_remote_free-5" class="fnlink" href="../../#v0.21.0/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
+<span class="nl">cleanup</span><span class="p">:</span>
+  <span class="n"><a name="git_remote_free-6" class="fnlink" href="../../#v0.21.0/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
   <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
 <span class="p">}</span></pre></div>
       </td>

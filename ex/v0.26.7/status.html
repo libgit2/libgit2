@@ -58,7 +58,7 @@
         
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="cm">/*</span>
+        <div class='highlight'><pre><span></span><span class="cm">/*</span>
 <span class="cm"> * libgit2 &quot;status&quot; example - shows how to use the status APIs</span>
 <span class="cm"> *</span>
 <span class="cm"> * Written by the libgit2 contributors</span>
@@ -72,7 +72,7 @@
 <span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
 <span class="cm"> */</span>
 
-<span class="cp">#include &quot;common.h&quot;</span>
+<span class="cp">#include</span> <span class="cpf">&quot;common.h&quot;</span><span class="cp"></span>
 <span class="cp">#ifdef _WIN32</span>
 <span class="cp"># include &lt;Windows.h&gt;</span>
 <span class="cp"># define sleep(a) Sleep(a * 1000)</span>
@@ -168,7 +168,7 @@ directory if none was given).</p>
     <span class="n">fatal</span><span class="p">(</span><span class="s">&quot;Cannot report status on bare repository&quot;</span><span class="p">,</span>
       <span class="n"><a name="git_repository_path-8" class="fnlink" href="../../#v0.26.7/group/repository/git_repository_path">git_repository_path</a></span><span class="p">(</span><span class="n">repo</span><span class="p">));</span>
 
-<span class="nl">show_status:</span>
+<span class="nl">show_status</span><span class="p">:</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">repeat</span><span class="p">)</span>
     <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\033</span><span class="s">[H</span><span class="se">\033</span><span class="s">[2J&quot;</span><span class="p">);</span></pre></div>
       </td>
@@ -248,9 +248,9 @@ branch.</p>
 
   <span class="k">if</span> <span class="p">(</span><span class="n">format</span> <span class="o">==</span> <span class="n">FORMAT_LONG</span><span class="p">)</span>
     <span class="n">printf</span><span class="p">(</span><span class="s">&quot;# On branch %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
-      <span class="n">branch</span> <span class="o">?</span> <span class="n">branch</span> <span class="o">:</span> <span class="s">&quot;Not currently on any branch.&quot;</span><span class="p">);</span>
+      <span class="n">branch</span> <span class="o">?</span> <span class="nl">branch</span> <span class="p">:</span> <span class="s">&quot;Not currently on any branch.&quot;</span><span class="p">);</span>
   <span class="k">else</span>
-    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;## %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">branch</span> <span class="o">?</span> <span class="n">branch</span> <span class="o">:</span> <span class="s">&quot;HEAD (no branch)&quot;</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;## %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">branch</span> <span class="o">?</span> <span class="nl">branch</span> <span class="p">:</span> <span class="s">&quot;HEAD (no branch)&quot;</span><span class="p">);</span>
 
   <span class="n"><a name="git_reference_free-3" class="fnlink" href="../../#v0.26.7/group/reference/git_reference_free">git_reference_free</a></span><span class="p">(</span><span class="n">head</span><span class="p">);</span>
 <span class="p">}</span></pre></div>
@@ -320,7 +320,7 @@ in long form, including the command-line hints.</p>
     <span class="k">if</span> <span class="p">(</span><span class="n">old_path</span> <span class="o">&amp;&amp;</span> <span class="n">new_path</span> <span class="o">&amp;&amp;</span> <span class="n">strcmp</span><span class="p">(</span><span class="n">old_path</span><span class="p">,</span> <span class="n">new_path</span><span class="p">))</span>
       <span class="n">printf</span><span class="p">(</span><span class="s">&quot;#</span><span class="se">\t</span><span class="s">%s  %s -&gt; %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">istatus</span><span class="p">,</span> <span class="n">old_path</span><span class="p">,</span> <span class="n">new_path</span><span class="p">);</span>
     <span class="k">else</span>
-      <span class="n">printf</span><span class="p">(</span><span class="s">&quot;#</span><span class="se">\t</span><span class="s">%s  %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">istatus</span><span class="p">,</span> <span class="n">old_path</span> <span class="o">?</span> <span class="n">old_path</span> <span class="o">:</span> <span class="n">new_path</span><span class="p">);</span>
+      <span class="n">printf</span><span class="p">(</span><span class="s">&quot;#</span><span class="se">\t</span><span class="s">%s  %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">istatus</span><span class="p">,</span> <span class="n">old_path</span> <span class="o">?</span> <span class="nl">old_path</span> <span class="p">:</span> <span class="n">new_path</span><span class="p">);</span>
   <span class="p">}</span>
 
   <span class="k">if</span> <span class="p">(</span><span class="n">header</span><span class="p">)</span> <span class="p">{</span>
@@ -392,7 +392,7 @@ no differences, in which case it will be a <code>GIT_DELTA_UNMODIFIED</code>.</p
     <span class="k">if</span> <span class="p">(</span><span class="n">old_path</span> <span class="o">&amp;&amp;</span> <span class="n">new_path</span> <span class="o">&amp;&amp;</span> <span class="n">strcmp</span><span class="p">(</span><span class="n">old_path</span><span class="p">,</span> <span class="n">new_path</span><span class="p">))</span>
       <span class="n">printf</span><span class="p">(</span><span class="s">&quot;#</span><span class="se">\t</span><span class="s">%s  %s -&gt; %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">wstatus</span><span class="p">,</span> <span class="n">old_path</span><span class="p">,</span> <span class="n">new_path</span><span class="p">);</span>
     <span class="k">else</span>
-      <span class="n">printf</span><span class="p">(</span><span class="s">&quot;#</span><span class="se">\t</span><span class="s">%s  %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">wstatus</span><span class="p">,</span> <span class="n">old_path</span> <span class="o">?</span> <span class="n">old_path</span> <span class="o">:</span> <span class="n">new_path</span><span class="p">);</span>
+      <span class="n">printf</span><span class="p">(</span><span class="s">&quot;#</span><span class="se">\t</span><span class="s">%s  %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">wstatus</span><span class="p">,</span> <span class="n">old_path</span> <span class="o">?</span> <span class="nl">old_path</span> <span class="p">:</span> <span class="n">new_path</span><span class="p">);</span>
   <span class="p">}</span>
 
   <span class="k">if</span> <span class="p">(</span><span class="n">header</span><span class="p">)</span> <span class="p">{</span>
