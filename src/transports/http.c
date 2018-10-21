@@ -69,7 +69,7 @@ typedef struct {
 typedef struct {
 	git_smart_subtransport parent;
 	transport_smart *owner;
-	git_stream *io;
+	git_stream *gitserver_stream;
 	gitno_connection_data gitserver_data;
 	bool connected;
 
@@ -508,7 +508,7 @@ static int on_body_fill_buffer(http_parser *parser, const char *str, size_t len)
 static void clear_parser_state(http_subtransport *t)
 {
 	http_parser_init(&t->parser, HTTP_RESPONSE);
-	gitno_buffer_setup_fromstream(t->io,
+	gitno_buffer_setup_fromstream(t->gitserver_stream,
 		&t->parse_buffer,
 		t->parse_buffer_data,
 		sizeof(t->parse_buffer_data));
@@ -565,7 +565,7 @@ static int apply_proxy_config(http_subtransport *t)
 	int error;
 	git_proxy_t proxy_type;
 
-	if (!git_stream_supports_proxy(t->io))
+	if (!git_stream_supports_proxy(t->gitserver_stream))
 		return 0;
 
 	proxy_type = t->owner->proxy.type;
@@ -585,13 +585,13 @@ static int apply_proxy_config(http_subtransport *t)
 		opts.payload = t->owner->proxy.payload;
 		opts.type = GIT_PROXY_SPECIFIED;
 		opts.url = url;
-		error = git_stream_set_proxy(t->io, &opts);
+		error = git_stream_set_proxy(t->gitserver_stream, &opts);
 		git__free(url);
 
 		return error;
 	}
 
-	return git_stream_set_proxy(t->io, &t->owner->proxy);
+	return git_stream_set_proxy(t->gitserver_stream, &t->owner->proxy);
 }
 
 static int http_connect(http_subtransport *t)
@@ -603,39 +603,42 @@ static int http_connect(http_subtransport *t)
 		t->parse_finished)
 		return 0;
 
-	if (t->io) {
-		git_stream_close(t->io);
-		git_stream_free(t->io);
-		t->io = NULL;
+	if (t->gitserver_stream) {
+		git_stream_close(t->gitserver_stream);
+		git_stream_free(t->gitserver_stream);
+		t->gitserver_stream = NULL;
 		t->connected = 0;
 	}
 
 	if (t->gitserver_data.use_ssl) {
-		error = git_tls_stream_new(&t->io, t->gitserver_data.host, t->gitserver_data.port);
+		error = git_tls_stream_new(&t->gitserver_stream,
+		    t->gitserver_data.host, t->gitserver_data.port);
 	} else {
 #ifdef GIT_CURL
-		error = git_curl_stream_new(&t->io, t->gitserver_data.host, t->gitserver_data.port);
+		error = git_curl_stream_new(&t->gitserver_stream,
+		    t->gitserver_data.host, t->gitserver_data.port);
 #else
-		error = git_socket_stream_new(&t->io,  t->gitserver_data.host, t->gitserver_data.port);
+		error = git_socket_stream_new(&t->gitserver_stream,
+		    t->gitserver_data.host, t->gitserver_data.port);
 #endif
 	}
 
 	if (error < 0)
 		return error;
 
-	GITERR_CHECK_VERSION(t->io, GIT_STREAM_VERSION, "git_stream");
+	GITERR_CHECK_VERSION(t->gitserver_stream, GIT_STREAM_VERSION, "git_stream");
 
 	if ((error = apply_proxy_config(t)) < 0)
 		return error;
 
-	error = git_stream_connect(t->io);
+	error = git_stream_connect(t->gitserver_stream);
 
 	if ((!error || error == GIT_ECERTIFICATE) && t->owner->certificate_check_cb != NULL &&
-	    git_stream_is_encrypted(t->io)) {
+	    git_stream_is_encrypted(t->gitserver_stream)) {
 		git_cert *cert;
 		int is_valid = (error == GIT_OK);
 
-		if ((error = git_stream_certificate(&cert, t->io)) < 0)
+		if ((error = git_stream_certificate(&cert, t->gitserver_stream)) < 0)
 			return error;
 
 		giterr_clear();
@@ -683,7 +686,8 @@ replay:
 		if (gen_request(&request, s, 0) < 0)
 			return -1;
 
-		if (git_stream_write(t->io, request.ptr, request.size, 0) < 0) {
+		if (git_stream_write(t->gitserver_stream,
+		    request.ptr, request.size, 0) < 0) {
 			git_buf_dispose(&request);
 			return -1;
 		}
@@ -699,13 +703,14 @@ replay:
 
 			/* Flush, if necessary */
 			if (s->chunk_buffer_len > 0 &&
-				write_chunk(t->io, s->chunk_buffer, s->chunk_buffer_len) < 0)
+				write_chunk(t->gitserver_stream,
+				    s->chunk_buffer, s->chunk_buffer_len) < 0)
 				return -1;
 
 			s->chunk_buffer_len = 0;
 
 			/* Write the final chunk. */
-			if (git_stream_write(t->io, "0\r\n\r\n", 5, 0) < 0)
+			if (git_stream_write(t->gitserver_stream, "0\r\n\r\n", 5, 0) < 0)
 				return -1;
 		}
 
@@ -804,7 +809,8 @@ static int http_stream_write_chunked(
 		if (gen_request(&request, s, 0) < 0)
 			return -1;
 
-		if (git_stream_write(t->io, request.ptr, request.size, 0) < 0) {
+		if (git_stream_write(t->gitserver_stream,
+		    request.ptr, request.size, 0) < 0) {
 			git_buf_dispose(&request);
 			return -1;
 		}
@@ -817,14 +823,15 @@ static int http_stream_write_chunked(
 	if (len > CHUNK_SIZE) {
 		/* Flush, if necessary */
 		if (s->chunk_buffer_len > 0) {
-			if (write_chunk(t->io, s->chunk_buffer, s->chunk_buffer_len) < 0)
+			if (write_chunk(t->gitserver_stream,
+			    s->chunk_buffer, s->chunk_buffer_len) < 0)
 				return -1;
 
 			s->chunk_buffer_len = 0;
 		}
 
 		/* Write chunk directly */
-		if (write_chunk(t->io, buffer, len) < 0)
+		if (write_chunk(t->gitserver_stream, buffer, len) < 0)
 			return -1;
 	}
 	else {
@@ -841,7 +848,8 @@ static int http_stream_write_chunked(
 
 		/* Is the buffer full? If so, then flush */
 		if (CHUNK_SIZE == s->chunk_buffer_len) {
-			if (write_chunk(t->io, s->chunk_buffer, s->chunk_buffer_len) < 0)
+			if (write_chunk(t->gitserver_stream,
+			    s->chunk_buffer, s->chunk_buffer_len) < 0)
 				return -1;
 
 			s->chunk_buffer_len = 0;
@@ -877,10 +885,11 @@ static int http_stream_write_single(
 	if (gen_request(&request, s, len) < 0)
 		return -1;
 
-	if (git_stream_write(t->io, request.ptr, request.size, 0) < 0)
+	if (git_stream_write(t->gitserver_stream,
+	    request.ptr, request.size, 0) < 0)
 		goto on_error;
 
-	if (len && git_stream_write(t->io, buffer, len, 0) < 0)
+	if (len && git_stream_write(t->gitserver_stream, buffer, len, 0) < 0)
 		goto on_error;
 
 	git_buf_dispose(&request);
@@ -1049,10 +1058,10 @@ static int http_close(git_smart_subtransport *subtransport)
 
 	t->connected = 0;
 
-	if (t->io) {
-		git_stream_close(t->io);
-		git_stream_free(t->io);
-		t->io = NULL;
+	if (t->gitserver_stream) {
+		git_stream_close(t->gitserver_stream);
+		git_stream_free(t->gitserver_stream);
+		t->gitserver_stream = NULL;
 	}
 
 	if (t->cred) {
