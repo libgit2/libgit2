@@ -13,7 +13,7 @@ jobs:
   steps:
   - template: azure-pipelines/docker.yml
     parameters:
-      imageName: 'libgit2/trusty-openssl:latest'
+      imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=gcc
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
@@ -26,7 +26,7 @@ jobs:
   steps:
   - template: azure-pipelines/docker.yml
     parameters:
-      imageName: 'libgit2/trusty-mbedtls:latest'
+      imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=gcc
        CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DSHA1_BACKEND=mbedTLS
@@ -39,7 +39,7 @@ jobs:
   steps:
   - template: azure-pipelines/docker.yml
     parameters:
-      imageName: 'libgit2/trusty-openssl:latest'
+      imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=clang
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
@@ -52,7 +52,7 @@ jobs:
   steps:
   - template: azure-pipelines/docker.yml
     parameters:
-      imageName: 'libgit2/trusty-mbedtls:latest'
+      imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=clang
        CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DSHA1_BACKEND=mbedTLS
