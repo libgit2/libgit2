@@ -1,5 +1,9 @@
 # These are the steps used in a container-based build in VSTS.
 steps:
+- ${{ if eq(parameters.qemu, 'true') }}:
+  - script: docker run --rm --privileged multiarch/qemu-user-static:register --reset
+    displayName: 'Register Docker QEMU'
+
 - task: docker@0
   displayName: Build
   inputs:

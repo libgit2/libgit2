@@ -1,0 +1,78 @@
+resources:
+- repo: self
+
+jobs:
+- job: linux_x86_bionic_gcc_openssl
+  displayName: 'Linux (x86; Bionic; GCC; OpenSSL)'
+  pool:
+    vmImage: 'Ubuntu 16.04'
+  steps:
+  - template: docker.yml
+    parameters:
+      qemu: 'true'
+      imageName: 'libgit2/bionic-x86:test'
+      environmentVariables: |
+       CC=gcc
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
+       LEAK_CHECK=valgrind
+
+- job: linux_x86_bionic_clang_openssl
+  displayName: 'Linux (x86; Bionic; Clang; OpenSSL)'
+  pool:
+    vmImage: 'Ubuntu 16.04'
+  steps:
+  - template: docker.yml
+    parameters:
+      qemu: 'true'
+      imageName: 'libgit2/bionic-x86:test'
+      environmentVariables: |
+       CC=clang
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
+       LEAK_CHECK=valgrind
+
+- job: linux_arm32_bionic_gcc_openssl
+  displayName: 'Linux (arm32; Bionic; GCC; OpenSSL)'
+  pool:
+    vmImage: 'Ubuntu 16.04'
+  steps:
+  - template: docker.yml
+    parameters:
+      qemu: 'true'
+      imageName: 'libgit2/bionic-arm32:test'
+      environmentVariables: |
+       CC=gcc
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
+       SKIP_PROXY_TESTS=true
+
+- job: linux_arm64_bionic_gcc_openssl
+  displayName: 'Linux (arm64; Bionic; GCC; OpenSSL)'
+  pool:
+    vmImage: 'Ubuntu 16.04'
+  steps:
+  - template: docker.yml
+    parameters:
+      qemu: 'true'
+      imageName: 'libgit2/bionic-arm64:test'
+      environmentVariables: |
+       CC=gcc
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
+       SKIP_PROXY_TESTS=true
+
+- job: coverity
+  displayName: 'Coverity'
+  pool:
+    vmImage: 'Ubuntu 16.04'
+  steps:
+  - task: Docker@0
+    displayName: Build
+    inputs:
+      action: 'Run an image'
+      imageName: 'libgit2/trusty-openssl:latest'
+      volumes: |
+       $(Build.SourcesDirectory):/src
+       $(Build.BinariesDirectory):/build
+      envVars: |
+       COVERITY_TOKEN=$(COVERITY_TOKEN)
+      workDir: '/build'
+      containerCommand: '/src/ci/coverity.sh'
+      detached: false

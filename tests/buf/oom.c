@@ -11,12 +11,8 @@
  */
 #if defined(GIT_ARCH_64) && defined(__linux__)
 # define TOOBIG 0x0fffffffffffffff
-#elif defined(__linux__)
-# define TOOBIG 0x0fffffff
 #elif defined(GIT_ARCH_64)
 # define TOOBIG 0xffffffffffffff00
-#else
-# define TOOBIG 0xffffff00
 #endif
 
 /**
@@ -25,13 +21,18 @@
  * will fail.  And because the git_buf_grow() wrapper always
  * sets mark_oom, the code in git_buf_try_grow() will free
  * the internal buffer and set it to git_buf__oom.
- * 
+ *
  * We initialized the internal buffer to (the static variable)
  * git_buf__initbuf.  The purpose of this test is to make sure
  * that we don't try to free the static buffer.
+ *
+ * Skip this test entirely on 32-bit platforms; a buffer large enough
+ * to guarantee malloc failures is so large that valgrind considers
+ * it likely to be an error.
  */
 void test_buf_oom__grow(void)
 {
+#ifdef GIT_ARCH_64
 	git_buf buf = GIT_BUF_INIT;
 
 	git_buf_clear(&buf);
@@ -40,6 +41,9 @@ void test_buf_oom__grow(void)
 	cl_assert(git_buf_oom(&buf));
 
 	git_buf_dispose(&buf);
+#else
+    cl_skip();
+#endif
 }
 
 void test_buf_oom__grow_by(void)

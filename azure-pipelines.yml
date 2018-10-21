@@ -6,53 +6,53 @@ trigger:
 - maint/*
 
 jobs:
-- job: linux_trusty_gcc_openssl
-  displayName: 'Linux (Trusty; GCC; OpenSSL)'
+- job: linux_amd64_trusty_gcc_openssl
+  displayName: 'Linux (amd64; Trusty; GCC; OpenSSL)'
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
-  - template: ci/docker.yml
+  - template: azure-pipelines/docker.yml
     parameters:
-      imageName: 'libgit2/trusty-openssl:latest'
+      imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=gcc
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
        LEAK_CHECK=valgrind
 
-- job: linux_trusty_gcc_mbedtls
-  displayName: 'Linux (Trusty; GCC; mbedTLS)'
+- job: linux_amd64_trusty_gcc_mbedtls
+  displayName: 'Linux (amd64; Trusty; GCC; mbedTLS)'
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
-  - template: ci/docker.yml
+  - template: azure-pipelines/docker.yml
     parameters:
-      imageName: 'libgit2/trusty-mbedtls:latest'
+      imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=gcc
        CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DSHA1_BACKEND=mbedTLS
        LEAK_CHECK=valgrind
 
-- job: linux_trusty_clang_openssl
-  displayName: 'Linux (Trusty; Clang; OpenSSL)'
+- job: linux_amd64_trusty_clang_openssl
+  displayName: 'Linux (amd64; Trusty; Clang; OpenSSL)'
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
-  - template: ci/docker.yml
+  - template: azure-pipelines/docker.yml
     parameters:
-      imageName: 'libgit2/trusty-openssl:latest'
+      imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=clang
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
        LEAK_CHECK=valgrind
 
-- job: linux_trusty_clang_mbedtls
-  displayName: 'Linux (Trusty; Clang; mbedTLS)'
+- job: linux_amd64_trusty_clang_mbedtls
+  displayName: 'Linux (amd64; Trusty; Clang; mbedTLS)'
   pool:
     vmImage: 'Ubuntu 16.04'
   steps:
-  - template: ci/docker.yml
+  - template: azure-pipelines/docker.yml
     parameters:
-      imageName: 'libgit2/trusty-mbedtls:latest'
+      imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=clang
        CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DSHA1_BACKEND=mbedTLS
@@ -65,7 +65,7 @@ jobs:
   steps:
   - bash: . '$(Build.SourcesDirectory)/ci/setup-osx.sh'
     displayName: Setup
-  - template: ci/bash.yml
+  - template: azure-pipelines/bash.yml
     parameters:
       environmentVariables:
         TMPDIR: $(Agent.TempDirectory)
@@ -74,25 +74,25 @@ jobs:
         CMAKE_OPTIONS: -G Ninja
 
 - job: windows_vs_amd64
-  displayName: 'Windows (Visual Studio; amd64)'
+  displayName: 'Windows (amd64; Visual Studio)'
   pool: Hosted
   steps:
-  - template: ci/powershell.yml
+  - template: azure-pipelines/powershell.yml
     parameters:
       environmentVariables:
         CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013 Win64"
 
 - job: windows_vs_x86
-  displayName: 'Windows (Visual Studio; x86)'
+  displayName: 'Windows (x86; Visual Studio)'
   pool: Hosted
   steps:
-  - template: ci/powershell.yml
+  - template: azure-pipelines/powershell.yml
     parameters:
       environmentVariables:
         CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013"
 
 - job: windows_mingw_amd64
-  displayName: 'Windows (MinGW; amd64)'
+  displayName: 'Windows (amd64; MinGW)'
   pool: Hosted
   steps:
   - powershell: . '$(Build.SourcesDirectory)\ci\setup-mingw.ps1'
@@ -100,14 +100,14 @@ jobs:
     env:
       TEMP: $(Agent.TempDirectory)
       ARCH: amd64
-  - template: ci/powershell.yml
+  - template: azure-pipelines/powershell.yml
     parameters:
       environmentVariables:
         CMAKE_OPTIONS: -G"MinGW Makefiles"
         PATH: $(Agent.TempDirectory)\mingw64\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
 
 - job: windows_mingw_x86
-  displayName: 'Windows (MinGW; x86)'
+  displayName: 'Windows (x86; MinGW)'
   pool: Hosted
   steps:
   - powershell: . '$(Build.SourcesDirectory)\ci\setup-mingw.ps1'
@@ -116,7 +116,7 @@ jobs:
     env:
       TEMP: $(Agent.TempDirectory)
       ARCH: x86
-  - template: ci/powershell.yml
+  - template: azure-pipelines/powershell.yml
     parameters:
       environmentVariables:
         CMAKE_OPTIONS: -G"MinGW Makefiles"
