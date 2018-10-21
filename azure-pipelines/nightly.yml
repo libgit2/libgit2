@@ -2,6 +2,34 @@ resources:
 - repo: self
 
 jobs:
+- job: linux_x86_xenial_gcc_openssl
+  displayName: 'Linux (x86; Xenial; GCC; OpenSSL)'
+  pool:
+    vmImage: 'Ubuntu 16.04'
+  steps:
+  - template: docker.yml
+    parameters:
+      qemu: 'true'
+      imageName: 'libgit2/xenial-x86:test'
+      environmentVariables: |
+       CC=gcc
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
+       LEAK_CHECK=valgrind
+
+- job: linux_x86_xenial_clang_openssl
+  displayName: 'Linux (x86; Xenial; Clang; OpenSSL)'
+  pool:
+    vmImage: 'Ubuntu 16.04'
+  steps:
+  - template: docker.yml
+    parameters:
+      qemu: 'true'
+      imageName: 'libgit2/xenial-x86:test'
+      environmentVariables: |
+       CC=clang
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
+       LEAK_CHECK=valgrind
+
 - job: linux_arm32_xenial_gcc_openssl
   displayName: 'Linux (arm32; Xenial; GCC; OpenSSL)'
   pool:
