@@ -15,6 +15,15 @@
 
 git_allocator git__allocator;
 
+static int setup_default_allocator(void)
+{
+#if defined(GIT_MSVC_CRTDBG)
+	return git_win32_crtdbg_init_allocator(&git__allocator);
+#else
+	return git_stdalloc_init_allocator(&git__allocator);
+#endif
+}
+
 int git_allocator_global_init(void)
 {
 	/*
@@ -24,15 +33,14 @@ int git_allocator_global_init(void)
 	if (git__allocator.gmalloc != NULL)
 		return 0;
 
-#if defined(GIT_MSVC_CRTDBG)
-	return git_win32_crtdbg_init_allocator(&git__allocator);
-#else
-	return git_stdalloc_init_allocator(&git__allocator);
-#endif
+	return setup_default_allocator();
 }
 
 int git_allocator_setup(git_allocator *allocator)
 {
+	if (!allocator)
+		return setup_default_allocator();
+
 	memcpy(&git__allocator, allocator, sizeof(*allocator));
 	return 0;
 }
