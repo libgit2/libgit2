@@ -2,6 +2,34 @@ resources:
 - repo: self
 
 jobs:
+- job: linux_arm32_xenial_gcc_openssl
+  displayName: 'Linux (arm32; Xenial; GCC; OpenSSL)'
+  pool:
+    vmImage: 'Ubuntu 16.04'
+  steps:
+  - template: docker.yml
+    parameters:
+      qemu: 'true'
+      imageName: 'libgit2/xenial-arm32:test'
+      environmentVariables: |
+       CC=gcc
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
+       SKIP_PROXY_TESTS=true
+
+- job: linux_arm64_xenial_gcc_openssl
+  displayName: 'Linux (arm64; Xenial; GCC; OpenSSL)'
+  pool:
+    vmImage: 'Ubuntu 16.04'
+  steps:
+  - template: docker.yml
+    parameters:
+      qemu: 'true'
+      imageName: 'libgit2/xenial-arm64:test'
+      environmentVariables: |
+       CC=gcc
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
+       SKIP_PROXY_TESTS=true
+
 - job: coverity
   displayName: 'Coverity'
   pool:
