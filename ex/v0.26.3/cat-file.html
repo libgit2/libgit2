@@ -58,7 +58,7 @@
         
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="cm">/*</span>
+        <div class='highlight'><pre><span></span><span class="cm">/*</span>
 <span class="cm"> * libgit2 &quot;cat-file&quot; example - shows how to print data from the ODB</span>
 <span class="cm"> *</span>
 <span class="cm"> * Written by the libgit2 contributors</span>
@@ -72,7 +72,7 @@
 <span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
 <span class="cm"> */</span>
 
-<span class="cp">#include &quot;common.h&quot;</span>
+<span class="cp">#include</span> <span class="cpf">&quot;common.h&quot;</span><span class="cp"></span>
 
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">print_signature</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">header</span><span class="p">,</span> <span class="k">const</span> <span class="n">git_signature</span> <span class="o">*</span><span class="n">sig</span><span class="p">)</span>
 <span class="p">{</span>
@@ -234,10 +234,10 @@
   <span class="p">}</span>
 
   <span class="k">switch</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">action</span><span class="p">)</span> <span class="p">{</span>
-  <span class="k">case</span> <span class="n">SHOW_TYPE</span>:
+  <span class="k">case</span> <span class="nl">SHOW_TYPE</span><span class="p">:</span>
     <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_object_type2string-21" class="fnlink" href="../../#v0.26.3/group/object/git_object_type2string">git_object_type2string</a></span><span class="p">(</span><span class="n"><a name="git_object_type-15" class="fnlink" href="../../#v0.26.3/group/object/git_object_type">git_object_type</a></span><span class="p">(</span><span class="n">obj</span><span class="p">)));</span>
     <span class="k">break</span><span class="p">;</span>
-  <span class="k">case</span> <span class="n">SHOW_SIZE</span>: <span class="p">{</span>
+  <span class="k">case</span> <span class="nl">SHOW_SIZE</span><span class="p">:</span> <span class="p">{</span>
     <span class="n">git_odb</span> <span class="o">*</span><span class="n">odb</span><span class="p">;</span>
     <span class="n">git_odb_object</span> <span class="o">*</span><span class="n">odbobj</span><span class="p">;</span>
 
@@ -251,25 +251,25 @@
     <span class="n"><a name="git_odb_free-22" class="fnlink" href="../../#v0.26.3/group/odb/git_odb_free">git_odb_free</a></span><span class="p">(</span><span class="n">odb</span><span class="p">);</span>
     <span class="p">}</span>
     <span class="k">break</span><span class="p">;</span>
-  <span class="k">case</span> <span class="n">SHOW_NONE</span>:
+  <span class="k">case</span> <span class="nl">SHOW_NONE</span><span class="p">:</span>
     <span class="cm">/* just want return result */</span>
     <span class="k">break</span><span class="p">;</span>
-  <span class="k">case</span> <span class="n">SHOW_PRETTY</span>:
+  <span class="k">case</span> <span class="nl">SHOW_PRETTY</span><span class="p">:</span>
 
     <span class="k">switch</span> <span class="p">(</span><span class="n"><a name="git_object_type-16" class="fnlink" href="../../#v0.26.3/group/object/git_object_type">git_object_type</a></span><span class="p">(</span><span class="n">obj</span><span class="p">))</span> <span class="p">{</span>
-    <span class="k">case</span> <span class="n">GIT_OBJ_BLOB</span>:
+    <span class="k">case</span> <span class="nl">GIT_OBJ_BLOB</span><span class="p">:</span>
       <span class="n">show_blob</span><span class="p">((</span><span class="k">const</span> <span class="n">git_blob</span> <span class="o">*</span><span class="p">)</span><span class="n">obj</span><span class="p">);</span>
       <span class="k">break</span><span class="p">;</span>
-    <span class="k">case</span> <span class="n">GIT_OBJ_COMMIT</span>:
+    <span class="k">case</span> <span class="nl">GIT_OBJ_COMMIT</span><span class="p">:</span>
       <span class="n">show_commit</span><span class="p">((</span><span class="k">const</span> <span class="n">git_commit</span> <span class="o">*</span><span class="p">)</span><span class="n">obj</span><span class="p">);</span>
       <span class="k">break</span><span class="p">;</span>
-    <span class="k">case</span> <span class="n">GIT_OBJ_TREE</span>:
+    <span class="k">case</span> <span class="nl">GIT_OBJ_TREE</span><span class="p">:</span>
       <span class="n">show_tree</span><span class="p">((</span><span class="k">const</span> <span class="n">git_tree</span> <span class="o">*</span><span class="p">)</span><span class="n">obj</span><span class="p">);</span>
       <span class="k">break</span><span class="p">;</span>
-    <span class="k">case</span> <span class="n">GIT_OBJ_TAG</span>:
+    <span class="k">case</span> <span class="nl">GIT_OBJ_TAG</span><span class="p">:</span>
       <span class="n">show_tag</span><span class="p">((</span><span class="k">const</span> <span class="n">git_tag</span> <span class="o">*</span><span class="p">)</span><span class="n">obj</span><span class="p">);</span>
       <span class="k">break</span><span class="p">;</span>
-    <span class="nl">default:</span>
+    <span class="k">default</span><span class="o">:</span>
       <span class="n">printf</span><span class="p">(</span><span class="s">&quot;unknown %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">oidstr</span><span class="p">);</span>
       <span class="k">break</span><span class="p">;</span>
     <span class="p">}</span>

@@ -59,12 +59,12 @@
         
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="cp">#include &quot;common.h&quot;</span>
-<span class="cp">#include &lt;git2.h&gt;</span>
-<span class="cp">#include &lt;git2/clone.h&gt;</span>
-<span class="cp">#include &lt;stdio.h&gt;</span>
-<span class="cp">#include &lt;stdlib.h&gt;</span>
-<span class="cp">#include &lt;string.h&gt;</span>
+        <div class='highlight'><pre><span></span><span class="cp">#include</span> <span class="cpf">&quot;common.h&quot;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;git2.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;git2/clone.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;stdlib.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;string.h&gt;</span><span class="cp"></span>
 <span class="cp">#ifndef _WIN32</span>
 <span class="cp"># include &lt;pthread.h&gt;</span>
 <span class="cp"># include &lt;unistd.h&gt;</span>
@@ -80,15 +80,15 @@
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">print_progress</span><span class="p">(</span><span class="k">const</span> <span class="n">progress_data</span> <span class="o">*</span><span class="n">pd</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="kt">int</span> <span class="n">network_percent</span> <span class="o">=</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">total_objects</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">?</span>
-    <span class="p">(</span><span class="mi">100</span><span class="o">*</span><span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">received_objects</span><span class="p">)</span> <span class="o">/</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">total_objects</span> <span class="o">:</span>
+    <span class="p">(</span><span class="mi">100</span><span class="o">*</span><span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">received_objects</span><span class="p">)</span> <span class="o">/</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="nl">total_objects</span> <span class="p">:</span>
     <span class="mi">0</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">index_percent</span> <span class="o">=</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">total_objects</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">?</span>
-    <span class="p">(</span><span class="mi">100</span><span class="o">*</span><span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">indexed_objects</span><span class="p">)</span> <span class="o">/</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">total_objects</span> <span class="o">:</span>
+    <span class="p">(</span><span class="mi">100</span><span class="o">*</span><span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">indexed_objects</span><span class="p">)</span> <span class="o">/</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="nl">total_objects</span> <span class="p">:</span>
     <span class="mi">0</span><span class="p">;</span>
 
   <span class="kt">int</span> <span class="n">checkout_percent</span> <span class="o">=</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">total_steps</span> <span class="o">&gt;</span> <span class="mi">0</span>
-    <span class="o">?</span> <span class="p">(</span><span class="mi">100</span> <span class="o">*</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">completed_steps</span><span class="p">)</span> <span class="o">/</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">total_steps</span>
-    <span class="o">:</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="o">?</span> <span class="p">(</span><span class="mi">100</span> <span class="o">*</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">completed_steps</span><span class="p">)</span> <span class="o">/</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="nl">total_steps</span>
+    <span class="p">:</span> <span class="mi">0</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">kbytes</span> <span class="o">=</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">received_bytes</span> <span class="o">/</span> <span class="mi">1024</span><span class="p">;</span>
 
   <span class="k">if</span> <span class="p">(</span><span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">total_objects</span> <span class="o">&amp;&amp;</span>
@@ -187,7 +187,7 @@
 
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_clone-1" class="fnlink" href="../../#v0.27.5/group/git2_clone/git_clone">git_clone</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">cloned_repo</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">clone_opts</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_clone-1" class="fnlink" href="../../#v0.27.5/group/clone/git_clone">git_clone</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">cloned_repo</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">clone_opts</span><span class="p">);</span>
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">const</span> <span class="n">git_error</span> <span class="o">*</span><span class="n">err</span> <span class="o">=</span> <span class="n"><a name="giterr_last-2" class="fnlink" href="../../#v0.27.5/group/giterr/giterr_last">giterr_last</a></span><span class="p">();</span>

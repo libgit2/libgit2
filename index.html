@@ -3,30 +3,30 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>API Documentation</title>
-    <link href="shared/css/documentation.css" media="screen" rel="stylesheet" type="text/css"> 
-    <link href="shared/css/pygments.css" media="screen" rel="stylesheet" type="text/css"> 
-    <link href="css/style.css" media="screen" rel="stylesheet" type="text/css"> 
-    <script src="shared/js/jquery.js" type="text/javascript"></script> 
-    <script src="js/json2.js" type="text/javascript"></script> 
-    <script src="js/underscore.js" type="text/javascript"></script> 
-    <script src="js/backbone.js" type="text/javascript"></script> 
-    <script src="js/docurium.js" type="text/javascript"></script> 
+    <link href="shared/css/documentation.css" media="screen" rel="stylesheet" type="text/css">
+    <link href="shared/css/pygments.css" media="screen" rel="stylesheet" type="text/css">
+    <link href="css/style.css" media="screen" rel="stylesheet" type="text/css">
+    <script src="shared/js/jquery.js" type="text/javascript"></script>
+    <script src="js/json2.js" type="text/javascript"></script>
+    <script src="js/underscore.js" type="text/javascript"></script>
+    <script src="js/backbone.js" type="text/javascript"></script>
+    <script src="js/docurium.js" type="text/javascript"></script>
 
     <!-- Changelog -->
     <script type="text/template" id="changelog-item-template">
       <p>
-	<ul>
-	  <% _.each(dels, function(elem) { %>
-	  <li class="deletes"><%= elem %></li>
-	  <% }) %>
-	</ul>
+        <ul>
+          <% _.each(dels, function(elem) { %>
+          <li class="deletes"><%= elem %></li>
+          <% }) %>
+        </ul>
       </p>
       <p>
-	<ul>
-	  <% _.each(adds, function(elem) { %>
-	  <li class="adds"><a href="#<%= elem.link %>"><%= elem.text %></a></li>
-	  <% }) %>
-	</ul>
+        <ul>
+          <% _.each(adds, function(elem) { %>
+          <li class="adds"><a href="#<%= elem.link %>"><%= elem.text %></a></li>
+          <% }) %>
+        </ul>
       </p>
     </script>
 
@@ -35,7 +35,7 @@
       <% _.each(versions, function(version) { %>
       <h3><%= version.title %></h3>
       <div class="changelog">
-	<%= version.listing %>
+        <%= version.listing %>
       </div>
       <% }) %>
     </script>
@@ -55,27 +55,27 @@
     <!-- Sidebar where the groups and types appear -->
     <script type="text/template" id="type-list-template">
       <li>
-	<li><span class="divide"><%= title %></span></li>
-	<% _.each(elements, function(e) { %>
-	<li>
-	  <a href="#<%= e.link %>" ref="<%= e.ref %>" class="type", id="typeItem<%= e.name %>">
-	  <%= e.name %>
-	  </a>
-	</li>
-	<% }) %>
+      <li><span class="divide"><%= title %></span></li>
+      <% _.each(elements, function(e) { %>
+      <li>
+        <a href="#<%= e.link %>" ref="<%= e.ref %>" class="type", id="typeItem<%= e.name %>">
+          <%= e.name %>
+        </a>
+      </li>
+      <% }) %>
       </li>
     </script>
     <script type="text/template" id="file-list-template">
      <li>
        <h3><a href="#">Functions</a></h3>
        <ul>
-	 <% _.each(funs, function(fun, i) { %>
-	 <li>
-	   <a href="#<%= fun.link %>" ref="<%= i %>" class="group" id="groupItem<%= fun.name %>">
-	   <%= fun.name %>&nbsp;<small>(<%= fun.num %>)</small>
-	   </a>
-	 </li>
-	 <% }) %>
+         <% _.each(funs, function(fun, i) { %>
+         <li>
+           <a href="#<%= fun.link %>" ref="<%= i %>" class="group" id="groupItem<%= fun.name %>">
+             <%= fun.name %>&nbsp;<small>(<%= fun.num %>)</small>
+           </a>
+         </li>
+         <% }) %>
        </ul>
      </li>
      <li>
@@ -85,22 +85,22 @@
      <li>
        <h3><a href="#">Files</a></h3>
        <ul class="hidden">
-	 <% _.each(files, function(file) { %>
-	 <li>
-	   <a target="github" href="<%= file.url %>"><%= file.name %></a>
-	 </li>
-	 <% }) %>
+       <% _.each(files, function(file) { %>
+         <li>
+           <a target="github" href="<%= file.url %>"><%= file.name %></a>
+         </li>
+         <% }) %>
        </ul>
      </li>
      <% if (examples.length > 0) { %>
      <li>
        <h3><a href="#">Examples</a></h3>
        <ul>
-	 <% _.each(examples, function(example) { %>
-	 <li>
-	   <a href="<%= example.path %>"><%= example.name %></a>
-	 </li>
-	 <% }) %>
+       <% _.each(examples, function(example) { %>
+         <li>
+           <a href="<%= example.path %>"><%= example.name %></a>
+         </li>
+       <% }) %>
        </ul>
      </li>
     <% } %> <!-- if we have examples -->
@@ -109,13 +109,15 @@
     <!-- Listing of the details of a single function -->
     <script type="text/template" id="function-args-template">
       <table class="funcTable">
-	<% _.each(args, function(arg) { %>
-	<tr>
-	  <td valign="top" nowrap="true"><%= arg.link %></td>
-	  <td valign="top" class="var"><%= arg.name %></td>
-	  <td class="comment"><%= arg.comment %></td>
-	</tr>
-	<% }) %>
+        <% _.each(args, function(arg) { %>
+        <tr>
+          <td valign="top" class="type" nowrap="true" rowspan="<%= (arg.comment ? 2 : 1) %>"><%= arg.link %></td>
+          <td valign="top" class="var"><%= arg.name %></td>
+        </tr>
+        <tr>
+          <td class="comment"><%= arg.comment %></td>
+        </tr>
+        <% }) %>
       </table>
     </script>
     <script type="text/template" id="function-template">
@@ -126,10 +128,10 @@
      <div class="returns">
        <h3>returns</h3>
        <table class="funcTable">
-	 <tr>
-	   <td valign="top"><%= returns.link %></td>
-	   <td class="comment"><%= returns.comment %></td>
-	 </tr>
+         <tr>
+           <td valign="top"><%= returns.link %></td>
+           <td class="comment"><%= returns.comment %></td>
+         </tr>
        </table>
      </div>
      <div><%= data.comments %></div>
@@ -143,9 +145,9 @@
      <div class="signatures">
        <h3>versions</h3>
        <ul>
-	 <% _.each(sigs, function(sig) { %>
-	 <li><a href="<%= sig.url %>" class="<%= sig.klass %>"><%= sig.name %></a></li>
-	 <% }) %>
+         <% _.each(sigs, function(sig) { %>
+           <li><a href="<%= sig.url %>" class="<%= sig.klass %>"><%= sig.name %></a></li>
+         <% }) %>
        </ul>
      </div>
      <% } %> <!-- if we have version history -->
@@ -168,7 +170,7 @@
      <div class="also">
        Also in <a href="<%= alsoGroup %>"><%= groupName %></a> group: <br/>
        <% _.each(_.initial(alsoLinks), function(link) { %>
-       <a href="<%= link.url %>"><%= link.name %></a>, 
+       <a href="<%= link.url %>"><%= link.name %></a>,
        <% }) %>
        <% var link = _.last(alsoLinks) %>
        <a href="<%= link.url %>"><%= link.name %></a>.
@@ -182,11 +184,11 @@
       <% _.each(groups, function(group) { %>
       <h2 class="funcGroup"><%= group.name %></h2>
       <p class="functionList">
-	<% _.each(_.initial(group.funs), function(fun) { %>
-	<a href="<%= fun.url %>" class="<%= fun.klass %>"><%= fun.name %></a>
-	<% }) %> <!-- loop through all but the last function -->
-	<% var fun = _.last(group.funs) %>
-	<a href="<%= fun.url %>" class="<%= fun.klass %>"><%= fun.name %></a>
+      <% _.each(_.initial(group.funs), function(fun) { %>
+        <a href="<%= fun.url %>" class="<%= fun.klass %>"><%= fun.name %></a>
+      <% }) %> <!-- loop through all but the last function -->
+      <% var fun = _.last(group.funs) %>
+        <a href="<%= fun.url %>" class="<%= fun.klass %>"><%= fun.name %></a>
       </p>
       <% }) %> <!-- loop through the groups -->
     </script>
@@ -211,14 +213,14 @@
       <% } %> <!-- if we have 'needs' -->
 
       <div class="fileLink">
-	Defined in:
-	<a href="<%= fileLink.url %>"><%= fileLink.name %></a>
+        Defined in:
+        <a href="<%= fileLink.url %>"><%= fileLink.name %></a>
       </div>
     </script>
 
     <!-- listing for an enum -->
     <script type="text/template" id="enum-template">
-      <h1 class="funcTitle"><%= type.tname %><small><%= type.type %></small></h1>
+      <h1 class="enumTitle"><%= type.tname %><small><%= type.type %></small></h1>
       <p><%= type.value %></p>
 
       <% if (type.data.description) { %>
@@ -228,23 +230,20 @@
       <p><%= type.data.comments %></p>
       <% } %>
 
-      <table>
-	<% _.each(type.data.fields, function(field) { %>
-	<tr>
-	  <td><code><%= field.name %></code></td>
-	<tr>
-	  <% if (field.comments) { %>
-	  <tr>
-	    <td class="type-comment"><%= field.comments %></td>
-	  </tr>
-	  <% } %>
-	<% }) %>
+      <table class="enumTable">
+        <% _.each(type.data.fields, function(field) { %>
+        <tr>
+          <td class="type"><code><%= field.name %></code></td>
+          <td class="comment"><%= field.comments %></td>
+        </tr>
+        <% }) %>
       </table>
       <%= uses %>
     </script>
+
     <!-- listing for a struct -->
     <script type="text/template" id="struct-template">
-      <h1 class="funcTitle"><%= type.tname %><small><%= type.type %></small></h1>
+      <h1 class="structTitle"><%= type.tname %><small><%= type.type %></small></h1>
       <p><%= type.value %></p>
 
       <% if (type.data.description) { %>
@@ -254,18 +253,18 @@
       <p><%= type.data.comments %></p>
       <% } %>
 
-      <table>
-	<% _.each(type.data.fields, function(field) { %>
-	<tr>
-	  <td><code><%= field.type %></code></td>
-	  <td><code><%= field.name %></code></td>
-	<tr>
-	  <% if (field.comments) { %>
-	  <tr>
-	    <td colspan="2" class="type-comment"><%= field.comments %></td>
-	  </tr>
-	  <% } %>
-	<% }) %>
+      <table class="structTable">
+        <% _.each(type.data.fields, function(field) { %>
+        <tr>
+          <td class="type" valign="top" rowspan="<%= (field.comments ? 2 : 1) %>"><%= field.type %></td>
+          <td class="var"><%= field.name %></td>
+          <% if (field.comments) { %>
+        </tr>
+        <tr>
+          <td><span class="comment"><%= field.comments %></td>
+          <% } %>
+        </tr>
+        <% }) %>
       </table>
 
       <%= uses %>
@@ -275,28 +274,29 @@
       <h1><%= gname %> functions</h1>
       <!-- table with all the functions -->
       <table class="methods">
-	<% _.each(functions, function(fun) { %>
-	<tr>
-	  <td valign="top" nowrap="true">
-	    <%= fun.returns %>
-	  </td>
-	  <td valign="top" class="methodName">
-	    <a href="<%= fun.url %>"><%= fun.name %></a>
-	  </td>
-	  <td>
-	    <% _.each(fun.args, function(arg) { %>
-	    <%= arg.type %> <%= arg.name %><br/>
-	    <% }) %> <!-- loop over the args of a function -->
-	  </td>
-	</tr>
-	<% }) %> <!-- loop over the functions -->
+        <% _.each(functions, function(fun) { %>
+        <tr>
+          <td valign="top" nowrap="true">
+            <%= fun.returns %>
+          </td>
+          <td valign="top" class="methodName">
+            <a href="<%= fun.url %>"><%= fun.name %></a>
+          </td>
+          <td>
+            <% _.each(fun.args, function(arg) { %>
+              <%= arg.type %> <%= arg.name %><br/>
+            <% }) %> <!-- loop over the args of a function -->
+          </td>
+        </tr>
+        <% }) %> <!-- loop over the functions -->
       </table>
+
       <!-- list of the functions with the descriptions -->
       <% _.each(functions, function(fun) { %>
       <h2><a href="<%= fun.url %>"><%= fun.name %></a><small>(<%= fun.argline %>)</small></h2>
       <div class="description">
-	<%= fun.description %>
-	<%= fun.comments %>
+        <%= fun.description %>
+        <%= fun.comments %>
       </div>
       <% }) %> <!-- loop over the functions -->
     </script>
@@ -304,12 +304,12 @@
     <script type="text/template" id="search-template">
       <h1>Search Results</h1>
       <table>
-	<% _.each(results, function(result) { %>
-	<tr>
-	  <td><a href="<%= result.url %>"><%= result.name %></a></td>
-	  <td><%= result.match %></td>
-	</tr>
-	<% }) %>
+        <% _.each(results, function(result) { %>
+        <tr>
+          <td><a href="<%= result.url %>"><%= result.name %></a></td>
+          <td><%= result.match %></td>
+        </tr>
+        <% }) %>
       </table>
     </script>
 

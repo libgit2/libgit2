@@ -61,7 +61,7 @@
         
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="cm">/*</span>
+        <div class='highlight'><pre><span></span><span class="cm">/*</span>
 <span class="cm"> * libgit2 &quot;general&quot; example - shows basic libgit2 concepts</span>
 <span class="cm"> *</span>
 <span class="cm"> * Written by the libgit2 contributors</span>
@@ -115,9 +115,9 @@ that you need.  It should be the only thing you need to include in order
 to compile properly and get all the libgit2 API.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="cp">#include &lt;git2.h&gt;</span>
-<span class="cp">#include &lt;stdio.h&gt;</span>
-<span class="cp">#include &lt;string.h&gt;</span>
+        <div class='highlight'><pre><span class="cp">#include</span> <span class="cpf">&lt;git2.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;string.h&gt;</span><span class="cp"></span>
 
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">oid_parsing</span><span class="p">(</span><span class="n">git_oid</span> <span class="o">*</span><span class="n">out</span><span class="p">);</span>
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">object_database</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="n">git_oid</span> <span class="o">*</span><span class="n">oid</span><span class="p">);</span>
@@ -149,7 +149,7 @@ as an example.</p>
     <span class="k">return</span><span class="p">;</span>
 
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Error %d %s - %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">error_code</span><span class="p">,</span> <span class="n">action</span><span class="p">,</span>
-      <span class="p">(</span><span class="n">error</span> <span class="o">&amp;&amp;</span> <span class="n">error</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">)</span> <span class="o">?</span> <span class="n">error</span><span class="o">-&gt;</span><span class="n">message</span> <span class="o">:</span> <span class="s">&quot;???&quot;</span><span class="p">);</span>
+      <span class="p">(</span><span class="n">error</span> <span class="o">&amp;&amp;</span> <span class="n">error</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">)</span> <span class="o">?</span> <span class="n">error</span><span class="o">-&gt;</span><span class="nl">message</span> <span class="p">:</span> <span class="s">&quot;???&quot;</span><span class="p">);</span>
 
   <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
 <span class="p">}</span>
@@ -1049,15 +1049,15 @@ one at a time and resolve them to the SHA, then print both values out.</p>
     <span class="n"><a name="git_reference_lookup-62" class="fnlink" href="../../#HEAD/group/reference/git_reference_lookup">git_reference_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">ref</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">refname</span><span class="p">);</span>
 
     <span class="k">switch</span> <span class="p">(</span><span class="n"><a name="git_reference_type-65" class="fnlink" href="../../#HEAD/group/reference/git_reference_type">git_reference_type</a></span><span class="p">(</span><span class="n">ref</span><span class="p">))</span> <span class="p">{</span>
-      <span class="k">case</span> <span class="n">GIT_REF_OID</span>:
+      <span class="k">case</span> <span class="nl">GIT_REF_OID</span><span class="p">:</span>
         <span class="n"><a name="git_oid_fmt-61" class="fnlink" href="../../#HEAD/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">oid_hex</span><span class="p">,</span> <span class="n"><a name="git_reference_target-63" class="fnlink" href="../../#HEAD/group/reference/git_reference_target">git_reference_target</a></span><span class="p">(</span><span class="n">ref</span><span class="p">));</span>
         <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s [%s]</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">refname</span><span class="p">,</span> <span class="n">oid_hex</span><span class="p">);</span>
         <span class="k">break</span><span class="p">;</span>
 
-      <span class="k">case</span> <span class="n">GIT_REF_SYMBOLIC</span>:
+      <span class="k">case</span> <span class="nl">GIT_REF_SYMBOLIC</span><span class="p">:</span>
         <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s =&gt; %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">refname</span><span class="p">,</span> <span class="n"><a name="git_reference_symbolic_target-64" class="fnlink" href="../../#HEAD/group/reference/git_reference_symbolic_target">git_reference_symbolic_target</a></span><span class="p">(</span><span class="n">ref</span><span class="p">));</span>
         <span class="k">break</span><span class="p">;</span>
-      <span class="nl">default:</span>
+      <span class="k">default</span><span class="o">:</span>
         <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;Unexpected reference type</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
         <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
     <span class="p">}</span>
@@ -1114,13 +1114,13 @@ in any of the accessible config file locations (system, global, local).</p>
   <span class="n">error_code</span> <span class="o">=</span> <span class="n"><a name="git_config_get_int32-30" class="fnlink" href="../../#HEAD/group/config/git_config_get_int32">git_config_get_int32</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">autocorrect</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="s">&quot;help.autocorrect&quot;</span><span class="p">);</span>
   <span class="k">switch</span> <span class="p">(</span><span class="n">error_code</span><span class="p">)</span>
   <span class="p">{</span>
-    <span class="k">case</span> <span class="mi">0</span>:
+    <span class="k">case</span> <span class="mi">0</span><span class="o">:</span>
       <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Autocorrect: %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">autocorrect</span><span class="p">);</span>
       <span class="k">break</span><span class="p">;</span>
-    <span class="k">case</span> <span class="n">GIT_ENOTFOUND</span>:
+    <span class="k">case</span> <span class="nl">GIT_ENOTFOUND</span><span class="p">:</span>
       <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Autocorrect: Undefined</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
       <span class="k">break</span><span class="p">;</span>
-    <span class="nl">default:</span>
+    <span class="k">default</span><span class="o">:</span>
       <span class="n">check_error</span><span class="p">(</span><span class="n">error_code</span><span class="p">,</span> <span class="s">&quot;get_int32 failed&quot;</span><span class="p">);</span>
   <span class="p">}</span>
   <span class="n"><a name="git_config_free-27" class="fnlink" href="../../#HEAD/group/config/git_config_free">git_config_free</a></span><span class="p">(</span><span class="n">cfg</span><span class="p">);</span>
@@ -1129,13 +1129,13 @@ in any of the accessible config file locations (system, global, local).</p>
   <span class="n">error_code</span> <span class="o">=</span> <span class="n"><a name="git_config_get_string-32" class="fnlink" href="../../#HEAD/group/config/git_config_get_string">git_config_get_string</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">email</span><span class="p">,</span> <span class="n">snap_cfg</span><span class="p">,</span> <span class="s">&quot;user.email&quot;</span><span class="p">);</span>
   <span class="k">switch</span> <span class="p">(</span><span class="n">error_code</span><span class="p">)</span>
   <span class="p">{</span>
-    <span class="k">case</span> <span class="mi">0</span>:
+    <span class="k">case</span> <span class="mi">0</span><span class="o">:</span>
       <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Email: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">email</span><span class="p">);</span>
       <span class="k">break</span><span class="p">;</span>
-    <span class="k">case</span> <span class="n">GIT_ENOTFOUND</span>:
+    <span class="k">case</span> <span class="nl">GIT_ENOTFOUND</span><span class="p">:</span>
       <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Email: Undefined</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
       <span class="k">break</span><span class="p">;</span>
-    <span class="nl">default:</span>
+    <span class="k">default</span><span class="o">:</span>
       <span class="n">check_error</span><span class="p">(</span><span class="n">error_code</span><span class="p">,</span> <span class="s">&quot;get_string failed&quot;</span><span class="p">);</span>
   <span class="p">}</span>
 

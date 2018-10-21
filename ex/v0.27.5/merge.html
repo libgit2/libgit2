@@ -59,7 +59,7 @@
         
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="cm">/*</span>
+        <div class='highlight'><pre><span></span><span class="cm">/*</span>
 <span class="cm"> * libgit2 &quot;merge&quot; example - shows how to perform merges</span>
 <span class="cm"> *</span>
 <span class="cm"> * Written by the libgit2 contributors</span>
@@ -73,8 +73,8 @@
 <span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
 <span class="cm"> */</span>
 
-<span class="cp">#include &quot;common.h&quot;</span>
-<span class="cp">#include &lt;assert.h&gt;</span>
+<span class="cp">#include</span> <span class="cpf">&quot;common.h&quot;</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&lt;assert.h&gt;</span><span class="cp"></span>
 
 <span class="cp">#ifdef _MSC_VER</span>
 <span class="cp">#define snprintf sprintf_s</span>
@@ -102,7 +102,7 @@
   <span class="n">git_annotated_commit</span> <span class="o">**</span><span class="n">annotated</span><span class="p">;</span>
   <span class="kt">size_t</span> <span class="n">annotated_count</span><span class="p">;</span>
 
-  <span class="kt">int</span> <span class="n">no_commit</span> <span class="o">:</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="nl">no_commit</span> <span class="p">:</span> <span class="mi">1</span><span class="p">;</span>
 <span class="p">}</span> <span class="n">merge_options</span><span class="p">;</span>
 
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">print_usage</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
@@ -283,9 +283,9 @@
 
   <span class="k">while</span> <span class="p">((</span><span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_index_conflict_next-17" class="fnlink" href="../../#v0.27.5/group/index/git_index_conflict_next">git_index_conflict_next</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">ancestor</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">our</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">their</span><span class="p">,</span> <span class="n">conflicts</span><span class="p">))</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;conflict: a:%s o:%s t:%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
-            <span class="n">ancestor</span> <span class="o">?</span> <span class="n">ancestor</span><span class="o">-&gt;</span><span class="n">path</span> <span class="o">:</span> <span class="s">&quot;NULL&quot;</span><span class="p">,</span>
-            <span class="n">our</span><span class="o">-&gt;</span><span class="n">path</span> <span class="o">?</span> <span class="n">our</span><span class="o">-&gt;</span><span class="n">path</span> <span class="o">:</span> <span class="s">&quot;NULL&quot;</span><span class="p">,</span>
-            <span class="n">their</span><span class="o">-&gt;</span><span class="n">path</span> <span class="o">?</span> <span class="n">their</span><span class="o">-&gt;</span><span class="n">path</span> <span class="o">:</span> <span class="s">&quot;NULL&quot;</span><span class="p">);</span>
+            <span class="n">ancestor</span> <span class="o">?</span> <span class="n">ancestor</span><span class="o">-&gt;</span><span class="nl">path</span> <span class="p">:</span> <span class="s">&quot;NULL&quot;</span><span class="p">,</span>
+            <span class="n">our</span><span class="o">-&gt;</span><span class="n">path</span> <span class="o">?</span> <span class="n">our</span><span class="o">-&gt;</span><span class="nl">path</span> <span class="p">:</span> <span class="s">&quot;NULL&quot;</span><span class="p">,</span>
+            <span class="n">their</span><span class="o">-&gt;</span><span class="n">path</span> <span class="o">?</span> <span class="n">their</span><span class="o">-&gt;</span><span class="nl">path</span> <span class="p">:</span> <span class="s">&quot;NULL&quot;</span><span class="p">);</span>
   <span class="p">}</span>
 
   <span class="k">if</span> <span class="p">(</span><span class="n">err</span> <span class="o">!=</span> <span class="n">GIT_ITEROVER</span><span class="p">)</span> <span class="p">{</span>
@@ -363,7 +363,7 @@
   <span class="cm">/* We&#39;re done merging, cleanup the repository state */</span>
   <span class="n"><a name="git_repository_state_cleanup-43" class="fnlink" href="../../#v0.27.5/group/repository/git_repository_state_cleanup">git_repository_state_cleanup</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
 
-<span class="nl">cleanup:</span>
+<span class="nl">cleanup</span><span class="p">:</span>
   <span class="n">free</span><span class="p">(</span><span class="n">parents</span><span class="p">);</span>
   <span class="k">return</span> <span class="n">err</span><span class="p">;</span>
 <span class="p">}</span>
@@ -373,9 +373,9 @@
   <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
   <span class="n">merge_options</span> <span class="n">opts</span><span class="p">;</span>
   <span class="n">git_index</span> <span class="o">*</span><span class="n">index</span><span class="p">;</span>
-  <span class="kt">git_repository_state_t</span> <span class="n">state</span><span class="p">;</span>
-  <span class="kt">git_merge_analysis_t</span> <span class="n">analysis</span><span class="p">;</span>
-  <span class="kt">git_merge_preference_t</span> <span class="n">preference</span><span class="p">;</span>
+  <span class="n">git_repository_state_t</span> <span class="n">state</span><span class="p">;</span>
+  <span class="n">git_merge_analysis_t</span> <span class="n">analysis</span><span class="p">;</span>
+  <span class="n">git_merge_preference_t</span> <span class="n">preference</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span> <span class="o">=</span> <span class="s">&quot;.&quot;</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">err</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 
@@ -435,7 +435,7 @@
       <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
     <span class="p">}</span>
 
-    <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_merge-20" class="fnlink" href="../../#v0.27.5/group/git2_merge/git_merge">git_merge</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_merge-20" class="fnlink" href="../../#v0.27.5/group/merge/git_merge">git_merge</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span>
                     <span class="p">(</span><span class="k">const</span> <span class="n">git_annotated_commit</span> <span class="o">**</span><span class="p">)</span><span class="n">opts</span><span class="p">.</span><span class="n">annotated</span><span class="p">,</span> <span class="n">opts</span><span class="p">.</span><span class="n">annotated_count</span><span class="p">,</span>
                     <span class="o">&amp;</span><span class="n">merge_opts</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">checkout_opts</span><span class="p">);</span>
     <span class="n">check_lg2</span><span class="p">(</span><span class="n">err</span><span class="p">,</span> <span class="s">&quot;merge failed&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
@@ -453,7 +453,7 @@
     <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Merge made</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
   <span class="p">}</span>
 
-<span class="nl">cleanup:</span>
+<span class="nl">cleanup</span><span class="p">:</span>
   <span class="n">free</span><span class="p">(</span><span class="n">opts</span><span class="p">.</span><span class="n">heads</span><span class="p">);</span>
   <span class="n">free</span><span class="p">(</span><span class="n">opts</span><span class="p">.</span><span class="n">annotated</span><span class="p">);</span>
   <span class="n"><a name="git_repository_free-39" class="fnlink" href="../../#v0.27.5/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>

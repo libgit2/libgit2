@@ -58,7 +58,7 @@
         
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="cm">/*</span>
+        <div class='highlight'><pre><span></span><span class="cm">/*</span>
 <span class="cm"> * libgit2 &quot;tag&quot; example - shows how to list, create and delete tags</span>
 <span class="cm"> *</span>
 <span class="cm"> * Written by the libgit2 contributors</span>
@@ -72,7 +72,7 @@
 <span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
 <span class="cm"> */</span>
 
-<span class="cp">#include &quot;common.h&quot;</span></pre></div>
+<span class="cp">#include</span> <span class="cpf">&quot;common.h&quot;</span><span class="cp"></span></pre></div>
       </td>
     </tr>
     <tr id='section-2'>
@@ -308,13 +308,13 @@ all of the use cases.</p>
       <span class="s">&quot;Failed to lookup rev&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">);</span>
 
   <span class="k">switch</span> <span class="p">(</span><span class="n"><a name="git_object_type-6" class="fnlink" href="../../#v0.26.5/group/object/git_object_type">git_object_type</a></span><span class="p">(</span><span class="n">obj</span><span class="p">))</span> <span class="p">{</span>
-    <span class="k">case</span> <span class="n">GIT_OBJ_TAG</span>:
+    <span class="k">case</span> <span class="nl">GIT_OBJ_TAG</span><span class="p">:</span>
       <span class="n">print_tag</span><span class="p">((</span><span class="n">git_tag</span> <span class="o">*</span><span class="p">)</span> <span class="n">obj</span><span class="p">,</span> <span class="n">state</span><span class="p">);</span>
       <span class="k">break</span><span class="p">;</span>
-    <span class="k">case</span> <span class="n">GIT_OBJ_COMMIT</span>:
+    <span class="k">case</span> <span class="nl">GIT_OBJ_COMMIT</span><span class="p">:</span>
       <span class="n">print_commit</span><span class="p">((</span><span class="n">git_commit</span> <span class="o">*</span><span class="p">)</span> <span class="n">obj</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">state</span><span class="p">);</span>
       <span class="k">break</span><span class="p">;</span>
-    <span class="nl">default:</span>
+    <span class="k">default</span><span class="o">:</span>
       <span class="n">print_name</span><span class="p">(</span><span class="n">name</span><span class="p">);</span>
   <span class="p">}</span>
 
@@ -328,7 +328,7 @@ all of the use cases.</p>
   <span class="n">git_strarray</span> <span class="n">tag_names</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
   <span class="kt">size_t</span> <span class="n">i</span><span class="p">;</span>
 
-  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_tag_list_match-25" class="fnlink" href="../../#v0.26.5/group/tag/git_tag_list_match">git_tag_list_match</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tag_names</span><span class="p">,</span> <span class="n">pattern</span> <span class="o">?</span> <span class="n">pattern</span> <span class="o">:</span> <span class="s">&quot;*&quot;</span><span class="p">,</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">),</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_tag_list_match-25" class="fnlink" href="../../#v0.26.5/group/tag/git_tag_list_match">git_tag_list_match</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tag_names</span><span class="p">,</span> <span class="n">pattern</span> <span class="o">?</span> <span class="nl">pattern</span> <span class="p">:</span> <span class="s">&quot;*&quot;</span><span class="p">,</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">),</span>
       <span class="s">&quot;Unable to get list of tags&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
   <span class="k">for</span><span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">tag_names</span><span class="p">.</span><span class="n">count</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
