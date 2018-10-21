@@ -164,11 +164,11 @@ if [ -z "$SKIP_PROXY_TESTS" ]; then
 	echo "Running proxy tests"
 	echo ""
 
-	export GITTEST_REMOTE_PROXY_URL="localhost:8080"
+	export GITTEST_REMOTE_PROXY_HOST="localhost:8080"
 	export GITTEST_REMOTE_PROXY_USER="foo"
 	export GITTEST_REMOTE_PROXY_PASS="bar"
 	run_test proxy
-	unset GITTEST_REMOTE_PROXY_URL
+	unset GITTEST_REMOTE_PROXY_HOST
 	unset GITTEST_REMOTE_PROXY_USER
 	unset GITTEST_REMOTE_PROXY_PASS
 fi
