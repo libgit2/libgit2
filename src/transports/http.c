@@ -70,7 +70,7 @@ typedef struct {
 	git_smart_subtransport parent;
 	transport_smart *owner;
 	git_stream *io;
-	gitno_connection_data connection_data;
+	gitno_connection_data gitserver_data;
 	bool connected;
 
 	/* Parser structures */
@@ -153,7 +153,7 @@ static int auth_context_match(
 	}
 
 	if (!context) {
-		if (scheme->init_context(&context, &t->connection_data) < 0)
+		if (scheme->init_context(&context, &t->gitserver_data) < 0)
 			return -1;
 		else if (!context)
 			return 0;
@@ -172,10 +172,10 @@ static int apply_credentials(git_buf *buf, http_subtransport *t)
 	git_http_auth_context *context;
 
 	/* Apply the credentials given to us in the URL */
-	if (!cred && t->connection_data.user && t->connection_data.pass) {
+	if (!cred && t->gitserver_data.user && t->gitserver_data.pass) {
 		if (!t->url_cred &&
 			git_cred_userpass_plaintext_new(&t->url_cred,
-				t->connection_data.user, t->connection_data.pass) < 0)
+				t->gitserver_data.user, t->gitserver_data.pass) < 0)
 			return -1;
 
 		cred = t->url_cred;
@@ -200,7 +200,7 @@ static int gen_request(
 	size_t content_length)
 {
 	http_subtransport *t = OWNING_SUBTRANSPORT(s);
-	const char *path = t->connection_data.path ? t->connection_data.path : "/";
+	const char *path = t->gitserver_data.path ? t->gitserver_data.path : "/";
 	size_t i;
 
 	git_buf_printf(buf, "%s %s%s HTTP/1.1\r\n", s->verb, path, s->service_url);
@@ -208,9 +208,9 @@ static int gen_request(
 	git_buf_puts(buf, "User-Agent: ");
 	git_http__user_agent(buf);
 	git_buf_puts(buf, "\r\n");
-	git_buf_printf(buf, "Host: %s", t->connection_data.host);
-	if (strcmp(t->connection_data.port, gitno__default_port(&t->connection_data)) != 0) {
-		git_buf_printf(buf, ":%s", t->connection_data.port);
+	git_buf_printf(buf, "Host: %s", t->gitserver_data.host);
+	if (strcmp(t->gitserver_data.port, gitno__default_port(&t->gitserver_data)) != 0) {
+		git_buf_printf(buf, ":%s", t->gitserver_data.port);
 	}
 	git_buf_puts(buf, "\r\n");
 
@@ -367,7 +367,7 @@ static int on_headers_complete(http_parser *parser)
 
 				error = t->owner->cred_acquire_cb(&t->cred,
 								  t->owner->url,
-								  t->connection_data.user,
+								  t->gitserver_data.user,
 								  allowed_auth_types,
 								  t->owner->cred_acquire_payload);
 
@@ -412,7 +412,7 @@ static int on_headers_complete(http_parser *parser)
 			return t->parse_error = PARSE_ERROR_GENERIC;
 		}
 
-		if (gitno_connection_data_from_url(&t->connection_data, t->location, s->service_url) < 0)
+		if (gitno_connection_data_from_url(&t->gitserver_data, t->location, s->service_url) < 0)
 			return t->parse_error = PARSE_ERROR_GENERIC;
 
 		/* Set the redirect URL on the stream. This is a transfer of
@@ -577,7 +577,7 @@ static int apply_proxy_config(http_subtransport *t)
 		char *url;
 		git_proxy_options opts = GIT_PROXY_OPTIONS_INIT;
 
-		if ((error = git_remote__get_http_proxy(t->owner->owner, !!t->connection_data.use_ssl, &url)) < 0)
+		if ((error = git_remote__get_http_proxy(t->owner->owner, !!t->gitserver_data.use_ssl, &url)) < 0)
 			return error;
 
 		opts.credentials = t->owner->proxy.credentials;
@@ -610,13 +610,13 @@ static int http_connect(http_subtransport *t)
 		t->connected = 0;
 	}
 
-	if (t->connection_data.use_ssl) {
-		error = git_tls_stream_new(&t->io, t->connection_data.host, t->connection_data.port);
+	if (t->gitserver_data.use_ssl) {
+		error = git_tls_stream_new(&t->io, t->gitserver_data.host, t->gitserver_data.port);
 	} else {
 #ifdef GIT_CURL
-		error = git_curl_stream_new(&t->io, t->connection_data.host, t->connection_data.port);
+		error = git_curl_stream_new(&t->io, t->gitserver_data.host, t->gitserver_data.port);
 #else
-		error = git_socket_stream_new(&t->io,  t->connection_data.host, t->connection_data.port);
+		error = git_socket_stream_new(&t->io,  t->gitserver_data.host, t->gitserver_data.port);
 #endif
 	}
 
@@ -639,7 +639,7 @@ static int http_connect(http_subtransport *t)
 			return error;
 
 		giterr_clear();
-		error = t->owner->certificate_check_cb(cert, is_valid, t->connection_data.host, t->owner->message_cb_payload);
+		error = t->owner->certificate_check_cb(cert, is_valid, t->gitserver_data.host, t->owner->message_cb_payload);
 
 		if (error == GIT_PASSTHROUGH)
 			error = is_valid ? 0 : GIT_ECERTIFICATE;
@@ -1014,8 +1014,8 @@ static int http_action(
 	if (!stream)
 		return -1;
 
-	if ((!t->connection_data.host || !t->connection_data.port || !t->connection_data.path) &&
-		 (ret = gitno_connection_data_from_url(&t->connection_data, url, NULL)) < 0)
+	if ((!t->gitserver_data.host || !t->gitserver_data.port || !t->gitserver_data.path) &&
+		 (ret = gitno_connection_data_from_url(&t->gitserver_data, url, NULL)) < 0)
 		return ret;
 
 	if ((ret = http_connect(t)) < 0)
@@ -1072,8 +1072,8 @@ static int http_close(git_smart_subtransport *subtransport)
 
 	git_vector_clear(&t->auth_contexts);
 
-	gitno_connection_data_free_ptrs(&t->connection_data);
-	memset(&t->connection_data, 0x0, sizeof(gitno_connection_data));
+	gitno_connection_data_free_ptrs(&t->gitserver_data);
+	memset(&t->gitserver_data, 0x0, sizeof(gitno_connection_data));
 
 	return 0;
 }
