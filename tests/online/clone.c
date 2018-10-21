@@ -24,6 +24,7 @@ static char *_remote_ssh_pubkey = NULL;
 static char *_remote_ssh_privkey = NULL;
 static char *_remote_ssh_passphrase = NULL;
 static char *_remote_ssh_fingerprint = NULL;
+static char *_remote_proxy_scheme = NULL;
 static char *_remote_proxy_host = NULL;
 static char *_remote_proxy_user = NULL;
 static char *_remote_proxy_pass = NULL;
@@ -52,6 +53,7 @@ void test_online_clone__initialize(void)
 	_remote_ssh_privkey = cl_getenv("GITTEST_REMOTE_SSH_KEY");
 	_remote_ssh_passphrase = cl_getenv("GITTEST_REMOTE_SSH_PASSPHRASE");
 	_remote_ssh_fingerprint = cl_getenv("GITTEST_REMOTE_SSH_FINGERPRINT");
+	_remote_proxy_scheme = cl_getenv("GITTEST_REMOTE_PROXY_SCHEME");
 	_remote_proxy_host = cl_getenv("GITTEST_REMOTE_PROXY_HOST");
 	_remote_proxy_user = cl_getenv("GITTEST_REMOTE_PROXY_USER");
 	_remote_proxy_pass = cl_getenv("GITTEST_REMOTE_PROXY_PASS");
@@ -74,6 +76,7 @@ void test_online_clone__cleanup(void)
 	git__free(_remote_ssh_privkey);
 	git__free(_remote_ssh_passphrase);
 	git__free(_remote_ssh_fingerprint);
+	git__free(_remote_proxy_scheme);
 	git__free(_remote_proxy_host);
 	git__free(_remote_proxy_user);
 	git__free(_remote_proxy_pass);
@@ -731,7 +734,9 @@ void test_online_clone__proxy_credentials_request(void)
 	if (!_remote_proxy_host || !_remote_proxy_user || !_remote_proxy_pass)
 		cl_skip();
 
-	cl_git_pass(git_buf_printf(&url, "http://%s/", _remote_proxy_host));
+	cl_git_pass(git_buf_printf(&url, "%s://%s/",
+		_remote_proxy_scheme ? _remote_proxy_scheme : "http",
+		_remote_proxy_host));
 
 	g_options.fetch_opts.proxy_opts.type = GIT_PROXY_SPECIFIED;
 	g_options.fetch_opts.proxy_opts.url = url.ptr;
@@ -750,7 +755,9 @@ void test_online_clone__proxy_credentials_in_url(void)
 	if (!_remote_proxy_host || !_remote_proxy_user || !_remote_proxy_pass)
 		cl_skip();
 
-	cl_git_pass(git_buf_printf(&url, "http://%s:%s@%s/", _remote_proxy_user, _remote_proxy_pass, _remote_proxy_host));
+	cl_git_pass(git_buf_printf(&url, "%s://%s:%s@%s/",
+		_remote_proxy_scheme ? _remote_proxy_scheme : "http",
+		_remote_proxy_user, _remote_proxy_pass, _remote_proxy_host));
 
 	g_options.fetch_opts.proxy_opts.type = GIT_PROXY_SPECIFIED;
 	g_options.fetch_opts.proxy_opts.url = url.ptr;
@@ -774,7 +781,9 @@ void test_online_clone__proxy_credentials_in_environment(void)
 
 	g_options.fetch_opts.proxy_opts.type = GIT_PROXY_AUTO;
 
-	cl_git_pass(git_buf_printf(&url, "http://%s:%s@%s/", _remote_proxy_user, _remote_proxy_pass, _remote_proxy_host));
+	cl_git_pass(git_buf_printf(&url, "%s://%s:%s@%s/",
+		_remote_proxy_scheme ? _remote_proxy_scheme : "http",
+		_remote_proxy_user, _remote_proxy_pass, _remote_proxy_host));
 
 	cl_setenv("HTTP_PROXY", url.ptr);
 	cl_setenv("HTTPS_PROXY", url.ptr);
