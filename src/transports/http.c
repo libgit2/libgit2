@@ -66,7 +66,7 @@ typedef struct {
 	unsigned sent_request : 1,
 		received_response : 1,
 		chunked : 1,
-		redirect_count : 3;
+		replay_count : 3;
 } http_stream;
 
 typedef struct {
@@ -424,6 +424,12 @@ static int on_headers_complete(http_parser *parser)
 	git_buf buf = GIT_BUF_INIT;
 	int allowed_proxy_auth_types = 0, allowed_www_auth_types = 0;
 
+	/* Enforce a reasonable cap on the number of replays */
+	if (s->replay_count++ >= GIT_HTTP_REPLAY_MAX) {
+		giterr_set(GITERR_NET, "too many redirects or authentication replays");
+		return t->parse_error = PARSE_ERROR_GENERIC;
+	}
+
 	/* Both parse_header_name and parse_header_value are populated
 	 * and ready for consumption. */
 	if (VALUE == t->last_cb)
@@ -472,11 +478,6 @@ static int on_headers_complete(http_parser *parser)
 	     parser->status_code == 308) &&
 	    t->location) {
 
-		if (s->redirect_count >= 7) {
-			giterr_set(GITERR_NET, "too many redirects");
-			return t->parse_error = PARSE_ERROR_GENERIC;
-		}
-
 		if (gitno_connection_data_from_url(&t->gitserver_data, t->location, s->service_url) < 0)
 			return t->parse_error = PARSE_ERROR_GENERIC;
 
@@ -489,8 +490,6 @@ static int on_headers_complete(http_parser *parser)
 		t->location = NULL;
 
 		t->connected = 0;
-		s->redirect_count++;
-
 		t->parse_error = PARSE_ERROR_REPLAY;
 		return 0;
 	}

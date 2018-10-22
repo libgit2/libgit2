@@ -932,7 +932,7 @@ static int winhttp_stream_read(
 
 replay:
 	/* Enforce a reasonable cap on the number of replays */
-	if (++replay_count >= 7) {
+	if (replay_count++ >= GIT_HTTP_REPLAY_MAX) {
 		giterr_set(GITERR_NET, "too many redirects or authentication replays");
 		return -1;
 	}
