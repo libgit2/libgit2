@@ -636,14 +636,15 @@ static int write_chunk(git_stream *io, const char *buffer, size_t len)
 	return 0;
 }
 
-static int apply_proxy_config_to_stream(http_subtransport *t)
+static int apply_proxy_config_to_stream(
+	git_stream *stream, git_proxy_options *proxy_opts)
 {
 	/* Only set the proxy configuration on the curl stream. */
-	if (!git_stream_supports_proxy(t->server.stream) ||
-	    t->proxy_opts.type == GIT_PROXY_NONE)
+	if (!git_stream_supports_proxy(stream) ||
+	    proxy_opts->type == GIT_PROXY_NONE)
 		return 0;
 
-	return git_stream_set_proxy(t->server.stream, &t->proxy_opts);
+	return git_stream_set_proxy(stream, proxy_opts);
 }
 
 static int load_proxy_config(http_subtransport *t)
@@ -683,9 +684,41 @@ static int load_proxy_config(http_subtransport *t)
 	return gitno_connection_data_from_url(&t->proxy.url, t->proxy_opts.url, NULL);
 }
 
+static int check_certificate(
+	git_stream *stream,
+	gitno_connection_data *url,
+	int is_valid,
+	git_transport_certificate_check_cb cert_cb,
+	void *cert_cb_payload)
+{
+	git_cert *cert;
+	int error;
+
+	if ((error = git_stream_certificate(&cert, stream)) < 0)
+		return error;
+
+	giterr_clear();
+	error = cert_cb(cert, is_valid, url->host, cert_cb_payload);
+
+	if (error == GIT_PASSTHROUGH)
+		error = is_valid ? 0 : GIT_ECERTIFICATE;
+
+	if (error) {
+		if (!giterr_last())
+			giterr_set(GITERR_NET, "user cancelled certificate check");
+
+		return error;
+	}
+
+	return 0;
+}
+
 static int http_connect(http_subtransport *t)
 {
-	gitno_connection_data *connection_url;
+	gitno_connection_data *url;
+	git_stream *stream = NULL;
+	git_transport_certificate_check_cb cert_cb;
+	void *cb_payload;
 	int error;
 
 	if (t->connected &&
@@ -700,58 +733,56 @@ static int http_connect(http_subtransport *t)
 		t->connected = 0;
 	}
 
-	connection_url = (t->proxy_opts.type == GIT_PROXY_SPECIFIED) ?
-		&t->proxy.url : &t->server.url;
+	if (t->proxy_opts.type == GIT_PROXY_SPECIFIED) {
+		url = &t->proxy.url;
+		cert_cb = t->proxy_opts.certificate_check;
+		cb_payload = t->proxy_opts.payload;
+	} else {
+		url = &t->server.url;
+		cert_cb = t->owner->certificate_check_cb;
+		cb_payload = t->owner->message_cb_payload;
+	}
 
 #ifdef GIT_CURL
-	error = git_curl_stream_new(&t->server.stream,
+	error = git_curl_stream_new(&stream,
 	    t->server.url.host, t->server.url.port);
 #else
-	if (connection_url->use_ssl)
-		error = git_tls_stream_new(&t->server.stream,
-		    connection_url->host, connection_url->port);
+	if (url->use_ssl)
+		error = git_tls_stream_new(&stream, url->host, url->port);
 	else
-		error = git_socket_stream_new(&t->server.stream,
-		    connection_url->host, connection_url->port);
+		error = git_socket_stream_new(&stream, url->host, url->port);
 #endif
 
 	if (error < 0)
-		return error;
+		goto on_error;
 
-	GITERR_CHECK_VERSION(t->server.stream, GIT_STREAM_VERSION, "git_stream");
+	GITERR_CHECK_VERSION(stream, GIT_STREAM_VERSION, "git_stream");
 
-	if ((error = apply_proxy_config_to_stream(t)) < 0)
-		return error;
+	if ((error = apply_proxy_config_to_stream(stream, &t->proxy_opts)) < 0)
+		goto on_error;
 
-	error = git_stream_connect(t->server.stream);
+	error = git_stream_connect(stream);
 
-	if ((!error || error == GIT_ECERTIFICATE) && t->owner->certificate_check_cb != NULL &&
-	    git_stream_is_encrypted(t->server.stream)) {
-		git_cert *cert;
-		int is_valid = (error == GIT_OK);
+	if (error && error != GIT_ECERTIFICATE)
+		goto on_error;
 
-		if ((error = git_stream_certificate(&cert, t->server.stream)) < 0)
-			return error;
+	if (git_stream_is_encrypted(stream) && cert_cb != NULL)
+		error = check_certificate(stream, url, !error, cert_cb, cb_payload);
 
-		giterr_clear();
-		error = t->owner->certificate_check_cb(cert, is_valid, t->server.url.host, t->owner->message_cb_payload);
+	if (error)
+		goto on_error;
 
-		if (error == GIT_PASSTHROUGH)
-			error = is_valid ? 0 : GIT_ECERTIFICATE;
-
-		if (error < 0) {
-			if (!giterr_last())
-				giterr_set(GITERR_NET, "user cancelled certificate check");
-
-			return error;
-		}
-	}
-
-	if (error < 0)
-		return error;
-
+	t->server.stream = stream;
 	t->connected = 1;
 	return 0;
+
+on_error:
+	if (stream) {
+		git_stream_close(stream);
+		git_stream_free(stream);
+	}
+
+	return error;
 }
 
 static int http_stream_read(
