@@ -346,13 +346,63 @@ static int on_header_value(http_parser *parser, const char *str, size_t len)
 	return 0;
 }
 
+static int on_auth_required(http_parser *parser, int allowed_types)
+{
+	parser_context *ctx = (parser_context *) parser->data;
+	http_subtransport *t = ctx->t;
+	int ret;
+
+	if (!allowed_types) {
+		giterr_set(GITERR_NET, "remote did not prompt for authentication mechanisms");
+		t->parse_error = PARSE_ERROR_GENERIC;
+		return t->parse_error;
+	}
+
+	if (t->owner->cred_acquire_cb) {
+		if (t->cred) {
+			t->cred->free(t->cred);
+			t->cred = NULL;
+		}
+
+		ret = t->owner->cred_acquire_cb(&t->cred,
+				  t->owner->url,
+				  t->gitserver_data.user,
+				  allowed_types,
+				  t->owner->cred_acquire_payload);
+
+		if (ret == GIT_PASSTHROUGH) {
+			/* treat GIT_PASSTHROUGH as if callback isn't set */
+		} else if (ret < 0) {
+			t->error = ret;
+			t->parse_error = PARSE_ERROR_EXT;
+			return t->parse_error;
+		} else {
+			assert(t->cred);
+
+			if (!(t->cred->credtype & allowed_types)) {
+				giterr_set(GITERR_NET, "credential provider returned an invalid cred type");
+				t->parse_error = PARSE_ERROR_GENERIC;
+				return t->parse_error;
+			}
+
+			/* Successfully acquired a credential. */
+			t->parse_error = PARSE_ERROR_REPLAY;
+			return 0;
+		}
+	}
+
+	giterr_set(GITERR_NET, "authentication required but no callback set");
+	t->parse_error = PARSE_ERROR_GENERIC;
+	return t->parse_error;
+}
+
 static int on_headers_complete(http_parser *parser)
 {
 	parser_context *ctx = (parser_context *) parser->data;
 	http_subtransport *t = ctx->t;
 	http_stream *s = ctx->s;
 	git_buf buf = GIT_BUF_INIT;
-	int error = 0, no_callback = 0, allowed_auth_types = 0;
+	int allowed_www_auth_types = 0;
 
 	/* Both parse_header_name and parse_header_value are populated
 	 * and ready for consumption. */
@@ -360,57 +410,18 @@ static int on_headers_complete(http_parser *parser)
 		if (on_header_ready(t) < 0)
 			return t->parse_error = PARSE_ERROR_GENERIC;
 
-	/* Capture authentication headers which may be a 401 (authentication
-	 * is not complete) or a 200 (simply informing us that auth *is*
-	 * complete.)
+	/*
+	 * Capture authentication headers for the proxy or final endpoint,
+	 * these may be 407/401 (authentication is not complete) or a 200
+	 * (informing us that auth has completed).
 	 */
 	if (parse_authenticate_response(&t->www_authenticate, t,
-			&allowed_auth_types) < 0)
+	        &allowed_www_auth_types) < 0)
 		return t->parse_error = PARSE_ERROR_GENERIC;
 
 	/* Check for an authentication failure. */
-	if (parser->status_code == 401 && get_verb == s->verb) {
-		if (!t->owner->cred_acquire_cb) {
-			no_callback = 1;
-		} else {
-			if (allowed_auth_types) {
-				if (t->cred) {
-					t->cred->free(t->cred);
-					t->cred = NULL;
-				}
-
-				error = t->owner->cred_acquire_cb(&t->cred,
-								  t->owner->url,
-								  t->gitserver_data.user,
-								  allowed_auth_types,
-								  t->owner->cred_acquire_payload);
-
-				/* treat GIT_PASSTHROUGH as if callback isn't set */
-				if (error == GIT_PASSTHROUGH) {
-					no_callback = 1;
-				} else if (error < 0) {
-					t->error = error;
-					return t->parse_error = PARSE_ERROR_EXT;
-				} else {
-					assert(t->cred);
-
-					if (!(t->cred->credtype & allowed_auth_types)) {
-						giterr_set(GITERR_NET, "credentials callback returned an invalid cred type");
-						return t->parse_error = PARSE_ERROR_GENERIC;
-					}
-
-					/* Successfully acquired a credential. */
-					t->parse_error = PARSE_ERROR_REPLAY;
-					return 0;
-				}
-			}
-		}
-
-		if (no_callback) {
-			giterr_set(GITERR_NET, "authentication required but no callback set");
-			return t->parse_error = PARSE_ERROR_GENERIC;
-		}
-	}
+	if (parser->status_code == 401 && get_verb == s->verb)
+		return on_auth_required(parser, allowed_www_auth_types);
 
 	/* Check for a redirect.
 	 * Right now we only permit a redirect to the same hostname. */
