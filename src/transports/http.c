@@ -37,6 +37,9 @@ static const char *receive_pack_service_url = "/git-receive-pack";
 static const char *get_verb = "GET";
 static const char *post_verb = "POST";
 
+#define SERVER_TYPE_REMOTE "remote"
+#define SERVER_TYPE_PROXY  "proxy"
+
 #define OWNING_SUBTRANSPORT(s) ((http_subtransport *)(s)->parent.subtransport)
 
 #define PARSE_ERROR_GENERIC	-1
@@ -97,6 +100,7 @@ typedef struct {
 	/* Authentication */
 	git_cred *cred;
 	git_cred *url_cred;
+	git_cred *proxy_cred;
 	git_vector auth_contexts;
 } http_subtransport;
 
@@ -353,10 +357,19 @@ static int on_header_value(http_parser *parser, const char *str, size_t len)
 	return 0;
 }
 
+GIT_INLINE(void) free_cred(git_cred **cred)
+{
+	if (*cred) {
+		git_cred_free(*cred);
+		(*cred) = NULL;
+	}
+}
+
 static int on_auth_required(
 	git_cred **creds,
 	http_parser *parser,
 	const char *url,
+	const char *type,
 	git_cred_acquire_cb callback,
 	void *callback_payload,
 	const char *username,
@@ -367,17 +380,13 @@ static int on_auth_required(
 	int ret;
 
 	if (!allowed_types) {
-		giterr_set(GITERR_NET, "remote did not prompt for authentication mechanisms");
+		giterr_set(GITERR_NET, "%s requested authentication but did not negotiate mechanisms", type);
 		t->parse_error = PARSE_ERROR_GENERIC;
 		return t->parse_error;
 	}
 
 	if (callback) {
-		if (*creds) {
-			(*creds)->free(*creds);
-			*creds = NULL;
-		}
-
+		free_cred(creds);
 		ret = callback(creds, url, username, allowed_types, callback_payload);
 
 		if (ret == GIT_PASSTHROUGH) {
@@ -390,7 +399,7 @@ static int on_auth_required(
 			assert(*creds);
 
 			if (!((*creds)->credtype & allowed_types)) {
-				giterr_set(GITERR_NET, "credential provider returned an invalid cred type");
+				giterr_set(GITERR_NET, "%s credential provider returned an invalid cred type", type);
 				t->parse_error = PARSE_ERROR_GENERIC;
 				return t->parse_error;
 			}
@@ -401,7 +410,8 @@ static int on_auth_required(
 		}
 	}
 
-	giterr_set(GITERR_NET, "authentication required but no callback set");
+	giterr_set(GITERR_NET, "%s authentication required but no callback set",
+		type);
 	t->parse_error = PARSE_ERROR_GENERIC;
 	return t->parse_error;
 }
@@ -412,7 +422,7 @@ static int on_headers_complete(http_parser *parser)
 	http_subtransport *t = ctx->t;
 	http_stream *s = ctx->s;
 	git_buf buf = GIT_BUF_INIT;
-	int allowed_www_auth_types = 0;
+	int allowed_proxy_auth_types = 0, allowed_www_auth_types = 0;
 
 	/* Both parse_header_name and parse_header_value are populated
 	 * and ready for consumption. */
@@ -425,15 +435,29 @@ static int on_headers_complete(http_parser *parser)
 	 * these may be 407/401 (authentication is not complete) or a 200
 	 * (informing us that auth has completed).
 	 */
-	if (parse_authenticate_response(&t->www_authenticate, t,
+	if (parse_authenticate_response(&t->proxy_authenticate, t,
+	        &allowed_proxy_auth_types) < 0 ||
+	    parse_authenticate_response(&t->www_authenticate, t,
 	        &allowed_www_auth_types) < 0)
 		return t->parse_error = PARSE_ERROR_GENERIC;
+
+	/* Check for a proxy authentication failure. */
+	if (parser->status_code == 407 && get_verb == s->verb)
+		return on_auth_required(&t->proxy_cred,
+		    parser,
+		    t->proxy.url,
+		    SERVER_TYPE_PROXY,
+		    t->proxy.credentials,
+		    t->proxy.payload,
+		    t->proxy_data.user,
+			allowed_proxy_auth_types);
 
 	/* Check for an authentication failure. */
 	if (parser->status_code == 401 && get_verb == s->verb)
 		return on_auth_required(&t->cred,
 		    parser,
 		    t->owner->url,
+		    SERVER_TYPE_REMOTE,
 		    t->owner->cred_acquire_cb,
 		    t->owner->cred_acquire_payload,
 		    t->gitserver_data.user,
@@ -1131,15 +1155,9 @@ static int http_close(git_smart_subtransport *subtransport)
 		t->gitserver_stream = NULL;
 	}
 
-	if (t->cred) {
-		t->cred->free(t->cred);
-		t->cred = NULL;
-	}
-
-	if (t->url_cred) {
-		t->url_cred->free(t->url_cred);
-		t->url_cred = NULL;
-	}
+	free_cred(&t->cred);
+	free_cred(&t->url_cred);
+	free_cred(&t->proxy_cred);
 
 	git_vector_foreach(&t->auth_contexts, i, context) {
 		if (context->free)
