@@ -37,6 +37,9 @@ static const char *receive_pack_service_url = "/git-receive-pack";
 static const char *get_verb = "GET";
 static const char *post_verb = "POST";
 
+#define AUTH_HEADER_SERVER "Authorization"
+#define AUTH_HEADER_PROXY  "Proxy-Authorization"
+
 #define SERVER_TYPE_REMOTE "remote"
 #define SERVER_TYPE_PROXY  "proxy"
 
@@ -179,7 +182,10 @@ static int auth_context_match(
 	return 0;
 }
 
-static int apply_credentials(git_buf *buf, http_server *server)
+static int apply_credentials(
+	git_buf *buf,
+	http_server *server,
+	const char *header_name)
 {
 	git_cred *cred = server->cred;
 	git_http_auth_context *context;
@@ -205,7 +211,7 @@ static int apply_credentials(git_buf *buf, http_server *server)
 	if (!context)
 		return 0;
 
-	return context->next_token(buf, context, cred);
+	return context->next_token(buf, context, header_name, cred);
 }
 
 static int gen_request(
@@ -253,8 +259,9 @@ static int gen_request(
 			git_buf_printf(buf, "%s\r\n", t->owner->custom_headers.strings[i]);
 	}
 
-	/* Apply credentials to the request */
-	if (apply_credentials(buf, &t->server) < 0)
+	/* Apply proxy and server credentials to the request */
+	if (apply_credentials(buf, &t->proxy, AUTH_HEADER_PROXY) < 0 ||
+	    apply_credentials(buf, &t->server, AUTH_HEADER_SERVER) < 0)
 		return -1;
 
 	git_buf_puts(buf, "\r\n");

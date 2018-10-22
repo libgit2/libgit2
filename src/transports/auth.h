@@ -31,7 +31,7 @@ struct git_http_auth_context {
 	int (*set_challenge)(git_http_auth_context *ctx, const char *challenge);
 
 	/** Gets the next authentication token from the context */
-	int (*next_token)(git_buf *out, git_http_auth_context *ctx, git_cred *cred);
+	int (*next_token)(git_buf *out, git_http_auth_context *ctx, const char *header_name, git_cred *cred);
 
 	/** Frees the authentication context */
 	void (*free)(git_http_auth_context *ctx);
