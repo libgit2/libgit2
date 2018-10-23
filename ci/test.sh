@@ -14,7 +14,7 @@ USER=${USER:-$(whoami)}
 SUCCESS=1
 
 VALGRIND="valgrind --leak-check=full --show-reachable=yes --error-exitcode=125 --num-callers=50 --suppressions=\"$SOURCE_DIR/libgit2_clar.supp\""
-LEAKS="MallocStackLogging=1 MallocScribble=1 leaks -quiet -atExit -- nohup"
+LEAKS="MallocStackLogging=1 MallocScribble=1 MallocLogFile=/dev/null leaks -quiet -atExit -- nohup"
 
 cleanup() {
 	echo "Cleaning up..."
