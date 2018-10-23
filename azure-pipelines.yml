@@ -70,7 +70,6 @@ jobs:
       environmentVariables:
         TMPDIR: $(Agent.TempDirectory)
         PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
-        LEAK_CHECK: leaks
         CMAKE_OPTIONS: -G Ninja
 
 - job: windows_vs_amd64
