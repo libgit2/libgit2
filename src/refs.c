@@ -709,6 +709,8 @@ int git_reference_rename(
 	git_signature *who;
 	int error;
 
+	assert(out && ref);
+
 	if ((error = git_reference__log_signature(&who, ref->db->repo)) < 0)
 		return error;
 
