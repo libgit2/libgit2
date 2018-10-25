@@ -364,7 +364,8 @@ typedef enum {
  *
  *		> Set the memory allocator to a different memory allocator. This
  *		> allocator will then be used to make all memory allocations for
- *		> libgit2 operations.
+ *		> libgit2 operations.  If the given `allocator` is NULL, then the
+ *		> system default will be restored.
  *
  *	 opts(GIT_OPT_ENABLE_UNSAVED_INDEX_SAFETY, int enabled)
  *
