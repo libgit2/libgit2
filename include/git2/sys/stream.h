@@ -40,18 +40,48 @@ typedef struct git_stream {
 	void (*free)(struct git_stream *);
 } git_stream;
 
-typedef int (*git_stream_cb)(git_stream **out, const char *host, const char *port);
+typedef struct {
+	/** The `version` field should be set to `GIT_STREAM_VERSION`. */
+	int version;
+
+	/**
+	 * Called to create a new TLS connection to a given host.
+	 *
+	 * @param out The created TLS stream
+	 * @param host The hostname to connect to; may be a hostname or
+	 *             IP address
+	 * @param port The port to connect to; may be a port number or
+	 *             service name
+	 * @return 0 or an error code
+	 */
+	int (*init)(git_stream **out, const char *host, const char *port);
+
+	/**
+	 * Called to create a new TLS connection on top of the given
+	 * stream.  May be used to proxy a TLS stream over a CONNECT
+	 * session.
+	 *
+	 * @param out The created TLS stream
+	 * @param in An existing stream to add TLS to
+	 * @param host The hostname that the stream is connected to,
+	 *             for certificate validation
+	 * @return 0 or an error code
+	 */
+	int (*wrap)(git_stream **out, git_stream *in, const char *host);
+} git_stream_registration;
 
 /**
- * Register a TLS stream constructor for the library to use
+ * Register TLS stream constructors for the library to use
  *
- * If a constructor is already set, it will be overwritten. Pass
- * `NULL` in order to deregister the current constructor.
+ * If a registration structure is already set, it will be overwritten.
+ * Pass `NULL` in order to deregister the current constructor and return
+ * to the system defaults.
  *
- * @param ctor the constructor to use
+ * @param registration the registration data
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_stream_register_tls(git_stream_cb ctor);
+GIT_EXTERN(int) git_stream_register_tls(
+	git_stream_registration *registration);
 
 GIT_END_DECL
 

@@ -6,7 +6,7 @@
 static git_stream test_stream;
 static int ctor_called;
 
-static int test_ctor(git_stream **out, const char *host, const char *port)
+static int test_stream_init(git_stream **out, const char *host, const char *port)
 {
 	GIT_UNUSED(host);
 	GIT_UNUSED(port);
@@ -17,13 +17,29 @@ static int test_ctor(git_stream **out, const char *host, const char *port)
 	return 0;
 }
 
+static int test_stream_wrap(git_stream **out, git_stream *in, const char *host)
+{
+	GIT_UNUSED(in);
+	GIT_UNUSED(host);
+
+	ctor_called = 1;
+	*out = &test_stream;
+
+	return 0;
+}
+
 void test_core_stream__register_tls(void)
 {
 	git_stream *stream;
+	git_stream_registration registration = {0};
 	int error;
 
+	registration.version = 1;
+	registration.init = test_stream_init;
+	registration.wrap = test_stream_wrap;
+
 	ctor_called = 0;
-	cl_git_pass(git_stream_register_tls(test_ctor));
+	cl_git_pass(git_stream_register_tls(&registration));
 	cl_git_pass(git_tls_stream_new(&stream, "localhost", "443"));
 	cl_assert_equal_i(1, ctor_called);
 	cl_assert_equal_p(&test_stream, stream);

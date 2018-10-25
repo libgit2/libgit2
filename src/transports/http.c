@@ -713,10 +713,31 @@ static int check_certificate(
 	return error;
 }
 
+static int stream_connect(
+	git_stream *stream,
+	gitno_connection_data *url,
+	git_transport_certificate_check_cb cert_cb,
+	void *cb_payload)
+{
+	int error;
+
+	GITERR_CHECK_VERSION(stream, GIT_STREAM_VERSION, "git_stream");
+
+	error = git_stream_connect(stream);
+
+	if (error && error != GIT_ECERTIFICATE)
+		return error;
+
+	if (git_stream_is_encrypted(stream) && cert_cb != NULL)
+		error = check_certificate(stream, url, !error, cert_cb, cb_payload);
+
+	return error;
+}
+
 static int http_connect(http_subtransport *t)
 {
 	gitno_connection_data *url;
-	git_stream *stream = NULL;
+	git_stream *proxy_stream = NULL, *stream = NULL;
 	git_transport_certificate_check_cb cert_cb;
 	void *cb_payload;
 	int error;
@@ -744,8 +765,14 @@ static int http_connect(http_subtransport *t)
 	}
 
 #ifdef GIT_CURL
-	error = git_curl_stream_new(&stream,
-	    t->server.url.host, t->server.url.port);
+	if ((error = git_curl_stream_new(&stream,
+	        t->server.url.host, t->server.url.port)) < 0)
+		goto on_error;
+
+	GITERR_CHECK_VERSION(stream, GIT_STREAM_VERSION, "git_stream");
+
+	if ((error = apply_proxy_config_to_stream(stream, &t->proxy_opts)) < 0)
+		goto on_error;
 #else
 	if (url->use_ssl)
 		error = git_tls_stream_new(&stream, url->host, url->port);
@@ -756,20 +783,7 @@ static int http_connect(http_subtransport *t)
 	if (error < 0)
 		goto on_error;
 
-	GITERR_CHECK_VERSION(stream, GIT_STREAM_VERSION, "git_stream");
-
-	if ((error = apply_proxy_config_to_stream(stream, &t->proxy_opts)) < 0)
-		goto on_error;
-
-	error = git_stream_connect(stream);
-
-	if (error && error != GIT_ECERTIFICATE)
-		goto on_error;
-
-	if (git_stream_is_encrypted(stream) && cert_cb != NULL)
-		error = check_certificate(stream, url, !error, cert_cb, cb_payload);
-
-	if (error)
+	if ((error = stream_connect(stream, url, cert_cb, cb_payload)) < 0)
 		goto on_error;
 
 	t->server.stream = stream;
@@ -780,6 +794,11 @@ on_error:
 	if (stream) {
 		git_stream_close(stream);
 		git_stream_free(stream);
+	}
+
+	if (proxy_stream) {
+		git_stream_close(proxy_stream);
+		git_stream_free(proxy_stream);
 	}
 
 	return error;
