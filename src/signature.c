@@ -231,7 +231,8 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 		const char *time_start = email_end + 2;
 		const char *time_end;
 
-		if (git__strtol64(&sig->when.time, time_start, &time_end, 10) < 0) {
+		if (git__strntol64(&sig->when.time, time_start,
+				   buffer_end - time_start, &time_end, 10) < 0) {
 			git__free(sig->name);
 			git__free(sig->email);
 			sig->name = sig->email = NULL;
@@ -246,7 +247,8 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 			tz_start = time_end + 1;
 
 			if ((tz_start[0] != '-' && tz_start[0] != '+') ||
-				git__strtol32(&offset, tz_start + 1, &tz_end, 10) < 0) {
+			    git__strntol32(&offset, tz_start + 1,
+					   buffer_end - tz_start + 1, &tz_end, 10) < 0) {
 				/* malformed timezone, just assume it's zero */
 				offset = 0;
 			}

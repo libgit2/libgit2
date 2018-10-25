@@ -330,7 +330,7 @@ int git_curl_stream_new(git_stream **out, const char *host, const char *port)
 		return -1;
 	}
 
-	if ((error = git__strtol32(&iport, port, NULL, 10)) < 0) {
+	if ((error = git__strntol32(&iport, port, strlen(port), NULL, 10)) < 0) {
 		git__free(st);
 		return error;
 	}

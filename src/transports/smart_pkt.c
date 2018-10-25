@@ -391,7 +391,7 @@ static int parse_len(size_t *out, const char *line, size_t linelen)
 		}
 	}
 
-	if ((error = git__strtol32(&len, num, &num_end, 16)) < 0)
+	if ((error = git__strntol32(&len, num, PKT_LEN_SIZE, &num_end, 16)) < 0)
 		return error;
 
 	if (len < 0)

@@ -2243,7 +2243,7 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 		for (i = 0; i < 3; i++) {
 			int64_t tmp;
 
-			if (git__strtol64(&tmp, buffer, &endptr, 8) < 0 ||
+			if (git__strntol64(&tmp, buffer, size, &endptr, 8) < 0 ||
 				!endptr || endptr == buffer || *endptr ||
 				tmp < 0 || tmp > UINT32_MAX) {
 				index_entry_reuc_free(lost);
