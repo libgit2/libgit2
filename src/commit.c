@@ -505,6 +505,8 @@ int git_commit__parse_ext(git_commit *commit, git_odb_object *odb_obj, git_commi
 	    flags)) < 0)
 		return error;
 
+	printf("parsing %s\n", git_oid_tostr_s(&odb_obj->cached.oid));
+
 	/* Perform necessary grafts */
 	if (git__graft_for_oid(&graft, repo->grafts, git_odb_object_id(odb_obj)) != GIT_ENOTFOUND) {
 		size_t idx;
