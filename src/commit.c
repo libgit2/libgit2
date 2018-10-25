@@ -20,6 +20,7 @@
 #include "message.h"
 #include "refs.h"
 #include "object.h"
+#include "array.h"
 #include "oidarray.h"
 
 void git_commit__free(void *_commit)
@@ -383,14 +384,15 @@ int git_commit_amend(
 	return error;
 }
 
-int git_commit__parse_raw(void *_commit, const char *data, size_t size)
+static int git_commit__parse_internal(git_commit *commit, const char *data, size_t size, git_commit__parse_flags flags)
 {
-	git_commit *commit = _commit;
 	const char *buffer_start = data, *buffer;
 	const char *buffer_end = buffer_start + size;
 	git_oid parent_id;
 	size_t header_len;
 	git_signature dummy_sig;
+
+	assert(commit && data);
 
 	buffer = buffer_start;
 
@@ -399,8 +401,15 @@ int git_commit__parse_raw(void *_commit, const char *data, size_t size)
 	GIT_ERROR_CHECK_ARRAY(commit->parent_ids);
 
 	/* The tree is always the first field */
-	if (git_oid__parse(&commit->tree_id, &buffer, buffer_end, "tree ") < 0)
-		goto bad_buffer;
+	if (flags & GIT_COMMIT_PARSE_ALL) {
+	    if (git_oid__parse(&commit->tree_id, &buffer, buffer_end, "tree ") < 0)
+			goto bad_buffer;
+	} else {
+		size_t tree_len = strlen("tree ") + GIT_OID_HEXSZ + 1;
+		if (buffer + tree_len > buffer_end)
+			goto bad_buffer;
+		buffer += tree_len;
+	}
 
 	/*
 	 * TODO: commit grafts!
@@ -413,11 +422,13 @@ int git_commit__parse_raw(void *_commit, const char *data, size_t size)
 		git_oid_cpy(new_id, &parent_id);
 	}
 
-	commit->author = git__malloc(sizeof(git_signature));
-	GIT_ERROR_CHECK_ALLOC(commit->author);
+	if (flags & GIT_COMMIT_PARSE_ALL) {
+		commit->author = git__malloc(sizeof(git_signature));
+		GIT_ERROR_CHECK_ALLOC(commit->author);
 
-	if (git_signature__parse(commit->author, &buffer, buffer_end, "author ", '\n') < 0)
-		return -1;
+		if (git_signature__parse(commit->author, &buffer, buffer_end, "author ", '\n') < 0)
+			return -1;
+	}
 
 	/* Some tools create multiple author fields, ignore the extra ones */
 	while (!git__prefixncmp(buffer, buffer_end - buffer, "author ")) {
@@ -434,6 +445,9 @@ int git_commit__parse_raw(void *_commit, const char *data, size_t size)
 
 	if (git_signature__parse(commit->committer, &buffer, buffer_end, "committer ", '\n') < 0)
 		return -1;
+
+	if (!(flags & GIT_COMMIT_PARSE_ALL))
+		return 0;
 
 	/* Parse add'l header entries */
 	while (buffer < buffer_end) {
@@ -477,11 +491,22 @@ bad_buffer:
 	return -1;
 }
 
+int git_commit__parse_raw(void *commit, const char *data, size_t size)
+{
+	return git_commit__parse_internal(commit, data, size, GIT_COMMIT_PARSE_ALL);
+}
+
+int git_commit__parse_ext(git_commit *commit, git_odb_object *odb_obj, git_commit__parse_flags flags)
+{
+	return git_commit__parse_internal(commit,
+		git_odb_object_data(odb_obj),
+		git_odb_object_size(odb_obj),
+		flags);
+}
+
 int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 {
-	return git_commit__parse_raw(_commit,
-		git_odb_object_data(odb_obj),
-		git_odb_object_size(odb_obj));
+	return git_commit__parse_ext(_commit, odb_obj, GIT_COMMIT_PARSE_ALL);
 }
 
 #define GIT_COMMIT_GETTER(_rvalue, _name, _return) \
