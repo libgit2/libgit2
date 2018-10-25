@@ -110,7 +110,6 @@ cleanup:
 int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 {
 	git_transport *t = remote->transport;
-	git_fetch_negotiation nego;
 
 	remote->need_pack = 0;
 
@@ -127,18 +126,18 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 	 * Now we have everything set up so we can start tell the
 	 * server what we want and what we have.
 	 */
-	nego.refs = (const git_remote_head * const *)remote->refs.contents;
-	nego.count = remote->refs.length;
-	nego.depth = opts->depth;
-	nego.shallow_roots = git__malloc(sizeof(nego.shallow_roots));
+	remote->nego.refs = (const git_remote_head * const *)remote->refs.contents;
+	remote->nego.count = remote->refs.length;
+	remote->nego.depth = opts->depth;
+	remote->nego.shallow_roots = git__malloc(sizeof(git_shallowarray));
 
-	git_array_init(nego.shallow_roots->array);
+	git_array_init(remote->nego.shallow_roots->array);
 
-	git_repository__shallow_roots(&nego.shallow_roots->array, remote->repo);
+	git_repository__shallow_roots(&remote->nego.shallow_roots->array, remote->repo);
 
 	return t->negotiate_fetch(t,
 		remote->repo,
-		&nego);
+		&remote->nego);
 }
 
 int git_fetch_download_pack(git_remote *remote, const git_remote_callbacks *callbacks)
@@ -146,6 +145,7 @@ int git_fetch_download_pack(git_remote *remote, const git_remote_callbacks *call
 	git_transport *t = remote->transport;
 	git_transfer_progress_cb progress = NULL;
 	void *payload = NULL;
+	int error;
 
 	if (!remote->need_pack)
 		return 0;
@@ -155,7 +155,13 @@ int git_fetch_download_pack(git_remote *remote, const git_remote_callbacks *call
 		payload  = callbacks->payload;
 	}
 
-	return t->download_pack(t, remote->repo, &remote->stats, progress, payload);
+	if ((error = t->download_pack(t, remote->repo, &remote->stats, progress, payload)) < 0)
+		return error;
+
+	if ((error = git_repository__shallow_roots_write(remote->repo, remote->nego.shallow_roots->array)) < 0)
+		return error;
+
+	return 0;
 }
 
 int git_fetch_init_options(git_fetch_options *opts, unsigned int version)
