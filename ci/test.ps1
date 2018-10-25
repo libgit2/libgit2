@@ -7,7 +7,7 @@ $PSDefaultParameterValues['*:ErrorAction'] = 'Stop'
 
 $SourceDir = Split-Path (Split-Path (Get-Variable MyInvocation).Value.MyCommand.Path)
 $BuildDir = Get-Location
-$Success = $true
+$global:Success = $true
 
 if ($Env:SKIP_TESTS) { exit }
 
@@ -25,7 +25,7 @@ function run_test {
 	Write-Host $TestCommand
 	Invoke-Expression $TestCommand
 
-	if ($LastExitCode -ne 0) { $Success = $false }
+	if ($LastExitCode -ne 0) { $global:Success = $false }
 }
 
 Write-Host "##############################################################################"
@@ -69,4 +69,4 @@ if (-not $Env:SKIP_PROXY_TESTS) {
 	taskkill /F /IM javaw.exe
 }
 
-if (-not $Success) { exit 1 }
+if (-Not $global:Success) { exit 1 }
