@@ -19,12 +19,17 @@ if ($Env:SKIP_TESTS) { exit }
 function run_test {
 	$TestName = $args[0]
 
+	$TestCommand = (ctest -N -V -R "^$TestName$") -join "`n"
+
+	if (-Not ($TestCommand -match "(?ms).*\n^[0-9]*: Test command: ")) {
+		echo "Could not find tests: $TestName"
+		exit
+	}
+
 	$TestCommand = (ctest -N -V -R "^$TestName$") -join "`n" -replace "(?ms).*\n^[0-9]*: Test command: ","" -replace "\n.*",""
 	$TestCommand += " -r${BuildDir}\results_${TestName}.xml"
 
-	Write-Host $TestCommand
 	Invoke-Expression $TestCommand
-
 	if ($LastExitCode -ne 0) { $global:Success = $false }
 }
 
