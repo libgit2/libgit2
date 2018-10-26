@@ -44,6 +44,12 @@ failure() {
 # JUnit-style XML files.
 run_test() {
 	TEST_CMD=$(ctest -N -V -R "^${1}$" | sed -n 's/^[0-9]*: Test command: //p')
+
+	if [ -z "$TEST_CMD" ]; then
+		echo "Could not find tests: $1"
+		exit 1
+	fi
+
 	TEST_CMD="${TEST_CMD} -r${BUILD_DIR}/results_${1}.xml"
 
 	if [ "$LEAK_CHECK" = "valgrind" ]; then
