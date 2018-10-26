@@ -703,15 +703,15 @@ IF (BUILD_CLAR)
 	ENDIF ()
 
 	ENABLE_TESTING()
+	ADD_TEST(offline   "${libgit2_BINARY_DIR}/libgit2_clar" -v -xonline -xclone::local::git_style_unc_paths -xclone::local::standard_unc_paths_are_written_git_style)
+
 	IF (WINHTTP OR OPENSSL_FOUND OR SECURITY_FOUND)
-		ADD_TEST(libgit2_clar libgit2_clar -ionline -xclone::local::git_style_unc_paths -xclone::local::standard_unc_paths_are_written_git_style)
-	ELSE ()
-		ADD_TEST(libgit2_clar libgit2_clar -v -xclone::local::git_style_unc_paths -xclone::local::standard_unc_paths_are_written_git_style)
+		ADD_TEST(online    "${libgit2_BINARY_DIR}/libgit2_clar" -v -sonline)
 	ENDIF ()
 
-	# Add additional test targets that require special setup
-	ADD_TEST(libgit2_clar-proxy_credentials libgit2_clar -v -sonline::clone::proxy_credentials_in_url -sonline::clone::proxy_credentials_request)
-	ADD_TEST(libgit2_clar-ssh libgit2_clar -v -sonline::push -sonline::clone::ssh_cert -sonline::clone::ssh_with_paths)
+	ADD_TEST(gitdaemon "${libgit2_BINARY_DIR}/libgit2_clar" -v -sonline::push)
+	ADD_TEST(ssh       "${libgit2_BINARY_DIR}/libgit2_clar" -v -sonline::push -sonline::clone::ssh_cert -sonline::clone::ssh_with_paths)
+	ADD_TEST(proxy     "${libgit2_BINARY_DIR}/libgit2_clar" -v -sonline::clone::proxy_credentials_in_url -sonline::clone::proxy_credentials_request)
 ENDIF ()
 
 IF (TAGS)
