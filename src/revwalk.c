@@ -384,10 +384,16 @@ static int still_interesting(git_commit_list *list, int64_t time, int slop)
 	if (!list)
 		return 0;
 
+	/*
+	 * If the destination list has commits with an earlier date than our
+	 * source, we want to reset the slop counter as we're not done.
+	 */
+	if (time <= list->item->time)
+		return SLOP;
+
 	for (; list; list = list->next) {
 		/*
-		 * If the destination list has commits with an earlier date than
-		 * our source or if it still contains interesting commits we
+		 * If the destination list still contains interesting commits we
 		 * want to continue looking.
 		 */
 		if (!list->item->uninteresting || list->item->time > time)
@@ -401,7 +407,7 @@ static int still_interesting(git_commit_list *list, int64_t time, int slop)
 static int limit_list(git_commit_list **out, git_revwalk *walk, git_commit_list *commits)
 {
 	int error, slop = SLOP;
-	int64_t time = ~0ll;
+	int64_t time = INT64_MAX;
 	git_commit_list *list = commits;
 	git_commit_list *newlist = NULL;
 	git_commit_list **p = &newlist;
@@ -522,7 +528,7 @@ cleanup:
 
 static int prepare_walk(git_revwalk *walk)
 {
-	int error;
+	int error = 0;
 	git_commit_list *list, *commits = NULL;
 	git_commit_list_node *next;
 

@@ -28,6 +28,7 @@ INCLUDE(CheckLibraryExists)
 INCLUDE(CheckFunctionExists)
 INCLUDE(CheckSymbolExists)
 INCLUDE(CheckStructHasMember)
+INCLUDE(CheckPrototypeDefinition) # Added in CMake 3.0
 INCLUDE(AddCFlagIfSupported)
 INCLUDE(FindPkgLibraries)
 INCLUDE(FindThreads)
@@ -224,6 +225,9 @@ ELSE ()
 	ENABLE_WARNINGS(shift-count-overflow)
 	DISABLE_WARNINGS(unused-const-variable)
 	DISABLE_WARNINGS(unused-function)
+	ENABLE_WARNINGS(format)
+	ENABLE_WARNINGS(format-security)
+	ENABLE_WARNINGS(int-conversion)
 
 	IF (APPLE) # Apple deprecated OpenSSL
 	    DISABLE_WARNINGS(deprecated-declarations)

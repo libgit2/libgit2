@@ -490,15 +490,16 @@ static int append_entry(
 	git_treebuilder *bld,
 	const char *filename,
 	const git_oid *id,
-	git_filemode_t filemode)
+	git_filemode_t filemode,
+	bool validate)
 {
 	git_tree_entry *entry;
 	int error = 0;
 
-	if (!valid_entry_name(bld->repo, filename))
+	if (validate && !valid_entry_name(bld->repo, filename))
 		return tree_error("failed to insert entry: invalid name for a tree entry", filename);
 
-	if (git_oid_iszero(id))
+	if (validate && git_oid_iszero(id))
 		return tree_error("failed to insert entry: invalid null OID for a tree entry", filename);
 
 	entry = alloc_entry(filename, strlen(filename), id);
@@ -596,12 +597,12 @@ static int write_tree(
 				last_comp = subdir;
 			}
 
-			error = append_entry(bld, last_comp, &sub_oid, S_IFDIR);
+			error = append_entry(bld, last_comp, &sub_oid, S_IFDIR, true);
 			git__free(subdir);
 			if (error < 0)
 				goto on_error;
 		} else {
-			error = append_entry(bld, filename, &entry->id, entry->mode);
+			error = append_entry(bld, filename, &entry->id, entry->mode, true);
 			if (error < 0)
 				goto on_error;
 		}
@@ -699,7 +700,8 @@ int git_treebuilder_new(
 			if (append_entry(
 				bld, entry_src->filename,
 				entry_src->oid,
-				entry_src->attr) < 0)
+				entry_src->attr,
+				false) < 0)
 				goto on_error;
 		}
 	}

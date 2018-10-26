@@ -188,6 +188,9 @@ static int apply_credentials(git_buf *buf, http_subtransport *t)
 	if (auth_context_match(&context, t, credtype_match, &cred->credtype) < 0)
 		return -1;
 
+	if (!context)
+		return 0;
+
 	return context->next_token(buf, context, cred);
 }
 
