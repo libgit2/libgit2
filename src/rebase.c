@@ -152,7 +152,7 @@ GIT_INLINE(int) rebase_readint(
 	if ((error = rebase_readfile(asc_out, state_path, filename)) < 0)
 		return error;
 
-	if (git__strtol32(&num, asc_out->ptr, &eol, 10) < 0 || num < 0 || *eol) {
+	if (git__strntol32(&num, asc_out->ptr, asc_out->size, &eol, 10) < 0 || num < 0 || *eol) {
 		giterr_set(GITERR_REBASE, "the file '%s' contains an invalid numeric value", filename);
 		return -1;
 	}

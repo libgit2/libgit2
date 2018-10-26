@@ -91,7 +91,7 @@ static int read_tree_internal(git_tree_cache **out,
 		return -1;
 
 	/* Blank-terminated ASCII decimal number of entries in this tree */
-	if (git__strtol32(&count, buffer, &buffer, 10) < 0)
+	if (git__strntol32(&count, buffer, buffer_end - buffer, &buffer, 10) < 0)
 		goto corrupted;
 
 	tree->entry_count = count;
@@ -100,7 +100,7 @@ static int read_tree_internal(git_tree_cache **out,
 		goto corrupted;
 
 	 /* Number of children of the tree, newline-terminated */
-	if (git__strtol32(&count, buffer, &buffer, 10) < 0 || count < 0)
+	if (git__strntol32(&count, buffer, buffer_end - buffer, &buffer, 10) < 0 || count < 0)
 		goto corrupted;
 
 	tree->children_count = count;

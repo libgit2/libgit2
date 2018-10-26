@@ -193,9 +193,7 @@ GIT_INLINE(int) git__signum(int val)
 	return ((val > 0) - (val < 0));
 }
 
-extern int git__strtol32(int32_t *n, const char *buff, const char **end_buf, int base);
 extern int git__strntol32(int32_t *n, const char *buff, size_t buff_len, const char **end_buf, int base);
-extern int git__strtol64(int64_t *n, const char *buff, const char **end_buf, int base);
 extern int git__strntol64(int64_t *n, const char *buff, size_t buff_len, const char **end_buf, int base);
 
 
@@ -247,6 +245,9 @@ GIT_INLINE(const void *) git__memrchr(const void *s, int c, size_t n)
 
 	return NULL;
 }
+
+extern const void * git__memmem(const void *haystack, size_t haystacklen,
+				const void *needle, size_t needlelen);
 
 typedef int (*git__tsort_cmp)(const void *a, const void *b);
 

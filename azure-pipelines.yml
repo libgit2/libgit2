@@ -1,0 +1,94 @@
+resources:
+- repo: self
+
+trigger:
+- master
+- maint/*
+
+jobs:
+- job: linux_trusty_gcc_openssl
+  displayName: 'Linux (Trusty; GCC; OpenSSL)'
+  pool:
+    vmImage: 'Ubuntu 16.04'
+  steps:
+  - template: ci/docker.yml
+    parameters:
+      imageName: 'libgit2/trusty-openssl:latest'
+      environmentVariables: |
+       CC=gcc
+       LEAK_CHECK=valgrind
+
+- job: linux_trusty_clang_openssl
+  displayName: 'Linux (Trusty; Clang; OpenSSL)'
+  pool:
+    vmImage: 'Ubuntu 16.04'
+  steps:
+  - template: ci/docker.yml
+    parameters:
+      imageName: 'libgit2/trusty-openssl:latest'
+      environmentVariables: |
+       CC=clang
+       LEAK_CHECK=valgrind
+
+- job: macos
+  displayName: 'macOS'
+  pool:
+    vmImage: 'macOS 10.13'
+  steps:
+  - bash: . '$(Build.SourcesDirectory)/ci/setup-osx.sh'
+    displayName: Setup
+  - template: ci/bash.yml
+    parameters:
+      environmentVariables:
+        TMPDIR: $(Agent.TempDirectory)
+        PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
+        LEAK_CHECK: leaks
+
+- job: windows_vs_amd64
+  displayName: 'Windows (Visual Studio; amd64)'
+  pool: Hosted
+  steps:
+  - template: ci/powershell.yml
+    parameters:
+      environmentVariables:
+        CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013 Win64"
+
+- job: windows_vs_x86
+  displayName: 'Windows (Visual Studio; x86)'
+  pool: Hosted
+  steps:
+  - template: ci/powershell.yml
+    parameters:
+      environmentVariables:
+        CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013"
+
+- job: windows_mingw_amd64
+  displayName: 'Windows (MinGW; amd64)'
+  pool: Hosted
+  steps:
+  - powershell: . '$(Build.SourcesDirectory)\ci\setup-mingw.ps1'
+    displayName: Setup
+    env:
+      TEMP: $(Agent.TempDirectory)
+      ARCH: amd64
+  - template: ci/powershell.yml
+    parameters:
+      environmentVariables:
+        CMAKE_OPTIONS: -G"MinGW Makefiles"
+        PATH: $(Agent.TempDirectory)\mingw64\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
+
+- job: windows_mingw_x86
+  displayName: 'Windows (MinGW; x86)'
+  pool: Hosted
+  steps:
+  - powershell: . '$(Build.SourcesDirectory)\ci\setup-mingw.ps1'
+    displayName: Setup
+    workingDirectory: '$(Build.BinariesDirectory)'
+    env:
+      TEMP: $(Agent.TempDirectory)
+      ARCH: x86
+  - template: ci/powershell.yml
+    parameters:
+      environmentVariables:
+        CMAKE_OPTIONS: -G"MinGW Makefiles"
+        PATH: $(Agent.TempDirectory)\mingw32\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin

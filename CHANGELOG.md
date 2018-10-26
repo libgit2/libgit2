@@ -1,3 +1,51 @@
+v0.27.6
+-------
+
+This as a security release fixing the following list of issues:
+
+- The function family `git__strtol` is used to parse integers
+  from a buffer. As the functions do not take a buffer length as
+  argument, they will scan either until the end of the current
+  number or until a NUL byte is encountered. Many callers have
+  been misusing the function and called it on potentially
+  non-NUL-terminated buffers, resulting in possible out-of-bounds
+  reads. Callers have been fixed to use `git__strntol` functions
+  instead and `git__strtol` functions were removed.
+
+- The function `git__strntol64` relied on the undefined behavior
+  of signed integer overflows. While the code tried to detect
+  such overflows after they have happened, this is unspecified
+  behavior and may lead to weird behavior on uncommon platforms.
+
+- In the case where `git__strntol32` was unable to parse an
+  integer because it doesn't fit into an `int32_t`, it printed an
+  error message containing the string that is currently being
+  parsed. The code didn't truncate the string though, which
+  caused it to print the complete string until a NUL byte is
+  encountered and not only the currently parsed number. In case
+  where the string was not NUL terminated, this could have lead
+  to an out-of-bounds read.
+
+- When parsing tags, all unknown fields that appear before the
+  tag message are skipped. This skipping is done by using a plain
+  `strstr(buffer, "\n\n")` to search for the two newlines that
+  separate tag fields from tag message. As it is not possible to
+  supply a buffer length to `strstr`, this call may skip over the
+  buffer's end and thus result in an out of bounds read. As
+  `strstr` may return a pointer that is out of bounds, the
+  following computation of `buffer_end - buffer` will overflow
+  and result in an allocation of an invalid length. Note that
+  when reading objects from the object database, we make sure to
+  always NUL terminate them, making the use of `strstr` safe.
+
+- When parsing the "encoding" field of a commit, we may perform
+  an out of bounds read due to using `git__prefixcmp` instead of
+  `git__prefixncmp`. This can result in the parsed commit object
+  containing uninitialized data in both its message encoding and
+  message fields. Note that when reading objects from the object
+  database, we make sure to always NUL terminate them, making the
+  use of `strstr` safe.
+
 v0.27.5
 -------
 
