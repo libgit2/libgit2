@@ -52,9 +52,10 @@ test_script:
     Start-FileDownload https://github.com/ethomson/poxyproxy/releases/download/v0.1.0/poxyproxy-0.1.0.jar -FileName poxyproxy.jar
     # Run this early so we know it's ready by the time we need it
     $proxyJob = Start-Job { java -jar $Env:APPVEYOR_BUILD_FOLDER\build\poxyproxy.jar -d --port 8080 --credentials foo:bar }
-    ctest -V -R libgit2_clar
+    ctest -V -R offline
+    ctest -V -R online
     Receive-Job -Job $proxyJob
     $env:GITTEST_REMOTE_PROXY_URL = "localhost:8080"
     $env:GITTEST_REMOTE_PROXY_USER = "foo"
     $env:GITTEST_REMOTE_PROXY_PASS = "bar"
-    ctest -V -R libgit2_clar-proxy_credentials
+    ctest -V -R proxy
