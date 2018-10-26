@@ -111,6 +111,9 @@ GIT_INLINE(const void *) git__memrchr(const void *s, int c, size_t n)
 	return NULL;
 }
 
+extern const void * git__memmem(const void *haystack, size_t haystacklen,
+				const void *needle, size_t needlelen);
+
 typedef int (*git__tsort_cmp)(const void *a, const void *b);
 
 extern void git__tsort(void **dst, size_t size, git__tsort_cmp cmp);

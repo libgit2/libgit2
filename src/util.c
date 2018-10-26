@@ -357,6 +357,47 @@ size_t git__linenlen(const char *buffer, size_t buffer_len)
 	return nl ? (size_t)(nl - buffer) + 1 : buffer_len;
 }
 
+/*
+ * Adapted Not So Naive algorithm from http://www-igm.univ-mlv.fr/~lecroq/string/
+ */
+const void * git__memmem(const void *haystack, size_t haystacklen,
+			 const void *needle, size_t needlelen)
+{
+	const char *h, *n;
+	size_t j, k, l;
+
+	if (needlelen > haystacklen || !haystacklen || !needlelen)
+		return NULL;
+
+	h = (const char *) haystack,
+	n = (const char *) needle;
+
+	if (needlelen == 1)
+		return memchr(haystack, *n, haystacklen);
+
+	if (n[0] == n[1]) {
+		k = 2;
+		l = 1;
+	} else {
+		k = 1;
+		l = 2;
+	}
+
+	j = 0;
+	while (j <= haystacklen - needlelen) {
+		if (n[1] != h[j + 1]) {
+			j += k;
+		} else {
+			if (memcmp(n + 2, h + j + 2, needlelen - 2) == 0 &&
+			    n[0] == h[j])
+				return h + j;
+			j += l;
+		}
+	}
+
+	return NULL;
+}
+
 void git__hexdump(const char *buffer, size_t len)
 {
 	static const size_t LINE_WIDTH = 16;
