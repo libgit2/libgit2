@@ -47,3 +47,28 @@
 	...
 	fun:__check_pf
 }
+
+{
+	ignore-curl-global-init
+	Memcheck:Leak
+	...
+	fun:curl_global_init
+}
+
+{
+	ignore-libssh2-gcrypt-leak
+	Memcheck:Leak
+	...
+	fun:gcry_control
+	obj:*libssh2.so*
+}
+
+{
+	ignore-noai6ai_cached-double-free
+	Memcheck:Free
+	fun:free
+	fun:__libc_freeres
+	...
+	fun:exit
+	...
+}

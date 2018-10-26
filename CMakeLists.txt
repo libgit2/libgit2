@@ -677,7 +677,7 @@ IF (BUILD_CLAR)
 
 	ADD_CUSTOM_COMMAND(
 		OUTPUT ${CLAR_PATH}/clar.suite
-		COMMAND ${PYTHON_EXECUTABLE} generate.py -f -xonline -xstress .
+		COMMAND ${PYTHON_EXECUTABLE} generate.py -f -xonline -xstress -xperf .
 		DEPENDS ${SRC_TEST}
 		WORKING_DIRECTORY ${CLAR_PATH}
 	)
@@ -703,17 +703,12 @@ IF (BUILD_CLAR)
 	ENDIF ()
 
 	ENABLE_TESTING()
-	IF (WINHTTP OR OPENSSL_FOUND OR SECURITY_FOUND)
-		ADD_TEST(libgit2_clar libgit2_clar -ionline -xclone::local::git_style_unc_paths -xclone::local::standard_unc_paths_are_written_git_style)
-	ELSE ()
-		ADD_TEST(libgit2_clar libgit2_clar -v -xclone::local::git_style_unc_paths -xclone::local::standard_unc_paths_are_written_git_style)
-	ENDIF ()
 
-	# Add a test target which runs the cred callback tests, to be
-	# called after setting the url and user
-	ADD_TEST(libgit2_clar-cred_callback libgit2_clar -v -sonline::clone::cred_callback)
-	ADD_TEST(libgit2_clar-proxy_credentials_in_url libgit2_clar -v -sonline::clone::proxy_credentials_in_url)
-	ADD_TEST(libgit2_clar-proxy_credentials_request libgit2_clar -v	-sonline::clone::proxy_credentials_request)
+	ADD_TEST(offline   libgit2_clar -v -xonline)
+	ADD_TEST(online    libgit2_clar -v -sonline)
+	ADD_TEST(gitdaemon libgit2_clar -v -sonline::push)
+	ADD_TEST(ssh       libgit2_clar -v -sonline::push -sonline::clone::ssh_cert -sonline::clone::ssh_with_paths)
+	ADD_TEST(proxy     libgit2_clar -v -sonline::clone::proxy_credentials_in_url -sonline::clone::proxy_credentials_request)
 ENDIF ()
 
 IF (TAGS)

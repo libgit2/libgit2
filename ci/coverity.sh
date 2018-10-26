@@ -1,16 +1,12 @@
 #!/bin/bash
-set -e
 
-# Only run this on our branches
-echo "Branch: $TRAVIS_BRANCH  |  Pull request: $TRAVIS_PULL_REQUEST  |  Slug: $TRAVIS_REPO_SLUG"
-if [ "$TRAVIS_BRANCH" != "master" -o "$TRAVIS_PULL_REQUEST" != "false" -o "$TRAVIS_REPO_SLUG" != "libgit2/libgit2" ];
-then
-	echo "Only analyzing the 'master' brach of the main repository."
-	exit 0
-fi
+set -e
 
 # Environment check
 [ -z "$COVERITY_TOKEN" ] && echo "Need to set a coverity token" && exit 1
+
+SOURCE_DIR=${SOURCE_DIR:-$( cd "$( dirname "${BASH_SOURCE[0]}" )" && dirname $( pwd ) )}
+BUILD_DIR=$(pwd)
 
 case $(uname -m) in
 	i?86)				BITS=32 ;;
@@ -32,31 +28,29 @@ if [ ! -d "$TOOL_BASE" ]; then
 	ln -s "$TOOL_DIR" "$TOOL_BASE"/cov-analysis
 fi
 
-cp script/user_nodefs.h "$TOOL_BASE"/cov-analysis/config/user_nodefs.h
+cp "${SOURCE_DIR}/script/user_nodefs.h" "$TOOL_BASE"/cov-analysis/config/user_nodefs.h
 
 COV_BUILD="$TOOL_BASE/cov-analysis/bin/cov-build"
 
 # Configure and build
-rm -rf _build
-mkdir _build
-cd _build
-cmake .. -DTHREADSAFE=ON
+cmake ${SOURCE_DIR}
+
 COVERITY_UNSUPPORTED=1 \
 	$COV_BUILD --dir cov-int \
 	cmake --build .
 
 # Upload results
 tar czf libgit2.tgz cov-int
-SHA=$(git rev-parse --short HEAD)
+SHA=$(cd ${SOURCE_DIR} && git rev-parse --short HEAD)
 
 HTML="$(curl \
 	--silent \
 	--write-out "\n%{http_code}" \
 	--form token="$COVERITY_TOKEN" \
-	--form email=bs@github.com \
+	--form email=libgit2@gmail.com \
 	--form file=@libgit2.tgz \
 	--form version="$SHA" \
-	--form description="Travis build" \
+	--form description="libgit2 build" \
 	https://scan.coverity.com/builds?project=libgit2)"
 # Body is everything up to the last line
 BODY="$(echo "$HTML" | head -n-1)"
@@ -65,7 +59,7 @@ STATUS_CODE="$(echo "$HTML" | tail -n1)"
 
 echo "${BODY}"
 
-if [ "${STATUS_CODE}" != "201" ]; then
+if [ "${STATUS_CODE}" != "200" -a "${STATUS_CODE}" != "201" ]; then
 	echo "Received error code ${STATUS_CODE} from Coverity"
 	exit 1
 fi
