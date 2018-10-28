@@ -68,8 +68,7 @@ typedef struct {
 	unsigned chunk_buffer_len;
 	unsigned sent_request : 1,
 		received_response : 1,
-		chunked : 1,
-		replay_count : 3;
+		chunked : 1;
 } http_stream;
 
 typedef struct {
@@ -103,11 +102,13 @@ typedef struct {
 	git_buf parse_header_value;
 	char parse_buffer_data[NETIO_BUFSIZE];
 	char *content_type;
+	char *content_length;
 	char *location;
 	enum last_cb last_cb;
 	int parse_error;
 	int error;
-	unsigned parse_finished : 1;
+	unsigned parse_finished : 1,
+	    replay_count : 3;
 } http_subtransport;
 
 typedef struct {
@@ -260,8 +261,11 @@ static int gen_request(
 	}
 
 	/* Apply proxy and server credentials to the request */
-	if (apply_credentials(buf, &t->proxy, AUTH_HEADER_PROXY) < 0 ||
-	    apply_credentials(buf, &t->server, AUTH_HEADER_SERVER) < 0)
+	if (t->proxy_opts.type != GIT_PROXY_NONE &&
+	    apply_credentials(buf, &t->proxy, AUTH_HEADER_PROXY) < 0)
+		return -1;
+
+	if (apply_credentials(buf, &t->server, AUTH_HEADER_SERVER) < 0)
 		return -1;
 
 	git_buf_puts(buf, "\r\n");
@@ -306,6 +310,12 @@ static int on_header_ready(http_subtransport *t)
 		if (!t->content_type) {
 			t->content_type = git__strdup(git_buf_cstr(value));
 			GITERR_CHECK_ALLOC(t->content_type);
+		}
+	}
+	else if (!strcasecmp("Content-Length", git_buf_cstr(name))) {
+		if (!t->content_length) {
+			t->content_length = git__strdup(git_buf_cstr(value));
+			GITERR_CHECK_ALLOC(t->content_length);
 		}
 	}
 	else if (!strcasecmp("Proxy-Authenticate", git_buf_cstr(name))) {
@@ -438,7 +448,7 @@ static int on_headers_complete(http_parser *parser)
 	int proxy_auth_types = 0, server_auth_types = 0;
 
 	/* Enforce a reasonable cap on the number of replays */
-	if (s->replay_count++ >= GIT_HTTP_REPLAY_MAX) {
+	if (t->replay_count++ >= GIT_HTTP_REPLAY_MAX) {
 		giterr_set(GITERR_NET, "too many redirects or authentication replays");
 		return t->parse_error = PARSE_ERROR_GENERIC;
 	}
@@ -567,15 +577,19 @@ static int on_body_fill_buffer(http_parser *parser, const char *str, size_t len)
 	if (t->parse_error == PARSE_ERROR_REPLAY)
 		return 0;
 
-	if (ctx->buf_size < len) {
-		giterr_set(GITERR_NET, "can't fit data in the buffer");
-		return t->parse_error = PARSE_ERROR_GENERIC;
+	/* If there's no buffer set, we're explicitly ignoring the body. */
+	if (ctx->buffer) {
+		if (ctx->buf_size < len) {
+			giterr_set(GITERR_NET, "can't fit data in the buffer");
+			return t->parse_error = PARSE_ERROR_GENERIC;
+		}
+
+		memcpy(ctx->buffer, str, len);
+		ctx->buffer += len;
+		ctx->buf_size -= len;
 	}
 
-	memcpy(ctx->buffer, str, len);
 	*(ctx->bytes_read) += len;
-	ctx->buffer += len;
-	ctx->buf_size -= len;
 
 	return 0;
 }
@@ -600,6 +614,9 @@ static void clear_parser_state(http_subtransport *t)
 
 	git__free(t->content_type);
 	t->content_type = NULL;
+
+	git__free(t->content_length);
+	t->content_length = NULL;
 
 	git__free(t->location);
 	t->location = NULL;
@@ -734,6 +751,172 @@ static int stream_connect(
 	return error;
 }
 
+static int gen_connect_req(git_buf *buf, http_subtransport *t)
+{
+	git_buf_printf(buf, "CONNECT %s:%s HTTP/1.1\r\n",
+		t->server.url.host, t->server.url.port);
+
+	git_buf_puts(buf, "User-Agent: ");
+	git_http__user_agent(buf);
+	git_buf_puts(buf, "\r\n");
+
+	git_buf_printf(buf, "Host: %s\r\n", t->proxy.url.host);
+
+	if (apply_credentials(buf, &t->proxy, AUTH_HEADER_PROXY) < 0)
+		return -1;
+
+	git_buf_puts(buf, "\r\n");
+
+	return git_buf_oom(buf) ? -1 : 0;
+}
+
+static int proxy_headers_complete(http_parser *parser)
+{
+	parser_context *ctx = (parser_context *) parser->data;
+	http_subtransport *t = ctx->t;
+	int proxy_auth_types = 0;
+
+	/* Enforce a reasonable cap on the number of replays */
+	if (t->replay_count++ >= GIT_HTTP_REPLAY_MAX) {
+		giterr_set(GITERR_NET, "too many redirects or authentication replays");
+		return t->parse_error = PARSE_ERROR_GENERIC;
+	}
+
+	/* Both parse_header_name and parse_header_value are populated
+	 * and ready for consumption. */
+	if (VALUE == t->last_cb)
+		if (on_header_ready(t) < 0)
+			return t->parse_error = PARSE_ERROR_GENERIC;
+
+	/*
+	 * Capture authentication headers for the proxy or final endpoint,
+	 * these may be 407/401 (authentication is not complete) or a 200
+	 * (informing us that auth has completed).
+	 */
+	if (parse_authenticate_response(&t->proxy, &proxy_auth_types) < 0)
+		return t->parse_error = PARSE_ERROR_GENERIC;
+
+	/* Check for a proxy authentication failure. */
+	if (parser->status_code == 407)
+		return on_auth_required(&t->proxy.cred,
+			parser,
+			t->proxy_opts.url,
+			SERVER_TYPE_PROXY,
+			t->proxy_opts.credentials,
+			t->proxy_opts.payload,
+			t->proxy.url.user,
+			proxy_auth_types);
+
+	if (parser->status_code != 200) {
+		giterr_set(GITERR_NET, "unexpected status code from proxy: %d",
+			parser->status_code);
+		return t->parse_error = PARSE_ERROR_GENERIC;
+	}
+
+	if (!t->content_length || strcmp(t->content_length, "0") == 0)
+		t->parse_finished = 1;
+
+	return 0;
+}
+
+static int proxy_connect(
+	git_stream **out, git_stream *proxy_stream, http_subtransport *t)
+{
+	git_buf request = GIT_BUF_INIT;
+	static http_parser_settings proxy_parser_settings = {0};
+	size_t bytes_read = 0, bytes_parsed;
+	parser_context ctx;
+	int error;
+
+	/* Use the parser settings only to parser headers. */
+	proxy_parser_settings.on_header_field = on_header_field;
+	proxy_parser_settings.on_header_value = on_header_value;
+	proxy_parser_settings.on_headers_complete = proxy_headers_complete;
+	proxy_parser_settings.on_message_complete = on_message_complete;
+
+replay:
+	clear_parser_state(t);
+
+	gitno_buffer_setup_fromstream(proxy_stream,
+		&t->parse_buffer,
+		t->parse_buffer_data,
+		sizeof(t->parse_buffer_data));
+
+	if ((error = gen_connect_req(&request, t)) < 0)
+		goto done;
+
+	if ((error = git_stream_write(proxy_stream,
+	    request.ptr, request.size, 0)) < 0)
+		goto done;
+
+	git_buf_dispose(&request);
+
+	while (!bytes_read && !t->parse_finished) {
+		t->parse_buffer.offset = 0;
+
+		if ((error = gitno_recv(&t->parse_buffer)) < 0)
+			goto done;
+
+		/*
+		 * This call to http_parser_execute will invoke the on_*
+		 * callbacks.  Since we don't care about the body of the response,
+		 * we can set our buffer to NULL.
+		 */
+		ctx.t = t;
+		ctx.s = NULL;
+		ctx.buffer = NULL;
+		ctx.buf_size = 0;
+		ctx.bytes_read = &bytes_read;
+
+		/* Set the context, call the parser, then unset the context. */
+		t->parser.data = &ctx;
+
+		bytes_parsed = http_parser_execute(&t->parser,
+			&proxy_parser_settings, t->parse_buffer.data, t->parse_buffer.offset);
+
+		t->parser.data = NULL;
+
+		/* Ensure that we didn't get a redirect; unsupported. */
+		if (t->location) {
+			giterr_set(GITERR_NET, "proxy server sent unsupported redirect during CONNECT");
+			error = -1;
+			goto done;
+		}
+
+		/* Replay the request with authentication headers. */
+		if (PARSE_ERROR_REPLAY == t->parse_error)
+			goto replay;
+
+		if (t->parse_error < 0) {
+			error = t->parse_error == PARSE_ERROR_EXT ? PARSE_ERROR_EXT : -1;
+			goto done;
+		}
+
+		if (bytes_parsed != t->parse_buffer.offset) {
+			giterr_set(GITERR_NET,
+				"HTTP parser error: %s",
+				http_errno_description((enum http_errno)t->parser.http_errno));
+			error = -1;
+			goto done;
+		}
+	}
+
+	if ((error = git_tls_stream_wrap(out, proxy_stream, t->server.url.host)) == 0)
+		error = stream_connect(*out, &t->server.url,
+		    t->owner->certificate_check_cb,
+			t->owner->message_cb_payload);
+
+	/*
+	 * Since we've connected via a HTTPS proxy tunnel, we don't behave
+	 * as if we have an HTTP proxy.
+	 */
+	t->proxy_opts.type = GIT_PROXY_NONE;
+	t->replay_count = 0;
+
+done:
+	return error;
+}
+
 static int http_connect(http_subtransport *t)
 {
 	gitno_connection_data *url;
@@ -751,8 +934,15 @@ static int http_connect(http_subtransport *t)
 		git_stream_close(t->server.stream);
 		git_stream_free(t->server.stream);
 		t->server.stream = NULL;
-		t->connected = 0;
 	}
+
+	if (t->proxy.stream) {
+		git_stream_close(t->proxy.stream);
+		git_stream_free(t->proxy.stream);
+		t->proxy.stream = NULL;
+	}
+
+	t->connected = 0;
 
 	if (t->proxy_opts.type == GIT_PROXY_SPECIFIED) {
 		url = &t->proxy.url;
@@ -786,6 +976,21 @@ static int http_connect(http_subtransport *t)
 	if ((error = stream_connect(stream, url, cert_cb, cb_payload)) < 0)
 		goto on_error;
 
+	/*
+	 * At this point we have a connection to the remote server or to
+	 * a proxy.  If it's a proxy and the remote server is actually
+	 * an HTTPS connection, then we need to build a CONNECT tunnel.
+	 */
+	if (t->proxy_opts.type == GIT_PROXY_SPECIFIED &&
+		t->server.url.use_ssl) {
+		proxy_stream = stream;
+		stream = NULL;
+
+		if ((error = proxy_connect(&stream, proxy_stream, t)) < 0)
+			goto on_error;
+	}
+
+	t->proxy.stream = proxy_stream;
 	t->server.stream = stream;
 	t->connected = 1;
 	return 0;
@@ -1224,6 +1429,12 @@ static int http_close(git_smart_subtransport *subtransport)
 		git_stream_close(t->server.stream);
 		git_stream_free(t->server.stream);
 		t->server.stream = NULL;
+	}
+
+	if (t->proxy.stream) {
+		git_stream_close(t->proxy.stream);
+		git_stream_free(t->proxy.stream);
+		t->proxy.stream = NULL;
 	}
 
 	free_cred(&t->server.cred);
