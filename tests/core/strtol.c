@@ -64,6 +64,28 @@ void test_core_strtol__int64(void)
 	assert_l64_fails("-0x8000000000000001", 16);
 }
 
+void test_core_strtol__base_autodetection(void)
+{
+	assert_l64_parses("0", 0, 0);
+	assert_l64_parses("00", 0, 0);
+	assert_l64_parses("0x", 0, 0);
+	assert_l64_parses("0foobar", 0, 0);
+	assert_l64_parses("07", 7, 0);
+	assert_l64_parses("017", 15, 0);
+	assert_l64_parses("0x8", 8, 0);
+	assert_l64_parses("0x18", 24, 0);
+}
+
+void test_core_strtol__buffer_length_with_autodetection_truncates(void)
+{
+	int64_t i64;
+
+	cl_git_pass(git__strntol64(&i64, "011", 2, NULL, 0));
+	cl_assert_equal_i(i64, 1);
+	cl_git_pass(git__strntol64(&i64, "0x11", 3, NULL, 0));
+	cl_assert_equal_i(i64, 1);
+}
+
 void test_core_strtol__buffer_length_truncates(void)
 {
 	int32_t i32;
