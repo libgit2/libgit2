@@ -399,22 +399,21 @@ static int tree_error(const char *str, const char *path)
 	return -1;
 }
 
-static int parse_mode(unsigned int *modep, const char *buffer, size_t buffer_len, const char **buffer_out)
+static int parse_mode(uint16_t *mode_out, const char *buffer, size_t buffer_len, const char **buffer_out)
 {
-	const char *buffer_end = buffer + buffer_len;
-	unsigned char c;
-	unsigned int mode = 0;
+	int32_t mode;
+	int error;
 
-	if (*buffer == ' ')
+	if (!buffer_len || git__isspace(*buffer))
 		return -1;
 
-	while (buffer < buffer_end && (c = *buffer++) != ' ') {
-		if (c < '0' || c > '7')
-			return -1;
-		mode = (mode << 3) + (c - '0');
-	}
-	*modep = mode;
-	*buffer_out = buffer;
+	if ((error = git__strntol32(&mode, buffer, buffer_len, buffer_out, 8)) < 0)
+		return error;
+
+	if (mode < 0 || mode > UINT16_MAX)
+		return -1;
+
+	*mode_out = mode;
 
 	return 0;
 }
@@ -438,10 +437,13 @@ int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 		git_tree_entry *entry;
 		size_t filename_len;
 		const char *nul;
-		unsigned int attr;
+		uint16_t attr;
 
 		if (parse_mode(&attr, buffer, buffer_end - buffer, &buffer) < 0 || !buffer)
 			return tree_error("failed to parse tree: can't parse filemode", NULL);
+
+		if (buffer >= buffer_end || (*buffer++) != ' ')
+			return tree_error("failed to parse tree: missing space after filemode", NULL);
 
 		if ((nul = memchr(buffer, 0, buffer_end - buffer)) == NULL)
 			return tree_error("failed to parse tree: object is corrupted", NULL);
