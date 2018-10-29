@@ -118,7 +118,13 @@ void test_object_tree_parse__mode_doesnt_cause_oob_read(void)
 	 * later fail to parse the OID with a different error
 	 * message
 	 */
-	cl_assert(strstr(giterr_last()->message, "object is corrupted"));
+	cl_assert_equal_s(giterr_last()->message, "failed to parse tree: missing space after filemode");
+}
+
+void test_object_tree_parse__unreasonably_large_mode_fails(void)
+{
+	const char data[] = "10000000000000000000000000 bar\x00" OID1_HEX;
+	assert_tree_fails(data, ARRAY_SIZE(data) - 1);
 }
 
 void test_object_tree_parse__missing_filename_separator_fails(void)
