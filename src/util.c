@@ -83,8 +83,11 @@ int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const cha
 	/*
 	 * White space
 	 */
-	while (git__isspace(*p))
-		p++;
+	while (nptr_len && git__isspace(*p))
+		p++, nptr_len--;
+
+	if (!nptr_len)
+		goto Return;
 
 	/*
 	 * Sign
