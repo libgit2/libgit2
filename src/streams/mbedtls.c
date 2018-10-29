@@ -490,23 +490,4 @@ int git_mbedtls_stream_global_init(void)
 	return 0;
 }
 
-int git_mbedtls_stream_new(git_stream **out, const char *host, const char *port)
-{
-	GIT_UNUSED(out);
-	GIT_UNUSED(host);
-	GIT_UNUSED(port);
-
-	giterr_set(GITERR_SSL, "mbedTLS is not supported in this version");
-	return -1;
-}
-
-int git_mbedtls__set_cert_location(const char *path, int is_dir)
-{
-	GIT_UNUSED(path);
-	GIT_UNUSED(is_dir);
-
-	giterr_set(GITERR_SSL, "mbedTLS is not supported in this version");
-	return -1;
-}
-
 #endif
