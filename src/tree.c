@@ -356,15 +356,16 @@ static int tree_error(const char *str, const char *path)
 	return -1;
 }
 
-static int parse_mode(unsigned int *modep, const char *buffer, const char **buffer_out)
+static int parse_mode(unsigned int *modep, const char *buffer, size_t buffer_len, const char **buffer_out)
 {
+	const char *buffer_end = buffer + buffer_len;
 	unsigned char c;
 	unsigned int mode = 0;
 
 	if (*buffer == ' ')
 		return -1;
 
-	while ((c = *buffer++) != ' ') {
+	while (buffer < buffer_end && (c = *buffer++) != ' ') {
 		if (c < '0' || c > '7')
 			return -1;
 		mode = (mode << 3) + (c - '0');
@@ -394,7 +395,7 @@ int git_tree__parse_raw(void *_tree, const char *data, size_t size)
 		const char *nul;
 		unsigned int attr;
 
-		if (parse_mode(&attr, buffer, &buffer) < 0 || !buffer)
+		if (parse_mode(&attr, buffer, buffer_end - buffer, &buffer) < 0 || !buffer)
 			return tree_error("failed to parse tree: can't parse filemode", NULL);
 
 		if ((nul = memchr(buffer, 0, buffer_end - buffer)) == NULL)

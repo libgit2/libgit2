@@ -109,6 +109,18 @@ void test_object_tree_parse__missing_mode_fails(void)
 	assert_tree_fails(data, ARRAY_SIZE(data) - 1);
 }
 
+void test_object_tree_parse__mode_doesnt_cause_oob_read(void)
+{
+	const char data[] = "100644 bar\x00" OID1_HEX;
+	assert_tree_fails(data, 2);
+	/*
+	 * An oob-read would correctly parse the filename and
+	 * later fail to parse the OID with a different error
+	 * message
+	 */
+	cl_assert(strstr(giterr_last()->message, "object is corrupted"));
+}
+
 void test_object_tree_parse__missing_filename_separator_fails(void)
 {
 	const char data[] = "100644bar\x00" OID1_HEX;
