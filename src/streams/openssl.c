@@ -19,10 +19,6 @@
 #include "git2/transport.h"
 #include "git2/sys/openssl.h"
 
-#ifdef GIT_CURL
-# include "streams/curl.h"
-#endif
-
 #ifndef GIT_WIN32
 # include <sys/types.h>
 # include <sys/socket.h>
@@ -752,13 +748,7 @@ int git_openssl_stream_new(git_stream **out, const char *host, const char *port)
 
 	assert(out && host && port);
 
-#ifdef GIT_CURL
-	error = git_curl_stream_new(&stream, host, port);
-#else
-	error = git_socket_stream_new(&stream, host, port);
-#endif
-
-	if (error < 0)
+	if ((error = git_socket_stream_new(&stream, host, port)) < 0)
 		return error;
 
 	if ((error = openssl_stream_wrap(out, stream, host, 1)) < 0) {

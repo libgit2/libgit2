@@ -21,7 +21,6 @@
 #include "auth_negotiate.h"
 #include "streams/tls.h"
 #include "streams/socket.h"
-#include "streams/curl.h"
 
 git_http_auth_scheme auth_schemes[] = {
 	{ GIT_AUTHTYPE_NEGOTIATE, "Negotiate", GIT_CREDTYPE_DEFAULT, git_http_auth_negotiate },
@@ -653,17 +652,6 @@ static int write_chunk(git_stream *io, const char *buffer, size_t len)
 	return 0;
 }
 
-static int apply_proxy_config_to_stream(
-	git_stream *stream, git_proxy_options *proxy_opts)
-{
-	/* Only set the proxy configuration on the curl stream. */
-	if (!git_stream_supports_proxy(stream) ||
-	    proxy_opts->type == GIT_PROXY_NONE)
-		return 0;
-
-	return git_stream_set_proxy(stream, proxy_opts);
-}
-
 static int load_proxy_config(http_subtransport *t)
 {
 	int error;
@@ -954,21 +942,10 @@ static int http_connect(http_subtransport *t)
 		cb_payload = t->owner->message_cb_payload;
 	}
 
-#ifdef GIT_CURL
-	if ((error = git_curl_stream_new(&stream,
-	        t->server.url.host, t->server.url.port)) < 0)
-		goto on_error;
-
-	GITERR_CHECK_VERSION(stream, GIT_STREAM_VERSION, "git_stream");
-
-	if ((error = apply_proxy_config_to_stream(stream, &t->proxy_opts)) < 0)
-		goto on_error;
-#else
 	if (url->use_ssl)
 		error = git_tls_stream_new(&stream, url->host, url->port);
 	else
 		error = git_socket_stream_new(&stream, url->host, url->port);
-#endif
 
 	if (error < 0)
 		goto on_error;

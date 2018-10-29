@@ -16,7 +16,6 @@
 #include "git2/transport.h"
 
 #include "streams/socket.h"
-#include "streams/curl.h"
 
 static int stransport_error(OSStatus ret)
 {
@@ -308,11 +307,7 @@ int git_stransport_stream_new(git_stream **out, const char *host, const char *po
 
 	assert(out && host);
 
-#ifdef GIT_CURL
-	error = git_curl_stream_new(&stream, host, port);
-#else
 	error = git_socket_stream_new(&stream, host, port);
-#endif
 
 	if (!error)
 		error = stransport_wrap(out, stream, host, 1);
