@@ -76,6 +76,16 @@ void test_core_strtol__buffer_length_truncates(void)
 	cl_assert_equal_i(i64, 1);
 }
 
+void test_core_strtol__buffer_length_with_leading_ws_truncates(void)
+{
+	int64_t i64;
+
+	cl_git_fail(git__strntol64(&i64, " 1", 1, NULL, 10));
+
+	cl_git_pass(git__strntol64(&i64, " 11", 2, NULL, 10));
+	cl_assert_equal_i(i64, 1);
+}
+
 void test_core_strtol__error_message_cuts_off(void)
 {
 	assert_l32_fails("2147483657foobar", 10);
