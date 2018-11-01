@@ -137,23 +137,10 @@ typedef enum {
 	GIT_CREDTYPE_SSH_MEMORY = (1u << 6),
 } git_credtype_t;
 
-typedef struct git_cred git_cred;
-
 /**
  * The base structure for all credential types
  */
-struct git_cred {
-	git_credtype_t credtype; /**< A type of credential */
-	void (*free)(git_cred *cred);
-};
-
-/** A plaintext username and password */
-typedef struct {
-	git_cred parent;
-	char *username;
-	char *password;
-} git_cred_userpass_plaintext;
-
+typedef struct git_cred git_cred;
 
 /*
  * If the user hasn't included libssh2.h before git2.h, we need to
@@ -167,48 +154,6 @@ typedef struct _LIBSSH2_USERAUTH_KBDINT_RESPONSE LIBSSH2_USERAUTH_KBDINT_RESPONS
 
 typedef int (*git_cred_sign_callback)(LIBSSH2_SESSION *session, unsigned char **sig, size_t *sig_len, const unsigned char *data, size_t data_len, void **abstract);
 typedef void (*git_cred_ssh_interactive_callback)(const char* name, int name_len, const char* instruction, int instruction_len, int num_prompts, const LIBSSH2_USERAUTH_KBDINT_PROMPT* prompts, LIBSSH2_USERAUTH_KBDINT_RESPONSE* responses, void **abstract);
-
-/**
- * A ssh key from disk
- */
-typedef struct git_cred_ssh_key {
-	git_cred parent;
-	char *username;
-	char *publickey;
-	char *privatekey;
-	char *passphrase;
-} git_cred_ssh_key;
-
-/**
- * Keyboard-interactive based ssh authentication
- */
-typedef struct git_cred_ssh_interactive {
-	git_cred parent;
-	char *username;
-	git_cred_ssh_interactive_callback prompt_callback;
-	void *payload;
-} git_cred_ssh_interactive;
-
-/**
- * A key with a custom signature function
- */
-typedef struct git_cred_ssh_custom {
-	git_cred parent;
-	char *username;
-	char *publickey;
-	size_t publickey_len;
-	git_cred_sign_callback sign_callback;
-	void *payload;
-} git_cred_ssh_custom;
-
-/** A key for NTLM/Kerberos "default" credentials */
-typedef struct git_cred git_cred_default;
-
-/** Username-only credential information */
-typedef struct git_cred_username {
-	git_cred parent;
-	char username[1];
-} git_cred_username;
 
 /**
  * Check whether a credential object contains username information.

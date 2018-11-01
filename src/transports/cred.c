@@ -9,6 +9,7 @@
 
 #include "git2.h"
 #include "smart.h"
+#include "git2/sys/cred.h"
 #include "git2/cred_helpers.h"
 
 static int git_cred_ssh_key_type_new(

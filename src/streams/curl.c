@@ -13,6 +13,7 @@
 
 #include "stream.h"
 #include "git2/transport.h"
+#include "git2/sys/cred.h"
 #include "buffer.h"
 #include "global.h"
 #include "vector.h"

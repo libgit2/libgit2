@@ -1,4 +1,5 @@
 #include "clar_libgit2.h"
+#include "git2/sys/cred.h"
 
 #include "git2/cred_helpers.h"
 
