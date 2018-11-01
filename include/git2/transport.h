@@ -104,9 +104,9 @@ typedef enum {
 
 	/**
 	 * An NTLM/Negotiate-based authentication request.
-	 * @see git_cred_default
+	 * @see git_cred_negotiate
 	 */
-	GIT_CREDTYPE_DEFAULT = (1u << 3),
+	GIT_CREDTYPE_NEGOTIATE = (1u << 3),
 
 	/**
 	 * An SSH interactive authentication request
@@ -249,12 +249,12 @@ GIT_EXTERN(int) git_cred_ssh_custom_new(
 	void *payload);
 
 /**
- * Create a "default" credential usable for Negotiate mechanisms like NTLM
+ * Create a credential object usable for Negotiate mechanisms like NTLM
  * or Kerberos authentication.
  *
  * @return 0 for success or an error code for failure
  */
-GIT_EXTERN(int) git_cred_default_new(git_cred **out);
+GIT_EXTERN(int) git_cred_negotiate_new(git_cred **out);
 
 /**
  * Create a credential to specify a username.

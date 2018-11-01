@@ -30,7 +30,7 @@ typedef struct git_cred_username {
 } git_cred_username;
 
 /** A key for NTLM/Kerberos "default" credentials */
-typedef struct git_cred git_cred_default;
+typedef struct git_cred git_cred_negotiate;
 
 /**
  * A ssh key from disk

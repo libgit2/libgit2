@@ -322,7 +322,7 @@ void test_online_clone__cred_callback_called_again_on_auth_failure(void)
 	cl_assert_equal_i(3, counter);
 }
 
-int cred_default(
+int cred_negotiate(
 	git_cred **cred,
 	const char *url,
 	const char *user_from_url,
@@ -333,10 +333,10 @@ int cred_default(
 	GIT_UNUSED(user_from_url);
 	GIT_UNUSED(payload);
 
-	if (!(allowed_types & GIT_CREDTYPE_DEFAULT))
+	if (!(allowed_types & GIT_CREDTYPE_NEGOTIATE))
 		return 0;
 
-	return git_cred_default_new(cred);
+	return git_cred_negotiate_new(cred);
 }
 
 void test_online_clone__credentials(void)
@@ -353,7 +353,7 @@ void test_online_clone__credentials(void)
 		clar__skip();
 
 	if (cl_is_env_set("GITTEST_REMOTE_DEFAULT")) {
-		g_options.fetch_opts.callbacks.credentials = cred_default;
+		g_options.fetch_opts.callbacks.credentials = cred_negotiate;
 	} else {
 		g_options.fetch_opts.callbacks.credentials = git_cred_userpass;
 		g_options.fetch_opts.callbacks.payload = &user_pass;

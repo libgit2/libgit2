@@ -218,7 +218,7 @@ static int fallback_cred_acquire_cb(
 
 	/* If the target URI supports integrated Windows authentication
 	 * as an authentication mechanism */
-	if (GIT_CREDTYPE_DEFAULT & allowed_types) {
+	if (GIT_CREDTYPE_NEGOTIATE & allowed_types) {
 		wchar_t *wide_url;
 		HRESULT hCoInitResult;
 
@@ -582,7 +582,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		apply_userpass_credential(s->request, t->auth_mechanisms, t->cred) < 0)
 		goto on_error;
 	else if (t->cred &&
-		t->cred->credtype == GIT_CREDTYPE_DEFAULT &&
+		t->cred->credtype == GIT_CREDTYPE_NEGOTIATE &&
 		apply_default_credentials(s->request, t->auth_mechanisms) < 0)
 		goto on_error;
 
@@ -629,12 +629,12 @@ static int parse_unauthorized_response(
 
 	if (WINHTTP_AUTH_SCHEME_NTLM & supported) {
 		*allowed_types |= GIT_CREDTYPE_USERPASS_PLAINTEXT;
-		*allowed_types |= GIT_CREDTYPE_DEFAULT;
+		*allowed_types |= GIT_CREDTYPE_NEGOTIATE;
 		*allowed_mechanisms |= GIT_WINHTTP_AUTH_NTLM;
 	}
 
 	if (WINHTTP_AUTH_SCHEME_NEGOTIATE & supported) {
-		*allowed_types |= GIT_CREDTYPE_DEFAULT;
+		*allowed_types |= GIT_CREDTYPE_NEGOTIATE;
 		*allowed_mechanisms |= GIT_WINHTTP_AUTH_NEGOTIATE;
 	}
 

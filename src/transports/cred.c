@@ -22,7 +22,7 @@ static int git_cred_ssh_key_type_new(
 
 int git_cred_has_username(git_cred *cred)
 {
-	if (cred->credtype == GIT_CREDTYPE_DEFAULT)
+	if (cred->credtype == GIT_CREDTYPE_NEGOTIATE)
 		return 0;
 
 	return 1;
@@ -168,9 +168,9 @@ static void ssh_custom_free(struct git_cred *cred)
 	git__free(c);
 }
 
-static void default_free(struct git_cred *cred)
+static void negotiate_free(struct git_cred *cred)
 {
-	git_cred_default *c = (git_cred_default *)cred;
+	git_cred_negotiate *c = (git_cred_negotiate *)cred;
 
 	git__free(c);
 }
@@ -344,17 +344,17 @@ int git_cred_ssh_custom_new(
 	return 0;
 }
 
-int git_cred_default_new(git_cred **cred)
+int git_cred_negotiate_new(git_cred **cred)
 {
-	git_cred_default *c;
+	git_cred_negotiate *c;
 
 	assert(cred);
 
-	c = git__calloc(1, sizeof(git_cred_default));
+	c = git__calloc(1, sizeof(git_cred_negotiate));
 	GITERR_CHECK_ALLOC(c);
 
-	c->credtype = GIT_CREDTYPE_DEFAULT;
-	c->free = default_free;
+	c->credtype = GIT_CREDTYPE_NEGOTIATE;
+	c->free = negotiate_free;
 
 	*cred = c;
 	return 0;

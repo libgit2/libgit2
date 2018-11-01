@@ -25,7 +25,7 @@
 #include "streams/curl.h"
 
 git_http_auth_scheme auth_schemes[] = {
-	{ GIT_AUTHTYPE_NEGOTIATE, "Negotiate", GIT_CREDTYPE_DEFAULT, git_http_auth_negotiate },
+	{ GIT_AUTHTYPE_NEGOTIATE, "Negotiate", GIT_CREDTYPE_NEGOTIATE, git_http_auth_negotiate },
 	{ GIT_AUTHTYPE_BASIC, "Basic", GIT_CREDTYPE_USERPASS_PLAINTEXT, git_http_auth_basic },
 };
 

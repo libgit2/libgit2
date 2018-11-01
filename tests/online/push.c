@@ -59,13 +59,13 @@ static int cred_acquire_cb(
 		return git_cred_username_new(cred, _remote_user);
 	}
 
-	if (GIT_CREDTYPE_DEFAULT & allowed_types) {
+	if (GIT_CREDTYPE_NEGOTIATE & allowed_types) {
 		if (!_remote_default) {
 			printf("GITTEST_REMOTE_DEFAULT must be set to use NTLM/Negotiate credentials\n");
 			return -1;
 		}
 
-		return git_cred_default_new(cred);
+		return git_cred_negotiate_new(cred);
 	}
 
 	if (GIT_CREDTYPE_SSH_KEY & allowed_types) {
