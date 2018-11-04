@@ -225,6 +225,16 @@
 	"rename from beef.txt\n" \
 	"rename to notbeef.txt\n"
 
+#define DIFF_RENAME_CIRCULAR \
+	"diff --git a/asparagus.txt b/beef.txt\n" \
+	"similarity index 100%\n" \
+	"rename from asparagus.txt\n" \
+	"rename to beef.txt\n" \
+	"diff --git a/beef.txt b/notbeef.txt\n" \
+	"similarity index 100%\n" \
+	"rename from beef.txt\n" \
+	"rename to asparagus.txt\n"
+
 struct iterator_compare_data {
 	struct merge_index_entry *expected;
 	size_t cnt;
