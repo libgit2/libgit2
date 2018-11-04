@@ -422,6 +422,7 @@ static int apply_one(
 	git_repository *repo,
 	git_reader *preimage_reader,
 	git_index *preimage,
+	git_reader *postimage_reader,
 	git_index *postimage,
 	git_diff *diff,
 	size_t i,
@@ -435,6 +436,7 @@ static int apply_one(
 	git_oid pre_id, post_id;
 	git_filemode_t pre_filemode;
 	git_index_entry pre_entry, post_entry;
+	bool skip_preimage = false;
 	int error;
 
 	if ((error = git_patch_from_diff(&patch, diff, i)) < 0)
@@ -453,7 +455,26 @@ static int apply_one(
 		}
 	}
 
-	if (delta->status != GIT_DELTA_ADDED) {
+	/*
+	 * We may be applying a second delta to an already seen file.  If so,
+	 * use the already modified data in the postimage instead of the
+	 * content from the index or working directory.  (Renames must be
+	 * specified before additional deltas since we are applying deltas
+	 * to the _target_ filename.)
+	 */
+	if (delta->status != GIT_DELTA_RENAMED) {
+		if ((error = git_reader_read(&pre_contents, &pre_id, &pre_filemode,
+		    postimage_reader, delta->old_file.path)) == 0) {
+			skip_preimage = true;
+		} else if (error == GIT_ENOTFOUND) {
+			giterr_clear();
+			error = 0;
+		} else {
+			goto done;
+		}
+	}
+
+	if (!skip_preimage && delta->status != GIT_DELTA_ADDED) {
 		error = git_reader_read(&pre_contents, &pre_id, &pre_filemode,
 			preimage_reader, delta->old_file.path);
 
@@ -527,7 +548,7 @@ int git_apply_to_tree(
 	const git_apply_options *given_opts)
 {
 	git_index *postimage = NULL;
-	git_reader *pre_reader = NULL;
+	git_reader *pre_reader = NULL, *post_reader = NULL;
 	git_apply_options opts = GIT_APPLY_OPTIONS_INIT;
 	const git_diff_delta *delta;
 	size_t i;
@@ -548,7 +569,8 @@ int git_apply_to_tree(
 	 * replace any entries contained therein
 	 */
 	if ((error = git_index_new(&postimage)) < 0 ||
-		(error = git_index_read_tree(postimage, preimage)) < 0)
+		(error = git_index_read_tree(postimage, preimage)) < 0 ||
+		(error = git_reader_for_index(&post_reader, repo, postimage)) < 0)
 		goto done;
 
 	/*
@@ -565,7 +587,7 @@ int git_apply_to_tree(
 	}
 
 	for (i = 0; i < git_diff_num_deltas(diff); i++) {
-		if ((error = apply_one(repo, pre_reader, NULL, postimage, diff, i, &opts)) < 0)
+		if ((error = apply_one(repo, pre_reader, NULL, post_reader, postimage, diff, i, &opts)) < 0)
 			goto done;
 	}
 
@@ -576,6 +598,7 @@ done:
 		git_index_free(postimage);
 
 	git_reader_free(pre_reader);
+	git_reader_free(post_reader);
 
 	return error;
 }
@@ -700,7 +723,7 @@ int git_apply(
 {
 	git_indexwriter indexwriter = GIT_INDEXWRITER_INIT;
 	git_index *index = NULL, *preimage = NULL, *postimage = NULL;
-	git_reader *pre_reader = NULL;
+	git_reader *pre_reader = NULL, *post_reader = NULL;
 	git_apply_options opts = GIT_APPLY_OPTIONS_INIT;
 	size_t i;
 	int error = GIT_EINVALID;
@@ -743,7 +766,8 @@ int git_apply(
 	 * to only write these files that were affected by the diff.
 	 */
 	if ((error = git_index_new(&preimage)) < 0 ||
-	    (error = git_index_new(&postimage)) < 0)
+	    (error = git_index_new(&postimage)) < 0 ||
+	    (error = git_reader_for_index(&post_reader, repo, postimage)) < 0)
 		goto done;
 
 	if ((error = git_repository_index(&index, repo)) < 0 ||
@@ -751,7 +775,7 @@ int git_apply(
 		goto done;
 
 	for (i = 0; i < git_diff_num_deltas(diff); i++) {
-		if ((error = apply_one(repo, pre_reader, preimage, postimage, diff, i, &opts)) < 0)
+		if ((error = apply_one(repo, pre_reader, preimage, post_reader, postimage, diff, i, &opts)) < 0)
 			goto done;
 	}
 
@@ -780,6 +804,7 @@ done:
 	git_index_free(preimage);
 	git_index_free(index);
 	git_reader_free(pre_reader);
+	git_reader_free(post_reader);
 
 	return error;
 }

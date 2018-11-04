@@ -255,6 +255,28 @@
 	"rename from asparagus.txt\n" \
 	"rename to 2.txt\n"
 
+#define DIFF_TWO_DELTAS_ONE_FILE \
+	"diff --git a/beef.txt b/beef.txt\n" \
+	"index 68f6182..235069d 100644\n" \
+	"--- a/beef.txt\n" \
+	"+++ b/beef.txt\n" \
+	"@@ -1,4 +1,4 @@\n" \
+	"-BEEF SOUP.\n" \
+	"+BEEF SOUP!\n" \
+	"\n" \
+	" Take the hind shin of beef, cut off all the flesh off the leg-bone,\n" \
+	" which must be taken away entirely, or the soup will be greasy. Wash the\n" \
+	"diff --git a/beef.txt b/beef.txt\n" \
+	"index 68f6182..e059eb5 100644\n" \
+	"--- a/beef.txt\n" \
+	"+++ b/beef.txt\n" \
+	"@@ -19,4 +19,4 @@ a ladle full of the soup, a little at a time; stirring it all the while.\n" \
+	" Strain this browning and mix it well with the soup; take out the bundle\n" \
+	" of thyme and parsley, put the nicest pieces of meat in your tureen, and\n" \
+	" pour on the soup and vegetables; put in some toasted bread cut in dice,\n" \
+	"-and serve it up.\n" \
+	"+and serve it up!\n"
+
 struct iterator_compare_data {
 	struct merge_index_entry *expected;
 	size_t cnt;
