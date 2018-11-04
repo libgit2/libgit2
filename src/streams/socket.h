@@ -20,4 +20,6 @@ typedef struct {
 
 extern int git_socket_stream_new(git_stream **out, const char *host, const char *port);
 
+extern int git_socket_stream_new_native(git_stream **out, const char *host, const char *port, GIT_SOCKET s);
+
 #endif

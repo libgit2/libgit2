@@ -17,7 +17,9 @@
 #include "netops.h"
 #include "smart.h"
 #include "cred.h"
+#include "posix.h"
 #include "streams/socket.h"
+#include "git2/sys/transport.h"
 
 #ifdef GIT_SSH
 
@@ -45,6 +47,7 @@ typedef struct {
 	git_cred *cred;
 	char *cmd_uploadpack;
 	char *cmd_receivepack;
+	git_transport_ssh_options *options;
 } ssh_subtransport;
 
 static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *username);
@@ -520,6 +523,7 @@ static int _git_ssh_setup_conn(
 	git_cred *cred = NULL;
 	LIBSSH2_SESSION* session=NULL;
 	LIBSSH2_CHANNEL* channel=NULL;
+	GIT_SOCKET sock = INVALID_SOCKET;
 
 	t->current_stream = NULL;
 
@@ -547,13 +551,26 @@ static int _git_ssh_setup_conn(
 	GITERR_CHECK_ALLOC(port);
 
 post_extract:
-	if ((error = git_socket_stream_new(&s->io, host, port)) < 0 ||
+	if (t->options != NULL && t->options->socket != NULL) {
+		error = t->options->socket(&sock, url, t->options->payload);
+		if (error == GIT_PASSTHROUGH) {
+			sock = INVALID_SOCKET;
+			error = 0;
+		}
+		else if (error < 0) {
+			sock = INVALID_SOCKET;
+			goto done;
+		}
+	}
+
+	if ((error = git_socket_stream_new_native(&s->io, host, port, sock)) < 0 ||
 	    (error = git_stream_connect(s->io)) < 0)
 		goto done;
 
 	if ((error = _git_ssh_session_create(&session, s->io)) < 0)
 		goto done;
 
+post_session:
 	if (t->owner->certificate_check_cb != NULL) {
 		git_cert_hostkey cert = {{ 0 }}, *cert_ptr;
 		const char *key;
@@ -768,6 +785,7 @@ static void _ssh_free(git_smart_subtransport *subtransport)
 
 	git__free(t->cmd_uploadpack);
 	git__free(t->cmd_receivepack);
+	git__free(t->options);
 	git__free(t);
 }
 
@@ -891,6 +909,43 @@ int git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *p
 #else
 	GIT_UNUSED(owner);
 	GIT_UNUSED(payload);
+
+	assert(out);
+	*out = NULL;
+
+	giterr_set(GITERR_INVALID, "cannot create SSH transport. Library was built without SSH support");
+	return -1;
+#endif
+}
+
+int git_transport_ssh_with_options(git_transport **out, git_remote *owner, git_transport_ssh_options *options) {
+#ifdef GIT_SSH
+	git_transport *transport;
+	transport_smart *smart;
+	ssh_subtransport *t;
+	int error;
+	git_smart_subtransport_definition ssh_definition = {
+		git_smart_subtransport_ssh,
+		0, /* no RPC */
+		NULL,
+	};
+
+	if ((error = git_transport_smart(&transport, owner, &ssh_definition)) < 0)
+		return error;
+
+	smart = (transport_smart *) transport;
+	t = (ssh_subtransport *) smart->wrapped;
+
+    if (options != NULL) {
+        t->options = git__calloc(sizeof(git_transport_ssh_options), 1);
+        memcpy(t->options, options, sizeof(git_transport_ssh_options));
+    }
+
+	*out = transport;
+	return 0;
+#else
+	GIT_UNUSED(owner);
+	GIT_UNUSED(options);
 
 	assert(out);
 	*out = NULL;

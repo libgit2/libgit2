@@ -12,6 +12,12 @@
 #include "git2/types.h"
 #include "git2/strarray.h"
 #include "git2/proxy.h"
+#include "git2/transport.h"
+
+#ifdef GIT_WIN32
+/* For SOCKET and INVALID_SOCKET */
+#include <winsock2.h>
+#endif
 
 /**
  * @file git2/sys/transport.h
@@ -147,6 +153,48 @@ GIT_EXTERN(int) git_transport_new(git_transport **out, git_remote *owner, const 
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *payload);
+
+typedef struct {
+    unsigned int version;
+    /**
+     * Called to create and connect the socket for the SSH session.
+     * On Win32, this should be a handle to a Winsock SOCKET.
+     * On other platforms, this should be a handle to a socket file descriptor.
+     * The library will take responsibility for closing the provided socket.
+     * 
+     * Returning GIT_PASSTHROUGH will make libgit2 behave as
+     * though this field isn't set.
+     */
+#ifdef GIT_WIN32
+    int (*socket)(SOCKET *out, const char *url, void *payload);
+#else
+    int (*socket)(int *out, const char *url, void *payload);
+#endif
+
+    /**
+     * This will be passed to each of the callbacks in this struct
+     * as the last parameter.
+     */
+    void *payload;
+} git_transport_ssh_options;
+
+#define GIT_TRANSPORT_SSH_OPTIONS_VERSION 1
+#define GIT_TRANSPORT_SSH_OPTIONS_INIT {GIT_TRANSPORT_SSH_OPTIONS_VERSION}
+
+/**
+ * Create an ssh transport with custom SSH transport options
+ * 
+ * This function allows the user to provide specific options for creating
+ * and configuring an SSH transport.
+ * 
+ * The options struct will be internally duplicated.
+ *
+ * @param out The newly created transport (out)
+ * @param owner The git_remote which will own this transport
+ * @param options The options to use
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_transport_ssh_with_options(git_transport **out, git_remote *owner, git_transport_ssh_options *options);
 
 /**
  * Add a custom transport definition, to be used in addition to the built-in
