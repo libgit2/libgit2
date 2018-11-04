@@ -172,6 +172,13 @@ typedef struct {
 #endif
 
     /**
+     * Called to configure the underlying SSH session options.
+     * The user may set options on the session, such as restricting the
+     * set of ciphers or key-exchange algorithms available.
+     */
+    int (*session_configure)(LIBSSH2_SESSION *session, const char *url, void *payload);
+
+    /**
      * This will be passed to each of the callbacks in this struct
      * as the last parameter.
      */

@@ -478,7 +478,9 @@ static int request_creds(git_cred **out, ssh_subtransport *t, const char *user, 
 
 static int _git_ssh_session_create(
 	LIBSSH2_SESSION** session,
-	git_stream *io)
+	git_stream *io,
+	const char *url,
+	ssh_subtransport *t)
 {
 	int rc = 0;
 	LIBSSH2_SESSION* s;
@@ -490,6 +492,14 @@ static int _git_ssh_session_create(
 	if (!s) {
 		giterr_set(GITERR_NET, "failed to initialize SSH session");
 		return -1;
+	}
+
+	if (t->options != NULL && t->options->session_configure != NULL) {
+		/* Call the session configure callback */
+		rc = t->options->session_configure(s, url, t->options->payload);
+		if (rc != GIT_OK && rc != GIT_PASSTHROUGH) {
+			return rc;
+		}
 	}
 
 	do {
@@ -567,10 +577,9 @@ post_extract:
 	    (error = git_stream_connect(s->io)) < 0)
 		goto done;
 
-	if ((error = _git_ssh_session_create(&session, s->io)) < 0)
+	if ((error = _git_ssh_session_create(&session, s->io, url, t)) < 0)
 		goto done;
 
-post_session:
 	if (t->owner->certificate_check_cb != NULL) {
 		git_cert_hostkey cert = {{ 0 }}, *cert_ptr;
 		const char *key;
