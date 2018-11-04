@@ -650,3 +650,14 @@ void test_apply_both__rename_and_modify_deltas(void)
 
 	git_diff_free(diff);
 }
+
+void test_apply_both__cant_rename_after_modify(void)
+{
+	git_diff *diff;
+
+	cl_git_pass(git_diff_from_buffer(&diff, DIFF_RENAME_AFTER_MODIFY,
+		strlen(DIFF_RENAME_AFTER_MODIFY)));
+	cl_git_fail(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
+
+	git_diff_free(diff);
+}
