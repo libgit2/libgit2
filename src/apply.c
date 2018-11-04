@@ -433,6 +433,7 @@ static int apply_one(
 	char *filename = NULL;
 	unsigned int mode;
 	git_oid pre_id, post_id;
+	git_filemode_t pre_filemode;
 	git_index_entry pre_entry, post_entry;
 	int error;
 
@@ -453,7 +454,7 @@ static int apply_one(
 	}
 
 	if (delta->status != GIT_DELTA_ADDED) {
-		error = git_reader_read(&pre_contents, &pre_id,
+		error = git_reader_read(&pre_contents, &pre_id, &pre_filemode,
 			preimage_reader, delta->old_file.path);
 
 		/* ENOTFOUND means the preimage was not found; apply failed. */
@@ -477,11 +478,15 @@ static int apply_one(
 		 * application.  (Without this, we would fail to write the
 		 * postimage contents to any file that had been modified
 		 * from HEAD on-disk, even if the patch application succeeded.)
+		 * Use the contents from the delta where available - some
+		 * fields may not be available, like the old file mode (eg in
+		 * an exact rename situation) so trust the patch parsing to
+		 * validate and use the preimage data in that case.
 		 */
 		if (preimage) {
 			memset(&pre_entry, 0, sizeof(git_index_entry));
 			pre_entry.path = delta->old_file.path;
-			pre_entry.mode = delta->old_file.mode;
+			pre_entry.mode = delta->old_file.mode ? delta->old_file.mode : pre_filemode;
 			git_oid_cpy(&pre_entry.id, &pre_id);
 
 			if ((error = git_index_add(preimage, &pre_entry)) < 0)

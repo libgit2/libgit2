@@ -112,6 +112,12 @@
 	"+but the shin OR knuckle is the nicest.\n" \
 	"+Another new line.\n" \
 
+#define DIFF_RENAME_FILE \
+	"diff --git a/beef.txt b/notbeef.txt\n" \
+	"similarity index 100%\n" \
+	"rename from beef.txt\n" \
+	"rename to notbeef.txt\n"
+
 #define DIFF_RENAME_AND_MODIFY_FILE \
 	"diff --git a/beef.txt b/notbeef.txt\n" \
 	"similarity index 97%\n" \

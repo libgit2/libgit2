@@ -25,6 +25,7 @@ typedef struct {
 static int tree_reader_read(
 	git_buf *out,
 	git_oid *out_id,
+	git_filemode_t *out_filemode,
 	git_reader *_reader,
 	const char *filename)
 {
@@ -40,6 +41,9 @@ static int tree_reader_read(
 
 	if (out_id)
 		git_oid_cpy(out_id, git_tree_entry_id(tree_entry));
+
+	if (out_filemode)
+		*out_filemode = git_tree_entry_filemode(tree_entry);
 
 done:
 	git_blob_free(blob);
@@ -74,6 +78,7 @@ typedef struct {
 static int workdir_reader_read(
 	git_buf *out,
 	git_oid *out_id,
+	git_filemode_t *out_filemode,
 	git_reader *_reader,
 	const char *filename)
 {
@@ -130,6 +135,9 @@ static int workdir_reader_read(
 	if (out_id)
 		git_oid_cpy(out_id, &id);
 
+	if (out_filemode)
+		*out_filemode = filemode;
+
 done:
 	git_filter_list_free(filters);
 	git_buf_dispose(&path);
@@ -173,6 +181,7 @@ typedef struct {
 static int index_reader_read(
 	git_buf *out,
 	git_oid *out_id,
+	git_filemode_t *out_filemode,
 	git_reader *_reader,
 	const char *filename)
 {
@@ -189,6 +198,9 @@ static int index_reader_read(
 
 	if (out_id)
 		git_oid_cpy(out_id, &entry->id);
+
+	if (out_filemode)
+		*out_filemode = entry->mode;
 
 	error = git_blob__getbuf(out, blob);
 
@@ -229,12 +241,13 @@ int git_reader_for_index(
 int git_reader_read(
 	git_buf *out,
 	git_oid *out_id,
+	git_filemode_t *out_filemode,
 	git_reader *reader,
 	const char *filename)
 {
 	assert(out && reader && filename);
 
-	return reader->read(out, out_id, reader, filename);
+	return reader->read(out, out_id, out_filemode, reader, filename);
 }
 
 void git_reader_free(git_reader *reader)
