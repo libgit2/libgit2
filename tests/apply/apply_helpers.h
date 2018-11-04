@@ -277,6 +277,23 @@
 	"-and serve it up.\n" \
 	"+and serve it up!\n"
 
+#define DIFF_TWO_DELTAS_ONE_NEW_FILE \
+	"diff --git a/newfile.txt b/newfile.txt\n" \
+	"new file mode 100644\n" \
+	"index 0000000..6434b13\n" \
+	"--- /dev/null\n" \
+	"+++ b/newfile.txt\n" \
+	"@@ -0,0 +1 @@\n" \
+	"+This is a new file.\n" \
+	"diff --git a/newfile.txt b/newfile.txt\n" \
+	"index 6434b13..08d4c44 100644\n" \
+	"--- a/newfile.txt\n" \
+	"+++ b/newfile.txt\n" \
+	"@@ -1 +1,3 @@\n" \
+	" This is a new file.\n" \
+	"+\n" \
+	"+This is another change to a new file.\n"
+
 struct iterator_compare_data {
 	struct merge_index_entry *expected;
 	size_t cnt;
