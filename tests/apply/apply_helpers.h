@@ -112,6 +112,21 @@
 	"+but the shin OR knuckle is the nicest.\n" \
 	"+Another new line.\n" \
 
+#define DIFF_RENAME_AND_MODIFY_FILE \
+	"diff --git a/beef.txt b/notbeef.txt\n" \
+	"similarity index 97%\n" \
+	"rename from beef.txt\n" \
+	"rename to notbeef.txt\n" \
+	"index 68f6182..6fa1014 100644\n" \
+	"--- a/beef.txt\n" \
+	"+++ b/notbeef.txt\n" \
+	"@@ -1,4 +1,4 @@\n" \
+	"-BEEF SOUP.\n" \
+	"+THIS IS NOT BEEF SOUP, IT HAS A NEW NAME.\n" \
+	"\n" \
+	" Take the hind shin of beef, cut off all the flesh off the leg-bone,\n" \
+	" which must be taken away entirely, or the soup will be greasy. Wash the\n"
+
 struct iterator_compare_data {
 	struct merge_index_entry *expected;
 	size_t cnt;
