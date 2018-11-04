@@ -79,6 +79,8 @@ static int workdir_reader_read(
 {
 	workdir_reader *reader = (workdir_reader *)_reader;
 	git_buf path = GIT_BUF_INIT;
+	struct stat st;
+	git_filemode_t filemode;
 	git_filter_list *filters = NULL;
 	const git_index_entry *idx_entry;
 	git_oid id;
@@ -87,6 +89,16 @@ static int workdir_reader_read(
 	if ((error = git_buf_joinpath(&path,
 		git_repository_workdir(reader->repo), filename)) < 0)
 		goto done;
+
+	if ((error = p_lstat(path.ptr, &st)) < 0) {
+		if (error == -1 && errno == ENOENT)
+			error = GIT_ENOTFOUND;
+
+		giterr_set(GITERR_OS, "could not stat '%s'", path.ptr);
+		goto done;
+	}
+
+	filemode = git_futils_canonical_mode(st.st_mode);
 
 	/*
 	 * Patch application - for example - uses the filtered version of
@@ -108,6 +120,7 @@ static int workdir_reader_read(
 
 	if (reader->index) {
 		if (!(idx_entry = git_index_get_bypath(reader->index, filename, 0)) ||
+		    filemode != idx_entry->mode ||
 		    !git_oid_equal(&id, &idx_entry->id)) {
 			error = GIT_READER_MISMATCH;
 			goto done;

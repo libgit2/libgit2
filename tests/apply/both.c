@@ -204,6 +204,23 @@ void test_apply_both__index_must_match_workdir(void)
 	git_diff_free(diff);
 }
 
+void test_apply_both__index_mode_must_match_workdir(void)
+{
+	git_diff *diff;
+
+	if (!cl_is_chmod_supported())
+		clar__skip();
+
+	/* Set a file in the working directory executable. */
+	cl_must_pass(p_chmod("merge-recursive/asparagus.txt", 0755));
+
+	cl_git_pass(git_diff_from_buffer(&diff, DIFF_MODIFY_TWO_FILES,
+	    strlen(DIFF_MODIFY_TWO_FILES)));
+	cl_git_fail_with(GIT_EAPPLYFAIL, git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
+
+	git_diff_free(diff);
+}
+
 void test_apply_both__application_failure_leaves_workdir_unmodified(void)
 {
 	git_diff *diff;
