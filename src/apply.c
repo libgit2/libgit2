@@ -458,23 +458,26 @@ static int apply_one(
 	}
 
 	/*
-	 * We may be applying a second delta to an already seen file.  If so,
-	 * use the already modified data in the postimage instead of the
-	 * content from the index or working directory.  (Don't do this in
-	 * the case of a rename, which must be specified before additional
-	 * deltas since we apply deltas to the target filename.)
-	 *
-	 * Additionally, make sure that the file has not been deleted or renamed
-	 * out of the way; again, except in the rename case, since we support
-	 * renaming a single file into two target files.
+	 * Ensure that the file has not been deleted or renamed if we're
+	 * applying a modification delta.
 	 */
-	if (delta->status != GIT_DELTA_RENAMED) {
+	if (delta->status != GIT_DELTA_RENAMED &&
+	    delta->status != GIT_DELTA_ADDED) {
 		pos = git_strmap_lookup_index(removed_paths, delta->old_file.path);
 		if (git_strmap_valid_index(removed_paths, pos)) {
 			error = apply_err("path '%s' has been renamed or deleted", delta->old_file.path);
 			goto done;
 		}
+	}
 
+	/*
+	 * We may be applying a second delta to an already seen file.  If so,
+	 * use the already modified data in the postimage instead of the
+	 * content from the index or working directory.  (Don't do this in
+	 * the case of a rename, which must be specified before additional
+	 * deltas since we apply deltas to the target filename.)
+	 */
+	if (delta->status != GIT_DELTA_RENAMED) {
 		if ((error = git_reader_read(&pre_contents, &pre_id, &pre_filemode,
 		    postimage_reader, delta->old_file.path)) == 0) {
 			skip_preimage = true;
