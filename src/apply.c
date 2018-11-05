@@ -425,6 +425,7 @@ static int apply_one(
 	git_reader *postimage_reader,
 	git_index *postimage,
 	git_diff *diff,
+	git_strmap *removed_paths,
 	size_t i,
 	const git_apply_options *opts)
 {
@@ -437,6 +438,7 @@ static int apply_one(
 	git_filemode_t pre_filemode;
 	git_index_entry pre_entry, post_entry;
 	bool skip_preimage = false;
+	size_t pos;
 	int error;
 
 	if ((error = git_patch_from_diff(&patch, diff, i)) < 0)
@@ -458,11 +460,21 @@ static int apply_one(
 	/*
 	 * We may be applying a second delta to an already seen file.  If so,
 	 * use the already modified data in the postimage instead of the
-	 * content from the index or working directory.  (Renames must be
-	 * specified before additional deltas since we are applying deltas
-	 * to the _target_ filename.)
+	 * content from the index or working directory.  (Don't do this in
+	 * the case of a rename, which must be specified before additional
+	 * deltas since we apply deltas to the target filename.)
+	 *
+	 * Additionally, make sure that the file has not been deleted or renamed
+	 * out of the way; again, except in the rename case, since we support
+	 * renaming a single file into two target files.
 	 */
 	if (delta->status != GIT_DELTA_RENAMED) {
+		pos = git_strmap_lookup_index(removed_paths, delta->old_file.path);
+		if (git_strmap_valid_index(removed_paths, pos)) {
+			error = apply_err("path '%s' has been renamed or deleted", delta->old_file.path);
+			goto done;
+		}
+
 		if ((error = git_reader_read(&pre_contents, &pre_id, &pre_filemode,
 		    postimage_reader, delta->old_file.path)) == 0) {
 			skip_preimage = true;
@@ -531,12 +543,46 @@ static int apply_one(
 			goto done;
 	}
 
+	if (delta->status == GIT_DELTA_RENAMED ||
+	    delta->status == GIT_DELTA_DELETED)
+		git_strmap_insert(removed_paths, delta->old_file.path, (char *)delta->old_file.path, &error);
+
+	if (delta->status == GIT_DELTA_RENAMED ||
+	    delta->status == GIT_DELTA_ADDED)
+		git_strmap_delete(removed_paths, delta->new_file.path);
+
 done:
 	git_buf_dispose(&pre_contents);
 	git_buf_dispose(&post_contents);
 	git__free(filename);
 	git_patch_free(patch);
 
+	return error;
+}
+
+static int apply_deltas(
+	git_repository *repo,
+	git_reader *pre_reader,
+	git_index *preimage,
+	git_reader *post_reader,
+	git_index *postimage,
+	git_diff *diff,
+	const git_apply_options *opts)
+{
+	git_strmap *removed_paths;
+	size_t i;
+	int error;
+
+	if (git_strmap_alloc(&removed_paths) < 0)
+		return -1;
+
+	for (i = 0; i < git_diff_num_deltas(diff); i++) {
+		if ((error = apply_one(repo, pre_reader, preimage, post_reader, postimage, diff, removed_paths, i, opts)) < 0)
+			goto done;
+	}
+
+done:
+	git_strmap_free(removed_paths);
 	return error;
 }
 
@@ -586,10 +632,8 @@ int git_apply_to_tree(
 			goto done;
 	}
 
-	for (i = 0; i < git_diff_num_deltas(diff); i++) {
-		if ((error = apply_one(repo, pre_reader, NULL, post_reader, postimage, diff, i, &opts)) < 0)
-			goto done;
-	}
+	if ((error = apply_deltas(repo, pre_reader, NULL, post_reader, postimage, diff, &opts)) < 0)
+		goto done;
 
 	*out = postimage;
 
@@ -725,7 +769,6 @@ int git_apply(
 	git_index *index = NULL, *preimage = NULL, *postimage = NULL;
 	git_reader *pre_reader = NULL, *post_reader = NULL;
 	git_apply_options opts = GIT_APPLY_OPTIONS_INIT;
-	size_t i;
 	int error = GIT_EINVALID;
 
 	assert(repo && diff);
@@ -774,10 +817,8 @@ int git_apply(
 	    (error = git_indexwriter_init(&indexwriter, index)) < 0)
 		goto done;
 
-	for (i = 0; i < git_diff_num_deltas(diff); i++) {
-		if ((error = apply_one(repo, pre_reader, preimage, post_reader, postimage, diff, i, &opts)) < 0)
-			goto done;
-	}
+	if ((error = apply_deltas(repo, pre_reader, preimage, post_reader, postimage, diff, &opts)) < 0)
+		goto done;
 
 	switch (location) {
 	case GIT_APPLY_LOCATION_BOTH:

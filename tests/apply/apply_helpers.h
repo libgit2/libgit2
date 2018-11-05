@@ -344,6 +344,56 @@
 	"-but the shin or knuckle is the nicest.\n" \
 	"+but the shin or knuckle is the nicest!\n"
 
+#define DIFF_RENAME_AFTER_MODIFY_TARGET_PATH \
+	"diff --git a/beef.txt b/beef.txt\n" \
+	"index 292cb60..61c686b 100644\n" \
+	"--- a/beef.txt\n" \
+	"+++ b/beef.txt\n" \
+	"@@ -1,4 +1,4 @@\n" \
+	"-VEAL SOUP!\n" \
+	"+VEAL SOUP\n" \
+	"\n" \
+	" Put into a pot three quarts of water, three onions cut small, one\n" \
+	" spoonful of black pepper pounded, and two of salt, with two or three\n" \
+	"diff --git a/veal.txt b/beef.txt\n" \
+	"similarity index 96%\n" \
+	"rename from veal.txt\n" \
+	"rename to beef.txt\n" \
+	"index 94d2c01..292cb60 100644\n" \
+	"--- a/veal.txt\n" \
+	"+++ b/beef.txt\n" \
+	"@@ -15,4 +15,4 @@ will curdle in the soup. For a change you may put a dozen ripe tomatos\n" \
+	" in, first taking off their skins, by letting them stand a few minutes in\n" \
+	" hot water, when they may be easily peeled. When made in this way you\n" \
+	" must thicken it with the flour only. Any part of the veal may be used,\n" \
+	"-but the shin or knuckle is the nicest.\n" \
+	"+but the shin or knuckle is the nicest!\n"
+
+#define DIFF_RENAME_AND_MODIFY_SOURCE_PATH \
+	"diff --git a/veal.txt b/asdf.txt\n" \
+	"similarity index 96%\n" \
+	"rename from veal.txt\n" \
+	"rename to asdf.txt\n" \
+	"index 94d2c01..292cb60 100644\n" \
+	"--- a/veal.txt\n" \
+	"+++ b/asdf.txt\n" \
+	"@@ -15,4 +15,4 @@ will curdle in the soup. For a change you may put a dozen ripe tomatos\n" \
+	" in, first taking off their skins, by letting them stand a few minutes in\n" \
+	" hot water, when they may be easily peeled. When made in this way you\n" \
+	" must thicken it with the flour only. Any part of the veal may be used,\n" \
+	"-but the shin or knuckle is the nicest.\n" \
+	"+but the shin or knuckle is the nicest!\n" \
+	"diff --git a/veal.txt b/veal.txt\n" \
+	"index 292cb60..61c686b 100644\n" \
+	"--- a/veal.txt\n" \
+	"+++ b/veal.txt\n" \
+	"@@ -1,4 +1,4 @@\n" \
+	"-VEAL SOUP!\n" \
+	"+VEAL SOUP\n" \
+	"\n" \
+	" Put into a pot three quarts of water, three onions cut small, one\n" \
+	" spoonful of black pepper pounded, and two of salt, with two or three\n"
+
 struct iterator_compare_data {
 	struct merge_index_entry *expected;
 	size_t cnt;

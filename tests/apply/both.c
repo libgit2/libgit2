@@ -676,3 +676,25 @@ void test_apply_both__rename_delta_after_modify_delta(void)
 
 	git_diff_free(diff);
 }
+
+void test_apply_both__cant_rename_after_modify_nonexistent_target_path(void)
+{
+	git_diff *diff;
+
+	cl_git_pass(git_diff_from_buffer(&diff, DIFF_RENAME_AFTER_MODIFY_TARGET_PATH,
+		strlen(DIFF_RENAME_AFTER_MODIFY_TARGET_PATH)));
+	cl_git_fail(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
+
+	git_diff_free(diff);
+}
+
+void test_apply_both__cant_modify_source_path_after_rename(void)
+{
+	git_diff *diff;
+
+	cl_git_pass(git_diff_from_buffer(&diff, DIFF_RENAME_AND_MODIFY_SOURCE_PATH,
+		strlen(DIFF_RENAME_AND_MODIFY_SOURCE_PATH)));
+	cl_git_fail(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
+
+	git_diff_free(diff);
+}
