@@ -330,13 +330,13 @@
 	"\n" \
 	" Put into a pot three quarts of water, three onions cut small, one\n" \
 	" spoonful of black pepper pounded, and two of salt, with two or three\n" \
-	"diff --git a/veal.txt b/beef.txt\n" \
+	"diff --git a/veal.txt b/other.txt\n" \
 	"similarity index 96%\n" \
 	"rename from veal.txt\n" \
-	"rename to beef.txt\n" \
+	"rename to other.txt\n" \
 	"index 94d2c01..292cb60 100644\n" \
 	"--- a/veal.txt\n" \
-	"+++ b/beef.txt\n" \
+	"+++ b/other.txt\n" \
 	"@@ -15,4 +15,4 @@ will curdle in the soup. For a change you may put a dozen ripe tomatos\n" \
 	" in, first taking off their skins, by letting them stand a few minutes in\n" \
 	" hot water, when they may be easily peeled. When made in this way you\n" \
