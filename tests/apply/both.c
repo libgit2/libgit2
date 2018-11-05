@@ -723,3 +723,14 @@ void test_apply_both__readd_deleted_file(void)
 
 	git_diff_free(diff);
 }
+
+void test_apply_both__cant_remove_file_twice(void)
+{
+	git_diff *diff;
+
+	cl_git_pass(git_diff_from_buffer(&diff, DIFF_REMOVE_FILE_TWICE,
+		strlen(DIFF_REMOVE_FILE_TWICE)));
+	cl_git_fail(git_apply(repo, diff, GIT_APPLY_LOCATION_BOTH, NULL));
+
+	git_diff_free(diff);
+}
