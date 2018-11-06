@@ -330,6 +330,9 @@ typedef struct {
  * this certificate is valid
  * @param host Hostname of the host libgit2 connected to
  * @param payload Payload provided by the caller
+ * @return 0 to proceed with the connection, < 0 to fail the connection
+ *         or > 0 to indicate that the callback refused to act and that
+ *         the existing validity determination should be honored
  */
 typedef int (*git_transport_certificate_check_cb)(git_cert *cert, int valid, const char *host, void *payload);
 

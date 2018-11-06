@@ -52,7 +52,7 @@ typedef enum {
 	GIT_EDIRECTORY      = -23,      /**< The operation is not valid for a directory */
 	GIT_EMERGECONFLICT  = -24,	/**< A merge conflict exists and cannot continue */
 
-	GIT_PASSTHROUGH     = -30,	/**< Internal only */
+	GIT_PASSTHROUGH     = -30,	/**< A user-configured callback refused to act */
 	GIT_ITEROVER        = -31,	/**< Signals end of iteration with iterator */
 	GIT_RETRY           = -32,	/**< Internal only */
 	GIT_EMISMATCH       = -33,	/**< Hashsum mismatch in object */
