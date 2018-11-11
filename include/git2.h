@@ -9,6 +9,7 @@
 #define INCLUDE_git_git_h__
 
 #include "git2/annotated_commit.h"
+#include "git2/apply.h"
 #include "git2/attr.h"
 #include "git2/blob.h"
 #include "git2/blame.h"

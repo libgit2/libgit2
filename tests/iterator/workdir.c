@@ -3,6 +3,7 @@
 #include "repository.h"
 #include "fileops.h"
 #include "../submodule/submodule_helpers.h"
+#include "../merge/merge_helpers.h"
 #include "iterator_helpers.h"
 #include <stdarg.h>
 
@@ -1474,3 +1475,48 @@ void test_iterator_workdir__pathlist_with_directory_include_trees(void)
 	git_vector_free(&filelist);
 }
 
+void test_iterator_workdir__hash_when_requested(void)
+{
+	git_iterator *iter;
+	const git_index_entry *entry;
+	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_oid expected_id = {{0}};
+	size_t i;
+
+	struct merge_index_entry expected[] = {
+		{ 0100644, "ffb36e513f5fdf8a6ba850a20142676a2ac4807d", 0, "asparagus.txt" },
+		{ 0100644, "68f6182f4c85d39e1309d97c7e456156dc9c0096", 0, "beef.txt" },
+		{ 0100644, "4b7c5650008b2e747fe1809eeb5a1dde0e80850a", 0, "bouilli.txt" },
+		{ 0100644, "c4e6cca3ec6ae0148ed231f97257df8c311e015f", 0, "gravy.txt" },
+		{ 0100644, "7c7e08f9559d9e1551b91e1cf68f1d0066109add", 0, "oyster.txt" },
+		{ 0100644, "898d12687fb35be271c27c795a6b32c8b51da79e", 0, "veal.txt" },
+	};
+
+	g_repo = cl_git_sandbox_init("merge-recursive");
+
+	/* do the iteration normally, ensure there are no hashes */
+	cl_git_pass(git_iterator_for_workdir(&iter, g_repo, NULL, NULL, &iter_opts));
+
+	for (i = 0; i < sizeof(expected) / sizeof(struct merge_index_entry); i++) {
+		cl_git_pass(git_iterator_advance(&entry, iter));
+
+		cl_assert_equal_oid(&expected_id, &entry->id);
+		cl_assert_equal_s(expected[i].path, entry->path);
+	}
+	cl_assert_equal_i(GIT_ITEROVER, git_iterator_advance(&entry, iter));
+	git_iterator_free(iter);
+
+	/* do the iteration requesting hashes */
+	iter_opts.flags |= GIT_ITERATOR_INCLUDE_HASH;
+	cl_git_pass(git_iterator_for_workdir(&iter, g_repo, NULL, NULL, &iter_opts));
+
+	for (i = 0; i < sizeof(expected) / sizeof(struct merge_index_entry); i++) {
+		cl_git_pass(git_iterator_advance(&entry, iter));
+
+		cl_git_pass(git_oid_fromstr(&expected_id, expected[i].oid_str));
+		cl_assert_equal_oid(&expected_id, &entry->id);
+		cl_assert_equal_s(expected[i].path, entry->path);
+	}
+	cl_assert_equal_i(GIT_ITEROVER, git_iterator_advance(&entry, iter));
+	git_iterator_free(iter);
+}

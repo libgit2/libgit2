@@ -9,16 +9,23 @@
 
 #include <assert.h>
 
+#include "git2/apply.h"
 #include "git2/patch.h"
 #include "git2/filter.h"
+#include "git2/blob.h"
+#include "git2/index.h"
+#include "git2/checkout.h"
+#include "git2/repository.h"
 #include "array.h"
 #include "patch.h"
 #include "fileops.h"
 #include "delta.h"
 #include "zstream.h"
+#include "reader.h"
+#include "index.h"
 
 #define apply_err(...) \
-	( giterr_set(GITERR_PATCH, __VA_ARGS__), -1 )
+	( giterr_set(GITERR_PATCH, __VA_ARGS__), GIT_EAPPLYFAIL )
 
 typedef struct {
 	/* The lines that we allocate ourself are allocated out of the pool.
@@ -160,14 +167,35 @@ static int update_hunk(
 	return 0;
 }
 
+typedef struct {
+	git_apply_options opts;
+	size_t skipped_new_lines;
+	size_t skipped_old_lines;
+} apply_hunks_ctx;
+
 static int apply_hunk(
 	patch_image *image,
 	git_patch *patch,
-	git_patch_hunk *hunk)
+	git_patch_hunk *hunk,
+	apply_hunks_ctx *ctx)
 {
 	patch_image preimage = PATCH_IMAGE_INIT, postimage = PATCH_IMAGE_INIT;
 	size_t line_num, i;
 	int error = 0;
+
+	if (ctx->opts.hunk_cb) {
+		error = ctx->opts.hunk_cb(&hunk->hunk, ctx->opts.payload);
+
+		if (error) {
+			if (error > 0) {
+				ctx->skipped_new_lines += hunk->hunk.new_lines;
+				ctx->skipped_old_lines += hunk->hunk.old_lines;
+				error = 0;
+			}
+
+			goto done;
+		}
+	}
 
 	for (i = 0; i < hunk->line_count; i++) {
 		size_t linenum = hunk->line_start + i;
@@ -191,7 +219,14 @@ static int apply_hunk(
 		}
 	}
 
-	line_num = hunk->hunk.new_start ? hunk->hunk.new_start - 1 : 0;
+	if (hunk->hunk.new_start) {
+		line_num = hunk->hunk.new_start -
+			ctx->skipped_new_lines +
+			ctx->skipped_old_lines -
+			1;
+	} else {
+		line_num = 0;
+	}
 
 	if (!find_hunk_linenum(&line_num, image, &preimage, line_num)) {
 		error = apply_err("hunk at line %d did not apply",
@@ -212,7 +247,8 @@ static int apply_hunks(
 	git_buf *out,
 	const char *source,
 	size_t source_len,
-	git_patch *patch)
+	git_patch *patch,
+	apply_hunks_ctx *ctx)
 {
 	git_patch_hunk *hunk;
 	git_diff_line *line;
@@ -224,7 +260,7 @@ static int apply_hunks(
 		goto done;
 
 	git_array_foreach(patch->hunks, i, hunk) {
-		if ((error = apply_hunk(&image, patch, hunk)) < 0)
+		if ((error = apply_hunk(&image, patch, hunk, ctx)) < 0)
 			goto done;
 	}
 
@@ -332,13 +368,18 @@ int git_apply__patch(
 	unsigned int *mode_out,
 	const char *source,
 	size_t source_len,
-	git_patch *patch)
+	git_patch *patch,
+	const git_apply_options *given_opts)
 {
+	apply_hunks_ctx ctx = { GIT_APPLY_OPTIONS_INIT };
 	char *filename = NULL;
 	unsigned int mode = 0;
 	int error = 0;
 
 	assert(contents_out && filename_out && mode_out && (source || !source_len) && patch);
+
+	if (given_opts)
+		memcpy(&ctx.opts, given_opts, sizeof(git_apply_options));
 
 	*filename_out = NULL;
 	*mode_out = 0;
@@ -354,7 +395,7 @@ int git_apply__patch(
 	if (patch->delta->flags & GIT_DIFF_FLAG_BINARY)
 		error = apply_binary(contents_out, source, source_len, patch);
 	else if (patch->hunks.size)
-		error = apply_hunks(contents_out, source, source_len, patch);
+		error = apply_hunks(contents_out, source, source_len, patch, &ctx);
 	else
 		error = git_buf_put(contents_out, source, source_len);
 
@@ -373,6 +414,441 @@ int git_apply__patch(
 done:
 	if (error < 0)
 		git__free(filename);
+
+	return error;
+}
+
+static int apply_one(
+	git_repository *repo,
+	git_reader *preimage_reader,
+	git_index *preimage,
+	git_reader *postimage_reader,
+	git_index *postimage,
+	git_diff *diff,
+	git_strmap *removed_paths,
+	size_t i,
+	const git_apply_options *opts)
+{
+	git_patch *patch = NULL;
+	git_buf pre_contents = GIT_BUF_INIT, post_contents = GIT_BUF_INIT;
+	const git_diff_delta *delta;
+	char *filename = NULL;
+	unsigned int mode;
+	git_oid pre_id, post_id;
+	git_filemode_t pre_filemode;
+	git_index_entry pre_entry, post_entry;
+	bool skip_preimage = false;
+	size_t pos;
+	int error;
+
+	if ((error = git_patch_from_diff(&patch, diff, i)) < 0)
+		goto done;
+
+	delta = git_patch_get_delta(patch);
+
+	if (opts->delta_cb) {
+		error = opts->delta_cb(delta, opts->payload);
+
+		if (error) {
+			if (error > 0)
+				error = 0;
+
+			goto done;
+		}
+	}
+
+	/*
+	 * Ensure that the file has not been deleted or renamed if we're
+	 * applying a modification delta.
+	 */
+	if (delta->status != GIT_DELTA_RENAMED &&
+	    delta->status != GIT_DELTA_ADDED) {
+		pos = git_strmap_lookup_index(removed_paths, delta->old_file.path);
+		if (git_strmap_valid_index(removed_paths, pos)) {
+			error = apply_err("path '%s' has been renamed or deleted", delta->old_file.path);
+			goto done;
+		}
+	}
+
+	/*
+	 * We may be applying a second delta to an already seen file.  If so,
+	 * use the already modified data in the postimage instead of the
+	 * content from the index or working directory.  (Don't do this in
+	 * the case of a rename, which must be specified before additional
+	 * deltas since we apply deltas to the target filename.)
+	 */
+	if (delta->status != GIT_DELTA_RENAMED) {
+		if ((error = git_reader_read(&pre_contents, &pre_id, &pre_filemode,
+		    postimage_reader, delta->old_file.path)) == 0) {
+			skip_preimage = true;
+		} else if (error == GIT_ENOTFOUND) {
+			giterr_clear();
+			error = 0;
+		} else {
+			goto done;
+		}
+	}
+
+	if (!skip_preimage && delta->status != GIT_DELTA_ADDED) {
+		error = git_reader_read(&pre_contents, &pre_id, &pre_filemode,
+			preimage_reader, delta->old_file.path);
+
+		/* ENOTFOUND means the preimage was not found; apply failed. */
+		if (error == GIT_ENOTFOUND)
+			error = GIT_EAPPLYFAIL;
+
+		/* When applying to BOTH, the index did not match the workdir. */
+		if (error == GIT_READER_MISMATCH)
+			error = apply_err("%s: does not match index", delta->old_file.path);
+
+		if (error < 0)
+			goto done;
+
+		/*
+		 * We need to populate the preimage data structure with the
+		 * contents that we are using as the preimage for this file.
+		 * This allows us to apply patches to files that have been
+		 * modified in the working directory.  During checkout,
+		 * we will use this expected preimage as the baseline, and
+		 * limit checkout to only the paths affected by patch
+		 * application.  (Without this, we would fail to write the
+		 * postimage contents to any file that had been modified
+		 * from HEAD on-disk, even if the patch application succeeded.)
+		 * Use the contents from the delta where available - some
+		 * fields may not be available, like the old file mode (eg in
+		 * an exact rename situation) so trust the patch parsing to
+		 * validate and use the preimage data in that case.
+		 */
+		if (preimage) {
+			memset(&pre_entry, 0, sizeof(git_index_entry));
+			pre_entry.path = delta->old_file.path;
+			pre_entry.mode = delta->old_file.mode ? delta->old_file.mode : pre_filemode;
+			git_oid_cpy(&pre_entry.id, &pre_id);
+
+			if ((error = git_index_add(preimage, &pre_entry)) < 0)
+				goto done;
+		}
+	}
+
+	if (delta->status != GIT_DELTA_DELETED) {
+		if ((error = git_apply__patch(&post_contents, &filename, &mode,
+				pre_contents.ptr, pre_contents.size, patch, opts)) < 0 ||
+			(error = git_blob_create_frombuffer(&post_id, repo,
+				post_contents.ptr, post_contents.size)) < 0)
+			goto done;
+
+		memset(&post_entry, 0, sizeof(git_index_entry));
+		post_entry.path = filename;
+		post_entry.mode = mode;
+		git_oid_cpy(&post_entry.id, &post_id);
+
+		if ((error = git_index_add(postimage, &post_entry)) < 0)
+			goto done;
+	}
+
+	if (delta->status == GIT_DELTA_RENAMED ||
+	    delta->status == GIT_DELTA_DELETED)
+		git_strmap_insert(removed_paths, delta->old_file.path, (char *)delta->old_file.path, &error);
+
+	if (delta->status == GIT_DELTA_RENAMED ||
+	    delta->status == GIT_DELTA_ADDED)
+		git_strmap_delete(removed_paths, delta->new_file.path);
+
+done:
+	git_buf_dispose(&pre_contents);
+	git_buf_dispose(&post_contents);
+	git__free(filename);
+	git_patch_free(patch);
+
+	return error;
+}
+
+static int apply_deltas(
+	git_repository *repo,
+	git_reader *pre_reader,
+	git_index *preimage,
+	git_reader *post_reader,
+	git_index *postimage,
+	git_diff *diff,
+	const git_apply_options *opts)
+{
+	git_strmap *removed_paths;
+	size_t i;
+	int error;
+
+	if (git_strmap_alloc(&removed_paths) < 0)
+		return -1;
+
+	for (i = 0; i < git_diff_num_deltas(diff); i++) {
+		if ((error = apply_one(repo, pre_reader, preimage, post_reader, postimage, diff, removed_paths, i, opts)) < 0)
+			goto done;
+	}
+
+done:
+	git_strmap_free(removed_paths);
+	return error;
+}
+
+int git_apply_to_tree(
+	git_index **out,
+	git_repository *repo,
+	git_tree *preimage,
+	git_diff *diff,
+	const git_apply_options *given_opts)
+{
+	git_index *postimage = NULL;
+	git_reader *pre_reader = NULL, *post_reader = NULL;
+	git_apply_options opts = GIT_APPLY_OPTIONS_INIT;
+	const git_diff_delta *delta;
+	size_t i;
+	int error = 0;
+
+	assert(out && repo && preimage && diff);
+
+	*out = NULL;
+
+	if (given_opts)
+		memcpy(&opts, given_opts, sizeof(git_apply_options));
+
+	if ((error = git_reader_for_tree(&pre_reader, preimage)) < 0)
+		goto done;
+
+	/*
+	 * put the current tree into the postimage as-is - the diff will
+	 * replace any entries contained therein
+	 */
+	if ((error = git_index_new(&postimage)) < 0 ||
+		(error = git_index_read_tree(postimage, preimage)) < 0 ||
+		(error = git_reader_for_index(&post_reader, repo, postimage)) < 0)
+		goto done;
+
+	/*
+	 * Remove the old paths from the index before applying diffs -
+	 * we need to do a full pass to remove them before adding deltas,
+	 * in order to handle rename situations.
+	 */
+	for (i = 0; i < git_diff_num_deltas(diff); i++) {
+		delta = git_diff_get_delta(diff, i);
+
+		if ((error = git_index_remove(postimage,
+				delta->old_file.path, 0)) < 0)
+			goto done;
+	}
+
+	if ((error = apply_deltas(repo, pre_reader, NULL, post_reader, postimage, diff, &opts)) < 0)
+		goto done;
+
+	*out = postimage;
+
+done:
+	if (error < 0)
+		git_index_free(postimage);
+
+	git_reader_free(pre_reader);
+	git_reader_free(post_reader);
+
+	return error;
+}
+
+static int git_apply__to_workdir(
+	git_repository *repo,
+	git_diff *diff,
+	git_index *preimage,
+	git_index *postimage,
+	git_apply_location_t location,
+	git_apply_options *opts)
+{
+	git_vector paths = GIT_VECTOR_INIT;
+	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+	const git_diff_delta *delta;
+	size_t i;
+	int error;
+
+	GIT_UNUSED(opts);
+
+	/*
+	 * Limit checkout to the paths affected by the diff; this ensures
+	 * that other modifications in the working directory are unaffected.
+	 */
+	if ((error = git_vector_init(&paths, git_diff_num_deltas(diff), NULL)) < 0)
+		goto done;
+
+	for (i = 0; i < git_diff_num_deltas(diff); i++) {
+		delta = git_diff_get_delta(diff, i);
+
+		if ((error = git_vector_insert(&paths, (void *)delta->old_file.path)) < 0)
+			goto done;
+
+		if (strcmp(delta->old_file.path, delta->new_file.path) &&
+		    (error = git_vector_insert(&paths, (void *)delta->new_file.path)) < 0)
+			goto done;
+	}
+
+	checkout_opts.checkout_strategy |= GIT_CHECKOUT_SAFE;
+	checkout_opts.checkout_strategy |= GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH;
+	checkout_opts.checkout_strategy |= GIT_CHECKOUT_DONT_WRITE_INDEX;
+
+	if (location == GIT_APPLY_LOCATION_WORKDIR)
+		checkout_opts.checkout_strategy |= GIT_CHECKOUT_DONT_UPDATE_INDEX;
+
+	checkout_opts.paths.strings = (char **)paths.contents;
+	checkout_opts.paths.count = paths.length;
+
+	checkout_opts.baseline_index = preimage;
+
+	error = git_checkout_index(repo, postimage, &checkout_opts);
+
+done:
+	git_vector_free(&paths);
+	return error;
+}
+
+static int git_apply__to_index(
+	git_repository *repo,
+	git_diff *diff,
+	git_index *preimage,
+	git_index *postimage,
+	git_apply_options *opts)
+{
+	git_index *index = NULL;
+	const git_diff_delta *delta;
+	const git_index_entry *entry;
+	size_t i;
+	int error;
+
+	GIT_UNUSED(preimage);
+	GIT_UNUSED(opts);
+
+	if ((error = git_repository_index(&index, repo)) < 0)
+		goto done;
+
+	/* Remove deleted (or renamed) paths from the index. */
+	for (i = 0; i < git_diff_num_deltas(diff); i++) {
+		delta = git_diff_get_delta(diff, i);
+
+		if (delta->status == GIT_DELTA_DELETED ||
+		    delta->status == GIT_DELTA_RENAMED) {
+			if ((error = git_index_remove(index, delta->old_file.path, 0)) < 0)
+				goto done;
+		}
+	}
+
+	/* Then add the changes back to the index. */
+	for (i = 0; i < git_index_entrycount(postimage); i++) {
+		entry = git_index_get_byindex(postimage, i);
+
+		if ((error = git_index_add(index, entry)) < 0)
+			goto done;
+	}
+
+done:
+	git_index_free(index);
+	return error;
+}
+
+/*
+ * Handle the three application options ("locations"):
+ *
+ * GIT_APPLY_LOCATION_WORKDIR: the default, emulates `git apply`.
+ * Applies the diff only to the workdir items and ignores the index
+ * entirely.
+ *
+ * GIT_APPLY_LOCATION_INDEX: emulates `git apply --cached`.
+ * Applies the diff only to the index items and ignores the workdir
+ * completely.
+ *
+ * GIT_APPLY_LOCATION_BOTH: emulates `git apply --index`.
+ * Applies the diff to both the index items and the working directory
+ * items.
+ */
+
+int git_apply(
+	git_repository *repo,
+	git_diff *diff,
+	git_apply_location_t location,
+	const git_apply_options *given_opts)
+{
+	git_indexwriter indexwriter = GIT_INDEXWRITER_INIT;
+	git_index *index = NULL, *preimage = NULL, *postimage = NULL;
+	git_reader *pre_reader = NULL, *post_reader = NULL;
+	git_apply_options opts = GIT_APPLY_OPTIONS_INIT;
+	int error = GIT_EINVALID;
+
+	assert(repo && diff);
+
+	GITERR_CHECK_VERSION(
+		given_opts, GIT_APPLY_OPTIONS_VERSION, "git_apply_options");
+
+	if (given_opts)
+		memcpy(&opts, given_opts, sizeof(git_apply_options));
+
+	/*
+	 * by default, we apply a patch directly to the working directory;
+	 * in `--cached` or `--index` mode, we apply to the contents already
+	 * in the index.
+	 */
+	switch (location) {
+	case GIT_APPLY_LOCATION_BOTH:
+		error = git_reader_for_workdir(&pre_reader, repo, true);
+		break;
+	case GIT_APPLY_LOCATION_INDEX:
+		error = git_reader_for_index(&pre_reader, repo, NULL);
+		break;
+	case GIT_APPLY_LOCATION_WORKDIR:
+		error = git_reader_for_workdir(&pre_reader, repo, false);
+		break;
+	default:
+		assert(false);
+	}
+
+	if (error < 0)
+		goto done;
+
+	/*
+	 * Build the preimage and postimage (differences).  Note that
+	 * this is not the complete preimage or postimage, it only
+	 * contains the files affected by the patch.  We want to avoid
+	 * having the full repo index, so we will limit our checkout
+	 * to only write these files that were affected by the diff.
+	 */
+	if ((error = git_index_new(&preimage)) < 0 ||
+	    (error = git_index_new(&postimage)) < 0 ||
+	    (error = git_reader_for_index(&post_reader, repo, postimage)) < 0)
+		goto done;
+
+	if ((error = git_repository_index(&index, repo)) < 0 ||
+	    (error = git_indexwriter_init(&indexwriter, index)) < 0)
+		goto done;
+
+	if ((error = apply_deltas(repo, pre_reader, preimage, post_reader, postimage, diff, &opts)) < 0)
+		goto done;
+
+	switch (location) {
+	case GIT_APPLY_LOCATION_BOTH:
+		error = git_apply__to_workdir(repo, diff, preimage, postimage, location, &opts);
+		break;
+	case GIT_APPLY_LOCATION_INDEX:
+		error = git_apply__to_index(repo, diff, preimage, postimage, &opts);
+		break;
+	case GIT_APPLY_LOCATION_WORKDIR:
+		error = git_apply__to_workdir(repo, diff, preimage, postimage, location, &opts);
+		break;
+	default:
+		assert(false);
+	}
+
+	if (error < 0)
+		goto done;
+
+	error = git_indexwriter_commit(&indexwriter);
+
+done:
+	git_indexwriter_cleanup(&indexwriter);
+	git_index_free(postimage);
+	git_index_free(preimage);
+	git_index_free(index);
+	git_reader_free(pre_reader);
+	git_reader_free(post_reader);
 
 	return error;
 }
