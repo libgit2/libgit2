@@ -492,6 +492,46 @@ GIT_EXTERN(int) git_index_entry_is_conflict(const git_index_entry *entry);
 
 /**@}*/
 
+/** @name Index Entry Iteration Functions
+ *
+ * These functions provide an iterator for index entries.
+ */
+/**@{*/
+
+/**
+ * Create an iterator that will return every entry contained in the
+ * index at the time of creation.  Entries are returned in order,
+ * sorted by path.  This iterator is backed by a snapshot that allows
+ * callers to modify the index while iterating without affecting the
+ * iterator.
+ *
+ * @param iterator_out The newly created iterator
+ * @param index The index to iterate
+ */
+GIT_EXTERN(int) git_index_iterator_new(
+	git_index_iterator **iterator_out,
+	git_index *index);
+
+/**
+ * Return the next index entry in-order from the iterator.
+ *
+ * @param out Pointer to store the index entry in
+ * @param iterator The iterator
+ * @return 0, GIT_ITEROVER on iteration completion or an error code
+ */
+GIT_EXTERN(int) git_index_iterator_next(
+	const git_index_entry **out,
+	git_index_iterator *iterator);
+
+/**
+ * Free the index iterator
+ *
+ * @param iterator The iterator to free
+ */
+GIT_EXTERN(void) git_index_iterator_free(git_index_iterator *iterator);
+
+/**@}*/
+
 /** @name Workdir Index Entry Functions
  *
  * These functions work on index entries specifically in the working

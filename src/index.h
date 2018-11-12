@@ -55,6 +55,12 @@ struct git_index {
 	unsigned int version;
 };
 
+struct git_index_iterator {
+	git_index *index;
+	git_vector snap;
+	size_t cur;
+};
+
 struct git_index_conflict_iterator {
 	git_index *index;
 	size_t cur;
