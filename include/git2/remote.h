@@ -42,6 +42,80 @@ GIT_EXTERN(int) git_remote_create(
 		const char *url);
 
 /**
+ * Remote creation options flags
+ */
+typedef enum {
+	/** Ignore the repository apply.insteadOf configuration */
+	GIT_REMOTE_CREATE_SKIP_INSTEADOF = (1 << 0),
+
+	/** Don't build a fetchspec from the name if none is set */
+	GIT_REMOTE_CREATE_SKIP_DEFAULT_FETCHSPEC = (1 << 1),
+} git_remote_create_flags;
+
+/**
+ * Remote creation options structure
+ *
+ * Initialize with `GIT_REMOTE_CREATE_OPTIONS_INIT`. Alternatively, you can
+ * use `git_remote_create_init_options`.
+ *
+ */
+typedef struct git_remote_create_options {
+	unsigned int version;
+
+	/**
+	 * The repository that should own the remote.
+	 * Setting this to NULL results in a detached remote.
+	 */
+	git_repository *repository;
+
+	/**
+	 * The remote's name.
+	 * Setting this to NULL results in an in-memory/anonymous remote.
+	 */
+	const char *name;
+
+	/** The fetchspec the remote should use. */
+	const char *fetchspec;
+
+	/** Additional flags for the remote. See git_remote_create_flags. */
+	unsigned int flags;
+} git_remote_create_options;
+
+#define GIT_REMOTE_CREATE_OPTIONS_VERSION 1
+#define GIT_REMOTE_CREATE_OPTIONS_INIT {GIT_REMOTE_CREATE_OPTIONS_VERSION}
+
+/**
+ * Initialize git_remote_create_options structure
+ *
+ * Initializes a `git_remote_create_options` with default values. Equivalent to
+ * creating an instance with `GIT_REMOTE_CREATE_OPTIONS_INIT`.
+ *
+ * @param opts The `git_remote_create_options` struct to initialize.
+ * @param version The struct version; pass `GIT_REMOTE_CREATE_OPTIONS_VERSION`.
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_remote_create_init_options(
+		git_remote_create_options *opts,
+		unsigned int version);
+
+/**
+ * Create a remote, with options.
+ *
+ * This function allows more fine-grained control over the remote creation.
+ *
+ * Passing NULL as the opts argument will result in a detached remote.
+ *
+ * @param out the resulting remote
+ * @param url the remote's url
+ * @param opts the remote creation options
+ * @return 0, GIT_EINVALIDSPEC, GIT_EEXISTS or an error code
+ */
+GIT_EXTERN(int) git_remote_create_with_opts(
+		git_remote **out,
+		const char *url,
+		const git_remote_create_options *opts);
+
+/**
  * Add a remote with the provided fetch refspec (or default if NULL) to the repository's
  * configuration.
  *

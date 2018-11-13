@@ -1182,6 +1182,8 @@ int git_config_lock(git_transaction **out, git_config *cfg)
 	git_config_backend *backend;
 	backend_internal *internal;
 
+	assert(cfg);
+
 	internal = git_vector_get(&cfg->backends, 0);
 	if (!internal || !internal->backend) {
 		giterr_set(GITERR_CONFIG, "cannot lock; the config has no backends");
@@ -1199,6 +1201,8 @@ int git_config_unlock(git_config *cfg, int commit)
 {
 	git_config_backend *backend;
 	backend_internal *internal;
+
+	assert(cfg);
 
 	internal = git_vector_get(&cfg->backends, 0);
 	if (!internal || !internal->backend) {
