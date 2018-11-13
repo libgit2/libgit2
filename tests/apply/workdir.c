@@ -167,7 +167,7 @@ void test_apply_workdir__modified_index_with_unmodified_workdir_is_ok(void)
 		sizeof(struct merge_index_entry);
 
 	/* mutate the index and leave the workdir matching HEAD */
-	git_repository_index(&index, repo);
+	cl_git_pass(git_repository_index(&index, repo));
 
 	idx_entry.mode = 0100644;
 	idx_entry.path = "veal.txt";
