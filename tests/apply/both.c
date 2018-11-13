@@ -244,7 +244,7 @@ void test_apply_both__application_failure_leaves_workdir_unmodified(void)
 	    "This is a modification.\n");
 
 	cl_git_pass(git_repository_index(&index, repo));
-	git_index_add_bypath(index, "veal.txt");
+	cl_git_pass(git_index_add_bypath(index, "veal.txt"));
 	cl_git_pass(git_index_write(index));
 	git_index_free(index);
 
@@ -291,7 +291,7 @@ void test_apply_both__keeps_nonconflicting_changes(void)
 	idx_entry.mode = 0100644;
 	idx_entry.path = "beef.txt";
 	cl_git_pass(git_oid_fromstr(&idx_entry.id, "898d12687fb35be271c27c795a6b32c8b51da79e"));
-	git_index_add(index, &idx_entry);
+	cl_git_pass(git_index_add(index, &idx_entry));
 
 	cl_git_pass(git_index_remove(index, "bouilli.txt", 0));
 	cl_git_pass(git_index_write(index));
@@ -337,7 +337,7 @@ void test_apply_both__can_apply_nonconflicting_file_changes(void)
 	    "This line is added in the index and the workdir.\n");
 
 	cl_git_pass(git_repository_index(&index, repo));
-	git_index_add_bypath(index, "asparagus.txt");
+	cl_git_pass(git_index_add_bypath(index, "asparagus.txt"));
 	cl_git_pass(git_index_write(index));
 	git_index_free(index);
 
