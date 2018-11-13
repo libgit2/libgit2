@@ -23,9 +23,10 @@ void test_index_collision__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-void test_index_collision__add(void)
+void test_index_collision__add_blob_with_conflicting_file(void)
 {
 	git_index_entry entry;
+	git_tree_entry *tentry;
 	git_oid tree_id;
 	git_tree *tree;
 
@@ -39,13 +40,59 @@ void test_index_collision__add(void)
 	entry.path = "a/b";
 	cl_git_pass(git_index_add(g_index, &entry));
 
-	/* create a tree/blob collision */
-	entry.path = "a/b/c";
-	cl_git_fail(git_index_add(g_index, &entry));
-
+	/* Check a/b exists here */
 	cl_git_pass(git_index_write_tree(&tree_id, g_index));
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
+	cl_git_pass(git_tree_entry_bypath(&tentry, tree, "a/b"));
+	git_tree_entry_free(tentry);
+	git_tree_free(tree);
 
+	/* create a tree/blob collision */
+	entry.path = "a/b/c";
+	cl_git_pass(git_index_add(g_index, &entry));
+
+	/* a/b should now be a tree and a/b/c a blob */
+	cl_git_pass(git_index_write_tree(&tree_id, g_index));
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
+	cl_git_pass(git_tree_entry_bypath(&tentry, tree, "a/b/c"));
+	git_tree_entry_free(tentry);
+	git_tree_free(tree);
+}
+
+void test_index_collision__add_blob_with_conflicting_dir(void)
+{
+	git_index_entry entry;
+	git_tree_entry *tentry;
+	git_oid tree_id;
+	git_tree *tree;
+
+	memset(&entry, 0, sizeof(entry));
+	entry.ctime.seconds = 12346789;
+	entry.mtime.seconds = 12346789;
+	entry.mode  = 0100644;
+	entry.file_size = 0;
+	git_oid_cpy(&entry.id, &g_empty_id);
+
+	entry.path = "a/b/c";
+	cl_git_pass(git_index_add(g_index, &entry));
+
+	/* Check a/b/c exists here */
+	cl_git_pass(git_index_write_tree(&tree_id, g_index));
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
+	cl_git_pass(git_tree_entry_bypath(&tentry, tree, "a/b/c"));
+	git_tree_entry_free(tentry);
+	git_tree_free(tree);
+
+	/* create a blob/tree collision */
+	entry.path = "a/b";
+	cl_git_pass(git_index_add(g_index, &entry));
+
+	/* a/b should now be a tree and a/b/c a blob */
+	cl_git_pass(git_index_write_tree(&tree_id, g_index));
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
+	cl_git_pass(git_tree_entry_bypath(&tentry, tree, "a/b"));
+	cl_git_fail(git_tree_entry_bypath(&tentry, tree, "a/b/c"));
+	git_tree_entry_free(tentry);
 	git_tree_free(tree);
 }
 
