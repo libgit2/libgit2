@@ -279,7 +279,7 @@ typedef int(*git_revwalk_hide_cb)(
 	void *payload);
 
 /**
- * Adds a callback function to hide a commit and its parents
+ * Adds, changes or removes a callback function to hide a commit and its parents
  *
  * @param walk the revision walker
  * @param hide_cb  callback function to hide a commit and its parents

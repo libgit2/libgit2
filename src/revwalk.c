@@ -756,15 +756,11 @@ int git_revwalk_add_hide_cb(
 	if (walk->walking)
 		git_revwalk_reset(walk);
 
-	if (walk->hide_cb) {
-		/* There is already a callback added */
-		giterr_set(GITERR_INVALID, "there is already a callback added to hide commits in revwalk");
-		return -1;
-	}
-
 	walk->hide_cb = hide_cb;
 	walk->hide_cb_payload = payload;
-	walk->limited = 1;
+
+	if (hide_cb)
+		walk->limited = 1;
 
 	return 0;
 }

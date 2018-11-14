@@ -117,13 +117,40 @@ void test_revwalk_hidecb__hide_none_cb(void)
 	git_revwalk_free(walk);
 }
 
-void test_revwalk_hidecb__add_hide_cb_multiple_times(void)
+void test_revwalk_hidecb__unset_cb_before_walk(void)
 {
 	git_revwalk *walk;
+	git_oid id;
+	int i, error;
 
 	cl_git_pass(git_revwalk_new(&walk, _repo));
 	cl_git_pass(git_revwalk_add_hide_cb(walk, hide_every_commit_cb, NULL));
-	cl_git_fail(git_revwalk_add_hide_cb(walk, hide_every_commit_cb, NULL));
+	cl_git_pass(git_revwalk_add_hide_cb(walk, NULL, NULL));
+	cl_git_pass(git_revwalk_push(walk, &_head_id));
+
+	/* It should return all 6 commits */
+	i = 0;
+	while ((error = git_revwalk_next(&id, walk)) == 0)
+		i++;
+
+	cl_assert_equal_i(i, 6);
+	cl_assert_equal_i(error, GIT_ITEROVER);
+
+	git_revwalk_free(walk);
+}
+
+void test_revwalk_hidecb__change_cb_before_walk(void)
+{
+	git_revwalk *walk;
+	git_oid id;
+
+	cl_git_pass(git_revwalk_new(&walk, _repo));
+	cl_git_pass(git_revwalk_add_hide_cb(walk, hide_none_cb, NULL));
+	cl_git_pass(git_revwalk_add_hide_cb(walk, hide_every_commit_cb, NULL));
+	cl_git_pass(git_revwalk_push(walk, &_head_id));
+
+	/* First call to git_revwalk_next should return GIT_ITEROVER */
+	cl_assert_equal_i(GIT_ITEROVER, git_revwalk_next(&id, walk));
 
 	git_revwalk_free(walk);
 }
