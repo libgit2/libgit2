@@ -92,9 +92,15 @@ int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const cha
 	/*
 	 * Sign
 	 */
-	if (*p == '-' || *p == '+')
-		if (*p++ == '-')
+	if (*p == '-' || *p == '+') {
+		if (*p == '-')
 			neg = 1;
+		p++;
+		nptr_len--;
+	}
+
+	if (!nptr_len)
+		goto Return;
 
 	/*
 	 * Automatically detect the base if none was given to us.
