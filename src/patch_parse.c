@@ -458,26 +458,6 @@ done:
 	return error;
 }
 
-static int parse_number(git_off_t *out, git_patch_parse_ctx *ctx)
-{
-	const char *end;
-	int64_t num;
-
-	if (!git__isdigit(ctx->parse_ctx.line[0]))
-		return -1;
-
-	if (git__strntol64(&num, ctx->parse_ctx.line, ctx->parse_ctx.line_len, &end, 10) < 0)
-		return -1;
-
-	if (num < 0)
-		return -1;
-
-	*out = num;
-	git_parse_advance_chars(&ctx->parse_ctx, (end - ctx->parse_ctx.line));
-
-	return 0;
-}
-
 static int parse_int(int *out, git_patch_parse_ctx *ctx)
 {
 	git_off_t num;
