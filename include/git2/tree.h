@@ -189,7 +189,7 @@ GIT_EXTERN(const git_oid *) git_tree_entry_id(const git_tree_entry *entry);
  * @param entry a tree entry
  * @return the type of the pointed object
  */
-GIT_EXTERN(git_otype) git_tree_entry_type(const git_tree_entry *entry);
+GIT_EXTERN(git_object_t) git_tree_entry_type(const git_tree_entry *entry);
 
 /**
  * Get the UNIX file attributes of a tree entry

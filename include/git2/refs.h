@@ -699,19 +699,19 @@ GIT_EXTERN(int) git_reference_normalize_name(
  * The retrieved `peeled` object is owned by the repository
  * and should be closed with the `git_object_free` method.
  *
- * If you pass `GIT_OBJ_ANY` as the target type, then the object
+ * If you pass `GIT_OBJECT_ANY` as the target type, then the object
  * will be peeled until a non-tag object is met.
  *
  * @param out Pointer to the peeled git_object
  * @param ref The reference to be processed
- * @param type The type of the requested object (GIT_OBJ_COMMIT,
- * GIT_OBJ_TAG, GIT_OBJ_TREE, GIT_OBJ_BLOB or GIT_OBJ_ANY).
+ * @param type The type of the requested object (GIT_OBJECT_COMMIT,
+ * GIT_OBJECT_TAG, GIT_OBJECT_TREE, GIT_OBJECT_BLOB or GIT_OBJECT_ANY).
  * @return 0 on success, GIT_EAMBIGUOUS, GIT_ENOTFOUND or an error code
  */
 GIT_EXTERN(int) git_reference_peel(
 	git_object **out,
 	git_reference *ref,
-	git_otype type);
+	git_object_t type);
 
 /**
  * Ensure the reference name is well-formed.

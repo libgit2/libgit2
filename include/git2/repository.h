@@ -685,7 +685,7 @@ GIT_EXTERN(int) git_repository_mergehead_foreach(
  * @param repo Repository pointer
  * @param path Path to file on disk whose contents should be hashed. If the
  *             repository is not NULL, this can be a relative path.
- * @param type The object type to hash as (e.g. GIT_OBJ_BLOB)
+ * @param type The object type to hash as (e.g. GIT_OBJECT_BLOB)
  * @param as_path The path to use to look up filtering rules. If this is
  *             NULL, then the `path` parameter will be used instead. If
  *             this is passed as the empty string, then no filters will be
@@ -696,7 +696,7 @@ GIT_EXTERN(int) git_repository_hashfile(
 	git_oid *out,
 	git_repository *repo,
 	const char *path,
-	git_otype type,
+	git_object_t type,
 	const char *as_path);
 
 /**
