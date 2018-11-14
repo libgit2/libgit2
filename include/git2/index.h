@@ -37,11 +37,11 @@ typedef struct {
  * "Documentation/technical/index-format.txt").
  *
  * The `flags` field consists of a number of bit fields which can be
- * accessed via the first set of `GIT_IDXENTRY_...` bitmasks below.  These
- * flags are all read from and persisted to disk.
+ * accessed via the first set of `GIT_INDEX_ENTRY_...` bitmasks below.
+ * These flags are all read from and persisted to disk.
  *
  * The `flags_extended` field also has a number of bit fields which can be
- * accessed via the later `GIT_IDXENTRY_...` bitmasks below.  Some of
+ * accessed via the later `GIT_INDEX_ENTRY_...` bitmasks below.  Some of
  * these flags are read from and written to disk, but some are set aside
  * for in-memory only reference.
  *
@@ -76,24 +76,25 @@ typedef struct git_index_entry {
  * value both in memory and on disk.  You can use them to interpret the
  * data in the `flags`.
  */
-#define GIT_IDXENTRY_NAMEMASK  (0x0fff)
-#define GIT_IDXENTRY_STAGEMASK (0x3000)
-#define GIT_IDXENTRY_STAGESHIFT 12
+
+#define GIT_INDEX_ENTRY_NAMEMASK  (0x0fff)
+#define GIT_INDEX_ENTRY_STAGEMASK (0x3000)
+#define GIT_INDEX_ENTRY_STAGESHIFT 12
 
 /**
  * Flags for index entries
  */
 typedef enum {
-	GIT_IDXENTRY_EXTENDED  = (0x4000),
-	GIT_IDXENTRY_VALID     = (0x8000),
-} git_indxentry_flag_t;
+	GIT_INDEX_ENTRY_EXTENDED  = (0x4000),
+	GIT_INDEX_ENTRY_VALID     = (0x8000),
+} git_index_entry_flag_t;
 
-#define GIT_IDXENTRY_STAGE(E) \
-	(((E)->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT)
+#define GIT_INDEX_ENTRY_STAGE(E) \
+	(((E)->flags & GIT_INDEX_ENTRY_STAGEMASK) >> GIT_INDEX_ENTRY_STAGESHIFT)
 
-#define GIT_IDXENTRY_STAGE_SET(E,S) do { \
-	(E)->flags = ((E)->flags & ~GIT_IDXENTRY_STAGEMASK) | \
-		(((S) & 0x03) << GIT_IDXENTRY_STAGESHIFT); } while (0)
+#define GIT_INDEX_ENTRY_STAGE_SET(E,S) do { \
+	(E)->flags = ((E)->flags & ~GIT_INDEX_ENTRY_STAGEMASK) | \
+		(((S) & 0x03) << GIT_INDEX_ENTRY_STAGESHIFT); } while (0)
 
 /**
  * Bitmasks for on-disk fields of `git_index_entry`'s `flags_extended`
@@ -101,7 +102,7 @@ typedef enum {
  * In memory, the `flags_extended` fields are divided into two parts: the
  * fields that are read from and written to disk, and other fields that
  * in-memory only and used by libgit2.  Only the flags in
- * `GIT_IDXENTRY_EXTENDED_FLAGS` will get saved on-disk.
+ * `GIT_INDEX_ENTRY_EXTENDED_FLAGS` will get saved on-disk.
  *
  * Thee first three bitmasks match the three fields in the
  * `git_index_entry` `flags_extended` value that belong on disk.  You
@@ -113,34 +114,22 @@ typedef enum {
  *
  */
 typedef enum {
+	GIT_INDEX_ENTRY_INTENT_TO_ADD  =  (1 << 13),
+	GIT_INDEX_ENTRY_SKIP_WORKTREE  =  (1 << 14),
 
-	GIT_IDXENTRY_INTENT_TO_ADD  =  (1 << 13),
-	GIT_IDXENTRY_SKIP_WORKTREE  =  (1 << 14),
-	/** Reserved for future extension */
-	GIT_IDXENTRY_EXTENDED2      =  (1 << 15),
+	GIT_INDEX_ENTRY_EXTENDED_FLAGS =  (GIT_INDEX_ENTRY_INTENT_TO_ADD | GIT_INDEX_ENTRY_SKIP_WORKTREE),
 
-	GIT_IDXENTRY_EXTENDED_FLAGS = (GIT_IDXENTRY_INTENT_TO_ADD | GIT_IDXENTRY_SKIP_WORKTREE),
-	GIT_IDXENTRY_UPDATE            =  (1 << 0),
-	GIT_IDXENTRY_REMOVE            =  (1 << 1),
-	GIT_IDXENTRY_UPTODATE          =  (1 << 2),
-	GIT_IDXENTRY_ADDED             =  (1 << 3),
-
-	GIT_IDXENTRY_HASHED            =  (1 << 4),
-	GIT_IDXENTRY_UNHASHED          =  (1 << 5),
-	GIT_IDXENTRY_WT_REMOVE         =  (1 << 6), /**< remove in work directory */
-	GIT_IDXENTRY_CONFLICTED        =  (1 << 7),
-
-	GIT_IDXENTRY_UNPACKED          =  (1 << 8),
-	GIT_IDXENTRY_NEW_SKIP_WORKTREE =  (1 << 9),
-} git_idxentry_extended_flag_t;
+	GIT_INDEX_ENTRY_UPTODATE       =  (1 << 2),
+} git_index_entry_extended_flag_t;
 
 /** Capabilities of system that affect index actions. */
 typedef enum {
-	GIT_INDEXCAP_IGNORE_CASE = 1,
-	GIT_INDEXCAP_NO_FILEMODE = 2,
-	GIT_INDEXCAP_NO_SYMLINKS = 4,
-	GIT_INDEXCAP_FROM_OWNER  = -1,
-} git_indexcap_t;
+	GIT_INDEX_CAPABILITY_IGNORE_CASE = 1,
+	GIT_INDEX_CAPABILITY_NO_FILEMODE = 2,
+	GIT_INDEX_CAPABILITY_NO_SYMLINKS = 4,
+	GIT_INDEX_CAPABILITY_FROM_OWNER  = -1,
+} git_index_capability_t;
+
 
 /** Callback for APIs that add/remove/update files matching pathspec */
 typedef int (*git_index_matched_path_cb)(
@@ -234,19 +223,19 @@ GIT_EXTERN(git_repository *) git_index_owner(const git_index *index);
  * Read index capabilities flags.
  *
  * @param index An existing index object
- * @return A combination of GIT_INDEXCAP values
+ * @return A combination of GIT_INDEX_CAPABILITY values
  */
 GIT_EXTERN(int) git_index_caps(const git_index *index);
 
 /**
  * Set index capabilities flags.
  *
- * If you pass `GIT_INDEXCAP_FROM_OWNER` for the caps, then the
+ * If you pass `GIT_INDEX_CAPABILITY_FROM_OWNER` for the caps, then
  * capabilities will be read from the config of the owner object,
  * looking at `core.ignorecase`, `core.filemode`, `core.symlinks`.
  *
  * @param index An existing index object
- * @param caps A combination of GIT_INDEXCAP values
+ * @param caps A combination of GIT_INDEX_CAPABILITY values
  * @return 0 on success, -1 on failure
  */
 GIT_EXTERN(int) git_index_set_caps(git_index *index, int caps);
@@ -474,7 +463,7 @@ GIT_EXTERN(int) git_index_add(git_index *index, const git_index_entry *source_en
  *
  * This entry is calculated from the entry's flag attribute like this:
  *
- *    (entry->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT
+ *    (entry->flags & GIT_INDEX_ENTRY_STAGEMASK) >> GIT_INDEX_ENTRY_STAGESHIFT
  *
  * @param entry The entry
  * @return the stage number
@@ -844,6 +833,49 @@ GIT_EXTERN(int) git_index_conflict_next(
  */
 GIT_EXTERN(void) git_index_conflict_iterator_free(
 	git_index_conflict_iterator *iterator);
+
+/**@}*/
+
+/** @name Deprecated Index Structures
+ *
+ * These macros, structures and enumerations are retained for backward
+ * compatibility.  The newer versions of these functions and structures
+ * should be preferred in all new code.
+ */
+/**@{*/
+
+#define GIT_IDXENTRY_NAMEMASK          GIT_INDEX_ENTRY_NAMEMASK
+#define GIT_IDXENTRY_STAGEMASK         GIT_INDEX_ENTRY_STAGEMASK
+#define GIT_IDXENTRY_STAGESHIFT        GIT_INDEX_ENTRY_STAGESHIFT
+
+/* The git_indxentry_flag_t enum */
+#define GIT_IDXENTRY_EXTENDED          GIT_INDEX_ENTRY_EXTENDED
+#define GIT_IDXENTRY_VALID             GIT_INDEX_ENTRY_VALID
+
+#define GIT_IDXENTRY_STAGE(E)          GIT_INDEX_ENTRY_STAGE(E)
+#define GIT_IDXENTRY_STAGE_SET(E,S)    GIT_INDEX_ENTRY_STAGE_SET(E,S)
+
+/* The git_idxentry_extended_flag_t enum */
+#define GIT_IDXENTRY_INTENT_TO_ADD     GIT_INDEX_ENTRY_INTENT_TO_ADD
+#define GIT_IDXENTRY_SKIP_WORKTREE     GIT_INDEX_ENTRY_SKIP_WORKTREE
+#define GIT_IDXENTRY_EXTENDED_FLAGS    (GIT_INDEX_ENTRY_INTENT_TO_ADD | GIT_INDEX_ENTRY_SKIP_WORKTREE)
+#define GIT_IDXENTRY_EXTENDED2         (1 << 15)
+#define GIT_IDXENTRY_UPDATE            (1 << 0)
+#define GIT_IDXENTRY_REMOVE            (1 << 1)
+#define GIT_IDXENTRY_UPTODATE          (1 << 2)
+#define GIT_IDXENTRY_ADDED             (1 << 3)
+#define GIT_IDXENTRY_HASHED            (1 << 4)
+#define GIT_IDXENTRY_UNHASHED          (1 << 5)
+#define GIT_IDXENTRY_WT_REMOVE         (1 << 6)
+#define GIT_IDXENTRY_CONFLICTED        (1 << 7)
+#define GIT_IDXENTRY_UNPACKED          (1 << 8)
+#define GIT_IDXENTRY_NEW_SKIP_WORKTREE (1 << 9)
+
+/* The git_index_capability_t enum */
+#define GIT_INDEXCAP_IGNORE_CASE       GIT_INDEX_CAPABILITY_IGNORE_CASE
+#define GIT_INDEXCAP_NO_FILEMODE       GIT_INDEX_CAPABILITY_NO_FILEMODE
+#define GIT_INDEXCAP_NO_SYMLINKS       GIT_INDEX_CAPABILITY_NO_SYMLINKS
+#define GIT_INDEXCAP_FROM_OWNER        GIT_INDEX_CAPABILITY_FROM_OWNER
 
 /**@}*/
 
