@@ -4,6 +4,7 @@
 #include "config.h"
 #include "path.h"
 #include "config/config_helpers.h"
+#include "repo/repo_helpers.h"
 
 enum repo_mode {
 	STANDARD_REPOSITORY = 0,
@@ -12,7 +13,6 @@ enum repo_mode {
 
 static git_repository *_repo = NULL;
 static git_buf _global_path = GIT_BUF_INIT;
-static git_buf _tmp_path = GIT_BUF_INIT;
 static mode_t g_umask = 0;
 
 void test_repo_init__initialize(void)
@@ -35,9 +35,7 @@ void test_repo_init__cleanup(void)
 		_global_path.ptr);
 	git_buf_dispose(&_global_path);
 
-	if (_tmp_path.size > 0 && git_path_isdir(_tmp_path.ptr))
-		git_futils_rmdir_r(_tmp_path.ptr, NULL, GIT_RMDIR_REMOVE_FILES);
-	git_buf_dispose(&_tmp_path);
+	cl_fixture_cleanup("tmp_global_path");
 }
 
 static void cleanup_repository(void *path)
@@ -245,6 +243,68 @@ void test_repo_init__detect_ignorecase(void)
 
 	assert_config_entry_on_init(
 		"core.ignorecase", found_without_match ? true : GIT_ENOTFOUND);
+}
+
+/*
+ * Windows: if the filesystem supports symlinks (because we're running
+ * as administrator, or because the user has opted into it for normal
+ * users) then we can also opt-in explicitly by settings `core.symlinks`
+ * in the global config.  Symlinks remain off by default.
+ */
+
+void test_repo_init__symlinks_win32_enabled_by_global_config(void)
+{
+#ifndef GIT_WIN32
+	cl_skip();
+#else
+	git_config *config, *repo_config;
+	int val;
+
+	if (!filesystem_supports_symlinks("link"))
+		cl_skip();
+
+	create_tmp_global_config("tmp_global_config", "core.symlinks", "true");
+
+	/*
+	 * Create a new repository (can't use `assert_config_on_init` since we
+	 * want to examine configuration levels with more granularity.)
+	 */
+	cl_git_pass(git_repository_init(&_repo, "config_entry/test.non.bare.git", false));
+
+	/* Ensure that core.symlinks remains set (via the global config). */
+	cl_git_pass(git_repository_config(&config, _repo));
+	cl_git_pass(git_config_get_bool(&val, config, "core.symlinks"));
+	cl_assert_equal_i(1, val);
+
+	/*
+	 * Ensure that the repository config does not set core.symlinks.
+	 * It should remain inherited.
+	 */
+	cl_git_pass(git_config_open_level(&repo_config, config, GIT_CONFIG_LEVEL_LOCAL));
+	cl_git_fail_with(GIT_ENOTFOUND, git_config_get_bool(&val, repo_config, "core.symlinks"));
+	git_config_free(repo_config);
+
+	git_config_free(config);
+#endif
+}
+
+void test_repo_init__symlinks_win32_off_by_default(void)
+{
+#ifndef GIT_WIN32
+	cl_skip();
+#else
+	assert_config_entry_on_init("core.symlinks", false);
+#endif
+}
+
+void test_repo_init__symlinks_posix_detected(void)
+{
+#ifdef GIT_WIN32
+	cl_skip();
+#else
+	assert_config_entry_on_init(
+	    "core.symlinks", filesystem_supports_symlinks("link") ? GIT_ENOTFOUND : false);
+#endif
 }
 
 void test_repo_init__detect_precompose_unicode_required(void)
@@ -563,26 +623,7 @@ static const char *template_sandbox(const char *name)
 
 static void configure_templatedir(const char *template_path)
 {
-	git_buf config_path = GIT_BUF_INIT;
-	git_buf config_data = GIT_BUF_INIT;
-
-    cl_git_pass(git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH,
-		GIT_CONFIG_LEVEL_GLOBAL, &_tmp_path));
-	cl_git_pass(git_buf_puts(&_tmp_path, ".tmp"));
-	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH,
-		GIT_CONFIG_LEVEL_GLOBAL, _tmp_path.ptr));
-
-	cl_must_pass(p_mkdir(_tmp_path.ptr, 0777));
-
-	cl_git_pass(git_buf_joinpath(&config_path, _tmp_path.ptr, ".gitconfig"));
-
-	cl_git_pass(git_buf_printf(&config_data,
-		"[init]\n\ttemplatedir = \"%s\"\n", template_path));
-
-	cl_git_mkfile(config_path.ptr, config_data.ptr);
-
-	git_buf_dispose(&config_path);
-	git_buf_dispose(&config_data);
+	create_tmp_global_config("tmp_global_path", "init.templatedir", template_path);
 }
 
 static void validate_templates(git_repository *repo, const char *template_path)

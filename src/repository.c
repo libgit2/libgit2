@@ -944,18 +944,20 @@ static int load_config(
 	git_buf config_path = GIT_BUF_INIT;
 	git_config *cfg = NULL;
 
-	assert(repo && out);
+	assert(out);
 
 	if ((error = git_config_new(&cfg)) < 0)
 		return error;
 
-	if ((error = git_repository_item_path(&config_path, repo, GIT_REPOSITORY_ITEM_CONFIG)) == 0)
-		error = git_config_add_file_ondisk(cfg, config_path.ptr, GIT_CONFIG_LEVEL_LOCAL, repo, 0);
+	if (repo) {
+		if ((error = git_repository_item_path(&config_path, repo, GIT_REPOSITORY_ITEM_CONFIG)) == 0)
+			error = git_config_add_file_ondisk(cfg, config_path.ptr, GIT_CONFIG_LEVEL_LOCAL, repo, 0);
 
-	if (error && error != GIT_ENOTFOUND)
-		goto on_error;
+		if (error && error != GIT_ENOTFOUND)
+			goto on_error;
 
-	git_buf_dispose(&config_path);
+		git_buf_dispose(&config_path);
+	}
 
 	if (global_config_path != NULL &&
 		(error = git_config_add_file_ondisk(
@@ -1411,24 +1413,56 @@ static bool is_filesystem_case_insensitive(const char *gitdir_path)
 
 static bool are_symlinks_supported(const char *wd_path)
 {
+	git_config *config = NULL;
 	git_buf path = GIT_BUF_INIT;
 	int fd;
 	struct stat st;
-	int symlinks_supported = -1;
+	bool symlinks = false;
+
+	/*
+	 * To emulate Git for Windows, symlinks on Windows must be explicitly
+	 * opted-in.  We examine the system configuration for a core.symlinks
+	 * set to true.  If found, we then examine the filesystem to see if
+	 * symlinks are _actually_ supported by the current user.  If that is
+	 * _not_ set, then we do not test or enable symlink support.
+	 */
+#ifdef GIT_WIN32
+	git_buf global_buf = GIT_BUF_INIT;
+	git_buf xdg_buf = GIT_BUF_INIT;
+	git_buf system_buf = GIT_BUF_INIT;
+	git_buf programdata_buf = GIT_BUF_INIT;
+
+	git_config_find_global(&global_buf);
+	git_config_find_xdg(&xdg_buf);
+	git_config_find_system(&system_buf);
+	git_config_find_programdata(&programdata_buf);
+
+	if (load_config(&config, NULL,
+	    path_unless_empty(&global_buf),
+	    path_unless_empty(&xdg_buf),
+	    path_unless_empty(&system_buf),
+	    path_unless_empty(&programdata_buf)) < 0)
+		goto done;
+
+	if (git_config_get_bool(&symlinks, config, "core.symlinks") < 0 || !symlinks)
+		goto done;
+#endif
 
 	if ((fd = git_futils_mktmp(&path, wd_path, 0666)) < 0 ||
-		p_close(fd) < 0 ||
-		p_unlink(path.ptr) < 0 ||
-		p_symlink("testing", path.ptr) < 0 ||
-		p_lstat(path.ptr, &st) < 0)
-		symlinks_supported = false;
-	else
-		symlinks_supported = (S_ISLNK(st.st_mode) != 0);
+	    p_close(fd) < 0 ||
+	    p_unlink(path.ptr) < 0 ||
+	    p_symlink("testing", path.ptr) < 0 ||
+	    p_lstat(path.ptr, &st) < 0)
+		goto done;
+
+	symlinks = (S_ISLNK(st.st_mode) != 0);
 
 	(void)p_unlink(path.ptr);
-	git_buf_dispose(&path);
 
-	return symlinks_supported;
+done:
+	git_buf_dispose(&path);
+	git_config_free(config);
+	return symlinks;
 }
 
 static int create_empty_file(const char *path, mode_t mode)
