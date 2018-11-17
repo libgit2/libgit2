@@ -422,6 +422,28 @@ void test_refs_reflog_reflog__logallrefupdates_bare_set_false(void)
 	assert_no_reflog_update();
 }
 
+void test_refs_reflog_reflog__logallrefupdates_bare_set_always(void)
+{
+	git_config *config;
+	git_reference *ref;
+	git_reflog *log;
+	git_oid id;
+
+	cl_git_pass(git_repository_config(&config, g_repo));
+	cl_git_pass(git_config_set_string(config, "core.logallrefupdates", "always"));
+	git_config_free(config);
+
+	git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+	cl_git_pass(git_reference_create(&ref, g_repo, "refs/bork", &id, 1, "message"));
+
+	cl_git_pass(git_reflog_read(&log, g_repo, "refs/bork"));
+	cl_assert_equal_i(1, git_reflog_entrycount(log));
+	cl_assert_equal_s("message", git_reflog_entry_byindex(log, 0)->msg);
+
+	git_reflog_free(log);
+	git_reference_free(ref);
+}
+
 void test_refs_reflog_reflog__logallrefupdates_bare_unset(void)
 {
 	git_config *config;

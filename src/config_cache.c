@@ -58,6 +58,12 @@ static git_cvar_map _cvar_map_safecrlf[] = {
 	{GIT_CVAR_STRING, "warn", GIT_SAFE_CRLF_WARN}
 };
 
+static git_cvar_map _cvar_map_logallrefupdates[] = {
+	{GIT_CVAR_FALSE, NULL, GIT_LOGALLREFUPDATES_FALSE},
+	{GIT_CVAR_TRUE, NULL, GIT_LOGALLREFUPDATES_TRUE},
+	{GIT_CVAR_STRING, "always", GIT_LOGALLREFUPDATES_ALWAYS},
+};
+
 /*
  * Generic map for integer values
  */
@@ -76,7 +82,7 @@ static struct map_data _cvar_maps[] = {
 	{"core.abbrev", _cvar_map_int, 1, GIT_ABBREV_DEFAULT },
 	{"core.precomposeunicode", NULL, 0, GIT_PRECOMPOSE_DEFAULT },
 	{"core.safecrlf", _cvar_map_safecrlf, ARRAY_SIZE(_cvar_map_safecrlf), GIT_SAFE_CRLF_DEFAULT},
-	{"core.logallrefupdates", NULL, 0, GIT_LOGALLREFUPDATES_DEFAULT },
+	{"core.logallrefupdates", _cvar_map_logallrefupdates, ARRAY_SIZE(_cvar_map_logallrefupdates), GIT_LOGALLREFUPDATES_DEFAULT},
 	{"core.protecthfs", NULL, 0, GIT_PROTECTHFS_DEFAULT },
 	{"core.protectntfs", NULL, 0, GIT_PROTECTNTFS_DEFAULT },
 	{"core.fsyncobjectfiles", NULL, 0, GIT_FSYNCOBJECTFILES_DEFAULT },
