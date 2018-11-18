@@ -719,7 +719,7 @@ void test_online_clone__start_with_http(void)
 }
 
 static int called_proxy_creds;
-static int proxy_creds(git_cred **out, const char *url, const char *username, unsigned int allowed, void *payload)
+static int proxy_cred_cb(git_cred **out, const char *url, const char *username, unsigned int allowed, void *payload)
 {
 	GIT_UNUSED(url);
 	GIT_UNUSED(username);
@@ -767,7 +767,7 @@ void test_online_clone__proxy_credentials_request(void)
 
 	g_options.fetch_opts.proxy_opts.type = GIT_PROXY_SPECIFIED;
 	g_options.fetch_opts.proxy_opts.url = url.ptr;
-	g_options.fetch_opts.proxy_opts.credentials = proxy_creds;
+	g_options.fetch_opts.proxy_opts.credentials = proxy_cred_cb;
 	g_options.fetch_opts.proxy_opts.certificate_check = proxy_cert_cb;
 	called_proxy_creds = 0;
 	cl_git_pass(git_clone(&g_repo, "http://github.com/libgit2/TestGitRepository", "./foo", &g_options));
