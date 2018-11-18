@@ -927,6 +927,9 @@ static int http_connect(http_subtransport *t)
 		t->parse_finished)
 		return 0;
 
+	if ((error = load_proxy_config(t)) < 0)
+		return error;
+
 	if (t->server.stream) {
 		git_stream_close(t->server.stream);
 		git_stream_free(t->server.stream);
@@ -1368,8 +1371,7 @@ static int http_action(
 
 	assert(t->server.url.host && t->server.url.port && t->server.url.path);
 
-	if ((ret = load_proxy_config(t)) < 0 ||
-		(ret = http_connect(t)) < 0)
+	if ((ret = http_connect(t)) < 0)
 		return ret;
 
 	switch (action) {
