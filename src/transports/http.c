@@ -695,7 +695,15 @@ static int load_proxy_config(http_subtransport *t)
 		return -1;
 	}
 
-	return gitno_connection_data_from_url(&t->proxy.url, t->proxy_opts.url, NULL);
+	if ((error = gitno_connection_data_from_url(&t->proxy.url, t->proxy_opts.url, NULL)) < 0)
+		return error;
+
+	if (t->proxy.url.use_ssl) {
+		giterr_set(GITERR_NET, "SSL connections to proxy are not supported");
+		return -1;
+	}
+
+	return error;
 }
 
 static int check_certificate(
