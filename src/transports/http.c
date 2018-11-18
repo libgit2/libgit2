@@ -208,7 +208,11 @@ static int gen_request(
 	git_buf_puts(buf, "User-Agent: ");
 	git_http__user_agent(buf);
 	git_buf_puts(buf, "\r\n");
-	git_buf_printf(buf, "Host: %s\r\n", t->connection_data.host);
+	git_buf_printf(buf, "Host: %s", t->connection_data.host);
+	if (strcmp(t->connection_data.port, gitno__default_port(&t->connection_data)) != 0) {
+		git_buf_printf(buf, ":%s", t->connection_data.port);
+	}
+	git_buf_puts(buf, "\r\n");
 
 	if (s->chunked || content_length > 0) {
 		git_buf_printf(buf, "Accept: application/x-git-%s-result\r\n", s->service);
