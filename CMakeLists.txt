@@ -233,6 +233,7 @@ ELSE ()
 	ENABLE_WARNINGS(format)
 	ENABLE_WARNINGS(format-security)
 	ENABLE_WARNINGS(int-conversion)
+	DISABLE_WARNINGS(documentation-deprecated-sync)
 
 	IF (APPLE) # Apple deprecated OpenSSL
 	    DISABLE_WARNINGS(deprecated-declarations)
