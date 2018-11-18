@@ -306,16 +306,22 @@ static int on_header_ready(http_subtransport *t)
 	git_buf *value = &t->parse_header_value;
 
 	if (!strcasecmp("Content-Type", git_buf_cstr(name))) {
-		if (!t->content_type) {
-			t->content_type = git__strdup(git_buf_cstr(value));
-			GITERR_CHECK_ALLOC(t->content_type);
+		if (t->content_type) {
+			giterr_set(GITERR_NET, "multiple Content-Type headers");
+			return -1;
 		}
+
+		t->content_type = git__strdup(git_buf_cstr(value));
+		GITERR_CHECK_ALLOC(t->content_type);
 	}
 	else if (!strcasecmp("Content-Length", git_buf_cstr(name))) {
-		if (!t->content_length) {
-			t->content_length = git__strdup(git_buf_cstr(value));
-			GITERR_CHECK_ALLOC(t->content_length);
+		if (t->content_length) {
+			giterr_set(GITERR_NET, "multiple Content-Length headers");
+			return -1;
 		}
+
+		t->content_length = git__strdup(git_buf_cstr(value));
+		GITERR_CHECK_ALLOC(t->content_length);
 	}
 	else if (!strcasecmp("Proxy-Authenticate", git_buf_cstr(name))) {
 		char *dup = git__strdup(git_buf_cstr(value));
@@ -332,10 +338,13 @@ static int on_header_ready(http_subtransport *t)
 			return -1;
 	}
 	else if (!strcasecmp("Location", git_buf_cstr(name))) {
-		if (!t->location) {
-			t->location = git__strdup(git_buf_cstr(value));
-			GITERR_CHECK_ALLOC(t->location);
+		if (t->location) {
+			giterr_set(GITERR_NET, "multiple Location headers");
+			return -1;
 		}
+
+		t->location = git__strdup(git_buf_cstr(value));
+		GITERR_CHECK_ALLOC(t->location);
 	}
 
 	return 0;
