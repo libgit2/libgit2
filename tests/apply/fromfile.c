@@ -43,7 +43,8 @@ static int apply_patchfile(
 
 	if (error == 0) {
 		cl_assert_equal_i(new_len, result.size);
-		cl_assert(memcmp(new, result.ptr, new_len) == 0);
+		if (new_len)
+			cl_assert(memcmp(new, result.ptr, new_len) == 0);
 
 		cl_assert_equal_s(filename_expected, filename);
 		cl_assert_equal_i(mode_expected, mode);

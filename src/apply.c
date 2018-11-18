@@ -348,8 +348,9 @@ static int apply_binary(
 			&patch->binary.old_file)) < 0)
 		goto done;
 
+	/* Verify that the resulting file with the reverse patch applied matches the source file */
 	if (source_len != reverse.size ||
-		memcmp(source, reverse.ptr, source_len) != 0) {
+		(source_len && memcmp(source, reverse.ptr, source_len) != 0)) {
 		error = apply_err("binary patch did not apply cleanly");
 		goto done;
 	}
