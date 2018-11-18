@@ -11,9 +11,6 @@
 
 #include "git2/sys/stream.h"
 
-/** Configure TLS stream functions. */
-int git_tls_stream_global_init(void);
-
 /**
  * Create a TLS stream with the most appropriate backend available for
  * the current platform, whether that's SecureTransport on macOS,

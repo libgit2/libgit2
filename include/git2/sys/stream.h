@@ -45,9 +45,9 @@ typedef struct {
 	int version;
 
 	/**
-	 * Called to create a new TLS connection to a given host.
+	 * Called to create a new connection to a given host.
 	 *
-	 * @param out The created TLS stream
+	 * @param out The created stream
 	 * @param host The hostname to connect to; may be a hostname or
 	 *             IP address
 	 * @param port The port to connect to; may be a port number or
@@ -57,11 +57,12 @@ typedef struct {
 	int (*init)(git_stream **out, const char *host, const char *port);
 
 	/**
-	 * Called to create a new TLS connection on top of the given
-	 * stream.  May be used to proxy a TLS stream over a CONNECT
-	 * session.
+	 * Called to create a new connection on top of the given stream.  If
+	 * this is a TLS stream, then this function may be used to proxy a
+	 * TLS stream over an HTTP CONNECT session.  If this is unset, then
+	 * HTTP CONNECT proxies will not be supported.
 	 *
-	 * @param out The created TLS stream
+	 * @param out The created stream
 	 * @param in An existing stream to add TLS to
 	 * @param host The hostname that the stream is connected to,
 	 *             for certificate validation
@@ -71,17 +72,45 @@ typedef struct {
 } git_stream_registration;
 
 /**
- * Register TLS stream constructors for the library to use
+ * Register stream constructors for the library to use
  *
  * If a registration structure is already set, it will be overwritten.
  * Pass `NULL` in order to deregister the current constructor and return
  * to the system defaults.
  *
  * @param registration the registration data
+ * @param tls 1 if the registration is for TLS streams, 0 for regular
+ *        (insecure) sockets
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_stream_register_tls(
-	git_stream_registration *registration);
+GIT_EXTERN(int) git_stream_register(
+	int tls, git_stream_registration *registration);
+
+/** @name Deprecated TLS Stream Registration Functions
+ *
+ * These typedefs and functions are retained for backward compatibility.
+ * The newer versions of these functions and structures should be preferred
+ * in all new code.
+ */
+
+/**@{*/
+
+/**
+ * @deprecated Provide a git_stream_registration to git_stream_register
+ * @see git_stream_registration
+ */
+typedef int (*git_stream_cb)(git_stream **out, const char *host, const char *port);
+
+/**
+ * Register a TLS stream constructor for the library to use.  This stream
+ * will not support HTTP CONNECT proxies.
+ *
+ * @deprecated Provide a git_stream_registration to git_stream_register
+ * @see git_stream_register
+ */
+GIT_EXTERN(int) git_stream_register_tls(git_stream_cb ctor);
+
+ /**@}*/
 
 GIT_END_DECL
 
