@@ -692,25 +692,25 @@ static int check_certificate(
 	void *cert_cb_payload)
 {
 	git_cert *cert;
+	git_error_state last_error = {0};
 	int error;
 
 	if ((error = git_stream_certificate(&cert, stream)) < 0)
 		return error;
 
-	giterr_clear();
+	giterr_state_capture(&last_error, GIT_ECERTIFICATE);
+
 	error = cert_cb(cert, is_valid, url->host, cert_cb_payload);
 
-	if (error == GIT_PASSTHROUGH)
-		error = is_valid ? 0 : GIT_ECERTIFICATE;
+	if (error == GIT_PASSTHROUGH && !is_valid)
+		return giterr_state_restore(&last_error);
+	else if (error == GIT_PASSTHROUGH)
+		error = 0;
+	else if (error && !giterr_last())
+		giterr_set(GITERR_NET, "user rejected certificate for %s", url->host);
 
-	if (error) {
-		if (!giterr_last())
-			giterr_set(GITERR_NET, "user cancelled certificate check");
-
-		return error;
-	}
-
-	return 0;
+	giterr_state_free(&last_error);
+	return error;
 }
 
 static int http_connect(http_subtransport *t)
