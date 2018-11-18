@@ -101,7 +101,7 @@ typedef struct git_worktree_add_options {
  * @param version The struct version; pass `GIT_WORKTREE_ADD_OPTIONS_VERSION`.
  * @return Zero on success; -1 on failure.
  */
-int git_worktree_add_init_options(git_worktree_add_options *opts,
+GIT_EXTERN(int) git_worktree_add_init_options(git_worktree_add_options *opts,
 	unsigned int version);
 
 /**
