@@ -1971,6 +1971,51 @@ int git_index_has_conflicts(const git_index *index)
 	return 0;
 }
 
+int git_index_iterator_new(
+	git_index_iterator **iterator_out,
+	git_index *index)
+{
+	git_index_iterator *it;
+	int error;
+
+	assert(iterator_out && index);
+
+	it = git__calloc(1, sizeof(git_index_iterator));
+	GITERR_CHECK_ALLOC(it);
+
+	if ((error = git_index_snapshot_new(&it->snap, index)) < 0) {
+		git__free(it);
+		return error;
+	}
+
+	it->index = index;
+
+	*iterator_out = it;
+	return 0;
+}
+
+int git_index_iterator_next(
+	const git_index_entry **out,
+	git_index_iterator *it)
+{
+	assert(out && it);
+
+	if (it->cur >= git_vector_length(&it->snap))
+		return GIT_ITEROVER;
+
+	*out = (git_index_entry *)git_vector_get(&it->snap, it->cur++);
+	return 0;
+}
+
+void git_index_iterator_free(git_index_iterator *it)
+{
+	if (it == NULL)
+		return;
+
+	git_index_snapshot_release(&it->snap, it->index);
+	git__free(it);
+}
+
 int git_index_conflict_iterator_new(
 	git_index_conflict_iterator **iterator_out,
 	git_index *index)

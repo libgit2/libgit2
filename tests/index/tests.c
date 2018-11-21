@@ -19,10 +19,10 @@ struct test_entry {
 
 static struct test_entry test_entries[] = {
    {4, "Makefile", 5064, 0x4C3F7F33},
-   {62, "tests/Makefile", 2631, 0x4C3F7F33},
-   {36, "src/index.c", 10014, 0x4C43368D},
    {6, "git.git-authors", 2709, 0x4C3F7F33},
-   {48, "src/revobject.h", 1448, 0x4C3F7FE2}
+   {36, "src/index.c", 10014, 0x4C43368D},
+   {48, "src/revobject.h", 1448, 0x4C3F7FE2},
+   {62, "tests/Makefile", 2631, 0x4C3F7F33}
 };
 
 /* Helpers */
@@ -990,4 +990,91 @@ void test_index_tests__can_lock_index(void)
 	git_indexwriter_cleanup(&two);
 	git_index_free(index);
 	cl_git_sandbox_cleanup();
+}
+
+void test_index_tests__can_iterate(void)
+{
+	git_index *index;
+	git_index_iterator *iterator;
+	const git_index_entry *entry;
+	size_t i, iterator_idx = 0, found = 0;
+	int ret;
+
+	cl_git_pass(git_index_open(&index, TEST_INDEX_PATH));
+	cl_git_pass(git_index_iterator_new(&iterator, index));
+
+	cl_assert(git_vector_is_sorted(&iterator->snap));
+
+	for (i = 0; i < ARRAY_SIZE(test_entries); i++) {
+		/* Advance iterator to next test entry index */
+		do {
+			ret = git_index_iterator_next(&entry, iterator);
+
+			if (ret == GIT_ITEROVER)
+				cl_fail("iterator did not contain all test entries");
+
+			cl_git_pass(ret);
+		} while (iterator_idx++ < test_entries[i].index);
+
+		cl_assert_equal_s(entry->path, test_entries[i].path);
+		cl_assert_equal_i(entry->mtime.seconds, test_entries[i].mtime);
+		cl_assert_equal_i(entry->file_size, test_entries[i].file_size);
+		found++;
+	}
+
+	while ((ret = git_index_iterator_next(&entry, iterator)) == 0)
+		;
+
+	if (ret != GIT_ITEROVER)
+		cl_git_fail(ret);
+
+	cl_assert_equal_i(found, ARRAY_SIZE(test_entries));
+
+	git_index_iterator_free(iterator);
+	git_index_free(index);
+}
+
+void test_index_tests__can_modify_while_iterating(void)
+{
+	git_index *index;
+	git_index_iterator *iterator;
+	const git_index_entry *entry;
+	git_index_entry new_entry = {{0}};
+	size_t expected = 0, seen = 0;
+	int ret;
+
+	cl_git_pass(git_index_open(&index, TEST_INDEX_PATH));
+	cl_git_pass(git_index_iterator_new(&iterator, index));
+
+	expected = git_index_entrycount(index);
+	cl_assert(git_vector_is_sorted(&iterator->snap));
+
+	/*
+	 * After we've counted the entries, add a new one and change another;
+	 * ensure that our iterator is backed by a snapshot and thus returns
+	 * the number of entries from when the iterator was created.
+	 */
+	cl_git_pass(git_oid_fromstr(&new_entry.id, "8312e0a89a9cbab77c732b6bc39b51a783e3a318"));
+	new_entry.path = "newfile";
+	new_entry.mode = GIT_FILEMODE_BLOB;
+	cl_git_pass(git_index_add(index, &new_entry));
+
+	cl_git_pass(git_oid_fromstr(&new_entry.id, "4141414141414141414141414141414141414141"));
+	new_entry.path = "Makefile";
+	new_entry.mode = GIT_FILEMODE_BLOB;
+	cl_git_pass(git_index_add(index, &new_entry));
+
+	while (true) {
+		ret = git_index_iterator_next(&entry, iterator);
+
+		if (ret == GIT_ITEROVER)
+			break;
+
+		seen++;
+	}
+
+	cl_assert_equal_i(expected, seen);
+
+	git_index_iterator_free(iterator);
+	git_index_free(index);
 }
