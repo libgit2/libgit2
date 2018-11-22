@@ -23,7 +23,7 @@ int git_tls_stream_new(git_stream **out, const char *host, const char *port)
 
 	assert(out && host && port);
 
-	if ((error = git_stream_registry_lookup(&custom, 1)) == 0) {
+	if ((error = git_stream_registry_lookup(&custom, GIT_STREAM_TLS)) == 0) {
 		init = custom.init;
 	} else if (error == GIT_ENOTFOUND) {
 #ifdef GIT_SECURE_TRANSPORT
@@ -52,7 +52,7 @@ int git_tls_stream_wrap(git_stream **out, git_stream *in, const char *host)
 
 	assert(out && in);
 
-	if (git_stream_registry_lookup(&custom, 1) == 0) {
+	if (git_stream_registry_lookup(&custom, GIT_STREAM_TLS) == 0) {
 		wrap = custom.wrap;
 	} else {
 #ifdef GIT_SECURE_TRANSPORT

@@ -14,6 +14,6 @@
 int git_stream_registry_global_init(void);
 
 /** Lookup a stream registration. */
-extern int git_stream_registry_lookup(git_stream_registration *out, int tls);
+extern int git_stream_registry_lookup(git_stream_registration *out, git_stream_t type);
 
 #endif

@@ -72,19 +72,31 @@ typedef struct {
 } git_stream_registration;
 
 /**
+ * The type of stream to register.
+ */
+typedef enum {
+	/** A standard (non-TLS) socket. */
+	GIT_STREAM_STANDARD = 1,
+
+	/** A TLS-encrypted socket. */
+	GIT_STREAM_TLS = 2,
+} git_stream_t;
+
+/**
  * Register stream constructors for the library to use
  *
  * If a registration structure is already set, it will be overwritten.
  * Pass `NULL` in order to deregister the current constructor and return
  * to the system defaults.
  *
+ * The type parameter may be a bitwise AND of types.
+ *
+ * @param type the type or types of stream to register
  * @param registration the registration data
- * @param tls 1 if the registration is for TLS streams, 0 for regular
- *        (insecure) sockets
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_stream_register(
-	int tls, git_stream_registration *registration);
+	git_stream_t type, git_stream_registration *registration);
 
 /** @name Deprecated TLS Stream Registration Functions
  *

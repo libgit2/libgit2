@@ -224,7 +224,7 @@ int git_socket_stream_new(
 
 	assert(out && host && port);
 
-	if ((error = git_stream_registry_lookup(&custom, 0)) == 0)
+	if ((error = git_stream_registry_lookup(&custom, GIT_STREAM_STANDARD)) == 0)
 		init = custom.init;
 	else if (error == GIT_ENOTFOUND)
 		init = default_socket_stream_new;

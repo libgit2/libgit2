@@ -36,14 +36,34 @@ int git_stream_registry_global_init(void)
 	return 0;
 }
 
-int git_stream_registry_lookup(git_stream_registration *out, int tls)
+GIT_INLINE(void) stream_registration_cpy(
+	git_stream_registration *target,
+	git_stream_registration *src)
 {
-	git_stream_registration *target = tls ?
-		&stream_registry.callbacks :
-		&stream_registry.tls_callbacks;
+	if (src)
+		memcpy(target, src, sizeof(git_stream_registration));
+	else
+		memset(target, 0, sizeof(git_stream_registration));
+}
+
+int git_stream_registry_lookup(git_stream_registration *out, git_stream_t type)
+{
+	git_stream_registration *target;
 	int error = GIT_ENOTFOUND;
 
 	assert(out);
+
+	switch(type) {
+	case GIT_STREAM_STANDARD:
+		target = &stream_registry.callbacks;
+		break;
+	case GIT_STREAM_TLS:
+		target = &stream_registry.tls_callbacks;
+		break;
+	default:
+		assert(0);
+		return -1;
+	}
 
 	if (git_rwlock_rdlock(&stream_registry.lock) < 0) {
 		giterr_set(GITERR_OS, "failed to lock stream registry");
@@ -51,7 +71,7 @@ int git_stream_registry_lookup(git_stream_registration *out, int tls)
 	}
 
 	if (target->init) {
-		memcpy(out, target, sizeof(git_stream_registration));
+		stream_registration_cpy(out, target);
 		error = 0;
 	}
 
@@ -59,12 +79,8 @@ int git_stream_registry_lookup(git_stream_registration *out, int tls)
 	return error;
 }
 
-int git_stream_register(int tls, git_stream_registration *registration)
+int git_stream_register(git_stream_t type, git_stream_registration *registration)
 {
-	git_stream_registration *target = tls ?
-		&stream_registry.callbacks :
-		&stream_registry.tls_callbacks;
-
 	assert(!registration || registration->init);
 
 	GITERR_CHECK_VERSION(registration, GIT_STREAM_VERSION, "stream_registration");
@@ -74,10 +90,11 @@ int git_stream_register(int tls, git_stream_registration *registration)
 		return -1;
 	}
 
-	if (registration)
-		memcpy(target, registration, sizeof(git_stream_registration));
-	else
-		memset(target, 0, sizeof(git_stream_registration));
+	if ((type & GIT_STREAM_STANDARD) == GIT_STREAM_STANDARD)
+		stream_registration_cpy(&stream_registry.callbacks, registration);
+
+	if ((type & GIT_STREAM_TLS) == GIT_STREAM_TLS)
+		stream_registration_cpy(&stream_registry.tls_callbacks, registration);
 
 	git_rwlock_wrunlock(&stream_registry.lock);
 	return 0;
@@ -92,8 +109,8 @@ int git_stream_register_tls(git_stream_cb ctor)
 		registration.init = ctor;
 		registration.wrap = NULL;
 
-		return git_stream_register(1, &registration);
+		return git_stream_register(GIT_STREAM_TLS, &registration);
 	} else {
-		return git_stream_register(1, NULL);
+		return git_stream_register(GIT_STREAM_TLS, NULL);
 	}
 }
