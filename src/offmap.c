@@ -44,6 +44,16 @@ int git_offmap_exists(git_offmap *map, const git_off_t key)
 	return kh_get(off, map, key) != kh_end(map);
 }
 
+int git_offmap_has_data(git_offmap *map, size_t idx)
+{
+	return kh_exist(map, idx);
+}
+
+git_off_t git_offmap_key_at(git_offmap *map, size_t idx)
+{
+	return kh_key(map, idx);
+}
+
 void *git_offmap_value_at(git_offmap *map, size_t idx)
 {
 	return kh_val(map, idx);

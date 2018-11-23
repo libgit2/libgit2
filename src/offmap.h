@@ -31,7 +31,9 @@ size_t git_offmap_lookup_index(git_offmap *map, const git_off_t key);
 int git_offmap_valid_index(git_offmap *map, size_t idx);
 
 int git_offmap_exists(git_offmap *map, const git_off_t key);
+int git_offmap_has_data(git_offmap *map, size_t idx);
 
+git_off_t git_offmap_key_at(git_offmap *map, size_t idx);
 void *git_offmap_value_at(git_offmap *map, size_t idx);
 void git_offmap_set_value_at(git_offmap *map, size_t idx, void *value);
 void git_offmap_delete_at(git_offmap *map, size_t idx);
@@ -43,7 +45,19 @@ void git_offmap_delete(git_offmap *map, const git_off_t key);
 size_t git_offmap_begin(git_offmap *map);
 size_t git_offmap_end(git_offmap *map);
 
-#define git_offmap_foreach		kh_foreach
-#define git_offmap_foreach_value	kh_foreach_value
+#define git_offmap_foreach(h, kvar, vvar, code) { size_t __i;			\
+	for (__i = git_offmap_begin(h); __i != git_offmap_end(h); ++__i) {	\
+		if (!git_offmap_has_data(h,__i)) continue;			\
+		(kvar) = git_offmap_key_at(h,__i);				\
+		(vvar) = git_offmap_value_at(h,__i);				\
+		code;								\
+	} }
+
+#define git_offmap_foreach_value(h, vvar, code) { size_t __i;			\
+	for (__i = git_offmap_begin(h); __i != git_offmap_end(h); ++__i) {	\
+		if (!git_offmap_has_data(h,__i)) continue;			\
+		(vvar) = git_offmap_value_at(h,__i);				\
+		code;								\
+	} }
 
 #endif

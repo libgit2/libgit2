@@ -46,6 +46,11 @@ void git_oidmap_delete(git_oidmap *map, const git_oid *key);
 size_t git_oidmap_begin(git_oidmap *map);
 size_t git_oidmap_end(git_oidmap *map);
 
-#define git_oidmap_foreach_value kh_foreach_value
+#define git_oidmap_foreach_value(h, vvar, code) { size_t __i;			\
+	for (__i = git_oidmap_begin(h); __i != git_oidmap_end(h); ++__i) {	\
+		if (!git_oidmap_has_data(h,__i)) continue;			\
+		(vvar) = git_oidmap_value_at(h,__i);				\
+		code;								\
+	} }
 
 #endif
