@@ -11,15 +11,7 @@
 
 #include "git2/types.h"
 
-#define kmalloc git__malloc
-#define kcalloc git__calloc
-#define krealloc git__realloc
-#define kreallocarray git__reallocarray
-#define kfree git__free
-#include "khash.h"
-
-__KHASH_TYPE(off, git_off_t, void *)
-typedef khash_t(off) git_offmap;
+typedef struct kh_off_s git_offmap;
 
 git_offmap *git_offmap_alloc(void);
 void git_offmap_free(git_offmap *map);

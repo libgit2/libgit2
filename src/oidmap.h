@@ -11,15 +11,7 @@
 
 #include "git2/oid.h"
 
-#define kmalloc git__malloc
-#define kcalloc git__calloc
-#define krealloc git__realloc
-#define kreallocarray git__reallocarray
-#define kfree git__free
-#include "khash.h"
-
-__KHASH_TYPE(oid, const git_oid *, void *)
-typedef khash_t(oid) git_oidmap;
+typedef struct kh_oid_s git_oidmap;
 
 git_oidmap *git_oidmap_alloc(void);
 void git_oidmap_free(git_oidmap *map);

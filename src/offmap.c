@@ -7,6 +7,15 @@
 
 #include "offmap.h"
 
+#define kmalloc git__malloc
+#define kcalloc git__calloc
+#define krealloc git__realloc
+#define kreallocarray git__reallocarray
+#define kfree git__free
+#include "khash.h"
+
+__KHASH_TYPE(off, git_off_t, void *)
+
 __KHASH_IMPL(off, static kh_inline, git_off_t, void *, 1, kh_int64_hash_func, kh_int64_hash_equal)
 
 git_offmap *git_offmap_alloc(void)

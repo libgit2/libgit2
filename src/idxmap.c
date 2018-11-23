@@ -7,6 +7,16 @@
 
 #include "idxmap.h"
 
+#define kmalloc git__malloc
+#define kcalloc git__calloc
+#define krealloc git__realloc
+#define kreallocarray git__reallocarray
+#define kfree git__free
+#include "khash.h"
+
+__KHASH_TYPE(idx, const git_index_entry *, git_index_entry *)
+__KHASH_TYPE(idxicase, const git_index_entry *, git_index_entry *)
+
 /* This is __ac_X31_hash_string but with tolower and it takes the entry's stage into account */
 static kh_inline khint_t idxentry_hash(const git_index_entry *e)
 {
@@ -104,9 +114,19 @@ void git_idxmap_free(git_idxmap *map)
 	kh_destroy(idx, map);
 }
 
+void git_idxmap_icase_free(git_idxmap_icase *map)
+{
+	kh_destroy(idxicase, map);
+}
+
 void git_idxmap_clear(git_idxmap *map)
 {
 	kh_clear(idx, map);
+}
+
+void git_idxmap_icase_clear(git_idxmap_icase *map)
+{
+	kh_clear(idxicase, map);
 }
 
 void git_idxmap_delete_at(git_idxmap *map, size_t idx)
