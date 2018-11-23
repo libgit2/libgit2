@@ -49,7 +49,4 @@ void git_idxmap_icase_delete_at(git_idxmap_icase *map, size_t idx);
 void git_idxmap_delete(git_idxmap *map, const git_index_entry *key);
 void git_idxmap_icase_delete(git_idxmap_icase *map, const git_index_entry *key);
 
-#define git_idxmap_begin		kh_begin
-#define git_idxmap_end		kh_end
-
 #endif
