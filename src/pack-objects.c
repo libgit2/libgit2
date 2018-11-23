@@ -197,8 +197,7 @@ unsigned int git_packbuilder_set_threads(git_packbuilder *pb, unsigned int n)
 static void rehash(git_packbuilder *pb)
 {
 	git_pobject *po;
-	khiter_t pos;
-	size_t i;
+	size_t pos, i;
 	int ret;
 
 	git_oidmap_clear(pb->object_ix);
@@ -212,8 +211,7 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 			   const char *name)
 {
 	git_pobject *po;
-	khiter_t pos;
-	size_t newsize;
+	size_t newsize, pos;
 	int ret;
 
 	assert(pb && oid);
@@ -516,7 +514,7 @@ static int cb_tag_foreach(const char *name, git_oid *oid, void *data)
 {
 	git_packbuilder *pb = data;
 	git_pobject *po;
-	khiter_t pos;
+	size_t pos;
 
 	GIT_UNUSED(name);
 
@@ -1542,7 +1540,7 @@ static int lookup_walk_object(struct walk_object **out, git_packbuilder *pb, con
 static int retrieve_object(struct walk_object **out, git_packbuilder *pb, const git_oid *id)
 {
 	int error;
-	khiter_t pos;
+	size_t pos;
 	struct walk_object *obj;
 
 	pos = git_oidmap_lookup_index(pb->walk_objects, id);

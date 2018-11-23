@@ -402,7 +402,7 @@ out:
 static int store_object(git_indexer *idx)
 {
 	int i, error;
-	khiter_t k;
+	size_t k;
 	git_oid oid;
 	struct entry *entry;
 	git_off_t entry_size;
@@ -483,7 +483,7 @@ GIT_INLINE(bool) has_entry(git_indexer *idx, git_oid *id)
 static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_entry *pentry, git_off_t entry_start)
 {
 	int i, error;
-	khiter_t k;
+	size_t k;
 
 	if (entry_start > UINT31_MAX) {
 		entry->offset = UINT32_MAX;
@@ -1292,7 +1292,7 @@ on_error:
 
 void git_indexer_free(git_indexer *idx)
 {
-	khiter_t pos;
+	size_t pos;
 
 	if (idx == NULL)
 		return;

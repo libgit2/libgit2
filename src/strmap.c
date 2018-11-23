@@ -115,7 +115,7 @@ size_t git_strmap_end(git_strmap *map)
 
 int git_strmap_next(
 	void **data,
-	git_strmap_iter* iter,
+	size_t* iter,
 	git_strmap *map)
 {
 	if (!map)

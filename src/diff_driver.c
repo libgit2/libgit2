@@ -234,8 +234,7 @@ static int git_diff_driver_load(
 	int error = 0;
 	git_diff_driver_registry *reg;
 	git_diff_driver *drv = NULL;
-	size_t namelen;
-	khiter_t pos;
+	size_t namelen, pos;
 	git_config *cfg = NULL;
 	git_buf name = GIT_BUF_INIT;
 	git_config_entry *ce = NULL;

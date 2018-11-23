@@ -270,8 +270,8 @@ int git_sortedcache_clear(git_sortedcache *sc, bool wlock)
 /* find and/or insert item, returning pointer to item data */
 int git_sortedcache_upsert(void **out, git_sortedcache *sc, const char *key)
 {
+	size_t pos;
 	int error = 0;
-	khiter_t pos;
 	void *item;
 	size_t keylen, itemlen;
 	char *item_key;
@@ -320,7 +320,7 @@ done:
 /* lookup item by key */
 void *git_sortedcache_lookup(const git_sortedcache *sc, const char *key)
 {
-	khiter_t pos = git_strmap_lookup_index(sc->map, key);
+	size_t pos = git_strmap_lookup_index(sc->map, key);
 	if (git_strmap_valid_index(sc->map, pos))
 		return git_strmap_value_at(sc->map, pos);
 	return NULL;
@@ -371,7 +371,7 @@ int git_sortedcache_lookup_index(
 int git_sortedcache_remove(git_sortedcache *sc, size_t pos)
 {
 	char *item;
-	khiter_t mappos;
+	size_t mappos;
 
 	/* because of pool allocation, this can't actually remove the item,
 	 * but we can remove it from the items vector and the hash table.

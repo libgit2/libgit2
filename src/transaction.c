@@ -133,8 +133,8 @@ cleanup:
 
 static int find_locked(transaction_node **out, git_transaction *tx, const char *refname)
 {
-	git_strmap_iter pos;
 	transaction_node *node;
+	size_t pos;
 
 	pos = git_strmap_lookup_index(tx->locks, refname);
 	if (!git_strmap_valid_index(tx->locks, pos)) {

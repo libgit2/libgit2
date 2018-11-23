@@ -108,8 +108,8 @@ static int cache_init(git_pack_cache *cache)
 
 static git_pack_cache_entry *cache_get(git_pack_cache *cache, git_off_t offset)
 {
-	khiter_t k;
 	git_pack_cache_entry *entry = NULL;
+	size_t k;
 
 	if (git_mutex_lock(&cache->lock) < 0)
 		return NULL;
@@ -148,7 +148,7 @@ static int cache_add(
 {
 	git_pack_cache_entry *entry;
 	int error, exists = 0;
-	khiter_t k;
+	size_t k;
 
 	if (base->len > GIT_PACK_CACHE_SIZE_LIMIT)
 		return -1;
@@ -954,8 +954,8 @@ git_off_t get_delta_base(
 	} else if (type == GIT_OBJ_REF_DELTA) {
 		/* If we have the cooperative cache, search in it first */
 		if (p->has_cache) {
-			khiter_t k;
 			git_oid oid;
+			size_t k;
 
 			git_oid_fromraw(&oid, base_info);
 			k = git_oidmap_lookup_index(p->idx_cache, &oid);

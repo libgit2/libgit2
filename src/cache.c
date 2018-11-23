@@ -123,7 +123,7 @@ static void cache_evict_entries(git_cache *cache)
 	}
 
 	while (evict_count > 0) {
-		khiter_t pos = seed++ % git_oidmap_end(cache->map);
+		size_t pos = seed++ % git_oidmap_end(cache->map);
 
 		if (git_oidmap_has_data(cache->map, pos)) {
 			git_cached_obj *evict = git_oidmap_value_at(cache->map, pos);
@@ -148,7 +148,7 @@ static bool cache_should_store(git_otype object_type, size_t object_size)
 
 static void *cache_get(git_cache *cache, const git_oid *oid, unsigned int flags)
 {
-	khiter_t pos;
+	size_t pos;
 	git_cached_obj *entry = NULL;
 
 	if (!git_cache__enabled || git_rwlock_rdlock(&cache->lock) < 0)
@@ -172,7 +172,7 @@ static void *cache_get(git_cache *cache, const git_oid *oid, unsigned int flags)
 
 static void *cache_store(git_cache *cache, git_cached_obj *entry)
 {
-	khiter_t pos;
+	size_t pos;
 
 	git_cached_obj_incref(entry);
 

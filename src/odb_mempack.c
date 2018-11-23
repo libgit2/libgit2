@@ -37,7 +37,7 @@ static int impl__write(git_odb_backend *_backend, const git_oid *oid, const void
 {
 	struct memory_packer_db *db = (struct memory_packer_db *)_backend;
 	struct memobject *obj = NULL; 
-	khiter_t pos;
+	size_t pos;
 	size_t alloc_len;
 	int rval;
 
@@ -80,7 +80,7 @@ static int impl__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_odb
 {
 	struct memory_packer_db *db = (struct memory_packer_db *)backend;
 	struct memobject *obj = NULL;
-	khiter_t pos;
+	size_t pos;
 
 	pos = git_oidmap_lookup_index(db->objects, oid);
 	if (!git_oidmap_valid_index(db->objects, pos))
@@ -101,7 +101,7 @@ static int impl__read_header(size_t *len_p, git_otype *type_p, git_odb_backend *
 {
 	struct memory_packer_db *db = (struct memory_packer_db *)backend;
 	struct memobject *obj = NULL;
-	khiter_t pos;
+	size_t pos;
 
 	pos = git_oidmap_lookup_index(db->objects, oid);
 	if (!git_oidmap_valid_index(db->objects, pos))

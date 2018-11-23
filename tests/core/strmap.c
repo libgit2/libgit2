@@ -60,7 +60,7 @@ void test_core_strmap__1(void)
 
 void test_core_strmap__2(void)
 {
-	khiter_t pos;
+	size_t pos;
 	int i;
 	char *str;
 

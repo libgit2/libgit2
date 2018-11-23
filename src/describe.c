@@ -36,7 +36,7 @@ struct commit_name {
 
 static void *oidmap_value_bykey(git_oidmap *map, const git_oid *key)
 {
-	khint_t pos = git_oidmap_lookup_index(map, key);
+	size_t pos = git_oidmap_lookup_index(map, key);
 
 	if (!git_oidmap_valid_index(map, pos))
 		return NULL;

@@ -33,7 +33,7 @@ GIT_INLINE(void) attr_cache_unlock(git_attr_cache *cache)
 GIT_INLINE(git_attr_file_entry *) attr_cache_lookup_entry(
 	git_attr_cache *cache, const char *path)
 {
-	khiter_t pos = git_strmap_lookup_index(cache->files, path);
+	size_t pos = git_strmap_lookup_index(cache->files, path);
 
 	if (git_strmap_valid_index(cache->files, pos))
 		return git_strmap_value_at(cache->files, pos);
@@ -266,7 +266,7 @@ bool git_attr_cache__is_cached(
 {
 	git_attr_cache *cache = git_repository_attr_cache(repo);
 	git_strmap *files;
-	khiter_t pos;
+	size_t pos;
 	git_attr_file_entry *entry;
 
 	if (!cache || !(files = cache->files))
@@ -457,7 +457,7 @@ git_attr_rule *git_attr_cache__lookup_macro(
 	git_repository *repo, const char *name)
 {
 	git_strmap *macros = git_repository_attr_cache(repo)->macros;
-	khiter_t pos;
+	size_t pos;
 
 	pos = git_strmap_lookup_index(macros, name);
 
