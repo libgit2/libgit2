@@ -102,6 +102,17 @@ void git_strmap_delete(git_strmap *map, const char *key)
 		git_strmap_delete_at(map, idx);
 }
 
+size_t git_strmap_begin(git_strmap *map)
+{
+	GIT_UNUSED(map);
+	return 0;
+}
+
+size_t git_strmap_end(git_strmap *map)
+{
+	return map->n_buckets;
+}
+
 int git_strmap_next(
 	void **data,
 	git_strmap_iter* iter,

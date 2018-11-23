@@ -103,3 +103,14 @@ void git_oidmap_delete(git_oidmap *map, const git_oid *key)
 	if (git_oidmap_valid_index(map, idx))
 		git_oidmap_delete_at(map, idx);
 }
+
+size_t git_oidmap_begin(git_oidmap *map)
+{
+	GIT_UNUSED(map);
+	return 0;
+}
+
+size_t git_oidmap_end(git_oidmap *map)
+{
+	return map->n_buckets;
+}

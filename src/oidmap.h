@@ -43,9 +43,9 @@ int git_oidmap_put(git_oidmap *map, const git_oid *key, int *err);
 void git_oidmap_insert(git_oidmap *map, const git_oid *key, void *value, int *rval);
 void git_oidmap_delete(git_oidmap *map, const git_oid *key);
 
-#define git_oidmap_foreach_value kh_foreach_value
+size_t git_oidmap_begin(git_oidmap *map);
+size_t git_oidmap_end(git_oidmap *map);
 
-#define git_oidmap_begin	kh_begin
-#define git_oidmap_end		kh_end
+#define git_oidmap_foreach_value kh_foreach_value
 
 #endif

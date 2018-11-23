@@ -81,3 +81,14 @@ void git_offmap_delete(git_offmap *map, const git_off_t key)
 	if (git_offmap_valid_index(map, idx))
 		git_offmap_delete_at(map, idx);
 }
+
+size_t git_offmap_begin(git_offmap *map)
+{
+	GIT_UNUSED(map);
+	return 0;
+}
+
+size_t git_offmap_end(git_offmap *map)
+{
+	return map->n_buckets;
+}
