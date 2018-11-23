@@ -60,35 +60,6 @@ enum {
 	GITMODULES_CREATE = 1,
 };
 
-static kh_inline khint_t str_hash_no_trailing_slash(const char *s)
-{
-	khint_t h;
-
-	for (h = 0; *s; ++s)
-		if (s[1] != '\0' || *s != '/')
-			h = (h << 5) - h + *s;
-
-	return h;
-}
-
-static kh_inline int str_equal_no_trailing_slash(const char *a, const char *b)
-{
-	size_t alen = a ? strlen(a) : 0;
-	size_t blen = b ? strlen(b) : 0;
-
-	if (alen > 0 && a[alen - 1] == '/')
-		alen--;
-	if (blen > 0 && b[blen - 1] == '/')
-		blen--;
-
-	return (alen == 0 && blen == 0) ||
-		(alen == blen && strncmp(a, b, alen) == 0);
-}
-
-__KHASH_IMPL(
-	str, static kh_inline, const char *, void *, 1,
-	str_hash_no_trailing_slash, str_equal_no_trailing_slash)
-
 static int submodule_alloc(git_submodule **out, git_repository *repo, const char *name);
 static git_config_backend *open_gitmodules(git_repository *repo, int gitmod);
 static int gitmodules_snapshot(git_config **snap, git_repository *repo);
