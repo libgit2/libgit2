@@ -1417,7 +1417,7 @@ static bool are_symlinks_supported(const char *wd_path)
 	git_buf path = GIT_BUF_INIT;
 	int fd;
 	struct stat st;
-	bool symlinks = false;
+	int symlinks = 0;
 
 	/*
 	 * To emulate Git for Windows, symlinks on Windows must be explicitly
@@ -1462,7 +1462,7 @@ static bool are_symlinks_supported(const char *wd_path)
 done:
 	git_buf_dispose(&path);
 	git_config_free(config);
-	return symlinks;
+	return symlinks != 0;
 }
 
 static int create_empty_file(const char *path, mode_t mode)
