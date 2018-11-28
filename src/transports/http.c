@@ -990,6 +990,7 @@ static int http_connect(http_subtransport *t)
 	t->proxy.stream = proxy_stream;
 	t->server.stream = stream;
 	t->connected = 1;
+	t->replay_count = 0;
 	return 0;
 
 on_error:
