@@ -41,21 +41,21 @@ static void index_add_conflicts(void)
 		/* ancestor */
 		entry.path = conflict[0];
 		entry.mode = GIT_FILEMODE_BLOB;
-		GIT_IDXENTRY_STAGE_SET(&entry, GIT_INDEX_STAGE_ANCESTOR);
+		GIT_INDEX_ENTRY_STAGE_SET(&entry, GIT_INDEX_STAGE_ANCESTOR);
 		git_oid_fromstr(&entry.id, "1f85ca51b8e0aac893a621b61a9c2661d6aa6d81");
 		cl_git_pass(git_index_add(repo_index, &entry));
 
 		/* ours */
 		entry.path = conflict[1];
 		entry.mode = GIT_FILEMODE_BLOB;
-		GIT_IDXENTRY_STAGE_SET(&entry, GIT_INDEX_STAGE_OURS);
+		GIT_INDEX_ENTRY_STAGE_SET(&entry, GIT_INDEX_STAGE_OURS);
 		git_oid_fromstr(&entry.id, "1f85ca51b8e0aac893a621b61a9c2661d6aa6d81");
 		cl_git_pass(git_index_add(repo_index, &entry));
 
 		/* theirs */
 		entry.path = conflict[2];
 		entry.mode = GIT_FILEMODE_BLOB;
-		GIT_IDXENTRY_STAGE_SET(&entry, GIT_INDEX_STAGE_THEIRS);
+		GIT_INDEX_ENTRY_STAGE_SET(&entry, GIT_INDEX_STAGE_THEIRS);
 		git_oid_fromstr(&entry.id, "1f85ca51b8e0aac893a621b61a9c2661d6aa6d81");
 		cl_git_pass(git_index_add(repo_index, &entry));
 	}

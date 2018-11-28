@@ -147,17 +147,17 @@ static void add_conflicts(git_index *index, const char *filename)
 
 	ancestor_entry.path = filename;
 	ancestor_entry.mode = 0100644;
-	GIT_IDXENTRY_STAGE_SET(&ancestor_entry, 1);
+	GIT_INDEX_ENTRY_STAGE_SET(&ancestor_entry, 1);
 	git_oid_fromstr(&ancestor_entry.id, ancestor_ids[conflict_idx]);
 
 	our_entry.path = filename;
 	our_entry.mode = 0100644;
-	GIT_IDXENTRY_STAGE_SET(&our_entry, 2);
+	GIT_INDEX_ENTRY_STAGE_SET(&our_entry, 2);
 	git_oid_fromstr(&our_entry.id, our_ids[conflict_idx]);
 
 	their_entry.path = filename;
 	their_entry.mode = 0100644;
-	GIT_IDXENTRY_STAGE_SET(&ancestor_entry, 2);
+	GIT_INDEX_ENTRY_STAGE_SET(&ancestor_entry, 2);
 	git_oid_fromstr(&their_entry.id, their_ids[conflict_idx]);
 
 	cl_git_pass(git_index_conflict_add(index, &ancestor_entry,

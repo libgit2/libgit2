@@ -129,12 +129,12 @@ void test_index_reuc__ignore_case(void)
 
 	index_caps = git_index_caps(repo_index);
 
-	index_caps &= ~GIT_INDEXCAP_IGNORE_CASE;
+	index_caps &= ~GIT_INDEX_CAPABILITY_IGNORE_CASE;
 	cl_git_pass(git_index_set_caps(repo_index, index_caps));
 
 	cl_assert(!git_index_reuc_get_bypath(repo_index, "TWO.txt"));
 
-	index_caps |= GIT_INDEXCAP_IGNORE_CASE;
+	index_caps |= GIT_INDEX_CAPABILITY_IGNORE_CASE;
 	cl_git_pass(git_index_set_caps(repo_index, index_caps));
 
 	cl_assert_equal_i(2, git_index_reuc_entrycount(repo_index));
@@ -197,7 +197,7 @@ void test_index_reuc__updates_existing(void)
 
 	index_caps = git_index_caps(repo_index);
 
-	index_caps |= GIT_INDEXCAP_IGNORE_CASE;
+	index_caps |= GIT_INDEX_CAPABILITY_IGNORE_CASE;
 	cl_git_pass(git_index_set_caps(repo_index, index_caps));
 
 	git_oid_fromstr(&ancestor_oid, TWO_ANCESTOR_OID);

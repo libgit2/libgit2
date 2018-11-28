@@ -108,7 +108,7 @@ static void index_entry_init(git_index *index, int side, git_oid *oid)
 	memset(&entry, 0x0, sizeof(git_index_entry));
 
 	entry.path = "conflicting_file";
-	GIT_IDXENTRY_STAGE_SET(&entry, side);
+	GIT_INDEX_ENTRY_STAGE_SET(&entry, side);
 	entry.mode = 0100644;
 	git_oid_cpy(&entry.id, oid);
 

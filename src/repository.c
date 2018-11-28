@@ -1186,7 +1186,8 @@ int git_repository_index__weakptr(git_index **out, git_repository *repo)
 				git_index_free(index);
 			}
 
-			error = git_index_set_caps(repo->_index, GIT_INDEXCAP_FROM_OWNER);
+			error = git_index_set_caps(repo->_index,
+			                           GIT_INDEX_CAPABILITY_FROM_OWNER);
 		}
 
 		git_buf_dispose(&index_path);

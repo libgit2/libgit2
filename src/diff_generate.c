@@ -138,7 +138,7 @@ static int diff_delta__from_one(
 	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_REVERSE))
 		has_old = !has_old;
 
-	if ((entry->flags & GIT_IDXENTRY_VALID) != 0)
+	if ((entry->flags & GIT_INDEX_ENTRY_VALID) != 0)
 		return 0;
 
 	if (status == GIT_DELTA_IGNORED &&
@@ -764,11 +764,11 @@ static int maybe_modified(
 		status = GIT_DELTA_CONFLICTED;
 
 	/* support "assume unchanged" (poorly, b/c we still stat everything) */
-	} else if ((oitem->flags & GIT_IDXENTRY_VALID) != 0) {
+	} else if ((oitem->flags & GIT_INDEX_ENTRY_VALID) != 0) {
 		status = GIT_DELTA_UNMODIFIED;
 
 	/* support "skip worktree" index bit */
-	} else if ((oitem->flags_extended & GIT_IDXENTRY_SKIP_WORKTREE) != 0) {
+	} else if ((oitem->flags_extended & GIT_INDEX_ENTRY_SKIP_WORKTREE) != 0) {
 		status = GIT_DELTA_UNMODIFIED;
 
 	/* if basic type of file changed, then split into delete and add */

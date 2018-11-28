@@ -23,11 +23,11 @@ static kh_inline khint_t idxentry_hash(const git_index_entry *e)
 	const char *s = e->path;
 	khint_t h = (khint_t)git__tolower(*s);
 	if (h) for (++s ; *s; ++s) h = (h << 5) - h + (khint_t)git__tolower(*s);
-	return h + GIT_IDXENTRY_STAGE(e);
+	return h + GIT_INDEX_ENTRY_STAGE(e);
 }
 
-#define idxentry_equal(a, b) (GIT_IDXENTRY_STAGE(a) == GIT_IDXENTRY_STAGE(b) && strcmp(a->path, b->path) == 0)
-#define idxentry_icase_equal(a, b) (GIT_IDXENTRY_STAGE(a) == GIT_IDXENTRY_STAGE(b) && strcasecmp(a->path, b->path) == 0)
+#define idxentry_equal(a, b) (GIT_INDEX_ENTRY_STAGE(a) == GIT_INDEX_ENTRY_STAGE(b) && strcmp(a->path, b->path) == 0)
+#define idxentry_icase_equal(a, b) (GIT_INDEX_ENTRY_STAGE(a) == GIT_INDEX_ENTRY_STAGE(b) && strcasecmp(a->path, b->path) == 0)
 
 __KHASH_IMPL(idx, static kh_inline, const git_index_entry *, git_index_entry *, 1, idxentry_hash, idxentry_equal)
 __KHASH_IMPL(idxicase, static kh_inline, const git_index_entry *, git_index_entry *, 1, idxentry_hash, idxentry_icase_equal)

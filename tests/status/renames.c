@@ -483,7 +483,7 @@ void test_status_renames__both_casechange_one(void)
 
 	cl_git_pass(git_status_list_new(&statuslist, g_repo, &opts));
 
-	check_status(statuslist, (index_caps & GIT_INDEXCAP_IGNORE_CASE) ?
+	check_status(statuslist, (index_caps & GIT_INDEX_CAPABILITY_IGNORE_CASE) ?
 		expected_icase : expected_case, 1);
 
 	git_status_list_free(statuslist);
@@ -550,7 +550,7 @@ void test_status_renames__both_casechange_two(void)
 
 	cl_git_pass(git_status_list_new(&statuslist, g_repo, &opts));
 
-	check_status(statuslist, (index_caps & GIT_INDEXCAP_IGNORE_CASE) ?
+	check_status(statuslist, (index_caps & GIT_INDEX_CAPABILITY_IGNORE_CASE) ?
 		expected_icase : expected_case, 4);
 
 	git_status_list_free(statuslist);
