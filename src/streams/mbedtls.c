@@ -18,10 +18,6 @@
 #include "git2/transport.h"
 #include "util.h"
 
-#ifdef GIT_CURL
-# include "streams/curl.h"
-#endif
-
 #ifndef GIT_DEFAULT_CERT_LOCATION
 #define GIT_DEFAULT_CERT_LOCATION NULL
 #endif
@@ -242,6 +238,7 @@ static int verify_server_cert(mbedtls_ssl_context *ssl)
 typedef struct {
 	git_stream parent;
 	git_stream *io;
+	int owned;
 	bool connected;
 	char *host;
 	mbedtls_ssl_context *ssl;
@@ -254,7 +251,7 @@ int mbedtls_connect(git_stream *stream)
 	int ret;
 	mbedtls_stream *st = (mbedtls_stream *) stream;
 
-	if ((ret = git_stream_connect(st->io)) < 0)
+	if (st->owned && (ret = git_stream_connect(st->io)) < 0)
 		return ret;
 
 	st->connected = true;
@@ -345,37 +342,37 @@ int mbedtls_stream_close(git_stream *stream)
 
 	st->connected = false;
 
-	return git_stream_close(st->io);
+	return st->owned ? git_stream_close(st->io) : 0;
 }
 
 void mbedtls_stream_free(git_stream *stream)
 {
 	mbedtls_stream *st = (mbedtls_stream *) stream;
 
+	if (st->owned)
+		git_stream_free(st->io);
+
 	git__free(st->host);
 	git__free(st->cert_info.data);
-	git_stream_free(st->io);
 	mbedtls_ssl_free(st->ssl);
 	git__free(st->ssl);
 	git__free(st);
 }
 
-int git_mbedtls_stream_new(git_stream **out, const char *host, const char *port)
+static int mbedtls_stream_wrap(
+	git_stream **out,
+	git_stream *in,
+	const char *host,
+	int owned)
 {
-	int error;
 	mbedtls_stream *st;
+	int error;
 
 	st = git__calloc(1, sizeof(mbedtls_stream));
 	GITERR_CHECK_ALLOC(st);
 
-#ifdef GIT_CURL
-	error = git_curl_stream_new(&st->io, host, port);
-#else
-	error = git_socket_stream_new(&st->io, host, port);
-#endif
-
-	if (error < 0)
-		goto out_err;
+	st->io = in;
+	st->owned = owned;
 
 	st->ssl = git__malloc(sizeof(mbedtls_ssl_context));
 	GITERR_CHECK_ALLOC(st->ssl);
@@ -405,8 +402,38 @@ int git_mbedtls_stream_new(git_stream **out, const char *host, const char *port)
 
 out_err:
 	mbedtls_ssl_free(st->ssl);
+	git_stream_close(st->io);
 	git_stream_free(st->io);
 	git__free(st);
+
+	return error;
+}
+
+int git_mbedtls_stream_wrap(
+	git_stream **out,
+	git_stream *in,
+	const char *host)
+{
+	return mbedtls_stream_wrap(out, in, host, 0);
+}
+
+int git_mbedtls_stream_new(
+	git_stream **out,
+	const char *host,
+	const char *port)
+{
+	git_stream *stream;
+	int error;
+
+	assert(out && host && port);
+
+	if ((error = git_socket_stream_new(&stream, host, port)) < 0)
+		return error;
+
+	if ((error = mbedtls_stream_wrap(out, stream, host, 1)) < 0) {
+		git_stream_close(stream);
+		git_stream_free(stream);
+	}
 
 	return error;
 }
@@ -451,25 +478,6 @@ int git_mbedtls__set_cert_location(const char *path, int is_dir)
 int git_mbedtls_stream_global_init(void)
 {
 	return 0;
-}
-
-int git_mbedtls_stream_new(git_stream **out, const char *host, const char *port)
-{
-	GIT_UNUSED(out);
-	GIT_UNUSED(host);
-	GIT_UNUSED(port);
-
-	giterr_set(GITERR_SSL, "mbedTLS is not supported in this version");
-	return -1;
-}
-
-int git_mbedtls__set_cert_location(const char *path, int is_dir)
-{
-	GIT_UNUSED(path);
-	GIT_UNUSED(is_dir);
-
-	giterr_set(GITERR_SSL, "mbedTLS is not supported in this version");
-	return -1;
 }
 
 #endif

@@ -10,6 +10,8 @@
 
 #include "buffer.h"
 
+#define GIT_HTTP_REPLAY_MAX 7
+
 GIT_INLINE(int) git_http__user_agent(git_buf *buf)
 {
 	const char *ua = git_libgit2__user_agent();

@@ -73,6 +73,7 @@ static int negotiate_set_challenge(
 static int negotiate_next_token(
 	git_buf *buf,
 	git_http_auth_context *c,
+	const char *header_name,
 	git_cred *cred)
 {
 	http_auth_negotiate_context *ctx = (http_auth_negotiate_context *)c;
@@ -155,7 +156,7 @@ static int negotiate_next_token(
 		goto done;
 	}
 
-	git_buf_puts(buf, "Authorization: Negotiate ");
+	git_buf_printf(buf, "%s: Negotiate ", header_name);
 	git_buf_encode_base64(buf, output_token.value, output_token.length);
 	git_buf_puts(buf, "\r\n");
 

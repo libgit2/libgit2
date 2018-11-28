@@ -16,7 +16,6 @@
 #include "git2/transport.h"
 
 #include "streams/socket.h"
-#include "streams/curl.h"
 
 static int stransport_error(OSStatus ret)
 {
@@ -34,8 +33,8 @@ static int stransport_error(OSStatus ret)
 	giterr_set(GITERR_NET, "SecureTransport error: %s", CFStringGetCStringPtr(message, kCFStringEncodingUTF8));
 	CFRelease(message);
 #else
-    giterr_set(GITERR_NET, "SecureTransport error: OSStatus %d", (unsigned int)ret);
-    GIT_UNUSED(message);
+	giterr_set(GITERR_NET, "SecureTransport error: OSStatus %d", (unsigned int)ret);
+	GIT_UNUSED(message);
 #endif
 
 	return -1;
@@ -44,6 +43,7 @@ static int stransport_error(OSStatus ret)
 typedef struct {
 	git_stream parent;
 	git_stream *io;
+	int owned;
 	SSLContextRef ctx;
 	CFDataRef der_data;
 	git_cert_x509 cert_info;
@@ -57,7 +57,7 @@ static int stransport_connect(git_stream *stream)
 	SecTrustResultType sec_res;
 	OSStatus ret;
 
-	if ((error = git_stream_connect(st->io)) < 0)
+	if (st->owned && (error = git_stream_connect(st->io)) < 0)
 		return error;
 
 	ret = SSLHandshake(st->ctx);
@@ -226,41 +226,38 @@ static int stransport_close(git_stream *stream)
 	if (ret != noErr && ret != errSSLClosedGraceful)
 		return stransport_error(ret);
 
-	return git_stream_close(st->io);
+	return st->owned ? git_stream_close(st->io) : 0;
 }
 
 static void stransport_free(git_stream *stream)
 {
 	stransport_stream *st = (stransport_stream *) stream;
 
-	git_stream_free(st->io);
+	if (st->owned)
+		git_stream_free(st->io);
+
 	CFRelease(st->ctx);
 	if (st->der_data)
 		CFRelease(st->der_data);
 	git__free(st);
 }
 
-int git_stransport_stream_new(git_stream **out, const char *host, const char *port)
+static int stransport_wrap(
+	git_stream **out,
+	git_stream *in,
+	const char *host,
+	int owned)
 {
 	stransport_stream *st;
-	int error;
 	OSStatus ret;
 
-	assert(out && host);
+	assert(out && in && host);
 
 	st = git__calloc(1, sizeof(stransport_stream));
 	GITERR_CHECK_ALLOC(st);
 
-#ifdef GIT_CURL
-	error = git_curl_stream_new(&st->io, host, port);
-#else
-	error = git_socket_stream_new(&st->io, host, port);
-#endif
-
-	if (error < 0){
-		git__free(st);
-		return error;
-	}
+	st->io = in;
+	st->owned = owned;
 
 	st->ctx = SSLCreateContext(NULL, kSSLClientSide, kSSLStreamType);
 	if (!st->ctx) {
@@ -293,6 +290,34 @@ int git_stransport_stream_new(git_stream **out, const char *host, const char *po
 
 	*out = (git_stream *) st;
 	return 0;
+}
+
+int git_stransport_stream_wrap(
+	git_stream **out,
+	git_stream *in,
+	const char *host)
+{
+	return stransport_wrap(out, in, host, 0);
+}
+
+int git_stransport_stream_new(git_stream **out, const char *host, const char *port)
+{
+	git_stream *stream = NULL;
+	int error;
+
+	assert(out && host);
+
+	error = git_socket_stream_new(&stream, host, port);
+
+	if (!error)
+		error = stransport_wrap(out, stream, host, 1);
+
+	if (error < 0 && stream) {
+		git_stream_close(stream);
+		git_stream_free(stream);
+	}
+
+	return error;
 }
 
 #endif

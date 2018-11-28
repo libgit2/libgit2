@@ -22,7 +22,6 @@
 
 #cmakedefine GIT_GSSAPI 1
 #cmakedefine GIT_WINHTTP 1
-#cmakedefine GIT_CURL 1
 
 #cmakedefine GIT_HTTPS 1
 #cmakedefine GIT_OPENSSL 1

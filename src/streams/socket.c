@@ -9,6 +9,7 @@
 
 #include "posix.h"
 #include "netops.h"
+#include "registry.h"
 #include "stream.h"
 
 #ifndef _WIN32
@@ -180,11 +181,14 @@ void socket_free(git_stream *stream)
 	git__free(st);
 }
 
-int git_socket_stream_new(git_stream **out, const char *host, const char *port)
+static int default_socket_stream_new(
+	git_stream **out,
+	const char *host,
+	const char *port)
 {
 	git_socket_stream *st;
 
-	assert(out && host);
+	assert(out && host && port);
 
 	st = git__calloc(1, sizeof(git_socket_stream));
 	GITERR_CHECK_ALLOC(st);
@@ -207,4 +211,30 @@ int git_socket_stream_new(git_stream **out, const char *host, const char *port)
 
 	*out = (git_stream *) st;
 	return 0;
+}
+
+int git_socket_stream_new(
+	git_stream **out,
+	const char *host,
+	const char *port)
+{
+	int (*init)(git_stream **, const char *, const char *) = NULL;
+	git_stream_registration custom = {0};
+	int error;
+
+	assert(out && host && port);
+
+	if ((error = git_stream_registry_lookup(&custom, GIT_STREAM_STANDARD)) == 0)
+		init = custom.init;
+	else if (error == GIT_ENOTFOUND)
+		init = default_socket_stream_new;
+	else
+		return error;
+
+	if (!init) {
+		giterr_set(GITERR_NET, "there is no socket stream available");
+		return -1;
+	}
+
+	return init(out, host, port);
 }

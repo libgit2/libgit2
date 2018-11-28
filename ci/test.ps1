@@ -65,7 +65,7 @@ if (-not $Env:SKIP_PROXY_TESTS) {
 	Write-Host "Running proxy tests"
 	Write-Host ""
 
-	$Env:GITTEST_REMOTE_PROXY_URL="localhost:8080"
+	$Env:GITTEST_REMOTE_PROXY_HOST="localhost:8080"
 	$Env:GITTEST_REMOTE_PROXY_USER="foo"
 	$Env:GITTEST_REMOTE_PROXY_PASS="bar"
 
