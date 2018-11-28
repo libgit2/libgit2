@@ -115,14 +115,14 @@ static int add_ref(transport_local *t, const char *name)
 	if (git__prefixcmp(name, GIT_REFS_TAGS_DIR))
 		return 0;
 
-	if ((error = git_object_lookup(&obj, t->repo, &head->oid, GIT_OBJ_ANY)) < 0)
+	if ((error = git_object_lookup(&obj, t->repo, &head->oid, GIT_OBJECT_ANY)) < 0)
 		return error;
 
 	head = NULL;
 
 	/* If it's not an annotated tag, or if we're mocking
 	 * git-receive-pack, just get out */
-	if (git_object_type(obj) != GIT_OBJ_TAG ||
+	if (git_object_type(obj) != GIT_OBJECT_TAG ||
 		t->direction != GIT_DIRECTION_FETCH) {
 		git_object_free(obj);
 		return 0;
@@ -563,10 +563,10 @@ static int local_download_pack(
 
 	git_vector_foreach(&t->refs, i, rhead) {
 		git_object *obj;
-		if ((error = git_object_lookup(&obj, t->repo, &rhead->oid, GIT_OBJ_ANY)) < 0)
+		if ((error = git_object_lookup(&obj, t->repo, &rhead->oid, GIT_OBJECT_ANY)) < 0)
 			goto cleanup;
 
-		if (git_object_type(obj) == GIT_OBJ_COMMIT) {
+		if (git_object_type(obj) == GIT_OBJECT_COMMIT) {
 			/* Revwalker includes only wanted commits */
 			error = git_revwalk_push(walk, &rhead->oid);
 		} else {

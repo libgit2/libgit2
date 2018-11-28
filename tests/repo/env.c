@@ -101,24 +101,24 @@ static void env_check_objects_(bool a, bool t, bool p, const char *file, int lin
 	cl_git_expect(git_repository_open_ext(&repo, "attr", GIT_REPOSITORY_OPEN_FROM_ENV, NULL), 0, file, line);
 
 	if (a) {
-		cl_git_expect(git_object_lookup(&object, repo, &oid_a, GIT_OBJ_BLOB), 0, file, line);
+		cl_git_expect(git_object_lookup(&object, repo, &oid_a, GIT_OBJECT_BLOB), 0, file, line);
 		git_object_free(object);
 	} else {
-		cl_git_fail_at_line(git_object_lookup(&object, repo, &oid_a, GIT_OBJ_BLOB), file, line);
+		cl_git_fail_at_line(git_object_lookup(&object, repo, &oid_a, GIT_OBJECT_BLOB), file, line);
 	}
 
 	if (t) {
-		cl_git_expect(git_object_lookup(&object, repo, &oid_t, GIT_OBJ_BLOB), 0, file, line);
+		cl_git_expect(git_object_lookup(&object, repo, &oid_t, GIT_OBJECT_BLOB), 0, file, line);
 		git_object_free(object);
 	} else {
-		cl_git_fail_at_line(git_object_lookup(&object, repo, &oid_t, GIT_OBJ_BLOB), file, line);
+		cl_git_fail_at_line(git_object_lookup(&object, repo, &oid_t, GIT_OBJECT_BLOB), file, line);
 	}
 
 	if (p) {
-		cl_git_expect(git_object_lookup(&object, repo, &oid_p, GIT_OBJ_COMMIT), 0, file, line);
+		cl_git_expect(git_object_lookup(&object, repo, &oid_p, GIT_OBJECT_COMMIT), 0, file, line);
 		git_object_free(object);
 	} else {
-		cl_git_fail_at_line(git_object_lookup(&object, repo, &oid_p, GIT_OBJ_COMMIT), file, line);
+		cl_git_fail_at_line(git_object_lookup(&object, repo, &oid_p, GIT_OBJECT_COMMIT), file, line);
 	}
 
 	git_repository_free(repo);

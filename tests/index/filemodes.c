@@ -247,7 +247,7 @@ void test_index_filemodes__invalid(void)
 
 	GIT_INDEX_ENTRY_STAGE_SET(&entry, 0);
 	entry.path = "foo";
-	entry.mode = GIT_OBJ_BLOB;
+	entry.mode = GIT_OBJECT_BLOB;
 	git_oid_cpy(&entry.id, &dummy->id);
 	cl_git_fail(git_index_add(index, &entry));
 

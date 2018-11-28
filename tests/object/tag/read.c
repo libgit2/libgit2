@@ -39,7 +39,7 @@ void test_object_tag_read__parse(void)
 	cl_git_pass(git_tag_lookup(&tag1, g_repo, &id1));
 
 	cl_assert_equal_s(git_tag_name(tag1), "test");
-	cl_assert(git_tag_target_type(tag1) == GIT_OBJ_TAG);
+	cl_assert(git_tag_target_type(tag1) == GIT_OBJECT_TAG);
 
 	cl_git_pass(git_tag_target((git_object **)&tag2, tag1));
 	cl_assert(tag2 != NULL);
@@ -132,7 +132,7 @@ void test_object_tag_read__without_tagger_nor_message(void)
 	cl_git_pass(git_tag_lookup(&tag, repo, &id));
 
 	cl_assert_equal_s(git_tag_name(tag), "taggerless");
-	cl_assert(git_tag_target_type(tag) == GIT_OBJ_COMMIT);
+	cl_assert(git_tag_target_type(tag) == GIT_OBJECT_COMMIT);
 
 	cl_assert(tag->message == NULL);
 	cl_assert(tag->tagger == NULL);
@@ -170,7 +170,7 @@ void test_object_tag_read__extra_header_fields(void)
 
 	cl_git_pass(git_repository_odb__weakptr(&odb, g_repo));
 
-	cl_git_pass(git_odb_write(&id, odb, silly_tag, strlen(silly_tag), GIT_OBJ_TAG));
+	cl_git_pass(git_odb_write(&id, odb, silly_tag, strlen(silly_tag), GIT_OBJECT_TAG));
 	cl_git_pass(git_tag_lookup(&tag, g_repo, &id));
 
 	cl_assert_equal_s("v1_0_1 release\n", git_tag_message(tag));

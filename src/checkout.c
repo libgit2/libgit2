@@ -1944,7 +1944,7 @@ static int checkout_lookup_head_tree(git_tree **out, git_repository *repo)
 	git_object *head;
 
 	if (!(error = git_repository_head(&ref, repo)) &&
-		!(error = git_reference_peel(&head, ref, GIT_OBJ_TREE)))
+		!(error = git_reference_peel(&head, ref, GIT_OBJECT_TREE)))
 		*out = (git_tree *)head;
 
 	git_reference_free(ref);
@@ -2749,7 +2749,7 @@ int git_checkout_tree(
 		repo = git_object_owner(treeish);
 
 	if (treeish) {
-		if (git_object_peel((git_object **)&tree, treeish, GIT_OBJ_TREE) < 0) {
+		if (git_object_peel((git_object **)&tree, treeish, GIT_OBJECT_TREE) < 0) {
 			giterr_set(
 				GITERR_CHECKOUT, "provided object cannot be peeled to a tree");
 			return -1;

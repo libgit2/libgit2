@@ -496,7 +496,7 @@ static int similarity_sig(
 		if (info->odb_obj != NULL)
 			error = git_object__from_odb_object(
 				(git_object **)&info->blob, info->repo,
-				info->odb_obj, GIT_OBJ_BLOB);
+				info->odb_obj, GIT_OBJECT_BLOB);
 		else
 			error = git_blob_lookup(&info->blob, info->repo, &file->id);
 

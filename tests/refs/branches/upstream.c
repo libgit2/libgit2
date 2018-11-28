@@ -91,7 +91,7 @@ static void assert_merge_and_or_remote_key_missing(git_repository *repository, c
 {
 	git_reference *branch;
 
-	cl_assert_equal_i(GIT_OBJ_COMMIT, git_object_type((git_object*)target));
+	cl_assert_equal_i(GIT_OBJECT_COMMIT, git_object_type((git_object*)target));
 	cl_git_pass(git_branch_create(&branch, repository, entry_name, (git_commit*)target, 0));
 
 	cl_assert_equal_i(GIT_ENOTFOUND, git_branch_upstream(&upstream, branch));
@@ -108,7 +108,7 @@ void test_refs_branches_upstream__retrieve_a_remote_tracking_reference_from_a_br
 	repository = cl_git_sandbox_init("testrepo.git");
 
 	cl_git_pass(git_repository_head(&head, repository));
-	cl_git_pass(git_reference_peel(((git_object **)&target), head, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reference_peel(((git_object **)&target), head, GIT_OBJECT_COMMIT));
 	git_reference_free(head);
 
 	assert_merge_and_or_remote_key_missing(repository, target, "remoteless");

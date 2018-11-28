@@ -13,7 +13,7 @@ void test_index_collision__initialize(void)
 	cl_git_pass(git_repository_odb(&g_odb, g_repo));
 	cl_git_pass(git_repository_index(&g_index, g_repo));
 
-	cl_git_pass(git_odb_write(&g_empty_id, g_odb, "", 0, GIT_OBJ_BLOB));
+	cl_git_pass(git_odb_write(&g_empty_id, g_odb, "", 0, GIT_OBJECT_BLOB));
 }
 
 void test_index_collision__cleanup(void)

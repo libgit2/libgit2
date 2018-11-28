@@ -29,7 +29,7 @@ static void writefile(git_oid *oid)
 	for (i = 0; i < 3041; i++)
 		cl_git_pass(git_buf_puts(&buf, "Hello, world.\n"));
 
-	cl_git_pass(git_odb_open_wstream(&stream, odb, LARGEFILE_SIZE, GIT_OBJ_BLOB));
+	cl_git_pass(git_odb_open_wstream(&stream, odb, LARGEFILE_SIZE, GIT_OBJECT_BLOB));
 	for (i = 0; i < 126103; i++)
 		cl_git_pass(git_odb_stream_write(stream, buf.ptr, buf.size));
 
@@ -58,7 +58,7 @@ void test_odb_largefiles__write_from_memory(void)
 		cl_git_pass(git_buf_puts(&buf, "Hello, world.\n"));
 
 	git_oid_fromstr(&expected, "3fb56989cca483b21ba7cb0a6edb229d10e1c26c");
-	cl_git_pass(git_odb_write(&oid, odb, buf.ptr, buf.size, GIT_OBJ_BLOB));
+	cl_git_pass(git_odb_write(&oid, odb, buf.ptr, buf.size, GIT_OBJECT_BLOB));
 
 	cl_assert_equal_oid(&expected, &oid);
 }
@@ -89,7 +89,7 @@ void test_odb_largefiles__streamread(void)
 	char hdr[64];
 	size_t len, hdr_len, total = 0;
 	git_hash_ctx hash;
-	git_otype type;
+	git_object_t type;
 	int ret;
 
 #ifndef GIT_ARCH_64
@@ -105,7 +105,7 @@ void test_odb_largefiles__streamread(void)
 	cl_git_pass(git_odb_open_rstream(&stream, &len, &type, odb, &oid));
 
 	cl_assert_equal_sz(LARGEFILE_SIZE, len);
-	cl_assert_equal_i(GIT_OBJ_BLOB, type);
+	cl_assert_equal_i(GIT_OBJECT_BLOB, type);
 
 	cl_git_pass(git_hash_ctx_init(&hash));
 	cl_git_pass(git_odb__format_object_header(&hdr_len, hdr, sizeof(hdr), len, type));
@@ -171,7 +171,7 @@ void test_odb_largefiles__read_header(void)
 {
 	git_oid oid;
 	size_t len;
-	git_otype type;
+	git_object_t type;
 
 #ifndef GIT_ARCH_64
 	cl_skip();
@@ -185,5 +185,5 @@ void test_odb_largefiles__read_header(void)
 	cl_git_pass(git_odb_read_header(&len, &type, odb, &oid));
 
 	cl_assert_equal_sz(LARGEFILE_SIZE, len);
-	cl_assert_equal_i(GIT_OBJ_BLOB, type);
+	cl_assert_equal_i(GIT_OBJECT_BLOB, type);
 }

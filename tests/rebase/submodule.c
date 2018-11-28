@@ -44,7 +44,7 @@ void test_rebase_submodule__initialize(void)
 	cl_git_pass(git_commit_create_v(&commit_id, repo, git_reference_name(master_ref), signature, signature, NULL, "Fixup .gitmodules", tree, 1, parent));
 
 	/* And a final reset, for good measure */
-	cl_git_pass(git_object_lookup(&obj, repo, &commit_id, GIT_OBJ_COMMIT));
+	cl_git_pass(git_object_lookup(&obj, repo, &commit_id, GIT_OBJECT_COMMIT));
 	cl_git_pass(git_reset(repo, obj, GIT_RESET_HARD, &opts));
 
 	git_index_free(index);

@@ -894,7 +894,7 @@ static int packed_find_peel(refdb_fs_backend *backend, struct packref *ref)
 	/*
 	 * Find the tagged object in the repository
 	 */
-	if (git_object_lookup(&object, backend->repo, &ref->oid, GIT_OBJ_ANY) < 0)
+	if (git_object_lookup(&object, backend->repo, &ref->oid, GIT_OBJECT_ANY) < 0)
 		return -1;
 
 	/*
@@ -902,7 +902,7 @@ static int packed_find_peel(refdb_fs_backend *backend, struct packref *ref)
 	 * if the ref is actually a 'weak' ref, we don't need to resolve
 	 * anything.
 	 */
-	if (git_object_type(object) == GIT_OBJ_TAG) {
+	if (git_object_type(object) == GIT_OBJECT_TAG) {
 		git_tag *tag = (git_tag *)object;
 
 		/*

@@ -157,7 +157,7 @@ void test_index_names__cleaned_on_checkout_tree(void)
 
 	test_index_names__add();
 	cl_git_pass(git_reference_name_to_id(&oid, repo, "refs/heads/master"));
-	cl_git_pass(git_object_lookup(&obj, repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&obj, repo, &oid, GIT_OBJECT_ANY));
 	cl_git_pass(git_checkout_tree(repo, obj, &opts));
 	cl_assert_equal_sz(0, git_index_name_entrycount(repo_index));
 

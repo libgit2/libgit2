@@ -43,7 +43,7 @@ static int make_origin(git_blame__origin **out, git_commit *commit, const char *
 	int error = 0;
 
 	if ((error = git_object_lookup_bypath(&blob, (git_object*)commit,
-			path, GIT_OBJ_BLOB)) < 0)
+			path, GIT_OBJECT_BLOB)) < 0)
 		return error;
 
 	GITERR_CHECK_ALLOC_ADD(&alloc_len, sizeof(*o), path_len);
@@ -257,7 +257,7 @@ static void split_blame(git_blame *blame, git_blame__entry *split, git_blame__en
 	}
 }
 
-/* 
+/*
  * After splitting the blame, the origins used by the on-stack blame_entry
  * should lose one refcnt each.
  */
@@ -486,7 +486,7 @@ static int pass_whole_blame(git_blame *blame,
 
 	if (!porigin->blob &&
 	    git_object_lookup((git_object**)&porigin->blob, blame->repository,
-				git_blob_id(origin->blob), GIT_OBJ_BLOB) < 0)
+				git_blob_id(origin->blob), GIT_OBJECT_BLOB) < 0)
 		return -1;
 	for (e=blame->ent; e; e=e->next) {
 		if (!same_suspect(e->suspect, origin))

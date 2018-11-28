@@ -47,7 +47,7 @@ int git_reset_default(
 			return -1;
 		}
 
-		if ((error = git_object_peel(&commit, target, GIT_OBJ_COMMIT)) < 0 ||
+		if ((error = git_object_peel(&commit, target, GIT_OBJECT_COMMIT)) < 0 ||
 			(error = git_commit_tree(&tree, (git_commit *)commit)) < 0)
 			goto cleanup;
 	}
@@ -129,7 +129,7 @@ static int reset(
 			reset_type == GIT_RESET_MIXED ? "reset mixed" : "reset hard")) < 0)
 		return error;
 
-	if ((error = git_object_peel(&commit, target, GIT_OBJ_COMMIT)) < 0 ||
+	if ((error = git_object_peel(&commit, target, GIT_OBJECT_COMMIT)) < 0 ||
 		(error = git_repository_index(&index, repo)) < 0 ||
 		(error = git_commit_tree(&tree, (git_commit *)commit)) < 0)
 		goto cleanup;

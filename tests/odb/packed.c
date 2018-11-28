@@ -39,7 +39,7 @@ void test_odb_packed__read_header_0(void)
 		git_oid id;
 		git_odb_object *obj;
 		size_t len;
-		git_otype type;
+		git_object_t type;
 
 		cl_git_pass(git_oid_fromstr(&id, packed_objects[i]));
 
@@ -61,7 +61,7 @@ void test_odb_packed__read_header_1(void)
 		git_oid id;
 		git_odb_object *obj;
 		size_t len;
-		git_otype type;
+		git_object_t type;
 
 		cl_git_pass(git_oid_fromstr(&id, loose_objects[i]));
 

@@ -640,7 +640,7 @@ int git_diff__oid_for_entry(
 			error = fd;
 		else {
 			error = git_odb__hashfd_filtered(
-				out, fd, (size_t)entry.file_size, GIT_OBJ_BLOB, fl);
+				out, fd, (size_t)entry.file_size, GIT_OBJECT_BLOB, fl);
 			p_close(fd);
 			diff->base.perf.oid_calculations++;
 		}

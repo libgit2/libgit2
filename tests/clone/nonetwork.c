@@ -269,7 +269,7 @@ void test_clone_nonetwork__clone_tag_to_tree(void)
 	memset(&entry, 0, sizeof(git_index_entry));
 	entry.path = file_path;
 	entry.mode = GIT_FILEMODE_BLOB;
-	cl_git_pass(git_odb_write(&entry.id, odb, file_content, strlen(file_content), GIT_OBJ_BLOB));
+	cl_git_pass(git_odb_write(&entry.id, odb, file_content, strlen(file_content), GIT_OBJECT_BLOB));
 
 	cl_git_pass(git_index_add(index, &entry));
 	cl_git_pass(git_index_write_tree_to(&tree_id, index, stage));

@@ -80,7 +80,7 @@ static void assert_head_is_correctly_detached(void)
 
 	cl_git_pass(git_repository_head(&head, repo));
 
-	cl_git_pass(git_object_lookup(&commit, repo, git_reference_target(head), GIT_OBJ_COMMIT));
+	cl_git_pass(git_object_lookup(&commit, repo, git_reference_target(head), GIT_OBJECT_COMMIT));
 
 	git_object_free(commit);
 	git_reference_free(head);
@@ -120,7 +120,7 @@ void test_repo_head__set_head_detached_Detaches_HEAD_and_make_it_point_to_the_pe
 	git_object *tag;
 
 	cl_git_pass(git_revparse_single(&tag, repo, "tags/test"));
-	cl_assert_equal_i(GIT_OBJ_TAG, git_object_type(tag));
+	cl_assert_equal_i(GIT_OBJECT_TAG, git_object_type(tag));
 
 	cl_git_pass(git_repository_set_head_detached(repo, git_object_id(tag)));
 

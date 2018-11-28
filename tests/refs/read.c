@@ -38,9 +38,9 @@ void test_refs_read__loose_tag(void)
 	cl_assert(reference_is_packed(reference) == 0);
 	cl_assert_equal_s(reference->name, loose_tag_ref_name);
 
-	cl_git_pass(git_object_lookup(&object, g_repo, git_reference_target(reference), GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&object, g_repo, git_reference_target(reference), GIT_OBJECT_ANY));
 	cl_assert(object != NULL);
-	cl_assert(git_object_type(object) == GIT_OBJ_TAG);
+	cl_assert(git_object_type(object) == GIT_OBJECT_TAG);
 
 	/* Ensure the name of the tag matches the name of the reference */
 	cl_git_pass(git_buf_joinpath(&ref_name_from_tag_name, GIT_REFS_TAGS_DIR, git_tag_name((git_tag *)object)));
@@ -78,9 +78,9 @@ void test_refs_read__symbolic(void)
 	cl_git_pass(git_reference_resolve(&resolved_ref, reference));
 	cl_assert(git_reference_type(resolved_ref) == GIT_REF_OID);
 
-	cl_git_pass(git_object_lookup(&object, g_repo, git_reference_target(resolved_ref), GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&object, g_repo, git_reference_target(resolved_ref), GIT_OBJECT_ANY));
 	cl_assert(object != NULL);
-	cl_assert(git_object_type(object) == GIT_OBJ_COMMIT);
+	cl_assert(git_object_type(object) == GIT_OBJECT_COMMIT);
 
 	git_oid_fromstr(&id, current_master_tip);
 	cl_assert_equal_oid(&id, git_object_id(object));
@@ -106,9 +106,9 @@ void test_refs_read__nested_symbolic(void)
 	cl_git_pass(git_reference_resolve(&resolved_ref, reference));
 	cl_assert(git_reference_type(resolved_ref) == GIT_REF_OID);
 
-	cl_git_pass(git_object_lookup(&object, g_repo, git_reference_target(resolved_ref), GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&object, g_repo, git_reference_target(resolved_ref), GIT_OBJECT_ANY));
 	cl_assert(object != NULL);
-	cl_assert(git_object_type(object) == GIT_OBJ_COMMIT);
+	cl_assert(git_object_type(object) == GIT_OBJECT_COMMIT);
 
 	git_oid_fromstr(&id, current_master_tip);
 	cl_assert_equal_oid(&id, git_object_id(object));
@@ -171,9 +171,9 @@ void test_refs_read__packed(void)
 	cl_assert(reference_is_packed(reference));
 	cl_assert_equal_s(reference->name, packed_head_name);
 
-	cl_git_pass(git_object_lookup(&object, g_repo, git_reference_target(reference), GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&object, g_repo, git_reference_target(reference), GIT_OBJECT_ANY));
 	cl_assert(object != NULL);
-	cl_assert(git_object_type(object) == GIT_OBJ_COMMIT);
+	cl_assert(git_object_type(object) == GIT_OBJECT_COMMIT);
 
 	git_object_free(object);
 

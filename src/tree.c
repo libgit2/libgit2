@@ -271,16 +271,16 @@ const git_oid *git_tree_entry_id(const git_tree_entry *entry)
 	return entry->oid;
 }
 
-git_otype git_tree_entry_type(const git_tree_entry *entry)
+git_object_t git_tree_entry_type(const git_tree_entry *entry)
 {
 	assert(entry);
 
 	if (S_ISGITLINK(entry->attr))
-		return GIT_OBJ_COMMIT;
+		return GIT_OBJECT_COMMIT;
 	else if (S_ISDIR(entry->attr))
-		return GIT_OBJ_TREE;
+		return GIT_OBJECT_TREE;
 	else
-		return GIT_OBJ_BLOB;
+		return GIT_OBJECT_BLOB;
 }
 
 int git_tree_entry_to_object(
@@ -289,7 +289,7 @@ int git_tree_entry_to_object(
 	const git_tree_entry *entry)
 {
 	assert(entry && object_out);
-	return git_object_lookup(object_out, repo, entry->oid, GIT_OBJ_ANY);
+	return git_object_lookup(object_out, repo, entry->oid, GIT_OBJECT_ANY);
 }
 
 static const git_tree_entry *entry_fromname(
@@ -459,15 +459,15 @@ static size_t find_next_dir(const char *dirname, git_index *index, size_t start)
 	return i;
 }
 
-static git_otype otype_from_mode(git_filemode_t filemode)
+static git_object_t otype_from_mode(git_filemode_t filemode)
 {
 	switch (filemode) {
 	case GIT_FILEMODE_TREE:
-		return GIT_OBJ_TREE;
+		return GIT_OBJECT_TREE;
 	case GIT_FILEMODE_COMMIT:
-		return GIT_OBJ_COMMIT;
+		return GIT_OBJECT_COMMIT;
 	default:
-		return GIT_OBJ_BLOB;
+		return GIT_OBJECT_BLOB;
 	}
 }
 
@@ -840,7 +840,7 @@ int git_treebuilder_write_with_buffer(git_oid *oid, git_treebuilder *bld, git_bu
 	}
 
 	if ((error = git_repository_odb__weakptr(&odb, bld->repo)) == 0)
-		error = git_odb_write(oid, odb, tree->ptr, tree->size, GIT_OBJ_TREE);
+		error = git_odb_write(oid, odb, tree->ptr, tree->size, GIT_OBJECT_TREE);
 
 out:
 	git_vector_free(&entries);
@@ -1127,7 +1127,7 @@ static int create_popped_tree(tree_stack_entry *current, tree_stack_entry *poppe
 	if (current->tree) {
 		const git_tree_entry *to_replace;
 		to_replace = git_tree_entry_byname(current->tree, component->ptr);
-		if (to_replace && git_tree_entry_type(to_replace) != GIT_OBJ_TREE) {
+		if (to_replace && git_tree_entry_type(to_replace) != GIT_OBJECT_TREE) {
 			giterr_set(GITERR_TREE, "D/F conflict when updating tree");
 			return -1;
 		}
@@ -1204,7 +1204,7 @@ int git_tree_create_updated(git_oid *out, git_repository *repo, git_tree *baseli
 			if (!entry)
 				entry = treebuilder_get(last->bld, component.ptr);
 
-			if (entry && git_tree_entry_type(entry) != GIT_OBJ_TREE) {
+			if (entry && git_tree_entry_type(entry) != GIT_OBJECT_TREE) {
 				giterr_set(GITERR_TREE, "D/F conflict when updating tree");
 				error = -1;
 				goto cleanup;

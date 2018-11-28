@@ -18,7 +18,7 @@ void test_filter_file__initialize(void)
 	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 
 	cl_git_pass(git_repository_head(&head_ref, g_repo));
-	cl_git_pass(git_reference_peel((git_object **)&head, head_ref, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reference_peel((git_object **)&head, head_ref, GIT_OBJECT_COMMIT));
 	cl_git_pass(git_reset(g_repo, (git_object *)head, GIT_RESET_HARD, NULL));
 
 	git_commit_free(head);

@@ -201,7 +201,7 @@ static void stage_content(char *content[])
 	size_t i;
 
 	cl_git_pass(git_repository_head(&head, repo));
-	cl_git_pass(git_reference_peel(&head_object, head, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reference_peel(&head_object, head, GIT_OBJECT_COMMIT));
 	cl_git_pass(git_reset(repo, head_object, GIT_RESET_HARD, NULL));
 
 	for (i = 0, filename = content[i], text = content[++i];
@@ -228,7 +228,7 @@ static int merge_dirty_files(char *dirty_files[])
 	int error;
 
 	cl_git_pass(git_repository_head(&head, repo));
-	cl_git_pass(git_reference_peel(&head_object, head, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reference_peel(&head_object, head, GIT_OBJECT_COMMIT));
 	cl_git_pass(git_reset(repo, head_object, GIT_RESET_HARD, NULL));
 
 	write_files(dirty_files);
@@ -248,7 +248,7 @@ static int merge_differently_filtered_files(char *files[])
 	int error;
 
 	cl_git_pass(git_repository_head(&head, repo));
-	cl_git_pass(git_reference_peel(&head_object, head, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reference_peel(&head_object, head, GIT_OBJECT_COMMIT));
 	cl_git_pass(git_reset(repo, head_object, GIT_RESET_HARD, NULL));
 
 	/* Emulate checkout with a broken or misconfigured filter:  modify some
@@ -275,7 +275,7 @@ static int merge_differently_filtered_files(char *files[])
 }
 
 static int merge_staged_files(char *staged_files[])
-{	
+{
 	stage_random_files(staged_files);
 	return merge_branch();
 }
@@ -295,7 +295,7 @@ void test_merge_workdir_dirty__unstaged_deletes_maintained(void)
 	git_object *head_object;
 
 	cl_git_pass(git_repository_head(&head, repo));
-	cl_git_pass(git_reference_peel(&head_object, head, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reference_peel(&head_object, head, GIT_OBJECT_COMMIT));
 	cl_git_pass(git_reset(repo, head_object, GIT_RESET_HARD, NULL));
 
 	cl_git_pass(p_unlink("merge-resolve/unchanged.txt"));
@@ -333,7 +333,7 @@ void test_merge_workdir_dirty__identical_staged_files_allowed(void)
 	size_t i;
 
 	set_core_autocrlf_to(repo, false);
-	
+
 	for (i = 0, content = result_contents[i]; content[0]; content = result_contents[++i]) {
 		stage_content(content);
 

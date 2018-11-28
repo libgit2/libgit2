@@ -140,7 +140,7 @@ int git_libgit2_opts(int key, ...)
 
 	case GIT_OPT_SET_CACHE_OBJECT_LIMIT:
 		{
-			git_otype type = (git_otype)va_arg(ap, int);
+			git_object_t type = (git_object_t)va_arg(ap, int);
 			size_t size = va_arg(ap, size_t);
 			error = git_cache_set_max_object_size(type, size);
 			break;

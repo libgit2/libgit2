@@ -20,8 +20,8 @@ void test_pack_sharing__open_two_repos(void)
 
 	git_oid_fromstr(&id, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 
-	cl_git_pass(git_object_lookup(&obj1, repo1, &id, GIT_OBJ_ANY));
-	cl_git_pass(git_object_lookup(&obj2, repo2, &id, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&obj1, repo1, &id, GIT_OBJECT_ANY));
+	cl_git_pass(git_object_lookup(&obj2, repo2, &id, GIT_OBJECT_ANY));
 
 	pos = 0;
 	while ((error = git_strmap_next(&data, &pos, git__pack_cache)) == 0) {

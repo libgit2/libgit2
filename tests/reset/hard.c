@@ -248,7 +248,7 @@ void test_reset_hard__switch_file_to_dir(void)
 	git_oid src_id, tgt_id;
 
 	cl_git_pass(git_repository_odb(&odb, repo));
-	cl_git_pass(git_odb_write(&entry.id, odb, "", 0, GIT_OBJ_BLOB));
+	cl_git_pass(git_odb_write(&entry.id, odb, "", 0, GIT_OBJECT_BLOB));
 	git_odb_free(odb);
 
 	entry.mode = GIT_FILEMODE_BLOB;
@@ -282,12 +282,12 @@ void test_reset_hard__switch_file_to_dir(void)
 	git_signature_free(sig);
 
 	/* Let's go to a known state of the src commit with the file named 'dir' */
-	cl_git_pass(git_object_lookup(&commit, repo, &src_id, GIT_OBJ_COMMIT));
+	cl_git_pass(git_object_lookup(&commit, repo, &src_id, GIT_OBJECT_COMMIT));
 	cl_git_pass(git_reset(repo, commit, GIT_RESET_HARD, NULL));
 	git_object_free(commit);
 
 	/* And now we move over to the commit with the directory named 'dir' */
-	cl_git_pass(git_object_lookup(&commit, repo, &tgt_id, GIT_OBJ_COMMIT));
+	cl_git_pass(git_object_lookup(&commit, repo, &tgt_id, GIT_OBJECT_COMMIT));
 	cl_git_pass(git_reset(repo, commit, GIT_RESET_HARD, NULL));
 	git_object_free(commit);
 }

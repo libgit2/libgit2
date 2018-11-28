@@ -353,7 +353,7 @@ static int pack_backend__refresh(git_odb_backend *backend_)
 }
 
 static int pack_backend__read_header(
-	size_t *len_p, git_otype *type_p,
+	size_t *len_p, git_object_t *type_p,
 	struct git_odb_backend *backend, const git_oid *oid)
 {
 	struct git_pack_entry e;
@@ -390,7 +390,7 @@ static int pack_backend__freshen(
 }
 
 static int pack_backend__read(
-	void **buffer_p, size_t *len_p, git_otype *type_p,
+	void **buffer_p, size_t *len_p, git_object_t *type_p,
 	git_odb_backend *backend, const git_oid *oid)
 {
 	struct git_pack_entry e;
@@ -412,7 +412,7 @@ static int pack_backend__read_prefix(
 	git_oid *out_oid,
 	void **buffer_p,
 	size_t *len_p,
-	git_otype *type_p,
+	git_object_t *type_p,
 	git_odb_backend *backend,
 	const git_oid *short_oid,
 	size_t len)

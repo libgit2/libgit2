@@ -28,7 +28,7 @@ extern bool git_odb__strict_hash_verification;
 typedef struct {
 	void *data;			/**< Raw, decompressed object data. */
 	size_t len;			/**< Total number of bytes in data. */
-	git_otype type;		/**< Type of this object. */
+	git_object_t type;		/**< Type of this object. */
 } git_rawobj;
 
 /* EXPORT */
@@ -70,7 +70,7 @@ int git_odb__hashobj(git_oid *id, git_rawobj *obj);
 /*
  * Format the object header such as it would appear in the on-disk object
  */
-int git_odb__format_object_header(size_t *out_len, char *hdr, size_t hdr_size, git_off_t obj_len, git_otype obj_type);
+int git_odb__format_object_header(size_t *out_len, char *hdr, size_t hdr_size, git_off_t obj_len, git_object_t obj_type);
 /*
  * Hash an open file descriptor.
  * This is a performance call when the contents of a fd need to be hashed,
@@ -81,22 +81,22 @@ int git_odb__format_object_header(size_t *out_len, char *hdr, size_t hdr_size, g
  * The fd is never closed, not even on error. It must be opened and closed
  * by the caller
  */
-int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type);
+int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_object_t type);
 
 /*
  * Hash an open file descriptor applying an array of filters
  * Acts just like git_odb__hashfd with the addition of filters...
  */
 int git_odb__hashfd_filtered(
-	git_oid *out, git_file fd, size_t len, git_otype type, git_filter_list *fl);
+	git_oid *out, git_file fd, size_t len, git_object_t type, git_filter_list *fl);
 
 /*
  * Hash a `path`, assuming it could be a POSIX symlink: if the path is a
  * symlink, then the raw contents of the symlink will be hashed. Otherwise,
  * this will fallback to `git_odb__hashfd`.
  *
- * The hash type for this call is always `GIT_OBJ_BLOB` because symlinks may
- * only point to blobs.
+ * The hash type for this call is always `GIT_OBJIECT_BLOB` because
+ * symlinks may only point to blobs.
  */
 int git_odb__hashlink(git_oid *out, const char *path);
 
@@ -122,7 +122,7 @@ int git_odb__error_ambiguous(const char *message);
  * not be read.
  */
 int git_odb__read_header_or_object(
-	git_odb_object **out, size_t *len_p, git_otype *type_p,
+	git_odb_object **out, size_t *len_p, git_object_t *type_p,
 	git_odb *db, const git_oid *id);
 
 /* freshen an entry in the object database */

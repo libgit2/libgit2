@@ -1014,7 +1014,7 @@ static int rebase_commit_merge(
 
 	if ((error = rebase_ensure_not_dirty(rebase->repo, false, true, GIT_EUNMERGED)) < 0 ||
 		(error = git_repository_head(&head, rebase->repo)) < 0 ||
-		(error = git_reference_peel((git_object **)&head_commit, head, GIT_OBJ_COMMIT)) < 0 ||
+		(error = git_reference_peel((git_object **)&head_commit, head, GIT_OBJECT_COMMIT)) < 0 ||
 		(error = git_repository_index(&index, rebase->repo)) < 0 ||
 		(error = rebase_commit__create(&commit, rebase, index, head_commit,
 			author, committer, message_encoding, message)) < 0 ||
@@ -1288,7 +1288,7 @@ static int return_to_orig_head(git_rebase *rebase)
 			rebase->orig_head_name)) == 0 &&
 		(error = git_repository_head(&terminal_ref, rebase->repo)) == 0 &&
 		(error = git_reference_peel((git_object **)&terminal_commit,
-			terminal_ref, GIT_OBJ_COMMIT)) == 0 &&
+			terminal_ref, GIT_OBJECT_COMMIT)) == 0 &&
 		(error = git_reference_create_matching(&branch_ref,
 			rebase->repo, rebase->orig_head_name,
 			git_commit_id(terminal_commit), 1,

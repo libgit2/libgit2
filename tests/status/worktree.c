@@ -1163,7 +1163,7 @@ void test_status_worktree__update_index_with_symlink_doesnt_change_mode(void)
 	opts.flags = GIT_STATUS_OPT_DEFAULTS | GIT_STATUS_OPT_UPDATE_INDEX;
 
 	cl_git_pass(git_repository_head(&head, repo));
-	cl_git_pass(git_reference_peel(&head_object, head, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reference_peel(&head_object, head, GIT_OBJECT_COMMIT));
 
 	cl_git_pass(git_reset(repo, head_object, GIT_RESET_HARD, NULL));
 

@@ -315,7 +315,7 @@ static int load_blob(git_blame *blame)
 	if (error < 0)
 		goto cleanup;
 	error = git_object_lookup_bypath((git_object**)&blame->final_blob,
-			(git_object*)blame->final, blame->path, GIT_OBJ_BLOB);
+			(git_object*)blame->final, blame->path, GIT_OBJECT_BLOB);
 
 cleanup:
 	return error;

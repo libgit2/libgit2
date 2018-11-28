@@ -346,7 +346,7 @@ void test_index_reuc__cleaned_on_checkout_tree(void)
 
 	test_index_reuc__add();
 	cl_git_pass(git_reference_name_to_id(&oid, repo, "refs/heads/master"));
-	cl_git_pass(git_object_lookup(&obj, repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&obj, repo, &oid, GIT_OBJECT_ANY));
 	cl_git_pass(git_checkout_tree(repo, obj, &opts));
 	cl_assert(reuc_entry_exists() == false);
 
