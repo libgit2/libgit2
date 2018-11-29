@@ -1877,9 +1877,11 @@ static int checkout_deferred_remove(git_repository *repo, const char *path)
 
 static int checkout_create_the_new(
 	unsigned int *actions,
-	checkout_data *data)
+	checkout_data *data,
+	int symlink_pass)
 {
 	int error = 0;
+    int symlink_mode;
 	git_diff_delta *delta;
 	size_t i;
 
@@ -1894,12 +1896,19 @@ static int checkout_create_the_new(
 		}
 
 		if (actions[i] & CHECKOUT_ACTION__UPDATE_BLOB) {
-			error = checkout_blob(data, &delta->new_file);
-			if (error < 0)
-				return error;
 
-			data->completed_steps++;
-			report_progress(data, delta->new_file.path);
+			/* only checkout blob if the mode matches current pass */
+			symlink_mode = S_ISLNK(delta->new_file.mode) ? 1 : 0;
+ 			if(symlink_pass == symlink_mode) {
+
+				error = checkout_blob(data, &delta->new_file);
+				if (error < 0)
+					return error;
+                
+				data->completed_steps++;
+				report_progress(data, delta->new_file.path);
+
+			}
 		}
 	}
 
@@ -2643,9 +2652,16 @@ int git_checkout_iterator(
 		(error = checkout_remove_conflicts(&data)) < 0)
 		goto cleanup;
 
-	if (counts[CHECKOUT_ACTION__UPDATE_BLOB] > 0 &&
-		(error = checkout_create_the_new(actions, &data)) < 0)
-		goto cleanup;
+		if (counts[CHECKOUT_ACTION__UPDATE_BLOB] > 0) {
+			/* Checkout regular files before symlinks, to make sure symlink
+			 * targets exist.
+			 */
+			if((error = checkout_create_the_new(actions, &data, 0)) < 0)
+				goto cleanup;
+
+			if((error = checkout_create_the_new(actions, &data, 1)) < 0)
+				goto cleanup;
+		}
 
 	if (counts[CHECKOUT_ACTION__UPDATE_SUBMODULE] > 0 &&
 		(error = checkout_create_submodules(actions, &data)) < 0)
