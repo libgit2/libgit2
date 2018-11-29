@@ -51,7 +51,7 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 {
 	int error;
 	char *packname;
-	git_strmap_iter pos;
+	size_t pos;
 	struct git_pack_file *pack;
 
 	if ((error = git_packfile__name(&packname, path)) < 0)
@@ -97,7 +97,7 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 void git_mwindow_put_pack(struct git_pack_file *pack)
 {
 	int count;
-	git_strmap_iter pos;
+	size_t pos;
 
 	if (git_mutex_lock(&git__mwindow_mutex) < 0)
 		return;

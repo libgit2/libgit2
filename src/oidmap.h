@@ -11,15 +11,7 @@
 
 #include "git2/oid.h"
 
-#define kmalloc git__malloc
-#define kcalloc git__calloc
-#define krealloc git__realloc
-#define kreallocarray git__reallocarray
-#define kfree git__free
-#include "khash.h"
-
-__KHASH_TYPE(oid, const git_oid *, void *)
-typedef khash_t(oid) git_oidmap;
+typedef struct kh_oid_s git_oidmap;
 
 git_oidmap *git_oidmap_alloc(void);
 void git_oidmap_free(git_oidmap *map);
@@ -43,9 +35,14 @@ int git_oidmap_put(git_oidmap *map, const git_oid *key, int *err);
 void git_oidmap_insert(git_oidmap *map, const git_oid *key, void *value, int *rval);
 void git_oidmap_delete(git_oidmap *map, const git_oid *key);
 
-#define git_oidmap_foreach_value kh_foreach_value
+size_t git_oidmap_begin(git_oidmap *map);
+size_t git_oidmap_end(git_oidmap *map);
 
-#define git_oidmap_begin	kh_begin
-#define git_oidmap_end		kh_end
+#define git_oidmap_foreach_value(h, vvar, code) { size_t __i;			\
+	for (__i = git_oidmap_begin(h); __i != git_oidmap_end(h); ++__i) {	\
+		if (!git_oidmap_has_data(h,__i)) continue;			\
+		(vvar) = git_oidmap_value_at(h,__i);				\
+		code;								\
+	} }
 
 #endif

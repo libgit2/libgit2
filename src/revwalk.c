@@ -21,7 +21,7 @@ git_commit_list_node *git_revwalk__commit_lookup(
 	git_revwalk *walk, const git_oid *oid)
 {
 	git_commit_list_node *commit;
-	khiter_t pos;
+	size_t pos;
 	int ret;
 
 	/* lookup and reserve space if not already present */

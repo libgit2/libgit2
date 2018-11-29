@@ -1105,7 +1105,7 @@ static void deletes_by_oid_free(git_oidmap *map) {
 }
 
 static int deletes_by_oid_enqueue(git_oidmap *map, git_pool* pool, const git_oid *id, size_t idx) {
-	khint_t pos;
+	size_t pos;
 	deletes_by_oid_queue *queue;
 	size_t *array_entry;
 	int error;
@@ -1133,7 +1133,7 @@ static int deletes_by_oid_enqueue(git_oidmap *map, git_pool* pool, const git_oid
 }
 
 static int deletes_by_oid_dequeue(size_t *idx, git_oidmap *map, const git_oid *id) {
-	khint_t pos;
+	size_t pos;
 	deletes_by_oid_queue *queue;
 	size_t *array_entry;
 

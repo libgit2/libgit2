@@ -7,6 +7,15 @@
 
 #include "strmap.h"
 
+#define kmalloc git__malloc
+#define kcalloc git__calloc
+#define krealloc git__realloc
+#define kreallocarray git__reallocarray
+#define kfree git__free
+#include "khash.h"
+
+__KHASH_TYPE(str, const char *, void *)
+
 __KHASH_IMPL(str, static kh_inline, const char *, void *, 1, kh_str_hash_func, kh_str_hash_equal)
 
 int git_strmap_alloc(git_strmap **map)
@@ -102,9 +111,20 @@ void git_strmap_delete(git_strmap *map, const char *key)
 		git_strmap_delete_at(map, idx);
 }
 
+size_t git_strmap_begin(git_strmap *map)
+{
+	GIT_UNUSED(map);
+	return 0;
+}
+
+size_t git_strmap_end(git_strmap *map)
+{
+	return map->n_buckets;
+}
+
 int git_strmap_next(
 	void **data,
-	git_strmap_iter* iter,
+	size_t* iter,
 	git_strmap *map)
 {
 	if (!map)

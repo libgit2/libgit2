@@ -131,9 +131,9 @@ void git_config_entries_free(git_config_entries *entries)
 
 int git_config_entries_append(git_config_entries *entries, git_config_entry *entry)
 {
-	git_strmap_iter pos;
 	config_entry_list *existing, *var;
 	int error = 0;
+	size_t pos;
 
 	var = git__calloc(1, sizeof(config_entry_list));
 	GITERR_CHECK_ALLOC(var);
@@ -171,7 +171,7 @@ int git_config_entries_append(git_config_entries *entries, git_config_entry *ent
 
 int config_entry_get(config_entry_list **out, git_config_entries *entries, const char *key)
 {
-	khiter_t pos;
+	size_t pos;
 
 	pos = git_strmap_lookup_index(entries->map, key);
 

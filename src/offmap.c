@@ -7,6 +7,15 @@
 
 #include "offmap.h"
 
+#define kmalloc git__malloc
+#define kcalloc git__calloc
+#define krealloc git__realloc
+#define kreallocarray git__reallocarray
+#define kfree git__free
+#include "khash.h"
+
+__KHASH_TYPE(off, git_off_t, void *)
+
 __KHASH_IMPL(off, static kh_inline, git_off_t, void *, 1, kh_int64_hash_func, kh_int64_hash_equal)
 
 git_offmap *git_offmap_alloc(void)
@@ -42,6 +51,16 @@ int git_offmap_valid_index(git_offmap *map, size_t idx)
 int git_offmap_exists(git_offmap *map, const git_off_t key)
 {
 	return kh_get(off, map, key) != kh_end(map);
+}
+
+int git_offmap_has_data(git_offmap *map, size_t idx)
+{
+	return kh_exist(map, idx);
+}
+
+git_off_t git_offmap_key_at(git_offmap *map, size_t idx)
+{
+	return kh_key(map, idx);
 }
 
 void *git_offmap_value_at(git_offmap *map, size_t idx)
@@ -80,4 +99,15 @@ void git_offmap_delete(git_offmap *map, const git_off_t key)
 	khiter_t idx = git_offmap_lookup_index(map, key);
 	if (git_offmap_valid_index(map, idx))
 		git_offmap_delete_at(map, idx);
+}
+
+size_t git_offmap_begin(git_offmap *map)
+{
+	GIT_UNUSED(map);
+	return 0;
+}
+
+size_t git_offmap_end(git_offmap *map)
+{
+	return map->n_buckets;
 }

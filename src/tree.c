@@ -723,7 +723,7 @@ int git_treebuilder_insert(
 {
 	git_tree_entry *entry;
 	int error;
-	git_strmap_iter pos;
+	size_t pos;
 
 	assert(bld && id && filename);
 
@@ -758,7 +758,7 @@ int git_treebuilder_insert(
 static git_tree_entry *treebuilder_get(git_treebuilder *bld, const char *filename)
 {
 	git_tree_entry *entry = NULL;
-	git_strmap_iter pos;
+	size_t pos;
 
 	assert(bld && filename);
 

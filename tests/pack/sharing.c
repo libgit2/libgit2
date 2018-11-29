@@ -11,7 +11,7 @@ void test_pack_sharing__open_two_repos(void)
 	git_repository *repo1, *repo2;
 	git_object *obj1, *obj2;
 	git_oid id;
-	git_strmap_iter pos;
+	size_t pos;
 	void *data;
 	int error;
 

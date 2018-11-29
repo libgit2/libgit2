@@ -129,9 +129,9 @@ void test_path_win32__absolute_from_relative(void)
 #endif
 }
 
+#ifdef GIT_WIN32
 static void test_canonicalize(const wchar_t *in, const wchar_t *expected)
 {
-#ifdef GIT_WIN32
 	git_win32_path canonical;
 
 	cl_assert(wcslen(in) < MAX_PATH);
@@ -139,11 +139,8 @@ static void test_canonicalize(const wchar_t *in, const wchar_t *expected)
 
 	cl_must_pass(git_win32_path_canonicalize(canonical));
 	cl_assert_equal_wcs(expected, canonical);
-#else
-	GIT_UNUSED(in);
-	GIT_UNUSED(expected);
-#endif
 }
+#endif
 
 static void test_remove_namespace(const wchar_t *in, const wchar_t *expected)
 {

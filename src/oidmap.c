@@ -7,6 +7,15 @@
 
 #include "oidmap.h"
 
+#define kmalloc git__malloc
+#define kcalloc git__calloc
+#define krealloc git__realloc
+#define kreallocarray git__reallocarray
+#define kfree git__free
+#include "khash.h"
+
+__KHASH_TYPE(oid, const git_oid *, void *)
+
 GIT_INLINE(khint_t) git_oidmap_hash(const git_oid *oid)
 {
 	khint_t h;
@@ -102,4 +111,15 @@ void git_oidmap_delete(git_oidmap *map, const git_oid *key)
 	khiter_t idx = git_oidmap_lookup_index(map, key);
 	if (git_oidmap_valid_index(map, idx))
 		git_oidmap_delete_at(map, idx);
+}
+
+size_t git_oidmap_begin(git_oidmap *map)
+{
+	GIT_UNUSED(map);
+	return 0;
+}
+
+size_t git_oidmap_end(git_oidmap *map)
+{
+	return map->n_buckets;
 }

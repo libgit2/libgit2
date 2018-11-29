@@ -9,16 +9,7 @@
 
 #include "common.h"
 
-#define kmalloc git__malloc
-#define kcalloc git__calloc
-#define krealloc git__realloc
-#define kreallocarray git__reallocarray
-#define kfree git__free
-#include "khash.h"
-
-__KHASH_TYPE(str, const char *, void *)
-typedef khash_t(str) git_strmap;
-typedef khiter_t git_strmap_iter;
+typedef struct kh_str_s git_strmap;
 
 int git_strmap_alloc(git_strmap **map);
 void git_strmap_free(git_strmap *map);
@@ -42,15 +33,27 @@ int git_strmap_put(git_strmap *map, const char *key, int *err);
 void git_strmap_insert(git_strmap *map, const char *key, void *value, int *rval);
 void git_strmap_delete(git_strmap *map, const char *key);
 
-#define git_strmap_foreach		kh_foreach
-#define git_strmap_foreach_value	kh_foreach_value
+#define git_strmap_foreach(h, kvar, vvar, code) { size_t __i;			\
+	for (__i = git_strmap_begin(h); __i != git_strmap_end(h); ++__i) {	\
+		if (!git_strmap_has_data(h,__i)) continue;			\
+		(kvar) = git_strmap_key(h,__i);					\
+		(vvar) = git_strmap_value_at(h,__i);				\
+		code;								\
+	} }
 
-#define git_strmap_begin		kh_begin
-#define git_strmap_end		kh_end
+#define git_strmap_foreach_value(h, vvar, code) { size_t __i;			\
+	for (__i = git_strmap_begin(h); __i != git_strmap_end(h); ++__i) {	\
+		if (!git_strmap_has_data(h,__i)) continue;			\
+		(vvar) = git_strmap_value_at(h,__i);				\
+		code;								\
+	} }
+
+size_t git_strmap_begin(git_strmap *map);
+size_t git_strmap_end(git_strmap *map);
 
 int git_strmap_next(
 	void **data,
-	git_strmap_iter* iter,
+	size_t *iter,
 	git_strmap *map);
 
 #endif
