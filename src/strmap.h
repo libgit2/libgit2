@@ -42,7 +42,13 @@ void git_strmap_free(git_strmap *map);
  */
 void git_strmap_clear(git_strmap *map);
 
-size_t git_strmap_num_entries(git_strmap *map);
+/**
+ * Return the number of elements in the map.
+ *
+ * @parameter map map containing the elements
+ * @return number of elements in the map
+ */
+size_t git_strmap_size(git_strmap *map);
 
 size_t git_strmap_lookup_index(git_strmap *map, const char *key);
 int git_strmap_valid_index(git_strmap *map, size_t idx);

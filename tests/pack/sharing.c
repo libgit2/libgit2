@@ -30,7 +30,7 @@ void test_pack_sharing__open_two_repos(void)
 		cl_assert_equal_i(2, pack->refcount.val);
 	}
 
-	cl_assert_equal_i(3, git_strmap_num_entries(git__pack_cache));
+	cl_assert_equal_i(3, git_strmap_size(git__pack_cache));
 
 	git_object_free(obj1);
 	git_object_free(obj2);
@@ -38,5 +38,5 @@ void test_pack_sharing__open_two_repos(void)
 	git_repository_free(repo2);
 
 	/* we don't want to keep the packs open after the repos go away */
-	cl_assert_equal_i(0, git_strmap_num_entries(git__pack_cache));
+	cl_assert_equal_i(0, git_strmap_size(git__pack_cache));
 }

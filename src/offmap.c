@@ -37,7 +37,7 @@ void git_offmap_clear(git_offmap *map)
 	kh_clear(off, map);
 }
 
-size_t git_offmap_num_entries(git_offmap *map)
+size_t git_offmap_size(git_offmap *map)
 {
 	return kh_size(map);
 }

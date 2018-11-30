@@ -36,7 +36,7 @@ void git_strmap_clear(git_strmap *map)
 	kh_clear(str, map);
 }
 
-size_t git_strmap_num_entries(git_strmap *map)
+size_t git_strmap_size(git_strmap *map)
 {
 	return kh_size(map);
 }

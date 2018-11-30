@@ -44,6 +44,12 @@ void git_oidmap_free(git_oidmap *map);
  */
 void git_oidmap_clear(git_oidmap *map);
 
+/**
+ * Return the number of elements in the map.
+ *
+ * @parameter map map containing the elements
+ * @return number of elements in the map
+ */
 size_t git_oidmap_size(git_oidmap *map);
 
 size_t git_oidmap_lookup_index(git_oidmap *map, const git_oid *key);

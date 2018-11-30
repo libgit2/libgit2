@@ -16,12 +16,13 @@ void test_core_strmap__cleanup(void)
 
 void test_core_strmap__0(void)
 {
-	cl_assert(git_strmap_num_entries(g_table) == 0);
+	cl_assert(git_strmap_size(g_table) == 0);
 }
 
-static void insert_strings(git_strmap *table, int count)
+static void insert_strings(git_strmap *table, size_t count)
 {
-	int i, j, over, err;
+	size_t i, j, over;
+	int err;
 	char *str;
 
 	for (i = 0; i < count; ++i) {
@@ -38,7 +39,7 @@ static void insert_strings(git_strmap *table, int count)
 		cl_assert(err >= 0);
 	}
 
-	cl_assert((int)git_strmap_num_entries(table) == count);
+	cl_assert_equal_i(git_strmap_size(table), count);
 }
 
 void test_core_strmap__1(void)

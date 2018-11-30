@@ -344,7 +344,7 @@ unsigned int git_treebuilder_entrycount(git_treebuilder *bld)
 {
 	assert(bld);
 
-	return git_strmap_num_entries(bld->map);
+	return git_strmap_size(bld->map);
 }
 
 static int tree_error(const char *str, const char *path)
@@ -811,7 +811,7 @@ int git_treebuilder_write_with_buffer(git_oid *oid, git_treebuilder *bld, git_bu
 
 	git_buf_clear(tree);
 
-	entrycount = git_strmap_num_entries(bld->map);
+	entrycount = git_strmap_size(bld->map);
 	if ((error = git_vector_init(&entries, entrycount, entry_sort_cmp)) < 0)
 		goto out;
 

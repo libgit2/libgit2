@@ -44,7 +44,13 @@ void git_offmap_free(git_offmap *map);
  */
 void git_offmap_clear(git_offmap *map);
 
-size_t git_offmap_num_entries(git_offmap *map);
+/**
+ * Return the number of elements in the map.
+ *
+ * @parameter map map containing the elements
+ * @return number of elements in the map
+ */
+size_t git_offmap_size(git_offmap *map);
 
 size_t git_offmap_lookup_index(git_offmap *map, const git_off_t key);
 int git_offmap_valid_index(git_offmap *map, size_t idx);
