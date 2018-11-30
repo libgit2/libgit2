@@ -52,6 +52,15 @@ void git_offmap_clear(git_offmap *map);
  */
 size_t git_offmap_size(git_offmap *map);
 
+/**
+ * Return value associated with the given key.
+ *
+ * @param map map to search key in
+ * @param key key to search for
+ * @return value associated with the given key or NULL if the key was not found
+ */
+void *git_offmap_get(git_offmap *map, const git_off_t key);
+
 size_t git_offmap_lookup_index(git_offmap *map, const git_off_t key);
 int git_offmap_valid_index(git_offmap *map, size_t idx);
 

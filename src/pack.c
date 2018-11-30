@@ -111,15 +111,12 @@ static int cache_init(git_pack_cache *cache)
 
 static git_pack_cache_entry *cache_get(git_pack_cache *cache, git_off_t offset)
 {
-	git_pack_cache_entry *entry = NULL;
-	size_t k;
+	git_pack_cache_entry *entry;
 
 	if (git_mutex_lock(&cache->lock) < 0)
 		return NULL;
 
-	k = git_offmap_lookup_index(cache->entries, offset);
-	if (git_offmap_valid_index(cache->entries, k)) { /* found it */
-		entry = git_offmap_value_at(cache->entries, k);
+	if ((entry = git_offmap_get(cache->entries, offset)) != NULL) {
 		git_atomic_inc(&entry->refcount);
 		entry->last_usage = cache->use_ctr++;
 	}
