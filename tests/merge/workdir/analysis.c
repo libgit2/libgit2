@@ -40,21 +40,33 @@ void test_merge_workdir_analysis__cleanup(void)
 static void analysis_from_branch(
 	git_merge_analysis_t *merge_analysis,
 	git_merge_preference_t *merge_pref,
-	const char *branchname)
+	const char *our_branchname,
+	const char *their_branchname)
 {
-	git_buf refname = GIT_BUF_INIT;
+	git_buf our_refname = GIT_BUF_INIT;
+	git_buf their_refname = GIT_BUF_INIT;
+	git_reference *our_ref;
 	git_reference *their_ref;
 	git_annotated_commit *their_head;
 
-	git_buf_printf(&refname, "%s%s", GIT_REFS_HEADS_DIR, branchname);
+	if (our_branchname != NULL) {
+		cl_git_pass(git_buf_printf(&our_refname, "%s%s", GIT_REFS_HEADS_DIR, our_branchname));
+		cl_git_pass(git_reference_lookup(&our_ref, repo, git_buf_cstr(&our_refname)));
+	} else {
+		cl_git_pass(git_reference_lookup(&our_ref, repo, GIT_HEAD_FILE));
+	}
 
-	cl_git_pass(git_reference_lookup(&their_ref, repo, git_buf_cstr(&refname)));
+	cl_git_pass(git_buf_printf(&their_refname, "%s%s", GIT_REFS_HEADS_DIR, their_branchname));
+
+	cl_git_pass(git_reference_lookup(&their_ref, repo, git_buf_cstr(&their_refname)));
 	cl_git_pass(git_annotated_commit_from_ref(&their_head, repo, their_ref));
 
-	cl_git_pass(git_merge_analysis(merge_analysis, merge_pref, repo, (const git_annotated_commit **)&their_head, 1));
+	cl_git_pass(git_merge_analysis_for_ref(merge_analysis, merge_pref, repo, our_ref, (const git_annotated_commit **)&their_head, 1));
 
-	git_buf_dispose(&refname);
+	git_buf_dispose(&our_refname);
+	git_buf_dispose(&their_refname);
 	git_annotated_commit_free(their_head);
+	git_reference_free(our_ref);
 	git_reference_free(their_ref);
 }
 
@@ -63,9 +75,8 @@ void test_merge_workdir_analysis__fastforward(void)
 	git_merge_analysis_t merge_analysis;
 	git_merge_preference_t merge_pref;
 
-	analysis_from_branch(&merge_analysis, &merge_pref, FASTFORWARD_BRANCH);
-	cl_assert_equal_i(GIT_MERGE_ANALYSIS_FASTFORWARD, (merge_analysis & GIT_MERGE_ANALYSIS_FASTFORWARD));
-	cl_assert_equal_i(GIT_MERGE_ANALYSIS_NORMAL, (merge_analysis & GIT_MERGE_ANALYSIS_NORMAL));
+	analysis_from_branch(&merge_analysis, &merge_pref, NULL, FASTFORWARD_BRANCH);
+	cl_assert_equal_i(GIT_MERGE_ANALYSIS_NORMAL|GIT_MERGE_ANALYSIS_FASTFORWARD, merge_analysis);
 }
 
 void test_merge_workdir_analysis__no_fastforward(void)
@@ -73,7 +84,7 @@ void test_merge_workdir_analysis__no_fastforward(void)
 	git_merge_analysis_t merge_analysis;
 	git_merge_preference_t merge_pref;
 
-	analysis_from_branch(&merge_analysis, &merge_pref, NOFASTFORWARD_BRANCH);
+	analysis_from_branch(&merge_analysis, &merge_pref, NULL, NOFASTFORWARD_BRANCH);
 	cl_assert_equal_i(GIT_MERGE_ANALYSIS_NORMAL, merge_analysis);
 }
 
@@ -82,7 +93,7 @@ void test_merge_workdir_analysis__uptodate(void)
 	git_merge_analysis_t merge_analysis;
 	git_merge_preference_t merge_pref;
 
-	analysis_from_branch(&merge_analysis, &merge_pref, UPTODATE_BRANCH);
+	analysis_from_branch(&merge_analysis, &merge_pref, NULL, UPTODATE_BRANCH);
 	cl_assert_equal_i(GIT_MERGE_ANALYSIS_UP_TO_DATE, merge_analysis);
 }
 
@@ -91,7 +102,7 @@ void test_merge_workdir_analysis__uptodate_merging_prev_commit(void)
 	git_merge_analysis_t merge_analysis;
 	git_merge_preference_t merge_pref;
 
-	analysis_from_branch(&merge_analysis, &merge_pref, PREVIOUS_BRANCH);
+	analysis_from_branch(&merge_analysis, &merge_pref, NULL, PREVIOUS_BRANCH);
 	cl_assert_equal_i(GIT_MERGE_ANALYSIS_UP_TO_DATE, merge_analysis);
 }
 
@@ -104,9 +115,8 @@ void test_merge_workdir_analysis__unborn(void)
 	git_buf_joinpath(&master, git_repository_path(repo), "refs/heads/master");
 	p_unlink(git_buf_cstr(&master));
 
-	analysis_from_branch(&merge_analysis, &merge_pref, NOFASTFORWARD_BRANCH);
-	cl_assert_equal_i(GIT_MERGE_ANALYSIS_FASTFORWARD, (merge_analysis & GIT_MERGE_ANALYSIS_FASTFORWARD));
-	cl_assert_equal_i(GIT_MERGE_ANALYSIS_UNBORN, (merge_analysis & GIT_MERGE_ANALYSIS_UNBORN));
+	analysis_from_branch(&merge_analysis, &merge_pref, NULL, NOFASTFORWARD_BRANCH);
+	cl_assert_equal_i(GIT_MERGE_ANALYSIS_FASTFORWARD|GIT_MERGE_ANALYSIS_UNBORN, merge_analysis);
 
 	git_buf_dispose(&master);
 }
@@ -120,9 +130,9 @@ void test_merge_workdir_analysis__fastforward_with_config_noff(void)
 	git_repository_config(&config, repo);
 	git_config_set_string(config, "merge.ff", "false");
 
-	analysis_from_branch(&merge_analysis, &merge_pref, FASTFORWARD_BRANCH);
-	cl_assert_equal_i(GIT_MERGE_ANALYSIS_FASTFORWARD, (merge_analysis & GIT_MERGE_ANALYSIS_FASTFORWARD));
-	cl_assert_equal_i(GIT_MERGE_ANALYSIS_NORMAL, (merge_analysis & GIT_MERGE_ANALYSIS_NORMAL));
+	analysis_from_branch(&merge_analysis, &merge_pref, NULL, FASTFORWARD_BRANCH);
+	cl_assert_equal_i(GIT_MERGE_ANALYSIS_NORMAL|GIT_MERGE_ANALYSIS_FASTFORWARD, merge_analysis);
+
 	cl_assert_equal_i(GIT_MERGE_PREFERENCE_NO_FASTFORWARD, (merge_pref & GIT_MERGE_PREFERENCE_NO_FASTFORWARD));
 }
 
@@ -135,7 +145,26 @@ void test_merge_workdir_analysis__no_fastforward_with_config_ffonly(void)
 	git_repository_config(&config, repo);
 	git_config_set_string(config, "merge.ff", "only");
 
-	analysis_from_branch(&merge_analysis, &merge_pref, NOFASTFORWARD_BRANCH);
-	cl_assert_equal_i(GIT_MERGE_ANALYSIS_NORMAL, (merge_analysis & GIT_MERGE_ANALYSIS_NORMAL));
+	analysis_from_branch(&merge_analysis, &merge_pref, NULL, NOFASTFORWARD_BRANCH);
+	cl_assert_equal_i(GIT_MERGE_ANALYSIS_NORMAL, merge_analysis);
+
 	cl_assert_equal_i(GIT_MERGE_PREFERENCE_FASTFORWARD_ONLY, (merge_pref & GIT_MERGE_PREFERENCE_FASTFORWARD_ONLY));
+}
+
+void test_merge_workdir_analysis__between_uptodate_refs(void)
+{
+	git_merge_analysis_t merge_analysis;
+	git_merge_preference_t merge_pref;
+
+	analysis_from_branch(&merge_analysis, &merge_pref, NOFASTFORWARD_BRANCH, PREVIOUS_BRANCH);
+	cl_assert_equal_i(GIT_MERGE_ANALYSIS_UP_TO_DATE, merge_analysis);
+}
+
+void test_merge_workdir_analysis__between_noff_refs(void)
+{
+	git_merge_analysis_t merge_analysis;
+	git_merge_preference_t merge_pref;
+
+	analysis_from_branch(&merge_analysis, &merge_pref, "branch", FASTFORWARD_BRANCH);
+	cl_assert_equal_i(GIT_MERGE_ANALYSIS_NORMAL, merge_analysis);
 }

@@ -1430,3 +1430,27 @@ const char *git_reference_shorthand(const git_reference *ref)
 {
 	return git_reference__shorthand(ref->name);
 }
+
+int git_reference__is_unborn_head(bool *unborn, const git_reference *ref, git_repository *repo)
+{
+	int error;
+	git_reference *tmp_ref;
+	assert(unborn && ref && repo);
+
+	if (ref->type == GIT_REF_OID) {
+		*unborn = 0;
+		return 0;
+	}
+
+	error = git_reference_lookup_resolved(&tmp_ref, repo, ref->name, -1);
+	git_reference_free(tmp_ref);
+
+	if (error != 0 && error != GIT_ENOTFOUND)
+		return error;
+	else if (error == GIT_ENOTFOUND && git__strcmp(ref->name, GIT_HEAD_FILE) == 0)
+		*unborn = true;
+	else
+		*unborn = false;
+
+	return 0;
+}

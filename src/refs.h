@@ -136,4 +136,6 @@ int git_reference__update_for_commit(
 	const git_oid *id,
 	const char *operation);
 
+int git_reference__is_unborn_head(bool *unborn, const git_reference *ref, git_repository *repo);
+
 #endif

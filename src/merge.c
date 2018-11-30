@@ -3110,11 +3110,11 @@ static int merge_heads(
 	git_annotated_commit **ancestor_head_out,
 	git_annotated_commit **our_head_out,
 	git_repository *repo,
+	git_reference *our_ref,
 	const git_annotated_commit **their_heads,
 	size_t their_heads_len)
 {
 	git_annotated_commit *ancestor_head = NULL, *our_head = NULL;
-	git_reference *our_ref = NULL;
 	int error = 0;
 
 	*ancestor_head_out = NULL;
@@ -3123,8 +3123,7 @@ static int merge_heads(
 	if ((error = git_repository__ensure_not_bare(repo, "merge")) < 0)
 		goto done;
 
-	if ((error = git_reference_lookup(&our_ref, repo, GIT_HEAD_FILE)) < 0 ||
-		(error = git_annotated_commit_from_ref(&our_head, repo, our_ref)) < 0)
+	if ((error = git_annotated_commit_from_ref(&our_head, repo, our_ref)) < 0)
 		goto done;
 
 	if ((error = merge_ancestor_head(&ancestor_head, repo, our_head, their_heads, their_heads_len)) < 0) {
@@ -3143,8 +3142,6 @@ done:
 		git_annotated_commit_free(ancestor_head);
 		git_annotated_commit_free(our_head);
 	}
-
-	git_reference_free(our_ref);
 
 	return error;
 }
@@ -3182,17 +3179,19 @@ done:
 	return error;
 }
 
-int git_merge_analysis(
+int git_merge_analysis_for_ref(
 	git_merge_analysis_t *analysis_out,
 	git_merge_preference_t *preference_out,
 	git_repository *repo,
+	git_reference *our_ref,
 	const git_annotated_commit **their_heads,
 	size_t their_heads_len)
 {
 	git_annotated_commit *ancestor_head = NULL, *our_head = NULL;
 	int error = 0;
+	bool unborn;
 
-	assert(analysis_out && preference_out && repo && their_heads);
+	assert(analysis_out && preference_out && repo && their_heads && their_heads_len > 0);
 
 	if (their_heads_len != 1) {
 		giterr_set(GITERR_MERGE, "can only merge a single branch");
@@ -3205,12 +3204,16 @@ int git_merge_analysis(
 	if ((error = merge_preference(preference_out, repo)) < 0)
 		goto done;
 
-	if (git_repository_head_unborn(repo)) {
+	if ((error = git_reference__is_unborn_head(&unborn, our_ref, repo)) < 0)
+		goto done;
+
+	if (unborn) {
 		*analysis_out |= GIT_MERGE_ANALYSIS_FASTFORWARD | GIT_MERGE_ANALYSIS_UNBORN;
+		error = 0;
 		goto done;
 	}
 
-	if ((error = merge_heads(&ancestor_head, &our_head, repo, their_heads, their_heads_len)) < 0)
+	if ((error = merge_heads(&ancestor_head, &our_head, repo, our_ref, their_heads, their_heads_len)) < 0)
 		goto done;
 
 	/* We're up-to-date if we're trying to merge our own common ancestor. */
@@ -3233,6 +3236,28 @@ done:
 	return error;
 }
 
+int git_merge_analysis(
+	git_merge_analysis_t *analysis_out,
+	git_merge_preference_t *preference_out,
+	git_repository *repo,
+	const git_annotated_commit **their_heads,
+	size_t their_heads_len)
+{
+	git_reference *head_ref = NULL;
+	int error = 0;
+
+	if ((error = git_reference_lookup(&head_ref, repo, GIT_HEAD_FILE)) < 0) {
+		giterr_set(GITERR_MERGE, "failed to lookup HEAD reference");
+		return error;
+	}
+
+	error = git_merge_analysis_for_ref(analysis_out, preference_out, repo, head_ref, their_heads, their_heads_len);
+
+	git_reference_free(head_ref);
+
+	return error;
+}
+
 int git_merge(
 	git_repository *repo,
 	const git_annotated_commit **their_heads,
@@ -3248,7 +3273,7 @@ int git_merge(
 	unsigned int checkout_strategy;
 	int error = 0;
 
-	assert(repo && their_heads);
+	assert(repo && their_heads && their_heads_len > 0);
 
 	if (their_heads_len != 1) {
 		giterr_set(GITERR_MERGE, "can only merge a single branch");

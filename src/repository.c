@@ -2157,6 +2157,8 @@ int git_repository_head(git_reference **head_out, git_repository *repo)
 	git_reference *head;
 	int error;
 
+	assert(head_out);
+
 	if ((error = git_reference_lookup(&head, repo, GIT_HEAD_FILE)) < 0)
 		return error;
 
