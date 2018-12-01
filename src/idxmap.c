@@ -68,6 +68,24 @@ void git_idxmap_icase_clear(git_idxmap_icase *map)
 	kh_clear(idxicase, map);
 }
 
+int git_idxmap_resize(git_idxmap *map, size_t size)
+{
+	if (kh_resize(idx, map, size) < 0) {
+		git_error_set_oom();
+		return -1;
+	}
+	return 0;
+}
+
+int git_idxmap_icase_resize(git_idxmap_icase *map, size_t size)
+{
+	if (kh_resize(idxicase, map, size) < 0) {
+		git_error_set_oom();
+		return -1;
+	}
+	return 0;
+}
+
 void *git_idxmap_get(git_idxmap *map, const git_index_entry *key)
 {
 	size_t idx = git_idxmap_lookup_index(map, key);
@@ -175,16 +193,6 @@ int git_idxmap_has_data(git_idxmap *map, size_t idx)
 int git_idxmap_icase_has_data(git_idxmap_icase *map, size_t idx)
 {
 	return kh_exist(map, idx);
-}
-
-void git_idxmap_resize(git_idxmap *map, size_t size)
-{
-	kh_resize(idx, map, size);
-}
-
-void git_idxmap_icase_resize(git_idxmap_icase *map, size_t size)
-{
-	kh_resize(idxicase, map, size);
 }
 
 void git_idxmap_delete_at(git_idxmap *map, size_t idx)

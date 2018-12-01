@@ -77,6 +77,26 @@ void git_idxmap_clear(git_idxmap *map);
 void git_idxmap_icase_clear(git_idxmap_icase *map);
 
 /**
+ * Resize the map by allocating more memory.
+ *
+ * @param map map that shall be resized
+ * @param size count of entries that the map shall hold
+ * @return `0` if the map was successfully resized, a negative
+ *         error code otherwise
+ */
+int git_idxmap_resize(git_idxmap *map, size_t size);
+
+/**
+ * Resize the map by allocating more memory.
+ *
+ * @param map map that shall be resized
+ * @param size count of entries that the map shall hold
+ * @return `0` if the map was successfully resized, a negative
+ *         error code otherwise
+ */
+int git_idxmap_icase_resize(git_idxmap_icase *map, size_t size);
+
+/**
  * Return value associated with the given key.
  *
  * @param map map to search key in
@@ -136,9 +156,6 @@ int git_idxmap_valid_index(git_idxmap *map, size_t idx);
 int git_idxmap_icase_valid_index(git_idxmap_icase *map, size_t idx);
 int git_idxmap_has_data(git_idxmap *map, size_t idx);
 int git_idxmap_icase_has_data(git_idxmap_icase *map, size_t idx);
-
-void git_idxmap_resize(git_idxmap *map, size_t size);
-void git_idxmap_icase_resize(git_idxmap_icase *map, size_t size);
 
 void git_idxmap_delete_at(git_idxmap *map, size_t idx);
 void git_idxmap_icase_delete_at(git_idxmap_icase *map, size_t idx);

@@ -1619,8 +1619,9 @@ int git_index__fill(git_index *index, const git_vector *source_entries)
 	if (!source_entries->length)
 		return 0;
 
-	git_vector_size_hint(&index->entries, source_entries->length);
-	git_idxmap_resize(index->entries_map, (size_t)(source_entries->length * 1.3));
+	if (git_vector_size_hint(&index->entries, source_entries->length) < 0 ||
+	    git_idxmap_resize(index->entries_map, (size_t)(source_entries->length * 1.3)) < 0)
+		return -1;
 
 	git_vector_foreach(source_entries, i, source_entry) {
 		git_index_entry *entry = NULL;
@@ -2608,10 +2609,12 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 
 	assert(!index->entries.length);
 
-	if (index->ignore_case)
-		git_idxmap_icase_resize((git_idxmap_icase *) index->entries_map, header.entry_count);
-	else
-		git_idxmap_resize(index->entries_map, header.entry_count);
+	if (index->ignore_case &&
+	    (error = git_idxmap_icase_resize((git_idxmap_icase *) index->entries_map,
+					     header.entry_count)) < 0)
+		return error;
+	else if ((error = git_idxmap_resize(index->entries_map, header.entry_count)) < 0)
+		return error;
 
 	/* Parse all the entries */
 	for (i = 0; i < header.entry_count && buffer_size > INDEX_FOOTER_SIZE; ++i) {
@@ -3125,10 +3128,12 @@ int git_index_read_tree(git_index *index, const git_tree *tree)
 	if ((error = git_tree_walk(tree, GIT_TREEWALK_POST, read_tree_cb, &data)) < 0)
 		goto cleanup;
 
-	if (index->ignore_case)
-		git_idxmap_icase_resize((git_idxmap_icase *) entries_map, entries.length);
-	else
-		git_idxmap_resize(entries_map, entries.length);
+	if (index->ignore_case &&
+	    (error = git_idxmap_icase_resize((git_idxmap_icase *) entries_map,
+					     entries.length)) < 0)
+		goto cleanup;
+	else if ((error = git_idxmap_resize(entries_map, entries.length)) < 0)
+		goto cleanup;
 
 	git_vector_foreach(&entries, i, e) {
 		INSERT_IN_MAP_EX(index, entries_map, e, error);
@@ -3185,10 +3190,13 @@ static int git_index_read_iterator(
 	    (error = git_idxmap_new(&new_entries_map)) < 0)
 		goto done;
 
-	if (index->ignore_case && new_length_hint)
-		git_idxmap_icase_resize((git_idxmap_icase *) new_entries_map, new_length_hint);
-	else if (new_length_hint)
-		git_idxmap_resize(new_entries_map, new_length_hint);
+	if (index->ignore_case && new_length_hint &&
+	    (error = git_idxmap_icase_resize((git_idxmap_icase *) new_entries_map,
+					     new_length_hint)) < 0)
+		goto done;
+	else if (new_length_hint &&
+	         (error = git_idxmap_resize(new_entries_map, new_length_hint)) < 0)
+		goto done;
 
 	opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE |
 		GIT_ITERATOR_INCLUDE_CONFLICTS;
