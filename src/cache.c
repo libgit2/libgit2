@@ -115,8 +115,7 @@ void git_cache_free(git_cache *cache)
 /* Called with lock */
 static void cache_evict_entries(git_cache *cache)
 {
-	uint32_t seed = rand();
-	size_t evict_count = 8;
+	size_t evict_count = 8, i;
 	ssize_t evicted_memory = 0;
 
 	/* do not infinite loop if there's not enough entries to evict  */
@@ -125,18 +124,19 @@ static void cache_evict_entries(git_cache *cache)
 		return;
 	}
 
+	i = 0;
 	while (evict_count > 0) {
-		size_t pos = seed++ % git_oidmap_end(cache->map);
+		git_cached_obj *evict;
+		const git_oid *key;
 
-		if (git_oidmap_has_data(cache->map, pos)) {
-			git_cached_obj *evict = git_oidmap_value_at(cache->map, pos);
+		if (git_oidmap_iterate((void **) &evict, cache->map, &i, &key) == GIT_ITEROVER)
+			break;
 
-			evict_count--;
-			evicted_memory += evict->size;
-			git_cached_obj_decref(evict);
+		evict_count--;
+		evicted_memory += evict->size;
+		git_cached_obj_decref(evict);
 
-			git_oidmap_delete_at(cache->map, pos);
-		}
+		git_oidmap_delete(cache->map, key);
 	}
 
 	cache->used_memory -= evicted_memory;
