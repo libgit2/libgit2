@@ -120,22 +120,6 @@ int git_offmap_exists(git_offmap *map, const git_off_t key);
  */
 int git_offmap_iterate(void **value, git_offmap *map, size_t *iter, git_off_t *key);
 
-size_t git_offmap_lookup_index(git_offmap *map, const git_off_t key);
-int git_offmap_valid_index(git_offmap *map, size_t idx);
-
-int git_offmap_has_data(git_offmap *map, size_t idx);
-
-git_off_t git_offmap_key_at(git_offmap *map, size_t idx);
-void *git_offmap_value_at(git_offmap *map, size_t idx);
-void git_offmap_set_value_at(git_offmap *map, size_t idx, void *value);
-void git_offmap_delete_at(git_offmap *map, size_t idx);
-
-int git_offmap_put(git_offmap *map, const git_off_t key, int *err);
-void git_offmap_insert(git_offmap *map, const git_off_t key, void *value, int *rval);
-
-size_t git_offmap_begin(git_offmap *map);
-size_t git_offmap_end(git_offmap *map);
-
 #define git_offmap_foreach(h, kvar, vvar, code) { size_t __i = 0;		\
 	while (git_offmap_iterate((void **) &(vvar), h, &__i, &(kvar)) == 0) {	\
 		code;								\

@@ -44,9 +44,8 @@ size_t git_offmap_size(git_offmap *map)
 
 void *git_offmap_get(git_offmap *map, const git_off_t key)
 {
-	size_t idx = git_offmap_lookup_index(map, key);
-	if (!git_offmap_valid_index(map, idx) ||
-	    !git_offmap_has_data(map, idx))
+	size_t idx = kh_get(off, map, key);
+	if (idx == kh_end(map) || !kh_exist(map, idx))
 		return NULL;
 	return kh_val(map, idx);
 }
@@ -70,10 +69,10 @@ int git_offmap_set(git_offmap *map, const git_off_t key, void *value)
 
 int git_offmap_delete(git_offmap *map, const git_off_t key)
 {
-	khiter_t idx = git_offmap_lookup_index(map, key);
-	if (!git_offmap_valid_index(map, idx))
+	khiter_t idx = kh_get(off, map, key);
+	if (idx == kh_end(map))
 		return GIT_ENOTFOUND;
-	git_offmap_delete_at(map, idx);
+	kh_del(off, map, idx);
 	return 0;
 }
 
@@ -86,79 +85,17 @@ int git_offmap_iterate(void **value, git_offmap *map, size_t *iter, git_off_t *k
 {
 	size_t i = *iter;
 
-	while (i < git_offmap_end(map) && !git_offmap_has_data(map, i))
+	while (i < map->n_buckets && !kh_exist(map, i))
 		i++;
 
-	if (i >= git_offmap_end(map))
+	if (i >= map->n_buckets)
 		return GIT_ITEROVER;
 
 	if (key)
-		*key = git_offmap_key_at(map, i);
+		*key = kh_key(map, i);
 	if (value)
-		*value = git_offmap_value_at(map, i);
+		*value = kh_value(map, i);
 	*iter = ++i;
 
 	return 0;
-}
-
-size_t git_offmap_lookup_index(git_offmap *map, const git_off_t key)
-{
-	return kh_get(off, map, key);
-}
-
-int git_offmap_valid_index(git_offmap *map, size_t idx)
-{
-	return idx != kh_end(map);
-}
-
-int git_offmap_has_data(git_offmap *map, size_t idx)
-{
-	return kh_exist(map, idx);
-}
-
-git_off_t git_offmap_key_at(git_offmap *map, size_t idx)
-{
-	return kh_key(map, idx);
-}
-
-void *git_offmap_value_at(git_offmap *map, size_t idx)
-{
-	return kh_val(map, idx);
-}
-
-void git_offmap_set_value_at(git_offmap *map, size_t idx, void *value)
-{
-	kh_val(map, idx) = value;
-}
-
-void git_offmap_delete_at(git_offmap *map, size_t idx)
-{
-	kh_del(off, map, idx);
-}
-
-int git_offmap_put(git_offmap *map, const git_off_t key, int *err)
-{
-	return kh_put(off, map, key, err);
-}
-
-void git_offmap_insert(git_offmap *map, const git_off_t key, void *value, int *rval)
-{
-	khiter_t idx = kh_put(off, map, key, rval);
-
-	if ((*rval) >= 0) {
-		if ((*rval) == 0)
-			kh_key(map, idx) = key;
-		kh_val(map, idx) = value;
-	}
-}
-
-size_t git_offmap_begin(git_offmap *map)
-{
-	GIT_UNUSED(map);
-	return 0;
-}
-
-size_t git_offmap_end(git_offmap *map)
-{
-	return map->n_buckets;
 }
