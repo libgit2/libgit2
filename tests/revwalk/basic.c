@@ -292,9 +292,9 @@ void test_revwalk_basic__multiple_push_1(void)
 }
 
 /*
-* Difference between test_revwalk_basic__multiple_push_1 and 
+* Difference between test_revwalk_basic__multiple_push_1 and
 * test_revwalk_basic__multiple_push_2 is in the order reference
-* refs/heads/packed-test and commit 5b5b02 are pushed. 
+* refs/heads/packed-test and commit 5b5b02 are pushed.
 * revwalk should return same commits in both the tests.
 
 * $ git rev-list 5b5b02 HEAD ^refs/heads/packed-test
@@ -509,7 +509,7 @@ void test_revwalk_basic__big_timestamp(void)
 	revwalk_basic_setup_walk("testrepo.git");
 
 	cl_git_pass(git_repository_head(&head, _repo));
-	cl_git_pass(git_reference_peel((git_object **) &tip, head, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reference_peel((git_object **) &tip, head, GIT_OBJECT_COMMIT));
 
 	/* Commit with a far-ahead timestamp, we should be able to parse it in the revwalk */
 	cl_git_pass(git_signature_new(&sig, "Joe", "joe@example.com", 2399662595, 0));

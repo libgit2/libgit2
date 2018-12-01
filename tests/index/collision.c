@@ -13,7 +13,7 @@ void test_index_collision__initialize(void)
 	cl_git_pass(git_repository_odb(&g_odb, g_repo));
 	cl_git_pass(git_repository_index(&g_index, g_repo));
 
-	cl_git_pass(git_odb_write(&g_empty_id, g_odb, "", 0, GIT_OBJ_BLOB));
+	cl_git_pass(git_odb_write(&g_empty_id, g_odb, "", 0, GIT_OBJECT_BLOB));
 }
 
 void test_index_collision__cleanup(void)
@@ -108,7 +108,7 @@ void test_index_collision__add_with_highstage_1(void)
 	git_oid_cpy(&entry.id, &g_empty_id);
 
 	entry.path = "a/b";
-	GIT_IDXENTRY_STAGE_SET(&entry, 2);
+	GIT_INDEX_ENTRY_STAGE_SET(&entry, 2);
 	cl_git_pass(git_index_add(g_index, &entry));
 
 	/* create a blob beneath the previous tree entry */
@@ -118,7 +118,7 @@ void test_index_collision__add_with_highstage_1(void)
 
 	/* create another tree entry above the blob */
 	entry.path = "a/b";
-	GIT_IDXENTRY_STAGE_SET(&entry, 1);
+	GIT_INDEX_ENTRY_STAGE_SET(&entry, 1);
 	cl_git_pass(git_index_add(g_index, &entry));
 }
 
@@ -134,16 +134,16 @@ void test_index_collision__add_with_highstage_2(void)
 	git_oid_cpy(&entry.id, &g_empty_id);
 
 	entry.path = "a/b/c";
-	GIT_IDXENTRY_STAGE_SET(&entry, 1);
+	GIT_INDEX_ENTRY_STAGE_SET(&entry, 1);
 	cl_git_pass(git_index_add(g_index, &entry));
 
 	/* create a blob beneath the previous tree entry */
 	entry.path = "a/b/c";
-	GIT_IDXENTRY_STAGE_SET(&entry, 2);
+	GIT_INDEX_ENTRY_STAGE_SET(&entry, 2);
 	cl_git_pass(git_index_add(g_index, &entry));
 
 	/* create another tree entry above the blob */
 	entry.path = "a/b";
-	GIT_IDXENTRY_STAGE_SET(&entry, 3);
+	GIT_INDEX_ENTRY_STAGE_SET(&entry, 3);
 	cl_git_pass(git_index_add(g_index, &entry));
 }

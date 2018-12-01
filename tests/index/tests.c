@@ -810,7 +810,7 @@ void test_index_tests__preserves_case(void)
 	cl_git_rewritefile("myrepo/TEST.txt", "hello again\n");
 	cl_git_pass(git_index_add_bypath(index, "TEST.txt"));
 
-	if (index_caps & GIT_INDEXCAP_IGNORE_CASE)
+	if (index_caps & GIT_INDEX_CAPABILITY_IGNORE_CASE)
 		cl_assert_equal_i(1, (int)git_index_entrycount(index));
 	else
 		cl_assert_equal_i(2, (int)git_index_entrycount(index));
@@ -821,7 +821,7 @@ void test_index_tests__preserves_case(void)
 	cl_assert(git__strcmp(entry->path, "test.txt") == 0);
 
 	cl_assert((entry = git_index_get_bypath(index, "TEST.txt", 0)) != NULL);
-	if (index_caps & GIT_INDEXCAP_IGNORE_CASE)
+	if (index_caps & GIT_INDEX_CAPABILITY_IGNORE_CASE)
 		/* The path should *not* have changed without an explicit remove */
 		cl_assert(git__strcmp(entry->path, "test.txt") == 0);
 	else
@@ -923,13 +923,13 @@ void test_index_tests__reload_while_ignoring_case(void)
 	cl_git_pass(git_vector_verify_sorted(&index->entries));
 
 	caps = git_index_caps(index);
-	cl_git_pass(git_index_set_caps(index, caps &= ~GIT_INDEXCAP_IGNORE_CASE));
+	cl_git_pass(git_index_set_caps(index, caps &= ~GIT_INDEX_CAPABILITY_IGNORE_CASE));
 	cl_git_pass(git_index_read(index, true));
 	cl_git_pass(git_vector_verify_sorted(&index->entries));
 	cl_assert(git_index_get_bypath(index, ".HEADER", 0));
 	cl_assert_equal_p(NULL, git_index_get_bypath(index, ".header", 0));
 
-	cl_git_pass(git_index_set_caps(index, caps | GIT_INDEXCAP_IGNORE_CASE));
+	cl_git_pass(git_index_set_caps(index, caps | GIT_INDEX_CAPABILITY_IGNORE_CASE));
 	cl_git_pass(git_index_read(index, true));
 	cl_git_pass(git_vector_verify_sorted(&index->entries));
 	cl_assert(git_index_get_bypath(index, ".HEADER", 0));
@@ -948,7 +948,7 @@ void test_index_tests__change_icase_on_instance(void)
 	cl_git_pass(git_vector_verify_sorted(&index->entries));
 
 	caps = git_index_caps(index);
-	cl_git_pass(git_index_set_caps(index, caps &= ~GIT_INDEXCAP_IGNORE_CASE));
+	cl_git_pass(git_index_set_caps(index, caps &= ~GIT_INDEX_CAPABILITY_IGNORE_CASE));
 	cl_assert_equal_i(false, index->ignore_case);
 	cl_git_pass(git_vector_verify_sorted(&index->entries));
 	cl_assert(e = git_index_get_bypath(index, "src/common.h", 0));
@@ -956,7 +956,7 @@ void test_index_tests__change_icase_on_instance(void)
 	cl_assert(e = git_index_get_bypath(index, "COPYING", 0));
 	cl_assert_equal_p(NULL, e = git_index_get_bypath(index, "copying", 0));
 
-	cl_git_pass(git_index_set_caps(index, caps | GIT_INDEXCAP_IGNORE_CASE));
+	cl_git_pass(git_index_set_caps(index, caps | GIT_INDEX_CAPABILITY_IGNORE_CASE));
 	cl_assert_equal_i(true, index->ignore_case);
 	cl_git_pass(git_vector_verify_sorted(&index->entries));
 	cl_assert(e = git_index_get_bypath(index, "COPYING", 0));

@@ -20,12 +20,12 @@
  */
 int git_commit_lookup(git_commit **out, git_repository *repo, const git_oid *id)
 {
-	return git_object_lookup((git_object **)out, repo, id, GIT_OBJ_COMMIT);
+	return git_object_lookup((git_object **)out, repo, id, GIT_OBJECT_COMMIT);
 }
 
 int git_commit_lookup_prefix(git_commit **out, git_repository *repo, const git_oid *id, size_t len)
 {
-	return git_object_lookup_prefix((git_object **)out, repo, id, len, GIT_OBJ_COMMIT);
+	return git_object_lookup_prefix((git_object **)out, repo, id, len, GIT_OBJECT_COMMIT);
 }
 
 void git_commit_free(git_commit *obj)
@@ -53,12 +53,12 @@ int git_commit_dup(git_commit **out, git_commit *obj)
  */
 int git_tree_lookup(git_tree **out, git_repository *repo, const git_oid *id)
 {
-	return git_object_lookup((git_object **)out, repo, id, GIT_OBJ_TREE);
+	return git_object_lookup((git_object **)out, repo, id, GIT_OBJECT_TREE);
 }
 
 int git_tree_lookup_prefix(git_tree **out, git_repository *repo, const git_oid *id, size_t len)
 {
-	return git_object_lookup_prefix((git_object **)out, repo, id, len, GIT_OBJ_TREE);
+	return git_object_lookup_prefix((git_object **)out, repo, id, len, GIT_OBJECT_TREE);
 }
 
 void git_tree_free(git_tree *obj)
@@ -86,12 +86,12 @@ int git_tree_dup(git_tree **out, git_tree *obj)
  */
 int git_tag_lookup(git_tag **out, git_repository *repo, const git_oid *id)
 {
-	return git_object_lookup((git_object **)out, repo, id, GIT_OBJ_TAG);
+	return git_object_lookup((git_object **)out, repo, id, GIT_OBJECT_TAG);
 }
 
 int git_tag_lookup_prefix(git_tag **out, git_repository *repo, const git_oid *id, size_t len)
 {
-	return git_object_lookup_prefix((git_object **)out, repo, id, len, GIT_OBJ_TAG);
+	return git_object_lookup_prefix((git_object **)out, repo, id, len, GIT_OBJECT_TAG);
 }
 
 void git_tag_free(git_tag *obj)
@@ -119,12 +119,12 @@ int git_tag_dup(git_tag **out, git_tag *obj)
  */
 int git_blob_lookup(git_blob **out, git_repository *repo, const git_oid *id)
 {
-	return git_object_lookup((git_object **)out, repo, id, GIT_OBJ_BLOB);
+	return git_object_lookup((git_object **)out, repo, id, GIT_OBJECT_BLOB);
 }
 
 int git_blob_lookup_prefix(git_blob **out, git_repository *repo, const git_oid *id, size_t len)
 {
-	return git_object_lookup_prefix((git_object **)out, repo, id, len, GIT_OBJ_BLOB);
+	return git_object_lookup_prefix((git_object **)out, repo, id, len, GIT_OBJECT_BLOB);
 }
 
 void git_blob_free(git_blob *obj)

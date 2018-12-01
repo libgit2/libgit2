@@ -31,38 +31,38 @@ int git_object__from_raw(
 	git_object **object_out,
 	const char *data,
 	size_t size,
-	git_otype type);
+	git_object_t type);
 
 int git_object__from_odb_object(
 	git_object **object_out,
 	git_repository *repo,
 	git_odb_object *odb_obj,
-	git_otype type);
+	git_object_t type);
 
-int git_object__resolve_to_type(git_object **obj, git_otype type);
+int git_object__resolve_to_type(git_object **obj, git_object_t type);
 
-git_otype git_object_stringn2type(const char *str, size_t len);
+git_object_t git_object_stringn2type(const char *str, size_t len);
 
 int git_oid__parse(git_oid *oid, const char **buffer_out, const char *buffer_end, const char *header);
 
 void git_oid__writebuf(git_buf *buf, const char *header, const git_oid *oid);
 
 bool git_object__is_valid(
-	git_repository *repo, const git_oid *id, git_otype expected_type);
+	git_repository *repo, const git_oid *id, git_object_t expected_type);
 
-GIT_INLINE(git_otype) git_object__type_from_filemode(git_filemode_t mode)
+GIT_INLINE(git_object_t) git_object__type_from_filemode(git_filemode_t mode)
 {
 	switch (mode) {
 	case GIT_FILEMODE_TREE:
-		return GIT_OBJ_TREE;
+		return GIT_OBJECT_TREE;
 	case GIT_FILEMODE_COMMIT:
-		return GIT_OBJ_COMMIT;
+		return GIT_OBJECT_COMMIT;
 	case GIT_FILEMODE_BLOB:
 	case GIT_FILEMODE_BLOB_EXECUTABLE:
 	case GIT_FILEMODE_LINK:
-		return GIT_OBJ_BLOB;
+		return GIT_OBJECT_BLOB;
 	default:
-		return GIT_OBJ_BAD;
+		return GIT_OBJECT_BAD;
 	}
 }
 

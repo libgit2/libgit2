@@ -1272,10 +1272,10 @@ static int filesystem_iterator_entry_hash(
 
 	if (iter->base.type == GIT_ITERATOR_TYPE_WORKDIR)
 		return git_repository_hashfile(&entry->id,
-			iter->base.repo, entry->path, GIT_OBJ_BLOB, NULL);
+			iter->base.repo, entry->path, GIT_OBJECT_BLOB, NULL);
 
 	if (!(error = git_buf_joinpath(&fullpath, iter->root, entry->path)))
-		error = git_odb_hashfile(&entry->id, fullpath.ptr, GIT_OBJ_BLOB);
+		error = git_odb_hashfile(&entry->id, fullpath.ptr, GIT_OBJECT_BLOB);
 
 	git_buf_dispose(&fullpath);
 	return error;

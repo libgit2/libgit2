@@ -1186,7 +1186,8 @@ int git_repository_index__weakptr(git_index **out, git_repository *repo)
 				git_index_free(index);
 			}
 
-			error = git_index_set_caps(repo->_index, GIT_INDEXCAP_FROM_OWNER);
+			error = git_index_set_caps(repo->_index,
+			                           GIT_INDEX_CAPABILITY_FROM_OWNER);
 		}
 
 		git_buf_dispose(&index_path);
@@ -2449,7 +2450,7 @@ int git_repository_head_tree(git_tree **tree, git_repository *repo)
 	if ((error = git_repository_head(&head, repo)) < 0)
 		return error;
 
-	if ((error = git_reference_peel(&obj, head, GIT_OBJ_TREE)) < 0)
+	if ((error = git_reference_peel(&obj, head, GIT_OBJECT_TREE)) < 0)
 		goto cleanup;
 
 	*tree = (git_tree *)obj;
@@ -2523,7 +2524,7 @@ int git_repository_hashfile(
 	git_oid *out,
 	git_repository *repo,
 	const char *path,
-	git_otype type,
+	git_object_t type,
 	const char *as_path)
 {
 	int error;
@@ -2625,10 +2626,10 @@ static int detach(git_repository *repo, const git_oid *id, const char *new)
 	if ((error = git_reference_lookup(&current, repo, GIT_HEAD_FILE)) < 0)
 		return error;
 
-	if ((error = git_object_lookup(&object, repo, id, GIT_OBJ_ANY)) < 0)
+	if ((error = git_object_lookup(&object, repo, id, GIT_OBJECT_ANY)) < 0)
 		goto cleanup;
 
-	if ((error = git_object_peel(&peeled, object, GIT_OBJ_COMMIT)) < 0)
+	if ((error = git_object_peel(&peeled, object, GIT_OBJECT_COMMIT)) < 0)
 		goto cleanup;
 
 	if (new == NULL)
@@ -2728,7 +2729,7 @@ int git_repository_detach_head(git_repository* repo)
 	if ((error = git_repository_head(&old_head, repo)) < 0)
 		goto cleanup;
 
-	if ((error = git_object_lookup(&object, repo, git_reference_target(old_head), GIT_OBJ_COMMIT)) < 0)
+	if ((error = git_object_lookup(&object, repo, git_reference_target(old_head), GIT_OBJECT_COMMIT)) < 0)
 		goto cleanup;
 
 	if ((error = checkout_message(&log_message, current, git_oid_tostr_s(git_object_id(object)))) < 0)

@@ -296,7 +296,7 @@ static int mailmap_add_blob(
 	if (error < 0)
 		goto cleanup;
 
-	error = git_object_peel((git_object **)&blob, object, GIT_OBJ_BLOB);
+	error = git_object_peel((git_object **)&blob, object, GIT_OBJECT_BLOB);
 	if (error < 0)
 		goto cleanup;
 

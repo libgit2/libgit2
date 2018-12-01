@@ -118,7 +118,7 @@ static int treewalk_skip_de_cb(
 
 	GIT_UNUSED(root);
 
-	if (git_tree_entry_type(entry) == GIT_OBJ_TREE)
+	if (git_tree_entry_type(entry) == GIT_OBJECT_TREE)
 		data->dirs++;
 	else
 		data->files++;

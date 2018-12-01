@@ -241,7 +241,7 @@ void test_submodule_update__update_already_checked_out_submodule(void)
 	checkout_options.checkout_strategy = GIT_CHECKOUT_SAFE;
 
 	cl_git_pass(git_reference_lookup(&branch_reference, g_repo, "refs/heads/alternate_1"));
-	cl_git_pass(git_reference_peel(&branch_commit, branch_reference, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reference_peel(&branch_commit, branch_reference, GIT_OBJECT_COMMIT));
 	cl_git_pass(git_checkout_tree(g_repo, branch_commit, &checkout_options));
 	cl_git_pass(git_repository_set_head(g_repo, git_reference_name(branch_reference)));
 
@@ -277,7 +277,7 @@ void test_submodule_update__update_already_checked_out_submodule(void)
 
 	/* verify that the expected callbacks have been called. */
 	cl_assert_equal_i(1, update_payload.checkout_progress_called);
-	
+
 	git_submodule_free(sm);
 	git_object_free(branch_commit);
 	git_reference_free(branch_reference);
@@ -319,7 +319,7 @@ void test_submodule_update__update_blocks_on_dirty_wd(void)
 	checkout_options.checkout_strategy = GIT_CHECKOUT_SAFE;
 
 	cl_git_pass(git_reference_lookup(&branch_reference, g_repo, "refs/heads/alternate_1"));
-	cl_git_pass(git_reference_peel(&branch_commit, branch_reference, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reference_peel(&branch_commit, branch_reference, GIT_OBJECT_COMMIT));
 	cl_git_pass(git_checkout_tree(g_repo, branch_commit, &checkout_options));
 	cl_git_pass(git_repository_set_head(g_repo, git_reference_name(branch_reference)));
 
@@ -396,7 +396,7 @@ void test_submodule_update__can_force_update(void)
 	checkout_options.checkout_strategy = GIT_CHECKOUT_SAFE;
 
 	cl_git_pass(git_reference_lookup(&branch_reference, g_repo, "refs/heads/alternate_1"));
-	cl_git_pass(git_reference_peel(&branch_commit, branch_reference, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reference_peel(&branch_commit, branch_reference, GIT_OBJECT_COMMIT));
 	cl_git_pass(git_checkout_tree(g_repo, branch_commit, &checkout_options));
 	cl_git_pass(git_repository_set_head(g_repo, git_reference_name(branch_reference)));
 

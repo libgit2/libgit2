@@ -50,10 +50,10 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting,
 	git_commit_list_node *commit;
 	git_commit_list *list;
 
-	if ((error = git_object_lookup(&oobj, walk->repo, oid, GIT_OBJ_ANY)) < 0)
+	if ((error = git_object_lookup(&oobj, walk->repo, oid, GIT_OBJECT_ANY)) < 0)
 		return error;
 
-	error = git_object_peel(&obj, oobj, GIT_OBJ_COMMIT);
+	error = git_object_peel(&obj, oobj, GIT_OBJECT_COMMIT);
 	git_object_free(oobj);
 
 	if (error == GIT_ENOTFOUND || error == GIT_EINVALIDSPEC || error == GIT_EPEEL) {

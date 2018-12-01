@@ -155,7 +155,7 @@ void test_refs_reflog_messages__branch_birth(void)
 	cl_git_pass(git_signature_now(&sig, "me", "foo@example.com"));
 
 	cl_git_pass(git_repository_head(&ref, g_repo));
-	cl_git_pass(git_reference_peel((git_object **) &tree, ref, GIT_OBJ_TREE));
+	cl_git_pass(git_reference_peel((git_object **) &tree, ref, GIT_OBJECT_TREE));
 
 	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/orphan"));
 
@@ -191,7 +191,7 @@ void test_refs_reflog_messages__commit_on_symbolic_ref_updates_head_reflog(void)
 	cl_git_pass(git_signature_now(&sig, "me", "foo@example.com"));
 
 	cl_git_pass(git_repository_head(&ref1, g_repo));
-	cl_git_pass(git_reference_peel((git_object **) &tree, ref1, GIT_OBJ_TREE));
+	cl_git_pass(git_reference_peel((git_object **) &tree, ref1, GIT_OBJECT_TREE));
 
 	nentries_master = reflog_entrycount(g_repo, "refs/heads/master");
 

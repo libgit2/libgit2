@@ -60,7 +60,7 @@ static void test_read_header(object_data *data)
 	git_oid id;
 	git_odb *odb;
 	size_t len;
-	git_otype type;
+	git_object_t type;
 
 	write_object_files(data);
 
@@ -212,7 +212,7 @@ void test_write_object_permission(
 	cl_git_pass(git_odb_new(&odb));
 	cl_git_pass(git_odb_backend_loose(&backend, "test-objects", -1, 0, dir_mode, file_mode));
 	cl_git_pass(git_odb_add_backend(odb, backend, 1));
-	cl_git_pass(git_odb_write(&oid, odb, "Test data\n", 10, GIT_OBJ_BLOB));
+	cl_git_pass(git_odb_write(&oid, odb, "Test data\n", 10, GIT_OBJECT_BLOB));
 
 	cl_git_pass(p_stat("test-objects/67", &statbuf));
 	cl_assert_equal_i(statbuf.st_mode & os_mask, (expected_dir_mode & ~mask) & os_mask);
@@ -247,7 +247,7 @@ static void write_object_to_loose_odb(int fsync)
 	cl_git_pass(git_odb_new(&odb));
 	cl_git_pass(git_odb_backend_loose(&backend, "test-objects", -1, fsync, 0777, 0666));
 	cl_git_pass(git_odb_add_backend(odb, backend, 1));
-	cl_git_pass(git_odb_write(&oid, odb, "Test data\n", 10, GIT_OBJ_BLOB));
+	cl_git_pass(git_odb_write(&oid, odb, "Test data\n", 10, GIT_OBJECT_BLOB));
 	git_odb_free(odb);
 }
 
@@ -278,14 +278,14 @@ void test_odb_loose__fsync_obeys_repo_setting(void)
 
 	cl_git_pass(git_repository_init(&repo, "test-objects", 1));
 	cl_git_pass(git_repository_odb__weakptr(&odb, repo));
-	cl_git_pass(git_odb_write(&oid, odb, "No fsync here\n", 14, GIT_OBJ_BLOB));
+	cl_git_pass(git_odb_write(&oid, odb, "No fsync here\n", 14, GIT_OBJECT_BLOB));
 	cl_assert(p_fsync__cnt == 0);
 	git_repository_free(repo);
 
 	cl_git_pass(git_repository_open(&repo, "test-objects"));
 	cl_repo_set_bool(repo, "core.fsyncObjectFiles", true);
 	cl_git_pass(git_repository_odb__weakptr(&odb, repo));
-	cl_git_pass(git_odb_write(&oid, odb, "Now fsync\n", 10, GIT_OBJ_BLOB));
+	cl_git_pass(git_odb_write(&oid, odb, "Now fsync\n", 10, GIT_OBJECT_BLOB));
 	cl_assert(p_fsync__cnt > 0);
 	git_repository_free(repo);
 }

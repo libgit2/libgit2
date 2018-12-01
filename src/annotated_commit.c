@@ -105,7 +105,7 @@ int git_annotated_commit_from_revspec(
 	if ((error = git_revparse_single(&obj, repo, revspec)) < 0)
 		return error;
 
-	if ((error = git_object_peel(&commit, obj, GIT_OBJ_COMMIT))) {
+	if ((error = git_object_peel(&commit, obj, GIT_OBJECT_COMMIT))) {
 		git_object_free(obj);
 		return error;
 	}
@@ -132,7 +132,7 @@ int git_annotated_commit_from_ref(
 
 	if ((error = git_reference_resolve(&resolved, ref)) < 0)
 		return error;
-	
+
 	error = annotated_commit_init_from_id(out,
 		repo,
 		git_reference_target(resolved),

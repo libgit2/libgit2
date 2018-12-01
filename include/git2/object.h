@@ -30,7 +30,7 @@ GIT_BEGIN_DECL
  *
  * The 'type' parameter must match the type of the object
  * in the odb; the method will fail otherwise.
- * The special value 'GIT_OBJ_ANY' may be passed to let
+ * The special value 'GIT_OBJECT_ANY' may be passed to let
  * the method guess the object's type.
  *
  * @param object pointer to the looked-up object
@@ -43,7 +43,7 @@ GIT_EXTERN(int) git_object_lookup(
 		git_object **object,
 		git_repository *repo,
 		const git_oid *id,
-		git_otype type);
+		git_object_t type);
 
 /**
  * Lookup a reference to one of the objects in a repository,
@@ -62,7 +62,7 @@ GIT_EXTERN(int) git_object_lookup(
  *
  * The 'type' parameter must match the type of the object
  * in the odb; the method will fail otherwise.
- * The special value 'GIT_OBJ_ANY' may be passed to let
+ * The special value 'GIT_OBJECT_ANY' may be passed to let
  * the method guess the object's type.
  *
  * @param object_out pointer where to store the looked-up object
@@ -77,7 +77,7 @@ GIT_EXTERN(int) git_object_lookup_prefix(
 		git_repository *repo,
 		const git_oid *id,
 		size_t len,
-		git_otype type);
+		git_object_t type);
 
 
 /**
@@ -94,7 +94,7 @@ GIT_EXTERN(int) git_object_lookup_bypath(
 		git_object **out,
 		const git_object *treeish,
 		const char *path,
-		git_otype type);
+		git_object_t type);
 
 /**
  * Get the id (SHA1) of a repository object
@@ -124,7 +124,7 @@ GIT_EXTERN(int) git_object_short_id(git_buf *out, const git_object *obj);
  * @param obj the repository object
  * @return the object's type
  */
-GIT_EXTERN(git_otype) git_object_type(const git_object *obj);
+GIT_EXTERN(git_object_t) git_object_type(const git_object *obj);
 
 /**
  * Get the repository that owns this object
@@ -166,24 +166,24 @@ GIT_EXTERN(void) git_object_free(git_object *object);
  * @param type object type to convert.
  * @return the corresponding string representation.
  */
-GIT_EXTERN(const char *) git_object_type2string(git_otype type);
+GIT_EXTERN(const char *) git_object_type2string(git_object_t type);
 
 /**
- * Convert a string object type representation to it's git_otype.
+ * Convert a string object type representation to it's git_object_t.
  *
  * @param str the string to convert.
- * @return the corresponding git_otype.
+ * @return the corresponding git_object_t.
  */
-GIT_EXTERN(git_otype) git_object_string2type(const char *str);
+GIT_EXTERN(git_object_t) git_object_string2type(const char *str);
 
 /**
- * Determine if the given git_otype is a valid loose object type.
+ * Determine if the given git_object_t is a valid loose object type.
  *
  * @param type object type to test.
  * @return true if the type represents a valid loose object type,
  * false otherwise.
  */
-GIT_EXTERN(int) git_object_typeisloose(git_otype type);
+GIT_EXTERN(int) git_object_typeisloose(git_object_t type);
 
 /**
  * Get the size in bytes for the structure which
@@ -197,7 +197,7 @@ GIT_EXTERN(int) git_object_typeisloose(git_otype type);
  * @param type object type to get its size
  * @return size in bytes of the object
  */
-GIT_EXTERN(size_t) git_object__size(git_otype type);
+GIT_EXTERN(size_t) git_object__size(git_object_t type);
 
 /**
  * Recursively peel an object until an object of the specified type is met.
@@ -206,7 +206,7 @@ GIT_EXTERN(size_t) git_object__size(git_otype type);
  * GIT_EINVALIDSPEC will be returned (e.g. trying to peel a blob to a
  * tree).
  *
- * If you pass `GIT_OBJ_ANY` as the target type, then the object will
+ * If you pass `GIT_OBJECT_ANY` as the target type, then the object will
  * be peeled until the type changes. A tag will be peeled until the
  * referenced object is no longer a tag, and a commit will be peeled
  * to a tree. Any other object type will return GIT_EINVALIDSPEC.
@@ -219,13 +219,13 @@ GIT_EXTERN(size_t) git_object__size(git_otype type);
  *
  * @param peeled Pointer to the peeled git_object
  * @param object The object to be processed
- * @param target_type The type of the requested object (a GIT_OBJ_ value)
+ * @param target_type The type of the requested object (a GIT_OBJECT_ value)
  * @return 0 on success, GIT_EINVALIDSPEC, GIT_EPEEL, or an error code
  */
 GIT_EXTERN(int) git_object_peel(
 	git_object **peeled,
 	const git_object *object,
-	git_otype target_type);
+	git_object_t target_type);
 
 /**
  * Create an in-memory copy of a Git object. The copy must be

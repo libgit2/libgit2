@@ -277,47 +277,47 @@ static char *some_id = "fd8430bc864cfcd5f10e5590f8a447e01b942bfe";
 static git_rawobj tree_obj = {
 	tree_data,
 	sizeof(tree_data),
-	GIT_OBJ_TREE
+	GIT_OBJECT_TREE
 };
 
 static git_rawobj tag_obj = {
 	tag_data,
 	sizeof(tag_data),
-	GIT_OBJ_TAG
+	GIT_OBJECT_TAG
 };
 
 static git_rawobj zero_obj = {
 	zero_data,
 	0,
-	GIT_OBJ_BLOB
+	GIT_OBJECT_BLOB
 };
 
 static git_rawobj one_obj = {
 	one_data,
 	sizeof(one_data),
-	GIT_OBJ_BLOB
+	GIT_OBJECT_BLOB
 };
 
 static git_rawobj two_obj = {
 	two_data,
 	sizeof(two_data),
-	GIT_OBJ_BLOB
+	GIT_OBJECT_BLOB
 };
 
 static git_rawobj commit_obj = {
 	commit_data,
 	sizeof(commit_data),
-	GIT_OBJ_COMMIT
+	GIT_OBJECT_COMMIT
 };
 
 static git_rawobj some_obj = {
 	some_data,
 	sizeof(some_data),
-	GIT_OBJ_BLOB
+	GIT_OBJECT_BLOB
 };
 
 static git_rawobj junk_obj = {
 	NULL,
 	0,
-	GIT_OBJ_BAD
+	GIT_OBJECT_BAD
 };

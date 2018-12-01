@@ -243,13 +243,13 @@ typedef enum {
  *		>   `GIT_CONFIG_LEVEL_GLOBAL`, `GIT_CONFIG_LEVEL_XDG`, or
  *		>   `GIT_CONFIG_LEVEL_PROGRAMDATA`.
  *
- *	* opts(GIT_OPT_SET_CACHE_OBJECT_LIMIT, git_otype type, size_t size)
+ *	* opts(GIT_OPT_SET_CACHE_OBJECT_LIMIT, git_object_t type, size_t size)
  *
  *		> Set the maximum data size for the given type of object to be
  *		> considered eligible for caching in memory.  Setting to value to
  *		> zero means that that type of object will not be cached.
- *		> Defaults to 0 for GIT_OBJ_BLOB (i.e. won't cache blobs) and 4k
- *		> for GIT_OBJ_COMMIT, GIT_OBJ_TREE, and GIT_OBJ_TAG.
+ *		> Defaults to 0 for GIT_OBJECT_BLOB (i.e. won't cache blobs) and 4k
+ *		> for GIT_OBJECT_COMMIT, GIT_OBJECT_TREE, and GIT_OBJECT_TAG.
  *
  *	* opts(GIT_OPT_SET_CACHE_MAX_SIZE, ssize_t max_storage_bytes)
  *

@@ -10,7 +10,7 @@ void test_odb_streamwrite__initialize(void)
 	repo = cl_git_sandbox_init("testrepo.git");
 	cl_git_pass(git_repository_odb(&odb, repo));
 
-	cl_git_pass(git_odb_open_wstream(&stream, odb, 14, GIT_OBJ_BLOB));
+	cl_git_pass(git_odb_open_wstream(&stream, odb, 14, GIT_OBJECT_BLOB));
 	cl_assert_equal_sz(14, stream->declared_size);
 }
 

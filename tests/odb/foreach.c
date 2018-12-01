@@ -98,7 +98,7 @@ void test_odb_foreach__interrupt_foreach(void)
 	cl_git_pass(git_repository_init(&_repo, "onlyloose.git", true));
 	git_repository_odb(&_odb, _repo);
 
-	cl_git_pass(git_odb_write(&id, _odb, "", 0, GIT_OBJ_BLOB));
+	cl_git_pass(git_odb_write(&id, _odb, "", 0, GIT_OBJECT_BLOB));
 	cl_assert_equal_i(-123, git_odb_foreach(_odb, foreach_stop_first_cb, &nobj));
 }
 

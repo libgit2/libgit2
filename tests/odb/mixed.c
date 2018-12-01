@@ -112,46 +112,46 @@ void test_odb_mixed__dup_oid_prefix_0(void) {
 struct expand_id_test_data {
 	char *lookup_id;
 	char *expected_id;
-	git_otype expected_type;
+	git_object_t expected_type;
 };
 
 struct expand_id_test_data expand_id_test_data[] = {
 	/* some prefixes and their expected values */
-	{ "dea509d0",  NULL, GIT_OBJ_ANY },
-	{ "00000000",  NULL, GIT_OBJ_ANY },
-	{ "dea509d0",  NULL, GIT_OBJ_ANY },
-	{ "dea509d09", "dea509d097ce692e167dfc6a48a7a280cc5e877e", GIT_OBJ_BLOB },
-	{ "dea509d0b", "dea509d0b3cb8ee0650f6ca210bc83f4678851ba", GIT_OBJ_BLOB },
-	{ "ce0136250", "ce013625030ba8dba906f756967f9e9ca394464a", GIT_OBJ_BLOB },
-	{ "0ddeaded",  NULL, GIT_OBJ_ANY },
-	{ "4d5979b",   "4d5979b468252190cb572ae758aca36928e8a91e", GIT_OBJ_TREE },
-	{ "0ddeaded",  NULL, GIT_OBJ_ANY },
-	{ "0ddeadede", "0ddeadede9e6d6ccddce0ee1e5749eed0485e5ea", GIT_OBJ_BLOB },
-	{ "0ddeaded9", "0ddeaded9502971eefe1e41e34d0e536853ae20f", GIT_OBJ_BLOB },
-	{ "f00b4e",    NULL, GIT_OBJ_ANY },
+	{ "dea509d0",  NULL, GIT_OBJECT_ANY },
+	{ "00000000",  NULL, GIT_OBJECT_ANY },
+	{ "dea509d0",  NULL, GIT_OBJECT_ANY },
+	{ "dea509d09", "dea509d097ce692e167dfc6a48a7a280cc5e877e", GIT_OBJECT_BLOB },
+	{ "dea509d0b", "dea509d0b3cb8ee0650f6ca210bc83f4678851ba", GIT_OBJECT_BLOB },
+	{ "ce0136250", "ce013625030ba8dba906f756967f9e9ca394464a", GIT_OBJECT_BLOB },
+	{ "0ddeaded",  NULL, GIT_OBJECT_ANY },
+	{ "4d5979b",   "4d5979b468252190cb572ae758aca36928e8a91e", GIT_OBJECT_TREE },
+	{ "0ddeaded",  NULL, GIT_OBJECT_ANY },
+	{ "0ddeadede", "0ddeadede9e6d6ccddce0ee1e5749eed0485e5ea", GIT_OBJECT_BLOB },
+	{ "0ddeaded9", "0ddeaded9502971eefe1e41e34d0e536853ae20f", GIT_OBJECT_BLOB },
+	{ "f00b4e",    NULL, GIT_OBJECT_ANY },
 
 	/* this OID is too short and should be ambiguous! */
-	{ "f00",    NULL, GIT_OBJ_ANY },
+	{ "f00",    NULL, GIT_OBJECT_ANY },
 
 	/* some full-length object ids */
-	{ "0000000000000000000000000000000000000000", NULL, GIT_OBJ_ANY },
+	{ "0000000000000000000000000000000000000000", NULL, GIT_OBJECT_ANY },
 	{
 	  "dea509d097ce692e167dfc6a48a7a280cc5e877e",
 	  "dea509d097ce692e167dfc6a48a7a280cc5e877e",
-	  GIT_OBJ_BLOB
+	  GIT_OBJECT_BLOB
 	},
-	{ "f00f00f00f00f00f00f00f00f00f00f00f00f00f", NULL, GIT_OBJ_ANY },
+	{ "f00f00f00f00f00f00f00f00f00f00f00f00f00f", NULL, GIT_OBJECT_ANY },
 	{
 	  "4d5979b468252190cb572ae758aca36928e8a91e",
 	  "4d5979b468252190cb572ae758aca36928e8a91e",
-	  GIT_OBJ_TREE
+	  GIT_OBJECT_TREE
 	},
 
 	 /*
 	  * ensure we're not leaking the return error code for the
 	  * last lookup if the last object is invalid
 	  */
-	{ "0ddeadedfff",  NULL, GIT_OBJ_ANY },
+	{ "0ddeadedfff",  NULL, GIT_OBJECT_ANY },
 };
 
 static void setup_prefix_query(
@@ -188,7 +188,7 @@ static void assert_found_objects(git_odb_expand_id *ids)
 	for (i = 0; i < num; i++) {
 		git_oid expected_id = {{0}};
 		size_t expected_len = 0;
-		git_otype expected_type = 0;
+		git_object_t expected_type = 0;
 
 		if (expand_id_test_data[i].expected_id) {
 			git_oid_fromstr(&expected_id, expand_id_test_data[i].expected_id);
@@ -239,12 +239,12 @@ void test_odb_mixed__expand_ids(void)
 	assert_found_objects(ids);
 	git__free(ids);
 
-	/* test looking for an explicit GIT_OBJ_ANY */
+	/* test looking for an explicit GIT_OBJECT_ANY */
 
 	setup_prefix_query(&ids, &num);
 
 	for (i = 0; i < num; i++)
-		ids[i].type = GIT_OBJ_ANY;
+		ids[i].type = GIT_OBJECT_ANY;
 
 	cl_git_pass(git_odb_expand_ids(_odb, ids, num));
 	assert_found_objects(ids);
@@ -255,8 +255,8 @@ void test_odb_mixed__expand_ids(void)
 	setup_prefix_query(&ids, &num);
 
 	for (i = 0; i < num; i++)
-		ids[i].type = (ids[i].type == GIT_OBJ_BLOB) ?
-			GIT_OBJ_TREE : GIT_OBJ_BLOB;
+		ids[i].type = (ids[i].type == GIT_OBJECT_BLOB) ?
+			GIT_OBJECT_TREE : GIT_OBJECT_BLOB;
 
 	cl_git_pass(git_odb_expand_ids(_odb, ids, num));
 	assert_notfound_objects(ids);

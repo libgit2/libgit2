@@ -24,7 +24,7 @@ static int packfile_unpack_compressed(
 		git_mwindow **w_curs,
 		git_off_t *curpos,
 		size_t size,
-		git_otype type);
+		git_object_t type);
 
 /* Can find the offset of an object given
  * a prefix of an identifier.
@@ -378,12 +378,12 @@ static unsigned char *pack_window_open(
  *  - each byte afterwards: low seven bits are size continuation,
  *    with the high bit being "size continues"
  */
-size_t git_packfile__object_header(unsigned char *hdr, size_t size, git_otype type)
+size_t git_packfile__object_header(unsigned char *hdr, size_t size, git_object_t type)
 {
 	unsigned char *hdr_base;
 	unsigned char c;
 
-	assert(type >= GIT_OBJ_COMMIT && type <= GIT_OBJ_REF_DELTA);
+	assert(type >= GIT_OBJECT_COMMIT && type <= GIT_OBJECT_REF_DELTA);
 
 	/* TODO: add support for chunked objects; see git.git 6c0d19b1 */
 
@@ -405,7 +405,7 @@ size_t git_packfile__object_header(unsigned char *hdr, size_t size, git_otype ty
 static int packfile_unpack_header1(
 		unsigned long *usedp,
 		size_t *sizep,
-		git_otype *type,
+		git_object_t *type,
 		const unsigned char *buf,
 		unsigned long len)
 {
@@ -441,7 +441,7 @@ static int packfile_unpack_header1(
 
 int git_packfile_unpack_header(
 		size_t *size_p,
-		git_otype *type_p,
+		git_object_t *type_p,
 		git_mwindow_file *mwf,
 		git_mwindow **w_curs,
 		git_off_t *curpos)
@@ -475,14 +475,14 @@ int git_packfile_unpack_header(
 
 int git_packfile_resolve_header(
 		size_t *size_p,
-		git_otype *type_p,
+		git_object_t *type_p,
 		struct git_pack_file *p,
 		git_off_t offset)
 {
 	git_mwindow *w_curs = NULL;
 	git_off_t curpos = offset;
 	size_t size;
-	git_otype type;
+	git_object_t type;
 	git_off_t base_offset;
 	int error;
 
@@ -490,7 +490,7 @@ int git_packfile_resolve_header(
 	if (error < 0)
 		return error;
 
-	if (type == GIT_OBJ_OFS_DELTA || type == GIT_OBJ_REF_DELTA) {
+	if (type == GIT_OBJECT_OFS_DELTA || type == GIT_OBJECT_REF_DELTA) {
 		size_t base_size;
 		git_packfile_stream stream;
 
@@ -507,12 +507,12 @@ int git_packfile_resolve_header(
 		base_offset = 0;
 	}
 
-	while (type == GIT_OBJ_OFS_DELTA || type == GIT_OBJ_REF_DELTA) {
+	while (type == GIT_OBJECT_OFS_DELTA || type == GIT_OBJECT_REF_DELTA) {
 		curpos = base_offset;
 		error = git_packfile_unpack_header(&size, &type, &p->mwf, &w_curs, &curpos);
 		if (error < 0)
 			return error;
-		if (type != GIT_OBJ_OFS_DELTA && type != GIT_OBJ_REF_DELTA)
+		if (type != GIT_OBJECT_OFS_DELTA && type != GIT_OBJECT_REF_DELTA)
 			break;
 		base_offset = get_delta_base(p, &w_curs, &curpos, type, base_offset);
 		git_mwindow_close(&w_curs);
@@ -540,7 +540,7 @@ static int pack_dependency_chain(git_dependency_chain *chain_out,
 	git_off_t curpos = obj_offset, base_offset;
 	int error = 0, use_heap = 0;
 	size_t size, elem_pos;
-	git_otype type;
+	git_object_t type;
 
 	elem_pos = 0;
 	while (true) {
@@ -586,7 +586,7 @@ static int pack_dependency_chain(git_dependency_chain *chain_out,
 		elem->type = type;
 		elem->base_key = obj_offset;
 
-		if (type != GIT_OBJ_OFS_DELTA && type != GIT_OBJ_REF_DELTA)
+		if (type != GIT_OBJECT_OFS_DELTA && type != GIT_OBJECT_REF_DELTA)
 			break;
 
 		base_offset = get_delta_base(p, &w_curs, &curpos, type, obj_offset);
@@ -609,7 +609,7 @@ static int pack_dependency_chain(git_dependency_chain *chain_out,
 		elem_pos++;
 	}
 
-	
+
 	*stack_sz = elem_pos + 1;
 	*chain_out = chain;
 	return error;
@@ -632,7 +632,7 @@ int git_packfile_unpack(
 	git_pack_cache_entry *cached = NULL;
 	struct pack_chain_elem small_stack[SMALL_STACK_SIZE];
 	size_t stack_size = 0, elem_pos, alloclen;
-	git_otype base_type;
+	git_object_t base_type;
 
 	/*
 	 * TODO: optionally check the CRC on the packfile
@@ -644,7 +644,7 @@ int git_packfile_unpack(
 
 	obj->data = NULL;
 	obj->len = 0;
-	obj->type = GIT_OBJ_BAD;
+	obj->type = GIT_OBJECT_BAD;
 
 	/* let's point to the right stack */
 	stack = chain.ptr ? chain.ptr : small_stack;
@@ -660,10 +660,10 @@ int git_packfile_unpack(
 	}
 
 	switch (base_type) {
-	case GIT_OBJ_COMMIT:
-	case GIT_OBJ_TREE:
-	case GIT_OBJ_BLOB:
-	case GIT_OBJ_TAG:
+	case GIT_OBJECT_COMMIT:
+	case GIT_OBJECT_TREE:
+	case GIT_OBJECT_BLOB:
+	case GIT_OBJECT_TAG:
 		if (!cached) {
 			curpos = elem->offset;
 			error = packfile_unpack_compressed(obj, p, &w_curs, &curpos, elem->size, elem->type);
@@ -673,8 +673,8 @@ int git_packfile_unpack(
 		if (error < 0)
 			goto cleanup;
 		break;
-	case GIT_OBJ_OFS_DELTA:
-	case GIT_OBJ_REF_DELTA:
+	case GIT_OBJECT_OFS_DELTA:
+	case GIT_OBJECT_REF_DELTA:
 		error = packfile_error("dependency chain ends in a delta");
 		goto cleanup;
 	default:
@@ -726,7 +726,7 @@ int git_packfile_unpack(
 		base = *obj;
 		obj->data = NULL;
 		obj->len = 0;
-		obj->type = GIT_OBJ_BAD;
+		obj->type = GIT_OBJECT_BAD;
 
 		error = git_delta_apply(&obj->data, &obj->len, base.data, base.len, delta.data, delta.len);
 		obj->type = base_type;
@@ -851,7 +851,7 @@ static int packfile_unpack_compressed(
 	git_mwindow **w_curs,
 	git_off_t *curpos,
 	size_t size,
-	git_otype type)
+	git_object_t type)
 {
 	size_t buf_size;
 	int st;
@@ -916,7 +916,7 @@ git_off_t get_delta_base(
 	struct git_pack_file *p,
 	git_mwindow **w_curs,
 	git_off_t *curpos,
-	git_otype type,
+	git_object_t type,
 	git_off_t delta_obj_offset)
 {
 	unsigned int left = 0;
@@ -934,7 +934,7 @@ git_off_t get_delta_base(
 	 * that is assured. An OFS_DELTA longer than the hash size
 	 * is stupid, as then a REF_DELTA would be smaller to store.
 	 */
-	if (type == GIT_OBJ_OFS_DELTA) {
+	if (type == GIT_OBJECT_OFS_DELTA) {
 		unsigned used = 0;
 		unsigned char c = base_info[used++];
 		size_t unsigned_base_offset = c & 127;
@@ -951,7 +951,7 @@ git_off_t get_delta_base(
 			return 0; /* out of bound */
 		base_offset = delta_obj_offset - unsigned_base_offset;
 		*curpos += used;
-	} else if (type == GIT_OBJ_REF_DELTA) {
+	} else if (type == GIT_OBJECT_REF_DELTA) {
 		/* If we have the cooperative cache, search in it first */
 		if (p->has_cache) {
 			git_oid oid;

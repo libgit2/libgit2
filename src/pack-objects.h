@@ -29,7 +29,7 @@
 
 typedef struct git_pobject {
 	git_oid id;
-	git_otype type;
+	git_object_t type;
 	git_off_t offset;
 
 	size_t size;

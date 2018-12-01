@@ -28,7 +28,7 @@ void test_odb_backend_mempack__cleanup(void)
 void test_odb_backend_mempack__write_succeeds(void)
 {
 	const char *data = "data";
-	cl_git_pass(git_odb_write(&_oid, _odb, data, strlen(data) + 1, GIT_OBJ_BLOB));
+	cl_git_pass(git_odb_write(&_oid, _odb, data, strlen(data) + 1, GIT_OBJECT_BLOB));
 	cl_git_pass(git_odb_read(&_obj, _odb, &_oid));
 }
 
@@ -47,7 +47,7 @@ void test_odb_backend_mempack__exists_of_missing_object_fails(void)
 void test_odb_backend_mempack__exists_with_existing_objects_succeeds(void)
 {
 	const char *data = "data";
-	cl_git_pass(git_odb_write(&_oid, _odb, data, strlen(data) + 1, GIT_OBJ_BLOB));
+	cl_git_pass(git_odb_write(&_oid, _odb, data, strlen(data) + 1, GIT_OBJECT_BLOB));
 	cl_assert(git_odb_exists(_odb, &_oid) == 1);
 }
 

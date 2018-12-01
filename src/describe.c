@@ -151,7 +151,7 @@ static int retrieve_peeled_tag_or_object_oid(
 	if ((error = git_reference_lookup_resolved(&ref, repo, refname, -1)) < 0)
 		return error;
 
-	if ((error = git_reference_peel(&peeled, ref, GIT_OBJ_ANY)) < 0)
+	if ((error = git_reference_peel(&peeled, ref, GIT_OBJECT_ANY)) < 0)
 		goto cleanup;
 
 	git_oid_cpy(ref_target_out, git_reference_target(ref));
@@ -392,7 +392,7 @@ static int find_unique_abbrev_size(
 
 	/* If we didn't find any shorter prefix, we have to do the whole thing */
 	*out = GIT_OID_HEXSZ;
-	
+
 	return 0;
 }
 
@@ -563,14 +563,14 @@ static int describe(
 			goto cleanup;
 		}
 		if (unannotated_cnt) {
-			error = describe_not_found(git_commit_id(commit), 
+			error = describe_not_found(git_commit_id(commit),
 				"cannot describe - "
 				"no annotated tags can describe '%s'; "
 			    "however, there were unannotated tags.");
 			goto cleanup;
 		}
 		else {
-			error = describe_not_found(git_commit_id(commit), 
+			error = describe_not_found(git_commit_id(commit),
 				"cannot describe - "
 				"no tags can describe '%s'.");
 			goto cleanup;
@@ -686,7 +686,7 @@ int git_describe_commit(
 
 	/** TODO: contains to be implemented */
 
-	if ((error = git_object_peel((git_object **)(&commit), committish, GIT_OBJ_COMMIT)) < 0)
+	if ((error = git_object_peel((git_object **)(&commit), committish, GIT_OBJECT_COMMIT)) < 0)
 		goto cleanup;
 
 	if ((error = git_reference_foreach_name(
@@ -738,7 +738,7 @@ int git_describe_workdir(
 	if ((error = git_reference_name_to_id(&current_id, repo, GIT_HEAD_FILE)) < 0)
 		return error;
 
-	if ((error = git_object_lookup(&commit, repo, &current_id, GIT_OBJ_COMMIT)) < 0)
+	if ((error = git_object_lookup(&commit, repo, &current_id, GIT_OBJECT_COMMIT)) < 0)
 		return error;
 
 	/* The first step is to perform a describe of HEAD, so we can leverage this */

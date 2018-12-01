@@ -889,7 +889,7 @@ int git_submodule_add_to_index(git_submodule *sm, int write_index)
 	memset(&entry, 0, sizeof(entry));
 	entry.path = sm->path;
 	git_index_entry__init_from_stat(
-		&entry, &st, !(git_index_caps(index) & GIT_INDEXCAP_NO_FILEMODE));
+		&entry, &st, !(git_index_caps(index) & GIT_INDEX_CAPABILITY_NO_FILEMODE));
 
 	/* calling git_submodule_open will have set sm->wd_oid if possible */
 	if ((sm->flags & GIT_SUBMODULE_STATUS__WD_OID_VALID) == 0) {
@@ -1308,12 +1308,12 @@ int git_submodule_update(git_submodule *sm, int init, git_submodule_update_optio
 		}
 
 		/* Look up the target commit in the submodule. */
-		if ((error = git_object_lookup(&target_commit, sub_repo, oid, GIT_OBJ_COMMIT)) < 0) {
+		if ((error = git_object_lookup(&target_commit, sub_repo, oid, GIT_OBJECT_COMMIT)) < 0) {
 			/* If it isn't found then fetch and try again. */
 			if (error != GIT_ENOTFOUND || !update_options.allow_fetch ||
 				(error = lookup_default_remote(&remote, sub_repo)) < 0 ||
 				(error = git_remote_fetch(remote, NULL, &update_options.fetch_opts, NULL)) < 0 ||
-				(error = git_object_lookup(&target_commit, sub_repo, git_submodule_index_id(sm), GIT_OBJ_COMMIT)) < 0)
+				(error = git_object_lookup(&target_commit, sub_repo, git_submodule_index_id(sm), GIT_OBJECT_COMMIT)) < 0)
 				goto done;
 		}
 

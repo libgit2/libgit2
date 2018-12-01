@@ -859,7 +859,7 @@ static int merge_conflict_invoke_driver(
 
 	if ((error = driver->apply(driver, &path, &mode, &buf, name, src)) < 0 ||
 		(error = git_repository_odb(&odb, src->repo)) < 0 ||
-		(error = git_odb_write(&oid, odb, buf.ptr, buf.size, GIT_OBJ_BLOB)) < 0)
+		(error = git_odb_write(&oid, odb, buf.ptr, buf.size, GIT_OBJECT_BLOB)) < 0)
 		goto done;
 
 	result = git_pool_mallocz(&diff_list->pool, sizeof(git_index_entry));
@@ -1084,7 +1084,7 @@ static int index_entry_similarity_inexact(
 }
 
 /* Tracks deletes by oid for merge_diff_mark_similarity_exact().  This is a
-* non-shrinking queue where next_pos is the next position to dequeue. 
+* non-shrinking queue where next_pos is the next position to dequeue.
 */
 typedef struct {
 	git_array_t(size_t) arr;
@@ -1143,7 +1143,7 @@ static int deletes_by_oid_dequeue(size_t *idx, git_oidmap *map, const git_oid *i
 		return GIT_ENOTFOUND;
 
 	queue = git_oidmap_value_at(map, pos);
-	
+
 	if (queue->next_pos == 0) {
 		*idx = queue->first_entry;
 	} else {

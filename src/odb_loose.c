@@ -25,7 +25,7 @@
 #define MAX_HEADER_LEN 64
 
 typedef struct { /* object header data */
-	git_otype type; /* object type */
+	git_object_t type; /* object type */
 	size_t	size; /* object size */
 } obj_hdr;
 
@@ -351,7 +351,7 @@ static int read_loose(git_rawobj *out, git_buf *loc)
 
 	out->data = NULL;
 	out->len = 0;
-	out->type = GIT_OBJ_BAD;
+	out->type = GIT_OBJECT_BAD;
 
 	if ((error = git_futils_readbuffer(&obj, loc->ptr)) < 0)
 		goto done;
@@ -574,7 +574,7 @@ static int locate_object_short_oid(
  *
  ***********************************************************/
 
-static int loose_backend__read_header(size_t *len_p, git_otype *type_p, git_odb_backend *backend, const git_oid *oid)
+static int loose_backend__read_header(size_t *len_p, git_object_t *type_p, git_odb_backend *backend, const git_oid *oid)
 {
 	git_buf object_path = GIT_BUF_INIT;
 	git_rawobj raw;
@@ -583,7 +583,7 @@ static int loose_backend__read_header(size_t *len_p, git_otype *type_p, git_odb_
 	assert(backend && oid);
 
 	raw.len = 0;
-	raw.type = GIT_OBJ_BAD;
+	raw.type = GIT_OBJECT_BAD;
 
 	if (locate_object(&object_path, (loose_backend *)backend, oid) < 0) {
 		error = git_odb__error_notfound("no matching loose object",
@@ -598,7 +598,7 @@ static int loose_backend__read_header(size_t *len_p, git_otype *type_p, git_odb_
 	return error;
 }
 
-static int loose_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_odb_backend *backend, const git_oid *oid)
+static int loose_backend__read(void **buffer_p, size_t *len_p, git_object_t *type_p, git_odb_backend *backend, const git_oid *oid)
 {
 	git_buf object_path = GIT_BUF_INIT;
 	git_rawobj raw;
@@ -624,7 +624,7 @@ static int loose_backend__read_prefix(
 	git_oid *out_oid,
 	void **buffer_p,
 	size_t *len_p,
-	git_otype *type_p,
+	git_object_t *type_p,
 	git_odb_backend *backend,
 	const git_oid *short_oid,
 	size_t len)
@@ -819,7 +819,7 @@ static int filebuf_flags(loose_backend *backend)
 	return flags;
 }
 
-static int loose_backend__writestream(git_odb_stream **stream_out, git_odb_backend *_backend, git_off_t length, git_otype type)
+static int loose_backend__writestream(git_odb_stream **stream_out, git_odb_backend *_backend, git_off_t length, git_object_t type)
 {
 	loose_backend *backend;
 	loose_writestream *stream = NULL;
@@ -973,7 +973,7 @@ static int loose_backend__readstream_standard(
 static int loose_backend__readstream(
 	git_odb_stream **stream_out,
 	size_t *len_out,
-	git_otype *type_out,
+	git_object_t *type_out,
 	git_odb_backend *_backend,
 	const git_oid *oid)
 {
@@ -989,7 +989,7 @@ static int loose_backend__readstream(
 	backend = (loose_backend *)_backend;
 	*stream_out = NULL;
 	*len_out = 0;
-	*type_out = GIT_OBJ_BAD;
+	*type_out = GIT_OBJECT_BAD;
 
 	if (locate_object(&object_path, backend, oid) < 0) {
 		error = git_odb__error_notfound("no matching loose object",
@@ -1039,7 +1039,7 @@ done:
 	return error;
 }
 
-static int loose_backend__write(git_odb_backend *_backend, const git_oid *oid, const void *data, size_t len, git_otype type)
+static int loose_backend__write(git_odb_backend *_backend, const git_oid *oid, const void *data, size_t len, git_object_t type)
 {
 	int error = 0;
 	git_buf final_path = GIT_BUF_INIT;

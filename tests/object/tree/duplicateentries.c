@@ -18,9 +18,9 @@ void test_object_tree_duplicateentries__cleanup(void) {
  * parent cf80f8de9f1185bf3a05f993f6121880dd0cfbc9
  * author Ben Straub <bstraub@github.com> 1343755506 -0700
  * committer Ben Straub <bstraub@github.com> 1343755506 -0700
- * 
+ *
  *     Change a file mode
- * 
+ *
  * diff --git a/a/b.txt b/a/b.txt
  * old mode 100644
  * new mode 100755
@@ -69,7 +69,7 @@ static void two_blobs(git_treebuilder *bld)
 {
 	git_oid oid;
 	const git_tree_entry *entry;
-	
+
 	cl_git_pass(git_oid_fromstr(&oid,
 		"a8233120f6ad708f843d861ce2b7228ec4e3dec6"));	/* blob oid (README) */
 
@@ -89,7 +89,7 @@ static void one_blob_and_one_tree(git_treebuilder *bld)
 {
 	git_oid oid;
 	const git_tree_entry *entry;
-	
+
 	cl_git_pass(git_oid_fromstr(&oid,
 		"a8233120f6ad708f843d861ce2b7228ec4e3dec6"));	/* blob oid (README) */
 
@@ -111,7 +111,7 @@ void test_object_tree_duplicateentries__cannot_create_a_duplicate_entry_through_
 
 	tree_creator(&tid, two_blobs);
 	tree_checker(&tid, "a71586c1dfe8a71c6cbf6c129f404c5642ff31bd", GIT_FILEMODE_BLOB);
-	
+
 	tree_creator(&tid, one_blob_and_one_tree);
 	tree_checker(&tid, "4e0883eeeeebc1fb1735161cea82f7cb5fab7e63", GIT_FILEMODE_TREE);
 }
@@ -126,17 +126,17 @@ static void add_fake_conflicts(git_index *index)
 
 	ancestor_entry.path = "duplicate";
 	ancestor_entry.mode = GIT_FILEMODE_BLOB;
-	GIT_IDXENTRY_STAGE_SET(&ancestor_entry, 1);
+	GIT_INDEX_ENTRY_STAGE_SET(&ancestor_entry, 1);
 	git_oid_fromstr(&ancestor_entry.id, "a8233120f6ad708f843d861ce2b7228ec4e3dec6");
 
 	our_entry.path = "duplicate";
 	our_entry.mode = GIT_FILEMODE_BLOB;
-	GIT_IDXENTRY_STAGE_SET(&our_entry, 2);
+	GIT_INDEX_ENTRY_STAGE_SET(&our_entry, 2);
 	git_oid_fromstr(&our_entry.id, "45b983be36b73c0788dc9cbcb76cbb80fc7bb057");
 
 	their_entry.path = "duplicate";
 	their_entry.mode = GIT_FILEMODE_BLOB;
-	GIT_IDXENTRY_STAGE_SET(&their_entry, 3);
+	GIT_INDEX_ENTRY_STAGE_SET(&their_entry, 3);
 	git_oid_fromstr(&their_entry.id, "a71586c1dfe8a71c6cbf6c129f404c5642ff31bd");
 
 	cl_git_pass(git_index_conflict_add(index, &ancestor_entry, &our_entry, &their_entry));
@@ -149,7 +149,7 @@ void test_object_tree_duplicateentries__cannot_create_a_duplicate_entry_building
 
 	cl_git_pass(git_repository_index(&index, _repo));
 
-	add_fake_conflicts(index); 
+	add_fake_conflicts(index);
 
 	cl_assert_equal_i(GIT_EUNMERGED, git_index_write_tree(&tid, index));
 

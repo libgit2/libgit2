@@ -149,7 +149,7 @@ void test_reset_soft__fails_when_index_contains_conflicts_independently_of_MERGE
 	git_index_free(index);
 
 	cl_git_pass(git_repository_head(&head, repo));
-	cl_git_pass(git_reference_peel(&target, head, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reference_peel(&target, head, GIT_OBJECT_COMMIT));
 	git_reference_free(head);
 
 	cl_assert_equal_i(GIT_EUNMERGED, git_reset(repo, target, GIT_RESET_SOFT, NULL));

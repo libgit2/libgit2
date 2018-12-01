@@ -33,30 +33,30 @@ struct git_odb_backend {
 	 * the function git_odb_backend_malloc to ensure that it can
 	 * be safely freed later. */
 	int (* read)(
-		void **, size_t *, git_otype *, git_odb_backend *, const git_oid *);
+		void **, size_t *, git_object_t *, git_odb_backend *, const git_oid *);
 
 	/* To find a unique object given a prefix of its oid.  The oid given
 	 * must be so that the remaining (GIT_OID_HEXSZ - len)*4 bits are 0s.
 	 */
 	int (* read_prefix)(
-		git_oid *, void **, size_t *, git_otype *,
+		git_oid *, void **, size_t *, git_object_t *,
 		git_odb_backend *, const git_oid *, size_t);
 
 	int (* read_header)(
-		size_t *, git_otype *, git_odb_backend *, const git_oid *);
+		size_t *, git_object_t *, git_odb_backend *, const git_oid *);
 
 	/**
 	 * Write an object into the backend. The id of the object has
 	 * already been calculated and is passed in.
 	 */
 	int (* write)(
-		git_odb_backend *, const git_oid *, const void *, size_t, git_otype);
+		git_odb_backend *, const git_oid *, const void *, size_t, git_object_t);
 
 	int (* writestream)(
-		git_odb_stream **, git_odb_backend *, git_off_t, git_otype);
+		git_odb_stream **, git_odb_backend *, git_off_t, git_object_t);
 
 	int (* readstream)(
-		git_odb_stream **, size_t *, git_otype *,
+		git_odb_stream **, size_t *, git_object_t *,
 		git_odb_backend *, const git_oid *);
 
 	int (* exists)(

@@ -27,7 +27,7 @@ void test_odb_emptyobjects__blob_notfound(void)
 	cl_git_pass(git_oid_fromstr(&id, "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"));
 	cl_git_fail_with(GIT_ENOTFOUND, git_blob_lookup(&blob, g_repo, &id));
 
-	cl_git_pass(git_odb_write(&written_id, g_odb, "", 0, GIT_OBJ_BLOB));
+	cl_git_pass(git_odb_write(&written_id, g_odb, "", 0, GIT_OBJECT_BLOB));
 	cl_assert(git_path_exists(TEST_REPO_PATH "/objects/e6/9de29bb2d1d6434b8b29ae775ad8c2e48c5391"));
 }
 
@@ -38,7 +38,7 @@ void test_odb_emptyobjects__read_tree(void)
 
 	cl_git_pass(git_oid_fromstr(&id, "4b825dc642cb6eb9a060e54bf8d69288fbee4904"));
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
-	cl_assert_equal_i(GIT_OBJ_TREE, git_object_type((git_object *) tree));
+	cl_assert_equal_i(GIT_OBJECT_TREE, git_object_type((git_object *) tree));
 	cl_assert_equal_i(0, git_tree_entrycount(tree));
 	cl_assert_equal_p(NULL, git_tree_entry_byname(tree, "foo"));
 	git_tree_free(tree);

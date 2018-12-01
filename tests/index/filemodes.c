@@ -78,7 +78,7 @@ void test_index_filemodes__untrusted(void)
 	cl_repo_set_bool(g_repo, "core.filemode", false);
 
 	cl_git_pass(git_repository_index(&index, g_repo));
-	cl_assert((git_index_caps(index) & GIT_INDEXCAP_NO_FILEMODE) != 0);
+	cl_assert((git_index_caps(index) & GIT_INDEX_CAPABILITY_NO_FILEMODE) != 0);
 
 	/* 1 - add 0644 over existing 0644 -> expect 0644 */
 	replace_file_with_mode("exec_off", "filemodes/exec_off.0", 0644);
@@ -122,7 +122,7 @@ void test_index_filemodes__trusted(void)
 	cl_repo_set_bool(g_repo, "core.filemode", true);
 
 	cl_git_pass(git_repository_index(&index, g_repo));
-	cl_assert((git_index_caps(index) & GIT_INDEXCAP_NO_FILEMODE) == 0);
+	cl_assert((git_index_caps(index) & GIT_INDEX_CAPABILITY_NO_FILEMODE) == 0);
 
 	/* 1 - add 0644 over existing 0644 -> expect 0644 */
 	replace_file_with_mode("exec_off", "filemodes/exec_off.0", 0644);
@@ -245,9 +245,9 @@ void test_index_filemodes__invalid(void)
 	cl_git_pass(git_index_add_bypath(index, "dummy-file.txt"));
 	cl_assert((dummy = git_index_get_bypath(index, "dummy-file.txt", 0)));
 
-	GIT_IDXENTRY_STAGE_SET(&entry, 0);
+	GIT_INDEX_ENTRY_STAGE_SET(&entry, 0);
 	entry.path = "foo";
-	entry.mode = GIT_OBJ_BLOB;
+	entry.mode = GIT_OBJECT_BLOB;
 	git_oid_cpy(&entry.id, &dummy->id);
 	cl_git_fail(git_index_add(index, &entry));
 

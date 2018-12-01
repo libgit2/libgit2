@@ -31,7 +31,7 @@ void test_checkout_icase__initialize(void)
 		cl_skip();
 
 	cl_git_pass(git_reference_name_to_id(&id, repo, "refs/heads/dir"));
-	cl_git_pass(git_object_lookup(&obj, repo, &id, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&obj, repo, &id, GIT_OBJECT_ANY));
 
 	git_checkout_init_options(&checkout_opts, GIT_CHECKOUT_OPTIONS_VERSION);
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_NONE;
@@ -273,7 +273,7 @@ void test_checkout_icase__conflicts_with_casechanged_subtrees(void)
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 
 	cl_git_pass(git_reference_lookup_resolved(&orig_ref, repo, "HEAD", 100));
-	cl_git_pass(git_object_lookup(&orig, repo, git_reference_target(orig_ref), GIT_OBJ_COMMIT));
+	cl_git_pass(git_object_lookup(&orig, repo, git_reference_target(orig_ref), GIT_OBJECT_COMMIT));
 	cl_git_pass(git_reset(repo, (git_object *)orig, GIT_RESET_HARD, NULL));
 
 	cl_must_pass(p_mkdir("testrepo/AB", 0777));
@@ -281,7 +281,7 @@ void test_checkout_icase__conflicts_with_casechanged_subtrees(void)
 	cl_git_write2file("testrepo/AB/C/3.txt", "Foobar!\n", 8, O_RDWR|O_CREAT, 0666);
 
 	cl_git_pass(git_reference_name_to_id(&oid, repo, "refs/heads/subtrees"));
-	cl_git_pass(git_object_lookup(&subtrees, repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&subtrees, repo, &oid, GIT_OBJECT_ANY));
 
 	cl_git_fail(git_checkout_tree(repo, subtrees, &checkout_opts));
 

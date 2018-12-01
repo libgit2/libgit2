@@ -76,7 +76,7 @@ static void seed_packbuilder(void)
 
 	git_vector_foreach(&_commits, i, o) {
 		git_object *obj;
-		cl_git_pass(git_object_lookup(&obj, _repo, o, GIT_OBJ_COMMIT));
+		cl_git_pass(git_object_lookup(&obj, _repo, o, GIT_OBJECT_COMMIT));
 		cl_git_pass(git_packbuilder_insert_tree(_packbuilder,
 					git_commit_tree_id((git_commit *)obj)));
 		git_object_free(obj);

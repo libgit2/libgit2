@@ -68,17 +68,15 @@ typedef int64_t git_time_t;
 
 /** Basic type (loose or packed) of any Git object. */
 typedef enum {
-	GIT_OBJ_ANY = -2,		/**< Object can be any of the following */
-	GIT_OBJ_BAD = -1,		/**< Object is invalid. */
-	GIT_OBJ__EXT1 = 0,		/**< Reserved for future use. */
-	GIT_OBJ_COMMIT = 1,		/**< A commit object. */
-	GIT_OBJ_TREE = 2,		/**< A tree (directory listing) object. */
-	GIT_OBJ_BLOB = 3,		/**< A file revision object. */
-	GIT_OBJ_TAG = 4,		/**< An annotated tag object. */
-	GIT_OBJ__EXT2 = 5,		/**< Reserved for future use. */
-	GIT_OBJ_OFS_DELTA = 6, /**< A delta, base is given by an offset. */
-	GIT_OBJ_REF_DELTA = 7, /**< A delta, base is given by object id. */
-} git_otype;
+	GIT_OBJECT_ANY =      -2, /**< Object can be any of the following */
+	GIT_OBJECT_BAD =      -1, /**< Object is invalid. */
+	GIT_OBJECT_COMMIT =    1, /**< A commit object. */
+	GIT_OBJECT_TREE =      2, /**< A tree (directory listing) object. */
+	GIT_OBJECT_BLOB =      3, /**< A file revision object. */
+	GIT_OBJECT_TAG =       4, /**< An annotated tag object. */
+	GIT_OBJECT_OFS_DELTA = 6, /**< A delta, base is given by an offset. */
+	GIT_OBJECT_REF_DELTA = 7, /**< A delta, base is given by object id. */
+} git_object_t;
 
 /** An open object database handle. */
 typedef struct git_odb git_odb;
@@ -442,6 +440,30 @@ struct git_writestream {
 
 /** Representation of .mailmap file state. */
 typedef struct git_mailmap git_mailmap;
+
+/** @name Deprecated Index Structures
+ *
+ * These macros, structures and enumerations are retained for backward
+ * compatibility.  The newer versions of these functions and structures
+ * should be preferred in all new code.
+ */
+
+/**@{*/
+
+#define GIT_OBJ_ANY        GIT_OBJECT_ANY
+#define GIT_OBJ_BAD        GIT_OBJECT_BAD
+#define GIT_OBJ__EXT1      0
+#define GIT_OBJ_COMMIT     GIT_OBJECT_COMMIT
+#define GIT_OBJ_TREE       GIT_OBJECT_TREE
+#define GIT_OBJ_BLOB       GIT_OBJECT_BLOB
+#define GIT_OBJ_TAG        GIT_OBJECT_TAG
+#define GIT_OBJ__EXT2      5
+#define GIT_OBJ_OFS_DELTA  GIT_OBJECT_OFS_DELTA
+#define GIT_OBJ_REF_DELTA  GIT_OBJECT_REF_DELTA
+
+#define git_otype git_object_t
+
+/**@}*/
 
 /** @} */
 GIT_END_DECL

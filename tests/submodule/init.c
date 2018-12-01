@@ -87,7 +87,7 @@ void test_submodule_init__relative_url_detached_head(void)
 
 	/* Put the parent repository into a detached head state. */
 	cl_git_pass(git_repository_head(&head_ref, g_repo));
-	cl_git_pass(git_reference_peel(&head_commit, head_ref, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reference_peel(&head_commit, head_ref, GIT_OBJECT_COMMIT));
 
 	cl_git_pass(git_repository_set_head_detached(g_repo, git_commit_id((git_commit *)head_commit)));
 

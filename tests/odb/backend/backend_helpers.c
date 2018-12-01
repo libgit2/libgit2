@@ -58,7 +58,7 @@ static int fake_backend__exists_prefix(
 }
 
 static int fake_backend__read(
-	void **buffer_p, size_t *len_p, git_otype *type_p,
+	void **buffer_p, size_t *len_p, git_object_t *type_p,
 	git_odb_backend *backend, const git_oid *oid)
 {
 	const fake_object *obj;
@@ -74,13 +74,13 @@ static int fake_backend__read(
 
 	*len_p = strlen(obj->content);
 	*buffer_p = git__strdup(obj->content);
-	*type_p = GIT_OBJ_BLOB;
+	*type_p = GIT_OBJECT_BLOB;
 
 	return 0;
 }
 
 static int fake_backend__read_header(
-	size_t *len_p, git_otype *type_p,
+	size_t *len_p, git_object_t *type_p,
 	git_odb_backend *backend, const git_oid *oid)
 {
 	const fake_object *obj;
@@ -95,13 +95,13 @@ static int fake_backend__read_header(
 		return error;
 
 	*len_p = strlen(obj->content);
-	*type_p = GIT_OBJ_BLOB;
+	*type_p = GIT_OBJECT_BLOB;
 
 	return 0;
 }
 
 static int fake_backend__read_prefix(
-	git_oid *out_oid, void **buffer_p, size_t *len_p, git_otype *type_p,
+	git_oid *out_oid, void **buffer_p, size_t *len_p, git_object_t *type_p,
 	git_odb_backend *backend, const git_oid *short_oid, size_t len)
 {
 	const fake_object *obj;
@@ -118,7 +118,7 @@ static int fake_backend__read_prefix(
 	git_oid_fromstr(out_oid, obj->oid);
 	*len_p = strlen(obj->content);
 	*buffer_p = git__strdup(obj->content);
-	*type_p = GIT_OBJ_BLOB;
+	*type_p = GIT_OBJECT_BLOB;
 
 	return 0;
 }

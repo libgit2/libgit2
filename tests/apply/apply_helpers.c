@@ -13,7 +13,7 @@ static int iterator_compare(const git_index_entry *entry, void *_data)
 
 	struct iterator_compare_data *data = (struct iterator_compare_data *)_data;
 
-	cl_assert_equal_i(GIT_IDXENTRY_STAGE(entry), data->expected[data->idx].stage);
+	cl_assert_equal_i(GIT_INDEX_ENTRY_STAGE(entry), data->expected[data->idx].stage);
 	cl_git_pass(git_oid_fromstr(&expected_id, data->expected[data->idx].oid_str));
 	cl_assert_equal_oid(&entry->id, &expected_id);
 	cl_assert_equal_i(entry->mode, data->expected[data->idx].mode);
@@ -75,7 +75,7 @@ static int iterator_eq(const git_index_entry **entry, void *_data)
 	if (!entry[0] || !entry[1])
 		return -1;
 
-	cl_assert_equal_i(GIT_IDXENTRY_STAGE(entry[0]), GIT_IDXENTRY_STAGE(entry[1]));
+	cl_assert_equal_i(GIT_INDEX_ENTRY_STAGE(entry[0]), GIT_INDEX_ENTRY_STAGE(entry[1]));
 	cl_assert_equal_oid(&entry[0]->id, &entry[1]->id);
 	cl_assert_equal_i(entry[0]->mode, entry[1]->mode);
 	cl_assert_equal_s(entry[0]->path, entry[1]->path);
