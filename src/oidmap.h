@@ -120,23 +120,6 @@ int git_oidmap_exists(git_oidmap *map, const git_oid *key);
  */
 int git_oidmap_iterate(void **value, git_oidmap *map, size_t *iter, const git_oid **key);
 
-size_t git_oidmap_lookup_index(git_oidmap *map, const git_oid *key);
-int git_oidmap_valid_index(git_oidmap *map, size_t idx);
-
-int git_oidmap_has_data(git_oidmap *map, size_t idx);
-
-const git_oid *git_oidmap_key(git_oidmap *map, size_t idx);
-void git_oidmap_set_key_at(git_oidmap *map, size_t idx, git_oid *key);
-void *git_oidmap_value_at(git_oidmap *map, size_t idx);
-void git_oidmap_set_value_at(git_oidmap *map, size_t idx, void *value);
-void git_oidmap_delete_at(git_oidmap *map, size_t idx);
-
-int git_oidmap_put(git_oidmap *map, const git_oid *key, int *err);
-void git_oidmap_insert(git_oidmap *map, const git_oid *key, void *value, int *rval);
-
-size_t git_oidmap_begin(git_oidmap *map);
-size_t git_oidmap_end(git_oidmap *map);
-
 #define git_oidmap_foreach_value(h, vvar, code) { size_t __i = 0;		\
 	while (git_oidmap_iterate((void **) &(vvar), h, &__i, NULL) == 0) {	\
 		code;								\

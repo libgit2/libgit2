@@ -1,186 +1,93 @@
 #include "clar_libgit2.h"
 #include "oidmap.h"
 
-typedef struct {
+static struct {
 	git_oid oid;
 	size_t extra;
-} oidmap_item;
+} test_oids[0x0FFF];
 
-#define NITEMS 0x0fff
+static git_oidmap *g_map;
+
+void test_core_oidmap__initialize(void)
+{
+	uint32_t i, j;
+	for (i = 0; i < ARRAY_SIZE(test_oids); ++i) {
+		uint32_t segment = i / 8;
+		int modi = i - (segment * 8);
+
+		test_oids[i].extra = i;
+
+		for (j = 0; j < GIT_OID_RAWSZ / 4; ++j) {
+			test_oids[i].oid.id[j * 4    ] = (unsigned char)modi;
+			test_oids[i].oid.id[j * 4 + 1] = (unsigned char)(modi >> 8);
+			test_oids[i].oid.id[j * 4 + 2] = (unsigned char)(modi >> 16);
+			test_oids[i].oid.id[j * 4 + 3] = (unsigned char)(modi >> 24);
+		}
+
+		test_oids[i].oid.id[ 8] = (unsigned char)i;
+		test_oids[i].oid.id[ 9] = (unsigned char)(i >> 8);
+		test_oids[i].oid.id[10] = (unsigned char)(i >> 16);
+		test_oids[i].oid.id[11] = (unsigned char)(i >> 24);
+	}
+
+	cl_git_pass(git_oidmap_new(&g_map));
+}
+
+void test_core_oidmap__cleanup(void)
+{
+	git_oidmap_free(g_map);
+}
 
 void test_core_oidmap__basic(void)
 {
-	git_oidmap *map;
-	oidmap_item items[NITEMS];
-	uint32_t i, j;
+	size_t i;
 
-	for (i = 0; i < NITEMS; ++i) {
-		items[i].extra = i;
-		for (j = 0; j < GIT_OID_RAWSZ / 4; ++j) {
-			items[i].oid.id[j * 4    ] = (unsigned char)i;
-			items[i].oid.id[j * 4 + 1] = (unsigned char)(i >> 8);
-			items[i].oid.id[j * 4 + 2] = (unsigned char)(i >> 16);
-			items[i].oid.id[j * 4 + 3] = (unsigned char)(i >> 24);
-		}
+	for (i = 0; i < ARRAY_SIZE(test_oids); ++i) {
+		cl_assert(!git_oidmap_exists(g_map, &test_oids[i].oid));
+		cl_git_pass(git_oidmap_set(g_map, &test_oids[i].oid, &test_oids[i]));
 	}
 
-	cl_git_pass(git_oidmap_new(&map));
-
-	for (i = 0; i < NITEMS; ++i) {
-		size_t pos;
-		int ret;
-
-		pos = git_oidmap_lookup_index(map, &items[i].oid);
-		cl_assert(!git_oidmap_valid_index(map, pos));
-
-		pos = git_oidmap_put(map, &items[i].oid, &ret);
-		cl_assert(ret != 0);
-
-		git_oidmap_set_value_at(map, pos, &items[i]);
+	for (i = 0; i < ARRAY_SIZE(test_oids); ++i) {
+		cl_assert(git_oidmap_exists(g_map, &test_oids[i].oid));
+		cl_assert_equal_p(git_oidmap_get(g_map, &test_oids[i].oid), &test_oids[i]);
 	}
-
-
-	for (i = 0; i < NITEMS; ++i) {
-		size_t pos;
-
-		pos = git_oidmap_lookup_index(map, &items[i].oid);
-		cl_assert(git_oidmap_valid_index(map, pos));
-
-		cl_assert_equal_p(git_oidmap_value_at(map, pos), &items[i]);
-	}
-
-	git_oidmap_free(map);
 }
 
 void test_core_oidmap__hash_collision(void)
 {
-	git_oidmap *map;
-	oidmap_item items[NITEMS];
-	uint32_t i, j;
+	size_t i;
 
-	for (i = 0; i < NITEMS; ++i) {
-		uint32_t segment = i / 8;
-		int modi = i - (segment * 8);
-
-		items[i].extra = i;
-
-		for (j = 0; j < GIT_OID_RAWSZ / 4; ++j) {
-			items[i].oid.id[j * 4    ] = (unsigned char)modi;
-			items[i].oid.id[j * 4 + 1] = (unsigned char)(modi >> 8);
-			items[i].oid.id[j * 4 + 2] = (unsigned char)(modi >> 16);
-			items[i].oid.id[j * 4 + 3] = (unsigned char)(modi >> 24);
-		}
-
-		items[i].oid.id[ 8] = (unsigned char)i;
-		items[i].oid.id[ 9] = (unsigned char)(i >> 8);
-		items[i].oid.id[10] = (unsigned char)(i >> 16);
-		items[i].oid.id[11] = (unsigned char)(i >> 24);
+	for (i = 0; i < ARRAY_SIZE(test_oids); ++i) {
+		cl_assert(!git_oidmap_exists(g_map, &test_oids[i].oid));
+		cl_git_pass(git_oidmap_set(g_map, &test_oids[i].oid, &test_oids[i]));
 	}
 
-	cl_git_pass(git_oidmap_new(&map));
-
-	for (i = 0; i < NITEMS; ++i) {
-		size_t pos;
-		int ret;
-
-		pos = git_oidmap_lookup_index(map, &items[i].oid);
-		cl_assert(!git_oidmap_valid_index(map, pos));
-
-		pos = git_oidmap_put(map, &items[i].oid, &ret);
-		cl_assert(ret != 0);
-
-		git_oidmap_set_value_at(map, pos, &items[i]);
+	for (i = 0; i < ARRAY_SIZE(test_oids); ++i) {
+		cl_assert(git_oidmap_exists(g_map, &test_oids[i].oid));
+		cl_assert_equal_p(git_oidmap_get(g_map, &test_oids[i].oid), &test_oids[i]);
 	}
-
-
-	for (i = 0; i < NITEMS; ++i) {
-		size_t pos;
-
-		pos = git_oidmap_lookup_index(map, &items[i].oid);
-		cl_assert(git_oidmap_valid_index(map, pos));
-
-		cl_assert_equal_p(git_oidmap_value_at(map, pos), &items[i]);
-	}
-
-	git_oidmap_free(map);
 }
 
 void test_core_oidmap__get_succeeds_with_existing_keys(void)
 {
-	git_oidmap *map;
-	oidmap_item items[NITEMS];
-	uint32_t i, j;
+	size_t i;
 
-	for (i = 0; i < NITEMS; ++i) {
-		uint32_t segment = i / 8;
-		int modi = i - (segment * 8);
+	for (i = 0; i < ARRAY_SIZE(test_oids); ++i)
+		cl_git_pass(git_oidmap_set(g_map, &test_oids[i].oid, &test_oids[i]));
 
-		items[i].extra = i;
-
-		for (j = 0; j < GIT_OID_RAWSZ / 4; ++j) {
-			items[i].oid.id[j * 4    ] = (unsigned char)modi;
-			items[i].oid.id[j * 4 + 1] = (unsigned char)(modi >> 8);
-			items[i].oid.id[j * 4 + 2] = (unsigned char)(modi >> 16);
-			items[i].oid.id[j * 4 + 3] = (unsigned char)(modi >> 24);
-		}
-
-		items[i].oid.id[ 8] = (unsigned char)i;
-		items[i].oid.id[ 9] = (unsigned char)(i >> 8);
-		items[i].oid.id[10] = (unsigned char)(i >> 16);
-		items[i].oid.id[11] = (unsigned char)(i >> 24);
-	}
-
-	cl_git_pass(git_oidmap_new(&map));
-
-	for (i = 0; i < NITEMS; ++i) {
-		int ret;
-		git_oidmap_insert(map, &items[i].oid, &items[i], &ret);
-		cl_assert(ret == 1);
-	}
-
-	for (i = 0; i < NITEMS; ++i)
-		cl_assert_equal_p(git_oidmap_get(map, &items[i].oid), &items[i]);
-
-	git_oidmap_free(map);
+	for (i = 0; i < ARRAY_SIZE(test_oids); ++i)
+		cl_assert_equal_p(git_oidmap_get(g_map, &test_oids[i].oid), &test_oids[i]);
 }
 
 void test_core_oidmap__get_fails_with_nonexisting_key(void)
 {
-	git_oidmap *map;
-	oidmap_item items[NITEMS];
-	uint32_t i, j;
-
-	for (i = 0; i < NITEMS; ++i) {
-		uint32_t segment = i / 8;
-		int modi = i - (segment * 8);
-
-		items[i].extra = i;
-
-		for (j = 0; j < GIT_OID_RAWSZ / 4; ++j) {
-			items[i].oid.id[j * 4    ] = (unsigned char)modi;
-			items[i].oid.id[j * 4 + 1] = (unsigned char)(modi >> 8);
-			items[i].oid.id[j * 4 + 2] = (unsigned char)(modi >> 16);
-			items[i].oid.id[j * 4 + 3] = (unsigned char)(modi >> 24);
-		}
-
-		items[i].oid.id[ 8] = (unsigned char)i;
-		items[i].oid.id[ 9] = (unsigned char)(i >> 8);
-		items[i].oid.id[10] = (unsigned char)(i >> 16);
-		items[i].oid.id[11] = (unsigned char)(i >> 24);
-	}
-
-	cl_git_pass(git_oidmap_new(&map));
+	size_t i;
 
 	/* Do _not_ add last OID to verify that we cannot look it up */
-	for (i = 0; i < NITEMS - 1; ++i) {
-		int ret;
-		git_oidmap_insert(map, &items[i].oid, &items[i], &ret);
-		cl_assert(ret == 1);
-	}
+	for (i = 0; i < ARRAY_SIZE(test_oids) - 1; ++i)
+		cl_git_pass(git_oidmap_set(g_map, &test_oids[i].oid, &test_oids[i]));
 
-	cl_assert_equal_p(git_oidmap_get(map, &items[NITEMS - 1].oid), NULL);
-
-	git_oidmap_free(map);
+	cl_assert_equal_p(git_oidmap_get(g_map, &test_oids[ARRAY_SIZE(test_oids) - 1].oid), NULL);
 }
 
 void test_core_oidmap__setting_oid_persists(void)
@@ -190,18 +97,14 @@ void test_core_oidmap__setting_oid_persists(void)
 	    {{ 0x02 }},
 	    {{ 0x03 }}
 	};
-	git_oidmap *map;
 
-	cl_git_pass(git_oidmap_new(&map));
-	cl_git_pass(git_oidmap_set(map, &oids[0], "one"));
-	cl_git_pass(git_oidmap_set(map, &oids[1], "two"));
-	cl_git_pass(git_oidmap_set(map, &oids[2], "three"));
+	cl_git_pass(git_oidmap_set(g_map, &oids[0], "one"));
+	cl_git_pass(git_oidmap_set(g_map, &oids[1], "two"));
+	cl_git_pass(git_oidmap_set(g_map, &oids[2], "three"));
 
-	cl_assert_equal_s(git_oidmap_get(map, &oids[0]), "one");
-	cl_assert_equal_s(git_oidmap_get(map, &oids[1]), "two");
-	cl_assert_equal_s(git_oidmap_get(map, &oids[2]), "three");
-
-	git_oidmap_free(map);
+	cl_assert_equal_s(git_oidmap_get(g_map, &oids[0]), "one");
+	cl_assert_equal_s(git_oidmap_get(g_map, &oids[1]), "two");
+	cl_assert_equal_s(git_oidmap_get(g_map, &oids[2]), "three");
 }
 
 void test_core_oidmap__setting_existing_key_updates(void)
@@ -211,18 +114,14 @@ void test_core_oidmap__setting_existing_key_updates(void)
 	    {{ 0x02 }},
 	    {{ 0x03 }}
 	};
-	git_oidmap *map;
 
-	cl_git_pass(git_oidmap_new(&map));
-	cl_git_pass(git_oidmap_set(map, &oids[0], "one"));
-	cl_git_pass(git_oidmap_set(map, &oids[1], "two"));
-	cl_git_pass(git_oidmap_set(map, &oids[2], "three"));
-	cl_assert_equal_i(git_oidmap_size(map), 3);
+	cl_git_pass(git_oidmap_set(g_map, &oids[0], "one"));
+	cl_git_pass(git_oidmap_set(g_map, &oids[1], "two"));
+	cl_git_pass(git_oidmap_set(g_map, &oids[2], "three"));
+	cl_assert_equal_i(git_oidmap_size(g_map), 3);
 
-	cl_git_pass(git_oidmap_set(map, &oids[1], "other"));
-	cl_assert_equal_i(git_oidmap_size(map), 3);
+	cl_git_pass(git_oidmap_set(g_map, &oids[1], "other"));
+	cl_assert_equal_i(git_oidmap_size(g_map), 3);
 
-	cl_assert_equal_s(git_oidmap_get(map, &oids[1]), "other");
-
-	git_oidmap_free(map);
+	cl_assert_equal_s(git_oidmap_get(g_map, &oids[1]), "other");
 }
