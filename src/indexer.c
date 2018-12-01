@@ -19,6 +19,7 @@
 #include "pack.h"
 #include "filebuf.h"
 #include "oid.h"
+#include "oidarray.h"
 #include "oidmap.h"
 #include "zstream.h"
 #include "object.h"
@@ -321,7 +322,7 @@ static int add_expected_oid(git_indexer *idx, const git_oid *oid)
 	    !git_oidmap_exists(idx->expected_oids, oid)) {
 		    git_oid *dup = git__malloc(sizeof(*oid));
 		    git_oid_cpy(dup, oid);
-		    return git_oidmap_set(idx->expected_oids, dup, NULL);
+		    return git_oidmap_set(idx->expected_oids, dup, dup);
 	}
 
 	return 0;
@@ -330,7 +331,7 @@ static int add_expected_oid(git_indexer *idx, const git_oid *oid)
 static int check_object_connectivity(git_indexer *idx, const git_rawobj *obj)
 {
 	git_object *object;
-	size_t keyidx;
+	git_oid *expected;
 	int error;
 
 	if (obj->type != GIT_OBJECT_BLOB &&
@@ -342,11 +343,9 @@ static int check_object_connectivity(git_indexer *idx, const git_rawobj *obj)
 	if ((error = git_object__from_raw(&object, obj->data, obj->len, obj->type)) < 0)
 		goto out;
 
-	keyidx = git_oidmap_lookup_index(idx->expected_oids, &object->cached.oid);
-	if (git_oidmap_valid_index(idx->expected_oids, keyidx)) {
-		const git_oid *key = git_oidmap_key(idx->expected_oids, keyidx);
-		git__free((git_oid *) key);
-		git_oidmap_delete_at(idx->expected_oids, keyidx);
+	if ((expected = git_oidmap_get(idx->expected_oids, &object->cached.oid)) != NULL) {
+		git_oidmap_delete(idx->expected_oids, &object->cached.oid);
+		git__free(expected);
 	}
 
 	/*
@@ -1289,7 +1288,9 @@ on_error:
 
 void git_indexer_free(git_indexer *idx)
 {
-	size_t pos;
+	const git_oid *key;
+	git_oid *value;
+	size_t iter;
 
 	if (idx == NULL)
 		return;
@@ -1318,14 +1319,9 @@ void git_indexer_free(git_indexer *idx)
 		git_mutex_unlock(&git__mwindow_mutex);
 	}
 
-	for (pos = git_oidmap_begin(idx->expected_oids);
-	    pos != git_oidmap_end(idx->expected_oids); pos++)
-	{
-		if (git_oidmap_has_data(idx->expected_oids, pos)) {
-			git__free((git_oid *) git_oidmap_key(idx->expected_oids, pos));
-			git_oidmap_delete_at(idx->expected_oids, pos);
-		}
-	}
+	iter = 0;
+	while (git_oidmap_iterate((void **) &value, idx->expected_oids, &iter, &key) == 0)
+		git__free(value);
 
 	git_hash_ctx_cleanup(&idx->trailer);
 	git_hash_ctx_cleanup(&idx->hash_ctx);
