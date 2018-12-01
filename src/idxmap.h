@@ -174,18 +174,4 @@ int git_idxmap_delete(git_idxmap *map, const git_index_entry *key);
  */
 int git_idxmap_icase_delete(git_idxmap_icase *map, const git_index_entry *key);
 
-void git_idxmap_insert(git_idxmap *map, const git_index_entry *key, void *value, int *rval);
-void git_idxmap_icase_insert(git_idxmap_icase *map, const git_index_entry *key, void *value, int *rval);
-
-size_t git_idxmap_lookup_index(git_idxmap *map, const git_index_entry *key);
-size_t git_idxmap_icase_lookup_index(git_idxmap_icase *map, const git_index_entry *key);
-void *git_idxmap_value_at(git_idxmap *map, size_t idx);
-int git_idxmap_valid_index(git_idxmap *map, size_t idx);
-int git_idxmap_icase_valid_index(git_idxmap_icase *map, size_t idx);
-int git_idxmap_has_data(git_idxmap *map, size_t idx);
-int git_idxmap_icase_has_data(git_idxmap_icase *map, size_t idx);
-
-void git_idxmap_delete_at(git_idxmap *map, size_t idx);
-void git_idxmap_icase_delete_at(git_idxmap_icase *map, size_t idx);
-
 #endif
