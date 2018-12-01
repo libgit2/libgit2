@@ -74,6 +74,20 @@ void *git_strmap_get(git_strmap *map, const char *key);
  */
 int git_strmap_set(git_strmap *map, const char *key, void *value);
 
+/**
+ * Delete an entry from the map.
+ *
+ * Delete the given key and its value from the map. If no such
+ * key exists, this will do nothing.
+ *
+ * @param map map to delete key in
+ * @param key key to delete
+ * @return `0` if the key has been deleted, GIT_ENOTFOUND if no
+ *         such key was found, a negative code in case of an
+ *         error
+ */
+int git_strmap_delete(git_strmap *map, const char *key);
+
 size_t git_strmap_lookup_index(git_strmap *map, const char *key);
 int git_strmap_valid_index(git_strmap *map, size_t idx);
 
@@ -88,7 +102,6 @@ void git_strmap_delete_at(git_strmap *map, size_t idx);
 
 int git_strmap_put(git_strmap *map, const char *key, int *err);
 void git_strmap_insert(git_strmap *map, const char *key, void *value, int *rval);
-void git_strmap_delete(git_strmap *map, const char *key);
 
 #define git_strmap_foreach(h, kvar, vvar, code) { size_t __i;			\
 	for (__i = git_strmap_begin(h); __i != git_strmap_end(h); ++__i) {	\

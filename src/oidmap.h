@@ -76,6 +76,20 @@ void *git_oidmap_get(git_oidmap *map, const git_oid *key);
  */
 int git_oidmap_set(git_oidmap *map, const git_oid *key, void *value);
 
+/**
+ * Delete an entry from the map.
+ *
+ * Delete the given key and its value from the map. If no such
+ * key exists, this will do nothing.
+ *
+ * @param map map to delete key in
+ * @param key key to delete
+ * @return `0` if the key has been deleted, GIT_ENOTFOUND if no
+ *         such key was found, a negative code in case of an
+ *         error
+ */
+int git_oidmap_delete(git_oidmap *map, const git_oid *key);
+
 size_t git_oidmap_lookup_index(git_oidmap *map, const git_oid *key);
 int git_oidmap_valid_index(git_oidmap *map, size_t idx);
 
@@ -90,7 +104,6 @@ void git_oidmap_delete_at(git_oidmap *map, size_t idx);
 
 int git_oidmap_put(git_oidmap *map, const git_oid *key, int *err);
 void git_oidmap_insert(git_oidmap *map, const git_oid *key, void *value, int *rval);
-void git_oidmap_delete(git_oidmap *map, const git_oid *key);
 
 size_t git_oidmap_begin(git_oidmap *map);
 size_t git_oidmap_end(git_oidmap *map);

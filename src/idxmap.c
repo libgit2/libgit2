@@ -160,6 +160,24 @@ void git_idxmap_icase_insert(git_idxmap_icase *map, const git_index_entry *key, 
 	}
 }
 
+int git_idxmap_delete(git_idxmap *map, const git_index_entry *key)
+{
+	khiter_t idx = git_idxmap_lookup_index(map, key);
+	if (!git_idxmap_valid_index(map, idx))
+		return GIT_ENOTFOUND;
+	git_idxmap_delete_at(map, idx);
+	return 0;
+}
+
+int git_idxmap_icase_delete(git_idxmap_icase *map, const git_index_entry *key)
+{
+	khiter_t idx = git_idxmap_icase_lookup_index(map, key);
+	if (!git_idxmap_valid_index((git_idxmap *)map, idx))
+		return GIT_ENOTFOUND;
+	git_idxmap_icase_delete_at(map, idx);
+	return 0;
+}
+
 size_t git_idxmap_lookup_index(git_idxmap *map, const git_index_entry *key)
 {
 	return kh_get(idx, map, key);
@@ -203,17 +221,4 @@ void git_idxmap_delete_at(git_idxmap *map, size_t idx)
 void git_idxmap_icase_delete_at(git_idxmap_icase *map, size_t idx)
 {
 	kh_del(idxicase, map, idx);
-}
-
-void git_idxmap_delete(git_idxmap *map, const git_index_entry *key)
-{
-	khiter_t idx = git_idxmap_lookup_index(map, key);
-	if (git_idxmap_valid_index(map, idx))
-		git_idxmap_delete_at(map, idx);
-}
-void git_idxmap_icase_delete(git_idxmap_icase *map, const git_index_entry *key)
-{
-	khiter_t idx = git_idxmap_icase_lookup_index(map, key);
-	if (git_idxmap_valid_index((git_idxmap *)map, idx))
-		git_idxmap_icase_delete_at(map, idx);
 }

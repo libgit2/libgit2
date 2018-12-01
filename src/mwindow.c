@@ -94,7 +94,6 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 void git_mwindow_put_pack(struct git_pack_file *pack)
 {
 	int count;
-	size_t pos;
 
 	if (git_mutex_lock(&git__mwindow_mutex) < 0)
 		return;
@@ -102,13 +101,12 @@ void git_mwindow_put_pack(struct git_pack_file *pack)
 	/* put before get would be a corrupted state */
 	assert(git__pack_cache);
 
-	pos = git_strmap_lookup_index(git__pack_cache, pack->pack_name);
 	/* if we cannot find it, the state is corrupted */
-	assert(git_strmap_valid_index(git__pack_cache, pos));
+	assert(git_strmap_exists(git__pack_cache, pack->pack_name));
 
 	count = git_atomic_dec(&pack->refcount);
 	if (count == 0) {
-		git_strmap_delete_at(git__pack_cache, pos);
+		git_strmap_delete(git__pack_cache, pack->pack_name);
 		git_packfile_free(pack);
 	}
 

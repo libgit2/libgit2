@@ -358,9 +358,9 @@ int git_sortedcache_lookup_index(
 int git_sortedcache_remove(git_sortedcache *sc, size_t pos)
 {
 	char *item;
-	size_t mappos;
 
-	/* because of pool allocation, this can't actually remove the item,
+	/*
+	 * Because of pool allocation, this can't actually remove the item,
 	 * but we can remove it from the items vector and the hash table.
 	 */
 
@@ -371,8 +371,7 @@ int git_sortedcache_remove(git_sortedcache *sc, size_t pos)
 
 	(void)git_vector_remove(&sc->items, pos);
 
-	mappos = git_strmap_lookup_index(sc->map, item + sc->item_path_offset);
-	git_strmap_delete_at(sc->map, mappos);
+	git_strmap_delete(sc->map, item + sc->item_path_offset);
 
 	if (sc->free_item)
 		sc->free_item(sc->free_item_payload, item);

@@ -146,6 +146,34 @@ int git_idxmap_set(git_idxmap *map, const git_index_entry *key, void *value);
  */
 int git_idxmap_icase_set(git_idxmap_icase *map, const git_index_entry *key, void *value);
 
+/**
+ * Delete an entry from the map.
+ *
+ * Delete the given key and its value from the map. If no such
+ * key exists, this will do nothing.
+ *
+ * @param map map to delete key in
+ * @param key key to delete
+ * @return `0` if the key has been deleted, GIT_ENOTFOUND if no
+ *         such key was found, a negative code in case of an
+ *         error
+ */
+int git_idxmap_delete(git_idxmap *map, const git_index_entry *key);
+
+/**
+ * Delete an entry from the map.
+ *
+ * Delete the given key and its value from the map. If no such
+ * key exists, this will do nothing.
+ *
+ * @param map map to delete key in
+ * @param key key to delete
+ * @return `0` if the key has been deleted, GIT_ENOTFOUND if no
+ *         such key was found, a negative code in case of an
+ *         error
+ */
+int git_idxmap_icase_delete(git_idxmap_icase *map, const git_index_entry *key);
+
 void git_idxmap_insert(git_idxmap *map, const git_index_entry *key, void *value, int *rval);
 void git_idxmap_icase_insert(git_idxmap_icase *map, const git_index_entry *key, void *value, int *rval);
 
@@ -159,8 +187,5 @@ int git_idxmap_icase_has_data(git_idxmap_icase *map, size_t idx);
 
 void git_idxmap_delete_at(git_idxmap *map, size_t idx);
 void git_idxmap_icase_delete_at(git_idxmap_icase *map, size_t idx);
-
-void git_idxmap_delete(git_idxmap *map, const git_index_entry *key);
-void git_idxmap_icase_delete(git_idxmap_icase *map, const git_index_entry *key);
 
 #endif

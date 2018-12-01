@@ -68,6 +68,14 @@ int git_offmap_set(git_offmap *map, const git_off_t key, void *value)
 	return 0;
 }
 
+int git_offmap_delete(git_offmap *map, const git_off_t key)
+{
+	khiter_t idx = git_offmap_lookup_index(map, key);
+	if (!git_offmap_valid_index(map, idx))
+		return GIT_ENOTFOUND;
+	git_offmap_delete_at(map, idx);
+	return 0;
+}
 
 size_t git_offmap_lookup_index(git_offmap *map, const git_off_t key)
 {
@@ -123,13 +131,6 @@ void git_offmap_insert(git_offmap *map, const git_off_t key, void *value, int *r
 			kh_key(map, idx) = key;
 		kh_val(map, idx) = value;
 	}
-}
-
-void git_offmap_delete(git_offmap *map, const git_off_t key)
-{
-	khiter_t idx = git_offmap_lookup_index(map, key);
-	if (git_offmap_valid_index(map, idx))
-		git_offmap_delete_at(map, idx);
 }
 
 size_t git_offmap_begin(git_offmap *map)

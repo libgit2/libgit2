@@ -74,6 +74,15 @@ int git_oidmap_set(git_oidmap *map, const git_oid *key, void *value)
 	return 0;
 }
 
+int git_oidmap_delete(git_oidmap *map, const git_oid *key)
+{
+	khiter_t idx = git_oidmap_lookup_index(map, key);
+	if (!git_oidmap_valid_index(map, idx))
+		return GIT_ENOTFOUND;
+	git_oidmap_delete_at(map, idx);
+	return 0;
+}
+
 size_t git_oidmap_lookup_index(git_oidmap *map, const git_oid *key)
 {
 	return kh_get(oid, map, key);
@@ -133,13 +142,6 @@ void git_oidmap_insert(git_oidmap *map, const git_oid *key, void *value, int *rv
 			kh_key(map, idx) = key;
 		kh_val(map, idx) = value;
 	}
-}
-
-void git_oidmap_delete(git_oidmap *map, const git_oid *key)
-{
-	khiter_t idx = git_oidmap_lookup_index(map, key);
-	if (git_oidmap_valid_index(map, idx))
-		git_oidmap_delete_at(map, idx);
 }
 
 size_t git_oidmap_begin(git_oidmap *map)

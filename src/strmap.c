@@ -67,6 +67,15 @@ int git_strmap_set(git_strmap *map, const char *key, void *value)
 	return 0;
 }
 
+int git_strmap_delete(git_strmap *map, const char *key)
+{
+	khiter_t idx = git_strmap_lookup_index(map, key);
+	if (!git_strmap_valid_index(map, idx))
+		return GIT_ENOTFOUND;
+	git_strmap_delete_at(map, idx);
+	return 0;
+}
+
 size_t git_strmap_lookup_index(git_strmap *map, const char *key)
 {
 	return kh_get(str, map, key);
@@ -126,13 +135,6 @@ void git_strmap_insert(git_strmap *map, const char *key, void *value, int *rval)
 			kh_key(map, idx) = key;
 		kh_val(map, idx) = value;
 	}
-}
-
-void git_strmap_delete(git_strmap *map, const char *key)
-{
-	khiter_t idx = git_strmap_lookup_index(map, key);
-	if (git_strmap_valid_index(map, idx))
-		git_strmap_delete_at(map, idx);
 }
 
 size_t git_strmap_begin(git_strmap *map)

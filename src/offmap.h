@@ -76,6 +76,20 @@ void *git_offmap_get(git_offmap *map, const git_off_t key);
  */
 int git_offmap_set(git_offmap *map, const git_off_t key, void *value);
 
+/**
+ * Delete an entry from the map.
+ *
+ * Delete the given key and its value from the map. If no such
+ * key exists, this will do nothing.
+ *
+ * @param map map to delete key in
+ * @param key key to delete
+ * @return `0` if the key has been deleted, GIT_ENOTFOUND if no
+ *         such key was found, a negative code in case of an
+ *         error
+ */
+int git_offmap_delete(git_offmap *map, const git_off_t key);
+
 size_t git_offmap_lookup_index(git_offmap *map, const git_off_t key);
 int git_offmap_valid_index(git_offmap *map, size_t idx);
 
@@ -89,7 +103,6 @@ void git_offmap_delete_at(git_offmap *map, size_t idx);
 
 int git_offmap_put(git_offmap *map, const git_off_t key, int *err);
 void git_offmap_insert(git_offmap *map, const git_off_t key, void *value, int *rval);
-void git_offmap_delete(git_offmap *map, const git_off_t key);
 
 size_t git_offmap_begin(git_offmap *map);
 size_t git_offmap_end(git_offmap *map);
