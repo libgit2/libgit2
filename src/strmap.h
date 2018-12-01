@@ -118,20 +118,6 @@ int git_strmap_exists(git_strmap *map, const char *key);
  */
 int git_strmap_iterate(void **value, git_strmap *map, size_t *iter, const char **key);
 
-size_t git_strmap_lookup_index(git_strmap *map, const char *key);
-int git_strmap_valid_index(git_strmap *map, size_t idx);
-
-int git_strmap_has_data(git_strmap *map, size_t idx);
-
-const char *git_strmap_key(git_strmap *map, size_t idx);
-void git_strmap_set_key_at(git_strmap *map, size_t idx, char *key);
-void *git_strmap_value_at(git_strmap *map, size_t idx);
-void git_strmap_set_value_at(git_strmap *map, size_t idx, void *value);
-void git_strmap_delete_at(git_strmap *map, size_t idx);
-
-int git_strmap_put(git_strmap *map, const char *key, int *err);
-void git_strmap_insert(git_strmap *map, const char *key, void *value, int *rval);
-
 #define git_strmap_foreach(h, kvar, vvar, code) { size_t __i = 0;		\
 	while (git_strmap_iterate((void **) &(vvar), h, &__i, &(kvar)) == 0) {	\
 		code;								\
@@ -141,13 +127,5 @@ void git_strmap_insert(git_strmap *map, const char *key, void *value, int *rval)
 	while (git_strmap_iterate((void **) &(vvar), h, &__i, NULL) == 0) {	\
 		code;								\
 	} }
-
-size_t git_strmap_begin(git_strmap *map);
-size_t git_strmap_end(git_strmap *map);
-
-int git_strmap_next(
-	void **data,
-	size_t *iter,
-	git_strmap *map);
 
 #endif

@@ -43,9 +43,8 @@ size_t git_strmap_size(git_strmap *map)
 
 void *git_strmap_get(git_strmap *map, const char *key)
 {
-	size_t idx = git_strmap_lookup_index(map, key);
-	if (!git_strmap_valid_index(map, idx) ||
-	    !git_strmap_has_data(map, idx))
+	size_t idx = kh_get(str, map, key);
+	if (idx == kh_end(map) || !kh_exist(map, idx))
 		return NULL;
 	return kh_val(map, idx);
 }
@@ -69,10 +68,10 @@ int git_strmap_set(git_strmap *map, const char *key, void *value)
 
 int git_strmap_delete(git_strmap *map, const char *key)
 {
-	khiter_t idx = git_strmap_lookup_index(map, key);
-	if (!git_strmap_valid_index(map, idx))
+	khiter_t idx = kh_get(str, map, key);
+	if (idx == kh_end(map))
 		return GIT_ENOTFOUND;
-	git_strmap_delete_at(map, idx);
+	kh_del(str, map, idx);
 	return 0;
 }
 
@@ -85,108 +84,17 @@ int git_strmap_iterate(void **value, git_strmap *map, size_t *iter, const char *
 {
 	size_t i = *iter;
 
-	while (i < git_strmap_end(map) && !git_strmap_has_data(map, i))
+	while (i < map->n_buckets && !kh_exist(map, i))
 		i++;
 
-	if (i >= git_strmap_end(map))
+	if (i >= map->n_buckets)
 		return GIT_ITEROVER;
 
 	if (key)
-		*key = git_strmap_key(map, i);
+		*key = kh_key(map, i);
 	if (value)
-		*value = git_strmap_value_at(map, i);
+		*value = kh_val(map, i);
 	*iter = ++i;
 
 	return 0;
-}
-
-size_t git_strmap_lookup_index(git_strmap *map, const char *key)
-{
-	return kh_get(str, map, key);
-}
-
-int git_strmap_valid_index(git_strmap *map, size_t idx)
-{
-	return idx != kh_end(map);
-}
-
-int git_strmap_has_data(git_strmap *map, size_t idx)
-{
-	return kh_exist(map, idx);
-}
-
-const char *git_strmap_key(git_strmap *map, size_t idx)
-{
-	return kh_key(map, idx);
-}
-
-void git_strmap_set_key_at(git_strmap *map, size_t idx, char *key)
-{
-	kh_val(map, idx) = key;
-}
-
-void *git_strmap_value_at(git_strmap *map, size_t idx)
-{
-	return kh_val(map, idx);
-}
-
-void git_strmap_set_value_at(git_strmap *map, size_t idx, void *value)
-{
-	kh_val(map, idx) = value;
-}
-
-void git_strmap_delete_at(git_strmap *map, size_t idx)
-{
-	kh_del(str, map, idx);
-}
-
-int git_strmap_put(git_strmap *map, const char *key, int *err)
-{
-	return kh_put(str, map, key, err);
-}
-
-void git_strmap_insert(git_strmap *map, const char *key, void *value, int *rval)
-{
-	khiter_t idx = kh_put(str, map, key, rval);
-
-	if ((*rval) >= 0) {
-		if ((*rval) == 0)
-			kh_key(map, idx) = key;
-		kh_val(map, idx) = value;
-	}
-}
-
-size_t git_strmap_begin(git_strmap *map)
-{
-	GIT_UNUSED(map);
-	return 0;
-}
-
-size_t git_strmap_end(git_strmap *map)
-{
-	return map->n_buckets;
-}
-
-int git_strmap_next(
-	void **data,
-	size_t* iter,
-	git_strmap *map)
-{
-	if (!map)
-		return GIT_ERROR;
-
-	while (*iter != git_strmap_end(map)) {
-		if (!(git_strmap_has_data(map, *iter))) {
-			++(*iter);
-			continue;
-		}
-
-		*data = git_strmap_value_at(map, *iter);
-
-		++(*iter);
-
-		return GIT_OK;
-	}
-
-	return GIT_ITEROVER;
 }

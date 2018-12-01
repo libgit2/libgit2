@@ -22,7 +22,6 @@ void test_core_strmap__0(void)
 static void insert_strings(git_strmap *table, size_t count)
 {
 	size_t i, j, over;
-	int err;
 	char *str;
 
 	for (i = 0; i < count; ++i) {
@@ -35,17 +34,16 @@ static void insert_strings(git_strmap *table, size_t count)
 		for (j = 0, over = i / 26; over > 0; j++, over = over / 26)
 			str[j] = 'A' + (over % 26);
 
-		git_strmap_insert(table, str, str, &err);
-		cl_assert(err >= 0);
+		cl_git_pass(git_strmap_set(table, str, str));
 	}
 
 	cl_assert_equal_i(git_strmap_size(table), count);
 }
 
-void test_core_strmap__1(void)
+void test_core_strmap__inserted_strings_can_be_retrieved(void)
 {
-	int i;
 	char *str;
+	int i;
 
 	insert_strings(g_table, 20);
 
@@ -59,25 +57,18 @@ void test_core_strmap__1(void)
 	cl_assert(i == 20);
 }
 
-void test_core_strmap__2(void)
+void test_core_strmap__deleted_entry_cannot_be_retrieved(void)
 {
-	size_t pos;
-	int i;
 	char *str;
+	int i;
 
 	insert_strings(g_table, 20);
 
-	cl_assert(git_strmap_exists(g_table, "aaaaaaaaa"));
-	cl_assert(git_strmap_exists(g_table, "ggggggggg"));
-	cl_assert(!git_strmap_exists(g_table, "aaaaaaaab"));
-	cl_assert(!git_strmap_exists(g_table, "abcdefghi"));
-
 	cl_assert(git_strmap_exists(g_table, "bbbbbbbbb"));
-	pos = git_strmap_lookup_index(g_table, "bbbbbbbbb");
-	cl_assert(git_strmap_valid_index(g_table, pos));
-	cl_assert_equal_s(git_strmap_value_at(g_table, pos), "bbbbbbbbb");
-	free(git_strmap_value_at(g_table, pos));
-	git_strmap_delete_at(g_table, pos);
+	str = git_strmap_get(g_table, "bbbbbbbbb");
+	cl_assert_equal_s(str, "bbbbbbbbb");
+	cl_git_pass(git_strmap_delete(g_table, "bbbbbbbbb"));
+	free(str);
 
 	cl_assert(!git_strmap_exists(g_table, "bbbbbbbbb"));
 
@@ -86,10 +77,10 @@ void test_core_strmap__2(void)
 	cl_assert_equal_i(i, 19);
 }
 
-void test_core_strmap__3(void)
+void test_core_strmap__inserting_many_keys_succeeds(void)
 {
-	int i;
 	char *str;
+	int i;
 
 	insert_strings(g_table, 10000);
 
@@ -102,13 +93,10 @@ void test_core_strmap__get_succeeds_with_existing_entries(void)
 {
 	const char *keys[] = { "foo", "bar", "gobble" };
 	char *values[] = { "oof", "rab", "elbbog" };
-	int error;
 	size_t i;
 
-	for (i = 0; i < ARRAY_SIZE(keys); i++) {
-		git_strmap_insert(g_table, keys[i], values[i], &error);
-		cl_assert_equal_i(error, 1);
-	}
+	for (i = 0; i < ARRAY_SIZE(keys); i++)
+		cl_git_pass(git_strmap_set(g_table, keys[i], values[i]));
 
 	cl_assert_equal_s(git_strmap_get(g_table, "foo"), "oof");
 	cl_assert_equal_s(git_strmap_get(g_table, "bar"), "rab");
@@ -119,13 +107,10 @@ void test_core_strmap__get_returns_null_on_nonexisting_key(void)
 {
 	const char *keys[] = { "foo", "bar", "gobble" };
 	char *values[] = { "oof", "rab", "elbbog" };
-	int error;
 	size_t i;
 
-	for (i = 0; i < ARRAY_SIZE(keys); i++) {
-		git_strmap_insert(g_table, keys[i], values[i], &error);
-		cl_assert_equal_i(error, 1);
-	}
+	for (i = 0; i < ARRAY_SIZE(keys); i++)
+		cl_git_pass(git_strmap_set(g_table, keys[i], values[i]));
 
 	cl_assert_equal_p(git_strmap_get(g_table, "other"), NULL);
 }
