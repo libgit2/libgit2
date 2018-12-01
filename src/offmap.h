@@ -90,10 +90,18 @@ int git_offmap_set(git_offmap *map, const git_off_t key, void *value);
  */
 int git_offmap_delete(git_offmap *map, const git_off_t key);
 
+/**
+ * Check whether a key exists in the given map.
+ *
+ * @param map map to query for the key
+ * @param key key to search for
+ * @return 0 if the key has not been found, 1 otherwise
+ */
+int git_offmap_exists(git_offmap *map, const git_off_t key);
+
 size_t git_offmap_lookup_index(git_offmap *map, const git_off_t key);
 int git_offmap_valid_index(git_offmap *map, size_t idx);
 
-int git_offmap_exists(git_offmap *map, const git_off_t key);
 int git_offmap_has_data(git_offmap *map, size_t idx);
 
 git_off_t git_offmap_key_at(git_offmap *map, size_t idx);

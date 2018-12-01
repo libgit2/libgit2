@@ -83,6 +83,11 @@ int git_oidmap_delete(git_oidmap *map, const git_oid *key)
 	return 0;
 }
 
+int git_oidmap_exists(git_oidmap *map, const git_oid *key)
+{
+	return kh_get(oid, map, key) != kh_end(map);
+}
+
 size_t git_oidmap_lookup_index(git_oidmap *map, const git_oid *key)
 {
 	return kh_get(oid, map, key);
@@ -91,11 +96,6 @@ size_t git_oidmap_lookup_index(git_oidmap *map, const git_oid *key)
 int git_oidmap_valid_index(git_oidmap *map, size_t idx)
 {
 	return idx != kh_end(map);
-}
-
-int git_oidmap_exists(git_oidmap *map, const git_oid *key)
-{
-	return kh_get(oid, map, key) != kh_end(map);
 }
 
 int git_oidmap_has_data(git_oidmap *map, size_t idx)

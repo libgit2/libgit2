@@ -77,6 +77,11 @@ int git_offmap_delete(git_offmap *map, const git_off_t key)
 	return 0;
 }
 
+int git_offmap_exists(git_offmap *map, const git_off_t key)
+{
+	return kh_get(off, map, key) != kh_end(map);
+}
+
 size_t git_offmap_lookup_index(git_offmap *map, const git_off_t key)
 {
 	return kh_get(off, map, key);
@@ -85,11 +90,6 @@ size_t git_offmap_lookup_index(git_offmap *map, const git_off_t key)
 int git_offmap_valid_index(git_offmap *map, size_t idx)
 {
 	return idx != kh_end(map);
-}
-
-int git_offmap_exists(git_offmap *map, const git_off_t key)
-{
-	return kh_get(off, map, key) != kh_end(map);
 }
 
 int git_offmap_has_data(git_offmap *map, size_t idx)

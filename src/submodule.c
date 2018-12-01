@@ -1907,7 +1907,6 @@ static int submodule_load_each(const git_config_entry *entry, void *payload)
 {
 	lfc_data *data = payload;
 	const char *namestart, *property;
-	size_t pos;
 	git_strmap *map = data->map;
 	git_buf name = GIT_BUF_INIT;
 	git_submodule *sm;
@@ -1939,8 +1938,7 @@ static int submodule_load_each(const git_config_entry *entry, void *payload)
 	 * a new submodule, load the config and insert it. If it's
 	 * already inserted, we've already loaded it, so we skip.
 	 */
-	pos = git_strmap_lookup_index(map, name.ptr);
-	if (git_strmap_valid_index(map, pos)) {
+	if (git_strmap_exists(map, name.ptr)) {
 		error = 0;
 		goto done;
 	}

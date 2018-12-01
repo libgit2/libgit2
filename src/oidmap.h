@@ -90,10 +90,18 @@ int git_oidmap_set(git_oidmap *map, const git_oid *key, void *value);
  */
 int git_oidmap_delete(git_oidmap *map, const git_oid *key);
 
+/**
+ * Check whether a key exists in the given map.
+ *
+ * @param map map to query for the key
+ * @param key key to search for
+ * @return 0 if the key has not been found, 1 otherwise
+ */
+int git_oidmap_exists(git_oidmap *map, const git_oid *key);
+
 size_t git_oidmap_lookup_index(git_oidmap *map, const git_oid *key);
 int git_oidmap_valid_index(git_oidmap *map, size_t idx);
 
-int git_oidmap_exists(git_oidmap *map, const git_oid *key);
 int git_oidmap_has_data(git_oidmap *map, size_t idx);
 
 const git_oid *git_oidmap_key(git_oidmap *map, size_t idx);

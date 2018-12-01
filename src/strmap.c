@@ -76,6 +76,11 @@ int git_strmap_delete(git_strmap *map, const char *key)
 	return 0;
 }
 
+int git_strmap_exists(git_strmap *map, const char *key)
+{
+	return kh_get(str, map, key) != kh_end(map);
+}
+
 size_t git_strmap_lookup_index(git_strmap *map, const char *key)
 {
 	return kh_get(str, map, key);
@@ -84,11 +89,6 @@ size_t git_strmap_lookup_index(git_strmap *map, const char *key)
 int git_strmap_valid_index(git_strmap *map, size_t idx)
 {
 	return idx != kh_end(map);
-}
-
-int git_strmap_exists(git_strmap *map, const char *key)
-{
-	return kh_get(str, map, key) != kh_end(map);
 }
 
 int git_strmap_has_data(git_strmap *map, size_t idx)

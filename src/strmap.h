@@ -88,10 +88,18 @@ int git_strmap_set(git_strmap *map, const char *key, void *value);
  */
 int git_strmap_delete(git_strmap *map, const char *key);
 
+/**
+ * Check whether a key exists in the given map.
+ *
+ * @param map map to query for the key
+ * @param key key to search for
+ * @return 0 if the key has not been found, 1 otherwise
+ */
+int git_strmap_exists(git_strmap *map, const char *key);
+
 size_t git_strmap_lookup_index(git_strmap *map, const char *key);
 int git_strmap_valid_index(git_strmap *map, size_t idx);
 
-int git_strmap_exists(git_strmap *map, const char *key);
 int git_strmap_has_data(git_strmap *map, size_t idx);
 
 const char *git_strmap_key(git_strmap *map, size_t idx);
