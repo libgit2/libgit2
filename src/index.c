@@ -29,9 +29,9 @@
 
 #define INSERT_IN_MAP_EX(idx, map, e, err) do {				\
 		if ((idx)->ignore_case)					\
-			git_idxmap_icase_insert((git_idxmap_icase *) (map), (e), (e), (err)); \
+			(err) = git_idxmap_icase_set((git_idxmap_icase *) (map), (e), (e)); \
 		else							\
-			git_idxmap_insert((map), (e), (e), (err));	\
+			(err) = git_idxmap_set((map), (e), (e));	\
 	} while (0)
 
 #define INSERT_IN_MAP(idx, e, err) INSERT_IN_MAP_EX(idx, (idx)->entries_map, e, err)
@@ -1402,7 +1402,7 @@ static int index_insert(
 		if ((error = git_vector_insert_sorted(&index->entries, entry, index_no_dups)) < 0)
 			goto out;
 
-		INSERT_IN_MAP(index, entry, &error);
+		INSERT_IN_MAP(index, entry, error);
 	}
 
 	index->dirty = 1;
@@ -1635,7 +1635,7 @@ int git_index__fill(git_index *index, const git_vector *source_entries)
 		if ((ret = git_vector_insert(&index->entries, entry)) < 0)
 			break;
 
-		INSERT_IN_MAP(index, entry, &ret);
+		INSERT_IN_MAP(index, entry, ret);
 		if (ret < 0)
 			break;
 
@@ -2628,7 +2628,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 			goto done;
 		}
 
-		INSERT_IN_MAP(index, entry, &error);
+		INSERT_IN_MAP(index, entry, error);
 
 		if (error < 0) {
 			index_entry_free(entry);
@@ -3131,7 +3131,7 @@ int git_index_read_tree(git_index *index, const git_tree *tree)
 		git_idxmap_resize(entries_map, entries.length);
 
 	git_vector_foreach(&entries, i, e) {
-		INSERT_IN_MAP_EX(index, entries_map, e, &error);
+		INSERT_IN_MAP_EX(index, entries_map, e, error);
 
 		if (error < 0) {
 			git_error_set(GIT_ERROR_INDEX, "failed to insert entry into map");
@@ -3252,7 +3252,7 @@ static int git_index_read_iterator(
 
 		if (add_entry) {
 			if ((error = git_vector_insert(&new_entries, add_entry)) == 0)
-				INSERT_IN_MAP_EX(index, new_entries_map, add_entry, &error);
+				INSERT_IN_MAP_EX(index, new_entries_map, add_entry, error);
 		}
 
 		if (remove_entry && error >= 0)

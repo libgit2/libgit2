@@ -96,6 +96,36 @@ void *git_idxmap_get(git_idxmap *map, const git_index_entry *key);
  */
 void *git_idxmap_icase_get(git_idxmap_icase *map, const git_index_entry *key);
 
+/**
+ * Set the entry for key to value.
+ *
+ * If the map has no corresponding entry for the given key, a new
+ * entry will be created with the given value. If an entry exists
+ * already, its value will be updated to match the given value.
+ *
+ * @param map map to create new entry in
+ * @param key key to set
+ * @param value value to associate the key with; may be NULL
+ * @return zero if the key was successfully set, a negative error
+ *         code otherwise
+ */
+int git_idxmap_set(git_idxmap *map, const git_index_entry *key, void *value);
+
+/**
+ * Set the entry for key to value.
+ *
+ * If the map has no corresponding entry for the given key, a new
+ * entry will be created with the given value. If an entry exists
+ * already, its value will be updated to match the given value.
+ *
+ * @param map map to create new entry in
+ * @param key key to set
+ * @param value value to associate the key with; may be NULL
+ * @return zero if the key was successfully set, a negative error
+ *         code otherwise
+ */
+int git_idxmap_icase_set(git_idxmap_icase *map, const git_index_entry *key, void *value);
+
 void git_idxmap_insert(git_idxmap *map, const git_index_entry *key, void *value, int *rval);
 void git_idxmap_icase_insert(git_idxmap_icase *map, const git_index_entry *key, void *value, int *rval);
 

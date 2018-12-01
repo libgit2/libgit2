@@ -77,6 +77,40 @@ void *git_idxmap_get(git_idxmap *map, const git_index_entry *key)
 	return kh_val(map, idx);
 }
 
+int git_idxmap_set(git_idxmap *map, const git_index_entry *key, void *value)
+{
+	size_t idx;
+	int rval;
+
+	idx = kh_put(idx, map, key, &rval);
+	if (rval < 0)
+		return -1;
+
+	if (rval == 0)
+		kh_key(map, idx) = key;
+
+	kh_val(map, idx) = value;
+
+	return 0;
+}
+
+int git_idxmap_icase_set(git_idxmap_icase *map, const git_index_entry *key, void *value)
+{
+	size_t idx;
+	int rval;
+
+	idx = kh_put(idxicase, map, key, &rval);
+	if (rval < 0)
+		return -1;
+
+	if (rval == 0)
+		kh_key(map, idx) = key;
+
+	kh_val(map, idx) = value;
+
+	return 0;
+}
+
 void *git_idxmap_icase_get(git_idxmap_icase *map, const git_index_entry *key)
 {
 	size_t idx = git_idxmap_icase_lookup_index(map, key);
