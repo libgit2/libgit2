@@ -43,64 +43,43 @@ struct compare_data
 
 static int add_and_check_file(void *payload, git_buf *actual_path)
 {
-	git_buf expected_path_oid = GIT_BUF_INIT;
+	git_buf expected_path = GIT_BUF_INIT;
 	git_buf expected_path_fail = GIT_BUF_INIT;
 	git_buf expected_contents = GIT_BUF_INIT;
 	struct compare_data *cd = payload;
-	bool failed = true;
-	int cmp_git, cmp_gitattributes;
 	char *basename;
-	int add_bypath_ret;
 	const git_index_entry *entry;
-	git_oid oid;
-	git_error_state error = { 0 };
+	git_blob *blob;
 
 	basename = git_path_basename(actual_path->ptr);
-	cmp_git = strcmp(basename, ".git");
-	cmp_gitattributes = strcmp(basename, ".gitattributes");
 
-	if (cmp_git == 0 || cmp_gitattributes == 0) {
-		failed = false;
-		goto done;
-	}
+	if (!strcmp(basename, ".git") || !strcmp(basename, ".gitattributes"))
+		return 0;
 
-	giterr_clear();
-	add_bypath_ret = git_index_add_bypath(g_index, basename);
-	giterr_state_capture(&error, add_bypath_ret);
+	cl_git_pass(git_buf_joinpath(&expected_path, cd->dirname, basename));
 
-	entry = git_index_get_bypath(g_index, basename, 0);
-	if (!add_bypath_ret && !entry)
-		goto done;
+	cl_git_pass(git_buf_puts(&expected_path_fail, expected_path.ptr));
+	cl_git_pass(git_buf_puts(&expected_path_fail, ".fail"));
 
-	cl_git_pass(git_buf_joinpath(&expected_path_oid, cd->dirname, basename));
-	cl_git_pass(git_buf_joinpath(&expected_path_fail, cd->dirname, basename));
-	git_buf_puts(&expected_path_oid, ".obj");
-	git_buf_puts(&expected_path_fail, ".fail");
+	if (git_path_isfile(expected_path.ptr)) {
+		cl_git_pass(git_index_add_bypath(g_index, basename));
 
-	if (git_path_isfile(expected_path_oid.ptr)) {
-		if (add_bypath_ret)
-			goto done;
+		cl_assert(entry = git_index_get_bypath(g_index, basename, 0));
+		cl_git_pass(git_blob_lookup(&blob, g_repo, &entry->id));
 
-		if (git_futils_readbuffer(&expected_contents, expected_path_oid.ptr) < 0)
-			goto done;
+		cl_git_pass(git_futils_readbuffer(&expected_contents, expected_path.ptr));
+		cl_assert_equal_s(expected_contents, git_blob_rawcontent(blob));
 
-		if (git_oid_fromstr(&oid, expected_contents.ptr))
-			goto done;
-		if (!git_oid_equal(&oid, &entry->id))
-			goto done;
-	}
-
-	if (git_path_isfile(expected_path_fail.ptr)) {
-		if (!add_bypath_ret)
-			goto done;
-
-		if (git_futils_readbuffer(&expected_contents, expected_path_fail.ptr) < 0)
-			goto done;
-
+		git_blob_free(blob);
+	} else if (git_path_isfile(expected_path_fail.ptr)) {
+		cl_git_pass(git_futils_readbuffer(&expected_contents, expected_path_fail.ptr));
 		git_buf_rtrim(&expected_contents);
 
-		if (error.error_msg.klass != GITERR_FILTER || strstr(error.error_msg.message, expected_contents.ptr) == NULL)
-			goto done;
+		cl_git_fail(git_index_add_bypath(g_index, basename));
+		cl_assert_equal_i(GITERR_FILTER, giterr_last()->klass);
+		cl_assert_equal_s(expected_contents.ptr, giterr_last()->message);
+	} else {
+		cl_fail("unexpected index failure");
 	}
 
 	failed = false;
@@ -108,19 +87,17 @@ static int add_and_check_file(void *payload, git_buf *actual_path)
 done:
 	if (failed) {
 		git_buf details = GIT_BUF_INIT;
-		git_buf_printf(&details, "filename=%s, safecrlf=%s, autocrlf=%s, attrs={%s}",
-			git_path_basename(actual_path->ptr), cd->safecrlf, cd->autocrlf, cd->attrs);
+		git_buf_printf(&details, "filename=%s, system=%s, autocrlf=%s, safecrlf=%s, attrs={%s}",
+			basename, cd->systype, cd->autocrlf, cd->safecrlf, cd->attrs);
 		clar__fail(__FILE__, __LINE__,
-			"adding file did not work as expected", details.ptr, 0);
-		git_buf_free(&details);
+			"index contents did not match expected", details.ptr, 0);
+		git_buf_dispose(&details);
 	}
 
 	git__free(basename);
-	git_buf_free(&expected_contents);
-	git_buf_free(&expected_path_oid);
-	git_buf_free(&expected_path_fail);
-	giterr_state_free(&error);
-
+	git_buf_dispose(&expected_contents);
+	git_buf_dispose(&expected_path);
+	git_buf_dispose(&expected_path_fail);
 	return 0;
 }
 
@@ -135,11 +112,11 @@ static void test_add_index(const char *safecrlf, const char *autocrlf, const cha
 
 	git_buf_puts(&reponame, "crlf");
 
-	git_buf_puts(&sandboxname, "safecrlf_");
-	git_buf_puts(&sandboxname, safecrlf);
-
-	git_buf_puts(&sandboxname, ",autocrlf_");
+	git_buf_puts(&sandboxname, "autocrlf_");
 	git_buf_puts(&sandboxname, autocrlf);
+
+	git_buf_puts(&sandboxname, ",safecrlf_");
+	git_buf_puts(&sandboxname, safecrlf);
 
 	if (*attrs) {
 		git_buf_puts(&sandboxname, ",");
@@ -162,7 +139,7 @@ static void test_add_index(const char *safecrlf, const char *autocrlf, const cha
 
 	cl_git_pass(git_index_clear(g_index));
 
-	git_buf_joinpath(&expected_dirname, "crlf_data", "checkin_results");
+	git_buf_joinpath(&expected_dirname, "crlf_data", "posix_to_odb");
 	git_buf_joinpath(&expected_fixture, expected_dirname.ptr, sandboxname.ptr);
 	cl_fixture_sandbox(expected_fixture.ptr);
 
@@ -199,13 +176,18 @@ static void set_up_workingdir(const char *name)
 	git_vector_free_deep(&contents);
 
 	/* copy input files */
-	git_path_dirload(&contents, cl_fixture("crlf_data/checkin_input_files"), 0, 0);
+	git_path_dirload(&contents, cl_fixture("crlf"), 0, 0);
 	git_vector_foreach(&contents, i, fn) {
 		char *basename = git_path_basename(fn);
 		git_buf dest_filename = GIT_BUF_INIT;
-		git_buf_joinpath(&dest_filename, name, basename);
+
+		if (strcmp(basename, ".gitted") &&
+			strcmp(basename, ".gitattributes")) {
+			git_buf_joinpath(&dest_filename, name, basename);
+			cl_git_pass(git_futils_cp(fn, dest_filename.ptr, 0644));
+		}
+
 		git__free(basename);
-		cl_git_pass(git_futils_cp(fn, dest_filename.ptr, 0644));
 		git_buf_free(&dest_filename);
 	}
 	git_vector_free_deep(&contents);
@@ -217,7 +199,7 @@ void test_index_crlf__matches_core_git(void)
 	const char *autocrlf[] = { "true", "false", "input", NULL };
 	const char *attrs[] = { "", "-crlf", "-text", "eol=crlf", "eol=lf",
 		"text", "text eol=crlf", "text eol=lf",
-		"text=auto", "text=auto eol=crlf", "text=auto eol=lf", 
+		"text=auto", "text=auto eol=crlf", "text=auto eol=lf",
 		NULL };
 	const char **a, **b, **c;
 
