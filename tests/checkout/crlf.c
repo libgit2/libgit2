@@ -13,14 +13,38 @@ static git_repository *g_repo;
 static const char *systype;
 static git_buf expected_fixture = GIT_BUF_INIT;
 
+static int unlink_file(void *payload, git_buf *path)
+{
+	const char *fn = git_path_basename(path->ptr);
+
+	GIT_UNUSED(payload);
+
+	if (strcmp(fn, ".git"))
+		cl_must_pass(p_unlink(path->ptr));
+
+	git__free(fn);
+	return 0;
+}
+
 void test_checkout_crlf__initialize(void)
 {
+	git_buf reponame = GIT_BUF_INIT;
+
 	g_repo = cl_git_sandbox_init("crlf");
+
+	/*
+	 * remove the contents of the working directory so that we can
+	 * check out over it.
+	 */
+	git_buf_puts(&reponame, "crlf");
+	cl_git_pass(git_path_direach(&reponame, 0, unlink_file, NULL));
 
 	if (GIT_EOL_NATIVE == GIT_EOL_CRLF)
 		systype = "windows";
 	else
 		systype = "posix";
+
+	git_buf_dispose(&reponame);
 }
 
 void test_checkout_crlf__cleanup(void)
