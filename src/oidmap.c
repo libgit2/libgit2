@@ -88,6 +88,25 @@ int git_oidmap_exists(git_oidmap *map, const git_oid *key)
 	return kh_get(oid, map, key) != kh_end(map);
 }
 
+int git_oidmap_iterate(void **value, git_oidmap *map, size_t *iter, const git_oid **key)
+{
+	size_t i = *iter;
+
+	while (i < git_oidmap_end(map) && !git_oidmap_has_data(map, i))
+		i++;
+
+	if (i >= git_oidmap_end(map))
+		return GIT_ITEROVER;
+
+	if (key)
+		*key = git_oidmap_key(map, i);
+	if (value)
+		*value = git_oidmap_value_at(map, i);
+	*iter = ++i;
+
+	return 0;
+}
+
 size_t git_oidmap_lookup_index(git_oidmap *map, const git_oid *key)
 {
 	return kh_get(oid, map, key);

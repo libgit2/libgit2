@@ -81,6 +81,25 @@ int git_strmap_exists(git_strmap *map, const char *key)
 	return kh_get(str, map, key) != kh_end(map);
 }
 
+int git_strmap_iterate(void **value, git_strmap *map, size_t *iter, const char **key)
+{
+	size_t i = *iter;
+
+	while (i < git_strmap_end(map) && !git_strmap_has_data(map, i))
+		i++;
+
+	if (i >= git_strmap_end(map))
+		return GIT_ITEROVER;
+
+	if (key)
+		*key = git_strmap_key(map, i);
+	if (value)
+		*value = git_strmap_value_at(map, i);
+	*iter = ++i;
+
+	return 0;
+}
+
 size_t git_strmap_lookup_index(git_strmap *map, const char *key)
 {
 	return kh_get(str, map, key);

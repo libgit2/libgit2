@@ -83,7 +83,7 @@ void test_core_strmap__2(void)
 
 	i = 0;
 	git_strmap_foreach_value(g_table, str, { i++; free(str); });
-	cl_assert(i == 19);
+	cl_assert_equal_i(i, 19);
 }
 
 void test_core_strmap__3(void)
@@ -95,7 +95,7 @@ void test_core_strmap__3(void)
 
 	i = 0;
 	git_strmap_foreach_value(g_table, str, { i++; free(str); });
-	cl_assert(i == 10000);
+	cl_assert_equal_i(i, 10000);
 }
 
 void test_core_strmap__get_succeeds_with_existing_entries(void)
@@ -155,4 +155,51 @@ void test_core_strmap__set_updates_existing_key(void)
 	cl_assert_equal_i(git_strmap_size(g_table), 3);
 
 	cl_assert_equal_s(git_strmap_get(g_table, "foo"), "other");
+}
+
+void test_core_strmap__iteration(void)
+{
+	struct {
+		char *key;
+		char *value;
+		int seen;
+	} entries[] = {
+		{ "foo", "oof" },
+		{ "bar", "rab" },
+		{ "gobble", "elbbog" },
+	};
+	const char *key, *value;
+	size_t i, n;
+
+	for (i = 0; i < ARRAY_SIZE(entries); i++)
+		cl_git_pass(git_strmap_set(g_table, entries[i].key, entries[i].value));
+
+	i = 0, n = 0;
+	while (git_strmap_iterate((void **) &value, g_table, &i, &key) == 0) {
+		size_t j;
+
+		for (j = 0; j < ARRAY_SIZE(entries); j++) {
+			if (strcmp(entries[j].key, key))
+				continue;
+
+			cl_assert_equal_i(entries[j].seen, 0);
+			cl_assert_equal_s(entries[j].value, value);
+			entries[j].seen++;
+			break;
+		}
+
+		n++;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(entries); i++)
+		cl_assert_equal_i(entries[i].seen, 1);
+
+	cl_assert_equal_i(n, ARRAY_SIZE(entries));
+}
+
+void test_core_strmap__iterating_empty_map_stops_immediately(void)
+{
+	size_t i = 0;
+
+	cl_git_fail_with(git_strmap_iterate(NULL, g_table, &i, NULL), GIT_ITEROVER);
 }

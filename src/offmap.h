@@ -99,6 +99,27 @@ int git_offmap_delete(git_offmap *map, const git_off_t key);
  */
 int git_offmap_exists(git_offmap *map, const git_off_t key);
 
+/**
+ * Iterate over entries of the map.
+ *
+ * This functions allows to iterate over all key-value entries of
+ * the map. The current position is stored in the `iter` variable
+ * and should be initialized to `0` before the first call to this
+ * function.
+ *
+ * @param map map to iterate over
+ * @param value pointer to the variable where to store the current
+ *            value. May be NULL.
+ * @param iter iterator storing the current position. Initialize
+ *             with zero previous to the first call.
+ * @param key pointer to the variable where to store the current
+ *            key. May be NULL.
+ * @return `0` if the next entry was correctly retrieved.
+ *        GIT_ITEROVER if no entries are left. A negative error
+ *        code otherwise.
+ */
+int git_offmap_iterate(void **value, git_offmap *map, size_t *iter, git_off_t *key);
+
 size_t git_offmap_lookup_index(git_offmap *map, const git_off_t key);
 int git_offmap_valid_index(git_offmap *map, size_t idx);
 
@@ -115,18 +136,13 @@ void git_offmap_insert(git_offmap *map, const git_off_t key, void *value, int *r
 size_t git_offmap_begin(git_offmap *map);
 size_t git_offmap_end(git_offmap *map);
 
-#define git_offmap_foreach(h, kvar, vvar, code) { size_t __i;			\
-	for (__i = git_offmap_begin(h); __i != git_offmap_end(h); ++__i) {	\
-		if (!git_offmap_has_data(h,__i)) continue;			\
-		(kvar) = git_offmap_key_at(h,__i);				\
-		(vvar) = git_offmap_value_at(h,__i);				\
+#define git_offmap_foreach(h, kvar, vvar, code) { size_t __i = 0;		\
+	while (git_offmap_iterate((void **) &(vvar), h, &__i, &(kvar)) == 0) {	\
 		code;								\
 	} }
 
-#define git_offmap_foreach_value(h, vvar, code) { size_t __i;			\
-	for (__i = git_offmap_begin(h); __i != git_offmap_end(h); ++__i) {	\
-		if (!git_offmap_has_data(h,__i)) continue;			\
-		(vvar) = git_offmap_value_at(h,__i);				\
+#define git_offmap_foreach_value(h, vvar, code) { size_t __i = 0;		\
+	while (git_offmap_iterate((void **) &(vvar), h, &__i, NULL) == 0) {	\
 		code;								\
 	} }
 

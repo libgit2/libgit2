@@ -82,6 +82,25 @@ int git_offmap_exists(git_offmap *map, const git_off_t key)
 	return kh_get(off, map, key) != kh_end(map);
 }
 
+int git_offmap_iterate(void **value, git_offmap *map, size_t *iter, git_off_t *key)
+{
+	size_t i = *iter;
+
+	while (i < git_offmap_end(map) && !git_offmap_has_data(map, i))
+		i++;
+
+	if (i >= git_offmap_end(map))
+		return GIT_ITEROVER;
+
+	if (key)
+		*key = git_offmap_key_at(map, i);
+	if (value)
+		*value = git_offmap_value_at(map, i);
+	*iter = ++i;
+
+	return 0;
+}
+
 size_t git_offmap_lookup_index(git_offmap *map, const git_off_t key)
 {
 	return kh_get(off, map, key);

@@ -97,6 +97,27 @@ int git_strmap_delete(git_strmap *map, const char *key);
  */
 int git_strmap_exists(git_strmap *map, const char *key);
 
+/**
+ * Iterate over entries of the map.
+ *
+ * This functions allows to iterate over all key-value entries of
+ * the map. The current position is stored in the `iter` variable
+ * and should be initialized to `0` before the first call to this
+ * function.
+ *
+ * @param map map to iterate over
+ * @param value pointer to the variable where to store the current
+ *            value. May be NULL.
+ * @param iter iterator storing the current position. Initialize
+ *             with zero previous to the first call.
+ * @param key pointer to the variable where to store the current
+ *            key. May be NULL.
+ * @return `0` if the next entry was correctly retrieved.
+ *        GIT_ITEROVER if no entries are left. A negative error
+ *        code otherwise.
+ */
+int git_strmap_iterate(void **value, git_strmap *map, size_t *iter, const char **key);
+
 size_t git_strmap_lookup_index(git_strmap *map, const char *key);
 int git_strmap_valid_index(git_strmap *map, size_t idx);
 
@@ -111,18 +132,13 @@ void git_strmap_delete_at(git_strmap *map, size_t idx);
 int git_strmap_put(git_strmap *map, const char *key, int *err);
 void git_strmap_insert(git_strmap *map, const char *key, void *value, int *rval);
 
-#define git_strmap_foreach(h, kvar, vvar, code) { size_t __i;			\
-	for (__i = git_strmap_begin(h); __i != git_strmap_end(h); ++__i) {	\
-		if (!git_strmap_has_data(h,__i)) continue;			\
-		(kvar) = git_strmap_key(h,__i);					\
-		(vvar) = git_strmap_value_at(h,__i);				\
+#define git_strmap_foreach(h, kvar, vvar, code) { size_t __i = 0;		\
+	while (git_strmap_iterate((void **) &(vvar), h, &__i, &(kvar)) == 0) {	\
 		code;								\
 	} }
 
-#define git_strmap_foreach_value(h, vvar, code) { size_t __i;			\
-	for (__i = git_strmap_begin(h); __i != git_strmap_end(h); ++__i) {	\
-		if (!git_strmap_has_data(h,__i)) continue;			\
-		(vvar) = git_strmap_value_at(h,__i);				\
+#define git_strmap_foreach_value(h, vvar, code) { size_t __i = 0;		\
+	while (git_strmap_iterate((void **) &(vvar), h, &__i, NULL) == 0) {	\
 		code;								\
 	} }
 

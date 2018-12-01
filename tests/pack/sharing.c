@@ -24,7 +24,7 @@ void test_pack_sharing__open_two_repos(void)
 	cl_git_pass(git_object_lookup(&obj2, repo2, &id, GIT_OBJECT_ANY));
 
 	pos = 0;
-	while ((error = git_strmap_next(&data, &pos, git__pack_cache)) == 0) {
+	while ((error = git_strmap_iterate(&data, git__pack_cache, &pos, NULL)) == 0) {
 		struct git_pack_file *pack = (struct git_pack_file *) data;
 
 		cl_assert_equal_i(2, pack->refcount.val);

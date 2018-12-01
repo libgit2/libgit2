@@ -99,6 +99,27 @@ int git_oidmap_delete(git_oidmap *map, const git_oid *key);
  */
 int git_oidmap_exists(git_oidmap *map, const git_oid *key);
 
+/**
+ * Iterate over entries of the map.
+ *
+ * This functions allows to iterate over all key-value entries of
+ * the map. The current position is stored in the `iter` variable
+ * and should be initialized to `0` before the first call to this
+ * function.
+ *
+ * @param map map to iterate over
+ * @param value pointer to the variable where to store the current
+ *            value. May be NULL.
+ * @param iter iterator storing the current position. Initialize
+ *             with zero previous to the first call.
+ * @param key pointer to the variable where to store the current
+ *            key. May be NULL.
+ * @return `0` if the next entry was correctly retrieved.
+ *        GIT_ITEROVER if no entries are left. A negative error
+ *        code otherwise.
+ */
+int git_oidmap_iterate(void **value, git_oidmap *map, size_t *iter, const git_oid **key);
+
 size_t git_oidmap_lookup_index(git_oidmap *map, const git_oid *key);
 int git_oidmap_valid_index(git_oidmap *map, size_t idx);
 
@@ -116,10 +137,8 @@ void git_oidmap_insert(git_oidmap *map, const git_oid *key, void *value, int *rv
 size_t git_oidmap_begin(git_oidmap *map);
 size_t git_oidmap_end(git_oidmap *map);
 
-#define git_oidmap_foreach_value(h, vvar, code) { size_t __i;			\
-	for (__i = git_oidmap_begin(h); __i != git_oidmap_end(h); ++__i) {	\
-		if (!git_oidmap_has_data(h,__i)) continue;			\
-		(vvar) = git_oidmap_value_at(h,__i);				\
+#define git_oidmap_foreach_value(h, vvar, code) { size_t __i = 0;		\
+	while (git_oidmap_iterate((void **) &(vvar), h, &__i, NULL) == 0) {	\
 		code;								\
 	} }
 
