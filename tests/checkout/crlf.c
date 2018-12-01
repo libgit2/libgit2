@@ -99,6 +99,7 @@ static void test_checkout(const char *autocrlf, const char *attrs)
 {
 	git_buf attrbuf = GIT_BUF_INIT;
 	git_buf expected_dirname = GIT_BUF_INIT;
+	git_buf systype_and_direction = GIT_BUF_INIT;
 	git_buf sandboxname = GIT_BUF_INIT;
 	git_buf reponame = GIT_BUF_INIT;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
@@ -106,6 +107,9 @@ static void test_checkout(const char *autocrlf, const char *attrs)
 	const char *c;
 
 	git_buf_puts(&reponame, "crlf");
+
+	git_buf_puts(&systype_and_direction, systype);
+	git_buf_puts(&systype_and_direction, "_to_workdir");
 
 	git_buf_puts(&sandboxname, "autocrlf_");
 	git_buf_puts(&sandboxname, autocrlf);
@@ -128,7 +132,7 @@ static void test_checkout(const char *autocrlf, const char *attrs)
 
 	cl_repo_set_string(g_repo, "core.autocrlf", autocrlf);
 
-	git_buf_joinpath(&expected_dirname, systype, sandboxname.ptr);
+	git_buf_joinpath(&expected_dirname, systype_and_direction.ptr, sandboxname.ptr);
 	git_buf_joinpath(&expected_fixture, "crlf_data", expected_dirname.ptr);
 	cl_fixture_sandbox(expected_fixture.ptr);
 
@@ -145,6 +149,7 @@ static void test_checkout(const char *autocrlf, const char *attrs)
 	git_buf_dispose(&expected_fixture);
 	git_buf_dispose(&expected_dirname);
 	git_buf_dispose(&sandboxname);
+	git_buf_dispose(&systype_and_direction);
 	git_buf_dispose(&reponame);
 }
 
@@ -173,7 +178,7 @@ void test_checkout_crlf__matches_core_git(void)
 	const char *autocrlf[] = { "true", "false", "input", NULL };
 	const char *attrs[] = { "", "-crlf", "-text", "eol=crlf", "eol=lf",
 		"text", "text eol=crlf", "text eol=lf",
-		"text=auto", "text=auto eol=crlf", "text=auto eol=lf", 
+		"text=auto", "text=auto eol=crlf", "text=auto eol=lf",
 		NULL };
 	const char **a, **b;
 

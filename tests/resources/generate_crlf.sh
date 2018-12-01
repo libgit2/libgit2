@@ -25,7 +25,7 @@ tempdir=$3
 
 set -u
 
-create_repo() {
+create_to_workdir_data() {
 	local input=$1
 	local output=$2
 	local tempdir=$3
@@ -33,7 +33,7 @@ create_repo() {
 	local autocrlf=$5
 	local attr=$6
 
-	local worktree="${output}/${systype}/autocrlf_${autocrlf}"
+	local worktree="${output}/${systype}_to_workdir/autocrlf_${autocrlf}"
 
 	if [ "$attr" != "" ]; then
 		local attrdir=`echo $attr | sed -e "s/ /,/g" | sed -e "s/=/_/g"`
@@ -78,7 +78,7 @@ for autocrlf in true false input; do
 		"text eol=lf" "text eol=crlf" \
 		"text=auto eol=lf" "text=auto eol=crlf"; do
 
-		create_repo "${input}" "${output}" "${tempdir}" \
+		create_to_workdir_data "${input}" "${output}" "${tempdir}" \
 			"${systype}" "${autocrlf}" "${attr}"
 	done
 done
