@@ -35,6 +35,7 @@ void test_index_crlf__cleanup(void)
 
 struct compare_data
 {
+	const char *systype;
 	const char *dirname;
 	const char *safecrlf;
 	const char *autocrlf;
@@ -50,11 +51,14 @@ static int add_and_check_file(void *payload, git_buf *actual_path)
 	char *basename;
 	const git_index_entry *entry;
 	git_blob *blob;
+	bool failed = true;
 
 	basename = git_path_basename(actual_path->ptr);
 
-	if (!strcmp(basename, ".git") || !strcmp(basename, ".gitattributes"))
-		return 0;
+	if (!strcmp(basename, ".git") || !strcmp(basename, ".gitattributes")) {
+		failed = false;
+		goto done;
+	}
 
 	cl_git_pass(git_buf_joinpath(&expected_path, cd->dirname, basename));
 
@@ -68,16 +72,19 @@ static int add_and_check_file(void *payload, git_buf *actual_path)
 		cl_git_pass(git_blob_lookup(&blob, g_repo, &entry->id));
 
 		cl_git_pass(git_futils_readbuffer(&expected_contents, expected_path.ptr));
-		cl_assert_equal_s(expected_contents, git_blob_rawcontent(blob));
+
+		if (strcmp(expected_contents.ptr, git_blob_rawcontent(blob)) != 0)
+			goto done;
 
 		git_blob_free(blob);
 	} else if (git_path_isfile(expected_path_fail.ptr)) {
 		cl_git_pass(git_futils_readbuffer(&expected_contents, expected_path_fail.ptr));
 		git_buf_rtrim(&expected_contents);
 
-		cl_git_fail(git_index_add_bypath(g_index, basename));
-		cl_assert_equal_i(GITERR_FILTER, giterr_last()->klass);
-		cl_assert_equal_s(expected_contents.ptr, giterr_last()->message);
+		if (git_index_add_bypath(g_index, basename) == 0 ||
+			giterr_last()->klass != GITERR_FILTER ||
+			strcmp(expected_contents.ptr, giterr_last()->message) != 0)
+			goto done;
 	} else {
 		cl_fail("unexpected index failure");
 	}
@@ -101,13 +108,21 @@ done:
 	return 0;
 }
 
+static const char *system_type(void)
+{
+	if (GIT_EOL_NATIVE == GIT_EOL_CRLF)
+		return "windows";
+	else
+		return "posix";
+}
+
 static void test_add_index(const char *safecrlf, const char *autocrlf, const char *attrs)
 {
 	git_buf attrbuf = GIT_BUF_INIT;
 	git_buf expected_dirname = GIT_BUF_INIT;
 	git_buf sandboxname = GIT_BUF_INIT;
 	git_buf reponame = GIT_BUF_INIT;
-	struct compare_data compare_data = { NULL, safecrlf, autocrlf, attrs };
+	struct compare_data compare_data = { system_type(), NULL, safecrlf, autocrlf, attrs };
 	const char *c;
 
 	git_buf_puts(&reponame, "crlf");
@@ -139,7 +154,9 @@ static void test_add_index(const char *safecrlf, const char *autocrlf, const cha
 
 	cl_git_pass(git_index_clear(g_index));
 
-	git_buf_joinpath(&expected_dirname, "crlf_data", "posix_to_odb");
+	git_buf_joinpath(&expected_dirname, "crlf_data", system_type());
+	git_buf_puts(&expected_dirname, "_to_odb");
+
 	git_buf_joinpath(&expected_fixture, expected_dirname.ptr, sandboxname.ptr);
 	cl_fixture_sandbox(expected_fixture.ptr);
 
