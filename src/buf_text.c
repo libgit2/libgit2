@@ -310,6 +310,7 @@ bool git_buf_text_gather_stats(
 			}
 	}
 
-	return (stats->nul > 0 ||
+	/* Treat files with a bare CR as binary */
+	return (stats->cr != stats->crlf || stats->nul > 0 ||
 		((stats->printable >> 7) < stats->nonprintable));
 }
