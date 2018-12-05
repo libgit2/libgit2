@@ -809,6 +809,7 @@ static int proxy_stream_close(git_writestream *s)
 {
 	struct proxy_stream *proxy_stream = (struct proxy_stream *)s;
 	git_buf *writebuf;
+	git_error_state error_state = {0};
 	int error;
 
 	assert(proxy_stream);
@@ -826,6 +827,11 @@ static int proxy_stream_close(git_writestream *s)
 		git_buf_sanitize(proxy_stream->output);
 		writebuf = proxy_stream->output;
 	} else {
+		/* close stream before erroring out taking care
+		 * to preserve the original error */
+		giterr_state_capture(&error_state, error);
+		proxy_stream->target->close(proxy_stream->target);
+		giterr_state_restore(&error_state);
 		return error;
 	}
 
