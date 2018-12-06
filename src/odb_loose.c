@@ -1028,15 +1028,15 @@ static int loose_backend__readstream(
 
 done:
 	if (error < 0) {
-                if(stream) {
-		        git_futils_mmap_free(&stream->map);
-   		        git_zstream_free(&stream->zstream);
-                        git__free(stream);
-                }
-                if(hash_ctx) {
-   		        git_hash_ctx_cleanup(hash_ctx);
-		        git__free(hash_ctx);
-                }
+		if (stream) {
+			git_futils_mmap_free(&stream->map);
+			git_zstream_free(&stream->zstream);
+			git__free(stream);
+		}
+		if (hash_ctx) {
+			git_hash_ctx_cleanup(hash_ctx);
+			git__free(hash_ctx);
+		}
 	}
 
 	git_buf_dispose(&object_path);
