@@ -1339,7 +1339,7 @@ int git_reference_is_note(const git_reference *ref)
 	return git_reference__is_note(ref->name);
 }
 
-static int peel_error(int error, git_reference *ref, const char* msg)
+static int peel_error(int error, const git_reference *ref, const char* msg)
 {
 	giterr_set(
 		GITERR_INVALID,
@@ -1349,10 +1349,11 @@ static int peel_error(int error, git_reference *ref, const char* msg)
 
 int git_reference_peel(
 	git_object **peeled,
-	git_reference *ref,
+	const git_reference *ref,
 	git_otype target_type)
 {
-	git_reference *resolved = NULL;
+	const git_reference *resolved = NULL;
+	git_reference *allocated = NULL;
 	git_object *target = NULL;
 	int error;
 
@@ -1361,8 +1362,10 @@ int git_reference_peel(
 	if (ref->type == GIT_REF_OID) {
 		resolved = ref;
 	} else {
-		if ((error = git_reference_resolve(&resolved, ref)) < 0)
+		if ((error = git_reference_resolve(&allocated, ref)) < 0)
 			return peel_error(error, ref, "Cannot resolve reference");
+
+		resolved = allocated;
 	}
 
 	/*
@@ -1391,9 +1394,7 @@ int git_reference_peel(
 
 cleanup:
 	git_object_free(target);
-
-	if (resolved != ref)
-		git_reference_free(resolved);
+	git_reference_free(allocated);
 
 	return error;
 }
