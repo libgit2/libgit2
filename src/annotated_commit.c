@@ -123,19 +123,19 @@ int git_annotated_commit_from_ref(
 	git_repository *repo,
 	const git_reference *ref)
 {
-	git_reference *resolved;
+	git_object *peeled;
 	int error = 0;
 
 	assert(out && repo && ref);
 
 	*out = NULL;
 
-	if ((error = git_reference_resolve(&resolved, ref)) < 0)
+	if ((error = git_reference_peel(&peeled, ref, GIT_OBJ_COMMIT)) < 0)
 		return error;
 
 	error = annotated_commit_init_from_id(out,
 		repo,
-		git_reference_target(resolved),
+		git_object_id(peeled),
 		git_reference_name(ref));
 
 	if (!error) {
@@ -143,7 +143,7 @@ int git_annotated_commit_from_ref(
 		GITERR_CHECK_ALLOC((*out)->ref_name);
 	}
 
-	git_reference_free(resolved);
+	git_object_free(peeled);
 	return error;
 }
 
