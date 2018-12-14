@@ -46,9 +46,6 @@ GIT_INLINE(int) git_smart__reset_stream(transport_smart *t, bool close_subtransp
 	}
 
 	if (close_subtransport) {
-		git__free(t->url);
-		t->url = NULL;
-
 		if (t->wrapped->close(t->wrapped) < 0)
 			return -1;
 	}
@@ -223,6 +220,7 @@ static int git_smart__connect(
 	if (git_smart__reset_stream(t, true) < 0)
 		return -1;
 
+	git__free(t->url);
 	t->url = git__strdup(url);
 	GITERR_CHECK_ALLOC(t->url);
 
