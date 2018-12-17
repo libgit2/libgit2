@@ -52,6 +52,15 @@ void git_oidmap_clear(git_oidmap *map);
  */
 size_t git_oidmap_size(git_oidmap *map);
 
+/**
+ * Return value associated with the given key.
+ *
+ * @param map map to search key in
+ * @param key key to search for
+ * @return value associated with the given key or NULL if the key was not found
+ */
+void *git_oidmap_get(git_oidmap *map, const git_oid *key);
+
 size_t git_oidmap_lookup_index(git_oidmap *map, const git_oid *key);
 int git_oidmap_valid_index(git_oidmap *map, size_t idx);
 

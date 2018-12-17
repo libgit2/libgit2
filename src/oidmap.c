@@ -48,6 +48,15 @@ size_t git_oidmap_size(git_oidmap *map)
 	return kh_size(map);
 }
 
+void *git_oidmap_get(git_oidmap *map, const git_oid *key)
+{
+	size_t idx = git_oidmap_lookup_index(map, key);
+	if (!git_oidmap_valid_index(map, idx) ||
+	    !git_oidmap_has_data(map, idx))
+		return NULL;
+	return kh_val(map, idx);
+}
+
 size_t git_oidmap_lookup_index(git_oidmap *map, const git_oid *key)
 {
 	return kh_get(oid, map, key);

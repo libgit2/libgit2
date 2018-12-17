@@ -512,15 +512,12 @@ static int cb_tag_foreach(const char *name, git_oid *oid, void *data)
 {
 	git_packbuilder *pb = data;
 	git_pobject *po;
-	size_t pos;
 
 	GIT_UNUSED(name);
 
-	pos = git_oidmap_lookup_index(pb->object_ix, oid);
-	if (!git_oidmap_valid_index(pb->object_ix, pos))
+	if ((po = git_oidmap_get(pb->object_ix, oid)) == NULL)
 		return 0;
 
-	po = git_oidmap_value_at(pb->object_ix, pos);
 	po->tagged = 1;
 
 	/* TODO: peel objects */
@@ -1537,14 +1534,10 @@ static int lookup_walk_object(struct walk_object **out, git_packbuilder *pb, con
 
 static int retrieve_object(struct walk_object **out, git_packbuilder *pb, const git_oid *id)
 {
-	int error;
-	size_t pos;
 	struct walk_object *obj;
+	int error;
 
-	pos = git_oidmap_lookup_index(pb->walk_objects, id);
-	if (git_oidmap_valid_index(pb->walk_objects, pos)) {
-		obj = git_oidmap_value_at(pb->walk_objects, pos);
-	} else {
+	if ((obj = git_oidmap_get(pb->walk_objects, id)) == NULL) {
 		if ((error = lookup_walk_object(&obj, pb, id)) < 0)
 			return error;
 

@@ -957,14 +957,13 @@ git_off_t get_delta_base(
 	} else if (type == GIT_OBJECT_REF_DELTA) {
 		/* If we have the cooperative cache, search in it first */
 		if (p->has_cache) {
+			struct git_pack_entry *entry;
 			git_oid oid;
-			size_t k;
 
 			git_oid_fromraw(&oid, base_info);
-			k = git_oidmap_lookup_index(p->idx_cache, &oid);
-			if (git_oidmap_valid_index(p->idx_cache, k)) {
+			if ((entry = git_oidmap_get(p->idx_cache, &oid)) != NULL) {
 				*curpos += 20;
-				return ((struct git_pack_entry *)git_oidmap_value_at(p->idx_cache, k))->offset;
+				return entry->offset;
 			} else {
 				/* If we're building an index, don't try to find the pack
 				 * entry; we just haven't seen it yet.  We'll make

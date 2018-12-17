@@ -151,16 +151,12 @@ static bool cache_should_store(git_object_t object_type, size_t object_size)
 
 static void *cache_get(git_cache *cache, const git_oid *oid, unsigned int flags)
 {
-	size_t pos;
-	git_cached_obj *entry = NULL;
+	git_cached_obj *entry;
 
 	if (!git_cache__enabled || git_rwlock_rdlock(&cache->lock) < 0)
 		return NULL;
 
-	pos = git_oidmap_lookup_index(cache->map, oid);
-	if (git_oidmap_valid_index(cache->map, pos)) {
-		entry = git_oidmap_value_at(cache->map, pos);
-
+	if ((entry = git_oidmap_get(cache->map, oid)) != NULL) {
 		if (flags && entry->flags != flags) {
 			entry = NULL;
 		} else {
@@ -175,7 +171,7 @@ static void *cache_get(git_cache *cache, const git_oid *oid, unsigned int flags)
 
 static void *cache_store(git_cache *cache, git_cached_obj *entry)
 {
-	size_t pos;
+	git_cached_obj *stored_entry;
 
 	git_cached_obj_incref(entry);
 
@@ -194,10 +190,8 @@ static void *cache_store(git_cache *cache, git_cached_obj *entry)
 	if (git_cache__current_storage.val > git_cache__max_storage)
 		cache_evict_entries(cache);
 
-	pos = git_oidmap_lookup_index(cache->map, &entry->oid);
-
 	/* not found */
-	if (!git_oidmap_valid_index(cache->map, pos)) {
+	if ((stored_entry = git_oidmap_get(cache->map, &entry->oid)) == NULL) {
 		int rval;
 
 		git_oidmap_insert(cache->map, &entry->oid, entry, &rval);
@@ -209,19 +203,18 @@ static void *cache_store(git_cache *cache, git_cached_obj *entry)
 	}
 	/* found */
 	else {
-		git_cached_obj *stored_entry = git_oidmap_value_at(cache->map, pos);
-
 		if (stored_entry->flags == entry->flags) {
 			git_cached_obj_decref(entry);
 			git_cached_obj_incref(stored_entry);
 			entry = stored_entry;
 		} else if (stored_entry->flags == GIT_CACHE_STORE_RAW &&
-			entry->flags == GIT_CACHE_STORE_PARSED) {
+			   entry->flags == GIT_CACHE_STORE_PARSED) {
+			int rval;
+
 			git_cached_obj_decref(stored_entry);
 			git_cached_obj_incref(entry);
 
-			git_oidmap_set_key_at(cache->map, pos, &entry->oid);
-			git_oidmap_set_value_at(cache->map, pos, entry);
+			git_oidmap_insert(cache->map, &entry->oid, entry, &rval);
 		} else {
 			/* NO OP */
 		}

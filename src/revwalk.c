@@ -25,9 +25,8 @@ git_commit_list_node *git_revwalk__commit_lookup(
 	int ret;
 
 	/* lookup and reserve space if not already present */
-	pos = git_oidmap_lookup_index(walk->commits, oid);
-	if (git_oidmap_valid_index(walk->commits, pos))
-		return git_oidmap_value_at(walk->commits, pos);
+	if ((commit = git_oidmap_get(walk->commits, oid)) != NULL)
+		return commit;
 
 	commit = git_commit_list_alloc_node(walk);
 	if (commit == NULL)

@@ -79,14 +79,10 @@ static int impl__exists(git_odb_backend *backend, const git_oid *oid)
 static int impl__read(void **buffer_p, size_t *len_p, git_object_t *type_p, git_odb_backend *backend, const git_oid *oid)
 {
 	struct memory_packer_db *db = (struct memory_packer_db *)backend;
-	struct memobject *obj = NULL;
-	size_t pos;
+	struct memobject *obj;
 
-	pos = git_oidmap_lookup_index(db->objects, oid);
-	if (!git_oidmap_valid_index(db->objects, pos))
+	if ((obj = git_oidmap_get(db->objects, oid)) == NULL)
 		return GIT_ENOTFOUND;
-
-	obj = git_oidmap_value_at(db->objects, pos);
 
 	*len_p = obj->len;
 	*type_p = obj->type;
@@ -100,14 +96,10 @@ static int impl__read(void **buffer_p, size_t *len_p, git_object_t *type_p, git_
 static int impl__read_header(size_t *len_p, git_object_t *type_p, git_odb_backend *backend, const git_oid *oid)
 {
 	struct memory_packer_db *db = (struct memory_packer_db *)backend;
-	struct memobject *obj = NULL;
-	size_t pos;
+	struct memobject *obj;
 
-	pos = git_oidmap_lookup_index(db->objects, oid);
-	if (!git_oidmap_valid_index(db->objects, pos))
+	if ((obj = git_oidmap_get(db->objects, oid)) == NULL)
 		return GIT_ENOTFOUND;
-
-	obj = git_oidmap_value_at(db->objects, pos);
 
 	*len_p = obj->len;
 	*type_p = obj->type;
