@@ -147,8 +147,7 @@ static int cache_add(
 		git_off_t offset)
 {
 	git_pack_cache_entry *entry;
-	int error, exists = 0;
-	size_t k;
+	int exists;
 
 	if (base->len > GIT_PACK_CACHE_SIZE_LIMIT)
 		return -1;
@@ -166,9 +165,7 @@ static int cache_add(
 			while (cache->memory_used + base->len > cache->memory_limit)
 				free_lowest_entry(cache);
 
-			k = git_offmap_put(cache->entries, offset, &error);
-			assert(error != 0);
-			git_offmap_set_value_at(cache->entries, k, entry);
+			git_offmap_set(cache->entries, offset, entry);
 			cache->memory_used += entry->raw.len;
 
 			*cached_out = entry;

@@ -51,6 +51,24 @@ void *git_offmap_get(git_offmap *map, const git_off_t key)
 	return kh_val(map, idx);
 }
 
+int git_offmap_set(git_offmap *map, const git_off_t key, void *value)
+{
+	size_t idx;
+	int rval;
+
+	idx = kh_put(off, map, key, &rval);
+	if (rval < 0)
+		return -1;
+
+	if (rval == 0)
+		kh_key(map, idx) = key;
+
+	kh_val(map, idx) = value;
+
+	return 0;
+}
+
+
 size_t git_offmap_lookup_index(git_offmap *map, const git_off_t key)
 {
 	return kh_get(off, map, key);

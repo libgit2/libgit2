@@ -61,6 +61,21 @@ size_t git_offmap_size(git_offmap *map);
  */
 void *git_offmap_get(git_offmap *map, const git_off_t key);
 
+/**
+ * Set the entry for key to value.
+ *
+ * If the map has no corresponding entry for the given key, a new
+ * entry will be created with the given value. If an entry exists
+ * already, its value will be updated to match the given value.
+ *
+ * @param map map to create new entry in
+ * @param key key to set
+ * @param value value to associate the key with; may be NULL
+ * @return zero if the key was successfully set, a negative error
+ *         code otherwise
+ */
+int git_offmap_set(git_offmap *map, const git_off_t key, void *value);
+
 size_t git_offmap_lookup_index(git_offmap *map, const git_off_t key);
 int git_offmap_valid_index(git_offmap *map, size_t idx);
 
