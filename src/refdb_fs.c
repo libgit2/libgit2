@@ -2046,28 +2046,27 @@ cleanup:
 
 static int refdb_reflog_fs__delete(git_refdb_backend *_backend, const char *name)
 {
-	int error;
+	refdb_fs_backend *backend = (refdb_fs_backend *) _backend;
 	git_buf path = GIT_BUF_INIT;
-
-	git_repository *repo;
-	refdb_fs_backend *backend;
+	int error;
 
 	assert(_backend && name);
 
-	backend = (refdb_fs_backend *) _backend;
-	repo = backend->repo;
+	if ((error = retrieve_reflog_path(&path, backend->repo, name)) < 0)
+		goto out;
 
-	error = retrieve_reflog_path(&path, repo, name);
+	if (!git_path_exists(path.ptr))
+		goto out;
 
-	if (!error && git_path_exists(path.ptr)) {
-		error = p_unlink(path.ptr);
-		refdb_fs_backend__try_delete_empty_ref_hierarchie(backend, name, true);
-	}
+	if ((error = p_unlink(path.ptr)) < 0)
+		goto out;
 
+	refdb_fs_backend__try_delete_empty_ref_hierarchie(backend, name, true);
+
+out:
 	git_buf_dispose(&path);
 
 	return error;
-
 }
 
 int git_refdb_backend_fs(
