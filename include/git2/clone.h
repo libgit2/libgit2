@@ -196,7 +196,7 @@ GIT_EXTERN(int) git_clone_init_options(
  *        function works as though GIT_OPTIONS_INIT were passed.
  * @return 0 on success, any non-zero return value from a callback
  *         function, or a negative value to indicate an error (use
- *         `giterr_last` for a detailed error message)
+ *         `git_error_last` for a detailed error message)
  */
 GIT_EXTERN(int) git_clone(
 	git_repository **out,

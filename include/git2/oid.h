@@ -246,7 +246,7 @@ GIT_EXTERN(git_oid_shorten *) git_oid_shorten_new(size_t min_length);
  * memory-efficient.
  *
  * Attempting to add more than those OIDs will result in a
- * GITERR_INVALID error
+ * GIT_ERROR_INVALID error
  *
  * @param os a `git_oid_shorten` instance
  * @param text_id an OID in text form

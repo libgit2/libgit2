@@ -44,7 +44,7 @@ static void set_error(int error_class, char *string)
 	set_error_from_buffer(error_class);
 }
 
-void giterr_set_oom(void)
+void git_error_set_oom(void)
 {
 	GIT_GLOBAL->last_error = &g_git_oom_error;
 }
@@ -90,7 +90,7 @@ void giterr_set(int error_class, const char *string, ...)
 		set_error_from_buffer(error_class);
 }
 
-void giterr_set_str(int error_class, const char *string)
+void git_error_set_str(int error_class, const char *string)
 {
 	git_buf *buf = &GIT_GLOBAL->error_buf;
 
@@ -120,7 +120,7 @@ int giterr_set_regex(const regex_t *regex, int error_code)
 	return GIT_EINVALIDSPEC;
 }
 
-void giterr_clear(void)
+void git_error_clear(void)
 {
 	if (GIT_GLOBAL->last_error != NULL) {
 		set_error(0, NULL);
@@ -133,7 +133,7 @@ void giterr_clear(void)
 #endif
 }
 
-const git_error *giterr_last(void)
+const git_error *git_error_last(void)
 {
 	return GIT_GLOBAL->last_error;
 }
@@ -210,4 +210,26 @@ void giterr_system_set(int code)
 #else
 	errno = code;
 #endif
+}
+
+/* Deprecated functions */
+
+const git_error *giterr_last(void)
+{
+	return git_error_last();
+}
+
+void giterr_clear(void)
+{
+	git_error_clear();
+}
+
+void giterr_set_str(int error_class, const char *string)
+{
+	return git_error_set_str(error_class, string);
+}
+
+void giterr_set_oom(void)
+{
+	git_error_set_oom();
 }

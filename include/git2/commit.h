@@ -296,8 +296,8 @@ GIT_EXTERN(int) git_commit_header_field(git_buf *out, const git_commit *commit, 
  * Extract the signature from a commit
  *
  * If the id is not for a commit, the error class will be
- * `GITERR_INVALID`. If the commit does not have a signature, the
- * error class will be `GITERR_OBJECT`.
+ * `GIT_ERROR_INVALID`. If the commit does not have a signature, the
+ * error class will be `GIT_ERROR_OBJECT`.
  *
  * @param signature the signature block; existing content will be
  * overwritten
