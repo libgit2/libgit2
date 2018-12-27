@@ -61,7 +61,7 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting,
 		if (from_glob)
 			return 0;
 
-		giterr_set(GITERR_INVALID, "object is not a committish");
+		git_error_set(GIT_ERROR_INVALID, "object is not a committish");
 		return -1;
 	}
 	if (error < 0)
@@ -88,7 +88,7 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting,
 	commit->uninteresting = uninteresting;
 	list = walk->user_input;
 	if (git_commit_list_insert(commit, &list) == NULL) {
-		giterr_set_oom();
+		git_error_set_oom();
 		return -1;
 	}
 
@@ -135,7 +135,7 @@ static int push_glob(git_revwalk *walk, const char *glob, int hide)
 		git_buf_joinpath(&buf, GIT_REFS_DIR, glob);
 	else
 		git_buf_puts(&buf, glob);
-	GITERR_CHECK_ALLOC_BUF(&buf);
+	GIT_ERROR_CHECK_ALLOC_BUF(&buf);
 
 	/* If no '?', '*' or '[' exist, we append '/ *' to the glob */
 	wildcard = strcspn(glob, "?*[");
@@ -200,7 +200,7 @@ int git_revwalk_push_range(git_revwalk *walk, const char *range)
 
 	if (revspec.flags & GIT_REVPARSE_MERGE_BASE) {
 		/* TODO: support "<commit>...<commit>" */
-		giterr_set(GITERR_INVALID, "symmetric differences not implemented in revwalk");
+		git_error_set(GIT_ERROR_INVALID, "symmetric differences not implemented in revwalk");
 		return GIT_EINVALIDSPEC;
 	}
 
@@ -243,7 +243,7 @@ static int revwalk_next_timesort(git_commit_list_node **object_out, git_revwalk 
 		}
 	}
 
-	giterr_clear();
+	git_error_clear();
 	return GIT_ITEROVER;
 }
 
@@ -451,7 +451,7 @@ static int get_revision(git_commit_list_node **out, git_revwalk *walk, git_commi
 
 	commit = git_commit_list_pop(list);
 	if (!commit) {
-		giterr_clear();
+		git_error_clear();
 		return GIT_ITEROVER;
 	}
 
@@ -562,7 +562,7 @@ static int prepare_walk(git_revwalk *walk)
 
 	/* If there were no pushes, we know that the walk is already over */
 	if (!walk->did_push) {
-		giterr_clear();
+		git_error_clear();
 		return GIT_ITEROVER;
 	}
 
@@ -624,10 +624,10 @@ static int prepare_walk(git_revwalk *walk)
 int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 {
 	git_revwalk *walk = git__calloc(1, sizeof(git_revwalk));
-	GITERR_CHECK_ALLOC(walk);
+	GIT_ERROR_CHECK_ALLOC(walk);
 
 	walk->commits = git_oidmap_alloc();
-	GITERR_CHECK_ALLOC(walk->commits);
+	GIT_ERROR_CHECK_ALLOC(walk->commits);
 
 	if (git_pqueue_init(&walk->iterator_time, 0, 8, git_commit_list_time_cmp) < 0)
 		return -1;
@@ -709,7 +709,7 @@ int git_revwalk_next(git_oid *oid, git_revwalk *walk)
 
 	if (error == GIT_ITEROVER) {
 		git_revwalk_reset(walk);
-		giterr_clear();
+		git_error_clear();
 		return GIT_ITEROVER;
 	}
 

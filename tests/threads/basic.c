@@ -38,7 +38,7 @@ void test_threads_basic__multiple_init(void)
 
 static void *set_error(void *dummy)
 {
-	giterr_set(GITERR_INVALID, "oh no, something happened!\n");
+	git_error_set(GIT_ERROR_INVALID, "oh no, something happened!\n");
 
 	return dummy;
 }

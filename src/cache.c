@@ -33,7 +33,7 @@ static size_t git_cache__max_object_size[8] = {
 int git_cache_set_max_object_size(git_object_t type, size_t size)
 {
 	if (type < 0 || (size_t)type >= ARRAY_SIZE(git_cache__max_object_size)) {
-		giterr_set(GITERR_INVALID, "type out of range");
+		git_error_set(GIT_ERROR_INVALID, "type out of range");
 		return -1;
 	}
 
@@ -66,9 +66,9 @@ int git_cache_init(git_cache *cache)
 {
 	memset(cache, 0, sizeof(*cache));
 	cache->map = git_oidmap_alloc();
-	GITERR_CHECK_ALLOC(cache->map);
+	GIT_ERROR_CHECK_ALLOC(cache->map);
 	if (git_rwlock_init(&cache->lock)) {
-		giterr_set(GITERR_OS, "failed to initialize cache rwlock");
+		git_error_set(GIT_ERROR_OS, "failed to initialize cache rwlock");
 		return -1;
 	}
 	return 0;

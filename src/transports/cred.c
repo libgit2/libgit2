@@ -88,7 +88,7 @@ int git_cred_userpass_plaintext_new(
 	assert(cred && username && password);
 
 	c = git__malloc(sizeof(git_cred_userpass_plaintext));
-	GITERR_CHECK_ALLOC(c);
+	GIT_ERROR_CHECK_ALLOC(c);
 
 	c->parent.credtype = GIT_CREDTYPE_USERPASS_PLAINTEXT;
 	c->parent.free = plaintext_free;
@@ -217,7 +217,7 @@ int git_cred_ssh_key_memory_new(
 	GIT_UNUSED(privatekey);
 	GIT_UNUSED(passphrase);
 
-	giterr_set(GITERR_INVALID,
+	git_error_set(GIT_ERROR_INVALID,
 		"this version of libgit2 was not built with ssh memory credentials.");
 	return -1;
 #endif
@@ -236,25 +236,25 @@ static int git_cred_ssh_key_type_new(
 	assert(username && cred && privatekey);
 
 	c = git__calloc(1, sizeof(git_cred_ssh_key));
-	GITERR_CHECK_ALLOC(c);
+	GIT_ERROR_CHECK_ALLOC(c);
 
 	c->parent.credtype = credtype;
 	c->parent.free = ssh_key_free;
 
 	c->username = git__strdup(username);
-	GITERR_CHECK_ALLOC(c->username);
+	GIT_ERROR_CHECK_ALLOC(c->username);
 
 	c->privatekey = git__strdup(privatekey);
-	GITERR_CHECK_ALLOC(c->privatekey);
+	GIT_ERROR_CHECK_ALLOC(c->privatekey);
 
 	if (publickey) {
 		c->publickey = git__strdup(publickey);
-		GITERR_CHECK_ALLOC(c->publickey);
+		GIT_ERROR_CHECK_ALLOC(c->publickey);
 	}
 
 	if (passphrase) {
 		c->passphrase = git__strdup(passphrase);
-		GITERR_CHECK_ALLOC(c->passphrase);
+		GIT_ERROR_CHECK_ALLOC(c->passphrase);
 	}
 
 	*cred = &c->parent;
@@ -272,13 +272,13 @@ int git_cred_ssh_interactive_new(
 	assert(out && username && prompt_callback);
 
 	c = git__calloc(1, sizeof(git_cred_ssh_interactive));
-	GITERR_CHECK_ALLOC(c);
+	GIT_ERROR_CHECK_ALLOC(c);
 
 	c->parent.credtype = GIT_CREDTYPE_SSH_INTERACTIVE;
 	c->parent.free = ssh_interactive_free;
 
 	c->username = git__strdup(username);
-	GITERR_CHECK_ALLOC(c->username);
+	GIT_ERROR_CHECK_ALLOC(c->username);
 
 	c->prompt_callback = prompt_callback;
 	c->payload = payload;
@@ -293,13 +293,13 @@ int git_cred_ssh_key_from_agent(git_cred **cred, const char *username) {
 	assert(username && cred);
 
 	c = git__calloc(1, sizeof(git_cred_ssh_key));
-	GITERR_CHECK_ALLOC(c);
+	GIT_ERROR_CHECK_ALLOC(c);
 
 	c->parent.credtype = GIT_CREDTYPE_SSH_KEY;
 	c->parent.free = ssh_key_free;
 
 	c->username = git__strdup(username);
-	GITERR_CHECK_ALLOC(c->username);
+	GIT_ERROR_CHECK_ALLOC(c->username);
 
 	c->privatekey = NULL;
 
@@ -320,17 +320,17 @@ int git_cred_ssh_custom_new(
 	assert(username && cred);
 
 	c = git__calloc(1, sizeof(git_cred_ssh_custom));
-	GITERR_CHECK_ALLOC(c);
+	GIT_ERROR_CHECK_ALLOC(c);
 
 	c->parent.credtype = GIT_CREDTYPE_SSH_CUSTOM;
 	c->parent.free = ssh_custom_free;
 
 	c->username = git__strdup(username);
-	GITERR_CHECK_ALLOC(c->username);
+	GIT_ERROR_CHECK_ALLOC(c->username);
 
 	if (publickey_len > 0) {
 		c->publickey = git__malloc(publickey_len);
-		GITERR_CHECK_ALLOC(c->publickey);
+		GIT_ERROR_CHECK_ALLOC(c->publickey);
 
 		memcpy(c->publickey, publickey, publickey_len);
 	}
@@ -350,7 +350,7 @@ int git_cred_default_new(git_cred **cred)
 	assert(cred);
 
 	c = git__calloc(1, sizeof(git_cred_default));
-	GITERR_CHECK_ALLOC(c);
+	GIT_ERROR_CHECK_ALLOC(c);
 
 	c->credtype = GIT_CREDTYPE_DEFAULT;
 	c->free = default_free;
@@ -368,10 +368,10 @@ int git_cred_username_new(git_cred **cred, const char *username)
 
 	len = strlen(username);
 
-	GITERR_CHECK_ALLOC_ADD(&allocsize, sizeof(git_cred_username), len);
-	GITERR_CHECK_ALLOC_ADD(&allocsize, allocsize, 1);
+	GIT_ERROR_CHECK_ALLOC_ADD(&allocsize, sizeof(git_cred_username), len);
+	GIT_ERROR_CHECK_ALLOC_ADD(&allocsize, allocsize, 1);
 	c = git__malloc(allocsize);
-	GITERR_CHECK_ALLOC(c);
+	GIT_ERROR_CHECK_ALLOC(c);
 
 	c->parent.credtype = GIT_CREDTYPE_USERNAME;
 	c->parent.free = username_free;

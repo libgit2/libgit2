@@ -124,19 +124,19 @@ static int lookup_index_alloc(
 {
 	size_t entries_len, hash_len, index_len;
 
-	GITERR_CHECK_ALLOC_MULTIPLY(&entries_len, entries, sizeof(struct index_entry));
-	GITERR_CHECK_ALLOC_MULTIPLY(&hash_len, hash_count, sizeof(struct index_entry *));
+	GIT_ERROR_CHECK_ALLOC_MULTIPLY(&entries_len, entries, sizeof(struct index_entry));
+	GIT_ERROR_CHECK_ALLOC_MULTIPLY(&hash_len, hash_count, sizeof(struct index_entry *));
 
-	GITERR_CHECK_ALLOC_ADD(&index_len, sizeof(struct git_delta_index), entries_len);
-	GITERR_CHECK_ALLOC_ADD(&index_len, index_len, hash_len);
+	GIT_ERROR_CHECK_ALLOC_ADD(&index_len, sizeof(struct git_delta_index), entries_len);
+	GIT_ERROR_CHECK_ALLOC_ADD(&index_len, index_len, hash_len);
 
 	if (!git__is_ulong(index_len)) {
-		giterr_set(GITERR_NOMEMORY, "overly large delta");
+		git_error_set(GIT_ERROR_NOMEMORY, "overly large delta");
 		return -1;
 	}
 
 	*out = git__malloc(index_len);
-	GITERR_CHECK_ALLOC(*out);
+	GIT_ERROR_CHECK_ALLOC(*out);
 
 	*out_len = index_len;
 	return 0;
@@ -291,7 +291,7 @@ int git_delta_create_from_index(
 	if (max_size && bufsize >= max_size)
 		bufsize = (unsigned int)(max_size + MAX_OP_SIZE + 1);
 	buf = git__malloc(bufsize);
-	GITERR_CHECK_ALLOC(buf);
+	GIT_ERROR_CHECK_ALLOC(buf);
 
 	/* store reference buffer size */
 	i = index->src_size;
@@ -438,7 +438,7 @@ int git_delta_create_from_index(
 		buf[bufpos - inscnt - 1] = inscnt;
 
 	if (max_size && bufpos > max_size) {
-		giterr_set(GITERR_NOMEMORY, "delta would be larger than maximum size");
+		git_error_set(GIT_ERROR_NOMEMORY, "delta would be larger than maximum size");
 		git__free(buf);
 		return GIT_EBUFS;
 	}
@@ -466,7 +466,7 @@ static int hdr_sz(
 
 	do {
 		if (d == end) {
-			giterr_set(GITERR_INVALID, "truncated delta");
+			git_error_set(GIT_ERROR_INVALID, "truncated delta");
 			return -1;
 		}
 
@@ -545,18 +545,18 @@ int git_delta_apply(
 	 * base object, resulting in data corruption or segfault.
 	 */
 	if ((hdr_sz(&base_sz, &delta, delta_end) < 0) || (base_sz != base_len)) {
-		giterr_set(GITERR_INVALID, "failed to apply delta: base size does not match given data");
+		git_error_set(GIT_ERROR_INVALID, "failed to apply delta: base size does not match given data");
 		return -1;
 	}
 
 	if (hdr_sz(&res_sz, &delta, delta_end) < 0) {
-		giterr_set(GITERR_INVALID, "failed to apply delta: base size does not match given data");
+		git_error_set(GIT_ERROR_INVALID, "failed to apply delta: base size does not match given data");
 		return -1;
 	}
 
-	GITERR_CHECK_ALLOC_ADD(&alloc_sz, res_sz, 1);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_sz, res_sz, 1);
 	res_dp = git__malloc(alloc_sz);
-	GITERR_CHECK_ALLOC(res_dp);
+	GIT_ERROR_CHECK_ALLOC(res_dp);
 
 	res_dp[res_sz] = '\0';
 	*out = res_dp;
@@ -616,6 +616,6 @@ fail:
 	*out = NULL;
 	*out_len = 0;
 
-	giterr_set(GITERR_INVALID, "failed to apply delta");
+	git_error_set(GIT_ERROR_INVALID, "failed to apply delta");
 	return -1;
 }

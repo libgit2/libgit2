@@ -15,7 +15,7 @@
  *     git_array_t(int) my_ints = GIT_ARRAY_INIT;
  *     ...
  *     int *i = git_array_alloc(my_ints);
- *     GITERR_CHECK_ALLOC(i);
+ *     GIT_ERROR_CHECK_ALLOC(i);
  *     ...
  *     git_array_clear(my_ints);
  *
@@ -36,7 +36,7 @@
 #define git_array_clear(a) \
 	do { git__free((a).ptr); git_array_init(a); } while (0)
 
-#define GITERR_CHECK_ARRAY(a) GITERR_CHECK_ALLOC((a).ptr)
+#define GIT_ERROR_CHECK_ARRAY(a) GIT_ERROR_CHECK_ALLOC((a).ptr)
 
 
 typedef git_array_t(char) git_array_generic_t;

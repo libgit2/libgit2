@@ -78,7 +78,7 @@ static int odb_read_hardcoded(bool *found, git_rawobj *raw, const git_oid *id)
 	raw->type = type;
 	raw->len = 0;
 	raw->data = git__calloc(1, sizeof(uint8_t));
-	GITERR_CHECK_ALLOC(raw->data);
+	GIT_ERROR_CHECK_ALLOC(raw->data);
 
 	*found = true;
 	return 0;
@@ -98,7 +98,7 @@ int git_odb__format_object_header(
 	len = p_snprintf(hdr, hdr_max, "%s %"PRId64, type_str, (int64_t)obj_len);
 
 	if (len < 0 || len >= hdr_max) {
-		giterr_set(GITERR_OS, "object header creation failed");
+		git_error_set(GIT_ERROR_OS, "object header creation failed");
 		return -1;
 	}
 
@@ -116,12 +116,12 @@ int git_odb__hashobj(git_oid *id, git_rawobj *obj)
 	assert(id && obj);
 
 	if (!git_object_typeisloose(obj->type)) {
-		giterr_set(GITERR_INVALID, "invalid object type");
+		git_error_set(GIT_ERROR_INVALID, "invalid object type");
 		return -1;
 	}
 
 	if (!obj->data && obj->len != 0) {
-		giterr_set(GITERR_INVALID, "invalid object");
+		git_error_set(GIT_ERROR_INVALID, "invalid object");
 		return -1;
 	}
 
@@ -204,7 +204,7 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_object_t type)
 	int error = 0;
 
 	if (!git_object_typeisloose(type)) {
-		giterr_set(GITERR_INVALID, "invalid object type for hash");
+		git_error_set(GIT_ERROR_INVALID, "invalid object type for hash");
 		return -1;
 	}
 
@@ -229,7 +229,7 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_object_t type)
 	 * If size is not zero, the file was truncated after we originally
 	 * stat'd it, so we consider this a read failure too */
 	if (read_len < 0 || size > 0) {
-		giterr_set(GITERR_OS, "error reading file for hashing");
+		git_error_set(GIT_ERROR_OS, "error reading file for hashing");
 		error = -1;
 
 		goto done;
@@ -281,7 +281,7 @@ int git_odb__hashlink(git_oid *out, const char *path)
 		return -1;
 
 	if (!git__is_int(st.st_size) || (int)st.st_size < 0) {
-		giterr_set(GITERR_FILESYSTEM, "file size overflow for 32-bit systems");
+		git_error_set(GIT_ERROR_FILESYSTEM, "file size overflow for 32-bit systems");
 		return -1;
 	}
 
@@ -292,14 +292,14 @@ int git_odb__hashlink(git_oid *out, const char *path)
 		int read_len;
 		size_t alloc_size;
 
-		GITERR_CHECK_ALLOC_ADD(&alloc_size, size, 1);
+		GIT_ERROR_CHECK_ALLOC_ADD(&alloc_size, size, 1);
 		link_data = git__malloc(alloc_size);
-		GITERR_CHECK_ALLOC(link_data);
+		GIT_ERROR_CHECK_ALLOC(link_data);
 
 		read_len = p_readlink(path, link_data, size);
 		link_data[size] = '\0';
 		if (read_len != size) {
-			giterr_set(GITERR_OS, "failed to read symlink data for '%s'", path);
+			git_error_set(GIT_ERROR_OS, "failed to read symlink data for '%s'", path);
 			git__free(link_data);
 			return -1;
 		}
@@ -325,7 +325,7 @@ int git_odb_hashfile(git_oid *out, const char *path, git_object_t type)
 		return fd;
 
 	if ((size = git_futils_filesize(fd)) < 0 || !git__is_sizet(size)) {
-		giterr_set(GITERR_OS, "file size overflow for 32-bit systems");
+		git_error_set(GIT_ERROR_OS, "file size overflow for 32-bit systems");
 		p_close(fd);
 		return -1;
 	}
@@ -389,12 +389,12 @@ static int init_fake_wstream(git_odb_stream **stream_p, git_odb_backend *backend
 	fake_wstream *stream;
 
 	if (!git__is_ssizet(size)) {
-		giterr_set(GITERR_ODB, "object size too large to keep in memory");
+		git_error_set(GIT_ERROR_ODB, "object size too large to keep in memory");
 		return -1;
 	}
 
 	stream = git__calloc(1, sizeof(fake_wstream));
-	GITERR_CHECK_ALLOC(stream);
+	GIT_ERROR_CHECK_ALLOC(stream);
 
 	stream->size = size;
 	stream->type = type;
@@ -441,7 +441,7 @@ static int backend_sort_cmp(const void *a, const void *b)
 int git_odb_new(git_odb **out)
 {
 	git_odb *db = git__calloc(1, sizeof(*db));
-	GITERR_CHECK_ALLOC(db);
+	GIT_ERROR_CHECK_ALLOC(db);
 
 	if (git_cache_init(&db->own_cache) < 0 ||
 		git_vector_init(&db->backends, 4, backend_sort_cmp) < 0) {
@@ -462,13 +462,13 @@ static int add_backend_internal(
 
 	assert(odb && backend);
 
-	GITERR_CHECK_VERSION(backend, GIT_ODB_BACKEND_VERSION, "git_odb_backend");
+	GIT_ERROR_CHECK_VERSION(backend, GIT_ODB_BACKEND_VERSION, "git_odb_backend");
 
 	/* Check if the backend is already owned by another ODB */
 	assert(!backend->odb || backend->odb == odb);
 
 	internal = git__malloc(sizeof(backend_internal));
-	GITERR_CHECK_ALLOC(internal);
+	GIT_ERROR_CHECK_ALLOC(internal);
 
 	internal->backend = backend;
 	internal->priority = priority;
@@ -503,7 +503,7 @@ size_t git_odb_num_backends(git_odb *odb)
 
 static int git_odb__error_unsupported_in_backend(const char *action)
 {
-	giterr_set(GITERR_ODB,
+	git_error_set(GIT_ERROR_ODB,
 		"cannot %s - unsupported in the loaded odb backends", action);
 	return -1;
 }
@@ -521,7 +521,7 @@ int git_odb_get_backend(git_odb_backend **out, git_odb *odb, size_t pos)
 		return 0;
 	}
 
-	giterr_set(GITERR_ODB, "no ODB backend loaded at index %" PRIuZ, pos);
+	git_error_set(GIT_ERROR_ODB, "no ODB backend loaded at index %" PRIuZ, pos);
 	return GIT_ENOTFOUND;
 }
 
@@ -546,7 +546,7 @@ int git_odb__add_default_backends(
 		if (as_alternates)
 			return 0;
 
-		giterr_set(GITERR_ODB, "failed to load object database in '%s'", objects_dir);
+		git_error_set(GIT_ERROR_ODB, "failed to load object database in '%s'", objects_dir);
 		return -1;
 	}
 
@@ -657,7 +657,7 @@ int git_odb__set_caps(git_odb *odb, int caps)
 		int val;
 
 		if (!repo) {
-			giterr_set(GITERR_ODB, "cannot access repository to set odb caps");
+			git_error_set(GIT_ERROR_ODB, "cannot access repository to set odb caps");
 			return -1;
 		}
 
@@ -919,7 +919,7 @@ int git_odb_expand_ids(
 		}
 	}
 
-	giterr_clear();
+	git_error_clear();
 	return 0;
 }
 
@@ -1075,7 +1075,7 @@ static int odb_read_1(git_odb_object **out, git_odb *db, const git_oid *id,
 		}
 	}
 
-	giterr_clear();
+	git_error_clear();
 	if ((object = odb_object__alloc(id, &raw)) == NULL) {
 		error = -1;
 		goto out;
@@ -1362,7 +1362,7 @@ int git_odb_open_wstream(
 	}
 
 	ctx = git__malloc(sizeof(git_hash_ctx));
-	GITERR_CHECK_ALLOC(ctx);
+	GIT_ERROR_CHECK_ALLOC(ctx);
 
 	if ((error = git_hash_ctx_init(ctx)) < 0 ||
 		(error = hash_header(ctx, size, type)) < 0)
@@ -1382,7 +1382,7 @@ static int git_odb_stream__invalid_length(
 	const git_odb_stream *stream,
 	const char *action)
 {
-	giterr_set(GITERR_ODB,
+	git_error_set(GIT_ERROR_ODB,
 		"cannot %s - "
 		"Invalid length. %"PRId64" was expected. The "
 		"total size of the received chunks amounts to %"PRId64".",
@@ -1524,7 +1524,7 @@ int git_odb__error_mismatch(const git_oid *expected, const git_oid *actual)
 	git_oid_tostr(expected_oid, sizeof(expected_oid), expected);
 	git_oid_tostr(actual_oid, sizeof(actual_oid), actual);
 
-	giterr_set(GITERR_ODB, "object hash mismatch - expected %s but got %s",
+	git_error_set(GIT_ERROR_ODB, "object hash mismatch - expected %s but got %s",
 		expected_oid, actual_oid);
 
 	return GIT_EMISMATCH;
@@ -1536,23 +1536,23 @@ int git_odb__error_notfound(
 	if (oid != NULL) {
 		char oid_str[GIT_OID_HEXSZ + 1];
 		git_oid_tostr(oid_str, oid_len+1, oid);
-		giterr_set(GITERR_ODB, "object not found - %s (%.*s)",
+		git_error_set(GIT_ERROR_ODB, "object not found - %s (%.*s)",
 			message, (int) oid_len, oid_str);
 	} else
-		giterr_set(GITERR_ODB, "object not found - %s", message);
+		git_error_set(GIT_ERROR_ODB, "object not found - %s", message);
 
 	return GIT_ENOTFOUND;
 }
 
 static int error_null_oid(int error, const char *message)
 {
-	giterr_set(GITERR_ODB, "odb: %s: null OID cannot exist", message);
+	git_error_set(GIT_ERROR_ODB, "odb: %s: null OID cannot exist", message);
 	return error;
 }
 
 int git_odb__error_ambiguous(const char *message)
 {
-	giterr_set(GITERR_ODB, "ambiguous SHA1 prefix - %s", message);
+	git_error_set(GIT_ERROR_ODB, "ambiguous SHA1 prefix - %s", message);
 	return GIT_EAMBIGUOUS;
 }
 

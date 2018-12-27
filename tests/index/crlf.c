@@ -82,8 +82,8 @@ static int add_and_check_file(void *payload, git_buf *actual_path)
 		git_buf_rtrim(&expected_contents);
 
 		if (git_index_add_bypath(g_index, basename) == 0 ||
-			giterr_last()->klass != GITERR_FILTER ||
-			strcmp(expected_contents.ptr, giterr_last()->message) != 0)
+			git_error_last()->klass != GIT_ERROR_FILTER ||
+			strcmp(expected_contents.ptr, git_error_last()->message) != 0)
 			goto done;
 	} else {
 		cl_fail("unexpected index failure");

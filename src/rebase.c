@@ -153,7 +153,7 @@ GIT_INLINE(int) rebase_readint(
 		return error;
 
 	if (git__strntol32(&num, asc_out->ptr, asc_out->size, &eol, 10) < 0 || num < 0 || *eol) {
-		giterr_set(GITERR_REBASE, "the file '%s' contains an invalid numeric value", filename);
+		git_error_set(GIT_ERROR_REBASE, "the file '%s' contains an invalid numeric value", filename);
 		return -1;
 	}
 
@@ -171,7 +171,7 @@ GIT_INLINE(int) rebase_readoid(
 		return error;
 
 	if (str_out->size != GIT_OID_HEXSZ || git_oid_fromstr(out, str_out->ptr) < 0) {
-		giterr_set(GITERR_REBASE, "the file '%s' contains an invalid object ID", filename);
+		git_error_set(GIT_ERROR_REBASE, "the file '%s' contains an invalid object ID", filename);
 		return -1;
 	}
 
@@ -231,7 +231,7 @@ static int rebase_open_merge(git_rebase *rebase)
 
 	/* Read cmt.* */
 	git_array_init_to_size(rebase->operations, end);
-	GITERR_CHECK_ARRAY(rebase->operations);
+	GIT_ERROR_CHECK_ARRAY(rebase->operations);
 
 	for (i = 0; i < end; i++) {
 		git_buf_clear(&cmt);
@@ -241,7 +241,7 @@ static int rebase_open_merge(git_rebase *rebase)
 			goto done;
 
 		operation = rebase_operation_alloc(rebase, GIT_REBASE_OPERATION_PICK, &id, NULL);
-		GITERR_CHECK_ALLOC(operation);
+		GIT_ERROR_CHECK_ALLOC(operation);
 	}
 
 	/* Read 'onto_name' */
@@ -261,7 +261,7 @@ done:
 static int rebase_alloc(git_rebase **out, const git_rebase_options *rebase_opts)
 {
 	git_rebase *rebase = git__calloc(1, sizeof(git_rebase));
-	GITERR_CHECK_ALLOC(rebase);
+	GIT_ERROR_CHECK_ALLOC(rebase);
 
 	*out = NULL;
 
@@ -272,7 +272,7 @@ static int rebase_alloc(git_rebase **out, const git_rebase_options *rebase_opts)
 
 	if (rebase_opts && rebase_opts->rewrite_notes_ref) {
 		rebase->options.rewrite_notes_ref = git__strdup(rebase_opts->rewrite_notes_ref);
-		GITERR_CHECK_ALLOC(rebase->options.rewrite_notes_ref);
+		GIT_ERROR_CHECK_ALLOC(rebase->options.rewrite_notes_ref);
 	}
 
 	*out = rebase;
@@ -282,10 +282,10 @@ static int rebase_alloc(git_rebase **out, const git_rebase_options *rebase_opts)
 
 static int rebase_check_versions(const git_rebase_options *given_opts)
 {
-	GITERR_CHECK_VERSION(given_opts, GIT_REBASE_OPTIONS_VERSION, "git_rebase_options");
+	GIT_ERROR_CHECK_VERSION(given_opts, GIT_REBASE_OPTIONS_VERSION, "git_rebase_options");
 
 	if (given_opts)
-		GITERR_CHECK_VERSION(&given_opts->checkout_options, GIT_CHECKOUT_OPTIONS_VERSION, "git_checkout_options");
+		GIT_ERROR_CHECK_VERSION(&given_opts->checkout_options, GIT_CHECKOUT_OPTIONS_VERSION, "git_checkout_options");
 
 	return 0;
 }
@@ -314,7 +314,7 @@ int git_rebase_open(
 		goto done;
 
 	if (rebase->type == GIT_REBASE_TYPE_NONE) {
-		giterr_set(GITERR_REBASE, "there is no rebase in progress");
+		git_error_set(GIT_ERROR_REBASE, "there is no rebase in progress");
 		error = GIT_ENOTFOUND;
 		goto done;
 	}
@@ -370,14 +370,14 @@ int git_rebase_open(
 
 	switch (rebase->type) {
 	case GIT_REBASE_TYPE_INTERACTIVE:
-		giterr_set(GITERR_REBASE, "interactive rebase is not supported");
+		git_error_set(GIT_ERROR_REBASE, "interactive rebase is not supported");
 		error = -1;
 		break;
 	case GIT_REBASE_TYPE_MERGE:
 		error = rebase_open_merge(rebase);
 		break;
 	case GIT_REBASE_TYPE_APPLY:
-		giterr_set(GITERR_REBASE, "patch application rebase is not supported");
+		git_error_set(GIT_ERROR_REBASE, "patch application rebase is not supported");
 		error = -1;
 		break;
 	default:
@@ -476,7 +476,7 @@ static int rebase_setupfiles(git_rebase *rebase)
 	git_oid_fmt(orig_head, &rebase->orig_head_id);
 
 	if (p_mkdir(rebase->state_path, REBASE_DIR_MODE) < 0) {
-		giterr_set(GITERR_OS, "failed to create rebase directory '%s'", rebase->state_path);
+		git_error_set(GIT_ERROR_OS, "failed to create rebase directory '%s'", rebase->state_path);
 		return -1;
 	}
 
@@ -509,7 +509,7 @@ static int rebase_ensure_not_in_progress(git_repository *repo)
 		return error;
 
 	if (type != GIT_REBASE_TYPE_NONE) {
-		giterr_set(GITERR_REBASE, "there is an existing rebase in progress");
+		git_error_set(GIT_ERROR_REBASE, "there is an existing rebase in progress");
 		return -1;
 	}
 
@@ -534,7 +534,7 @@ static int rebase_ensure_not_dirty(
 			goto done;
 
 		if (git_diff_num_deltas(diff) > 0) {
-			giterr_set(GITERR_REBASE, "uncommitted changes exist in index");
+			git_error_set(GIT_ERROR_REBASE, "uncommitted changes exist in index");
 			error = fail_with;
 			goto done;
 		}
@@ -550,7 +550,7 @@ static int rebase_ensure_not_dirty(
 			goto done;
 
 		if (git_diff_num_deltas(diff) > 0) {
-			giterr_set(GITERR_REBASE, "unstaged changes exist in workdir");
+			git_error_set(GIT_ERROR_REBASE, "unstaged changes exist in workdir");
 			error = fail_with;
 			goto done;
 		}
@@ -599,7 +599,7 @@ static int rebase_init_operations(
 			continue;
 
 		operation = rebase_operation_alloc(rebase, GIT_REBASE_OPERATION_PICK, &id, NULL);
-		GITERR_CHECK_ALLOC(operation);
+		GIT_ERROR_CHECK_ALLOC(operation);
 	}
 
 	error = 0;
@@ -628,17 +628,17 @@ static int rebase_init_merge(
 		goto done;
 
 	rebase->state_path = git_buf_detach(&state_path);
-	GITERR_CHECK_ALLOC(rebase->state_path);
+	GIT_ERROR_CHECK_ALLOC(rebase->state_path);
 
 	if (branch->ref_name && strcmp(branch->ref_name, "HEAD")) {
 		rebase->orig_head_name = git__strdup(branch->ref_name);
-		GITERR_CHECK_ALLOC(rebase->orig_head_name);
+		GIT_ERROR_CHECK_ALLOC(rebase->orig_head_name);
 	} else {
 		rebase->head_detached = 1;
 	}
 
 	rebase->onto_name = git__strdup(rebase_onto_name(onto));
-	GITERR_CHECK_ALLOC(rebase->onto_name);
+	GIT_ERROR_CHECK_ALLOC(rebase->onto_name);
 
 	rebase->quiet = rebase->options.quiet;
 
@@ -807,7 +807,7 @@ static int rebase_next_merge(
 		goto done;
 
 	if ((parent_count = git_commit_parentcount(current_commit)) > 1) {
-		giterr_set(GITERR_REBASE, "cannot rebase a merge commit");
+		git_error_set(GIT_ERROR_REBASE, "cannot rebase a merge commit");
 		error = -1;
 		goto done;
 	} else if (parent_count) {
@@ -864,7 +864,7 @@ static int rebase_next_inmemory(
 		goto done;
 
 	if ((parent_count = git_commit_parentcount(current_commit)) > 1) {
-		giterr_set(GITERR_REBASE, "cannot rebase a merge commit");
+		git_error_set(GIT_ERROR_REBASE, "cannot rebase a merge commit");
 		error = -1;
 		goto done;
 	} else if (parent_count) {
@@ -950,7 +950,7 @@ static int rebase_commit__create(
 	operation = git_array_get(rebase->operations, rebase->current);
 
 	if (git_index_has_conflicts(index)) {
-		giterr_set(GITERR_REBASE, "conflicts have not been resolved");
+		git_error_set(GIT_ERROR_REBASE, "conflicts have not been resolved");
 		error = GIT_EUNMERGED;
 		goto done;
 	}
@@ -962,7 +962,7 @@ static int rebase_commit__create(
 		goto done;
 
 	if (git_oid_equal(&tree_id, git_tree_id(parent_tree))) {
-		giterr_set(GITERR_REBASE, "this patch has already been applied");
+		git_error_set(GIT_ERROR_REBASE, "this patch has already been applied");
 		error = GIT_EAPPLIED;
 		goto done;
 	}
@@ -1148,7 +1148,7 @@ static int notes_ref_lookup(git_buf *out, git_rebase *rebase)
 		if (error != GIT_ENOTFOUND)
 			goto done;
 
-		giterr_clear();
+		git_error_clear();
 		do_rewrite = 1;
 	}
 
@@ -1175,7 +1175,7 @@ static int rebase_copy_note(
 
 	if ((error = git_note_read(&note, rebase->repo, notes_ref, from)) < 0) {
 		if (error == GIT_ENOTFOUND) {
-			giterr_clear();
+			git_error_clear();
 			error = 0;
 		}
 
@@ -1188,7 +1188,7 @@ static int rebase_copy_note(
 				(error = git_signature_now(&who, "unknown", "unknown")) < 0)
 				goto done;
 
-			giterr_clear();
+			git_error_clear();
 		}
 
 		committer = who;
@@ -1216,7 +1216,7 @@ static int rebase_copy_notes(
 
 	if ((error = notes_ref_lookup(&notes_ref, rebase)) < 0) {
 		if (error == GIT_ENOTFOUND) {
-			giterr_clear();
+			git_error_clear();
 			error = 0;
 		}
 
@@ -1259,7 +1259,7 @@ static int rebase_copy_notes(
 	goto done;
 
 on_error:
-	giterr_set(GITERR_REBASE, "invalid rewritten file at line %d", linenum);
+	git_error_set(GIT_ERROR_REBASE, "invalid rewritten file at line %d", linenum);
 	error = -1;
 
 done:

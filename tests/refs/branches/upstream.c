@@ -176,7 +176,7 @@ void test_refs_branches_upstream__no_fetch_refspec(void)
 	cl_git_pass(git_reference_create(&ref, repo, "refs/remotes/matching/master", git_reference_target(branch), 1, "fetch"));
 	cl_git_fail(git_branch_set_upstream(branch, "matching/master"));
 	cl_assert_equal_s("could not determine remote for 'refs/remotes/matching/master'",
-			  giterr_last()->message);
+			  git_error_last()->message);
 
 	/* we can't set it automatically, so let's test the user setting it by hand */
 	cl_git_pass(git_repository_config(&cfg, repo));

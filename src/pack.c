@@ -42,7 +42,7 @@ static int pack_entry_find_offset(
 
 static int packfile_error(const char *message)
 {
-	giterr_set(GITERR_ODB, "invalid pack file - %s", message);
+	git_error_set(GIT_ERROR_ODB, "invalid pack file - %s", message);
 	return -1;
 }
 
@@ -90,12 +90,12 @@ static void cache_free(git_pack_cache *cache)
 static int cache_init(git_pack_cache *cache)
 {
 	cache->entries = git_offmap_alloc();
-	GITERR_CHECK_ALLOC(cache->entries);
+	GIT_ERROR_CHECK_ALLOC(cache->entries);
 
 	cache->memory_limit = GIT_PACK_CACHE_MEMORY_LIMIT;
 
 	if (git_mutex_init(&cache->lock)) {
-		giterr_set(GITERR_OS, "failed to initialize pack cache mutex");
+		git_error_set(GIT_ERROR_OS, "failed to initialize pack cache mutex");
 
 		git__free(cache->entries);
 		cache->entries = NULL;
@@ -156,7 +156,7 @@ static int cache_add(
 	entry = new_cache_object(base);
 	if (entry) {
 		if (git_mutex_lock(&cache->lock) < 0) {
-			giterr_set(GITERR_OS, "failed to lock cache");
+			git_error_set(GIT_ERROR_OS, "failed to lock cache");
 			git__free(entry);
 			return -1;
 		}
@@ -217,7 +217,7 @@ static int pack_index_check(const char *path, struct git_pack_file *p)
 
 	if (p_fstat(fd, &st) < 0) {
 		p_close(fd);
-		giterr_set(GITERR_OS, "unable to stat pack index '%s'", path);
+		git_error_set(GIT_ERROR_OS, "unable to stat pack index '%s'", path);
 		return -1;
 	}
 
@@ -226,7 +226,7 @@ static int pack_index_check(const char *path, struct git_pack_file *p)
 		(idx_size = (size_t)st.st_size) < 4 * 256 + 20 + 20)
 	{
 		p_close(fd);
-		giterr_set(GITERR_ODB, "invalid pack index '%s'", path);
+		git_error_set(GIT_ERROR_ODB, "invalid pack index '%s'", path);
 		return -1;
 	}
 
@@ -419,13 +419,13 @@ static int packfile_unpack_header1(
 	shift = 4;
 	while (c & 0x80) {
 		if (len <= used) {
-			giterr_set(GITERR_ODB, "buffer too small");
+			git_error_set(GIT_ERROR_ODB, "buffer too small");
 			return GIT_EBUFS;
 		}
 
 		if (bitsizeof(long) <= shift) {
 			*usedp = 0;
-			giterr_set(GITERR_ODB, "packfile corrupted");
+			git_error_set(GIT_ERROR_ODB, "packfile corrupted");
 			return -1;
 		}
 
@@ -557,7 +557,7 @@ static int pack_dependency_chain(git_dependency_chain *chain_out,
 		/* if we run out of space on the small stack, use the array */
 		if (elem_pos == SMALL_STACK_SIZE) {
 			git_array_init_to_size(chain, elem_pos);
-			GITERR_CHECK_ARRAY(chain);
+			GIT_ERROR_CHECK_ARRAY(chain);
 			memcpy(chain.ptr, small_stack, elem_pos * sizeof(struct pack_chain_elem));
 			chain.size = elem_pos;
 			use_heap = 1;
@@ -691,9 +691,9 @@ int git_packfile_unpack(
 	if (cached && stack_size == 1) {
 		void *data = obj->data;
 
-		GITERR_CHECK_ALLOC_ADD(&alloclen, obj->len, 1);
+		GIT_ERROR_CHECK_ALLOC_ADD(&alloclen, obj->len, 1);
 		obj->data = git__malloc(alloclen);
-		GITERR_CHECK_ALLOC(obj->data);
+		GIT_ERROR_CHECK_ALLOC(obj->data);
 
 		memcpy(obj->data, data, obj->len + 1);
 		git_atomic_dec(&cached->refcount);
@@ -793,7 +793,7 @@ int git_packfile_stream_open(git_packfile_stream *obj, struct git_pack_file *p, 
 	obj->zstream.next_out = Z_NULL;
 	st = inflateInit(&obj->zstream);
 	if (st != Z_OK) {
-		giterr_set(GITERR_ZLIB, "failed to init packfile stream");
+		git_error_set(GIT_ERROR_ZLIB, "failed to init packfile stream");
 		return -1;
 	}
 
@@ -824,7 +824,7 @@ ssize_t git_packfile_stream_read(git_packfile_stream *obj, void *buffer, size_t 
 	written = len - obj->zstream.avail_out;
 
 	if (st != Z_OK && st != Z_STREAM_END) {
-		giterr_set(GITERR_ZLIB, "error reading from the zlib stream");
+		git_error_set(GIT_ERROR_ZLIB, "error reading from the zlib stream");
 		return -1;
 	}
 
@@ -858,9 +858,9 @@ static int packfile_unpack_compressed(
 	z_stream stream;
 	unsigned char *buffer, *in;
 
-	GITERR_CHECK_ALLOC_ADD(&buf_size, size, 1);
+	GIT_ERROR_CHECK_ALLOC_ADD(&buf_size, size, 1);
 	buffer = git__calloc(1, buf_size);
-	GITERR_CHECK_ALLOC(buffer);
+	GIT_ERROR_CHECK_ALLOC(buffer);
 
 	memset(&stream, 0, sizeof(stream));
 	stream.next_out = buffer;
@@ -871,7 +871,7 @@ static int packfile_unpack_compressed(
 	st = inflateInit(&stream);
 	if (st != Z_OK) {
 		git__free(buffer);
-		giterr_set(GITERR_ZLIB, "failed to init zlib stream on unpack");
+		git_error_set(GIT_ERROR_ZLIB, "failed to init zlib stream on unpack");
 
 		return -1;
 	}
@@ -898,7 +898,7 @@ static int packfile_unpack_compressed(
 
 	if ((st != Z_STREAM_END) || stream.total_out != size) {
 		git__free(buffer);
-		giterr_set(GITERR_ZLIB, "error inflating zlib stream");
+		git_error_set(GIT_ERROR_ZLIB, "error inflating zlib stream");
 		return -1;
 	}
 
@@ -1087,7 +1087,7 @@ static int packfile_open(struct git_pack_file *p)
 	return 0;
 
 cleanup:
-	giterr_set(GITERR_OS, "invalid packfile '%s'", p->pack_name);
+	git_error_set(GIT_ERROR_OS, "invalid packfile '%s'", p->pack_name);
 
 	if (p->mwf.fd >= 0)
 		p_close(p->mwf.fd);
@@ -1126,11 +1126,11 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 	if (path_len < strlen(".idx"))
 		return git_odb__error_notfound("invalid packfile path", NULL, 0);
 
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, sizeof(*p), path_len);
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 2);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, sizeof(*p), path_len);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 2);
 
 	p = git__calloc(1, alloc_len);
-	GITERR_CHECK_ALLOC(p);
+	GIT_ERROR_CHECK_ALLOC(p);
 
 	memcpy(p->pack_name, path, path_len + 1);
 
@@ -1163,7 +1163,7 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 	p->index_version = -1;
 
 	if (git_mutex_init(&p->lock)) {
-		giterr_set(GITERR_OS, "failed to initialize packfile mutex");
+		git_error_set(GIT_ERROR_OS, "failed to initialize packfile mutex");
 		git__free(p);
 		return -1;
 	}
@@ -1266,7 +1266,7 @@ int git_pack_foreach_entry(
 
 	for (i = 0; i < p->num_objects; i++)
 		if ((error = cb(p->oids[i], data)) != 0)
-			return giterr_set_after_callback(error);
+			return git_error_set_after_callback(error);
 
 	return error;
 }
@@ -1352,7 +1352,7 @@ static int pack_entry_find_offset(
 		return git_odb__error_ambiguous("found multiple offsets for pack entry");
 
 	if ((offset = nth_packed_object_offset(p, pos)) < 0) {
-		giterr_set(GITERR_ODB, "packfile index is corrupt");
+		git_error_set(GIT_ERROR_ODB, "packfile index is corrupt");
 		return -1;
 	}
 

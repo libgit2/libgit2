@@ -532,7 +532,7 @@ int p_utimes(const char *path, const struct p_timeval times[2])
 		attrs_new = attrs_orig & ~FILE_ATTRIBUTE_READONLY;
 
 		if (!SetFileAttributesW(wpath, attrs_new)) {
-			giterr_set(GITERR_OS, "failed to set attributes");
+			git_error_set(GIT_ERROR_OS, "failed to set attributes");
 			return -1;
 		}
 	}
@@ -852,7 +852,7 @@ int p_rename(const char *from, const char *to)
 int p_recv(GIT_SOCKET socket, void *buffer, size_t length, int flags)
 {
 	if ((size_t)((int)length) != length)
-		return -1; /* giterr_set will be done by caller */
+		return -1; /* git_error_set will be done by caller */
 
 	return recv(socket, buffer, (int)length, flags);
 }
@@ -860,7 +860,7 @@ int p_recv(GIT_SOCKET socket, void *buffer, size_t length, int flags)
 int p_send(GIT_SOCKET socket, const void *buffer, size_t length, int flags)
 {
 	if ((size_t)((int)length) != length)
-		return -1; /* giterr_set will be done by caller */
+		return -1; /* git_error_set will be done by caller */
 
 	return send(socket, buffer, (int)length, flags);
 }

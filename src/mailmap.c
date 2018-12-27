@@ -149,7 +149,7 @@ int git_mailmap_new(git_mailmap **out)
 {
 	int error;
 	git_mailmap *mm = git__calloc(1, sizeof(git_mailmap));
-	GITERR_CHECK_ALLOC(mm);
+	GIT_ERROR_CHECK_ALLOC(mm);
 
 	error = git_vector_init(&mm->entries, 0, mailmap_entry_cmp);
 	if (error < 0) {
@@ -183,24 +183,24 @@ static int mailmap_add_entry_unterminated(
 {
 	int error;
 	git_mailmap_entry *entry = git__calloc(1, sizeof(git_mailmap_entry));
-	GITERR_CHECK_ALLOC(entry);
+	GIT_ERROR_CHECK_ALLOC(entry);
 
 	assert(mm && replace_email && *replace_email);
 
 	if (real_name_size > 0) {
 		entry->real_name = git__substrdup(real_name, real_name_size);
-		GITERR_CHECK_ALLOC(entry->real_name);
+		GIT_ERROR_CHECK_ALLOC(entry->real_name);
 	}
 	if (real_email_size > 0) {
 		entry->real_email = git__substrdup(real_email, real_email_size);
-		GITERR_CHECK_ALLOC(entry->real_email);
+		GIT_ERROR_CHECK_ALLOC(entry->real_email);
 	}
 	if (replace_name_size > 0) {
 		entry->replace_name = git__substrdup(replace_name, replace_name_size);
-		GITERR_CHECK_ALLOC(entry->replace_name);
+		GIT_ERROR_CHECK_ALLOC(entry->replace_name);
 	}
 	entry->replace_email = git__substrdup(replace_email, replace_email_size);
-	GITERR_CHECK_ALLOC(entry->replace_email);
+	GIT_ERROR_CHECK_ALLOC(entry->replace_email);
 
 	error = git_vector_insert_sorted(&mm->entries, entry, mailmap_entry_replace);
 	if (error == GIT_EEXISTS)

@@ -408,7 +408,7 @@ int git_index_open(git_index **index_out, const char *index_path)
 	assert(index_out);
 
 	index = git__calloc(1, sizeof(git_index));
-	GITERR_CHECK_ALLOC(index);
+	GIT_ERROR_CHECK_ALLOC(index);
 
 	git_pool_init(&index->tree_pool, 1);
 
@@ -550,7 +550,7 @@ int git_index_clear(git_index *index)
 
 static int create_index_error(int error, const char *msg)
 {
-	giterr_set_str(GITERR_INDEX, msg);
+	git_error_set_str(GIT_ERROR_INDEX, msg);
 	return error;
 }
 
@@ -616,7 +616,7 @@ static int compare_checksum(git_index *index)
 
 	if (p_lseek(fd, -20, SEEK_END) < 0) {
 		p_close(fd);
-		giterr_set(GITERR_OS, "failed to seek to end of file");
+		git_error_set(GIT_ERROR_OS, "failed to seek to end of file");
 		return -1;
 	}
 
@@ -651,8 +651,8 @@ int git_index_read(git_index *index, int force)
 
 	if ((updated = git_futils_filestamp_check(&stamp, index->index_file_path) < 0) ||
 	    ((updated = compare_checksum(index)) < 0)) {
-		giterr_set(
-			GITERR_INDEX,
+		git_error_set(
+			GIT_ERROR_INDEX,
 			"failed to read index: '%s' no longer exists",
 			index->index_file_path);
 		return updated;
@@ -685,7 +685,7 @@ int git_index_read(git_index *index, int force)
 int git_index_read_safely(git_index *index)
 {
 	if (git_index__enforce_unsaved_safety && index->dirty) {
-		giterr_set(GITERR_INDEX,
+		git_error_set(GIT_ERROR_INDEX,
 			"the index has unsaved changes that would be overwritten by this operation");
 		return GIT_EINDEXDIRTY;
 	}
@@ -698,7 +698,7 @@ int git_index__changed_relative_to(
 {
 	/* attempt to update index (ignoring errors) */
 	if (git_index_read(index, false) < 0)
-		giterr_clear();
+		git_error_clear();
 
 	return !!git_oid_cmp(&index->checksum, checksum);
 }
@@ -781,7 +781,7 @@ int git_index_set_version(git_index *index, unsigned int version)
 
 	if (version < INDEX_VERSION_NUMBER_LB ||
 	    version > INDEX_VERSION_NUMBER_UB) {
-		giterr_set(GITERR_INDEX, "invalid version number");
+		git_error_set(GIT_ERROR_INDEX, "invalid version number");
 		return -1;
 	}
 
@@ -864,7 +864,7 @@ const git_index_entry *git_index_get_bypath(
 	if (git_idxmap_valid_index(index->entries_map, pos))
 		return git_idxmap_value_at(index->entries_map, pos);
 
-	giterr_set(GITERR_INDEX, "index does not contain '%s'", path);
+	git_error_set(GIT_ERROR_INDEX, "index does not contain '%s'", path);
 	return NULL;
 }
 
@@ -926,14 +926,14 @@ static int index_entry_create(
 		mode = st->st_mode;
 
 	if (!git_path_isvalid(repo, path, mode, path_valid_flags)) {
-		giterr_set(GITERR_INDEX, "invalid path: '%s'", path);
+		git_error_set(GIT_ERROR_INDEX, "invalid path: '%s'", path);
 		return -1;
 	}
 
-	GITERR_CHECK_ALLOC_ADD(&alloclen, sizeof(struct entry_internal), pathlen);
-	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloclen, sizeof(struct entry_internal), pathlen);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
 	entry = git__calloc(1, alloclen);
-	GITERR_CHECK_ALLOC(entry);
+	GIT_ERROR_CHECK_ALLOC(entry);
 
 	entry->pathlen = pathlen;
 	memcpy(entry->path, path, pathlen);
@@ -1030,7 +1030,7 @@ static int index_entry_reuc_init(git_index_reuc_entry **reuc_out,
 	assert(reuc_out && path);
 
 	*reuc_out = reuc = reuc_entry_alloc(path);
-	GITERR_CHECK_ALLOC(reuc);
+	GIT_ERROR_CHECK_ALLOC(reuc);
 
 	if ((reuc->mode[0] = ancestor_mode) > 0) {
 		assert(ancestor_oid);
@@ -1177,7 +1177,7 @@ static int check_file_directory_collision(git_index *index,
 {
 	if (has_file_name(index, entry, pos, ok_to_replace) < 0 ||
 	    has_dir_name(index, entry, ok_to_replace) < 0) {
-		giterr_set(GITERR_INDEX,
+		git_error_set(GIT_ERROR_INDEX,
 			"'%s' appears as both a file and a directory", entry->path);
 		return -1;
 	}
@@ -1259,7 +1259,7 @@ static int index_no_dups(void **old, void *new)
 {
 	const git_index_entry *entry = new;
 	GIT_UNUSED(old);
-	giterr_set(GITERR_INDEX, "'%s' appears multiple times at stage %d",
+	git_error_set(GIT_ERROR_INDEX, "'%s' appears multiple times at stage %d",
 		entry->path, GIT_INDEX_ENTRY_STAGE(entry));
 	return GIT_EEXISTS;
 }
@@ -1469,7 +1469,7 @@ int git_index_add_frombuffer(
 			"Index is not backed up by an existing repository.");
 
 	if (!is_file_or_link(source_entry->mode)) {
-		giterr_set(GITERR_INDEX, "invalid filemode");
+		git_error_set(GIT_ERROR_INDEX, "invalid filemode");
 		return -1;
 	}
 
@@ -1510,7 +1510,7 @@ static int add_repo_as_submodule(git_index_entry **out, git_index *index, const 
 		return error;
 
 	if ((error = p_stat(abspath.ptr, &st)) < 0) {
-		giterr_set(GITERR_OS, "failed to stat repository dir");
+		git_error_set(GIT_ERROR_OS, "failed to stat repository dir");
 		return -1;
 	}
 
@@ -1554,13 +1554,13 @@ int git_index_add_bypath(git_index *index, const char *path)
 		git_submodule *sm;
 		git_error_state err;
 
-		giterr_state_capture(&err, ret);
+		git_error_state_capture(&err, ret);
 
 		ret = git_submodule_lookup(&sm, INDEX_OWNER(index), path);
 		if (ret == GIT_ENOTFOUND)
-			return giterr_state_restore(&err);
+			return git_error_state_restore(&err);
 
-		giterr_state_free(&err);
+		git_error_state_free(&err);
 
 		/*
 		 * EEXISTS means that there is a repository at that path, but it's not known
@@ -1602,7 +1602,7 @@ int git_index_remove_bypath(git_index *index, const char *path)
 		return ret;
 
 	if (ret == GIT_ENOTFOUND)
-		giterr_clear();
+		git_error_clear();
 
 	return 0;
 }
@@ -1656,7 +1656,7 @@ int git_index_add(git_index *index, const git_index_entry *source_entry)
 	assert(index && source_entry && source_entry->path);
 
 	if (!valid_filemode(source_entry->mode)) {
-		giterr_set(GITERR_INDEX, "invalid entry mode");
+		git_error_set(GIT_ERROR_INDEX, "invalid entry mode");
 		return -1;
 	}
 
@@ -1680,8 +1680,8 @@ int git_index_remove(git_index *index, const char *path, int stage)
 	DELETE_IN_MAP(index, &remove_key);
 
 	if (index_find(&position, index, path, 0, stage) < 0) {
-		giterr_set(
-			GITERR_INDEX, "index does not contain %s at stage %d", path, stage);
+		git_error_set(
+			GIT_ERROR_INDEX, "index does not contain %s at stage %d", path, stage);
 		error = GIT_ENOTFOUND;
 	} else {
 		error = index_remove_entry(index, position);
@@ -1753,7 +1753,7 @@ int git_index_find(size_t *at_pos, git_index *index, const char *path)
 
 	if (git_vector_bsearch2(
 			&pos, &index->entries, index->entries_search_path, path) < 0) {
-		giterr_set(GITERR_INDEX, "index does not contain %s", path);
+		git_error_set(GIT_ERROR_INDEX, "index does not contain %s", path);
 		return GIT_ENOTFOUND;
 	}
 
@@ -1795,7 +1795,7 @@ int git_index_conflict_add(git_index *index,
 	/* Validate entries */
 	for (i = 0; i < 3; i++) {
 		if (entries[i] && !valid_filemode(entries[i]->mode)) {
-			giterr_set(GITERR_INDEX, "invalid filemode for stage %d entry",
+			git_error_set(GIT_ERROR_INDEX, "invalid filemode for stage %d entry",
 				i + 1);
 			ret = -1;
 			goto on_error;
@@ -1811,7 +1811,7 @@ int git_index_conflict_add(git_index *index,
 			if (ret != GIT_ENOTFOUND)
 				goto on_error;
 
-			giterr_clear();
+			git_error_clear();
 			ret = 0;
 		}
 	}
@@ -1981,7 +1981,7 @@ int git_index_iterator_new(
 	assert(iterator_out && index);
 
 	it = git__calloc(1, sizeof(git_index_iterator));
-	GITERR_CHECK_ALLOC(it);
+	GIT_ERROR_CHECK_ALLOC(it);
 
 	if ((error = git_index_snapshot_new(&it->snap, index)) < 0) {
 		git__free(it);
@@ -2025,7 +2025,7 @@ int git_index_conflict_iterator_new(
 	assert(iterator_out && index);
 
 	it = git__calloc(1, sizeof(git_index_conflict_iterator));
-	GITERR_CHECK_ALLOC(it);
+	GIT_ERROR_CHECK_ALLOC(it);
 
 	it->index = index;
 
@@ -2111,7 +2111,7 @@ int git_index_name_add(git_index *index,
 	assert((ancestor && ours) || (ancestor && theirs) || (ours && theirs));
 
 	conflict_name = git__calloc(1, sizeof(git_index_name_entry));
-	GITERR_CHECK_ALLOC(conflict_name);
+	GIT_ERROR_CHECK_ALLOC(conflict_name);
 
 	if ((ancestor && !(conflict_name->ancestor = git__strdup(ancestor))) ||
 		(ours     && !(conflict_name->ours     = git__strdup(ours))) ||
@@ -2251,7 +2251,7 @@ void git_index_reuc_clear(git_index *index)
 
 static int index_error_invalid(const char *message)
 {
-	giterr_set(GITERR_INDEX, "invalid data in index - %s", message);
+	git_error_set(GIT_ERROR_INDEX, "invalid data in index - %s", message);
 	return -1;
 }
 
@@ -2274,7 +2274,7 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 			return index_error_invalid("reading reuc entries");
 
 		lost = reuc_entry_alloc(buffer);
-		GITERR_CHECK_ALLOC(lost);
+		GIT_ERROR_CHECK_ALLOC(lost);
 
 		size -= len;
 		buffer += len;
@@ -2347,7 +2347,7 @@ static int read_conflict_names(git_index *index, const char *buffer, size_t size
 		ptr = NULL; \
 	else { \
 		ptr = git__malloc(len); \
-		GITERR_CHECK_ALLOC(ptr); \
+		GIT_ERROR_CHECK_ALLOC(ptr); \
 		memcpy(ptr, buffer, len); \
 	} \
 	\
@@ -2356,7 +2356,7 @@ static int read_conflict_names(git_index *index, const char *buffer, size_t size
 
 	while (size) {
 		git_index_name_entry *conflict_name = git__calloc(1, sizeof(git_index_name_entry));
-		GITERR_CHECK_ALLOC(conflict_name);
+		GIT_ERROR_CHECK_ALLOC(conflict_name);
 
 		read_conflict_name(conflict_name->ancestor);
 		read_conflict_name(conflict_name->ours);
@@ -2478,14 +2478,14 @@ static int read_entry(
 		prefix_len = last_len - strip_len;
 		suffix_len = strlen(path_ptr + varint_len);
 
-		GITERR_CHECK_ALLOC_ADD(&path_len, prefix_len, suffix_len);
-		GITERR_CHECK_ALLOC_ADD(&path_len, path_len, 1);
+		GIT_ERROR_CHECK_ALLOC_ADD(&path_len, prefix_len, suffix_len);
+		GIT_ERROR_CHECK_ALLOC_ADD(&path_len, path_len, 1);
 
 		if (path_len > GIT_PATH_MAX)
 			return index_error_invalid("unreasonable path length");
 
 		tmp_path = git__malloc(path_len);
-		GITERR_CHECK_ALLOC(tmp_path);
+		GIT_ERROR_CHECK_ALLOC(tmp_path);
 
 		memcpy(tmp_path, last, prefix_len);
 		memcpy(tmp_path + prefix_len, path_ptr + varint_len, suffix_len + 1);
@@ -3132,7 +3132,7 @@ int git_index_read_tree(git_index *index, const git_tree *tree)
 		INSERT_IN_MAP_EX(index, entries_map, e, &error);
 
 		if (error < 0) {
-			giterr_set(GITERR_INDEX, "failed to insert entry into map");
+			git_error_set(GIT_ERROR_INDEX, "failed to insert entry into map");
 			return error;
 		}
 	}
@@ -3257,7 +3257,7 @@ static int git_index_read_iterator(
 			error = git_vector_insert(&remove_entries, remove_entry);
 
 		if (error < 0) {
-			giterr_set(GITERR_INDEX, "failed to insert entry");
+			git_error_set(GIT_ERROR_INDEX, "failed to insert entry");
 			goto done;
 		}
 
@@ -3366,7 +3366,7 @@ int git_index_add_all(
 	error = index_apply_to_wd_diff(index, INDEX_ACTION_ADDALL, paths, flags, cb, payload);
 
 	if (error)
-		giterr_set_after_callback(error);
+		git_error_set_after_callback(error);
 
 cleanup:
 	git_iterator_free(wditer);
@@ -3468,7 +3468,7 @@ static int index_apply_to_wd_diff(git_index *index, int action, const git_strarr
 	git_diff_free(diff);
 
 	if (error) /* make sure error is set if callback stopped iteration */
-		giterr_set_after_callback(error);
+		git_error_set_after_callback(error);
 
 cleanup:
 	git_pathspec__clear(&ps);
@@ -3525,7 +3525,7 @@ static int index_apply_to_all(
 			error = git_index_add_bypath(index, path.ptr);
 
 			if (error == GIT_ENOTFOUND) {
-				giterr_clear();
+				git_error_clear();
 
 				error = git_index_remove_bypath(index, path.ptr);
 
@@ -3538,7 +3538,7 @@ static int index_apply_to_all(
 				i--; /* back up foreach if we removed this */
 			break;
 		default:
-			giterr_set(GITERR_INVALID, "unknown index action %d", action);
+			git_error_set(GIT_ERROR_INVALID, "unknown index action %d", action);
 			error = -1;
 			break;
 		}
@@ -3560,7 +3560,7 @@ int git_index_remove_all(
 		index, INDEX_ACTION_REMOVE, pathspec, cb, payload);
 
 	if (error) /* make sure error is set if callback stopped iteration */
-		giterr_set_after_callback(error);
+		git_error_set_after_callback(error);
 
 	return error;
 }
@@ -3573,7 +3573,7 @@ int git_index_update_all(
 {
 	int error = index_apply_to_wd_diff(index, INDEX_ACTION_UPDATE, pathspec, 0, cb, payload);
 	if (error) /* make sure error is set if callback stopped iteration */
-		giterr_set_after_callback(error);
+		git_error_set_after_callback(error);
 
 	return error;
 }
@@ -3629,7 +3629,7 @@ int git_indexwriter_init(
 		&writer->file, index->index_file_path, GIT_FILEBUF_HASH_CONTENTS, GIT_INDEX_FILE_MODE)) < 0) {
 
 		if (error == GIT_ELOCKED)
-			giterr_set(GITERR_INDEX, "the index is locked; this might be due to a concurrent or crashed process");
+			git_error_set(GIT_ERROR_INDEX, "the index is locked; this might be due to a concurrent or crashed process");
 
 		return error;
 	}
@@ -3678,7 +3678,7 @@ int git_indexwriter_commit(git_indexwriter *writer)
 
 	if ((error = git_futils_filestamp_check(
 		&writer->index->stamp, writer->index->index_file_path)) < 0) {
-		giterr_set(GITERR_OS, "could not read index timestamp");
+		git_error_set(GIT_ERROR_OS, "could not read index timestamp");
 		return -1;
 	}
 

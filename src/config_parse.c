@@ -17,7 +17,7 @@ const char *git_config_escaped = "\n\t\b\"\\";
 static void set_parse_error(git_config_parser *reader, int col, const char *error_str)
 {
 	const char *file = reader->file ? reader->file->path : "in-memory";
-	giterr_set(GITERR_CONFIG, "failed to parse config file: %s (in %s:%"PRIuZ", column %d)",
+	git_error_set(GIT_ERROR_CONFIG, "failed to parse config file: %s (in %s:%"PRIuZ", column %d)",
 		error_str, file, reader->ctx.line_num, col);
 }
 
@@ -87,8 +87,8 @@ static int parse_section_header_ext(git_config_parser *reader, const char *line,
 		goto end_error;
 	}
 
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, base_name_len, quoted_len);
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 2);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, base_name_len, quoted_len);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 2);
 
 	if (git_buf_grow(&buf, alloc_len) < 0 ||
 	    git_buf_printf(&buf, "%s.", base_name) < 0)
@@ -169,9 +169,9 @@ static int parse_section_header(git_config_parser *reader, char **section_out)
 		return -1;
 	}
 
-	GITERR_CHECK_ALLOC_ADD(&line_len, (size_t)(name_end - line), 1);
+	GIT_ERROR_CHECK_ALLOC_ADD(&line_len, (size_t)(name_end - line), 1);
 	name = git__malloc(line_len);
-	GITERR_CHECK_ALLOC(name);
+	GIT_ERROR_CHECK_ALLOC(name);
 
 	name_length = 0;
 	pos = 0;
@@ -304,7 +304,7 @@ static int unescape_line(
 				*fixed++ = git_config_escaped[esc - git_config_escapes];
 			} else {
 				git__free(str);
-				giterr_set(GITERR_CONFIG, "invalid escape at %s", ptr);
+				git_error_set(GIT_ERROR_CONFIG, "invalid escape at %s", ptr);
 				return -1;
 			}
 		}
@@ -330,7 +330,7 @@ static int parse_multiline_variable(git_config_parser *reader, git_buf *value, i
 		/* Check that the next line exists */
 		git_parse_advance_line(&reader->ctx);
 		line = git__strndup(reader->ctx.line, reader->ctx.line_len);
-		GITERR_CHECK_ALLOC(line);
+		GIT_ERROR_CHECK_ALLOC(line);
 
 		/*
 		 * We've reached the end of the file, there is no continuation.
@@ -420,7 +420,7 @@ static int parse_variable(git_config_parser *reader, char **var_name, char **var
 
 	git_parse_advance_ws(&reader->ctx);
 	line = git__strndup(reader->ctx.line, reader->ctx.line_len);
-	GITERR_CHECK_ALLOC(line);
+	GIT_ERROR_CHECK_ALLOC(line);
 
 	quote_count = strip_comments(line, 0);
 

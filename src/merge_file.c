@@ -130,7 +130,7 @@ static int merge_file__xdiff(
 
 	if ((xdl_result = xdl_merge(&ancestor_mmfile, &our_mmfile,
 		&their_mmfile, &xmparam, &mmbuffer)) < 0) {
-		giterr_set(GITERR_MERGE, "failed to merge files");
+		git_error_set(GIT_ERROR_MERGE, "failed to merge files");
 		error = -1;
 		goto done;
 	}

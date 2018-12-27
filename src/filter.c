@@ -157,15 +157,15 @@ static int filter_registry_insert(
 	if (filter_def_scan_attrs(&attrs, &nattr, &nmatch, filter->attributes) < 0)
 		return -1;
 
-	GITERR_CHECK_ALLOC_MULTIPLY(&alloc_len, nattr, 2);
-	GITERR_CHECK_ALLOC_MULTIPLY(&alloc_len, alloc_len, sizeof(char *));
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, sizeof(git_filter_def));
+	GIT_ERROR_CHECK_ALLOC_MULTIPLY(&alloc_len, nattr, 2);
+	GIT_ERROR_CHECK_ALLOC_MULTIPLY(&alloc_len, alloc_len, sizeof(char *));
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, sizeof(git_filter_def));
 
 	fdef = git__calloc(1, alloc_len);
-	GITERR_CHECK_ALLOC(fdef);
+	GIT_ERROR_CHECK_ALLOC(fdef);
 
 	fdef->filter_name = git__strdup(name);
-	GITERR_CHECK_ALLOC(fdef->filter_name);
+	GIT_ERROR_CHECK_ALLOC(fdef->filter_name);
 
 	fdef->filter      = filter;
 	fdef->priority    = priority;
@@ -269,13 +269,13 @@ int git_filter_register(
 	assert(name && filter);
 
 	if (git_rwlock_wrlock(&filter_registry.lock) < 0) {
-		giterr_set(GITERR_OS, "failed to lock filter registry");
+		git_error_set(GIT_ERROR_OS, "failed to lock filter registry");
 		return -1;
 	}
 
 	if (!filter_registry_find(NULL, name)) {
-		giterr_set(
-			GITERR_FILTER, "attempt to reregister existing filter '%s'", name);
+		git_error_set(
+			GIT_ERROR_FILTER, "attempt to reregister existing filter '%s'", name);
 		error = GIT_EEXISTS;
 		goto done;
 	}
@@ -297,17 +297,17 @@ int git_filter_unregister(const char *name)
 
 	/* cannot unregister default filters */
 	if (!strcmp(GIT_FILTER_CRLF, name) || !strcmp(GIT_FILTER_IDENT, name)) {
-		giterr_set(GITERR_FILTER, "cannot unregister filter '%s'", name);
+		git_error_set(GIT_ERROR_FILTER, "cannot unregister filter '%s'", name);
 		return -1;
 	}
 
 	if (git_rwlock_wrlock(&filter_registry.lock) < 0) {
-		giterr_set(GITERR_OS, "failed to lock filter registry");
+		git_error_set(GIT_ERROR_OS, "failed to lock filter registry");
 		return -1;
 	}
 
 	if ((fdef = filter_registry_lookup(&pos, name)) == NULL) {
-		giterr_set(GITERR_FILTER, "cannot find filter '%s' to unregister", name);
+		git_error_set(GIT_ERROR_FILTER, "cannot find filter '%s' to unregister", name);
 		error = GIT_ENOTFOUND;
 		goto done;
 	}
@@ -348,7 +348,7 @@ git_filter *git_filter_lookup(const char *name)
 	git_filter *filter = NULL;
 
 	if (git_rwlock_rdlock(&filter_registry.lock) < 0) {
-		giterr_set(GITERR_OS, "failed to lock filter registry");
+		git_error_set(GIT_ERROR_OS, "failed to lock filter registry");
 		return NULL;
 	}
 
@@ -404,11 +404,11 @@ static int filter_list_new(
 	git_filter_list *fl = NULL;
 	size_t pathlen = src->path ? strlen(src->path) : 0, alloclen;
 
-	GITERR_CHECK_ALLOC_ADD(&alloclen, sizeof(git_filter_list), pathlen);
-	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloclen, sizeof(git_filter_list), pathlen);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
 
 	fl = git__calloc(1, alloclen);
-	GITERR_CHECK_ALLOC(fl);
+	GIT_ERROR_CHECK_ALLOC(fl);
 
 	if (src->path)
 		memcpy(fl->path, src->path, pathlen);
@@ -431,14 +431,14 @@ static int filter_list_check_attributes(
 	int error;
 	size_t i;
 	const char **strs = git__calloc(fdef->nattrs, sizeof(const char *));
-	GITERR_CHECK_ALLOC(strs);
+	GIT_ERROR_CHECK_ALLOC(strs);
 
 	error = git_attr_get_many_with_session(
 		strs, repo, attr_session, 0, src->path, fdef->nattrs, fdef->attrs);
 
 	/* if no values were found but no matches are needed, it's okay! */
 	if (error == GIT_ENOTFOUND && !fdef->nmatches) {
-		giterr_clear();
+		git_error_clear();
 		git__free((void *)strs);
 		return 0;
 	}
@@ -499,7 +499,7 @@ int git_filter_list__load_ext(
 	git_filter_def *fdef;
 
 	if (git_rwlock_rdlock(&filter_registry.lock) < 0) {
-		giterr_set(GITERR_OS, "failed to lock filter registry");
+		git_error_set(GIT_ERROR_OS, "failed to lock filter registry");
 		return -1;
 	}
 
@@ -551,7 +551,7 @@ int git_filter_list__load_ext(
 			}
 
 			fe = git_array_alloc(fl->filters);
-			GITERR_CHECK_ALLOC(fe);
+			GIT_ERROR_CHECK_ALLOC(fe);
 
 			fe->filter = fdef->filter;
 			fe->filter_name = fdef->filter_name;
@@ -634,7 +634,7 @@ int git_filter_list_push(
 	assert(fl && filter);
 
 	if (git_rwlock_rdlock(&filter_registry.lock) < 0) {
-		giterr_set(GITERR_OS, "failed to lock filter registry");
+		git_error_set(GIT_ERROR_OS, "failed to lock filter registry");
 		return -1;
 	}
 
@@ -646,7 +646,7 @@ int git_filter_list_push(
 	git_rwlock_rdunlock(&filter_registry.lock);
 
 	if (fdef == NULL) {
-		giterr_set(GITERR_FILTER, "cannot use an unregistered filter");
+		git_error_set(GIT_ERROR_FILTER, "cannot use an unregistered filter");
 		return -1;
 	}
 
@@ -654,7 +654,7 @@ int git_filter_list_push(
 		return error;
 
 	fe = git_array_alloc(fl->filters);
-	GITERR_CHECK_ALLOC(fe);
+	GIT_ERROR_CHECK_ALLOC(fe);
 	fe->filter  = filter;
 	fe->payload = payload;
 
@@ -759,7 +759,7 @@ static int buf_from_blob(git_buf *out, git_blob *blob)
 	git_off_t rawsize = git_blob_rawsize(blob);
 
 	if (!git__is_sizet(rawsize)) {
-		giterr_set(GITERR_OS, "blob is too large to filter");
+		git_error_set(GIT_ERROR_OS, "blob is too large to filter");
 		return -1;
 	}
 
@@ -829,9 +829,9 @@ static int proxy_stream_close(git_writestream *s)
 	} else {
 		/* close stream before erroring out taking care
 		 * to preserve the original error */
-		giterr_state_capture(&error_state, error);
+		git_error_state_capture(&error_state, error);
 		proxy_stream->target->close(proxy_stream->target);
-		giterr_state_restore(&error_state);
+		git_error_state_restore(&error_state);
 		return error;
 	}
 
@@ -861,7 +861,7 @@ static int proxy_stream_init(
 	git_writestream *target)
 {
 	struct proxy_stream *proxy_stream = git__calloc(1, sizeof(struct proxy_stream));
-	GITERR_CHECK_ALLOC(proxy_stream);
+	GIT_ERROR_CHECK_ALLOC(proxy_stream);
 
 	proxy_stream->parent.write = proxy_stream_write;
 	proxy_stream->parent.close = proxy_stream_close;

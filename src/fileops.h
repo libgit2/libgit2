@@ -340,7 +340,7 @@ typedef struct {
  * This function updates the file stamp to current data for the given path
  * and returns 0 if the file is up-to-date relative to the prior setting,
  * 1 if the file has been changed, or GIT_ENOTFOUND if the file doesn't
- * exist.  This will not call giterr_set, so you must set the error if you
+ * exist.  This will not call git_error_set, so you must set the error if you
  * plan to return an error.
  *
  * @param stamp File stamp to be checked

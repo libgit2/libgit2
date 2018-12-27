@@ -184,7 +184,7 @@ int git_diff_get_stats(
 	assert(out && diff);
 
 	stats = git__calloc(1, sizeof(git_diff_stats));
-	GITERR_CHECK_ALLOC(stats);
+	GIT_ERROR_CHECK_ALLOC(stats);
 
 	deltas = git_diff_num_deltas(diff);
 

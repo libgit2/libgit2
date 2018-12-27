@@ -1,12 +1,12 @@
 {
-   libgit2-giterr-set-buffer
+   libgit2-git-error-set-buffer
    Memcheck:Leak
    ...
    fun:git__realloc
    fun:git_buf_try_grow
    fun:git_buf_grow
    fun:git_buf_vprintf
-   fun:giterr_set
+   fun:git_error_set
 }
 {
    mac-setenv-leak-1

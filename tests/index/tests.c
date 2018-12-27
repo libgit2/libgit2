@@ -849,8 +849,8 @@ void test_index_tests__elocked(void)
 	error = git_index_write(index);
 	cl_assert_equal_i(GIT_ELOCKED, error);
 
-	err = giterr_last();
-	cl_assert_equal_i(err->klass, GITERR_INDEX);
+	err = git_error_last();
+	cl_assert_equal_i(err->klass, GIT_ERROR_INDEX);
 
 	git_filebuf_cleanup(&file);
 	git_index_free(index);

@@ -125,7 +125,7 @@ static int xdl_recs_copy_0(size_t *out, int use_orig, xdfenv_t *xe, int i, int c
 		if (dest)
 			memcpy(dest + size, recs[i]->ptr, recs[i]->size);
 
-		GITERR_CHECK_ALLOC_ADD(&size, size, recs[i++]->size);
+		GIT_ERROR_CHECK_ALLOC_ADD(&size, size, recs[i++]->size);
 	}
 
 	if (add_nl) {
@@ -134,13 +134,13 @@ static int xdl_recs_copy_0(size_t *out, int use_orig, xdfenv_t *xe, int i, int c
 			if (needs_cr) {
 				if (dest)
 					dest[size] = '\r';
-				GITERR_CHECK_ALLOC_ADD(&size, size, 1);
+				GIT_ERROR_CHECK_ALLOC_ADD(&size, size, 1);
 			}
 
 			if (dest)
 				dest[size] = '\n';
 
-			GITERR_CHECK_ALLOC_ADD(&size, size, 1);
+			GIT_ERROR_CHECK_ALLOC_ADD(&size, size, 1);
 		}
 	}
 
@@ -224,10 +224,10 @@ static int fill_conflict_hunk(size_t *out, xdfenv_t *xe1, const char *name1,
 			      dest ? dest + size : NULL) < 0)
 		return -1;
 
-	GITERR_CHECK_ALLOC_ADD(&size, size, copied);
+	GIT_ERROR_CHECK_ALLOC_ADD(&size, size, copied);
 
 	if (!dest) {
-		GITERR_CHECK_ALLOC_ADD5(&size, size, marker_size, 1, needs_cr,  marker1_size);
+		GIT_ERROR_CHECK_ALLOC_ADD5(&size, size, marker_size, 1, needs_cr,  marker1_size);
 	} else {
 		memset(dest + size, '<', marker_size);
 		size += marker_size;
@@ -246,12 +246,12 @@ static int fill_conflict_hunk(size_t *out, xdfenv_t *xe1, const char *name1,
 			      dest ? dest + size : NULL) < 0)
 		return -1;
 
-	GITERR_CHECK_ALLOC_ADD(&size, size, copied);
+	GIT_ERROR_CHECK_ALLOC_ADD(&size, size, copied);
 
 	if (style == XDL_MERGE_DIFF3) {
 		/* Shared preimage */
 		if (!dest) {
-			GITERR_CHECK_ALLOC_ADD5(&size, size, marker_size, 1, needs_cr, marker3_size);
+			GIT_ERROR_CHECK_ALLOC_ADD5(&size, size, marker_size, 1, needs_cr, marker3_size);
 		} else {
 			memset(dest + size, '|', marker_size);
 			size += marker_size;
@@ -268,11 +268,11 @@ static int fill_conflict_hunk(size_t *out, xdfenv_t *xe1, const char *name1,
 		if (xdl_orig_copy(&copied, xe1, m->i0, m->chg0, needs_cr, 1,
 				      dest ? dest + size : NULL) < 0)
 			return -1;
-		GITERR_CHECK_ALLOC_ADD(&size, size, copied);
+		GIT_ERROR_CHECK_ALLOC_ADD(&size, size, copied);
 	}
 
 	if (!dest) {
-		GITERR_CHECK_ALLOC_ADD4(&size, size, marker_size, 1, needs_cr);
+		GIT_ERROR_CHECK_ALLOC_ADD4(&size, size, marker_size, 1, needs_cr);
 	} else {
 		memset(dest + size, '=', marker_size);
 		size += marker_size;
@@ -286,10 +286,10 @@ static int fill_conflict_hunk(size_t *out, xdfenv_t *xe1, const char *name1,
 	if (xdl_recs_copy(&copied, xe2, m->i2, m->chg2, needs_cr, 1,
 			      dest ? dest + size : NULL) < 0)
 		return -1;
-	GITERR_CHECK_ALLOC_ADD(&size, size, copied);
+	GIT_ERROR_CHECK_ALLOC_ADD(&size, size, copied);
 
 	if (!dest) {
-		GITERR_CHECK_ALLOC_ADD5(&size, size, marker_size, 1, needs_cr, marker2_size);
+		GIT_ERROR_CHECK_ALLOC_ADD5(&size, size, marker_size, 1, needs_cr, marker2_size);
 	} else {
 		memset(dest + size, '>', marker_size);
 		size += marker_size;
@@ -336,7 +336,7 @@ static int xdl_fill_merge_buffer(size_t *out,
 			if (xdl_recs_copy(&copied, xe1, i, m->i1 - i, 0, 0,
 					      dest ? dest + size : NULL) < 0)
 				return -1;
-			GITERR_CHECK_ALLOC_ADD(&size, size, copied);
+			GIT_ERROR_CHECK_ALLOC_ADD(&size, size, copied);
 
 			/* Postimage from side #1 */
 			if (m->mode & 1) {
@@ -345,7 +345,7 @@ static int xdl_fill_merge_buffer(size_t *out,
 				if (xdl_recs_copy(&copied, xe1, m->i1, m->chg1, needs_cr, (m->mode & 2),
 						      dest ? dest + size : NULL) < 0)
 					return -1;
-				GITERR_CHECK_ALLOC_ADD(&size, size, copied);
+				GIT_ERROR_CHECK_ALLOC_ADD(&size, size, copied);
 			}
 
 			/* Postimage from side #2 */
@@ -353,7 +353,7 @@ static int xdl_fill_merge_buffer(size_t *out,
 				if (xdl_recs_copy(&copied, xe2, m->i2, m->chg2, 0, 0,
 						      dest ? dest + size : NULL) < 0)
 					return -1;
-				GITERR_CHECK_ALLOC_ADD(&size, size, copied);
+				GIT_ERROR_CHECK_ALLOC_ADD(&size, size, copied);
 			}
 		} else
 			continue;
@@ -363,7 +363,7 @@ static int xdl_fill_merge_buffer(size_t *out,
 	if (xdl_recs_copy(&copied, xe1, i, xe1->xdf2.nrec - i, 0, 0,
 			      dest ? dest + size : NULL) < 0)
 		return -1;
-	GITERR_CHECK_ALLOC_ADD(&size, size, copied);
+	GIT_ERROR_CHECK_ALLOC_ADD(&size, size, copied);
 
 	*out = size;
 	return 0;

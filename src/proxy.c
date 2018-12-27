@@ -26,7 +26,7 @@ int git_proxy_options_dup(git_proxy_options *tgt, const git_proxy_options *src)
 	memcpy(tgt, src, sizeof(git_proxy_options));
 	if (src->url) {
 		tgt->url = git__strdup(src->url);
-		GITERR_CHECK_ALLOC(tgt->url);
+		GIT_ERROR_CHECK_ALLOC(tgt->url);
 	}
 
 	return 0;

@@ -34,10 +34,10 @@ void test_refs_branches_remote__no_matching_remote_returns_error(void)
 	const char *unknown = "refs/remotes/nonexistent/master";
 	git_buf buf;
 
-	giterr_clear();
+	git_error_clear();
 	memset(&buf, 0, sizeof(git_buf));
 	cl_git_fail_with(git_branch_remote_name(&buf, g_repo, unknown), GIT_ENOTFOUND);
-	cl_assert(giterr_last() != NULL);
+	cl_assert(git_error_last() != NULL);
 }
 
 void test_refs_branches_remote__local_remote_returns_error(void)
@@ -45,10 +45,10 @@ void test_refs_branches_remote__local_remote_returns_error(void)
 	const char *local = "refs/heads/master";
 	git_buf buf;
 
-	giterr_clear();
+	git_error_clear();
 	memset(&buf, 0, sizeof(git_buf));
 	cl_git_fail_with(git_branch_remote_name(&buf, g_repo, local), GIT_ERROR);
-	cl_assert(giterr_last() != NULL);
+	cl_assert(git_error_last() != NULL);
 }
 
 void test_refs_branches_remote__ambiguous_remote_returns_error(void)
@@ -61,8 +61,8 @@ void test_refs_branches_remote__ambiguous_remote_returns_error(void)
 
 	git_remote_free(remote);
 
-	giterr_clear();
+	git_error_clear();
 	memset(&buf, 0, sizeof(git_buf));
 	cl_git_fail_with(git_branch_remote_name(&buf, g_repo, remote_tracking_branch_name), GIT_EAMBIGUOUS);
-	cl_assert(giterr_last() != NULL);
+	cl_assert(git_error_last() != NULL);
 }

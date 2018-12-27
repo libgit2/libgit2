@@ -108,7 +108,7 @@ static int cherrypick_seterr(git_commit *commit, const char *fmt)
 {
 	char commit_oidstr[GIT_OID_HEXSZ + 1];
 
-	giterr_set(GITERR_CHERRYPICK, fmt,
+	git_error_set(GIT_ERROR_CHERRYPICK, fmt,
 		git_oid_tostr(commit_oidstr, GIT_OID_HEXSZ + 1, git_commit_id(commit)));
 
 	return -1;
@@ -179,7 +179,7 @@ int git_cherrypick(
 
 	assert(repo && commit);
 
-	GITERR_CHECK_VERSION(given_opts, GIT_CHERRYPICK_OPTIONS_VERSION, "git_cherrypick_options");
+	GIT_ERROR_CHECK_VERSION(given_opts, GIT_CHERRYPICK_OPTIONS_VERSION, "git_cherrypick_options");
 
 	if ((error = git_repository__ensure_not_bare(repo, "cherry-pick")) < 0)
 		return error;

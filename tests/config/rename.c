@@ -66,7 +66,7 @@ void test_config_rename__prevent_overwrite(void)
 	/* so, we don't currently prevent overwrite... */
 	/* {
 		const git_error *err;
-		cl_assert((err = giterr_last()) != NULL);
+		cl_assert((err = git_error_last()) != NULL);
 		cl_assert(err->message != NULL);
 	} */
 }

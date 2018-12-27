@@ -48,9 +48,9 @@ static int impl__write(git_odb_backend *_backend, const git_oid *oid, const void
 	if (rval == 0)
 		return 0;
 
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, sizeof(struct memobject), len);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, sizeof(struct memobject), len);
 	obj = git__malloc(alloc_len);
-	GITERR_CHECK_ALLOC(obj);
+	GIT_ERROR_CHECK_ALLOC(obj);
 
 	memcpy(obj->data, data, len);
 	git_oid_cpy(&obj->oid, oid);
@@ -62,7 +62,7 @@ static int impl__write(git_odb_backend *_backend, const git_oid *oid, const void
 
 	if (type == GIT_OBJECT_COMMIT) {
 		struct memobject **store = git_array_alloc(db->commits);
-		GITERR_CHECK_ALLOC(store);
+		GIT_ERROR_CHECK_ALLOC(store);
 		*store = obj;
 	}
 
@@ -91,7 +91,7 @@ static int impl__read(void **buffer_p, size_t *len_p, git_object_t *type_p, git_
 	*len_p = obj->len;
 	*type_p = obj->type;
 	*buffer_p = git__malloc(obj->len);
-	GITERR_CHECK_ALLOC(*buffer_p);
+	GIT_ERROR_CHECK_ALLOC(*buffer_p);
 
 	memcpy(*buffer_p, obj->data, obj->len);
 	return 0;
@@ -169,7 +169,7 @@ int git_mempack_new(git_odb_backend **out)
 	assert(out);
 
 	db = git__calloc(1, sizeof(struct memory_packer_db));
-	GITERR_CHECK_ALLOC(db);
+	GIT_ERROR_CHECK_ALLOC(db);
 
 	db->objects = git_oidmap_alloc();
 

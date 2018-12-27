@@ -22,18 +22,18 @@ static int stransport_error(OSStatus ret)
 	CFStringRef message;
 
 	if (ret == noErr || ret == errSSLClosedGraceful) {
-		giterr_clear();
+		git_error_clear();
 		return 0;
 	}
 
 #if !TARGET_OS_IPHONE
 	message = SecCopyErrorMessageString(ret, NULL);
-	GITERR_CHECK_ALLOC(message);
+	GIT_ERROR_CHECK_ALLOC(message);
 
-	giterr_set(GITERR_NET, "SecureTransport error: %s", CFStringGetCStringPtr(message, kCFStringEncodingUTF8));
+	git_error_set(GIT_ERROR_NET, "SecureTransport error: %s", CFStringGetCStringPtr(message, kCFStringEncodingUTF8));
 	CFRelease(message);
 #else
-	giterr_set(GITERR_NET, "SecureTransport error: OSStatus %d", (unsigned int)ret);
+	git_error_set(GIT_ERROR_NET, "SecureTransport error: OSStatus %d", (unsigned int)ret);
 	GIT_UNUSED(message);
 #endif
 
@@ -62,7 +62,7 @@ static int stransport_connect(git_stream *stream)
 
 	ret = SSLHandshake(st->ctx);
 	if (ret != errSSLServerAuthCompleted) {
-		giterr_set(GITERR_SSL, "unexpected return value from ssl handshake %d", (int)ret);
+		git_error_set(GIT_ERROR_SSL, "unexpected return value from ssl handshake %d", (int)ret);
 		return -1;
 	}
 
@@ -78,13 +78,13 @@ static int stransport_connect(git_stream *stream)
 	CFRelease(trust);
 
 	if (sec_res == kSecTrustResultInvalid || sec_res == kSecTrustResultOtherError) {
-		giterr_set(GITERR_SSL, "internal security trust error");
+		git_error_set(GIT_ERROR_SSL, "internal security trust error");
 		return -1;
 	}
 
 	if (sec_res == kSecTrustResultDeny || sec_res == kSecTrustResultRecoverableTrustFailure ||
 	    sec_res == kSecTrustResultFatalTrustFailure) {
-		giterr_set(GITERR_SSL, "untrusted connection error");
+		git_error_set(GIT_ERROR_SSL, "untrusted connection error");
 		return GIT_ECERTIFICATE;
 	}
 
@@ -112,7 +112,7 @@ static int stransport_certificate(git_cert **out, git_stream *stream)
 	CFRelease(trust);
 
 	if (st->der_data == NULL) {
-		giterr_set(GITERR_SSL, "retrieved invalid certificate data");
+		git_error_set(GIT_ERROR_SSL, "retrieved invalid certificate data");
 		return -1;
 	}
 
@@ -254,14 +254,14 @@ static int stransport_wrap(
 	assert(out && in && host);
 
 	st = git__calloc(1, sizeof(stransport_stream));
-	GITERR_CHECK_ALLOC(st);
+	GIT_ERROR_CHECK_ALLOC(st);
 
 	st->io = in;
 	st->owned = owned;
 
 	st->ctx = SSLCreateContext(NULL, kSSLClientSide, kSSLStreamType);
 	if (!st->ctx) {
-		giterr_set(GITERR_NET, "failed to create SSL context");
+		git_error_set(GIT_ERROR_NET, "failed to create SSL context");
 		git__free(st);
 		return -1;
 	}

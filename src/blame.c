@@ -272,7 +272,7 @@ static int index_blob_lines(git_blame *blame)
     while (len--) {
         if (bol) {
             i = git_array_alloc(blame->line_index);
-            GITERR_CHECK_ALLOC(i);
+            GIT_ERROR_CHECK_ALLOC(i);
             *i = buf - blame->final_buf;
             bol = 0;
         }
@@ -282,7 +282,7 @@ static int index_blob_lines(git_blame *blame)
         }
     }
     i = git_array_alloc(blame->line_index);
-    GITERR_CHECK_ALLOC(i);
+    GIT_ERROR_CHECK_ALLOC(i);
     *i = buf - blame->final_buf;
     blame->num_lines = num + incomplete;
     return blame->num_lines;
@@ -334,7 +334,7 @@ static int blame_internal(git_blame *blame)
 	blame->final_buf_size = git_blob_rawsize(blame->final_blob);
 
 	ent = git__calloc(1, sizeof(git_blame__entry));
-	GITERR_CHECK_ALLOC(ent);
+	GIT_ERROR_CHECK_ALLOC(ent);
 
 	ent->num_lines = index_blob_lines(blame);
 	ent->lno = blame->options.min_line - 1;
@@ -381,7 +381,7 @@ int git_blame_file(
 		goto on_error;
 
 	blame = git_blame__alloc(repo, normOptions, path);
-	GITERR_CHECK_ALLOC(blame);
+	GIT_ERROR_CHECK_ALLOC(blame);
 
 	if ((error = load_blob(blame)) < 0)
 		goto on_error;
@@ -423,14 +423,14 @@ static int buffer_hunk_cb(
 	if (!blame->current_hunk) {
 		/* Line added at the end of the file */
 		blame->current_hunk = new_hunk(wedge_line, 0, wedge_line, blame->path);
-		GITERR_CHECK_ALLOC(blame->current_hunk);
+		GIT_ERROR_CHECK_ALLOC(blame->current_hunk);
 
 		git_vector_insert(&blame->hunks, blame->current_hunk);
 	} else if (!hunk_starts_at_or_after_line(blame->current_hunk, wedge_line)){
 		/* If this hunk doesn't start between existing hunks, split a hunk up so it does */
 		blame->current_hunk = split_hunk_in_vector(&blame->hunks, blame->current_hunk,
 				wedge_line - blame->current_hunk->orig_start_line_number, true);
-		GITERR_CHECK_ALLOC(blame->current_hunk);
+		GIT_ERROR_CHECK_ALLOC(blame->current_hunk);
 	}
 
 	return 0;
@@ -459,7 +459,7 @@ static int buffer_line_cb(
 			/* Create a new buffer-blame hunk with this line */
 			shift_hunks_by(&blame->hunks, blame->current_diff_line, 1);
 			blame->current_hunk = new_hunk(blame->current_diff_line, 1, 0, blame->path);
-			GITERR_CHECK_ALLOC(blame->current_hunk);
+			GIT_ERROR_CHECK_ALLOC(blame->current_hunk);
 
 			git_vector_insert_sorted(&blame->hunks, blame->current_hunk, NULL);
 		}
@@ -500,12 +500,12 @@ int git_blame_buffer(
 	assert(out && reference && buffer && buffer_len);
 
 	blame = git_blame__alloc(reference->repository, reference->options, reference->path);
-	GITERR_CHECK_ALLOC(blame);
+	GIT_ERROR_CHECK_ALLOC(blame);
 
 	/* Duplicate all of the hunk structures in the reference blame */
 	git_vector_foreach(&reference->hunks, i, hunk) {
 		git_blame_hunk *h = dup_hunk(hunk);
-		GITERR_CHECK_ALLOC(h);
+		GIT_ERROR_CHECK_ALLOC(h);
 
 		git_vector_insert(&blame->hunks, h);
 	}

@@ -55,7 +55,7 @@ void git_win32__stack_cleanup(void)
 int git_win32__stack_capture(git_win32__stack__raw_data *pdata, int skip)
 {
 	if (!g_win32_stack_initialized) {
-		giterr_set(GITERR_INVALID, "git_win32_stack not initialized.");
+		git_error_set(GIT_ERROR_INVALID, "git_win32_stack not initialized.");
 		return GIT_ERROR;
 	}
 
@@ -102,7 +102,7 @@ int git_win32__stack_format(
 	int detail_len;
 
 	if (!g_win32_stack_initialized) {
-		giterr_set(GITERR_INVALID, "git_win32_stack not initialized.");
+		git_error_set(GIT_ERROR_INVALID, "git_win32_stack not initialized.");
 		return GIT_ERROR;
 	}
 

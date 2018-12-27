@@ -101,9 +101,9 @@ void test_config_include__missing(void)
 {
 	cl_git_mkfile("including", "[include]\npath = nonexistentfile\n[foo]\nbar = baz");
 
-	giterr_clear();
+	git_error_clear();
 	cl_git_pass(git_config_open_ondisk(&cfg, "including"));
-	cl_assert(giterr_last() == NULL);
+	cl_assert(git_error_last() == NULL);
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.bar"));
 	cl_assert_equal_s("baz", git_buf_cstr(&buf));
 
@@ -115,9 +115,9 @@ void test_config_include__missing_homedir(void)
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, cl_fixture("config")));
 	cl_git_mkfile("including", "[include]\npath = ~/.nonexistentfile\n[foo]\nbar = baz");
 
-	giterr_clear();
+	git_error_clear();
 	cl_git_pass(git_config_open_ondisk(&cfg, "including"));
-	cl_assert(giterr_last() == NULL);
+	cl_assert(git_error_last() == NULL);
 	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.bar"));
 	cl_assert_equal_s("baz", git_buf_cstr(&buf));
 

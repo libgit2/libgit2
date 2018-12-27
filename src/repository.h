@@ -214,8 +214,8 @@ GIT_INLINE(int) git_repository__ensure_not_bare(
 	if (!git_repository_is_bare(repo))
 		return 0;
 
-	giterr_set(
-		GITERR_REPOSITORY,
+	git_error_set(
+		GIT_ERROR_REPOSITORY,
 		"cannot %s. This operation is not allowed against bare repositories.",
 		operation_name);
 

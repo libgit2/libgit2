@@ -1221,14 +1221,14 @@ void test_diff_workdir__checks_options_version(void)
 
 	opts.version = 0;
 	cl_git_fail(git_diff_tree_to_workdir(&diff, g_repo, NULL, &opts));
-	err = giterr_last();
-	cl_assert_equal_i(GITERR_INVALID, err->klass);
+	err = git_error_last();
+	cl_assert_equal_i(GIT_ERROR_INVALID, err->klass);
 
-	giterr_clear();
+	git_error_clear();
 	opts.version = 1024;
 	cl_git_fail(git_diff_tree_to_workdir(&diff, g_repo, NULL, &opts));
-	err = giterr_last();
-	cl_assert_equal_i(GITERR_INVALID, err->klass);
+	err = git_error_last();
+	cl_assert_equal_i(GIT_ERROR_INVALID, err->klass);
 }
 
 void test_diff_workdir__can_diff_empty_file(void)

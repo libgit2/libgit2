@@ -139,7 +139,7 @@ int build_fake_backend(
 	fake_backend *backend;
 
 	backend = git__calloc(1, sizeof(fake_backend));
-	GITERR_CHECK_ALLOC(backend);
+	GIT_ERROR_CHECK_ALLOC(backend);
 
 	backend->parent.version = GIT_ODB_BACKEND_VERSION;
 

@@ -35,16 +35,16 @@ static void net_set_error(const char *str)
 	char * win32_error = git_win32_get_error_message(error);
 
 	if (win32_error) {
-		giterr_set(GITERR_NET, "%s: %s", str, win32_error);
+		git_error_set(GIT_ERROR_NET, "%s: %s", str, win32_error);
 		git__free(win32_error);
 	} else {
-		giterr_set(GITERR_NET, "%s", str);
+		git_error_set(GITERR_NET, "%s", str);
 	}
 }
 #else
 static void net_set_error(const char *str)
 {
-	giterr_set(GITERR_NET, "%s: %s", str, strerror(errno));
+	git_error_set(GIT_ERROR_NET, "%s: %s", str, strerror(errno));
 }
 #endif
 
@@ -58,7 +58,7 @@ static int close_socket(GIT_SOCKET s)
 		return -1;
 
 	if (0 != WSACleanup()) {
-		giterr_set(GITERR_OS, "winsock cleanup failed");
+		git_error_set(GIT_ERROR_OS, "winsock cleanup failed");
 		return -1;
 	}
 
@@ -83,13 +83,13 @@ int socket_connect(git_stream *stream)
 	WSADATA wsd;
 
 	if (WSAStartup(MAKEWORD(2,2), &wsd) != 0) {
-		giterr_set(GITERR_OS, "winsock init failed");
+		git_error_set(GIT_ERROR_OS, "winsock init failed");
 		return -1;
 	}
 
 	if (LOBYTE(wsd.wVersion) != 2 || HIBYTE(wsd.wVersion) != 2) {
 		WSACleanup();
-		giterr_set(GITERR_OS, "winsock init failed");
+		git_error_set(GIT_ERROR_OS, "winsock init failed");
 		return -1;
 	}
 #endif
@@ -99,7 +99,7 @@ int socket_connect(git_stream *stream)
 	hints.ai_family = AF_UNSPEC;
 
 	if ((ret = p_getaddrinfo(st->host, st->port, &hints, &info)) != 0) {
-		giterr_set(GITERR_NET,
+		git_error_set(GIT_ERROR_NET,
 			   "failed to resolve address for %s: %s", st->host, p_gai_strerror(ret));
 		return -1;
 	}
@@ -120,7 +120,7 @@ int socket_connect(git_stream *stream)
 
 	/* Oops, we couldn't connect to any address */
 	if (s == INVALID_SOCKET && p == NULL) {
-		giterr_set(GITERR_OS, "failed to connect to %s", st->host);
+		git_error_set(GIT_ERROR_OS, "failed to connect to %s", st->host);
 		p_freeaddrinfo(info);
 		return -1;
 	}
@@ -191,14 +191,14 @@ static int default_socket_stream_new(
 	assert(out && host && port);
 
 	st = git__calloc(1, sizeof(git_socket_stream));
-	GITERR_CHECK_ALLOC(st);
+	GIT_ERROR_CHECK_ALLOC(st);
 
 	st->host = git__strdup(host);
-	GITERR_CHECK_ALLOC(st->host);
+	GIT_ERROR_CHECK_ALLOC(st->host);
 
 	if (port) {
 		st->port = git__strdup(port);
-		GITERR_CHECK_ALLOC(st->port);
+		GIT_ERROR_CHECK_ALLOC(st->port);
 	}
 
 	st->parent.version = GIT_STREAM_VERSION;
@@ -232,7 +232,7 @@ int git_socket_stream_new(
 		return error;
 
 	if (!init) {
-		giterr_set(GITERR_NET, "there is no socket stream available");
+		git_error_set(GIT_ERROR_NET, "there is no socket stream available");
 		return -1;
 	}
 

@@ -518,7 +518,7 @@ static int parse_hunk_header(
 	return 0;
 
 fail:
-	giterr_set(GITERR_PATCH, "invalid patch hunk header at line %"PRIuZ,
+	git_error_set(GIT_ERROR_PATCH, "invalid patch hunk header at line %"PRIuZ,
 		ctx->parse_ctx.line_num);
 	return -1;
 }
@@ -583,7 +583,7 @@ static int parse_hunk_body(
 		}
 
 		line = git_array_alloc(patch->base.lines);
-		GITERR_CHECK_ALLOC(line);
+		GIT_ERROR_CHECK_ALLOC(line);
 
 		memset(line, 0x0, sizeof(git_diff_line));
 
@@ -650,7 +650,7 @@ static int parse_patch_header(
 			* noise, continue.
 			*/
 			if (parse_hunk_header(&hunk, ctx) < 0) {
-				giterr_clear();
+				git_error_clear();
 				continue;
 			}
 
@@ -673,7 +673,7 @@ static int parse_patch_header(
 		continue;
 	}
 
-	giterr_set(GITERR_PATCH, "no patch found");
+	git_error_set(GIT_ERROR_PATCH, "no patch found");
 	error = GIT_ENOTFOUND;
 
 done:
@@ -821,7 +821,7 @@ static int parse_patch_hunks(
 
 	while (git_parse_ctx_contains_s(&ctx->parse_ctx, "@@ -")) {
 		hunk = git_array_alloc(patch->base.hunks);
-		GITERR_CHECK_ALLOC(hunk);
+		GIT_ERROR_CHECK_ALLOC(hunk);
 
 		memset(hunk, 0, sizeof(git_patch_hunk));
 
@@ -1079,7 +1079,7 @@ int git_patch_parse(
 	*out = NULL;
 
 	patch = git__calloc(1, sizeof(git_patch_parsed));
-	GITERR_CHECK_ALLOC(patch);
+	GIT_ERROR_CHECK_ALLOC(patch);
 
 	patch->ctx = ctx;
 	GIT_REFCOUNT_INC(patch->ctx);
@@ -1087,7 +1087,7 @@ int git_patch_parse(
 	patch->base.free_fn = patch_parsed__free;
 
 	patch->base.delta = git__calloc(1, sizeof(git_diff_delta));
-	GITERR_CHECK_ALLOC(patch->base.delta);
+	GIT_ERROR_CHECK_ALLOC(patch->base.delta);
 
 	patch->base.delta->status = GIT_DELTA_MODIFIED;
 	patch->base.delta->nfiles = 2;
@@ -1126,7 +1126,7 @@ int git_patch_from_buffer(
 	int error;
 
 	ctx = git_patch_parse_ctx_init(content, content_len, opts);
-	GITERR_CHECK_ALLOC(ctx);
+	GIT_ERROR_CHECK_ALLOC(ctx);
 
 	error = git_patch_parse(out, ctx);
 
