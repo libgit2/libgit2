@@ -18,9 +18,13 @@ struct git_hash_ctx {
 
 #define CC_LONG_MAX ((CC_LONG)-1)
 
-#define git_hash_global_init() 0
 #define git_hash_ctx_init(ctx) git_hash_init(ctx)
 #define git_hash_ctx_cleanup(ctx)
+
+GIT_INLINE(int) git_hash_global_init(void)
+{
+	return 0;
+}
 
 GIT_INLINE(int) git_hash_init(git_hash_ctx *ctx)
 {

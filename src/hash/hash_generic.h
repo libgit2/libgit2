@@ -18,8 +18,12 @@ struct git_hash_ctx {
 	unsigned int W[16];
 };
 
-#define git_hash_global_init() 0
 #define git_hash_ctx_init(ctx) git_hash_init(ctx)
 #define git_hash_ctx_cleanup(ctx)
+
+GIT_INLINE(int) git_hash_global_init(void)
+{
+	return 0;
+}
 
 #endif
