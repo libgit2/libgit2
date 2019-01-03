@@ -26,9 +26,23 @@
 
 git_mutex git__mwindow_mutex;
 
-#define MAX_SHUTDOWN_CB 10
+typedef int (*git_global_init_fn)(void);
 
-static git_global_shutdown_fn git__shutdown_callbacks[MAX_SHUTDOWN_CB];
+static git_global_init_fn git__init_callbacks[] = {
+	git_allocator_global_init,
+	git_hash_global_init,
+	git_sysdir_global_init,
+	git_filter_global_init,
+	git_merge_driver_global_init,
+	git_transport_ssh_global_init,
+	git_stream_registry_global_init,
+	git_openssl_stream_global_init,
+	git_mbedtls_stream_global_init,
+	git_mwindow_global_init
+};
+
+static git_global_shutdown_fn git__shutdown_callbacks[ARRAY_SIZE(git__init_callbacks)];
+
 static git_atomic git__n_shutdown_callbacks;
 static git_atomic git__n_inits;
 char *git__user_agent;
@@ -37,7 +51,7 @@ char *git__ssl_ciphers;
 void git__on_shutdown(git_global_shutdown_fn callback)
 {
 	int count = git_atomic_inc(&git__n_shutdown_callbacks);
-	assert(count <= MAX_SHUTDOWN_CB && count > 0);
+	assert(count <= (int) ARRAY_SIZE(git__shutdown_callbacks) && count > 0);
 	git__shutdown_callbacks[count - 1] = callback;
 }
 
@@ -52,6 +66,7 @@ static void git__global_state_cleanup(git_global_st *st)
 
 static int init_common(void)
 {
+	size_t i;
 	int ret;
 
 	/* Initialize the CRT debug allocator first, before our first malloc */
@@ -60,17 +75,10 @@ static int init_common(void)
 	git_win32__stack_init();
 #endif
 
-	/* Initialize any other subsystems that have global state */
-	if ((ret = git_allocator_global_init()) == 0 &&
-		(ret = git_hash_global_init()) == 0 &&
-		(ret = git_sysdir_global_init()) == 0 &&
-		(ret = git_filter_global_init()) == 0 &&
-		(ret = git_merge_driver_global_init()) == 0 &&
-		(ret = git_transport_ssh_global_init()) == 0 &&
-		(ret = git_stream_registry_global_init()) == 0 &&
-		(ret = git_openssl_stream_global_init()) == 0 &&
-		(ret = git_mbedtls_stream_global_init()) == 0)
-		ret = git_mwindow_global_init();
+	/* Initialize subsystems that have global state */
+	for (i = 0; i < ARRAY_SIZE(git__init_callbacks); i++)
+		if ((ret = git__init_callbacks[i]()) != 0)
+			break;
 
 	GIT_MEMORY_BARRIER;
 
