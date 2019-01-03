@@ -13,14 +13,40 @@ static git_repository *g_repo;
 static const char *systype;
 static git_buf expected_fixture = GIT_BUF_INIT;
 
+static int unlink_file(void *payload, git_buf *path)
+{
+	char *fn;
+
+	cl_assert(fn = git_path_basename(path->ptr));
+
+	GIT_UNUSED(payload);
+
+	if (strcmp(fn, ".git"))
+		cl_must_pass(p_unlink(path->ptr));
+
+	git__free(fn);
+	return 0;
+}
+
 void test_checkout_crlf__initialize(void)
 {
+	git_buf reponame = GIT_BUF_INIT;
+
 	g_repo = cl_git_sandbox_init("crlf");
+
+	/*
+	 * remove the contents of the working directory so that we can
+	 * check out over it.
+	 */
+	cl_git_pass(git_buf_puts(&reponame, "crlf"));
+	cl_git_pass(git_path_direach(&reponame, 0, unlink_file, NULL));
 
 	if (GIT_EOL_NATIVE == GIT_EOL_CRLF)
 		systype = "windows";
 	else
 		systype = "posix";
+
+	git_buf_dispose(&reponame);
 }
 
 void test_checkout_crlf__cleanup(void)
@@ -99,41 +125,45 @@ static void test_checkout(const char *autocrlf, const char *attrs)
 {
 	git_buf attrbuf = GIT_BUF_INIT;
 	git_buf expected_dirname = GIT_BUF_INIT;
+	git_buf systype_and_direction = GIT_BUF_INIT;
 	git_buf sandboxname = GIT_BUF_INIT;
 	git_buf reponame = GIT_BUF_INIT;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	struct compare_data compare_data = { NULL, autocrlf, attrs };
 	const char *c;
 
-	git_buf_puts(&reponame, "crlf");
+	cl_git_pass(git_buf_puts(&reponame, "crlf"));
 
-	git_buf_puts(&sandboxname, "autocrlf_");
-	git_buf_puts(&sandboxname, autocrlf);
+	cl_git_pass(git_buf_puts(&systype_and_direction, systype));
+	cl_git_pass(git_buf_puts(&systype_and_direction, "_to_workdir"));
+
+	cl_git_pass(git_buf_puts(&sandboxname, "autocrlf_"));
+	cl_git_pass(git_buf_puts(&sandboxname, autocrlf));
 
 	if (*attrs) {
-		git_buf_puts(&sandboxname, ",");
+		cl_git_pass(git_buf_puts(&sandboxname, ","));
 
 		for (c = attrs; *c; c++) {
 			if (*c == ' ')
-				git_buf_putc(&sandboxname, ',');
+				cl_git_pass(git_buf_putc(&sandboxname, ','));
 			else if (*c == '=')
-				git_buf_putc(&sandboxname, '_');
+				cl_git_pass(git_buf_putc(&sandboxname, '_'));
 			else
-				git_buf_putc(&sandboxname, *c);
+				cl_git_pass(git_buf_putc(&sandboxname, *c));
 		}
 
-		git_buf_printf(&attrbuf, "* %s\n", attrs);
+		cl_git_pass(git_buf_printf(&attrbuf, "* %s\n", attrs));
 		cl_git_mkfile("crlf/.gitattributes", attrbuf.ptr);
 	}
 
 	cl_repo_set_string(g_repo, "core.autocrlf", autocrlf);
 
-	git_buf_joinpath(&expected_dirname, systype, sandboxname.ptr);
-	git_buf_joinpath(&expected_fixture, "crlf_data", expected_dirname.ptr);
+	cl_git_pass(git_buf_joinpath(&expected_dirname, systype_and_direction.ptr, sandboxname.ptr));
+	cl_git_pass(git_buf_joinpath(&expected_fixture, "crlf_data", expected_dirname.ptr));
 	cl_fixture_sandbox(expected_fixture.ptr);
 
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-	git_checkout_head(g_repo, &opts);
+	cl_git_pass(git_checkout_head(g_repo, &opts));
 
 	compare_data.dirname = sandboxname.ptr;
 	cl_git_pass(git_path_direach(&reponame, 0, compare_file, &compare_data));
@@ -145,25 +175,27 @@ static void test_checkout(const char *autocrlf, const char *attrs)
 	git_buf_dispose(&expected_fixture);
 	git_buf_dispose(&expected_dirname);
 	git_buf_dispose(&sandboxname);
+	git_buf_dispose(&systype_and_direction);
 	git_buf_dispose(&reponame);
 }
 
 static void empty_workdir(const char *name)
 {
 	git_vector contents = GIT_VECTOR_INIT;
+	char *basename;
+	int cmp;
 	size_t i;
 	const char *fn;
 
-	git_path_dirload(&contents, name, 0, 0);
+	cl_git_pass(git_path_dirload(&contents, name, 0, 0));
 	git_vector_foreach(&contents, i, fn) {
-		char *basename = git_path_basename(fn);
-		int cmp = strncasecmp(basename, ".git", 4);
+		cl_assert(basename = git_path_basename(fn));
+		cmp = strncasecmp(basename, ".git", 4);
 
 		git__free(basename);
 
-		if (cmp == 0)
-			continue;
-		p_unlink(fn);
+		if (cmp)
+			cl_git_pass(p_unlink(fn));
 	}
 	git_vector_free_deep(&contents);
 }
@@ -173,7 +205,7 @@ void test_checkout_crlf__matches_core_git(void)
 	const char *autocrlf[] = { "true", "false", "input", NULL };
 	const char *attrs[] = { "", "-crlf", "-text", "eol=crlf", "eol=lf",
 		"text", "text eol=crlf", "text eol=lf",
-		"text=auto", "text=auto eol=crlf", "text=auto eol=lf", 
+		"text=auto", "text=auto eol=crlf", "text=auto eol=lf",
 		NULL };
 	const char **a, **b;
 
@@ -335,7 +367,7 @@ void test_checkout_crlf__with_ident(void)
 	p_unlink("crlf/more1.identlf");
 	p_unlink("crlf/more2.identcrlf");
 
-	git_checkout_head(g_repo, &opts);
+	cl_git_pass(git_checkout_head(g_repo, &opts));
 
 	cl_assert_equal_file(
 		ALL_LF_TEXT_AS_CRLF
@@ -364,7 +396,7 @@ void test_checkout_crlf__autocrlf_false_no_attrs(void)
 
 	cl_repo_set_bool(g_repo, "core.autocrlf", false);
 
-	git_checkout_head(g_repo, &opts);
+	cl_git_pass(git_checkout_head(g_repo, &opts));
 
 	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
 	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
@@ -377,7 +409,7 @@ void test_checkout_crlf__autocrlf_true_no_attrs(void)
 
 	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 
-	git_checkout_head(g_repo, &opts);
+	cl_git_pass(git_checkout_head(g_repo, &opts));
 
 	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
 	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
@@ -390,7 +422,7 @@ void test_checkout_crlf__autocrlf_input_no_attrs(void)
 
 	cl_repo_set_string(g_repo, "core.autocrlf", "input");
 
-	git_checkout_head(g_repo, &opts);
+	cl_git_pass(git_checkout_head(g_repo, &opts));
 
 	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
 	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
@@ -405,7 +437,7 @@ void test_checkout_crlf__autocrlf_false_text_auto_attr(void)
 
 	cl_repo_set_bool(g_repo, "core.autocrlf", false);
 
-	git_checkout_head(g_repo, &opts);
+	cl_git_pass(git_checkout_head(g_repo, &opts));
 
 	if (GIT_EOL_NATIVE == GIT_EOL_CRLF) {
 		check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
@@ -425,7 +457,7 @@ void test_checkout_crlf__autocrlf_true_text_auto_attr(void)
 
 	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 
-	git_checkout_head(g_repo, &opts);
+	cl_git_pass(git_checkout_head(g_repo, &opts));
 
 	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
 	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
@@ -440,7 +472,7 @@ void test_checkout_crlf__autocrlf_input_text_auto_attr(void)
 
 	cl_repo_set_string(g_repo, "core.autocrlf", "input");
 
-	git_checkout_head(g_repo, &opts);
+	cl_git_pass(git_checkout_head(g_repo, &opts));
 
 	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
 	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
@@ -453,8 +485,8 @@ void test_checkout_crlf__can_write_empty_file(void)
 
 	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 
-	git_repository_set_head(g_repo, "refs/heads/empty-files");
-	git_checkout_head(g_repo, &opts);
+	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/empty-files"));
+	cl_git_pass(git_checkout_head(g_repo, &opts));
 
 	check_file_contents("./crlf/test1.txt", "");
 
