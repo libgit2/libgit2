@@ -933,9 +933,14 @@ int git_repository_open_ext(
 {
 	git_repository_open_options opts = GIT_REPOSITORY_OPEN_OPTIONS_INIT;
 
-	opts.flags = flags;
-	if (git_strarray_parse_pathlist(&opts.ceiling_dirs, ceilingdirs_paths) < 0)
-		return -1;
+	if (flags & GIT_REPOSITORY_OPEN_FROM_ENV) {
+		/* When _FROM_ENV is used, ignore all other flags and ceiling_dirs */
+		opts.flags = GIT_REPOSITORY_OPEN_FROM_ENV;
+	} else {
+		opts.flags = flags;
+		if (git_strarray_parse_pathlist(&opts.ceiling_dirs, ceilingdirs_paths) < 0)
+			return -1;
+	}
 
 	return git_repository_open_with_opts(repo_ptr, start_path, &opts);
 }

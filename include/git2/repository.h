@@ -129,9 +129,9 @@ typedef enum {
 	/**
 	 * Find and open a git repository, respecting the environment variables
 	 * used by the git command-line tools.
-	 * If set, `git_repository_open_ext` will ignore the other flags and
-	 * the `ceiling_dirs` argument, and will allow a NULL `path` to use
-	 * `GIT_DIR` or search from the current directory.
+	 * If set, a NULL string can be passed as the `path` parameter to use
+	 * the value from the `GIT_DIR` environment variable. If `GIT_DIR` is
+	 * not set, start the search from the current directory (ie. `getcwd()`).
 	 * The search for a repository will respect $GIT_CEILING_DIRECTORIES and
 	 * $GIT_DISCOVERY_ACROSS_FILESYSTEM.  The opened repository will
 	 * respect $GIT_INDEX_FILE, $GIT_NAMESPACE, $GIT_OBJECT_DIRECTORY, and
@@ -146,6 +146,12 @@ typedef enum {
 
 /**
  * Find and open a repository with extended controls.
+ *
+ * Note that it has the following differing behavior as compared to
+ * `git_repository_open_with_opts`:
+ *
+ * - If `GIT_REPOSITORY_OPEN_FROM_ENV` is set, all other flags as well as the
+ *   `ceiling_dirs` argument will be ignored.
  *
  * @param out Pointer to the repo which will be opened.  This can
  *        actually be NULL if you only want to use the error code to
