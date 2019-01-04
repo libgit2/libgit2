@@ -169,6 +169,62 @@ GIT_EXTERN(int) git_repository_open_ext(
 	const char *ceiling_dirs);
 
 /**
+ * Repository open options structure
+ *
+ * Initialize with `GIT_REPOSITORY_OPEN_OPTIONS_INIT`. Alternatively, you can
+ * use `git_repository_open_init_options`.
+ *
+ * @see git_repository_open_with_opts
+ */
+typedef struct {
+	int version;
+
+	/** Flags to use when opening. See git_repository_open_flag_t */
+	unsigned int flags;
+
+	/**
+	 * An array of path prefixes at which the search for a containing
+	 * repository should terminate.
+	 */
+	git_strarray ceiling_dirs;
+} git_repository_open_options;
+
+#define GIT_REPOSITORY_OPEN_OPTIONS_VERSION 1
+#define GIT_REPOSITORY_OPEN_OPTIONS_INIT {GIT_REPOSITORY_OPEN_OPTIONS_VERSION}
+
+/**
+ * Initialize git_repository_open_options structure
+ *
+ * Initializes a `git_repository_open_options` with default values. Equivalent to
+ * creating an instance with `GIT_REPOSITORY_OPEN_OPTIONS_INIT`.
+ *
+ * @param opts The `git_repository_open_options` struct to initialize.
+ * @param version The struct version; pass `GIT_REPOSITORY_OPEN_OPTIONS_VERSION`.
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_repository_open_init_options(
+	git_repository_open_options *opts,
+	unsigned int version);
+
+/**
+ * Open a repository, with extended options.
+ *
+ * @param out Pointer to the repository which will be opened.
+ *        This can be NULL if you only want to check for the existence of a
+ *        valid repository at this path.
+ * @param path Path to open as git repository.
+ *        If the flags permit "searching", then this can be a path to a
+ *        subdirectory inside the working directory of the repository.
+ *        May be NULL if the GIT_REPOSITORY_OPEN_FROM_ENV flag is set.
+ * @param opts The options to use when opening.
+ * @return 0 on success, a negative error code otherwise.
+ */
+GIT_EXTERN(int) git_repository_open_with_opts(
+	git_repository **out,
+	const char *path,
+	const git_repository_open_options *opts);
+
+/**
  * Open a bare repository on the serverside.
  *
  * This is a fast open for bare repositories that will come in handy

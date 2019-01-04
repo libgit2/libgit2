@@ -442,8 +442,7 @@ struct repo_env {
 static int repo_env_init(
 	struct repo_env *env,
 	const char *start_path,
-	uint32_t flags,
-	git_strarray *ceiling_dirs);
+	const git_repository_open_options *opts);
 
 static void repo_env_dispose(struct repo_env *env)
 {
@@ -642,8 +641,7 @@ int git_repository_open_bare(
 static int repo_env_init(
 	struct repo_env *env,
 	const char *start_path,
-	uint32_t flags,
-	git_strarray *ceiling_dirs)
+	const git_repository_open_options *opts)
 {
 	git_buf across_fs_buf = GIT_BUF_INIT;
 	git_buf index_file_buf = GIT_BUF_INIT;
@@ -656,9 +654,9 @@ static int repo_env_init(
 	assert(env);
 
 	memset(env, 0, sizeof(*env));
-	env->flags = flags;
+	env->flags = opts->flags;
 
-	if (git_strarray_copy(&env->ceiling_dirs, ceiling_dirs) < 0)
+	if (git_strarray_copy(&env->ceiling_dirs, &opts->ceiling_dirs) < 0)
 		return -1;
 
 	if ((env->flags & GIT_REPOSITORY_OPEN_FROM_ENV) == 0)
@@ -831,19 +829,35 @@ static int repo_is_worktree(unsigned *out, const git_repository *repo)
 	return error;
 }
 
-static int git_repository__open(
+int git_repository_open_init_options(
+	git_repository_open_options *opts,
+	unsigned int version)
+{
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_repository_open_options,
+		GIT_REPOSITORY_OPEN_OPTIONS_INIT);
+	return 0;
+}
+
+int git_repository_open_with_opts(
 	git_repository **repo_ptr,
 	const char *start_path,
-	unsigned int flags,
-	git_strarray *ceiling_dirs)
+	const git_repository_open_options *given_opts)
 {
 	int error;
 	unsigned is_worktree;
 	git_repository *repo = NULL;
 	git_config *config = NULL;
+	git_repository_open_options opts = GIT_REPOSITORY_OPEN_OPTIONS_INIT;
 	struct repo_env env;
 
-	if ((error = repo_env_init(&env, start_path, flags, ceiling_dirs)) < 0 ||
+	GIT_ERROR_CHECK_VERSION(
+		given_opts, GIT_REPOSITORY_OPEN_OPTIONS_VERSION, "git_repository_open_options");
+
+	if (given_opts)
+		memcpy(&opts, given_opts, sizeof(opts));
+
+	if ((error = repo_env_init(&env, start_path, &opts)) < 0 ||
 		(error = repo_env_find(&env, start_path)) < 0 ||
 		!repo_ptr)
 		goto cleanup;
@@ -885,7 +899,7 @@ static int git_repository__open(
 	if (config && (error = check_repositoryformatversion(config)) < 0)
 		goto cleanup;
 
-	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0)
+	if ((opts.flags & GIT_REPOSITORY_OPEN_BARE) != 0)
 		repo->is_bare = 1;
 	else {
 
@@ -917,15 +931,13 @@ int git_repository_open_ext(
 	unsigned int flags,
 	const char *ceilingdirs_paths)
 {
-	git_strarray ceiling_dirs;
-	int error;
+	git_repository_open_options opts = GIT_REPOSITORY_OPEN_OPTIONS_INIT;
 
-	if (git_strarray_parse_pathlist(&ceiling_dirs, ceilingdirs_paths))
+	opts.flags = flags;
+	if (git_strarray_parse_pathlist(&opts.ceiling_dirs, ceilingdirs_paths) < 0)
 		return -1;
 
-	error = git_repository__open(repo_ptr, start_path, flags, &ceiling_dirs);
-	git_strarray_free(&ceiling_dirs);
-	return error;
+	return git_repository_open_with_opts(repo_ptr, start_path, &opts);
 }
 
 int git_repository_open(git_repository **repo_out, const char *path)
@@ -985,18 +997,19 @@ int git_repository_discover(
 	const char *ceiling_dirs_str)
 {
 	struct repo_env env;
-	uint32_t flags = across_fs ? GIT_REPOSITORY_OPEN_CROSS_FS : 0;
-	git_strarray ceiling_dirs;
+	git_repository_open_options opts = GIT_REPOSITORY_OPEN_OPTIONS_INIT;
 	int error;
+
+	opts.flags = across_fs ? GIT_REPOSITORY_OPEN_CROSS_FS : 0;
+
+	if (git_strarray_parse_pathlist(&opts.ceiling_dirs, ceiling_dirs_str) < 0)
+		return -1;
 
 	assert(start_path);
 
 	git_buf_sanitize(out);
 
-	if (git_strarray_parse_pathlist(&ceiling_dirs, ceiling_dirs_str) < 0)
-		return -1;
-
-	if ((error = repo_env_init(&env, start_path, flags, &ceiling_dirs) < 0)
+	if ((error = repo_env_init(&env, start_path, &opts) < 0)
 	    || (error = repo_env_find(&env, start_path)) < 0)
 		goto cleanup;
 
