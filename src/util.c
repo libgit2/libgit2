@@ -950,3 +950,20 @@ int git__getenv(git_buf *out, const char *name)
 	return git_buf_puts(out, val);
 }
 #endif
+
+int git__getenv_wl(git_buf *out, const char *name, const git_strarray *whitelist)
+{
+	if (whitelist && whitelist->count > 0) {
+		size_t idx;
+
+		for (idx = 0; idx < whitelist->count; idx++) {
+			if (git__strcmp(name, whitelist->strings[idx]) == 0)
+				break;
+		}
+
+		if (idx == whitelist->count)
+			return GIT_ENOTFOUND;
+	}
+
+	return git__getenv(out, name);
+}

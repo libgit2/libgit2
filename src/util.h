@@ -19,6 +19,7 @@
 #include "common.h"
 #include "strnlen.h"
 #include "thread-utils.h"
+#include "git2/strarray.h"
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 #define bitsizeof(x) (CHAR_BIT * sizeof(x))
@@ -413,6 +414,7 @@ GIT_INLINE(double) git__timer(void)
 #endif
 
 extern int git__getenv(git_buf *out, const char *name);
+extern int git__getenv_wl(git_buf *out, const char *name, const git_strarray *whitelist);
 
 #include "alloc.h"
 
