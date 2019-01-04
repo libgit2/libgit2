@@ -670,7 +670,7 @@ static int repo_env_init(
 	else
 
 	if (!start_path) {
-		error = git__getenv(&env->gitdir_path, "GIT_DIR");
+		error = git__getenv_wl(&env->gitdir_path, "GIT_DIR", &opts->allowed_env);
 		IGNORE_NOTFOUND(error)
 		if (error < 0)
 			goto error;
@@ -680,7 +680,7 @@ static int repo_env_init(
 		}
 	}
 
-	error = git__getenv(&ceilingdirs_buf, "GIT_CEILING_DIRECTORIES");
+	error = git__getenv_wl(&ceilingdirs_buf, "GIT_CEILING_DIRECTORIES", &opts->allowed_env);
 	IGNORE_NOTFOUND(error)
 	if (error < 0)
 		goto error;
@@ -689,7 +689,7 @@ static int repo_env_init(
 			return -1;
 	}
 
-	error = git__getenv(&across_fs_buf, "GIT_DISCOVERY_ACROSS_FILESYSTEM");
+	error = git__getenv_wl(&across_fs_buf, "GIT_DISCOVERY_ACROSS_FILESYSTEM", &opts->allowed_env);
 	IGNORE_NOTFOUND(error)
 	if (error < 0)
 		goto error;
@@ -702,7 +702,7 @@ static int repo_env_init(
 			env->flags |= GIT_REPOSITORY_OPEN_CROSS_FS;
 	}
 
-	error = git__getenv(&index_file_buf, "GIT_INDEX_FILE");
+	error = git__getenv_wl(&index_file_buf, "GIT_INDEX_FILE", &opts->allowed_env);
 	IGNORE_NOTFOUND(error)
 	if (error < 0)
 		goto error;
@@ -712,12 +712,12 @@ static int repo_env_init(
 			goto error;
 	}
 
-	error = git__getenv(&env->namespace_buf, "GIT_NAMESPACE");
+	error = git__getenv_wl(&env->namespace_buf, "GIT_NAMESPACE", &opts->allowed_env);
 	IGNORE_NOTFOUND(error)
 	if (error < 0)
 		goto error;
 
-	error = git__getenv(&object_dir_buf, "GIT_OBJECT_DIRECTORY");
+	error = git__getenv_wl(&object_dir_buf, "GIT_OBJECT_DIRECTORY", &opts->allowed_env);
 	IGNORE_NOTFOUND(error)
 	if (error < 0)
 		goto error;
@@ -727,12 +727,12 @@ static int repo_env_init(
 			goto error;
 	}
 
-	error = git__getenv(&env->alts_buf, "GIT_ALTERNATE_OBJECT_DIRECTORIES");
+	error = git__getenv_wl(&env->alts_buf, "GIT_ALTERNATE_OBJECT_DIRECTORIES", &opts->allowed_env);
 	IGNORE_NOTFOUND(error)
 	if (error < 0)
 		goto error;
 
-	error = git__getenv(&work_tree_buf, "GIT_WORK_TREE");
+	error = git__getenv_wl(&work_tree_buf, "GIT_WORK_TREE", &opts->allowed_env);
 	IGNORE_NOTFOUND(error)
 	if (error < 0)
 		goto error;
@@ -742,7 +742,7 @@ static int repo_env_init(
 		goto error;
 	}
 
-	error = git__getenv(&common_dir_buf, "GIT_COMMON_DIR");
+	error = git__getenv_wl(&common_dir_buf, "GIT_COMMON_DIR", &opts->allowed_env);
 	IGNORE_NOTFOUND(error)
 	if (error < 0)
 		goto error;
@@ -932,6 +932,20 @@ int git_repository_open_ext(
 	const char *ceilingdirs_paths)
 {
 	git_repository_open_options opts = GIT_REPOSITORY_OPEN_OPTIONS_INIT;
+	static char *compat_env[] = {
+		"GIT_DIR",
+		"GIT_CEILING_DIRECTORIES",
+		"GIT_DISCOVERY_ACROSS_FILESYSTEM",
+		"GIT_INDEX_FILE",
+		"GIT_NAMESPACE",
+		"GIT_OBJECT_DIRECTORY",
+		"GIT_WORK_TREE",
+		"GIT_COMMON_DIR",
+		"GIT_ALTERNATE_OBJECT_DIRECTORIES",
+	};
+
+	opts.allowed_env.strings = compat_env;
+	opts.allowed_env.count = ARRAY_SIZE(compat_env);
 
 	if (flags & GIT_REPOSITORY_OPEN_FROM_ENV) {
 		/* When _FROM_ENV is used, ignore all other flags and ceiling_dirs */

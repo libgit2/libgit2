@@ -11,6 +11,7 @@
 #include "types.h"
 #include "oid.h"
 #include "buffer.h"
+#include "strarray.h"
 
 /**
  * @file git2/repository.h
@@ -153,6 +154,11 @@ typedef enum {
  * - If `GIT_REPOSITORY_OPEN_FROM_ENV` is set, all other flags as well as the
  *   `ceiling_dirs` argument will be ignored.
  *
+ * - The list of allowed environment variables is hardcoded to
+ *   `GIT_DIR`, `GIT_CEILING_DIRECTORIES`, `GIT_DISCOVERY_ACROSS_FILESYSTEM`,
+ *   `GIT_INDEX_FILE`, `GIT_NAMESPACE`, `GIT_OBJECT_DIRECTORY`, `GIT_WORK_TREE`,
+ *   `GIT_COMMON_DIR`, and `GIT_ALTERNATE_OBJECT_DIRECTORIES`.
+ *
  * @param out Pointer to the repo which will be opened.  This can
  *        actually be NULL if you only want to use the error code to
  *        see if a repo at this path could be opened.
@@ -193,6 +199,13 @@ typedef struct {
 	 * repository should terminate.
 	 */
 	git_strarray ceiling_dirs;
+
+	/**
+	 * If GIT_REPOSITORY_OPEN_FROM_ENV is set, this is used as a whitelist
+	 * of environment variables we're allowed to use. An empty array means that
+	 * we can use any of them.
+	 */
+	git_strarray allowed_env;
 } git_repository_open_options;
 
 #define GIT_REPOSITORY_OPEN_OPTIONS_VERSION 1
