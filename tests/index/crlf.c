@@ -353,6 +353,7 @@ void test_index_crlf__safecrlf_true_autocrlf_input_text_auto_attr(void)
 
 	cl_git_pass(git_index_add_bypath(g_index, "newfile.txt"));
 	entry = git_index_get_bypath(g_index, "newfile.txt", 0);
+	cl_assert(entry);
 
 	cl_git_pass(git_oid_fromstr(&oid, FILE_OID_LF));
 	cl_assert_equal_oid(&oid, &entry->id);
@@ -373,6 +374,7 @@ void test_index_crlf__safecrlf_true_autocrlf_input_text__no_attr(void)
 
 	cl_git_pass(git_index_add_bypath(g_index, "newfile.txt"));
 	entry = git_index_get_bypath(g_index, "newfile.txt", 0);
+	cl_assert(entry);
 
 	cl_git_pass(git_oid_fromstr(&oid, FILE_OID_LF));
 	cl_assert_equal_oid(&oid, &entry->id);
