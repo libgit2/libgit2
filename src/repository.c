@@ -175,6 +175,7 @@ void git_repository_free(git_repository *repo)
 	git__free(repo->commondir);
 	git__free(repo->workdir);
 	git__free(repo->namespace);
+	git__free(repo->configfile);
 	git__free(repo->ident_name);
 	git__free(repo->ident_email);
 
@@ -435,6 +436,7 @@ struct repo_env {
 	git_buf workdir_path;
 	git_buf alts_buf;
 	git_buf namespace_buf;
+	git_buf configfile_path;
 	git_index *index;
 	git_odb *odb;
 };
@@ -453,6 +455,7 @@ static void repo_env_dispose(struct repo_env *env)
 	git_buf_dispose(&env->workdir_path);
 	git_buf_dispose(&env->alts_buf);
 	git_buf_dispose(&env->namespace_buf);
+	git_buf_dispose(&env->configfile_path);
 	git_index_free(env->index);
 	git_odb_free(env->odb);
 }
@@ -742,6 +745,11 @@ static int repo_env_init(
 	if (error < 0)
 		goto error;
 
+	error = git__getenv_wl(&env->configfile_path, "GIT_CONFIG", &opts->allowed_env);
+	IGNORE_NOTFOUND(error)
+	if (error < 0)
+		goto error;
+
 #undef IGNORE_NOTFOUND
 
 error:
@@ -875,6 +883,11 @@ int git_repository_open_with_opts(
 	if (git_buf_len(&env.workdir_path) > 0) {
 		repo->workdir = git_buf_detach(&env.workdir_path);
 		GIT_ERROR_CHECK_ALLOC(repo->workdir)
+	}
+
+	if (git_buf_len(&env.configfile_path) > 0) {
+		repo->configfile = git_buf_detach(&env.configfile_path);
+		GIT_ERROR_CHECK_ALLOC(repo->configfile);
 	}
 
 	if ((error = repo_is_worktree(&is_worktree, repo)) < 0)
@@ -1035,6 +1048,21 @@ cleanup:
 	return error;
 }
 
+static int configfile_path(git_buf *file, git_repository *repo)
+{
+	int error = 0;
+	assert(repo);
+
+	if (repo->configfile) {
+		git_buf_puts(file, repo->configfile);
+		if (git_buf_oom(file))
+			error = -1;
+	} else
+		error = git_repository_item_path(file, repo, GIT_REPOSITORY_ITEM_CONFIG);
+
+	return error;
+}
+
 static int load_config(
 	git_config **out,
 	git_repository *repo,
@@ -1053,7 +1081,7 @@ static int load_config(
 		return error;
 
 	if (repo) {
-		if ((error = git_repository_item_path(&config_path, repo, GIT_REPOSITORY_ITEM_CONFIG)) == 0)
+		if ((error = configfile_path(&config_path, repo)) == 0)
 			error = git_config_add_file_ondisk(cfg, config_path.ptr, GIT_CONFIG_LEVEL_LOCAL, repo, 0);
 
 		if (error && error != GIT_ENOTFOUND)

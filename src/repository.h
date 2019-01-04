@@ -141,6 +141,7 @@ struct git_repository {
 	char *commondir;
 	char *workdir;
 	char *namespace;
+	char *configfile;
 
 	char *ident_name;
 	char *ident_email;
