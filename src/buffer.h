@@ -218,4 +218,17 @@ int git_buf_splice(
 	const char *data,
 	size_t nb_to_insert);
 
+/*
+ * Extract slices of a buffer using the provided separator.
+ *
+ * Note the slice might not be NULL-terminated, by design.
+ *
+ * @param slice On success, either the extracted slice or the remainder of buf.
+ * @param buf The data to slice into.
+ * @param sep The separator to slice at.
+ *
+ * @return 1 on success, 0 otherwise
+ */
+int git_buf_slice(git_buf *slice, const git_buf *buf, char sep);
+
 #endif
