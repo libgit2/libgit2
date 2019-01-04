@@ -732,25 +732,15 @@ static int repo_env_init(
 	if (error < 0)
 		goto error;
 
-	error = git__getenv_wl(&work_tree_buf, "GIT_WORK_TREE", &opts->allowed_env);
+	error = git__getenv_wl(&env->workdir_path, "GIT_WORK_TREE", &opts->allowed_env);
 	IGNORE_NOTFOUND(error)
 	if (error < 0)
 		goto error;
-	else {
-		git_error_set(GIT_ERROR_INVALID, "GIT_WORK_TREE unimplemented");
-		error = GIT_ERROR;
-		goto error;
-	}
 
-	error = git__getenv_wl(&common_dir_buf, "GIT_COMMON_DIR", &opts->allowed_env);
+	error = git__getenv_wl(&env->commondir_path, "GIT_COMMON_DIR", &opts->allowed_env);
 	IGNORE_NOTFOUND(error)
 	if (error < 0)
 		goto error;
-	else {
-		git_error_set(GIT_ERROR_INVALID, "GIT_COMMON_DIR unimplemented");
-		error = GIT_ERROR;
-		goto error;
-	}
 
 #undef IGNORE_NOTFOUND
 
@@ -880,6 +870,11 @@ int git_repository_open_with_opts(
 	if (git_buf_len(&env.commondir_path) > 0) {
 		repo->commondir = git_buf_detach(&env.commondir_path);
 		GIT_ERROR_CHECK_ALLOC(repo->commondir);
+	}
+
+	if (git_buf_len(&env.workdir_path) > 0) {
+		repo->workdir = git_buf_detach(&env.workdir_path);
+		GIT_ERROR_CHECK_ALLOC(repo->workdir)
 	}
 
 	if ((error = repo_is_worktree(&is_worktree, repo)) < 0)

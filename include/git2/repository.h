@@ -137,10 +137,6 @@ typedef enum {
 	 * $GIT_DISCOVERY_ACROSS_FILESYSTEM.  The opened repository will
 	 * respect $GIT_INDEX_FILE, $GIT_NAMESPACE, $GIT_OBJECT_DIRECTORY, and
 	 * $GIT_ALTERNATE_OBJECT_DIRECTORIES.
-	 * In the future, this flag will also cause `git_repository_open_ext`
-	 * to respect $GIT_WORK_TREE and $GIT_COMMON_DIR; currently,
-	 * `git_repository_open_ext` with this flag will error out if either
-	 * $GIT_WORK_TREE or $GIT_COMMON_DIR is set.
 	 */
 	GIT_REPOSITORY_OPEN_FROM_ENV  = (1 << 4),
 } git_repository_open_flag_t;
