@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 #include "clar_libgit2.h"
 #include "vector.h"
 
@@ -66,14 +68,14 @@ void test_core_vector__2(void)
 
 static int compare_them(const void *a, const void *b)
 {
-	return (int)((long)a - (long)b);
+	return (int)((intptr_t)a - (intptr_t)b);
 }
 
 /* insert_sorted */
 void test_core_vector__3(void)
 {
 	git_vector x;
-	long i;
+	intptr_t i;
 	git_vector_init(&x, 1, &compare_them);
 
 	for (i = 0; i < 10; i += 2) {
@@ -96,7 +98,7 @@ void test_core_vector__3(void)
 void test_core_vector__4(void)
 {
 	git_vector x;
-	long i;
+	intptr_t i;
 	git_vector_init(&x, 1, &compare_them);
 
 	for (i = 0; i < 10; i += 2) {

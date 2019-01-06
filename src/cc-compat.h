@@ -47,9 +47,17 @@
 
 /* Define the printf format specifer to use for size_t output */
 #if defined(_MSC_VER) || defined(__MINGW32__)
-#	define PRIuZ "Iu"
-#	define PRIxZ "Ix"
-#	define PRIdZ "Id"
+
+#	if (SIZE_MAX == ULLONG_MAX)
+#		define PRIuZ "I64u"
+#		define PRIxZ "I64x"
+#		define PRIdZ "I64d"
+#	else
+#		define PRIuZ "Iu"
+#		define PRIxZ "Ix"
+#		define PRIdZ "Id"
+#	endif
+
 #else
 #	define PRIuZ "zu"
 #	define PRIxZ "zx"
