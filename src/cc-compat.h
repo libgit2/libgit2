@@ -51,16 +51,19 @@
 #	if (SIZE_MAX == ULLONG_MAX)
 #		define PRIuZ "I64u"
 #		define PRIxZ "I64x"
+#		define PRIXZ "I64X"
 #		define PRIdZ "I64d"
 #	else
 #		define PRIuZ "Iu"
 #		define PRIxZ "Ix"
+#		define PRIXZ "IX"
 #		define PRIdZ "Id"
 #	endif
 
 #else
 #	define PRIuZ "zu"
 #	define PRIxZ "zx"
+#	define PRIXZ "zX"
 #	define PRIdZ "zd"
 #endif
 

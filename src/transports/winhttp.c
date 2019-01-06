@@ -631,7 +631,7 @@ static int write_chunk(HINTERNET request, const char *buffer, size_t len)
 	git_buf buf = GIT_BUF_INIT;
 
 	/* Chunk header */
-	git_buf_printf(&buf, "%zX\r\n", len);
+	git_buf_printf(&buf, "%"PRIXZ"\r\n", len);
 
 	if (git_buf_oom(&buf))
 		return -1;
