@@ -35,7 +35,7 @@ struct crlf_attrs {
 
 	int auto_crlf;
 	int safe_crlf;
-	git_cvar_value core_eol;
+	int core_eol;
 };
 
 struct crlf_filter {
