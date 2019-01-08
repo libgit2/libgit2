@@ -73,3 +73,26 @@ int git_buf_set(git_buf *buf, const void *data, size_t len)
     buf->size = len + 1;
     return 0;
 }
+
+void clar__fail(
+	const char *file,
+	int line,
+	const char *error,
+	const char *description,
+	int should_abort)
+{
+	if (should_abort)
+		__coverity_panic__();
+}
+
+void clar__assert(
+	int condition,
+	const char *file,
+	int line,
+	const char *error,
+	const char *description,
+	int should_abort)
+{
+	if (!condition && should_abort)
+		__coverity_panic__();
+}

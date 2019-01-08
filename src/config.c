@@ -513,6 +513,8 @@ int git_config_backend_foreach_match(
 	regex_t regex;
 	int error = 0;
 
+	assert(backend && cb);
+
 	if (regexp != NULL) {
 		if ((error = p_regcomp(&regex, regexp, REG_EXTENDED)) != 0) {
 			giterr_set_regex(&regex, error);

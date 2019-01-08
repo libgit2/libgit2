@@ -208,7 +208,7 @@ static int load_submodule_names(git_strmap **out, git_repository *repo, git_conf
 	if ((error = git_config_iterator_glob_new(&iter, cfg, key)) < 0)
 		goto out;
 
-	while (git_config_next(&entry, iter) == 0) {
+	while ((error = git_config_next(&entry, iter)) == 0) {
 		const char *fdot, *ldot;
 		fdot = strchr(entry->name, '.');
 		ldot = strrchr(entry->name, '.');
