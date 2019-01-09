@@ -74,14 +74,6 @@ IF (APPLE)
 ENDIF()
 
 IF(MSVC)
-	# This option is only available when building with MSVC. By default, libgit2
-	# is build using the cdecl calling convention, which is useful if you're
-	# writing C. However, the CLR and Win32 API both expect stdcall.
-	#
-	# If you are writing a CLR program and want to link to libgit2, you'll want
-	# to turn this on by invoking CMake with the "-DSTDCALL=ON" argument.
-	OPTION(STDCALL			"Build libgit2 with the __stdcall convention"		OFF)
-
 	# This option must match the settings used in your program, in particular if you
 	# are linking statically
 	OPTION(STATIC_CRT		"Link the static CRT libraries"		 		 ON)
@@ -125,10 +117,8 @@ IF (MSVC)
 	# /MP - Parallel build
 	SET(CMAKE_C_FLAGS "/GF /MP /nologo ${CMAKE_C_FLAGS}")
 
-	IF (STDCALL)
-		# /Gz - stdcall calling convention
-		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gz")
-	ENDIF ()
+	# /Gd - explicitly set cdecl calling convention
+	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gd")
 
 	IF (STATIC_CRT)
 		SET(CRT_FLAG_DEBUG "/MTd")
