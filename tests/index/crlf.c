@@ -29,7 +29,7 @@ void test_index_crlf__cleanup(void)
 
 	if (expected_fixture.size) {
 		cl_fixture_cleanup(expected_fixture.ptr);
-		git_buf_free(&expected_fixture);
+		git_buf_dispose(&expected_fixture);
 	}
 }
 
@@ -164,13 +164,13 @@ static void test_add_index(const char *safecrlf, const char *autocrlf, const cha
 	cl_git_pass(git_path_direach(&reponame, 0, add_and_check_file, &compare_data));
 
 	cl_fixture_cleanup(expected_fixture.ptr);
-	git_buf_free(&expected_fixture);
+	git_buf_dispose(&expected_fixture);
 
-	git_buf_free(&attrbuf);
-	git_buf_free(&expected_fixture);
-	git_buf_free(&expected_dirname);
-	git_buf_free(&sandboxname);
-	git_buf_free(&reponame);
+	git_buf_dispose(&attrbuf);
+	git_buf_dispose(&expected_fixture);
+	git_buf_dispose(&expected_dirname);
+	git_buf_dispose(&sandboxname);
+	git_buf_dispose(&reponame);
 }
 
 static void set_up_workingdir(const char *name)
@@ -205,7 +205,7 @@ static void set_up_workingdir(const char *name)
 		}
 
 		git__free(basename);
-		git_buf_free(&dest_filename);
+		git_buf_dispose(&dest_filename);
 	}
 	git_vector_free_deep(&contents);
 }
