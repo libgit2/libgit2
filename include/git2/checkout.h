@@ -220,7 +220,7 @@ typedef struct {
 } git_checkout_perfdata;
 
 /** Checkout notification callback function */
-typedef int (*git_checkout_notify_cb)(
+typedef int GIT_CALLBACK(git_checkout_notify_cb)(
 	git_checkout_notify_t why,
 	const char *path,
 	const git_diff_file *baseline,
@@ -229,14 +229,14 @@ typedef int (*git_checkout_notify_cb)(
 	void *payload);
 
 /** Checkout progress notification function */
-typedef void (*git_checkout_progress_cb)(
+typedef void GIT_CALLBACK(git_checkout_progress_cb)(
 	const char *path,
 	size_t completed_steps,
 	size_t total_steps,
 	void *payload);
 
 /** Checkout perfdata notification function */
-typedef void (*git_checkout_perfdata_cb)(
+typedef void GIT_CALLBACK(git_checkout_perfdata_cb)(
 	const git_checkout_perfdata *perfdata,
 	void *payload);
 

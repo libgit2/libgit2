@@ -22,54 +22,54 @@ GIT_BEGIN_DECL
  */
 typedef struct {
 	/* Allocate `n` bytes of memory */
-	void *(*gmalloc)(size_t n, const char *file, int line);
+	void * GIT_CALLBACK(gmalloc)(size_t n, const char *file, int line);
 
 	/*
 	 * Allocate memory for an array of `nelem` elements, where each element
 	 * has a size of `elsize`. Returned memory shall be initialized to
 	 * all-zeroes
 	 */
-	void *(*gcalloc)(size_t nelem, size_t elsize, const char *file, int line);
+	void * GIT_CALLBACK(gcalloc)(size_t nelem, size_t elsize, const char *file, int line);
 
 	/* Allocate memory for the string `str` and duplicate its contents. */
-	char *(*gstrdup)(const char *str, const char *file, int line);
+	char * GIT_CALLBACK(gstrdup)(const char *str, const char *file, int line);
 
 	/*
 	 * Equivalent to the `gstrdup` function, but only duplicating at most
 	 * `n + 1` bytes
 	 */
-	char *(*gstrndup)(const char *str, size_t n, const char *file, int line);
+	char * GIT_CALLBACK(gstrndup)(const char *str, size_t n, const char *file, int line);
 
 	/*
 	 * Equivalent to `gstrndup`, but will always duplicate exactly `n` bytes
 	 * of `str`. Thus, out of bounds reads at `str` may happen.
 	 */
-	char *(*gsubstrdup)(const char *str, size_t n, const char *file, int line);
+	char * GIT_CALLBACK(gsubstrdup)(const char *str, size_t n, const char *file, int line);
 
 	/*
 	 * This function shall deallocate the old object `ptr` and return a
 	 * pointer to a new object that has the size specified by `size`. In
 	 * case `ptr` is `NULL`, a new array shall be allocated.
 	 */
-	void *(*grealloc)(void *ptr, size_t size, const char *file, int line);
+	void * GIT_CALLBACK(grealloc)(void *ptr, size_t size, const char *file, int line);
 
 	/*
 	 * This function shall be equivalent to `grealloc`, but allocating
 	 * `neleme * elsize` bytes.
 	 */
-	void *(*greallocarray)(void *ptr, size_t nelem, size_t elsize, const char *file, int line);
+	void * GIT_CALLBACK(greallocarray)(void *ptr, size_t nelem, size_t elsize, const char *file, int line);
 
 	/*
 	 * This function shall allocate a new array of `nelem` elements, where
 	 * each element has a size of `elsize` bytes.
 	 */
-	void *(*gmallocarray)(size_t nelem, size_t elsize, const char *file, int line);
+	void * GIT_CALLBACK(gmallocarray)(size_t nelem, size_t elsize, const char *file, int line);
 
 	/*
 	 * This function shall free the memory pointed to by `ptr`. In case
 	 * `ptr` is `NULL`, this shall be a no-op.
 	 */
-	void (*gfree)(void *ptr);
+	void GIT_CALLBACK(gfree)(void *ptr);
 } git_allocator;
 
 /**

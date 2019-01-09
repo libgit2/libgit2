@@ -202,7 +202,7 @@ GIT_EXTERN(int) git_attr_get_many(
  * @return 0 to continue looping, non-zero to stop. This value will be returned
  *         from git_attr_foreach.
  */
-typedef int (*git_attr_foreach_cb)(const char *name, const char *value, void *payload);
+typedef int GIT_CALLBACK(git_attr_foreach_cb)(const char *name, const char *value, void *payload);
 
 /**
  * Loop over all the git attributes for a path.

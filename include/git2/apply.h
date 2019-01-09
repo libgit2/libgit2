@@ -33,7 +33,7 @@ GIT_BEGIN_DECL
  * @param delta The delta to be applied
  * @param payload User-specified payload
  */
-typedef int (*git_apply_delta_cb)(
+typedef int GIT_CALLBACK(git_apply_delta_cb)(
 	const git_diff_delta *delta,
 	void *payload);
 
@@ -49,7 +49,7 @@ typedef int (*git_apply_delta_cb)(
  * @param hunk The hunk to be applied
  * @param payload User-specified payload
  */
-typedef int (*git_apply_hunk_cb)(
+typedef int GIT_CALLBACK(git_apply_hunk_cb)(
 	const git_diff_hunk *hunk,
 	void *payload);
 

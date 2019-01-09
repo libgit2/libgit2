@@ -422,8 +422,8 @@ GIT_EXTERN(int) git_reference_remove(git_repository *repo, const char *name);
  */
 GIT_EXTERN(int) git_reference_list(git_strarray *array, git_repository *repo);
 
-typedef int (*git_reference_foreach_cb)(git_reference *reference, void *payload);
-typedef int (*git_reference_foreach_name_cb)(const char *name, void *payload);
+typedef int GIT_CALLBACK(git_reference_foreach_cb)(git_reference *reference, void *payload);
+typedef int GIT_CALLBACK(git_reference_foreach_name_cb)(const char *name, void *payload);
 
 /**
  * Perform a callback on each reference in the repository.

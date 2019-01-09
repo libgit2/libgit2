@@ -627,7 +627,7 @@ GIT_EXTERN(int) git_repository_message_remove(git_repository *repo);
  */
 GIT_EXTERN(int) git_repository_state_cleanup(git_repository *repo);
 
-typedef int (*git_repository_fetchhead_foreach_cb)(const char *ref_name,
+typedef int GIT_CALLBACK(git_repository_fetchhead_foreach_cb)(const char *ref_name,
 	const char *remote_url,
 	const git_oid *oid,
 	unsigned int is_merge,
@@ -649,7 +649,7 @@ GIT_EXTERN(int) git_repository_fetchhead_foreach(
 	git_repository_fetchhead_foreach_cb callback,
 	void *payload);
 
-typedef int (*git_repository_mergehead_foreach_cb)(const git_oid *oid,
+typedef int GIT_CALLBACK(git_repository_mergehead_foreach_cb)(const git_oid *oid,
 	void *payload);
 
 /**

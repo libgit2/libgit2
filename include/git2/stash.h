@@ -112,7 +112,7 @@ typedef enum {
  * Return 0 to continue processing, or a negative value to
  * abort the stash application.
  */
-typedef int (*git_stash_apply_progress_cb)(
+typedef int GIT_CALLBACK(git_stash_apply_progress_cb)(
 	git_stash_apply_progress_t progress,
 	void *payload);
 
@@ -198,7 +198,7 @@ GIT_EXTERN(int) git_stash_apply(
  * @param payload Extra parameter to callback function.
  * @return 0 to continue iterating or non-zero to stop.
  */
-typedef int (*git_stash_cb)(
+typedef int GIT_CALLBACK(git_stash_cb)(
 	size_t index,
 	const char* message,
 	const git_oid *stash_id,

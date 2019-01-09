@@ -115,7 +115,7 @@ typedef enum {
  * @param payload value you passed to the foreach function as payload
  * @return 0 on success or error code
  */
-typedef int (*git_submodule_cb)(
+typedef int GIT_CALLBACK(git_submodule_cb)(
 	git_submodule *sm, const char *name, void *payload);
 
 /**

@@ -49,7 +49,7 @@ typedef enum {
 /**
  * An instance for a tracing function
  */
-typedef void (*git_trace_callback)(git_trace_level_t level, const char *msg);
+typedef void GIT_CALLBACK(git_trace_callback)(git_trace_level_t level, const char *msg);
 
 /**
  * Sets the system tracing configuration to the specified level with the

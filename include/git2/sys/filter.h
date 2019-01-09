@@ -138,7 +138,7 @@ GIT_EXTERN(uint32_t) git_filter_source_flags(const git_filter_source *src);
  * initialization operations (in case libgit2 is being used in a way that
  * doesn't need the filter).
  */
-typedef int (*git_filter_init_fn)(git_filter *self);
+typedef int GIT_CALLBACK(git_filter_init_fn)(git_filter *self);
 
 /**
  * Shutdown callback on filter
@@ -150,7 +150,7 @@ typedef int (*git_filter_init_fn)(git_filter *self);
  *
  * Typically this function will free the `git_filter` object itself.
  */
-typedef void (*git_filter_shutdown_fn)(git_filter *self);
+typedef void GIT_CALLBACK(git_filter_shutdown_fn)(git_filter *self);
 
 /**
  * Callback to decide if a given source needs this filter
@@ -172,7 +172,7 @@ typedef void (*git_filter_shutdown_fn)(git_filter *self);
  * callback can use it.  If a filter allocates and assigns a value to the
  * `payload`, it will need a `cleanup` callback to free the payload.
  */
-typedef int (*git_filter_check_fn)(
+typedef int GIT_CALLBACK(git_filter_check_fn)(
 	git_filter  *self,
 	void       **payload, /* points to NULL ptr on entry, may be set */
 	const git_filter_source *src,
@@ -190,14 +190,14 @@ typedef int (*git_filter_check_fn)(
  * The `payload` value will refer to any payload that was set by the
  * `check` callback.  It may be read from or written to as needed.
  */
-typedef int (*git_filter_apply_fn)(
+typedef int GIT_CALLBACK(git_filter_apply_fn)(
 	git_filter    *self,
 	void         **payload, /* may be read and/or set */
 	git_buf       *to,
 	const git_buf *from,
 	const git_filter_source *src);
 
-typedef int (*git_filter_stream_fn)(
+typedef int GIT_CALLBACK(git_filter_stream_fn)(
 	git_writestream **out,
 	git_filter *self,
 	void **payload,
@@ -212,7 +212,7 @@ typedef int (*git_filter_stream_fn)(
  * allocated a `payload` to keep per-source filter state, use this
  * callback to free that payload and release resources as required.
  */
-typedef void (*git_filter_cleanup_fn)(
+typedef void GIT_CALLBACK(git_filter_cleanup_fn)(
 	git_filter *self,
 	void       *payload);
 

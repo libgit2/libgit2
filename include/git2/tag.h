@@ -318,7 +318,7 @@ GIT_EXTERN(int) git_tag_list_match(
 	git_repository *repo);
 
 
-typedef int (*git_tag_foreach_cb)(const char *name, git_oid *oid, void *payload);
+typedef int GIT_CALLBACK(git_tag_foreach_cb)(const char *name, git_oid *oid, void *payload);
 
 /**
  * Call callback `cb' for each tag in the repository

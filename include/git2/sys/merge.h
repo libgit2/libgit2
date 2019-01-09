@@ -73,7 +73,7 @@ GIT_EXTERN(const git_merge_file_options *) git_merge_driver_source_file_options(
  * initialization operations (in case libgit2 is being used in a way that
  * doesn't need the merge driver).
  */
-typedef int (*git_merge_driver_init_fn)(git_merge_driver *self);
+typedef int GIT_CALLBACK(git_merge_driver_init_fn)(git_merge_driver *self);
 
 /**
  * Shutdown callback on merge driver
@@ -85,7 +85,7 @@ typedef int (*git_merge_driver_init_fn)(git_merge_driver *self);
  *
  * Typically this function will free the `git_merge_driver` object itself.
  */
-typedef void (*git_merge_driver_shutdown_fn)(git_merge_driver *self);
+typedef void GIT_CALLBACK(git_merge_driver_shutdown_fn)(git_merge_driver *self);
 
 /**
  * Callback to perform the merge.
@@ -105,7 +105,7 @@ typedef void (*git_merge_driver_shutdown_fn)(git_merge_driver *self);
  *
  * The `src` contains the data about the file to be merged.
  */
-typedef int (*git_merge_driver_apply_fn)(
+typedef int GIT_CALLBACK(git_merge_driver_apply_fn)(
 	git_merge_driver *self,
 	const char **path_out,
 	uint32_t *mode_out,
