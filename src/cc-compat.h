@@ -48,6 +48,7 @@
 /* Define the printf format specifer to use for size_t output */
 #if defined(_MSC_VER) || defined(__MINGW32__)
 
+/* The first block is needed to avoid warnings on MingW amd64 */
 #	if (SIZE_MAX == ULLONG_MAX)
 #		define PRIuZ "I64u"
 #		define PRIxZ "I64x"
