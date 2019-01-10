@@ -235,9 +235,6 @@ ELSE ()
 	ENABLE_WARNINGS(int-conversion)
 	DISABLE_WARNINGS(documentation-deprecated-sync)
 
-	IF (APPLE) # Apple deprecated OpenSSL
-	    DISABLE_WARNINGS(deprecated-declarations)
-	ENDIF()
 
 	IF (PROFILE)
 		SET(CMAKE_C_FLAGS "-pg ${CMAKE_C_FLAGS}")
