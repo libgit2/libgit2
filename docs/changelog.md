@@ -5,6 +5,8 @@ v0.27 + 1
 
 * Reference log creation now honors `core.logallrefupdates=always`.
 
+* Fix some issues with the error-reporting in the OpenSSL backend.
+
 * HTTP proxy support is now builtin; libcurl is no longer used to support
   proxies and is removed as a dependency.
 
