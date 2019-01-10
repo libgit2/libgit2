@@ -212,7 +212,7 @@ void giterr_system_set(int code)
 #endif
 }
 
-/* Deprecated functions */
+/* Deprecated error values and functions */
 
 const git_error *giterr_last(void)
 {
