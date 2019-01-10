@@ -5,8 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#nodef GITERR_CHECK_ALLOC(ptr) if (ptr == NULL) { __coverity_panic__(); }
-#nodef GITERR_CHECK_ALLOC_BUF(buf) if (buf == NULL || git_buf_oom(buf)) { __coverity_panic__(); }
+#nodef GIT_ERROR_CHECK_ALLOC(ptr) if (ptr == NULL) { __coverity_panic__(); }
+#nodef GIT_ERROR_CHECK_ALLOC_BUF(buf) if (buf == NULL || git_buf_oom(buf)) { __coverity_panic__(); }
 
 #nodef GITERR_CHECK_ALLOC_ADD(out, one, two) \
 	if (GIT_ADD_SIZET_OVERFLOW(out, one, two)) { __coverity_panic__(); }
@@ -23,7 +23,7 @@
 #nodef GITERR_CHECK_ALLOC_MULTIPLY(out, nelem, elsize) \
 	if (GIT_MULTIPLY_SIZET_OVERFLOW(out, nelem, elsize)) { __coverity_panic__(); }
 
-#nodef GITERR_CHECK_VERSION(S,V,N) if (giterr__check_version(S,V,N) < 0)  { __coverity_panic__(); }
+#nodef GIT_ERROR_CHECK_VERSION(S,V,N) if (git_error__check_version(S,V,N) < 0)  { __coverity_panic__(); }
 
 #nodef LOOKS_LIKE_DRIVE_PREFIX(S) (strlen(S) >= 2 && git__isalpha((S)[0]) && (S)[1] == ':')
 
