@@ -22,7 +22,7 @@ snapshots.
 Error messages
 --------------
 
-The error message is thread-local. The `giterr_last()` call must
+The error message is thread-local. The `git_error_last()` call must
 happen on the same thread as the error in order to get the
 message. Often this will be the case regardless, but if you use
 something like the [GCD](http://en.wikipedia.org/wiki/Grand_Central_Dispatch)
