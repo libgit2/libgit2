@@ -158,7 +158,7 @@ int fuzzer_transport_cb(git_transport **out, git_remote *owner, void *param)
 
 void fuzzer_git_abort(const char *op)
 {
-	const git_error *err = giterr_last();
+	const git_error *err = git_error_last();
 	fprintf(stderr, "unexpected libgit error: %s: %s\n",
 		op, err ? err->message : "<none>");
 	abort();
