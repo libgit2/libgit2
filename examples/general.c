@@ -66,7 +66,7 @@ static void config_files(const char *repo_path, git_repository *repo);
  */
 static void check_error(int error_code, const char *action)
 {
-	const git_error *error = giterr_last();
+	const git_error *error = git_error_last();
 	if (!error_code)
 		return;
 

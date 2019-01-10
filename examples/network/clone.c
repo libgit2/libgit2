@@ -104,7 +104,7 @@ int do_clone(git_repository *repo, int argc, char **argv)
 	error = git_clone(&cloned_repo, url, path, &clone_opts);
 	printf("\n");
 	if (error != 0) {
-		const git_error *err = giterr_last();
+		const git_error *err = git_error_last();
 		if (err) printf("ERROR %d: %s\n", err->klass, err->message);
 		else printf("ERROR %d: no detailed info\n", error);
 	}
