@@ -24,6 +24,36 @@
 GIT_BEGIN_DECL
 
 /**
+ * Rebase commit signature callback.
+ *
+ * The callback will be called with the commit content, giving a user an
+ * opportunity to sign the commit content in a rebase.
+ * The signature parameter will be owned by LibGit2 after this callback returns.
+ *
+ * When the callback:
+ * - returns GIT_PASSTHROUGH, no signature will be added to the commit.
+ * - returns < 0, git_rebase_commit will be aborted.
+ * - returns GIT_OK, the signature parameter is expected to be filled.
+ */
+typedef int (*git_rebase_commit_signature_cb)(
+	char **signature, const char *commit_content, void *payload);
+
+/**
+ * Rebase commit signature field callback.
+ *
+ * The callback will be called if a signature_cb was called and successful.
+ * This callback will provide the field that a user is signing in a git_rebase_commit.
+ * The signature_field parameter will be owned by LibGit2 after this callback returns.
+ *
+ * When the callback:
+ * - returns GIT_PASSTHROUGH, signature_field is expected to remain null.
+ * - returns < 0, git_rebase_commit will be aborted.
+ * - returns GIT_OK, the signature_field parameter is expected to be filled.
+ */
+typedef int (*git_rebase_commit_signature_field_cb)(
+	char **signature_field, void *payload);
+
+/**
  * Rebase options
  *
  * Use to tell the rebase machinery how to operate.
@@ -72,6 +102,28 @@ typedef struct {
 	 * `abort` to match git semantics.
 	 */
 	git_checkout_options checkout_options;
+
+	/**
+	 * If provided, this will be called with the commit content, allowing
+	 * a signature to be added to the rebase commit. Can be skipped with
+	 * GIT_PASSTHROUGH. If GIT_PASSTHROUGH is returned, a commit will be made
+	 * without a signature.
+	 * This field is only used when performing git_rebase_commit.
+	 */
+	git_rebase_commit_signature_cb signature_cb;
+
+	/**
+	 * If provided and the signature_cb is provided, this will be called asking
+	 * for the field to write the signature to. Can be skipped with GIT_PASSTHROUGH.
+	 * This field is only used when performing git_rebase_commit.
+	 */
+	git_rebase_commit_signature_field_cb signature_field_cb;
+
+	/**
+	 * This will be passed to each of the callbacks in this struct
+	 * as the last parameter.
+	 */
+	void *payload;
 } git_rebase_options;
 
 /**
@@ -118,7 +170,7 @@ typedef enum {
 #define GIT_REBASE_OPTIONS_VERSION 1
 #define GIT_REBASE_OPTIONS_INIT \
 	{ GIT_REBASE_OPTIONS_VERSION, 0, 0, NULL, GIT_MERGE_OPTIONS_INIT, \
-	  GIT_CHECKOUT_OPTIONS_INIT}
+	  GIT_CHECKOUT_OPTIONS_INIT, 0, 0, NULL }
 
 /** Indicates that a rebase operation is not (yet) in progress. */
 #define GIT_REBASE_NO_OPERATION SIZE_MAX
