@@ -51,6 +51,16 @@ Write-Host "####################################################################
 
 run_test offline
 
+if (-not $Env:SKIP_INVASIVE_TESTS) {
+	Write-Host ""
+	Write-Host "##############################################################################"
+	Write-Host "## Running (invasive) tests"
+	Write-Host "##############################################################################"
+
+	$Env:GITTEST_INVASIVE_FS_SIZE=1
+	run_test invasive
+}
+
 if (-not $Env:SKIP_ONLINE_TESTS) {
 	Write-Host ""
 	Write-Host "##############################################################################"
