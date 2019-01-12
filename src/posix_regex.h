@@ -8,13 +8,16 @@
 #define INCLUDE_posix_regex_h__
 
 #include "common.h"
-#include <regex.h>
 
 /*
  * Regular expressions: if the operating system has p_regcomp_l,
- * use that as our p_regcomp implementation, otherwise fall back
- * to standard regcomp.
+ * use it so that we can override the locale environment variable.
+ * Otherwise, use our bundled PCRE implementation.
  */
+
+#ifdef GIT_USE_REGCOMP_L
+# include <regex.h>
+# include <xlocale.h>
 
 #define P_REG_EXTENDED REG_EXTENDED
 #define P_REG_ICASE REG_ICASE
@@ -23,19 +26,28 @@
 #define p_regex_t regex_t
 #define p_regmatch_t regmatch_t
 
-#define p_regerror regerror
-#define p_regexec regexec
-#define p_regfree regfree
-
-#ifdef GIT_USE_REGCOMP_L
-#include <xlocale.h>
-
 GIT_INLINE(int) p_regcomp(p_regex_t *preg, const char *pattern, int cflags)
 {
 	return regcomp_l(preg, pattern, cflags, (locale_t) 0);
 }
+
+#define p_regerror regerror
+#define p_regexec regexec
+#define p_regfree regfree
+
 #else
-# define p_regcomp regcomp
+# include "pcreposix.h"
+
+# define P_REG_EXTENDED PCRE_REG_EXTENDED
+# define P_REG_ICASE PCRE_REG_ICASE
+# define P_REG_NOMATCH PCRE_REG_NOMATCH
+
+# define p_regex_t pcre_regex_t
+# define p_regmatch_t pcre_regmatch_t
+# define p_regcomp pcre_regcomp
+# define p_regerror pcre_regerror
+# define p_regexec pcre_regexec
+# define p_regfree pcre_regfree
 #endif
 
 #endif

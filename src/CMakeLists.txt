@@ -306,6 +306,16 @@ ELSE()
 	MESSAGE(FATAL_ERROR "Asked for unknown SHA1 backend ${SHA1_BACKEND}")
 ENDIF()
 
+# Include PCRE and its POSIX regex compatibility layer when it is required
+IF (HAVE_REGCOMP_L)
+	ADD_FEATURE_INFO(regex ON "using system regcomp_l")
+ELSE()
+	ADD_SUBDIRECTORY("${libgit2_SOURCE_DIR}/deps/pcre" "${libgit2_BINARY_DIR}/deps/pcre")
+	LIST(APPEND LIBGIT2_INCLUDES "${libgit2_SOURCE_DIR}/deps/pcre")
+	LIST(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:pcre>)
+	ADD_FEATURE_INFO(regex ON "using bundled PCRE")
+ENDIF()
+
 # Optional external dependency: http-parser
 FIND_PACKAGE(HTTP_Parser)
 IF (USE_EXT_HTTP_PARSER AND HTTP_PARSER_FOUND AND HTTP_PARSER_VERSION_MAJOR EQUAL 2)
