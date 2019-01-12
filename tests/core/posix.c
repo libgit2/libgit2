@@ -154,7 +154,7 @@ void test_core_posix__utimes(void)
 
 void test_core_posix__p_regcomp_ignores_global_locale_ctype(void)
 {
-	regex_t preg;
+	p_regex_t preg;
 	int error = 0;
 
 	const char* oldlocale = setlocale(LC_CTYPE, NULL);
@@ -169,8 +169,8 @@ void test_core_posix__p_regcomp_ignores_global_locale_ctype(void)
 		cl_fail("Expected locale to be switched to multibyte");
 	}
 
-	p_regcomp(&preg, "[\xc0-\xff][\x80-\xbf]", REG_EXTENDED);
-	regfree(&preg);
+	p_regcomp(&preg, "[\xc0-\xff][\x80-\xbf]", P_REG_EXTENDED);
+	p_regfree(&preg);
 
 	setlocale(LC_CTYPE, oldlocale);
 
@@ -184,14 +184,14 @@ void test_core_posix__p_regcomp_compile_userdiff_regexps(void)
 	for (idx = 0; idx < ARRAY_SIZE(builtin_defs); ++idx) {
 		git_diff_driver_definition ddef = builtin_defs[idx];
 		int error = 0;
-		regex_t preg;
+		p_regex_t preg;
 
-		error = p_regcomp(&preg, ddef.fns, REG_EXTENDED | ddef.flags);
-		regfree(&preg);
+		error = p_regcomp(&preg, ddef.fns, P_REG_EXTENDED | ddef.flags);
+		p_regfree(&preg);
 		cl_must_pass(error);
 
-		error = p_regcomp(&preg, ddef.words, REG_EXTENDED);
-		regfree(&preg);
+		error = p_regcomp(&preg, ddef.words, P_REG_EXTENDED);
+		p_regfree(&preg);
 		cl_must_pass(error);
 	}
 }

@@ -85,7 +85,8 @@
  */
 #include "git2/deprecated.h"
 
-#include <regex.h>
+#include "posix.h"
+#include "posix_regex.h"
 
 #define DEFAULT_BUFSIZE 65536
 #define FILEIO_BUFSIZE DEFAULT_BUFSIZE
@@ -118,7 +119,7 @@ void git_error_set(int error_class, const char *string, ...) GIT_FORMAT_PRINTF(2
  * Set the error message for a regex failure, using the internal regex
  * error code lookup and return a libgit error code.
  */
-int git_error_set_regex(const regex_t *regex, int error_code);
+int git_error_set_regex(const p_regex_t *regex, int error_code);
 
 /**
  * Set error message for user callback if needed.
