@@ -205,7 +205,7 @@ void test_core_posix__p_regcomp_matches_digits_with_locale(void)
 	try_set_locale(LC_COLLATE);
 	try_set_locale(LC_CTYPE);
 
-	cl_assert(!p_regcomp(&preg, "[:digit:]", P_REG_EXTENDED));
+	cl_assert(!p_regcomp(&preg, "[[:digit:]]", P_REG_EXTENDED));
 
 	str[1] = '\0';
 	for (c = '0'; c <= '9'; c++) {
@@ -224,7 +224,7 @@ void test_core_posix__p_regcomp_matches_alphabet_with_locale(void)
 	try_set_locale(LC_COLLATE);
 	try_set_locale(LC_CTYPE);
 
-	cl_assert(!p_regcomp(&preg, "[:alpha:]", REG_EXTENDED));
+	cl_assert(!p_regcomp(&preg, "[[:alpha:]]", P_REG_EXTENDED));
 
 	str[1] = '\0';
 	for (c = 'a'; c <= 'z'; c++) {
