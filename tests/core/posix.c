@@ -15,11 +15,15 @@
 #include "posix.h"
 #include "userdiff.h"
 
+#if LC_ALL > 0
 static const char *old_locales[LC_ALL];
+#endif
 
 void test_core_posix__initialize(void)
 {
+#if LC_ALL > 0
 	memset(&old_locales, 0, sizeof(old_locales));
+#endif
 
 #ifdef GIT_WIN32
 	/* on win32, the WSA context needs to be initialized
@@ -33,13 +37,6 @@ void test_core_posix__initialize(void)
 
 void test_core_posix__cleanup(void)
 {
-	int i;
-
-	for (i = 0; i < LC_ALL; i++) {
-		if (old_locales[i])
-		    setlocale(i, old_locales[i]);
-	}
-
     p_unlink("fallocate_test");
 }
 
@@ -165,7 +162,9 @@ void test_core_posix__utimes(void)
 
 static void try_set_locale(int category)
 {
+#if LC_ALL > 0
 	old_locales[category] = setlocale(category, NULL);
+#endif
 
 	if (!setlocale(category, "UTF-8") &&
 	    !setlocale(category, "c.utf8") &&
@@ -191,6 +190,10 @@ void test_core_posix__p_regcomp_ignores_global_locale_collate(void)
 {
 	p_regex_t preg;
 
+#ifdef GIT_WIN32
+	cl_skip();
+#endif
+
 	try_set_locale(LC_COLLATE);
 	cl_assert(!p_regcomp(&preg, "[\xc0-\xff][\x80-\xbf]", P_REG_EXTENDED));
 
@@ -201,6 +204,10 @@ void test_core_posix__p_regcomp_matches_digits_with_locale(void)
 {
 	p_regex_t preg;
 	char c, str[2];
+
+#ifdef GIT_WIN32
+	cl_skip();
+#endif
 
 	try_set_locale(LC_COLLATE);
 	try_set_locale(LC_CTYPE);
@@ -220,6 +227,10 @@ void test_core_posix__p_regcomp_matches_alphabet_with_locale(void)
 {
 	p_regex_t preg;
 	char c, str[2];
+
+#ifdef GIT_WIN32
+	cl_skip();
+#endif
 
 	try_set_locale(LC_COLLATE);
 	try_set_locale(LC_CTYPE);
