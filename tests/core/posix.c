@@ -177,6 +177,31 @@ void test_core_posix__p_regcomp_ignores_global_locale_ctype(void)
 	cl_must_pass(error);
 }
 
+void test_core_posix__p_regcomp_ignores_global_locale_collate(void)
+{
+	regex_t preg;
+	int error = 0;
+
+	const char* oldlocale = setlocale(LC_COLLATE, NULL);
+
+	if (!setlocale(LC_COLLATE, "UTF-8") &&
+	    !setlocale(LC_COLLATE, "c.utf8") &&
+			!setlocale(LC_COLLATE, "en_US.UTF-8"))
+		cl_skip();
+
+	if (MB_CUR_MAX == 1) {
+		setlocale(LC_COLLATE, oldlocale);
+		cl_fail("Expected locale to be switched to multibyte");
+	}
+
+	error = p_regcomp(&preg, "[\xc0-\xff][\x80-\xbf]", REG_EXTENDED);
+	regfree(&preg);
+
+	setlocale(LC_COLLATE, oldlocale);
+
+	cl_must_pass(error);
+}
+
 void test_core_posix__p_regcomp_compile_userdiff_regexps(void)
 {
 	size_t idx;
