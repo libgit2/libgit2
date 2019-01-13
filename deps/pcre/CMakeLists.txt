@@ -20,6 +20,8 @@ CHECK_FUNCTION_EXISTS(_strtoi64 HAVE__STRTOI64)
 CHECK_TYPE_SIZE("long long"             LONG_LONG)
 CHECK_TYPE_SIZE("unsigned long long"    UNSIGNED_LONG_LONG)
 
+DISABLE_WARNINGS(unused-function)
+
 # User-configurable options
 
 SET(SUPPORT_PCRE8 1)
