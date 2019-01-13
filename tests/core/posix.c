@@ -182,7 +182,7 @@ void test_core_posix__p_regcomp_ignores_global_locale_ctype(void)
 
 	try_set_locale(LC_CTYPE);
 
-	cl_must_pass(p_regcomp(&preg, "[\xc0-\xff][\x80-\xbf]", P_REG_EXTENDED));
+	cl_assert(!p_regcomp(&preg, "[\xc0-\xff][\x80-\xbf]", P_REG_EXTENDED));
 
 	p_regfree(&preg);
 }
@@ -192,7 +192,7 @@ void test_core_posix__p_regcomp_ignores_global_locale_collate(void)
 	p_regex_t preg;
 
 	try_set_locale(LC_COLLATE);
-	cl_must_pass(p_regcomp(&preg, "[\xc0-\xff][\x80-\xbf]", P_REG_EXTENDED));
+	cl_assert(!p_regcomp(&preg, "[\xc0-\xff][\x80-\xbf]", P_REG_EXTENDED));
 
 	p_regfree(&preg);
 }
@@ -205,12 +205,12 @@ void test_core_posix__p_regcomp_matches_digits_with_locale(void)
 	try_set_locale(LC_COLLATE);
 	try_set_locale(LC_CTYPE);
 
-	cl_must_pass(p_regcomp(&preg, "[:digit:]", P_REG_EXTENDED));
+	cl_assert(!p_regcomp(&preg, "[:digit:]", P_REG_EXTENDED));
 
 	str[1] = '\0';
 	for (c = '0'; c <= '9'; c++) {
 	    str[0] = c;
-	    cl_must_pass(p_regexec(&preg, str, 0, NULL, 0));
+	    cl_assert(!p_regexec(&preg, str, 0, NULL, 0));
 	}
 
 	p_regfree(&preg);
@@ -224,16 +224,16 @@ void test_core_posix__p_regcomp_matches_alphabet_with_locale(void)
 	try_set_locale(LC_COLLATE);
 	try_set_locale(LC_CTYPE);
 
-	cl_must_pass(p_regcomp(&preg, "[:alpha:]", REG_EXTENDED));
+	cl_assert(!p_regcomp(&preg, "[:alpha:]", REG_EXTENDED));
 
 	str[1] = '\0';
 	for (c = 'a'; c <= 'z'; c++) {
 	    str[0] = c;
-	    cl_must_pass(p_regexec(&preg, str, 0, NULL, 0));
+	    cl_assert(!p_regexec(&preg, str, 0, NULL, 0));
 	}
 	for (c = 'A'; c <= 'Z'; c++) {
 	    str[0] = c;
-	    cl_must_pass(p_regexec(&preg, str, 0, NULL, 0));
+	    cl_assert(!p_regexec(&preg, str, 0, NULL, 0));
 	}
 
 	p_regfree(&preg);
@@ -250,11 +250,11 @@ void test_core_posix__p_regcomp_compile_userdiff_regexps(void)
 
 		error = p_regcomp(&preg, ddef.fns, P_REG_EXTENDED | ddef.flags);
 		p_regfree(&preg);
-		cl_must_pass(error);
+		cl_assert(!error);
 
 		error = p_regcomp(&preg, ddef.words, P_REG_EXTENDED);
 		p_regfree(&preg);
-		cl_must_pass(error);
+		cl_assert(!error);
 	}
 }
 
