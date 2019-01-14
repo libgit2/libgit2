@@ -840,3 +840,10 @@ void test_online_clone__proxy_credentials_in_environment(void)
 
 	git_buf_dispose(&url);
 }
+
+void test_online_clone__proxy_auto_not_detected(void)
+{
+	g_options.fetch_opts.proxy_opts.type = GIT_PROXY_AUTO;
+
+	cl_git_pass(git_clone(&g_repo, "http://github.com/libgit2/TestGitRepository", "./foo", &g_options));
+}

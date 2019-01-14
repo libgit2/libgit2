@@ -679,6 +679,9 @@ static int load_proxy_config(http_subtransport *t)
 		    !!t->server.url.use_ssl, &t->proxy_url)) < 0)
 			return error;
 
+		if (!t->proxy_url)
+			return 0;
+
 		t->proxy_opts.type = GIT_PROXY_SPECIFIED;
 		t->proxy_opts.url = t->proxy_url;
 		t->proxy_opts.credentials = t->owner->proxy.credentials;
