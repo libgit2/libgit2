@@ -25,9 +25,14 @@ committer Rebaser <rebaser@rebaser.rb> 1405694510 +0000\n\
 \n\
 Modification 3 to gravy\n";
 
-int signature_cb_passthrough(char **signature, const char *commit_content, void *payload)
+int signature_cb_passthrough(
+  git_buf *signature,
+  git_buf *signature_field,
+  const char *commit_content,
+  void *payload)
 {
-  cl_assert_equal_p(NULL, *signature);
+  cl_assert_equal_b(false, git_buf_is_allocated(signature));
+  cl_assert_equal_b(false, git_buf_is_allocated(signature_field));
   cl_assert_equal_s(expected_commit_content, commit_content);
   cl_assert_equal_p(NULL, payload);
   return GIT_PASSTHROUGH;
@@ -79,7 +84,11 @@ committer Rebaser <rebaser@rebaser.rb> 1405694510 +0000\n";
   git_rebase_free(rebase);
 }
 
-int signature_cb_gpg(char **signature, const char *commit_content, void *payload)
+int signature_cb_gpg(
+  git_buf *signature,
+  git_buf *signature_field,
+  const char *commit_content,
+  void *payload)
 {
   const char *gpg_signature = "-----BEGIN PGP SIGNATURE-----\n\
 \n\
@@ -98,22 +107,17 @@ cttVRsdOoego+fiy08eFE+aJIeYiINRGhqOBTsuqG4jIdpdKxPE=\n\
 =KbsY\n\
 -----END PGP SIGNATURE-----";
 
+  cl_assert_equal_b(false, git_buf_is_allocated(signature));
+  cl_assert_equal_b(false, git_buf_is_allocated(signature_field));
   cl_assert_equal_s(expected_commit_content, commit_content);
   cl_assert_equal_p(NULL, payload);
 
-  *signature = strdup(gpg_signature);
+  cl_git_pass(git_buf_set(signature, gpg_signature, strlen(gpg_signature) + 1));
   return GIT_OK;
 }
 
-int signature_field_cb_passthrough(char **signature_field, void *payload)
-{
-  cl_assert_equal_p(NULL, *signature_field);
-  cl_assert_equal_p(NULL, payload);
-  return GIT_PASSTHROUGH;
-}
-
 /* git checkout gravy ; git rebase --merge veal */
-void test_gpg_signature(bool use_passthrough)
+void test_rebase_sign__gpg_with_no_field(void)
 {
   git_rebase *rebase;
   git_reference *branch_ref, *upstream_ref;
@@ -145,8 +149,6 @@ gpgsig -----BEGIN PGP SIGNATURE-----\n\
  -----END PGP SIGNATURE-----\n";
 
   rebase_opts.signature_cb = signature_cb_gpg;
-  if (use_passthrough)
-    rebase_opts.signature_field_cb = signature_field_cb_passthrough;
 
   cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/gravy"));
   cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/veal"));
@@ -176,30 +178,26 @@ gpgsig -----BEGIN PGP SIGNATURE-----\n\
   git_rebase_free(rebase);
 }
 
-/* git checkout gravy ; git rebase --merge veal */
-void test_rebase_sign__gpg_with_no_field_cb(void)
-{
-  test_gpg_signature(false);
-}
 
-/* git checkout gravy ; git rebase --merge veal */
-void test_rebase_sign__gpg_with_passthrough_field_cb(void)
+int signature_cb_magic_field(
+  git_buf *signature,
+  git_buf *signature_field,
+  const char *commit_content,
+  void *payload)
 {
-  test_gpg_signature(true);
-}
+  const char *signature_content = "magic word: pretty please";
+  const char * signature_field_content = "magicsig";
 
-int signature_cb_magic_field(char **signature, const char *commit_content, void *payload)
-{
+  cl_assert_equal_b(false, git_buf_is_allocated(signature));
+  cl_assert_equal_b(false, git_buf_is_allocated(signature_field));
   cl_assert_equal_s(expected_commit_content, commit_content);
   cl_assert_equal_p(NULL, payload);
-  *signature = strdup("magic word: pretty please");
-  return GIT_OK;
-}
 
-int signature_field_cb_magic_field(char **signature_field, void *payload)
-{
-  cl_assert_equal_p(NULL, payload);
-  *signature_field = strdup("magicsig");
+  cl_git_pass(git_buf_set(signature, signature_content,
+    strlen(signature_content) + 1));
+  cl_git_pass(git_buf_set(signature_field, signature_field_content,
+    strlen(signature_field_content) + 1));
+
   return GIT_OK;
 }
 
@@ -221,7 +219,6 @@ committer Rebaser <rebaser@rebaser.rb> 1405694510 +0000\n\
 magicsig magic word: pretty please\n";
 
   rebase_opts.signature_cb = signature_cb_magic_field;
-  rebase_opts.signature_field_cb = signature_field_cb_magic_field;
 
   cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/gravy"));
   cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/veal"));
