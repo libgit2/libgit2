@@ -6,19 +6,19 @@ set -eu
 mkdir push_src
 pushd push_src
   git init
-  
+
   echo a > a.txt
   git add .
   git commit -m 'added a.txt'
-  
+
   mkdir fold
   echo b > fold/b.txt
   git add .
   git commit -m 'added fold and fold/b.txt'
-  
+
   git branch b1 #b1 and b2 are the same
   git branch b2
-  
+
   git checkout -b b3
   echo edit >> a.txt
   git add .
@@ -28,11 +28,11 @@ pushd push_src
   echo edit >> fold\b.txt
   git add .
   git commit -m 'edited fold\b.txt'
-  
+
   git checkout -b b5 master
   git submodule add ../testrepo.git submodule
   git commit -m "added submodule named 'submodule' pointing to '../testrepo.git'"
-  
+
   git checkout master
   git merge -m "merge b3, b4, and b5 to master" b3 b4 b5
 
