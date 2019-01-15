@@ -7,8 +7,8 @@ static git_signature *signature;
 /* Fixture setup and teardown */
 void test_rebase_sign__initialize(void)
 {
-  repo = cl_git_sandbox_init("rebase");
-  cl_git_pass(git_signature_new(&signature, "Rebaser",
+	repo = cl_git_sandbox_init("rebase");
+	cl_git_pass(git_signature_new(&signature, "Rebaser",
 		"rebaser@rebaser.rb", 1405694510, 0));
 }
 
@@ -26,71 +26,71 @@ committer Rebaser <rebaser@rebaser.rb> 1405694510 +0000\n\
 Modification 3 to gravy\n";
 
 int signature_cb_passthrough(
-  git_buf *signature,
-  git_buf *signature_field,
-  const char *commit_content,
-  void *payload)
+	git_buf *signature,
+	git_buf *signature_field,
+	const char *commit_content,
+	void *payload)
 {
-  cl_assert_equal_b(false, git_buf_is_allocated(signature));
-  cl_assert_equal_b(false, git_buf_is_allocated(signature_field));
-  cl_assert_equal_s(expected_commit_content, commit_content);
-  cl_assert_equal_p(NULL, payload);
-  return GIT_PASSTHROUGH;
+	cl_assert_equal_b(false, git_buf_is_allocated(signature));
+	cl_assert_equal_b(false, git_buf_is_allocated(signature_field));
+	cl_assert_equal_s(expected_commit_content, commit_content);
+	cl_assert_equal_p(NULL, payload);
+	return GIT_PASSTHROUGH;
 }
 
 /* git checkout gravy ; git rebase --merge veal */
 void test_rebase_sign__passthrough_signature_cb(void)
 {
-  git_rebase *rebase;
-  git_reference *branch_ref, *upstream_ref;
-  git_annotated_commit *branch_head, *upstream_head;
-  git_rebase_operation *rebase_operation;
-  git_oid commit_id, expected_id;
-  git_rebase_options rebase_opts = GIT_REBASE_OPTIONS_INIT;
-  git_commit *commit;
-  int error;
-  const char *expected_commit_raw_header = "tree cd99b26250099fc38d30bfaed7797a7275ed3366\n\
+	git_rebase *rebase;
+	git_reference *branch_ref, *upstream_ref;
+	git_annotated_commit *branch_head, *upstream_head;
+	git_rebase_operation *rebase_operation;
+	git_oid commit_id, expected_id;
+	git_rebase_options rebase_opts = GIT_REBASE_OPTIONS_INIT;
+	git_commit *commit;
+	int error;
+	const char *expected_commit_raw_header = "tree cd99b26250099fc38d30bfaed7797a7275ed3366\n\
 parent f87d14a4a236582a0278a916340a793714256864\n\
 author Edward Thomson <ethomson@edwardthomson.com> 1405625055 -0400\n\
 committer Rebaser <rebaser@rebaser.rb> 1405694510 +0000\n";
 
-  rebase_opts.signature_cb = signature_cb_passthrough;
+	rebase_opts.signature_cb = signature_cb_passthrough;
 
-  cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/gravy"));
-  cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/veal"));
+	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/gravy"));
+	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/veal"));
 
-  cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
-  cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
+	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
+	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
 
-  cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, &rebase_opts));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, &rebase_opts));
 
-  cl_git_pass(git_rebase_next(&rebase_operation, rebase));
-  cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature, NULL, NULL));
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature, NULL, NULL));
 
-  git_oid_fromstr(&expected_id, "129183968a65abd6c52da35bff43325001bfc630");
-  cl_assert_equal_oid(&expected_id, &commit_id);
+	git_oid_fromstr(&expected_id, "129183968a65abd6c52da35bff43325001bfc630");
+	cl_assert_equal_oid(&expected_id, &commit_id);
 
-  cl_git_pass(git_commit_lookup(&commit, repo, &commit_id));
-  cl_assert_equal_s(expected_commit_raw_header, git_commit_raw_header(commit));
+	cl_git_pass(git_commit_lookup(&commit, repo, &commit_id));
+	cl_assert_equal_s(expected_commit_raw_header, git_commit_raw_header(commit));
 
-  cl_git_fail(error = git_rebase_next(&rebase_operation, rebase));
-  cl_assert_equal_i(GIT_ITEROVER, error);
+	cl_git_fail(error = git_rebase_next(&rebase_operation, rebase));
+	cl_assert_equal_i(GIT_ITEROVER, error);
 
-  git_reference_free(branch_ref);
-  git_reference_free(upstream_ref);
-  git_annotated_commit_free(branch_head);
-  git_annotated_commit_free(upstream_head);
-  git_commit_free(commit);
-  git_rebase_free(rebase);
+	git_reference_free(branch_ref);
+	git_reference_free(upstream_ref);
+	git_annotated_commit_free(branch_head);
+	git_annotated_commit_free(upstream_head);
+	git_commit_free(commit);
+	git_rebase_free(rebase);
 }
 
 int signature_cb_gpg(
-  git_buf *signature,
-  git_buf *signature_field,
-  const char *commit_content,
-  void *payload)
+	git_buf *signature,
+	git_buf *signature_field,
+	const char *commit_content,
+	void *payload)
 {
-  const char *gpg_signature = "-----BEGIN PGP SIGNATURE-----\n\
+	const char *gpg_signature = "-----BEGIN PGP SIGNATURE-----\n\
 \n\
 iQIzBAEBCgAdFiEEgVlDEfSlmKn0fvGgK++h5T2/ctIFAlwZcrAACgkQK++h5T2/\n\
 ctIPVhAA42RyZhMdKl5Bm0KtQco2scsukIg2y7tjSwhti91zDu3HQgpusjjo0fQx\n\
@@ -107,27 +107,27 @@ cttVRsdOoego+fiy08eFE+aJIeYiINRGhqOBTsuqG4jIdpdKxPE=\n\
 =KbsY\n\
 -----END PGP SIGNATURE-----";
 
-  cl_assert_equal_b(false, git_buf_is_allocated(signature));
-  cl_assert_equal_b(false, git_buf_is_allocated(signature_field));
-  cl_assert_equal_s(expected_commit_content, commit_content);
-  cl_assert_equal_p(NULL, payload);
+	cl_assert_equal_b(false, git_buf_is_allocated(signature));
+	cl_assert_equal_b(false, git_buf_is_allocated(signature_field));
+	cl_assert_equal_s(expected_commit_content, commit_content);
+	cl_assert_equal_p(NULL, payload);
 
-  cl_git_pass(git_buf_set(signature, gpg_signature, strlen(gpg_signature) + 1));
-  return GIT_OK;
+	cl_git_pass(git_buf_set(signature, gpg_signature, strlen(gpg_signature) + 1));
+	return GIT_OK;
 }
 
 /* git checkout gravy ; git rebase --merge veal */
 void test_rebase_sign__gpg_with_no_field(void)
 {
-  git_rebase *rebase;
-  git_reference *branch_ref, *upstream_ref;
-  git_annotated_commit *branch_head, *upstream_head;
-  git_rebase_operation *rebase_operation;
-  git_oid commit_id, expected_id;
-  git_rebase_options rebase_opts = GIT_REBASE_OPTIONS_INIT;
-  git_commit *commit;
-  int error;
-  const char *expected_commit_raw_header = "tree cd99b26250099fc38d30bfaed7797a7275ed3366\n\
+	git_rebase *rebase;
+	git_reference *branch_ref, *upstream_ref;
+	git_annotated_commit *branch_head, *upstream_head;
+	git_rebase_operation *rebase_operation;
+	git_oid commit_id, expected_id;
+	git_rebase_options rebase_opts = GIT_REBASE_OPTIONS_INIT;
+	git_commit *commit;
+	int error;
+	const char *expected_commit_raw_header = "tree cd99b26250099fc38d30bfaed7797a7275ed3366\n\
 parent f87d14a4a236582a0278a916340a793714256864\n\
 author Edward Thomson <ethomson@edwardthomson.com> 1405625055 -0400\n\
 committer Rebaser <rebaser@rebaser.rb> 1405694510 +0000\n\
@@ -148,102 +148,102 @@ gpgsig -----BEGIN PGP SIGNATURE-----\n\
  =KbsY\n\
  -----END PGP SIGNATURE-----\n";
 
-  rebase_opts.signature_cb = signature_cb_gpg;
+	rebase_opts.signature_cb = signature_cb_gpg;
 
-  cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/gravy"));
-  cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/veal"));
+	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/gravy"));
+	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/veal"));
 
-  cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
-  cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
+	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
+	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
 
-  cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, &rebase_opts));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, &rebase_opts));
 
-  cl_git_pass(git_rebase_next(&rebase_operation, rebase));
-  cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature, NULL, NULL));
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature, NULL, NULL));
 
-  git_oid_fromstr(&expected_id, "bf78348e45c8286f52b760f1db15cb6da030f2ef");
-  cl_assert_equal_oid(&expected_id, &commit_id);
+	git_oid_fromstr(&expected_id, "bf78348e45c8286f52b760f1db15cb6da030f2ef");
+	cl_assert_equal_oid(&expected_id, &commit_id);
 
-  cl_git_pass(git_commit_lookup(&commit, repo, &commit_id));
-  cl_assert_equal_s(expected_commit_raw_header, git_commit_raw_header(commit));
+	cl_git_pass(git_commit_lookup(&commit, repo, &commit_id));
+	cl_assert_equal_s(expected_commit_raw_header, git_commit_raw_header(commit));
 
-  cl_git_fail(error = git_rebase_next(&rebase_operation, rebase));
-  cl_assert_equal_i(GIT_ITEROVER, error);
+	cl_git_fail(error = git_rebase_next(&rebase_operation, rebase));
+	cl_assert_equal_i(GIT_ITEROVER, error);
 
-  git_reference_free(branch_ref);
-  git_reference_free(upstream_ref);
-  git_annotated_commit_free(branch_head);
-  git_annotated_commit_free(upstream_head);
-  git_commit_free(commit);
-  git_rebase_free(rebase);
+	git_reference_free(branch_ref);
+	git_reference_free(upstream_ref);
+	git_annotated_commit_free(branch_head);
+	git_annotated_commit_free(upstream_head);
+	git_commit_free(commit);
+	git_rebase_free(rebase);
 }
 
 
 int signature_cb_magic_field(
-  git_buf *signature,
-  git_buf *signature_field,
-  const char *commit_content,
-  void *payload)
+	git_buf *signature,
+	git_buf *signature_field,
+	const char *commit_content,
+	void *payload)
 {
-  const char *signature_content = "magic word: pretty please";
-  const char * signature_field_content = "magicsig";
+	const char *signature_content = "magic word: pretty please";
+	const char * signature_field_content = "magicsig";
 
-  cl_assert_equal_b(false, git_buf_is_allocated(signature));
-  cl_assert_equal_b(false, git_buf_is_allocated(signature_field));
-  cl_assert_equal_s(expected_commit_content, commit_content);
-  cl_assert_equal_p(NULL, payload);
+	cl_assert_equal_b(false, git_buf_is_allocated(signature));
+	cl_assert_equal_b(false, git_buf_is_allocated(signature_field));
+	cl_assert_equal_s(expected_commit_content, commit_content);
+	cl_assert_equal_p(NULL, payload);
 
-  cl_git_pass(git_buf_set(signature, signature_content,
-    strlen(signature_content) + 1));
-  cl_git_pass(git_buf_set(signature_field, signature_field_content,
-    strlen(signature_field_content) + 1));
+	cl_git_pass(git_buf_set(signature, signature_content,
+		strlen(signature_content) + 1));
+	cl_git_pass(git_buf_set(signature_field, signature_field_content,
+		strlen(signature_field_content) + 1));
 
-  return GIT_OK;
+	return GIT_OK;
 }
 
 /* git checkout gravy ; git rebase --merge veal */
 void test_rebase_sign__custom_signature_field(void)
 {
-  git_rebase *rebase;
-  git_reference *branch_ref, *upstream_ref;
-  git_annotated_commit *branch_head, *upstream_head;
-  git_rebase_operation *rebase_operation;
-  git_oid commit_id, expected_id;
-  git_rebase_options rebase_opts = GIT_REBASE_OPTIONS_INIT;
-  git_commit *commit;
-  int error;
-  const char *expected_commit_raw_header = "tree cd99b26250099fc38d30bfaed7797a7275ed3366\n\
+	git_rebase *rebase;
+	git_reference *branch_ref, *upstream_ref;
+	git_annotated_commit *branch_head, *upstream_head;
+	git_rebase_operation *rebase_operation;
+	git_oid commit_id, expected_id;
+	git_rebase_options rebase_opts = GIT_REBASE_OPTIONS_INIT;
+	git_commit *commit;
+	int error;
+	const char *expected_commit_raw_header = "tree cd99b26250099fc38d30bfaed7797a7275ed3366\n\
 parent f87d14a4a236582a0278a916340a793714256864\n\
 author Edward Thomson <ethomson@edwardthomson.com> 1405625055 -0400\n\
 committer Rebaser <rebaser@rebaser.rb> 1405694510 +0000\n\
 magicsig magic word: pretty please\n";
 
-  rebase_opts.signature_cb = signature_cb_magic_field;
+	rebase_opts.signature_cb = signature_cb_magic_field;
 
-  cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/gravy"));
-  cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/veal"));
+	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/gravy"));
+	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/veal"));
 
-  cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
-  cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
+	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
+	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
 
-  cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, &rebase_opts));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, &rebase_opts));
 
-  cl_git_pass(git_rebase_next(&rebase_operation, rebase));
-  cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature, NULL, NULL));
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature, NULL, NULL));
 
-  git_oid_fromstr(&expected_id, "f46a4a8d26ae411b02aa61b7d69576627f4a1e1c");
-  cl_assert_equal_oid(&expected_id, &commit_id);
+	git_oid_fromstr(&expected_id, "f46a4a8d26ae411b02aa61b7d69576627f4a1e1c");
+	cl_assert_equal_oid(&expected_id, &commit_id);
 
-  cl_git_pass(git_commit_lookup(&commit, repo, &commit_id));
-  cl_assert_equal_s(expected_commit_raw_header, git_commit_raw_header(commit));
+	cl_git_pass(git_commit_lookup(&commit, repo, &commit_id));
+	cl_assert_equal_s(expected_commit_raw_header, git_commit_raw_header(commit));
 
-  cl_git_fail(error = git_rebase_next(&rebase_operation, rebase));
-  cl_assert_equal_i(GIT_ITEROVER, error);
+	cl_git_fail(error = git_rebase_next(&rebase_operation, rebase));
+	cl_assert_equal_i(GIT_ITEROVER, error);
 
-  git_reference_free(branch_ref);
-  git_reference_free(upstream_ref);
-  git_annotated_commit_free(branch_head);
-  git_annotated_commit_free(upstream_head);
-  git_commit_free(commit);
-  git_rebase_free(rebase);
+	git_reference_free(branch_ref);
+	git_reference_free(upstream_ref);
+	git_annotated_commit_free(branch_head);
+	git_annotated_commit_free(upstream_head);
+	git_commit_free(commit);
+	git_rebase_free(rebase);
 }
