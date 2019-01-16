@@ -193,11 +193,11 @@ typedef struct git_rebase git_rebase;
 
 /** Basic type of any Git reference. */
 typedef enum {
-	GIT_REF_INVALID = 0, /**< Invalid reference */
-	GIT_REF_OID = 1, /**< A reference which points at an object id */
-	GIT_REF_SYMBOLIC = 2, /**< A reference which points at another reference */
-	GIT_REF_LISTALL = GIT_REF_OID|GIT_REF_SYMBOLIC,
-} git_ref_t;
+	GIT_REFERENCE_INVALID  = 0, /**< Invalid reference */
+	GIT_REFERENCE_DIRECT   = 1, /**< A reference that points at an object id */
+	GIT_REFERENCE_SYMBOLIC = 2, /**< A reference that points at another reference */
+	GIT_REFERENCE_ALL      = GIT_REFERENCE_DIRECT | GIT_REFERENCE_SYMBOLIC,
+} git_reference_t;
 
 /** Basic type of any Git branch. */
 typedef enum {

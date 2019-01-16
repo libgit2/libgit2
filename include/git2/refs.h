@@ -21,6 +21,12 @@
  */
 GIT_BEGIN_DECL
 
+/** @name Reference Functions
+ *
+ * These functions read, write and analyze references.
+ */
+/**@{*/
+
 /**
  * Lookup a reference by name in a repository.
  *
@@ -263,12 +269,12 @@ GIT_EXTERN(const char *) git_reference_symbolic_target(const git_reference *ref)
 /**
  * Get the type of a reference.
  *
- * Either direct (GIT_REF_OID) or symbolic (GIT_REF_SYMBOLIC)
+ * Either direct (GIT_REFERENCE_DIRECT) or symbolic (GIT_REFERENCE_SYMBOLIC)
  *
  * @param ref The reference
  * @return the type
  */
-GIT_EXTERN(git_ref_t) git_reference_type(const git_reference *ref);
+GIT_EXTERN(git_reference_t) git_reference_type(const git_reference *ref);
 
 /**
  * Get the full name of a reference.
@@ -640,7 +646,7 @@ typedef enum {
 	/**
 	 * No particular normalization.
 	 */
-	GIT_REF_FORMAT_NORMAL = 0u,
+	GIT_REFERENCE_FORMAT_NORMAL = 0u,
 
 	/**
 	 * Control whether one-level refnames are accepted
@@ -648,7 +654,7 @@ typedef enum {
 	 * components). Those are expected to be written only using
 	 * uppercase letters and underscore (FETCH_HEAD, ...)
 	 */
-	GIT_REF_FORMAT_ALLOW_ONELEVEL = (1u << 0),
+	GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL = (1u << 0),
 
 	/**
 	 * Interpret the provided name as a reference pattern for a
@@ -657,15 +663,15 @@ typedef enum {
 	 * in place of a one full pathname component
 	 * (e.g., foo/<star>/bar but not foo/bar<star>).
 	 */
-	GIT_REF_FORMAT_REFSPEC_PATTERN = (1u << 1),
+	GIT_REFERENCE_FORMAT_REFSPEC_PATTERN = (1u << 1),
 
 	/**
 	 * Interpret the name as part of a refspec in shorthand form
 	 * so the `ONELEVEL` naming rules aren't enforced and 'master'
 	 * becomes a valid name.
 	 */
-	GIT_REF_FORMAT_REFSPEC_SHORTHAND = (1u << 2),
-} git_reference_normalize_t;
+	GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND = (1u << 2),
+} git_reference_format_t;
 
 /**
  * Normalize reference name and check validity.
@@ -683,7 +689,7 @@ typedef enum {
  * @param buffer_size Size of buffer_out
  * @param name Reference name to be checked.
  * @param flags Flags to constrain name validation rules - see the
- *              GIT_REF_FORMAT constants above.
+ *              GIT_REFERENCE_FORMAT constants above.
  * @return 0 on success, GIT_EBUFS if buffer is too small, GIT_EINVALIDSPEC
  * or an error code.
  */
@@ -743,6 +749,34 @@ GIT_EXTERN(int) git_reference_is_valid_name(const char *refname);
  */
 GIT_EXTERN(const char *) git_reference_shorthand(const git_reference *ref);
 
+/**@}*/
+
+/** @name Deprecated Reference Constants
+ *
+ * These enumeration values are retained for backward compatibility.  The
+ * newer versions of these functions should be preferred in all new code.
+ */
+/**@{*/
+
+ /** Basic type of any Git reference. */
+#define git_ref_t git_reference_t
+#define git_reference_normalize_t git_reference_format_t
+
+GIT_DEPRECATED(static const unsigned int) GIT_REF_INVALID = GIT_REFERENCE_INVALID;
+GIT_DEPRECATED(static const unsigned int) GIT_REF_OID = GIT_REFERENCE_DIRECT;
+GIT_DEPRECATED(static const unsigned int) GIT_REF_SYMBOLIC = GIT_REFERENCE_SYMBOLIC;
+GIT_DEPRECATED(static const unsigned int) GIT_REF_LISTALL = GIT_REFERENCE_ALL;
+
+GIT_DEPRECATED(static const unsigned int) GIT_REF_FORMAT_NORMAL =
+	GIT_REFERENCE_FORMAT_NORMAL;
+GIT_DEPRECATED(static const unsigned int) GIT_REF_FORMAT_ALLOW_ONELEVEL =
+	GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL;
+GIT_DEPRECATED(static const unsigned int) GIT_REF_FORMAT_REFSPEC_PATTERN =
+	GIT_REFERENCE_FORMAT_REFSPEC_PATTERN;
+GIT_DEPRECATED(static const unsigned int) GIT_REF_FORMAT_REFSPEC_SHORTHAND =
+	GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND;
+
+/**@}*/
 
 /** @} */
 GIT_END_DECL
