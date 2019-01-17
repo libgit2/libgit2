@@ -30,7 +30,7 @@ typedef struct {
 	const char *name;
 	void *payload;
 
-	git_ref_t ref_type;
+	git_reference_t ref_type;
 	union {
 		git_oid id;
 		char *symbolic;
@@ -120,7 +120,7 @@ int git_transaction_lock_ref(git_transaction *tx, const char *refname)
 		return error;
 
 	git_strmap_insert(tx->locks, node->name, node, &error);
-	if (error < 0) 
+	if (error < 0)
 		goto cleanup;
 
 	return 0;
@@ -189,7 +189,7 @@ int git_transaction_set_target(git_transaction *tx, const char *refname, const g
 		return error;
 
 	git_oid_cpy(&node->target.id, target);
-	node->ref_type = GIT_REF_OID;
+	node->ref_type = GIT_REFERENCE_DIRECT;
 
 	return 0;
 }
@@ -209,7 +209,7 @@ int git_transaction_set_symbolic_target(git_transaction *tx, const char *refname
 
 	node->target.symbolic = git_pool_strdup(&tx->pool, target);
 	GITERR_CHECK_ALLOC(node->target.symbolic);
-	node->ref_type = GIT_REF_SYMBOLIC;
+	node->ref_type = GIT_REFERENCE_SYMBOLIC;
 
 	return 0;
 }
@@ -223,7 +223,7 @@ int git_transaction_remove(git_transaction *tx, const char *refname)
 		return error;
 
 	node->remove = true;
-	node->ref_type = GIT_REF_OID; /* the id will be ignored */
+	node->ref_type = GIT_REFERENCE_DIRECT; /* the id will be ignored */
 
 	return 0;
 }
@@ -292,9 +292,9 @@ static int update_target(git_refdb *db, transaction_node *node)
 	git_reference *ref;
 	int error, update_reflog;
 
-	if (node->ref_type == GIT_REF_OID) {
+	if (node->ref_type == GIT_REFERENCE_DIRECT) {
 		ref = git_reference__alloc(node->name, &node->target.id, NULL);
-	} else if (node->ref_type == GIT_REF_SYMBOLIC) {
+	} else if (node->ref_type == GIT_REFERENCE_SYMBOLIC) {
 		ref = git_reference__alloc_symbolic(node->name, node->target.symbolic);
 	} else {
 		abort();
@@ -305,9 +305,9 @@ static int update_target(git_refdb *db, transaction_node *node)
 
 	if (node->remove) {
 		error =  git_refdb_unlock(db, node->payload, 2, false, ref, NULL, NULL);
-	} else if (node->ref_type == GIT_REF_OID) {
+	} else if (node->ref_type == GIT_REFERENCE_DIRECT) {
 		error = git_refdb_unlock(db, node->payload, true, update_reflog, ref, node->sig, node->message);
-	} else if (node->ref_type == GIT_REF_SYMBOLIC) {
+	} else if (node->ref_type == GIT_REFERENCE_SYMBOLIC) {
 		error = git_refdb_unlock(db, node->payload, true, update_reflog, ref, node->sig, node->message);
 	} else {
 		abort();
@@ -339,7 +339,7 @@ int git_transaction_commit(git_transaction *tx)
 				return error;
 		}
 
-		if (node->ref_type != GIT_REF_INVALID) {
+		if (node->ref_type != GIT_REFERENCE_INVALID) {
 			if ((error = update_target(tx->db, node)) < 0)
 				return error;
 		}

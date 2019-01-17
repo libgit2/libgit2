@@ -297,7 +297,7 @@ static int fetch_setup_walk(git_revwalk **out, git_repository *repo)
 		if ((error = git_reference_lookup(&ref, repo, refs.strings[i])) < 0)
 			goto on_error;
 
-		if (git_reference_type(ref) == GIT_REF_SYMBOLIC)
+		if (git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC)
 			continue;
 
 		if ((error = git_revwalk_push(walk, git_reference_target(ref))) < 0)

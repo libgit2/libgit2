@@ -692,12 +692,12 @@ static void reference_listing(git_repository *repo)
 		git_reference_lookup(&ref, repo, refname);
 
 		switch (git_reference_type(ref)) {
-			case GIT_REF_OID:
+			case GIT_REFERENCE_DIRECT:
 				git_oid_fmt(oid_hex, git_reference_target(ref));
 				printf("%s [%s]\n", refname, oid_hex);
 				break;
 
-			case GIT_REF_SYMBOLIC:
+			case GIT_REFERENCE_SYMBOLIC:
 				printf("%s => %s\n", refname, git_reference_symbolic_target(ref));
 				break;
 			default:

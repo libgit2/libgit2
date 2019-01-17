@@ -1126,7 +1126,7 @@ static int remote_head_for_ref(git_remote_head **out, git_remote *remote, git_re
 	error = git_reference_resolve(&resolved_ref, ref);
 
 	/* If we're in an unborn branch, let's pretend nothing happened */
-	if (error == GIT_ENOTFOUND && git_reference_type(ref) == GIT_REF_SYMBOLIC) {
+	if (error == GIT_ENOTFOUND && git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC) {
 		ref_name = git_reference_symbolic_target(ref);
 		error = 0;
 	} else {
@@ -1329,7 +1329,7 @@ int git_remote_prune(git_remote *remote, const git_remote_callbacks *callbacks)
 		if (error < 0)
 			goto cleanup;
 
-		if (git_reference_type(ref) == GIT_REF_SYMBOLIC) {
+		if (git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC) {
 			git_reference_free(ref);
 			continue;
 		}
@@ -1450,7 +1450,7 @@ static int update_tips_for_spec(
 			continue;
 
 		/* In autotag mode, don't overwrite any locally-existing tags */
-		error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, !autotag, 
+		error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, !autotag,
 				log_message);
 
 		if (error == GIT_EEXISTS)
@@ -1919,7 +1919,7 @@ static int rename_one_remote_reference(
 					  git_buf_cstr(&log_message))) < 0)
 		goto cleanup;
 
-	if (git_reference_type(ref) != GIT_REF_SYMBOLIC)
+	if (git_reference_type(ref) != GIT_REFERENCE_SYMBOLIC)
 		goto cleanup;
 
 	/* Handle refs like origin/HEAD -> origin/master */

@@ -145,7 +145,7 @@ void test_online_clone__empty_repository(void)
 	cl_assert_equal_i(true, git_repository_head_unborn(g_repo));
 
 	cl_git_pass(git_reference_lookup(&head, g_repo, GIT_HEAD_FILE));
-	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(head));
+	cl_assert_equal_i(GIT_REFERENCE_SYMBOLIC, git_reference_type(head));
 	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
 
 	git_reference_free(head);
@@ -185,7 +185,7 @@ void test_online_clone__can_checkout_a_cloned_repo(void)
 	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&path)));
 
 	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
-	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(head));
+	cl_assert_equal_i(GIT_REFERENCE_SYMBOLIC, git_reference_type(head));
 	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
 
 	cl_assert_equal_i(true, checkout_progress_cb_was_called);
@@ -226,7 +226,7 @@ void test_online_clone__clone_mirror(void)
 	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo.git", &opts));
 
 	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
-	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(head));
+	cl_assert_equal_i(GIT_REFERENCE_SYMBOLIC, git_reference_type(head));
 	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
 
 	cl_assert_equal_i(true, fetch_progress_cb_was_called);

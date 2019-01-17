@@ -10,7 +10,7 @@ static int show_ref(git_reference *ref, void *data)
         const git_oid *oid;
         git_object *obj;
 
-        if (git_reference_type(ref) == GIT_REF_SYMBOLIC)
+        if (git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC)
                 check_lg2(git_reference_resolve(&resolved, ref),
                           "Unable to resolve symbolic reference",
                           git_reference_name(ref));

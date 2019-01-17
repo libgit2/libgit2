@@ -41,13 +41,13 @@ void test_refs_create__symbolic(void)
 
 	/* Ensure the reference can be looked-up... */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, new_head_tracker));
-	cl_assert(git_reference_type(looked_up_ref) & GIT_REF_SYMBOLIC);
+	cl_assert(git_reference_type(looked_up_ref) & GIT_REFERENCE_SYMBOLIC);
 	cl_assert(reference_is_packed(looked_up_ref) == 0);
 	cl_assert_equal_s(looked_up_ref->name, new_head_tracker);
 
 	/* ...peeled.. */
 	cl_git_pass(git_reference_resolve(&resolved_ref, looked_up_ref));
-	cl_assert(git_reference_type(resolved_ref) == GIT_REF_OID);
+	cl_assert(git_reference_type(resolved_ref) == GIT_REFERENCE_DIRECT);
 
 	/* ...and that it points to the current master tip */
 	cl_assert_equal_oid(&id, git_reference_target(resolved_ref));
@@ -91,7 +91,7 @@ void test_refs_create__symbolic_with_arbitrary_content(void)
 
 	/* Ensure the reference can be looked-up... */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, new_head_tracker));
-	cl_assert(git_reference_type(looked_up_ref) & GIT_REF_SYMBOLIC);
+	cl_assert(git_reference_type(looked_up_ref) & GIT_REFERENCE_SYMBOLIC);
 	cl_assert(reference_is_packed(looked_up_ref) == 0);
 	cl_assert_equal_s(looked_up_ref->name, new_head_tracker);
 	git_reference_free(looked_up_ref);
@@ -104,7 +104,7 @@ void test_refs_create__symbolic_with_arbitrary_content(void)
 
 	/* Ensure the reference can be looked-up... */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, repo2, new_head_tracker));
-	cl_assert(git_reference_type(looked_up_ref) & GIT_REF_SYMBOLIC);
+	cl_assert(git_reference_type(looked_up_ref) & GIT_REFERENCE_SYMBOLIC);
 	cl_assert(reference_is_packed(looked_up_ref) == 0);
 	cl_assert_equal_s(looked_up_ref->name, new_head_tracker);
 
@@ -152,7 +152,7 @@ void test_refs_create__oid(void)
 
 	/* Ensure the reference can be looked-up... */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, new_head));
-	cl_assert(git_reference_type(looked_up_ref) & GIT_REF_OID);
+	cl_assert(git_reference_type(looked_up_ref) & GIT_REFERENCE_DIRECT);
 	cl_assert(reference_is_packed(looked_up_ref) == 0);
 	cl_assert_equal_s(looked_up_ref->name, new_head);
 

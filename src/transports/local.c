@@ -100,7 +100,7 @@ static int add_ref(transport_local *t, const char *name)
 
 	git_oid_cpy(&head->oid, &obj_id);
 
-	if (git_reference_type(ref) == GIT_REF_SYMBOLIC) {
+	if (git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC) {
 		head->symref_target = git__strdup(git_reference_symbolic_target(ref));
 		GITERR_CHECK_ALLOC(head->symref_target);
 	}
@@ -512,7 +512,7 @@ static int foreach_reference_cb(git_reference *reference, void *payload)
 	git_revwalk *walk = (git_revwalk *)payload;
 	int error;
 
-	if (git_reference_type(reference) != GIT_REF_OID) {
+	if (git_reference_type(reference) != GIT_REFERENCE_DIRECT) {
 		git_reference_free(reference);
 		return 0;
 	}

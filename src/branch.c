@@ -141,7 +141,7 @@ static int branch_equals(git_repository *repo, const char *path, void *payload)
 	int equal = 0;
 
 	if (git_reference__read_head(&head, repo, path) < 0 ||
-		git_reference_type(head) != GIT_REF_SYMBOLIC)
+		git_reference_type(head) != GIT_REFERENCE_SYMBOLIC)
 		goto done;
 
 	equal = !git__strcmp(head->target.symbolic, branch->name);
