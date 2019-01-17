@@ -70,7 +70,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	}
 	git_mempack_reset(mempack);
 
-	if (git_odb_write(&id, odb, base_obj, base_obj_len, GIT_OBJ_BLOB) < 0) {
+	if (git_odb_write(&id, odb, base_obj, base_obj_len, GIT_OBJECT_BLOB) < 0) {
 		fprintf(stderr, "Failed to add an object to the odb\n");
 		abort();
 	}
@@ -93,7 +93,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 		goto cleanup;
 	if (append_hash) {
 		git_oid oid;
-		if (git_odb_hash(&oid, data, size, GIT_OBJ_BLOB) < 0) {
+		if (git_odb_hash(&oid, data, size, GIT_OBJECT_BLOB) < 0) {
 			fprintf(stderr, "Failed to compute the SHA1 hash\n");
 			abort();
 		}

@@ -130,7 +130,7 @@ int git_annotated_commit_from_ref(
 
 	*out = NULL;
 
-	if ((error = git_reference_peel(&peeled, ref, GIT_OBJ_COMMIT)) < 0)
+	if ((error = git_reference_peel(&peeled, ref, GIT_OBJECT_COMMIT)) < 0)
 		return error;
 
 	error = annotated_commit_init_from_id(out,

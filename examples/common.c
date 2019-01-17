@@ -250,7 +250,7 @@ void treeish_to_tree(
 		"looking up object", treeish);
 
 	check_lg2(
-		git_object_peel((git_object **)out, obj, GIT_OBJ_TREE),
+		git_object_peel((git_object **)out, obj, GIT_OBJECT_TREE),
 		"resolving object to tree", treeish);
 
 	git_object_free(obj);

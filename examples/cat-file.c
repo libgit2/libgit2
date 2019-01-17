@@ -168,16 +168,16 @@ int main(int argc, char *argv[])
 	case SHOW_PRETTY:
 
 		switch (git_object_type(obj)) {
-		case GIT_OBJ_BLOB:
+		case GIT_OBJECT_BLOB:
 			show_blob((const git_blob *)obj);
 			break;
-		case GIT_OBJ_COMMIT:
+		case GIT_OBJECT_COMMIT:
 			show_commit((const git_commit *)obj);
 			break;
-		case GIT_OBJ_TREE:
+		case GIT_OBJECT_TREE:
 			show_tree((const git_tree *)obj);
 			break;
-		case GIT_OBJ_TAG:
+		case GIT_OBJECT_TAG:
 			show_tag((const git_tag *)obj);
 			break;
 		default:

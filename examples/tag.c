@@ -135,10 +135,10 @@ static int each_tag(const char *name, tag_state *state)
 			"Failed to lookup rev", name);
 
 	switch (git_object_type(obj)) {
-		case GIT_OBJ_TAG:
+		case GIT_OBJECT_TAG:
 			print_tag((git_tag *) obj, state);
 			break;
-		case GIT_OBJ_COMMIT:
+		case GIT_OBJECT_COMMIT:
 			print_commit((git_commit *) obj, name, state);
 			break;
 		default:
