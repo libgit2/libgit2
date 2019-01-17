@@ -351,7 +351,7 @@ static int read_loose(git_rawobj *out, git_buf *loc)
 
 	out->data = NULL;
 	out->len = 0;
-	out->type = GIT_OBJECT_BAD;
+	out->type = GIT_OBJECT_INVALID;
 
 	if ((error = git_futils_readbuffer(&obj, loc->ptr)) < 0)
 		goto done;
@@ -583,7 +583,7 @@ static int loose_backend__read_header(size_t *len_p, git_object_t *type_p, git_o
 	assert(backend && oid);
 
 	raw.len = 0;
-	raw.type = GIT_OBJECT_BAD;
+	raw.type = GIT_OBJECT_INVALID;
 
 	if (locate_object(&object_path, (loose_backend *)backend, oid) < 0) {
 		error = git_odb__error_notfound("no matching loose object",
@@ -989,7 +989,7 @@ static int loose_backend__readstream(
 	backend = (loose_backend *)_backend;
 	*stream_out = NULL;
 	*len_out = 0;
-	*type_out = GIT_OBJECT_BAD;
+	*type_out = GIT_OBJECT_INVALID;
 
 	if (locate_object(&object_path, backend, oid) < 0) {
 		error = git_odb__error_notfound("no matching loose object",

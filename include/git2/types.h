@@ -69,7 +69,7 @@ typedef int64_t git_time_t;
 /** Basic type (loose or packed) of any Git object. */
 typedef enum {
 	GIT_OBJECT_ANY =      -2, /**< Object can be any of the following */
-	GIT_OBJECT_BAD =      -1, /**< Object is invalid. */
+	GIT_OBJECT_INVALID =  -1, /**< Object is invalid. */
 	GIT_OBJECT_COMMIT =    1, /**< A commit object. */
 	GIT_OBJECT_TREE =      2, /**< A tree (directory listing) object. */
 	GIT_OBJECT_BLOB =      3, /**< A file revision object. */
@@ -451,7 +451,7 @@ typedef struct git_mailmap git_mailmap;
 /**@{*/
 
 GIT_DEPRECATED(static const int) GIT_OBJ_ANY = GIT_OBJECT_ANY;
-GIT_DEPRECATED(static const int) GIT_OBJ_BAD = GIT_OBJECT_BAD;
+GIT_DEPRECATED(static const int) GIT_OBJ_BAD = GIT_OBJECT_INVALID;
 GIT_DEPRECATED(static const int) GIT_OBJ__EXT1 = 0;
 GIT_DEPRECATED(static const int) GIT_OBJ_COMMIT = GIT_OBJECT_COMMIT;
 GIT_DEPRECATED(static const int) GIT_OBJ_TREE = GIT_OBJECT_TREE;

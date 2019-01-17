@@ -644,7 +644,7 @@ int git_packfile_unpack(
 
 	obj->data = NULL;
 	obj->len = 0;
-	obj->type = GIT_OBJECT_BAD;
+	obj->type = GIT_OBJECT_INVALID;
 
 	/* let's point to the right stack */
 	stack = chain.ptr ? chain.ptr : small_stack;
@@ -726,7 +726,7 @@ int git_packfile_unpack(
 		base = *obj;
 		obj->data = NULL;
 		obj->len = 0;
-		obj->type = GIT_OBJECT_BAD;
+		obj->type = GIT_OBJECT_INVALID;
 
 		error = git_delta_apply(&obj->data, &obj->len, base.data, base.len, delta.data, delta.len);
 		obj->type = base_type;

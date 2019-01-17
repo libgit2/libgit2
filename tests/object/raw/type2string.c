@@ -6,7 +6,7 @@
 
 void test_object_raw_type2string__convert_type_to_string(void)
 {
-	cl_assert_equal_s(git_object_type2string(GIT_OBJECT_BAD), "");
+	cl_assert_equal_s(git_object_type2string(GIT_OBJECT_INVALID), "");
 	cl_assert_equal_s(git_object_type2string(0), ""); /* EXT1 */
 	cl_assert_equal_s(git_object_type2string(GIT_OBJECT_COMMIT), "commit");
 	cl_assert_equal_s(git_object_type2string(GIT_OBJECT_TREE), "tree");
@@ -23,8 +23,8 @@ void test_object_raw_type2string__convert_type_to_string(void)
 
 void test_object_raw_type2string__convert_string_to_type(void)
 {
-	cl_assert(git_object_string2type(NULL) == GIT_OBJECT_BAD);
-	cl_assert(git_object_string2type("") == GIT_OBJECT_BAD);
+	cl_assert(git_object_string2type(NULL) == GIT_OBJECT_INVALID);
+	cl_assert(git_object_string2type("") == GIT_OBJECT_INVALID);
 	cl_assert(git_object_string2type("commit") == GIT_OBJECT_COMMIT);
 	cl_assert(git_object_string2type("tree") == GIT_OBJECT_TREE);
 	cl_assert(git_object_string2type("blob") == GIT_OBJECT_BLOB);
@@ -32,13 +32,13 @@ void test_object_raw_type2string__convert_string_to_type(void)
 	cl_assert(git_object_string2type("OFS_DELTA") == GIT_OBJECT_OFS_DELTA);
 	cl_assert(git_object_string2type("REF_DELTA") == GIT_OBJECT_REF_DELTA);
 
-	cl_assert(git_object_string2type("CoMmIt") == GIT_OBJECT_BAD);
-	cl_assert(git_object_string2type("hohoho") == GIT_OBJECT_BAD);
+	cl_assert(git_object_string2type("CoMmIt") == GIT_OBJECT_INVALID);
+	cl_assert(git_object_string2type("hohoho") == GIT_OBJECT_INVALID);
 }
 
 void test_object_raw_type2string__check_type_is_loose(void)
 {
-	cl_assert(git_object_typeisloose(GIT_OBJECT_BAD) == 0);
+	cl_assert(git_object_typeisloose(GIT_OBJECT_INVALID) == 0);
 	cl_assert(git_object_typeisloose(0) == 0); /* EXT1 */
 	cl_assert(git_object_typeisloose(GIT_OBJECT_COMMIT) == 1);
 	cl_assert(git_object_typeisloose(GIT_OBJECT_TREE) == 1);

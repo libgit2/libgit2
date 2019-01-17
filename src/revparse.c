@@ -369,7 +369,7 @@ static git_object_t parse_obj_type(const char *str)
 	if (!strcmp(str, "tag"))
 		return GIT_OBJECT_TAG;
 
-	return GIT_OBJECT_BAD;
+	return GIT_OBJECT_INVALID;
 }
 
 static int dereference_to_non_tag(git_object **out, git_object *obj)
@@ -515,7 +515,7 @@ static int handle_caret_curly_syntax(git_object **out, git_object *obj, const ch
 
 	expected_type = parse_obj_type(curly_braces_content);
 
-	if (expected_type == GIT_OBJECT_BAD)
+	if (expected_type == GIT_OBJECT_INVALID)
 		return GIT_EINVALIDSPEC;
 
 	return git_object_peel(out, obj, expected_type);
