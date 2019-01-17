@@ -104,6 +104,9 @@ v0.27 + 1
 * The `ref` field has been added to `git_worktree_add_options` to enable
   the creation of a worktree from a pre-existing branch.
 
+* It's now possible to analyze merge relationships between any two
+  references, not just against `HEAD`, using `git_merge_analysis_for_ref`.
+
 ### API removals
 
 ### Breaking API changes
