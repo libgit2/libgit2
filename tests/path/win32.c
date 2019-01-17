@@ -150,7 +150,7 @@ static void test_remove_namespace(const wchar_t *in, const wchar_t *expected)
 	cl_assert(wcslen(in) < MAX_PATH);
 	wcscpy(canonical, in);
 
-	cl_must_pass(git_win32_path_remove_namespace(canonical, wcslen(in)));
+	git_win32_path_remove_namespace(canonical, wcslen(in));
 	cl_assert_equal_wcs(expected, canonical);
 #else
 	GIT_UNUSED(in);

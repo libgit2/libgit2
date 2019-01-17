@@ -95,7 +95,7 @@ int git_odb__format_object_header(
 	int hdr_max = (hdr_size > INT_MAX-2) ? (INT_MAX-2) : (int)hdr_size;
 	int len;
 
-	len = p_snprintf(hdr, hdr_max, "%s %lld", type_str, (long long)obj_len);
+	len = p_snprintf(hdr, hdr_max, "%s %"PRId64, type_str, (int64_t)obj_len);
 
 	if (len < 0 || len >= hdr_max) {
 		giterr_set(GITERR_OS, "object header creation failed");

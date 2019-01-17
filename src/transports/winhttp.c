@@ -329,34 +329,6 @@ static void winhttp_stream_close(winhttp_stream *s)
 	s->sent_request = 0;
 }
 
-/**
- * Extract the url and password from a URL. The outputs are pointers
- * into the input.
- */
-static int userpass_from_url(wchar_t **user, int *user_len,
-			     wchar_t **pass, int *pass_len,
-			     const wchar_t *url, int url_len)
-{
-	URL_COMPONENTS components = { 0 };
-
-	components.dwStructSize = sizeof(components);
-	/* These tell WinHttpCrackUrl that we're interested in the fields */
-	components.dwUserNameLength = 1;
-	components.dwPasswordLength = 1;
-
-	if (!WinHttpCrackUrl(url, url_len, 0, &components)) {
-		giterr_set(GITERR_OS, "failed to extract user/pass from url");
-		return -1;
-	}
-
-	*user     = components.lpszUserName;
-	*user_len = components.dwUserNameLength;
-	*pass     = components.lpszPassword;
-	*pass_len = components.dwPasswordLength;
-
-	return 0;
-}
-
 #define SCHEME_HTTP  "http://"
 #define SCHEME_HTTPS "https://"
 
@@ -659,7 +631,7 @@ static int write_chunk(HINTERNET request, const char *buffer, size_t len)
 	git_buf buf = GIT_BUF_INIT;
 
 	/* Chunk header */
-	git_buf_printf(&buf, "%X\r\n", len);
+	git_buf_printf(&buf, "%"PRIXZ"\r\n", len);
 
 	if (git_buf_oom(&buf))
 		return -1;
@@ -747,7 +719,7 @@ static void CALLBACK winhttp_status(
 	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_SECURITY_CHANNEL_ERROR))
 		giterr_set(GITERR_NET, "security libraries could not be loaded");
 	else
-		giterr_set(GITERR_NET, "unknown security error %d", status);
+		giterr_set(GITERR_NET, "unknown security error %lu", status);
 }
 
 static int winhttp_connect(
@@ -870,7 +842,7 @@ static int do_send_request(winhttp_stream *s, size_t len, int ignore_length)
 				len, 0);
 		}
 
-		if (success || GetLastError() != SEC_E_BUFFER_TOO_SMALL)
+		if (success || GetLastError() != (DWORD)SEC_E_BUFFER_TOO_SMALL)
 			break;
 	}
 
@@ -1170,7 +1142,7 @@ replay:
 		}
 
 		if (HTTP_STATUS_OK != status_code) {
-			giterr_set(GITERR_NET, "request failed with status code: %d", status_code);
+			giterr_set(GITERR_NET, "request failed with status code: %lu", status_code);
 			return -1;
 		}
 
