@@ -35,7 +35,7 @@ v0.27 + 1
   limit the maximum memory used when fetching from an untrusted remote.
 
 * Line numbers in diffs loaded from patch files were not being populated;
-  they are now included in the results..
+  they are now included in the results.
 
 * The repository's index is reloaded from disk at the beginning of
   `git_merge` operations to ensure that it is up-to-date.
