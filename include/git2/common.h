@@ -43,9 +43,16 @@ typedef size_t size_t;
 			 __attribute__((visibility("default"))) \
 			 type
 #elif defined(_MSC_VER)
-# define GIT_EXTERN(type) __declspec(dllexport) type
+# define GIT_EXTERN(type) __declspec(dllexport) type __cdecl
 #else
 # define GIT_EXTERN(type) extern type
+#endif
+
+/** Declare a callback function for application use. */
+#if defined(_MSC_VER)
+# define GIT_CALLBACK(name) (__cdecl *name)
+#else
+# define GIT_CALLBACK(name) (*name)
 #endif
 
 /** Declare a function as deprecated. */

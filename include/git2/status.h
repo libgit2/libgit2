@@ -60,7 +60,7 @@ typedef enum {
  *
  * `payload` is the value you passed to the foreach function as payload.
  */
-typedef int (*git_status_cb)(
+typedef int GIT_CALLBACK(git_status_cb)(
 	const char *path, unsigned int status_flags, void *payload);
 
 /**

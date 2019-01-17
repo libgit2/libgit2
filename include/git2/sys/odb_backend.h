@@ -32,37 +32,37 @@ struct git_odb_backend {
 	 * will be freed later. The buffer should be allocated using
 	 * the function git_odb_backend_malloc to ensure that it can
 	 * be safely freed later. */
-	int (* read)(
+	int GIT_CALLBACK(read)(
 		void **, size_t *, git_object_t *, git_odb_backend *, const git_oid *);
 
 	/* To find a unique object given a prefix of its oid.  The oid given
 	 * must be so that the remaining (GIT_OID_HEXSZ - len)*4 bits are 0s.
 	 */
-	int (* read_prefix)(
+	int GIT_CALLBACK(read_prefix)(
 		git_oid *, void **, size_t *, git_object_t *,
 		git_odb_backend *, const git_oid *, size_t);
 
-	int (* read_header)(
+	int GIT_CALLBACK(read_header)(
 		size_t *, git_object_t *, git_odb_backend *, const git_oid *);
 
 	/**
 	 * Write an object into the backend. The id of the object has
 	 * already been calculated and is passed in.
 	 */
-	int (* write)(
+	int GIT_CALLBACK(write)(
 		git_odb_backend *, const git_oid *, const void *, size_t, git_object_t);
 
-	int (* writestream)(
+	int GIT_CALLBACK(writestream)(
 		git_odb_stream **, git_odb_backend *, git_off_t, git_object_t);
 
-	int (* readstream)(
+	int GIT_CALLBACK(readstream)(
 		git_odb_stream **, size_t *, git_object_t *,
 		git_odb_backend *, const git_oid *);
 
-	int (* exists)(
+	int GIT_CALLBACK(exists)(
 		git_odb_backend *, const git_oid *);
 
-	int (* exists_prefix)(
+	int GIT_CALLBACK(exists_prefix)(
 		git_oid *, git_odb_backend *, const git_oid *, size_t);
 
 	/**
@@ -75,12 +75,12 @@ struct git_odb_backend {
 	 * implementation to achieve this could be to internally invoke this
 	 * endpoint on failed lookups (ie. `exists()`, `read()`, `read_header()`).
 	 */
-	int (* refresh)(git_odb_backend *);
+	int GIT_CALLBACK(refresh)(git_odb_backend *);
 
-	int (* foreach)(
+	int GIT_CALLBACK(foreach)(
 		git_odb_backend *, git_odb_foreach_cb cb, void *payload);
 
-	int (* writepack)(
+	int GIT_CALLBACK(writepack)(
 		git_odb_writepack **, git_odb_backend *, git_odb *odb,
 		git_transfer_progress_cb progress_cb, void *progress_payload);
 
@@ -93,13 +93,13 @@ struct git_odb_backend {
 	 * If callers implement this, they should return `0` if the object
 	 * exists and was freshened, and non-zero otherwise.
 	 */
-	int (* freshen)(git_odb_backend *, const git_oid *);
+	int GIT_CALLBACK(freshen)(git_odb_backend *, const git_oid *);
 
 	/**
 	 * Frees any resources held by the odb (including the `git_odb_backend`
 	 * itself). An odb backend implementation must provide this function.
 	 */
-	void (* free)(git_odb_backend *);
+	void GIT_CALLBACK(free)(git_odb_backend *);
 };
 
 #define GIT_ODB_BACKEND_VERSION 1

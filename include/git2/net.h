@@ -52,7 +52,7 @@ struct git_remote_head {
 /**
  * Callback for listing the remote heads
  */
-typedef int (*git_headlist_cb)(git_remote_head *rhead, void *payload);
+typedef int GIT_CALLBACK(git_headlist_cb)(git_remote_head *rhead, void *payload);
 
 /** @} */
 GIT_END_DECL

@@ -328,7 +328,7 @@ typedef struct {
  * - returns 0, the delta is inserted into the diff, and the diff process
  *		continues.
  */
-typedef int (*git_diff_notify_cb)(
+typedef int GIT_CALLBACK(git_diff_notify_cb)(
 	const git_diff *diff_so_far,
 	const git_diff_delta *delta_to_add,
 	const char *matched_pathspec,
@@ -344,7 +344,7 @@ typedef int (*git_diff_notify_cb)(
  * @param new_path The path to the new file or NULL.
  * @return Non-zero to abort the diff.
  */
-typedef int (*git_diff_progress_cb)(
+typedef int GIT_CALLBACK(git_diff_progress_cb)(
 	const git_diff *diff_so_far,
 	const char *old_path,
 	const char *new_path,
@@ -462,7 +462,7 @@ GIT_EXTERN(int) git_diff_init_options(
  * @param progress Goes from 0 to 1 over the diff
  * @param payload User-specified pointer from foreach function
  */
-typedef int (*git_diff_file_cb)(
+typedef int GIT_CALLBACK(git_diff_file_cb)(
 	const git_diff_delta *delta,
 	float progress,
 	void *payload);
@@ -528,7 +528,7 @@ typedef struct {
  * When iterating over a diff, callback that will be made for
  * binary content within the diff.
  */
-typedef int(*git_diff_binary_cb)(
+typedef int GIT_CALLBACK(git_diff_binary_cb)(
 	const git_diff_delta *delta,
 	const git_diff_binary *binary,
 	void *payload);
@@ -554,7 +554,7 @@ typedef struct {
 /**
  * When iterating over a diff, callback that will be made per hunk.
  */
-typedef int (*git_diff_hunk_cb)(
+typedef int GIT_CALLBACK(git_diff_hunk_cb)(
 	const git_diff_delta *delta,
 	const git_diff_hunk *hunk,
 	void *payload);
@@ -615,7 +615,7 @@ typedef struct {
  * of text.  This uses some extra GIT_DIFF_LINE_... constants for output
  * of lines of file and hunk headers.
  */
-typedef int (*git_diff_line_cb)(
+typedef int GIT_CALLBACK(git_diff_line_cb)(
 	const git_diff_delta *delta, /**< delta that contains this data */
 	const git_diff_hunk *hunk,   /**< hunk containing this data */
 	const git_diff_line *line,   /**< line data */
@@ -699,14 +699,14 @@ typedef enum {
  * Pluggable similarity metric
  */
 typedef struct {
-	int (*file_signature)(
+	int GIT_CALLBACK(file_signature)(
 		void **out, const git_diff_file *file,
 		const char *fullpath, void *payload);
-	int (*buffer_signature)(
+	int GIT_CALLBACK(buffer_signature)(
 		void **out, const git_diff_file *file,
 		const char *buf, size_t buflen, void *payload);
-	void (*free_signature)(void *sig, void *payload);
-	int (*similarity)(int *score, void *siga, void *sigb, void *payload);
+	void GIT_CALLBACK(free_signature)(void *sig, void *payload);
+	int GIT_CALLBACK(similarity)(int *score, void *siga, void *sigb, void *payload);
 	void *payload;
 } git_diff_similarity_metric;
 

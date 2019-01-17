@@ -21,7 +21,7 @@
 GIT_BEGIN_DECL
 
 /** Signature of a function which creates a transport */
-typedef int (*git_transport_cb)(git_transport **out, git_remote *owner, void *param);
+typedef int GIT_CALLBACK(git_transport_cb)(git_transport **out, git_remote *owner, void *param);
 
 /**
  * Type of SSH host fingerprint
@@ -144,7 +144,7 @@ typedef struct git_cred git_cred;
  */
 struct git_cred {
 	git_credtype_t credtype; /**< A type of credential */
-	void (*free)(git_cred *cred);
+	void GIT_CALLBACK(free)(git_cred *cred);
 };
 
 /** A plaintext username and password */
@@ -165,8 +165,8 @@ typedef struct _LIBSSH2_USERAUTH_KBDINT_PROMPT LIBSSH2_USERAUTH_KBDINT_PROMPT;
 typedef struct _LIBSSH2_USERAUTH_KBDINT_RESPONSE LIBSSH2_USERAUTH_KBDINT_RESPONSE;
 #endif
 
-typedef int (*git_cred_sign_callback)(LIBSSH2_SESSION *session, unsigned char **sig, size_t *sig_len, const unsigned char *data, size_t data_len, void **abstract);
-typedef void (*git_cred_ssh_interactive_callback)(const char* name, int name_len, const char* instruction, int instruction_len, int num_prompts, const LIBSSH2_USERAUTH_KBDINT_PROMPT* prompts, LIBSSH2_USERAUTH_KBDINT_RESPONSE* responses, void **abstract);
+typedef int GIT_CALLBACK(git_cred_sign_callback)(LIBSSH2_SESSION *session, unsigned char **sig, size_t *sig_len, const unsigned char *data, size_t data_len, void **abstract);
+typedef void GIT_CALLBACK(git_cred_ssh_interactive_callback)(const char* name, int name_len, const char* instruction, int instruction_len, int num_prompts, const LIBSSH2_USERAUTH_KBDINT_PROMPT* prompts, LIBSSH2_USERAUTH_KBDINT_RESPONSE* responses, void **abstract);
 
 /**
  * A ssh key from disk
@@ -359,7 +359,7 @@ GIT_EXTERN(void) git_cred_free(git_cred *cred);
  * @return 0 for success, < 0 to indicate an error, > 0 to indicate
  *       no credential was acquired
  */
-typedef int (*git_cred_acquire_cb)(
+typedef int GIT_CALLBACK(git_cred_acquire_cb)(
 	git_cred **cred,
 	const char *url,
 	const char *username_from_url,

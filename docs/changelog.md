@@ -3,6 +3,9 @@ v0.27 + 1
 
 ### Changes or improvements
 
+* The library is now always built with cdecl calling conventions on
+  Windows; the ability to build a stdcall library has been removed.
+
 * Reference log creation now honors `core.logallrefupdates=always`.
 
 * Fix some issues with the error-reporting in the OpenSSL backend.

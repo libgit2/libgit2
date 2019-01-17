@@ -272,7 +272,7 @@ typedef struct git_transfer_progress {
  * @param stats Structure containing information about the state of the transfer
  * @param payload Payload provided by caller
  */
-typedef int (*git_transfer_progress_cb)(const git_transfer_progress *stats, void *payload);
+typedef int GIT_CALLBACK(git_transfer_progress_cb)(const git_transfer_progress *stats, void *payload);
 
 /**
  * Type for messages delivered by the transport.  Return a negative value
@@ -282,7 +282,7 @@ typedef int (*git_transfer_progress_cb)(const git_transfer_progress *stats, void
  * @param len The length of the message
  * @param payload Payload provided by the caller
  */
-typedef int (*git_transport_message_cb)(const char *str, int len, void *payload);
+typedef int GIT_CALLBACK(git_transport_message_cb)(const char *str, int len, void *payload);
 
 
 /**
@@ -335,7 +335,7 @@ typedef struct {
  *         or > 0 to indicate that the callback refused to act and that
  *         the existing validity determination should be honored
  */
-typedef int (*git_transport_certificate_check_cb)(git_cert *cert, int valid, const char *host, void *payload);
+typedef int GIT_CALLBACK(git_transport_certificate_check_cb)(git_cert *cert, int valid, const char *host, void *payload);
 
 /**
  * Opaque structure representing a submodule.
@@ -433,9 +433,9 @@ typedef struct git_writestream git_writestream;
 
 /** A type to write in a streaming fashion, for example, for filters. */
 struct git_writestream {
-	int (*write)(git_writestream *stream, const char *buffer, size_t len);
-	int (*close)(git_writestream *stream);
-	void (*free)(git_writestream *stream);
+	int GIT_CALLBACK(write)(git_writestream *stream, const char *buffer, size_t len);
+	int GIT_CALLBACK(close)(git_writestream *stream);
+	void GIT_CALLBACK(free)(git_writestream *stream);
 };
 
 /** Representation of .mailmap file state. */

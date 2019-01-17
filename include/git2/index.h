@@ -132,7 +132,7 @@ typedef enum {
 
 
 /** Callback for APIs that add/remove/update files matching pathspec */
-typedef int (*git_index_matched_path_cb)(
+typedef int GIT_CALLBACK(git_index_matched_path_cb)(
 	const char *path, const char *matched_pathspec, void *payload);
 
 /** Flags for APIs that add files matching pathspec */

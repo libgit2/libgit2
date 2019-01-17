@@ -35,7 +35,7 @@ typedef enum {
 struct git_transport {
 	unsigned int version;
 	/* Set progress and error callbacks */
-	int (*set_callbacks)(
+	int GIT_CALLBACK(set_callbacks)(
 		git_transport *transport,
 		git_transport_message_cb progress_cb,
 		git_transport_message_cb error_cb,
@@ -43,13 +43,13 @@ struct git_transport {
 		void *payload);
 
 	/* Set custom headers for HTTP requests */
-	int (*set_custom_headers)(
+	int GIT_CALLBACK(set_custom_headers)(
 		git_transport *transport,
 		const git_strarray *custom_headers);
 
 	/* Connect the transport to the remote repository, using the given
 	 * direction. */
-	int (*connect)(
+	int GIT_CALLBACK(connect)(
 		git_transport *transport,
 		const char *url,
 		git_cred_acquire_cb cred_acquire_cb,
@@ -61,18 +61,18 @@ struct git_transport {
 	/* This function may be called after a successful call to
 	 * connect(). The array returned is owned by the transport and
 	 * is guaranteed until the next call of a transport function. */
-	int (*ls)(
+	int GIT_CALLBACK(ls)(
 		const git_remote_head ***out,
 		size_t *size,
 		git_transport *transport);
 
 	/* Executes the push whose context is in the git_push object. */
-	int(*push)(git_transport *transport, git_push *push, const git_remote_callbacks *callbacks);
+	int GIT_CALLBACK(push)(git_transport *transport, git_push *push, const git_remote_callbacks *callbacks);
 
 	/* This function may be called after a successful call to connect(), when
 	 * the direction is FETCH. The function performs a negotiation to calculate
 	 * the wants list for the fetch. */
-	int (*negotiate_fetch)(
+	int GIT_CALLBACK(negotiate_fetch)(
 		git_transport *transport,
 		git_repository *repo,
 		const git_remote_head * const *refs,
@@ -81,7 +81,7 @@ struct git_transport {
 	/* This function may be called after a successful call to negotiate_fetch(),
 	 * when the direction is FETCH. This function retrieves the pack file for
 	 * the fetch from the remote end. */
-	int (*download_pack)(
+	int GIT_CALLBACK(download_pack)(
 		git_transport *transport,
 		git_repository *repo,
 		git_transfer_progress *stats,
@@ -89,20 +89,20 @@ struct git_transport {
 		void *progress_payload);
 
 	/* Checks to see if the transport is connected */
-	int (*is_connected)(git_transport *transport);
+	int GIT_CALLBACK(is_connected)(git_transport *transport);
 
 	/* Reads the flags value previously passed into connect() */
-	int (*read_flags)(git_transport *transport, int *flags);
+	int GIT_CALLBACK(read_flags)(git_transport *transport, int *flags);
 
 	/* Cancels any outstanding transport operation */
-	void (*cancel)(git_transport *transport);
+	void GIT_CALLBACK(cancel)(git_transport *transport);
 
 	/* This function is the reverse of connect() -- it terminates the
 	 * connection to the remote end. */
-	int (*close)(git_transport *transport);
+	int GIT_CALLBACK(close)(git_transport *transport);
 
 	/* Frees/destructs the git_transport object. */
-	void (*free)(git_transport *transport);
+	void GIT_CALLBACK(free)(git_transport *transport);
 };
 
 #define GIT_TRANSPORT_VERSION 1
@@ -292,25 +292,25 @@ struct git_smart_subtransport_stream {
 	/* The owning subtransport */
 	git_smart_subtransport *subtransport;
 
-	int (*read)(
+	int GIT_CALLBACK(read)(
 		git_smart_subtransport_stream *stream,
 		char *buffer,
 		size_t buf_size,
 		size_t *bytes_read);
 
-	int (*write)(
+	int GIT_CALLBACK(write)(
 		git_smart_subtransport_stream *stream,
 		const char *buffer,
 		size_t len);
 
-	void (*free)(
+	void GIT_CALLBACK(free)(
 		git_smart_subtransport_stream *stream);
 };
 
 /* An implementation of a subtransport which carries data for the
  * smart transport */
 struct git_smart_subtransport {
-	int (* action)(
+	int GIT_CALLBACK(action)(
 			git_smart_subtransport_stream **out,
 			git_smart_subtransport *transport,
 			const char *url,
@@ -322,13 +322,13 @@ struct git_smart_subtransport {
 	 *
 	 * 1. UPLOADPACK_LS -> UPLOADPACK
 	 * 2. RECEIVEPACK_LS -> RECEIVEPACK */
-	int (*close)(git_smart_subtransport *transport);
+	int GIT_CALLBACK(close)(git_smart_subtransport *transport);
 
-	void (*free)(git_smart_subtransport *transport);
+	void GIT_CALLBACK(free)(git_smart_subtransport *transport);
 };
 
 /* A function which creates a new subtransport for the smart transport */
-typedef int (*git_smart_subtransport_cb)(
+typedef int GIT_CALLBACK(git_smart_subtransport_cb)(
 	git_smart_subtransport **out,
 	git_transport* owner,
 	void* param);

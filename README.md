@@ -255,7 +255,6 @@ The following CMake variables are declared:
 - `BUILD_SHARED_LIBS`: Build libgit2 as a Shared Library (defaults to ON)
 - `BUILD_CLAR`: Build [Clar](https://github.com/vmg/clar)-based test suite (defaults to ON)
 - `THREADSAFE`: Build libgit2 with threading support (defaults to ON)
-- `STDCALL`: Build libgit2 as `stdcall`. Turn off for `cdecl` (Windows; defaults to ON)
 
 To list all build options and their current value, you can do the
 following:

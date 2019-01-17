@@ -422,7 +422,7 @@ typedef enum git_remote_completion_type {
 } git_remote_completion_type;
 
 /** Push network progress notification function */
-typedef int (*git_push_transfer_progress)(
+typedef int GIT_CALLBACK(git_push_transfer_progress)(
 	unsigned int current,
 	unsigned int total,
 	size_t bytes,
@@ -457,7 +457,7 @@ typedef struct {
  * @param len number of elements in `updates`
  * @param payload Payload provided by the caller
  */
-typedef int (*git_push_negotiation)(const git_push_update **updates, size_t len, void *payload);
+typedef int GIT_CALLBACK(git_push_negotiation)(const git_push_update **updates, size_t len, void *payload);
 
 /**
  * Callback used to inform of the update status from the remote.
@@ -471,7 +471,7 @@ typedef int (*git_push_negotiation)(const git_push_update **updates, size_t len,
  * @param data data provided by the caller
  * @return 0 on success, otherwise an error
  */
-typedef int (*git_push_update_reference_cb)(const char *refname, const char *status, void *data);
+typedef int GIT_CALLBACK(git_push_update_reference_cb)(const char *refname, const char *status, void *data);
 
 /**
  * The callback settings structure
@@ -492,7 +492,7 @@ struct git_remote_callbacks {
 	 * Completion is called when different parts of the download
 	 * process are done (currently unused).
 	 */
-	int (*completion)(git_remote_completion_type type, void *data);
+	int GIT_CALLBACK(completion)(git_remote_completion_type type, void *data);
 
 	/**
 	 * This will be called if the remote host requires
@@ -522,7 +522,7 @@ struct git_remote_callbacks {
 	 * Each time a reference is updated locally, this function
 	 * will be called with information about it.
 	 */
-	int (*update_tips)(const char *refname, const git_oid *a, const git_oid *b, void *data);
+	int GIT_CALLBACK(update_tips)(const char *refname, const git_oid *a, const git_oid *b, void *data);
 
 	/**
 	 * Function to call with progress information during pack

@@ -344,7 +344,7 @@ GIT_EXTERN(int) git_treebuilder_remove(
  * entry should be left alone and any non-zero value meaning that the
  * entry should be removed from the treebuilder list (i.e. filtered out).
  */
-typedef int (*git_treebuilder_filter_cb)(
+typedef int GIT_CALLBACK(git_treebuilder_filter_cb)(
 	const git_tree_entry *entry, void *payload);
 
 /**
@@ -391,7 +391,7 @@ GIT_EXTERN(int) git_treebuilder_write_with_buffer(
 	git_oid *oid, git_treebuilder *bld, git_buf *tree);
 
 /** Callback for the tree traversal method */
-typedef int (*git_treewalk_cb)(
+typedef int GIT_CALLBACK(git_treewalk_cb)(
 	const char *root, const git_tree_entry *entry, void *payload);
 
 /** Tree traversal modes */
