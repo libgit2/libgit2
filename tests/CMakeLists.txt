@@ -55,7 +55,7 @@ IF (MSVC_IDE)
 ENDIF ()
 
 ADD_TEST(offline   "${libgit2_BINARY_DIR}/libgit2_clar" -v -xonline)
-ADD_TEST(invasive  "${libgit2_BINARY_DIR}/libgit2_clar" -v -score::ftruncate -sfilter::stream -sodb::largefiles -siterator::workdir -srepo::init)
+ADD_TEST(invasive  "${libgit2_BINARY_DIR}/libgit2_clar" -v -score::ftruncate -sfilter::stream::bigfile -sodb::largefiles -siterator::workdir::filesystem_gunk -srepo::init -srepo::init::at_filesystem_root)
 ADD_TEST(online    "${libgit2_BINARY_DIR}/libgit2_clar" -v -sonline)
 ADD_TEST(gitdaemon "${libgit2_BINARY_DIR}/libgit2_clar" -v -sonline::push)
 ADD_TEST(ssh       "${libgit2_BINARY_DIR}/libgit2_clar" -v -sonline::push -sonline::clone::ssh_cert -sonline::clone::ssh_with_paths)
