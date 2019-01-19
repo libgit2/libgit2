@@ -275,7 +275,7 @@ static int add_revision(struct log_state *s, const char *revstr)
 				git_object_id(revs.from), git_object_id(revs.to)),
 				"Could not find merge base", revstr);
 			check_lg2(
-				git_object_lookup(&revs.to, s->repo, &base, GIT_OBJ_COMMIT),
+				git_object_lookup(&revs.to, s->repo, &base, GIT_OBJECT_COMMIT),
 				"Could not find merge base commit", NULL);
 
 			push_rev(s, revs.to, hide);

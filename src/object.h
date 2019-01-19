@@ -62,7 +62,7 @@ GIT_INLINE(git_object_t) git_object__type_from_filemode(git_filemode_t mode)
 	case GIT_FILEMODE_LINK:
 		return GIT_OBJECT_BLOB;
 	default:
-		return GIT_OBJECT_BAD;
+		return GIT_OBJECT_INVALID;
 	}
 }
 

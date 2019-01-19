@@ -84,7 +84,7 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 		return tag_error("type field not found");
 	buffer += 5;
 
-	tag->type = GIT_OBJECT_BAD;
+	tag->type = GIT_OBJECT_INVALID;
 
 	for (i = 1; i < ARRAY_SIZE(tag_types); ++i) {
 		size_t type_length = strlen(tag_types[i]);
@@ -99,7 +99,7 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 		}
 	}
 
-	if (tag->type == GIT_OBJECT_BAD)
+	if (tag->type == GIT_OBJECT_INVALID)
 		return tag_error("invalid object type");
 
 	if (buffer + 4 >= buffer_end)

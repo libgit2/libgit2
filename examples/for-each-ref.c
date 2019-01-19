@@ -18,7 +18,7 @@ static int show_ref(git_reference *ref, void *data)
         oid = git_reference_target(resolved ? resolved : ref);
         git_oid_fmt(hex, oid);
         hex[GIT_OID_HEXSZ] = 0;
-        check_lg2(git_object_lookup(&obj, repo, oid, GIT_OBJ_ANY),
+        check_lg2(git_object_lookup(&obj, repo, oid, GIT_OBJECT_ANY),
                   "Unable to lookup object", hex);
 
         printf("%s %-6s\t%s\n",

@@ -153,7 +153,7 @@ static int perform_fastforward(git_repository *repo, const git_oid *target_oid, 
 	}
 
 	/* Lookup the target object */
-	err = git_object_lookup(&target, repo, target_oid, GIT_OBJ_COMMIT);
+	err = git_object_lookup(&target, repo, target_oid, GIT_OBJECT_COMMIT);
 	if (err != 0) {
 		fprintf(stderr, "failed to lookup OID %s\n", git_oid_tostr_s(target_oid));
 		return -1;
@@ -251,7 +251,7 @@ static int create_merge_commit(git_repository *repo, git_index *index, merge_opt
 	if (err < 0) goto cleanup;
 
 	/* Setup our parent commits */
-	err = git_reference_peel((git_object **)&parents[0], head_ref, GIT_OBJ_COMMIT);
+	err = git_reference_peel((git_object **)&parents[0], head_ref, GIT_OBJECT_COMMIT);
 	check_lg2(err, "failed to peel head reference", NULL);
 	for (i = 0; i < opts->annotated_count; i++) {
 		git_commit_lookup(&parents[i + 1], repo, git_annotated_commit_id(opts->annotated[i]));

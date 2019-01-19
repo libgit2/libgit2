@@ -241,7 +241,7 @@ static void object_database(git_repository *repo, git_oid *oid)
 	 * we'll write a new blob object that just contains a simple string.
 	 * Notice that we have to specify the object type as the `git_otype` enum.
 	 */
-	git_odb_write(oid, odb, "test data", sizeof("test data") - 1, GIT_OBJ_BLOB);
+	git_odb_write(oid, odb, "test data", sizeof("test data") - 1, GIT_OBJECT_BLOB);
 
 	/**
 	 * Now that we've written the object, we can check out what SHA1 was
@@ -441,7 +441,7 @@ static void tag_parsing(git_repository *repo)
 	 */
 	git_tag_target((git_object **)&commit, tag);
 	name = git_tag_name(tag);		/* "test" */
-	type = git_tag_target_type(tag);	/* GIT_OBJ_COMMIT (otype enum) */
+	type = git_tag_target_type(tag);	/* GIT_OBJECT_COMMIT (object_t enum) */
 	message = git_tag_message(tag);		/* "tag message\n" */
 	printf("Tag Name: %s\nTag Type: %s\nTag Message: %s\n",
 		name, git_object_type2string(type), message);

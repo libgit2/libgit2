@@ -288,7 +288,7 @@ const char *git_object_type2string(git_object_t type)
 git_object_t git_object_string2type(const char *str)
 {
 	if (!str)
-		return GIT_OBJECT_BAD;
+		return GIT_OBJECT_INVALID;
 
 	return git_object_stringn2type(str, strlen(str));
 }
@@ -298,14 +298,14 @@ git_object_t git_object_stringn2type(const char *str, size_t len)
 	size_t i;
 
 	if (!str || !len || !*str)
-		return GIT_OBJECT_BAD;
+		return GIT_OBJECT_INVALID;
 
 	for (i = 0; i < ARRAY_SIZE(git_objects_table); i++)
 		if (*git_objects_table[i].str &&
 			!git__prefixncmp(str, len, git_objects_table[i].str))
 			return (git_object_t)i;
 
-	return GIT_OBJECT_BAD;
+	return GIT_OBJECT_INVALID;
 }
 
 int git_object_typeisloose(git_object_t type)

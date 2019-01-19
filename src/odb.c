@@ -63,7 +63,7 @@ static git_object_t odb_hardcoded_type(const git_oid *id)
 	if (!git_oid_cmp(id, &empty_tree))
 		return GIT_OBJECT_TREE;
 
-	return GIT_OBJECT_BAD;
+	return GIT_OBJECT_INVALID;
 }
 
 static int odb_read_hardcoded(bool *found, git_rawobj *raw, const git_oid *id)
@@ -72,7 +72,7 @@ static int odb_read_hardcoded(bool *found, git_rawobj *raw, const git_oid *id)
 
 	*found = false;
 
-	if ((type = odb_hardcoded_type(id)) == GIT_OBJECT_BAD)
+	if ((type = odb_hardcoded_type(id)) == GIT_OBJECT_INVALID)
 		return 0;
 
 	raw->type = type;
@@ -945,7 +945,7 @@ static int odb_read_header_1(
 	bool passthrough = false;
 	int error;
 
-	if (!only_refreshed && (ht = odb_hardcoded_type(id)) != GIT_OBJECT_BAD) {
+	if (!only_refreshed && (ht = odb_hardcoded_type(id)) != GIT_OBJECT_INVALID) {
 		*type_p = ht;
 		*len_p = 0;
 		return 0;

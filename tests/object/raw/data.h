@@ -319,5 +319,5 @@ static git_rawobj some_obj = {
 static git_rawobj junk_obj = {
 	NULL,
 	0,
-	GIT_OBJECT_BAD
+	GIT_OBJECT_INVALID
 };
