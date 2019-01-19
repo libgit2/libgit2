@@ -14,6 +14,7 @@ jobs:
        CC=gcc
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
        LEAK_CHECK=valgrind
+       RUN_INVASIVE_TESTS=true
 
 - job: linux_amd64_trusty_gcc_mbedtls
   displayName: 'Linux (amd64; Trusty; GCC; mbedTLS)'
@@ -27,6 +28,7 @@ jobs:
        CC=gcc
        CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DSHA1_BACKEND=mbedTLS
        LEAK_CHECK=valgrind
+       RUN_INVASIVE_TESTS=true
 
 - job: linux_amd64_trusty_clang_openssl
   displayName: 'Linux (amd64; Trusty; Clang; OpenSSL)'
@@ -40,6 +42,7 @@ jobs:
        CC=clang
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
        LEAK_CHECK=valgrind
+       RUN_INVASIVE_TESTS=true
 
 - job: linux_amd64_trusty_clang_mbedtls
   displayName: 'Linux (amd64; Trusty; Clang; mbedTLS)'
@@ -53,6 +56,7 @@ jobs:
        CC=clang
        CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DSHA1_BACKEND=mbedTLS
        LEAK_CHECK=valgrind
+       RUN_INVASIVE_TESTS=true
 
 - job: macos
   displayName: 'macOS'
@@ -68,6 +72,7 @@ jobs:
         PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
         LEAK_CHECK: leaks
         CMAKE_OPTIONS: -G Ninja
+        RUN_INVASIVE_TESTS: true
 
 - job: windows_vs_amd64
   displayName: 'Windows (amd64; Visual Studio)'
@@ -77,6 +82,7 @@ jobs:
     parameters:
       environmentVariables:
         CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013 Win64"
+        RUN_INVASIVE_TESTS: true
 
 - job: windows_vs_x86
   displayName: 'Windows (x86; Visual Studio)'
@@ -86,6 +92,7 @@ jobs:
     parameters:
       environmentVariables:
         CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013"
+        RUN_INVASIVE_TESTS: true
 
 - job: windows_mingw_amd64
   displayName: 'Windows (amd64; MinGW)'
@@ -101,6 +108,7 @@ jobs:
       environmentVariables:
         CMAKE_OPTIONS: -G"MinGW Makefiles"
         PATH: $(Agent.TempDirectory)\mingw64\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
+        RUN_INVASIVE_TESTS: true
 
 - job: windows_mingw_x86
   displayName: 'Windows (x86; MinGW)'
@@ -117,6 +125,7 @@ jobs:
       environmentVariables:
         CMAKE_OPTIONS: -G"MinGW Makefiles"
         PATH: $(Agent.TempDirectory)\mingw32\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
+        RUN_INVASIVE_TESTS: true
 
 - job: linux_x86_bionic_gcc_openssl
   displayName: 'Linux (x86; Bionic; GCC; OpenSSL)'
@@ -131,6 +140,7 @@ jobs:
        CC=gcc
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
        LEAK_CHECK=valgrind
+       RUN_INVASIVE_TESTS=true
 
 - job: linux_x86_bionic_clang_openssl
   displayName: 'Linux (x86; Bionic; Clang; OpenSSL)'
@@ -145,6 +155,7 @@ jobs:
        CC=clang
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
        LEAK_CHECK=valgrind
+       RUN_INVASIVE_TESTS=true
 
 - job: linux_arm32_bionic_gcc_openssl
   displayName: 'Linux (arm32; Bionic; GCC; OpenSSL)'
@@ -158,6 +169,7 @@ jobs:
       environmentVariables: |
        CC=gcc
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
+       RUN_INVASIVE_TESTS=true
        SKIP_PROXY_TESTS=true
 
 - job: linux_arm64_bionic_gcc_openssl
@@ -172,23 +184,5 @@ jobs:
       environmentVariables: |
        CC=gcc
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
+       RUN_INVASIVE_TESTS=true
        SKIP_PROXY_TESTS=true
-
-- job: coverity
-  displayName: 'Coverity'
-  pool:
-    vmImage: 'Ubuntu 16.04'
-  steps:
-  - task: Docker@0
-    displayName: Build
-    inputs:
-      action: 'Run an image'
-      imageName: 'libgit2/trusty-openssl:latest'
-      volumes: |
-       $(Build.SourcesDirectory):/src
-       $(Build.BinariesDirectory):/build
-      envVars: |
-       COVERITY_TOKEN=$(COVERITY_TOKEN)
-      workDir: '/build'
-      containerCommand: '/src/ci/coverity.sh'
-      detached: false

@@ -136,6 +136,20 @@ if [ -z "$SKIP_OFFLINE_TESTS" ]; then
 	run_test offline
 fi
 
+if [ -n "$RUN_INVASIVE_TESTS" ]; then
+	echo ""
+	echo "Running invasive tests"
+	echo ""
+
+	export GITTEST_INVASIVE_FS_SIZE=1
+	export GITTEST_INVASIVE_MEMORY=1
+	export GITTEST_INVASIVE_SPEED=1
+	run_test invasive
+	unset GITTEST_INVASIVE_FS_SIZE
+	unset GITTEST_INVASIVE_MEMORY
+	unset GITTEST_INVASIVE_SPEED
+fi
+
 if [ -z "$SKIP_ONLINE_TESTS" ]; then
 	# Run the various online tests.  The "online" test suite only includes the
 	# default online tests that do not require additional configuration.  The
