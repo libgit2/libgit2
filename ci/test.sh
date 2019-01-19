@@ -136,7 +136,7 @@ if [ -z "$SKIP_OFFLINE_TESTS" ]; then
 	run_test offline
 fi
 
-if [ -z "$SKIP_INVASIVE_TESTS" ]; then
+if [ -n "$RUN_INVASIVE_TESTS" ]; then
 	echo ""
 	echo "Running invasive tests"
 	echo ""

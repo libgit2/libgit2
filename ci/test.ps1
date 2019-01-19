@@ -51,7 +51,7 @@ Write-Host "####################################################################
 
 run_test offline
 
-if (-not $Env:SKIP_INVASIVE_TESTS) {
+if ($Env:RUN_INVASIVE_TESTS) {
 	Write-Host ""
 	Write-Host "##############################################################################"
 	Write-Host "## Running (invasive) tests"
