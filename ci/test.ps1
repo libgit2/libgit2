@@ -59,6 +59,7 @@ if (-not $Env:SKIP_INVASIVE_TESTS) {
 
 	$Env:GITTEST_INVASIVE_FS_SIZE=1
 	run_test invasive
+	$Env:GITTEST_INVASIVE_FS_SIZE=$null
 }
 
 if (-not $Env:SKIP_ONLINE_TESTS) {
@@ -80,6 +81,10 @@ if (-not $Env:SKIP_PROXY_TESTS) {
 	$Env:GITTEST_REMOTE_PROXY_PASS="bar"
 
 	run_test proxy
+
+	$Env:GITTEST_REMOTE_PROXY_HOST=$null
+	$Env:GITTEST_REMOTE_PROXY_USER=$null
+	$Env:GITTEST_REMOTE_PROXY_PASS=$null
 
 	taskkill /F /IM javaw.exe
 }
