@@ -59,7 +59,7 @@ git_reference *git_reference__alloc_symbolic(
 	if (!ref)
 		return NULL;
 
-	ref->type = GIT_REF_SYMBOLIC;
+	ref->type = GIT_REFERENCE_SYMBOLIC;
 
 	if ((ref->target.symbolic = git__strdup(target)) == NULL) {
 		git__free(ref);
@@ -82,7 +82,7 @@ git_reference *git_reference__alloc(
 	if (!ref)
 		return NULL;
 
-	ref->type = GIT_REF_OID;
+	ref->type = GIT_REFERENCE_DIRECT;
 	git_oid_cpy(&ref->target.oid, oid);
 
 	if (peel != NULL)
@@ -108,7 +108,7 @@ git_reference *git_reference__set_name(
 
 int git_reference_dup(git_reference **dest, git_reference *source)
 {
-	if (source->type == GIT_REF_SYMBOLIC)
+	if (source->type == GIT_REFERENCE_SYMBOLIC)
 		*dest = git_reference__alloc_symbolic(source->name, source->target.symbolic);
 	else
 		*dest = git_reference__alloc(source->name, &source->target.oid, &source->peel);
@@ -126,7 +126,7 @@ void git_reference_free(git_reference *reference)
 	if (reference == NULL)
 		return;
 
-	if (reference->type == GIT_REF_SYMBOLIC)
+	if (reference->type == GIT_REFERENCE_SYMBOLIC)
 		git__free(reference->target.symbolic);
 
 	if (reference->db)
@@ -140,7 +140,7 @@ int git_reference_delete(git_reference *ref)
 	const git_oid *old_id = NULL;
 	const char *old_target = NULL;
 
-	if (ref->type == GIT_REF_OID)
+	if (ref->type == GIT_REFERENCE_DIRECT)
 		old_id = &ref->target.oid;
 	else
 		old_target = ref->target.symbolic;
@@ -186,14 +186,14 @@ static int reference_normalize_for_repo(
 	bool validate)
 {
 	int precompose;
-	unsigned int flags = GIT_REF_FORMAT_ALLOW_ONELEVEL;
+	unsigned int flags = GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL;
 
 	if (!git_repository__cvar(&precompose, repo, GIT_CVAR_PRECOMPOSE) &&
 		precompose)
-		flags |= GIT_REF_FORMAT__PRECOMPOSE_UNICODE;
+		flags |= GIT_REFERENCE_FORMAT__PRECOMPOSE_UNICODE;
 
 	if (!validate)
-		flags |= GIT_REF_FORMAT__VALIDATION_DISABLE;
+		flags |= GIT_REFERENCE_FORMAT__VALIDATION_DISABLE;
 
 	return git_reference_normalize_name(out, GIT_REFNAME_MAX, name, flags);
 }
@@ -205,7 +205,7 @@ int git_reference_lookup_resolved(
 	int max_nesting)
 {
 	git_refname_t scan_name;
-	git_ref_t scan_type;
+	git_reference_t scan_type;
 	int error = 0, nesting;
 	git_reference *ref = NULL;
 	git_refdb *refdb;
@@ -219,7 +219,7 @@ int git_reference_lookup_resolved(
 	else if (max_nesting < 0)
 		max_nesting = DEFAULT_NESTING_LEVEL;
 
-	scan_type = GIT_REF_SYMBOLIC;
+	scan_type = GIT_REFERENCE_SYMBOLIC;
 
 	if ((error = reference_normalize_for_repo(scan_name, repo, name, true)) < 0)
 		return error;
@@ -228,7 +228,7 @@ int git_reference_lookup_resolved(
 		return error;
 
 	for (nesting = max_nesting;
-		 nesting >= 0 && scan_type == GIT_REF_SYMBOLIC;
+		 nesting >= 0 && scan_type == GIT_REFERENCE_SYMBOLIC;
 		 nesting--)
 	{
 		if (nesting != max_nesting) {
@@ -242,7 +242,7 @@ int git_reference_lookup_resolved(
 		scan_type = ref->type;
 	}
 
-	if (scan_type != GIT_REF_OID && max_nesting != 0) {
+	if (scan_type != GIT_REFERENCE_DIRECT && max_nesting != 0) {
 		giterr_set(GITERR_REFERENCE,
 			"cannot resolve reference (>%u levels deep)", max_nesting);
 		git_reference_free(ref);
@@ -354,7 +354,7 @@ cleanup:
 /**
  * Getters
  */
-git_ref_t git_reference_type(const git_reference *ref)
+git_reference_t git_reference_type(const git_reference *ref)
 {
 	assert(ref);
 	return ref->type;
@@ -376,7 +376,7 @@ const git_oid *git_reference_target(const git_reference *ref)
 {
 	assert(ref);
 
-	if (ref->type != GIT_REF_OID)
+	if (ref->type != GIT_REFERENCE_DIRECT)
 		return NULL;
 
 	return &ref->target.oid;
@@ -386,7 +386,7 @@ const git_oid *git_reference_target_peel(const git_reference *ref)
 {
 	assert(ref);
 
-	if (ref->type != GIT_REF_OID || git_oid_iszero(&ref->peel))
+	if (ref->type != GIT_REFERENCE_DIRECT || git_oid_iszero(&ref->peel))
 		return NULL;
 
 	return &ref->peel;
@@ -396,7 +396,7 @@ const char *git_reference_symbolic_target(const git_reference *ref)
 {
 	assert(ref);
 
-	if (ref->type != GIT_REF_SYMBOLIC)
+	if (ref->type != GIT_REFERENCE_SYMBOLIC)
 		return NULL;
 
 	return ref->target.symbolic;
@@ -566,7 +566,7 @@ int git_reference_symbolic_create(
 
 static int ensure_is_an_updatable_direct_reference(git_reference *ref)
 {
-	if (ref->type == GIT_REF_OID)
+	if (ref->type == GIT_REFERENCE_DIRECT)
 		return 0;
 
 	giterr_set(GITERR_REFERENCE, "cannot set OID on symbolic reference");
@@ -594,7 +594,7 @@ int git_reference_set_target(
 
 static int ensure_is_an_updatable_symbolic_reference(git_reference *ref)
 {
-	if (ref->type == GIT_REF_SYMBOLIC)
+	if (ref->type == GIT_REFERENCE_SYMBOLIC)
 		return 0;
 
 	giterr_set(GITERR_REFERENCE, "cannot set symbolic target on a direct reference");
@@ -640,7 +640,7 @@ static int update_wt_heads(git_repository *repo, const char *path, void *payload
 		goto out;
 	}
 
-	if (git_reference_type(head) != GIT_REF_SYMBOLIC ||
+	if (git_reference_type(head) != GIT_REFERENCE_SYMBOLIC ||
 	    git__strcmp(head->target.symbolic, data->old_name) != 0) {
 		error = 0;
 		goto out;
@@ -723,10 +723,10 @@ int git_reference_rename(
 int git_reference_resolve(git_reference **ref_out, const git_reference *ref)
 {
 	switch (git_reference_type(ref)) {
-	case GIT_REF_OID:
+	case GIT_REFERENCE_DIRECT:
 		return git_reference_lookup(ref_out, ref->db->repo, ref->name);
 
-	case GIT_REF_SYMBOLIC:
+	case GIT_REFERENCE_SYMBOLIC:
 		return git_reference_lookup_resolved(ref_out, ref->db->repo, ref->target.symbolic, -1);
 
 	default:
@@ -970,7 +970,7 @@ int git_reference__normalize_name(
 	int segment_len, segments_count = 0, error = GIT_EINVALIDSPEC;
 	unsigned int process_flags;
 	bool normalize = (buf != NULL);
-	bool validate = (flags & GIT_REF_FORMAT__VALIDATION_DISABLE) == 0;
+	bool validate = (flags & GIT_REFERENCE_FORMAT__VALIDATION_DISABLE) == 0;
 
 #ifdef GIT_USE_ICONV
 	git_path_iconv_t ic = GIT_PATH_ICONV_INIT;
@@ -988,7 +988,7 @@ int git_reference__normalize_name(
 		git_buf_clear(buf);
 
 #ifdef GIT_USE_ICONV
-	if ((flags & GIT_REF_FORMAT__PRECOMPOSE_UNICODE) != 0) {
+	if ((flags & GIT_REFERENCE_FORMAT__PRECOMPOSE_UNICODE) != 0) {
 		size_t namelen = strlen(current);
 		if ((error = git_path_iconv_init_precompose(&ic)) < 0 ||
 			(error = git_path_iconv(&ic, &current, &namelen)) < 0)
@@ -1007,11 +1007,11 @@ int git_reference__normalize_name(
 	while (true) {
 		segment_len = ensure_segment_validity(current);
 		if (segment_len < 0) {
-			if ((process_flags & GIT_REF_FORMAT_REFSPEC_PATTERN) &&
+			if ((process_flags & GIT_REFERENCE_FORMAT_REFSPEC_PATTERN) &&
 					current[0] == '*' &&
 					(current[1] == '\0' || current[1] == '/')) {
 				/* Accept one wildcard as a full refname component. */
-				process_flags &= ~GIT_REF_FORMAT_REFSPEC_PATTERN;
+				process_flags &= ~GIT_REFERENCE_FORMAT_REFSPEC_PATTERN;
 				segment_len = 1;
 			} else
 				goto cleanup;
@@ -1056,13 +1056,13 @@ int git_reference__normalize_name(
 	if (current[segment_len - 1] == '/')
 		goto cleanup;
 
-	if ((segments_count == 1 ) && !(flags & GIT_REF_FORMAT_ALLOW_ONELEVEL))
+	if ((segments_count == 1 ) && !(flags & GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL))
 		goto cleanup;
 
 	if ((segments_count == 1 ) &&
-	    !(flags & GIT_REF_FORMAT_REFSPEC_SHORTHAND) &&
+	    !(flags & GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND) &&
 		!(is_all_caps_and_underscore(name, (size_t)segment_len) ||
-			((flags & GIT_REF_FORMAT_REFSPEC_PATTERN) && !strcmp("*", name))))
+			((flags & GIT_REFERENCE_FORMAT_REFSPEC_PATTERN) && !strcmp("*", name))))
 			goto cleanup;
 
 	if ((segments_count > 1)
@@ -1116,13 +1116,13 @@ cleanup:
 	return error;
 }
 
-#define GIT_REF_TYPEMASK (GIT_REF_OID | GIT_REF_SYMBOLIC)
+#define GIT_REFERENCE_TYPEMASK (GIT_REFERENCE_DIRECT | GIT_REFERENCE_SYMBOLIC)
 
 int git_reference_cmp(
 	const git_reference *ref1,
 	const git_reference *ref2)
 {
-	git_ref_t type1, type2;
+	git_reference_t type1, type2;
 	assert(ref1 && ref2);
 
 	type1 = git_reference_type(ref1);
@@ -1130,9 +1130,9 @@ int git_reference_cmp(
 
 	/* let's put symbolic refs before OIDs */
 	if (type1 != type2)
-		return (type1 == GIT_REF_SYMBOLIC) ? -1 : 1;
+		return (type1 == GIT_REFERENCE_SYMBOLIC) ? -1 : 1;
 
-	if (type1 == GIT_REF_SYMBOLIC)
+	if (type1 == GIT_REFERENCE_SYMBOLIC)
 		return strcmp(ref1->target.symbolic, ref2->target.symbolic);
 
 	return git_oid__cmp(&ref1->target.oid, &ref2->target.oid);
@@ -1158,7 +1158,7 @@ static int get_terminal(git_reference **out, git_repository *repo, const char *r
 		return error;
 	}
 
-	if (git_reference_type(ref) == GIT_REF_OID) {
+	if (git_reference_type(ref) == GIT_REFERENCE_DIRECT) {
 		*out = ref;
 		error = 0;
 	} else {
@@ -1197,7 +1197,7 @@ int git_reference__update_terminal(
 
 	/* found a dangling symref */
 	if (error == GIT_ENOTFOUND && ref) {
-		assert(git_reference_type(ref) == GIT_REF_SYMBOLIC);
+		assert(git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC);
 		giterr_clear();
 		error = reference__create(&ref2, repo, ref->target.symbolic, oid, NULL, 0, to_use,
 					  log_message, NULL, NULL);
@@ -1206,7 +1206,7 @@ int git_reference__update_terminal(
 		error = reference__create(&ref2, repo, ref_name, oid, NULL, 0, to_use,
 					  log_message, NULL, NULL);
 	}  else if (error == 0) {
-		assert(git_reference_type(ref) == GIT_REF_OID);
+		assert(git_reference_type(ref) == GIT_REFERENCE_DIRECT);
 		error = reference__create(&ref2, repo, ref->name, oid, NULL, 1, to_use,
 					  log_message, &ref->target.oid, NULL);
 	}
@@ -1359,7 +1359,7 @@ int git_reference_peel(
 
 	assert(ref);
 
-	if (ref->type == GIT_REF_OID) {
+	if (ref->type == GIT_REFERENCE_DIRECT) {
 		resolved = ref;
 	} else {
 		if ((error = git_reference_resolve(&allocated, ref)) < 0)
@@ -1411,7 +1411,7 @@ int git_reference__is_valid_name(const char *refname, unsigned int flags)
 
 int git_reference_is_valid_name(const char *refname)
 {
-	return git_reference__is_valid_name(refname, GIT_REF_FORMAT_ALLOW_ONELEVEL);
+	return git_reference__is_valid_name(refname, GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL);
 }
 
 const char *git_reference__shorthand(const char *name)
@@ -1440,7 +1440,7 @@ int git_reference__is_unborn_head(bool *unborn, const git_reference *ref, git_re
 	git_reference *tmp_ref;
 	assert(unborn && ref && repo);
 
-	if (ref->type == GIT_REF_OID) {
+	if (ref->type == GIT_REFERENCE_DIRECT) {
 		*unborn = 0;
 		return 0;
 	}

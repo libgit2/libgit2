@@ -442,7 +442,7 @@ void test_repo_init__extended_1(void)
 		cl_assert((S_ISGID & st.st_mode) == 0);
 
 	cl_git_pass(git_reference_lookup(&ref, _repo, "HEAD"));
-	cl_assert(git_reference_type(ref) == GIT_REF_SYMBOLIC);
+	cl_assert(git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC);
 	cl_assert_equal_s("refs/heads/development", git_reference_symbolic_target(ref));
 	git_reference_free(ref);
 

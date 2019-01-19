@@ -811,12 +811,12 @@ static int loose_commit(git_filebuf *file, const git_reference *ref)
 {
 	assert(file && ref);
 
-	if (ref->type == GIT_REF_OID) {
+	if (ref->type == GIT_REFERENCE_DIRECT) {
 		char oid[GIT_OID_HEXSZ + 1];
 		git_oid_nfmt(oid, sizeof(oid), &ref->target.oid);
 
 		git_filebuf_printf(file, "%s\n", oid);
-	} else if (ref->type == GIT_REF_SYMBOLIC) {
+	} else if (ref->type == GIT_REFERENCE_SYMBOLIC) {
 		git_filebuf_printf(file, GIT_SYMREF "%s\n", ref->target.symbolic);
 	} else {
 		assert(0); /* don't let this happen */
@@ -1142,19 +1142,19 @@ static int cmp_old_ref(int *cmp, git_refdb_backend *backend, const char *name,
 		goto out;
 
 	/* If the types don't match, there's no way the values do */
-	if (old_id && old_ref->type != GIT_REF_OID) {
+	if (old_id && old_ref->type != GIT_REFERENCE_DIRECT) {
 		*cmp = -1;
 		goto out;
 	}
-	if (old_target && old_ref->type != GIT_REF_SYMBOLIC) {
+	if (old_target && old_ref->type != GIT_REFERENCE_SYMBOLIC) {
 		*cmp = 1;
 		goto out;
 	}
 
-	if (old_id && old_ref->type == GIT_REF_OID)
+	if (old_id && old_ref->type == GIT_REFERENCE_DIRECT)
 		*cmp = git_oid_cmp(old_id, &old_ref->target.oid);
 
-	if (old_target && old_ref->type == GIT_REF_SYMBOLIC)
+	if (old_target && old_ref->type == GIT_REFERENCE_SYMBOLIC)
 		*cmp = git__strcmp(old_target, old_ref->target.symbolic);
 
 out:
@@ -1184,7 +1184,7 @@ static int maybe_append_head(refdb_fs_backend *backend, const git_reference *ref
 	git_reference *tmp = NULL, *head = NULL, *peeled = NULL;
 	const char *name;
 
-	if (ref->type == GIT_REF_SYMBOLIC)
+	if (ref->type == GIT_REFERENCE_SYMBOLIC)
 		return 0;
 
 	/* if we can't resolve, we use {0}*40 as old id */
@@ -1194,14 +1194,14 @@ static int maybe_append_head(refdb_fs_backend *backend, const git_reference *ref
 	if ((error = git_reference_lookup(&head, backend->repo, GIT_HEAD_FILE)) < 0)
 		return error;
 
-	if (git_reference_type(head) == GIT_REF_OID)
+	if (git_reference_type(head) == GIT_REFERENCE_DIRECT)
 		goto cleanup;
 
 	if ((error = git_reference_lookup(&tmp, backend->repo, GIT_HEAD_FILE)) < 0)
 		goto cleanup;
 
 	/* Go down the symref chain until we find the branch */
-	while (git_reference_type(tmp) == GIT_REF_SYMBOLIC) {
+	while (git_reference_type(tmp) == GIT_REFERENCE_SYMBOLIC) {
 		error = git_reference_lookup(&peeled, backend->repo, git_reference_symbolic_target(tmp));
 		if (error < 0)
 			break;
@@ -1279,7 +1279,7 @@ static int refdb_fs_backend__write_tail(
 		goto on_error;
 	}
 
-	if (ref->type == GIT_REF_SYMBOLIC)
+	if (ref->type == GIT_REFERENCE_SYMBOLIC)
 		new_target = ref->target.symbolic;
 	else
 		new_id = &ref->target.oid;
@@ -1886,7 +1886,7 @@ static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, co
 	git_buf buf = GIT_BUF_INIT, path = GIT_BUF_INIT;
 	git_repository *repo = backend->repo;
 
-	is_symbolic = ref->type == GIT_REF_SYMBOLIC;
+	is_symbolic = ref->type == GIT_REFERENCE_SYMBOLIC;
 
 	/* "normal" symbolic updates do not write */
 	if (is_symbolic &&
@@ -1979,7 +1979,7 @@ static int refdb_reflog_fs__rename(git_refdb_backend *_backend, const char *old_
 	repo = backend->repo;
 
 	if ((error = git_reference__normalize_name(
-		&normalized, new_name, GIT_REF_FORMAT_ALLOW_ONELEVEL)) < 0)
+		&normalized, new_name, GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL)) < 0)
 			return error;
 
 	if (git_buf_joinpath(&temp_path, repo->gitdir, GIT_REFLOG_DIR) < 0)

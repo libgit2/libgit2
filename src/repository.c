@@ -2119,7 +2119,7 @@ int git_repository_head_detached(git_repository *repo)
 	if (git_reference_lookup(&ref, repo, GIT_HEAD_FILE) < 0)
 		return -1;
 
-	if (git_reference_type(ref) == GIT_REF_SYMBOLIC) {
+	if (git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC) {
 		git_reference_free(ref);
 		return 0;
 	}
@@ -2146,7 +2146,7 @@ int git_repository_head_detached_for_worktree(git_repository *repo, const char *
 	if ((error = git_repository_head_for_worktree(&ref, repo, name)) < 0)
 		goto out;
 
-	error = (git_reference_type(ref) != GIT_REF_SYMBOLIC);
+	error = (git_reference_type(ref) != GIT_REFERENCE_SYMBOLIC);
 out:
 	git_reference_free(ref);
 
@@ -2163,7 +2163,7 @@ int git_repository_head(git_reference **head_out, git_repository *repo)
 	if ((error = git_reference_lookup(&head, repo, GIT_HEAD_FILE)) < 0)
 		return error;
 
-	if (git_reference_type(head) == GIT_REF_OID) {
+	if (git_reference_type(head) == GIT_REFERENCE_DIRECT) {
 		*head_out = head;
 		return 0;
 	}
@@ -2188,7 +2188,7 @@ int git_repository_head_for_worktree(git_reference **out, git_repository *repo, 
 	    (error = git_reference__read_head(&head, repo, path.ptr)) < 0)
 		goto out;
 
-	if (git_reference_type(head) != GIT_REF_OID) {
+	if (git_reference_type(head) != GIT_REFERENCE_DIRECT) {
 		git_reference *resolved;
 
 		error = git_reference_lookup_resolved(&resolved, repo, git_reference_symbolic_target(head), -1);
@@ -2286,7 +2286,7 @@ int git_repository_is_empty(git_repository *repo)
 	if (git_reference_lookup(&head, repo, GIT_HEAD_FILE) < 0)
 		return -1;
 
-	if (git_reference_type(head) == GIT_REF_SYMBOLIC)
+	if (git_reference_type(head) == GIT_REFERENCE_SYMBOLIC)
 		is_empty =
 			(strcmp(git_reference_symbolic_target(head),
 					GIT_REFS_HEADS_DIR "master") == 0) &&
@@ -2594,7 +2594,7 @@ static int checkout_message(git_buf *out, git_reference *old, const char *new)
 {
 	git_buf_puts(out, "checkout: moving from ");
 
-	if (git_reference_type(old) == GIT_REF_SYMBOLIC)
+	if (git_reference_type(old) == GIT_REFERENCE_SYMBOLIC)
 		git_buf_puts(out, git_reference__shorthand(git_reference_symbolic_target(old)));
 	else
 		git_buf_puts(out, git_oid_tostr_s(git_reference_target(old)));
@@ -2669,7 +2669,7 @@ int git_repository_set_head(
 	if (error < 0 && error != GIT_ENOTFOUND)
 		goto cleanup;
 
-	if (ref && current->type == GIT_REF_SYMBOLIC && git__strcmp(current->target.symbolic, ref->name) &&
+	if (ref && current->type == GIT_REFERENCE_SYMBOLIC && git__strcmp(current->target.symbolic, ref->name) &&
 	    git_reference_is_branch(ref) && git_branch_is_checked_out(ref)) {
 		giterr_set(GITERR_REPOSITORY, "cannot set HEAD to reference '%s' as it is the current HEAD "
 			"of a linked repository.", git_reference_name(ref));

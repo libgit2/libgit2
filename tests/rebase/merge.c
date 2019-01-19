@@ -450,7 +450,7 @@ void test_rebase_merge__finish(void)
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_NONE, git_repository_state(repo));
 
 	cl_git_pass(git_reference_lookup(&head_ref, repo, "HEAD"));
-	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(head_ref));
+	cl_assert_equal_i(GIT_REFERENCE_SYMBOLIC, git_reference_type(head_ref));
 	cl_assert_equal_s("refs/heads/gravy", git_reference_symbolic_target(head_ref));
 
 	/* Make sure the reflogs are updated appropriately */
@@ -512,7 +512,7 @@ void test_rebase_merge__detached_finish(void)
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_NONE, git_repository_state(repo));
 
 	cl_git_pass(git_reference_lookup(&head_ref, repo, "HEAD"));
-	cl_assert_equal_i(GIT_REF_OID, git_reference_type(head_ref));
+	cl_assert_equal_i(GIT_REFERENCE_DIRECT, git_reference_type(head_ref));
 
 	/* Make sure the reflogs are updated appropriately */
 	cl_git_pass(git_reflog_read(&reflog, repo, "HEAD"));
@@ -561,7 +561,7 @@ void test_rebase_merge__finish_with_ids(void)
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_NONE, git_repository_state(repo));
 
 	cl_git_pass(git_reference_lookup(&head_ref, repo, "HEAD"));
-	cl_assert_equal_i(GIT_REF_OID, git_reference_type(head_ref));
+	cl_assert_equal_i(GIT_REFERENCE_DIRECT, git_reference_type(head_ref));
 	cl_assert_equal_oid(&commit_id, git_reference_target(head_ref));
 
 	/* reflogs are not updated as if we were operating on proper

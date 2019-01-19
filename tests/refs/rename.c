@@ -264,7 +264,7 @@ void test_refs_rename__overwrite(void)
 	git_oid id;
 
 	cl_git_pass(git_reference_lookup(&ref, g_repo, ref_master_name));
-	cl_assert(git_reference_type(ref) & GIT_REF_OID);
+	cl_assert(git_reference_type(ref) & GIT_REFERENCE_DIRECT);
 
 	git_oid_cpy(&id, git_reference_target(ref));
 
@@ -297,7 +297,7 @@ void test_refs_rename__prefix(void)
 	git_oid id;
 
 	cl_git_pass(git_reference_lookup(&ref, g_repo, ref_master_name));
-	cl_assert(git_reference_type(ref) & GIT_REF_OID);
+	cl_assert(git_reference_type(ref) & GIT_REFERENCE_DIRECT);
 
 	git_oid_cpy(&id, git_reference_target(ref));
 
@@ -330,7 +330,7 @@ void test_refs_rename__move_up(void)
 	git_oid id;
 
 	cl_git_pass(git_reference_lookup(&ref, g_repo, ref_master_name));
-	cl_assert(git_reference_type(ref) & GIT_REF_OID);
+	cl_assert(git_reference_type(ref) & GIT_REFERENCE_DIRECT);
 
 	git_oid_cpy(&id, git_reference_target(ref));
 

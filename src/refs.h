@@ -55,8 +55,8 @@ extern bool git_reference__enable_symbolic_ref_target_validation;
 #define GIT_STASH_FILE "stash"
 #define GIT_REFS_STASH_FILE GIT_REFS_DIR GIT_STASH_FILE
 
-#define GIT_REF_FORMAT__PRECOMPOSE_UNICODE	(1u << 16)
-#define GIT_REF_FORMAT__VALIDATION_DISABLE	(1u << 15)
+#define GIT_REFERENCE_FORMAT__PRECOMPOSE_UNICODE	(1u << 16)
+#define GIT_REFERENCE_FORMAT__VALIDATION_DISABLE	(1u << 15)
 
 #define GIT_REFNAME_MAX 1024
 
@@ -64,7 +64,7 @@ typedef char git_refname_t[GIT_REFNAME_MAX];
 
 struct git_reference {
 	git_refdb *db;
-	git_ref_t type;
+	git_reference_t type;
 
 	union {
 		git_oid oid;
