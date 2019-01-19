@@ -58,8 +58,12 @@ if ($Env:RUN_INVASIVE_TESTS) {
 	Write-Host "##############################################################################"
 
 	$Env:GITTEST_INVASIVE_FS_SIZE=1
+	$Env:GITTEST_INVASIVE_MEMORY=1
+	$Env:GITTEST_INVASIVE_SPEED=1
 	run_test invasive
 	$Env:GITTEST_INVASIVE_FS_SIZE=$null
+	$Env:GITTEST_INVASIVE_MEMORY=$null
+	$Env:GITTEST_INVASIVE_SPEED=$null
 }
 
 if (-not $Env:SKIP_ONLINE_TESTS) {
