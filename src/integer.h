@@ -58,32 +58,24 @@ GIT_INLINE(bool) git__add_uint64_overflow(uint64_t *out, uint64_t one, uint64_t 
 #if (__has_builtin(__builtin_add_overflow) || \
      (defined(__GNUC__) && (__GNUC__ >= 5)))
 
-/*
- * Even though __builtin_{add,mul}_overflow should be able to handle all
- * possible cases (since it can accept any type), under some configurations
- * clang would need a dependency on compiler-rt. In order to avoid that, we
- * attempt to choose one of the explicit unsigned long long / unsigned long
- * versions of the intrinsics if possible. Unfortunately, unsigned long long
- * and unsigned long are still different types to the compiler, so we need to
- * still do some additional sniffing to prevent MinGW 64 from choosing the
- * wrong version and triggering compiler warnings.
- */
-#	if (SIZE_MAX == ULLONG_MAX) && (ULONG_MAX == ULLONG_MAX) && defined(_WIN64)
-#		define git__add_sizet_overflow(out, one, two) \
-			__builtin_uaddll_overflow(one, two, out)
-#		define git__multiply_sizet_overflow(out, one, two) \
-			__builtin_umulll_overflow(one, two, out)
-#	elif (SIZE_MAX == ULONG_MAX) && (ULONG_MAX == ULLONG_MAX)
-#		define git__add_sizet_overflow(out, one, two) \
-			__builtin_uaddl_overflow(one, two, out)
-#		define git__multiply_sizet_overflow(out, one, two) \
-			__builtin_umull_overflow(one, two, out)
-#	else
-#		define git__add_sizet_overflow(out, one, two) \
-			__builtin_add_overflow(one, two, out)
-#		define git__multiply_sizet_overflow(out, one, two) \
-			__builtin_mul_overflow(one, two, out)
-#	endif
+# if (SIZE_MAX == UINT_MAX)
+#  define git__add_sizet_overflow(out, one, two) \
+     __builtin_uadd_overflow(one, two, out)
+#  define git__multiply_sizet_overflow(out, one, two) \
+     __builtin_umul_overflow(one, two, out)
+# elif (SIZE_MAX == ULONG_MAX)
+#  define git__add_sizet_overflow(out, one, two) \
+     __builtin_uaddl_overflow(one, two, out)
+#  define git__multiply_sizet_overflow(out, one, two) \
+     __builtin_umull_overflow(one, two, out)
+# elif (SIZE_MAX == ULLONG_MAX)
+#  define git__add_sizet_overflow(out, one, two) \
+     __builtin_uaddll_overflow(one, two, out)
+#  define git__multiply_sizet_overflow(out, one, two) \
+     __builtin_umulll_overflow(one, two, out)
+# else
+#  error compiler has add with overflow intrinsics but SIZE_MAX is unknown
+# endif
 
 #else
 
