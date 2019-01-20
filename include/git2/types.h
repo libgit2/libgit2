@@ -450,18 +450,18 @@ typedef struct git_mailmap git_mailmap;
 
 /**@{*/
 
-GIT_DEPRECATED(static const int) GIT_OBJ_ANY = GIT_OBJECT_ANY;
-GIT_DEPRECATED(static const int) GIT_OBJ_BAD = GIT_OBJECT_INVALID;
-GIT_DEPRECATED(static const int) GIT_OBJ__EXT1 = 0;
-GIT_DEPRECATED(static const int) GIT_OBJ_COMMIT = GIT_OBJECT_COMMIT;
-GIT_DEPRECATED(static const int) GIT_OBJ_TREE = GIT_OBJECT_TREE;
-GIT_DEPRECATED(static const int) GIT_OBJ_BLOB = GIT_OBJECT_BLOB;
-GIT_DEPRECATED(static const int) GIT_OBJ_TAG = GIT_OBJECT_TAG;
-GIT_DEPRECATED(static const int) GIT_OBJ__EXT2 = 5;
-GIT_DEPRECATED(static const int) GIT_OBJ_OFS_DELTA = GIT_OBJECT_OFS_DELTA;
-GIT_DEPRECATED(static const int) GIT_OBJ_REF_DELTA = GIT_OBJECT_REF_DELTA;
-
 #define git_otype git_object_t
+
+GIT_DEPRECATED(static const git_otype) GIT_OBJ_ANY = GIT_OBJECT_ANY;
+GIT_DEPRECATED(static const git_otype) GIT_OBJ_BAD = GIT_OBJECT_INVALID;
+GIT_DEPRECATED(static const git_otype) GIT_OBJ__EXT1 = 0;
+GIT_DEPRECATED(static const git_otype) GIT_OBJ_COMMIT = GIT_OBJECT_COMMIT;
+GIT_DEPRECATED(static const git_otype) GIT_OBJ_TREE = GIT_OBJECT_TREE;
+GIT_DEPRECATED(static const git_otype) GIT_OBJ_BLOB = GIT_OBJECT_BLOB;
+GIT_DEPRECATED(static const git_otype) GIT_OBJ_TAG = GIT_OBJECT_TAG;
+GIT_DEPRECATED(static const git_otype) GIT_OBJ__EXT2 = 5;
+GIT_DEPRECATED(static const git_otype) GIT_OBJ_OFS_DELTA = GIT_OBJECT_OFS_DELTA;
+GIT_DEPRECATED(static const git_otype) GIT_OBJ_REF_DELTA = GIT_OBJECT_REF_DELTA;
 
 /**@}*/
 

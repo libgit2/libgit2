@@ -59,6 +59,7 @@ typedef size_t size_t;
 #if defined(__GNUC__)
 # define GIT_DEPRECATED(func) \
 			 __attribute__((deprecated)) \
+			 __attribute__((used)) \
 			 func
 #elif defined(_MSC_VER)
 # define GIT_DEPRECATED(func) __declspec(deprecated) func
