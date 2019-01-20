@@ -386,7 +386,7 @@ static int flush_hunk(git_oid *result, git_hash_ctx *ctx)
 
 	for (i = 0; i < GIT_OID_RAWSZ; i++) {
 		carry += result->id[i] + hash.id[i];
-		result->id[i] = carry;
+		result->id[i] = (unsigned char)carry;
 		carry >>= 8;
 	}
 
