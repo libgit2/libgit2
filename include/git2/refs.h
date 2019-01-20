@@ -762,18 +762,18 @@ GIT_EXTERN(const char *) git_reference_shorthand(const git_reference *ref);
 #define git_ref_t git_reference_t
 #define git_reference_normalize_t git_reference_format_t
 
-GIT_DEPRECATED(static const unsigned int) GIT_REF_INVALID = GIT_REFERENCE_INVALID;
-GIT_DEPRECATED(static const unsigned int) GIT_REF_OID = GIT_REFERENCE_DIRECT;
-GIT_DEPRECATED(static const unsigned int) GIT_REF_SYMBOLIC = GIT_REFERENCE_SYMBOLIC;
-GIT_DEPRECATED(static const unsigned int) GIT_REF_LISTALL = GIT_REFERENCE_ALL;
+GIT_DEPRECATED(static const git_ref_t) GIT_REF_INVALID = GIT_REFERENCE_INVALID;
+GIT_DEPRECATED(static const git_ref_t) GIT_REF_OID = GIT_REFERENCE_DIRECT;
+GIT_DEPRECATED(static const git_ref_t) GIT_REF_SYMBOLIC = GIT_REFERENCE_SYMBOLIC;
+GIT_DEPRECATED(static const git_ref_t) GIT_REF_LISTALL = GIT_REFERENCE_ALL;
 
-GIT_DEPRECATED(static const unsigned int) GIT_REF_FORMAT_NORMAL =
+GIT_DEPRECATED(static const git_reference_normalize_t) GIT_REF_FORMAT_NORMAL =
 	GIT_REFERENCE_FORMAT_NORMAL;
-GIT_DEPRECATED(static const unsigned int) GIT_REF_FORMAT_ALLOW_ONELEVEL =
+GIT_DEPRECATED(static const git_reference_normalize_t) GIT_REF_FORMAT_ALLOW_ONELEVEL =
 	GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL;
-GIT_DEPRECATED(static const unsigned int) GIT_REF_FORMAT_REFSPEC_PATTERN =
+GIT_DEPRECATED(static const git_reference_normalize_t) GIT_REF_FORMAT_REFSPEC_PATTERN =
 	GIT_REFERENCE_FORMAT_REFSPEC_PATTERN;
-GIT_DEPRECATED(static const unsigned int) GIT_REF_FORMAT_REFSPEC_SHORTHAND =
+GIT_DEPRECATED(static const git_reference_normalize_t) GIT_REF_FORMAT_REFSPEC_SHORTHAND =
 	GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND;
 
 /**@}*/
