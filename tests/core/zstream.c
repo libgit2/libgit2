@@ -61,7 +61,7 @@ void test_core_zstream__basic(void)
 void test_core_zstream__fails_on_trailing_garbage(void)
 {
 	git_buf deflated = GIT_BUF_INIT, inflated = GIT_BUF_INIT;
-	size_t i = 0;
+	char i = 0;
 
 	/* compress a simple string */
 	git_zstream_deflatebuf(&deflated, "foobar!!", 8);
