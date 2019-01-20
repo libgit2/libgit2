@@ -65,6 +65,16 @@ GIT_INLINE(int) git__is_int(long long p)
 #  error compiler has add with overflow intrinsics but SIZE_MAX is unknown
 # endif
 
+/* Use Microsoft's safe integer handling functions where available */
+#elif defined(_MSC_VER)
+
+# include <intsafe.h>
+
+# define git__add_sizet_overflow(out, one, two) \
+    (SizeTAdd(one, two, out) != S_OK)
+# define git__multiply_sizet_overflow(out, one, two) \
+    (SizeTMult(one, two, out) != S_OK)
+
 #else
 
 /**
