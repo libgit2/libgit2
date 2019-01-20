@@ -403,7 +403,7 @@ int git_tree__parse_raw(void *_tree, const char *data, size_t size)
 		if ((nul = memchr(buffer, 0, buffer_end - buffer)) == NULL)
 			return tree_error("failed to parse tree: object is corrupted", NULL);
 
-		if ((filename_len = nul - buffer) == 0)
+		if ((filename_len = nul - buffer) == 0 || filename_len > UINT16_MAX)
 			return tree_error("failed to parse tree: can't parse filename", NULL);
 
 		if ((buffer_end - (nul + 1)) < GIT_OID_RAWSZ)
@@ -415,7 +415,7 @@ int git_tree__parse_raw(void *_tree, const char *data, size_t size)
 			GIT_ERROR_CHECK_ALLOC(entry);
 
 			entry->attr = attr;
-			entry->filename_len = filename_len;
+			entry->filename_len = (uint16_t)filename_len;
 			entry->filename = buffer;
 			entry->oid = (git_oid *) ((char *) buffer + filename_len + 1);
 		}
