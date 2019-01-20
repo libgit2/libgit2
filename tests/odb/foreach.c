@@ -81,6 +81,16 @@ static int foreach_stop_first_cb(const git_oid *oid, void *data)
 	return -123;
 }
 
+static int foreach_stop_cb_positive_ret(const git_oid *oid, void *data)
+{
+	int *nobj = data;
+	(*nobj)++;
+
+	GIT_UNUSED(oid);
+
+	return (*nobj == 1000) ? 321 : 0;
+}
+
 void test_odb_foreach__interrupt_foreach(void)
 {
 	int nobj = 0;
@@ -90,6 +100,11 @@ void test_odb_foreach__interrupt_foreach(void)
 	git_repository_odb(&_odb, _repo);
 
 	cl_assert_equal_i(-321, git_odb_foreach(_odb, foreach_stop_cb, &nobj));
+	cl_assert(nobj == 1000);
+
+	nobj = 0;
+
+	cl_assert_equal_i(321, git_odb_foreach(_odb, foreach_stop_cb_positive_ret, &nobj));
 	cl_assert(nobj == 1000);
 
 	git_odb_free(_odb);

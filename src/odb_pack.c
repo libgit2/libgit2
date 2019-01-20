@@ -478,7 +478,7 @@ static int pack_backend__foreach(git_odb_backend *_backend, git_odb_foreach_cb c
 		return error;
 
 	git_vector_foreach(&backend->packs, i, p) {
-		if ((error = git_pack_foreach_entry(p, cb, data)) < 0)
+		if ((error = git_pack_foreach_entry(p, cb, data)) != 0)
 			return error;
 	}
 
