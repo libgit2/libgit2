@@ -12,6 +12,7 @@
 #include "config.h"
 #include "iterator.h"
 #include "signature.h"
+#include "blob.h"
 
 static int note_error_notfound(void)
 {
@@ -319,6 +320,7 @@ static int note_new(
 	git_blob *blob)
 {
 	git_note *note = NULL;
+	git_off_t blobsize;
 
 	note = git__malloc(sizeof(git_note));
 	GIT_ERROR_CHECK_ALLOC(note);
@@ -329,7 +331,10 @@ static int note_new(
 		git_signature_dup(&note->committer, git_commit_committer(commit)) < 0)
 		return -1;
 
-	note->message = git__strndup(git_blob_rawcontent(blob), git_blob_rawsize(blob));
+	blobsize = git_blob_rawsize(blob);
+	GIT_ERROR_CHECK_BLOBSIZE(blobsize);
+
+	note->message = git__strndup(git_blob_rawcontent(blob), (size_t)blobsize);
 	GIT_ERROR_CHECK_ALLOC(note->message);
 
 	*out = note;

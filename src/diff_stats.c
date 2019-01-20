@@ -54,7 +54,8 @@ int git_diff_file_stats__full_to_buf(
 	size_t width)
 {
 	const char *old_path = NULL, *new_path = NULL;
-	size_t padding, old_size, new_size;
+	size_t padding;
+	git_off_t old_size, new_size;
 
 	old_path = delta->old_file.path;
 	new_path = delta->new_file.path;
@@ -96,7 +97,7 @@ int git_diff_file_stats__full_to_buf(
 
 	if (delta->flags & GIT_DIFF_FLAG_BINARY) {
 		if (git_buf_printf(out,
-				"Bin %" PRIuZ " -> %" PRIuZ " bytes", old_size, new_size) < 0)
+				"Bin %" PRId64 " -> %" PRId64 " bytes", old_size, new_size) < 0)
 			goto on_error;
 	}
 	else {
