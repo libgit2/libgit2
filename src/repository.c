@@ -1415,6 +1415,10 @@ static bool is_filesystem_case_insensitive(const char *gitdir_path)
 static bool are_symlinks_supported(const char *wd_path)
 {
 	git_config *config = NULL;
+	git_buf global_buf = GIT_BUF_INIT;
+	git_buf xdg_buf = GIT_BUF_INIT;
+	git_buf system_buf = GIT_BUF_INIT;
+	git_buf programdata_buf = GIT_BUF_INIT;
 	git_buf path = GIT_BUF_INIT;
 	int fd;
 	struct stat st;
@@ -1428,11 +1432,6 @@ static bool are_symlinks_supported(const char *wd_path)
 	 * _not_ set, then we do not test or enable symlink support.
 	 */
 #ifdef GIT_WIN32
-	git_buf global_buf = GIT_BUF_INIT;
-	git_buf xdg_buf = GIT_BUF_INIT;
-	git_buf system_buf = GIT_BUF_INIT;
-	git_buf programdata_buf = GIT_BUF_INIT;
-
 	git_config_find_global(&global_buf);
 	git_config_find_xdg(&xdg_buf);
 	git_config_find_system(&system_buf);
@@ -1461,6 +1460,10 @@ static bool are_symlinks_supported(const char *wd_path)
 	(void)p_unlink(path.ptr);
 
 done:
+	git_buf_dispose(&global_buf);
+	git_buf_dispose(&xdg_buf);
+	git_buf_dispose(&system_buf);
+	git_buf_dispose(&programdata_buf);
 	git_buf_dispose(&path);
 	git_config_free(config);
 	return symlinks != 0;
