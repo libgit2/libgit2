@@ -42,18 +42,6 @@ GIT_INLINE(int) git__is_int(long long p)
 	return p == (long long)r;
 }
 
-/**
- * Sets `one + two` into `out`, unless the arithmetic would overflow.
- * @return true if the result fits in a `uint64_t`, false on overflow.
- */
-GIT_INLINE(bool) git__add_uint64_overflow(uint64_t *out, uint64_t one, uint64_t two)
-{
-	if (UINT64_MAX - one < two)
-		return true;
-	*out = one + two;
-	return false;
-}
-
 /* Use clang/gcc compiler intrinsics whenever possible */
 #if (__has_builtin(__builtin_add_overflow) || \
      (defined(__GNUC__) && (__GNUC__ >= 5)))
