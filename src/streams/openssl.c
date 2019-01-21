@@ -644,10 +644,10 @@ static int openssl_set_proxy(git_stream *stream, const git_proxy_options *proxy_
 	return git_stream_set_proxy(st->io, proxy_opts);
 }
 
-ssize_t openssl_write(git_stream *stream, const char *data, size_t len, int flags)
+ssize_t openssl_write(git_stream *stream, const char *data, size_t data_len, int flags)
 {
 	openssl_stream *st = (openssl_stream *) stream;
-	int ret;
+	int ret, len = min(data_len, INT_MAX);
 
 	GIT_UNUSED(flags);
 

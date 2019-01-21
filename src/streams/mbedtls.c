@@ -303,22 +303,22 @@ static int mbedtls_set_proxy(git_stream *stream, const git_proxy_options *proxy_
 	return git_stream_set_proxy(st->io, proxy_options);
 }
 
-ssize_t mbedtls_stream_write(git_stream *stream, const char *data, size_t len, int flags)
+ssize_t mbedtls_stream_write(git_stream *stream, const char *data, size_t data_len, int flags)
 {
-	size_t read = 0;
+	ssize_t written = 0, len = min(data_len, SSIZE_MAX);
 	mbedtls_stream *st = (mbedtls_stream *) stream;
 
 	GIT_UNUSED(flags);
 
 	do {
-		int error = mbedtls_ssl_write(st->ssl, (const unsigned char *)data + read, len - read);
+		int error = mbedtls_ssl_write(st->ssl, (const unsigned char *)data + written, len - written);
 		if (error <= 0) {
 			return ssl_set_error(st->ssl, error);
 		}
-		read += error;
-	} while (read < len);
+		written += error;
+	} while (written < len);
 
-	return read;
+	return written;
 }
 
 ssize_t mbedtls_stream_read(git_stream *stream, void *data, size_t len)
