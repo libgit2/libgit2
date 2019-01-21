@@ -41,7 +41,12 @@ static int hunk_cmp(const void *_a, const void *_b)
 	git_blame_hunk *a = (git_blame_hunk*)_a,
 						*b = (git_blame_hunk*)_b;
 
-	return a->final_start_line_number - b->final_start_line_number;
+	if (a->final_start_line_number > b->final_start_line_number)
+		return 1;
+	else if (a->final_start_line_number < b->final_start_line_number)
+		return -1;
+	else
+		return 0;
 }
 
 static bool hunk_ends_at_or_before_line(git_blame_hunk *hunk, size_t line)
