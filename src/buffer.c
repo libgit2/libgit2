@@ -440,7 +440,7 @@ int git_buf_decode_base85(
 
 		acc += de;
 
-		cnt = (output_len < 4) ? output_len : 4;
+		cnt = (output_len < 4) ? (int)output_len : 4;
 		output_len -= cnt;
 		do {
 			acc = (acc << 8) | (acc >> 24);
