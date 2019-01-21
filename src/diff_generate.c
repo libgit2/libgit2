@@ -564,14 +564,14 @@ int git_diff__oid_for_file(
 {
 	git_index_entry entry;
 
-	if (!git__is_sizet(size)) {
+	if (size < 0 || size > UINT32_MAX) {
 		git_error_set(GIT_ERROR_NOMEMORY, "file size overflow (for 32-bits) on '%s'", path);
 		return -1;
 	}
 
 	memset(&entry, 0, sizeof(entry));
 	entry.mode = mode;
-	entry.file_size = (size_t)size;
+	entry.file_size = (uint32_t)size;
 	entry.path = (char *)path;
 
 	return git_diff__oid_for_entry(out, diff, &entry, mode, NULL);
