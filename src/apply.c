@@ -138,7 +138,7 @@ static bool find_hunk_linenum(
 
 static int update_hunk(
 	patch_image *image,
-	unsigned int linenum,
+	size_t linenum,
 	patch_image *preimage,
 	patch_image *postimage)
 {
