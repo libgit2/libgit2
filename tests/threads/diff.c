@@ -136,7 +136,7 @@ static void *run_index_diffs(void *arg)
 
 	git_diff_free(diff);
 	git_repository_free(repo);
-	giterr_clear();
+	git_error_clear();
 
 	return arg;
 }
@@ -203,7 +203,7 @@ static void *run_index_diffs_with_modifier(void *arg)
 done:
 	git_index_free(idx);
 	git_repository_free(repo);
-	giterr_clear();
+	git_error_clear();
 
 	return arg;
 }

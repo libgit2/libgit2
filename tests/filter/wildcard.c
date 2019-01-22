@@ -69,7 +69,7 @@ static int wildcard_filter_check(
 	if (strcmp(attr_values[0], "wcflip") == 0 ||
 		strcmp(attr_values[0], "wcreverse") == 0) {
 		*payload = git__strdup(attr_values[0]);
-		GITERR_CHECK_ALLOC(*payload);
+		GIT_ERROR_CHECK_ALLOC(*payload);
 		return 0;
 	}
 

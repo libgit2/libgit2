@@ -31,7 +31,7 @@ static int annotated_commit_init(
 	*out = NULL;
 
 	annotated_commit = git__calloc(1, sizeof(git_annotated_commit));
-	GITERR_CHECK_ALLOC(annotated_commit);
+	GIT_ERROR_CHECK_ALLOC(annotated_commit);
 
 	annotated_commit->type = GIT_ANNOTATED_COMMIT_REAL;
 
@@ -45,7 +45,7 @@ static int annotated_commit_init(
 		description = annotated_commit->id_str;
 
 	annotated_commit->description = git__strdup(description);
-	GITERR_CHECK_ALLOC(annotated_commit->description);
+	GIT_ERROR_CHECK_ALLOC(annotated_commit->description);
 
 done:
 	if (!error)
@@ -140,7 +140,7 @@ int git_annotated_commit_from_ref(
 
 	if (!error) {
 		(*out)->ref_name = git__strdup(git_reference_name(ref));
-		GITERR_CHECK_ALLOC((*out)->ref_name);
+		GIT_ERROR_CHECK_ALLOC((*out)->ref_name);
 	}
 
 	git_object_free(peeled);
@@ -180,10 +180,10 @@ int git_annotated_commit_from_fetchhead(
 		return -1;
 
 	(*out)->ref_name = git__strdup(branch_name);
-	GITERR_CHECK_ALLOC((*out)->ref_name);
+	GIT_ERROR_CHECK_ALLOC((*out)->ref_name);
 
 	(*out)->remote_url = git__strdup(remote_url);
-	GITERR_CHECK_ALLOC((*out)->remote_url);
+	GIT_ERROR_CHECK_ALLOC((*out)->remote_url);
 
 	return 0;
 }

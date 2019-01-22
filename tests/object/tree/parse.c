@@ -118,7 +118,7 @@ void test_object_tree_parse__mode_doesnt_cause_oob_read(void)
 	 * later fail to parse the OID with a different error
 	 * message
 	 */
-	cl_assert_equal_s(giterr_last()->message, "failed to parse tree: missing space after filemode");
+	cl_assert_equal_s(git_error_last()->message, "failed to parse tree: missing space after filemode");
 }
 
 void test_object_tree_parse__unreasonably_large_mode_fails(void)

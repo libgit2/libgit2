@@ -35,7 +35,7 @@ static int add_refspec_to(git_vector *vector, const char *string, bool is_fetch)
 	git_refspec *spec;
 
 	spec = git__calloc(1, sizeof(git_refspec));
-	GITERR_CHECK_ALLOC(spec);
+	GIT_ERROR_CHECK_ALLOC(spec);
 
 	if (git_refspec__parse(spec, string, is_fetch) < 0) {
 		git__free(spec);
@@ -85,8 +85,8 @@ static int ensure_remote_name_is_valid(const char *name)
 	int error = 0;
 
 	if (!git_remote_is_valid_name(name)) {
-		giterr_set(
-			GITERR_CONFIG,
+		git_error_set(
+			GIT_ERROR_CONFIG,
 			"'%s' is not a valid remote name.", name ? name : "(null)");
 		error = GIT_EINVALIDSPEC;
 	}
@@ -111,7 +111,7 @@ static int write_add_refspec(git_repository *repo, const char *name, const char 
 		return error;
 
 	if ((error = git_refspec__parse(&spec, refspec, fetch)) < 0) {
-		if (giterr_last()->klass != GITERR_NOMEMORY)
+		if (git_error_last()->klass != GIT_ERROR_NOMEMORY)
 			error = GIT_EINVALIDSPEC;
 
 		return error;
@@ -168,7 +168,7 @@ static int get_check_cert(int *out, git_repository *repo)
 static int canonicalize_url(git_buf *out, const char *in)
 {
 	if (in == NULL || strlen(in) == 0) {
-		giterr_set(GITERR_INVALID, "cannot set empty URL");
+		git_error_set(GIT_ERROR_INVALID, "cannot set empty URL");
 		return GIT_EINVALIDSPEC;
 	}
 
@@ -212,7 +212,7 @@ static int ensure_remote_doesnot_exist(git_repository *repo, const char *name)
 
 	git_remote_free(remote);
 
-	giterr_set(GITERR_CONFIG, "remote '%s' already exists", name);
+	git_error_set(GIT_ERROR_CONFIG, "remote '%s' already exists", name);
 
 	return GIT_EEXISTS;
 }
@@ -240,7 +240,7 @@ int git_remote_create_with_opts(git_remote **out, const char *url, const git_rem
 		opts = &dummy_opts;
 	}
 
-	GITERR_CHECK_VERSION(opts, GIT_REMOTE_CREATE_OPTIONS_VERSION, "git_remote_create_options");
+	GIT_ERROR_CHECK_VERSION(opts, GIT_REMOTE_CREATE_OPTIONS_VERSION, "git_remote_create_options");
 
 	if (opts->name != NULL) {
 		if ((error = ensure_remote_name_is_valid(opts->name)) < 0)
@@ -257,7 +257,7 @@ int git_remote_create_with_opts(git_remote **out, const char *url, const git_rem
 	}
 
 	remote = git__calloc(1, sizeof(git_remote));
-	GITERR_CHECK_ALLOC(remote);
+	GIT_ERROR_CHECK_ALLOC(remote);
 
 	remote->repo = opts->repository;
 
@@ -270,11 +270,11 @@ int git_remote_create_with_opts(git_remote **out, const char *url, const git_rem
 	} else {
 		remote->url = git__strdup(canonical_url.ptr);
 	}
-	GITERR_CHECK_ALLOC(remote->url);
+	GIT_ERROR_CHECK_ALLOC(remote->url);
 
 	if (opts->name != NULL) {
 		remote->name = git__strdup(opts->name);
-		GITERR_CHECK_ALLOC(remote->name);
+		GIT_ERROR_CHECK_ALLOC(remote->name);
 
 		if (opts->repository &&
 		    ((error = git_buf_printf(&var, CONFIG_URL_FMT, opts->name)) < 0 ||
@@ -393,21 +393,21 @@ int git_remote_dup(git_remote **dest, git_remote *source)
 	int error = 0;
 	git_refspec *spec;
 	git_remote *remote = git__calloc(1, sizeof(git_remote));
-	GITERR_CHECK_ALLOC(remote);
+	GIT_ERROR_CHECK_ALLOC(remote);
 
 	if (source->name != NULL) {
 		remote->name = git__strdup(source->name);
-		GITERR_CHECK_ALLOC(remote->name);
+		GIT_ERROR_CHECK_ALLOC(remote->name);
 	}
 
 	if (source->url != NULL) {
 		remote->url = git__strdup(source->url);
-		GITERR_CHECK_ALLOC(remote->url);
+		GIT_ERROR_CHECK_ALLOC(remote->url);
 	}
 
 	if (source->pushurl != NULL) {
 		remote->pushurl = git__strdup(source->pushurl);
-		GITERR_CHECK_ALLOC(remote->pushurl);
+		GIT_ERROR_CHECK_ALLOC(remote->pushurl);
 	}
 
 	remote->repo = source->repo;
@@ -466,7 +466,7 @@ static int get_optional_config(
 		*found = !error;
 
 	if (error == GIT_ENOTFOUND) {
-		giterr_clear();
+		git_error_clear();
 		error = 0;
 	}
 
@@ -492,10 +492,10 @@ int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 		return error;
 
 	remote = git__calloc(1, sizeof(git_remote));
-	GITERR_CHECK_ALLOC(remote);
+	GIT_ERROR_CHECK_ALLOC(remote);
 
 	remote->name = git__strdup(name);
-	GITERR_CHECK_ALLOC(remote->name);
+	GIT_ERROR_CHECK_ALLOC(remote->name);
 
 	if (git_vector_init(&remote->refs, 32, NULL) < 0 ||
 	    git_vector_init(&remote->refspecs, 2, NULL) < 0 ||
@@ -518,7 +518,7 @@ int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 
 	if (found && strlen(val) > 0) {
 		remote->url = apply_insteadof(config, val, GIT_DIRECTION_FETCH);
-		GITERR_CHECK_ALLOC(remote->url);
+		GIT_ERROR_CHECK_ALLOC(remote->url);
 	}
 
 	val = NULL;
@@ -532,13 +532,13 @@ int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 
 	if (!optional_setting_found) {
 		error = GIT_ENOTFOUND;
-		giterr_set(GITERR_CONFIG, "remote '%s' does not exist", name);
+		git_error_set(GIT_ERROR_CONFIG, "remote '%s' does not exist", name);
 		goto cleanup;
 	}
 
 	if (found && strlen(val) > 0) {
 		remote->pushurl = apply_insteadof(config, val, GIT_DIRECTION_PUSH);
-		GITERR_CHECK_ALLOC(remote->pushurl);
+		GIT_ERROR_CHECK_ALLOC(remote->pushurl);
 	}
 
 	data.remote = remote;
@@ -588,11 +588,11 @@ static int lookup_remote_prune_config(git_remote *remote, git_config *config, co
 
 	if ((error = git_config_get_bool(&remote->prune_refs, config, git_buf_cstr(&buf))) < 0) {
 		if (error == GIT_ENOTFOUND) {
-			giterr_clear();
+			git_error_clear();
 
 			if ((error = git_config_get_bool(&remote->prune_refs, config, "fetch.prune")) < 0) {
 				if (error == GIT_ENOTFOUND) {
-					giterr_clear();
+					git_error_clear();
 					error = 0;
 				}
 			}
@@ -717,20 +717,20 @@ int git_remote__connect(git_remote *remote, git_direction direction, const git_r
 	assert(remote);
 
 	if (callbacks) {
-		GITERR_CHECK_VERSION(callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
+		GIT_ERROR_CHECK_VERSION(callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
 		credentials = callbacks->credentials;
 		transport   = callbacks->transport;
 		payload     = callbacks->payload;
 	}
 
 	if (conn->proxy)
-		GITERR_CHECK_VERSION(conn->proxy, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
+		GIT_ERROR_CHECK_VERSION(conn->proxy, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
 
 	t = remote->transport;
 
 	url = git_remote__urlfordirection(remote, direction);
 	if (url == NULL) {
-		giterr_set(GITERR_INVALID,
+		git_error_set(GIT_ERROR_INVALID,
 			"Malformed remote '%s' - missing %s URL",
 			remote->name ? remote->name : "(anonymous)",
 			direction == GIT_DIRECTION_FETCH ? "fetch" : "push");
@@ -783,7 +783,7 @@ int git_remote_ls(const git_remote_head ***out, size_t *size, git_remote *remote
 	assert(remote);
 
 	if (!remote->transport) {
-		giterr_set(GITERR_NET, "this remote has never connected");
+		git_error_set(GIT_ERROR_NET, "this remote has never connected");
 		return -1;
 	}
 
@@ -847,7 +847,7 @@ int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_ur
 
 	if (error < 0) {
 		if (error == GIT_ENOTFOUND) {
-			giterr_clear();
+			git_error_clear();
 			error = 0;
 		}
 
@@ -857,7 +857,7 @@ int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_ur
 	*proxy_url = git_buf_detach(&val);
 
 found:
-	GITERR_CHECK_ALLOC(*proxy_url);
+	GIT_ERROR_CHECK_ALLOC(*proxy_url);
 	git_config_entry_free(ce);
 
 	return 0;
@@ -929,15 +929,15 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs, const 
 	assert(remote);
 
 	if (!remote->repo) {
-		giterr_set(GITERR_INVALID, "cannot download detached remote");
+		git_error_set(GIT_ERROR_INVALID, "cannot download detached remote");
 		return -1;
 	}
 
 	if (opts) {
-		GITERR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
+		GIT_ERROR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
 		cbs = &opts->callbacks;
 		custom_headers = &opts->custom_headers;
-		GITERR_CHECK_VERSION(&opts->proxy_opts, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
+		GIT_ERROR_CHECK_VERSION(&opts->proxy_opts, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
 		proxy = &opts->proxy_opts;
 	}
 
@@ -1009,12 +1009,12 @@ int git_remote_fetch(
 	git_remote_connection_opts conn = GIT_REMOTE_CONNECTION_OPTIONS_INIT;
 
 	if (opts) {
-		GITERR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
+		GIT_ERROR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
 		cbs = &opts->callbacks;
 		conn.custom_headers = &opts->custom_headers;
 		update_fetchhead = opts->update_fetchhead;
 		tagopt = opts->download_tags;
-		GITERR_CHECK_VERSION(&opts->proxy_opts, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
+		GIT_ERROR_CHECK_VERSION(&opts->proxy_opts, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
 		conn.proxy = &opts->proxy_opts;
 	}
 
@@ -1097,7 +1097,7 @@ static int ref_to_update(int *update, git_buf *remote_name, git_remote *remote, 
 	    (error = git_refspec_rtransform(remote_name, spec, upstream_name.ptr)) < 0) {
 		/* Not an error if there is no upstream */
 		if (error == GIT_ENOTFOUND) {
-			giterr_clear();
+			git_error_clear();
 			error = 0;
 		}
 
@@ -1232,7 +1232,7 @@ static int prune_candidates(git_vector *candidates, git_remote *remote)
 			continue;
 
 		refname_dup = git__strdup(refname);
-		GITERR_CHECK_ALLOC(refname_dup);
+		GIT_ERROR_CHECK_ALLOC(refname_dup);
 
 		if ((error = git_vector_insert(candidates, refname_dup)) < 0)
 			goto out;
@@ -1262,7 +1262,7 @@ int git_remote_prune(git_remote *remote, const git_remote_callbacks *callbacks)
 	git_oid zero_id = {{ 0 }};
 
 	if (callbacks)
-		GITERR_CHECK_VERSION(callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
+		GIT_ERROR_CHECK_VERSION(callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
 
 	if ((error = ls_to_vector(&remote_refs, remote)) < 0)
 		goto cleanup;
@@ -1737,7 +1737,7 @@ static int remote_list_cb(const git_config_entry *entry, void *payload)
 		remote_name = git__strndup(name, namelen - 4); /* strip ".url" */
 	else
 		remote_name = git__strndup(name, namelen - 8); /* strip ".pushurl" */
-	GITERR_CHECK_ALLOC(remote_name);
+	GIT_ERROR_CHECK_ALLOC(remote_name);
 
 	return git_vector_insert(list, remote_name);
 }
@@ -1811,7 +1811,7 @@ int git_remote_set_autotag(git_repository *repo, const char *remote, git_remote_
 			error = 0;
 		break;
 	default:
-		giterr_set(GITERR_INVALID, "invalid value for the tagopt setting");
+		git_error_set(GIT_ERROR_INVALID, "invalid value for the tagopt setting");
 		error = -1;
 	}
 
@@ -2005,7 +2005,7 @@ static int rename_fetch_refspecs(git_vector *problems, git_remote *remote, const
 			char *dup;
 
 			dup = git__strdup(spec->string);
-			GITERR_CHECK_ALLOC(dup);
+			GIT_ERROR_CHECK_ALLOC(dup);
 
 			if ((error = git_vector_insert(problems, dup)) < 0)
 				break;
@@ -2101,7 +2101,7 @@ int git_remote_is_valid_name(
 	git_buf_dispose(&buf);
 	git_refspec__dispose(&refspec);
 
-	giterr_clear();
+	git_error_clear();
 	return error == 0;
 }
 
@@ -2256,7 +2256,7 @@ static int remove_branch_config_related_entries(
 		if ((error = git_config_delete_entry(config, git_buf_cstr(&buf))) < 0) {
 			if (error != GIT_ENOTFOUND)
 				break;
-			giterr_clear();
+			git_error_clear();
 		}
 
 		git_buf_clear(&buf);
@@ -2266,7 +2266,7 @@ static int remove_branch_config_related_entries(
 		if ((error = git_config_delete_entry(config, git_buf_cstr(&buf))) < 0) {
 			if (error != GIT_ENOTFOUND)
 				break;
-			giterr_clear();
+			git_error_clear();
 		}
 	}
 
@@ -2432,7 +2432,7 @@ int git_remote_upload(git_remote *remote, const git_strarray *refspecs, const gi
 	assert(remote);
 
 	if (!remote->repo) {
-		giterr_set(GITERR_INVALID, "cannot download detached remote");
+		git_error_set(GIT_ERROR_INVALID, "cannot download detached remote");
 		return -1;
 	}
 
@@ -2498,15 +2498,15 @@ int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_
 	assert(remote);
 
 	if (!remote->repo) {
-		giterr_set(GITERR_INVALID, "cannot download detached remote");
+		git_error_set(GIT_ERROR_INVALID, "cannot download detached remote");
 		return -1;
 	}
 
 	if (opts) {
-		GITERR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
+		GIT_ERROR_CHECK_VERSION(&opts->callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
 		cbs = &opts->callbacks;
 		custom_headers = &opts->custom_headers;
-		GITERR_CHECK_VERSION(&opts->proxy_opts, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
+		GIT_ERROR_CHECK_VERSION(&opts->proxy_opts, GIT_PROXY_OPTIONS_VERSION, "git_proxy_options");
 		proxy = &opts->proxy_opts;
 	}
 

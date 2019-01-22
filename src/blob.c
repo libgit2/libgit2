@@ -116,7 +116,7 @@ static int write_file_stream(
 	p_close(fd);
 
 	if (written != file_size || read_len < 0) {
-		giterr_set(GITERR_OS, "failed to read file into stream");
+		git_error_set(GIT_ERROR_OS, "failed to read file into stream");
 		error = -1;
 	}
 
@@ -158,11 +158,11 @@ static int write_symlink(
 	int error;
 
 	link_data = git__malloc(link_size);
-	GITERR_CHECK_ALLOC(link_data);
+	GIT_ERROR_CHECK_ALLOC(link_data);
 
 	read_len = p_readlink(path, link_data, link_size);
 	if (read_len != (ssize_t)link_size) {
-		giterr_set(GITERR_OS, "failed to create blob: cannot read symlink '%s'", path);
+		git_error_set(GIT_ERROR_OS, "failed to create blob: cannot read symlink '%s'", path);
 		git__free(link_data);
 		return -1;
 	}
@@ -206,7 +206,7 @@ int git_blob__create_from_paths(
 		goto done;
 
 	if (S_ISDIR(st.st_mode)) {
-		giterr_set(GITERR_ODB, "cannot create blob from '%s': it is a directory", content_path);
+		git_error_set(GIT_ERROR_ODB, "cannot create blob from '%s': it is a directory", content_path);
 		error = GIT_EDIRECTORY;
 		goto done;
 	}
@@ -334,11 +334,11 @@ int git_blob_create_fromstream(git_writestream **out, git_repository *repo, cons
 	assert(out && repo);
 
 	stream = git__calloc(1, sizeof(blob_writestream));
-	GITERR_CHECK_ALLOC(stream);
+	GIT_ERROR_CHECK_ALLOC(stream);
 
 	if (hintpath) {
 		stream->hintpath = git__strdup(hintpath);
-		GITERR_CHECK_ALLOC(stream->hintpath);
+		GIT_ERROR_CHECK_ALLOC(stream->hintpath);
 	}
 
 	stream->repo = repo;

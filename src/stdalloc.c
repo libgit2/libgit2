@@ -14,7 +14,7 @@ static void *stdalloc__malloc(size_t len, const char *file, int line)
 	GIT_UNUSED(file);
 	GIT_UNUSED(line);
 
-	if (!ptr) giterr_set_oom();
+	if (!ptr) git_error_set_oom();
 	return ptr;
 }
 
@@ -25,7 +25,7 @@ static void *stdalloc__calloc(size_t nelem, size_t elsize, const char *file, int
 	GIT_UNUSED(file);
 	GIT_UNUSED(line);
 
-	if (!ptr) giterr_set_oom();
+	if (!ptr) git_error_set_oom();
 	return ptr;
 }
 
@@ -36,7 +36,7 @@ static char *stdalloc__strdup(const char *str, const char *file, int line)
 	GIT_UNUSED(file);
 	GIT_UNUSED(line);
 
-	if (!ptr) giterr_set_oom();
+	if (!ptr) git_error_set_oom();
 	return ptr;
 }
 
@@ -80,7 +80,7 @@ static void *stdalloc__realloc(void *ptr, size_t size, const char *file, int lin
 	GIT_UNUSED(file);
 	GIT_UNUSED(line);
 
-	if (!new_ptr) giterr_set_oom();
+	if (!new_ptr) git_error_set_oom();
 	return new_ptr;
 }
 

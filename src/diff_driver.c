@@ -149,7 +149,7 @@ static git_diff_driver_registry *git_repository_driver_registry(
 	}
 
 	if (!repo->diff_drivers)
-		giterr_set(GITERR_REPOSITORY, "unable to create diff driver registry");
+		git_error_set(GIT_ERROR_REPOSITORY, "unable to create diff driver registry");
 
 	return repo->diff_drivers;
 }
@@ -162,11 +162,11 @@ static int diff_driver_alloc(
 		namelen = strlen(name),
 		alloclen;
 
-	GITERR_CHECK_ALLOC_ADD(&alloclen, driverlen, namelen);
-	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloclen, driverlen, namelen);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
 
 	driver = git__calloc(1, alloclen);
-	GITERR_CHECK_ALLOC(driver);
+	GIT_ERROR_CHECK_ALLOC(driver);
 
 	memcpy(driver->name, name, namelen);
 
@@ -211,7 +211,7 @@ static int git_diff_driver_builtin(
 		(error = p_regcomp(
 			&drv->word_pattern, ddef->words, ddef->flags | REG_EXTENDED)))
 	{
-		error = giterr_set_regex(&drv->word_pattern, error);
+		error = git_error_set_regex(&drv->word_pattern, error);
 		goto done;
 	}
 
@@ -256,7 +256,7 @@ static int git_diff_driver_load(
 
 	/* if you can't read config for repo, just use default driver */
 	if (git_repository_config_snapshot(&cfg, repo) < 0) {
-		giterr_clear();
+		git_error_clear();
 		goto done;
 	}
 
@@ -287,7 +287,7 @@ static int git_diff_driver_load(
 			cfg, name.ptr, NULL, diff_driver_xfuncname, drv)) < 0) {
 		if (error != GIT_ENOTFOUND)
 			goto done;
-		giterr_clear(); /* no diff.<driver>.xfuncname, so just continue */
+		git_error_clear(); /* no diff.<driver>.xfuncname, so just continue */
 	}
 
 	git_buf_truncate(&name, namelen + strlen("diff.."));
@@ -296,7 +296,7 @@ static int git_diff_driver_load(
 			cfg, name.ptr, NULL, diff_driver_funcname, drv)) < 0) {
 		if (error != GIT_ENOTFOUND)
 			goto done;
-		giterr_clear(); /* no diff.<driver>.funcname, so just continue */
+		git_error_clear(); /* no diff.<driver>.funcname, so just continue */
 	}
 
 	/* if we found any patterns, set driver type to use correct callback */
@@ -315,7 +315,7 @@ static int git_diff_driver_load(
 		found_driver = true;
 	else {
 		/* TODO: warn about bad regex instead of failure */
-		error = giterr_set_regex(&drv->word_pattern, error);
+		error = git_error_set_regex(&drv->word_pattern, error);
 		goto done;
 	}
 
@@ -379,7 +379,7 @@ int git_diff_driver_lookup(
 	else if ((error = git_diff_driver_load(out, repo, values[0])) < 0) {
 		if (error == GIT_ENOTFOUND) {
 			error = 0;
-			giterr_clear();
+			git_error_clear();
 		}
 	}
 

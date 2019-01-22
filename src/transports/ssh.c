@@ -54,7 +54,7 @@ static void ssh_error(LIBSSH2_SESSION *session, const char *errmsg)
 	char *ssherr;
 	libssh2_session_last_error(session, &ssherr, NULL, 0);
 
-	giterr_set(GITERR_SSH, "%s: %s", errmsg, ssherr);
+	git_error_set(GIT_ERROR_SSH, "%s: %s", errmsg, ssherr);
 }
 
 /*
@@ -85,7 +85,7 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 
 done:
 	if (!repo) {
-		giterr_set(GITERR_NET, "malformed git protocol URL");
+		git_error_set(GIT_ERROR_NET, "malformed git protocol URL");
 		return -1;
 	}
 
@@ -151,7 +151,7 @@ static int ssh_stream_read(
 	 */
 	if (rc == 0) {
 		if ((rc = libssh2_channel_read_stderr(s->channel, buffer, buf_size)) > 0) {
-			giterr_set(GITERR_SSH, "%*s", rc, buffer);
+			git_error_set(GIT_ERROR_SSH, "%*s", rc, buffer);
 			return GIT_EEOF;
 		} else if (rc < LIBSSH2_ERROR_NONE) {
 			ssh_error(s->session, "SSH could not read stderr");
@@ -238,7 +238,7 @@ static int ssh_stream_alloc(
 	assert(stream);
 
 	s = git__calloc(sizeof(ssh_stream), 1);
-	GITERR_CHECK_ALLOC(s);
+	GIT_ERROR_CHECK_ALLOC(s);
 
 	s->parent.subtransport = &t->parent;
 	s->parent.read = ssh_stream_read;
@@ -272,19 +272,19 @@ static int git_ssh_extract_url_parts(
 	if (at) {
 		start = at + 1;
 		*username = git__substrdup(url, at - url);
-		GITERR_CHECK_ALLOC(*username);
+		GIT_ERROR_CHECK_ALLOC(*username);
 	} else {
 		start = url;
 		*username = NULL;
 	}
 
 	if (colon == NULL || (colon < start)) {
-		giterr_set(GITERR_NET, "malformed URL");
+		git_error_set(GIT_ERROR_NET, "malformed URL");
 		return -1;
 	}
 
 	*host = git__substrdup(start, colon - start);
-	GITERR_CHECK_ALLOC(*host);
+	GIT_ERROR_CHECK_ALLOC(*host);
 
 	return 0;
 }
@@ -350,7 +350,7 @@ static int _git_ssh_authenticate_session(
 	int rc;
 
 	do {
-		giterr_clear();
+		git_error_clear();
 		switch (cred->credtype) {
 		case GIT_CREDTYPE_USERPASS_PLAINTEXT: {
 			git_cred_userpass_plaintext *c = (git_cred_userpass_plaintext *)cred;
@@ -428,7 +428,7 @@ static int _git_ssh_authenticate_session(
 			return GIT_EAUTH;
 
 	if (rc != LIBSSH2_ERROR_NONE) {
-		if (!giterr_last())
+		if (!git_error_last())
 			ssh_error(session, "Failed to authenticate SSH session");
 		return -1;
 	}
@@ -452,19 +452,19 @@ static int request_creds(git_cred **out, ssh_subtransport *t, const char *user, 
 		} else if (error < 0) {
 			return error;
 		} else if (!cred) {
-			giterr_set(GITERR_SSH, "callback failed to initialize SSH credentials");
+			git_error_set(GIT_ERROR_SSH, "callback failed to initialize SSH credentials");
 			return -1;
 		}
 	}
 
 	if (no_callback) {
-		giterr_set(GITERR_SSH, "authentication required but no callback set");
+		git_error_set(GIT_ERROR_SSH, "authentication required but no callback set");
 		return -1;
 	}
 
 	if (!(cred->credtype & auth_methods)) {
 		cred->free(cred);
-		giterr_set(GITERR_SSH, "callback returned unsupported credentials type");
+		git_error_set(GIT_ERROR_SSH, "callback returned unsupported credentials type");
 		return -1;
 	}
 
@@ -485,7 +485,7 @@ static int _git_ssh_session_create(
 
 	s = libssh2_session_init();
 	if (!s) {
-		giterr_set(GITERR_NET, "failed to initialize SSH session");
+		git_error_set(GIT_ERROR_NET, "failed to initialize SSH session");
 		return -1;
 	}
 
@@ -544,7 +544,7 @@ static int _git_ssh_setup_conn(
 	if ((error = git_ssh_extract_url_parts(&host, &user, url)) < 0)
 		goto done;
 	port = git__strdup(default_port);
-	GITERR_CHECK_ALLOC(port);
+	GIT_ERROR_CHECK_ALLOC(port);
 
 post_extract:
 	if ((error = git_socket_stream_new(&s->io, host, port)) < 0 ||
@@ -573,21 +573,21 @@ post_extract:
 		}
 
 		if (cert.type == 0) {
-			giterr_set(GITERR_SSH, "unable to get the host key");
+			git_error_set(GIT_ERROR_SSH, "unable to get the host key");
 			error = -1;
 			goto done;
 		}
 
 		/* We don't currently trust any hostkeys */
-		giterr_clear();
+		git_error_clear();
 
 		cert_ptr = &cert;
 
 		error = t->owner->certificate_check_cb((git_cert *) cert_ptr, 0, host, t->owner->message_cb_payload);
 
 		if (error < 0 && error != GIT_PASSTHROUGH) {
-			if (!giterr_last())
-				giterr_set(GITERR_NET, "user cancelled hostkey check");
+			if (!git_error_last())
+				git_error_set(GIT_ERROR_NET, "user cancelled hostkey check");
 
 			goto done;
 		}
@@ -626,7 +626,7 @@ post_extract:
 			goto done;
 
 		if (strcmp(user, git_cred__username(cred))) {
-			giterr_set(GITERR_SSH, "username does not match previous request");
+			git_error_set(GIT_ERROR_SSH, "username does not match previous request");
 			error = -1;
 			goto done;
 		}
@@ -693,7 +693,7 @@ static int ssh_uploadpack(
 		return 0;
 	}
 
-	giterr_set(GITERR_NET, "must call UPLOADPACK_LS before UPLOADPACK");
+	git_error_set(GIT_ERROR_NET, "must call UPLOADPACK_LS before UPLOADPACK");
 	return -1;
 }
 
@@ -720,7 +720,7 @@ static int ssh_receivepack(
 		return 0;
 	}
 
-	giterr_set(GITERR_NET, "must call RECEIVEPACK_LS before RECEIVEPACK");
+	git_error_set(GIT_ERROR_NET, "must call RECEIVEPACK_LS before RECEIVEPACK");
 	return -1;
 }
 
@@ -836,7 +836,7 @@ int git_smart_subtransport_ssh(
 	GIT_UNUSED(param);
 
 	t = git__calloc(sizeof(ssh_subtransport), 1);
-	GITERR_CHECK_ALLOC(t);
+	GIT_ERROR_CHECK_ALLOC(t);
 
 	t->owner = (transport_smart *)owner;
 	t->parent.action = _ssh_action;
@@ -852,7 +852,7 @@ int git_smart_subtransport_ssh(
 	assert(out);
 	*out = NULL;
 
-	giterr_set(GITERR_INVALID, "cannot create SSH transport. Library was built without SSH support");
+	git_error_set(GIT_ERROR_INVALID, "cannot create SSH transport. Library was built without SSH support");
 	return -1;
 #endif
 }
@@ -872,7 +872,7 @@ int git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *p
 	};
 
 	if (paths->count != 2) {
-		giterr_set(GITERR_SSH, "invalid ssh paths, must be two strings");
+		git_error_set(GIT_ERROR_SSH, "invalid ssh paths, must be two strings");
 		return GIT_EINVALIDSPEC;
 	}
 
@@ -883,9 +883,9 @@ int git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *p
 	t = (ssh_subtransport *) smart->wrapped;
 
 	t->cmd_uploadpack = git__strdup(paths->strings[0]);
-	GITERR_CHECK_ALLOC(t->cmd_uploadpack);
+	GIT_ERROR_CHECK_ALLOC(t->cmd_uploadpack);
 	t->cmd_receivepack = git__strdup(paths->strings[1]);
-	GITERR_CHECK_ALLOC(t->cmd_receivepack);
+	GIT_ERROR_CHECK_ALLOC(t->cmd_receivepack);
 
 	*out = transport;
 	return 0;
@@ -896,7 +896,7 @@ int git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *p
 	assert(out);
 	*out = NULL;
 
-	giterr_set(GITERR_INVALID, "cannot create SSH transport. Library was built without SSH support");
+	git_error_set(GIT_ERROR_INVALID, "cannot create SSH transport. Library was built without SSH support");
 	return -1;
 #endif
 }
@@ -912,7 +912,7 @@ int git_transport_ssh_global_init(void)
 {
 #ifdef GIT_SSH
 	if (libssh2_init(0) < 0) {
-		giterr_set(GITERR_SSH, "unable to initialize libssh2");
+		git_error_set(GIT_ERROR_SSH, "unable to initialize libssh2");
 		return -1;
 	}
 

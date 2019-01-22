@@ -41,7 +41,7 @@ static void *run_workdir_iterator(void *arg)
 
 	git_iterator_free(iter);
 	git_repository_free(repo);
-	giterr_clear();
+	git_error_clear();
 	return arg;
 }
 

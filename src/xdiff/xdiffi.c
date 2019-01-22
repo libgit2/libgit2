@@ -350,10 +350,10 @@ int xdl_do_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	 * Allocate and setup K vectors to be used by the differential algorithm.
 	 * One is to store the forward path and one to store the backward path.
 	 */
-	GITERR_CHECK_ALLOC_ADD3(&ndiags, xe->xdf1.nreff, xe->xdf2.nreff, 3);
-	GITERR_CHECK_ALLOC_MULTIPLY(&allocsize, ndiags, 2);
-	GITERR_CHECK_ALLOC_ADD(&allocsize, allocsize, 2);
-	GITERR_CHECK_ALLOC_MULTIPLY(&allocsize, allocsize, sizeof(long));
+	GIT_ERROR_CHECK_ALLOC_ADD3(&ndiags, xe->xdf1.nreff, xe->xdf2.nreff, 3);
+	GIT_ERROR_CHECK_ALLOC_MULTIPLY(&allocsize, ndiags, 2);
+	GIT_ERROR_CHECK_ALLOC_ADD(&allocsize, allocsize, 2);
+	GIT_ERROR_CHECK_ALLOC_MULTIPLY(&allocsize, allocsize, sizeof(long));
 
 	if (!(kvd = (long *) xdl_malloc(allocsize))) {
 		xdl_free_env(xe);

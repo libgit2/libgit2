@@ -49,7 +49,7 @@ int git_allocator_setup(git_allocator *allocator)
 int git_win32_crtdbg_init_allocator(git_allocator *allocator)
 {
 	GIT_UNUSED(allocator);
-	giterr_set(GIT_EINVALID, "crtdbg memory allocator not available");
+	git_error_set(GIT_EINVALID, "crtdbg memory allocator not available");
 	return -1;
 }
 #endif

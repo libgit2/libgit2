@@ -520,7 +520,7 @@ void test_object_tree_write__invalid_null_oid(void)
 
 	cl_git_pass(git_treebuilder_new(&bld, g_repo, NULL));
 	cl_git_fail(git_treebuilder_insert(NULL, bld, "null_oid_file", &null_oid, GIT_FILEMODE_BLOB));
-	cl_assert(giterr_last() && strstr(giterr_last()->message, "null OID") != NULL);
+	cl_assert(git_error_last() && strstr(git_error_last()->message, "null OID") != NULL);
 
 	git_treebuilder_free(bld);
 }

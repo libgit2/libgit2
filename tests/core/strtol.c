@@ -121,6 +121,6 @@ void test_core_strtol__buffer_length_with_leading_sign_truncates(void)
 void test_core_strtol__error_message_cuts_off(void)
 {
 	assert_l32_fails("2147483657foobar", 10);
-	cl_assert(strstr(giterr_last()->message, "2147483657") != NULL);
-	cl_assert(strstr(giterr_last()->message, "foobar") == NULL);
+	cl_assert(strstr(git_error_last()->message, "2147483657") != NULL);
+	cl_assert(strstr(git_error_last()->message, "foobar") == NULL);
 }

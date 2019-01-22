@@ -218,7 +218,7 @@ static int packfile_load__cb(void *data, git_buf *path)
 
 	/* ignore missing .pack file as git does */
 	if (error == GIT_ENOTFOUND) {
-		giterr_clear();
+		git_error_clear();
 		return 0;
 	}
 
@@ -533,7 +533,7 @@ static int pack_backend__writepack(struct git_odb_writepack **out,
 	backend = (struct pack_backend *)_backend;
 
 	writepack = git__calloc(1, sizeof(struct pack_writepack));
-	GITERR_CHECK_ALLOC(writepack);
+	GIT_ERROR_CHECK_ALLOC(writepack);
 
 	if (git_indexer_new(&writepack->indexer,
 		backend->pack_folder, 0, odb, &opts) < 0) {
@@ -573,7 +573,7 @@ static void pack_backend__free(git_odb_backend *_backend)
 static int pack_backend__alloc(struct pack_backend **out, size_t initial_size)
 {
 	struct pack_backend *backend = git__calloc(1, sizeof(struct pack_backend));
-	GITERR_CHECK_ALLOC(backend);
+	GIT_ERROR_CHECK_ALLOC(backend);
 
 	if (git_vector_init(&backend->packs, initial_size, packfile_sort__cb) < 0) {
 		git__free(backend);

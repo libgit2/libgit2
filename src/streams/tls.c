@@ -38,7 +38,7 @@ int git_tls_stream_new(git_stream **out, const char *host, const char *port)
 	}
 
 	if (!init) {
-		giterr_set(GITERR_SSL, "there is no TLS stream available");
+		git_error_set(GIT_ERROR_SSL, "there is no TLS stream available");
 		return -1;
 	}
 
@@ -65,7 +65,7 @@ int git_tls_stream_wrap(git_stream **out, git_stream *in, const char *host)
 	}
 
 	if (!wrap) {
-		giterr_set(GITERR_SSL, "there is no TLS stream available");
+		git_error_set(GIT_ERROR_SSL, "there is no TLS stream available");
 		return -1;
 	}
 

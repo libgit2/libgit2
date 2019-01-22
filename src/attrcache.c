@@ -18,7 +18,7 @@ GIT_INLINE(int) attr_cache_lock(git_attr_cache *cache)
 	GIT_UNUSED(cache); /* avoid warning if threading is off */
 
 	if (git_mutex_lock(&cache->lock) < 0) {
-		giterr_set(GITERR_OS, "unable to get attr cache lock");
+		git_error_set(GIT_ERROR_OS, "unable to get attr cache lock");
 		return -1;
 	}
 	return 0;
@@ -60,7 +60,7 @@ int git_attr_cache__alloc_file_entry(
 	}
 
 	ce = git_pool_mallocz(pool, (uint32_t)cachesize);
-	GITERR_CHECK_ALLOC(ce);
+	GIT_ERROR_CHECK_ALLOC(ce);
 
 	if (baselen) {
 		memcpy(ce->fullpath, base, baselen);
@@ -250,7 +250,7 @@ int git_attr_cache__get(
 		}
 		/* no error if file simply doesn't exist */
 		if (error == GIT_ENOTFOUND) {
-			giterr_clear();
+			git_error_clear();
 			error = 0;
 		}
 	}
@@ -374,11 +374,11 @@ int git_attr_cache__init(git_repository *repo)
 		return 0;
 
 	cache = git__calloc(1, sizeof(git_attr_cache));
-	GITERR_CHECK_ALLOC(cache);
+	GIT_ERROR_CHECK_ALLOC(cache);
 
 	/* set up lock */
 	if (git_mutex_init(&cache->lock) < 0) {
-		giterr_set(GITERR_OS, "unable to initialize lock for attr cache");
+		git_error_set(GIT_ERROR_OS, "unable to initialize lock for attr cache");
 		git__free(cache);
 		return -1;
 	}
@@ -443,7 +443,7 @@ int git_attr_cache__insert_macro(git_repository *repo, git_attr_rule *macro)
 		return 0;
 
 	if (attr_cache_lock(cache) < 0) {
-		giterr_set(GITERR_OS, "unable to get attr cache lock");
+		git_error_set(GIT_ERROR_OS, "unable to get attr cache lock");
 		error = -1;
 	} else {
 		git_strmap_insert(macros, macro->match.pattern, macro, &error);

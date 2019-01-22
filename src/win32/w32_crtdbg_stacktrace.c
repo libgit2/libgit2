@@ -74,21 +74,21 @@ static bool g_transient_leaks_since_mark = false; /* payload for hook */
 static void *crtdbg__malloc(size_t len, const char *file, int line)
 {
 	void *ptr = _malloc_dbg(len, _NORMAL_BLOCK, git_win32__crtdbg_stacktrace(1,file), line);
-	if (!ptr) giterr_set_oom();
+	if (!ptr) git_error_set_oom();
 	return ptr;
 }
 
 static void *crtdbg__calloc(size_t nelem, size_t elsize, const char *file, int line)
 {
 	void *ptr = _calloc_dbg(nelem, elsize, _NORMAL_BLOCK, git_win32__crtdbg_stacktrace(1,file), line);
-	if (!ptr) giterr_set_oom();
+	if (!ptr) git_error_set_oom();
 	return ptr;
 }
 
 static char *crtdbg__strdup(const char *str, const char *file, int line)
 {
 	char *ptr = _strdup_dbg(str, _NORMAL_BLOCK, git_win32__crtdbg_stacktrace(1,file), line);
-	if (!ptr) giterr_set_oom();
+	if (!ptr) git_error_set_oom();
 	return ptr;
 }
 
@@ -128,7 +128,7 @@ static char *crtdbg__substrdup(const char *start, size_t n, const char *file, in
 static void *crtdbg__realloc(void *ptr, size_t size, const char *file, int line)
 {
 	void *new_ptr = _realloc_dbg(ptr, size, _NORMAL_BLOCK, git_win32__crtdbg_stacktrace(1,file), line);
-	if (!new_ptr) giterr_set_oom();
+	if (!new_ptr) git_error_set_oom();
 	return new_ptr;
 }
 
@@ -347,11 +347,11 @@ int git_win32__crtdbg_stacktrace__dump(
 	bool b_quiet            = IS_BIT_SET(opt, GIT_WIN32__CRTDBG_STACKTRACE__QUIET);
 
 	if (b_leaks_since_mark && b_leaks_total) {
-		giterr_set(GITERR_INVALID, "cannot combine LEAKS_SINCE_MARK and LEAKS_TOTAL.");
+		git_error_set(GIT_ERROR_INVALID, "cannot combine LEAKS_SINCE_MARK and LEAKS_TOTAL.");
 		return GIT_ERROR;
 	}
 	if (!b_set_mark && !b_leaks_since_mark && !b_leaks_total) {
-		giterr_set(GITERR_INVALID, "nothing to do.");
+		git_error_set(GIT_ERROR_INVALID, "nothing to do.");
 		return GIT_ERROR;
 	}
 

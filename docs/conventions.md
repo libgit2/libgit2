@@ -136,11 +136,11 @@ Check
 [`include/git2/errors.h`](https://github.com/libgit2/libgit2/blob/development/include/git2/errors.h)
 for the return codes already defined.
 
-In your implementation, use `giterr_set()` to provide extended error
+In your implementation, use `git_error_set()` to provide extended error
 information to callers.
 
 If a `libgit2` function internally invokes another function that reports an
-error, but the error is not propagated up, use `giterr_clear()` to prevent
+error, but the error is not propagated up, use `git_error_clear()` to prevent
 callers from getting the wrong error message later on.
 
 

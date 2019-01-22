@@ -224,7 +224,7 @@ int diff_foreach_via_iterator(
 	return 0;
 
 abort:
-	giterr_clear();
+	git_error_clear();
 	return GIT_EUSER;
 }
 

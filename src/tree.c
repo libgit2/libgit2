@@ -18,7 +18,7 @@
 #define MAX_FILEMODE_BYTES 6
 
 #define TREE_ENTRY_CHECK_NAMELEN(n) \
-	if (n > UINT16_MAX) { giterr_set(GITERR_INVALID, "tree entry path too long"); }
+	if (n > UINT16_MAX) { git_error_set(GIT_ERROR_INVALID, "tree entry path too long"); }
 
 static bool valid_filemode(const int filemode)
 {
@@ -350,9 +350,9 @@ unsigned int git_treebuilder_entrycount(git_treebuilder *bld)
 static int tree_error(const char *str, const char *path)
 {
 	if (path)
-		giterr_set(GITERR_TREE, "%s - %s", str, path);
+		git_error_set(GIT_ERROR_TREE, "%s - %s", str, path);
 	else
-		giterr_set(GITERR_TREE, "%s", str);
+		git_error_set(GIT_ERROR_TREE, "%s", str);
 	return -1;
 }
 
@@ -386,7 +386,7 @@ int git_tree__parse_raw(void *_tree, const char *data, size_t size)
 
 	tree->odb_obj = NULL;
 	git_array_init_to_size(tree->entries, DEFAULT_TREE_SIZE);
-	GITERR_CHECK_ARRAY(tree->entries);
+	GIT_ERROR_CHECK_ARRAY(tree->entries);
 
 	while (buffer < buffer_end) {
 		git_tree_entry *entry;
@@ -412,7 +412,7 @@ int git_tree__parse_raw(void *_tree, const char *data, size_t size)
 		/* Allocate the entry */
 		{
 			entry = git_array_alloc(tree->entries);
-			GITERR_CHECK_ALLOC(entry);
+			GIT_ERROR_CHECK_ALLOC(entry);
 
 			entry->attr = attr;
 			entry->filename_len = filename_len;
@@ -503,14 +503,14 @@ static int append_entry(
 		return error;
 
 	entry = alloc_entry(filename, strlen(filename), id);
-	GITERR_CHECK_ALLOC(entry);
+	GIT_ERROR_CHECK_ALLOC(entry);
 
 	entry->attr = (uint16_t)filemode;
 
 	git_strmap_insert(bld->map, entry->filename, entry, &error);
 	if (error < 0) {
 		git_tree_entry_free(entry);
-		giterr_set(GITERR_TREE, "failed to append entry %s to the tree builder", filename);
+		git_error_set(GIT_ERROR_TREE, "failed to append entry %s to the tree builder", filename);
 		return -1;
 	}
 
@@ -573,7 +573,7 @@ static int write_tree(
 			char *subdir, *last_comp;
 
 			subdir = git__strndup(entry->path, next_slash - entry->path);
-			GITERR_CHECK_ALLOC(subdir);
+			GIT_ERROR_CHECK_ALLOC(subdir);
 
 			/* Write out the subtree */
 			written = write_tree(&sub_oid, repo, index, subdir, i, shared_buf);
@@ -630,7 +630,7 @@ int git_tree__write_index(
 	assert(oid && index && repo);
 
 	if (git_index_has_conflicts(index)) {
-		giterr_set(GITERR_INDEX,
+		git_error_set(GIT_ERROR_INDEX,
 			"cannot create a tree from a not fully merged index.");
 		return GIT_EUNMERGED;
 	}
@@ -684,7 +684,7 @@ int git_treebuilder_new(
 	assert(builder_p && repo);
 
 	bld = git__calloc(1, sizeof(git_treebuilder));
-	GITERR_CHECK_ALLOC(bld);
+	GIT_ERROR_CHECK_ALLOC(bld);
 
 	bld->repo = repo;
 
@@ -736,13 +736,13 @@ int git_treebuilder_insert(
 		git_oid_cpy((git_oid *) entry->oid, id);
 	} else {
 		entry = alloc_entry(filename, strlen(filename), id);
-		GITERR_CHECK_ALLOC(entry);
+		GIT_ERROR_CHECK_ALLOC(entry);
 
 		git_strmap_insert(bld->map, entry->filename, entry, &error);
 
 		if (error < 0) {
 			git_tree_entry_free(entry);
-			giterr_set(GITERR_TREE, "failed to insert %s", filename);
+			git_error_set(GIT_ERROR_TREE, "failed to insert %s", filename);
 			return -1;
 		}
 	}
@@ -910,14 +910,14 @@ int git_tree_entry_bypath(
 	filename_len = subpath_len(path);
 
 	if (filename_len == 0) {
-		giterr_set(GITERR_TREE, "invalid tree path given");
+		git_error_set(GIT_ERROR_TREE, "invalid tree path given");
 		return GIT_ENOTFOUND;
 	}
 
 	entry = entry_fromname(root, path, filename_len);
 
 	if (entry == NULL) {
-		giterr_set(GITERR_TREE,
+		git_error_set(GIT_ERROR_TREE,
 			   "the path '%.*s' does not exist in the given tree", (int) filename_len, path);
 		return GIT_ENOTFOUND;
 	}
@@ -927,7 +927,7 @@ int git_tree_entry_bypath(
 		/* If there are more components in the path...
 		 * then this entry *must* be a tree */
 		if (!git_tree_entry__is_tree(entry)) {
-			giterr_set(GITERR_TREE,
+			git_error_set(GIT_ERROR_TREE,
 				   "the path '%.*s' exists but is not a tree", (int) filename_len, path);
 			return GIT_ENOTFOUND;
 		}
@@ -972,7 +972,7 @@ static int tree_walk(
 		if (preorder) {
 			error = callback(path->ptr, entry, payload);
 			if (error < 0) { /* negative value stops iteration */
-				giterr_set_after_callback_function(error, "git_tree_walk");
+				git_error_set_after_callback_function(error, "git_tree_walk");
 				break;
 			}
 			if (error > 0) { /* positive value skips this entry */
@@ -1008,7 +1008,7 @@ static int tree_walk(
 		if (!preorder) {
 			error = callback(path->ptr, entry, payload);
 			if (error < 0) { /* negative value stops iteration */
-				giterr_set_after_callback_function(error, "git_tree_walk");
+				git_error_set_after_callback_function(error, "git_tree_walk");
 				break;
 			}
 			error = 0;
@@ -1028,7 +1028,7 @@ int git_tree_walk(
 	git_buf root_path = GIT_BUF_INIT;
 
 	if (mode != GIT_TREEWALK_POST && mode != GIT_TREEWALK_PRE) {
-		giterr_set(GITERR_INVALID, "invalid walking mode for tree walk");
+		git_error_set(GIT_ERROR_INVALID, "invalid walking mode for tree walk");
 		return -1;
 	}
 
@@ -1052,7 +1052,7 @@ static int on_dup_entry(void **old, void *new)
 {
 	GIT_UNUSED(old); GIT_UNUSED(new);
 
-	giterr_set(GITERR_TREE, "duplicate entries given for update");
+	git_error_set(GIT_ERROR_TREE, "duplicate entries given for update");
 	return -1;
 }
 
@@ -1121,14 +1121,14 @@ static int create_popped_tree(tree_stack_entry *current, tree_stack_entry *poppe
 	git_buf_puts(component, popped->name);
 	git__free(popped->name);
 
-	GITERR_CHECK_ALLOC(component->ptr);
+	GIT_ERROR_CHECK_ALLOC(component->ptr);
 
 	/* Error out if this would create a D/F conflict in this update */
 	if (current->tree) {
 		const git_tree_entry *to_replace;
 		to_replace = git_tree_entry_byname(current->tree, component->ptr);
 		if (to_replace && git_tree_entry_type(to_replace) != GIT_OBJECT_TREE) {
-			giterr_set(GITERR_TREE, "D/F conflict when updating tree");
+			git_error_set(GIT_ERROR_TREE, "D/F conflict when updating tree");
 			return -1;
 		}
 	}
@@ -1155,7 +1155,7 @@ int git_tree_create_updated(git_oid *out, git_repository *repo, git_tree *baseli
 	}
 
 	root_elem = git_array_alloc(stack);
-	GITERR_CHECK_ALLOC(root_elem);
+	GIT_ERROR_CHECK_ALLOC(root_elem);
 	memset(root_elem, 0, sizeof(*root_elem));
 
 	if (baseline && (error = git_tree_dup(&root_elem->tree, baseline)) < 0)
@@ -1205,13 +1205,13 @@ int git_tree_create_updated(git_oid *out, git_repository *repo, git_tree *baseli
 				entry = treebuilder_get(last->bld, component.ptr);
 
 			if (entry && git_tree_entry_type(entry) != GIT_OBJECT_TREE) {
-				giterr_set(GITERR_TREE, "D/F conflict when updating tree");
+				git_error_set(GIT_ERROR_TREE, "D/F conflict when updating tree");
 				error = -1;
 				goto cleanup;
 			}
 
 			new_entry = git_array_alloc(stack);
-			GITERR_CHECK_ALLOC(new_entry);
+			GIT_ERROR_CHECK_ALLOC(new_entry);
 			memset(new_entry, 0, sizeof(*new_entry));
 
 			new_entry->tree = NULL;
@@ -1222,7 +1222,7 @@ int git_tree_create_updated(git_oid *out, git_repository *repo, git_tree *baseli
 				goto cleanup;
 
 			new_entry->name = git__strdup(component.ptr);
-			GITERR_CHECK_ALLOC(new_entry->name);
+			GIT_ERROR_CHECK_ALLOC(new_entry->name);
 
 			/* Get to the start of the next component */
 			path += component.size + 1;
@@ -1238,7 +1238,7 @@ int git_tree_create_updated(git_oid *out, git_repository *repo, git_tree *baseli
 				const git_tree_entry *e = git_treebuilder_get(last->bld, basename);
 				if (e && git_tree_entry_type(e) != git_object__type_from_filemode(update->filemode)) {
 					git__free(basename);
-					giterr_set(GITERR_TREE, "cannot replace '%s' with '%s' at '%s'",
+					git_error_set(GIT_ERROR_TREE, "cannot replace '%s' with '%s' at '%s'",
 						   git_object_type2string(git_tree_entry_type(e)),
 						   git_object_type2string(git_object__type_from_filemode(update->filemode)),
 						   update->path);
@@ -1258,7 +1258,7 @@ int git_tree_create_updated(git_oid *out, git_repository *repo, git_tree *baseli
 				break;
 			}
 			default:
-				giterr_set(GITERR_TREE, "unknown action for update");
+				git_error_set(GIT_ERROR_TREE, "unknown action for update");
 				error = -1;
 				goto cleanup;
 		}

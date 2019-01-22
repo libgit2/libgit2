@@ -99,14 +99,14 @@ static int validate_tree_and_parents(git_array_oid_t *parents, git_repository *r
 		}
 
 		parent_cpy = git_array_alloc(*parents);
-		GITERR_CHECK_ALLOC(parent_cpy);
+		GIT_ERROR_CHECK_ALLOC(parent_cpy);
 
 		git_oid_cpy(parent_cpy, parent);
 		i++;
 	}
 
 	if (current_id && (parents->size == 0 || git_oid_cmp(current_id, git_array_get(*parents, 0)))) {
-		giterr_set(GITERR_OBJECT, "failed to create commit: current tip is not the first parent");
+		git_error_set(GIT_ERROR_OBJECT, "failed to create commit: current tip is not the first parent");
 		error = GIT_EMODIFIED;
 		goto on_error;
 	}
@@ -143,7 +143,7 @@ static int git_commit__create_internal(
 		if (error < 0 && error != GIT_ENOTFOUND)
 			return error;
 	}
-	giterr_clear();
+	git_error_clear();
 
 	if (ref)
 		current_id = git_reference_target(ref);
@@ -351,7 +351,7 @@ int git_commit_amend(
 
 	if (!tree) {
 		git_tree *old_tree;
-		GITERR_CHECK_ERROR( git_commit_tree(&old_tree, commit_to_amend) );
+		GIT_ERROR_CHECK_ERROR( git_commit_tree(&old_tree, commit_to_amend) );
 		git_oid_cpy(&tree_id, git_tree_id(old_tree));
 		git_tree_free(old_tree);
 	} else {
@@ -365,7 +365,7 @@ int git_commit_amend(
 
 		if (git_oid_cmp(git_commit_id(commit_to_amend), git_reference_target(ref))) {
 			git_reference_free(ref);
-			giterr_set(GITERR_REFERENCE, "commit to amend is not the tip of the given branch");
+			git_error_set(GIT_ERROR_REFERENCE, "commit to amend is not the tip of the given branch");
 			return -1;
 		}
 	}
@@ -396,7 +396,7 @@ int git_commit__parse_raw(void *_commit, const char *data, size_t size)
 
 	/* Allocate for one, which will allow not to realloc 90% of the time  */
 	git_array_init_to_size(commit->parent_ids, 1);
-	GITERR_CHECK_ARRAY(commit->parent_ids);
+	GIT_ERROR_CHECK_ARRAY(commit->parent_ids);
 
 	/* The tree is always the first field */
 	if (git_oid__parse(&commit->tree_id, &buffer, buffer_end, "tree ") < 0)
@@ -408,13 +408,13 @@ int git_commit__parse_raw(void *_commit, const char *data, size_t size)
 
 	while (git_oid__parse(&parent_id, &buffer, buffer_end, "parent ") == 0) {
 		git_oid *new_id = git_array_alloc(commit->parent_ids);
-		GITERR_CHECK_ALLOC(new_id);
+		GIT_ERROR_CHECK_ALLOC(new_id);
 
 		git_oid_cpy(new_id, &parent_id);
 	}
 
 	commit->author = git__malloc(sizeof(git_signature));
-	GITERR_CHECK_ALLOC(commit->author);
+	GIT_ERROR_CHECK_ALLOC(commit->author);
 
 	if (git_signature__parse(commit->author, &buffer, buffer_end, "author ", '\n') < 0)
 		return -1;
@@ -430,7 +430,7 @@ int git_commit__parse_raw(void *_commit, const char *data, size_t size)
 
 	/* Always parse the committer; we need the commit time */
 	commit->committer = git__malloc(sizeof(git_signature));
-	GITERR_CHECK_ALLOC(commit->committer);
+	GIT_ERROR_CHECK_ALLOC(commit->committer);
 
 	if (git_signature__parse(commit->committer, &buffer, buffer_end, "committer ", '\n') < 0)
 		return -1;
@@ -448,7 +448,7 @@ int git_commit__parse_raw(void *_commit, const char *data, size_t size)
 			buffer += strlen("encoding ");
 
 			commit->message_encoding = git__strndup(buffer, eoln - buffer);
-			GITERR_CHECK_ALLOC(commit->message_encoding);
+			GIT_ERROR_CHECK_ALLOC(commit->message_encoding);
 		}
 
 		if (eoln < buffer_end && *eoln == '\n')
@@ -458,7 +458,7 @@ int git_commit__parse_raw(void *_commit, const char *data, size_t size)
 
 	header_len = buffer - buffer_start;
 	commit->raw_header = git__strndup(buffer_start, header_len);
-	GITERR_CHECK_ALLOC(commit->raw_header);
+	GIT_ERROR_CHECK_ALLOC(commit->raw_header);
 
 	/* point "buffer" to data after header, +1 for the final LF */
 	buffer = buffer_start + header_len + 1;
@@ -468,12 +468,12 @@ int git_commit__parse_raw(void *_commit, const char *data, size_t size)
 		commit->raw_message = git__strndup(buffer, buffer_end - buffer);
 	else
 		commit->raw_message = git__strdup("");
-	GITERR_CHECK_ALLOC(commit->raw_message);
+	GIT_ERROR_CHECK_ALLOC(commit->raw_message);
 
 	return 0;
 
 bad_buffer:
-	giterr_set(GITERR_OBJECT, "failed to parse bad commit object");
+	git_error_set(GIT_ERROR_OBJECT, "failed to parse bad commit object");
 	return -1;
 }
 
@@ -610,7 +610,7 @@ int git_commit_parent(
 
 	parent_id = git_commit_parent_id(commit, n);
 	if (parent_id == NULL) {
-		giterr_set(GITERR_INVALID, "parent %u does not exist", n);
+		git_error_set(GIT_ERROR_INVALID, "parent %u does not exist", n);
 		return GIT_ENOTFOUND;
 	}
 
@@ -699,14 +699,14 @@ int git_commit_header_field(git_buf *out, const git_commit *commit, const char *
 		return 0;
 	}
 
-	giterr_set(GITERR_OBJECT, "no such field '%s'", field);
+	git_error_set(GIT_ERROR_OBJECT, "no such field '%s'", field);
 	return GIT_ENOTFOUND;
 
 malformed:
-	giterr_set(GITERR_OBJECT, "malformed header");
+	git_error_set(GIT_ERROR_OBJECT, "malformed header");
 	return -1;
 oom:
-	giterr_set_oom();
+	git_error_set_oom();
 	return -1;
 }
 
@@ -731,7 +731,7 @@ int git_commit_extract_signature(git_buf *signature, git_buf *signed_data, git_r
 		return error;
 
 	if (obj->cached.type != GIT_OBJECT_COMMIT) {
-		giterr_set(GITERR_INVALID, "the requested type does not match the type in ODB");
+		git_error_set(GIT_ERROR_INVALID, "the requested type does not match the type in ODB");
 		error = GIT_ENOTFOUND;
 		goto cleanup;
 	}
@@ -783,16 +783,16 @@ int git_commit_extract_signature(git_buf *signature, git_buf *signed_data, git_r
 		return error;
 	}
 
-	giterr_set(GITERR_OBJECT, "this commit is not signed");
+	git_error_set(GIT_ERROR_OBJECT, "this commit is not signed");
 	error = GIT_ENOTFOUND;
 	goto cleanup;
 
 malformed:
-	giterr_set(GITERR_OBJECT, "malformed header");
+	git_error_set(GIT_ERROR_OBJECT, "malformed header");
 	error = -1;
 	goto cleanup;
 oom:
-	giterr_set_oom();
+	git_error_set_oom();
 	error = -1;
 	goto cleanup;
 
@@ -872,7 +872,7 @@ int git_commit_create_with_signature(
 	/* We start by identifying the end of the commit header */
 	header_end = strstr(commit_content, "\n\n");
 	if (!header_end) {
-		giterr_set(GITERR_INVALID, "malformed commit contents");
+		git_error_set(GIT_ERROR_INVALID, "malformed commit contents");
 		return -1;
 	}
 

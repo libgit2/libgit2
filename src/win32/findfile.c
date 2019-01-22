@@ -39,7 +39,7 @@ static int win32_path_to_8(git_buf *dest, const wchar_t *src)
 	git_win32_utf8_path utf8_path;
 
 	if (git_win32_path_to_utf8(utf8_path, src) < 0) {
-		giterr_set(GITERR_OS, "unable to convert path to UTF-8");
+		git_error_set(GIT_ERROR_OS, "unable to convert path to UTF-8");
 		return -1;
 	}
 

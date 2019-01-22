@@ -49,7 +49,7 @@ int git_strarray_copy(git_strarray *tgt, const git_strarray *src)
 		return 0;
 
 	tgt->strings = git__calloc(src->count, sizeof(char *));
-	GITERR_CHECK_ALLOC(tgt->strings);
+	GIT_ERROR_CHECK_ALLOC(tgt->strings);
 
 	for (i = 0; i < src->count; ++i) {
 		if (!src->strings[i])
@@ -164,7 +164,7 @@ int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const cha
 
 Return:
 	if (ndig == 0) {
-		giterr_set(GITERR_INVALID, "failed to convert string to long: not a number");
+		git_error_set(GIT_ERROR_INVALID, "failed to convert string to long: not a number");
 		return -1;
 	}
 
@@ -172,7 +172,7 @@ Return:
 		*endptr = p;
 
 	if (ovfl) {
-		giterr_set(GITERR_INVALID, "failed to convert string to long: overflow error");
+		git_error_set(GIT_ERROR_INVALID, "failed to convert string to long: overflow error");
 		return -1;
 	}
 
@@ -193,7 +193,7 @@ int git__strntol32(int32_t *result, const char *nptr, size_t nptr_len, const cha
 	tmp_int = tmp_long & 0xFFFFFFFF;
 	if (tmp_int != tmp_long) {
 		int len = tmp_endptr - nptr;
-		giterr_set(GITERR_INVALID, "failed to convert: '%.*s' is too large", len, nptr);
+		git_error_set(GIT_ERROR_INVALID, "failed to convert: '%.*s' is too large", len, nptr);
 		return -1;
 	}
 
@@ -899,7 +899,7 @@ int git__getenv(git_buf *out, const char *name)
 
 	if ((value_len = GetEnvironmentVariableW(wide_name, NULL, 0)) > 0) {
 		wide_value = git__malloc(value_len * sizeof(wchar_t));
-		GITERR_CHECK_ALLOC(wide_value);
+		GIT_ERROR_CHECK_ALLOC(wide_value);
 
 		value_len = GetEnvironmentVariableW(wide_name, wide_value, value_len);
 	}
@@ -909,7 +909,7 @@ int git__getenv(git_buf *out, const char *name)
 	else if (GetLastError() == ERROR_ENVVAR_NOT_FOUND)
 		error = GIT_ENOTFOUND;
 	else
-		giterr_set(GITERR_OS, "could not read environment variable '%s'", name);
+		git_error_set(GIT_ERROR_OS, "could not read environment variable '%s'", name);
 
 	git__free(wide_name);
 	git__free(wide_value);

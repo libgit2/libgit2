@@ -24,7 +24,7 @@ typedef struct {
 
 static int config_error_readonly(void)
 {
-	giterr_set(GITERR_CONFIG, "this backend is read-only");
+	git_error_set(GIT_ERROR_CONFIG, "this backend is read-only");
 	return -1;
 }
 
@@ -63,7 +63,7 @@ static int read_variable_cb(
 		return -1;
 
 	entry = git__calloc(1, sizeof(git_config_entry));
-	GITERR_CHECK_ALLOC(entry);
+	GIT_ERROR_CHECK_ALLOC(entry);
 	entry->name = git_buf_detach(&buf);
 	entry->value = var_value ? git__strdup(var_value) : NULL;
 	entry->level = parse_data->level;
@@ -170,7 +170,7 @@ static int config_memory_snapshot(git_config_backend **out, git_config_backend *
 {
 	GIT_UNUSED(out);
 	GIT_UNUSED(backend);
-	giterr_set(GITERR_CONFIG, "this backend does not support snapshots");
+	git_error_set(GIT_ERROR_CONFIG, "this backend does not support snapshots");
 	return -1;
 }
 
@@ -191,7 +191,7 @@ int git_config_backend_from_string(git_config_backend **out, const char *cfg, si
 	config_memory_backend *backend;
 
 	backend = git__calloc(1, sizeof(config_memory_backend));
-	GITERR_CHECK_ALLOC(backend);
+	GIT_ERROR_CHECK_ALLOC(backend);
 
 	if (git_config_entries_new(&backend->entries) < 0) {
 		git__free(backend);

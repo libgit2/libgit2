@@ -36,8 +36,8 @@ int git_buf_put_w(git_buf *buf, const wchar_t *string_w, size_t len_w)
 
 	assert(utf8_len > 0);
 
-	GITERR_CHECK_ALLOC_ADD(&new_size, buf->size, (size_t)utf8_len);
-	GITERR_CHECK_ALLOC_ADD(&new_size, new_size, 1);
+	GIT_ERROR_CHECK_ALLOC_ADD(&new_size, buf->size, (size_t)utf8_len);
+	GIT_ERROR_CHECK_ALLOC_ADD(&new_size, new_size, 1);
 
 	if (git_buf_grow(buf, new_size) < 0)
 		return -1;

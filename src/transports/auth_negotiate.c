@@ -44,12 +44,12 @@ static void negotiate_err_set(
 
 	if (gss_display_status(&status_display, status_major, GSS_C_GSS_CODE,
 		GSS_C_NO_OID, &context, &buffer) == GSS_S_COMPLETE) {
-		giterr_set(GITERR_NET, "%s: %.*s (%d.%d)",
+		git_error_set(GIT_ERROR_NET, "%s: %.*s (%d.%d)",
 			message, (int)buffer.length, (const char *)buffer.value,
 			status_major, status_minor);
 		gss_release_buffer(&status_minor, &buffer);
 	} else {
-		giterr_set(GITERR_NET, "%s: unknown negotiate error (%d.%d)",
+		git_error_set(GIT_ERROR_NET, "%s: unknown negotiate error (%d.%d)",
 			message, status_major, status_minor);
 	}
 }
@@ -65,7 +65,7 @@ static int negotiate_set_challenge(
 	git__free(ctx->challenge);
 
 	ctx->challenge = git__strdup(challenge);
-	GITERR_CHECK_ALLOC(ctx->challenge);
+	GIT_ERROR_CHECK_ALLOC(ctx->challenge);
 
 	return 0;
 }
@@ -109,13 +109,13 @@ static int negotiate_next_token(
 	challenge_len = ctx->challenge ? strlen(ctx->challenge) : 0;
 
 	if (challenge_len < 9) {
-		giterr_set(GITERR_NET, "no negotiate challenge sent from server");
+		git_error_set(GIT_ERROR_NET, "no negotiate challenge sent from server");
 		error = -1;
 		goto done;
 	} else if (challenge_len > 9) {
 		if (git_buf_decode_base64(&input_buf,
 				ctx->challenge + 10, challenge_len - 10) < 0) {
-			giterr_set(GITERR_NET, "invalid negotiate challenge from server");
+			git_error_set(GIT_ERROR_NET, "invalid negotiate challenge from server");
 			error = -1;
 			goto done;
 		}
@@ -124,7 +124,7 @@ static int negotiate_next_token(
 		input_token.length = input_buf.size;
 		input_token_ptr = &input_token;
 	} else if (ctx->gss_context != GSS_C_NO_CONTEXT) {
-		giterr_set(GITERR_NET, "could not restart authentication");
+		git_error_set(GIT_ERROR_NET, "could not restart authentication");
 		error = -1;
 		goto done;
 	}
@@ -230,7 +230,7 @@ static int negotiate_init_context(
 	gss_release_oid_set(&status_minor, &mechanism_list);
 
 	if (!ctx->oid) {
-		giterr_set(GITERR_NET, "negotiate authentication is not supported");
+		git_error_set(GIT_ERROR_NET, "negotiate authentication is not supported");
 		return -1;
 	}
 
@@ -255,7 +255,7 @@ int git_http_auth_negotiate(
 	*out = NULL;
 
 	ctx = git__calloc(1, sizeof(http_auth_negotiate_context));
-	GITERR_CHECK_ALLOC(ctx);
+	GIT_ERROR_CHECK_ALLOC(ctx);
 
 	if (negotiate_init_context(ctx, connection_data) < 0) {
 		git__free(ctx);

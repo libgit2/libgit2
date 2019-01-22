@@ -47,7 +47,7 @@ static int build_regex(regex_t *regex, const char *pattern)
 	int error;
 
 	if (*pattern == '\0') {
-		giterr_set(GITERR_REGEX, "empty pattern");
+		git_error_set(GIT_ERROR_REGEX, "empty pattern");
 		return GIT_EINVALIDSPEC;
 	}
 
@@ -55,7 +55,7 @@ static int build_regex(regex_t *regex, const char *pattern)
 	if (!error)
 		return 0;
 
-	error = giterr_set_regex(regex, error);
+	error = git_error_set_regex(regex, error);
 
 	regfree(regex);
 
@@ -119,7 +119,7 @@ static int revparse_lookup_object(
 	if ((error = maybe_describe(object_out, repo, spec)) != GIT_ENOTFOUND)
 		return error;
 
-	giterr_set(GITERR_REFERENCE, "revspec '%s' not found", spec);
+	git_error_set(GIT_ERROR_REFERENCE, "revspec '%s' not found", spec);
 	return GIT_ENOTFOUND;
 }
 
@@ -245,8 +245,8 @@ static int retrieve_oid_from_reflog(git_oid *oid, git_reference *ref, size_t ide
 	return 0;
 
 notfound:
-	giterr_set(
-		GITERR_REFERENCE,
+	git_error_set(
+		GIT_ERROR_REFERENCE,
 		"reflog for '%s' has only %"PRIuZ" entries, asked for %"PRIuZ,
 		git_reference_name(ref), numentries, identifier);
 
@@ -759,7 +759,7 @@ int revparse__ext(
 					 * TODO: support merge-stage path lookup (":2:Makefile")
 					 * and plain index blob lookup (:i-am/a/blob)
 					 */
-					giterr_set(GITERR_INVALID, "unimplemented");
+					git_error_set(GIT_ERROR_INVALID, "unimplemented");
 					error = GIT_ERROR;
 					goto cleanup;
 				}
@@ -814,7 +814,7 @@ int revparse__ext(
 cleanup:
 	if (error) {
 		if (error == GIT_EINVALIDSPEC)
-			giterr_set(GITERR_INVALID,
+			git_error_set(GIT_ERROR_INVALID,
 				"failed to parse revision specifier - Invalid pattern '%s'", spec);
 
 		git_object_free(base_rev);
@@ -898,7 +898,7 @@ int git_revparse(
 		 * allowed.
 		 */
 		if (!git__strcmp(spec, "..")) {
-			giterr_set(GITERR_INVALID, "Invalid pattern '..'");
+			git_error_set(GIT_ERROR_INVALID, "Invalid pattern '..'");
 			return GIT_EINVALIDSPEC;
 		}
 

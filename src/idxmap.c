@@ -35,7 +35,7 @@ __KHASH_IMPL(idxicase, static kh_inline, const git_index_entry *, git_index_entr
 int git_idxmap_alloc(git_idxmap **map)
 {
 	if ((*map = kh_init(idx)) == NULL) {
-		giterr_set_oom();
+		git_error_set_oom();
 		return -1;
 	}
 
@@ -45,7 +45,7 @@ int git_idxmap_alloc(git_idxmap **map)
 int git_idxmap_icase_alloc(git_idxmap_icase **map)
 {
 	if ((*map = kh_init(idxicase)) == NULL) {
-		giterr_set_oom();
+		git_error_set_oom();
 		return -1;
 	}
 

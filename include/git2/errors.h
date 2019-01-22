@@ -73,41 +73,47 @@ typedef struct {
 
 /** Error classes */
 typedef enum {
-	GITERR_NONE = 0,
-	GITERR_NOMEMORY,
-	GITERR_OS,
-	GITERR_INVALID,
-	GITERR_REFERENCE,
-	GITERR_ZLIB,
-	GITERR_REPOSITORY,
-	GITERR_CONFIG,
-	GITERR_REGEX,
-	GITERR_ODB,
-	GITERR_INDEX,
-	GITERR_OBJECT,
-	GITERR_NET,
-	GITERR_TAG,
-	GITERR_TREE,
-	GITERR_INDEXER,
-	GITERR_SSL,
-	GITERR_SUBMODULE,
-	GITERR_THREAD,
-	GITERR_STASH,
-	GITERR_CHECKOUT,
-	GITERR_FETCHHEAD,
-	GITERR_MERGE,
-	GITERR_SSH,
-	GITERR_FILTER,
-	GITERR_REVERT,
-	GITERR_CALLBACK,
-	GITERR_CHERRYPICK,
-	GITERR_DESCRIBE,
-	GITERR_REBASE,
-	GITERR_FILESYSTEM,
-	GITERR_PATCH,
-	GITERR_WORKTREE,
-	GITERR_SHA1
+	GIT_ERROR_NONE = 0,
+	GIT_ERROR_NOMEMORY,
+	GIT_ERROR_OS,
+	GIT_ERROR_INVALID,
+	GIT_ERROR_REFERENCE,
+	GIT_ERROR_ZLIB,
+	GIT_ERROR_REPOSITORY,
+	GIT_ERROR_CONFIG,
+	GIT_ERROR_REGEX,
+	GIT_ERROR_ODB,
+	GIT_ERROR_INDEX,
+	GIT_ERROR_OBJECT,
+	GIT_ERROR_NET,
+	GIT_ERROR_TAG,
+	GIT_ERROR_TREE,
+	GIT_ERROR_INDEXER,
+	GIT_ERROR_SSL,
+	GIT_ERROR_SUBMODULE,
+	GIT_ERROR_THREAD,
+	GIT_ERROR_STASH,
+	GIT_ERROR_CHECKOUT,
+	GIT_ERROR_FETCHHEAD,
+	GIT_ERROR_MERGE,
+	GIT_ERROR_SSH,
+	GIT_ERROR_FILTER,
+	GIT_ERROR_REVERT,
+	GIT_ERROR_CALLBACK,
+	GIT_ERROR_CHERRYPICK,
+	GIT_ERROR_DESCRIBE,
+	GIT_ERROR_REBASE,
+	GIT_ERROR_FILESYSTEM,
+	GIT_ERROR_PATCH,
+	GIT_ERROR_WORKTREE,
+	GIT_ERROR_SHA1
 } git_error_t;
+
+/** @name Error Functions
+ *
+ * These functions report or set error information.
+ */
+/**@{*/
 
 /**
  * Return the last `git_error` object that was generated for the
@@ -120,12 +126,12 @@ typedef enum {
  *
  * @return A git_error object.
  */
-GIT_EXTERN(const git_error *) giterr_last(void);
+GIT_EXTERN(const git_error *) git_error_last(void);
 
 /**
  * Clear the last library error that occurred for this thread.
  */
-GIT_EXTERN(void) giterr_clear(void);
+GIT_EXTERN(void) git_error_clear(void);
 
 /**
  * Set the error message string for this thread.
@@ -143,18 +149,100 @@ GIT_EXTERN(void) giterr_clear(void);
  *                    general subsystem that is responsible for the error.
  * @param string The formatted error message to keep
  */
-GIT_EXTERN(void) giterr_set_str(int error_class, const char *string);
+GIT_EXTERN(void) git_error_set_str(int error_class, const char *string);
 
 /**
  * Set the error message to a special value for memory allocation failure.
  *
- * The normal `giterr_set_str()` function attempts to `strdup()` the string
- * that is passed in.  This is not a good idea when the error in question
- * is a memory allocation failure.  That circumstance has a special setter
- * function that sets the error string to a known and statically allocated
- * internal value.
+ * The normal `git_error_set_str()` function attempts to `strdup()` the
+ * string that is passed in.  This is not a good idea when the error in
+ * question is a memory allocation failure.  That circumstance has a
+ * special setter function that sets the error string to a known and
+ * statically allocated internal value.
  */
-GIT_EXTERN(void) giterr_set_oom(void);
+GIT_EXTERN(void) git_error_set_oom(void);
+
+/**@}*/
+
+/** @name Deprecated Error Functions
+ *
+ * These functions and enumeration values are retained for backward
+ * compatibility.  The newer versions of these functions should be
+ * preferred in all new code.
+ */
+/**@{*/
+
+GIT_DEPRECATED(static const int) GITERR_NONE = GIT_ERROR_NONE;
+GIT_DEPRECATED(static const int) GITERR_NOMEMORY = GIT_ERROR_NOMEMORY;
+GIT_DEPRECATED(static const int) GITERR_OS = GIT_ERROR_OS;
+GIT_DEPRECATED(static const int) GITERR_INVALID = GIT_ERROR_INVALID;
+GIT_DEPRECATED(static const int) GITERR_REFERENCE = GIT_ERROR_REFERENCE;
+GIT_DEPRECATED(static const int) GITERR_ZLIB = GIT_ERROR_ZLIB;
+GIT_DEPRECATED(static const int) GITERR_REPOSITORY = GIT_ERROR_REPOSITORY;
+GIT_DEPRECATED(static const int) GITERR_CONFIG = GIT_ERROR_CONFIG;
+GIT_DEPRECATED(static const int) GITERR_REGEX = GIT_ERROR_REGEX;
+GIT_DEPRECATED(static const int) GITERR_ODB = GIT_ERROR_ODB;
+GIT_DEPRECATED(static const int) GITERR_INDEX = GIT_ERROR_INDEX;
+GIT_DEPRECATED(static const int) GITERR_OBJECT = GIT_ERROR_OBJECT;
+GIT_DEPRECATED(static const int) GITERR_NET = GIT_ERROR_NET;
+GIT_DEPRECATED(static const int) GITERR_TAG = GIT_ERROR_TAG;
+GIT_DEPRECATED(static const int) GITERR_TREE = GIT_ERROR_TREE;
+GIT_DEPRECATED(static const int) GITERR_INDEXER = GIT_ERROR_INDEXER;
+GIT_DEPRECATED(static const int) GITERR_SSL = GIT_ERROR_SSL;
+GIT_DEPRECATED(static const int) GITERR_SUBMODULE = GIT_ERROR_SUBMODULE;
+GIT_DEPRECATED(static const int) GITERR_THREAD = GIT_ERROR_THREAD;
+GIT_DEPRECATED(static const int) GITERR_STASH = GIT_ERROR_STASH;
+GIT_DEPRECATED(static const int) GITERR_CHECKOUT = GIT_ERROR_CHECKOUT;
+GIT_DEPRECATED(static const int) GITERR_FETCHHEAD = GIT_ERROR_FETCHHEAD;
+GIT_DEPRECATED(static const int) GITERR_MERGE = GIT_ERROR_MERGE;
+GIT_DEPRECATED(static const int) GITERR_SSH = GIT_ERROR_SSH;
+GIT_DEPRECATED(static const int) GITERR_FILTER = GIT_ERROR_FILTER;
+GIT_DEPRECATED(static const int) GITERR_REVERT = GIT_ERROR_REVERT;
+GIT_DEPRECATED(static const int) GITERR_CALLBACK = GIT_ERROR_CALLBACK;
+GIT_DEPRECATED(static const int) GITERR_CHERRYPICK = GIT_ERROR_CHERRYPICK;
+GIT_DEPRECATED(static const int) GITERR_DESCRIBE = GIT_ERROR_DESCRIBE;
+GIT_DEPRECATED(static const int) GITERR_REBASE = GIT_ERROR_REBASE;
+GIT_DEPRECATED(static const int) GITERR_FILESYSTEM = GIT_ERROR_FILESYSTEM;
+GIT_DEPRECATED(static const int) GITERR_PATCH = GIT_ERROR_PATCH;
+GIT_DEPRECATED(static const int) GITERR_WORKTREE = GIT_ERROR_WORKTREE;
+GIT_DEPRECATED(static const int) GITERR_SHA1 = GIT_ERROR_SHA1;
+
+/**
+ * Return the last `git_error` object that was generated for the
+ * current thread.  This function is deprecated and will be removed
+ * in a future release; `git_error_last` should be used instead.
+ *
+ * @see git_error_last
+ */
+GIT_DEPRECATED(GIT_EXTERN(const git_error *)) giterr_last(void);
+
+/**
+ * Clear the last error.  This function is deprecated and will be
+ * removed in a future release; `giterr_clear` should be used instead.
+ *
+ * @see git_error_last
+ */
+GIT_DEPRECATED(GIT_EXTERN(void)) giterr_clear(void);
+
+/**
+ * Sets the error message to the given string.  This function is
+ * deprecated and will be removed in a future release; `giterr_clear`
+ * should be used instead.
+ *
+ * @see git_error_set_str
+ */
+GIT_DEPRECATED(GIT_EXTERN(void)) giterr_set_str(int error_class, const char *string);
+
+/**
+ * Indicates that an out-of-memory situation occured.  This function
+ * is deprecated and will be removed in a future release; `giterr_clear`
+ * should be used instead.
+ *
+ * @see git_error_set_oom
+ */
+GIT_DEPRECATED(GIT_EXTERN(void)) giterr_set_oom(void);
+
+/**@}*/
 
 /** @} */
 GIT_END_DECL

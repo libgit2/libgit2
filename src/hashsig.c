@@ -216,7 +216,7 @@ static int hashsig_finalize_hashes(git_hashsig *sig)
 {
 	if (sig->mins.size < HASHSIG_HEAP_MIN_SIZE &&
 		!(sig->opt & GIT_HASHSIG_ALLOW_SMALL_FILES)) {
-		giterr_set(GITERR_INVALID,
+		git_error_set(GIT_ERROR_INVALID,
 			"file too small for similarity signature calculation");
 		return GIT_EBUFS;
 	}
@@ -249,7 +249,7 @@ int git_hashsig_create(
 	int error;
 	hashsig_in_progress prog;
 	git_hashsig *sig = hashsig_alloc(opts);
-	GITERR_CHECK_ALLOC(sig);
+	GIT_ERROR_CHECK_ALLOC(sig);
 
 	hashsig_in_progress_init(&prog, sig);
 
@@ -276,7 +276,7 @@ int git_hashsig_create_fromfile(
 	int error = 0, fd;
 	hashsig_in_progress prog;
 	git_hashsig *sig = hashsig_alloc(opts);
-	GITERR_CHECK_ALLOC(sig);
+	GIT_ERROR_CHECK_ALLOC(sig);
 
 	if ((fd = git_futils_open_ro(path)) < 0) {
 		git__free(sig);
@@ -288,7 +288,7 @@ int git_hashsig_create_fromfile(
 	while (!error) {
 		if ((buflen = p_read(fd, buf, sizeof(buf))) <= 0) {
 			if ((error = (int)buflen) < 0)
-				giterr_set(GITERR_OS,
+				git_error_set(GIT_ERROR_OS,
 					"read error on '%s' calculating similarity hashes", path);
 			break;
 		}

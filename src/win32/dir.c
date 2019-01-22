@@ -31,7 +31,7 @@ git__DIR *git__opendir(const char *dir)
 	new->h = FindFirstFileW(filter_w, &new->f);
 
 	if (new->h == INVALID_HANDLE_VALUE) {
-		giterr_set(GITERR_OS, "could not open directory '%s'", dir);
+		git_error_set(GIT_ERROR_OS, "could not open directory '%s'", dir);
 		git__free(new);
 		return NULL;
 	}
@@ -56,7 +56,7 @@ int git__readdir_ext(
 	else if (!FindNextFileW(d->h, &d->f)) {
 		if (GetLastError() == ERROR_NO_MORE_FILES)
 			return 0;
-		giterr_set(GITERR_OS, "could not read from directory '%s'", d->dir);
+		git_error_set(GIT_ERROR_OS, "could not read from directory '%s'", d->dir);
 		return -1;
 	}
 
@@ -101,7 +101,7 @@ void git__rewinddir(git__DIR *d)
 	d->h = FindFirstFileW(filter_w, &d->f);
 
 	if (d->h == INVALID_HANDLE_VALUE)
-		giterr_set(GITERR_OS, "could not open directory '%s'", d->dir);
+		git_error_set(GIT_ERROR_OS, "could not open directory '%s'", d->dir);
 	else
 		d->first = 1;
 }

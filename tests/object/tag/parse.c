@@ -214,5 +214,5 @@ void test_object_tag_parse__no_oob_read_when_searching_message(void)
 	 * expected one.
 	 */
 	assert_tag_fails(tag, strlen(tag) - strlen("\n\nMessage"));
-	cl_assert(strstr(giterr_last()->message, "tag contains no message"));
+	cl_assert(strstr(git_error_last()->message, "tag contains no message"));
 }

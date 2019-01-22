@@ -246,5 +246,5 @@ void test_odb_backend_simple__null_oid_is_ignored(void)
 	cl_assert(!git_odb_exists(_odb, &null_oid));
 
 	cl_git_fail_with(GIT_ENOTFOUND, git_odb_read(&obj, _odb, &null_oid));
-	cl_assert(giterr_last() && strstr(giterr_last()->message, "null OID"));
+	cl_assert(git_error_last() && strstr(git_error_last()->message, "null OID"));
 }

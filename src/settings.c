@@ -76,8 +76,8 @@ static int config_level_to_sysdir(int config_level)
 		val = GIT_SYSDIR_PROGRAMDATA;
 		break;
 	default:
-		giterr_set(
-			GITERR_INVALID, "invalid config path selector %d", config_level);
+		git_error_set(
+			GIT_ERROR_INVALID, "invalid config path selector %d", config_level);
 	}
 
 	return val;
@@ -193,7 +193,7 @@ int git_libgit2_opts(int key, ...)
 				error = git_mbedtls__set_cert_location(path, 1);
 		}
 #else
-		giterr_set(GITERR_SSL, "TLS backend doesn't support certificate locations");
+		git_error_set(GIT_ERROR_SSL, "TLS backend doesn't support certificate locations");
 		error = -1;
 #endif
 		break;
@@ -201,7 +201,7 @@ int git_libgit2_opts(int key, ...)
 		git__free(git__user_agent);
 		git__user_agent = git__strdup(va_arg(ap, const char *));
 		if (!git__user_agent) {
-			giterr_set_oom();
+			git_error_set_oom();
 			error = -1;
 		}
 
@@ -221,12 +221,12 @@ int git_libgit2_opts(int key, ...)
 			git__free(git__ssl_ciphers);
 			git__ssl_ciphers = git__strdup(va_arg(ap, const char *));
 			if (!git__ssl_ciphers) {
-				giterr_set_oom();
+				git_error_set_oom();
 				error = -1;
 			}
 		}
 #else
-		giterr_set(GITERR_SSL, "TLS backend doesn't support custom ciphers");
+		git_error_set(GIT_ERROR_SSL, "TLS backend doesn't support custom ciphers");
 		error = -1;
 #endif
 		break;
@@ -280,7 +280,7 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	default:
-		giterr_set(GITERR_INVALID, "invalid option key");
+		git_error_set(GIT_ERROR_INVALID, "invalid option key");
 		error = -1;
 	}
 

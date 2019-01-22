@@ -58,7 +58,7 @@ int git_reader_for_tree(git_reader **out, git_tree *tree)
 	assert(out && tree);
 
 	reader = git__calloc(1, sizeof(tree_reader));
-	GITERR_CHECK_ALLOC(reader);
+	GIT_ERROR_CHECK_ALLOC(reader);
 
 	reader->reader.read = tree_reader_read;
 	reader->tree = tree;
@@ -99,7 +99,7 @@ static int workdir_reader_read(
 		if (error == -1 && errno == ENOENT)
 			error = GIT_ENOTFOUND;
 
-		giterr_set(GITERR_OS, "could not stat '%s'", path.ptr);
+		git_error_set(GIT_ERROR_OS, "could not stat '%s'", path.ptr);
 		goto done;
 	}
 
@@ -155,7 +155,7 @@ int git_reader_for_workdir(
 	assert(out && repo);
 
 	reader = git__calloc(1, sizeof(workdir_reader));
-	GITERR_CHECK_ALLOC(reader);
+	GIT_ERROR_CHECK_ALLOC(reader);
 
 	reader->reader.read = workdir_reader_read;
 	reader->repo = repo;
@@ -220,7 +220,7 @@ int git_reader_for_index(
 	assert(out && repo);
 
 	reader = git__calloc(1, sizeof(index_reader));
-	GITERR_CHECK_ALLOC(reader);
+	GIT_ERROR_CHECK_ALLOC(reader);
 
 	reader->reader.read = index_reader_read;
 	reader->repo = repo;

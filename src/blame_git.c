@@ -46,10 +46,10 @@ static int make_origin(git_blame__origin **out, git_commit *commit, const char *
 			path, GIT_OBJECT_BLOB)) < 0)
 		return error;
 
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, sizeof(*o), path_len);
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 1);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, sizeof(*o), path_len);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 1);
 	o = git__calloc(1, alloc_len);
-	GITERR_CHECK_ALLOC(o);
+	GIT_ERROR_CHECK_ALLOC(o);
 
 	o->commit = commit;
 	o->blob = (git_blob *) blob;
@@ -365,7 +365,7 @@ static int diff_hunks(mmfile_t file_a, mmfile_t file_b, void *cb_data)
 
 	if (file_a.size > GIT_XDIFF_MAX_SIZE ||
 		file_b.size > GIT_XDIFF_MAX_SIZE) {
-		giterr_set(GITERR_INVALID, "file too large to blame");
+		git_error_set(GIT_ERROR_INVALID, "file too large to blame");
 		return -1;
 	}
 
@@ -522,7 +522,7 @@ static int pass_blame(git_blame *blame, git_blame__origin *origin, uint32_t opt)
 		memset(sg_buf, 0, sizeof(sg_buf));
 	else {
 		sg_origin = git__calloc(num_parents, sizeof(*sg_origin));
-		GITERR_CHECK_ALLOC(sg_origin);
+		GIT_ERROR_CHECK_ALLOC(sg_origin);
 	}
 
 	for (i=0; i<num_parents; i++) {

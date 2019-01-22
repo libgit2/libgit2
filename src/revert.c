@@ -112,7 +112,7 @@ static int revert_seterr(git_commit *commit, const char *fmt)
 	git_oid_fmt(commit_oidstr, git_commit_id(commit));
 	commit_oidstr[GIT_OID_HEXSZ] = '\0';
 
-	giterr_set(GITERR_REVERT, fmt, commit_oidstr);
+	git_error_set(GIT_ERROR_REVERT, fmt, commit_oidstr);
 
 	return -1;
 }
@@ -182,7 +182,7 @@ int git_revert(
 
 	assert(repo && commit);
 
-	GITERR_CHECK_VERSION(given_opts, GIT_REVERT_OPTIONS_VERSION, "git_revert_options");
+	GIT_ERROR_CHECK_VERSION(given_opts, GIT_REVERT_OPTIONS_VERSION, "git_revert_options");
 
 	if ((error = git_repository__ensure_not_bare(repo, "revert")) < 0)
 		return error;

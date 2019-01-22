@@ -81,8 +81,8 @@ static int object_file_name(
 	size_t alloclen;
 
 	/* expand length for object root + 40 hex sha1 chars + 2 * '/' + '\0' */
-	GITERR_CHECK_ALLOC_ADD(&alloclen, be->objects_dirlen, GIT_OID_HEXSZ);
-	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, 3);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloclen, be->objects_dirlen, GIT_OID_HEXSZ);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloclen, alloclen, 3);
 	if (git_buf_grow(name, alloclen) < 0)
 		return -1;
 
@@ -138,7 +138,7 @@ static int parse_header_packlike(
 	return 0;
 
 on_error:
-	giterr_set(GITERR_OBJECT, "failed to parse loose object: invalid header");
+	git_error_set(GIT_ERROR_OBJECT, "failed to parse loose object: invalid header");
 	return -1;
 }
 
@@ -179,7 +179,7 @@ static int parse_header(
 		goto on_error;
 
 	if ((uint64_t)size > SIZE_MAX) {
-		giterr_set(GITERR_OBJECT, "object is larger than available memory");
+		git_error_set(GIT_ERROR_OBJECT, "object is larger than available memory");
 		return -1;
 	}
 
@@ -191,7 +191,7 @@ static int parse_header(
 	return 0;
 
 on_error:
-	giterr_set(GITERR_OBJECT, "failed to parse loose object: invalid header");
+	git_error_set(GIT_ERROR_OBJECT, "failed to parse loose object: invalid header");
 	return -1;
 }
 
@@ -241,7 +241,7 @@ static int read_loose_packlike(git_rawobj *out, git_buf *obj)
 		goto done;
 
 	if (!git_object_typeisloose(hdr.type) || head_len > obj_len) {
-		giterr_set(GITERR_ODB, "failed to inflate loose object");
+		git_error_set(GIT_ERROR_ODB, "failed to inflate loose object");
 		error = -1;
 		goto done;
 	}
@@ -294,7 +294,7 @@ static int read_loose_standard(git_rawobj *out, git_buf *obj)
 		goto done;
 
 	if (!git_object_typeisloose(hdr.type)) {
-		giterr_set(GITERR_ODB, "failed to inflate disk object");
+		git_error_set(GIT_ERROR_ODB, "failed to inflate disk object");
 		error = -1;
 		goto done;
 	}
@@ -320,7 +320,7 @@ static int read_loose_standard(git_rawobj *out, git_buf *obj)
 		goto done;
 
 	if (!git_zstream_done(&zstream)) {
-		giterr_set(GITERR_ZLIB, "failed to finish zlib inflation: stream aborted prematurely");
+		git_error_set(GIT_ERROR_ZLIB, "failed to finish zlib inflation: stream aborted prematurely");
 		error = -1;
 		goto done;
 	}
@@ -427,7 +427,7 @@ static int read_header_loose(git_rawobj *out, git_buf *loc)
 		error = read_header_loose_standard(out, obj, (size_t)obj_len);
 
 	if (!error && !git_object_typeisloose(out->type)) {
-		giterr_set(GITERR_ZLIB, "failed to read loose object header");
+		git_error_set(GIT_ERROR_ZLIB, "failed to read loose object header");
 		error = -1;
 		goto done;
 	}
@@ -496,8 +496,8 @@ static int locate_object_short_oid(
 	int error;
 
 	/* prealloc memory for OBJ_DIR/xx/xx..38x..xx */
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, dir_len, GIT_OID_HEXSZ);
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 3);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, dir_len, GIT_OID_HEXSZ);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 3);
 	if (git_buf_grow(object_location, alloc_len) < 0)
 		return -1;
 
@@ -543,8 +543,8 @@ static int locate_object_short_oid(
 		return error;
 
 	/* Update the location according to the oid obtained */
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, dir_len, GIT_OID_HEXSZ);
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 2);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, dir_len, GIT_OID_HEXSZ);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 2);
 
 	git_buf_truncate(object_location, dir_len);
 	if (git_buf_grow(object_location, alloc_len) < 0)
@@ -731,7 +731,7 @@ static int foreach_object_dir_cb(void *_state, git_buf *path)
 	if (filename_to_oid(&oid, path->ptr + state->dir_len) < 0)
 		return 0;
 
-	return giterr_set_after_callback_function(
+	return git_error_set_after_callback_function(
 		state->cb(&oid, state->data), "git_odb_foreach");
 }
 
@@ -838,7 +838,7 @@ static int loose_backend__writestream(git_odb_stream **stream_out, git_odb_backe
 		return error;
 
 	stream = git__calloc(1, sizeof(loose_writestream));
-	GITERR_CHECK_ALLOC(stream);
+	GIT_ERROR_CHECK_ALLOC(stream);
 
 	stream->stream.backend = _backend;
 	stream->stream.read = NULL; /* read only */
@@ -926,7 +926,7 @@ static int loose_backend__readstream_packlike(
 		return error;
 
 	if (!git_object_typeisloose(hdr->type)) {
-		giterr_set(GITERR_ODB, "failed to inflate loose object");
+		git_error_set(GIT_ERROR_ODB, "failed to inflate loose object");
 		return -1;
 	}
 
@@ -958,7 +958,7 @@ static int loose_backend__readstream_standard(
 		return error;
 
 	if (!git_object_typeisloose(hdr->type)) {
-		giterr_set(GITERR_ODB, "failed to inflate disk object");
+		git_error_set(GIT_ERROR_ODB, "failed to inflate disk object");
 		return -1;
 	}
 
@@ -998,10 +998,10 @@ static int loose_backend__readstream(
 	}
 
 	stream = git__calloc(1, sizeof(loose_readstream));
-	GITERR_CHECK_ALLOC(stream);
+	GIT_ERROR_CHECK_ALLOC(stream);
 
 	hash_ctx = git__malloc(sizeof(git_hash_ctx));
-	GITERR_CHECK_ALLOC(hash_ctx);
+	GIT_ERROR_CHECK_ALLOC(hash_ctx);
 
 	if ((error = git_hash_ctx_init(hash_ctx)) < 0 ||
 		(error = git_futils_mmap_ro_file(&stream->map, object_path.ptr)) < 0 ||
@@ -1123,10 +1123,10 @@ int git_odb_backend_loose(
 
 	objects_dirlen = strlen(objects_dir);
 
-	GITERR_CHECK_ALLOC_ADD(&alloclen, sizeof(loose_backend), objects_dirlen);
-	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, 2);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloclen, sizeof(loose_backend), objects_dirlen);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloclen, alloclen, 2);
 	backend = git__calloc(1, alloclen);
-	GITERR_CHECK_ALLOC(backend);
+	GIT_ERROR_CHECK_ALLOC(backend);
 
 	backend->parent.version = GIT_ODB_BACKEND_VERSION;
 	backend->objects_dirlen = objects_dirlen;

@@ -5,10 +5,10 @@
 }
 
 {
-	ignore-giterr-set-leak
+	ignore-giterror-set-leak
 	Memcheck:Leak
 	...
-	fun:giterr_set
+	fun:giterror_set
 }
 
 {

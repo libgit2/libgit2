@@ -56,7 +56,7 @@ int git_config_entries_new(git_config_entries **out)
 	int error;
 
 	entries = git__calloc(1, sizeof(git_config_entries));
-	GITERR_CHECK_ALLOC(entries);
+	GIT_ERROR_CHECK_ALLOC(entries);
 	GIT_REFCOUNT_INC(entries);
 
 	if ((error = git_strmap_alloc(&entries->map)) < 0)
@@ -81,10 +81,10 @@ int git_config_entries_dup(git_config_entries **out, git_config_entries *entries
 
 		dup = git__calloc(1, sizeof(git_config_entry));
 		dup->name = git__strdup(head->entry->name);
-		GITERR_CHECK_ALLOC(dup->name);
+		GIT_ERROR_CHECK_ALLOC(dup->name);
 		if (head->entry->value) {
 			dup->value = git__strdup(head->entry->value);
-			GITERR_CHECK_ALLOC(dup->value);
+			GIT_ERROR_CHECK_ALLOC(dup->value);
 		}
 		dup->level = head->entry->level;
 		dup->include_depth = head->entry->include_depth;
@@ -136,7 +136,7 @@ int git_config_entries_append(git_config_entries *entries, git_config_entry *ent
 	size_t pos;
 
 	var = git__calloc(1, sizeof(config_entry_list));
-	GITERR_CHECK_ALLOC(var);
+	GIT_ERROR_CHECK_ALLOC(var);
 	var->entry = entry;
 
 	pos = git_strmap_lookup_index(entries->map, entry->name);
@@ -162,7 +162,7 @@ int git_config_entries_append(git_config_entries *entries, git_config_entry *ent
 	}
 
 	var = git__calloc(1, sizeof(config_entry_list));
-	GITERR_CHECK_ALLOC(var);
+	GIT_ERROR_CHECK_ALLOC(var);
 	var->entry = entry;
 	config_entry_list_append(&entries->list, var);
 
@@ -205,12 +205,12 @@ int git_config_entries_get_unique(git_config_entry **out, git_config_entries *en
 		return error;
 
 	if (entry->next != NULL) {
-		giterr_set(GITERR_CONFIG, "entry is not unique due to being a multivar");
+		git_error_set(GIT_ERROR_CONFIG, "entry is not unique due to being a multivar");
 		return -1;
 	}
 
 	if (entry->entry->include_depth) {
-		giterr_set(GITERR_CONFIG, "entry is not unique due to being included");
+		git_error_set(GIT_ERROR_CONFIG, "entry is not unique due to being included");
 		return -1;
 	}
 
@@ -246,7 +246,7 @@ int git_config_entries_iterator_new(git_config_iterator **out, git_config_entrie
 	config_entries_iterator *it;
 
 	it = git__calloc(1, sizeof(config_entries_iterator));
-	GITERR_CHECK_ALLOC(it);
+	GIT_ERROR_CHECK_ALLOC(it);
 	it->parent.next = config_iterator_next;
 	it->parent.free = config_iterator_free;
 	it->head = entries->list;

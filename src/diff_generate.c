@@ -81,7 +81,7 @@ static int diff_insert_delta(
 			if (error > 0)	/* positive value means to skip this delta */
 				return 0;
 			else			/* negative value means to cancel diff */
-				return giterr_set_after_callback_function(error, "git_diff");
+				return git_error_set_after_callback_function(error, "git_diff");
 		}
 	}
 
@@ -157,7 +157,7 @@ static int diff_delta__from_one(
 		return 0;
 
 	delta = diff_delta__alloc(diff, status, entry->path);
-	GITERR_CHECK_ALLOC(delta);
+	GIT_ERROR_CHECK_ALLOC(delta);
 
 	/* This fn is just for single-sided diffs */
 	assert(status != GIT_DELTA_MODIFIED);
@@ -220,7 +220,7 @@ static int diff_delta__from_two(
 	}
 
 	delta = diff_delta__alloc(diff, status, canonical_path);
-	GITERR_CHECK_ALLOC(delta);
+	GIT_ERROR_CHECK_ALLOC(delta);
 	delta->nfiles = 2;
 
 	if (!git_index_entry_is_conflict(old_entry)) {
@@ -517,7 +517,7 @@ static int diff_generated_apply_options(
 
 		if (entry && git_submodule_parse_ignore(
 				&diff->base.opts.ignore_submodules, entry->value) < 0)
-			giterr_clear();
+			git_error_clear();
 		git_config_entry_free(entry);
 	}
 
@@ -622,13 +622,13 @@ int git_diff__oid_for_entry(
 			/* if submodule lookup failed probably just in an intermediate
 			 * state where some init hasn't happened, so ignore the error
 			 */
-			giterr_clear();
+			git_error_clear();
 		}
 	} else if (S_ISLNK(mode)) {
 		error = git_odb__hashlink(out, full_path.ptr);
 		diff->base.perf.oid_calculations++;
 	} else if (!git__is_sizet(entry.file_size)) {
-		giterr_set(GITERR_OS, "file size overflow (for 32-bits) on '%s'",
+		git_error_set(GIT_ERROR_OS, "file size overflow (for 32-bits) on '%s'",
 			entry.path);
 		error = -1;
 	} else if (!(error = git_filter_list_load(&fl,
@@ -700,7 +700,7 @@ static int maybe_modified_submodule(
 
 		/* GIT_EEXISTS means dir with .git in it was found - ignore it */
 		if (error == GIT_EEXISTS) {
-			giterr_clear();
+			git_error_clear();
 			error = 0;
 		}
 		return error;
@@ -1060,7 +1060,7 @@ static int handle_unmatched_new_item(
 
 			/* if directory is empty, can't advance into it, so skip it */
 			if (error == GIT_ENOTFOUND) {
-				giterr_clear();
+				git_error_clear();
 				error = iterator_advance(&info->nitem, info->new_iter);
 			}
 
@@ -1082,7 +1082,7 @@ static int handle_unmatched_new_item(
 	else if (nitem->mode == GIT_FILEMODE_COMMIT) {
 		/* ignore things that are not actual submodules */
 		if (git_submodule_lookup(NULL, info->repo, nitem->path) != 0) {
-			giterr_clear();
+			git_error_clear();
 			delta_type = GIT_DELTA_IGNORED;
 
 			/* if this contains a tracked item, treat as normal TREE */
@@ -1091,7 +1091,7 @@ static int handle_unmatched_new_item(
 				if (error != GIT_ENOTFOUND)
 					return error;
 
-				giterr_clear();
+				git_error_clear();
 				return iterator_advance(&info->nitem, info->new_iter);
 			}
 		}
@@ -1192,7 +1192,7 @@ int git_diff__from_iterators(
 	*out = NULL;
 
 	diff = diff_generated_alloc(repo, old_iter, new_iter);
-	GITERR_CHECK_ALLOC(diff);
+	GIT_ERROR_CHECK_ALLOC(diff);
 
 	info.repo = repo;
 	info.old_iter = old_iter;
@@ -1269,7 +1269,7 @@ cleanup:
 	b_opts.flags = FLAGS_SECOND; \
 	b_opts.start = pfx; \
 	b_opts.end = pfx; \
-	GITERR_CHECK_VERSION(opts, GIT_DIFF_OPTIONS_VERSION, "git_diff_options"); \
+	GIT_ERROR_CHECK_VERSION(opts, GIT_DIFF_OPTIONS_VERSION, "git_diff_options"); \
 	if (opts && (opts->flags & GIT_DIFF_DISABLE_PATHSPEC_MATCH)) { \
 		a_opts.pathlist.strings = opts->pathspec.strings; \
 		a_opts.pathlist.count = opts->pathspec.count; \
@@ -1320,7 +1320,7 @@ static int diff_load_index(git_index **index, git_repository *repo)
 
 	/* reload the repository index when user did not pass one in */
 	if (!error && git_index_read(*index, false) < 0)
-		giterr_clear();
+		git_error_clear();
 
 	return error;
 }
@@ -1552,7 +1552,7 @@ int git_diff__paired_foreach(
 		}
 
 		if ((error = cb(h2i, i2w, payload)) != 0) {
-			giterr_set_after_callback(error);
+			git_error_set_after_callback(error);
 			break;
 		}
 	}
@@ -1591,7 +1591,7 @@ int git_diff__commit(
 		char commit_oidstr[GIT_OID_HEXSZ + 1];
 
 		error = -1;
-		giterr_set(GITERR_INVALID, "commit %s is a merge commit",
+		git_error_set(GIT_ERROR_INVALID, "commit %s is a merge commit",
 			git_oid_tostr(commit_oidstr, GIT_OID_HEXSZ + 1, git_commit_id(commit)));
 		goto on_error;
 	}

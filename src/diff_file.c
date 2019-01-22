@@ -188,7 +188,7 @@ static int diff_file_content_commit_to_str(
 		if ((error = git_submodule_lookup(&sm, fc->repo, fc->file->path)) < 0) {
 			/* GIT_EEXISTS means a "submodule" that has not been git added */
 			if (error == GIT_EEXISTS) {
-				giterr_clear();
+				git_error_clear();
 				error = 0;
 			}
 			return error;
@@ -303,13 +303,13 @@ static int diff_file_content_load_workdir_symlink(
 	alloc_len = (ssize_t)(fc->file->size * 2) + 1;
 
 	fc->map.data = git__calloc(alloc_len, sizeof(char));
-	GITERR_CHECK_ALLOC(fc->map.data);
+	GIT_ERROR_CHECK_ALLOC(fc->map.data);
 
 	fc->flags |= GIT_DIFF_FLAG__FREE_DATA;
 
 	read_len = p_readlink(git_buf_cstr(path), fc->map.data, alloc_len);
 	if (read_len < 0) {
-		giterr_set(GITERR_OS, "failed to read symlink '%s'", fc->file->path);
+		git_error_set(GIT_ERROR_OS, "failed to read symlink '%s'", fc->file->path);
 		return -1;
 	}
 
@@ -352,7 +352,7 @@ static int diff_file_content_load_workdir_file(
 		}
 
 		/* if mmap failed, fall through to try readbuffer below */
-		giterr_clear();
+		git_error_clear();
 	}
 
 	if (!(error = git_futils_readbuffer_fd(&raw, fd, (size_t)fc->file->size))) {

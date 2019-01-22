@@ -472,7 +472,7 @@ static int cred_cb(git_cred **cred, const char *url, const char *user_from_url,
 			_remote_user, _remote_ssh_pubkey,
 			_remote_ssh_privkey, _remote_ssh_passphrase);
 
-	giterr_set(GITERR_NET, "unexpected cred type");
+	git_error_set(GIT_ERROR_NET, "unexpected cred type");
 	return -1;
 }
 
@@ -665,7 +665,7 @@ static int ssh_memory_cred_cb(git_cred **cred, const char *url, const char *user
 		return ret;
 	}
 
-	giterr_set(GITERR_NET, "unexpected cred type");
+	git_error_set(GIT_ERROR_NET, "unexpected cred type");
 	return -1;
 }
 

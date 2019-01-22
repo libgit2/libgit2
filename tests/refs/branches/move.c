@@ -84,7 +84,7 @@ void test_refs_branches_move__can_not_move_a_branch_if_its_destination_name_coll
 	cl_assert_equal_i(GIT_EEXISTS,
 		git_branch_move(&new_ref, original_ref, "master", 0));
 
-	cl_assert(giterr_last()->message != NULL);
+	cl_assert(git_error_last()->message != NULL);
 
 	cl_git_pass(git_repository_config_snapshot(&config, repo));
 	cl_git_pass(git_config_get_string(&str, config, "branch.master.remote"));
@@ -96,7 +96,7 @@ void test_refs_branches_move__can_not_move_a_branch_if_its_destination_name_coll
 	cl_assert_equal_i(GIT_EEXISTS,
 		git_branch_move(&new_ref, original_ref, "cannot-fetch", 0));
 
-	cl_assert(giterr_last()->message != NULL);
+	cl_assert(git_error_last()->message != NULL);
 
 	cl_git_pass(git_repository_config_snapshot(&config, repo));
 	cl_git_pass(git_config_get_string(&str, config, "branch.master.remote"));
@@ -111,7 +111,7 @@ void test_refs_branches_move__can_not_move_a_branch_if_its_destination_name_coll
 	cl_assert_equal_i(GIT_EEXISTS,
 		git_branch_move(&new_ref, original_ref, "master", 0));
 
-	cl_assert(giterr_last()->message != NULL);
+	cl_assert(git_error_last()->message != NULL);
 
 	cl_git_pass(git_repository_config_snapshot(&config, repo));
 	cl_git_pass(git_config_get_string(&str, config, "branch.master.remote"));

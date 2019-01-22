@@ -85,7 +85,7 @@ static int has_cr_in_index(const git_filter_source *src)
 		return false;
 
 	if (git_repository_index__weakptr(&index, repo) < 0) {
-		giterr_clear();
+		git_error_clear();
 		return false;
 	}
 
@@ -170,12 +170,12 @@ GIT_INLINE(int) check_safecrlf(
 				/* TODO: issue a warning when available */
 			} else {
 				if (filename && *filename)
-					giterr_set(
-						GITERR_FILTER, "CRLF would be replaced by LF in '%s'",
+					git_error_set(
+						GIT_ERROR_FILTER, "CRLF would be replaced by LF in '%s'",
 						filename);
 				else
-					giterr_set(
-						GITERR_FILTER, "CRLF would be replaced by LF");
+					git_error_set(
+						GIT_ERROR_FILTER, "CRLF would be replaced by LF");
 
 				return -1;
 			}
@@ -190,12 +190,12 @@ GIT_INLINE(int) check_safecrlf(
 				/* TODO: issue a warning when available */
 			} else {
 				if (filename && *filename)
-					giterr_set(
-						GITERR_FILTER, "LF would be replaced by CRLF in '%s'",
+					git_error_set(
+						GIT_ERROR_FILTER, "LF would be replaced by CRLF in '%s'",
 						filename);
 				else
-					giterr_set(
-						GITERR_FILTER, "LF would be replaced by CRLF");
+					git_error_set(
+						GIT_ERROR_FILTER, "LF would be replaced by CRLF");
 
 				return -1;
 			}
@@ -360,7 +360,7 @@ static int crlf_check(
 		return GIT_PASSTHROUGH;
 
 	*payload = git__malloc(sizeof(ca));
-	GITERR_CHECK_ALLOC(*payload);
+	GIT_ERROR_CHECK_ALLOC(*payload);
 	memcpy(*payload, &ca, sizeof(ca));
 
 	return 0;

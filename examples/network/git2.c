@@ -26,10 +26,10 @@ static int run_command(git_cb fn, git_repository *repo, struct args_info args)
 	/* Run the command. If something goes wrong, print the error message to stderr */
 	error = fn(repo, args.argc - args.pos, &args.argv[args.pos]);
 	if (error < 0) {
-		if (giterr_last() == NULL)
+		if (git_error_last() == NULL)
 			fprintf(stderr, "Error without message");
 		else
-			fprintf(stderr, "Bad news:\n %s\n", giterr_last()->message);
+			fprintf(stderr, "Bad news:\n %s\n", git_error_last()->message);
 	}
 
 	return !!error;

@@ -307,44 +307,44 @@ static int on_header_ready(http_subtransport *t)
 
 	if (!strcasecmp("Content-Type", git_buf_cstr(name))) {
 		if (t->content_type) {
-			giterr_set(GITERR_NET, "multiple Content-Type headers");
+			git_error_set(GIT_ERROR_NET, "multiple Content-Type headers");
 			return -1;
 		}
 
 		t->content_type = git__strdup(git_buf_cstr(value));
-		GITERR_CHECK_ALLOC(t->content_type);
+		GIT_ERROR_CHECK_ALLOC(t->content_type);
 	}
 	else if (!strcasecmp("Content-Length", git_buf_cstr(name))) {
 		if (t->content_length) {
-			giterr_set(GITERR_NET, "multiple Content-Length headers");
+			git_error_set(GIT_ERROR_NET, "multiple Content-Length headers");
 			return -1;
 		}
 
 		t->content_length = git__strdup(git_buf_cstr(value));
-		GITERR_CHECK_ALLOC(t->content_length);
+		GIT_ERROR_CHECK_ALLOC(t->content_length);
 	}
 	else if (!strcasecmp("Proxy-Authenticate", git_buf_cstr(name))) {
 		char *dup = git__strdup(git_buf_cstr(value));
-		GITERR_CHECK_ALLOC(dup);
+		GIT_ERROR_CHECK_ALLOC(dup);
 
 		if (git_vector_insert(&t->proxy.auth_challenges, dup) < 0)
 			return -1;
 	}
 	else if (!strcasecmp("WWW-Authenticate", git_buf_cstr(name))) {
 		char *dup = git__strdup(git_buf_cstr(value));
-		GITERR_CHECK_ALLOC(dup);
+		GIT_ERROR_CHECK_ALLOC(dup);
 
 		if (git_vector_insert(&t->server.auth_challenges, dup) < 0)
 			return -1;
 	}
 	else if (!strcasecmp("Location", git_buf_cstr(name))) {
 		if (t->location) {
-			giterr_set(GITERR_NET, "multiple Location headers");
+			git_error_set(GIT_ERROR_NET, "multiple Location headers");
 			return -1;
 		}
 
 		t->location = git__strdup(git_buf_cstr(value));
-		GITERR_CHECK_ALLOC(t->location);
+		GIT_ERROR_CHECK_ALLOC(t->location);
 	}
 
 	return 0;
@@ -411,7 +411,7 @@ static int on_auth_required(
 	int ret;
 
 	if (!allowed_types) {
-		giterr_set(GITERR_NET, "%s requested authentication but did not negotiate mechanisms", type);
+		git_error_set(GIT_ERROR_NET, "%s requested authentication but did not negotiate mechanisms", type);
 		t->parse_error = PARSE_ERROR_GENERIC;
 		return t->parse_error;
 	}
@@ -430,7 +430,7 @@ static int on_auth_required(
 			assert(*creds);
 
 			if (!((*creds)->credtype & allowed_types)) {
-				giterr_set(GITERR_NET, "%s credential provider returned an invalid cred type", type);
+				git_error_set(GIT_ERROR_NET, "%s credential provider returned an invalid cred type", type);
 				t->parse_error = PARSE_ERROR_GENERIC;
 				return t->parse_error;
 			}
@@ -441,7 +441,7 @@ static int on_auth_required(
 		}
 	}
 
-	giterr_set(GITERR_NET, "%s authentication required but no callback set",
+	git_error_set(GIT_ERROR_NET, "%s authentication required but no callback set",
 		type);
 	t->parse_error = PARSE_ERROR_GENERIC;
 	return t->parse_error;
@@ -457,7 +457,7 @@ static int on_headers_complete(http_parser *parser)
 
 	/* Enforce a reasonable cap on the number of replays */
 	if (t->replay_count++ >= GIT_HTTP_REPLAY_MAX) {
-		giterr_set(GITERR_NET, "too many redirects or authentication replays");
+		git_error_set(GIT_ERROR_NET, "too many redirects or authentication replays");
 		return t->parse_error = PARSE_ERROR_GENERIC;
 	}
 
@@ -525,7 +525,7 @@ static int on_headers_complete(http_parser *parser)
 
 	/* Check for a 200 HTTP status code. */
 	if (parser->status_code != 200) {
-		giterr_set(GITERR_NET,
+		git_error_set(GIT_ERROR_NET,
 			"unexpected HTTP status code: %d",
 			parser->status_code);
 		return t->parse_error = PARSE_ERROR_GENERIC;
@@ -533,7 +533,7 @@ static int on_headers_complete(http_parser *parser)
 
 	/* The response must contain a Content-Type header. */
 	if (!t->content_type) {
-		giterr_set(GITERR_NET, "no Content-Type header in response");
+		git_error_set(GIT_ERROR_NET, "no Content-Type header in response");
 		return t->parse_error = PARSE_ERROR_GENERIC;
 	}
 
@@ -552,7 +552,7 @@ static int on_headers_complete(http_parser *parser)
 
 	if (strcmp(t->content_type, git_buf_cstr(&buf))) {
 		git_buf_dispose(&buf);
-		giterr_set(GITERR_NET,
+		git_error_set(GIT_ERROR_NET,
 			"invalid Content-Type: %s",
 			t->content_type);
 		return t->parse_error = PARSE_ERROR_GENERIC;
@@ -588,7 +588,7 @@ static int on_body_fill_buffer(http_parser *parser, const char *str, size_t len)
 	/* If there's no buffer set, we're explicitly ignoring the body. */
 	if (ctx->buffer) {
 		if (ctx->buf_size < len) {
-			giterr_set(GITERR_NET, "can't fit data in the buffer");
+			git_error_set(GIT_ERROR_NET, "can't fit data in the buffer");
 			return t->parse_error = PARSE_ERROR_GENERIC;
 		}
 
@@ -702,7 +702,7 @@ static int load_proxy_config(http_subtransport *t)
 		return error;
 
 	if (t->proxy.url.use_ssl) {
-		giterr_set(GITERR_NET, "SSL connections to proxy are not supported");
+		git_error_set(GIT_ERROR_NET, "SSL connections to proxy are not supported");
 		return -1;
 	}
 
@@ -723,18 +723,18 @@ static int check_certificate(
 	if ((error = git_stream_certificate(&cert, stream)) < 0)
 		return error;
 
-	giterr_state_capture(&last_error, GIT_ECERTIFICATE);
+	git_error_state_capture(&last_error, GIT_ECERTIFICATE);
 
 	error = cert_cb(cert, is_valid, url->host, cert_cb_payload);
 
 	if (error == GIT_PASSTHROUGH && !is_valid)
-		return giterr_state_restore(&last_error);
+		return git_error_state_restore(&last_error);
 	else if (error == GIT_PASSTHROUGH)
 		error = 0;
-	else if (error && !giterr_last())
-		giterr_set(GITERR_NET, "user rejected certificate for %s", url->host);
+	else if (error && !git_error_last())
+		git_error_set(GIT_ERROR_NET, "user rejected certificate for %s", url->host);
 
-	giterr_state_free(&last_error);
+	git_error_state_free(&last_error);
 	return error;
 }
 
@@ -746,7 +746,7 @@ static int stream_connect(
 {
 	int error;
 
-	GITERR_CHECK_VERSION(stream, GIT_STREAM_VERSION, "git_stream");
+	GIT_ERROR_CHECK_VERSION(stream, GIT_STREAM_VERSION, "git_stream");
 
 	error = git_stream_connect(stream);
 
@@ -786,7 +786,7 @@ static int proxy_headers_complete(http_parser *parser)
 
 	/* Enforce a reasonable cap on the number of replays */
 	if (t->replay_count++ >= GIT_HTTP_REPLAY_MAX) {
-		giterr_set(GITERR_NET, "too many redirects or authentication replays");
+		git_error_set(GIT_ERROR_NET, "too many redirects or authentication replays");
 		return t->parse_error = PARSE_ERROR_GENERIC;
 	}
 
@@ -816,7 +816,7 @@ static int proxy_headers_complete(http_parser *parser)
 			proxy_auth_types);
 
 	if (parser->status_code != 200) {
-		giterr_set(GITERR_NET, "unexpected status code from proxy: %d",
+		git_error_set(GIT_ERROR_NET, "unexpected status code from proxy: %d",
 			parser->status_code);
 		return t->parse_error = PARSE_ERROR_GENERIC;
 	}
@@ -886,7 +886,7 @@ replay:
 
 		/* Ensure that we didn't get a redirect; unsupported. */
 		if (t->location) {
-			giterr_set(GITERR_NET, "proxy server sent unsupported redirect during CONNECT");
+			git_error_set(GIT_ERROR_NET, "proxy server sent unsupported redirect during CONNECT");
 			error = -1;
 			goto done;
 		}
@@ -901,7 +901,7 @@ replay:
 		}
 
 		if (bytes_parsed != t->parse_buffer.offset) {
-			giterr_set(GITERR_NET,
+			git_error_set(GIT_ERROR_NET,
 				"HTTP parser error: %s",
 				http_errno_description((enum http_errno)t->parser.http_errno));
 			error = -1;
@@ -1128,7 +1128,7 @@ replay:
 			return -1;
 
 		if (bytes_parsed != t->parse_buffer.offset - data_offset) {
-			giterr_set(GITERR_NET,
+			git_error_set(GIT_ERROR_NET,
 				"HTTP parser error: %s",
 				http_errno_description((enum http_errno)t->parser.http_errno));
 			return -1;
@@ -1224,7 +1224,7 @@ static int http_stream_write_single(
 	assert(t->connected);
 
 	if (s->sent_request) {
-		giterr_set(GITERR_NET, "subtransport configured for only one write");
+		git_error_set(GIT_ERROR_NET, "subtransport configured for only one write");
 		return -1;
 	}
 
@@ -1272,7 +1272,7 @@ static int http_stream_alloc(http_subtransport *t,
 		return -1;
 
 	s = git__calloc(sizeof(http_stream), 1);
-	GITERR_CHECK_ALLOC(s);
+	GIT_ERROR_CHECK_ALLOC(s);
 
 	s->parent.subtransport = &t->parent;
 	s->parent.read = http_stream_read;
@@ -1478,7 +1478,7 @@ int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *own
 		return -1;
 
 	t = git__calloc(sizeof(http_subtransport), 1);
-	GITERR_CHECK_ALLOC(t);
+	GIT_ERROR_CHECK_ALLOC(t);
 
 	t->owner = (transport_smart *)owner;
 	t->parent.action = http_action;

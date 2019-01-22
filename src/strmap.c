@@ -21,7 +21,7 @@ __KHASH_IMPL(str, static kh_inline, const char *, void *, 1, kh_str_hash_func, k
 int git_strmap_alloc(git_strmap **map)
 {
 	if ((*map = kh_init(str)) == NULL) {
-		giterr_set_oom();
+		git_error_set_oom();
 		return -1;
 	}
 

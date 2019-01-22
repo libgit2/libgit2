@@ -66,7 +66,7 @@ int git_stream_registry_lookup(git_stream_registration *out, git_stream_t type)
 	}
 
 	if (git_rwlock_rdlock(&stream_registry.lock) < 0) {
-		giterr_set(GITERR_OS, "failed to lock stream registry");
+		git_error_set(GIT_ERROR_OS, "failed to lock stream registry");
 		return -1;
 	}
 
@@ -83,10 +83,10 @@ int git_stream_register(git_stream_t type, git_stream_registration *registration
 {
 	assert(!registration || registration->init);
 
-	GITERR_CHECK_VERSION(registration, GIT_STREAM_VERSION, "stream_registration");
+	GIT_ERROR_CHECK_VERSION(registration, GIT_STREAM_VERSION, "stream_registration");
 
 	if (git_rwlock_wrlock(&stream_registry.lock) < 0) {
-		giterr_set(GITERR_OS, "failed to lock stream registry");
+		git_error_set(GIT_ERROR_OS, "failed to lock stream registry");
 		return -1;
 	}
 

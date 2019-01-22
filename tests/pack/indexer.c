@@ -122,8 +122,8 @@ void test_pack_indexer__missing_trailer(void)
 		idx, missing_trailer_pack, missing_trailer_pack_len, &stats));
 	cl_git_fail(git_indexer_commit(idx, &stats));
 
-	cl_assert(giterr_last() != NULL);
-	cl_assert_equal_i(giterr_last()->klass, GITERR_INDEXER);
+	cl_assert(git_error_last() != NULL);
+	cl_assert_equal_i(git_error_last()->klass, GIT_ERROR_INDEXER);
 
 	git_indexer_free(idx);
 }
@@ -138,8 +138,8 @@ void test_pack_indexer__leaky(void)
 		idx, leaky_pack, leaky_pack_len, &stats));
 	cl_git_fail(git_indexer_commit(idx, &stats));
 
-	cl_assert(giterr_last() != NULL);
-	cl_assert_equal_i(giterr_last()->klass, GITERR_INDEXER);
+	cl_assert(git_error_last() != NULL);
+	cl_assert_equal_i(git_error_last()->klass, GIT_ERROR_INDEXER);
 
 	git_indexer_free(idx);
 }
@@ -231,8 +231,8 @@ void test_pack_indexer__corrupt_length(void)
 		idx, corrupt_thin_pack, corrupt_thin_pack_len, &stats));
 	cl_git_fail(git_indexer_commit(idx, &stats));
 
-	cl_assert(giterr_last() != NULL);
-	cl_assert_equal_i(giterr_last()->klass, GITERR_ZLIB);
+	cl_assert(git_error_last() != NULL);
+	cl_assert_equal_i(git_error_last()->klass, GIT_ERROR_ZLIB);
 
 	git_indexer_free(idx);
 	git_odb_free(odb);

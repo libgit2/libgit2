@@ -131,7 +131,7 @@ int git_diff__merge(
 
 	if (ignore_case != ((from->opts.flags & GIT_DIFF_IGNORE_CASE) != 0) ||
 		reversed    != ((from->opts.flags & GIT_DIFF_REVERSE) != 0)) {
-		giterr_set(GITERR_INVALID,
+		git_error_set(GIT_ERROR_INVALID,
 			"attempt to merge diffs created with conflicting options");
 		return -1;
 	}
@@ -251,7 +251,7 @@ static int normalize_find_opts(
 	git_config *cfg = NULL;
 	git_hashsig_option_t hashsig_opts;
 
-	GITERR_CHECK_VERSION(given, GIT_DIFF_FIND_OPTIONS_VERSION, "git_diff_find_options");
+	GIT_ERROR_CHECK_VERSION(given, GIT_DIFF_FIND_OPTIONS_VERSION, "git_diff_find_options");
 
 	if (diff->repo != NULL &&
 		git_repository_config__weakptr(&cfg, diff->repo) < 0)
@@ -332,7 +332,7 @@ static int normalize_find_opts(
 	/* assign the internal metric with whitespace flag as payload */
 	if (!opts->metric) {
 		opts->metric = git__malloc(sizeof(git_diff_similarity_metric));
-		GITERR_CHECK_ALLOC(opts->metric);
+		GIT_ERROR_CHECK_ALLOC(opts->metric);
 
 		opts->metric->file_signature = git_diff_find_similar__hashsig_for_file;
 		opts->metric->buffer_signature = git_diff_find_similar__hashsig_for_buf;
@@ -357,7 +357,7 @@ static int insert_delete_side_of_split(
 {
 	/* make new record for DELETED side of split */
 	git_diff_delta *deleted = git_diff__delta_dup(delta, &diff->pool);
-	GITERR_CHECK_ALLOC(deleted);
+	GIT_ERROR_CHECK_ALLOC(deleted);
 
 	deleted->status = GIT_DELTA_DELETED;
 	deleted->nfiles = 1;
@@ -502,7 +502,7 @@ static int similarity_sig(
 
 		if (error < 0) {
 			/* if lookup fails, just skip this item in similarity calc */
-			giterr_clear();
+			git_error_clear();
 		} else {
 			size_t sz;
 
@@ -831,9 +831,9 @@ int git_diff_find_similar(
 	if ((opts.flags & GIT_DIFF_FIND_ALL) == 0)
 		goto cleanup;
 
-	GITERR_CHECK_ALLOC_MULTIPLY(&sigcache_size, num_deltas, 2);
+	GIT_ERROR_CHECK_ALLOC_MULTIPLY(&sigcache_size, num_deltas, 2);
 	sigcache = git__calloc(sigcache_size, sizeof(void *));
-	GITERR_CHECK_ALLOC(sigcache);
+	GIT_ERROR_CHECK_ALLOC(sigcache);
 
 	/* Label rename sources and targets
 	 *
@@ -856,13 +856,13 @@ int git_diff_find_similar(
 		goto cleanup;
 
 	src2tgt = git__calloc(num_deltas, sizeof(diff_find_match));
-	GITERR_CHECK_ALLOC(src2tgt);
+	GIT_ERROR_CHECK_ALLOC(src2tgt);
 	tgt2src = git__calloc(num_deltas, sizeof(diff_find_match));
-	GITERR_CHECK_ALLOC(tgt2src);
+	GIT_ERROR_CHECK_ALLOC(tgt2src);
 
 	if (FLAG_SET(&opts, GIT_DIFF_FIND_COPIES)) {
 		tgt2src_copy = git__calloc(num_deltas, sizeof(diff_find_match));
-		GITERR_CHECK_ALLOC(tgt2src_copy);
+		GIT_ERROR_CHECK_ALLOC(tgt2src_copy);
 	}
 
 	/*

@@ -25,7 +25,7 @@
 #include "index.h"
 
 #define apply_err(...) \
-	( giterr_set(GITERR_PATCH, __VA_ARGS__), GIT_EAPPLYFAIL )
+	( git_error_set(GIT_ERROR_PATCH, __VA_ARGS__), GIT_EAPPLYFAIL )
 
 typedef struct {
 	/* The lines that we allocate ourself are allocated out of the pool.
@@ -68,7 +68,7 @@ static int patch_image_init_fromstr(
 			end++;
 
 		line = git_pool_mallocz(&out->pool, 1);
-		GITERR_CHECK_ALLOC(line);
+		GIT_ERROR_CHECK_ALLOC(line);
 
 		if (git_vector_insert(&out->lines, line) < 0)
 			return -1;
@@ -155,7 +155,7 @@ static int update_hunk(
 			&image->lines, linenum, (prelen - postlen));
 
 	if (error) {
-		giterr_set_oom();
+		git_error_set_oom();
 		return -1;
 	}
 
@@ -483,7 +483,7 @@ static int apply_one(
 		    postimage_reader, delta->old_file.path)) == 0) {
 			skip_preimage = true;
 		} else if (error == GIT_ENOTFOUND) {
-			giterr_clear();
+			git_error_clear();
 			error = 0;
 		} else {
 			goto done;
@@ -777,7 +777,7 @@ int git_apply(
 
 	assert(repo && diff);
 
-	GITERR_CHECK_VERSION(
+	GIT_ERROR_CHECK_VERSION(
 		given_opts, GIT_APPLY_OPTIONS_VERSION, "git_apply_options");
 
 	if (given_opts)

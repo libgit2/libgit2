@@ -41,7 +41,7 @@ GIT_INLINE(int) git_hash_final(git_oid *out, git_hash_ctx *ctx)
 {
 	assert(ctx);
 	if (SHA1DCFinal(out->id, &ctx->c)) {
-		giterr_set(GITERR_SHA1, "SHA1 collision attack detected");
+		git_error_set(GIT_ERROR_SHA1, "SHA1 collision attack detected");
 		return -1;
 	}
 

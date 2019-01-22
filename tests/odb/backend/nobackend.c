@@ -39,7 +39,7 @@ void test_odb_backend_nobackend__write_fails_gracefully(void)
 	git_repository_odb(&odb, _repo);
 	cl_git_fail(git_odb_write(&id, odb, "Hello world!\n", 13, GIT_OBJECT_BLOB));
 
-	err = giterr_last();
+	err = git_error_last();
 	cl_assert_equal_s(err->message, "cannot write object - unsupported in the loaded odb backends");
 
 	git_odb_free(odb);
