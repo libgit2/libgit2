@@ -169,13 +169,13 @@ cleanup:
 static int bio_read(void *b, unsigned char *buf, size_t len)
 {
 	git_stream *io = (git_stream *) b;
-	return (int) git_stream_read(io, buf, len);
+	return (int) git_stream_read(io, buf, min(len, INT_MAX));
 }
 
 static int bio_write(void *b, const unsigned char *buf, size_t len)
 {
 	git_stream *io = (git_stream *) b;
-	return (int) git_stream_write(io, (const char *)buf, len, 0);
+	return (int) git_stream_write(io, (const char *)buf, min(len, INT_MAX), 0);
 }
 
 static int ssl_set_error(mbedtls_ssl_context *ssl, int error)
@@ -307,6 +307,13 @@ static ssize_t mbedtls_stream_write(git_stream *stream, const char *data, size_t
 	int written;
 
 	GIT_UNUSED(flags);
+
+	/*
+	 * `mbedtls_ssl_write` can only represent INT_MAX bytes
+	 * written via its return value. We thus need to clamp
+	 * the maximum number of bytes written.
+	 */
+	len = min(len, INT_MAX);
 
 	if ((written = mbedtls_ssl_write(st->ssl, (const unsigned char *)data, len)) <= 0)
 		return ssl_set_error(st->ssl, written);
