@@ -40,6 +40,7 @@ GIT_BEGIN_DECL
  * This function is deprecated, but there is no plan to remove this
  * function at this time.
  *
+ * @deprecated Use git_buf_dispose
  * @see git_buf_dispose
  */
 GIT_EXTERN(void) git_buf_free(git_buf *buffer);
@@ -100,6 +101,7 @@ GIT_EXTERN(void) git_buf_free(git_buf *buffer);
  * This function is deprecated, but there is no plan to remove this
  * function at this time.
  *
+ * @deprecated Use git_error_last
  * @see git_error_last
  */
 GIT_EXTERN(const git_error *) giterr_last(void);
@@ -111,6 +113,7 @@ GIT_EXTERN(const git_error *) giterr_last(void);
  * This function is deprecated, but there is no plan to remove this
  * function at this time.
  *
+ * @deprecated Use git_error_clear
  * @see git_error_clear
  */
 GIT_EXTERN(void) giterr_clear(void);
@@ -122,6 +125,7 @@ GIT_EXTERN(void) giterr_clear(void);
  * This function is deprecated, but there is no plan to remove this
  * function at this time.
  *
+ * @deprecated Use git_error_set_str
  * @see git_error_set_str
  */
 GIT_EXTERN(void) giterr_set_str(int error_class, const char *string);
@@ -133,6 +137,7 @@ GIT_EXTERN(void) giterr_set_str(int error_class, const char *string);
  * This function is deprecated, but there is no plan to remove this
  * function at this time.
  *
+ * @deprecated Use git_error_set_oom
  * @see git_error_set_oom
  */
 GIT_EXTERN(void) giterr_set_oom(void);
