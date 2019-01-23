@@ -150,10 +150,7 @@ int git_config_entries_append(git_config_entries *entries, git_config_entry *ent
 		 */
 		var->last = var;
 
-		git_strmap_insert(entries->map, entry->name, var, &error);
-
-		if (error > 0)
-			error = 0;
+		error = git_strmap_set(entries->map, entry->name, var);
 	} else {
 		config_entry_list_append(&existing, var);
 	}

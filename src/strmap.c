@@ -50,6 +50,23 @@ void *git_strmap_get(git_strmap *map, const char *key)
 	return kh_val(map, idx);
 }
 
+int git_strmap_set(git_strmap *map, const char *key, void *value)
+{
+	size_t idx;
+	int rval;
+
+	idx = kh_put(str, map, key, &rval);
+	if (rval < 0)
+		return -1;
+
+	if (rval == 0)
+		kh_key(map, idx) = key;
+
+	kh_val(map, idx) = value;
+
+	return 0;
+}
+
 size_t git_strmap_lookup_index(git_strmap *map, const char *key)
 {
 	return kh_get(str, map, key);

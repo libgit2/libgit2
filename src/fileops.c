@@ -640,8 +640,7 @@ retry_lstat:
 
 			memcpy(cache_path, make_path.ptr, make_path.size + 1);
 
-			git_strmap_insert(opts->dir_map, cache_path, cache_path, &error);
-			if (error < 0)
+			if ((error = git_strmap_set(opts->dir_map, cache_path, cache_path)) < 0)
 				goto done;
 		}
 	}

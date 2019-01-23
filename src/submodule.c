@@ -197,8 +197,7 @@ static int load_submodule_names(git_strmap **out, git_repository *repo, git_conf
 	git_config_entry *entry;
 	git_buf buf = GIT_BUF_INIT;
 	git_strmap *names;
-	int rval, isvalid;
-	int error = 0;
+	int isvalid, error;
 
 	*out = NULL;
 
@@ -230,8 +229,7 @@ static int load_submodule_names(git_strmap **out, git_repository *repo, git_conf
 		if (!isvalid)
 			continue;
 
-		git_strmap_insert(names, git__strdup(entry->value), git_buf_detach(&buf), &rval);
-		if (rval < 0) {
+		if ((error = git_strmap_set(names, git__strdup(entry->value), git_buf_detach(&buf))) < 0) {
 			git_error_set(GIT_ERROR_NOMEMORY, "error inserting submodule into hash table");
 			error = -1;
 			goto out;
@@ -394,9 +392,8 @@ static void submodule_free_dup(void *sm)
 
 static int submodule_get_or_create(git_submodule **out, git_repository *repo, git_strmap *map, const char *name)
 {
-	int error = 0;
-	size_t pos;
 	git_submodule *sm = NULL;
+	int error;
 
 	if ((sm = git_strmap_get(map, name)) != NULL)
 		goto done;
@@ -405,15 +402,10 @@ static int submodule_get_or_create(git_submodule **out, git_repository *repo, gi
 	if ((error = submodule_alloc(&sm, repo, name)) < 0)
 		return error;
 
-	pos = git_strmap_put(map, sm->name, &error);
-	/* nobody can beat us to adding it */
-	assert(error != 0);
-	if (error < 0) {
+	if ((error = git_strmap_set(map, sm->name, sm)) < 0) {
 		git_submodule_free(sm);
 		return error;
 	}
-
-	git_strmap_set_value_at(map, pos, sm);
 
 done:
 	GIT_REFCOUNT_INC(sm);
@@ -1961,9 +1953,7 @@ static int submodule_load_each(const git_config_entry *entry, void *payload)
 		goto done;
 	}
 
-	git_strmap_insert(map, sm->name, sm, &error);
-	assert(error != 0);
-	if (error < 0)
+	if ((error = git_strmap_set(map, sm->name, sm)) < 0)
 		goto done;
 
 	error = 0;

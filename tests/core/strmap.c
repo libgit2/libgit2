@@ -129,3 +129,30 @@ void test_core_strmap__get_returns_null_on_nonexisting_key(void)
 
 	cl_assert_equal_p(git_strmap_get(g_table, "other"), NULL);
 }
+
+void test_core_strmap__set_persists_key(void)
+{
+	cl_git_pass(git_strmap_set(g_table, "foo", "oof"));
+	cl_assert_equal_s(git_strmap_get(g_table, "foo"), "oof");
+}
+
+void test_core_strmap__set_persists_multpile_keys(void)
+{
+	cl_git_pass(git_strmap_set(g_table, "foo", "oof"));
+	cl_git_pass(git_strmap_set(g_table, "bar", "rab"));
+	cl_assert_equal_s(git_strmap_get(g_table, "foo"), "oof");
+	cl_assert_equal_s(git_strmap_get(g_table, "bar"), "rab");
+}
+
+void test_core_strmap__set_updates_existing_key(void)
+{
+	cl_git_pass(git_strmap_set(g_table, "foo", "oof"));
+	cl_git_pass(git_strmap_set(g_table, "bar", "rab"));
+	cl_git_pass(git_strmap_set(g_table, "gobble", "elbbog"));
+	cl_assert_equal_i(git_strmap_size(g_table), 3);
+
+	cl_git_pass(git_strmap_set(g_table, "foo", "other"));
+	cl_assert_equal_i(git_strmap_size(g_table), 3);
+
+	cl_assert_equal_s(git_strmap_get(g_table, "foo"), "other");
+}

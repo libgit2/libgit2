@@ -183,9 +183,9 @@ static int git_diff_driver_builtin(
 	git_diff_driver_registry *reg,
 	const char *driver_name)
 {
-	int error = 0;
 	git_diff_driver_definition *ddef = NULL;
 	git_diff_driver *drv = NULL;
+	int error = 0;
 	size_t idx;
 
 	for (idx = 0; idx < ARRAY_SIZE(builtin_defs); ++idx) {
@@ -215,9 +215,8 @@ static int git_diff_driver_builtin(
 		goto done;
 	}
 
-	git_strmap_insert(reg->drivers, drv->name, drv, &error);
-	if (error > 0)
-		error = 0;
+	if ((error = git_strmap_set(reg->drivers, drv->name, drv)) < 0)
+		goto done;
 
 done:
 	if (error && drv)
@@ -327,10 +326,8 @@ static int git_diff_driver_load(
 		goto done;
 
 	/* store driver in registry */
-	git_strmap_insert(reg->drivers, drv->name, drv, &error);
-	if (error < 0)
+	if ((error = git_strmap_set(reg->drivers, drv->name, drv)) < 0)
 		goto done;
-	error = 0;
 
 	*out = drv;
 

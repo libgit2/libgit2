@@ -79,7 +79,7 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 
 	git_atomic_inc(&pack->refcount);
 
-	git_strmap_insert(git__pack_cache, pack->pack_name, pack, &error);
+	error = git_strmap_set(git__pack_cache, pack->pack_name, pack);
 	git_mutex_unlock(&git__mwindow_mutex);
 
 	if (error < 0) {

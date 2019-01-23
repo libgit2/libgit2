@@ -270,11 +270,10 @@ int git_sortedcache_clear(git_sortedcache *sc, bool wlock)
 /* find and/or insert item, returning pointer to item data */
 int git_sortedcache_upsert(void **out, git_sortedcache *sc, const char *key)
 {
-	size_t pos;
-	int error = 0;
-	void *item;
 	size_t keylen, itemlen;
+	int error = 0;
 	char *item_key;
+	void *item;
 
 	if ((item = git_strmap_get(sc->map, key)) != NULL)
 		goto done;
@@ -296,17 +295,11 @@ int git_sortedcache_upsert(void **out, git_sortedcache *sc, const char *key)
 	item_key = ((char *)item) + sc->item_path_offset;
 	memcpy(item_key, key, keylen);
 
-	pos = git_strmap_put(sc->map, item_key, &error);
-	if (error < 0)
+	if ((error = git_strmap_set(sc->map, item_key, item)) < 0)
 		goto done;
 
-	if (!error)
-		git_strmap_set_key_at(sc->map, pos, item_key);
-	git_strmap_set_value_at(sc->map, pos, item);
-
-	error = git_vector_insert(&sc->items, item);
-	if (error < 0)
-		git_strmap_delete_at(sc->map, pos);
+	if ((error = git_vector_insert(&sc->items, item)) < 0)
+		git_strmap_delete(sc->map, item_key);
 
 done:
 	if (out)

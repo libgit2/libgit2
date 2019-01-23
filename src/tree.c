@@ -507,8 +507,7 @@ static int append_entry(
 
 	entry->attr = (uint16_t)filemode;
 
-	git_strmap_insert(bld->map, entry->filename, entry, &error);
-	if (error < 0) {
+	if ((error = git_strmap_set(bld->map, entry->filename, entry)) < 0) {
 		git_tree_entry_free(entry);
 		git_error_set(GIT_ERROR_TREE, "failed to append entry %s to the tree builder", filename);
 		return -1;
@@ -735,9 +734,7 @@ int git_treebuilder_insert(
 		entry = alloc_entry(filename, strlen(filename), id);
 		GIT_ERROR_CHECK_ALLOC(entry);
 
-		git_strmap_insert(bld->map, entry->filename, entry, &error);
-
-		if (error < 0) {
+		if ((error = git_strmap_set(bld->map, entry->filename, entry)) < 0) {
 			git_tree_entry_free(entry);
 			git_error_set(GIT_ERROR_TREE, "failed to insert %s", filename);
 			return -1;

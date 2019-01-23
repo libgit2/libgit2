@@ -549,7 +549,7 @@ static int apply_one(
 
 	if (delta->status == GIT_DELTA_RENAMED ||
 	    delta->status == GIT_DELTA_DELETED)
-		git_strmap_insert(removed_paths, delta->old_file.path, (char *)delta->old_file.path, &error);
+		error = git_strmap_set(removed_paths, delta->old_file.path, (char *) delta->old_file.path);
 
 	if (delta->status == GIT_DELTA_RENAMED ||
 	    delta->status == GIT_DELTA_ADDED)
