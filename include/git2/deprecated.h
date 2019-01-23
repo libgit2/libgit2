@@ -14,6 +14,11 @@
 #include "object.h"
 #include "refs.h"
 
+/*
+ * Users can avoid deprecated functions by defining `GIT_DEPRECATE_HARD`.
+ */
+#ifndef GIT_DEPRECATE_HARD
+
 /**
  * @file git2/deprecated.h
  * @brief libgit2 deprecated functions and values
@@ -242,5 +247,7 @@ GIT_EXTERN(void) giterr_set_oom(void);
 
 /** @} */
 GIT_END_DECL
+
+#endif
 
 #endif
