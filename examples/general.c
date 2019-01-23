@@ -185,7 +185,7 @@ static void object_database(git_repository *repo, git_oid *oid)
 	int error;
 	git_odb_object *obj;
 	git_odb *odb;
-	git_otype otype;
+	git_object_t otype;
 
 	git_repository_odb(&odb, repo);
 
@@ -416,7 +416,7 @@ static void commit_parsing(git_repository *repo)
 static void tag_parsing(git_repository *repo)
 {
 	git_commit *commit;
-	git_otype type;
+	git_object_t type;
 	git_tag *tag;
 	git_oid oid;
 	const char *name, *message;
