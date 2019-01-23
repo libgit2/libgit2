@@ -649,9 +649,8 @@ static ssize_t openssl_write(git_stream *stream, const char *data, size_t data_l
 
 	GIT_UNUSED(flags);
 
-	if ((ret = SSL_write(st->ssl, data, len)) <= 0) {
+	if ((ret = SSL_write(st->ssl, data, len)) <= 0)
 		return ssl_set_error(st->ssl, ret);
-	}
 
 	return ret;
 }
