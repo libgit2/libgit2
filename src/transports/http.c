@@ -643,7 +643,7 @@ static int write_chunk(git_stream *io, const char *buffer, size_t len)
 	if (git_buf_oom(&buf))
 		return -1;
 
-	if (git_stream_write(io, buf.ptr, buf.size, 0) < 0) {
+	if (git_stream__write_full(io, buf.ptr, buf.size, 0) < 0) {
 		git_buf_dispose(&buf);
 		return -1;
 	}
@@ -651,11 +651,11 @@ static int write_chunk(git_stream *io, const char *buffer, size_t len)
 	git_buf_dispose(&buf);
 
 	/* Chunk body */
-	if (len > 0 && git_stream_write(io, buffer, len, 0) < 0)
+	if (len > 0 && git_stream__write_full(io, buffer, len, 0) < 0)
 		return -1;
 
 	/* Chunk footer */
-	if (git_stream_write(io, "\r\n", 2, 0) < 0)
+	if (git_stream__write_full(io, "\r\n", 2, 0) < 0)
 		return -1;
 
 	return 0;
@@ -853,8 +853,8 @@ replay:
 	if ((error = gen_connect_req(&request, t)) < 0)
 		goto done;
 
-	if ((error = git_stream_write(proxy_stream,
-	    request.ptr, request.size, 0)) < 0)
+	if ((error = git_stream__write_full(proxy_stream, request.ptr,
+					    request.size, 0)) < 0)
 		goto done;
 
 	git_buf_dispose(&request);
@@ -1034,8 +1034,8 @@ replay:
 		if (gen_request(&request, s, 0) < 0)
 			return -1;
 
-		if (git_stream_write(t->server.stream,
-		    request.ptr, request.size, 0) < 0) {
+		if (git_stream__write_full(t->server.stream, request.ptr,
+					   request.size, 0) < 0) {
 			git_buf_dispose(&request);
 			return -1;
 		}
@@ -1058,7 +1058,8 @@ replay:
 			s->chunk_buffer_len = 0;
 
 			/* Write the final chunk. */
-			if (git_stream_write(t->server.stream, "0\r\n\r\n", 5, 0) < 0)
+			if (git_stream__write_full(t->server.stream,
+						   "0\r\n\r\n", 5, 0) < 0)
 				return -1;
 		}
 
@@ -1157,8 +1158,8 @@ static int http_stream_write_chunked(
 		if (gen_request(&request, s, 0) < 0)
 			return -1;
 
-		if (git_stream_write(t->server.stream,
-		    request.ptr, request.size, 0) < 0) {
+		if (git_stream__write_full(t->server.stream, request.ptr,
+					   request.size, 0) < 0) {
 			git_buf_dispose(&request);
 			return -1;
 		}
@@ -1233,11 +1234,10 @@ static int http_stream_write_single(
 	if (gen_request(&request, s, len) < 0)
 		return -1;
 
-	if (git_stream_write(t->server.stream,
-	    request.ptr, request.size, 0) < 0)
+	if (git_stream__write_full(t->server.stream, request.ptr, request.size, 0) < 0)
 		goto on_error;
 
-	if (len && git_stream_write(t->server.stream, buffer, len, 0) < 0)
+	if (len && git_stream__write_full(t->server.stream, buffer, len, 0) < 0)
 		goto on_error;
 
 	git_buf_dispose(&request);
