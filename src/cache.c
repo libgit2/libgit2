@@ -192,10 +192,7 @@ static void *cache_store(git_cache *cache, git_cached_obj *entry)
 
 	/* not found */
 	if ((stored_entry = git_oidmap_get(cache->map, &entry->oid)) == NULL) {
-		int rval;
-
-		git_oidmap_insert(cache->map, &entry->oid, entry, &rval);
-		if (rval >= 0) {
+		if (git_oidmap_set(cache->map, &entry->oid, entry) == 0) {
 			git_cached_obj_incref(entry);
 			cache->used_memory += entry->size;
 			git_atomic_ssize_add(&git_cache__current_storage, (ssize_t)entry->size);
@@ -209,12 +206,10 @@ static void *cache_store(git_cache *cache, git_cached_obj *entry)
 			entry = stored_entry;
 		} else if (stored_entry->flags == GIT_CACHE_STORE_RAW &&
 			   entry->flags == GIT_CACHE_STORE_PARSED) {
-			int rval;
-
 			git_cached_obj_decref(stored_entry);
 			git_cached_obj_incref(entry);
 
-			git_oidmap_insert(cache->map, &entry->oid, entry, &rval);
+			git_oidmap_set(cache->map, &entry->oid, entry);
 		} else {
 			/* NO OP */
 		}

@@ -61,6 +61,21 @@ size_t git_oidmap_size(git_oidmap *map);
  */
 void *git_oidmap_get(git_oidmap *map, const git_oid *key);
 
+/**
+ * Set the entry for key to value.
+ *
+ * If the map has no corresponding entry for the given key, a new
+ * entry will be created with the given value. If an entry exists
+ * already, its value will be updated to match the given value.
+ *
+ * @param map map to create new entry in
+ * @param key key to set
+ * @param value value to associate the key with; may be NULL
+ * @return zero if the key was successfully set, a negative error
+ *         code otherwise
+ */
+int git_oidmap_set(git_oidmap *map, const git_oid *key, void *value);
+
 size_t git_oidmap_lookup_index(git_oidmap *map, const git_oid *key);
 int git_oidmap_valid_index(git_oidmap *map, size_t idx);
 

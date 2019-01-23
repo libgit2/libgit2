@@ -182,3 +182,47 @@ void test_core_oidmap__get_fails_with_nonexisting_key(void)
 
 	git_oidmap_free(map);
 }
+
+void test_core_oidmap__setting_oid_persists(void)
+{
+	git_oid oids[] = {
+	    {{ 0x01 }},
+	    {{ 0x02 }},
+	    {{ 0x03 }}
+	};
+	git_oidmap *map;
+
+	cl_git_pass(git_oidmap_new(&map));
+	cl_git_pass(git_oidmap_set(map, &oids[0], "one"));
+	cl_git_pass(git_oidmap_set(map, &oids[1], "two"));
+	cl_git_pass(git_oidmap_set(map, &oids[2], "three"));
+
+	cl_assert_equal_s(git_oidmap_get(map, &oids[0]), "one");
+	cl_assert_equal_s(git_oidmap_get(map, &oids[1]), "two");
+	cl_assert_equal_s(git_oidmap_get(map, &oids[2]), "three");
+
+	git_oidmap_free(map);
+}
+
+void test_core_oidmap__setting_existing_key_updates(void)
+{
+	git_oid oids[] = {
+	    {{ 0x01 }},
+	    {{ 0x02 }},
+	    {{ 0x03 }}
+	};
+	git_oidmap *map;
+
+	cl_git_pass(git_oidmap_new(&map));
+	cl_git_pass(git_oidmap_set(map, &oids[0], "one"));
+	cl_git_pass(git_oidmap_set(map, &oids[1], "two"));
+	cl_git_pass(git_oidmap_set(map, &oids[2], "three"));
+	cl_assert_equal_i(git_oidmap_size(map), 3);
+
+	cl_git_pass(git_oidmap_set(map, &oids[1], "other"));
+	cl_assert_equal_i(git_oidmap_size(map), 3);
+
+	cl_assert_equal_s(git_oidmap_get(map, &oids[1]), "other");
+
+	git_oidmap_free(map);
+}

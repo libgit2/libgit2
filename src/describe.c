@@ -119,13 +119,8 @@ static int add_to_known_names(
 		e->path = git__strdup(path);
 		git_oid_cpy(&e->peeled, peeled);
 
-		if (!found) {
-			int ret;
-
-			git_oidmap_insert(names, &e->peeled, e, &ret);
-			if (ret < 0)
-				return -1;
-		}
+		if (!found && git_oidmap_set(names, &e->peeled, e) < 0)
+			return -1;
 	}
 	else
 		git_tag_free(tag);

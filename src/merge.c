@@ -1108,7 +1108,6 @@ static int deletes_by_oid_enqueue(git_oidmap *map, git_pool* pool, const git_oid
 {
 	deletes_by_oid_queue *queue;
 	size_t *array_entry;
-	int error;
 
 	if ((queue = git_oidmap_get(map, id)) == NULL) {
 		queue = git_pool_malloc(pool, sizeof(deletes_by_oid_queue));
@@ -1118,8 +1117,7 @@ static int deletes_by_oid_enqueue(git_oidmap *map, git_pool* pool, const git_oid
 		queue->next_pos = 0;
 		queue->first_entry = idx;
 
-		git_oidmap_insert(map, id, queue, &error);
-		if (error < 0)
+		if (git_oidmap_set(map, id, queue) < 0)
 			return -1;
 	} else {
 		array_entry = git_array_alloc(queue->arr);

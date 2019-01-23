@@ -37,15 +37,9 @@ static int impl__write(git_odb_backend *_backend, const git_oid *oid, const void
 {
 	struct memory_packer_db *db = (struct memory_packer_db *)_backend;
 	struct memobject *obj = NULL;
-	size_t pos;
 	size_t alloc_len;
-	int rval;
 
-	pos = git_oidmap_put(db->objects, oid, &rval);
-	if (rval < 0)
-		return -1;
-
-	if (rval == 0)
+	if (git_oidmap_exists(db->objects, oid))
 		return 0;
 
 	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, sizeof(struct memobject), len);
@@ -57,8 +51,8 @@ static int impl__write(git_odb_backend *_backend, const git_oid *oid, const void
 	obj->len = len;
 	obj->type = type;
 
-	git_oidmap_set_key_at(db->objects, pos, &obj->oid);
-	git_oidmap_set_value_at(db->objects, pos, obj);
+	if (git_oidmap_set(db->objects, &obj->oid, obj) < 0)
+		return -1;
 
 	if (type == GIT_OBJECT_COMMIT) {
 		struct memobject **store = git_array_alloc(db->commits);

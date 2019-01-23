@@ -309,10 +309,8 @@ static int crc_object(uint32_t *crc_out, git_mwindow_file *mwf, git_off_t start,
 	return 0;
 }
 
-static void add_expected_oid(git_indexer *idx, const git_oid *oid)
+static int add_expected_oid(git_indexer *idx, const git_oid *oid)
 {
-	int ret;
-
 	/*
 	 * If we know about that object because it is stored in our ODB or
 	 * because we have already processed it as part of our pack file, we do
@@ -323,8 +321,10 @@ static void add_expected_oid(git_indexer *idx, const git_oid *oid)
 	    !git_oidmap_exists(idx->expected_oids, oid)) {
 		    git_oid *dup = git__malloc(sizeof(*oid));
 		    git_oid_cpy(dup, oid);
-		    git_oidmap_put(idx->expected_oids, dup, &ret);
+		    return git_oidmap_set(idx->expected_oids, dup, NULL);
 	}
+
+	return 0;
 }
 
 static int check_object_connectivity(git_indexer *idx, const git_rawobj *obj)
@@ -364,7 +364,8 @@ static int check_object_connectivity(git_indexer *idx, const git_rawobj *obj)
 			size_t i;
 
 			git_array_foreach(tree->entries, i, entry)
-				add_expected_oid(idx, entry->oid);
+				if (add_expected_oid(idx, entry->oid) < 0)
+					goto out;
 
 			break;
 		}
@@ -375,9 +376,11 @@ static int check_object_connectivity(git_indexer *idx, const git_rawobj *obj)
 			size_t i;
 
 			git_array_foreach(commit->parent_ids, i, parent_oid)
-				add_expected_oid(idx, parent_oid);
+				if (add_expected_oid(idx, parent_oid) < 0)
+					goto out;
 
-			add_expected_oid(idx, &commit->tree_id);
+			if (add_expected_oid(idx, &commit->tree_id) < 0)
+				goto out;
 
 			break;
 		}
@@ -385,7 +388,8 @@ static int check_object_connectivity(git_indexer *idx, const git_rawobj *obj)
 		{
 			git_tag *tag = (git_tag *) object;
 
-			add_expected_oid(idx, &tag->target);
+			if (add_expected_oid(idx, &tag->target) < 0)
+				goto out;
 
 			break;
 		}
@@ -403,7 +407,6 @@ out:
 static int store_object(git_indexer *idx)
 {
 	int i, error;
-	size_t k;
 	git_oid oid;
 	struct entry *entry;
 	git_off_t entry_size;
@@ -439,21 +442,17 @@ static int store_object(git_indexer *idx)
 	git_oid_cpy(&pentry->sha1, &oid);
 	pentry->offset = entry_start;
 
-	k = git_oidmap_put(idx->pack->idx_cache, &pentry->sha1, &error);
-	if (error == -1) {
-		git__free(pentry);
-		git_error_set_oom();
-		goto on_error;
-	}
-
-	if (error == 0) {
+	if (git_oidmap_exists(idx->pack->idx_cache, &pentry->sha1)) {
 		git_error_set(GIT_ERROR_INDEXER, "duplicate object %s found in pack", git_oid_tostr_s(&pentry->sha1));
 		git__free(pentry);
 		goto on_error;
 	}
 
-
-	git_oidmap_set_value_at(idx->pack->idx_cache, k, pentry);
+	if ((error = git_oidmap_set(idx->pack->idx_cache, &pentry->sha1, pentry)) < 0) {
+		git__free(pentry);
+		git_error_set_oom();
+		goto on_error;
+	}
 
 	git_oid_cpy(&entry->oid, &oid);
 
@@ -483,8 +482,7 @@ GIT_INLINE(bool) has_entry(git_indexer *idx, git_oid *id)
 
 static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_entry *pentry, git_off_t entry_start)
 {
-	int i, error;
-	size_t k;
+	int i;
 
 	if (entry_start > UINT31_MAX) {
 		entry->offset = UINT32_MAX;
@@ -494,14 +492,12 @@ static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_ent
 	}
 
 	pentry->offset = entry_start;
-	k = git_oidmap_put(idx->pack->idx_cache, &pentry->sha1, &error);
 
-	if (error <= 0) {
+	if (git_oidmap_exists(idx->pack->idx_cache, &pentry->sha1) ||
+	    git_oidmap_set(idx->pack->idx_cache, &pentry->sha1, pentry) < 0) {
 		git_error_set(GIT_ERROR_INDEXER, "cannot insert object into pack");
 		return -1;
 	}
-
-	git_oidmap_set_value_at(idx->pack->idx_cache, k, pentry);
 
 	/* Add the object to the list */
 	if (git_vector_insert(&idx->objects, entry) < 0)

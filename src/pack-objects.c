@@ -192,24 +192,26 @@ unsigned int git_packbuilder_set_threads(git_packbuilder *pb, unsigned int n)
 	return pb->nr_threads;
 }
 
-static void rehash(git_packbuilder *pb)
+static int rehash(git_packbuilder *pb)
 {
 	git_pobject *po;
-	size_t pos, i;
-	int ret;
+	size_t i;
 
 	git_oidmap_clear(pb->object_ix);
+
 	for (i = 0, po = pb->object_list; i < pb->nr_objects; i++, po++) {
-		pos = git_oidmap_put(pb->object_ix, &po->id, &ret);
-		git_oidmap_set_value_at(pb->object_ix, pos, po);
+		if (git_oidmap_set(pb->object_ix, &po->id, po) < 0)
+			return -1;
 	}
+
+	return 0;
 }
 
 int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 			   const char *name)
 {
 	git_pobject *po;
-	size_t newsize, pos;
+	size_t newsize;
 	int ret;
 
 	assert(pb && oid);
@@ -233,7 +235,9 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 		pb->object_list = git__reallocarray(pb->object_list,
 			pb->nr_alloc, sizeof(*po));
 		GIT_ERROR_CHECK_ALLOC(pb->object_list);
-		rehash(pb);
+
+		if (rehash(pb) < 0)
+			return -1;
 	}
 
 	po = pb->object_list + pb->nr_objects;
@@ -246,13 +250,10 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 	git_oid_cpy(&po->id, oid);
 	po->hash = name_hash(name);
 
-	pos = git_oidmap_put(pb->object_ix, &po->id, &ret);
-	if (ret < 0) {
+	if (git_oidmap_set(pb->object_ix, &po->id, po) < 0) {
 		git_error_set_oom();
-		return ret;
+		return -1;
 	}
-	assert(ret != 0);
-	git_oidmap_set_value_at(pb->object_ix, pos, po);
 
 	pb->done = false;
 
@@ -1541,7 +1542,8 @@ static int retrieve_object(struct walk_object **out, git_packbuilder *pb, const 
 		if ((error = lookup_walk_object(&obj, pb, id)) < 0)
 			return error;
 
-		git_oidmap_insert(pb->walk_objects, &obj->id, obj, &error);
+		if ((error = git_oidmap_set(pb->walk_objects, &obj->id, obj)) < 0)
+			return error;
 	}
 
 	*out = obj;

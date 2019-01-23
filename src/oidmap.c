@@ -57,6 +57,23 @@ void *git_oidmap_get(git_oidmap *map, const git_oid *key)
 	return kh_val(map, idx);
 }
 
+int git_oidmap_set(git_oidmap *map, const git_oid *key, void *value)
+{
+	size_t idx;
+	int rval;
+
+	idx = kh_put(oid, map, key, &rval);
+	if (rval < 0)
+		return -1;
+
+	if (rval == 0)
+		kh_key(map, idx) = key;
+
+	kh_val(map, idx) = value;
+
+	return 0;
+}
+
 size_t git_oidmap_lookup_index(git_oidmap *map, const git_oid *key)
 {
 	return kh_get(oid, map, key);
