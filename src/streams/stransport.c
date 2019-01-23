@@ -158,16 +158,17 @@ static OSStatus write_cb(SSLConnectionRef conn, const void *data, size_t *len)
 static ssize_t stransport_write(git_stream *stream, const char *data, size_t len, int flags)
 {
 	stransport_stream *st = (stransport_stream *) stream;
-	size_t data_len, processed;
+	size_t processed;
 	OSStatus ret;
 
 	GIT_UNUSED(flags);
 
-	data_len = len;
-	if ((ret = SSLWrite(st->ctx, data, data_len, &processed)) != noErr)
+	len = min(len, SSIZE_MAX);
+
+	if ((ret = SSLWrite(st->ctx, data, len, &processed)) != noErr)
 		return stransport_error(ret);
 
-	return processed;
+	return (ssize_t)processed;
 }
 
 /*
