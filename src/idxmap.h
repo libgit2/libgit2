@@ -76,6 +76,26 @@ void git_idxmap_clear(git_idxmap *map);
  */
 void git_idxmap_icase_clear(git_idxmap_icase *map);
 
+/**
+ * Return value associated with the given key.
+ *
+ * @param map map to search key in
+ * @param key key to search for; the index entry will be searched
+ *            for by its case-sensitive path
+ * @return value associated with the given key or NULL if the key was not found
+ */
+void *git_idxmap_get(git_idxmap *map, const git_index_entry *key);
+
+/**
+ * Return value associated with the given key.
+ *
+ * @param map map to search key in
+ * @param key key to search for; the index entry will be searched
+ *            for by its case-insensitive path
+ * @return value associated with the given key or NULL if the key was not found
+ */
+void *git_idxmap_icase_get(git_idxmap_icase *map, const git_index_entry *key);
+
 void git_idxmap_insert(git_idxmap *map, const git_index_entry *key, void *value, int *rval);
 void git_idxmap_icase_insert(git_idxmap_icase *map, const git_index_entry *key, void *value, int *rval);
 
@@ -83,7 +103,9 @@ size_t git_idxmap_lookup_index(git_idxmap *map, const git_index_entry *key);
 size_t git_idxmap_icase_lookup_index(git_idxmap_icase *map, const git_index_entry *key);
 void *git_idxmap_value_at(git_idxmap *map, size_t idx);
 int git_idxmap_valid_index(git_idxmap *map, size_t idx);
+int git_idxmap_icase_valid_index(git_idxmap_icase *map, size_t idx);
 int git_idxmap_has_data(git_idxmap *map, size_t idx);
+int git_idxmap_icase_has_data(git_idxmap_icase *map, size_t idx);
 
 void git_idxmap_resize(git_idxmap *map, size_t size);
 void git_idxmap_icase_resize(git_idxmap_icase *map, size_t size);

@@ -36,11 +36,11 @@
 
 #define INSERT_IN_MAP(idx, e, err) INSERT_IN_MAP_EX(idx, (idx)->entries_map, e, err)
 
-#define LOOKUP_IN_MAP(p, idx, k) do {					\
+#define LOOKUP_IN_MAP(v, idx, k) do {					\
 		if ((idx)->ignore_case)					\
-			(p) = git_idxmap_icase_lookup_index((git_idxmap_icase *) index->entries_map, (k)); \
+			(v) = git_idxmap_icase_get((git_idxmap_icase *) index->entries_map, (k)); \
 		else							\
-			(p) = git_idxmap_lookup_index(index->entries_map, (k)); \
+			(v) = git_idxmap_get(index->entries_map, (k)); \
 	} while (0)
 
 #define DELETE_IN_MAP(idx, e) do {					\
@@ -852,20 +852,21 @@ const git_index_entry *git_index_get_bypath(
 	git_index *index, const char *path, int stage)
 {
 	git_index_entry key = {{ 0 }};
-	size_t pos;
+	git_index_entry *value;
 
 	assert(index);
 
 	key.path = path;
 	GIT_INDEX_ENTRY_STAGE_SET(&key, stage);
 
-	LOOKUP_IN_MAP(pos, index, &key);
+	LOOKUP_IN_MAP(value, index, &key);
 
-	if (git_idxmap_valid_index(index->entries_map, pos))
-		return git_idxmap_value_at(index->entries_map, pos);
+	if (!value) {
+	    git_error_set(GIT_ERROR_INDEX, "index does not contain '%s'", path);
+	    return NULL;
+	}
 
-	git_error_set(GIT_ERROR_INDEX, "index does not contain '%s'", path);
-	return NULL;
+	return value;
 }
 
 void git_index_entry__init_from_stat(
