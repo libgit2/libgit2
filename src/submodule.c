@@ -267,10 +267,9 @@ int git_submodule_lookup(
 	}
 
 	if (repo->submodule_cache != NULL) {
-		size_t pos = git_strmap_lookup_index(repo->submodule_cache, name);
-		if (git_strmap_valid_index(repo->submodule_cache, pos)) {
+		if ((sm = git_strmap_get(repo->submodule_cache, name)) != NULL) {
 			if (out) {
-				*out = git_strmap_value_at(repo->submodule_cache, pos);
+				*out = sm;
 				GIT_REFCOUNT_INC(*out);
 			}
 			return 0;
@@ -399,11 +398,8 @@ static int submodule_get_or_create(git_submodule **out, git_repository *repo, gi
 	size_t pos;
 	git_submodule *sm = NULL;
 
-	pos = git_strmap_lookup_index(map, name);
-	if (git_strmap_valid_index(map, pos)) {
-		sm = git_strmap_value_at(map, pos);
+	if ((sm = git_strmap_get(map, name)) != NULL)
 		goto done;
-	}
 
 	/* if the submodule doesn't exist yet in the map, create it */
 	if ((error = submodule_alloc(&sm, repo, name)) < 0)
@@ -439,26 +435,18 @@ static int submodules_from_index(git_strmap *map, git_index *idx, git_config *cf
 		goto done;
 
 	while (!(error = git_iterator_advance(&entry, i))) {
-		size_t pos = git_strmap_lookup_index(map, entry->path);
 		git_submodule *sm;
 
-		if (git_strmap_valid_index(map, pos)) {
-			sm = git_strmap_value_at(map, pos);
-
+		if ((sm = git_strmap_get(map, entry->path)) != NULL) {
 			if (S_ISGITLINK(entry->mode))
 				submodule_update_from_index_entry(sm, entry);
 			else
 				sm->flags |= GIT_SUBMODULE_STATUS__INDEX_NOT_SUBMODULE;
 		} else if (S_ISGITLINK(entry->mode)) {
-			size_t name_pos;
 			const char *name;
 
-			name_pos = git_strmap_lookup_index(names, entry->path);
-			if (git_strmap_valid_index(names, name_pos)) {
-				name = git_strmap_value_at(names, name_pos);
-			} else {
+			if ((name = git_strmap_get(names, entry->path)) == NULL)
 				name = entry->path;
-			}
 
 			if (!submodule_get_or_create(&sm, git_index_owner(idx), map, name)) {
 				submodule_update_from_index_entry(sm, entry);
@@ -491,26 +479,18 @@ static int submodules_from_head(git_strmap *map, git_tree *head, git_config *cfg
 		goto done;
 
 	while (!(error = git_iterator_advance(&entry, i))) {
-		size_t pos = git_strmap_lookup_index(map, entry->path);
 		git_submodule *sm;
 
-		if (git_strmap_valid_index(map, pos)) {
-			sm = git_strmap_value_at(map, pos);
-
+		if ((sm = git_strmap_get(map, entry->path)) != NULL) {
 			if (S_ISGITLINK(entry->mode))
 				submodule_update_from_head_data(sm, entry->mode, &entry->id);
 			else
 				sm->flags |= GIT_SUBMODULE_STATUS__HEAD_NOT_SUBMODULE;
 		} else if (S_ISGITLINK(entry->mode)) {
-			size_t name_pos;
 			const char *name;
 
-			name_pos = git_strmap_lookup_index(names, entry->path);
-			if (git_strmap_valid_index(names, name_pos)) {
-				name = git_strmap_value_at(names, name_pos);
-			} else {
+			if ((name = git_strmap_get(names, entry->path)) == NULL)
 				name = entry->path;
-			}
 
 			if (!submodule_get_or_create(&sm, git_tree_owner(head), map, name)) {
 				submodule_update_from_head_data(

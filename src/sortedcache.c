@@ -276,11 +276,8 @@ int git_sortedcache_upsert(void **out, git_sortedcache *sc, const char *key)
 	size_t keylen, itemlen;
 	char *item_key;
 
-	pos = git_strmap_lookup_index(sc->map, key);
-	if (git_strmap_valid_index(sc->map, pos)) {
-		item = git_strmap_value_at(sc->map, pos);
+	if ((item = git_strmap_get(sc->map, key)) != NULL)
 		goto done;
-	}
 
 	keylen  = strlen(key);
 	itemlen = sc->item_path_offset + keylen + 1;
@@ -320,10 +317,7 @@ done:
 /* lookup item by key */
 void *git_sortedcache_lookup(const git_sortedcache *sc, const char *key)
 {
-	size_t pos = git_strmap_lookup_index(sc->map, key);
-	if (git_strmap_valid_index(sc->map, pos))
-		return git_strmap_value_at(sc->map, pos);
-	return NULL;
+	return git_strmap_get(sc->map, key);
 }
 
 /* find out how many items are in the cache */

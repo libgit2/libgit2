@@ -49,10 +49,9 @@ int git_mwindow_global_init(void)
 
 int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 {
-	int error;
-	char *packname;
-	size_t pos;
 	struct git_pack_file *pack;
+	char *packname;
+	int error;
 
 	if ((error = git_packfile__name(&packname, path)) < 0)
 		return error;
@@ -62,13 +61,11 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 		return -1;
 	}
 
-	pos = git_strmap_lookup_index(git__pack_cache, packname);
+	pack = git_strmap_get(git__pack_cache, packname);
 	git__free(packname);
 
-	if (git_strmap_valid_index(git__pack_cache, pos)) {
-		pack = git_strmap_value_at(git__pack_cache, pos);
+	if (pack != NULL) {
 		git_atomic_inc(&pack->refcount);
-
 		git_mutex_unlock(&git__mwindow_mutex);
 		*out = pack;
 		return 0;

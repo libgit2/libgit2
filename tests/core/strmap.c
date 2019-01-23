@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "strmap.h"
 
-git_strmap *g_table;
+static git_strmap *g_table;
 
 void test_core_strmap__initialize(void)
 {
@@ -96,4 +96,36 @@ void test_core_strmap__3(void)
 	i = 0;
 	git_strmap_foreach_value(g_table, str, { i++; free(str); });
 	cl_assert(i == 10000);
+}
+
+void test_core_strmap__get_succeeds_with_existing_entries(void)
+{
+	const char *keys[] = { "foo", "bar", "gobble" };
+	char *values[] = { "oof", "rab", "elbbog" };
+	int error;
+	size_t i;
+
+	for (i = 0; i < ARRAY_SIZE(keys); i++) {
+		git_strmap_insert(g_table, keys[i], values[i], &error);
+		cl_assert_equal_i(error, 1);
+	}
+
+	cl_assert_equal_s(git_strmap_get(g_table, "foo"), "oof");
+	cl_assert_equal_s(git_strmap_get(g_table, "bar"), "rab");
+	cl_assert_equal_s(git_strmap_get(g_table, "gobble"), "elbbog");
+}
+
+void test_core_strmap__get_returns_null_on_nonexisting_key(void)
+{
+	const char *keys[] = { "foo", "bar", "gobble" };
+	char *values[] = { "oof", "rab", "elbbog" };
+	int error;
+	size_t i;
+
+	for (i = 0; i < ARRAY_SIZE(keys); i++) {
+		git_strmap_insert(g_table, keys[i], values[i], &error);
+		cl_assert_equal_i(error, 1);
+	}
+
+	cl_assert_equal_p(git_strmap_get(g_table, "other"), NULL);
 }

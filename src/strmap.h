@@ -50,6 +50,15 @@ void git_strmap_clear(git_strmap *map);
  */
 size_t git_strmap_size(git_strmap *map);
 
+/**
+ * Return value associated with the given key.
+ *
+ * @param map map to search key in
+ * @param key key to search for
+ * @return value associated with the given key or NULL if the key was not found
+ */
+void *git_strmap_get(git_strmap *map, const char *key);
+
 size_t git_strmap_lookup_index(git_strmap *map, const char *key);
 int git_strmap_valid_index(git_strmap *map, size_t idx);
 

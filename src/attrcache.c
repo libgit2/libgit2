@@ -33,12 +33,7 @@ GIT_INLINE(void) attr_cache_unlock(git_attr_cache *cache)
 GIT_INLINE(git_attr_file_entry *) attr_cache_lookup_entry(
 	git_attr_cache *cache, const char *path)
 {
-	size_t pos = git_strmap_lookup_index(cache->files, path);
-
-	if (git_strmap_valid_index(cache->files, pos))
-		return git_strmap_value_at(cache->files, pos);
-	else
-		return NULL;
+	return git_strmap_get(cache->files, path);
 }
 
 int git_attr_cache__alloc_file_entry(
@@ -265,18 +260,14 @@ bool git_attr_cache__is_cached(
 	const char *filename)
 {
 	git_attr_cache *cache = git_repository_attr_cache(repo);
-	git_strmap *files;
-	size_t pos;
 	git_attr_file_entry *entry;
+	git_strmap *files;
 
 	if (!cache || !(files = cache->files))
 		return false;
 
-	pos = git_strmap_lookup_index(files, filename);
-	if (!git_strmap_valid_index(files, pos))
+	if ((entry = git_strmap_get(files, filename)) == NULL)
 		return false;
-
-	entry = git_strmap_value_at(files, pos);
 
 	return entry && (entry->file[source] != NULL);
 }
@@ -457,13 +448,6 @@ git_attr_rule *git_attr_cache__lookup_macro(
 	git_repository *repo, const char *name)
 {
 	git_strmap *macros = git_repository_attr_cache(repo)->macros;
-	size_t pos;
 
-	pos = git_strmap_lookup_index(macros, name);
-
-	if (!git_strmap_valid_index(macros, pos))
-		return NULL;
-
-	return (git_attr_rule *)git_strmap_value_at(macros, pos);
+	return git_strmap_get(macros, name);
 }
-

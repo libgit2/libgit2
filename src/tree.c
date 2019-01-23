@@ -723,16 +723,13 @@ int git_treebuilder_insert(
 {
 	git_tree_entry *entry;
 	int error;
-	size_t pos;
 
 	assert(bld && id && filename);
 
 	if ((error = check_entry(bld->repo, filename, id, filemode)) < 0)
 		return error;
 
-	pos = git_strmap_lookup_index(bld->map, filename);
-	if (git_strmap_valid_index(bld->map, pos)) {
-		entry = git_strmap_value_at(bld->map, pos);
+	if ((entry = git_strmap_get(bld->map, filename)) != NULL) {
 		git_oid_cpy((git_oid *) entry->oid, id);
 	} else {
 		entry = alloc_entry(filename, strlen(filename), id);
@@ -757,16 +754,8 @@ int git_treebuilder_insert(
 
 static git_tree_entry *treebuilder_get(git_treebuilder *bld, const char *filename)
 {
-	git_tree_entry *entry = NULL;
-	size_t pos;
-
 	assert(bld && filename);
-
-	pos = git_strmap_lookup_index(bld->map, filename);
-	if (git_strmap_valid_index(bld->map, pos))
-		entry = git_strmap_value_at(bld->map, pos);
-
-	return entry;
+	return git_strmap_get(bld->map, filename);
 }
 
 const git_tree_entry *git_treebuilder_get(git_treebuilder *bld, const char *filename)

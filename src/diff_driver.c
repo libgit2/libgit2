@@ -233,8 +233,8 @@ static int git_diff_driver_load(
 {
 	int error = 0;
 	git_diff_driver_registry *reg;
-	git_diff_driver *drv = NULL;
-	size_t namelen, pos;
+	git_diff_driver *drv;
+	size_t namelen;
 	git_config *cfg = NULL;
 	git_buf name = GIT_BUF_INIT;
 	git_config_entry *ce = NULL;
@@ -243,9 +243,8 @@ static int git_diff_driver_load(
 	if ((reg = git_repository_driver_registry(repo)) == NULL)
 		return -1;
 
-	pos = git_strmap_lookup_index(reg->drivers, driver_name);
-	if (git_strmap_valid_index(reg->drivers, pos)) {
-		*out = git_strmap_value_at(reg->drivers, pos);
+	if ((drv = git_strmap_get(reg->drivers, driver_name)) != NULL) {
+		*out = drv;
 		return 0;
 	}
 

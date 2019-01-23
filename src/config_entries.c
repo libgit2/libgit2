@@ -133,14 +133,12 @@ int git_config_entries_append(git_config_entries *entries, git_config_entry *ent
 {
 	config_entry_list *existing, *var;
 	int error = 0;
-	size_t pos;
 
 	var = git__calloc(1, sizeof(config_entry_list));
 	GIT_ERROR_CHECK_ALLOC(var);
 	var->entry = entry;
 
-	pos = git_strmap_lookup_index(entries->map, entry->name);
-	if (!git_strmap_valid_index(entries->map, pos)) {
+	if ((existing = git_strmap_get(entries->map, entry->name)) == NULL) {
 		/*
 		 * We only ever inspect `last` from the first config
 		 * entry in a multivar. In case where this new entry is
@@ -157,7 +155,6 @@ int git_config_entries_append(git_config_entries *entries, git_config_entry *ent
 		if (error > 0)
 			error = 0;
 	} else {
-		existing = git_strmap_value_at(entries->map, pos);
 		config_entry_list_append(&existing, var);
 	}
 
@@ -171,15 +168,12 @@ int git_config_entries_append(git_config_entries *entries, git_config_entry *ent
 
 int config_entry_get(config_entry_list **out, git_config_entries *entries, const char *key)
 {
-	size_t pos;
+	config_entry_list *list;
 
-	pos = git_strmap_lookup_index(entries->map, key);
-
-	/* no error message; the config system will write one */
-	if (!git_strmap_valid_index(entries->map, pos))
+	if ((list = git_strmap_get(entries->map, key)) == NULL)
 		return GIT_ENOTFOUND;
 
-	*out = git_strmap_value_at(entries->map, pos);
+	*out = list;
 
 	return 0;
 }

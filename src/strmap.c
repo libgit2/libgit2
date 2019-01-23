@@ -41,6 +41,15 @@ size_t git_strmap_size(git_strmap *map)
 	return kh_size(map);
 }
 
+void *git_strmap_get(git_strmap *map, const char *key)
+{
+	size_t idx = git_strmap_lookup_index(map, key);
+	if (!git_strmap_valid_index(map, idx) ||
+	    !git_strmap_has_data(map, idx))
+		return NULL;
+	return kh_val(map, idx);
+}
+
 size_t git_strmap_lookup_index(git_strmap *map, const char *key)
 {
 	return kh_get(str, map, key);

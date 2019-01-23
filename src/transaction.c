@@ -134,15 +134,11 @@ cleanup:
 static int find_locked(transaction_node **out, git_transaction *tx, const char *refname)
 {
 	transaction_node *node;
-	size_t pos;
 
-	pos = git_strmap_lookup_index(tx->locks, refname);
-	if (!git_strmap_valid_index(tx->locks, pos)) {
+	if ((node = git_strmap_get(tx->locks, refname)) == NULL) {
 		git_error_set(GIT_ERROR_REFERENCE, "the specified reference is not locked");
 		return GIT_ENOTFOUND;
 	}
-
-	node = git_strmap_value_at(tx->locks, pos);
 
 	*out = node;
 	return 0;
