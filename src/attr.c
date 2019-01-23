@@ -215,7 +215,7 @@ int git_attr_foreach(
 		return -1;
 
 	if ((error = collect_attr_files(repo, NULL, flags, pathname, &files)) < 0 ||
-		(error = git_strmap_alloc(&seen)) < 0)
+	    (error = git_strmap_new(&seen)) < 0)
 		goto cleanup;
 
 	git_vector_foreach(&files, i, file) {

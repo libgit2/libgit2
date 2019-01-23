@@ -577,7 +577,7 @@ static int apply_deltas(
 	size_t i;
 	int error = 0;
 
-	if (git_strmap_alloc(&removed_paths) < 0)
+	if (git_strmap_new(&removed_paths) < 0)
 		return -1;
 
 	for (i = 0; i < git_diff_num_deltas(diff); i++) {

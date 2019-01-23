@@ -65,12 +65,15 @@ void git_cache_dump_stats(git_cache *cache)
 int git_cache_init(git_cache *cache)
 {
 	memset(cache, 0, sizeof(*cache));
-	cache->map = git_oidmap_alloc();
-	GIT_ERROR_CHECK_ALLOC(cache->map);
+
+	if ((git_oidmap_new(&cache->map)) < 0)
+		return -1;
+
 	if (git_rwlock_init(&cache->lock)) {
 		git_error_set(GIT_ERROR_OS, "failed to initialize cache rwlock");
 		return -1;
 	}
+
 	return 0;
 }
 

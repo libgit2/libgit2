@@ -24,8 +24,7 @@ void test_core_oidmap__basic(void)
 		}
 	}
 
-	map = git_oidmap_alloc();
-	cl_assert(map != NULL);
+	cl_git_pass(git_oidmap_new(&map));
 
 	for (i = 0; i < NITEMS; ++i) {
 		size_t pos;
@@ -78,8 +77,7 @@ void test_core_oidmap__hash_collision(void)
 		items[i].oid.id[11] = (unsigned char)(i >> 24);
 	}
 
-	map = git_oidmap_alloc();
-	cl_assert(map != NULL);
+	cl_git_pass(git_oidmap_new(&map));
 
 	for (i = 0; i < NITEMS; ++i) {
 		size_t pos;

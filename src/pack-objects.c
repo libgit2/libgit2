@@ -141,12 +141,10 @@ int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
 	pb = git__calloc(1, sizeof(*pb));
 	GIT_ERROR_CHECK_ALLOC(pb);
 
-	pb->object_ix = git_oidmap_alloc();
-	if (!pb->object_ix)
+	if (git_oidmap_new(&pb->object_ix) < 0)
 		goto on_error;
 
-	pb->walk_objects = git_oidmap_alloc();
-	if (!pb->walk_objects)
+	if (git_oidmap_new(&pb->walk_objects) < 0)
 		goto on_error;
 
 	git_pool_init(&pb->object_pool, sizeof(struct walk_object));

@@ -2916,7 +2916,7 @@ int git_repository_submodule_cache_all(git_repository *repo)
 
 	assert(repo);
 
-	if ((error = git_strmap_alloc(&repo->submodule_cache)))
+	if ((error = git_strmap_new(&repo->submodule_cache)))
 		return error;
 
 	error = git_submodule__map(repo, repo->submodule_cache);

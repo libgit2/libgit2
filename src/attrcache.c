@@ -400,8 +400,8 @@ int git_attr_cache__init(git_repository *repo)
 	/* allocate hashtable for attribute and ignore file contents,
 	 * hashtable for attribute macros, and string pool
 	 */
-	if ((ret = git_strmap_alloc(&cache->files)) < 0 ||
-		(ret = git_strmap_alloc(&cache->macros)) < 0)
+	if ((ret = git_strmap_new(&cache->files)) < 0 ||
+	    (ret = git_strmap_new(&cache->macros)) < 0)
 		goto cancel;
 
 	git_pool_init(&cache->pool, 1);

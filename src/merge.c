@@ -1168,8 +1168,8 @@ static int merge_diff_mark_similarity_exact(
 	git_oidmap *ours_deletes_by_oid = NULL, *theirs_deletes_by_oid = NULL;
 	int error = 0;
 
-	if (!(ours_deletes_by_oid = git_oidmap_alloc()) ||
-		!(theirs_deletes_by_oid = git_oidmap_alloc())) {
+	if (git_oidmap_new(&ours_deletes_by_oid) < 0 ||
+	    git_oidmap_new(&theirs_deletes_by_oid) < 0) {
 		error = -1;
 		goto done;
 	}

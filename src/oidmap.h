@@ -11,10 +11,37 @@
 
 #include "git2/oid.h"
 
+/** A map with `git_oid`s as key. */
 typedef struct kh_oid_s git_oidmap;
 
-git_oidmap *git_oidmap_alloc(void);
+/**
+ * Allocate a new OID map.
+ *
+ * @param out Pointer to the map that shall be allocated.
+ * @return 0 on success, an error code if allocation has failed.
+ */
+int git_oidmap_new(git_oidmap **out);
+
+/**
+ * Free memory associated with the map.
+ *
+ * Note that this function will _not_ free values added to this
+ * map.
+ *
+ * @param map Pointer to the map that is to be free'd. May be
+ *            `NULL`.
+ */
 void git_oidmap_free(git_oidmap *map);
+
+/**
+ * Clear all entries from the map.
+ *
+ * This function will remove all entries from the associated map.
+ * Memory associated with it will not be released, though.
+ *
+ * @param map Pointer to the map that shall be cleared. May be
+ *            `NULL`.
+ */
 void git_oidmap_clear(git_oidmap *map);
 
 size_t git_oidmap_size(git_oidmap *map);

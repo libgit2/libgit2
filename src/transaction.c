@@ -84,7 +84,7 @@ int git_transaction_new(git_transaction **out, git_repository *repo)
 		goto on_error;
 	}
 
-	if ((error = git_strmap_alloc(&tx->locks)) < 0) {
+	if ((error = git_strmap_new(&tx->locks)) < 0) {
 		error = -1;
 		goto on_error;
 	}

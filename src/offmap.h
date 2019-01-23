@@ -11,10 +11,37 @@
 
 #include "git2/types.h"
 
+/** A map with `git_off_t`s as key. */
 typedef struct kh_off_s git_offmap;
 
-git_offmap *git_offmap_alloc(void);
+/**
+ * Allocate a new `git_off_t` map.
+ *
+ * @param out Pointer to the map that shall be allocated.
+ * @return 0 on success, an error code if allocation has failed.
+ */
+int git_offmap_new(git_offmap **out);
+
+/**
+ * Free memory associated with the map.
+ *
+ * Note that this function will _not_ free values added to this
+ * map.
+ *
+ * @param map Pointer to the map that is to be free'd. May be
+ *            `NULL`.
+ */
 void git_offmap_free(git_offmap *map);
+
+/**
+ * Clear all entries from the map.
+ *
+ * This function will remove all entries from the associated map.
+ * Memory associated with it will not be released, though.
+ *
+ * @param map Pointer to the map that shall be cleared. May be
+ *            `NULL`.
+ */
 void git_offmap_clear(git_offmap *map);
 
 size_t git_offmap_num_entries(git_offmap *map);

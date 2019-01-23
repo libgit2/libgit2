@@ -688,7 +688,7 @@ int git_treebuilder_new(
 
 	bld->repo = repo;
 
-	if (git_strmap_alloc(&bld->map) < 0) {
+	if (git_strmap_new(&bld->map) < 0) {
 		git__free(bld);
 		return -1;
 	}

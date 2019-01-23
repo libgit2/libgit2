@@ -681,8 +681,8 @@ int git_describe_commit(
 		"git_describe_options");
 	data.opts = &normalized;
 
-	data.names = git_oidmap_alloc();
-	GIT_ERROR_CHECK_ALLOC(data.names);
+	if ((error = git_oidmap_new(&data.names)) < 0)
+		return error;
 
 	/** TODO: contains to be implemented */
 

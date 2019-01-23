@@ -5,7 +5,7 @@ git_strmap *g_table;
 
 void test_core_strmap__initialize(void)
 {
-	cl_git_pass(git_strmap_alloc(&g_table));
+	cl_git_pass(git_strmap_new(&g_table));
 	cl_assert(g_table != NULL);
 }
 

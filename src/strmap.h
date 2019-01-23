@@ -9,10 +9,37 @@
 
 #include "common.h"
 
+/** A map with C strings as key. */
 typedef struct kh_str_s git_strmap;
 
-int git_strmap_alloc(git_strmap **map);
+/**
+ * Allocate a new string map.
+ *
+ * @param out Pointer to the map that shall be allocated.
+ * @return 0 on success, an error code if allocation has failed.
+ */
+int git_strmap_new(git_strmap **out);
+
+/**
+ * Free memory associated with the map.
+ *
+ * Note that this function will _not_ free keys or values added
+ * to this map.
+ *
+ * @param map Pointer to the map that is to be free'd. May be
+ *            `NULL`.
+ */
 void git_strmap_free(git_strmap *map);
+
+/**
+ * Clear all entries from the map.
+ *
+ * This function will remove all entries from the associated map.
+ * Memory associated with it will not be released, though.
+ *
+ * @param map Pointer to the map that shall be cleared. May be
+ *            `NULL`.
+ */
 void git_strmap_clear(git_strmap *map);
 
 size_t git_strmap_num_entries(git_strmap *map);

@@ -44,7 +44,7 @@ int git_mwindow_global_init(void)
 	assert(!git__pack_cache);
 
 	git__on_shutdown(git_mwindow_files_free);
-	return git_strmap_alloc(&git__pack_cache);
+	return git_strmap_new(&git__pack_cache);
 }
 
 int git_mwindow_get_pack(struct git_pack_file **out, const char *path)

@@ -59,7 +59,7 @@ int git_config_entries_new(git_config_entries **out)
 	GIT_ERROR_CHECK_ALLOC(entries);
 	GIT_REFCOUNT_INC(entries);
 
-	if ((error = git_strmap_alloc(&entries->map)) < 0)
+	if ((error = git_strmap_new(&entries->map)) < 0)
 		git__free(entries);
 	else
 		*out = entries;

@@ -92,8 +92,8 @@ static void cache_free(git_pack_cache *cache)
 
 static int cache_init(git_pack_cache *cache)
 {
-	cache->entries = git_offmap_alloc();
-	GIT_ERROR_CHECK_ALLOC(cache->entries);
+	if (git_offmap_new(&cache->entries) < 0)
+		return -1;
 
 	cache->memory_limit = GIT_PACK_CACHE_MEMORY_LIMIT;
 

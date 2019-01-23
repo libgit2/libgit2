@@ -18,12 +18,10 @@ __KHASH_TYPE(str, const char *, void *)
 
 __KHASH_IMPL(str, static kh_inline, const char *, void *, 1, kh_str_hash_func, kh_str_hash_equal)
 
-int git_strmap_alloc(git_strmap **map)
+int git_strmap_new(git_strmap **out)
 {
-	if ((*map = kh_init(str)) == NULL) {
-		git_error_set_oom();
-		return -1;
-	}
+	*out = kh_init(str);
+	GIT_ERROR_CHECK_ALLOC(*out);
 
 	return 0;
 }

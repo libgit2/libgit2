@@ -202,7 +202,7 @@ static int load_submodule_names(git_strmap **out, git_repository *repo, git_conf
 
 	*out = NULL;
 
-	if ((error = git_strmap_alloc(&names)) < 0)
+	if ((error = git_strmap_new(&names)) < 0)
 		goto out;
 
 	if ((error = git_config_iterator_glob_new(&iter, cfg, key)) < 0)
@@ -618,7 +618,7 @@ int git_submodule_foreach(
 		return -1;
 	}
 
-	if ((error = git_strmap_alloc(&submodules)) < 0)
+	if ((error = git_strmap_new(&submodules)) < 0)
 		return error;
 
 	if ((error = git_submodule__map(repo, submodules)) < 0)

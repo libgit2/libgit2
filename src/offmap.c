@@ -18,9 +18,13 @@ __KHASH_TYPE(off, git_off_t, void *)
 
 __KHASH_IMPL(off, static kh_inline, git_off_t, void *, 1, kh_int64_hash_func, kh_int64_hash_equal)
 
-git_offmap *git_offmap_alloc(void)
+
+int git_offmap_new(git_offmap **out)
 {
-	return kh_init(off);
+	*out = kh_init(off);
+	GIT_ERROR_CHECK_ALLOC(*out);
+
+	return 0;
 }
 
 void git_offmap_free(git_offmap *map)

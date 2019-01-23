@@ -423,10 +423,10 @@ int git_index_open(git_index **index_out, const char *index_path)
 	}
 
 	if (git_vector_init(&index->entries, 32, git_index_entry_cmp) < 0 ||
-		git_idxmap_alloc(&index->entries_map) < 0 ||
-		git_vector_init(&index->names, 8, conflict_name_cmp) < 0 ||
-		git_vector_init(&index->reuc, 8, reuc_cmp) < 0 ||
-		git_vector_init(&index->deleted, 8, git_index_entry_cmp) < 0)
+	    git_idxmap_new(&index->entries_map) < 0 ||
+	    git_vector_init(&index->names, 8, conflict_name_cmp) < 0 ||
+	    git_vector_init(&index->reuc, 8, reuc_cmp) < 0 ||
+	    git_vector_init(&index->deleted, 8, git_index_entry_cmp) < 0)
 		goto fail;
 
 	index->entries_cmp_path = git__strcmp_cb;
@@ -3106,7 +3106,7 @@ int git_index_read_tree(git_index *index, const git_tree *tree)
 	size_t i;
 	git_index_entry *e;
 
-	if (git_idxmap_alloc(&entries_map) < 0)
+	if (git_idxmap_new(&entries_map) < 0)
 		return -1;
 
 	git_vector_set_cmp(&entries, index->entries._cmp); /* match sort */
@@ -3180,8 +3180,8 @@ static int git_index_read_iterator(
 	assert((new_iterator->flags & GIT_ITERATOR_DONT_IGNORE_CASE));
 
 	if ((error = git_vector_init(&new_entries, new_length_hint, index->entries._cmp)) < 0 ||
-		(error = git_vector_init(&remove_entries, index->entries.length, NULL)) < 0 ||
-		(error = git_idxmap_alloc(&new_entries_map)) < 0)
+	    (error = git_vector_init(&remove_entries, index->entries.length, NULL)) < 0 ||
+	    (error = git_idxmap_new(&new_entries_map)) < 0)
 		goto done;
 
 	if (index->ignore_case && new_length_hint)

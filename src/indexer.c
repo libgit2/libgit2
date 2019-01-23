@@ -147,8 +147,9 @@ int git_indexer_new(
 	git_hash_ctx_init(&idx->hash_ctx);
 	git_hash_ctx_init(&idx->trailer);
 	git_buf_init(&idx->entry_data, 0);
-	idx->expected_oids = git_oidmap_alloc();
-	GIT_ERROR_CHECK_ALLOC(idx->expected_oids);
+
+	if ((error = git_oidmap_new(&idx->expected_oids)) < 0)
+		goto cleanup;
 
 	idx->do_verify = opts.verify;
 
@@ -781,8 +782,8 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_tran
 			return -1;
 		}
 
-		idx->pack->idx_cache = git_oidmap_alloc();
-		GIT_ERROR_CHECK_ALLOC(idx->pack->idx_cache);
+		if (git_oidmap_new(&idx->pack->idx_cache) < 0)
+			return -1;
 
 		idx->pack->has_cache = 1;
 		if (git_vector_init(&idx->objects, total_objects, objects_cmp) < 0)

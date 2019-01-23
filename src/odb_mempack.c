@@ -171,7 +171,8 @@ int git_mempack_new(git_odb_backend **out)
 	db = git__calloc(1, sizeof(struct memory_packer_db));
 	GIT_ERROR_CHECK_ALLOC(db);
 
-	db->objects = git_oidmap_alloc();
+	if (git_oidmap_new(&db->objects) < 0)
+		return -1;
 
 	db->parent.version = GIT_ODB_BACKEND_VERSION;
 	db->parent.read = &impl__read;
