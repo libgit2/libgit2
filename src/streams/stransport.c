@@ -149,9 +149,8 @@ static OSStatus write_cb(SSLConnectionRef conn, const void *data, size_t *len)
 {
 	git_stream *io = (git_stream *) conn;
 
-	if (git_stream_write(io, data, *len, 0) < 0) {
+	if (git_stream__write_full(io, data, *len, 0) < 0)
 		return -36; /* "ioErr" from MacErrors.h which is not available on iOS */
-	}
 
 	return noErr;
 }
