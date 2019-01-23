@@ -645,13 +645,14 @@ static int openssl_set_proxy(git_stream *stream, const git_proxy_options *proxy_
 static ssize_t openssl_write(git_stream *stream, const char *data, size_t len, int flags)
 {
 	openssl_stream *st = (openssl_stream *) stream;
-	int ret;
+	int ret, data_len;
 
 	GIT_UNUSED(flags);
 
-	if ((ret = SSL_write(st->ssl, data, len)) <= 0) {
+	data_len = min(len, INT_MAX);
+
+	if ((ret = SSL_write(st->ssl, data, data_len)) <= 0)
 		return ssl_set_error(st->ssl, ret);
-	}
 
 	return ret;
 }
