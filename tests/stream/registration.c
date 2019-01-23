@@ -7,7 +7,7 @@
 static git_stream test_stream;
 static int ctor_called;
 
-void test_core_stream__cleanup(void)
+void test_stream_registration__cleanup(void)
 {
 	cl_git_pass(git_stream_register(GIT_STREAM_TLS | GIT_STREAM_STANDARD, NULL));
 }
@@ -34,7 +34,7 @@ static int test_stream_wrap(git_stream **out, git_stream *in, const char *host)
 	return 0;
 }
 
-void test_core_stream__register_insecure(void)
+void test_stream_registration__insecure(void)
 {
 	git_stream *stream;
 	git_stream_registration registration = {0};
@@ -60,7 +60,7 @@ void test_core_stream__register_insecure(void)
 	git_stream_free(stream);
 }
 
-void test_core_stream__register_tls(void)
+void test_stream_registration__tls(void)
 {
 	git_stream *stream;
 	git_stream_registration registration = {0};
@@ -96,7 +96,7 @@ void test_core_stream__register_tls(void)
 	git_stream_free(stream);
 }
 
-void test_core_stream__register_both(void)
+void test_stream_registration__both(void)
 {
 	git_stream *stream;
 	git_stream_registration registration = {0};
@@ -116,36 +116,4 @@ void test_core_stream__register_both(void)
 	cl_git_pass(git_socket_stream_new(&stream, "localhost", "80"));
 	cl_assert_equal_i(1, ctor_called);
 	cl_assert_equal_p(&test_stream, stream);
-}
-
-void test_core_stream__register_tls_deprecated(void)
-{
-	git_stream *stream;
-	int error;
-
-	ctor_called = 0;
-	cl_git_pass(git_stream_register_tls(test_stream_init));
-	cl_git_pass(git_tls_stream_new(&stream, "localhost", "443"));
-	cl_assert_equal_i(1, ctor_called);
-	cl_assert_equal_p(&test_stream, stream);
-
-	ctor_called = 0;
-	stream = NULL;
-	cl_git_pass(git_stream_register_tls(NULL));
-	error = git_tls_stream_new(&stream, "localhost", "443");
-
-	/*
-	 * We don't have TLS support enabled, or we're on Windows,
-	 * which has no arbitrary TLS stream support.
-	 */
-#if defined(GIT_WIN32) || !defined(GIT_HTTPS)
-	cl_git_fail_with(-1, error);
-#else
-	cl_git_pass(error);
-#endif
-
-	cl_assert_equal_i(0, ctor_called);
-	cl_assert(&test_stream != stream);
-
-	git_stream_free(stream);
 }
