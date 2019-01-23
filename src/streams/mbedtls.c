@@ -246,7 +246,7 @@ typedef struct {
 } mbedtls_stream;
 
 
-int mbedtls_connect(git_stream *stream)
+static int mbedtls_connect(git_stream *stream)
 {
 	int ret;
 	mbedtls_stream *st = (mbedtls_stream *) stream;
@@ -266,7 +266,7 @@ int mbedtls_connect(git_stream *stream)
 	return verify_server_cert(st->ssl);
 }
 
-int mbedtls_certificate(git_cert **out, git_stream *stream)
+static int mbedtls_certificate(git_cert **out, git_stream *stream)
 {
 	unsigned char *encoded_cert;
 	mbedtls_stream *st = (mbedtls_stream *) stream;
@@ -303,7 +303,7 @@ static int mbedtls_set_proxy(git_stream *stream, const git_proxy_options *proxy_
 	return git_stream_set_proxy(st->io, proxy_options);
 }
 
-ssize_t mbedtls_stream_write(git_stream *stream, const char *data, size_t len, int flags)
+static ssize_t mbedtls_stream_write(git_stream *stream, const char *data, size_t len, int flags)
 {
 	size_t read = 0;
 	mbedtls_stream *st = (mbedtls_stream *) stream;
@@ -321,7 +321,7 @@ ssize_t mbedtls_stream_write(git_stream *stream, const char *data, size_t len, i
 	return read;
 }
 
-ssize_t mbedtls_stream_read(git_stream *stream, void *data, size_t len)
+static ssize_t mbedtls_stream_read(git_stream *stream, void *data, size_t len)
 {
 	mbedtls_stream *st = (mbedtls_stream *) stream;
 	int ret;
@@ -332,7 +332,7 @@ ssize_t mbedtls_stream_read(git_stream *stream, void *data, size_t len)
 	return ret;
 }
 
-int mbedtls_stream_close(git_stream *stream)
+static int mbedtls_stream_close(git_stream *stream)
 {
 	mbedtls_stream *st = (mbedtls_stream *) stream;
 	int ret = 0;
@@ -345,7 +345,7 @@ int mbedtls_stream_close(git_stream *stream)
 	return st->owned ? git_stream_close(st->io) : 0;
 }
 
-void mbedtls_stream_free(git_stream *stream)
+static void mbedtls_stream_free(git_stream *stream)
 {
 	mbedtls_stream *st = (mbedtls_stream *) stream;
 
