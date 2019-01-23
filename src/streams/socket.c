@@ -132,22 +132,17 @@ static int socket_connect(git_stream *stream)
 
 static ssize_t socket_write(git_stream *stream, const char *data, size_t len, int flags)
 {
-	ssize_t ret;
-	size_t off = 0;
 	git_socket_stream *st = (git_socket_stream *) stream;
+	ssize_t written;
 
-	while (off < len) {
-		errno = 0;
-		ret = p_send(st->s, data + off, len - off, flags);
-		if (ret < 0) {
-			net_set_error("Error sending data");
-			return -1;
-		}
+	errno = 0;
 
-		off += ret;
+	if ((written = p_send(st->s, data, len, flags)) < 0) {
+		net_set_error("Error sending data");
+		return -1;
 	}
 
-	return off;
+	return written;
 }
 
 static ssize_t socket_read(git_stream *stream, void *data, size_t len)
