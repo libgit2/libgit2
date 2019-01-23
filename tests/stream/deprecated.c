@@ -1,3 +1,5 @@
+#undef GIT_DEPRECATE_HARD
+
 #include "clar_libgit2.h"
 #include "git2/sys/stream.h"
 #include "streams/tls.h"
