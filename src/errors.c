@@ -226,7 +226,7 @@ void giterr_clear(void)
 
 void giterr_set_str(int error_class, const char *string)
 {
-	return git_error_set_str(error_class, string);
+	git_error_set_str(error_class, string);
 }
 
 void giterr_set_oom(void)
