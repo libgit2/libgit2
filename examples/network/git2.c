@@ -1,12 +1,9 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-
 #include "../common.h"
-#include "common.h"
 
 /* This part is not strictly libgit2-dependent, but you can use this
  * as a starting point for a git-like tool */
+
+typedef int (*git_cb)(git_repository *, int , char **);
 
 struct {
 	char *name;

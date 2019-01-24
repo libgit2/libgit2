@@ -1,12 +1,4 @@
-#include "common.h"
-#include <git2.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#ifndef _WIN32
-# include <pthread.h>
-# include <unistd.h>
-#endif
+#include "../common.h"
 
 static int progress_cb(const char *str, int len, void *data)
 {

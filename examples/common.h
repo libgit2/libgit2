@@ -17,6 +17,17 @@
 #include <stdlib.h>
 #include <git2.h>
 
+#ifndef PRIuZ
+/* Define the printf format specifer to use for size_t output */
+#if defined(_MSC_VER) || defined(__MINGW32__)
+#	define PRIuZ "Iu"
+#else
+#	define PRIuZ "zu"
+#endif
+#endif
+
+#define UNUSED(x) (void)(x)
+
 /**
  * Check libgit2 error code, printing error to stderr on failure and
  * exiting the program.
@@ -122,3 +133,17 @@ extern void *xrealloc(void *oldp, size_t newsz);
  * Convert a refish to an annotated commit.
  */
 extern int resolve_refish(git_annotated_commit **commit, git_repository *repo, const char *refish);
+
+/**
+ * Acquire credentials via command line
+ */
+extern int cred_acquire_cb(git_cred **out,
+		const char *url,
+		const char *username_from_url,
+		unsigned int allowed_types,
+		void *payload);
+
+extern int ls_remote(git_repository *repo, int argc, char **argv);
+extern int fetch(git_repository *repo, int argc, char **argv);
+extern int index_pack(git_repository *repo, int argc, char **argv);
+extern int do_clone(git_repository *repo, int argc, char **argv);

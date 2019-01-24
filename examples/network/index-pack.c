@@ -1,7 +1,5 @@
-#include <git2.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#include "../common.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -17,7 +15,6 @@
 #else
 # include <unistd.h>
 #endif
-#include "common.h"
 
 /*
  * This could be run in the main loop whilst the application waits for
