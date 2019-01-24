@@ -26,7 +26,31 @@
 #endif
 #endif
 
+#define ARRAY_SIZE(x) (sizeof(x)/sizeof(*x))
 #define UNUSED(x) (void)(x)
+
+extern int lg2_add(git_repository *repo, int argc, char **argv);
+extern int lg2_blame(git_repository *repo, int argc, char **argv);
+extern int lg2_cat_file(git_repository *repo, int argc, char **argv);
+extern int lg2_checkout(git_repository *repo, int argc, char **argv);
+extern int lg2_clone(git_repository *repo, int argc, char **argv);
+extern int lg2_describe(git_repository *repo, int argc, char **argv);
+extern int lg2_diff(git_repository *repo, int argc, char **argv);
+extern int lg2_fetch(git_repository *repo, int argc, char **argv);
+extern int lg2_for_each_ref(git_repository *repo, int argc, char **argv);
+extern int lg2_general(git_repository *repo, int argc, char **argv);
+extern int lg2_index_pack(git_repository *repo, int argc, char **argv);
+extern int lg2_init(git_repository *repo, int argc, char **argv);
+extern int lg2_log(git_repository *repo, int argc, char **argv);
+extern int lg2_ls_files(git_repository *repo, int argc, char **argv);
+extern int lg2_ls_remote(git_repository *repo, int argc, char **argv);
+extern int lg2_merge(git_repository *repo, int argc, char **argv);
+extern int lg2_remote(git_repository *repo, int argc, char **argv);
+extern int lg2_rev_list(git_repository *repo, int argc, char **argv);
+extern int lg2_rev_parse(git_repository *repo, int argc, char **argv);
+extern int lg2_show_index(git_repository *repo, int argc, char **argv);
+extern int lg2_status(git_repository *repo, int argc, char **argv);
+extern int lg2_tag(git_repository *repo, int argc, char **argv);
 
 /**
  * Check libgit2 error code, printing error to stderr on failure and
@@ -142,8 +166,3 @@ extern int cred_acquire_cb(git_cred **out,
 		const char *username_from_url,
 		unsigned int allowed_types,
 		void *payload);
-
-extern int ls_remote(git_repository *repo, int argc, char **argv);
-extern int fetch(git_repository *repo, int argc, char **argv);
-extern int index_pack(git_repository *repo, int argc, char **argv);
-extern int do_clone(git_repository *repo, int argc, char **argv);

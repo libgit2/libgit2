@@ -16,26 +16,20 @@
 
 /** Forward declarations for helpers. */
 struct parse_state {
-	git_repository *repo;
 	const char *repodir;
 	const char *spec;
 	int not;
 };
 static void parse_opts(struct parse_state *ps, int argc, char *argv[]);
-static int parse_revision(struct parse_state *ps);
+static int parse_revision(git_repository *repo, struct parse_state *ps);
 
-
-int main(int argc, char *argv[])
+int lg2_rev_parse(git_repository *repo, int argc, char *argv[])
 {
 	struct parse_state ps = {0};
 
-	git_libgit2_init();
 	parse_opts(&ps, argc, argv);
 
-	check_lg2(parse_revision(&ps), "Parsing", NULL);
-
-	git_repository_free(ps.repo);
-	git_libgit2_shutdown();
+	check_lg2(parse_revision(repo, &ps), "Parsing", NULL);
 
 	return 0;
 }
@@ -68,19 +62,12 @@ static void parse_opts(struct parse_state *ps, int argc, char *argv[])
 	}
 }
 
-static int parse_revision(struct parse_state *ps)
+static int parse_revision(git_repository *repo, struct parse_state *ps)
 {
 	git_revspec rs;
 	char str[GIT_OID_HEXSZ + 1];
 
-	if (!ps->repo) {
-		if (!ps->repodir)
-			ps->repodir = ".";
-		check_lg2(git_repository_open_ext(&ps->repo, ps->repodir, 0, NULL),
-			"Could not open repository from", ps->repodir);
-	}
-
-	check_lg2(git_revparse(&rs, ps->repo, ps->spec), "Could not parse", ps->spec);
+	check_lg2(git_revparse(&rs, repo, ps->spec), "Could not parse", ps->spec);
 
 	if ((rs.flags & GIT_REVPARSE_SINGLE) != 0) {
 		git_oid_tostr(str, sizeof(str), git_object_id(rs.from));
@@ -94,7 +81,7 @@ static int parse_revision(struct parse_state *ps)
 
 		if ((rs.flags & GIT_REVPARSE_MERGE_BASE) != 0) {
 			git_oid base;
-			check_lg2(git_merge_base(&base, ps->repo,
+			check_lg2(git_merge_base(&base, repo,
 						git_object_id(rs.from), git_object_id(rs.to)),
 					"Could not find merge base", ps->spec);
 

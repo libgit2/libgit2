@@ -17,16 +17,12 @@
 
 static int revwalk_parseopts(git_repository *repo, git_revwalk *walk, int nopts, char **opts);
 
-int main (int argc, char **argv)
+int lg2_rev_list(git_repository *repo, int argc, char **argv)
 {
-	git_repository *repo;
 	git_revwalk *walk;
 	git_oid oid;
 	char buf[GIT_OID_HEXSZ+1];
 
-	git_libgit2_init();
-
-	check_lg2(git_repository_open_ext(&repo, ".", 0, NULL), "opening repository", NULL);
 	check_lg2(git_revwalk_new(&walk, repo), "allocating revwalk", NULL);
 	check_lg2(revwalk_parseopts(repo, walk, argc-1, argv+1), "parsing options", NULL);
 
@@ -36,7 +32,6 @@ int main (int argc, char **argv)
 		printf("%s\n", buf);
 	}
 
-	git_libgit2_shutdown();
 	return 0;
 }
 

@@ -48,23 +48,12 @@ static void parse_subcmd(
 	struct opts *opt, int argc, char **argv);
 static void usage(const char *msg, const char *arg);
 
-int main(int argc, char *argv[])
+int lg2_remote(git_repository *repo, int argc, char *argv[])
 {
 	int retval = 0;
 	struct opts opt = {0};
-	git_buf buf = GIT_BUF_INIT_CONST(NULL, 0);
-	git_repository *repo = NULL;
 
 	parse_subcmd(&opt, argc, argv);
-
-	git_libgit2_init();
-
-	check_lg2(git_repository_discover(&buf, ".", 0, NULL),
-		"Could not find repository", NULL);
-
-	check_lg2(git_repository_open(&repo, buf.ptr),
-		"Could not open repository", NULL);
-	git_buf_dispose(&buf);
 
 	switch (opt.cmd)
 	{
@@ -84,8 +73,6 @@ int main(int argc, char *argv[])
 		retval = cmd_show(repo, &opt);
 		break;
 	}
-
-	git_libgit2_shutdown();
 
 	return retval;
 }

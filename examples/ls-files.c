@@ -13,7 +13,6 @@
  */
 
 #include "common.h"
-#include "array.h"
 
 /**
  * This example demonstrates the libgit2 index APIs to roughly
@@ -111,20 +110,14 @@ static int print_paths(ls_options *opts, git_index *index)
 	return 0;
 }
 
-int main(int argc, char *argv[])
+int lg2_ls_files(git_repository *repo, int argc, char *argv[])
 {
-	ls_options opts;
-	git_repository *repo = NULL;
 	git_index *index = NULL;
+	ls_options opts;
 	int error;
 
 	if ((error = parse_options(&opts, argc, argv)) < 0)
 		return error;
-
-	git_libgit2_init();
-
-	if ((error = git_repository_open_ext(&repo, ".", 0, NULL)) < 0)
-		goto cleanup;
 
 	if ((error = git_repository_index(&index, repo)) < 0)
 		goto cleanup;
@@ -133,8 +126,6 @@ int main(int argc, char *argv[])
 
 cleanup:
 	git_index_free(index);
-	git_repository_free(repo);
-	git_libgit2_shutdown();
 
 	return error;
 }

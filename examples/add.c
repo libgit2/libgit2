@@ -31,22 +31,18 @@ static void parse_opts(int *options, int *count, int argc, char *argv[]);
 void init_array(git_strarray *array, int argc, char **argv);
 int print_matched_cb(const char *path, const char *matched_pathspec, void *payload);
 
-int main (int argc, char** argv)
+int lg2_add(git_repository *repo, int argc, char** argv)
 {
 	git_index_matched_path_cb matched_cb = NULL;
-	git_repository *repo = NULL;
 	git_index *index;
 	git_strarray array = {0};
 	int options = 0, count = 0;
 	struct print_payload payload = {0};
 
-	git_libgit2_init();
-
 	parse_opts(&options, &count, argc, argv);
 
 	init_array(&array, argc-count, argv+count);
 
-	check_lg2(git_repository_open(&repo, "."), "No git repository", NULL);
 	check_lg2(git_repository_index(&index, repo), "Could not open repository index", NULL);
 
 	if (options&VERBOSE || options&SKIP) {
@@ -64,9 +60,6 @@ int main (int argc, char** argv)
 
 	git_index_write(index);
 	git_index_free(index);
-	git_repository_free(repo);
-
-	git_libgit2_shutdown();
 
 	return 0;
 }

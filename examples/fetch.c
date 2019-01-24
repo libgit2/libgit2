@@ -1,4 +1,4 @@
-#include "../common.h"
+#include "common.h"
 
 static int progress_cb(const char *str, int len, void *data)
 {
@@ -54,7 +54,7 @@ static int transfer_progress_cb(const git_transfer_progress *stats, void *payloa
 }
 
 /** Entry point for this command */
-int fetch(git_repository *repo, int argc, char **argv)
+int lg2_fetch(git_repository *repo, int argc, char **argv)
 {
 	git_remote *remote = NULL;
 	const git_transfer_progress *stats;

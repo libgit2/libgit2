@@ -1,4 +1,4 @@
-#include "../common.h"
+#include "common.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -28,7 +28,7 @@ static int index_cb(const git_transfer_progress *stats, void *data)
 	return 0;
 }
 
-int index_pack(git_repository *repo, int argc, char **argv)
+int lg2_index_pack(git_repository *repo, int argc, char **argv)
 {
 	git_indexer *idx;
 	git_transfer_progress stats = {0, 0};
