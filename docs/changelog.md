@@ -71,6 +71,9 @@ v0.27 + 1
 * Revision walks are now more efficient when the output is unsorted;
   we now avoid walking all the way to the beginning of history unnecessarily.
 
+* Error-handling around index extension loading has been fixed. We were
+  previously always misreporting a truncated index (#4858).
+
 ### API additions
 
 * The index may now be iterated atomically using `git_index_iterator`.
