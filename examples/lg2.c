@@ -50,6 +50,17 @@ static int run_command(git_command_fn fn, git_repository *repo, struct args_info
 	return !!error;
 }
 
+static int usage(const char *prog)
+{
+	size_t i;
+
+	fprintf(stderr, "usage: %s <cmd>...\n\nAvailable commands:\n\n", prog);
+	for (i = 0; i < ARRAY_SIZE(commands); i++)
+		fprintf(stderr, "\t%s\n", commands[i].name);
+
+	exit(EXIT_FAILURE);
+}
+
 int main(int argc, char **argv)
 {
 	struct args_info args = ARGS_INFO_INIT;
@@ -58,10 +69,8 @@ int main(int argc, char **argv)
 	int return_code = 1;
 	size_t i;
 
-	if (argc < 2) {
-		fprintf(stderr, "usage: %s <cmd> [repo]\n", argv[0]);
-		exit(EXIT_FAILURE);
-	}
+	if (argc < 2)
+		usage(argv[0]);
 
 	git_libgit2_init();
 
@@ -78,6 +87,9 @@ int main(int argc, char **argv)
 			break;
 		}
 	}
+
+	if (args.pos == args.argc)
+		usage(argv[0]);
 
 	if (!git_dir)
 		git_dir = ".";
