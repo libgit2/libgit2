@@ -981,12 +981,12 @@ static int rebase_commit__create(
 	/* this error will be cleared by the signing process, but should be set
 	 * to signal the unsigned commit create process if we are not going to sign */
 	error = GIT_PASSTHROUGH;
-	if (rebase->options.signature_cb) {
+	if (rebase->options.signing_cb) {
 		if ((error = git_commit_create_buffer(&commit_content, rebase->repo, author, committer,
 				message_encoding, message, tree, 1, (const git_commit **)&parent_commit)) < 0)
 			goto done;
 
-		if ((error = rebase->options.signature_cb(&commit_signature, &signature_field,
+		if ((error = rebase->options.signing_cb(&commit_signature, &signature_field,
 				git_buf_cstr(&commit_content), rebase->options.payload)) < 0 &&
 				error != GIT_PASSTHROUGH)
 			goto done;

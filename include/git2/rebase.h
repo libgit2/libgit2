@@ -24,21 +24,6 @@
 GIT_BEGIN_DECL
 
 /**
- * Rebase commit signature callback.
- *
- * The callback will be called with the commit content, giving a user an
- * opportunity to sign the commit content in a rebase. The signature_field
- * buf may be left empty to specify the default field.
- *
- * When the callback:
- * - returns GIT_PASSTHROUGH, no signature will be added to the commit.
- * - returns < 0, git_rebase_commit will be aborted.
- * - returns GIT_OK, the signature parameter is expected to be filled.
- */
-typedef int (*git_rebase_commit_signature_cb)(
-	git_buf *signature, git_buf *signature_field, const char *commit_content, void *payload);
-
-/**
  * Rebase options
  *
  * Use to tell the rebase machinery how to operate.
@@ -95,7 +80,7 @@ typedef struct {
 	 * without a signature.
 	 * This field is only used when performing git_rebase_commit.
 	 */
-	git_rebase_commit_signature_cb signature_cb;
+	git_commit_signing_cb signing_cb;
 
 	/**
 	 * This will be passed to each of the callbacks in this struct

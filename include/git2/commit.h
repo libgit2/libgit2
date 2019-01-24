@@ -501,6 +501,21 @@ GIT_EXTERN(int) git_commit_create_with_signature(
  */
 GIT_EXTERN(int) git_commit_dup(git_commit **out, git_commit *source);
 
+/**
+ * Commit signing callback.
+ *
+ * The callback will be called with the commit content, giving a user an
+ * opportunity to sign the commit content. The signature_field
+ * buf may be left empty to specify the default field.
+ *
+ * When the callback:
+ * - returns GIT_PASSTHROUGH, no signature will be added to the commit.
+ * - returns < 0, commit creation will be aborted.
+ * - returns GIT_OK, the signature parameter is expected to be filled.
+ */
+typedef int (*git_commit_signing_cb)(
+	git_buf *signature, git_buf *signature_field, const char *commit_content, void *payload);
+
 /** @} */
 GIT_END_DECL
 #endif

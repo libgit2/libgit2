@@ -25,7 +25,7 @@ committer Rebaser <rebaser@rebaser.rb> 1405694510 +0000\n\
 \n\
 Modification 3 to gravy\n";
 
-int signature_cb_passthrough(
+int signing_cb_passthrough(
 	git_buf *signature,
 	git_buf *signature_field,
 	const char *commit_content,
@@ -39,7 +39,7 @@ int signature_cb_passthrough(
 }
 
 /* git checkout gravy ; git rebase --merge veal */
-void test_rebase_sign__passthrough_signature_cb(void)
+void test_rebase_sign__passthrough_signing_cb(void)
 {
 	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
@@ -54,7 +54,7 @@ parent f87d14a4a236582a0278a916340a793714256864\n\
 author Edward Thomson <ethomson@edwardthomson.com> 1405625055 -0400\n\
 committer Rebaser <rebaser@rebaser.rb> 1405694510 +0000\n";
 
-	rebase_opts.signature_cb = signature_cb_passthrough;
+	rebase_opts.signing_cb = signing_cb_passthrough;
 
 	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/gravy"));
 	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/veal"));
@@ -84,7 +84,7 @@ committer Rebaser <rebaser@rebaser.rb> 1405694510 +0000\n";
 	git_rebase_free(rebase);
 }
 
-int signature_cb_gpg(
+int signing_cb_gpg(
 	git_buf *signature,
 	git_buf *signature_field,
 	const char *commit_content,
@@ -148,7 +148,7 @@ gpgsig -----BEGIN PGP SIGNATURE-----\n\
  =KbsY\n\
  -----END PGP SIGNATURE-----\n";
 
-	rebase_opts.signature_cb = signature_cb_gpg;
+	rebase_opts.signing_cb = signing_cb_gpg;
 
 	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/gravy"));
 	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/veal"));
@@ -179,14 +179,14 @@ gpgsig -----BEGIN PGP SIGNATURE-----\n\
 }
 
 
-int signature_cb_magic_field(
+int signing_cb_magic_field(
 	git_buf *signature,
 	git_buf *signature_field,
 	const char *commit_content,
 	void *payload)
 {
 	const char *signature_content = "magic word: pretty please";
-	const char * signature_field_content = "magicsig";
+	const char *signature_field_content = "magicsig";
 
 	cl_assert_equal_b(false, git_buf_is_allocated(signature));
 	cl_assert_equal_b(false, git_buf_is_allocated(signature_field));
@@ -218,7 +218,7 @@ author Edward Thomson <ethomson@edwardthomson.com> 1405625055 -0400\n\
 committer Rebaser <rebaser@rebaser.rb> 1405694510 +0000\n\
 magicsig magic word: pretty please\n";
 
-	rebase_opts.signature_cb = signature_cb_magic_field;
+	rebase_opts.signing_cb = signing_cb_magic_field;
 
 	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/gravy"));
 	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/veal"));
