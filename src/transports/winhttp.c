@@ -719,7 +719,7 @@ static void CALLBACK winhttp_status(
 	else if ((status & WINHTTP_CALLBACK_STATUS_FLAG_SECURITY_CHANNEL_ERROR))
 		git_error_set(GIT_ERROR_NET, "security libraries could not be loaded");
 	else
-		git_error_set(GITERR_NET, "unknown security error %lu", status);
+		git_error_set(GIT_ERROR_NET, "unknown security error %lu", status);
 }
 
 static int winhttp_connect(
@@ -1142,7 +1142,7 @@ replay:
 		}
 
 		if (HTTP_STATUS_OK != status_code) {
-			git_error_set(GITERR_NET, "request failed with status code: %lu", status_code);
+			git_error_set(GIT_ERROR_NET, "request failed with status code: %lu", status_code);
 			return -1;
 		}
 
