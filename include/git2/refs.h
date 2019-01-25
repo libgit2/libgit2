@@ -21,12 +21,6 @@
  */
 GIT_BEGIN_DECL
 
-/** @name Reference Functions
- *
- * These functions read, write and analyze references.
- */
-/**@{*/
-
 /**
  * Lookup a reference by name in a repository.
  *
@@ -748,35 +742,6 @@ GIT_EXTERN(int) git_reference_is_valid_name(const char *refname);
  * @return the human-readable version of the name
  */
 GIT_EXTERN(const char *) git_reference_shorthand(const git_reference *ref);
-
-/**@}*/
-
-/** @name Deprecated Reference Constants
- *
- * These enumeration values are retained for backward compatibility.  The
- * newer versions of these functions should be preferred in all new code.
- */
-/**@{*/
-
- /** Basic type of any Git reference. */
-#define git_ref_t git_reference_t
-#define git_reference_normalize_t git_reference_format_t
-
-GIT_DEPRECATED(static const git_ref_t) GIT_REF_INVALID = GIT_REFERENCE_INVALID;
-GIT_DEPRECATED(static const git_ref_t) GIT_REF_OID = GIT_REFERENCE_DIRECT;
-GIT_DEPRECATED(static const git_ref_t) GIT_REF_SYMBOLIC = GIT_REFERENCE_SYMBOLIC;
-GIT_DEPRECATED(static const git_ref_t) GIT_REF_LISTALL = GIT_REFERENCE_ALL;
-
-GIT_DEPRECATED(static const git_reference_normalize_t) GIT_REF_FORMAT_NORMAL =
-	GIT_REFERENCE_FORMAT_NORMAL;
-GIT_DEPRECATED(static const git_reference_normalize_t) GIT_REF_FORMAT_ALLOW_ONELEVEL =
-	GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL;
-GIT_DEPRECATED(static const git_reference_normalize_t) GIT_REF_FORMAT_REFSPEC_PATTERN =
-	GIT_REFERENCE_FORMAT_REFSPEC_PATTERN;
-GIT_DEPRECATED(static const git_reference_normalize_t) GIT_REF_FORMAT_REFSPEC_SHORTHAND =
-	GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND;
-
-/**@}*/
 
 /** @} */
 GIT_END_DECL

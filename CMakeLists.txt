@@ -105,6 +105,9 @@ SET(LIBGIT2_VERSION_STRING "${LIBGIT2_VERSION_MAJOR}.${LIBGIT2_VERSION_MINOR}.${
 FILE(STRINGS "${libgit2_SOURCE_DIR}/include/git2/version.h" GIT2_HEADER_SOVERSION REGEX "^#define LIBGIT2_SOVERSION [0-9]+$")
 STRING(REGEX REPLACE "^.*LIBGIT2_SOVERSION ([0-9]+)$" "\\1" LIBGIT2_SOVERSION "${GIT2_HEADER_SOVERSION}")
 
+# Ensure that we do not use deprecated functions internally
+ADD_DEFINITIONS(-DGIT_DEPRECATE_HARD)
+
 # Platform specific compilation flags
 IF (MSVC)
 	IF (STDCALL)
@@ -228,7 +231,6 @@ ELSE ()
 	ENABLE_WARNINGS(format-security)
 	ENABLE_WARNINGS(int-conversion)
 	DISABLE_WARNINGS(documentation-deprecated-sync)
-
 
 	IF (PROFILE)
 		SET(CMAKE_C_FLAGS "-pg ${CMAKE_C_FLAGS}")

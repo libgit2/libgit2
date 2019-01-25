@@ -98,13 +98,16 @@ typedef enum {
 GIT_EXTERN(int) git_stream_register(
 	git_stream_t type, git_stream_registration *registration);
 
+#ifndef GIT_DEPRECATE_HARD
+
 /** @name Deprecated TLS Stream Registration Functions
  *
- * These typedefs and functions are retained for backward compatibility.
- * The newer versions of these functions and structures should be preferred
- * in all new code.
+ * These functions are retained for backward compatibility.  The newer
+ * versions of these values should be preferred in all new code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
  */
-
 /**@{*/
 
 /**
@@ -115,14 +118,20 @@ typedef int GIT_CALLBACK(git_stream_cb)(git_stream **out, const char *host, cons
 
 /**
  * Register a TLS stream constructor for the library to use.  This stream
- * will not support HTTP CONNECT proxies.
+ * will not support HTTP CONNECT proxies.  This internally calls
+ * `git_stream_register` and is preserved for backward compatibility.
+ *
+ * This function is deprecated, but there is no plan to remove this
+ * function at this time.
  *
  * @deprecated Provide a git_stream_registration to git_stream_register
  * @see git_stream_register
  */
 GIT_EXTERN(int) git_stream_register_tls(git_stream_cb ctor);
 
- /**@}*/
+/**@}*/
+
+#endif
 
 GIT_END_DECL
 

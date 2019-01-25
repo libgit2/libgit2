@@ -165,12 +165,6 @@ typedef enum {
 	GIT_INDEX_STAGE_THEIRS = 3,
 } git_index_stage_t;
 
-/** @name Index File Functions
- *
- * These functions work on the index file itself.
- */
-/**@{*/
-
 /**
  * Create a new bare Git index object as a memory representation
  * of the Git index file in 'index_path', without a repository
@@ -833,51 +827,6 @@ GIT_EXTERN(int) git_index_conflict_next(
  */
 GIT_EXTERN(void) git_index_conflict_iterator_free(
 	git_index_conflict_iterator *iterator);
-
-/**@}*/
-
-/** @name Deprecated Index Structures
- *
- * These macros, structures and enumerations are retained for backward
- * compatibility.  The newer versions of these functions and structures
- * should be preferred in all new code.
- */
-/**@{*/
-
-#define GIT_IDXENTRY_NAMEMASK          GIT_INDEX_ENTRY_NAMEMASK
-#define GIT_IDXENTRY_STAGEMASK         GIT_INDEX_ENTRY_STAGEMASK
-#define GIT_IDXENTRY_STAGESHIFT        GIT_INDEX_ENTRY_STAGESHIFT
-
-/* The git_indxentry_flag_t enum */
-#define GIT_IDXENTRY_EXTENDED          GIT_INDEX_ENTRY_EXTENDED
-#define GIT_IDXENTRY_VALID             GIT_INDEX_ENTRY_VALID
-
-#define GIT_IDXENTRY_STAGE(E)          GIT_INDEX_ENTRY_STAGE(E)
-#define GIT_IDXENTRY_STAGE_SET(E,S)    GIT_INDEX_ENTRY_STAGE_SET(E,S)
-
-/* The git_idxentry_extended_flag_t enum */
-#define GIT_IDXENTRY_INTENT_TO_ADD     GIT_INDEX_ENTRY_INTENT_TO_ADD
-#define GIT_IDXENTRY_SKIP_WORKTREE     GIT_INDEX_ENTRY_SKIP_WORKTREE
-#define GIT_IDXENTRY_EXTENDED_FLAGS    (GIT_INDEX_ENTRY_INTENT_TO_ADD | GIT_INDEX_ENTRY_SKIP_WORKTREE)
-#define GIT_IDXENTRY_EXTENDED2         (1 << 15)
-#define GIT_IDXENTRY_UPDATE            (1 << 0)
-#define GIT_IDXENTRY_REMOVE            (1 << 1)
-#define GIT_IDXENTRY_UPTODATE          (1 << 2)
-#define GIT_IDXENTRY_ADDED             (1 << 3)
-#define GIT_IDXENTRY_HASHED            (1 << 4)
-#define GIT_IDXENTRY_UNHASHED          (1 << 5)
-#define GIT_IDXENTRY_WT_REMOVE         (1 << 6)
-#define GIT_IDXENTRY_CONFLICTED        (1 << 7)
-#define GIT_IDXENTRY_UNPACKED          (1 << 8)
-#define GIT_IDXENTRY_NEW_SKIP_WORKTREE (1 << 9)
-
-/* The git_index_capability_t enum */
-#define GIT_INDEXCAP_IGNORE_CASE       GIT_INDEX_CAPABILITY_IGNORE_CASE
-#define GIT_INDEXCAP_NO_FILEMODE       GIT_INDEX_CAPABILITY_NO_FILEMODE
-#define GIT_INDEXCAP_NO_SYMLINKS       GIT_INDEX_CAPABILITY_NO_SYMLINKS
-#define GIT_INDEXCAP_FROM_OWNER        GIT_INDEX_CAPABILITY_FROM_OWNER
-
-/**@}*/
 
 /** @} */
 GIT_END_DECL

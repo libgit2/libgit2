@@ -112,22 +112,30 @@ v0.27 + 1
 
 ### API removals
 
-### Breaking API changes
-
 * The `git_buf_free` API is deprecated; it has been renamed to
   `git_buf_dispose` for consistency.  The `git_buf_free` API will be
-  removed in a future release.
+  retained for backward compatibility for the foreseeable future.
 
 * The `git_otype` enumeration and its members are deprecated and have
   been renamed for consistency.  The `GIT_OBJ_` enumeration values are
-  now prefixed with `GIT_OBJECT_`.  The `git_otype` enumeration will
-  be removed in a future release.
+  now prefixed with `GIT_OBJECT_`.  The old enumerations and macros
+  will be retained for backward compatibility for the foreseeable future.
 
 * Several index-related APIs have been renamed for consistency.  The
   `GIT_IDXENTRY_` enumeration values and macros have been renamed to
   be prefixed with `GIT_INDEX_ENTRY_`.  The `GIT_INDEXCAP` enumeration
   values are now prefixed with `GIT_INDEX_CAPABILITY_`.  The old
-  enumerations and macros will be removed in a future release.
+  enumerations and macros will be retained for backward compatibility
+  for the foreseeable future.
+
+* The error functions and enumeration values have been renamed for
+  consistency.  The `giterr_` functions and values prefix have been
+  renamed to be prefixed with `git_error_`; similarly, the `GITERR_`
+  constants have been renamed to be prefixed with `GIT_ERROR_`.
+  The old enumerations and macros will be retained for backward
+  compatibility for the foreseeable future.
+
+### Breaking API changes
 
 * The default checkout strategy changed from `DRY_RUN` to `SAFE` (#4531).
 
