@@ -138,7 +138,7 @@ struct reuc_entry_internal {
 bool git_index__enforce_unsaved_safety = false;
 
 /* local declarations */
-static size_t read_extension(git_index *index, const char *buffer, size_t buffer_size);
+static int read_extension(size_t *read_len, git_index *index, const char *buffer, size_t buffer_size);
 static int read_header(struct index_header *dest, const void *buffer);
 
 static int parse_index(git_index *index, const char *buffer, size_t buffer_size);
@@ -2526,7 +2526,7 @@ static int read_header(struct index_header *dest, const void *buffer)
 	return 0;
 }
 
-static size_t read_extension(git_index *index, const char *buffer, size_t buffer_size)
+static int read_extension(size_t *read_len, git_index *index, const char *buffer, size_t buffer_size)
 {
 	struct index_extension dest;
 	size_t total_size;
@@ -2539,31 +2539,36 @@ static size_t read_extension(git_index *index, const char *buffer, size_t buffer
 
 	if (dest.extension_size > total_size ||
 		buffer_size < total_size ||
-		buffer_size - total_size < INDEX_FOOTER_SIZE)
-		return 0;
+		buffer_size - total_size < INDEX_FOOTER_SIZE) {
+		index_error_invalid("extension is truncated");
+		return -1;
+	}
 
 	/* optional extension */
 	if (dest.signature[0] >= 'A' && dest.signature[0] <= 'Z') {
 		/* tree cache */
 		if (memcmp(dest.signature, INDEX_EXT_TREECACHE_SIG, 4) == 0) {
 			if (git_tree_cache_read(&index->tree, buffer + 8, dest.extension_size, &index->tree_pool) < 0)
-				return 0;
+				return -1;
 		} else if (memcmp(dest.signature, INDEX_EXT_UNMERGED_SIG, 4) == 0) {
 			if (read_reuc(index, buffer + 8, dest.extension_size) < 0)
-				return 0;
+				return -1;
 		} else if (memcmp(dest.signature, INDEX_EXT_CONFLICT_NAME_SIG, 4) == 0) {
 			if (read_conflict_names(index, buffer + 8, dest.extension_size) < 0)
-				return 0;
+				return -1;
 		}
 		/* else, unsupported extension. We cannot parse this, but we can skip
 		 * it by returning `total_size */
 	} else {
 		/* we cannot handle non-ignorable extensions;
 		 * in fact they aren't even defined in the standard */
-		return 0;
+		git_error_set(GIT_ERROR_INDEX, "unsupported mandatory extension: '%.4s'", dest.signature);
+		return -1;
 	}
 
-	return total_size;
+	*read_len = total_size;
+
+	return 0;
 }
 
 static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
@@ -2645,11 +2650,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	while (buffer_size > INDEX_FOOTER_SIZE) {
 		size_t extension_size;
 
-		extension_size = read_extension(index, buffer, buffer_size);
-
-		/* see if we have read any bytes from the extension */
-		if (extension_size == 0) {
-			error = index_error_invalid("extension is truncated");
+		if ((error = read_extension(&extension_size, index, buffer, buffer_size)) < 0) {
 			goto done;
 		}
 
