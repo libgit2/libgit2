@@ -38,7 +38,7 @@ static void net_set_error(const char *str)
 		git_error_set(GIT_ERROR_NET, "%s: %s", str, win32_error);
 		git__free(win32_error);
 	} else {
-		git_error_set(GITERR_NET, "%s", str);
+		git_error_set(GIT_ERROR_NET, "%s", str);
 	}
 }
 #else
