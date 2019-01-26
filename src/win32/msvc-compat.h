@@ -12,6 +12,12 @@
 typedef unsigned short mode_t;
 typedef SSIZE_T ssize_t;
 
+#ifdef _WIN64
+# define SSIZE_MAX _I64_MAX
+#else
+# define SSIZE_MAX LONG_MAX
+#endif
+
 #define strcasecmp(s1, s2) _stricmp(s1, s2)
 #define strncasecmp(s1, s2, c) _strnicmp(s1, s2, c)
 

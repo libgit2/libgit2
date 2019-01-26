@@ -366,7 +366,7 @@ static int find_unique_abbrev_size(
 	int *out,
 	git_repository *repo,
 	const git_oid *oid_in,
-	int abbreviated_size)
+	unsigned int abbreviated_size)
 {
 	size_t size = abbreviated_size;
 	git_odb *odb;
@@ -401,7 +401,7 @@ static int show_suffix(
 	int depth,
 	git_repository *repo,
 	const git_oid* id,
-	size_t abbrev_size)
+	unsigned int abbrev_size)
 {
 	int error, size = 0;
 

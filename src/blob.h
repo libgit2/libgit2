@@ -27,6 +27,14 @@ struct git_blob {
 	unsigned int raw:1;
 };
 
+#define GIT_ERROR_CHECK_BLOBSIZE(n) \
+	do { \
+		if (!git__is_sizet(n)) { \
+			git_error_set(GIT_ERROR_NOMEMORY, "blob contents too large to fit in memory"); \
+			return -1; \
+		} \
+	} while(0)
+
 void git_blob__free(void *blob);
 int git_blob__parse(void *blob, git_odb_object *obj);
 int git_blob__parse_raw(void *blob, const char *data, size_t size);

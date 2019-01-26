@@ -1485,8 +1485,15 @@ static void filesystem_iterator_set_current(
 	filesystem_iterator *iter,
 	filesystem_iterator_entry *entry)
 {
-	iter->entry.ctime.seconds = entry->st.st_ctime;
-	iter->entry.mtime.seconds = entry->st.st_mtime;
+	/*
+	 * Index entries are limited to 32 bit timestamps.  We can safely
+	 * cast this since workdir times are only used in the cache; any
+	 * mismatch will cause a hash recomputation which is unfortunate
+	 * but affects only people who set their filetimes to 2038.
+	 * (Same with the file size.)
+	 */
+	iter->entry.ctime.seconds = (int32_t)entry->st.st_ctime;
+	iter->entry.mtime.seconds = (int32_t)entry->st.st_mtime;
 
 #if defined(GIT_USE_NSEC)
 	iter->entry.ctime.nanoseconds = entry->st.st_ctime_nsec;
@@ -1501,7 +1508,7 @@ static void filesystem_iterator_set_current(
 	iter->entry.mode = git_futils_canonical_mode(entry->st.st_mode);
 	iter->entry.uid = entry->st.st_uid;
 	iter->entry.gid = entry->st.st_gid;
-	iter->entry.file_size = entry->st.st_size;
+	iter->entry.file_size = (uint32_t)entry->st.st_size;
 
 	if (iter->base.flags & GIT_ITERATOR_INCLUDE_HASH)
 		git_oid_cpy(&iter->entry.id, &entry->id);

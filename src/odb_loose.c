@@ -183,7 +183,7 @@ static int parse_header(
 		return -1;
 	}
 
-	out->size = size;
+	out->size = (size_t)size;
 
 	if (GIT_ADD_SIZET_OVERFLOW(out_len, i, 1))
 		goto on_error;

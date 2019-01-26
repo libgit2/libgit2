@@ -15,6 +15,7 @@
 #include "delta.h"
 #include "filter.h"
 #include "repository.h"
+#include "blob.h"
 
 #include "git2/odb_backend.h"
 #include "git2/oid.h"
@@ -387,18 +388,17 @@ static void fake_wstream__free(git_odb_stream *_stream)
 static int init_fake_wstream(git_odb_stream **stream_p, git_odb_backend *backend, git_off_t size, git_object_t type)
 {
 	fake_wstream *stream;
+	size_t blobsize;
 
-	if (!git__is_ssizet(size)) {
-		git_error_set(GIT_ERROR_ODB, "object size too large to keep in memory");
-		return -1;
-	}
+	GIT_ERROR_CHECK_BLOBSIZE(size);
+	blobsize = (size_t)size;
 
 	stream = git__calloc(1, sizeof(fake_wstream));
 	GIT_ERROR_CHECK_ALLOC(stream);
 
-	stream->size = size;
+	stream->size = blobsize;
 	stream->type = type;
-	stream->buffer = git__malloc(size);
+	stream->buffer = git__malloc(blobsize);
 	if (stream->buffer == NULL) {
 		git__free(stream);
 		return -1;

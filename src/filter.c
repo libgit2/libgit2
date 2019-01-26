@@ -974,7 +974,7 @@ int git_filter_list_stream_file(
 	}
 
 	if (readlen < 0)
-		error = readlen;
+		error = -1;
 
 done:
 	if (initialized)

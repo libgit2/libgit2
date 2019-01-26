@@ -130,10 +130,9 @@ int socket_connect(git_stream *stream)
 	return 0;
 }
 
-ssize_t socket_write(git_stream *stream, const char *data, size_t len, int flags)
+ssize_t socket_write(git_stream *stream, const char *data, size_t data_len, int flags)
 {
-	ssize_t ret;
-	size_t off = 0;
+	ssize_t ret, off = 0, len = min(data_len, SSIZE_MAX);
 	git_socket_stream *st = (git_socket_stream *) stream;
 
 	while (off < len) {

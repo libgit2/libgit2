@@ -126,8 +126,8 @@ static void setup_race(void)
 	cl_assert(entry = (git_index_entry *)git_index_get_bypath(index, "A", 0));
 
 	/* force a race */
-	entry->mtime.seconds = st.st_mtime;
-	entry->mtime.nanoseconds = st.st_mtime_nsec;
+	entry->mtime.seconds = (int32_t)st.st_mtime;
+	entry->mtime.nanoseconds = (int32_t)st.st_mtime_nsec;
 
 	git_buf_dispose(&path);
 }

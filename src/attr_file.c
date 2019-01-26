@@ -12,6 +12,7 @@
 #include "attrcache.h"
 #include "git2/blob.h"
 #include "git2/tree.h"
+#include "blob.h"
 #include "index.h"
 #include <ctype.h>
 
@@ -119,6 +120,7 @@ int git_attr_file__load(
 		break;
 	case GIT_ATTR_FILE__FROM_INDEX: {
 		git_oid id;
+		git_off_t blobsize;
 
 		if ((error = attr_file_oid_from_index(&id, repo, entry->path)) < 0 ||
 			(error = git_blob_lookup(&blob, repo, &id)) < 0)
@@ -126,7 +128,10 @@ int git_attr_file__load(
 
 		/* Do not assume that data straight from the ODB is NULL-terminated;
 		 * copy the contents of a file to a buffer to work on */
-		git_buf_put(&content, git_blob_rawcontent(blob), git_blob_rawsize(blob));
+		blobsize = git_blob_rawsize(blob);
+
+		GIT_ERROR_CHECK_BLOBSIZE(blobsize);
+		git_buf_put(&content, git_blob_rawcontent(blob), (size_t)blobsize);
 		break;
 	}
 	case GIT_ATTR_FILE__FROM_FILE: {

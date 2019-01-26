@@ -2475,7 +2475,7 @@ static int read_entry(
 		if (varint_len == 0 || last_len < strip_len)
 			return index_error_invalid("incorrect prefix length");
 
-		prefix_len = last_len - strip_len;
+		prefix_len = last_len - (size_t)strip_len;
 		suffix_len = strlen(path_ptr + varint_len);
 
 		GIT_ERROR_CHECK_ALLOC_ADD(&path_len, prefix_len, suffix_len);

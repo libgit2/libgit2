@@ -75,14 +75,17 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 
 static int send_command(git_proto_stream *s)
 {
-	int error;
 	git_buf request = GIT_BUF_INIT;
+	size_t write_size;
+	int error;
 
 	error = gen_proto(&request, s->cmd, s->url);
 	if (error < 0)
 		goto cleanup;
 
-	error = git_stream_write(s->io, request.ptr, request.size, 0);
+	write_size = min(request.size, INT_MAX);
+	error = (int)git_stream_write(s->io, request.ptr, write_size, 0);
+
 	if (error >= 0)
 		s->sent_command = 1;
 
@@ -119,15 +122,16 @@ static int git_proto_stream_read(
 static int git_proto_stream_write(
 	git_smart_subtransport_stream *stream,
 	const char *buffer,
-	size_t len)
+	size_t buffer_len)
 {
-	int error;
 	git_proto_stream *s = (git_proto_stream *)stream;
+	size_t len = min(buffer_len, INT_MAX);
+	int error;
 
 	if (!s->sent_command && (error = send_command(s)) < 0)
 		return error;
 
-	return git_stream_write(s->io, buffer, len, 0);
+	return (int)git_stream_write(s->io, buffer, len, 0);
 }
 
 static void git_proto_stream_free(git_smart_subtransport_stream *stream)

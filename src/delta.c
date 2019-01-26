@@ -138,7 +138,7 @@ static int lookup_index_alloc(
 	*out = git__malloc(index_len);
 	GIT_ERROR_CHECK_ALLOC(*out);
 
-	*out_len = index_len;
+	*out_len = (unsigned long)index_len;
 	return 0;
 }
 
@@ -286,6 +286,13 @@ int git_delta_create_from_index(
 	if (!trg_buf || !trg_size)
 		return 0;
 
+	if (index->src_size > UINT_MAX ||
+	    trg_size > UINT_MAX ||
+	    max_size > (UINT_MAX - MAX_OP_SIZE - 1)) {
+		git_error_set(GIT_ERROR_INVALID, "buffer sizes too large for delta processing");
+		return -1;
+	}
+
 	bufpos = 0;
 	bufsize = 8192;
 	if (max_size && bufsize >= max_size)
@@ -294,7 +301,7 @@ int git_delta_create_from_index(
 	GIT_ERROR_CHECK_ALLOC(buf);
 
 	/* store reference buffer size */
-	i = index->src_size;
+	i = (unsigned int)index->src_size;
 	while (i >= 0x80) {
 		buf[bufpos++] = i | 0x80;
 		i >>= 7;
@@ -302,7 +309,7 @@ int git_delta_create_from_index(
 	buf[bufpos++] = i;
 
 	/* store target buffer size */
-	i = trg_size;
+	i = (unsigned int)trg_size;
 	while (i >= 0x80) {
 		buf[bufpos++] = i | 0x80;
 		i >>= 7;
@@ -423,7 +430,7 @@ int git_delta_create_from_index(
 			void *tmp = buf;
 			bufsize = bufsize * 3 / 2;
 			if (max_size && bufsize >= max_size)
-				bufsize = max_size + MAX_OP_SIZE + 1;
+				bufsize = (unsigned int)(max_size + MAX_OP_SIZE + 1);
 			if (max_size && bufpos > max_size)
 				break;
 			buf = git__realloc(buf, bufsize);

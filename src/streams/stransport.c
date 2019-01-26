@@ -164,11 +164,12 @@ static ssize_t stransport_write(git_stream *stream, const char *data, size_t len
 
 	GIT_UNUSED(flags);
 
-	data_len = len;
+	data_len = min(len, SSIZE_MAX);
 	if ((ret = SSLWrite(st->ctx, data, data_len, &processed)) != noErr)
 		return stransport_error(ret);
 
-	return processed;
+	assert(processed < SSIZE_MAX);
+	return (ssize_t)processed;
 }
 
 /*

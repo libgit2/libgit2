@@ -282,7 +282,7 @@ static int parse_header_percent(uint16_t *out, git_patch_parse_ctx *ctx)
 	if (val < 0 || val > 100)
 		return -1;
 
-	*out = val;
+	*out = (uint16_t)val;
 	return 0;
 }
 

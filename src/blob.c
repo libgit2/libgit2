@@ -36,10 +36,10 @@ git_off_t git_blob_rawsize(const git_blob *blob)
 
 int git_blob__getbuf(git_buf *buffer, git_blob *blob)
 {
-	return git_buf_set(
-		buffer,
-		git_blob_rawcontent(blob),
-		git_blob_rawsize(blob));
+	git_off_t size = git_blob_rawsize(blob);
+
+	GIT_ERROR_CHECK_BLOBSIZE(size);
+	return git_buf_set(buffer, git_blob_rawcontent(blob), (size_t)size);
 }
 
 void git_blob__free(void *_blob)
@@ -389,12 +389,14 @@ cleanup:
 int git_blob_is_binary(const git_blob *blob)
 {
 	git_buf content = GIT_BUF_INIT;
+	git_off_t size;
 
 	assert(blob);
 
+	size = git_blob_rawsize(blob);
+
 	git_buf_attach_notowned(&content, git_blob_rawcontent(blob),
-		min(git_blob_rawsize(blob),
-		GIT_FILTER_BYTES_TO_CHECK_NUL));
+		(size_t)min(size, GIT_FILTER_BYTES_TO_CHECK_NUL));
 	return git_buf_text_is_binary(&content);
 }
 
