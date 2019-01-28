@@ -186,22 +186,3 @@ jobs:
        CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
        RUN_INVASIVE_TESTS=true
        SKIP_PROXY_TESTS=true
-
-- job: coverity
-  displayName: 'Coverity'
-  pool:
-    vmImage: 'Ubuntu 16.04'
-  steps:
-  - task: Docker@0
-    displayName: Build
-    inputs:
-      action: 'Run an image'
-      imageName: 'libgit2/trusty-openssl:latest'
-      volumes: |
-       $(Build.SourcesDirectory):/src
-       $(Build.BinariesDirectory):/build
-      envVars: |
-       COVERITY_TOKEN=$(COVERITY_TOKEN)
-      workDir: '/build'
-      containerCommand: '/src/ci/coverity.sh'
-      detached: false
