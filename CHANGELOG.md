@@ -1,7 +1,7 @@
 v0.27.8
 -------
 
-This is a bugfix release with the following change:
+This is a bugfix release with the following changes:
 
 - Negative gitignore rules should match git's behavior.  For example,
   given a gitignore rule of `*.test` and a second gitignore rule of
