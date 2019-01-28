@@ -83,34 +83,54 @@ int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const cha
 	/*
 	 * White space
 	 */
-	while (git__isspace(*p))
-		p++;
+	while (nptr_len && git__isspace(*p))
+		p++, nptr_len--;
+
+	if (!nptr_len)
+		goto Return;
 
 	/*
 	 * Sign
 	 */
-	if (*p == '-' || *p == '+')
-		if (*p++ == '-')
+	if (*p == '-' || *p == '+') {
+		if (*p == '-')
 			neg = 1;
+		p++;
+		nptr_len--;
+	}
+
+	if (!nptr_len)
+		goto Return;
 
 	/*
-	 * Base
+	 * Automatically detect the base if none was given to us.
+	 * Right now, we assume that a number starting with '0x'
+	 * is hexadecimal and a number starting with '0' is
+	 * octal.
 	 */
 	if (base == 0) {
 		if (*p != '0')
 			base = 10;
-		else {
+		else if (nptr_len > 2 && (p[1] == 'x' || p[1] == 'X'))
+			base = 16;
+		else
 			base = 8;
-			if (p[1] == 'x' || p[1] == 'X') {
-				p += 2;
-				base = 16;
-			}
-		}
-	} else if (base == 16 && *p == '0') {
-		if (p[1] == 'x' || p[1] == 'X')
-			p += 2;
-	} else if (base < 0 || 36 < base)
+	}
+
+	if (base < 0 || 36 < base)
 		goto Return;
+
+	/*
+	 * Skip prefix of '0x'-prefixed hexadecimal numbers. There is no
+	 * need to do the same for '0'-prefixed octal numbers as a
+	 * leading '0' does not have any impact. Also, if we skip a
+	 * leading '0' in such a string, then we may end up with no
+	 * digits left and produce an error later on which isn't one.
+	 */
+	if (base == 16 && nptr_len > 2 && p[0] == '0' && (p[1] == 'x' || p[1] == 'X')) {
+		p += 2;
+		nptr_len -= 2;
+	}
 
 	/*
 	 * Non-empty sequence of digits

@@ -816,6 +816,8 @@ int git_diff_find_similar(
 	diff_find_match *best_match;
 	git_diff_file swap;
 
+	assert(diff);
+
 	if ((error = normalize_find_opts(diff, &opts, given_opts)) < 0)
 		return error;
 

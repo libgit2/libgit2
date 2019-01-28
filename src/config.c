@@ -109,7 +109,7 @@ int git_config_add_file_ondisk(
 	assert(cfg && path);
 
 	res = p_stat(path, &st);
-	if (res < 0 && errno != ENOENT) {
+	if (res < 0 && errno != ENOENT && errno != ENOTDIR) {
 		giterr_set(GITERR_CONFIG, "failed to stat '%s'", path);
 		return -1;
 	}
@@ -512,6 +512,8 @@ int git_config_backend_foreach_match(
 	git_config_iterator* iter;
 	regex_t regex;
 	int error = 0;
+
+	assert(backend && cb);
 
 	if (regexp != NULL) {
 		if ((error = p_regcomp(&regex, regexp, REG_EXTENDED)) != 0) {
