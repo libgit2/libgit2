@@ -57,6 +57,7 @@ int git_libgit2_features(void)
 extern size_t git_mwindow__window_size;
 extern size_t git_mwindow__mapped_limit;
 extern size_t git_indexer__max_objects;
+extern bool git_disable_pack_keep_file_checks;
 
 static int config_level_to_sysdir(int config_level)
 {
@@ -277,6 +278,10 @@ int git_libgit2_opts(int key, ...)
 
 	case GIT_OPT_GET_PACK_MAX_OBJECTS:
 		*(va_arg(ap, size_t *)) = git_indexer__max_objects;
+		break;
+
+	case GIT_OPT_DISABLE_PACK_KEEP_FILE_CHECKS:
+		git_disable_pack_keep_file_checks = (va_arg(ap, int) != 0);
 		break;
 
 	default:

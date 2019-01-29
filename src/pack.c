@@ -16,6 +16,9 @@
 
 #include <zlib.h>
 
+/* Option to bypass checking existence of '.keep' files */
+bool git_disable_pack_keep_file_checks = false;
+
 static int packfile_open(struct git_pack_file *p);
 static git_off_t nth_packed_object_offset(const struct git_pack_file *p, uint32_t n);
 static int packfile_unpack_compressed(
@@ -1141,9 +1144,11 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 	if (git__suffixcmp(path, ".idx") == 0) {
 		size_t root_len = path_len - strlen(".idx");
 
-		memcpy(p->pack_name + root_len, ".keep", sizeof(".keep"));
-		if (git_path_exists(p->pack_name) == true)
-			p->pack_keep = 1;
+		if (!git_disable_pack_keep_file_checks) {
+			memcpy(p->pack_name + root_len, ".keep", sizeof(".keep"));
+			if (git_path_exists(p->pack_name) == true)
+				p->pack_keep = 1;
+		}
 
 		memcpy(p->pack_name + root_len, ".pack", sizeof(".pack"));
 	}
