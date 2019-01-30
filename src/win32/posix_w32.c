@@ -516,6 +516,12 @@ int p_creat(const char *path, mode_t mode)
 	return p_open(path, O_WRONLY | O_CREAT | O_TRUNC, mode);
 }
 
+int p_fallocate(int fd, off_t offset, off_t len)
+{
+	error = ENOSYS;
+	return -1;
+}
+
 int p_utimes(const char *path, const struct p_timeval times[2])
 {
 	git_win32_path wpath;
