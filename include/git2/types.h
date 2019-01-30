@@ -59,7 +59,7 @@ typedef __haiku_std_int64 git_time_t;
  * app, even though /we/ define _FILE_OFFSET_BITS=64.
  */
 typedef int64_t git_off_t;
-typedef int64_t git_time_t;
+typedef int64_t git_time_t; /**< time in seconds from epoch */
 
 #endif
 

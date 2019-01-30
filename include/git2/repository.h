@@ -94,40 +94,53 @@ GIT_EXTERN(int) git_repository_discover(
 
 /**
  * Option flags for `git_repository_open_ext`.
- *
- * * GIT_REPOSITORY_OPEN_NO_SEARCH - Only open the repository if it can be
- *   immediately found in the start_path.  Do not walk up from the
- *   start_path looking at parent directories.
- * * GIT_REPOSITORY_OPEN_CROSS_FS - Unless this flag is set, open will not
- *   continue searching across filesystem boundaries (i.e. when `st_dev`
- *   changes from the `stat` system call).  (E.g. Searching in a user's home
- *   directory "/home/user/source/" will not return "/.git/" as the found
- *   repo if "/" is a different filesystem than "/home".)
- * * GIT_REPOSITORY_OPEN_BARE - Open repository as a bare repo regardless
- *   of core.bare config, and defer loading config file for faster setup.
- *   Unlike `git_repository_open_bare`, this can follow gitlinks.
- * * GIT_REPOSITORY_OPEN_NO_DOTGIT - Do not check for a repository by
- *   appending /.git to the start_path; only open the repository if
- *   start_path itself points to the git directory.
- * * GIT_REPOSITORY_OPEN_FROM_ENV - Find and open a git repository,
- *   respecting the environment variables used by the git command-line
- *   tools. If set, `git_repository_open_ext` will ignore the other
- *   flags and the `ceiling_dirs` argument, and will allow a NULL `path`
- *   to use `GIT_DIR` or search from the current directory. The search
- *   for a repository will respect $GIT_CEILING_DIRECTORIES and
- *   $GIT_DISCOVERY_ACROSS_FILESYSTEM.  The opened repository will
- *   respect $GIT_INDEX_FILE, $GIT_NAMESPACE, $GIT_OBJECT_DIRECTORY, and
- *   $GIT_ALTERNATE_OBJECT_DIRECTORIES.  In the future, this flag will
- *   also cause `git_repository_open_ext` to respect $GIT_WORK_TREE and
- *   $GIT_COMMON_DIR; currently, `git_repository_open_ext` with this
- *   flag will error out if either $GIT_WORK_TREE or $GIT_COMMON_DIR is
- *   set.
  */
 typedef enum {
+	/**
+	 * Only open the repository if it can be immediately found in the
+	 * start_path. Do not walk up from the start_path looking at parent
+	 * directories.
+	 */
 	GIT_REPOSITORY_OPEN_NO_SEARCH = (1 << 0),
+
+	/**
+	 * Unless this flag is set, open will not continue searching across
+	 * filesystem boundaries (i.e. when `st_dev` changes from the `stat`
+	 * system call).  For example, searching in a user's home directory at
+	 * "/home/user/source/" will not return "/.git/" as the found repo if
+	 * "/" is a different filesystem than "/home".
+	 */
 	GIT_REPOSITORY_OPEN_CROSS_FS  = (1 << 1),
+
+	/**
+	 * Open repository as a bare repo regardless of core.bare config, and
+	 * defer loading config file for faster setup.
+	 * Unlike `git_repository_open_bare`, this can follow gitlinks.
+	 */
 	GIT_REPOSITORY_OPEN_BARE      = (1 << 2),
+
+	/**
+	 * Do not check for a repository by appending /.git to the start_path;
+	 * only open the repository if start_path itself points to the git
+	 * directory.
+	 */
 	GIT_REPOSITORY_OPEN_NO_DOTGIT = (1 << 3),
+
+	/**
+	 * Find and open a git repository, respecting the environment variables
+	 * used by the git command-line tools.
+	 * If set, `git_repository_open_ext` will ignore the other flags and
+	 * the `ceiling_dirs` argument, and will allow a NULL `path` to use
+	 * `GIT_DIR` or search from the current directory.
+	 * The search for a repository will respect $GIT_CEILING_DIRECTORIES and
+	 * $GIT_DISCOVERY_ACROSS_FILESYSTEM.  The opened repository will
+	 * respect $GIT_INDEX_FILE, $GIT_NAMESPACE, $GIT_OBJECT_DIRECTORY, and
+	 * $GIT_ALTERNATE_OBJECT_DIRECTORIES.
+	 * In the future, this flag will also cause `git_repository_open_ext`
+	 * to respect $GIT_WORK_TREE and $GIT_COMMON_DIR; currently,
+	 * `git_repository_open_ext` with this flag will error out if either
+	 * $GIT_WORK_TREE or $GIT_COMMON_DIR is set.
+	 */
 	GIT_REPOSITORY_OPEN_FROM_ENV  = (1 << 4),
 } git_repository_open_flag_t;
 
