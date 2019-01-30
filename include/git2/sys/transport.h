@@ -296,19 +296,30 @@ typedef struct git_smart_subtransport_stream git_smart_subtransport_stream;
 
 /**
  * A stream used by the smart transport to read and write data
- * from a subtransport */
+ * from a subtransport.
+ *
+ * This provides a customization point in case you need to
+ * support some other communication method.
+ */
 struct git_smart_subtransport_stream {
-	/** The owning subtransport */
-	git_smart_subtransport *subtransport;
+	git_smart_subtransport *subtransport; /**< The owning subtransport */
 
-	/** Read available data from the stream */
+	/**
+	 * Read available data from the stream.
+	 *
+	 * The implementation may read less than requested.
+	 */
 	int GIT_CALLBACK(read)(
 		git_smart_subtransport_stream *stream,
 		char *buffer,
 		size_t buf_size,
 		size_t *bytes_read);
 
-	/** Write data to the stream */
+	/**
+	 * Write data to the stream
+	 *
+	 * The implementation must write all data or return an error.
+	 */
 	int GIT_CALLBACK(write)(
 		git_smart_subtransport_stream *stream,
 		const char *buffer,
@@ -321,7 +332,8 @@ struct git_smart_subtransport_stream {
 
 /**
  * An implementation of a subtransport which carries data for the
- * smart transport */
+ * smart transport
+ */
 struct git_smart_subtransport {
 	/**
 	 * Setup a subtransport stream for the requested action.
@@ -362,13 +374,11 @@ typedef int GIT_CALLBACK(git_smart_subtransport_cb)(
  * or how to move data back and forth. For this, a subtransport interface is
  * declared, and the smart transport delegates this work to the subtransports.
  *
- * Three subtransports are provided by libgit2: git, http, and winhttp.
- * The http and winhttp transports each implement both http and https.
+ * Three subtransports are provided by libgit2: ssh, git, http(s).
  *
  * Subtransports can either be RPC = 0 (persistent connection) or RPC = 1
  * (request/response). The smart transport handles the differences in its own
- * logic. The git subtransport is RPC = 0, while http and winhttp are both
- * RPC = 1.
+ * logic. The git subtransport is RPC = 0, while http is RPC = 1.
  */
 typedef struct git_smart_subtransport_definition {
 	/** The function to use to create the git_smart_subtransport */
@@ -389,8 +399,7 @@ typedef struct git_smart_subtransport_definition {
 /**
  * Create an instance of the http subtransport.
  *
- * This subtransport also supports https. On Win32, this subtransport may be
- * implemented using the WinHTTP library.
+ * This subtransport also supports https.
  *
  * @param out The newly created subtransport
  * @param owner The smart transport to own this subtransport
