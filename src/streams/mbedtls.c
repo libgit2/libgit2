@@ -42,9 +42,9 @@
 #define GIT_SSL_DEFAULT_CIPHERS "TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256:TLS-ECDHE-RSA-WITH-AES-128-GCM-SHA256:TLS-ECDHE-ECDSA-WITH-AES-256-GCM-SHA384:TLS-ECDHE-RSA-WITH-AES-256-GCM-SHA384:TLS-DHE-RSA-WITH-AES-128-GCM-SHA256:TLS-DHE-DSS-WITH-AES-128-GCM-SHA256:TLS-DHE-RSA-WITH-AES-256-GCM-SHA384:TLS-DHE-DSS-WITH-AES-256-GCM-SHA384:TLS-ECDHE-ECDSA-WITH-AES-128-CBC-SHA256:TLS-ECDHE-RSA-WITH-AES-128-CBC-SHA256:TLS-ECDHE-ECDSA-WITH-AES-128-CBC-SHA:TLS-ECDHE-RSA-WITH-AES-128-CBC-SHA:TLS-ECDHE-ECDSA-WITH-AES-256-CBC-SHA384:TLS-ECDHE-RSA-WITH-AES-256-CBC-SHA384:TLS-ECDHE-ECDSA-WITH-AES-256-CBC-SHA:TLS-ECDHE-RSA-WITH-AES-256-CBC-SHA:TLS-DHE-RSA-WITH-AES-128-CBC-SHA256:TLS-DHE-RSA-WITH-AES-256-CBC-SHA256:TLS-DHE-RSA-WITH-AES-128-CBC-SHA:TLS-DHE-RSA-WITH-AES-256-CBC-SHA:TLS-DHE-DSS-WITH-AES-128-CBC-SHA256:TLS-DHE-DSS-WITH-AES-256-CBC-SHA256:TLS-DHE-DSS-WITH-AES-128-CBC-SHA:TLS-DHE-DSS-WITH-AES-256-CBC-SHA:TLS-RSA-WITH-AES-128-GCM-SHA256:TLS-RSA-WITH-AES-256-GCM-SHA384:TLS-RSA-WITH-AES-128-CBC-SHA256:TLS-RSA-WITH-AES-256-CBC-SHA256:TLS-RSA-WITH-AES-128-CBC-SHA:TLS-RSA-WITH-AES-256-CBC-SHA"
 #define GIT_SSL_DEFAULT_CIPHERS_COUNT 30
 
-mbedtls_ssl_config *git__ssl_conf;
+static mbedtls_ssl_config *git__ssl_conf;
 static int ciphers_list[GIT_SSL_DEFAULT_CIPHERS_COUNT];
-mbedtls_entropy_context *mbedtls_entropy;
+static mbedtls_entropy_context *mbedtls_entropy;
 
 /**
  * This function aims to clean-up the SSL context which
@@ -166,18 +166,16 @@ cleanup:
 	return -1;
 }
 
-mbedtls_ssl_config *git__ssl_conf;
-
 static int bio_read(void *b, unsigned char *buf, size_t len)
 {
 	git_stream *io = (git_stream *) b;
-	return (int) git_stream_read(io, buf, len);
+	return (int) git_stream_read(io, buf, min(len, INT_MAX));
 }
 
 static int bio_write(void *b, const unsigned char *buf, size_t len)
 {
 	git_stream *io = (git_stream *) b;
-	return (int) git_stream_write(io, (const char *)buf, len, 0);
+	return (int) git_stream_write(io, (const char *)buf, min(len, INT_MAX), 0);
 }
 
 static int ssl_set_error(mbedtls_ssl_context *ssl, int error)
@@ -246,7 +244,7 @@ typedef struct {
 } mbedtls_stream;
 
 
-int mbedtls_connect(git_stream *stream)
+static int mbedtls_connect(git_stream *stream)
 {
 	int ret;
 	mbedtls_stream *st = (mbedtls_stream *) stream;
@@ -266,7 +264,7 @@ int mbedtls_connect(git_stream *stream)
 	return verify_server_cert(st->ssl);
 }
 
-int mbedtls_certificate(git_cert **out, git_stream *stream)
+static int mbedtls_certificate(git_cert **out, git_stream *stream)
 {
 	unsigned char *encoded_cert;
 	mbedtls_stream *st = (mbedtls_stream *) stream;
@@ -303,25 +301,27 @@ static int mbedtls_set_proxy(git_stream *stream, const git_proxy_options *proxy_
 	return git_stream_set_proxy(st->io, proxy_options);
 }
 
-ssize_t mbedtls_stream_write(git_stream *stream, const char *data, size_t data_len, int flags)
+static ssize_t mbedtls_stream_write(git_stream *stream, const char *data, size_t len, int flags)
 {
-	ssize_t written = 0, len = min(data_len, SSIZE_MAX);
 	mbedtls_stream *st = (mbedtls_stream *) stream;
+	int written;
 
 	GIT_UNUSED(flags);
 
-	do {
-		int error = mbedtls_ssl_write(st->ssl, (const unsigned char *)data + written, len - written);
-		if (error <= 0) {
-			return ssl_set_error(st->ssl, error);
-		}
-		written += error;
-	} while (written < len);
+	/*
+	 * `mbedtls_ssl_write` can only represent INT_MAX bytes
+	 * written via its return value. We thus need to clamp
+	 * the maximum number of bytes written.
+	 */
+	len = min(len, INT_MAX);
+
+	if ((written = mbedtls_ssl_write(st->ssl, (const unsigned char *)data, len)) <= 0)
+		return ssl_set_error(st->ssl, written);
 
 	return written;
 }
 
-ssize_t mbedtls_stream_read(git_stream *stream, void *data, size_t len)
+static ssize_t mbedtls_stream_read(git_stream *stream, void *data, size_t len)
 {
 	mbedtls_stream *st = (mbedtls_stream *) stream;
 	int ret;
@@ -332,7 +332,7 @@ ssize_t mbedtls_stream_read(git_stream *stream, void *data, size_t len)
 	return ret;
 }
 
-int mbedtls_stream_close(git_stream *stream)
+static int mbedtls_stream_close(git_stream *stream)
 {
 	mbedtls_stream *st = (mbedtls_stream *) stream;
 	int ret = 0;
@@ -345,7 +345,7 @@ int mbedtls_stream_close(git_stream *stream)
 	return st->owned ? git_stream_close(st->io) : 0;
 }
 
-void mbedtls_stream_free(git_stream *stream)
+static void mbedtls_stream_free(git_stream *stream)
 {
 	mbedtls_stream *st = (mbedtls_stream *) stream;
 

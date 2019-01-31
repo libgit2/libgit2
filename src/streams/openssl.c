@@ -572,9 +572,7 @@ typedef struct {
 	git_cert_x509 cert_info;
 } openssl_stream;
 
-int openssl_close(git_stream *stream);
-
-int openssl_connect(git_stream *stream)
+static int openssl_connect(git_stream *stream)
 {
 	int ret;
 	BIO *bio;
@@ -602,7 +600,7 @@ int openssl_connect(git_stream *stream)
 	return verify_server_cert(st->ssl, st->host);
 }
 
-int openssl_certificate(git_cert **out, git_stream *stream)
+static int openssl_certificate(git_cert **out, git_stream *stream)
 {
 	openssl_stream *st = (openssl_stream *) stream;
 	int len;
@@ -644,21 +642,20 @@ static int openssl_set_proxy(git_stream *stream, const git_proxy_options *proxy_
 	return git_stream_set_proxy(st->io, proxy_opts);
 }
 
-ssize_t openssl_write(git_stream *stream, const char *data, size_t data_len, int flags)
+static ssize_t openssl_write(git_stream *stream, const char *data, size_t data_len, int flags)
 {
 	openssl_stream *st = (openssl_stream *) stream;
 	int ret, len = min(data_len, INT_MAX);
 
 	GIT_UNUSED(flags);
 
-	if ((ret = SSL_write(st->ssl, data, len)) <= 0) {
+	if ((ret = SSL_write(st->ssl, data, len)) <= 0)
 		return ssl_set_error(st->ssl, ret);
-	}
 
 	return ret;
 }
 
-ssize_t openssl_read(git_stream *stream, void *data, size_t len)
+static ssize_t openssl_read(git_stream *stream, void *data, size_t len)
 {
 	openssl_stream *st = (openssl_stream *) stream;
 	int ret;
@@ -669,7 +666,7 @@ ssize_t openssl_read(git_stream *stream, void *data, size_t len)
 	return ret;
 }
 
-int openssl_close(git_stream *stream)
+static int openssl_close(git_stream *stream)
 {
 	openssl_stream *st = (openssl_stream *) stream;
 	int ret;
@@ -682,7 +679,7 @@ int openssl_close(git_stream *stream)
 	return st->owned ? git_stream_close(st->io) : 0;
 }
 
-void openssl_free(git_stream *stream)
+static void openssl_free(git_stream *stream)
 {
 	openssl_stream *st = (openssl_stream *) stream;
 
