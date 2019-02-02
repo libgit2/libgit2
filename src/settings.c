@@ -25,6 +25,7 @@
 #include "refs.h"
 #include "index.h"
 #include "transports/smart.h"
+#include "streams/tls.h"
 #include "streams/openssl.h"
 #include "streams/mbedtls.h"
 
@@ -94,7 +95,10 @@ const char *git_libgit2__user_agent(void)
 
 const char *git_libgit2__ssl_ciphers(void)
 {
-	return git__ssl_ciphers;
+	const char *ciphers = git__ssl_ciphers;
+	if (!ciphers)
+		ciphers = GIT_TLS_DEFAULT_CIPHERS;
+	return ciphers;
 }
 
 int git_libgit2_opts(int key, ...)

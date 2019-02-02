@@ -16,6 +16,8 @@
 #include "git2/transport.h"
 
 #include "streams/socket.h"
+#include "streams/tls.h"
+#include "global.h"
 
 static int stransport_error(OSStatus ret)
 {
@@ -48,6 +50,71 @@ typedef struct {
 	CFDataRef der_data;
 	git_cert_x509 cert_info;
 } stransport_stream;
+
+static int stransport_setup_cipher_list(SSLContextRef ctx)
+{
+	SSLCipherSuite *supported_ciphers = malloc(sizeof(*supported_ciphers));
+	SSLCipherSuite *enabled_ciphers = NULL;
+	size_t num_supported = 0, num_enabled = 0;
+	OSStatus ret;
+	const char *cipher_list = git_libgit2__ssl_ciphers();
+	const char *name;
+	size_t len;
+	int error = 0;
+
+	ret = SSLGetNumberSupportedCiphers(ctx, &num_supported);
+	if (ret != noErr) {
+		return stransport_error(ret);
+	}
+
+	supported_ciphers = git__calloc(num_supported, sizeof(*supported_ciphers));
+	enabled_ciphers = git__calloc(num_supported, sizeof(*enabled_ciphers));
+
+	ret = SSLGetSupportedCiphers(ctx, supported_ciphers, &num_supported);
+	if (ret != noErr) {
+		stransport_error(ret);
+		error = -1;
+		goto cleanup;
+	}
+
+	while (git_tls_ciphers_foreach(&name, &len, &cipher_list) == 0) {
+		git_tls_cipher cipher;
+		size_t idx;
+
+		if (git_tls_cipher_lookup(&cipher, name, len) < 0)
+			continue;
+
+		for (idx = 0; idx < num_supported; idx++) {
+			if (supported_ciphers[idx] == cipher.value) {
+				enabled_ciphers[num_enabled++] = supported_ciphers[idx];
+				break;
+			}
+		}
+
+		/* cipher not found */
+		if (idx == num_supported)
+			continue;
+	}
+
+	if (num_enabled == 0) {
+		git_error_set(GIT_ERROR_SSL, "no cipher could be enabled");
+		error = -1;
+		goto cleanup;
+	}
+
+	ret = SSLSetEnabledCiphers(ctx, enabled_ciphers, num_enabled);
+	if (ret != noErr) {
+		stransport_error(ret);
+		error = -1;
+		goto cleanup;
+	}
+
+cleanup:
+	git__free(supported_ciphers);
+	git__free(enabled_ciphers);
+
+	return error;
+}
 
 static int stransport_connect(git_stream *stream)
 {
@@ -275,6 +342,12 @@ static int stransport_wrap(
 		CFRelease(st->ctx);
 		git__free(st);
 		return stransport_error(ret);
+	}
+
+	if (stransport_setup_cipher_list(st->ctx) < 0) {
+		CFRelease(st->ctx);
+		git__free(st);
+		return -1;
 	}
 
 	st->parent.version = GIT_STREAM_VERSION;
