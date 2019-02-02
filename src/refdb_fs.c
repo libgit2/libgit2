@@ -1097,6 +1097,30 @@ fail:
 	return error;
 }
 
+static int packed_delete(refdb_fs_backend *backend, const char *ref_name)
+{
+	size_t pack_pos;
+	int error;
+
+	if ((error = packed_reload(backend)) < 0)
+		goto cleanup;
+
+	/* If a packed reference exists, remove it from the packfile and repack */
+	if ((error = git_sortedcache_wlock(backend->refcache)) < 0)
+		goto cleanup;
+
+	if (!(error = git_sortedcache_lookup_index(
+			&pack_pos, backend->refcache, ref_name)))
+		error = git_sortedcache_remove(backend->refcache, pack_pos);
+
+	git_sortedcache_wunlock(backend->refcache);
+
+	error = packed_write(backend);
+
+cleanup:
+	return error;
+}
+
 static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, const git_oid *old, const git_oid *new, const git_signature *author, const char *message);
 static int has_reflog(git_repository *repo, const char *name);
 
@@ -1382,6 +1406,25 @@ static int refdb_fs_backend__delete(
 	return refdb_fs_backend__delete_tail(_backend, &file, ref_name, old_id, old_target);
 }
 
+static int loose_delete(refdb_fs_backend *backend, const char *ref_name)
+{
+	git_buf loose_path = GIT_BUF_INIT;
+	int error = 0;
+
+	if (git_buf_joinpath(&loose_path, backend->commonpath, ref_name) < 0)
+		return -1;
+
+	error = p_unlink(loose_path.ptr);
+	if (error < 0 && errno == ENOENT)
+		error = GIT_ENOTFOUND;
+	else if (error != 0)
+		error = -1;
+
+	git_buf_dispose(&loose_path);
+
+	return error;
+}
+
 static int refdb_fs_backend__delete_tail(
 	git_refdb_backend *_backend,
 	git_filebuf *file,
@@ -1389,8 +1432,6 @@ static int refdb_fs_backend__delete_tail(
 	const git_oid *old_id, const char *old_target)
 {
 	refdb_fs_backend *backend = GIT_CONTAINER_OF(_backend, refdb_fs_backend, parent);
-	git_buf loose_path = GIT_BUF_INIT;
-	size_t pack_pos;
 	int error = 0, cmp = 0;
 	bool loose_deleted = 0;
 
@@ -1405,40 +1446,23 @@ static int refdb_fs_backend__delete_tail(
 	}
 
 	/* If a loose reference exists, remove it from the filesystem */
-	if (git_buf_joinpath(&loose_path, backend->commonpath, ref_name) < 0)
-		return -1;
-
-
-	error = p_unlink(loose_path.ptr);
-	if (error < 0 && errno == ENOENT)
-		error = 0;
-	else if (error < 0)
+	if ((error = loose_delete(backend, ref_name)) < 0 && error != GIT_ENOTFOUND)
 		goto cleanup;
+
+	if (error == GIT_ENOTFOUND)
+		error = 0;
 	else if (error == 0)
 		loose_deleted = 1;
 
-	if ((error = packed_reload(backend)) < 0)
+	if ((error = packed_delete(backend, ref_name)) < 0 && error != GIT_ENOTFOUND)
 		goto cleanup;
-
-	/* If a packed reference exists, remove it from the packfile and repack */
-	if ((error = git_sortedcache_wlock(backend->refcache)) < 0)
-		goto cleanup;
-
-	if (!(error = git_sortedcache_lookup_index(
-			&pack_pos, backend->refcache, ref_name)))
-		error = git_sortedcache_remove(backend->refcache, pack_pos);
-
-	git_sortedcache_wunlock(backend->refcache);
 
 	if (error == GIT_ENOTFOUND) {
 		error = loose_deleted ? 0 : ref_error_notfound(ref_name);
 		goto cleanup;
 	}
 
-	error = packed_write(backend);
-
 cleanup:
-	git_buf_dispose(&loose_path);
 	git_filebuf_cleanup(file);
 	if (loose_deleted)
 		refdb_fs_backend__try_delete_empty_ref_hierarchie(backend, ref_name, false);
