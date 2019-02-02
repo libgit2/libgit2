@@ -858,16 +858,17 @@ static int refdb_fs_backend__write_tail(
 	const git_reference *ref,
 	git_filebuf *file,
 	int update_reflog,
-	const git_signature *who,
-	const char *message,
 	const git_oid *old_id,
-	const char *old_target);
+	const char *old_target,
+	const git_signature *who,
+	const char *message);
 
 static int refdb_fs_backend__delete_tail(
 	git_refdb_backend *_backend,
 	git_filebuf *file,
 	const char *ref_name,
-	const git_oid *old_id, const char *old_target);
+	const git_oid *old_id,
+	const char *old_target);
 
 static int refdb_fs_backend__unlock(git_refdb_backend *backend, void *payload, int success, int update_reflog,
 				    const git_reference *ref, const git_signature *sig, const char *message)
@@ -878,7 +879,7 @@ static int refdb_fs_backend__unlock(git_refdb_backend *backend, void *payload, i
 	if (success == 2)
 		error = refdb_fs_backend__delete_tail(backend, lock, ref->name, NULL, NULL);
 	else if (success)
-		error = refdb_fs_backend__write_tail(backend, ref, lock, update_reflog, sig, message, NULL, NULL);
+		error = refdb_fs_backend__write_tail(backend, ref, lock, update_reflog, NULL, NULL, sig, message);
 	else
 		git_filebuf_cleanup(lock);
 
@@ -1291,7 +1292,7 @@ static int refdb_fs_backend__write(
 	if ((error = loose_lock(&file, backend, ref->name)) < 0)
 		return error;
 
-	return refdb_fs_backend__write_tail(_backend, ref, &file, true, who, message, old_id, old_target);
+	return refdb_fs_backend__write_tail(_backend, ref, &file, true, old_id, old_target, who, message);
 }
 
 static int refdb_fs_backend__write_tail(
@@ -1299,10 +1300,10 @@ static int refdb_fs_backend__write_tail(
 	const git_reference *ref,
 	git_filebuf *file,
 	int update_reflog,
-	const git_signature *who,
-	const char *message,
 	const git_oid *old_id,
-	const char *old_target)
+	const char *old_target,
+	const git_signature *who,
+	const char *message)
 {
 	refdb_fs_backend *backend = GIT_CONTAINER_OF(_backend, refdb_fs_backend, parent);
 	int error = 0, cmp = 0, should_write;
