@@ -66,6 +66,8 @@ static void refdb_free_backend(git_refdb *db)
 
 int git_refdb_set_backend(git_refdb *db, git_refdb_backend *backend)
 {
+	GIT_ERROR_CHECK_VERSION(backend, GIT_REFDB_BACKEND_VERSION, "git_refdb_backend");
+
 	refdb_free_backend(db);
 	db->backend = backend;
 
