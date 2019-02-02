@@ -1600,56 +1600,70 @@ static int refdb_fs_backend__rename(
 	const char *message)
 {
 	refdb_fs_backend *backend = GIT_CONTAINER_OF(_backend, refdb_fs_backend, parent);
-	git_reference *old, *new;
-	git_filebuf file = GIT_FILEBUF_INIT;
+	git_reference *old, *new = NULL;
+	git_filebuf old_lock = GIT_FILEBUF_INIT;
+	git_filebuf new_lock = GIT_FILEBUF_INIT;
 	int error;
+	git__refdb_flags flags;
 
 	assert(backend);
 
-	if ((error = reference_path_available(
-			backend, new_name, old_name, force)) < 0 ||
+	if ((error = reference_path_available(backend, new_name, old_name, force)) < 0 ||
 		(error = refdb_fs_backend__lookup(&old, _backend, old_name)) < 0)
 		return error;
 
-	if ((error = refdb_fs_backend__delete_impl(_backend, old_name, who, message, NULL, NULL)) < 0) {
-		git_reference_free(old);
-		return error;
+	/* We delete the old ref first so we don't cause a failure later if the new
+	 * name is the suffix or prefix of the old. Also, we skip the reflog, because
+	 * we want to rename it */
+	if ((error = refdb_fs_backend__delete_tail(&old_lock, _backend, old, GIT_REFDB__SKIP_REFLOG, NULL, NULL, who, message)) < 0)
+		goto cleanup;
+	git_filebuf_cleanup(&old_lock);
+
+	/* postpone empty hierarchy cleanup after we relinquish the lock */
+	if (error == 0)
+		refdb_fs_backend__try_delete_empty_ref_hierarchie(_backend, old->name, false);
+
+	/* We need to create a reference object to write */
+	if (old->type == GIT_REFERENCE_DIRECT) {
+		new = git_reference__alloc(new_name, &old->target.oid, NULL);
+	} else if (old->type == GIT_REFERENCE_SYMBOLIC) {
+		new = git_reference__alloc_symbolic(new_name, old->target.symbolic);
+	} else {
+		assert(false);
 	}
 
-	new = git_reference__set_name(old, new_name);
-	if (!new) {
-		git_reference_free(old);
-		return -1;
-	}
+	if (new == NULL) goto cleanup;
 
-	if ((error = loose_lock(&file, backend, new->name)) < 0) {
-		git_reference_free(new);
-		return error;
-	}
+	/* Save the new ref on disk; we skip the reflog because the old ref might be
+	 * sharing a suffix/prefix with us.
+	 */
+	flags = GIT_REFDB__SKIP_REFLOG;
+	if (force) flags |= GIT_REFDB__FORCE_WRITE;
+	if ((error = refdb_fs_backend__write_tail(&new_lock, _backend, new, flags, NULL, NULL, who, message)) < 0)
+		goto cleanup;
 
-	/* Try to rename the refog; it's ok if the old doesn't exist */
+	/* Try to rename the reflog; it's ok if the old doesn't exist */
 	error = refdb_reflog_fs__rename(_backend, old_name, new_name);
-	if (((error == 0) || (error == GIT_ENOTFOUND)) &&
-	    ((error = reflog_append(backend, new, git_reference_target(new), NULL, who, message)) < 0)) {
+	if (error < 0 && error != GIT_ENOTFOUND)
+		goto cleanup;
+
+	if ((error = reflog_append(backend, new, git_reference_target(new), NULL, who, message)) < 0)
+		goto cleanup;
+
+	if ((error = loose_commit(&new_lock, new)) < 0)
+		goto cleanup;
+
+
+cleanup:
+	git_filebuf_cleanup(&new_lock);
+	git_reference_free(old);
+
+	if (out != NULL)
+		*out = new;
+	else
 		git_reference_free(new);
-		git_filebuf_cleanup(&file);
-		return error;
-	}
 
-	if (error < 0) {
-		git_reference_free(new);
-		git_filebuf_cleanup(&file);
-		return error;
-	}
-
-
-	if ((error = loose_commit(&file, new)) < 0 || out == NULL) {
-		git_reference_free(new);
-		return error;
-	}
-
-	*out = new;
-	return 0;
+	return error;
 }
 
 static int refdb_fs_backend__compress(git_refdb_backend *_backend)
