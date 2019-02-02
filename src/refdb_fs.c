@@ -878,12 +878,16 @@ static int refdb_fs_backend__delete_tail(
 	const git_reference *ref,
 	git__refdb_flags flags,
 	const git_oid *old_id,
-	const char *old_target);
+	const char *old_target,
+	const git_signature *who,
+	const char *message);
 
 static int refdb_fs_backend__unlock(git_refdb_backend *backend, void *payload, int success, int update_reflog,
 				    const git_reference *ref, const git_signature *sig, const char *message)
 {
+	refdb_fs_backend *_backend = (refdb_fs_backend *)backend;
 	git_filebuf *lock = (git_filebuf *) payload;
+	git_signature *who;
 	int error = 0;
 
 	git__refdb_flags flags = (GIT_REFDB__SKIP_LOCK | GIT_REFDB__FORCE_WRITE);
@@ -891,7 +895,13 @@ static int refdb_fs_backend__unlock(git_refdb_backend *backend, void *payload, i
 		flags |= GIT_REFDB__SKIP_REFLOG;
 	}
 	if (success == 2) {
-		error = refdb_fs_backend__delete_tail(lock, backend, ref, flags, NULL, NULL);
+		if (!sig && (error = git_reference__log_signature(&who, _backend->repo)) < 0)
+			return error;
+
+		error = refdb_fs_backend__delete_tail(lock, backend, ref, flags, NULL, NULL, sig ? sig : who, message);
+
+		if (!sig)
+			git_signature_free(who);
 	} else if (success) {
 		error = refdb_fs_backend__write_tail(lock, backend, ref, flags, NULL, NULL, sig, message);
 		if (error == 0) {
@@ -1417,9 +1427,11 @@ cleanup:
 	git_buf_dispose(&base_path);
 }
 
-static int refdb_fs_backend__delete(
+static int refdb_fs_backend__delete_impl(
 	git_refdb_backend *_backend,
 	const char *ref_name,
+	const git_signature *who,
+	const char *message,
 	const git_oid *old_id, const char *old_target)
 {
 	git_filebuf file = GIT_FILEBUF_INIT;
@@ -1429,7 +1441,7 @@ static int refdb_fs_backend__delete(
 	if ((error = refdb_fs_backend__lookup(&ref, _backend, ref_name)) < 0)
 		return error;
 
-	error = refdb_fs_backend__delete_tail(&file, _backend, ref, 0, old_id, old_target);
+	error = refdb_fs_backend__delete_tail(&file, _backend, ref, 0, old_id, old_target, who, message);
 	git_filebuf_cleanup(&file);
 
 	/* postpone empty hierarchy cleanup after we relinquish the lock */
@@ -1458,6 +1470,24 @@ static int loose_delete(refdb_fs_backend *backend, const char *ref_name)
 	return error;
 }
 
+static int refdb_fs_backend__delete(
+	git_refdb_backend *_backend,
+	const char *ref_name,
+	const git_oid *old_id, const char *old_target)
+{
+	refdb_fs_backend *backend = (refdb_fs_backend *)_backend;
+	git_signature *who;
+	int error;
+
+	if ((error = git_reference__log_signature(&who, backend->repo)) < 0)
+		return error;
+
+	error = refdb_fs_backend__delete_impl(_backend, ref_name, who, NULL, old_id, old_target);
+
+	git_signature_free(who);
+	return error;
+}
+
 /* you need to cleanup the lock on success */
 static int refdb_fs_backend__delete_tail(
 	git_filebuf *out_lock,
@@ -1465,10 +1495,12 @@ static int refdb_fs_backend__delete_tail(
 	const git_reference *ref,
 	git__refdb_flags flags,
 	const git_oid *old_id,
-	const char *old_target)
+	const char *old_target,
+	const git_signature *who,
+	const char *message)
 {
 	refdb_fs_backend *backend = GIT_CONTAINER_OF(_backend, refdb_fs_backend, parent);
-	int error = 0, cmp = 0;
+	int error = 0, cmp = 0, should_write = 0;
 	bool packed_deleted = 0;
 
 	assert(backend && ref && out_lock);
@@ -1523,6 +1555,17 @@ static int refdb_fs_backend__delete_tail(
 		goto cleanup;
 	}
 
+	if ((flags & GIT_REFDB__SKIP_REFLOG) == 0) {
+		if ((error = should_write_reflog(&should_write, backend->repo, ref->name)) < 0)
+			goto cleanup;
+
+		if (should_write) {
+			const git_oid *old_id = git_reference_target(ref);
+			if ((error = maybe_append_head(backend, ref, old_id, NULL, who, message)) < 0)
+				goto cleanup;
+		}
+	}
+
 cleanup:
 	return error;
 }
@@ -1550,7 +1593,7 @@ static int refdb_fs_backend__rename(
 		(error = refdb_fs_backend__lookup(&old, _backend, old_name)) < 0)
 		return error;
 
-	if ((error = refdb_fs_backend__delete(_backend, old_name, NULL, NULL)) < 0) {
+	if ((error = refdb_fs_backend__delete_impl(_backend, old_name, who, message, NULL, NULL)) < 0) {
 		git_reference_free(old);
 		return error;
 	}
