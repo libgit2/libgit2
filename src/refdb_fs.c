@@ -875,7 +875,7 @@ static int refdb_fs_backend__write_tail(
 static int refdb_fs_backend__delete_tail(
 	git_filebuf *out_lock,
 	git_refdb_backend *_backend,
-	const char *ref_name,
+	const git_reference *ref,
 	git__refdb_flags flags,
 	const git_oid *old_id,
 	const char *old_target);
@@ -891,7 +891,7 @@ static int refdb_fs_backend__unlock(git_refdb_backend *backend, void *payload, i
 		flags |= GIT_REFDB__SKIP_REFLOG;
 	}
 	if (success == 2) {
-		error = refdb_fs_backend__delete_tail(lock, backend, ref->name, flags, NULL, NULL);
+		error = refdb_fs_backend__delete_tail(lock, backend, ref, flags, NULL, NULL);
 	} else if (success) {
 		error = refdb_fs_backend__write_tail(lock, backend, ref, flags, NULL, NULL, sig, message);
 		if (error == 0) {
@@ -1424,13 +1424,17 @@ static int refdb_fs_backend__delete(
 {
 	git_filebuf file = GIT_FILEBUF_INIT;
 	int error = 0;
+	git_reference *ref;
 
-	error = refdb_fs_backend__delete_tail(&file, _backend, ref_name, 0, old_id, old_target);
+	if ((error = refdb_fs_backend__lookup(&ref, _backend, ref_name)) < 0)
+		return error;
+
+	error = refdb_fs_backend__delete_tail(&file, _backend, ref, 0, old_id, old_target);
 	git_filebuf_cleanup(&file);
 
 	/* postpone empty hierarchy cleanup after we relinquish the lock */
 	if (error == 0)
-		refdb_fs_backend__prune_refs(_backend, ref_name, "");
+		refdb_fs_backend__prune_refs(_backend, ref->name, "");
 
 	return error;
 }
@@ -1458,7 +1462,7 @@ static int loose_delete(refdb_fs_backend *backend, const char *ref_name)
 static int refdb_fs_backend__delete_tail(
 	git_filebuf *out_lock,
 	git_refdb_backend *_backend,
-	const char *ref_name,
+	const git_reference *ref,
 	git__refdb_flags flags,
 	const git_oid *old_id,
 	const char *old_target)
@@ -1467,18 +1471,18 @@ static int refdb_fs_backend__delete_tail(
 	int error = 0, cmp = 0;
 	bool packed_deleted = 0;
 
-	assert(backend && ref_name && out_lock);
+	assert(backend && ref && out_lock);
 
 	if (((flags & GIT_REFDB__SKIP_LOCK) != GIT_REFDB__SKIP_LOCK) &&
-	    (error = loose_lock(out_lock, backend, ref_name)) < 0)
+	    (error = loose_lock(out_lock, backend, ref->name)) < 0)
 		return error;
 
 	if ((flags & GIT_REFDB__SKIP_REFLOG) != GIT_REFDB__SKIP_REFLOG &&
-	    (error = refdb_reflog_fs__delete(_backend, ref_name)) < 0) {
+	    (error = refdb_reflog_fs__delete(_backend, ref->name)) < 0) {
 		goto cleanup;
 	}
 
-	error = cmp_old_ref(&cmp, _backend, ref_name, old_id, old_target);
+	error = cmp_old_ref(&cmp, _backend, ref->name, old_id, old_target);
 	if (error < 0)
 		goto cleanup;
 
@@ -1505,17 +1509,17 @@ static int refdb_fs_backend__delete_tail(
 	 * as our current code never write packed-refs.lock, nothing stops observers
 	 * from grabbing a "stale" value from there).
 	 */
-	if ((error = packed_delete(backend, ref_name)) < 0 && error != GIT_ENOTFOUND)
+	if ((error = packed_delete(backend, ref->name)) < 0 && error != GIT_ENOTFOUND)
 		goto cleanup;
 
 	if (error == 0)
 		packed_deleted = 1;
 
-	if ((error = loose_delete(backend, ref_name)) < 0 && error != GIT_ENOTFOUND)
+	if ((error = loose_delete(backend, ref->name)) < 0 && error != GIT_ENOTFOUND)
 		goto cleanup;
 
 	if (error == GIT_ENOTFOUND) {
-		error = packed_deleted ? 0 : ref_error_notfound(ref_name);
+		error = packed_deleted ? 0 : ref_error_notfound(ref->name);
 		goto cleanup;
 	}
 
