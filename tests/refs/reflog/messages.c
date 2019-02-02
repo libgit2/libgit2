@@ -444,3 +444,37 @@ void test_refs_reflog_messages__detaching_head_default_message(void)
 
 	git_reference_free(ref);
 }
+
+void test_refs_reflog_messages__renaming_checked_out_branch_updates_HEAD_reflog(void)
+{
+	git_reference *head_ref, *current_ref, *renamed_ref;
+	int nentries, nentries_after;
+	git_buf msg = GIT_BUF_INIT;
+
+	cl_git_pass(git_repository_head(&head_ref, g_repo));
+
+	cl_git_pass(git_reference_resolve(&current_ref, head_ref));
+
+	nentries = reflog_entrycount(g_repo, GIT_HEAD_FILE);
+
+	cl_git_pass(git_branch_move(&renamed_ref, current_ref, "renamed", 1));
+
+	nentries_after = reflog_entrycount(g_repo, GIT_HEAD_FILE);
+
+	git_buf_printf(&msg, "branch: renamed %s to %s", git_reference_name(current_ref), git_reference_name(renamed_ref));
+	cl_assert_equal_i(nentries + 2, nentries_after);
+	cl_reflog_check_entry(g_repo, GIT_HEAD_FILE, 0,
+						  GIT_OID_HEX_ZERO,
+						  "a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
+						  NULL, git_buf_cstr(&msg));
+
+	cl_reflog_check_entry(g_repo, GIT_HEAD_FILE, 1,
+						  "a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
+						  GIT_OID_HEX_ZERO,
+						  NULL, git_buf_cstr(&msg));
+
+	git_buf_dispose(&msg);
+	git_reference_free(head_ref);
+	git_reference_free(current_ref);
+	git_reference_free(renamed_ref);
+}
