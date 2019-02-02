@@ -664,8 +664,8 @@ static int reference__rename(git_reference **out, git_reference *ref, const char
 {
 	git_repository *repo;
 	git_refname_t normalized;
-	bool should_head_be_updated = false;
 	int error = 0;
+	rename_cb_data payload;
 
 	assert(ref && new_name && signature);
 
@@ -675,27 +675,13 @@ static int reference__rename(git_reference **out, git_reference *ref, const char
 		normalized, repo, new_name, true)) < 0)
 		return error;
 
-	/* Check if we have to update HEAD. */
-	if ((error = git_branch_is_head(ref)) < 0)
-		return error;
-
-	should_head_be_updated = (error > 0);
-
 	if ((error = git_refdb_rename(out, ref->db, ref->name, normalized, force, signature, message)) < 0)
 		return error;
 
-	/* Update HEAD if it was pointing to the reference being renamed */
-	if (should_head_be_updated) {
-		error = git_repository_set_head(ref->db->repo, normalized);
-	} else {
-		rename_cb_data payload;
-		payload.old_name = ref->name;
-		memcpy(&payload.new_name, &normalized, sizeof(normalized));
+	payload.old_name = ref->name;
+	memcpy(&payload.new_name, &normalized, sizeof(normalized));
 
-		error = git_repository_foreach_head(repo, update_wt_heads, 0, &payload);
-	}
-
-	return error;
+	return git_repository_foreach_head(repo, update_wt_heads, 0, &payload);
 }
 
 
