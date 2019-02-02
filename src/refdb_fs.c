@@ -1257,8 +1257,16 @@ static int maybe_append_head(
 	if (ref->type == GIT_REFERENCE_SYMBOLIC)
 		return 0;
 
-	if ((error = git_reference_lookup(&head, backend->repo, GIT_HEAD_FILE)) < 0)
+	if ((error = git_reference_lookup(&head, backend->repo, GIT_HEAD_FILE))
+	    && error != GIT_ENOTFOUND)
 		return error;
+
+	/* Our repo is somehow missing its HEAD. Ignore the reflog in that case */
+	if (error == GIT_ENOTFOUND) {
+		/* XXX: warn ? */
+		git_error_clear();
+		return 0;
+	}
 
 	if (git_reference_type(head) == GIT_REFERENCE_DIRECT)
 		goto cleanup;
