@@ -1193,6 +1193,15 @@ static int should_write_reflog(int *write, refdb_fs_backend *backend, const git_
 		break;
 	}
 
+	/* Check that we are not writing an orphan reference */
+	if (*write && ref->type == GIT_REFERENCE_SYMBOLIC) {
+		int exists = 0;
+		error = refdb_fs_backend__exists(&exists, &backend->parent, ref->target.symbolic);
+		if (error < 0 || !exists) {
+			*write = 0;
+		}
+	}
+
 	return 0;
 }
 
@@ -2051,9 +2060,6 @@ static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, co
 			error = git_reference_name_to_id(&new_id, repo, git_reference_symbolic_target(ref));
 			if (error < 0 && error != GIT_ENOTFOUND)
 				return error;
-			/* detaching HEAD does not create an entry */
-			if (error == GIT_ENOTFOUND)
-				return 0;
 
 			git_error_clear();
 		}
