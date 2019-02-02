@@ -1602,10 +1602,12 @@ static int refdb_fs_backend__rename(
 	const char *message)
 {
 	refdb_fs_backend *backend = GIT_CONTAINER_OF(_backend, refdb_fs_backend, parent);
-	git_reference *old, *new = NULL;
+	git_reference *old, *new = NULL, *head = NULL;
 	git_filebuf old_lock = GIT_FILEBUF_INIT;
 	git_filebuf new_lock = GIT_FILEBUF_INIT;
 	int error;
+	int is_head = 0;
+	char *old_head_target = NULL;
 	git__refdb_flags flags;
 
 	assert(backend);
@@ -1613,6 +1615,14 @@ static int refdb_fs_backend__rename(
 	if ((error = reference_path_available(backend, new_name, old_name, force)) < 0 ||
 		(error = refdb_fs_backend__lookup(&old, _backend, old_name)) < 0)
 		return error;
+
+	if ((error = refdb_fs_backend__lookup(&head, _backend, GIT_HEAD_FILE)) < 0)
+		goto cleanup;
+
+	if (head->type == GIT_REFERENCE_SYMBOLIC && strcmp(head->target.symbolic, old->name) == 0) {
+		is_head = 1;
+		old_head_target = head->target.symbolic;
+	}
 
 	/* We delete the old ref first so we don't cause a failure later if the new
 	 * name is the suffix or prefix of the old. Also, we skip the reflog, because
@@ -1655,10 +1665,23 @@ static int refdb_fs_backend__rename(
 	if ((error = loose_commit(&new_lock, new)) < 0)
 		goto cleanup;
 
+	/* We're done renaming refs, but we might have to update HEAD */
+	if (is_head) {
+		git_filebuf head_lock = GIT_FILEBUF_INIT;
+		head->target.symbolic = git__strdup(new_name);
+		if ((error = refdb_fs_backend__write_tail(&head_lock, _backend, head,
+				GIT_REFDB__FORCE_WRITE, NULL, old_head_target, who, message)) < 0) {
+			goto cleanup;
+		}
+		if ((error = loose_commit(&head_lock, head)) < 0)
+			goto cleanup;
+	}
 
 cleanup:
+	git__free(old_head_target);
 	git_filebuf_cleanup(&new_lock);
 	git_reference_free(old);
+	git_reference_free(head);
 
 	if (out != NULL)
 		*out = new;
