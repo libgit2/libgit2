@@ -45,6 +45,14 @@ enum {
 	PEELING_FULL
 };
 
+typedef enum {
+	GIT_REFDB__FORCE_WRITE = (1 << 0),
+	GIT_REFDB__SKIP_REFLOG = (1 << 1),
+
+	/* Can be used if you want to manage locking/unlocking yourself */
+	GIT_REFDB__SKIP_LOCK = (1 << 2),
+} git__refdb_flags;
+
 struct packref {
 	git_oid oid;
 	git_oid peel;
@@ -855,19 +863,20 @@ static int refdb_fs_backend__lock(void **out, git_refdb_backend *_backend, const
 }
 
 static int refdb_fs_backend__write_tail(
+	git_filebuf *out_lock,
 	git_refdb_backend *_backend,
 	const git_reference *ref,
-	git_filebuf *file,
-	int update_reflog,
+	git__refdb_flags flags,
 	const git_oid *old_id,
 	const char *old_target,
 	const git_signature *who,
 	const char *message);
 
 static int refdb_fs_backend__delete_tail(
+	git_filebuf *out_lock,
 	git_refdb_backend *_backend,
-	git_filebuf *file,
 	const char *ref_name,
+	git__refdb_flags flags,
 	const git_oid *old_id,
 	const char *old_target);
 
@@ -877,12 +886,20 @@ static int refdb_fs_backend__unlock(git_refdb_backend *backend, void *payload, i
 	git_filebuf *lock = (git_filebuf *) payload;
 	int error = 0;
 
-	if (success == 2)
-		error = refdb_fs_backend__delete_tail(backend, lock, ref->name, NULL, NULL);
-	else if (success)
-		error = refdb_fs_backend__write_tail(backend, ref, lock, update_reflog, NULL, NULL, sig, message);
-	else
-		git_filebuf_cleanup(lock);
+	git__refdb_flags flags = (GIT_REFDB__SKIP_LOCK | GIT_REFDB__FORCE_WRITE);
+	if (!update_reflog) {
+		flags |= GIT_REFDB__SKIP_REFLOG;
+	}
+	if (success == 2) {
+		error = refdb_fs_backend__delete_tail(lock, backend, ref->name, flags, NULL, NULL);
+	} else if (success) {
+		error = refdb_fs_backend__write_tail(lock, backend, ref, flags, NULL, NULL, sig, message);
+		if (error == 0) {
+			error = loose_commit(lock, ref);
+		}
+	}
+
+	git_filebuf_cleanup(lock);
 
 	git__free(lock);
 	return error;
@@ -1280,36 +1297,47 @@ static int refdb_fs_backend__write(
 	const git_oid *old_id,
 	const char *old_target)
 {
-	refdb_fs_backend *backend = GIT_CONTAINER_OF(_backend, refdb_fs_backend, parent);
 	git_filebuf file = GIT_FILEBUF_INIT;
+	git__refdb_flags flags = (force ? GIT_REFDB__FORCE_WRITE : 0);
 	int error = 0;
 
-	assert(backend);
+	if ((error = refdb_fs_backend__write_tail(&file, _backend, ref, flags, old_id, old_target, who, message)) < 0) {
+		goto cleanup;
+	}
 
-	if ((error = reference_path_available(backend, ref->name, NULL, force)) < 0)
-		return error;
-
-	/* We need to perform the reflog append and old value check under the ref's lock */
-	if ((error = loose_lock(&file, backend, ref->name)) < 0)
-		return error;
-
-	return refdb_fs_backend__write_tail(_backend, ref, &file, true, old_id, old_target, who, message);
+	if ((error = loose_commit(&file, ref)) < 0) {
+		goto cleanup;
+	}
+	
+cleanup:
+	git_filebuf_cleanup(&file);
+	return error;
 }
 
+/* you need to loose_commit the lock on success */
 static int refdb_fs_backend__write_tail(
+	git_filebuf *out_lock,
 	git_refdb_backend *_backend,
 	const git_reference *ref,
-	git_filebuf *file,
-	int update_reflog,
+	git__refdb_flags flags,
 	const git_oid *old_id,
 	const char *old_target,
 	const git_signature *who,
 	const char *message)
 {
 	refdb_fs_backend *backend = GIT_CONTAINER_OF(_backend, refdb_fs_backend, parent);
-	int error = 0, cmp = 0, should_write;
+	int error = 0, cmp = 0, should_write, create_missing;
 	const char *new_target = NULL;
 	const git_oid *new_id = NULL;
+
+	create_missing = (flags & GIT_REFDB__FORCE_WRITE) == GIT_REFDB__FORCE_WRITE;
+	if ((error = reference_path_available(backend, ref->name, NULL, create_missing)) < 0)
+		return error;
+
+	/* We need to perform the reflog append and old value check under the ref's lock */
+	if (((flags & GIT_REFDB__SKIP_LOCK) != GIT_REFDB__SKIP_LOCK) &&
+	    (error = loose_lock(out_lock, backend, ref->name)) < 0)
+		return error;
 
 	if ((error = cmp_old_ref(&cmp, _backend, ref->name, old_id, old_target)) < 0)
 		goto on_error;
@@ -1335,7 +1363,7 @@ static int refdb_fs_backend__write_tail(
 		goto on_error; /* not really error */
 	}
 
-	if (update_reflog) {
+	if ((flags & GIT_REFDB__SKIP_REFLOG) == 0) {
 		if ((error = should_write_reflog(&should_write, backend->repo, ref->name)) < 0)
 			goto on_error;
 
@@ -1347,18 +1375,18 @@ static int refdb_fs_backend__write_tail(
 		}
 	}
 
-	return loose_commit(file, ref);
+	return 0;
 
 on_error:
-        git_filebuf_cleanup(file);
-        return error;
+	return error;
 }
 
 static void refdb_fs_backend__prune_refs(
-	refdb_fs_backend *backend,
+	git_refdb_backend *_backend,
 	const char *ref_name,
 	const char *prefix)
 {
+	refdb_fs_backend *backend = GIT_CONTAINER_OF(_backend, refdb_fs_backend, parent);
 	git_buf relative_path = GIT_BUF_INIT;
 	git_buf base_path = GIT_BUF_INIT;
 	size_t commonlen;
@@ -1396,21 +1424,17 @@ static int refdb_fs_backend__delete(
 	const char *ref_name,
 	const git_oid *old_id, const char *old_target)
 {
-	refdb_fs_backend *backend = GIT_CONTAINER_OF(_backend, refdb_fs_backend, parent);
 	git_filebuf file = GIT_FILEBUF_INIT;
 	int error = 0;
 
-	assert(backend && ref_name);
+	error = refdb_fs_backend__delete_tail(&file, _backend, ref_name, 0, old_id, old_target);
+	git_filebuf_cleanup(&file);
 
-	if ((error = loose_lock(&file, backend, ref_name)) < 0)
-		return error;
+	/* postpone empty hierarchy cleanup after we relinquish the lock */
+	if (error == 0)
+		refdb_fs_backend__prune_refs(_backend, ref_name, "");
 
-	if ((error = refdb_reflog_fs__delete(_backend, ref_name)) < 0) {
-		git_filebuf_cleanup(&file);
-		return error;
-	}
-
-	return refdb_fs_backend__delete_tail(_backend, &file, ref_name, old_id, old_target);
+	return error;
 }
 
 static int loose_delete(refdb_fs_backend *backend, const char *ref_name)
@@ -1432,15 +1456,29 @@ static int loose_delete(refdb_fs_backend *backend, const char *ref_name)
 	return error;
 }
 
+/* you need to cleanup the lock on success */
 static int refdb_fs_backend__delete_tail(
+	git_filebuf *out_lock,
 	git_refdb_backend *_backend,
-	git_filebuf *file,
 	const char *ref_name,
-	const git_oid *old_id, const char *old_target)
+	git__refdb_flags flags,
+	const git_oid *old_id,
+	const char *old_target)
 {
 	refdb_fs_backend *backend = GIT_CONTAINER_OF(_backend, refdb_fs_backend, parent);
 	int error = 0, cmp = 0;
 	bool packed_deleted = 0;
+
+	assert(backend && ref_name && out_lock);
+
+	if (((flags & GIT_REFDB__SKIP_LOCK) != GIT_REFDB__SKIP_LOCK) &&
+	    (error = loose_lock(out_lock, backend, ref_name)) < 0)
+		return error;
+
+	if ((flags & GIT_REFDB__SKIP_REFLOG) != GIT_REFDB__SKIP_REFLOG &&
+	    (error = refdb_reflog_fs__delete(_backend, ref_name)) < 0) {
+		goto cleanup;
+	}
 
 	error = cmp_old_ref(&cmp, _backend, ref_name, old_id, old_target);
 	if (error < 0)
@@ -1484,9 +1522,6 @@ static int refdb_fs_backend__delete_tail(
 	}
 
 cleanup:
-	git_filebuf_cleanup(file);
-	if (error == 0)
-		refdb_fs_backend__prune_refs(backend, ref_name, "");
 	return error;
 }
 
@@ -2110,7 +2145,7 @@ static int refdb_reflog_fs__delete(git_refdb_backend *_backend, const char *name
 	if ((error = p_unlink(path.ptr)) < 0)
 		goto out;
 
-	refdb_fs_backend__prune_refs(backend, name, GIT_REFLOG_DIR);
+	refdb_fs_backend__prune_refs(_backend, name, GIT_REFLOG_DIR);
 
 out:
 	git_buf_dispose(&path);
