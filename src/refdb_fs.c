@@ -1100,22 +1100,27 @@ fail:
 static int packed_delete(refdb_fs_backend *backend, const char *ref_name)
 {
 	size_t pack_pos;
-	int error;
+	int error, found = 0;
 
 	if ((error = packed_reload(backend)) < 0)
 		goto cleanup;
 
-	/* If a packed reference exists, remove it from the packfile and repack */
 	if ((error = git_sortedcache_wlock(backend->refcache)) < 0)
 		goto cleanup;
 
-	if (!(error = git_sortedcache_lookup_index(
-			&pack_pos, backend->refcache, ref_name)))
+	/* If a packed reference exists, remove it from the packfile and repack if necessary */
+	error = git_sortedcache_lookup_index(&pack_pos, backend->refcache, ref_name);
+	if (error == 0) {
 		error = git_sortedcache_remove(backend->refcache, pack_pos);
+		found = 1;
+	}
+	if (error == GIT_ENOTFOUND)
+		error = 0;
 
 	git_sortedcache_wunlock(backend->refcache);
 
-	error = packed_write(backend);
+	if (found)
+		error = packed_write(backend);
 
 cleanup:
 	return error;
