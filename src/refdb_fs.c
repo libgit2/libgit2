@@ -1158,9 +1158,10 @@ cleanup:
 static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, const git_oid *old, const git_oid *new, const git_signature *author, const char *message);
 static int has_reflog(git_repository *repo, const char *name);
 
-static int should_write_reflog(int *write, git_repository *repo, const char *name)
+static int should_write_reflog(int *write, refdb_fs_backend *backend, const git_reference *ref)
 {
 	int error, logall;
+	git_repository *repo = backend->repo;
 
 	error = git_repository__configmap_lookup(&logall, repo, GIT_CONFIGMAP_LOGALLREFUPDATES);
 	if (error < 0)
@@ -1180,11 +1181,11 @@ static int should_write_reflog(int *write, git_repository *repo, const char *nam
 		/* Only write if it already has a log,
 		 * or if it's under heads/, remotes/ or notes/
 		 */
-		*write = has_reflog(repo, name) ||
-			!git__prefixcmp(name, GIT_REFS_HEADS_DIR) ||
-			!git__strcmp(name, GIT_HEAD_FILE) ||
-			!git__prefixcmp(name, GIT_REFS_REMOTES_DIR) ||
-			!git__prefixcmp(name, GIT_REFS_NOTES_DIR);
+		*write = has_reflog(repo, ref->name) ||
+			!git__prefixcmp(ref->name, GIT_REFS_HEADS_DIR) ||
+			!git__strcmp(ref->name, GIT_HEAD_FILE) ||
+			!git__prefixcmp(ref->name, GIT_REFS_REMOTES_DIR) ||
+			!git__prefixcmp(ref->name, GIT_REFS_NOTES_DIR);
 		break;
 
 	case GIT_LOGALLREFUPDATES_ALWAYS:
@@ -1380,7 +1381,7 @@ static int refdb_fs_backend__write_tail(
 	}
 
 	if ((flags & GIT_REFDB__SKIP_REFLOG) == 0) {
-		if ((error = should_write_reflog(&should_write, backend->repo, ref->name)) < 0)
+		if ((error = should_write_reflog(&should_write, backend, ref)) < 0)
 			goto on_error;
 
 		if (should_write) {
@@ -1564,7 +1565,7 @@ static int refdb_fs_backend__delete_tail(
 	}
 
 	if ((flags & GIT_REFDB__SKIP_REFLOG) == 0) {
-		if ((error = should_write_reflog(&should_write, backend->repo, ref->name)) < 0)
+		if ((error = should_write_reflog(&should_write, backend, ref)) < 0)
 			goto cleanup;
 
 		if (should_write) {
