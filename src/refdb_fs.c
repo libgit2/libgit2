@@ -1904,7 +1904,7 @@ static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, co
 	    !(old && new))
 		return 0;
 
-	/* From here on is_symoblic also means that it's HEAD */
+	/* From here on is_symbolic also means that it's HEAD */
 
 	if (old) {
 		git_oid_cpy(&old_id, old);
