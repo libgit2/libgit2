@@ -215,6 +215,22 @@ void test_refs_reflog_messages__commit_on_symbolic_ref_updates_head_reflog(void)
 	git_tree_free(tree);
 }
 
+void test_refs_reflog_messages__delete_checked_out_ref_updates_head_reflog(void)
+{
+	git_reference *head, *current;
+
+	cl_git_pass(git_repository_head(&head, g_repo));
+	cl_git_pass(git_reference_resolve(&current, head));
+
+	cl_git_pass(git_reference_delete(current));
+
+	cl_reflog_check_entry(g_repo, GIT_HEAD_FILE,
+		0, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", GIT_OID_HEX_ZERO, g_email, "");
+
+	git_reference_free(head);
+	git_reference_free(current);
+}
+
 void test_refs_reflog_messages__show_merge_for_merge_commits(void)
 {
 	git_oid b1_oid;
