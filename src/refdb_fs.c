@@ -1235,19 +1235,17 @@ out:
  * check with HEAD only which should cover 99% of all usage
  * scenarios (even 100% of the default ones).
  */
-static int maybe_append_head(refdb_fs_backend *backend, const git_reference *ref, const git_signature *who, const char *message)
+static int maybe_append_head(
+	refdb_fs_backend *backend, const git_reference *ref,
+	const git_oid *old_id, const git_oid *new_id,
+	const git_signature *who, const char *message)
 {
 	int error;
-	git_oid old_id;
 	git_reference *tmp = NULL, *head = NULL, *peeled = NULL;
 	const char *name;
 
 	if (ref->type == GIT_REFERENCE_SYMBOLIC)
 		return 0;
-
-	/* if we can't resolve, we use {0}*40 as old id */
-	if (git_reference_name_to_id(&old_id, backend->repo, ref->name) < 0)
-		memset(&old_id, 0, sizeof(old_id));
 
 	if ((error = git_reference_lookup(&head, backend->repo, GIT_HEAD_FILE)) < 0)
 		return error;
@@ -1280,7 +1278,7 @@ static int maybe_append_head(refdb_fs_backend *backend, const git_reference *ref
 	if (strcmp(name, ref->name))
 		goto cleanup;
 
-	error = reflog_append(backend, head, &old_id, git_reference_target(ref), who, message);
+	error = reflog_append(backend, head, old_id, new_id, who, message);
 
 cleanup:
 	git_reference_free(tmp);
@@ -1370,7 +1368,7 @@ static int refdb_fs_backend__write_tail(
 		if (should_write) {
 			if ((error = reflog_append(backend, ref, NULL, NULL, who, message)) < 0)
 				goto on_error;
-			if ((error = maybe_append_head(backend, ref, who, message)) < 0)
+			if ((error = maybe_append_head(backend, ref, NULL, new_id, who, message)) < 0)
 				goto on_error;
 		}
 	}
