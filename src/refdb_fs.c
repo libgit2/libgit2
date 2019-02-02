@@ -1573,15 +1573,13 @@ static int refdb_fs_backend__delete_tail(
 		goto cleanup;
 	}
 
-	if ((flags & GIT_REFDB__SKIP_REFLOG) == 0) {
-		if ((error = should_write_reflog(&should_write, backend, ref)) < 0)
-			goto cleanup;
+	if ((error = should_write_reflog(&should_write, backend, ref)) < 0)
+		goto cleanup;
 
-		if (should_write) {
-			const git_oid *old_id = git_reference_target(ref);
-			if ((error = maybe_append_head(backend, ref, old_id, NULL, who, message)) < 0)
-				goto cleanup;
-		}
+	if (should_write) {
+		const git_oid *old_id = git_reference_target(ref);
+		if ((error = maybe_append_head(backend, ref, old_id, NULL, who, message)) < 0)
+			goto cleanup;
 	}
 
 cleanup:
