@@ -1281,6 +1281,10 @@ static int maybe_append_head(
 	if (git_reference_type(head) == GIT_REFERENCE_DIRECT)
 		goto cleanup;
 
+	/* If we're manipulating the HEAD reference, we already updated its reflog, */
+	if (strcmp(ref->name, GIT_HEAD_FILE) == 0)
+		goto cleanup;
+
 	if ((error = git_reference_lookup(&tmp, backend->repo, GIT_HEAD_FILE)) < 0)
 		goto cleanup;
 
