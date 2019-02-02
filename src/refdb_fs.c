@@ -1285,7 +1285,7 @@ static int maybe_append_head(
 	if (strcmp(ref->name, GIT_HEAD_FILE) == 0)
 		goto cleanup;
 
-	if ((error = git_reference_lookup(&tmp, backend->repo, GIT_HEAD_FILE)) < 0)
+	if ((error = git_reference_dup(&tmp, head)) < 0)
 		goto cleanup;
 
 	/* Go down the symref chain until we find the branch */
