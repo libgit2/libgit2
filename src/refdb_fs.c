@@ -885,9 +885,7 @@ static int refdb_fs_backend__delete_tail(
 static int refdb_fs_backend__unlock(git_refdb_backend *backend, void *payload, int success, int update_reflog,
 				    const git_reference *ref, const git_signature *sig, const char *message)
 {
-	refdb_fs_backend *_backend = (refdb_fs_backend *)backend;
 	git_filebuf *lock = (git_filebuf *) payload;
-	git_signature *who;
 	int error = 0;
 
 	git__refdb_flags flags = (GIT_REFDB__SKIP_LOCK | GIT_REFDB__FORCE_WRITE);
@@ -895,13 +893,7 @@ static int refdb_fs_backend__unlock(git_refdb_backend *backend, void *payload, i
 		flags |= GIT_REFDB__SKIP_REFLOG;
 	}
 	if (success == 2) {
-		if (!sig && (error = git_reference__log_signature(&who, _backend->repo)) < 0)
-			return error;
-
-		error = refdb_fs_backend__delete_tail(lock, backend, ref, flags, NULL, NULL, sig ? sig : who, message);
-
-		if (!sig)
-			git_signature_free(who);
+		error = refdb_fs_backend__delete_tail(lock, backend, ref, flags, NULL, NULL, sig, message);
 	} else if (success) {
 		error = refdb_fs_backend__write_tail(lock, backend, ref, flags, NULL, NULL, sig, message);
 		if (error == 0) {

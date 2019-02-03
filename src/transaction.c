@@ -211,10 +211,18 @@ int git_transaction_set_symbolic_target(git_transaction *tx, const char *refname
 
 int git_transaction_remove(git_transaction *tx, const char *refname)
 {
+	return git_transaction_remove_with_msg(tx, refname, NULL, NULL);
+}
+
+int git_transaction_remove_with_msg(git_transaction *tx, const char *refname, const git_signature *sig, const char *msg)
+{
 	int error;
 	transaction_node *node;
 
 	if ((error = find_locked(&node, tx, refname)) < 0)
+		return error;
+
+	if ((error = copy_common(node, tx, sig, msg)) < 0)
 		return error;
 
 	node->remove = true;
@@ -299,7 +307,7 @@ static int update_target(git_refdb *db, transaction_node *node)
 	update_reflog = node->reflog == NULL;
 
 	if (node->remove) {
-		error =  git_refdb_unlock(db, node->payload, 2, false, ref, NULL, NULL);
+		error =  git_refdb_unlock(db, node->payload, 2, true, ref, node->sig, node->message);
 	} else if (node->ref_type == GIT_REFERENCE_DIRECT) {
 		error = git_refdb_unlock(db, node->payload, true, update_reflog, ref, node->sig, node->message);
 	} else if (node->ref_type == GIT_REFERENCE_SYMBOLIC) {
