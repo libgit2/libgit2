@@ -1449,7 +1449,7 @@ cleanup:
 	git_buf_dispose(&base_path);
 }
 
-static int refdb_fs_backend__delete_impl(
+static int refdb_fs_backend__delete(
 	git_refdb_backend *_backend,
 	const char *ref_name,
 	const git_signature *who,
@@ -1489,24 +1489,6 @@ static int loose_delete(refdb_fs_backend *backend, const char *ref_name)
 
 	git_buf_dispose(&loose_path);
 
-	return error;
-}
-
-static int refdb_fs_backend__delete(
-	git_refdb_backend *_backend,
-	const char *ref_name,
-	const git_oid *old_id, const char *old_target)
-{
-	refdb_fs_backend *backend = (refdb_fs_backend *)_backend;
-	git_signature *who;
-	int error;
-
-	if ((error = git_reference__log_signature(&who, backend->repo)) < 0)
-		return error;
-
-	error = refdb_fs_backend__delete_impl(_backend, ref_name, who, NULL, old_id, old_target);
-
-	git_signature_free(who);
 	return error;
 }
 
@@ -2262,6 +2244,9 @@ int git_refdb_backend_fs(
 
 	backend = git__calloc(1, sizeof(refdb_fs_backend));
 	GIT_ERROR_CHECK_ALLOC(backend);
+
+	if (git_refdb_init_backend(&backend->parent, GIT_REFDB_BACKEND_VERSION) < 0)
+		return -1;
 
 	backend->repo = repository;
 

@@ -137,6 +137,21 @@ void git_reference_free(git_reference *reference)
 
 int git_reference_delete(git_reference *ref)
 {
+	git_signature *who;
+	int error;
+
+	if ((error = git_reference__log_signature(&who, ref->db->repo)) < 0)
+		return error;
+
+	error = git_reference_delete_with_msg(ref, who, NULL);
+
+	git_signature_free(who);
+
+	return error;
+}
+
+int git_reference_delete_with_msg(git_reference *ref, const git_signature *who, const char *msg)
+{
 	const git_oid *old_id = NULL;
 	const char *old_target = NULL;
 
@@ -145,10 +160,25 @@ int git_reference_delete(git_reference *ref)
 	else
 		old_target = ref->target.symbolic;
 
-	return git_refdb_delete(ref->db, ref->name, old_id, old_target);
+	return git_refdb_delete(ref->db, ref->name, who, msg, old_id, old_target);
 }
 
 int git_reference_remove(git_repository *repo, const char *name)
+{
+	git_signature *who;
+	int error;
+
+	if ((error = git_reference__log_signature(&who, repo)) < 0)
+		return error;
+
+	error = git_reference_remove_with_msg(repo, name, who, NULL);
+
+	git_signature_free(who);
+
+	return error;
+}
+
+int git_reference_remove_with_msg(git_repository *repo, const char *name, const git_signature *who, const char *msg)
 {
 	git_refdb *db;
 	int error;
@@ -156,7 +186,7 @@ int git_reference_remove(git_repository *repo, const char *name)
 	if ((error = git_repository_refdb__weakptr(&db, repo)) < 0)
 		return error;
 
-	return git_refdb_delete(db, name, NULL, NULL);
+	return git_refdb_delete(db, name, who, msg, NULL, NULL);
 }
 
 int git_reference_lookup(git_reference **ref_out,

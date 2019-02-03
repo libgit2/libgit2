@@ -397,6 +397,8 @@ GIT_EXTERN(int) git_reference_rename(
  */
 GIT_EXTERN(int) git_reference_delete(git_reference *ref);
 
+GIT_EXTERN(int) git_reference_delete_with_msg(git_reference *ref, const git_signature *who, const char *msg);
+
 /**
  * Delete an existing reference by name
  *
@@ -407,6 +409,8 @@ GIT_EXTERN(int) git_reference_delete(git_reference *ref);
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_reference_remove(git_repository *repo, const char *name);
+
+GIT_EXTERN(int) git_reference_remove_with_msg(git_repository *repo, const char *name, const git_signature *who, const char *msg);
 
 /**
  * Fill a list with all the references that can be found in a repository.
