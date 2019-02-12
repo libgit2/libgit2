@@ -37,16 +37,16 @@ Write-Host "####################################################################
 Write-Host "## Configuring test environment"
 Write-Host "##############################################################################"
 
-if (-not $Env:SKIP_PROXY_TESTS) {
+if (-not $Env:SKIP_PROXY_TESTS -and -not $Env:SKIP_PROXY_SSL_TESTS) {
 	Invoke-WebRequest -Method GET -Uri https://github.com/ethomson/poxyproxy/releases/download/v0.7.0/poxyproxy-0.7.0.jar -OutFile poxyproxy.jar
 
 	Write-Host ""
 	Write-Host "Starting HTTP proxy (Basic)..."
-	javaw -jar poxyproxy.jar --port 8080 --credentials foo:bar --auth-type basic --quiet
+	javaw -jar poxyproxy.jar --port 8080 --ssl-port 8081 --ssl-keystore "$SourceDir/ci/proxy_keystore.jks" --ssl-keystore-password password --credentials foo:bar --auth-type basic --quiet
 
 	Write-Host ""
 	Write-Host "Starting HTTP proxy (NTLM)..."
-	javaw -jar poxyproxy.jar --port 8090 --credentials foo:bar --auth-type ntlm --quiet
+	javaw -jar poxyproxy.jar --port 8090 --ssl-port 8091 --ssl-keystore "$SourceDir/ci/proxy_keystore.jks" --ssl-keystore-password password --credentials foo:bar --auth-type ntlm --quiet
 }
 
 if (-not $Env:SKIP_OFFLINE_TESTS) {
@@ -106,7 +106,27 @@ if (-not $Env:SKIP_PROXY_TESTS) {
 	$Env:GITTEST_REMOTE_PROXY_HOST=$null
 	$Env:GITTEST_REMOTE_PROXY_USER=$null
 	$Env:GITTEST_REMOTE_PROXY_PASS=$null
+}
 
+if (-not $Env:SKIP_SSL_PROXY_TESTS) {
+	Write-Host ""
+	Write-Host "Running proxy (SSL) tests"
+	Write-Host ""
+
+    $Env:GITTEST_REMOTE_PROXY_SCHEME="https"
+	$Env:GITTEST_REMOTE_PROXY_HOST="localhost:8081"
+	$Env:GITTEST_REMOTE_PROXY_USER="foo"
+	$Env:GITTEST_REMOTE_PROXY_PASS="bar"
+    $Env:GITTEST_REMOTE_PROXY_SELFSIGNED=1
+    run_test proxy
+    $Env:GITTEST_REMOTE_PROXY_SCHEME=$null
+    $Env:GITTEST_REMOTE_PROXY_HOST=$null
+    $Env:GITTEST_REMOTE_PROXY_USER=$null
+    $Env:GITTEST_REMOTE_PROXY_PASS=$null
+    $Env:GITTEST_REMOTE_PROXY_SELFSIGNED=$null
+}
+
+if (-not $Env:SKIP_PROXY_TESTS -and -not $Env:SKIP_SSL_PROXY_TESTS) {
 	taskkill /F /IM javaw.exe
 }
 

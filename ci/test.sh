@@ -77,16 +77,16 @@ if [ -z "$SKIP_GITDAEMON_TESTS" ]; then
 	git daemon --listen=localhost --export-all --enable=receive-pack --pid-file="${GITDAEMON_DIR}/pid" --base-path="${GITDAEMON_DIR}" "${GITDAEMON_DIR}" 2>/dev/null &
 fi
 
-if [ -z "$SKIP_PROXY_TESTS" ]; then
+if [ -z "$SKIP_PROXY_TESTS" -a -z "$SKIP_PROXY_SSL_TESTS" ]; then
 	curl -L https://github.com/ethomson/poxyproxy/releases/download/v0.7.0/poxyproxy-0.7.0.jar >poxyproxy.jar
 
 	echo ""
 	echo "Starting HTTP proxy (Basic)..."
-	java -jar poxyproxy.jar --address 127.0.0.1 --port 8080 --credentials foo:bar --auth-type basic --quiet &
+	java -jar poxyproxy.jar --address 127.0.0.1 --port 8080 --ssl-port 8081 --ssl-keystore "${SOURCE_DIR}/ci/proxy_keystore.jks" --ssl-keystore-password password --credentials foo:bar --auth-type basic --quiet &
 
 	echo ""
 	echo "Starting HTTP proxy (NTLM)..."
-	java -jar poxyproxy.jar --address 127.0.0.1 --port 8090 --credentials foo:bar --auth-type ntlm --quiet &
+	java -jar poxyproxy.jar --address 127.0.0.1 --port 8090 --ssl-port 8091 --ssl-keystore "${SOURCE_DIR}/ci/proxy_keystore.jks" --ssl-keystore-password password --credentials foo:bar --auth-type ntlm --quiet &
 fi
 
 if [ -z "$SKIP_SSH_TESTS" ]; then
@@ -188,9 +188,6 @@ if [ -z "$SKIP_PROXY_TESTS" ]; then
 	export GITTEST_REMOTE_PROXY_USER="foo"
 	export GITTEST_REMOTE_PROXY_PASS="bar"
 	run_test proxy
-	unset GITTEST_REMOTE_PROXY_HOST
-	unset GITTEST_REMOTE_PROXY_USER
-	unset GITTEST_REMOTE_PROXY_PASS
 
 	echo ""
 	echo "Running proxy tests (NTLM authentication)"
@@ -203,6 +200,23 @@ if [ -z "$SKIP_PROXY_TESTS" ]; then
 	unset GITTEST_REMOTE_PROXY_HOST
 	unset GITTEST_REMOTE_PROXY_USER
 	unset GITTEST_REMOTE_PROXY_PASS
+fi
+
+if [ -z "$SKIP_PROXY_SSL_TESTS" ]; then
+	echo ""
+	echo "Running proxy (SSL) tests"
+	echo ""
+	export GITTEST_REMOTE_PROXY_SCHEME="https"
+	export GITTEST_REMOTE_PROXY_HOST="localhost:8081"
+	export GITTEST_REMOTE_PROXY_SELFSIGNED=1
+	export GITTEST_REMOTE_PROXY_USER="foo"
+	export GITTEST_REMOTE_PROXY_PASS="bar"
+	run_test proxy
+	unset GITTEST_REMOTE_PROXY_SCHEME
+	unset GITTEST_REMOTE_PROXY_HOST
+	unset GITTEST_REMOTE_PROXY_USER
+	unset GITTEST_REMOTE_PROXY_PASS
+	unset GITTEST_REMOTE_PROXY_SELFSIGNED
 fi
 
 if [ -z "$SKIP_SSH_TESTS" ]; then
