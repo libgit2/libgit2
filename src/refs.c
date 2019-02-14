@@ -692,7 +692,7 @@ static int reference__rename(git_reference **out, git_reference *ref, const char
 		payload.old_name = ref->name;
 		memcpy(&payload.new_name, &normalized, sizeof(normalized));
 
-		error = git_repository_foreach_head(repo, update_wt_heads, &payload);
+		error = git_repository_foreach_head(repo, update_wt_heads, 0, &payload);
 	}
 
 	return error;

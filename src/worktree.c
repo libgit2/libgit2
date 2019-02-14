@@ -290,6 +290,20 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 
 	*out = NULL;
 
+	if (wtopts.ref) {
+		if (!git_reference_is_branch(wtopts.ref)) {
+			git_error_set(GIT_ERROR_WORKTREE, "reference is not a branch");
+			err = -1;
+			goto out;
+		}
+
+		if (git_branch_is_checked_out(wtopts.ref)) {
+			git_error_set(GIT_ERROR_WORKTREE, "reference is already checked out");
+			err = -1;
+			goto out;
+		}
+	}
+
 	/* Create gitdir directory ".git/worktrees/<name>" */
 	if ((err = git_buf_joinpath(&gitdir, repo->commondir, "worktrees")) < 0)
 		goto out;
@@ -342,18 +356,6 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 
 	/* Set up worktree reference */
 	if (wtopts.ref) {
-		if (!git_reference_is_branch(wtopts.ref)) {
-			git_error_set(GIT_ERROR_WORKTREE, "reference is not a branch");
-			err = -1;
-			goto out;
-		}
-
-		if (git_branch_is_checked_out(wtopts.ref)) {
-			git_error_set(GIT_ERROR_WORKTREE, "reference is already checked out");
-			err = -1;
-			goto out;
-		}
-
 		if ((err = git_reference_dup(&ref, wtopts.ref)) < 0)
 			goto out;
 	} else {

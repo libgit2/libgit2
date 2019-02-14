@@ -2210,30 +2210,37 @@ out:
 	return error;
 }
 
-int git_repository_foreach_head(git_repository *repo, git_repository_foreach_head_cb cb, void *payload)
+int git_repository_foreach_head(git_repository *repo,
+				git_repository_foreach_head_cb cb,
+				int flags, void *payload)
 {
 	git_strarray worktrees = GIT_VECTOR_INIT;
 	git_buf path = GIT_BUF_INIT;
 	int error;
 	size_t i;
 
-	/* Execute callback for HEAD of commondir */
-	if ((error = git_buf_joinpath(&path, repo->commondir, GIT_HEAD_FILE)) < 0 ||
-	    (error = cb(repo, path.ptr, payload) != 0))
-		goto out;
 
-	if ((error = git_worktree_list(&worktrees, repo)) < 0) {
-		error = 0;
-		goto out;
+	if (!(flags & GIT_REPOSITORY_FOREACH_HEAD_SKIP_REPO)) {
+		/* Gather HEAD of main repository */
+		if ((error = git_buf_joinpath(&path, repo->commondir, GIT_HEAD_FILE)) < 0 ||
+		    (error = cb(repo, path.ptr, payload) != 0))
+			goto out;
 	}
 
-	/* Execute callback for all worktree HEADs */
-	for (i = 0; i < worktrees.count; i++) {
-		if (get_worktree_file_path(&path, repo, worktrees.strings[i], GIT_HEAD_FILE) < 0)
-			continue;
-
-		if ((error = cb(repo, path.ptr, payload)) != 0)
+	if (!(flags & GIT_REPOSITORY_FOREACH_HEAD_SKIP_WORKTREES)) {
+		if ((error = git_worktree_list(&worktrees, repo)) < 0) {
+			error = 0;
 			goto out;
+		}
+
+		/* Gather HEADs of all worktrees */
+		for (i = 0; i < worktrees.count; i++) {
+			if (get_worktree_file_path(&path, repo, worktrees.strings[i], GIT_HEAD_FILE) < 0)
+				continue;
+
+			if ((error = cb(repo, path.ptr, payload)) != 0)
+				goto out;
+		}
 	}
 
 out:

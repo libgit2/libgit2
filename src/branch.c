@@ -153,10 +153,20 @@ done:
 
 int git_branch_is_checked_out(const git_reference *branch)
 {
-	assert(branch && git_reference_is_branch(branch));
+	git_repository *repo;
+	int flags = 0;
 
-	return git_repository_foreach_head(git_reference_owner(branch),
-		branch_equals, (void *) branch) == 1;
+	assert(branch);
+
+	if (!git_reference_is_branch(branch))
+		return 0;
+
+	repo = git_reference_owner(branch);
+
+	if (git_repository_is_bare(repo))
+		flags |= GIT_REPOSITORY_FOREACH_HEAD_SKIP_REPO;
+
+	return git_repository_foreach_head(repo, branch_equals, flags, (void *) branch) == 1;
 }
 
 int git_branch_delete(git_reference *branch)
