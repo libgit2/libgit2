@@ -73,6 +73,7 @@ jobs:
         LEAK_CHECK: leaks
         CMAKE_OPTIONS: -G Ninja
         RUN_INVASIVE_TESTS: true
+        SKIP_SSH_TESTS: true
 
 - job: windows_vs_amd64
   displayName: 'Windows (amd64; Visual Studio)'
