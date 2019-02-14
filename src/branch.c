@@ -153,7 +153,10 @@ done:
 
 int git_branch_is_checked_out(const git_reference *branch)
 {
-	assert(branch && git_reference_is_branch(branch));
+	assert(branch);
+
+	if (!git_reference_is_branch(branch))
+		return 0;
 
 	return git_repository_foreach_head(git_reference_owner(branch),
 		branch_equals, (void *) branch) == 1;

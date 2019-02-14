@@ -37,3 +37,10 @@ void test_refs_branches_checkedout__worktree(void)
 
 	cleanup_fixture_worktree(&fixture);
 }
+
+void test_refs_branches_checkedout__head_is_not_checked_out(void)
+{
+	repo = cl_git_sandbox_init("testrepo");
+	assert_checked_out(repo, "HEAD", 0);
+	cl_git_sandbox_cleanup();
+}
