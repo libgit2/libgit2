@@ -14,6 +14,8 @@ static git_vector _commits;
 static int _commits_is_initialized;
 static git_transfer_progress _stats;
 
+extern bool git_disable_pack_keep_file_checks;
+
 void test_pack_packbuilder__initialize(void)
 {
 	_repo = cl_git_sandbox_init("testrepo.git");
@@ -32,6 +34,7 @@ void test_pack_packbuilder__cleanup(void)
 	unsigned int i;
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_FSYNC_GITDIR, 0));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_DISABLE_PACK_KEEP_FILE_CHECKS, false));
 
 	if (_commits_is_initialized) {
 		_commits_is_initialized = 0;
@@ -259,4 +262,11 @@ void test_pack_packbuilder__foreach_with_cancel(void)
 	cl_git_fail_with(
 		git_packbuilder_foreach(_packbuilder, foreach_cancel_cb, idx), -1111);
 	git_indexer_free(idx);
+}
+
+void test_pack_packbuilder__keep_file_check(void)
+{
+	assert(!git_disable_pack_keep_file_checks);
+	cl_git_pass(git_libgit2_opts(GIT_OPT_DISABLE_PACK_KEEP_FILE_CHECKS, true));
+	assert(git_disable_pack_keep_file_checks);
 }
