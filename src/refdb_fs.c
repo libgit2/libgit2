@@ -666,17 +666,31 @@ static int refdb_fs_backend__iterator_next_name(
 	return error;
 }
 
+static void mark_shadowed_packrefs(git_vector *loose, git_sortedcache *packed)
+{
+	size_t i;
+	const char *name;
+
+	git_vector_foreach(loose, i, name) {
+		struct packref *ref;
+
+		git_sortedcache_rlock(packed);
+		ref = git_sortedcache_lookup(packed, name);
+		if (ref)
+			ref->flags |= PACKREF_SHADOWED;
+		git_sortedcache_runlock(packed);
+	}
+}
+
 static int refdb_fs_backend__iterator(
 	git_reference_iterator **out, git_refdb_backend *_backend, const char *glob)
 {
 	int error;
+	int ret = -1;
 	refdb_fs_iter *iter;
 	refdb_fs_backend *backend = (refdb_fs_backend *)_backend;
 
 	assert(backend);
-
-	if ((error = packed_reload(backend)) < 0)
-		return error;
 
 	iter = git__calloc(1, sizeof(refdb_fs_iter));
 	GIT_ERROR_CHECK_ALLOC(iter);
@@ -697,12 +711,19 @@ static int refdb_fs_backend__iterator(
 	if (iter_load_loose_paths(backend, iter) < 0)
 		goto fail;
 
+	if ((error = packed_reload(backend)) < 0) {
+		ret = error;
+		goto fail;
+	}
+
+	mark_shadowed_packrefs(&iter->loose, backend->refcache);
+
 	*out = (git_reference_iterator *)iter;
 	return 0;
 
 fail:
 	refdb_fs_backend__iterator_free((git_reference_iterator *)iter);
-	return -1;
+	return ret;
 }
 
 static bool ref_is_available(
