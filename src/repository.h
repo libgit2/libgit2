@@ -176,6 +176,13 @@ int git_repository_create_head(const char *git_dir, const char *ref_name);
  */
 typedef int (*git_repository_foreach_head_cb)(git_repository *repo, const char *path, void *payload);
 
+enum {
+	/* Skip enumeration of the main repository HEAD */
+	GIT_REPOSITORY_FOREACH_HEAD_SKIP_REPO      = (1u << 0),
+	/* Skip enumeration of worktree HEADs */
+	GIT_REPOSITORY_FOREACH_HEAD_SKIP_WORKTREES = (1u << 1),
+};
+
 /*
  * Iterate over repository and all worktree HEADs.
  *
@@ -184,7 +191,9 @@ typedef int (*git_repository_foreach_head_cb)(git_repository *repo, const char *
  * executed with the given payload. The return value equals the
  * return value of the last executed callback function.
  */
-int git_repository_foreach_head(git_repository *repo, git_repository_foreach_head_cb cb, void *payload);
+int git_repository_foreach_head(git_repository *repo,
+				git_repository_foreach_head_cb cb,
+				int flags, void *payload);
 
 /*
  * Weak pointers to repository internals.

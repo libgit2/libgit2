@@ -159,7 +159,7 @@ int git_branch_is_checked_out(const git_reference *branch)
 		return 0;
 
 	return git_repository_foreach_head(git_reference_owner(branch),
-		branch_equals, (void *) branch) == 1;
+		branch_equals, 0, (void *) branch) == 1;
 }
 
 int git_branch_delete(git_reference *branch)
