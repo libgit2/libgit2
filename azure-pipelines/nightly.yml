@@ -12,7 +12,7 @@ jobs:
       imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=gcc
-       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON
        LEAK_CHECK=valgrind
        RUN_INVASIVE_TESTS=true
 
@@ -26,7 +26,7 @@ jobs:
       imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=gcc
-       CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DSHA1_BACKEND=mbedTLS
+       CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DSHA1_BACKEND=mbedTLS -DDEPRECATE_HARD=ON
        LEAK_CHECK=valgrind
        RUN_INVASIVE_TESTS=true
 
@@ -40,7 +40,7 @@ jobs:
       imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=clang
-       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON
        LEAK_CHECK=valgrind
        RUN_INVASIVE_TESTS=true
 
@@ -54,7 +54,7 @@ jobs:
       imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=clang
-       CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DSHA1_BACKEND=mbedTLS
+       CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DSHA1_BACKEND=mbedTLS -DDEPRECATE_HARD=ON
        LEAK_CHECK=valgrind
        RUN_INVASIVE_TESTS=true
 
@@ -71,8 +71,9 @@ jobs:
         TMPDIR: $(Agent.TempDirectory)
         PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
         LEAK_CHECK: leaks
-        CMAKE_OPTIONS: -G Ninja
+        CMAKE_OPTIONS: -G Ninja -DDEPRECATE_HARD=ON
         RUN_INVASIVE_TESTS: true
+        SKIP_SSH_TESTS: true
 
 - job: windows_vs_amd64
   displayName: 'Windows (amd64; Visual Studio)'
@@ -81,7 +82,7 @@ jobs:
   - template: powershell.yml
     parameters:
       environmentVariables:
-        CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013 Win64"
+        CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013 Win64" -DDEPRECATE_HARD=ON
         RUN_INVASIVE_TESTS: true
 
 - job: windows_vs_x86
@@ -91,7 +92,7 @@ jobs:
   - template: powershell.yml
     parameters:
       environmentVariables:
-        CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013"
+        CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013" -DDEPRECATE_HARD=ON
         RUN_INVASIVE_TESTS: true
 
 - job: windows_mingw_amd64
@@ -106,7 +107,7 @@ jobs:
   - template: powershell.yml
     parameters:
       environmentVariables:
-        CMAKE_OPTIONS: -G"MinGW Makefiles"
+        CMAKE_OPTIONS: -G"MinGW Makefiles" -DDEPRECATE_HARD=ON
         PATH: $(Agent.TempDirectory)\mingw64\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
         RUN_INVASIVE_TESTS: true
 
@@ -123,7 +124,7 @@ jobs:
   - template: powershell.yml
     parameters:
       environmentVariables:
-        CMAKE_OPTIONS: -G"MinGW Makefiles"
+        CMAKE_OPTIONS: -G"MinGW Makefiles" -DDEPRECATE_HARD=ON
         PATH: $(Agent.TempDirectory)\mingw32\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
         RUN_INVASIVE_TESTS: true
 
@@ -138,7 +139,7 @@ jobs:
       imageName: 'libgit2/bionic-x86:latest'
       environmentVariables: |
        CC=gcc
-       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON
        LEAK_CHECK=valgrind
        RUN_INVASIVE_TESTS=true
 
@@ -153,7 +154,7 @@ jobs:
       imageName: 'libgit2/bionic-x86:latest'
       environmentVariables: |
        CC=clang
-       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON
        LEAK_CHECK=valgrind
        RUN_INVASIVE_TESTS=true
 
@@ -168,7 +169,7 @@ jobs:
       imageName: 'libgit2/bionic-arm32:latest'
       environmentVariables: |
        CC=gcc
-       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON
        RUN_INVASIVE_TESTS=true
        SKIP_PROXY_TESTS=true
 
@@ -183,6 +184,6 @@ jobs:
       imageName: 'libgit2/bionic-arm64:latest'
       environmentVariables: |
        CC=gcc
-       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON
        RUN_INVASIVE_TESTS=true
        SKIP_PROXY_TESTS=true

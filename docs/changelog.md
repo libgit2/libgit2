@@ -1,3 +1,13 @@
+v0.28.1
+-------
+
+This is a bugfix release with the following change:
+
+* The deprecated functions (`git_buf_free` and the `giterr_` family of
+  functions) are now exported properly.  In the v0.28 release, they were
+  not given the correct external attributes and they did not have the
+  correct linkage visibility in the v0.28 library.
+
 v0.28
 -----
 

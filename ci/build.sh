@@ -16,8 +16,20 @@ indent() { sed "s/^/    /"; }
 echo "Source directory: ${SOURCE_DIR}"
 echo "Build directory:  ${BUILD_DIR}"
 echo ""
-echo "Operating system version:"
+
+if [ "$(uname -s)" = "Darwin" ]; then
+	echo "macOS version:"
+	sw_vers | indent
+fi
+
+if [ -f "/etc/debian_version" ]; then
+	echo "Debian version:"
+	lsb_release -a | indent
+fi
+
+echo "Kernel version:"
 uname -a 2>&1 | indent
+
 echo "CMake version:"
 cmake --version 2>&1 | indent
 echo "Compiler version:"
