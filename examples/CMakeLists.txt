@@ -5,6 +5,9 @@ FILE(GLOB_RECURSE SRC_EXAMPLE_GIT2 network/*.c network/*.h common.?)
 ADD_EXECUTABLE(cgit2 ${SRC_EXAMPLE_GIT2})
 SET_TARGET_PROPERTIES(cgit2 PROPERTIES C_STANDARD 90)
 
+# Ensure that we do not use deprecated functions internally
+ADD_DEFINITIONS(-DGIT_DEPRECATE_HARD)
+
 IF(WIN32 OR ANDROID)
 	TARGET_LINK_LIBRARIES(cgit2 git2)
 ELSE()

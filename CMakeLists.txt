@@ -64,6 +64,7 @@ OPTION(USE_EXT_HTTP_PARSER		"Use system HTTP_Parser if available"			 ON)
 OPTION(DEBUG_POOL			"Enable debug pool allocator"				OFF)
 OPTION(ENABLE_WERROR			"Enable compilation with -Werror"			OFF)
 OPTION(USE_BUNDLED_ZLIB    		"Use the bundled version of zlib"			OFF)
+OPTION(DEPRECATE_HARD			"Do not include deprecated functions in the library"	OFF)
 
 IF (UNIX AND NOT APPLE)
 	OPTION(ENABLE_REPRODUCIBLE_BUILDS "Enable reproducible builds"				OFF)
@@ -105,8 +106,9 @@ SET(LIBGIT2_VERSION_STRING "${LIBGIT2_VERSION_MAJOR}.${LIBGIT2_VERSION_MINOR}.${
 FILE(STRINGS "${libgit2_SOURCE_DIR}/include/git2/version.h" GIT2_HEADER_SOVERSION REGEX "^#define LIBGIT2_SOVERSION [0-9]+$")
 STRING(REGEX REPLACE "^.*LIBGIT2_SOVERSION ([0-9]+)$" "\\1" LIBGIT2_SOVERSION "${GIT2_HEADER_SOVERSION}")
 
-# Ensure that we do not use deprecated functions internally
-ADD_DEFINITIONS(-DGIT_DEPRECATE_HARD)
+IF (DEPRECATE_HARD)
+	ADD_DEFINITIONS(-DGIT_DEPRECATE_HARD)
+ENDIF()
 
 # Platform specific compilation flags
 IF (MSVC)

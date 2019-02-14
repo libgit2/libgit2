@@ -79,6 +79,12 @@
 #include "thread-utils.h"
 #include "integer.h"
 
+/*
+ * Include the declarations for deprecated functions; this ensures
+ * that they're decorated with the proper extern/visibility attributes.
+ */
+#include "git2/deprecated.h"
+
 #include <regex.h>
 
 #define DEFAULT_BUFSIZE 65536
