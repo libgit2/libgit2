@@ -564,7 +564,6 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 
 	while (!error && !git_iterator_advance(&entry, fsit)) {
 		const char *ref_name;
-		struct packref *ref;
 		char *ref_dup;
 
 		git_buf_truncate(&path, ref_prefix_len);
@@ -574,12 +573,6 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 		if (git__suffixcmp(ref_name, ".lock") == 0 ||
 			(iter->glob && p_fnmatch(iter->glob, ref_name, 0) != 0))
 			continue;
-
-		git_sortedcache_rlock(backend->refcache);
-		ref = git_sortedcache_lookup(backend->refcache, ref_name);
-		if (ref)
-			ref->flags |= PACKREF_SHADOWED;
-		git_sortedcache_runlock(backend->refcache);
 
 		ref_dup = git_pool_strdup(&iter->pool, ref_name);
 		if (!ref_dup)
@@ -605,8 +598,13 @@ static int refdb_fs_backend__iterator_next(
 	while (iter->loose_pos < iter->loose.length) {
 		const char *path = git_vector_get(&iter->loose, iter->loose_pos++);
 
-		if (loose_lookup(out, backend, path) == 0)
+		if (loose_lookup(out, backend, path) == 0) {
+			ref = git_sortedcache_lookup(iter->cache, path);
+			if (ref)
+				ref->flags |= PACKREF_SHADOWED;
+
 			return 0;
+		}
 
 		git_error_clear();
 	}
@@ -640,8 +638,13 @@ static int refdb_fs_backend__iterator_next_name(
 
 	while (iter->loose_pos < iter->loose.length) {
 		const char *path = git_vector_get(&iter->loose, iter->loose_pos++);
+		struct packref *ref;
 
 		if (loose_lookup(NULL, backend, path) == 0) {
+			ref = git_sortedcache_lookup(iter->cache, path);
+			if (ref)
+				ref->flags |= PACKREF_SHADOWED;
+
 			*out = path;
 			return 0;
 		}
