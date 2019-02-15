@@ -333,14 +333,17 @@ static int refdb_fs_backend__exists(
 
 	assert(backend);
 
-	if ((error = packed_reload(backend)) < 0 ||
-		(error = git_buf_joinpath(&ref_path, backend->gitpath, ref_name)) < 0)
+	if ((error = git_buf_joinpath(&ref_path, backend->gitpath, ref_name)) < 0)
 		return error;
-
-	*exists = git_path_isfile(ref_path.ptr) ||
-		(git_sortedcache_lookup(backend->refcache, ref_name) != NULL);
-
+	*exists = git_path_isfile(ref_path.ptr);
 	git_buf_dispose(&ref_path);
+
+	if (!*exists) {
+		if ((error = packed_reload(backend)) < 0)
+		    return error;
+		*exists = git_sortedcache_lookup(backend->refcache, ref_name) != NULL;
+	}
+
 	return 0;
 }
 
