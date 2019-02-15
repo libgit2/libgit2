@@ -681,40 +681,41 @@ static int refdb_fs_backend__iterator_next_name(
 static int refdb_fs_backend__iterator(
 	git_reference_iterator **out, git_refdb_backend *_backend, const char *glob)
 {
-	int error;
-	refdb_fs_iter *iter;
 	refdb_fs_backend *backend = (refdb_fs_backend *)_backend;
+	refdb_fs_iter *iter = NULL;
+	int error;
 
 	assert(backend);
 
 	if ((error = packed_reload(backend)) < 0)
-		return error;
+		goto out;
 
 	iter = git__calloc(1, sizeof(refdb_fs_iter));
 	GIT_ERROR_CHECK_ALLOC(iter);
 
 	git_pool_init(&iter->pool, 1);
 
-	if (git_vector_init(&iter->loose, 8, NULL) < 0)
-		goto fail;
+	if ((error = git_vector_init(&iter->loose, 8, NULL)) < 0)
+		goto out;
 
 	if (glob != NULL &&
-		(iter->glob = git_pool_strdup(&iter->pool, glob)) == NULL)
-		goto fail;
+	    (iter->glob = git_pool_strdup(&iter->pool, glob)) == NULL) {
+		error = GIT_ERROR_NOMEMORY;
+		goto out;
+	}
+
+	if ((error = iter_load_loose_paths(backend, iter)) < 0)
+		goto out;
 
 	iter->parent.next = refdb_fs_backend__iterator_next;
 	iter->parent.next_name = refdb_fs_backend__iterator_next_name;
 	iter->parent.free = refdb_fs_backend__iterator_free;
 
-	if (iter_load_loose_paths(backend, iter) < 0)
-		goto fail;
-
 	*out = (git_reference_iterator *)iter;
-	return 0;
-
-fail:
-	refdb_fs_backend__iterator_free((git_reference_iterator *)iter);
-	return -1;
+out:
+	if (error)
+		refdb_fs_backend__iterator_free((git_reference_iterator *)iter);
+	return error;
 }
 
 static bool ref_is_available(
