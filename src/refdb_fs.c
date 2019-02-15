@@ -611,11 +611,6 @@ static int refdb_fs_backend__iterator_next(
 		git_error_clear();
 	}
 
-	if (!iter->cache) {
-		if ((error = git_sortedcache_copy(&iter->cache, backend->refcache, 1, NULL, NULL)) < 0)
-			return error;
-	}
-
 	error = GIT_ITEROVER;
 	while (iter->packed_pos < git_sortedcache_entrycount(iter->cache)) {
 		ref = git_sortedcache_entry(iter->cache, iter->packed_pos++);
@@ -654,11 +649,6 @@ static int refdb_fs_backend__iterator_next_name(
 		git_error_clear();
 	}
 
-	if (!iter->cache) {
-		if ((error = git_sortedcache_copy(&iter->cache, backend->refcache, 1, NULL, NULL)) < 0)
-			return error;
-	}
-
 	error = GIT_ITEROVER;
 	while (iter->packed_pos < git_sortedcache_entrycount(iter->cache)) {
 		ref = git_sortedcache_entry(iter->cache, iter->packed_pos++);
@@ -687,9 +677,6 @@ static int refdb_fs_backend__iterator(
 
 	assert(backend);
 
-	if ((error = packed_reload(backend)) < 0)
-		goto out;
-
 	iter = git__calloc(1, sizeof(refdb_fs_iter));
 	GIT_ERROR_CHECK_ALLOC(iter);
 
@@ -704,7 +691,13 @@ static int refdb_fs_backend__iterator(
 		goto out;
 	}
 
+	if ((error = packed_reload(backend)) < 0)
+		goto out;
+
 	if ((error = iter_load_loose_paths(backend, iter)) < 0)
+		goto out;
+
+	if ((error = git_sortedcache_copy(&iter->cache, backend->refcache, 1, NULL, NULL)) < 0)
 		goto out;
 
 	iter->parent.next = refdb_fs_backend__iterator_next;
