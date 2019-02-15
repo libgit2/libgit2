@@ -694,10 +694,10 @@ static int refdb_fs_backend__iterator(
 		goto out;
 	}
 
-	if ((error = packed_reload(backend)) < 0)
+	if ((error = iter_load_loose_paths(backend, iter)) < 0)
 		goto out;
 
-	if ((error = iter_load_loose_paths(backend, iter)) < 0)
+	if ((error = packed_reload(backend)) < 0)
 		goto out;
 
 	if ((error = git_sortedcache_copy(&iter->cache, backend->refcache, 1, NULL, NULL)) < 0)
