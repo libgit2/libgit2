@@ -443,8 +443,12 @@ int git_odb_new(git_odb **out)
 	git_odb *db = git__calloc(1, sizeof(*db));
 	GIT_ERROR_CHECK_ALLOC(db);
 
-	if (git_cache_init(&db->own_cache) < 0 ||
-		git_vector_init(&db->backends, 4, backend_sort_cmp) < 0) {
+	if (git_cache_init(&db->own_cache) < 0) {
+		git__free(db);
+		return -1;
+	}
+	if (git_vector_init(&db->backends, 4, backend_sort_cmp) < 0) {
+		git_cache_free(&db->own_cache);
 		git__free(db);
 		return -1;
 	}
