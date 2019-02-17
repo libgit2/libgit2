@@ -864,11 +864,6 @@ int git__utf8_iterate(const uint8_t *str, int str_len, int32_t *dst)
 	return length;
 }
 
-double git_time_monotonic(void)
-{
-	return git__timer();
-}
-
 size_t git__utf8_valid_buf_length(const uint8_t *str, size_t str_len)
 {
 	size_t offset = 0;
