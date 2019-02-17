@@ -58,7 +58,7 @@
         
       </td>
       <td class=code>
-        <div class='highlight'><pre><span></span><span class="cm">/*</span>
+        <div class='highlight'><pre><span class="cm">/*</span>
 <span class="cm"> * libgit2 &quot;blame&quot; example - shows how to use the blame API</span>
 <span class="cm"> *</span>
 <span class="cm"> * Written by the libgit2 contributors</span>
@@ -72,7 +72,7 @@
 <span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
 <span class="cm"> */</span>
 
-<span class="cp">#include</span> <span class="cpf">&quot;common.h&quot;</span><span class="cp"></span>
+<span class="cp">#include &quot;common.h&quot;</span>
 
 <span class="cp">#ifdef _MSC_VER</span>
 <span class="cp">#define snprintf sprintf_s</span>
@@ -143,7 +143,7 @@ nail down the end points.</p>
       </td>
       <td class=code>
         <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">commitspec</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse-27" class="fnlink" href="../../#v0.24.3/group/revparse/git_revparse">git_revparse</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">revspec</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">commitspec</span><span class="p">),</span> <span class="s">&quot;Couldn&#39;t parse commit spec&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse-27" class="fnlink" href="../../#v0.24.3/group/git2_revparse/git_revparse">git_revparse</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">revspec</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">commitspec</span><span class="p">),</span> <span class="s">&quot;Couldn&#39;t parse commit spec&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">revspec</span><span class="p">.</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">GIT_REVPARSE_SINGLE</span><span class="p">)</span> <span class="p">{</span>
       <span class="n"><a name="git_oid_cpy-20" class="fnlink" href="../../#v0.24.3/group/oid/git_oid_cpy">git_oid_cpy</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blameopts</span><span class="p">.</span><span class="n">newest_commit</span><span class="p">,</span> <span class="n"><a name="git_object_id-10" class="fnlink" href="../../#v0.24.3/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">revspec</span><span class="p">.</span><span class="n">from</span><span class="p">));</span>
       <span class="n"><a name="git_object_free-14" class="fnlink" href="../../#v0.24.3/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">revspec</span><span class="p">.</span><span class="n">from</span><span class="p">);</span>

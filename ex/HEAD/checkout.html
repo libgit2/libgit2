@@ -61,7 +61,7 @@
         
       </td>
       <td class=code>
-        <div class='highlight'><pre><span></span><span class="cm">/*</span>
+        <div class='highlight'><pre><span class="cm">/*</span>
 <span class="cm"> * libgit2 &quot;checkout&quot; example - shows how to perform checkouts</span>
 <span class="cm"> *</span>
 <span class="cm"> * Written by the libgit2 contributors</span>
@@ -75,8 +75,8 @@
 <span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
 <span class="cm"> */</span>
 
-<span class="cp">#include</span> <span class="cpf">&quot;common.h&quot;</span><span class="cp"></span>
-<span class="cp">#include</span> <span class="cpf">&lt;assert.h&gt;</span><span class="cp"></span>
+<span class="cp">#include &quot;common.h&quot;</span>
+<span class="cp">#include &lt;assert.h&gt;</span>
 
 <span class="cm">/* Define the printf format specifer to use for size_t output */</span>
 <span class="cp">#if defined(_MSC_VER) || defined(__MINGW32__)</span>
@@ -234,7 +234,7 @@ a branch-based checkout.</p>
       <td class=code>
         <div class='highlight'><pre>  <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_commit_lookup-6" class="fnlink" href="../../#HEAD/group/commit/git_commit_lookup">git_commit_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">target_commit</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n"><a name="git_annotated_commit_id-1" class="fnlink" href="../../#HEAD/group/annotated/git_annotated_commit_id">git_annotated_commit_id</a></span><span class="p">(</span><span class="n">target</span><span class="p">));</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">err</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to lookup commit: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="giterr_last-8" class="fnlink" href="../../#HEAD/group/giterr/giterr_last">giterr_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to lookup commit: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_error_last-8" class="fnlink" href="../../#HEAD/group/error/git_error_last">git_error_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
     <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
   <span class="p">}</span></pre></div>
       </td>
@@ -247,13 +247,13 @@ a branch-based checkout.</p>
         <p>Perform the checkout so the workdir corresponds to what target_commit
 contains.</p>
 
-<p>Note that it&#39;s okay to pass a git_commit here, because it will be 
+<p>Note that it&#39;s okay to pass a git_commit here, because it will be
 peeled to a tree.</p>
       </td>
       <td class=code>
         <div class='highlight'><pre>  <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_checkout_tree-5" class="fnlink" href="../../#HEAD/group/checkout/git_checkout_tree">git_checkout_tree</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="p">(</span><span class="k">const</span> <span class="n">git_object</span> <span class="o">*</span><span class="p">)</span><span class="n">target_commit</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">checkout_opts</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">err</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to checkout tree: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="giterr_last-9" class="fnlink" href="../../#HEAD/group/giterr/giterr_last">giterr_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to checkout tree: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_error_last-9" class="fnlink" href="../../#HEAD/group/error/git_error_last">git_error_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
     <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
   <span class="p">}</span></pre></div>
       </td>
@@ -275,7 +275,7 @@ we might need to detach HEAD.</p>
     <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_repository_set_head_detached_from_annotated-17" class="fnlink" href="../../#HEAD/group/repository/git_repository_set_head_detached_from_annotated">git_repository_set_head_detached_from_annotated</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">target</span><span class="p">);</span>
   <span class="p">}</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">err</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to update HEAD reference: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="giterr_last-10" class="fnlink" href="../../#HEAD/group/giterr/giterr_last">giterr_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to update HEAD reference: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_error_last-10" class="fnlink" href="../../#HEAD/group/error/git_error_last">git_error_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
     <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
   <span class="p">}</span>
 
@@ -299,7 +299,7 @@ we might need to detach HEAD.</p>
   <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
   <span class="k">struct</span> <span class="n">args_info</span> <span class="n">args</span> <span class="o">=</span> <span class="n">ARGS_INFO_INIT</span><span class="p">;</span>
   <span class="n">checkout_options</span> <span class="n">opts</span><span class="p">;</span>
-  <span class="n">git_repository_state_t</span> <span class="n">state</span><span class="p">;</span>
+  <span class="kt">git_repository_state_t</span> <span class="n">state</span><span class="p">;</span>
   <span class="n">git_annotated_commit</span> <span class="o">*</span><span class="n">checkout_target</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">err</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span> <span class="o">=</span> <span class="s">&quot;.&quot;</span><span class="p">;</span></pre></div>
@@ -387,7 +387,7 @@ we might need to detach HEAD.</p>
       <td class=code>
         <div class='highlight'><pre>    <span class="n">err</span> <span class="o">=</span> <span class="n">resolve_refish</span><span class="p">(</span><span class="o">&amp;</span><span class="n">checkout_target</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">args</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">]);</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">err</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-      <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to resolve %s: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">args</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">],</span> <span class="n"><a name="giterr_last-11" class="fnlink" href="../../#HEAD/group/giterr/giterr_last">giterr_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
+      <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to resolve %s: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">args</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">],</span> <span class="n"><a name="git_error_last-11" class="fnlink" href="../../#HEAD/group/error/git_error_last">git_error_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
       <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
     <span class="p">}</span>
     <span class="n">err</span> <span class="o">=</span> <span class="n">perform_checkout_ref</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">checkout_target</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="p">);</span>

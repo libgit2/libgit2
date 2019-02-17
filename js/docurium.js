@@ -12,52 +12,52 @@ $(function() {
 
       // Function groups
       var funs = _.map(data['groups'], function(group, i) {
-        var name = group[0]
-        var link = groupLink(name, version)
-        return {name: name, link: link, num: group[1].length}
+	var name = group[0]
+	var link = groupLink(name, version)
+	return {name: name, link: link, num: group[1].length}
       })
 
       // Callbacks
       var callbacks = _.map(_.keys(data['callbacks']), function(name) {
-        var link = functionLink('callback', name, version)
-        return {name: name, link: link}
+	var link = functionLink('callback', name, version)
+	return {name: name, link: link}
       })
 
       // Types
       var getName = function(type) {
-        var name = type[0];
-        var link = typeLink(name, version);
-        return {link: link, name: name};
+	var name = type[0];
+	var link = typeLink(name, version);
+	return {link: link, name: name};
       }
 
       var enums = _.filter(data['types'], function(type) {
-        return type[1]['block'] && type[1]['type'] == 'enum';
+	return type[1]['block'] && type[1]['type'] == 'enum';
       }).map(getName)
 
       var structs = _.filter(data['types'], function(type) {
-        return type[1]['block'] && type[1]['type'] != 'enum'
+	return type[1]['block'] && type[1]['type'] != 'enum'
       }).map(getName)
 
       var opaques = _.filter(data['types'], function(type) {
-        return !type[1]['block']
+	return !type[1]['block']
       }).map(getName)
 
       // File Listing
       var files = _.map(data['files'], function(file) {
-        var url = this.github_file(file['file'])
-        return {url: url, name: file['file']}
+	var url = this.github_file(file['file'])
+	return {url: url, name: file['file']}
       }, docurium)
 
       // Examples List
       var examples = []
       if(data['examples'] && (data['examples'].length > 0)) {
-        examples = _.map(data['examples'], function(file) {
-          return {name: file[0], path: file[1]}
-        })
+	examples = _.map(data['examples'], function(file) {
+	  return {name: file[0], path: file[1]}
+	})
       }
 
       this.set('data', {funs: funs, callbacks: callbacks, enums: enums, structs: structs,
-        opaques: opaques, files: files, examples: examples})
+	                opaques: opaques, files: files, examples: examples})
     },
   })
 
@@ -187,34 +187,34 @@ $(function() {
 
       // figure out the adds, deletes and changes
       _.forEach(sigHist, function(func, fname) {
-        var lastv = _.last(func.exists)
-        var firstv = _.first(func.exists)
-        changelog[firstv]['adds'].push(fname)
+	var lastv = _.last(func.exists)
+	var firstv = _.first(func.exists)
+	changelog[firstv]['adds'].push(fname)
 
-        // figure out where it was deleted or changed
-        if (lastv && (lastv != lastVer)) {
-          var vi = _.indexOf(versions,lastv)
-          var delv = versions[vi-1]
-          changelog[delv]['deletes'].push(fname)
+	// figure out where it was deleted or changed
+	if (lastv && (lastv != lastVer)) {
+	  var vi = _.indexOf(versions,lastv)
+	  var delv = versions[vi-1]
+	  changelog[delv]['deletes'].push(fname)
 
-          _.forEach(func.changes, function(_, v) {
-            changelog[v]['changes'].push(fname)
-          })
-        }
+	  _.forEach(func.changes, function(_, v) {
+	    changelog[v]['changes'].push(fname)
+	  })
+	}
       })
 
       var vers = _.map(versions, function(version) {
-        var deletes = changelog[version]['deletes']
-        deletes.sort()
+	var deletes = changelog[version]['deletes']
+	deletes.sort()
 
-        var additions = changelog[version]['adds']
-        additions.sort()
-        var adds = _.map(additions, function(add) {
+	var additions = changelog[version]['adds']
+	additions.sort()
+	var adds = _.map(additions, function(add) {
           var gname = this.model.groupOf(add)
-          return {link: functionLink(gname, add, version), text: add}
-        }, this)
+	  return {link: functionLink(gname, add, version), text: add}
+	}, this)
 
-        return {title: version, listing: this.itemTemplate({dels: deletes, adds: adds})}
+	return {title: version, listing: this.itemTemplate({dels: deletes, adds: adds})}
       }, this)
 
       this.el = this.template({versions: vers})
@@ -238,15 +238,15 @@ $(function() {
 
       var ldata = fdata
       if (isCallback) {
-        var cdata = docurium.get('data')['callbacks']
-        ldata = cdata
+	var cdata = docurium.get('data')['callbacks']
+	ldata = cdata
       } else {
-        var functions = _.filter(group[1], function(f){ return f != fname})
+	var functions = _.filter(group[1], function(f){ return f != fname})
       }
 
       // Function Arguments
       var args = _.map(ldata[fname]['args'], function(arg) {
-        return {link: this.hotLink(arg.type), name: arg.name, comment: arg.comment}
+	return {link: this.hotLink(arg.type), name: arg.name, comment: arg.comment}
       }, docurium)
 
       var data = ldata[fname]
@@ -257,32 +257,32 @@ $(function() {
       var sig = docurium.hotLink(ret.type) + ' ' + fname + '(' + data['argline'] + ');'
       // version history
       if (!isCallback) {
-        var sigHist = docurium.get('signatures')[fname]
-        var version = docurium.get('version')
-        var sigs = _.map(sigHist.exists, function(ver) {
-          var klass = []
-          if (sigHist.changes[ver])
-            klass.push('changed')
-            if (ver == version)
-              klass.push('current')
+	var sigHist = docurium.get('signatures')[fname]
+	var version = docurium.get('version')
+	var sigs = _.map(sigHist.exists, function(ver) {
+	  var klass = []
+	  if (sigHist.changes[ver])
+	    klass.push('changed')
+	  if (ver == version)
+	    klass.push('current')
 
-              return {url: '#' + functionLink(gname, fname, ver), name: ver, klass: klass.join(' ')}
-        })
+	  return {url: '#' + functionLink(gname, fname, ver), name: ver, klass: klass.join(' ')}
+	})
       }
       // GitHub link
       var fileLink = docurium.github_file(data.file, data.line, data.lineto)
       // link to the group
       if (!isCallback) {
-        var version = docurium.get('version')
-        var alsoGroup = '#' + groupLink(group[0], version)
-        var alsoLinks = _.map(functions, function(f) {
-          return {url: '#' + functionLink(gname, f, version), name: f}
-        })
+	var version = docurium.get('version')
+	var alsoGroup = '#' + groupLink(group[0], version)
+	var alsoLinks = _.map(functions, function(f) {
+	  return {url: '#' + functionLink(gname, f, version), name: f}
+	})
       }
 
       this.set('data', {name: fname, data: data, args: args, returns: returns, sig: sig,
-        sigs: sigs, fileLink: fileLink, groupName: gname,
-        alsoGroup: alsoGroup, alsoLinks: alsoLinks})
+			sigs: sigs, fileLink: fileLink, groupName: gname,
+			alsoGroup: alsoGroup, alsoLinks: alsoLinks})
     }
   })
 
@@ -313,18 +313,18 @@ $(function() {
       var version = this.docurium.get('version')
 
       var groups = _.map(data.groups, function(group) {
-        var gname = group[0]
-        var funs = _.map(group[1], function(fun) {
-          var klass = ''
-          if (sigHist[fun].changes[version])
-            klass = 'changed'
+	var gname = group[0]
+	var funs = _.map(group[1], function(fun) {
+	  var klass = ''
+	  if (sigHist[fun].changes[version])
+	    klass = 'changed'
 
-            if (version == _.first(sigHist[fun].exists))
-              klass = 'introd'
+	  if (version == _.first(sigHist[fun].exists))
+	    klass = 'introd'
 
-              return {name: fun, url: '#' + functionLink(gname, fun, version), klass: klass}
-        })
-        return {name: gname, funs: funs}
+	  return {name: fun, url: '#' + functionLink(gname, fun, version), klass: klass}
+	})
+	return {name: gname, funs: funs}
       })
 
       this.reset(groups)
@@ -347,27 +347,38 @@ $(function() {
       var version = docurium.get('version')
       var types = docurium.get('data')['types']
       var tdata = _.find(types, function(g) {
-        return g[0] == typename
+	return g[0] == typename
       })
       var tname = tdata[0]
       var data = tdata[1]
 
       var toPair = function(fun) {
-        var gname = this.groupOf(fun)
-        var url = '#' + functionLink(gname, fun, version)
-        return {name: fun, url: url}
+	var gname = this.groupOf(fun)
+	var url = '#' + functionLink(gname, fun, version)
+	return {name: fun, url: url}
       }
 
       var returns = _.map(data.used.returns, toPair, docurium)
       var needs = _.map(data.used.needs, toPair, docurium)
       var fileLink = {name: data.file, url: docurium.github_file(data.file, data.line, data.lineto)}
 
-      // Hot link our field types
-      data.fields = _.map(data.fields, function(field) {
-        return {type: this.hotLink(field.type), name: field.name, comments: field.comments}
-      }, docurium)
+      // so it doesn't look crap, we build up a block with fields
+      // without a comment
+      var had_comment = false
+      var blocks = []
+      var tmp = []
+      _.each(data.fields, function(f) {
+	if (had_comment) {
+	  blocks.push(tmp)
+	  tmp = []
+	}
 
-      this.set('data', {tname: tname, data: data, returns: returns, needs: needs, fileLink: fileLink})
+	tmp.push(f)
+	had_comment = f.comments
+      })
+      blocks.push(tmp)
+
+      this.set('data', {tname: tname, data: data, blocks: blocks, returns: returns, needs: needs, fileLink: fileLink})
     }
   })
 
@@ -400,10 +411,10 @@ $(function() {
 
       this.gname = gname.charAt(0).toUpperCase() + gname.substring(1).toLowerCase()
       this.functions = _.map(group[1], function(name) {
-        var url = '#' + functionLink(gname, name, version)
-        var d = fdata[name]
-        return {name: name, url: url, returns: d['return']['type'], argline: d['argline'],
-        description: d['description'], comments: d['comments'], args: d['args']}
+	var url = '#' + functionLink(gname, name, version)
+	var d = fdata[name]
+	return {name: name, url: url, returns: d['return']['type'], argline: d['argline'],
+		description: d['description'], comments: d['comments'], args: d['args']}
       })
     },
 
@@ -422,9 +433,9 @@ $(function() {
 
     events: {
       'keyup': function() {
-        this.trigger('keyup')
-        if (this.$el.val() == '')
-          this.trigger('empty')
+	this.trigger('keyup')
+	if (this.$el.val() == '')
+	  this.trigger('empty')
       }
     },
   })
@@ -444,7 +455,7 @@ $(function() {
     keyup: function() {
       var newValue = this.field.$el.val()
       if (this.value == newValue || newValue.length < 3)
-        return
+	return
 
       this.value = newValue
       this.refreshSearch()
@@ -460,19 +471,19 @@ $(function() {
       var version = docurium.get('version')
       // look for functions (name, comment, argline)
       _.forEach(data.functions, function(f, name) {
-        var gname = docurium.groupOf(name)
-        // look in the function name first
+	var gname = docurium.groupOf(name)
+	// look in the function name first
         if (name.search(value) > -1) {
-          var gl = functionLink(gname, name, version)
-          var url = '#' + gl
-          searchResults.push({url: url, name: name, match: 'function', navigate: gl})
-          return
+	  var gl = functionLink(gname, name, version)
+	  var url = '#' + gl
+	  searchResults.push({url: url, name: name, match: 'function', navigate: gl})
+	  return
         }
 
-        // if we didn't find it there, let's look in the argline
+	// if we didn't find it there, let's look in the argline
         if (f.argline && f.argline.search(value) > -1) {
-          var gl = functionLink(gname, name, version)
-          var url = '#' + gl
+	  var gl = functionLink(gname, name, version)
+	  var url = '#' + gl
           searchResults.push({url: url, name: name, match: f.argline, navigate: gl})
         }
       })
@@ -480,8 +491,8 @@ $(function() {
       // look for types
       data.types.forEach(function(type) {
         var name = type[0]
-        var tl = typeLink(name, version)
-        var url = '#' + tl
+	var tl = typeLink(name, version)
+	var url = '#' + tl
         if (name.search(value) > -1) {
           searchResults.push({url: url, name: name, match: type[1].type, navigate: tl})
         }
@@ -489,12 +500,12 @@ $(function() {
 
       // look for callbacks
       _.each(data.callbacks, function(f, name) {
-        if (name.search(value) > -1) {
-          var gl = functionLink('callback', name, version)
-          var url = '#' + gl
-          searchResults.push({url: url, name: name, match: 'callback', navigate: gl})
-          return
-        }
+	if (name.search(value) > -1) {
+	  var gl = functionLink('callback', name, version)
+	  var url = '#' + gl
+	  searchResults.push({url: url, name: name, match: 'callback', navigate: gl})
+	  return
+	}
       })
 
       this.reset(searchResults)
@@ -521,8 +532,8 @@ $(function() {
       view.render()
 
       if (this.activeView) {
-        this.stopListening()
-        this.activeView.remove()
+	this.stopListening()
+	this.activeView.remove()
       }
 
       this.activeView = view
@@ -564,15 +575,15 @@ $(function() {
 
       current = docurium.get('version')
       if (current == version) {
-        if (success)
-          success();
-        return;
+	if (success)
+	  success();
+	return;
       }
 
       docurium.set({version: version})
       p = this.loadDoc()
       if (success)
-        p.then(success)
+	p.then(success)
     },
 
     loadDoc: function() {
@@ -585,7 +596,7 @@ $(function() {
     getGroup: function(gname) {
       var groups = docurium.get('data')['groups']
       return _.find(groups, function(g) {
-        return g[0] == gname
+	return g[0] == gname
       })
     },
 
@@ -623,7 +634,7 @@ $(function() {
     github_file: function(file, line, lineto) {
       var data = this.get('data')
       url = ['https://github.com', docurium.get('github'),
-        'blob', docurium.get('version'), data.prefix, file].join('/')
+	     'blob', docurium.get('version'), data.prefix, file].join('/')
       if(line) {
         url += '#L' + line.toString()
         if(lineto) {
@@ -666,47 +677,47 @@ $(function() {
     main: function(version) {
       var self = this
       this.doc.setVersion(version, function() {
-        var view = new MainListView({collection: self.groups})
-        self.mainView.setActive(view)
+	var view = new MainListView({collection: self.groups})
+	self.mainView.setActive(view)
       })
     },
 
     group: function(version, gname) {
       var self = this
       this.doc.setVersion(version, function() {
-        var group = self.doc.getGroup(gname)
-        var fdata = self.doc.get('data')['functions']
-        var cdata = self.doc.get('data')['callbacks']
-        var version = self.doc.get('version')
-        var view = new GroupView({group: group, functions: fdata, callbacks: cdata, version: version})
-        self.mainView.setActive(view)
+	var group = self.doc.getGroup(gname)
+	var fdata = self.doc.get('data')['functions']
+	var cdata = self.doc.get('data')['callbacks']
+	var version = self.doc.get('version')
+	var view = new GroupView({group: group, functions: fdata, callbacks: cdata, version: version})
+	self.mainView.setActive(view)
       });
     },
 
     groupFun: function(version, gname, fname) {
       var self = this
       this.doc.setVersion(version, function() {
-        var model = new FunctionModel({docurium: self.doc, gname: gname, fname: fname})
-        var view = new FunctionView({model: model})
-        self.mainView.setActive(view)
+	var model = new FunctionModel({docurium: self.doc, gname: gname, fname: fname})
+	var view = new FunctionView({model: model})
+	self.mainView.setActive(view)
       })
     },
 
     showtype: function(version, tname) {
       var self = this
       this.doc.setVersion(version, function() {
-        var model = new TypeModel({docurium: self.doc, typename: tname})
-        var view = new TypeView({model: model})
-        self.mainView.setActive(view)
+	var model = new TypeModel({docurium: self.doc, typename: tname})
+	var view = new TypeView({model: model})
+	self.mainView.setActive(view)
       })
     },
 
     search: function(version, query) {
       var self = this
       this.doc.setVersion(version, function() {
-        var view = new SearchView({collection: self.search})
-        $('#search-field').val(query).keyup()
-        self.mainView.setActive(view)
+	var view = new SearchView({collection: self.search})
+	$('#search-field').val(query).keyup()
+	self.mainView.setActive(view)
       })
     },
 
@@ -714,10 +725,10 @@ $(function() {
       // let's wait to process it until it's asked, and let's only do
       // it once
       if (this.changelogView == undefined) {
-        this.changelogView = new ChangelogView({model: this.doc})
+	this.changelogView = new ChangelogView({model: this.doc})
       }
       this.doc.setVersion(undefined, function() {
-        this.mainView.setActive(this.changelogView)
+	this.mainView.setActive(this.changelogView)
       })
     },
   });
@@ -749,7 +760,7 @@ $(function() {
   var mainView = new MainView()
 
   var router = new Workspace({docurium: docurium, search: searchCol, mainView: mainView,
-    groups: groupCol})
+			      groups: groupCol})
 
   searchField.on('empty', function() {
     router.navigate(docurium.get('version'), {trigger: true})

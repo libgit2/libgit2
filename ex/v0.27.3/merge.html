@@ -59,7 +59,7 @@
         
       </td>
       <td class=code>
-        <div class='highlight'><pre><span></span><span class="cm">/*</span>
+        <div class='highlight'><pre><span class="cm">/*</span>
 <span class="cm"> * libgit2 &quot;merge&quot; example - shows how to perform merges</span>
 <span class="cm"> *</span>
 <span class="cm"> * Written by the libgit2 contributors</span>
@@ -73,8 +73,8 @@
 <span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
 <span class="cm"> */</span>
 
-<span class="cp">#include</span> <span class="cpf">&quot;common.h&quot;</span><span class="cp"></span>
-<span class="cp">#include</span> <span class="cpf">&lt;assert.h&gt;</span><span class="cp"></span>
+<span class="cp">#include &quot;common.h&quot;</span>
+<span class="cp">#include &lt;assert.h&gt;</span>
 
 <span class="cp">#ifdef _MSC_VER</span>
 <span class="cp">#define snprintf sprintf_s</span>
@@ -373,9 +373,9 @@
   <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
   <span class="n">merge_options</span> <span class="n">opts</span><span class="p">;</span>
   <span class="n">git_index</span> <span class="o">*</span><span class="n">index</span><span class="p">;</span>
-  <span class="n">git_repository_state_t</span> <span class="n">state</span><span class="p">;</span>
-  <span class="n">git_merge_analysis_t</span> <span class="n">analysis</span><span class="p">;</span>
-  <span class="n">git_merge_preference_t</span> <span class="n">preference</span><span class="p">;</span>
+  <span class="kt">git_repository_state_t</span> <span class="n">state</span><span class="p">;</span>
+  <span class="kt">git_merge_analysis_t</span> <span class="n">analysis</span><span class="p">;</span>
+  <span class="kt">git_merge_preference_t</span> <span class="n">preference</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span> <span class="o">=</span> <span class="s">&quot;.&quot;</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">err</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 
@@ -435,7 +435,7 @@
       <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
     <span class="p">}</span>
 
-    <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_merge-20" class="fnlink" href="../../#v0.27.3/group/merge/git_merge">git_merge</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_merge-20" class="fnlink" href="../../#v0.27.3/group/git2_merge/git_merge">git_merge</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span>
                     <span class="p">(</span><span class="k">const</span> <span class="n">git_annotated_commit</span> <span class="o">**</span><span class="p">)</span><span class="n">opts</span><span class="p">.</span><span class="n">annotated</span><span class="p">,</span> <span class="n">opts</span><span class="p">.</span><span class="n">annotated_count</span><span class="p">,</span>
                     <span class="o">&amp;</span><span class="n">merge_opts</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">checkout_opts</span><span class="p">);</span>
     <span class="n">check_lg2</span><span class="p">(</span><span class="n">err</span><span class="p">,</span> <span class="s">&quot;merge failed&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>

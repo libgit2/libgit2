@@ -61,7 +61,7 @@
         
       </td>
       <td class=code>
-        <div class='highlight'><pre><span></span><span class="cm">/*</span>
+        <div class='highlight'><pre><span class="cm">/*</span>
 <span class="cm"> * libgit2 &quot;tag&quot; example - shows how to list, create and delete tags</span>
 <span class="cm"> *</span>
 <span class="cm"> * Written by the libgit2 contributors</span>
@@ -75,7 +75,7 @@
 <span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
 <span class="cm"> */</span>
 
-<span class="cp">#include</span> <span class="cpf">&quot;common.h&quot;</span><span class="cp"></span></pre></div>
+<span class="cp">#include &quot;common.h&quot;</span></pre></div>
       </td>
     </tr>
     <tr id='section-2'>
@@ -311,10 +311,10 @@ all of the use cases.</p>
       <span class="s">&quot;Failed to lookup rev&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">);</span>
 
   <span class="k">switch</span> <span class="p">(</span><span class="n"><a name="git_object_type-6" class="fnlink" href="../../#HEAD/group/object/git_object_type">git_object_type</a></span><span class="p">(</span><span class="n">obj</span><span class="p">))</span> <span class="p">{</span>
-    <span class="k">case</span> <span class="nl">GIT_OBJ_TAG</span><span class="p">:</span>
+    <span class="k">case</span> <span class="nl">GIT_OBJECT_TAG</span><span class="p">:</span>
       <span class="n">print_tag</span><span class="p">((</span><span class="n">git_tag</span> <span class="o">*</span><span class="p">)</span> <span class="n">obj</span><span class="p">,</span> <span class="n">state</span><span class="p">);</span>
       <span class="k">break</span><span class="p">;</span>
-    <span class="k">case</span> <span class="nl">GIT_OBJ_COMMIT</span><span class="p">:</span>
+    <span class="k">case</span> <span class="nl">GIT_OBJECT_COMMIT</span><span class="p">:</span>
       <span class="n">print_commit</span><span class="p">((</span><span class="n">git_commit</span> <span class="o">*</span><span class="p">)</span> <span class="n">obj</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">state</span><span class="p">);</span>
       <span class="k">break</span><span class="p">;</span>
     <span class="k">default</span><span class="o">:</span>

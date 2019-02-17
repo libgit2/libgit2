@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>remote.c</title>
+  <link rel="stylesheet" href="../css.css">
+  <style type="text/css">
+    a.fnlink {text-decoration: none}
+    a.fnlink:hover {text-decoration: underline}
+  </style>
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div id="jump_to">
+    Jump To &hellip;
+    <div id="jump_wrapper">
+      <div id="jump_page">
+        <a class="source" href="../../#v0.26.8">API Docs</a>
+          <a class="source" href="add.html">add.c</a>
+          <a class="source" href="blame.html">blame.c</a>
+          <a class="source" href="cat-file.html">cat-file.c</a>
+          <a class="source" href="common.html">common.c</a>
+          <a class="source" href="describe.html">describe.c</a>
+          <a class="source" href="diff.html">diff.c</a>
+          <a class="source" href="for-each-ref.html">for-each-ref.c</a>
+          <a class="source" href="general.html">general.c</a>
+          <a class="source" href="init.html">init.c</a>
+          <a class="source" href="log.html">log.c</a>
+          <a class="source" href="network/clone.html">clone.c</a>
+          <a class="source" href="network/common.html">common.c</a>
+          <a class="source" href="network/fetch.html">fetch.c</a>
+          <a class="source" href="network/git2.html">git2.c</a>
+          <a class="source" href="network/index-pack.html">index-pack.c</a>
+          <a class="source" href="network/ls-remote.html">ls-remote.c</a>
+          <a class="source" href="remote.html">remote.c</a>
+          <a class="source" href="rev-list.html">rev-list.c</a>
+          <a class="source" href="rev-parse.html">rev-parse.c</a>
+          <a class="source" href="showindex.html">showindex.c</a>
+          <a class="source" href="status.html">status.c</a>
+          <a class="source" href="tag.html">tag.c</a>
+      </div>
+    </div>
+  </div>
+  <table cellspacing=0 cellpadding=0>
+  <thead>
+    <tr>
+      <th class=docs><h1>remote.c</h1></th>
+      <th class=code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr id='section-1'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-1">&#182;</a>
+        </div>
+        
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="cm">/*</span>
+<span class="cm"> * libgit2 &quot;remote&quot; example - shows how to modify remotes for a repo</span>
+<span class="cm"> *</span>
+<span class="cm"> * Written by the libgit2 contributors</span>
+<span class="cm"> *</span>
+<span class="cm"> * To the extent possible under law, the author(s) have dedicated all copyright</span>
+<span class="cm"> * and related and neighboring rights to this software to the public domain</span>
+<span class="cm"> * worldwide. This software is distributed without any warranty.</span>
+<span class="cm"> *</span>
+<span class="cm"> * You should have received a copy of the CC0 Public Domain Dedication along</span>
+<span class="cm"> * with this software. If not, see</span>
+<span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
+<span class="cm"> */</span>
+
+<span class="cp">#include &quot;common.h&quot;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-2'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-2">&#182;</a>
+        </div>
+        <p>This is a sample program that is similar to &quot;git remote&quot;.  See the
+documentation for that (try &quot;git help remote&quot;) to understand what this
+program is emulating.</p>
+
+<p>This demonstrates using the libgit2 APIs to modify remotes of a repository.</p>
+
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">enum</span> <span class="n">subcmd</span> <span class="p">{</span>
+  <span class="n">subcmd_add</span><span class="p">,</span>
+  <span class="n">subcmd_remove</span><span class="p">,</span>
+  <span class="n">subcmd_rename</span><span class="p">,</span>
+  <span class="n">subcmd_seturl</span><span class="p">,</span>
+  <span class="n">subcmd_show</span><span class="p">,</span>
+<span class="p">};</span>
+
+<span class="k">struct</span> <span class="n">opts</span> <span class="p">{</span>
+  <span class="k">enum</span> <span class="n">subcmd</span> <span class="n">cmd</span><span class="p">;</span>
+
+  <span class="cm">/* for command-specific args */</span>
+  <span class="kt">int</span> <span class="n">argc</span><span class="p">;</span>
+  <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">cmd_add</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">cmd_remove</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">cmd_rename</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">cmd_seturl</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">cmd_show</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">);</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_subcmd</span><span class="p">(</span>
+  <span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">opt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">usage</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">msg</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">arg</span><span class="p">);</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
+<span class="p">{</span>
+  <span class="kt">int</span> <span class="n">retval</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="k">struct</span> <span class="n">opts</span> <span class="n">opt</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+  <span class="n">git_buf</span> <span class="n">buf</span> <span class="o">=</span> <span class="n">GIT_BUF_INIT_CONST</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+  <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+
+  <span class="n">parse_subcmd</span><span class="p">(</span><span class="o">&amp;</span><span class="n">opt</span><span class="p">,</span> <span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
+
+  <span class="n"><a name="git_libgit2_init-2" class="fnlink" href="../../#v0.26.8/group/libgit2/git_libgit2_init">git_libgit2_init</a></span><span class="p">();</span>
+
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_discover-15" class="fnlink" href="../../#v0.26.8/group/repository/git_repository_discover">git_repository_discover</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">buf</span><span class="p">,</span> <span class="s">&quot;.&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span>
+    <span class="s">&quot;Could not find repository&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_open-14" class="fnlink" href="../../#v0.26.8/group/repository/git_repository_open">git_repository_open</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="n">buf</span><span class="p">.</span><span class="n">ptr</span><span class="p">),</span>
+    <span class="s">&quot;Could not open repository&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+  <span class="n"><a name="git_buf_free-1" class="fnlink" href="../../#v0.26.8/group/buf/git_buf_free">git_buf_free</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">buf</span><span class="p">);</span>
+
+  <span class="k">switch</span> <span class="p">(</span><span class="n">opt</span><span class="p">.</span><span class="n">cmd</span><span class="p">)</span>
+  <span class="p">{</span>
+  <span class="k">case</span> <span class="nl">subcmd_add</span><span class="p">:</span>
+    <span class="n">retval</span> <span class="o">=</span> <span class="n">cmd_add</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opt</span><span class="p">);</span>
+    <span class="k">break</span><span class="p">;</span>
+  <span class="k">case</span> <span class="nl">subcmd_remove</span><span class="p">:</span>
+    <span class="n">retval</span> <span class="o">=</span> <span class="n">cmd_remove</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opt</span><span class="p">);</span>
+    <span class="k">break</span><span class="p">;</span>
+  <span class="k">case</span> <span class="nl">subcmd_rename</span><span class="p">:</span>
+    <span class="n">retval</span> <span class="o">=</span> <span class="n">cmd_rename</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opt</span><span class="p">);</span>
+    <span class="k">break</span><span class="p">;</span>
+  <span class="k">case</span> <span class="nl">subcmd_seturl</span><span class="p">:</span>
+    <span class="n">retval</span> <span class="o">=</span> <span class="n">cmd_seturl</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opt</span><span class="p">);</span>
+    <span class="k">break</span><span class="p">;</span>
+  <span class="k">case</span> <span class="nl">subcmd_show</span><span class="p">:</span>
+    <span class="n">retval</span> <span class="o">=</span> <span class="n">cmd_show</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opt</span><span class="p">);</span>
+    <span class="k">break</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="n"><a name="git_libgit2_shutdown-3" class="fnlink" href="../../#v0.26.8/group/libgit2/git_libgit2_shutdown">git_libgit2_shutdown</a></span><span class="p">();</span>
+
+  <span class="k">return</span> <span class="n">retval</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">cmd_add</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">url</span><span class="p">;</span>
+  <span class="n">git_remote</span> <span class="o">*</span><span class="n">remote</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">argc</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">usage</span><span class="p">(</span><span class="s">&quot;you need to specify a name and URL&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="n">name</span> <span class="o">=</span> <span class="n">o</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+  <span class="n">url</span> <span class="o">=</span> <span class="n">o</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
+
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_remote_create-4" class="fnlink" href="../../#v0.26.8/group/remote/git_remote_create">git_remote_create</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">url</span><span class="p">),</span>
+      <span class="s">&quot;could not create remote&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">cmd_remove</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">argc</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">usage</span><span class="p">(</span><span class="s">&quot;you need to specify a name&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="n">name</span> <span class="o">=</span> <span class="n">o</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_remote_delete-13" class="fnlink" href="../../#v0.26.8/group/remote/git_remote_delete">git_remote_delete</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span>
+      <span class="s">&quot;could not delete remote&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">cmd_rename</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="n">retval</span><span class="p">;</span>
+  <span class="kt">char</span> <span class="o">*</span><span class="n">old</span><span class="p">,</span> <span class="o">*</span><span class="n">new</span><span class="p">;</span>
+  <span class="n">git_strarray</span> <span class="n">problems</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">argc</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">usage</span><span class="p">(</span><span class="s">&quot;you need to specify old and new remote name&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="n">old</span> <span class="o">=</span> <span class="n">o</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+  <span class="n">new</span> <span class="o">=</span> <span class="n">o</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
+
+  <span class="n">retval</span> <span class="o">=</span> <span class="n"><a name="git_remote_rename-12" class="fnlink" href="../../#v0.26.8/group/remote/git_remote_rename">git_remote_rename</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">problems</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">retval</span><span class="p">)</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+
+  <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span> <span class="n">problems</span><span class="p">.</span><span class="n">count</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">puts</span><span class="p">(</span><span class="n">problems</span><span class="p">.</span><span class="n">strings</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
+  <span class="p">}</span>
+
+  <span class="n"><a name="git_strarray_free-16" class="fnlink" href="../../#v0.26.8/group/strarray/git_strarray_free">git_strarray_free</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">problems</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="n">retval</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">cmd_seturl</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="n">retval</span><span class="p">,</span> <span class="n">push</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="kt">char</span> <span class="o">*</span><span class="n">name</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">,</span> <span class="o">*</span><span class="n">url</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+
+  <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">o</span><span class="o">-&gt;</span><span class="n">argc</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">arg</span> <span class="o">=</span> <span class="n">o</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="s">&quot;--push&quot;</span><span class="p">))</span> <span class="p">{</span>
+      <span class="n">push</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">arg</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="sc">&#39;-&#39;</span> <span class="o">&amp;&amp;</span> <span class="n">name</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">name</span> <span class="o">=</span> <span class="n">arg</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">arg</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="sc">&#39;-&#39;</span> <span class="o">&amp;&amp;</span> <span class="n">url</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">url</span> <span class="o">=</span> <span class="n">arg</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+      <span class="n">usage</span><span class="p">(</span><span class="s">&quot;invalid argument to set-url&quot;</span><span class="p">,</span> <span class="n">arg</span><span class="p">);</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">name</span> <span class="o">==</span> <span class="nb">NULL</span> <span class="o">||</span> <span class="n">url</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span>
+    <span class="n">usage</span><span class="p">(</span><span class="s">&quot;you need to specify remote and the new URL&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">push</span><span class="p">)</span>
+    <span class="n">retval</span> <span class="o">=</span> <span class="n"><a name="git_remote_set_pushurl-9" class="fnlink" href="../../#v0.26.8/group/remote/git_remote_set_pushurl">git_remote_set_pushurl</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">url</span><span class="p">);</span>
+  <span class="k">else</span>
+    <span class="n">retval</span> <span class="o">=</span> <span class="n"><a name="git_remote_set_url-8" class="fnlink" href="../../#v0.26.8/group/remote/git_remote_set_url">git_remote_set_url</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">url</span><span class="p">);</span>
+
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n">retval</span><span class="p">,</span> <span class="s">&quot;could not set URL&quot;</span><span class="p">,</span> <span class="n">url</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">cmd_show</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
+  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">*</span><span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">fetch</span><span class="p">,</span> <span class="o">*</span><span class="n">push</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">verbose</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="n">git_strarray</span> <span class="n">remotes</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+  <span class="n">git_remote</span> <span class="o">*</span><span class="n">remote</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+
+  <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">o</span><span class="o">-&gt;</span><span class="n">argc</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">arg</span> <span class="o">=</span> <span class="n">o</span><span class="o">-&gt;</span><span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="s">&quot;-v&quot;</span><span class="p">)</span> <span class="o">||</span> <span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="s">&quot;--verbose&quot;</span><span class="p">))</span> <span class="p">{</span>
+      <span class="n">verbose</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_remote_list-11" class="fnlink" href="../../#v0.26.8/group/remote/git_remote_list">git_remote_list</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remotes</span><span class="p">,</span> <span class="n">repo</span><span class="p">),</span>
+    <span class="s">&quot;could not retrieve remotes&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span> <span class="n">remotes</span><span class="p">.</span><span class="n">count</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">remotes</span><span class="p">.</span><span class="n">strings</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">verbose</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">puts</span><span class="p">(</span><span class="n">name</span><span class="p">);</span>
+      <span class="k">continue</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_remote_lookup-5" class="fnlink" href="../../#v0.26.8/group/remote/git_remote_lookup">git_remote_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span>
+      <span class="s">&quot;could not look up remote&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">);</span>
+
+    <span class="n">fetch</span> <span class="o">=</span> <span class="n"><a name="git_remote_url-6" class="fnlink" href="../../#v0.26.8/group/remote/git_remote_url">git_remote_url</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">fetch</span><span class="p">)</span>
+      <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s</span><span class="se">\t</span><span class="s">%s (fetch)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">fetch</span><span class="p">);</span>
+    <span class="n">push</span> <span class="o">=</span> <span class="n"><a name="git_remote_pushurl-7" class="fnlink" href="../../#v0.26.8/group/remote/git_remote_pushurl">git_remote_pushurl</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
+    <span class="cm">/* use fetch URL if no distinct push URL has been set */</span>
+    <span class="n">push</span> <span class="o">=</span> <span class="n">push</span> <span class="o">?</span> <span class="nl">push</span> <span class="p">:</span> <span class="n">fetch</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">push</span><span class="p">)</span>
+      <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s</span><span class="se">\t</span><span class="s">%s (push)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">push</span><span class="p">);</span>
+
+    <span class="n"><a name="git_remote_free-10" class="fnlink" href="../../#v0.26.8/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="n"><a name="git_strarray_free-17" class="fnlink" href="../../#v0.26.8/group/strarray/git_strarray_free">git_strarray_free</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remotes</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_subcmd</span><span class="p">(</span>
+  <span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">opt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">char</span> <span class="o">*</span><span class="n">arg</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
+  <span class="k">enum</span> <span class="n">subcmd</span> <span class="n">cmd</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">argc</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">usage</span><span class="p">(</span><span class="s">&quot;no command specified&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="s">&quot;add&quot;</span><span class="p">))</span> <span class="p">{</span>
+    <span class="n">cmd</span> <span class="o">=</span> <span class="n">subcmd_add</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="s">&quot;remove&quot;</span><span class="p">))</span> <span class="p">{</span>
+    <span class="n">cmd</span> <span class="o">=</span> <span class="n">subcmd_remove</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="s">&quot;rename&quot;</span><span class="p">))</span> <span class="p">{</span>
+    <span class="n">cmd</span> <span class="o">=</span> <span class="n">subcmd_rename</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="s">&quot;set-url&quot;</span><span class="p">))</span> <span class="p">{</span>
+    <span class="n">cmd</span> <span class="o">=</span> <span class="n">subcmd_seturl</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="s">&quot;show&quot;</span><span class="p">))</span> <span class="p">{</span>
+    <span class="n">cmd</span> <span class="o">=</span> <span class="n">subcmd_show</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="n">usage</span><span class="p">(</span><span class="s">&quot;command is not valid&quot;</span><span class="p">,</span> <span class="n">arg</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="n">opt</span><span class="o">-&gt;</span><span class="n">cmd</span> <span class="o">=</span> <span class="n">cmd</span><span class="p">;</span>
+
+  <span class="n">opt</span><span class="o">-&gt;</span><span class="n">argc</span> <span class="o">=</span> <span class="n">argc</span> <span class="o">-</span> <span class="mi">2</span><span class="p">;</span> <span class="cm">/* executable and subcommand are removed */</span>
+  <span class="n">opt</span><span class="o">-&gt;</span><span class="n">argv</span> <span class="o">=</span> <span class="n">argv</span> <span class="o">+</span> <span class="mi">2</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">usage</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">msg</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">fputs</span><span class="p">(</span><span class="s">&quot;usage: remote add &lt;name&gt; &lt;url&gt;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">stderr</span><span class="p">);</span>
+  <span class="n">fputs</span><span class="p">(</span><span class="s">&quot;       remote remove &lt;name&gt;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">stderr</span><span class="p">);</span>
+  <span class="n">fputs</span><span class="p">(</span><span class="s">&quot;       remote rename &lt;old&gt; &lt;new&gt;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">stderr</span><span class="p">);</span>
+  <span class="n">fputs</span><span class="p">(</span><span class="s">&quot;       remote set-url [--push] &lt;name&gt; &lt;newurl&gt;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">stderr</span><span class="p">);</span>
+  <span class="n">fputs</span><span class="p">(</span><span class="s">&quot;       remote show [-v|--verbose]</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">stderr</span><span class="p">);</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">msg</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">arg</span><span class="p">)</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">msg</span><span class="p">);</span>
+  <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">msg</span> <span class="o">&amp;&amp;</span> <span class="n">arg</span><span class="p">)</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">%s: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">arg</span><span class="p">);</span>
+  <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>

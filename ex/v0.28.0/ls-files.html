@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>ls-files.c</title>
+  <link rel="stylesheet" href="../css.css">
+  <style type="text/css">
+    a.fnlink {text-decoration: none}
+    a.fnlink:hover {text-decoration: underline}
+  </style>
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div id="jump_to">
+    Jump To &hellip;
+    <div id="jump_wrapper">
+      <div id="jump_page">
+        <a class="source" href="../../#v0.28.0">API Docs</a>
+          <a class="source" href="add.html">add.c</a>
+          <a class="source" href="blame.html">blame.c</a>
+          <a class="source" href="cat-file.html">cat-file.c</a>
+          <a class="source" href="checkout.html">checkout.c</a>
+          <a class="source" href="common.html">common.c</a>
+          <a class="source" href="describe.html">describe.c</a>
+          <a class="source" href="diff.html">diff.c</a>
+          <a class="source" href="for-each-ref.html">for-each-ref.c</a>
+          <a class="source" href="general.html">general.c</a>
+          <a class="source" href="init.html">init.c</a>
+          <a class="source" href="log.html">log.c</a>
+          <a class="source" href="ls-files.html">ls-files.c</a>
+          <a class="source" href="merge.html">merge.c</a>
+          <a class="source" href="network/clone.html">clone.c</a>
+          <a class="source" href="network/common.html">common.c</a>
+          <a class="source" href="network/fetch.html">fetch.c</a>
+          <a class="source" href="network/git2.html">git2.c</a>
+          <a class="source" href="network/index-pack.html">index-pack.c</a>
+          <a class="source" href="network/ls-remote.html">ls-remote.c</a>
+          <a class="source" href="remote.html">remote.c</a>
+          <a class="source" href="rev-list.html">rev-list.c</a>
+          <a class="source" href="rev-parse.html">rev-parse.c</a>
+          <a class="source" href="showindex.html">showindex.c</a>
+          <a class="source" href="status.html">status.c</a>
+          <a class="source" href="tag.html">tag.c</a>
+      </div>
+    </div>
+  </div>
+  <table cellspacing=0 cellpadding=0>
+  <thead>
+    <tr>
+      <th class=docs><h1>ls-files.c</h1></th>
+      <th class=code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr id='section-1'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-1">&#182;</a>
+        </div>
+        
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="cm">/*</span>
+<span class="cm"> * libgit2 &quot;ls-files&quot; example - shows how to view all files currently in the index</span>
+<span class="cm"> *</span>
+<span class="cm"> * Written by the libgit2 contributors</span>
+<span class="cm"> *</span>
+<span class="cm"> * To the extent possible under law, the author(s) have dedicated all copyright</span>
+<span class="cm"> * and related and neighboring rights to this software to the public domain</span>
+<span class="cm"> * worldwide. This software is distributed without any warranty.</span>
+<span class="cm"> *</span>
+<span class="cm"> * You should have received a copy of the CC0 Public Domain Dedication along</span>
+<span class="cm"> * with this software. If not, see</span>
+<span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
+<span class="cm"> */</span>
+
+<span class="cp">#include &quot;common.h&quot;</span>
+<span class="cp">#include &quot;array.h&quot;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-2'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-2">&#182;</a>
+        </div>
+        <p>This example demonstrates the libgit2 index APIs to roughly
+simulate the output of <code>git ls-files</code>.
+<code>git ls-files</code> has many options and this currently does not show them.</p>
+
+<p><code>git ls-files</code> base command shows all paths in the index at that time.
+This includes staged and committed files, but unstaged files will not display.</p>
+
+<p>This currently supports the default behavior and the <code>--error-unmatch</code> option.</p>
+
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">typedef</span> <span class="k">struct</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">error_unmatch</span><span class="p">;</span>
+  <span class="kt">char</span> <span class="o">*</span><span class="n">files</span><span class="p">[</span><span class="mi">1024</span><span class="p">];</span>
+  <span class="kt">size_t</span> <span class="n">file_count</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">ls_options</span><span class="p">;</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">usage</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">message</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">message</span> <span class="o">&amp;&amp;</span> <span class="n">arg</span><span class="p">)</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;%s: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">arg</span><span class="p">);</span>
+  <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">message</span><span class="p">)</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">message</span><span class="p">);</span>
+  <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;usage: ls-files [--error-unmatch] [--] [&lt;file&gt;...]</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">parse_options</span><span class="p">(</span><span class="n">ls_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
+<span class="p">{</span>
+  <span class="kt">int</span> <span class="n">parsing_files</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
+
+  <span class="n">memset</span><span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">ls_options</span><span class="p">));</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">argc</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+
+  <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">argc</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">a</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+
+    <span class="cm">/* if it doesn&#39;t start with a &#39;-&#39; or is after the &#39;--&#39; then it is a file */</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="sc">&#39;-&#39;</span> <span class="o">||</span> <span class="n">parsing_files</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">parsing_files</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+      <span class="cm">/* watch for overflows (just in case) */</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">file_count</span> <span class="o">==</span> <span class="mi">1024</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;ls-files can only support 1024 files at this time.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+        <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+      <span class="p">}</span>
+
+      <span class="n">opts</span><span class="o">-&gt;</span><span class="n">files</span><span class="p">[</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">file_count</span><span class="o">++</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--&quot;</span><span class="p">))</span> <span class="p">{</span>
+      <span class="n">parsing_files</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--error-unmatch&quot;</span><span class="p">))</span> <span class="p">{</span>
+      <span class="n">opts</span><span class="o">-&gt;</span><span class="n">error_unmatch</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+      <span class="n">usage</span><span class="p">(</span><span class="s">&quot;Unsupported argument&quot;</span><span class="p">,</span> <span class="n">a</span><span class="p">);</span>
+      <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">print_paths</span><span class="p">(</span><span class="n">ls_options</span> <span class="o">*</span><span class="n">opts</span><span class="p">,</span> <span class="n">git_index</span> <span class="o">*</span><span class="n">index</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">size_t</span> <span class="n">i</span><span class="p">;</span>
+  <span class="k">const</span> <span class="n">git_index_entry</span> <span class="o">*</span><span class="n">entry</span><span class="p">;</span>
+
+  <span class="cm">/* if there are no files explicitly listed by the user print all entries in the index */</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">file_count</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">size_t</span> <span class="n">entry_count</span> <span class="o">=</span> <span class="n"><a name="git_index_entrycount-4" class="fnlink" href="../../#v0.28.0/group/index/git_index_entrycount">git_index_entrycount</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">entry_count</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">entry</span> <span class="o">=</span> <span class="n"><a name="git_index_get_byindex-5" class="fnlink" href="../../#v0.28.0/group/index/git_index_get_byindex">git_index_get_byindex</a></span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">i</span><span class="p">);</span>
+      <span class="n">puts</span><span class="p">(</span><span class="n">entry</span><span class="o">-&gt;</span><span class="n">path</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="cm">/* loop through the files found in the args and print them if they exist */</span>
+  <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">file_count</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span> <span class="o">=</span> <span class="n">opts</span><span class="o">-&gt;</span><span class="n">files</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+
+    <span class="k">if</span> <span class="p">((</span><span class="n">entry</span> <span class="o">=</span> <span class="n"><a name="git_index_get_bypath-6" class="fnlink" href="../../#v0.28.0/group/index/git_index_get_bypath">git_index_get_bypath</a></span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">GIT_INDEX_STAGE_NORMAL</span><span class="p">))</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">puts</span><span class="p">(</span><span class="n">path</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">opts</span><span class="o">-&gt;</span><span class="n">error_unmatch</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;error: pathspec &#39;%s&#39; did not match any file(s) known to git.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">path</span><span class="p">);</span>
+      <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;Did you forget to &#39;git add&#39;?</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+      <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
+<span class="p">{</span>
+  <span class="n">ls_options</span> <span class="n">opts</span><span class="p">;</span>
+  <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="n">git_index</span> <span class="o">*</span><span class="n">index</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">error</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n">parse_options</span><span class="p">(</span><span class="o">&amp;</span><span class="n">opts</span><span class="p">,</span> <span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
+
+  <span class="n"><a name="git_libgit2_init-1" class="fnlink" href="../../#v0.28.0/group/libgit2/git_libgit2_init">git_libgit2_init</a></span><span class="p">();</span>
+
+  <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_repository_open_ext-7" class="fnlink" href="../../#v0.28.0/group/repository/git_repository_open_ext">git_repository_open_ext</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="s">&quot;.&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">((</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_repository_index-9" class="fnlink" href="../../#v0.28.0/group/repository/git_repository_index">git_repository_index</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">index</span><span class="p">,</span> <span class="n">repo</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
+
+  <span class="n">error</span> <span class="o">=</span> <span class="n">print_paths</span><span class="p">(</span><span class="o">&amp;</span><span class="n">opts</span><span class="p">,</span> <span class="n">index</span><span class="p">);</span>
+
+<span class="nl">cleanup</span><span class="p">:</span>
+  <span class="n"><a name="git_index_free-3" class="fnlink" href="../../#v0.28.0/group/index/git_index_free">git_index_free</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
+  <span class="n"><a name="git_repository_free-8" class="fnlink" href="../../#v0.28.0/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+  <span class="n"><a name="git_libgit2_shutdown-2" class="fnlink" href="../../#v0.28.0/group/libgit2/git_libgit2_shutdown">git_libgit2_shutdown</a></span><span class="p">();</span>
+
+  <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
