@@ -31,4 +31,4 @@ jobs:
       artifactName: 'docs'
   - script: git push origin gh-pages
     displayName: 'Publish Documentation'
-	condition: eq(variables['Build.Reason'], 'IndividualCI')
+    condition: eq(variables['Build.Reason'], 'IndividualCI')
