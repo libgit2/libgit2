@@ -134,6 +134,7 @@ jobs:
       docker run --rm -v /home/vsts/work/1/s:/src -w /src libgit2/docurium:test cm doc api.docurium
       git checkout gh-pages
       cp -R * '$(Build.BinariesDirectory)'
+    displayName: 'Generate Documentation'
   - task: archivefiles@2
     displayName: 'Archive Documentation'
     inputs:
@@ -141,7 +142,10 @@ jobs:
       includeRootFolder: false
       archiveFile: '$(Build.ArtifactStagingDirectory)/api-documentation.zip'
   - task: publishbuildartifacts@1
-    displayName: 'Upload Documentation'
+    displayName: 'Upload Documentation Artifact'
     inputs:
       pathToPublish: '$(Build.ArtifactStagingDirectory)'
       artifactName: 'docs'
+  - script: git push origin gh-pages
+    displayName: 'Publish Documentation'
+	condition: eq(variables['Build.Reason'], 'IndividualCI')
