@@ -1124,6 +1124,7 @@ static int odb_otype_fast(git_object_t *type_p, git_odb *db, const git_oid *id)
 
 	if ((object = git_cache_get_raw(odb_cache(db), id)) != NULL) {
 		*type_p = object->cached.type;
+		git_odb_object_free(object);
 		return 0;
 	}
 
