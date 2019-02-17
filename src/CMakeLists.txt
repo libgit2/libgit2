@@ -48,23 +48,6 @@ IF (ENABLE_TRACE STREQUAL "ON")
 ENDIF()
 ADD_FEATURE_INFO(tracing GIT_TRACE "tracing support")
 
-# Use `regcomp_l` if available
-CHECK_SYMBOL_EXISTS(regcomp_l "regex.h;xlocale.h" HAVE_REGCOMP_L)
-IF (HAVE_REGCOMP_L)
-	SET(GIT_USE_REGCOMP_L 1)
-ENDIF ()
-
-# Otherwise, we either want to use system's `regcomp` or our
-# bundled regcomp code, if system doesn't provide `regcomp`.
-IF(NOT HAVE_REGCOMP_L)
-	CHECK_FUNCTION_EXISTS(regcomp HAVE_REGCOMP)
-	IF(NOT HAVE_REGCOMP)
-		ADD_SUBDIRECTORY("${libgit2_SOURCE_DIR}/deps/regex" "${libgit2_BINARY_DIR}/deps/regex")
-		LIST(APPEND LIBGIT2_INCLUDES "${libgit2_SOURCE_DIR}/deps/regex")
-		LIST(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:regex>)
-	ENDIF()
-ENDIF()
-
 CHECK_FUNCTION_EXISTS(futimens HAVE_FUTIMENS)
 IF (HAVE_FUTIMENS)
 	SET(GIT_USE_FUTIMENS 1)
@@ -306,14 +289,38 @@ ELSE()
 	MESSAGE(FATAL_ERROR "Asked for unknown SHA1 backend ${SHA1_BACKEND}")
 ENDIF()
 
-# Include PCRE and its POSIX regex compatibility layer when it is required
-IF (HAVE_REGCOMP_L)
+# Specify regular expression implementation
+IF(REGEX STREQUAL "")
+	CHECK_SYMBOL_EXISTS(regcomp_l "regex.h;xlocale.h" HAVE_REGCOMP_L)
+	CHECK_SYMBOL_EXISTS(pcre_regcomp "pcreposix.h" HAVE_PCRE)
+
+	IF(HAVE_REGCOMP_L)
+		SET(REGEX "regcomp_l")
+	ELSEIF(HAVE_PCRE)
+		SET(REGEX "pcre")
+	ELSE()
+		SET(REGEX "builtin")
+	ENDIF()
+ENDIF()
+
+IF(REGEX STREQUAL "regcomp_l")
 	ADD_FEATURE_INFO(regex ON "using system regcomp_l")
-ELSE()
+	SET(GIT_REGEX_REGCOMP_L 1)
+ELSEIF(REGEX STREQUAL "pcre")
+	ADD_FEATURE_INFO(regex ON "using system PCRE")
+	SET(GIT_REGEX_PCRE 1)
+ELSEIF(REGEX STREQUAL "regcomp")
+	ADD_FEATURE_INFO(regex ON "using system regcomp")
+	SET(GIT_REGEX_REGCOMP 1)
+ELSEIF(REGEX STREQUAL "builtin")
+	ADD_FEATURE_INFO(regex ON "using bundled PCRE")
+	SET(GIT_REGEX_PCRE 1)
+
 	ADD_SUBDIRECTORY("${libgit2_SOURCE_DIR}/deps/pcre" "${libgit2_BINARY_DIR}/deps/pcre")
 	LIST(APPEND LIBGIT2_INCLUDES "${libgit2_SOURCE_DIR}/deps/pcre")
 	LIST(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:pcre>)
-	ADD_FEATURE_INFO(regex ON "using bundled PCRE")
+ELSE()
+	MESSAGE(FATAL_ERROR "The REGEX option provided is not supported")
 ENDIF()
 
 # Optional external dependency: http-parser

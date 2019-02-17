@@ -65,6 +65,7 @@ OPTION(DEBUG_POOL			"Enable debug pool allocator"				OFF)
 OPTION(ENABLE_WERROR			"Enable compilation with -Werror"			OFF)
 OPTION(USE_BUNDLED_ZLIB    		"Use the bundled version of zlib"			OFF)
 OPTION(DEPRECATE_HARD			"Do not include deprecated functions in the library"	OFF)
+   SET(REGEX				"" CACHE STRING "Regular expression implementation. One of regcomp_l, pcre, regcomp, or builtin.")
 
 IF (UNIX AND NOT APPLE)
 	OPTION(ENABLE_REPRODUCIBLE_BUILDS "Enable reproducible builds"				OFF)
