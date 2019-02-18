@@ -48,6 +48,11 @@
 /* Define the printf format specifer to use for size_t output */
 #if defined(_MSC_VER) || defined(__MINGW32__)
 
+/* Visual Studio 2012 and prior lack PRId64 entirely */
+#	ifndef PRId64
+#		define PRId64 "I64d"
+#	endif
+
 /* The first block is needed to avoid warnings on MingW amd64 */
 #	if (SIZE_MAX == ULLONG_MAX)
 #		define PRIuZ "I64u"

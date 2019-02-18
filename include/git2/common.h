@@ -21,10 +21,7 @@
 #endif
 
 #if defined(_MSC_VER) && _MSC_VER < 1800
- GIT_BEGIN_DECL
-# include "inttypes.h"
- GIT_END_DECL
-/** This check is needed for importing this file in an iOS/OS X framework throws an error in Xcode otherwise.*/
+# include <stdint.h>
 #elif !defined(__CLANG_INTTYPES_H)
 # include <inttypes.h>
 #endif
