@@ -101,7 +101,7 @@ void git_cache_clear(git_cache *cache)
 	git_rwlock_wrunlock(&cache->lock);
 }
 
-void git_cache_free(git_cache *cache)
+void git_cache_dispose(git_cache *cache)
 {
 	git_cache_clear(cache);
 	git_oidmap_free(cache->map);

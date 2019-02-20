@@ -448,7 +448,7 @@ int git_odb_new(git_odb **out)
 		return -1;
 	}
 	if (git_vector_init(&db->backends, 4, backend_sort_cmp) < 0) {
-		git_cache_free(&db->own_cache);
+		git_cache_dispose(&db->own_cache);
 		git__free(db);
 		return -1;
 	}
@@ -686,7 +686,7 @@ static void odb_free(git_odb *db)
 	}
 
 	git_vector_free(&db->backends);
-	git_cache_free(&db->own_cache);
+	git_cache_dispose(&db->own_cache);
 
 	git__memzero(db, sizeof(*db));
 	git__free(db);

@@ -43,7 +43,7 @@ extern git_atomic_ssize git_cache__current_storage;
 int git_cache_set_max_object_size(git_object_t type, size_t size);
 
 int git_cache_init(git_cache *cache);
-void git_cache_free(git_cache *cache);
+void git_cache_dispose(git_cache *cache);
 void git_cache_clear(git_cache *cache);
 
 void *git_cache_store_raw(git_cache *cache, git_odb_object *entry);
