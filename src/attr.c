@@ -307,10 +307,10 @@ static int system_attr_file(
 
 static int attr_setup(git_repository *repo, git_attr_session *attr_session)
 {
-	int error = 0;
-	const char *workdir = git_repository_workdir(repo);
-	git_index *idx = NULL;
 	git_buf path = GIT_BUF_INIT;
+	git_index *idx = NULL;
+	const char *workdir;
+	int error = 0;
 
 	if (attr_session && attr_session->init_setup)
 		return 0;
@@ -318,42 +318,36 @@ static int attr_setup(git_repository *repo, git_attr_session *attr_session)
 	if ((error = git_attr_cache__init(repo)) < 0)
 		return error;
 
-	/* preload attribute files that could contain macros so the
-	 * definitions will be available for later file parsing
+	/*
+	 * Preload attribute files that could contain macros so the
+	 * definitions will be available for later file parsing.
 	 */
 
-	error = system_attr_file(&path, attr_session);
+	if ((error = system_attr_file(&path, attr_session)) < 0 ||
+	    (error = preload_attr_file(repo, attr_session, GIT_ATTR_FILE__FROM_FILE,
+				       NULL, path.ptr)) < 0) {
+		if (error != GIT_ENOTFOUND)
+			goto out;
+	}
 
-	if (error == 0)
-		error = preload_attr_file(
-			repo, attr_session, GIT_ATTR_FILE__FROM_FILE, NULL, path.ptr);
-
-	if (error != GIT_ENOTFOUND)
+	if ((error = preload_attr_file(repo, attr_session, GIT_ATTR_FILE__FROM_FILE,
+				       NULL, git_repository_attr_cache(repo)->cfg_attr_file)) < 0)
 		goto out;
 
-	if ((error = preload_attr_file(
-			repo, attr_session, GIT_ATTR_FILE__FROM_FILE,
-			NULL, git_repository_attr_cache(repo)->cfg_attr_file)) < 0)
+	if ((error = git_repository_item_path(&path, repo, GIT_REPOSITORY_ITEM_INFO)) < 0 ||
+	    (error = preload_attr_file(repo, attr_session, GIT_ATTR_FILE__FROM_FILE,
+				       path.ptr, GIT_ATTR_FILE_INREPO)) < 0)
 		goto out;
 
-	if ((error = git_repository_item_path(&path,
-			repo, GIT_REPOSITORY_ITEM_INFO)) < 0)
-		goto out;
-
-	if ((error = preload_attr_file(
-			repo, attr_session, GIT_ATTR_FILE__FROM_FILE,
-			path.ptr, GIT_ATTR_FILE_INREPO)) < 0)
-		goto out;
-
-	if (workdir != NULL &&
-		(error = preload_attr_file(
-			repo, attr_session, GIT_ATTR_FILE__FROM_FILE, workdir, GIT_ATTR_FILE)) < 0)
-		goto out;
+	if ((workdir = git_repository_workdir(repo)) != NULL &&
+	    (error = preload_attr_file(repo, attr_session, GIT_ATTR_FILE__FROM_FILE,
+				       workdir, GIT_ATTR_FILE)) < 0)
+			goto out;
 
 	if ((error = git_repository_index__weakptr(&idx, repo)) < 0 ||
-		(error = preload_attr_file(
-			repo, attr_session, GIT_ATTR_FILE__FROM_INDEX, NULL, GIT_ATTR_FILE)) < 0)
-		goto out;
+	    (error = preload_attr_file(repo, attr_session, GIT_ATTR_FILE__FROM_INDEX,
+				       NULL, GIT_ATTR_FILE)) < 0)
+			goto out;
 
 	if (attr_session)
 		attr_session->init_setup = 1;
