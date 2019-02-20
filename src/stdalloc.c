@@ -88,11 +88,10 @@ static void *stdalloc__reallocarray(void *ptr, size_t nelem, size_t elsize, cons
 {
 	size_t newsize;
 
-	GIT_UNUSED(file);
-	GIT_UNUSED(line);
+	if (GIT_MULTIPLY_SIZET_OVERFLOW(&newsize, nelem, elsize))
+		return NULL;
 
-	return GIT_MULTIPLY_SIZET_OVERFLOW(&newsize, nelem, elsize) ?
-		NULL : realloc(ptr, newsize);
+	return stdalloc__realloc(ptr, newsize, file, line);
 }
 
 static void *stdalloc__mallocarray(size_t nelem, size_t elsize, const char *file, int line)
