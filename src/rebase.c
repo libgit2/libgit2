@@ -988,8 +988,10 @@ static int rebase_commit__create(
 
 		if ((error = rebase->options.signing_cb(&commit_signature, &signature_field,
 				git_buf_cstr(&commit_content), rebase->options.payload)) < 0 &&
-				error != GIT_PASSTHROUGH)
+				error != GIT_PASSTHROUGH) {
+			git_error_set(error, "signing_cb failed");
 			goto done;
+		}
 
 		if (error != GIT_PASSTHROUGH) {
 			if (git_buf_is_allocated(&signature_field)) {
