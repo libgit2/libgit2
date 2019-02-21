@@ -58,7 +58,7 @@ static void *return_normally(void *param)
 
 void test_threads_basic__exit(void)
 {
-#if GIT_THREADS
+#if !(GIT_THREADS)
 	clar__skip();
 #else
 	git_thread thread;
