@@ -7,7 +7,7 @@
 
 #include "w32_crtdbg_stacktrace.h"
 
-#if defined(GIT_MSVC_CRTDBG)
+#if GIT_MSVC_CRTDBG
 #include "w32_stack.h"
 
 #define CRTDBG_STACKTRACE__UID_LEN (15)

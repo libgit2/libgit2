@@ -2,7 +2,7 @@
 #include "win32/w32_stack.h"
 #include "win32/w32_crtdbg_stacktrace.h"
 
-#if defined(GIT_MSVC_CRTDBG)
+#if GIT_MSVC_CRTDBG
 static void a(void)
 {
 	char buf[10000];
@@ -27,7 +27,7 @@ static void c(void)
 
 void test_trace_windows_stacktrace__basic(void)
 {
-#if defined(GIT_MSVC_CRTDBG)
+#if GIT_MSVC_CRTDBG
 	c();
 #endif
 }
@@ -35,7 +35,7 @@ void test_trace_windows_stacktrace__basic(void)
 
 void test_trace_windows_stacktrace__leaks(void)
 {
-#if defined(GIT_MSVC_CRTDBG)
+#if GIT_MSVC_CRTDBG
 	void * p1;
 	void * p2;
 	void * p3;
@@ -124,7 +124,7 @@ void test_trace_windows_stacktrace__leaks(void)
 #endif
 }
 
-#if defined(GIT_MSVC_CRTDBG)
+#if GIT_MSVC_CRTDBG
 static void aux_cb_alloc__1(unsigned int *aux_id)
 {
 	static unsigned int aux_counter = 0;
@@ -141,7 +141,7 @@ static void aux_cb_lookup__1(unsigned int aux_id, char *aux_msg, unsigned int au
 
 void test_trace_windows_stacktrace__aux1(void)
 {
-#if defined(GIT_MSVC_CRTDBG)
+#if GIT_MSVC_CRTDBG
 	git_win32__stack__set_aux_cb(aux_cb_alloc__1, aux_cb_lookup__1);
 	c();
 	c();

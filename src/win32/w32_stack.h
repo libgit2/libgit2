@@ -10,7 +10,7 @@
 
 #include "common.h"
 
-#if defined(GIT_MSVC_CRTDBG)
+#if GIT_MSVC_CRTDBG
 
 /**
  * This type defines a callback to be used to augment a C stacktrace

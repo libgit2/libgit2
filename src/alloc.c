@@ -7,7 +7,7 @@
 
 #include "alloc.h"
 
-#if defined(GIT_MSVC_CRTDBG)
+#if GIT_MSVC_CRTDBG
 # include "win32/w32_crtdbg_stacktrace.h"
 #else
 # include "stdalloc.h"
@@ -17,7 +17,7 @@ git_allocator git__allocator;
 
 static int setup_default_allocator(void)
 {
-#if defined(GIT_MSVC_CRTDBG)
+#if GIT_MSVC_CRTDBG
 	return git_win32_crtdbg_init_allocator(&git__allocator);
 #else
 	return git_stdalloc_init_allocator(&git__allocator);
@@ -45,7 +45,7 @@ int git_allocator_setup(git_allocator *allocator)
 	return 0;
 }
 
-#if !defined(GIT_MSVC_CRTDBG)
+#if !(GIT_MSVC_CRTDBG)
 int git_win32_crtdbg_init_allocator(git_allocator *allocator)
 {
 	GIT_UNUSED(allocator);

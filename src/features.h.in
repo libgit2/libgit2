@@ -4,7 +4,7 @@
 #define GIT_DEBUG_POOL ${GIT_DEBUG_POOL}
 #define GIT_TRACE ${GIT_TRACE}
 #define GIT_THREADS ${GIT_THREADS}
-#cmakedefine GIT_MSVC_CRTDBG 1
+#define GIT_MSVC_CRTDBG ${GIT_MSVC_CRTDBG}
 
 #cmakedefine GIT_ARCH_64 1
 #cmakedefine GIT_ARCH_32 1

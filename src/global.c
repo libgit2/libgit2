@@ -19,7 +19,7 @@
 #include "git2/global.h"
 #include "transports/ssh.h"
 
-#if defined(GIT_MSVC_CRTDBG)
+#if GIT_MSVC_CRTDBG
 #include "win32/w32_stack.h"
 #include "win32/w32_crtdbg_stacktrace.h"
 #endif
@@ -70,7 +70,7 @@ static int init_common(void)
 	int ret;
 
 	/* Initialize the CRT debug allocator first, before our first malloc */
-#if defined(GIT_MSVC_CRTDBG)
+#if GIT_MSVC_CRTDBG
 	git_win32__crtdbg_stacktrace_init();
 	git_win32__stack_init();
 #endif
@@ -195,7 +195,7 @@ int git_libgit2_shutdown(void)
 		TlsFree(_tls_index);
 		git_mutex_free(&git__mwindow_mutex);
 
-#if defined(GIT_MSVC_CRTDBG)
+#if GIT_MSVC_CRTDBG
 		git_win32__crtdbg_stacktrace_cleanup();
 		git_win32__stack_cleanup();
 #endif

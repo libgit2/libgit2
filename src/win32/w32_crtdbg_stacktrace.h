@@ -9,7 +9,7 @@
 
 #include "common.h"
 
-#if defined(GIT_MSVC_CRTDBG)
+#if GIT_MSVC_CRTDBG
 
 #include <stdlib.h>
 #include <crtdbg.h>
