@@ -21,25 +21,24 @@
           <a class="source" href="blame.html">blame.c</a>
           <a class="source" href="cat-file.html">cat-file.c</a>
           <a class="source" href="checkout.html">checkout.c</a>
+          <a class="source" href="clone.html">clone.c</a>
           <a class="source" href="common.html">common.c</a>
           <a class="source" href="describe.html">describe.c</a>
           <a class="source" href="diff.html">diff.c</a>
+          <a class="source" href="fetch.html">fetch.c</a>
           <a class="source" href="for-each-ref.html">for-each-ref.c</a>
           <a class="source" href="general.html">general.c</a>
+          <a class="source" href="index-pack.html">index-pack.c</a>
           <a class="source" href="init.html">init.c</a>
+          <a class="source" href="lg2.html">lg2.c</a>
           <a class="source" href="log.html">log.c</a>
           <a class="source" href="ls-files.html">ls-files.c</a>
+          <a class="source" href="ls-remote.html">ls-remote.c</a>
           <a class="source" href="merge.html">merge.c</a>
-          <a class="source" href="network/clone.html">clone.c</a>
-          <a class="source" href="network/common.html">common.c</a>
-          <a class="source" href="network/fetch.html">fetch.c</a>
-          <a class="source" href="network/git2.html">git2.c</a>
-          <a class="source" href="network/index-pack.html">index-pack.c</a>
-          <a class="source" href="network/ls-remote.html">ls-remote.c</a>
           <a class="source" href="remote.html">remote.c</a>
           <a class="source" href="rev-list.html">rev-list.c</a>
           <a class="source" href="rev-parse.html">rev-parse.c</a>
-          <a class="source" href="showindex.html">showindex.c</a>
+          <a class="source" href="show-index.html">show-index.c</a>
           <a class="source" href="status.html">status.c</a>
           <a class="source" href="tag.html">tag.c</a>
       </div>
@@ -53,6 +52,187 @@
     </tr>
   </thead>
   <tbody>
+    <tr id='section-1'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-1">&#182;</a>
+        </div>
+        
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="cm">/*</span>
+<span class="cm"> * libgit2 &quot;add&quot; example - shows how to modify the index</span>
+<span class="cm"> *</span>
+<span class="cm"> * Written by the libgit2 contributors</span>
+<span class="cm"> *</span>
+<span class="cm"> * To the extent possible under law, the author(s) have dedicated all copyright</span>
+<span class="cm"> * and related and neighboring rights to this software to the public domain</span>
+<span class="cm"> * worldwide. This software is distributed without any warranty.</span>
+<span class="cm"> *</span>
+<span class="cm"> * You should have received a copy of the CC0 Public Domain Dedication along</span>
+<span class="cm"> * with this software. If not, see</span>
+<span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
+<span class="cm"> */</span>
+
+<span class="cp">#include &quot;common.h&quot;</span>
+<span class="cp">#include &lt;assert.h&gt;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-2'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-2">&#182;</a>
+        </div>
+        <p>The following example demonstrates how to add files with libgit2.</p>
+
+<p>It will use the repository in the current working directory, and act
+on files passed as its parameters.</p>
+
+<p>Recognized options are:
+  -v/--verbose: show the file&#39;s status after acting on it.
+  -n/--dry-run: do not actually change the index.
+  -u/--update: update the index instead of adding to it.</p>
+
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">enum</span> <span class="n">print_options</span> <span class="p">{</span>
+  <span class="n">SKIP</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+  <span class="n">VERBOSE</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+  <span class="n">UPDATE</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+<span class="p">};</span>
+
+<span class="k">struct</span> <span class="n">print_payload</span> <span class="p">{</span>
+  <span class="k">enum</span> <span class="n">print_options</span> <span class="n">options</span><span class="p">;</span>
+  <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="cm">/* Forward declarations for helpers */</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="kt">int</span> <span class="o">*</span><span class="n">options</span><span class="p">,</span> <span class="kt">int</span> <span class="o">*</span><span class="n">count</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[]);</span>
+<span class="kt">void</span> <span class="nf">init_array</span><span class="p">(</span><span class="n">git_strarray</span> <span class="o">*</span><span class="n">array</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">);</span>
+<span class="kt">int</span> <span class="nf">print_matched_cb</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">matched_pathspec</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">payload</span><span class="p">);</span>
+
+<span class="kt">int</span> <span class="nf">lg2_add</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span><span class="o">**</span> <span class="n">argv</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">git_index_matched_path_cb</span> <span class="n">matched_cb</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="n">git_index</span> <span class="o">*</span><span class="n">index</span><span class="p">;</span>
+  <span class="n">git_strarray</span> <span class="n">array</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+  <span class="kt">int</span> <span class="n">options</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="k">struct</span> <span class="n">print_payload</span> <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+
+  <span class="n">parse_opts</span><span class="p">(</span><span class="o">&amp;</span><span class="n">options</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">count</span><span class="p">,</span> <span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
+  <span class="n">init_array</span><span class="p">(</span><span class="o">&amp;</span><span class="n">array</span><span class="p">,</span> <span class="n">argc</span><span class="o">-</span><span class="n">count</span><span class="p">,</span> <span class="n">argv</span><span class="o">+</span><span class="n">count</span><span class="p">);</span>
+
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_index-5" class="fnlink" href="../../#HEAD/group/repository/git_repository_index">git_repository_index</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">index</span><span class="p">,</span> <span class="n">repo</span><span class="p">),</span> <span class="s">&quot;Could not open repository index&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="cm">/* Setup a callback if the requested options need it */</span>
+  <span class="k">if</span> <span class="p">((</span><span class="n">options</span> <span class="o">&amp;</span> <span class="n">VERBOSE</span><span class="p">)</span> <span class="o">||</span> <span class="p">(</span><span class="n">options</span> <span class="o">&amp;</span> <span class="n">SKIP</span><span class="p">))</span> <span class="p">{</span>
+    <span class="n">matched_cb</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">print_matched_cb</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="cm">/* Perform the requested action with the index and files */</span>
+  <span class="n">payload</span><span class="p">.</span><span class="n">options</span> <span class="o">=</span> <span class="n">options</span><span class="p">;</span>
+  <span class="n">payload</span><span class="p">.</span><span class="n">repo</span> <span class="o">=</span> <span class="n">repo</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">options</span> <span class="o">&amp;</span> <span class="n">UPDATE</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n"><a name="git_index_update_all-4" class="fnlink" href="../../#HEAD/group/index/git_index_update_all">git_index_update_all</a></span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">array</span><span class="p">,</span> <span class="n">matched_cb</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">payload</span><span class="p">);</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="n"><a name="git_index_add_all-3" class="fnlink" href="../../#HEAD/group/index/git_index_add_all">git_index_add_all</a></span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">array</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">matched_cb</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">payload</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="cm">/* Cleanup memory */</span>
+  <span class="n"><a name="git_index_write-2" class="fnlink" href="../../#HEAD/group/index/git_index_write">git_index_write</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
+  <span class="n"><a name="git_index_free-1" class="fnlink" href="../../#HEAD/group/index/git_index_free">git_index_free</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="cm">/*</span>
+<span class="cm"> * This callback is called for each file under consideration by</span>
+<span class="cm"> * git_index_(update|add)_all above.</span>
+<span class="cm"> * It makes uses of the callback&#39;s ability to abort the action.</span>
+<span class="cm"> */</span>
+<span class="kt">int</span> <span class="nf">print_matched_cb</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">matched_pathspec</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">payload</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">struct</span> <span class="n">print_payload</span> <span class="n">p</span> <span class="o">=</span> <span class="o">*</span><span class="p">(</span><span class="k">struct</span> <span class="n">print_payload</span><span class="o">*</span><span class="p">)(</span><span class="n">payload</span><span class="p">);</span>
+  <span class="kt">int</span> <span class="n">ret</span><span class="p">;</span>
+  <span class="kt">unsigned</span> <span class="n">status</span><span class="p">;</span>
+  <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">matched_pathspec</span><span class="p">;</span>
+
+  <span class="cm">/* Get the file status */</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_status_file-6" class="fnlink" href="../../#HEAD/group/status/git_status_file">git_status_file</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">status</span><span class="p">,</span> <span class="n">p</span><span class="p">.</span><span class="n">repo</span><span class="p">,</span> <span class="n">path</span><span class="p">))</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="k">if</span> <span class="p">((</span><span class="n">status</span> <span class="o">&amp;</span> <span class="n">GIT_STATUS_WT_MODIFIED</span><span class="p">)</span> <span class="o">||</span> <span class="p">(</span><span class="n">status</span> <span class="o">&amp;</span> <span class="n">GIT_STATUS_WT_NEW</span><span class="p">))</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;add &#39;%s&#39;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">path</span><span class="p">);</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="k">if</span> <span class="p">((</span><span class="n">p</span><span class="p">.</span><span class="n">options</span> <span class="o">&amp;</span> <span class="n">SKIP</span><span class="p">))</span> <span class="p">{</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="k">return</span> <span class="n">ret</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">init_array</span><span class="p">(</span><span class="n">git_strarray</span> <span class="o">*</span><span class="n">array</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
+
+  <span class="n">array</span><span class="o">-&gt;</span><span class="n">count</span> <span class="o">=</span> <span class="n">argc</span><span class="p">;</span>
+  <span class="n">array</span><span class="o">-&gt;</span><span class="n">strings</span> <span class="o">=</span> <span class="n">calloc</span><span class="p">(</span><span class="n">array</span><span class="o">-&gt;</span><span class="n">count</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="p">));</span>
+  <span class="n">assert</span><span class="p">(</span><span class="n">array</span><span class="o">-&gt;</span><span class="n">strings</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">array</span><span class="o">-&gt;</span><span class="n">count</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">array</span><span class="o">-&gt;</span><span class="n">strings</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+  <span class="p">}</span>
+
+  <span class="k">return</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">print_usage</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;usage: add [options] [--] file-spec [file-spec] [...]</span><span class="se">\n\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;</span><span class="se">\t</span><span class="s">-n, --dry-run    dry run</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;</span><span class="se">\t</span><span class="s">-v, --verbose    be verbose</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;</span><span class="se">\t</span><span class="s">-u, --update     update tracked files</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="kt">int</span> <span class="o">*</span><span class="n">options</span><span class="p">,</span> <span class="kt">int</span> <span class="o">*</span><span class="n">count</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
+<span class="p">{</span>
+  <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
+
+  <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">argc</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="sc">&#39;-&#39;</span><span class="p">)</span>
+      <span class="k">break</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="s">&quot;--verbose&quot;</span><span class="p">)</span> <span class="o">||</span> <span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="s">&quot;-v&quot;</span><span class="p">))</span>
+      <span class="o">*</span><span class="n">options</span> <span class="o">|=</span> <span class="n">VERBOSE</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="s">&quot;--dry-run&quot;</span><span class="p">)</span> <span class="o">||</span> <span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="s">&quot;-n&quot;</span><span class="p">))</span>
+      <span class="o">*</span><span class="n">options</span> <span class="o">|=</span> <span class="n">SKIP</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="s">&quot;--update&quot;</span><span class="p">)</span> <span class="o">||</span> <span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="s">&quot;-u&quot;</span><span class="p">))</span>
+      <span class="o">*</span><span class="n">options</span> <span class="o">|=</span> <span class="n">UPDATE</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="s">&quot;-h&quot;</span><span class="p">))</span> <span class="p">{</span>
+      <span class="n">print_usage</span><span class="p">();</span>
+      <span class="k">break</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="s">&quot;--&quot;</span><span class="p">))</span> <span class="p">{</span>
+      <span class="n">i</span><span class="o">++</span><span class="p">;</span>
+      <span class="k">break</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+      <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;Unsupported option %s.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+      <span class="n">print_usage</span><span class="p">();</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">argc</span> <span class="o">&lt;=</span> <span class="n">i</span><span class="p">)</span>
+    <span class="n">print_usage</span><span class="p">();</span>
+
+  <span class="o">*</span><span class="n">count</span> <span class="o">=</span> <span class="n">i</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
   </table>
 </div>
 </body>

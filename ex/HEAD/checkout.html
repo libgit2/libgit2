@@ -21,25 +21,24 @@
           <a class="source" href="blame.html">blame.c</a>
           <a class="source" href="cat-file.html">cat-file.c</a>
           <a class="source" href="checkout.html">checkout.c</a>
+          <a class="source" href="clone.html">clone.c</a>
           <a class="source" href="common.html">common.c</a>
           <a class="source" href="describe.html">describe.c</a>
           <a class="source" href="diff.html">diff.c</a>
+          <a class="source" href="fetch.html">fetch.c</a>
           <a class="source" href="for-each-ref.html">for-each-ref.c</a>
           <a class="source" href="general.html">general.c</a>
+          <a class="source" href="index-pack.html">index-pack.c</a>
           <a class="source" href="init.html">init.c</a>
+          <a class="source" href="lg2.html">lg2.c</a>
           <a class="source" href="log.html">log.c</a>
           <a class="source" href="ls-files.html">ls-files.c</a>
+          <a class="source" href="ls-remote.html">ls-remote.c</a>
           <a class="source" href="merge.html">merge.c</a>
-          <a class="source" href="network/clone.html">clone.c</a>
-          <a class="source" href="network/common.html">common.c</a>
-          <a class="source" href="network/fetch.html">fetch.c</a>
-          <a class="source" href="network/git2.html">git2.c</a>
-          <a class="source" href="network/index-pack.html">index-pack.c</a>
-          <a class="source" href="network/ls-remote.html">ls-remote.c</a>
           <a class="source" href="remote.html">remote.c</a>
           <a class="source" href="rev-list.html">rev-list.c</a>
           <a class="source" href="rev-parse.html">rev-parse.c</a>
-          <a class="source" href="showindex.html">showindex.c</a>
+          <a class="source" href="show-index.html">show-index.c</a>
           <a class="source" href="status.html">status.c</a>
           <a class="source" href="tag.html">tag.c</a>
       </div>
@@ -270,9 +269,9 @@ we might need to detach HEAD.</p>
       </td>
       <td class=code>
         <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_annotated_commit_ref-2" class="fnlink" href="../../#HEAD/group/annotated/git_annotated_commit_ref">git_annotated_commit_ref</a></span><span class="p">(</span><span class="n">target</span><span class="p">))</span> <span class="p">{</span>
-    <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_repository_set_head-16" class="fnlink" href="../../#HEAD/group/repository/git_repository_set_head">git_repository_set_head</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n"><a name="git_annotated_commit_ref-3" class="fnlink" href="../../#HEAD/group/annotated/git_annotated_commit_ref">git_annotated_commit_ref</a></span><span class="p">(</span><span class="n">target</span><span class="p">));</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_repository_set_head-12" class="fnlink" href="../../#HEAD/group/repository/git_repository_set_head">git_repository_set_head</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n"><a name="git_annotated_commit_ref-3" class="fnlink" href="../../#HEAD/group/annotated/git_annotated_commit_ref">git_annotated_commit_ref</a></span><span class="p">(</span><span class="n">target</span><span class="p">));</span>
   <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-    <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_repository_set_head_detached_from_annotated-17" class="fnlink" href="../../#HEAD/group/repository/git_repository_set_head_detached_from_annotated">git_repository_set_head_detached_from_annotated</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">target</span><span class="p">);</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_repository_set_head_detached_from_annotated-13" class="fnlink" href="../../#HEAD/group/repository/git_repository_set_head_detached_from_annotated">git_repository_set_head_detached_from_annotated</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">target</span><span class="p">);</span>
   <span class="p">}</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">err</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;failed to update HEAD reference: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n"><a name="git_error_last-10" class="fnlink" href="../../#HEAD/group/error/git_error_last">git_error_last</a></span><span class="p">()</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
@@ -294,9 +293,8 @@ we might need to detach HEAD.</p>
         <p>That example&#39;s entry point</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
+        <div class='highlight'><pre><span class="kt">int</span> <span class="nf">lg2_checkout</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
 <span class="p">{</span>
-  <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
   <span class="k">struct</span> <span class="n">args_info</span> <span class="n">args</span> <span class="o">=</span> <span class="n">ARGS_INFO_INIT</span><span class="p">;</span>
   <span class="n">checkout_options</span> <span class="n">opts</span><span class="p">;</span>
   <span class="kt">git_repository_state_t</span> <span class="n">state</span><span class="p">;</span>
@@ -321,35 +319,10 @@ we might need to detach HEAD.</p>
         <div class="pilwrap">
           <a class="pilcrow" href="#section-12">&#182;</a>
         </div>
-        <p>Initialize the library</p>
-      </td>
-      <td class=code>
-        <div class='highlight'><pre>  <span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_libgit2_init-12" class="fnlink" href="../../#HEAD/group/libgit2/git_libgit2_init">git_libgit2_init</a></span><span class="p">();</span>
-  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">err</span><span class="p">)</span>
-    <span class="n">check_lg2</span><span class="p">(</span><span class="n">err</span><span class="p">,</span> <span class="s">&quot;Failed to initialize libgit2&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span></pre></div>
-      </td>
-    </tr>
-    <tr id='section-13'>
-      <td class=docs>
-        <div class="pilwrap">
-          <a class="pilcrow" href="#section-13">&#182;</a>
-        </div>
-        <p>Open the repository corresponding to the options</p>
-      </td>
-      <td class=code>
-        <div class='highlight'><pre>  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_open_ext-14" class="fnlink" href="../../#HEAD/group/repository/git_repository_open_ext">git_repository_open_ext</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span>
-        <span class="s">&quot;Could not open repository&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span></pre></div>
-      </td>
-    </tr>
-    <tr id='section-14'>
-      <td class=docs>
-        <div class="pilwrap">
-          <a class="pilcrow" href="#section-14">&#182;</a>
-        </div>
         <p>Make sure we&#39;re not about to checkout while something else is going on</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">state</span> <span class="o">=</span> <span class="n"><a name="git_repository_state-18" class="fnlink" href="../../#HEAD/group/repository/git_repository_state">git_repository_state</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n">state</span> <span class="o">=</span> <span class="n"><a name="git_repository_state-14" class="fnlink" href="../../#HEAD/group/repository/git_repository_state">git_repository_state</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">state</span> <span class="o">!=</span> <span class="n">GIT_REPOSITORY_STATE_NONE</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;repository is in unexpected state %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">state</span><span class="p">);</span>
     <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
@@ -362,10 +335,10 @@ we might need to detach HEAD.</p>
   <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">strcmp</span><span class="p">(</span><span class="s">&quot;--&quot;</span><span class="p">,</span> <span class="n">args</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">]))</span> <span class="p">{</span></pre></div>
       </td>
     </tr>
-    <tr id='section-15'>
+    <tr id='section-13'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-15">&#182;</a>
+          <a class="pilcrow" href="#section-13">&#182;</a>
         </div>
         <p>Try to checkout the given path</p>
       </td>
@@ -376,10 +349,10 @@ we might need to detach HEAD.</p>
   <span class="p">}</span> <span class="k">else</span> <span class="p">{</span></pre></div>
       </td>
     </tr>
-    <tr id='section-16'>
+    <tr id='section-14'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-16">&#182;</a>
+          <a class="pilcrow" href="#section-14">&#182;</a>
         </div>
         <p>Try to resolve a &quot;refish&quot; argument to a target libgit2 can use</p>
 
@@ -395,9 +368,6 @@ we might need to detach HEAD.</p>
 
 <span class="nl">cleanup</span><span class="p">:</span>
   <span class="n"><a name="git_annotated_commit_free-4" class="fnlink" href="../../#HEAD/group/annotated/git_annotated_commit_free">git_annotated_commit_free</a></span><span class="p">(</span><span class="n">checkout_target</span><span class="p">);</span>
-
-  <span class="n"><a name="git_repository_free-15" class="fnlink" href="../../#HEAD/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
-  <span class="n"><a name="git_libgit2_shutdown-13" class="fnlink" href="../../#HEAD/group/libgit2/git_libgit2_shutdown">git_libgit2_shutdown</a></span><span class="p">();</span>
 
   <span class="k">return</span> <span class="n">err</span><span class="p">;</span>
 <span class="p">}</span></pre></div>
