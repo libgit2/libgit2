@@ -986,10 +986,12 @@ static int rebase_commit__create(
 				message_encoding, message, tree, 1, (const git_commit **)&parent_commit)) < 0)
 			goto done;
 
+		git_error_clear();
 		if ((error = rebase->options.signing_cb(&commit_signature, &signature_field,
 				git_buf_cstr(&commit_content), rebase->options.payload)) < 0 &&
 				error != GIT_PASSTHROUGH) {
-			git_error_set(error, "signing_cb failed");
+			if (git_error_last() == NULL)
+				git_error_set(GIT_ERROR_CALLBACK, "commit signing_cb failed");
 			goto done;
 		}
 
