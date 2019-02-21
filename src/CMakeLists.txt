@@ -1,5 +1,7 @@
 IF(DEBUG_POOL)
 	SET(GIT_DEBUG_POOL 1)
+ELSE()
+	SET(GIT_DEBUG_POOL 0)
 ENDIF()
 ADD_FEATURE_INFO(debugpool GIT_DEBUG_POOL "debug pool allocator")
 

@@ -36,7 +36,7 @@ uint32_t git_pool__system_page_size(void)
 	return size;
 }
 
-#ifndef GIT_DEBUG_POOL
+#if !(GIT_DEBUG_POOL)
 void git_pool_init(git_pool *pool, uint32_t item_size)
 {
 	assert(pool);

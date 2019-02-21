@@ -31,7 +31,7 @@ void test_core_pool__1(void)
 	for (i = 2010; i > 0; i--)
 		cl_assert(git_pool_malloc(&p, i) != NULL);
 
-#ifndef GIT_DEBUG_POOL
+#if !(GIT_DEBUG_POOL)
 	/* with fixed page size, allocation must end up with these values */
 	cl_assert_equal_i(591, git_pool__open_pages(&p));
 #endif
@@ -43,7 +43,7 @@ void test_core_pool__1(void)
 	for (i = 2010; i > 0; i--)
 		cl_assert(git_pool_malloc(&p, i) != NULL);
 
-#ifndef GIT_DEBUG_POOL
+#if !(GIT_DEBUG_POOL)
 	/* with fixed page size, allocation must end up with these values */
 	cl_assert_equal_i(sizeof(void *) == 8 ? 575 : 573, git_pool__open_pages(&p));
 #endif
@@ -73,7 +73,7 @@ void test_core_pool__2(void)
 		cl_git_pass(git_oid_fromstr(oid, oid_hex));
 	}
 
-#ifndef GIT_DEBUG_POOL
+#if !(GIT_DEBUG_POOL)
 	/* with fixed page size, allocation must end up with these values */
 	cl_assert_equal_i(sizeof(void *) == 8 ? 55 : 45, git_pool__open_pages(&p));
 #endif
