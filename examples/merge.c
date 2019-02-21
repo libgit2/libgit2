@@ -278,9 +278,8 @@ cleanup:
 	return err;
 }
 
-int main(int argc, char **argv)
+int lg2_merge(git_repository *repo, int argc, char **argv)
 {
-	git_repository *repo = NULL;
 	merge_options opts;
 	git_index *index;
 	git_repository_state_t state;
@@ -291,11 +290,6 @@ int main(int argc, char **argv)
 
 	merge_options_init(&opts);
 	parse_options(&path, &opts, argc, argv);
-
-	git_libgit2_init();
-
-	check_lg2(git_repository_open_ext(&repo, path, 0, NULL),
-	          "Could not open repository", NULL);
 
 	state = git_repository_state(repo);
 	if (state != GIT_REPOSITORY_STATE_NONE) {
@@ -366,8 +360,6 @@ int main(int argc, char **argv)
 cleanup:
 	free(opts.heads);
 	free(opts.annotated);
-	git_repository_free(repo);
-	git_libgit2_shutdown();
 
 	return 0;
 }

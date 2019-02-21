@@ -1,7 +1,5 @@
-#include <git2.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#include "common.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -17,7 +15,6 @@
 #else
 # include <unistd.h>
 #endif
-#include "common.h"
 
 /*
  * This could be run in the main loop whilst the application waits for
@@ -31,7 +28,7 @@ static int index_cb(const git_transfer_progress *stats, void *data)
 	return 0;
 }
 
-int index_pack(git_repository *repo, int argc, char **argv)
+int lg2_index_pack(git_repository *repo, int argc, char **argv)
 {
 	git_indexer *idx;
 	git_transfer_progress stats = {0, 0};

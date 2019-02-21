@@ -1,7 +1,3 @@
-#include <git2.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include "common.h"
 
 static int use_remote(git_repository *repo, char *name)
@@ -49,7 +45,7 @@ cleanup:
 }
 
 /** Entry point for this command */
-int ls_remote(git_repository *repo, int argc, char **argv)
+int lg2_ls_remote(git_repository *repo, int argc, char **argv)
 {
 	int error;
 

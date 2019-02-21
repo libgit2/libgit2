@@ -172,9 +172,8 @@ cleanup:
 }
 
 /** That example's entry point */
-int main(int argc, char **argv)
+int lg2_checkout(git_repository *repo, int argc, char **argv)
 {
-	git_repository *repo = NULL;
 	struct args_info args = ARGS_INFO_INIT;
 	checkout_options opts;
 	git_repository_state_t state;
@@ -184,15 +183,6 @@ int main(int argc, char **argv)
 
 	/** Parse our command line options */
 	parse_options(&path, &opts, &args);
-
-	/** Initialize the library */
-	err = git_libgit2_init();
-	if (!err)
-		check_lg2(err, "Failed to initialize libgit2", NULL);
-
-	/** Open the repository corresponding to the options */
-	check_lg2(git_repository_open_ext(&repo, path, 0, NULL),
-			  "Could not open repository", NULL);
 
 	/** Make sure we're not about to checkout while something else is going on */
 	state = git_repository_state(repo);
@@ -227,9 +217,6 @@ int main(int argc, char **argv)
 
 cleanup:
 	git_annotated_commit_free(checkout_target);
-
-	git_repository_free(repo);
-	git_libgit2_shutdown();
 
 	return err;
 }

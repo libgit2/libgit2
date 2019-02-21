@@ -67,13 +67,10 @@ static void print_long(git_status_list *status);
 static void print_short(git_repository *repo, git_status_list *status);
 static int print_submod(git_submodule *sm, const char *name, void *payload);
 
-int main(int argc, char *argv[])
+int lg2_status(git_repository *repo, int argc, char *argv[])
 {
-	git_repository *repo = NULL;
 	git_status_list *status;
 	struct opts o = { GIT_STATUS_OPTIONS_INIT, "." };
-
-	git_libgit2_init();
 
 	o.statusopt.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	o.statusopt.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
@@ -81,13 +78,6 @@ int main(int argc, char *argv[])
 		GIT_STATUS_OPT_SORT_CASE_SENSITIVELY;
 
 	parse_opts(&o, argc, argv);
-
-	/**
-	 * Try to open the repository at the given path (or at the current
-	 * directory if none was given).
-	 */
-	check_lg2(git_repository_open_ext(&repo, o.repodir, 0, NULL),
-		  "Could not open repository", o.repodir);
 
 	if (git_repository_is_bare(repo))
 		fatal("Cannot report status on bare repository",
@@ -133,9 +123,6 @@ show_status:
 		sleep(o.repeat);
 		goto show_status;
 	}
-
-	git_repository_free(repo);
-	git_libgit2_shutdown();
 
 	return 0;
 }

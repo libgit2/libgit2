@@ -152,23 +152,14 @@ static void describe_options_init(describe_options *opts)
 	git_describe_init_format_options(&opts->format_options, GIT_DESCRIBE_FORMAT_OPTIONS_VERSION);
 }
 
-int main(int argc, char **argv)
+int lg2_describe(git_repository *repo, int argc, char **argv)
 {
-	git_repository *repo;
 	describe_options opts;
-
-	git_libgit2_init();
-
-	check_lg2(git_repository_open_ext(&repo, ".", 0, NULL),
-			"Could not open repository", NULL);
 
 	describe_options_init(&opts);
 	parse_options(&opts, argc, argv);
 
 	do_describe(repo, &opts);
-
-	git_repository_free(repo);
-	git_libgit2_shutdown();
 
 	return 0;
 }

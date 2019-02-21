@@ -17,6 +17,41 @@
 #include <stdlib.h>
 #include <git2.h>
 
+#ifndef PRIuZ
+/* Define the printf format specifer to use for size_t output */
+#if defined(_MSC_VER) || defined(__MINGW32__)
+#	define PRIuZ "Iu"
+#else
+#	define PRIuZ "zu"
+#endif
+#endif
+
+#define ARRAY_SIZE(x) (sizeof(x)/sizeof(*x))
+#define UNUSED(x) (void)(x)
+
+extern int lg2_add(git_repository *repo, int argc, char **argv);
+extern int lg2_blame(git_repository *repo, int argc, char **argv);
+extern int lg2_cat_file(git_repository *repo, int argc, char **argv);
+extern int lg2_checkout(git_repository *repo, int argc, char **argv);
+extern int lg2_clone(git_repository *repo, int argc, char **argv);
+extern int lg2_describe(git_repository *repo, int argc, char **argv);
+extern int lg2_diff(git_repository *repo, int argc, char **argv);
+extern int lg2_fetch(git_repository *repo, int argc, char **argv);
+extern int lg2_for_each_ref(git_repository *repo, int argc, char **argv);
+extern int lg2_general(git_repository *repo, int argc, char **argv);
+extern int lg2_index_pack(git_repository *repo, int argc, char **argv);
+extern int lg2_init(git_repository *repo, int argc, char **argv);
+extern int lg2_log(git_repository *repo, int argc, char **argv);
+extern int lg2_ls_files(git_repository *repo, int argc, char **argv);
+extern int lg2_ls_remote(git_repository *repo, int argc, char **argv);
+extern int lg2_merge(git_repository *repo, int argc, char **argv);
+extern int lg2_remote(git_repository *repo, int argc, char **argv);
+extern int lg2_rev_list(git_repository *repo, int argc, char **argv);
+extern int lg2_rev_parse(git_repository *repo, int argc, char **argv);
+extern int lg2_show_index(git_repository *repo, int argc, char **argv);
+extern int lg2_status(git_repository *repo, int argc, char **argv);
+extern int lg2_tag(git_repository *repo, int argc, char **argv);
+
 /**
  * Check libgit2 error code, printing error to stderr on failure and
  * exiting the program.
@@ -122,3 +157,12 @@ extern void *xrealloc(void *oldp, size_t newsz);
  * Convert a refish to an annotated commit.
  */
 extern int resolve_refish(git_annotated_commit **commit, git_repository *repo, const char *refish);
+
+/**
+ * Acquire credentials via command line
+ */
+extern int cred_acquire_cb(git_cred **out,
+		const char *url,
+		const char *username_from_url,
+		unsigned int allowed_types,
+		void *payload);
