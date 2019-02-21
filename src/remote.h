@@ -29,7 +29,7 @@ struct git_remote {
 	git_transport *transport;
 	git_repository *repo;
 	git_push *push;
-	git_transfer_progress stats;
+	git_indexer_progress stats;
 	unsigned int need_pack;
 	git_remote_autotag_option_t download_tags;
 	int prune_refs;

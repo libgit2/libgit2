@@ -171,7 +171,7 @@ void test_clone_nonetwork__can_checkout_given_branch(void)
 }
 
 static int clone_cancel_fetch_transfer_progress_cb(
-	const git_transfer_progress *stats, void *data)
+	const git_indexer_progress *stats, void *data)
 {
 	GIT_UNUSED(stats); GIT_UNUSED(data);
 	return -54321;

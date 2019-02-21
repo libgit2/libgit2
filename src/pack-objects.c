@@ -38,7 +38,7 @@ struct tree_walk_context {
 
 struct pack_write_context {
 	git_indexer *indexer;
-	git_transfer_progress *stats;
+	git_indexer_progress *stats;
 };
 
 struct walk_object {
@@ -1379,12 +1379,12 @@ int git_packbuilder_write(
 	git_packbuilder *pb,
 	const char *path,
 	unsigned int mode,
-	git_transfer_progress_cb progress_cb,
+	git_indexer_progress_cb progress_cb,
 	void *progress_cb_payload)
 {
 	git_indexer_options opts = GIT_INDEXER_OPTIONS_INIT;
 	git_indexer *indexer;
-	git_transfer_progress stats;
+	git_indexer_progress stats;
 	struct pack_write_context ctx;
 	int t;
 

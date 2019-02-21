@@ -82,7 +82,7 @@ struct git_odb_backend {
 
 	int GIT_CALLBACK(writepack)(
 		git_odb_writepack **, git_odb_backend *, git_odb *odb,
-		git_transfer_progress_cb progress_cb, void *progress_payload);
+		git_indexer_progress_cb progress_cb, void *progress_payload);
 
 	/**
 	 * "Freshens" an already existing object, updating its last-used

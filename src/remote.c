@@ -1770,7 +1770,7 @@ int git_remote_list(git_strarray *remotes_list, git_repository *repo)
 	return 0;
 }
 
-const git_transfer_progress* git_remote_stats(git_remote *remote)
+const git_indexer_progress *git_remote_stats(git_remote *remote)
 {
 	assert(remote);
 	return &remote->stats;

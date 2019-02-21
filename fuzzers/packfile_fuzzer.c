@@ -55,7 +55,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
 	git_indexer *indexer = NULL;
-	git_transfer_progress stats = {0, 0};
+	git_indexer_progress stats = {0, 0};
 	bool append_hash = false;
 	git_oid id;
 	char hash[GIT_OID_HEXSZ + 1] = {0};

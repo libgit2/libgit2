@@ -492,7 +492,7 @@ on_error:
 	return error;
 }
 
-static int no_sideband(transport_smart *t, struct git_odb_writepack *writepack, gitno_buffer *buf, git_transfer_progress *stats)
+static int no_sideband(transport_smart *t, struct git_odb_writepack *writepack, gitno_buffer *buf, git_indexer_progress *stats)
 {
 	int recvd;
 
@@ -519,9 +519,9 @@ static int no_sideband(transport_smart *t, struct git_odb_writepack *writepack, 
 
 struct network_packetsize_payload
 {
-	git_transfer_progress_cb callback;
+	git_indexer_progress_cb callback;
 	void *payload;
-	git_transfer_progress *stats;
+	git_indexer_progress *stats;
 	size_t last_fired_bytes;
 };
 
@@ -546,8 +546,8 @@ static int network_packetsize(size_t received, void *payload)
 int git_smart__download_pack(
 	git_transport *transport,
 	git_repository *repo,
-	git_transfer_progress *stats,
-	git_transfer_progress_cb transfer_progress_cb,
+	git_indexer_progress *stats,
+	git_indexer_progress_cb progress_cb,
 	void *progress_payload)
 {
 	transport_smart *t = (transport_smart *)transport;
@@ -557,10 +557,10 @@ int git_smart__download_pack(
 	int error = 0;
 	struct network_packetsize_payload npp = {0};
 
-	memset(stats, 0, sizeof(git_transfer_progress));
+	memset(stats, 0, sizeof(git_indexer_progress));
 
-	if (transfer_progress_cb) {
-		npp.callback = transfer_progress_cb;
+	if (progress_cb) {
+		npp.callback = progress_cb;
 		npp.payload = progress_payload;
 		npp.stats = stats;
 		t->packetsize_cb = &network_packetsize;
@@ -573,7 +573,7 @@ int git_smart__download_pack(
 	}
 
 	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||
-		((error = git_odb_write_pack(&writepack, odb, transfer_progress_cb, progress_payload)) != 0))
+		((error = git_odb_write_pack(&writepack, odb, progress_cb, progress_payload)) != 0))
 		goto done;
 
 	/*
@@ -626,7 +626,7 @@ int git_smart__download_pack(
 	} while (1);
 
 	/*
-	 * Trailing execution of transfer_progress_cb, if necessary...
+	 * Trailing execution of progress_cb, if necessary...
 	 * Only the callback through the npp datastructure currently
 	 * updates the last_fired_bytes value. It is possible that
 	 * progress has already been reported with the correct
@@ -645,7 +645,7 @@ int git_smart__download_pack(
 done:
 	if (writepack)
 		writepack->free(writepack);
-	if (transfer_progress_cb) {
+	if (progress_cb) {
 		t->packetsize_cb = NULL;
 		t->packetsize_payload = NULL;
 	}

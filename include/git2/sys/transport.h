@@ -98,8 +98,8 @@ struct git_transport {
 	int GIT_CALLBACK(download_pack)(
 		git_transport *transport,
 		git_repository *repo,
-		git_transfer_progress *stats,
-		git_transfer_progress_cb progress_cb,
+		git_indexer_progress *stats,
+		git_indexer_progress_cb progress_cb,
 		void *progress_payload);
 
 	/** Checks to see if the transport is connected */

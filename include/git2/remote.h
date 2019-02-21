@@ -516,7 +516,7 @@ struct git_remote_callbacks {
 	 * called with the current count of progress done by the
 	 * indexer.
 	 */
-	git_transfer_progress_cb transfer_progress;
+	git_indexer_progress_cb transfer_progress;
 
 	/**
 	 * Each time a reference is updated locally, this function
@@ -832,7 +832,7 @@ GIT_EXTERN(int) git_remote_push(git_remote *remote,
 /**
  * Get the statistics structure that is filled in by the fetch operation.
  */
-GIT_EXTERN(const git_transfer_progress *) git_remote_stats(git_remote *remote);
+GIT_EXTERN(const git_indexer_progress *) git_remote_stats(git_remote *remote);
 
 /**
  * Retrieve the tag auto-follow setting

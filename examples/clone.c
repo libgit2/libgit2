@@ -1,7 +1,7 @@
 #include "common.h"
 
 typedef struct progress_data {
-	git_transfer_progress fetch_progress;
+	git_indexer_progress fetch_progress;
 	size_t completed_steps;
 	size_t total_steps;
 	const char *path;
@@ -46,7 +46,7 @@ static int sideband_progress(const char *str, int len, void *payload)
 	return 0;
 }
 
-static int fetch_progress(const git_transfer_progress *stats, void *payload)
+static int fetch_progress(const git_indexer_progress *stats, void *payload)
 {
 	progress_data *pd = (progress_data*)payload;
 	pd->fetch_progress = *stats;
