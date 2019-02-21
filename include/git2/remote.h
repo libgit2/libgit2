@@ -422,11 +422,12 @@ typedef enum git_remote_completion_type {
 } git_remote_completion_type;
 
 /** Push network progress notification function */
-typedef int GIT_CALLBACK(git_push_transfer_progress)(
+typedef int GIT_CALLBACK(git_push_transfer_progress_cb)(
 	unsigned int current,
 	unsigned int total,
 	size_t bytes,
 	void* payload);
+
 /**
  * Represents an update which will be performed on the remote during push
  */
@@ -537,7 +538,7 @@ struct git_remote_callbacks {
 	 * inline with pack building operations, so performance may be
 	 * affected.
 	 */
-	git_push_transfer_progress push_transfer_progress;
+	git_push_transfer_progress_cb push_transfer_progress;
 
 	/**
 	 * See documentation of git_push_update_reference_cb

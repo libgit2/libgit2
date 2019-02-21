@@ -978,7 +978,7 @@ struct push_packbuilder_payload
 {
 	git_smart_subtransport_stream *stream;
 	git_packbuilder *pb;
-	git_push_transfer_progress cb;
+	git_push_transfer_progress_cb cb;
 	void *cb_payload;
 	size_t last_bytes;
 	double last_progress_report_time;
