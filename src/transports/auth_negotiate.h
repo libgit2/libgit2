@@ -12,7 +12,7 @@
 #include "git2.h"
 #include "auth.h"
 
-#ifdef GIT_GSSAPI
+#if GIT_GSSAPI
 
 extern int git_http_auth_negotiate(
 	git_http_auth_context **out,

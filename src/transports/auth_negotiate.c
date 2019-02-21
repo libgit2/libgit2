@@ -7,7 +7,7 @@
 
 #include "auth_negotiate.h"
 
-#ifdef GIT_GSSAPI
+#if GIT_GSSAPI
 
 #include "git2.h"
 #include "buffer.h"
