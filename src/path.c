@@ -942,7 +942,7 @@ bool git_path_has_non_ascii(const char *path, size_t pathlen)
 	return false;
 }
 
-#ifdef GIT_USE_ICONV
+#if GIT_USE_ICONV
 
 int git_path_iconv_init_precompose(git_path_iconv_t *ic)
 {
@@ -1091,7 +1091,7 @@ int git_path_direach(
 	DIR *dir;
 	struct dirent *de;
 
-#ifdef GIT_USE_ICONV
+#if GIT_USE_ICONV
 	git_path_iconv_t ic = GIT_PATH_ICONV_INIT;
 #endif
 
@@ -1110,7 +1110,7 @@ int git_path_direach(
 		return -1;
 	}
 
-#ifdef GIT_USE_ICONV
+#if GIT_USE_ICONV
 	if ((flags & GIT_PATH_DIR_PRECOMPOSE_UNICODE) != 0)
 		(void)git_path_iconv_init_precompose(&ic);
 #endif
@@ -1122,7 +1122,7 @@ int git_path_direach(
 		if (git_path_is_dot_or_dotdot(de_path))
 			continue;
 
-#ifdef GIT_USE_ICONV
+#if GIT_USE_ICONV
 		if ((error = git_path_iconv(&ic, &de_path, &de_len)) < 0)
 			break;
 #endif
@@ -1146,7 +1146,7 @@ int git_path_direach(
 
 	closedir(dir);
 
-#ifdef GIT_USE_ICONV
+#if GIT_USE_ICONV
 	git_path_iconv_clear(&ic);
 #endif
 
@@ -1344,7 +1344,7 @@ int git_path_diriter_init(
 		return -1;
 	}
 
-#ifdef GIT_USE_ICONV
+#if GIT_USE_ICONV
 	if ((flags & GIT_PATH_DIR_PRECOMPOSE_UNICODE) != 0)
 		(void)git_path_iconv_init_precompose(&diriter->ic);
 #endif
@@ -1381,7 +1381,7 @@ int git_path_diriter_next(git_path_diriter *diriter)
 	filename = de->d_name;
 	filename_len = strlen(filename);
 
-#ifdef GIT_USE_ICONV
+#if GIT_USE_ICONV
 	if ((diriter->flags & GIT_PATH_DIR_PRECOMPOSE_UNICODE) != 0 &&
 		(error = git_path_iconv(&diriter->ic, &filename, &filename_len)) < 0)
 		return error;
@@ -1444,7 +1444,7 @@ void git_path_diriter_free(git_path_diriter *diriter)
 		diriter->dir = NULL;
 	}
 
-#ifdef GIT_USE_ICONV
+#if GIT_USE_ICONV
 	git_path_iconv_clear(&diriter->ic);
 #endif
 

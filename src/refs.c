@@ -972,7 +972,7 @@ int git_reference__normalize_name(
 	bool normalize = (buf != NULL);
 	bool validate = (flags & GIT_REFERENCE_FORMAT__VALIDATION_DISABLE) == 0;
 
-#ifdef GIT_USE_ICONV
+#if GIT_USE_ICONV
 	git_path_iconv_t ic = GIT_PATH_ICONV_INIT;
 #endif
 
@@ -987,7 +987,7 @@ int git_reference__normalize_name(
 	if (normalize)
 		git_buf_clear(buf);
 
-#ifdef GIT_USE_ICONV
+#if GIT_USE_ICONV
 	if ((flags & GIT_REFERENCE_FORMAT__PRECOMPOSE_UNICODE) != 0) {
 		size_t namelen = strlen(current);
 		if ((error = git_path_iconv_init_precompose(&ic)) < 0 ||
@@ -1080,7 +1080,7 @@ cleanup:
 	if (error && normalize)
 		git_buf_dispose(buf);
 
-#ifdef GIT_USE_ICONV
+#if GIT_USE_ICONV
 	git_path_iconv_clear(&ic);
 #endif
 

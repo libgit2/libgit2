@@ -9,7 +9,7 @@
 #define GIT_ARCH_64 ${GIT_ARCH_64}
 #define GIT_ARCH_32 ${GIT_ARCH_32}
 
-#cmakedefine GIT_USE_ICONV 1
+#define GIT_USE_ICONV ${GIT_USE_ICONV}
 #cmakedefine GIT_USE_NSEC 1
 #cmakedefine GIT_USE_STAT_MTIM 1
 #cmakedefine GIT_USE_STAT_MTIMESPEC 1

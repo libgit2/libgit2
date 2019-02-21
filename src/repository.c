@@ -1556,7 +1556,7 @@ static int repo_init_fs_configs(
 			git_error_clear();
 	}
 
-#ifdef GIT_USE_ICONV
+#if GIT_USE_ICONV
 	if ((error = git_config_set_bool(
 			cfg, "core.precomposeunicode",
 			git_path_does_fs_decompose_unicode(work_dir))) < 0)

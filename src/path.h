@@ -425,7 +425,7 @@ extern bool git_path_has_non_ascii(const char *path, size_t pathlen);
 #define GIT_PATH_NATIVE_ENCODING "UTF-8"
 #endif
 
-#ifdef GIT_USE_ICONV
+#if GIT_USE_ICONV
 
 #include <iconv.h>
 
@@ -487,7 +487,7 @@ struct git_path_diriter
 
 	DIR *dir;
 
-#ifdef GIT_USE_ICONV
+#if GIT_USE_ICONV
 	git_path_iconv_t ic;
 #endif
 };

@@ -309,7 +309,7 @@ void test_repo_init__symlinks_posix_detected(void)
 
 void test_repo_init__detect_precompose_unicode_required(void)
 {
-#ifdef GIT_USE_ICONV
+#if GIT_USE_ICONV
 	char *composed = "ḱṷṓn", *decomposed = "ḱṷṓn";
 	struct stat st;
 	bool found_with_nfd;
