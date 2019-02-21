@@ -22,7 +22,7 @@ typedef struct {
 #endif
 } git_atomic;
 
-#ifdef GIT_ARCH_64
+#if GIT_ARCH_64
 
 typedef struct {
 #if defined(GIT_WIN32)
@@ -120,7 +120,7 @@ GIT_INLINE(volatile void *) git___swap(
 #endif
 }
 
-#ifdef GIT_ARCH_64
+#if GIT_ARCH_64
 
 GIT_INLINE(int64_t) git_atomic64_add(git_atomic64 *a, int64_t addend)
 {
@@ -208,7 +208,7 @@ GIT_INLINE(volatile void *) git___swap(
 	return old;
 }
 
-#ifdef GIT_ARCH_64
+#if GIT_ARCH_64
 
 GIT_INLINE(int64_t) git_atomic64_add(git_atomic64 *a, int64_t addend)
 {

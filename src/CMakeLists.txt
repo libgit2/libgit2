@@ -441,7 +441,9 @@ FILE(GLOB SRC_GIT2 *.c *.h
 # Determine architecture of the machine
 IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
 	SET(GIT_ARCH_64 1)
+	SET(GIT_ARCH_32 0)
 ELSEIF (CMAKE_SIZEOF_VOID_P EQUAL 4)
+	SET(GIT_ARCH_64 0)
 	SET(GIT_ARCH_32 1)
 ELSEIF (CMAKE_SIZEOF_VOID_P)
 	MESSAGE(FATAL_ERROR "Unsupported architecture (pointer size is ${CMAKE_SIZEOF_VOID_P} bytes)")

@@ -6,8 +6,8 @@
 #define GIT_THREADS ${GIT_THREADS}
 #define GIT_MSVC_CRTDBG ${GIT_MSVC_CRTDBG}
 
-#cmakedefine GIT_ARCH_64 1
-#cmakedefine GIT_ARCH_32 1
+#define GIT_ARCH_64 ${GIT_ARCH_64}
+#define GIT_ARCH_32 ${GIT_ARCH_32}
 
 #cmakedefine GIT_USE_ICONV 1
 #cmakedefine GIT_USE_NSEC 1

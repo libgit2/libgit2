@@ -45,7 +45,7 @@ void test_odb_largefiles__write_from_memory(void)
 	git_buf buf = GIT_BUF_INIT;
 	size_t i;
 
-#ifndef GIT_ARCH_64
+#if !(GIT_ARCH_64)
 	cl_skip();
 #endif
 
@@ -67,7 +67,7 @@ void test_odb_largefiles__streamwrite(void)
 {
 	git_oid expected, oid;
 
-#ifndef GIT_ARCH_64
+#if !(GIT_ARCH_64)
 	cl_skip();
 #endif
 
@@ -92,7 +92,7 @@ void test_odb_largefiles__streamread(void)
 	git_object_t type;
 	int ret;
 
-#ifndef GIT_ARCH_64
+#if !(GIT_ARCH_64)
 	cl_skip();
 #endif
 
@@ -132,7 +132,7 @@ void test_odb_largefiles__read_into_memory(void)
 	git_oid oid;
 	git_odb_object *obj;
 
-#ifndef GIT_ARCH_64
+#if !(GIT_ARCH_64)
 	cl_skip();
 #endif
 
@@ -152,7 +152,7 @@ void test_odb_largefiles__read_into_memory_rejected_on_32bit(void)
 	git_oid oid;
 	git_odb_object *obj = NULL;
 
-#ifdef GIT_ARCH_64
+#if GIT_ARCH_64
 	cl_skip();
 #endif
 
@@ -173,7 +173,7 @@ void test_odb_largefiles__read_header(void)
 	size_t len;
 	git_object_t type;
 
-#ifndef GIT_ARCH_64
+#if !(GIT_ARCH_64)
 	cl_skip();
 #endif
 
