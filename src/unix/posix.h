@@ -89,7 +89,7 @@ GIT_INLINE(int) p_futimes(int f, const struct p_timeval t[2])
 # define p_futimes futimes
 #endif
 
-#ifdef GIT_USE_REGCOMP_L
+#if GIT_USE_REGCOMP_L
 #include <xlocale.h>
 GIT_INLINE(int) p_regcomp(regex_t *preg, const char *pattern, int cflags)
 {
