@@ -52,7 +52,7 @@ void test_transport_register__custom_transport_ssh(void)
 	unsigned i;
 
 	for (i = 0; i < ARRAY_SIZE(urls); i++) {
-#ifndef GIT_SSH
+#if !(GIT_SSH)
 		cl_git_fail_with(git_transport_new(&transport, NULL, urls[i]), -1);
 #else
 		cl_git_pass(git_transport_new(&transport, NULL, urls[i]));
@@ -69,7 +69,7 @@ void test_transport_register__custom_transport_ssh(void)
 	cl_git_pass(git_transport_unregister("ssh"));
 
 	for (i = 0; i < ARRAY_SIZE(urls); i++) {
-#ifndef GIT_SSH
+#if !(GIT_SSH)
 		cl_git_fail_with(git_transport_new(&transport, NULL, urls[i]), -1);
 #else
 		cl_git_pass(git_transport_new(&transport, NULL, urls[i]));

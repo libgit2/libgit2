@@ -494,7 +494,7 @@ void test_online_clone__ssh_auth_methods(void)
 {
 	int with_user;
 
-#ifndef GIT_SSH
+#if !(GIT_SSH)
 	clar__skip();
 #endif
 	g_options.fetch_opts.callbacks.credentials = check_ssh_auth_methods;
@@ -542,7 +542,7 @@ void test_online_clone__ssh_with_paths(void)
 		2,
 	};
 
-#ifndef GIT_SSH
+#if !(GIT_SSH)
 	clar__skip();
 #endif
 	if (!_remote_url || !_remote_user || strncmp(_remote_url, "ssh://", 5) != 0)
@@ -571,7 +571,7 @@ static int cred_foo_bar(git_cred **cred, const char *url, const char *username_f
 
 void test_online_clone__ssh_cannot_change_username(void)
 {
-#ifndef GIT_SSH
+#if !(GIT_SSH)
 	clar__skip();
 #endif
 	g_options.fetch_opts.callbacks.credentials = cred_foo_bar;
@@ -671,7 +671,7 @@ static int ssh_memory_cred_cb(git_cred **cred, const char *url, const char *user
 
 void test_online_clone__ssh_memory_auth(void)
 {
-#ifndef GIT_SSH_MEMORY_CREDENTIALS
+#if !(GIT_SSH_MEMORY_CREDENTIALS)
 	clar__skip();
 #endif
 	if (!_remote_url || !_remote_user || !_remote_ssh_privkey || strncmp(_remote_url, "ssh://", 5) != 0)
@@ -705,7 +705,7 @@ void test_online_clone__certificate_invalid(void)
 	cl_git_fail_with(git_clone(&g_repo, "https://github.com/libgit2/TestGitRepository", "./foo", &g_options),
 		GIT_ECERTIFICATE);
 
-#ifdef GIT_SSH
+#if GIT_SSH
 	cl_git_fail_with(git_clone(&g_repo, "ssh://github.com/libgit2/TestGitRepository", "./foo", &g_options),
 		GIT_ECERTIFICATE);
 #endif

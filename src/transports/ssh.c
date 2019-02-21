@@ -7,7 +7,7 @@
 
 #include "ssh.h"
 
-#ifdef GIT_SSH
+#if GIT_SSH
 #include <libssh2.h>
 #endif
 
@@ -19,7 +19,7 @@
 #include "cred.h"
 #include "streams/socket.h"
 
-#ifdef GIT_SSH
+#if GIT_SSH
 
 #define OWNING_SUBTRANSPORT(s) ((ssh_subtransport *)(s)->parent.subtransport)
 
@@ -398,7 +398,7 @@ static int _git_ssh_authenticate_session(
 				session, c->username, c->prompt_callback);
 			break;
 		}
-#ifdef GIT_SSH_MEMORY_CREDENTIALS
+#if GIT_SSH_MEMORY_CREDENTIALS
 		case GIT_CREDTYPE_SSH_MEMORY: {
 			git_cred_ssh_key *c = (git_cred_ssh_key *)cred;
 
@@ -798,7 +798,7 @@ static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *use
 		if (!git__prefixcmp(ptr, SSH_AUTH_PUBLICKEY)) {
 			*out |= GIT_CREDTYPE_SSH_KEY;
 			*out |= GIT_CREDTYPE_SSH_CUSTOM;
-#ifdef GIT_SSH_MEMORY_CREDENTIALS
+#if GIT_SSH_MEMORY_CREDENTIALS
 			*out |= GIT_CREDTYPE_SSH_MEMORY;
 #endif
 			ptr += strlen(SSH_AUTH_PUBLICKEY);
@@ -828,7 +828,7 @@ static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *use
 int git_smart_subtransport_ssh(
 	git_smart_subtransport **out, git_transport *owner, void *param)
 {
-#ifdef GIT_SSH
+#if GIT_SSH
 	ssh_subtransport *t;
 
 	assert(out);
@@ -859,7 +859,7 @@ int git_smart_subtransport_ssh(
 
 int git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *payload)
 {
-#ifdef GIT_SSH
+#if GIT_SSH
 	git_strarray *paths = (git_strarray *) payload;
 	git_transport *transport;
 	transport_smart *smart;
@@ -901,7 +901,7 @@ int git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *p
 #endif
 }
 
-#ifdef GIT_SSH
+#if GIT_SSH
 static void shutdown_ssh(void)
 {
     libssh2_exit();
@@ -910,7 +910,7 @@ static void shutdown_ssh(void)
 
 int git_transport_ssh_global_init(void)
 {
-#ifdef GIT_SSH
+#if GIT_SSH
 	if (libssh2_init(0) < 0) {
 		git_error_set(GIT_ERROR_SSH, "unable to initialize libssh2");
 		return -1;

@@ -365,6 +365,12 @@ IF (LIBSSH2_FOUND)
 ELSE()
 	MESSAGE(STATUS "LIBSSH2 not found. Set CMAKE_PREFIX_PATH if it is installed outside of the default search path.")
 ENDIF()
+IF(NOT GIT_SSH)
+	SET(GIT_SSH 0)
+ENDIF()
+IF (NOT HAVE_LIBSSH2_MEMORY_CREDENTIALS)
+	SET(GIT_SSH_MEMORY_CREDENTIALS 0)
+ENDIF()
 ADD_FEATURE_INFO(SSH GIT_SSH "SSH transport support")
 
 # Optional external dependency: libgssapi
