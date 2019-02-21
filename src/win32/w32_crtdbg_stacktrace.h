@@ -43,8 +43,6 @@
  * startup.  See tests/main.c for an example.
  */
 
-int git_win32_crtdbg_init_allocator(git_allocator *allocator);
-
 /**
  * Initialize our memory leak tracking and de-dup data structures.
  * This should ONLY be called by git_libgit2_init().
