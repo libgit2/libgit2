@@ -17,15 +17,15 @@ typedef struct git_hash_ctx git_hash_ctx;
 int git_hash_ctx_init(git_hash_ctx *ctx);
 void git_hash_ctx_cleanup(git_hash_ctx *ctx);
 
-#if defined(GIT_SHA1_COLLISIONDETECT)
+#if GIT_SHA1_COLLISIONDETECT
 # include "hash/hash_collisiondetect.h"
-#elif defined(GIT_SHA1_COMMON_CRYPTO)
+#elif GIT_SHA1_COMMON_CRYPTO
 # include "hash/hash_common_crypto.h"
-#elif defined(GIT_SHA1_OPENSSL)
+#elif GIT_SHA1_OPENSSL
 # include "hash/hash_openssl.h"
-#elif defined(GIT_SHA1_WIN32)
+#elif GIT_SHA1_WIN32
 # include "hash/hash_win32.h"
-#elif defined(GIT_SHA1_MBEDTLS)
+#elif GIT_SHA1_MBEDTLS
 # include "hash/hash_mbedtls.h"
 #else
 # include "hash/hash_generic.h"

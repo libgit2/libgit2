@@ -51,7 +51,7 @@ void test_core_sha1__detect_collision_attack(void)
 {
 	git_oid oid, expected;
 
-#ifdef GIT_SHA1_COLLISIONDETECT
+#if GIT_SHA1_COLLISIONDETECT
 	GIT_UNUSED(expected);
 	cl_git_fail(sha1_file(&oid, FIXTURE_DIR "/shattered-1.pdf"));
 	cl_assert_equal_s("SHA1 collision attack detected", git_error_last()->message);
