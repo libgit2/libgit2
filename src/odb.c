@@ -540,7 +540,7 @@ int git_odb__add_default_backends(
 
 	/* TODO: inodes are not really relevant on Win32, so we need to find
 	 * a cross-platform workaround for this */
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	GIT_UNUSED(i);
 	GIT_UNUSED(st);
 

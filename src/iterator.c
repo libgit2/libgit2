@@ -1685,7 +1685,7 @@ int git_iterator_current_workdir_path(git_buf **out, git_iterator *i)
 
 GIT_INLINE(git_dir_flag) entry_dir_flag(git_index_entry *entry)
 {
-#if defined(GIT_WIN32) && !defined(__MINGW32__)
+#if GIT_WIN32 && !defined(__MINGW32__)
 	return (entry && entry->mode) ?
 		(S_ISDIR(entry->mode) ? GIT_DIR_FLAG_TRUE : GIT_DIR_FLAG_FALSE) :
 		GIT_DIR_FLAG_UNKNOWN;

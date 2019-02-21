@@ -39,7 +39,7 @@ void test_core_futils__writebuffer(void)
 
 void test_core_futils__write_hidden_file(void)
 {
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	cl_skip();
 #else
 	git_buf out = GIT_BUF_INIT, append = GIT_BUF_INIT;

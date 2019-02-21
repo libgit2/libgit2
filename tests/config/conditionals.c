@@ -2,7 +2,7 @@
 #include "buffer.h"
 #include "fileops.h"
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 # define ROOT_PREFIX "C:"
 #else
 # define ROOT_PREFIX

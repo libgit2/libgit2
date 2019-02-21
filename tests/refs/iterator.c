@@ -152,7 +152,7 @@ void test_refs_iterator__foreach_through_symlink(void)
 {
 	git_vector output;
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	cl_skip();
 #endif
 

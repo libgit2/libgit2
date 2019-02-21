@@ -3,13 +3,13 @@
 #include "buffer.h"
 #include "path.h"
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 # include "win32/reparse.h"
 #endif
 
 void test_core_link__cleanup(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	RemoveDirectory("lstat_junction");
 	RemoveDirectory("lstat_dangling");
 	RemoveDirectory("lstat_dangling_dir");
@@ -22,7 +22,7 @@ void test_core_link__cleanup(void)
 #endif
 }
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 static bool should_run(void)
 {
 	static SID_IDENTIFIER_AUTHORITY authority = { SECURITY_NT_AUTHORITY };
@@ -44,7 +44,7 @@ static bool should_run(void)
 
 static void do_symlink(const char *old, const char *new, int is_dir)
 {
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	GIT_UNUSED(is_dir);
 
 	cl_must_pass(symlink(old, new));
@@ -62,7 +62,7 @@ static void do_symlink(const char *old, const char *new, int is_dir)
 
 static void do_hardlink(const char *old, const char *new)
 {
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	cl_must_pass(link(old, new));
 #else
 	typedef DWORD (WINAPI *create_hardlink_func)(LPCTSTR, LPCTSTR, LPSECURITY_ATTRIBUTES);
@@ -76,7 +76,7 @@ static void do_hardlink(const char *old, const char *new)
 #endif
 }
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 
 static void do_junction(const char *old, const char *new)
 {
@@ -382,7 +382,7 @@ void test_core_link__lstat_dangling_symlink_directory(void)
 
 void test_core_link__stat_junction(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	git_buf target_path = GIT_BUF_INIT;
 	struct stat st;
 
@@ -403,7 +403,7 @@ void test_core_link__stat_junction(void)
 
 void test_core_link__stat_dangling_junction(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	git_buf target_path = GIT_BUF_INIT;
 	struct stat st;
 
@@ -423,7 +423,7 @@ void test_core_link__stat_dangling_junction(void)
 
 void test_core_link__lstat_junction(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	git_buf target_path = GIT_BUF_INIT;
 	struct stat st;
 
@@ -444,7 +444,7 @@ void test_core_link__lstat_junction(void)
 
 void test_core_link__lstat_dangling_junction(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	git_buf target_path = GIT_BUF_INIT;
 	struct stat st;
 
@@ -505,7 +505,7 @@ void test_core_link__lstat_hardlink(void)
 
 void test_core_link__stat_reparse_point(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	struct stat st;
 
 	/* Generic reparse points should be treated as regular files, only
@@ -523,7 +523,7 @@ void test_core_link__stat_reparse_point(void)
 
 void test_core_link__lstat_reparse_point(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	struct stat st;
 
 	cl_git_rewritefile("lstat_reparse", "This is a reparse point!\n");

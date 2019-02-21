@@ -13,7 +13,7 @@
 #define BITFLIP_FILTER_PRIORITY -1
 #define REVERSE_FILTER_PRIORITY -2
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 # define NEWLINE "\r\n"
 #else
 # define NEWLINE "\n"

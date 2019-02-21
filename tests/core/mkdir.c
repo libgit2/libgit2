@@ -228,7 +228,7 @@ void test_core_mkdir__chmods(void)
 
 void test_core_mkdir__keeps_parent_symlinks(void)
 {
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	git_buf path = GIT_BUF_INIT;
 
 	cl_set_cleanup(cleanup_basic_dirs, NULL);

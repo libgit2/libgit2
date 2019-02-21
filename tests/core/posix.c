@@ -17,7 +17,7 @@
 
 void test_core_posix__initialize(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	/* on win32, the WSA context needs to be initialized
 	 * before any socket calls can be performed */
 	WSADATA wsd;
@@ -29,7 +29,7 @@ void test_core_posix__initialize(void)
 
 static bool supports_ipv6(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	/* IPv6 is supported on Vista and newer */
 	return git_has_win32_version(6, 0, 0);
 #else

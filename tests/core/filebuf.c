@@ -100,7 +100,7 @@ void test_core_filebuf__umask(void)
 	struct stat statbuf;
 	mode_t mask, os_mask;
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	os_mask = 0600;
 #else
 	os_mask = 0777;
@@ -130,7 +130,7 @@ void test_core_filebuf__rename_error(void)
 	char *dir = "subdir",  *test = "subdir/test", *test_lock = "subdir/test.lock";
 	int fd;
 
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	cl_skip();
 #endif
 
@@ -157,7 +157,7 @@ void test_core_filebuf__symlink_follow(void)
 	git_filebuf file = GIT_FILEBUF_INIT;
 	const char *dir = "linkdir", *source = "linkdir/link";
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	cl_skip();
 #endif
 
@@ -192,7 +192,7 @@ void test_core_filebuf__symlink_follow_absolute_paths(void)
 	git_filebuf file = GIT_FILEBUF_INIT;
 	git_buf source = GIT_BUF_INIT, target = GIT_BUF_INIT;
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	cl_skip();
 #endif
 
@@ -221,7 +221,7 @@ void test_core_filebuf__symlink_depth(void)
 	git_filebuf file = GIT_FILEBUF_INIT;
 	const char *dir = "linkdir", *source = "linkdir/link";
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	cl_skip();
 #endif
 
@@ -236,7 +236,7 @@ void test_core_filebuf__symlink_depth(void)
 
 void test_core_filebuf__hidden_file(void)
 {
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	cl_skip();
 #else
 	git_filebuf file = GIT_FILEBUF_INIT;

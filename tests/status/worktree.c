@@ -1040,7 +1040,7 @@ void test_status_worktree__update_stat_cache_0(void)
 
 void test_status_worktree__unreadable(void)
 {
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	const char *expected_paths[] = { "no_permission/foo" };
 	const unsigned int expected_statuses[] = {GIT_STATUS_WT_UNREADABLE};
 
@@ -1079,7 +1079,7 @@ void test_status_worktree__unreadable(void)
 
 void test_status_worktree__unreadable_not_included(void)
 {
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	const char *expected_paths[] = { "no_permission/" };
 	const unsigned int expected_statuses[] = {GIT_STATUS_WT_NEW};
 

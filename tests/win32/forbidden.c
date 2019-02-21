@@ -71,7 +71,7 @@ void test_win32_forbidden__cannot_add_forbidden_filename_from_filesystem(void)
 	cl_git_pass(git_repository_index(&index, repo));
 	cl_git_write2file("win32-forbidden/aux.", "foo\n", 4, O_RDWR | O_CREAT, 0666);
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	cl_git_fail(git_index_add_bypath(index, "aux."));
 #else
 	cl_git_pass(git_index_add_bypath(index, "aux."));
@@ -138,7 +138,7 @@ void test_win32_forbidden__can_diff_index_to_workdir(void)
 
 void test_win32_forbidden__checking_out_forbidden_index_fails(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	git_index *index;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_diff *diff;

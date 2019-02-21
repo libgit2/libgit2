@@ -163,7 +163,7 @@ static void test_write_pack_permission(mode_t given, mode_t expected)
 	/* Windows does not return group/user bits from stat,
 	* files are never executable.
 	*/
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	os_mask = 0600;
 #else
 	os_mask = 0777;
@@ -204,7 +204,7 @@ void test_pack_packbuilder__does_not_fsync_by_default(void)
 /* We fsync the packfile and index.  On non-Windows, we also fsync
  * the parent directories.
  */
-#ifdef GIT_WIN32
+#if GIT_WIN32
 static int expected_fsyncs = 2;
 #else
 static int expected_fsyncs = 4;

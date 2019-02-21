@@ -200,7 +200,7 @@ void test_write_object_permission(
 	/* Windows does not return group/user bits from stat,
 	* files are never executable.
 	*/
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	os_mask = 0600;
 #else
 	os_mask = 0777;

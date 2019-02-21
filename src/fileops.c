@@ -1148,7 +1148,7 @@ void git_futils_filestamp_set_from_stat(
 
 int git_futils_fsync_dir(const char *path)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	GIT_UNUSED(path);
 	return 0;
 #else

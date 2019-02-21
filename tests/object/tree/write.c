@@ -418,7 +418,7 @@ void test_object_tree_write__protect_filesystems(void)
 	 */
 	cl_git_pass(git_treebuilder_new(&builder, g_repo, NULL));
 
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	cl_git_pass(git_treebuilder_insert(NULL, builder, ".git.", &bid, GIT_FILEMODE_BLOB));
 	cl_git_pass(git_treebuilder_insert(NULL, builder, "git~1", &bid, GIT_FILEMODE_BLOB));
 #endif

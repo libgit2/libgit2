@@ -131,7 +131,7 @@ void test_checkout_index__honor_the_gitattributes_directives(void)
 
 void test_checkout_index__honor_coreautocrlf_setting_set_to_true(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	const char *expected_readme_text = "hey there\r\n";
 
@@ -180,7 +180,7 @@ void test_checkout_index__honor_coresymlinks_default_true(void)
 	if (!filesystem_supports_symlinks("symlink/test"))
 		cl_skip();
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	/*
 	 * Windows explicitly requires the global configuration to have
 	 * core.symlinks=true in addition to actual filesystem support.
@@ -203,7 +203,7 @@ void test_checkout_index__honor_coresymlinks_default_false(void)
 {
 	cl_must_pass(p_mkdir("symlink", 0777));
 
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	/*
 	 * This test is largely for Windows platforms to ensure that
 	 * we respect an unset core.symlinks even when the platform
@@ -793,7 +793,7 @@ void test_checkout_index__adding_conflict_removes_stage_0(void)
 
 void test_checkout_index__conflicts_honor_coreautocrlf(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	git_index *index;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_buf conflicting_buf = GIT_BUF_INIT;

@@ -19,7 +19,7 @@
 #include "git2/transport.h"
 #include "git2/sys/openssl.h"
 
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 # include <sys/types.h>
 # include <sys/socket.h>
 # include <netinet/in.h>

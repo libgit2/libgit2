@@ -9,7 +9,7 @@
 
 #include "git2/common.h"
 
-#if !defined(GIT_WIN32) && !defined(NO_MMAP)
+#if !(GIT_WIN32) && !defined(NO_MMAP)
 
 #include "map.h"
 #include <sys/mman.h>

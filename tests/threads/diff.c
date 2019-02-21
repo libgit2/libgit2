@@ -3,7 +3,7 @@
 
 #if GIT_THREADS
 
-# if defined(GIT_WIN32)
+# if GIT_WIN32
 #  define git_thread_yield() Sleep(0)
 # elif defined(__FreeBSD__) || defined(__MidnightBSD__) || defined(__DragonFly__)
 #  define git_thread_yield() pthread_yield()
@@ -19,7 +19,7 @@ static git_repository *_repo;
 static git_tree *_a, *_b;
 static git_atomic _counts[4];
 static int _check_counts;
-#ifdef GIT_WIN32
+#if GIT_WIN32
 static int _retries;
 #endif
 
@@ -27,7 +27,7 @@ static int _retries;
 
 void test_threads_diff__initialize(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	_retries = git_win32__retries;
 	git_win32__retries = 1;
 #endif
@@ -37,7 +37,7 @@ void test_threads_diff__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	git_win32__retries = _retries;
 #endif
 }

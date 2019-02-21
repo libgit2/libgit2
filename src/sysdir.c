@@ -20,7 +20,7 @@
 
 static int git_sysdir_guess_programdata_dirs(git_buf *out)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	return git_win32__find_programdata_dirs(out);
 #else
 	git_buf_clear(out);
@@ -30,14 +30,14 @@ static int git_sysdir_guess_programdata_dirs(git_buf *out)
 
 static int git_sysdir_guess_system_dirs(git_buf *out)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	return git_win32__find_system_dirs(out, L"etc\\");
 #else
 	return git_buf_sets(out, "/etc");
 #endif
 }
 
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 static int get_passwd_home(git_buf *out, uid_t uid)
 {
 	struct passwd pwd, *pwdptr;
@@ -77,7 +77,7 @@ out:
 
 static int git_sysdir_guess_global_dirs(git_buf *out)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	return git_win32__find_global_dirs(out);
 #else
 	int error;
@@ -106,7 +106,7 @@ static int git_sysdir_guess_global_dirs(git_buf *out)
 
 static int git_sysdir_guess_xdg_dirs(git_buf *out)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	return git_win32__find_xdg_dirs(out);
 #else
 	git_buf env = GIT_BUF_INIT;
@@ -143,7 +143,7 @@ static int git_sysdir_guess_xdg_dirs(git_buf *out)
 
 static int git_sysdir_guess_template_dirs(git_buf *out)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	return git_win32__find_system_dirs(out, L"share\\git-core\\templates");
 #else
 	return git_buf_sets(out, "/usr/share/git-core/templates");

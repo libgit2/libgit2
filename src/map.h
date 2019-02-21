@@ -30,7 +30,7 @@
 typedef struct { /* memory mapped buffer	*/
 	void *data; /* data bytes			*/
 	size_t len; /* data length			*/
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	HANDLE fmh; /* file mapping handle */
 #endif
 } git_map;

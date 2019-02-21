@@ -71,7 +71,7 @@ static void ensure_repository_init(
 
 	cl_assert(git_repository_is_bare(_repo) == is_bare);
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	if (!is_bare) {
 		DWORD fattrs = GetFileAttributes(git_repository_path(_repo));
 		cl_assert((fattrs & FILE_ATTRIBUTE_HIDDEN) != 0);
@@ -254,7 +254,7 @@ void test_repo_init__detect_ignorecase(void)
 
 void test_repo_init__symlinks_win32_enabled_by_global_config(void)
 {
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	cl_skip();
 #else
 	git_config *config, *repo_config;
@@ -290,7 +290,7 @@ void test_repo_init__symlinks_win32_enabled_by_global_config(void)
 
 void test_repo_init__symlinks_win32_off_by_default(void)
 {
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	cl_skip();
 #else
 	assert_config_entry_on_init("core.symlinks", false);
@@ -299,7 +299,7 @@ void test_repo_init__symlinks_win32_off_by_default(void)
 
 void test_repo_init__symlinks_posix_detected(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	cl_skip();
 #else
 	assert_config_entry_on_init(
@@ -603,7 +603,7 @@ static const char *template_sandbox(const char *name)
 	cl_git_pass(git_buf_joinpath(&hooks_path, name, "hooks"));
 	cl_git_pass(git_buf_joinpath(&link_path, hooks_path.ptr, "link.sample"));
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	cl_git_mkfile(link_path.ptr, "#!/bin/sh\necho hello, world\n");
 #else
 	cl_must_pass(symlink("update.sample", link_path.ptr));

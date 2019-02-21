@@ -172,7 +172,7 @@ static int canonicalize_url(git_buf *out, const char *in)
 		return GIT_EINVALIDSPEC;
 	}
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	/* Given a UNC path like \\server\path, we need to convert this
 	 * to //server/path for compatibility with core git.
 	 */

@@ -464,7 +464,7 @@ int git_clone_init_options(git_clone_options *opts, unsigned int version)
 
 static bool can_link(const char *src, const char *dst, int link)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	GIT_UNUSED(src);
 	GIT_UNUSED(dst);
 	GIT_UNUSED(link);

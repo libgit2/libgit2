@@ -249,13 +249,13 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	case GIT_OPT_GET_WINDOWS_SHAREMODE:
-#ifdef GIT_WIN32
+#if GIT_WIN32
 		*(va_arg(ap, unsigned long *)) = git_win32__createfile_sharemode;
 #endif
 		break;
 
 	case GIT_OPT_SET_WINDOWS_SHAREMODE:
-#ifdef GIT_WIN32
+#if GIT_WIN32
 		git_win32__createfile_sharemode = va_arg(ap, unsigned long);
 #endif
 		break;

@@ -16,7 +16,7 @@ static int file_url(git_buf *buf, const char *host, const char *path)
 	return git_buf_printf(buf, "file://%s/%s", host, path);
 }
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 static int git_style_unc_path(git_buf *buf, const char *host, const char *path)
 {
 	git_buf_clear(buf);
@@ -116,7 +116,7 @@ void test_clone_local__hardlinks(void)
 	opts.local = GIT_CLONE_LOCAL;
 	cl_git_pass(git_clone(&repo, cl_git_path_url("clone.git"), "./clone2.git", &opts));
 
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	git_buf_clear(&buf);
 	cl_git_pass(git_buf_join_n(&buf, '/', 4, git_repository_path(repo), "objects", "08", "b041783f40edfe12bb406c9c9a8a040177c125"));
 
@@ -141,7 +141,7 @@ void test_clone_local__hardlinks(void)
 	/* this one should automatically use links */
 	cl_git_pass(git_clone(&repo, "./clone.git", "./clone4.git", NULL));
 
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	git_buf_clear(&buf);
 	cl_git_pass(git_buf_join_n(&buf, '/', 4, git_repository_path(repo), "objects", "08", "b041783f40edfe12bb406c9c9a8a040177c125"));
 
@@ -160,7 +160,7 @@ void test_clone_local__hardlinks(void)
 
 void test_clone_local__standard_unc_paths_are_written_git_style(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	git_repository *repo;
 	git_remote *remote;
 	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
@@ -188,7 +188,7 @@ void test_clone_local__standard_unc_paths_are_written_git_style(void)
 
 void test_clone_local__git_style_unc_paths(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	git_repository *repo;
 	git_remote *remote;
 	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;

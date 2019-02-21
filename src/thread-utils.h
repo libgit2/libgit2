@@ -15,7 +15,7 @@
 
 /* Common operations even if threading has been disabled */
 typedef struct {
-#if defined(GIT_WIN32)
+#if GIT_WIN32
 	volatile long val;
 #else
 	volatile int val;
@@ -25,7 +25,7 @@ typedef struct {
 #if GIT_ARCH_64
 
 typedef struct {
-#if defined(GIT_WIN32)
+#if GIT_WIN32
 	__int64 val;
 #else
 	int64_t val;
@@ -46,7 +46,7 @@ typedef git_atomic git_atomic_ssize;
 
 #if GIT_THREADS
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 #   include "win32/thread.h"
 #else
 #   include "unix/pthread.h"
@@ -54,7 +54,7 @@ typedef git_atomic git_atomic_ssize;
 
 GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)
 {
-#if defined(GIT_WIN32)
+#if GIT_WIN32
 	InterlockedExchange(&a->val, (LONG)val);
 #elif defined(__GNUC__)
 	__sync_lock_test_and_set(&a->val, val);
@@ -65,7 +65,7 @@ GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)
 
 GIT_INLINE(int) git_atomic_inc(git_atomic *a)
 {
-#if defined(GIT_WIN32)
+#if GIT_WIN32
 	return InterlockedIncrement(&a->val);
 #elif defined(__GNUC__)
 	return __sync_add_and_fetch(&a->val, 1);
@@ -76,7 +76,7 @@ GIT_INLINE(int) git_atomic_inc(git_atomic *a)
 
 GIT_INLINE(int) git_atomic_add(git_atomic *a, int32_t addend)
 {
-#if defined(GIT_WIN32)
+#if GIT_WIN32
 	return InterlockedExchangeAdd(&a->val, addend);
 #elif defined(__GNUC__)
 	return __sync_add_and_fetch(&a->val, addend);
@@ -87,7 +87,7 @@ GIT_INLINE(int) git_atomic_add(git_atomic *a, int32_t addend)
 
 GIT_INLINE(int) git_atomic_dec(git_atomic *a)
 {
-#if defined(GIT_WIN32)
+#if GIT_WIN32
 	return InterlockedDecrement(&a->val);
 #elif defined(__GNUC__)
 	return __sync_sub_and_fetch(&a->val, 1);
@@ -100,7 +100,7 @@ GIT_INLINE(void *) git___compare_and_swap(
 	void * volatile *ptr, void *oldval, void *newval)
 {
 	volatile void *foundval;
-#if defined(GIT_WIN32)
+#if GIT_WIN32
 	foundval = InterlockedCompareExchangePointer((volatile PVOID *)ptr, newval, oldval);
 #elif defined(__GNUC__)
 	foundval = __sync_val_compare_and_swap(ptr, oldval, newval);
@@ -113,7 +113,7 @@ GIT_INLINE(void *) git___compare_and_swap(
 GIT_INLINE(volatile void *) git___swap(
 	void * volatile *ptr, void *newval)
 {
-#if defined(GIT_WIN32)
+#if GIT_WIN32
 	return InterlockedExchangePointer(ptr, newval);
 #else
 	return __sync_lock_test_and_set(ptr, newval);
@@ -124,7 +124,7 @@ GIT_INLINE(volatile void *) git___swap(
 
 GIT_INLINE(int64_t) git_atomic64_add(git_atomic64 *a, int64_t addend)
 {
-#if defined(GIT_WIN32)
+#if GIT_WIN32
 	return InterlockedExchangeAdd64(&a->val, addend);
 #elif defined(__GNUC__)
 	return __sync_add_and_fetch(&a->val, addend);

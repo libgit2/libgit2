@@ -6,7 +6,7 @@
 
 #include "common.h"
 
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 #include <sys/time.h>
 #endif
 

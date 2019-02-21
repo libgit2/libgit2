@@ -199,7 +199,7 @@ void test_merge_workdir_simple__index_reload(void)
 
 void test_merge_workdir_simple__automerge_crlf(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	git_index *index;
 	const git_index_entry *entry;
 	git_buf automergeable_buf = GIT_BUF_INIT;

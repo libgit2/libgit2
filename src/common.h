@@ -38,7 +38,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 
 # include <io.h>
 # include <direct.h>
@@ -140,7 +140,7 @@ GIT_INLINE(int) git_error_set_after_callback_function(
 	return error_code;
 }
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 #define git_error_set_after_callback(code) \
 	git_error_set_after_callback_function((code), __FUNCTION__)
 #else

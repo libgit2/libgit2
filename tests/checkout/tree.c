@@ -807,7 +807,7 @@ void test_checkout_tree__can_write_to_empty_dirs(void)
 
 void test_checkout_tree__fails_when_dir_in_use(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid oid;
 	git_object *obj = NULL;
@@ -840,7 +840,7 @@ void test_checkout_tree__fails_when_dir_in_use(void)
 
 void test_checkout_tree__can_continue_when_dir_in_use(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid oid;
 	git_object *obj = NULL;
@@ -1054,7 +1054,7 @@ mode_t read_filemode(const char *path)
 
 void test_checkout_tree__filemode_preserved_in_workdir(void)
 {
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	git_oid executable_oid;
 	git_commit *commit;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;

@@ -9,7 +9,7 @@
 
 #include "common.h"
 
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 # include <ctype.h>
 #endif
 
@@ -78,7 +78,7 @@ extern char *git__strsep(char **end, const char *sep);
 extern void git__strntolower(char *str, size_t len);
 extern void git__strtolower(char *str);
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 GIT_INLINE(int) git__tolower(int c)
 {
 	return (c >= 'A' && c <= 'Z') ? (c + 32) : c;
@@ -345,7 +345,7 @@ GIT_INLINE(void) git__memzero(void *data, size_t size)
 #endif
 }
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 
 GIT_INLINE(double) git__timer(void)
 {

@@ -76,7 +76,7 @@ static int transport_find_fn(
 {
 	transport_definition *definition = transport_find_by_url(url);
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	/* On Windows, it might not be possible to discern between absolute local
 	 * and ssh paths - first check if this is a valid local path that points
 	 * to a directory and if so assume local path, else assume SSH */
@@ -96,7 +96,7 @@ static int transport_find_fn(
 		definition = transport_find_by_url("ssh://");
 	}
 
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	/* Check to see if the path points to a file on the local file system */
 	if (!definition && git_path_exists(url) && git_path_isdir(url))
 		definition = &local_transport_definition;

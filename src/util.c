@@ -9,7 +9,7 @@
 
 #include "common.h"
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 # include "win32/utf-conv.h"
 # include "win32/w32_buffer.h"
 
@@ -880,7 +880,7 @@ size_t git__utf8_valid_buf_length(const uint8_t *str, size_t str_len)
 	return offset;
 }
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 int git__getenv(git_buf *out, const char *name)
 {
 	wchar_t *wide_name = NULL, *wide_value = NULL;

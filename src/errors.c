@@ -52,7 +52,7 @@ void git_error_set_oom(void)
 void git_error_set(int error_class, const char *string, ...)
 {
 	va_list arglist;
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	DWORD win32_error_code = (error_class == GIT_ERROR_OS) ? GetLastError() : 0;
 #endif
 	int error_code = (error_class == GIT_ERROR_OS) ? errno : 0;
@@ -69,7 +69,7 @@ void git_error_set(int error_class, const char *string, ...)
 	}
 
 	if (error_class == GIT_ERROR_OS) {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 		char * win32_error = git_win32_get_error_message(win32_error_code);
 		if (win32_error) {
 			git_buf_puts(buf, win32_error);
@@ -128,7 +128,7 @@ void git_error_clear(void)
 	}
 
 	errno = 0;
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	SetLastError(0);
 #endif
 }
@@ -196,7 +196,7 @@ void git_error_state_free(git_error_state *state)
 
 int git_error_system_last(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	return GetLastError();
 #else
 	return errno;
@@ -205,7 +205,7 @@ int git_error_system_last(void)
 
 void git_error_system_set(int code)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	SetLastError(code);
 #else
 	errno = code;

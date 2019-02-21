@@ -281,7 +281,7 @@ static void test_win32_name(const char *name)
 
 	ret = git_reference_create(&new_reference, g_repo, name, &id, 0, NULL);
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	cl_assert_equal_i(GIT_EINVALIDSPEC, ret);
 #else
 	cl_git_pass(ret);
@@ -305,7 +305,7 @@ void test_refs_create__creating_a_loose_ref_with_invalid_windows_name(void)
  * Creating a packed ref involves fsync'ing the packed ref file
  * and (on non-Windows) the containing directory.
  */
-#ifdef GIT_WIN32
+#if GIT_WIN32
 static int expected_fsyncs_create = 2, expected_fsyncs_compress = 1;
 #else
 static int expected_fsyncs_create = 4, expected_fsyncs_compress = 2;

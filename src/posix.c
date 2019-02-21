@@ -13,7 +13,7 @@
 
 size_t p_fsync__cnt = 0;
 
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 
 #ifdef NO_ADDRINFO
 
@@ -162,7 +162,7 @@ ssize_t p_read(git_file fd, void *buf, size_t cnt)
 	char *b = buf;
 
 	if (!git__is_ssizet(cnt)) {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 		SetLastError(ERROR_INVALID_PARAMETER);
 #endif
 		errno = EINVAL;
@@ -171,7 +171,7 @@ ssize_t p_read(git_file fd, void *buf, size_t cnt)
 
 	while (cnt) {
 		ssize_t r;
-#ifdef GIT_WIN32
+#if GIT_WIN32
 		r = read(fd, b, cnt > INT_MAX ? INT_MAX : (unsigned int)cnt);
 #else
 		r = read(fd, b, cnt);
@@ -195,7 +195,7 @@ int p_write(git_file fd, const void *buf, size_t cnt)
 
 	while (cnt) {
 		ssize_t r;
-#ifdef GIT_WIN32
+#if GIT_WIN32
 		assert((size_t)((unsigned int)cnt) == cnt);
 		r = write(fd, b, (unsigned int)cnt);
 #else

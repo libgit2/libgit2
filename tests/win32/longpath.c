@@ -9,7 +9,7 @@ static git_buf path = GIT_BUF_INIT;
 
 void test_win32_longpath__initialize(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	const char *base = clar_sandbox_path();
 	size_t base_len = strlen(base);
 	size_t remain = MAX_PATH - base_len;
@@ -31,7 +31,7 @@ void test_win32_longpath__cleanup(void)
 	git_buf_dispose(&path);
 }
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 void assert_name_too_long(void)
 {
 	const git_error *err;
@@ -53,7 +53,7 @@ void assert_name_too_long(void)
 
 void test_win32_longpath__errmsg_on_checkout(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	git_repository *repo;
 
 	cl_git_fail(git_clone(&repo, cl_fixture("testrepo.git"), path.ptr, NULL));

@@ -3,7 +3,7 @@
 #include "sysdir.h"
 #include "path.h"
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 #define NUM_VARS 5
 static const char *env_vars[NUM_VARS] = {
 	"HOME", "HOMEDRIVE", "HOMEPATH", "USERPROFILE", "PROGRAMFILES"
@@ -128,7 +128,7 @@ void test_core_env__0(void)
 		cl_assert_equal_i(
 			GIT_ENOTFOUND, git_sysdir_find_global_file(&found, testfile));
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 		setenv_and_check("HOMEDRIVE", NULL);
 		setenv_and_check("HOMEPATH", NULL);
 		setenv_and_check("USERPROFILE", path.ptr);
@@ -175,7 +175,7 @@ void test_core_env__1(void)
 		GIT_ENOTFOUND, git_sysdir_find_global_file(&path, "nonexistentfile"));
 
 	cl_git_pass(cl_setenv("HOME", "doesnotexist"));
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	cl_git_pass(cl_setenv("HOMEPATH", "doesnotexist"));
 	cl_git_pass(cl_setenv("USERPROFILE", "doesnotexist"));
 #endif
@@ -185,7 +185,7 @@ void test_core_env__1(void)
 		GIT_ENOTFOUND, git_sysdir_find_global_file(&path, "nonexistentfile"));
 
 	cl_git_pass(cl_setenv("HOME", NULL));
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	cl_git_pass(cl_setenv("HOMEPATH", NULL));
 	cl_git_pass(cl_setenv("USERPROFILE", NULL));
 #endif
@@ -198,7 +198,7 @@ void test_core_env__1(void)
 	cl_assert_equal_i(
 		GIT_ENOTFOUND, git_sysdir_find_system_file(&path, "nonexistentfile"));
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	cl_git_pass(cl_setenv("PROGRAMFILES", NULL));
 	set_system_search_path_from_env();
 

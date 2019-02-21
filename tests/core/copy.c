@@ -70,7 +70,7 @@ void test_core_copy__tree(void)
 	cl_git_mkfile("src/c/d/f4", content);
 	cl_git_mkfile("src/c/d/.f5", content);
 
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	cl_assert(p_symlink("../../b/f2", "src/c/d/l1") == 0);
 #endif
 
@@ -100,7 +100,7 @@ void test_core_copy__tree(void)
 	cl_assert(S_ISREG(st.st_mode));
 	cl_assert(strlen(content) == (size_t)st.st_size);
 
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	cl_git_pass(git_path_lstat("t1/c/d/l1", &st));
 	cl_assert(S_ISLNK(st.st_mode));
 #endif
@@ -125,14 +125,14 @@ void test_core_copy__tree(void)
 	cl_assert(git_path_isfile("t2/c/d/f4"));
 	cl_assert(git_path_isfile("t2/c/d/.f5"));
 
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	cl_git_fail(git_path_lstat("t2/c/d/l1", &st));
 #endif
 
 	cl_git_pass(git_futils_rmdir_r("t2", NULL, GIT_RMDIR_REMOVE_FILES));
 	cl_assert(!git_path_isdir("t2"));
 
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	cl_git_pass(git_futils_cp_r("src", "t3", GIT_CPDIR_CREATE_EMPTY_DIRS | GIT_CPDIR_LINK_FILES, 0));
 	cl_assert(git_path_isdir("t3"));
 

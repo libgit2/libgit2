@@ -34,7 +34,7 @@
 
 #include "strmap.h"
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 # include "win32/w32_util.h"
 #endif
 
@@ -1229,7 +1229,7 @@ const char *git_repository_get_namespace(git_repository *repo)
 	return repo->namespace;
 }
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 static int reserved_names_add8dot3(git_repository *repo, const char *path)
 {
 	char *name = git_win32_path_8dot3_name(path);
@@ -1431,7 +1431,7 @@ static bool are_symlinks_supported(const char *wd_path)
 	 * symlinks are _actually_ supported by the current user.  If that is
 	 * _not_ set, then we do not test or enable symlink support.
 	 */
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	git_config_find_global(&global_buf);
 	git_config_find_xdg(&xdg_buf);
 	git_config_find_system(&system_buf);
@@ -1695,7 +1695,7 @@ static int repo_write_template(
 	else if (errno != EEXIST)
 		error = fd;
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	if (!error && hidden) {
 		if (git_win32__set_hidden(path.ptr, true) < 0)
 			error = -1;
@@ -1789,7 +1789,7 @@ static int repo_init_structure(
 	bool chmod = opts->mode != GIT_REPOSITORY_INIT_SHARED_UMASK;
 
 	/* Hide the ".git" directory */
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	if ((opts->flags & GIT_REPOSITORY_INIT__HAS_DOTGIT) != 0) {
 		if (git_win32__set_hidden(repo_dir, true) < 0) {
 			git_error_set(GIT_ERROR_OS,

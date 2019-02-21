@@ -81,7 +81,7 @@ typedef enum {
 	GIT_EOL_UNSET = 0,
 	GIT_EOL_CRLF = 1,
 	GIT_EOL_LF = 2,
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	GIT_EOL_NATIVE = GIT_EOL_CRLF,
 #else
 	GIT_EOL_NATIVE = GIT_EOL_LF,

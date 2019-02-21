@@ -279,7 +279,7 @@ void test_apply_workdir__can_apply_nonconflicting_file_changes(void)
 
 void test_apply_workdir__change_mode(void)
 {
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	git_diff *diff;
 
 	const char *diff_file = DIFF_EXECUTABLE_FILE;

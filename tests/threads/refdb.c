@@ -5,7 +5,7 @@
 static git_repository *g_repo;
 static int g_expected = 0;
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 static bool concurrent_compress = false;
 #else
 static bool concurrent_compress = true;

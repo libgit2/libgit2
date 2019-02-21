@@ -69,7 +69,7 @@ void test_core_errors__new_school(void)
 	cl_assert(git__prefixcmp(str_in_error, "stat failed: ") == 0);
 	cl_assert(strlen(str_in_error) > strlen("stat failed: "));
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	git_error_clear();
 
 	/* The MSDN docs use this to generate a sample error */

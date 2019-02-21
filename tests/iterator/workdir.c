@@ -677,7 +677,7 @@ void test_iterator_workdir__skips_unreadable_dirs(void)
 	if (!cl_is_chmod_supported())
 		return;
 
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	if (geteuid() == 0)
 		cl_skip();
 #endif
@@ -713,7 +713,7 @@ void test_iterator_workdir__skips_unreadable_dirs(void)
 
 void test_iterator_workdir__skips_fifos_and_special_files(void)
 {
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	git_iterator *i;
 	const git_index_entry *e;
 	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;

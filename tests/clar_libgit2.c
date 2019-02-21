@@ -94,7 +94,7 @@ bool cl_is_env_set(const char *name)
 	return result;
 }
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 
 #include "win32/utf-conv.h"
 
@@ -284,7 +284,7 @@ const char* cl_git_path_url(const char *path)
 	cl_git_pass(git_path_prettify_dir(&path_buf, path, NULL));
 	cl_git_pass(git_buf_puts(&url_buf, "file://"));
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	/*
 	 * A FILE uri matches the following format: file://[host]/path
 	 * where "host" can be empty and "path" is an absolute path to the resource.
@@ -601,7 +601,7 @@ void cl_sandbox_set_search_path_defaults(void)
 	git_buf_dispose(&path);
 }
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 bool cl_sandbox_supports_8dot3(void)
 {
 	git_buf longpath = GIT_BUF_INIT;

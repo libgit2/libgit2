@@ -55,7 +55,7 @@ void test_index_bypath__add_hidden(void)
 	GIT_UNUSED(entry);
 	GIT_UNUSED(hidden);
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	cl_git_mkfile("submod2/hidden_file", "you can't see me");
 
 	cl_git_pass(git_win32__hidden(&hidden, "submod2/hidden_file"));

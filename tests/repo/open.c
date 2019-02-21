@@ -120,7 +120,7 @@ void test_repo_open__gitlinked(void)
 
 void test_repo_open__from_git_new_workdir(void)
 {
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	/* The git-new-workdir script that ships with git sets up a bunch of
 	 * symlinks to create a second workdir that shares the object db with
 	 * another checkout.  Libgit2 can open a repo that has been configured
@@ -243,7 +243,7 @@ void test_repo_open__bad_gitlinks(void)
 	git_futils_rmdir_r("invalid2", NULL, GIT_RMDIR_REMOVE_FILES);
 }
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 static void unposix_path(git_buf *path)
 {
 	char *src, *tgt;
@@ -269,7 +269,7 @@ static void unposix_path(git_buf *path)
 
 void test_repo_open__win32_path(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	git_repository *repo = cl_git_sandbox_init("empty_standard_repo"), *repo2;
 	git_buf winpath = GIT_BUF_INIT;
 	static const char *repo_path = "empty_standard_repo/.git/";

@@ -73,6 +73,8 @@ typedef size_t size_t;
 
 #if (defined(_WIN32)) && !defined(__CYGWIN__)
 #define GIT_WIN32 1
+#else
+#define GIT_WIN32 0
 #endif
 
 #ifdef __amigaos4__

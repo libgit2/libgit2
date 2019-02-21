@@ -20,7 +20,7 @@ static void _git_trace_cb__printf(git_trace_level_t level, const char *msg)
 	printf("%s\n", msg);
 }
 
-#if defined(GIT_WIN32)
+#if GIT_WIN32
 static void _git_trace_cb__debug(git_trace_level_t level, const char *msg)
 {
 	/* TODO Use level to print a per-message prefix. */

@@ -84,7 +84,7 @@ void test_stream_registration__tls(void)
 	/* We don't have TLS support enabled, or we're on Windows,
 	 * which has no arbitrary TLS stream support.
 	 */
-#if defined(GIT_WIN32) || !(GIT_HTTPS)
+#if GIT_WIN32 || !(GIT_HTTPS)
 	cl_git_fail_with(-1, error);
 #else
 	cl_git_pass(error);

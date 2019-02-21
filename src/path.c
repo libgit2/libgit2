@@ -9,7 +9,7 @@
 
 #include "posix.h"
 #include "repository.h"
-#ifdef GIT_WIN32
+#if GIT_WIN32
 #include "win32/posix.h"
 #include "win32/w32_buffer.h"
 #include "win32/w32_util.h"
@@ -22,7 +22,7 @@
 
 #define LOOKS_LIKE_DRIVE_PREFIX(S) (git__isalpha((S)[0]) && (S)[1] == ':')
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 static bool looks_like_network_computer_name(const char *path, int pos)
 {
 	if (pos < 3)
@@ -117,7 +117,7 @@ Exit:
  */
 static int win32_prefix_length(const char *path, int len)
 {
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	GIT_UNUSED(path);
 	GIT_UNUSED(len);
 #else
@@ -265,7 +265,7 @@ int git_path_root(const char *path)
 	if (LOOKS_LIKE_DRIVE_PREFIX(path))
 		offset += 2;
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	/* Are we dealing with a windows network path? */
 	else if ((path[0] == '/' && path[1] == '/' && path[2] != '/') ||
 		(path[0] == '\\' && path[1] == '\\' && path[2] != '\\'))
@@ -469,7 +469,7 @@ int git_path_fromurl(git_buf *local_path_out, const char *file_url)
 		file_url[offset] == '\0' || file_url[offset] == '/')
 		return error_invalid_local_file_uri(file_url);
 
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 	offset--;	/* A *nix absolute path starts with a forward slash */
 #endif
 
@@ -578,7 +578,7 @@ bool git_path_islink(const char *path)
 	return S_ISLNK(st.st_mode) != 0;
 }
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 
 bool git_path_is_empty_dir(const char *path)
 {
@@ -1153,7 +1153,7 @@ int git_path_direach(
 	return error;
 }
 
-#if defined(GIT_WIN32) && !defined(__MINGW32__)
+#if GIT_WIN32 && !defined(__MINGW32__)
 
 /* Using _FIND_FIRST_EX_LARGE_FETCH may increase performance in Windows 7
  * and better.
@@ -1812,7 +1812,7 @@ GIT_INLINE(unsigned int) dotgit_flags(
 	protectHFS = 1;
 #endif
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	protectNTFS = 1;
 #endif
 

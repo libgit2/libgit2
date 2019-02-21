@@ -8,7 +8,7 @@
 #include "pool.h"
 
 #include "posix.h"
-#ifndef GIT_WIN32
+#if !(GIT_WIN32)
 #include <unistd.h>
 #endif
 

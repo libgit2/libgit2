@@ -162,7 +162,7 @@ static void ensure_workdir_oid(const char *path, const char *oid_str)
 
 static void ensure_workdir_mode(const char *path, int mode)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	GIT_UNUSED(path);
 	GIT_UNUSED(mode);
 #else
@@ -980,7 +980,7 @@ void test_checkout_conflict__name_mangled_file_exists_in_workdir(void)
 		0100644, "b69fe837e4cecfd4c9a40cdca7c138468687df07");
 
 	/* Name is mangled on case insensitive only */
-#if defined(GIT_WIN32) || defined(__APPLE__)
+#if GIT_WIN32 || defined(__APPLE__)
 	ensure_workdir("test-three.txt~ours_0",
 		0100644, "b42712cfe99a1a500b2a51fe984e0b8a7702ba11");
 	ensure_workdir("test-three.txt~theirs_0",

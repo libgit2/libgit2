@@ -99,7 +99,7 @@ GIT_INLINE(int) git_path_is_dot_or_dotdot(const char *name)
 				(name[1] == '.' && name[2] == '\0')));
 }
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 GIT_INLINE(int) git_path_is_dot_or_dotdotW(const wchar_t *name)
 {
 	return (name[0] == L'.' &&
@@ -456,7 +456,7 @@ extern bool git_path_does_fs_decompose_unicode(const char *root);
 
 typedef struct git_path_diriter git_path_diriter;
 
-#if defined(GIT_WIN32) && !defined(__MINGW32__)
+#if GIT_WIN32 && !defined(__MINGW32__)
 
 struct git_path_diriter
 {
@@ -606,7 +606,7 @@ extern int git_path_from_url_or_path(git_buf *local_path_out, const char *url_or
  * Win32 "File Namespace" APIs ("\\?\") we need to protect from
  * paths that the normal Win32 APIs would not write.
  */
-#ifdef GIT_WIN32
+#if GIT_WIN32
 # define GIT_PATH_REJECT_FILESYSTEM_DEFAULTS \
 	GIT_PATH_REJECT_TRAVERSAL | \
 	GIT_PATH_REJECT_BACKSLASH | \

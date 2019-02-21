@@ -307,7 +307,7 @@ void test_attr_ignore__dont_ignore_files_for_folder(void)
 
 void test_attr_ignore__symlink_to_outside(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	cl_skip();
 #endif
 

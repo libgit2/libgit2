@@ -88,7 +88,7 @@ void test_core_path__00_dirname(void)
 
 	check_dirname(REP16("/abc"), REP15("/abc"));
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	check_dirname("C:/", "C:/");
 	check_dirname("C:", "C:/");
 	check_dirname("C:/path/", "C:/");
@@ -328,7 +328,7 @@ static void check_fromurl(const char *expected_result, const char *input, int sh
 	git_buf_dispose(&buf);
 }
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 #define ABS_PATH_MARKER ""
 #else
 #define ABS_PATH_MARKER "/"
@@ -480,7 +480,7 @@ void test_core_path__12_offset_to_path_root(void)
 	cl_assert(git_path_root("non/rooted/path") == -1);
 	cl_assert(git_path_root("/rooted/path") == 0);
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	/* Windows specific tests */
 	cl_assert(git_path_root("C:non/rooted/path") == -1);
 	cl_assert(git_path_root("C:/rooted/path") == 2);
@@ -640,7 +640,7 @@ void test_core_path__15_resolve_relative(void)
 	cl_git_fail(git_path_resolve_relative(&buf, 0));
 
 	/* things that start with Windows network paths */
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	assert_resolve_relative(&buf, "//a/b/c", "//a/b/c");
 	assert_resolve_relative(&buf, "//a/", "//a/b/..");
 	assert_resolve_relative(&buf, "//a/b/c", "//a/Q/../b/x/y/../../c");

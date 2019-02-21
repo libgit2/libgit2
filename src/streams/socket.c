@@ -28,7 +28,7 @@
 #	endif
 #endif
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 static void net_set_error(const char *str)
 {
 	int error = WSAGetLastError();
@@ -53,7 +53,7 @@ static int close_socket(GIT_SOCKET s)
 	if (s == INVALID_SOCKET)
 		return 0;
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	if (SOCKET_ERROR == closesocket(s))
 		return -1;
 
@@ -77,7 +77,7 @@ static int socket_connect(git_stream *stream)
 	GIT_SOCKET s = INVALID_SOCKET;
 	int ret;
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	/* on win32, the WSA context needs to be initialized
 	 * before any socket calls can be performed */
 	WSADATA wsd;

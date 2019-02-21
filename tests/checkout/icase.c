@@ -5,7 +5,7 @@
 #include "path.h"
 #include "repository.h"
 
-#ifdef GIT_WIN32
+#if GIT_WIN32
 # include <windows.h>
 #else
 # include <dirent.h>

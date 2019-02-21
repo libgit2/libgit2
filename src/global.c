@@ -139,7 +139,7 @@ static void shutdown_common(void)
  * before cache invalidation of the subsystems' newly written global
  * state.
  */
-#if GIT_THREADS && defined(GIT_WIN32)
+#if GIT_THREADS && GIT_WIN32
 
 static DWORD _tls_index;
 static volatile LONG _mutex = 0;

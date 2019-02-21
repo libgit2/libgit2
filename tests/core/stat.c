@@ -69,7 +69,7 @@ void test_core_stat__0(void)
 	cl_assert_error(ENOTDIR);
 
 	cl_assert(p_lstat("root/file/invalid", &st) < 0);
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	cl_assert_error(ENOENT);
 #else
 	cl_assert_error(ENOTDIR);
@@ -79,7 +79,7 @@ void test_core_stat__0(void)
 	cl_assert_error(ENOTDIR);
 
 	cl_assert(p_lstat("root/file/invalid/deeper_path", &st) < 0);
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	cl_assert_error(ENOENT);
 #else
 	cl_assert_error(ENOTDIR);

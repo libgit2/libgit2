@@ -170,7 +170,7 @@ void test_checkout_nasty__dotdot_path(void)
 /* A tree that contains an entry with a backslash ".git\foobar"  */
 void test_checkout_nasty__dotgit_backslash_path(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	test_checkout_fails("refs/heads/dotgit_backslash_path", ".git/foobar");
 #endif
 }
@@ -178,7 +178,7 @@ void test_checkout_nasty__dotgit_backslash_path(void)
 /* A tree that contains an entry with a backslash ".GIT\foobar"  */
 void test_checkout_nasty__dotcapitalgit_backslash_path(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	test_checkout_fails("refs/heads/dotcapitalgit_backslash_path", ".GIT/foobar");
 #endif
 }
@@ -186,7 +186,7 @@ void test_checkout_nasty__dotcapitalgit_backslash_path(void)
 /* A tree that contains an entry with a backslash ".\.GIT\foobar"  */
 void test_checkout_nasty__dot_backslash_dotcapitalgit_path(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	test_checkout_fails("refs/heads/dot_backslash_dotcapitalgit_path", ".GIT/foobar");
 #endif
 }
@@ -196,7 +196,7 @@ void test_checkout_nasty__dot_backslash_dotcapitalgit_path(void)
  */
 void test_checkout_nasty__dot_git_dot(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	test_checkout_fails("refs/heads/dot_git_dot", ".git/foobar");
 #endif
 }
@@ -206,7 +206,7 @@ void test_checkout_nasty__dot_git_dot(void)
  */
 void test_checkout_nasty__git_tilde1(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	test_checkout_fails("refs/heads/git_tilde1", ".git/foobar");
 #endif
 }
@@ -216,7 +216,7 @@ void test_checkout_nasty__git_tilde1(void)
  */
 void test_checkout_nasty__git_custom_shortname(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	if (!cl_sandbox_supports_8dot3())
 		clar__skip();
 
@@ -233,7 +233,7 @@ void test_checkout_nasty__git_custom_shortname(void)
  */
 void test_checkout_nasty__only_looks_like_a_git_shortname(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	git_oid commit_id;
 	git_commit *commit;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
@@ -259,7 +259,7 @@ void test_checkout_nasty__only_looks_like_a_git_shortname(void)
  */
 void test_checkout_nasty__dot_git_colon(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	test_checkout_fails("refs/heads/dot_git_colon", ".git/foobar");
 #endif
 }
@@ -269,7 +269,7 @@ void test_checkout_nasty__dot_git_colon(void)
  */
 void test_checkout_nasty__dot_git_colon_stuff(void)
 {
-#ifdef GIT_WIN32
+#if GIT_WIN32
 	test_checkout_fails("refs/heads/dot_git_colon_stuff", ".git/foobar");
 #endif
 }
