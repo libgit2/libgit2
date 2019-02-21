@@ -160,7 +160,7 @@ void git_repository_free(git_repository *repo)
 
 	git_repository__cleanup(repo);
 
-	git_cache_free(&repo->objects);
+	git_cache_dispose(&repo->objects);
 
 	git_diff_driver_registry_free(repo->diff_drivers);
 	repo->diff_drivers = NULL;
@@ -245,7 +245,7 @@ static git_repository *repository_alloc(void)
 
 on_error:
 	if (repo)
-		git_cache_free(&repo->objects);
+		git_cache_dispose(&repo->objects);
 
 	git__free(repo);
 	return NULL;
