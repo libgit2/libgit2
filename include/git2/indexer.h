@@ -15,6 +15,51 @@ GIT_BEGIN_DECL
 
 typedef struct git_indexer git_indexer;
 
+/**
+ * This structure is used to provide callers information about the
+ * progress of indexing a packfile, either directly or part of a
+ * fetch or clone that downloads a packfile.
+ */
+typedef struct git_indexer_progress {
+	/** number of objects in the packfile being indexed */
+	unsigned int total_objects;
+
+	/** received objects that have been hashed */
+	unsigned int indexed_objects;
+
+	/** received_objects: objects which have been downloaded */
+	unsigned int received_objects;
+
+	/**
+	 * locally-available objects that have been injected in order
+	 * to fix a thin pack
+	 */
+	unsigned int local_objects;
+
+	/** number of deltas in the packfile being indexed */
+	unsigned int total_deltas;
+
+	/** received deltas that have been indexed */
+	unsigned int indexed_deltas;
+
+	/** size of the packfile received up to now */
+	size_t received_bytes;
+} git_indexer_progress;
+
+typedef git_indexer_progress git_transfer_progress;
+
+/**
+ * Type for progress callbacks during indexing.  Return a value less
+ * than zero to cancel the indexing or download.
+ *
+ * @param stats Structure containing information about the state of the tran    sfer
+ * @param payload Payload provided by caller
+ */
+typedef int GIT_CALLBACK(git_indexer_progress_cb)(const git_indexer_progress *stats, void *payload);
+
+typedef git_indexer_progress_cb git_transfer_progress_cb;
+
+
 typedef struct git_indexer_options {
 	unsigned int version;
 
