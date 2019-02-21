@@ -8,6 +8,8 @@
 #ifndef INCLUDE_alloc_h__
 #define INCLUDE_alloc_h__
 
+#include "common.h"
+
 #include "git2/sys/alloc.h"
 
 extern git_allocator git__allocator;
