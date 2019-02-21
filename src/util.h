@@ -367,7 +367,7 @@ GIT_INLINE(double) git__timer(void)
 	return (double) count / (double) 1000;
 }
 
-#elif __APPLE__
+#elif defined(__APPLE__)
 
 #include <mach/mach_time.h>
 
