@@ -13,6 +13,7 @@
 #include "index.h"
 #include "object.h"
 #include "refs.h"
+#include "remote.h"
 
 /*
  * Users can avoid deprecated functions by defining `GIT_DEPRECATE_HARD`.
@@ -271,6 +272,14 @@ typedef git_indexer_progress git_transfer_progress;
  * type definition at this time.
  */
 typedef git_indexer_progress_cb git_transfer_progress_cb;
+
+/**
+ * Type definition for push transfer progress callbacks.
+ *
+ * This type is deprecated, but there is no plan to remove this
+ * type definition at this time.
+ */
+typedef git_push_transfer_progress_cb git_push_transfer_progress;
 
 /**@}*/
 
