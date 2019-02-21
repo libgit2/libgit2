@@ -5,12 +5,12 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifndef INCLUDE_stdalloc_h__
-#define INCLUDE_stdalloc_h__
-
-#include "alloc.h"
+#ifndef INCLUDE_allocators_stdalloc_h__
+#define INCLUDE_allocators_stdalloc_h__
 
 #include "common.h"
+
+#include "alloc.h"
 
 int git_stdalloc_init_allocator(git_allocator *allocator);
 

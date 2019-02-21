@@ -10,7 +10,7 @@
 #if defined(GIT_MSVC_CRTDBG)
 # include "win32/w32_crtdbg_stacktrace.h"
 #else
-# include "stdalloc.h"
+# include "allocators/stdalloc.h"
 #endif
 
 git_allocator git__allocator;

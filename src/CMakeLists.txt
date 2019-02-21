@@ -428,6 +428,7 @@ ELSE()
 	FILE(GLOB SRC_OS unix/*.c unix/*.h)
 ENDIF()
 FILE(GLOB SRC_GIT2 *.c *.h
+	allocators/*.c allocators/*.h
 	streams/*.c streams/*.h
 	transports/*.c transports/*.h
 	xdiff/*.c xdiff/*.h)
