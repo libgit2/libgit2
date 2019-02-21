@@ -13,7 +13,7 @@
 
 extern int git_mbedtls_stream_global_init(void);
 
-#ifdef GIT_MBEDTLS
+#if GIT_MBEDTLS
 extern int git_mbedtls__set_cert_location(const char *path, int is_dir);
 
 extern int git_mbedtls_stream_new(git_stream **out, const char *host, const char *port);

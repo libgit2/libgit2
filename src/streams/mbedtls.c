@@ -7,7 +7,7 @@
 
 #include "streams/mbedtls.h"
 
-#ifdef GIT_MBEDTLS
+#if GIT_MBEDTLS
 
 #include <ctype.h>
 

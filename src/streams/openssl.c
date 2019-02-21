@@ -7,7 +7,7 @@
 
 #include "streams/openssl.h"
 
-#ifdef GIT_OPENSSL
+#if GIT_OPENSSL
 
 #include <ctype.h>
 

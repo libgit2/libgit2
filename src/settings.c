@@ -7,11 +7,11 @@
 
 #include "common.h"
 
-#ifdef GIT_OPENSSL
+#if GIT_OPENSSL
 # include <openssl/err.h>
 #endif
 
-#ifdef GIT_MBEDTLS
+#if GIT_MBEDTLS
 # include <mbedtls/error.h>
 #endif
 
@@ -178,13 +178,13 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	case GIT_OPT_SET_SSL_CERT_LOCATIONS:
-#ifdef GIT_OPENSSL
+#if GIT_OPENSSL
 		{
 			const char *file = va_arg(ap, const char *);
 			const char *path = va_arg(ap, const char *);
 			error = git_openssl__set_cert_location(file, path);
 		}
-#elif defined(GIT_MBEDTLS)
+#elif GIT_MBEDTLS
 		{
 			const char *file = va_arg(ap, const char *);
 			const char *path = va_arg(ap, const char *);
