@@ -17,7 +17,7 @@
 
 #include <io.h>
 #include <direct.h>
-#ifdef GIT_THREADS
+#if GIT_THREADS
  #include "win32/thread.h"
 #endif
 

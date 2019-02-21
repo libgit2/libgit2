@@ -49,7 +49,7 @@ void test_threads_basic__set_error(void)
 	run_in_parallel(1, 4, set_error, NULL, NULL);
 }
 
-#ifdef GIT_THREADS
+#if GIT_THREADS
 static void *return_normally(void *param)
 {
 	return param;
@@ -58,7 +58,7 @@ static void *return_normally(void *param)
 
 void test_threads_basic__exit(void)
 {
-#ifndef GIT_THREADS
+#if GIT_THREADS
 	clar__skip();
 #else
 	git_thread thread;

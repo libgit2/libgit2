@@ -200,7 +200,7 @@ void test_object_cache__threadmania(void)
 	void *data;
 	void *(*fn)(void *);
 
-#ifdef GIT_THREADS
+#if GIT_THREADS
 	git_thread t[THREADCOUNT];
 #endif
 
@@ -219,7 +219,7 @@ void test_object_cache__threadmania(void)
 
 			fn = (th & 1) ? cache_parsed : cache_raw;
 
-#ifdef GIT_THREADS
+#if GIT_THREADS
 			cl_git_pass(git_thread_create(&t[th], fn, data));
 #else
 			cl_assert(fn(data) == data);
@@ -227,7 +227,7 @@ void test_object_cache__threadmania(void)
 #endif
 		}
 
-#ifdef GIT_THREADS
+#if GIT_THREADS
 		for (th = 0; th < THREADCOUNT; ++th) {
 			cl_git_pass(git_thread_join(&t[th], &data));
 			cl_assert_equal_i(th, ((int *)data)[0]);
@@ -256,7 +256,7 @@ static void *cache_quick(void *arg)
 void test_object_cache__fast_thread_rush(void)
 {
 	int try, th, data[THREADCOUNT*2];
-#ifdef GIT_THREADS
+#if GIT_THREADS
 	git_thread t[THREADCOUNT*2];
 #endif
 
@@ -265,7 +265,7 @@ void test_object_cache__fast_thread_rush(void)
 
 		for (th = 0; th < THREADCOUNT*2; ++th) {
 			data[th] = th;
-#ifdef GIT_THREADS
+#if GIT_THREADS
 			cl_git_pass(
 				git_thread_create(&t[th], cache_quick, &data[th]));
 #else
@@ -273,7 +273,7 @@ void test_object_cache__fast_thread_rush(void)
 #endif
 		}
 
-#ifdef GIT_THREADS
+#if GIT_THREADS
 		for (th = 0; th < THREADCOUNT*2; ++th) {
 			void *rval;
 			cl_git_pass(git_thread_join(&t[th], &rval));

@@ -19,7 +19,7 @@ void test_core_init__reinit_succeeds(void)
 	cl_sandbox_set_search_path_defaults();
 }
 
-#ifdef GIT_THREADS
+#if GIT_THREADS
 static void *reinit(void *unused)
 {
 	unsigned i;
@@ -35,7 +35,7 @@ static void *reinit(void *unused)
 
 void test_core_init__concurrent_init_succeeds(void)
 {
-#ifdef GIT_THREADS
+#if GIT_THREADS
 	git_thread threads[10];
 	unsigned i;
 

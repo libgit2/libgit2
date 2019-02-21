@@ -63,7 +63,7 @@ typedef struct {
 	char error_msg[4096];
 } cl_git_thread_err;
 
-#ifdef GIT_THREADS
+#if GIT_THREADS
 # define cl_git_thread_pass(threaderr, expr) cl_git_thread_pass_(threaderr, (expr), __FILE__, __LINE__)
 #else
 # define cl_git_thread_pass(threaderr, expr) cl_git_pass(expr)

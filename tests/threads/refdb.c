@@ -156,7 +156,7 @@ void test_threads_refdb__edit_while_iterate(void)
 	char name[128];
 	git_refdb *refdb;
 
-#ifdef GIT_THREADS
+#if GIT_THREADS
 	git_thread th[THREADS];
 #endif
 
@@ -192,14 +192,14 @@ void test_threads_refdb__edit_while_iterate(void)
 		th_data[t].id = t;
 		th_data[t].path = git_repository_path(g_repo);
 
-#ifdef GIT_THREADS
+#if GIT_THREADS
 		cl_git_pass(git_thread_create(&th[t], fn, &th_data[t]));
 #else
 		fn(&th_data[t]);
 #endif
 	}
 
-#ifdef GIT_THREADS
+#if GIT_THREADS
 	for (t = 0; t < THREADS; ++t) {
 		cl_git_pass(git_thread_join(&th[t], NULL));
 		cl_git_thread_check(&th_data[t]);

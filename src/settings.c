@@ -38,7 +38,7 @@ void git_libgit2_version(int *major, int *minor, int *rev)
 int git_libgit2_features(void)
 {
 	return 0
-#ifdef GIT_THREADS
+#if GIT_THREADS
 		| GIT_FEATURE_THREADS
 #endif
 #ifdef GIT_HTTPS

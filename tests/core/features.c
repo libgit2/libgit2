@@ -11,7 +11,7 @@ void test_core_features__0(void)
 
 	caps = git_libgit2_features();
 
-#ifdef GIT_THREADS
+#if GIT_THREADS
 	cl_assert((caps & GIT_FEATURE_THREADS) != 0);
 #else
 	cl_assert((caps & GIT_FEATURE_THREADS) == 0);

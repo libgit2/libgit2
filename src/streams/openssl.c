@@ -142,7 +142,7 @@ static const unsigned char *ASN1_STRING_get0_data(const ASN1_STRING *x)
 	return ASN1_STRING_data((ASN1_STRING *)x);
 }
 
-# if defined(GIT_THREADS)
+# if GIT_THREADS
 static git_mutex *openssl_locks;
 
 static void openssl_locking_function(
@@ -244,7 +244,7 @@ error:
 	return -1;
 }
 
-#if defined(GIT_THREADS) && defined(OPENSSL_LEGACY_API)
+#if GIT_THREADS && defined(OPENSSL_LEGACY_API)
 static void threadid_cb(CRYPTO_THREADID *threadid)
 {
 	GIT_UNUSED(threadid);
@@ -254,7 +254,7 @@ static void threadid_cb(CRYPTO_THREADID *threadid)
 
 int git_openssl_set_locking(void)
 {
-#if defined(GIT_THREADS) && defined(OPENSSL_LEGACY_API)
+#if GIT_THREADS && defined(OPENSSL_LEGACY_API)
 	int num_locks, i;
 
 	CRYPTO_THREADID_set_callback(threadid_cb);

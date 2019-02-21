@@ -50,7 +50,7 @@
 # include "win32/win32-compat.h"
 # include "win32/error.h"
 # include "win32/version.h"
-# ifdef GIT_THREADS
+# if GIT_THREADS
 #	include "win32/thread.h"
 # endif
 
@@ -58,7 +58,7 @@
 
 # include <unistd.h>
 # include <strings.h>
-# ifdef GIT_THREADS
+# if GIT_THREADS
 #	include <pthread.h>
 #	include <sched.h>
 # endif

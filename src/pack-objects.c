@@ -47,7 +47,7 @@ struct walk_object {
 		seen:1;
 };
 
-#ifdef GIT_THREADS
+#if GIT_THREADS
 
 #define GIT_PACKBUILDER__MUTEX_OP(pb, mtx, op) do { \
 		int result = git_mutex_##op(&(pb)->mtx); \
@@ -160,7 +160,7 @@ int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
 		packbuilder_config(pb) < 0)
 		goto on_error;
 
-#ifdef GIT_THREADS
+#if GIT_THREADS
 
 	if (git_mutex_init(&pb->cache_mutex) ||
 		git_mutex_init(&pb->progress_mutex) ||
@@ -184,7 +184,7 @@ unsigned int git_packbuilder_set_threads(git_packbuilder *pb, unsigned int n)
 {
 	assert(pb);
 
-#ifdef GIT_THREADS
+#if GIT_THREADS
 	pb->nr_threads = n;
 #else
 	GIT_UNUSED(n);
@@ -1104,7 +1104,7 @@ on_error:
 	return error;
 }
 
-#ifdef GIT_THREADS
+#if GIT_THREADS
 
 struct thread_params {
 	git_thread thread;
@@ -1770,7 +1770,7 @@ void git_packbuilder_free(git_packbuilder *pb)
 	if (pb == NULL)
 		return;
 
-#ifdef GIT_THREADS
+#if GIT_THREADS
 
 	git_mutex_free(&pb->cache_mutex);
 	git_mutex_free(&pb->progress_mutex);

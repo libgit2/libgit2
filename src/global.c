@@ -139,7 +139,7 @@ static void shutdown_common(void)
  * before cache invalidation of the subsystems' newly written global
  * state.
  */
-#if defined(GIT_THREADS) && defined(GIT_WIN32)
+#if GIT_THREADS && defined(GIT_WIN32)
 
 static DWORD _tls_index;
 static volatile LONG _mutex = 0;
@@ -259,7 +259,7 @@ BOOL WINAPI DllMain(HINSTANCE hInstDll, DWORD fdwReason, LPVOID lpvReserved)
 	return TRUE;
 }
 
-#elif defined(GIT_THREADS) && defined(_POSIX_THREADS)
+#elif GIT_THREADS && defined(_POSIX_THREADS)
 
 static pthread_key_t _tls_key;
 static pthread_mutex_t _init_mutex = PTHREAD_MUTEX_INITIALIZER;

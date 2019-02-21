@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "thread_helpers.h"
 
-#ifdef GIT_THREADS
+#if GIT_THREADS
 
 # if defined(GIT_WIN32)
 #  define git_thread_yield() Sleep(0)

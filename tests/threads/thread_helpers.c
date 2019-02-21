@@ -9,7 +9,7 @@ void run_in_parallel(
 	void (*after_test)(void))
 {
 	int r, t, *id = git__calloc(threads, sizeof(int));
-#ifdef GIT_THREADS
+#if GIT_THREADS
 	git_thread *th = git__calloc(threads, sizeof(git_thread));
 	cl_assert(th != NULL);
 #else
@@ -23,14 +23,14 @@ void run_in_parallel(
 
 		for (t = 0; t < threads; ++t) {
 			id[t] = t;
-#ifdef GIT_THREADS
+#if GIT_THREADS
 			cl_git_pass(git_thread_create(&th[t], func, &id[t]));
 #else
 			cl_assert(func(&id[t]) == &id[t]);
 #endif
 		}
 
-#ifdef GIT_THREADS
+#if GIT_THREADS
 		for (t = 0; t < threads; ++t)
 			cl_git_pass(git_thread_join(&th[t], NULL));
 		memset(th, 0, threads * sizeof(git_thread));

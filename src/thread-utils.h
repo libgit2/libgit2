@@ -7,7 +7,7 @@
 #ifndef INCLUDE_thread_utils_h__
 #define INCLUDE_thread_utils_h__
 
-#if defined(__GNUC__) && defined(GIT_THREADS)
+#if defined(__GNUC__) && GIT_THREADS
 # if (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 1))
 #  error Atomic primitives do not exist on this version of gcc; configure libgit2 with -DTHREADSAFE=OFF
 # endif
@@ -44,7 +44,7 @@ typedef git_atomic git_atomic_ssize;
 
 #endif
 
-#ifdef GIT_THREADS
+#if GIT_THREADS
 
 #ifdef GIT_WIN32
 #   include "win32/thread.h"
@@ -235,9 +235,9 @@ GIT_INLINE(int) git_atomic_get(git_atomic *a)
 
 extern int git_online_cpus(void);
 
-#if defined(GIT_THREADS) && defined(_MSC_VER)
+#if GIT_THREADS && defined(_MSC_VER)
 # define GIT_MEMORY_BARRIER MemoryBarrier()
-#elif defined(GIT_THREADS)
+#elif GIT_THREADS
 # define GIT_MEMORY_BARRIER __sync_synchronize()
 #else
 # define GIT_MEMORY_BARRIER /* noop */
