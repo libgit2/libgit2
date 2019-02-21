@@ -59,7 +59,7 @@ static int patch_image_init_fromstr(
 	git_pool_init(&out->pool, sizeof(git_diff_line));
 
 	for (start = in; start < in + in_len; start = end) {
-		end = memchr(start, '\n', in_len);
+		end = memchr(start, '\n', in_len - (start - in));
 
 		if (end == NULL)
 			end = in + in_len;
