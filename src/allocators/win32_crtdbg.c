@@ -76,8 +76,10 @@ static void *crtdbg__reallocarray(void *ptr, size_t nelem, size_t elsize, const 
 {
 	size_t newsize;
 
-	return GIT_MULTIPLY_SIZET_OVERFLOW(&newsize, nelem, elsize) ?
-		NULL : _realloc_dbg(ptr, newsize, _NORMAL_BLOCK, git_win32__crtdbg_stacktrace(1,file), line);
+	if (GIT_MULTIPLY_SIZET_OVERFLOW(&newsize, nelem, elsize))
+		return NULL;
+
+	return crtdbg__realloc(ptr, newsize, file, line);
 }
 
 static void *crtdbg__mallocarray(size_t nelem, size_t elsize, const char *file, int line)
