@@ -11,7 +11,7 @@
 #include "global.h"
 #include "git2/trace.h"
 
-#ifdef GIT_TRACE
+#if GIT_TRACE
 
 struct git_trace_data git_trace__data = {0};
 
@@ -19,7 +19,7 @@ struct git_trace_data git_trace__data = {0};
 
 int git_trace_set(git_trace_level_t level, git_trace_callback callback)
 {
-#ifdef GIT_TRACE
+#if GIT_TRACE
 	assert(level == 0 || callback != NULL);
 
 	git_trace__data.level = level;

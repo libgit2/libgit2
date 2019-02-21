@@ -2,7 +2,7 @@
 #define INCLUDE_features_h__
 
 #define GIT_DEBUG_POOL ${GIT_DEBUG_POOL}
-#cmakedefine GIT_TRACE 1
+#define GIT_TRACE ${GIT_TRACE}
 #cmakedefine GIT_THREADS 1
 #cmakedefine GIT_MSVC_CRTDBG 1
 

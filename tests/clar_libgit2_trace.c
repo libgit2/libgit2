@@ -11,7 +11,7 @@ struct method {
 };
 
 
-#if defined(GIT_TRACE)
+#if GIT_TRACE
 static void _git_trace_cb__printf(git_trace_level_t level, const char *msg)
 {
 	/* TODO Use level to print a per-message prefix. */
@@ -209,7 +209,7 @@ void _cl_trace_cb__event_handler(
  */
 void cl_global_trace_register(void)
 {
-#if defined(GIT_TRACE)
+#if GIT_TRACE
 	if (!s_trace_loaded)
 		_load_trace_params();
 
@@ -234,7 +234,7 @@ void cl_global_trace_register(void)
  */
 void cl_global_trace_disable(void)
 {
-#if defined(GIT_TRACE)
+#if GIT_TRACE
 	cl_trace_register(NULL, NULL);
 	git_trace_set(GIT_TRACE_NONE, NULL);
 	if (s_trace_method && s_trace_method->close)

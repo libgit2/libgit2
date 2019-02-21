@@ -12,7 +12,7 @@
 #include <git2/trace.h>
 #include "buffer.h"
 
-#ifdef GIT_TRACE
+#if GIT_TRACE
 
 struct git_trace_data {
 	git_trace_level_t level;
