@@ -333,3 +333,36 @@ void test_apply_fromdiff__binary_delete(void)
 		NULL, NULL,
 		NULL, &binary_opts));
 }
+
+void test_apply_fromdiff__patching_correctly_truncates_source(void)
+{
+	git_buf original = GIT_BUF_INIT, patched = GIT_BUF_INIT;
+	git_patch *patch;
+	unsigned int mode;
+	char *path;
+
+	cl_git_pass(git_patch_from_buffers(&patch,
+					   "foo\nbar", 7, "file.txt",
+					   "foo\nfoo", 7, "file.txt", NULL));
+
+	/*
+	 * Previously, we would fail to correctly truncate the source buffer if
+	 * the source has more than one line and ends with a non-newline
+	 * character. In the following call, we thus truncate the source string
+	 * in the middle of the second line. Without the bug fixed, we would
+	 * successfully apply the patch to the source and return success. With
+	 * the overflow being fixed, we should return an error.
+	 */
+	cl_git_fail_with(GIT_EAPPLYFAIL,
+			 git_apply__patch(&patched, &path, &mode,
+					  "foo\nbar\n", 5, patch, NULL));
+
+	/* Verify that the patch succeeds if we do not truncate */
+	cl_git_pass(git_apply__patch(&patched, &path, &mode,
+				     "foo\nbar\n", 7, patch, NULL));
+
+	git_buf_dispose(&original);
+	git_buf_dispose(&patched);
+	git_patch_free(patch);
+	git__free(path);
+}
