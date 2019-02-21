@@ -83,7 +83,7 @@ GIT_INLINE(bool) git_index_time_eq(const git_index_time *one, const git_index_ti
 	if (one->seconds != two->seconds)
 		return false;
 
-#ifdef GIT_USE_NSEC
+#if GIT_USE_NSEC
 	if (one->nanoseconds != two->nanoseconds)
 		return false;
 #endif
@@ -104,7 +104,7 @@ GIT_INLINE(bool) git_index_entry_newer_than_index(
 		return false;
 
 	/* If the timestamp is the same or newer than the index, it's racy */
-#if defined(GIT_USE_NSEC)
+#if GIT_USE_NSEC
 	if ((int32_t)index->stamp.mtime.tv_sec < entry->mtime.seconds)
 		return true;
 	else if ((int32_t)index->stamp.mtime.tv_sec > entry->mtime.seconds)

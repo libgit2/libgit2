@@ -27,7 +27,7 @@ void test_core_features__0(void)
 	cl_assert((caps & GIT_FEATURE_SSH) == 0);
 #endif
 
-#if defined(GIT_USE_NSEC)
+#if GIT_USE_NSEC
 	cl_assert((caps & GIT_FEATURE_NSEC) != 0);
 #else
 	cl_assert((caps & GIT_FEATURE_NSEC) == 0);
