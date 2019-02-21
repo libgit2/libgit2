@@ -23,7 +23,7 @@
 #define GIT_GSSAPI ${GIT_GSSAPI}
 #define GIT_WINHTTP ${GIT_WINHTTP}
 
-#cmakedefine GIT_HTTPS 1
+#define GIT_HTTPS ${GIT_HTTPS}
 #cmakedefine GIT_OPENSSL 1
 #cmakedefine GIT_SECURE_TRANSPORT 1
 #cmakedefine GIT_MBEDTLS 1

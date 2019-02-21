@@ -4,7 +4,7 @@
 
 static git_repository *g_repo;
 
-#ifdef GIT_HTTPS
+#if GIT_HTTPS
 static bool g_has_ssl = true;
 #else
 static bool g_has_ssl = false;

@@ -17,7 +17,7 @@ void test_core_features__0(void)
 	cl_assert((caps & GIT_FEATURE_THREADS) == 0);
 #endif
 
-#ifdef GIT_HTTPS
+#if GIT_HTTPS
 	cl_assert((caps & GIT_FEATURE_HTTPS) != 0);
 #endif
 

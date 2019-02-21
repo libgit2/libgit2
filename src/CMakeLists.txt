@@ -255,6 +255,7 @@ IF (USE_HTTPS)
 	SET(GIT_HTTPS 1)
 ELSE()
 	ADD_FEATURE_INFO(HTTPS OFF "no support")
+	SET(GIT_HTTPS 0)
 ENDIF()
 
 # Specify sha1 implementation

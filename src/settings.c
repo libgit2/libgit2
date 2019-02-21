@@ -41,7 +41,7 @@ int git_libgit2_features(void)
 #if GIT_THREADS
 		| GIT_FEATURE_THREADS
 #endif
-#ifdef GIT_HTTPS
+#if GIT_HTTPS
 		| GIT_FEATURE_HTTPS
 #endif
 #if GIT_SSH
