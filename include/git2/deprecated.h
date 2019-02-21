@@ -245,6 +245,35 @@ GIT_EXTERN(void) giterr_set_oom(void);
 
 /**@}*/
 
+/** @name Deprecated Transfer Progress Types
+ *
+ * These types are retained for backward compatibility.  The newer
+ * versions of these values should be preferred in all new code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
+ */
+/**@{*/
+
+/**
+ * This structure is used to provide callers information about the
+ * progress of indexing a packfile.
+ *
+ * This type is deprecated, but there is no plan to remove this
+ * type definition at this time.
+ */
+typedef git_indexer_progress git_transfer_progress;
+
+/**
+ * Type definition for progress callbacks during indexing.
+ *
+ * This type is deprecated, but there is no plan to remove this
+ * type definition at this time.
+ */
+typedef git_indexer_progress_cb git_transfer_progress_cb;
+
+/**@}*/
+
 /** @} */
 GIT_END_DECL
 
