@@ -9,7 +9,7 @@
 
 #include "utf-conv.h"
 
-#ifdef GIT_WINHTTP
+#if GIT_WINHTTP
 # include <winhttp.h>
 #endif
 
@@ -24,7 +24,7 @@ char *git_win32_get_error_message(DWORD error_code)
 	if (!error_code)
 		return NULL;
 
-#ifdef GIT_WINHTTP
+#if GIT_WINHTTP
 	/* Errors raised by WinHTTP are not in the system resource table */
 	if (error_code >= WINHTTP_ERROR_BASE &&
 		error_code <= WINHTTP_ERROR_LAST)

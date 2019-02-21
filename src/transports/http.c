@@ -7,7 +7,7 @@
 
 #include "common.h"
 
-#ifndef GIT_WINHTTP
+#if !(GIT_WINHTTP)
 
 #include "git2.h"
 #include "http_parser.h"
