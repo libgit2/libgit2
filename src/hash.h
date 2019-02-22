@@ -11,7 +11,6 @@
 
 #include "git2/oid.h"
 
-typedef struct git_hash_prov git_hash_prov;
 typedef struct git_hash_ctx git_hash_ctx;
 
 int git_hash_ctx_init(git_hash_ctx *ctx);

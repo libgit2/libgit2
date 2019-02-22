@@ -106,14 +106,14 @@ struct hash_cng_prov {
 	DWORD hash_object_size;
 };
 
-struct git_hash_prov {
+typedef struct {
 	enum hash_win32_prov_type type;
 
 	union {
 		struct hash_cryptoapi_prov cryptoapi;
 		struct hash_cng_prov cng;
 	} prov;
-};
+} git_hash_prov;
 
 /* Hash contexts */
 
