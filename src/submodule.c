@@ -197,12 +197,11 @@ static int load_submodule_names(git_strmap **out, git_repository *repo, git_conf
 	git_config_entry *entry;
 	git_buf buf = GIT_BUF_INIT;
 	git_strmap *names;
-	int rval, isvalid;
-	int error = 0;
+	int isvalid, error;
 
 	*out = NULL;
 
-	if ((error = git_strmap_alloc(&names)) < 0)
+	if ((error = git_strmap_new(&names)) < 0)
 		goto out;
 
 	if ((error = git_config_iterator_glob_new(&iter, cfg, key)) < 0)
@@ -230,8 +229,7 @@ static int load_submodule_names(git_strmap **out, git_repository *repo, git_conf
 		if (!isvalid)
 			continue;
 
-		git_strmap_insert(names, git__strdup(entry->value), git_buf_detach(&buf), &rval);
-		if (rval < 0) {
+		if ((error = git_strmap_set(names, git__strdup(entry->value), git_buf_detach(&buf))) < 0) {
 			git_error_set(GIT_ERROR_NOMEMORY, "error inserting submodule into hash table");
 			error = -1;
 			goto out;
@@ -267,10 +265,9 @@ int git_submodule_lookup(
 	}
 
 	if (repo->submodule_cache != NULL) {
-		size_t pos = git_strmap_lookup_index(repo->submodule_cache, name);
-		if (git_strmap_valid_index(repo->submodule_cache, pos)) {
+		if ((sm = git_strmap_get(repo->submodule_cache, name)) != NULL) {
 			if (out) {
-				*out = git_strmap_value_at(repo->submodule_cache, pos);
+				*out = sm;
 				GIT_REFCOUNT_INC(*out);
 			}
 			return 0;
@@ -395,29 +392,20 @@ static void submodule_free_dup(void *sm)
 
 static int submodule_get_or_create(git_submodule **out, git_repository *repo, git_strmap *map, const char *name)
 {
-	int error = 0;
-	size_t pos;
 	git_submodule *sm = NULL;
+	int error;
 
-	pos = git_strmap_lookup_index(map, name);
-	if (git_strmap_valid_index(map, pos)) {
-		sm = git_strmap_value_at(map, pos);
+	if ((sm = git_strmap_get(map, name)) != NULL)
 		goto done;
-	}
 
 	/* if the submodule doesn't exist yet in the map, create it */
 	if ((error = submodule_alloc(&sm, repo, name)) < 0)
 		return error;
 
-	pos = git_strmap_put(map, sm->name, &error);
-	/* nobody can beat us to adding it */
-	assert(error != 0);
-	if (error < 0) {
+	if ((error = git_strmap_set(map, sm->name, sm)) < 0) {
 		git_submodule_free(sm);
 		return error;
 	}
-
-	git_strmap_set_value_at(map, pos, sm);
 
 done:
 	GIT_REFCOUNT_INC(sm);
@@ -439,26 +427,18 @@ static int submodules_from_index(git_strmap *map, git_index *idx, git_config *cf
 		goto done;
 
 	while (!(error = git_iterator_advance(&entry, i))) {
-		size_t pos = git_strmap_lookup_index(map, entry->path);
 		git_submodule *sm;
 
-		if (git_strmap_valid_index(map, pos)) {
-			sm = git_strmap_value_at(map, pos);
-
+		if ((sm = git_strmap_get(map, entry->path)) != NULL) {
 			if (S_ISGITLINK(entry->mode))
 				submodule_update_from_index_entry(sm, entry);
 			else
 				sm->flags |= GIT_SUBMODULE_STATUS__INDEX_NOT_SUBMODULE;
 		} else if (S_ISGITLINK(entry->mode)) {
-			size_t name_pos;
 			const char *name;
 
-			name_pos = git_strmap_lookup_index(names, entry->path);
-			if (git_strmap_valid_index(names, name_pos)) {
-				name = git_strmap_value_at(names, name_pos);
-			} else {
+			if ((name = git_strmap_get(names, entry->path)) == NULL)
 				name = entry->path;
-			}
 
 			if (!submodule_get_or_create(&sm, git_index_owner(idx), map, name)) {
 				submodule_update_from_index_entry(sm, entry);
@@ -491,26 +471,18 @@ static int submodules_from_head(git_strmap *map, git_tree *head, git_config *cfg
 		goto done;
 
 	while (!(error = git_iterator_advance(&entry, i))) {
-		size_t pos = git_strmap_lookup_index(map, entry->path);
 		git_submodule *sm;
 
-		if (git_strmap_valid_index(map, pos)) {
-			sm = git_strmap_value_at(map, pos);
-
+		if ((sm = git_strmap_get(map, entry->path)) != NULL) {
 			if (S_ISGITLINK(entry->mode))
 				submodule_update_from_head_data(sm, entry->mode, &entry->id);
 			else
 				sm->flags |= GIT_SUBMODULE_STATUS__HEAD_NOT_SUBMODULE;
 		} else if (S_ISGITLINK(entry->mode)) {
-			size_t name_pos;
 			const char *name;
 
-			name_pos = git_strmap_lookup_index(names, entry->path);
-			if (git_strmap_valid_index(names, name_pos)) {
-				name = git_strmap_value_at(names, name_pos);
-			} else {
+			if ((name = git_strmap_get(names, entry->path)) == NULL)
 				name = entry->path;
-			}
 
 			if (!submodule_get_or_create(&sm, git_tree_owner(head), map, name)) {
 				submodule_update_from_head_data(
@@ -618,14 +590,14 @@ int git_submodule_foreach(
 		return -1;
 	}
 
-	if ((error = git_strmap_alloc(&submodules)) < 0)
+	if ((error = git_strmap_new(&submodules)) < 0)
 		return error;
 
 	if ((error = git_submodule__map(repo, submodules)) < 0)
 		goto done;
 
 	if (!(error = git_vector_init(
-			&snapshot, git_strmap_num_entries(submodules), submodule_cmp))) {
+			&snapshot, git_strmap_size(submodules), submodule_cmp))) {
 
 		git_strmap_foreach_value(submodules, sm, {
 			if ((error = git_vector_insert(&snapshot, sm)) < 0)
@@ -1935,7 +1907,6 @@ static int submodule_load_each(const git_config_entry *entry, void *payload)
 {
 	lfc_data *data = payload;
 	const char *namestart, *property;
-	size_t pos;
 	git_strmap *map = data->map;
 	git_buf name = GIT_BUF_INIT;
 	git_submodule *sm;
@@ -1967,8 +1938,7 @@ static int submodule_load_each(const git_config_entry *entry, void *payload)
 	 * a new submodule, load the config and insert it. If it's
 	 * already inserted, we've already loaded it, so we skip.
 	 */
-	pos = git_strmap_lookup_index(map, name.ptr);
-	if (git_strmap_valid_index(map, pos)) {
+	if (git_strmap_exists(map, name.ptr)) {
 		error = 0;
 		goto done;
 	}
@@ -1981,9 +1951,7 @@ static int submodule_load_each(const git_config_entry *entry, void *payload)
 		goto done;
 	}
 
-	git_strmap_insert(map, sm->name, sm, &error);
-	assert(error != 0);
-	if (error < 0)
+	if ((error = git_strmap_set(map, sm->name, sm)) < 0)
 		goto done;
 
 	error = 0;

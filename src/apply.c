@@ -439,7 +439,6 @@ static int apply_one(
 	git_filemode_t pre_filemode;
 	git_index_entry pre_entry, post_entry;
 	bool skip_preimage = false;
-	size_t pos;
 	int error;
 
 	if ((error = git_patch_from_diff(&patch, diff, i)) < 0)
@@ -464,8 +463,7 @@ static int apply_one(
 	 */
 	if (delta->status != GIT_DELTA_RENAMED &&
 	    delta->status != GIT_DELTA_ADDED) {
-		pos = git_strmap_lookup_index(removed_paths, delta->old_file.path);
-		if (git_strmap_valid_index(removed_paths, pos)) {
+		if (git_strmap_exists(removed_paths, delta->old_file.path)) {
 			error = apply_err("path '%s' has been renamed or deleted", delta->old_file.path);
 			goto done;
 		}
@@ -549,7 +547,7 @@ static int apply_one(
 
 	if (delta->status == GIT_DELTA_RENAMED ||
 	    delta->status == GIT_DELTA_DELETED)
-		git_strmap_insert(removed_paths, delta->old_file.path, (char *)delta->old_file.path, &error);
+		error = git_strmap_set(removed_paths, delta->old_file.path, (char *) delta->old_file.path);
 
 	if (delta->status == GIT_DELTA_RENAMED ||
 	    delta->status == GIT_DELTA_ADDED)
@@ -577,7 +575,7 @@ static int apply_deltas(
 	size_t i;
 	int error = 0;
 
-	if (git_strmap_alloc(&removed_paths) < 0)
+	if (git_strmap_new(&removed_paths) < 0)
 		return -1;
 
 	for (i = 0; i < git_diff_num_deltas(diff); i++) {

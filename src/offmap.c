@@ -18,9 +18,13 @@ __KHASH_TYPE(off, git_off_t, void *)
 
 __KHASH_IMPL(off, static kh_inline, git_off_t, void *, 1, kh_int64_hash_func, kh_int64_hash_equal)
 
-git_offmap *git_offmap_alloc(void)
+
+int git_offmap_new(git_offmap **out)
 {
-	return kh_init(off);
+	*out = kh_init(off);
+	GIT_ERROR_CHECK_ALLOC(*out);
+
+	return 0;
 }
 
 void git_offmap_free(git_offmap *map)
@@ -33,19 +37,43 @@ void git_offmap_clear(git_offmap *map)
 	kh_clear(off, map);
 }
 
-size_t git_offmap_num_entries(git_offmap *map)
+size_t git_offmap_size(git_offmap *map)
 {
 	return kh_size(map);
 }
 
-size_t git_offmap_lookup_index(git_offmap *map, const git_off_t key)
+void *git_offmap_get(git_offmap *map, const git_off_t key)
 {
-	return kh_get(off, map, key);
+	size_t idx = kh_get(off, map, key);
+	if (idx == kh_end(map) || !kh_exist(map, idx))
+		return NULL;
+	return kh_val(map, idx);
 }
 
-int git_offmap_valid_index(git_offmap *map, size_t idx)
+int git_offmap_set(git_offmap *map, const git_off_t key, void *value)
 {
-	return idx != kh_end(map);
+	size_t idx;
+	int rval;
+
+	idx = kh_put(off, map, key, &rval);
+	if (rval < 0)
+		return -1;
+
+	if (rval == 0)
+		kh_key(map, idx) = key;
+
+	kh_val(map, idx) = value;
+
+	return 0;
+}
+
+int git_offmap_delete(git_offmap *map, const git_off_t key)
+{
+	khiter_t idx = kh_get(off, map, key);
+	if (idx == kh_end(map))
+		return GIT_ENOTFOUND;
+	kh_del(off, map, idx);
+	return 0;
 }
 
 int git_offmap_exists(git_offmap *map, const git_off_t key)
@@ -53,61 +81,21 @@ int git_offmap_exists(git_offmap *map, const git_off_t key)
 	return kh_get(off, map, key) != kh_end(map);
 }
 
-int git_offmap_has_data(git_offmap *map, size_t idx)
+int git_offmap_iterate(void **value, git_offmap *map, size_t *iter, git_off_t *key)
 {
-	return kh_exist(map, idx);
-}
+	size_t i = *iter;
 
-git_off_t git_offmap_key_at(git_offmap *map, size_t idx)
-{
-	return kh_key(map, idx);
-}
+	while (i < map->n_buckets && !kh_exist(map, i))
+		i++;
 
-void *git_offmap_value_at(git_offmap *map, size_t idx)
-{
-	return kh_val(map, idx);
-}
+	if (i >= map->n_buckets)
+		return GIT_ITEROVER;
 
-void git_offmap_set_value_at(git_offmap *map, size_t idx, void *value)
-{
-	kh_val(map, idx) = value;
-}
+	if (key)
+		*key = kh_key(map, i);
+	if (value)
+		*value = kh_value(map, i);
+	*iter = ++i;
 
-void git_offmap_delete_at(git_offmap *map, size_t idx)
-{
-	kh_del(off, map, idx);
-}
-
-int git_offmap_put(git_offmap *map, const git_off_t key, int *err)
-{
-	return kh_put(off, map, key, err);
-}
-
-void git_offmap_insert(git_offmap *map, const git_off_t key, void *value, int *rval)
-{
-	khiter_t idx = kh_put(off, map, key, rval);
-
-	if ((*rval) >= 0) {
-		if ((*rval) == 0)
-			kh_key(map, idx) = key;
-		kh_val(map, idx) = value;
-	}
-}
-
-void git_offmap_delete(git_offmap *map, const git_off_t key)
-{
-	khiter_t idx = git_offmap_lookup_index(map, key);
-	if (git_offmap_valid_index(map, idx))
-		git_offmap_delete_at(map, idx);
-}
-
-size_t git_offmap_begin(git_offmap *map)
-{
-	GIT_UNUSED(map);
 	return 0;
-}
-
-size_t git_offmap_end(git_offmap *map)
-{
-	return map->n_buckets;
 }

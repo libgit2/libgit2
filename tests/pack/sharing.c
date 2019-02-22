@@ -24,13 +24,13 @@ void test_pack_sharing__open_two_repos(void)
 	cl_git_pass(git_object_lookup(&obj2, repo2, &id, GIT_OBJECT_ANY));
 
 	pos = 0;
-	while ((error = git_strmap_next(&data, &pos, git__pack_cache)) == 0) {
+	while ((error = git_strmap_iterate(&data, git__pack_cache, &pos, NULL)) == 0) {
 		struct git_pack_file *pack = (struct git_pack_file *) data;
 
 		cl_assert_equal_i(2, pack->refcount.val);
 	}
 
-	cl_assert_equal_i(3, git_strmap_num_entries(git__pack_cache));
+	cl_assert_equal_i(3, git_strmap_size(git__pack_cache));
 
 	git_object_free(obj1);
 	git_object_free(obj2);
@@ -38,5 +38,5 @@ void test_pack_sharing__open_two_repos(void)
 	git_repository_free(repo2);
 
 	/* we don't want to keep the packs open after the repos go away */
-	cl_assert_equal_i(0, git_strmap_num_entries(git__pack_cache));
+	cl_assert_equal_i(0, git_strmap_size(git__pack_cache));
 }

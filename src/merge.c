@@ -1104,14 +1104,12 @@ static void deletes_by_oid_free(git_oidmap *map) {
 	git_oidmap_free(map);
 }
 
-static int deletes_by_oid_enqueue(git_oidmap *map, git_pool* pool, const git_oid *id, size_t idx) {
-	size_t pos;
+static int deletes_by_oid_enqueue(git_oidmap *map, git_pool* pool, const git_oid *id, size_t idx)
+{
 	deletes_by_oid_queue *queue;
 	size_t *array_entry;
-	int error;
 
-	pos = git_oidmap_lookup_index(map, id);
-	if (!git_oidmap_valid_index(map, pos)) {
+	if ((queue = git_oidmap_get(map, id)) == NULL) {
 		queue = git_pool_malloc(pool, sizeof(deletes_by_oid_queue));
 		GIT_ERROR_CHECK_ALLOC(queue);
 
@@ -1119,11 +1117,9 @@ static int deletes_by_oid_enqueue(git_oidmap *map, git_pool* pool, const git_oid
 		queue->next_pos = 0;
 		queue->first_entry = idx;
 
-		git_oidmap_insert(map, id, queue, &error);
-		if (error < 0)
+		if (git_oidmap_set(map, id, queue) < 0)
 			return -1;
 	} else {
-		queue = git_oidmap_value_at(map, pos);
 		array_entry = git_array_alloc(queue->arr);
 		GIT_ERROR_CHECK_ALLOC(array_entry);
 		*array_entry = idx;
@@ -1132,17 +1128,13 @@ static int deletes_by_oid_enqueue(git_oidmap *map, git_pool* pool, const git_oid
 	return 0;
 }
 
-static int deletes_by_oid_dequeue(size_t *idx, git_oidmap *map, const git_oid *id) {
-	size_t pos;
+static int deletes_by_oid_dequeue(size_t *idx, git_oidmap *map, const git_oid *id)
+{
 	deletes_by_oid_queue *queue;
 	size_t *array_entry;
 
-	pos = git_oidmap_lookup_index(map, id);
-
-	if (!git_oidmap_valid_index(map, pos))
+	if ((queue = git_oidmap_get(map, id)) == NULL)
 		return GIT_ENOTFOUND;
-
-	queue = git_oidmap_value_at(map, pos);
 
 	if (queue->next_pos == 0) {
 		*idx = queue->first_entry;
@@ -1168,8 +1160,8 @@ static int merge_diff_mark_similarity_exact(
 	git_oidmap *ours_deletes_by_oid = NULL, *theirs_deletes_by_oid = NULL;
 	int error = 0;
 
-	if (!(ours_deletes_by_oid = git_oidmap_alloc()) ||
-		!(theirs_deletes_by_oid = git_oidmap_alloc())) {
+	if (git_oidmap_new(&ours_deletes_by_oid) < 0 ||
+	    git_oidmap_new(&theirs_deletes_by_oid) < 0) {
 		error = -1;
 		goto done;
 	}

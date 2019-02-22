@@ -36,12 +36,7 @@ struct commit_name {
 
 static void *oidmap_value_bykey(git_oidmap *map, const git_oid *key)
 {
-	size_t pos = git_oidmap_lookup_index(map, key);
-
-	if (!git_oidmap_valid_index(map, pos))
-		return NULL;
-
-	return git_oidmap_value_at(map, pos);
+	return git_oidmap_get(map, key);
 }
 
 static struct commit_name *find_commit_name(
@@ -124,13 +119,8 @@ static int add_to_known_names(
 		e->path = git__strdup(path);
 		git_oid_cpy(&e->peeled, peeled);
 
-		if (!found) {
-			int ret;
-
-			git_oidmap_insert(names, &e->peeled, e, &ret);
-			if (ret < 0)
-				return -1;
-		}
+		if (!found && git_oidmap_set(names, &e->peeled, e) < 0)
+			return -1;
 	}
 	else
 		git_tag_free(tag);
@@ -681,8 +671,8 @@ int git_describe_commit(
 		"git_describe_options");
 	data.opts = &normalized;
 
-	data.names = git_oidmap_alloc();
-	GIT_ERROR_CHECK_ALLOC(data.names);
+	if ((error = git_oidmap_new(&data.names)) < 0)
+		return error;
 
 	/** TODO: contains to be implemented */
 

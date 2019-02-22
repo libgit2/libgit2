@@ -84,7 +84,7 @@ int git_transaction_new(git_transaction **out, git_repository *repo)
 		goto on_error;
 	}
 
-	if ((error = git_strmap_alloc(&tx->locks)) < 0) {
+	if ((error = git_strmap_new(&tx->locks)) < 0) {
 		error = -1;
 		goto on_error;
 	}
@@ -119,8 +119,7 @@ int git_transaction_lock_ref(git_transaction *tx, const char *refname)
 	if ((error = git_refdb_lock(&node->payload, tx->db, refname)) < 0)
 		return error;
 
-	git_strmap_insert(tx->locks, node->name, node, &error);
-	if (error < 0)
+	if ((error = git_strmap_set(tx->locks, node->name, node)) < 0)
 		goto cleanup;
 
 	return 0;
@@ -134,15 +133,11 @@ cleanup:
 static int find_locked(transaction_node **out, git_transaction *tx, const char *refname)
 {
 	transaction_node *node;
-	size_t pos;
 
-	pos = git_strmap_lookup_index(tx->locks, refname);
-	if (!git_strmap_valid_index(tx->locks, pos)) {
+	if ((node = git_strmap_get(tx->locks, refname)) == NULL) {
 		git_error_set(GIT_ERROR_REFERENCE, "the specified reference is not locked");
 		return GIT_ENOTFOUND;
 	}
-
-	node = git_strmap_value_at(tx->locks, pos);
 
 	*out = node;
 	return 0;

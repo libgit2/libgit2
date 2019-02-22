@@ -33,12 +33,7 @@ GIT_INLINE(void) attr_cache_unlock(git_attr_cache *cache)
 GIT_INLINE(git_attr_file_entry *) attr_cache_lookup_entry(
 	git_attr_cache *cache, const char *path)
 {
-	size_t pos = git_strmap_lookup_index(cache->files, path);
-
-	if (git_strmap_valid_index(cache->files, pos))
-		return git_strmap_value_at(cache->files, pos);
-	else
-		return NULL;
+	return git_strmap_get(cache->files, path);
 }
 
 int git_attr_cache__alloc_file_entry(
@@ -80,18 +75,16 @@ int git_attr_cache__alloc_file_entry(
 static int attr_cache_make_entry(
 	git_attr_file_entry **out, git_repository *repo, const char *path)
 {
-	int error = 0;
 	git_attr_cache *cache = git_repository_attr_cache(repo);
 	git_attr_file_entry *entry = NULL;
+	int error;
 
-	error = git_attr_cache__alloc_file_entry(
-		&entry, git_repository_workdir(repo), path, &cache->pool);
+	if ((error = git_attr_cache__alloc_file_entry(&entry, git_repository_workdir(repo),
+						      path, &cache->pool)) < 0)
+		return error;
 
-	if (!error) {
-		git_strmap_insert(cache->files, entry->path, entry, &error);
-		if (error > 0)
-			error = 0;
-	}
+	if ((error = git_strmap_set(cache->files, entry->path, entry)) < 0)
+		return error;
 
 	*out = entry;
 	return error;
@@ -265,18 +258,14 @@ bool git_attr_cache__is_cached(
 	const char *filename)
 {
 	git_attr_cache *cache = git_repository_attr_cache(repo);
-	git_strmap *files;
-	size_t pos;
 	git_attr_file_entry *entry;
+	git_strmap *files;
 
 	if (!cache || !(files = cache->files))
 		return false;
 
-	pos = git_strmap_lookup_index(files, filename);
-	if (!git_strmap_valid_index(files, pos))
+	if ((entry = git_strmap_get(files, filename)) == NULL)
 		return false;
-
-	entry = git_strmap_value_at(files, pos);
 
 	return entry && (entry->file[source] != NULL);
 }
@@ -400,8 +389,8 @@ int git_attr_cache__init(git_repository *repo)
 	/* allocate hashtable for attribute and ignore file contents,
 	 * hashtable for attribute macros, and string pool
 	 */
-	if ((ret = git_strmap_alloc(&cache->files)) < 0 ||
-		(ret = git_strmap_alloc(&cache->macros)) < 0)
+	if ((ret = git_strmap_new(&cache->files)) < 0 ||
+	    (ret = git_strmap_new(&cache->macros)) < 0)
 		goto cancel;
 
 	git_pool_init(&cache->pool, 1);
@@ -446,24 +435,17 @@ int git_attr_cache__insert_macro(git_repository *repo, git_attr_rule *macro)
 		git_error_set(GIT_ERROR_OS, "unable to get attr cache lock");
 		error = -1;
 	} else {
-		git_strmap_insert(macros, macro->match.pattern, macro, &error);
+		error = git_strmap_set(macros, macro->match.pattern, macro);
 		git_mutex_unlock(&cache->lock);
 	}
 
-	return (error < 0) ? -1 : 0;
+	return error;
 }
 
 git_attr_rule *git_attr_cache__lookup_macro(
 	git_repository *repo, const char *name)
 {
 	git_strmap *macros = git_repository_attr_cache(repo)->macros;
-	size_t pos;
 
-	pos = git_strmap_lookup_index(macros, name);
-
-	if (!git_strmap_valid_index(macros, pos))
-		return NULL;
-
-	return (git_attr_rule *)git_strmap_value_at(macros, pos);
+	return git_strmap_get(macros, name);
 }
-

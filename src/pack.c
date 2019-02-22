@@ -92,8 +92,8 @@ static void cache_free(git_pack_cache *cache)
 
 static int cache_init(git_pack_cache *cache)
 {
-	cache->entries = git_offmap_alloc();
-	GIT_ERROR_CHECK_ALLOC(cache->entries);
+	if (git_offmap_new(&cache->entries) < 0)
+		return -1;
 
 	cache->memory_limit = GIT_PACK_CACHE_MEMORY_LIMIT;
 
@@ -111,15 +111,12 @@ static int cache_init(git_pack_cache *cache)
 
 static git_pack_cache_entry *cache_get(git_pack_cache *cache, git_off_t offset)
 {
-	git_pack_cache_entry *entry = NULL;
-	size_t k;
+	git_pack_cache_entry *entry;
 
 	if (git_mutex_lock(&cache->lock) < 0)
 		return NULL;
 
-	k = git_offmap_lookup_index(cache->entries, offset);
-	if (git_offmap_valid_index(cache->entries, k)) { /* found it */
-		entry = git_offmap_value_at(cache->entries, k);
+	if ((entry = git_offmap_get(cache->entries, offset)) != NULL) {
 		git_atomic_inc(&entry->refcount);
 		entry->last_usage = cache->use_ctr++;
 	}
@@ -150,8 +147,7 @@ static int cache_add(
 		git_off_t offset)
 {
 	git_pack_cache_entry *entry;
-	int error, exists = 0;
-	size_t k;
+	int exists;
 
 	if (base->len > GIT_PACK_CACHE_SIZE_LIMIT)
 		return -1;
@@ -169,9 +165,7 @@ static int cache_add(
 			while (cache->memory_used + base->len > cache->memory_limit)
 				free_lowest_entry(cache);
 
-			k = git_offmap_put(cache->entries, offset, &error);
-			assert(error != 0);
-			git_offmap_set_value_at(cache->entries, k, entry);
+			git_offmap_set(cache->entries, offset, entry);
 			cache->memory_used += entry->raw.len;
 
 			*cached_out = entry;
@@ -957,14 +951,13 @@ git_off_t get_delta_base(
 	} else if (type == GIT_OBJECT_REF_DELTA) {
 		/* If we have the cooperative cache, search in it first */
 		if (p->has_cache) {
+			struct git_pack_entry *entry;
 			git_oid oid;
-			size_t k;
 
 			git_oid_fromraw(&oid, base_info);
-			k = git_oidmap_lookup_index(p->idx_cache, &oid);
-			if (git_oidmap_valid_index(p->idx_cache, k)) {
+			if ((entry = git_oidmap_get(p->idx_cache, &oid)) != NULL) {
 				*curpos += 20;
-				return ((struct git_pack_entry *)git_oidmap_value_at(p->idx_cache, k))->offset;
+				return entry->offset;
 			} else {
 				/* If we're building an index, don't try to find the pack
 				 * entry; we just haven't seen it yet.  We'll make

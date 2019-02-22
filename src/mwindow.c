@@ -44,15 +44,14 @@ int git_mwindow_global_init(void)
 	assert(!git__pack_cache);
 
 	git__on_shutdown(git_mwindow_files_free);
-	return git_strmap_alloc(&git__pack_cache);
+	return git_strmap_new(&git__pack_cache);
 }
 
 int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 {
-	int error;
-	char *packname;
-	size_t pos;
 	struct git_pack_file *pack;
+	char *packname;
+	int error;
 
 	if ((error = git_packfile__name(&packname, path)) < 0)
 		return error;
@@ -62,13 +61,11 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 		return -1;
 	}
 
-	pos = git_strmap_lookup_index(git__pack_cache, packname);
+	pack = git_strmap_get(git__pack_cache, packname);
 	git__free(packname);
 
-	if (git_strmap_valid_index(git__pack_cache, pos)) {
-		pack = git_strmap_value_at(git__pack_cache, pos);
+	if (pack != NULL) {
 		git_atomic_inc(&pack->refcount);
-
 		git_mutex_unlock(&git__mwindow_mutex);
 		*out = pack;
 		return 0;
@@ -82,7 +79,7 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 
 	git_atomic_inc(&pack->refcount);
 
-	git_strmap_insert(git__pack_cache, pack->pack_name, pack, &error);
+	error = git_strmap_set(git__pack_cache, pack->pack_name, pack);
 	git_mutex_unlock(&git__mwindow_mutex);
 
 	if (error < 0) {
@@ -97,7 +94,6 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 void git_mwindow_put_pack(struct git_pack_file *pack)
 {
 	int count;
-	size_t pos;
 
 	if (git_mutex_lock(&git__mwindow_mutex) < 0)
 		return;
@@ -105,13 +101,12 @@ void git_mwindow_put_pack(struct git_pack_file *pack)
 	/* put before get would be a corrupted state */
 	assert(git__pack_cache);
 
-	pos = git_strmap_lookup_index(git__pack_cache, pack->pack_name);
 	/* if we cannot find it, the state is corrupted */
-	assert(git_strmap_valid_index(git__pack_cache, pos));
+	assert(git_strmap_exists(git__pack_cache, pack->pack_name));
 
 	count = git_atomic_dec(&pack->refcount);
 	if (count == 0) {
-		git_strmap_delete_at(git__pack_cache, pos);
+		git_strmap_delete(git__pack_cache, pack->pack_name);
 		git_packfile_free(pack);
 	}
 

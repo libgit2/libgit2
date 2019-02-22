@@ -344,7 +344,7 @@ unsigned int git_treebuilder_entrycount(git_treebuilder *bld)
 {
 	assert(bld);
 
-	return git_strmap_num_entries(bld->map);
+	return git_strmap_size(bld->map);
 }
 
 static int tree_error(const char *str, const char *path)
@@ -507,8 +507,7 @@ static int append_entry(
 
 	entry->attr = (uint16_t)filemode;
 
-	git_strmap_insert(bld->map, entry->filename, entry, &error);
-	if (error < 0) {
+	if ((error = git_strmap_set(bld->map, entry->filename, entry)) < 0) {
 		git_tree_entry_free(entry);
 		git_error_set(GIT_ERROR_TREE, "failed to append entry %s to the tree builder", filename);
 		return -1;
@@ -688,7 +687,7 @@ int git_treebuilder_new(
 
 	bld->repo = repo;
 
-	if (git_strmap_alloc(&bld->map) < 0) {
+	if (git_strmap_new(&bld->map) < 0) {
 		git__free(bld);
 		return -1;
 	}
@@ -723,24 +722,19 @@ int git_treebuilder_insert(
 {
 	git_tree_entry *entry;
 	int error;
-	size_t pos;
 
 	assert(bld && id && filename);
 
 	if ((error = check_entry(bld->repo, filename, id, filemode)) < 0)
 		return error;
 
-	pos = git_strmap_lookup_index(bld->map, filename);
-	if (git_strmap_valid_index(bld->map, pos)) {
-		entry = git_strmap_value_at(bld->map, pos);
+	if ((entry = git_strmap_get(bld->map, filename)) != NULL) {
 		git_oid_cpy((git_oid *) entry->oid, id);
 	} else {
 		entry = alloc_entry(filename, strlen(filename), id);
 		GIT_ERROR_CHECK_ALLOC(entry);
 
-		git_strmap_insert(bld->map, entry->filename, entry, &error);
-
-		if (error < 0) {
+		if ((error = git_strmap_set(bld->map, entry->filename, entry)) < 0) {
 			git_tree_entry_free(entry);
 			git_error_set(GIT_ERROR_TREE, "failed to insert %s", filename);
 			return -1;
@@ -757,16 +751,8 @@ int git_treebuilder_insert(
 
 static git_tree_entry *treebuilder_get(git_treebuilder *bld, const char *filename)
 {
-	git_tree_entry *entry = NULL;
-	size_t pos;
-
 	assert(bld && filename);
-
-	pos = git_strmap_lookup_index(bld->map, filename);
-	if (git_strmap_valid_index(bld->map, pos))
-		entry = git_strmap_value_at(bld->map, pos);
-
-	return entry;
+	return git_strmap_get(bld->map, filename);
 }
 
 const git_tree_entry *git_treebuilder_get(git_treebuilder *bld, const char *filename)
@@ -811,7 +797,7 @@ int git_treebuilder_write_with_buffer(git_oid *oid, git_treebuilder *bld, git_bu
 
 	git_buf_clear(tree);
 
-	entrycount = git_strmap_num_entries(bld->map);
+	entrycount = git_strmap_size(bld->map);
 	if ((error = git_vector_init(&entries, entrycount, entry_sort_cmp)) < 0)
 		goto out;
 

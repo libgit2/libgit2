@@ -215,7 +215,7 @@ int git_attr_foreach(
 		return -1;
 
 	if ((error = collect_attr_files(repo, NULL, flags, pathname, &files)) < 0 ||
-		(error = git_strmap_alloc(&seen)) < 0)
+	    (error = git_strmap_new(&seen)) < 0)
 		goto cleanup;
 
 	git_vector_foreach(&files, i, file) {
@@ -227,8 +227,7 @@ int git_attr_foreach(
 				if (git_strmap_exists(seen, assign->name))
 					continue;
 
-				git_strmap_insert(seen, assign->name, assign, &error);
-				if (error < 0)
+				if ((error = git_strmap_set(seen, assign->name, assign)) < 0)
 					goto cleanup;
 
 				error = callback(assign->name, assign->value, payload);

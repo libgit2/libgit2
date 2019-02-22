@@ -25,9 +25,12 @@ GIT_INLINE(khint_t) git_oidmap_hash(const git_oid *oid)
 
 __KHASH_IMPL(oid, static kh_inline, const git_oid *, void *, 1, git_oidmap_hash, git_oid_equal)
 
-git_oidmap *git_oidmap_alloc()
+int git_oidmap_new(git_oidmap **out)
 {
-	return kh_init(oid);
+	*out = kh_init(oid);
+	GIT_ERROR_CHECK_ALLOC(*out);
+
+	return 0;
 }
 
 void git_oidmap_free(git_oidmap *map)
@@ -45,14 +48,38 @@ size_t git_oidmap_size(git_oidmap *map)
 	return kh_size(map);
 }
 
-size_t git_oidmap_lookup_index(git_oidmap *map, const git_oid *key)
+void *git_oidmap_get(git_oidmap *map, const git_oid *key)
 {
-	return kh_get(oid, map, key);
+	size_t idx = kh_get(oid, map, key);
+	if (idx == kh_end(map) || !kh_exist(map, idx))
+		return NULL;
+	return kh_val(map, idx);
 }
 
-int git_oidmap_valid_index(git_oidmap *map, size_t idx)
+int git_oidmap_set(git_oidmap *map, const git_oid *key, void *value)
 {
-	return idx != kh_end(map);
+	size_t idx;
+	int rval;
+
+	idx = kh_put(oid, map, key, &rval);
+	if (rval < 0)
+		return -1;
+
+	if (rval == 0)
+		kh_key(map, idx) = key;
+
+	kh_val(map, idx) = value;
+
+	return 0;
+}
+
+int git_oidmap_delete(git_oidmap *map, const git_oid *key)
+{
+	khiter_t idx = kh_get(oid, map, key);
+	if (idx == kh_end(map))
+		return GIT_ENOTFOUND;
+	kh_del(oid, map, idx);
+	return 0;
 }
 
 int git_oidmap_exists(git_oidmap *map, const git_oid *key)
@@ -60,66 +87,21 @@ int git_oidmap_exists(git_oidmap *map, const git_oid *key)
 	return kh_get(oid, map, key) != kh_end(map);
 }
 
-int git_oidmap_has_data(git_oidmap *map, size_t idx)
+int git_oidmap_iterate(void **value, git_oidmap *map, size_t *iter, const git_oid **key)
 {
-	return kh_exist(map, idx);
-}
+	size_t i = *iter;
 
-const git_oid *git_oidmap_key(git_oidmap *map, size_t idx)
-{
-	return kh_key(map, idx);
-}
+	while (i < map->n_buckets && !kh_exist(map, i))
+		i++;
 
-void git_oidmap_set_key_at(git_oidmap *map, size_t idx, git_oid *key)
-{
-	kh_key(map, idx) = key;
-}
+	if (i >= map->n_buckets)
+		return GIT_ITEROVER;
 
-void *git_oidmap_value_at(git_oidmap *map, size_t idx)
-{
-	return kh_val(map, idx);
-}
+	if (key)
+		*key = kh_key(map, i);
+	if (value)
+		*value = kh_value(map, i);
+	*iter = ++i;
 
-void git_oidmap_set_value_at(git_oidmap *map, size_t idx, void *value)
-{
-	kh_val(map, idx) = value;
-}
-
-void git_oidmap_delete_at(git_oidmap *map, size_t idx)
-{
-	kh_del(oid, map, idx);
-}
-
-int git_oidmap_put(git_oidmap *map, const git_oid *key, int *err)
-{
-	return kh_put(oid, map, key, err);
-}
-
-void git_oidmap_insert(git_oidmap *map, const git_oid *key, void *value, int *rval)
-{
-	khiter_t idx = kh_put(oid, map, key, rval);
-
-	if ((*rval) >= 0) {
-		if ((*rval) == 0)
-			kh_key(map, idx) = key;
-		kh_val(map, idx) = value;
-	}
-}
-
-void git_oidmap_delete(git_oidmap *map, const git_oid *key)
-{
-	khiter_t idx = git_oidmap_lookup_index(map, key);
-	if (git_oidmap_valid_index(map, idx))
-		git_oidmap_delete_at(map, idx);
-}
-
-size_t git_oidmap_begin(git_oidmap *map)
-{
-	GIT_UNUSED(map);
 	return 0;
-}
-
-size_t git_oidmap_end(git_oidmap *map)
-{
-	return map->n_buckets;
 }

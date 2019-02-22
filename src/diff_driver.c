@@ -63,7 +63,7 @@ git_diff_driver_registry *git_diff_driver_registry_new(void)
 	if (!reg)
 		return NULL;
 
-	if (git_strmap_alloc(&reg->drivers) < 0) {
+	if (git_strmap_new(&reg->drivers) < 0) {
 		git_diff_driver_registry_free(reg);
 		return NULL;
 	}
@@ -183,9 +183,9 @@ static int git_diff_driver_builtin(
 	git_diff_driver_registry *reg,
 	const char *driver_name)
 {
-	int error = 0;
 	git_diff_driver_definition *ddef = NULL;
 	git_diff_driver *drv = NULL;
+	int error = 0;
 	size_t idx;
 
 	for (idx = 0; idx < ARRAY_SIZE(builtin_defs); ++idx) {
@@ -215,9 +215,8 @@ static int git_diff_driver_builtin(
 		goto done;
 	}
 
-	git_strmap_insert(reg->drivers, drv->name, drv, &error);
-	if (error > 0)
-		error = 0;
+	if ((error = git_strmap_set(reg->drivers, drv->name, drv)) < 0)
+		goto done;
 
 done:
 	if (error && drv)
@@ -233,8 +232,8 @@ static int git_diff_driver_load(
 {
 	int error = 0;
 	git_diff_driver_registry *reg;
-	git_diff_driver *drv = NULL;
-	size_t namelen, pos;
+	git_diff_driver *drv;
+	size_t namelen;
 	git_config *cfg = NULL;
 	git_buf name = GIT_BUF_INIT;
 	git_config_entry *ce = NULL;
@@ -243,9 +242,8 @@ static int git_diff_driver_load(
 	if ((reg = git_repository_driver_registry(repo)) == NULL)
 		return -1;
 
-	pos = git_strmap_lookup_index(reg->drivers, driver_name);
-	if (git_strmap_valid_index(reg->drivers, pos)) {
-		*out = git_strmap_value_at(reg->drivers, pos);
+	if ((drv = git_strmap_get(reg->drivers, driver_name)) != NULL) {
+		*out = drv;
 		return 0;
 	}
 
@@ -328,10 +326,8 @@ static int git_diff_driver_load(
 		goto done;
 
 	/* store driver in registry */
-	git_strmap_insert(reg->drivers, drv->name, drv, &error);
-	if (error < 0)
+	if ((error = git_strmap_set(reg->drivers, drv->name, drv)) < 0)
 		goto done;
-	error = 0;
 
 	*out = drv;
 
