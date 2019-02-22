@@ -112,7 +112,7 @@ data. Most frontends will probably want to show a percentage and
 the download rate.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="k">static</span> <span class="kt">int</span> <span class="nf">transfer_progress_cb</span><span class="p">(</span><span class="k">const</span> <span class="n">git_transfer_progress</span> <span class="o">*</span><span class="n">stats</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">payload</span><span class="p">)</span>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">int</span> <span class="nf">transfer_progress_cb</span><span class="p">(</span><span class="k">const</span> <span class="n">git_indexer_progress</span> <span class="o">*</span><span class="n">stats</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">payload</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">payload</span><span class="p">;</span>
 
@@ -139,7 +139,7 @@ the download rate.</p>
         <div class='highlight'><pre><span class="kt">int</span> <span class="nf">lg2_fetch</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="n">git_remote</span> <span class="o">*</span><span class="n">remote</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
-  <span class="k">const</span> <span class="n">git_transfer_progress</span> <span class="o">*</span><span class="n">stats</span><span class="p">;</span>
+  <span class="k">const</span> <span class="n">git_indexer_progress</span> <span class="o">*</span><span class="n">stats</span><span class="p">;</span>
   <span class="n">git_fetch_options</span> <span class="n">fetch_opts</span> <span class="o">=</span> <span class="n">GIT_FETCH_OPTIONS_INIT</span><span class="p">;</span>
 
   <span class="k">if</span> <span class="p">(</span><span class="n">argc</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">)</span> <span class="p">{</span>
