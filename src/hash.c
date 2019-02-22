@@ -14,27 +14,55 @@ int git_hash_global_init(void)
 
 int git_hash_ctx_init(git_hash_ctx *ctx)
 {
-	return git_hash_sha1_ctx_init(&ctx->sha1);
+	int error;
+
+	if ((error = git_hash_sha1_ctx_init(&ctx->sha1)) < 0)
+		return error;
+
+	ctx->algo = GIT_HASH_ALGO_SHA1;
+
+	return 0;
 }
 
 void git_hash_ctx_cleanup(git_hash_ctx *ctx)
 {
-	git_hash_sha1_ctx_cleanup(&ctx->sha1);
+	switch (ctx->algo) {
+		case GIT_HASH_ALGO_SHA1:
+			git_hash_sha1_ctx_cleanup(&ctx->sha1);
+			return;
+		default:
+			assert(0);
+	}
 }
 
 int git_hash_init(git_hash_ctx *ctx)
 {
-	return git_hash_sha1_init(&ctx->sha1);
+	switch (ctx->algo) {
+		case GIT_HASH_ALGO_SHA1:
+			return git_hash_sha1_init(&ctx->sha1);
+		default:
+			assert(0);
+	}
 }
 
 int git_hash_update(git_hash_ctx *ctx, const void *data, size_t len)
 {
-	return git_hash_sha1_update(&ctx->sha1, data, len);
+	switch (ctx->algo) {
+		case GIT_HASH_ALGO_SHA1:
+			return git_hash_sha1_update(&ctx->sha1, data, len);
+		default:
+			assert(0);
+	}
 }
 
 int git_hash_final(git_oid *out, git_hash_ctx *ctx)
 {
-	return git_hash_sha1_final(out, &ctx->sha1);
+	switch (ctx->algo) {
+		case GIT_HASH_ALGO_SHA1:
+			return git_hash_sha1_final(out, &ctx->sha1);
+		default:
+			assert(0);
+	}
 }
 
 int git_hash_buf(git_oid *out, const void *data, size_t len)
