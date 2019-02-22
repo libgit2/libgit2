@@ -5,13 +5,13 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifndef INCLUDE_stdalloc_h__
-#define INCLUDE_stdalloc_h__
-
-#include "alloc.h"
+#ifndef INCLUDE_allocators_crtdbg_h
+#define INCLUDE_allocators_crtdbg_h
 
 #include "common.h"
 
-int git_stdalloc_init_allocator(git_allocator *allocator);
+#include "alloc.h"
+
+int git_win32_crtdbg_init_allocator(git_allocator *allocator);
 
 #endif
