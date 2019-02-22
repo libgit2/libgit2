@@ -325,7 +325,7 @@ static int local_push_update_remote_ref(
 	return error;
 }
 
-static int transfer_to_push_transfer(const git_transfer_progress *stats, void *payload)
+static int transfer_to_push_transfer(const git_indexer_progress *stats, void *payload)
 {
 	const git_remote_callbacks *cbs = payload;
 
@@ -460,8 +460,8 @@ on_error:
 }
 
 typedef struct foreach_data {
-	git_transfer_progress *stats;
-	git_transfer_progress_cb progress_cb;
+	git_indexer_progress *stats;
+	git_indexer_progress_cb progress_cb;
 	void *progress_payload;
 	git_odb_writepack *writepack;
 } foreach_data;
@@ -533,8 +533,8 @@ static int foreach_reference_cb(git_reference *reference, void *payload)
 static int local_download_pack(
 		git_transport *transport,
 		git_repository *repo,
-		git_transfer_progress *stats,
-		git_transfer_progress_cb progress_cb,
+		git_indexer_progress *stats,
+		git_indexer_progress_cb progress_cb,
 		void *progress_payload)
 {
 	transport_local *t = (transport_local*)transport;

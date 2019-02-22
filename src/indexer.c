@@ -58,7 +58,7 @@ struct git_indexer {
 	unsigned int fanout[256];
 	git_hash_ctx hash_ctx;
 	git_oid hash;
-	git_transfer_progress_cb progress_cb;
+	git_indexer_progress_cb progress_cb;
 	void *progress_payload;
 	char objbuf[8*1024];
 
@@ -544,7 +544,7 @@ on_error:
 	return -1;
 }
 
-static int do_progress_callback(git_indexer *idx, git_transfer_progress *stats)
+static int do_progress_callback(git_indexer *idx, git_indexer_progress *stats)
 {
 	if (idx->progress_cb)
 		return git_error_set_after_callback_function(
@@ -652,7 +652,7 @@ static int append_to_pack(git_indexer *idx, const void *data, size_t size)
 	return write_at(idx, data, idx->pack->mwf.size, size);
 }
 
-static int read_stream_object(git_indexer *idx, git_transfer_progress *stats)
+static int read_stream_object(git_indexer *idx, git_indexer_progress *stats)
 {
 	git_packfile_stream *stream = &idx->stream;
 	git_off_t entry_start = idx->off;
@@ -741,7 +741,7 @@ static int read_stream_object(git_indexer *idx, git_transfer_progress *stats)
 	return 0;
 }
 
-int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_transfer_progress *stats)
+int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_indexer_progress *stats)
 {
 	int error = -1;
 	struct git_pack_header *hdr = &idx->hdr;
@@ -925,7 +925,7 @@ cleanup:
 	return error;
 }
 
-static int fix_thin_pack(git_indexer *idx, git_transfer_progress *stats)
+static int fix_thin_pack(git_indexer *idx, git_indexer_progress *stats)
 {
 	int error, found_ref_delta = 0;
 	unsigned int i;
@@ -987,7 +987,7 @@ static int fix_thin_pack(git_indexer *idx, git_transfer_progress *stats)
 	return 0;
 }
 
-static int resolve_deltas(git_indexer *idx, git_transfer_progress *stats)
+static int resolve_deltas(git_indexer *idx, git_indexer_progress *stats)
 {
 	unsigned int i;
 	int error;
@@ -1044,7 +1044,7 @@ static int resolve_deltas(git_indexer *idx, git_transfer_progress *stats)
 	return 0;
 }
 
-static int update_header_and_rehash(git_indexer *idx, git_transfer_progress *stats)
+static int update_header_and_rehash(git_indexer *idx, git_indexer_progress *stats)
 {
 	void *ptr;
 	size_t chunk = 1024*1024;
@@ -1085,7 +1085,7 @@ static int update_header_and_rehash(git_indexer *idx, git_transfer_progress *sta
 	return 0;
 }
 
-int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
+int git_indexer_commit(git_indexer *idx, git_indexer_progress *stats)
 {
 	git_mwindow *w = NULL;
 	unsigned int i, long_offsets = 0, left;

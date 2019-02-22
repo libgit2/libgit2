@@ -422,11 +422,12 @@ typedef enum git_remote_completion_type {
 } git_remote_completion_type;
 
 /** Push network progress notification function */
-typedef int GIT_CALLBACK(git_push_transfer_progress)(
+typedef int GIT_CALLBACK(git_push_transfer_progress_cb)(
 	unsigned int current,
 	unsigned int total,
 	size_t bytes,
 	void* payload);
+
 /**
  * Represents an update which will be performed on the remote during push
  */
@@ -516,7 +517,7 @@ struct git_remote_callbacks {
 	 * called with the current count of progress done by the
 	 * indexer.
 	 */
-	git_transfer_progress_cb transfer_progress;
+	git_indexer_progress_cb transfer_progress;
 
 	/**
 	 * Each time a reference is updated locally, this function
@@ -537,7 +538,7 @@ struct git_remote_callbacks {
 	 * inline with pack building operations, so performance may be
 	 * affected.
 	 */
-	git_push_transfer_progress push_transfer_progress;
+	git_push_transfer_progress_cb push_transfer_progress;
 
 	/**
 	 * See documentation of git_push_update_reference_cb
@@ -832,7 +833,7 @@ GIT_EXTERN(int) git_remote_push(git_remote *remote,
 /**
  * Get the statistics structure that is filled in by the fetch operation.
  */
-GIT_EXTERN(const git_transfer_progress *) git_remote_stats(git_remote *remote);
+GIT_EXTERN(const git_indexer_progress *) git_remote_stats(git_remote *remote);
 
 /**
  * Retrieve the tag auto-follow setting

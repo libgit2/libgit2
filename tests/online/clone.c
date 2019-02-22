@@ -158,7 +158,7 @@ static void checkout_progress(const char *path, size_t cur, size_t tot, void *pa
 	(*was_called) = true;
 }
 
-static int fetch_progress(const git_transfer_progress *stats, void *payload)
+static int fetch_progress(const git_indexer_progress *stats, void *payload)
 {
 	bool *was_called = (bool*)payload;
 	GIT_UNUSED(stats);
@@ -442,7 +442,7 @@ void test_online_clone__bitbucket_falls_back_to_specified_creds(void)
 	cl_fixture_cleanup("./foo");
 }
 
-static int cancel_at_half(const git_transfer_progress *stats, void *payload)
+static int cancel_at_half(const git_indexer_progress *stats, void *payload)
 {
 	GIT_UNUSED(payload);
 

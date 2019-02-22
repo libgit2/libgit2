@@ -124,8 +124,8 @@ struct git_odb_stream {
 struct git_odb_writepack {
 	git_odb_backend *backend;
 
-	int GIT_CALLBACK(append)(git_odb_writepack *writepack, const void *data, size_t size, git_transfer_progress *stats);
-	int GIT_CALLBACK(commit)(git_odb_writepack *writepack, git_transfer_progress *stats);
+	int GIT_CALLBACK(append)(git_odb_writepack *writepack, const void *data, size_t size, git_indexer_progress *stats);
+	int GIT_CALLBACK(commit)(git_odb_writepack *writepack, git_indexer_progress *stats);
 	void GIT_CALLBACK(free)(git_odb_writepack *writepack);
 };
 

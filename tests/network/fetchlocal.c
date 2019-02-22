@@ -8,7 +8,7 @@ static const char* tagger_name = "Vicent Marti";
 static const char* tagger_email = "vicent@github.com";
 static const char* tagger_message = "This is my tag.\n\nThere are many tags, but this one is mine\n";
 
-static int transfer_cb(const git_transfer_progress *stats, void *payload)
+static int transfer_cb(const git_indexer_progress *stats, void *payload)
 {
 	int *callcount = (int*)payload;
 	GIT_UNUSED(stats);

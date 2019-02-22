@@ -13,6 +13,7 @@
 #include "index.h"
 #include "object.h"
 #include "refs.h"
+#include "remote.h"
 
 /*
  * Users can avoid deprecated functions by defining `GIT_DEPRECATE_HARD`.
@@ -242,6 +243,43 @@ GIT_EXTERN(void) giterr_set_oom(void);
 #define GIT_REF_FORMAT_ALLOW_ONELEVEL GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL
 #define GIT_REF_FORMAT_REFSPEC_PATTERN GIT_REFERENCE_FORMAT_REFSPEC_PATTERN
 #define GIT_REF_FORMAT_REFSPEC_SHORTHAND GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND
+
+/**@}*/
+
+/** @name Deprecated Transfer Progress Types
+ *
+ * These types are retained for backward compatibility.  The newer
+ * versions of these values should be preferred in all new code.
+ *
+ * There is no plan to remove these backward compatibility values at
+ * this time.
+ */
+/**@{*/
+
+/**
+ * This structure is used to provide callers information about the
+ * progress of indexing a packfile.
+ *
+ * This type is deprecated, but there is no plan to remove this
+ * type definition at this time.
+ */
+typedef git_indexer_progress git_transfer_progress;
+
+/**
+ * Type definition for progress callbacks during indexing.
+ *
+ * This type is deprecated, but there is no plan to remove this
+ * type definition at this time.
+ */
+typedef git_indexer_progress_cb git_transfer_progress_cb;
+
+/**
+ * Type definition for push transfer progress callbacks.
+ *
+ * This type is deprecated, but there is no plan to remove this
+ * type definition at this time.
+ */
+typedef git_push_transfer_progress_cb git_push_transfer_progress;
 
 /**@}*/
 

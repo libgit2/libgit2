@@ -12,7 +12,7 @@ static git_packbuilder *_packbuilder;
 static git_indexer *_indexer;
 static git_vector _commits;
 static int _commits_is_initialized;
-static git_transfer_progress _stats;
+static git_indexer_progress _stats;
 
 extern bool git_disable_pack_keep_file_checks;
 
@@ -88,14 +88,14 @@ static void seed_packbuilder(void)
 
 static int feed_indexer(void *ptr, size_t len, void *payload)
 {
-	git_transfer_progress *stats = (git_transfer_progress *)payload;
+	git_indexer_progress *stats = (git_indexer_progress *)payload;
 
 	return git_indexer_append(_indexer, ptr, len, stats);
 }
 
 void test_pack_packbuilder__create_pack(void)
 {
-	git_transfer_progress stats;
+	git_indexer_progress stats;
 	git_buf buf = GIT_BUF_INIT, path = GIT_BUF_INIT;
 	git_hash_ctx ctx;
 	git_oid hash;

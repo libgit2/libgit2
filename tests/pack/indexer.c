@@ -98,7 +98,7 @@ static const unsigned int base_obj_len = 2;
 void test_pack_indexer__out_of_order(void)
 {
 	git_indexer *idx = 0;
-	git_transfer_progress stats = { 0 };
+	git_indexer_progress stats = { 0 };
 
 	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL));
 	cl_git_pass(git_indexer_append(
@@ -115,7 +115,7 @@ void test_pack_indexer__out_of_order(void)
 void test_pack_indexer__missing_trailer(void)
 {
 	git_indexer *idx = 0;
-	git_transfer_progress stats = { 0 };
+	git_indexer_progress stats = { 0 };
 
 	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL));
 	cl_git_pass(git_indexer_append(
@@ -131,7 +131,7 @@ void test_pack_indexer__missing_trailer(void)
 void test_pack_indexer__leaky(void)
 {
 	git_indexer *idx = 0;
-	git_transfer_progress stats = { 0 };
+	git_indexer_progress stats = { 0 };
 
 	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL));
 	cl_git_pass(git_indexer_append(
@@ -147,7 +147,7 @@ void test_pack_indexer__leaky(void)
 void test_pack_indexer__fix_thin(void)
 {
 	git_indexer *idx = NULL;
-	git_transfer_progress stats = { 0 };
+	git_indexer_progress stats = { 0 };
 	git_repository *repo;
 	git_odb *odb;
 	git_oid id, should_id;
@@ -213,7 +213,7 @@ void test_pack_indexer__fix_thin(void)
 void test_pack_indexer__corrupt_length(void)
 {
 	git_indexer *idx = NULL;
-	git_transfer_progress stats = { 0 };
+	git_indexer_progress stats = { 0 };
 	git_repository *repo;
 	git_odb *odb;
 	git_oid id, should_id;
@@ -243,7 +243,7 @@ void test_pack_indexer__incomplete_pack_fails_with_strict(void)
 {
 	git_indexer_options opts = GIT_INDEXER_OPTIONS_INIT;
 	git_indexer *idx = 0;
-	git_transfer_progress stats = { 0 };
+	git_indexer_progress stats = { 0 };
 
 	opts.verify = 1;
 
@@ -263,7 +263,7 @@ void test_pack_indexer__out_of_order_with_connectivity_checks(void)
 {
 	git_indexer_options opts = GIT_INDEXER_OPTIONS_INIT;
 	git_indexer *idx = 0;
-	git_transfer_progress stats = { 0 };
+	git_indexer_progress stats = { 0 };
 
 	opts.verify = 1;
 
