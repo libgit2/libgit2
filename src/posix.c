@@ -155,6 +155,23 @@ int p_rename(const char *from, const char *to)
 	return -1;
 }
 
+int p_fallocate(int fd, off_t offset, off_t len)
+{
+#ifdef __APPLE__
+	fstore_t prealloc;
+
+	memset(&prealloc, 0, sizeof(prealloc));
+	prealloc.fst_flags  = F_ALLOCATEALL;
+	prealloc.fst_posmode = F_PEOFPOSMODE;
+	prealloc.fst_offset = offset;
+	prealloc.fst_length = len;
+
+	return fcntl(fd, F_PREALLOCATE, &prealloc);
+#else
+	return posix_fallocate(fd, offset, len);
+#endif
+}
+
 #endif /* GIT_WIN32 */
 
 ssize_t p_read(git_file fd, void *buf, size_t cnt)
@@ -214,23 +231,6 @@ int p_write(git_file fd, const void *buf, size_t cnt)
 		b += r;
 	}
 	return 0;
-}
-
-int p_fallocate(int fd, off_t offset, off_t len)
-{
-#ifdef __APPLE__
-	fstore_t prealloc;
-
-	memset(&prealloc, 0, sizeof(prealloc));
-	prealloc.fst_flags  = F_ALLOCATEALL;
-	prealloc.fst_posmode = F_PEOFPOSMODE;
-	prealloc.fst_offset = offset;
-	prealloc.fst_length = len;
-
-	return fcntl(fd, F_PREALLOCATE, &prealloc);
-#else
-	return posix_fallocate(fd, offset, len);
-#endif
 }
 
 #ifdef NO_MMAP
