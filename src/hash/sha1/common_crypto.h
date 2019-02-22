@@ -8,11 +8,11 @@
 #ifndef INCLUDE_hash_sha1_common_crypto_h__
 #define INCLUDE_hash_sha1_common_crypto_h__
 
-#include "hash.h"
+#include "hash/sha1.h"
 
 #include <CommonCrypto/CommonDigest.h>
 
-struct git_hash_ctx {
+struct git_hash_sha1_ctx {
 	CC_SHA1_CTX c;
 };
 

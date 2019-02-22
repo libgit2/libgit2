@@ -5,12 +5,10 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#ifndef INCLUDE_hash_hash_win32_h__
-#define INCLUDE_hash_hash_win32_h__
+#ifndef INCLUDE_hash_sha1_win32_h__
+#define INCLUDE_hash_sha1_win32_h__
 
-#include "common.h"
-
-#include "hash.h"
+#include "hash/sha1.h"
 
 #include <wincrypt.h>
 #include <strsafe.h>
@@ -117,7 +115,7 @@ struct hash_cng_ctx {
 	PBYTE hash_object;
 };
 
-struct git_hash_ctx {
+struct git_hash_sha1_ctx {
 	enum hash_win32_prov_type type;
 	git_hash_prov *prov;
 

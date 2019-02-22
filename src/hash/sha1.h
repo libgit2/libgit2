@@ -10,6 +10,8 @@
 
 #include "common.h"
 
+typedef struct git_hash_sha1_ctx git_hash_sha1_ctx;
+
 #if defined(GIT_SHA1_COLLISIONDETECT)
 # include "sha1/collisiondetect.h"
 #elif defined(GIT_SHA1_COMMON_CRYPTO)
@@ -26,11 +28,11 @@
 
 int git_hash_sha1_global_init(void);
 
-int git_hash_sha1_ctx_init(git_hash_ctx *ctx);
-void git_hash_sha1_ctx_cleanup(git_hash_ctx *ctx);
+int git_hash_sha1_ctx_init(git_hash_sha1_ctx *ctx);
+void git_hash_sha1_ctx_cleanup(git_hash_sha1_ctx *ctx);
 
-int git_hash_sha1_init(git_hash_ctx *c);
-int git_hash_sha1_update(git_hash_ctx *c, const void *data, size_t len);
-int git_hash_sha1_final(git_oid *out, git_hash_ctx *c);
+int git_hash_sha1_init(git_hash_sha1_ctx *c);
+int git_hash_sha1_update(git_hash_sha1_ctx *c, const void *data, size_t len);
+int git_hash_sha1_final(git_oid *out, git_hash_sha1_ctx *c);
 
 #endif

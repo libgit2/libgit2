@@ -8,11 +8,11 @@
 #ifndef INCLUDE_hash_sha1_mbedtls_h__
 #define INCLUDE_hash_sha1_mbedtls_h__
 
-#include "hash.h"
+#include "hash/sha1.h"
 
 #include <mbedtls/sha1.h>
 
-struct git_hash_ctx {
+struct git_hash_sha1_ctx {
     mbedtls_sha1_context c;
 };
 

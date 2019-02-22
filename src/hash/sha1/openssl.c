@@ -12,17 +12,17 @@ int git_hash_sha1_global_init(void)
 	return 0;
 }
 
-int git_hash_sha1_ctx_init(git_hash_ctx *ctx)
+int git_hash_sha1_ctx_init(git_hash_sha1_ctx *ctx)
 {
 	return git_hash_sha1_init(ctx);
 }
 
-void git_hash_sha1_ctx_cleanup(git_hash_ctx *ctx)
+void git_hash_sha1_ctx_cleanup(git_hash_sha1_ctx *ctx)
 {
 	GIT_UNUSED(ctx);
 }
 
-int git_hash_sha1_init(git_hash_ctx *ctx)
+int git_hash_sha1_init(git_hash_sha1_ctx *ctx)
 {
 	assert(ctx);
 
@@ -34,7 +34,7 @@ int git_hash_sha1_init(git_hash_ctx *ctx)
 	return 0;
 }
 
-int git_hash_sha1_update(git_hash_ctx *ctx, const void *data, size_t len)
+int git_hash_sha1_update(git_hash_sha1_ctx *ctx, const void *data, size_t len)
 {
 	assert(ctx);
 
@@ -46,7 +46,7 @@ int git_hash_sha1_update(git_hash_ctx *ctx, const void *data, size_t len)
 	return 0;
 }
 
-int git_hash_sha1_final(git_oid *out, git_hash_ctx *ctx)
+int git_hash_sha1_final(git_oid *out, git_hash_sha1_ctx *ctx)
 {
 	assert(ctx);
 

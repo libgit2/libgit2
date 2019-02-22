@@ -8,11 +8,11 @@
 #ifndef INCLUDE_hash_sha1_collisiondetect_h__
 #define INCLUDE_hash_sha1_collisiondetect_h__
 
-#include "hash.h"
+#include "hash/sha1.h"
 
 #include "sha1dc/sha1.h"
 
-struct git_hash_ctx {
+struct git_hash_sha1_ctx {
 	SHA1_CTX c;
 };
 

@@ -14,27 +14,27 @@ int git_hash_global_init(void)
 
 int git_hash_ctx_init(git_hash_ctx *ctx)
 {
-	return git_hash_sha1_ctx_init(ctx);
+	return git_hash_sha1_ctx_init(&ctx->sha1);
 }
 
 void git_hash_ctx_cleanup(git_hash_ctx *ctx)
 {
-	git_hash_sha1_ctx_cleanup(ctx);
+	git_hash_sha1_ctx_cleanup(&ctx->sha1);
 }
 
-int git_hash_init(git_hash_ctx *c)
+int git_hash_init(git_hash_ctx *ctx)
 {
-	return git_hash_sha1_init(c);
+	return git_hash_sha1_init(&ctx->sha1);
 }
 
-int git_hash_update(git_hash_ctx *c, const void *data, size_t len)
+int git_hash_update(git_hash_ctx *ctx, const void *data, size_t len)
 {
-	return git_hash_sha1_update(c, data, len);
+	return git_hash_sha1_update(&ctx->sha1, data, len);
 }
 
-int git_hash_final(git_oid *out, git_hash_ctx *c)
+int git_hash_final(git_oid *out, git_hash_ctx *ctx)
 {
-	return git_hash_sha1_final(out, c);
+	return git_hash_sha1_final(out, &ctx->sha1);
 }
 
 int git_hash_buf(git_oid *out, const void *data, size_t len)

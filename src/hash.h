@@ -12,14 +12,18 @@
 
 #include "git2/oid.h"
 
-typedef struct git_hash_ctx git_hash_ctx;
-
 typedef struct {
 	void *data;
 	size_t len;
 } git_buf_vec;
 
 #include "hash/sha1.h"
+
+typedef struct git_hash_ctx {
+	union {
+		git_hash_sha1_ctx sha1;
+	};
+} git_hash_ctx;
 
 int git_hash_global_init(void);
 
