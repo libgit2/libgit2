@@ -333,15 +333,27 @@ static int refdb_fs_backend__exists(
 
 	assert(backend);
 
-	if ((error = packed_reload(backend)) < 0 ||
-		(error = git_buf_joinpath(&ref_path, backend->gitpath, ref_name)) < 0)
-		return error;
+	*exists = 0;
 
-	*exists = git_path_isfile(ref_path.ptr) ||
-		(git_sortedcache_lookup(backend->refcache, ref_name) != NULL);
+	if ((error = git_buf_joinpath(&ref_path, backend->gitpath, ref_name)) < 0)
+		goto out;
 
+	if (git_path_isfile(ref_path.ptr)) {
+		*exists = 1;
+		goto out;
+	}
+
+	if ((error = packed_reload(backend)) < 0)
+		goto out;
+
+	if (git_sortedcache_lookup(backend->refcache, ref_name) != NULL) {
+		*exists = 1;
+		goto out;
+	}
+
+out:
 	git_buf_dispose(&ref_path);
-	return 0;
+	return error;
 }
 
 static const char *loose_parse_symbolic(git_buf *file_content)
@@ -552,7 +564,6 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 
 	while (!error && !git_iterator_advance(&entry, fsit)) {
 		const char *ref_name;
-		struct packref *ref;
 		char *ref_dup;
 
 		git_buf_truncate(&path, ref_prefix_len);
@@ -562,12 +573,6 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 		if (git__suffixcmp(ref_name, ".lock") == 0 ||
 			(iter->glob && p_fnmatch(iter->glob, ref_name, 0) != 0))
 			continue;
-
-		git_sortedcache_rlock(backend->refcache);
-		ref = git_sortedcache_lookup(backend->refcache, ref_name);
-		if (ref)
-			ref->flags |= PACKREF_SHADOWED;
-		git_sortedcache_runlock(backend->refcache);
 
 		ref_dup = git_pool_strdup(&iter->pool, ref_name);
 		if (!ref_dup)
@@ -593,15 +598,15 @@ static int refdb_fs_backend__iterator_next(
 	while (iter->loose_pos < iter->loose.length) {
 		const char *path = git_vector_get(&iter->loose, iter->loose_pos++);
 
-		if (loose_lookup(out, backend, path) == 0)
+		if (loose_lookup(out, backend, path) == 0) {
+			ref = git_sortedcache_lookup(iter->cache, path);
+			if (ref)
+				ref->flags |= PACKREF_SHADOWED;
+
 			return 0;
+		}
 
 		git_error_clear();
-	}
-
-	if (!iter->cache) {
-		if ((error = git_sortedcache_copy(&iter->cache, backend->refcache, 1, NULL, NULL)) < 0)
-			return error;
 	}
 
 	error = GIT_ITEROVER;
@@ -633,18 +638,18 @@ static int refdb_fs_backend__iterator_next_name(
 
 	while (iter->loose_pos < iter->loose.length) {
 		const char *path = git_vector_get(&iter->loose, iter->loose_pos++);
+		struct packref *ref;
 
 		if (loose_lookup(NULL, backend, path) == 0) {
+			ref = git_sortedcache_lookup(iter->cache, path);
+			if (ref)
+				ref->flags |= PACKREF_SHADOWED;
+
 			*out = path;
 			return 0;
 		}
 
 		git_error_clear();
-	}
-
-	if (!iter->cache) {
-		if ((error = git_sortedcache_copy(&iter->cache, backend->refcache, 1, NULL, NULL)) < 0)
-			return error;
 	}
 
 	error = GIT_ITEROVER;
@@ -669,40 +674,44 @@ static int refdb_fs_backend__iterator_next_name(
 static int refdb_fs_backend__iterator(
 	git_reference_iterator **out, git_refdb_backend *_backend, const char *glob)
 {
-	int error;
-	refdb_fs_iter *iter;
 	refdb_fs_backend *backend = (refdb_fs_backend *)_backend;
+	refdb_fs_iter *iter = NULL;
+	int error;
 
 	assert(backend);
-
-	if ((error = packed_reload(backend)) < 0)
-		return error;
 
 	iter = git__calloc(1, sizeof(refdb_fs_iter));
 	GIT_ERROR_CHECK_ALLOC(iter);
 
 	git_pool_init(&iter->pool, 1);
 
-	if (git_vector_init(&iter->loose, 8, NULL) < 0)
-		goto fail;
+	if ((error = git_vector_init(&iter->loose, 8, NULL)) < 0)
+		goto out;
 
 	if (glob != NULL &&
-		(iter->glob = git_pool_strdup(&iter->pool, glob)) == NULL)
-		goto fail;
+	    (iter->glob = git_pool_strdup(&iter->pool, glob)) == NULL) {
+		error = GIT_ERROR_NOMEMORY;
+		goto out;
+	}
+
+	if ((error = iter_load_loose_paths(backend, iter)) < 0)
+		goto out;
+
+	if ((error = packed_reload(backend)) < 0)
+		goto out;
+
+	if ((error = git_sortedcache_copy(&iter->cache, backend->refcache, 1, NULL, NULL)) < 0)
+		goto out;
 
 	iter->parent.next = refdb_fs_backend__iterator_next;
 	iter->parent.next_name = refdb_fs_backend__iterator_next_name;
 	iter->parent.free = refdb_fs_backend__iterator_free;
 
-	if (iter_load_loose_paths(backend, iter) < 0)
-		goto fail;
-
 	*out = (git_reference_iterator *)iter;
-	return 0;
-
-fail:
-	refdb_fs_backend__iterator_free((git_reference_iterator *)iter);
-	return -1;
+out:
+	if (error)
+		refdb_fs_backend__iterator_free((git_reference_iterator *)iter);
+	return error;
 }
 
 static bool ref_is_available(
