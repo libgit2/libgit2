@@ -131,6 +131,17 @@ GIT_EXTERN(int) git_odb_init_backend(
  */
 GIT_EXTERN(void *) git_odb_backend_data_alloc(git_odb_backend *backend, size_t len);
 
+/**
+ * Frees custom allocated ODB data.  This should only be called when
+ * memory allocated using git_odb_backend_data_alloc is not returned
+ * to libgit2 because the backend encountered an error in the read
+ * function after allocation and did not return this data to libgit2.
+ *
+ * @param backend the ODB backend that is freeing this memory
+ * @param data the buffer to free
+ */
+GIT_EXTERN(void) git_odb_backend_data_free(git_odb_backend *backend, void *data);
+
 
 /*
  * Users can avoid deprecated functions by defining `GIT_DEPRECATE_HARD`.
