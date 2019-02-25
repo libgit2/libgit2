@@ -48,10 +48,22 @@ IF (ENABLE_TRACE STREQUAL "ON")
 ENDIF()
 ADD_FEATURE_INFO(tracing GIT_TRACE "tracing support")
 
+# Use `regcomp_l` if available
 CHECK_SYMBOL_EXISTS(regcomp_l "regex.h;xlocale.h" HAVE_REGCOMP_L)
 IF (HAVE_REGCOMP_L)
 	SET(GIT_USE_REGCOMP_L 1)
 ENDIF ()
+
+# Otherwise, we either want to use system's `regcomp` or our
+# bundled regcomp code, if system doesn't provide `regcomp`.
+IF(NOT HAVE_REGCOMP_L)
+	CHECK_FUNCTION_EXISTS(regcomp HAVE_REGCOMP)
+	IF(NOT HAVE_REGCOMP)
+		ADD_SUBDIRECTORY("${libgit2_SOURCE_DIR}/deps/regex" "${libgit2_BINARY_DIR}/deps/regex")
+		LIST(APPEND LIBGIT2_SYSTEM_INCLUDES "${libgit2_SOURCE_DIR}/deps/regex")
+		LIST(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:regex>)
+	ENDIF()
+ENDIF()
 
 CHECK_FUNCTION_EXISTS(futimens HAVE_FUTIMENS)
 IF (HAVE_FUTIMENS)
@@ -292,13 +304,6 @@ ELSEIF (SHA1_BACKEND STREQUAL "mbedTLS")
 	LIST(APPEND LIBGIT2_PC_LIBS ${MBEDTLS_LIBRARIES})
 ELSE()
 	MESSAGE(FATAL_ERROR "Asked for unknown SHA1 backend ${SHA1_BACKEND}")
-ENDIF()
-
-# Include POSIX regex when it is required
-IF(WIN32 OR AMIGA OR CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
-	ADD_SUBDIRECTORY("${libgit2_SOURCE_DIR}/deps/regex" "${libgit2_BINARY_DIR}/deps/regex")
-	LIST(APPEND LIBGIT2_SYSTEM_INCLUDES "${libgit2_SOURCE_DIR}/deps/regex")
-	LIST(APPEND LIBGIT2_OBJECTS $<TARGET_OBJECTS:regex>)
 ENDIF()
 
 # Optional external dependency: http-parser
