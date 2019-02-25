@@ -415,11 +415,11 @@ GIT_EXTERN(int) git_remote_list(git_strarray *out, git_repository *repo);
  * Argument to the completion callback which tells it which operation
  * finished.
  */
-typedef enum git_remote_completion_type {
+typedef enum git_remote_completion_t {
 	GIT_REMOTE_COMPLETION_DOWNLOAD,
 	GIT_REMOTE_COMPLETION_INDEXING,
 	GIT_REMOTE_COMPLETION_ERROR,
-} git_remote_completion_type;
+} git_remote_completion_t;
 
 /** Push network progress notification function */
 typedef int GIT_CALLBACK(git_push_transfer_progress_cb)(
@@ -493,7 +493,7 @@ struct git_remote_callbacks {
 	 * Completion is called when different parts of the download
 	 * process are done (currently unused).
 	 */
-	int GIT_CALLBACK(completion)(git_remote_completion_type type, void *data);
+	int GIT_CALLBACK(completion)(git_remote_completion_t type, void *data);
 
 	/**
 	 * This will be called if the remote host requires

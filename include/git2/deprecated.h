@@ -281,6 +281,9 @@ typedef git_indexer_progress_cb git_transfer_progress_cb;
  */
 typedef git_push_transfer_progress_cb git_push_transfer_progress;
 
+ /** The type of a remote completion event */
+#define git_remote_completion_type git_remote_completion_t
+
 /**@}*/
 
 /** @} */
