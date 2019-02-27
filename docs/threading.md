@@ -2,7 +2,7 @@ Threading in libgit2
 ==================
 
 Unless otherwise specified, libgit2 objects cannot be safely accessed by
-multiple threads.
+multiple threads simultaneously.
 
 There are also caveats on the cryptographic libraries libgit2 or its
 dependencies link to (more on this later). For libgit2 itself,
