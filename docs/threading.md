@@ -58,10 +58,11 @@ general case still affects you if you use ssh.
 General Case
 ------------
 
-If there are no applicable TLS implementations (currently only
-SecureTransport and mbedTLS), libgit2 defaults to OpenSSL in order to use HTTPS as a transport.
-OpenSSL is thread-safe starting at version 1.1.0. If your copy of libgit2 is
-linked against that version, you do not need to take any further steps.
+libgit2 will default to OpenSSL for HTTPS transport (except on Windows and
+macOS, as mentioned above).  On any system, mbedTLS _may_ be optionally
+enabled as the security provider.  OpenSSL is thread-safe starting at
+version 1.1.0. If your copy of libgit2 is linked against that version,
+you do not need to take any further steps.
 
 Older versions of OpenSSL are made to be thread-implementation agnostic, and the
 users of the library must set which locking function it should use. libgit2
