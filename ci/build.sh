@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 #
 # Environment variables:
 #
@@ -7,7 +7,7 @@
 
 set -e
 
-SOURCE_DIR=${SOURCE_DIR:-$( cd "$( dirname "${BASH_SOURCE[0]}" )" && dirname $( pwd ) )}
+SOURCE_DIR=${SOURCE_DIR:-$( cd "$( dirname -- "${BASH_SOURCE[0]:-0}" )" && dirname $( pwd ) )}
 BUILD_DIR=$(pwd)
 CC=${CC:-cc}
 

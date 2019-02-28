@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 set -e
 
@@ -6,7 +6,7 @@ if [ -n "$SKIP_TESTS" ]; then
 	exit 0
 fi
 
-SOURCE_DIR=${SOURCE_DIR:-$( cd "$( dirname "${BASH_SOURCE[0]}" )" && dirname $( pwd ) )}
+SOURCE_DIR=${SOURCE_DIR:-$( cd "$( dirname -- "${BASH_SOURCE[0]:-0}" )" && dirname $( pwd ) )}
 BUILD_DIR=$(pwd)
 TMPDIR=${TMPDIR:-/tmp}
 USER=${USER:-$(whoami)}
