@@ -366,6 +366,10 @@ Here are the bindings to libgit2 that are currently available:
 If you start another language binding to libgit2, please let us know so
 we can add it to the list.
 
+Experimental Emscripten support for running in a web-browser
+============================================================
+See [EMSCRIPTEN_HACKS](emscripten_hacks/README.md)
+
 How Can I Contribute?
 ==================================
 

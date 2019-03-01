@@ -131,6 +131,16 @@ jobs:
         CMAKE_OPTIONS: -DDEPRECATE_HARD=ON
         SKIP_SSH_TESTS: true
 
+- job: emscripten
+  displayName: 'Emscripten (javascript)'
+  pool:
+    vmImage: 'Ubuntu 16.04'
+  steps:
+  - script: |
+      docker run --rm -v $(pwd):/src trzeci/emscripten bash emscripten_hacks/build.sh
+      cd emscripten_hacks
+      node nodetest.js
+      node nodefstest.js
 - job: documentation
   displayName: 'Generate Documentation'
   pool:

@@ -31,6 +31,8 @@ msvc/Release/
 .*.swp
 tags
 mkmf.log
+
+.vscode
 *.profdata
 *.profraw
 CMakeSettings.json

@@ -1,0 +1,15 @@
+{
+    "name": "libgit2.js",
+    "version": "0.0.5",
+    "description": "Webassembly port of libgit2 for nodejs and the browser",
+    "homepage": "https://github.com/libgit2/libgit2/pull/4400",
+    "repository": "https://github.com/fintechneo/libgit2",
+    "main": "libgit2_node.js",
+    "files": [
+        "libgit2_node.js",
+        "libgit2_node.wasm", 
+        "libgit2httpsrequest.js",
+        "libgit2.js",
+        "libgit2.wasm"
+    ]
+}

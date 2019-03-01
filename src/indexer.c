@@ -92,6 +92,12 @@ static int parse_header(struct git_pack_header *hdr, struct git_pack_file *pack)
 		return error;
 
 	memcpy(hdr, map.data, sizeof(*hdr));
+		
+	#ifdef __EMSCRIPTEN__
+	// Emscripten mmap is read only, so have to help a little and add a manual write here
+	pwrite( pack->mwf.fd,hdr,sizeof(*hdr),0);	
+	#endif
+
 	p_munmap(&map);
 
 	/* Verify we recognize this pack file format. */
@@ -619,6 +625,12 @@ static int write_at(git_indexer *idx, const void *data, git_off_t offset, size_t
 
 	map_data = (unsigned char *)map.data;
 	memcpy(map_data + page_offset, data, size);
+		
+	#ifdef __EMSCRIPTEN__
+	// Emscripten mmap is read only, so have to help a little and add a manual write here
+	pwrite(fd,data,size,page_start+page_offset);
+	#endif
+
 	p_munmap(&map);
 
 	return 0;

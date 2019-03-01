@@ -1,0 +1,27 @@
+<html>
+    <head>
+        
+    </head>
+    <body>
+        <style>
+            pre {
+                background-color: #ddd;
+                padding: 5px;
+            }
+        </style>
+        <p>libgit2 is started as a webworker. Open web console to test it (Right-click + inspect in Google Chrome).</p>
+
+        <p>In the console select git_worker.js to receive commands.</p>
+
+        <p>Start with typing the command: <pre>jsgitinit()</pre></p>
+
+        <p>Then try cloning using: <pre>jsgitclone("https://somehost/path-to-gitrepository.git","destinationfolder")</pre></p>
+
+        <p>Finally list the contents of the repository using <pre>FS.readdir("destinationfolder")</pre></p>
+        
+    </body>
+    <script>
+        const gitworker = new Worker("git_worker.js");
+
+    </script>
+</html>

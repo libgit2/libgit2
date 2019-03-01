@@ -7,7 +7,7 @@
 
 #include "common.h"
 
-#ifndef GIT_WINHTTP
+#if !defined(GIT_WINHTTP) && !defined(__EMSCRIPTEN__)
 
 #include "git2.h"
 #include "http_parser.h"
