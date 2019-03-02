@@ -1497,10 +1497,21 @@ int git_odb_write_pack(struct git_odb_writepack **out, git_odb *db, git_indexer_
 	return error;
 }
 
-void *git_odb_backend_malloc(git_odb_backend *backend, size_t len)
+void *git_odb_backend_data_alloc(git_odb_backend *backend, size_t len)
 {
 	GIT_UNUSED(backend);
 	return git__malloc(len);
+}
+
+void *git_odb_backend_malloc(git_odb_backend *backend, size_t len)
+{
+	return git_odb_backend_data_alloc(backend, len);
+}
+
+void git_odb_backend_data_free(git_odb_backend *backend, void *data)
+{
+	GIT_UNUSED(backend);
+	git__free(data);
 }
 
 int git_odb_refresh(struct git_odb *db)
