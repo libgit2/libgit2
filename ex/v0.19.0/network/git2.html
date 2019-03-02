@@ -126,7 +126,7 @@ repository and pass it to the function.</p>
     <span class="n">exit</span><span class="p">(</span><span class="n">EXIT_FAILURE</span><span class="p">);</span>
   <span class="p">}</span>
 
-  <span class="n">git_threads_init</span><span class="p">();</span>
+  <span class="n"><a name="git_threads_init-5" class="fnlink" href="../../#v0.19.0/group/threads/git_threads_init">git_threads_init</a></span><span class="p">();</span>
 
   <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">commands</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">name</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">commands</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">name</span><span class="p">))</span>
