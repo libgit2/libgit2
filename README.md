@@ -359,7 +359,7 @@ Here are the bindings to libgit2 that are currently available:
 * Ruby
     * Rugged <https://github.com/libgit2/rugged>
 * Rust
-    * git2-rs <https://github.com/alexcrichton/git2-rs>
+    * git2-rs <https://github.com/rust-lang/git2-rs>
 * Swift
     * SwiftGit2 <https://github.com/SwiftGit2/SwiftGit2>
 * Vala
