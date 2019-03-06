@@ -389,6 +389,25 @@ GIT_EXTERN(int) git_merge_analysis(
 	size_t their_heads_len);
 
 /**
+ * Analyzes the given branch(es) and determines the opportunities for
+ * merging them into a reference.
+ *
+ * @param analysis_out analysis enumeration that the result is written into
+ * @param repo the repository to merge
+ * @param our_ref the reference to perform the analysis from
+ * @param their_heads the heads to merge into
+ * @param their_heads_len the number of heads to merge
+ * @return 0 on success or error code
+ */
+GIT_EXTERN(int) git_merge_analysis_for_ref(
+	git_merge_analysis_t *analysis_out,
+	git_merge_preference_t *preference_out,
+	git_repository *repo,
+	git_reference *our_ref,
+	const git_annotated_commit **their_heads,
+	size_t their_heads_len);
+
+/**
  * Find a merge base between two commits
  *
  * @param out the OID of a merge base between 'one' and 'two'

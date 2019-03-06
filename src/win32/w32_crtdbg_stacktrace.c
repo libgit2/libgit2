@@ -71,99 +71,6 @@ static bool g_limit_reached = false; /* had allocs after we filled row table */
 static unsigned int g_checkpoint_id = 0; /* to better label leak checkpoints */
 static bool g_transient_leaks_since_mark = false; /* payload for hook */
 
-static void *crtdbg__malloc(size_t len, const char *file, int line)
-{
-	void *ptr = _malloc_dbg(len, _NORMAL_BLOCK, git_win32__crtdbg_stacktrace(1,file), line);
-	if (!ptr) giterr_set_oom();
-	return ptr;
-}
-
-static void *crtdbg__calloc(size_t nelem, size_t elsize, const char *file, int line)
-{
-	void *ptr = _calloc_dbg(nelem, elsize, _NORMAL_BLOCK, git_win32__crtdbg_stacktrace(1,file), line);
-	if (!ptr) giterr_set_oom();
-	return ptr;
-}
-
-static char *crtdbg__strdup(const char *str, const char *file, int line)
-{
-	char *ptr = _strdup_dbg(str, _NORMAL_BLOCK, git_win32__crtdbg_stacktrace(1,file), line);
-	if (!ptr) giterr_set_oom();
-	return ptr;
-}
-
-static char *crtdbg__strndup(const char *str, size_t n, const char *file, int line)
-{
-	size_t length = 0, alloclength;
-	char *ptr;
-
-	length = p_strnlen(str, n);
-
-	if (GIT_ADD_SIZET_OVERFLOW(&alloclength, length, 1) ||
-		!(ptr = crtdbg__malloc(alloclength, file, line)))
-		return NULL;
-
-	if (length)
-		memcpy(ptr, str, length);
-
-	ptr[length] = '\0';
-
-	return ptr;
-}
-
-static char *crtdbg__substrdup(const char *start, size_t n, const char *file, int line)
-{
-	char *ptr;
-	size_t alloclen;
-
-	if (GIT_ADD_SIZET_OVERFLOW(&alloclen, n, 1) ||
-		!(ptr = crtdbg__malloc(alloclen, file, line)))
-		return NULL;
-
-	memcpy(ptr, start, n);
-	ptr[n] = '\0';
-	return ptr;
-}
-
-static void *crtdbg__realloc(void *ptr, size_t size, const char *file, int line)
-{
-	void *new_ptr = _realloc_dbg(ptr, size, _NORMAL_BLOCK, git_win32__crtdbg_stacktrace(1,file), line);
-	if (!new_ptr) giterr_set_oom();
-	return new_ptr;
-}
-
-static void *crtdbg__reallocarray(void *ptr, size_t nelem, size_t elsize, const char *file, int line)
-{
-	size_t newsize;
-
-	return GIT_MULTIPLY_SIZET_OVERFLOW(&newsize, nelem, elsize) ?
-		NULL : _realloc_dbg(ptr, newsize, _NORMAL_BLOCK, git_win32__crtdbg_stacktrace(1,file), line);
-}
-
-static void *crtdbg__mallocarray(size_t nelem, size_t elsize, const char *file, int line)
-{
-	return crtdbg__reallocarray(NULL, nelem, elsize, file, line);
-}
-
-static void crtdbg__free(void *ptr)
-{
-	free(ptr);
-}
-
-int git_win32_crtdbg_init_allocator(git_allocator *allocator)
-{
-	allocator->gmalloc = crtdbg__malloc;
-	allocator->gcalloc = crtdbg__calloc;
-	allocator->gstrdup = crtdbg__strdup;
-	allocator->gstrndup = crtdbg__strndup;
-	allocator->gsubstrdup = crtdbg__substrdup;
-	allocator->grealloc = crtdbg__realloc;
-	allocator->greallocarray = crtdbg__reallocarray;
-	allocator->gmallocarray = crtdbg__mallocarray;
-	allocator->gfree = crtdbg__free;
-	return 0;
-}
-
 /**
  * Compare function for bsearch on g_cs_index table.
  */
@@ -347,11 +254,11 @@ int git_win32__crtdbg_stacktrace__dump(
 	bool b_quiet            = IS_BIT_SET(opt, GIT_WIN32__CRTDBG_STACKTRACE__QUIET);
 
 	if (b_leaks_since_mark && b_leaks_total) {
-		giterr_set(GITERR_INVALID, "cannot combine LEAKS_SINCE_MARK and LEAKS_TOTAL.");
+		git_error_set(GIT_ERROR_INVALID, "cannot combine LEAKS_SINCE_MARK and LEAKS_TOTAL.");
 		return GIT_ERROR;
 	}
 	if (!b_set_mark && !b_leaks_since_mark && !b_leaks_total) {
-		giterr_set(GITERR_INVALID, "nothing to do.");
+		git_error_set(GIT_ERROR_INVALID, "nothing to do.");
 		return GIT_ERROR;
 	}
 

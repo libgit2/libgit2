@@ -582,8 +582,8 @@ void test_diff_blob__checks_options_version_too_low(void)
 	cl_git_fail(git_diff_blobs(
 		d, NULL, alien, NULL, &opts,
 		diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &expected));
-	err = giterr_last();
-	cl_assert_equal_i(GITERR_INVALID, err->klass);
+	err = git_error_last();
+	cl_assert_equal_i(GIT_ERROR_INVALID, err->klass);
 }
 
 void test_diff_blob__checks_options_version_too_high(void)
@@ -594,8 +594,8 @@ void test_diff_blob__checks_options_version_too_high(void)
 	cl_git_fail(git_diff_blobs(
 		d, NULL, alien, NULL, &opts,
 		diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &expected));
-	err = giterr_last();
-	cl_assert_equal_i(GITERR_INVALID, err->klass);
+	err = git_error_last();
+	cl_assert_equal_i(GIT_ERROR_INVALID, err->klass);
 }
 
 void test_diff_blob__can_correctly_detect_a_binary_blob_as_binary(void)

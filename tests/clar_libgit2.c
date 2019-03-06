@@ -7,7 +7,7 @@ void cl_git_report_failure(
 	int error, int expected, const char *file, int line, const char *fncall)
 {
 	char msg[4096];
-	const git_error *last = giterr_last();
+	const git_error *last = git_error_last();
 
 	if (expected)
 		p_snprintf(msg, 4096, "error %d (expected %d) - %s",
@@ -470,7 +470,7 @@ int cl_repo_get_bool(git_repository *repo, const char *cfg)
 	git_config *config;
 	cl_git_pass(git_repository_config(&config, repo));
 	if (git_config_get_bool(&val, config, cfg) < 0)
-		giterr_clear();
+		git_error_clear();
 	git_config_free(config);
 	return val;
 }

@@ -135,7 +135,7 @@ int git_attr_get_many_with_session(
 		goto cleanup;
 
 	info = git__calloc(num_attr, sizeof(attr_get_many_info));
-	GITERR_CHECK_ALLOC(info);
+	GIT_ERROR_CHECK_ALLOC(info);
 
 	git_vector_foreach(&files, i, file) {
 
@@ -215,7 +215,7 @@ int git_attr_foreach(
 		return -1;
 
 	if ((error = collect_attr_files(repo, NULL, flags, pathname, &files)) < 0 ||
-		(error = git_strmap_alloc(&seen)) < 0)
+	    (error = git_strmap_new(&seen)) < 0)
 		goto cleanup;
 
 	git_vector_foreach(&files, i, file) {
@@ -227,13 +227,12 @@ int git_attr_foreach(
 				if (git_strmap_exists(seen, assign->name))
 					continue;
 
-				git_strmap_insert(seen, assign->name, assign, &error);
-				if (error < 0)
+				if ((error = git_strmap_set(seen, assign->name, assign)) < 0)
 					goto cleanup;
 
 				error = callback(assign->name, assign->value, payload);
 				if (error) {
-					giterr_set_after_callback(error);
+					git_error_set_after_callback(error);
 					goto cleanup;
 				}
 			}
@@ -277,7 +276,7 @@ static int system_attr_file(
 		error = git_sysdir_find_system_file(out, GIT_ATTR_FILE_SYSTEM);
 
 		if (error == GIT_ENOTFOUND)
-			giterr_clear();
+			git_error_clear();
 
 		return error;
 	}
@@ -286,7 +285,7 @@ static int system_attr_file(
 		error = git_sysdir_find_system_file(&attr_session->sysdir, GIT_ATTR_FILE_SYSTEM);
 
 		if (error == GIT_ENOTFOUND)
-			giterr_clear();
+			git_error_clear();
 		else if (error)
 			return error;
 
@@ -377,12 +376,12 @@ int git_attr_add_macro(
 		return error;
 
 	macro = git__calloc(1, sizeof(git_attr_rule));
-	GITERR_CHECK_ALLOC(macro);
+	GIT_ERROR_CHECK_ALLOC(macro);
 
 	pool = &git_repository_attr_cache(repo)->pool;
 
 	macro->match.pattern = git_pool_strdup(pool, name);
-	GITERR_CHECK_ALLOC(macro->match.pattern);
+	GIT_ERROR_CHECK_ALLOC(macro->match.pattern);
 
 	macro->match.length = strlen(macro->match.pattern);
 	macro->match.flags = GIT_ATTR_FNMATCH_MACRO;
@@ -532,7 +531,7 @@ static int collect_attr_files(
 	info.flags = flags;
 	info.workdir = workdir;
 	if (git_repository_index__weakptr(&info.index, repo) < 0)
-		giterr_clear(); /* no error even if there is no index */
+		git_error_clear(); /* no error even if there is no index */
 	info.files = files;
 
 	if (!strcmp(dir.ptr, "."))

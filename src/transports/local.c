@@ -83,7 +83,7 @@ static int add_ref(transport_local *t, const char *name)
 		if (!strcmp(name, GIT_HEAD_FILE) && error == GIT_ENOTFOUND) {
 			/* This is actually okay.  Empty repos often have a HEAD that
 			 * points to a nonexistent "refs/heads/master". */
-			giterr_clear();
+			git_error_clear();
 			return 0;
 		}
 		return error;
@@ -93,16 +93,16 @@ static int add_ref(transport_local *t, const char *name)
 	git_reference_free(resolved);
 
 	head = git__calloc(1, sizeof(git_remote_head));
-	GITERR_CHECK_ALLOC(head);
+	GIT_ERROR_CHECK_ALLOC(head);
 
 	head->name = git__strdup(name);
-	GITERR_CHECK_ALLOC(head->name);
+	GIT_ERROR_CHECK_ALLOC(head->name);
 
 	git_oid_cpy(&head->oid, &obj_id);
 
-	if (git_reference_type(ref) == GIT_REF_SYMBOLIC) {
+	if (git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC) {
 		head->symref_target = git__strdup(git_reference_symbolic_target(ref));
-		GITERR_CHECK_ALLOC(head->symref_target);
+		GIT_ERROR_CHECK_ALLOC(head->symref_target);
 	}
 	git_reference_free(ref);
 
@@ -115,14 +115,14 @@ static int add_ref(transport_local *t, const char *name)
 	if (git__prefixcmp(name, GIT_REFS_TAGS_DIR))
 		return 0;
 
-	if ((error = git_object_lookup(&obj, t->repo, &head->oid, GIT_OBJ_ANY)) < 0)
+	if ((error = git_object_lookup(&obj, t->repo, &head->oid, GIT_OBJECT_ANY)) < 0)
 		return error;
 
 	head = NULL;
 
 	/* If it's not an annotated tag, or if we're mocking
 	 * git-receive-pack, just get out */
-	if (git_object_type(obj) != GIT_OBJ_TAG ||
+	if (git_object_type(obj) != GIT_OBJECT_TAG ||
 		t->direction != GIT_DIRECTION_FETCH) {
 		git_object_free(obj);
 		return 0;
@@ -130,7 +130,7 @@ static int add_ref(transport_local *t, const char *name)
 
 	/* And if it's a tag, peel it, and add it to the list */
 	head = git__calloc(1, sizeof(git_remote_head));
-	GITERR_CHECK_ALLOC(head);
+	GIT_ERROR_CHECK_ALLOC(head);
 
 	if (git_buf_join(&buf, 0, name, peeled) < 0) {
 		free_head(head);
@@ -222,7 +222,7 @@ static int local_connect(
 	free_heads(&t->refs);
 
 	t->url = git__strdup(url);
-	GITERR_CHECK_ALLOC(t->url);
+	GIT_ERROR_CHECK_ALLOC(t->url);
 	t->direction = direction;
 	t->flags = flags;
 
@@ -255,7 +255,7 @@ static int local_ls(const git_remote_head ***out, size_t *size, git_transport *t
 	transport_local *t = (transport_local *)transport;
 
 	if (!t->have_refs) {
-		giterr_set(GITERR_NET, "the transport has not yet loaded the refs");
+		git_error_set(GIT_ERROR_NET, "the transport has not yet loaded the refs");
 		return -1;
 	}
 
@@ -288,7 +288,7 @@ static int local_negotiate_fetch(
 		else if (error != GIT_ENOTFOUND)
 			return error;
 		else
-			giterr_clear();
+			git_error_clear();
 		git_object_free(obj);
 	}
 
@@ -325,7 +325,7 @@ static int local_push_update_remote_ref(
 	return error;
 }
 
-static int transfer_to_push_transfer(const git_transfer_progress *stats, void *payload)
+static int transfer_to_push_transfer(const git_indexer_progress *stats, void *payload)
 {
 	const git_remote_callbacks *cbs = payload;
 
@@ -374,7 +374,7 @@ static int local_push(
 	   but we forbid all pushes just in case */
 	if (!remote_repo->is_bare) {
 		error = GIT_EBAREREPO;
-		giterr_set(GITERR_INVALID, "local push doesn't (yet) support pushing to non-bare repos.");
+		git_error_set(GIT_ERROR_INVALID, "local push doesn't (yet) support pushing to non-bare repos.");
 		goto on_error;
 	}
 
@@ -418,7 +418,7 @@ static int local_push(
 				status->msg = git__strdup("Remote branch not found to delete");
 				break;
 			default:
-				last = giterr_last();
+				last = git_error_last();
 
 				if (last && last->message)
 					status->msg = git__strdup(last->message);
@@ -460,8 +460,8 @@ on_error:
 }
 
 typedef struct foreach_data {
-	git_transfer_progress *stats;
-	git_transfer_progress_cb progress_cb;
+	git_indexer_progress *stats;
+	git_indexer_progress_cb progress_cb;
 	void *progress_payload;
 	git_odb_writepack *writepack;
 } foreach_data;
@@ -512,7 +512,7 @@ static int foreach_reference_cb(git_reference *reference, void *payload)
 	git_revwalk *walk = (git_revwalk *)payload;
 	int error;
 
-	if (git_reference_type(reference) != GIT_REF_OID) {
+	if (git_reference_type(reference) != GIT_REFERENCE_DIRECT) {
 		git_reference_free(reference);
 		return 0;
 	}
@@ -520,8 +520,8 @@ static int foreach_reference_cb(git_reference *reference, void *payload)
 	error = git_revwalk_hide(walk, git_reference_target(reference));
 	/* The reference is in the local repository, so the target may not
 	 * exist on the remote.  It also may not be a commit. */
-	if (error == GIT_ENOTFOUND || error == GITERR_INVALID) {
-		giterr_clear();
+	if (error == GIT_ENOTFOUND || error == GIT_ERROR_INVALID) {
+		git_error_clear();
 		error = 0;
 	}
 
@@ -533,8 +533,8 @@ static int foreach_reference_cb(git_reference *reference, void *payload)
 static int local_download_pack(
 		git_transport *transport,
 		git_repository *repo,
-		git_transfer_progress *stats,
-		git_transfer_progress_cb progress_cb,
+		git_indexer_progress *stats,
+		git_indexer_progress_cb progress_cb,
 		void *progress_payload)
 {
 	transport_local *t = (transport_local*)transport;
@@ -563,10 +563,10 @@ static int local_download_pack(
 
 	git_vector_foreach(&t->refs, i, rhead) {
 		git_object *obj;
-		if ((error = git_object_lookup(&obj, t->repo, &rhead->oid, GIT_OBJ_ANY)) < 0)
+		if ((error = git_object_lookup(&obj, t->repo, &rhead->oid, GIT_OBJECT_ANY)) < 0)
 			goto cleanup;
 
-		if (git_object_type(obj) == GIT_OBJ_COMMIT) {
+		if (git_object_type(obj) == GIT_OBJECT_COMMIT) {
 			/* Revwalker includes only wanted commits */
 			error = git_revwalk_push(walk, &rhead->oid);
 		} else {
@@ -718,7 +718,7 @@ int git_transport_local(git_transport **out, git_remote *owner, void *param)
 	GIT_UNUSED(param);
 
 	t = git__calloc(1, sizeof(transport_local));
-	GITERR_CHECK_ALLOC(t);
+	GIT_ERROR_CHECK_ALLOC(t);
 
 	t->parent.version = GIT_TRANSPORT_VERSION;
 	t->parent.set_callbacks = local_set_callbacks;

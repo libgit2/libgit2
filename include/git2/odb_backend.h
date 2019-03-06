@@ -92,12 +92,12 @@ struct git_odb_stream {
 	/**
 	 * Write at most `len` bytes into `buffer` and advance the stream.
 	 */
-	int (*read)(git_odb_stream *stream, char *buffer, size_t len);
+	int GIT_CALLBACK(read)(git_odb_stream *stream, char *buffer, size_t len);
 
 	/**
 	 * Write `len` bytes from `buffer` into the stream.
 	 */
-	int (*write)(git_odb_stream *stream, const char *buffer, size_t len);
+	int GIT_CALLBACK(write)(git_odb_stream *stream, const char *buffer, size_t len);
 
 	/**
 	 * Store the contents of the stream as an object with the id
@@ -109,7 +109,7 @@ struct git_odb_stream {
 	 * - the final number of received bytes differs from the size declared
 	 *   with `git_odb_open_wstream()`
 	 */
-	int (*finalize_write)(git_odb_stream *stream, const git_oid *oid);
+	int GIT_CALLBACK(finalize_write)(git_odb_stream *stream, const git_oid *oid);
 
 	/**
 	 * Free the stream's memory.
@@ -117,16 +117,16 @@ struct git_odb_stream {
 	 * This method might be called without a call to `finalize_write` if
 	 * an error occurs or if the object is already present in the ODB.
 	 */
-	void (*free)(git_odb_stream *stream);
+	void GIT_CALLBACK(free)(git_odb_stream *stream);
 };
 
 /** A stream to write a pack file to the ODB */
 struct git_odb_writepack {
 	git_odb_backend *backend;
 
-	int (*append)(git_odb_writepack *writepack, const void *data, size_t size, git_transfer_progress *stats);
-	int (*commit)(git_odb_writepack *writepack, git_transfer_progress *stats);
-	void (*free)(git_odb_writepack *writepack);
+	int GIT_CALLBACK(append)(git_odb_writepack *writepack, const void *data, size_t size, git_indexer_progress *stats);
+	int GIT_CALLBACK(commit)(git_odb_writepack *writepack, git_indexer_progress *stats);
+	void GIT_CALLBACK(free)(git_odb_writepack *writepack);
 };
 
 GIT_END_DECL

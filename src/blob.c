@@ -36,10 +36,10 @@ git_off_t git_blob_rawsize(const git_blob *blob)
 
 int git_blob__getbuf(git_buf *buffer, git_blob *blob)
 {
-	return git_buf_set(
-		buffer,
-		git_blob_rawcontent(blob),
-		git_blob_rawsize(blob));
+	git_off_t size = git_blob_rawsize(blob);
+
+	GIT_ERROR_CHECK_BLOBSIZE(size);
+	return git_buf_set(buffer, git_blob_rawcontent(blob), (size_t)size);
 }
 
 void git_blob__free(void *_blob)
@@ -80,7 +80,7 @@ int git_blob_create_frombuffer(
 	assert(id && repo);
 
 	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||
-		(error = git_odb_open_wstream(&stream, odb, len, GIT_OBJ_BLOB)) < 0)
+		(error = git_odb_open_wstream(&stream, odb, len, GIT_OBJECT_BLOB)) < 0)
 		return error;
 
 	if ((error = git_odb_stream_write(stream, buffer, len)) == 0)
@@ -100,7 +100,7 @@ static int write_file_stream(
 	git_off_t written = 0;
 
 	if ((error = git_odb_open_wstream(
-			&stream, odb, file_size, GIT_OBJ_BLOB)) < 0)
+			&stream, odb, file_size, GIT_OBJECT_BLOB)) < 0)
 		return error;
 
 	if ((fd = git_futils_open_ro(path)) < 0) {
@@ -116,7 +116,7 @@ static int write_file_stream(
 	p_close(fd);
 
 	if (written != file_size || read_len < 0) {
-		giterr_set(GITERR_OS, "failed to read file into stream");
+		git_error_set(GIT_ERROR_OS, "failed to read file into stream");
 		error = -1;
 	}
 
@@ -143,7 +143,7 @@ static int write_file_filtered(
 	if (!error) {
 		*size = tgt.size;
 
-		error = git_odb_write(id, odb, tgt.ptr, tgt.size, GIT_OBJ_BLOB);
+		error = git_odb_write(id, odb, tgt.ptr, tgt.size, GIT_OBJECT_BLOB);
 	}
 
 	git_buf_dispose(&tgt);
@@ -158,16 +158,16 @@ static int write_symlink(
 	int error;
 
 	link_data = git__malloc(link_size);
-	GITERR_CHECK_ALLOC(link_data);
+	GIT_ERROR_CHECK_ALLOC(link_data);
 
 	read_len = p_readlink(path, link_data, link_size);
 	if (read_len != (ssize_t)link_size) {
-		giterr_set(GITERR_OS, "failed to create blob: cannot read symlink '%s'", path);
+		git_error_set(GIT_ERROR_OS, "failed to create blob: cannot read symlink '%s'", path);
 		git__free(link_data);
 		return -1;
 	}
 
-	error = git_odb_write(id, odb, (void *)link_data, link_size, GIT_OBJ_BLOB);
+	error = git_odb_write(id, odb, (void *)link_data, link_size, GIT_OBJECT_BLOB);
 	git__free(link_data);
 	return error;
 }
@@ -206,7 +206,7 @@ int git_blob__create_from_paths(
 		goto done;
 
 	if (S_ISDIR(st.st_mode)) {
-		giterr_set(GITERR_ODB, "cannot create blob from '%s': it is a directory", content_path);
+		git_error_set(GIT_ERROR_ODB, "cannot create blob from '%s': it is a directory", content_path);
 		error = GIT_EDIRECTORY;
 		goto done;
 	}
@@ -334,11 +334,11 @@ int git_blob_create_fromstream(git_writestream **out, git_repository *repo, cons
 	assert(out && repo);
 
 	stream = git__calloc(1, sizeof(blob_writestream));
-	GITERR_CHECK_ALLOC(stream);
+	GIT_ERROR_CHECK_ALLOC(stream);
 
 	if (hintpath) {
 		stream->hintpath = git__strdup(hintpath);
-		GITERR_CHECK_ALLOC(stream->hintpath);
+		GIT_ERROR_CHECK_ALLOC(stream->hintpath);
 	}
 
 	stream->repo = repo;
@@ -389,12 +389,14 @@ cleanup:
 int git_blob_is_binary(const git_blob *blob)
 {
 	git_buf content = GIT_BUF_INIT;
+	git_off_t size;
 
 	assert(blob);
 
+	size = git_blob_rawsize(blob);
+
 	git_buf_attach_notowned(&content, git_blob_rawcontent(blob),
-		min(git_blob_rawsize(blob),
-		GIT_FILTER_BYTES_TO_CHECK_NUL));
+		(size_t)min(size, GIT_FILTER_BYTES_TO_CHECK_NUL));
 	return git_buf_text_is_binary(&content);
 }
 

@@ -109,7 +109,7 @@ GIT_INLINE(int) git_diff_file__resolve_zero_size(
 	int error;
 	git_odb *odb;
 	size_t len;
-	git_otype type;
+	git_object_t type;
 
 	if ((error = git_repository_odb(&odb, repo)) < 0)
 		return error;

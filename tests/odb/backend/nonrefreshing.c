@@ -58,7 +58,7 @@ void test_odb_backend_nonrefreshing__read_is_invoked_once_on_failure(void)
 	git_object *obj;
 
 	cl_git_fail_with(
-		git_object_lookup(&obj, _repo, &_nonexisting_oid, GIT_OBJ_ANY),
+		git_object_lookup(&obj, _repo, &_nonexisting_oid, GIT_OBJECT_ANY),
 		GIT_ENOTFOUND);
 
 	cl_assert_equal_i(1, _fake->read_calls);
@@ -69,7 +69,7 @@ void test_odb_backend_nonrefreshing__readprefix_is_invoked_once_on_failure(void)
 	git_object *obj;
 
 	cl_git_fail_with(
-		git_object_lookup_prefix(&obj, _repo, &_nonexisting_oid, 7, GIT_OBJ_ANY),
+		git_object_lookup_prefix(&obj, _repo, &_nonexisting_oid, 7, GIT_OBJECT_ANY),
 		GIT_ENOTFOUND);
 
 	cl_assert_equal_i(1, _fake->read_prefix_calls);
@@ -79,7 +79,7 @@ void test_odb_backend_nonrefreshing__readheader_is_invoked_once_on_failure(void)
 {
 	git_odb *odb;
 	size_t len;
-	git_otype type;
+	git_object_t type;
 
 	cl_git_pass(git_repository_odb__weakptr(&odb, _repo));
 
@@ -104,7 +104,7 @@ void test_odb_backend_nonrefreshing__read_is_invoked_once_on_success(void)
 {
 	git_object *obj;
 
-	cl_git_pass(git_object_lookup(&obj, _repo, &_existing_oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&obj, _repo, &_existing_oid, GIT_OBJECT_ANY));
 
 	cl_assert_equal_i(1, _fake->read_calls);
 
@@ -115,7 +115,7 @@ void test_odb_backend_nonrefreshing__readprefix_is_invoked_once_on_success(void)
 {
 	git_object *obj;
 
-	cl_git_pass(git_object_lookup_prefix(&obj, _repo, &_existing_oid, 7, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup_prefix(&obj, _repo, &_existing_oid, 7, GIT_OBJECT_ANY));
 
 	cl_assert_equal_i(1, _fake->read_prefix_calls);
 
@@ -126,7 +126,7 @@ void test_odb_backend_nonrefreshing__readheader_is_invoked_once_on_success(void)
 {
 	git_odb *odb;
 	size_t len;
-	git_otype type;
+	git_object_t type;
 
 	cl_git_pass(git_repository_odb__weakptr(&odb, _repo));
 

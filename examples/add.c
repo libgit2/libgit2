@@ -15,6 +15,18 @@
 #include "common.h"
 #include <assert.h>
 
+/**
+ * The following example demonstrates how to add files with libgit2.
+ *
+ * It will use the repository in the current working directory, and act
+ * on files passed as its parameters.
+ *
+ * Recognized options are:
+ *   -v/--verbose: show the file's status after acting on it.
+ *   -n/--dry-run: do not actually change the index.
+ *   -u/--update: update the index instead of adding to it.
+ */
+
 enum print_options {
 	SKIP = 1,
 	VERBOSE = 2,
@@ -31,46 +43,46 @@ static void parse_opts(int *options, int *count, int argc, char *argv[]);
 void init_array(git_strarray *array, int argc, char **argv);
 int print_matched_cb(const char *path, const char *matched_pathspec, void *payload);
 
-int main (int argc, char** argv)
+int lg2_add(git_repository *repo, int argc, char** argv)
 {
 	git_index_matched_path_cb matched_cb = NULL;
-	git_repository *repo = NULL;
 	git_index *index;
 	git_strarray array = {0};
 	int options = 0, count = 0;
 	struct print_payload payload = {0};
 
-	git_libgit2_init();
-
 	parse_opts(&options, &count, argc, argv);
-
 	init_array(&array, argc-count, argv+count);
 
-	check_lg2(git_repository_open(&repo, "."), "No git repository", NULL);
 	check_lg2(git_repository_index(&index, repo), "Could not open repository index", NULL);
 
-	if (options&VERBOSE || options&SKIP) {
+	/* Setup a callback if the requested options need it */
+	if ((options & VERBOSE) || (options & SKIP)) {
 		matched_cb = &print_matched_cb;
 	}
 
+	/* Perform the requested action with the index and files */
 	payload.options = options;
 	payload.repo = repo;
 
-	if (options&UPDATE) {
+	if (options & UPDATE) {
 		git_index_update_all(index, &array, matched_cb, &payload);
 	} else {
 		git_index_add_all(index, &array, 0, matched_cb, &payload);
 	}
 
+	/* Cleanup memory */
 	git_index_write(index);
 	git_index_free(index);
-	git_repository_free(repo);
-
-	git_libgit2_shutdown();
 
 	return 0;
 }
 
+/*
+ * This callback is called for each file under consideration by
+ * git_index_(update|add)_all above.
+ * It makes uses of the callback's ability to abort the action.
+ */
 int print_matched_cb(const char *path, const char *matched_pathspec, void *payload)
 {
 	struct print_payload p = *(struct print_payload*)(payload);
@@ -78,18 +90,19 @@ int print_matched_cb(const char *path, const char *matched_pathspec, void *paylo
 	unsigned status;
 	(void)matched_pathspec;
 
+	/* Get the file status */
 	if (git_status_file(&status, p.repo, path)) {
 		return -1;
 	}
 
-	if (status & GIT_STATUS_WT_MODIFIED || status & GIT_STATUS_WT_NEW) {
+	if ((status & GIT_STATUS_WT_MODIFIED) || (status & GIT_STATUS_WT_NEW)) {
 		printf("add '%s'\n", path);
 		ret = 0;
 	} else {
 		ret = 1;
 	}
 
-	if(p.options & SKIP) {
+	if ((p.options & SKIP)) {
 		ret = 1;
 	}
 
@@ -101,11 +114,11 @@ void init_array(git_strarray *array, int argc, char **argv)
 	unsigned int i;
 
 	array->count = argc;
-	array->strings = malloc(sizeof(char*) * array->count);
-	assert(array->strings!=NULL);
+	array->strings = calloc(array->count, sizeof(char *));
+	assert(array->strings != NULL);
 
-	for(i=0; i<array->count; i++) {
-		array->strings[i]=argv[i];
+	for (i = 0; i < array->count; i++) {
+		array->strings[i] = argv[i];
 	}
 
 	return;
@@ -125,33 +138,27 @@ static void parse_opts(int *options, int *count, int argc, char *argv[])
 	int i;
 
 	for (i = 1; i < argc; ++i) {
-		if (argv[i][0] != '-') {
+		if (argv[i][0] != '-')
 			break;
-		}
-		else if(!strcmp(argv[i], "--verbose") || !strcmp(argv[i], "-v")) {
+		else if (!strcmp(argv[i], "--verbose") || !strcmp(argv[i], "-v"))
 			*options |= VERBOSE;
-		}
-		else if(!strcmp(argv[i], "--dry-run") || !strcmp(argv[i], "-n")) {
+		else if (!strcmp(argv[i], "--dry-run") || !strcmp(argv[i], "-n"))
 			*options |= SKIP;
-		}
-		else if(!strcmp(argv[i], "--update") || !strcmp(argv[i], "-u")) {
+		else if (!strcmp(argv[i], "--update") || !strcmp(argv[i], "-u"))
 			*options |= UPDATE;
-		}
-		else if(!strcmp(argv[i], "-h")) {
+		else if (!strcmp(argv[i], "-h")) {
 			print_usage();
 			break;
-		}
-		else if(!strcmp(argv[i], "--")) {
+		} else if (!strcmp(argv[i], "--")) {
 			i++;
 			break;
-		}
-		else {
+		} else {
 			fprintf(stderr, "Unsupported option %s.\n", argv[i]);
 			print_usage();
 		}
 	}
 
-	if (argc<=i)
+	if (argc <= i)
 		print_usage();
 
 	*count = i;

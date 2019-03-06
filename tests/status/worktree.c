@@ -154,7 +154,7 @@ void test_status_worktree__swap_subdir_and_file(void)
 	bool ignore_case;
 
 	cl_git_pass(git_repository_index(&index, repo));
-	ignore_case = (git_index_caps(index) & GIT_INDEXCAP_IGNORE_CASE) != 0;
+	ignore_case = (git_index_caps(index) & GIT_INDEX_CAPABILITY_IGNORE_CASE) != 0;
 	git_index_free(index);
 
 	/* first alter the contents of the worktree */
@@ -889,7 +889,7 @@ void test_status_worktree__sorting_by_case(void)
 
 	cl_git_pass(git_repository_index(&index, repo));
 	native_ignore_case =
-		(git_index_caps(index) & GIT_INDEXCAP_IGNORE_CASE) != 0;
+		(git_index_caps(index) & GIT_INDEX_CAPABILITY_IGNORE_CASE) != 0;
 	git_index_free(index);
 
 	memset(&counts, 0, sizeof(counts));
@@ -1163,7 +1163,7 @@ void test_status_worktree__update_index_with_symlink_doesnt_change_mode(void)
 	opts.flags = GIT_STATUS_OPT_DEFAULTS | GIT_STATUS_OPT_UPDATE_INDEX;
 
 	cl_git_pass(git_repository_head(&head, repo));
-	cl_git_pass(git_reference_peel(&head_object, head, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reference_peel(&head_object, head, GIT_OBJECT_COMMIT));
 
 	cl_git_pass(git_reset(repo, head_object, GIT_RESET_HARD, NULL));
 
@@ -1222,7 +1222,7 @@ void test_status_worktree__with_directory_in_pathlist(void)
 
 	cl_git_pass(git_repository_index(&index, repo));
 	native_ignore_case =
-			(git_index_caps(index) & GIT_INDEXCAP_IGNORE_CASE) != 0;
+			(git_index_caps(index) & GIT_INDEX_CAPABILITY_IGNORE_CASE) != 0;
 	git_index_free(index);
 
 	opts.pathspec.strings = &subdir_path;

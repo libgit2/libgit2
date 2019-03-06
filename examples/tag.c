@@ -135,10 +135,10 @@ static int each_tag(const char *name, tag_state *state)
 			"Failed to lookup rev", name);
 
 	switch (git_object_type(obj)) {
-		case GIT_OBJ_TAG:
+		case GIT_OBJECT_TAG:
 			print_tag((git_tag *) obj, state);
 			break;
-		case GIT_OBJ_COMMIT:
+		case GIT_OBJECT_COMMIT:
 			print_commit((git_commit *) obj, name, state);
 			break;
 		default:
@@ -293,17 +293,11 @@ static void tag_options_init(tag_options *opts)
 	opts->force     = 0;
 }
 
-int main(int argc, char **argv)
+int lg2_tag(git_repository *repo, int argc, char **argv)
 {
-	git_repository *repo;
 	tag_options opts;
 	tag_action action;
 	tag_state state;
-
-	git_libgit2_init();
-
-	check_lg2(git_repository_open_ext(&repo, ".", 0, NULL),
-			"Could not open repository", NULL);
 
 	tag_options_init(&opts);
 	parse_options(&action, &opts, argc, argv);
@@ -311,9 +305,6 @@ int main(int argc, char **argv)
 	state.repo = repo;
 	state.opts = &opts;
 	action(&state);
-
-	git_repository_free(repo);
-	git_libgit2_shutdown();
 
 	return 0;
 }

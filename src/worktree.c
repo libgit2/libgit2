@@ -194,7 +194,7 @@ int git_worktree_open_from_repository(git_worktree **out, git_repository *repo)
 	int error = 0;
 
 	if (!git_repository_is_worktree(repo)) {
-		giterr_set(GITERR_WORKTREE, "cannot open worktree of a non-worktree repo");
+		git_error_set(GIT_ERROR_WORKTREE, "cannot open worktree of a non-worktree repo");
 		error = -1;
 		goto out;
 	}
@@ -237,21 +237,21 @@ int git_worktree_validate(const git_worktree *wt)
 	assert(wt);
 
 	if (!is_worktree_dir(wt->gitdir_path)) {
-		giterr_set(GITERR_WORKTREE,
+		git_error_set(GIT_ERROR_WORKTREE,
 			"Worktree gitdir ('%s') is not valid",
 			wt->gitlink_path);
 		return GIT_ERROR;
 	}
 
 	if (wt->parent_path && !git_path_exists(wt->parent_path)) {
-		giterr_set(GITERR_WORKTREE,
+		git_error_set(GIT_ERROR_WORKTREE,
 			"Worktree parent directory ('%s') does not exist ",
 			wt->parent_path);
 		return GIT_ERROR;
 	}
 
 	if (!git_path_exists(wt->commondir_path)) {
-		giterr_set(GITERR_WORKTREE,
+		git_error_set(GIT_ERROR_WORKTREE,
 			"Worktree common directory ('%s') does not exist ",
 			wt->commondir_path);
 		return GIT_ERROR;
@@ -280,7 +280,7 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 	git_worktree_add_options wtopts = GIT_WORKTREE_ADD_OPTIONS_INIT;
 	int err;
 
-	GITERR_CHECK_VERSION(
+	GIT_ERROR_CHECK_VERSION(
 		opts, GIT_WORKTREE_ADD_OPTIONS_VERSION, "git_worktree_add_options");
 
 	if (opts)
@@ -289,6 +289,20 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 	assert(out && repo && name && worktree);
 
 	*out = NULL;
+
+	if (wtopts.ref) {
+		if (!git_reference_is_branch(wtopts.ref)) {
+			git_error_set(GIT_ERROR_WORKTREE, "reference is not a branch");
+			err = -1;
+			goto out;
+		}
+
+		if (git_branch_is_checked_out(wtopts.ref)) {
+			git_error_set(GIT_ERROR_WORKTREE, "reference is already checked out");
+			err = -1;
+			goto out;
+		}
+	}
 
 	/* Create gitdir directory ".git/worktrees/<name>" */
 	if ((err = git_buf_joinpath(&gitdir, repo->commondir, "worktrees")) < 0)
@@ -342,18 +356,6 @@ int git_worktree_add(git_worktree **out, git_repository *repo,
 
 	/* Set up worktree reference */
 	if (wtopts.ref) {
-		if (!git_reference_is_branch(wtopts.ref)) {
-			giterr_set(GITERR_WORKTREE, "reference is not a branch");
-			err = -1;
-			goto out;
-		}
-
-		if (git_branch_is_checked_out(wtopts.ref)) {
-			giterr_set(GITERR_WORKTREE, "reference is already checked out");
-			err = -1;
-			goto out;
-		}
-
 		if ((err = git_reference_dup(&ref, wtopts.ref)) < 0)
 			goto out;
 	} else {
@@ -491,7 +493,7 @@ int git_worktree_is_prunable(git_worktree *wt,
 	git_buf reason = GIT_BUF_INIT;
 	git_worktree_prune_options popts = GIT_WORKTREE_PRUNE_OPTIONS_INIT;
 
-	GITERR_CHECK_VERSION(
+	GIT_ERROR_CHECK_VERSION(
 		opts, GIT_WORKTREE_PRUNE_OPTIONS_VERSION,
 		"git_worktree_prune_options");
 
@@ -503,7 +505,7 @@ int git_worktree_is_prunable(git_worktree *wt,
 	{
 		if (!reason.size)
 			git_buf_attach_notowned(&reason, "no reason given", 15);
-		giterr_set(GITERR_WORKTREE, "Not pruning locked working tree: '%s'", reason.ptr);
+		git_error_set(GIT_ERROR_WORKTREE, "Not pruning locked working tree: '%s'", reason.ptr);
 		git_buf_dispose(&reason);
 
 		return 0;
@@ -512,7 +514,7 @@ int git_worktree_is_prunable(git_worktree *wt,
 	if ((popts.flags & GIT_WORKTREE_PRUNE_VALID) == 0 &&
 		git_worktree_validate(wt) == 0)
 	{
-		giterr_set(GITERR_WORKTREE, "Not pruning valid working tree");
+		git_error_set(GIT_ERROR_WORKTREE, "Not pruning valid working tree");
 		return 0;
 	}
 
@@ -527,7 +529,7 @@ int git_worktree_prune(git_worktree *wt,
 	char *wtpath;
 	int err;
 
-	GITERR_CHECK_VERSION(
+	GIT_ERROR_CHECK_VERSION(
 		opts, GIT_WORKTREE_PRUNE_OPTIONS_VERSION,
 		"git_worktree_prune_options");
 
@@ -544,7 +546,7 @@ int git_worktree_prune(git_worktree *wt,
 		goto out;
 	if (!git_path_exists(path.ptr))
 	{
-		giterr_set(GITERR_WORKTREE, "Worktree gitdir '%s' does not exist", path.ptr);
+		git_error_set(GIT_ERROR_WORKTREE, "Worktree gitdir '%s' does not exist", path.ptr);
 		err = -1;
 		goto out;
 	}
@@ -564,7 +566,7 @@ int git_worktree_prune(git_worktree *wt,
 	git_buf_attach(&path, wtpath, 0);
 	if (!git_path_exists(path.ptr))
 	{
-		giterr_set(GITERR_WORKTREE, "Working tree '%s' does not exist", path.ptr);
+		git_error_set(GIT_ERROR_WORKTREE, "Working tree '%s' does not exist", path.ptr);
 		err = -1;
 		goto out;
 	}

@@ -36,7 +36,7 @@ GIT_INLINE(int) resize_vector(git_vector *v, size_t new_size)
 		return 0;
 
 	new_contents = git__reallocarray(v->contents, new_size, sizeof(void *));
-	GITERR_CHECK_ALLOC(new_contents);
+	GIT_ERROR_CHECK_ALLOC(new_contents);
 
 	v->_alloc_size = new_size;
 	v->contents = new_contents;
@@ -65,9 +65,9 @@ int git_vector_dup(git_vector *v, const git_vector *src, git_vector_cmp cmp)
 
 	if (src->length) {
 		size_t bytes;
-		GITERR_CHECK_ALLOC_MULTIPLY(&bytes, src->length, sizeof(void *));
+		GIT_ERROR_CHECK_ALLOC_MULTIPLY(&bytes, src->length, sizeof(void *));
 		v->contents = git__malloc(bytes);
-		GITERR_CHECK_ALLOC(v->contents);
+		GIT_ERROR_CHECK_ALLOC(v->contents);
 		v->_alloc_size = src->length;
 		memcpy(v->contents, src->contents, bytes);
 	}
@@ -342,7 +342,7 @@ int git_vector_insert_null(git_vector *v, size_t idx, size_t insert_len)
 
 	assert(insert_len > 0 && idx <= v->length);
 
-	GITERR_CHECK_ALLOC_ADD(&new_length, v->length, insert_len);
+	GIT_ERROR_CHECK_ALLOC_ADD(&new_length, v->length, insert_len);
 
 	if (new_length > v->_alloc_size && resize_vector(v, new_length) < 0)
 		return -1;

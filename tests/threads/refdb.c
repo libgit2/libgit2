@@ -58,7 +58,7 @@ static void *iterate_refs(void *arg)
 	git_reference_iterator_free(i);
 
 	git_repository_free(repo);
-	giterr_clear();
+	git_error_clear();
 	return arg;
 }
 
@@ -101,7 +101,7 @@ static void *create_refs(void *arg)
 
 	git_repository_free(repo);
 
-	giterr_clear();
+	git_error_clear();
 	return arg;
 }
 
@@ -143,7 +143,7 @@ static void *delete_refs(void *arg)
 	}
 
 	git_repository_free(repo);
-	giterr_clear();
+	git_error_clear();
 	return arg;
 }
 

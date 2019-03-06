@@ -198,12 +198,12 @@ static void assert_mergebase_many(const char *expected_sha, int count, ...)
 	memset(oids, 0x0, count * sizeof(git_oid));
 
 	va_start(ap, count);
-	
+
 	for (i = 0; i < count; ++i) {
 		partial_oid = va_arg(ap, char *);
 		cl_git_pass(git_oid_fromstrn(&oid, partial_oid, strlen(partial_oid)));
 
-		cl_git_pass(git_object_lookup_prefix(&object, _repo, &oid, strlen(partial_oid), GIT_OBJ_COMMIT));
+		cl_git_pass(git_object_lookup_prefix(&object, _repo, &oid, strlen(partial_oid), GIT_OBJECT_COMMIT));
 		git_oid_cpy(&oids[i], git_object_id(object));
 		git_object_free(object);
 	}
@@ -267,7 +267,7 @@ static void assert_mergebase_octopus(const char *expected_sha, int count, ...)
 		partial_oid = va_arg(ap, char *);
 		cl_git_pass(git_oid_fromstrn(&oid, partial_oid, strlen(partial_oid)));
 
-		cl_git_pass(git_object_lookup_prefix(&object, _repo, &oid, strlen(partial_oid), GIT_OBJ_COMMIT));
+		cl_git_pass(git_object_lookup_prefix(&object, _repo, &oid, strlen(partial_oid), GIT_OBJECT_COMMIT));
 		git_oid_cpy(&oids[i], git_object_id(object));
 		git_object_free(object);
 	}

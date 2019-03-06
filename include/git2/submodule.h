@@ -115,7 +115,7 @@ typedef enum {
  * @param payload value you passed to the foreach function as payload
  * @return 0 on success or error code
  */
-typedef int (*git_submodule_cb)(
+typedef int GIT_CALLBACK(git_submodule_cb)(
 	git_submodule *sm, const char *name, void *payload);
 
 /**
@@ -133,7 +133,7 @@ typedef struct git_submodule_update_options {
 	 * checkout, set the `checkout_strategy` to
 	 * `GIT_CHECKOUT_NONE`. Generally you will want the use
 	 * GIT_CHECKOUT_SAFE to update files in the working
-	 * directory. 
+	 * directory.
 	 */
 	git_checkout_options checkout_opts;
 
@@ -187,7 +187,7 @@ GIT_EXTERN(int) git_submodule_update_init_options(
  *        function works as though GIT_SUBMODULE_UPDATE_OPTIONS_INIT was passed.
  * @return 0 on success, any non-zero return value from a callback
  *         function, or a negative value to indicate an error (use
- *         `giterr_last` for a detailed error message).
+ *         `git_error_last` for a detailed error message).
  */
 GIT_EXTERN(int) git_submodule_update(git_submodule *submodule, int init, git_submodule_update_options *options);
 

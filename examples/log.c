@@ -71,7 +71,7 @@ static int match_with_parent(git_commit *commit, int i, git_diff_options *);
 static int signature_matches(const git_signature *sig, const char *filter);
 static int log_message_matches(const git_commit *commit, const char *filter);
 
-int main(int argc, char *argv[])
+int lg2_log(git_repository *repo, int argc, char *argv[])
 {
 	int i, count = 0, printed = 0, parents, last_arg;
 	struct log_state s;
@@ -81,11 +81,9 @@ int main(int argc, char *argv[])
 	git_commit *commit = NULL;
 	git_pathspec *ps = NULL;
 
-	git_libgit2_init();
-
 	/** Parse arguments and set up revwalker. */
-
 	last_arg = parse_options(&s, &opt, argc, argv);
+	s.repo = repo;
 
 	diffopts.pathspec.strings = &argv[last_arg];
 	diffopts.pathspec.count	  = argc - last_arg;
@@ -180,8 +178,6 @@ int main(int argc, char *argv[])
 
 	git_pathspec_free(ps);
 	git_revwalk_free(s.walker);
-	git_repository_free(s.repo);
-	git_libgit2_shutdown();
 
 	return 0;
 }
@@ -243,13 +239,6 @@ static int add_revision(struct log_state *s, const char *revstr)
 	git_revspec revs;
 	int hide = 0;
 
-	/** Open repo on demand if it isn't already open. */
-	if (!s->repo) {
-		if (!s->repodir) s->repodir = ".";
-		check_lg2(git_repository_open_ext(&s->repo, s->repodir, 0, NULL),
-			"Could not open repository", s->repodir);
-	}
-
 	if (!revstr) {
 		push_rev(s, NULL, hide);
 		return 0;
@@ -275,7 +264,7 @@ static int add_revision(struct log_state *s, const char *revstr)
 				git_object_id(revs.from), git_object_id(revs.to)),
 				"Could not find merge base", revstr);
 			check_lg2(
-				git_object_lookup(&revs.to, s->repo, &base, GIT_OBJ_COMMIT),
+				git_object_lookup(&revs.to, s->repo, &base, GIT_OBJECT_COMMIT),
 				"Could not find merge base commit", NULL);
 
 			push_rev(s, revs.to, hide);

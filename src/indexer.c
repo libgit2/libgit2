@@ -19,6 +19,7 @@
 #include "pack.h"
 #include "filebuf.h"
 #include "oid.h"
+#include "oidarray.h"
 #include "oidmap.h"
 #include "zstream.h"
 #include "object.h"
@@ -48,7 +49,7 @@ struct git_indexer {
 	unsigned int mode;
 	git_off_t off;
 	git_off_t entry_start;
-	git_otype entry_type;
+	git_object_t entry_type;
 	git_buf entry_data;
 	git_packfile_stream stream;
 	size_t nr_objects;
@@ -57,7 +58,7 @@ struct git_indexer {
 	unsigned int fanout[256];
 	git_hash_ctx hash_ctx;
 	git_oid hash;
-	git_transfer_progress_cb progress_cb;
+	git_indexer_progress_cb progress_cb;
 	void *progress_payload;
 	char objbuf[8*1024];
 
@@ -95,12 +96,12 @@ static int parse_header(struct git_pack_header *hdr, struct git_pack_file *pack)
 
 	/* Verify we recognize this pack file format. */
 	if (hdr->hdr_signature != ntohl(PACK_SIGNATURE)) {
-		giterr_set(GITERR_INDEXER, "wrong pack signature");
+		git_error_set(GIT_ERROR_INDEXER, "wrong pack signature");
 		return -1;
 	}
 
 	if (!pack_version_ok(hdr->hdr_version)) {
-		giterr_set(GITERR_INDEXER, "wrong pack version");
+		git_error_set(GIT_ERROR_INDEXER, "wrong pack version");
 		return -1;
 	}
 
@@ -139,7 +140,7 @@ int git_indexer_new(
 		memcpy(&opts, in_opts, sizeof(opts));
 
 	idx = git__calloc(1, sizeof(git_indexer));
-	GITERR_CHECK_ALLOC(idx);
+	GIT_ERROR_CHECK_ALLOC(idx);
 	idx->odb = odb;
 	idx->progress_cb = opts.progress_cb;
 	idx->progress_payload = opts.progress_cb_payload;
@@ -147,8 +148,9 @@ int git_indexer_new(
 	git_hash_ctx_init(&idx->hash_ctx);
 	git_hash_ctx_init(&idx->trailer);
 	git_buf_init(&idx->entry_data, 0);
-	idx->expected_oids = git_oidmap_alloc();
-	GITERR_CHECK_ALLOC(idx->expected_oids);
+
+	if ((error = git_oidmap_new(&idx->expected_oids)) < 0)
+		goto cleanup;
 
 	idx->do_verify = opts.verify;
 
@@ -204,7 +206,7 @@ static int store_delta(git_indexer *idx)
 	struct delta_info *delta;
 
 	delta = git__calloc(1, sizeof(struct delta_info));
-	GITERR_CHECK_ALLOC(delta);
+	GIT_ERROR_CHECK_ALLOC(delta);
 	delta->delta_off = idx->entry_start;
 
 	if (git_vector_insert(&idx->deltas, delta) < 0)
@@ -213,7 +215,7 @@ static int store_delta(git_indexer *idx)
 	return 0;
 }
 
-static int hash_header(git_hash_ctx *ctx, git_off_t len, git_otype type)
+static int hash_header(git_hash_ctx *ctx, git_off_t len, git_object_t type)
 {
 	char buffer[64];
 	size_t hdrlen;
@@ -249,13 +251,13 @@ static int hash_object_stream(git_indexer*idx, git_packfile_stream *stream)
 }
 
 /* In order to create the packfile stream, we need to skip over the delta base description */
-static int advance_delta_offset(git_indexer *idx, git_otype type)
+static int advance_delta_offset(git_indexer *idx, git_object_t type)
 {
 	git_mwindow *w = NULL;
 
-	assert(type == GIT_OBJ_REF_DELTA || type == GIT_OBJ_OFS_DELTA);
+	assert(type == GIT_OBJECT_REF_DELTA || type == GIT_OBJECT_OFS_DELTA);
 
-	if (type == GIT_OBJ_REF_DELTA) {
+	if (type == GIT_OBJECT_REF_DELTA) {
 		idx->off += GIT_OID_RAWSZ;
 	} else {
 		git_off_t base_off = get_delta_base(idx->pack, &w, &idx->off, type, idx->entry_start);
@@ -308,10 +310,8 @@ static int crc_object(uint32_t *crc_out, git_mwindow_file *mwf, git_off_t start,
 	return 0;
 }
 
-static void add_expected_oid(git_indexer *idx, const git_oid *oid)
+static int add_expected_oid(git_indexer *idx, const git_oid *oid)
 {
-	int ret;
-
 	/*
 	 * If we know about that object because it is stored in our ODB or
 	 * because we have already processed it as part of our pack file, we do
@@ -322,30 +322,30 @@ static void add_expected_oid(git_indexer *idx, const git_oid *oid)
 	    !git_oidmap_exists(idx->expected_oids, oid)) {
 		    git_oid *dup = git__malloc(sizeof(*oid));
 		    git_oid_cpy(dup, oid);
-		    git_oidmap_put(idx->expected_oids, dup, &ret);
+		    return git_oidmap_set(idx->expected_oids, dup, dup);
 	}
+
+	return 0;
 }
 
 static int check_object_connectivity(git_indexer *idx, const git_rawobj *obj)
 {
 	git_object *object;
-	size_t keyidx;
+	git_oid *expected;
 	int error;
 
-	if (obj->type != GIT_OBJ_BLOB &&
-	    obj->type != GIT_OBJ_TREE &&
-	    obj->type != GIT_OBJ_COMMIT &&
-	    obj->type != GIT_OBJ_TAG)
+	if (obj->type != GIT_OBJECT_BLOB &&
+	    obj->type != GIT_OBJECT_TREE &&
+	    obj->type != GIT_OBJECT_COMMIT &&
+	    obj->type != GIT_OBJECT_TAG)
 		return 0;
 
 	if ((error = git_object__from_raw(&object, obj->data, obj->len, obj->type)) < 0)
 		goto out;
 
-	keyidx = git_oidmap_lookup_index(idx->expected_oids, &object->cached.oid);
-	if (git_oidmap_valid_index(idx->expected_oids, keyidx)) {
-		const git_oid *key = git_oidmap_key(idx->expected_oids, keyidx);
-		git__free((git_oid *) key);
-		git_oidmap_delete_at(idx->expected_oids, keyidx);
+	if ((expected = git_oidmap_get(idx->expected_oids, &object->cached.oid)) != NULL) {
+		git_oidmap_delete(idx->expected_oids, &object->cached.oid);
+		git__free(expected);
 	}
 
 	/*
@@ -356,39 +356,43 @@ static int check_object_connectivity(git_indexer *idx, const git_rawobj *obj)
 		return 0;
 
 	switch (obj->type) {
-		case GIT_OBJ_TREE:
+		case GIT_OBJECT_TREE:
 		{
 			git_tree *tree = (git_tree *) object;
 			git_tree_entry *entry;
 			size_t i;
 
 			git_array_foreach(tree->entries, i, entry)
-				add_expected_oid(idx, entry->oid);
+				if (add_expected_oid(idx, entry->oid) < 0)
+					goto out;
 
 			break;
 		}
-		case GIT_OBJ_COMMIT:
+		case GIT_OBJECT_COMMIT:
 		{
 			git_commit *commit = (git_commit *) object;
 			git_oid *parent_oid;
 			size_t i;
 
 			git_array_foreach(commit->parent_ids, i, parent_oid)
-				add_expected_oid(idx, parent_oid);
+				if (add_expected_oid(idx, parent_oid) < 0)
+					goto out;
 
-			add_expected_oid(idx, &commit->tree_id);
+			if (add_expected_oid(idx, &commit->tree_id) < 0)
+				goto out;
 
 			break;
 		}
-		case GIT_OBJ_TAG:
+		case GIT_OBJECT_TAG:
 		{
 			git_tag *tag = (git_tag *) object;
 
-			add_expected_oid(idx, &tag->target);
+			if (add_expected_oid(idx, &tag->target) < 0)
+				goto out;
 
 			break;
 		}
-		case GIT_OBJ_BLOB:
+		case GIT_OBJECT_BLOB:
 		default:
 			break;
 	}
@@ -402,7 +406,6 @@ out:
 static int store_object(git_indexer *idx)
 {
 	int i, error;
-	khiter_t k;
 	git_oid oid;
 	struct entry *entry;
 	git_off_t entry_size;
@@ -410,10 +413,10 @@ static int store_object(git_indexer *idx)
 	git_off_t entry_start = idx->entry_start;
 
 	entry = git__calloc(1, sizeof(*entry));
-	GITERR_CHECK_ALLOC(entry);
+	GIT_ERROR_CHECK_ALLOC(entry);
 
 	pentry = git__calloc(1, sizeof(struct git_pack_entry));
-	GITERR_CHECK_ALLOC(pentry);
+	GIT_ERROR_CHECK_ALLOC(pentry);
 
 	git_hash_final(&oid, &idx->hash_ctx);
 	entry_size = idx->off - entry_start;
@@ -438,21 +441,17 @@ static int store_object(git_indexer *idx)
 	git_oid_cpy(&pentry->sha1, &oid);
 	pentry->offset = entry_start;
 
-	k = git_oidmap_put(idx->pack->idx_cache, &pentry->sha1, &error);
-	if (error == -1) {
-		git__free(pentry);
-		giterr_set_oom();
-		goto on_error;
-	}
-
-	if (error == 0) {
-		giterr_set(GITERR_INDEXER, "duplicate object %s found in pack", git_oid_tostr_s(&pentry->sha1));
+	if (git_oidmap_exists(idx->pack->idx_cache, &pentry->sha1)) {
+		git_error_set(GIT_ERROR_INDEXER, "duplicate object %s found in pack", git_oid_tostr_s(&pentry->sha1));
 		git__free(pentry);
 		goto on_error;
 	}
 
-
-	git_oidmap_set_value_at(idx->pack->idx_cache, k, pentry);
+	if ((error = git_oidmap_set(idx->pack->idx_cache, &pentry->sha1, pentry)) < 0) {
+		git__free(pentry);
+		git_error_set_oom();
+		goto on_error;
+	}
 
 	git_oid_cpy(&entry->oid, &oid);
 
@@ -482,8 +481,7 @@ GIT_INLINE(bool) has_entry(git_indexer *idx, git_oid *id)
 
 static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_entry *pentry, git_off_t entry_start)
 {
-	int i, error;
-	khiter_t k;
+	int i;
 
 	if (entry_start > UINT31_MAX) {
 		entry->offset = UINT32_MAX;
@@ -493,14 +491,12 @@ static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_ent
 	}
 
 	pentry->offset = entry_start;
-	k = git_oidmap_put(idx->pack->idx_cache, &pentry->sha1, &error);
 
-	if (error <= 0) {
-		giterr_set(GITERR_INDEXER, "cannot insert object into pack");
+	if (git_oidmap_exists(idx->pack->idx_cache, &pentry->sha1) ||
+	    git_oidmap_set(idx->pack->idx_cache, &pentry->sha1, pentry) < 0) {
+		git_error_set(GIT_ERROR_INDEXER, "cannot insert object into pack");
 		return -1;
 	}
-
-	git_oidmap_set_value_at(idx->pack->idx_cache, k, pentry);
 
 	/* Add the object to the list */
 	if (git_vector_insert(&idx->objects, entry) < 0)
@@ -521,15 +517,15 @@ static int hash_and_save(git_indexer *idx, git_rawobj *obj, git_off_t entry_star
 	struct git_pack_entry *pentry = NULL;
 
 	entry = git__calloc(1, sizeof(*entry));
-	GITERR_CHECK_ALLOC(entry);
+	GIT_ERROR_CHECK_ALLOC(entry);
 
 	if (git_odb__hashobj(&oid, obj) < 0) {
-		giterr_set(GITERR_INDEXER, "failed to hash object");
+		git_error_set(GIT_ERROR_INDEXER, "failed to hash object");
 		goto on_error;
 	}
 
 	pentry = git__calloc(1, sizeof(struct git_pack_entry));
-	GITERR_CHECK_ALLOC(pentry);
+	GIT_ERROR_CHECK_ALLOC(pentry);
 
 	git_oid_cpy(&pentry->sha1, &oid);
 	git_oid_cpy(&entry->oid, &oid);
@@ -548,10 +544,10 @@ on_error:
 	return -1;
 }
 
-static int do_progress_callback(git_indexer *idx, git_transfer_progress *stats)
+static int do_progress_callback(git_indexer *idx, git_indexer_progress *stats)
 {
 	if (idx->progress_cb)
-		return giterr_set_after_callback_function(
+		return git_error_set_after_callback_function(
 			idx->progress_cb(stats, idx->progress_payload),
 			"indexer progress");
 	return 0;
@@ -649,19 +645,19 @@ static int append_to_pack(git_indexer *idx, const void *data, size_t size)
 
 	if (p_lseek(fd, page_start + mmap_alignment - 1, SEEK_SET) < 0 ||
 	    p_write(idx->pack->mwf.fd, data, 1) < 0) {
-		giterr_set(GITERR_OS, "cannot extend packfile '%s'", idx->pack->pack_name);
+		git_error_set(GIT_ERROR_OS, "cannot extend packfile '%s'", idx->pack->pack_name);
 		return -1;
 	}
 
 	return write_at(idx, data, idx->pack->mwf.size, size);
 }
 
-static int read_stream_object(git_indexer *idx, git_transfer_progress *stats)
+static int read_stream_object(git_indexer *idx, git_indexer_progress *stats)
 {
 	git_packfile_stream *stream = &idx->stream;
 	git_off_t entry_start = idx->off;
 	size_t entry_size;
-	git_otype type;
+	git_object_t type;
 	git_mwindow *w = NULL;
 	int error;
 
@@ -682,7 +678,7 @@ static int read_stream_object(git_indexer *idx, git_transfer_progress *stats)
 		git_hash_init(&idx->hash_ctx);
 		git_buf_clear(&idx->entry_data);
 
-		if (type == GIT_OBJ_REF_DELTA || type == GIT_OBJ_OFS_DELTA) {
+		if (type == GIT_OBJECT_REF_DELTA || type == GIT_OBJECT_OFS_DELTA) {
 			error = advance_delta_offset(idx, type);
 			if (error == GIT_EBUFS) {
 				idx->off = entry_start;
@@ -745,7 +741,7 @@ static int read_stream_object(git_indexer *idx, git_transfer_progress *stats)
 	return 0;
 }
 
-int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_transfer_progress *stats)
+int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_indexer_progress *stats)
 {
 	int error = -1;
 	struct git_pack_header *hdr = &idx->hdr;
@@ -777,12 +773,12 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_tran
 		if (idx->nr_objects <= git_indexer__max_objects) {
 			total_objects = (unsigned int)idx->nr_objects;
 		} else {
-			giterr_set(GITERR_INDEXER, "too many objects");
+			git_error_set(GIT_ERROR_INDEXER, "too many objects");
 			return -1;
 		}
 
-		idx->pack->idx_cache = git_oidmap_alloc();
-		GITERR_CHECK_ALLOC(idx->pack->idx_cache);
+		if (git_oidmap_new(&idx->pack->idx_cache) < 0)
+			return -1;
 
 		idx->pack->has_cache = 1;
 		if (git_vector_init(&idx->objects, total_objects, objects_cmp) < 0)
@@ -872,7 +868,7 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	entry_start = idx->pack->mwf.size;
 
 	if (git_odb_read(&obj, idx->odb, id) < 0) {
-		giterr_set(GITERR_INDEXER, "missing delta bases");
+		git_error_set(GIT_ERROR_INDEXER, "missing delta bases");
 		return -1;
 	}
 
@@ -880,7 +876,7 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	len = git_odb_object_size(obj);
 
 	entry = git__calloc(1, sizeof(*entry));
-	GITERR_CHECK_ALLOC(entry);
+	GIT_ERROR_CHECK_ALLOC(entry);
 
 	entry->crc = crc32(0L, Z_NULL, 0);
 
@@ -911,7 +907,7 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	idx->pack->mwf.size += GIT_OID_RAWSZ;
 
 	pentry = git__calloc(1, sizeof(struct git_pack_entry));
-	GITERR_CHECK_ALLOC(pentry);
+	GIT_ERROR_CHECK_ALLOC(pentry);
 
 	git_oid_cpy(&pentry->sha1, id);
 	git_oid_cpy(&entry->oid, id);
@@ -929,13 +925,13 @@ cleanup:
 	return error;
 }
 
-static int fix_thin_pack(git_indexer *idx, git_transfer_progress *stats)
+static int fix_thin_pack(git_indexer *idx, git_indexer_progress *stats)
 {
 	int error, found_ref_delta = 0;
 	unsigned int i;
 	struct delta_info *delta;
 	size_t size;
-	git_otype type;
+	git_object_t type;
 	git_mwindow *w = NULL;
 	git_off_t curpos = 0;
 	unsigned char *base_info;
@@ -945,7 +941,7 @@ static int fix_thin_pack(git_indexer *idx, git_transfer_progress *stats)
 	assert(git_vector_length(&idx->deltas) > 0);
 
 	if (idx->odb == NULL) {
-		giterr_set(GITERR_INDEXER, "cannot fix a thin pack without an ODB");
+		git_error_set(GIT_ERROR_INDEXER, "cannot fix a thin pack without an ODB");
 		return -1;
 	}
 
@@ -959,21 +955,21 @@ static int fix_thin_pack(git_indexer *idx, git_transfer_progress *stats)
 		if (error < 0)
 			return error;
 
-		if (type == GIT_OBJ_REF_DELTA) {
+		if (type == GIT_OBJECT_REF_DELTA) {
 			found_ref_delta = 1;
 			break;
 		}
 	}
 
 	if (!found_ref_delta) {
-		giterr_set(GITERR_INDEXER, "no REF_DELTA found, cannot inject object");
+		git_error_set(GIT_ERROR_INDEXER, "no REF_DELTA found, cannot inject object");
 		return -1;
 	}
 
 	/* curpos now points to the base information, which is an OID */
 	base_info = git_mwindow_open(&idx->pack->mwf, &w, curpos, GIT_OID_RAWSZ, &left);
 	if (base_info == NULL) {
-		giterr_set(GITERR_INDEXER, "failed to map delta information");
+		git_error_set(GIT_ERROR_INDEXER, "failed to map delta information");
 		return -1;
 	}
 
@@ -991,7 +987,7 @@ static int fix_thin_pack(git_indexer *idx, git_transfer_progress *stats)
 	return 0;
 }
 
-static int resolve_deltas(git_indexer *idx, git_transfer_progress *stats)
+static int resolve_deltas(git_indexer *idx, git_indexer_progress *stats)
 {
 	unsigned int i;
 	int error;
@@ -1048,7 +1044,7 @@ static int resolve_deltas(git_indexer *idx, git_transfer_progress *stats)
 	return 0;
 }
 
-static int update_header_and_rehash(git_indexer *idx, git_transfer_progress *stats)
+static int update_header_and_rehash(git_indexer *idx, git_indexer_progress *stats)
 {
 	void *ptr;
 	size_t chunk = 1024*1024;
@@ -1089,7 +1085,7 @@ static int update_header_and_rehash(git_indexer *idx, git_transfer_progress *sta
 	return 0;
 }
 
-int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
+int git_indexer_commit(git_indexer *idx, git_indexer_progress *stats)
 {
 	git_mwindow *w = NULL;
 	unsigned int i, long_offsets = 0, left;
@@ -1102,17 +1098,17 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 	void *packfile_trailer;
 
 	if (!idx->parsed_header) {
-		giterr_set(GITERR_INDEXER, "incomplete pack header");
+		git_error_set(GIT_ERROR_INDEXER, "incomplete pack header");
 		return -1;
 	}
 
 	/* Test for this before resolve_deltas(), as it plays with idx->off */
 	if (idx->off + 20 < idx->pack->mwf.size) {
-		giterr_set(GITERR_INDEXER, "unexpected data at the end of the pack");
+		git_error_set(GIT_ERROR_INDEXER, "unexpected data at the end of the pack");
 		return -1;
 	}
 	if (idx->off + 20 > idx->pack->mwf.size) {
-		giterr_set(GITERR_INDEXER, "missing trailer at the end of the pack");
+		git_error_set(GIT_ERROR_INDEXER, "missing trailer at the end of the pack");
 		return -1;
 	}
 
@@ -1128,7 +1124,7 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 
 	git_hash_final(&trailer_hash, &idx->trailer);
 	if (git_oid_cmp(&file_hash, &trailer_hash)) {
-		giterr_set(GITERR_INDEXER, "packfile trailer mismatch");
+		git_error_set(GIT_ERROR_INDEXER, "packfile trailer mismatch");
 		return -1;
 	}
 
@@ -1139,7 +1135,7 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 		return error;
 
 	if (stats->indexed_objects != stats->total_objects) {
-		giterr_set(GITERR_INDEXER, "early EOF");
+		git_error_set(GIT_ERROR_INDEXER, "early EOF");
 		return -1;
 	}
 
@@ -1158,7 +1154,7 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 	 * packfile.
 	 */
 	if (git_oidmap_size(idx->expected_oids) > 0) {
-		giterr_set(GITERR_INDEXER, "packfile is missing %"PRIuZ" objects",
+		git_error_set(GIT_ERROR_INDEXER, "packfile is missing %"PRIuZ" objects",
 			git_oidmap_size(idx->expected_oids));
 		return -1;
 	}
@@ -1249,18 +1245,18 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 
 	/* Truncate file to undo rounding up to next page_size in append_to_pack */
 	if (p_ftruncate(idx->pack->mwf.fd, idx->pack->mwf.size) < 0) {
-		giterr_set(GITERR_OS, "failed to truncate pack file '%s'", idx->pack->pack_name);
+		git_error_set(GIT_ERROR_OS, "failed to truncate pack file '%s'", idx->pack->pack_name);
 		return -1;
 	}
 
 	if (idx->do_fsync && p_fsync(idx->pack->mwf.fd) < 0) {
-		giterr_set(GITERR_OS, "failed to fsync packfile");
+		git_error_set(GIT_ERROR_OS, "failed to fsync packfile");
 		goto on_error;
 	}
 
 	/* We need to close the descriptor here so Windows doesn't choke on commit_at */
 	if (p_close(idx->pack->mwf.fd) < 0) {
-		giterr_set(GITERR_OS, "failed to close packfile");
+		git_error_set(GIT_ERROR_OS, "failed to close packfile");
 		goto on_error;
 	}
 
@@ -1292,7 +1288,9 @@ on_error:
 
 void git_indexer_free(git_indexer *idx)
 {
-	khiter_t pos;
+	const git_oid *key;
+	git_oid *value;
+	size_t iter;
 
 	if (idx == NULL)
 		return;
@@ -1321,14 +1319,9 @@ void git_indexer_free(git_indexer *idx)
 		git_mutex_unlock(&git__mwindow_mutex);
 	}
 
-	for (pos = git_oidmap_begin(idx->expected_oids);
-	    pos != git_oidmap_end(idx->expected_oids); pos++)
-	{
-		if (git_oidmap_has_data(idx->expected_oids, pos)) {
-			git__free((git_oid *) git_oidmap_key(idx->expected_oids, pos));
-			git_oidmap_delete_at(idx->expected_oids, pos);
-		}
-	}
+	iter = 0;
+	while (git_oidmap_iterate((void **) &value, idx->expected_oids, &iter, &key) == 0)
+		git__free(value);
 
 	git_hash_ctx_cleanup(&idx->trailer);
 	git_hash_ctx_cleanup(&idx->hash_ctx);

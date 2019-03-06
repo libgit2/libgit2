@@ -170,7 +170,7 @@ void test_checkout_tree__can_switch_branches(void)
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/dir"));
-	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJECT_ANY));
 
 	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
 	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/dir"));
@@ -190,7 +190,7 @@ void test_checkout_tree__can_switch_branches(void)
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/subtrees"));
-	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJECT_ANY));
 
 	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
 	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/subtrees"));
@@ -260,7 +260,7 @@ static int checkout_tree_with_blob_ignored_in_workdir(int strategy, bool isdir)
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/dir"));
-	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJECT_ANY));
 
 	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
 	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/dir"));
@@ -300,7 +300,7 @@ static int checkout_tree_with_blob_ignored_in_workdir(int strategy, bool isdir)
 	cl_assert_equal_i(1, ignored);
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/subtrees"));
-	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJECT_ANY));
 
 	error = git_checkout_tree(g_repo, obj, &opts);
 
@@ -374,7 +374,7 @@ void test_checkout_tree__can_update_only(void)
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_UPDATE_ONLY;
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/dir"));
-	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJECT_ANY));
 
 	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
 	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/dir"));
@@ -541,7 +541,7 @@ void assert_conflict(
 	/* Hack-ishy workaound to ensure *all* the index entries
 	 * match the content of the tree
 	 */
-	cl_git_pass(git_object_peel(&hack_tree, g_object, GIT_OBJ_TREE));
+	cl_git_pass(git_object_peel(&hack_tree, g_object, GIT_OBJECT_TREE));
 	cl_git_pass(git_index_read_tree(index, (git_tree *)hack_tree));
 	cl_git_pass(git_index_write(index));
 	git_object_free(hack_tree);
@@ -676,7 +676,7 @@ void test_checkout_tree__can_cancel_checkout_from_notify(void)
 	assert_on_branch(g_repo, "master");
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/dir"));
-	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJECT_ANY));
 
 	ca.filename = "new.txt";
 	ca.error = -5555;
@@ -796,7 +796,7 @@ void test_checkout_tree__can_write_to_empty_dirs(void)
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/dir"));
-	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJECT_ANY));
 
 	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
 
@@ -815,7 +815,7 @@ void test_checkout_tree__fails_when_dir_in_use(void)
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/dir"));
-	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJECT_ANY));
 
 	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
 
@@ -826,7 +826,7 @@ void test_checkout_tree__fails_when_dir_in_use(void)
 	cl_git_pass(p_chdir("testrepo/a"));
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/master"));
-	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJECT_ANY));
 
 	cl_git_fail(git_checkout_tree(g_repo, obj, &opts));
 
@@ -849,7 +849,7 @@ void test_checkout_tree__can_continue_when_dir_in_use(void)
 		GIT_CHECKOUT_SKIP_LOCKED_DIRECTORIES;
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/dir"));
-	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJECT_ANY));
 
 	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
 
@@ -860,7 +860,7 @@ void test_checkout_tree__can_continue_when_dir_in_use(void)
 	cl_git_pass(p_chdir("testrepo/a"));
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/master"));
-	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJECT_ANY));
 
 	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
 
@@ -892,7 +892,7 @@ void test_checkout_tree__target_directory_from_bare(void)
 	opts.notify_payload = &cts;
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "HEAD"));
-	cl_git_pass(git_object_lookup(&g_object, g_repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&g_object, g_repo, &oid, GIT_OBJECT_ANY));
 
 	cl_git_fail(git_checkout_tree(g_repo, g_object, &opts));
 
@@ -941,16 +941,16 @@ static void create_conflict(const char *path)
 
 	memset(&entry, 0x0, sizeof(git_index_entry));
 	entry.mode = 0100644;
-	GIT_IDXENTRY_STAGE_SET(&entry, 1);
+	GIT_INDEX_ENTRY_STAGE_SET(&entry, 1);
 	git_oid_fromstr(&entry.id, "d427e0b2e138501a3d15cc376077a3631e15bd46");
 	entry.path = path;
 	cl_git_pass(git_index_add(index, &entry));
 
-	GIT_IDXENTRY_STAGE_SET(&entry, 2);
+	GIT_INDEX_ENTRY_STAGE_SET(&entry, 2);
 	git_oid_fromstr(&entry.id, "ee3fa1b8c00aff7fe02065fdb50864bb0d932ccf");
 	cl_git_pass(git_index_add(index, &entry));
 
-	GIT_IDXENTRY_STAGE_SET(&entry, 3);
+	GIT_INDEX_ENTRY_STAGE_SET(&entry, 3);
 	git_oid_fromstr(&entry.id, "2bd0a343aeef7a2cf0d158478966a6e587ff3863");
 	cl_git_pass(git_index_add(index, &entry));
 
@@ -967,7 +967,7 @@ void test_checkout_tree__fails_when_conflicts_exist_in_index(void)
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "HEAD"));
-	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJECT_ANY));
 
 	create_conflict("conflicts.txt");
 
@@ -1287,7 +1287,7 @@ void test_checkout_tree__can_collect_perfdata(void)
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/dir"));
-	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJECT_ANY));
 
 	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
 
@@ -1328,7 +1328,7 @@ void test_checkout_tree__caches_attributes_during_checkout(void)
 	opts.paths.count = 2;
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/ident"));
-	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJECT_ANY));
 
 	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
 
@@ -1363,7 +1363,7 @@ void test_checkout_tree__can_not_update_index(void)
 		GIT_CHECKOUT_FORCE | GIT_CHECKOUT_DONT_UPDATE_INDEX;
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "HEAD"));
-	cl_git_pass(git_object_lookup(&head, g_repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&head, g_repo, &oid, GIT_OBJECT_ANY));
 
 	cl_git_pass(git_reset(g_repo, head, GIT_RESET_HARD, &g_opts));
 
@@ -1400,7 +1400,7 @@ void test_checkout_tree__can_update_but_not_write_index(void)
 		GIT_CHECKOUT_FORCE | GIT_CHECKOUT_DONT_WRITE_INDEX;
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "HEAD"));
-	cl_git_pass(git_object_lookup(&head, g_repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&head, g_repo, &oid, GIT_OBJECT_ANY));
 
 	cl_git_pass(git_reset(g_repo, head, GIT_RESET_HARD, &g_opts));
 
@@ -1446,7 +1446,7 @@ void test_checkout_tree__safe_proceeds_if_no_index(void)
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/subtrees"));
-	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJECT_ANY));
 
 	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
 	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/subtrees"));
@@ -1500,7 +1500,7 @@ void test_checkout_tree__baseline_is_empty_when_no_index(void)
 	assert_on_branch(g_repo, "master");
 
 	cl_git_pass(git_repository_head(&head, g_repo));
-	cl_git_pass(git_reference_peel(&obj, head, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reference_peel(&obj, head, GIT_OBJECT_COMMIT));
 
 	cl_git_pass(git_reset(g_repo, obj, GIT_RESET_HARD, NULL));
 
@@ -1539,7 +1539,7 @@ void test_checkout_tree__mode_change_is_force_updated(void)
 	assert_on_branch(g_repo, "master");
 	cl_git_pass(git_repository_index(&index, g_repo));
 	cl_git_pass(git_repository_head(&head, g_repo));
-	cl_git_pass(git_reference_peel(&obj, head, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reference_peel(&obj, head, GIT_OBJECT_COMMIT));
 
 	cl_git_pass(git_reset(g_repo, obj, GIT_RESET_HARD, NULL));
 	assert_status_entrycount(g_repo, 0);
@@ -1602,7 +1602,7 @@ static void modify_index_and_checkout_tree(git_checkout_options *opts)
 	/* External changes to the index are maintained by default */
 	cl_git_pass(git_repository_index(&index, g_repo));
 	cl_git_pass(git_repository_head(&head, g_repo));
-	cl_git_pass(git_reference_peel(&obj, head, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reference_peel(&obj, head, GIT_OBJECT_COMMIT));
 
 	cl_git_pass(git_reset(g_repo, obj, GIT_RESET_HARD, NULL));
 	assert_status_entrycount(g_repo, 0);

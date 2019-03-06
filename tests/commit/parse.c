@@ -515,7 +515,7 @@ corrupt signature\n";
 
 
 	cl_git_pass(git_repository_odb__weakptr(&odb, g_repo));
-	cl_git_pass(git_odb_write(&commit_id, odb, passing_commit_cases[4], strlen(passing_commit_cases[4]), GIT_OBJ_COMMIT));
+	cl_git_pass(git_odb_write(&commit_id, odb, passing_commit_cases[4], strlen(passing_commit_cases[4]), GIT_OBJECT_COMMIT));
 
 	cl_git_pass(git_commit_extract_signature(&signature, &signed_data, g_repo, &commit_id, NULL));
 	cl_assert_equal_s(gpgsig, signature.ptr);
@@ -531,17 +531,17 @@ corrupt signature\n";
 	/* Try to parse a tree */
 	cl_git_pass(git_oid_fromstr(&commit_id, "45dd856fdd4d89b884c340ba0e047752d9b085d6"));
 	cl_git_fail_with(GIT_ENOTFOUND, git_commit_extract_signature(&signature, &signed_data, g_repo, &commit_id, NULL));
-	cl_assert_equal_i(GITERR_INVALID, giterr_last()->klass);
+	cl_assert_equal_i(GIT_ERROR_INVALID, git_error_last()->klass);
 
 	/* Try to parse an unsigned commit */
-	cl_git_pass(git_odb_write(&commit_id, odb, passing_commit_cases[1], strlen(passing_commit_cases[1]), GIT_OBJ_COMMIT));
+	cl_git_pass(git_odb_write(&commit_id, odb, passing_commit_cases[1], strlen(passing_commit_cases[1]), GIT_OBJECT_COMMIT));
 	cl_git_fail_with(GIT_ENOTFOUND, git_commit_extract_signature(&signature, &signed_data, g_repo, &commit_id, NULL));
-	cl_assert_equal_i(GITERR_OBJECT, giterr_last()->klass);
+	cl_assert_equal_i(GIT_ERROR_OBJECT, git_error_last()->klass);
 
 	/* Parse the commit with a single-line signature */
 	git_buf_clear(&signature);
 	git_buf_clear(&signed_data);
-	cl_git_pass(git_odb_write(&commit_id, odb, oneline_signature, strlen(oneline_signature), GIT_OBJ_COMMIT));
+	cl_git_pass(git_odb_write(&commit_id, odb, oneline_signature, strlen(oneline_signature), GIT_OBJECT_COMMIT));
 	cl_git_pass(git_commit_extract_signature(&signature, &signed_data, g_repo, &commit_id, NULL));
 	cl_assert_equal_s("bad", signature.ptr);
 	cl_assert_equal_s(oneline_data, signed_data.ptr);

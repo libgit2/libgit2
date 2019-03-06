@@ -78,10 +78,10 @@ int git_diff_from_buffer(
 	*out = NULL;
 
 	diff = diff_parsed_alloc();
-	GITERR_CHECK_ALLOC(diff);
+	GIT_ERROR_CHECK_ALLOC(diff);
 
 	ctx = git_patch_parse_ctx_init(content, content_len, NULL);
-	GITERR_CHECK_ALLOC(ctx);
+	GIT_ERROR_CHECK_ALLOC(ctx);
 
 	while (ctx->parse_ctx.remain_len) {
 		if ((error = git_patch_parse(&patch, ctx)) < 0)
@@ -92,7 +92,7 @@ int git_diff_from_buffer(
 	}
 
 	if (error == GIT_ENOTFOUND && git_vector_length(&diff->patches) > 0) {
-		giterr_clear();
+		git_error_clear();
 		error = 0;
 	}
 

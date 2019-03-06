@@ -66,7 +66,7 @@ typedef enum {
  * @param payload an opaque payload
  * @return 0, GIT_EINVALIDSPEC, GIT_EEXISTS or an error code
  */
-typedef int (*git_remote_create_cb)(
+typedef int GIT_CALLBACK(git_remote_create_cb)(
 	git_remote **out,
 	git_repository *repo,
 	const char *name,
@@ -87,7 +87,7 @@ typedef int (*git_remote_create_cb)(
  * @param payload payload specified by the options
  * @return 0, or a negative value to indicate error
  */
-typedef int (*git_repository_create_cb)(
+typedef int GIT_CALLBACK(git_repository_create_cb)(
 	git_repository **out,
 	const char *path,
 	int bare,
@@ -196,7 +196,7 @@ GIT_EXTERN(int) git_clone_init_options(
  *        function works as though GIT_OPTIONS_INIT were passed.
  * @return 0 on success, any non-zero return value from a callback
  *         function, or a negative value to indicate an error (use
- *         `giterr_last` for a detailed error message)
+ *         `git_error_last` for a detailed error message)
  */
 GIT_EXTERN(int) git_clone(
 	git_repository **out,

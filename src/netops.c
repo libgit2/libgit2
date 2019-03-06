@@ -119,6 +119,15 @@ int gitno__match_host(const char *pattern, const char *host)
 	return -1;
 }
 
+static const char *default_port_http = "80";
+static const char *default_port_https = "443";
+
+const char *gitno__default_port(
+	gitno_connection_data *data)
+{
+	return data->use_ssl ? default_port_https : default_port_http;
+}
+
 static const char *prefix_http = "http://";
 static const char *prefix_https = "https://";
 
@@ -141,21 +150,21 @@ int gitno_connection_data_from_url(
 
 	if (!git__prefixcmp(url, prefix_http)) {
 		path_search_start = url + strlen(prefix_http);
-		default_port = "80";
+		default_port = default_port_http;
 
 		if (data->use_ssl) {
-			giterr_set(GITERR_NET, "redirect from HTTPS to HTTP is not allowed");
+			git_error_set(GIT_ERROR_NET, "redirect from HTTPS to HTTP is not allowed");
 			goto cleanup;
 		}
 	} else if (!git__prefixcmp(url, prefix_https)) {
 		path_search_start = url + strlen(prefix_https);
-		default_port = "443";
+		default_port = default_port_https;
 		data->use_ssl = true;
 	} else if (url[0] == '/')
-		default_port = data->use_ssl ? "443" : "80";
+		default_port = gitno__default_port(data);
 
 	if (!default_port) {
-		giterr_set(GITERR_NET, "unrecognized URL prefix");
+		git_error_set(GIT_ERROR_NET, "unrecognized URL prefix");
 		goto cleanup;
 	}
 
@@ -187,7 +196,7 @@ int gitno_connection_data_from_url(
 
 		/* Check for errors in the resulting data */
 		if (original_host && url[0] != '/' && strcmp(original_host, data->host)) {
-			giterr_set(GITERR_NET, "cross host redirect not allowed");
+			git_error_set(GIT_ERROR_NET, "cross host redirect not allowed");
 			error = -1;
 		}
 	}
@@ -225,7 +234,7 @@ int gitno_extract_url_parts(
 	int error = 0;
 
 	if (http_parser_parse_url(url, strlen(url), false, &u)) {
-		giterr_set(GITERR_NET, "malformed URL '%s'", url);
+		git_error_set(GIT_ERROR_NET, "malformed URL '%s'", url);
 		error = GIT_EINVALIDSPEC;
 		goto done;
 	}
@@ -254,7 +263,7 @@ int gitno_extract_url_parts(
 		size_t url_path_len = u.field_data[UF_PATH].len;
 		git_buf_decode_percent(&path, url_path, url_path_len);
 	} else if (path_out) {
-		giterr_set(GITERR_NET, "invalid url, missing path");
+		git_error_set(GIT_ERROR_NET, "invalid url, missing path");
 		error = GIT_EINVALIDSPEC;
 		goto done;
 	}

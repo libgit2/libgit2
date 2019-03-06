@@ -52,7 +52,7 @@ static int git_xdiff_parse_hunk(git_diff_hunk *hunk, const char *header)
 	return 0;
 
 fail:
-	giterr_set(GITERR_INVALID, "malformed hunk header from xdiff");
+	git_error_set(GIT_ERROR_INVALID, "malformed hunk header from xdiff");
 	return -1;
 }
 
@@ -101,7 +101,7 @@ static int diff_update_lines(
 		info->new_lineno += (int)line->num_lines;
 		break;
 	default:
-		giterr_set(GITERR_INVALID, "unknown diff line origin %02x",
+		git_error_set(GIT_ERROR_INVALID, "unknown diff line origin %02x",
 			(unsigned int)line->origin);
 		return -1;
 	}
@@ -224,7 +224,7 @@ static int git_xdiff(git_patch_generated_output *output, git_patch_generated *pa
 
 	if (info.xd_old_data.size > GIT_XDIFF_MAX_SIZE ||
 		info.xd_new_data.size > GIT_XDIFF_MAX_SIZE) {
-		giterr_set(GITERR_INVALID, "files too large for diff");
+		git_error_set(GIT_ERROR_INVALID, "files too large for diff");
 		return -1;
 	}
 

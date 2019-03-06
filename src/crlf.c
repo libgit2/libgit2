@@ -18,66 +18,56 @@
 #include "buf_text.h"
 #include "repository.h"
 
+typedef enum {
+	GIT_CRLF_UNDEFINED,
+	GIT_CRLF_BINARY,
+	GIT_CRLF_TEXT,
+	GIT_CRLF_TEXT_INPUT,
+	GIT_CRLF_TEXT_CRLF,
+	GIT_CRLF_AUTO,
+	GIT_CRLF_AUTO_INPUT,
+	GIT_CRLF_AUTO_CRLF,
+} git_crlf_t;
+
 struct crlf_attrs {
-	int crlf_action;
-	int eol;
+	int attr_action; /* the .gitattributes setting */
+	int crlf_action; /* the core.autocrlf setting */
+
 	int auto_crlf;
 	int safe_crlf;
+	int core_eol;
 };
 
 struct crlf_filter {
 	git_filter f;
 };
 
-static int check_crlf(const char *value)
+static git_crlf_t check_crlf(const char *value)
 {
 	if (GIT_ATTR_TRUE(value))
 		return GIT_CRLF_TEXT;
-
-	if (GIT_ATTR_FALSE(value))
+	else if (GIT_ATTR_FALSE(value))
 		return GIT_CRLF_BINARY;
-
-	if (GIT_ATTR_UNSPECIFIED(value))
-		return GIT_CRLF_GUESS;
-
-	if (strcmp(value, "input") == 0)
-		return GIT_CRLF_INPUT;
-
-	if (strcmp(value, "auto") == 0)
+	else if (GIT_ATTR_UNSPECIFIED(value))
+		;
+	else if (strcmp(value, "input") == 0)
+		return GIT_CRLF_TEXT_INPUT;
+	else if (strcmp(value, "auto") == 0)
 		return GIT_CRLF_AUTO;
 
-	return GIT_CRLF_GUESS;
+	return GIT_CRLF_UNDEFINED;
 }
 
-static int check_eol(const char *value)
+static git_cvar_value check_eol(const char *value)
 {
 	if (GIT_ATTR_UNSPECIFIED(value))
-		return GIT_EOL_UNSET;
-
-	if (strcmp(value, "lf") == 0)
+		;
+	else if (strcmp(value, "lf") == 0)
 		return GIT_EOL_LF;
-
-	if (strcmp(value, "crlf") == 0)
+	else if (strcmp(value, "crlf") == 0)
 		return GIT_EOL_CRLF;
 
 	return GIT_EOL_UNSET;
-}
-
-static int crlf_input_action(struct crlf_attrs *ca)
-{
-	if (ca->crlf_action == GIT_CRLF_BINARY)
-		return GIT_CRLF_BINARY;
-
-	if (ca->eol == GIT_EOL_LF)
-		return GIT_CRLF_INPUT;
-
-	if (ca->crlf_action == GIT_CRLF_AUTO)
-		return GIT_CRLF_AUTO;
-
-	if (ca->eol == GIT_EOL_CRLF)
-		return GIT_CRLF_CRLF;
-
-	return ca->crlf_action;
 }
 
 static int has_cr_in_index(const git_filter_source *src)
@@ -95,7 +85,7 @@ static int has_cr_in_index(const git_filter_source *src)
 		return false;
 
 	if (git_repository_index__weakptr(&index, repo) < 0) {
-		giterr_clear();
+		git_error_clear();
 		return false;
 	}
 
@@ -122,147 +112,168 @@ static int has_cr_in_index(const git_filter_source *src)
 	return found_cr;
 }
 
+static int text_eol_is_crlf(struct crlf_attrs *ca)
+{
+	if (ca->auto_crlf == GIT_AUTO_CRLF_TRUE)
+		return 1;
+	else if (ca->auto_crlf == GIT_AUTO_CRLF_INPUT)
+		return 0;
+
+	if (ca->core_eol == GIT_EOL_CRLF)
+		return 1;
+	if (ca->core_eol == GIT_EOL_UNSET && GIT_EOL_NATIVE == GIT_EOL_CRLF)
+		return 1;
+
+	return 0;
+}
+
+static git_cvar_value output_eol(struct crlf_attrs *ca)
+{
+	switch (ca->crlf_action) {
+	case GIT_CRLF_BINARY:
+		return GIT_EOL_UNSET;
+	case GIT_CRLF_TEXT_CRLF:
+		return GIT_EOL_CRLF;
+	case GIT_CRLF_TEXT_INPUT:
+		return GIT_EOL_LF;
+	case GIT_CRLF_UNDEFINED:
+	case GIT_CRLF_AUTO_CRLF:
+		return GIT_EOL_CRLF;
+	case GIT_CRLF_AUTO_INPUT:
+		return GIT_EOL_LF;
+	case GIT_CRLF_TEXT:
+	case GIT_CRLF_AUTO:
+		return text_eol_is_crlf(ca) ? GIT_EOL_CRLF : GIT_EOL_LF;
+	}
+
+	/* TODO: warn when available */
+	return ca->core_eol;
+}
+
+GIT_INLINE(int) check_safecrlf(
+	struct crlf_attrs *ca,
+	const git_filter_source *src,
+	git_buf_text_stats *stats)
+{
+	const char *filename = git_filter_source_path(src);
+
+	if (!ca->safe_crlf)
+		return 0;
+
+	if (output_eol(ca) == GIT_EOL_LF) {
+		/*
+		 * CRLFs would not be restored by checkout:
+		 * check if we'd remove CRLFs
+		 */
+		if (stats->crlf) {
+			if (ca->safe_crlf == GIT_SAFE_CRLF_WARN) {
+				/* TODO: issue a warning when available */
+			} else {
+				if (filename && *filename)
+					git_error_set(
+						GIT_ERROR_FILTER, "CRLF would be replaced by LF in '%s'",
+						filename);
+				else
+					git_error_set(
+						GIT_ERROR_FILTER, "CRLF would be replaced by LF");
+
+				return -1;
+			}
+		}
+	} else if (output_eol(ca) == GIT_EOL_CRLF) {
+		/*
+		 * CRLFs would be added by checkout:
+		 * check if we have "naked" LFs
+		 */
+		if (stats->crlf != stats->lf) {
+			if (ca->safe_crlf == GIT_SAFE_CRLF_WARN) {
+				/* TODO: issue a warning when available */
+			} else {
+				if (filename && *filename)
+					git_error_set(
+						GIT_ERROR_FILTER, "LF would be replaced by CRLF in '%s'",
+						filename);
+				else
+					git_error_set(
+						GIT_ERROR_FILTER, "LF would be replaced by CRLF");
+
+				return -1;
+			}
+		}
+	}
+
+	return 0;
+}
+
 static int crlf_apply_to_odb(
 	struct crlf_attrs *ca,
 	git_buf *to,
 	const git_buf *from,
 	const git_filter_source *src)
 {
-	/* Empty file? Nothing to do */
-	if (!git_buf_len(from))
-		return 0;
+	git_buf_text_stats stats;
+	bool is_binary;
+	int error;
+
+	/* Binary attribute? Empty file? Nothing to do */
+	if (ca->crlf_action == GIT_CRLF_BINARY || !git_buf_len(from))
+		return GIT_PASSTHROUGH;
+
+	is_binary = git_buf_text_gather_stats(&stats, from, false);
 
 	/* Heuristics to see if we can skip the conversion.
 	 * Straight from Core Git.
 	 */
-	if (ca->crlf_action == GIT_CRLF_AUTO || ca->crlf_action == GIT_CRLF_GUESS) {
-		git_buf_text_stats stats;
+	if (ca->crlf_action == GIT_CRLF_AUTO ||
+		ca->crlf_action == GIT_CRLF_AUTO_INPUT ||
+		ca->crlf_action == GIT_CRLF_AUTO_CRLF) {
 
-		/* Check heuristics for binary vs text - returns true if binary */
-		if (git_buf_text_gather_stats(&stats, from, false))
+		if (is_binary)
 			return GIT_PASSTHROUGH;
-
-		/* If there are no CR characters to filter out, then just pass */
-		if (!stats.cr)
-			return GIT_PASSTHROUGH;
-
-		/* If safecrlf is enabled, sanity-check the result. */
-		if (stats.cr != stats.crlf || stats.lf != stats.crlf) {
-			switch (ca->safe_crlf) {
-			case GIT_SAFE_CRLF_FAIL:
-				giterr_set(
-					GITERR_FILTER, "LF would be replaced by CRLF in '%s'",
-					git_filter_source_path(src));
-				return -1;
-			case GIT_SAFE_CRLF_WARN:
-				/* TODO: issue warning when warning API is available */;
-				break;
-			default:
-				break;
-			}
-		}
 
 		/*
-		 * We're currently not going to even try to convert stuff
-		 * that has bare CR characters. Does anybody do that crazy
-		 * stuff?
+		 * If the file in the index has any CR in it, do not convert.
+		 * This is the new safer autocrlf handling.
 		 */
-		if (stats.cr != stats.crlf)
-			return GIT_PASSTHROUGH;
-
-		if (ca->crlf_action == GIT_CRLF_GUESS) {
-			/*
-			 * If the file in the index has any CR in it, do not convert.
-			 * This is the new safer autocrlf handling.
-			 */
-			if (has_cr_in_index(src))
-				return GIT_PASSTHROUGH;
-		}
-
-		if (!stats.cr)
+		if (has_cr_in_index(src))
 			return GIT_PASSTHROUGH;
 	}
+
+	if ((error = check_safecrlf(ca, src, &stats)) < 0)
+		return error;
+
+	/* If there are no CR characters to filter out, then just pass */
+	if (!stats.crlf)
+		return GIT_PASSTHROUGH;
 
 	/* Actually drop the carriage returns */
 	return git_buf_text_crlf_to_lf(to, from);
 }
 
-static const char *line_ending(struct crlf_attrs *ca)
-{
-	switch (ca->crlf_action) {
-	case GIT_CRLF_BINARY:
-	case GIT_CRLF_INPUT:
-		return "\n";
-
-	case GIT_CRLF_CRLF:
-		return "\r\n";
-
-	case GIT_CRLF_GUESS:
-		if (ca->auto_crlf == GIT_AUTO_CRLF_FALSE)
-			return "\n";
-		break;
-
-	case GIT_CRLF_AUTO:
-		if (ca->eol == GIT_EOL_CRLF)
-			return "\r\n";
-	case GIT_CRLF_TEXT:
-		break;
-
-	default:
-		goto line_ending_error;
-	}
-
-	if (ca->auto_crlf == GIT_AUTO_CRLF_TRUE)
-		return "\r\n";
-	else if (ca->auto_crlf == GIT_AUTO_CRLF_INPUT)
-		return "\n";
-	else if (ca->eol == GIT_EOL_UNSET)
-		return GIT_EOL_NATIVE == GIT_EOL_CRLF ? "\r\n" : "\n";
-	else if (ca->eol == GIT_EOL_LF)
-		return "\n";
-	else if (ca->eol == GIT_EOL_CRLF)
-		return "\r\n";
-
-line_ending_error:
-	giterr_set(GITERR_INVALID, "invalid input to line ending filter");
-	return NULL;
-}
-
 static int crlf_apply_to_workdir(
-	struct crlf_attrs *ca, git_buf *to, const git_buf *from)
+	struct crlf_attrs *ca,
+	git_buf *to,
+	const git_buf *from)
 {
 	git_buf_text_stats stats;
-	const char *workdir_ending = NULL;
 	bool is_binary;
 
 	/* Empty file? Nothing to do. */
-	if (git_buf_len(from) == 0)
-		return 0;
-
-	/* Determine proper line ending */
-	workdir_ending = line_ending(ca);
-	if (!workdir_ending)
-		return -1;
-
-	/* only LF->CRLF conversion is supported, do nothing on LF platforms */
-	if (strcmp(workdir_ending, "\r\n") != 0)
+	if (git_buf_len(from) == 0 || output_eol(ca) != GIT_EOL_CRLF)
 		return GIT_PASSTHROUGH;
 
-	/* If there are no LFs, or all LFs are part of a CRLF, nothing to do */
 	is_binary = git_buf_text_gather_stats(&stats, from, false);
 
+	/* If there are no LFs, or all LFs are part of a CRLF, nothing to do */
 	if (stats.lf == 0 || stats.lf == stats.crlf)
 		return GIT_PASSTHROUGH;
 
 	if (ca->crlf_action == GIT_CRLF_AUTO ||
-		ca->crlf_action == GIT_CRLF_GUESS) {
+		ca->crlf_action == GIT_CRLF_AUTO_INPUT ||
+		ca->crlf_action == GIT_CRLF_AUTO_CRLF) {
 
 		/* If we have any existing CR or CRLF line endings, do nothing */
-		if (stats.cr > 0 && stats.crlf > 0)
-			return GIT_PASSTHROUGH;
-
-		/* If we have bare CR characters, do nothing */
-		if (stats.cr != stats.crlf)
+		if (stats.cr > 0)
 			return GIT_PASSTHROUGH;
 
 		/* Don't filter binary files */
@@ -273,87 +284,99 @@ static int crlf_apply_to_workdir(
 	return git_buf_text_lf_to_crlf(to, from);
 }
 
+static int convert_attrs(
+	struct crlf_attrs *ca,
+	const char **attr_values,
+	const git_filter_source *src)
+{
+	int error;
+
+	memset(ca, 0, sizeof(struct crlf_attrs));
+
+	if ((error = git_repository__cvar(&ca->auto_crlf,
+		 git_filter_source_repo(src), GIT_CVAR_AUTO_CRLF)) < 0 ||
+		(error = git_repository__cvar(&ca->safe_crlf,
+		 git_filter_source_repo(src), GIT_CVAR_SAFE_CRLF)) < 0 ||
+		(error = git_repository__cvar(&ca->core_eol,
+		 git_filter_source_repo(src), GIT_CVAR_EOL)) < 0)
+		return error;
+
+	/* downgrade FAIL to WARN if ALLOW_UNSAFE option is used */
+	if ((git_filter_source_flags(src) & GIT_FILTER_ALLOW_UNSAFE) &&
+		ca->safe_crlf == GIT_SAFE_CRLF_FAIL)
+		ca->safe_crlf = GIT_SAFE_CRLF_WARN;
+
+	if (attr_values) {
+		/* load the text attribute */
+		ca->crlf_action = check_crlf(attr_values[2]); /* text */
+
+		if (ca->crlf_action == GIT_CRLF_UNDEFINED)
+			ca->crlf_action = check_crlf(attr_values[0]); /* crlf */
+
+		if (ca->crlf_action != GIT_CRLF_BINARY) {
+			/* load the eol attribute */
+			int eol_attr = check_eol(attr_values[1]);
+
+			if (ca->crlf_action == GIT_CRLF_AUTO && eol_attr == GIT_EOL_LF)
+				ca->crlf_action = GIT_CRLF_AUTO_INPUT;
+			else if (ca->crlf_action == GIT_CRLF_AUTO && eol_attr == GIT_EOL_CRLF)
+				ca->crlf_action = GIT_CRLF_AUTO_CRLF;
+			else if (eol_attr == GIT_EOL_LF)
+				ca->crlf_action = GIT_CRLF_TEXT_INPUT;
+			else if (eol_attr == GIT_EOL_CRLF)
+				ca->crlf_action = GIT_CRLF_TEXT_CRLF;
+		}
+
+		ca->attr_action = ca->crlf_action;
+	} else {
+		ca->crlf_action = GIT_CRLF_UNDEFINED;
+	}
+
+	if (ca->crlf_action == GIT_CRLF_TEXT)
+		ca->crlf_action = text_eol_is_crlf(ca) ? GIT_CRLF_TEXT_CRLF : GIT_CRLF_TEXT_INPUT;
+	if (ca->crlf_action == GIT_CRLF_UNDEFINED && ca->auto_crlf == GIT_AUTO_CRLF_FALSE)
+		ca->crlf_action = GIT_CRLF_BINARY;
+	if (ca->crlf_action == GIT_CRLF_UNDEFINED && ca->auto_crlf == GIT_AUTO_CRLF_TRUE)
+		ca->crlf_action = GIT_CRLF_AUTO_CRLF;
+	if (ca->crlf_action == GIT_CRLF_UNDEFINED && ca->auto_crlf == GIT_AUTO_CRLF_INPUT)
+		ca->crlf_action = GIT_CRLF_AUTO_INPUT;
+
+	return 0;
+}
+
 static int crlf_check(
-	git_filter        *self,
-	void              **payload, /* points to NULL ptr on entry, may be set */
+	git_filter *self,
+	void **payload, /* points to NULL ptr on entry, may be set */
 	const git_filter_source *src,
 	const char **attr_values)
 {
-	int error;
 	struct crlf_attrs ca;
 
 	GIT_UNUSED(self);
 
-	if (!attr_values) {
-		ca.crlf_action = GIT_CRLF_GUESS;
-		ca.eol = GIT_EOL_UNSET;
-	} else {
-		ca.crlf_action = check_crlf(attr_values[2]); /* text */
-		if (ca.crlf_action == GIT_CRLF_GUESS)
-			ca.crlf_action = check_crlf(attr_values[0]); /* clrf */
-		ca.eol = check_eol(attr_values[1]); /* eol */
-	}
-	ca.auto_crlf = GIT_AUTO_CRLF_DEFAULT;
-	ca.safe_crlf = GIT_SAFE_CRLF_DEFAULT;
-
-	/*
-	 * Use the core Git logic to see if we should perform CRLF for this file
-	 * based on its attributes & the value of `core.autocrlf`
-	 */
-	ca.crlf_action = crlf_input_action(&ca);
+	convert_attrs(&ca, attr_values, src);
 
 	if (ca.crlf_action == GIT_CRLF_BINARY)
 		return GIT_PASSTHROUGH;
 
-	if (ca.crlf_action == GIT_CRLF_GUESS ||
-		((ca.crlf_action == GIT_CRLF_AUTO ||
-		ca.crlf_action == GIT_CRLF_TEXT) &&
-		git_filter_source_mode(src) == GIT_FILTER_SMUDGE)) {
-
-		error = git_repository__cvar(
-			&ca.auto_crlf, git_filter_source_repo(src), GIT_CVAR_AUTO_CRLF);
-		if (error < 0)
-			return error;
-
-		if (ca.crlf_action == GIT_CRLF_GUESS &&
-			ca.auto_crlf == GIT_AUTO_CRLF_FALSE)
-			return GIT_PASSTHROUGH;
-
-		if (ca.auto_crlf == GIT_AUTO_CRLF_INPUT &&
-			ca.eol != GIT_EOL_CRLF &&
-			git_filter_source_mode(src) == GIT_FILTER_SMUDGE)
-			return GIT_PASSTHROUGH;
-	}
-
-	if (git_filter_source_mode(src) == GIT_FILTER_CLEAN) {
-		error = git_repository__cvar(
-			&ca.safe_crlf, git_filter_source_repo(src), GIT_CVAR_SAFE_CRLF);
-		if (error < 0)
-			return error;
-
-		/* downgrade FAIL to WARN if ALLOW_UNSAFE option is used */
-		if ((git_filter_source_flags(src) & GIT_FILTER_ALLOW_UNSAFE) &&
-			ca.safe_crlf == GIT_SAFE_CRLF_FAIL)
-			ca.safe_crlf = GIT_SAFE_CRLF_WARN;
-	}
-
 	*payload = git__malloc(sizeof(ca));
-	GITERR_CHECK_ALLOC(*payload);
+	GIT_ERROR_CHECK_ALLOC(*payload);
 	memcpy(*payload, &ca, sizeof(ca));
 
 	return 0;
 }
 
 static int crlf_apply(
-	git_filter    *self,
-	void         **payload, /* may be read and/or set */
-	git_buf       *to,
+	git_filter *self,
+	void **payload, /* may be read and/or set */
+	git_buf *to,
 	const git_buf *from,
 	const git_filter_source *src)
 {
 	/* initialize payload in case `check` was bypassed */
 	if (!*payload) {
 		int error = crlf_check(self, payload, src, NULL);
+
 		if (error < 0)
 			return error;
 	}

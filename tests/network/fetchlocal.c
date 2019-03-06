@@ -8,7 +8,7 @@ static const char* tagger_name = "Vicent Marti";
 static const char* tagger_email = "vicent@github.com";
 static const char* tagger_message = "This is my tag.\n\nThere are many tags, but this one is mine\n";
 
-static int transfer_cb(const git_transfer_progress *stats, void *payload)
+static int transfer_cb(const git_indexer_progress *stats, void *payload)
 {
 	int *callcount = (int*)payload;
 	GIT_UNUSED(stats);
@@ -369,7 +369,7 @@ void test_network_fetchlocal__clone_into_mirror(void)
 	cl_git_pass(git_clone(&repo, cl_git_fixture_url("testrepo.git"), "./foo.git", &opts));
 
 	cl_git_pass(git_reference_lookup(&ref, repo, "HEAD"));
-	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(ref));
+	cl_assert_equal_i(GIT_REFERENCE_SYMBOLIC, git_reference_type(ref));
 	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(ref));
 
 	git_reference_free(ref);

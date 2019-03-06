@@ -49,7 +49,7 @@ static int apply_gitbuf(
 		cl_assert_equal_s(patch_expected, patchbuf.ptr);
 	}
 
-	error = git_apply__patch(&result, &filename, &mode, old ? old->ptr : NULL, old ? old->size : 0, patch);
+	error = git_apply__patch(&result, &filename, &mode, old ? old->ptr : NULL, old ? old->size : 0, patch, NULL);
 
 	if (error == 0 && new == NULL) {
 		cl_assert_equal_i(0, result.size);
@@ -148,6 +148,52 @@ void test_apply_fromdiff__prepend_nocontext(void)
 		FILE_ORIGINAL, "file.txt",
 		FILE_PREPEND, "file.txt",
 		PATCH_ORIGINAL_TO_PREPEND_NOCONTEXT, &diff_opts));
+}
+
+void test_apply_fromdiff__prepend_and_change(void)
+{
+	cl_git_pass(apply_buf(
+		FILE_ORIGINAL, "file.txt",
+		FILE_PREPEND_AND_CHANGE, "file.txt",
+		PATCH_ORIGINAL_TO_PREPEND_AND_CHANGE, NULL));
+}
+
+void test_apply_fromdiff__prepend_and_change_nocontext(void)
+{
+	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
+	diff_opts.context_lines = 0;
+
+	cl_git_pass(apply_buf(
+		FILE_ORIGINAL, "file.txt",
+		FILE_PREPEND_AND_CHANGE, "file.txt",
+		PATCH_ORIGINAL_TO_PREPEND_AND_CHANGE_NOCONTEXT, &diff_opts));
+}
+
+void test_apply_fromdiff__delete_and_change(void)
+{
+	cl_git_pass(apply_buf(
+		FILE_ORIGINAL, "file.txt",
+		FILE_DELETE_AND_CHANGE, "file.txt",
+		PATCH_ORIGINAL_TO_DELETE_AND_CHANGE, NULL));
+}
+
+void test_apply_fromdiff__delete_and_change_nocontext(void)
+{
+	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
+	diff_opts.context_lines = 0;
+
+	cl_git_pass(apply_buf(
+		FILE_ORIGINAL, "file.txt",
+		FILE_DELETE_AND_CHANGE, "file.txt",
+		PATCH_ORIGINAL_TO_DELETE_AND_CHANGE_NOCONTEXT, &diff_opts));
+}
+
+void test_apply_fromdiff__delete_firstline(void)
+{
+	cl_git_pass(apply_buf(
+		FILE_ORIGINAL, "file.txt",
+		FILE_DELETE_FIRSTLINE, "file.txt",
+		PATCH_ORIGINAL_TO_DELETE_FIRSTLINE, NULL));
 }
 
 void test_apply_fromdiff__append(void)
@@ -286,4 +332,37 @@ void test_apply_fromdiff__binary_delete(void)
 		&original, "binary.bin",
 		NULL, NULL,
 		NULL, &binary_opts));
+}
+
+void test_apply_fromdiff__patching_correctly_truncates_source(void)
+{
+	git_buf original = GIT_BUF_INIT, patched = GIT_BUF_INIT;
+	git_patch *patch;
+	unsigned int mode;
+	char *path;
+
+	cl_git_pass(git_patch_from_buffers(&patch,
+					   "foo\nbar", 7, "file.txt",
+					   "foo\nfoo", 7, "file.txt", NULL));
+
+	/*
+	 * Previously, we would fail to correctly truncate the source buffer if
+	 * the source has more than one line and ends with a non-newline
+	 * character. In the following call, we thus truncate the source string
+	 * in the middle of the second line. Without the bug fixed, we would
+	 * successfully apply the patch to the source and return success. With
+	 * the overflow being fixed, we should return an error.
+	 */
+	cl_git_fail_with(GIT_EAPPLYFAIL,
+			 git_apply__patch(&patched, &path, &mode,
+					  "foo\nbar\n", 5, patch, NULL));
+
+	/* Verify that the patch succeeds if we do not truncate */
+	cl_git_pass(git_apply__patch(&patched, &path, &mode,
+				     "foo\nbar\n", 7, patch, NULL));
+
+	git_buf_dispose(&original);
+	git_buf_dispose(&patched);
+	git_patch_free(patch);
+	git__free(path);
 }

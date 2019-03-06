@@ -49,7 +49,7 @@ int git_strarray_copy(git_strarray *tgt, const git_strarray *src)
 		return 0;
 
 	tgt->strings = git__calloc(src->count, sizeof(char *));
-	GITERR_CHECK_ALLOC(tgt->strings);
+	GIT_ERROR_CHECK_ALLOC(tgt->strings);
 
 	for (i = 0; i < src->count; ++i) {
 		if (!src->strings[i])
@@ -83,34 +83,54 @@ int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const cha
 	/*
 	 * White space
 	 */
-	while (git__isspace(*p))
-		p++;
+	while (nptr_len && git__isspace(*p))
+		p++, nptr_len--;
+
+	if (!nptr_len)
+		goto Return;
 
 	/*
 	 * Sign
 	 */
-	if (*p == '-' || *p == '+')
-		if (*p++ == '-')
+	if (*p == '-' || *p == '+') {
+		if (*p == '-')
 			neg = 1;
+		p++;
+		nptr_len--;
+	}
+
+	if (!nptr_len)
+		goto Return;
 
 	/*
-	 * Base
+	 * Automatically detect the base if none was given to us.
+	 * Right now, we assume that a number starting with '0x'
+	 * is hexadecimal and a number starting with '0' is
+	 * octal.
 	 */
 	if (base == 0) {
 		if (*p != '0')
 			base = 10;
-		else {
+		else if (nptr_len > 2 && (p[1] == 'x' || p[1] == 'X'))
+			base = 16;
+		else
 			base = 8;
-			if (p[1] == 'x' || p[1] == 'X') {
-				p += 2;
-				base = 16;
-			}
-		}
-	} else if (base == 16 && *p == '0') {
-		if (p[1] == 'x' || p[1] == 'X')
-			p += 2;
-	} else if (base < 0 || 36 < base)
+	}
+
+	if (base < 0 || 36 < base)
 		goto Return;
+
+	/*
+	 * Skip prefix of '0x'-prefixed hexadecimal numbers. There is no
+	 * need to do the same for '0'-prefixed octal numbers as a
+	 * leading '0' does not have any impact. Also, if we skip a
+	 * leading '0' in such a string, then we may end up with no
+	 * digits left and produce an error later on which isn't one.
+	 */
+	if (base == 16 && nptr_len > 2 && p[0] == '0' && (p[1] == 'x' || p[1] == 'X')) {
+		p += 2;
+		nptr_len -= 2;
+	}
 
 	/*
 	 * Non-empty sequence of digits
@@ -144,7 +164,7 @@ int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const cha
 
 Return:
 	if (ndig == 0) {
-		giterr_set(GITERR_INVALID, "failed to convert string to long: not a number");
+		git_error_set(GIT_ERROR_INVALID, "failed to convert string to long: not a number");
 		return -1;
 	}
 
@@ -152,7 +172,7 @@ Return:
 		*endptr = p;
 
 	if (ovfl) {
-		giterr_set(GITERR_INVALID, "failed to convert string to long: overflow error");
+		git_error_set(GIT_ERROR_INVALID, "failed to convert string to long: overflow error");
 		return -1;
 	}
 
@@ -173,7 +193,7 @@ int git__strntol32(int32_t *result, const char *nptr, size_t nptr_len, const cha
 	tmp_int = tmp_long & 0xFFFFFFFF;
 	if (tmp_int != tmp_long) {
 		int len = tmp_endptr - nptr;
-		giterr_set(GITERR_INVALID, "failed to convert: '%.*s' is too large", len, nptr);
+		git_error_set(GIT_ERROR_INVALID, "failed to convert: '%.*s' is too large", len, nptr);
 		return -1;
 	}
 
@@ -844,11 +864,6 @@ int git__utf8_iterate(const uint8_t *str, int str_len, int32_t *dst)
 	return length;
 }
 
-double git_time_monotonic(void)
-{
-	return git__timer();
-}
-
 size_t git__utf8_valid_buf_length(const uint8_t *str, size_t str_len)
 {
 	size_t offset = 0;
@@ -879,7 +894,7 @@ int git__getenv(git_buf *out, const char *name)
 
 	if ((value_len = GetEnvironmentVariableW(wide_name, NULL, 0)) > 0) {
 		wide_value = git__malloc(value_len * sizeof(wchar_t));
-		GITERR_CHECK_ALLOC(wide_value);
+		GIT_ERROR_CHECK_ALLOC(wide_value);
 
 		value_len = GetEnvironmentVariableW(wide_name, wide_value, value_len);
 	}
@@ -889,7 +904,7 @@ int git__getenv(git_buf *out, const char *name)
 	else if (GetLastError() == ERROR_ENVVAR_NOT_FOUND)
 		error = GIT_ENOTFOUND;
 	else
-		giterr_set(GITERR_OS, "could not read environment variable '%s'", name);
+		git_error_set(GIT_ERROR_OS, "could not read environment variable '%s'", name);
 
 	git__free(wide_name);
 	git__free(wide_value);

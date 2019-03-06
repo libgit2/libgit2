@@ -15,16 +15,6 @@
 /* Amount of file to examine for NUL byte when checking binary-ness */
 #define GIT_FILTER_BYTES_TO_CHECK_NUL 8000
 
-/* Possible CRLF values */
-typedef enum {
-	GIT_CRLF_GUESS = -1,
-	GIT_CRLF_BINARY = 0,
-	GIT_CRLF_TEXT,
-	GIT_CRLF_INPUT,
-	GIT_CRLF_CRLF,
-	GIT_CRLF_AUTO,
-} git_crlf_t;
-
 typedef struct {
 	git_attr_session *attr_session;
 	git_buf *temp_buf;

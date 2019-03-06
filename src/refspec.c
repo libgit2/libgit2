@@ -43,11 +43,11 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 	if (!is_fetch && rhs == lhs && rhs[1] == '\0') {
 		refspec->matching = 1;
 		refspec->string = git__strdup(input);
-		GITERR_CHECK_ALLOC(refspec->string);
+		GIT_ERROR_CHECK_ALLOC(refspec->string);
 		refspec->src = git__strdup("");
-		GITERR_CHECK_ALLOC(refspec->src);
+		GIT_ERROR_CHECK_ALLOC(refspec->src);
 		refspec->dst = git__strdup("");
-		GITERR_CHECK_ALLOC(refspec->dst);
+		GIT_ERROR_CHECK_ALLOC(refspec->dst);
 		return 0;
 	}
 
@@ -69,8 +69,9 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 
 	refspec->pattern = is_glob;
 	refspec->src = git__strndup(lhs, llen);
-	flags = GIT_REF_FORMAT_ALLOW_ONELEVEL | GIT_REF_FORMAT_REFSPEC_SHORTHAND
-		| (is_glob ? GIT_REF_FORMAT_REFSPEC_PATTERN : 0);
+	flags = GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL |
+		GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND |
+		(is_glob ? GIT_REFERENCE_FORMAT_REFSPEC_PATTERN : 0);
 
 	if (is_fetch) {
 		/*
@@ -131,18 +132,18 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 		/* if the RHS is empty, then it's a copy of the LHS */
 		if (!refspec->dst) {
 			refspec->dst = git__strdup(refspec->src);
-			GITERR_CHECK_ALLOC(refspec->dst);
+			GIT_ERROR_CHECK_ALLOC(refspec->dst);
 		}
 	}
 
 	refspec->string = git__strdup(input);
-	GITERR_CHECK_ALLOC(refspec->string);
+	GIT_ERROR_CHECK_ALLOC(refspec->string);
 
 	return 0;
 
  invalid:
-        giterr_set(
-                GITERR_INVALID,
+        git_error_set(
+                GIT_ERROR_INVALID,
                 "'%s' is not a valid refspec.", input);
         git_refspec__dispose(refspec);
 	return -1;
@@ -168,7 +169,7 @@ int git_refspec_parse(git_refspec **out_refspec, const char *input, int is_fetch
 	*out_refspec = NULL;
 
 	refspec = git__malloc(sizeof(git_refspec));
-	GITERR_CHECK_ALLOC(refspec);
+	GIT_ERROR_CHECK_ALLOC(refspec);
 
 	if (git_refspec__parse(refspec, input, !!is_fetch) != 0) {
 		git__free(refspec);
@@ -272,7 +273,7 @@ int git_refspec_transform(git_buf *out, const git_refspec *spec, const char *nam
 	git_buf_sanitize(out);
 
 	if (!git_refspec_src_matches(spec, name)) {
-		giterr_set(GITERR_INVALID, "ref '%s' doesn't match the source", name);
+		git_error_set(GIT_ERROR_INVALID, "ref '%s' doesn't match the source", name);
 		return -1;
 	}
 
@@ -288,7 +289,7 @@ int git_refspec_rtransform(git_buf *out, const git_refspec *spec, const char *na
 	git_buf_sanitize(out);
 
 	if (!git_refspec_dst_matches(spec, name)) {
-		giterr_set(GITERR_INVALID, "ref '%s' doesn't match the destination", name);
+		git_error_set(GIT_ERROR_INVALID, "ref '%s' doesn't match the destination", name);
 		return -1;
 	}
 
@@ -341,7 +342,7 @@ int git_refspec__dwim_one(git_vector *out, git_refspec *spec, git_vector *refs)
 	assert(out && spec && refs);
 
 	cur = git__calloc(1, sizeof(git_refspec));
-	GITERR_CHECK_ALLOC(cur);
+	GIT_ERROR_CHECK_ALLOC(cur);
 
 	cur->force = spec->force;
 	cur->push = spec->push;
@@ -354,7 +355,7 @@ int git_refspec__dwim_one(git_vector *out, git_refspec *spec, git_vector *refs)
 		for (j = 0; formatters[j]; j++) {
 			git_buf_clear(&buf);
 			git_buf_printf(&buf, formatters[j], spec->src);
-			GITERR_CHECK_ALLOC_BUF(&buf);
+			GIT_ERROR_CHECK_ALLOC_BUF(&buf);
 
 			key.name = (char *) git_buf_cstr(&buf);
 			if (!git_vector_search(&pos, refs, &key)) {
@@ -367,7 +368,7 @@ int git_refspec__dwim_one(git_vector *out, git_refspec *spec, git_vector *refs)
 	/* No shorthands found, copy over the name */
 	if (cur->src == NULL && spec->src != NULL) {
 		cur->src = git__strdup(spec->src);
-		GITERR_CHECK_ALLOC(cur->src);
+		GIT_ERROR_CHECK_ALLOC(cur->src);
 	}
 
 	if (spec->dst && git__prefixcmp(spec->dst, GIT_REFS_DIR)) {
@@ -379,7 +380,7 @@ int git_refspec__dwim_one(git_vector *out, git_refspec *spec, git_vector *refs)
 		}
 
 		git_buf_puts(&buf, spec->dst);
-		GITERR_CHECK_ALLOC_BUF(&buf);
+		GIT_ERROR_CHECK_ALLOC_BUF(&buf);
 
 		cur->dst = git_buf_detach(&buf);
 	}
@@ -388,7 +389,7 @@ int git_refspec__dwim_one(git_vector *out, git_refspec *spec, git_vector *refs)
 
 	if (cur->dst == NULL && spec->dst != NULL) {
 		cur->dst = git__strdup(spec->dst);
-		GITERR_CHECK_ALLOC(cur->dst);
+		GIT_ERROR_CHECK_ALLOC(cur->dst);
 	}
 
 	return git_vector_insert(out, cur);

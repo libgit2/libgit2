@@ -174,7 +174,7 @@ static int status_collect(
 		return 0;
 
 	status_entry = git__malloc(sizeof(git_status_entry));
-	GITERR_CHECK_ALLOC(status_entry);
+	GIT_ERROR_CHECK_ALLOC(status_entry);
 
 	status_entry->status = status_compute(status, head2idx, idx2wd);
 	status_entry->head_to_index = head2idx;
@@ -240,16 +240,16 @@ static int status_validate_options(const git_status_options *opts)
 	if (!opts)
 		return 0;
 
-	GITERR_CHECK_VERSION(opts, GIT_STATUS_OPTIONS_VERSION, "git_status_options");
+	GIT_ERROR_CHECK_VERSION(opts, GIT_STATUS_OPTIONS_VERSION, "git_status_options");
 
 	if (opts->show > GIT_STATUS_SHOW_WORKDIR_ONLY) {
-		giterr_set(GITERR_INVALID, "unknown status 'show' option");
+		git_error_set(GIT_ERROR_INVALID, "unknown status 'show' option");
 		return -1;
 	}
 
 	if ((opts->flags & GIT_STATUS_OPT_NO_REFRESH) != 0 &&
 		(opts->flags & GIT_STATUS_OPT_UPDATE_INDEX) != 0) {
-		giterr_set(GITERR_INVALID, "updating index from status "
+		git_error_set(GIT_ERROR_INVALID, "updating index from status "
 			"is not allowed when index refresh is disabled");
 		return -1;
 	}
@@ -288,17 +288,17 @@ int git_status_list_new(
 		if ((error = git_repository_head_tree(&head, repo)) < 0) {
 			if (error != GIT_ENOTFOUND && error != GIT_EUNBORNBRANCH)
 				goto done;
-			giterr_clear();
+			git_error_clear();
 		}
 	}
 
 	/* refresh index from disk unless prevented */
 	if ((flags & GIT_STATUS_OPT_NO_REFRESH) == 0 &&
 		git_index_read_safely(index) < 0)
-		giterr_clear();
+		git_error_clear();
 
 	status = git_status_list_alloc(index);
-	GITERR_CHECK_ALLOC(status);
+	GIT_ERROR_CHECK_ALLOC(status);
 
 	if (opts) {
 		memcpy(&status->opts, opts, sizeof(git_status_options));
@@ -437,7 +437,7 @@ int git_status_foreach_ext(
 			status_entry->index_to_workdir->old_file.path;
 
 		if ((error = cb(path, status_entry->status, payload)) != 0) {
-			giterr_set_after_callback(error);
+			git_error_set_after_callback(error);
 			break;
 		}
 	}
@@ -475,7 +475,7 @@ static int get_one_status(const char *path, unsigned int status, void *data)
 		 p_fnmatch(sfi->expected, path, sfi->fnm_flags) != 0))
 	{
 		sfi->ambiguous = true;
-		return GIT_EAMBIGUOUS; /* giterr_set will be done by caller */
+		return GIT_EAMBIGUOUS; /* git_error_set will be done by caller */
 	}
 
 	return 0;
@@ -514,13 +514,13 @@ int git_status_file(
 	error = git_status_foreach_ext(repo, &opts, get_one_status, &sfi);
 
 	if (error < 0 && sfi.ambiguous) {
-		giterr_set(GITERR_INVALID,
+		git_error_set(GIT_ERROR_INVALID,
 			"ambiguous path '%s' given to git_status_file", sfi.expected);
 		error = GIT_EAMBIGUOUS;
 	}
 
 	if (!error && !sfi.count) {
-		giterr_set(GITERR_INVALID,
+		git_error_set(GIT_ERROR_INVALID,
 			"attempt to get status of nonexistent file '%s'", path);
 		error = GIT_ENOTFOUND;
 	}
@@ -551,7 +551,7 @@ int git_status_list_get_perfdata(
 	git_diff_perfdata *out, const git_status_list *status)
 {
 	assert(out);
-	GITERR_CHECK_VERSION(out, GIT_DIFF_PERFDATA_VERSION, "git_diff_perfdata");
+	GIT_ERROR_CHECK_VERSION(out, GIT_DIFF_PERFDATA_VERSION, "git_diff_perfdata");
 
 	out->stat_calls = 0;
 	out->oid_calculations = 0;

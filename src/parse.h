@@ -27,7 +27,7 @@ int git_parse_ctx_init(git_parse_ctx *ctx, const char *content, size_t content_l
 void git_parse_ctx_clear(git_parse_ctx *ctx);
 
 #define git_parse_err(...) \
-	( giterr_set(GITERR_PATCH, __VA_ARGS__), -1 )
+	( git_error_set(GIT_ERROR_PATCH, __VA_ARGS__), -1 )
 
 #define git_parse_ctx_contains_s(ctx, str) \
 	git_parse_ctx_contains(ctx, str, sizeof(str) - 1)

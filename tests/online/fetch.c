@@ -25,7 +25,7 @@ static int update_tips(const char *refname, const git_oid *a, const git_oid *b, 
 	return 0;
 }
 
-static int progress(const git_transfer_progress *stats, void *payload)
+static int progress(const git_indexer_progress *stats, void *payload)
 {
 	size_t *bytes_received = (size_t *)payload;
 	*bytes_received = stats->received_bytes;
@@ -84,15 +84,15 @@ void test_online_fetch__fetch_twice(void)
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
 	cl_git_pass(git_remote_download(remote, NULL, NULL));
     	git_remote_disconnect(remote);
-    	
+
 	git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL);
 	cl_git_pass(git_remote_download(remote, NULL, NULL));
 	git_remote_disconnect(remote);
-	
+
 	git_remote_free(remote);
 }
 
-static int transferProgressCallback(const git_transfer_progress *stats, void *payload)
+static int transferProgressCallback(const git_indexer_progress *stats, void *payload)
 {
 	bool *invoked = (bool *)payload;
 
@@ -134,7 +134,7 @@ void test_online_fetch__doesnt_retrieve_a_pack_when_the_repository_is_up_to_date
 	git_repository_free(_repository);
 }
 
-static int cancel_at_half(const git_transfer_progress *stats, void *payload)
+static int cancel_at_half(const git_indexer_progress *stats, void *payload)
 {
 	GIT_UNUSED(payload);
 

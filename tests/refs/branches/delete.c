@@ -2,6 +2,8 @@
 #include "refs.h"
 #include "repo/repo_helpers.h"
 #include "config/config_helpers.h"
+#include "fileops.h"
+#include "reflog.h"
 
 static git_repository *repo;
 static git_reference *fake_remote;
@@ -70,7 +72,7 @@ void test_refs_branches_delete__can_delete_a_branch_pointed_at_by_detached_HEAD(
 	git_reference *head, *branch;
 
 	cl_git_pass(git_reference_lookup(&head, repo, GIT_HEAD_FILE));
-	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(head));
+	cl_assert_equal_i(GIT_REFERENCE_SYMBOLIC, git_reference_type(head));
 	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
 	git_reference_free(head);
 
@@ -138,5 +140,49 @@ void test_refs_branches_delete__removes_reflog(void)
 	cl_git_pass(git_reflog_read(&log, repo, "refs/heads/track-local"));
 	cl_assert_equal_i(0, git_reflog_entrycount(log));
 	git_reflog_free(log);
+}
+
+void test_refs_branches_delete__removes_empty_folders(void)
+{
+	const char *commondir = git_repository_commondir(repo);
+	git_oid commit_id;
+	git_commit *commit;
+	git_reference *branch;
+
+	git_reflog *log;
+	git_oid oidzero = {{0}};
+	git_signature *sig;
+
+	git_buf ref_folder = GIT_BUF_INIT;
+	git_buf reflog_folder = GIT_BUF_INIT;
+
+	/* Create a new branch with a nested name */
+	cl_git_pass(git_oid_fromstr(&commit_id, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750"));
+	cl_git_pass(git_commit_lookup(&commit, repo, &commit_id));
+	cl_git_pass(git_branch_create(&branch, repo, "some/deep/ref", commit, 0));
+	git_commit_free(commit);
+
+	/* Ensure the reflog has at least one entry */
+	cl_git_pass(git_signature_now(&sig, "Me", "user@example.com"));
+	cl_git_pass(git_reflog_read(&log, repo, "refs/heads/some/deep/ref"));
+	cl_git_pass(git_reflog_append(log, &oidzero, sig, "message"));
+	cl_assert(git_reflog_entrycount(log) > 0);
+	git_signature_free(sig);
+	git_reflog_free(log);
+
+	cl_git_pass(git_buf_joinpath(&ref_folder, commondir, "refs/heads/some/deep"));
+	cl_git_pass(git_buf_join3(&reflog_folder, '/', commondir, GIT_REFLOG_DIR, "refs/heads/some/deep"));
+
+	cl_assert(git_path_exists(git_buf_cstr(&ref_folder)) == true);
+	cl_assert(git_path_exists(git_buf_cstr(&reflog_folder)) == true);
+
+	cl_git_pass(git_branch_delete(branch));
+
+	cl_assert(git_path_exists(git_buf_cstr(&ref_folder)) == false);
+	cl_assert(git_path_exists(git_buf_cstr(&reflog_folder)) == false);
+
+	git_reference_free(branch);
+	git_buf_dispose(&ref_folder);
+	git_buf_dispose(&reflog_folder);
 }
 

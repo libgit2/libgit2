@@ -45,14 +45,13 @@ GIT_INLINE(int) git_smart__reset_stream(transport_smart *t, bool close_subtransp
 		t->current_stream = NULL;
 	}
 
-	if (t->url) {
+	if (close_subtransport) {
 		git__free(t->url);
 		t->url = NULL;
-	}
 
-	if (close_subtransport &&
-		t->wrapped->close(t->wrapped) < 0)
-		return -1;
+		if (t->wrapped->close(t->wrapped) < 0)
+			return -1;
+	}
 
 	return 0;
 }
@@ -140,11 +139,11 @@ static int git_smart__set_custom_headers(
 
 	for (i = 0; i < custom_headers->count; i++) {
 		if (is_malformed_http_header(custom_headers->strings[i])) {
-			giterr_set(GITERR_INVALID, "custom HTTP header '%s' is malformed", custom_headers->strings[i]);
+			git_error_set(GIT_ERROR_INVALID, "custom HTTP header '%s' is malformed", custom_headers->strings[i]);
 			return -1;
 		}
 		if (is_forbidden_custom_header(custom_headers->strings[i])) {
-			giterr_set(GITERR_INVALID, "custom HTTP header '%s' is already set by libgit2", custom_headers->strings[i]);
+			git_error_set(GIT_ERROR_INVALID, "custom HTTP header '%s' is already set by libgit2", custom_headers->strings[i]);
 			return -1;
 		}
 	}
@@ -225,7 +224,7 @@ static int git_smart__connect(
 		return -1;
 
 	t->url = git__strdup(url);
-	GITERR_CHECK_ALLOC(t->url);
+	GIT_ERROR_CHECK_ALLOC(t->url);
 
 	if (git_proxy_options_dup(&t->proxy, proxy) < 0)
 		return -1;
@@ -240,7 +239,7 @@ static int git_smart__connect(
 	else if (GIT_DIRECTION_PUSH == t->direction)
 		service = GIT_SERVICE_RECEIVEPACK_LS;
 	else {
-		giterr_set(GITERR_NET, "invalid direction");
+		git_error_set(GIT_ERROR_NET, "invalid direction");
 		return -1;
 	}
 
@@ -261,7 +260,7 @@ static int git_smart__connect(
 		pkt = (git_pkt *)git_vector_get(&t->refs, 0);
 
 		if (!pkt || GIT_PKT_COMMENT != pkt->type) {
-			giterr_set(GITERR_NET, "invalid response");
+			git_error_set(GIT_ERROR_NET, "invalid response");
 			return -1;
 		} else {
 			/* Remove the comment pkt from the list */
@@ -275,7 +274,7 @@ static int git_smart__connect(
 
 	pkt = (git_pkt *)git_vector_get(&t->refs, 0);
 	if (pkt && GIT_PKT_REF != pkt->type) {
-		giterr_set(GITERR_NET, "invalid response");
+		git_error_set(GIT_ERROR_NET, "invalid response");
 		return -1;
 	}
 	first = (git_pkt_ref *)pkt;
@@ -298,7 +297,7 @@ static int git_smart__connect(
 		/* There was no ref packet received, or the cap list was empty */
 		error = 0;
 	} else {
-		giterr_set(GITERR_NET, "invalid response");
+		git_error_set(GIT_ERROR_NET, "invalid response");
 		goto cleanup;
 	}
 
@@ -319,7 +318,7 @@ static int git_smart__ls(const git_remote_head ***out, size_t *size, git_transpo
 	transport_smart *t = (transport_smart *)transport;
 
 	if (!t->have_refs) {
-		giterr_set(GITERR_NET, "the transport has not yet loaded the refs");
+		git_error_set(GIT_ERROR_NET, "the transport has not yet loaded the refs");
 		return -1;
 	}
 
@@ -339,7 +338,7 @@ int git_smart__negotiation_step(git_transport *transport, void *data, size_t len
 		return -1;
 
 	if (GIT_DIRECTION_FETCH != t->direction) {
-		giterr_set(GITERR_NET, "this operation is only valid for fetch");
+		git_error_set(GIT_ERROR_NET, "this operation is only valid for fetch");
 		return -1;
 	}
 
@@ -368,7 +367,7 @@ int git_smart__get_push_stream(transport_smart *t, git_smart_subtransport_stream
 		return -1;
 
 	if (GIT_DIRECTION_PUSH != t->direction) {
-		giterr_set(GITERR_NET, "this operation is only valid for push");
+		git_error_set(GIT_ERROR_NET, "this operation is only valid for push");
 		return -1;
 	}
 
@@ -482,12 +481,22 @@ int git_transport_smart_certificate_check(git_transport *transport, git_cert *ce
 {
 	transport_smart *t = (transport_smart *)transport;
 
+	assert(transport && cert && hostname);
+
+	if (!t->certificate_check_cb)
+		return GIT_PASSTHROUGH;
+
 	return t->certificate_check_cb(cert, valid, hostname, t->message_cb_payload);
 }
 
 int git_transport_smart_credentials(git_cred **out, git_transport *transport, const char *user, int methods)
 {
 	transport_smart *t = (transport_smart *)transport;
+
+	assert(out && transport);
+
+	if (!t->cred_acquire_cb)
+		return GIT_PASSTHROUGH;
 
 	return t->cred_acquire_cb(out, t->url, user, methods, t->cred_acquire_payload);
 }
@@ -507,7 +516,7 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 		return -1;
 
 	t = git__calloc(1, sizeof(transport_smart));
-	GITERR_CHECK_ALLOC(t);
+	GIT_ERROR_CHECK_ALLOC(t);
 
 	t->parent.version = GIT_TRANSPORT_VERSION;
 	t->parent.set_callbacks = git_smart__set_callbacks;

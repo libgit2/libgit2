@@ -20,19 +20,19 @@ int git_sortedcache_new(
 
 	pathlen = path ? strlen(path) : 0;
 
-	GITERR_CHECK_ALLOC_ADD(&alloclen, sizeof(git_sortedcache), pathlen);
-	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloclen, sizeof(git_sortedcache), pathlen);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
 	sc = git__calloc(1, alloclen);
-	GITERR_CHECK_ALLOC(sc);
+	GIT_ERROR_CHECK_ALLOC(sc);
 
 	git_pool_init(&sc->pool, 1);
 
 	if (git_vector_init(&sc->items, 4, item_cmp) < 0 ||
-		git_strmap_alloc(&sc->map) < 0)
+	    git_strmap_new(&sc->map) < 0)
 		goto fail;
 
 	if (git_rwlock_init(&sc->lock)) {
-		giterr_set(GITERR_OS, "failed to initialize lock");
+		git_error_set(GIT_ERROR_OS, "failed to initialize lock");
 		goto fail;
 	}
 
@@ -167,7 +167,7 @@ int git_sortedcache_wlock(git_sortedcache *sc)
 	GIT_UNUSED(sc); /* prevent warning when compiled w/o threads */
 
 	if (git_rwlock_wrlock(&sc->lock) < 0) {
-		giterr_set(GITERR_OS, "unable to acquire write lock on cache");
+		git_error_set(GIT_ERROR_OS, "unable to acquire write lock on cache");
 		return -1;
 	}
 	return 0;
@@ -186,7 +186,7 @@ int git_sortedcache_rlock(git_sortedcache *sc)
 	GIT_UNUSED(sc); /* prevent warning when compiled w/o threads */
 
 	if (git_rwlock_rdlock(&sc->lock) < 0) {
-		giterr_set(GITERR_OS, "unable to acquire read lock on cache");
+		git_error_set(GIT_ERROR_OS, "unable to acquire read lock on cache");
 		return -1;
 	}
 	return 0;
@@ -219,14 +219,14 @@ int git_sortedcache_lockandload(git_sortedcache *sc, git_buf *buf)
 	}
 
 	if (p_fstat(fd, &st) < 0) {
-		giterr_set(GITERR_OS, "failed to stat file");
+		git_error_set(GIT_ERROR_OS, "failed to stat file");
 		error = -1;
 		(void)p_close(fd);
 		goto unlock;
 	}
 
 	if (!git__is_sizet(st.st_size)) {
-		giterr_set(GITERR_INVALID, "unable to load file larger than size_t");
+		git_error_set(GIT_ERROR_INVALID, "unable to load file larger than size_t");
 		error = -1;
 		(void)p_close(fd);
 		goto unlock;
@@ -270,24 +270,20 @@ int git_sortedcache_clear(git_sortedcache *sc, bool wlock)
 /* find and/or insert item, returning pointer to item data */
 int git_sortedcache_upsert(void **out, git_sortedcache *sc, const char *key)
 {
-	int error = 0;
-	khiter_t pos;
-	void *item;
 	size_t keylen, itemlen;
+	int error = 0;
 	char *item_key;
+	void *item;
 
-	pos = git_strmap_lookup_index(sc->map, key);
-	if (git_strmap_valid_index(sc->map, pos)) {
-		item = git_strmap_value_at(sc->map, pos);
+	if ((item = git_strmap_get(sc->map, key)) != NULL)
 		goto done;
-	}
 
 	keylen  = strlen(key);
 	itemlen = sc->item_path_offset + keylen + 1;
 	itemlen = (itemlen + 7) & ~7;
 
 	if ((item = git_pool_mallocz(&sc->pool, (uint32_t)itemlen)) == NULL) {
-		/* don't use GITERR_CHECK_ALLOC b/c of lock */
+		/* don't use GIT_ERROR_CHECK_ALLOC b/c of lock */
 		error = -1;
 		goto done;
 	}
@@ -299,17 +295,11 @@ int git_sortedcache_upsert(void **out, git_sortedcache *sc, const char *key)
 	item_key = ((char *)item) + sc->item_path_offset;
 	memcpy(item_key, key, keylen);
 
-	pos = git_strmap_put(sc->map, item_key, &error);
-	if (error < 0)
+	if ((error = git_strmap_set(sc->map, item_key, item)) < 0)
 		goto done;
 
-	if (!error)
-		git_strmap_set_key_at(sc->map, pos, item_key);
-	git_strmap_set_value_at(sc->map, pos, item);
-
-	error = git_vector_insert(&sc->items, item);
-	if (error < 0)
-		git_strmap_delete_at(sc->map, pos);
+	if ((error = git_vector_insert(&sc->items, item)) < 0)
+		git_strmap_delete(sc->map, item_key);
 
 done:
 	if (out)
@@ -320,10 +310,7 @@ done:
 /* lookup item by key */
 void *git_sortedcache_lookup(const git_sortedcache *sc, const char *key)
 {
-	khiter_t pos = git_strmap_lookup_index(sc->map, key);
-	if (git_strmap_valid_index(sc->map, pos))
-		return git_strmap_value_at(sc->map, pos);
-	return NULL;
+	return git_strmap_get(sc->map, key);
 }
 
 /* find out how many items are in the cache */
@@ -371,21 +358,20 @@ int git_sortedcache_lookup_index(
 int git_sortedcache_remove(git_sortedcache *sc, size_t pos)
 {
 	char *item;
-	khiter_t mappos;
 
-	/* because of pool allocation, this can't actually remove the item,
+	/*
+	 * Because of pool allocation, this can't actually remove the item,
 	 * but we can remove it from the items vector and the hash table.
 	 */
 
 	if ((item = git_vector_get(&sc->items, pos)) == NULL) {
-		giterr_set(GITERR_INVALID, "removing item out of range");
+		git_error_set(GIT_ERROR_INVALID, "removing item out of range");
 		return GIT_ENOTFOUND;
 	}
 
 	(void)git_vector_remove(&sc->items, pos);
 
-	mappos = git_strmap_lookup_index(sc->map, item + sc->item_path_offset);
-	git_strmap_delete_at(sc->map, mappos);
+	git_strmap_delete(sc->map, item + sc->item_path_offset);
 
 	if (sc->free_item)
 		sc->free_item(sc->free_item_payload, item);

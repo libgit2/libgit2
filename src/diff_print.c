@@ -224,7 +224,7 @@ static int diff_print_one_raw(
 		delta->new_file.id_abbrev;
 
 	if (pi->id_strlen > id_abbrev) {
-		giterr_set(GITERR_PATCH,
+		git_error_set(GIT_ERROR_PATCH,
 			"the patch input contains %d id characters (cannot print %d)",
 			id_abbrev, pi->id_strlen);
 		return -1;
@@ -275,7 +275,7 @@ static int diff_print_oid_range(
 
 	if (delta->old_file.mode &&
 			id_strlen > delta->old_file.id_abbrev) {
-		giterr_set(GITERR_PATCH,
+		git_error_set(GIT_ERROR_PATCH,
 			"the patch input contains %d id characters (cannot print %d)",
 			delta->old_file.id_abbrev, id_strlen);
 		return -1;
@@ -283,7 +283,7 @@ static int diff_print_oid_range(
 
 	if ((delta->new_file.mode &&
 			id_strlen > delta->new_file.id_abbrev)) {
-		giterr_set(GITERR_PATCH,
+		git_error_set(GIT_ERROR_PATCH,
 			"the patch input contains %d id characters (cannot print %d)",
 			delta->new_file.id_abbrev, id_strlen);
 		return -1;
@@ -343,7 +343,7 @@ int diff_delta_format_similarity_header(
 	int error = 0;
 
 	if (delta->similarity > 100) {
-		giterr_set(GITERR_PATCH, "invalid similarity %d", delta->similarity);
+		git_error_set(GIT_ERROR_PATCH, "invalid similarity %d", delta->similarity);
 		error = -1;
 		goto done;
 	}
@@ -540,7 +540,7 @@ static int diff_print_patch_file_binary(
 			binary->old_file.datalen, binary->old_file.inflatedlen)) < 0) {
 
 		if (error == GIT_EBUFS) {
-			giterr_clear();
+			git_error_clear();
 			git_buf_truncate(pi->buf, pre_binary_size);
 
 			return diff_print_patch_file_binary_noshow(
@@ -683,7 +683,7 @@ int git_diff_print(
 		print_file = diff_print_one_name_status;
 		break;
 	default:
-		giterr_set(GITERR_INVALID, "unknown diff output format (%d)", format);
+		git_error_set(GIT_ERROR_INVALID, "unknown diff output format (%d)", format);
 		return -1;
 	}
 
@@ -693,7 +693,7 @@ int git_diff_print(
 			diff, print_file, print_binary, print_hunk, print_line, &pi);
 
 		if (error) /* make sure error message is set */
-			giterr_set_after_callback_function(error, "git_diff_print");
+			git_error_set_after_callback_function(error, "git_diff_print");
 	}
 
 	git_buf_dispose(&buf);
@@ -711,7 +711,7 @@ int git_diff_print_callback__to_buf(
 	GIT_UNUSED(delta); GIT_UNUSED(hunk);
 
 	if (!output) {
-		giterr_set(GITERR_INVALID, "buffer pointer must be provided");
+		git_error_set(GIT_ERROR_INVALID, "buffer pointer must be provided");
 		return -1;
 	}
 
@@ -773,7 +773,7 @@ int git_patch_print(
 			&pi);
 
 		if (error) /* make sure error message is set */
-			giterr_set_after_callback_function(error, "git_patch_print");
+			git_error_set_after_callback_function(error, "git_patch_print");
 	}
 
 	git_buf_dispose(&temp);

@@ -161,7 +161,7 @@ int git_diff_file_content__init_from_src(
 			fc->flags |= GIT_DIFF_FLAG__FREE_BLOB;
 		} else {
 			fc->file->size = src->buflen;
-			git_odb_hash(&fc->file->id, src->buf, src->buflen, GIT_OBJ_BLOB);
+			git_odb_hash(&fc->file->id, src->buf, src->buflen, GIT_OBJECT_BLOB);
 			fc->file->id_abbrev = GIT_OID_HEXSZ;
 
 			fc->map.len  = src->buflen;
@@ -188,7 +188,7 @@ static int diff_file_content_commit_to_str(
 		if ((error = git_submodule_lookup(&sm, fc->repo, fc->file->path)) < 0) {
 			/* GIT_EEXISTS means a "submodule" that has not been git added */
 			if (error == GIT_EEXISTS) {
-				giterr_clear();
+				git_error_clear();
 				error = 0;
 			}
 			return error;
@@ -251,7 +251,7 @@ static int diff_file_content_load_blob(
 
 	if (odb_obj != NULL) {
 		error = git_object__from_odb_object(
-			(git_object **)&fc->blob, fc->repo, odb_obj, GIT_OBJ_BLOB);
+			(git_object **)&fc->blob, fc->repo, odb_obj, GIT_OBJECT_BLOB);
 		git_odb_object_free(odb_obj);
 	} else {
 		error = git_blob_lookup(
@@ -303,13 +303,13 @@ static int diff_file_content_load_workdir_symlink(
 	alloc_len = (ssize_t)(fc->file->size * 2) + 1;
 
 	fc->map.data = git__calloc(alloc_len, sizeof(char));
-	GITERR_CHECK_ALLOC(fc->map.data);
+	GIT_ERROR_CHECK_ALLOC(fc->map.data);
 
 	fc->flags |= GIT_DIFF_FLAG__FREE_DATA;
 
 	read_len = p_readlink(git_buf_cstr(path), fc->map.data, alloc_len);
 	if (read_len < 0) {
-		giterr_set(GITERR_OS, "failed to read symlink '%s'", fc->file->path);
+		git_error_set(GIT_ERROR_OS, "failed to read symlink '%s'", fc->file->path);
 		return -1;
 	}
 
@@ -352,7 +352,7 @@ static int diff_file_content_load_workdir_file(
 		}
 
 		/* if mmap failed, fall through to try readbuffer below */
-		giterr_clear();
+		git_error_clear();
 	}
 
 	if (!(error = git_futils_readbuffer_fd(&raw, fd, (size_t)fc->file->size))) {
@@ -402,7 +402,7 @@ static int diff_file_content_load_workdir(
 	/* once data is loaded, update OID if we didn't have it previously */
 	if (!error && (fc->file->flags & GIT_DIFF_FLAG_VALID_ID) == 0) {
 		error = git_odb_hash(
-			&fc->file->id, fc->map.data, fc->map.len, GIT_OBJ_BLOB);
+			&fc->file->id, fc->map.data, fc->map.len, GIT_OBJECT_BLOB);
 		fc->file->flags |= GIT_DIFF_FLAG_VALID_ID;
 	}
 

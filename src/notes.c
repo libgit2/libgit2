@@ -12,10 +12,11 @@
 #include "config.h"
 #include "iterator.h"
 #include "signature.h"
+#include "blob.h"
 
 static int note_error_notfound(void)
 {
-	giterr_set(GITERR_INVALID, "note could not be found");
+	git_error_set(GIT_ERROR_INVALID, "note could not be found");
 	return GIT_ENOTFOUND;
 }
 
@@ -226,7 +227,7 @@ static int remove_note_in_tree_enotfound_cb(
 	GIT_UNUSED(note_oid);
 	GIT_UNUSED(fanout);
 
-	giterr_set(GITERR_REPOSITORY, "object '%s' has no note", annotated_object_sha);
+	git_error_set(GIT_ERROR_REPOSITORY, "object '%s' has no note", annotated_object_sha);
 	return current_error;
 }
 
@@ -244,7 +245,7 @@ static int insert_note_in_tree_eexists_cb(git_tree **out,
 	GIT_UNUSED(note_oid);
 	GIT_UNUSED(fanout);
 
-	giterr_set(GITERR_REPOSITORY, "note for '%s' exists already", annotated_object_sha);
+	git_error_set(GIT_ERROR_REPOSITORY, "note for '%s' exists already", annotated_object_sha);
 	return current_error;
 }
 
@@ -319,9 +320,10 @@ static int note_new(
 	git_blob *blob)
 {
 	git_note *note = NULL;
+	git_off_t blobsize;
 
 	note = git__malloc(sizeof(git_note));
-	GITERR_CHECK_ALLOC(note);
+	GIT_ERROR_CHECK_ALLOC(note);
 
 	git_oid_cpy(&note->id, note_oid);
 
@@ -329,8 +331,11 @@ static int note_new(
 		git_signature_dup(&note->committer, git_commit_committer(commit)) < 0)
 		return -1;
 
-	note->message = git__strndup(git_blob_rawcontent(blob), git_blob_rawsize(blob));
-	GITERR_CHECK_ALLOC(note->message);
+	blobsize = git_blob_rawsize(blob);
+	GIT_ERROR_CHECK_BLOBSIZE(blobsize);
+
+	note->message = git__strndup(git_blob_rawcontent(blob), (size_t)blobsize);
+	GIT_ERROR_CHECK_ALLOC(note->message);
 
 	*out = note;
 	return 0;
@@ -417,7 +422,7 @@ static int normalize_namespace(char **out, git_repository *repo, const char *not
 {
 	if (notes_ref) {
 		*out = git__strdup(notes_ref);
-		GITERR_CHECK_ALLOC(*out);
+		GIT_ERROR_CHECK_ALLOC(*out);
 		return 0;
 	}
 
@@ -729,7 +734,7 @@ int git_note_foreach(
 
 	while (!(error = git_note_next(&note_id, &annotated_id, iter))) {
 		if ((error = note_cb(&note_id, &annotated_id, payload)) != 0) {
-			giterr_set_after_callback(error);
+			git_error_set_after_callback(error);
 			break;
 		}
 	}

@@ -16,7 +16,7 @@ jobs:
       imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=gcc
-       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON
        LEAK_CHECK=valgrind
 
 - job: linux_amd64_trusty_gcc_mbedtls
@@ -29,7 +29,7 @@ jobs:
       imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=gcc
-       CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DSHA1_BACKEND=mbedTLS
+       CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DSHA1_BACKEND=mbedTLS -DDEPRECATE_HARD=ON
        LEAK_CHECK=valgrind
 
 - job: linux_amd64_trusty_clang_openssl
@@ -42,7 +42,7 @@ jobs:
       imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=clang
-       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL
+       CMAKE_OPTIONS=-DUSE_HTTPS=OpenSSL -DDEPRECATE_HARD=ON
        LEAK_CHECK=valgrind
 
 - job: linux_amd64_trusty_clang_mbedtls
@@ -55,7 +55,7 @@ jobs:
       imageName: 'libgit2/trusty-amd64:latest'
       environmentVariables: |
        CC=clang
-       CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DSHA1_BACKEND=mbedTLS
+       CMAKE_OPTIONS=-DUSE_HTTPS=mbedTLS -DSHA1_BACKEND=mbedTLS -DDEPRECATE_HARD=ON
        LEAK_CHECK=valgrind
 
 - job: macos
@@ -71,7 +71,8 @@ jobs:
         TMPDIR: $(Agent.TempDirectory)
         PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
         LEAK_CHECK: leaks
-        CMAKE_OPTIONS: -G Ninja
+        CMAKE_OPTIONS: -G Ninja -DDEPRECATE_HARD=ON
+        SKIP_SSH_TESTS: true
 
 - job: windows_vs_amd64
   displayName: 'Windows (amd64; Visual Studio)'
@@ -80,7 +81,7 @@ jobs:
   - template: azure-pipelines/powershell.yml
     parameters:
       environmentVariables:
-        CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013 Win64"
+        CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013 Win64" -DDEPRECATE_HARD=ON
 
 - job: windows_vs_x86
   displayName: 'Windows (x86; Visual Studio)'
@@ -89,7 +90,7 @@ jobs:
   - template: azure-pipelines/powershell.yml
     parameters:
       environmentVariables:
-        CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013"
+        CMAKE_OPTIONS: -DMSVC_CRTDBG=ON -G"Visual Studio 12 2013" -DDEPRECATE_HARD=ON
 
 - job: windows_mingw_amd64
   displayName: 'Windows (amd64; MinGW)'
@@ -103,7 +104,7 @@ jobs:
   - template: azure-pipelines/powershell.yml
     parameters:
       environmentVariables:
-        CMAKE_OPTIONS: -G"MinGW Makefiles"
+        CMAKE_OPTIONS: -G"MinGW Makefiles" -DDEPRECATE_HARD=ON
         PATH: $(Agent.TempDirectory)\mingw64\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
 
 - job: windows_mingw_x86
@@ -119,5 +120,38 @@ jobs:
   - template: azure-pipelines/powershell.yml
     parameters:
       environmentVariables:
-        CMAKE_OPTIONS: -G"MinGW Makefiles"
+        CMAKE_OPTIONS: -G"MinGW Makefiles" -DDEPRECATE_HARD=ON
         PATH: $(Agent.TempDirectory)\mingw32\bin;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\CMake\bin
+
+- job: documentation
+  displayName: 'Generate Documentation'
+  pool:
+    vmImage: 'Ubuntu 16.04'
+  steps:
+  - script: |
+      git config user.name 'Documentation Generation'
+      git config user.email 'libgit2@users.noreply.github.com'
+      git branch gh-pages origin/gh-pages
+      docker run --rm -v $(Build.SourcesDirectory):/src -w /src libgit2/docurium:latest cm doc api.docurium
+      git checkout gh-pages
+      cp -R * '$(Build.BinariesDirectory)'
+    displayName: 'Generate Documentation'
+  - task: archivefiles@2
+    displayName: 'Archive Documentation'
+    inputs:
+      rootFolderOrFile: '$(Build.BinariesDirectory)'
+      includeRootFolder: false
+      archiveFile: '$(Build.ArtifactStagingDirectory)/api-documentation.zip'
+  - task: publishbuildartifacts@1
+    displayName: 'Upload Documentation Artifact'
+    inputs:
+      pathToPublish: '$(Build.ArtifactStagingDirectory)'
+      artifactName: 'docs'
+  - script: |
+      git remote -v
+      echo 'machine github.com' > ~/.netrc
+      echo 'login $(GITHUB_USERNAME)' >> ~/.netrc
+      echo 'password $(GITHUB_PAT)' >> ~/.netrc
+      git push origin gh-pages
+    displayName: 'Publish Documentation'
+    condition: eq(variables['Build.Reason'], 'IndividualCI')

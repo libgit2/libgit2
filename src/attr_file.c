@@ -12,6 +12,7 @@
 #include "attrcache.h"
 #include "git2/blob.h"
 #include "git2/tree.h"
+#include "blob.h"
 #include "index.h"
 #include <ctype.h>
 
@@ -34,10 +35,10 @@ int git_attr_file__new(
 	git_attr_file_source source)
 {
 	git_attr_file *attrs = git__calloc(1, sizeof(git_attr_file));
-	GITERR_CHECK_ALLOC(attrs);
+	GIT_ERROR_CHECK_ALLOC(attrs);
 
 	if (git_mutex_init(&attrs->lock) < 0) {
-		giterr_set(GITERR_OS, "failed to initialize lock");
+		git_error_set(GIT_ERROR_OS, "failed to initialize lock");
 		git__free(attrs);
 		return -1;
 	}
@@ -56,7 +57,7 @@ int git_attr_file__clear_rules(git_attr_file *file, bool need_lock)
 	git_attr_rule *rule;
 
 	if (need_lock && git_mutex_lock(&file->lock) < 0) {
-		giterr_set(GITERR_OS, "failed to lock attribute file");
+		git_error_set(GIT_ERROR_OS, "failed to lock attribute file");
 		return -1;
 	}
 
@@ -119,6 +120,7 @@ int git_attr_file__load(
 		break;
 	case GIT_ATTR_FILE__FROM_INDEX: {
 		git_oid id;
+		git_off_t blobsize;
 
 		if ((error = attr_file_oid_from_index(&id, repo, entry->path)) < 0 ||
 			(error = git_blob_lookup(&blob, repo, &id)) < 0)
@@ -126,7 +128,10 @@ int git_attr_file__load(
 
 		/* Do not assume that data straight from the ODB is NULL-terminated;
 		 * copy the contents of a file to a buffer to work on */
-		git_buf_put(&content, git_blob_rawcontent(blob), git_blob_rawsize(blob));
+		blobsize = git_blob_rawsize(blob);
+
+		GIT_ERROR_CHECK_BLOBSIZE(blobsize);
+		git_buf_put(&content, git_blob_rawcontent(blob), (size_t)blobsize);
 		break;
 	}
 	case GIT_ATTR_FILE__FROM_FILE: {
@@ -147,7 +152,7 @@ int git_attr_file__load(
 		break;
 	}
 	default:
-		giterr_set(GITERR_INVALID, "unknown file source %d", source);
+		git_error_set(GIT_ERROR_INVALID, "unknown file source %d", source);
 		return -1;
 	}
 
@@ -219,7 +224,7 @@ int git_attr_file__out_of_date(
 	}
 
 	default:
-		giterr_set(GITERR_INVALID, "invalid file type %d", file->source);
+		git_error_set(GIT_ERROR_INVALID, "invalid file type %d", file->source);
 		return -1;
 	}
 }
@@ -245,7 +250,7 @@ int git_attr_file__parse_buffer(
 		context = attrs->entry->path;
 
 	if (git_mutex_lock(&attrs->lock) < 0) {
-		giterr_set(GITERR_OS, "failed to lock attribute file");
+		git_error_set(GIT_ERROR_OS, "failed to lock attribute file");
 		return -1;
 	}
 
@@ -751,7 +756,7 @@ int git_attr_assignment__parse(
 		/* allocate assign if needed */
 		if (!assign) {
 			assign = git__calloc(1, sizeof(git_attr_assignment));
-			GITERR_CHECK_ALLOC(assign);
+			GIT_ERROR_CHECK_ALLOC(assign);
 			GIT_REFCOUNT_INC(assign);
 		}
 
@@ -785,7 +790,7 @@ int git_attr_assignment__parse(
 
 		/* allocate permanent storage for name */
 		assign->name = git_pool_strndup(pool, name_start, scan - name_start);
-		GITERR_CHECK_ALLOC(assign->name);
+		GIT_ERROR_CHECK_ALLOC(assign->name);
 
 		/* if there is an equals sign, find the value */
 		if (*scan == '=') {
@@ -794,7 +799,7 @@ int git_attr_assignment__parse(
 			/* if we found a value, allocate permanent storage for it */
 			if (scan > value_start) {
 				assign->value = git_pool_strndup(pool, value_start, scan - value_start);
-				GITERR_CHECK_ALLOC(assign->value);
+				GIT_ERROR_CHECK_ALLOC(assign->value);
 			}
 		}
 

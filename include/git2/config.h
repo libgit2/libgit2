@@ -66,7 +66,7 @@ typedef struct git_config_entry {
 	const char *value; /**< String value of the entry */
 	unsigned int include_depth; /**< Depth of includes where this variable was found */
 	git_config_level_t level; /**< Which config file this was found in */
-	void (*free)(struct git_config_entry *entry); /**< Free function for this entry */
+	void GIT_CALLBACK(free)(struct git_config_entry *entry); /**< Free function for this entry */
 	void *payload; /**< Opaque value for the free function. Do not read or write */
 } git_config_entry;
 
@@ -81,7 +81,7 @@ GIT_EXTERN(void) git_config_entry_free(git_config_entry *);
  * @param entry the entry currently being enumerated
  * @param payload a user-specified pointer
  */
-typedef int  (*git_config_foreach_cb)(const git_config_entry *entry, void *payload);
+typedef int GIT_CALLBACK(git_config_foreach_cb)(const git_config_entry *entry, void *payload);
 
 /**
  * An opaque structure for a configuration iterator

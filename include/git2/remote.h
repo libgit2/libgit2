@@ -42,6 +42,80 @@ GIT_EXTERN(int) git_remote_create(
 		const char *url);
 
 /**
+ * Remote creation options flags
+ */
+typedef enum {
+	/** Ignore the repository apply.insteadOf configuration */
+	GIT_REMOTE_CREATE_SKIP_INSTEADOF = (1 << 0),
+
+	/** Don't build a fetchspec from the name if none is set */
+	GIT_REMOTE_CREATE_SKIP_DEFAULT_FETCHSPEC = (1 << 1),
+} git_remote_create_flags;
+
+/**
+ * Remote creation options structure
+ *
+ * Initialize with `GIT_REMOTE_CREATE_OPTIONS_INIT`. Alternatively, you can
+ * use `git_remote_create_init_options`.
+ *
+ */
+typedef struct git_remote_create_options {
+	unsigned int version;
+
+	/**
+	 * The repository that should own the remote.
+	 * Setting this to NULL results in a detached remote.
+	 */
+	git_repository *repository;
+
+	/**
+	 * The remote's name.
+	 * Setting this to NULL results in an in-memory/anonymous remote.
+	 */
+	const char *name;
+
+	/** The fetchspec the remote should use. */
+	const char *fetchspec;
+
+	/** Additional flags for the remote. See git_remote_create_flags. */
+	unsigned int flags;
+} git_remote_create_options;
+
+#define GIT_REMOTE_CREATE_OPTIONS_VERSION 1
+#define GIT_REMOTE_CREATE_OPTIONS_INIT {GIT_REMOTE_CREATE_OPTIONS_VERSION}
+
+/**
+ * Initialize git_remote_create_options structure
+ *
+ * Initializes a `git_remote_create_options` with default values. Equivalent to
+ * creating an instance with `GIT_REMOTE_CREATE_OPTIONS_INIT`.
+ *
+ * @param opts The `git_remote_create_options` struct to initialize.
+ * @param version The struct version; pass `GIT_REMOTE_CREATE_OPTIONS_VERSION`.
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_remote_create_init_options(
+		git_remote_create_options *opts,
+		unsigned int version);
+
+/**
+ * Create a remote, with options.
+ *
+ * This function allows more fine-grained control over the remote creation.
+ *
+ * Passing NULL as the opts argument will result in a detached remote.
+ *
+ * @param out the resulting remote
+ * @param url the remote's url
+ * @param opts the remote creation options
+ * @return 0, GIT_EINVALIDSPEC, GIT_EEXISTS or an error code
+ */
+GIT_EXTERN(int) git_remote_create_with_opts(
+		git_remote **out,
+		const char *url,
+		const git_remote_create_options *opts);
+
+/**
  * Add a remote with the provided fetch refspec (or default if NULL) to the repository's
  * configuration.
  *
@@ -341,18 +415,19 @@ GIT_EXTERN(int) git_remote_list(git_strarray *out, git_repository *repo);
  * Argument to the completion callback which tells it which operation
  * finished.
  */
-typedef enum git_remote_completion_type {
+typedef enum git_remote_completion_t {
 	GIT_REMOTE_COMPLETION_DOWNLOAD,
 	GIT_REMOTE_COMPLETION_INDEXING,
 	GIT_REMOTE_COMPLETION_ERROR,
-} git_remote_completion_type;
+} git_remote_completion_t;
 
 /** Push network progress notification function */
-typedef int (*git_push_transfer_progress)(
+typedef int GIT_CALLBACK(git_push_transfer_progress_cb)(
 	unsigned int current,
 	unsigned int total,
 	size_t bytes,
 	void* payload);
+
 /**
  * Represents an update which will be performed on the remote during push
  */
@@ -383,7 +458,7 @@ typedef struct {
  * @param len number of elements in `updates`
  * @param payload Payload provided by the caller
  */
-typedef int (*git_push_negotiation)(const git_push_update **updates, size_t len, void *payload);
+typedef int GIT_CALLBACK(git_push_negotiation)(const git_push_update **updates, size_t len, void *payload);
 
 /**
  * Callback used to inform of the update status from the remote.
@@ -397,7 +472,7 @@ typedef int (*git_push_negotiation)(const git_push_update **updates, size_t len,
  * @param data data provided by the caller
  * @return 0 on success, otherwise an error
  */
-typedef int (*git_push_update_reference_cb)(const char *refname, const char *status, void *data);
+typedef int GIT_CALLBACK(git_push_update_reference_cb)(const char *refname, const char *status, void *data);
 
 /**
  * The callback settings structure
@@ -418,7 +493,7 @@ struct git_remote_callbacks {
 	 * Completion is called when different parts of the download
 	 * process are done (currently unused).
 	 */
-	int (*completion)(git_remote_completion_type type, void *data);
+	int GIT_CALLBACK(completion)(git_remote_completion_t type, void *data);
 
 	/**
 	 * This will be called if the remote host requires
@@ -442,13 +517,13 @@ struct git_remote_callbacks {
 	 * called with the current count of progress done by the
 	 * indexer.
 	 */
-	git_transfer_progress_cb transfer_progress;
+	git_indexer_progress_cb transfer_progress;
 
 	/**
 	 * Each time a reference is updated locally, this function
 	 * will be called with information about it.
 	 */
-	int (*update_tips)(const char *refname, const git_oid *a, const git_oid *b, void *data);
+	int GIT_CALLBACK(update_tips)(const char *refname, const git_oid *a, const git_oid *b, void *data);
 
 	/**
 	 * Function to call with progress information during pack
@@ -463,7 +538,7 @@ struct git_remote_callbacks {
 	 * inline with pack building operations, so performance may be
 	 * affected.
 	 */
-	git_push_transfer_progress push_transfer_progress;
+	git_push_transfer_progress_cb push_transfer_progress;
 
 	/**
 	 * See documentation of git_push_update_reference_cb
@@ -758,7 +833,7 @@ GIT_EXTERN(int) git_remote_push(git_remote *remote,
 /**
  * Get the statistics structure that is filled in by the fetch operation.
  */
-GIT_EXTERN(const git_transfer_progress *) git_remote_stats(git_remote *remote);
+GIT_EXTERN(const git_indexer_progress *) git_remote_stats(git_remote *remote);
 
 /**
  * Retrieve the tag auto-follow setting

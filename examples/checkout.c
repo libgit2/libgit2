@@ -132,7 +132,7 @@ static int perform_checkout_ref(git_repository *repo, git_annotated_commit *targ
 	/** Grab the commit we're interested to move to */
 	err = git_commit_lookup(&target_commit, repo, git_annotated_commit_id(target));
 	if (err != 0) {
-		fprintf(stderr, "failed to lookup commit: %s\n", giterr_last()->message);
+		fprintf(stderr, "failed to lookup commit: %s\n", git_error_last()->message);
 		goto cleanup;
 	}
 
@@ -140,12 +140,12 @@ static int perform_checkout_ref(git_repository *repo, git_annotated_commit *targ
 	 * Perform the checkout so the workdir corresponds to what target_commit
 	 * contains.
 	 *
-	 * Note that it's okay to pass a git_commit here, because it will be 
+	 * Note that it's okay to pass a git_commit here, because it will be
 	 * peeled to a tree.
 	 */
 	err = git_checkout_tree(repo, (const git_object *)target_commit, &checkout_opts);
 	if (err != 0) {
-		fprintf(stderr, "failed to checkout tree: %s\n", giterr_last()->message);
+		fprintf(stderr, "failed to checkout tree: %s\n", git_error_last()->message);
 		goto cleanup;
 	}
 
@@ -161,7 +161,7 @@ static int perform_checkout_ref(git_repository *repo, git_annotated_commit *targ
 		err = git_repository_set_head_detached_from_annotated(repo, target);
 	}
 	if (err != 0) {
-		fprintf(stderr, "failed to update HEAD reference: %s\n", giterr_last()->message);
+		fprintf(stderr, "failed to update HEAD reference: %s\n", git_error_last()->message);
 		goto cleanup;
 	}
 
@@ -172,9 +172,8 @@ cleanup:
 }
 
 /** That example's entry point */
-int main(int argc, char **argv)
+int lg2_checkout(git_repository *repo, int argc, char **argv)
 {
-	git_repository *repo = NULL;
 	struct args_info args = ARGS_INFO_INIT;
 	checkout_options opts;
 	git_repository_state_t state;
@@ -184,15 +183,6 @@ int main(int argc, char **argv)
 
 	/** Parse our command line options */
 	parse_options(&path, &opts, &args);
-
-	/** Initialize the library */
-	err = git_libgit2_init();
-	if (!err)
-		check_lg2(err, "Failed to initialize libgit2", NULL);
-
-	/** Open the repository corresponding to the options */
-	check_lg2(git_repository_open_ext(&repo, path, 0, NULL),
-			  "Could not open repository", NULL);
 
 	/** Make sure we're not about to checkout while something else is going on */
 	state = git_repository_state(repo);
@@ -219,7 +209,7 @@ int main(int argc, char **argv)
 		 */
 		err = resolve_refish(&checkout_target, repo, args.argv[args.pos]);
 		if (err != 0) {
-			fprintf(stderr, "failed to resolve %s: %s\n", args.argv[args.pos], giterr_last()->message);
+			fprintf(stderr, "failed to resolve %s: %s\n", args.argv[args.pos], git_error_last()->message);
 			goto cleanup;
 		}
 		err = perform_checkout_ref(repo, checkout_target, &opts);
@@ -227,9 +217,6 @@ int main(int argc, char **argv)
 
 cleanup:
 	git_annotated_commit_free(checkout_target);
-
-	git_repository_free(repo);
-	git_libgit2_shutdown();
 
 	return err;
 }

@@ -14,8 +14,8 @@ static void assert_tag_parses(const char *data, size_t datalen,
 	if (!datalen)
 		datalen = strlen(data);
 
-	cl_git_pass(git_object__from_raw((git_object **) &tag, data, datalen, GIT_OBJ_TAG));
-	cl_assert_equal_i(tag->type, GIT_OBJ_TAG);
+	cl_git_pass(git_object__from_raw((git_object **) &tag, data, datalen, GIT_OBJECT_TAG));
+	cl_assert_equal_i(tag->type, GIT_OBJECT_TAG);
 
 	if (expected_oid) {
 		git_oid oid;
@@ -54,7 +54,7 @@ static void assert_tag_fails(const char *data, size_t datalen)
 	git_object *object;
 	if (!datalen)
 		datalen = strlen(data);
-	cl_git_fail(git_object__from_raw(&object, data, datalen, GIT_OBJ_TAG));
+	cl_git_fail(git_object__from_raw(&object, data, datalen, GIT_OBJECT_TAG));
 }
 
 void test_object_tag_parse__valid_tag_parses(void)
@@ -214,5 +214,5 @@ void test_object_tag_parse__no_oob_read_when_searching_message(void)
 	 * expected one.
 	 */
 	assert_tag_fails(tag, strlen(tag) - strlen("\n\nMessage"));
-	cl_assert(strstr(giterr_last()->message, "tag contains no message"));
+	cl_assert(strstr(git_error_last()->message, "tag contains no message"));
 }

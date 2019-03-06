@@ -165,7 +165,7 @@ GIT_EXTERN(int) git_packbuilder_write(
 	git_packbuilder *pb,
 	const char *path,
 	unsigned int mode,
-	git_transfer_progress_cb progress_cb,
+	git_indexer_progress_cb progress_cb,
 	void *progress_cb_payload);
 
 /**
@@ -178,7 +178,7 @@ GIT_EXTERN(int) git_packbuilder_write(
 */
 GIT_EXTERN(const git_oid *) git_packbuilder_hash(git_packbuilder *pb);
 
-typedef int (*git_packbuilder_foreach_cb)(void *buf, size_t size, void *payload);
+typedef int GIT_CALLBACK(git_packbuilder_foreach_cb)(void *buf, size_t size, void *payload);
 
 /**
  * Create the new pack and pass each object to the callback
@@ -207,7 +207,7 @@ GIT_EXTERN(size_t) git_packbuilder_object_count(git_packbuilder *pb);
 GIT_EXTERN(size_t) git_packbuilder_written(git_packbuilder *pb);
 
 /** Packbuilder progress notification function */
-typedef int (*git_packbuilder_progress)(
+typedef int GIT_CALLBACK(git_packbuilder_progress)(
 	int stage,
 	uint32_t current,
 	uint32_t total,

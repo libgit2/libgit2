@@ -29,14 +29,15 @@
 #define IO_REPARSE_TAG_SYMLINK (0xA000000CL)
 #endif
 
+#ifndef SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE
+# define SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE 0x02
+#endif
+
 /* Allowable mode bits on Win32.  Using mode bits that are not supported on
  * Win32 (eg S_IRWXU) is generally ignored, but Wine warns loudly about it
  * so we simply remove them.
  */
 #define WIN32_MODE_MASK (_S_IREAD | _S_IWRITE)
-
-/* GetFinalPathNameByHandleW signature */
-typedef DWORD(WINAPI *PFGetFinalPathNameByHandleW)(HANDLE, LPWSTR, DWORD, DWORD);
 
 unsigned long git_win32__createfile_sharemode =
  FILE_SHARE_READ | FILE_SHARE_WRITE;
@@ -393,12 +394,19 @@ int p_readlink(const char *path, char *buf, size_t bufsiz)
 	return (int)bufsiz;
 }
 
-int p_symlink(const char *old, const char *new)
+int p_symlink(const char *target, const char *path)
 {
-	/* Real symlinks on NTFS require admin privileges. Until this changes,
-	 * libgit2 just creates a text file with the link target in the contents.
-	 */
-	return git_futils_fake_symlink(old, new);
+	git_win32_path target_w, path_w;
+
+	if (git_win32_path_from_utf8(path_w, path) < 0 ||
+		git__utf8_to_16(target_w, MAX_PATH, target) < 0)
+		return -1;
+
+	if (!CreateSymbolicLinkW(path_w, target_w,
+	    SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE))
+		return -1;
+
+	return 0;
 }
 
 struct open_opts {
@@ -524,7 +532,7 @@ int p_utimes(const char *path, const struct p_timeval times[2])
 		attrs_new = attrs_orig & ~FILE_ATTRIBUTE_READONLY;
 
 		if (!SetFileAttributesW(wpath, attrs_new)) {
-			giterr_set(GITERR_OS, "failed to set attributes");
+			git_error_set(GIT_ERROR_OS, "failed to set attributes");
 			return -1;
 		}
 	}
@@ -598,39 +606,12 @@ int p_getcwd(char *buffer_out, size_t size)
 	return 0;
 }
 
-/*
- * Returns the address of the GetFinalPathNameByHandleW function.
- * This function is available on Windows Vista and higher.
- */
-static PFGetFinalPathNameByHandleW get_fpnbyhandle(void)
-{
-	static PFGetFinalPathNameByHandleW pFunc = NULL;
-	PFGetFinalPathNameByHandleW toReturn = pFunc;
-
-	if (!toReturn) {
-		HMODULE hModule = GetModuleHandleW(L"kernel32");
-
-		if (hModule)
-			toReturn = (PFGetFinalPathNameByHandleW)GetProcAddress(hModule, "GetFinalPathNameByHandleW");
-
-		pFunc = toReturn;
-	}
-
-	assert(toReturn);
-
-	return toReturn;
-}
-
 static int getfinalpath_w(
 	git_win32_path dest,
 	const wchar_t *path)
 {
-	PFGetFinalPathNameByHandleW pgfp = get_fpnbyhandle();
 	HANDLE hFile;
 	DWORD dwChars;
-
-	if (!pgfp)
-		return -1;
 
 	/* Use FILE_FLAG_BACKUP_SEMANTICS so we can open a directory. Do not
 	* specify FILE_FLAG_OPEN_REPARSE_POINT; we want to open a handle to the
@@ -642,7 +623,7 @@ static int getfinalpath_w(
 		return -1;
 
 	/* Call GetFinalPathNameByHandle */
-	dwChars = pgfp(hFile, dest, GIT_WIN_PATH_UTF16, FILE_NAME_NORMALIZED);
+	dwChars = GetFinalPathNameByHandleW(hFile, dest, GIT_WIN_PATH_UTF16, FILE_NAME_NORMALIZED);
 	CloseHandle(hFile);
 
 	if (!dwChars || dwChars >= GIT_WIN_PATH_UTF16)
@@ -871,7 +852,7 @@ int p_rename(const char *from, const char *to)
 int p_recv(GIT_SOCKET socket, void *buffer, size_t length, int flags)
 {
 	if ((size_t)((int)length) != length)
-		return -1; /* giterr_set will be done by caller */
+		return -1; /* git_error_set will be done by caller */
 
 	return recv(socket, buffer, (int)length, flags);
 }
@@ -879,7 +860,7 @@ int p_recv(GIT_SOCKET socket, void *buffer, size_t length, int flags)
 int p_send(GIT_SOCKET socket, const void *buffer, size_t length, int flags)
 {
 	if ((size_t)((int)length) != length)
-		return -1; /* giterr_set will be done by caller */
+		return -1; /* git_error_set will be done by caller */
 
 	return send(socket, buffer, (int)length, flags);
 }

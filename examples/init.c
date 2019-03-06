@@ -40,13 +40,9 @@ struct opts {
 static void create_initial_commit(git_repository *repo);
 static void parse_opts(struct opts *o, int argc, char *argv[]);
 
-
-int main(int argc, char *argv[])
+int lg2_init(git_repository *repo, int argc, char *argv[])
 {
-	git_repository *repo = NULL;
 	struct opts o = { 1, 0, 0, 0, GIT_REPOSITORY_INIT_SHARED_UMASK, 0, 0, 0 };
-
-	git_libgit2_init();
 
 	parse_opts(&o, argc, argv);
 
@@ -116,7 +112,6 @@ int main(int argc, char *argv[])
 	}
 
 	git_repository_free(repo);
-	git_libgit2_shutdown();
 
 	return 0;
 }

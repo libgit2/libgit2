@@ -96,4 +96,6 @@ int gitno_extract_url_parts(
 		const char *url,
 		const char *default_port);
 
+const char *gitno__default_port(gitno_connection_data *data);
+
 #endif

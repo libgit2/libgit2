@@ -62,7 +62,7 @@ void test_merge_trees_commits__automerge(void)
 	cl_assert((entry = git_index_get_bypath(index, "automergeable.txt", 0)) != NULL);
 	cl_assert(entry->file_size == strlen(AUTOMERGEABLE_MERGED_FILE));
 
-	cl_git_pass(git_object_lookup((git_object **)&blob, repo, &entry->id, GIT_OBJ_BLOB));
+	cl_git_pass(git_object_lookup((git_object **)&blob, repo, &entry->id, GIT_OBJECT_BLOB));
 	cl_assert(memcmp(git_blob_rawcontent(blob), AUTOMERGEABLE_MERGED_FILE, (size_t)entry->file_size) == 0);
 
 	git_index_free(index);
@@ -137,12 +137,12 @@ void test_merge_trees_commits__fail_on_conflict(void)
 
 	opts.flags |= GIT_MERGE_FAIL_ON_CONFLICT;
 
-	cl_git_fail_with(GIT_EMERGECONFLICT, 
+	cl_git_fail_with(GIT_EMERGECONFLICT,
 		merge_trees_from_branches(&index, repo, "df_side1", "df_side2", &opts));
 
-	cl_git_fail_with(GIT_EMERGECONFLICT, 
+	cl_git_fail_with(GIT_EMERGECONFLICT,
 		merge_commits_from_branches(&index, repo, "master", "unrelated", &opts));
-	cl_git_fail_with(GIT_EMERGECONFLICT, 
+	cl_git_fail_with(GIT_EMERGECONFLICT,
 		merge_commits_from_branches(&index, repo, "master", "branch", &opts));
 }
 

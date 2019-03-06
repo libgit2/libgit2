@@ -24,7 +24,7 @@ int git_refdb_new(git_refdb **out, git_repository *repo)
 	assert(out && repo);
 
 	db = git__calloc(1, sizeof(*db));
-	GITERR_CHECK_ALLOC(db);
+	GIT_ERROR_CHECK_ALLOC(db);
 
 	db->repo = repo;
 
@@ -127,7 +127,7 @@ int git_refdb_iterator(git_reference_iterator **out, git_refdb *db, const char *
 	int error;
 
 	if (!db->backend || !db->backend->iterator) {
-		giterr_set(GITERR_REFERENCE, "this backend doesn't support iterators");
+		git_error_set(GIT_ERROR_REFERENCE, "this backend doesn't support iterators");
 		return -1;
 	}
 
@@ -245,7 +245,7 @@ int git_refdb_lock(void **payload, git_refdb *db, const char *refname)
 	assert(payload && db && refname);
 
 	if (!db->backend->lock) {
-		giterr_set(GITERR_REFERENCE, "backend does not support locking");
+		git_error_set(GIT_ERROR_REFERENCE, "backend does not support locking");
 		return -1;
 	}
 

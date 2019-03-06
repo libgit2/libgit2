@@ -69,7 +69,7 @@ static int config_snapshot(git_config_backend **out, git_config_backend *in);
 
 static int config_error_readonly(void)
 {
-	giterr_set(GITERR_CONFIG, "this backend is read-only");
+	git_error_set(GIT_ERROR_CONFIG, "this backend is read-only");
 	return -1;
 }
 
@@ -83,7 +83,7 @@ static git_config_entries *diskfile_entries_take(diskfile_header *h)
 	git_config_entries *entries;
 
 	if (git_mutex_lock(&h->values_mutex) < 0) {
-	    giterr_set(GITERR_OS, "failed to lock config backend");
+	    git_error_set(GIT_ERROR_OS, "failed to lock config backend");
 	    return NULL;
 	}
 
@@ -196,7 +196,7 @@ static int config_refresh(git_config_backend *cfg)
 		goto out;
 
 	if ((error = git_mutex_lock(&b->header.values_mutex)) < 0) {
-		giterr_set(GITERR_OS, "failed to lock config backend");
+		git_error_set(GIT_ERROR_OS, "failed to lock config backend");
 		goto out;
 	}
 
@@ -274,7 +274,7 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 	/* No early returns due to sanity checks, let's write it out and refresh */
 	if (value) {
 		esc_value = escape_value(value);
-		GITERR_CHECK_ALLOC(esc_value);
+		GIT_ERROR_CHECK_ALLOC(esc_value);
 	}
 
 	if ((error = config_write(b, name, key, NULL, esc_value)) < 0)
@@ -339,7 +339,7 @@ static int config_set_multivar(
 
 	result = p_regcomp(&preg, regexp, REG_EXTENDED);
 	if (result != 0) {
-		giterr_set_regex(&preg, result);
+		git_error_set_regex(&preg, result);
 		result = -1;
 		goto out;
 	}
@@ -374,7 +374,7 @@ static int config_delete(git_config_backend *cfg, const char *name)
 	/* Check whether we'd be modifying an included or multivar key */
 	if ((error = git_config_entries_get_unique(&entry, entries, key)) < 0) {
 		if (error == GIT_ENOTFOUND)
-			giterr_set(GITERR_CONFIG, "could not find key '%s' to delete", name);
+			git_error_set(GIT_ERROR_CONFIG, "could not find key '%s' to delete", name);
 		goto out;
 	}
 
@@ -409,12 +409,12 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 
 	if ((result = git_config_entries_get(&entry, entries, key)) < 0) {
 		if (result == GIT_ENOTFOUND)
-			giterr_set(GITERR_CONFIG, "could not find key '%s' to delete", name);
+			git_error_set(GIT_ERROR_CONFIG, "could not find key '%s' to delete", name);
 		goto out;
 	}
 
 	if ((result = p_regcomp(&preg, regexp, REG_EXTENDED)) != 0) {
-		giterr_set_regex(&preg, result);
+		git_error_set_regex(&preg, result);
 		result = -1;
 		goto out;
 	}
@@ -473,13 +473,13 @@ int git_config_backend_from_file(git_config_backend **out, const char *path)
 	diskfile_backend *backend;
 
 	backend = git__calloc(1, sizeof(diskfile_backend));
-	GITERR_CHECK_ALLOC(backend);
+	GIT_ERROR_CHECK_ALLOC(backend);
 
 	backend->header.parent.version = GIT_CONFIG_BACKEND_VERSION;
 	git_mutex_init(&backend->header.values_mutex);
 
 	backend->file.path = git__strdup(path);
-	GITERR_CHECK_ALLOC(backend->file.path);
+	GIT_ERROR_CHECK_ALLOC(backend->file.path);
 	git_array_init(backend->file.includes);
 
 	backend->header.parent.open = config_open;
@@ -590,7 +590,7 @@ static int config_snapshot(git_config_backend **out, git_config_backend *in)
 	diskfile_readonly_backend *backend;
 
 	backend = git__calloc(1, sizeof(diskfile_readonly_backend));
-	GITERR_CHECK_ALLOC(backend);
+	GIT_ERROR_CHECK_ALLOC(backend);
 
 	backend->header.parent.version = GIT_CONFIG_BACKEND_VERSION;
 	git_mutex_init(&backend->header.values_mutex);
@@ -686,7 +686,7 @@ static int parse_include(git_config_parser *reader,
 		include, parse_data->level, parse_data->depth+1);
 
 	if (result == GIT_ENOTFOUND) {
-		giterr_clear();
+		git_error_clear();
 		result = 0;
 	}
 
@@ -828,7 +828,7 @@ static int read_on_variable(
 		return -1;
 
 	entry = git__calloc(1, sizeof(git_config_entry));
-	GITERR_CHECK_ALLOC(entry);
+	GIT_ERROR_CHECK_ALLOC(entry);
 	entry->name = git_buf_detach(&buf);
 	entry->value = var_value ? git__strdup(var_value) : NULL;
 	entry->level = parse_data->level;
@@ -863,7 +863,7 @@ static int config_read(
 	int error;
 
 	if (depth >= MAX_INCLUDE_DEPTH) {
-		giterr_set(GITERR_CONFIG, "maximum config include depth reached");
+		git_error_set(GIT_ERROR_CONFIG, "maximum config include depth reached");
 		return -1;
 	}
 
@@ -911,7 +911,7 @@ static int write_section(git_buf *fbuf, const char *key)
 		char *escaped;
 		git_buf_put(&buf, key, dot - key);
 		escaped = escape_value(dot + 1);
-		GITERR_CHECK_ALLOC(escaped);
+		GIT_ERROR_CHECK_ALLOC(escaped);
 		git_buf_printf(&buf, " \"%s\"", escaped);
 		git__free(escaped);
 	}
@@ -1156,12 +1156,12 @@ static int config_write(diskfile_backend *cfg, const char *orig_key, const char 
 	ldot = strrchr(key, '.');
 	name = ldot + 1;
 	section = git__strndup(key, ldot - key);
-	GITERR_CHECK_ALLOC(section);
+	GIT_ERROR_CHECK_ALLOC(section);
 
 	ldot = strrchr(orig_key, '.');
 	orig_name = ldot + 1;
 	orig_section = git__strndup(orig_key, ldot - orig_key);
-	GITERR_CHECK_ALLOC(orig_section);
+	GIT_ERROR_CHECK_ALLOC(orig_section);
 
 	write_data.buf = &buf;
 	git_buf_init(&write_data.buffered_comment, 0);

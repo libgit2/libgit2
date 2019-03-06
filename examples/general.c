@@ -66,7 +66,7 @@ static void config_files(const char *repo_path, git_repository *repo);
  */
 static void check_error(int error_code, const char *action)
 {
-	const git_error *error = giterr_last();
+	const git_error *error = git_error_last();
 	if (!error_code)
 		return;
 
@@ -76,12 +76,11 @@ static void check_error(int error_code, const char *action)
 	exit(1);
 }
 
-int main (int argc, char** argv)
+int lg2_general(git_repository *repo, int argc, char** argv)
 {
 	int error;
 	git_oid oid;
 	char *repo_path;
-	git_repository *repo;
 
 	/**
 	 * Initialize the library, this will set up any global state which libgit2 needs
@@ -185,7 +184,7 @@ static void object_database(git_repository *repo, git_oid *oid)
 	int error;
 	git_odb_object *obj;
 	git_odb *odb;
-	git_otype otype;
+	git_object_t otype;
 
 	git_repository_odb(&odb, repo);
 
@@ -241,7 +240,7 @@ static void object_database(git_repository *repo, git_oid *oid)
 	 * we'll write a new blob object that just contains a simple string.
 	 * Notice that we have to specify the object type as the `git_otype` enum.
 	 */
-	git_odb_write(oid, odb, "test data", sizeof("test data") - 1, GIT_OBJ_BLOB);
+	git_odb_write(oid, odb, "test data", sizeof("test data") - 1, GIT_OBJECT_BLOB);
 
 	/**
 	 * Now that we've written the object, we can check out what SHA1 was
@@ -416,7 +415,7 @@ static void commit_parsing(git_repository *repo)
 static void tag_parsing(git_repository *repo)
 {
 	git_commit *commit;
-	git_otype type;
+	git_object_t type;
 	git_tag *tag;
 	git_oid oid;
 	const char *name, *message;
@@ -441,7 +440,7 @@ static void tag_parsing(git_repository *repo)
 	 */
 	git_tag_target((git_object **)&commit, tag);
 	name = git_tag_name(tag);		/* "test" */
-	type = git_tag_target_type(tag);	/* GIT_OBJ_COMMIT (otype enum) */
+	type = git_tag_target_type(tag);	/* GIT_OBJECT_COMMIT (object_t enum) */
 	message = git_tag_message(tag);		/* "tag message\n" */
 	printf("Tag Name: %s\nTag Type: %s\nTag Message: %s\n",
 		name, git_object_type2string(type), message);
@@ -692,12 +691,12 @@ static void reference_listing(git_repository *repo)
 		git_reference_lookup(&ref, repo, refname);
 
 		switch (git_reference_type(ref)) {
-			case GIT_REF_OID:
+			case GIT_REFERENCE_DIRECT:
 				git_oid_fmt(oid_hex, git_reference_target(ref));
 				printf("%s [%s]\n", refname, oid_hex);
 				break;
 
-			case GIT_REF_SYMBOLIC:
+			case GIT_REFERENCE_SYMBOLIC:
 				printf("%s => %s\n", refname, git_reference_symbolic_target(ref));
 				break;
 			default:

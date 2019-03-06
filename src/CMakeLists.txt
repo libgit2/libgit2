@@ -125,17 +125,6 @@ IF (WIN32 AND WINHTTP)
 
 	LIST(APPEND LIBGIT2_LIBS "rpcrt4" "crypt32" "ole32")
 	LIST(APPEND LIBGIT2_PC_LIBS "-lrpcrt4" "-lcrypt32" "-lole32")
-ELSE ()
-	IF (CURL)
-		FIND_PKGLIBRARIES(CURL libcurl)
-	ENDIF ()
-	IF (CURL_FOUND)
-		SET(GIT_CURL 1)
-		LIST(APPEND LIBGIT2_SYSTEM_INCLUDES ${CURL_INCLUDE_DIRS})
-		LIST(APPEND LIBGIT2_LIBS ${CURL_LIBRARIES})
-		LIST(APPEND LIBGIT2_PC_LIBS ${CURL_LDFLAGS})
-	ENDIF()
-	ADD_FEATURE_INFO(cURL GIT_CURL "cURL for HTTP proxy support")
 ENDIF()
 
 IF (USE_HTTPS)
@@ -423,7 +412,7 @@ FILE(GLOB SRC_H
 
 # On Windows use specific platform sources
 IF (WIN32 AND NOT CYGWIN)
-	ADD_DEFINITIONS(-DWIN32 -D_WIN32_WINNT=0x0501)
+	ADD_DEFINITIONS(-DWIN32 -D_WIN32_WINNT=0x0600)
 
 	IF(MSVC)
 		SET(WIN_RC "win32/git2.rc")
@@ -439,6 +428,7 @@ ELSE()
 	FILE(GLOB SRC_OS unix/*.c unix/*.h)
 ENDIF()
 FILE(GLOB SRC_GIT2 *.c *.h
+	allocators/*.c allocators/*.h
 	streams/*.c streams/*.h
 	transports/*.c transports/*.h
 	xdiff/*.c xdiff/*.h)

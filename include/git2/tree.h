@@ -189,7 +189,7 @@ GIT_EXTERN(const git_oid *) git_tree_entry_id(const git_tree_entry *entry);
  * @param entry a tree entry
  * @return the type of the pointed object
  */
-GIT_EXTERN(git_otype) git_tree_entry_type(const git_tree_entry *entry);
+GIT_EXTERN(git_object_t) git_tree_entry_type(const git_tree_entry *entry);
 
 /**
  * Get the UNIX file attributes of a tree entry
@@ -344,7 +344,7 @@ GIT_EXTERN(int) git_treebuilder_remove(
  * entry should be left alone and any non-zero value meaning that the
  * entry should be removed from the treebuilder list (i.e. filtered out).
  */
-typedef int (*git_treebuilder_filter_cb)(
+typedef int GIT_CALLBACK(git_treebuilder_filter_cb)(
 	const git_tree_entry *entry, void *payload);
 
 /**
@@ -391,7 +391,7 @@ GIT_EXTERN(int) git_treebuilder_write_with_buffer(
 	git_oid *oid, git_treebuilder *bld, git_buf *tree);
 
 /** Callback for the tree traversal method */
-typedef int (*git_treewalk_cb)(
+typedef int GIT_CALLBACK(git_treewalk_cb)(
 	const char *root, const git_tree_entry *entry, void *payload);
 
 /** Tree traversal modes */

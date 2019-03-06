@@ -56,7 +56,7 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 				return recvd;
 
 			if (recvd == 0) {
-				giterr_set(GITERR_NET, "early EOF");
+				git_error_set(GIT_ERROR_NET, "early EOF");
 				return GIT_EEOF;
 			}
 
@@ -65,7 +65,7 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 
 		gitno_consume(buf, line_end);
 		if (pkt->type == GIT_PKT_ERR) {
-			giterr_set(GITERR_NET, "remote error: %s", ((git_pkt_err *)pkt)->error);
+			git_error_set(GIT_ERROR_NET, "remote error: %s", ((git_pkt_err *)pkt)->error);
 			git__free(pkt);
 			return -1;
 		}
@@ -103,14 +103,14 @@ static int append_symref(const char **out, git_vector *symrefs, const char *ptr)
 
 	/* symref mapping has refspec format */
 	mapping = git__calloc(1, sizeof(git_refspec));
-	GITERR_CHECK_ALLOC(mapping);
+	GIT_ERROR_CHECK_ALLOC(mapping);
 
 	error = git_refspec__parse(mapping, git_buf_cstr(&buf), true);
 	git_buf_dispose(&buf);
 
 	/* if the error isn't OOM, then it's a parse error; let's use a nicer message */
 	if (error < 0) {
-		if (giterr_last()->klass != GITERR_NOMEMORY)
+		if (git_error_last()->klass != GIT_ERROR_NOMEMORY)
 			goto on_invalid;
 
 		git__free(mapping);
@@ -124,7 +124,7 @@ static int append_symref(const char **out, git_vector *symrefs, const char *ptr)
 	return 0;
 
 on_invalid:
-	giterr_set(GITERR_NET, "remote sent invalid symref");
+	git_error_set(GIT_ERROR_NET, "remote sent invalid symref");
 	git_refspec__dispose(mapping);
 	git__free(mapping);
 	return -1;
@@ -230,7 +230,7 @@ static int recv_pkt(git_pkt **out_pkt, git_pkt_type *out_type, gitno_buffer *buf
 		if ((ret = gitno_recv(buf)) < 0) {
 			return ret;
 		} else if (ret == 0) {
-			giterr_set(GITERR_NET, "early EOF");
+			git_error_set(GIT_ERROR_NET, "early EOF");
 			return GIT_EEOF;
 		}
 	} while (error);
@@ -297,7 +297,7 @@ static int fetch_setup_walk(git_revwalk **out, git_repository *repo)
 		if ((error = git_reference_lookup(&ref, repo, refs.strings[i])) < 0)
 			goto on_error;
 
-		if (git_reference_type(ref) == GIT_REF_SYMBOLIC)
+		if (git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC)
 			continue;
 
 		if ((error = git_revwalk_push(walk, git_reference_target(ref))) < 0)
@@ -382,7 +382,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 		i++;
 		if (i % 20 == 0) {
 			if (t->cancelled.val) {
-				giterr_set(GITERR_NET, "The fetch was cancelled by the user");
+				git_error_set(GIT_ERROR_NET, "The fetch was cancelled by the user");
 				error = GIT_EUSER;
 				goto on_error;
 			}
@@ -409,7 +409,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 				} else if (pkt_type == GIT_PKT_NAK) {
 					continue;
 				} else {
-					giterr_set(GITERR_NET, "Unexpected pkt type");
+					git_error_set(GIT_ERROR_NET, "Unexpected pkt type");
 					error = -1;
 					goto on_error;
 				}
@@ -461,7 +461,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 		goto on_error;
 
 	if (t->cancelled.val) {
-		giterr_set(GITERR_NET, "The fetch was cancelled by the user");
+		git_error_set(GIT_ERROR_NET, "The fetch was cancelled by the user");
 		error = GIT_EUSER;
 		goto on_error;
 	}
@@ -477,7 +477,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 			return error;
 
 		if (pkt_type != GIT_PKT_ACK && pkt_type != GIT_PKT_NAK) {
-			giterr_set(GITERR_NET, "Unexpected pkt type");
+			git_error_set(GIT_ERROR_NET, "Unexpected pkt type");
 			return -1;
 		}
 	} else {
@@ -492,13 +492,13 @@ on_error:
 	return error;
 }
 
-static int no_sideband(transport_smart *t, struct git_odb_writepack *writepack, gitno_buffer *buf, git_transfer_progress *stats)
+static int no_sideband(transport_smart *t, struct git_odb_writepack *writepack, gitno_buffer *buf, git_indexer_progress *stats)
 {
 	int recvd;
 
 	do {
 		if (t->cancelled.val) {
-			giterr_set(GITERR_NET, "The fetch was cancelled by the user");
+			git_error_set(GIT_ERROR_NET, "The fetch was cancelled by the user");
 			return GIT_EUSER;
 		}
 
@@ -519,9 +519,9 @@ static int no_sideband(transport_smart *t, struct git_odb_writepack *writepack, 
 
 struct network_packetsize_payload
 {
-	git_transfer_progress_cb callback;
+	git_indexer_progress_cb callback;
 	void *payload;
-	git_transfer_progress *stats;
+	git_indexer_progress *stats;
 	size_t last_fired_bytes;
 };
 
@@ -546,8 +546,8 @@ static int network_packetsize(size_t received, void *payload)
 int git_smart__download_pack(
 	git_transport *transport,
 	git_repository *repo,
-	git_transfer_progress *stats,
-	git_transfer_progress_cb transfer_progress_cb,
+	git_indexer_progress *stats,
+	git_indexer_progress_cb progress_cb,
 	void *progress_payload)
 {
 	transport_smart *t = (transport_smart *)transport;
@@ -557,10 +557,10 @@ int git_smart__download_pack(
 	int error = 0;
 	struct network_packetsize_payload npp = {0};
 
-	memset(stats, 0, sizeof(git_transfer_progress));
+	memset(stats, 0, sizeof(git_indexer_progress));
 
-	if (transfer_progress_cb) {
-		npp.callback = transfer_progress_cb;
+	if (progress_cb) {
+		npp.callback = progress_cb;
 		npp.payload = progress_payload;
 		npp.stats = stats;
 		t->packetsize_cb = &network_packetsize;
@@ -573,7 +573,7 @@ int git_smart__download_pack(
 	}
 
 	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||
-		((error = git_odb_write_pack(&writepack, odb, transfer_progress_cb, progress_payload)) != 0))
+		((error = git_odb_write_pack(&writepack, odb, progress_cb, progress_payload)) != 0))
 		goto done;
 
 	/*
@@ -591,7 +591,7 @@ int git_smart__download_pack(
 
 		/* Check cancellation before network call */
 		if (t->cancelled.val) {
-			giterr_clear();
+			git_error_clear();
 			error = GIT_EUSER;
 			goto done;
 		}
@@ -599,7 +599,7 @@ int git_smart__download_pack(
 		if ((error = recv_pkt(&pkt, NULL, buf)) >= 0) {
 			/* Check cancellation after network call */
 			if (t->cancelled.val) {
-				giterr_clear();
+				git_error_clear();
 				error = GIT_EUSER;
 			} else if (pkt->type == GIT_PKT_PROGRESS) {
 				if (t->progress_cb) {
@@ -626,7 +626,7 @@ int git_smart__download_pack(
 	} while (1);
 
 	/*
-	 * Trailing execution of transfer_progress_cb, if necessary...
+	 * Trailing execution of progress_cb, if necessary...
 	 * Only the callback through the npp datastructure currently
 	 * updates the last_fired_bytes value. It is possible that
 	 * progress has already been reported with the correct
@@ -645,7 +645,7 @@ int git_smart__download_pack(
 done:
 	if (writepack)
 		writepack->free(writepack);
-	if (transfer_progress_cb) {
+	if (progress_cb) {
 		t->packetsize_cb = NULL;
 		t->packetsize_payload = NULL;
 	}
@@ -701,7 +701,7 @@ static int add_push_report_pkt(git_push *push, git_pkt *pkt)
 	switch (pkt->type) {
 		case GIT_PKT_OK:
 			status = git__calloc(1, sizeof(push_status));
-			GITERR_CHECK_ALLOC(status);
+			GIT_ERROR_CHECK_ALLOC(status);
 			status->msg = NULL;
 			status->ref = git__strdup(((git_pkt_ok *)pkt)->ref);
 			if (!status->ref ||
@@ -712,7 +712,7 @@ static int add_push_report_pkt(git_push *push, git_pkt *pkt)
 			break;
 		case GIT_PKT_NG:
 			status = git__calloc(1, sizeof(push_status));
-			GITERR_CHECK_ALLOC(status);
+			GIT_ERROR_CHECK_ALLOC(status);
 			status->ref = git__strdup(((git_pkt_ng *)pkt)->ref);
 			status->msg = git__strdup(((git_pkt_ng *)pkt)->msg);
 			if (!status->ref || !status->msg ||
@@ -727,7 +727,7 @@ static int add_push_report_pkt(git_push *push, git_pkt *pkt)
 		case GIT_PKT_FLUSH:
 			return GIT_ITEROVER;
 		default:
-			giterr_set(GITERR_NET, "report-status: protocol error");
+			git_error_set(GIT_ERROR_NET, "report-status: protocol error");
 			return -1;
 	}
 
@@ -815,7 +815,7 @@ static int parse_report(transport_smart *transport, git_push *push)
 			}
 
 			if (recvd == 0) {
-				giterr_set(GITERR_NET, "early EOF");
+				git_error_set(GIT_ERROR_NET, "early EOF");
 				error = GIT_EEOF;
 				goto done;
 			}
@@ -832,7 +832,7 @@ static int parse_report(transport_smart *transport, git_push *push)
 				error = add_push_report_sideband_pkt(push, (git_pkt_data *)pkt, &data_pkt_buf);
 				break;
 			case GIT_PKT_ERR:
-				giterr_set(GITERR_NET, "report-status: Error reported: %s",
+				git_error_set(GIT_ERROR_NET, "report-status: Error reported: %s",
 					((git_pkt_err *)pkt)->error);
 				error = -1;
 				break;
@@ -855,7 +855,7 @@ static int parse_report(transport_smart *transport, git_push *push)
 			if (data_pkt_buf.size > 0) {
 				/* If there was data remaining in the pack data buffer,
 				 * then the server sent a partial pkt-line */
-				giterr_set(GITERR_NET, "Incomplete pack data pkt-line");
+				git_error_set(GIT_ERROR_NET, "Incomplete pack data pkt-line");
 				error = GIT_ERROR;
 			}
 			goto done;
@@ -873,7 +873,7 @@ done:
 static int add_ref_from_push_spec(git_vector *refs, push_spec *push_spec)
 {
 	git_pkt_ref *added = git__calloc(1, sizeof(git_pkt_ref));
-	GITERR_CHECK_ALLOC(added);
+	GIT_ERROR_CHECK_ALLOC(added);
 
 	added->type = GIT_PKT_REF;
 	git_oid_cpy(&added->head.oid, &push_spec->loid);
@@ -902,7 +902,7 @@ static int update_refs_from_report(
 	/* For each push spec we sent to the server, we should have
 	 * gotten back a status packet in the push report */
 	if (push_specs->length != push_report->length) {
-		giterr_set(GITERR_NET, "report-status: protocol error");
+		git_error_set(GIT_ERROR_NET, "report-status: protocol error");
 		return -1;
 	}
 
@@ -917,7 +917,7 @@ static int update_refs_from_report(
 		/* For each push spec we sent to the server, we should have
 		 * gotten back a status packet in the push report which matches */
 		if (strcmp(push_spec->refspec.dst, push_status->ref)) {
-			giterr_set(GITERR_NET, "report-status: protocol error");
+			git_error_set(GIT_ERROR_NET, "report-status: protocol error");
 			return -1;
 		}
 	}
@@ -978,7 +978,7 @@ struct push_packbuilder_payload
 {
 	git_smart_subtransport_stream *stream;
 	git_packbuilder *pb;
-	git_push_transfer_progress cb;
+	git_push_transfer_progress_cb cb;
 	void *cb_payload;
 	size_t last_bytes;
 	double last_progress_report_time;

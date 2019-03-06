@@ -14,7 +14,7 @@ static void assert_commit_parses(const char *data, size_t datalen,
 	git_commit *commit;
 	if (!datalen)
 		datalen = strlen(data);
-	cl_git_pass(git_object__from_raw((git_object **) &commit, data, datalen, GIT_OBJ_COMMIT));
+	cl_git_pass(git_object__from_raw((git_object **) &commit, data, datalen, GIT_OBJECT_COMMIT));
 
 	if (expected_author) {
 		git_signature *author;
@@ -65,7 +65,7 @@ static void assert_commit_fails(const char *data, size_t datalen)
 	git_object *object;
 	if (!datalen)
 		datalen = strlen(data);
-	cl_git_fail(git_object__from_raw(&object, data, datalen, GIT_OBJ_COMMIT));
+	cl_git_fail(git_object__from_raw(&object, data, datalen, GIT_OBJECT_COMMIT));
 }
 
 void test_object_commit_parse__parsing_commit_succeeds(void)

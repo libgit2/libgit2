@@ -67,9 +67,8 @@ static int color_printer(
 	const git_diff_delta*, const git_diff_hunk*, const git_diff_line*, void*);
 static void diff_print_stats(git_diff *diff, struct opts *o);
 
-int main(int argc, char *argv[])
+int lg2_diff(git_repository *repo, int argc, char *argv[])
 {
-	git_repository *repo = NULL;
 	git_tree *t1 = NULL, *t2 = NULL;
 	git_diff *diff;
 	struct opts o = {
@@ -77,12 +76,7 @@ int main(int argc, char *argv[])
 		-1, 0, 0, GIT_DIFF_FORMAT_PATCH, NULL, NULL, "."
 	};
 
-	git_libgit2_init();
-
 	parse_opts(&o, argc, argv);
-
-	check_lg2(git_repository_open_ext(&repo, o.dir, 0, NULL),
-		"Could not open repository", o.dir);
 
 	/**
 	 * Possible argument patterns:
@@ -157,13 +151,9 @@ int main(int argc, char *argv[])
 	}
 
 	/** Cleanup before exiting. */
-
 	git_diff_free(diff);
 	git_tree_free(t1);
 	git_tree_free(t2);
-	git_repository_free(repo);
-
-	git_libgit2_shutdown();
 
 	return 0;
 }

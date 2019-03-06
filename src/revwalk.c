@@ -21,13 +21,10 @@ git_commit_list_node *git_revwalk__commit_lookup(
 	git_revwalk *walk, const git_oid *oid)
 {
 	git_commit_list_node *commit;
-	khiter_t pos;
-	int ret;
 
 	/* lookup and reserve space if not already present */
-	pos = git_oidmap_lookup_index(walk->commits, oid);
-	if (git_oidmap_valid_index(walk->commits, pos))
-		return git_oidmap_value_at(walk->commits, pos);
+	if ((commit = git_oidmap_get(walk->commits, oid)) != NULL)
+		return commit;
 
 	commit = git_commit_list_alloc_node(walk);
 	if (commit == NULL)
@@ -35,9 +32,8 @@ git_commit_list_node *git_revwalk__commit_lookup(
 
 	git_oid_cpy(&commit->oid, oid);
 
-	pos = git_oidmap_put(walk->commits, &commit->oid, &ret);
-	assert(ret != 0);
-	git_oidmap_set_value_at(walk->commits, pos, commit);
+	if ((git_oidmap_set(walk->commits, &commit->oid, commit)) < 0)
+		return NULL;
 
 	return commit;
 }
@@ -50,10 +46,10 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting,
 	git_commit_list_node *commit;
 	git_commit_list *list;
 
-	if ((error = git_object_lookup(&oobj, walk->repo, oid, GIT_OBJ_ANY)) < 0)
+	if ((error = git_object_lookup(&oobj, walk->repo, oid, GIT_OBJECT_ANY)) < 0)
 		return error;
 
-	error = git_object_peel(&obj, oobj, GIT_OBJ_COMMIT);
+	error = git_object_peel(&obj, oobj, GIT_OBJECT_COMMIT);
 	git_object_free(oobj);
 
 	if (error == GIT_ENOTFOUND || error == GIT_EINVALIDSPEC || error == GIT_EPEEL) {
@@ -61,7 +57,7 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting,
 		if (from_glob)
 			return 0;
 
-		giterr_set(GITERR_INVALID, "object is not a committish");
+		git_error_set(GIT_ERROR_INVALID, "object is not a committish");
 		return -1;
 	}
 	if (error < 0)
@@ -88,7 +84,7 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting,
 	commit->uninteresting = uninteresting;
 	list = walk->user_input;
 	if (git_commit_list_insert(commit, &list) == NULL) {
-		giterr_set_oom();
+		git_error_set_oom();
 		return -1;
 	}
 
@@ -135,7 +131,7 @@ static int push_glob(git_revwalk *walk, const char *glob, int hide)
 		git_buf_joinpath(&buf, GIT_REFS_DIR, glob);
 	else
 		git_buf_puts(&buf, glob);
-	GITERR_CHECK_ALLOC_BUF(&buf);
+	GIT_ERROR_CHECK_ALLOC_BUF(&buf);
 
 	/* If no '?', '*' or '[' exist, we append '/ *' to the glob */
 	wildcard = strcspn(glob, "?*[");
@@ -200,7 +196,7 @@ int git_revwalk_push_range(git_revwalk *walk, const char *range)
 
 	if (revspec.flags & GIT_REVPARSE_MERGE_BASE) {
 		/* TODO: support "<commit>...<commit>" */
-		giterr_set(GITERR_INVALID, "symmetric differences not implemented in revwalk");
+		git_error_set(GIT_ERROR_INVALID, "symmetric differences not implemented in revwalk");
 		return GIT_EINVALIDSPEC;
 	}
 
@@ -243,7 +239,7 @@ static int revwalk_next_timesort(git_commit_list_node **object_out, git_revwalk 
 		}
 	}
 
-	giterr_clear();
+	git_error_clear();
 	return GIT_ITEROVER;
 }
 
@@ -451,7 +447,7 @@ static int get_revision(git_commit_list_node **out, git_revwalk *walk, git_commi
 
 	commit = git_commit_list_pop(list);
 	if (!commit) {
-		giterr_clear();
+		git_error_clear();
 		return GIT_ITEROVER;
 	}
 
@@ -562,7 +558,7 @@ static int prepare_walk(git_revwalk *walk)
 
 	/* If there were no pushes, we know that the walk is already over */
 	if (!walk->did_push) {
-		giterr_clear();
+		git_error_clear();
 		return GIT_ITEROVER;
 	}
 
@@ -624,10 +620,10 @@ static int prepare_walk(git_revwalk *walk)
 int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 {
 	git_revwalk *walk = git__calloc(1, sizeof(git_revwalk));
-	GITERR_CHECK_ALLOC(walk);
+	GIT_ERROR_CHECK_ALLOC(walk);
 
-	walk->commits = git_oidmap_alloc();
-	GITERR_CHECK_ALLOC(walk->commits);
+	if (git_oidmap_new(&walk->commits) < 0)
+		return -1;
 
 	if (git_pqueue_init(&walk->iterator_time, 0, 8, git_commit_list_time_cmp) < 0)
 		return -1;
@@ -709,7 +705,7 @@ int git_revwalk_next(git_oid *oid, git_revwalk *walk)
 
 	if (error == GIT_ITEROVER) {
 		git_revwalk_reset(walk);
-		giterr_clear();
+		git_error_clear();
 		return GIT_ITEROVER;
 	}
 
@@ -756,15 +752,11 @@ int git_revwalk_add_hide_cb(
 	if (walk->walking)
 		git_revwalk_reset(walk);
 
-	if (walk->hide_cb) {
-		/* There is already a callback added */
-		giterr_set(GITERR_INVALID, "there is already a callback added to hide commits in revwalk");
-		return -1;
-	}
-
 	walk->hide_cb = hide_cb;
 	walk->hide_cb_payload = payload;
-	walk->limited = 1;
+
+	if (hide_cb)
+		walk->limited = 1;
 
 	return 0;
 }

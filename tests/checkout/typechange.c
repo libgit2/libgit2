@@ -96,8 +96,8 @@ static void assert_workdir_matches_tree(
 		root = git_repository_workdir(repo);
 	cl_assert(root);
 
-	cl_git_pass(git_object_lookup(&obj, repo, id, GIT_OBJ_ANY));
-	cl_git_pass(git_object_peel((git_object **)&tree, obj, GIT_OBJ_TREE));
+	cl_git_pass(git_object_lookup(&obj, repo, id, GIT_OBJECT_ANY));
+	cl_git_pass(git_object_peel((git_object **)&tree, obj, GIT_OBJECT_TREE));
 	git_object_free(obj);
 
 	max_i = git_tree_entrycount(tree);
@@ -109,16 +109,16 @@ static void assert_workdir_matches_tree(
 		cl_git_pass(git_buf_joinpath(&path, root, git_tree_entry_name(te)));
 
 		switch (git_tree_entry_type(te)) {
-		case GIT_OBJ_COMMIT:
+		case GIT_OBJECT_COMMIT:
 			assert_dir_exists(path.ptr);
 			break;
-		case GIT_OBJ_TREE:
+		case GIT_OBJECT_TREE:
 			assert_dir_exists(path.ptr);
 			if (recurse)
 				assert_workdir_matches_tree(
 					repo, git_tree_entry_id(te), path.ptr, true);
 			break;
-		case GIT_OBJ_BLOB:
+		case GIT_OBJECT_BLOB:
 			switch (git_tree_entry_filemode(te)) {
 			case GIT_FILEMODE_BLOB:
 			case GIT_FILEMODE_BLOB_EXECUTABLE:

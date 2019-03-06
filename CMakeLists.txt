@@ -60,11 +60,11 @@ OPTION(USE_HTTPS			"Enable HTTPS support. Can be set to a specific backend" ON)
 OPTION(USE_GSSAPI			"Link with libgssapi for SPNEGO auth"			OFF)
 OPTION(USE_STANDALONE_FUZZERS		"Enable standalone fuzzers (compatible with gcc)"	OFF)
 OPTION(VALGRIND				"Configure build for valgrind"				OFF)
-OPTION(CURL				"Use curl for HTTP if available"			 ON)
 OPTION(USE_EXT_HTTP_PARSER		"Use system HTTP_Parser if available"			 ON)
 OPTION(DEBUG_POOL			"Enable debug pool allocator"				OFF)
 OPTION(ENABLE_WERROR			"Enable compilation with -Werror"			OFF)
 OPTION(USE_BUNDLED_ZLIB    		"Use the bundled version of zlib"			OFF)
+OPTION(DEPRECATE_HARD			"Do not include deprecated functions in the library"	OFF)
 
 IF (UNIX AND NOT APPLE)
 	OPTION(ENABLE_REPRODUCIBLE_BUILDS "Enable reproducible builds"				OFF)
@@ -75,14 +75,6 @@ IF (APPLE)
 ENDIF()
 
 IF(MSVC)
-	# This option is only available when building with MSVC. By default, libgit2
-	# is build using the cdecl calling convention, which is useful if you're
-	# writing C. However, the CLR and Win32 API both expect stdcall.
-	#
-	# If you are writing a CLR program and want to link to libgit2, you'll want
-	# to turn this on by invoking CMake with the "-DSTDCALL=ON" argument.
-	OPTION(STDCALL			"Build libgit2 with the __stdcall convention"		OFF)
-
 	# This option must match the settings used in your program, in particular if you
 	# are linking statically
 	OPTION(STATIC_CRT		"Link the static CRT libraries"		 		 ON)
@@ -114,8 +106,16 @@ SET(LIBGIT2_VERSION_STRING "${LIBGIT2_VERSION_MAJOR}.${LIBGIT2_VERSION_MINOR}.${
 FILE(STRINGS "${libgit2_SOURCE_DIR}/include/git2/version.h" GIT2_HEADER_SOVERSION REGEX "^#define LIBGIT2_SOVERSION [0-9]+$")
 STRING(REGEX REPLACE "^.*LIBGIT2_SOVERSION ([0-9]+)$" "\\1" LIBGIT2_SOVERSION "${GIT2_HEADER_SOVERSION}")
 
+IF (DEPRECATE_HARD)
+	ADD_DEFINITIONS(-DGIT_DEPRECATE_HARD)
+ENDIF()
+
 # Platform specific compilation flags
 IF (MSVC)
+	IF (STDCALL)
+		MESSAGE(FATAL_ERROR "The STDCALL option is no longer supported; libgit2 is now always built as a cdecl library.  If you're using PInvoke, please add the CallingConventions.Cdecl attribute for support.")
+	ENDIF()
+
 	ADD_DEFINITIONS(-D_SCL_SECURE_NO_WARNINGS)
 	ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
 	ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_DEPRECATE)
@@ -126,10 +126,8 @@ IF (MSVC)
 	# /MP - Parallel build
 	SET(CMAKE_C_FLAGS "/GF /MP /nologo ${CMAKE_C_FLAGS}")
 
-	IF (STDCALL)
-		# /Gz - stdcall calling convention
-		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gz")
-	ENDIF ()
+	# /Gd - explicitly set cdecl calling convention
+	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gd")
 
 	IF (STATIC_CRT)
 		SET(CRT_FLAG_DEBUG "/MTd")
@@ -167,6 +165,9 @@ IF (MSVC)
 
 	# /O1 - Optimize for size
 	SET(CMAKE_C_FLAGS_MINSIZEREL "/DNDEBUG /O1 /Oy /GL /Gy ${CRT_FLAG_RELEASE}")
+
+	# /IGNORE:4221 - Ignore empty compilation units
+	SET(CMAKE_STATIC_LINKER_FLAGS "/IGNORE:4221")
 
 	# /DYNAMICBASE - Address space load randomization (ASLR)
 	# /NXCOMPAT - Data execution prevention (DEP)
@@ -229,15 +230,12 @@ ELSE ()
 	ENABLE_WARNINGS(strict-prototypes)
 	ENABLE_WARNINGS(declaration-after-statement)
 	ENABLE_WARNINGS(shift-count-overflow)
-	DISABLE_WARNINGS(unused-const-variable)
-	DISABLE_WARNINGS(unused-function)
+	ENABLE_WARNINGS(unused-const-variable)
+	ENABLE_WARNINGS(unused-function)
 	ENABLE_WARNINGS(format)
 	ENABLE_WARNINGS(format-security)
 	ENABLE_WARNINGS(int-conversion)
-
-	IF (APPLE) # Apple deprecated OpenSSL
-	    DISABLE_WARNINGS(deprecated-declarations)
-	ENDIF()
+	DISABLE_WARNINGS(documentation-deprecated-sync)
 
 	IF (PROFILE)
 		SET(CMAKE_C_FLAGS "-pg ${CMAKE_C_FLAGS}")

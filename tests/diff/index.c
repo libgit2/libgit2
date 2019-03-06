@@ -149,15 +149,15 @@ void test_diff_index__checks_options_version(void)
 
 	opts.version = 0;
 	cl_git_fail(git_diff_tree_to_index(&diff, g_repo, a, NULL, &opts));
-	err = giterr_last();
-	cl_assert_equal_i(GITERR_INVALID, err->klass);
+	err = git_error_last();
+	cl_assert_equal_i(GIT_ERROR_INVALID, err->klass);
 	cl_assert_equal_p(diff, NULL);
 
-	giterr_clear();
+	git_error_clear();
 	opts.version = 1024;
 	cl_git_fail(git_diff_tree_to_index(&diff, g_repo, a, NULL, &opts));
-	err = giterr_last();
-	cl_assert_equal_i(GITERR_INVALID, err->klass);
+	err = git_error_last();
+	cl_assert_equal_i(GIT_ERROR_INVALID, err->klass);
 	cl_assert_equal_p(diff, NULL);
 
 	git_tree_free(a);

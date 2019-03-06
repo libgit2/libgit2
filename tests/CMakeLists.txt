@@ -11,6 +11,9 @@ ADD_DEFINITIONS(-DCLAR_FIXTURE_PATH=\"${CLAR_FIXTURES}\")
 ADD_DEFINITIONS(-DCLAR_TMPDIR=\"libgit2_tests\")
 ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
 
+# Ensure that we do not use deprecated functions internally
+ADD_DEFINITIONS(-DGIT_DEPRECATE_HARD)
+
 INCLUDE_DIRECTORIES(${CLAR_PATH} ${libgit2_BINARY_DIR}/src)
 FILE(GLOB_RECURSE SRC_TEST ${CLAR_PATH}/*/*.c ${CLAR_PATH}/*/*.h)
 SET(SRC_CLAR "main.c" "clar_libgit2.c" "clar_libgit2_trace.c" "clar_libgit2_timer.c" "clar.c")
@@ -55,6 +58,7 @@ IF (MSVC_IDE)
 ENDIF ()
 
 ADD_TEST(offline   "${libgit2_BINARY_DIR}/libgit2_clar" -v -xonline)
+ADD_TEST(invasive  "${libgit2_BINARY_DIR}/libgit2_clar" -v -score::ftruncate -sfilter::stream::bigfile -sodb::largefiles -siterator::workdir::filesystem_gunk -srepo::init -srepo::init::at_filesystem_root)
 ADD_TEST(online    "${libgit2_BINARY_DIR}/libgit2_clar" -v -sonline)
 ADD_TEST(gitdaemon "${libgit2_BINARY_DIR}/libgit2_clar" -v -sonline::push)
 ADD_TEST(ssh       "${libgit2_BINARY_DIR}/libgit2_clar" -v -sonline::push -sonline::clone::ssh_cert -sonline::clone::ssh_with_paths)

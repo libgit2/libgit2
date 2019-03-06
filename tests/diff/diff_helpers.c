@@ -12,9 +12,9 @@ git_tree *resolve_commit_oid_to_tree(
 	git_tree *tree = NULL;
 
 	if (git_oid_fromstrn(&oid, partial_oid, len) == 0)
-		cl_git_pass(git_object_lookup_prefix(&obj, repo, &oid, len, GIT_OBJ_ANY));
+		cl_git_pass(git_object_lookup_prefix(&obj, repo, &oid, len, GIT_OBJECT_ANY));
 
-	cl_git_pass(git_object_peel((git_object **) &tree, obj, GIT_OBJ_TREE));
+	cl_git_pass(git_object_peel((git_object **) &tree, obj, GIT_OBJECT_TREE));
 	git_object_free(obj);
 	return tree;
 }
@@ -224,7 +224,7 @@ int diff_foreach_via_iterator(
 	return 0;
 
 abort:
-	giterr_clear();
+	git_error_clear();
 	return GIT_EUSER;
 }
 

@@ -172,14 +172,14 @@ void test_diff_rename__checks_options_version(void)
 
 	opts.version = 0;
 	cl_git_fail(git_diff_find_similar(diff, &opts));
-	err = giterr_last();
-	cl_assert_equal_i(GITERR_INVALID, err->klass);
+	err = git_error_last();
+	cl_assert_equal_i(GIT_ERROR_INVALID, err->klass);
 
-	giterr_clear();
+	git_error_clear();
 	opts.version = 1024;
 	cl_git_fail(git_diff_find_similar(diff, &opts));
-	err = giterr_last();
-	cl_assert_equal_i(GITERR_INVALID, err->klass);
+	err = git_error_last();
+	cl_assert_equal_i(GIT_ERROR_INVALID, err->klass);
 
 	git_diff_free(diff);
 	git_tree_free(old_tree);
@@ -418,7 +418,7 @@ void test_diff_rename__test_small_files(void)
 	cl_git_pass(git_index_add_bypath(index, "small.txt"));
 
 	cl_git_pass(git_repository_head(&head_reference, g_repo));
-	cl_git_pass(git_reference_peel((git_object**)&head_commit, head_reference, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reference_peel((git_object**)&head_commit, head_reference, GIT_OBJECT_COMMIT));
 	cl_git_pass(git_commit_tree(&head_tree, head_commit));
 	cl_git_pass(git_index_write_tree(&oid, index));
 	cl_git_pass(git_tree_lookup(&commit_tree, g_repo, &oid));

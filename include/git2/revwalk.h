@@ -274,12 +274,12 @@ GIT_EXTERN(git_repository *) git_revwalk_repository(git_revwalk *walk);
  * @param commit_id oid of Commit
  * @param payload User-specified pointer to data to be passed as data payload
  */
-typedef int(*git_revwalk_hide_cb)(
+typedef int GIT_CALLBACK(git_revwalk_hide_cb)(
 	const git_oid *commit_id,
 	void *payload);
 
 /**
- * Adds a callback function to hide a commit and its parents
+ * Adds, changes or removes a callback function to hide a commit and its parents
  *
  * @param walk the revision walker
  * @param hide_cb  callback function to hide a commit and its parents

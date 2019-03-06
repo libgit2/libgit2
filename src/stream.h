@@ -23,7 +23,7 @@ GIT_INLINE(int) git_stream_is_encrypted(git_stream *st)
 GIT_INLINE(int) git_stream_certificate(git_cert **out, git_stream *st)
 {
 	if (!st->encrypted) {
-		giterr_set(GITERR_INVALID, "an unencrypted stream does not have a certificate");
+		git_error_set(GIT_ERROR_INVALID, "an unencrypted stream does not have a certificate");
 		return -1;
 	}
 
@@ -38,7 +38,7 @@ GIT_INLINE(int) git_stream_supports_proxy(git_stream *st)
 GIT_INLINE(int) git_stream_set_proxy(git_stream *st, const git_proxy_options *proxy_opts)
 {
 	if (!st->proxy_support) {
-		giterr_set(GITERR_INVALID, "proxy not supported on this stream");
+		git_error_set(GIT_ERROR_INVALID, "proxy not supported on this stream");
 		return -1;
 	}
 
@@ -53,6 +53,21 @@ GIT_INLINE(ssize_t) git_stream_read(git_stream *st, void *data, size_t len)
 GIT_INLINE(ssize_t) git_stream_write(git_stream *st, const char *data, size_t len, int flags)
 {
 	return st->write(st, data, len, flags);
+}
+
+GIT_INLINE(int) git_stream__write_full(git_stream *st, const char *data, size_t len, int flags)
+{
+	size_t total_written = 0;
+
+	while (total_written < len) {
+		ssize_t written = git_stream_write(st, data + total_written, len - total_written, flags);
+		if (written <= 0)
+			return -1;
+
+		total_written += written;
+	}
+
+	return 0;
 }
 
 GIT_INLINE(int) git_stream_close(git_stream *st)

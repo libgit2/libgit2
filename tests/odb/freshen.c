@@ -160,7 +160,7 @@ void test_odb_freshen__packed_object(void)
 
 	/* ensure that packfile is freshened */
 	cl_git_pass(git_odb_write(&id, odb, PACKED_STR,
-		CONST_STRLEN(PACKED_STR), GIT_OBJ_BLOB));
+		CONST_STRLEN(PACKED_STR), GIT_OBJECT_BLOB));
 	cl_assert_equal_oid(&expected_id, &id);
 	cl_must_pass(p_lstat("testrepo.git/objects/pack/" PACKED_FN, &after));
 
@@ -171,7 +171,7 @@ void test_odb_freshen__packed_object(void)
 
 	/* ensure that the pack file is not freshened again immediately */
 	cl_git_pass(git_odb_write(&id, odb, PACKED_STR,
-		CONST_STRLEN(PACKED_STR), GIT_OBJ_BLOB));
+		CONST_STRLEN(PACKED_STR), GIT_OBJECT_BLOB));
 	cl_assert_equal_oid(&expected_id, &id);
 	cl_must_pass(p_lstat("testrepo.git/objects/pack/" PACKED_FN, &after));
 

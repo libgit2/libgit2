@@ -80,20 +80,23 @@ void test_object_raw_hash__hash_junk_data(void)
 	junk_obj.data = some_data;
 	hash_object_fail(&id, &junk_obj);
 
-	junk_obj.type = GIT_OBJ__EXT1;
+	junk_obj.type = 0; /* EXT1 */
 	hash_object_fail(&id, &junk_obj);
 
-	junk_obj.type = GIT_OBJ__EXT2;
+	junk_obj.type = 5; /* EXT2 */
 	hash_object_fail(&id, &junk_obj);
 
-	junk_obj.type = GIT_OBJ_OFS_DELTA;
+	junk_obj.type = GIT_OBJECT_OFS_DELTA;
 	hash_object_fail(&id, &junk_obj);
 
-	junk_obj.type = GIT_OBJ_REF_DELTA;
+	junk_obj.type = GIT_OBJECT_REF_DELTA;
+	hash_object_fail(&id, &junk_obj);
+
+	junk_obj.type = 42;
 	hash_object_fail(&id, &junk_obj);
 
 	/* data can be NULL only if len is zero: */
-	junk_obj.type = GIT_OBJ_BLOB;
+	junk_obj.type = GIT_OBJECT_BLOB;
 	junk_obj.data = NULL;
 	hash_object_pass(&id, &junk_obj);
 	cl_assert(git_oid_cmp(&id, &id_zero) == 0);

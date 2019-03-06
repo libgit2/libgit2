@@ -129,12 +129,12 @@ void test_index_reuc__ignore_case(void)
 
 	index_caps = git_index_caps(repo_index);
 
-	index_caps &= ~GIT_INDEXCAP_IGNORE_CASE;
+	index_caps &= ~GIT_INDEX_CAPABILITY_IGNORE_CASE;
 	cl_git_pass(git_index_set_caps(repo_index, index_caps));
 
 	cl_assert(!git_index_reuc_get_bypath(repo_index, "TWO.txt"));
 
-	index_caps |= GIT_INDEXCAP_IGNORE_CASE;
+	index_caps |= GIT_INDEX_CAPABILITY_IGNORE_CASE;
 	cl_git_pass(git_index_set_caps(repo_index, index_caps));
 
 	cl_assert_equal_i(2, git_index_reuc_entrycount(repo_index));
@@ -197,7 +197,7 @@ void test_index_reuc__updates_existing(void)
 
 	index_caps = git_index_caps(repo_index);
 
-	index_caps |= GIT_INDEXCAP_IGNORE_CASE;
+	index_caps |= GIT_INDEX_CAPABILITY_IGNORE_CASE;
 	cl_git_pass(git_index_set_caps(repo_index, index_caps));
 
 	git_oid_fromstr(&ancestor_oid, TWO_ANCESTOR_OID);
@@ -346,7 +346,7 @@ void test_index_reuc__cleaned_on_checkout_tree(void)
 
 	test_index_reuc__add();
 	cl_git_pass(git_reference_name_to_id(&oid, repo, "refs/heads/master"));
-	cl_git_pass(git_object_lookup(&obj, repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&obj, repo, &oid, GIT_OBJECT_ANY));
 	cl_git_pass(git_checkout_tree(repo, obj, &opts));
 	cl_assert(reuc_entry_exists() == false);
 

@@ -263,12 +263,12 @@ GIT_EXTERN(const char *) git_reference_symbolic_target(const git_reference *ref)
 /**
  * Get the type of a reference.
  *
- * Either direct (GIT_REF_OID) or symbolic (GIT_REF_SYMBOLIC)
+ * Either direct (GIT_REFERENCE_DIRECT) or symbolic (GIT_REFERENCE_SYMBOLIC)
  *
  * @param ref The reference
  * @return the type
  */
-GIT_EXTERN(git_ref_t) git_reference_type(const git_reference *ref);
+GIT_EXTERN(git_reference_t) git_reference_type(const git_reference *ref);
 
 /**
  * Get the full name of a reference.
@@ -422,8 +422,8 @@ GIT_EXTERN(int) git_reference_remove(git_repository *repo, const char *name);
  */
 GIT_EXTERN(int) git_reference_list(git_strarray *array, git_repository *repo);
 
-typedef int (*git_reference_foreach_cb)(git_reference *reference, void *payload);
-typedef int (*git_reference_foreach_name_cb)(const char *name, void *payload);
+typedef int GIT_CALLBACK(git_reference_foreach_cb)(git_reference *reference, void *payload);
+typedef int GIT_CALLBACK(git_reference_foreach_name_cb)(const char *name, void *payload);
 
 /**
  * Perform a callback on each reference in the repository.
@@ -640,7 +640,7 @@ typedef enum {
 	/**
 	 * No particular normalization.
 	 */
-	GIT_REF_FORMAT_NORMAL = 0u,
+	GIT_REFERENCE_FORMAT_NORMAL = 0u,
 
 	/**
 	 * Control whether one-level refnames are accepted
@@ -648,7 +648,7 @@ typedef enum {
 	 * components). Those are expected to be written only using
 	 * uppercase letters and underscore (FETCH_HEAD, ...)
 	 */
-	GIT_REF_FORMAT_ALLOW_ONELEVEL = (1u << 0),
+	GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL = (1u << 0),
 
 	/**
 	 * Interpret the provided name as a reference pattern for a
@@ -657,15 +657,15 @@ typedef enum {
 	 * in place of a one full pathname component
 	 * (e.g., foo/<star>/bar but not foo/bar<star>).
 	 */
-	GIT_REF_FORMAT_REFSPEC_PATTERN = (1u << 1),
+	GIT_REFERENCE_FORMAT_REFSPEC_PATTERN = (1u << 1),
 
 	/**
 	 * Interpret the name as part of a refspec in shorthand form
 	 * so the `ONELEVEL` naming rules aren't enforced and 'master'
 	 * becomes a valid name.
 	 */
-	GIT_REF_FORMAT_REFSPEC_SHORTHAND = (1u << 2),
-} git_reference_normalize_t;
+	GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND = (1u << 2),
+} git_reference_format_t;
 
 /**
  * Normalize reference name and check validity.
@@ -683,7 +683,7 @@ typedef enum {
  * @param buffer_size Size of buffer_out
  * @param name Reference name to be checked.
  * @param flags Flags to constrain name validation rules - see the
- *              GIT_REF_FORMAT constants above.
+ *              GIT_REFERENCE_FORMAT constants above.
  * @return 0 on success, GIT_EBUFS if buffer is too small, GIT_EINVALIDSPEC
  * or an error code.
  */
@@ -699,19 +699,19 @@ GIT_EXTERN(int) git_reference_normalize_name(
  * The retrieved `peeled` object is owned by the repository
  * and should be closed with the `git_object_free` method.
  *
- * If you pass `GIT_OBJ_ANY` as the target type, then the object
+ * If you pass `GIT_OBJECT_ANY` as the target type, then the object
  * will be peeled until a non-tag object is met.
  *
  * @param out Pointer to the peeled git_object
  * @param ref The reference to be processed
- * @param type The type of the requested object (GIT_OBJ_COMMIT,
- * GIT_OBJ_TAG, GIT_OBJ_TREE, GIT_OBJ_BLOB or GIT_OBJ_ANY).
+ * @param type The type of the requested object (GIT_OBJECT_COMMIT,
+ * GIT_OBJECT_TAG, GIT_OBJECT_TREE, GIT_OBJECT_BLOB or GIT_OBJECT_ANY).
  * @return 0 on success, GIT_EAMBIGUOUS, GIT_ENOTFOUND or an error code
  */
 GIT_EXTERN(int) git_reference_peel(
 	git_object **out,
-	git_reference *ref,
-	git_otype type);
+	const git_reference *ref,
+	git_object_t type);
 
 /**
  * Ensure the reference name is well-formed.
@@ -742,7 +742,6 @@ GIT_EXTERN(int) git_reference_is_valid_name(const char *refname);
  * @return the human-readable version of the name
  */
 GIT_EXTERN(const char *) git_reference_shorthand(const git_reference *ref);
-
 
 /** @} */
 GIT_END_DECL

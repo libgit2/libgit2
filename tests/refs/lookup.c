@@ -64,5 +64,5 @@ void test_refs_lookup__dwim_notfound(void)
 	git_reference *ref;
 
 	cl_git_fail_with(GIT_ENOTFOUND, git_reference_dwim(&ref, g_repo, "idontexist"));
-	cl_assert_equal_s("no reference found for shorthand 'idontexist'", giterr_last()->message);
+	cl_assert_equal_s("no reference found for shorthand 'idontexist'", git_error_last()->message);
 }

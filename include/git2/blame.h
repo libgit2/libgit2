@@ -183,7 +183,7 @@ GIT_EXTERN(const git_blame_hunk*) git_blame_get_hunk_byline(
  * @param path path to file to consider
  * @param options options for the blame operation.  If NULL, this is treated as
  *                though GIT_BLAME_OPTIONS_INIT were passed.
- * @return 0 on success, or an error code. (use giterr_last for information
+ * @return 0 on success, or an error code. (use git_error_last for information
  *         about the error.)
  */
 GIT_EXTERN(int) git_blame_file(
@@ -207,7 +207,7 @@ GIT_EXTERN(int) git_blame_file(
  *                  from git_blame_file)
  * @param buffer the (possibly) modified contents of the file
  * @param buffer_len number of valid bytes in the buffer
- * @return 0 on success, or an error code. (use giterr_last for information
+ * @return 0 on success, or an error code. (use git_error_last for information
  *         about the error)
  */
 GIT_EXTERN(int) git_blame_buffer(

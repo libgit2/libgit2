@@ -25,7 +25,7 @@ GIT_INLINE(int) hash_cng_prov_init(void)
 
 	/* Only use CNG on Windows 2008 / Vista SP1  or better (Windows 6.0 SP1) */
 	if (!git_has_win32_version(6, 0, 1)) {
-		giterr_set(GITERR_SHA1, "CryptoNG is not supported on this platform");
+		git_error_set(GIT_ERROR_SHA1, "CryptoNG is not supported on this platform");
 		return -1;
 	}
 
@@ -35,7 +35,7 @@ GIT_INLINE(int) hash_cng_prov_init(void)
 		StringCchCat(dll_path, MAX_PATH, "\\") < 0 ||
 		StringCchCat(dll_path, MAX_PATH, GIT_HASH_CNG_DLL_NAME) < 0 ||
 		(hash_prov.prov.cng.dll = LoadLibrary(dll_path)) == NULL) {
-		giterr_set(GITERR_SHA1, "CryptoNG library could not be loaded");
+		git_error_set(GIT_ERROR_SHA1, "CryptoNG library could not be loaded");
 		return -1;
 	}
 
@@ -49,7 +49,7 @@ GIT_INLINE(int) hash_cng_prov_init(void)
 		(hash_prov.prov.cng.close_algorithm_provider = (hash_win32_cng_close_algorithm_provider_fn)GetProcAddress(hash_prov.prov.cng.dll, "BCryptCloseAlgorithmProvider")) == NULL) {
 		FreeLibrary(hash_prov.prov.cng.dll);
 
-		giterr_set(GITERR_OS, "CryptoNG functions could not be loaded");
+		git_error_set(GIT_ERROR_OS, "CryptoNG functions could not be loaded");
 		return -1;
 	}
 
@@ -57,7 +57,7 @@ GIT_INLINE(int) hash_cng_prov_init(void)
 	if (hash_prov.prov.cng.open_algorithm_provider(&hash_prov.prov.cng.handle, GIT_HASH_CNG_HASH_TYPE, NULL, GIT_HASH_CNG_HASH_REUSABLE) < 0) {
 		FreeLibrary(hash_prov.prov.cng.dll);
 
-		giterr_set(GITERR_OS, "algorithm provider could not be initialized");
+		git_error_set(GIT_ERROR_OS, "algorithm provider could not be initialized");
 		return -1;
 	}
 
@@ -66,7 +66,7 @@ GIT_INLINE(int) hash_cng_prov_init(void)
 		hash_prov.prov.cng.close_algorithm_provider(hash_prov.prov.cng.handle, 0);
 		FreeLibrary(hash_prov.prov.cng.dll);
 
-		giterr_set(GITERR_OS, "algorithm handle could not be found");
+		git_error_set(GIT_ERROR_OS, "algorithm handle could not be found");
 		return -1;
 	}
 
@@ -86,7 +86,7 @@ GIT_INLINE(void) hash_cng_prov_shutdown(void)
 GIT_INLINE(int) hash_cryptoapi_prov_init()
 {
 	if (!CryptAcquireContext(&hash_prov.prov.cryptoapi.handle, NULL, 0, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
-		giterr_set(GITERR_OS, "legacy hash context could not be started");
+		git_error_set(GIT_ERROR_OS, "legacy hash context could not be started");
 		return -1;
 	}
 
@@ -141,7 +141,7 @@ GIT_INLINE(int) hash_cryptoapi_init(git_hash_ctx *ctx)
 
 	if (!CryptCreateHash(ctx->prov->prov.cryptoapi.handle, CALG_SHA1, 0, 0, &ctx->ctx.cryptoapi.hash_handle)) {
 		ctx->ctx.cryptoapi.valid = 0;
-		giterr_set(GITERR_OS, "legacy hash implementation could not be created");
+		git_error_set(GIT_ERROR_OS, "legacy hash implementation could not be created");
 		return -1;
 	}
 
@@ -159,7 +159,7 @@ GIT_INLINE(int) hash_cryptoapi_update(git_hash_ctx *ctx, const void *_data, size
 		DWORD chunk = (len > MAXDWORD) ? MAXDWORD : (DWORD)len;
 
 		if (!CryptHashData(ctx->ctx.cryptoapi.hash_handle, data, chunk, 0)) {
-			giterr_set(GITERR_OS, "legacy hash data could not be updated");
+			git_error_set(GIT_ERROR_OS, "legacy hash data could not be updated");
 			return -1;
 		}
 
@@ -178,7 +178,7 @@ GIT_INLINE(int) hash_cryptoapi_final(git_oid *out, git_hash_ctx *ctx)
 	assert(ctx->ctx.cryptoapi.valid);
 
 	if (!CryptGetHashParam(ctx->ctx.cryptoapi.hash_handle, HP_HASHVAL, out->id, &len, 0)) {
-		giterr_set(GITERR_OS, "legacy hash data could not be finished");
+		git_error_set(GIT_ERROR_OS, "legacy hash data could not be finished");
 		error = -1;
 	}
 
@@ -204,7 +204,7 @@ GIT_INLINE(int) hash_ctx_cng_init(git_hash_ctx *ctx)
 	if (hash_prov.prov.cng.create_hash(hash_prov.prov.cng.handle, &ctx->ctx.cng.hash_handle, ctx->ctx.cng.hash_object, hash_prov.prov.cng.hash_object_size, NULL, 0, 0) < 0) {
 		git__free(ctx->ctx.cng.hash_object);
 
-		giterr_set(GITERR_OS, "hash implementation could not be created");
+		git_error_set(GIT_ERROR_OS, "hash implementation could not be created");
 		return -1;
 	}
 
@@ -223,7 +223,7 @@ GIT_INLINE(int) hash_cng_init(git_hash_ctx *ctx)
 
 	/* CNG needs to be finished to restart */
 	if (ctx->prov->prov.cng.finish_hash(ctx->ctx.cng.hash_handle, hash, GIT_OID_RAWSZ, 0) < 0) {
-		giterr_set(GITERR_OS, "hash implementation could not be finished");
+		git_error_set(GIT_ERROR_OS, "hash implementation could not be finished");
 		return -1;
 	}
 
@@ -240,7 +240,7 @@ GIT_INLINE(int) hash_cng_update(git_hash_ctx *ctx, const void *_data, size_t len
 		ULONG chunk = (len > ULONG_MAX) ? ULONG_MAX : (ULONG)len;
 
 		if (ctx->prov->prov.cng.hash_data(ctx->ctx.cng.hash_handle, data, chunk, 0) < 0) {
-			giterr_set(GITERR_OS, "hash could not be updated");
+			git_error_set(GIT_ERROR_OS, "hash could not be updated");
 			return -1;
 		}
 
@@ -254,7 +254,7 @@ GIT_INLINE(int) hash_cng_update(git_hash_ctx *ctx, const void *_data, size_t len
 GIT_INLINE(int) hash_cng_final(git_oid *out, git_hash_ctx *ctx)
 {
 	if (ctx->prov->prov.cng.finish_hash(ctx->ctx.cng.hash_handle, out->id, GIT_OID_RAWSZ, 0) < 0) {
-		giterr_set(GITERR_OS, "hash could not be finished");
+		git_error_set(GIT_ERROR_OS, "hash could not be finished");
 		return -1;
 	}
 

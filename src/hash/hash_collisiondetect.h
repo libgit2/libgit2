@@ -15,9 +15,13 @@ struct git_hash_ctx {
 	SHA1_CTX c;
 };
 
-#define git_hash_global_init() 0
 #define git_hash_ctx_init(ctx) git_hash_init(ctx)
 #define git_hash_ctx_cleanup(ctx)
+
+GIT_INLINE(int) git_hash_global_init(void)
+{
+	return 0;
+}
 
 GIT_INLINE(int) git_hash_init(git_hash_ctx *ctx)
 {
@@ -37,7 +41,7 @@ GIT_INLINE(int) git_hash_final(git_oid *out, git_hash_ctx *ctx)
 {
 	assert(ctx);
 	if (SHA1DCFinal(out->id, &ctx->c)) {
-		giterr_set(GITERR_SHA1, "SHA1 collision attack detected");
+		git_error_set(GIT_ERROR_SHA1, "SHA1 collision attack detected");
 		return -1;
 	}
 

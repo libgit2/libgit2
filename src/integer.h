@@ -42,34 +42,44 @@ GIT_INLINE(int) git__is_int(long long p)
 	return p == (long long)r;
 }
 
-/**
- * Sets `one + two` into `out`, unless the arithmetic would overflow.
- * @return true if the result fits in a `uint64_t`, false on overflow.
- */
-GIT_INLINE(bool) git__add_uint64_overflow(uint64_t *out, uint64_t one, uint64_t two)
-{
-	if (UINT64_MAX - one < two)
-		return true;
-	*out = one + two;
-	return false;
-}
-
 /* Use clang/gcc compiler intrinsics whenever possible */
-#if (SIZE_MAX == ULONG_MAX) && __has_builtin(__builtin_uaddl_overflow)
+#if (__has_builtin(__builtin_add_overflow) || \
+     (defined(__GNUC__) && (__GNUC__ >= 5)))
+
+# if (SIZE_MAX == UINT_MAX)
+#  define git__add_sizet_overflow(out, one, two) \
+     __builtin_uadd_overflow(one, two, out)
+#  define git__multiply_sizet_overflow(out, one, two) \
+     __builtin_umul_overflow(one, two, out)
+# elif (SIZE_MAX == ULONG_MAX)
+#  define git__add_sizet_overflow(out, one, two) \
+     __builtin_uaddl_overflow(one, two, out)
+#  define git__multiply_sizet_overflow(out, one, two) \
+     __builtin_umull_overflow(one, two, out)
+# elif (SIZE_MAX == ULLONG_MAX)
+#  define git__add_sizet_overflow(out, one, two) \
+     __builtin_uaddll_overflow(one, two, out)
+#  define git__multiply_sizet_overflow(out, one, two) \
+     __builtin_umulll_overflow(one, two, out)
+# else
+#  error compiler has add with overflow intrinsics but SIZE_MAX is unknown
+# endif
+
+/* Use Microsoft's safe integer handling functions where available */
+#elif defined(_MSC_VER)
+
+# include <intsafe.h>
+
 # define git__add_sizet_overflow(out, one, two) \
-	__builtin_uaddl_overflow(one, two, out)
+    (SizeTAdd(one, two, out) != S_OK)
 # define git__multiply_sizet_overflow(out, one, two) \
-	__builtin_umull_overflow(one, two, out)
-#elif (SIZE_MAX == UINT_MAX) && __has_builtin(__builtin_uadd_overflow)
-# define git__add_sizet_overflow(out, one, two) \
-	__builtin_uadd_overflow(one, two, out)
-# define git__multiply_sizet_overflow(out, one, two) \
-	__builtin_umul_overflow(one, two, out)
+    (SizeTMult(one, two, out) != S_OK)
+
 #else
 
 /**
  * Sets `one + two` into `out`, unless the arithmetic would overflow.
- * @return true if the result fits in a `size_t`, false on overflow.
+ * @return false if the result fits in a `size_t`, true on overflow.
  */
 GIT_INLINE(bool) git__add_sizet_overflow(size_t *out, size_t one, size_t two)
 {
@@ -81,7 +91,7 @@ GIT_INLINE(bool) git__add_sizet_overflow(size_t *out, size_t one, size_t two)
 
 /**
  * Sets `one * two` into `out`, unless the arithmetic would overflow.
- * @return true if the result fits in a `size_t`, false on overflow.
+ * @return false if the result fits in a `size_t`, true on overflow.
  */
 GIT_INLINE(bool) git__multiply_sizet_overflow(size_t *out, size_t one, size_t two)
 {

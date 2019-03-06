@@ -3,6 +3,7 @@
 #include "git2/checkout.h"
 #include "refs.h"
 #include "path.h"
+#include "repository.h"
 
 #ifdef GIT_WIN32
 # include <windows.h>
@@ -30,7 +31,7 @@ void test_checkout_icase__initialize(void)
 		cl_skip();
 
 	cl_git_pass(git_reference_name_to_id(&id, repo, "refs/heads/dir"));
-	cl_git_pass(git_object_lookup(&obj, repo, &id, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&obj, repo, &id, GIT_OBJECT_ANY));
 
 	git_checkout_init_options(&checkout_opts, GIT_CHECKOUT_OPTIONS_VERSION);
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_NONE;
@@ -44,29 +45,6 @@ void test_checkout_icase__cleanup(void)
 
 static char *get_filename(const char *in)
 {
-#ifdef GIT_WIN32
-	HANDLE fh;
-	HMODULE kerneldll;
-	char *filename;
-
-	typedef DWORD (__stdcall *getfinalpathname)(HANDLE, LPSTR, DWORD, DWORD);
-	getfinalpathname getfinalpathfn;
-
-	cl_assert(filename = malloc(MAX_PATH));
-	cl_assert(kerneldll = LoadLibrary("kernel32.dll"));
-	cl_assert(getfinalpathfn = (getfinalpathname)GetProcAddress(kerneldll, "GetFinalPathNameByHandleA"));
-
-	cl_assert(fh = CreateFileA(in, FILE_READ_ATTRIBUTES | STANDARD_RIGHTS_READ, FILE_SHARE_READ,
-		NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL));
-
-	cl_win32_pass(getfinalpathfn(fh, filename, MAX_PATH, VOLUME_NAME_DOS));
-
-	CloseHandle(fh);
-
-	git_path_mkposix(filename);
-
-	return filename;
-#else
 	char *search_dirname, *search_filename, *filename = NULL;
 	git_buf out = GIT_BUF_INIT;
 	DIR *dir;
@@ -92,7 +70,6 @@ static char *get_filename(const char *in)
 	git_buf_dispose(&out);
 
 	return filename;
-#endif
 }
 
 static void assert_name_is(const char *expected)
@@ -113,6 +90,18 @@ static void assert_name_is(const char *expected)
 		cl_assert_equal_strn("/", actual + (start - 1), 1);
 
 	free(actual);
+}
+
+static int symlink_or_fake(git_repository *repo, const char *a, const char *b)
+{
+	int symlinks;
+
+	cl_git_pass(git_repository__cvar(&symlinks, repo, GIT_CVAR_SYMLINKS));
+
+	if (symlinks)
+		return p_symlink(a, b);
+	else
+		return git_futils_fake_symlink(a, b);
 }
 
 void test_checkout_icase__refuses_to_overwrite_files_for_files(void)
@@ -141,7 +130,7 @@ void test_checkout_icase__refuses_to_overwrite_links_for_files(void)
 {
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE|GIT_CHECKOUT_RECREATE_MISSING;
 
-	cl_must_pass(p_symlink("../tmp", "testrepo/BRANCH_FILE.txt"));
+	cl_must_pass(symlink_or_fake(repo, "../tmp", "testrepo/BRANCH_FILE.txt"));
 
 	cl_git_fail(git_checkout_tree(repo, obj, &checkout_opts));
 
@@ -153,7 +142,7 @@ void test_checkout_icase__overwrites_links_for_files_when_forced(void)
 {
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
-	cl_must_pass(p_symlink("../tmp", "testrepo/NEW.txt"));
+	cl_must_pass(symlink_or_fake(repo, "../tmp", "testrepo/NEW.txt"));
 
 	cl_git_pass(git_checkout_tree(repo, obj, &checkout_opts));
 
@@ -229,7 +218,7 @@ void test_checkout_icase__refuses_to_overwrite_links_for_folders(void)
 {
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE|GIT_CHECKOUT_RECREATE_MISSING;
 
-	cl_must_pass(p_symlink("..", "testrepo/A"));
+	cl_must_pass(symlink_or_fake(repo, "..", "testrepo/A"));
 
 	cl_git_fail(git_checkout_tree(repo, obj, &checkout_opts));
 
@@ -241,7 +230,7 @@ void test_checkout_icase__overwrites_links_for_folders_when_forced(void)
 {
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
-	cl_must_pass(p_symlink("..", "testrepo/A"));
+	cl_must_pass(symlink_or_fake(repo, "..", "testrepo/A"));
 
 	cl_git_pass(git_checkout_tree(repo, obj, &checkout_opts));
 
@@ -284,7 +273,7 @@ void test_checkout_icase__conflicts_with_casechanged_subtrees(void)
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 
 	cl_git_pass(git_reference_lookup_resolved(&orig_ref, repo, "HEAD", 100));
-	cl_git_pass(git_object_lookup(&orig, repo, git_reference_target(orig_ref), GIT_OBJ_COMMIT));
+	cl_git_pass(git_object_lookup(&orig, repo, git_reference_target(orig_ref), GIT_OBJECT_COMMIT));
 	cl_git_pass(git_reset(repo, (git_object *)orig, GIT_RESET_HARD, NULL));
 
 	cl_must_pass(p_mkdir("testrepo/AB", 0777));
@@ -292,7 +281,7 @@ void test_checkout_icase__conflicts_with_casechanged_subtrees(void)
 	cl_git_write2file("testrepo/AB/C/3.txt", "Foobar!\n", 8, O_RDWR|O_CREAT, 0666);
 
 	cl_git_pass(git_reference_name_to_id(&oid, repo, "refs/heads/subtrees"));
-	cl_git_pass(git_object_lookup(&subtrees, repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_object_lookup(&subtrees, repo, &oid, GIT_OBJECT_ANY));
 
 	cl_git_fail(git_checkout_tree(repo, subtrees, &checkout_opts));
 

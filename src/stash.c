@@ -29,7 +29,7 @@
 
 static int create_error(int error, const char *msg)
 {
-	giterr_set(GITERR_STASH, "cannot stash changes - %s", msg);
+	git_error_set(GIT_ERROR_STASH, "cannot stash changes - %s", msg);
 	return error;
 }
 
@@ -48,7 +48,7 @@ static int append_abbreviated_oid(git_buf *out, const git_oid *b_commit)
 	char *formatted_oid;
 
 	formatted_oid = git_oid_allocfmt(b_commit);
-	GITERR_CHECK_ALLOC(formatted_oid);
+	GIT_ERROR_CHECK_ALLOC(formatted_oid);
 
 	git_buf_put(out, formatted_oid, 7);
 	git__free(formatted_oid);
@@ -59,7 +59,7 @@ static int append_abbreviated_oid(git_buf *out, const git_oid *b_commit)
 static int append_commit_description(git_buf *out, git_commit* commit)
 {
 	const char *summary = git_commit_summary(commit);
-	GITERR_CHECK_ALLOC(summary);
+	GIT_ERROR_CHECK_ALLOC(summary);
 
 	if (append_abbreviated_oid(out, git_commit_id(commit)) < 0)
 		return -1;
@@ -233,8 +233,8 @@ static int stash_update_index_from_diff(
 
 		default:
 			/* Unimplemented */
-			giterr_set(
-				GITERR_INVALID,
+			git_error_set(
+				GIT_ERROR_INVALID,
 				"cannot update index. Unimplemented status (%d)",
 				delta->status);
 			return -1;
@@ -641,7 +641,7 @@ static int retrieve_stash_commit(
 	max = git_reflog_entrycount(reflog);
 	if (!max || index > max - 1) {
 		error = GIT_ENOTFOUND;
-		giterr_set(GITERR_STASH, "no stashed state at position %" PRIuZ, index);
+		git_error_set(GIT_ERROR_STASH, "no stashed state at position %" PRIuZ, index);
 		goto cleanup;
 	}
 
@@ -822,7 +822,7 @@ static int ensure_clean_index(git_repository *repo, git_index *index)
 		goto done;
 
 	if (git_diff_num_deltas(index_diff) > 0) {
-		giterr_set(GITERR_STASH, "%" PRIuZ " uncommitted changes exist in the index",
+		git_error_set(GIT_ERROR_STASH, "%" PRIuZ " uncommitted changes exist in the index",
 			git_diff_num_deltas(index_diff));
 		error = GIT_EUNCOMMITTED;
 	}
@@ -894,7 +894,7 @@ int git_stash_apply(
 	git_index *untracked_index = NULL;
 	int error;
 
-	GITERR_CHECK_VERSION(given_opts, GIT_STASH_APPLY_OPTIONS_VERSION, "git_stash_apply_options");
+	GIT_ERROR_CHECK_VERSION(given_opts, GIT_STASH_APPLY_OPTIONS_VERSION, "git_stash_apply_options");
 
 	normalize_apply_options(&opts, given_opts);
 	checkout_strategy = opts.checkout_options.checkout_strategy;
@@ -1027,7 +1027,7 @@ int git_stash_foreach(
 
 	error = git_reference_lookup(&stash, repo, GIT_REFS_STASH_FILE);
 	if (error == GIT_ENOTFOUND) {
-		giterr_clear();
+		git_error_clear();
 		return 0;
 	}
 	if (error < 0)
@@ -1046,7 +1046,7 @@ int git_stash_foreach(
 			payload);
 
 		if (error) {
-			giterr_set_after_callback(error);
+			git_error_set_after_callback(error);
 			break;
 		}
 	}
@@ -1083,7 +1083,7 @@ int git_stash_drop(
 
 	if (!max || index > max - 1) {
 		error = GIT_ENOTFOUND;
-		giterr_set(GITERR_STASH, "no stashed state at position %" PRIuZ, index);
+		git_error_set(GIT_ERROR_STASH, "no stashed state at position %" PRIuZ, index);
 		goto cleanup;
 	}
 

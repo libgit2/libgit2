@@ -113,7 +113,7 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 	remote->need_pack = 0;
 
 	if (filter_wants(remote, opts) < 0) {
-		giterr_set(GITERR_NET, "failed to filter the reference list for wants");
+		git_error_set(GIT_ERROR_NET, "failed to filter the reference list for wants");
 		return -1;
 	}
 
@@ -134,7 +134,7 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 int git_fetch_download_pack(git_remote *remote, const git_remote_callbacks *callbacks)
 {
 	git_transport *t = remote->transport;
-	git_transfer_progress_cb progress = NULL;
+	git_indexer_progress_cb progress = NULL;
 	void *payload = NULL;
 
 	if (!remote->need_pack)

@@ -35,13 +35,13 @@ int git_futils_mktmp(git_buf *path_out, const char *filename, mode_t mode)
 		return -1;
 
 	if ((fd = p_mkstemp(path_out->ptr)) < 0) {
-		giterr_set(GITERR_OS,
+		git_error_set(GIT_ERROR_OS,
 			"failed to create temporary file '%s'", path_out->ptr);
 		return -1;
 	}
 
 	if (p_chmod(path_out->ptr, (mode & ~mask))) {
-		giterr_set(GITERR_OS,
+		git_error_set(GIT_ERROR_OS,
 			"failed to set permissions on file '%s'", path_out->ptr);
 		return -1;
 	}
@@ -58,7 +58,7 @@ int git_futils_creat_withpath(const char *path, const mode_t dirmode, const mode
 
 	fd = p_creat(path, mode);
 	if (fd < 0) {
-		giterr_set(GITERR_OS, "failed to create file '%s'", path);
+		git_error_set(GIT_ERROR_OS, "failed to create file '%s'", path);
 		return -1;
 	}
 
@@ -72,7 +72,7 @@ int git_futils_creat_locked(const char *path, const mode_t mode)
 
 	if (fd < 0) {
 		int error = errno;
-		giterr_set(GITERR_OS, "failed to create locked file '%s'", path);
+		git_error_set(GIT_ERROR_OS, "failed to create locked file '%s'", path);
 		switch (error) {
 		case EEXIST:
 			return GIT_ELOCKED;
@@ -117,7 +117,7 @@ git_off_t git_futils_filesize(git_file fd)
 	struct stat sb;
 
 	if (p_fstat(fd, &sb)) {
-		giterr_set(GITERR_OS, "failed to stat file descriptor");
+		git_error_set(GIT_ERROR_OS, "failed to stat file descriptor");
 		return -1;
 	}
 
@@ -146,11 +146,11 @@ int git_futils_readbuffer_fd(git_buf *buf, git_file fd, size_t len)
 	git_buf_clear(buf);
 
 	if (!git__is_ssizet(len)) {
-		giterr_set(GITERR_INVALID, "read too large");
+		git_error_set(GIT_ERROR_INVALID, "read too large");
 		return -1;
 	}
 
-	GITERR_CHECK_ALLOC_ADD(&alloc_len, len, 1);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, len, 1);
 	if (git_buf_grow(buf, alloc_len) < 0)
 		return -1;
 
@@ -158,7 +158,7 @@ int git_futils_readbuffer_fd(git_buf *buf, git_file fd, size_t len)
 	read_size = p_read(fd, buf->ptr, len);
 
 	if (read_size != (ssize_t)len) {
-		giterr_set(GITERR_OS, "failed to read descriptor");
+		git_error_set(GIT_ERROR_OS, "failed to read descriptor");
 		git_buf_dispose(buf);
 		return -1;
 	}
@@ -188,12 +188,12 @@ int git_futils_readbuffer_updated(
 
 
 	if (S_ISDIR(st.st_mode)) {
-		giterr_set(GITERR_INVALID, "requested file is a directory");
+		git_error_set(GIT_ERROR_INVALID, "requested file is a directory");
 		return GIT_ENOTFOUND;
 	}
 
 	if (!git__is_sizet(st.st_size+1)) {
-		giterr_set(GITERR_OS, "invalid regular file stat for '%s'", path);
+		git_error_set(GIT_ERROR_OS, "invalid regular file stat for '%s'", path);
 		return -1;
 	}
 
@@ -261,24 +261,24 @@ int git_futils_writebuffer(
 		mode = GIT_FILEMODE_BLOB;
 
 	if ((fd = p_open(path, flags, mode)) < 0) {
-		giterr_set(GITERR_OS, "could not open '%s' for writing", path);
+		git_error_set(GIT_ERROR_OS, "could not open '%s' for writing", path);
 		return fd;
 	}
 
 	if ((error = p_write(fd, git_buf_cstr(buf), git_buf_len(buf))) < 0) {
-		giterr_set(GITERR_OS, "could not write to '%s'", path);
+		git_error_set(GIT_ERROR_OS, "could not write to '%s'", path);
 		(void)p_close(fd);
 		return error;
 	}
 
 	if (do_fsync && (error = p_fsync(fd)) < 0) {
-		giterr_set(GITERR_OS, "could not fsync '%s'", path);
+		git_error_set(GIT_ERROR_OS, "could not fsync '%s'", path);
 		p_close(fd);
 		return error;
 	}
 
 	if ((error = p_close(fd)) < 0) {
-		giterr_set(GITERR_OS, "error while closing '%s'", path);
+		git_error_set(GIT_ERROR_OS, "error while closing '%s'", path);
 		return error;
 	}
 
@@ -294,7 +294,7 @@ int git_futils_mv_withpath(const char *from, const char *to, const mode_t dirmod
 		return -1;
 
 	if (p_rename(from, to) < 0) {
-		giterr_set(GITERR_OS, "failed to rename '%s' to '%s'", from, to);
+		git_error_set(GIT_ERROR_OS, "failed to rename '%s' to '%s'", from, to);
 		return -1;
 	}
 
@@ -321,7 +321,7 @@ int git_futils_mmap_ro_file(git_map *out, const char *path)
 	}
 
 	if (!git__is_sizet(len)) {
-		giterr_set(GITERR_OS, "file `%s` too large to mmap", path);
+		git_error_set(GIT_ERROR_OS, "file `%s` too large to mmap", path);
 		result = -1;
 		goto out;
 	}
@@ -346,7 +346,7 @@ GIT_INLINE(int) mkdir_validate_dir(
 {
 	/* with exclusive create, existing dir is an error */
 	if ((flags & GIT_MKDIR_EXCL) != 0) {
-		giterr_set(GITERR_FILESYSTEM,
+		git_error_set(GIT_ERROR_FILESYSTEM,
 			"failed to make directory '%s': directory exists", path);
 		return GIT_EEXISTS;
 	}
@@ -354,7 +354,7 @@ GIT_INLINE(int) mkdir_validate_dir(
 	if ((S_ISREG(st->st_mode) && (flags & GIT_MKDIR_REMOVE_FILES)) ||
 		(S_ISLNK(st->st_mode) && (flags & GIT_MKDIR_REMOVE_SYMLINKS))) {
 		if (p_unlink(path) < 0) {
-			giterr_set(GITERR_OS, "failed to remove %s '%s'",
+			git_error_set(GIT_ERROR_OS, "failed to remove %s '%s'",
 				S_ISLNK(st->st_mode) ? "symlink" : "file", path);
 			return GIT_EEXISTS;
 		}
@@ -362,7 +362,7 @@ GIT_INLINE(int) mkdir_validate_dir(
 		opts->perfdata.mkdir_calls++;
 
 		if (p_mkdir(path, mode) < 0) {
-			giterr_set(GITERR_OS, "failed to make directory '%s'", path);
+			git_error_set(GIT_ERROR_OS, "failed to make directory '%s'", path);
 			return GIT_EEXISTS;
 		}
 	}
@@ -372,13 +372,13 @@ GIT_INLINE(int) mkdir_validate_dir(
 		opts->perfdata.stat_calls++;
 
 		if (p_stat(path, st) < 0) {
-			giterr_set(GITERR_OS, "failed to make directory '%s'", path);
+			git_error_set(GIT_ERROR_OS, "failed to make directory '%s'", path);
 			return GIT_EEXISTS;
 		}
 	}
 
 	else if (!S_ISDIR(st->st_mode)) {
-		giterr_set(GITERR_FILESYSTEM,
+		git_error_set(GIT_ERROR_FILESYSTEM,
 			"failed to make directory '%s': directory exists", path);
 		return GIT_EEXISTS;
 	}
@@ -400,7 +400,7 @@ GIT_INLINE(int) mkdir_validate_mode(
 		opts->perfdata.chmod_calls++;
 
 		if (p_chmod(path, mode) < 0) {
-			giterr_set(GITERR_OS, "failed to set permissions on '%s'", path);
+			git_error_set(GIT_ERROR_OS, "failed to set permissions on '%s'", path);
 			return -1;
 		}
 	}
@@ -415,7 +415,7 @@ GIT_INLINE(int) mkdir_canonicalize(
 	ssize_t root_len;
 
 	if (path->size == 0) {
-		giterr_set(GITERR_OS, "attempt to create empty path");
+		git_error_set(GIT_ERROR_OS, "attempt to create empty path");
 		return -1;
 	}
 
@@ -475,7 +475,7 @@ int git_futils_mkdir(
 		if (error == 0) {
 			break;
 		} else if (errno != ENOENT) {
-			giterr_set(GITERR_OS, "failed to stat '%s'", parent_path.ptr);
+			git_error_set(GIT_ERROR_OS, "failed to stat '%s'", parent_path.ptr);
 			goto done;
 		}
 
@@ -602,18 +602,18 @@ int git_futils_mkdir_relative(
 retry_lstat:
 		if (p_lstat(make_path.ptr, &st) < 0) {
 			if (mkdir_attempted || errno != ENOENT) {
-				giterr_set(GITERR_OS, "cannot access component in path '%s'", make_path.ptr);
+				git_error_set(GIT_ERROR_OS, "cannot access component in path '%s'", make_path.ptr);
 				error = -1;
 				goto done;
 			}
 
-			giterr_clear();
+			git_error_clear();
 			opts->perfdata.mkdir_calls++;
 			mkdir_attempted = true;
 			if (p_mkdir(make_path.ptr, mode) < 0) {
 				if (errno == EEXIST)
 					goto retry_lstat;
-				giterr_set(GITERR_OS, "failed to make directory '%s'", make_path.ptr);
+				git_error_set(GIT_ERROR_OS, "failed to make directory '%s'", make_path.ptr);
 				error = -1;
 				goto done;
 			}
@@ -632,16 +632,15 @@ retry_lstat:
 			char *cache_path;
 			size_t alloc_size;
 
-			GITERR_CHECK_ALLOC_ADD(&alloc_size, make_path.size, 1);
+			GIT_ERROR_CHECK_ALLOC_ADD(&alloc_size, make_path.size, 1);
 			if (!git__is_uint32(alloc_size))
 				return -1;
 			cache_path = git_pool_malloc(opts->pool, (uint32_t)alloc_size);
-			GITERR_CHECK_ALLOC(cache_path);
+			GIT_ERROR_CHECK_ALLOC(cache_path);
 
 			memcpy(cache_path, make_path.ptr, make_path.size + 1);
 
-			git_strmap_insert(opts->dir_map, cache_path, cache_path, &error);
-			if (error < 0)
+			if ((error = git_strmap_set(opts->dir_map, cache_path, cache_path)) < 0)
 				goto done;
 		}
 	}
@@ -654,7 +653,7 @@ retry_lstat:
 		opts->perfdata.stat_calls++;
 
 		if (p_stat(make_path.ptr, &st) < 0 || !S_ISDIR(st.st_mode)) {
-			giterr_set(GITERR_OS, "path is not a directory '%s'",
+			git_error_set(GIT_ERROR_OS, "path is not a directory '%s'",
 				make_path.ptr);
 			error = GIT_ENOTFOUND;
 		}
@@ -677,10 +676,10 @@ typedef struct {
 static int futils__error_cannot_rmdir(const char *path, const char *filemsg)
 {
 	if (filemsg)
-		giterr_set(GITERR_OS, "could not remove directory '%s': %s",
+		git_error_set(GIT_ERROR_OS, "could not remove directory '%s': %s",
 				   path, filemsg);
 	else
-		giterr_set(GITERR_OS, "could not remove directory '%s'", path);
+		git_error_set(GIT_ERROR_OS, "could not remove directory '%s'", path);
 
 	return -1;
 }
@@ -818,7 +817,7 @@ int git_futils_rmdir_r(
 			&fullpath, base, futils__rmdir_empty_parent, &data);
 
 	if (error == GIT_ITEROVER) {
-		giterr_clear();
+		git_error_clear();
 		error = 0;
 	}
 
@@ -851,12 +850,12 @@ static int cp_by_fd(int ifd, int ofd, bool close_fd_when_done)
 		error = p_write(ofd, buffer, len);
 
 	if (len < 0) {
-		giterr_set(GITERR_OS, "read error while copying file");
+		git_error_set(GIT_ERROR_OS, "read error while copying file");
 		error = (int)len;
 	}
 
 	if (error < 0)
-		giterr_set(GITERR_OS, "write error while copying file");
+		git_error_set(GIT_ERROR_OS, "write error while copying file");
 
 	if (close_fd_when_done) {
 		p_close(ifd);
@@ -901,20 +900,20 @@ static int cp_link(const char *from, const char *to, size_t link_size)
 	char *link_data;
 	size_t alloc_size;
 
-	GITERR_CHECK_ALLOC_ADD(&alloc_size, link_size, 1);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_size, link_size, 1);
 	link_data = git__malloc(alloc_size);
-	GITERR_CHECK_ALLOC(link_data);
+	GIT_ERROR_CHECK_ALLOC(link_data);
 
 	read_len = p_readlink(from, link_data, link_size);
 	if (read_len != (ssize_t)link_size) {
-		giterr_set(GITERR_OS, "failed to read symlink data for '%s'", from);
+		git_error_set(GIT_ERROR_OS, "failed to read symlink data for '%s'", from);
 		error = -1;
 	}
 	else {
 		link_data[read_len] = '\0';
 
 		if (p_symlink(link_data, to) < 0) {
-			giterr_set(GITERR_OS, "could not symlink '%s' as '%s'",
+			git_error_set(GIT_ERROR_OS, "could not symlink '%s' as '%s'",
 				link_data, to);
 			error = -1;
 		}
@@ -977,7 +976,7 @@ static int _cp_r_callback(void *ref, git_buf *from)
 	else if (error != GIT_ENOTFOUND)
 		return error;
 	else {
-		giterr_clear();
+		git_error_clear();
 		error = 0;
 	}
 
@@ -1010,7 +1009,7 @@ static int _cp_r_callback(void *ref, git_buf *from)
 			return 0;
 
 		if (p_unlink(info->to.ptr) < 0) {
-			giterr_set(GITERR_OS, "cannot overwrite existing file '%s'",
+			git_error_set(GIT_ERROR_OS, "cannot overwrite existing file '%s'",
 				info->to.ptr);
 			return GIT_EEXISTS;
 		}
@@ -1030,7 +1029,7 @@ static int _cp_r_callback(void *ref, git_buf *from)
 	/* make symlink or regular file */
 	if (info->flags & GIT_CPDIR_LINK_FILES) {
 		if ((error = p_link(from->ptr, info->to.ptr)) < 0)
-			giterr_set(GITERR_OS, "failed to link '%s'", from->ptr);
+			git_error_set(GIT_ERROR_OS, "failed to link '%s'", from->ptr);
 	} else if (S_ISLNK(from_st.st_mode)) {
 		error = cp_link(from->ptr, info->to.ptr, (size_t)from_st.st_size);
 	} else {
@@ -1155,12 +1154,12 @@ int git_futils_fsync_dir(const char *path)
 	int fd, error = -1;
 
 	if ((fd = p_open(path, O_RDONLY)) < 0) {
-		giterr_set(GITERR_OS, "failed to open directory '%s' for fsync", path);
+		git_error_set(GIT_ERROR_OS, "failed to open directory '%s' for fsync", path);
 		return -1;
 	}
 
 	if ((error = p_fsync(fd)) < 0)
-		giterr_set(GITERR_OS, "failed to fsync directory '%s'", path);
+		git_error_set(GIT_ERROR_OS, "failed to fsync directory '%s'", path);
 
 	p_close(fd);
 	return error;

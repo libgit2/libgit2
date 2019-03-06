@@ -35,29 +35,23 @@ struct opts {
 };
 static void parse_opts(struct opts *o, int argc, char *argv[]);
 
-int main(int argc, char *argv[])
+int lg2_blame(git_repository *repo, int argc, char *argv[])
 {
 	int line, break_on_null_hunk;
 	size_t i, rawsize;
 	char spec[1024] = {0};
 	struct opts o = {0};
 	const char *rawdata;
-	git_repository *repo = NULL;
 	git_revspec revspec = {0};
 	git_blame_options blameopts = GIT_BLAME_OPTIONS_INIT;
 	git_blame *blame = NULL;
 	git_blob *blob;
 	git_object *obj;
 
-	git_libgit2_init();
-
 	parse_opts(&o, argc, argv);
 	if (o.M) blameopts.flags |= GIT_BLAME_TRACK_COPIES_SAME_COMMIT_MOVES;
 	if (o.C) blameopts.flags |= GIT_BLAME_TRACK_COPIES_SAME_COMMIT_COPIES;
 	if (o.F) blameopts.flags |= GIT_BLAME_FIRST_PARENT;
-
-	/** Open the repository. */
-	check_lg2(git_repository_open_ext(&repo, ".", 0, NULL), "Couldn't open repository", NULL);
 
 	/**
 	 * The commit range comes in "commitish" form. Use the rev-parse API to
@@ -131,9 +125,6 @@ int main(int argc, char *argv[])
 	/** Cleanup. */
 	git_blob_free(blob);
 	git_blame_free(blame);
-	git_repository_free(repo);
-
-	git_libgit2_shutdown();
 
 	return 0;
 }

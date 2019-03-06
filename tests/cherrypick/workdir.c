@@ -370,7 +370,7 @@ void test_cherrypick_workdir__nonmerge_fails_mainline_specified(void)
 	git_cherrypick_options opts = GIT_CHERRYPICK_OPTIONS_INIT;
 
 	cl_git_pass(git_repository_head(&head, repo));
-	cl_git_pass(git_reference_peel((git_object **)&commit, head, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reference_peel((git_object **)&commit, head, GIT_OBJECT_COMMIT));
 
 	opts.mainline = 1;
 	cl_must_fail(git_cherrypick(repo, commit, &opts));

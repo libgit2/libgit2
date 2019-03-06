@@ -97,14 +97,21 @@ void test_filter_crlf__with_safecrlf(void)
 	in.size = strlen(in.ptr);
 
 	cl_git_fail(git_filter_list_apply_to_data(&out, fl, &in));
-	cl_assert_equal_i(giterr_last()->klass, GITERR_FILTER);
+	cl_assert_equal_i(git_error_last()->klass, GIT_ERROR_FILTER);
 
-	/* Normalized \n is reversible, so does not fail with safecrlf */
+	/* Normalized \n fails for autocrlf=true when safecrlf=true */
 	in.ptr = "Normal\nLF\nonly\nline-endings.\n";
 	in.size = strlen(in.ptr);
 
+	cl_git_fail(git_filter_list_apply_to_data(&out, fl, &in));
+	cl_assert_equal_i(git_error_last()->klass, GIT_ERROR_FILTER);
+
+	/* String with \r but without \r\n does not fail with safecrlf */
+	in.ptr = "Normal\nCR only\rand some more\nline-endings.\n";
+	in.size = strlen(in.ptr);
+
 	cl_git_pass(git_filter_list_apply_to_data(&out, fl, &in));
-	cl_assert_equal_s(in.ptr, out.ptr);
+	cl_assert_equal_s("Normal\nCR only\rand some more\nline-endings.\n", out.ptr);
 
 	git_filter_list_free(fl);
 	git_buf_dispose(&out);

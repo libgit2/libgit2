@@ -10,7 +10,7 @@ void assert_on_branch(git_repository *repo, const char *branch)
 	git_buf bname = GIT_BUF_INIT;
 
 	cl_git_pass(git_reference_lookup(&head, repo, GIT_HEAD_FILE));
-	cl_assert_(git_reference_type(head) == GIT_REF_SYMBOLIC, branch);
+	cl_assert_(git_reference_type(head) == GIT_REFERENCE_SYMBOLIC, branch);
 
 	cl_git_pass(git_buf_joinpath(&bname, "refs/heads", branch));
 	cl_assert_equal_s(bname.ptr, git_reference_symbolic_target(head));
@@ -25,7 +25,7 @@ void reset_index_to_treeish(git_object *treeish)
 	git_index *index;
 	git_repository *repo = git_object_owner(treeish);
 
-	cl_git_pass(git_object_peel(&tree, treeish, GIT_OBJ_TREE));
+	cl_git_pass(git_object_peel(&tree, treeish, GIT_OBJECT_TREE));
 
 	cl_git_pass(git_repository_index(&index, repo));
 	cl_git_pass(git_index_read_tree(index, (git_tree *)tree));

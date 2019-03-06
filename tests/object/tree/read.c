@@ -55,11 +55,11 @@ void test_object_tree_read__two(void)
 	cl_assert(git_tree_entrycount(tree) == 3);
 
 	/* GH-86: git_object_lookup() should also check the type if the object comes from the cache */
-	cl_assert(git_object_lookup(&obj, g_repo, &id, GIT_OBJ_TREE) == 0);
+	cl_assert(git_object_lookup(&obj, g_repo, &id, GIT_OBJECT_TREE) == 0);
 	cl_assert(obj != NULL);
 	git_object_free(obj);
 	obj = NULL;
-	cl_git_fail(git_object_lookup(&obj, g_repo, &id, GIT_OBJ_BLOB));
+	cl_git_fail(git_object_lookup(&obj, g_repo, &id, GIT_OBJECT_BLOB));
 	cl_assert(obj == NULL);
 
 	entry = git_tree_entry_byname(tree, "README");

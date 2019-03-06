@@ -38,21 +38,21 @@ struct git_reference_iterator {
 	/**
 	 * Return the current reference and advance the iterator.
 	 */
-	int (*next)(
+	int GIT_CALLBACK(next)(
 		git_reference **ref,
 		git_reference_iterator *iter);
 
 	/**
 	 * Return the name of the current reference and advance the iterator
 	 */
-	int (*next_name)(
+	int GIT_CALLBACK(next_name)(
 		const char **ref_name,
 		git_reference_iterator *iter);
 
 	/**
 	 * Free the iterator
 	 */
-	void (*free)(
+	void GIT_CALLBACK(free)(
 		git_reference_iterator *iter);
 };
 
@@ -64,7 +64,7 @@ struct git_refdb_backend {
 	 * Queries the refdb backend to determine if the given ref_name
 	 * exists.  A refdb implementation must provide this function.
 	 */
-	int (*exists)(
+	int GIT_CALLBACK(exists)(
 		int *exists,
 		git_refdb_backend *backend,
 		const char *ref_name);
@@ -73,7 +73,7 @@ struct git_refdb_backend {
 	 * Queries the refdb backend for a given reference.  A refdb
 	 * implementation must provide this function.
 	 */
-	int (*lookup)(
+	int GIT_CALLBACK(lookup)(
 		git_reference **out,
 		git_refdb_backend *backend,
 		const char *ref_name);
@@ -83,7 +83,7 @@ struct git_refdb_backend {
 	 *
 	 * A refdb implementation must provide this function.
 	 */
-	int (*iterator)(
+	int GIT_CALLBACK(iterator)(
 		git_reference_iterator **iter,
 		struct git_refdb_backend *backend,
 		const char *glob);
@@ -92,12 +92,12 @@ struct git_refdb_backend {
 	 * Writes the given reference to the refdb.  A refdb implementation
 	 * must provide this function.
 	 */
-	int (*write)(git_refdb_backend *backend,
+	int GIT_CALLBACK(write)(git_refdb_backend *backend,
 		     const git_reference *ref, int force,
 		     const git_signature *who, const char *message,
 		     const git_oid *old, const char *old_target);
 
-	int (*rename)(
+	int GIT_CALLBACK(rename)(
 		git_reference **out, git_refdb_backend *backend,
 		const char *old_name, const char *new_name, int force,
 		const git_signature *who, const char *message);
@@ -107,7 +107,7 @@ struct git_refdb_backend {
 	 * from the refdb.  A refdb implementation must provide this
 	 * function.
 	 */
-	int (*del)(git_refdb_backend *backend, const char *ref_name, const git_oid *old_id, const char *old_target);
+	int GIT_CALLBACK(del)(git_refdb_backend *backend, const char *ref_name, const git_oid *old_id, const char *old_target);
 
 	/**
 	 * Suggests that the given refdb compress or optimize its references.
@@ -116,56 +116,56 @@ struct git_refdb_backend {
 	 * implementation may provide this function; if it is not provided,
 	 * nothing will be done.
 	 */
-	int (*compress)(git_refdb_backend *backend);
+	int GIT_CALLBACK(compress)(git_refdb_backend *backend);
 
 	/**
 	 * Query whether a particular reference has a log (may be empty)
 	 */
-	int (*has_log)(git_refdb_backend *backend, const char *refname);
+	int GIT_CALLBACK(has_log)(git_refdb_backend *backend, const char *refname);
 
 	/**
 	 * Make sure a particular reference will have a reflog which
 	 * will be appended to on writes.
 	 */
-	int (*ensure_log)(git_refdb_backend *backend, const char *refname);
+	int GIT_CALLBACK(ensure_log)(git_refdb_backend *backend, const char *refname);
 
 	/**
 	 * Frees any resources held by the refdb (including the `git_refdb_backend`
 	 * itself). A refdb backend implementation must provide this function.
 	 */
-	void (*free)(git_refdb_backend *backend);
+	void GIT_CALLBACK(free)(git_refdb_backend *backend);
 
 	/**
 	 * Read the reflog for the given reference name.
 	 */
-	int (*reflog_read)(git_reflog **out, git_refdb_backend *backend, const char *name);
+	int GIT_CALLBACK(reflog_read)(git_reflog **out, git_refdb_backend *backend, const char *name);
 
 	/**
 	 * Write a reflog to disk.
 	 */
-	int (*reflog_write)(git_refdb_backend *backend, git_reflog *reflog);
+	int GIT_CALLBACK(reflog_write)(git_refdb_backend *backend, git_reflog *reflog);
 
 	/**
 	 * Rename a reflog
 	 */
-	int (*reflog_rename)(git_refdb_backend *_backend, const char *old_name, const char *new_name);
+	int GIT_CALLBACK(reflog_rename)(git_refdb_backend *_backend, const char *old_name, const char *new_name);
 
 	/**
 	 * Remove a reflog.
 	 */
-	int (*reflog_delete)(git_refdb_backend *backend, const char *name);
+	int GIT_CALLBACK(reflog_delete)(git_refdb_backend *backend, const char *name);
 
 	/**
 	 * Lock a reference. The opaque parameter will be passed to the unlock function
 	 */
-	int (*lock)(void **payload_out, git_refdb_backend *backend, const char *refname);
+	int GIT_CALLBACK(lock)(void **payload_out, git_refdb_backend *backend, const char *refname);
 
 	/**
 	 * Unlock a reference. Only one of target or symbolic_target
 	 * will be set. success indicates whether to update the
 	 * reference or discard the lock (if it's false)
 	 */
-	int (*unlock)(git_refdb_backend *backend, void *payload, int success, int update_reflog,
+	int GIT_CALLBACK(unlock)(git_refdb_backend *backend, void *payload, int success, int update_reflog,
 		      const git_reference *ref, const git_signature *sig, const char *message);
 };
 

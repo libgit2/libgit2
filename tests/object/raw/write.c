@@ -58,7 +58,7 @@ static void make_odb_dir(void)
 
 
 /* Standard test form */
-void test_body(object_data *d, git_rawobj *o) 
+void test_body(object_data *d, git_rawobj *o)
 {
    git_odb *db;
    git_oid id1, id2;
@@ -146,7 +146,7 @@ void test_object_raw_write__loose_object(void)
    git_rawobj commit_obj = {
       commit_data,
       sizeof(commit_data),
-      GIT_OBJ_COMMIT
+      GIT_OBJECT_COMMIT
    };
 
    test_body(&commit, &commit_obj);
@@ -182,7 +182,7 @@ void test_object_raw_write__loose_tree(void)
    static git_rawobj tree_obj = {
       tree_data,
       sizeof(tree_data),
-      GIT_OBJ_TREE
+      GIT_OBJECT_TREE
    };
 
    test_body(&tree, &tree_obj);
@@ -224,7 +224,7 @@ void test_object_raw_write__loose_tag(void)
    static git_rawobj tag_obj = {
       tag_data,
       sizeof(tag_data),
-      GIT_OBJ_TAG
+      GIT_OBJECT_TAG
    };
 
 
@@ -246,7 +246,7 @@ void test_object_raw_write__zero_length(void)
    static git_rawobj zero_obj = {
       zero_data,
       0,
-      GIT_OBJ_BLOB
+      GIT_OBJECT_BLOB
    };
 
    test_body(&zero, &zero_obj);
@@ -267,7 +267,7 @@ void test_object_raw_write__one_byte(void)
    static git_rawobj one_obj = {
       one_data,
       sizeof(one_data),
-      GIT_OBJ_BLOB
+      GIT_OBJECT_BLOB
    };
 
    test_body(&one, &one_obj);
@@ -288,7 +288,7 @@ void test_object_raw_write__two_byte(void)
    static git_rawobj two_obj = {
       two_data,
       sizeof(two_data),
-      GIT_OBJ_BLOB
+      GIT_OBJECT_BLOB
    };
 
    test_body(&two, &two_obj);
@@ -455,7 +455,7 @@ void test_object_raw_write__several_bytes(void)
    static git_rawobj some_obj = {
       some_data,
       sizeof(some_data),
-      GIT_OBJ_BLOB
+      GIT_OBJECT_BLOB
    };
 
    test_body(&some, &some_obj);

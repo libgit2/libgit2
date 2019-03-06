@@ -96,7 +96,7 @@ static int resolve_heads(git_repository *repo, merge_options *opts)
 	for (i = 0; i < opts->heads_count; i++) {
 		err = resolve_refish(&annotated[annotated_count++], repo, opts->heads[i]);
 		if (err != 0) {
-			fprintf(stderr, "failed to resolve refish %s: %s\n", opts->heads[i], giterr_last()->message);
+			fprintf(stderr, "failed to resolve refish %s: %s\n", opts->heads[i], git_error_last()->message);
 			annotated_count--;
 			continue;
 		}
@@ -153,7 +153,7 @@ static int perform_fastforward(git_repository *repo, const git_oid *target_oid, 
 	}
 
 	/* Lookup the target object */
-	err = git_object_lookup(&target, repo, target_oid, GIT_OBJ_COMMIT);
+	err = git_object_lookup(&target, repo, target_oid, GIT_OBJECT_COMMIT);
 	if (err != 0) {
 		fprintf(stderr, "failed to lookup OID %s\n", git_oid_tostr_s(target_oid));
 		return -1;
@@ -229,7 +229,7 @@ static int create_merge_commit(git_repository *repo, git_index *index, merge_opt
 
 	/* Maybe that's a ref, so DWIM it */
 	err = git_reference_dwim(&merge_ref, repo, opts->heads[0]);
-	check_lg2(err, "failed to DWIM reference", giterr_last()->message);
+	check_lg2(err, "failed to DWIM reference", git_error_last()->message);
 
 	/* Grab a signature */
 	check_lg2(git_signature_now(&sign, "Me", "me@example.com"), "failed to create signature", NULL);
@@ -251,7 +251,7 @@ static int create_merge_commit(git_repository *repo, git_index *index, merge_opt
 	if (err < 0) goto cleanup;
 
 	/* Setup our parent commits */
-	err = git_reference_peel((git_object **)&parents[0], head_ref, GIT_OBJ_COMMIT);
+	err = git_reference_peel((git_object **)&parents[0], head_ref, GIT_OBJECT_COMMIT);
 	check_lg2(err, "failed to peel head reference", NULL);
 	for (i = 0; i < opts->annotated_count; i++) {
 		git_commit_lookup(&parents[i + 1], repo, git_annotated_commit_id(opts->annotated[i]));
@@ -278,9 +278,8 @@ cleanup:
 	return err;
 }
 
-int main(int argc, char **argv)
+int lg2_merge(git_repository *repo, int argc, char **argv)
 {
-	git_repository *repo = NULL;
 	merge_options opts;
 	git_index *index;
 	git_repository_state_t state;
@@ -291,11 +290,6 @@ int main(int argc, char **argv)
 
 	merge_options_init(&opts);
 	parse_options(&path, &opts, argc, argv);
-
-	git_libgit2_init();
-
-	check_lg2(git_repository_open_ext(&repo, path, 0, NULL),
-	          "Could not open repository", NULL);
 
 	state = git_repository_state(repo);
 	if (state != GIT_REPOSITORY_STATE_NONE) {
@@ -366,8 +360,6 @@ int main(int argc, char **argv)
 cleanup:
 	free(opts.heads);
 	free(opts.annotated);
-	git_repository_free(repo);
-	git_libgit2_shutdown();
 
 	return 0;
 }

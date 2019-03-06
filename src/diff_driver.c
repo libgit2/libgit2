@@ -63,7 +63,7 @@ git_diff_driver_registry *git_diff_driver_registry_new(void)
 	if (!reg)
 		return NULL;
 
-	if (git_strmap_alloc(&reg->drivers) < 0) {
+	if (git_strmap_new(&reg->drivers) < 0) {
 		git_diff_driver_registry_free(reg);
 		return NULL;
 	}
@@ -149,7 +149,7 @@ static git_diff_driver_registry *git_repository_driver_registry(
 	}
 
 	if (!repo->diff_drivers)
-		giterr_set(GITERR_REPOSITORY, "unable to create diff driver registry");
+		git_error_set(GIT_ERROR_REPOSITORY, "unable to create diff driver registry");
 
 	return repo->diff_drivers;
 }
@@ -162,11 +162,11 @@ static int diff_driver_alloc(
 		namelen = strlen(name),
 		alloclen;
 
-	GITERR_CHECK_ALLOC_ADD(&alloclen, driverlen, namelen);
-	GITERR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloclen, driverlen, namelen);
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloclen, alloclen, 1);
 
 	driver = git__calloc(1, alloclen);
-	GITERR_CHECK_ALLOC(driver);
+	GIT_ERROR_CHECK_ALLOC(driver);
 
 	memcpy(driver->name, name, namelen);
 
@@ -183,9 +183,9 @@ static int git_diff_driver_builtin(
 	git_diff_driver_registry *reg,
 	const char *driver_name)
 {
-	int error = 0;
 	git_diff_driver_definition *ddef = NULL;
 	git_diff_driver *drv = NULL;
+	int error = 0;
 	size_t idx;
 
 	for (idx = 0; idx < ARRAY_SIZE(builtin_defs); ++idx) {
@@ -211,13 +211,12 @@ static int git_diff_driver_builtin(
 		(error = p_regcomp(
 			&drv->word_pattern, ddef->words, ddef->flags | REG_EXTENDED)))
 	{
-		error = giterr_set_regex(&drv->word_pattern, error);
+		error = git_error_set_regex(&drv->word_pattern, error);
 		goto done;
 	}
 
-	git_strmap_insert(reg->drivers, drv->name, drv, &error);
-	if (error > 0)
-		error = 0;
+	if ((error = git_strmap_set(reg->drivers, drv->name, drv)) < 0)
+		goto done;
 
 done:
 	if (error && drv)
@@ -233,9 +232,8 @@ static int git_diff_driver_load(
 {
 	int error = 0;
 	git_diff_driver_registry *reg;
-	git_diff_driver *drv = NULL;
+	git_diff_driver *drv;
 	size_t namelen;
-	khiter_t pos;
 	git_config *cfg = NULL;
 	git_buf name = GIT_BUF_INIT;
 	git_config_entry *ce = NULL;
@@ -244,9 +242,8 @@ static int git_diff_driver_load(
 	if ((reg = git_repository_driver_registry(repo)) == NULL)
 		return -1;
 
-	pos = git_strmap_lookup_index(reg->drivers, driver_name);
-	if (git_strmap_valid_index(reg->drivers, pos)) {
-		*out = git_strmap_value_at(reg->drivers, pos);
+	if ((drv = git_strmap_get(reg->drivers, driver_name)) != NULL) {
+		*out = drv;
 		return 0;
 	}
 
@@ -257,7 +254,7 @@ static int git_diff_driver_load(
 
 	/* if you can't read config for repo, just use default driver */
 	if (git_repository_config_snapshot(&cfg, repo) < 0) {
-		giterr_clear();
+		git_error_clear();
 		goto done;
 	}
 
@@ -288,7 +285,7 @@ static int git_diff_driver_load(
 			cfg, name.ptr, NULL, diff_driver_xfuncname, drv)) < 0) {
 		if (error != GIT_ENOTFOUND)
 			goto done;
-		giterr_clear(); /* no diff.<driver>.xfuncname, so just continue */
+		git_error_clear(); /* no diff.<driver>.xfuncname, so just continue */
 	}
 
 	git_buf_truncate(&name, namelen + strlen("diff.."));
@@ -297,7 +294,7 @@ static int git_diff_driver_load(
 			cfg, name.ptr, NULL, diff_driver_funcname, drv)) < 0) {
 		if (error != GIT_ENOTFOUND)
 			goto done;
-		giterr_clear(); /* no diff.<driver>.funcname, so just continue */
+		git_error_clear(); /* no diff.<driver>.funcname, so just continue */
 	}
 
 	/* if we found any patterns, set driver type to use correct callback */
@@ -316,7 +313,7 @@ static int git_diff_driver_load(
 		found_driver = true;
 	else {
 		/* TODO: warn about bad regex instead of failure */
-		error = giterr_set_regex(&drv->word_pattern, error);
+		error = git_error_set_regex(&drv->word_pattern, error);
 		goto done;
 	}
 
@@ -329,10 +326,8 @@ static int git_diff_driver_load(
 		goto done;
 
 	/* store driver in registry */
-	git_strmap_insert(reg->drivers, drv->name, drv, &error);
-	if (error < 0)
+	if ((error = git_strmap_set(reg->drivers, drv->name, drv)) < 0)
 		goto done;
-	error = 0;
 
 	*out = drv;
 
@@ -380,7 +375,7 @@ int git_diff_driver_lookup(
 	else if ((error = git_diff_driver_load(out, repo, values[0])) < 0) {
 		if (error == GIT_ENOTFOUND) {
 			error = 0;
-			giterr_clear();
+			git_error_clear();
 		}
 	}
 

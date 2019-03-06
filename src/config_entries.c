@@ -56,10 +56,10 @@ int git_config_entries_new(git_config_entries **out)
 	int error;
 
 	entries = git__calloc(1, sizeof(git_config_entries));
-	GITERR_CHECK_ALLOC(entries);
+	GIT_ERROR_CHECK_ALLOC(entries);
 	GIT_REFCOUNT_INC(entries);
 
-	if ((error = git_strmap_alloc(&entries->map)) < 0)
+	if ((error = git_strmap_new(&entries->map)) < 0)
 		git__free(entries);
 	else
 		*out = entries;
@@ -81,10 +81,10 @@ int git_config_entries_dup(git_config_entries **out, git_config_entries *entries
 
 		dup = git__calloc(1, sizeof(git_config_entry));
 		dup->name = git__strdup(head->entry->name);
-		GITERR_CHECK_ALLOC(dup->name);
+		GIT_ERROR_CHECK_ALLOC(dup->name);
 		if (head->entry->value) {
 			dup->value = git__strdup(head->entry->value);
-			GITERR_CHECK_ALLOC(dup->value);
+			GIT_ERROR_CHECK_ALLOC(dup->value);
 		}
 		dup->level = head->entry->level;
 		dup->include_depth = head->entry->include_depth;
@@ -131,16 +131,14 @@ void git_config_entries_free(git_config_entries *entries)
 
 int git_config_entries_append(git_config_entries *entries, git_config_entry *entry)
 {
-	git_strmap_iter pos;
 	config_entry_list *existing, *var;
 	int error = 0;
 
 	var = git__calloc(1, sizeof(config_entry_list));
-	GITERR_CHECK_ALLOC(var);
+	GIT_ERROR_CHECK_ALLOC(var);
 	var->entry = entry;
 
-	pos = git_strmap_lookup_index(entries->map, entry->name);
-	if (!git_strmap_valid_index(entries->map, pos)) {
+	if ((existing = git_strmap_get(entries->map, entry->name)) == NULL) {
 		/*
 		 * We only ever inspect `last` from the first config
 		 * entry in a multivar. In case where this new entry is
@@ -152,17 +150,13 @@ int git_config_entries_append(git_config_entries *entries, git_config_entry *ent
 		 */
 		var->last = var;
 
-		git_strmap_insert(entries->map, entry->name, var, &error);
-
-		if (error > 0)
-			error = 0;
+		error = git_strmap_set(entries->map, entry->name, var);
 	} else {
-		existing = git_strmap_value_at(entries->map, pos);
 		config_entry_list_append(&existing, var);
 	}
 
 	var = git__calloc(1, sizeof(config_entry_list));
-	GITERR_CHECK_ALLOC(var);
+	GIT_ERROR_CHECK_ALLOC(var);
 	var->entry = entry;
 	config_entry_list_append(&entries->list, var);
 
@@ -171,15 +165,12 @@ int git_config_entries_append(git_config_entries *entries, git_config_entry *ent
 
 int config_entry_get(config_entry_list **out, git_config_entries *entries, const char *key)
 {
-	khiter_t pos;
+	config_entry_list *list;
 
-	pos = git_strmap_lookup_index(entries->map, key);
-
-	/* no error message; the config system will write one */
-	if (!git_strmap_valid_index(entries->map, pos))
+	if ((list = git_strmap_get(entries->map, key)) == NULL)
 		return GIT_ENOTFOUND;
 
-	*out = git_strmap_value_at(entries->map, pos);
+	*out = list;
 
 	return 0;
 }
@@ -205,12 +196,12 @@ int git_config_entries_get_unique(git_config_entry **out, git_config_entries *en
 		return error;
 
 	if (entry->next != NULL) {
-		giterr_set(GITERR_CONFIG, "entry is not unique due to being a multivar");
+		git_error_set(GIT_ERROR_CONFIG, "entry is not unique due to being a multivar");
 		return -1;
 	}
 
 	if (entry->entry->include_depth) {
-		giterr_set(GITERR_CONFIG, "entry is not unique due to being included");
+		git_error_set(GIT_ERROR_CONFIG, "entry is not unique due to being included");
 		return -1;
 	}
 
@@ -246,7 +237,7 @@ int git_config_entries_iterator_new(git_config_iterator **out, git_config_entrie
 	config_entries_iterator *it;
 
 	it = git__calloc(1, sizeof(config_entries_iterator));
-	GITERR_CHECK_ALLOC(it);
+	GIT_ERROR_CHECK_ALLOC(it);
 	it->parent.next = config_iterator_next;
 	it->parent.free = config_iterator_free;
 	it->head = entries->list;

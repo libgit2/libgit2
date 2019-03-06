@@ -108,7 +108,7 @@ static int cherrypick_seterr(git_commit *commit, const char *fmt)
 {
 	char commit_oidstr[GIT_OID_HEXSZ + 1];
 
-	giterr_set(GITERR_CHERRYPICK, fmt,
+	git_error_set(GIT_ERROR_CHERRYPICK, fmt,
 		git_oid_tostr(commit_oidstr, GIT_OID_HEXSZ + 1, git_commit_id(commit)));
 
 	return -1;
@@ -179,7 +179,7 @@ int git_cherrypick(
 
 	assert(repo && commit);
 
-	GITERR_CHECK_VERSION(given_opts, GIT_CHERRYPICK_OPTIONS_VERSION, "git_cherrypick_options");
+	GIT_ERROR_CHECK_VERSION(given_opts, GIT_CHERRYPICK_OPTIONS_VERSION, "git_cherrypick_options");
 
 	if ((error = git_repository__ensure_not_bare(repo, "cherry-pick")) < 0)
 		return error;
@@ -198,7 +198,7 @@ int git_cherrypick(
 		(error = git_indexwriter_init_for_operation(&indexwriter, repo, &opts.checkout_opts.checkout_strategy)) < 0 ||
 		(error = write_cherrypick_head(repo, commit_oidstr)) < 0 ||
 		(error = git_repository_head(&our_ref, repo)) < 0 ||
-		(error = git_reference_peel((git_object **)&our_commit, our_ref, GIT_OBJ_COMMIT)) < 0 ||
+		(error = git_reference_peel((git_object **)&our_commit, our_ref, GIT_OBJECT_COMMIT)) < 0 ||
 		(error = git_cherrypick_commit(&index, repo, commit, our_commit, opts.mainline, &opts.merge_opts)) < 0 ||
 		(error = git_merge__check_result(repo, index)) < 0 ||
 		(error = git_merge__append_conflicts_to_merge_msg(repo, index)) < 0 ||

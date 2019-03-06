@@ -114,7 +114,7 @@ int git_diff_is_sorted_icase(const git_diff *diff)
 int git_diff_get_perfdata(git_diff_perfdata *out, const git_diff *diff)
 {
 	assert(out);
-	GITERR_CHECK_VERSION(out, GIT_DIFF_PERFDATA_VERSION, "git_diff_perfdata");
+	GIT_ERROR_CHECK_VERSION(out, GIT_DIFF_PERFDATA_VERSION, "git_diff_perfdata");
 	out->stat_calls = diff->perf.stat_calls;
 	out->oid_calculations = diff->perf.oid_calculations;
 	return 0;
@@ -251,7 +251,7 @@ int git_diff_format_email(
 	assert(out && diff && opts);
 	assert(opts->summary && opts->id && opts->author);
 
-	GITERR_CHECK_VERSION(opts,
+	GIT_ERROR_CHECK_VERSION(opts,
 		GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION,
 		"git_format_email_options");
 
@@ -260,14 +260,14 @@ int git_diff_format_email(
 
 	if (!ignore_marker) {
 		if (opts->patch_no > opts->total_patches) {
-			giterr_set(GITERR_INVALID,
+			git_error_set(GIT_ERROR_INVALID,
 				"patch %"PRIuZ" out of range. max %"PRIuZ,
 				opts->patch_no, opts->total_patches);
 			return -1;
 		}
 
 		if (opts->patch_no == 0) {
-			giterr_set(GITERR_INVALID,
+			git_error_set(GIT_ERROR_INVALID,
 				"invalid patch no %"PRIuZ". should be >0", opts->patch_no);
 			return -1;
 		}
@@ -280,14 +280,14 @@ int git_diff_format_email(
 		size_t offset = 0;
 
 		if ((offset = (loc - opts->summary)) == 0) {
-			giterr_set(GITERR_INVALID, "summary is empty");
+			git_error_set(GIT_ERROR_INVALID, "summary is empty");
 			error = -1;
 			goto on_error;
 		}
 
-		GITERR_CHECK_ALLOC_ADD(&allocsize, offset, 1);
+		GIT_ERROR_CHECK_ALLOC_ADD(&allocsize, offset, 1);
 		summary = git__calloc(allocsize, sizeof(char));
-		GITERR_CHECK_ALLOC(summary);
+		GIT_ERROR_CHECK_ALLOC(summary);
 
 		strncpy(summary, opts->summary, offset);
 	}
@@ -386,7 +386,7 @@ static int flush_hunk(git_oid *result, git_hash_ctx *ctx)
 
 	for (i = 0; i < GIT_OID_RAWSZ; i++) {
 		carry += result->id[i] + hash.id[i];
-		result->id[i] = carry;
+		result->id[i] = (unsigned char)carry;
 		carry >>= 8;
 	}
 
@@ -466,7 +466,7 @@ static int line_cb(
 	    case GIT_DIFF_LINE_CONTEXT:
 		break;
 	    default:
-		giterr_set(GITERR_PATCH, "invalid line origin for patch");
+		git_error_set(GIT_ERROR_PATCH, "invalid line origin for patch");
 		return -1;
 	}
 
@@ -493,7 +493,7 @@ int git_diff_patchid(git_oid *out, git_diff *diff, git_diff_patchid_options *opt
 	struct patch_id_args args;
 	int error;
 
-	GITERR_CHECK_VERSION(
+	GIT_ERROR_CHECK_VERSION(
 		opts, GIT_DIFF_PATCHID_OPTIONS_VERSION, "git_diff_patchid_options");
 
 	memset(&args, 0, sizeof(args));

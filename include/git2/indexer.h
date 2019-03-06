@@ -15,11 +15,52 @@ GIT_BEGIN_DECL
 
 typedef struct git_indexer git_indexer;
 
+/**
+ * This structure is used to provide callers information about the
+ * progress of indexing a packfile, either directly or part of a
+ * fetch or clone that downloads a packfile.
+ */
+typedef struct git_indexer_progress {
+	/** number of objects in the packfile being indexed */
+	unsigned int total_objects;
+
+	/** received objects that have been hashed */
+	unsigned int indexed_objects;
+
+	/** received_objects: objects which have been downloaded */
+	unsigned int received_objects;
+
+	/**
+	 * locally-available objects that have been injected in order
+	 * to fix a thin pack
+	 */
+	unsigned int local_objects;
+
+	/** number of deltas in the packfile being indexed */
+	unsigned int total_deltas;
+
+	/** received deltas that have been indexed */
+	unsigned int indexed_deltas;
+
+	/** size of the packfile received up to now */
+	size_t received_bytes;
+} git_indexer_progress;
+
+/**
+ * Type for progress callbacks during indexing.  Return a value less
+ * than zero to cancel the indexing or download.
+ *
+ * @param stats Structure containing information about the state of the tran    sfer
+ * @param payload Payload provided by caller
+ */
+typedef int GIT_CALLBACK(git_indexer_progress_cb)(const git_indexer_progress *stats, void *payload);
+
+
 typedef struct git_indexer_options {
 	unsigned int version;
 
 	/** progress_cb function to call with progress information */
-	git_transfer_progress_cb progress_cb;
+	git_indexer_progress_cb progress_cb;
 	/** progress_cb_payload payload for the progress callback */
 	void *progress_cb_payload;
 
@@ -69,7 +110,7 @@ GIT_EXTERN(int) git_indexer_new(
  * @param size the size of the data in bytes
  * @param stats stat storage
  */
-GIT_EXTERN(int) git_indexer_append(git_indexer *idx, const void *data, size_t size, git_transfer_progress *stats);
+GIT_EXTERN(int) git_indexer_append(git_indexer *idx, const void *data, size_t size, git_indexer_progress *stats);
 
 /**
  * Finalize the pack and index
@@ -78,7 +119,7 @@ GIT_EXTERN(int) git_indexer_append(git_indexer *idx, const void *data, size_t si
  *
  * @param idx the indexer
  */
-GIT_EXTERN(int) git_indexer_commit(git_indexer *idx, git_transfer_progress *stats);
+GIT_EXTERN(int) git_indexer_commit(git_indexer *idx, git_indexer_progress *stats);
 
 /**
  * Get the packfile's hash

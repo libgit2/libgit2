@@ -50,7 +50,7 @@ GIT_EXTERN(int) git_commit_create_from_ids(
  * along with the user supplied payload.  This should return a git_oid of
  * the next parent or NULL if all parents have been provided.
  */
-typedef const git_oid *(*git_commit_parent_callback)(size_t idx, void *payload);
+typedef const git_oid * GIT_CALLBACK(git_commit_parent_callback)(size_t idx, void *payload);
 
 /**
  * Create a new commit in the repository with an callback to supply parents.

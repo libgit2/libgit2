@@ -79,8 +79,8 @@ fi
 
 if [ -z "$SKIP_PROXY_TESTS" ]; then
 	echo "Starting HTTP proxy..."
-	curl -L https://github.com/ethomson/poxyproxy/releases/download/v0.2.0/poxyproxy-0.2.0.jar >poxyproxy.jar
-	java -jar poxyproxy.jar -d --address 127.0.0.1 --port 8080 --credentials foo:bar >/dev/null 2>&1 &
+	curl -L https://github.com/ethomson/poxyproxy/releases/download/v0.4.0/poxyproxy-0.4.0.jar >poxyproxy.jar
+	java -jar poxyproxy.jar -d --address 127.0.0.1 --port 8080 --credentials foo:bar --quiet &
 fi
 
 if [ -z "$SKIP_SSH_TESTS" ]; then
@@ -136,6 +136,20 @@ if [ -z "$SKIP_OFFLINE_TESTS" ]; then
 	run_test offline
 fi
 
+if [ -n "$RUN_INVASIVE_TESTS" ]; then
+	echo ""
+	echo "Running invasive tests"
+	echo ""
+
+	export GITTEST_INVASIVE_FS_SIZE=1
+	export GITTEST_INVASIVE_MEMORY=1
+	export GITTEST_INVASIVE_SPEED=1
+	run_test invasive
+	unset GITTEST_INVASIVE_FS_SIZE
+	unset GITTEST_INVASIVE_MEMORY
+	unset GITTEST_INVASIVE_SPEED
+fi
+
 if [ -z "$SKIP_ONLINE_TESTS" ]; then
 	# Run the various online tests.  The "online" test suite only includes the
 	# default online tests that do not require additional configuration.  The
@@ -164,11 +178,11 @@ if [ -z "$SKIP_PROXY_TESTS" ]; then
 	echo "Running proxy tests"
 	echo ""
 
-	export GITTEST_REMOTE_PROXY_URL="localhost:8080"
+	export GITTEST_REMOTE_PROXY_HOST="localhost:8080"
 	export GITTEST_REMOTE_PROXY_USER="foo"
 	export GITTEST_REMOTE_PROXY_PASS="bar"
 	run_test proxy
-	unset GITTEST_REMOTE_PROXY_URL
+	unset GITTEST_REMOTE_PROXY_HOST
 	unset GITTEST_REMOTE_PROXY_USER
 	unset GITTEST_REMOTE_PROXY_PASS
 fi

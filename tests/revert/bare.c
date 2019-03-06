@@ -68,7 +68,7 @@ void test_revert_bare__conflicts(void)
 	git_oid_fromstr(&revert_oid, "72333f47d4e83616630ff3b0ffe4c0faebcc3c45");
 
 	cl_git_pass(git_repository_head(&head_ref, repo));
-	cl_git_pass(git_reference_peel((git_object **)&head_commit, head_ref, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reference_peel((git_object **)&head_commit, head_ref, GIT_OBJECT_COMMIT));
 
 	cl_git_pass(git_commit_lookup(&revert_commit, repo, &revert_oid));
 	cl_git_pass(git_revert_commit(&index, repo, revert_commit, head_commit, 0, NULL));

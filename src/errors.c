@@ -17,7 +17,7 @@
 
 static git_error g_git_oom_error = {
 	"Out of memory",
-	GITERR_NOMEMORY
+	GIT_ERROR_NOMEMORY
 };
 
 static void set_error_from_buffer(int error_class)
@@ -44,18 +44,18 @@ static void set_error(int error_class, char *string)
 	set_error_from_buffer(error_class);
 }
 
-void giterr_set_oom(void)
+void git_error_set_oom(void)
 {
 	GIT_GLOBAL->last_error = &g_git_oom_error;
 }
 
-void giterr_set(int error_class, const char *string, ...)
+void git_error_set(int error_class, const char *string, ...)
 {
 	va_list arglist;
 #ifdef GIT_WIN32
-	DWORD win32_error_code = (error_class == GITERR_OS) ? GetLastError() : 0;
+	DWORD win32_error_code = (error_class == GIT_ERROR_OS) ? GetLastError() : 0;
 #endif
-	int error_code = (error_class == GITERR_OS) ? errno : 0;
+	int error_code = (error_class == GIT_ERROR_OS) ? errno : 0;
 	git_buf *buf = &GIT_GLOBAL->error_buf;
 
 	git_buf_clear(buf);
@@ -64,11 +64,11 @@ void giterr_set(int error_class, const char *string, ...)
 		git_buf_vprintf(buf, string, arglist);
 		va_end(arglist);
 
-		if (error_class == GITERR_OS)
+		if (error_class == GIT_ERROR_OS)
 			git_buf_PUTS(buf, ": ");
 	}
 
-	if (error_class == GITERR_OS) {
+	if (error_class == GIT_ERROR_OS) {
 #ifdef GIT_WIN32
 		char * win32_error = git_win32_get_error_message(win32_error_code);
 		if (win32_error) {
@@ -90,7 +90,7 @@ void giterr_set(int error_class, const char *string, ...)
 		set_error_from_buffer(error_class);
 }
 
-void giterr_set_str(int error_class, const char *string)
+void git_error_set_str(int error_class, const char *string)
 {
 	git_buf *buf = &GIT_GLOBAL->error_buf;
 
@@ -105,14 +105,14 @@ void giterr_set_str(int error_class, const char *string)
 		set_error_from_buffer(error_class);
 }
 
-int giterr_set_regex(const regex_t *regex, int error_code)
+int git_error_set_regex(const regex_t *regex, int error_code)
 {
 	char error_buf[1024];
 
 	assert(error_code);
 
 	regerror(error_code, regex, error_buf, sizeof(error_buf));
-	giterr_set_str(GITERR_REGEX, error_buf);
+	git_error_set_str(GIT_ERROR_REGEX, error_buf);
 
 	if (error_code == REG_NOMATCH)
 		return GIT_ENOTFOUND;
@@ -120,7 +120,7 @@ int giterr_set_regex(const regex_t *regex, int error_code)
 	return GIT_EINVALIDSPEC;
 }
 
-void giterr_clear(void)
+void git_error_clear(void)
 {
 	if (GIT_GLOBAL->last_error != NULL) {
 		set_error(0, NULL);
@@ -133,12 +133,12 @@ void giterr_clear(void)
 #endif
 }
 
-const git_error *giterr_last(void)
+const git_error *git_error_last(void)
 {
 	return GIT_GLOBAL->last_error;
 }
 
-int giterr_state_capture(git_error_state *state, int error_code)
+int git_error_state_capture(git_error_state *state, int error_code)
 {
 	git_error *error = GIT_GLOBAL->last_error;
 	git_buf *error_buf = &GIT_GLOBAL->error_buf;
@@ -160,19 +160,19 @@ int giterr_state_capture(git_error_state *state, int error_code)
 			state->error_msg.message = git_buf_detach(error_buf);
 	}
 
-	giterr_clear();
+	git_error_clear();
 	return error_code;
 }
 
-int giterr_state_restore(git_error_state *state)
+int git_error_state_restore(git_error_state *state)
 {
 	int ret = 0;
 
-	giterr_clear();
+	git_error_clear();
 
 	if (state && state->error_msg.message) {
 		if (state->oom)
-			giterr_set_oom();
+			git_error_set_oom();
 		else
 			set_error(state->error_msg.klass, state->error_msg.message);
 
@@ -183,7 +183,7 @@ int giterr_state_restore(git_error_state *state)
 	return ret;
 }
 
-void giterr_state_free(git_error_state *state)
+void git_error_state_free(git_error_state *state)
 {
 	if (!state)
 		return;
@@ -194,7 +194,7 @@ void giterr_state_free(git_error_state *state)
 	memset(state, 0, sizeof(git_error_state));
 }
 
-int giterr_system_last(void)
+int git_error_system_last(void)
 {
 #ifdef GIT_WIN32
 	return GetLastError();
@@ -203,11 +203,33 @@ int giterr_system_last(void)
 #endif
 }
 
-void giterr_system_set(int code)
+void git_error_system_set(int code)
 {
 #ifdef GIT_WIN32
 	SetLastError(code);
 #else
 	errno = code;
 #endif
+}
+
+/* Deprecated error values and functions */
+
+const git_error *giterr_last(void)
+{
+	return git_error_last();
+}
+
+void giterr_clear(void)
+{
+	git_error_clear();
+}
+
+void giterr_set_str(int error_class, const char *string)
+{
+	git_error_set_str(error_class, string);
+}
+
+void giterr_set_oom(void)
+{
+	git_error_set_oom();
 }

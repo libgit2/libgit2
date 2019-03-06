@@ -30,39 +30,39 @@ struct git_odb_backend {
 
 	/* read and read_prefix each return to libgit2 a buffer which
 	 * will be freed later. The buffer should be allocated using
-	 * the function git_odb_backend_malloc to ensure that it can
-	 * be safely freed later. */
-	int (* read)(
-		void **, size_t *, git_otype *, git_odb_backend *, const git_oid *);
+	 * the function git_odb_backend_data_alloc to ensure that libgit2
+	 * can safely free it later. */
+	int GIT_CALLBACK(read)(
+		void **, size_t *, git_object_t *, git_odb_backend *, const git_oid *);
 
 	/* To find a unique object given a prefix of its oid.  The oid given
 	 * must be so that the remaining (GIT_OID_HEXSZ - len)*4 bits are 0s.
 	 */
-	int (* read_prefix)(
-		git_oid *, void **, size_t *, git_otype *,
+	int GIT_CALLBACK(read_prefix)(
+		git_oid *, void **, size_t *, git_object_t *,
 		git_odb_backend *, const git_oid *, size_t);
 
-	int (* read_header)(
-		size_t *, git_otype *, git_odb_backend *, const git_oid *);
+	int GIT_CALLBACK(read_header)(
+		size_t *, git_object_t *, git_odb_backend *, const git_oid *);
 
 	/**
 	 * Write an object into the backend. The id of the object has
 	 * already been calculated and is passed in.
 	 */
-	int (* write)(
-		git_odb_backend *, const git_oid *, const void *, size_t, git_otype);
+	int GIT_CALLBACK(write)(
+		git_odb_backend *, const git_oid *, const void *, size_t, git_object_t);
 
-	int (* writestream)(
-		git_odb_stream **, git_odb_backend *, git_off_t, git_otype);
+	int GIT_CALLBACK(writestream)(
+		git_odb_stream **, git_odb_backend *, git_off_t, git_object_t);
 
-	int (* readstream)(
-		git_odb_stream **, size_t *, git_otype *,
+	int GIT_CALLBACK(readstream)(
+		git_odb_stream **, size_t *, git_object_t *,
 		git_odb_backend *, const git_oid *);
 
-	int (* exists)(
+	int GIT_CALLBACK(exists)(
 		git_odb_backend *, const git_oid *);
 
-	int (* exists_prefix)(
+	int GIT_CALLBACK(exists_prefix)(
 		git_oid *, git_odb_backend *, const git_oid *, size_t);
 
 	/**
@@ -75,14 +75,14 @@ struct git_odb_backend {
 	 * implementation to achieve this could be to internally invoke this
 	 * endpoint on failed lookups (ie. `exists()`, `read()`, `read_header()`).
 	 */
-	int (* refresh)(git_odb_backend *);
+	int GIT_CALLBACK(refresh)(git_odb_backend *);
 
-	int (* foreach)(
+	int GIT_CALLBACK(foreach)(
 		git_odb_backend *, git_odb_foreach_cb cb, void *payload);
 
-	int (* writepack)(
+	int GIT_CALLBACK(writepack)(
 		git_odb_writepack **, git_odb_backend *, git_odb *odb,
-		git_transfer_progress_cb progress_cb, void *progress_payload);
+		git_indexer_progress_cb progress_cb, void *progress_payload);
 
 	/**
 	 * "Freshens" an already existing object, updating its last-used
@@ -93,13 +93,13 @@ struct git_odb_backend {
 	 * If callers implement this, they should return `0` if the object
 	 * exists and was freshened, and non-zero otherwise.
 	 */
-	int (* freshen)(git_odb_backend *, const git_oid *);
+	int GIT_CALLBACK(freshen)(git_odb_backend *, const git_oid *);
 
 	/**
 	 * Frees any resources held by the odb (including the `git_odb_backend`
 	 * itself). An odb backend implementation must provide this function.
 	 */
-	void (* free)(git_odb_backend *);
+	void GIT_CALLBACK(free)(git_odb_backend *);
 };
 
 #define GIT_ODB_BACKEND_VERSION 1
@@ -117,7 +117,51 @@ GIT_EXTERN(int) git_odb_init_backend(
 	git_odb_backend *backend,
 	unsigned int version);
 
+/**
+ * Allocate data for an ODB object.  Custom ODB backends may use this
+ * to provide data back to the ODB from their read function.  This
+ * memory should not be freed once it is returned to libgit2.  If a
+ * custom ODB uses this function but encounters an error and does not
+ * return this data to libgit2, then they should use the corresponding
+ * git_odb_backend_data_free function.
+ *
+ * @param backend the ODB backend that is allocating this memory
+ * @param len the number of bytes to allocate
+ * @return the allocated buffer on success or NULL if out of memory
+ */
+GIT_EXTERN(void *) git_odb_backend_data_alloc(git_odb_backend *backend, size_t len);
+
+/**
+ * Frees custom allocated ODB data.  This should only be called when
+ * memory allocated using git_odb_backend_data_alloc is not returned
+ * to libgit2 because the backend encountered an error in the read
+ * function after allocation and did not return this data to libgit2.
+ *
+ * @param backend the ODB backend that is freeing this memory
+ * @param data the buffer to free
+ */
+GIT_EXTERN(void) git_odb_backend_data_free(git_odb_backend *backend, void *data);
+
+
+/*
+ * Users can avoid deprecated functions by defining `GIT_DEPRECATE_HARD`.
+ */
+#ifndef GIT_DEPRECATE_HARD
+
+/**
+ * Allocate memory for an ODB object from a custom backend.  This is
+ * an alias of `git_odb_backend_data_alloc` and is preserved for
+ * backward compatibility.
+ *
+ * This function is deprecated, but there is no plan to remove this
+ * function at this time.
+ *
+ * @deprecated git_odb_backend_data_alloc
+ * @see git_odb_backend_data_alloc
+ */
 GIT_EXTERN(void *) git_odb_backend_malloc(git_odb_backend *backend, size_t len);
+
+#endif
 
 GIT_END_DECL
 

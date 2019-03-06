@@ -10,7 +10,7 @@ static int show_ref(git_reference *ref, void *data)
         const git_oid *oid;
         git_object *obj;
 
-        if (git_reference_type(ref) == GIT_REF_SYMBOLIC)
+        if (git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC)
                 check_lg2(git_reference_resolve(&resolved, ref),
                           "Unable to resolve symbolic reference",
                           git_reference_name(ref));
@@ -18,7 +18,7 @@ static int show_ref(git_reference *ref, void *data)
         oid = git_reference_target(resolved ? resolved : ref);
         git_oid_fmt(hex, oid);
         hex[GIT_OID_HEXSZ] = 0;
-        check_lg2(git_object_lookup(&obj, repo, oid, GIT_OBJ_ANY),
+        check_lg2(git_object_lookup(&obj, repo, oid, GIT_OBJECT_ANY),
                   "Unable to lookup object", hex);
 
         printf("%s %-6s\t%s\n",
@@ -31,19 +31,15 @@ static int show_ref(git_reference *ref, void *data)
         return 0;
 }
 
-int main(int argc, char **argv)
+int lg2_for_each_ref(git_repository *repo, int argc, char **argv)
 {
-        git_repository *repo;
-        git_libgit2_init();
+	UNUSED(argv);
 
-        if (argc != 1 || argv[1] /* silence -Wunused-parameter */)
+        if (argc != 1)
                 fatal("Sorry, no for-each-ref options supported yet", NULL);
 
-        check_lg2(git_repository_open(&repo, "."),
-                  "Could not open repository", NULL);
         check_lg2(git_reference_foreach(repo, show_ref, repo),
                   "Could not iterate over references", NULL);
 
-        git_libgit2_shutdown();
         return 0;
 }

@@ -61,7 +61,7 @@ static int commit_error(git_commit_list_node *commit, const char *msg)
 	git_oid_fmt(commit_oid, &commit->oid);
 	commit_oid[GIT_OID_HEXSZ] = '\0';
 
-	giterr_set(GITERR_ODB, "failed to parse commit %s - %s", commit_oid, msg);
+	git_error_set(GIT_ERROR_ODB, "failed to parse commit %s - %s", commit_oid, msg);
 
 	return -1;
 }
@@ -126,7 +126,7 @@ static int commit_quick_parse(
 	}
 
 	commit->parents = alloc_parents(walk, commit, parents);
-	GITERR_CHECK_ALLOC(commit->parents);
+	GIT_ERROR_CHECK_ALLOC(commit->parents);
 
 	buffer = parents_start;
 	for (i = 0; i < parents; ++i) {
@@ -192,8 +192,8 @@ int git_commit_list_parse(git_revwalk *walk, git_commit_list_node *commit)
 	if ((error = git_odb_read(&obj, walk->odb, &commit->oid)) < 0)
 		return error;
 
-	if (obj->cached.type != GIT_OBJ_COMMIT) {
-		giterr_set(GITERR_INVALID, "object is no commit object");
+	if (obj->cached.type != GIT_OBJECT_COMMIT) {
+		git_error_set(GIT_ERROR_INVALID, "object is no commit object");
 		error = -1;
 	} else
 		error = commit_quick_parse(

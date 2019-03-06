@@ -142,7 +142,7 @@ static int does_negate_rule(int *out, git_vector *rules, git_attr_fnmatch *match
 			goto out;
 
 		if ((error = p_fnmatch(git_buf_cstr(&buf), path, fnflags)) < 0) {
-			giterr_set(GITERR_INVALID, "error matching pattern");
+			git_error_set(GIT_ERROR_INVALID, "error matching pattern");
 			goto out;
 		}
 
@@ -171,7 +171,7 @@ static int parse_ignore_file(
 	git_attr_fnmatch *match = NULL;
 
 	if (git_repository__cvar(&ignore_case, repo, GIT_CVAR_IGNORECASE) < 0)
-		giterr_clear();
+		git_error_clear();
 
 	/* if subdir file path, convert context for file paths */
 	if (attrs->entry &&
@@ -180,7 +180,7 @@ static int parse_ignore_file(
 		context = attrs->entry->path;
 
 	if (git_mutex_lock(&attrs->lock) < 0) {
-		giterr_set(GITERR_OS, "failed to lock ignore file");
+		git_error_set(GIT_ERROR_OS, "failed to lock ignore file");
 		return -1;
 	}
 
@@ -624,7 +624,7 @@ int git_ignore__check_pathspec_for_exact_ignores(
 			break;
 
 		if (ignored) {
-			giterr_set(GITERR_INVALID, "pathspec contains ignored file '%s'",
+			git_error_set(GIT_ERROR_INVALID, "pathspec contains ignored file '%s'",
 				filename);
 			error = GIT_EINVALIDSPEC;
 			break;

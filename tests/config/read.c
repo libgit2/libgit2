@@ -534,6 +534,26 @@ void test_config_read__fallback_from_local_to_global_and_from_global_to_system(v
 	git_config_free(cfg);
 }
 
+void test_config_read__parent_dir_is_file(void)
+{
+	git_config *cfg;
+	int count;
+
+	cl_git_pass(git_config_new(&cfg));
+	/*
+	 * Verify we can add non-existing files when the parent directory is not
+	 * a directory.
+	 */
+	cl_git_pass(git_config_add_file_ondisk(cfg, "/dev/null/.gitconfig",
+		GIT_CONFIG_LEVEL_SYSTEM, NULL, 0));
+
+	count = 0;
+	cl_git_pass(git_config_foreach(cfg, count_cfg_entries_and_compare_levels, &count));
+	cl_assert_equal_i(0, count);
+
+	git_config_free(cfg);
+}
+
 /*
  * At the beginning of the test, config18 has:
  *	int32global = 28

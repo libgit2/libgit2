@@ -47,7 +47,7 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 
 	delim = strchr(url, '/');
 	if (delim == NULL) {
-		giterr_set(GITERR_NET, "malformed URL");
+		git_error_set(GIT_ERROR_NET, "malformed URL");
 		return -1;
 	}
 
@@ -75,16 +75,16 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 
 static int send_command(git_proto_stream *s)
 {
-	int error;
 	git_buf request = GIT_BUF_INIT;
+	int error;
 
-	error = gen_proto(&request, s->cmd, s->url);
-	if (error < 0)
+	if ((error = gen_proto(&request, s->cmd, s->url)) < 0)
 		goto cleanup;
 
-	error = git_stream_write(s->io, request.ptr, request.size, 0);
-	if (error >= 0)
-		s->sent_command = 1;
+	if ((error = git_stream__write_full(s->io, request.ptr, request.size, 0)) < 0)
+		goto cleanup;
+
+	s->sent_command = 1;
 
 cleanup:
 	git_buf_dispose(&request);
@@ -121,13 +121,13 @@ static int git_proto_stream_write(
 	const char *buffer,
 	size_t len)
 {
-	int error;
 	git_proto_stream *s = (git_proto_stream *)stream;
+	int error;
 
 	if (!s->sent_command && (error = send_command(s)) < 0)
 		return error;
 
-	return git_stream_write(s->io, buffer, len, 0);
+	return git_stream__write_full(s->io, buffer, len, 0);
 }
 
 static void git_proto_stream_free(git_smart_subtransport_stream *stream)
@@ -163,7 +163,7 @@ static int git_proto_stream_alloc(
 		return -1;
 
 	s = git__calloc(1, sizeof(git_proto_stream));
-	GITERR_CHECK_ALLOC(s);
+	GIT_ERROR_CHECK_ALLOC(s);
 
 	s->parent.subtransport = &t->parent;
 	s->parent.read = git_proto_stream_read;
@@ -181,7 +181,7 @@ static int git_proto_stream_alloc(
 	if ((git_socket_stream_new(&s->io, host, port)) < 0)
 		return -1;
 
-	GITERR_CHECK_VERSION(s->io, GIT_STREAM_VERSION, "git_stream");
+	GIT_ERROR_CHECK_VERSION(s->io, GIT_STREAM_VERSION, "git_stream");
 
 	*stream = &s->parent;
 	return 0;
@@ -242,7 +242,7 @@ static int _git_uploadpack(
 		return 0;
 	}
 
-	giterr_set(GITERR_NET, "must call UPLOADPACK_LS before UPLOADPACK");
+	git_error_set(GIT_ERROR_NET, "must call UPLOADPACK_LS before UPLOADPACK");
 	return -1;
 }
 
@@ -298,7 +298,7 @@ static int _git_receivepack(
 		return 0;
 	}
 
-	giterr_set(GITERR_NET, "must call RECEIVEPACK_LS before RECEIVEPACK");
+	git_error_set(GIT_ERROR_NET, "must call RECEIVEPACK_LS before RECEIVEPACK");
 	return -1;
 }
 
@@ -358,7 +358,7 @@ int git_smart_subtransport_git(git_smart_subtransport **out, git_transport *owne
 		return -1;
 
 	t = git__calloc(1, sizeof(git_subtransport));
-	GITERR_CHECK_ALLOC(t);
+	GIT_ERROR_CHECK_ALLOC(t);
 
 	t->owner = owner;
 	t->parent.action = _git_action;

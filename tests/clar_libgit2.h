@@ -18,7 +18,7 @@
 
 #define cl_git_expect(expr, expected, file, line) do { \
 	int _lg2_error; \
-	giterr_clear(); \
+	git_error_clear(); \
 	if ((_lg2_error = (expr)) != expected) \
 		cl_git_report_failure(_lg2_error, expected, file, line, "Function call failed: " #expr); \
 	} while (0)
@@ -29,7 +29,7 @@
  * calls that are supposed to fail!
  */
 #define cl_git_fail(expr) do { \
-	giterr_clear(); \
+	git_error_clear(); \
 	if ((expr) == 0) \
 		cl_git_report_failure(0, 0, __FILE__, __LINE__, "Function call succeeded: " #expr); \
 	} while (0)
@@ -40,7 +40,7 @@
 #define cl_win32_pass(expr) do { \
 	int _win32_res; \
 	if ((_win32_res = (expr)) == 0) { \
-		giterr_set(GITERR_OS, "Returned: %d, system error code: %d", _win32_res, GetLastError()); \
+		git_error_set(GIT_ERROR_OS, "Returned: %d, system error code: %lu", _win32_res, GetLastError()); \
 		cl_git_report_failure(_win32_res, 0, __FILE__, __LINE__, "System call failed: " #expr); \
 	} \
 	} while(0)
@@ -70,9 +70,9 @@ typedef struct {
 #endif
 
 #define cl_git_thread_pass_(__threaderr, __expr, __file, __line) do { \
-	giterr_clear(); \
+	git_error_clear(); \
 	if ((((cl_git_thread_err *)__threaderr)->error = (__expr)) != 0) { \
-		const git_error *_last = giterr_last(); \
+		const git_error *_last = git_error_last(); \
 		((cl_git_thread_err *)__threaderr)->file = __file; \
 		((cl_git_thread_err *)__threaderr)->line = __line; \
 		((cl_git_thread_err *)__threaderr)->expr = "Function call failed: " #__expr; \
