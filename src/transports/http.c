@@ -826,6 +826,7 @@ static int proxy_connect(
 	static http_parser_settings proxy_parser_settings = {0};
 	size_t bytes_read = 0, bytes_parsed;
 	parser_context ctx;
+	bool auth_replay;
 	int error;
 
 	/* Use the parser settings only to parser headers. */
@@ -836,6 +837,8 @@ static int proxy_connect(
 
 replay:
 	clear_parser_state(t);
+
+	auth_replay = false;
 
 	gitno_buffer_setup_fromstream(proxy_stream,
 		&t->parse_buffer,
@@ -884,10 +887,9 @@ replay:
 		}
 
 		/* Replay the request with authentication headers. */
-		if (PARSE_ERROR_REPLAY == t->parse_error)
-			goto replay;
-
-		if (t->parse_error < 0) {
+		if (PARSE_ERROR_REPLAY == t->parse_error) {
+			auth_replay = true;
+		} else if (t->parse_error < 0) {
 			error = t->parse_error == PARSE_ERROR_EXT ? PARSE_ERROR_EXT : -1;
 			goto done;
 		}
@@ -900,6 +902,9 @@ replay:
 			goto done;
 		}
 	}
+
+	if (auth_replay)
+		goto replay;
 
 	if ((error = git_tls_stream_wrap(out, proxy_stream, t->server.url.host)) == 0)
 		error = stream_connect(*out, &t->server.url,
