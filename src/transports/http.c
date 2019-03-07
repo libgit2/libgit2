@@ -582,13 +582,6 @@ static int on_body_fill_buffer(http_parser *parser, const char *str, size_t len)
 	parser_context *ctx = (parser_context *) parser->data;
 	http_subtransport *t = ctx->t;
 
-	/* If our goal is to replay the request (either an auth failure or
-	 * a redirect) then don't bother buffering since we're ignoring the
-	 * content anyway.
-	 */
-	if (t->parse_error == PARSE_ERROR_REPLAY)
-		return 0;
-
 	/* If there's no buffer set, we're explicitly ignoring the body. */
 	if (ctx->buffer) {
 		if (ctx->buf_size < len) {
@@ -1018,10 +1011,12 @@ static int http_stream_read(
 	parser_context ctx;
 	size_t bytes_parsed;
 	git_buf request = GIT_BUF_INIT;
+	bool auth_replay;
 	int error = 0;
 
 replay:
 	*bytes_read = 0;
+	auth_replay = false;
 
 	assert(t->connected);
 
@@ -1078,15 +1073,18 @@ replay:
 		if ((error = gitno_recv(&t->parse_buffer)) < 0)
 			goto done;
 
-		/* This call to http_parser_execute will result in invocations of the
-		 * on_* family of callbacks. The most interesting of these is
-		 * on_body_fill_buffer, which is called when data is ready to be copied
-		 * into the target buffer. We need to marshal the buffer, buf_size, and
-		 * bytes_read parameters to this callback. */
+		/*
+		 * This call to http_parser_execute will result in invocations
+		 * of the on_* family of callbacks, including on_body_fill_buffer
+		 * which will write into the target buffer.  Set up the buffer
+		 * for it to write into _unless_ we got an auth failure; in
+		 * that case we only care about the headers and don't need to
+		 * bother copying the body.
+		 */
 		ctx.t = t;
 		ctx.s = s;
-		ctx.buffer = buffer;
-		ctx.buf_size = buf_size;
+		ctx.buffer = auth_replay ? NULL : buffer;
+		ctx.buf_size = auth_replay ? 0 : buf_size;
 		ctx.bytes_read = bytes_read;
 
 		/* Set the context, call the parser, then unset the context. */
@@ -1099,18 +1097,10 @@ replay:
 
 		t->parser.data = NULL;
 
-		/* If there was a handled authentication failure, then parse_error
-		 * will have signaled us that we should replay the request. */
-		if (PARSE_ERROR_REPLAY == t->parse_error) {
-			s->sent_request = 0;
-
-			if ((error = http_connect(t)) < 0)
-				goto done;
-
-			goto replay;
-		}
-
-		if (t->parse_error == PARSE_ERROR_EXT) {
+		/* On a 401, read the rest of the response then retry. */
+		if (t->parse_error == PARSE_ERROR_REPLAY) {
+			auth_replay = true;
+		} else if (t->parse_error == PARSE_ERROR_EXT) {
 			error = t->error;
 			goto done;
 		} else if (t->parse_error < 0) {
@@ -1125,6 +1115,15 @@ replay:
 			error = -1;
 			goto done;
 		}
+	}
+
+	if (auth_replay) {
+		s->sent_request = 0;
+
+		if ((error = http_connect(t)) < 0)
+			return error;
+
+		goto replay;
 	}
 
 done:
