@@ -108,6 +108,7 @@ typedef struct {
 	int parse_error;
 	int error;
 	unsigned parse_finished : 1,
+	    keepalive : 1,
 	    replay_count : 4;
 } http_subtransport;
 
@@ -571,6 +572,7 @@ static int on_message_complete(http_parser *parser)
 	http_subtransport *t = ctx->t;
 
 	t->parse_finished = 1;
+	t->keepalive = http_should_keep_alive(parser);
 
 	return 0;
 }
@@ -615,6 +617,7 @@ static void clear_parser_state(http_subtransport *t)
 	t->last_cb = NONE;
 	t->parse_error = 0;
 	t->parse_finished = 0;
+	t->keepalive = 0;
 
 	git_buf_dispose(&t->parse_header_name);
 	git_buf_init(&t->parse_header_name, 0);
@@ -929,9 +932,7 @@ static int http_connect(http_subtransport *t)
 	void *cb_payload;
 	int error;
 
-	if (t->connected &&
-		http_should_keep_alive(&t->parser) &&
-		t->parse_finished)
+	if (t->connected && t->keepalive && t->parse_finished)
 		return 0;
 
 	if ((error = load_proxy_config(t)) < 0)
