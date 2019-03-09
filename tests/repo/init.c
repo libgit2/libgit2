@@ -414,8 +414,13 @@ void test_repo_init__extended_nonexistent_path(void)
 {
 	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
 
-	cl_git_fail(git_repository_init_ext(&_repo, "wrong", &opts));
-	cl_git_fail(git_repository_init_ext(&_repo, "wrong/dir", &opts));
+	opts.flags = GIT_REPOSITORY_INIT_MKPATH;
+
+//	cl_git_fail(git_repository_init_ext(&_repo, "wrong", &opts));
+//	cl_git_fail(git_repository_init_ext(&_repo, "wrong/dir", &opts));
+
+//	cl_git_fail(git_repository_init_ext(&_repo, "C:\\wrong\\", &opts));
+	cl_git_fail(git_repository_init_ext(&_repo, "C:\\wrong\\path", &opts));
 }
 
 void test_repo_init__extended_1(void)
