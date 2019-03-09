@@ -410,6 +410,14 @@ void test_repo_init__extended_0(void)
 	cleanup_repository("extended");
 }
 
+void test_repo_init__extended_nonexistent_path(void)
+{
+	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
+
+	cl_git_fail(git_repository_init_ext(&_repo, "wrong", &opts));
+	cl_git_fail(git_repository_init_ext(&_repo, "wrong/dir", &opts));
+}
+
 void test_repo_init__extended_1(void)
 {
 	git_reference *ref;
