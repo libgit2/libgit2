@@ -56,18 +56,18 @@ static git_http_auth_context basic_context = {
 };
 
 int git_http_auth_basic(
-	git_http_auth_context **out, const gitno_connection_data *connection_data)
+	git_http_auth_context **out, const git_net_url *url)
 {
-	GIT_UNUSED(connection_data);
+	GIT_UNUSED(url);
 
 	*out = &basic_context;
 	return 0;
 }
 
 int git_http_auth_dummy(
-	git_http_auth_context **out, const gitno_connection_data *connection_data)
+	git_http_auth_context **out, const git_net_url *url)
 {
-	GIT_UNUSED(connection_data);
+	GIT_UNUSED(url);
 
 	*out = NULL;
 	return 0;

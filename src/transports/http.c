@@ -12,6 +12,7 @@
 #include "git2.h"
 #include "http_parser.h"
 #include "buffer.h"
+#include "net.h"
 #include "netops.h"
 #include "global.h"
 #include "remote.h"
@@ -71,7 +72,7 @@ typedef struct {
 } http_stream;
 
 typedef struct {
-	gitno_connection_data url;
+	git_net_url url;
 	git_stream *stream;
 
 	git_cred *cred;
@@ -191,10 +192,10 @@ static int apply_credentials(
 	git_http_auth_context *context;
 
 	/* Apply the credentials given to us in the URL */
-	if (!cred && server->url.user && server->url.pass) {
+	if (!cred && server->url.username && server->url.password) {
 		if (!server->url_cred &&
 			git_cred_userpass_plaintext_new(&server->url_cred,
-			    server->url.user, server->url.pass) < 0)
+			    server->url.username, server->url.password) < 0)
 			return -1;
 
 		cred = server->url_cred;
@@ -226,7 +227,7 @@ static int gen_request(
 	if (t->proxy_opts.type == GIT_PROXY_SPECIFIED)
 		git_buf_printf(buf, "%s %s://%s:%s%s%s HTTP/1.1\r\n",
 			s->verb,
-			t->server.url.use_ssl ? "https" : "http",
+			t->server.url.scheme,
 			t->server.url.host,
 			t->server.url.port,
 			path, s->service_url);
@@ -238,9 +239,10 @@ static int gen_request(
 	git_http__user_agent(buf);
 	git_buf_puts(buf, "\r\n");
 	git_buf_printf(buf, "Host: %s", t->server.url.host);
-	if (strcmp(t->server.url.port, gitno__default_port(&t->server.url)) != 0) {
+
+	if (!git_net_url_is_default_port(&t->server.url))
 		git_buf_printf(buf, ":%s", t->server.url.port);
-	}
+
 	git_buf_puts(buf, "\r\n");
 
 	if (s->chunked || content_length > 0) {
@@ -484,7 +486,7 @@ static int on_headers_complete(http_parser *parser)
 		    SERVER_TYPE_PROXY,
 		    t->proxy_opts.credentials,
 		    t->proxy_opts.payload,
-		    t->proxy.url.user,
+		    t->proxy.url.username,
 			proxy_auth_types);
 
 	/* Check for an authentication failure. */
@@ -495,7 +497,7 @@ static int on_headers_complete(http_parser *parser)
 		    SERVER_TYPE_REMOTE,
 		    t->owner->cred_acquire_cb,
 		    t->owner->cred_acquire_payload,
-		    t->server.url.user,
+		    t->server.url.username,
 		    server_auth_types);
 
 	/* Check for a redirect.
@@ -507,7 +509,7 @@ static int on_headers_complete(http_parser *parser)
 	     parser->status_code == 308) &&
 	    t->location) {
 
-		if (gitno_connection_data_from_url(&t->server.url, t->location, s->service_url) < 0)
+		if (gitno_connection_data_handle_redirect(&t->server.url, t->location, s->service_url) < 0)
 			return t->parse_error = PARSE_ERROR_GENERIC;
 
 		/* Set the redirect URL on the stream. This is a transfer of
@@ -676,7 +678,7 @@ static int load_proxy_config(http_subtransport *t)
 		git_proxy_init_options(&t->proxy_opts, GIT_PROXY_OPTIONS_VERSION);
 
 		if ((error = git_remote__get_http_proxy(t->owner->owner,
-		    !!t->server.url.use_ssl, &t->proxy_url)) < 0)
+			!strcmp(t->server.url.scheme, "https"), &t->proxy_url)) < 0)
 			return error;
 
 		if (!t->proxy_url)
@@ -698,10 +700,11 @@ static int load_proxy_config(http_subtransport *t)
 		return -1;
 	}
 
-	if ((error = gitno_connection_data_from_url(&t->proxy.url, t->proxy_opts.url, NULL)) < 0)
+	git_net_url_dispose(&t->proxy.url);
+	if ((error = git_net_url_parse(&t->proxy.url, t->proxy_opts.url)) < 0)
 		return error;
 
-	if (t->proxy.url.use_ssl) {
+	if (!strcmp(t->proxy.url.scheme, "https")) {
 		git_error_set(GIT_ERROR_NET, "SSL connections to proxy are not supported");
 		return -1;
 	}
@@ -711,7 +714,7 @@ static int load_proxy_config(http_subtransport *t)
 
 static int check_certificate(
 	git_stream *stream,
-	gitno_connection_data *url,
+	git_net_url *url,
 	int is_valid,
 	git_transport_certificate_check_cb cert_cb,
 	void *cert_cb_payload)
@@ -740,7 +743,7 @@ static int check_certificate(
 
 static int stream_connect(
 	git_stream *stream,
-	gitno_connection_data *url,
+	git_net_url *url,
 	git_transport_certificate_check_cb cert_cb,
 	void *cb_payload)
 {
@@ -812,7 +815,7 @@ static int proxy_headers_complete(http_parser *parser)
 			SERVER_TYPE_PROXY,
 			t->proxy_opts.credentials,
 			t->proxy_opts.payload,
-			t->proxy.url.user,
+			t->proxy.url.username,
 			proxy_auth_types);
 
 	if (parser->status_code != 200) {
@@ -927,7 +930,7 @@ done:
 
 static int http_connect(http_subtransport *t)
 {
-	gitno_connection_data *url;
+	git_net_url *url;
 	git_stream *proxy_stream = NULL, *stream = NULL;
 	git_transport_certificate_check_cb cert_cb;
 	void *cb_payload;
@@ -965,7 +968,7 @@ static int http_connect(http_subtransport *t)
 		cb_payload = t->owner->message_cb_payload;
 	}
 
-	if (url->use_ssl)
+	if (strcmp(url->scheme, "https") == 0)
 		error = git_tls_stream_new(&stream, url->host, url->port);
 	else
 		error = git_socket_stream_new(&stream, url->host, url->port);
@@ -982,7 +985,7 @@ static int http_connect(http_subtransport *t)
 	 * an HTTPS connection, then we need to build a CONNECT tunnel.
 	 */
 	if (t->proxy_opts.type == GIT_PROXY_SPECIFIED &&
-		t->server.url.use_ssl) {
+	    strcmp(t->server.url.scheme, "https") == 0) {
 		proxy_stream = stream;
 		stream = NULL;
 
@@ -1378,7 +1381,7 @@ static int http_action(
 	 * that would be insecure in plaintext (eg, HTTP Basic).
 	 */
 	if ((!t->server.url.host || !t->server.url.port || !t->server.url.path) &&
-	    (ret = gitno_connection_data_from_url(&t->server.url, url, NULL)) < 0)
+	    (ret = git_net_url_parse(&t->server.url, url)) < 0)
 		return ret;
 
 	assert(t->server.url.host && t->server.url.port && t->server.url.path);
@@ -1445,11 +1448,8 @@ static int http_close(git_smart_subtransport *subtransport)
 	free_auth_contexts(&t->server.auth_contexts);
 	free_auth_contexts(&t->proxy.auth_contexts);
 
-	gitno_connection_data_free_ptrs(&t->server.url);
-	memset(&t->server.url, 0x0, sizeof(gitno_connection_data));
-
-	gitno_connection_data_free_ptrs(&t->proxy.url);
-	memset(&t->proxy.url, 0x0, sizeof(gitno_connection_data));
+	git_net_url_dispose(&t->server.url);
+	git_net_url_dispose(&t->proxy.url);
 
 	git__free(t->proxy_url);
 	t->proxy_url = NULL;

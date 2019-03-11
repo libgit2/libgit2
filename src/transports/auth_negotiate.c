@@ -194,7 +194,7 @@ static void negotiate_context_free(git_http_auth_context *c)
 
 static int negotiate_init_context(
 	http_auth_negotiate_context *ctx,
-	const gitno_connection_data *connection_data)
+	const git_net_url *url)
 {
 	OM_uint32 status_major, status_minor;
 	gss_OID item, *oid;
@@ -235,7 +235,7 @@ static int negotiate_init_context(
 	}
 
 	git_buf_puts(&ctx->target, "HTTP@");
-	git_buf_puts(&ctx->target, connection_data->host);
+	git_buf_puts(&ctx->target, url->host);
 
 	if (git_buf_oom(&ctx->target))
 		return -1;
@@ -248,7 +248,7 @@ static int negotiate_init_context(
 
 int git_http_auth_negotiate(
 	git_http_auth_context **out,
-	const gitno_connection_data *connection_data)
+	const git_net_url *url)
 {
 	http_auth_negotiate_context *ctx;
 
@@ -257,7 +257,7 @@ int git_http_auth_negotiate(
 	ctx = git__calloc(1, sizeof(http_auth_negotiate_context));
 	GIT_ERROR_CHECK_ALLOC(ctx);
 
-	if (negotiate_init_context(ctx, connection_data) < 0) {
+	if (negotiate_init_context(ctx, url) < 0) {
 		git__free(ctx);
 		return -1;
 	}

@@ -103,8 +103,8 @@ typedef struct {
 typedef struct {
 	git_smart_subtransport parent;
 	transport_smart *owner;
-	gitno_connection_data connection_data;
-	gitno_connection_data proxy_connection_data;
+	git_net_url url;
+	git_net_url proxy_url;
 	git_cred *cred;
 	git_cred *url_cred;
 	git_cred *proxy_cred;
@@ -280,7 +280,7 @@ static int certificate_check(winhttp_stream *s, int valid)
 		return GIT_ECERTIFICATE;
 	}
 
-	if (t->owner->certificate_check_cb == NULL || !t->connection_data.use_ssl)
+	if (t->owner->certificate_check_cb == NULL || git__strcmp(t->url.scheme, "https") != 0)
 		return 0;
 
 	if (!WinHttpQueryOption(s->request, WINHTTP_OPTION_SERVER_CERT_CONTEXT, &cert_ctx, &cert_ctx_size)) {
@@ -292,7 +292,7 @@ static int certificate_check(winhttp_stream *s, int valid)
 	cert.parent.cert_type = GIT_CERT_X509;
 	cert.data = cert_ctx->pbCertEncoded;
 	cert.len = cert_ctx->cbCertEncoded;
-	error = t->owner->certificate_check_cb((git_cert *) &cert, valid, t->connection_data.host, t->owner->message_cb_payload);
+	error = t->owner->certificate_check_cb((git_cert *) &cert, valid, t->url.host, t->owner->message_cb_payload);
 	CertFreeCertificateContext(cert_ctx);
 
 	if (error == GIT_PASSTHROUGH)
@@ -329,9 +329,6 @@ static void winhttp_stream_close(winhttp_stream *s)
 	s->sent_request = 0;
 }
 
-#define SCHEME_HTTP  "http://"
-#define SCHEME_HTTPS "https://"
-
 static int winhttp_stream_connect(winhttp_stream *s)
 {
 	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
@@ -348,7 +345,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	const git_proxy_options *proxy_opts;
 
 	/* Prepare URL */
-	git_buf_printf(&buf, "%s%s", t->connection_data.path, s->service_url);
+	git_buf_printf(&buf, "%s%s", t->url.path, s->service_url);
 
 	if (git_buf_oom(&buf))
 		return -1;
@@ -367,7 +364,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			NULL,
 			WINHTTP_NO_REFERER,
 			types,
-			t->connection_data.use_ssl ? WINHTTP_FLAG_SECURE : 0);
+			git__strcmp(t->url.scheme, "https") == 0 ? WINHTTP_FLAG_SECURE : 0);
 
 	if (!s->request) {
 		git_error_set(GIT_ERROR_OS, "failed to open request");
@@ -382,7 +379,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	proxy_opts = &t->owner->proxy;
 	if (proxy_opts->type == GIT_PROXY_AUTO) {
 		/* Set proxy if necessary */
-		if (git_remote__get_http_proxy(t->owner->owner, !!t->connection_data.use_ssl, &proxy_url) < 0)
+		if (git_remote__get_http_proxy(t->owner->owner, (strcmp(t->url.scheme, "https") == 0), &proxy_url) < 0)
 			goto on_error;
 	}
 	else if (proxy_opts->type == GIT_PROXY_SPECIFIED) {
@@ -395,38 +392,33 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		WINHTTP_PROXY_INFO proxy_info;
 		wchar_t *proxy_wide;
 
-		if (!git__prefixcmp(proxy_url, SCHEME_HTTP)) {
-			t->proxy_connection_data.use_ssl = false;
-		} else if (!git__prefixcmp(proxy_url, SCHEME_HTTPS)) {
-			t->proxy_connection_data.use_ssl = true;
-		} else {
-			git_error_set(GIT_ERROR_NET, "invalid URL: '%s'", proxy_url);
-			return -1;
-		}
+		git_net_url_dispose(&t->proxy_url);
 
-		gitno_connection_data_free_ptrs(&t->proxy_connection_data);
-
-		if ((error = gitno_extract_url_parts(&t->proxy_connection_data.host, &t->proxy_connection_data.port, NULL,
-				&t->proxy_connection_data.user, &t->proxy_connection_data.pass, proxy_url, NULL)) < 0)
+		if ((error = git_net_url_parse(&t->proxy_url, proxy_url)) < 0)
 			goto on_error;
 
-		if (t->proxy_connection_data.user && t->proxy_connection_data.pass) {
+		if (strcmp(t->proxy_url.scheme, "http") != 0 && strcmp(t->proxy_url.scheme, "https") != 0) {
+			git_error_set(GIT_ERROR_NET, "invalid URL: '%s'", proxy_url);
+			error = -1;
+			goto on_error;
+		}
+
+		if (t->proxy_url.username && t->proxy_url.password) {
 			if (t->proxy_cred) {
 				t->proxy_cred->free(t->proxy_cred);
 			}
 
-			if ((error = git_cred_userpass_plaintext_new(&t->proxy_cred, t->proxy_connection_data.user, t->proxy_connection_data.pass)) < 0)
+			if ((error = git_cred_userpass_plaintext_new(&t->proxy_cred, t->proxy_url.username, t->proxy_url.password)) < 0)
 				goto on_error;
 		}
 
-		if (t->proxy_connection_data.use_ssl)
-			git_buf_PUTS(&processed_url, SCHEME_HTTPS);
-		else
-			git_buf_PUTS(&processed_url, SCHEME_HTTP);
+		git_buf_puts(&processed_url, t->proxy_url.scheme);
+		git_buf_PUTS(&processed_url, "://");
 
-		git_buf_puts(&processed_url, t->proxy_connection_data.host);
-		if (t->proxy_connection_data.port)
-			git_buf_printf(&processed_url, ":%s", t->proxy_connection_data.port);
+		git_buf_puts(&processed_url, t->proxy_url.host);
+
+		if (!git_net_url_is_default_port(&t->proxy_url))
+			git_buf_printf(&processed_url, ":%s", t->proxy_url.port);
 
 		if (git_buf_oom(&processed_url)) {
 			error = -1;
@@ -543,7 +535,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	}
 
 	/* If requested, disable certificate validation */
-	if (t->connection_data.use_ssl) {
+	if (strcmp(t->url.scheme, "https") == 0) {
 		int flags;
 
 		if (t->owner->parent.read_flags(&t->owner->parent, &flags) < 0)
@@ -562,9 +554,9 @@ static int winhttp_stream_connect(winhttp_stream *s)
 
 	/* If no other credentials have been applied and the URL has username and
 	 * password, use those */
-	if (!t->cred && t->connection_data.user && t->connection_data.pass) {
+	if (!t->cred && t->url.username && t->url.password) {
 		if (!t->url_cred &&
-			git_cred_userpass_plaintext_new(&t->url_cred, t->connection_data.user, t->connection_data.pass) < 0)
+			git_cred_userpass_plaintext_new(&t->url_cred, t->url.username, t->url.password) < 0)
 			goto on_error;
 		if (apply_userpass_credential(s->request, GIT_WINHTTP_AUTH_BASIC, t->url_cred) < 0)
 			goto on_error;
@@ -741,12 +733,12 @@ static int winhttp_connect(
 	t->connection = NULL;
 
 	/* Prepare port */
-	if (git__strntol32(&port, t->connection_data.port,
-			   strlen(t->connection_data.port), NULL, 10) < 0)
+	if (git__strntol32(&port, t->url.port,
+			   strlen(t->url.port), NULL, 10) < 0)
 		return -1;
 
 	/* Prepare host */
-	if (git__utf8_to_16_alloc(&wide_host, t->connection_data.host) < 0) {
+	if (git__utf8_to_16_alloc(&wide_host, t->url.host) < 0) {
 		git_error_set(GIT_ERROR_OS, "unable to convert host to wide characters");
 		return -1;
 	}
@@ -1062,7 +1054,7 @@ replay:
 
 			if (!git__prefixcmp_icase(location8, prefix_https)) {
 				/* Upgrade to secure connection; disconnect and start over */
-				if (gitno_connection_data_from_url(&t->connection_data, location8, s->service_url) < 0) {
+				if (gitno_connection_data_handle_redirect(&t->url, location8, s->service_url) < 0) {
 					git__free(location8);
 					return -1;
 				}
@@ -1112,7 +1104,7 @@ replay:
 				/* Start with the user-supplied credential callback, if present */
 				if (t->owner->cred_acquire_cb) {
 					cred_error = t->owner->cred_acquire_cb(&t->cred, t->owner->url,
-						t->connection_data.user, allowed_types,	t->owner->cred_acquire_payload);
+						t->url.username, allowed_types,	t->owner->cred_acquire_payload);
 
 					/* Treat GIT_PASSTHROUGH as though git_cred_acquire_cb isn't set */
 					if (cred_error == GIT_PASSTHROUGH)
@@ -1124,7 +1116,7 @@ replay:
 				/* Invoke the fallback credentials acquisition callback if necessary */
 				if (cred_error > 0) {
 					cred_error = fallback_cred_acquire_cb(&t->cred, t->owner->url,
-						t->connection_data.user, allowed_types, NULL);
+						t->url.username, allowed_types, NULL);
 
 					if (cred_error < 0)
 						return cred_error;
@@ -1496,7 +1488,7 @@ static int winhttp_action(
 	int ret = -1;
 
 	if (!t->connection)
-		if ((ret = gitno_connection_data_from_url(&t->connection_data, url, NULL)) < 0 ||
+		if ((ret = git_net_url_parse(&t->url, url)) < 0 ||
 			 (ret = winhttp_connect(t)) < 0)
 			return ret;
 
@@ -1538,10 +1530,8 @@ static int winhttp_close(git_smart_subtransport *subtransport)
 {
 	winhttp_subtransport *t = (winhttp_subtransport *)subtransport;
 
-	gitno_connection_data_free_ptrs(&t->connection_data);
-	memset(&t->connection_data, 0x0, sizeof(gitno_connection_data));
-	gitno_connection_data_free_ptrs(&t->proxy_connection_data);
-	memset(&t->proxy_connection_data, 0x0, sizeof(gitno_connection_data));
+	git_net_url_dispose(&t->url);
+	git_net_url_dispose(&t->proxy_url);
 
 	if (t->cred) {
 		t->cred->free(t->cred);
