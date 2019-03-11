@@ -682,12 +682,6 @@ void test_online_clone__ssh_memory_auth(void)
 	cl_git_pass(git_clone(&g_repo, _remote_url, "./foo", &g_options));
 }
 
-void test_online_clone__url_with_no_path_returns_EINVALIDSPEC(void)
-{
-	cl_git_fail_with(git_clone(&g_repo, "http://github.com", "./foo", &g_options),
-		GIT_EINVALIDSPEC);
-}
-
 static int fail_certificate_check(git_cert *cert, int valid, const char *host, void *payload)
 {
 	GIT_UNUSED(cert);
