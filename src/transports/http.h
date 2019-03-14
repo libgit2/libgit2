@@ -10,7 +10,7 @@
 
 #include "buffer.h"
 
-#define GIT_HTTP_REPLAY_MAX 7
+#define GIT_HTTP_REPLAY_MAX 15
 
 GIT_INLINE(int) git_http__user_agent(git_buf *buf)
 {

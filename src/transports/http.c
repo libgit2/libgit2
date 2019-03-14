@@ -108,7 +108,7 @@ typedef struct {
 	int parse_error;
 	int error;
 	unsigned parse_finished : 1,
-	    replay_count : 3;
+	    replay_count : 4;
 } http_subtransport;
 
 typedef struct {
