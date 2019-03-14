@@ -204,13 +204,6 @@ int git__strntol32(int32_t *result, const char *nptr, size_t nptr_len, const cha
 	return error;
 }
 
-int git__strcmp(const char *a, const char *b)
-{
-	while (*a && *b && *a == *b)
-		++a, ++b;
-	return (int)(*(const unsigned char *)a) - (int)(*(const unsigned char *)b);
-}
-
 int git__strcasecmp(const char *a, const char *b)
 {
 	while (*a && *b && git__tolower(*a) == git__tolower(*b))
@@ -238,15 +231,6 @@ int git__strcasesort_cmp(const char *a, const char *b)
 		return (unsigned char)git__tolower(*a) - (unsigned char)git__tolower(*b);
 
 	return cmp;
-}
-
-int git__strncmp(const char *a, const char *b, size_t sz)
-{
-	while (sz && *a && *b && *a == *b)
-		--sz, ++a, ++b;
-	if (!sz)
-		return 0;
-	return (int)(*(const unsigned char *)a) - (int)(*(const unsigned char *)b);
 }
 
 int git__strncasecmp(const char *a, const char *b, size_t sz)
@@ -301,7 +285,18 @@ GIT_INLINE(int) prefixcmp(const char *str, size_t str_n, const char *prefix, boo
 
 int git__prefixcmp(const char *str, const char *prefix)
 {
-	return prefixcmp(str, SIZE_MAX, prefix, false);
+	unsigned char s, p;
+
+	while (1) {
+		p = *prefix++;
+		s = *str++;
+
+		if (!p)
+			return 0;
+
+		if (s != p)
+			return s - p;
+	}
 }
 
 int git__prefixncmp(const char *str, size_t str_n, const char *prefix)
