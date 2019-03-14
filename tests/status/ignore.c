@@ -1213,3 +1213,21 @@ void test_status_ignore__unignored_subdirs(void)
 	assert_is_ignored("dir/a.test");
 	refute_is_ignored("dir/subdir/a.test");
 }
+
+void test_status_ignore__unignored_subdirfiles(void)
+{
+	static const char *test_files[] = {
+		"empty_standard_repo/dir/a.test",
+		"empty_standard_repo/dir/subdir/a.test",
+		NULL
+	};
+
+	make_test_data("empty_standard_repo", test_files);
+	cl_git_mkfile(
+		"empty_standard_repo/.gitignore",
+		"dir/\n"
+		"!dir/subdir/a.test\n");
+
+	assert_is_ignored("dir/a.test");
+	refute_is_ignored("dir/subdir/a.test");
+}
