@@ -49,12 +49,14 @@ if (-not $Env:SKIP_PROXY_TESTS) {
 	javaw -jar poxyproxy.jar --port 8090 --credentials foo:bar --auth-type ntlm --quiet
 }
 
-Write-Host ""
-Write-Host "##############################################################################"
-Write-Host "## Running (offline) tests"
-Write-Host "##############################################################################"
+if (-not $Env:SKIP_OFFLINE_TESTS) {
+	Write-Host ""
+	Write-Host "##############################################################################"
+	Write-Host "## Running (offline) tests"
+	Write-Host "##############################################################################"
 
-run_test offline
+	run_test offline
+}
 
 if ($Env:RUN_INVASIVE_TESTS) {
 	Write-Host ""
