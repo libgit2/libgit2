@@ -1222,7 +1222,7 @@ void test_status_ignore__ignored_subdirfiles_with_subdir_rule(void)
 		NULL
 	};
 
-	make_test_data("empty_standard_repo", test_files);
+ 	make_test_data("empty_standard_repo", test_files);
 	cl_git_mkfile(
 		"empty_standard_repo/.gitignore",
 		"dir/*\n"
@@ -1230,6 +1230,8 @@ void test_status_ignore__ignored_subdirfiles_with_subdir_rule(void)
 
 	assert_is_ignored("dir/a.test");
 	assert_is_ignored("dir/sub1/a.test");
+	assert_is_ignored("dir/sub1/sub2");
+	assert_is_ignored("dir/sub1/sub2/b.test");
 }
 
 void test_status_ignore__ignored_subdirfiles_with_negations(void)
@@ -1241,13 +1243,13 @@ void test_status_ignore__ignored_subdirfiles_with_negations(void)
 		NULL
 	};
 
-	make_test_data("empty_standard_repo", test_files);
+ 	make_test_data("empty_standard_repo", test_files);
 	cl_git_mkfile(
 		"empty_standard_repo/.gitignore",
 		"dir/*\n"
 		"!dir/a.test\n");
 
-	refute_is_ignored("dir/a.test");
+ 	refute_is_ignored("dir/a.test");
 	assert_is_ignored("dir/b.test");
 	assert_is_ignored("dir/sub1/c.test");
 }
