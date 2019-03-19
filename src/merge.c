@@ -3112,9 +3112,6 @@ static int merge_heads(
 	*ancestor_head_out = NULL;
 	*our_head_out = NULL;
 
-	if ((error = git_repository__ensure_not_bare(repo, "merge")) < 0)
-		goto done;
-
 	if ((error = git_annotated_commit_from_ref(&our_head, repo, our_ref)) < 0)
 		goto done;
 
