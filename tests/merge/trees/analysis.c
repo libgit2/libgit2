@@ -1,3 +1,6 @@
+// NOTE: this is essentially duplicated from tests/merge/workdir/analysis.c
+// You probably want to make changes to both files.
+
 #include "clar_libgit2.h"
 #include "git2/repository.h"
 #include "git2/merge.h"
