@@ -1133,7 +1133,7 @@ static int config_write(diskfile_backend *cfg, const char *orig_key, const char 
 	reader.file = &cfg->file;
 
 	if (cfg->locked) {
-		result = git_buf_puts(&contents, git_buf_cstr(&cfg->locked_content));
+		result = git_buf_puts(&contents, git_buf_cstr(&cfg->locked_content) == NULL ? "" : git_buf_cstr(&cfg->locked_content));
 	} else {
 		/* Lock the file */
 		if ((result = git_filebuf_open(
