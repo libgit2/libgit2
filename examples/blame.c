@@ -12,6 +12,7 @@
  * <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 
+#include <strings.h>
 #include "common.h"
 
 #ifdef _MSC_VER
