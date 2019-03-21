@@ -52,6 +52,7 @@ static git_http_auth_context basic_context = {
 	GIT_CREDTYPE_USERPASS_PLAINTEXT,
 	NULL,
 	basic_next_token,
+	NULL,
 	NULL
 };
 

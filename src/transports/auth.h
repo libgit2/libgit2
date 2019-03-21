@@ -33,6 +33,9 @@ struct git_http_auth_context {
 	/** Gets the next authentication token from the context */
 	int (*next_token)(git_buf *out, git_http_auth_context *ctx, const char *header_name, git_cred *cred);
 
+	/** Examines if all tokens have been presented. */
+	int (*is_complete)(git_http_auth_context *ctx);
+
 	/** Frees the authentication context */
 	void (*free)(git_http_auth_context *ctx);
 };

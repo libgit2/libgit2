@@ -170,6 +170,15 @@ done:
 	return error;
 }
 
+static int negotiate_is_complete(git_http_auth_context *c)
+{
+	http_auth_negotiate_context *ctx = (http_auth_negotiate_context *)c;
+
+	assert(ctx);
+
+	return (ctx->complete == 1);
+}
+
 static void negotiate_context_free(git_http_auth_context *c)
 {
 	http_auth_negotiate_context *ctx = (http_auth_negotiate_context *)c;
@@ -266,6 +275,7 @@ int git_http_auth_negotiate(
 	ctx->parent.credtypes = GIT_CREDTYPE_DEFAULT;
 	ctx->parent.set_challenge = negotiate_set_challenge;
 	ctx->parent.next_token = negotiate_next_token;
+	ctx->parent.is_complete = negotiate_is_complete;
 	ctx->parent.free = negotiate_context_free;
 
 	*out = (git_http_auth_context *)ctx;
