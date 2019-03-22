@@ -67,6 +67,10 @@ OPTION(USE_BUNDLED_ZLIB    		"Use the bundled version of zlib"			OFF)
 OPTION(DEPRECATE_HARD			"Do not include deprecated functions in the library"	OFF)
    SET(REGEX_BACKEND			"" CACHE STRING "Regular expression implementation. One of regcomp_l, pcre2, pcre, regcomp, or builtin.")
 
+IF (UNIX)
+	OPTION(USE_NTLMCLIENT		"Enable NTLM support on Unix."				ON )
+ENDIF()
+
 IF (UNIX AND NOT APPLE)
 	OPTION(ENABLE_REPRODUCIBLE_BUILDS "Enable reproducible builds"				OFF)
 ENDIF()
