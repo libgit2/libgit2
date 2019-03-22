@@ -77,12 +77,14 @@ typedef struct {
 	git_net_url url;
 	git_stream *stream;
 
-	git_http_authtype_t server_types;
+	git_http_authtype_t authtypes;
+	git_credtype_t credtypes;
+
 	git_cred *cred;
 	unsigned url_cred_presented : 1;
 
 	git_vector auth_challenges;
-	git_vector auth_contexts;
+	git_http_auth_context *auth_context;
 } http_server;
 
 typedef struct {
@@ -125,79 +127,24 @@ typedef struct {
 	size_t *bytes_read;
 } parser_context;
 
-static bool credtype_match(git_http_auth_scheme *scheme, void *data)
-{
-	unsigned int credtype = *(unsigned int *)data;
-
-	return !!(scheme->credtypes & credtype);
-}
-
-static bool challenge_match(git_http_auth_scheme *scheme, void *data)
-{
-	const char *scheme_name = scheme->name;
-	const char *challenge = (const char *)data;
-	size_t scheme_len;
-
-	scheme_len = strlen(scheme_name);
-	return (strncasecmp(challenge, scheme_name, scheme_len) == 0 &&
-		(challenge[scheme_len] == '\0' || challenge[scheme_len] == ' '));
-}
-
-typedef struct {
-	git_http_authtype_t server_types;
-	unsigned int credtype;
-} authmatch_data;
-
-static bool auth_match(git_http_auth_scheme *scheme, void *_data)
-{
-	authmatch_data *data = (authmatch_data *)_data;
-
-	return !!(data->server_types & scheme->type) &&
-	       !!(scheme->credtypes & data->credtype);
-}
-
-static int auth_context_match(
-	git_http_auth_context **out,
-	http_server *server,
-	bool (*scheme_match)(git_http_auth_scheme *scheme, void *data),
-	void *data)
+static git_http_auth_scheme *scheme_for_challenge(const char *challenge)
 {
 	git_http_auth_scheme *scheme = NULL;
-	git_http_auth_context *context = NULL, *c;
 	size_t i;
 
-	*out = NULL;
-
 	for (i = 0; i < ARRAY_SIZE(auth_schemes); i++) {
-		if (scheme_match(&auth_schemes[i], data)) {
+		const char *scheme_name = auth_schemes[i].name;
+		size_t scheme_len;
+
+		scheme_len = strlen(scheme_name);
+		if (strncasecmp(challenge, scheme_name, scheme_len) == 0 &&
+		    (challenge[scheme_len] == '\0' || challenge[scheme_len] == ' ')) {
 			scheme = &auth_schemes[i];
 			break;
 		}
 	}
 
-	if (!scheme)
-		return 0;
-
-	/* See if authentication has already started for this scheme */
-	git_vector_foreach(&server->auth_contexts, i, c) {
-		if (c->type == scheme->type) {
-			context = c;
-			break;
-		}
-	}
-
-	if (!context) {
-		if (scheme->init_context(&context, &server->url) < 0)
-			return -1;
-		else if (!context)
-			return 0;
-		else if (git_vector_insert(&server->auth_contexts, context) < 0)
-			return -1;
-	}
-
-	*out = context;
-
-	return 0;
+	return scheme;
 }
 
 static int apply_credentials(
@@ -205,43 +152,13 @@ static int apply_credentials(
 	http_server *server,
 	const char *header_name)
 {
-	git_cred *cred = server->cred;
-	git_http_auth_context *context;
-	authmatch_data data = {0};
 	git_buf token = GIT_BUF_INIT;
 	int error = 0;
 
-	if (!server->server_types)
+	if (!server->auth_context)
 		goto done;
 
-	/* Get or create a context for the best scheme for this cred type */
-	if ((error = auth_context_match(&context, server,
-	    credtype_match, &cred->credtype)) < 0)
-		goto done;
-
-	if (!context)
-		goto done;
-
-	/*
-	 * If we do have creds, find the first mechanism supported by both
-	 * the server and ourselves that supports the credential type.
-	 */
-	if (!cred)
-		goto done;
-
-	data.server_types = server->server_types;
-	data.credtype = cred->credtype;
-
-	if ((error = auth_context_match(&context, server, auth_match, &data)) < 0)
-		goto done;
-
-	if (!context) {
-		git_error_set(GIT_ERROR_NET, "no suitable mechanism found for authentication");
-		error = -1;
-		goto done;
-	}
-
-	if ((error = context->next_token(&token, context, cred)) < 0)
+	if ((error = server->auth_context->next_token(&token, server->auth_context, server->cred)) < 0)
 		goto done;
 
 	error = git_buf_printf(buf, "%s: %s\r\n", header_name, token.ptr);
@@ -313,30 +230,51 @@ static int gen_request(
 	return 0;
 }
 
-static int parse_authenticate_response(
-	http_server *server,
-	int *allowed_types)
+static int set_authentication_challenge(http_server *server)
 {
-	git_http_auth_context *context;
+	const char *challenge;
+
+	if (git_vector_length(&server->auth_challenges) > 1) {
+		git_error_set(GIT_ERROR_NET, "received multiple authentication challenges");
+		return -1;
+	}
+
+	challenge = git_vector_get(&server->auth_challenges, 0);
+
+	if (server->auth_context->set_challenge)
+		return server->auth_context->set_challenge(server->auth_context, challenge);
+	else
+		return 0;
+}
+
+static int set_authentication_types(http_server *server)
+{
+	git_http_auth_scheme *scheme;
 	char *challenge;
 	size_t i;
 
 	git_vector_foreach(&server->auth_challenges, i, challenge) {
-		if (auth_context_match(&context, server,
-		    challenge_match, challenge) < 0)
-			return -1;
-		else if (!context)
-			continue;
-
-		if (context->set_challenge &&
-			context->set_challenge(context, challenge) < 0)
-			return -1;
-
-		server->server_types |= context->type;
-		*allowed_types |= context->credtypes;
+		if ((scheme = scheme_for_challenge(challenge)) != NULL) {
+			server->authtypes |= scheme->type;
+			server->credtypes |= scheme->credtypes;
+		}
 	}
 
 	return 0;
+}
+
+static int parse_authenticate_response(http_server *server)
+{
+	/*
+	 * If we've begun authentication, give the challenge to the context.
+	 * Otherwise, set up the types to prepare credentials.
+	 */
+	if (git_vector_length(&server->auth_challenges) == 0)
+		return 0;
+	else if (server->auth_context)
+		return set_authentication_challenge(server);
+	else
+		return set_authentication_types(server);
 }
 
 static int on_header_ready(http_subtransport *t)
@@ -427,6 +365,17 @@ static int on_header_value(http_parser *parser, const char *str, size_t len)
 	return 0;
 }
 
+static void free_auth_context(http_server *server)
+{
+	if (!server->auth_context)
+		return;
+
+	if (server->auth_context->free)
+		server->auth_context->free(server->auth_context);
+
+	server->auth_context = NULL;
+}
+
 GIT_INLINE(void) free_cred(git_cred **cred)
 {
 	if (*cred) {
@@ -450,6 +399,37 @@ static int apply_url_credentials(
 	return GIT_PASSTHROUGH;
 }
 
+static int init_auth(http_server *server)
+{
+	git_http_auth_scheme *s, *scheme = NULL;
+	char *c, *challenge = NULL;
+	size_t i;
+
+	git_vector_foreach(&server->auth_challenges, i, c) {
+		s = scheme_for_challenge(c);
+
+		if (s && !!(s->credtypes & server->credtypes)) {
+			scheme = s;
+			challenge = c;
+			break;
+		}
+	}
+
+	if (!scheme) {
+		git_error_set(GIT_ERROR_NET, "no authentication mechanism could be negotiated");
+		return -1;
+	}
+
+	if (scheme->init_context(&server->auth_context, &server->url) < 0)
+		return -1;
+
+	if (server->auth_context->set_challenge &&
+		server->auth_context->set_challenge(server->auth_context, challenge) < 0)
+		return -1;
+
+	return 0;
+}
+
 static int on_auth_required(
 	git_cred **creds,
 	http_parser *parser,
@@ -457,24 +437,24 @@ static int on_auth_required(
 	const char *url,
 	const char *type,
 	git_cred_acquire_cb callback,
-	void *callback_payload,
-	int allowed_types)
+	void *callback_payload)
 {
 	parser_context *ctx = (parser_context *) parser->data;
 	http_subtransport *t = ctx->t;
 	int error = 1;
 
-	if (!allowed_types) {
+	if (!server->credtypes) {
 		git_error_set(GIT_ERROR_NET, "%s requested authentication but did not negotiate mechanisms", type);
 		t->parse_error = PARSE_ERROR_GENERIC;
 		return t->parse_error;
 	}
 
+	free_auth_context(server);
 	free_cred(creds);
 
 	/* Start with URL-specified credentials, if there were any. */
 	if (!server->url_cred_presented && server->url.username && server->url.password) {
-		error = apply_url_credentials(creds, allowed_types, server->url.username, server->url.password);
+		error = apply_url_credentials(creds, server->credtypes, server->url.username, server->url.password);
 		server->url_cred_presented = 1;
 
 		if (error == GIT_PASSTHROUGH) {
@@ -484,7 +464,7 @@ static int on_auth_required(
 	}
 
 	if (error > 0 && callback) {
-		error = callback(creds, url, server->url.username, allowed_types, callback_payload);
+		error = callback(creds, url, server->url.username, server->credtypes, callback_payload);
 
 		if (error == GIT_PASSTHROUGH) {
 			/* treat GIT_PASSTHROUGH as if callback isn't set */
@@ -505,13 +485,18 @@ static int on_auth_required(
 
 	assert(*creds);
 
-	if (!((*creds)->credtype & allowed_types)) {
+	if (!((*creds)->credtype & server->credtypes)) {
 		git_error_set(GIT_ERROR_NET, "%s credential provider returned an invalid cred type", type);
 		t->parse_error = PARSE_ERROR_GENERIC;
 		return t->parse_error;
 	}
 
-	/* Successfully acquired a credential. */
+	/* Successfully acquired a credential. Start an auth context. */
+	if (init_auth(server) < 0) {
+		t->parse_error = PARSE_ERROR_GENERIC;
+		return t->parse_error;
+	}
+
 	t->parse_error = PARSE_ERROR_REPLAY;
 	return 0;
 }
@@ -522,28 +507,38 @@ static int on_headers_complete(http_parser *parser)
 	http_subtransport *t = ctx->t;
 	http_stream *s = ctx->s;
 	git_buf buf = GIT_BUF_INIT;
-	int proxy_auth_types = 0, server_auth_types = 0;
-
-	/* Enforce a reasonable cap on the number of replays */
-	if (t->replay_count++ >= GIT_HTTP_REPLAY_MAX) {
-		git_error_set(GIT_ERROR_NET, "too many redirects or authentication replays");
-		return t->parse_error = PARSE_ERROR_GENERIC;
-	}
 
 	/* Both parse_header_name and parse_header_value are populated
 	 * and ready for consumption. */
-	if (VALUE == t->last_cb)
-		if (on_header_ready(t) < 0)
-			return t->parse_error = PARSE_ERROR_GENERIC;
+	if (t->last_cb == VALUE && on_header_ready(t) < 0)
+		return t->parse_error = PARSE_ERROR_GENERIC;
 
 	/*
 	 * Capture authentication headers for the proxy or final endpoint,
 	 * these may be 407/401 (authentication is not complete) or a 200
 	 * (informing us that auth has completed).
 	 */
-	if (parse_authenticate_response(&t->proxy, &proxy_auth_types) < 0 ||
-	    parse_authenticate_response(&t->server, &server_auth_types) < 0)
+	if (parse_authenticate_response(&t->proxy) < 0 ||
+	    parse_authenticate_response(&t->server) < 0)
 		return t->parse_error = PARSE_ERROR_GENERIC;
+
+	/* If we're in the middle of challenge/response auth, continue */
+	if (parser->status_code == 407 || parser->status_code == 401) {
+		http_server *server = parser->status_code == 407 ? &t->proxy : &t->server;
+
+		if (server->auth_context &&
+		    server->auth_context->is_complete &&
+		    !server->auth_context->is_complete(server->auth_context)) {
+			t->parse_error = PARSE_ERROR_REPLAY;
+			return 0;
+		}
+	}
+
+	/* Enforce a reasonable cap on the number of replays */
+	if (t->replay_count++ >= GIT_HTTP_REPLAY_MAX) {
+		git_error_set(GIT_ERROR_NET, "too many redirects or authentication replays");
+		return t->parse_error = PARSE_ERROR_GENERIC;
+	}
 
 	/* Check for a proxy authentication failure. */
 	if (parser->status_code == 407 && get_verb == s->verb)
@@ -553,8 +548,7 @@ static int on_headers_complete(http_parser *parser)
 		    t->proxy_opts.url,
 		    SERVER_TYPE_PROXY,
 		    t->proxy_opts.credentials,
-		    t->proxy_opts.payload,
-			proxy_auth_types);
+		    t->proxy_opts.payload);
 
 	/* Check for an authentication failure. */
 	if (parser->status_code == 401 && get_verb == s->verb)
@@ -564,8 +558,7 @@ static int on_headers_complete(http_parser *parser)
 		    t->owner->url,
 		    SERVER_TYPE_REMOTE,
 		    t->owner->cred_acquire_cb,
-		    t->owner->cred_acquire_payload,
-		    server_auth_types);
+		    t->owner->cred_acquire_payload);
 
 	/* Check for a redirect.
 	 * Right now we only permit a redirect to the same hostname. */
@@ -840,18 +833,10 @@ static int proxy_headers_complete(http_parser *parser)
 {
 	parser_context *ctx = (parser_context *) parser->data;
 	http_subtransport *t = ctx->t;
-	int proxy_auth_types = 0;
-
-	/* Enforce a reasonable cap on the number of replays */
-	if (t->replay_count++ >= GIT_HTTP_REPLAY_MAX) {
-		git_error_set(GIT_ERROR_NET, "too many redirects or authentication replays");
-		return t->parse_error = PARSE_ERROR_GENERIC;
-	}
 
 	/* Both parse_header_name and parse_header_value are populated
 	 * and ready for consumption. */
-	if (VALUE == t->last_cb)
-		if (on_header_ready(t) < 0)
+	if (t->last_cb == VALUE && on_header_ready(t) < 0)
 			return t->parse_error = PARSE_ERROR_GENERIC;
 
 	/*
@@ -859,8 +844,24 @@ static int proxy_headers_complete(http_parser *parser)
 	 * these may be 407/401 (authentication is not complete) or a 200
 	 * (informing us that auth has completed).
 	 */
-	if (parse_authenticate_response(&t->proxy, &proxy_auth_types) < 0)
+	if (parse_authenticate_response(&t->proxy) < 0)
 		return t->parse_error = PARSE_ERROR_GENERIC;
+
+	/* If we're in the middle of challenge/response auth, continue */
+	if (parser->status_code == 407) {
+		if (t->proxy.auth_context &&
+		    t->proxy.auth_context->is_complete &&
+		    !t->proxy.auth_context->is_complete(t->proxy.auth_context)) {
+			t->parse_error = PARSE_ERROR_REPLAY;
+			return 0;
+		}
+	}
+
+	/* Enforce a reasonable cap on the number of replays */
+	if (t->replay_count++ >= GIT_HTTP_REPLAY_MAX) {
+		git_error_set(GIT_ERROR_NET, "too many redirects or authentication replays");
+		return t->parse_error = PARSE_ERROR_GENERIC;
+	}
 
 	/* Check for a proxy authentication failure. */
 	if (parser->status_code == 407)
@@ -870,8 +871,7 @@ static int proxy_headers_complete(http_parser *parser)
 			t->proxy_opts.url,
 			SERVER_TYPE_PROXY,
 			t->proxy_opts.credentials,
-			t->proxy_opts.payload,
-			proxy_auth_types);
+			t->proxy_opts.payload);
 
 	if (parser->status_code != 200) {
 		git_error_set(GIT_ERROR_NET, "unexpected status code from proxy: %d",
@@ -1013,6 +1013,12 @@ static int http_connect(http_subtransport *t)
 		git_stream_free(t->proxy.stream);
 		t->proxy.stream = NULL;
 	}
+
+	free_auth_context(&t->server);
+	free_auth_context(&t->proxy);
+
+	t->server.url_cred_presented = false;
+	t->proxy.url_cred_presented = false;
 
 	t->connected = 0;
 
@@ -1466,19 +1472,6 @@ static int http_action(
 	return -1;
 }
 
-static void free_auth_contexts(git_vector *contexts)
-{
-	git_http_auth_context *context;
-	size_t i;
-
-	git_vector_foreach(contexts, i, context) {
-		if (context->free)
-			context->free(context);
-	}
-
-	git_vector_clear(contexts);
-}
-
 static int http_close(git_smart_subtransport *subtransport)
 {
 	http_subtransport *t = GIT_CONTAINER_OF(subtransport, http_subtransport, parent);
@@ -1502,8 +1495,8 @@ static int http_close(git_smart_subtransport *subtransport)
 	free_cred(&t->server.cred);
 	free_cred(&t->proxy.cred);
 
-	free_auth_contexts(&t->server.auth_contexts);
-	free_auth_contexts(&t->proxy.auth_contexts);
+	free_auth_context(&t->server);
+	free_auth_context(&t->proxy);
 
 	t->server.url_cred_presented = false;
 	t->proxy.url_cred_presented = false;
@@ -1522,9 +1515,6 @@ static void http_free(git_smart_subtransport *subtransport)
 	http_subtransport *t = GIT_CONTAINER_OF(subtransport, http_subtransport, parent);
 
 	http_close(subtransport);
-
-	git_vector_free(&t->server.auth_contexts);
-	git_vector_free(&t->proxy.auth_contexts);
 	git__free(t);
 }
 
