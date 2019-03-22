@@ -75,8 +75,9 @@ typedef struct {
 	git_net_url url;
 	git_stream *stream;
 
+	git_http_authtype_t server_types;
 	git_cred *cred;
-	git_cred *url_cred;
+	unsigned url_cred_presented : 1;
 
 	git_vector auth_challenges;
 	git_vector auth_contexts;
@@ -140,6 +141,19 @@ static bool challenge_match(git_http_auth_scheme *scheme, void *data)
 		(challenge[scheme_len] == '\0' || challenge[scheme_len] == ' '));
 }
 
+typedef struct {
+	git_http_authtype_t server_types;
+	unsigned int credtype;
+} authmatch_data;
+
+static bool auth_match(git_http_auth_scheme *scheme, void *_data)
+{
+	authmatch_data *data = (authmatch_data *)_data;
+
+	return !!(data->server_types & scheme->type) &&
+	       !!(scheme->credtypes & data->credtype);
+}
+
 static int auth_context_match(
 	git_http_auth_context **out,
 	http_server *server,
@@ -191,18 +205,9 @@ static int apply_credentials(
 {
 	git_cred *cred = server->cred;
 	git_http_auth_context *context;
+	authmatch_data data = {0};
 
-	/* Apply the credentials given to us in the URL */
-	if (!cred && server->url.username && server->url.password) {
-		if (!server->url_cred &&
-			git_cred_userpass_plaintext_new(&server->url_cred,
-			    server->url.username, server->url.password) < 0)
-			return -1;
-
-		cred = server->url_cred;
-	}
-
-	if (!cred)
+	if (!server->server_types)
 		return 0;
 
 	/* Get or create a context for the best scheme for this cred type */
@@ -212,6 +217,24 @@ static int apply_credentials(
 
 	if (!context)
 		return 0;
+
+	/*
+	 * If we do have creds, find the first mechanism supported by both
+	 * the server and ourselves that supports the credential type.
+	 */
+	if (!cred)
+		return 0;
+
+	data.server_types = server->server_types;
+	data.credtype = cred->credtype;
+
+	if (auth_context_match(&context, server, auth_match, &data) < 0)
+		return -1;
+
+	if (!context) {
+		git_error_set(GIT_ERROR_NET, "no suitable mechanism found for authentication");
+		return -1;
+	}
 
 	return context->next_token(buf, context, header_name, cred);
 }
@@ -297,6 +320,7 @@ static int parse_authenticate_response(
 			context->set_challenge(context, challenge) < 0)
 			return -1;
 
+		server->server_types |= context->type;
 		*allowed_types |= context->credtypes;
 	}
 
@@ -399,19 +423,34 @@ GIT_INLINE(void) free_cred(git_cred **cred)
 	}
 }
 
+static int apply_url_credentials(
+	git_cred **cred,
+	unsigned int allowed_types,
+	const char *username,
+	const char *password)
+{
+	if (allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT)
+		return git_cred_userpass_plaintext_new(cred, username, password);
+
+	if ((allowed_types & GIT_CREDTYPE_DEFAULT) && *username == '\0' && *password == '\0')
+		return git_cred_default_new(cred);
+
+	return GIT_PASSTHROUGH;
+}
+
 static int on_auth_required(
 	git_cred **creds,
 	http_parser *parser,
+	http_server *server,
 	const char *url,
 	const char *type,
 	git_cred_acquire_cb callback,
 	void *callback_payload,
-	const char *username,
 	int allowed_types)
 {
 	parser_context *ctx = (parser_context *) parser->data;
 	http_subtransport *t = ctx->t;
-	int ret;
+	int error = 1;
 
 	if (!allowed_types) {
 		git_error_set(GIT_ERROR_NET, "%s requested authentication but did not negotiate mechanisms", type);
@@ -419,35 +458,50 @@ static int on_auth_required(
 		return t->parse_error;
 	}
 
-	if (callback) {
-		free_cred(creds);
-		ret = callback(creds, url, username, allowed_types, callback_payload);
+	free_cred(creds);
 
-		if (ret == GIT_PASSTHROUGH) {
+	/* Start with URL-specified credentials, if there were any. */
+	if (!server->url_cred_presented && server->url.username && server->url.password) {
+		error = apply_url_credentials(creds, allowed_types, server->url.username, server->url.password);
+		server->url_cred_presented = 1;
+
+		if (error == GIT_PASSTHROUGH) {
 			/* treat GIT_PASSTHROUGH as if callback isn't set */
-		} else if (ret < 0) {
-			t->error = ret;
-			t->parse_error = PARSE_ERROR_EXT;
-			return t->parse_error;
-		} else {
-			assert(*creds);
-
-			if (!((*creds)->credtype & allowed_types)) {
-				git_error_set(GIT_ERROR_NET, "%s credential provider returned an invalid cred type", type);
-				t->parse_error = PARSE_ERROR_GENERIC;
-				return t->parse_error;
-			}
-
-			/* Successfully acquired a credential. */
-			t->parse_error = PARSE_ERROR_REPLAY;
-			return 0;
+			error = 1;
 		}
 	}
 
-	git_error_set(GIT_ERROR_NET, "%s authentication required but no callback set",
-		type);
-	t->parse_error = PARSE_ERROR_GENERIC;
-	return t->parse_error;
+	if (error > 0 && callback) {
+		error = callback(creds, url, server->url.username, allowed_types, callback_payload);
+
+		if (error == GIT_PASSTHROUGH) {
+			/* treat GIT_PASSTHROUGH as if callback isn't set */
+			error = 1;
+		}
+	}
+
+	if (error > 0) {
+		git_error_set(GIT_ERROR_NET, "%s authentication required but no callback set",
+			type);
+		t->parse_error = PARSE_ERROR_GENERIC;
+		return t->parse_error;
+	} else if (error < 0) {
+		t->error = error;
+		t->parse_error = PARSE_ERROR_EXT;
+		return t->parse_error;
+	}
+
+	assert(*creds);
+
+	if (!((*creds)->credtype & allowed_types)) {
+		git_error_set(GIT_ERROR_NET, "%s credential provider returned an invalid cred type", type);
+		t->parse_error = PARSE_ERROR_GENERIC;
+		return t->parse_error;
+	}
+
+	/* Successfully acquired a credential. */
+	t->parse_error = PARSE_ERROR_REPLAY;
+	return 0;
 }
 
 static int on_headers_complete(http_parser *parser)
@@ -483,22 +537,22 @@ static int on_headers_complete(http_parser *parser)
 	if (parser->status_code == 407 && get_verb == s->verb)
 		return on_auth_required(&t->proxy.cred,
 		    parser,
+		    &t->proxy,
 		    t->proxy_opts.url,
 		    SERVER_TYPE_PROXY,
 		    t->proxy_opts.credentials,
 		    t->proxy_opts.payload,
-		    t->proxy.url.username,
 			proxy_auth_types);
 
 	/* Check for an authentication failure. */
 	if (parser->status_code == 401 && get_verb == s->verb)
 		return on_auth_required(&t->server.cred,
 		    parser,
+		    &t->server,
 		    t->owner->url,
 		    SERVER_TYPE_REMOTE,
 		    t->owner->cred_acquire_cb,
 		    t->owner->cred_acquire_payload,
-		    t->server.url.username,
 		    server_auth_types);
 
 	/* Check for a redirect.
@@ -800,11 +854,11 @@ static int proxy_headers_complete(http_parser *parser)
 	if (parser->status_code == 407)
 		return on_auth_required(&t->proxy.cred,
 			parser,
+			&t->proxy,
 			t->proxy_opts.url,
 			SERVER_TYPE_PROXY,
 			t->proxy_opts.credentials,
 			t->proxy_opts.payload,
-			t->proxy.url.username,
 			proxy_auth_types);
 
 	if (parser->status_code != 200) {
@@ -1435,12 +1489,13 @@ static int http_close(git_smart_subtransport *subtransport)
 	}
 
 	free_cred(&t->server.cred);
-	free_cred(&t->server.url_cred);
 	free_cred(&t->proxy.cred);
-	free_cred(&t->proxy.url_cred);
 
 	free_auth_contexts(&t->server.auth_contexts);
 	free_auth_contexts(&t->proxy.auth_contexts);
+
+	t->server.url_cred_presented = false;
+	t->proxy.url_cred_presented = false;
 
 	git_net_url_dispose(&t->server.url);
 	git_net_url_dispose(&t->proxy.url);
