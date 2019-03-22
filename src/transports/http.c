@@ -1017,6 +1017,8 @@ static int http_stream_read(
 	http_subtransport *t = OWNING_SUBTRANSPORT(s);
 	parser_context ctx;
 	size_t bytes_parsed;
+	git_buf request = GIT_BUF_INIT;
+	int error = 0;
 
 replay:
 	*bytes_read = 0;
@@ -1024,20 +1026,12 @@ replay:
 	assert(t->connected);
 
 	if (!s->sent_request) {
-		git_buf request = GIT_BUF_INIT;
-
+		git_buf_clear(&request);
 		clear_parser_state(t);
 
-		if (gen_request(&request, s, 0) < 0)
-			return -1;
-
-		if (git_stream__write_full(t->server.stream, request.ptr,
-					   request.size, 0) < 0) {
-			git_buf_dispose(&request);
-			return -1;
-		}
-
-		git_buf_dispose(&request);
+		if ((error = gen_request(&request, s, 0)) < 0 ||
+		    (error = git_stream__write_full(t->server.stream, request.ptr, request.size, 0)) < 0)
+			goto done;
 
 		s->sent_request = 1;
 	}
@@ -1047,17 +1041,17 @@ replay:
 			assert(s->verb == post_verb);
 
 			/* Flush, if necessary */
-			if (s->chunk_buffer_len > 0 &&
-				write_chunk(t->server.stream,
-				    s->chunk_buffer, s->chunk_buffer_len) < 0)
-				return -1;
+			if (s->chunk_buffer_len > 0) {
+				if ((error = write_chunk(t->server.stream, s->chunk_buffer, s->chunk_buffer_len)) < 0)
+					goto done;
 
-			s->chunk_buffer_len = 0;
+				s->chunk_buffer_len = 0;
+			}
 
 			/* Write the final chunk. */
-			if (git_stream__write_full(t->server.stream,
-						   "0\r\n\r\n", 5, 0) < 0)
-				return -1;
+			if ((error = git_stream__write_full(t->server.stream,
+						   "0\r\n\r\n", 5, 0)) < 0)
+				goto done;
 		}
 
 		s->received_response = 1;
@@ -1065,7 +1059,6 @@ replay:
 
 	while (!*bytes_read && !t->parse_finished) {
 		size_t data_offset;
-		int error;
 
 		/*
 		 * Make the parse_buffer think it's as full of data as
@@ -1075,16 +1068,15 @@ replay:
 		 * data_offset is the actual data offset from which we
 		 * should tell the parser to start reading.
 		 */
-		if (buf_size >= t->parse_buffer.len) {
+		if (buf_size >= t->parse_buffer.len)
 			t->parse_buffer.offset = 0;
-		} else {
+		else
 			t->parse_buffer.offset = t->parse_buffer.len - buf_size;
-		}
 
 		data_offset = t->parse_buffer.offset;
 
-		if (gitno_recv(&t->parse_buffer) < 0)
-			return -1;
+		if ((error = gitno_recv(&t->parse_buffer)) < 0)
+			goto done;
 
 		/* This call to http_parser_execute will result in invocations of the
 		 * on_* family of callbacks. The most interesting of these is
@@ -1113,27 +1105,31 @@ replay:
 			s->sent_request = 0;
 
 			if ((error = http_connect(t)) < 0)
-				return error;
+				goto done;
 
 			goto replay;
 		}
 
 		if (t->parse_error == PARSE_ERROR_EXT) {
-			return t->error;
+			error = t->error;
+			goto done;
+		} else if (t->parse_error < 0) {
+			error = -1;
+			goto done;
 		}
-
-		if (t->parse_error < 0)
-			return -1;
 
 		if (bytes_parsed != t->parse_buffer.offset - data_offset) {
 			git_error_set(GIT_ERROR_NET,
 				"HTTP parser error: %s",
 				http_errno_description((enum http_errno)t->parser.http_errno));
-			return -1;
+			error = -1;
+			goto done;
 		}
 	}
 
-	return 0;
+done:
+	git_buf_dispose(&request);
+	return error;
 }
 
 static int http_stream_write_chunked(
