@@ -360,6 +360,7 @@ void test_diff_parse__lineinfo(void)
 	git_diff_free(diff);
 }
 
+
 void test_diff_parse__new_file_with_space(void)
 {
 	const char *content = PATCH_ORIGINAL_NEW_FILE_WITH_SPACE;
@@ -373,6 +374,24 @@ void test_diff_parse__new_file_with_space(void)
 	cl_assert_equal_p(patch->delta->old_file.path, NULL);
 	cl_assert_equal_s(patch->diff_opts.new_prefix, "b/");
 	cl_assert_equal_s(patch->delta->new_file.path, "sp ace.txt");
+
+	git_patch_free(patch);
+	git_diff_free(diff);
+}
+
+void test_diff_parse__crlf(void)
+{
+	const char *text = PATCH_CRLF;
+	git_diff *diff;
+	git_patch *patch;
+	const git_diff_delta *delta;
+
+	cl_git_pass(git_diff_from_buffer(&diff, text, strlen(text)));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
+	delta = git_patch_get_delta(patch);
+
+	cl_assert_equal_s(delta->old_file.path, "test-file");
+	cl_assert_equal_s(delta->new_file.path, "test-file");
 
 	git_patch_free(patch);
 	git_diff_free(diff);
