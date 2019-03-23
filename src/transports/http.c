@@ -208,37 +208,47 @@ static int apply_credentials(
 	git_cred *cred = server->cred;
 	git_http_auth_context *context;
 	authmatch_data data = {0};
+	git_buf token = GIT_BUF_INIT;
+	int error = 0;
 
 	if (!server->server_types)
-		return 0;
+		goto done;
 
 	/* Get or create a context for the best scheme for this cred type */
-	if (auth_context_match(&context, server,
-	    credtype_match, &cred->credtype) < 0)
-		return -1;
+	if ((error = auth_context_match(&context, server,
+	    credtype_match, &cred->credtype)) < 0)
+		goto done;
 
 	if (!context)
-		return 0;
+		goto done;
 
 	/*
 	 * If we do have creds, find the first mechanism supported by both
 	 * the server and ourselves that supports the credential type.
 	 */
 	if (!cred)
-		return 0;
+		goto done;
 
 	data.server_types = server->server_types;
 	data.credtype = cred->credtype;
 
-	if (auth_context_match(&context, server, auth_match, &data) < 0)
-		return -1;
+	if ((error = auth_context_match(&context, server, auth_match, &data)) < 0)
+		goto done;
 
 	if (!context) {
 		git_error_set(GIT_ERROR_NET, "no suitable mechanism found for authentication");
-		return -1;
+		error = -1;
+		goto done;
 	}
 
-	return context->next_token(buf, context, header_name, cred);
+	if ((error = context->next_token(&token, context, cred)) < 0)
+		goto done;
+
+	error = git_buf_printf(buf, "%s: %s\r\n", header_name, token.ptr);
+
+done:
+	git_buf_dispose(&token);
+	return error;
 }
 
 static int gen_request(
