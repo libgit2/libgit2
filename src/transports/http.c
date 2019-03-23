@@ -81,7 +81,8 @@ typedef struct {
 	git_credtype_t credtypes;
 
 	git_cred *cred;
-	unsigned url_cred_presented : 1;
+	unsigned url_cred_presented : 1,
+	    authenticated : 1;
 
 	git_vector auth_challenges;
 	git_http_auth_context *auth_context;
@@ -501,6 +502,12 @@ static int on_auth_required(
 	return 0;
 }
 
+static void on_auth_success(http_server *server)
+{
+	server->url_cred_presented = 0;
+	server->authenticated = 1;
+}
+
 static int on_headers_complete(http_parser *parser)
 {
 	parser_context *ctx = (parser_context *) parser->data;
@@ -549,6 +556,8 @@ static int on_headers_complete(http_parser *parser)
 		    SERVER_TYPE_PROXY,
 		    t->proxy_opts.credentials,
 		    t->proxy_opts.payload);
+	else
+		on_auth_success(&t->proxy);
 
 	/* Check for an authentication failure. */
 	if (parser->status_code == 401 && get_verb == s->verb)
@@ -559,6 +568,8 @@ static int on_headers_complete(http_parser *parser)
 		    SERVER_TYPE_REMOTE,
 		    t->owner->cred_acquire_cb,
 		    t->owner->cred_acquire_payload);
+	else
+		on_auth_success(&t->server);
 
 	/* Check for a redirect.
 	 * Right now we only permit a redirect to the same hostname. */
@@ -988,6 +999,29 @@ done:
 	return error;
 }
 
+static void reset_auth_connection(http_server *server)
+{
+	/*
+	 * If we've authenticated and we're doing "normal"
+	 * authentication with a request affinity (Basic, Digest)
+	 * then we want to _keep_ our context, since authentication
+	 * survives even through non-keep-alive connections.  If
+	 * we've authenticated and we're doing connection-based
+	 * authentication (NTLM, Negotiate) - indicated by the presence
+	 * of an `is_complete` callback - then we need to restart
+	 * authentication on a new connection.
+	 */
+
+	if (server->authenticated &&
+	    server->auth_context &&
+	    server->auth_context->is_complete) {
+		free_auth_context(server);
+
+		server->url_cred_presented = 0;
+		server->authenticated = 0;
+	}
+}
+
 static int http_connect(http_subtransport *t)
 {
 	git_net_url *url;
@@ -1014,13 +1048,11 @@ static int http_connect(http_subtransport *t)
 		t->proxy.stream = NULL;
 	}
 
-	free_auth_context(&t->server);
-	free_auth_context(&t->proxy);
-
-	t->server.url_cred_presented = false;
-	t->proxy.url_cred_presented = false;
+	reset_auth_connection(&t->server);
+	reset_auth_connection(&t->proxy);
 
 	t->connected = 0;
+	t->keepalive = 0;
 
 	if (t->proxy_opts.type == GIT_PROXY_SPECIFIED) {
 		url = &t->proxy.url;
