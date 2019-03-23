@@ -271,6 +271,7 @@ int git_http_auth_negotiate(
 
 	ctx->parent.type = GIT_AUTHTYPE_NEGOTIATE;
 	ctx->parent.credtypes = GIT_CREDTYPE_DEFAULT;
+	ctx->parent.connection_affinity = 1;
 	ctx->parent.set_challenge = negotiate_set_challenge;
 	ctx->parent.next_token = negotiate_next_token;
 	ctx->parent.is_complete = negotiate_is_complete;

@@ -28,6 +28,9 @@ struct git_http_auth_context {
 	/** Supported credentials */
 	git_credtype_t credtypes;
 
+	/** Connection affinity or request affinity */
+	unsigned connection_affinity : 1;
+
 	/** Sets the challenge on the authentication context */
 	int (*set_challenge)(git_http_auth_context *ctx, const char *challenge);
 

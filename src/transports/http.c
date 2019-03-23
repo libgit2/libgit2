@@ -1014,7 +1014,7 @@ static void reset_auth_connection(http_server *server)
 
 	if (server->authenticated &&
 	    server->auth_context &&
-	    server->auth_context->is_complete) {
+	    server->auth_context->connection_affinity) {
 		free_auth_context(server);
 
 		server->url_cred_presented = 0;
