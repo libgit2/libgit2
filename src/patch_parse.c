@@ -41,7 +41,19 @@ static int header_path_len(git_patch_parse_ctx *ctx)
 
 	for (len = quoted; len < ctx->parse_ctx.line_len; len++) {
 		if (!quoted && git__isspace(ctx->parse_ctx.line[len]))
-			break;
+			/* lookahead for the sequence "?b/ to allow for spaces in filenames */
+			if (len < ctx->parse_ctx.line_len - 3) {
+				int offset = 0;
+				if (ctx->parse_ctx.line[len+1] == '"') {
+					offset += 1;
+				}
+				if (ctx->parse_ctx.line[len+offset+1] == 'b'
+					&& ctx->parse_ctx.line[len+offset+2] == '/') {
+					break;
+				}
+			} else {
+				break;
+			}
 		else if (quoted && !inquote && ctx->parse_ctx.line[len] == '"') {
 			len++;
 			break;

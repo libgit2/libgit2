@@ -86,6 +86,50 @@ void test_diff_parse__invalid_patches_fails(void)
 	test_parse_invalid_diff(PATCH_CORRUPT_MISSING_HUNK_HEADER);
 }
 
+void test_diff_parse__new_file_with_space(void)
+{
+	const char *text = "diff --git a/sp ace.txt b/sp ace.txt\n"
+		"new file mode 100644\n"
+		"index 000000000..789819226\n"
+		"--- /dev/null\n"
+		"+++ b/sp ace.txt\n"
+		"@@ -0,0 +1 @@\n"
+		"+a\n";
+
+	git_diff *diff;
+	git_patch *patch;
+	const git_diff_delta *delta;
+
+	cl_git_pass(git_diff_from_buffer(&diff, text, strlen(text)));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
+	delta = git_patch_get_delta(patch);
+
+	cl_assert_equal_s(delta->old_file.path, "sp ace.txt");
+	cl_assert_equal_s(delta->new_file.path, "sp ace.txt");
+
+	git_patch_free(patch);
+	git_diff_free(diff);
+}
+
+void test_diff_parse__new_file_with_space_ab_differs(void)
+{
+	const char *text = "diff --git yours/sp ace.txt mine/sp ace.txt\n"
+	"new file mode 100644\n"
+	"index 000000000..789819226\n"
+	"--- /dev/null\n"
+	"+++ b/sp ace.txt\n"
+	"@@ -0,0 +1 @@\n"
+	"+a\n";
+
+	git_diff *diff;
+
+	cl_git_fail_with(-1, git_diff_from_buffer(&diff, text, strlen(text)));
+	cl_assert_equal_s(git_error_last()->message,
+					  "corrupt new path in git diff header at line 1");
+
+	git_diff_free(diff);
+}
+
 static void test_tree_to_tree_computed_to_parsed(
 	const char *sandbox, const char *a_id, const char *b_id,
 	uint32_t diff_flags, uint32_t find_flags)
