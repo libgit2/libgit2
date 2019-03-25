@@ -109,21 +109,6 @@ static void git_hash_global_shutdown(void)
 		hash_cryptoapi_prov_shutdown();
 }
 
-int git_hash_global_init(void)
-{
-	int error = 0;
-
-	if (hash_prov.type != INVALID)
-		return 0;
-
-	if ((error = hash_cng_prov_init()) < 0)
-		error = hash_cryptoapi_prov_init();
-
-	git__on_shutdown(git_hash_global_shutdown);
-
-	return error;
-}
-
 /* CryptoAPI: available in Windows XP and newer */
 
 GIT_INLINE(int) hash_ctx_cryptoapi_init(git_hash_ctx *ctx)

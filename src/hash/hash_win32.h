@@ -138,4 +138,19 @@ struct git_hash_ctx {
 	} ctx;
 };
 
+GIT_INLINE(int) git_hash_global_init(void)
+{
+	int error = 0;
+
+	if (hash_prov.type != INVALID)
+		return 0;
+
+	if ((error = hash_cng_prov_init()) < 0)
+		error = hash_cryptoapi_prov_init();
+
+	git__on_shutdown(git_hash_global_shutdown);
+
+	return error;
+}
+
 #endif
