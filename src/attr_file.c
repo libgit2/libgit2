@@ -209,7 +209,7 @@ int git_attr_file__out_of_date(
 		return 0;
 
 	case GIT_ATTR_FILE__FROM_FILE:
-		return git_futils_filestamp_check(
+		return git_futils_filestamp_check_readonly(
 			&file->cache_data.stamp, file->entry->fullpath);
 
 	case GIT_ATTR_FILE__FROM_INDEX: {

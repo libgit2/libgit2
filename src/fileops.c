@@ -1116,6 +1116,29 @@ int git_futils_filestamp_check(
 	return 1;
 }
 
+int git_futils_filestamp_check_readonly(
+	const git_futils_filestamp *stamp, const char *path)
+{
+	struct stat st;
+
+	/* if the stamp is NULL, then always reload */
+	if (stamp == NULL)
+		return 1;
+
+	if (p_stat(path, &st) < 0)
+		return GIT_ENOTFOUND;
+
+	if (stamp->mtime.tv_sec == st.st_mtime &&
+#if defined(GIT_USE_NSEC)
+		stamp->mtime.tv_nsec == st.st_mtime_nsec &&
+#endif
+		stamp->size  == (git_off_t)st.st_size   &&
+		stamp->ino   == (unsigned int)st.st_ino)
+		return 0;
+
+	return 1;
+}
+
 void git_futils_filestamp_set(
 	git_futils_filestamp *target, const git_futils_filestamp *source)
 {
