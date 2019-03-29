@@ -928,8 +928,8 @@ static int check_filenames(git_patch_parsed *patch)
 	prefixed_old = (!added && patch->old_path) ? patch->old_path : patch->header_old_path;
 	prefixed_new = (!deleted && patch->new_path) ? patch->new_path : patch->header_new_path;
 
-	if (check_prefix(&patch->old_prefix, &old_prefixlen, patch, prefixed_old) < 0 ||
-	    check_prefix(&patch->new_prefix, &new_prefixlen, patch, prefixed_new) < 0)
+	if ((prefixed_old && check_prefix(&patch->old_prefix, &old_prefixlen, patch, prefixed_old) < 0) ||
+	    (prefixed_new && check_prefix(&patch->new_prefix, &new_prefixlen, patch, prefixed_new) < 0))
 		return -1;
 
 	/* Prefer the rename filenames as they are unambiguous and unprefixed */
