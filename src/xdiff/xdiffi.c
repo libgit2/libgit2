@@ -36,7 +36,7 @@
 #elif defined(__GNUC__)
 # define XDL_INLINE(type) static __inline__ type
 #else
-#define XDG_INLINE(type) static type
+# define XDL_INLINE(type) static type
 #endif
 
 typedef struct s_xdpsplit {
