@@ -106,10 +106,22 @@ GIT_BEGIN_DECL
 typedef enum {
 	GIT_CHECKOUT_NONE = 0, /**< default is a dry run, no actual updates */
 
-	/** Allow safe updates that cannot overwrite uncommitted data */
+	/**
+	 * Allow safe updates that cannot overwrite uncommitted data.
+	 * If the uncommitted changes don't conflict with the checked out files,
+	 * the checkout will still proceed, leaving the changes intact.
+	 *
+	 * Mutually exclusive with GIT_CHECKOUT_FORCE.
+	 * GIT_CHECKOUT_FORCE takes precedence over GIT_CHECKOUT_SAFE.
+	 */
 	GIT_CHECKOUT_SAFE = (1u << 0),
 
-	/** Allow all updates to force working directory to look like index */
+	/**
+	 * Allow all updates to force working directory to look like index.
+	 *
+	 * Mutually exclusive with GIT_CHECKOUT_SAFE.
+	 * GIT_CHECKOUT_FORCE takes precedence over GIT_CHECKOUT_SAFE.
+	 */
 	GIT_CHECKOUT_FORCE = (1u << 1),
 
 
