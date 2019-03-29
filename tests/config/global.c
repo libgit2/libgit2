@@ -58,6 +58,23 @@ void test_config_global__open_global(void)
 	git_config_free(cfg);
 }
 
+void test_config_global__open_symlinked_global(void)
+{
+#ifndef GIT_WIN32
+	git_config *cfg;
+	int32_t value;
+
+	cl_git_mkfile("home/.gitconfig.linked", "[global]\n  test = 4567\n");
+	cl_must_pass(symlink(".gitconfig.linked", "home/.gitconfig"));
+
+	cl_git_pass(git_config_open_default(&cfg));
+	cl_git_pass(git_config_get_int32(&value, cfg, "global.test"));
+	cl_assert_equal_i(4567, value);
+
+	git_config_free(cfg);
+#endif
+}
+
 void test_config_global__open_xdg(void)
 {
 	git_config *cfg, *xdg, *selected;
