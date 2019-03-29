@@ -27,6 +27,9 @@ void test_config_global__initialize(void)
 void test_config_global__cleanup(void)
 {
 	cl_sandbox_set_search_path_defaults();
+	cl_git_pass(git_futils_rmdir_r("home", NULL, GIT_RMDIR_REMOVE_FILES));
+	cl_git_pass(git_futils_rmdir_r("xdg", NULL, GIT_RMDIR_REMOVE_FILES));
+	cl_git_pass(git_futils_rmdir_r("etc", NULL, GIT_RMDIR_REMOVE_FILES));
 }
 
 void test_config_global__open_global(void)
