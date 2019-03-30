@@ -278,6 +278,8 @@ GIT_EXTERN(int) git_index_set_version(git_index *index, unsigned int version);
  */
 GIT_EXTERN(int) git_index_read(git_index *index, int force);
 
+GIT_EXTERN(int) git_index_is_case_sensitive(const git_index *index);
+
 /**
  * Write an existing index object from memory back to disk
  * using an atomic file lock.

@@ -684,6 +684,10 @@ int git_index_read(git_index *index, int force)
 	return error;
 }
 
+int git_index_is_case_sensitive(const git_index *index) {
+	return !index->ignore_case;
+}
+
 int git_index_read_safely(git_index *index)
 {
 	if (git_index__enforce_unsaved_safety && index->dirty) {
@@ -3589,18 +3593,32 @@ int git_index_update_all(
 
 int git_index_snapshot_new(git_vector *snap, git_index *index)
 {
+	int error = 0;
+
 	GIT_REFCOUNT_INC(index);
 
 	git_atomic_inc(&index->readers);
 	git_vector_sort(&index->entries);
 
-	*snap = index->entries;
-	return 0;
+	/* This assumes that when index is case sensitive, everything else is also case
+	 * sensitive. I'm not sure this is true. Same thing in git_index_snapshot_release.
+	 * TODO(romanp): Verify.
+	 */
+	if (index->ignore_case) {
+		error = git_vector_dup(snap, &index->entries, index->entries._cmp);
+		if (error < 0)
+			git_index_snapshot_release(snap, index);
+	} else {
+		*snap = index->entries;
+	}
+
+	return error;
 }
 
 void git_index_snapshot_release(git_vector *snap, git_index *index)
 {
-	(void)snap;
+	if (index->ignore_case)
+		git_vector_free(snap);
 
 	git_atomic_dec(&index->readers);
 
