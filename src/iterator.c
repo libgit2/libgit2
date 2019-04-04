@@ -1013,6 +1013,7 @@ typedef struct {
 	size_t path_len;
 	iterator_pathlist_search_t match;
 	git_oid id;
+	char *basename;
 	char path[GIT_FLEX_ARRAY];
 } filesystem_iterator_entry;
 
@@ -1074,7 +1075,7 @@ static int filesystem_iterator_entry_cmp(const void *_a, const void *_b)
 	const filesystem_iterator_entry *a = (const filesystem_iterator_entry *)_a;
 	const filesystem_iterator_entry *b = (const filesystem_iterator_entry *)_b;
 
-	return git__strcmp(a->path, b->path);
+	return git__strcmp(a->basename, b->basename);
 }
 
 static int filesystem_iterator_entry_cmp_icase(const void *_a, const void *_b)
@@ -1082,7 +1083,7 @@ static int filesystem_iterator_entry_cmp_icase(const void *_a, const void *_b)
 	const filesystem_iterator_entry *a = (const filesystem_iterator_entry *)_a;
 	const filesystem_iterator_entry *b = (const filesystem_iterator_entry *)_b;
 
-	return git__strcasecmp(a->path, b->path);
+	return git__strcasecmp(a->basename, b->basename);
 }
 
 #define FILESYSTEM_MAX_DEPTH 100
@@ -1310,6 +1311,7 @@ static int filesystem_iterator_entry_init(
 	filesystem_iterator_frame *frame,
 	const char *path,
 	size_t path_len,
+	size_t basename_len,
 	struct stat *statbuf,
 	iterator_pathlist_search_t pathlist_match)
 {
@@ -1333,6 +1335,7 @@ static int filesystem_iterator_entry_init(
 	entry->match = pathlist_match;
 	memcpy(entry->path, path, path_len);
 	memcpy(&entry->st, statbuf, sizeof(struct stat));
+	entry->basename = entry->path + (path_len - basename_len);
 
 	/* Suffix directory paths with a '/' */
 	if (S_ISDIR(entry->st.st_mode))
@@ -1357,9 +1360,11 @@ static int filesystem_iterator_frame_push(
 	git_path_diriter diriter = GIT_PATH_DIRITER_INIT;
 	git_buf root = GIT_BUF_INIT;
 	const char *path;
+	const char *basename;
 	filesystem_iterator_entry *entry;
 	struct stat statbuf;
 	size_t path_len;
+	size_t basename_len;
 	int error = 0;
 	bool submodule = false;
 
@@ -1471,8 +1476,11 @@ static int filesystem_iterator_frame_push(
 			}
 		}
 
-		if ((error = filesystem_iterator_entry_init(&entry, iter, new_frame, path, path_len, &statbuf,
-							    pathlist_match)) < 0)
+		if ((error = git_path_diriter_filename(&basename, &basename_len, &diriter)) < 0)
+			goto done;
+
+		if ((error = filesystem_iterator_entry_init(&entry, iter, new_frame, path, path_len,
+							    basename_len, &statbuf, pathlist_match)) < 0)
 			goto done;
 
 		git_vector_insert(&new_frame->entries, entry);
