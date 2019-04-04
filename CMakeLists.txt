@@ -253,6 +253,15 @@ ELSE()
 	# that uses CMAKE_CONFIGURATION_TYPES and not CMAKE_BUILD_TYPE
 ENDIF()
 
+ADD_FEATURE_INFO(sanitize_address   SANITIZE_ADDRESS   "ASan support")
+ADD_FEATURE_INFO(sanitize_memory    SANITIZE_MEMORY    "MSan support")
+ADD_FEATURE_INFO(sanitize_thread    SANITIZE_THREAD    "TSan support")
+ADD_FEATURE_INFO(sanitize_undefined SANITIZE_UNDEFINED "UBSan support")
+
+IF (SANITIZE_ADDRESS OR SANITIZE_MEMORY OR SANITIZE_THREAD OR SANITIZE_UNDEFINED)
+	FIND_PACKAGE(Sanitizers)
+ENDIF()
+
 IF(BUILD_FUZZERS AND NOT USE_STANDALONE_FUZZERS)
 	# The actual sanitizer link target will be added when linking the fuzz
 	# targets.
