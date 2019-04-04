@@ -1274,6 +1274,12 @@ cleanup:
 	b_opts.flags = FLAGS_SECOND; \
 	b_opts.start = pfx; \
 	b_opts.end = pfx; \
+	if (opts && opts->range_start && *opts->range_start && \
+			(!pfx || !*pfx || strcmp(opts->range_start, pfx) > 0)) \
+	  a_opts.start = b_opts.start = opts->range_start; \
+	if (opts && opts->range_end && *opts->range_end && \
+			(!pfx || !*pfx || strcmp(opts->range_end, pfx) < 0)) \
+	  a_opts.end = b_opts.end = opts->range_end; \
 	GIT_ERROR_CHECK_VERSION(opts, GIT_DIFF_OPTIONS_VERSION, "git_diff_options"); \
 	if (opts && (opts->flags & GIT_DIFF_DISABLE_PATHSPEC_MATCH)) { \
 		a_opts.pathlist.strings = opts->pathspec.strings; \

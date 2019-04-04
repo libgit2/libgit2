@@ -430,10 +430,22 @@ typedef struct {
 	 * Defaults to "b".
 	 */
 	const char *new_prefix;
+
+	/**
+	 * Do not diff entries whose paths are lexicographically less than
+	 * range_start or greater than range_end. Empty or null values mean
+	 * no bound. It's legal to specify just one of the bounds, both, or
+	 * neither.
+	 *
+	 * The range restriction can be combined with pathspec and applies
+	 * even when GIT_DIFF_DISABLE_PATHSPEC_MATCH is set.
+	 */
+	const char *range_start;
+	const char *range_end;
 } git_diff_options;
 
 /* The current version of the diff options structure */
-#define GIT_DIFF_OPTIONS_VERSION 1
+#define GIT_DIFF_OPTIONS_VERSION 2
 
 /* Stack initializer for diff options.  Alternatively use
  * `git_diff_options_init` programmatic initialization.
