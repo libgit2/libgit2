@@ -1970,7 +1970,7 @@ int git_index_has_conflicts(const git_index *index)
 	return 0;
 }
 
-int git_index_iterator_new(
+int git_index_iterator_new_testonly(
 	git_index_iterator **iterator_out,
 	git_index *index)
 {
@@ -2006,12 +2006,12 @@ int git_index_iterator_next(
 	return 0;
 }
 
-void git_index_iterator_free(git_index_iterator *it)
+void git_index_iterator_free_testonly(git_index_iterator *it)
 {
 	if (it == NULL)
 		return;
 
-	git_index_snapshot_release(&it->snap, it->index);
+	git_index_snapshot_release(it->index);
 	git__free(it);
 }
 
@@ -2499,7 +2499,7 @@ static int read_entry(
 		return -1;
 
 	if (index_entry_create(out, INDEX_OWNER(index), entry.path, NULL,
-	    git_index__disable_filepath_validation ? 0 : GIT_PATH_REJECT_INDEX_DEFAULTS) < 0) {
+	    git_index__disable_filepath_validation ? GIT_PATH_REJECT_NOTHING : GIT_PATH_REJECT_INDEX_DEFAULTS) < 0) {
 		git__free(tmp_path);
 		return -1;
 	}
@@ -3593,33 +3593,18 @@ int git_index_update_all(
 
 int git_index_snapshot_new(git_vector *snap, git_index *index)
 {
-	int error = 0;
-
 	GIT_REFCOUNT_INC(index);
 
 	git_atomic_inc(&index->readers);
 	git_vector_sort(&index->entries);
 
-	/* This assumes that when index is case sensitive, everything else is also case
-	 * sensitive. I'm not sure this is true. Same thing in git_index_snapshot_release.
-	 * TODO(romanp): Verify.
-	 */
-	if (index->ignore_case) {
-		error = git_vector_dup(snap, &index->entries, index->entries._cmp);
-		if (error < 0)
-			git_index_snapshot_release(snap, index);
-	} else {
-		*snap = index->entries;
-	}
+	*snap = index->entries;
 
-	return error;
+	return 0;
 }
 
-void git_index_snapshot_release(git_vector *snap, git_index *index)
+void git_index_snapshot_release(git_index *index)
 {
-	if (index->ignore_case)
-		git_vector_free(snap);
-
 	git_atomic_dec(&index->readers);
 
 	git_index_free(index);

@@ -1879,7 +1879,7 @@ static void filesystem_iterator_free(git_iterator *i)
 	git_buf_dispose(&iter->current_path);
 	git_tree_free(iter->tree);
 	if (iter->index)
-		git_index_snapshot_release(&iter->index_snapshot, iter->index);
+		git_index_snapshot_release(iter->index);
 	filesystem_iterator_clear(iter);
 }
 
@@ -2005,6 +2005,7 @@ typedef struct {
 	git_iterator base;
 	git_vector entries;
 	size_t next_idx;
+	bool owns_entries;
 
 	/* the pseudotree entry */
 	git_index_entry tree_entry;
@@ -2213,7 +2214,9 @@ static void index_iterator_free(git_iterator *i)
 {
 	index_iterator *iter = (index_iterator *)i;
 
-	git_index_snapshot_release(&iter->entries, iter->base.index);
+	if (iter->owns_entries)
+		git_vector_free(&iter->entries);
+	git_index_snapshot_release(iter->base.index);
 	git_buf_dispose(&iter->tree_buf);
 }
 
@@ -2223,7 +2226,9 @@ int git_iterator_for_index(
 	git_index  *index,
 	git_iterator_options *options)
 {
+	git_vector_cmp cmp;
 	index_iterator *iter;
+	git_vector entries;
 	int error;
 
 	static git_iterator_callbacks callbacks = {
@@ -2245,15 +2250,25 @@ int git_iterator_for_index(
 
 	iter->base.type = GIT_ITERATOR_TYPE_INDEX;
 	iter->base.cb = &callbacks;
+	iter->owns_entries = false;
 
 	if ((error = iterator_init_common(&iter->base, repo, index, options)) < 0 ||
 		(error = git_index_snapshot_new(&iter->entries, index)) < 0 ||
 		(error = index_iterator_init(iter)) < 0)
 		goto on_error;
 
-	git_vector_set_cmp(&iter->entries, iterator__ignore_case(&iter->base) ?
-		git_index_entry_icmp : git_index_entry_cmp);
-	git_vector_sort(&iter->entries);
+	cmp = iterator__ignore_case(&iter->base) ?
+		git_index_entry_icmp : git_index_entry_cmp;
+
+	if (cmp != iter->entries._cmp) {
+		if ((error = git_vector_dup(&entries, &index->entries, cmp)) < 0)
+			goto on_error;
+		iter->entries = entries;
+		iter->owns_entries = true;
+		git_vector_sort(&iter->entries);
+	} else {
+		assert(git_vector_is_sorted(&iter->entries));
+	}
 
 	*out = &iter->base;
 	return 0;
