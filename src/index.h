@@ -21,6 +21,8 @@
 #define GIT_INDEX_FILE_MODE 0666
 
 extern bool git_index__enforce_unsaved_safety;
+extern bool git_index__disable_checksum_verification;
+extern bool git_index__disable_filepath_validation;
 
 struct git_index {
 	git_refcount rc;
