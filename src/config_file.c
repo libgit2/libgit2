@@ -292,8 +292,9 @@ out:
 /* release the map containing the entry as an equivalent to freeing it */
 static void free_diskfile_entry(git_config_entry *entry)
 {
-	git_config_entries *entries = (git_config_entries *) entry->payload;
-	git_config_entries_free(entries);
+	void *payload;
+	__atomic_load(&entry->payload, &payload, __ATOMIC_RELAXED);
+	git_config_entries_free((git_config_entries *) payload);
 }
 
 /*
@@ -301,6 +302,7 @@ static void free_diskfile_entry(git_config_entry *entry)
  */
 static int config_get(git_config_backend *cfg, const char *key, git_config_entry **out)
 {
+  void (*free)(struct git_config_entry *) = &free_diskfile_entry;
 	diskfile_header *h = (diskfile_header *)cfg;
 	git_config_entries *entries = NULL;
 	git_config_entry *entry;
@@ -317,8 +319,8 @@ static int config_get(git_config_backend *cfg, const char *key, git_config_entry
 		return error;
 	}
 
-	entry->free = free_diskfile_entry;
-	entry->payload = entries;
+	__atomic_store(&entry->free, &free, __ATOMIC_RELAXED);
+	__atomic_store(&entry->payload, &entries, __ATOMIC_RELAXED);
 	*out = entry;
 
 	return 0;
