@@ -89,10 +89,6 @@ void test_object_tree_read__largefile(void)
 	int fd;
 	git_index *idx;
 
-#ifdef GIT_WIN32
-	cl_skip();
-#endif
-
 	if (!cl_is_env_set("GITTEST_INVASIVE_FS_SIZE"))
 		cl_skip();
 
