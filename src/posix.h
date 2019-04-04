@@ -115,6 +115,7 @@ extern int p_open(const char *path, int flags, ...);
 extern int p_creat(const char *path, mode_t mode);
 extern int p_getcwd(char *buffer_out, size_t size);
 extern int p_rename(const char *from, const char *to);
+extern int p_fallocate(int fd, off_t offset, off_t len);
 
 extern int git__page_size(size_t *page_size);
 extern int git__mmap_alignment(size_t *page_size);
