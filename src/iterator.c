@@ -2018,6 +2018,8 @@ typedef struct {
 	git_buf tree_buf;
 	bool skip_tree;
 
+	size_t end_idx;
+
 	const git_index_entry *entry;
 } index_iterator;
 
@@ -2094,8 +2096,32 @@ static int index_iterator_advance(
 	const git_index_entry *entry = NULL;
 	bool is_submodule;
 	int error = 0;
+	git_index_entry key;
+	git_buf buf = GIT_BUF_INIT;
 
 	iter->base.flags |= GIT_ITERATOR_FIRST_ACCESS;
+
+	if (iter->end_idx == (size_t)-1) {
+		if (iter->base.start_len && !iterator__include_trees(&iter->base)) {
+			memset(&key, 0, sizeof(key));
+			if (iter->base.start[iter->base.start_len - 1] == '/') {
+				git_buf_puts(&buf, iter->base.start);
+				buf.ptr[buf.size - 1] = 0;
+				key.path = buf.ptr;
+			} else {
+				key.path = iter->base.start;
+			}
+			git_vector_bsearch(&iter->next_idx, &iter->entries, &key);
+			git_buf_dispose(&buf);
+		}
+
+		if (iter->base.end_len) {
+			key.path = iter->base.end;
+			if (!git_vector_bsearch(&iter->end_idx, &iter->entries, &key)) ++iter->end_idx;
+		} else {
+			iter->end_idx = iter->entries.length;
+		}
+	}
 
 	while (true) {
 		if (iter->next_idx >= iter->entries.length) {
@@ -2205,6 +2231,7 @@ static int index_iterator_init(index_iterator *iter)
 	iter->base.flags &= ~GIT_ITERATOR_FIRST_ACCESS;
 	iter->next_idx = 0;
 	iter->skip_tree = false;
+	iter->end_idx = -1;
 	return 0;
 }
 
