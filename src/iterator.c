@@ -2143,7 +2143,7 @@ static int index_iterator_advance(
 			continue;
 		}
 
-		if (iterator_has_ended(&iter->base, entry->path)) {
+		if (iter->next_idx >= iter->end_idx && iterator_has_ended(&iter->base, entry->path)) {
 			error = GIT_ITEROVER;
 			break;
 		}
