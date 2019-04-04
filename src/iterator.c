@@ -1178,7 +1178,9 @@ static void filesystem_iterator_frame_pop_ignores(
 }
 
 GIT_INLINE(bool) filesystem_iterator_examine_path(
-	bool *is_dir_out,
+	struct stat *st,
+	bool *expected_dir,
+	git_path_diriter *diriter,
 	iterator_pathlist_search_t *match_out,
 	filesystem_iterator *iter,
 	filesystem_iterator_entry *frame_entry,
@@ -1187,8 +1189,9 @@ GIT_INLINE(bool) filesystem_iterator_examine_path(
 {
 	bool is_dir = 0;
 	iterator_pathlist_search_t match = ITERATOR_PATHLIST_FULL;
+	int error;
 
-	*is_dir_out = false;
+	*expected_dir = false;
 	*match_out = ITERATOR_PATHLIST_NONE;
 
 	if (iter->base.start_len) {
@@ -1251,10 +1254,9 @@ GIT_INLINE(bool) filesystem_iterator_examine_path(
 		/* Ensure that the pathlist entry lines up with what we expected */
 		if (match == ITERATOR_PATHLIST_IS_DIR ||
 			match == ITERATOR_PATHLIST_IS_PARENT)
-			is_dir = true;
+			*expected_dir = true;
 	}
 
-	*is_dir_out = is_dir;
 	*match_out = match;
 	return true;
 }
@@ -1422,30 +1424,33 @@ static int filesystem_iterator_frame_push(
 		path += iter->root_len;
 		path_len -= iter->root_len;
 
+		if (filesystem_iterator_is_dot_git(iter, path, path_len))
+			continue;
+
+		memset(&statbuf, 0, sizeof(statbuf));
+
 		/* examine start / end and the pathlist to see if this path is in it.
 		 * note that since we haven't yet stat'ed the path, we cannot know
 		 * whether it's a directory yet or not, so this can give us an
 		 * expected type (S_IFDIR or S_IFREG) that we should examine)
 		 */
-		if (!filesystem_iterator_examine_path(&dir_expected, &pathlist_match,
+		if (!filesystem_iterator_examine_path(&statbuf, &dir_expected, &diriter, &pathlist_match,
 			iter, frame_entry, path, path_len))
-			continue;
-
-		if (filesystem_iterator_is_dot_git(iter, path, path_len))
 			continue;
 
 		/* TODO: don't need to stat if assume unchanged for this path and
 		 * we have an index, we can just copy the data out of it.
 		 */
 
-		if (diriter.d_type == DT_DIR &&
+		if (statbuf.st_mode == 0 &&
+		    diriter.d_type == DT_DIR &&
 		    !(error = filesystem_iterator_is_submodule(&submodule, iter, path, path_len)) &&
 		    !submodule) {
 			// It's a directory, no need to lstat it.
 			statbuf.st_mode = S_IFDIR;
 		} else if (error < 0) {
 			goto done;
-		} else {
+		} else if (statbuf.st_mode == 0) {
 			if ((error = git_path_diriter_stat(&statbuf, &diriter)) < 0) {
 				/* file was removed between readdir and lstat */
 				if (error == GIT_ENOTFOUND) continue;
