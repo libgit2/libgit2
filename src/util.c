@@ -74,6 +74,15 @@ int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const cha
 	int64_t n, nn;
 	int c, ovfl, v, neg, ndig;
 
+	if (base == 10 &&
+	    nptr_len >= 2 &&
+	    (nptr[1] == 10 || nptr[1] == 32) &&
+	    '0' <= nptr[0] && nptr[0] <= '9') {
+		*result = nptr[0] - '0';
+		if (endptr) *endptr = nptr + 1;
+		return 0;
+	}
+
 	p = nptr;
 	neg = 0;
 	n = 0;
