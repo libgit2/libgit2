@@ -27,20 +27,52 @@ void test_config_global__initialize(void)
 void test_config_global__cleanup(void)
 {
 	cl_sandbox_set_search_path_defaults();
+	cl_git_pass(git_futils_rmdir_r("home", NULL, GIT_RMDIR_REMOVE_FILES));
+	cl_git_pass(git_futils_rmdir_r("xdg", NULL, GIT_RMDIR_REMOVE_FILES));
+	cl_git_pass(git_futils_rmdir_r("etc", NULL, GIT_RMDIR_REMOVE_FILES));
 }
 
 void test_config_global__open_global(void)
 {
 	git_config *cfg, *global, *selected, *dummy;
+	int32_t value;
+
+	cl_git_mkfile("home/.gitconfig", "[global]\n  test = 4567\n");
 
 	cl_git_pass(git_config_open_default(&cfg));
+	cl_git_pass(git_config_get_int32(&value, cfg, "global.test"));
+	cl_assert_equal_i(4567, value);
+
 	cl_git_pass(git_config_open_level(&global, cfg, GIT_CONFIG_LEVEL_GLOBAL));
+	cl_git_pass(git_config_get_int32(&value, global, "global.test"));
+	cl_assert_equal_i(4567, value);
+
 	cl_git_fail(git_config_open_level(&dummy, cfg, GIT_CONFIG_LEVEL_XDG));
+
 	cl_git_pass(git_config_open_global(&selected, cfg));
+	cl_git_pass(git_config_get_int32(&value, selected, "global.test"));
+	cl_assert_equal_i(4567, value);
 
 	git_config_free(selected);
 	git_config_free(global);
 	git_config_free(cfg);
+}
+
+void test_config_global__open_symlinked_global(void)
+{
+#ifndef GIT_WIN32
+	git_config *cfg;
+	int32_t value;
+
+	cl_git_mkfile("home/.gitconfig.linked", "[global]\n  test = 4567\n");
+	cl_must_pass(symlink(".gitconfig.linked", "home/.gitconfig"));
+
+	cl_git_pass(git_config_open_default(&cfg));
+	cl_git_pass(git_config_get_int32(&value, cfg, "global.test"));
+	cl_assert_equal_i(4567, value);
+
+	git_config_free(cfg);
+#endif
 }
 
 void test_config_global__open_xdg(void)
