@@ -1193,20 +1193,38 @@ GIT_INLINE(bool) filesystem_iterator_examine_path(
 	if (iter->base.start_len) {
 		int cmp = iter->base.strncomp(path, iter->base.start, path_len);
 
+		if (cmp < 0)
+			return false;
+
 		/* we haven't stat'ed `path` yet, so we don't yet know if it's a
 		 * directory or not.  special case if the current path may be a
 		 * directory that matches the start prefix.
 		 */
-		if (cmp == 0) {
-			if (iter->base.start[path_len] == '/')
+		if (cmp == 0 && iter->base.start[path_len] == '/') {
+			*expected_dir = true;
+		} else if (cmp == 0) {
+			/* Suppose iter->base.start is "b.c" and path is "b", which is a directory.
+			 * If we erroneously return false here based on the faulty logic that "b" is less than
+			 * "b.c" (the relationship is true, but the conclusion doesn't follow), we'll skip all files
+			 * under "b", which are all lexicographically greater than "b.c" (since '/' > '.').
+			 */
+			if (diriter->d_type == DT_DIR) {
 				is_dir = true;
-
-			else if (iter->base.start[path_len] != '\0')
-				cmp = -1;
+			} else if (diriter->d_type != DT_UNKNOWN) {
+				is_dir = false;
+			} else {
+				if ((error = git_path_diriter_stat(st, diriter)) < 0) {
+					/* file was removed between readdir and lstat */
+					if (error == GIT_ENOTFOUND) return false;
+					/* treat the file as unreadable */
+					memset(st, 0, sizeof(*st));
+					st->st_mode = GIT_FILEMODE_UNREADABLE;
+				}
+				iter->base.stat_calls++;
+				is_dir = S_ISDIR(st->st_mode);
+			}
+			cmp = (is_dir ? '/' : 0) - (unsigned char)iter->base.start[path_len];
 		}
-
-		if (cmp < 0)
-			return false;
 	}
 
 	if (iter->base.end_len) {
