@@ -534,7 +534,9 @@ int git_ignore_path_is_ignored(
 	memset(&path, 0, sizeof(path));
 	memset(&ignores, 0, sizeof(ignores));
 
-	if (git_repository_is_bare(repo))
+	if (!git__suffixcmp(pathname, "/"))
+		dir_flag = GIT_DIR_FLAG_TRUE;
+	else if (git_repository_is_bare(repo))
 		dir_flag = GIT_DIR_FLAG_FALSE;
 
 	if ((error = git_attr_path__init(&path, pathname, workdir, dir_flag)) < 0 ||

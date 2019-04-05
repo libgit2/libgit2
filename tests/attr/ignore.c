@@ -397,3 +397,19 @@ void test_attr_ignore__ignored_subdirfiles_with_negations(void)
 	assert_is_ignored(true, "dir/sub1/c.test");
 }
 
+void test_attr_ignore__negative_directory_rules_only_match_directories(void)
+{
+	cl_git_rewritefile(
+		"attr/.gitignore",
+		"*\n"
+		"!/**/\n"
+		"!*.keep\n"
+		"!.gitignore\n"
+	);
+
+	assert_is_ignored(true, "src");
+	assert_is_ignored(true, "src/A");
+	assert_is_ignored(false, "src/");
+	assert_is_ignored(false, "src/A.keep");
+	assert_is_ignored(false, ".gitignore");
+}
