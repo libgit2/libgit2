@@ -989,8 +989,19 @@ static int handle_unmatched_new_item(
 	if (git_index_entry_is_conflict(nitem))
 		delta_type = GIT_DELTA_CONFLICTED;
 
-	/* update delta_type if this item is ignored */
-	else if (git_iterator_current_is_ignored(info->new_iter))
+	/*
+	 * update delta_type if this item is ignored
+	 *
+	 * We can skip the ignore check if:
+	 * - we're not interested in ignored things
+	 * - the other iterator has no changes for this item's prefix
+	 * 	 ie. 'foo/bar.c' vs 'foo/' in a clean repository.
+	 */
+	else if ((!contains_oitem ||
+		  DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_IGNORED |
+						   GIT_DIFF_RECURSE_IGNORED_DIRS |
+						   GIT_DIFF_ENABLE_FAST_UNTRACKED_DIRS)) &&
+		 git_iterator_current_is_ignored(info->new_iter))
 		delta_type = GIT_DELTA_IGNORED;
 
 	if (nitem->mode == GIT_FILEMODE_TREE) {
