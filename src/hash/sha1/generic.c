@@ -219,22 +219,22 @@ static void hash__block(git_hash_ctx *ctx, const unsigned int *data)
 	ctx->H[4] += E;
 }
 
-int git_hash_global_init(void)
+int git_hash_sha1_global_init(void)
 {
 	return 0;
 }
 
-int git_hash_ctx_init(git_hash_ctx *ctx)
+int git_hash_sha1_ctx_init(git_hash_ctx *ctx)
 {
-	return git_hash_init(ctx);
+	return git_hash_sha1_init(ctx);
 }
 
-void git_hash_ctx_cleanup(git_hash_ctx *ctx)
+void git_hash_sha1_ctx_cleanup(git_hash_ctx *ctx)
 {
 	GIT_UNUSED(ctx);
 }
 
-int git_hash_init(git_hash_ctx *ctx)
+int git_hash_sha1_init(git_hash_ctx *ctx)
 {
 	ctx->size = 0;
 
@@ -248,7 +248,7 @@ int git_hash_init(git_hash_ctx *ctx)
 	return 0;
 }
 
-int git_hash_update(git_hash_ctx *ctx, const void *data, size_t len)
+int git_hash_sha1_update(git_hash_ctx *ctx, const void *data, size_t len)
 {
 	unsigned int lenW = ctx->size & 63;
 
@@ -278,7 +278,7 @@ int git_hash_update(git_hash_ctx *ctx, const void *data, size_t len)
 	return 0;
 }
 
-int git_hash_final(git_oid *out, git_hash_ctx *ctx)
+int git_hash_sha1_final(git_oid *out, git_hash_ctx *ctx)
 {
 	static const unsigned char pad[64] = { 0x80 };
 	unsigned int padlen[2];

@@ -7,36 +7,36 @@
 
 #include "collisiondetect.h"
 
-int git_hash_global_init(void)
+int git_hash_sha1_global_init(void)
 {
 	return 0;
 }
 
-int git_hash_ctx_init(git_hash_ctx *ctx)
+int git_hash_sha1_ctx_init(git_hash_ctx *ctx)
 {
-	return git_hash_init(ctx);
+	return git_hash_sha1_init(ctx);
 }
 
-void git_hash_ctx_cleanup(git_hash_ctx *ctx)
+void git_hash_sha1_ctx_cleanup(git_hash_ctx *ctx)
 {
 	GIT_UNUSED(ctx);
 }
 
-int git_hash_init(git_hash_ctx *ctx)
+int git_hash_sha1_init(git_hash_ctx *ctx)
 {
 	assert(ctx);
 	SHA1DCInit(&ctx->c);
 	return 0;
 }
 
-int git_hash_update(git_hash_ctx *ctx, const void *data, size_t len)
+int git_hash_sha1_update(git_hash_ctx *ctx, const void *data, size_t len)
 {
 	assert(ctx);
 	SHA1DCUpdate(&ctx->c, data, len);
 	return 0;
 }
 
-int git_hash_final(git_oid *out, git_hash_ctx *ctx)
+int git_hash_sha1_final(git_oid *out, git_hash_ctx *ctx)
 {
 	assert(ctx);
 	if (SHA1DCFinal(out->id, &ctx->c)) {
