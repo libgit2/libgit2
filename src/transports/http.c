@@ -701,15 +701,8 @@ static int load_proxy_config(http_subtransport *t)
 	}
 
 	git_net_url_dispose(&t->proxy.url);
-	if ((error = git_net_url_parse(&t->proxy.url, t->proxy_opts.url)) < 0)
-		return error;
 
-	if (!strcmp(t->proxy.url.scheme, "https")) {
-		git_error_set(GIT_ERROR_NET, "SSL connections to proxy are not supported");
-		return -1;
-	}
-
-	return error;
+	return git_net_url_parse(&t->proxy.url, t->proxy_opts.url);
 }
 
 static int check_certificate(
