@@ -265,8 +265,43 @@ static int set_authentication_types(http_server *server)
 	return 0;
 }
 
+static bool auth_context_complete(http_server *server)
+{
+	/* If there's no is_complete function, we're always complete */
+	if (!server->auth_context->is_complete)
+		return true;
+
+	if (server->auth_context->is_complete(server->auth_context))
+		return true;
+
+	return false;
+}
+
+static void free_auth_context(http_server *server)
+{
+	if (!server->auth_context)
+		return;
+
+	if (server->auth_context->free)
+		server->auth_context->free(server->auth_context);
+
+	server->auth_context = NULL;
+}
+
 static int parse_authenticate_response(http_server *server)
 {
+	/*
+	 * If we think that we've completed authentication (ie, we've either
+	 * sent a basic credential or we've sent the NTLM/Negotiate response)
+	 * but we've got an authentication request from the server then our
+	 * last authentication did not succeed.  Start over.
+	 */
+	if (server->auth_context && auth_context_complete(server)) {
+		free_auth_context(server);
+
+		server->authenticated = 0;
+	}
+
 	/*
 	 * If we've begun authentication, give the challenge to the context.
 	 * Otherwise, set up the types to prepare credentials.
@@ -367,17 +402,6 @@ static int on_header_value(http_parser *parser, const char *str, size_t len)
 	return 0;
 }
 
-static void free_auth_context(http_server *server)
-{
-	if (!server->auth_context)
-		return;
-
-	if (server->auth_context->free)
-		server->auth_context->free(server->auth_context);
-
-	server->auth_context = NULL;
-}
-
 GIT_INLINE(void) free_cred(git_cred **cred)
 {
 	if (*cred) {
@@ -433,7 +457,6 @@ static int init_auth(http_server *server)
 }
 
 static int on_auth_required(
-	git_cred **creds,
 	http_parser *parser,
 	http_server *server,
 	const char *url,
@@ -445,6 +468,25 @@ static int on_auth_required(
 	http_subtransport *t = ctx->t;
 	int error = 1;
 
+	if (parse_authenticate_response(server) < 0) {
+		t->parse_error = PARSE_ERROR_GENERIC;
+		return t->parse_error;
+	}
+
+	/* If we're in the middle of challenge/response auth, continue */
+	if (parser->status_code == 407 || parser->status_code == 401) {
+		if (server->auth_context && !auth_context_complete(server)) {
+			t->parse_error = PARSE_ERROR_REPLAY;
+			return 0;
+		}
+	}
+
+	/* Enforce a reasonable cap on the number of replays */
+	if (t->replay_count++ >= GIT_HTTP_REPLAY_MAX) {
+		git_error_set(GIT_ERROR_NET, "too many redirects or authentication replays");
+		return t->parse_error = PARSE_ERROR_GENERIC;
+	}
+
 	if (!server->credtypes) {
 		git_error_set(GIT_ERROR_NET, "%s requested authentication but did not negotiate mechanisms", type);
 		t->parse_error = PARSE_ERROR_GENERIC;
@@ -452,11 +494,11 @@ static int on_auth_required(
 	}
 
 	free_auth_context(server);
-	free_cred(creds);
+	free_cred(&server->cred);
 
 	/* Start with URL-specified credentials, if there were any. */
 	if (!server->url_cred_presented && server->url.username && server->url.password) {
-		error = apply_url_credentials(creds, server->credtypes, server->url.username, server->url.password);
+		error = apply_url_credentials(&server->cred, server->credtypes, server->url.username, server->url.password);
 		server->url_cred_presented = 1;
 
 		if (error == GIT_PASSTHROUGH) {
@@ -466,7 +508,7 @@ static int on_auth_required(
 	}
 
 	if (error > 0 && callback) {
-		error = callback(creds, url, server->url.username, server->credtypes, callback_payload);
+		error = callback(&server->cred, url, server->url.username, server->credtypes, callback_payload);
 
 		if (error == GIT_PASSTHROUGH) {
 			/* treat GIT_PASSTHROUGH as if callback isn't set */
@@ -485,9 +527,9 @@ static int on_auth_required(
 		return t->parse_error;
 	}
 
-	assert(*creds);
+	assert(server->cred);
 
-	if (!((*creds)->credtype & server->credtypes)) {
+    if (!(server->cred->credtype & server->credtypes)) {
 		git_error_set(GIT_ERROR_NET, "%s credential provider returned an invalid cred type", type);
 		t->parse_error = PARSE_ERROR_GENERIC;
 		return t->parse_error;
@@ -521,36 +563,9 @@ static int on_headers_complete(http_parser *parser)
 	if (t->last_cb == VALUE && on_header_ready(t) < 0)
 		return t->parse_error = PARSE_ERROR_GENERIC;
 
-	/*
-	 * Capture authentication headers for the proxy or final endpoint,
-	 * these may be 407/401 (authentication is not complete) or a 200
-	 * (informing us that auth has completed).
-	 */
-	if (parse_authenticate_response(&t->proxy) < 0 ||
-	    parse_authenticate_response(&t->server) < 0)
-		return t->parse_error = PARSE_ERROR_GENERIC;
-
-	/* If we're in the middle of challenge/response auth, continue */
-	if (parser->status_code == 407 || parser->status_code == 401) {
-		http_server *server = parser->status_code == 407 ? &t->proxy : &t->server;
-
-		if (server->auth_context &&
-		    server->auth_context->is_complete &&
-		    !server->auth_context->is_complete(server->auth_context)) {
-			t->parse_error = PARSE_ERROR_REPLAY;
-			return 0;
-		}
-	}
-
-	/* Enforce a reasonable cap on the number of replays */
-	if (t->replay_count++ >= GIT_HTTP_REPLAY_MAX) {
-		git_error_set(GIT_ERROR_NET, "too many redirects or authentication replays");
-		return t->parse_error = PARSE_ERROR_GENERIC;
-	}
-
 	/* Check for a proxy authentication failure. */
 	if (parser->status_code == 407 && get_verb == s->verb)
-		return on_auth_required(&t->proxy.cred,
+		return on_auth_required(
 		    parser,
 		    &t->proxy,
 		    t->proxy_opts.url,
@@ -562,7 +577,7 @@ static int on_headers_complete(http_parser *parser)
 
 	/* Check for an authentication failure. */
 	if (parser->status_code == 401 && get_verb == s->verb)
-		return on_auth_required(&t->server.cred,
+		return on_auth_required(
 		    parser,
 		    &t->server,
 		    t->owner->url,
@@ -861,9 +876,7 @@ static int proxy_headers_complete(http_parser *parser)
 
 	/* If we're in the middle of challenge/response auth, continue */
 	if (parser->status_code == 407) {
-		if (t->proxy.auth_context &&
-		    t->proxy.auth_context->is_complete &&
-		    !t->proxy.auth_context->is_complete(t->proxy.auth_context)) {
+		if (t->proxy.auth_context && !auth_context_complete(&t->proxy)) {
 			t->parse_error = PARSE_ERROR_REPLAY;
 			return 0;
 		}
@@ -877,7 +890,7 @@ static int proxy_headers_complete(http_parser *parser)
 
 	/* Check for a proxy authentication failure. */
 	if (parser->status_code == 407)
-		return on_auth_required(&t->proxy.cred,
+		return on_auth_required(
 			parser,
 			&t->proxy,
 			t->proxy_opts.url,
