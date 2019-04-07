@@ -992,8 +992,12 @@ replay:
 
 	t->request_count++;
 
-	if (auth_replay)
-		goto replay;
+	if (auth_replay) {
+		if (t->keepalive && t->parse_finished)
+			goto replay;
+
+		return PARSE_ERROR_REPLAY;
+	}
 
 	if ((error = git_tls_stream_wrap(out, proxy_stream, t->server.url.host)) == 0)
 		error = stream_connect(*out, &t->server.url,
@@ -1043,6 +1047,7 @@ static int http_connect(http_subtransport *t)
 	void *cb_payload;
 	int error;
 
+auth_replay:
 	if (t->connected && t->keepalive && t->parse_finished)
 		return 0;
 
@@ -1099,8 +1104,15 @@ static int http_connect(http_subtransport *t)
 		proxy_stream = stream;
 		stream = NULL;
 
-		if ((error = proxy_connect(&stream, proxy_stream, t)) < 0)
+		error = proxy_connect(&stream, proxy_stream, t);
+
+		if (error == PARSE_ERROR_REPLAY) {
+			git_stream_close(proxy_stream);
+			git_stream_free(proxy_stream);
+			goto auth_replay;
+		} else if (error < 0) {
 			goto on_error;
+		}
 	}
 
 	t->proxy.stream = proxy_stream;
