@@ -6,7 +6,7 @@
 #
 # Read-Only variables:
 #  GSSAPI_FLAVOR_MIT - set to TURE if MIT Kerberos has been found
-#  GSSAPI_FLAVOR_HEIMDAL - set to TRUE if Heimdal Keberos has been found
+#  GSSAPI_FLAVOR_HEIMDAL - set to TRUE if Heimdal Kerberos has been found
 #  GSSAPI_FOUND - system has GSSAPI
 #  GSSAPI_INCLUDE_DIR - the GSSAPI include directory
 #  GSSAPI_LIBRARIES - Link these to use GSSAPI
