@@ -113,6 +113,7 @@ typedef struct {
 	enum last_cb last_cb;
 	int parse_error;
 	int error;
+	unsigned request_count;
 	unsigned parse_finished : 1,
 	    keepalive : 1,
 	    replay_count : 4;
@@ -936,6 +937,10 @@ replay:
 
 		if ((error = gitno_recv(&t->parse_buffer)) < 0) {
 			goto done;
+		} else if (error == 0 && t->request_count > 0) {
+			/* Server closed a keep-alive socket; reconnect. */
+			auth_replay = true;
+			goto done;
 		} else if (error == 0) {
 			git_error_set(GIT_ERROR_NET, "unexpected disconnection from server");
 			error = -1;
@@ -985,6 +990,8 @@ replay:
 		}
 	}
 
+	t->request_count++;
+
 	if (auth_replay)
 		goto replay;
 
@@ -999,6 +1006,7 @@ replay:
 	 */
 	t->proxy_opts.type = GIT_PROXY_NONE;
 	t->replay_count = 0;
+	t->request_count = 0;
 
 done:
 	return error;
@@ -1058,6 +1066,7 @@ static int http_connect(http_subtransport *t)
 
 	t->connected = 0;
 	t->keepalive = 0;
+	t->request_count = 0;
 
 	if (t->proxy_opts.type == GIT_PROXY_SPECIFIED) {
 		url = &t->proxy.url;
@@ -1185,6 +1194,10 @@ replay:
 
 		if ((error = gitno_recv(&t->parse_buffer)) < 0) {
 			goto done;
+		} else if (error == 0 && t->request_count > 0) {
+			/* Server closed a keep-alive socket; reconnect. */
+			auth_replay = true;
+			goto done;
 		} else if (error == 0) {
 			git_error_set(GIT_ERROR_NET, "unexpected disconnection from server");
 			error = -1;
@@ -1234,6 +1247,8 @@ replay:
 			goto done;
 		}
 	}
+
+	t->request_count++;
 
 	if (auth_replay) {
 		s->sent_request = 0;
