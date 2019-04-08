@@ -475,6 +475,17 @@ typedef int GIT_CALLBACK(git_push_negotiation)(const git_push_update **updates, 
 typedef int GIT_CALLBACK(git_push_update_reference_cb)(const char *refname, const char *status, void *data);
 
 /**
+ * Callback to resolve URLs before connecting to remote
+ *
+ * @param url The URL to resolve
+ * @param url_resolved The resolved URL
+ * @param direction GIT_DIRECTION_FETCH or GIT_DIRECTION_PUSH
+ * @param payload The callback payload
+ * @return 0 on success, otherwise an error
+ */
+typedef int GIT_CALLBACK(git_resolve_url_cb)(const char *url, char **url_resolved, int direction, void *payload);
+
+/**
  * The callback settings structure
  *
  * Set the callbacks to be called by the remote when informing the user
@@ -494,6 +505,12 @@ struct git_remote_callbacks {
 	 * process are done (currently unused).
 	 */
 	int GIT_CALLBACK(completion)(git_remote_completion_t type, void *data);
+
+	/**
+	 * Resolve URL before connecting to remote.
+	 * The returned URL will be used to connect to the remote instead.
+	 */
+	git_resolve_url_cb resolve_url;
 
 	/**
 	 * This will be called if the remote host requires
