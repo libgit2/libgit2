@@ -475,6 +475,20 @@ typedef int GIT_CALLBACK(git_push_negotiation)(const git_push_update **updates, 
 typedef int GIT_CALLBACK(git_push_update_reference_cb)(const char *refname, const char *status, void *data);
 
 /**
+ * Callback to resolve URLs before connecting to remote
+ *
+ * If you return GIT_PASSTHROUGH, you don't need to write anything to
+ * url_resolved.
+ *
+ * @param url_resolved The buffer to write the resolved URL to
+ * @param url The URL to resolve
+ * @param direction GIT_DIRECTION_FETCH or GIT_DIRECTION_PUSH
+ * @param payload Payload provided by the caller
+ * @return 0 on success, GIT_PASSTHROUGH or an error
+ */
+typedef int GIT_CALLBACK(git_url_resolve_cb)(git_buf *url_resolved, const char *url, int direction, void *payload);
+
+/**
  * The callback settings structure
  *
  * Set the callbacks to be called by the remote when informing the user
@@ -562,6 +576,12 @@ struct git_remote_callbacks {
 	 * as the last parameter.
 	 */
 	void *payload;
+
+	/**
+	 * Resolve URL before connecting to remote.
+	 * The returned URL will be used to connect to the remote instead.
+	 */
+	git_url_resolve_cb resolve_url;
 };
 
 #define GIT_REMOTE_CALLBACKS_VERSION 1
