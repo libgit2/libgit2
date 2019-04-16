@@ -349,14 +349,28 @@ int cred_acquire_cb(git_cred **out,
 		unsigned int allowed_types,
 		void *payload)
 {
-	char *username = NULL, *password = NULL;
+	char *username = NULL, *password = NULL, *privkey = NULL, *pubkey = NULL;
 	int error = 1;
 
 	UNUSED(url);
 	UNUSED(username_from_url);
 	UNUSED(payload);
 
-	if (allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT) {
+	if (allowed_types & GIT_CREDTYPE_SSH_KEY) {
+		int n;
+
+		if ((error = ask(&username, "Username:")) < 0 ||
+		    (error = ask(&privkey, "SSH Key:")) < 0 ||
+		    (error = ask(&password, "Password:")) < 0)
+			goto out;
+
+		if ((n = snprintf(NULL, 0, "%s.pub", privkey)) < 0 ||
+		    (pubkey = malloc(n + 1)) == NULL ||
+		    (n = snprintf(pubkey, n + 1, "%s.pub", privkey)) < 0)
+			goto out;
+
+		error = git_cred_ssh_key_new(out, username, pubkey, privkey, password);
+	} else if (allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT) {
 		if ((error = ask(&username, "Username:")) < 0 ||
 		    (error = ask(&password, "Password:")) < 0)
 			goto out;
@@ -372,5 +386,7 @@ int cred_acquire_cb(git_cred **out,
 out:
 	free(username);
 	free(password);
+	free(privkey);
+	free(pubkey);
 	return error;
 }
