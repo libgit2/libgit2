@@ -14,11 +14,6 @@
 
 #include "common.h"
 
-#ifdef _MSC_VER
-#define snprintf sprintf_s
-#define strcasecmp strcmpi
-#endif
-
 /**
  * This example demonstrates how to invoke the libgit2 blame API to roughly
  * simulate the output of `git blame` and a few of its command line arguments.
