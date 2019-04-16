@@ -678,6 +678,7 @@ static int parse_include(git_config_parser *reader,
 		return result;
 
 	include = git_array_alloc(reader->file->includes);
+	GIT_ERROR_CHECK_ALLOC(include);
 	memset(include, 0, sizeof(*include));
 	git_array_init(include->includes);
 	include->path = git_buf_detach(&path);
