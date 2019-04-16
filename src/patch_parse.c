@@ -328,7 +328,8 @@ static int parse_header_start(git_patch_parsed *patch, git_patch_parse_ctx *ctx)
 	 * proceeed here. We then hope for the "---" and "+++" lines to fix that
 	 * for us.
 	 */
-	if (!git_parse_ctx_contains(&ctx->parse_ctx, "\n", 1)) {
+	if (!git_parse_ctx_contains(&ctx->parse_ctx, "\n", 1) &&
+	    !git_parse_ctx_contains(&ctx->parse_ctx, "\r\n", 2)) {
 		git_parse_advance_chars(&ctx->parse_ctx, ctx->parse_ctx.line_len - 1);
 
 		git__free(patch->header_old_path);
