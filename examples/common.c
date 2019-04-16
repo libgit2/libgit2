@@ -330,12 +330,12 @@ error:
 	return error;
 }
 
-static int ask(char **out, const char *prompt)
+static int ask(char **out, const char *prompt, char optional)
 {
 	printf("%s ", prompt);
 	fflush(stdout);
 
-	if (!readline(out)) {
+	if (!readline(out) && !optional) {
 		fprintf(stderr, "Could not read response: %s", strerror(errno));
 		return -1;
 	}
@@ -359,9 +359,9 @@ int cred_acquire_cb(git_cred **out,
 	if (allowed_types & GIT_CREDTYPE_SSH_KEY) {
 		int n;
 
-		if ((error = ask(&username, "Username:")) < 0 ||
-		    (error = ask(&privkey, "SSH Key:")) < 0 ||
-		    (error = ask(&password, "Password:")) < 0)
+		if ((error = ask(&username, "Username:", 0)) < 0 ||
+		    (error = ask(&privkey, "SSH Key:", 0)) < 0 ||
+		    (error = ask(&password, "Password:", 1)) < 0)
 			goto out;
 
 		if ((n = snprintf(NULL, 0, "%s.pub", privkey)) < 0 ||
@@ -371,13 +371,13 @@ int cred_acquire_cb(git_cred **out,
 
 		error = git_cred_ssh_key_new(out, username, pubkey, privkey, password);
 	} else if (allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT) {
-		if ((error = ask(&username, "Username:")) < 0 ||
-		    (error = ask(&password, "Password:")) < 0)
+		if ((error = ask(&username, "Username:", 0)) < 0 ||
+		    (error = ask(&password, "Password:", 1)) < 0)
 			goto out;
 
 		error = git_cred_userpass_plaintext_new(out, username, password);
 	} else if (allowed_types & GIT_CREDTYPE_USERNAME) {
-		if ((error = ask(&username, "Username:")) < 0)
+		if ((error = ask(&username, "Username:", 0)) < 0)
 			goto out;
 
 		error = git_cred_username_new(out, username);
