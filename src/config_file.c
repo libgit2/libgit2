@@ -227,9 +227,9 @@ static void backend_free(git_config_backend *_backend)
 
 static int config_iterator_new(
 	git_config_iterator **iter,
-	struct git_config_backend* backend)
+	struct git_config_backend *backend)
 {
-	diskfile_header *bh = (diskfile_header *) backend;
+	diskfile_header *bh = GIT_CONTAINER_OF(backend, diskfile_header, parent);
 	git_config_entries *entries;
 	int error;
 
