@@ -353,14 +353,19 @@ int cred_acquire_cb(git_cred **out,
 	int error = 1;
 
 	UNUSED(url);
-	UNUSED(username_from_url);
 	UNUSED(payload);
+
+	if (username_from_url) {
+		if ((username = strdup(username_from_url)) == NULL)
+			goto out;
+	} else if ((error = ask(&username, "Username:", 0)) < 0) {
+		goto out;
+	}
 
 	if (allowed_types & GIT_CREDTYPE_SSH_KEY) {
 		int n;
 
-		if ((error = ask(&username, "Username:", 0)) < 0 ||
-		    (error = ask(&privkey, "SSH Key:", 0)) < 0 ||
+		if ((error = ask(&privkey, "SSH Key:", 0)) < 0 ||
 		    (error = ask(&password, "Password:", 1)) < 0)
 			goto out;
 
@@ -371,15 +376,11 @@ int cred_acquire_cb(git_cred **out,
 
 		error = git_cred_ssh_key_new(out, username, pubkey, privkey, password);
 	} else if (allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT) {
-		if ((error = ask(&username, "Username:", 0)) < 0 ||
-		    (error = ask(&password, "Password:", 1)) < 0)
+		if ((error = ask(&password, "Password:", 1)) < 0)
 			goto out;
 
 		error = git_cred_userpass_plaintext_new(out, username, password);
 	} else if (allowed_types & GIT_CREDTYPE_USERNAME) {
-		if ((error = ask(&username, "Username:", 0)) < 0)
-			goto out;
-
 		error = git_cred_username_new(out, username);
 	}
 
