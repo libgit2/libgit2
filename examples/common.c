@@ -330,6 +330,19 @@ error:
 	return error;
 }
 
+static int ask(char **out, const char *prompt)
+{
+	printf("%s ", prompt);
+	fflush(stdout);
+
+	if (!readline(out)) {
+		fprintf(stderr, "Could not read response: %s", strerror(errno));
+		return -1;
+	}
+
+	return 0;
+}
+
 int cred_acquire_cb(git_cred **out,
 		const char *url,
 		const char *username_from_url,
@@ -337,31 +350,22 @@ int cred_acquire_cb(git_cred **out,
 		void *payload)
 {
 	char *username = NULL, *password = NULL;
-	int error;
+	int error = 1;
 
 	UNUSED(url);
 	UNUSED(username_from_url);
-	UNUSED(allowed_types);
 	UNUSED(payload);
 
-	printf("Username: ");
-	if (readline(&username) < 0) {
-		fprintf(stderr, "Unable to read username: %s", strerror(errno));
-		return -1;
+	if (allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT) {
+		if ((error = ask(&username, "Username:")) < 0 ||
+		    (error = ask(&password, "Password:")) < 0)
+			goto out;
+
+		error = git_cred_userpass_plaintext_new(out, username, password);
 	}
 
-	/* Yup. Right there on your terminal. Careful where you copy/paste output. */
-	printf("Password: ");
-	if (readline(&password) < 0) {
-		fprintf(stderr, "Unable to read password: %s", strerror(errno));
-		free(username);
-		return -1;
-	}
-
-	error = git_cred_userpass_plaintext_new(out, username, password);
-
+out:
 	free(username);
 	free(password);
-
 	return error;
 }
