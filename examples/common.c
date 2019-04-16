@@ -362,6 +362,11 @@ int cred_acquire_cb(git_cred **out,
 			goto out;
 
 		error = git_cred_userpass_plaintext_new(out, username, password);
+	} else if (allowed_types & GIT_CREDTYPE_USERNAME) {
+		if ((error = ask(&username, "Username:")) < 0)
+			goto out;
+
+		error = git_cred_username_new(out, username);
 	}
 
 out:
