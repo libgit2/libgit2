@@ -132,7 +132,7 @@ static int ssh_stream_read(
 	size_t *bytes_read)
 {
 	int rc;
-	ssh_stream *s = (ssh_stream *)stream;
+	ssh_stream *s = GIT_CONTAINER_OF(stream, ssh_stream, parent);
 
 	*bytes_read = 0;
 
@@ -170,7 +170,7 @@ static int ssh_stream_write(
 	const char *buffer,
 	size_t len)
 {
-	ssh_stream *s = (ssh_stream *)stream;
+	ssh_stream *s = GIT_CONTAINER_OF(stream, ssh_stream, parent);
 	size_t off = 0;
 	ssize_t ret = 0;
 
@@ -196,7 +196,7 @@ static int ssh_stream_write(
 
 static void ssh_stream_free(git_smart_subtransport_stream *stream)
 {
-	ssh_stream *s = (ssh_stream *)stream;
+	ssh_stream *s = GIT_CONTAINER_OF(stream, ssh_stream, parent);
 	ssh_subtransport *t;
 
 	if (!stream)
@@ -479,7 +479,7 @@ static int _git_ssh_session_create(
 {
 	int rc = 0;
 	LIBSSH2_SESSION* s;
-	git_socket_stream *socket = (git_socket_stream *) io;
+	git_socket_stream *socket = GIT_CONTAINER_OF(io, git_socket_stream, parent);
 
 	assert(session);
 
@@ -730,7 +730,7 @@ static int _ssh_action(
 	const char *url,
 	git_smart_service_t action)
 {
-	ssh_subtransport *t = (ssh_subtransport *) subtransport;
+	ssh_subtransport *t = GIT_CONTAINER_OF(subtransport, ssh_subtransport, parent);
 
 	switch (action) {
 		case GIT_SERVICE_UPLOADPACK_LS:
@@ -752,7 +752,7 @@ static int _ssh_action(
 
 static int _ssh_close(git_smart_subtransport *subtransport)
 {
-	ssh_subtransport *t = (ssh_subtransport *) subtransport;
+	ssh_subtransport *t = GIT_CONTAINER_OF(subtransport, ssh_subtransport, parent);
 
 	assert(!t->current_stream);
 
@@ -763,7 +763,7 @@ static int _ssh_close(git_smart_subtransport *subtransport)
 
 static void _ssh_free(git_smart_subtransport *subtransport)
 {
-	ssh_subtransport *t = (ssh_subtransport *) subtransport;
+	ssh_subtransport *t = GIT_CONTAINER_OF(subtransport, ssh_subtransport, parent);
 
 	assert(!t->current_stream);
 

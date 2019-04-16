@@ -63,7 +63,7 @@ static int git_smart__set_callbacks(
 	git_transport_certificate_check_cb certificate_check_cb,
 	void *message_cb_payload)
 {
-	transport_smart *t = (transport_smart *)transport;
+	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
 
 	t->progress_cb = progress_cb;
 	t->error_cb = error_cb;
@@ -128,7 +128,7 @@ static int git_smart__set_custom_headers(
 	git_transport *transport,
 	const git_strarray *custom_headers)
 {
-	transport_smart *t = (transport_smart *)transport;
+	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
 	size_t i;
 
 	if (t->custom_headers.count)
@@ -212,7 +212,7 @@ static int git_smart__connect(
 	int direction,
 	int flags)
 {
-	transport_smart *t = (transport_smart *)transport;
+	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
 	git_smart_subtransport_stream *stream;
 	int error;
 	git_pkt *pkt;
@@ -315,7 +315,7 @@ cleanup:
 
 static int git_smart__ls(const git_remote_head ***out, size_t *size, git_transport *transport)
 {
-	transport_smart *t = (transport_smart *)transport;
+	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
 
 	if (!t->have_refs) {
 		git_error_set(GIT_ERROR_NET, "the transport has not yet loaded the refs");
@@ -330,7 +330,7 @@ static int git_smart__ls(const git_remote_head ***out, size_t *size, git_transpo
 
 int git_smart__negotiation_step(git_transport *transport, void *data, size_t len)
 {
-	transport_smart *t = (transport_smart *)transport;
+	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
 	git_smart_subtransport_stream *stream;
 	int error;
 
@@ -387,21 +387,21 @@ int git_smart__get_push_stream(transport_smart *t, git_smart_subtransport_stream
 
 static void git_smart__cancel(git_transport *transport)
 {
-	transport_smart *t = (transport_smart *)transport;
+	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
 
 	git_atomic_set(&t->cancelled, 1);
 }
 
 static int git_smart__is_connected(git_transport *transport)
 {
-	transport_smart *t = (transport_smart *)transport;
+	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
 
 	return t->connected;
 }
 
 static int git_smart__read_flags(git_transport *transport, int *flags)
 {
-	transport_smart *t = (transport_smart *)transport;
+	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
 
 	*flags = t->flags;
 
@@ -410,7 +410,7 @@ static int git_smart__read_flags(git_transport *transport, int *flags)
 
 static int git_smart__close(git_transport *transport)
 {
-	transport_smart *t = (transport_smart *)transport;
+	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
 	git_vector *common = &t->common;
 	unsigned int i;
 	git_pkt *p;
@@ -447,7 +447,7 @@ static int git_smart__close(git_transport *transport)
 
 static void git_smart__free(git_transport *transport)
 {
-	transport_smart *t = (transport_smart *)transport;
+	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
 	git_vector *refs = &t->refs;
 	unsigned int i;
 	git_pkt *p;
@@ -479,7 +479,7 @@ static int ref_name_cmp(const void *a, const void *b)
 
 int git_transport_smart_certificate_check(git_transport *transport, git_cert *cert, int valid, const char *hostname)
 {
-	transport_smart *t = (transport_smart *)transport;
+	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
 
 	assert(transport && cert && hostname);
 
@@ -491,7 +491,7 @@ int git_transport_smart_certificate_check(git_transport *transport, git_cert *ce
 
 int git_transport_smart_credentials(git_cred **out, git_transport *transport, const char *user, int methods)
 {
-	transport_smart *t = (transport_smart *)transport;
+	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
 
 	assert(out && transport);
 
@@ -503,7 +503,7 @@ int git_transport_smart_credentials(git_cred **out, git_transport *transport, co
 
 int git_transport_smart_proxy_options(git_proxy_options *out, git_transport *transport)
 {
-	transport_smart *t = (transport_smart *) transport;
+	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
 	return git_proxy_options_dup(out, &t->proxy);
 }
 
