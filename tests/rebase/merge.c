@@ -44,6 +44,10 @@ void test_rebase_merge__next(void)
 	git_status_list *status_list;
 	const git_status_entry *status_entry;
 	git_oid pick_id, file1_id;
+	git_oid master_id, beef_id;
+
+	git_oid_fromstr(&master_id, "efad0b11c47cb2f0220cbd6f5b0f93bb99064b00");
+	git_oid_fromstr(&beef_id, "b146bd7608eac53d9bf9e1a6963543588b555c64");
 
 	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/beef"));
 	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/master"));
@@ -52,6 +56,12 @@ void test_rebase_merge__next(void)
 	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
 
 	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, NULL));
+
+	cl_assert_equal_s("refs/heads/beef", git_rebase_orig_head_name(rebase));
+	cl_assert_equal_oid(&beef_id, git_rebase_orig_head_id(rebase));
+
+	cl_assert_equal_s("master", git_rebase_onto_name(rebase));
+	cl_assert_equal_oid(&master_id, git_rebase_onto_id(rebase));
 
 	cl_git_pass(git_rebase_next(&rebase_operation, rebase));
 

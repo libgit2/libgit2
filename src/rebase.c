@@ -1327,6 +1327,22 @@ int git_rebase_finish(
 	return error;
 }
 
+const char *git_rebase_orig_head_name(git_rebase *rebase) {
+	return rebase->orig_head_name;
+}
+
+const git_oid *git_rebase_orig_head_id(git_rebase *rebase) {
+	return &rebase->orig_head_id;
+}
+
+const char *git_rebase_onto_name(git_rebase *rebase) {
+	return rebase->onto_name;
+}
+
+const git_oid *git_rebase_onto_id(git_rebase *rebase) {
+	return &rebase->onto_id;
+}
+
 size_t git_rebase_operation_entrycount(git_rebase *rebase)
 {
 	assert(rebase);
