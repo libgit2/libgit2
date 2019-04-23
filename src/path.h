@@ -482,6 +482,7 @@ struct git_path_diriter
 {
 	git_buf path;
 	size_t parent_len;
+	unsigned char d_type;
 
 	unsigned int flags;
 
