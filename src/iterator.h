@@ -77,6 +77,7 @@ typedef struct {
 		const git_index_entry **, git_iterator_status_t *, git_iterator *);
 	int (*reset)(git_iterator *);
 	void (*free)(git_iterator *);
+	int (*get_perf)(git_perfdata *out, const git_iterator *);
 } git_iterator_callbacks;
 
 struct git_iterator {
@@ -100,7 +101,6 @@ struct git_iterator {
 	int (*strncomp)(const char *a, const char *b, size_t n);
 	int (*prefixcomp)(const char *str, const char *prefix);
 	int (*entry_srch)(const void *key, const void *array_member);
-	size_t stat_calls;
 	unsigned int flags;
 };
 
@@ -320,5 +320,7 @@ extern int git_iterator_walk(
 	size_t cnt,
 	git_iterator_walk_cb cb,
 	void *data);
+
+int git_iterator_get_perfdata(git_perfdata *out, const git_iterator *iter);
 
 #endif

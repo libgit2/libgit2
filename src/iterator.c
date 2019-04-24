@@ -165,7 +165,6 @@ static void iterator_clear(git_iterator *iter)
 {
 	iter->started = false;
 	iter->ended = false;
-	iter->stat_calls = 0;
 	iter->pathlist_walk_idx = 0;
 	iter->flags &= ~GIT_ITERATOR_FIRST_ACCESS;
 }
@@ -1024,6 +1023,8 @@ typedef struct {
 	char *root;
 	size_t root_len;
 
+	git_perfdata perf;
+
 	unsigned int dirload_flags;
 
 	git_tree *tree;
@@ -1415,7 +1416,7 @@ static int filesystem_iterator_frame_push(
 			error = 0;
 		}
 
-		iter->base.stat_calls++;
+		iter->perf.stat_calls++;
 
 		/* Ignore wacky things in the filesystem */
 		if (!S_ISDIR(statbuf.st_mode) &&
@@ -1900,6 +1901,17 @@ static void filesystem_iterator_free(git_iterator *i)
 	filesystem_iterator_clear(iter);
 }
 
+static int filesystem_iterator_get_perfdata(git_perfdata *out, const git_iterator *i)
+{
+	filesystem_iterator *iter = (filesystem_iterator *)i;
+	assert(out && iter);
+
+	GIT_ERROR_CHECK_VERSION(out, GIT_PERFDATA_VERSION, "git_perfdata");
+	git_perfdata_merge(out, &iter->perf);
+
+	return 0;
+}
+
 static int iterator_for_filesystem(
 	git_iterator **out,
 	git_repository *repo,
@@ -1919,7 +1931,8 @@ static int iterator_for_filesystem(
 		filesystem_iterator_advance_into,
 		filesystem_iterator_advance_over,
 		filesystem_iterator_reset,
-		filesystem_iterator_free
+		filesystem_iterator_free,
+		filesystem_iterator_get_perfdata,
 	};
 
 	*out = NULL;
@@ -2427,4 +2440,13 @@ done:
 		error = 0;
 
 	return error;
+}
+
+int git_iterator_get_perfdata(git_perfdata *out, const git_iterator *iter)
+{
+	assert(out && iter);
+	GIT_ERROR_CHECK_VERSION(out, GIT_PERFDATA_VERSION, "git_perfdata");
+	if (iter->cb->get_perf)
+		return iter->cb->get_perf(out, iter);
+	return 0;
 }

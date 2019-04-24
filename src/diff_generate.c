@@ -420,6 +420,7 @@ static git_diff_generated *diff_generated_alloc(
 	diff->base.new_src = new_iter->type;
 	diff->base.patch_fn = git_patch_generated_from_diff;
 	diff->base.free_fn = diff_generated_free;
+	git_perfdata_init(&diff->base.perf);
 	git_attr_session__init(&diff->base.attrsession, repo);
 	memcpy(&diff->base.opts, &dflt, sizeof(git_diff_options));
 
@@ -1261,8 +1262,7 @@ int git_diff__from_iterators(
 			error = handle_matched_item(diff, &info);
 	}
 
-	diff->base.perf.stat_calls +=
-		old_iter->stat_calls + new_iter->stat_calls;
+	git_iterator_get_perfdata(&diff->base.perf, new_iter);
 
 cleanup:
 	if (!error)
@@ -1292,8 +1292,11 @@ cleanup:
 		b_opts.pathlist.strings = opts->pathspec.strings; \
 		b_opts.pathlist.count = opts->pathspec.count; \
 	} \
-	if (!error && !(error = MAKE_FIRST) && !(error = MAKE_SECOND)) \
+	if (!error && !(error = MAKE_FIRST) && !(error = MAKE_SECOND)) { \
 		error = git_diff__from_iterators(&diff, repo, a, b, opts); \
+		git_iterator_get_perfdata(&diff->perf, a); \
+		git_iterator_get_perfdata(&diff->perf, b); \
+	} \
 	git__free(pfx); git_iterator_free(a); git_iterator_free(b); \
 } while (0)
 

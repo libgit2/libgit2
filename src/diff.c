@@ -115,8 +115,7 @@ int git_diff_get_perfdata(git_diff_perfdata *out, const git_diff *diff)
 {
 	assert(out);
 	GIT_ERROR_CHECK_VERSION(out, GIT_DIFF_PERFDATA_VERSION, "git_diff_perfdata");
-	out->stat_calls = diff->perf.stat_calls;
-	out->oid_calculations = diff->perf.oid_calculations;
+	git_perfdata_merge(out, &diff->perf);
 	return 0;
 }
 

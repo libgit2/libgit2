@@ -411,6 +411,23 @@ struct git_writestream {
 /** Representation of .mailmap file state. */
 typedef struct git_mailmap git_mailmap;
 
+/**
+ * Performance data from the library.
+ *
+ * Note that there's no guarantee that those counters are accurate.
+ */
+typedef struct {
+	unsigned int version;
+
+	size_t mkdir_calls;
+	size_t stat_calls;
+	size_t chmod_calls;
+	size_t oid_calculations;
+} git_perfdata;
+
+#define GIT_PERFDATA_VERSION 2
+#define GIT_PERFDATA_INIT {GIT_PERFDATA_VERSION,0,0}
+
 /** @} */
 GIT_END_DECL
 
