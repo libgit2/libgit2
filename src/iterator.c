@@ -1908,6 +1908,7 @@ static int filesystem_iterator_get_perfdata(git_perfdata *out, const git_iterato
 
 	GIT_ERROR_CHECK_VERSION(out, GIT_PERFDATA_VERSION, "git_perfdata");
 	git_perfdata_merge(out, &iter->perf);
+	git_perfdata_merge(out, &iter->ignores.perf);
 
 	return 0;
 }

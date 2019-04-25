@@ -430,6 +430,7 @@ GIT_INLINE(void) git_perfdata_merge(git_perfdata *data, const git_perfdata *othe
 	data->stat_calls += other->stat_calls;
 	data->chmod_calls += other->chmod_calls;
 	data->oid_calculations += other->oid_calculations;
+	data->ignore_files_parsed += other->ignore_files_parsed;
 }
 
 #endif

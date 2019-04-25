@@ -4,6 +4,8 @@
 #include "ignore.h"
 #include "attr.h"
 #include "status/status_helpers.h"
+#include "diff.h"
+#include "status.h"
 
 static git_repository *g_repo = NULL;
 
@@ -1289,4 +1291,49 @@ void test_ignore_status__leading_spaces_are_significant(void)
 	assert_is_ignored("\tc.test");
 	assert_is_ignored(" # not a comment");
 	assert_is_ignored("d.test");
+}
+
+void test_ignore_status__status_list_perf_stat(void)
+{
+	git_status_list *list;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	git_checkout_options co_opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_reference *head_ref;
+	git_object *target;
+
+	opts.flags = GIT_STATUS_OPT_INCLUDE_IGNORED;
+	co_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	/*
+	 * To check that this works as expected you can run status on a clean
+	 * repository and verify that no .gitignore files get read or parsed.
+	 */
+
+	g_repo = cl_git_sandbox_init("status");
+
+	cl_git_pass(git_repository_head(&head_ref, g_repo));
+	cl_git_pass(git_object_lookup(&target, g_repo, git_reference_target(head_ref), GIT_OBJECT_COMMIT));
+	cl_git_pass(git_reset(g_repo, (git_object *)target, GIT_RESET_HARD, &co_opts));
+
+	cl_git_pass(git_status_list_new(&list, g_repo, &opts));
+	cl_assert_equal_i(0, list->head2idx->perf.stat_calls);
+	cl_assert_equal_i(36, list->idx2wd->perf.stat_calls);
+	cl_assert_equal_i(6, list->idx2wd->perf.ignore_files_parsed);
+
+	git_status_list_free(list);
+	/*
+	 * If you touch a file under foo/bar/, then status should read and parse
+	 * .gitignore from the root, foo/ and bar/ and nowhere else.
+	 */
+	cl_git_pass(git_futils_mkdir_r("status/foo/bar", S_IRWXU));
+	cl_git_mkfile("status/foo/.gitignore", "");
+	cl_git_mkfile("status/foo/bar/zoink", "");
+	cl_git_mkfile("status/subdir/modified_file", "");
+
+	cl_git_pass(git_status_list_new(&list, g_repo, &opts));
+	cl_assert_equal_i(0, list->head2idx->perf.stat_calls);
+	cl_assert_equal_i(38, list->idx2wd->perf.stat_calls);
+	cl_assert_equal_i(6, list->idx2wd->perf.ignore_files_parsed);
+
+	git_status_list_free(list);
 }

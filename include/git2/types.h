@@ -423,6 +423,7 @@ typedef struct {
 	size_t stat_calls;
 	size_t chmod_calls;
 	size_t oid_calculations;
+	size_t ignore_files_parsed;
 } git_perfdata;
 
 #define GIT_PERFDATA_VERSION 2
