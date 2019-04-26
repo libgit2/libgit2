@@ -686,7 +686,7 @@ static int git_remote__urlresolve(char **resolved_url, const char *url, int dire
 	*resolved_url = git__strdup(url);
 	GIT_ERROR_CHECK_ALLOC(*resolved_url);
 
-	return GIT_OK;
+	return 0;
 }
 
 int git_remote__urlfordirection(char **url_out, struct git_remote *remote, int direction, const git_remote_callbacks *callbacks)
