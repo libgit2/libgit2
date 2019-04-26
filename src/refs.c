@@ -897,14 +897,13 @@ static int is_valid_ref_char(char ch)
 	case '\\':
 	case '?':
 	case '[':
-	case '*':
 		return 0;
 	default:
 		return 1;
 	}
 }
 
-static int ensure_segment_validity(const char *name)
+static int ensure_segment_validity(const char *name, char may_contain_glob)
 {
 	const char *current = name;
 	char prev = '\0';
@@ -926,6 +925,12 @@ static int ensure_segment_validity(const char *name)
 
 		if (prev == '@' && *current == '{')
 			return -1; /* Refname contains "@{" */
+
+		if (*current == '*') {
+			if (!may_contain_glob)
+				return -1;
+			may_contain_glob = 0;
+		}
 
 		prev = *current;
 	}
@@ -1005,19 +1010,20 @@ int git_reference__normalize_name(
 	}
 
 	while (true) {
-		segment_len = ensure_segment_validity(current);
-		if (segment_len < 0) {
-			if ((process_flags & GIT_REFERENCE_FORMAT_REFSPEC_PATTERN) &&
-					current[0] == '*' &&
-					(current[1] == '\0' || current[1] == '/')) {
-				/* Accept one wildcard as a full refname component. */
-				process_flags &= ~GIT_REFERENCE_FORMAT_REFSPEC_PATTERN;
-				segment_len = 1;
-			} else
-				goto cleanup;
-		}
+		char may_contain_glob = process_flags & GIT_REFERENCE_FORMAT_REFSPEC_PATTERN;
+
+		segment_len = ensure_segment_validity(current, may_contain_glob);
+		if (segment_len < 0)
+			goto cleanup;
 
 		if (segment_len > 0) {
+			/*
+			 * There may only be one glob in a pattern, thus we reset
+			 * the pattern-flag in case the current segment has one.
+			 */
+			if (memchr(current, '*', segment_len))
+				process_flags &= ~GIT_REFERENCE_FORMAT_REFSPEC_PATTERN;
+
 			if (normalize) {
 				size_t cur_len = git_buf_len(buf);
 

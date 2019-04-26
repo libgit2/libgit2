@@ -70,14 +70,17 @@ void test_network_refspecs__parsing(void)
 	assert_refspec(GIT_DIRECTION_PUSH, ":refs/remotes/frotz/delete me", false);
 	assert_refspec(GIT_DIRECTION_FETCH, ":refs/remotes/frotz/HEAD to me", false);
 
-	assert_refspec(GIT_DIRECTION_FETCH, "refs/heads/*/for-linus:refs/remotes/mine/*-blah", false);
-	assert_refspec(GIT_DIRECTION_PUSH, "refs/heads/*/for-linus:refs/remotes/mine/*-blah", false);
+	assert_refspec(GIT_DIRECTION_FETCH, "refs/heads/*/for-linus:refs/remotes/mine/*-blah", true);
+	assert_refspec(GIT_DIRECTION_PUSH, "refs/heads/*/for-linus:refs/remotes/mine/*-blah", true);
 
-	assert_refspec(GIT_DIRECTION_FETCH, "refs/heads*/for-linus:refs/remotes/mine/*", false);
-	assert_refspec(GIT_DIRECTION_PUSH, "refs/heads*/for-linus:refs/remotes/mine/*", false);
+	assert_refspec(GIT_DIRECTION_FETCH, "refs/heads*/for-linus:refs/remotes/mine/*", true);
+	assert_refspec(GIT_DIRECTION_PUSH, "refs/heads*/for-linus:refs/remotes/mine/*", true);
 
 	assert_refspec(GIT_DIRECTION_FETCH, "refs/heads/*/*/for-linus:refs/remotes/mine/*", false);
 	assert_refspec(GIT_DIRECTION_PUSH, "refs/heads/*/*/for-linus:refs/remotes/mine/*", false);
+
+	assert_refspec(GIT_DIRECTION_FETCH, "refs/heads/*g*/for-linus:refs/remotes/mine/*", false);
+	assert_refspec(GIT_DIRECTION_PUSH, "refs/heads/*g*/for-linus:refs/remotes/mine/*", false);
 
 	assert_refspec(GIT_DIRECTION_FETCH, "refs/heads/*/for-linus:refs/remotes/mine/*", true);
 	assert_refspec(GIT_DIRECTION_PUSH, "refs/heads/*/for-linus:refs/remotes/mine/*", true);
@@ -109,6 +112,12 @@ void test_network_refspecs__transform_mid_star(void)
 	assert_valid_transform("refs/heads/*:refs/heads/*", "refs/heads/master", "refs/heads/master");
 	assert_valid_transform("refs/heads/*:refs/heads/*", "refs/heads/user/feature", "refs/heads/user/feature");
 	assert_valid_transform("refs/*:refs/*", "refs/heads/master", "refs/heads/master");
+}
+
+void test_network_refspecs__transform_loosened_star(void)
+{
+	assert_valid_transform("refs/heads/branch-*:refs/remotes/origin/branch-*", "refs/heads/branch-a", "refs/remotes/origin/branch-a");
+	assert_valid_transform("refs/heads/branch-*/head:refs/remotes/origin/branch-*/head", "refs/heads/branch-a/head", "refs/remotes/origin/branch-a/head");
 }
 
 void test_network_refspecs__no_dst(void)
