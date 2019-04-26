@@ -26,6 +26,11 @@
 #endif
 #endif
 
+#ifdef _MSC_VER
+#define snprintf sprintf_s
+#define strcasecmp strcmpi
+#endif
+
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(*x))
 #define UNUSED(x) (void)(x)
 

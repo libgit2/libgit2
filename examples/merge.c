@@ -15,10 +15,6 @@
 #include "common.h"
 #include <assert.h>
 
-#ifdef _MSC_VER
-#define snprintf sprintf_s
-#endif
-
 /** The following example demonstrates how to do merges with libgit2.
  *
  * It will merge whatever commit-ish you pass in into the current branch.
