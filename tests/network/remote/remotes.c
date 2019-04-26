@@ -102,10 +102,10 @@ void test_network_remote_remotes__urlresolve(void)
 
 static int test_network_remote_remotes__urlresolve_passthrough_callback(char **url_resolved, const char *url, int direction, void *payload)
 {
-	#pragma unused(url_resolved)
-	#pragma unused(url)
-	#pragma unused(direction)
-	#pragma unused(payload)
+	GIT_UNUSED(url_resolved);
+	GIT_UNUSED(url);
+	GIT_UNUSED(direction);
+	GIT_UNUSED(payload);
 	return GIT_PASSTHROUGH;
 }
 
