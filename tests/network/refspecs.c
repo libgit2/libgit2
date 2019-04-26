@@ -93,7 +93,7 @@ static void assert_valid_transform(const char *refspec, const char *name, const 
 	git_refspec spec;
 	git_buf buf = GIT_BUF_INIT;
 
-	git_refspec__parse(&spec, refspec, true);
+	cl_git_pass(git_refspec__parse(&spec, refspec, true));
 	cl_git_pass(git_refspec_transform(&buf, &spec, name));
 	cl_assert_equal_s(result, buf.ptr);
 
