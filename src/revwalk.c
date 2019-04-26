@@ -194,6 +194,12 @@ int git_revwalk_push_range(git_revwalk *walk, const char *range)
 	if ((error = git_revparse(&revspec, walk->repo, range)))
 		return error;
 
+	if (!revspec.to) {
+		git_error_set(GIT_ERROR_INVALID, "invalid revspec. Only range supported.");
+		error = GIT_EINVALIDSPEC;
+		goto out;
+	}
+
 	if (revspec.flags & GIT_REVPARSE_MERGE_BASE) {
 		/* TODO: support "<commit>...<commit>" */
 		git_error_set(GIT_ERROR_INVALID, "symmetric differences not implemented in revwalk");
