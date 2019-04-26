@@ -45,7 +45,7 @@ typedef struct git_remote_connection_opts {
 
 int git_remote__connect(git_remote *remote, git_direction direction, const git_remote_callbacks *callbacks, const git_remote_connection_opts *conn);
 
-int git_remote__urlfordirection(struct git_remote *remote, int direction, const git_remote_callbacks *callbacks, char **url_out);
+int git_remote__urlfordirection(char **url_out, struct git_remote *remote, int direction, const git_remote_callbacks *callbacks);
 int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_url);
 
 git_refspec *git_remote__matching_refspec(git_remote *remote, const char *refname);

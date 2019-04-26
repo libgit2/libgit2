@@ -670,31 +670,39 @@ int git_remote_set_pushurl(git_repository *repo, const char *remote, const char*
 	return set_url(repo, remote, CONFIG_PUSHURL_FMT, url);
 }
 
-static int git_remote__urlresolve(const char *url, char **resolved_url, int direction, const git_remote_callbacks *callbacks)
+static int git_remote__urlresolve(char **resolved_url, const char *url, int direction, const git_remote_callbacks *callbacks)
 {
+	int status;
+
+	if (!url)
+		return -1;
+
 	if (callbacks && callbacks->resolve_url) {
-		return callbacks->resolve_url(url, resolved_url, direction, callbacks->payload);
+		status = callbacks->resolve_url(resolved_url, url, direction, callbacks->payload);
+		if (status != GIT_PASSTHROUGH)
+			return status;
 	}
 
 	*resolved_url = url ? git__strdup(url) : NULL;
 
+	GIT_ERROR_CHECK_ALLOC(*resolved_url);
+
 	return GIT_OK;
 }
 
-int git_remote__urlfordirection(struct git_remote *remote, int direction, const git_remote_callbacks *callbacks, char **url_out)
+int git_remote__urlfordirection(char **url_out, struct git_remote *remote, int direction, const git_remote_callbacks *callbacks)
 {
 	assert(remote);
 	assert(direction == GIT_DIRECTION_FETCH || direction == GIT_DIRECTION_PUSH);
 
 	if (direction == GIT_DIRECTION_FETCH) {
-		return git_remote__urlresolve(remote->url, url_out, direction, callbacks);
+		return git_remote__urlresolve(url_out, remote->url, direction, callbacks);
 	}
 
 	if (direction == GIT_DIRECTION_PUSH) {
-		return git_remote__urlresolve(remote->pushurl ? remote->pushurl : remote->url, url_out, direction, callbacks);
+		return git_remote__urlresolve(url_out, remote->pushurl ? remote->pushurl : remote->url, direction, callbacks);
 	}
 
-	/* unreachable */
 	return GIT_EINVALID;
 }
 
@@ -739,15 +747,11 @@ int git_remote__connect(git_remote *remote, git_direction direction, const git_r
 
 	t = remote->transport;
 
-	if ((error = git_remote__urlfordirection(remote, direction, callbacks, &url)) != 0)
-		goto on_error;
-
-	if (url == NULL) {
+	if ((error = git_remote__urlfordirection(&url, remote, direction, callbacks))) {
 		git_error_set(GIT_ERROR_INVALID,
 			"Malformed remote '%s' - missing %s URL",
 			remote->name ? remote->name : "(anonymous)",
 			direction == GIT_DIRECTION_FETCH ? "fetch" : "push");
-		error = -1;
 		goto on_error;
 	}
 
@@ -779,8 +783,7 @@ on_error:
 	if (t)
 		t->free(t);
 
-	if (url)
-		free(url);
+	free(url);
 
 	if (t == remote->transport)
 		remote->transport = NULL;
