@@ -120,6 +120,11 @@ void test_network_refspecs__transform_loosened_star(void)
 	assert_valid_transform("refs/heads/branch-*/head:refs/remotes/origin/branch-*/head", "refs/heads/branch-a/head", "refs/remotes/origin/branch-a/head");
 }
 
+void test_network_refspecs__transform_nested_star(void)
+{
+	assert_valid_transform("refs/heads/x*x/for-linus:refs/remotes/mine/*", "refs/heads/xbranchx/for-linus", "refs/remotes/mine/branch");
+}
+
 void test_network_refspecs__no_dst(void)
 {
 	assert_valid_transform("refs/heads/master:", "refs/heads/master", "");
