@@ -683,8 +683,7 @@ static int git_remote__urlresolve(char **resolved_url, const char *url, int dire
 			return status;
 	}
 
-	*resolved_url = url ? git__strdup(url) : NULL;
-
+	*resolved_url = git__strdup(url);
 	GIT_ERROR_CHECK_ALLOC(*resolved_url);
 
 	return GIT_OK;
