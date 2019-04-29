@@ -478,7 +478,7 @@ typedef int GIT_CALLBACK(git_push_update_reference_cb)(const char *refname, cons
  * Callback to resolve URLs before connecting to remote
  *
  * @param url_resolved The buffer to write the resolved URL to.
- *                     If GIT_PASSTHROUGH is returned, it is not required to write to the buffer.
+ *                     If GIT_PASSTHROUGH is returned, writing to the buffer it is not required.
  * @param url The URL to resolve
  * @param direction GIT_DIRECTION_FETCH or GIT_DIRECTION_PUSH
  * @param payload The callback payload
