@@ -67,12 +67,12 @@ static int urlresolve_callback(char **url_resolved, const char *url, int directi
 {
 	const char *url_out;
 
-	cl_assert(git__strcmp(url, "git://github.com/libgit2/libgit2") == 0);
-	cl_assert(git__strcmp(payload, "payload") == 0);
+	cl_assert(strcmp(url, "git://github.com/libgit2/libgit2") == 0);
+	cl_assert(strcmp(payload, "payload") == 0);
 
 	url_out = (direction == GIT_DIRECTION_PUSH) ? "pushresolve" : "fetchresolve";
 
-	*url_resolved = git__strdup(url_out);
+	*url_resolved = strdup(url_out);
 
 	return GIT_OK;
 }
