@@ -1144,7 +1144,7 @@ static int http_stream_write_chunked(
 	const char *buffer,
 	size_t len)
 {
-	http_stream *s = (http_stream *)stream;
+	http_stream *s = GIT_CONTAINER_OF(stream, http_stream, parent);
 	http_subtransport *t = OWNING_SUBTRANSPORT(s);
 
 	assert(t->connected);
@@ -1218,7 +1218,7 @@ static int http_stream_write_single(
 	const char *buffer,
 	size_t len)
 {
-	http_stream *s = (http_stream *)stream;
+	http_stream *s = GIT_CONTAINER_OF(stream, http_stream, parent);
 	http_subtransport *t = OWNING_SUBTRANSPORT(s);
 	git_buf request = GIT_BUF_INIT;
 
@@ -1252,7 +1252,7 @@ on_error:
 
 static void http_stream_free(git_smart_subtransport_stream *stream)
 {
-	http_stream *s = (http_stream *)stream;
+	http_stream *s = GIT_CONTAINER_OF(stream, http_stream, parent);
 
 	if (s->chunk_buffer)
 		git__free(s->chunk_buffer);
@@ -1365,7 +1365,7 @@ static int http_action(
 	const char *url,
 	git_smart_service_t action)
 {
-	http_subtransport *t = (http_subtransport *)subtransport;
+	http_subtransport *t = GIT_CONTAINER_OF(subtransport, http_subtransport, parent);
 	int ret;
 
 	assert(stream);
@@ -1419,7 +1419,7 @@ static void free_auth_contexts(git_vector *contexts)
 
 static int http_close(git_smart_subtransport *subtransport)
 {
-	http_subtransport *t = (http_subtransport *) subtransport;
+	http_subtransport *t = GIT_CONTAINER_OF(subtransport, http_subtransport, parent);
 
 	clear_parser_state(t);
 
@@ -1459,7 +1459,7 @@ static int http_close(git_smart_subtransport *subtransport)
 
 static void http_free(git_smart_subtransport *subtransport)
 {
-	http_subtransport *t = (http_subtransport *) subtransport;
+	http_subtransport *t = GIT_CONTAINER_OF(subtransport, http_subtransport, parent);
 
 	http_close(subtransport);
 

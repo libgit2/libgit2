@@ -30,6 +30,17 @@
 # define max(a,b) ((a) > (b) ? (a) : (b))
 #endif
 
+#if defined(__GNUC__)
+# define GIT_CONTAINER_OF(ptr, type, member) \
+	__builtin_choose_expr( \
+	    __builtin_offsetof(type, member) == 0 && \
+	    __builtin_types_compatible_p(typeof(&((type *) 0)->member), typeof(ptr)), \
+		((type *) (ptr)), \
+		(void)0)
+#else
+# define GIT_CONTAINER_OF(ptr, type, member) (type *)(ptr)
+#endif
+
 #define GIT_DATE_RFC2822_SZ  32
 
 /**
