@@ -63,7 +63,7 @@ void test_network_remote_remotes__parsing(void)
 	git_remote_free(_remote2);
 }
 
-static int test_network_remote_remotes__urlresolve_callback(char **url_resolved, const char *url, int direction, void *payload)
+static int urlresolve_callback(char **url_resolved, const char *url, int direction, void *payload)
 {
 	const char *url_out;
 
@@ -82,7 +82,7 @@ void test_network_remote_remotes__urlresolve(void)
 	char *url = NULL;
 
 	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
-	callbacks.resolve_url = test_network_remote_remotes__urlresolve_callback;
+	callbacks.resolve_url = urlresolve_callback;
 	callbacks.payload = "payload";
 
 	cl_assert_equal_s(git_remote_name(_remote), "test");
@@ -100,7 +100,7 @@ void test_network_remote_remotes__urlresolve(void)
 	free(url);
 }
 
-static int test_network_remote_remotes__urlresolve_passthrough_callback(char **url_resolved, const char *url, int direction, void *payload)
+static int urlresolve_passthrough_callback(char **url_resolved, const char *url, int direction, void *payload)
 {
 	GIT_UNUSED(url_resolved);
 	GIT_UNUSED(url);
@@ -115,7 +115,7 @@ void test_network_remote_remotes__urlresolve_passthrough(void)
 	const char *orig_url = "git://github.com/libgit2/libgit2";
 
 	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
-	callbacks.resolve_url = test_network_remote_remotes__urlresolve_passthrough_callback;
+	callbacks.resolve_url = urlresolve_passthrough_callback;
 
 	cl_assert_equal_s(git_remote_name(_remote), "test");
 	cl_assert_equal_s(git_remote_url(_remote), orig_url);
