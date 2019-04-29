@@ -674,6 +674,8 @@ static int git_remote__urlresolve(git_buf *resolved_url, const char *url, int di
 {
 	int status;
 
+	git_buf_clear(resolved_url);
+
 	if (!url)
 		return -1;
 
