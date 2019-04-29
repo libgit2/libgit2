@@ -685,9 +685,7 @@ static int git_remote__urlresolve(git_buf *resolved_url, const char *url, int di
 			return status;
 	}
 
-	/* clear again in case user wrote to it */
-	git_buf_clear(resolved_url);
-	git_buf_puts(resolved_url, url);
+	git_buf_sets(resolved_url, url);
 
 	return 0;
 }
