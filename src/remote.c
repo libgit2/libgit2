@@ -670,7 +670,7 @@ int git_remote_set_pushurl(git_repository *repo, const char *remote, const char*
 	return set_url(repo, remote, CONFIG_PUSHURL_FMT, url);
 }
 
-static int git_remote__urlresolve(char **resolved_url, const char *url, int direction, const git_remote_callbacks *callbacks)
+static int git_remote__urlresolve(git_buf *resolved_url, const char *url, int direction, const git_remote_callbacks *callbacks)
 {
 	int status;
 
@@ -683,13 +683,13 @@ static int git_remote__urlresolve(char **resolved_url, const char *url, int dire
 			return status;
 	}
 
-	*resolved_url = git__strdup(url);
-	GIT_ERROR_CHECK_ALLOC(*resolved_url);
+	git_buf_clear(resolved_url);
+	git_buf_puts(resolved_url, url);
 
 	return 0;
 }
 
-int git_remote__urlfordirection(char **url_out, struct git_remote *remote, int direction, const git_remote_callbacks *callbacks)
+int git_remote__urlfordirection(git_buf *url_out, struct git_remote *remote, int direction, const git_remote_callbacks *callbacks)
 {
 	assert(remote);
 	assert(direction == GIT_DIRECTION_FETCH || direction == GIT_DIRECTION_PUSH);
@@ -725,7 +725,7 @@ static int set_transport_custom_headers(git_transport *t, const git_strarray *cu
 int git_remote__connect(git_remote *remote, git_direction direction, const git_remote_callbacks *callbacks, const git_remote_connection_opts *conn)
 {
 	git_transport *t = NULL;
-	char *url = NULL;
+	git_buf url = GIT_BUF_INIT;
 	int flags = GIT_TRANSPORTFLAGS_NONE;
 	int error;
 	void *payload = NULL;
@@ -762,19 +762,19 @@ int git_remote__connect(git_remote *remote, git_direction direction, const git_r
 
 	/* If we still don't have a transport, then use the global
 	 * transport registrations which map URI schemes to transport factories */
-	if (!t && (error = git_transport_new(&t, remote, url)) < 0)
+	if (!t && (error = git_transport_new(&t, remote, url.ptr)) < 0)
 		goto on_error;
 
 	if ((error = set_transport_custom_headers(t, conn->custom_headers)) != 0)
 		goto on_error;
 
 	if ((error = set_transport_callbacks(t, callbacks)) < 0 ||
-	    (error = t->connect(t, url, credentials, payload, conn->proxy, direction, flags)) != 0)
+	    (error = t->connect(t, url.ptr, credentials, payload, conn->proxy, direction, flags)) != 0)
 		goto on_error;
 
 	remote->transport = t;
 
-	free(url);
+	git_buf_dispose(&url);
 
 	return 0;
 
@@ -782,7 +782,7 @@ on_error:
 	if (t)
 		t->free(t);
 
-	free(url);
+	git_buf_dispose(&url);
 
 	if (t == remote->transport)
 		remote->transport = NULL;
