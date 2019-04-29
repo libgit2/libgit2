@@ -193,7 +193,15 @@ static void submodule_add(struct opts *opts)
 
 static int submodule_init(git_submodule *sm, const char *name, void *payload)
 {
-	UNUSED(payload);
+	struct opts *opts = (struct opts *) payload;
+	unsigned int status;
+
+	check_lg2(git_submodule_status(&status, opts->repo, name, GIT_SUBMODULE_IGNORE_ALL),
+		"Unable to get submodule status", NULL);
+
+	/** Check whether the submodule is initialized already */
+	if (status & GIT_SUBMODULE_STATUS_IN_GITCONFIG)
+		return 0;
 
 	/**
 	 * Initialize the submodule. We have the `overwrite`
