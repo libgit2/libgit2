@@ -349,38 +349,34 @@ cleanup:
  */
 static size_t find_ceiling_dir_offset(
 	const char *path,
-	const char *ceiling_directories)
+	const git_strarray *ceiling_directories)
 {
-	char buf[GIT_PATH_MAX + 1];
-	char buf2[GIT_PATH_MAX + 1];
-	const char *ceil, *sep;
-	size_t len, max_len = 0, min_len;
+	char real_dir[GIT_PATH_MAX + 1];
+	char *dir;
+	size_t len, max_len = 0, min_len, cur;
 
 	assert(path);
 
 	min_len = (size_t)(git_path_root(path) + 1);
 
-	if (ceiling_directories == NULL || min_len == 0)
+	if (ceiling_directories->count == 0 || min_len == 0)
 		return min_len;
 
-	for (sep = ceil = ceiling_directories; *sep; ceil = sep + 1) {
-		for (sep = ceil; *sep && *sep != GIT_PATH_LIST_SEPARATOR; sep++);
-		len = sep - ceil;
+	for (cur = 0; cur < ceiling_directories->count; cur++) {
+		dir = ceiling_directories->strings[cur];
+		len = strlen(dir);
 
-		if (len == 0 || len >= sizeof(buf) || git_path_root(ceil) == -1)
+		if (len == 0 || git_path_root(dir) == -1)
 			continue;
 
-		strncpy(buf, ceil, len);
-		buf[len] = '\0';
-
-		if (p_realpath(buf, buf2) == NULL)
+		if (p_realpath(dir, real_dir) == NULL)
 			continue;
 
-		len = strlen(buf2);
-		if (len > 0 && buf2[len-1] == '/')
-			buf[--len] = '\0';
+		len = strlen(real_dir);
+		if (len > 0 && real_dir[len-1] == '/')
+			dir[--len] = '\0';
 
-		if (!strncmp(path, buf2, len) &&
+		if (!strncmp(path, real_dir, len) &&
 			(path[len] == '/' || !path[len]) &&
 			len > max_len)
 		{
@@ -437,7 +433,7 @@ static int find_repo(
 	git_buf *commondir_path,
 	const char *start_path,
 	uint32_t flags,
-	const char *ceiling_dirs)
+	git_strarray *ceiling_dirs)
 {
 	int error;
 	git_buf path = GIT_BUF_INIT;
@@ -598,7 +594,13 @@ int git_repository_open_bare(
 	return 0;
 }
 
-static int _git_repository_open_ext_from_env(
+static int git_repository__open(
+	git_repository **repo_ptr,
+	const char *start_path,
+	unsigned int flags,
+	git_strarray *ceiling_dirs);
+
+static int git_repository__open_from_env(
 	git_repository **out,
 	const char *start_path)
 {
@@ -614,9 +616,11 @@ static int _git_repository_open_ext_from_env(
 	git_buf alts_buf = GIT_BUF_INIT;
 	git_buf work_tree_buf = GIT_BUF_INIT;
 	git_buf common_dir_buf = GIT_BUF_INIT;
-	const char *ceiling_dirs = NULL;
+	git_strarray ceiling_dirs;
 	unsigned flags = 0;
 	int error;
+
+	memset(&ceiling_dirs, 0, sizeof(ceiling_dirs));
 
 	if (!start_path) {
 		error = git__getenv(&dir_buf, "GIT_DIR");
@@ -637,8 +641,8 @@ static int _git_repository_open_ext_from_env(
 		git_error_clear();
 	else if (error < 0)
 		goto error;
-	else
-		ceiling_dirs = git_buf_cstr(&ceiling_dirs_buf);
+	else if ((error = git_strarray_parse_pathlist(&ceiling_dirs, git_buf_cstr(&ceiling_dirs_buf))) < 0)
+		goto error;
 
 	error = git__getenv(&across_fs_buf, "GIT_DISCOVERY_ACROSS_FILESYSTEM");
 	if (error == GIT_ENOTFOUND)
@@ -704,7 +708,7 @@ static int _git_repository_open_ext_from_env(
 		goto error;
 	}
 
-	error = git_repository_open_ext(&repo, start_path, flags, ceiling_dirs);
+	error = git_repository__open(&repo, start_path, flags, &ceiling_dirs);
 	if (error < 0)
 		goto error;
 
@@ -717,7 +721,7 @@ static int _git_repository_open_ext_from_env(
 		error = 0;
 	} else if (error < 0)
 		goto error;
-        else {
+	else {
 		const char *end;
 		char *alt, *sep;
 		if (!odb) {
@@ -790,11 +794,11 @@ static int repo_is_worktree(unsigned *out, const git_repository *repo)
 	return error;
 }
 
-int git_repository_open_ext(
+static int git_repository__open(
 	git_repository **repo_ptr,
 	const char *start_path,
 	unsigned int flags,
-	const char *ceiling_dirs)
+	git_strarray *ceiling_dirs)
 {
 	int error;
 	unsigned is_worktree;
@@ -802,9 +806,6 @@ int git_repository_open_ext(
 		gitlink = GIT_BUF_INIT, commondir = GIT_BUF_INIT;
 	git_repository *repo = NULL;
 	git_config *config = NULL;
-
-	if (flags & GIT_REPOSITORY_OPEN_FROM_ENV)
-		return _git_repository_open_ext_from_env(repo_ptr, start_path);
 
 	if (repo_ptr)
 		*repo_ptr = NULL;
@@ -872,6 +873,23 @@ cleanup:
 	return error;
 }
 
+int git_repository_open_ext(
+	git_repository **repo_ptr,
+	const char *start_path,
+	unsigned int flags,
+	const char *ceilingdirs_paths)
+{
+	git_strarray ceiling_dirs;
+
+	if (flags & GIT_REPOSITORY_OPEN_FROM_ENV)
+		return git_repository__open_from_env(repo_ptr, start_path);
+
+	if (git_strarray_parse_pathlist(&ceiling_dirs, ceilingdirs_paths))
+		return -1;
+
+	return git_repository__open(repo_ptr, start_path, flags, &ceiling_dirs);
+}
+
 int git_repository_open(git_repository **repo_out, const char *path)
 {
 	return git_repository_open_ext(
@@ -926,15 +944,19 @@ int git_repository_discover(
 	git_buf *out,
 	const char *start_path,
 	int across_fs,
-	const char *ceiling_dirs)
+	const char *ceiling_dirs_str)
 {
 	uint32_t flags = across_fs ? GIT_REPOSITORY_OPEN_CROSS_FS : 0;
+	git_strarray ceiling_dirs;
 
 	assert(start_path);
 
 	git_buf_sanitize(out);
 
-	return find_repo(out, NULL, NULL, NULL, start_path, flags, ceiling_dirs);
+	if (git_strarray_parse_pathlist(&ceiling_dirs, ceiling_dirs_str) < 0)
+		return -1;
+
+	return find_repo(out, NULL, NULL, NULL, start_path, flags, &ceiling_dirs);
 }
 
 static int load_config(
