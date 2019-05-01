@@ -382,11 +382,12 @@ done:
 	return is_local;
 }
 
-int git_clone(
+static int git__clone(
 	git_repository **out,
 	const char *url,
 	const char *local_path,
-	const git_clone_options *_options)
+	const git_clone_options *_options,
+	int use_existing)
 {
 	int error = 0;
 	git_repository *repo = NULL;
@@ -403,7 +404,7 @@ int git_clone(
 	GIT_ERROR_CHECK_VERSION(&options, GIT_CLONE_OPTIONS_VERSION, "git_clone_options");
 
 	/* Only clone to a new directory or an empty directory */
-	if (git_path_exists(local_path) && !git_path_is_empty_dir(local_path)) {
+	if (git_path_exists(local_path) && !use_existing && !git_path_is_empty_dir(local_path)) {
 		git_error_set(GIT_ERROR_INVALID,
 			"'%s' exists and is not an empty directory", local_path);
 		return GIT_EEXISTS;
@@ -453,6 +454,24 @@ int git_clone(
 
 	*out = repo;
 	return error;
+}
+
+int git_clone(
+	git_repository **out,
+	const char *url,
+	const char *local_path,
+	const git_clone_options *_options)
+{
+	return git__clone(out, url, local_path, _options, 0);
+}
+
+int git_clone__submodule(
+	git_repository **out,
+	const char *url,
+	const char *local_path,
+	const git_clone_options *_options)
+{
+	return git__clone(out, url, local_path, _options, 1);
 }
 
 int git_clone_options_init(git_clone_options *opts, unsigned int version)
