@@ -52,6 +52,14 @@ GIT_EXTERN(void) git_strarray_free(git_strarray *array);
  */
 GIT_EXTERN(int) git_strarray_copy(git_strarray *tgt, const git_strarray *src);
 
+/**
+ * Split a GIT_PATH_LIST_SEPARATOR-separated string into a strarray.
+ *
+ * @param strarray The array to initialize
+ * @param pathlist The string to parse
+ * @return 0 on success, < 0 on allocation failure
+ */
+GIT_EXTERN(int) git_strarray_parse_pathlist(git_strarray *strarray, const char *pathlist);
 
 /** @} */
 GIT_END_DECL
