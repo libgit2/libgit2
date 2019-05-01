@@ -721,22 +721,19 @@ static int git_repository__open_from_env(
 		error = 0;
 	} else if (error < 0)
 		goto error;
-	else {
-		const char *end;
-		char *alt, *sep;
+	else {		git_strarray odb_dirs;
+		size_t idx;
 		if (!odb) {
 			error = git_repository_odb(&odb, repo);
 			if (error < 0)
 				goto error;
 		}
 
-		end = git_buf_cstr(&alts_buf) + git_buf_len(&alts_buf);
-		for (sep = alt = alts_buf.ptr; sep != end; alt = sep+1) {
-			for (sep = alt; *sep && *sep != GIT_PATH_LIST_SEPARATOR; sep++)
-				;
-			if (*sep)
-				*sep = '\0';
-			error = git_odb_add_disk_alternate(odb, alt);
+		if ((error = git_strarray_parse_pathlist(&odb_dirs, alts_buf.ptr)) < 0)
+			goto error;
+
+		for (idx = 0; idx < odb_dirs.count; idx++) {
+			error = git_odb_add_disk_alternate(odb, odb_dirs.strings[idx]);
 			if (error < 0)
 				goto error;
 		}
