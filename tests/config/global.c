@@ -75,6 +75,36 @@ void test_config_global__open_symlinked_global(void)
 #endif
 }
 
+void test_config_global__lock_missing_global_config(void)
+{
+	git_config *cfg;
+	git_config_entry *entry;
+	git_transaction *transaction;
+
+	p_unlink("home/.gitconfig"); /* No global config */
+
+	cl_git_pass(git_config_open_default(&cfg));
+	cl_git_pass(git_config_lock(&transaction, cfg));
+	cl_git_pass(git_config_set_string(cfg, "assertion.fail", "boom"));
+	cl_git_pass(git_transaction_commit(transaction));
+	git_transaction_free(transaction);
+
+	/* cfg is updated */
+	cl_git_pass(git_config_get_entry(&entry, cfg, "assertion.fail"));
+	cl_assert_equal_s("boom", entry->value);
+
+	git_config_entry_free(entry);
+	git_config_free(cfg);
+
+	/* We can reread the new value from the global config */
+	cl_git_pass(git_config_open_default(&cfg));
+	cl_git_pass(git_config_get_entry(&entry, cfg, "assertion.fail"));
+	cl_assert_equal_s("boom", entry->value);
+
+	git_config_entry_free(entry);
+	git_config_free(cfg);
+}
+
 void test_config_global__open_xdg(void)
 {
 	git_config *cfg, *xdg, *selected;
