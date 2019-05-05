@@ -402,8 +402,12 @@ int p_symlink(const char *target, const char *path)
 		git__utf8_to_16(target_w, MAX_PATH, target) < 0)
 		return -1;
 
-	if (!CreateSymbolicLinkW(path_w, target_w,
-	    SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE))
+	DWORD dwFlags = SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
+
+	if (GetFileAttributesW(target_w) & FILE_ATTRIBUTE_DIRECTORY)
+		dwFlags |= SYMBOLIC_LINK_FLAG_DIRECTORY;
+
+	if (!CreateSymbolicLinkW(path_w, target_w, dwFlags))
 		return -1;
 
 	return 0;
