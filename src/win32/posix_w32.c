@@ -397,12 +397,13 @@ int p_readlink(const char *path, char *buf, size_t bufsiz)
 int p_symlink(const char *target, const char *path)
 {
 	git_win32_path target_w, path_w;
+	DWORD dwFlags;
 
 	if (git_win32_path_from_utf8(path_w, path) < 0 ||
 		git__utf8_to_16(target_w, MAX_PATH, target) < 0)
 		return -1;
 
-	DWORD dwFlags = SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
+	dwFlags = SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
 
 	if (GetFileAttributesW(target_w) & FILE_ATTRIBUTE_DIRECTORY)
 		dwFlags |= SYMBOLIC_LINK_FLAG_DIRECTORY;
