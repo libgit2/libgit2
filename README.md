@@ -73,7 +73,7 @@ Quick Start
 2. Create the cmake build environment: `cmake ..`
 3. Build libgit2: `cmake --build .`
 
-Trouble with these steps?  Read our (troubleshooting guide)[docs/troubleshooting.md].
+Trouble with these steps?  Read our (troubleshooting guide)[docs/troubleshooting.md]. Or check out the following link for some tips on how to build a project using cmake. [https://preshing.com/20170511/how-to-build-a-cmake-based-project/]
 More detailed build guidance is available below.
 
 Getting Help
