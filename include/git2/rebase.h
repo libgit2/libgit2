@@ -200,6 +200,34 @@ GIT_EXTERN(int) git_rebase_open(
 	const git_rebase_options *opts);
 
 /**
+ * Gets the original `HEAD` ref name for merge rebases.
+ *
+ * @return The original `HEAD` ref name
+ */
+GIT_EXTERN(const char *) git_rebase_orig_head_name(git_rebase *rebase);
+
+/**
+ * Gets the original `HEAD` id for merge rebases.
+ *
+ * @return The original `HEAD` id
+ */
+GIT_EXTERN(const git_oid *) git_rebase_orig_head_id(git_rebase *rebase);
+
+/**
+ * Gets the `onto` ref name for merge rebases.
+ *
+ * @return The `onto` ref name
+ */
+GIT_EXTERN(const char *) git_rebase_onto_name(git_rebase *rebase);
+
+/**
+ * Gets the `onto` id for merge rebases.
+ *
+ * @return The `onto` id
+ */
+GIT_EXTERN(const git_oid *) git_rebase_onto_id(git_rebase *rebase);
+
+/**
  * Gets the count of rebase operations that are to be applied.
  *
  * @param rebase The in-progress rebase
