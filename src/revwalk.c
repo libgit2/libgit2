@@ -195,7 +195,7 @@ int git_revwalk_push_range(git_revwalk *walk, const char *range)
 		return error;
 
 	if (!revspec.to) {
-		git_error_set(GIT_ERROR_INVALID, "invalid revspec. Only range supported.");
+		git_error_set(GIT_ERROR_INVALID, "invalid revspec: range not provided");
 		error = GIT_EINVALIDSPEC;
 		goto out;
 	}
