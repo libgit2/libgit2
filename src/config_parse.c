@@ -66,26 +66,25 @@ static int strip_comments(char *line, int in_quotes)
 }
 
 
-static int parse_section_header_ext(git_config_parser *reader, const char *line, const char *base_name, char **section_name)
+static int parse_section_header_ext(git_config_parser *reader, const char *line, size_t pos, const char *base_name, char **section_name)
 {
 	int c, rpos;
-	char *first_quote, *last_quote;
+	const char *first_quote, *last_quote;
 	const char *line_start = line;
 	git_buf buf = GIT_BUF_INIT;
 	size_t quoted_len, alloc_len, base_name_len = strlen(base_name);
 
-	/*
-	 * base_name is what came before the space. We should be at the
-	 * first quotation mark, except for now, line isn't being kept in
-	 * sync so we only really use it to calculate the length.
-	 */
+	/* Skip any additional whitespace before our section name */
+	while (git__isspace(line[pos]))
+		pos++;
 
-	first_quote = strchr(line, '"');
-	if (first_quote == NULL) {
+	/* We should be at the first quotation mark. */
+	if (line[pos] != '"') {
 		set_parse_error(reader, 0, "missing quotation marks in section header");
 		goto end_error;
 	}
 
+	first_quote = &line[pos];
 	last_quote = strrchr(line, '"');
 	quoted_len = last_quote - first_quote;
 
@@ -192,7 +191,7 @@ static int parse_section_header(git_config_parser *reader, char **section_out)
 	do {
 		if (git__isspace(c)){
 			name[name_length] = '\0';
-			result = parse_section_header_ext(reader, line, name, section_out);
+			result = parse_section_header_ext(reader, line, pos, name, section_out);
 			git__free(line);
 			git__free(name);
 			return result;
