@@ -15,7 +15,7 @@
  * compatible implementation.
  */
 
-#ifdef GIT_REGEX_PCRE
+#ifdef GIT_REGEX_BUILTIN
 
 # include "pcreposix.h"
 
