@@ -37,7 +37,9 @@
 
 #else
 
-# ifdef GIT_REGEX_PCRE
+# if defined(GIT_REGEX_PCRE2)
+#  include <pcre2posix.h>
+# elif defined(GIT_REGEX_PCRE)
 #  include <pcreposix.h>
 # else
 #  include <regex.h>

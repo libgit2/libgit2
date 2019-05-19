@@ -19,6 +19,7 @@
 #cmakedefine GIT_REGEX_REGCOMP_L
 #cmakedefine GIT_REGEX_REGCOMP
 #cmakedefine GIT_REGEX_PCRE
+#cmakedefine GIT_REGEX_PCRE2
 #cmakedefine GIT_REGEX_BUILTIN 1
 
 #cmakedefine GIT_SSH 1
