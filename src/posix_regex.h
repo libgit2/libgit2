@@ -30,10 +30,18 @@
 # define p_regexec pcre_regexec
 # define p_regfree pcre_regfree
 
-/* Otherwise, use regcomp_l if available, or regcomp if not. */
+/*
+ * Use the system-provided `regex` routines, whether that's via the
+ * PCRE emulation layer, or libc, preferring `regcomp_l` it's available.
+ */
+
 #else
 
-# include <regex.h>
+# ifdef GIT_REGEX_PCRE
+#  include <pcreposix.h>
+# else
+#  include <regex.h>
+# endif
 
 # define P_REG_EXTENDED REG_EXTENDED
 # define P_REG_ICASE REG_ICASE

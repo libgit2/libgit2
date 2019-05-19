@@ -290,13 +290,14 @@ ELSE()
 ENDIF()
 
 # Specify regular expression implementation
+FIND_PACKAGE(PCRE)
+
 IF(REGEX STREQUAL "")
 	CHECK_SYMBOL_EXISTS(regcomp_l "regex.h;xlocale.h" HAVE_REGCOMP_L)
-	CHECK_SYMBOL_EXISTS(pcre_regcomp "pcreposix.h" HAVE_PCRE)
 
 	IF(HAVE_REGCOMP_L)
 		SET(REGEX "regcomp_l")
-	ELSEIF(HAVE_PCRE)
+	ELSEIF(PCRE_FOUND)
 		SET(REGEX "pcre")
 	ELSE()
 		SET(REGEX "builtin")
@@ -309,6 +310,9 @@ IF(REGEX STREQUAL "regcomp_l")
 ELSEIF(REGEX STREQUAL "pcre")
 	ADD_FEATURE_INFO(regex ON "using system PCRE")
 	SET(GIT_REGEX_PCRE 1)
+
+	LIST(APPEND LIBGIT2_SYSTEM_INCLUDES ${PCRE_INCLUDE_DIRS})
+	LIST(APPEND LIBGIT2_LIBS ${PCRE_LIBRARIES})
 ELSEIF(REGEX STREQUAL "regcomp")
 	ADD_FEATURE_INFO(regex ON "using system regcomp")
 	SET(GIT_REGEX_REGCOMP 1)
