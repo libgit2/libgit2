@@ -1251,14 +1251,18 @@ void test_status_ignore__leading_spaces_are_significant(void)
 	cl_git_mkfile(
 		"empty_standard_repo/.gitignore",
 		" a.test\n"
+		"# this is a comment\n"
 		"b.test\n"
 		"\tc.test\n"
+		" # not a comment\n"
 		"d.test\n");
 
 	refute_is_ignored("a.test");
 	assert_is_ignored(" a.test");
+	refute_is_ignored("# this is a comment");
 	assert_is_ignored("b.test");
 	refute_is_ignored("c.test");
 	assert_is_ignored("\tc.test");
+	assert_is_ignored(" # not a comment");
 	assert_is_ignored("d.test");
 }
