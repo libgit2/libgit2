@@ -42,15 +42,19 @@ static const char *next_line(const char *str)
 }
 
 /*
- * Return the position of the start of the last line. If len is 0, return -1.
+ * Return the position of the start of the last line. If len is 0, return 0.
  */
-static int last_line(const char *buf, size_t len)
+static bool last_line(size_t *out, const char *buf, size_t len)
 {
-	int i;
+	size_t i;
+
+	*out = 0;
+
 	if (len == 0)
-		return -1;
+		return false;
 	if (len == 1)
-		return 0;
+		return true;
+
 	/*
 	 * Skip the last character (in addition to the null terminator),
 	 * because if the last character is a newline, it is considered as part
@@ -58,31 +62,37 @@ static int last_line(const char *buf, size_t len)
 	 */
 	i = len - 2;
 
-	for (; i >= 0; i--) {
-		if (buf[i] == '\n')
-			return i + 1;
+	for (; i > 0; i--) {
+		if (buf[i] == '\n') {
+			*out = i + 1;
+			return true;
+		}
 	}
-	return 0;
+	return true;
 }
 
 /*
  * If the given line is of the form
- * "<token><optional whitespace><separator>..." or "<separator>...", return the
- * location of the separator. Otherwise, return -1.  The optional whitespace
- * is allowed there primarily to allow things like "Bug #43" where <token> is
- * "Bug" and <separator> is "#".
+ * "<token><optional whitespace><separator>..." or "<separator>...", sets out
+ * to the location of the separator and returns true.  Otherwise, returns
+ * false.  The optional whitespace is allowed there primarily to allow things
+ * like "Bug #43" where <token> is "Bug" and <separator> is "#".
  *
- * The separator-starts-line case (in which this function returns 0) is
- * distinguished from the non-well-formed-line case (in which this function
- * returns -1) because some callers of this function need such a distinction.
+ * The separator-starts-line case (in which this function returns true and
+ * sets out to 0) is distinguished from the non-well-formed-line case (in
+ * which this function returns false) because some callers of this function
+ * need such a distinction.
  */
-static int find_separator(const char *line, const char *separators)
+static bool find_separator(size_t *out, const char *line, const char *separators)
 {
 	int whitespace_found = 0;
 	const char *c;
 	for (c = line; *c; c++) {
-		if (strchr(separators, *c))
-			return c - line;
+		if (strchr(separators, *c)) {
+			*out = c - line;
+			return true;
+		}
+
 		if (!whitespace_found && (isalnum(*c) || *c == '-'))
 			continue;
 		if (c != line && (*c == ' ' || *c == '\t')) {
@@ -91,7 +101,7 @@ static int find_separator(const char *line, const char *separators)
 		}
 		break;
 	}
-	return -1;
+	return false;
 }
 
 /*
@@ -104,10 +114,9 @@ static int find_separator(const char *line, const char *separators)
  * Returns the number of bytes from the tail to ignore, to be fed as
  * the second parameter to append_signoff().
  */
-static int ignore_non_trailer(const char *buf, size_t len)
+static size_t ignore_non_trailer(const char *buf, size_t len)
 {
-	int boc = 0;
-	size_t bol = 0;
+	size_t boc = 0, bol = 0;
 	int in_old_conflicts_block = 0;
 	size_t cutoff = len;
 
@@ -144,7 +153,7 @@ static int ignore_non_trailer(const char *buf, size_t len)
  * Return the position of the start of the patch or the length of str if there
  * is no patch in the message.
  */
-static int find_patch_start(const char *str)
+static size_t find_patch_start(const char *str)
 {
 	const char *s;
 
@@ -160,10 +169,11 @@ static int find_patch_start(const char *str)
  * Return the position of the first trailer line or len if there are no
  * trailers.
  */
-static int find_trailer_start(const char *buf, size_t len)
+static size_t find_trailer_start(const char *buf, size_t len)
 {
 	const char *s;
-	int end_of_title, l, only_spaces = 1;
+	size_t end_of_title, l;
+	int only_spaces = 1;
 	int recognized_prefix = 0, trailer_lines = 0, non_trailer_lines = 0;
 	/*
 	 * Number of possible continuation lines encountered. This will be
@@ -189,12 +199,11 @@ static int find_trailer_start(const char *buf, size_t len)
 	 * trailers, or (ii) contains at least one Git-generated trailer and
 	 * consists of at least 25% trailers.
 	 */
-	for (l = last_line(buf, len);
-	     l >= end_of_title;
-	     l = last_line(buf, l)) {
+	l = len;
+	while (last_line(&l, buf, l) && l >= end_of_title) {
 		const char *bol = buf + l;
 		const char *const *p;
-		int separator_pos;
+		size_t separator_pos = 0;
 
 		if (bol[0] == COMMENT_LINE_CHAR) {
 			non_trailer_lines += possible_continuation_lines;
@@ -223,7 +232,7 @@ static int find_trailer_start(const char *buf, size_t len)
 			}
 		}
 
-		separator_pos = find_separator(bol, TRAILER_SEPARATORS);
+		find_separator(&separator_pos, bol, TRAILER_SEPARATORS);
 		if (separator_pos >= 1 && !isspace(bol[0])) {
 			trailer_lines++;
 			possible_continuation_lines = 0;
@@ -244,7 +253,7 @@ continue_outer_loop:
 }
 
 /* Return the position of the end of the trailers. */
-static int find_trailer_end(const char *buf, size_t len)
+static size_t find_trailer_end(const char *buf, size_t len)
 {
 	return len - ignore_non_trailer(buf, len);
 }
