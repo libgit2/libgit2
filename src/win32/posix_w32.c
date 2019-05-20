@@ -33,6 +33,10 @@
 # define SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE 0x02
 #endif
 
+#ifndef SYMBOLIC_LINK_FLAG_DIRECTORY
+# define SYMBOLIC_LINK_FLAG_DIRECTORY 0x01
+#endif
+
 /* Allowable mode bits on Win32.  Using mode bits that are not supported on
  * Win32 (eg S_IRWXU) is generally ignored, but Wine warns loudly about it
  * so we simply remove them.
