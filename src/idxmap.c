@@ -70,7 +70,8 @@ void git_idxmap_icase_clear(git_idxmap_icase *map)
 
 int git_idxmap_resize(git_idxmap *map, size_t size)
 {
-	if (kh_resize(idx, map, size) < 0) {
+	if (!git__is_uint32(size) ||
+	    kh_resize(idx, map, (khiter_t)size) < 0) {
 		git_error_set_oom();
 		return -1;
 	}
@@ -79,7 +80,8 @@ int git_idxmap_resize(git_idxmap *map, size_t size)
 
 int git_idxmap_icase_resize(git_idxmap_icase *map, size_t size)
 {
-	if (kh_resize(idxicase, map, size) < 0) {
+	if (!git__is_uint32(size) ||
+	    kh_resize(idxicase, map, (khiter_t)size) < 0) {
 		git_error_set_oom();
 		return -1;
 	}
