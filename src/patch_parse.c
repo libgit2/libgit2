@@ -33,7 +33,7 @@ typedef struct {
 	char *old_prefix, *new_prefix;
 } git_patch_parsed;
 
-static int header_path_len(git_patch_parse_ctx *ctx)
+static size_t header_path_len(git_patch_parse_ctx *ctx)
 {
 	bool inquote = 0;
 	bool quoted = git_parse_ctx_contains_s(&ctx->parse_ctx, "\"");
