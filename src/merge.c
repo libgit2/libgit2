@@ -867,7 +867,7 @@ static int merge_conflict_invoke_driver(
 
 	git_oid_cpy(&result->id, &oid);
 	result->mode = mode;
-	result->file_size = buf.size;
+	result->file_size = (uint32_t)buf.size;
 
 	result->path = git_pool_strdup(&diff_list->pool, path);
 	GIT_ERROR_CHECK_ALLOC(result->path);
