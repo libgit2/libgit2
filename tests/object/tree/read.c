@@ -75,8 +75,9 @@ void test_object_tree_read__two(void)
 }
 
 #define BIGFILE "bigfile"
+
 #ifdef GIT_ARCH_64
-# define BIGFILE_SIZE (size_t)4 * 1024 * 1024 * 1024 /* 4 GiB */
+#define BIGFILE_SIZE (off_t)4294967296
 #else
 # define BIGFILE_SIZE SIZE_MAX
 #endif
