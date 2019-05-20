@@ -42,7 +42,7 @@ void test_worktree_worktree__list_with_invalid_worktree_dirs(void)
 	};
 	git_buf path = GIT_BUF_INIT;
 	git_strarray wts;
-	unsigned i, j, len;
+	size_t i, j, len;
 
 	cl_git_pass(git_buf_printf(&path, "%s/worktrees/invalid",
 		    fixture.repo->commondir));
