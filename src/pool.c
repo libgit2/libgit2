@@ -30,7 +30,7 @@ uint32_t git_pool__system_page_size(void)
 		if (git__page_size(&page_size) < 0)
 			page_size = 4096;
 		/* allow space for malloc overhead */
-		size = page_size - (2 * sizeof(void *)) - sizeof(git_pool_page);
+		size = (uint32_t)(page_size - (2 * sizeof(void *)) - sizeof(git_pool_page));
 	}
 
 	return size;
