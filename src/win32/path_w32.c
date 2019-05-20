@@ -140,14 +140,24 @@ int git_win32_path_canonicalize(git_win32_path path)
 
 	*to = L'\0';
 
-	return (to - path);
+	if ((to - path) > INT_MAX) {
+		SetLastError(ERROR_FILENAME_EXCED_RANGE);
+		return -1;
+	}
+
+	return (int)(to - path);
 }
 
 int git_win32_path__cwd(wchar_t *out, size_t len)
 {
 	int cwd_len;
 
-	if ((cwd_len = path__cwd(out, len)) < 0)
+	if (len > INT_MAX) {
+		errno = ENAMETOOLONG;
+		return -1;
+	}
+
+	if ((cwd_len = path__cwd(out, (int)len)) < 0)
 		return -1;
 
 	/* UNC paths */
