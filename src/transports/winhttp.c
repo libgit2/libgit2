@@ -816,6 +816,11 @@ static int do_send_request(winhttp_stream *s, size_t len, int ignore_length)
 	int attempts;
 	bool success;
 
+	if (len > DWORD_MAX) {
+		SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+		return -1;
+	}
+
 	for (attempts = 0; attempts < 5; attempts++) {
 		if (ignore_length) {
 			success = WinHttpSendRequest(s->request,
@@ -826,7 +831,7 @@ static int do_send_request(winhttp_stream *s, size_t len, int ignore_length)
 			success = WinHttpSendRequest(s->request,
 				WINHTTP_NO_ADDITIONAL_HEADERS, 0,
 				WINHTTP_NO_REQUEST_DATA, 0,
-				len, 0);
+				(DWORD)len, 0);
 		}
 
 		if (success || GetLastError() != (DWORD)SEC_E_BUFFER_TOO_SMALL)
