@@ -1303,12 +1303,7 @@ static int filesystem_iterator_entry_init(
 		sizeof(filesystem_iterator_entry), path_len);
 	GIT_ERROR_CHECK_ALLOC_ADD(&entry_size, entry_size, 2);
 
-	if (entry_size > UINT32_MAX) {
-		git_error_set(GIT_ERROR_REPOSITORY, "file path too long");
-		return -1;
-	}
-
-	entry = git_pool_malloc(&frame->entry_pool, (uint32_t)entry_size);
+	entry = git_pool_malloc(&frame->entry_pool, entry_size);
 	GIT_ERROR_CHECK_ALLOC(entry);
 
 	entry->path_len = path_len;

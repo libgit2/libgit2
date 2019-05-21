@@ -54,7 +54,7 @@ int git_attr_cache__alloc_file_entry(
 			cachesize++;
 	}
 
-	ce = git_pool_mallocz(pool, (uint32_t)cachesize);
+	ce = git_pool_mallocz(pool, cachesize);
 	GIT_ERROR_CHECK_ALLOC(ce);
 
 	if (baselen) {

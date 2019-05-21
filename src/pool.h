@@ -32,8 +32,8 @@ typedef struct git_pool_page git_pool_page;
  */
 typedef struct {
 	git_pool_page *pages; /* allocated pages */
-	uint32_t item_size;  /* size of single alloc unit in bytes */
-	uint32_t page_size;  /* size of page in bytes */
+	size_t item_size;  /* size of single alloc unit in bytes */
+	size_t page_size;  /* size of page in bytes */
 } git_pool;
 
 #define GIT_POOL_INIT { NULL, 0, 0 }
@@ -57,8 +57,8 @@ typedef struct {
  */
 typedef struct {
 	git_vector allocations;
-	uint32_t item_size;
-	uint32_t page_size;
+	size_t item_size;
+	size_t page_size;
 } git_pool;
 
 #define GIT_POOL_INIT { GIT_VECTOR_INIT, 0, 0 }
@@ -81,7 +81,7 @@ typedef struct {
  * Of course, you can use this in other ways, but those are the
  * two most common patterns.
  */
-extern void git_pool_init(git_pool *pool, uint32_t item_size);
+extern void git_pool_init(git_pool *pool, size_t item_size);
 
 /**
  * Free all items in pool
@@ -96,8 +96,8 @@ extern void git_pool_swap(git_pool *a, git_pool *b);
 /**
  * Allocate space for one or more items from a pool.
  */
-extern void *git_pool_malloc(git_pool *pool, uint32_t items);
-extern void *git_pool_mallocz(git_pool *pool, uint32_t items);
+extern void *git_pool_malloc(git_pool *pool, size_t items);
+extern void *git_pool_mallocz(git_pool *pool, size_t items);
 
 /**
  * Allocate space and duplicate string data into it.

@@ -636,9 +636,7 @@ retry_lstat:
 			size_t alloc_size;
 
 			GIT_ERROR_CHECK_ALLOC_ADD(&alloc_size, make_path.size, 1);
-			if (!git__is_uint32(alloc_size))
-				return -1;
-			cache_path = git_pool_malloc(opts->pool, (uint32_t)alloc_size);
+			cache_path = git_pool_malloc(opts->pool, alloc_size);
 			GIT_ERROR_CHECK_ALLOC(cache_path);
 
 			memcpy(cache_path, make_path.ptr, make_path.size + 1);
