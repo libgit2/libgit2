@@ -192,7 +192,7 @@ int git__strntol32(int32_t *result, const char *nptr, size_t nptr_len, const cha
 
 	tmp_int = tmp_long & 0xFFFFFFFF;
 	if (tmp_int != tmp_long) {
-		int len = tmp_endptr - nptr;
+		int len = (int)(tmp_endptr - nptr);
 		git_error_set(GIT_ERROR_INVALID, "failed to convert: '%.*s' is too large", len, nptr);
 		return -1;
 	}
