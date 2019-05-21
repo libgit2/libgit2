@@ -372,3 +372,44 @@ void test_attr_ignore__case_sensitive_unignore_does_nothing(void)
 
 	assert_is_ignored(true, "case/file");
 }
+
+void test_attr_ignore__ignored_subdirfiles_with_subdir_rule(void)
+{
+	cl_git_rewritefile(
+		"attr/.gitignore",
+		"dir/*\n"
+		"!dir/sub1/sub2/**\n");
+
+	assert_is_ignored(true, "dir/a.test");
+	assert_is_ignored(true, "dir/sub1/a.test");
+	assert_is_ignored(true, "dir/sub1/sub2");
+}
+
+void test_attr_ignore__ignored_subdirfiles_with_negations(void)
+{
+	cl_git_rewritefile(
+		"attr/.gitignore",
+		"dir/*\n"
+		"!dir/a.test\n");
+
+	assert_is_ignored(false, "dir/a.test");
+	assert_is_ignored(true, "dir/b.test");
+	assert_is_ignored(true, "dir/sub1/c.test");
+}
+
+void test_attr_ignore__negative_directory_rules_only_match_directories(void)
+{
+	cl_git_rewritefile(
+		"attr/.gitignore",
+		"*\n"
+		"!/**/\n"
+		"!*.keep\n"
+		"!.gitignore\n"
+	);
+
+	assert_is_ignored(true, "src");
+	assert_is_ignored(true, "src/A");
+	assert_is_ignored(false, "src/");
+	assert_is_ignored(false, "src/A.keep");
+	assert_is_ignored(false, ".gitignore");
+}

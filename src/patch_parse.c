@@ -328,7 +328,8 @@ static int parse_header_start(git_patch_parsed *patch, git_patch_parse_ctx *ctx)
 	 * proceeed here. We then hope for the "---" and "+++" lines to fix that
 	 * for us.
 	 */
-	if (!git_parse_ctx_contains(&ctx->parse_ctx, "\n", 1)) {
+	if (!git_parse_ctx_contains(&ctx->parse_ctx, "\n", 1) &&
+	    !git_parse_ctx_contains(&ctx->parse_ctx, "\r\n", 2)) {
 		git_parse_advance_chars(&ctx->parse_ctx, ctx->parse_ctx.line_len - 1);
 
 		git__free(patch->header_old_path);
@@ -921,21 +922,15 @@ static int check_filenames(git_patch_parsed *patch)
 		return git_parse_err("missing old path");
 
 	/* Ensure (non-renamed) paths match */
-	if (check_header_names(
-			patch->header_old_path, patch->old_path, "old", added) < 0 ||
-		check_header_names(
-			patch->header_new_path, patch->new_path, "new", deleted) < 0)
+	if (check_header_names(patch->header_old_path, patch->old_path, "old", added) < 0 ||
+	    check_header_names(patch->header_new_path, patch->new_path, "new", deleted) < 0)
 		return -1;
 
-	prefixed_old = (!added && patch->old_path) ? patch->old_path :
-		patch->header_old_path;
-	prefixed_new = (!deleted && patch->new_path) ? patch->new_path :
-		patch->header_new_path;
+	prefixed_old = (!added && patch->old_path) ? patch->old_path : patch->header_old_path;
+	prefixed_new = (!deleted && patch->new_path) ? patch->new_path : patch->header_new_path;
 
-	if (check_prefix(
-			&patch->old_prefix, &old_prefixlen, patch, prefixed_old) < 0 ||
-		check_prefix(
-			&patch->new_prefix, &new_prefixlen, patch, prefixed_new) < 0)
+	if ((prefixed_old && check_prefix(&patch->old_prefix, &old_prefixlen, patch, prefixed_old) < 0) ||
+	    (prefixed_new && check_prefix(&patch->new_prefix, &new_prefixlen, patch, prefixed_new) < 0))
 		return -1;
 
 	/* Prefer the rename filenames as they are unambiguous and unprefixed */
@@ -950,7 +945,7 @@ static int check_filenames(git_patch_parsed *patch)
 		patch->base.delta->new_file.path = prefixed_new + new_prefixlen;
 
 	if (!patch->base.delta->old_file.path &&
-		!patch->base.delta->new_file.path)
+	    !patch->base.delta->new_file.path)
 		return git_parse_err("git diff header lacks old / new paths");
 
 	return 0;
@@ -964,14 +959,14 @@ static int check_patch(git_patch_parsed *patch)
 		return -1;
 
 	if (delta->old_file.path &&
-			delta->status != GIT_DELTA_DELETED &&
-			!delta->new_file.mode)
+	    delta->status != GIT_DELTA_DELETED &&
+	    !delta->new_file.mode)
 		delta->new_file.mode = delta->old_file.mode;
 
 	if (delta->status == GIT_DELTA_MODIFIED &&
-			!(delta->flags & GIT_DIFF_FLAG_BINARY) &&
-			delta->new_file.mode == delta->old_file.mode &&
-			git_array_size(patch->base.hunks) == 0)
+	    !(delta->flags & GIT_DIFF_FLAG_BINARY) &&
+	    delta->new_file.mode == delta->old_file.mode &&
+	    git_array_size(patch->base.hunks) == 0)
 		return git_parse_err("patch with no hunks");
 
 	if (delta->status == GIT_DELTA_ADDED) {

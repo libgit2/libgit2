@@ -443,8 +443,12 @@ int git_odb_new(git_odb **out)
 	git_odb *db = git__calloc(1, sizeof(*db));
 	GIT_ERROR_CHECK_ALLOC(db);
 
-	if (git_cache_init(&db->own_cache) < 0 ||
-		git_vector_init(&db->backends, 4, backend_sort_cmp) < 0) {
+	if (git_cache_init(&db->own_cache) < 0) {
+		git__free(db);
+		return -1;
+	}
+	if (git_vector_init(&db->backends, 4, backend_sort_cmp) < 0) {
+		git_cache_free(&db->own_cache);
 		git__free(db);
 		return -1;
 	}
@@ -1124,6 +1128,7 @@ static int odb_otype_fast(git_object_t *type_p, git_odb *db, const git_oid *id)
 
 	if ((object = git_cache_get_raw(odb_cache(db), id)) != NULL) {
 		*type_p = object->cached.type;
+		git_odb_object_free(object);
 		return 0;
 	}
 

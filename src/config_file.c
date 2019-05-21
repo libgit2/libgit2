@@ -678,6 +678,7 @@ static int parse_include(git_config_parser *reader,
 		return result;
 
 	include = git_array_alloc(reader->file->includes);
+	GIT_ERROR_CHECK_ALLOC(include);
 	memset(include, 0, sizeof(*include));
 	git_array_init(include->includes);
 	include->path = git_buf_detach(&path);
@@ -1132,7 +1133,7 @@ static int config_write(diskfile_backend *cfg, const char *orig_key, const char 
 	reader.file = &cfg->file;
 
 	if (cfg->locked) {
-		result = git_buf_puts(&contents, git_buf_cstr(&cfg->locked_content));
+		result = git_buf_puts(&contents, git_buf_cstr(&cfg->locked_content) == NULL ? "" : git_buf_cstr(&cfg->locked_content));
 	} else {
 		/* Lock the file */
 		if ((result = git_filebuf_open(

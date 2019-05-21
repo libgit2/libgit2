@@ -489,10 +489,13 @@ int git_futils_mkdir(
 
 		assert(len);
 
-		/* we've walked all the given path's parents and it's either relative
-		 * or rooted.  either way, give up and make the entire path.
+		/*
+		 * We've walked all the given path's parents and it's either relative
+		 * (the parent is simply '.') or rooted (the length is less than or
+		 * equal to length of the root path).  The path may be less than the
+		 * root path length on Windows, where `C:` == `C:/`.
 		 */
-		if ((len == 1 && parent_path.ptr[0] == '.') || len == root_len+1) {
+		if ((len == 1 && parent_path.ptr[0] == '.') || len <= root_len) {
 			relative = make_path.ptr;
 			break;
 		}

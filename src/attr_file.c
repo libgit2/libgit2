@@ -429,18 +429,6 @@ bool git_attr_fnmatch__match(
 		return (p_fnmatch(match->pattern, relpath, flags) != FNM_NOMATCH);
 	}
 
-	/* if path is a directory prefix of a negated pattern, then match */
-	if ((match->flags & GIT_ATTR_FNMATCH_NEGATIVE) && path->is_dir) {
-		size_t pathlen = strlen(relpath);
-		bool prefixed = (pathlen <= match->length) &&
-			((match->flags & GIT_ATTR_FNMATCH_ICASE) ?
-			!strncasecmp(match->pattern, relpath, pathlen) :
-			!strncmp(match->pattern, relpath, pathlen));
-
-		if (prefixed && git_path_at_end_of_segment(&match->pattern[pathlen]))
-			return true;
-	}
-
 	return (p_fnmatch(match->pattern, filename, flags) != FNM_NOMATCH);
 }
 
